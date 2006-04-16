@@ -2132,7 +2132,8 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 		}
 
 		// compile additional data about the surface geometry
-		Mod_BuildTextureVectorsAndNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, (loadmodel->surfmesh.data_element3i + 3 * surface->num_firsttriangle), loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, loadmodel->surfmesh.data_normal3f, true);
+		Mod_BuildNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, loadmodel->surfmesh.data_vertex3f, (loadmodel->surfmesh.data_element3i + 3 * surface->num_firsttriangle), loadmodel->surfmesh.data_normal3f, true);
+		Mod_BuildTextureVectorsFromNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, (loadmodel->surfmesh.data_element3i + 3 * surface->num_firsttriangle), loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, true);
 		BoxFromPoints(surface->mins, surface->maxs, surface->num_vertices, (loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex));
 
 		// generate surface extents information
@@ -4775,7 +4776,8 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			Con_Print("\n");
 		}
 		// for per pixel lighting
-		Mod_BuildTextureVectorsAndNormals(out->num_firstvertex, out->num_vertices, out->num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, (loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle), loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, loadmodel->surfmesh.data_normal3f, true);
+		Mod_BuildNormals(out->num_firstvertex, out->num_vertices, out->num_triangles, loadmodel->surfmesh.data_vertex3f, (loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle), loadmodel->surfmesh.data_normal3f, true);
+		Mod_BuildTextureVectorsFromNormals(out->num_firstvertex, out->num_vertices, out->num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, (loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle), loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, true);
 		// calculate a bounding box
 		VectorClear(out->mins);
 		VectorClear(out->maxs);

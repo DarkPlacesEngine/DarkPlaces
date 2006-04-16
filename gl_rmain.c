@@ -2443,25 +2443,24 @@ void RSurf_PrepareVerticesForBatch(const entity_render_t *ent, const texture_t *
 	if ((rsurface_entity->frameblend[0].lerp != 1 || rsurface_entity->frameblend[0].frame != 0) && (rsurface_model->surfmesh.data_morphvertex3f || rsurface_model->surfmesh.data_vertexboneweights))
 	{
 		rsurface_vertex3f = rsurface_array_vertex3f;
+		rsurface_svector3f = NULL;
+		rsurface_tvector3f = NULL;
+		rsurface_normal3f = NULL;
 		Mod_Alias_GetMesh_Vertex3f(rsurface_model, rsurface_entity->frameblend, rsurface_array_vertex3f);
-		if (generatetangents || (rsurface_texture->textureflags & (Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2)))
+		if (rsurface_texture->textureflags & (Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2))
+			generatetangents = true;
+		if (generatetangents)
+			generatenormals = true;
+		if (generatenormals && !rsurface_normal3f)
 		{
+			rsurface_normal3f = rsurface_array_normal3f;
+			Mod_BuildNormals(0, rsurface_model->surfmesh.num_vertices, rsurface_model->surfmesh.num_triangles, rsurface_array_vertex3f, rsurface_model->surfmesh.data_element3i, rsurface_array_normal3f, r_smoothnormals_areaweighting.integer);
+		}
+		if (generatetangents && !rsurface_svector3f)
+		{
+			Mod_BuildTextureVectorsFromNormals(0, rsurface_model->surfmesh.num_vertices, rsurface_model->surfmesh.num_triangles, rsurface_array_vertex3f, rsurface_model->surfmesh.data_texcoordtexture2f, rsurface_normal3f, rsurface_model->surfmesh.data_element3i, rsurface_array_svector3f, rsurface_array_tvector3f, r_smoothnormals_areaweighting.integer);
 			rsurface_svector3f = rsurface_array_svector3f;
 			rsurface_tvector3f = rsurface_array_tvector3f;
-			rsurface_normal3f = rsurface_array_normal3f;
-			Mod_BuildTextureVectorsAndNormals(0, rsurface_model->surfmesh.num_vertices, rsurface_model->surfmesh.num_triangles, rsurface_array_vertex3f, rsurface_model->surfmesh.data_texcoordtexture2f, rsurface_model->surfmesh.data_element3i, rsurface_array_svector3f, rsurface_array_tvector3f, rsurface_array_normal3f, r_smoothnormals_areaweighting.integer);
-		}
-		else
-		{
-			rsurface_svector3f = NULL;
-			rsurface_tvector3f = NULL;
-			if (generatenormals)
-			{
-				rsurface_normal3f = rsurface_array_normal3f;
-				Mod_BuildNormals(0, rsurface_model->surfmesh.num_vertices, rsurface_model->surfmesh.num_triangles, rsurface_array_vertex3f, rsurface_model->surfmesh.data_element3i, rsurface_array_normal3f, r_smoothnormals_areaweighting.integer);
-			}
-			else
-				rsurface_normal3f = NULL;
 		}
 	}
 	else
@@ -2510,7 +2509,8 @@ void RSurf_PrepareVerticesForBatch(const entity_render_t *ent, const texture_t *
 				for (i = 0;i < 4;i++)
 					VectorMAMAMAM(1, center, v[i][0], forward, v[i][1], right, v[i][2], up, rsurface_array_vertex3f + (surface->num_firstvertex+i+j) * 3);
 			}
-			Mod_BuildTextureVectorsAndNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface_array_vertex3f, rsurface_model->surfmesh.data_texcoordtexture2f, rsurface_model->surfmesh.data_element3i + surface->num_firsttriangle * 3, rsurface_array_svector3f, rsurface_array_tvector3f, rsurface_array_normal3f, r_smoothnormals_areaweighting.integer);
+			Mod_BuildNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface_array_vertex3f, rsurface_model->surfmesh.data_element3i + surface->num_firsttriangle * 3, rsurface_array_normal3f, r_smoothnormals_areaweighting.integer);
+			Mod_BuildTextureVectorsFromNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface_array_vertex3f, rsurface_model->surfmesh.data_texcoordtexture2f, rsurface_array_normal3f, rsurface_model->surfmesh.data_element3i + surface->num_firsttriangle * 3, rsurface_array_svector3f, rsurface_array_tvector3f, r_smoothnormals_areaweighting.integer);
 		}
 		rsurface_vertex3f = rsurface_array_vertex3f;
 		rsurface_svector3f = rsurface_array_svector3f;

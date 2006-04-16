@@ -605,20 +605,16 @@ void Mod_BuildBumpVectors(const float *v0, const float *v1, const float *v2, con
 }
 
 // warning: this is a very expensive function!
-void Mod_BuildTextureVectorsAndNormals(int firstvertex, int numvertices, int numtriangles, const float *vertex3f, const float *texcoord2f, const int *elements, float *svector3f, float *tvector3f, float *normal3f, qboolean areaweighting)
+void Mod_BuildTextureVectorsFromNormals(int firstvertex, int numvertices, int numtriangles, const float *vertex3f, const float *texcoord2f, const float *normal3f, const int *elements, float *svector3f, float *tvector3f, qboolean areaweighting)
 {
 	int i, tnum;
-	float sdir[3], tdir[3], normal[3], *v;
-	const float *v0, *v1, *v2, *tc0, *tc1, *tc2;
+	float sdir[3], tdir[3], normal[3], *sv, *tv;
+	const float *v0, *v1, *v2, *tc0, *tc1, *tc2, *n;
 	float f, tangentcross[3], v10[3], v20[3], tc10[2], tc20[2];
 	const int *e;
 	// clear the vectors
-	if (svector3f)
-		memset(svector3f + 3 * firstvertex, 0, numvertices * sizeof(float[3]));
-	if (tvector3f)
-		memset(tvector3f + 3 * firstvertex, 0, numvertices * sizeof(float[3]));
-	if (normal3f)
-		memset(normal3f + 3 * firstvertex, 0, numvertices * sizeof(float[3]));
+	memset(svector3f + 3 * firstvertex, 0, numvertices * sizeof(float[3]));
+	memset(tvector3f + 3 * firstvertex, 0, numvertices * sizeof(float[3]));
 	// process each vertex of each triangle and accumulate the results
 	for (tnum = 0, e = elements;tnum < numtriangles;tnum++, e += 3)
 	{
@@ -653,17 +649,6 @@ void Mod_BuildTextureVectorsAndNormals(int firstvertex, int numvertices, int num
 		tdir[1] = tc10[0] * v20[1] - tc20[0] * v10[1];
 		tdir[2] = tc10[0] * v20[2] - tc20[0] * v10[2];
 
-		// make the tangents completely perpendicular to the surface normal
-		// 12 multiply, 4 add, 6 subtract
-		f = DotProduct(sdir, normal);
-		sdir[0] -= f * normal[0];
-		sdir[1] -= f * normal[1];
-		sdir[2] -= f * normal[2];
-		f = DotProduct(tdir, normal);
-		tdir[0] -= f * normal[0];
-		tdir[1] -= f * normal[1];
-		tdir[2] -= f * normal[2];
-
 		// if texture is mapped the wrong way (counterclockwise), the tangents
 		// have to be flipped, this is detected by calculating a normal from the
 		// two tangents, and seeing if it is opposite the surface normal
@@ -679,32 +664,25 @@ void Mod_BuildTextureVectorsAndNormals(int firstvertex, int numvertices, int num
 		{
 			VectorNormalize(sdir);
 			VectorNormalize(tdir);
-			VectorNormalize(normal);
 		}
-		if (svector3f)
-			for (i = 0;i < 3;i++)
-				VectorAdd(svector3f + e[i]*3, sdir, svector3f + e[i]*3);
-		if (tvector3f)
-			for (i = 0;i < 3;i++)
-				VectorAdd(tvector3f + e[i]*3, tdir, tvector3f + e[i]*3);
-		if (normal3f)
-			for (i = 0;i < 3;i++)
-				VectorAdd(normal3f + e[i]*3, normal, normal3f + e[i]*3);
+		for (i = 0;i < 3;i++)
+		{
+			VectorAdd(svector3f + e[i]*3, sdir, svector3f + e[i]*3);
+			VectorAdd(tvector3f + e[i]*3, tdir, tvector3f + e[i]*3);
+		}
 	}
-	// now we could divide the vectors by the number of averaged values on
-	// each vertex...  but instead normalize them
-	// 4 assignments, 1 divide, 1 sqrt, 2 adds, 6 multiplies
-	if (svector3f)
-		for (i = 0, v = svector3f + 3 * firstvertex;i < numvertices;i++, v += 3)
-			VectorNormalize(v);
-	// 4 assignments, 1 divide, 1 sqrt, 2 adds, 6 multiplies
-	if (tvector3f)
-		for (i = 0, v = tvector3f + 3 * firstvertex;i < numvertices;i++, v += 3)
-			VectorNormalize(v);
-	// 4 assignments, 1 divide, 1 sqrt, 2 adds, 6 multiplies
-	if (normal3f)
-		for (i = 0, v = normal3f + 3 * firstvertex;i < numvertices;i++, v += 3)
-			VectorNormalize(v);
+	// make the tangents completely perpendicular to the surface normal, and
+	// then normalize them
+	// 16 assignments, 2 divide, 2 sqrt, 2 negates, 14 adds, 24 multiplies
+	for (i = 0, sv = svector3f + 3 * firstvertex, tv = tvector3f + 3 * firstvertex, n = normal3f + 3 * firstvertex;i < numvertices;i++, sv += 3, tv += 3, n += 3)
+	{
+		f = -DotProduct(sv, n);
+		VectorMA(sv, f, n, sv);
+		VectorNormalize(sv);
+		f = -DotProduct(tv, n);
+		VectorMA(tv, f, n, tv);
+		VectorNormalize(tv);
+	}
 }
 
 void Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriangles, qboolean lightmapoffsets, qboolean vertexcolors, qboolean neighbors)

@@ -616,7 +616,7 @@ int Mod_BuildVertexRemapTableFromElements(int numelements, const int *elements, 
 void Mod_BuildTriangleNeighbors(int *neighbors, const int *elements, int numtriangles);
 void Mod_ValidateElements(int *elements, int numtriangles, int firstvertex, int numverts, const char *filename, int fileline);
 void Mod_BuildNormals(int firstvertex, int numvertices, int numtriangles, const float *vertex3f, const int *elements, float *normal3f, qboolean areaweighting);
-void Mod_BuildTextureVectorsAndNormals(int firstvertex, int numvertices, int numtriangles, const float *vertex, const float *texcoord, const int *elements, float *svectors, float *tvectors, float *normals, qboolean areaweighting);
+void Mod_BuildTextureVectorsFromNormals(int firstvertex, int numvertices, int numtriangles, const float *vertex3f, const float *texcoord2f, const float *normal3f, const int *elements, float *svector3f, float *tvector3f, qboolean areaweighting);
 
 void Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriangles, qboolean lightmapoffsets, qboolean vertexcolors, qboolean neighbors);
 
