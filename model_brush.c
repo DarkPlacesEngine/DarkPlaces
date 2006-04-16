@@ -4371,8 +4371,9 @@ static void Mod_Q3BSP_LoadVertices(lump_t *l)
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q3BSP_LoadVertices: funny lump size in %s",loadmodel->name);
 	loadmodel->brushq3.num_vertices = count = l->filelen / sizeof(*in);
-	loadmodel->brushq3.data_vertex3f = (float *)Mem_Alloc(loadmodel->mempool, count * (sizeof(float) * (3 + 2 + 2 + 4)));
-	loadmodel->brushq3.data_texcoordtexture2f = loadmodel->brushq3.data_vertex3f + count * 3;
+	loadmodel->brushq3.data_vertex3f = (float *)Mem_Alloc(loadmodel->mempool, count * (sizeof(float) * (3 + 3 + 2 + 2 + 4)));
+	loadmodel->brushq3.data_normal3f = loadmodel->brushq3.data_vertex3f + count * 3;
+	loadmodel->brushq3.data_texcoordtexture2f = loadmodel->brushq3.data_normal3f + count * 3;
 	loadmodel->brushq3.data_texcoordlightmap2f = loadmodel->brushq3.data_texcoordtexture2f + count * 2;
 	loadmodel->brushq3.data_color4f = loadmodel->brushq3.data_texcoordlightmap2f + count * 2;
 
@@ -4381,6 +4382,9 @@ static void Mod_Q3BSP_LoadVertices(lump_t *l)
 		loadmodel->brushq3.data_vertex3f[i * 3 + 0] = LittleFloat(in->origin3f[0]);
 		loadmodel->brushq3.data_vertex3f[i * 3 + 1] = LittleFloat(in->origin3f[1]);
 		loadmodel->brushq3.data_vertex3f[i * 3 + 2] = LittleFloat(in->origin3f[2]);
+		loadmodel->brushq3.data_normal3f[i * 3 + 0] = LittleFloat(in->normal3f[0]);
+		loadmodel->brushq3.data_normal3f[i * 3 + 1] = LittleFloat(in->normal3f[1]);
+		loadmodel->brushq3.data_normal3f[i * 3 + 2] = LittleFloat(in->normal3f[2]);
 		loadmodel->brushq3.data_texcoordtexture2f[i * 2 + 0] = LittleFloat(in->texcoord2f[0]);
 		loadmodel->brushq3.data_texcoordtexture2f[i * 2 + 1] = LittleFloat(in->texcoord2f[1]);
 		loadmodel->brushq3.data_texcoordlightmap2f[i * 2 + 0] = LittleFloat(in->lightmap2f[0]);
@@ -4470,7 +4474,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 	float *originalvertex3f;
 	//float *originalsvector3f;
 	//float *originaltvector3f;
-	//float *originalnormal3f;
+	float *originalnormal3f;
 	float *originalcolor4f;
 	float *originaltexcoordtexture2f;
 	float *originaltexcoordlightmap2f;
@@ -4661,6 +4665,9 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 				(loadmodel->surfmesh.data_vertex3f + 3 * out->num_firstvertex)[j * 3 + 0] = loadmodel->brushq3.data_vertex3f[(firstvertex + j) * 3 + 0];
 				(loadmodel->surfmesh.data_vertex3f + 3 * out->num_firstvertex)[j * 3 + 1] = loadmodel->brushq3.data_vertex3f[(firstvertex + j) * 3 + 1];
 				(loadmodel->surfmesh.data_vertex3f + 3 * out->num_firstvertex)[j * 3 + 2] = loadmodel->brushq3.data_vertex3f[(firstvertex + j) * 3 + 2];
+				(loadmodel->surfmesh.data_normal3f + 3 * out->num_firstvertex)[j * 3 + 0] = loadmodel->brushq3.data_normal3f[(firstvertex + j) * 3 + 0];
+				(loadmodel->surfmesh.data_normal3f + 3 * out->num_firstvertex)[j * 3 + 1] = loadmodel->brushq3.data_normal3f[(firstvertex + j) * 3 + 1];
+				(loadmodel->surfmesh.data_normal3f + 3 * out->num_firstvertex)[j * 3 + 2] = loadmodel->brushq3.data_normal3f[(firstvertex + j) * 3 + 2];
 				(loadmodel->surfmesh.data_texcoordtexture2f + 2 * out->num_firstvertex)[j * 2 + 0] = loadmodel->brushq3.data_texcoordtexture2f[(firstvertex + j) * 2 + 0];
 				(loadmodel->surfmesh.data_texcoordtexture2f + 2 * out->num_firstvertex)[j * 2 + 1] = loadmodel->brushq3.data_texcoordtexture2f[(firstvertex + j) * 2 + 1];
 				(loadmodel->surfmesh.data_texcoordlightmap2f + 2 * out->num_firstvertex)[j * 2 + 0] = loadmodel->brushq3.data_texcoordlightmap2f[(firstvertex + j) * 2 + 0];
@@ -4677,6 +4684,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			patchsize[0] = LittleLong(in->specific.patch.patchsize[0]);
 			patchsize[1] = LittleLong(in->specific.patch.patchsize[1]);
 			originalvertex3f = loadmodel->brushq3.data_vertex3f + firstvertex * 3;
+			originalnormal3f = loadmodel->brushq3.data_normal3f + firstvertex * 3;
 			originaltexcoordtexture2f = loadmodel->brushq3.data_texcoordtexture2f + firstvertex * 2;
 			originaltexcoordlightmap2f = loadmodel->brushq3.data_texcoordlightmap2f + firstvertex * 2;
 			originalcolor4f = loadmodel->brushq3.data_color4f + firstvertex * 4;
@@ -4705,6 +4713,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			// generate geometry
 			// (note: normals are skipped because they get recalculated)
 			Q3PatchTesselateFloat(3, sizeof(float[3]), (loadmodel->surfmesh.data_vertex3f + 3 * out->num_firstvertex), patchsize[0], patchsize[1], sizeof(float[3]), originalvertex3f, xtess, ytess);
+			Q3PatchTesselateFloat(3, sizeof(float[3]), (loadmodel->surfmesh.data_normal3f + 3 * out->num_firstvertex), patchsize[0], patchsize[1], sizeof(float[3]), originalnormal3f, xtess, ytess);
 			Q3PatchTesselateFloat(2, sizeof(float[2]), (loadmodel->surfmesh.data_texcoordtexture2f + 2 * out->num_firstvertex), patchsize[0], patchsize[1], sizeof(float[2]), originaltexcoordtexture2f, xtess, ytess);
 			Q3PatchTesselateFloat(2, sizeof(float[2]), (loadmodel->surfmesh.data_texcoordlightmap2f + 2 * out->num_firstvertex), patchsize[0], patchsize[1], sizeof(float[2]), originaltexcoordlightmap2f, xtess, ytess);
 			Q3PatchTesselateFloat(4, sizeof(float[4]), (loadmodel->surfmesh.data_lightmapcolor4f + 4 * out->num_firstvertex), patchsize[0], patchsize[1], sizeof(float[4]), originalcolor4f, xtess, ytess);
@@ -4775,9 +4784,6 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			}
 			Con_Print("\n");
 		}
-		// for per pixel lighting
-		Mod_BuildNormals(out->num_firstvertex, out->num_vertices, out->num_triangles, loadmodel->surfmesh.data_vertex3f, (loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle), loadmodel->surfmesh.data_normal3f, true);
-		Mod_BuildTextureVectorsFromNormals(out->num_firstvertex, out->num_vertices, out->num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, (loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle), loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, true);
 		// calculate a bounding box
 		VectorClear(out->mins);
 		VectorClear(out->maxs);
@@ -4808,10 +4814,14 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		//out->lightmapinfo->styles[3] = 255;
 	}
 
+	// for per pixel lighting
+	Mod_BuildTextureVectorsFromNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, true);
+
 	// free the no longer needed vertex data
 	loadmodel->brushq3.num_vertices = 0;
 	Mem_Free(loadmodel->brushq3.data_vertex3f);
 	loadmodel->brushq3.data_vertex3f = NULL;
+	loadmodel->brushq3.data_normal3f = NULL;
 	loadmodel->brushq3.data_texcoordtexture2f = NULL;
 	loadmodel->brushq3.data_texcoordlightmap2f = NULL;
 	loadmodel->brushq3.data_color4f = NULL;
