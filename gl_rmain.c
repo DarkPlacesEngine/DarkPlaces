@@ -132,7 +132,7 @@ rtexture_t *r_texture_notexture;
 rtexture_t *r_texture_whitecube;
 rtexture_t *r_texture_normalizationcube;
 rtexture_t *r_texture_fogattenuation;
-rtexture_t *r_texture_fogintensity;
+//rtexture_t *r_texture_fogintensity;
 
 // information about each possible shader permutation
 r_glsl_permutation_t r_glsl_permutations[SHADERPERMUTATION_COUNT];
@@ -386,7 +386,7 @@ static void R_BuildFogTexture(void)
 	double r, alpha;
 #define FOGWIDTH 64
 	unsigned char data1[FOGWIDTH][4];
-	unsigned char data2[FOGWIDTH][4];
+	//unsigned char data2[FOGWIDTH][4];
 	r = (-1.0/256.0) * (FOGWIDTH * FOGWIDTH);
 	for (x = 0;x < FOGWIDTH;x++)
 	{
@@ -399,13 +399,13 @@ static void R_BuildFogTexture(void)
 		data1[x][1] = 255 - b;
 		data1[x][2] = 255 - b;
 		data1[x][3] = 255;
-		data2[x][0] = b;
-		data2[x][1] = b;
-		data2[x][2] = b;
-		data2[x][3] = 255;
+		//data2[x][0] = b;
+		//data2[x][1] = b;
+		//data2[x][2] = b;
+		//data2[x][3] = 255;
 	}
 	r_texture_fogattenuation = R_LoadTexture2D(r_main_texturepool, "fogattenuation", FOGWIDTH, 1, &data1[0][0], TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP, NULL);
-	r_texture_fogintensity = R_LoadTexture2D(r_main_texturepool, "fogintensity", FOGWIDTH, 1, &data2[0][0], TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP, NULL);
+	//r_texture_fogintensity = R_LoadTexture2D(r_main_texturepool, "fogintensity", FOGWIDTH, 1, &data2[0][0], TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP, NULL);
 }
 
 static const char *builtinshaderstring =
