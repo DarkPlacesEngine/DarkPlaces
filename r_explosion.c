@@ -196,11 +196,12 @@ static void R_DrawExplosion_TransparentCallback(const entity_render_t *ent, int 
 	numverts = EXPLOSIONVERTS;
 	alpha = e->alpha;
 
+	R_Mesh_VertexPointer(e->vert[0]);
+	R_Mesh_ColorPointer(NULL);
 	memset(&m, 0, sizeof(m));
 	m.tex[0] = R_GetTexture(explosiontexture);
 	m.pointer_texcoord[0] = explosiontexcoord2f[0];
-	m.pointer_vertex = e->vert[0];
-	R_Mesh_State(&m);
+	R_Mesh_TextureState(&m);
 
 	GL_Color(alpha, alpha, alpha, 1);
 

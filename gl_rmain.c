@@ -952,9 +952,12 @@ void R_SetupSurfaceShader(const entity_render_t *ent, const texture_t *texture, 
 	if (r_glsl_permutation->loc_Texture_Normal >= 0) R_Mesh_TexBind(0, R_GetTexture(texture->skin.nmap));
 	if (r_glsl_permutation->loc_Texture_Color >= 0) R_Mesh_TexBind(1, R_GetTexture(texture->basetexture));
 	if (r_glsl_permutation->loc_Texture_Gloss >= 0) R_Mesh_TexBind(2, R_GetTexture(texture->glosstexture));
-	if (r_glsl_permutation->loc_Texture_FogMask >= 0) R_Mesh_TexBind(4, R_GetTexture(r_texture_fogattenuation));
+	//if (r_glsl_permutation->loc_Texture_Cube >= 0 && permutation & SHADERPERMUTATION_MODE_LIGHTSOURCE) R_Mesh_TexBindCubeMap(3, R_GetTexture(r_shadow_rtlight->currentcubemap));
+	//if (r_glsl_permutation->loc_Texture_FogMask >= 0) R_Mesh_TexBind(4, R_GetTexture(r_texture_fogattenuation));
 	if (r_glsl_permutation->loc_Texture_Pants >= 0) R_Mesh_TexBind(5, R_GetTexture(texture->skin.pants));
 	if (r_glsl_permutation->loc_Texture_Shirt >= 0) R_Mesh_TexBind(6, R_GetTexture(texture->skin.shirt));
+	//if (r_glsl_permutation->loc_Texture_Lightmap >= 0) R_Mesh_TexBind(7, R_GetTexture(r_texture_white));
+	//if (r_glsl_permutation->loc_Texture_Deluxemap >= 0) R_Mesh_TexBind(8, R_GetTexture(r_texture_blanknormalmap));
 	if (r_glsl_permutation->loc_Texture_Glow >= 0) R_Mesh_TexBind(9, R_GetTexture(texture->skin.glow));
 	if (r_glsl_permutation->loc_FogColor >= 0)
 	{
@@ -1464,7 +1467,6 @@ static void R_BlendView(void)
 	int screenwidth, screenheight;
 	qboolean dobloom;
 	qboolean doblend;
-	rmeshstate_t m;
 	float vertex3f[12];
 	float texcoord2f[3][8];
 
@@ -1489,9 +1491,12 @@ static void R_BlendView(void)
 	vertex3f[3] = 1;vertex3f[4] = 0;vertex3f[5] = 0;
 	vertex3f[6] = 1;vertex3f[7] = 1;vertex3f[8] = 0;
 	vertex3f[9] = 0;vertex3f[10] = 1;vertex3f[11] = 0;
+	R_Mesh_VertexPointer(vertex3f);
+	R_Mesh_ColorPointer(NULL);
+	R_Mesh_ResetTextureState();
 	if (dobloom)
 	{
-		int bloomwidth, bloomheight, x, dobloomblend, range;
+		int bloomwidth, bloomheight, x, range;
 		float xoffset, yoffset, r;
 		renderstats.bloom++;
 		// allocate textures as needed
@@ -1523,11 +1528,8 @@ static void R_BlendView(void)
 		texcoord2f[1][5] = 0;
 		texcoord2f[1][6] = 0;
 		texcoord2f[1][7] = 0;
-		memset(&m, 0, sizeof(m));
-		m.pointer_vertex = vertex3f;
-		m.pointer_texcoord[0] = texcoord2f[0];
-		m.tex[0] = R_GetTexture(r_bloom_texture_screen);
-		R_Mesh_State(&m);
+		R_Mesh_TexCoordPointer(0, 2, texcoord2f[0]);
+		R_Mesh_TexBind(0, R_GetTexture(r_bloom_texture_screen));
 		// copy view into the full resolution screen image texture
 		GL_ActiveTexture(0);
 		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view_x, vid.height - (r_view_y + r_view_height), r_view_width, r_view_height);
@@ -1550,11 +1552,8 @@ static void R_BlendView(void)
 		}
 		// we now have a darkened bloom image in the framebuffer, copy it into
 		// the bloom image texture for more processing
-		memset(&m, 0, sizeof(m));
-		m.pointer_vertex = vertex3f;
-		m.tex[0] = R_GetTexture(r_bloom_texture_bloom);
-		m.pointer_texcoord[0] = texcoord2f[2];
-		R_Mesh_State(&m);
+		R_Mesh_TexBind(0, R_GetTexture(r_bloom_texture_bloom));
+		R_Mesh_TexCoordPointer(0, 2, texcoord2f[2]);
 		GL_ActiveTexture(0);
 		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view_x, vid.height - (r_view_y + bloomheight), bloomwidth, bloomheight);
 		renderstats.bloom_copypixels += bloomwidth * bloomheight;
@@ -1627,49 +1626,33 @@ static void R_BlendView(void)
 		qglViewport(r_view_x, vid.height - (r_view_y + r_view_height), r_view_width, r_view_height);
 		// put the original screen image back in place and blend the bloom
 		// texture on it
-		memset(&m, 0, sizeof(m));
-		m.pointer_vertex = vertex3f;
-		m.tex[0] = R_GetTexture(r_bloom_texture_screen);
-		m.pointer_texcoord[0] = texcoord2f[0];
-#if 0
-		dobloomblend = false;
-#else
+		GL_Color(1,1,1,1);
+		GL_BlendFunc(GL_ONE, GL_ZERO);
 		// do both in one pass if possible
+		R_Mesh_TexBind(0, R_GetTexture(r_bloom_texture_screen));
+		R_Mesh_TexCoordPointer(0, 2, texcoord2f[0]);
 		if (r_textureunits.integer >= 2 && gl_combine.integer)
 		{
-			dobloomblend = false;
-			m.texcombinergb[1] = GL_ADD;
-			m.tex[1] = R_GetTexture(r_bloom_texture_bloom);
-			m.pointer_texcoord[1] = texcoord2f[1];
+			R_Mesh_TexCombine(1, GL_ADD, GL_ADD, 1, 1);
+			R_Mesh_TexBind(1, R_GetTexture(r_bloom_texture_bloom));
+			R_Mesh_TexCoordPointer(1, 2, texcoord2f[1]);
 		}
 		else
-			dobloomblend = true;
-#endif
-		R_Mesh_State(&m);
-		GL_BlendFunc(GL_ONE, GL_ZERO);
-		GL_Color(1,1,1,1);
-		R_Mesh_Draw(0, 4, 2, polygonelements);
-		renderstats.bloom_drawpixels += r_view_width * r_view_height;
-		// now blend on the bloom texture if multipass
-		if (dobloomblend)
 		{
-			memset(&m, 0, sizeof(m));
-			m.pointer_vertex = vertex3f;
-			m.tex[0] = R_GetTexture(r_bloom_texture_bloom);
-			m.pointer_texcoord[0] = texcoord2f[1];
-			R_Mesh_State(&m);
-			GL_BlendFunc(GL_ONE, GL_ONE);
-			GL_Color(1,1,1,1);
 			R_Mesh_Draw(0, 4, 2, polygonelements);
 			renderstats.bloom_drawpixels += r_view_width * r_view_height;
+			// now blend on the bloom texture
+			GL_BlendFunc(GL_ONE, GL_ONE);
+			R_Mesh_TexBind(0, R_GetTexture(r_bloom_texture_bloom));
+			R_Mesh_TexCoordPointer(0, 2, texcoord2f[1]);
 		}
+		R_Mesh_Draw(0, 4, 2, polygonelements);
+		renderstats.bloom_drawpixels += r_view_width * r_view_height;
 	}
 	if (doblend)
 	{
 		// apply a color tint to the whole view
-		memset(&m, 0, sizeof(m));
-		m.pointer_vertex = vertex3f;
-		R_Mesh_State(&m);
+		R_Mesh_ResetTextureState();
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		GL_Color(r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
 		R_Mesh_Draw(0, 4, 2, polygonelements);
@@ -1946,7 +1929,6 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 {
 	int i;
 	float *v, *c, f1, f2, diff[3], vertex3f[8*3], color4f[8*4];
-	rmeshstate_t m;
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
@@ -1972,10 +1954,9 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 			c[2] = c[2] * f1 + fogcolor[2] * f2;
 		}
 	}
-	memset(&m, 0, sizeof(m));
-	m.pointer_vertex = vertex3f;
-	m.pointer_color = color;
-	R_Mesh_State(&m);
+	R_Mesh_VertexPointer(vertex3f);
+	R_Mesh_ColorPointer(color);
+	R_Mesh_ResetTextureState();
 	R_Mesh_Draw(8, 12);
 }
 */
@@ -2017,11 +1998,7 @@ void R_DrawNoModel_TransparentCallback(const entity_render_t *ent, int surfacenu
 	int i;
 	float f1, f2, *c;
 	float color4f[6*4];
-	rmeshstate_t m;
 	R_Mesh_Matrix(&ent->matrix);
-
-	memset(&m, 0, sizeof(m));
-	m.pointer_vertex = nomodelvertex3f;
 
 	if (ent->flags & EF_ADDITIVE)
 	{
@@ -2039,10 +2016,11 @@ void R_DrawNoModel_TransparentCallback(const entity_render_t *ent, int surfacenu
 		GL_DepthMask(true);
 	}
 	GL_DepthTest(!(ent->effects & EF_NODEPTHTEST));
+	R_Mesh_VertexPointer(nomodelvertex3f);
 	if (fogenabled)
 	{
 		memcpy(color4f, nomodelcolor4f, sizeof(float[6*4]));
-		m.pointer_color = color4f;
+		R_Mesh_ColorPointer(color4f);
 		f2 = VERTEXFOGTABLE(VectorDistance(ent->origin, r_vieworigin));
 		f1 = 1 - f2;
 		for (i = 0, c = color4f;i < 6;i++, c += 4)
@@ -2056,13 +2034,13 @@ void R_DrawNoModel_TransparentCallback(const entity_render_t *ent, int surfacenu
 	else if (ent->alpha != 1)
 	{
 		memcpy(color4f, nomodelcolor4f, sizeof(float[6*4]));
-		m.pointer_color = color4f;
+		R_Mesh_ColorPointer(color4f);
 		for (i = 0, c = color4f;i < 6;i++, c += 4)
 			c[3] *= ent->alpha;
 	}
 	else
-		m.pointer_color = nomodelcolor4f;
-	R_Mesh_State(&m);
+		R_Mesh_ColorPointer(nomodelcolor4f);
+	R_Mesh_ResetTextureState();
 	R_Mesh_Draw(0, 6, 8, nomodelelements);
 }
 
@@ -2109,7 +2087,6 @@ float spritetexcoord2f[4*2] = {0, 1, 0, 0, 1, 0, 1, 1};
 void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, rtexture_t *fogtexture, int depthdisable, const vec3_t origin, const vec3_t left, const vec3_t up, float scalex1, float scalex2, float scaley1, float scaley2, float cr, float cg, float cb, float ca)
 {
 	float fog = 0.0f, ifog;
-	rmeshstate_t m;
 	float vertex3f[12];
 
 	if (fogenabled)
@@ -2134,11 +2111,11 @@ void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, rtexture_
 	vertex3f[10] = origin[1] + left[1] * scalex1 + up[1] * scaley1;
 	vertex3f[11] = origin[2] + left[2] * scalex1 + up[2] * scaley1;
 
-	memset(&m, 0, sizeof(m));
-	m.tex[0] = R_GetTexture(texture);
-	m.pointer_texcoord[0] = spritetexcoord2f;
-	m.pointer_vertex = vertex3f;
-	R_Mesh_State(&m);
+	R_Mesh_VertexPointer(vertex3f);
+	R_Mesh_ColorPointer(NULL);
+	R_Mesh_ResetTextureState();
+	R_Mesh_TexBind(0, R_GetTexture(texture));
+	R_Mesh_TexCoordPointer(0, 2, spritetexcoord2f);
 	GL_Color(cr * ifog, cg * ifog, cb * ifog, ca);
 	R_Mesh_Draw(0, 4, 2, polygonelements);
 
@@ -2221,10 +2198,7 @@ void R_Mesh_AddBrushMeshFromPlanes(rmesh_t *mesh, int numplanes, mplane_t *plane
 static void R_DrawCollisionBrush(colbrushf_t *brush)
 {
 	int i;
-	rmeshstate_t m;
-	memset(&m, 0, sizeof(m));
-	m.pointer_vertex = brush->points->v;
-	R_Mesh_State(&m);
+	R_Mesh_VertexPointer(brush->points->v);
 	i = (int)(((size_t)brush) / sizeof(colbrushf_t));
 	GL_Color((i & 31) * (1.0f / 32.0f), ((i >> 5) & 31) * (1.0f / 32.0f), ((i >> 10) & 31) * (1.0f / 32.0f), 0.2f);
 	GL_LockArrays(0, brush->numpoints);
@@ -2235,12 +2209,9 @@ static void R_DrawCollisionBrush(colbrushf_t *brush)
 static void R_DrawCollisionSurface(entity_render_t *ent, msurface_t *surface)
 {
 	int i;
-	rmeshstate_t m;
 	if (!surface->num_collisiontriangles)
 		return;
-	memset(&m, 0, sizeof(m));
-	m.pointer_vertex = surface->data_collisionvertex3f;
-	R_Mesh_State(&m);
+	R_Mesh_VertexPointer(surface->data_collisionvertex3f);
 	i = (int)(((size_t)surface) / sizeof(msurface_t));
 	GL_Color((i & 31) * (1.0f / 32.0f), ((i >> 5) & 31) * (1.0f / 32.0f), ((i >> 10) & 31) * (1.0f / 32.0f), 0.2f);
 	GL_LockArrays(0, surface->num_collisionvertices);
@@ -2553,7 +2524,6 @@ static void RSurf_Draw(const msurface_t *surface)
 {
 	GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 	R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (rsurface_model->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
-	GL_LockArrays(0, 0);
 }
 
 static void RSurf_DrawLightmap(const msurface_t *surface, float r, float g, float b, float a, int lightmode, qboolean applycolor, qboolean applyfog)
@@ -2709,8 +2679,8 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 	{
 		GL_DepthMask(true);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
-		memset(&m, 0, sizeof(m));
-		R_Mesh_State(&m);
+		R_Mesh_ColorPointer(NULL);
+		R_Mesh_ResetTextureState();
 		RSurf_PrepareVerticesForBatch(ent, texture, modelorg, false, false, texturenumsurfaces, texturesurfacelist);
 		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
@@ -2742,8 +2712,8 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			if (model->type == mod_brushq1 && r_q1bsp_skymasking.integer && !r_worldnovis)
 			{
 				GL_Color(fogcolor[0], fogcolor[1], fogcolor[2], 1);
-				memset(&m, 0, sizeof(m));
-				R_Mesh_State(&m);
+				R_Mesh_ColorPointer(NULL);
+				R_Mesh_ResetTextureState();
 				if (skyrendermasked)
 				{
 					// depth-only (masking)
@@ -2786,35 +2756,31 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			GL_DepthMask(true);
 		}
 
-		memset(&m, 0, sizeof(m));
-		R_Mesh_State(&m);
+		R_Mesh_ColorPointer(NULL);
+		R_Mesh_ResetTextureState();
 		GL_Color(ent->colormod[0], ent->colormod[1], ent->colormod[2], texture->currentalpha);
 		R_SetupSurfaceShader(ent, texture, modelorg, vec3_origin, lightmode == 2);
 		if (!r_glsl_permutation)
 			return;
 		RSurf_PrepareVerticesForBatch(ent, texture, modelorg, true, true, texturenumsurfaces, texturesurfacelist);
+		R_Mesh_TexCoordPointer(0, 2, model->surfmesh.data_texcoordtexture2f);
+		R_Mesh_TexCoordPointer(1, 3, rsurface_svector3f);
+		R_Mesh_TexCoordPointer(2, 3, rsurface_tvector3f);
+		R_Mesh_TexCoordPointer(3, 3, rsurface_normal3f);
 		if (lightmode == 2)
 		{
 			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 			{
 				surface = texturesurfacelist[texturesurfaceindex];
-				R_Mesh_TexCoordPointer(0, 2, model->surfmesh.data_texcoordtexture2f);
-				R_Mesh_TexCoordPointer(1, 3, rsurface_svector3f);
-				R_Mesh_TexCoordPointer(2, 3, rsurface_tvector3f);
-				R_Mesh_TexCoordPointer(3, 3, rsurface_normal3f);
 				RSurf_Draw(surface);
 			}
 		}
 		else
 		{
+			R_Mesh_TexCoordPointer(4, 2, model->surfmesh.data_texcoordlightmap2f);
 			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 			{
 				surface = texturesurfacelist[texturesurfaceindex];
-				R_Mesh_TexCoordPointer(0, 2, model->surfmesh.data_texcoordtexture2f);
-				R_Mesh_TexCoordPointer(1, 3, rsurface_svector3f);
-				R_Mesh_TexCoordPointer(2, 3, rsurface_tvector3f);
-				R_Mesh_TexCoordPointer(3, 3, rsurface_normal3f);
-				R_Mesh_TexCoordPointer(4, 2, model->surfmesh.data_texcoordlightmap2f);
 				if (surface->lightmaptexture)
 				{
 					R_Mesh_TexBind(7, R_GetTexture(surface->lightmaptexture));
@@ -2861,6 +2827,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				VectorScale(layer->color, 1.0f, layercolor);
 			}
 			layercolor[3] = layer->color[3];
+			R_Mesh_ColorPointer(NULL);
 			GL_Color(layercolor[0], layercolor[1], layercolor[2], layercolor[3]);
 			applycolor = layercolor[0] != 1 || layercolor[1] != 1 || layercolor[2] != 1 || layercolor[3] != 1;
 			applyfog = (layer->flags & TEXTURELAYERFLAG_FOGDARKEN) != 0;
@@ -2868,19 +2835,17 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			{
 			case TEXTURELAYERTYPE_LITTEXTURE_COMBINE:
 				memset(&m, 0, sizeof(m));
+				m.pointer_texcoord[0] = model->surfmesh.data_texcoordlightmap2f;
 				m.tex[1] = R_GetTexture(layer->texture);
 				m.texmatrix[1] = layer->texmatrix;
 				m.texrgbscale[1] = layertexrgbscale;
-				m.pointer_color = rsurface_array_color4f;
-				m.pointer_vertex = rsurface_vertex3f;
-				R_Mesh_State(&m);
+				m.pointer_texcoord[1] = model->surfmesh.data_texcoordtexture2f;
+				R_Mesh_TextureState(&m);
 				if (lightmode == 2)
 				{
 					for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 					{
 						surface = texturesurfacelist[texturesurfaceindex];
-						R_Mesh_TexCoordPointer(0, 2, model->surfmesh.data_texcoordlightmap2f);
-						R_Mesh_TexCoordPointer(1, 2, model->surfmesh.data_texcoordtexture2f);
 						R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
 						RSurf_DrawLightmap(surface, layercolor[0], layercolor[1], layercolor[2], layercolor[3], 2, applycolor, applyfog);
 					}
@@ -2890,8 +2855,6 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 					for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 					{
 						surface = texturesurfacelist[texturesurfaceindex];
-						R_Mesh_TexCoordPointer(0, 2, model->surfmesh.data_texcoordlightmap2f);
-						R_Mesh_TexCoordPointer(1, 2, model->surfmesh.data_texcoordtexture2f);
 						if (surface->lightmaptexture)
 						{
 							R_Mesh_TexBind(0, R_GetTexture(surface->lightmaptexture));
@@ -2909,16 +2872,14 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				memset(&m, 0, sizeof(m));
 				m.tex[0] = R_GetTexture(layer->texture);
 				m.texmatrix[0] = layer->texmatrix;
-				m.pointer_color = rsurface_array_color4f;
 				m.texrgbscale[0] = layertexrgbscale;
-				m.pointer_vertex = rsurface_vertex3f;
-				R_Mesh_State(&m);
+				m.pointer_texcoord[0] = model->surfmesh.data_texcoordlightmap2f;
+				R_Mesh_TextureState(&m);
 				if (lightmode == 2)
 				{
 					for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 					{
 						surface = texturesurfacelist[texturesurfaceindex];
-						R_Mesh_TexCoordPointer(0, 2, model->surfmesh.data_texcoordlightmap2f);
 						R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
 						RSurf_DrawLightmap(surface, 1, 1, 1, 1, 2, false, false);
 					}
@@ -2928,7 +2889,6 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 					for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 					{
 						surface = texturesurfacelist[texturesurfaceindex];
-						R_Mesh_TexCoordPointer(0, 2, model->surfmesh.data_texcoordlightmap2f);
 						if (surface->lightmaptexture)
 						{
 							R_Mesh_TexBind(0, R_GetTexture(surface->lightmaptexture));
@@ -2941,18 +2901,17 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 						}
 					}
 				}
+				GL_LockArrays(0, 0);
 				GL_BlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
 				memset(&m, 0, sizeof(m));
 				m.tex[0] = R_GetTexture(layer->texture);
 				m.texmatrix[0] = layer->texmatrix;
-				m.pointer_color = rsurface_array_color4f;
 				m.texrgbscale[0] = layertexrgbscale;
-				m.pointer_vertex = rsurface_vertex3f;
-				R_Mesh_State(&m);
+				m.pointer_texcoord[0] = model->surfmesh.data_texcoordtexture2f;
+				R_Mesh_TextureState(&m);
 				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 				{
 					surface = texturesurfacelist[texturesurfaceindex];
-					R_Mesh_TexCoordPointer(0, 2, model->surfmesh.data_texcoordtexture2f);
 					RSurf_DrawLightmap(surface, layercolor[0], layercolor[1], layercolor[2], layercolor[3], 0, applycolor, false);
 				}
 				break;
@@ -2961,15 +2920,13 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				m.tex[0] = R_GetTexture(layer->texture);
 				m.texmatrix[0] = layer->texmatrix;
 				m.texrgbscale[0] = layertexrgbscale;
-				m.pointer_color = rsurface_array_color4f;
-				m.pointer_vertex = rsurface_vertex3f;
-				R_Mesh_State(&m);
+				m.pointer_texcoord[0] = model->surfmesh.data_texcoordtexture2f;
+				R_Mesh_TextureState(&m);
 				if (lightmode == 2)
 				{
 					for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 					{
 						surface = texturesurfacelist[texturesurfaceindex];
-						R_Mesh_TexCoordPointer(0, 2, model->surfmesh.data_texcoordtexture2f);
 						RSurf_DrawLightmap(surface, layercolor[0], layercolor[1], layercolor[2], layercolor[3], 2, applycolor, applyfog);
 					}
 				}
@@ -2978,7 +2935,6 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 					for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 					{
 						surface = texturesurfacelist[texturesurfaceindex];
-						R_Mesh_TexCoordPointer(0, 2, model->surfmesh.data_texcoordtexture2f);
 						RSurf_DrawLightmap(surface, layercolor[0], layercolor[1], layercolor[2], layercolor[3], 1, applycolor, applyfog);
 					}
 				}
@@ -2987,34 +2943,32 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				memset(&m, 0, sizeof(m));
 				m.tex[0] = R_GetTexture(layer->texture);
 				m.texmatrix[0] = layer->texmatrix;
-				m.pointer_color = rsurface_array_color4f;
 				m.texrgbscale[0] = layertexrgbscale;
-				m.pointer_vertex = rsurface_vertex3f;
-				R_Mesh_State(&m);
+				m.pointer_texcoord[0] = model->surfmesh.data_texcoordtexture2f;
+				R_Mesh_TextureState(&m);
 				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 				{
 					surface = texturesurfacelist[texturesurfaceindex];
-					R_Mesh_TexCoordPointer(0, 2, model->surfmesh.data_texcoordtexture2f);
 					RSurf_DrawLightmap(surface, layercolor[0], layercolor[1], layercolor[2], layercolor[3], 0, applycolor, applyfog);
 				}
 				break;
 			case TEXTURELAYERTYPE_FOG:
-				memset(&m, 0, sizeof(m));
+				R_Mesh_ColorPointer(rsurface_array_color4f);
 				if (layer->texture)
 				{
+					memset(&m, 0, sizeof(m));
 					m.tex[0] = R_GetTexture(layer->texture);
 					m.texmatrix[0] = layer->texmatrix;
+					m.pointer_texcoord[0] = model->surfmesh.data_texcoordtexture2f;
+					R_Mesh_TextureState(&m);
 				}
-				m.pointer_vertex = rsurface_vertex3f;
-				R_Mesh_State(&m);
+				else
+					R_Mesh_ResetTextureState();
 				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 				{
 					int i;
 					float f, *v, *c;
 					surface = texturesurfacelist[texturesurfaceindex];
-					if (layer->texture)
-						R_Mesh_TexCoordPointer(0, 2, model->surfmesh.data_texcoordtexture2f);
-					R_Mesh_ColorPointer(rsurface_array_color4f);
 					for (i = 0, v = (rsurface_vertex3f + 3 * surface->num_firstvertex), c = (rsurface_array_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, v += 3, c += 4)
 					{
 						f = VERTEXFOGTABLE(VectorDistance(v, modelorg));
@@ -3029,25 +2983,27 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			default:
 				Con_Printf("R_DrawTextureSurfaceList: unknown layer type %i\n", layer->type);
 			}
+			GL_LockArrays(0, 0);
 			// if trying to do overbright on first pass of an opaque surface
 			// when combine is not supported, brighten as a post process
 			if (layertexrgbscale > 1 && !gl_combine.integer && layer->depthmask)
 			{
 				int scale;
 				GL_BlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
+				R_Mesh_ColorPointer(NULL);
 				GL_Color(1, 1, 1, 1);
-				memset(&m, 0, sizeof(m));
-				m.pointer_vertex = rsurface_vertex3f;
-				R_Mesh_State(&m);
+				R_Mesh_ResetTextureState();
 				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 				{
 					surface = texturesurfacelist[texturesurfaceindex];
 					for (scale = 1;scale < layertexrgbscale;scale <<= 1)
 						RSurf_Draw(surface);
 				}
+				GL_LockArrays(0, 0);
 			}
 		}
 	}
+	GL_LockArrays(0, 0);
 	if ((texture->textureflags & Q3TEXTUREFLAG_TWOSIDED) || (ent->flags & RENDER_NOCULLFACE))
 		qglEnable(GL_CULL_FACE);
 }
@@ -3207,6 +3163,8 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 		msurface_t *surface;
 		q3mbrush_t *brush;
 		R_Mesh_Matrix(&ent->matrix);
+		R_Mesh_ColorPointer(NULL);
+		R_Mesh_ResetTextureState();
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 		GL_DepthMask(false);
 		GL_DepthTest(!r_showdisabledepthtest.integer);
@@ -3224,15 +3182,14 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 	{
 		int k, l;
 		const int *elements;
-		rmeshstate_t m;
 		vec3_t v;
 		GL_DepthTest(true);
 		GL_DepthMask(true);
 		if (r_showdisabledepthtest.integer)
 			qglDepthFunc(GL_ALWAYS);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
-		memset(&m, 0, sizeof(m));
-		R_Mesh_State(&m);
+		R_Mesh_ColorPointer(NULL);
+		R_Mesh_ResetTextureState();
 		for (i = 0, j = model->firstmodelsurface, surface = model->data_surfaces + j;i < model->nummodelsurfaces;i++, j++, surface++)
 		{
 			if (ent == r_refdef.worldentity && !r_worldsurfacevisible[j])

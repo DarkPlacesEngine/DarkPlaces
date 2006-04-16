@@ -2004,11 +2004,12 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, int surfacen
 
 	R_Mesh_Matrix(&identitymatrix);
 
+	R_Mesh_VertexPointer(particle_vertex3f);
+	R_Mesh_ColorPointer(NULL);
 	memset(&m, 0, sizeof(m));
 	m.tex[0] = R_GetTexture(tex->texture);
 	m.pointer_texcoord[0] = particle_texcoord2f;
-	m.pointer_vertex = particle_vertex3f;
-	R_Mesh_State(&m);
+	R_Mesh_TextureState(&m);
 
 	GL_Color(cr, cg, cb, ca);
 

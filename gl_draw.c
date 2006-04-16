@@ -529,7 +529,6 @@ void DrawQ_String_Real(float x, float y, const char *string, int maxlen, float w
 	int i, num;
 	float *av, *at;
 	int batchcount;
-	rmeshstate_t m;
 	float vertex3f[QUADELEMENTS_MAXQUADS*4*3];
 	float texcoord2f[QUADELEMENTS_MAXQUADS*4*2];
 
@@ -556,12 +555,11 @@ void DrawQ_String_Real(float x, float y, const char *string, int maxlen, float w
 
 	GL_Color(red, green, blue, alpha);
 
-	memset(&m, 0, sizeof(m));
-	m.pointer_vertex = vertex3f;
-	m.pointer_color = NULL;
-	m.pointer_texcoord[0] = texcoord2f;
-	m.tex[0] = R_GetTexture(char_texture);
-	R_Mesh_State(&m);
+	R_Mesh_VertexPointer(vertex3f);
+	R_Mesh_ColorPointer(NULL);
+	R_Mesh_ResetTextureState();
+	R_Mesh_TexBind(0, R_GetTexture(char_texture));
+	R_Mesh_TexCoordPointer(0, 2, texcoord2f);
 
 	at = texcoord2f;
 	av = vertex3f;
@@ -736,7 +734,6 @@ void DrawQ_ColoredString( float x, float y, const char *text, int maxlen, float 
 
 void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height, float s1, float t1, float r1, float g1, float b1, float a1, float s2, float t2, float r2, float g2, float b2, float a2, float s3, float t3, float r3, float g3, float b3, float a3, float s4, float t4, float r4, float g4, float b4, float a4, int flags)
 {
-	rmeshstate_t m;
 	float floats[36];
 
 	if (!r_refdef.draw2dstage)
@@ -757,23 +754,22 @@ void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height
 	else
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	memset(&m, 0, sizeof(m));
-	m.pointer_vertex = floats;
-	m.pointer_color = floats + 20;
+	R_Mesh_VertexPointer(floats);
+	R_Mesh_ColorPointer(floats + 20);
+	R_Mesh_ResetTextureState();
 	if (pic)
 	{
 		if (width == 0)
 			width = pic->width;
 		if (height == 0)
 			height = pic->height;
-		m.tex[0] = R_GetTexture(pic->tex);
-		m.pointer_texcoord[0] = floats + 12;
+		R_Mesh_TexBind(0, R_GetTexture(pic->tex));
+		R_Mesh_TexCoordPointer(0, 2, floats + 12);
 		floats[12] = s1;floats[13] = t1;
 		floats[14] = s2;floats[15] = t2;
 		floats[16] = s4;floats[17] = t4;
 		floats[18] = s3;floats[19] = t3;
 	}
-	R_Mesh_State(&m);
 
 	floats[2] = floats[5] = floats[8] = floats[11] = 0;
 	floats[0] = floats[9] = x;
@@ -790,8 +786,6 @@ void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height
 
 void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags)
 {
-	rmeshstate_t m;
-
 	if (!r_refdef.draw2dstage)
 	{
 		Con_Printf("DrawQ_Mesh: not in 2d rendering stage!\n");
@@ -810,13 +804,11 @@ void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags)
 	else
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	memset(&m, 0, sizeof(m));
-	m.pointer_vertex = mesh->data_vertex3f;
-	m.pointer_color = mesh->data_color4f;
-	m.tex[0] = R_GetTexture(mesh->texture);
-	if (m.tex[0])
-		m.pointer_texcoord[0] = mesh->data_texcoord2f;
-	R_Mesh_State(&m);
+	R_Mesh_VertexPointer(mesh->data_vertex3f);
+	R_Mesh_ColorPointer(mesh->data_color4f);
+	R_Mesh_ResetTextureState();
+	R_Mesh_TexBind(0, R_GetTexture(mesh->texture));
+	R_Mesh_TexCoordPointer(0, 2, mesh->data_texcoord2f);
 
 	GL_LockArrays(0, mesh->num_vertices);
 	R_Mesh_Draw(0, mesh->num_vertices, mesh->num_triangles, mesh->data_element3i);
@@ -937,14 +929,13 @@ void DrawQ_Finish(void)
 static float blendvertex3f[9] = {-5000, -5000, 10, 10000, -5000, 10, -5000, 10000, 10};
 void R_DrawGamma(void)
 {
-	rmeshstate_t m;
 	float c[4];
 	if (!vid_usinghwgamma)
 	{
 		// all the blends ignore depth
-		memset(&m, 0, sizeof(m));
-		m.pointer_vertex = blendvertex3f;
-		R_Mesh_State(&m);
+		R_Mesh_VertexPointer(blendvertex3f);
+		R_Mesh_ColorPointer(NULL);
+		R_Mesh_ResetTextureState();
 		GL_DepthMask(true);
 		GL_DepthTest(false);
 		if (v_color_enable.integer)

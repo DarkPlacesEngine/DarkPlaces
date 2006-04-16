@@ -342,7 +342,6 @@ static void R_DrawPortal_Callback(const entity_render_t *ent, int surfacenumber,
 	const mportal_t *portal = (mportal_t *)ent;
 	int i, numpoints;
 	float *v;
-	rmeshstate_t m;
 	float vertex3f[POLYGONELEMENTS_MAXPOINTS*3];
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	GL_DepthMask(false);
@@ -352,9 +351,9 @@ static void R_DrawPortal_Callback(const entity_render_t *ent, int surfacenumber,
 
 	numpoints = min(portal->numpoints, POLYGONELEMENTS_MAXPOINTS);
 
-	memset(&m, 0, sizeof(m));
-	m.pointer_vertex = vertex3f;
-	R_Mesh_State(&m);
+	R_Mesh_VertexPointer(vertex3f);
+	R_Mesh_ColorPointer(NULL);
+	R_Mesh_ResetTextureState();
 
 	i = surfacenumber;
 	GL_Color(((i & 0x0007) >> 0) * (1.0f / 7.0f),
@@ -768,7 +767,7 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 				texture = t->currentframe;
 				f = (texture->currentmaterialflags & (MATERIALFLAG_NODRAW | MATERIALFLAG_TRANSPARENT | MATERIALFLAG_WALL)) == MATERIALFLAG_WALL;
 			}
-			if (!f && surface->num_triangles)
+			if (f && surface->num_triangles)
 				surfacelist[numsurfacelist++] = surface;
 		}
 		if (numsurfacelist)
