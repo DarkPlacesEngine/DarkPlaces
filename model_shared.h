@@ -447,9 +447,10 @@ typedef struct model_brushq3_s
 	int num_models;
 	q3dmodel_t *data_models;
 
-	// freed after loading!
+	// used only during loading - freed after loading!
 	int num_vertices;
 	float *data_vertex3f;
+	float *data_normal3f;
 	float *data_texcoordtexture2f;
 	float *data_texcoordlightmap2f;
 	float *data_color4f;

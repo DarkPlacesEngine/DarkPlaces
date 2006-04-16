@@ -123,7 +123,7 @@
 0 feature darkplaces protocol: add DP_SENSITIVITYSCALE extension which scales sensitivity on client like viewzoom does, but without affecting fov, note if this is non-zero it overrides viewzoom sensitivity entirely, it does not scale it (Urre)
 0 feature darkplaces protocol: add DP_TE_BUBBLES to make a burst of bubbles underwater (Supa, shadowalker)
 0 feature darkplaces protocol: add DP_WEAPONSKIN extension which would add a .float weaponskin field (protoplasmatic, Kazashi)
-0 feature darkplaces protocol: add EF_NOLERP effect for mods to use to prevent interpolation across teleports (Kinn)
+0 feature darkplaces protocol: add EF_NOLERP effect for mods to use to prevent interpolation across teleports (Kinn, CuBe0wL)
 0 feature darkplaces protocol: add TE_LASER effect with values Entity owner Vector start Vector end Byte palettecolor Byte startalpha Byte endalpha Byte beam width (in quake units) Byte lifetime (0-255 for 0-1 seconds), skin index (looking up a gfx/particles/beam%03i.tga), it fades from startalpha to endalpha over time (Wazat, Vermeulen)
 0 feature darkplaces protocol: add a new TE_ explosion effect with RGB color choice for particle color and another choice for light color (VorteX)
 0 feature darkplaces protocol: add an EF_BULLETTRACER trail effect which can be used to make an invisible entity into a tracer, a bright streak leaving a faint smoke trail (Carni)
