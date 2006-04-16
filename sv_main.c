@@ -673,8 +673,9 @@ qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, int 
 	}
 	else
 	{
-		VectorCopy(cs->origin, cullmins);
-		VectorCopy(cs->origin, cullmaxs);
+		// if there is no model (or it could not be loaded), use the physics box
+		VectorAdd(cs->origin, ent->fields.server->mins, cullmins);
+		VectorAdd(cs->origin, ent->fields.server->maxs, cullmaxs);
 	}
 	if (specialvisibilityradius)
 	{
