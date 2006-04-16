@@ -247,7 +247,7 @@ extern rtexture_t *r_texture_notexture;
 extern rtexture_t *r_texture_whitecube;
 extern rtexture_t *r_texture_normalizationcube;
 extern rtexture_t *r_texture_fogattenuation;
-extern rtexture_t *r_texture_fogintensity;
+//extern rtexture_t *r_texture_fogintensity;
 
 void R_TimeReport(char *name);
 
