@@ -82,43 +82,41 @@ void Mod_Alias_GetMesh_Vertex3f(const model_t *model, const frameblend_t *frameb
 			out[2] += v->origin[0] * matrix[8] + v->origin[1] * matrix[9] + v->origin[2] * matrix[10] + v->origin[3] * matrix[11];
 		}
 	}
+	else if (!model->surfmesh.data_morphvertex3f)
+		Host_Error("model %s has no skeletal or vertex morph animation data", model->name);
 	else
 	{
-		int i, vertcount;
-		float lerp1, lerp2, lerp3, lerp4;
-		const float *vertsbase, *verts1, *verts2, *verts3, *verts4;
 		// vertex morph
-		if (!model->surfmesh.data_morphvertex3f)
-			Host_Error("model %s has no skeletal or vertex morph animation data", model->name);
-		vertsbase = model->surfmesh.data_morphvertex3f;
-		vertcount = model->surfmesh.num_vertices;
-		verts1 = vertsbase + frameblend[0].frame * vertcount * 3;
-		lerp1 = frameblend[0].lerp;
+		int numverts = model->surfmesh.num_vertices;
+		const float *vertsbase = model->surfmesh.data_morphvertex3f;
+		const float *verts1 = vertsbase + numverts * 3 * frameblend[0].frame;
 		if (frameblend[1].lerp)
 		{
-			verts2 = vertsbase + frameblend[1].frame * vertcount * 3;
-			lerp2 = frameblend[1].lerp;
+			int i;
+			float lerp1 = frameblend[0].lerp;
+			const float *verts2 = vertsbase + numverts * 3 * frameblend[1].frame;
+			float lerp2 = frameblend[1].lerp;
 			if (frameblend[2].lerp)
 			{
-				verts3 = vertsbase + frameblend[2].frame * vertcount * 3;
-				lerp3 = frameblend[2].lerp;
+				const float *verts3 = vertsbase + numverts * 3 * frameblend[2].frame;
+				float lerp3 = frameblend[2].lerp;
 				if (frameblend[3].lerp)
 				{
-					verts4 = vertsbase + frameblend[3].frame * vertcount * 3;
-					lerp4 = frameblend[3].lerp;
-					for (i = 0;i < vertcount * 3;i++)
-						VectorMAMAMAM(lerp1, verts1 + i, lerp2, verts2 + i, lerp3, verts3 + i, lerp4, verts4 + i, out3f + i);
+					const float *verts4 = vertsbase + numverts * 3 * frameblend[3].frame;
+					float lerp4 = frameblend[3].lerp;
+					for (i = 0;i < numverts * 3;i++)
+						out3f[i] = lerp1 * verts1[i] + lerp2 * verts2[i] + lerp3 * verts3[i] + lerp4 * verts4[i];
 				}
 				else
-					for (i = 0;i < vertcount * 3;i++)
-						VectorMAMAM(lerp1, verts1 + i, lerp2, verts2 + i, lerp3, verts3 + i, out3f + i);
+					for (i = 0;i < numverts * 3;i++)
+						out3f[i] = lerp1 * verts1[i] + lerp2 * verts2[i] + lerp3 * verts3[i];
 			}
 			else
-				for (i = 0;i < vertcount * 3;i++)
-					VectorMAM(lerp1, verts1 + i, lerp2, verts2 + i, out3f + i);
+				for (i = 0;i < numverts * 3;i++)
+					out3f[i] = lerp1 * verts1[i] + lerp2 * verts2[i];
 		}
 		else
-			memcpy(out3f, verts1, vertcount * sizeof(float[3]));
+			memcpy(out3f, verts1, numverts * 3 * sizeof(float));
 	}
 }
 
@@ -1136,11 +1134,16 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 			loadmodel->surfmesh.data_texcoordtexture2f[(j + surface->num_firstvertex) * 2 + 0] = LittleFloat(((float *)((unsigned char *)pinmesh + LittleLong(pinmesh->lump_texcoords)))[j * 2 + 0]);
 			loadmodel->surfmesh.data_texcoordtexture2f[(j + surface->num_firstvertex) * 2 + 1] = LittleFloat(((float *)((unsigned char *)pinmesh + LittleLong(pinmesh->lump_texcoords)))[j * 2 + 1]);
 		}
-		for (j = 0;j < surface->num_vertices * loadmodel->numframes;j++)
+		for (j = 0;j < loadmodel->numframes;j++)
 		{
-			loadmodel->surfmesh.data_morphvertex3f[(j + surface->num_firstvertex) * 3 + 0] = LittleShort(((short *)((unsigned char *)pinmesh + LittleLong(pinmesh->lump_framevertices)))[j * 4 + 0]) * (1.0f / 64.0f);
-			loadmodel->surfmesh.data_morphvertex3f[(j + surface->num_firstvertex) * 3 + 1] = LittleShort(((short *)((unsigned char *)pinmesh + LittleLong(pinmesh->lump_framevertices)))[j * 4 + 1]) * (1.0f / 64.0f);
-			loadmodel->surfmesh.data_morphvertex3f[(j + surface->num_firstvertex) * 3 + 2] = LittleShort(((short *)((unsigned char *)pinmesh + LittleLong(pinmesh->lump_framevertices)))[j * 4 + 2]) * (1.0f / 64.0f);
+			const short *in4s = (short *)((unsigned char *)pinmesh + LittleLong(pinmesh->lump_framevertices)) + j * surface->num_vertices * 4;
+			float *out3f = loadmodel->surfmesh.data_morphvertex3f + 3 * (j * loadmodel->surfmesh.num_vertices + surface->num_firstvertex);
+			for (k = 0;k < surface->num_vertices;k++, in4s += 4, out3f += 3)
+			{
+				out3f[0] = LittleShort(in4s[0]) * (1.0f / 64.0f);
+				out3f[1] = LittleShort(in4s[1]) * (1.0f / 64.0f);
+				out3f[2] = LittleShort(in4s[2]) * (1.0f / 64.0f);
+			}
 		}
 
 		if (LittleLong(pinmesh->num_shaders) >= 1)
