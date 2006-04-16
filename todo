@@ -182,6 +182,7 @@
 0 feature dpmod: make run animation play back according to movement speed (along v_forward), instead of just playing a continuous loop based on time (Urre)
 0 feature dpmod: make spawning use viewzoom to start zoomed out 2.0 and then zoom in to 1.0 (Urre)
 0 feature dpmod: make teleport leave an EF_ADDITIVE clone of the player which fades out
+0 feature dpmod: merge alieninfestation speedmod into dpmod, especially the map
 0 feature dpmod: try making ball lightning mortar shamblers (scar3crow)
 0 feature dpmod: try not adding gravity when onground to see if it gets rid of ramp sliding (Midgar)
 0 feature dpmod: update stats to count monster kills in dm 7 and such (Sajt)
