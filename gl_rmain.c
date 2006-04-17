@@ -845,7 +845,7 @@ void R_GLSL_Restart_f(void)
 	memset(r_glsl_permutations, 0, sizeof(r_glsl_permutations));
 }
 
-void R_SetupSurfaceShader(const entity_render_t *ent, const texture_t *texture, const vec3_t modelorg, const vec3_t lightcolorbase, qboolean modellighting)
+void R_SetupSurfaceShader(const entity_render_t *ent, const texture_t *texture, rtexture_t *lightmaptexture, const vec3_t modelorg, const vec3_t lightcolorbase, qboolean modellighting)
 {
 	// select a permutation of the lighting shader appropriate to this
 	// combination of texture, entity, light source, and fogging, only use the
@@ -865,7 +865,7 @@ void R_SetupSurfaceShader(const entity_render_t *ent, const texture_t *texture, 
 	{
 		if (modellighting)
 			permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTION;
-		else if (r_glsl_deluxemapping.integer >= 1 && r_refdef.worldmodel && r_refdef.worldmodel->brushq3.deluxemapping)
+		else if (r_glsl_deluxemapping.integer >= 1 && r_refdef.worldmodel && r_refdef.worldmodel->brushq3.deluxemapping && lightmaptexture)
 		{
 			if (r_refdef.worldmodel->brushq3.deluxemapping_modelspace)
 				permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP_MODELSPACE;
@@ -2203,7 +2203,7 @@ void R_Mesh_AddBrushMeshFromPlanes(rmesh_t *mesh, int numplanes, mplane_t *plane
 	}
 }
 
-static void R_DrawCollisionBrush(colbrushf_t *brush)
+static void R_DrawCollisionBrush(const colbrushf_t *brush)
 {
 	int i;
 	R_Mesh_VertexPointer(brush->points->v);
@@ -2214,7 +2214,7 @@ static void R_DrawCollisionBrush(colbrushf_t *brush)
 	GL_LockArrays(0, 0);
 }
 
-static void R_DrawCollisionSurface(entity_render_t *ent, msurface_t *surface)
+static void R_DrawCollisionSurface(const entity_render_t *ent, const msurface_t *surface)
 {
 	int i;
 	if (!surface->num_collisiontriangles)
@@ -2665,11 +2665,10 @@ static void RSurf_DrawLightmap(const msurface_t *surface, float r, float g, floa
 	RSurf_Draw(surface);
 }
 
-static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *texture, int texturenumsurfaces, msurface_t **texturesurfacelist, const vec3_t modelorg)
+static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *texture, rtexture_t *lightmaptexture, int texturenumsurfaces, msurface_t **texturesurfacelist, const vec3_t modelorg)
 {
 	int texturesurfaceindex;
 	int lightmode;
-	const msurface_t *surface;
 	model_t *model = ent->model;
 	qboolean applycolor;
 	qboolean applyfog;
@@ -2692,9 +2691,9 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 		RSurf_PrepareVerticesForBatch(ent, texture, modelorg, false, false, texturenumsurfaces, texturesurfacelist);
 		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
+			const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 			int k = (int)(((size_t)surface) / sizeof(msurface_t));
 			GL_Color((k & 15) * (1.0f / 16.0f), ((k >> 4) & 15) * (1.0f / 16.0f), ((k >> 8) & 15) * (1.0f / 16.0f), 0.2f);
-			surface = texturesurfacelist[texturesurfaceindex];
 			RSurf_Draw(surface);
 		}
 	}
@@ -2738,7 +2737,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				RSurf_PrepareVerticesForBatch(ent, texture, modelorg, false, false, texturenumsurfaces, texturesurfacelist);
 				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 				{
-					surface = texturesurfacelist[texturesurfaceindex];
+					const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 					RSurf_Draw(surface);
 				}
 				if (skyrendermasked)
@@ -2767,7 +2766,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 		R_Mesh_ColorPointer(NULL);
 		R_Mesh_ResetTextureState();
 		GL_Color(ent->colormod[0], ent->colormod[1], ent->colormod[2], texture->currentalpha);
-		R_SetupSurfaceShader(ent, texture, modelorg, vec3_origin, lightmode == 2);
+		R_SetupSurfaceShader(ent, texture, lightmaptexture, modelorg, vec3_origin, lightmode == 2);
 		if (!r_glsl_permutation)
 			return;
 		RSurf_PrepareVerticesForBatch(ent, texture, modelorg, true, true, texturenumsurfaces, texturesurfacelist);
@@ -2775,36 +2774,28 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 		R_Mesh_TexCoordPointer(1, 3, rsurface_svector3f);
 		R_Mesh_TexCoordPointer(2, 3, rsurface_tvector3f);
 		R_Mesh_TexCoordPointer(3, 3, rsurface_normal3f);
-		if (lightmode == 2)
-		{
-			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
-			{
-				surface = texturesurfacelist[texturesurfaceindex];
-				RSurf_Draw(surface);
-			}
-		}
-		else
+		if (lightmode != 2)
 		{
 			R_Mesh_TexCoordPointer(4, 2, model->surfmesh.data_texcoordlightmap2f);
-			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+			if (lightmaptexture)
 			{
-				surface = texturesurfacelist[texturesurfaceindex];
-				if (surface->lightmaptexture)
-				{
-					R_Mesh_TexBind(7, R_GetTexture(surface->lightmaptexture));
-					if (r_glsl_permutation->loc_Texture_Deluxemap >= 0)
-						R_Mesh_TexBind(8, R_GetTexture(surface->deluxemaptexture));
-					R_Mesh_ColorPointer(NULL);
-				}
-				else
-				{
-					R_Mesh_TexBind(7, R_GetTexture(r_texture_white));
-					if (r_glsl_permutation->loc_Texture_Deluxemap >= 0)
-						R_Mesh_TexBind(8, R_GetTexture(r_texture_blanknormalmap));
-					R_Mesh_ColorPointer(model->surfmesh.data_lightmapcolor4f);
-				}
-				RSurf_Draw(surface);
+				R_Mesh_TexBind(7, R_GetTexture(lightmaptexture));
+				if (r_glsl_permutation->loc_Texture_Deluxemap >= 0)
+					R_Mesh_TexBind(8, R_GetTexture(texturesurfacelist[0]->deluxemaptexture));
+				R_Mesh_ColorPointer(NULL);
 			}
+			else
+			{
+				R_Mesh_TexBind(7, R_GetTexture(r_texture_white));
+				if (r_glsl_permutation->loc_Texture_Deluxemap >= 0)
+					R_Mesh_TexBind(8, R_GetTexture(r_texture_blanknormalmap));
+				R_Mesh_ColorPointer(model->surfmesh.data_lightmapcolor4f);
+			}
+		}
+		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+		{
+			const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+			RSurf_Draw(surface);
 		}
 		qglUseProgramObjectARB(0);
 	}
@@ -2853,26 +2844,27 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				{
 					for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 					{
-						surface = texturesurfacelist[texturesurfaceindex];
+						const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 						R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
 						RSurf_DrawLightmap(surface, layercolor[0], layercolor[1], layercolor[2], layercolor[3], 2, applycolor, applyfog);
 					}
 				}
-				else
+				else if (lightmaptexture)
 				{
+					R_Mesh_TexBind(0, R_GetTexture(lightmaptexture));
 					for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 					{
-						surface = texturesurfacelist[texturesurfaceindex];
-						if (surface->lightmaptexture)
-						{
-							R_Mesh_TexBind(0, R_GetTexture(surface->lightmaptexture));
-							RSurf_DrawLightmap(surface, layercolor[0], layercolor[1], layercolor[2], layercolor[3], 0, applycolor, applyfog);
-						}
-						else
-						{
-							R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
-							RSurf_DrawLightmap(surface, layercolor[0], layercolor[1], layercolor[2], layercolor[3], 1, applycolor, applyfog);
-						}
+						const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+						RSurf_DrawLightmap(surface, layercolor[0], layercolor[1], layercolor[2], layercolor[3], 0, applycolor, applyfog);
+					}
+				}
+				else
+				{
+					R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
+					for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+					{
+						const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+						RSurf_DrawLightmap(surface, layercolor[0], layercolor[1], layercolor[2], layercolor[3], 1, applycolor, applyfog);
 					}
 				}
 				break;
@@ -2887,26 +2879,27 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				{
 					for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 					{
-						surface = texturesurfacelist[texturesurfaceindex];
+						const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 						R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
 						RSurf_DrawLightmap(surface, 1, 1, 1, 1, 2, false, false);
 					}
 				}
-				else
+				else if (lightmaptexture)
 				{
+					R_Mesh_TexBind(0, R_GetTexture(lightmaptexture));
 					for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 					{
-						surface = texturesurfacelist[texturesurfaceindex];
-						if (surface->lightmaptexture)
-						{
-							R_Mesh_TexBind(0, R_GetTexture(surface->lightmaptexture));
-							RSurf_DrawLightmap(surface, 1, 1, 1, 1, 0, false, false);
-						}
-						else
-						{
-							R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
-							RSurf_DrawLightmap(surface, 1, 1, 1, 1, 1, false, false);
-						}
+						const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+						RSurf_DrawLightmap(surface, 1, 1, 1, 1, 0, false, false);
+					}
+				}
+				else
+				{
+					R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
+					for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+					{
+						const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+						RSurf_DrawLightmap(surface, 1, 1, 1, 1, 1, false, false);
 					}
 				}
 				GL_LockArrays(0, 0);
@@ -2919,7 +2912,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				R_Mesh_TextureState(&m);
 				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 				{
-					surface = texturesurfacelist[texturesurfaceindex];
+					const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 					RSurf_DrawLightmap(surface, layercolor[0], layercolor[1], layercolor[2], layercolor[3], 0, applycolor, false);
 				}
 				break;
@@ -2934,7 +2927,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				{
 					for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 					{
-						surface = texturesurfacelist[texturesurfaceindex];
+						const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 						RSurf_DrawLightmap(surface, layercolor[0], layercolor[1], layercolor[2], layercolor[3], 2, applycolor, applyfog);
 					}
 				}
@@ -2942,7 +2935,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				{
 					for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 					{
-						surface = texturesurfacelist[texturesurfaceindex];
+						const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 						RSurf_DrawLightmap(surface, layercolor[0], layercolor[1], layercolor[2], layercolor[3], 1, applycolor, applyfog);
 					}
 				}
@@ -2956,7 +2949,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				R_Mesh_TextureState(&m);
 				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 				{
-					surface = texturesurfacelist[texturesurfaceindex];
+					const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 					RSurf_DrawLightmap(surface, layercolor[0], layercolor[1], layercolor[2], layercolor[3], 0, applycolor, applyfog);
 				}
 				break;
@@ -2976,7 +2969,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				{
 					int i;
 					float f, *v, *c;
-					surface = texturesurfacelist[texturesurfaceindex];
+					const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 					for (i = 0, v = (rsurface_vertex3f + 3 * surface->num_firstvertex), c = (rsurface_array_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, v += 3, c += 4)
 					{
 						f = VERTEXFOGTABLE(VectorDistance(v, modelorg));
@@ -3003,7 +2996,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				R_Mesh_ResetTextureState();
 				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 				{
-					surface = texturesurfacelist[texturesurfaceindex];
+					const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 					for (scale = 1;scale < layertexrgbscale;scale <<= 1)
 						RSurf_Draw(surface);
 				}
@@ -3029,13 +3022,12 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, int su
 
 	R_Mesh_Matrix(&ent->matrix);
 	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
-	R_DrawTextureSurfaceList(ent, texture->currentframe, 1, &surface, modelorg);
+	R_DrawTextureSurfaceList(ent, texture->currentframe, surface->lightmaptexture, 1, &surface, modelorg);
 }
 
-void R_QueueTextureSurfaceList(entity_render_t *ent, texture_t *texture, int texturenumsurfaces, msurface_t **texturesurfacelist, const vec3_t modelorg)
+void R_QueueTextureSurfaceList(entity_render_t *ent, texture_t *texture, rtexture_t *lightmaptexture, int texturenumsurfaces, msurface_t **texturesurfacelist, const vec3_t modelorg)
 {
 	int texturesurfaceindex;
-	const msurface_t *surface;
 	vec3_t tempcenter, center;
 	if (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT)
 	{
@@ -3044,7 +3036,7 @@ void R_QueueTextureSurfaceList(entity_render_t *ent, texture_t *texture, int tex
 		{
 			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 			{
-				surface = texturesurfacelist[texturesurfaceindex];
+				const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 				tempcenter[0] = (surface->mins[0] + surface->maxs[0]) * 0.5f;
 				tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
 				tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
@@ -3054,7 +3046,7 @@ void R_QueueTextureSurfaceList(entity_render_t *ent, texture_t *texture, int tex
 		}
 	}
 	else
-		R_DrawTextureSurfaceList(ent, texture, texturenumsurfaces, texturesurfacelist, modelorg);
+		R_DrawTextureSurfaceList(ent, texture, lightmaptexture, texturenumsurfaces, texturesurfacelist, modelorg);
 }
 
 extern void R_BuildLightMap(const entity_render_t *ent, msurface_t *surface);
@@ -3062,8 +3054,8 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 {
 	int i, j, f, flagsmask;
 	int counttriangles = 0;
-	msurface_t *surface, **surfacechain;
 	texture_t *t, *texture;
+	rtexture_t *lmap;
 	model_t *model = ent->model;
 	vec3_t modelorg;
 	const int maxsurfacelist = 1024;
@@ -3077,6 +3069,7 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 	// update light styles
 	if (!skysurfaces && model->brushq1.light_styleupdatechains)
 	{
+		msurface_t *surface, **surfacechain;
 		for (i = 0;i < model->brushq1.light_styles;i++)
 		{
 			if (model->brushq1.light_stylevalue[i] != r_refdef.lightstylevalue[model->brushq1.light_style[i]])
@@ -3093,22 +3086,25 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 	flagsmask = skysurfaces ? MATERIALFLAG_SKY : (MATERIALFLAG_WATER | MATERIALFLAG_WALL);
 	f = 0;
 	t = NULL;
+	lmap = NULL;
 	texture = NULL;
 	numsurfacelist = 0;
 	if (ent == r_refdef.worldentity)
 	{
+		msurface_t *surface;
 		for (i = 0, j = model->firstmodelsurface, surface = model->data_surfaces + j;i < model->nummodelsurfaces;i++, j++, surface++)
 		{
 			if (!r_worldsurfacevisible[j])
 				continue;
-			if (t != surface->texture)
+			if (t != surface->texture || lmap != surface->lightmaptexture)
 			{
 				if (numsurfacelist)
 				{
-					R_QueueTextureSurfaceList(ent, texture, numsurfacelist, surfacelist, modelorg);
+					R_QueueTextureSurfaceList(ent, texture, lmap, numsurfacelist, surfacelist, modelorg);
 					numsurfacelist = 0;
 				}
 				t = surface->texture;
+				lmap = surface->lightmaptexture;
 				texture = t->currentframe;
 				f = texture->currentmaterialflags & flagsmask;
 			}
@@ -3122,7 +3118,7 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 				counttriangles += surface->num_triangles;
 				if (numsurfacelist >= maxsurfacelist)
 				{
-					R_QueueTextureSurfaceList(ent, texture, numsurfacelist, surfacelist, modelorg);
+					R_QueueTextureSurfaceList(ent, texture, lmap, numsurfacelist, surfacelist, modelorg);
 					numsurfacelist = 0;
 				}
 			}
@@ -3130,16 +3126,18 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 	}
 	else
 	{
+		msurface_t *surface;
 		for (i = 0, j = model->firstmodelsurface, surface = model->data_surfaces + j;i < model->nummodelsurfaces;i++, j++, surface++)
 		{
-			if (t != surface->texture)
+			if (t != surface->texture || lmap != surface->lightmaptexture)
 			{
 				if (numsurfacelist)
 				{
-					R_QueueTextureSurfaceList(ent, texture, numsurfacelist, surfacelist, modelorg);
+					R_QueueTextureSurfaceList(ent, texture, lmap, numsurfacelist, surfacelist, modelorg);
 					numsurfacelist = 0;
 				}
 				t = surface->texture;
+				lmap = surface->lightmaptexture;
 				texture = t->currentframe;
 				f = texture->currentmaterialflags & flagsmask;
 			}
@@ -3153,14 +3151,14 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 				counttriangles += surface->num_triangles;
 				if (numsurfacelist >= maxsurfacelist)
 				{
-					R_QueueTextureSurfaceList(ent, texture, numsurfacelist, surfacelist, modelorg);
+					R_QueueTextureSurfaceList(ent, texture, lmap, numsurfacelist, surfacelist, modelorg);
 					numsurfacelist = 0;
 				}
 			}
 		}
 	}
 	if (numsurfacelist)
-		R_QueueTextureSurfaceList(ent, texture, numsurfacelist, surfacelist, modelorg);
+		R_QueueTextureSurfaceList(ent, texture, lmap, numsurfacelist, surfacelist, modelorg);
 	renderstats.entities_triangles += counttriangles;
 	if (gl_support_fragment_shader)
 		qglUseProgramObjectARB(0);
@@ -3168,7 +3166,7 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 	if (r_showcollisionbrushes.integer && model->brush.num_brushes && !skysurfaces)
 	{
 		int i;
-		msurface_t *surface;
+		const msurface_t *surface;
 		q3mbrush_t *brush;
 		R_Mesh_Matrix(&ent->matrix);
 		R_Mesh_ColorPointer(NULL);
@@ -3189,6 +3187,7 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 	if (r_showtris.integer || r_shownormals.integer)
 	{
 		int k, l;
+		msurface_t *surface;
 		const int *elements;
 		vec3_t v;
 		GL_DepthTest(true);

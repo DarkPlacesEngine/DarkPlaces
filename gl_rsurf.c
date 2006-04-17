@@ -724,7 +724,7 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 	int f = 0;
 	float projectdistance = lightradius + model->radius*2 + r_shadow_projectdistance.value;
 	vec3_t modelorg;
-	texture_t *t = NULL, *texture;
+	texture_t *t = NULL, *texture = NULL;
 	const int maxsurfacelist = 1024;
 	int numsurfacelist = 0;
 	msurface_t *surfacelist[1024];
