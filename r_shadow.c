@@ -1253,7 +1253,7 @@ static void R_Shadow_RenderSurfacesLighting_Light_GLSL(const entity_render_t *en
 	int surfacelistindex;
 	model_t *model = ent->model;
 	RSurf_PrepareVerticesForBatch(ent, texture, r_shadow_entityeyeorigin, true, true, numsurfaces, surfacelist);
-	R_SetupSurfaceShader(ent, texture, r_shadow_entityeyeorigin, lightcolorbase, false);
+	R_SetupSurfaceShader(ent, texture, NULL, r_shadow_entityeyeorigin, lightcolorbase, false);
 	R_Mesh_TexCoordPointer(0, 2, model->surfmesh.data_texcoordtexture2f);
 	R_Mesh_TexCoordPointer(1, 3, rsurface_svector3f);
 	R_Mesh_TexCoordPointer(2, 3, rsurface_tvector3f);

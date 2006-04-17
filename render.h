@@ -287,7 +287,7 @@ struct texture_s;
 struct msurface_s;
 void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t);
 void R_UpdateAllTextureInfo(entity_render_t *ent);
-void R_QueueTextureSurfaceList(entity_render_t *ent, struct texture_s *texture, int texturenumsurfaces, msurface_t **texturesurfacelist, const vec3_t modelorg);
+void R_QueueTextureSurfaceList(entity_render_t *ent, texture_t *texture, rtexture_t *lightmaptexture, int texturenumsurfaces, msurface_t **texturesurfacelist, const vec3_t modelorg);
 void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces);
 
 void RSurf_PrepareVerticesForBatch(const entity_render_t *ent, const texture_t *texture, const vec3_t modelorg, qboolean generatenormals, qboolean generatetangents, int texturenumsurfaces, msurface_t **texturesurfacelist);
@@ -346,7 +346,7 @@ extern r_glsl_permutation_t r_glsl_permutations[SHADERPERMUTATION_COUNT];
 extern r_glsl_permutation_t *r_glsl_permutation;
 
 void R_GLSL_CompilePermutation(int permutation);
-void R_SetupSurfaceShader(const entity_render_t *ent, const texture_t *texture, const vec3_t modelorg, const vec3_t lightcolorbase, qboolean modellighting);
+void R_SetupSurfaceShader(const entity_render_t *ent, const texture_t *texture, rtexture_t *lightmaptexture, const vec3_t modelorg, const vec3_t lightcolorbase, qboolean modellighting);
 
 #endif
 
