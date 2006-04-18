@@ -547,7 +547,8 @@ void Host_Main(void)
 	static double time1 = 0;
 	static double time2 = 0;
 	static double time3 = 0;
-	double frameoldtime, framenewtime, frametime, cl_timer, sv_timer;
+	// these are static because of setjmp/longjmp warnings in mingw32 gcc 2.95.3
+	static double frameoldtime, framenewtime, frametime, cl_timer, sv_timer;
 
 	Host_Init();
 
