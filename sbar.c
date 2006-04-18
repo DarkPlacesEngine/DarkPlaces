@@ -916,47 +916,20 @@ void Sbar_ShowFPS(void)
 	if (showfps.integer)
 	{
 		float calc;
-		if (showfps.integer > 1)
+		static double nexttime = 0, lasttime = 0;
+		static double framerate = 0;
+		static int framecount = 0;
+		double newtime;
+		newtime = Sys_DoubleTime();
+		if (newtime >= nexttime)
 		{
-			static double currtime, frametimes[32];
-			double newtime, total;
-			int count, i;
-			static int framecycle = 0;
-
-			newtime = Sys_DoubleTime();
-			frametimes[framecycle] = newtime - currtime;
-			total = 0;
-			count = 0;
-			while(total < 0.2 && count < 32 && frametimes[i = (framecycle - count) & 31])
-			{
-				total += frametimes[i];
-				count++;
-			}
-			framecycle++;
-			framecycle &= 31;
-			if (showfps.integer == 2)
-				calc = (((double)count / total) + 0.5);
-			else // showfps 3, rapid update
-				calc = ((1.0 / (newtime - currtime)) + 0.5);
-			currtime = newtime;
+			framerate = framecount / (newtime - lasttime);
+			lasttime = newtime;
+			nexttime = max(nexttime + 0.1, lasttime - 0.1);
+			framecount = 0;
 		}
-		else
-		{
-			static double nexttime = 0, lasttime = 0;
-			static float framerate = 0;
-			static int framecount = 0;
-			double newtime;
-			newtime = Sys_DoubleTime();
-			if (newtime >= nexttime)
-			{
-				framerate = ((float)framecount / (newtime - lasttime) + 0.5);
-				lasttime = newtime;
-				nexttime = max(nexttime + 1, lasttime - 1);
-				framecount = 0;
-			}
-			framecount++;
-			calc = framerate;
-		}
+		framecount++;
+		calc = framerate;
 
 		if ((red = (calc < 1.0f)))
 			dpsnprintf(fpsstring, sizeof(fpsstring), "%4i spf", (int)(1.0f / calc + 0.5));
