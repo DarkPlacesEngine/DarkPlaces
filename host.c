@@ -544,6 +544,9 @@ Runs all active servers
 static void Host_Init(void);
 void Host_Main(void)
 {
+	static double time1 = 0;
+	static double time2 = 0;
+	static double time3 = 0;
 	double frameoldtime, framenewtime, frametime, cl_timer, sv_timer;
 
 	Host_Init();
@@ -554,9 +557,8 @@ void Host_Main(void)
 	framenewtime = Sys_DoubleTime();
 	for (;;)
 	{
-		static double time1 = 0;
-		static double time2 = 0;
-		static double time3 = 0;
+		if (setjmp(host_abortframe))
+			continue;			// something bad happened, or the server disconnected
 
 		frameoldtime = framenewtime;
 		framenewtime = Sys_DoubleTime();
@@ -572,9 +574,6 @@ void Host_Main(void)
 		// accumulate the new frametime into the timers
 		cl_timer += frametime;
 		sv_timer += frametime;
-
-		if (setjmp(host_abortframe))
-			continue;			// something bad happened, or the server disconnected
 
 		if (slowmo.value < 0)
 			Cvar_SetValue("slowmo", 0);
