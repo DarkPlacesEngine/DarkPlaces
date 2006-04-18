@@ -2492,17 +2492,6 @@ void RSurf_PrepareVerticesForBatch(const entity_render_t *ent, const texture_t *
 		Matrix4x4_Transform(&rsurface_entity->inversematrix, r_viewforward, forward);
 		Matrix4x4_Transform(&rsurface_entity->inversematrix, r_viewright, right);
 		Matrix4x4_Transform(&rsurface_entity->inversematrix, r_viewup, up);
-		if (rsurface_texture->textureflags & Q3TEXTUREFLAG_AUTOSPRITE2)
-		{
-			forward[0] = rsurface_modelorg[0] - center[0];
-			forward[1] = rsurface_modelorg[1] - center[1];
-			forward[2] = 0;
-			VectorNormalize(forward);
-			right[0] = forward[1];
-			right[1] = -forward[0];
-			right[2] = 0;
-			VectorSet(up, 0, 0, 1);
-		}
 		// make deformed versions of only the vertices used by the specified surfaces
 		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
@@ -2515,6 +2504,17 @@ void RSurf_PrepareVerticesForBatch(const entity_render_t *ent, const texture_t *
 				for (i = 0;i < 4;i++)
 					VectorAdd(center, (rsurface_vertex3f + 3 * surface->num_firstvertex) + (j+i) * 3, center);
 				VectorScale(center, 0.25f, center);
+				if (rsurface_texture->textureflags & Q3TEXTUREFLAG_AUTOSPRITE2)
+				{
+					forward[0] = rsurface_modelorg[0] - center[0];
+					forward[1] = rsurface_modelorg[1] - center[1];
+					forward[2] = 0;
+					VectorNormalize(forward);
+					right[0] = forward[1];
+					right[1] = -forward[0];
+					right[2] = 0;
+					VectorSet(up, 0, 0, 1);
+				}
 				// FIXME: calculate vectors from triangle edges instead of using texture vectors as an easy way out?
 				Matrix4x4_FromVectors(&matrix1, (rsurface_normal3f + 3 * surface->num_firstvertex) + j*3, (rsurface_svector3f + 3 * surface->num_firstvertex) + j*3, (rsurface_tvector3f + 3 * surface->num_firstvertex) + j*3, center);
 				Matrix4x4_Invert_Simple(&imatrix1, &matrix1);
