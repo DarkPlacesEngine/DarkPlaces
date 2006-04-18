@@ -2278,9 +2278,9 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 	if (!(ent->flags & RENDER_LIGHT))
 		t->currentmaterialflags |= MATERIALFLAG_FULLBRIGHT;
 	if (ent->effects & EF_ADDITIVE)
-		t->currentmaterialflags |= MATERIALFLAG_ADD | MATERIALFLAG_TRANSPARENT;
+		t->currentmaterialflags |= MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_TRANSPARENT;
 	else if (t->currentalpha < 1)
-		t->currentmaterialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_TRANSPARENT;
+		t->currentmaterialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_TRANSPARENT;
 	if (ent->effects & EF_NODEPTHTEST)
 		t->currentmaterialflags |= MATERIALFLAG_NODEPTHTEST;
 	if (t->currentmaterialflags & MATERIALFLAG_WATER && r_waterscroll.value != 0)
@@ -2319,25 +2319,28 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 			{
 				blendfunc1 = GL_SRC_ALPHA;
 				blendfunc2 = GL_ONE;
-				depthmask = false;
 			}
 			else if (t->currentmaterialflags & MATERIALFLAG_ALPHA)
 			{
 				blendfunc1 = GL_SRC_ALPHA;
 				blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
-				depthmask = false;
+			}
+			else if (t->currentmaterialflags & MATERIALFLAG_CUSTOMBLEND)
+			{
+				blendfunc1 = t->customblendfunc[0];
+				blendfunc2 = t->customblendfunc[1];
 			}
 			else
 			{
 				blendfunc1 = GL_ONE;
 				blendfunc2 = GL_ZERO;
-				depthmask = true;
 			}
+			depthmask = !(t->currentmaterialflags & MATERIALFLAG_BLENDED);
 			if (t->currentmaterialflags & (MATERIALFLAG_WATER | MATERIALFLAG_WALL))
 			{
 				rtexture_t *currentbasetexture;
 				int layerflags = 0;
-				if (fogenabled && (t->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
+				if (fogenabled && (t->currentmaterialflags & MATERIALFLAG_BLENDED))
 					layerflags |= TEXTURELAYERFLAG_FOGDARKEN;
 				currentbasetexture = (VectorLength2(ent->colormap_pantscolor) + VectorLength2(ent->colormap_shirtcolor) < (1.0f / 1048576.0f) && t->skin.merged) ? t->skin.merged : t->skin.base;
 				if (t->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
@@ -2361,7 +2364,7 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 					colorscale *= r_lightmapintensity;
 					if (r_textureunits.integer >= 2 && gl_combine.integer)
 						R_Texture_AddLayer(t, depthmask, blendfunc1, blendfunc2, TEXTURELAYERTYPE_LITTEXTURE_COMBINE, currentbasetexture, &t->currenttexmatrix, ent->colormod[0] * colorscale, ent->colormod[1] * colorscale, ent->colormod[2] * colorscale, t->currentalpha);
-					else if ((t->currentmaterialflags & MATERIALFLAG_TRANSPARENT) == 0)
+					else if ((t->currentmaterialflags & MATERIALFLAG_BLENDED) == 0)
 						R_Texture_AddLayer(t, true, GL_ONE, GL_ZERO, TEXTURELAYERTYPE_LITTEXTURE_MULTIPASS, currentbasetexture, &t->currenttexmatrix, ent->colormod[0] * colorscale * 0.5f, ent->colormod[1] * colorscale * 0.5f, ent->colormod[2] * colorscale * 0.5f, t->currentalpha);
 					else
 						R_Texture_AddLayer(t, depthmask, blendfunc1, blendfunc2, TEXTURELAYERTYPE_LITTEXTURE_VERTEX, currentbasetexture, &t->currenttexmatrix, ent->colormod[0] * colorscale, ent->colormod[1] * colorscale, ent->colormod[2] * colorscale, t->currentalpha);
@@ -2395,7 +2398,7 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 					// were darkened by fog already, and we should not add fog color
 					// (because the background was not darkened, there is no fog color
 					// that was lost behind it).
-					R_Texture_AddLayer(t, false, GL_SRC_ALPHA, (t->currentmaterialflags & MATERIALFLAG_TRANSPARENT) ? GL_ONE : GL_ONE_MINUS_SRC_ALPHA, TEXTURELAYERTYPE_FOG, t->skin.fog, &identitymatrix, fogcolor[0], fogcolor[1], fogcolor[2], t->currentalpha);
+					R_Texture_AddLayer(t, false, GL_SRC_ALPHA, (t->currentmaterialflags & MATERIALFLAG_BLENDED) ? GL_ONE : GL_ONE_MINUS_SRC_ALPHA, TEXTURELAYERTYPE_FOG, t->skin.fog, &identitymatrix, fogcolor[0], fogcolor[1], fogcolor[2], t->currentalpha);
 				}
 			}
 		}
@@ -2748,23 +2751,10 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			}
 		}
 	}
-	else if (r_glsl.integer && gl_support_fragment_shader)
+	else if (texture->currentnumlayers && r_glsl.integer && gl_support_fragment_shader)
 	{
-		if (texture->currentmaterialflags & MATERIALFLAG_ADD)
-		{
-			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-			GL_DepthMask(false);
-		}
-		else if (texture->currentmaterialflags & MATERIALFLAG_ALPHA)
-		{
-			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-			GL_DepthMask(false);
-		}
-		else
-		{
-			GL_BlendFunc(GL_ONE, GL_ZERO);
-			GL_DepthMask(true);
-		}
+		GL_BlendFunc(texture->currentlayers[0].blendfunc1, texture->currentlayers[0].blendfunc2);
+		GL_DepthMask(!(texture->currentmaterialflags & MATERIALFLAG_BLENDED));
 
 		R_Mesh_ColorPointer(NULL);
 		R_Mesh_ResetTextureState();
@@ -2795,11 +2785,15 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				R_Mesh_ColorPointer(model->surfmesh.data_lightmapcolor4f);
 			}
 		}
+		if (texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
+			qglEnable(GL_ALPHA_TEST);
 		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
 			const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 			RSurf_Draw(surface);
 		}
+		if (texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
+			qglDisable(GL_ALPHA_TEST);
 		qglUseProgramObjectARB(0);
 	}
 	else if (texture->currentnumlayers)
@@ -2811,6 +2805,16 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 		{
 			vec4_t layercolor;
 			int layertexrgbscale;
+			if (texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
+			{
+				if (layerindex == 0)
+					qglEnable(GL_ALPHA_TEST);
+				else
+				{
+					qglDisable(GL_ALPHA_TEST);
+					qglDepthFunc(GL_EQUAL);
+				}
+			}
 			GL_DepthMask(layer->depthmask);
 			GL_BlendFunc(layer->blendfunc1, layer->blendfunc2);
 			if ((layer->color[0] > 2 || layer->color[1] > 2 || layer->color[2] > 2) && (gl_combine.integer || layer->depthmask))
@@ -3006,6 +3010,11 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				GL_LockArrays(0, 0);
 			}
 		}
+		if (texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
+		{
+			qglDepthFunc(GL_LEQUAL);
+			qglDisable(GL_ALPHA_TEST);
+		}
 	}
 	GL_LockArrays(0, 0);
 	if ((texture->textureflags & Q3TEXTUREFLAG_TWOSIDED) || (ent->flags & RENDER_NOCULLFACE))
@@ -3032,7 +3041,7 @@ void R_QueueTextureSurfaceList(entity_render_t *ent, texture_t *texture, rtextur
 {
 	int texturesurfaceindex;
 	vec3_t tempcenter, center;
-	if (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT)
+	if (texture->currentmaterialflags & MATERIALFLAG_BLENDED)
 	{
 		// drawing sky transparently would be too difficult
 		if (!(texture->currentmaterialflags & MATERIALFLAG_SKY))

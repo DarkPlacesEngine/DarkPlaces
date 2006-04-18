@@ -215,12 +215,14 @@ typedef struct texture_s
 	float specularscale;
 	float specularpower;
 
+	// from q3 shaders
+	int customblendfunc[2];
+
 	int currentnumlayers;
 	texturelayer_t currentlayers[16];
 
 	// q3bsp
 	char name[64];
-	char firstpasstexturename[64]; // used only during loading
 	int surfaceflags;
 	int supercontents;
 	int surfaceparms;

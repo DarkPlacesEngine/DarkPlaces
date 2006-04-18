@@ -1258,12 +1258,16 @@ static void R_Shadow_RenderSurfacesLighting_Light_GLSL(const entity_render_t *en
 	R_Mesh_TexCoordPointer(1, 3, rsurface_svector3f);
 	R_Mesh_TexCoordPointer(2, 3, rsurface_tvector3f);
 	R_Mesh_TexCoordPointer(3, 3, rsurface_normal3f);
+	if (texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
+		qglDepthFunc(GL_EQUAL);
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 	{
 		const msurface_t *surface = surfacelist[surfacelistindex];
 		GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 		R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, model->surfmesh.data_element3i + surface->num_firsttriangle * 3);
 	}
+	if (texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
+		qglDepthFunc(GL_LEQUAL);
 	GL_LockArrays(0, 0);
 }
 
