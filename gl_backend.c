@@ -517,11 +517,14 @@ void GL_Backend_ResetState(void)
 	CHECKGLERROR
 
 	qglColorMask(1, 1, 1, 1);
-	qglEnable(GL_CULL_FACE);CHECKGLERROR
-	qglCullFace(GL_FRONT);CHECKGLERROR
-	qglEnable(GL_DEPTH_TEST);CHECKGLERROR
+	qglAlphaFunc(GL_GEQUAL, 0.5);CHECKGLERROR
+	qglDisable(GL_ALPHA_TEST);CHECKGLERROR
 	qglBlendFunc(gl_state.blendfunc1, gl_state.blendfunc2);CHECKGLERROR
 	qglDisable(GL_BLEND);CHECKGLERROR
+	qglCullFace(GL_FRONT);CHECKGLERROR
+	qglEnable(GL_CULL_FACE);CHECKGLERROR
+	qglDepthFunc(GL_LEQUAL);CHECKGLERROR
+	qglEnable(GL_DEPTH_TEST);CHECKGLERROR
 	qglDepthMask(gl_state.depthmask);CHECKGLERROR
 
 	qglVertexPointer(3, GL_FLOAT, sizeof(float[3]), NULL);CHECKGLERROR
