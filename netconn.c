@@ -1555,7 +1555,7 @@ void NetConn_QueryQueueFrame(void)
 		return;
 
 	// each time querycounter reaches 1.0 issue a query
-	querycounter += host_realframetime * net_slist_queriespersecond.value;
+	querycounter += cl.realframetime * net_slist_queriespersecond.value;
 	maxqueries = (int)querycounter;
 	maxqueries = bound(0, maxqueries, net_slist_queriesperframe.integer);
 	querycounter -= maxqueries;
@@ -2207,7 +2207,6 @@ void NetConn_ServerFrame(void)
 {
 	int i, length;
 	lhnetaddress_t peeraddress;
-	NetConn_UpdateSockets();
 	for (i = 0;i < sv_numsockets;i++)
 		while (sv_sockets[i] && (length = NetConn_Read(sv_sockets[i], readbuffer, sizeof(readbuffer), &peeraddress)) > 0)
 			NetConn_ServerParsePacket(sv_sockets[i], readbuffer, length, &peeraddress);

@@ -2104,7 +2104,7 @@ void CL_ParseServerMessage(void)
 		cl.qw_num_nails = 0;
 
 		// fade weapon view kick
-		cl.qw_weaponkick = min(cl.qw_weaponkick + 10 * cl.frametime, 0);
+		cl.qw_weaponkick = min(cl.qw_weaponkick + 10 * (cl.time - cl.oldtime), 0);
 
 		while (1)
 		{

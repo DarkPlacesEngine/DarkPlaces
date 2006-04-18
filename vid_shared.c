@@ -803,13 +803,13 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 
 			for (x = 0;x < 3;x++)
 			{
-				nt[x] -= host_realframetime;
+				nt[x] -= cl.realframetime;
 				if (nt[x] < 0)
 				{
 					nd[x] = -nd[x];
 					nt[x] += lhrandom(1, 8.2);
 				}
-				n[x] += nd[x] * host_realframetime;
+				n[x] += nd[x] * cl.realframetime;
 				n[x] -= floor(n[x]);
 			}
 

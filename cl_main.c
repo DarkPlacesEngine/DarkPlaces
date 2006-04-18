@@ -1028,7 +1028,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 			tempmatrix.m[1][3] = trace.endpos[1];
 			tempmatrix.m[2][3] = trace.endpos[2];
 			CL_AllocDlight(NULL, &tempmatrix, 100, e->persistent.muzzleflash, e->persistent.muzzleflash, e->persistent.muzzleflash, 0, 0, 0, -1, true, 0, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-			e->persistent.muzzleflash -= cl.frametime * 10;
+			e->persistent.muzzleflash -= (cl.time - cl.oldtime) * 10;
 		}
 		// LordHavoc: if the model has no flags, don't check each
 		if (e->render.model && e->render.model->flags && (!e->state_current.tagentity && !(e->render.flags & RENDER_VIEWMODEL)))
@@ -1563,6 +1563,9 @@ int CL_ReadFromServer(void)
 
 		// update view blend
 		V_CalcViewBlend();
+
+		// update the r_refdef time again because cl.time may have changed
+		r_refdef.time = cl.time;
 	}
 
 	return 0;

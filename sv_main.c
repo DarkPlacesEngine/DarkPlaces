@@ -1843,7 +1843,7 @@ void SV_SpawnServer (const char *server)
 // run two frames to allow everything to settle
 	for (i = 0;i < 2;i++)
 	{
-		sv.frametime = host_frametime = 0.1;
+		sv.frametime = 0.1;
 		SV_Physics ();
 	}
 

@@ -199,8 +199,6 @@ void Sys_Init_Commands (void)
 
 int main (int argc, char *argv[])
 {
-	double frameoldtime, framenewtime;
-
 	signal(SIGFPE, SIG_IGN);
 
 	com_argc = argc;
@@ -210,17 +208,7 @@ int main (int argc, char *argv[])
 	fcntl(0, F_SETFL, fcntl (0, F_GETFL, 0) | FNDELAY);
 #endif
 
-	Host_Init();
+	Host_Main();
 
-	frameoldtime = Sys_DoubleTime () - 0.1;
-	while (1)
-	{
-		// find time spent rendering last frame
-		framenewtime = Sys_DoubleTime ();
-
-		Host_Frame (framenewtime - frameoldtime);
-
-		frameoldtime = framenewtime;
-	}
 	return 0;
 }
