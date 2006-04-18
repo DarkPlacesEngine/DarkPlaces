@@ -9,7 +9,6 @@
 cvar_t scr_viewsize = {CVAR_SAVE, "viewsize","100", "how large the view should be, 110 disables inventory bar, 120 disables status bar"};
 cvar_t scr_fov = {CVAR_SAVE, "fov","90", "field of vision, 1-170 degrees, default 90, some players use 110-130"};	// 1 - 170
 cvar_t scr_conalpha = {CVAR_SAVE, "scr_conalpha", "1", "opacity of console background"};
-cvar_t scr_conbrightness = {CVAR_SAVE, "scr_conbrightness", "0.2", "brightness of console background (0 = black, 1 = image)"};
 cvar_t scr_conforcewhiledisconnected = {0, "scr_conforcewhiledisconnected", "1", "forces fullscreen console while disconnected"};
 cvar_t scr_menuforcewhiledisconnected = {0, "scr_menuforcewhiledisconnected", "0", "forces menu while disconnected"};
 cvar_t scr_centertime = {0, "scr_centertime","2", "how long centerprint messages show"};
@@ -511,7 +510,6 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_fov);
 	Cvar_RegisterVariable (&scr_viewsize);
 	Cvar_RegisterVariable (&scr_conalpha);
-	Cvar_RegisterVariable (&scr_conbrightness);
 	Cvar_RegisterVariable (&scr_conforcewhiledisconnected);
 	Cvar_RegisterVariable (&scr_menuforcewhiledisconnected);
 	Cvar_RegisterVariable (&scr_showram);
