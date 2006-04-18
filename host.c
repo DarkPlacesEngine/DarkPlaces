@@ -43,13 +43,8 @@ int host_framecount = 0;
 // LordHavoc: set when quit is executed
 qboolean host_shuttingdown = false;
 
-double host_frametime;
-// LordHavoc: the real frametime, before slowmo and clamping are applied (used for console scrolling)
-double host_realframetime;
-// the real time, without any slowmo or clamping
+// the real time since application started, without any slowmo or clamping
 double realtime;
-// realtime from previous frame
-double oldrealtime;
 
 // current client
 client_t *host_client;
@@ -70,7 +65,6 @@ cvar_t sv_echobprint = {CVAR_SAVE, "sv_echobprint", "1", "prints gamecode bprint
 
 cvar_t sys_ticrate = {CVAR_SAVE, "sys_ticrate","0.05", "how long a server frame is in seconds, 0.05 is 20fps server rate, 0.1 is 10fps (can not be set higher than 0.1), 0 runs as many server frames as possible (makes games against bots a little smoother, overwhelms network players)"};
 cvar_t sv_fixedframeratesingleplayer = {0, "sv_fixedframeratesingleplayer", "0", "allows you to use server-style timing system in singleplayer (don't run faster than sys_ticrate)"};
-cvar_t serverprofile = {0, "serverprofile","0", "print some timings on server code"};
 
 cvar_t fraglimit = {CVAR_NOTIFY, "fraglimit","0", "ends level if this many frags is reached by any player"};
 cvar_t timelimit = {CVAR_NOTIFY, "timelimit","0", "ends level at this time (in minutes)"};
@@ -208,7 +202,7 @@ void Host_ServerOptions (void)
 
 	svs.clients = (client_t *)Mem_Alloc(sv_mempool, sizeof(client_t) * svs.maxclients);
 
-	if (svs.maxclients > 1 && !deathmatch.integer)
+	if (svs.maxclients > 1 && !deathmatch.integer && !coop.integer)
 		Cvar_SetValueQuick(&deathmatch, 1);
 }
 
@@ -218,7 +212,7 @@ Host_InitLocal
 ======================
 */
 void Host_SaveConfig_f(void);
-void Host_InitLocal (void)
+static void Host_InitLocal (void)
 {
 	Cmd_AddCommand("saveconfig", Host_SaveConfig_f, "save settings to config.cfg immediately (also automatic when quitting)");
 
@@ -231,7 +225,6 @@ void Host_InitLocal (void)
 
 	Cvar_RegisterVariable (&sys_ticrate);
 	Cvar_RegisterVariable (&sv_fixedframeratesingleplayer);
-	Cvar_RegisterVariable (&serverprofile);
 
 	Cvar_RegisterVariable (&fraglimit);
 	Cvar_RegisterVariable (&timelimit);
@@ -523,90 +516,6 @@ void Host_ShutdownServer(void)
 
 /*
 ===================
-Host_FilterTime
-
-Returns false if the time is too short to run a frame
-===================
-*/
-qboolean Host_FilterTime (double time)
-{
-	double timecap, timeleft;
-	realtime += time;
-
-	if (sys_ticrate.value < 0.00999 || sys_ticrate.value > 0.10001)
-		Cvar_SetValue("sys_ticrate", bound(0.01, sys_ticrate.value, 0.1));
-	if (slowmo.value < 0)
-		Cvar_SetValue("slowmo", 0);
-	if (host_framerate.value < 0.00001 && host_framerate.value != 0)
-		Cvar_SetValue("host_framerate", 0);
-	if (cl_maxfps.value < 1)
-		Cvar_SetValue("cl_maxfps", 1);
-
-	if (cls.timedemo)
-	{
-		// disable time effects during timedemo
-		cl.frametime = host_realframetime = host_frametime = realtime - oldrealtime;
-		oldrealtime = realtime;
-		return true;
-	}
-
-	// check if framerate is too high
-	// default to sys_ticrate (server framerate - presumably low) unless we
-	// have a good reason to run faster
-	timecap = host_framerate.value;
-	if (!timecap)
-		timecap = sys_ticrate.value;
-	if (cls.state != ca_dedicated)
-	{
-		if (cls.capturevideo_active)
-			timecap = 1.0 / cls.capturevideo_framerate;
-		else if (vid_activewindow)
-			timecap = 1.0 / cl_maxfps.value;
-	}
-
-	timeleft = timecap - (realtime - oldrealtime);
-	if (timeleft > 0)
-	{
-#if 0
-		if (timeleft * 1000 >= 10)
-			Sys_Sleep(1);
-#else
-		int msleft;
-		// don't totally hog the CPU
-		// try to hit exactly a steady framerate by not sleeping the full amount
-		msleft = (int)floor(timeleft * 1000);
-		if (msleft >= 10)
-			Sys_Sleep(msleft - 9);
-#endif
-		return false;
-	}
-
-	// LordHavoc: copy into host_realframetime as well
-	host_realframetime = host_frametime = realtime - oldrealtime;
-	oldrealtime = realtime;
-
-	if (cls.capturevideo_active && !cls.capturevideo_soundfile)
-		host_frametime = timecap;
-
-	// apply slowmo scaling
-	host_frametime *= slowmo.value;
-
-	// host_framerate overrides all else
-	if (host_framerate.value)
-		host_frametime = host_framerate.value;
-
-	// never run a frame longer than 1 second
-	if (host_frametime > 1)
-		host_frametime = 1;
-
-	cl.frametime = host_frametime;
-
-	return true;
-}
-
-
-/*
-===================
 Host_GetConsoleCommands
 
 Add them exactly as if they had been typed at the console
@@ -627,226 +536,275 @@ void Host_GetConsoleCommands (void)
 
 /*
 ==================
-Host_ServerFrame
-
-==================
-*/
-void Host_ServerFrame (void)
-{
-	// execute one or more server frames, with an upper limit on how much
-	// execution time to spend on server frames to avoid freezing the game if
-	// the server is overloaded, this execution time limit means the game will
-	// slow down if the server is taking too long.
-	int framecount, framelimit = 100;
-	double advancetime, aborttime;
-	if (!sv.active)
-	{
-		sv.timer = 0;
-		return;
-	}
-	sv.timer += host_realframetime;
-
-	// run the world state
-	// don't allow simulation to run too fast or too slow or logic glitches can occur
-
-	// setup the VM frame
-	SV_VM_Begin();
-	// stop running server frames if the wall time reaches this value
-	aborttime = Sys_DoubleTime() + 0.1;
-	for (framecount = 0;framecount < framelimit && sv.timer > 0;framecount++)
-	{
-		if (sys_ticrate.value <= 0)
-			advancetime = sv.timer;
-		else if (cl.islocalgame && !sv_fixedframeratesingleplayer.integer)
-			advancetime = min(sv.timer, sys_ticrate.value);
-		else
-			advancetime = sys_ticrate.value;
-		advancetime = min(advancetime, 0.1);
-		sv.timer -= advancetime;
-
-		// only advance time if not paused
-		// the game also pauses in singleplayer when menu or console is used
-		sv.frametime = advancetime * slowmo.value;
-		if (host_framerate.value)
-			sv.frametime = host_framerate.value;
-		if (sv.paused || (cl.islocalgame && (key_dest != key_game || key_consoleactive)))
-			sv.frametime = 0;
-
-
-		// move things around and think unless paused
-		if (sv.frametime)
-			SV_Physics();
-
-		// send all messages to the clients
-		SV_SendClientMessages();
-
-		// clear the general datagram
-		SV_ClearDatagram();
-
-		// if this server frame took too long, break out of the loop
-		if (Sys_DoubleTime() >= aborttime)
-			break;
-	}
-
-	// end the server VM frame
-	SV_VM_End();
-
-	// send an heartbeat if enough time has passed since the last one
-	NetConn_Heartbeat(0);
-
-	// if we fell behind too many frames just don't worry about it
-	if (sv.timer > 0)
-		sv.timer = 0;
-}
-
-
-/*
-==================
 Host_Frame
 
 Runs all active servers
 ==================
 */
-void _Host_Frame (float time)
+static void Host_Init(void);
+void Host_Main(void)
 {
-	static double time1 = 0;
-	static double time2 = 0;
-	static double time3 = 0;
-	int pass1, pass2, pass3;
+	double frameoldtime, framenewtime, frametime, cl_timer, sv_timer;
 
-	if (setjmp(host_abortframe))
-		return;			// something bad happened, or the server disconnected
+	Host_Init();
 
-	// decide the simulation time
-	if (!Host_FilterTime(time))
-		return;
+	cl_timer = 0;
+	sv_timer = 0;
 
-	// keep the random time dependent
-	rand();
-
-	cl.islocalgame = NetConn_IsLocalGame();
-
-	// get new key events
-	Sys_SendKeyEvents();
-
-	// Collect input into cmd
-	CL_Move();
-
-	// process console commands
-	Cbuf_Execute();
-
-	// if running the server locally, make intentions now
-	//if (cl.islocalgame)
-	//	CL_SendCmd();
-
-//-------------------
-//
-// server operations
-//
-//-------------------
-
-	// receive server packets now, which might contain rcon commands, which
-	// may change level or other such things we don't want to have happen in
-	// the middle of Host_Frame
-	NetConn_ServerFrame();
-
-	// check for commands typed to the host
-	Host_GetConsoleCommands();
-
-	if (sv.active)
-		Host_ServerFrame();
-
-//-------------------
-//
-// client operations
-//
-//-------------------
-
-	cl.oldtime = cl.time;
-	cl.time += cl.frametime;
-
-	NetConn_ClientFrame();
-
-	if (cls.state == ca_connected)
+	framenewtime = Sys_DoubleTime();
+	for (;;)
 	{
-		CL_ReadFromServer();
-		// if running the server remotely, send intentions now after
-		// the incoming messages have been read
-		//if (!cl.islocalgame)
-		//	CL_SendCmd();
+		static double time1 = 0;
+		static double time2 = 0;
+		static double time3 = 0;
+
+		frameoldtime = framenewtime;
+		framenewtime = Sys_DoubleTime();
+		frametime = framenewtime - frameoldtime;
+		realtime += frametime;
+
+		// if there is some time remaining from last frame, rest the timers
+		if (cl_timer >= 0)
+			cl_timer = 0;
+		if (sv_timer >= 0)
+			sv_timer = 0;
+
+		// accumulate the new frametime into the timers
+		cl_timer += frametime;
+		sv_timer += frametime;
+
+		if (setjmp(host_abortframe))
+			continue;			// something bad happened, or the server disconnected
+
+		if (slowmo.value < 0)
+			Cvar_SetValue("slowmo", 0);
+		if (host_framerate.value < 0.00001 && host_framerate.value != 0)
+			Cvar_SetValue("host_framerate", 0);
+		if (cl_maxfps.value < 1)
+			Cvar_SetValue("cl_maxfps", 1);
+
+		// if the accumulators haven't become positive yet, keep waiting
+		if (!cls.timedemo && cl_timer <= 0 && sv_timer <= 0)
+		{
+			double wait;
+			int msleft;
+			if (cls.state == ca_dedicated)
+				wait = sv_timer;
+			else if (!sv.active)
+				wait = cl_timer;
+			else
+				wait = max(cl_timer, sv_timer);
+			msleft = (int)floor(wait * -1000.0);
+			if (msleft >= 1)
+				Sys_Sleep(msleft);
+			continue;
+		}
+
+		// keep the random time dependent
+		rand();
+
+		cl.islocalgame = NetConn_IsLocalGame();
+
+		// get new key events
+		Sys_SendKeyEvents();
+
+		// when a server is running we only execute console commands on server frames
+		// (this mainly allows frikbot .way config files to work properly by staying in sync with the server qc)
+		// otherwise we execute them on all frames
+		if (sv_timer > 0 || !sv.active)
+		{
+			// process console commands
+			Cbuf_Execute();
+		}
+
+		NetConn_UpdateSockets();
+
+	//-------------------
+	//
+	// server operations
+	//
+	//-------------------
+
+		if (sv_timer > 0)
+		{
+			if (!sv.active)
+			{
+				// if there is no server, run server timing at 10fps
+				sv_timer -= 0.1;
+			}
+			else
+			{
+				// execute one or more server frames, with an upper limit on how much
+				// execution time to spend on server frames to avoid freezing the game if
+				// the server is overloaded, this execution time limit means the game will
+				// slow down if the server is taking too long.
+				int framecount, framelimit = 1;
+				double advancetime, aborttime = 0;
+
+				// receive server packets now, which might contain rcon commands, which
+				// may change level or other such things we don't want to have happen in
+				// the middle of Host_Frame
+				NetConn_ServerFrame();
+
+				// check for commands typed to the host
+				Host_GetConsoleCommands();
+
+				// run the world state
+				// don't allow simulation to run too fast or too slow or logic glitches can occur
+
+				// stop running server frames if the wall time reaches this value
+				if (sys_ticrate.value <= 0 || (cl.islocalgame && !sv_fixedframeratesingleplayer.integer))
+					advancetime = sv_timer;
+				else
+				{
+					advancetime = sys_ticrate.value;
+					// listen servers can run multiple server frames per client frame
+					if (cls.state == ca_connected)
+					{
+						framelimit = 10;
+						aborttime = Sys_DoubleTime() + 0.1;
+					}
+				}
+				advancetime = min(advancetime, 0.1);
+
+				// only advance time if not paused
+				// the game also pauses in singleplayer when menu or console is used
+				sv.frametime = advancetime * slowmo.value;
+				if (host_framerate.value)
+					sv.frametime = host_framerate.value;
+				if (sv.paused || (cl.islocalgame && (key_dest != key_game || key_consoleactive)))
+					sv.frametime = 0;
+
+				// setup the VM frame
+				SV_VM_Begin();
+
+				for (framecount = 0;framecount < framelimit && sv_timer > 0;framecount++)
+				{
+					sv_timer -= advancetime;
+
+					// move things around and think unless paused
+					if (sv.frametime)
+						SV_Physics();
+
+					// send all messages to the clients
+					SV_SendClientMessages();
+
+					// clear the general datagram
+					SV_ClearDatagram();
+
+					// if this server frame took too long, break out of the loop
+					if (framelimit > 1 && Sys_DoubleTime() >= aborttime)
+						break;
+				}
+
+				// end the server VM frame
+				SV_VM_End();
+
+				// send an heartbeat if enough time has passed since the last one
+				NetConn_Heartbeat(0);
+			}
+		}
+
+	//-------------------
+	//
+	// client operations
+	//
+	//-------------------
+
+		if (cl_timer > 0 || cls.timedemo)
+		{
+			if (cls.state == ca_dedicated)
+			{
+				// if there is no client, run client timing at 10fps
+				cl_timer -= 0.1;
+				if (host_speeds.integer)
+					time1 = time2 = Sys_DoubleTime();
+			}
+			else
+			{
+				double frametime;
+				frametime = cl.realframetime = min(cl_timer, 1);
+
+				// decide the simulation time
+				if (!cls.timedemo)
+				{
+					if (cls.capturevideo_active && !cls.capturevideo_soundfile)
+					{
+						frametime = 1.0 / cls.capturevideo_framerate;
+						cl.realframetime = max(cl.realframetime, frametime);
+					}
+					else if (vid_activewindow)
+						frametime = cl.realframetime = max(cl.realframetime, 1.0 / cl_maxfps.value);
+					else
+						frametime = cl.realframetime = 0.1;
+
+					// deduct the frame time from the accumulator
+					cl_timer -= cl.realframetime;
+
+					// apply slowmo scaling
+					frametime *= slowmo.value;
+
+					// host_framerate overrides all else
+					if (host_framerate.value)
+						frametime = host_framerate.value;
+				}
+
+				cl.oldtime = cl.time;
+				cl.time += frametime;
+
+				// Collect input into cmd
+				CL_Move();
+
+				NetConn_ClientFrame();
+
+				if (cls.state == ca_connected)
+				{
+					CL_ReadFromServer();
+					// if running the server remotely, send intentions now after
+					// the incoming messages have been read
+					//if (!cl.islocalgame)
+					//	CL_SendCmd();
+				}
+
+				// update video
+				if (host_speeds.integer)
+					time1 = Sys_DoubleTime();
+
+				//ui_update();
+
+				CL_VideoFrame();
+
+				CL_UpdateScreen();
+
+				if (host_speeds.integer)
+					time2 = Sys_DoubleTime();
+
+				// update audio
+				if(csqc_usecsqclistener)
+				{
+					S_Update(&csqc_listenermatrix);
+					csqc_usecsqclistener = false;
+				}
+				else
+					S_Update(&r_refdef.viewentitymatrix);
+
+				CDAudio_Update();
+			}
+
+			if (host_speeds.integer)
+			{
+				int pass1, pass2, pass3;
+				pass1 = (int)((time1 - time3)*1000000);
+				time3 = Sys_DoubleTime();
+				pass2 = (int)((time2 - time1)*1000000);
+				pass3 = (int)((time3 - time2)*1000000);
+				Con_Printf("%6ius total %6ius server %6ius gfx %6ius snd\n",
+							pass1+pass2+pass3, pass1, pass2, pass3);
+			}
+		}
+
+		host_framecount++;
 	}
-
-	//ui_update();
-
-	CL_VideoFrame();
-
-	// update video
-	if (host_speeds.integer)
-		time1 = Sys_DoubleTime();
-
-	CL_UpdateScreen();
-
-	if (host_speeds.integer)
-		time2 = Sys_DoubleTime();
-
-	// update audio
-	if(csqc_usecsqclistener)
-	{
-		S_Update(&csqc_listenermatrix);
-		csqc_usecsqclistener = false;
-	}
-	else
-		S_Update(&r_refdef.viewentitymatrix);
-
-	CDAudio_Update();
-
-	if (host_speeds.integer)
-	{
-		pass1 = (int)((time1 - time3)*1000000);
-		time3 = Sys_DoubleTime();
-		pass2 = (int)((time2 - time1)*1000000);
-		pass3 = (int)((time3 - time2)*1000000);
-		Con_Printf("%6ius total %6ius server %6ius gfx %6ius snd\n",
-					pass1+pass2+pass3, pass1, pass2, pass3);
-	}
-
-	host_framecount++;
-}
-
-void Host_Frame (float time)
-{
-	double time1, time2;
-	static double timetotal;
-	static int timecount;
-	int i, c, m;
-
-	if (!serverprofile.integer)
-	{
-		_Host_Frame (time);
-		return;
-	}
-
-	time1 = Sys_DoubleTime ();
-	_Host_Frame (time);
-	time2 = Sys_DoubleTime ();
-
-	timetotal += time2 - time1;
-	timecount++;
-
-	if (timecount < 1000)
-		return;
-
-	m = (int)(timetotal*1000/timecount);
-	timecount = 0;
-	timetotal = 0;
-	c = 0;
-	for (i=0 ; i<svs.maxclients ; i++)
-	{
-		if (svs.clients[i].active)
-			c++;
-	}
-
-	Con_Printf("serverprofile: %2i clients %2i msec\n",  c,  m);
 }
 
 //============================================================================
@@ -881,7 +839,7 @@ extern qboolean host_stuffcmdsrun;
 Host_Init
 ====================
 */
-void Host_Init (void)
+static void Host_Init (void)
 {
 	int i;
 	const char* os;

@@ -371,7 +371,6 @@ char		program_name[MAX_OSPATH];
 
 int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
-	double frameoldtime, framenewtime;
 	MEMORYSTATUS lpBuffer;
 
 	/* previous instances do not exist in Win32 */
@@ -424,17 +423,7 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 		}
 	}
 
-	Host_Init ();
-
-	frameoldtime = Sys_DoubleTime ();
-
-	/* main window message loop */
-	while (1)
-	{
-		framenewtime = Sys_DoubleTime ();
-		Host_Frame (framenewtime - frameoldtime);
-		frameoldtime = framenewtime;
-	}
+	Host_Main();
 
 	/* return success of application */
 	return true;

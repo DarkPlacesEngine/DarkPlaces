@@ -157,7 +157,7 @@ void SCR_CheckDrawCenterString (void)
 	if (scr_center_lines > scr_erase_lines)
 		scr_erase_lines = scr_center_lines;
 
-	scr_centertime_off -= host_frametime;
+	scr_centertime_off -= cl.realframetime;
 
 	// don't draw if this is a normal stats-screen intermission,
 	// only if it is not an intermission, or a finale intermission
@@ -186,7 +186,7 @@ void SCR_DrawTurtle (void)
 	if (!scr_showturtle.integer)
 		return;
 
-	if (host_frametime < 0.1)
+	if (cl.realframetime < 0.1)
 	{
 		count = 0;
 		return;
@@ -356,14 +356,13 @@ void SCR_SetUpToDrawConsole (void)
 	{
 		if (scr_con_current > conlines)
 		{
-			scr_con_current -= scr_conspeed.value*host_realframetime;
+			scr_con_current -= scr_conspeed.value*cl.realframetime;
 			if (scr_con_current < conlines)
 				scr_con_current = conlines;
-
 		}
 		else if (scr_con_current < conlines)
 		{
-			scr_con_current += scr_conspeed.value*host_realframetime;
+			scr_con_current += scr_conspeed.value*cl.realframetime;
 			if (scr_con_current > conlines)
 				scr_con_current = conlines;
 		}

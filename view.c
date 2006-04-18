@@ -155,7 +155,7 @@ void V_DriftPitch (void)
 		if ( fabs(cl.cmd.forwardmove) < cl_forwardspeed.value)
 			cl.driftmove = 0;
 		else
-			cl.driftmove += cl.frametime;
+			cl.driftmove += cl.realframetime;
 
 		if ( cl.driftmove > v_centermove.value)
 		{
@@ -172,8 +172,8 @@ void V_DriftPitch (void)
 		return;
 	}
 
-	move = cl.frametime * cl.pitchvel;
-	cl.pitchvel += cl.frametime * v_centerspeed.value;
+	move = cl.realframetime * cl.pitchvel;
+	cl.pitchvel += cl.realframetime * v_centerspeed.value;
 
 	if (delta > 0)
 	{
@@ -421,7 +421,7 @@ void V_CalcRefdef (void)
 				{
 					viewangles[ROLL] += v_dmg_time/v_kicktime.value*v_dmg_roll;
 					viewangles[PITCH] += v_dmg_time/v_kicktime.value*v_dmg_pitch;
-					v_dmg_time -= cl.frametime;
+					v_dmg_time -= cl.realframetime;
 				}
 				// origin
 				VectorAdd(vieworg, cl.punchvector, vieworg);

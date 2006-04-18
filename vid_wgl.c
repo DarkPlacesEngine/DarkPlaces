@@ -1625,7 +1625,7 @@ static void IN_JoyMove (void)
 	else
 		speed = 1;
 	// LordHavoc: viewzoom affects sensitivity for sniping
-	aspeed = speed * host_realframetime * cl.viewzoom;
+	aspeed = speed * cl.realframetime * cl.viewzoom;
 
 	// loop through the axes
 	for (i = 0; i < JOY_MAX_AXES; i++)

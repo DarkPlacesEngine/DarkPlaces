@@ -863,17 +863,20 @@ void R_SetupSurfaceShader(const entity_render_t *ent, const texture_t *texture, 
 	}
 	else
 	{
-		if (modellighting)
-			permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTION;
-		else if (r_glsl_deluxemapping.integer >= 1 && r_refdef.worldmodel && r_refdef.worldmodel->brushq3.deluxemapping && lightmaptexture)
+		if (!(texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
 		{
-			if (r_refdef.worldmodel->brushq3.deluxemapping_modelspace)
-				permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP_MODELSPACE;
-			else
+			if (modellighting)
+				permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTION;
+			else if (r_glsl_deluxemapping.integer >= 1 && r_refdef.worldmodel && r_refdef.worldmodel->brushq3.deluxemapping && lightmaptexture)
+			{
+				if (r_refdef.worldmodel->brushq3.deluxemapping_modelspace)
+					permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP_MODELSPACE;
+				else
+					permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP_TANGENTSPACE;
+			}
+			else if (r_glsl_deluxemapping.integer >= 2) // fake mode
 				permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP_TANGENTSPACE;
 		}
-		else if (r_glsl_deluxemapping.integer >= 2) // fake mode
-			permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP_TANGENTSPACE;
 		if (texture->skin.glow)
 			permutation |= SHADERPERMUTATION_GLOW;
 	}

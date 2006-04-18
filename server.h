@@ -52,9 +52,6 @@ typedef struct server_s
 	// one of the PROTOCOL_ values
 	protocolversion_t protocol;
 
-	// used for running multiple steps in one frame, etc
-	double timer;
-
 	double time;
 
 	double frametime;

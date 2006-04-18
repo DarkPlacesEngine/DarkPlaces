@@ -164,11 +164,11 @@ void CL_ReadDemoMessage(void)
 					cls.td_starttime = realtime;
 				if (host_framecount > cls.td_startframe + 2)
 				{
-					cls.td_minframetime = min(cls.td_minframetime, host_realframetime);
-					cls.td_maxframetime = max(cls.td_maxframetime, host_realframetime);
+					cls.td_minframetime = min(cls.td_minframetime, cl.realframetime);
+					cls.td_maxframetime = max(cls.td_maxframetime, cl.realframetime);
 				}
 				else
-					cls.td_minframetime = cls.td_maxframetime = host_realframetime;
+					cls.td_minframetime = cls.td_maxframetime = cl.realframetime;
 			}
 			else if (cl.time <= cl.mtime[0])
 			{

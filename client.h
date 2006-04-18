@@ -707,7 +707,10 @@ typedef struct client_state_s
 	// clients view of time, time should be between mtime[0] and mtime[1] to
 	// generate a lerp point for other data, oldtime is the previous frame's
 	// value of time, frametime is the difference between time and oldtime
-	double time, oldtime, frametime;
+	double time, oldtime;
+	// how long it has been since the previous client frame in real time
+	// (not game time, for that use cl.time - cl.oldtime)
+	double realframetime;
 
 	// copy of realtime from last recieved message, for net trouble icon
 	float last_received_message;
