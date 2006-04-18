@@ -82,6 +82,7 @@ typedef double GLclampd;
 #define GL_CULL_FACE				0x0B44
 
 #define GL_BLEND				0x0BE2
+#define GL_ALPHA_TEST			0x0BC0
 
 #define GL_ZERO					0x0
 #define GL_ONE					0x1
