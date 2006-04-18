@@ -86,6 +86,13 @@ mplane_t;
 #define MATERIALFLAG_NODRAW 512
 // probably used only on q1bsp water
 #define MATERIALFLAG_LIGHTBOTHSIDES 1024
+// use alpha test on this material
+#define MATERIALFLAG_ALPHATEST 2048
+// treat this material as a blended transparency (as opposed to an alpha test
+// transparency), this causes special fog behavior, and disables glDepthMask
+#define MATERIALFLAG_BLENDED 4096
+// render using a custom blendfunc
+#define MATERIALFLAG_CUSTOMBLEND 8192
 
 typedef struct medge_s
 {
@@ -624,14 +631,12 @@ q3dpvs_t;
 #define Q3SURFACEPARM_WATER 33554432
 #define Q3SURFACEPARM_POINTLIGHT 67108864
 
-// various flags from shaders
+// various flags from shaders, used for special effects not otherwise classified
 #define Q3TEXTUREFLAG_TWOSIDED 1
-#define Q3TEXTUREFLAG_ADDITIVE 2
-#define Q3TEXTUREFLAG_NOMIPMAPS 4
-#define Q3TEXTUREFLAG_NOPICMIP 8
-#define Q3TEXTUREFLAG_AUTOSPRITE 16
-#define Q3TEXTUREFLAG_AUTOSPRITE2 32
-#define Q3TEXTUREFLAG_ALPHATEST 64
+#define Q3TEXTUREFLAG_AUTOSPRITE 2
+#define Q3TEXTUREFLAG_AUTOSPRITE2 4
+#define Q3TEXTUREFLAG_ALPHATEST 8
+#define Q3TEXTUREFLAG_NOPICMIP 16
 
 typedef struct q3mbrush_s
 {

@@ -399,7 +399,7 @@ static void Mod_BuildAliasSkinFromSkinFrame(texture_t *skin, skinframe_t *skinfr
 	skin->currentframe = skin;
 	skin->basematerialflags = MATERIALFLAG_WALL;
 	if (skin->skin.fog)
-		skin->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_TRANSPARENT;
+		skin->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_TRANSPARENT;
 	skin->currentmaterialflags = skin->basematerialflags;
 }
 

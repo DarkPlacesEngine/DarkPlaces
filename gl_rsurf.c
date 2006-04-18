@@ -835,7 +835,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 		{
 			if (batchnumsurfaces > 0)
 			{
-				if (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT)
+				if (texture->currentmaterialflags & MATERIALFLAG_BLENDED)
 					R_Q1BSP_DrawLight_TransparentBatch(ent, texture, batchnumsurfaces, batchsurfacelist);
 				else
 					R_Shadow_RenderSurfacesLighting(ent, texture, batchnumsurfaces, batchsurfacelist);
@@ -851,7 +851,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 		{
 			if (batchnumsurfaces == RSURF_MAX_BATCHSURFACES)
 			{
-				if (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT)
+				if (texture->currentmaterialflags & MATERIALFLAG_BLENDED)
 					R_Q1BSP_DrawLight_TransparentBatch(ent, texture, batchnumsurfaces, batchsurfacelist);
 				else
 					R_Shadow_RenderSurfacesLighting(ent, texture, batchnumsurfaces, batchsurfacelist);
@@ -862,7 +862,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 	}
 	if (batchnumsurfaces > 0)
 	{
-		if (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT)
+		if (texture->currentmaterialflags & MATERIALFLAG_BLENDED)
 			R_Q1BSP_DrawLight_TransparentBatch(ent, texture, batchnumsurfaces, batchsurfacelist);
 		else
 			R_Shadow_RenderSurfacesLighting(ent, texture, batchnumsurfaces, batchsurfacelist);
