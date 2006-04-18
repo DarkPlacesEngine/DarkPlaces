@@ -1560,8 +1560,6 @@ static void M_Menu_Options_AdjustSliders (int dir)
 	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&vid_conheight, bound(240, vid_conheight.value + dir * 48, 1536));
 	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&scr_conspeed, bound(0, scr_conspeed.value + dir * 100, 1000));
-	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&scr_conalpha, bound(0, scr_conalpha.value + dir * 0.2, 1));
 	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&scr_conbrightness, bound(0, scr_conbrightness.value + dir * 0.2, 1));
@@ -1698,7 +1696,6 @@ static void M_Options_Draw (void)
 	M_Options_PrintCommand( "     Color Control", true);
 	M_Options_PrintSlider(  "  2D Screen Width ", true, vid_conwidth.value, 320, 2048);
 	M_Options_PrintSlider(  "  2D Screen Height", true, vid_conheight.value, 240, 1536);
-	M_Options_PrintSlider(  "     Console Speed", true, scr_conspeed.value, 0, 1000);
 	M_Options_PrintSlider(  "     Console Alpha", true, scr_conalpha.value, 0, 1);
 	M_Options_PrintSlider(  "Conback Brightness", true, scr_conbrightness.value, 0, 1);
 	M_Options_PrintSlider(  "     Sbar Alpha BG", true, sbar_alpha_bg.value, 0, 1);
