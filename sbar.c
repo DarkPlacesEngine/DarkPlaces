@@ -81,6 +81,11 @@ cachepic_t *zymsb_crosshair_left1;
 cachepic_t *zymsb_crosshair_left2;
 cachepic_t *zymsb_crosshair_right;
 
+cachepic_t *sb_ranking;
+cachepic_t *sb_complete;
+cachepic_t *sb_inter;
+cachepic_t *sb_finale;
+
 cvar_t showfps = {CVAR_SAVE, "showfps", "0", "shows your rendered fps (frames per second)"};
 cvar_t showtime = {CVAR_SAVE, "showtime", "0", "shows current time of day (useful on screenshots)"};
 cvar_t showtime_format = {CVAR_SAVE, "showtime_format", "%H:%M:%S", "format string for time of day"};
@@ -315,6 +320,11 @@ void sbar_start(void)
 			rsb_ammo[2] = Draw_CachePic ("gfx/r_ammoplasma", true);
 		}
 	}
+
+	sb_ranking = Draw_CachePic ("gfx/ranking", true);
+	sb_complete = Draw_CachePic ("gfx/complete", true);
+	sb_inter = Draw_CachePic ("gfx/inter", true);
+	sb_finale = Draw_CachePic ("gfx/finale", true);
 }
 
 void sbar_shutdown(void)
@@ -1375,7 +1385,6 @@ float Sbar_PrintScoreboardItem(scoreboard_t *s, float x, float y)
 void Sbar_DeathmatchOverlay (void)
 {
 	int i, x, y;
-	cachepic_t *pic;
 
 	// request new ping times every two second
 	if (cl.last_ping_request < realtime - 2)
@@ -1388,8 +1397,7 @@ void Sbar_DeathmatchOverlay (void)
 		}
 	}
 
-	pic = Draw_CachePic ("gfx/ranking", true);
-	DrawQ_Pic ((vid_conwidth.integer - pic->width)/2, 8, pic, 0, 0, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
+	DrawQ_Pic ((vid_conwidth.integer - sb_ranking->width)/2, 8, sb_ranking, 0, 0, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
 
 	// scores
 	Sbar_SortFrags ();
@@ -1477,8 +1485,8 @@ void Sbar_IntermissionOverlay (void)
 	sbar_x = (vid_conwidth.integer - 320) >> 1;
 	sbar_y = (vid_conheight.integer - 200) >> 1;
 
-	DrawQ_Pic (sbar_x + 64, sbar_y + 24, Draw_CachePic("gfx/complete", true), 0, 0, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
-	DrawQ_Pic (sbar_x + 0, sbar_y + 56, Draw_CachePic("gfx/inter", true), 0, 0, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
+	DrawQ_Pic (sbar_x + 64, sbar_y + 24, sb_complete, 0, 0, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
+	DrawQ_Pic (sbar_x + 0, sbar_y + 56, sb_inter, 0, 0, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
 
 // time
 	dig = (int)cl.completed_time / 60;
@@ -1510,9 +1518,6 @@ Sbar_FinaleOverlay
 */
 void Sbar_FinaleOverlay (void)
 {
-	cachepic_t	*pic;
-
-	pic = Draw_CachePic ("gfx/finale", true);
-	DrawQ_Pic((vid_conwidth.integer - pic->width)/2, 16, pic, 0, 0, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
+	DrawQ_Pic((vid_conwidth.integer - sb_finale->width)/2, 16, sb_finale, 0, 0, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
 }
 
