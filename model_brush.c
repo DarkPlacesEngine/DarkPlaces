@@ -4601,28 +4601,8 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l)
 	loadmodel->brushq3.data_lightmaps = out;
 	loadmodel->brushq3.num_lightmaps = count;
 
-	loadmodel->brushq3.deluxemapping_modelspace = false;
 	for (i = 0;i < count;i++, in++, out++)
-	{
-		// if this may be a deluxemap, check if it's in modelspace or not
-		if ((i & 1) && !loadmodel->brushq3.deluxemapping_modelspace)
-		{
-			int j;
-			unsigned char *b = in->rgb;
-			for (j = 2;j < 128*128*3;j += 3)
-			{
-				// if this is definitely negative Z, it is not facing outward,
-				// and thus must be in modelspace, as negative Z would never
-				// occur in tangentspace
-				if (b[j] < 120)
-				{
-					loadmodel->brushq3.deluxemapping_modelspace = true;
-					break;
-				}
-			}
-		}
 		*out = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", i), 128, 128, in->rgb, TEXTYPE_RGB, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
-	}
 }
 
 static void Mod_Q3BSP_LoadFaces(lump_t *l)
@@ -4657,6 +4637,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 	// is also not a deluxemapped bsp if it has an odd number of lightmaps or
 	// less than 2
 	loadmodel->brushq3.deluxemapping = true;
+	loadmodel->brushq3.deluxemapping_modelspace = true;
 	if (loadmodel->brushq3.num_lightmaps >= 2 && !(loadmodel->brushq3.num_lightmaps & 1))
 	{
 		for (i = 0;i < count;i++)
