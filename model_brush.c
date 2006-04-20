@@ -851,7 +851,7 @@ static void Mod_Q1BSP_TraceBox(struct model_s *model, int frame, trace_t *trace,
 	Con_Printf("t(%f %f %f,%f %f %f,%i %f %f %f)", rhc.start[0], rhc.start[1], rhc.start[2], rhc.end[0], rhc.end[1], rhc.end[2], rhc.hull - model->brushq1.hulls, rhc.hull->clip_mins[0], rhc.hull->clip_mins[1], rhc.hull->clip_mins[2]);
 	Mod_Q1BSP_RecursiveHullCheck(&rhc, rhc.hull->firstclipnode, 0, 1, rhc.start, rhc.end);
 	{
-		
+
 		double test[3];
 		trace_t testtrace;
 		VectorLerp(rhc.start, rhc.trace->fraction, rhc.end, test);
@@ -4235,16 +4235,19 @@ static void Mod_Q3BSP_LoadShaders(void)
 				}
 			}
 			// identify if this is a blended terrain shader or similar
-			shader->primarylayer = shader->layers + 0;
-			if (shader->layers[1].blendfunc[0] == GL_SRC_ALPHA && shader->layers[1].blendfunc[1] == GL_ONE_MINUS_SRC_ALPHA)
+			if (shader->numlayers)
 			{
-				// terrain blending or other effects
-				shader->backgroundlayer = shader->layers + 0;
-				shader->primarylayer = shader->layers + 1;
+				shader->primarylayer = shader->layers + 0;
+				if (shader->layers[1].blendfunc[0] == GL_SRC_ALPHA && shader->layers[1].blendfunc[1] == GL_ONE_MINUS_SRC_ALPHA)
+				{
+					// terrain blending or other effects
+					shader->backgroundlayer = shader->layers + 0;
+					shader->primarylayer = shader->layers + 1;
+				}
+				// now see if the lightmap came first, and if so choose the second texture instead
+				if (!strcasecmp(shader->primarylayer->texturename, "$lightmap"))
+					shader->primarylayer = shader->layers + 1;
 			}
-			// now see if the lightmap came first, and if so choose the second texture instead
-			if (!strcasecmp(shader->primarylayer->texturename, "$lightmap"))
-				shader->primarylayer = shader->layers + 1;
 		}
 		Mem_Free(f);
 	}
