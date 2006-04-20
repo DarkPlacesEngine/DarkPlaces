@@ -4410,7 +4410,7 @@ static void M_ServerList_Key(int k, char ascii)
 //=============================================================================
 /* Menu Subsystem */
 
-static void M_Keydown(int key, char ascii);
+static void M_KeyEvent(int key, char ascii, qboolean downevent);
 static void M_Draw(void);
 void M_ToggleMenu_f(void);
 static void M_Shutdown(void);
@@ -4642,8 +4642,10 @@ void M_Draw (void)
 }
 
 
-void M_Keydown (int key, char ascii)
+void M_KeyEvent (int key, char ascii, qboolean downevent)
 {
+	if (!downevent)
+		return;
 	switch (m_state)
 	{
 	case m_none:
@@ -4756,6 +4758,7 @@ mfunction_t *PRVM_ED_FindFunction(const char *);
 
 #define M_F_INIT		"m_init"
 #define M_F_KEYDOWN		"m_keydown"
+#define M_F_KEYUP		"m_keyup"
 #define M_F_DRAW		"m_draw"
 // normal menu names (rest)
 #define M_F_TOGGLE		"m_toggle"
@@ -4776,6 +4779,7 @@ static qboolean m_displayed;
 static int m_numrequiredfunc = sizeof(m_required_func) / sizeof(char*);
 
 static func_t m_draw, m_keydown;
+static mfunction_t *m_keyup;
 
 void MR_SetRouting (qboolean forceold);
 
@@ -4811,7 +4815,7 @@ void MP_Error(const char *format, ...)
 	Host_AbortCurrentFrame();
 }
 
-void MP_Keydown (int key, char ascii)
+void MP_KeyEvent (int key, char ascii, qboolean downevent)
 {
 	PRVM_Begin;
 	PRVM_SetProg(PRVM_MENUPROG);
@@ -4822,7 +4826,10 @@ void MP_Keydown (int key, char ascii)
 	// pass key
 	prog->globals.generic[OFS_PARM0] = (float) key;
 	prog->globals.generic[OFS_PARM1] = (float) ascii;
-	PRVM_ExecuteProgram(m_keydown, M_F_KEYDOWN"(float key, float ascii) required\n");
+	if (downevent)
+		PRVM_ExecuteProgram(m_keydown, M_F_KEYDOWN"(float key, float ascii) required\n");
+	else if (m_keyup)
+		PRVM_ExecuteProgram((func_t)(m_keyup - prog->functions), M_F_KEYUP"(float key, float ascii) required\n");
 
 	PRVM_End;
 }
@@ -4915,6 +4922,7 @@ void MP_Init (void)
 	// set m_draw and m_keydown
 	m_draw = (func_t) (PRVM_ED_FindFunction(M_F_DRAW) - prog->functions);
 	m_keydown = (func_t) (PRVM_ED_FindFunction(M_F_KEYDOWN) - prog->functions);
+	m_keyup = PRVM_ED_FindFunction(M_F_KEYUP);
 
 #ifdef NG_MENU
 	m_displayed = false;
@@ -4939,7 +4947,7 @@ void MP_Restart(void)
 
 static cvar_t forceqmenu = { 0, "forceqmenu", "0", "enables the quake menu instead of the quakec menu.dat (if present)" };
 
-void (*MR_Keydown) (int key, char ascii);
+void (*MR_KeyEvent) (int key, char ascii, qboolean downevent);
 void (*MR_Draw) (void);
 void (*MR_ToggleMenu_f) (void);
 void (*MR_Shutdown) (void);
@@ -4952,7 +4960,7 @@ void MR_SetRouting(qboolean forceold)
 	if(!FS_FileExists(M_PROG_FILENAME) || forceqmenu.integer || forceold)
 	{
 		// set menu router function pointers
-		MR_Keydown = M_Keydown;
+		MR_KeyEvent = M_KeyEvent;
 		MR_Draw = M_Draw;
 		MR_ToggleMenu_f = M_ToggleMenu_f;
 		MR_Shutdown = M_Shutdown;
@@ -4969,7 +4977,7 @@ void MR_SetRouting(qboolean forceold)
 	else
 	{
 		// set menu router function pointers
-		MR_Keydown = MP_Keydown;
+		MR_KeyEvent = MP_KeyEvent;
 		MR_Draw = MP_Draw;
 		MR_ToggleMenu_f = MP_ToggleMenu_f;
 		MR_Shutdown = MP_Shutdown;
