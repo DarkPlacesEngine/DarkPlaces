@@ -300,7 +300,7 @@ LoadTGA
 */
 unsigned char *LoadTGA (const unsigned char *f, int filesize, int matchwidth, int matchheight)
 {
-	int x, y, row_inc, compressed, readpixelcount, red, green, blue, alpha, runlen, pindex, alphabits;
+	int x, y, pix_inc, row_inc, red, green, blue, alpha, runlen, alphabits;
 	unsigned char *pixbuf, *image_rgba;
 	const unsigned char *fin, *enddata;
 	unsigned char *p;
@@ -386,35 +386,35 @@ unsigned char *LoadTGA (const unsigned char *f, int filesize, int matchwidth, in
 	}
 
 	// check our pixel_size restrictions according to image_type
-	if (targa_header.image_type == 2 || targa_header.image_type == 10)
+	switch (targa_header.image_type & ~8)
 	{
+	case 2:
 		if (targa_header.pixel_size != 24 && targa_header.pixel_size != 32)
 		{
 			Con_Print("LoadTGA: only 24bit and 32bit pixel sizes supported for type 2 and type 10 images\n");
 			PrintTargaHeader(&targa_header);
 			return NULL;
 		}
-	}
-	else if (targa_header.image_type == 1 || targa_header.image_type == 9)
-	{
+		break;
+	case 3:
+		// set up a palette to make the loader easier
+		for (x = 0;x < 256;x++)
+		{
+			palette[x*4+2] = x;
+			palette[x*4+1] = x;
+			palette[x*4+0] = x;
+			palette[x*4+3] = 255;
+		}
+		// fall through to colormap case
+	case 1:
 		if (targa_header.pixel_size != 8)
 		{
 			Con_Print("LoadTGA: only 8bit pixel size for type 1, 3, 9, and 11 images supported\n");
 			PrintTargaHeader(&targa_header);
 			return NULL;
 		}
-	}
-	else if (targa_header.image_type == 3 || targa_header.image_type == 11)
-	{
-		if (targa_header.pixel_size != 8)
-		{
-			Con_Print("LoadTGA: only 8bit pixel size for type 1, 3, 9, and 11 images supported\n");
-			PrintTargaHeader(&targa_header);
-			return NULL;
-		}
-	}
-	else
-	{
+		break;
+	default:
 		Con_Printf("LoadTGA: Only type 1, 2, 3, 9, 10, and 11 targa RGB images supported, image_type = %i\n", targa_header.image_type);
 		PrintTargaHeader(&targa_header);
 		return NULL;
@@ -453,80 +453,215 @@ unsigned char *LoadTGA (const unsigned char *f, int filesize, int matchwidth, in
 		row_inc = 0;
 	}
 
-	compressed = targa_header.image_type == 9 || targa_header.image_type == 10 || targa_header.image_type == 11;
 	x = 0;
 	y = 0;
 	red = green = blue = alpha = 255;
-	while (y < image_height)
+	pix_inc = 1;
+	if ((targa_header.image_type & ~8) == 2)
+		pix_inc = targa_header.pixel_size / 8;
+	switch (targa_header.image_type)
 	{
-		// decoder is mostly the same whether it's compressed or not
-		readpixelcount = 1000000;
-		runlen = 1000000;
-		if (compressed && fin < enddata)
+	case 1: // colormapped, uncompressed
+	case 3: // greyscale, uncompressed
+		if (fin + image_width * image_height * pix_inc > enddata)
+			break;
+		for (y = 0;y < image_height;y++, pixbuf += row_inc)
 		{
-			runlen = *fin++;
-			// high bit indicates this is an RLE compressed run
-			if (runlen & 0x80)
-				readpixelcount = 1;
-			runlen = 1 + (runlen & 0x7f);
-		}
-
-		while((runlen--) && y < image_height)
-		{
-			if (readpixelcount > 0)
+			for (x = 0;x < image_width;x++)
 			{
-				readpixelcount--;
-				red = green = blue = alpha = 255;
-				if (fin < enddata)
+				p = palette + *fin++ * 4;
+				*pixbuf++ = p[0];
+				*pixbuf++ = p[1];
+				*pixbuf++ = p[2];
+				*pixbuf++ = p[3];
+			}
+		}
+		break;
+	case 2:
+		// BGR or BGRA, uncompressed
+		if (fin + image_width * image_height * pix_inc > enddata)
+			break;
+		if (targa_header.pixel_size == 32 && alphabits)
+		{
+			for (y = 0;y < image_height;y++, pixbuf += row_inc)
+			{
+				for (x = 0;x < image_width;x++, fin += pix_inc)
 				{
-					switch(targa_header.image_type)
-					{
-					case 1:
-					case 9:
-						// colormapped
-						pindex = *fin++;
-						if (pindex >= targa_header.colormap_length)
-							pindex = 0; // error
-						p = palette + pindex * 4;
-						red = p[0];
-						green = p[1];
-						blue = p[2];
-						alpha = p[3];
-						break;
-					case 2:
-					case 10:
-						// BGR or BGRA
-						blue = *fin++;
-						if (fin < enddata)
-							green = *fin++;
-						if (fin < enddata)
-							red = *fin++;
-						if (targa_header.pixel_size == 32 && fin < enddata)
-							alpha = *fin++;
-						break;
-					case 3:
-					case 11:
-						// greyscale
-						red = green = blue = *fin++;
-						break;
-					}
-					if (!alphabits)
-						alpha = 255;
+					*pixbuf++ = fin[2];
+					*pixbuf++ = fin[1];
+					*pixbuf++ = fin[0];
+					*pixbuf++ = fin[3];
 				}
 			}
-			*pixbuf++ = red;
-			*pixbuf++ = green;
-			*pixbuf++ = blue;
-			*pixbuf++ = alpha;
-			x++;
-			if (x == image_width)
+		}
+		else
+		{
+			for (y = 0;y < image_height;y++, pixbuf += row_inc)
 			{
-				// end of line, advance to next
-				x = 0;
-				y++;
-				pixbuf += row_inc;
+				for (x = 0;x < image_width;x++, fin += pix_inc)
+				{
+					*pixbuf++ = fin[2];
+					*pixbuf++ = fin[1];
+					*pixbuf++ = fin[0];
+					*pixbuf++ = 255;
+				}
 			}
 		}
+		break;
+	case 9: // colormapped, RLE
+	case 11: // greyscale, RLE
+		for (y = 0;y < image_height;y++, pixbuf += row_inc)
+		{
+			for (x = 0;x < image_width;)
+			{
+				if (fin >= enddata)
+					break; // error - truncated file
+				runlen = *fin++;
+				if (runlen & 0x80)
+				{
+					// RLE - all pixels the same color
+					runlen += 1 - 0x80;
+					if (fin + pix_inc > enddata)
+						break; // error - truncated file
+					if (x + runlen > image_width)
+						break; // error - line exceeds width
+					p = palette + *fin++ * 4;
+					red = p[0];
+					green = p[1];
+					blue = p[2];
+					alpha = p[3];
+					for (;runlen--;x++)
+					{
+						*pixbuf++ = red;
+						*pixbuf++ = green;
+						*pixbuf++ = blue;
+						*pixbuf++ = alpha;
+					}
+				}
+				else
+				{
+					// uncompressed - all pixels different color
+					runlen++;
+					if (fin + pix_inc * runlen > enddata)
+						break; // error - truncated file
+					if (x + runlen > image_width)
+						break; // error - line exceeds width
+					for (;runlen--;x++)
+					{
+						p = palette + *fin++ * 4;
+						*pixbuf++ = p[0];
+						*pixbuf++ = p[1];
+						*pixbuf++ = p[2];
+						*pixbuf++ = p[3];
+					}
+				}
+			}
+		}
+		break;
+	case 10:
+		// BGR or BGRA, RLE
+		if (targa_header.pixel_size == 32 && alphabits)
+		{
+			for (y = 0;y < image_height;y++, pixbuf += row_inc)
+			{
+				for (x = 0;x < image_width;)
+				{
+					if (fin >= enddata)
+						break; // error - truncated file
+					runlen = *fin++;
+					if (runlen & 0x80)
+					{
+						// RLE - all pixels the same color
+						runlen += 1 - 0x80;
+						if (fin + pix_inc > enddata)
+							break; // error - truncated file
+						if (x + runlen > image_width)
+							break; // error - line exceeds width
+						red = fin[2];
+						green = fin[1];
+						blue = fin[0];
+						alpha = fin[3];
+						fin += pix_inc;
+						for (;runlen--;x++)
+						{
+							*pixbuf++ = red;
+							*pixbuf++ = green;
+							*pixbuf++ = blue;
+							*pixbuf++ = alpha;
+						}
+					}
+					else
+					{
+						// uncompressed - all pixels different color
+						runlen++;
+						if (fin + pix_inc * runlen > enddata)
+							break; // error - truncated file
+						if (x + runlen > image_width)
+							break; // error - line exceeds width
+						for (;runlen--;x++, fin += pix_inc)
+						{
+							*pixbuf++ = fin[2];
+							*pixbuf++ = fin[1];
+							*pixbuf++ = fin[0];
+							*pixbuf++ = fin[3];
+						}
+					}
+				}
+			}
+		}
+		else
+		{
+			for (y = 0;y < image_height;y++, pixbuf += row_inc)
+			{
+				for (x = 0;x < image_width;)
+				{
+					if (fin >= enddata)
+						break; // error - truncated file
+					runlen = *fin++;
+					if (runlen & 0x80)
+					{
+						// RLE - all pixels the same color
+						runlen += 1 - 0x80;
+						if (fin + pix_inc > enddata)
+							break; // error - truncated file
+						if (x + runlen > image_width)
+							break; // error - line exceeds width
+						red = fin[2];
+						green = fin[1];
+						blue = fin[0];
+						alpha = 255;
+						fin += pix_inc;
+						for (;runlen--;x++)
+						{
+							*pixbuf++ = red;
+							*pixbuf++ = green;
+							*pixbuf++ = blue;
+							*pixbuf++ = alpha;
+						}
+					}
+					else
+					{
+						// uncompressed - all pixels different color
+						runlen++;
+						if (fin + pix_inc * runlen > enddata)
+							break; // error - truncated file
+						if (x + runlen > image_width)
+							break; // error - line exceeds width
+						for (;runlen--;x++, fin += pix_inc)
+						{
+							*pixbuf++ = fin[2];
+							*pixbuf++ = fin[1];
+							*pixbuf++ = fin[0];
+							*pixbuf++ = 255;
+						}
+					}
+				}
+			}
+		}
+		break;
+	default:
+		// unknown image_type
+		break;
 	}
 
 	return image_rgba;
