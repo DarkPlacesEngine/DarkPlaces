@@ -17,6 +17,7 @@ void GL_SetupView_Mode_Ortho(double x1, double y1, double x2, double y2, double 
 void GL_BlendFunc(int blendfunc1, int blendfunc2);
 void GL_DepthMask(int state);
 void GL_DepthTest(int state);
+void GL_AlphaTest(int state);
 void GL_ColorMask(int r, int g, int b, int a);
 void GL_Color(float cr, float cg, float cb, float ca);
 void GL_TransformToScreen(const vec4_t in, vec4_t out);
