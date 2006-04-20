@@ -503,7 +503,7 @@ void VID_Finish (qboolean allowmousegrab)
 		vid_activewindow = true;
 
 	vid_usemouse = false;
-	if( allowmousegrab && vid_mouse.integer && !key_consoleactive && !cls.demoplayback )
+	if( allowmousegrab && vid_mouse.integer && !key_consoleactive && (key_dest != key_game || !cls.demoplayback) )
 		vid_usemouse = true;
 	if( vid_isfullscreen )
 		vid_usemouse = true;

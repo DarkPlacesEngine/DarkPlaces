@@ -111,7 +111,7 @@ void VID_Finish (qboolean allowmousegrab)
 
 	// handle the mouse state when windowed if that's changed
 	vid_usemouse = false;
-	if (allowmousegrab && vid_mouse.integer && !key_consoleactive && !cls.demoplayback)
+	if (allowmousegrab && vid_mouse.integer && !key_consoleactive && (key_dest != key_game || !cls.demoplayback))
 		vid_usemouse = true;
 	if (!vid_activewindow)
 		vid_usemouse = false;
@@ -274,7 +274,7 @@ void VID_Shutdown(void)
 		qaglDestroyContext(context);
 		context = NULL;
 	}
-	
+
 	if (vid_isfullscreen)
 		CGReleaseAllDisplays();
 
@@ -444,11 +444,11 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 		CGDirectDisplayID mainDisplay;
 		CFDictionaryRef refDisplayMode;
 		GDHandle gdhDisplay;
-		
+
 		// Get the mainDisplay and set resolution to current
 		mainDisplay = CGMainDisplayID();
 		CGDisplayCapture(mainDisplay);
-		
+
 		// TOCHECK: not sure whether or not it's necessary to change the resolution
 		// "by hand", or if aglSetFullscreen does the job anyway
 		refDisplayMode = CGDisplayBestModeForParametersAndRefreshRate(mainDisplay, bpp, width, height, refreshrate, NULL);
@@ -478,7 +478,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	}
 
 	// Make the context the current one ('enable' it)
-	qaglSetCurrentContext(context);   
+	qaglSetCurrentContext(context);
 	error = qaglGetError();
 	if (error != AGL_NO_ERROR)
 	{
