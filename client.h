@@ -583,6 +583,7 @@ typedef struct particle_s
 	vec3_t		org;
 	vec3_t		vel; // velocity of particle, or orientation of decal, or end point of beam
 	float		size;
+	float		sizeincrease; // rate of size change per second
 	float		alpha; // 0-255
 	float		alphafade; // how much alpha reduces per second
 	float		time2; // used for snow fluttering and decal fade
