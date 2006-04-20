@@ -845,14 +845,14 @@ void R_GLSL_Restart_f(void)
 	memset(r_glsl_permutations, 0, sizeof(r_glsl_permutations));
 }
 
-void R_SetupSurfaceShader(const entity_render_t *ent, const texture_t *texture, rtexture_t *lightmaptexture, const vec3_t modelorg, const vec3_t lightcolorbase, qboolean modellighting)
+int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting)
 {
 	// select a permutation of the lighting shader appropriate to this
 	// combination of texture, entity, light source, and fogging, only use the
 	// minimum features necessary to avoid wasting rendering time in the
 	// fragment shader on features that are not being used
 	int permutation = 0;
-	float specularscale = texture->specularscale;
+	float specularscale = rsurface_texture->specularscale;
 	r_glsl_permutation = NULL;
 	if (r_shadow_rtlight)
 	{
@@ -863,28 +863,31 @@ void R_SetupSurfaceShader(const entity_render_t *ent, const texture_t *texture, 
 	}
 	else
 	{
-		if (!(texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
+		if (!(rsurface_texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
 		{
 			if (modellighting)
 				permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTION;
-			else if (r_glsl_deluxemapping.integer >= 1 && r_refdef.worldmodel && r_refdef.worldmodel->brushq3.deluxemapping && lightmaptexture)
+			else
 			{
-				if (r_refdef.worldmodel->brushq3.deluxemapping_modelspace)
-					permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP_MODELSPACE;
-				else
+				if (r_glsl_deluxemapping.integer >= 1 && r_refdef.worldmodel && r_refdef.worldmodel->brushq3.deluxemapping && rsurface_lightmaptexture)
+				{
+					if (r_refdef.worldmodel->brushq3.deluxemapping_modelspace)
+						permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP_MODELSPACE;
+					else
+						permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP_TANGENTSPACE;
+				}
+				else if (r_glsl_deluxemapping.integer >= 2) // fake mode
 					permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP_TANGENTSPACE;
 			}
-			else if (r_glsl_deluxemapping.integer >= 2) // fake mode
-				permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP_TANGENTSPACE;
 		}
-		if (texture->skin.glow)
+		if (rsurface_texture->skin.glow)
 			permutation |= SHADERPERMUTATION_GLOW;
 	}
 	if (specularscale > 0)
 		permutation |= SHADERPERMUTATION_SPECULAR;
 	if (fogenabled)
 		permutation |= SHADERPERMUTATION_FOG;
-	if (texture->colormapping)
+	if (rsurface_texture->colormapping)
 		permutation |= SHADERPERMUTATION_COLORMAPPING;
 	if (r_glsl_offsetmapping.integer)
 	{
@@ -911,18 +914,17 @@ void R_SetupSurfaceShader(const entity_render_t *ent, const texture_t *texture, 
 				if (r_glsl_permutations[permutation].program)
 					break;
 				if (!i)
-					return; // utterly failed
+					return 0; // utterly failed
 			}
 		}
 	}
 	r_glsl_permutation = r_glsl_permutations + permutation;
 	CHECKGLERROR
 	qglUseProgramObjectARB(r_glsl_permutation->program);CHECKGLERROR
-	R_Mesh_TexMatrix(0, &texture->currenttexmatrix);
+	R_Mesh_TexMatrix(0, &rsurface_texture->currenttexmatrix);
 	if (permutation & SHADERPERMUTATION_MODE_LIGHTSOURCE)
 	{
-		R_Mesh_TexMatrix(3, &r_shadow_entitytolight);
-		//if (r_glsl_permutation->loc_Texture_Cube >= 0) R_Mesh_TexBindCubeMap(3, R_GetTexture(r_shadow_rtlight->currentcubemap));
+		if (r_glsl_permutation->loc_Texture_Cube >= 0 && r_shadow_rtlight) R_Mesh_TexBindCubeMap(3, R_GetTexture(r_shadow_rtlight->currentcubemap));
 		if (r_glsl_permutation->loc_LightPosition >= 0) qglUniform3fARB(r_glsl_permutation->loc_LightPosition, r_shadow_entitylightorigin[0], r_shadow_entitylightorigin[1], r_shadow_entitylightorigin[2]);
 		if (r_glsl_permutation->loc_LightColor >= 0) qglUniform3fARB(r_glsl_permutation->loc_LightColor, lightcolorbase[0], lightcolorbase[1], lightcolorbase[2]);
 		if (r_glsl_permutation->loc_AmbientScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_AmbientScale, r_shadow_rtlight->ambientscale);
@@ -931,7 +933,7 @@ void R_SetupSurfaceShader(const entity_render_t *ent, const texture_t *texture, 
 	}
 	else if (permutation & SHADERPERMUTATION_MODE_LIGHTDIRECTION)
 	{
-		if (texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
+		if (rsurface_texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
 		{
 			if (r_glsl_permutation->loc_AmbientColor >= 0)
 				qglUniform3fARB(r_glsl_permutation->loc_AmbientColor, 1, 1, 1);
@@ -945,13 +947,13 @@ void R_SetupSurfaceShader(const entity_render_t *ent, const texture_t *texture, 
 		else
 		{
 			if (r_glsl_permutation->loc_AmbientColor >= 0)
-				qglUniform3fARB(r_glsl_permutation->loc_AmbientColor, ent->modellight_ambient[0], ent->modellight_ambient[1], ent->modellight_ambient[2]);
+				qglUniform3fARB(r_glsl_permutation->loc_AmbientColor, rsurface_entity->modellight_ambient[0], rsurface_entity->modellight_ambient[1], rsurface_entity->modellight_ambient[2]);
 			if (r_glsl_permutation->loc_DiffuseColor >= 0)
-				qglUniform3fARB(r_glsl_permutation->loc_DiffuseColor, ent->modellight_diffuse[0], ent->modellight_diffuse[1], ent->modellight_diffuse[2]);
+				qglUniform3fARB(r_glsl_permutation->loc_DiffuseColor, rsurface_entity->modellight_diffuse[0], rsurface_entity->modellight_diffuse[1], rsurface_entity->modellight_diffuse[2]);
 			if (r_glsl_permutation->loc_SpecularColor >= 0)
-				qglUniform3fARB(r_glsl_permutation->loc_SpecularColor, ent->modellight_diffuse[0] * texture->specularscale, ent->modellight_diffuse[1] * texture->specularscale, ent->modellight_diffuse[2] * texture->specularscale);
+				qglUniform3fARB(r_glsl_permutation->loc_SpecularColor, rsurface_entity->modellight_diffuse[0] * rsurface_texture->specularscale, rsurface_entity->modellight_diffuse[1] * rsurface_texture->specularscale, rsurface_entity->modellight_diffuse[2] * rsurface_texture->specularscale);
 			if (r_glsl_permutation->loc_LightDir >= 0)
-				qglUniform3fARB(r_glsl_permutation->loc_LightDir, ent->modellight_lightdir[0], ent->modellight_lightdir[1], ent->modellight_lightdir[2]);
+				qglUniform3fARB(r_glsl_permutation->loc_LightDir, rsurface_entity->modellight_lightdir[0], rsurface_entity->modellight_lightdir[1], rsurface_entity->modellight_lightdir[2]);
 		}
 	}
 	else
@@ -960,43 +962,55 @@ void R_SetupSurfaceShader(const entity_render_t *ent, const texture_t *texture, 
 		if (r_glsl_permutation->loc_DiffuseScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_DiffuseScale, r_lightmapintensity * 2.0f);
 		if (r_glsl_permutation->loc_SpecularScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularScale, r_lightmapintensity * specularscale * 2.0f);
 	}
-	if (r_glsl_permutation->loc_Texture_Normal >= 0) R_Mesh_TexBind(0, R_GetTexture(texture->skin.nmap));
-	if (r_glsl_permutation->loc_Texture_Color >= 0) R_Mesh_TexBind(1, R_GetTexture(texture->basetexture));
-	if (r_glsl_permutation->loc_Texture_Gloss >= 0) R_Mesh_TexBind(2, R_GetTexture(texture->glosstexture));
+	if (r_glsl_permutation->loc_Texture_Normal >= 0) R_Mesh_TexBind(0, R_GetTexture(rsurface_texture->skin.nmap));
+	if (r_glsl_permutation->loc_Texture_Color >= 0) R_Mesh_TexBind(1, R_GetTexture(rsurface_texture->basetexture));
+	if (r_glsl_permutation->loc_Texture_Gloss >= 0) R_Mesh_TexBind(2, R_GetTexture(rsurface_texture->glosstexture));
 	//if (r_glsl_permutation->loc_Texture_Cube >= 0 && permutation & SHADERPERMUTATION_MODE_LIGHTSOURCE) R_Mesh_TexBindCubeMap(3, R_GetTexture(r_shadow_rtlight->currentcubemap));
 	if (r_glsl_permutation->loc_Texture_FogMask >= 0) R_Mesh_TexBind(4, R_GetTexture(r_texture_fogattenuation));
-	if (r_glsl_permutation->loc_Texture_Pants >= 0) R_Mesh_TexBind(5, R_GetTexture(texture->skin.pants));
-	if (r_glsl_permutation->loc_Texture_Shirt >= 0) R_Mesh_TexBind(6, R_GetTexture(texture->skin.shirt));
-	if (r_glsl_permutation->loc_Texture_Lightmap >= 0) R_Mesh_TexBind(7, R_GetTexture(r_texture_white));
-	if (r_glsl_permutation->loc_Texture_Deluxemap >= 0) R_Mesh_TexBind(8, R_GetTexture(r_texture_blanknormalmap));
-	if (r_glsl_permutation->loc_Texture_Glow >= 0) R_Mesh_TexBind(9, R_GetTexture(texture->skin.glow));
+	if (r_glsl_permutation->loc_Texture_Pants >= 0) R_Mesh_TexBind(5, R_GetTexture(rsurface_texture->skin.pants));
+	if (r_glsl_permutation->loc_Texture_Shirt >= 0) R_Mesh_TexBind(6, R_GetTexture(rsurface_texture->skin.shirt));
+	//if (r_glsl_permutation->loc_Texture_Lightmap >= 0) R_Mesh_TexBind(7, R_GetTexture(r_texture_white));
+	//if (r_glsl_permutation->loc_Texture_Deluxemap >= 0) R_Mesh_TexBind(8, R_GetTexture(r_texture_blanknormalmap));
+	if (r_glsl_permutation->loc_Texture_Glow >= 0) R_Mesh_TexBind(9, R_GetTexture(rsurface_texture->skin.glow));
 	if (r_glsl_permutation->loc_FogColor >= 0)
 	{
 		// additive passes are only darkened by fog, not tinted
-		if (r_shadow_rtlight || (texture->currentmaterialflags & MATERIALFLAG_ADD))
+		if (r_shadow_rtlight || (rsurface_texture->currentmaterialflags & MATERIALFLAG_ADD))
 			qglUniform3fARB(r_glsl_permutation->loc_FogColor, 0, 0, 0);
 		else
 			qglUniform3fARB(r_glsl_permutation->loc_FogColor, fogcolor[0], fogcolor[1], fogcolor[2]);
 	}
-	if (r_glsl_permutation->loc_EyePosition >= 0) qglUniform3fARB(r_glsl_permutation->loc_EyePosition, modelorg[0], modelorg[1], modelorg[2]);
+	if (r_glsl_permutation->loc_EyePosition >= 0) qglUniform3fARB(r_glsl_permutation->loc_EyePosition, rsurface_modelorg[0], rsurface_modelorg[1], rsurface_modelorg[2]);
 	if (r_glsl_permutation->loc_Color_Pants >= 0)
 	{
-		if (texture->skin.pants)
-			qglUniform3fARB(r_glsl_permutation->loc_Color_Pants, ent->colormap_pantscolor[0], ent->colormap_pantscolor[1], ent->colormap_pantscolor[2]);
+		if (rsurface_texture->skin.pants)
+			qglUniform3fARB(r_glsl_permutation->loc_Color_Pants, rsurface_entity->colormap_pantscolor[0], rsurface_entity->colormap_pantscolor[1], rsurface_entity->colormap_pantscolor[2]);
 		else
 			qglUniform3fARB(r_glsl_permutation->loc_Color_Pants, 0, 0, 0);
 	}
 	if (r_glsl_permutation->loc_Color_Shirt >= 0)
 	{
-		if (texture->skin.shirt)
-			qglUniform3fARB(r_glsl_permutation->loc_Color_Shirt, ent->colormap_shirtcolor[0], ent->colormap_shirtcolor[1], ent->colormap_shirtcolor[2]);
+		if (rsurface_texture->skin.shirt)
+			qglUniform3fARB(r_glsl_permutation->loc_Color_Shirt, rsurface_entity->colormap_shirtcolor[0], rsurface_entity->colormap_shirtcolor[1], rsurface_entity->colormap_shirtcolor[2]);
 		else
 			qglUniform3fARB(r_glsl_permutation->loc_Color_Shirt, 0, 0, 0);
 	}
 	if (r_glsl_permutation->loc_FogRangeRecip >= 0) qglUniform1fARB(r_glsl_permutation->loc_FogRangeRecip, fograngerecip);
-	if (r_glsl_permutation->loc_SpecularPower >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularPower, texture->specularpower);
+	if (r_glsl_permutation->loc_SpecularPower >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularPower, rsurface_texture->specularpower);
 	if (r_glsl_permutation->loc_OffsetMapping_Scale >= 0) qglUniform1fARB(r_glsl_permutation->loc_OffsetMapping_Scale, r_glsl_offsetmapping_scale.value);
 	CHECKGLERROR
+	return permutation;
+}
+
+void R_SwitchSurfaceShader(int permutation)
+{
+	if (r_glsl_permutation != r_glsl_permutations + permutation)
+	{
+		r_glsl_permutation = r_glsl_permutations + permutation;
+		CHECKGLERROR
+		qglUseProgramObjectARB(r_glsl_permutation->program);
+		CHECKGLERROR
+	}
 }
 
 void gl_main_start(void)
@@ -2357,7 +2371,7 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 					float colorscale;
 					colorscale = 2;
 					// q3bsp has no lightmap updates, so the lightstylevalue that
-					// would normally be baked into the lightmaptexture must be
+					// would normally be baked into the lightmap must be
 					// applied to the color
 					if (ent->model->type == mod_brushq3)
 						colorscale *= r_refdef.lightstylevalue[0] * (1.0f / 256.0f);
@@ -2414,75 +2428,119 @@ void R_UpdateAllTextureInfo(entity_render_t *ent)
 }
 
 int rsurface_array_size = 0;
-float *rsurface_array_vertex3f = NULL;
-float *rsurface_array_svector3f = NULL;
-float *rsurface_array_tvector3f = NULL;
-float *rsurface_array_normal3f = NULL;
+float *rsurface_array_modelvertex3f = NULL;
+float *rsurface_array_modelsvector3f = NULL;
+float *rsurface_array_modeltvector3f = NULL;
+float *rsurface_array_modelnormal3f = NULL;
+float *rsurface_array_deformedvertex3f = NULL;
+float *rsurface_array_deformedsvector3f = NULL;
+float *rsurface_array_deformedtvector3f = NULL;
+float *rsurface_array_deformednormal3f = NULL;
 float *rsurface_array_color4f = NULL;
 float *rsurface_array_texcoord3f = NULL;
 
 void R_Mesh_ResizeArrays(int newvertices)
 {
+	float *base;
 	if (rsurface_array_size >= newvertices)
 		return;
-	if (rsurface_array_vertex3f)
-		Mem_Free(rsurface_array_vertex3f);
+	if (rsurface_array_modelvertex3f)
+		Mem_Free(rsurface_array_modelvertex3f);
 	rsurface_array_size = (newvertices + 1023) & ~1023;
-	rsurface_array_vertex3f = (float *)Mem_Alloc(r_main_mempool, rsurface_array_size * sizeof(float[19]));
-	rsurface_array_svector3f = rsurface_array_vertex3f + rsurface_array_size * 3;
-	rsurface_array_tvector3f = rsurface_array_vertex3f + rsurface_array_size * 6;
-	rsurface_array_normal3f = rsurface_array_vertex3f + rsurface_array_size * 9;
-	rsurface_array_color4f = rsurface_array_vertex3f + rsurface_array_size * 12;
-	rsurface_array_texcoord3f = rsurface_array_vertex3f + rsurface_array_size * 16;
+	base = (float *)Mem_Alloc(r_main_mempool, rsurface_array_size * sizeof(float[31]));
+	rsurface_array_modelvertex3f     = base + rsurface_array_size * 0;
+	rsurface_array_modelsvector3f    = base + rsurface_array_size * 3;
+	rsurface_array_modeltvector3f    = base + rsurface_array_size * 6;
+	rsurface_array_modelnormal3f     = base + rsurface_array_size * 9;
+	rsurface_array_deformedvertex3f  = base + rsurface_array_size * 12;
+	rsurface_array_deformedsvector3f = base + rsurface_array_size * 15;
+	rsurface_array_deformedtvector3f = base + rsurface_array_size * 18;
+	rsurface_array_deformednormal3f  = base + rsurface_array_size * 21;
+	rsurface_array_texcoord3f        = base + rsurface_array_size * 24;
+	rsurface_array_color4f           = base + rsurface_array_size * 27;
 }
 
+float *rsurface_modelvertex3f;
+float *rsurface_modelsvector3f;
+float *rsurface_modeltvector3f;
+float *rsurface_modelnormal3f;
 float *rsurface_vertex3f;
 float *rsurface_svector3f;
 float *rsurface_tvector3f;
 float *rsurface_normal3f;
 float *rsurface_lightmapcolor4f;
 vec3_t rsurface_modelorg;
+qboolean rsurface_generatedvertex;
 const entity_render_t *rsurface_entity;
 const model_t *rsurface_model;
-const texture_t *rsurface_texture;
+texture_t *rsurface_texture;
+rtexture_t *rsurface_lightmaptexture;
+rsurfmode_t rsurface_mode;
+texture_t *rsurface_glsl_texture;
 
-void RSurf_PrepareVerticesForBatch(const entity_render_t *ent, const texture_t *texture, const vec3_t modelorg, qboolean generatenormals, qboolean generatetangents, int texturenumsurfaces, msurface_t **texturesurfacelist)
+void RSurf_ActiveEntity(const entity_render_t *ent)
 {
-	VectorCopy(modelorg, rsurface_modelorg);
+	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, rsurface_modelorg);
 	rsurface_entity = ent;
 	rsurface_model = ent->model;
-	rsurface_texture = texture;
 	if (rsurface_array_size < rsurface_model->surfmesh.num_vertices)
 		R_Mesh_ResizeArrays(rsurface_model->surfmesh.num_vertices);
+	R_Mesh_Matrix(&ent->matrix);
+	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, rsurface_modelorg);
 	if ((rsurface_entity->frameblend[0].lerp != 1 || rsurface_entity->frameblend[0].frame != 0) && (rsurface_model->surfmesh.data_morphvertex3f || rsurface_model->surfmesh.data_vertexboneweights))
 	{
-		rsurface_vertex3f = rsurface_array_vertex3f;
-		rsurface_svector3f = NULL;
-		rsurface_tvector3f = NULL;
-		rsurface_normal3f = NULL;
-		Mod_Alias_GetMesh_Vertex3f(rsurface_model, rsurface_entity->frameblend, rsurface_array_vertex3f);
+		rsurface_modelvertex3f = rsurface_array_modelvertex3f;
+		rsurface_modelsvector3f = NULL;
+		rsurface_modeltvector3f = NULL;
+		rsurface_modelnormal3f = NULL;
+		Mod_Alias_GetMesh_Vertex3f(rsurface_model, rsurface_entity->frameblend, rsurface_array_modelvertex3f);
+		rsurface_generatedvertex = true;
+	}
+	else
+	{
+		rsurface_modelvertex3f  = rsurface_model->surfmesh.data_vertex3f;
+		rsurface_modelsvector3f = rsurface_model->surfmesh.data_svector3f;
+		rsurface_modeltvector3f = rsurface_model->surfmesh.data_tvector3f;
+		rsurface_modelnormal3f  = rsurface_model->surfmesh.data_normal3f;
+		rsurface_generatedvertex = false;
+	}
+	rsurface_vertex3f  = rsurface_modelvertex3f;
+	rsurface_svector3f = rsurface_modelsvector3f;
+	rsurface_tvector3f = rsurface_modeltvector3f;
+	rsurface_normal3f  = rsurface_modelnormal3f;
+	rsurface_mode = RSURFMODE_NONE;
+}
+
+void RSurf_CleanUp(void)
+{
+	if (rsurface_mode == RSURFMODE_GLSL)
+		qglUseProgramObjectARB(0);
+	GL_AlphaTest(false);
+	rsurface_mode = RSURFMODE_NONE;
+	rsurface_lightmaptexture = NULL;
+	rsurface_texture = NULL;
+	rsurface_glsl_texture = NULL;
+}
+
+void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generatetangents, int texturenumsurfaces, msurface_t **texturesurfacelist)
+{
+	if (rsurface_generatedvertex)
+	{
 		if (rsurface_texture->textureflags & (Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2))
 			generatetangents = true;
 		if (generatetangents)
 			generatenormals = true;
-		if (generatenormals && !rsurface_normal3f)
+		if (generatenormals && !rsurface_modelnormal3f)
 		{
-			rsurface_normal3f = rsurface_array_normal3f;
-			Mod_BuildNormals(0, rsurface_model->surfmesh.num_vertices, rsurface_model->surfmesh.num_triangles, rsurface_array_vertex3f, rsurface_model->surfmesh.data_element3i, rsurface_array_normal3f, r_smoothnormals_areaweighting.integer);
+			rsurface_normal3f = rsurface_modelnormal3f = rsurface_array_modelnormal3f;
+			Mod_BuildNormals(0, rsurface_model->surfmesh.num_vertices, rsurface_model->surfmesh.num_triangles, rsurface_modelvertex3f, rsurface_model->surfmesh.data_element3i, rsurface_array_modelnormal3f, r_smoothnormals_areaweighting.integer);
 		}
-		if (generatetangents && !rsurface_svector3f)
+		if (generatetangents && !rsurface_modelsvector3f)
 		{
-			Mod_BuildTextureVectorsFromNormals(0, rsurface_model->surfmesh.num_vertices, rsurface_model->surfmesh.num_triangles, rsurface_array_vertex3f, rsurface_model->surfmesh.data_texcoordtexture2f, rsurface_normal3f, rsurface_model->surfmesh.data_element3i, rsurface_array_svector3f, rsurface_array_tvector3f, r_smoothnormals_areaweighting.integer);
-			rsurface_svector3f = rsurface_array_svector3f;
-			rsurface_tvector3f = rsurface_array_tvector3f;
+			rsurface_svector3f = rsurface_modelsvector3f = rsurface_array_modelsvector3f;
+			rsurface_tvector3f = rsurface_modeltvector3f = rsurface_array_modeltvector3f;
+			Mod_BuildTextureVectorsFromNormals(0, rsurface_model->surfmesh.num_vertices, rsurface_model->surfmesh.num_triangles, rsurface_modelvertex3f, rsurface_model->surfmesh.data_texcoordtexture2f, rsurface_modelnormal3f, rsurface_model->surfmesh.data_element3i, rsurface_array_modelsvector3f, rsurface_array_modeltvector3f, r_smoothnormals_areaweighting.integer);
 		}
-	}
-	else
-	{
-		rsurface_vertex3f = rsurface_model->surfmesh.data_vertex3f;
-		rsurface_svector3f = rsurface_model->surfmesh.data_svector3f;
-		rsurface_tvector3f = rsurface_model->surfmesh.data_tvector3f;
-		rsurface_normal3f = rsurface_model->surfmesh.data_normal3f;
 	}
 	if (rsurface_texture->textureflags & (Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2))
 	{
@@ -2521,15 +2579,15 @@ void RSurf_PrepareVerticesForBatch(const entity_render_t *ent, const texture_t *
 				for (i = 0;i < 4;i++)
 					Matrix4x4_Transform(&imatrix1, (rsurface_vertex3f + 3 * surface->num_firstvertex) + (j+i)*3, v[i]);
 				for (i = 0;i < 4;i++)
-					VectorMAMAMAM(1, center, v[i][0], forward, v[i][1], right, v[i][2], up, rsurface_array_vertex3f + (surface->num_firstvertex+i+j) * 3);
+					VectorMAMAMAM(1, center, v[i][0], forward, v[i][1], right, v[i][2], up, rsurface_array_modelvertex3f + (surface->num_firstvertex+i+j) * 3);
 			}
-			Mod_BuildNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface_array_vertex3f, rsurface_model->surfmesh.data_element3i + surface->num_firsttriangle * 3, rsurface_array_normal3f, r_smoothnormals_areaweighting.integer);
-			Mod_BuildTextureVectorsFromNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface_array_vertex3f, rsurface_model->surfmesh.data_texcoordtexture2f, rsurface_array_normal3f, rsurface_model->surfmesh.data_element3i + surface->num_firsttriangle * 3, rsurface_array_svector3f, rsurface_array_tvector3f, r_smoothnormals_areaweighting.integer);
+			Mod_BuildNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface_modelvertex3f, rsurface_model->surfmesh.data_element3i + surface->num_firsttriangle * 3, rsurface_array_deformednormal3f, r_smoothnormals_areaweighting.integer);
+			Mod_BuildTextureVectorsFromNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface_modelvertex3f, rsurface_model->surfmesh.data_texcoordtexture2f, rsurface_array_deformednormal3f, rsurface_model->surfmesh.data_element3i + surface->num_firsttriangle * 3, rsurface_array_deformedsvector3f, rsurface_array_deformedtvector3f, r_smoothnormals_areaweighting.integer);
 		}
-		rsurface_vertex3f = rsurface_array_vertex3f;
-		rsurface_svector3f = rsurface_array_svector3f;
-		rsurface_tvector3f = rsurface_array_tvector3f;
-		rsurface_normal3f = rsurface_array_normal3f;
+		rsurface_vertex3f = rsurface_array_deformedvertex3f;
+		rsurface_svector3f = rsurface_array_deformedsvector3f;
+		rsurface_tvector3f = rsurface_array_deformedtvector3f;
+		rsurface_normal3f = rsurface_array_deformednormal3f;
 	}
 	R_Mesh_VertexPointer(rsurface_vertex3f);
 }
@@ -2671,30 +2729,33 @@ static void RSurf_DrawLightmap(const msurface_t *surface, float r, float g, floa
 	RSurf_Draw(surface);
 }
 
-static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *texture, rtexture_t *lightmaptexture, int texturenumsurfaces, msurface_t **texturesurfacelist, const vec3_t modelorg)
+static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **texturesurfacelist)
 {
 	int texturesurfaceindex;
 	int lightmode;
-	model_t *model = ent->model;
 	qboolean applycolor;
 	qboolean applyfog;
 	rmeshstate_t m;
-	if (texture->currentmaterialflags & MATERIALFLAG_NODRAW)
+	if (rsurface_texture->currentmaterialflags & MATERIALFLAG_NODRAW)
 		return;
 	r_shadow_rtlight = NULL;
 	renderstats.entities_surfaces += texturenumsurfaces;
-	// FIXME: identify models using a better check than model->brush.shadowmesh
-	lightmode = ((ent->effects & EF_FULLBRIGHT) || model->brush.shadowmesh) ? 0 : 2;
-	GL_DepthTest(!(texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
-	if ((texture->textureflags & Q3TEXTUREFLAG_TWOSIDED) || (ent->flags & RENDER_NOCULLFACE))
+	// FIXME: identify models using a better check than rsurface_model->brush.shadowmesh
+	lightmode = ((rsurface_entity->effects & EF_FULLBRIGHT) || rsurface_model->brush.shadowmesh) ? 0 : 2;
+	GL_DepthTest(!(rsurface_texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
+	if ((rsurface_texture->textureflags & Q3TEXTUREFLAG_TWOSIDED) || (rsurface_entity->flags & RENDER_NOCULLFACE))
 		qglDisable(GL_CULL_FACE);
 	if (r_showsurfaces.integer)
 	{
-		GL_DepthMask(true);
-		GL_BlendFunc(GL_ONE, GL_ZERO);
-		R_Mesh_ColorPointer(NULL);
-		R_Mesh_ResetTextureState();
-		RSurf_PrepareVerticesForBatch(ent, texture, modelorg, false, false, texturenumsurfaces, texturesurfacelist);
+		if (rsurface_mode != RSURFMODE_SHOWSURFACES)
+		{
+			rsurface_mode = RSURFMODE_SHOWSURFACES;
+			GL_DepthMask(true);
+			GL_BlendFunc(GL_ONE, GL_ZERO);
+			R_Mesh_ColorPointer(NULL);
+			R_Mesh_ResetTextureState();
+		}
+		RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
 		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
 			const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
@@ -2703,44 +2764,59 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			RSurf_Draw(surface);
 		}
 	}
-	else if (texture->currentmaterialflags & MATERIALFLAG_SKY)
+	else if (rsurface_texture->currentmaterialflags & MATERIALFLAG_SKY)
 	{
 		// transparent sky would be ridiculous
-		if (!(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
+		if (!(rsurface_texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
 		{
-			if (skyrendernow)
+			if (rsurface_mode != RSURFMODE_SKY)
 			{
-				skyrendernow = false;
-				R_Sky();
-				// restore entity matrix
-				R_Mesh_Matrix(&ent->matrix);
+				if (rsurface_mode == RSURFMODE_GLSL)
+					qglUseProgramObjectARB(0);
+				rsurface_mode = RSURFMODE_SKY;
+				if (skyrendernow)
+				{
+					skyrendernow = false;
+					R_Sky();
+					// restore entity matrix
+					R_Mesh_Matrix(&rsurface_entity->matrix);
+				}
+				GL_DepthMask(true);
+				// LordHavoc: HalfLife maps have freaky skypolys so don't use
+				// skymasking on them, and Quake3 never did sky masking (unlike
+				// software Quake and software Quake2), so disable the sky masking
+				// in Quake3 maps as it causes problems with q3map2 sky tricks,
+				// and skymasking also looks very bad when noclipping outside the
+				// level, so don't use it then either.
+				if (rsurface_model->type == mod_brushq1 && r_q1bsp_skymasking.integer && !r_worldnovis)
+				{
+					GL_Color(fogcolor[0], fogcolor[1], fogcolor[2], 1);
+					R_Mesh_ColorPointer(NULL);
+					R_Mesh_ResetTextureState();
+					if (skyrendermasked)
+					{
+						// depth-only (masking)
+						GL_ColorMask(0,0,0,0);
+						// just to make sure that braindead drivers don't draw
+						// anything despite that colormask...
+						GL_BlendFunc(GL_ZERO, GL_ONE);
+					}
+					else
+					{
+						// fog sky
+						GL_BlendFunc(GL_ONE, GL_ZERO);
+					}
+				}
 			}
-			GL_DepthMask(true);
 			// LordHavoc: HalfLife maps have freaky skypolys so don't use
 			// skymasking on them, and Quake3 never did sky masking (unlike
 			// software Quake and software Quake2), so disable the sky masking
 			// in Quake3 maps as it causes problems with q3map2 sky tricks,
 			// and skymasking also looks very bad when noclipping outside the
 			// level, so don't use it then either.
-			if (model->type == mod_brushq1 && r_q1bsp_skymasking.integer && !r_worldnovis)
+			if (rsurface_model->type == mod_brushq1 && r_q1bsp_skymasking.integer && !r_worldnovis)
 			{
-				GL_Color(fogcolor[0], fogcolor[1], fogcolor[2], 1);
-				R_Mesh_ColorPointer(NULL);
-				R_Mesh_ResetTextureState();
-				if (skyrendermasked)
-				{
-					// depth-only (masking)
-					GL_ColorMask(0,0,0,0);
-					// just to make sure that braindead drivers don't draw
-					// anything despite that colormask...
-					GL_BlendFunc(GL_ZERO, GL_ONE);
-				}
-				else
-				{
-					// fog sky
-					GL_BlendFunc(GL_ONE, GL_ZERO);
-				}
-				RSurf_PrepareVerticesForBatch(ent, texture, modelorg, false, false, texturenumsurfaces, texturesurfacelist);
+				RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
 				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 				{
 					const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
@@ -2751,28 +2827,40 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			}
 		}
 	}
-	else if (texture->currentnumlayers && r_glsl.integer && gl_support_fragment_shader)
+	else if (rsurface_texture->currentnumlayers && r_glsl.integer && gl_support_fragment_shader)
 	{
-		GL_BlendFunc(texture->currentlayers[0].blendfunc1, texture->currentlayers[0].blendfunc2);
-		GL_DepthMask(!(texture->currentmaterialflags & MATERIALFLAG_BLENDED));
-
-		R_Mesh_ColorPointer(NULL);
-		R_Mesh_ResetTextureState();
-		GL_Color(ent->colormod[0], ent->colormod[1], ent->colormod[2], texture->currentalpha);
-		R_SetupSurfaceShader(ent, texture, lightmaptexture, modelorg, vec3_origin, lightmode == 2);
+		if (rsurface_mode != RSURFMODE_GLSL)
+		{
+			rsurface_mode = RSURFMODE_GLSL;
+			rsurface_glsl_texture = NULL;
+			R_Mesh_ResetTextureState();
+		}
+		if (rsurface_glsl_texture != rsurface_texture)
+		{
+			rsurface_glsl_texture = rsurface_texture;
+			GL_BlendFunc(rsurface_texture->currentlayers[0].blendfunc1, rsurface_texture->currentlayers[0].blendfunc2);
+			GL_DepthMask(!(rsurface_texture->currentmaterialflags & MATERIALFLAG_BLENDED));
+			GL_Color(rsurface_entity->colormod[0], rsurface_entity->colormod[1], rsurface_entity->colormod[2], rsurface_texture->currentalpha);
+			R_SetupSurfaceShader(vec3_origin, lightmode == 2);
+			//permutation_deluxemapping = permutation_lightmapping = R_SetupSurfaceShader(vec3_origin, lightmode == 2, false);
+			//if (r_glsl_deluxemapping.integer)
+			//	permutation_deluxemapping = R_SetupSurfaceShader(vec3_origin, lightmode == 2, true);
+			R_Mesh_TexCoordPointer(0, 2, rsurface_model->surfmesh.data_texcoordtexture2f);
+			if (lightmode != 2)
+				R_Mesh_TexCoordPointer(4, 2, rsurface_model->surfmesh.data_texcoordlightmap2f);
+			GL_AlphaTest((rsurface_texture->currentmaterialflags & MATERIALFLAG_ALPHATEST) != 0);
+		}
 		if (!r_glsl_permutation)
 			return;
-		RSurf_PrepareVerticesForBatch(ent, texture, modelorg, true, true, texturenumsurfaces, texturesurfacelist);
-		R_Mesh_TexCoordPointer(0, 2, model->surfmesh.data_texcoordtexture2f);
+		RSurf_PrepareVerticesForBatch(true, true, texturenumsurfaces, texturesurfacelist);
 		R_Mesh_TexCoordPointer(1, 3, rsurface_svector3f);
 		R_Mesh_TexCoordPointer(2, 3, rsurface_tvector3f);
 		R_Mesh_TexCoordPointer(3, 3, rsurface_normal3f);
 		if (lightmode != 2)
 		{
-			R_Mesh_TexCoordPointer(4, 2, model->surfmesh.data_texcoordlightmap2f);
-			if (lightmaptexture)
+			if (rsurface_lightmaptexture)
 			{
-				R_Mesh_TexBind(7, R_GetTexture(lightmaptexture));
+				R_Mesh_TexBind(7, R_GetTexture(rsurface_lightmaptexture));
 				if (r_glsl_permutation->loc_Texture_Deluxemap >= 0)
 					R_Mesh_TexBind(8, R_GetTexture(texturesurfacelist[0]->deluxemaptexture));
 				R_Mesh_ColorPointer(NULL);
@@ -2782,36 +2870,37 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				R_Mesh_TexBind(7, R_GetTexture(r_texture_white));
 				if (r_glsl_permutation->loc_Texture_Deluxemap >= 0)
 					R_Mesh_TexBind(8, R_GetTexture(r_texture_blanknormalmap));
-				R_Mesh_ColorPointer(model->surfmesh.data_lightmapcolor4f);
+				R_Mesh_ColorPointer(rsurface_model->surfmesh.data_lightmapcolor4f);
 			}
 		}
-		if (texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
-			qglEnable(GL_ALPHA_TEST);
 		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
 			const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 			RSurf_Draw(surface);
 		}
-		if (texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
-			qglDisable(GL_ALPHA_TEST);
-		qglUseProgramObjectARB(0);
 	}
-	else if (texture->currentnumlayers)
+	else if (rsurface_texture->currentnumlayers)
 	{
 		int layerindex;
-		texturelayer_t *layer;
-		RSurf_PrepareVerticesForBatch(ent, texture, modelorg, true, false, texturenumsurfaces, texturesurfacelist);
-		for (layerindex = 0, layer = texture->currentlayers;layerindex < texture->currentnumlayers;layerindex++, layer++)
+		const texturelayer_t *layer;
+		if (rsurface_mode != RSURFMODE_MULTIPASS)
+		{
+			if (rsurface_mode == RSURFMODE_GLSL)
+				qglUseProgramObjectARB(0);
+			rsurface_mode = RSURFMODE_MULTIPASS;
+		}
+		RSurf_PrepareVerticesForBatch(true, false, texturenumsurfaces, texturesurfacelist);
+		for (layerindex = 0, layer = rsurface_texture->currentlayers;layerindex < rsurface_texture->currentnumlayers;layerindex++, layer++)
 		{
 			vec4_t layercolor;
 			int layertexrgbscale;
-			if (texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
+			if (rsurface_texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
 			{
 				if (layerindex == 0)
-					qglEnable(GL_ALPHA_TEST);
+					GL_AlphaTest(true);
 				else
 				{
-					qglDisable(GL_ALPHA_TEST);
+					GL_AlphaTest(false);
 					qglDepthFunc(GL_EQUAL);
 				}
 			}
@@ -2841,11 +2930,11 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			{
 			case TEXTURELAYERTYPE_LITTEXTURE_COMBINE:
 				memset(&m, 0, sizeof(m));
-				m.pointer_texcoord[0] = model->surfmesh.data_texcoordlightmap2f;
+				m.pointer_texcoord[0] = rsurface_model->surfmesh.data_texcoordlightmap2f;
 				m.tex[1] = R_GetTexture(layer->texture);
 				m.texmatrix[1] = layer->texmatrix;
 				m.texrgbscale[1] = layertexrgbscale;
-				m.pointer_texcoord[1] = model->surfmesh.data_texcoordtexture2f;
+				m.pointer_texcoord[1] = rsurface_model->surfmesh.data_texcoordtexture2f;
 				R_Mesh_TextureState(&m);
 				if (lightmode == 2)
 				{
@@ -2856,9 +2945,9 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 						RSurf_DrawLightmap(surface, layercolor[0], layercolor[1], layercolor[2], layercolor[3], 2, applycolor, applyfog);
 					}
 				}
-				else if (lightmaptexture)
+				else if (rsurface_lightmaptexture)
 				{
-					R_Mesh_TexBind(0, R_GetTexture(lightmaptexture));
+					R_Mesh_TexBind(0, R_GetTexture(rsurface_lightmaptexture));
 					for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 					{
 						const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
@@ -2880,7 +2969,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				m.tex[0] = R_GetTexture(layer->texture);
 				m.texmatrix[0] = layer->texmatrix;
 				m.texrgbscale[0] = layertexrgbscale;
-				m.pointer_texcoord[0] = model->surfmesh.data_texcoordlightmap2f;
+				m.pointer_texcoord[0] = rsurface_model->surfmesh.data_texcoordlightmap2f;
 				R_Mesh_TextureState(&m);
 				if (lightmode == 2)
 				{
@@ -2891,9 +2980,9 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 						RSurf_DrawLightmap(surface, 1, 1, 1, 1, 2, false, false);
 					}
 				}
-				else if (lightmaptexture)
+				else if (rsurface_lightmaptexture)
 				{
-					R_Mesh_TexBind(0, R_GetTexture(lightmaptexture));
+					R_Mesh_TexBind(0, R_GetTexture(rsurface_lightmaptexture));
 					for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 					{
 						const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
@@ -2915,7 +3004,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				m.tex[0] = R_GetTexture(layer->texture);
 				m.texmatrix[0] = layer->texmatrix;
 				m.texrgbscale[0] = layertexrgbscale;
-				m.pointer_texcoord[0] = model->surfmesh.data_texcoordtexture2f;
+				m.pointer_texcoord[0] = rsurface_model->surfmesh.data_texcoordtexture2f;
 				R_Mesh_TextureState(&m);
 				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 				{
@@ -2928,7 +3017,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				m.tex[0] = R_GetTexture(layer->texture);
 				m.texmatrix[0] = layer->texmatrix;
 				m.texrgbscale[0] = layertexrgbscale;
-				m.pointer_texcoord[0] = model->surfmesh.data_texcoordtexture2f;
+				m.pointer_texcoord[0] = rsurface_model->surfmesh.data_texcoordtexture2f;
 				R_Mesh_TextureState(&m);
 				if (lightmode == 2)
 				{
@@ -2952,7 +3041,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				m.tex[0] = R_GetTexture(layer->texture);
 				m.texmatrix[0] = layer->texmatrix;
 				m.texrgbscale[0] = layertexrgbscale;
-				m.pointer_texcoord[0] = model->surfmesh.data_texcoordtexture2f;
+				m.pointer_texcoord[0] = rsurface_model->surfmesh.data_texcoordtexture2f;
 				R_Mesh_TextureState(&m);
 				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 				{
@@ -2967,7 +3056,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 					memset(&m, 0, sizeof(m));
 					m.tex[0] = R_GetTexture(layer->texture);
 					m.texmatrix[0] = layer->texmatrix;
-					m.pointer_texcoord[0] = model->surfmesh.data_texcoordtexture2f;
+					m.pointer_texcoord[0] = rsurface_model->surfmesh.data_texcoordtexture2f;
 					R_Mesh_TextureState(&m);
 				}
 				else
@@ -2979,7 +3068,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 					const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 					for (i = 0, v = (rsurface_vertex3f + 3 * surface->num_firstvertex), c = (rsurface_array_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, v += 3, c += 4)
 					{
-						f = VERTEXFOGTABLE(VectorDistance(v, modelorg));
+						f = VERTEXFOGTABLE(VectorDistance(v, rsurface_modelorg));
 						c[0] = layercolor[0];
 						c[1] = layercolor[1];
 						c[2] = layercolor[2];
@@ -3010,41 +3099,40 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				GL_LockArrays(0, 0);
 			}
 		}
-		if (texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
+		if (rsurface_texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
 		{
 			qglDepthFunc(GL_LEQUAL);
-			qglDisable(GL_ALPHA_TEST);
+			GL_AlphaTest(false);
 		}
 	}
 	GL_LockArrays(0, 0);
-	if ((texture->textureflags & Q3TEXTUREFLAG_TWOSIDED) || (ent->flags & RENDER_NOCULLFACE))
+	if ((rsurface_texture->textureflags & Q3TEXTUREFLAG_TWOSIDED) || (rsurface_entity->flags & RENDER_NOCULLFACE))
 		qglEnable(GL_CULL_FACE);
 }
 
 static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
 {
 	msurface_t *surface = ent->model->data_surfaces + surfacenumber;
-	vec3_t modelorg;
-	texture_t *texture;
 
-	texture = surface->texture;
-	if (texture->basematerialflags & MATERIALFLAG_SKY)
+	rsurface_texture = surface->texture;
+	if (rsurface_texture->basematerialflags & MATERIALFLAG_SKY)
 		return; // transparent sky is too difficult
-	R_UpdateTextureInfo(ent, texture);
 
-	R_Mesh_Matrix(&ent->matrix);
-	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
-	R_DrawTextureSurfaceList(ent, texture->currentframe, surface->lightmaptexture, 1, &surface, modelorg);
+	RSurf_ActiveEntity(ent);
+	R_UpdateTextureInfo(ent, rsurface_texture);
+	rsurface_texture = rsurface_texture->currentframe;
+	R_DrawTextureSurfaceList(1, &surface);
+	RSurf_CleanUp();
 }
 
-void R_QueueTextureSurfaceList(entity_render_t *ent, texture_t *texture, rtexture_t *lightmaptexture, int texturenumsurfaces, msurface_t **texturesurfacelist, const vec3_t modelorg)
+void R_QueueTextureSurfaceList(int texturenumsurfaces, msurface_t **texturesurfacelist)
 {
 	int texturesurfaceindex;
 	vec3_t tempcenter, center;
-	if (texture->currentmaterialflags & MATERIALFLAG_BLENDED)
+	if (rsurface_texture->currentmaterialflags & MATERIALFLAG_BLENDED)
 	{
 		// drawing sky transparently would be too difficult
-		if (!(texture->currentmaterialflags & MATERIALFLAG_SKY))
+		if (!(rsurface_texture->currentmaterialflags & MATERIALFLAG_SKY))
 		{
 			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 			{
@@ -3052,13 +3140,13 @@ void R_QueueTextureSurfaceList(entity_render_t *ent, texture_t *texture, rtextur
 				tempcenter[0] = (surface->mins[0] + surface->maxs[0]) * 0.5f;
 				tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
 				tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
-				Matrix4x4_Transform(&ent->matrix, tempcenter, center);
-				R_MeshQueue_AddTransparent(texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_vieworigin : center, R_DrawSurface_TransparentCallback, ent, surface - ent->model->data_surfaces, r_shadow_rtlight);
+				Matrix4x4_Transform(&rsurface_entity->matrix, tempcenter, center);
+				R_MeshQueue_AddTransparent(rsurface_texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_vieworigin : center, R_DrawSurface_TransparentCallback, rsurface_entity, surface - rsurface_model->data_surfaces, r_shadow_rtlight);
 			}
 		}
 	}
 	else
-		R_DrawTextureSurfaceList(ent, texture, lightmaptexture, texturenumsurfaces, texturesurfacelist, modelorg);
+		R_DrawTextureSurfaceList(texturenumsurfaces, texturesurfacelist);
 }
 
 extern void R_BuildLightMap(const entity_render_t *ent, msurface_t *surface);
@@ -3066,17 +3154,15 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 {
 	int i, j, f, flagsmask;
 	int counttriangles = 0;
-	texture_t *t, *texture;
-	rtexture_t *lmap;
+	texture_t *t;
 	model_t *model = ent->model;
-	vec3_t modelorg;
 	const int maxsurfacelist = 1024;
 	int numsurfacelist = 0;
 	msurface_t *surfacelist[1024];
 	if (model == NULL)
 		return;
-	R_Mesh_Matrix(&ent->matrix);
-	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
+
+	RSurf_ActiveEntity(ent);
 
 	// update light styles
 	if (!skysurfaces && model->brushq1.light_styleupdatechains)
@@ -3098,8 +3184,8 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 	flagsmask = skysurfaces ? MATERIALFLAG_SKY : (MATERIALFLAG_WATER | MATERIALFLAG_WALL);
 	f = 0;
 	t = NULL;
-	lmap = NULL;
-	texture = NULL;
+	rsurface_lightmaptexture = NULL;
+	rsurface_texture = NULL;
 	numsurfacelist = 0;
 	if (ent == r_refdef.worldentity)
 	{
@@ -3108,17 +3194,17 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 		{
 			if (!r_worldsurfacevisible[j])
 				continue;
-			if (t != surface->texture || lmap != surface->lightmaptexture)
+			if (t != surface->texture || rsurface_lightmaptexture != surface->lightmaptexture)
 			{
 				if (numsurfacelist)
 				{
-					R_QueueTextureSurfaceList(ent, texture, lmap, numsurfacelist, surfacelist, modelorg);
+					R_QueueTextureSurfaceList(numsurfacelist, surfacelist);
 					numsurfacelist = 0;
 				}
 				t = surface->texture;
-				lmap = surface->lightmaptexture;
-				texture = t->currentframe;
-				f = texture->currentmaterialflags & flagsmask;
+				rsurface_lightmaptexture = surface->lightmaptexture;
+				rsurface_texture = t->currentframe;
+				f = rsurface_texture->currentmaterialflags & flagsmask;
 			}
 			if (f && surface->num_triangles)
 			{
@@ -3130,7 +3216,7 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 				counttriangles += surface->num_triangles;
 				if (numsurfacelist >= maxsurfacelist)
 				{
-					R_QueueTextureSurfaceList(ent, texture, lmap, numsurfacelist, surfacelist, modelorg);
+					R_QueueTextureSurfaceList(numsurfacelist, surfacelist);
 					numsurfacelist = 0;
 				}
 			}
@@ -3141,17 +3227,17 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 		msurface_t *surface;
 		for (i = 0, j = model->firstmodelsurface, surface = model->data_surfaces + j;i < model->nummodelsurfaces;i++, j++, surface++)
 		{
-			if (t != surface->texture || lmap != surface->lightmaptexture)
+			if (t != surface->texture || rsurface_lightmaptexture != surface->lightmaptexture)
 			{
 				if (numsurfacelist)
 				{
-					R_QueueTextureSurfaceList(ent, texture, lmap, numsurfacelist, surfacelist, modelorg);
+					R_QueueTextureSurfaceList(numsurfacelist, surfacelist);
 					numsurfacelist = 0;
 				}
 				t = surface->texture;
-				lmap = surface->lightmaptexture;
-				texture = t->currentframe;
-				f = texture->currentmaterialflags & flagsmask;
+				rsurface_lightmaptexture = surface->lightmaptexture;
+				rsurface_texture = t->currentframe;
+				f = rsurface_texture->currentmaterialflags & flagsmask;
 			}
 			if (f && surface->num_triangles)
 			{
@@ -3163,17 +3249,16 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 				counttriangles += surface->num_triangles;
 				if (numsurfacelist >= maxsurfacelist)
 				{
-					R_QueueTextureSurfaceList(ent, texture, lmap, numsurfacelist, surfacelist, modelorg);
+					R_QueueTextureSurfaceList(numsurfacelist, surfacelist);
 					numsurfacelist = 0;
 				}
 			}
 		}
 	}
 	if (numsurfacelist)
-		R_QueueTextureSurfaceList(ent, texture, lmap, numsurfacelist, surfacelist, modelorg);
+		R_QueueTextureSurfaceList(numsurfacelist, surfacelist);
 	renderstats.entities_triangles += counttriangles;
-	if (gl_support_fragment_shader)
-		qglUseProgramObjectARB(0);
+	RSurf_CleanUp();
 
 	if (r_showcollisionbrushes.integer && model->brush.num_brushes && !skysurfaces)
 	{
@@ -3213,13 +3298,13 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 		{
 			if (ent == r_refdef.worldentity && !r_worldsurfacevisible[j])
 				continue;
-			texture = surface->texture->currentframe;
-			if ((texture->currentmaterialflags & flagsmask) && surface->num_triangles)
+			rsurface_texture = surface->texture->currentframe;
+			if ((rsurface_texture->currentmaterialflags & flagsmask) && surface->num_triangles)
 			{
-				RSurf_PrepareVerticesForBatch(ent, texture, modelorg, false, r_shownormals.integer != 0, 1, &surface);
+				RSurf_PrepareVerticesForBatch(true, true, 1, &surface);
 				if (r_showtris.integer)
 				{
-					if (!texture->currentlayers->depthmask)
+					if (!rsurface_texture->currentlayers->depthmask)
 						GL_Color(r_showtris.value, 0, 0, 1);
 					else if (ent == r_refdef.worldentity)
 						GL_Color(r_showtris.value, r_showtris.value, r_showtris.value, 1);
@@ -3270,6 +3355,7 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 				}
 			}
 		}
+		rsurface_texture = NULL;
 		if (r_showdisabledepthtest.integer)
 			qglDepthFunc(GL_LEQUAL);
 	}

@@ -705,10 +705,10 @@ void R_Q1BSP_CompileShadowVolume(entity_render_t *ent, vec3_t relativelightorigi
 	r_shadow_compilingrtlight->static_meshchain_shadow = Mod_ShadowMesh_Finish(r_main_mempool, r_shadow_compilingrtlight->static_meshchain_shadow, false, false);
 }
 
-void R_Q1BSP_DrawShadowVolume_Batch(entity_render_t *ent, texture_t *texture, const vec3_t modelorg, const vec3_t relativelightorigin, const vec3_t lightmins, const vec3_t lightmaxs, int texturenumsurfaces, msurface_t **texturesurfacelist)
+void R_Q1BSP_DrawShadowVolume_Batch(const vec3_t relativelightorigin, const vec3_t lightmins, const vec3_t lightmaxs, int texturenumsurfaces, msurface_t **texturesurfacelist)
 {
 	int texturesurfaceindex;
-	RSurf_PrepareVerticesForBatch(ent, texture, modelorg, false, false, texturenumsurfaces, texturesurfacelist);
+	RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
 	for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 	{
 		msurface_t *surface = texturesurfacelist[texturesurfaceindex];
@@ -723,8 +723,7 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 	int modelsurfacelistindex;
 	int f = 0;
 	float projectdistance = lightradius + model->radius*2 + r_shadow_projectdistance.value;
-	vec3_t modelorg;
-	texture_t *t = NULL, *texture = NULL;
+	texture_t *t = NULL;
 	const int maxsurfacelist = 1024;
 	int numsurfacelist = 0;
 	msurface_t *surfacelist[1024];
@@ -738,10 +737,10 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 		for (modelsurfacelistindex = 0;modelsurfacelistindex < modelnumsurfaces;modelsurfacelistindex++)
 		{
 			surface = model->data_surfaces + modelsurfacelist[modelsurfacelistindex];
-			texture = surface->texture->currentframe;
-			if ((texture->currentmaterialflags & (MATERIALFLAG_NODRAW | MATERIALFLAG_TRANSPARENT | MATERIALFLAG_WALL)) != MATERIALFLAG_WALL)
+			t = surface->texture->currentframe;
+			if ((t->currentmaterialflags & (MATERIALFLAG_NODRAW | MATERIALFLAG_TRANSPARENT | MATERIALFLAG_WALL)) != MATERIALFLAG_WALL)
 				continue;
-			if ((texture->textureflags & (Q3TEXTUREFLAG_TWOSIDED | Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2)) || (ent->flags & RENDER_NOCULLFACE))
+			if ((t->textureflags & (Q3TEXTUREFLAG_TWOSIDED | Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2)) || (ent->flags & RENDER_NOCULLFACE))
 				continue;
 			R_Shadow_MarkVolumeFromBox(surface->num_firstshadowmeshtriangle, surface->num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, relativelightorigin, lightmins, lightmaxs, surface->mins, surface->maxs);
 		}
@@ -750,7 +749,7 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 	else
 	{
 		projectdistance = lightradius + model->radius*2;
-		Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
+		RSurf_ActiveEntity(ent);
 		R_Shadow_PrepareShadowMark(model->surfmesh.num_triangles);
 		// identify lit faces within the bounding box
 		for (modelsurfacelistindex = 0;modelsurfacelistindex < modelnumsurfaces;modelsurfacelistindex++)
@@ -760,18 +759,18 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 			{
 				if (numsurfacelist)
 				{
-					R_Q1BSP_DrawShadowVolume_Batch(ent, texture, modelorg, relativelightorigin, lightmins, lightmaxs, numsurfacelist, surfacelist);
+					R_Q1BSP_DrawShadowVolume_Batch(relativelightorigin, lightmins, lightmaxs, numsurfacelist, surfacelist);
 					numsurfacelist = 0;
 				}
 				t = surface->texture;
-				texture = t->currentframe;
-				f = (texture->currentmaterialflags & (MATERIALFLAG_NODRAW | MATERIALFLAG_TRANSPARENT | MATERIALFLAG_WALL)) == MATERIALFLAG_WALL;
+				rsurface_texture = t->currentframe;
+				f = (rsurface_texture->currentmaterialflags & (MATERIALFLAG_NODRAW | MATERIALFLAG_TRANSPARENT | MATERIALFLAG_WALL)) == MATERIALFLAG_WALL;
 			}
 			if (f && surface->num_triangles)
 				surfacelist[numsurfacelist++] = surface;
 		}
 		if (numsurfacelist)
-			R_Q1BSP_DrawShadowVolume_Batch(ent, texture, modelorg, relativelightorigin, lightmins, lightmaxs, numsurfacelist, surfacelist);
+			R_Q1BSP_DrawShadowVolume_Batch(relativelightorigin, lightmins, lightmaxs, numsurfacelist, surfacelist);
 		R_Shadow_VolumeFromList(model->surfmesh.num_vertices, model->surfmesh.num_triangles, rsurface_vertex3f, model->surfmesh.data_element3i, model->surfmesh.data_neighbor3i, relativelightorigin, projectdistance, numshadowmark, shadowmarklist);
 	}
 }
@@ -779,21 +778,19 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 static void R_Q1BSP_DrawLight_TransparentCallback(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
 {
 	msurface_t *surface = ent->model->data_surfaces + surfacenumber;
-	texture_t *texture = surface->texture;
-	R_UpdateTextureInfo(ent, texture);
-	texture = texture->currentframe;
+	R_UpdateTextureInfo(ent, surface->texture);
 	R_Shadow_RenderMode_Begin();
 	R_Shadow_RenderMode_ActiveLight((rtlight_t *)rtlight);
 	R_Shadow_RenderMode_Lighting(false, true);
 	R_Shadow_SetupEntityLight(ent);
-	R_Shadow_RenderSurfacesLighting(ent, texture, 1, &surface);
+	rsurface_texture = surface->texture->currentframe;
+	R_Shadow_RenderSurfacesLighting(1, &surface);
 	R_Shadow_RenderMode_End();
 }
 
-static void R_Q1BSP_DrawLight_TransparentBatch(const entity_render_t *ent, texture_t *texture, int batchnumsurfaces, msurface_t **batchsurfacelist)
+static void R_Q1BSP_DrawLight_TransparentBatch(int batchnumsurfaces, msurface_t **batchsurfacelist)
 {
 	int batchsurfaceindex;
-	model_t *model = ent->model;
 	msurface_t *batchsurface;
 	vec3_t tempcenter, center;
 	for (batchsurfaceindex = 0;batchsurfaceindex < batchnumsurfaces;batchsurfaceindex++)
@@ -802,8 +799,8 @@ static void R_Q1BSP_DrawLight_TransparentBatch(const entity_render_t *ent, textu
 		tempcenter[0] = (batchsurface->mins[0] + batchsurface->maxs[0]) * 0.5f;
 		tempcenter[1] = (batchsurface->mins[1] + batchsurface->maxs[1]) * 0.5f;
 		tempcenter[2] = (batchsurface->mins[2] + batchsurface->maxs[2]) * 0.5f;
-		Matrix4x4_Transform(&ent->matrix, tempcenter, center);
-		R_MeshQueue_AddTransparent(texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_vieworigin : center, R_Q1BSP_DrawLight_TransparentCallback, ent, batchsurface - model->data_surfaces, r_shadow_rtlight);
+		Matrix4x4_Transform(&rsurface_entity->matrix, tempcenter, center);
+		R_MeshQueue_AddTransparent(rsurface_texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_vieworigin : center, R_Q1BSP_DrawLight_TransparentCallback, rsurface_entity, batchsurface - rsurface_model->data_surfaces, r_shadow_rtlight);
 	}
 }
 
@@ -813,16 +810,14 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 {
 	model_t *model = ent->model;
 	msurface_t *surface;
-	texture_t *texture;
 	int surfacelistindex, batchnumsurfaces;
 	msurface_t *batchsurfacelist[RSURF_MAX_BATCHSURFACES];
-	vec3_t modelorg;
 	texture_t *tex;
 	qboolean skip;
+	RSurf_ActiveEntity(ent);
 	R_UpdateAllTextureInfo(ent);
-	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 	tex = NULL;
-	texture = NULL;
+	rsurface_texture = NULL;
 	skip = false;
 	batchnumsurfaces = 0;
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
@@ -835,15 +830,15 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 		{
 			if (batchnumsurfaces > 0)
 			{
-				if (texture->currentmaterialflags & MATERIALFLAG_BLENDED)
-					R_Q1BSP_DrawLight_TransparentBatch(ent, texture, batchnumsurfaces, batchsurfacelist);
+				if (rsurface_texture->currentmaterialflags & MATERIALFLAG_BLENDED)
+					R_Q1BSP_DrawLight_TransparentBatch(batchnumsurfaces, batchsurfacelist);
 				else
-					R_Shadow_RenderSurfacesLighting(ent, texture, batchnumsurfaces, batchsurfacelist);
+					R_Shadow_RenderSurfacesLighting(batchnumsurfaces, batchsurfacelist);
 				batchnumsurfaces = 0;
 			}
 			tex = surface->texture;
-			texture = surface->texture->currentframe;
-			skip = (texture->currentmaterialflags & MATERIALFLAG_SKY) != 0;
+			rsurface_texture = surface->texture->currentframe;
+			skip = (rsurface_texture->currentmaterialflags & MATERIALFLAG_SKY) != 0;
 			if (skip)
 				continue;
 		}
@@ -851,10 +846,10 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 		{
 			if (batchnumsurfaces == RSURF_MAX_BATCHSURFACES)
 			{
-				if (texture->currentmaterialflags & MATERIALFLAG_BLENDED)
-					R_Q1BSP_DrawLight_TransparentBatch(ent, texture, batchnumsurfaces, batchsurfacelist);
+				if (rsurface_texture->currentmaterialflags & MATERIALFLAG_BLENDED)
+					R_Q1BSP_DrawLight_TransparentBatch(batchnumsurfaces, batchsurfacelist);
 				else
-					R_Shadow_RenderSurfacesLighting(ent, texture, batchnumsurfaces, batchsurfacelist);
+					R_Shadow_RenderSurfacesLighting(batchnumsurfaces, batchsurfacelist);
 				batchnumsurfaces = 0;
 			}
 			batchsurfacelist[batchnumsurfaces++] = surface;
@@ -862,10 +857,10 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 	}
 	if (batchnumsurfaces > 0)
 	{
-		if (texture->currentmaterialflags & MATERIALFLAG_BLENDED)
-			R_Q1BSP_DrawLight_TransparentBatch(ent, texture, batchnumsurfaces, batchsurfacelist);
+		if (rsurface_texture->currentmaterialflags & MATERIALFLAG_BLENDED)
+			R_Q1BSP_DrawLight_TransparentBatch(batchnumsurfaces, batchsurfacelist);
 		else
-			R_Shadow_RenderSurfacesLighting(ent, texture, batchnumsurfaces, batchsurfacelist);
+			R_Shadow_RenderSurfacesLighting(batchnumsurfaces, batchsurfacelist);
 		batchnumsurfaces = 0;
 	}
 	qglEnable(GL_CULL_FACE);
