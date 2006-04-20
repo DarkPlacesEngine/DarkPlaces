@@ -1093,8 +1093,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 			if (len > 0)
 				len = 1.0f / len;
 			VectorScale(vel, len, vel);
-			len = VectorDistance(origin, e->persistent.trail_origin);
-			CL_ParticleEffect(trailtype, len, e->persistent.trail_origin, origin, vel, vel, e, e->state_current.glowcolor);
+			CL_ParticleEffect(trailtype, 1, e->persistent.trail_origin, origin, vel, vel, e, e->state_current.glowcolor);
 		}
 		VectorCopy(origin, e->persistent.trail_origin);
 		// tenebrae's sprites are all additive mode (weird)
