@@ -32,7 +32,7 @@ extern cvar_t gl_ext_stenciltwoside;
 void R_Shadow_Init(void);
 void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f, const int *elements, const int *neighbors, const vec3_t projectorigin, float projectdistance, int nummarktris, const int *marktris);
 void R_Shadow_MarkVolumeFromBox(int firsttriangle, int numtris, const float *invertex3f, const int *elements, const vec3_t projectorigin, const vec3_t lightmins, const vec3_t lightmaxs, const vec3_t surfacemins, const vec3_t surfacemaxs);
-void R_Shadow_RenderSurfacesLighting(const entity_render_t *ent, const texture_t *texture, int numsurfaces, msurface_t **surfacelist);
+void R_Shadow_RenderSurfacesLighting(int numsurfaces, msurface_t **surfacelist);
 void R_Shadow_RenderMode_Begin(void);
 void R_Shadow_RenderMode_ActiveLight(rtlight_t *rtlight);
 void R_Shadow_RenderMode_Reset(void);

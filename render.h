@@ -263,12 +263,26 @@ void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, rtexture_
 extern mempool_t *r_main_mempool;
 
 extern int rsurface_array_size;
-extern float *rsurface_array_vertex3f;
-extern float *rsurface_array_svector3f;
-extern float *rsurface_array_tvector3f;
-extern float *rsurface_array_normal3f;
+extern float *rsurface_array_modelvertex3f;
+extern float *rsurface_array_modelsvector3f;
+extern float *rsurface_array_modeltvector3f;
+extern float *rsurface_array_modelnormal3f;
+extern float *rsurface_array_deformedvertex3f;
+extern float *rsurface_array_deformedsvector3f;
+extern float *rsurface_array_deformedtvector3f;
+extern float *rsurface_array_deformednormal3f;
 extern float *rsurface_array_color4f;
 extern float *rsurface_array_texcoord3f;
+
+typedef enum rsurfmode_e
+{
+	RSURFMODE_NONE,
+	RSURFMODE_SHOWSURFACES,
+	RSURFMODE_SKY,
+	RSURFMODE_MULTIPASS,
+	RSURFMODE_GLSL
+}
+rsurfmode_t;
 
 extern float *rsurface_vertex3f;
 extern float *rsurface_svector3f;
@@ -276,9 +290,15 @@ extern float *rsurface_tvector3f;
 extern float *rsurface_normal3f;
 extern float *rsurface_lightmapcolor4f;
 extern vec3_t rsurface_modelorg;
+extern qboolean rsurface_generatedvertex;
 extern const entity_render_t *rsurface_entity;
 extern const model_t *rsurface_model;
-extern const texture_t *rsurface_texture;
+extern texture_t *rsurface_texture;
+extern rtexture_t *rsurface_lightmaptexture;
+extern rsurfmode_t rsurface_mode;
+
+void RSurf_ActiveEntity(const entity_render_t *ent);
+void RSurf_CleanUp(void);
 
 void R_Mesh_ResizeArrays(int newvertices);
 
@@ -287,10 +307,10 @@ struct texture_s;
 struct msurface_s;
 void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t);
 void R_UpdateAllTextureInfo(entity_render_t *ent);
-void R_QueueTextureSurfaceList(entity_render_t *ent, texture_t *texture, rtexture_t *lightmaptexture, int texturenumsurfaces, msurface_t **texturesurfacelist, const vec3_t modelorg);
+void R_QueueTextureSurfaceList(int texturenumsurfaces, msurface_t **texturesurfacelist);
 void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces);
 
-void RSurf_PrepareVerticesForBatch(const entity_render_t *ent, const texture_t *texture, const vec3_t modelorg, qboolean generatenormals, qboolean generatetangents, int texturenumsurfaces, msurface_t **texturesurfacelist);
+void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generatetangents, int texturenumsurfaces, msurface_t **texturesurfacelist);
 
 #define SHADERPERMUTATION_MODE_LIGHTSOURCE (1<<0) // (lightsource) use directional pixel shading from light source (rtlight)
 #define SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP_MODELSPACE (1<<1) // (lightmap) use directional pixel shading from texture containing modelspace light directions (deluxemap)
@@ -346,7 +366,8 @@ extern r_glsl_permutation_t r_glsl_permutations[SHADERPERMUTATION_COUNT];
 extern r_glsl_permutation_t *r_glsl_permutation;
 
 void R_GLSL_CompilePermutation(int permutation);
-void R_SetupSurfaceShader(const entity_render_t *ent, const texture_t *texture, rtexture_t *lightmaptexture, const vec3_t modelorg, const vec3_t lightcolorbase, qboolean modellighting);
+int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting);
+void R_SwitchSurfaceShader(int permutation);
 
 #endif
 
