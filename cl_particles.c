@@ -1014,6 +1014,8 @@ void CL_ParticleEffect(int effectnameindex, float pcount, const vec3_t originmin
 		vec3_t traildir;
 		vec3_t trailpos;
 		vec3_t rvec;
+		vec_t traillen;
+		vec_t trailstep;
 		qboolean underwater;
 		// note this runs multiple effects with the same name, each one spawns only one kind of particle, so some effects need more than one
 		VectorLerp(originmins, 0.5, originmaxs, center);
@@ -1021,6 +1023,7 @@ void CL_ParticleEffect(int effectnameindex, float pcount, const vec3_t originmin
 		supercontents = CL_PointSuperContents(center);
 		underwater = (supercontents & (SUPERCONTENTS_WATER | SUPERCONTENTS_SLIME)) != 0;
 		VectorSubtract(originmaxs, originmins, traildir);
+		traillen = VectorLength(traildir);
 		VectorNormalize(traildir);
 		for (effectinfoindex = 0, info = particleeffectinfo;effectinfoindex < MAX_PARTICLEEFFECTINFO && info->effectnameindex;effectinfoindex++, info++)
 		{
@@ -1066,8 +1069,17 @@ void CL_ParticleEffect(int effectnameindex, float pcount, const vec3_t originmin
 					case pt_blood: if (!cl_particles_blood.integer) continue;break;
 					default: break;
 					}
-					info->particleaccumulator += info->countabsolute + pcount * info->countmultiplier * cl_particles_quality.value;
 					VectorCopy(originmins, trailpos);
+					if (info->trailspacing > 0)
+					{
+						info->particleaccumulator += traillen / info->trailspacing * cl_particles_quality.value;
+						trailstep = info->trailspacing / cl_particles_quality.value;
+					}
+					else
+					{
+						info->particleaccumulator += info->countabsolute + pcount * info->countmultiplier * cl_particles_quality.value;
+						trailstep = 0;
+					}
 					for (;info->particleaccumulator > 0;info->particleaccumulator--)
 					{
 						if (info->tex[1] > info->tex[0])
@@ -1075,7 +1087,7 @@ void CL_ParticleEffect(int effectnameindex, float pcount, const vec3_t originmin
 							tex = (int)lhrandom(info->tex[0], info->tex[1]);
 							tex = min(tex, info->tex[1] - 1);
 						}
-						if (info->trailspacing <= 0)
+						if (!trailstep)
 						{
 							trailpos[0] = lhrandom(originmins[0], originmaxs[0]);
 							trailpos[1] = lhrandom(originmins[1], originmaxs[1]);
@@ -1083,8 +1095,8 @@ void CL_ParticleEffect(int effectnameindex, float pcount, const vec3_t originmin
 						}
 						VectorRandom(rvec);
 						particle(particletype + info->particletype, info->color[0], info->color[1], tex, lhrandom(info->size[0], info->size[1]), info->size[2], lhrandom(info->alpha[0], info->alpha[1]), info->alpha[2], info->gravity, info->bounce, trailpos[0] + info->originoffset[0] + info->originjitter[0] * rvec[0], trailpos[1] + info->originoffset[1] + info->originjitter[1] * rvec[1], trailpos[2] + info->originoffset[2] + info->originjitter[2] * rvec[2], lhrandom(velocitymins[0], velocitymaxs[0]) * info->velocitymultiplier + info->velocityoffset[0] + info->velocityjitter[0] * rvec[0], lhrandom(velocitymins[1], velocitymaxs[1]) * info->velocitymultiplier + info->velocityoffset[1] + info->velocityjitter[1] * rvec[1], lhrandom(velocitymins[2], velocitymaxs[2]) * info->velocitymultiplier + info->velocityoffset[2] + info->velocityjitter[2] * rvec[2], info->airfriction, 0, 0);
-						if (info->trailspacing > 0)
-							VectorMA(trailpos, info->trailspacing, traildir, trailpos);
+						if (trailstep)
+							VectorMA(trailpos, trailstep, traildir, trailpos);
 					}
 				}
 			}
@@ -1656,10 +1668,6 @@ static void setuptex(int texnum, unsigned char *data, unsigned char *particletex
 	int basex, basey, y;
 	basex = ((texnum >> 0) & 7) * PARTICLETEXTURESIZE;
 	basey = ((texnum >> 3) & 7) * PARTICLETEXTURESIZE;
-	particletexture[texnum].s1 = (basex + 1) / (float)PARTICLEFONTSIZE;
-	particletexture[texnum].t1 = (basey + 1) / (float)PARTICLEFONTSIZE;
-	particletexture[texnum].s2 = (basex + PARTICLETEXTURESIZE - 1) / (float)PARTICLEFONTSIZE;
-	particletexture[texnum].t2 = (basey + PARTICLETEXTURESIZE - 1) / (float)PARTICLEFONTSIZE;
 	for (y = 0;y < PARTICLETEXTURESIZE;y++)
 		memcpy(particletexturedata + ((basey + y) * PARTICLEFONTSIZE + basex) * 4, data + y * PARTICLETEXTURESIZE * 4, PARTICLETEXTURESIZE * 4);
 }
@@ -1745,13 +1753,14 @@ static void R_InitBloodTextures (unsigned char *particletexturedata)
 
 }
 
+//uncomment this to make engine save out particle font to a tga file when run
+//#define DUMPPARTICLEFONT
+
 static void R_InitParticleTexture (void)
 {
 	int x, y, d, i, k, m;
 	float dx, dy, f;
-	unsigned char data[PARTICLETEXTURESIZE][PARTICLETEXTURESIZE][4], noise3[64][64], data2[64][16][4];
 	vec3_t light;
-	unsigned char *particletexturedata;
 
 	// a note: decals need to modulate (multiply) the background color to
 	// properly darken it (stain), and they need to be able to alpha fade,
@@ -1762,161 +1771,179 @@ static void R_InitParticleTexture (void)
 	// and white on black background) so we can alpha fade it to black, then
 	// we invert it again during the blendfunc to make it work...
 
-	particletexturedata = (unsigned char *)Mem_Alloc(tempmempool, PARTICLEFONTSIZE*PARTICLEFONTSIZE*4);
-	memset(particletexturedata, 255, PARTICLEFONTSIZE*PARTICLEFONTSIZE*4);
-
-	// smoke
-	for (i = 0;i < 8;i++)
-	{
-		memset(&data[0][0][0], 255, sizeof(data));
-		do
-		{
-			unsigned char noise1[PARTICLETEXTURESIZE*2][PARTICLETEXTURESIZE*2], noise2[PARTICLETEXTURESIZE*2][PARTICLETEXTURESIZE*2];
-
-			fractalnoise(&noise1[0][0], PARTICLETEXTURESIZE*2, PARTICLETEXTURESIZE/8);
-			fractalnoise(&noise2[0][0], PARTICLETEXTURESIZE*2, PARTICLETEXTURESIZE/4);
-			m = 0;
-			for (y = 0;y < PARTICLETEXTURESIZE;y++)
-			{
-				dy = (y - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
-				for (x = 0;x < PARTICLETEXTURESIZE;x++)
-				{
-					dx = (x - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
-					d = (noise2[y][x] - 128) * 3 + 192;
-					if (d > 0)
-						d = (int)(d * (1-(dx*dx+dy*dy)));
-					d = (d * noise1[y][x]) >> 7;
-					d = bound(0, d, 255);
-					data[y][x][3] = (unsigned char) d;
-					if (m < d)
-						m = d;
-				}
-			}
-		}
-		while (m < 224);
-		setuptex(tex_smoke[i], &data[0][0][0], particletexturedata);
-	}
-
-	// rain splash
-	memset(&data[0][0][0], 255, sizeof(data));
-	for (y = 0;y < PARTICLETEXTURESIZE;y++)
-	{
-		dy = (y - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
-		for (x = 0;x < PARTICLETEXTURESIZE;x++)
-		{
-			dx = (x - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
-			f = 255.0f * (1.0 - 4.0f * fabs(10.0f - sqrt(dx*dx+dy*dy)));
-			data[y][x][3] = (int) (bound(0.0f, f, 255.0f));
-		}
-	}
-	setuptex(tex_rainsplash, &data[0][0][0], particletexturedata);
-
-	// normal particle
-	memset(&data[0][0][0], 255, sizeof(data));
-	for (y = 0;y < PARTICLETEXTURESIZE;y++)
-	{
-		dy = (y - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
-		for (x = 0;x < PARTICLETEXTURESIZE;x++)
-		{
-			dx = (x - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
-			d = (int)(256 * (1 - (dx*dx+dy*dy)));
-			d = bound(0, d, 255);
-			data[y][x][3] = (unsigned char) d;
-		}
-	}
-	setuptex(tex_particle, &data[0][0][0], particletexturedata);
-
-	// rain
-	memset(&data[0][0][0], 255, sizeof(data));
-	light[0] = 1;light[1] = 1;light[2] = 1;
-	VectorNormalize(light);
-	for (y = 0;y < PARTICLETEXTURESIZE;y++)
-	{
-		dy = (y - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
-		// stretch upper half of bubble by +50% and shrink lower half by -50%
-		// (this gives an elongated teardrop shape)
-		if (dy > 0.5f)
-			dy = (dy - 0.5f) * 2.0f;
-		else
-			dy = (dy - 0.5f) / 1.5f;
-		for (x = 0;x < PARTICLETEXTURESIZE;x++)
-		{
-			dx = (x - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
-			// shrink bubble width to half
-			dx *= 2.0f;
-			data[y][x][3] = shadebubble(dx, dy, light);
-		}
-	}
-	setuptex(tex_raindrop, &data[0][0][0], particletexturedata);
-
-	// bubble
-	memset(&data[0][0][0], 255, sizeof(data));
-	light[0] = 1;light[1] = 1;light[2] = 1;
-	VectorNormalize(light);
-	for (y = 0;y < PARTICLETEXTURESIZE;y++)
-	{
-		dy = (y - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
-		for (x = 0;x < PARTICLETEXTURESIZE;x++)
-		{
-			dx = (x - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
-			data[y][x][3] = shadebubble(dx, dy, light);
-		}
-	}
-	setuptex(tex_bubble, &data[0][0][0], particletexturedata);
-
-	// Blood particles and blood decals
-	R_InitBloodTextures (particletexturedata);
-
-	// bullet decals
-	for (i = 0;i < 8;i++)
-	{
-		memset(&data[0][0][0], 255, sizeof(data));
-		for (k = 0;k < 12;k++)
-			particletextureblotch(&data[0][0][0], PARTICLETEXTURESIZE/16, 0, 0, 0, 128);
-		for (k = 0;k < 3;k++)
-			particletextureblotch(&data[0][0][0], PARTICLETEXTURESIZE/2, 0, 0, 0, 160);
-		//particletextureclamp(&data[0][0][0], 64, 64, 64, 255, 255, 255);
-		particletextureinvert(&data[0][0][0]);
-		setuptex(tex_bulletdecal[i], &data[0][0][0], particletexturedata);
-	}
-
-#if 0
-	Image_WriteTGARGBA ("particles/particlefont.tga", PARTICLEFONTSIZE, PARTICLEFONTSIZE, particletexturedata);
-#endif
-
+#ifndef DUMPPARTICLEFONT
 	particlefonttexture = loadtextureimage(particletexturepool, "particles/particlefont.tga", 0, 0, false, TEXF_ALPHA | TEXF_PRECACHE);
 	if (!particlefonttexture)
-		particlefonttexture = R_LoadTexture2D(particletexturepool, "particlefont", PARTICLEFONTSIZE, PARTICLEFONTSIZE, particletexturedata, TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
-	for (i = 0;i < MAX_PARTICLETEXTURES;i++)
-		particletexture[i].texture = particlefonttexture;
-
-	// nexbeam
-	fractalnoise(&noise3[0][0], 64, 4);
-	m = 0;
-	for (y = 0;y < 64;y++)
+#endif
 	{
-		dy = (y - 0.5f*64) / (64*0.5f-1);
-		for (x = 0;x < 16;x++)
-		{
-			dx = (x - 0.5f*16) / (16*0.5f-2);
-			d = (int)((1 - sqrt(fabs(dx))) * noise3[y][x]);
-			data2[y][x][0] = data2[y][x][1] = data2[y][x][2] = (unsigned char) bound(0, d, 255);
-			data2[y][x][3] = 255;
-		}
-	}
+		unsigned char *particletexturedata = (unsigned char *)Mem_Alloc(tempmempool, PARTICLEFONTSIZE*PARTICLEFONTSIZE*4);
+		unsigned char data[PARTICLETEXTURESIZE][PARTICLETEXTURESIZE][4];
+		memset(particletexturedata, 255, PARTICLEFONTSIZE*PARTICLEFONTSIZE*4);
 
-#if 0
-	Image_WriteTGARGBA ("particles/nexbeam.tga", 64, 64, &data2[0][0][0]);
+		// smoke
+		for (i = 0;i < 8;i++)
+		{
+			memset(&data[0][0][0], 255, sizeof(data));
+			do
+			{
+				unsigned char noise1[PARTICLETEXTURESIZE*2][PARTICLETEXTURESIZE*2], noise2[PARTICLETEXTURESIZE*2][PARTICLETEXTURESIZE*2];
+
+				fractalnoise(&noise1[0][0], PARTICLETEXTURESIZE*2, PARTICLETEXTURESIZE/8);
+				fractalnoise(&noise2[0][0], PARTICLETEXTURESIZE*2, PARTICLETEXTURESIZE/4);
+				m = 0;
+				for (y = 0;y < PARTICLETEXTURESIZE;y++)
+				{
+					dy = (y - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
+					for (x = 0;x < PARTICLETEXTURESIZE;x++)
+					{
+						dx = (x - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
+						d = (noise2[y][x] - 128) * 3 + 192;
+						if (d > 0)
+							d = (int)(d * (1-(dx*dx+dy*dy)));
+						d = (d * noise1[y][x]) >> 7;
+						d = bound(0, d, 255);
+						data[y][x][3] = (unsigned char) d;
+						if (m < d)
+							m = d;
+					}
+				}
+			}
+			while (m < 224);
+			setuptex(tex_smoke[i], &data[0][0][0], particletexturedata);
+		}
+
+		// rain splash
+		memset(&data[0][0][0], 255, sizeof(data));
+		for (y = 0;y < PARTICLETEXTURESIZE;y++)
+		{
+			dy = (y - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
+			for (x = 0;x < PARTICLETEXTURESIZE;x++)
+			{
+				dx = (x - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
+				f = 255.0f * (1.0 - 4.0f * fabs(10.0f - sqrt(dx*dx+dy*dy)));
+				data[y][x][3] = (int) (bound(0.0f, f, 255.0f));
+			}
+		}
+		setuptex(tex_rainsplash, &data[0][0][0], particletexturedata);
+
+		// normal particle
+		memset(&data[0][0][0], 255, sizeof(data));
+		for (y = 0;y < PARTICLETEXTURESIZE;y++)
+		{
+			dy = (y - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
+			for (x = 0;x < PARTICLETEXTURESIZE;x++)
+			{
+				dx = (x - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
+				d = (int)(256 * (1 - (dx*dx+dy*dy)));
+				d = bound(0, d, 255);
+				data[y][x][3] = (unsigned char) d;
+			}
+		}
+		setuptex(tex_particle, &data[0][0][0], particletexturedata);
+
+		// rain
+		memset(&data[0][0][0], 255, sizeof(data));
+		light[0] = 1;light[1] = 1;light[2] = 1;
+		VectorNormalize(light);
+		for (y = 0;y < PARTICLETEXTURESIZE;y++)
+		{
+			dy = (y - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
+			// stretch upper half of bubble by +50% and shrink lower half by -50%
+			// (this gives an elongated teardrop shape)
+			if (dy > 0.5f)
+				dy = (dy - 0.5f) * 2.0f;
+			else
+				dy = (dy - 0.5f) / 1.5f;
+			for (x = 0;x < PARTICLETEXTURESIZE;x++)
+			{
+				dx = (x - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
+				// shrink bubble width to half
+				dx *= 2.0f;
+				data[y][x][3] = shadebubble(dx, dy, light);
+			}
+		}
+		setuptex(tex_raindrop, &data[0][0][0], particletexturedata);
+
+		// bubble
+		memset(&data[0][0][0], 255, sizeof(data));
+		light[0] = 1;light[1] = 1;light[2] = 1;
+		VectorNormalize(light);
+		for (y = 0;y < PARTICLETEXTURESIZE;y++)
+		{
+			dy = (y - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
+			for (x = 0;x < PARTICLETEXTURESIZE;x++)
+			{
+				dx = (x - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
+				data[y][x][3] = shadebubble(dx, dy, light);
+			}
+		}
+		setuptex(tex_bubble, &data[0][0][0], particletexturedata);
+
+		// Blood particles and blood decals
+		R_InitBloodTextures (particletexturedata);
+
+		// bullet decals
+		for (i = 0;i < 8;i++)
+		{
+			memset(&data[0][0][0], 255, sizeof(data));
+			for (k = 0;k < 12;k++)
+				particletextureblotch(&data[0][0][0], PARTICLETEXTURESIZE/16, 0, 0, 0, 128);
+			for (k = 0;k < 3;k++)
+				particletextureblotch(&data[0][0][0], PARTICLETEXTURESIZE/2, 0, 0, 0, 160);
+			//particletextureclamp(&data[0][0][0], 64, 64, 64, 255, 255, 255);
+			particletextureinvert(&data[0][0][0]);
+			setuptex(tex_bulletdecal[i], &data[0][0][0], particletexturedata);
+		}
+
+#ifdef DUMPPARTICLEFONT
+		Image_WriteTGARGBA ("particles/particlefont.tga", PARTICLEFONTSIZE, PARTICLEFONTSIZE, particletexturedata);
 #endif
 
+		particlefonttexture = R_LoadTexture2D(particletexturepool, "particlefont", PARTICLEFONTSIZE, PARTICLEFONTSIZE, particletexturedata, TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
+
+		Mem_Free(particletexturedata);
+	}
+	for (i = 0;i < MAX_PARTICLETEXTURES;i++)
+	{
+		int basex = ((i >> 0) & 7) * PARTICLETEXTURESIZE;
+		int basey = ((i >> 3) & 7) * PARTICLETEXTURESIZE;
+		particletexture[i].texture = particlefonttexture;
+		particletexture[i].s1 = (basex + 1) / (float)PARTICLEFONTSIZE;
+		particletexture[i].t1 = (basey + 1) / (float)PARTICLEFONTSIZE;
+		particletexture[i].s2 = (basex + PARTICLETEXTURESIZE - 1) / (float)PARTICLEFONTSIZE;
+		particletexture[i].t2 = (basey + PARTICLETEXTURESIZE - 1) / (float)PARTICLEFONTSIZE;
+	}
+
+#ifndef DUMPPARTICLEFONT
 	particletexture[tex_beam].texture = loadtextureimage(particletexturepool, "particles/nexbeam.tga", 0, 0, false, TEXF_ALPHA | TEXF_PRECACHE);
 	if (!particletexture[tex_beam].texture)
+#endif
+	{
+		unsigned char noise3[64][64], data2[64][16][4];
+		// nexbeam
+		fractalnoise(&noise3[0][0], 64, 4);
+		m = 0;
+		for (y = 0;y < 64;y++)
+		{
+			dy = (y - 0.5f*64) / (64*0.5f-1);
+			for (x = 0;x < 16;x++)
+			{
+				dx = (x - 0.5f*16) / (16*0.5f-2);
+				d = (int)((1 - sqrt(fabs(dx))) * noise3[y][x]);
+				data2[y][x][0] = data2[y][x][1] = data2[y][x][2] = (unsigned char) bound(0, d, 255);
+				data2[y][x][3] = 255;
+			}
+		}
+
+#ifdef DUMPPARTICLEFONT
+		Image_WriteTGARGBA ("particles/nexbeam.tga", 64, 64, &data2[0][0][0]);
+#endif
 		particletexture[tex_beam].texture = R_LoadTexture2D(particletexturepool, "nexbeam", 16, 64, &data2[0][0][0], TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
+	}
 	particletexture[tex_beam].s1 = 0;
 	particletexture[tex_beam].t1 = 0;
 	particletexture[tex_beam].s2 = 1;
 	particletexture[tex_beam].t2 = 1;
-	Mem_Free(particletexturedata);
 }
 
 static void r_part_start(void)
