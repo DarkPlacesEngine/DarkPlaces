@@ -861,7 +861,13 @@ Key_Event (int key, char ascii, qboolean down)
 		}
 	}
 
-	if (!down)
+	if (down)
+	{
+		// increment key repeat count each time a down is received so that things
+		// which want to ignore key repeat can ignore it
+		keydown[key] = min(keydown[key] + 1, 2);
+	}
+	else
 	{
 		// clear repeat count now that the key is released
 		keydown[key] = 0;
@@ -872,14 +878,7 @@ Key_Event (int key, char ascii, qboolean down)
 		// downs can be matched with ups
 		if (bind && bind[0] == '+')
 			Cbuf_AddText(va("-%s %i\n", bind + 1, key));
-		return;
 	}
-
-	// from here on we know this is a down event
-
-	// increment key repeat count each time a down is received so that things
-	// which want to ignore key repeat can ignore it
-	keydown[key] = min(keydown[key] + 1, 2);
 
 	// key_consoleactive is a flag not a key_dest because the console is a
 	// high priority overlay ontop of the normal screen (designed as a safety
@@ -903,7 +902,7 @@ Key_Event (int key, char ascii, qboolean down)
 		// key_menu - go to parent menu (or key_game)
 		// key_game - open menu
 		// in all modes shift-escape toggles console
-		if ((key_consoleactive & KEY_CONSOLEACTIVE_USER) || keydown[K_SHIFT])
+		if (((key_consoleactive & KEY_CONSOLEACTIVE_USER) || keydown[K_SHIFT]) && down)
 		{
 			Con_ToggleConsole_f ();
 			return;
@@ -911,13 +910,15 @@ Key_Event (int key, char ascii, qboolean down)
 		switch (key_dest)
 		{
 			case key_message:
-				Key_Message (key, ascii);
+				if (down)
+					Key_Message (key, ascii);
 				break;
 			case key_menu:
-				MR_Keydown (key, ascii);
+				MR_KeyEvent (key, ascii, down);
 				break;
 			case key_game:
-				MR_ToggleMenu_f ();
+				if (down)
+					MR_ToggleMenu_f ();
 				break;
 			default:
 				Con_Printf ("Key_Event: Bad key_dest\n");
@@ -926,7 +927,7 @@ Key_Event (int key, char ascii, qboolean down)
 	}
 
 	// send function keydowns to interpreter no matter what mode is
-	if (key >= K_F1 && key <= K_F12)
+	if (key >= K_F1 && key <= K_F12 && down)
 	{
 		// ignore key repeats on F1-F12 binds
 		if (keydown[key] > 1)
@@ -947,11 +948,11 @@ Key_Event (int key, char ascii, qboolean down)
 
 #if 1
 	// ignore binds (other than the above escape/F1-F12 keys) while in console
-	if (key_consoleactive)
+	if (key_consoleactive && down)
 #else
 	// respond to toggleconsole binds while in console unless the pressed key
 	// happens to be the color prefix character (such as on German keyboards)
-	if (key_consoleactive && (strncmp(bind, "toggleconsole", strlen("toggleconsole")) || ascii == STRING_COLOR_TAG))
+	if (key_consoleactive && down && (strncmp(bind, "toggleconsole", strlen("toggleconsole")) || ascii == STRING_COLOR_TAG))
 #endif
 	{
 		Key_Console (key, ascii);
@@ -962,14 +963,15 @@ Key_Event (int key, char ascii, qboolean down)
 	switch (key_dest)
 	{
 		case key_message:
-			Key_Message (key, ascii);
+			if (down)
+				Key_Message (key, ascii);
 			break;
 		case key_menu:
-			MR_Keydown (key, ascii);
+			MR_KeyEvent (key, ascii, down);
 			break;
 		case key_game:
 			// ignore key repeats on binds
-			if (bind && keydown[key] == 1)
+			if (bind && keydown[key] == 1 && down)
 			{
 				// button commands add keynum as a parm
 				if (bind[0] == '+')

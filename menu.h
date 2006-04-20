@@ -59,7 +59,7 @@ void M_Update_Return_Reason(char *s);
 // hard-coded menus
 //
 void M_Init (void);
-void M_Keydown (int key);
+void M_KeyEvent (int key);
 void M_Draw (void);
 void M_ToggleMenu_f (void);
 
@@ -67,7 +67,7 @@ void M_ToggleMenu_f (void);
 // menu prog menu
 //
 void MP_Init (void);
-void MP_Keydown (int key);
+void MP_KeyEvent (int key);
 void MP_Draw (void);
 void MP_ToggleMenu_f (void);
 void MP_Shutdown (void);*/
@@ -78,7 +78,7 @@ void MP_Shutdown (void);*/
 void MR_Init_Commands (void);
 void MR_Init (void);
 void MR_Restart (void);
-extern void (*MR_Keydown) (int key, char ascii);
+extern void (*MR_KeyEvent) (int key, char ascii, qboolean downevent);
 extern void (*MR_Draw) (void);
 extern void (*MR_ToggleMenu_f) (void);
 extern void (*MR_Shutdown) (void);
