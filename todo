@@ -35,7 +35,6 @@
 -d (yummyluv) feature darkplaces protocol: add buttons 9-16 (yummyluv)
 -f (James D) bug darkplaces server: losing runes on episode completion, completing episode 1 then 2 then 3 causes it to forget 1, then 4 causes it to forget 2 and 3, making it impossible to open the boss gate (James D)
 -f (Wazat) bug darkplaces: client's slowmo detection (measuring packet times and comparing to game time changes) may be making the game unpleasant (Wazat)
-0 bug darkplaces client/server: viewzoom values above 1 are not working properly
 0 bug darkplaces client: GAME_NEHAHRA: make sure cutscenes and movies work, got a report of seeing a black screen (NightFright)
 0 bug darkplaces client: fix cl_bobmodel bug which momentarily jolts the gun when you pass through a trigger, pick up an item, etc, Sajt thinks this is related to console prints as well as centerprint (Sajt)
 0 bug darkplaces collision: frikbots are falling through the map (Sajt)
@@ -45,7 +44,6 @@
 0 bug darkplaces loader: occasional crash due to memory corruption when doing "deathmatch 1;map start" during demo loop (Willis)
 0 bug darkplaces loader: zym models are not loading some of their meshes?  this is causing the striped part of the nexuiz RL to disappear (div0, SavageX)
 0 bug darkplaces prvm: engine calls to qc functions are not counting as function calls in the prvm_profile results, so for example SV_PlayerPhysics is being shown with a 0 call count
-0 bug darkplaces prvm: unknown opcode warnings are missing a \n
 0 bug darkplaces renderer: deluxemaps are not detected in some maps that do have them?  (SavageX)
 0 bug darkplaces renderer: if a texture has the NOLIGHTMAP flag set, disable deluxemapping on the batch, this is needed to fix the glowing stuff in nexuiz maps like the stairs in Glow Arena or the slime pipes in Slime Pit (SavageX)
 0 bug darkplaces renderer: modify r_showtris_polygonoffset to push back all filled geometry, not lines, because polygonoffset will not affect GL_LINES at all
@@ -476,6 +474,7 @@ d bug darkplaces Mac filesystem: on Mac init the basedir to argv[0] truncated to
 d bug darkplaces SDL input: changing video mode causes it to ignore all character events from then on
 d bug darkplaces X11 keyboard: make sure that the XLookupString code is not little endian specific (Elric, jitspoe)
 d bug darkplaces client/server: unable to control player in TAoV multiplayer (RenegadeC)
+d bug darkplaces client/server: viewzoom values above 1 are not working properly
 d bug darkplaces client: GAME_NEXUIZ spews a number of warnings about gfx/ images not being found (Vermeulen)
 d bug darkplaces client: cl_beams_relative is behaving really badly with cl_movement prediction
 d bug darkplaces client: cl_beams_relative is sometimes drawing beams from '0 0 0' (VorteX)
@@ -528,6 +527,7 @@ d bug darkplaces prvm: assignment to world is not producing an error after world
 d bug darkplaces prvm: findchain/findchainfloat are corrupting things when trying to write to the .chain field (Kedhrin)
 d bug darkplaces prvm: findflags/findchainflags are server-specific, these should be moved into the generic progs commands
 d bug darkplaces prvm: the merged remove is causing a Host_Error on already removed entities, which happens in id1 start.bsp (RenegadeC)
+d bug darkplaces prvm: unknown opcode warnings are missing a \n
 d bug darkplaces quakec: to stop crashing on 64bit the quakec vm needs a string manager that can allocate/free negative integer indices to the strzone strings, and also automatically add engine strings
 d bug darkplaces renderer/server: scaled sprites (or possibly all models) are getting culled as if they were not scaled (KrimZon)
 d bug darkplaces renderer: add r_shadow_glsl_geforcefxlowquality cvar to make make GLSL shaders use "half" data type, automatically set this if on GFFX (MauveBib, SavageX)

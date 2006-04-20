@@ -1510,7 +1510,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 				PRVM_ERROR("PRVM_LoadProgs: out of bounds global index (statement %d) in %s", i, PRVM_NAME);
 			break;
 		default:
-			Con_DPrintf("PRVM_LoadProgs: unknown opcode %d at statement %d in %s", st->op, i, PRVM_NAME);
+			Con_DPrintf("PRVM_LoadProgs: unknown opcode %d at statement %d in %s\n", st->op, i, PRVM_NAME);
 			break;
 		}
 	}
