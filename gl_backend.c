@@ -396,6 +396,7 @@ static struct gl_state_s
 	GLboolean depthmask;
 	int colormask; // stored as bottom 4 bits: r g b a (3 2 1 0 order)
 	int depthtest;
+	int alphatest;
 	int scissortest;
 	unsigned int unit;
 	unsigned int clientunit;
@@ -503,6 +504,7 @@ void GL_Backend_ResetState(void)
 {
 	memset(&gl_state, 0, sizeof(gl_state));
 	gl_state.depthtest = true;
+	gl_state.alphatest = false;
 	gl_state.blendfunc1 = GL_ONE;
 	gl_state.blendfunc2 = GL_ZERO;
 	gl_state.blend = false;
@@ -620,6 +622,22 @@ void GL_DepthTest(int state)
 		else
 		{
 			qglDisable(GL_DEPTH_TEST);CHECKGLERROR
+		}
+	}
+}
+
+void GL_AlphaTest(int state)
+{
+	if (gl_state.alphatest != state)
+	{
+		gl_state.alphatest = state;
+		if (gl_state.alphatest)
+		{
+			qglEnable(GL_ALPHA_TEST);CHECKGLERROR
+		}
+		else
+		{
+			qglDisable(GL_ALPHA_TEST);CHECKGLERROR
 		}
 	}
 }
