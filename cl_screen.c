@@ -23,9 +23,9 @@ cvar_t vid_conheight = {CVAR_SAVE, "vid_conheight", "480", "virtual height of 2D
 cvar_t vid_pixelheight = {CVAR_SAVE, "vid_pixelheight", "1", "adjusts vertical field of vision to account for non-square pixels (1280x1024 on a CRT monitor for example)"};
 cvar_t scr_screenshot_jpeg = {CVAR_SAVE, "scr_screenshot_jpeg","1", "save jpeg instead of targa"};
 cvar_t scr_screenshot_jpeg_quality = {CVAR_SAVE, "scr_screenshot_jpeg_quality","0.9", "image quality of saved jpeg"};
-cvar_t scr_screenshot_gamma = {CVAR_SAVE, "scr_screenshot_gamma","2.2", "gamma correction on saved screenshots and videos, 1.0 saves unmodified images"};
+cvar_t scr_screenshot_gammaboost = {CVAR_SAVE, "scr_screenshot_gammaboost","1", "gamma correction on saved screenshots and videos, 1.0 saves unmodified images"};
 // scr_screenshot_name is defined in fs.c
-cvar_t cl_capturevideo = {0, "cl_capturevideo", "0", "enables saving of video to a file or files (default is .tga files, if scr_screenshot_jpeg is on it saves .jpg files (VERY SLOW), if any rawrgb or rawyv12 are on it saves those formats instead, note that scr_screenshot_gamma affects the brightness of the output)"};
+cvar_t cl_capturevideo = {0, "cl_capturevideo", "0", "enables saving of video to a file or files (default is .tga files, if scr_screenshot_jpeg is on it saves .jpg files (VERY SLOW), if any rawrgb or rawyv12 are on it saves those formats instead, note that scr_screenshot_gammaboost affects the brightness of the output)"};
 cvar_t cl_capturevideo_sound = {0, "cl_capturevideo_sound", "0", "enables saving of sound to a .wav file (warning: this requires exact sync, if your hard drive can't keep up it will abort, if your graphics can't keep up it will save duplicate frames to maintain sound sync)"};
 cvar_t cl_capturevideo_fps = {0, "cl_capturevideo_fps", "30", "how many frames per second to save (29.97 for NTSC, 30 for typical PC video, 15 can be useful)"};
 cvar_t cl_capturevideo_rawrgb = {0, "cl_capturevideo_rawrgb", "0", "saves a single .rgb video file containing raw RGB images (you'll need special processing tools to encode this to something more useful)"};
@@ -525,7 +525,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&vid_pixelheight);
 	Cvar_RegisterVariable (&scr_screenshot_jpeg);
 	Cvar_RegisterVariable (&scr_screenshot_jpeg_quality);
-	Cvar_RegisterVariable (&scr_screenshot_gamma);
+	Cvar_RegisterVariable (&scr_screenshot_gammaboost);
 	Cvar_RegisterVariable (&cl_capturevideo);
 	Cvar_RegisterVariable (&cl_capturevideo_sound);
 	Cvar_RegisterVariable (&cl_capturevideo_fps);
@@ -616,7 +616,7 @@ void SCR_CaptureVideo_BeginVideo(void)
 	cls.capturevideo_soundrate = 0;
 	cls.capturevideo_frame = 0;
 	cls.capturevideo_buffer = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * (3+3+3) + 18);
-	gamma = 1.0/scr_screenshot_gamma.value;
+	gamma = 1.0/scr_screenshot_gammaboost.value;
 
 	/*
 	for (i = 0;i < 256;i++)
@@ -1087,10 +1087,10 @@ qboolean SCR_ScreenShot(char *filename, unsigned char *buffer1, unsigned char *b
 	qglReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, buffer1);
 	CHECKGLERROR
 
-	if (scr_screenshot_gamma.value != 1 && gammacorrect)
+	if (scr_screenshot_gammaboost.value != 1 && gammacorrect)
 	{
 		int i;
-		double igamma = 1.0 / scr_screenshot_gamma.value;
+		double igamma = 1.0 / scr_screenshot_gammaboost.value;
 		unsigned char ramp[256];
 		for (i = 0;i < 256;i++)
 			ramp[i] = (unsigned char) (pow(i * (1.0 / 255.0), igamma) * 255.0);

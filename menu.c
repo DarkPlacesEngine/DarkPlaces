@@ -1576,7 +1576,7 @@ static void M_Menu_Options_AdjustSliders (int dir)
 	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&scr_screenshot_jpeg_quality, bound(0, scr_screenshot_jpeg_quality.value + dir * 0.1, 1));
 	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&scr_screenshot_gamma, bound(0.1, scr_screenshot_gamma.value + dir * 0.1, 4));
+		Cvar_SetValueQuick (&scr_screenshot_gammaboost, bound(0.1, scr_screenshot_gammaboost.value + dir * 0.1, 4));
 	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&r_sky, !r_sky.integer);
 	else if (options_cursor == optnum++)
@@ -1704,7 +1704,7 @@ static void M_Options_Draw (void)
 	M_Options_PrintSlider(  "     Field of View", true, scr_fov.integer, 1, 170);
 	M_Options_PrintCheckbox("  JPEG screenshots", jpeg_dll != NULL, scr_screenshot_jpeg.integer);
 	M_Options_PrintSlider(  "      JPEG quality", jpeg_dll != NULL, scr_screenshot_jpeg_quality.value, 0, 1);
-	M_Options_PrintSlider(  "  Screenshot Gamma", jpeg_dll != NULL, scr_screenshot_gamma.value, 0.1, 4);
+	M_Options_PrintSlider(  "  Screenshot Gamma", jpeg_dll != NULL, scr_screenshot_gammaboost.value, 0.1, 4);
 	M_Options_PrintCheckbox("               Sky", true, r_sky.integer);
 	M_Options_PrintCheckbox("         Dithering", true, gl_dither.integer);
 	M_Options_PrintSlider(  "Anisotropic Filter", gl_support_anisotropy, gl_texture_anisotropy.integer, 1, gl_max_anisotropy);
