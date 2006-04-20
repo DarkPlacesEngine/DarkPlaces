@@ -2477,6 +2477,7 @@ texture_t *rsurface_texture;
 rtexture_t *rsurface_lightmaptexture;
 rsurfmode_t rsurface_mode;
 texture_t *rsurface_glsl_texture;
+qboolean rsurface_glsl_uselightmap;
 
 void RSurf_ActiveEntity(const entity_render_t *ent)
 {
@@ -2509,6 +2510,10 @@ void RSurf_ActiveEntity(const entity_render_t *ent)
 	rsurface_tvector3f = rsurface_modeltvector3f;
 	rsurface_normal3f  = rsurface_modelnormal3f;
 	rsurface_mode = RSURFMODE_NONE;
+	rsurface_lightmaptexture = NULL;
+	rsurface_texture = NULL;
+	rsurface_glsl_texture = NULL;
+	rsurface_glsl_uselightmap = false;
 }
 
 void RSurf_CleanUp(void)
@@ -2520,6 +2525,7 @@ void RSurf_CleanUp(void)
 	rsurface_lightmaptexture = NULL;
 	rsurface_texture = NULL;
 	rsurface_glsl_texture = NULL;
+	rsurface_glsl_uselightmap = false;
 }
 
 void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generatetangents, int texturenumsurfaces, msurface_t **texturesurfacelist)
@@ -2833,11 +2839,13 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 		{
 			rsurface_mode = RSURFMODE_GLSL;
 			rsurface_glsl_texture = NULL;
+			rsurface_glsl_uselightmap = false;
 			R_Mesh_ResetTextureState();
 		}
-		if (rsurface_glsl_texture != rsurface_texture)
+		if (rsurface_glsl_texture != rsurface_texture || rsurface_glsl_uselightmap != (rsurface_lightmaptexture != NULL))
 		{
 			rsurface_glsl_texture = rsurface_texture;
+			rsurface_glsl_uselightmap = rsurface_lightmaptexture != NULL;
 			GL_BlendFunc(rsurface_texture->currentlayers[0].blendfunc1, rsurface_texture->currentlayers[0].blendfunc2);
 			GL_DepthMask(!(rsurface_texture->currentmaterialflags & MATERIALFLAG_BLENDED));
 			GL_Color(rsurface_entity->colormod[0], rsurface_entity->colormod[1], rsurface_entity->colormod[2], rsurface_texture->currentalpha);
@@ -2846,8 +2854,7 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 			//if (r_glsl_deluxemapping.integer)
 			//	permutation_deluxemapping = R_SetupSurfaceShader(vec3_origin, lightmode == 2, true);
 			R_Mesh_TexCoordPointer(0, 2, rsurface_model->surfmesh.data_texcoordtexture2f);
-			if (lightmode != 2)
-				R_Mesh_TexCoordPointer(4, 2, rsurface_model->surfmesh.data_texcoordlightmap2f);
+			R_Mesh_TexCoordPointer(4, 2, rsurface_model->surfmesh.data_texcoordlightmap2f);
 			GL_AlphaTest((rsurface_texture->currentmaterialflags & MATERIALFLAG_ALPHATEST) != 0);
 		}
 		if (!r_glsl_permutation)
@@ -2856,22 +2863,19 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 		R_Mesh_TexCoordPointer(1, 3, rsurface_svector3f);
 		R_Mesh_TexCoordPointer(2, 3, rsurface_tvector3f);
 		R_Mesh_TexCoordPointer(3, 3, rsurface_normal3f);
-		if (lightmode != 2)
+		if (rsurface_lightmaptexture)
 		{
-			if (rsurface_lightmaptexture)
-			{
-				R_Mesh_TexBind(7, R_GetTexture(rsurface_lightmaptexture));
-				if (r_glsl_permutation->loc_Texture_Deluxemap >= 0)
-					R_Mesh_TexBind(8, R_GetTexture(texturesurfacelist[0]->deluxemaptexture));
-				R_Mesh_ColorPointer(NULL);
-			}
-			else
-			{
-				R_Mesh_TexBind(7, R_GetTexture(r_texture_white));
-				if (r_glsl_permutation->loc_Texture_Deluxemap >= 0)
-					R_Mesh_TexBind(8, R_GetTexture(r_texture_blanknormalmap));
-				R_Mesh_ColorPointer(rsurface_model->surfmesh.data_lightmapcolor4f);
-			}
+			R_Mesh_TexBind(7, R_GetTexture(rsurface_lightmaptexture));
+			if (r_glsl_permutation->loc_Texture_Deluxemap >= 0)
+				R_Mesh_TexBind(8, R_GetTexture(texturesurfacelist[0]->deluxemaptexture));
+			R_Mesh_ColorPointer(NULL);
+		}
+		else
+		{
+			R_Mesh_TexBind(7, R_GetTexture(r_texture_white));
+			if (r_glsl_permutation->loc_Texture_Deluxemap >= 0)
+				R_Mesh_TexBind(8, R_GetTexture(r_texture_blanknormalmap));
+			R_Mesh_ColorPointer(rsurface_model->surfmesh.data_lightmapcolor4f);
 		}
 		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
@@ -3114,13 +3118,12 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, int su
 {
 	msurface_t *surface = ent->model->data_surfaces + surfacenumber;
 
-	rsurface_texture = surface->texture;
-	if (rsurface_texture->basematerialflags & MATERIALFLAG_SKY)
+	if (surface->texture->basematerialflags & MATERIALFLAG_SKY)
 		return; // transparent sky is too difficult
 
 	RSurf_ActiveEntity(ent);
-	R_UpdateTextureInfo(ent, rsurface_texture);
-	rsurface_texture = rsurface_texture->currentframe;
+	R_UpdateTextureInfo(ent, surface->texture);
+	rsurface_texture = surface->texture->currentframe;
 	R_DrawTextureSurfaceList(1, &surface);
 	RSurf_CleanUp();
 }
