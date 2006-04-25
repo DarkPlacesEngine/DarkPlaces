@@ -370,15 +370,15 @@ int SV_FlyMove (prvm_edict_t *ent, float time, float *stepnormal)
 		Con_Print("\n");
 #endif
 
-		/*
-		if (trace.startsolid)
+		if (trace.bmodelstartsolid)
 		{
-			// LordHavoc: note: this code is what makes entities stick in place if embedded in another object (which can be the world)
+			// LordHavoc: note: this code is what makes entities stick in place
+			// if embedded in world only (you can walk through other objects if
+			// stuck)
 			// entity is trapped in another solid
 			VectorClear(ent->fields.server->velocity);
 			return 3;
 		}
-		*/
 
 		// break if it moved the entire distance
 		if (trace.fraction == 1)
