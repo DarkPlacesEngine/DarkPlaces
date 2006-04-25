@@ -783,12 +783,11 @@ void VM_find (void)
 	f = PRVM_G_INT(OFS_PARM1);
 	s = PRVM_G_STRING(OFS_PARM2);
 
-	if (!s || !s[0])
-	{
-		// return reserved edict 0 (could be used for whatever the prog wants)
-		VM_RETURN_EDICT(prog->edicts);
-		return;
-	}
+	// LordHavoc: apparently BloodMage does a find(world, weaponmodel, "") and
+	// expects it to find all the monsters, so we must be careful to support
+	// searching for ""
+	if (!s)
+		s = "";
 
 	for (e++ ; e < prog->num_edicts ; e++)
 	{
@@ -798,7 +797,7 @@ void VM_find (void)
 			continue;
 		t = PRVM_E_STRING(ed,f);
 		if (!t)
-			continue;
+			t = "";
 		if (!strcmp(t,s))
 		{
 			VM_RETURN_EDICT(ed);
@@ -876,11 +875,12 @@ void VM_findchain (void)
 
 	f = PRVM_G_INT(OFS_PARM0);
 	s = PRVM_G_STRING(OFS_PARM1);
-	if (!s || !s[0])
-	{
-		VM_RETURN_EDICT(prog->edicts);
-		return;
-	}
+
+	// LordHavoc: apparently BloodMage does a find(world, weaponmodel, "") and
+	// expects it to find all the monsters, so we must be careful to support
+	// searching for ""
+	if (!s)
+		s = "";
 
 	ent = PRVM_NEXT_EDICT(prog->edicts);
 	for (i = 1;i < prog->num_edicts;i++, ent = PRVM_NEXT_EDICT(ent))
@@ -890,7 +890,7 @@ void VM_findchain (void)
 			continue;
 		t = PRVM_E_STRING(ent,f);
 		if (!t)
-			continue;
+			t = "";
 		if (strcmp(t,s))
 			continue;
 
@@ -975,6 +975,8 @@ void VM_findflags (void)
 		ed = PRVM_EDICT_NUM(e);
 		if (ed->priv.required->free)
 			continue;
+		if (!PRVM_E_FLOAT(ed,f))
+			continue;
 		if ((int)PRVM_E_FLOAT(ed,f) & s)
 		{
 			VM_RETURN_EDICT(ed);
@@ -1018,6 +1020,8 @@ void VM_findchainflags (void)
 	{
 		prog->xfunction->builtinsprofile++;
 		if (ent->priv.required->free)
+			continue;
+		if (!PRVM_E_FLOAT(ent,f))
 			continue;
 		if (!((int)PRVM_E_FLOAT(ent,f) & s))
 			continue;
