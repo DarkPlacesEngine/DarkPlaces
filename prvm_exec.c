@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 char *prvm_opnames[] =
 {
-"DONE",
+"^5DONE",
 
 "MUL_F",
 "MUL_V",
@@ -38,31 +38,31 @@ char *prvm_opnames[] =
 "SUB_F",
 "SUB_V",
 
-"EQ_F",
-"EQ_V",
-"EQ_S",
-"EQ_E",
-"EQ_FNC",
+"^2EQ_F",
+"^2EQ_V",
+"^2EQ_S",
+"^2EQ_E",
+"^2EQ_FNC",
 
-"NE_F",
-"NE_V",
-"NE_S",
-"NE_E",
-"NE_FNC",
+"^2NE_F",
+"^2NE_V",
+"^2NE_S",
+"^2NE_E",
+"^2NE_FNC",
 
-"LE",
-"GE",
-"LT",
-"GT",
+"^2LE",
+"^2GE",
+"^2LT",
+"^2GT",
 
-"INDIRECT",
-"INDIRECT",
-"INDIRECT",
-"INDIRECT",
-"INDIRECT",
-"INDIRECT",
+"^6FIELD_F",
+"^6FIELD_V",
+"^6FIELD_S",
+"^6FIELD_ENT",
+"^6FIELD_FLD",
+"^6FIELD_FNC",
 
-"ADDRESS",
+"^1ADDRESS",
 
 "STORE_F",
 "STORE_V",
@@ -71,40 +71,40 @@ char *prvm_opnames[] =
 "STORE_FLD",
 "STORE_FNC",
 
-"STOREP_F",
-"STOREP_V",
-"STOREP_S",
-"STOREP_ENT",
-"STOREP_FLD",
-"STOREP_FNC",
+"^1STOREP_F",
+"^1STOREP_V",
+"^1STOREP_S",
+"^1STOREP_ENT",
+"^1STOREP_FLD",
+"^1STOREP_FNC",
 
-"RETURN",
+"^5RETURN",
 
-"NOT_F",
-"NOT_V",
-"NOT_S",
-"NOT_ENT",
-"NOT_FNC",
+"^2NOT_F",
+"^2NOT_V",
+"^2NOT_S",
+"^2NOT_ENT",
+"^2NOT_FNC",
 
-"IF",
-"IFNOT",
+"^5IF",
+"^5IFNOT",
 
-"CALL0",
-"CALL1",
-"CALL2",
-"CALL3",
-"CALL4",
-"CALL5",
-"CALL6",
-"CALL7",
-"CALL8",
+"^3CALL0",
+"^3CALL1",
+"^3CALL2",
+"^3CALL3",
+"^3CALL4",
+"^3CALL5",
+"^3CALL6",
+"^3CALL7",
+"^3CALL8",
 
-"STATE",
+"^1STATE",
 
-"GOTO",
+"^5GOTO",
 
-"AND",
-"OR",
+"^2AND",
+"^2OR",
 
 "BITAND",
 "BITOR"
@@ -121,46 +121,125 @@ char *PRVM_GlobalStringNoContents (int ofs);
 PRVM_PrintStatement
 =================
 */
+extern cvar_t prvm_statementprofiling;
 void PRVM_PrintStatement (dstatement_t *s)
 {
 	size_t i;
+	int opnum = (int)(s - prog->statements);
 
-	if( prog->statement_linenums ) {
-		int opnum;
-
-		opnum = s - prog->statements;
+	Con_Printf("s%i: ", opnum);
+	if( prog->statement_linenums )
 		Con_Printf( "%s:%i: ", PRVM_GetString( prog->xfunction->s_file ), prog->statement_linenums[ opnum ] );
-	}
+
+	if (prvm_statementprofiling.integer)
+		Con_Printf("%7i ", prog->statement_profile[s - prog->statements]);
 
 	if ( (unsigned)s->op < sizeof(prvm_opnames)/sizeof(prvm_opnames[0]))
 	{
 		Con_Printf("%s ",  prvm_opnames[s->op]);
 		i = strlen(prvm_opnames[s->op]);
+		// don't count a preceding color tag when padding the name
+		if (prvm_opnames[s->op][0] == STRING_COLOR_TAG)
+			i -= 2;
 		for ( ; i<10 ; i++)
 			Con_Print(" ");
 	}
-
 	if (s->op == OP_IF || s->op == OP_IFNOT)
-		Con_Printf("%sbranch %i",PRVM_GlobalString((unsigned short) s->a),s->b);
+		Con_Printf("%s, s%i",PRVM_GlobalString((unsigned short) s->a),(signed short)s->b + opnum);
 	else if (s->op == OP_GOTO)
-	{
-		Con_Printf("branch %i",s->a);
-	}
+		Con_Printf("s%i",(signed short)s->a + opnum);
 	else if ( (unsigned)(s->op - OP_STORE_F) < 6)
 	{
 		Con_Print(PRVM_GlobalString((unsigned short) s->a));
+		Con_Print(", ");
 		Con_Print(PRVM_GlobalStringNoContents((unsigned short) s->b));
+	}
+	else if (s->op == OP_ADDRESS || (unsigned)(s->op - OP_LOAD_F) < 6)
+	{
+		if (s->a)
+			Con_Print(PRVM_GlobalString((unsigned short) s->a));
+		if (s->b)
+		{
+			Con_Print(", ");
+			Con_Print(PRVM_GlobalStringNoContents((unsigned short) s->b));
+		}
+		if (s->c)
+		{
+			Con_Print(", ");
+			Con_Print(PRVM_GlobalStringNoContents((unsigned short) s->c));
+		}
 	}
 	else
 	{
 		if (s->a)
 			Con_Print(PRVM_GlobalString((unsigned short) s->a));
 		if (s->b)
+		{
+			Con_Print(", ");
 			Con_Print(PRVM_GlobalString((unsigned short) s->b));
+		}
 		if (s->c)
+		{
+			Con_Print(", ");
 			Con_Print(PRVM_GlobalStringNoContents((unsigned short) s->c));
+		}
 	}
 	Con_Print("\n");
+}
+
+void PRVM_PrintFunctionStatements (const char *name)
+{
+	int i, firststatement, endstatement;
+	mfunction_t *func;
+	func = PRVM_ED_FindFunction (name);
+	if (!func)
+	{
+		Con_Printf("%s progs: no function named %s\n", PRVM_NAME, name);
+		return;
+	}
+	firststatement = func->first_statement;
+	if (firststatement < 0)
+	{
+		Con_Printf("%s progs: function %s is builtin #%i\n", PRVM_NAME, name, -firststatement);
+		return;
+	}
+
+	// find the end statement
+	endstatement = prog->progs->numstatements;
+	for (i = 0;i < prog->progs->numfunctions;i++)
+		if (endstatement > prog->functions[i].first_statement && firststatement < prog->functions[i].first_statement)
+			endstatement = prog->functions[i].first_statement;
+
+	// now print the range of statements
+	Con_Printf("%s progs: disassembly of function %s (statements %i-%i):\n", PRVM_NAME, name, firststatement, endstatement);
+	for (i = firststatement;i < endstatement;i++)
+	{
+		PRVM_PrintStatement(prog->statements + i);
+		prog->statement_profile[i] = 0;
+	}
+}
+
+/*
+============
+PRVM_PrintFunction_f
+
+============
+*/
+void PRVM_PrintFunction_f (void)
+{
+	if (Cmd_Argc() != 3)
+	{
+		Con_Printf("usage: prvm_printfunction <program name> <function name>\n");
+		return;
+	}
+
+	PRVM_Begin;
+	if(!PRVM_SetProgFromString(Cmd_Argv(1)))
+		return;
+
+	PRVM_PrintFunctionStatements(Cmd_Argv(2));
+
+	PRVM_End;
 }
 
 /*
@@ -231,9 +310,9 @@ void PRVM_Profile_f (void)
 		{
 			//if (num < howmany)
 			if (best->first_statement < 0)
-				Con_Printf("%7i -- builtin -- %s\n", best->callcount, PRVM_GetString(best->s_name));
+				Con_Printf("%10i ----- builtin ----- %s\n", best->callcount, PRVM_GetString(best->s_name));
 			else
-				Con_Printf("%7i%7i%7i %s\n", best->callcount, best->profile, best->builtinsprofile, PRVM_GetString(best->s_name));
+				Con_Printf("%10i%10i%10i %s\n", best->callcount, best->profile, best->builtinsprofile, PRVM_GetString(best->s_name));
 			num++;
 			best->profile = 0;
 			best->builtinsprofile = 0;
@@ -394,6 +473,7 @@ PRVM_ExecuteProgram
 #define OPC ((prvm_eval_t *)&prog->globals.generic[(unsigned short) st->c])
 extern cvar_t prvm_boundscheck;
 extern cvar_t prvm_traceqc;
+extern cvar_t prvm_statementprofiling;
 extern int		PRVM_ED_FindFieldOffset (const char *field);
 extern ddef_t*	PRVM_ED_FindGlobal(const char *name);
 void PRVM_ExecuteProgram (func_t fnum, const char *errormessage)
@@ -431,32 +511,68 @@ void PRVM_ExecuteProgram (func_t fnum, const char *errormessage)
 
 chooseexecprogram:
 	cachedpr_trace = prog->trace;
-	if (prvm_boundscheck.integer)
+	if (prvm_statementprofiling.integer)
 	{
-#define PRVMBOUNDSCHECK 1
-		if (prog->trace)
+#define PRVMSTATEMENTPROFILING 1
+		if (prvm_boundscheck.integer)
 		{
+#define PRVMBOUNDSCHECK 1
+			if (prog->trace)
+			{
 #define PRVMTRACE 1
 #include "prvm_execprogram.h"
+#undef PRVMTRACE
+			}
+			else
+			{
+#include "prvm_execprogram.h"
+			}
+#undef PRVMBOUNDSCHECK
 		}
 		else
 		{
-#undef PRVMTRACE
+			if (prog->trace)
+			{
+#define PRVMTRACE 1
 #include "prvm_execprogram.h"
+#undef PRVMTRACE
+			}
+			else
+			{
+#include "prvm_execprogram.h"
+			}
 		}
+#undef PRVMSTATEMENTPROFILING
 	}
 	else
 	{
-#undef PRVMBOUNDSCHECK
-		if (prog->trace)
+		if (prvm_boundscheck.integer)
 		{
+#define PRVMBOUNDSCHECK 1
+			if (prog->trace)
+			{
 #define PRVMTRACE 1
 #include "prvm_execprogram.h"
+#undef PRVMTRACE
+			}
+			else
+			{
+#include "prvm_execprogram.h"
+			}
+#undef PRVMBOUNDSCHECK
 		}
 		else
 		{
-#undef PRVMTRACE
+			if (prog->trace)
+			{
+#define PRVMTRACE 1
 #include "prvm_execprogram.h"
+#undef PRVMTRACE
+			}
+			else
+			{
+#include "prvm_execprogram.h"
+			}
 		}
 	}
 }

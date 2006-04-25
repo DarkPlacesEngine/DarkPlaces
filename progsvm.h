@@ -266,6 +266,8 @@ typedef struct prvm_prog_s
 
 	int					*statement_linenums; // NULL if not available
 
+	int					*statement_profile; // only incremented if prvm_statementprofiling is on
+
 	union {
 		float *generic;
 		globalvars_t *server;
@@ -428,6 +430,7 @@ void _PRVM_Free (void *buffer, const char *filename, int fileline);
 void _PRVM_FreeAll (const char *filename, int fileline);
 
 void PRVM_Profile_f (void);
+void PRVM_PrintFunction_f (void);
 
 void PRVM_PrintState(void);
 void PRVM_CrashAll (void);
@@ -444,6 +447,7 @@ prvm_edict_t *PRVM_ED_Alloc (void);
 void PRVM_ED_Free (prvm_edict_t *ed);
 void PRVM_ED_ClearEdict (prvm_edict_t *e);
 
+void PRVM_PrintFunctionStatements (const char *name);
 void PRVM_ED_Print(prvm_edict_t *ed);
 void PRVM_ED_Write (qfile_t *f, prvm_edict_t *ed);
 const char *PRVM_ED_ParseEdict (const char *data, prvm_edict_t *ent);

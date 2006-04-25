@@ -35,6 +35,8 @@ qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s);
 cvar_t prvm_boundscheck = {0, "prvm_boundscheck", "1", "enables detection of out of bounds memory access in the QuakeC code being run (in other words, prevents really exceedingly bad QuakeC code from doing nasty things to your computer)"};
 // LordHavoc: prints every opcode as it executes - warning: this is significant spew
 cvar_t prvm_traceqc = {0, "prvm_traceqc", "0", "prints every QuakeC statement as it is executed (only for really thorough debugging!)"};
+// LordHavoc: counts usage of each QuakeC statement
+cvar_t prvm_statementprofiling = {0, "prvm_statementprofiling", "0", "counts how many times each QuakeC statement has been executed, these counts are displayed in prvm_printfunction output (if enabled)"};
 
 //============================================================================
 // mempool handling
@@ -509,7 +511,7 @@ padded to 20 field width
 char *PRVM_GlobalString (int ofs)
 {
 	char	*s;
-	size_t	i;
+	//size_t	i;
 	ddef_t	*def;
 	void	*val;
 	static char	line[128];
@@ -517,37 +519,37 @@ char *PRVM_GlobalString (int ofs)
 	val = (void *)&prog->globals.generic[ofs];
 	def = PRVM_ED_GlobalAtOfs(ofs);
 	if (!def)
-		sprintf (line,"%i(?)", ofs);
+		sprintf (line,"GLOBAL%i", ofs);
 	else
 	{
 		s = PRVM_ValueString ((etype_t)def->type, (prvm_eval_t *)val);
-		sprintf (line,"%i(%s)%s", ofs, PRVM_GetString(def->s_name), s);
+		sprintf (line,"%s (=%s)", PRVM_GetString(def->s_name), s);
 	}
 
-	i = strlen(line);
-	for ( ; i<20 ; i++)
-		strcat (line," ");
-	strcat (line," ");
+	//i = strlen(line);
+	//for ( ; i<20 ; i++)
+	//	strcat (line," ");
+	//strcat (line," ");
 
 	return line;
 }
 
 char *PRVM_GlobalStringNoContents (int ofs)
 {
-	size_t	i;
+	//size_t	i;
 	ddef_t	*def;
 	static char	line[128];
 
 	def = PRVM_ED_GlobalAtOfs(ofs);
 	if (!def)
-		sprintf (line,"%i(?)", ofs);
+		sprintf (line,"GLOBAL%i", ofs);
 	else
-		sprintf (line,"%i(%s)", ofs, PRVM_GetString(def->s_name));
+		sprintf (line,"%s", PRVM_GetString(def->s_name));
 
-	i = strlen(line);
-	for ( ; i<20 ; i++)
-		strcat (line," ");
-	strcat (line," ");
+	//i = strlen(line);
+	//for ( ; i<20 ; i++)
+	//	strcat (line," ");
+	//strcat (line," ");
 
 	return line;
 }
@@ -1347,6 +1349,8 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 
 	prog->statements = (dstatement_t *)((unsigned char *)prog->progs + prog->progs->ofs_statements);
 
+	prog->statement_profile = (int *)Mem_Alloc(prog->progs_mempool, prog->progs->numstatements * sizeof(*prog->statement_profile));
+
 	// moved edict_size calculation down below field adding code
 
 	//pr_global_struct = (globalvars_t *)((unsigned char *)progs + progs->ofs_globals);
@@ -1764,9 +1768,11 @@ void PRVM_Init (void)
 	Cmd_AddCommand ("prvm_global", PRVM_Global_f, "prints value of a specified global variable in the selected VM (server, client, menu)");
 	Cmd_AddCommand ("prvm_globalset", PRVM_GlobalSet_f, "sets value of a specified global variable in the selected VM (server, client, menu)");
 	Cmd_AddCommand ("prvm_edictset", PRVM_ED_EdictSet_f, "changes value of a specified property of a specified entity in the selected VM (server, client, menu)");
+	Cmd_AddCommand ("prvm_printfunction", PRVM_PrintFunction_f, "prints a disassembly (QuakeC instructions) of the specified function in the selected VM (server, client, menu)");
 	// LordHavoc: optional runtime bounds checking (speed drain, but worth it for security, on by default - breaks most QCCX features (used by CRMod and others))
 	Cvar_RegisterVariable (&prvm_boundscheck);
 	Cvar_RegisterVariable (&prvm_traceqc);
+	Cvar_RegisterVariable (&prvm_statementprofiling);
 
 	//VM_Cmd_Init();
 }
