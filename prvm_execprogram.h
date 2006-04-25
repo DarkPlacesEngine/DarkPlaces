@@ -8,6 +8,9 @@
 #if PRVMTRACE
 			PRVM_PrintStatement(st);
 #endif
+#if PRVMSTATEMENTPROFILING
+			prog->statement_profile[st - prog->statements]++;
+#endif
 
 			switch (st->op)
 			{
