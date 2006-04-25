@@ -211,7 +211,7 @@ void PRVM_Profile_f (void)
 	if(!PRVM_SetProgFromString(Cmd_Argv(1)))
 		return;
 
-	Con_Printf( "%s Profile:\n[Profile] [BuiltinProfile] [CallCount]\n", PRVM_NAME );
+	Con_Printf( "%s Profile:\n[CallCount] [Statements] [BuiltinCost]\n", PRVM_NAME );
 
 	num = 0;
 	do
@@ -221,16 +221,19 @@ void PRVM_Profile_f (void)
 		for (i=0 ; i<prog->progs->numfunctions ; i++)
 		{
 			f = &prog->functions[i];
-			if (f->profile > max)
+			if (max < f->profile + f->builtinsprofile + f->callcount)
 			{
-				max = f->profile;
+				max = f->profile + f->builtinsprofile + f->callcount;
 				best = f;
 			}
 		}
 		if (best)
 		{
 			//if (num < howmany)
-				Con_Printf("%7i %7i %7i %s\n", best->profile, best->builtinsprofile, best->callcount, PRVM_GetString(best->s_name));
+			if (best->first_statement < 0)
+				Con_Printf("%7i -- builtin -- %s\n", best->callcount, PRVM_GetString(best->s_name));
+			else
+				Con_Printf("%7i%7i%7i %s\n", best->callcount, best->profile, best->builtinsprofile, PRVM_GetString(best->s_name));
 			num++;
 			best->profile = 0;
 			best->builtinsprofile = 0;
@@ -395,11 +398,11 @@ extern int		PRVM_ED_FindFieldOffset (const char *field);
 extern ddef_t*	PRVM_ED_FindGlobal(const char *name);
 void PRVM_ExecuteProgram (func_t fnum, const char *errormessage)
 {
-	dstatement_t	*st;
+	dstatement_t	*st, *startst;
 	mfunction_t	*f, *newf;
 	prvm_edict_t	*ed;
 	prvm_eval_t	*ptr;
-	int		profile, startprofile, cachedpr_trace, exitdepth;
+	int		jumpcount, cachedpr_trace, exitdepth;
 
 	if (!fnum || fnum >= (unsigned int)prog->progs->numfunctions)
 	{
@@ -417,7 +420,14 @@ void PRVM_ExecuteProgram (func_t fnum, const char *errormessage)
 
 // make a stack frame
 	st = &prog->statements[PRVM_EnterFunction (f)];
-	startprofile = profile = 0;
+	// save the starting statement pointer for profiling
+	// (when the function exits or jumps, the (st - startst) integer value is
+	// added to the function's profile counter)
+	startst = st;
+	// instead of counting instructions, we count jumps
+	jumpcount = 0;
+	// add one to the callcount of this function because otherwise engine-called functions aren't counted
+	prog->xfunction->callcount++;
 
 chooseexecprogram:
 	cachedpr_trace = prog->trace;
