@@ -935,7 +935,7 @@ void Sbar_ShowFPS(void)
 		{
 			framerate = framecount / (newtime - lasttime);
 			lasttime = newtime;
-			nexttime = max(nexttime + 0.1, lasttime - 0.1);
+			nexttime = max(nexttime + 1, lasttime - 1);
 			framecount = 0;
 		}
 		framecount++;
