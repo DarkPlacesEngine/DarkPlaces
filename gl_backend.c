@@ -267,11 +267,12 @@ void GL_SetupView_Mode_Perspective (double frustumx, double frustumy, double zNe
 		return;
 
 	// set up viewpoint
+	CHECKGLERROR
 	qglMatrixMode(GL_PROJECTION);CHECKGLERROR
 	qglLoadIdentity();CHECKGLERROR
 	// set view pyramid
 	qglFrustum(-frustumx * zNear, frustumx * zNear, -frustumy * zNear, frustumy * zNear, zNear, zFar);CHECKGLERROR
-	qglGetDoublev(GL_PROJECTION_MATRIX, m);
+	qglGetDoublev(GL_PROJECTION_MATRIX, m);CHECKGLERROR
 	backend_projectmatrix.m[0][0] = m[0];
 	backend_projectmatrix.m[1][0] = m[1];
 	backend_projectmatrix.m[2][0] = m[2];
@@ -290,6 +291,7 @@ void GL_SetupView_Mode_Perspective (double frustumx, double frustumy, double zNe
 	backend_projectmatrix.m[3][3] = m[15];
 	qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
 	GL_SetupView_Orientation_Identity();
+	CHECKGLERROR
 }
 
 void GL_SetupView_Mode_PerspectiveInfiniteFarClip (double frustumx, double frustumy, double zNear)
@@ -300,6 +302,7 @@ void GL_SetupView_Mode_PerspectiveInfiniteFarClip (double frustumx, double frust
 		return;
 
 	// set up viewpoint
+	CHECKGLERROR
 	qglMatrixMode(GL_PROJECTION);CHECKGLERROR
 	qglLoadIdentity();CHECKGLERROR
 	// set view pyramid
@@ -320,9 +323,10 @@ void GL_SetupView_Mode_PerspectiveInfiniteFarClip (double frustumx, double frust
 	m[13] = 0;
 	m[14] = -2 * zNear * nudge;
 	m[15] = 0;
-	qglLoadMatrixd(m);
+	qglLoadMatrixd(m);CHECKGLERROR
 	qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
 	GL_SetupView_Orientation_Identity();
+	CHECKGLERROR
 	backend_projectmatrix.m[0][0] = m[0];
 	backend_projectmatrix.m[1][0] = m[1];
 	backend_projectmatrix.m[2][0] = m[2];
@@ -349,10 +353,11 @@ void GL_SetupView_Mode_Ortho (double x1, double y1, double x2, double y2, double
 		return;
 
 	// set up viewpoint
+	CHECKGLERROR
 	qglMatrixMode(GL_PROJECTION);CHECKGLERROR
 	qglLoadIdentity();CHECKGLERROR
-	qglOrtho(x1, x2, y2, y1, zNear, zFar);
-	qglGetDoublev(GL_PROJECTION_MATRIX, m);
+	qglOrtho(x1, x2, y2, y1, zNear, zFar);CHECKGLERROR
+	qglGetDoublev(GL_PROJECTION_MATRIX, m);CHECKGLERROR
 	backend_projectmatrix.m[0][0] = m[0];
 	backend_projectmatrix.m[1][0] = m[1];
 	backend_projectmatrix.m[2][0] = m[2];
@@ -371,6 +376,7 @@ void GL_SetupView_Mode_Ortho (double x1, double y1, double x2, double y2, double
 	backend_projectmatrix.m[3][3] = m[15];
 	qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
 	GL_SetupView_Orientation_Identity();
+	CHECKGLERROR
 }
 
 typedef struct gltextureunit_s
@@ -469,9 +475,9 @@ void GL_SetupTextureState(void)
 		{
 			qglDisable(GL_TEXTURE_CUBE_MAP_ARB);CHECKGLERROR
 		}
-		qglMatrixMode(GL_TEXTURE);
-		qglLoadIdentity();
-		qglMatrixMode(GL_MODELVIEW);
+		qglMatrixMode(GL_TEXTURE);CHECKGLERROR
+		qglLoadIdentity();CHECKGLERROR
+		qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
 		if (gl_combine.integer)
 		{
 			qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE_ARB);CHECKGLERROR
@@ -496,6 +502,7 @@ void GL_SetupTextureState(void)
 		{
 			qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);CHECKGLERROR
 		}
+		CHECKGLERROR
 	}
 	CHECKGLERROR
 }
@@ -548,6 +555,7 @@ void GL_ActiveTexture(unsigned int num)
 		gl_state.unit = num;
 		if (qglActiveTexture)
 		{
+			CHECKGLERROR
 			qglActiveTexture(GL_TEXTURE0_ARB + gl_state.unit);
 			CHECKGLERROR
 		}
@@ -561,6 +569,7 @@ void GL_ClientActiveTexture(unsigned int num)
 		gl_state.clientunit = num;
 		if (qglActiveTexture)
 		{
+			CHECKGLERROR
 			qglClientActiveTexture(GL_TEXTURE0_ARB + gl_state.clientunit);
 			CHECKGLERROR
 		}
@@ -571,6 +580,7 @@ void GL_BlendFunc(int blendfunc1, int blendfunc2)
 {
 	if (gl_state.blendfunc1 != blendfunc1 || gl_state.blendfunc2 != blendfunc2)
 	{
+		CHECKGLERROR
 		qglBlendFunc(gl_state.blendfunc1 = blendfunc1, gl_state.blendfunc2 = blendfunc2);CHECKGLERROR
 		if (gl_state.blendfunc2 == GL_ZERO)
 		{
@@ -606,6 +616,7 @@ void GL_DepthMask(int state)
 {
 	if (gl_state.depthmask != state)
 	{
+		CHECKGLERROR
 		qglDepthMask(gl_state.depthmask = state);CHECKGLERROR
 	}
 }
@@ -615,6 +626,7 @@ void GL_DepthTest(int state)
 	if (gl_state.depthtest != state)
 	{
 		gl_state.depthtest = state;
+		CHECKGLERROR
 		if (gl_state.depthtest)
 		{
 			qglEnable(GL_DEPTH_TEST);CHECKGLERROR
@@ -631,6 +643,7 @@ void GL_AlphaTest(int state)
 	if (gl_state.alphatest != state)
 	{
 		gl_state.alphatest = state;
+		CHECKGLERROR
 		if (gl_state.alphatest)
 		{
 			qglEnable(GL_ALPHA_TEST);CHECKGLERROR
@@ -648,6 +661,7 @@ void GL_ColorMask(int r, int g, int b, int a)
 	if (gl_state.colormask != state)
 	{
 		gl_state.colormask = state;
+		CHECKGLERROR
 		qglColorMask((GLboolean)r, (GLboolean)g, (GLboolean)b, (GLboolean)a);CHECKGLERROR
 	}
 }
@@ -710,6 +724,7 @@ void GL_ScissorTest(int state)
 
 void GL_Clear(int mask)
 {
+	CHECKGLERROR
 	qglClear(mask);CHECKGLERROR
 }
 
@@ -730,6 +745,11 @@ void R_Mesh_Start(void)
 {
 	BACKENDACTIVECHECK
 	CHECKGLERROR
+	if (gl_printcheckerror.integer && !gl_paranoid.integer)
+	{
+		Con_Printf("WARNING: gl_printcheckerror is on but gl_paranoid is off, turning it on...\n");
+		Cvar_SetValueQuick(&gl_paranoid, 1);
+	}
 	GL_Backend_ResetState();
 }
 
@@ -740,8 +760,7 @@ unsigned int GL_Backend_CompileProgram(int vertexstrings_count, const char **ver
 	char compilelog[MAX_INPUTLINE];
 	CHECKGLERROR
 
-	programobject = qglCreateProgramObjectARB();
-	CHECKGLERROR
+	programobject = qglCreateProgramObjectARB();CHECKGLERROR
 	if (!programobject)
 		return 0;
 
@@ -767,66 +786,56 @@ unsigned int GL_Backend_CompileProgram(int vertexstrings_count, const char **ver
 
 	if (vertexstrings_count)
 	{
-		CHECKGLERROR
-		vertexshaderobject = qglCreateShaderObjectARB(GL_VERTEX_SHADER_ARB);
+		vertexshaderobject = qglCreateShaderObjectARB(GL_VERTEX_SHADER_ARB);CHECKGLERROR
 		if (!vertexshaderobject)
 		{
 			qglDeleteObjectARB(programobject);
 			CHECKGLERROR
 			return 0;
 		}
-		qglShaderSourceARB(vertexshaderobject, vertexstrings_count, vertexstrings_list, NULL);
-		qglCompileShaderARB(vertexshaderobject);
-		CHECKGLERROR
-		qglGetObjectParameterivARB(vertexshaderobject, GL_OBJECT_COMPILE_STATUS_ARB, &vertexshadercompiled);
-		qglGetInfoLogARB(vertexshaderobject, sizeof(compilelog), NULL, compilelog);
+		qglShaderSourceARB(vertexshaderobject, vertexstrings_count, vertexstrings_list, NULL);CHECKGLERROR
+		qglCompileShaderARB(vertexshaderobject);CHECKGLERROR
+		qglGetObjectParameterivARB(vertexshaderobject, GL_OBJECT_COMPILE_STATUS_ARB, &vertexshadercompiled);CHECKGLERROR
+		qglGetInfoLogARB(vertexshaderobject, sizeof(compilelog), NULL, compilelog);CHECKGLERROR
 		if (compilelog[0])
 			Con_DPrintf("vertex shader compile log:\n%s\n", compilelog);
 		if (!vertexshadercompiled)
 		{
-			qglDeleteObjectARB(programobject);
-			qglDeleteObjectARB(vertexshaderobject);
-			CHECKGLERROR
+			qglDeleteObjectARB(programobject);CHECKGLERROR
+			qglDeleteObjectARB(vertexshaderobject);CHECKGLERROR
 			return 0;
 		}
-		qglAttachObjectARB(programobject, vertexshaderobject);
-		qglDeleteObjectARB(vertexshaderobject);
-		CHECKGLERROR
+		qglAttachObjectARB(programobject, vertexshaderobject);CHECKGLERROR
+		qglDeleteObjectARB(vertexshaderobject);CHECKGLERROR
 	}
 
 	if (fragmentstrings_count)
 	{
-		CHECKGLERROR
-		fragmentshaderobject = qglCreateShaderObjectARB(GL_FRAGMENT_SHADER_ARB);
+		fragmentshaderobject = qglCreateShaderObjectARB(GL_FRAGMENT_SHADER_ARB);CHECKGLERROR
 		if (!fragmentshaderobject)
 		{
-			qglDeleteObjectARB(programobject);
-			CHECKGLERROR
+			qglDeleteObjectARB(programobject);CHECKGLERROR
 			return 0;
 		}
-		qglShaderSourceARB(fragmentshaderobject, fragmentstrings_count, fragmentstrings_list, NULL);
-		qglCompileShaderARB(fragmentshaderobject);
-		CHECKGLERROR
-		qglGetObjectParameterivARB(fragmentshaderobject, GL_OBJECT_COMPILE_STATUS_ARB, &fragmentshadercompiled);
-		qglGetInfoLogARB(fragmentshaderobject, sizeof(compilelog), NULL, compilelog);
+		qglShaderSourceARB(fragmentshaderobject, fragmentstrings_count, fragmentstrings_list, NULL);CHECKGLERROR
+		qglCompileShaderARB(fragmentshaderobject);CHECKGLERROR
+		qglGetObjectParameterivARB(fragmentshaderobject, GL_OBJECT_COMPILE_STATUS_ARB, &fragmentshadercompiled);CHECKGLERROR
+		qglGetInfoLogARB(fragmentshaderobject, sizeof(compilelog), NULL, compilelog);CHECKGLERROR
 		if (compilelog[0])
 			Con_DPrintf("fragment shader compile log:\n%s\n", compilelog);
 		if (!fragmentshadercompiled)
 		{
-			qglDeleteObjectARB(programobject);
-			qglDeleteObjectARB(fragmentshaderobject);
-			CHECKGLERROR
+			qglDeleteObjectARB(programobject);CHECKGLERROR
+			qglDeleteObjectARB(fragmentshaderobject);CHECKGLERROR
 			return 0;
 		}
-		qglAttachObjectARB(programobject, fragmentshaderobject);
-		qglDeleteObjectARB(fragmentshaderobject);
-		CHECKGLERROR
+		qglAttachObjectARB(programobject, fragmentshaderobject);CHECKGLERROR
+		qglDeleteObjectARB(fragmentshaderobject);CHECKGLERROR
 	}
 
-	qglLinkProgramARB(programobject);
-	CHECKGLERROR
-	qglGetObjectParameterivARB(programobject, GL_OBJECT_LINK_STATUS_ARB, &programlinked);
-	qglGetInfoLogARB(programobject, sizeof(compilelog), NULL, compilelog);
+	qglLinkProgramARB(programobject);CHECKGLERROR
+	qglGetObjectParameterivARB(programobject, GL_OBJECT_LINK_STATUS_ARB, &programlinked);CHECKGLERROR
+	qglGetInfoLogARB(programobject, sizeof(compilelog), NULL, compilelog);CHECKGLERROR
 	if (compilelog[0])
 	{
 		Con_DPrintf("program link log:\n%s\n", compilelog);
@@ -839,10 +848,9 @@ unsigned int GL_Backend_CompileProgram(int vertexstrings_count, const char **ver
 		if (strstr(compilelog, "fragment shader will run in software"))
 			programlinked = false;
 	}
-	CHECKGLERROR
 	if (!programlinked)
 	{
-		qglDeleteObjectARB(programobject);
+		qglDeleteObjectARB(programobject);CHECKGLERROR
 		return 0;
 	}
 	CHECKGLERROR
@@ -880,7 +888,7 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int numtriangles, const int *
 		Con_Printf("R_Mesh_Draw(%d, %d, %d, %08p);\n", firstvertex, numvertices, numtriangles, elements);
 		return;
 	}
-	//CHECKGLERROR
+	CHECKGLERROR
 	renderstats.meshes++;
 	renderstats.meshes_elements += numelements;
 	if (gl_paranoid.integer)
@@ -889,12 +897,14 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int numtriangles, const int *
 		const int *p;
 		if (!qglIsEnabled(GL_VERTEX_ARRAY))
 			Con_Print("R_Mesh_Draw: vertex array not enabled\n");
+		CHECKGLERROR
 		for (j = 0, size = numvertices * 3, p = (int *)((float *)gl_state.pointer_vertex + firstvertex * 3);j < size;j++, p++)
 			paranoidblah += *p;
 		if (gl_state.pointer_color)
 		{
 			if (!qglIsEnabled(GL_COLOR_ARRAY))
 				Con_Print("R_Mesh_Draw: color array set but not enabled\n");
+			CHECKGLERROR
 			for (j = 0, size = numvertices * 4, p = (int *)((float *)gl_state.pointer_color + firstvertex * 4);j < size;j++, p++)
 				paranoidblah += *p;
 		}
@@ -905,6 +915,7 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int numtriangles, const int *
 				GL_ClientActiveTexture(i);
 				if (!qglIsEnabled(GL_TEXTURE_COORD_ARRAY))
 					Con_Print("R_Mesh_Draw: texcoord array set but not enabled\n");
+				CHECKGLERROR
 				for (j = 0, size = numvertices * gl_state.units[i].arraycomponents, p = (int *)((float *)gl_state.units[i].pointer_texcoord + firstvertex * gl_state.units[i].arraycomponents);j < size;j++, p++)
 					paranoidblah += *p;
 			}
@@ -1080,7 +1091,8 @@ void R_Mesh_Matrix(const matrix4x4_t *matrix)
 		backend_modelmatrix = *matrix;
 		Matrix4x4_Concat(&backend_modelviewmatrix, &backend_viewmatrix, matrix);
 		Matrix4x4_Transpose(&backend_glmodelviewmatrix, &backend_modelviewmatrix);
-		qglLoadMatrixf(&backend_glmodelviewmatrix.m[0][0]);
+		CHECKGLERROR
+		qglLoadMatrixf(&backend_glmodelviewmatrix.m[0][0]);CHECKGLERROR
 	}
 }
 
@@ -1102,20 +1114,16 @@ void R_Mesh_ColorPointer(const float *color4f)
 		CHECKGLERROR
 		if (!gl_state.pointer_color)
 		{
-			qglEnableClientState(GL_COLOR_ARRAY);
-			CHECKGLERROR
+			qglEnableClientState(GL_COLOR_ARRAY);CHECKGLERROR
 		}
 		else if (!color4f)
 		{
-			qglDisableClientState(GL_COLOR_ARRAY);
-			CHECKGLERROR
+			qglDisableClientState(GL_COLOR_ARRAY);CHECKGLERROR
 			// when color array is on the glColor gets trashed, set it again
-			qglColor4f(gl_state.color4f[0], gl_state.color4f[1], gl_state.color4f[2], gl_state.color4f[3]);
-			CHECKGLERROR
+			qglColor4f(gl_state.color4f[0], gl_state.color4f[1], gl_state.color4f[2], gl_state.color4f[3]);CHECKGLERROR
 		}
 		gl_state.pointer_color = color4f;
-		qglColorPointer(4, GL_FLOAT, sizeof(float[4]), gl_state.pointer_color);
-		CHECKGLERROR
+		qglColorPointer(4, GL_FLOAT, sizeof(float[4]), gl_state.pointer_color);CHECKGLERROR
 	}
 }
 
@@ -1123,6 +1131,7 @@ void R_Mesh_TexCoordPointer(unsigned int unitnum, unsigned int numcomponents, co
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
 	// update array settings
+	CHECKGLERROR
 	if (texcoord)
 	{
 		// texcoord array
@@ -1131,8 +1140,7 @@ void R_Mesh_TexCoordPointer(unsigned int unitnum, unsigned int numcomponents, co
 			unit->pointer_texcoord = texcoord;
 			unit->arraycomponents = numcomponents;
 			GL_ClientActiveTexture(unitnum);
-			qglTexCoordPointer(unit->arraycomponents, GL_FLOAT, sizeof(float) * unit->arraycomponents, unit->pointer_texcoord);
-			CHECKGLERROR
+			qglTexCoordPointer(unit->arraycomponents, GL_FLOAT, sizeof(float) * unit->arraycomponents, unit->pointer_texcoord);CHECKGLERROR
 		}
 		// texture array unit is enabled, enable the array
 		if (!unit->arrayenabled)
@@ -1168,17 +1176,20 @@ void R_Mesh_TexBindAll(unsigned int unitnum, int tex1d, int tex2d, int tex3d, in
 			if (tex1d)
 			{
 				if (unit->t1d == 0)
-					qglEnable(GL_TEXTURE_1D);
+				{
+					qglEnable(GL_TEXTURE_1D);CHECKGLERROR
+				}
 			}
 			else
 			{
 				if (unit->t1d)
-					qglDisable(GL_TEXTURE_1D);
+				{
+					qglDisable(GL_TEXTURE_1D);CHECKGLERROR
+				}
 			}
 		}
 		unit->t1d = tex1d;
-		qglBindTexture(GL_TEXTURE_1D, unit->t1d);
-		CHECKGLERROR
+		qglBindTexture(GL_TEXTURE_1D, unit->t1d);CHECKGLERROR
 	}
 	// update 2d texture binding
 	if (unit->t2d != tex2d)
@@ -1189,17 +1200,20 @@ void R_Mesh_TexBindAll(unsigned int unitnum, int tex1d, int tex2d, int tex3d, in
 			if (tex2d)
 			{
 				if (unit->t2d == 0)
-					qglEnable(GL_TEXTURE_2D);
+				{
+					qglEnable(GL_TEXTURE_2D);CHECKGLERROR
+				}
 			}
 			else
 			{
 				if (unit->t2d)
-					qglDisable(GL_TEXTURE_2D);
+				{
+					qglDisable(GL_TEXTURE_2D);CHECKGLERROR
+				}
 			}
 		}
 		unit->t2d = tex2d;
-		qglBindTexture(GL_TEXTURE_2D, unit->t2d);
-		CHECKGLERROR
+		qglBindTexture(GL_TEXTURE_2D, unit->t2d);CHECKGLERROR
 	}
 	// update 3d texture binding
 	if (unit->t3d != tex3d)
@@ -1210,17 +1224,20 @@ void R_Mesh_TexBindAll(unsigned int unitnum, int tex1d, int tex2d, int tex3d, in
 			if (tex3d)
 			{
 				if (unit->t3d == 0)
-					qglEnable(GL_TEXTURE_3D);
+				{
+					qglEnable(GL_TEXTURE_3D);CHECKGLERROR
+				}
 			}
 			else
 			{
 				if (unit->t3d)
-					qglDisable(GL_TEXTURE_3D);
+				{
+					qglDisable(GL_TEXTURE_3D);CHECKGLERROR
+				}
 			}
 		}
 		unit->t3d = tex3d;
-		qglBindTexture(GL_TEXTURE_3D, unit->t3d);
-		CHECKGLERROR
+		qglBindTexture(GL_TEXTURE_3D, unit->t3d);CHECKGLERROR
 	}
 	// update cubemap texture binding
 	if (unit->tcubemap != texcubemap)
@@ -1231,17 +1248,20 @@ void R_Mesh_TexBindAll(unsigned int unitnum, int tex1d, int tex2d, int tex3d, in
 			if (texcubemap)
 			{
 				if (unit->tcubemap == 0)
-					qglEnable(GL_TEXTURE_CUBE_MAP_ARB);
+				{
+					qglEnable(GL_TEXTURE_CUBE_MAP_ARB);CHECKGLERROR
+				}
 			}
 			else
 			{
 				if (unit->tcubemap)
-					qglDisable(GL_TEXTURE_CUBE_MAP_ARB);
+				{
+					qglDisable(GL_TEXTURE_CUBE_MAP_ARB);CHECKGLERROR
+				}
 			}
 		}
 		unit->tcubemap = texcubemap;
-		qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, unit->tcubemap);
-		CHECKGLERROR
+		qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, unit->tcubemap);CHECKGLERROR
 	}
 }
 
@@ -1259,17 +1279,20 @@ void R_Mesh_TexBind1D(unsigned int unitnum, int texnum)
 			if (texnum)
 			{
 				if (unit->t1d == 0)
-					qglEnable(GL_TEXTURE_1D);
+				{
+					qglEnable(GL_TEXTURE_1D);CHECKGLERROR
+				}
 			}
 			else
 			{
 				if (unit->t1d)
-					qglDisable(GL_TEXTURE_1D);
+				{
+					qglDisable(GL_TEXTURE_1D);CHECKGLERROR
+				}
 			}
 		}
 		unit->t1d = texnum;
-		qglBindTexture(GL_TEXTURE_1D, unit->t1d);
-		CHECKGLERROR
+		qglBindTexture(GL_TEXTURE_1D, unit->t1d);CHECKGLERROR
 	}
 	// update 2d texture binding
 	if (unit->t2d)
@@ -1278,11 +1301,12 @@ void R_Mesh_TexBind1D(unsigned int unitnum, int texnum)
 		if (unitnum < backendunits)
 		{
 			if (unit->t2d)
-				qglDisable(GL_TEXTURE_2D);
+			{
+				qglDisable(GL_TEXTURE_2D);CHECKGLERROR
+			}
 		}
 		unit->t2d = 0;
-		qglBindTexture(GL_TEXTURE_2D, unit->t2d);
-		CHECKGLERROR
+		qglBindTexture(GL_TEXTURE_2D, unit->t2d);CHECKGLERROR
 	}
 	// update 3d texture binding
 	if (unit->t3d)
@@ -1291,11 +1315,12 @@ void R_Mesh_TexBind1D(unsigned int unitnum, int texnum)
 		if (unitnum < backendunits)
 		{
 			if (unit->t3d)
-				qglDisable(GL_TEXTURE_3D);
+			{
+				qglDisable(GL_TEXTURE_3D);CHECKGLERROR
+			}
 		}
 		unit->t3d = 0;
-		qglBindTexture(GL_TEXTURE_3D, unit->t3d);
-		CHECKGLERROR
+		qglBindTexture(GL_TEXTURE_3D, unit->t3d);CHECKGLERROR
 	}
 	// update cubemap texture binding
 	if (unit->tcubemap)
@@ -1304,11 +1329,12 @@ void R_Mesh_TexBind1D(unsigned int unitnum, int texnum)
 		if (unitnum < backendunits)
 		{
 			if (unit->tcubemap)
-				qglDisable(GL_TEXTURE_CUBE_MAP_ARB);
+			{
+				qglDisable(GL_TEXTURE_CUBE_MAP_ARB);CHECKGLERROR
+			}
 		}
 		unit->tcubemap = 0;
-		qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, unit->tcubemap);
-		CHECKGLERROR
+		qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, unit->tcubemap);CHECKGLERROR
 	}
 }
 
@@ -1324,11 +1350,12 @@ void R_Mesh_TexBind(unsigned int unitnum, int texnum)
 		if (unitnum < backendunits)
 		{
 			if (unit->t1d)
-				qglDisable(GL_TEXTURE_1D);
+			{
+				qglDisable(GL_TEXTURE_1D);CHECKGLERROR
+			}
 		}
 		unit->t1d = 0;
-		qglBindTexture(GL_TEXTURE_1D, unit->t1d);
-		CHECKGLERROR
+		qglBindTexture(GL_TEXTURE_1D, unit->t1d);CHECKGLERROR
 	}
 	// update 2d texture binding
 	if (unit->t2d != texnum)
@@ -1339,17 +1366,20 @@ void R_Mesh_TexBind(unsigned int unitnum, int texnum)
 			if (texnum)
 			{
 				if (unit->t2d == 0)
-					qglEnable(GL_TEXTURE_2D);
+				{
+					qglEnable(GL_TEXTURE_2D);CHECKGLERROR
+				}
 			}
 			else
 			{
 				if (unit->t2d)
-					qglDisable(GL_TEXTURE_2D);
+				{
+					qglDisable(GL_TEXTURE_2D);CHECKGLERROR
+				}
 			}
 		}
 		unit->t2d = texnum;
-		qglBindTexture(GL_TEXTURE_2D, unit->t2d);
-		CHECKGLERROR
+		qglBindTexture(GL_TEXTURE_2D, unit->t2d);CHECKGLERROR
 	}
 	// update 3d texture binding
 	if (unit->t3d)
@@ -1358,11 +1388,12 @@ void R_Mesh_TexBind(unsigned int unitnum, int texnum)
 		if (unitnum < backendunits)
 		{
 			if (unit->t3d)
-				qglDisable(GL_TEXTURE_3D);
+			{
+				qglDisable(GL_TEXTURE_3D);CHECKGLERROR
+			}
 		}
 		unit->t3d = 0;
-		qglBindTexture(GL_TEXTURE_3D, unit->t3d);
-		CHECKGLERROR
+		qglBindTexture(GL_TEXTURE_3D, unit->t3d);CHECKGLERROR
 	}
 	// update cubemap texture binding
 	if (unit->tcubemap != 0)
@@ -1371,11 +1402,12 @@ void R_Mesh_TexBind(unsigned int unitnum, int texnum)
 		if (unitnum < backendunits)
 		{
 			if (unit->tcubemap)
-				qglDisable(GL_TEXTURE_CUBE_MAP_ARB);
+			{
+				qglDisable(GL_TEXTURE_CUBE_MAP_ARB);CHECKGLERROR
+			}
 		}
 		unit->tcubemap = 0;
-		qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, unit->tcubemap);
-		CHECKGLERROR
+		qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, unit->tcubemap);CHECKGLERROR
 	}
 }
 
@@ -1391,11 +1423,12 @@ void R_Mesh_TexBind3D(unsigned int unitnum, int texnum)
 		if (unitnum < backendunits)
 		{
 			if (unit->t1d)
-				qglDisable(GL_TEXTURE_1D);
+			{
+				qglDisable(GL_TEXTURE_1D);CHECKGLERROR
+			}
 		}
 		unit->t1d = 0;
-		qglBindTexture(GL_TEXTURE_1D, unit->t1d);
-		CHECKGLERROR
+		qglBindTexture(GL_TEXTURE_1D, unit->t1d);CHECKGLERROR
 	}
 	// update 2d texture binding
 	if (unit->t2d)
@@ -1404,11 +1437,12 @@ void R_Mesh_TexBind3D(unsigned int unitnum, int texnum)
 		if (unitnum < backendunits)
 		{
 			if (unit->t2d)
-				qglDisable(GL_TEXTURE_2D);
+			{
+				qglDisable(GL_TEXTURE_2D);CHECKGLERROR
+			}
 		}
 		unit->t2d = 0;
-		qglBindTexture(GL_TEXTURE_2D, unit->t2d);
-		CHECKGLERROR
+		qglBindTexture(GL_TEXTURE_2D, unit->t2d);CHECKGLERROR
 	}
 	// update 3d texture binding
 	if (unit->t3d != texnum)
@@ -1419,17 +1453,20 @@ void R_Mesh_TexBind3D(unsigned int unitnum, int texnum)
 			if (texnum)
 			{
 				if (unit->t3d == 0)
-					qglEnable(GL_TEXTURE_3D);
+				{
+					qglEnable(GL_TEXTURE_3D);CHECKGLERROR
+				}
 			}
 			else
 			{
 				if (unit->t3d)
-					qglDisable(GL_TEXTURE_3D);
+				{
+					qglDisable(GL_TEXTURE_3D);CHECKGLERROR
+				}
 			}
 		}
 		unit->t3d = texnum;
-		qglBindTexture(GL_TEXTURE_3D, unit->t3d);
-		CHECKGLERROR
+		qglBindTexture(GL_TEXTURE_3D, unit->t3d);CHECKGLERROR
 	}
 	// update cubemap texture binding
 	if (unit->tcubemap != 0)
@@ -1438,11 +1475,12 @@ void R_Mesh_TexBind3D(unsigned int unitnum, int texnum)
 		if (unitnum < backendunits)
 		{
 			if (unit->tcubemap)
-				qglDisable(GL_TEXTURE_CUBE_MAP_ARB);
+			{
+				qglDisable(GL_TEXTURE_CUBE_MAP_ARB);CHECKGLERROR
+			}
 		}
 		unit->tcubemap = 0;
-		qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, unit->tcubemap);
-		CHECKGLERROR
+		qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, unit->tcubemap);CHECKGLERROR
 	}
 }
 
@@ -1458,11 +1496,12 @@ void R_Mesh_TexBindCubeMap(unsigned int unitnum, int texnum)
 		if (unitnum < backendunits)
 		{
 			if (unit->t1d)
-				qglDisable(GL_TEXTURE_1D);
+			{
+				qglDisable(GL_TEXTURE_1D);CHECKGLERROR
+			}
 		}
 		unit->t1d = 0;
-		qglBindTexture(GL_TEXTURE_1D, unit->t1d);
-		CHECKGLERROR
+		qglBindTexture(GL_TEXTURE_1D, unit->t1d);CHECKGLERROR
 	}
 	// update 2d texture binding
 	if (unit->t2d)
@@ -1471,11 +1510,12 @@ void R_Mesh_TexBindCubeMap(unsigned int unitnum, int texnum)
 		if (unitnum < backendunits)
 		{
 			if (unit->t2d)
-				qglDisable(GL_TEXTURE_2D);
+			{
+				qglDisable(GL_TEXTURE_2D);CHECKGLERROR
+			}
 		}
 		unit->t2d = 0;
-		qglBindTexture(GL_TEXTURE_2D, unit->t2d);
-		CHECKGLERROR
+		qglBindTexture(GL_TEXTURE_2D, unit->t2d);CHECKGLERROR
 	}
 	// update 3d texture binding
 	if (unit->t3d)
@@ -1484,11 +1524,12 @@ void R_Mesh_TexBindCubeMap(unsigned int unitnum, int texnum)
 		if (unitnum < backendunits)
 		{
 			if (unit->t3d)
-				qglDisable(GL_TEXTURE_3D);
+			{
+				qglDisable(GL_TEXTURE_3D);CHECKGLERROR
+			}
 		}
 		unit->t3d = 0;
-		qglBindTexture(GL_TEXTURE_3D, unit->t3d);
-		CHECKGLERROR
+		qglBindTexture(GL_TEXTURE_3D, unit->t3d);CHECKGLERROR
 	}
 	// update cubemap texture binding
 	if (unit->tcubemap != texnum)
@@ -1499,17 +1540,20 @@ void R_Mesh_TexBindCubeMap(unsigned int unitnum, int texnum)
 			if (texnum)
 			{
 				if (unit->tcubemap == 0)
-					qglEnable(GL_TEXTURE_CUBE_MAP_ARB);
+				{
+					qglEnable(GL_TEXTURE_CUBE_MAP_ARB);CHECKGLERROR
+				}
 			}
 			else
 			{
 				if (unit->tcubemap)
-					qglDisable(GL_TEXTURE_CUBE_MAP_ARB);
+				{
+					qglDisable(GL_TEXTURE_CUBE_MAP_ARB);CHECKGLERROR
+				}
 			}
 		}
 		unit->tcubemap = texnum;
-		qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, unit->tcubemap);
-		CHECKGLERROR
+		qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, unit->tcubemap);CHECKGLERROR
 	}
 }
 
@@ -1524,11 +1568,12 @@ void R_Mesh_TexMatrix(unsigned int unitnum, const matrix4x4_t *matrix)
 			matrix4x4_t tempmatrix;
 			unit->texmatrixenabled = true;
 			unit->matrix = *matrix;
+			CHECKGLERROR
 			Matrix4x4_Transpose(&tempmatrix, &unit->matrix);
-			qglMatrixMode(GL_TEXTURE);
+			qglMatrixMode(GL_TEXTURE);CHECKGLERROR
 			GL_ActiveTexture(unitnum);
-			qglLoadMatrixf(&tempmatrix.m[0][0]);
-			qglMatrixMode(GL_MODELVIEW);
+			qglLoadMatrixf(&tempmatrix.m[0][0]);CHECKGLERROR
+			qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
 		}
 	}
 	else
@@ -1537,10 +1582,11 @@ void R_Mesh_TexMatrix(unsigned int unitnum, const matrix4x4_t *matrix)
 		if (unit->texmatrixenabled)
 		{
 			unit->texmatrixenabled = false;
-			qglMatrixMode(GL_TEXTURE);
+			CHECKGLERROR
+			qglMatrixMode(GL_TEXTURE);CHECKGLERROR
 			GL_ActiveTexture(unitnum);
-			qglLoadIdentity();
-			qglMatrixMode(GL_MODELVIEW);
+			qglLoadIdentity();CHECKGLERROR
+			qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
 		}
 	}
 }
@@ -1548,6 +1594,7 @@ void R_Mesh_TexMatrix(unsigned int unitnum, const matrix4x4_t *matrix)
 void R_Mesh_TexCombine(unsigned int unitnum, int combinergb, int combinealpha, int rgbscale, int alphascale)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
+	CHECKGLERROR
 	if (gl_combine.integer)
 	{
 		// GL_ARB_texture_env_combine
@@ -1602,10 +1649,12 @@ void R_Mesh_TextureState(const rmeshstate_t *m)
 
 	BACKENDACTIVECHECK
 
+	CHECKGLERROR
 	if (gl_backend_rebindtextures)
 	{
 		gl_backend_rebindtextures = false;
 		GL_SetupTextureState();
+		CHECKGLERROR
 	}
 
 	for (i = 0;i < backendimageunits;i++)
@@ -1622,6 +1671,7 @@ void R_Mesh_TextureState(const rmeshstate_t *m)
 		R_Mesh_TexMatrix(i, &m->texmatrix[i]);
 		R_Mesh_TexCombine(i, m->texcombinergb[i], m->texcombinealpha[i], m->texrgbscale[i], m->texalphascale[i]);
 	}
+	CHECKGLERROR
 }
 
 void R_Mesh_ResetTextureState(void)
@@ -1630,10 +1680,12 @@ void R_Mesh_ResetTextureState(void)
 
 	BACKENDACTIVECHECK
 
+	CHECKGLERROR
 	if (gl_backend_rebindtextures)
 	{
 		gl_backend_rebindtextures = false;
 		GL_SetupTextureState();
+		CHECKGLERROR
 	}
 
 	for (unitnum = 0;unitnum < backendimageunits;unitnum++)
@@ -1644,40 +1696,44 @@ void R_Mesh_ResetTextureState(void)
 		{
 			GL_ActiveTexture(unitnum);
 			if (unitnum < backendunits)
-				qglDisable(GL_TEXTURE_1D);
+			{
+				qglDisable(GL_TEXTURE_1D);CHECKGLERROR
+			}
 			unit->t1d = 0;
-			qglBindTexture(GL_TEXTURE_1D, unit->t1d);
-			CHECKGLERROR
+			qglBindTexture(GL_TEXTURE_1D, unit->t1d);CHECKGLERROR
 		}
 		// update 2d texture binding
 		if (unit->t2d)
 		{
 			GL_ActiveTexture(unitnum);
 			if (unitnum < backendunits)
-				qglDisable(GL_TEXTURE_2D);
+			{
+				qglDisable(GL_TEXTURE_2D);CHECKGLERROR
+			}
 			unit->t2d = 0;
-			qglBindTexture(GL_TEXTURE_2D, unit->t2d);
-			CHECKGLERROR
+			qglBindTexture(GL_TEXTURE_2D, unit->t2d);CHECKGLERROR
 		}
 		// update 3d texture binding
 		if (unit->t3d)
 		{
 			GL_ActiveTexture(unitnum);
 			if (unitnum < backendunits)
-				qglDisable(GL_TEXTURE_3D);
+			{
+				qglDisable(GL_TEXTURE_3D);CHECKGLERROR
+			}
 			unit->t3d = 0;
-			qglBindTexture(GL_TEXTURE_3D, unit->t3d);
-			CHECKGLERROR
+			qglBindTexture(GL_TEXTURE_3D, unit->t3d);CHECKGLERROR
 		}
 		// update cubemap texture binding
 		if (unit->tcubemap)
 		{
 			GL_ActiveTexture(unitnum);
 			if (unitnum < backendunits)
-				qglDisable(GL_TEXTURE_CUBE_MAP_ARB);
+			{
+				qglDisable(GL_TEXTURE_CUBE_MAP_ARB);CHECKGLERROR
+			}
 			unit->tcubemap = 0;
-			qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, unit->tcubemap);
-			CHECKGLERROR
+			qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, unit->tcubemap);CHECKGLERROR
 		}
 	}
 	for (unitnum = 0;unitnum < backendarrayunits;unitnum++)
@@ -1698,10 +1754,11 @@ void R_Mesh_ResetTextureState(void)
 		if (unit->texmatrixenabled)
 		{
 			unit->texmatrixenabled = false;
-			qglMatrixMode(GL_TEXTURE);
+			CHECKGLERROR
+			qglMatrixMode(GL_TEXTURE);CHECKGLERROR
 			GL_ActiveTexture(unitnum);
-			qglLoadIdentity();
-			qglMatrixMode(GL_MODELVIEW);
+			qglLoadIdentity();CHECKGLERROR
+			qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
 		}
 		if (gl_combine.integer)
 		{
@@ -1744,6 +1801,7 @@ void R_Mesh_ResetTextureState(void)
 
 void R_Mesh_Draw_ShowTris(int firstvertex, int numvertices, int numtriangles, const int *elements)
 {
+	CHECKGLERROR
 	qglBegin(GL_LINES);
 	for (;numtriangles;numtriangles--, elements += 3)
 	{

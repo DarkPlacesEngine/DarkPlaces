@@ -488,8 +488,11 @@ void VID_Finish (qboolean allowmousegrab)
 	Uint8 appstate;
 	qboolean vid_usemouse;
 
+	CHECKGLERROR
 	if (r_speeds.integer || gl_finish.integer)
-		qglFinish();
+	{
+		qglFinish();CHECKGLERROR
+	}
 	SDL_GL_SwapBuffers();
 
 	//react on appstate changes

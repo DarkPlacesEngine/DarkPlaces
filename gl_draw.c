@@ -502,9 +502,10 @@ void DrawQ_Begin(void)
 	r_view_matrix = r_refdef.viewentitymatrix;
 	GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
 
-	qglViewport(r_view_x, vid.height - (r_view_y + r_view_height), r_view_width, r_view_height);
+	CHECKGLERROR
+	qglViewport(r_view_x, vid.height - (r_view_y + r_view_height), r_view_width, r_view_height);CHECKGLERROR
 	GL_SetupView_Mode_Ortho(0, 0, vid_conwidth.integer, vid_conheight.integer, -10, 100);
-	qglDepthFunc(GL_LEQUAL);
+	qglDepthFunc(GL_LEQUAL);CHECKGLERROR
 	R_Mesh_Matrix(&identitymatrix);
 
 	GL_DepthMask(true);
@@ -828,6 +829,7 @@ void DrawQ_LineLoop (drawqueuemesh_t *mesh, int flags)
 	if (!r_render.integer)
 		return;
 
+	CHECKGLERROR
 	if(flags == DRAWFLAG_ADDITIVE)
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 	else if(flags == DRAWFLAG_MODULATE)
@@ -838,6 +840,7 @@ void DrawQ_LineLoop (drawqueuemesh_t *mesh, int flags)
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	GL_Color(1,1,1,1);
+	CHECKGLERROR
 	qglBegin(GL_LINE_LOOP);
 	for (num = 0;num < mesh->num_vertices;num++)
 	{
@@ -846,6 +849,7 @@ void DrawQ_LineLoop (drawqueuemesh_t *mesh, int flags)
 		qglVertex2f(mesh->data_vertex3f[num*3+0], mesh->data_vertex3f[num*3+1]);
 	}
 	qglEnd();
+	CHECKGLERROR
 }
 
 //LordHavoc: FIXME: this is nasty!
@@ -856,7 +860,8 @@ void DrawQ_LineWidth (float width)
 		Con_Printf("DrawQ_LineWidth: not in 2d rendering stage!\n");
 		return;
 	}
-	qglLineWidth(width);
+	CHECKGLERROR
+	qglLineWidth(width);CHECKGLERROR
 }
 
 //[515]: this is old, delete
@@ -871,6 +876,7 @@ void DrawQ_Line (float width, float x1, float y1, float x2, float y2, float r, f
 	if (!r_render.integer)
 		return;
 
+	CHECKGLERROR
 	if(width > 0)
 		DrawQ_LineWidth(width);
 
@@ -884,10 +890,12 @@ void DrawQ_Line (float width, float x1, float y1, float x2, float y2, float r, f
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	GL_Color(r,g,b,alpha);
+	CHECKGLERROR
 	qglBegin(GL_LINES);
 	qglVertex2f(x1, y1);
 	qglVertex2f(x2, y2);
 	qglEnd();
+	CHECKGLERROR
 }
 
 void DrawQ_SetClipArea(float x, float y, float width, float height)

@@ -285,8 +285,11 @@ void VID_Finish (qboolean allowmousegrab)
 
 	if (r_render.integer && !vid_hidden)
 	{
+		CHECKGLERROR
 		if (r_speeds.integer || gl_finish.integer)
-			qglFinish();
+		{
+			qglFinish();CHECKGLERROR
+		}
 		SwapBuffers(baseDC);
 	}
 

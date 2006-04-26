@@ -136,8 +136,11 @@ void VID_Finish (qboolean allowmousegrab)
 
 	if (r_render.integer)
 	{
+		CHECKGLERROR
 		if (r_speeds.integer || gl_finish.integer)
-			qglFinish();
+		{
+			qglFinish();CHECKGLERROR
+		}
 		qaglSwapBuffers(context);
 	}
 	VID_UpdateGamma(false, GAMMA_TABLE_SIZE);

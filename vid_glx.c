@@ -585,9 +585,12 @@ void VID_Finish (qboolean allowmousegrab)
 
 	if (r_render.integer)
 	{
+		CHECKGLERROR
 		if (r_speeds.integer || gl_finish.integer)
-			qglFinish();
-		qglXSwapBuffers(vidx11_display, win);
+		{
+			qglFinish();CHECKGLERROR
+		}
+		qglXSwapBuffers(vidx11_display, win);CHECKGLERROR
 	}
 
 	if (vid_x11_hardwaregammasupported)

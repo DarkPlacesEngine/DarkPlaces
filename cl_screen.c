@@ -407,7 +407,8 @@ void R_TimeReport(char *desc)
 	if (r_speeds.integer < 2 || !r_timereport_active)
 		return;
 
-	qglFinish();
+	CHECKGLERROR
+	qglFinish();CHECKGLERROR
 	r_timereport_temp = r_timereport_current;
 	r_timereport_current = Sys_DoubleTime();
 	t = (int) ((r_timereport_current - r_timereport_temp) * 1000000.0 + 0.5);
@@ -757,14 +758,14 @@ qboolean SCR_CaptureVideo_VideoFrame(int newframenum)
 	unsigned char *b, *out;
 	char filename[32];
 	int outoffset = (width/2)*(height/2);
+	CHECKGLERROR
 	//return SCR_ScreenShot(filename, cls.capturevideo_buffer, cls.capturevideo_buffer + vid.width * vid.height * 3, cls.capturevideo_buffer + vid.width * vid.height * 6, 0, 0, vid.width, vid.height, false, false, false, jpeg, true);
 	// speed is critical here, so do saving as directly as possible
 	switch (cls.capturevideo_format)
 	{
 	case CAPTUREVIDEOFORMAT_RAWYV12:
 		// FIXME: width/height must be multiple of 2, enforce this?
-		qglReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, cls.capturevideo_buffer);
-		CHECKGLERROR
+		qglReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, cls.capturevideo_buffer);CHECKGLERROR
 		// process one line at a time, and CbCr every other line at 2 pixel intervals
 		for (y = 0;y < height;y++)
 		{
@@ -805,15 +806,13 @@ qboolean SCR_CaptureVideo_VideoFrame(int newframenum)
 				return false;
 		return true;
 	case CAPTUREVIDEOFORMAT_RAWRGB:
-		qglReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, cls.capturevideo_buffer);
-		CHECKGLERROR
+		qglReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, cls.capturevideo_buffer);CHECKGLERROR
 		for (;cls.capturevideo_frame < newframenum;cls.capturevideo_frame++)
 			if (!FS_Write (cls.capturevideo_videofile, cls.capturevideo_buffer, width*height*3))
 				return false;
 		return true;
 	case CAPTUREVIDEOFORMAT_JPEG:
-		qglReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, cls.capturevideo_buffer);
-		CHECKGLERROR
+		qglReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, cls.capturevideo_buffer);CHECKGLERROR
 		for (;cls.capturevideo_frame < newframenum;cls.capturevideo_frame++)
 		{
 			sprintf(filename, "video/dp%06d.jpg", cls.capturevideo_frame);
@@ -830,8 +829,7 @@ qboolean SCR_CaptureVideo_VideoFrame(int newframenum)
 		cls.capturevideo_buffer[14] = (height >> 0) & 0xFF;
 		cls.capturevideo_buffer[15] = (height >> 8) & 0xFF;
 		cls.capturevideo_buffer[16] = 24;	// pixel size
-		qglReadPixels (x, y, width, height, GL_BGR, GL_UNSIGNED_BYTE, cls.capturevideo_buffer + 18);
-		CHECKGLERROR
+		qglReadPixels (x, y, width, height, GL_BGR, GL_UNSIGNED_BYTE, cls.capturevideo_buffer + 18);CHECKGLERROR
 		for (;cls.capturevideo_frame < newframenum;cls.capturevideo_frame++)
 		{
 			sprintf(filename, "video/dp%06d.tga", cls.capturevideo_frame);
@@ -1084,8 +1082,8 @@ qboolean SCR_ScreenShot(char *filename, unsigned char *buffer1, unsigned char *b
 	if (!r_render.integer)
 		return false;
 
-	qglReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, buffer1);
 	CHECKGLERROR
+	qglReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, buffer1);CHECKGLERROR
 
 	if (scr_screenshot_gammaboost.value != 1 && gammacorrect)
 	{
@@ -1115,11 +1113,15 @@ void R_ClearScreen(void)
 	if (r_render.integer)
 	{
 		// clear to black
-		if (fogenabled)
-			qglClearColor(fogcolor[0],fogcolor[1],fogcolor[2],0);
-		else
-			qglClearColor(0,0,0,0);
 		CHECKGLERROR
+		if (fogenabled)
+		{
+			qglClearColor(fogcolor[0],fogcolor[1],fogcolor[2],0);CHECKGLERROR
+		}
+		else
+		{
+			qglClearColor(0,0,0,0);CHECKGLERROR
+		}
 		qglClearDepth(1);CHECKGLERROR
 		if (gl_stencil)
 		{
@@ -1276,14 +1278,15 @@ void SCR_UpdateLoadingScreen (void)
 	// don't do anything if not initialized yet
 	if (vid_hidden)
 		return;
-	qglViewport(0, 0, vid.width, vid.height);
-	//qglDisable(GL_SCISSOR_TEST);
-	//qglDepthMask(1);
-	qglColorMask(1,1,1,1);
-	//qglClearColor(0,0,0,0);
-	//qglClear(GL_COLOR_BUFFER_BIT);
-	//qglCullFace(GL_FRONT);
-	//qglDisable(GL_CULL_FACE);
+	CHECKGLERROR
+	qglViewport(0, 0, vid.width, vid.height);CHECKGLERROR
+	//qglDisable(GL_SCISSOR_TEST);CHECKGLERROR
+	//qglDepthMask(1);CHECKGLERROR
+	qglColorMask(1,1,1,1);CHECKGLERROR
+	//qglClearColor(0,0,0,0);CHECKGLERROR
+	//qglClear(GL_COLOR_BUFFER_BIT);CHECKGLERROR
+	//qglCullFace(GL_FRONT);CHECKGLERROR
+	//qglDisable(GL_CULL_FACE);CHECKGLERROR
 	//R_ClearScreen();
 	R_Textures_Frame();
 	GL_SetupView_Mode_Ortho(0, 0, vid_conwidth.integer, vid_conheight.integer, -10, 100);
@@ -1390,13 +1393,12 @@ void CL_UpdateScreen(void)
 		R_TimeReport("start");
 
 	CHECKGLERROR
-	qglViewport(0, 0, vid.width, vid.height);
-	qglDisable(GL_SCISSOR_TEST);
-	qglDepthMask(1);
-	qglColorMask(1,1,1,1);
-	qglClearColor(0,0,0,0);
-	qglClear(GL_COLOR_BUFFER_BIT);
-	CHECKGLERROR
+	qglViewport(0, 0, vid.width, vid.height);CHECKGLERROR
+	qglDisable(GL_SCISSOR_TEST);CHECKGLERROR
+	qglDepthMask(1);CHECKGLERROR
+	qglColorMask(1,1,1,1);CHECKGLERROR
+	qglClearColor(0,0,0,0);CHECKGLERROR
+	qglClear(GL_COLOR_BUFFER_BIT);CHECKGLERROR
 
 	if (r_timereport_active)
 		R_TimeReport("clear");

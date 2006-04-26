@@ -790,7 +790,7 @@ void R_GLSL_CompilePermutation(int permutation)
 	if (p->program)
 	{
 		CHECKGLERROR
-		qglUseProgramObjectARB(p->program);
+		qglUseProgramObjectARB(p->program);CHECKGLERROR
 		p->loc_Texture_Normal      = qglGetUniformLocationARB(p->program, "Texture_Normal");
 		p->loc_Texture_Color       = qglGetUniformLocationARB(p->program, "Texture_Color");
 		p->loc_Texture_Gloss       = qglGetUniformLocationARB(p->program, "Texture_Gloss");
@@ -827,8 +827,8 @@ void R_GLSL_CompilePermutation(int permutation)
 		if (p->loc_Texture_Lightmap >= 0)  qglUniform1iARB(p->loc_Texture_Lightmap, 7);
 		if (p->loc_Texture_Deluxemap >= 0) qglUniform1iARB(p->loc_Texture_Deluxemap, 8);
 		if (p->loc_Texture_Glow >= 0)      qglUniform1iARB(p->loc_Texture_Glow, 9);
-		qglUseProgramObjectARB(0);
 		CHECKGLERROR
+		qglUseProgramObjectARB(0);CHECKGLERROR
 	}
 	else
 		Con_Printf("permutation%s failed for shader %s, some features may not work properly!\n", permutationname, "glsl/default.glsl");
@@ -1203,8 +1203,9 @@ void GL_Init (void)
 	Con_DPrintf("\nengine extensions: %s\n", vm_sv_extensions );
 
 	// clear to black (loading plaque will be seen over this)
-	qglClearColor(0,0,0,1);
-	qglClear(GL_COLOR_BUFFER_BIT);
+	CHECKGLERROR
+	qglClearColor(0,0,0,1);CHECKGLERROR
+	qglClear(GL_COLOR_BUFFER_BIT);CHECKGLERROR
 }
 
 int R_CullBox(const vec3_t mins, const vec3_t maxs)
@@ -1557,13 +1558,15 @@ static void R_BlendView(void)
 		R_Mesh_TexBind(0, R_GetTexture(r_bloom_texture_screen));
 		// copy view into the full resolution screen image texture
 		GL_ActiveTexture(0);
-		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view_x, vid.height - (r_view_y + r_view_height), r_view_width, r_view_height);
+		CHECKGLERROR
+		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view_x, vid.height - (r_view_y + r_view_height), r_view_width, r_view_height);CHECKGLERROR
 		renderstats.bloom_copypixels += r_view_width * r_view_height;
 		// now scale it down to the bloom size and raise to a power of itself
 		// to darken it (this leaves the really bright stuff bright, and
 		// everything else becomes very dark)
 		// TODO: optimize with multitexture or GLSL
-		qglViewport(r_view_x, vid.height - (r_view_y + bloomheight), bloomwidth, bloomheight);
+		CHECKGLERROR
+		qglViewport(r_view_x, vid.height - (r_view_y + bloomheight), bloomwidth, bloomheight);CHECKGLERROR
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		GL_Color(1, 1, 1, 1);
 		R_Mesh_Draw(0, 4, 2, polygonelements);
@@ -1580,7 +1583,8 @@ static void R_BlendView(void)
 		R_Mesh_TexBind(0, R_GetTexture(r_bloom_texture_bloom));
 		R_Mesh_TexCoordPointer(0, 2, texcoord2f[2]);
 		GL_ActiveTexture(0);
-		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view_x, vid.height - (r_view_y + bloomheight), bloomwidth, bloomheight);
+		CHECKGLERROR
+		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view_x, vid.height - (r_view_y + bloomheight), bloomwidth, bloomheight);CHECKGLERROR
 		renderstats.bloom_copypixels += bloomwidth * bloomheight;
 		// blend on at multiple vertical offsets to achieve a vertical blur
 		// TODO: do offset blends using GLSL
@@ -1612,7 +1616,8 @@ static void R_BlendView(void)
 		}
 		// copy the vertically blurred bloom view to a texture
 		GL_ActiveTexture(0);
-		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view_x, vid.height - (r_view_y + bloomheight), bloomwidth, bloomheight);
+		CHECKGLERROR
+		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view_x, vid.height - (r_view_y + bloomheight), bloomwidth, bloomheight);CHECKGLERROR
 		renderstats.bloom_copypixels += bloomwidth * bloomheight;
 		// blend the vertically blurred image at multiple offsets horizontally
 		// to finish the blur effect
@@ -1645,10 +1650,11 @@ static void R_BlendView(void)
 		}
 		// copy the blurred bloom view to a texture
 		GL_ActiveTexture(0);
-		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view_x, vid.height - (r_view_y + bloomheight), bloomwidth, bloomheight);
+		CHECKGLERROR
+		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view_x, vid.height - (r_view_y + bloomheight), bloomwidth, bloomheight);CHECKGLERROR
 		renderstats.bloom_copypixels += bloomwidth * bloomheight;
 		// go back to full view area
-		qglViewport(r_view_x, vid.height - (r_view_y + r_view_height), r_view_width, r_view_height);
+		qglViewport(r_view_x, vid.height - (r_view_y + r_view_height), r_view_width, r_view_height);CHECKGLERROR
 		// put the original screen image back in place and blend the bloom
 		// texture on it
 		GL_Color(1,1,1,1);
@@ -1725,7 +1731,8 @@ void R_RenderView(void)
 	}
 
 	// GL is weird because it's bottom to top, r_view_y is top to bottom
-	qglViewport(r_view_x, vid.height - (r_view_y + r_view_height), r_view_width, r_view_height);
+	CHECKGLERROR
+	qglViewport(r_view_x, vid.height - (r_view_y + r_view_height), r_view_width, r_view_height);CHECKGLERROR
 	GL_Scissor(r_view_x, r_view_y, r_view_width, r_view_height);
 	GL_ScissorTest(true);
 	GL_DepthMask(true);
@@ -1735,14 +1742,16 @@ void R_RenderView(void)
 	if (r_timereport_active)
 		R_TimeReport("setup");
 
-	qglDepthFunc(GL_LEQUAL);
-	qglPolygonOffset(r_polygonfactor, r_polygonoffset);
-	qglEnable(GL_POLYGON_OFFSET_FILL);
+	CHECKGLERROR
+	qglDepthFunc(GL_LEQUAL);CHECKGLERROR
+	qglPolygonOffset(r_polygonfactor, r_polygonoffset);CHECKGLERROR
+	qglEnable(GL_POLYGON_OFFSET_FILL);CHECKGLERROR
 
 	R_RenderScene();
 
-	qglPolygonOffset(r_polygonfactor, r_polygonoffset);
-	qglDisable(GL_POLYGON_OFFSET_FILL);
+	CHECKGLERROR
+	qglPolygonOffset(r_polygonfactor, r_polygonoffset);CHECKGLERROR
+	qglDisable(GL_POLYGON_OFFSET_FILL);CHECKGLERROR
 
 	R_BlendView();
 	if (r_timereport_active)
@@ -1750,6 +1759,7 @@ void R_RenderView(void)
 
 	GL_Scissor(0, 0, vid.width, vid.height);
 	GL_ScissorTest(false);
+	CHECKGLERROR
 }
 
 //[515]: csqc
@@ -1785,7 +1795,8 @@ void CSQC_R_ClearScreen (void)
 	}
 
 	// GL is weird because it's bottom to top, r_view_y is top to bottom
-	qglViewport(r_view_x, vid.height - (r_view_y + r_view_height), r_view_width, r_view_height);
+	CHECKGLERROR
+	qglViewport(r_view_x, vid.height - (r_view_y + r_view_height), r_view_width, r_view_height);CHECKGLERROR
 	GL_Scissor(r_view_x, r_view_y, r_view_width, r_view_height);
 	GL_ScissorTest(true);
 	GL_DepthMask(true);
@@ -1794,19 +1805,22 @@ void CSQC_R_ClearScreen (void)
 	R_UpdateFog();
 	if (r_timereport_active)
 		R_TimeReport("setup");
+	CHECKGLERROR
 }
 
 //[515]: csqc
 void CSQC_R_RenderScene (void)
 {
-	qglDepthFunc(GL_LEQUAL);
-	qglPolygonOffset(r_polygonfactor, r_polygonoffset);
-	qglEnable(GL_POLYGON_OFFSET_FILL);
+	CHECKGLERROR
+	qglDepthFunc(GL_LEQUAL);CHECKGLERROR
+	qglPolygonOffset(r_polygonfactor, r_polygonoffset);CHECKGLERROR
+	qglEnable(GL_POLYGON_OFFSET_FILL);CHECKGLERROR
 
 	R_RenderScene();
 
-	qglPolygonOffset(r_polygonfactor, r_polygonoffset);
-	qglDisable(GL_POLYGON_OFFSET_FILL);
+	CHECKGLERROR
+	qglPolygonOffset(r_polygonfactor, r_polygonoffset);CHECKGLERROR
+	qglDisable(GL_POLYGON_OFFSET_FILL);CHECKGLERROR
 
 	R_BlendView();
 	if (r_timereport_active)
@@ -1814,6 +1828,7 @@ void CSQC_R_RenderScene (void)
 
 	GL_Scissor(0, 0, vid.width, vid.height);
 	GL_ScissorTest(false);
+	CHECKGLERROR
 }
 
 extern void R_DrawLightningBeams (void);
@@ -1828,8 +1843,11 @@ void R_RenderScene(void)
 
 	r_framecount++;
 
+	CHECKGLERROR
 	if (gl_support_fragment_shader)
-		qglUseProgramObjectARB(0);
+	{
+		qglUseProgramObjectARB(0);CHECKGLERROR
+	}
 
 	R_MeshQueue_BeginScene();
 
@@ -1945,8 +1963,11 @@ void R_RenderScene(void)
 	if (r_refdef.extraupdate)
 		S_ExtraUpdate ();
 
+	CHECKGLERROR
 	if (gl_support_fragment_shader)
-		qglUseProgramObjectARB(0);
+	{
+		qglUseProgramObjectARB(0);CHECKGLERROR
+	}
 }
 
 /*
@@ -2518,8 +2539,11 @@ void RSurf_ActiveEntity(const entity_render_t *ent)
 
 void RSurf_CleanUp(void)
 {
+	CHECKGLERROR
 	if (rsurface_mode == RSURFMODE_GLSL)
-		qglUseProgramObjectARB(0);
+	{
+		qglUseProgramObjectARB(0);CHECKGLERROR
+	}
 	GL_AlphaTest(false);
 	rsurface_mode = RSURFMODE_NONE;
 	rsurface_lightmaptexture = NULL;
@@ -2748,9 +2772,12 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 	renderstats.entities_surfaces += texturenumsurfaces;
 	// FIXME: identify models using a better check than rsurface_model->brush.shadowmesh
 	lightmode = ((rsurface_entity->effects & EF_FULLBRIGHT) || rsurface_model->brush.shadowmesh) ? 0 : 2;
+	CHECKGLERROR
 	GL_DepthTest(!(rsurface_texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
 	if ((rsurface_texture->textureflags & Q3TEXTUREFLAG_TWOSIDED) || (rsurface_entity->flags & RENDER_NOCULLFACE))
-		qglDisable(GL_CULL_FACE);
+	{
+		qglDisable(GL_CULL_FACE);CHECKGLERROR
+	}
 	if (r_showsurfaces.integer)
 	{
 		if (rsurface_mode != RSURFMODE_SHOWSURFACES)
@@ -2778,7 +2805,9 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 			if (rsurface_mode != RSURFMODE_SKY)
 			{
 				if (rsurface_mode == RSURFMODE_GLSL)
-					qglUseProgramObjectARB(0);
+				{
+					qglUseProgramObjectARB(0);CHECKGLERROR
+				}
 				rsurface_mode = RSURFMODE_SKY;
 				if (skyrendernow)
 				{
@@ -2887,10 +2916,13 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 	{
 		int layerindex;
 		const texturelayer_t *layer;
+		CHECKGLERROR
 		if (rsurface_mode != RSURFMODE_MULTIPASS)
 		{
 			if (rsurface_mode == RSURFMODE_GLSL)
-				qglUseProgramObjectARB(0);
+			{
+				qglUseProgramObjectARB(0);CHECKGLERROR
+			}
 			rsurface_mode = RSURFMODE_MULTIPASS;
 		}
 		RSurf_PrepareVerticesForBatch(true, false, texturenumsurfaces, texturesurfacelist);
@@ -2905,7 +2937,7 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 				else
 				{
 					GL_AlphaTest(false);
-					qglDepthFunc(GL_EQUAL);
+					qglDepthFunc(GL_EQUAL);CHECKGLERROR
 				}
 			}
 			GL_DepthMask(layer->depthmask);
@@ -3103,15 +3135,19 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 				GL_LockArrays(0, 0);
 			}
 		}
+		CHECKGLERROR
 		if (rsurface_texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
 		{
-			qglDepthFunc(GL_LEQUAL);
+			qglDepthFunc(GL_LEQUAL);CHECKGLERROR
 			GL_AlphaTest(false);
 		}
 	}
+	CHECKGLERROR
 	GL_LockArrays(0, 0);
 	if ((rsurface_texture->textureflags & Q3TEXTUREFLAG_TWOSIDED) || (rsurface_entity->flags & RENDER_NOCULLFACE))
-		qglEnable(GL_CULL_FACE);
+	{
+		qglEnable(GL_CULL_FACE);CHECKGLERROR
+	}
 }
 
 static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
@@ -3268,20 +3304,21 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 		int i;
 		const msurface_t *surface;
 		q3mbrush_t *brush;
+		CHECKGLERROR
 		R_Mesh_Matrix(&ent->matrix);
 		R_Mesh_ColorPointer(NULL);
 		R_Mesh_ResetTextureState();
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 		GL_DepthMask(false);
 		GL_DepthTest(!r_showdisabledepthtest.integer);
-		qglPolygonOffset(r_polygonfactor + r_showcollisionbrushes_polygonfactor.value, r_polygonoffset + r_showcollisionbrushes_polygonoffset.value);
+		qglPolygonOffset(r_polygonfactor + r_showcollisionbrushes_polygonfactor.value, r_polygonoffset + r_showcollisionbrushes_polygonoffset.value);CHECKGLERROR
 		for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)
 			if (brush->colbrushf && brush->colbrushf->numtriangles)
 				R_DrawCollisionBrush(brush->colbrushf);
 		for (i = 0, surface = model->data_surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surface++)
 			if (surface->num_collisiontriangles)
 				R_DrawCollisionSurface(ent, surface);
-		qglPolygonOffset(r_polygonfactor, r_polygonoffset);
+		qglPolygonOffset(r_polygonfactor, r_polygonoffset);CHECKGLERROR
 	}
 
 	if (r_showtris.integer || r_shownormals.integer)
@@ -3290,10 +3327,13 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 		msurface_t *surface;
 		const int *elements;
 		vec3_t v;
+		CHECKGLERROR
 		GL_DepthTest(true);
 		GL_DepthMask(true);
 		if (r_showdisabledepthtest.integer)
-			qglDepthFunc(GL_ALWAYS);
+		{
+			qglDepthFunc(GL_ALWAYS);CHECKGLERROR
+		}
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		R_Mesh_ColorPointer(NULL);
 		R_Mesh_ResetTextureState();
@@ -3314,6 +3354,7 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 					else
 						GL_Color(0, r_showtris.value, 0, 1);
 					elements = (ent->model->surfmesh.data_element3i + 3 * surface->num_firsttriangle);
+					CHECKGLERROR
 					qglBegin(GL_LINES);
 					for (k = 0;k < surface->num_triangles;k++, elements += 3)
 					{
@@ -3322,6 +3363,7 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 						qglArrayElement(elements[2]);qglArrayElement(elements[0]);
 					}
 					qglEnd();
+					CHECKGLERROR
 				}
 				if (r_shownormals.integer)
 				{
@@ -3335,6 +3377,7 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 						qglVertex3f(v[0], v[1], v[2]);
 					}
 					qglEnd();
+					CHECKGLERROR
 					GL_Color(0, 0, r_shownormals.value, 1);
 					qglBegin(GL_LINES);
 					for (k = 0, l = surface->num_firstvertex;k < surface->num_vertices;k++, l++)
@@ -3345,6 +3388,7 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 						qglVertex3f(v[0], v[1], v[2]);
 					}
 					qglEnd();
+					CHECKGLERROR
 					GL_Color(0, r_shownormals.value, 0, 1);
 					qglBegin(GL_LINES);
 					for (k = 0, l = surface->num_firstvertex;k < surface->num_vertices;k++, l++)
@@ -3355,12 +3399,15 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 						qglVertex3f(v[0], v[1], v[2]);
 					}
 					qglEnd();
+					CHECKGLERROR
 				}
 			}
 		}
 		rsurface_texture = NULL;
 		if (r_showdisabledepthtest.integer)
-			qglDepthFunc(GL_LEQUAL);
+		{
+			qglDepthFunc(GL_LEQUAL);CHECKGLERROR
+		}
 	}
 }
 

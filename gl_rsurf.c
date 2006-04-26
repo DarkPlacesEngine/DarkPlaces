@@ -343,10 +343,11 @@ static void R_DrawPortal_Callback(const entity_render_t *ent, int surfacenumber,
 	int i, numpoints;
 	float *v;
 	float vertex3f[POLYGONELEMENTS_MAXPOINTS*3];
+	CHECKGLERROR
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
-	qglDisable(GL_CULL_FACE);
+	qglDisable(GL_CULL_FACE);CHECKGLERROR
 	R_Mesh_Matrix(&identitymatrix);
 
 	numpoints = min(portal->numpoints, POLYGONELEMENTS_MAXPOINTS);
@@ -363,7 +364,7 @@ static void R_DrawPortal_Callback(const entity_render_t *ent, int surfacenumber,
 	for (i = 0, v = vertex3f;i < numpoints;i++, v += 3)
 		VectorCopy(portal->points[i].position, v);
 	R_Mesh_Draw(0, numpoints, numpoints - 2, polygonelements);
-	qglEnable(GL_CULL_FACE);
+	qglEnable(GL_CULL_FACE);CHECKGLERROR
 }
 
 // LordHavoc: this is just a nice debugging tool, very slow
@@ -814,12 +815,14 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 	msurface_t *batchsurfacelist[RSURF_MAX_BATCHSURFACES];
 	texture_t *tex;
 	qboolean skip;
+	CHECKGLERROR
 	RSurf_ActiveEntity(ent);
 	R_UpdateAllTextureInfo(ent);
 	tex = NULL;
 	rsurface_texture = NULL;
 	skip = false;
 	batchnumsurfaces = 0;
+	CHECKGLERROR
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 	{
 		if ((ent == r_refdef.worldentity && !r_worldsurfacevisible[surfacelist[surfacelistindex]]))
@@ -863,7 +866,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 			R_Shadow_RenderSurfacesLighting(batchnumsurfaces, batchsurfacelist);
 		batchnumsurfaces = 0;
 	}
-	qglEnable(GL_CULL_FACE);
+	qglEnable(GL_CULL_FACE);CHECKGLERROR
 }
 
 //Made by [515]

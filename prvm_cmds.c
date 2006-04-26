@@ -2871,10 +2871,11 @@ void VM_DrawPolygonCallback (const entity_render_t *ent, int surfacenumber, cons
 
 	R_Mesh_TexBind(0, R_GetTexture(p->tex));
 
+	CHECKGLERROR
 	//[515]: is speed is max ?
 	if(p->flags & VM_POLYGON_FLLINES)	//[515]: lines
 	{
-		qglLineWidth(p->data[13]);
+		qglLineWidth(p->data[13]);CHECKGLERROR
 		qglBegin(GL_LINE_LOOP);
 			qglTexCoord1f	(p->data[12]);
 			qglColor4f		(p->data[20], p->data[21], p->data[22], p->data[23]);
@@ -2898,6 +2899,7 @@ void VM_DrawPolygonCallback (const entity_render_t *ent, int surfacenumber, cons
 				}
 			}
 		qglEnd();
+		CHECKGLERROR
 	}
 	else
 	{
@@ -2921,6 +2923,7 @@ void VM_DrawPolygonCallback (const entity_render_t *ent, int surfacenumber, cons
 				qglVertex3f		(p->data[9] , p->data[10],  p->data[11]);
 			}
 		qglEnd();
+		CHECKGLERROR
 	}
 }
 
