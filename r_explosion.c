@@ -180,34 +180,30 @@ void R_NewExplosion(const vec3_t org)
 	}
 }
 
-static void R_DrawExplosion_TransparentCallback(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
+static void R_DrawExplosion_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
-	const explosion_t *e = explosion + surfacenumber;
-	int numtriangles, numverts;
-	float alpha;
+	int surfacelistindex = 0;
+	const int numtriangles = EXPLOSIONTRIS, numverts = EXPLOSIONVERTS;
 	rmeshstate_t m;
-
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
 	R_Mesh_Matrix(&identitymatrix);
 
-	numtriangles = EXPLOSIONTRIS;
-	numverts = EXPLOSIONVERTS;
-	alpha = e->alpha;
-
-	R_Mesh_VertexPointer(e->vert[0]);
 	R_Mesh_ColorPointer(NULL);
 	memset(&m, 0, sizeof(m));
 	m.tex[0] = R_GetTexture(explosiontexture);
 	m.pointer_texcoord[0] = explosiontexcoord2f[0];
 	R_Mesh_TextureState(&m);
-
-	GL_Color(alpha, alpha, alpha, 1);
-
-	GL_LockArrays(0, numverts);
-	R_Mesh_Draw(0, numverts, numtriangles, explosiontris[0]);
-	GL_LockArrays(0, 0);
+	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
+	{
+		const explosion_t *e = explosion + surfacelist[surfacelistindex];
+		R_Mesh_VertexPointer(e->vert[0]);
+		GL_Color(e->alpha, e->alpha, e->alpha, 1);
+		GL_LockArrays(0, numverts);
+		R_Mesh_Draw(0, numverts, numtriangles, explosiontris[0]);
+		GL_LockArrays(0, 0);
+	}
 }
 
 static void R_MoveExplosion(explosion_t *e)

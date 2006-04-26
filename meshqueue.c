@@ -9,7 +9,7 @@ cvar_t r_meshqueue_sort = {0, "r_meshqueue_sort", "0", "whether to sort meshes i
 typedef struct meshqueue_s
 {
 	struct meshqueue_s *next;
-	void (*callback)(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight);
+	void (*callback)(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfaceindices);
 	const entity_render_t *ent;
 	int surfacenumber;
 	const rtlight_t *rtlight;
@@ -37,11 +37,12 @@ void R_MeshQueue_Init(void)
 
 void R_MeshQueue_Render(void)
 {
+	// this is only used by one piece of code in prvm_cmds, why is it used at all?
 	meshqueue_t *mq;
 	if (!mq_count)
 		return;
 	for (mq = mq_listhead;mq;mq = mq->next)
-		mq->callback(mq->ent, mq->surfacenumber, mq->rtlight);
+		mq->callback(mq->ent, mq->rtlight, 1, &mq->surfacenumber);
 	mq_count = 0;
 	mq_listhead = NULL;
 }
@@ -59,12 +60,13 @@ static void R_MeshQueue_EnlargeTransparentArray(int newtotal)
 	mqt_total = newtotal;
 }
 
-void R_MeshQueue_Add(void (*callback)(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight), const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
+void R_MeshQueue_Add(void (*callback)(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist), const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
 {
+	// this is only used by one piece of code in prvm_cmds, why is it used at all?
 	meshqueue_t *mq, **mqnext;
 	if (r_meshqueue_immediaterender.integer)
 	{
-		callback(ent, surfacenumber, rtlight);
+		callback(ent, rtlight, 1, &surfacenumber);
 		return;
 	}
 	if (mq_count >= mq_total)
@@ -108,7 +110,7 @@ void R_MeshQueue_Add(void (*callback)(const entity_render_t *ent, int surfacenum
 	*mqnext = mq;
 }
 
-void R_MeshQueue_AddTransparent(const vec3_t center, void (*callback)(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight), const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
+void R_MeshQueue_AddTransparent(const vec3_t center, void (*callback)(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist), const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
 {
 	meshqueue_t *mq;
 	if (mqt_count >= mqt_total)
@@ -127,9 +129,14 @@ void R_MeshQueue_RenderTransparent(void)
 {
 	int i;
 	int hashdist;
+	int batchnumsurfaces;
 	float distscale;
+	const entity_render_t *ent;
+	const rtlight_t *rtlight;
+	void (*callback)(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfaceindices);
 	meshqueue_t *mqt;
 	meshqueue_t *hash[4096], **hashpointer[4096];
+	int batchsurfaceindex[256];
 	if (mq_count)
 		R_MeshQueue_Render();
 	if (!mqt_count)
@@ -148,10 +155,31 @@ void R_MeshQueue_RenderTransparent(void)
 		*hashpointer[hashdist] = mqt;
 		hashpointer[hashdist] = &mqt->next;
 	}
+	callback = NULL;
+	ent = NULL;
+	rtlight = NULL;
+	batchnumsurfaces = 0;
 	for (i = 4095;i >= 0;i--)
+	{
 		if (hash[i])
+		{
 			for (mqt = hash[i];mqt;mqt = mqt->next)
-				mqt->callback(mqt->ent, mqt->surfacenumber, mqt->rtlight);
+			{
+				if (ent != mqt->ent || rtlight != mqt->rtlight || callback != mqt->callback || batchnumsurfaces >= 256)
+				{
+					if (batchnumsurfaces)
+						callback(ent, rtlight, batchnumsurfaces, batchsurfaceindex);
+					batchnumsurfaces = 0;
+					ent = mqt->ent;
+					rtlight = mqt->rtlight;
+					callback = mqt->callback;
+				}
+				batchsurfaceindex[batchnumsurfaces++] = mqt->surfacenumber;
+			}
+		}
+	}
+	if (batchnumsurfaces)
+		callback(ent, rtlight, batchnumsurfaces, batchsurfaceindex);
 	mqt_count = 0;
 }
 
