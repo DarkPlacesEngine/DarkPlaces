@@ -2039,11 +2039,13 @@ float nomodelcolor4f[6*4] =
 	0.5f, 0.0f, 0.0f, 1.0f
 };
 
-void R_DrawNoModel_TransparentCallback(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
+void R_DrawNoModel_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
 	int i;
 	float f1, f2, *c;
 	float color4f[6*4];
+	// this is only called once per entity so numsurfaces is always 1, and
+	// surfacelist is always {0}, so this code does not handle batches
 	R_Mesh_Matrix(&ent->matrix);
 
 	if (ent->flags & EF_ADDITIVE)
@@ -3150,17 +3152,37 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 	}
 }
 
-static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
+#define BATCHSIZE 256
+static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
-	msurface_t *surface = ent->model->data_surfaces + surfacenumber;
-
-	if (surface->texture->basematerialflags & MATERIALFLAG_SKY)
-		return; // transparent sky is too difficult
-
+	int surfacelistindex;
+	int batchcount;
+	texture_t *t;
+	msurface_t *texturesurfacelist[BATCHSIZE];
 	RSurf_ActiveEntity(ent);
-	R_UpdateTextureInfo(ent, surface->texture);
-	rsurface_texture = surface->texture->currentframe;
-	R_DrawTextureSurfaceList(1, &surface);
+	batchcount = 0;
+	t = NULL;
+	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
+	{
+		msurface_t *surface = ent->model->data_surfaces + surfacelist[surfacelistindex];
+
+		if (t != surface->texture || rsurface_lightmaptexture != surface->lightmaptexture)
+		{
+			if (batchcount > 0)
+				R_DrawTextureSurfaceList(batchcount, texturesurfacelist);
+			batchcount = 0;
+			t = surface->texture;
+			rsurface_lightmaptexture = surface->lightmaptexture;
+			R_UpdateTextureInfo(ent, t);
+			rsurface_texture = t->currentframe;
+		}
+		if (rsurface_texture->currentmaterialflags & MATERIALFLAG_SKY)
+			continue; // transparent sky is too difficult
+
+		texturesurfacelist[batchcount++] = surface;
+	}
+	if (batchcount > 0)
+		R_DrawTextureSurfaceList(batchcount, texturesurfacelist);
 	RSurf_CleanUp();
 }
 

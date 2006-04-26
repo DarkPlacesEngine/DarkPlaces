@@ -2855,75 +2855,80 @@ void VM_InitPolygons (void)
 	vm_polygons_initialized = true;
 }
 
-void VM_DrawPolygonCallback (const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
+void VM_DrawPolygonCallback (const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
-	const vm_polygon_t	*p = &vm_polygons[surfacenumber];
-	int					flags = p->flags & 0x0f;
-
-	if(flags == DRAWFLAG_ADDITIVE)
-		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-	else if(flags == DRAWFLAG_MODULATE)
-		GL_BlendFunc(GL_DST_COLOR, GL_ZERO);
-	else if(flags == DRAWFLAG_2XMODULATE)
-		GL_BlendFunc(GL_DST_COLOR,GL_SRC_COLOR);
-	else
-		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	R_Mesh_TexBind(0, R_GetTexture(p->tex));
-
-	CHECKGLERROR
-	//[515]: is speed is max ?
-	if(p->flags & VM_POLYGON_FLLINES)	//[515]: lines
+	int surfacelistindex;
+	// LordHavoc: FIXME: this is stupid code
+	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 	{
-		qglLineWidth(p->data[13]);CHECKGLERROR
-		qglBegin(GL_LINE_LOOP);
-			qglTexCoord1f	(p->data[12]);
-			qglColor4f		(p->data[20], p->data[21], p->data[22], p->data[23]);
-			qglVertex3f		(p->data[0] , p->data[1],  p->data[2]);
+		const vm_polygon_t	*p = &vm_polygons[surfacelist[surfacelistindex]];
+		int					flags = p->flags & 0x0f;
 
-			qglTexCoord1f	(p->data[14]);
-			qglColor4f		(p->data[24], p->data[25], p->data[26], p->data[27]);
-			qglVertex3f		(p->data[3] , p->data[4],  p->data[5]);
+		if(flags == DRAWFLAG_ADDITIVE)
+			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+		else if(flags == DRAWFLAG_MODULATE)
+			GL_BlendFunc(GL_DST_COLOR, GL_ZERO);
+		else if(flags == DRAWFLAG_2XMODULATE)
+			GL_BlendFunc(GL_DST_COLOR,GL_SRC_COLOR);
+		else
+			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-			if(p->flags & VM_POLYGON_FL3V)
-			{
-				qglTexCoord1f	(p->data[16]);
+		R_Mesh_TexBind(0, R_GetTexture(p->tex));
+
+		CHECKGLERROR
+		//[515]: is speed is max ?
+		if(p->flags & VM_POLYGON_FLLINES)	//[515]: lines
+		{
+			qglLineWidth(p->data[13]);CHECKGLERROR
+			qglBegin(GL_LINE_LOOP);
+				qglTexCoord1f	(p->data[12]);
+				qglColor4f		(p->data[20], p->data[21], p->data[22], p->data[23]);
+				qglVertex3f		(p->data[0] , p->data[1],  p->data[2]);
+
+				qglTexCoord1f	(p->data[14]);
+				qglColor4f		(p->data[24], p->data[25], p->data[26], p->data[27]);
+				qglVertex3f		(p->data[3] , p->data[4],  p->data[5]);
+
+				if(p->flags & VM_POLYGON_FL3V)
+				{
+					qglTexCoord1f	(p->data[16]);
+					qglColor4f		(p->data[28], p->data[29], p->data[30], p->data[31]);
+					qglVertex3f		(p->data[6] , p->data[7],  p->data[8]);
+
+					if(p->flags & VM_POLYGON_FL4V)
+					{
+						qglTexCoord1f	(p->data[18]);
+						qglColor4f		(p->data[32], p->data[33], p->data[34], p->data[35]);
+						qglVertex3f		(p->data[9] , p->data[10],  p->data[11]);
+					}
+				}
+			qglEnd();
+			CHECKGLERROR
+		}
+		else
+		{
+			qglBegin(GL_POLYGON);
+				qglTexCoord2f	(p->data[12], p->data[13]);
+				qglColor4f		(p->data[20], p->data[21], p->data[22], p->data[23]);
+				qglVertex3f		(p->data[0] , p->data[1],  p->data[2]);
+
+				qglTexCoord2f	(p->data[14], p->data[15]);
+				qglColor4f		(p->data[24], p->data[25], p->data[26], p->data[27]);
+				qglVertex3f		(p->data[3] , p->data[4],  p->data[5]);
+
+				qglTexCoord2f	(p->data[16], p->data[17]);
 				qglColor4f		(p->data[28], p->data[29], p->data[30], p->data[31]);
 				qglVertex3f		(p->data[6] , p->data[7],  p->data[8]);
 
 				if(p->flags & VM_POLYGON_FL4V)
 				{
-					qglTexCoord1f	(p->data[18]);
+					qglTexCoord2f	(p->data[18], p->data[19]);
 					qglColor4f		(p->data[32], p->data[33], p->data[34], p->data[35]);
 					qglVertex3f		(p->data[9] , p->data[10],  p->data[11]);
 				}
-			}
-		qglEnd();
-		CHECKGLERROR
-	}
-	else
-	{
-		qglBegin(GL_POLYGON);
-			qglTexCoord2f	(p->data[12], p->data[13]);
-			qglColor4f		(p->data[20], p->data[21], p->data[22], p->data[23]);
-			qglVertex3f		(p->data[0] , p->data[1],  p->data[2]);
-
-			qglTexCoord2f	(p->data[14], p->data[15]);
-			qglColor4f		(p->data[24], p->data[25], p->data[26], p->data[27]);
-			qglVertex3f		(p->data[3] , p->data[4],  p->data[5]);
-
-			qglTexCoord2f	(p->data[16], p->data[17]);
-			qglColor4f		(p->data[28], p->data[29], p->data[30], p->data[31]);
-			qglVertex3f		(p->data[6] , p->data[7],  p->data[8]);
-
-			if(p->flags & VM_POLYGON_FL4V)
-			{
-				qglTexCoord2f	(p->data[18], p->data[19]);
-				qglColor4f		(p->data[32], p->data[33], p->data[34], p->data[35]);
-				qglVertex3f		(p->data[9] , p->data[10],  p->data[11]);
-			}
-		qglEnd();
-		CHECKGLERROR
+			qglEnd();
+			CHECKGLERROR
+		}
 	}
 }
 

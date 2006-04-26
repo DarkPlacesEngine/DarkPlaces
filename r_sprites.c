@@ -2,7 +2,7 @@
 #include "quakedef.h"
 #include "r_shadow.h"
 
-void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
+void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
 	int i;
 	model_t *model = ent->model;

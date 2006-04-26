@@ -1962,87 +1962,122 @@ static void r_part_newmap(void)
 {
 }
 
+#define BATCHSIZE 256
+int particle_element3i[BATCHSIZE*6];
+float particle_vertex3f[BATCHSIZE*12], particle_texcoord2f[BATCHSIZE*8], particle_color4f[BATCHSIZE*16];
+
 void R_Particles_Init (void)
 {
+	int i;
+	for (i = 0;i < BATCHSIZE;i++)
+	{
+		particle_element3i[i*6+0] = i*4+0;
+		particle_element3i[i*6+1] = i*4+1;
+		particle_element3i[i*6+2] = i*4+2;
+		particle_element3i[i*6+3] = i*4+0;
+		particle_element3i[i*6+4] = i*4+2;
+		particle_element3i[i*6+5] = i*4+3;
+	}
+
 	Cvar_RegisterVariable(&r_drawparticles);
 	R_RegisterModule("R_Particles", r_part_start, r_part_shutdown, r_part_newmap);
 }
 
-float particle_vertex3f[12], particle_texcoord2f[8];
-
-void R_DrawParticle_TransparentCallback(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
+void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
-	const particle_t *p = cl.particles + surfacenumber;
-	rmeshstate_t m;
+	int surfacelistindex;
+	int batchstart, batchcount;
+	const particle_t *p;
 	pblend_t blendmode;
-	float org[3], up2[3], v[3], right[3], up[3], fog, ifog, cr, cg, cb, ca, size;
-	particletexture_t *tex;
-
-	VectorCopy(p->org, org);
-
-	blendmode = p->type->blendmode;
-	tex = &particletexture[p->texnum];
-	cr = p->color[0] * (1.0f / 255.0f);
-	cg = p->color[1] * (1.0f / 255.0f);
-	cb = p->color[2] * (1.0f / 255.0f);
-	ca = p->alpha * (1.0f / 255.0f);
-	if (blendmode == PBLEND_MOD)
-	{
-		cr *= ca;
-		cg *= ca;
-		cb *= ca;
-		cr = min(cr, 1);
-		cg = min(cg, 1);
-		cb = min(cb, 1);
-		ca = 1;
-	}
-	ca /= cl_particles_quality.value;
-	if (p->type->lighting)
-	{
-		float ambient[3], diffuse[3], diffusenormal[3];
-		R_CompleteLightPoint(ambient, diffuse, diffusenormal, org, true);
-		cr *= (ambient[0] + 0.5 * diffuse[0]);
-		cg *= (ambient[1] + 0.5 * diffuse[1]);
-		cb *= (ambient[2] + 0.5 * diffuse[2]);
-	}
-	if (fogenabled)
-	{
-		fog = VERTEXFOGTABLE(VectorDistance(org, r_vieworigin));
-		ifog = 1 - fog;
-		cr = cr * ifog;
-		cg = cg * ifog;
-		cb = cb * ifog;
-		if (blendmode == PBLEND_ALPHA)
-		{
-			cr += fogcolor[0] * fog;
-			cg += fogcolor[1] * fog;
-			cb += fogcolor[2] * fog;
-		}
-	}
+	rtexture_t *texture;
+	float *v3f, *t2f, *c4f;
 
 	R_Mesh_Matrix(&identitymatrix);
-
+	R_Mesh_ResetTextureState();
 	R_Mesh_VertexPointer(particle_vertex3f);
-	R_Mesh_ColorPointer(NULL);
-	memset(&m, 0, sizeof(m));
-	m.tex[0] = R_GetTexture(tex->texture);
-	m.pointer_texcoord[0] = particle_texcoord2f;
-	R_Mesh_TextureState(&m);
-
-	GL_Color(cr, cg, cb, ca);
-
-	if (blendmode == PBLEND_ALPHA)
-		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	else if (blendmode == PBLEND_ADD)
-		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-	else //if (blendmode == PBLEND_MOD)
-		GL_BlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
+	R_Mesh_TexCoordPointer(0, 2, particle_texcoord2f);
+	R_Mesh_ColorPointer(particle_color4f);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
-	size = p->size * cl_particles_size.value;
-	if (p->type->orientation == PARTICLE_BILLBOARD || p->type->orientation == PARTICLE_ORIENTED_DOUBLESIDED)
+
+	// first generate all the vertices at once
+	for (surfacelistindex = 0, v3f = particle_vertex3f, t2f = particle_texcoord2f, c4f = particle_color4f;surfacelistindex < numsurfaces;surfacelistindex++, v3f += 3*4, t2f += 2*4, c4f += 4*4)
 	{
-		if (p->type->orientation == PARTICLE_ORIENTED_DOUBLESIDED)
+		particletexture_t *tex;
+		const float *org;
+		float up2[3], v[3], right[3], up[3], fog, ifog, cr, cg, cb, ca, size;
+
+		p = cl.particles + surfacelist[surfacelistindex];
+
+		blendmode = p->type->blendmode;
+
+		cr = p->color[0] * (1.0f / 255.0f);
+		cg = p->color[1] * (1.0f / 255.0f);
+		cb = p->color[2] * (1.0f / 255.0f);
+		ca = p->alpha * (1.0f / 255.0f);
+		if (blendmode == PBLEND_MOD)
+		{
+			cr *= ca;
+			cg *= ca;
+			cb *= ca;
+			cr = min(cr, 1);
+			cg = min(cg, 1);
+			cb = min(cb, 1);
+			ca = 1;
+		}
+		ca /= cl_particles_quality.value;
+		if (p->type->lighting)
+		{
+			float ambient[3], diffuse[3], diffusenormal[3];
+			R_CompleteLightPoint(ambient, diffuse, diffusenormal, p->org, true);
+			cr *= (ambient[0] + 0.5 * diffuse[0]);
+			cg *= (ambient[1] + 0.5 * diffuse[1]);
+			cb *= (ambient[2] + 0.5 * diffuse[2]);
+		}
+		if (fogenabled)
+		{
+			fog = VERTEXFOGTABLE(VectorDistance(p->org, r_vieworigin));
+			ifog = 1 - fog;
+			cr = cr * ifog;
+			cg = cg * ifog;
+			cb = cb * ifog;
+			if (blendmode == PBLEND_ALPHA)
+			{
+				cr += fogcolor[0] * fog;
+				cg += fogcolor[1] * fog;
+				cb += fogcolor[2] * fog;
+			}
+		}
+		c4f[0] = c4f[4] = c4f[8] = c4f[12] = cr;
+		c4f[1] = c4f[5] = c4f[9] = c4f[13] = cg;
+		c4f[2] = c4f[6] = c4f[10] = c4f[14] = cb;
+		c4f[3] = c4f[7] = c4f[11] = c4f[15] = ca;
+
+		size = p->size * cl_particles_size.value;
+		org = p->org;
+		tex = &particletexture[p->texnum];
+		if (p->type->orientation == PARTICLE_BILLBOARD)
+		{
+			VectorScale(r_viewleft, -size, right);
+			VectorScale(r_viewup, size, up);
+			v3f[ 0] = org[0] - right[0] - up[0];
+			v3f[ 1] = org[1] - right[1] - up[1];
+			v3f[ 2] = org[2] - right[2] - up[2];
+			v3f[ 3] = org[0] - right[0] + up[0];
+			v3f[ 4] = org[1] - right[1] + up[1];
+			v3f[ 5] = org[2] - right[2] + up[2];
+			v3f[ 6] = org[0] + right[0] + up[0];
+			v3f[ 7] = org[1] + right[1] + up[1];
+			v3f[ 8] = org[2] + right[2] + up[2];
+			v3f[ 9] = org[0] + right[0] - up[0];
+			v3f[10] = org[1] + right[1] - up[1];
+			v3f[11] = org[2] + right[2] - up[2];
+			t2f[0] = tex->s1;t2f[1] = tex->t2;
+			t2f[2] = tex->s1;t2f[3] = tex->t1;
+			t2f[4] = tex->s2;t2f[5] = tex->t1;
+			t2f[6] = tex->s2;t2f[7] = tex->t2;
+		}
+		else if (p->type->orientation == PARTICLE_ORIENTED_DOUBLESIDED)
 		{
 			// double-sided
 			if (DotProduct(p->vel, r_vieworigin) > DotProduct(p->vel, org))
@@ -2054,58 +2089,93 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, int surfacen
 				VectorVectors(p->vel, right, up);
 			VectorScale(right, size, right);
 			VectorScale(up, size, up);
+			v3f[ 0] = org[0] - right[0] - up[0];
+			v3f[ 1] = org[1] - right[1] - up[1];
+			v3f[ 2] = org[2] - right[2] - up[2];
+			v3f[ 3] = org[0] - right[0] + up[0];
+			v3f[ 4] = org[1] - right[1] + up[1];
+			v3f[ 5] = org[2] - right[2] + up[2];
+			v3f[ 6] = org[0] + right[0] + up[0];
+			v3f[ 7] = org[1] + right[1] + up[1];
+			v3f[ 8] = org[2] + right[2] + up[2];
+			v3f[ 9] = org[0] + right[0] - up[0];
+			v3f[10] = org[1] + right[1] - up[1];
+			v3f[11] = org[2] + right[2] - up[2];
+			t2f[0] = tex->s1;t2f[1] = tex->t2;
+			t2f[2] = tex->s1;t2f[3] = tex->t1;
+			t2f[4] = tex->s2;t2f[5] = tex->t1;
+			t2f[6] = tex->s2;t2f[7] = tex->t2;
+		}
+		else if (p->type->orientation == PARTICLE_SPARK)
+		{
+			VectorMA(org, -0.02, p->vel, v);
+			VectorMA(org, 0.02, p->vel, up2);
+			R_CalcBeam_Vertex3f(v3f, v, up2, size);
+			t2f[0] = tex->s1;t2f[1] = tex->t2;
+			t2f[2] = tex->s1;t2f[3] = tex->t1;
+			t2f[4] = tex->s2;t2f[5] = tex->t1;
+			t2f[6] = tex->s2;t2f[7] = tex->t2;
+		}
+		else if (p->type->orientation == PARTICLE_BEAM)
+		{
+			R_CalcBeam_Vertex3f(v3f, org, p->vel, size);
+			VectorSubtract(p->vel, org, up);
+			VectorNormalize(up);
+			v[0] = DotProduct(org, up) * (1.0f / 64.0f);
+			v[1] = DotProduct(p->vel, up) * (1.0f / 64.0f);
+			t2f[0] = 1;t2f[1] = v[0];
+			t2f[2] = 0;t2f[3] = v[0];
+			t2f[4] = 0;t2f[5] = v[1];
+			t2f[6] = 1;t2f[7] = v[1];
 		}
 		else
 		{
-			VectorScale(r_viewleft, -size, right);
-			VectorScale(r_viewup, size, up);
+			Con_Printf("R_DrawParticles: unknown particle orientation %i\n", p->type->orientation);
+			return;
 		}
-		particle_vertex3f[ 0] = org[0] - right[0] - up[0];
-		particle_vertex3f[ 1] = org[1] - right[1] - up[1];
-		particle_vertex3f[ 2] = org[2] - right[2] - up[2];
-		particle_vertex3f[ 3] = org[0] - right[0] + up[0];
-		particle_vertex3f[ 4] = org[1] - right[1] + up[1];
-		particle_vertex3f[ 5] = org[2] - right[2] + up[2];
-		particle_vertex3f[ 6] = org[0] + right[0] + up[0];
-		particle_vertex3f[ 7] = org[1] + right[1] + up[1];
-		particle_vertex3f[ 8] = org[2] + right[2] + up[2];
-		particle_vertex3f[ 9] = org[0] + right[0] - up[0];
-		particle_vertex3f[10] = org[1] + right[1] - up[1];
-		particle_vertex3f[11] = org[2] + right[2] - up[2];
-		particle_texcoord2f[0] = tex->s1;particle_texcoord2f[1] = tex->t2;
-		particle_texcoord2f[2] = tex->s1;particle_texcoord2f[3] = tex->t1;
-		particle_texcoord2f[4] = tex->s2;particle_texcoord2f[5] = tex->t1;
-		particle_texcoord2f[6] = tex->s2;particle_texcoord2f[7] = tex->t2;
-	}
-	else if (p->type->orientation == PARTICLE_SPARK)
-	{
-		VectorMA(p->org, -0.02, p->vel, v);
-		VectorMA(p->org, 0.02, p->vel, up2);
-		R_CalcBeam_Vertex3f(particle_vertex3f, v, up2, size);
-		particle_texcoord2f[0] = tex->s1;particle_texcoord2f[1] = tex->t2;
-		particle_texcoord2f[2] = tex->s1;particle_texcoord2f[3] = tex->t1;
-		particle_texcoord2f[4] = tex->s2;particle_texcoord2f[5] = tex->t1;
-		particle_texcoord2f[6] = tex->s2;particle_texcoord2f[7] = tex->t2;
-	}
-	else if (p->type->orientation == PARTICLE_BEAM)
-	{
-		R_CalcBeam_Vertex3f(particle_vertex3f, p->org, p->vel, size);
-		VectorSubtract(p->vel, p->org, up);
-		VectorNormalize(up);
-		v[0] = DotProduct(p->org, up) * (1.0f / 64.0f);
-		v[1] = DotProduct(p->vel, up) * (1.0f / 64.0f);
-		particle_texcoord2f[0] = 1;particle_texcoord2f[1] = v[0];
-		particle_texcoord2f[2] = 0;particle_texcoord2f[3] = v[0];
-		particle_texcoord2f[4] = 0;particle_texcoord2f[5] = v[1];
-		particle_texcoord2f[6] = 1;particle_texcoord2f[7] = v[1];
-	}
-	else
-	{
-		Con_Printf("R_DrawParticles: unknown particle orientation %i\n", p->type->orientation);
-		return;
 	}
 
-	R_Mesh_Draw(0, 4, 2, polygonelements);
+	// now render batches of particles based on blendmode and texture
+	blendmode = PBLEND_ADD;
+	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+	texture = particletexture[63].texture;
+	R_Mesh_TexBind(0, R_GetTexture(texture));
+	GL_LockArrays(0, numsurfaces*4);
+	batchstart = 0;
+	batchcount = 0;
+	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
+	{
+		p = cl.particles + surfacelist[surfacelistindex];
+
+		if (blendmode != p->type->blendmode)
+		{
+			if (batchcount > 0)
+				R_Mesh_Draw(batchstart * 4, batchcount * 4, batchcount * 2, particle_element3i + batchstart * 6);
+			batchcount = 0;
+			batchstart = surfacelistindex;
+			blendmode = p->type->blendmode;
+			if (blendmode == PBLEND_ALPHA)
+				GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			else if (blendmode == PBLEND_ADD)
+				GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+			else //if (blendmode == PBLEND_MOD)
+				GL_BlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
+		}
+		if (texture != particletexture[p->texnum].texture)
+		{
+			if (batchcount > 0)
+				R_Mesh_Draw(batchstart * 4, batchcount * 4, batchcount * 2, particle_element3i + batchstart * 6);
+			batchcount = 0;
+			batchstart = surfacelistindex;
+			texture = particletexture[p->texnum].texture;
+			R_Mesh_TexBind(0, R_GetTexture(texture));
+		}
+
+		batchcount++;
+	}
+	if (batchcount > 0)
+		R_Mesh_Draw(batchstart * 4, batchcount * 4, batchcount * 2, particle_element3i + batchstart * 6);
+	GL_LockArrays(0, 0);
 }
 
 void R_DrawParticles (void)
@@ -2127,12 +2197,7 @@ void R_DrawParticles (void)
 		{
 			renderstats.particles++;
 			if (DotProduct(p->org, r_viewforward) >= minparticledist || p->type->orientation == PARTICLE_BEAM)
-			{
-				if (p->type == particletype + pt_decal)
-					R_DrawParticle_TransparentCallback(0, i, 0);
-				else
-					R_MeshQueue_AddTransparent(p->org, R_DrawParticle_TransparentCallback, NULL, i, NULL);
-			}
+				R_MeshQueue_AddTransparent(p->org, R_DrawParticle_TransparentCallback, NULL, i, NULL);
 		}
 	}
 }

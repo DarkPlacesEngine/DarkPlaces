@@ -337,8 +337,11 @@ void R_Stain (const vec3_t origin, float radius, int cr1, int cg1, int cb1, int 
 =============================================================
 */
 
-static void R_DrawPortal_Callback(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
+static void R_DrawPortal_Callback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
+	// due to the hacky nature of this function's parameters, this is never
+	// called with a batch, so numsurfaces is always 1, and the surfacelist
+	// contains only a leaf number for coloring purposes
 	const mportal_t *portal = (mportal_t *)ent;
 	int i, numpoints;
 	float *v;
@@ -356,7 +359,7 @@ static void R_DrawPortal_Callback(const entity_render_t *ent, int surfacenumber,
 	R_Mesh_ColorPointer(NULL);
 	R_Mesh_ResetTextureState();
 
-	i = surfacenumber;
+	i = surfacelist[0];
 	GL_Color(((i & 0x0007) >> 0) * (1.0f / 7.0f),
 			 ((i & 0x0038) >> 3) * (1.0f / 7.0f),
 			 ((i & 0x01C0) >> 6) * (1.0f / 7.0f),
@@ -776,16 +779,36 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 	}
 }
 
-static void R_Q1BSP_DrawLight_TransparentCallback(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
+#define BATCHSIZE 256
+
+static void R_Q1BSP_DrawLight_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
-	msurface_t *surface = ent->model->data_surfaces + surfacenumber;
-	R_UpdateTextureInfo(ent, surface->texture);
+	int surfacelistindex, batchcount;
+	texture_t *t;
+	msurface_t *batchsurfaces[BATCHSIZE];
+	// note: in practice this never actualy batches, oh well
 	R_Shadow_RenderMode_Begin();
 	R_Shadow_RenderMode_ActiveLight((rtlight_t *)rtlight);
 	R_Shadow_RenderMode_Lighting(false, true);
 	R_Shadow_SetupEntityLight(ent);
-	rsurface_texture = surface->texture->currentframe;
-	R_Shadow_RenderSurfacesLighting(1, &surface);
+	t = NULL;
+	batchcount = 0;
+	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
+	{
+		msurface_t *surface = ent->model->data_surfaces + surfacelist[surfacelistindex];
+		if (t != surface->texture)
+		{
+			if (batchcount > 0)
+				R_Shadow_RenderSurfacesLighting(batchcount, batchsurfaces);
+			batchcount = 0;
+			t = surface->texture;
+			R_UpdateTextureInfo(ent, t);
+			rsurface_texture = t->currentframe;
+		}
+		batchsurfaces[batchcount++] = surface;
+	}
+	if (batchcount > 0)
+		R_Shadow_RenderSurfacesLighting(batchcount, batchsurfaces);
 	R_Shadow_RenderMode_End();
 }
 

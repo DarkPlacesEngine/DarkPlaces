@@ -2649,14 +2649,17 @@ void R_Shadow_SelectLight(dlight_t *light)
 		r_shadow_selectedlight->selected = true;
 }
 
-void R_Shadow_DrawCursor_TransparentCallback(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
+void R_Shadow_DrawCursor_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
+	// this is never batched (there can be only one)
 	float scale = r_editlights_cursorgrid.value * 0.5f;
 	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, r_crosshairs[1]->tex, NULL, false, r_editlights_cursorlocation, r_viewright, r_viewup, scale, -scale, -scale, scale, 1, 1, 1, 0.5f);
 }
 
-void R_Shadow_DrawLightSprite_TransparentCallback(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
+void R_Shadow_DrawLightSprite_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
+	// this is never batched (due to the ent parameter changing every time)
+	// so numsurfaces == 1 and surfacelist[0] == lightnumber
 	float intensity;
 	const dlight_t *light = (dlight_t *)ent;
 	intensity = 0.5;
@@ -2664,7 +2667,7 @@ void R_Shadow_DrawLightSprite_TransparentCallback(const entity_render_t *ent, in
 		intensity = 0.75 + 0.25 * sin(realtime * M_PI * 4.0);
 	if (!light->shadow)
 		intensity *= 0.5f;
-	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, r_crosshairs[surfacenumber]->tex, NULL, false, light->origin, r_viewright, r_viewup, 8, -8, -8, 8, intensity, intensity, intensity, 0.5);
+	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, r_crosshairs[surfacelist[0]]->tex, NULL, false, light->origin, r_viewright, r_viewup, 8, -8, -8, 8, intensity, intensity, intensity, 0.5);
 }
 
 void R_Shadow_DrawLightSprites(void)
