@@ -589,7 +589,8 @@ typedef struct particle_s
 	float		time2; // used for snow fluttering and decal fade
 	float		bounce; // how much bounce-back from a surface the particle hits (0 = no physics, 1 = stop and slide, 2 = keep bouncing forever, 1.5 is typical)
 	float		gravity; // how much gravity affects this particle (1.0 = normal gravity, 0.0 = none)
-	float		friction; // how much air friction affects this object (objects with a low mass/size ratio tend to get more air friction)
+	float		airfriction; // how much air friction affects this object (objects with a low mass/size ratio tend to get more air friction)
+	float		liquidfriction; // how much liquid friction affects this object (objects with a low mass/size ratio tend to get more liquid friction)
 	unsigned char		color[4];
 	unsigned short owner; // decal stuck to this entity
 	model_t		*ownermodel; // model the decal is stuck to (used to make sure the entity is still alive)
