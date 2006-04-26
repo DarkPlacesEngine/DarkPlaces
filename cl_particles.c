@@ -1428,7 +1428,11 @@ void CL_MoveParticles (void)
 	for (i = 0, p = cl.particles;i < cl.num_particles;i++, p++)
 	{
 		if (!p->type)
+		{
+			if (cl.free_particle > i)
+				cl.free_particle = i;
 			continue;
+		}
 		maxparticle = i;
 		content = 0;
 
@@ -1437,6 +1441,8 @@ void CL_MoveParticles (void)
 		if (p->alpha <= 0)
 		{
 			p->type = NULL;
+			if (cl.free_particle > i)
+				cl.free_particle = i;
 			continue;
 		}
 
@@ -1609,7 +1615,6 @@ void CL_MoveParticles (void)
 		}
 	}
 	cl.num_particles = maxparticle + 1;
-	cl.free_particle = 0;
 }
 
 #define MAX_PARTICLETEXTURES 64
