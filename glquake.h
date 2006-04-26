@@ -681,7 +681,7 @@ extern int gl_support_shading_language_100;
 #define DEBUGGL
 
 #ifdef DEBUGGL
-#define CHECKGLERROR {if (gl_printcheckerror.integer) Con_Printf("CHECKGLERROR at %s:%d\n", __FILE__, __LINE__);if (gl_paranoid.integer && (errornumber = qglGetError())) GL_PrintError(errornumber, __FILE__, __LINE__);}
+#define CHECKGLERROR {if (gl_paranoid.integer){if (gl_printcheckerror.integer) Con_Printf("CHECKGLERROR at %s:%d\n", __FILE__, __LINE__);errornumber = qglGetError();if (errornumber) GL_PrintError(errornumber, __FILE__, __LINE__);}}
 extern int errornumber;
 void GL_PrintError(int errornumber, char *filename, int linenumber);
 #else

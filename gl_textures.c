@@ -198,7 +198,10 @@ void R_FreeTexture(rtexture_t *rt)
 		Host_Error("R_FreeTexture: texture \"%s\" not linked in pool", glt->identifier);
 
 	if (glt->texnum)
-		qglDeleteTextures(1, (GLuint *)&glt->texnum);
+	{
+		CHECKGLERROR
+		qglDeleteTextures(1, (GLuint *)&glt->texnum);CHECKGLERROR
+	}
 
 	if (glt->inputtexels)
 		Mem_Free(glt->inputtexels);
@@ -293,6 +296,7 @@ static void GL_TextureMode_f (void)
 
 	// change all the existing mipmap texture objects
 	// FIXME: force renderer(/client/something?) restart instead?
+	CHECKGLERROR
 	for (pool = gltexturepoolchain;pool;pool = pool->next)
 	{
 		for (glt = pool->gltchain;glt;glt = glt->chain)
@@ -300,14 +304,18 @@ static void GL_TextureMode_f (void)
 			// only update already uploaded images
 			if (!(glt->flags & (GLTEXF_UPLOAD | TEXF_FORCENEAREST | TEXF_FORCELINEAR)))
 			{
-				qglGetIntegerv(gltexturetypebindingenums[glt->texturetype], &oldbindtexnum);
-				qglBindTexture(gltexturetypeenums[glt->texturetype], glt->texnum);
+				qglGetIntegerv(gltexturetypebindingenums[glt->texturetype], &oldbindtexnum);CHECKGLERROR
+				qglBindTexture(gltexturetypeenums[glt->texturetype], glt->texnum);CHECKGLERROR
 				if (glt->flags & TEXF_MIPMAP)
-					qglTexParameteri(gltexturetypeenums[glt->texturetype], GL_TEXTURE_MIN_FILTER, gl_filter_min);
+				{
+					qglTexParameteri(gltexturetypeenums[glt->texturetype], GL_TEXTURE_MIN_FILTER, gl_filter_min);CHECKGLERROR
+				}
 				else
-					qglTexParameteri(gltexturetypeenums[glt->texturetype], GL_TEXTURE_MIN_FILTER, gl_filter_mag);
-				qglTexParameteri(gltexturetypeenums[glt->texturetype], GL_TEXTURE_MAG_FILTER, gl_filter_mag);
-				qglBindTexture(gltexturetypeenums[glt->texturetype], oldbindtexnum);
+				{
+					qglTexParameteri(gltexturetypeenums[glt->texturetype], GL_TEXTURE_MIN_FILTER, gl_filter_mag);CHECKGLERROR
+				}
+				qglTexParameteri(gltexturetypeenums[glt->texturetype], GL_TEXTURE_MAG_FILTER, gl_filter_mag);CHECKGLERROR
+				qglBindTexture(gltexturetypeenums[glt->texturetype], oldbindtexnum);CHECKGLERROR
 			}
 		}
 	}
@@ -442,8 +450,8 @@ static void R_TextureStats_f(void)
 static void r_textures_start(void)
 {
 	// LordHavoc: allow any alignment
-	qglPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	CHECKGLERROR
+	qglPixelStorei(GL_UNPACK_ALIGNMENT, 1);CHECKGLERROR
 
 	texturemempool = Mem_AllocPool("texture management", 0, NULL);
 
@@ -521,6 +529,7 @@ void R_Textures_Frame (void)
 
 		Cvar_SetValueQuick(&gl_texture_anisotropy, old_aniso);
 
+		CHECKGLERROR
 		for (pool = gltexturepoolchain;pool;pool = pool->next)
 		{
 			for (glt = pool->gltchain;glt;glt = glt->chain)
@@ -528,12 +537,12 @@ void R_Textures_Frame (void)
 				// only update already uploaded images
 				if ((glt->flags & (GLTEXF_UPLOAD | TEXF_MIPMAP)) == TEXF_MIPMAP)
 				{
-					qglGetIntegerv(gltexturetypebindingenums[glt->texturetype], &oldbindtexnum);
+					qglGetIntegerv(gltexturetypebindingenums[glt->texturetype], &oldbindtexnum);CHECKGLERROR
 
-					qglBindTexture(gltexturetypeenums[glt->texturetype], glt->texnum);
+					qglBindTexture(gltexturetypeenums[glt->texturetype], glt->texnum);CHECKGLERROR
 					qglTexParameteri(gltexturetypeenums[glt->texturetype], GL_TEXTURE_MAX_ANISOTROPY_EXT, old_aniso);CHECKGLERROR
 
-					qglBindTexture(gltexturetypeenums[glt->texturetype], oldbindtexnum);
+					qglBindTexture(gltexturetypeenums[glt->texturetype], oldbindtexnum);CHECKGLERROR
 				}
 			}
 		}
@@ -635,9 +644,8 @@ static void R_Upload(gltexture_t *glt, unsigned char *data, int fragx, int fragy
 	CHECKGLERROR
 
 	// we need to restore the texture binding after finishing the upload
-	qglGetIntegerv(gltexturetypebindingenums[glt->texturetype], &oldbindtexnum);
-	qglBindTexture(gltexturetypeenums[glt->texturetype], glt->texnum);
-	CHECKGLERROR
+	qglGetIntegerv(gltexturetypebindingenums[glt->texturetype], &oldbindtexnum);CHECKGLERROR
+	qglBindTexture(gltexturetypeenums[glt->texturetype], glt->texnum);CHECKGLERROR
 
 	// these are rounded up versions of the size to do better resampling
 	for (width  = 1;width  < glt->inputwidth ;width  <<= 1);
@@ -666,16 +674,13 @@ static void R_Upload(gltexture_t *glt, unsigned char *data, int fragx, int fragy
 		switch(glt->texturetype)
 		{
 		case GLTEXTURETYPE_1D:
-			qglTexSubImage1D(GL_TEXTURE_1D, 0, fragx, fragwidth, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);
-			CHECKGLERROR
+			qglTexSubImage1D(GL_TEXTURE_1D, 0, fragx, fragwidth, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
 			break;
 		case GLTEXTURETYPE_2D:
-			qglTexSubImage2D(GL_TEXTURE_2D, 0, fragx, fragy, fragwidth, fragheight, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);
-			CHECKGLERROR
+			qglTexSubImage2D(GL_TEXTURE_2D, 0, fragx, fragy, fragwidth, fragheight, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
 			break;
 		case GLTEXTURETYPE_3D:
-			qglTexSubImage3D(GL_TEXTURE_3D, 0, fragx, fragy, fragz, fragwidth, fragheight, fragdepth, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);
-			CHECKGLERROR
+			qglTexSubImage3D(GL_TEXTURE_3D, 0, fragx, fragy, fragz, fragwidth, fragheight, fragdepth, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
 			break;
 		default:
 			Host_Error("R_Upload: partial update of type other than 1D, 2D, or 3D");
@@ -709,44 +714,38 @@ static void R_Upload(gltexture_t *glt, unsigned char *data, int fragx, int fragy
 		switch(glt->texturetype)
 		{
 		case GLTEXTURETYPE_1D:
-			qglTexImage1D(GL_TEXTURE_1D, mip++, glt->glinternalformat, width, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);
-			CHECKGLERROR
+			qglTexImage1D(GL_TEXTURE_1D, mip++, glt->glinternalformat, width, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
 			if (glt->flags & TEXF_MIPMAP)
 			{
 				while (width > 1 || height > 1 || depth > 1)
 				{
 					Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1, glt->bytesperpixel);
 					prevbuffer = resizebuffer;
-					qglTexImage1D(GL_TEXTURE_1D, mip++, glt->glinternalformat, width, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);
-					CHECKGLERROR
+					qglTexImage1D(GL_TEXTURE_1D, mip++, glt->glinternalformat, width, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
 				}
 			}
 			break;
 		case GLTEXTURETYPE_2D:
-			qglTexImage2D(GL_TEXTURE_2D, mip++, glt->glinternalformat, width, height, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);
-			CHECKGLERROR
+			qglTexImage2D(GL_TEXTURE_2D, mip++, glt->glinternalformat, width, height, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
 			if (glt->flags & TEXF_MIPMAP)
 			{
 				while (width > 1 || height > 1 || depth > 1)
 				{
 					Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1, glt->bytesperpixel);
 					prevbuffer = resizebuffer;
-					qglTexImage2D(GL_TEXTURE_2D, mip++, glt->glinternalformat, width, height, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);
-					CHECKGLERROR
+					qglTexImage2D(GL_TEXTURE_2D, mip++, glt->glinternalformat, width, height, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
 				}
 			}
 			break;
 		case GLTEXTURETYPE_3D:
-			qglTexImage3D(GL_TEXTURE_3D, mip++, glt->glinternalformat, width, height, depth, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);
-			CHECKGLERROR
+			qglTexImage3D(GL_TEXTURE_3D, mip++, glt->glinternalformat, width, height, depth, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
 			if (glt->flags & TEXF_MIPMAP)
 			{
 				while (width > 1 || height > 1 || depth > 1)
 				{
 					Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1, glt->bytesperpixel);
 					prevbuffer = resizebuffer;
-					qglTexImage3D(GL_TEXTURE_3D, mip++, glt->glinternalformat, width, height, depth, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);
-					CHECKGLERROR
+					qglTexImage3D(GL_TEXTURE_3D, mip++, glt->glinternalformat, width, height, depth, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
 				}
 			}
 			break;
@@ -770,16 +769,14 @@ static void R_Upload(gltexture_t *glt, unsigned char *data, int fragx, int fragy
 					prevbuffer = resizebuffer;
 				}
 				mip = 0;
-				qglTexImage2D(cubemapside[i], mip++, glt->glinternalformat, width, height, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);
-				CHECKGLERROR
+				qglTexImage2D(cubemapside[i], mip++, glt->glinternalformat, width, height, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
 				if (glt->flags & TEXF_MIPMAP)
 				{
 					while (width > 1 || height > 1 || depth > 1)
 					{
 						Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1, glt->bytesperpixel);
 						prevbuffer = resizebuffer;
-						qglTexImage2D(cubemapside[i], mip++, glt->glinternalformat, width, height, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);
-						CHECKGLERROR
+						qglTexImage2D(cubemapside[i], mip++, glt->glinternalformat, width, height, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
 					}
 				}
 			}
@@ -787,7 +784,7 @@ static void R_Upload(gltexture_t *glt, unsigned char *data, int fragx, int fragy
 		}
 		GL_SetupTextureParameters(glt->flags, glt->texturetype);
 	}
-	qglBindTexture(gltexturetypeenums[glt->texturetype], oldbindtexnum);
+	qglBindTexture(gltexturetypeenums[glt->texturetype], oldbindtexnum);CHECKGLERROR
 }
 
 static void R_UploadTexture (gltexture_t *glt)
@@ -795,7 +792,8 @@ static void R_UploadTexture (gltexture_t *glt)
 	if (!(glt->flags & GLTEXF_UPLOAD))
 		return;
 
-	qglGenTextures(1, (GLuint *)&glt->texnum);
+	CHECKGLERROR
+	qglGenTextures(1, (GLuint *)&glt->texnum);CHECKGLERROR
 	R_Upload(glt, glt->inputtexels, 0, 0, 0, glt->inputwidth, glt->inputheight, glt->inputdepth);
 	if (glt->inputtexels)
 	{

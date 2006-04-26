@@ -643,6 +643,7 @@ void VID_CheckExtensions(void)
 	Con_Printf("GL_EXTENSIONS: %s\n", gl_extensions);
 	Con_Printf("%s_EXTENSIONS: %s\n", gl_platform, gl_platformextensions);
 
+	CHECKGLERROR
 	qglGetIntegerv(GL_MAX_TEXTURE_SIZE, &gl_max_texture_size);
 
 	Con_Print("Checking OpenGL extensions...\n");
@@ -692,6 +693,7 @@ void VID_CheckExtensions(void)
 		if ((gl_support_shading_language_100 = GL_CheckExtension("GL_ARB_shading_language_100", NULL, "-noshadinglanguage100", false)))
 			if ((gl_support_vertex_shader = GL_CheckExtension("GL_ARB_vertex_shader", vertexshaderfuncs, "-novertexshader", false)))
 				gl_support_fragment_shader = GL_CheckExtension("GL_ARB_fragment_shader", NULL, "-nofragmentshader", false);
+	CHECKGLERROR
 }
 
 void Force_CenterView_f (void)
