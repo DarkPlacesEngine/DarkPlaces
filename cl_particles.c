@@ -485,7 +485,10 @@ static particle_t *particle(particletype_t *ptype, int pcolor1, int pcolor2, int
 	part->vel[1] = pvy + velocityjitter * v[1];
 	part->vel[2] = pvz + velocityjitter * v[2];
 	part->time2 = 0;
-	part->friction = pfriction;
+	// FIXME: change parameters to have separate air and liquid friction
+	// (as supported by effectinfo.txt)
+	part->airfriction = pfriction;
+	part->liquidfriction = pfriction * 4;
 	return part;
 }
 
@@ -500,9 +503,11 @@ void CL_SpawnDecalParticleForSurface(int hitent, const vec3_t org, const vec3_t 
 		p->time2 = cl.time;
 		p->owner = hitent;
 		p->ownermodel = cl.entities[p->owner].render.model;
+		VectorAdd(org, normal, p->org);
+		VectorCopy(normal, p->vel);
+		// these relative things are only used to regenerate p->org and p->vel if p->owner is not world (0)
 		Matrix4x4_Transform(&cl.entities[p->owner].render.inversematrix, org, p->relativeorigin);
 		Matrix4x4_Transform3x3(&cl.entities[p->owner].render.inversematrix, normal, p->relativedirection);
-		VectorAdd(p->relativeorigin, p->relativedirection, p->relativeorigin);
 	}
 }
 
@@ -1407,7 +1412,8 @@ void CL_MoveParticles (void)
 {
 	particle_t *p;
 	int i, maxparticle, j, a, content;
-	float gravity, dvel, bloodwaterfade, frametime, f, dist, org[3], oldorg[3];
+	float gravity, dvel, decalfade, frametime, f, dist, org[3], oldorg[3];
+	particletype_t *decaltype, *bloodtype;
 	int hitent;
 	trace_t trace;
 
@@ -1421,7 +1427,9 @@ void CL_MoveParticles (void)
 	frametime = cl.time - cl.oldtime;
 	gravity = frametime * sv_gravity.value;
 	dvel = 1+4*frametime;
-	bloodwaterfade = max(cl_particles_blood_alpha.value, 0.01f) * frametime * 128.0f;
+	decalfade = frametime * 255 / cl_decals_fadetime.value;
+	decaltype = particletype + pt_decal;
+	bloodtype = particletype + pt_blood;
 
 	maxparticle = -1;
 	j = 0;
@@ -1434,6 +1442,39 @@ void CL_MoveParticles (void)
 			continue;
 		}
 		maxparticle = i;
+
+		// heavily optimized decal case
+		if (p->type == decaltype)
+		{
+			// FIXME: this has fairly wacky handling of alpha
+			if (cl.time > p->time2 + cl_decals_time.value)
+			{
+				p->alpha -= decalfade;
+				if (p->alpha <= 0)
+				{
+					p->type = NULL;
+					if (cl.free_particle > i)
+						cl.free_particle = i;
+					continue;
+				}
+			}
+			if (p->owner)
+			{
+				if (cl.entities[p->owner].render.model == p->ownermodel)
+				{
+					Matrix4x4_Transform(&cl.entities[p->owner].render.matrix, p->relativeorigin, p->org);
+					Matrix4x4_Transform3x3(&cl.entities[p->owner].render.matrix, p->relativedirection, p->vel);
+				}
+				else
+				{
+					p->type = NULL;
+					if (cl.free_particle > i)
+						cl.free_particle = i;
+				}
+			}
+			continue;
+		}
+
 		content = 0;
 
 		p->alpha -= p->alphafade * frametime;
@@ -1478,7 +1519,8 @@ void CL_MoveParticles (void)
 						p->time2 = cl.time;
 						p->alphafade = p->alpha / 0.4;
 						p->bounce = 0;
-						p->friction = 0;
+						p->airfriction = 0;
+						p->liquidfriction = 0;
 						p->gravity = 0;
 						p->size *= 1.0f;
 						p->sizeincrease = p->size * 16;
@@ -1486,7 +1528,7 @@ void CL_MoveParticles (void)
 						while(count--)
 							particle(particletype + pt_spark, 0x000000, 0x707070, tex_particle, 0.25f, 0, lhrandom(64, 255), 512, 1, 0, p->org[0], p->org[1], p->org[2], p->vel[0]*16, p->vel[1]*16, 32 + p->vel[2]*16, 0, 0, 32);
 					}
-					else if (p->type == particletype + pt_blood)
+					else if (p->type == bloodtype)
 					{
 						// blood - splash on solid
 						if (trace.hitq3surfaceflags & Q3SURFACEFLAG_NOMARKS)
@@ -1509,12 +1551,14 @@ void CL_MoveParticles (void)
 						p->texnum = tex_blooddecal[rand()&7];
 						p->owner = hitent;
 						p->ownermodel = cl.entities[hitent].render.model;
+						// these relative things are only used to regenerate p->org and p->vel if p->owner is not world (0)
 						Matrix4x4_Transform(&cl.entities[hitent].render.inversematrix, p->org, p->relativeorigin);
 						Matrix4x4_Transform3x3(&cl.entities[hitent].render.inversematrix, p->vel, p->relativedirection);
 						p->time2 = cl.time;
 						p->alphafade = 0;
 						p->bounce = 0;
-						p->friction = 0;
+						p->airfriction = 0;
+						p->liquidfriction = 0;
 						p->gravity = 0;
 						p->size *= 2.0f;
 					}
@@ -1536,12 +1580,14 @@ void CL_MoveParticles (void)
 			}
 			p->vel[2] -= p->gravity * gravity;
 
-			if (p->friction)
+			if (p->liquidfriction && CL_PointSuperContents(p->org) & SUPERCONTENTS_LIQUIDSMASK)
 			{
-				f = p->friction * frametime;
-				if (CL_PointSuperContents(p->org) & SUPERCONTENTS_LIQUIDSMASK)
-					f *= 4;
-				f = 1.0f - f;
+				f = 1.0f - min(p->liquidfriction * frametime, 1);
+				VectorScale(p->vel, f, p->vel);
+			}
+			else if (p->airfriction)
+			{
+				f = 1.0f - min(p->airfriction * frametime, 1);
 				VectorScale(p->vel, f, p->vel);
 			}
 		}
@@ -1593,20 +1639,6 @@ void CL_MoveParticles (void)
 				}
 				a = CL_PointSuperContents(p->org);
 				if (a & (SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_LIQUIDSMASK))
-					p->type = NULL;
-				break;
-			case pt_smoke:
-				//p->size += frametime * 15;
-				break;
-			case pt_decal:
-				// FIXME: this has fairly wacky handling of alpha
-				p->alphafade = cl.time > (p->time2 + cl_decals_time.value) ? (255 / cl_decals_fadetime.value) : 0;
-				if (cl.entities[p->owner].render.model == p->ownermodel)
-				{
-					Matrix4x4_Transform(&cl.entities[p->owner].render.matrix, p->relativeorigin, p->org);
-					Matrix4x4_Transform3x3(&cl.entities[p->owner].render.matrix, p->relativedirection, p->vel);
-				}
-				else
 					p->type = NULL;
 				break;
 			default:
