@@ -495,7 +495,8 @@ qboolean	Cvar_Command (void)
 		return true;
 	}
 
-	Con_DPrint("Cvar_Command: ");
+	if (developer.integer >= 100)
+		Con_DPrint("Cvar_Command: ");
 
 	if (v->flags & CVAR_READONLY)
 	{
@@ -503,6 +504,8 @@ qboolean	Cvar_Command (void)
 		return true;
 	}
 	Cvar_Set (v->name, Cmd_Argv(1));
+	if (developer.integer >= 100)
+		Con_DPrint("\n");
 	return true;
 }
 
