@@ -13,7 +13,6 @@
 -d (Morphed) bug darkplaces renderer: Morphed's colormapping experiments in nexuiz show a difference in gloss color with GLSL vs dot3 path, http://img494.imageshack.us/img494/8745/nexuiz0000258lf.jpg http://www.nexuiz.com/forums/index.php?showtopic=1531 - and apparently it looks right or wrong depending on view point, suddenly switching (Morphed)
 -d (Mr Fribbles) feature darkplaces particles: reimplement quake effects for a cl_particles_quake mode (Mr Fribbles, metlslime)
 -d (QuakeMatt) change darkplaces menu: remove gl_combine from menu as it's not saved to config and really shouldn't be changed except when debugging drivers (QuakeMatt)
--d (Sajt) bug darkplaces collision: frikbots are falling through the map (Sajt)
 -d (Speedy) feature darkplaces init: add -demolooponly option which makes escape key quit, and disables all other keys (Speedy)
 -d (Spike) change darkplaces prvm: disable the unknown opcode error in progs loading so that fteqcc fastarrays progs will load (Spike)
 -d (Supa, Wazat, Spike) feature darkplaces server: make a DP_SV_CUSTOMIZEENTITYFORCLIENT extension which calls a .float customizeentityforclient() function for each client that may see the entity, the function returns TRUE if it should send, FALSE if it should not, and is fully capable of editing the entity's fields, this allows cloaked players to appear less transparent to their teammates, navigation markers to only show to their team, etc (Urre, Supa, Wazat, SavageX, Vermeulen, Spike)
@@ -489,6 +488,7 @@ d bug darkplaces client: make server queries use a queue to avoid flooding out q
 d bug darkplaces client: missing bolt/beam models should not produce warnings
 d bug darkplaces client: te_customflash isn't working? (Wazat)
 d bug darkplaces collision: check Urre's sltest.bsp and slopestuck.dem and fix the sticking bug, which only happens with sv_newflymove 1 (Urre)
+d bug darkplaces collision: frikbots are falling through the map (Sajt)
 d bug darkplaces commands: say command is not posting to server console (Vermeulen)
 d bug darkplaces console: $variable expansion is not working on forwarded commands like "say I'm $_cl_name", it does work on local commands like set (esteel, Black)
 d bug darkplaces console: alias test "echo 1";test;echo 2 should print 1 then 2, not 2 then 1 or an error (div0, FrikaC)
