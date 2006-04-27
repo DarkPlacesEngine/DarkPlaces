@@ -933,28 +933,14 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting)
 	}
 	else if (permutation & SHADERPERMUTATION_MODE_LIGHTDIRECTION)
 	{
-		if (rsurface_texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
-		{
-			if (r_glsl_permutation->loc_AmbientColor >= 0)
-				qglUniform3fARB(r_glsl_permutation->loc_AmbientColor, 1, 1, 1);
-			if (r_glsl_permutation->loc_DiffuseColor >= 0)
-				qglUniform3fARB(r_glsl_permutation->loc_DiffuseColor, 0, 0, 0);
-			if (r_glsl_permutation->loc_SpecularColor >= 0)
-				qglUniform3fARB(r_glsl_permutation->loc_SpecularColor, 0, 0, 0);
-			if (r_glsl_permutation->loc_LightDir >= 0)
-				qglUniform3fARB(r_glsl_permutation->loc_LightDir, 0, 0, -1);
-		}
-		else
-		{
-			if (r_glsl_permutation->loc_AmbientColor >= 0)
-				qglUniform3fARB(r_glsl_permutation->loc_AmbientColor, rsurface_entity->modellight_ambient[0], rsurface_entity->modellight_ambient[1], rsurface_entity->modellight_ambient[2]);
-			if (r_glsl_permutation->loc_DiffuseColor >= 0)
-				qglUniform3fARB(r_glsl_permutation->loc_DiffuseColor, rsurface_entity->modellight_diffuse[0], rsurface_entity->modellight_diffuse[1], rsurface_entity->modellight_diffuse[2]);
-			if (r_glsl_permutation->loc_SpecularColor >= 0)
-				qglUniform3fARB(r_glsl_permutation->loc_SpecularColor, rsurface_entity->modellight_diffuse[0] * rsurface_texture->specularscale, rsurface_entity->modellight_diffuse[1] * rsurface_texture->specularscale, rsurface_entity->modellight_diffuse[2] * rsurface_texture->specularscale);
-			if (r_glsl_permutation->loc_LightDir >= 0)
-				qglUniform3fARB(r_glsl_permutation->loc_LightDir, rsurface_entity->modellight_lightdir[0], rsurface_entity->modellight_lightdir[1], rsurface_entity->modellight_lightdir[2]);
-		}
+		if (r_glsl_permutation->loc_AmbientColor >= 0)
+			qglUniform3fARB(r_glsl_permutation->loc_AmbientColor, rsurface_entity->modellight_ambient[0], rsurface_entity->modellight_ambient[1], rsurface_entity->modellight_ambient[2]);
+		if (r_glsl_permutation->loc_DiffuseColor >= 0)
+			qglUniform3fARB(r_glsl_permutation->loc_DiffuseColor, rsurface_entity->modellight_diffuse[0], rsurface_entity->modellight_diffuse[1], rsurface_entity->modellight_diffuse[2]);
+		if (r_glsl_permutation->loc_SpecularColor >= 0)
+			qglUniform3fARB(r_glsl_permutation->loc_SpecularColor, rsurface_entity->modellight_diffuse[0] * rsurface_texture->specularscale, rsurface_entity->modellight_diffuse[1] * rsurface_texture->specularscale, rsurface_entity->modellight_diffuse[2] * rsurface_texture->specularscale);
+		if (r_glsl_permutation->loc_LightDir >= 0)
+			qglUniform3fARB(r_glsl_permutation->loc_LightDir, rsurface_entity->modellight_lightdir[0], rsurface_entity->modellight_lightdir[1], rsurface_entity->modellight_lightdir[2]);
 	}
 	else
 	{
@@ -2894,7 +2880,14 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 		R_Mesh_TexCoordPointer(1, 3, rsurface_svector3f);
 		R_Mesh_TexCoordPointer(2, 3, rsurface_tvector3f);
 		R_Mesh_TexCoordPointer(3, 3, rsurface_normal3f);
-		if (rsurface_lightmaptexture)
+		if (rsurface_texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
+		{
+			R_Mesh_TexBind(7, R_GetTexture(r_texture_white));
+			if (r_glsl_permutation->loc_Texture_Deluxemap >= 0)
+				R_Mesh_TexBind(8, R_GetTexture(r_texture_blanknormalmap));
+			R_Mesh_ColorPointer(NULL);
+		}
+		else if (rsurface_lightmaptexture)
 		{
 			R_Mesh_TexBind(7, R_GetTexture(rsurface_lightmaptexture));
 			if (r_glsl_permutation->loc_Texture_Deluxemap >= 0)
