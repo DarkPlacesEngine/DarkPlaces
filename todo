@@ -60,8 +60,8 @@
 0 bug dpmod: figure out what's wrong with the bots
 0 bug dpmod: go through http://www.inside3d.com/qip/q1/bugsmap.htm and fix map bugs by using replacement .ent files (Lardarse)
 0 bug dpmod: identify what could cause huge angles values (1187488512.0000) on a dog entity, may be related to anglemod, FacingIdeal, ai_run, or dog_run2 (Zombie13)
-0 bug dpmod: impulse 102 isn't removing the bots (Sajt)
-0 bug dpmod: monsters falling out of level? (Sajt)
+0 bug dpmod: impulse 102 isn't removing the bots
+0 bug dpmod: monsters falling out of level?
 0 bug dpmod: monsters shouldn't constantly do sightsounds on a slain player, it's annoying and silly
 0 bug dpmod: monsters that spawn underwater shouldn't drown, just because it somewhat breaks the intended behavior of maps
 0 bug dpmod: test for any unnamed death messages that might be happening
@@ -138,7 +138,7 @@
 0 feature darkplaces renderer: add rtlight "avelocity" parameter to make lights that spin, useful with cubemaps (romi)
 0 feature darkplaces renderer: make showfps display GL renderer string and CPU - figure out how to detect this from the OS
 0 feature darkplaces renderer: save r_shadow_glsl* cvars (and possibly a few others) to config because they are useful user settings (SavageX)
-0 feature darkplaces server: DP_SV_FINDPVS (Sajt)
+0 feature darkplaces server: DP_SV_FINDPVS
 0 feature darkplaces server: add .maxspeed field to control player movement speed in engine code, call it QW_SV_MAXSPEED (Carni)
 0 feature darkplaces server: add DP_QC_STRTOKEN extension with these functions: float strtokens(string s, string separator) = #;string strtoken(string s, string separator, float index) = #; (FrikaC)
 0 feature darkplaces server: add DP_SV_DRAWONLYTOTEAM extension (Supajoe)
@@ -181,7 +181,7 @@
 0 feature dpmod: merge alieninfestation speedmod into dpmod, especially the map
 0 feature dpmod: try making ball lightning mortar shamblers (scar3crow)
 0 feature dpmod: try not adding gravity when onground to see if it gets rid of ramp sliding (Midgar)
-0 feature dpmod: update stats to count monster kills in dm 7 and such (Sajt)
+0 feature dpmod: update stats to count monster kills in dm 7 and such
 0 feature dpmodel: merge in jalisk0's patches for halflife2 smd import: http://www.quakesrc.org/forums/viewtopic.php?t=4731
 0 feature dpzoo.map: flame jet
 0 feature dpzoo.map: func_train with sky brushes
@@ -236,21 +236,21 @@
 1 bug darkplaces renderer: lit sprites (which use R_CompleteLightPoint) are being lit blue by glow_color 108 dlights (Cheapy)
 1 bug darkplaces renderer: make sure that the texture fragment allocator can upload a full size block that uses the entire image, this may involve width/height comparisons needing a + 1 (fuh)
 1 bug darkplaces server: PF_vectorvectors is broken, given a v_forward from makevectors (not using roll) it does not give the same v_right and v_up vectors (VorteX)
-1 bug darkplaces server: add DP_QC_ENDFRAME extension/documentation and post it on wiki (tell Uffe, Sajt)
+1 bug darkplaces server: add DP_QC_ENDFRAME extension/documentation and post it on wiki (tell Uffe)
 1 bug darkplaces server: apparently MOVETYPE_WALK on non-players is frequently resetting origin to oldorigin, why does it think it's in solid? (Wazat)
 1 bug darkplaces server: change maxplayers to be a cvar, and post a warning if it changes during a game saying it won't take effect until the next map command
 1 bug darkplaces server: decide on an extension name for .ent loading and report it, also document in dpextensions (FrikaC, Gleeb, wiki)
 1 bug darkplaces server: figure out what's breaking RenegadeC's TAOV monster jump code (RenegadeC)
 1 bug darkplaces server: silver key missing in the map Menkalinan at http://quakemaps.nm.ru/maps2.html (zarquon)
-1 bug darkplaces: if progdefs.h is out of date it causes a Sys_Error, after clicking OK on the message box the engine crashes, probably something to do with partially loaded progs (Sajt)
+1 bug darkplaces: if progdefs.h is out of date it causes a Sys_Error, after clicking OK on the message box the engine crashes, probably something to do with partially loaded progs
 1 bug hmap: qbsp dies from runaway allocations if a duplicate plane is found on a brush (Tomaz)
 1 change darkplaces client: reduce number of particles used, and particle limit, to save some memory (LordHavoc)
-1 change darkplaces protocol: document the TEI stuff used in Nexuiz (Sajt)
+1 change darkplaces protocol: document the TEI stuff used in Nexuiz
 1 change darkplaces protocol: send cvar commands to client to set cl_movement_* cvars and cl_slowmo and cl_gravity (Vermeulen)
 1 change darkplaces renderer: add gunshot (shotgun pellet) and nail (spike) decals to the particlefont so that these can look different from explosions (Morphed)
 1 change darkplaces renderer: add r_shadow_realtime_world 2 mode (and update menu), make 1 only render rtlights if they came from a .rtlights file and mode 2 render them even if they were imported from the map, always render imported ones if editing mode is turned on (Willis)
 1 change darkplaces renderer: make "sky" keys in worldspawn override q3 sky shaders (Vermeulen)
-1 change darkplaces renderer: make attachments use their parent's origin for model lighting (Sajt)
+1 change darkplaces renderer: make attachments use their parent's origin for model lighting
 1 change darkplaces renderer: use 16th power specular instead of 8th power (LordHavoc)
 1 cleanup darkplaces loader: add palette conversion capabilities to Image_CopyMux
 1 cleanup darkplaces memory: add Mem_AllocNoClear function, and use it where possible, if developer is on it should clear with random garbage
@@ -263,20 +263,20 @@
 1 feature darkplaces input: finish porting Quake2 keyboard stuff (Rick, FrikaC)
 1 feature darkplaces loader: load separate _lower.tga and _upper.tga sky textures to allow resolutions other than 128x128 per layer (Idot)
 1 feature darkplaces loader: make the rtlight entity loader support a rtlight entity to be used for lightstyles in q3bsp, these would render in both normalmode and realtime mode, but not actually be dlights (Kazashi)
-1 feature darkplaces menu: add in_bindmap support to bind menu; a selector for which bindmap is actively being shown and bound in the menu, and add bind entries for some bindmap commands (sajt)
+1 feature darkplaces menu: add in_bindmap support to bind menu; a selector for which bindmap is actively being shown and bound in the menu, and add bind entries for some bindmap commands
 1 feature darkplaces networking: hexdump the replies to the packet command? (Spike)
 1 feature darkplaces particles: add a vertical splash effect to raindrop splashes, not just the ring (Stribbs)
-1 feature darkplaces protocol: add DP_EF_CLIENTLOCKANGLES extension (prevents client from turning view, takes angles from entity) (Wazat for Battlemech, Sajt)
+1 feature darkplaces protocol: add DP_EF_CLIENTLOCKANGLES extension (prevents client from turning view, takes angles from entity) (Wazat for Battlemech)
 1 feature darkplaces protocol: add DP_SV_CLIENTFLASHPIC extension: a function void svc_clientflashpic(entity cl, float alpha, float fadetime, string picname), to flash a pic in the center of the client's screen, useful for 'Double Kill' awards and such (Tomaz)
-1 feature darkplaces protocol: add DP_SV_READCLIENTINPUT extension (.vector clientinput; works like .movement but for mouse or any other similar controllers) (Wazat for Battlemech, FrikaC, Sajt, Urre)
+1 feature darkplaces protocol: add DP_SV_READCLIENTINPUT extension (.vector clientinput; works like .movement but for mouse or any other similar controllers) (Wazat for Battlemech, FrikaC, Urre)
 1 feature darkplaces protocol: add a .modelflags variable which if non-zero overrides model flags - note, LordHavoc would prefer just adding more EF_ values (Arwing, frightfan)
 1 feature darkplaces renderer: check out QMB lightning and lava effects (jeremy janzen)
-1 feature darkplaces renderer: make r_fogsky cvar to control how much fog is rendered infront of the sky (Deej, C0burn, Sajt)
-1 feature darkplaces server: add DP_CLIENTCAMERA extension (.entity clientcamera; sets which entity the client views from) (Wazat for Battlemech, Sajt, [TACO])
-1 feature darkplaces server: add EndGame function (called on server shutdown or level change) (Sajt, Vermeulen)
-1 feature darkplaces server: add a string function that returns a character value from a string, mainly for csqc printing its own text (Sajt)
+1 feature darkplaces renderer: make r_fogsky cvar to control how much fog is rendered infront of the sky (Deej, C0burn)
+1 feature darkplaces server: add DP_CLIENTCAMERA extension (.entity clientcamera; sets which entity the client views from) (Wazat for Battlemech, [TACO])
+1 feature darkplaces server: add EndGame function (called on server shutdown or level change) (Vermeulen)
+1 feature darkplaces server: add a string function that returns a character value from a string, mainly for csqc printing its own text
 1 feature darkplaces server: add contents reporting to qc somehow when traceline does model tracing and hits the model, this could also fix q3bsp sky collisions?
-1 feature darkplaces server: add gettimestamp builtin (returns a string) for logging purposes (Sajt)
+1 feature darkplaces server: add gettimestamp builtin (returns a string) for logging purposes
 1 feature darkplaces server: add md3 mesh name reporting to qc somehow when traceline does model tracing and hits the model
 1 feature darkplaces video: add r_displayrefresh cvar for windows video refresh settings (Willis, Judas Judas, Michael Miller, Vondur)
 1 feature dpmod: add a Treasure Hunt mode (inspired by preview of Will Rock) - a team wins when they hold all the artifacts
@@ -300,7 +300,7 @@
 2 bug darkplaces loader: nexuiz loading a level often loops part of the map's music during loading, this is probably an extra Host_Frame being executed during loading, where it shouldn't be (Vermeulen)
 2 bug darkplaces renderer: some polygons are not being lit by compiled rtlights in start.bsp, uncompiled rtlights work fine
 2 bug darkplaces rtlights: light entity import should support spotlights and generate cubemaps for their cone angles as needed
-2 bug darkplaces server: getlight builtin should consider lightstyles (Sajt)
+2 bug darkplaces server: getlight builtin should consider lightstyles
 2 bug darkplaces testing: make sure Zerstoerer works (Chris Kemp, Kaotic))
 2 change darkplaces client: PRYDON_CLIENTCURSOR should be able to click on sprites, make sure it collides with the polygons in the current orientation (FrikaC)
 2 change darkplaces renderer: use GLSL for bloom to improve color quality (Justin Thyme)
@@ -320,7 +320,7 @@
 2 feature darkplaces client: add cl_censor cvar which would replace 'swearing' with humorous messages (Deej)
 2 feature darkplaces client: add support for stereo shutter glasses
 2 feature darkplaces client: cl_particles_maximum cvar (default 32768) which would change number of particles allowed at once (TheBeast)
-2 feature darkplaces client: decal clipping (romi, Sajt)
+2 feature darkplaces client: decal clipping (romi)
 2 feature darkplaces client: http download and parse http://www.gameaholic.com/servers/qspy-quake for nq servers (Spike)
 2 feature darkplaces client: interpolate scale and alpha changes (Cheapy)
 2 feature darkplaces client: make CL_Video use TEXF_FRAGMENT again by adding general, transparent support for it in all drawqueue functions (so you dont need to call FragmentLocation) (Black)
@@ -332,9 +332,9 @@
 2 feature darkplaces menu: add some basic graphics/effects options profiles so that people can choose profiles like "Classic", "Modern", "Excessive", "Realistic", or any other profiles that make sense, may also need to reorganize the graphics/effects options menus to be a bit less confusing (Tron)
 2 feature darkplaces menu: implement menu_clearkeyconfig and menu_keyconfig and the corresponding menu (diGGer)
 2 feature darkplaces model: add model_exportobj console command to allow exporting a specified model as .obj (Randy)
-2 feature darkplaces physics: DP_SV_QCPHYSICS extension, calls SV_PhysicsQC function, which replaces the entire SV_Physics C function, calling all thinks and physics and everything (Urre, Sajt)
+2 feature darkplaces physics: DP_SV_QCPHYSICS extension, calls SV_PhysicsQC function, which replaces the entire SV_Physics C function, calling all thinks and physics and everything (Urre)
 2 feature darkplaces protocol: .float bulge; field which makes an entity larger by moving vertices along their normals, well known as the fatboy mutator in Unreal Tournament (Wazat)
-2 feature darkplaces protocol: add effects.txt file which would describe a bunch of numbered effects usable with a .effectindex field on entities, these would range from point effects, to continuous emitters, to beams with jitter and other properties, each effect would have various info like dlight and particle spawning and beam rendering (CheapAlert, Supa, FrikaC, [TACO], Sajt, Urre, Vermeulen)
+2 feature darkplaces protocol: add effects.txt file which would describe a bunch of numbered effects usable with a .effectindex field on entities, these would range from point effects, to continuous emitters, to beams with jitter and other properties, each effect would have various info like dlight and particle spawning and beam rendering (CheapAlert, Supa, FrikaC, [TACO], Urre, Vermeulen)
 2 feature darkplaces protocol: add rcon_password system similar to quakeworld server (II`cyan)
 2 feature darkplaces protocol: svc_spawnstatic should use a delta from defaultstate, instead of its outdated custom protocol (Spike)
 2 feature darkplaces release: add KDE/gnome icons somehow using darkplaces72x72.png (de-we)
@@ -376,7 +376,7 @@
 3 feature darkplaces client: add back r_waterripple (Vermeulen)
 3 feature darkplaces client: add clientside entity prediction similar to qw based on ping, and add cl_prediction and cl_prediction_lockping
 3 feature darkplaces client: add direct xvid recording using the xvid library (Error, Vermeulen)
-3 feature darkplaces client: mod browser (and ability to switch mods) (Sajt, mashakos)
+3 feature darkplaces client: mod browser (and ability to switch mods) (mashakos)
 3 feature darkplaces docs: add short and long documentation string to each cvar/command (QorpsE)
 3 feature darkplaces docs: write a documentation string in engine, and a command to dump documentation to a darkplaces.txt file (QorpsE)
 3 feature darkplaces editlights: add a custom light style string to rtlights, if empty it uses a normal server controlled light style (Stribbs)
@@ -387,7 +387,7 @@
 3 feature darkplaces loader: support md5mesh/md5anim model files (Supa, Kazashi, Swifty)
 3 feature darkplaces menu: add OpenGL Extensions menu to enable/disable various features (zombie_13)
 3 feature darkplaces physics: DP_SV_TRACEMOVE extension, adds a qc builtin which traces an entity through the world (using origin/angles/mins/maxs/velocity/avelocity) for a specified amount of time (frametime typically), and sets trace results accordingly, this would greatly help out QC physics (Urre)
-3 feature darkplaces physics: add DP_SV_CRATEPHYSICS (NotoriousRay, Sajt)
+3 feature darkplaces physics: add DP_SV_CRATEPHYSICS (NotoriousRay)
 3 feature darkplaces protocol: .string drawtext; displays the specified message (up to 31 characters) centered at the origin of this entity, for qc based menus and titles on things inside the world, also .float drawtextscale which defines character height and .float drawtextflags with DRAWTEXTFLAG_ORIENTED DRAWTEXTFLAG_UPRIGHTFACING DRAWTEXTFLAG_ALIGNTOP DRAWTEXTFLAG_ALIGNBOTTOM DRAWTEXTFLAG_ALIGNLEFT DRAWTEXTFLAG_ALIGNRIGHT, defaults to view parallel (like typical sprites) and centered alignment horizontally and vertically, also note colormod, and the effects flags EF_ADDITIVE EF_FULLBRIGHT (it is lit by default) EF_NODEPTHTEST EF_SELECTABLE apply to this (Wazat)
 3 feature darkplaces protocol: add "GetPK3URLList" and "PK3URLListResponse" messages to allow a client to query a server for what pk3 archives to httpdownload before joining (Paul Gagnon)
 3 feature darkplaces protocol: add DP_ENT_COLORSHELL which puts a Q2-style colored shell on a model (Supajoe)
@@ -402,14 +402,14 @@
 3 feature darkplaces renderer: dpshaders (when supported) should have support for envmaps, and should support being lit by diffuse lighting as a fake gloss effect for normal mode (Vermeulen)
 3 feature darkplaces renderer: implement steep parallax mapping with self shadowing and depth options: http://graphics.cs.brown.edu/games/SteepParallax/ (Kazashi, Randy)
 3 feature darkplaces renderer: need to make a standalone minimod to test darkplaces rtlights code, which Diablo-D3 can throw at the ATI driver team to test with, 3D txtures with GL_CLAMP_TO_EDGE wrapping are broken (Diablo-D3)
-3 feature darkplaces renderer: skyroom needs to be added ("info_skyroom" entity sets view origin, scanned by client at load, and by server to send all entities in skyroom) (Sajt)
+3 feature darkplaces renderer: skyroom needs to be added ("info_skyroom" entity sets view origin, scanned by client at load, and by server to send all entities in skyroom)
 3 feature darkplaces renderer: try to achieve perfect transparency sorting by encoding them as a BSP tree to cause all to be split by eachothers' planes, or at least try recursively splitting each one by all of the previous accepted transparent polygons, the BSP encode method is still probably too slow to use but is worth trying, and the other method is even slower (Kazashi)
 3 feature darkplaces renderer: try two-cubemap approach to specular lighting math on GF3 path (Black)
 3 feature darkplaces sdl: make and submit a patch to add vsync control to libSDL
 3 feature darkplaces server: add DP_GFX_QUAKE3MODELTAGS, DP_GFX_SKINFILES, and any other new extensions to the wiki (wiki)
 3 feature darkplaces server: add a DP_SV_PUSHMOVE extension with a pushmove builtin that does basically what MOVETYPE_PUSH does, but with controllable end position, not time based (Zombie)
-3 feature darkplaces server: add traceboxwithcontents function (same as tracebox but adds the startcontents parameter) (LTH, Sajt, http://forums.inside3d.com/showflat.pl?Board=Engine&Number=909 )
-3 feature darkplaces server: hub save support, one file indicating active map, and then for each map it saves a quake savegame (Sajt)
+3 feature darkplaces server: add traceboxwithcontents function (same as tracebox but adds the startcontents parameter) (LTH, http://forums.inside3d.com/showflat.pl?Board=Engine&Number=909 )
+3 feature darkplaces server: hub save support, one file indicating active map, and then for each map it saves a quake savegame
 3 feature darkplaces server: make an event message queue for each client, so TE_ effects and sounds and can be stuffed into successive packets if they don't all fit at once, currently a large number of explosions at once are never sent because they don't fit in one size limited packet (romi)
 3 feature darkplaces sound: add snd_rate cvar and make it changable during game (RenegadeC)
 3 feature darkplaces sound: sound shaders; mindistance, maxdistance, list of sounds to choose from (Supa)
@@ -426,7 +426,7 @@
 3 optimization darkplaces server: make SV_ClipMoveToWorld cache trace results somehow for a speed gain in masque.bsp
 4 bug darkplaces client: figure out why intermission camera pitch changes after a moment (Tomaz)
 4 bug darkplaces networking: use getaddrinfo to support ipv6, add support for winsock2 (or require it), check if winsock2 has ipv6 functions (getaddrinfo)... (|Rain|)
-4 bug darkplaces physics: rotating MOVETYPE_PUSH code calls blocked when it's just a touch, it isn't even trying to push (Sajt)
+4 bug darkplaces physics: rotating MOVETYPE_PUSH code calls blocked when it's just a touch, it isn't even trying to push
 4 cleanup darkplaces memory: use the memory pool nesting feature ! (Black[,Vicious])
 4 feature darkplaces client: add decals on models (Urre)
 4 feature darkplaces client: add qw protocol support (making darkplaces work as a qwcl client) (Amish, Fuh)
@@ -442,7 +442,7 @@
 4 feature darkplaces renderer: add _reflect textures which filter use of skybox as a cubemap reflection (FrikaC)
 4 feature darkplaces rtlights: add a directional flag which makes the light cast along X only, rather than spherically, angles can be used to make it point at things, this will also affect shadow volumes, so portal clipping enhancements are needed, and non-uniform scaling is needed (Zombie)
 4 feature darkplaces server: add DP_QC_MODELINFO extension to allow QC to ask about the range of frames owned by an animation base name, and other things like how many skins it has (Vermeulen, Supajoe)
-4 feature darkplaces sound: rewrite sound system! (FrikaC, Static_Fiend, Sajt)
+4 feature darkplaces sound: rewrite sound system! (FrikaC, Static_Fiend)
 4 feature dpzoo.map: a drivable vehicle (using same technique as remote cameras, plus DP_SV_READCLIENTINPUT)
 4 feature hmap2: add hint brushes (HINT texture)
 4 optimization darkplaces renderer: add cubemap light filter texture culling based on how much of the cubemap is used somehow (Vermeulen)
@@ -456,15 +456,15 @@
 5 feature darkplaces renderer: lightshader files (probably loaded by the cubemap field already present in rtlights handling), these would indicate what attenuation textures to use for the light, what cubemap filter, which corona texture and size and so on, and all textures can be animated (romi, Urre)
 5 feature darkplaces server: split server into a separate thread when running listen mode so that a host running too slow won't spoil the game (Toddd)
 5 feature dpzoo.map: make some things that make the player bigger/smaller to demonstrate scaling and better viewheight handling and brush collisions (depends on brush collisions)
-5 feature hmap2: fix tjunctions on leaky maps (Sajt)
+5 feature hmap2: fix tjunctions on leaky maps
 6 feature darkplaces client: add a "edit" command that can edit text files (I.E. .qc and progs.src) using a dialog window (allow multiple), and then add a "frikqcc" command to run it on the current mod (if it's in the command path at least)
 6 feature darkplaces renderer: add HalfLife2 style water rendering (Mitchell, Stribbs, Jimmy Freestone)
-6 feature darkplaces renderer: add cubemap reflections like UT2003 somehow (perhaps entities would define the reflection maps for rooms, and a water entity would take care of the rest?) (TEU, Nexuiz, Sajt)
-6 feature darkplaces renderer: figure out an LOD scheme for really large outdoor environments (Uffe, Sajt)
-7 feature darkplaces csqc: add clientside quakec (KrimZon, FrikaC, Sajt)
-7 feature darkplaces protocol,renderer: add DP_EF_REFRACT which turns an entity into a refraction effect similar to doom3 shockwave/heathaze (Supajoe, Sajt)
+6 feature darkplaces renderer: add cubemap reflections like UT2003 somehow (perhaps entities would define the reflection maps for rooms, and a water entity would take care of the rest?) (TEU, Nexuiz)
+6 feature darkplaces renderer: figure out an LOD scheme for really large outdoor environments (Uffe)
+7 feature darkplaces csqc: add clientside quakec (KrimZon, FrikaC)
+7 feature darkplaces protocol,renderer: add DP_EF_REFRACT which turns an entity into a refraction effect similar to doom3 shockwave/heathaze (Supajoe)
 7 feature darkplaces renderer: make it work on Savage4 again (Ender)
-7 feature darkplaces renderer: mirrors (Sajt)
+7 feature darkplaces renderer: mirrors
 7 feature darkplaces renderer: shadow volume clipping (romi)
 d bug darkplaces Mac filesystem: on Mac dlopen is not finding dylib files alongside the executable, do a more thorough search (Zenex)
 d bug darkplaces Mac filesystem: on Mac init the basedir to argv[0] truncated to not include the *.app/ part of the path onward (Zenex)
