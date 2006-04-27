@@ -64,4 +64,8 @@ void CL_DrawVideo( void );
 void CL_VideoStart( char *filename );
 void CL_VideoStop( void );
 
+// new function used for fullscreen videos
+// TODO: Andreas Kirsch: move this subsystem somewhere else (preferably host) since the cl_video system shouldnt do such work like managing key events..
+void CL_Video_KeyEvent( int key, int ascii, qboolean down );
+
 #endif

@@ -276,6 +276,16 @@ void CL_VideoStart(char *filename)
 	CL_RestartVideo( cl_videos );
 }
 
+void CL_Video_KeyEvent( int key, int ascii, qboolean down ) 
+{
+	// only react to up events, to allow the user to delay the abortion point if it suddenly becomes interesting..
+	if( !down ) {
+		if( key == K_ESCAPE || key == K_ENTER || key == K_SPACE ) {
+			CL_VideoStop();
+		}
+	}
+}
+
 void CL_VideoStop(void)
 {
 	cl_videoplaying = false;
