@@ -515,6 +515,19 @@ void DrawQ_Begin(void)
 	r_refdef.draw2dstage = true;
 }
 
+static void _DrawQ_ProcessDrawFlag(int flags)
+{
+	CHECKGLERROR
+	if(flags == DRAWFLAG_ADDITIVE)
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+	else if(flags == DRAWFLAG_MODULATE)
+		GL_BlendFunc(GL_DST_COLOR, GL_ZERO);
+	else if(flags == DRAWFLAG_2XMODULATE)
+		GL_BlendFunc(GL_DST_COLOR,GL_SRC_COLOR);
+	else
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+}
+
 void DrawQ_Pic(float x, float y, cachepic_t *pic, float width, float height, float red, float green, float blue, float alpha, int flags)
 {
 	if (!r_refdef.draw2dstage)
@@ -545,14 +558,7 @@ void DrawQ_String_Real(float x, float y, const char *string, int maxlen, float w
 	if (alpha < (1.0f / 255.0f))
 		return;
 
-	if(flags == DRAWFLAG_ADDITIVE)
-		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-	else if(flags == DRAWFLAG_MODULATE)
-		GL_BlendFunc(GL_DST_COLOR, GL_ZERO);
-	else if(flags == DRAWFLAG_2XMODULATE)
-		GL_BlendFunc(GL_DST_COLOR,GL_SRC_COLOR);
-	else
-		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	_DrawQ_ProcessDrawFlag(flags);
 
 	GL_Color(red, green, blue, alpha);
 
@@ -746,14 +752,7 @@ void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height
 	if (!r_render.integer)
 		return;
 
-	if(flags == DRAWFLAG_ADDITIVE)
-		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-	else if(flags == DRAWFLAG_MODULATE)
-		GL_BlendFunc(GL_DST_COLOR, GL_ZERO);
-	else if(flags == DRAWFLAG_2XMODULATE)
-		GL_BlendFunc(GL_DST_COLOR,GL_SRC_COLOR);
-	else
-		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	_DrawQ_ProcessDrawFlag(flags);
 
 	R_Mesh_VertexPointer(floats);
 	R_Mesh_ColorPointer(floats + 20);
@@ -796,14 +795,7 @@ void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags)
 	if (!r_render.integer)
 		return;
 
-	if(flags == DRAWFLAG_ADDITIVE)
-		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-	else if(flags == DRAWFLAG_MODULATE)
-		GL_BlendFunc(GL_DST_COLOR, GL_ZERO);
-	else if(flags == DRAWFLAG_2XMODULATE)
-		GL_BlendFunc(GL_DST_COLOR,GL_SRC_COLOR);
-	else
-		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	_DrawQ_ProcessDrawFlag(flags);
 
 	R_Mesh_VertexPointer(mesh->data_vertex3f);
 	R_Mesh_ColorPointer(mesh->data_color4f);
@@ -829,15 +821,7 @@ void DrawQ_LineLoop (drawqueuemesh_t *mesh, int flags)
 	if (!r_render.integer)
 		return;
 
-	CHECKGLERROR
-	if(flags == DRAWFLAG_ADDITIVE)
-		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-	else if(flags == DRAWFLAG_MODULATE)
-		GL_BlendFunc(GL_DST_COLOR, GL_ZERO);
-	else if(flags == DRAWFLAG_2XMODULATE)
-		GL_BlendFunc(GL_DST_COLOR,GL_SRC_COLOR);
-	else
-		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	_DrawQ_ProcessDrawFlag(flags);
 
 	GL_Color(1,1,1,1);
 	CHECKGLERROR
@@ -880,14 +864,7 @@ void DrawQ_Line (float width, float x1, float y1, float x2, float y2, float r, f
 	if(width > 0)
 		DrawQ_LineWidth(width);
 
-	if(flags == DRAWFLAG_ADDITIVE)
-		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-	else if(flags == DRAWFLAG_MODULATE)
-		GL_BlendFunc(GL_DST_COLOR, GL_ZERO);
-	else if(flags == DRAWFLAG_2XMODULATE)
-		GL_BlendFunc(GL_DST_COLOR,GL_SRC_COLOR);
-	else
-		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	_DrawQ_ProcessDrawFlag(flags);
 
 	GL_Color(r,g,b,alpha);
 	CHECKGLERROR

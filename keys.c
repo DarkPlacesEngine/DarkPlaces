@@ -21,7 +21,7 @@
 */
 
 #include "quakedef.h"
-
+#include "cl_video.h"
 
 /*
 key up events are sent even if in console mode
@@ -956,6 +956,13 @@ Key_Event (int key, char ascii, qboolean down)
 #endif
 	{
 		Key_Console (key, ascii);
+		return;
+	}
+
+	// ignore binds while a video is played, let the video system handle the key event
+	if (cl_videoplaying)
+	{
+		CL_Video_KeyEvent (key, ascii, keydown[key] != 0); 
 		return;
 	}
 
