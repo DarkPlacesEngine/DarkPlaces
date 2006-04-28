@@ -199,6 +199,7 @@ static int XLateKey(XKeyEvent *ev, char *ascii)
 
 		case XK_Alt_L:
 		case XK_Meta_L:
+		case XK_ISO_Level3_Shift:
 		case XK_Alt_R:
 		case XK_Meta_R: key = K_ALT;			break;
 
