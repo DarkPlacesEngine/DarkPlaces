@@ -653,6 +653,12 @@ typedef struct client_state_s
 	vec3_t mvelocity[2], velocity;
 	// update by server, can be used by mods for zooming
 	vec_t mviewzoom[2], viewzoom;
+	// if true interpolation the mviewangles and other interpolation of the
+	// player is disabled until the next network packet
+	// this is used primarily by teleporters, and when spectating players
+	// special checking of the old fixangle[1] is used to differentiate
+	// between teleporting and spectating
+	qboolean fixangle[2];
 
 	// client movement simulation
 	// these fields are only updated by CL_ClientMovement (called by CL_SendMove after parsing each network packet)
