@@ -1212,9 +1212,11 @@ void CL_MoveLerpEntityStates(entity_t *ent)
 		ent->persistent.muzzleflash = 0;
 		VectorCopy(ent->state_current.origin, ent->persistent.trail_origin);
 	}
-	else if (cls.timedemo || cl_nolerp.integer || DotProduct(odelta, odelta) > 1000*1000)
+	else if (cls.timedemo || cl_nolerp.integer || DotProduct(odelta, odelta) > 1000*1000 || (cl.fixangle[0] && !cl.fixangle[1]))
 	{
 		// don't interpolate the move
+		// (the fixangle[] check detects teleports, but not constant fixangles
+		//  such as when spectating)
 		ent->persistent.lerpdeltatime = 0;
 		ent->persistent.lerpstarttime = cl.mtime[1];
 		VectorCopy(ent->state_current.origin, ent->persistent.oldorigin);
@@ -2095,6 +2097,13 @@ void CL_ParseServerMessage(void)
 		cl.mtime[1] = cl.mtime[0];
 		cl.mtime[0] = realtime; // qw has no clock
 		cl.movement_needupdate = true;
+		// if true the cl.viewangles are interpolated from cl.mviewangles[]
+		// during this frame
+		// (makes spectating players much smoother and prevents mouse movement from turning)
+		cl.fixangle[1] = cl.fixangle[0];
+		cl.fixangle[0] = false;
+		if (!cls.demoplayback)
+			VectorCopy(cl.mviewangles[0], cl.mviewangles[1]);
 
 		// slightly kill qw player entities each frame
 		for (i = 1;i < cl.maxclients;i++)
@@ -2201,6 +2210,14 @@ void CL_ParseServerMessage(void)
 			case qw_svc_setangle:
 				for (i=0 ; i<3 ; i++)
 					cl.viewangles[i] = MSG_ReadAngle (cls.protocol);
+				if (!cls.demoplayback)
+				{
+					cl.fixangle[0] = true;
+					VectorCopy(cl.viewangles, cl.mviewangles[0]);
+					// disable interpolation if this is new
+					if (!cl.fixangle[1])
+						VectorCopy(cl.viewangles, cl.mviewangles[1]);
+				}
 				break;
 
 			case qw_svc_lightstyle:
@@ -2496,6 +2513,13 @@ void CL_ParseServerMessage(void)
 				cl.mtime[1] = cl.mtime[0];
 				cl.mtime[0] = MSG_ReadFloat ();
 				cl.movement_needupdate = true;
+				// if true the cl.viewangles are interpolated from cl.mviewangles[]
+				// during this frame
+				// (makes spectating players much smoother and prevents mouse movement from turning)
+				cl.fixangle[1] = cl.fixangle[0];
+				cl.fixangle[0] = false;
+				if (!cls.demoplayback)
+					VectorCopy(cl.mviewangles[0], cl.mviewangles[1]);
 				break;
 
 			case svc_clientdata:
@@ -2545,6 +2569,14 @@ void CL_ParseServerMessage(void)
 			case svc_setangle:
 				for (i=0 ; i<3 ; i++)
 					cl.viewangles[i] = MSG_ReadAngle (cls.protocol);
+				if (!cls.demoplayback)
+				{
+					cl.fixangle[0] = true;
+					VectorCopy(cl.viewangles, cl.mviewangles[0]);
+					// disable interpolation if this is new
+					if (!cl.fixangle[1])
+						VectorCopy(cl.viewangles, cl.mviewangles[1]);
+				}
 				break;
 
 			case svc_setview:

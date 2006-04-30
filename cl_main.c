@@ -1358,7 +1358,7 @@ void CL_RelinkBeams(void)
 		// if coming from the player, update the start position
 		//if (b->entity == cl.viewentity)
 		//	Matrix4x4_OriginFromMatrix(&cl.entities[cl.viewentity].render.matrix, b->start);
-		if (cl_beams_relative.integer && b->entity && cl.entities[b->entity].state_current.active && b->relativestartvalid)
+		if (cl_beams_relative.integer >= 1 && b->entity && (b->entity == cl.viewentity || cl_beams_relative.integer >= 2) && cl.entities[b->entity].state_current.active && b->relativestartvalid)
 		{
 			entity_render_t *r = &cl.entities[b->entity].render;
 			//Matrix4x4_OriginFromMatrix(&r->matrix, origin);
@@ -1460,7 +1460,6 @@ static void CL_RelinkQWNails(void)
 void CL_LerpPlayer(float frac)
 {
 	int i;
-	float d;
 
 	cl.viewzoom = cl.mviewzoom[1] + frac * (cl.mviewzoom[0] - cl.mviewzoom[1]);
 	for (i = 0;i < 3;i++)
@@ -1468,20 +1467,6 @@ void CL_LerpPlayer(float frac)
 		cl.punchangle[i] = cl.mpunchangle[1][i] + frac * (cl.mpunchangle[0][i] - cl.mpunchangle[1][i]);
 		cl.punchvector[i] = cl.mpunchvector[1][i] + frac * (cl.mpunchvector[0][i] - cl.mpunchvector[1][i]);
 		cl.velocity[i] = cl.mvelocity[1][i] + frac * (cl.mvelocity[0][i] - cl.mvelocity[1][i]);
-	}
-
-	if (cls.demoplayback)
-	{
-		// interpolate the angles
-		for (i = 0;i < 3;i++)
-		{
-			d = cl.mviewangles[0][i] - cl.mviewangles[1][i];
-			if (d > 180)
-				d -= 360;
-			else if (d < -180)
-				d += 360;
-			cl.viewangles[i] = cl.mviewangles[1][i] + frac * d;
-		}
 	}
 }
 

@@ -332,6 +332,25 @@ void V_CalcRefdef (void)
 	{
 		// ent is the view entity (visible when out of body)
 		ent = &cl.entities[cl.viewentity];
+		// player can look around, so take the origin from the entity,
+		// and the angles from the input system
+		Matrix4x4_OriginFromMatrix(&ent->render.matrix, vieworg);
+		VectorCopy(cl.viewangles, viewangles);
+		// interpolate the angles if playing a demo or spectating someone
+		if (cls.demoplayback || cl.fixangle[0])
+		{
+			int i;
+			float frac = bound(0, (cl.time - cl.mtime[1]) / (cl.mtime[0] - cl.mtime[1]), 1);
+			for (i = 0;i < 3;i++)
+			{
+				float d = cl.mviewangles[0][i] - cl.mviewangles[1][i];
+				if (d > 180)
+					d -= 360;
+				else if (d < -180)
+					d += 360;
+				viewangles[i] = cl.mviewangles[1][i] + frac * d;
+			}
+		}
 		if (cl.intermission)
 		{
 			// entity is a fixed camera, just copy the matrix
@@ -346,11 +365,6 @@ void V_CalcRefdef (void)
 		}
 		else
 		{
-			// player can look around, so take the origin from the entity,
-			// and the angles from the input system
-			Matrix4x4_OriginFromMatrix(&ent->render.matrix, vieworg);
-			VectorCopy(cl.viewangles, viewangles);
-
 			// apply qw weapon recoil effect (this did not work in QW)
 			// TODO: add a cvar to disable this
 			viewangles[PITCH] += cl.qw_weaponkick;
