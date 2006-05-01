@@ -46,8 +46,6 @@ void R_Shadow_SetupEntityLight(const entity_render_t *ent);
 // light currently being rendered
 extern rtlight_t *r_shadow_rtlight;
 
-// this is the location of the eye in entity space
-extern vec3_t r_shadow_entityeyeorigin;
 // this is the location of the light in entity space
 extern vec3_t r_shadow_entitylightorigin;
 // this transforms entity coordinates to light filter cubemap coordinates

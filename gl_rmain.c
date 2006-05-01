@@ -2612,7 +2612,7 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 	R_Mesh_VertexPointer(rsurface_vertex3f);
 }
 
-static void RSurf_DrawBatch_Simple(int texturenumsurfaces, msurface_t **texturesurfacelist)
+void RSurf_DrawBatch_Simple(int texturenumsurfaces, msurface_t **texturesurfacelist)
 {
 	int texturesurfaceindex;
 	const msurface_t *surface = texturesurfacelist[0];
@@ -2763,7 +2763,6 @@ static void RSurf_DrawBatch_Lightmap(int texturenumsurfaces, msurface_t **textur
 			b = ambientcolor[2];
 			rsurface_lightmapcolor4f = NULL;
 		}
-		R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
 	}
 	else if (lightmode >= 1 || !rsurface_lightmaptexture)
 	{
@@ -2808,12 +2807,10 @@ static void RSurf_DrawBatch_Lightmap(int texturenumsurfaces, msurface_t **textur
 		}
 		else
 			rsurface_lightmapcolor4f = rsurface_model->surfmesh.data_lightmapcolor4f;
-		R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
 	}
 	else
 	{
 		// just lightmap it
-		R_Mesh_TexBind(0, R_GetTexture(rsurface_lightmaptexture));
 		rsurface_lightmapcolor4f = NULL;
 	}
 	if (applyfog)
@@ -3077,13 +3074,18 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 				m.texrgbscale[1] = layertexrgbscale;
 				m.pointer_texcoord[1] = rsurface_model->surfmesh.data_texcoordtexture2f;
 				R_Mesh_TextureState(&m);
+				if (lightmode >= 1 || !rsurface_lightmaptexture)
+					R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
+				else
+					R_Mesh_TexBind(0, R_GetTexture(rsurface_lightmaptexture));
 				RSurf_DrawBatch_Lightmap(texturenumsurfaces, texturesurfacelist, layercolor[0], layercolor[1], layercolor[2], layercolor[3], lightmode, applycolor, applyfog);
 				break;
 			case TEXTURELAYERTYPE_LITTEXTURE_MULTIPASS:
 				memset(&m, 0, sizeof(m));
-				m.tex[0] = R_GetTexture(layer->texture);
-				m.texmatrix[0] = layer->texmatrix;
-				m.texrgbscale[0] = layertexrgbscale;
+				if (lightmode >= 1 || !rsurface_lightmaptexture)
+					m.tex[0] = R_GetTexture(r_texture_white);
+				else
+					m.tex[0] = R_GetTexture(rsurface_lightmaptexture);
 				m.pointer_texcoord[0] = rsurface_model->surfmesh.data_texcoordlightmap2f;
 				R_Mesh_TextureState(&m);
 				RSurf_DrawBatch_Lightmap(texturenumsurfaces, texturesurfacelist, 1, 1, 1, 1, lightmode, false, false);
@@ -3092,7 +3094,6 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 				memset(&m, 0, sizeof(m));
 				m.tex[0] = R_GetTexture(layer->texture);
 				m.texmatrix[0] = layer->texmatrix;
-				m.texrgbscale[0] = layertexrgbscale;
 				m.pointer_texcoord[0] = rsurface_model->surfmesh.data_texcoordtexture2f;
 				R_Mesh_TextureState(&m);
 				RSurf_DrawBatch_Lightmap(texturenumsurfaces, texturesurfacelist, layercolor[0], layercolor[1], layercolor[2], layercolor[3], 0, applycolor, false);
