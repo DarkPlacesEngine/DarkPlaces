@@ -2801,6 +2801,7 @@ static void RSurf_DrawBatch_Lightmap(int texturenumsurfaces, msurface_t **textur
 					}
 					else
 						VectorClear(c);
+					c[3] = 1;
 				}
 			}
 			rsurface_lightmapcolor4f = rsurface_array_color4f;
