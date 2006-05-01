@@ -24,7 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "cl_video.h"
 
-cvar_t r_textshadow = {0, "r_textshadow", "0" "draws a shadow on all text to improve readability"};
+cvar_t r_textshadow = {0, "r_textshadow", "0", "draws a shadow on all text to improve readability"};
 
 static rtexture_t *char_texture;
 cachepic_t *r_crosshairs[NUMCROSSHAIRS+1];
