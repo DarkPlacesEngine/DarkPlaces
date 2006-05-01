@@ -122,6 +122,7 @@ cvar_t developer_texturelogging = {0, "developer_texturelogging", "0", "produces
 cvar_t gl_lightmaps = {0, "gl_lightmaps", "0", "draws only lightmaps, no texture (for level designers)"};
 
 cvar_t r_test = {0, "r_test", "0", "internal development use only, leave it alone (usually does nothing anyway)"}; // used for testing renderer code changes, otherwise does nothing
+cvar_t r_batchmode = {0, "r_batchmode", "1", "selects method of rendering multiple surfaces with one driver call (values are 0, 1, 2, etc...)"};
 
 rtexture_t *r_bloom_texture_screen;
 rtexture_t *r_bloom_texture_bloom;
@@ -1096,6 +1097,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&developer_texturelogging);
 	Cvar_RegisterVariable(&gl_lightmaps);
 	Cvar_RegisterVariable(&r_test);
+	Cvar_RegisterVariable(&r_batchmode);
 	if (gamemode == GAME_NEHAHRA || gamemode == GAME_TENEBRAE)
 		Cvar_SetValue("r_fullbrights", 0);
 	R_RegisterModule("GL_Main", gl_main_start, gl_main_shutdown, gl_main_newmap);
@@ -2610,17 +2612,110 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 	R_Mesh_VertexPointer(rsurface_vertex3f);
 }
 
-static void RSurf_Draw(const msurface_t *surface)
+static void RSurf_DrawBatch_Simple(int texturenumsurfaces, msurface_t **texturesurfacelist)
 {
-	GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
-	R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (rsurface_model->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
+	int texturesurfaceindex;
+	const msurface_t *surface = texturesurfacelist[0];
+	int firstvertex = surface->num_firstvertex;
+	int endvertex = surface->num_firstvertex + surface->num_vertices;
+	if (texturenumsurfaces == 1)
+	{
+		GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
+		R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (rsurface_model->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
+	}
+	else if (r_batchmode.integer == 2)
+	{
+		#define MAXBATCHTRIANGLES 4096
+		int batchtriangles = 0;
+		int batchelements[MAXBATCHTRIANGLES*3];
+		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+		{
+			surface = texturesurfacelist[texturesurfaceindex];
+			if (surface->num_triangles >= 256 || (batchtriangles == 0 && texturesurfaceindex + 1 >= texturenumsurfaces))
+			{
+				R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (rsurface_model->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
+				continue;
+			}
+			if (batchtriangles + surface->num_triangles > MAXBATCHTRIANGLES)
+			{
+				R_Mesh_Draw(firstvertex, endvertex - firstvertex, batchtriangles, batchelements);
+				batchtriangles = 0;
+				firstvertex = surface->num_firstvertex;
+				endvertex = surface->num_firstvertex + surface->num_vertices;
+			}
+			else
+			{
+				firstvertex = min(firstvertex, surface->num_firstvertex);
+				endvertex = max(endvertex, surface->num_firstvertex + surface->num_vertices);
+			}
+			memcpy(batchelements + batchtriangles * 3, rsurface_model->surfmesh.data_element3i + 3 * surface->num_firsttriangle, surface->num_triangles * sizeof(int[3]));
+			batchtriangles += surface->num_triangles;
+		}
+		if (batchtriangles)
+			R_Mesh_Draw(firstvertex, endvertex - firstvertex, batchtriangles, batchelements);
+	}
+	else if (r_batchmode.integer == 1)
+	{
+		int firsttriangle = 0;
+		int endtriangle = -1;
+		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+		{
+			surface = texturesurfacelist[texturesurfaceindex];
+			if (surface->num_firsttriangle != endtriangle)
+			{
+				if (endtriangle > firsttriangle)
+				{
+					GL_LockArrays(firstvertex, endvertex - firstvertex);
+					R_Mesh_Draw(firstvertex, endvertex - firstvertex, endtriangle - firsttriangle, (rsurface_model->surfmesh.data_element3i + 3 * firsttriangle));
+				}
+				firstvertex = surface->num_firstvertex;
+				endvertex = surface->num_firstvertex + surface->num_vertices;
+				firsttriangle = surface->num_firsttriangle;
+			}
+			else
+			{
+				firstvertex = min(firstvertex, surface->num_firstvertex);
+				endvertex = max(endvertex, surface->num_firstvertex + surface->num_vertices);
+			}
+			endtriangle = surface->num_firsttriangle + surface->num_triangles;
+		}
+		if (endtriangle > firsttriangle)
+		{
+			GL_LockArrays(firstvertex, endvertex - firstvertex);
+			R_Mesh_Draw(firstvertex, endvertex - firstvertex, endtriangle - firsttriangle, (rsurface_model->surfmesh.data_element3i + 3 * firsttriangle));
+		}
+	}
+	else
+	{
+		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+		{
+			surface = texturesurfacelist[texturesurfaceindex];
+			GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
+			R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (rsurface_model->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
+		}
+	}
 }
 
-static void RSurf_DrawLightmap(const msurface_t *surface, float r, float g, float b, float a, int lightmode, qboolean applycolor, qboolean applyfog)
+static void RSurf_DrawBatch_ShowSurfaces(int texturenumsurfaces, msurface_t **texturesurfacelist)
 {
+	int texturesurfaceindex;
+	for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+	{
+		const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+		int k = (int)(((size_t)surface) / sizeof(msurface_t));
+		GL_Color((k & 15) * (1.0f / 16.0f), ((k >> 4) & 15) * (1.0f / 16.0f), ((k >> 8) & 15) * (1.0f / 16.0f), 0.2f);
+		GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
+		R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (rsurface_model->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
+	}
+}
+
+static void RSurf_DrawBatch_Lightmap(int texturenumsurfaces, msurface_t **texturesurfacelist, float r, float g, float b, float a, int lightmode, qboolean applycolor, qboolean applyfog)
+{
+	int texturesurfaceindex;
 	int i;
 	float f;
 	float *v, *c, *c2;
+	// TODO: optimize
 	if (lightmode >= 2)
 	{
 		// model lighting
@@ -2636,18 +2731,23 @@ static void RSurf_DrawLightmap(const msurface_t *surface, float r, float g, floa
 		diffusecolor[2] = rsurface_entity->modellight_diffuse[2] * b * 0.5f;
 		if (VectorLength2(diffusecolor) > 0)
 		{
-			int numverts = surface->num_vertices;
-			v = rsurface_vertex3f + 3 * surface->num_firstvertex;
-			c2 = rsurface_normal3f + 3 * surface->num_firstvertex;
-			c = rsurface_array_color4f + 4 * surface->num_firstvertex;
-			// q3-style directional shading
-			for (i = 0;i < numverts;i++, v += 3, c2 += 3, c += 4)
+			// generate color arrays for the surfaces in this list
+			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 			{
-				if ((f = DotProduct(c2, lightdir)) > 0)
-					VectorMA(ambientcolor, f, diffusecolor, c);
-				else
-					VectorCopy(ambientcolor, c);
-				c[3] = a;
+				const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+				int numverts = surface->num_vertices;
+				v = rsurface_vertex3f + 3 * surface->num_firstvertex;
+				c2 = rsurface_normal3f + 3 * surface->num_firstvertex;
+				c = rsurface_array_color4f + 4 * surface->num_firstvertex;
+				// q3-style directional shading
+				for (i = 0;i < numverts;i++, v += 3, c2 += 3, c += 4)
+				{
+					if ((f = DotProduct(c2, lightdir)) > 0)
+						VectorMA(ambientcolor, f, diffusecolor, c);
+					else
+						VectorCopy(ambientcolor, c);
+					c[3] = a;
+				}
 			}
 			r = 1;
 			g = 1;
@@ -2663,88 +2763,112 @@ static void RSurf_DrawLightmap(const msurface_t *surface, float r, float g, floa
 			b = ambientcolor[2];
 			rsurface_lightmapcolor4f = NULL;
 		}
+		R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
 	}
-	else if (lightmode >= 1)
+	else if (lightmode >= 1 || !rsurface_lightmaptexture)
 	{
-		if (surface->lightmapinfo && surface->lightmapinfo->stainsamples)
+		if (texturesurfacelist[0]->lightmapinfo && texturesurfacelist[0]->lightmapinfo->stainsamples)
 		{
-			for (i = 0, c = rsurface_array_color4f + 4 * surface->num_firstvertex;i < surface->num_vertices;i++, c += 4)
+			// generate color arrays for the surfaces in this list
+			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 			{
-				if (surface->lightmapinfo->samples)
+				const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+				for (i = 0, c = rsurface_array_color4f + 4 * surface->num_firstvertex;i < surface->num_vertices;i++, c += 4)
 				{
-					const unsigned char *lm = surface->lightmapinfo->samples + (rsurface_model->surfmesh.data_lightmapoffsets + surface->num_firstvertex)[i];
-					float scale = r_refdef.lightstylevalue[surface->lightmapinfo->styles[0]] * (1.0f / 32768.0f);
-					VectorScale(lm, scale, c);
-					if (surface->lightmapinfo->styles[1] != 255)
+					if (surface->lightmapinfo->samples)
 					{
-						int size3 = ((surface->lightmapinfo->extents[0]>>4)+1)*((surface->lightmapinfo->extents[1]>>4)+1)*3;
-						lm += size3;
-						scale = r_refdef.lightstylevalue[surface->lightmapinfo->styles[1]] * (1.0f / 32768.0f);
-						VectorMA(c, scale, lm, c);
-						if (surface->lightmapinfo->styles[2] != 255)
+						const unsigned char *lm = surface->lightmapinfo->samples + (rsurface_model->surfmesh.data_lightmapoffsets + surface->num_firstvertex)[i];
+						float scale = r_refdef.lightstylevalue[surface->lightmapinfo->styles[0]] * (1.0f / 32768.0f);
+						VectorScale(lm, scale, c);
+						if (surface->lightmapinfo->styles[1] != 255)
 						{
+							int size3 = ((surface->lightmapinfo->extents[0]>>4)+1)*((surface->lightmapinfo->extents[1]>>4)+1)*3;
 							lm += size3;
-							scale = r_refdef.lightstylevalue[surface->lightmapinfo->styles[2]] * (1.0f / 32768.0f);
+							scale = r_refdef.lightstylevalue[surface->lightmapinfo->styles[1]] * (1.0f / 32768.0f);
 							VectorMA(c, scale, lm, c);
-							if (surface->lightmapinfo->styles[3] != 255)
+							if (surface->lightmapinfo->styles[2] != 255)
 							{
 								lm += size3;
-								scale = r_refdef.lightstylevalue[surface->lightmapinfo->styles[3]] * (1.0f / 32768.0f);
+								scale = r_refdef.lightstylevalue[surface->lightmapinfo->styles[2]] * (1.0f / 32768.0f);
 								VectorMA(c, scale, lm, c);
+								if (surface->lightmapinfo->styles[3] != 255)
+								{
+									lm += size3;
+									scale = r_refdef.lightstylevalue[surface->lightmapinfo->styles[3]] * (1.0f / 32768.0f);
+									VectorMA(c, scale, lm, c);
+								}
 							}
 						}
 					}
+					else
+						VectorClear(c);
 				}
-				else
-					VectorClear(c);
 			}
 			rsurface_lightmapcolor4f = rsurface_array_color4f;
 		}
 		else
 			rsurface_lightmapcolor4f = rsurface_model->surfmesh.data_lightmapcolor4f;
+		R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
 	}
 	else
+	{
+		// just lightmap it
+		R_Mesh_TexBind(0, R_GetTexture(rsurface_lightmaptexture));
 		rsurface_lightmapcolor4f = NULL;
+	}
 	if (applyfog)
 	{
 		if (rsurface_lightmapcolor4f)
 		{
-			for (i = 0, v = (rsurface_vertex3f + 3 * surface->num_firstvertex), c = (rsurface_lightmapcolor4f + 4 * surface->num_firstvertex), c2 = (rsurface_array_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, v += 3, c += 4, c2 += 4)
+			// generate color arrays for the surfaces in this list
+			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 			{
-				f = 1 - VERTEXFOGTABLE(VectorDistance(v, rsurface_modelorg));
-				c2[0] = c[0] * f;
-				c2[1] = c[1] * f;
-				c2[2] = c[2] * f;
-				c2[3] = c[3];
+				const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+				for (i = 0, v = (rsurface_vertex3f + 3 * surface->num_firstvertex), c = (rsurface_lightmapcolor4f + 4 * surface->num_firstvertex), c2 = (rsurface_array_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, v += 3, c += 4, c2 += 4)
+				{
+					f = 1 - VERTEXFOGTABLE(VectorDistance(v, rsurface_modelorg));
+					c2[0] = c[0] * f;
+					c2[1] = c[1] * f;
+					c2[2] = c[2] * f;
+					c2[3] = c[3];
+				}
 			}
 		}
 		else
 		{
-			for (i = 0, v = (rsurface_vertex3f + 3 * surface->num_firstvertex), c2 = (rsurface_array_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, v += 3, c2 += 4)
+			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 			{
-				f = 1 - VERTEXFOGTABLE(VectorDistance(v, rsurface_modelorg));
-				c2[0] = f;
-				c2[1] = f;
-				c2[2] = f;
-				c2[3] = 1;
+				const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+				for (i = 0, v = (rsurface_vertex3f + 3 * surface->num_firstvertex), c2 = (rsurface_array_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, v += 3, c2 += 4)
+				{
+					f = 1 - VERTEXFOGTABLE(VectorDistance(v, rsurface_modelorg));
+					c2[0] = f;
+					c2[1] = f;
+					c2[2] = f;
+					c2[3] = 1;
+				}
 			}
 		}
 		rsurface_lightmapcolor4f = rsurface_array_color4f;
 	}
 	if (applycolor && rsurface_lightmapcolor4f)
 	{
-		for (i = 0, c = (rsurface_lightmapcolor4f + 4 * surface->num_firstvertex), c2 = (rsurface_array_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, c += 4, c2 += 4)
+		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
-			c2[0] = c[0] * r;
-			c2[1] = c[1] * g;
-			c2[2] = c[2] * b;
-			c2[3] = c[3] * a;
+			const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+			for (i = 0, c = (rsurface_lightmapcolor4f + 4 * surface->num_firstvertex), c2 = (rsurface_array_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, c += 4, c2 += 4)
+			{
+				c2[0] = c[0] * r;
+				c2[1] = c[1] * g;
+				c2[2] = c[2] * b;
+				c2[3] = c[3] * a;
+			}
 		}
 		rsurface_lightmapcolor4f = rsurface_array_color4f;
 	}
 	R_Mesh_ColorPointer(rsurface_lightmapcolor4f);
 	GL_Color(r, g, b, a);
-	RSurf_Draw(surface);
+	RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
 }
 
 static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **texturesurfacelist)
@@ -2777,13 +2901,7 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 			R_Mesh_ResetTextureState();
 		}
 		RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
-		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
-		{
-			const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
-			int k = (int)(((size_t)surface) / sizeof(msurface_t));
-			GL_Color((k & 15) * (1.0f / 16.0f), ((k >> 4) & 15) * (1.0f / 16.0f), ((k >> 8) & 15) * (1.0f / 16.0f), 0.2f);
-			RSurf_Draw(surface);
-		}
+		RSurf_DrawBatch_ShowSurfaces(texturenumsurfaces, texturesurfacelist);
 	}
 	else if (rsurface_texture->currentmaterialflags & MATERIALFLAG_SKY)
 	{
@@ -2840,11 +2958,7 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 			if (rsurface_model->type == mod_brushq1 && r_q1bsp_skymasking.integer && !r_worldnovis)
 			{
 				RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
-				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
-				{
-					const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
-					RSurf_Draw(surface);
-				}
+				RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
 				if (skyrendermasked)
 					GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
 			}
@@ -2901,11 +3015,7 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 				R_Mesh_TexBind(8, R_GetTexture(r_texture_blanknormalmap));
 			R_Mesh_ColorPointer(rsurface_model->surfmesh.data_lightmapcolor4f);
 		}
-		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
-		{
-			const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
-			RSurf_Draw(surface);
-		}
+		RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
 	}
 	else if (rsurface_texture->currentnumlayers)
 	{
@@ -2967,33 +3077,7 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 				m.texrgbscale[1] = layertexrgbscale;
 				m.pointer_texcoord[1] = rsurface_model->surfmesh.data_texcoordtexture2f;
 				R_Mesh_TextureState(&m);
-				if (lightmode == 2)
-				{
-					for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
-					{
-						const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
-						R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
-						RSurf_DrawLightmap(surface, layercolor[0], layercolor[1], layercolor[2], layercolor[3], 2, applycolor, applyfog);
-					}
-				}
-				else if (rsurface_lightmaptexture)
-				{
-					R_Mesh_TexBind(0, R_GetTexture(rsurface_lightmaptexture));
-					for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
-					{
-						const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
-						RSurf_DrawLightmap(surface, layercolor[0], layercolor[1], layercolor[2], layercolor[3], 0, applycolor, applyfog);
-					}
-				}
-				else
-				{
-					R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
-					for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
-					{
-						const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
-						RSurf_DrawLightmap(surface, layercolor[0], layercolor[1], layercolor[2], layercolor[3], 1, applycolor, applyfog);
-					}
-				}
+				RSurf_DrawBatch_Lightmap(texturenumsurfaces, texturesurfacelist, layercolor[0], layercolor[1], layercolor[2], layercolor[3], lightmode, applycolor, applyfog);
 				break;
 			case TEXTURELAYERTYPE_LITTEXTURE_MULTIPASS:
 				memset(&m, 0, sizeof(m));
@@ -3002,33 +3086,7 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 				m.texrgbscale[0] = layertexrgbscale;
 				m.pointer_texcoord[0] = rsurface_model->surfmesh.data_texcoordlightmap2f;
 				R_Mesh_TextureState(&m);
-				if (lightmode == 2)
-				{
-					for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
-					{
-						const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
-						R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
-						RSurf_DrawLightmap(surface, 1, 1, 1, 1, 2, false, false);
-					}
-				}
-				else if (rsurface_lightmaptexture)
-				{
-					R_Mesh_TexBind(0, R_GetTexture(rsurface_lightmaptexture));
-					for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
-					{
-						const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
-						RSurf_DrawLightmap(surface, 1, 1, 1, 1, 0, false, false);
-					}
-				}
-				else
-				{
-					R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
-					for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
-					{
-						const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
-						RSurf_DrawLightmap(surface, 1, 1, 1, 1, 1, false, false);
-					}
-				}
+				RSurf_DrawBatch_Lightmap(texturenumsurfaces, texturesurfacelist, 1, 1, 1, 1, lightmode, false, false);
 				GL_LockArrays(0, 0);
 				GL_BlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
 				memset(&m, 0, sizeof(m));
@@ -3037,11 +3095,7 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 				m.texrgbscale[0] = layertexrgbscale;
 				m.pointer_texcoord[0] = rsurface_model->surfmesh.data_texcoordtexture2f;
 				R_Mesh_TextureState(&m);
-				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
-				{
-					const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
-					RSurf_DrawLightmap(surface, layercolor[0], layercolor[1], layercolor[2], layercolor[3], 0, applycolor, false);
-				}
+				RSurf_DrawBatch_Lightmap(texturenumsurfaces, texturesurfacelist, layercolor[0], layercolor[1], layercolor[2], layercolor[3], 0, applycolor, false);
 				break;
 			case TEXTURELAYERTYPE_LITTEXTURE_VERTEX:
 				memset(&m, 0, sizeof(m));
@@ -3050,22 +3104,7 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 				m.texrgbscale[0] = layertexrgbscale;
 				m.pointer_texcoord[0] = rsurface_model->surfmesh.data_texcoordtexture2f;
 				R_Mesh_TextureState(&m);
-				if (lightmode == 2)
-				{
-					for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
-					{
-						const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
-						RSurf_DrawLightmap(surface, layercolor[0], layercolor[1], layercolor[2], layercolor[3], 2, applycolor, applyfog);
-					}
-				}
-				else
-				{
-					for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
-					{
-						const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
-						RSurf_DrawLightmap(surface, layercolor[0], layercolor[1], layercolor[2], layercolor[3], 1, applycolor, applyfog);
-					}
-				}
+				RSurf_DrawBatch_Lightmap(texturenumsurfaces, texturesurfacelist, layercolor[0], layercolor[1], layercolor[2], layercolor[3], lightmode == 2 ? 2 : 1, applycolor, applyfog);
 				break;
 			case TEXTURELAYERTYPE_TEXTURE:
 				memset(&m, 0, sizeof(m));
@@ -3074,11 +3113,7 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 				m.texrgbscale[0] = layertexrgbscale;
 				m.pointer_texcoord[0] = rsurface_model->surfmesh.data_texcoordtexture2f;
 				R_Mesh_TextureState(&m);
-				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
-				{
-					const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
-					RSurf_DrawLightmap(surface, layercolor[0], layercolor[1], layercolor[2], layercolor[3], 0, applycolor, applyfog);
-				}
+				RSurf_DrawBatch_Lightmap(texturenumsurfaces, texturesurfacelist, layercolor[0], layercolor[1], layercolor[2], layercolor[3], 0, applycolor, applyfog);
 				break;
 			case TEXTURELAYERTYPE_FOG:
 				R_Mesh_ColorPointer(rsurface_array_color4f);
@@ -3092,6 +3127,7 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 				}
 				else
 					R_Mesh_ResetTextureState();
+				// generate a color array for the fog pass
 				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 				{
 					int i;
@@ -3105,8 +3141,8 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 						c[2] = layercolor[2];
 						c[3] = f * layercolor[3];
 					}
-					RSurf_Draw(surface);
 				}
+				RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
 				break;
 			default:
 				Con_Printf("R_DrawTextureSurfaceList: unknown layer type %i\n", layer->type);
@@ -3121,12 +3157,8 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 				R_Mesh_ColorPointer(NULL);
 				GL_Color(1, 1, 1, 1);
 				R_Mesh_ResetTextureState();
-				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
-				{
-					const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
-					for (scale = 1;scale < layertexrgbscale;scale <<= 1)
-						RSurf_Draw(surface);
-				}
+				for (scale = 1;scale < layertexrgbscale;scale <<= 1)
+					RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
 				GL_LockArrays(0, 0);
 			}
 		}
