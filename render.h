@@ -311,6 +311,7 @@ void R_QueueTextureSurfaceList(int texturenumsurfaces, msurface_t **texturesurfa
 void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces);
 
 void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generatetangents, int texturenumsurfaces, msurface_t **texturesurfacelist);
+void RSurf_DrawBatch_Simple(int texturenumsurfaces, msurface_t **texturesurfacelist);
 
 #define SHADERPERMUTATION_MODE_LIGHTSOURCE (1<<0) // (lightsource) use directional pixel shading from light source (rtlight)
 #define SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP_MODELSPACE (1<<1) // (lightmap) use directional pixel shading from texture containing modelspace light directions (deluxemap)
