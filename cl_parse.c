@@ -391,6 +391,7 @@ static qboolean QW_CL_CheckOrDownloadFile(const char *filename)
 
 	cls.qw_downloadnumber++;
 	cls.qw_downloadpercent = 0;
+	cls.qw_downloadmemorycursize = 0;
 
 	return false;
 }
