@@ -769,7 +769,7 @@ int LHNET_Write(lhnetsocket_t *lhnetsocket, const void *content, int contentleng
 int main(int argc, char **argv)
 {
 #if 1
-	char *buffer = "socket to socket test successful", buffer2[1024];
+	char *buffer = "test", buffer2[1024];
 	int blen = strlen(buffer);
 	int b2len = 1024;
 	lhnetsocket_t *sock1;
@@ -781,8 +781,6 @@ int main(int argc, char **argv)
 	lhnetaddress_t localhostaddy2;
 	int test1;
 	int test2;
-
-	strcpy(buffer2, "socket to socket test failed");
 
 	printf("calling LHNET_Init\n");
 	LHNET_Init();
@@ -806,8 +804,12 @@ int main(int argc, char **argv)
 	usleep (100000);
 #endif
 	printf("calling LHNET_Read on the second socket to read the packet sent from the first socket\n");
-	test2 = LHNET_Read(sock2, buffer2, b2len, &myaddy3);
-	Con_Printf("%s\n", buffer2);
+	test2 = LHNET_Read(sock2, buffer2, b2len - 1, &myaddy3);
+	if (test2 > 0)
+		Con_Printf("socket to socket test succeeded\n");
+	else
+		Con_Printf("socket to socket test failed\n");
+
 #ifdef WIN32
 	printf("press any key to exit\n");
 	getchar();
