@@ -777,6 +777,8 @@ int main(int argc, char **argv)
 	lhnetaddress_t myaddy1;
 	lhnetaddress_t myaddy2;
 	lhnetaddress_t myaddy3;
+	lhnetaddress_t localhostaddy1;
+	lhnetaddress_t localhostaddy2;
 	int test1;
 	int test2;
 
@@ -788,13 +790,15 @@ int main(int argc, char **argv)
 	printf("calling LHNET_FromPort twice to create two local addresses\n");
 	LHNETADDRESS_FromPort(&myaddy1, LHNETADDRESSTYPE_INET4, 4000);
 	LHNETADDRESS_FromPort(&myaddy2, LHNETADDRESSTYPE_INET4, 4001);
+	LHNETADDRESS_FromString(&localhostaddy1, "127.0.0.1", 4000);
+	LHNETADDRESS_FromString(&localhostaddy2, "127.0.0.1", 4001);
 
 	printf("calling LHNET_OpenSocket_Connectionless twice to create two local sockets\n");
 	sock1 = LHNET_OpenSocket_Connectionless(&myaddy1);
 	sock2 = LHNET_OpenSocket_Connectionless(&myaddy2);
 
 	printf("calling LHNET_Write to send a packet from the first socket to the second socket\n");
-	test1 = LHNET_Write(sock1, buffer, blen, &myaddy2);
+	test1 = LHNET_Write(sock1, buffer, blen, &localhostaddy2);
 	printf("sleeping briefly\n");
 #ifdef WIN32
 	Sleep (100);
