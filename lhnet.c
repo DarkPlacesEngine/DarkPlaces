@@ -152,7 +152,11 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 	for (i = 0;i < MAX_NAMECACHE;i++)
 		if (!strcmp(namecache[i].name, name))
 			break;
+#ifdef STANDALONETEST
+	if (i < MAX_NAMECACHE)
+#else
 	if (i < MAX_NAMECACHE && Sys_DoubleTime() < namecache[i].expirationtime)
+#endif
 	{
 		*address = namecache[i].address;
 		if (address->addresstype == LHNETADDRESSTYPE_INET6)
@@ -165,7 +169,7 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 			address->addressdata.inet4.port = htons((unsigned short)port);
 			return 1;
 		}
-		return false;
+		return 0;
 	}
 	// try gethostbyname (handles dns and other ip formats)
 	hostentry = gethostbyname(name);
@@ -181,7 +185,9 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 			for (i = 0;i < (int)sizeof(namecache[namecacheposition].name)-1 && name[i];i++)
 				namecache[namecacheposition].name[i] = name[i];
 			namecache[namecacheposition].name[i] = 0;
+#ifndef STANDALONETEST
 			namecache[namecacheposition].expirationtime = Sys_DoubleTime() + 12 * 3600; // 12 hours
+#endif
 			namecache[namecacheposition].address = *address;
 			namecacheposition = (namecacheposition + 1) % MAX_NAMECACHE;
 #ifdef STANDALONETEST
@@ -199,7 +205,9 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 			for (i = 0;i < (int)sizeof(namecache[namecacheposition].name)-1 && name[i];i++)
 				namecache[namecacheposition].name[i] = name[i];
 			namecache[namecacheposition].name[i] = 0;
+#ifndef STANDALONETEST
 			namecache[namecacheposition].expirationtime = Sys_DoubleTime() + 12 * 3600; // 12 hours
+#endif
 			namecache[namecacheposition].address = *address;
 			namecacheposition = (namecacheposition + 1) % MAX_NAMECACHE;
 #ifdef STANDALONETEST
@@ -214,7 +222,9 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 	for (i = 0;i < (int)sizeof(namecache[namecacheposition].name)-1 && name[i];i++)
 		namecache[namecacheposition].name[i] = name[i];
 	namecache[namecacheposition].name[i] = 0;
+#ifndef STANDALONETEST
 	namecache[namecacheposition].expirationtime = Sys_DoubleTime() + 12 * 3600; // 12 hours
+#endif
 	namecache[namecacheposition].address.addresstype = LHNETADDRESSTYPE_NONE;
 	namecacheposition = (namecacheposition + 1) % MAX_NAMECACHE;
 	return 0;
@@ -394,6 +404,11 @@ void LHNET_Init(void)
 	lhnet_socketlist.next = lhnet_socketlist.prev = &lhnet_socketlist;
 	lhnet_packetlist.next = lhnet_packetlist.prev = &lhnet_packetlist;
 	lhnet_active = 1;
+#ifdef WIN32
+	lhnet_didWSAStartup = !WSAStartup(MAKEWORD(1, 1), &lhnet_winsockdata);
+	if (!lhnet_didWSAStartup)
+		Con_Print("LHNET_Init: WSAStartup failed, networking disabled\n");
+#endif
 }
 
 void LHNET_Shutdown(void)
@@ -410,6 +425,13 @@ void LHNET_Shutdown(void)
 		p->next->prev = p->prev;
 		Z_Free(p);
 	}
+#ifdef WIN32
+	if (lhnet_didWSAStartup)
+	{
+		lhnet_didWSAStartup = 0;
+		WSACleanup();
+	}
+#endif
 	lhnet_active = 0;
 }
 
@@ -518,7 +540,7 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 		case LHNETADDRESSTYPE_INET4:
 		case LHNETADDRESSTYPE_INET6:
 #ifdef WIN32
-			if (lhnet_didWSAStartup || (lhnet_didWSAStartup = !WSAStartup(MAKEWORD(1, 1), &lhnet_winsockdata)))
+			if (lhnet_didWSAStartup)
 			{
 #endif
 				if ((lhnetsocket->inetsocket = socket(address->addresstype == LHNETADDRESSTYPE_INET6 ? LHNETADDRESSTYPE_INET6_FAMILY : LHNETADDRESSTYPE_INET4_FAMILY, SOCK_DGRAM, IPPROTO_UDP)) != -1)
@@ -556,7 +578,7 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 #ifdef WIN32
 			}
 			else
-				Con_Print("LHNET_OpenSocket_Connectionless: WSAStartup failed\n");
+				Con_Print("LHNET_OpenSocket_Connectionless: can't open a socket (WSAStartup failed during LHNET_Init)\n");
 #endif
 			break;
 		default:
@@ -584,13 +606,6 @@ void LHNET_CloseSocket(lhnetsocket_t *lhnetsocket)
 		{
 			closesocket(lhnetsocket->inetsocket);
 		}
-#ifdef WIN32
-		if (lhnet_socketlist.next == &lhnet_socketlist && lhnet_didWSAStartup)
-		{
-			lhnet_didWSAStartup = 0;
-			WSACleanup();
-		}
-#endif
 		Z_Free(lhnetsocket);
 	}
 }
@@ -670,6 +685,7 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 					Con_Print("Connection refused\n");
 					return 0;
 			}
+			Con_Printf("LHNET_Read: recvfrom returned error: %s\n", LHNETPRIVATE_StrError());
 		}
 	}
 	else if (lhnetsocket->address.addresstype == LHNETADDRESSTYPE_INET6)
@@ -694,6 +710,7 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 					Con_Print("Connection refused\n");
 					return 0;
 			}
+			Con_Printf("LHNET_Read: recvfrom returned error: %s\n", LHNETPRIVATE_StrError());
 		}
 	}
 	return value;
@@ -732,6 +749,7 @@ int LHNET_Write(lhnetsocket_t *lhnetsocket, const void *content, int contentleng
 		{
 			if (SOCKETERRNO == EWOULDBLOCK)
 				return 0;
+			Con_Printf("LHNET_Read: sendto returned error: %s\n", LHNETPRIVATE_StrError());
 		}
 	}
 	else if (lhnetsocket->address.addresstype == LHNETADDRESSTYPE_INET6)
@@ -741,6 +759,7 @@ int LHNET_Write(lhnetsocket_t *lhnetsocket, const void *content, int contentleng
 		{
 			if (SOCKETERRNO == EWOULDBLOCK)
 				return 0;
+			Con_Printf("LHNET_Read: sendto returned error: %s\n", LHNETPRIVATE_StrError());
 		}
 	}
 	return value;
@@ -749,6 +768,52 @@ int LHNET_Write(lhnetsocket_t *lhnetsocket, const void *content, int contentleng
 #ifdef STANDALONETEST
 int main(int argc, char **argv)
 {
+#if 1
+	char *buffer = "socket to socket test successful", buffer2[1024];
+	int blen = strlen(buffer);
+	int b2len = 1024;
+	lhnetsocket_t *sock1;
+	lhnetsocket_t *sock2;
+	lhnetaddress_t myaddy1;
+	lhnetaddress_t myaddy2;
+	lhnetaddress_t myaddy3;
+	int test1;
+	int test2;
+
+	strcpy(buffer2, "socket to socket test failed");
+
+	printf("calling LHNET_Init\n");
+	LHNET_Init();
+
+	printf("calling LHNET_FromPort twice to create two local addresses\n");
+	LHNETADDRESS_FromPort(&myaddy1, LHNETADDRESSTYPE_INET4, 4000);
+	LHNETADDRESS_FromPort(&myaddy2, LHNETADDRESSTYPE_INET4, 4001);
+
+	printf("calling LHNET_OpenSocket_Connectionless twice to create two local sockets\n");
+	sock1 = LHNET_OpenSocket_Connectionless(&myaddy1);
+	sock2 = LHNET_OpenSocket_Connectionless(&myaddy2);
+
+	printf("calling LHNET_Write to send a packet from the first socket to the second socket\n");
+	test1 = LHNET_Write(sock1, buffer, blen, &myaddy2);
+	printf("sleeping briefly\n");
+#ifdef WIN32
+	Sleep (100);
+#else
+	usleep (100000);
+#endif
+	printf("calling LHNET_Read on the second socket to read the packet sent from the first socket\n");
+	test2 = LHNET_Read(sock2, buffer2, b2len, &myaddy3);
+	Con_Printf("%s\n", buffer2);
+#ifdef WIN32
+	printf("press any key to exit\n");
+	getchar();
+#endif
+
+	printf("calling LHNET_Shutdown\n");
+	LHNET_Shutdown();
+	printf("exiting\n");
+	return 0;
+#else
 	lhnetsocket_t *sock[16], *sendsock;
 	int i;
 	int numsockets;
@@ -884,6 +949,7 @@ int main(int argc, char **argv)
 	}
 	printf("Testing code for lhnet.c\nusage: lhnettest <localportnumber> [<sendnumberoftimes> <sendaddress:port> <sendmessage>]\n");
 	return -1;
+#endif
 }
 #endif
 
