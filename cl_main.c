@@ -867,7 +867,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 		// if it's the player entity, update according to client movement
 		if (e == cl.entities + cl.playerentity && cl.movement)// && !e->csqc)
 		{
-			lerp = (cl.time - cl.mtime[1]) / (cl.mtime[0] - cl.mtime[1]);
+			lerp = (cl.time - cl.movement_time[1]) / (cl.movement_time[0] - cl.movement_time[1]);
 			lerp = bound(0, lerp, 1);
 			VectorLerp(cl.movement_oldorigin, lerp, cl.movement_origin, origin);
 			VectorSet(angles, 0, cl.viewangles[1], 0);

@@ -668,6 +668,8 @@ typedef struct client_state_s
 	qboolean movement_needupdate;
 	// indicates the queue has been updated and should be replayed
 	qboolean movement_replay;
+	// timestamps of latest two predicted moves for interpolation
+	double movement_time[2];
 	// simulated data (this is valid even if cl.movement is false)
 	vec3_t movement_origin;
 	vec3_t movement_oldorigin;
