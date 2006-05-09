@@ -496,6 +496,8 @@ static void QW_CL_RequestNextDownload(void)
 
 		R_Modules_NewMap();
 
+		// TODO: add pmodel/emodel player.mdl/eyes.mdl CRCs to userinfo
+
 		// done checking sounds and models, send a prespawn command now
 		MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
 		MSG_WriteString(&cls.netcon->message, va("prespawn %i 0 %i", cl.qw_servercount, cl.model_precache[1]->brush.qw_md4sum2));
@@ -2085,7 +2087,6 @@ void CL_ParseServerMessage(void)
 	else if (cl_shownet.integer == 2)
 		Con_Print("------------------\n");
 
-	cl.onground = false;	// unless the server says otherwise
 //
 // parse the message
 //
