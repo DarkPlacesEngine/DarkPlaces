@@ -206,7 +206,12 @@ static qboolean _ServerList_Entry_Compare( serverlist_entry_t *A, serverlist_ent
 
 	if( serverlist_sortdescending )
 		return result > 0;
-	return result < 0;
+	if (result != 0)
+		return result < 0;
+	// if the chosen sort key is identical, sort by index
+	// (makes this a stable sort, so that later replies from servers won't
+	//  shuffle the servers around when they have the same ping)
+	return A < B;
 }
 
 static qboolean _ServerList_CompareInt( int A, serverlist_maskop_t op, int B )
@@ -1191,15 +1196,15 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			if (info->ping == 100000)
 					serverreplycount++;
 
+			// update the ping
 			pingtime = (int)((Sys_DoubleTime() - serverlist_cache[n].querytime) * 1000.0 + 0.5);
 			pingtime = bound(0, pingtime, 9999);
-			// update the ping
-			info->ping = (int)pingtime;
+			info->ping = min(info->ping, pingtime);
 
 			// legacy/old stuff move it to the menu ASAP
 
 			// build description strings for the things users care about
-			dpsnprintf(serverlist_cache[n].line1, sizeof(serverlist_cache[n].line1), "^%c%5d^7 ^%c%3u^7/%3u %-65.65s", pingtime >= 300 ? '1' : (pingtime >= 200 ? '3' : '7'), (int)pingtime, ((info->numplayers > 0 && info->numplayers < info->maxplayers) ? (info->numplayers >= 4 ? '7' : '3') : '1'), info->numplayers, info->maxplayers, info->name);
+			dpsnprintf(serverlist_cache[n].line1, sizeof(serverlist_cache[n].line1), "^%c%5d^7 ^%c%3u^7/%3u %-65.65s", info->ping >= 300 ? '1' : (info->ping >= 200 ? '3' : '7'), (int)info->ping, ((info->numplayers > 0 && info->numplayers < info->maxplayers) ? (info->numplayers >= 4 ? '7' : '3') : '1'), info->numplayers, info->maxplayers, info->name);
 			dpsnprintf(serverlist_cache[n].line2, sizeof(serverlist_cache[n].line2), "^5%-21.21s %-19.19s ^%c%-17.17s^5 %-20.20s", info->cname, info->game, (info->gameversion != gameversion.integer) ? '1' : '5', info->mod, info->map);
 			if( serverlist_cache[n].query == SQS_QUERIED ) {
 				ServerList_ViewList_Remove( &serverlist_cache[n] );
@@ -1411,12 +1416,12 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			pingtime = (int)((Sys_DoubleTime() - serverlist_cache[n].querytime) * 1000.0 + 0.5);
 			pingtime = bound(0, pingtime, 9999);
 			// update the ping
-			info->ping = (int)pingtime;
+			info->ping = min(info->ping, pingtime);
 
 			// legacy/old stuff move it to the menu ASAP
 
 			// build description strings for the things users care about
-			dpsnprintf(serverlist_cache[n].line1, sizeof(serverlist_cache[n].line1), "^%c%5d^7 ^%c%3u^7/%3u %-65.65s", pingtime >= 300 ? '1' : (pingtime >= 200 ? '3' : '7'), (int)pingtime, ((info->numplayers > 0 && info->numplayers < info->maxplayers) ? (info->numplayers >= 4 ? '7' : '3') : '1'), info->numplayers, info->maxplayers, info->name);
+			dpsnprintf(serverlist_cache[n].line1, sizeof(serverlist_cache[n].line1), "^%c%5d^7 ^%c%3u^7/%3u %-65.65s", info->ping >= 300 ? '1' : (info->ping >= 200 ? '3' : '7'), (int)info->ping, ((info->numplayers > 0 && info->numplayers < info->maxplayers) ? (info->numplayers >= 4 ? '7' : '3') : '1'), info->numplayers, info->maxplayers, info->name);
 			dpsnprintf(serverlist_cache[n].line2, sizeof(serverlist_cache[n].line2), "^4%-21.21s %-19.19s ^%c%-17.17s^4 %-20.20s", info->cname, info->game, (info->gameversion != gameversion.integer) ? '1' : '4', info->mod, info->map);
 			if( serverlist_cache[n].query == SQS_QUERIED ) {
 				ServerList_ViewList_Remove( &serverlist_cache[n] );
@@ -2301,7 +2306,7 @@ void NetConn_QueryMasters(qboolean querydp, qboolean queryqw)
 							Con_Printf("Querying master %s (resolved from %s)\n", lookupstring, sv_qwmasters[masternum].string);
 						}
 						masterquerycount++;
-						NetConn_Write(cl_sockets[i], request, 7, &masteraddress);
+						NetConn_Write(cl_sockets[i], request, strlen(request) + 1, &masteraddress);
 					}
 				}
 			}
