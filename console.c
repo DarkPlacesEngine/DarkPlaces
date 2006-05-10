@@ -582,23 +582,13 @@ void Con_Print(const char *msg)
 			line[index++] = STRING_COLOR_DEFAULT + '0';
 			// special color codes for chat messages must always come first
 			// for Con_PrintToHistory to work properly
-			if (*msg <= 2)
+			if (*msg == 1 || *msg == 2)
 			{
+				// play talk wav
 				if (*msg == 1)
-				{
-					// play talk wav
 					S_LocalSound ("sound/misc/talk.wav");
-				}
-				//if (gamemode == GAME_NEXUIZ)
-				//{
-					line[index++] = STRING_COLOR_TAG;
-					line[index++] = '3';
-				//}
-				//else
-				//{
-				//	// go to colored text
-				//	mask = 128;
-				//}
+				line[index++] = STRING_COLOR_TAG;
+				line[index++] = '3';
 				msg++;
 			}
 			// store timestamp
