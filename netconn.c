@@ -1111,30 +1111,17 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			Protocol_Names(protocolnames, sizeof(protocolnames));
 			Con_Printf("\"%s\" received, sending connect request back to %s\n", string, addressstring2);
 			M_Update_Return_Reason("Got challenge response");
+			// update the server IP in the userinfo (QW servers expect this, and it is used by the reconnect command)
+			InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "*ip", addressstring2);
+			// TODO: add userinfo stuff here instead of using NQ commands?
 			NetConn_WriteString(mysocket, va("\377\377\377\377connect\\protocol\\darkplaces 3\\protocols\\%s\\challenge\\%s", protocolnames, string + 10), peeraddress);
 			return true;
-		}
-		if (length > 1 && string[0] == 'c' && (string[1] == '-' || (string[1] >= '0' && string[1] <= '9')))
-		{
-			// quakeworld
-			LHNETADDRESS_ToString(peeraddress, addressstring2, sizeof(addressstring2), true);
-			Con_Printf("\"%s\" received, sending QuakeWorld connect request back to %s\n", string, addressstring2);
-			M_Update_Return_Reason("Got QuakeWorld challenge response");
-			cls.qw_qport = qport.integer;
-			NetConn_WriteString(mysocket, va("\377\377\377\377connect 28 %i %i \"%s\"\n", cls.qw_qport, atoi(string + 1), cls.userinfo), peeraddress);
 		}
 		if (length == 6 && !memcmp(string, "accept", 6) && cls.connect_trying)
 		{
 			// darkplaces or quake3
 			M_Update_Return_Reason("Accepted");
 			NetConn_ConnectionEstablished(mysocket, peeraddress, PROTOCOL_DARKPLACES3);
-			return true;
-		}
-		if (length > 1 && string[0] == 'j' && cls.connect_trying)
-		{
-			// quakeworld
-			M_Update_Return_Reason("QuakeWorld Accepted");
-			NetConn_ConnectionEstablished(mysocket, peeraddress, PROTOCOL_QUAKEWORLD);
 			return true;
 		}
 		if (length > 7 && !memcmp(string, "reject ", 7) && cls.connect_trying)
@@ -1308,40 +1295,36 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			serverlist_querywaittime = realtime + 3;
 			return true;
 		}
-		/*
 		if (!strncmp(string, "ping", 4))
 		{
 			if (developer.integer >= 10)
-				Con_Printf("Received ping from %s, sending ack\n", UDP_AddrToString(readaddr));
+			{
+				LHNETADDRESS_ToString(peeraddress, addressstring2, sizeof(addressstring2), true);
+				Con_Printf("Received ping from %s, sending ack\n", addressstring2);
+			}
 			NetConn_WriteString(mysocket, "\377\377\377\377ack", peeraddress);
 			return true;
 		}
 		if (!strncmp(string, "ack", 3))
 			return true;
-		*/
 		// QuakeWorld compatibility
-		if (length >= 1 && string[0] == 'j' && cls.connect_trying)
-		{
-			// accept message
-			M_Update_Return_Reason("Accepted");
-			NetConn_ConnectionEstablished(mysocket, peeraddress, PROTOCOL_QUAKEWORLD);
-			return true;
-		}
-		if (length > 1 && string[0] == 'c' && string[1] >= '0' && string[1] <= '9' && cls.connect_trying)
+		if (length > 1 && string[0] == 'c' && (string[1] == '-' || (string[1] >= '0' && string[1] <= '9')) && cls.connect_trying)
 		{
 			// challenge message
 			LHNETADDRESS_ToString(peeraddress, addressstring2, sizeof(addressstring2), true);
-			Con_Printf("challenge %s received, sending connect request back to %s\n", string + 1, addressstring2);
-			M_Update_Return_Reason("Got challenge response");
+			Con_Printf("challenge %s received, sending QuakeWorld connect request back to %s\n", string + 1, addressstring2);
+			M_Update_Return_Reason("Got QuakeWorld challenge response");
 			cls.qw_qport = qport.integer;
+			// update the server IP in the userinfo (QW servers expect this, and it is used by the reconnect command)
 			InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "*ip", addressstring2);
-			InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "name", cl_name.string);
-			InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "topcolor", va("%i", (cl_color.integer >> 4) & 15));
-			InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "bottomcolor", va("%i", (cl_color.integer) & 15));
-			InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "rate", va("%i", cl_rate.integer));
-			InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "msg", "1");
-			InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "*ver", engineversion);
 			NetConn_WriteString(mysocket, va("\377\377\377\377connect %i %i %i \"%s\"\n", 28, cls.qw_qport, atoi(string + 1), cls.userinfo), peeraddress);
+			return true;
+		}
+		if (length >= 1 && string[0] == 'j' && cls.connect_trying)
+		{
+			// accept message
+			M_Update_Return_Reason("QuakeWorld Accepted");
+			NetConn_ConnectionEstablished(mysocket, peeraddress, PROTOCOL_QUAKEWORLD);
 			return true;
 		}
 		if (length > 2 && !memcmp(string, "n\\", 2))
@@ -1475,6 +1458,9 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 					LHNETADDRESS_SetPort(&clientportaddress, port);
 				}
 				M_Update_Return_Reason("Accepted");
+				// update the server IP in the userinfo (QW servers expect this, and it is used by the reconnect command)
+				LHNETADDRESS_ToString(peeraddress, addressstring2, sizeof(addressstring2), true);
+				InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "*ip", addressstring2);
 				NetConn_ConnectionEstablished(mysocket, &clientportaddress, PROTOCOL_QUAKE);
 			}
 			break;
@@ -1484,6 +1470,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			cls.connect_trying = false;
 			M_Update_Return_Reason((char *)data);
 			break;
+		// TODO: fix this code so that lan searches for quake servers will work
 #if 0
 		case CCREP_SERVER_INFO:
 			if (developer.integer >= 10)
@@ -1494,10 +1481,10 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				// string we just ignore it and keep the real address
 				MSG_ReadString();
 				// serverlist only uses text addresses
-				cname = UDP_AddrToString(readaddr);
+				LHNETADDRESS_ToString(peeraddress, addressstring2, sizeof(addressstring2), true);
 				// search the cache for this server
 				for (n = 0; n < hostCacheCount; n++)
-					if (!strcmp(cname, serverlist[n].cname))
+					if (!strcmp(addressstring2, serverlist[n].cname))
 						break;
 				// add it
 				if (n == hostCacheCount && hostCacheCount < SERVERLISTSIZE)
