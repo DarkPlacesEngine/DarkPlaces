@@ -24,6 +24,9 @@ int current_skill;
 cvar_t sv_cheats = {0, "sv_cheats", "0", "enables cheat commands in any game, and cheat impulses in dpmod"};
 cvar_t rcon_password = {0, "rcon_password", "", "password to authenticate rcon commands"};
 cvar_t rcon_address = {0, "rcon_address", "", "server address to send rcon commands to (when not connected to a server)"};
+cvar_t team = {CVAR_USERINFO | CVAR_SAVE, "team", "none", "QW team (4 character limit, example: blue)"};
+cvar_t skin = {CVAR_USERINFO | CVAR_SAVE, "skin", "", "QW player skin name (example: base)"};
+cvar_t noaim = {CVAR_USERINFO | CVAR_SAVE, "noaim", "1", "QW option to disable vertical autoaim"};
 qboolean allowcheats = false;
 
 /*
@@ -400,7 +403,16 @@ void Host_Reconnect_f (void)
 				MSG_WriteString(&cls.netcon->message, "new");
 			}
 			else
-				Con_Printf("Please use connect instead (reconnect not implemented)\n");
+			{
+				char temp[128];
+				// if we have connected to a server recently, the userinfo
+				// will still contain its IP address, so get the address...
+				InfoString_GetValue(cls.userinfo, "*ip", temp, sizeof(temp));
+				if (temp[0])
+					CL_EstablishConnection(temp);
+				else
+					Con_Printf("Reconnect to what server?  (you have not connected to a server yet)\n");
+			}
 		}
 	}
 	else
@@ -789,9 +801,7 @@ void Host_Name_f (void)
 	if (cmd_source == src_command)
 	{
 		Cvar_Set ("_cl_name", newName);
-		InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "name", newName);
-		if (cls.state == ca_connected)
-			Cmd_ForwardToServer ();
+		CL_SetInfo("name", newName, true, false, false, false);
 		return;
 	}
 
@@ -849,9 +859,7 @@ void Host_Playermodel_f (void)
 	if (cmd_source == src_command)
 	{
 		Cvar_Set ("_cl_playermodel", newPath);
-		InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "playermodel", newPath);
-		if (cls.state == ca_connected)
-			Cmd_ForwardToServer ();
+		CL_SetInfo("playermodel", newPath, true, false, false, false);
 		return;
 	}
 
@@ -909,9 +917,7 @@ void Host_Playerskin_f (void)
 	if (cmd_source == src_command)
 	{
 		Cvar_Set ("_cl_playerskin", newPath);
-		InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "playerskin", newPath);
-		if (cls.state == ca_connected)
-			Cmd_ForwardToServer ();
+		CL_SetInfo("playermodel", newPath, true, false, false, false);
 		return;
 	}
 
@@ -976,7 +982,6 @@ void Host_Say(qboolean teamonly)
 	if (!teamplay.integer)
 		teamonly = false;
 
-// turn on color set 1
 	p1 = Cmd_Args();
 	quoted = false;
 	if (*p1 == '\"')
@@ -984,10 +989,11 @@ void Host_Say(qboolean teamonly)
 		quoted = true;
 		p1++;
 	}
+	// note this uses the chat prefix \001
 	if (!fromServer)
-		dpsnprintf (text, sizeof(text), "%c%s" STRING_COLOR_DEFAULT_STR ": %s", 1, host_client->name, p1);
+		dpsnprintf (text, sizeof(text), "\001%s" STRING_COLOR_DEFAULT_STR ": %s", host_client->name, p1);
 	else
-		dpsnprintf (text, sizeof(text), "%c<%s" STRING_COLOR_DEFAULT_STR "> %s", 1, hostname.string, p1);
+		dpsnprintf (text, sizeof(text), "\001<%s" STRING_COLOR_DEFAULT_STR "> %s", hostname.string, p1);
 	p2 = text + strlen(text);
 	while ((const char *)p2 > (const char *)text && (p2[-1] == '\r' || p2[-1] == '\n' || (p2[-1] == '\"' && quoted)))
 	{
@@ -1044,10 +1050,11 @@ void Host_Tell_f(void)
 	if (Cmd_Argc () < 3)
 		return;
 
+	// note this uses the chat prefix \001
 	if (!fromServer)
-		sprintf (text, "%s: ", host_client->name);
+		sprintf (text, "\001%s tells you: ", host_client->name);
 	else
-		sprintf (text, "<%s> ", hostname.string);
+		sprintf (text, "\001<%s tells you> ", hostname.string);
 
 	p1 = Cmd_Args();
 	p2 = p1 + strlen(p1);
@@ -1091,46 +1098,39 @@ Host_Color_f
 ==================
 */
 cvar_t cl_color = {CVAR_SAVE, "_cl_color", "0", "internal storage cvar for current player colors (changed by color command)"};
-void Host_Color_f(void)
+void Host_Color(int changetop, int changebottom)
 {
-	int		top, bottom;
-	int		playercolor;
+	int top, bottom, playercolor;
 	mfunction_t *f;
-	func_t	SV_ChangeTeam;
+	func_t SV_ChangeTeam;
 
-	if (Cmd_Argc() == 1)
-	{
-		Con_Printf("\"color\" is \"%i %i\"\n", cl_color.integer >> 4, cl_color.integer & 15);
-		Con_Print("color <0-15> [0-15]\n");
-		return;
-	}
-
-	if (Cmd_Argc() == 2)
-		top = bottom = atoi(Cmd_Argv(1));
-	else
-	{
-		top = atoi(Cmd_Argv(1));
-		bottom = atoi(Cmd_Argv(2));
-	}
+	// get top and bottom either from the provided values or the current values
+	// (allows changing only top or bottom, or both at once)
+	top = changetop >= 0 ? changetop : (cl_color.integer >> 4);
+	bottom = changebottom >= 0 ? changebottom : cl_color.integer;
 
 	top &= 15;
-	// LordHavoc: allow skin colormaps 14 and 15 (was 13)
-	if (top > 15)
-		top = 15;
 	bottom &= 15;
-	// LordHavoc: allow skin colormaps 14 and 15 (was 13)
-	if (bottom > 15)
-		bottom = 15;
+	// LordHavoc: allowing skin colormaps 14 and 15 by commenting this out
+	//if (top > 13)
+	//	top = 13;
+	//if (bottom > 13)
+	//	bottom = 13;
 
 	playercolor = top*16 + bottom;
 
 	if (cmd_source == src_command)
 	{
-		Cvar_SetValue ("_cl_color", playercolor);
-		InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "topcolor", va("%i", top));
-		InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "bottomcolor", va("%i", bottom));
-		if (cls.state == ca_connected && cls.protocol != PROTOCOL_QUAKEWORLD)
-			Cmd_ForwardToServer ();
+		Cvar_SetValueQuick(&cl_color, playercolor);
+		if (changetop >= 0)
+			CL_SetInfo("topcolor", va("%i", top), true, false, false, false);
+		if (changebottom >= 0)
+			CL_SetInfo("bottomcolor", va("%i", bottom), true, false, false, false);
+		if (cls.protocol != PROTOCOL_QUAKEWORLD)
+		{
+			MSG_WriteByte(&cls.netcon->message, clc_stringcmd);
+			MSG_WriteString(&cls.netcon->message, va("color %i %i", top, bottom));
+		}
 		return;
 	}
 
@@ -1166,6 +1166,51 @@ void Host_Color_f(void)
 	}
 }
 
+void Host_Color_f(void)
+{
+	int		top, bottom;
+
+	if (Cmd_Argc() == 1)
+	{
+		Con_Printf("\"color\" is \"%i %i\"\n", cl_color.integer >> 4, cl_color.integer & 15);
+		Con_Print("color <0-15> [0-15]\n");
+		return;
+	}
+
+	if (Cmd_Argc() == 2)
+		top = bottom = atoi(Cmd_Argv(1));
+	else
+	{
+		top = atoi(Cmd_Argv(1));
+		bottom = atoi(Cmd_Argv(2));
+	}
+	Host_Color(top, bottom);
+}
+
+void Host_TopColor_f(void)
+{
+	if (Cmd_Argc() == 1)
+	{
+		Con_Printf("\"topcolor\" is \"%i\"\n", cl_color.integer >> 4);
+		Con_Print("topcolor <0-15>\n");
+		return;
+	}
+
+	Host_Color(atoi(Cmd_Argv(1)), -1);
+}
+
+void Host_BottomColor_f(void)
+{
+	if (Cmd_Argc() == 1)
+	{
+		Con_Printf("\"bottomcolor\" is \"%i\"\n", cl_color.integer);
+		Con_Print("bottomcolor <0-15>\n");
+		return;
+	}
+
+	Host_Color(-1, atoi(Cmd_Argv(1)));
+}
+
 cvar_t cl_rate = {CVAR_SAVE, "_cl_rate", "10000", "internal storage cvar for current rate (changed by rate command)"};
 void Host_Rate_f(void)
 {
@@ -1183,9 +1228,7 @@ void Host_Rate_f(void)
 	if (cmd_source == src_command)
 	{
 		Cvar_SetValue ("_cl_rate", bound(NET_MINRATE, rate, NET_MAXRATE));
-		InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "rate", va("%i", rate));
-		if (cls.state == ca_connected)
-			Cmd_ForwardToServer ();
+		CL_SetInfo("rate", va("%i", rate), true, false, false, false);
 		return;
 	}
 
@@ -2177,16 +2220,7 @@ void Host_FullInfo_f (void) // credit: taken from QuakeWorld
 		if (*s)
 			s++;
 
-		if (!strcasecmp(key, "pmodel") || !strcasecmp(key, "emodel"))
-			continue;
-
-		if (key[0] == '*')
-		{
-			Con_Printf("Can't set star-key \"%s\" to \"%s\"\n", key, value);
-			continue;
-		}
-
-		InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), key, value);
+		CL_SetInfo(key, value, false, false, false, false);
 	}
 }
 
@@ -2209,16 +2243,7 @@ void Host_SetInfo_f (void) // credit: taken from QuakeWorld
 		Con_Printf ("usage: setinfo [ <key> <value> ]\n");
 		return;
 	}
-	if (!strcasecmp(Cmd_Argv(1), "pmodel") || !strcasecmp(Cmd_Argv(1), "emodel"))
-		return;
-	if (Cmd_Argv(1)[0] == '*')
-	{
-		Con_Printf("Can't set star-key \"%s\" to \"%s\"\n", Cmd_Argv(1), Cmd_Argv(2));
-		return;
-	}
-	InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), Cmd_Argv(1), Cmd_Argv(2));
-	if (cls.state == ca_connected)
-		Cmd_ForwardToServer ();
+	CL_SetInfo(Cmd_Argv(1), Cmd_Argv(2), true, false, false, false);
 }
 
 /*
@@ -2303,7 +2328,7 @@ Host_InitCommands
 */
 void Host_InitCommands (void)
 {
-	strcpy(cls.userinfo, "\\name\\player\\team\\none\\topcolor\\0\\bottomcolor\\0\\rate\\10000\\msg\\1\\*ver\\dp");
+	dpsnprintf(cls.userinfo, sizeof(cls.userinfo), "\\name\\player\\team\\none\\topcolor\\0\\bottomcolor\\0\\rate\\10000\\msg\\1\\noaim\\1\\*ver\\%s", engineversion);
 
 	Cmd_AddCommand ("status", Host_Status_f, "print server status information");
 	Cmd_AddCommand ("quit", Host_Quit_f, "quit the game");
@@ -2382,6 +2407,12 @@ void Host_InitCommands (void)
 	Cmd_AddCommand ("fullinfo", Host_FullInfo_f, "allows client to modify their userinfo");
 	Cmd_AddCommand ("setinfo", Host_SetInfo_f, "modifies your userinfo");
 	Cmd_AddCommand ("packet", Host_Packet_f, "send a packet to the specified address:port containing a text string");
+	Cmd_AddCommand ("topcolor", Host_TopColor_f, "QW command to set top color without changing bottom color");
+	Cmd_AddCommand ("bottomcolor", Host_BottomColor_f, "QW command to set bottom color without changing top color");
+
+	Cvar_RegisterVariable (&team);
+	Cvar_RegisterVariable (&skin);
+	Cvar_RegisterVariable (&noaim);
 
 	Cvar_RegisterVariable(&sv_cheats);
 }

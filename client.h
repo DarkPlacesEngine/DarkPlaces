@@ -994,6 +994,7 @@ void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float
 
 void CL_ClearState (void);
 void CL_ExpandEntities(int num);
+void CL_SetInfo(const char *key, const char *value, qboolean send, qboolean allowstarkey, qboolean allowmodel, qboolean quiet);
 
 
 int  CL_ReadFromServer (void);
