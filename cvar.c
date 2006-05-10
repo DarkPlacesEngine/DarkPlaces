@@ -246,12 +246,8 @@ void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 		}
 	}
 #endif
-	if ((var->flags & CVAR_USERINFO) && changed && cls.state != ca_dedicated)
-	{
-		InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), var->name, var->string);
-		if (cls.state == ca_connected)
-			Cmd_ForwardStringToServer(va("setinfo \"%s\" \"%s\"\n", var->name, var->string));
-	}
+	if ((var->flags & CVAR_USERINFO) && cls.state != ca_dedicated)
+		CL_SetInfo(var->name, var->string, true, false, false, false);
 }
 
 void Cvar_SetQuick (cvar_t *var, const char *value)

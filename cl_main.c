@@ -201,6 +201,53 @@ void CL_ClearState(void)
 	CL_Screen_NewMap();
 }
 
+void CL_SetInfo(const char *key, const char *value, qboolean send, qboolean allowstarkey, qboolean allowmodel, qboolean quiet)
+{
+	if (strchr(key, '\"') || strchr(value, '\"') || (!allowstarkey && key[0] == '*') || (!allowmodel && (!strcasecmp(Cmd_Argv(1), "pmodel") || !strcasecmp(Cmd_Argv(1), "emodel"))))
+	{
+		if (!quiet)
+			Con_Printf("Can't setinfo \"%s\" \"%s\"\n");
+		return;
+	}
+	InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), key, value);
+	if (cls.state == ca_connected)
+	{
+		if (cls.protocol == PROTOCOL_QUAKEWORLD)
+		{
+			MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
+			MSG_WriteString(&cls.netcon->message, va("setinfo \"%s\" \"%s\"", key, value));
+		}
+		else if (!strcasecmp(key, "name"))
+		{
+			MSG_WriteByte(&cls.netcon->message, clc_stringcmd);
+			MSG_WriteString(&cls.netcon->message, va("name \"%s\"", value));
+		}
+		else if (!strcasecmp(key, "playermodel"))
+		{
+			MSG_WriteByte(&cls.netcon->message, clc_stringcmd);
+			MSG_WriteString(&cls.netcon->message, va("playermodel \"%s\"", value));
+		}
+		else if (!strcasecmp(key, "playerskin"))
+		{
+			MSG_WriteByte(&cls.netcon->message, clc_stringcmd);
+			MSG_WriteString(&cls.netcon->message, va("playerskin \"%s\"", value));
+		}
+		else if (!strcasecmp(key, "topcolor"))
+		{
+			// don't send anything, the combined color code will be updated manually
+		}
+		else if (!strcasecmp(key, "bottomcolor"))
+		{
+			// don't send anything, the combined color code will be updated manually
+		}
+		else if (!strcasecmp(key, "rate"))
+		{
+			MSG_WriteByte(&cls.netcon->message, clc_stringcmd);
+			MSG_WriteString(&cls.netcon->message, va("rate \"%s\"", value));
+		}
+	}
+}
+
 void CL_ExpandEntities(int num)
 {
 	int i, oldmaxentities;
