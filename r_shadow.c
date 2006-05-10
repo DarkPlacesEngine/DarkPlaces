@@ -2246,7 +2246,7 @@ void R_Shadow_DrawEntityShadow(entity_render_t *ent, int numsurfaces, int *surfa
 void R_Shadow_SetupEntityLight(const entity_render_t *ent)
 {
 	// set up properties for rendering light onto this entity
-	RSurf_ActiveEntity(ent);
+	RSurf_ActiveEntity(ent, true, true);
 	Matrix4x4_Concat(&r_shadow_entitytolight, &r_shadow_rtlight->matrix_worldtolight, &ent->matrix);
 	Matrix4x4_Concat(&r_shadow_entitytoattenuationxyz, &matrix_attenuationxyz, &r_shadow_entitytolight);
 	Matrix4x4_Concat(&r_shadow_entitytoattenuationz, &matrix_attenuationz, &r_shadow_entitytolight);

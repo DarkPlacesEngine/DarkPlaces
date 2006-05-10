@@ -39,14 +39,27 @@ void Mod_AliasInit (void)
 	Cvar_RegisterVariable(&r_skeletal_debugtranslatez);
 }
 
-void Mod_Alias_GetMesh_Vertex3f(const model_t *model, const frameblend_t *frameblend, float *out3f)
+void Mod_Alias_GetMesh_Vertices(const model_t *model, const frameblend_t *frameblend, float *vertex3f, float *normal3f, float *svector3f, float *tvector3f)
 {
-	if (model->surfmesh.num_vertexboneweights)
+	if (model->surfmesh.data_vertexweightindex4i)
 	{
 		int i, k, blends;
-		surfmeshvertexboneweight_t *v;
-		float *out, *matrix, m[12], bonepose[256][12];
+		const float *v = model->surfmesh.data_vertex3f;
+		const float *n = model->surfmesh.data_normal3f;
+		const float *sv = model->surfmesh.data_svector3f;
+		const float *tv = model->surfmesh.data_tvector3f;
+		const int *wi = model->surfmesh.data_vertexweightindex4i;
+		const float *wf = model->surfmesh.data_vertexweightinfluence4f;
+		float *matrix, m[12], bonepose[256][12], boneposerelative[256][12];
 		// vertex weighted skeletal
+		memset(vertex3f, 0, model->surfmesh.num_vertices * sizeof(float[3]));
+		if (normal3f)
+			memset(normal3f, 0, model->surfmesh.num_vertices * sizeof(float[3]));
+		if (svector3f)
+		{
+			memset(svector3f, 0, model->surfmesh.num_vertices * sizeof(float[3]));
+			memset(tvector3f, 0, model->surfmesh.num_vertices * sizeof(float[3]));
+		}
 		// interpolate matrices and concatenate them to their parents
 		for (i = 0;i < model->num_bones;i++)
 		{
@@ -68,23 +81,67 @@ void Mod_Alias_GetMesh_Vertex3f(const model_t *model, const frameblend_t *frameb
 			else
 				for (k = 0;k < 12;k++)
 					bonepose[i][k] = m[k];
+			// create a relative deformation matrix to describe displacement
+			// from the base mesh, which is used by the actual weighting
+			R_ConcatTransforms(bonepose[i], model->data_baseboneposeinverse + i * 12, boneposerelative[i]);
 		}
 		// blend the vertex bone weights
-		memset(out3f, 0, model->surfmesh.num_vertices * sizeof(float[3]));
-		v = model->surfmesh.data_vertexboneweights;
-		for (i = 0;i < model->surfmesh.num_vertexboneweights;i++, v++)
+		if (svector3f)
 		{
-			out = out3f + v->vertexindex * 3;
-			matrix = bonepose[v->boneindex];
-			// FIXME: this can very easily be optimized with SSE or 3DNow
-			out[0] += v->origin[0] * matrix[0] + v->origin[1] * matrix[1] + v->origin[2] * matrix[ 2] + v->origin[3] * matrix[ 3];
-			out[1] += v->origin[0] * matrix[4] + v->origin[1] * matrix[5] + v->origin[2] * matrix[ 6] + v->origin[3] * matrix[ 7];
-			out[2] += v->origin[0] * matrix[8] + v->origin[1] * matrix[9] + v->origin[2] * matrix[10] + v->origin[3] * matrix[11];
+			for (i = 0;i < model->surfmesh.num_vertices;i++, v += 3, n += 3, sv += 3, tv += 3, wi += 4, wf += 4, vertex3f += 3, normal3f += 3, svector3f += 3, tvector3f += 3)
+			{
+				for (k = 0;k < 4 && wf[k];k++)
+				{
+					const float *m = boneposerelative[wi[k]];
+					float f = wf[k];
+					vertex3f[0] += f * (v[0] * m[0] + v[1] * m[1] + v[2] * m[ 2] + m[ 3]);
+					vertex3f[1] += f * (v[0] * m[4] + v[1] * m[5] + v[2] * m[ 6] + m[ 7]);
+					vertex3f[2] += f * (v[0] * m[8] + v[1] * m[9] + v[2] * m[10] + m[11]);
+					normal3f[0] += f * (n[0] * m[0] + n[1] * m[1] + n[2] * m[ 2]);
+					normal3f[1] += f * (n[0] * m[4] + n[1] * m[5] + n[2] * m[ 6]);
+					normal3f[2] += f * (n[0] * m[8] + n[1] * m[9] + n[2] * m[10]);
+					svector3f[0] += f * (sv[0] * m[0] + sv[1] * m[1] + sv[2] * m[ 2]);
+					svector3f[1] += f * (sv[0] * m[4] + sv[1] * m[5] + sv[2] * m[ 6]);
+					svector3f[2] += f * (sv[0] * m[8] + sv[1] * m[9] + sv[2] * m[10]);
+					tvector3f[0] += f * (tv[0] * m[0] + tv[1] * m[1] + tv[2] * m[ 2]);
+					tvector3f[1] += f * (tv[0] * m[4] + tv[1] * m[5] + tv[2] * m[ 6]);
+					tvector3f[2] += f * (tv[0] * m[8] + tv[1] * m[9] + tv[2] * m[10]);
+				}
+			}
+		}
+		else if (normal3f)
+		{
+			for (i = 0;i < model->surfmesh.num_vertices;i++, v += 3, n += 3, wi += 4, wf += 4, vertex3f += 3, normal3f += 3)
+			{
+				for (k = 0;k < 4 && wf[k];k++)
+				{
+					const float *m = boneposerelative[wi[k]];
+					float f = wf[k];
+					vertex3f[0] += f * (v[0] * m[0] + v[1] * m[1] + v[2] * m[ 2] + m[ 3]);
+					vertex3f[1] += f * (v[0] * m[4] + v[1] * m[5] + v[2] * m[ 6] + m[ 7]);
+					vertex3f[2] += f * (v[0] * m[8] + v[1] * m[9] + v[2] * m[10] + m[11]);
+					normal3f[0] += f * (n[0] * m[0] + n[1] * m[1] + n[2] * m[ 2]);
+					normal3f[1] += f * (n[0] * m[4] + n[1] * m[5] + n[2] * m[ 6]);
+					normal3f[2] += f * (n[0] * m[8] + n[1] * m[9] + n[2] * m[10]);
+				}
+			}
+		}
+		else
+		{
+			for (i = 0;i < model->surfmesh.num_vertices;i++, v += 3, wi += 4, wf += 4, vertex3f += 3)
+			{
+				for (k = 0;k < 4 && wf[k];k++)
+				{
+					const float *m = boneposerelative[wi[k]];
+					float f = wf[k];
+					vertex3f[0] += f * (v[0] * m[0] + v[1] * m[1] + v[2] * m[ 2] + m[ 3]);
+					vertex3f[1] += f * (v[0] * m[4] + v[1] * m[5] + v[2] * m[ 6] + m[ 7]);
+					vertex3f[2] += f * (v[0] * m[8] + v[1] * m[9] + v[2] * m[10] + m[11]);
+				}
+			}
 		}
 	}
-	else if (!model->surfmesh.data_morphvertex3f)
-		Host_Error("model %s has no skeletal or vertex morph animation data", model->name);
-	else
+	else if (model->surfmesh.data_morphvertex3f)
 	{
 		// vertex morph
 		int numverts = model->surfmesh.num_vertices;
@@ -105,19 +162,27 @@ void Mod_Alias_GetMesh_Vertex3f(const model_t *model, const frameblend_t *frameb
 					const float *verts4 = vertsbase + numverts * 3 * frameblend[3].frame;
 					float lerp4 = frameblend[3].lerp;
 					for (i = 0;i < numverts * 3;i++)
-						out3f[i] = lerp1 * verts1[i] + lerp2 * verts2[i] + lerp3 * verts3[i] + lerp4 * verts4[i];
+						vertex3f[i] = lerp1 * verts1[i] + lerp2 * verts2[i] + lerp3 * verts3[i] + lerp4 * verts4[i];
 				}
 				else
 					for (i = 0;i < numverts * 3;i++)
-						out3f[i] = lerp1 * verts1[i] + lerp2 * verts2[i] + lerp3 * verts3[i];
+						vertex3f[i] = lerp1 * verts1[i] + lerp2 * verts2[i] + lerp3 * verts3[i];
 			}
 			else
 				for (i = 0;i < numverts * 3;i++)
-					out3f[i] = lerp1 * verts1[i] + lerp2 * verts2[i];
+					vertex3f[i] = lerp1 * verts1[i] + lerp2 * verts2[i];
 		}
 		else
-			memcpy(out3f, verts1, numverts * 3 * sizeof(float));
+			memcpy(vertex3f, verts1, numverts * 3 * sizeof(float));
+		if (normal3f)
+		{
+			Mod_BuildNormals(0, model->surfmesh.num_vertices, model->surfmesh.num_triangles, vertex3f, model->surfmesh.data_element3i, normal3f, r_smoothnormals_areaweighting.integer);
+			if (svector3f)
+				Mod_BuildTextureVectorsFromNormals(0, model->surfmesh.num_vertices, model->surfmesh.num_triangles, vertex3f, model->surfmesh.data_texcoordtexture2f, normal3f, model->surfmesh.data_element3i, svector3f, tvector3f, r_smoothnormals_areaweighting.integer);
+		}
 	}
+	else
+		Host_Error("model %s has no skeletal or vertex morph animation data", model->name);
 }
 
 int Mod_Alias_GetTagMatrix(const model_t *model, int poseframe, int tagindex, matrix4x4_t *outmatrix)
@@ -185,6 +250,48 @@ int Mod_Alias_GetTagIndexForName(const model_t *model, unsigned int skin, const 
 	return 0;
 }
 
+static void Mod_BuildBaseBonePoses(void)
+{
+	int i, k;
+	double scale;
+	float *in12f = loadmodel->data_poses;
+	float *out12f = loadmodel->data_basebonepose;
+	float *outinv12f = loadmodel->data_baseboneposeinverse;
+	for (i = 0;i < loadmodel->num_bones;i++, in12f += 12, out12f += 12, outinv12f += 12)
+	{
+		if (loadmodel->data_bones[i].parent >= 0)
+			R_ConcatTransforms(loadmodel->data_basebonepose + 12 * loadmodel->data_bones[i].parent, in12f, out12f);
+		else
+			for (k = 0;k < 12;k++)
+				out12f[k] = in12f[k];
+
+		// invert The Matrix
+
+		// we only support uniform scaling, so assume the first row is enough
+		// (note the lack of sqrt here, because we're trying to undo the scaling,
+		// this means multiplying by the inverse scale twice - squaring it, which
+		// makes the sqrt a waste of time)
+		scale = 1.0 / (out12f[ 0] * out12f[ 0] + out12f[ 1] * out12f[ 1] + out12f[ 2] * out12f[ 2]);
+
+		// invert the rotation by transposing and multiplying by the squared
+		// recipricol of the input matrix scale as described above
+		outinv12f[ 0] = (float)(out12f[ 0] * scale);
+		outinv12f[ 1] = (float)(out12f[ 4] * scale);
+		outinv12f[ 2] = (float)(out12f[ 8] * scale);
+		outinv12f[ 4] = (float)(out12f[ 1] * scale);
+		outinv12f[ 5] = (float)(out12f[ 5] * scale);
+		outinv12f[ 6] = (float)(out12f[ 9] * scale);
+		outinv12f[ 8] = (float)(out12f[ 2] * scale);
+		outinv12f[ 9] = (float)(out12f[ 6] * scale);
+		outinv12f[10] = (float)(out12f[10] * scale);
+
+		// invert the translate
+		outinv12f[ 3] = -(out12f[ 3] * outinv12f[ 0] + out12f[ 7] * outinv12f[ 1] + out12f[11] * outinv12f[ 2]);
+		outinv12f[ 7] = -(out12f[ 3] * outinv12f[ 4] + out12f[ 7] * outinv12f[ 5] + out12f[11] * outinv12f[ 6]);
+		outinv12f[11] = -(out12f[ 3] * outinv12f[ 8] + out12f[ 7] * outinv12f[ 9] + out12f[11] * outinv12f[10]);
+	}
+}
+
 static void Mod_Alias_Mesh_CompileFrameZero(void)
 {
 	frameblend_t frameblend[4] = {{0, 1}, {0, 0}, {0, 0}, {0, 0}};
@@ -192,7 +299,7 @@ static void Mod_Alias_Mesh_CompileFrameZero(void)
 	loadmodel->surfmesh.data_svector3f = loadmodel->surfmesh.data_vertex3f + loadmodel->surfmesh.num_vertices * 3;
 	loadmodel->surfmesh.data_tvector3f = loadmodel->surfmesh.data_vertex3f + loadmodel->surfmesh.num_vertices * 6;
 	loadmodel->surfmesh.data_normal3f = loadmodel->surfmesh.data_vertex3f + loadmodel->surfmesh.num_vertices * 9;
-	Mod_Alias_GetMesh_Vertex3f(loadmodel, frameblend, loadmodel->surfmesh.data_vertex3f);
+	Mod_Alias_GetMesh_Vertices(loadmodel, frameblend, loadmodel->surfmesh.data_vertex3f, NULL, NULL, NULL);
 	Mod_BuildNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_normal3f, true);
 	Mod_BuildTextureVectorsFromNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, true);
 }
@@ -230,7 +337,7 @@ static void Mod_MDLMD2MD3_TraceBox(model_t *model, int frame, trace_t *trace, co
 		segmentmaxs[2] = max(start[2], end[2]) + 1;
 		for (i = 0, surface = model->data_surfaces;i < model->num_surfaces;i++, surface++)
 		{
-			Mod_Alias_GetMesh_Vertex3f(model, frameblend, vertex3f);
+			Mod_Alias_GetMesh_Vertices(model, frameblend, vertex3f, NULL, NULL, NULL);
 			Collision_TraceLineTriangleMeshFloat(trace, start, end, model->surfmesh.num_triangles, model->surfmesh.data_element3i, vertex3f, SUPERCONTENTS_SOLID, 0, surface->texture, segmentmins, segmentmaxs);
 		}
 	}
@@ -260,7 +367,7 @@ static void Mod_MDLMD2MD3_TraceBox(model_t *model, int frame, trace_t *trace, co
 				maxvertices = (model->surfmesh.num_vertices + 255) & ~255;
 				vertex3f = (float *)Z_Malloc(maxvertices * sizeof(float[3]));
 			}
-			Mod_Alias_GetMesh_Vertex3f(model, frameblend, vertex3f);
+			Mod_Alias_GetMesh_Vertices(model, frameblend, vertex3f, NULL, NULL, NULL);
 			Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, model->surfmesh.num_triangles, model->surfmesh.data_element3i, vertex3f, SUPERCONTENTS_SOLID, 0, surface->texture, segmentmins, segmentmaxs);
 		}
 	}
@@ -1165,8 +1272,8 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	zymtype1header_t *pinmodel, *pheader;
 	unsigned char *pbase;
-	int i, j, k, l, numposes, meshvertices, meshtriangles, numvertexboneweights, *bonecount, *vertbonecounts, count, *renderlist, *renderlistend, *outelements;
-	float modelradius, corner[2], *poses, *intexcoord2f, *outtexcoord2f;
+	int i, j, k, numposes, meshvertices, meshtriangles, *bonecount, *vertbonecounts, count, *renderlist, *renderlistend, *outelements;
+	float modelradius, corner[2], *poses, *intexcoord2f, *outtexcoord2f, *bonepose;
 	zymvertex_t *verts, *vertdata;
 	zymscene_t *scene;
 	zymbone_t *bone;
@@ -1317,30 +1424,35 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	for (i = 0;i < pheader->numverts;i++)
 	{
 		vertbonecounts[i] = BigLong(bonecount[i]);
-		if (vertbonecounts[i] < 1)
-			Host_Error("%s bonecount[%i] < 1", loadmodel->name, i);
+		if (vertbonecounts[i] != 1)
+			Host_Error("%s bonecount[%i] != 1 (vertex weight support is impossible in this format)", loadmodel->name, i);
 	}
 
 	loadmodel->num_poses = pheader->lump_poses.length / sizeof(float[3][4]);
 
 	meshvertices = pheader->numverts;
 	meshtriangles = pheader->numtris;
-	numvertexboneweights = pheader->lump_verts.length / sizeof(zymvertex_t);
 
 	loadmodel->nummodelsurfaces = loadmodel->num_surfaces;
 	loadmodel->num_textures = loadmodel->num_surfaces;
-	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + meshtriangles * sizeof(int[3]) + meshvertices * sizeof(float[2]) + numvertexboneweights * sizeof(surfmeshvertexboneweight_t) + loadmodel->num_poses * sizeof(float[3][4]));
+	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + meshtriangles * sizeof(int[3]) + meshvertices * sizeof(float[14]) + meshvertices * sizeof(int[4]) + meshvertices * sizeof(float[4]) + loadmodel->num_poses * sizeof(float[36]));
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
 	loadmodel->surfacelist = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
 	loadmodel->data_textures = (texture_t *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
 	loadmodel->surfmesh.num_vertices = meshvertices;
 	loadmodel->surfmesh.num_triangles = meshtriangles;
-	loadmodel->surfmesh.num_vertexboneweights = numvertexboneweights;
 	loadmodel->surfmesh.data_element3i = (int *)data;data += meshtriangles * sizeof(int[3]);
 	loadmodel->surfmesh.data_neighbor3i = (int *)data;data += meshtriangles * sizeof(int[3]);
+	loadmodel->surfmesh.data_vertex3f = (float *)data;data += meshvertices * sizeof(float[3]);
+	loadmodel->surfmesh.data_svector3f = (float *)data;data += meshvertices * sizeof(float[3]);
+	loadmodel->surfmesh.data_tvector3f = (float *)data;data += meshvertices * sizeof(float[3]);
+	loadmodel->surfmesh.data_normal3f = (float *)data;data += meshvertices * sizeof(float[3]);
 	loadmodel->surfmesh.data_texcoordtexture2f = (float *)data;data += meshvertices * sizeof(float[2]);
-	loadmodel->surfmesh.data_vertexboneweights = (surfmeshvertexboneweight_t *)data;data += numvertexboneweights * sizeof(surfmeshvertexboneweight_t);
-	loadmodel->data_poses = (float *)data;data += loadmodel->num_poses * sizeof(float[3][4]);
+	loadmodel->surfmesh.data_vertexweightindex4i = (int *)data;data += meshvertices * sizeof(int[4]);
+	loadmodel->surfmesh.data_vertexweightinfluence4f = (float *)data;data += meshvertices * sizeof(float[4]);
+	loadmodel->data_poses = (float *)data;data += loadmodel->num_poses * sizeof(float[12]);
+	loadmodel->data_basebonepose = (float *)data;data += loadmodel->num_poses * sizeof(float[12]);
+	loadmodel->data_baseboneposeinverse = (float *)data;data += loadmodel->num_poses * sizeof(float[12]);
 
 	//zymlump_t lump_poses; // float pose[numposes][numbones][3][4]; // animation data
 	poses = (float *) (pheader->lump_poses.start + pbase);
@@ -1350,21 +1462,40 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	//zymlump_t lump_verts; // zymvertex_t vert[numvertices]; // see vertex struct
 	verts = (zymvertex_t *)Mem_Alloc(loadmodel->mempool, pheader->lump_verts.length);
 	vertdata = (zymvertex_t *) (pheader->lump_verts.start + pbase);
-	l = 0;
+	// reconstruct frame 0 matrices to allow reconstruction of the base mesh
+	// (converting from weight-blending skeletal animation to
+	//  deformation-based skeletal animation)
+	bonepose = Z_Malloc(loadmodel->num_bones * sizeof(float[12]));
+	for (i = 0;i < loadmodel->num_bones;i++)
+	{
+		const float *m = loadmodel->data_poses + i * 12;
+		if (loadmodel->data_bones[i].parent >= 0)
+			R_ConcatTransforms(bonepose + 12 * loadmodel->data_bones[i].parent, m, bonepose + 12 * i);
+		else
+			for (k = 0;k < 12;k++)
+				bonepose[12*i+k] = m[k];
+	}
 	for (j = 0;j < pheader->numverts;j++)
 	{
-		for (k = 0;k < vertbonecounts[j];k++, l++)
-		{
-			// this format really should have had a per vertexweight weight value...
-			float influence = 1.0f / vertbonecounts[j];
-			loadmodel->surfmesh.data_vertexboneweights[l].vertexindex = j;
-			loadmodel->surfmesh.data_vertexboneweights[l].boneindex = BigLong(vertdata[l].bonenum);
-			loadmodel->surfmesh.data_vertexboneweights[l].origin[0] = BigFloat(vertdata[l].origin[0]) * influence;
-			loadmodel->surfmesh.data_vertexboneweights[l].origin[1] = BigFloat(vertdata[l].origin[1]) * influence;
-			loadmodel->surfmesh.data_vertexboneweights[l].origin[2] = BigFloat(vertdata[l].origin[2]) * influence;
-			loadmodel->surfmesh.data_vertexboneweights[l].origin[3] = influence;
-		}
+		// this format really should have had a per vertexweight weight value...
+		// but since it does not, the weighting is completely ignored and
+		// only one weight is allowed per vertex
+		int boneindex = BigLong(vertdata[j].bonenum);
+		const float *m = bonepose + 12 * boneindex;
+		float relativeorigin[3];
+		relativeorigin[0] = BigFloat(vertdata[j].origin[0]);
+		relativeorigin[1] = BigFloat(vertdata[j].origin[1]);
+		relativeorigin[2] = BigFloat(vertdata[j].origin[2]);
+		// transform the vertex bone weight into the base mesh
+		loadmodel->surfmesh.data_vertex3f[j*3+0] = relativeorigin[0] * m[0] + relativeorigin[1] * m[1] + relativeorigin[2] * m[ 2] + m[ 3];
+		loadmodel->surfmesh.data_vertex3f[j*3+1] = relativeorigin[0] * m[4] + relativeorigin[1] * m[5] + relativeorigin[2] * m[ 6] + m[ 7];
+		loadmodel->surfmesh.data_vertex3f[j*3+2] = relativeorigin[0] * m[8] + relativeorigin[1] * m[9] + relativeorigin[2] * m[10] + m[11];
+		// store the weight as the primary weight on this vertex
+		loadmodel->surfmesh.data_vertexweightindex4i[j*4+0] = boneindex;
+		loadmodel->surfmesh.data_vertexweightinfluence4f[j*4+0] = 1;
 	}
+	Z_Free(bonepose);
+	// normals and tangents are calculated after elements are loaded
 
 	//zymlump_t lump_texcoords; // float texcoords[numvertices][2];
 	outtexcoord2f = loadmodel->surfmesh.data_texcoordtexture2f;
@@ -1434,14 +1565,17 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		else
 			for (j = 0;j < loadmodel->numskins;j++)
 				Mod_BuildAliasSkinFromSkinFrame(loadmodel->data_textures + i + j * loadmodel->num_surfaces, NULL);
-
-		Mod_ValidateElements(loadmodel->surfmesh.data_element3i + surface->num_firsttriangle * 3, surface->num_triangles, surface->num_firstvertex, surface->num_vertices, __FILE__, __LINE__);
 	}
-	Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
-	Mod_Alias_Mesh_CompileFrameZero();
 	Mod_FreeSkinFiles(skinfiles);
 	Mem_Free(vertbonecounts);
 	Mem_Free(verts);
+
+	// compute all the mesh information that was not loaded from the file
+	Mod_ValidateElements(loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles, 0, loadmodel->surfmesh.num_vertices, __FILE__, __LINE__);
+	Mod_BuildBaseBonePoses();
+	Mod_BuildNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_normal3f, true);
+	Mod_BuildTextureVectorsFromNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, true);
+	Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
 }
 
 void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
@@ -1451,9 +1585,10 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	dpmbone_t *bone;
 	dpmmesh_t *dpmmesh;
 	unsigned char *pbase;
-	int i, j, k, meshvertices, meshtriangles, numvertexboneweights;
+	int i, j, k, meshvertices, meshtriangles;
 	skinfile_t *skinfiles;
 	unsigned char *data;
+	float *bonepose;
 
 	pheader = (dpmheader_t *)buffer;
 	pbase = (unsigned char *)buffer;
@@ -1522,7 +1657,6 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 
 	meshvertices = 0;
 	meshtriangles = 0;
-	numvertexboneweights = 0;
 
 	// gather combined statistics from the meshes
 	dpmmesh = (dpmmesh_t *) (pbase + pheader->ofs_meshs);
@@ -1531,15 +1665,6 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		int numverts = BigLong(dpmmesh->num_verts);
 		meshvertices += numverts;;
 		meshtriangles += BigLong(dpmmesh->num_tris);
-
-		data = (unsigned char *) (pbase + BigLong(dpmmesh->ofs_verts));
-		for (j = 0;j < numverts;j++)
-		{
-			int numweights = BigLong(((dpmvertex_t *)data)->numbones);
-			numvertexboneweights += numweights;
-			data += sizeof(dpmvertex_t);
-			data += numweights * sizeof(dpmbonevert_t);
-		}
 		dpmmesh++;
 	}
 
@@ -1548,18 +1673,24 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->num_poses = loadmodel->num_bones * loadmodel->numframes;
 	loadmodel->num_textures = loadmodel->nummodelsurfaces = loadmodel->num_surfaces = pheader->num_meshs;
 	// do most allocations as one merged chunk
-	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + meshtriangles * sizeof(int[3]) + meshvertices * sizeof(float[2]) + numvertexboneweights * sizeof(surfmeshvertexboneweight_t) + loadmodel->num_poses * sizeof(float[3][4]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t));
+	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + meshtriangles * sizeof(int[3]) + meshvertices * (sizeof(float[14]) + sizeof(int[4]) + sizeof(float[4])) + loadmodel->num_poses * sizeof(float[36]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t));
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
 	loadmodel->surfacelist = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
 	loadmodel->data_textures = (texture_t *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
 	loadmodel->surfmesh.num_vertices = meshvertices;
 	loadmodel->surfmesh.num_triangles = meshtriangles;
-	loadmodel->surfmesh.num_vertexboneweights = numvertexboneweights;
 	loadmodel->surfmesh.data_element3i = (int *)data;data += meshtriangles * sizeof(int[3]);
 	loadmodel->surfmesh.data_neighbor3i = (int *)data;data += meshtriangles * sizeof(int[3]);
+	loadmodel->surfmesh.data_vertex3f = (float *)data;data += meshvertices * sizeof(float[3]);
+	loadmodel->surfmesh.data_svector3f = (float *)data;data += meshvertices * sizeof(float[3]);
+	loadmodel->surfmesh.data_tvector3f = (float *)data;data += meshvertices * sizeof(float[3]);
+	loadmodel->surfmesh.data_normal3f = (float *)data;data += meshvertices * sizeof(float[3]);
 	loadmodel->surfmesh.data_texcoordtexture2f = (float *)data;data += meshvertices * sizeof(float[2]);
-	loadmodel->surfmesh.data_vertexboneweights = (surfmeshvertexboneweight_t *)data;data += numvertexboneweights * sizeof(surfmeshvertexboneweight_t);
-	loadmodel->data_poses = (float *)data;data += loadmodel->num_poses * sizeof(float[3][4]);
+	loadmodel->surfmesh.data_vertexweightindex4i = (int *)data;data += meshvertices * sizeof(int[4]);
+	loadmodel->surfmesh.data_vertexweightinfluence4f = (float *)data;data += meshvertices * sizeof(float[4]);
+	loadmodel->data_poses = (float *)data;data += loadmodel->num_poses * sizeof(float[12]);
+	loadmodel->data_basebonepose = (float *)data;data += loadmodel->num_poses * sizeof(float[12]);
+	loadmodel->data_baseboneposeinverse = (float *)data;data += loadmodel->num_poses * sizeof(float[12]);
 	loadmodel->skinscenes = (animscene_t *)data;data += loadmodel->numskins * sizeof(animscene_t);
 	loadmodel->data_bones = (aliasbone_t *)data;data += loadmodel->num_bones * sizeof(aliasbone_t);
 	loadmodel->animscenes = (animscene_t *)data;data += loadmodel->numframes * sizeof(animscene_t);
@@ -1605,7 +1736,19 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	dpmmesh = (dpmmesh_t *) (pbase + pheader->ofs_meshs);
 	meshvertices = 0;
 	meshtriangles = 0;
-	numvertexboneweights = 0;
+	// reconstruct frame 0 matrices to allow reconstruction of the base mesh
+	// (converting from weight-blending skeletal animation to
+	//  deformation-based skeletal animation)
+	bonepose = Z_Malloc(loadmodel->num_bones * sizeof(float[12]));
+	for (i = 0;i < loadmodel->num_bones;i++)
+	{
+		const float *m = loadmodel->data_poses + i * 12;
+		if (loadmodel->data_bones[i].parent >= 0)
+			R_ConcatTransforms(bonepose + 12 * loadmodel->data_bones[i].parent, m, bonepose + 12 * i);
+		else
+			for (k = 0;k < 12;k++)
+				bonepose[12*i+k] = m[k];
+	}
 	for (i = 0;i < loadmodel->num_surfaces;i++, dpmmesh++)
 	{
 		const int *inelements;
@@ -1640,22 +1783,70 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 			loadmodel->surfmesh.data_texcoordtexture2f[j + surface->num_firstvertex * 2] = BigFloat(intexcoord[j]);
 
 		data = (unsigned char *) (pbase + BigLong(dpmmesh->ofs_verts));
-		for (j = 0;j < surface->num_vertices;j++)
+		for (j = surface->num_firstvertex;j < surface->num_firstvertex + surface->num_vertices;j++)
 		{
+			float sum;
+			int l;
 			int numweights = BigLong(((dpmvertex_t *)data)->numbones);
 			data += sizeof(dpmvertex_t);
 			for (k = 0;k < numweights;k++)
 			{
 				const dpmbonevert_t *vert = (dpmbonevert_t *) data;
-				// stuff not processed here: normal
-				loadmodel->surfmesh.data_vertexboneweights[numvertexboneweights].vertexindex = j;
-				loadmodel->surfmesh.data_vertexboneweights[numvertexboneweights].boneindex = BigLong(vert->bonenum);
-				loadmodel->surfmesh.data_vertexboneweights[numvertexboneweights].origin[0] = BigFloat(vert->origin[0]);
-				loadmodel->surfmesh.data_vertexboneweights[numvertexboneweights].origin[1] = BigFloat(vert->origin[1]);
-				loadmodel->surfmesh.data_vertexboneweights[numvertexboneweights].origin[2] = BigFloat(vert->origin[2]);
-				loadmodel->surfmesh.data_vertexboneweights[numvertexboneweights].origin[3] = BigFloat(vert->influence);
-				numvertexboneweights++;
+				int boneindex = BigLong(vert->bonenum);
+				const float *m = bonepose + 12 * boneindex;
+				float influence = BigFloat(vert->influence);
+				float relativeorigin[3], relativenormal[3];
+				relativeorigin[0] = BigFloat(vert->origin[0]);
+				relativeorigin[1] = BigFloat(vert->origin[1]);
+				relativeorigin[2] = BigFloat(vert->origin[2]);
+				relativenormal[0] = BigFloat(vert->normal[0]);
+				relativenormal[1] = BigFloat(vert->normal[1]);
+				relativenormal[2] = BigFloat(vert->normal[2]);
+				// blend the vertex bone weights into the base mesh
+				loadmodel->surfmesh.data_vertex3f[j*3+0] += relativeorigin[0] * m[0] + relativeorigin[1] * m[1] + relativeorigin[2] * m[ 2] + influence * m[ 3];
+				loadmodel->surfmesh.data_vertex3f[j*3+1] += relativeorigin[0] * m[4] + relativeorigin[1] * m[5] + relativeorigin[2] * m[ 6] + influence * m[ 7];
+				loadmodel->surfmesh.data_vertex3f[j*3+2] += relativeorigin[0] * m[8] + relativeorigin[1] * m[9] + relativeorigin[2] * m[10] + influence * m[11];
+				loadmodel->surfmesh.data_normal3f[j*3+0] += relativenormal[0] * m[0] + relativenormal[1] * m[1] + relativenormal[2] * m[ 2];
+				loadmodel->surfmesh.data_normal3f[j*3+1] += relativenormal[0] * m[4] + relativenormal[1] * m[5] + relativenormal[2] * m[ 6];
+				loadmodel->surfmesh.data_normal3f[j*3+2] += relativenormal[0] * m[8] + relativenormal[1] * m[9] + relativenormal[2] * m[10];
+				if (!k)
+				{
+					// store the first (and often only) weight
+					loadmodel->surfmesh.data_vertexweightinfluence4f[j*4+0] = influence;
+					loadmodel->surfmesh.data_vertexweightindex4i[j*4+0] = boneindex;
+				}
+				else
+				{
+					// sort the new weight into this vertex's weight table
+					// (which only accepts up to 4 bones per vertex)
+					for (l = 0;l < 4;l++)
+					{
+						if (loadmodel->surfmesh.data_vertexweightinfluence4f[j*4+l] < influence)
+						{
+							// move weaker influence weights out of the way first
+							int l2;
+							for (l2 = 3;l2 > l;l2--)
+							{
+								loadmodel->surfmesh.data_vertexweightinfluence4f[j*4+l2] = loadmodel->surfmesh.data_vertexweightinfluence4f[j*4+l2-1];
+								loadmodel->surfmesh.data_vertexweightindex4i[j*4+l2] = loadmodel->surfmesh.data_vertexweightindex4i[j*4+l2-1];
+							}
+							// store the new weight
+							loadmodel->surfmesh.data_vertexweightinfluence4f[j*4+l] = influence;
+							loadmodel->surfmesh.data_vertexweightindex4i[j*4+l] = boneindex;
+							break;
+						}
+					}
+				}
 				data += sizeof(dpmbonevert_t);
+			}
+			sum = 0;
+			for (l = 0;l < 4;l++)
+				sum += loadmodel->surfmesh.data_vertexweightinfluence4f[j*4+l];
+			if (sum && fabs(sum - 1) > (1.0f / 256.0f))
+			{
+				float f = 1.0f / sum;
+				for (l = 0;l < 4;l++)
+					loadmodel->surfmesh.data_vertexweightinfluence4f[j*4+l] *= f;
 			}
 		}
 
@@ -1668,9 +1859,13 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 
 		Mod_ValidateElements(loadmodel->surfmesh.data_element3i + surface->num_firsttriangle * 3, surface->num_triangles, surface->num_firstvertex, surface->num_vertices, __FILE__, __LINE__);
 	}
-	Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
-	Mod_Alias_Mesh_CompileFrameZero();
+	Z_Free(bonepose);
 	Mod_FreeSkinFiles(skinfiles);
+
+	// compute all the mesh information that was not loaded from the file
+	Mod_BuildBaseBonePoses();
+	Mod_BuildTextureVectorsFromNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, true);
+	Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
 }
 
 static void Mod_PSKMODEL_AnimKeyToMatrix(float *origin, float *quat, matrix4x4_t *m)
@@ -1686,7 +1881,7 @@ static void Mod_PSKMODEL_AnimKeyToMatrix(float *origin, float *quat, matrix4x4_t
 #define PSKQUATNEGATIONS
 void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 {
-	int i, j, index, version, recordsize, numrecords, meshvertices, meshtriangles, numvertexboneweights;
+	int i, j, index, version, recordsize, numrecords, meshvertices, meshtriangles;
 	int numpnts, numvtxw, numfaces, nummatts, numbones, numrawweights, numanimbones, numanims, numanimkeys;
 	fs_offset_t filesize;
 	pskpnts_t *pnts;
@@ -2029,9 +2224,13 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 				}
 				else
 				{
-					p->quat[0] *=  1;
-					p->quat[1] *= -1;
-					p->quat[2] *=  1;
+					//p->quat[0] *=  1;
+					//p->quat[1] *= -1;
+					//p->quat[2] *=  1;
+					// clear root bone to defaults to recenter all frames of an animation
+					// (root bone is often tilted, or worse);
+					VectorSet(p->origin, 0, 0, 0);
+					Vector4Set(p->quat, 0, 0, 0.707106781187, 0.707106781187);
 				}
 #endif
 			}
@@ -2068,11 +2267,6 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 
 	meshvertices = numvtxw;
 	meshtriangles = numfaces;
-	numvertexboneweights = 0;
-	for (index = 0;index < numvtxw;index++)
-		for (j = 0;j < numrawweights;j++)
-			if (rawweights[j].pntsindex == vtxw[index].pntsindex)
-				numvertexboneweights++;
 
 	// load external .skin files if present
 	skinfiles = Mod_LoadSkinFiles();
@@ -2082,18 +2276,24 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->num_poses = loadmodel->num_bones * loadmodel->numframes;
 	loadmodel->num_textures = loadmodel->nummodelsurfaces = loadmodel->num_surfaces = nummatts;
 	// do most allocations as one merged chunk
-	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + meshtriangles * sizeof(int[3]) + meshvertices * sizeof(float[2]) + numvertexboneweights * sizeof(surfmeshvertexboneweight_t) + loadmodel->num_poses * sizeof(float[3][4]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t));
+	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + meshtriangles * sizeof(int[3]) + meshvertices * (sizeof(float[14]) + sizeof(int[4]) + sizeof(float[4])) + loadmodel->num_poses * sizeof(float[36]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t));
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
 	loadmodel->surfacelist = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
 	loadmodel->data_textures = (texture_t *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
 	loadmodel->surfmesh.num_vertices = meshvertices;
 	loadmodel->surfmesh.num_triangles = meshtriangles;
-	loadmodel->surfmesh.num_vertexboneweights = numvertexboneweights;
 	loadmodel->surfmesh.data_element3i = (int *)data;data += meshtriangles * sizeof(int[3]);
 	loadmodel->surfmesh.data_neighbor3i = (int *)data;data += meshtriangles * sizeof(int[3]);
+	loadmodel->surfmesh.data_vertex3f = (float *)data;data += meshvertices * sizeof(float[3]);
+	loadmodel->surfmesh.data_svector3f = (float *)data;data += meshvertices * sizeof(float[3]);
+	loadmodel->surfmesh.data_tvector3f = (float *)data;data += meshvertices * sizeof(float[3]);
+	loadmodel->surfmesh.data_normal3f = (float *)data;data += meshvertices * sizeof(float[3]);
 	loadmodel->surfmesh.data_texcoordtexture2f = (float *)data;data += meshvertices * sizeof(float[2]);
-	loadmodel->surfmesh.data_vertexboneweights = (surfmeshvertexboneweight_t *)data;data += numvertexboneweights * sizeof(surfmeshvertexboneweight_t);
-	loadmodel->data_poses = (float *)data;data += loadmodel->num_poses * sizeof(float[3][4]);
+	loadmodel->surfmesh.data_vertexweightindex4i = (int *)data;data += meshvertices * sizeof(int[4]);
+	loadmodel->surfmesh.data_vertexweightinfluence4f = (float *)data;data += meshvertices * sizeof(float[4]);
+	loadmodel->data_poses = (float *)data;data += loadmodel->num_poses * sizeof(float[12]);
+	loadmodel->data_basebonepose = (float *)data;data += loadmodel->num_poses * sizeof(float[12]);
+	loadmodel->data_baseboneposeinverse = (float *)data;data += loadmodel->num_poses * sizeof(float[12]);
 	loadmodel->skinscenes = (animscene_t *)data;data += loadmodel->numskins * sizeof(animscene_t);
 	loadmodel->data_bones = (aliasbone_t *)data;data += loadmodel->num_bones * sizeof(aliasbone_t);
 	loadmodel->animscenes = (animscene_t *)data;data += loadmodel->numframes * sizeof(animscene_t);
@@ -2121,9 +2321,12 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		loadmodel->data_surfaces[index].num_vertices = loadmodel->surfmesh.num_vertices;
 	}
 
-	// copy over the texcoords
+	// copy over the vertex locations and texcoords
 	for (index = 0;index < numvtxw;index++)
 	{
+		loadmodel->surfmesh.data_vertex3f[index*3+0] = pnts[vtxw[index].pntsindex].origin[0];
+		loadmodel->surfmesh.data_vertex3f[index*3+1] = pnts[vtxw[index].pntsindex].origin[1];
+		loadmodel->surfmesh.data_vertex3f[index*3+2] = pnts[vtxw[index].pntsindex].origin[2];
 		loadmodel->surfmesh.data_texcoordtexture2f[index*2+0] = vtxw[index].texcoord[0];
 		loadmodel->surfmesh.data_texcoordtexture2f[index*2+1] = vtxw[index].texcoord[1];
 	}
@@ -2154,31 +2357,45 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 			Host_Error("%s bone[%i].parent >= %i", loadmodel->name, index, index);
 	}
 
-	// build bone-relative vertex weights from the psk point weights
-	numvertexboneweights = 0;
+	// sort the psk point weights into the vertex weight tables
+	// (which only accept up to 4 bones per vertex)
 	for (index = 0;index < numvtxw;index++)
 	{
+		int l;
+		float sum;
 		for (j = 0;j < numrawweights;j++)
 		{
 			if (rawweights[j].pntsindex == vtxw[index].pntsindex)
 			{
-				matrix4x4_t matrix, inversematrix;
-				loadmodel->surfmesh.data_vertexboneweights[numvertexboneweights].vertexindex = index;
-				loadmodel->surfmesh.data_vertexboneweights[numvertexboneweights].boneindex = rawweights[j].boneindex;
-				loadmodel->surfmesh.data_vertexboneweights[numvertexboneweights].weight = rawweights[j].weight;
-				matrix = identitymatrix;
-				for (i = rawweights[j].boneindex;i >= 0;i = loadmodel->data_bones[i].parent)
+				int boneindex = rawweights[j].boneindex;
+				float influence = rawweights[j].weight;
+				for (l = 0;l < 4;l++)
 				{
-					matrix4x4_t childmatrix, tempmatrix;
-					Mod_PSKMODEL_AnimKeyToMatrix(bones[i].basepose.origin, bones[i].basepose.quat, &tempmatrix);
-					childmatrix = matrix;
-					Matrix4x4_Concat(&matrix, &tempmatrix, &childmatrix);
+					if (loadmodel->surfmesh.data_vertexweightinfluence4f[index*4+l] < influence)
+					{
+						// move lower influence weights out of the way first
+						int l2;
+						for (l2 = 3;l2 > l;l2--)
+						{
+							loadmodel->surfmesh.data_vertexweightinfluence4f[index*4+l2] = loadmodel->surfmesh.data_vertexweightinfluence4f[index*4+l2-1];
+							loadmodel->surfmesh.data_vertexweightindex4i[index*4+l2] = loadmodel->surfmesh.data_vertexweightindex4i[index*4+l2-1];
+						}
+						// store the new weight
+						loadmodel->surfmesh.data_vertexweightinfluence4f[index*4+l] = influence;
+						loadmodel->surfmesh.data_vertexweightindex4i[index*4+l] = boneindex;
+						break;
+					}
 				}
-				Matrix4x4_Invert_Simple(&inversematrix, &matrix);
-				Matrix4x4_Transform(&inversematrix, pnts[rawweights[j].pntsindex].origin, loadmodel->surfmesh.data_vertexboneweights[numvertexboneweights].origin);
-				VectorScale(loadmodel->surfmesh.data_vertexboneweights[numvertexboneweights].origin, loadmodel->surfmesh.data_vertexboneweights[numvertexboneweights].weight, loadmodel->surfmesh.data_vertexboneweights[numvertexboneweights].origin);
-				numvertexboneweights++;
 			}
+		}
+		sum = 0;
+		for (l = 0;l < 4;l++)
+			sum += loadmodel->surfmesh.data_vertexweightinfluence4f[index*4+l];
+		if (sum && fabs(sum - 1) > (1.0f / 256.0f))
+		{
+			float f = 1.0f / sum;
+			for (l = 0;l < 4;l++)
+				loadmodel->surfmesh.data_vertexweightinfluence4f[index*4+l] *= f;
 		}
 	}
 
@@ -2213,13 +2430,15 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		loadmodel->data_poses[index*12+10] = matrix.m[2][2];
 		loadmodel->data_poses[index*12+11] = matrix.m[2][3];
 	}
-
-	// compile extra data we want
-	Mod_ValidateElements(loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles, 0, loadmodel->surfmesh.num_vertices, __FILE__, __LINE__);
-	Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
-	Mod_Alias_Mesh_CompileFrameZero();
 	Mod_FreeSkinFiles(skinfiles);
-
 	Mem_Free(animfilebuffer);
+
+	// compute all the mesh information that was not loaded from the file
+	// TODO: honor smoothing groups somehow?
+	Mod_ValidateElements(loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles, 0, loadmodel->surfmesh.num_vertices, __FILE__, __LINE__);
+	Mod_BuildBaseBonePoses();
+	Mod_BuildNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_normal3f, true);
+	Mod_BuildTextureVectorsFromNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, true);
+	Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
 }
 

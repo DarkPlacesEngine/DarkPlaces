@@ -297,7 +297,7 @@ extern texture_t *rsurface_texture;
 extern rtexture_t *rsurface_lightmaptexture;
 extern rsurfmode_t rsurface_mode;
 
-void RSurf_ActiveEntity(const entity_render_t *ent);
+void RSurf_ActiveEntity(const entity_render_t *ent, qboolean wantnormals, qboolean wanttangents);
 void RSurf_CleanUp(void);
 
 void R_Mesh_ResizeArrays(int newvertices);
