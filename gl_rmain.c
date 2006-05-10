@@ -2485,7 +2485,7 @@ rsurfmode_t rsurface_mode;
 texture_t *rsurface_glsl_texture;
 qboolean rsurface_glsl_uselightmap;
 
-void RSurf_ActiveEntity(const entity_render_t *ent)
+void RSurf_ActiveEntity(const entity_render_t *ent, qboolean wantnormals, qboolean wanttangents)
 {
 	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, rsurface_modelorg);
 	rsurface_entity = ent;
@@ -2494,13 +2494,32 @@ void RSurf_ActiveEntity(const entity_render_t *ent)
 		R_Mesh_ResizeArrays(rsurface_model->surfmesh.num_vertices);
 	R_Mesh_Matrix(&ent->matrix);
 	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, rsurface_modelorg);
-	if ((rsurface_entity->frameblend[0].lerp != 1 || rsurface_entity->frameblend[0].frame != 0) && (rsurface_model->surfmesh.data_morphvertex3f || rsurface_model->surfmesh.data_vertexboneweights))
+	if ((rsurface_entity->frameblend[0].lerp != 1 || rsurface_entity->frameblend[0].frame != 0) && (rsurface_model->surfmesh.data_morphvertex3f || rsurface_model->surfmesh.data_vertexweightindex4i))
 	{
-		rsurface_modelvertex3f = rsurface_array_modelvertex3f;
-		rsurface_modelsvector3f = NULL;
-		rsurface_modeltvector3f = NULL;
-		rsurface_modelnormal3f = NULL;
-		Mod_Alias_GetMesh_Vertex3f(rsurface_model, rsurface_entity->frameblend, rsurface_array_modelvertex3f);
+		if (wanttangents)
+		{
+			rsurface_modelvertex3f = rsurface_array_modelvertex3f;
+			rsurface_modelsvector3f = rsurface_array_modelsvector3f;
+			rsurface_modeltvector3f = rsurface_array_modeltvector3f;
+			rsurface_modelnormal3f = rsurface_array_modelnormal3f;
+			Mod_Alias_GetMesh_Vertices(rsurface_model, rsurface_entity->frameblend, rsurface_array_modelvertex3f, rsurface_array_modelnormal3f, rsurface_array_modelsvector3f, rsurface_array_modeltvector3f);
+		}
+		else if (wantnormals)
+		{
+			rsurface_modelvertex3f = rsurface_array_modelvertex3f;
+			rsurface_modelsvector3f = NULL;
+			rsurface_modeltvector3f = NULL;
+			rsurface_modelnormal3f = rsurface_array_modelnormal3f;
+			Mod_Alias_GetMesh_Vertices(rsurface_model, rsurface_entity->frameblend, rsurface_array_modelvertex3f, rsurface_array_modelnormal3f, NULL, NULL);
+		}
+		else
+		{
+			rsurface_modelvertex3f = rsurface_array_modelvertex3f;
+			rsurface_modelsvector3f = NULL;
+			rsurface_modeltvector3f = NULL;
+			rsurface_modelnormal3f = NULL;
+			Mod_Alias_GetMesh_Vertices(rsurface_model, rsurface_entity->frameblend, rsurface_array_modelvertex3f, NULL, NULL, NULL);
+		}
 		rsurface_generatedvertex = true;
 	}
 	else
@@ -3272,7 +3291,13 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 	int batchcount;
 	texture_t *t;
 	msurface_t *texturesurfacelist[BATCHSIZE];
-	RSurf_ActiveEntity(ent);
+	// if the model is static it doesn't matter what value we give for
+	// wantnormals and wanttangents, so this logic uses only rules applicable
+	// to a model, knowing that they are meaningless otherwise
+	if ((ent->effects & EF_FULLBRIGHT) || r_showsurfaces.integer || VectorLength2(ent->modellight_diffuse) < (1.0f / 256.0f))
+		RSurf_ActiveEntity(ent, false, false);
+	else
+		RSurf_ActiveEntity(ent, true, r_glsl.integer && gl_support_fragment_shader);
 	batchcount = 0;
 	t = NULL;
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
@@ -3336,7 +3361,13 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 	if (model == NULL)
 		return;
 
-	RSurf_ActiveEntity(ent);
+	// if the model is static it doesn't matter what value we give for
+	// wantnormals and wanttangents, so this logic uses only rules applicable
+	// to a model, knowing that they are meaningless otherwise
+	if ((ent->effects & EF_FULLBRIGHT) || r_showsurfaces.integer || VectorLength2(ent->modellight_diffuse) < (1.0f / 256.0f))
+		RSurf_ActiveEntity(ent, false, false);
+	else
+		RSurf_ActiveEntity(ent, true, r_glsl.integer && gl_support_fragment_shader);
 
 	// update light styles
 	if (!skysurfaces && model->brushq1.light_styleupdatechains)

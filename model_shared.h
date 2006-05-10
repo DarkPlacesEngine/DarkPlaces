@@ -72,15 +72,6 @@ typedef struct overridetagnameset_s
 }
 overridetagnameset_t;
 
-typedef struct surfmeshvertexboneweight_s
-{
-	unsigned int vertexindex;
-	unsigned int boneindex;
-	float origin[3];
-	float weight;
-}
-surfmeshvertexboneweight_t;
-
 // used for mesh lists in q1bsp/q3bsp map models
 // (the surfaces reference portions of these meshes)
 typedef struct surfmesh_s
@@ -100,9 +91,9 @@ typedef struct surfmesh_s
 	// morph blending, these are zero if model is skeletal or static
 	int num_morphframes;
 	float *data_morphvertex3f;
-	// skeletal blending, these are zero if model is morph or static
-	int num_vertexboneweights;
-	surfmeshvertexboneweight_t *data_vertexboneweights;
+	// skeletal blending, these are NULL if model is morph or static
+	int *data_vertexweightindex4i;
+	float *data_vertexweightinfluence4f;
 }
 surfmesh_t;
 
@@ -551,6 +542,8 @@ typedef struct model_s
 	aliasbone_t		*data_bones;
 	int				num_poses;
 	float			*data_poses;
+	float			*data_basebonepose;
+	float			*data_baseboneposeinverse;
 	// textures of this model
 	int				num_textures;
 	texture_t		*data_textures;
@@ -676,7 +669,7 @@ void R_Q1BSP_DrawLight(struct entity_render_s *ent, int numsurfaces, const int *
 // alias models
 struct frameblend_s;
 void Mod_AliasInit(void);
-void Mod_Alias_GetMesh_Vertex3f(const model_t *model, const struct frameblend_s *frameblend, float *out3f);
+void Mod_Alias_GetMesh_Vertices(const model_t *model, const struct frameblend_s *frameblend, float *vertex3f, float *normal3f, float *svector3f, float *tvector3f);
 int Mod_Alias_GetTagMatrix(const model_t *model, int poseframe, int tagindex, matrix4x4_t *outmatrix);
 int Mod_Alias_GetTagIndexForName(const model_t *model, unsigned int skin, const char *tagname);
 
