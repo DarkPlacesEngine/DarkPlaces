@@ -730,7 +730,7 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 #if COLLISIONPARANOID < 3
 		if (trace.startsolid || endstuck)
 #endif
-			Con_Printf("%s{e%i:%f %f %f:%f %f %f:%f:%f %f %f%s%s}\n", (trace.startsolid || endstuck) ? "\002" : "", passedict ? passedict - prog->edicts : -1, passedict->fields.server->origin[0], passedict->fields.server->origin[1], passedict->fields.server->origin[2], end[0] - passedict->fields.server->origin[0], end[1] - passedict->fields.server->origin[1], end[2] - passedict->fields.server->origin[2], trace.fraction, trace.endpos[0] - passedict->fields.server->origin[0], trace.endpos[1] - passedict->fields.server->origin[1], trace.endpos[2] - passedict->fields.server->origin[2], trace.startsolid ? " startstuck" : "", endstuck ? " endstuck" : "");
+			Con_Printf("%s{e%i:%f %f %f:%f %f %f:%f:%f %f %f%s%s}\n", (trace.startsolid || endstuck) ? "^3" : "", passedict ? passedict - prog->edicts : -1, passedict->fields.server->origin[0], passedict->fields.server->origin[1], passedict->fields.server->origin[2], end[0] - passedict->fields.server->origin[0], end[1] - passedict->fields.server->origin[1], end[2] - passedict->fields.server->origin[2], trace.fraction, trace.endpos[0] - passedict->fields.server->origin[0], trace.endpos[1] - passedict->fields.server->origin[1], trace.endpos[2] - passedict->fields.server->origin[2], trace.startsolid ? " startstuck" : "", endstuck ? " endstuck" : "");
 	}
 	return trace;
 }

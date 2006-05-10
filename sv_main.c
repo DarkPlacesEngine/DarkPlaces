@@ -320,7 +320,7 @@ void SV_SendServerinfo (client_t *client)
 
 	SZ_Clear (&client->netconnection->message);
 	MSG_WriteByte (&client->netconnection->message, svc_print);
-	dpsnprintf (message, sizeof (message), "\002\nServer: %s build %s (progs %i crc)", gamename, buildstring, prog->filecrc);
+	dpsnprintf (message, sizeof (message), "\nServer: %s build %s (progs %i crc)", gamename, buildstring, prog->filecrc);
 	MSG_WriteString (&client->netconnection->message,message);
 
 	// FIXME: LordHavoc: this does not work on dedicated servers, needs fixing.
