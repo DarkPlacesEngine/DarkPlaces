@@ -404,6 +404,7 @@ void CSQC_AddPrintText (const char *msg)
 		Con_Print(msg);
 		return;
 	}
+	// FIXME: is this bugged?
 	i = strlen(msg)-1;
 	if(msg[i] != '\n' && msg[i] != '\r')
 	{
