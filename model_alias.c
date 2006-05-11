@@ -2224,13 +2224,9 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 				}
 				else
 				{
-					//p->quat[0] *=  1;
-					//p->quat[1] *= -1;
-					//p->quat[2] *=  1;
-					// clear root bone to defaults to recenter all frames of an animation
-					// (root bone is often tilted, or worse);
-					VectorSet(p->origin, 0, 0, 0);
-					Vector4Set(p->quat, 0, 0, 0.707106781187, 0.707106781187);
+					p->quat[0] *=  1;
+					p->quat[1] *= -1;
+					p->quat[2] *=  1;
 				}
 #endif
 			}
