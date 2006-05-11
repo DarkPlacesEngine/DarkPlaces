@@ -2241,7 +2241,7 @@ void NetConn_QueryMasters(qboolean querydp, qboolean queryqw)
 							Con_Printf("Querying master %s (resolved from %s)\n", lookupstring, sv_qwmasters[masternum].string);
 						}
 						masterquerycount++;
-						NetConn_Write(cl_sockets[i], request, strlen(request) + 1, &masteraddress);
+						NetConn_Write(cl_sockets[i], request, (int)strlen(request) + 1, &masteraddress);
 					}
 				}
 			}
