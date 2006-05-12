@@ -3075,7 +3075,7 @@ void VM_AddPolygonsToMeshQueue (void)
 	if(!vm_drawpolygons_num)
 		return;
 	for(i = 0;i < vm_drawpolygons_num;i++)
-		R_MeshQueue_Add(VM_DrawPolygonCallback, NULL, i, NULL);
+		VM_DrawPolygonCallback(NULL, NULL, i, NULL);
 	vm_drawpolygons_num = 0;
 }
 

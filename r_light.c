@@ -80,21 +80,21 @@ void R_DrawCoronas(void)
 	if (r_coronas.value < 0.01)
 		return;
 	R_Mesh_Matrix(&identitymatrix);
-	viewdist = DotProduct(r_vieworigin, r_viewforward);
-	flag = r_rtworld ? LIGHTFLAG_REALTIMEMODE : LIGHTFLAG_NORMALMODE;
+	viewdist = DotProduct(r_view.origin, r_view.forward);
+	flag = r_refdef.rtworld ? LIGHTFLAG_REALTIMEMODE : LIGHTFLAG_NORMALMODE;
 	for (lnum = 0, light = r_shadow_worldlightchain;light;light = light->next, lnum++)
 	{
-		if ((light->flags & flag) && light->corona * r_coronas.value > 0 && (r_shadow_debuglight.integer < 0 || r_shadow_debuglight.integer == lnum) && (dist = (DotProduct(light->rtlight.shadoworigin, r_viewforward) - viewdist)) >= 24.0f && CL_TraceBox(light->rtlight.shadoworigin, vec3_origin, vec3_origin, r_vieworigin, true, NULL, SUPERCONTENTS_SOLID, false).fraction == 1)
+		if ((light->flags & flag) && light->corona * r_coronas.value > 0 && (r_shadow_debuglight.integer < 0 || r_shadow_debuglight.integer == lnum) && (dist = (DotProduct(light->rtlight.shadoworigin, r_view.forward) - viewdist)) >= 24.0f && CL_TraceBox(light->rtlight.shadoworigin, vec3_origin, vec3_origin, r_view.origin, true, NULL, SUPERCONTENTS_SOLID, false).fraction == 1)
 		{
 			cscale = light->rtlight.corona * r_coronas.value * 0.25f;
 			scale = light->rtlight.radius * light->rtlight.coronasizescale;
-			R_DrawSprite(GL_ONE, GL_ONE, lightcorona, NULL, true, light->rtlight.shadoworigin, r_viewright, r_viewup, scale, -scale, -scale, scale, light->rtlight.color[0] * cscale, light->rtlight.color[1] * cscale, light->rtlight.color[2] * cscale, 1);
+			R_DrawSprite(GL_ONE, GL_ONE, lightcorona, NULL, true, light->rtlight.shadoworigin, r_view.right, r_view.up, scale, -scale, -scale, scale, light->rtlight.color[0] * cscale, light->rtlight.color[1] * cscale, light->rtlight.color[2] * cscale, 1);
 		}
 	}
 	for (i = 0;i < r_refdef.numlights;i++)
 	{
 		light = r_refdef.lights[i];
-		if ((light->flags & flag) && light->corona * r_coronas.value > 0 && (dist = (DotProduct(light->origin, r_viewforward) - viewdist)) >= 24.0f && CL_TraceBox(light->origin, vec3_origin, vec3_origin, r_vieworigin, true, NULL, SUPERCONTENTS_SOLID, false).fraction == 1)
+		if ((light->flags & flag) && light->corona * r_coronas.value > 0 && (dist = (DotProduct(light->origin, r_view.forward) - viewdist)) >= 24.0f && CL_TraceBox(light->origin, vec3_origin, vec3_origin, r_view.origin, true, NULL, SUPERCONTENTS_SOLID, false).fraction == 1)
 		{
 			cscale = light->corona * r_coronas.value * 0.25f;
 			scale = light->rtlight.radius * light->rtlight.coronasizescale;
@@ -103,7 +103,7 @@ void R_DrawCoronas(void)
 				cscale *= 4.0f;
 				scale *= 2.0f;
 			}
-			R_DrawSprite(GL_ONE, GL_ONE, lightcorona, NULL, true, light->origin, r_viewright, r_viewup, scale, -scale, -scale, scale, light->color[0] * cscale, light->color[1] * cscale, light->color[2] * cscale, 1);
+			R_DrawSprite(GL_ONE, GL_ONE, lightcorona, NULL, true, light->origin, r_view.right, r_view.up, scale, -scale, -scale, scale, light->color[0] * cscale, light->color[1] * cscale, light->color[2] * cscale, 1);
 		}
 	}
 }

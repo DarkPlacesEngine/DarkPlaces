@@ -56,7 +56,7 @@ void R_SkyStartFrame(void)
 	skyrendersphere = false;
 	skyrenderbox = false;
 	skyrendermasked = false;
-	if (r_sky.integer && !fogenabled)
+	if (r_sky.integer && !r_refdef.fogenabled)
 	{
 		if (skyboxside[0] || skyboxside[1] || skyboxside[2] || skyboxside[3] || skyboxside[4] || skyboxside[5])
 			skyrenderbox = true;
@@ -406,7 +406,7 @@ void R_Sky(void)
 	matrix4x4_t skymatrix;
 	if (skyrendermasked)
 	{
-		Matrix4x4_CreateTranslate(&skymatrix, r_vieworigin[0], r_vieworigin[1], r_vieworigin[2]);
+		Matrix4x4_CreateTranslate(&skymatrix, r_view.origin[0], r_view.origin[1], r_view.origin[2]);
 		R_Mesh_Matrix(&skymatrix);
 		if (skyrendersphere)
 		{

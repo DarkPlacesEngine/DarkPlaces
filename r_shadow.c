@@ -659,7 +659,7 @@ void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f,
 	if (maxshadowtriangles < nummarktris || maxshadowvertices < numverts)
 		R_Shadow_ResizeShadowArrays((numverts + 255) & ~255, (nummarktris + 255) & ~255);
 	tris = R_Shadow_ConstructShadowVolume(numverts, numtris, elements, neighbors, invertex3f, &outverts, shadowelements, shadowvertex3f, projectorigin, projectdistance, nummarktris, marktris);
-	renderstats.lights_dynamicshadowtriangles += tris;
+	r_refdef.stats.lights_dynamicshadowtriangles += tris;
 	R_Shadow_RenderVolume(outverts, tris, shadowvertex3f, shadowelements);
 }
 
@@ -708,7 +708,7 @@ void R_Shadow_RenderVolume(int numvertices, int numtriangles, const float *verte
 		Mod_ShadowMesh_AddMesh(r_main_mempool, r_shadow_compilingrtlight->static_meshchain_shadow, NULL, NULL, NULL, vertex3f, NULL, NULL, NULL, NULL, numtriangles, element3i);
 		return;
 	}
-	renderstats.lights_shadowtriangles += numtriangles;
+	r_refdef.stats.lights_shadowtriangles += numtriangles;
 	CHECKGLERROR
 	R_Mesh_VertexPointer(vertex3f);
 	GL_LockArrays(0, numvertices);
@@ -825,7 +825,7 @@ void R_Shadow_RenderMode_Begin(void)
 	GL_Color(0, 0, 0, 1);
 	qglCullFace(GL_FRONT);CHECKGLERROR // quake is backwards, this culls back faces
 	qglEnable(GL_CULL_FACE);CHECKGLERROR
-	GL_Scissor(r_view_x, r_view_y, r_view_width, r_view_height);
+	GL_Scissor(r_view.x, r_view.y, r_view.width, r_view.height);
 
 	r_shadow_rendermode = R_SHADOW_RENDERMODE_NONE;
 
@@ -871,7 +871,7 @@ void R_Shadow_RenderMode_StencilShadowVolumes(void)
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
-	qglPolygonOffset(r_shadowpolygonfactor, r_shadowpolygonoffset);CHECKGLERROR
+	qglPolygonOffset(r_refdef.shadowpolygonfactor, r_refdef.shadowpolygonoffset);CHECKGLERROR
 	qglDepthFunc(GL_LESS);CHECKGLERROR
 	qglCullFace(GL_FRONT);CHECKGLERROR // quake is backwards, this culls back faces
 	qglEnable(GL_STENCIL_TEST);CHECKGLERROR
@@ -896,7 +896,7 @@ void R_Shadow_RenderMode_StencilShadowVolumes(void)
 		qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);CHECKGLERROR
 	}
 	GL_Clear(GL_STENCIL_BUFFER_BIT);
-	renderstats.lights_clears++;
+	r_refdef.stats.lights_clears++;
 }
 
 void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent)
@@ -906,10 +906,10 @@ void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent)
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
-	qglPolygonOffset(r_polygonfactor, r_polygonoffset);CHECKGLERROR
+	qglPolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);CHECKGLERROR
 	//qglDisable(GL_POLYGON_OFFSET_FILL);CHECKGLERROR
 	GL_Color(1, 1, 1, 1);
-	GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
+	GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 1);
 	if (transparent)
 	{
 		qglDepthFunc(GL_LEQUAL);CHECKGLERROR
@@ -949,7 +949,7 @@ void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent)
 		R_Mesh_TexBind(9, R_GetTexture(r_texture_black)); // glow
 		//R_Mesh_TexMatrix(3, r_shadow_entitytolight); // light filter matrix
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-		GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 0);
+		GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 0);
 		CHECKGLERROR
 	}
 }
@@ -961,9 +961,9 @@ void R_Shadow_RenderMode_VisibleShadowVolumes(void)
 	GL_BlendFunc(GL_ONE, GL_ONE);
 	GL_DepthMask(false);
 	GL_DepthTest(!r_showdisabledepthtest.integer);
-	qglPolygonOffset(r_polygonfactor, r_polygonoffset);CHECKGLERROR
+	qglPolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);CHECKGLERROR
 	GL_Color(0.0, 0.0125, 0.1, 1);
-	GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
+	GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 1);
 	qglDepthFunc(GL_GEQUAL);CHECKGLERROR
 	qglCullFace(GL_FRONT);CHECKGLERROR // this culls back
 	qglDisable(GL_CULL_FACE);CHECKGLERROR
@@ -978,9 +978,9 @@ void R_Shadow_RenderMode_VisibleLighting(qboolean stenciltest, qboolean transpar
 	GL_BlendFunc(GL_ONE, GL_ONE);
 	GL_DepthMask(false);
 	GL_DepthTest(!r_showdisabledepthtest.integer);
-	qglPolygonOffset(r_polygonfactor, r_polygonoffset);CHECKGLERROR
+	qglPolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);CHECKGLERROR
 	GL_Color(0.1, 0.0125, 0, 1);
-	GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
+	GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 1);
 	if (transparent)
 	{
 		qglDepthFunc(GL_LEQUAL);CHECKGLERROR
@@ -1010,11 +1010,11 @@ void R_Shadow_RenderMode_End(void)
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(true);
 	GL_DepthTest(true);
-	qglPolygonOffset(r_polygonfactor, r_polygonoffset);CHECKGLERROR
+	qglPolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);CHECKGLERROR
 	//qglDisable(GL_POLYGON_OFFSET_FILL);CHECKGLERROR
 	GL_Color(1, 1, 1, 1);
-	GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
-	GL_Scissor(r_view_x, r_view_y, r_view_width, r_view_height);
+	GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 1);
+	GL_Scissor(r_view.x, r_view.y, r_view.width, r_view.height);
 	qglDepthFunc(GL_LEQUAL);CHECKGLERROR
 	qglCullFace(GL_FRONT);CHECKGLERROR // quake is backwards, this culls back faces
 	qglEnable(GL_CULL_FACE);CHECKGLERROR
@@ -1039,18 +1039,18 @@ qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 	float vertex3f[256*3];
 
 	// if view is inside the light box, just say yes it's visible
-	if (BoxesOverlap(r_vieworigin, r_vieworigin, mins, maxs))
+	if (BoxesOverlap(r_view.origin, r_view.origin, mins, maxs))
 	{
-		GL_Scissor(r_view_x, r_view_y, r_view_width, r_view_height);
+		GL_Scissor(r_view.x, r_view.y, r_view.width, r_view.height);
 		return false;
 	}
 
 	// create a temporary brush describing the area the light can affect in worldspace
-	VectorNegate(frustum[0].normal, planes[ 0].normal);planes[ 0].dist = -frustum[0].dist;
-	VectorNegate(frustum[1].normal, planes[ 1].normal);planes[ 1].dist = -frustum[1].dist;
-	VectorNegate(frustum[2].normal, planes[ 2].normal);planes[ 2].dist = -frustum[2].dist;
-	VectorNegate(frustum[3].normal, planes[ 3].normal);planes[ 3].dist = -frustum[3].dist;
-	VectorNegate(frustum[4].normal, planes[ 4].normal);planes[ 4].dist = -frustum[4].dist;
+	VectorNegate(r_view.frustum[0].normal, planes[ 0].normal);planes[ 0].dist = -r_view.frustum[0].dist;
+	VectorNegate(r_view.frustum[1].normal, planes[ 1].normal);planes[ 1].dist = -r_view.frustum[1].dist;
+	VectorNegate(r_view.frustum[2].normal, planes[ 2].normal);planes[ 2].dist = -r_view.frustum[2].dist;
+	VectorNegate(r_view.frustum[3].normal, planes[ 3].normal);planes[ 3].dist = -r_view.frustum[3].dist;
+	VectorNegate(r_view.frustum[4].normal, planes[ 4].normal);planes[ 4].dist = -r_view.frustum[4].dist;
 	VectorSet   (planes[ 5].normal,  1, 0, 0);         planes[ 5].dist =  maxs[0];
 	VectorSet   (planes[ 6].normal, -1, 0, 0);         planes[ 6].dist = -mins[0];
 	VectorSet   (planes[ 7].normal, 0,  1, 0);         planes[ 7].dist =  maxs[1];
@@ -1102,10 +1102,10 @@ qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 	//Con_Printf("%f %f %f %f\n", x1, y1, x2, y2);
 
 	// clamp it to the screen
-	if (ix1 < r_view_x) ix1 = r_view_x;
-	if (iy1 < r_view_y) iy1 = r_view_y;
-	if (ix2 > r_view_x + r_view_width) ix2 = r_view_x + r_view_width;
-	if (iy2 > r_view_y + r_view_height) iy2 = r_view_y + r_view_height;
+	if (ix1 < r_view.x) ix1 = r_view.x;
+	if (iy1 < r_view.y) iy1 = r_view.y;
+	if (ix2 > r_view.x + r_view.width) ix2 = r_view.x + r_view.width;
+	if (iy2 > r_view.y + r_view.height) iy2 = r_view.y + r_view.height;
 
 	// if it is inside out, it's not visible
 	if (ix2 <= ix1 || iy2 <= iy1)
@@ -1115,7 +1115,7 @@ qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 	GL_Scissor(ix1, vid.height - iy2, ix2 - ix1, iy2 - iy1);
 	//qglScissor(ix1, iy1, ix2 - ix1, iy2 - iy1);CHECKGLERROR
 	//qglEnable(GL_SCISSOR_TEST);CHECKGLERROR
-	renderstats.lights_scissored++;
+	r_refdef.stats.lights_scissored++;
 	return false;
 }
 
@@ -1138,7 +1138,7 @@ static void R_Shadow_RenderSurfacesLighting_Light_Vertex_Shading(const msurface_
 				color4f[0] = (ambientcolor[0] + shadeintensity * diffusecolor[0]);
 				color4f[1] = (ambientcolor[1] + shadeintensity * diffusecolor[1]);
 				color4f[2] = (ambientcolor[2] + shadeintensity * diffusecolor[2]);
-				if (fogenabled)
+				if (r_refdef.fogenabled)
 				{
 					float f = VERTEXFOGTABLE(VectorDistance(v, rsurface_modelorg));
 					VectorScale(color4f, f, color4f);
@@ -1171,7 +1171,7 @@ static void R_Shadow_RenderSurfacesLighting_Light_Vertex_Shading(const msurface_
 					color4f[1] = ambientcolor[1] * distintensity;
 					color4f[2] = ambientcolor[2] * distintensity;
 				}
-				if (fogenabled)
+				if (r_refdef.fogenabled)
 				{
 					float f = VERTEXFOGTABLE(VectorDistance(v, rsurface_modelorg));
 					VectorScale(color4f, f, color4f);
@@ -1205,7 +1205,7 @@ static void R_Shadow_RenderSurfacesLighting_Light_Vertex_Shading(const msurface_
 					color4f[1] = ambientcolor[1] * distintensity;
 					color4f[2] = ambientcolor[2] * distintensity;
 				}
-				if (fogenabled)
+				if (r_refdef.fogenabled)
 				{
 					float f = VERTEXFOGTABLE(VectorDistance(v, rsurface_modelorg));
 					VectorScale(color4f, f, color4f);
@@ -1308,7 +1308,7 @@ static void R_Shadow_RenderSurfacesLighting_Light_Dot3_Finalize(int numsurfaces,
 {
 	// shared final code for all the dot3 layers
 	int renders;
-	GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 0);
+	GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 0);
 	for (renders = 0;renders < 64 && (r > 0 || g > 0 || b > 0);renders++, r--, g--, b--)
 	{
 		GL_Color(bound(0, r, 1), bound(0, g, 1), bound(0, b, 1), 1);
@@ -2204,7 +2204,7 @@ void R_Shadow_DrawEntityShadow(entity_render_t *ent, int numsurfaces, int *surfa
 			CHECKGLERROR
 			for (mesh = r_shadow_rtlight->static_meshchain_shadow;mesh;mesh = mesh->next)
 			{
-				renderstats.lights_shadowtriangles += mesh->numtriangles;
+				r_refdef.stats.lights_shadowtriangles += mesh->numtriangles;
 				R_Mesh_VertexPointer(mesh->vertex3f);
 				GL_LockArrays(0, mesh->numverts);
 				if (r_shadow_rendermode == R_SHADOW_RENDERMODE_STENCIL)
@@ -2348,7 +2348,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	if (numleafs)
 	{
 		for (i = 0;i < numleafs;i++)
-			if (r_worldleafvisible[leaflist[i]])
+			if (r_viewcache.world_leafvisible[leaflist[i]])
 				break;
 		if (i == numleafs)
 			return;
@@ -2381,7 +2381,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 				// about the VectorDistance2 - light emitting entities should not cast their own shadow
 				if ((ent->flags & RENDER_SHADOW) && model->DrawShadowVolume && VectorDistance2(ent->origin, rtlight->shadoworigin) > 0.1)
 					shadowentities[numshadowentities++] = ent;
-				if (ent->visframe == r_framecount && (ent->flags & RENDER_LIGHT) && model->DrawLight)
+				if (r_viewcache.entityvisible[i] && (ent->flags & RENDER_LIGHT) && model->DrawLight)
 					lightentities[numlightentities++] = ent;
 			}
 		}
@@ -2398,10 +2398,10 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	// make this the active rtlight for rendering purposes
 	R_Shadow_RenderMode_ActiveLight(rtlight);
 	// count this light in the r_speeds
-	renderstats.lights++;
+	r_refdef.stats.lights++;
 
 	usestencil = false;
-	if (numshadowentities && rtlight->shadow && (rtlight->isstatic ? r_rtworldshadows : r_rtdlightshadows))
+	if (numshadowentities && rtlight->shadow && (rtlight->isstatic ? r_refdef.rtworldshadows : r_refdef.rtdlightshadows))
 	{
 		// draw stencil shadow volumes to mask off pixels that are in shadow
 		// so that they won't receive lighting
@@ -2451,7 +2451,7 @@ void R_ShadowVolumeLighting(qboolean visible)
 
 	R_Shadow_RenderMode_Begin();
 
-	flag = r_rtworld ? LIGHTFLAG_REALTIMEMODE : LIGHTFLAG_NORMALMODE;
+	flag = r_refdef.rtworld ? LIGHTFLAG_REALTIMEMODE : LIGHTFLAG_NORMALMODE;
 	if (r_shadow_debuglight.integer >= 0)
 	{
 		for (lnum = 0, light = r_shadow_worldlightchain;light;lnum++, light = light->next)
@@ -2462,7 +2462,7 @@ void R_ShadowVolumeLighting(qboolean visible)
 		for (lnum = 0, light = r_shadow_worldlightchain;light;lnum++, light = light->next)
 			if (light->flags & flag)
 				R_DrawRTLight(&light->rtlight, visible);
-	if (r_rtdlight)
+	if (r_refdef.rtdlight)
 		for (lnum = 0;lnum < r_refdef.numlights;lnum++)
 			R_DrawRTLight(&r_refdef.lights[lnum]->rtlight, visible);
 
@@ -2661,7 +2661,7 @@ void R_Shadow_DrawCursor_TransparentCallback(const entity_render_t *ent, const r
 {
 	// this is never batched (there can be only one)
 	float scale = r_editlights_cursorgrid.value * 0.5f;
-	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, r_crosshairs[1]->tex, NULL, false, r_editlights_cursorlocation, r_viewright, r_viewup, scale, -scale, -scale, scale, 1, 1, 1, 0.5f);
+	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, r_crosshairs[1]->tex, NULL, false, r_editlights_cursorlocation, r_view.right, r_view.up, scale, -scale, -scale, scale, 1, 1, 1, 0.5f);
 }
 
 void R_Shadow_DrawLightSprite_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
@@ -2675,7 +2675,7 @@ void R_Shadow_DrawLightSprite_TransparentCallback(const entity_render_t *ent, co
 		intensity = 0.75 + 0.25 * sin(realtime * M_PI * 4.0);
 	if (!light->shadow)
 		intensity *= 0.5f;
-	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, r_crosshairs[surfacelist[0]]->tex, NULL, false, light->origin, r_viewright, r_viewup, 8, -8, -8, 8, intensity, intensity, intensity, 0.5);
+	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, r_crosshairs[surfacelist[0]]->tex, NULL, false, light->origin, r_view.right, r_view.up, 8, -8, -8, 8, intensity, intensity, intensity, 0.5);
 }
 
 void R_Shadow_DrawLightSprites(void)
@@ -2696,12 +2696,12 @@ void R_Shadow_SelectLightInView(void)
 	bestrating = 0;
 	for (light = r_shadow_worldlightchain;light;light = light->next)
 	{
-		VectorSubtract(light->origin, r_vieworigin, temp);
-		rating = (DotProduct(temp, r_viewforward) / sqrt(DotProduct(temp, temp)));
+		VectorSubtract(light->origin, r_view.origin, temp);
+		rating = (DotProduct(temp, r_view.forward) / sqrt(DotProduct(temp, temp)));
 		if (rating >= 0.95)
 		{
 			rating /= (1 + 0.0625f * sqrt(DotProduct(temp, temp)));
-			if (bestrating < rating && CL_TraceBox(light->origin, vec3_origin, vec3_origin, r_vieworigin, true, NULL, SUPERCONTENTS_SOLID, false).fraction == 1.0f)
+			if (bestrating < rating && CL_TraceBox(light->origin, vec3_origin, vec3_origin, r_view.origin, true, NULL, SUPERCONTENTS_SOLID, false).fraction == 1.0f)
 			{
 				bestrating = rating;
 				best = light;
@@ -3127,8 +3127,8 @@ void R_Shadow_SetCursorLocationForView(void)
 	vec_t dist, push;
 	vec3_t dest, endpos;
 	trace_t trace;
-	VectorMA(r_vieworigin, r_editlights_cursordistance.value, r_viewforward, dest);
-	trace = CL_TraceBox(r_vieworigin, vec3_origin, vec3_origin, dest, true, NULL, SUPERCONTENTS_SOLID, false);
+	VectorMA(r_view.origin, r_editlights_cursordistance.value, r_view.forward, dest);
+	trace = CL_TraceBox(r_view.origin, vec3_origin, vec3_origin, dest, true, NULL, SUPERCONTENTS_SOLID, false);
 	if (trace.fraction < 1)
 	{
 		dist = trace.fraction * r_editlights_cursordistance.value;
@@ -3136,7 +3136,7 @@ void R_Shadow_SetCursorLocationForView(void)
 		if (push > dist)
 			push = dist;
 		push = -push;
-		VectorMA(trace.endpos, push, r_viewforward, endpos);
+		VectorMA(trace.endpos, push, r_view.forward, endpos);
 		VectorMA(endpos, r_editlights_cursorpushoff.value, trace.plane.normal, endpos);
 	}
 	else

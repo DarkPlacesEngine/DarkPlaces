@@ -653,8 +653,15 @@ void Host_Main(void)
 				// don't allow simulation to run too fast or too slow or logic glitches can occur
 
 				// stop running server frames if the wall time reaches this value
-				if (sys_ticrate.value <= 0 || (cl.islocalgame && !sv_fixedframeratesingleplayer.integer))
+				if (sys_ticrate.value <= 0)
 					advancetime = sv_timer;
+				else if (cl.islocalgame && !sv_fixedframeratesingleplayer.integer)
+				{
+					// synchronize to the client frametime, but no less than 10ms and no more than sys_ticrate
+					advancetime = bound(0.01, cl_timer, sys_ticrate.value);
+					framelimit = 10;
+					aborttime = Sys_DoubleTime() + 0.1;
+				}
 				else
 				{
 					advancetime = sys_ticrate.value;
@@ -786,7 +793,7 @@ void Host_Main(void)
 					csqc_usecsqclistener = false;
 				}
 				else
-					S_Update(&r_refdef.viewentitymatrix);
+					S_Update(&r_view.matrix);
 
 				CDAudio_Update();
 			}

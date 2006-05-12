@@ -219,7 +219,7 @@ void R_FogLightningBeam_Vertex3f_Color4f(const float *v, float *c, int numverts,
 	float ifog;
 	for (i = 0;i < numverts;i++, v += 3, c += 4)
 	{
-		ifog = 1 - VERTEXFOGTABLE(VectorDistance(v, r_vieworigin));
+		ifog = 1 - VERTEXFOGTABLE(VectorDistance(v, r_view.origin));
 		c[0] = r * ifog;
 		c[1] = g * ifog;
 		c[2] = b * ifog;
@@ -246,7 +246,7 @@ void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, const r
 		r_lightningbeams_setuptexture();
 
 	R_Mesh_VertexPointer(vertex3f);
-	if (fogenabled)
+	if (r_refdef.fogenabled)
 	{
 		// per vertex colors if fog is used
 		R_Mesh_ColorPointer(color4f);
@@ -284,7 +284,7 @@ void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, const r
 
 		// calculate up vector such that it points toward viewer, and rotates around the beamdir
 		// get direction from start of beam to viewer
-		VectorSubtract(r_vieworigin, b->start, up);
+		VectorSubtract(r_view.origin, b->start, up);
 		// remove the portion of the vector that moves along the beam
 		// (this leaves only a vector pointing directly away from the beam)
 		t1 = -DotProduct(up, beamdir);
@@ -325,7 +325,7 @@ void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, const r
 		R_CalcLightningBeamPolygonTexCoord2f(texcoord2f + 0, t1, t2);
 		R_CalcLightningBeamPolygonTexCoord2f(texcoord2f + 8, t1 + 0.33, t2 + 0.33);
 		R_CalcLightningBeamPolygonTexCoord2f(texcoord2f + 16, t1 + 0.66, t2 + 0.66);
-		if (fogenabled)
+		if (r_refdef.fogenabled)
 		{
 			// per vertex colors if fog is used
 			R_FogLightningBeam_Vertex3f_Color4f(vertex3f, color4f, 12, r_lightningbeam_color_red.value, r_lightningbeam_color_green.value, r_lightningbeam_color_blue.value, 1);
