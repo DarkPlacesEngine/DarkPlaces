@@ -32,17 +32,6 @@ cvar_t r_lockvisibility = {0, "r_lockvisibility", "0", "disables visibility upda
 cvar_t r_useportalculling = {0, "r_useportalculling", "1", "use advanced portal culling visibility method to improve performance over just Potentially Visible Set, provides an even more significant speed improvement in unvised maps"};
 cvar_t r_q3bsp_renderskydepth = {0, "r_q3bsp_renderskydepth", "0", "draws sky depth masking in q3 maps (as in q1 maps), this means for example that sky polygons can hide other things"};
 
-// flag arrays used for visibility checking on world model
-// (all other entities have no per-surface/per-leaf visibility checks)
-// TODO: dynamic resize according to r_refdef.worldmodel->brush.num_clusters
-unsigned char r_pvsbits[(32768+7)>>3];
-// TODO: dynamic resize according to r_refdef.worldmodel->brush.num_leafs
-unsigned char r_worldleafvisible[32768];
-// TODO: dynamic resize according to r_refdef.worldmodel->num_surfaces
-unsigned char r_worldsurfacevisible[262144];
-// if true, the view is currently in a leaf without pvs data
-qboolean r_worldnovis;
-
 /*
 ===============
 R_BuildLightMap
@@ -381,7 +370,7 @@ static void R_DrawPortals(void)
 		return;
 	for (leafnum = 0;leafnum < r_refdef.worldmodel->brush.num_leafs;leafnum++)
 	{
-		if (r_worldleafvisible[leafnum])
+		if (r_viewcache.world_leafvisible[leafnum])
 		{
 			//for (portalnum = 0, portal = model->brush.data_portals;portalnum < model->brush.num_portals;portalnum++, portal++)
 			for (portal = r_refdef.worldmodel->brush.data_leafs[leafnum].portals;portal;portal = portal->next)
@@ -401,7 +390,7 @@ static void R_DrawPortals(void)
 	}
 }
 
-void R_WorldVisibility(void)
+void R_View_WorldVisibility(void)
 {
 	int i, j, *mark;
 	mleaf_t *leaf;
@@ -412,18 +401,18 @@ void R_WorldVisibility(void)
 		return;
 
 	// if possible find the leaf the view origin is in
-	viewleaf = model->brush.PointInLeaf ? model->brush.PointInLeaf(model, r_vieworigin) : NULL;
+	viewleaf = model->brush.PointInLeaf ? model->brush.PointInLeaf(model, r_view.origin) : NULL;
 	// if possible fetch the visible cluster bits
 	if (!r_lockpvs.integer && model->brush.FatPVS)
-		model->brush.FatPVS(model, r_vieworigin, 2, r_pvsbits, sizeof(r_pvsbits));
+		model->brush.FatPVS(model, r_view.origin, 2, r_viewcache.world_pvsbits, sizeof(r_viewcache.world_pvsbits));
 
 	if (!r_lockvisibility.integer)
 	{
 		// clear the visible surface and leaf flags arrays
-		memset(r_worldsurfacevisible, 0, model->num_surfaces);
-		memset(r_worldleafvisible, 0, model->brush.num_leafs);
+		memset(r_viewcache.world_surfacevisible, 0, model->num_surfaces);
+		memset(r_viewcache.world_leafvisible, 0, model->brush.num_leafs);
 
-		r_worldnovis = false;
+		r_viewcache.world_novis = false;
 
 		// if floating around in the void (no pvs data available, and no
 		// portals available), simply use all on-screen leafs.
@@ -432,17 +421,17 @@ void R_WorldVisibility(void)
 			// no visibility method: (used when floating around in the void)
 			// simply cull each leaf to the frustum (view pyramid)
 			// similar to quake's RecursiveWorldNode but without cache misses
-			r_worldnovis = true;
+			r_viewcache.world_novis = true;
 			for (j = 0, leaf = model->brush.data_leafs;j < model->brush.num_leafs;j++, leaf++)
 			{
 				// if leaf is in current pvs and on the screen, mark its surfaces
 				if (!R_CullBox(leaf->mins, leaf->maxs))
 				{
-					renderstats.world_leafs++;
-					r_worldleafvisible[j] = true;
+					r_refdef.stats.world_leafs++;
+					r_viewcache.world_leafvisible[j] = true;
 					if (leaf->numleafsurfaces)
 						for (i = 0, mark = leaf->firstleafsurface;i < leaf->numleafsurfaces;i++, mark++)
-							r_worldsurfacevisible[*mark] = true;
+							r_viewcache.world_surfacevisible[*mark] = true;
 				}
 			}
 		}
@@ -457,13 +446,13 @@ void R_WorldVisibility(void)
 			for (j = 0, leaf = model->brush.data_leafs;j < model->brush.num_leafs;j++, leaf++)
 			{
 				// if leaf is in current pvs and on the screen, mark its surfaces
-				if (CHECKPVSBIT(r_pvsbits, leaf->clusterindex) && !R_CullBox(leaf->mins, leaf->maxs))
+				if (CHECKPVSBIT(r_viewcache.world_pvsbits, leaf->clusterindex) && !R_CullBox(leaf->mins, leaf->maxs))
 				{
-					renderstats.world_leafs++;
-					r_worldleafvisible[j] = true;
+					r_refdef.stats.world_leafs++;
+					r_viewcache.world_leafvisible[j] = true;
 					if (leaf->numleafsurfaces)
 						for (i = 0, mark = leaf->firstleafsurface;i < leaf->numleafsurfaces;i++, mark++)
-							r_worldsurfacevisible[*mark] = true;
+							r_viewcache.world_surfacevisible[*mark] = true;
 				}
 			}
 		}
@@ -485,13 +474,13 @@ void R_WorldVisibility(void)
 			leafstackpos = 1;
 			while (leafstackpos)
 			{
-				renderstats.world_leafs++;
+				r_refdef.stats.world_leafs++;
 				leaf = leafstack[--leafstackpos];
-				r_worldleafvisible[leaf - model->brush.data_leafs] = true;
+				r_viewcache.world_leafvisible[leaf - model->brush.data_leafs] = true;
 				// mark any surfaces bounding this leaf
 				if (leaf->numleafsurfaces)
 					for (i = 0, mark = leaf->firstleafsurface;i < leaf->numleafsurfaces;i++, mark++)
-						r_worldsurfacevisible[*mark] = true;
+						r_viewcache.world_surfacevisible[*mark] = true;
 				// follow portals into other leafs
 				// the checks are:
 				// if viewer is behind portal (portal faces outward into the scene)
@@ -501,8 +490,8 @@ void R_WorldVisibility(void)
 				// (the first two checks won't cause as many cache misses as the leaf checks)
 				for (p = leaf->portals;p;p = p->next)
 				{
-					renderstats.world_portals++;
-					if (DotProduct(r_vieworigin, p->plane.normal) < (p->plane.dist + 1) && !R_CullBox(p->mins, p->maxs) && !r_worldleafvisible[p->past - model->brush.data_leafs] && CHECKPVSBIT(r_pvsbits, p->past->clusterindex))
+					r_refdef.stats.world_portals++;
+					if (DotProduct(r_view.origin, p->plane.normal) < (p->plane.dist + 1) && !R_CullBox(p->mins, p->maxs) && !r_viewcache.world_leafvisible[p->past - model->brush.data_leafs] && CHECKPVSBIT(r_viewcache.world_pvsbits, p->past->clusterindex))
 						leafstack[leafstackpos++] = p->past;
 				}
 			}
@@ -824,7 +813,7 @@ static void R_Q1BSP_DrawLight_TransparentBatch(int batchnumsurfaces, msurface_t 
 		tempcenter[1] = (batchsurface->mins[1] + batchsurface->maxs[1]) * 0.5f;
 		tempcenter[2] = (batchsurface->mins[2] + batchsurface->maxs[2]) * 0.5f;
 		Matrix4x4_Transform(&rsurface_entity->matrix, tempcenter, center);
-		R_MeshQueue_AddTransparent(rsurface_texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_vieworigin : center, R_Q1BSP_DrawLight_TransparentCallback, rsurface_entity, batchsurface - rsurface_model->data_surfaces, r_shadow_rtlight);
+		R_MeshQueue_AddTransparent(rsurface_texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_view.origin : center, R_Q1BSP_DrawLight_TransparentCallback, rsurface_entity, batchsurface - rsurface_model->data_surfaces, r_shadow_rtlight);
 	}
 }
 
@@ -848,10 +837,10 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 	CHECKGLERROR
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 	{
-		if ((ent == r_refdef.worldentity && !r_worldsurfacevisible[surfacelist[surfacelistindex]]))
+		if ((ent == r_refdef.worldentity && !r_viewcache.world_surfacevisible[surfacelist[surfacelistindex]]))
 			continue;
 		surface = model->data_surfaces + surfacelist[surfacelistindex];
-		renderstats.lights_lighttriangles += surface->num_triangles;
+		r_refdef.stats.lights_lighttriangles += surface->num_triangles;
 		if (tex != surface->texture)
 		{
 			if (batchnumsurfaces > 0)

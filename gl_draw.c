@@ -493,17 +493,10 @@ void GL_Draw_Init (void)
 
 void DrawQ_Begin(void)
 {
-	r_view_width = bound(0, r_refdef.width, vid.width);
-	r_view_height = bound(0, r_refdef.height, vid.height);
-	r_view_depth = 1;
-	r_view_x = bound(0, r_refdef.x, vid.width - r_refdef.width);
-	r_view_y = bound(0, r_refdef.y, vid.height - r_refdef.height);
-	r_view_z = 0;
-	r_view_matrix = r_refdef.viewentitymatrix;
-	GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
+	GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 1);
 
 	CHECKGLERROR
-	qglViewport(r_view_x, vid.height - (r_view_y + r_view_height), r_view_width, r_view_height);CHECKGLERROR
+	qglViewport(r_view.x, vid.height - (r_view.y + r_view.height), r_view.width, r_view.height);CHECKGLERROR
 	GL_SetupView_Mode_Ortho(0, 0, vid_conwidth.integer, vid_conheight.integer, -10, 100);
 	qglDepthFunc(GL_LEQUAL);CHECKGLERROR
 	R_Mesh_Matrix(&identitymatrix);

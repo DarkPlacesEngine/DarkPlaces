@@ -2069,18 +2069,18 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 			cg *= (ambient[1] + 0.5 * diffuse[1]);
 			cb *= (ambient[2] + 0.5 * diffuse[2]);
 		}
-		if (fogenabled)
+		if (r_refdef.fogenabled)
 		{
-			fog = VERTEXFOGTABLE(VectorDistance(p->org, r_vieworigin));
+			fog = VERTEXFOGTABLE(VectorDistance(p->org, r_view.origin));
 			ifog = 1 - fog;
 			cr = cr * ifog;
 			cg = cg * ifog;
 			cb = cb * ifog;
 			if (blendmode == PBLEND_ALPHA)
 			{
-				cr += fogcolor[0] * fog;
-				cg += fogcolor[1] * fog;
-				cb += fogcolor[2] * fog;
+				cr += r_refdef.fogcolor[0] * fog;
+				cg += r_refdef.fogcolor[1] * fog;
+				cb += r_refdef.fogcolor[2] * fog;
 			}
 		}
 		c4f[0] = c4f[4] = c4f[8] = c4f[12] = cr;
@@ -2093,8 +2093,8 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 		tex = &particletexture[p->texnum];
 		if (p->type->orientation == PARTICLE_BILLBOARD)
 		{
-			VectorScale(r_viewleft, -size, right);
-			VectorScale(r_viewup, size, up);
+			VectorScale(r_view.left, -size, right);
+			VectorScale(r_view.up, size, up);
 			v3f[ 0] = org[0] - right[0] - up[0];
 			v3f[ 1] = org[1] - right[1] - up[1];
 			v3f[ 2] = org[2] - right[2] - up[2];
@@ -2115,7 +2115,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 		else if (p->type->orientation == PARTICLE_ORIENTED_DOUBLESIDED)
 		{
 			// double-sided
-			if (DotProduct(p->vel, r_vieworigin) > DotProduct(p->vel, org))
+			if (DotProduct(p->vel, r_view.origin) > DotProduct(p->vel, org))
 			{
 				VectorNegate(p->vel, v);
 				VectorVectors(v, right, up);
@@ -2223,15 +2223,15 @@ void R_DrawParticles (void)
 	if ((!cl.num_particles) || (!r_drawparticles.integer))
 		return;
 
-	minparticledist = DotProduct(r_vieworigin, r_viewforward) + 4.0f;
+	minparticledist = DotProduct(r_view.origin, r_view.forward) + 4.0f;
 
 	// LordHavoc: only render if not too close
 	for (i = 0, p = cl.particles;i < cl.num_particles;i++, p++)
 	{
 		if (p->type)
 		{
-			renderstats.particles++;
-			if (DotProduct(p->org, r_viewforward) >= minparticledist || p->type->orientation == PARTICLE_BEAM)
+			r_refdef.stats.particles++;
+			if (DotProduct(p->org, r_view.forward) >= minparticledist || p->type->orientation == PARTICLE_BEAM)
 				R_MeshQueue_AddTransparent(p->org, R_DrawParticle_TransparentCallback, NULL, i, NULL);
 		}
 	}

@@ -11,17 +11,17 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 	float scale;
 
 	// nudge it toward the view to make sure it isn't in a wall
-	org[0] = ent->matrix.m[0][3] - r_viewforward[0];
-	org[1] = ent->matrix.m[1][3] - r_viewforward[1];
-	org[2] = ent->matrix.m[2][3] - r_viewforward[2];
+	org[0] = ent->matrix.m[0][3] - r_view.forward[0];
+	org[1] = ent->matrix.m[1][3] - r_view.forward[1];
+	org[2] = ent->matrix.m[2][3] - r_view.forward[2];
 	switch(model->sprite.sprnum_type)
 	{
 	case SPR_VP_PARALLEL_UPRIGHT:
 		// flames and such
 		// vertical beam sprite, faces view plane
-		scale = ent->scale / sqrt(r_viewforward[0]*r_viewforward[0]+r_viewforward[1]*r_viewforward[1]);
-		left[0] = -r_viewforward[1] * scale;
-		left[1] = r_viewforward[0] * scale;
+		scale = ent->scale / sqrt(r_view.forward[0]*r_view.forward[0]+r_view.forward[1]*r_view.forward[1]);
+		left[0] = -r_view.forward[1] * scale;
+		left[1] = r_view.forward[0] * scale;
 		left[2] = 0;
 		up[0] = 0;
 		up[1] = 0;
@@ -30,9 +30,9 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 	case SPR_FACING_UPRIGHT:
 		// flames and such
 		// vertical beam sprite, faces viewer's origin (not the view plane)
-		scale = ent->scale / sqrt((org[0] - r_vieworigin[0])*(org[0] - r_vieworigin[0])+(org[1] - r_vieworigin[1])*(org[1] - r_vieworigin[1]));
-		left[0] = (org[1] - r_vieworigin[1]) * scale;
-		left[1] = -(org[0] - r_vieworigin[0]) * scale;
+		scale = ent->scale / sqrt((org[0] - r_view.origin[0])*(org[0] - r_view.origin[0])+(org[1] - r_view.origin[1])*(org[1] - r_view.origin[1]));
+		left[0] = (org[1] - r_view.origin[1]) * scale;
+		left[1] = -(org[0] - r_view.origin[0]) * scale;
 		left[2] = 0;
 		up[0] = 0;
 		up[1] = 0;
@@ -44,12 +44,12 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 	case SPR_VP_PARALLEL:
 		// normal sprite
 		// faces view plane
-		left[0] = r_viewleft[0] * ent->scale;
-		left[1] = r_viewleft[1] * ent->scale;
-		left[2] = r_viewleft[2] * ent->scale;
-		up[0] = r_viewup[0] * ent->scale;
-		up[1] = r_viewup[1] * ent->scale;
-		up[2] = r_viewup[2] * ent->scale;
+		left[0] = r_view.left[0] * ent->scale;
+		left[1] = r_view.left[1] * ent->scale;
+		left[2] = r_view.left[2] * ent->scale;
+		up[0] = r_view.up[0] * ent->scale;
+		up[1] = r_view.up[1] * ent->scale;
+		up[2] = r_view.up[2] * ent->scale;
 		break;
 	case SPR_ORIENTED:
 		// bullet marks on walls
@@ -65,12 +65,12 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 		// I have no idea what people would use this for...
 		// oriented relative to view space
 		// FIXME: test this and make sure it mimicks software
-		left[0] = ent->matrix.m[0][1] * r_viewforward[0] + ent->matrix.m[1][1] * r_viewleft[0] + ent->matrix.m[2][1] * r_viewup[0];
-		left[1] = ent->matrix.m[0][1] * r_viewforward[1] + ent->matrix.m[1][1] * r_viewleft[1] + ent->matrix.m[2][1] * r_viewup[1];
-		left[2] = ent->matrix.m[0][1] * r_viewforward[2] + ent->matrix.m[1][1] * r_viewleft[2] + ent->matrix.m[2][1] * r_viewup[2];
-		up[0] = ent->matrix.m[0][2] * r_viewforward[0] + ent->matrix.m[1][2] * r_viewleft[0] + ent->matrix.m[2][2] * r_viewup[0];
-		up[1] = ent->matrix.m[0][2] * r_viewforward[1] + ent->matrix.m[1][2] * r_viewleft[1] + ent->matrix.m[2][2] * r_viewup[1];
-		up[2] = ent->matrix.m[0][2] * r_viewforward[2] + ent->matrix.m[1][2] * r_viewleft[2] + ent->matrix.m[2][2] * r_viewup[2];
+		left[0] = ent->matrix.m[0][1] * r_view.forward[0] + ent->matrix.m[1][1] * r_view.left[0] + ent->matrix.m[2][1] * r_view.up[0];
+		left[1] = ent->matrix.m[0][1] * r_view.forward[1] + ent->matrix.m[1][1] * r_view.left[1] + ent->matrix.m[2][1] * r_view.up[1];
+		left[2] = ent->matrix.m[0][1] * r_view.forward[2] + ent->matrix.m[1][1] * r_view.left[2] + ent->matrix.m[2][1] * r_view.up[2];
+		up[0] = ent->matrix.m[0][2] * r_view.forward[0] + ent->matrix.m[1][2] * r_view.left[0] + ent->matrix.m[2][2] * r_view.up[0];
+		up[1] = ent->matrix.m[0][2] * r_view.forward[1] + ent->matrix.m[1][2] * r_view.left[1] + ent->matrix.m[2][2] * r_view.up[1];
+		up[2] = ent->matrix.m[0][2] * r_view.forward[2] + ent->matrix.m[1][2] * r_view.left[2] + ent->matrix.m[2][2] * r_view.up[2];
 		break;
 	}
 
@@ -104,6 +104,6 @@ void R_Model_Sprite_Draw(entity_render_t *ent)
 	if (ent->frameblend[0].frame < 0)
 		return;
 
-	R_MeshQueue_AddTransparent(ent->effects & EF_NODEPTHTEST ? r_vieworigin : ent->origin, R_Model_Sprite_Draw_TransparentCallback, ent, 0, r_shadow_rtlight);
+	R_MeshQueue_AddTransparent(ent->effects & EF_NODEPTHTEST ? r_view.origin : ent->origin, R_Model_Sprite_Draw_TransparentCallback, ent, 0, r_shadow_rtlight);
 }
 

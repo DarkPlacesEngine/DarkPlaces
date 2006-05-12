@@ -850,7 +850,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 		e->render.skinnum = e->state_current.skin;
 		if (e->render.flags & RENDER_VIEWMODEL && !e->state_current.tagentity)
 		{
-			if (!r_drawviewmodel.integer || chase_active.integer || envmap)// || csqc_loaded)
+			if (!r_drawviewmodel.integer || chase_active.integer || r_refdef.envmap)// || csqc_loaded)
 				return;
 			if (!e->csqc)
 			{
@@ -1557,7 +1557,7 @@ int CL_ReadFromServer(void)
 	r_refdef.time = cl.time;
 	r_refdef.extraupdate = !r_speeds.integer;
 	r_refdef.numentities = 0;
-	r_refdef.viewentitymatrix = identitymatrix;
+	r_view.matrix = identitymatrix;
 
 	if (cls.state == ca_connected && cls.signon == SIGNONS)
 	{
@@ -1621,13 +1621,13 @@ static void CL_Fog_f (void)
 {
 	if (Cmd_Argc () == 1)
 	{
-		Con_Printf("\"fog\" is \"%f %f %f %f\"\n", fog_density, fog_red, fog_green, fog_blue);
+		Con_Printf("\"fog\" is \"%f %f %f %f\"\n", r_refdef.fog_density, r_refdef.fog_red, r_refdef.fog_green, r_refdef.fog_blue);
 		return;
 	}
-	fog_density = atof(Cmd_Argv(1));
-	fog_red = atof(Cmd_Argv(2));
-	fog_green = atof(Cmd_Argv(3));
-	fog_blue = atof(Cmd_Argv(4));
+	r_refdef.fog_density = atof(Cmd_Argv(1));
+	r_refdef.fog_red = atof(Cmd_Argv(2));
+	r_refdef.fog_green = atof(Cmd_Argv(3));
+	r_refdef.fog_blue = atof(Cmd_Argv(4));
 }
 
 /*
@@ -1649,7 +1649,7 @@ static void CL_TimeRefresh_f (void)
 	timestart = Sys_DoubleTime();
 	for (i = 0;i < 128;i++)
 	{
-		Matrix4x4_CreateFromQuakeEntity(&r_refdef.viewentitymatrix, r_vieworigin[0], r_vieworigin[1], r_vieworigin[2], 0, i / 128.0 * 360.0, 0, 1);
+		Matrix4x4_CreateFromQuakeEntity(&r_view.matrix, r_view.origin[0], r_view.origin[1], r_view.origin[2], 0, i / 128.0 * 360.0, 0, 1);
 		CL_UpdateScreen();
 	}
 	timedelta = Sys_DoubleTime() - timestart;

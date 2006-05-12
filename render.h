@@ -21,26 +21,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef RENDER_H
 #define RENDER_H
 
-// flag arrays used for visibility checking on world model
-// (all other entities have no per-surface/per-leaf visibility checks)
-// TODO: dynamic resize according to r_refdef.worldmodel->brush.num_clusters
-extern unsigned char r_pvsbits[(32768+7)>>3];
-// TODO: dynamic resize according to r_refdef.worldmodel->brush.num_leafs
-extern unsigned char r_worldleafvisible[32768];
-// TODO: dynamic resize according to r_refdef.worldmodel->num_surfaces
-extern unsigned char r_worldsurfacevisible[262144];
-// if true, the view is currently in a leaf without pvs data
-extern qboolean r_worldnovis;
-
 // 1.0f / N table
 extern float ixtable[4096];
 
-// far clip distance for scene
-extern float r_farclip;
-
 // fog stuff
 extern void FOG_clear(void);
-extern float fog_density, fog_red, fog_green, fog_blue;
 
 // sky stuff
 extern cvar_t r_sky;
@@ -109,42 +94,6 @@ void R_Mesh_AddBrushMeshFromPlanes(rmesh_t *mesh, int numplanes, mplane_t *plane
 
 //=============================================================================
 
-extern int r_framecount;
-extern mplane_t frustum[5];
-
-typedef struct renderstats_s
-{
-	int entities;
-	int entities_surfaces;
-	int entities_triangles;
-	int world_leafs;
-	int world_portals;
-	int particles;
-	int meshes;
-	int meshes_elements;
-	int lights;
-	int lights_clears;
-	int lights_scissored;
-	int lights_lighttriangles;
-	int lights_shadowtriangles;
-	int lights_dynamicshadowtriangles;
-	int bloom;
-	int bloom_copypixels;
-	int bloom_drawpixels;
-}
-renderstats_t;
-
-extern renderstats_t renderstats;
-
-// brightness of world lightmaps and related lighting
-// (often reduced when world rtlights are enabled)
-extern float r_lightmapintensity;
-// whether to draw world lights realtime, dlights realtime, and their shadows
-extern qboolean r_rtworld;
-extern qboolean r_rtworldshadows;
-extern qboolean r_rtdlight;
-extern qboolean r_rtdlightshadows;
-
 extern cvar_t r_nearclip;
 
 // forces all rendering to draw triangle outlines
@@ -160,27 +109,6 @@ extern cvar_t r_showdisabledepthtest;
 //
 // view origin
 //
-extern vec3_t r_vieworigin;
-extern vec3_t r_viewforward;
-extern vec3_t r_viewleft;
-extern vec3_t r_viewright;
-extern vec3_t r_viewup;
-extern int r_view_x;
-extern int r_view_y;
-extern int r_view_z;
-extern int r_view_width;
-extern int r_view_height;
-extern int r_view_depth;
-extern matrix4x4_t r_view_matrix;
-extern float r_polygonfactor;
-extern float r_polygonoffset;
-extern float r_shadowpolygonfactor;
-extern float r_shadowpolygonoffset;
-
-extern	mleaf_t		*r_viewleaf, *r_oldviewleaf;
-
-extern	qboolean	envmap;
-
 extern cvar_t r_drawentities;
 extern cvar_t r_drawviewmodel;
 extern cvar_t r_speeds;
@@ -189,13 +117,13 @@ extern cvar_t r_wateralpha;
 extern cvar_t r_dynamic;
 
 void R_Init(void);
-void R_UpdateWorld(void); // needs no r_refdef
-void R_RenderView(void); // must call R_UpdateWorld and set r_refdef first
+void R_UpdateVariables(void); // must call after setting up most of r_refdef, but before calling R_RenderView
+void R_RenderView(void); // must set r_refdef and call R_UpdateVariables first
 
 
 void R_InitSky (unsigned char *src, int bytesperpixel); // called at level load
 
-void R_WorldVisibility();
+void R_View_WorldVisibility();
 void R_DrawParticles(void);
 void R_DrawExplosions(void);
 
@@ -203,17 +131,6 @@ void R_DrawExplosions(void);
 #define gl_alpha_format 4
 
 int R_CullBox(const vec3_t mins, const vec3_t maxs);
-
-#define FOGTABLEWIDTH 1024
-extern vec3_t fogcolor;
-extern vec_t fogdensity;
-extern vec_t fogrange;
-extern vec_t fograngerecip;
-extern int fogtableindex;
-extern vec_t fogtabledistmultiplier;
-extern float fogtable[FOGTABLEWIDTH];
-extern qboolean fogenabled;
-#define VERTEXFOGTABLE(dist) (fogtableindex = (int)((dist) * fogtabledistmultiplier), fogtable[bound(0, fogtableindex, FOGTABLEWIDTH - 1)])
 
 #include "r_modules.h"
 

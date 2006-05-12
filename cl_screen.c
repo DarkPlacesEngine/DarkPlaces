@@ -464,15 +464,15 @@ void R_TimeReport_Frame(void)
 		speedstringcount = 0;
 		r_speeds_string[0] = 0;
 		r_timereport_active = false;
-		sprintf(r_speeds_string + strlen(r_speeds_string), "org:'%+8.2f %+8.2f %+8.2f' dir:'%+2.3f %+2.3f %+2.3f'\n", r_vieworigin[0], r_vieworigin[1], r_vieworigin[2], r_viewforward[0], r_viewforward[1], r_viewforward[2]);
-		sprintf(r_speeds_string + strlen(r_speeds_string), "%5i entities%6i surfaces%6i triangles%5i leafs%5i portals%6i particles\n", renderstats.entities, renderstats.entities_surfaces, renderstats.entities_triangles, renderstats.world_leafs, renderstats.world_portals, renderstats.particles);
-		sprintf(r_speeds_string + strlen(r_speeds_string), "%4i lights%4i clears%4i scissored%7i light%7i shadow%7i dynamic\n", renderstats.lights, renderstats.lights_clears, renderstats.lights_scissored, renderstats.lights_lighttriangles, renderstats.lights_shadowtriangles, renderstats.lights_dynamicshadowtriangles);
-		if (renderstats.bloom)
-			sprintf(r_speeds_string + strlen(r_speeds_string), "rendered%6i meshes%8i triangles bloompixels%8i copied%8i drawn\n", renderstats.meshes, renderstats.meshes_elements / 3, renderstats.bloom_copypixels, renderstats.bloom_drawpixels);
+		sprintf(r_speeds_string + strlen(r_speeds_string), "org:'%+8.2f %+8.2f %+8.2f' dir:'%+2.3f %+2.3f %+2.3f'\n", r_view.origin[0], r_view.origin[1], r_view.origin[2], r_view.forward[0], r_view.forward[1], r_view.forward[2]);
+		sprintf(r_speeds_string + strlen(r_speeds_string), "%5i entities%6i surfaces%6i triangles%5i leafs%5i portals%6i particles\n", r_refdef.stats.entities, r_refdef.stats.entities_surfaces, r_refdef.stats.entities_triangles, r_refdef.stats.world_leafs, r_refdef.stats.world_portals, r_refdef.stats.particles);
+		sprintf(r_speeds_string + strlen(r_speeds_string), "%4i lights%4i clears%4i scissored%7i light%7i shadow%7i dynamic\n", r_refdef.stats.lights, r_refdef.stats.lights_clears, r_refdef.stats.lights_scissored, r_refdef.stats.lights_lighttriangles, r_refdef.stats.lights_shadowtriangles, r_refdef.stats.lights_dynamicshadowtriangles);
+		if (r_refdef.stats.bloom)
+			sprintf(r_speeds_string + strlen(r_speeds_string), "rendered%6i meshes%8i triangles bloompixels%8i copied%8i drawn\n", r_refdef.stats.meshes, r_refdef.stats.meshes_elements / 3, r_refdef.stats.bloom_copypixels, r_refdef.stats.bloom_drawpixels);
 		else
-			sprintf(r_speeds_string + strlen(r_speeds_string), "rendered%6i meshes%8i triangles\n", renderstats.meshes, renderstats.meshes_elements / 3);
+			sprintf(r_speeds_string + strlen(r_speeds_string), "rendered%6i meshes%8i triangles\n", r_refdef.stats.meshes, r_refdef.stats.meshes_elements / 3);
 
-		memset(&renderstats, 0, sizeof(renderstats));
+		memset(&r_refdef.stats, 0, sizeof(r_refdef.stats));
 
 		if (r_speeds.integer >= 2)
 		{
@@ -951,15 +951,19 @@ static void R_Envmap_f (void)
 		return;
 	}
 
-	envmap = true;
+	r_refdef.envmap = true;
 
-	r_refdef.x = 0;
-	r_refdef.y = 0;
-	r_refdef.width = size;
-	r_refdef.height = size;
+	R_UpdateVariables();
 
-	r_refdef.frustum_x = tan(90 * M_PI / 360.0);
-	r_refdef.frustum_y = tan(90 * M_PI / 360.0);
+	r_view.x = 0;
+	r_view.y = 0;
+	r_view.z = 0;
+	r_view.width = size;
+	r_view.height = size;
+	r_view.depth = 1;
+
+	r_view.frustum_x = tan(90 * M_PI / 360.0);
+	r_view.frustum_y = tan(90 * M_PI / 360.0);
 
 	buffer1 = (unsigned char *)Mem_Alloc(tempmempool, size * size * 3);
 	buffer2 = (unsigned char *)Mem_Alloc(tempmempool, size * size * 3);
@@ -968,19 +972,19 @@ static void R_Envmap_f (void)
 	for (j = 0;j < 12;j++)
 	{
 		sprintf(filename, "env/%s%s.tga", basename, envmapinfo[j].name);
-		Matrix4x4_CreateFromQuakeEntity(&r_refdef.viewentitymatrix, r_vieworigin[0], r_vieworigin[1], r_vieworigin[2], envmapinfo[j].angles[0], envmapinfo[j].angles[1], envmapinfo[j].angles[2], 1);
+		Matrix4x4_CreateFromQuakeEntity(&r_view.matrix, r_view.origin[0], r_view.origin[1], r_view.origin[2], envmapinfo[j].angles[0], envmapinfo[j].angles[1], envmapinfo[j].angles[2], 1);
 		R_ClearScreen();
 		R_Mesh_Start();
 		R_RenderView();
 		R_Mesh_Finish();
-		SCR_ScreenShot(filename, buffer1, buffer2, buffer3, 0, vid.height - (r_refdef.y + r_refdef.height), size, size, envmapinfo[j].flipx, envmapinfo[j].flipy, envmapinfo[j].flipdiagonaly, false, false);
+		SCR_ScreenShot(filename, buffer1, buffer2, buffer3, 0, vid.height - (r_view.y + r_view.height), size, size, envmapinfo[j].flipx, envmapinfo[j].flipy, envmapinfo[j].flipdiagonaly, false, false);
 	}
 
 	Mem_Free (buffer1);
 	Mem_Free (buffer2);
 	Mem_Free (buffer3);
 
-	envmap = false;
+	r_refdef.envmap = false;
 }
 
 //=============================================================================
@@ -1114,9 +1118,9 @@ void R_ClearScreen(void)
 	{
 		// clear to black
 		CHECKGLERROR
-		if (fogenabled)
+		if (r_refdef.fogenabled)
 		{
-			qglClearColor(fogcolor[0],fogcolor[1],fogcolor[2],0);CHECKGLERROR
+			qglClearColor(r_refdef.fogcolor[0],r_refdef.fogcolor[1],r_refdef.fogcolor[2],0);CHECKGLERROR
 		}
 		else
 		{
@@ -1157,6 +1161,8 @@ void SCR_DrawScreen (void)
 	if (r_timereport_active)
 		R_TimeReport("setup");
 
+	R_UpdateVariables();
+
 	if (cls.signon == SIGNONS)
 	{
 		float size;
@@ -1166,19 +1172,23 @@ void SCR_DrawScreen (void)
 
 		if (r_stereo_sidebyside.integer)
 		{
-			r_refdef.width = (int)(vid.width * size / 2.5);
-			r_refdef.height = (int)(vid.height * size / 2.5 * (1 - bound(0, r_letterbox.value, 100) / 100));
-			r_refdef.x = (int)((vid.width - r_refdef.width * 2.5) * 0.5);
-			r_refdef.y = (int)((vid.height - r_refdef.height)/2);
+			r_view.width = (int)(vid.width * size / 2.5);
+			r_view.height = (int)(vid.height * size / 2.5 * (1 - bound(0, r_letterbox.value, 100) / 100));
+			r_view.depth = 1;
+			r_view.x = (int)((vid.width - r_view.width * 2.5) * 0.5);
+			r_view.y = (int)((vid.height - r_view.height)/2);
+			r_view.z = 0;
 			if (r_stereo_side)
-				r_refdef.x += (int)(r_refdef.width * 1.5);
+				r_view.x += (int)(r_view.width * 1.5);
 		}
 		else
 		{
-			r_refdef.width = (int)(vid.width * size);
-			r_refdef.height = (int)(vid.height * size * (1 - bound(0, r_letterbox.value, 100) / 100));
-			r_refdef.x = (int)((vid.width - r_refdef.width)/2);
-			r_refdef.y = (int)((vid.height - r_refdef.height)/2);
+			r_view.width = (int)(vid.width * size);
+			r_view.height = (int)(vid.height * size * (1 - bound(0, r_letterbox.value, 100) / 100));
+			r_view.depth = 1;
+			r_view.x = (int)((vid.width - r_view.width)/2);
+			r_view.y = (int)((vid.height - r_view.height)/2);
+			r_view.z = 0;
 		}
 
 		// LordHavoc: viewzoom (zoom in for sniper rifles, etc)
@@ -1187,11 +1197,11 @@ void SCR_DrawScreen (void)
 		// this it simply assumes the requested fov is the vertical fov
 		// for a 4x3 display, if the ratio is not 4x3 this makes the fov
 		// higher/lower according to the ratio
-		r_refdef.frustum_y = tan(scr_fov.value * cl.viewzoom * M_PI / 360.0) * (3.0/4.0);
-		r_refdef.frustum_x = r_refdef.frustum_y * (float)r_refdef.width / (float)r_refdef.height / vid_pixelheight.value;
+		r_view.frustum_y = tan(scr_fov.value * cl.viewzoom * M_PI / 360.0) * (3.0/4.0);
+		r_view.frustum_x = r_view.frustum_y * (float)r_view.width / (float)r_view.height / vid_pixelheight.value;
 
-		r_refdef.frustum_x *= r_refdef.frustumscale_x;
-		r_refdef.frustum_y *= r_refdef.frustumscale_y;
+		r_view.frustum_x *= r_refdef.frustumscale_x;
+		r_view.frustum_y *= r_refdef.frustumscale_y;
 
 		if(!CL_VM_UpdateView())
 			R_RenderView();
@@ -1202,16 +1212,18 @@ void SCR_DrawScreen (void)
 		{
 			float sizex = bound(10, scr_zoomwindow_viewsizex.value, 100) / 100.0;
 			float sizey = bound(10, scr_zoomwindow_viewsizey.value, 100) / 100.0;
-			r_refdef.width = (int)(vid.width * sizex);
-			r_refdef.height = (int)(vid.height * sizey);
-			r_refdef.x = (int)((vid.width - r_refdef.width)/2);
-			r_refdef.y = 0;
+			r_view.width = (int)(vid.width * sizex);
+			r_view.height = (int)(vid.height * sizey);
+			r_view.depth = 1;
+			r_view.x = (int)((vid.width - r_view.width)/2);
+			r_view.y = 0;
+			r_view.z = 0;
 
-			r_refdef.frustum_y = tan(scr_zoomwindow_fov.value * cl.viewzoom * M_PI / 360.0) * (3.0/4.0);
-			r_refdef.frustum_x = r_refdef.frustum_y * vid_pixelheight.value * (float)r_refdef.width / (float)r_refdef.height;
+			r_view.frustum_y = tan(scr_zoomwindow_fov.value * cl.viewzoom * M_PI / 360.0) * (3.0/4.0);
+			r_view.frustum_x = r_view.frustum_y * vid_pixelheight.value * (float)r_view.width / (float)r_view.height;
 
-			r_refdef.frustum_x *= r_refdef.frustumscale_x;
-			r_refdef.frustum_y *= r_refdef.frustumscale_y;
+			r_view.frustum_x *= r_refdef.frustumscale_x;
+			r_view.frustum_y *= r_refdef.frustumscale_y;
 
 			if(!CL_VM_UpdateView())
 				R_RenderView();
@@ -1220,10 +1232,12 @@ void SCR_DrawScreen (void)
 
 	if (!r_stereo_sidebyside.integer)
 	{
-		r_refdef.width = vid.width;
-		r_refdef.height = vid.height;
-		r_refdef.x = 0;
-		r_refdef.y = 0;
+		r_view.width = vid.width;
+		r_view.height = vid.height;
+		r_view.depth = 1;
+		r_view.x = 0;
+		r_view.y = 0;
+		r_view.z = 0;
 	}
 
 	// draw 2D stuff
@@ -1380,9 +1394,9 @@ void CL_UpdateScreen(void)
 			sb_lines = 24+16+8;
 	}
 
-	r_refdef.colormask[0] = 1;
-	r_refdef.colormask[1] = 1;
-	r_refdef.colormask[2] = 1;
+	r_view.colormask[0] = 1;
+	r_view.colormask[1] = 1;
+	r_view.colormask[2] = 1;
 
 	if (r_timereport_active)
 		R_TimeReport("other");
@@ -1405,40 +1419,40 @@ void CL_UpdateScreen(void)
 
 	if (r_stereo_redblue.integer || r_stereo_redgreen.integer || r_stereo_redcyan.integer || r_stereo_sidebyside.integer)
 	{
-		matrix4x4_t originalmatrix = r_refdef.viewentitymatrix;
-		r_refdef.viewentitymatrix.m[0][3] = originalmatrix.m[0][3] + r_stereo_separation.value * -0.5f * r_refdef.viewentitymatrix.m[0][1];
-		r_refdef.viewentitymatrix.m[1][3] = originalmatrix.m[1][3] + r_stereo_separation.value * -0.5f * r_refdef.viewentitymatrix.m[1][1];
-		r_refdef.viewentitymatrix.m[2][3] = originalmatrix.m[2][3] + r_stereo_separation.value * -0.5f * r_refdef.viewentitymatrix.m[2][1];
+		matrix4x4_t originalmatrix = r_view.matrix;
+		r_view.matrix.m[0][3] = originalmatrix.m[0][3] + r_stereo_separation.value * -0.5f * r_view.matrix.m[0][1];
+		r_view.matrix.m[1][3] = originalmatrix.m[1][3] + r_stereo_separation.value * -0.5f * r_view.matrix.m[1][1];
+		r_view.matrix.m[2][3] = originalmatrix.m[2][3] + r_stereo_separation.value * -0.5f * r_view.matrix.m[2][1];
 
 		if (r_stereo_sidebyside.integer)
 			r_stereo_side = 0;
 
 		if (r_stereo_redblue.integer || r_stereo_redgreen.integer || r_stereo_redcyan.integer)
 		{
-			r_refdef.colormask[0] = 1;
-			r_refdef.colormask[1] = 0;
-			r_refdef.colormask[2] = 0;
+			r_view.colormask[0] = 1;
+			r_view.colormask[1] = 0;
+			r_view.colormask[2] = 0;
 		}
 
 		SCR_DrawScreen();
 
-		r_refdef.viewentitymatrix.m[0][3] = originalmatrix.m[0][3] + r_stereo_separation.value * 0.5f * r_refdef.viewentitymatrix.m[0][1];
-		r_refdef.viewentitymatrix.m[1][3] = originalmatrix.m[1][3] + r_stereo_separation.value * 0.5f * r_refdef.viewentitymatrix.m[1][1];
-		r_refdef.viewentitymatrix.m[2][3] = originalmatrix.m[2][3] + r_stereo_separation.value * 0.5f * r_refdef.viewentitymatrix.m[2][1];
+		r_view.matrix.m[0][3] = originalmatrix.m[0][3] + r_stereo_separation.value * 0.5f * r_view.matrix.m[0][1];
+		r_view.matrix.m[1][3] = originalmatrix.m[1][3] + r_stereo_separation.value * 0.5f * r_view.matrix.m[1][1];
+		r_view.matrix.m[2][3] = originalmatrix.m[2][3] + r_stereo_separation.value * 0.5f * r_view.matrix.m[2][1];
 
 		if (r_stereo_sidebyside.integer)
 			r_stereo_side = 1;
 
 		if (r_stereo_redblue.integer || r_stereo_redgreen.integer || r_stereo_redcyan.integer)
 		{
-			r_refdef.colormask[0] = 0;
-			r_refdef.colormask[1] = r_stereo_redcyan.integer || r_stereo_redgreen.integer;
-			r_refdef.colormask[2] = r_stereo_redcyan.integer || r_stereo_redblue.integer;
+			r_view.colormask[0] = 0;
+			r_view.colormask[1] = r_stereo_redcyan.integer || r_stereo_redgreen.integer;
+			r_view.colormask[2] = r_stereo_redcyan.integer || r_stereo_redblue.integer;
 		}
 
 		SCR_DrawScreen();
 
-		r_refdef.viewentitymatrix = originalmatrix;
+		r_view.matrix = originalmatrix;
 	}
 	else
 		SCR_DrawScreen();

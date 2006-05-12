@@ -735,9 +735,9 @@ void GL_TransformToScreen(const vec4_t in, vec4_t out)
 	Matrix4x4_Transform4 (&backend_viewmatrix, in, temp);
 	Matrix4x4_Transform4 (&backend_projectmatrix, temp, out);
 	iw = 1.0f / out[3];
-	out[0] = r_view_x + (out[0] * iw + 1.0f) * r_view_width * 0.5f;
-	out[1] = r_view_y + (out[1] * iw + 1.0f) * r_view_height * 0.5f;
-	out[2] = r_view_z + (out[2] * iw + 1.0f) * r_view_depth * 0.5f;
+	out[0] = r_view.x + (out[0] * iw + 1.0f) * r_view.width * 0.5f;
+	out[1] = r_view.y + (out[1] * iw + 1.0f) * r_view.height * 0.5f;
+	out[2] = r_view.z + (out[2] * iw + 1.0f) * r_view.depth * 0.5f;
 }
 
 // called at beginning of frame
@@ -889,8 +889,8 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int numtriangles, const int *
 		return;
 	}
 	CHECKGLERROR
-	renderstats.meshes++;
-	renderstats.meshes_elements += numelements;
+	r_refdef.stats.meshes++;
+	r_refdef.stats.meshes_elements += numelements;
 	if (gl_paranoid.integer)
 	{
 		unsigned int i, j, size;

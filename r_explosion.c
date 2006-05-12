@@ -151,7 +151,7 @@ void R_NewExplosion(const vec3_t org)
 	fractalnoisequick(noise, EXPLOSIONGRID, 4); // adjust noise grid size according to explosion
 	for (i = 0, e = explosion;i < MAX_EXPLOSIONS;i++, e++)
 	{
-		if (cl.time >= e->endtime)
+		if (!e->alpha)
 		{
 			e->starttime = cl.time;
 			e->endtime = cl.time + cl_explosions_lifetime.value;
@@ -215,6 +215,11 @@ static void R_MoveExplosion(explosion_t *e)
 	frametime = cl.time - e->time;
 	e->time = cl.time;
 	e->alpha = e->alpha - (e->fade * frametime);
+	if (e->alpha < 0 || cl.time > e->endtime)
+	{
+		e->alpha = 0;
+		return;
+	}
 	for (i = 0;i < EXPLOSIONVERTS;i++)
 	{
 		if (e->vertvel[i][0] || e->vertvel[i][1] || e->vertvel[i][2])
@@ -242,7 +247,7 @@ void R_MoveExplosions(void)
 {
 	int i;
 	for (i = 0;i < MAX_EXPLOSIONS;i++)
-		if (cl.time < explosion[i].endtime)
+		if (explosion[i].alpha)
 			R_MoveExplosion(&explosion[i]);
 }
 
@@ -253,7 +258,7 @@ void R_DrawExplosions(void)
 	if (!r_drawexplosions.integer)
 		return;
 	for (i = 0;i < MAX_EXPLOSIONS;i++)
-		if (r_refdef.time < explosion[i].endtime)
+		if (explosion[i].alpha)
 			R_MeshQueue_AddTransparent(explosion[i].origin, R_DrawExplosion_TransparentCallback, NULL, i, NULL);
 }
 

@@ -729,8 +729,8 @@ static void CSQC_R_RecalcView (void)
 {
 	extern matrix4x4_t viewmodelmatrix;
 	viewmodelmatrix = identitymatrix;
-	r_refdef.viewentitymatrix = identitymatrix;
-	Matrix4x4_CreateFromQuakeEntity(&r_refdef.viewentitymatrix, csqc_origin[0], csqc_origin[1], csqc_origin[2], csqc_angles[0], csqc_angles[1], csqc_angles[2], 1);
+	r_view.matrix = identitymatrix;
+	Matrix4x4_CreateFromQuakeEntity(&r_view.matrix, csqc_origin[0], csqc_origin[1], csqc_origin[2], csqc_angles[0], csqc_angles[1], csqc_angles[2], 1);
 	Matrix4x4_CreateFromQuakeEntity(&viewmodelmatrix, csqc_origin[0], csqc_origin[1], csqc_origin[2], csqc_angles[0], csqc_angles[1], csqc_angles[2], 0.3);
 }
 
@@ -774,25 +774,28 @@ void VM_R_SetView (void)
 
 	switch(c)
 	{
-	case VF_MIN:			r_refdef.x = (int)f[0];
-							r_refdef.y = (int)f[1];
+	case VF_MIN:			r_view.x = (int)f[0];
+							r_view.y = (int)f[1];
 							break;
-	case VF_MIN_X:			r_refdef.x = (int)k;
+	case VF_MIN_X:			r_view.x = (int)k;
 							break;
-	case VF_MIN_Y:			r_refdef.y = (int)k;
+	case VF_MIN_Y:			r_view.y = (int)k;
 							break;
-	case VF_SIZE:			r_refdef.width = (int)f[0];
-							r_refdef.height = (int)f[1];
+	case VF_SIZE:			r_view.width = (int)f[0];
+							r_view.height = (int)f[1];
 							break;
-	case VF_SIZE_Y:			r_refdef.width = (int)k;
+	case VF_SIZE_Y:			r_view.width = (int)k;
 							break;
-	case VF_SIZE_X:			r_refdef.height = (int)k;
+	case VF_SIZE_X:			r_view.height = (int)k;
 							break;
-	case VF_VIEWPORT:		r_refdef.x = (int)f[0];
-							r_refdef.y = (int)f[1];
+	case VF_VIEWPORT:		r_view.x = (int)f[0];
+							r_view.y = (int)f[1];
+							r_view.z = 0;
+							// TODO: make sure that view_z and view_depth are set properly even if csqc does not set them!
 							f = PRVM_G_VECTOR(OFS_PARM2);
-							r_refdef.width = (int)f[0];
-							r_refdef.height = (int)f[1];
+							r_view.width = (int)f[0];
+							r_view.height = (int)f[1];
+							r_view.depth = 1;
 							break;
 	case VF_FOV:			//r_refdef.fov_x = f[0]; // FIXME!
 							//r_refdef.fov_y = f[1]; // FIXME!
@@ -886,8 +889,8 @@ void VM_CL_unproject (void)
 
 	VM_SAFEPARMCOUNT(1, VM_CL_unproject);
 	f = PRVM_G_VECTOR(OFS_PARM0);
-	VectorSet(temp, f[2], f[0] * f[2] * -r_refdef.frustum_x * 2.0 / r_refdef.width, f[1] * f[2] * -r_refdef.frustum_y * 2.0 / r_refdef.height);
-	Matrix4x4_Transform(&r_refdef.viewentitymatrix, temp, PRVM_G_VECTOR(OFS_RETURN));
+	VectorSet(temp, f[2], f[0] * f[2] * -r_view.frustum_x * 2.0 / r_view.width, f[1] * f[2] * -r_view.frustum_y * 2.0 / r_view.height);
+	Matrix4x4_Transform(&r_view.matrix, temp, PRVM_G_VECTOR(OFS_RETURN));
 }
 
 //#311 vector (vector v) cs_project (EXT_CSQC)
@@ -899,9 +902,9 @@ void VM_CL_project (void)
 
 	VM_SAFEPARMCOUNT(1, VM_CL_project);
 	f = PRVM_G_VECTOR(OFS_PARM0);
-	Matrix4x4_Invert_Simple(&m, &r_refdef.viewentitymatrix);
+	Matrix4x4_Invert_Simple(&m, &r_view.matrix);
 	Matrix4x4_Transform(&m, f, v);
-	VectorSet(PRVM_G_VECTOR(OFS_RETURN), v[1]/v[0]/-r_refdef.frustum_x*0.5*r_refdef.width, v[2]/v[0]/-r_refdef.frustum_y*r_refdef.height*0.5, v[0]);
+	VectorSet(PRVM_G_VECTOR(OFS_RETURN), v[1]/v[0]/-r_view.frustum_x*0.5*r_view.width, v[2]/v[0]/-r_view.frustum_y*r_view.height*0.5, v[0]);
 }
 
 //#330 float(float stnum) getstatf (EXT_CSQC)
