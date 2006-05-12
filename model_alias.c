@@ -1465,7 +1465,7 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	// reconstruct frame 0 matrices to allow reconstruction of the base mesh
 	// (converting from weight-blending skeletal animation to
 	//  deformation-based skeletal animation)
-	bonepose = Z_Malloc(loadmodel->num_bones * sizeof(float[12]));
+	bonepose = (float *)Z_Malloc(loadmodel->num_bones * sizeof(float[12]));
 	for (i = 0;i < loadmodel->num_bones;i++)
 	{
 		const float *m = loadmodel->data_poses + i * 12;
@@ -1739,7 +1739,7 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	// reconstruct frame 0 matrices to allow reconstruction of the base mesh
 	// (converting from weight-blending skeletal animation to
 	//  deformation-based skeletal animation)
-	bonepose = Z_Malloc(loadmodel->num_bones * sizeof(float[12]));
+	bonepose = (float *)Z_Malloc(loadmodel->num_bones * sizeof(float[12]));
 	for (i = 0;i < loadmodel->num_bones;i++)
 	{
 		const float *m = loadmodel->data_poses + i * 12;
