@@ -495,8 +495,8 @@ void CL_UpdatePrydonCursor(void)
 	cl.cmd.cursor_screen[1] = bound(-1, cl.cmd.cursor_screen[1], 1);
 	cl.cmd.cursor_screen[2] = 1;
 
-	scale[0] = -r_refdef.frustum_x;
-	scale[1] = -r_refdef.frustum_y;
+	scale[0] = -r_view.frustum_x;
+	scale[1] = -r_view.frustum_y;
 	scale[2] = 1;
 
 	// trace distance
@@ -505,9 +505,9 @@ void CL_UpdatePrydonCursor(void)
 	// calculate current view matrix
 	V_CalcRefdef();
 	VectorClear(temp);
-	Matrix4x4_Transform(&r_refdef.viewentitymatrix, temp, cl.cmd.cursor_start);
+	Matrix4x4_Transform(&r_view.matrix, temp, cl.cmd.cursor_start);
 	VectorSet(temp, cl.cmd.cursor_screen[2] * scale[2], cl.cmd.cursor_screen[0] * scale[0], cl.cmd.cursor_screen[1] * scale[1]);
-	Matrix4x4_Transform(&r_refdef.viewentitymatrix, temp, cl.cmd.cursor_end);
+	Matrix4x4_Transform(&r_view.matrix, temp, cl.cmd.cursor_end);
 	// trace from view origin to the cursor
 	cl.cmd.cursor_fraction = CL_SelectTraceLine(cl.cmd.cursor_start, cl.cmd.cursor_end, cl.cmd.cursor_impact, cl.cmd.cursor_normal, &cl.cmd.cursor_entitynumber, (chase_active.integer || cl.intermission) ? &cl.entities[cl.playerentity].render : NULL, false);
 }
@@ -544,6 +544,7 @@ void CL_ClientMovement_Input(qboolean buttonjump, qboolean buttoncrouch)
 {
 	int i;
 	int n;
+	double lasttime = cl.movement_numqueue >= 0 ? cl.movement_queue[cl.movement_numqueue - 1].time : 0;
 	// remove stale queue items
 	n = cl.movement_numqueue;
 	cl.movement_numqueue = 0;
@@ -565,7 +566,7 @@ void CL_ClientMovement_Input(qboolean buttonjump, qboolean buttoncrouch)
 		// add to input queue
 		cl.movement_queue[cl.movement_numqueue].sequence = cl.movesequence;
 		cl.movement_queue[cl.movement_numqueue].time = cl.mtime[0];
-		cl.movement_queue[cl.movement_numqueue].frametime = cl.mtime[0] - cl.mtime[1];
+		cl.movement_queue[cl.movement_numqueue].frametime = bound(0, cl.mtime[0] - lasttime, 0.1);
 		VectorCopy(cl.viewangles, cl.movement_queue[cl.movement_numqueue].viewangles);
 		cl.movement_queue[cl.movement_numqueue].move[0] = cl.cmd.forwardmove;
 		cl.movement_queue[cl.movement_numqueue].move[1] = cl.cmd.sidemove;
@@ -715,18 +716,18 @@ void CL_ClientMovement_UpdateStatus(cl_clientmovement_state_t *s)
 
 	// set watertype/waterlevel
 	VectorSet(origin1, s->origin[0], s->origin[1], s->origin[2] + s->mins[2] + 1);
-	s->waterlevel = 0;
+	s->waterlevel = WATERLEVEL_NONE;
 	s->watertype = CL_TraceBox(origin1, vec3_origin, vec3_origin, origin1, true, NULL, 0, false).startsupercontents & SUPERCONTENTS_LIQUIDSMASK;
 	if (s->watertype)
 	{
-		s->waterlevel = 1;
+		s->waterlevel = WATERLEVEL_WETFEET;
 		origin1[2] = s->origin[2] + (s->mins[2] + s->maxs[2]) * 0.5f;
 		if (CL_TraceBox(origin1, vec3_origin, vec3_origin, origin1, true, NULL, 0, false).startsupercontents & SUPERCONTENTS_LIQUIDSMASK)
 		{
-			s->waterlevel = 2;
+			s->waterlevel = WATERLEVEL_SWIMMING;
 			origin1[2] = s->origin[2] + 22;
 			if (CL_TraceBox(origin1, vec3_origin, vec3_origin, origin1, true, NULL, 0, false).startsupercontents & SUPERCONTENTS_LIQUIDSMASK)
-				s->waterlevel = 3;
+				s->waterlevel = WATERLEVEL_SUBMERGED;
 		}
 	}
 
