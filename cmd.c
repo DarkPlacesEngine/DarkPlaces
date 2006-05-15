@@ -302,6 +302,86 @@ static void Cmd_Echo_f (void)
 	Con_Print("\n");
 }
 
+// DRESK - 5/14/06
+// Support Doom3-style Toggle Console Command
+/*
+===============
+Cmd_Toggle_f
+
+Toggles a specified console variable amongst the values specified (default is 0 and 1)
+===============
+*/
+static void Cmd_Toggle_f(void)
+{
+	// Acquire Number of Arguments
+	int nNumArgs = Cmd_Argc();
+
+	if(nNumArgs == 1)
+		// No Arguments Specified; Print Usage
+		Con_Print("Toggle Console Variable - Usage\n  toggle <variable> - toggles between 0 and 1\n  toggle <variable> <value> - toggles between 0 and <value>\n  toggle <variable> [string 1] [string 2]...[string n] - cycles through all strings\n");
+	else
+	{ // Correct Arguments Specified
+		// Acquire Potential CVar
+		cvar_t* cvCVar = Cvar_FindVar( Cmd_Argv(1) );
+		
+		if(cvCVar != NULL)
+		{ // Valid CVar
+			if(nNumArgs == 2)
+			{ // Default Usage
+				if(cvCVar->integer)
+					Cvar_SetValueQuick(cvCVar, 0);
+				else
+					Cvar_SetValueQuick(cvCVar, 1);
+			}
+			else
+			if(nNumArgs == 3)
+			{ // 0 and Specified Usage
+				if(cvCVar->integer == atoi(Cmd_Argv(2) ) )
+					// CVar is Specified Value; // Reset to 0
+					Cvar_SetValueQuick(cvCVar, 0);
+				else
+				if(cvCVar->integer == 0)
+					// CVar is 0; Specify Value
+					Cvar_SetQuick(cvCVar, Cmd_Argv(2) );
+				else
+					// CVar does not match; Reset to 0
+					Cvar_SetValueQuick(cvCVar, 0);
+			}
+			else
+			{ // Variable Values Specified
+				int nCnt;
+				int bFound = 0;
+
+				for(nCnt = 2; nCnt < nNumArgs; nCnt++)
+				{ // Cycle through Values
+					if( strcmp(cvCVar->string, Cmd_Argv(nCnt) ) == 0)
+					{ // Current Value Located; Increment to Next
+						if( (nCnt + 1) == nNumArgs)
+							// Max Value Reached; Reset
+							Cvar_SetQuick(cvCVar, Cmd_Argv(2) );
+						else
+							// Next Value
+							Cvar_SetQuick(cvCVar, Cmd_Argv(nCnt + 1) );
+
+						// End Loop
+						nCnt = nNumArgs;
+						// Assign Found
+						bFound = 1;
+					}
+				}
+				if(!bFound)
+					// Value not Found; Reset to Original
+					Cvar_SetQuick(cvCVar, Cmd_Argv(2) );
+			}
+
+		}
+		else
+		{ // Invalid CVar
+			Con_Printf("ERROR : CVar '%s' not found\n", Cmd_Argv(2) );
+		}
+	}
+}
+
 /*
 ===============
 Cmd_Alias_f
@@ -580,6 +660,10 @@ void Cmd_Init_Commands (void)
 	// Added/Modified by EvilTypeGuy eviltypeguy@qeradiant.com
 	Cmd_AddCommand ("cmdlist", Cmd_List_f, "lists all console commands beginning with the specified prefix");
 	Cmd_AddCommand ("cvarlist", Cvar_List_f, "lists all console variables beginning with the specified prefix");
+
+	// DRESK - 5/14/06
+	// Support Doom3-style Toggle Command
+	Cmd_AddCommand( "toggle", Cmd_Toggle_f, "toggles a console variable's values (use for more info)");
 }
 
 /*
