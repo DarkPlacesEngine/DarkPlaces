@@ -35,8 +35,10 @@
 -f (Wazat) bug darkplaces: client's slowmo detection (measuring packet times and comparing to game time changes) may be making the game unpleasant (Wazat)
 0 bug darkplaces client: GAME_NEHAHRA: make sure cutscenes and movies work, got a report of seeing a black screen (NightFright)
 0 bug darkplaces client: fix cl_bobmodel bug which momentarily jolts the gun when you pass through a trigger, pick up an item, etc, Sajt thinks this is related to console prints as well as centerprint (Sajt)
+0 bug darkplaces console: don't save cvars to config.cfg if their current value matches their default value (div0)
 0 bug darkplaces csqc: after the drawqueue was eliminated, the CSQC probably can't draw 2D polygons the same way, so it may need fixing ([515])
 0 bug darkplaces csqc: engine-based rocket entities have a trail but they don't glow if csqc is used
+0 bug darkplaces glx client: detect primary display somehow in NVIDIA TwinView setups and use it for fullscreen modes that occupy only one monitor, for example the secondary display may be left of the primary one...
 0 bug darkplaces loader: make rtlight entity loader support q3map/q3map2 lights properly, they use a spawnflag for LINEAR mode, by default they use 1/(x*x) falloff (Carni, motorsep)
 0 bug darkplaces loader: occasional crash due to memory corruption when doing "deathmatch 1;map start" during demo loop (Willis)
 0 bug darkplaces loader: zym models are not loading some of their meshes?  this is causing the striped part of the nexuiz RL to disappear (div0, SavageX)
@@ -97,6 +99,7 @@
 0 change darkplaces server: remove upper limit on sv_maxrate, there's no reason to limit it
 0 change darkplaces server: support sys_ticrate 0 as variable framerate mode
 0 change dpmod: stop using playernogun/playergun models, go back to ordinary player.mdl, this saves a bit of memory
+0 change hmap2: qbsp should do tjunc fixing on leaky maps
 0 change zmodel: include the example script in the build zips, not just in the files directory
 0 cleanup darkplaces cleanup: remove cgame* files and any references
 0 cleanup darkplaces cleanup: remove ui.* files and any references
@@ -107,6 +110,7 @@
 0 feature darkplaces client: add a cvar to make the renderer use a different entity for pvs than for viewing, this might be useful for a third person camera that should only see what the player sees (Urre)
 0 feature darkplaces client: add an alias to control whether the nexuiz logo.dpv splash video plays at startup and whether the menu opens, this way the config can change it before it happens, for instance to disable it, or to set up a similar thing in other games (green)
 0 feature darkplaces client: add ezQuake-style hud layout as an option - http://quake.tek.pl/_sshots/candy/redfog.png
+0 feature darkplaces console: centerprint and notify text printing should not count color codes in their length estimation (Dresk)
 0 feature darkplaces dpv playback: when video ends, execute a console command, perhaps "endvideo", this could be an alias set by a mod before it began playing the video (SavageX, motorsep)
 0 feature darkplaces editlights: add r_editlights_edit commands for turn/turnx/turny/turnz to allow angle adjustments using binds (Kedhrin)
 0 feature darkplaces editlights: split rtlight drawshadows option into drawworldshadows and drawentityshadows options, this allows combinations like no world shadows (for speed) but still having entity shadows (Mitchell, romi, Kedhrin)
@@ -1126,6 +1130,7 @@ d feature darkplaces client: add a sv_fixedframeratesingleplayer cvar (default o
 d feature darkplaces client: add showbrand cvar which would show gfx/brand.tga in the left/right top/bottom corner (depending on value of scr_showbrand) all the time, this would be useful for screenshots (Spirit_of_85)
 d feature darkplaces client: query qw masters for server browser
 d feature darkplaces client: v_deathtilt cvar (Sajt, MauveBib)
+d feature darkplaces console: "toggle" console command present in doom3: toggle <cvar>, and toggle <cvar> <value1> <value2> (Dresk)
 d feature darkplaces console: change commandline history to clear the commandline when cursoring below the most recent history, and not allow cursoring back more than the oldest history (up2nogood)
 d feature darkplaces console: expand parameters such as $cvar to use the value of the cvar, DP_CON_EXPANDCVAR (up2nogood)
 d feature darkplaces console: make aliases given parameters insert the parameters in place of $1, $2, $* macros in the alias string, add this as DP_CON_ALIASPARAMETERS (up2nogood)
