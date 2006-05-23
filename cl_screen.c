@@ -1114,37 +1114,35 @@ qboolean SCR_ScreenShot(char *filename, unsigned char *buffer1, unsigned char *b
 
 void R_ClearScreen(void)
 {
-	if (r_render.integer)
+	// clear to black
+	CHECKGLERROR
+	if (r_refdef.fogenabled)
 	{
-		// clear to black
-		CHECKGLERROR
-		if (r_refdef.fogenabled)
-		{
-			qglClearColor(r_refdef.fogcolor[0],r_refdef.fogcolor[1],r_refdef.fogcolor[2],0);CHECKGLERROR
-		}
-		else
-		{
-			qglClearColor(0,0,0,0);CHECKGLERROR
-		}
-		qglClearDepth(1);CHECKGLERROR
-		if (gl_stencil)
-		{
-			// LordHavoc: we use a stencil centered around 128 instead of 0,
-			// to avoid clamping interfering with strange shadow volume
-			// drawing orders
-			qglClearStencil(128);CHECKGLERROR
-		}
-		// clear the screen
+		qglClearColor(r_refdef.fogcolor[0],r_refdef.fogcolor[1],r_refdef.fogcolor[2],0);CHECKGLERROR
+	}
+	else
+	{
+		qglClearColor(0,0,0,0);CHECKGLERROR
+	}
+	qglClearDepth(1);CHECKGLERROR
+	if (gl_stencil)
+	{
+		// LordHavoc: we use a stencil centered around 128 instead of 0,
+		// to avoid clamping interfering with strange shadow volume
+		// drawing orders
+		qglClearStencil(128);CHECKGLERROR
+	}
+	// clear the screen
+	if (r_render.integer)
 		GL_Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | (gl_stencil ? GL_STENCIL_BUFFER_BIT : 0));
-		// set dithering mode
-		if (gl_dither.integer)
-		{
-			qglEnable(GL_DITHER);CHECKGLERROR
-		}
-		else
-		{
-			qglDisable(GL_DITHER);CHECKGLERROR
-		}
+	// set dithering mode
+	if (gl_dither.integer)
+	{
+		qglEnable(GL_DITHER);CHECKGLERROR
+	}
+	else
+	{
+		qglDisable(GL_DITHER);CHECKGLERROR
 	}
 }
 
