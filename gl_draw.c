@@ -545,9 +545,6 @@ void DrawQ_String_Real(float x, float y, const char *string, int maxlen, float w
 		return;
 	}
 
-	if (!r_render.integer)
-		return;
-
 	if (alpha < (1.0f / 255.0f))
 		return;
 
@@ -742,9 +739,6 @@ void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height
 		return;
 	}
 
-	if (!r_render.integer)
-		return;
-
 	_DrawQ_ProcessDrawFlag(flags);
 
 	R_Mesh_VertexPointer(floats);
@@ -785,9 +779,6 @@ void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags)
 		return;
 	}
 
-	if (!r_render.integer)
-		return;
-
 	_DrawQ_ProcessDrawFlag(flags);
 
 	R_Mesh_VertexPointer(mesh->data_vertex3f);
@@ -810,9 +801,6 @@ void DrawQ_LineLoop (drawqueuemesh_t *mesh, int flags)
 		Con_Printf("DrawQ_LineLoop: not in 2d rendering stage!\n");
 		return;
 	}
-
-	if (!r_render.integer)
-		return;
 
 	_DrawQ_ProcessDrawFlag(flags);
 
@@ -849,9 +837,6 @@ void DrawQ_Line (float width, float x1, float y1, float x2, float y2, float r, f
 		Con_Printf("DrawQ_Line: not in 2d rendering stage!\n");
 		return;
 	}
-
-	if (!r_render.integer)
-		return;
 
 	CHECKGLERROR
 	if(width > 0)

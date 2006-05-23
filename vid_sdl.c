@@ -488,13 +488,6 @@ void VID_Finish (qboolean allowmousegrab)
 	Uint8 appstate;
 	qboolean vid_usemouse;
 
-	CHECKGLERROR
-	if (r_speeds.integer || gl_finish.integer)
-	{
-		qglFinish();CHECKGLERROR
-	}
-	SDL_GL_SwapBuffers();
-
 	//react on appstate changes
 	appstate = SDL_GetAppState();
 
@@ -516,4 +509,14 @@ void VID_Finish (qboolean allowmousegrab)
 	IN_Activate(vid_usemouse);
 
 	VID_UpdateGamma(false, 256);
+
+	if (r_render.integer && !vid_hidden)
+	{
+		CHECKGLERROR
+		if (r_speeds.integer || gl_finish.integer)
+		{
+			qglFinish();CHECKGLERROR
+		}
+		SDL_GL_SwapBuffers();
+	}
 }

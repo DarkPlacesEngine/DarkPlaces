@@ -263,9 +263,6 @@ void GL_SetupView_Mode_Perspective (double frustumx, double frustumy, double zNe
 {
 	double m[16];
 
-	if (!r_render.integer)
-		return;
-
 	// set up viewpoint
 	CHECKGLERROR
 	qglMatrixMode(GL_PROJECTION);CHECKGLERROR
@@ -297,9 +294,6 @@ void GL_SetupView_Mode_Perspective (double frustumx, double frustumy, double zNe
 void GL_SetupView_Mode_PerspectiveInfiniteFarClip (double frustumx, double frustumy, double zNear)
 {
 	double nudge, m[16];
-
-	if (!r_render.integer)
-		return;
 
 	// set up viewpoint
 	CHECKGLERROR
@@ -348,9 +342,6 @@ void GL_SetupView_Mode_PerspectiveInfiniteFarClip (double frustumx, double frust
 void GL_SetupView_Mode_Ortho (double x1, double y1, double x2, double y2, double zNear, double zFar)
 {
 	double m[16];
-
-	if (!r_render.integer)
-		return;
 
 	// set up viewpoint
 	CHECKGLERROR
