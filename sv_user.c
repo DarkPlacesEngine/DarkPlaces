@@ -26,6 +26,8 @@ cvar_t sv_idealpitchscale = {0, "sv_idealpitchscale","0.8", "how much to look up
 cvar_t sv_maxspeed = {CVAR_NOTIFY, "sv_maxspeed", "320", "maximum speed a player can accelerate to when on ground (can be exceeded by tricks)"};
 cvar_t sv_maxairspeed = {0, "sv_maxairspeed", "30", "maximum speed a player can accelerate to when airborn (note that it is possible to completely stop by moving the opposite direction)"};
 cvar_t sv_accelerate = {0, "sv_accelerate", "10", "rate at which a player accelerates to sv_maxspeed"};
+cvar_t sv_airaccelerate = {0, "sv_airaccelerate", "-1", "rate at which a player accelerates to sv_maxairspeed while in the air, if less than 0 the sv_accelerate variable is used instead"};
+cvar_t sv_wateraccelerate = {0, "sv_wateraccelerate", "-1", "rate at which a player accelerates to sv_maxspeed while in the air, if less than 0 the sv_accelerate variable is used instead"};
 
 static usercmd_t cmd;
 
@@ -101,7 +103,6 @@ void SV_SetIdealPitch (void)
 	host_client->edict->fields.server->idealpitch = -dir * sv_idealpitchscale.value;
 }
 
-#if 1
 static vec3_t wishdir, forward, right, up;
 static float wishspeed;
 
@@ -182,7 +183,7 @@ void SV_AirAccelerate (vec3_t wishveloc)
 	addspeed = wishspd - currentspeed;
 	if (addspeed <= 0)
 		return;
-	accelspeed = sv_accelerate.value*wishspeed * sv.frametime;
+	accelspeed = (sv_airaccelerate.value < 0 ? sv_accelerate.value : sv_airaccelerate.value)*wishspeed * sv.frametime;
 	if (accelspeed > addspeed)
 		accelspeed = addspeed;
 
@@ -290,7 +291,7 @@ void SV_WaterMove (void)
 		return;
 
 	VectorNormalize (wishvel);
-	accelspeed = sv_accelerate.value * wishspeed * sv.frametime;
+	accelspeed = (sv_wateraccelerate.value < 0 ? sv_accelerate.value : sv_wateraccelerate.value) * wishspeed * sv.frametime;
 	if (accelspeed > addspeed)
 		accelspeed = addspeed;
 
@@ -426,176 +427,6 @@ void SV_ClientThink (void)
 
 	SV_AirMove ();
 }
-
-#else
-
-extern cvar_t cl_rollspeed;
-extern cvar_t cl_rollangle;
-void SV_ClientThink(void)
-{
-	int j;
-	vec3_t wishvel, wishdir, v, v_forward, v_right, v_up, start, stop;
-	float wishspeed, f, limit;
-	trace_t trace;
-
-	if (host_client->edict->fields.server->movetype == MOVETYPE_NONE)
-		return;
-
-	f = DotProduct(host_client->edict->fields.server->punchangle, host_client->edict->fields.server->punchangle);
-	if (f)
-	{
-		limit = sqrt(f);
-		f = (limit - 10 * sv.frametime);
-		f /= limit;
-		f = max(0, f);
-		VectorScale(host_client->edict->fields.server->punchangle, f, host_client->edict->fields.server->punchangle);
-	}
-
-	// if dead, behave differently
-	if (host_client->edict->fields.server->health <= 0)
-		return;
-
-	AngleVectors(host_client->edict->fields.server->v_angle, v_forward, v_right, v_up);
-	// show 1/3 the pitch angle and all the roll angle
-	f = DotProduct(host_client->edict->fields.server->velocity, v_right) * (1.0 / cl_rollspeed.value);
-	host_client->edict->fields.server->angles[2] = bound(-1, f, 1) * cl_rollangle.value * 4;
-	if (!host_client->edict->fields.server->fixangle)
-	{
-		host_client->edict->fields.server->angles[0] = (host_client->edict->fields.server->v_angle[0] + host_client->edict->fields.server->punchangle[0]) * -0.333;
-		host_client->edict->fields.server->angles[1] = host_client->edict->fields.server->v_angle[1] + host_client->edict->fields.server->punchangle[1];
-	}
-
-	if ((int)host_client->edict->fields.server->flags & FL_WATERJUMP)
-	{
-		host_client->edict->fields.server->velocity[0] = host_client->edict->fields.server->movedir[0];
-		host_client->edict->fields.server->velocity[1] = host_client->edict->fields.server->movedir[1];
-		if (sv.time > host_client->edict->fields.server->teleport_time || host_client->edict->fields.server->waterlevel == 0)
-		{
-			host_client->edict->fields.server->flags = (int)host_client->edict->fields.server->flags - ((int)host_client->edict->fields.server->flags & FL_WATERJUMP);
-			host_client->edict->fields.server->teleport_time = 0;
-		}
-		return;
-	}
-
-	// swim
-	if (host_client->edict->fields.server->waterlevel >= 2)
-	if (host_client->edict->fields.server->movetype != MOVETYPE_NOCLIP)
-	{
-		if (host_client->cmd.forwardmove == 0 && host_client->cmd.sidemove == 0 && host_client->cmd.upmove == 0)
-		{
-			// drift towards bottom
-			wishvel[0] = 0;
-			wishvel[1] = 0;
-			wishvel[2] = -60;
-		}
-		else
-		{
-			for (j = 0;j < 3;j++)
-				wishvel[j] = v_forward[j] * host_client->cmd.forwardmove + v_right[j] * host_client->cmd.sidemove;
-			wishvel[2] += host_client->cmd.upmove;
-		}
-
-		wishspeed = VectorLength(wishvel);
-		wishspeed = min(wishspeed, sv_maxspeed.value) * 0.7;
-
-		// water friction
-		f = VectorLength(host_client->edict->fields.server->velocity) * (1 - sv.frametime * sv_friction.value);
-		if (f > 0)
-			f /= VectorLength(host_client->edict->fields.server->velocity);
-		else
-			f = 0;
-		VectorScale(host_client->edict->fields.server->velocity, f, host_client->edict->fields.server->velocity);
-
-		// water acceleration
-		if (wishspeed <= f)
-			return;
-
-		f = wishspeed - f;
-		limit = sv_accelerate.value * wishspeed * sv.frametime;
-		if (f > limit)
-			f = limit;
-		limit = VectorLength(wishvel);
-		if (limit)
-			f /= limit;
-		VectorMA(host_client->edict->fields.server->velocity, f, wishvel, host_client->edict->fields.server->velocity);
-		return;
-	}
-
-	// if not flying, move horizontally only
-	if (host_client->edict->fields.server->movetype != MOVETYPE_FLY)
-	{
-		VectorClear(wishvel);
-		wishvel[1] = host_client->edict->fields.server->v_angle[1];
-		AngleVectors(wishvel, v_forward, v_right, v_up);
-	}
-
-	// hack to not let you back into teleporter
-	VectorScale(v_right, host_client->cmd.sidemove, wishvel);
-	if (sv.time >= host_client->edict->fields.server->teleport_time || host_client->cmd.forwardmove > 0)
-		VectorMA(wishvel, host_client->cmd.forwardmove, v_forward, wishvel);
-	if (host_client->edict->fields.server->movetype != MOVETYPE_WALK)
-		wishvel[2] += cmd.upmove;
-
-	VectorCopy(wishvel, wishdir);
-	VectorNormalize(wishdir);
-	wishspeed = VectorLength(wishvel);
-	if (wishspeed > sv_maxspeed.value)
-		wishspeed = sv_maxspeed.value;
-
-	if (host_client->edict->fields.server->movetype == MOVETYPE_NOCLIP || host_client->edict->fields.server->movetype == MOVETYPE_FLY)
-	{
-		VectorScale(wishdir, wishspeed, host_client->edict->fields.server->velocity);
-		return;
-	}
-
-	if ((int)host_client->edict->fields.server->flags & FL_ONGROUND) // walking
-	{
-		// friction
-		f = host_client->edict->fields.server->velocity[0] * host_client->edict->fields.server->velocity[0] + host_client->edict->fields.server->velocity[1] * host_client->edict->fields.server->velocity[1];
-		if (f)
-		{
-			f = sqrt(f);
-			VectorCopy(host_client->edict->fields.server->velocity, v);
-			v[2] = 0;
-
-			// if the leading edge is over a dropoff, increase friction
-			limit = 16.0f / f;
-			VectorMA(host_client->edict->fields.server->origin, limit, v, v);
-			v[2] += host_client->edict->fields.server->mins[2];
-
-			VectorCopy(v, start);
-			VectorCopy(v, stop);
-			stop[2] -= 34;
-			trace = SV_Move(start, vec3_origin, vec3_origin, stop, MOVE_NOMONSTERS, host_client->edict);
-
-			// apply friction
-			if (f < sv_stopspeed.value)
-				f = sv_stopspeed.value / f;
-			else
-				f = 1;
-			if (trace.fraction == 1)
-				f *= sv_edgefriction.value;
-			f = 1 - sv.frametime * f * sv_friction.value;
-
-			if (f < 0)
-				f = 0;
-			VectorScale(host_client->edict->fields.server->velocity, f, host_client->edict->fields.server->velocity);
-		}
-	}
-	else // airborn
-		wishspeed = min(wishspeed, 30);
-
-	// ground or air acceleration
-	f = wishspeed - DotProduct(host_client->edict->fields.server->velocity, wishdir);
-	if (f > 0)
-	{
-		limit = sv_accelerate.value * sv.frametime * wishspeed;
-		if (f > limit)
-			f = limit;
-		VectorMA(host_client->edict->fields.server->velocity, f, wishdir, host_client->edict->fields.server->velocity);
-	}
-}
-#endif
 
 /*
 ===================
