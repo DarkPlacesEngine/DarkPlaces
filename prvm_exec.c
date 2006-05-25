@@ -132,7 +132,7 @@ void PRVM_PrintStatement (dstatement_t *s)
 		Con_Printf( "%s:%i: ", PRVM_GetString( prog->xfunction->s_file ), prog->statement_linenums[ opnum ] );
 
 	if (prvm_statementprofiling.integer)
-		Con_Printf("%7i ", prog->statement_profile[s - prog->statements]);
+		Con_Printf("%7.0f ", prog->statement_profile[s - prog->statements]);
 
 	if ( (unsigned)s->op < sizeof(prvm_opnames)/sizeof(prvm_opnames[0]))
 	{
@@ -275,12 +275,13 @@ PRVM_Profile_f
 void PRVM_Profile_f (void)
 {
 	mfunction_t *f, *best;
-	int i, num, max/*, howmany*/;
+	int i, num, howmany;
+	double max;
 
-	//howmany = 10;
-	//if (Cmd_Argc() == 2)
-	//	howmany = atoi(Cmd_Argv(1));
-	if(Cmd_Argc() != 2)
+	howmany = 1<<30;
+	if (Cmd_Argc() == 3)
+		howmany = atoi(Cmd_Argv(2));
+	else if (Cmd_Argc() != 2)
 	{
 		Con_Print("prvm_profile <program name>\n");
 		return;
@@ -308,11 +309,13 @@ void PRVM_Profile_f (void)
 		}
 		if (best)
 		{
-			//if (num < howmany)
-			if (best->first_statement < 0)
-				Con_Printf("%10i ----- builtin ----- %s\n", best->callcount, PRVM_GetString(best->s_name));
-			else
-				Con_Printf("%10i%10i%10i %s\n", best->callcount, best->profile, best->builtinsprofile, PRVM_GetString(best->s_name));
+			if (num < howmany)
+			{
+				if (best->first_statement < 0)
+					Con_Printf("%9.0f ----- builtin ----- %s\n", best->callcount, PRVM_GetString(best->s_name));
+				else
+					Con_Printf("%9.0f %9.0f %9.0f %s\n", best->callcount, best->profile, best->builtinsprofile, PRVM_GetString(best->s_name));
+			}
 			num++;
 			best->profile = 0;
 			best->builtinsprofile = 0;
