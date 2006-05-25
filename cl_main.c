@@ -210,7 +210,7 @@ void CL_SetInfo(const char *key, const char *value, qboolean send, qboolean allo
 		return;
 	}
 	InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), key, value);
-	if (cls.state == ca_connected)
+	if (cls.state == ca_connected && cls.netcon)
 	{
 		if (cls.protocol == PROTOCOL_QUAKEWORLD)
 		{

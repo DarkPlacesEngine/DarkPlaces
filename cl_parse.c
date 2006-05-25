@@ -1043,8 +1043,11 @@ void CL_ParseServerInfo (void)
 		// check memory integrity
 		Mem_CheckSentinelsGlobal();
 
-		MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
-		MSG_WriteString(&cls.netcon->message, va("soundlist %i %i", cl.qw_servercount, 0));
+		if (cls.netcon)
+		{
+			MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
+			MSG_WriteString(&cls.netcon->message, va("soundlist %i %i", cl.qw_servercount, 0));
+		}
 
 		cls.state = ca_connected;
 		cls.signon = 1;

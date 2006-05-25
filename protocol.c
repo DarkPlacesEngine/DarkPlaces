@@ -2597,7 +2597,13 @@ void EntityFrameQW_CL_ReadFrame(qboolean delta)
 		cl.entitydatabaseqw = EntityFrameQW_AllocDatabase(cls.levelmempool);
 	d = cl.entitydatabaseqw;
 
-	newsnapindex = cls.netcon->qw.incoming_sequence & QW_UPDATE_MASK;
+	// there is no cls.netcon in demos, so this reading code can't access
+	// cls.netcon-> at all...  so cls.qw_incoming_sequence and
+	// cls.qw_outgoing_sequence are updated every time the corresponding
+	// cls.netcon->qw. variables are updated
+	// read the number of this frame to echo back in next input packet
+	cl.qw_validsequence = cls.qw_incoming_sequence;
+	newsnapindex = cl.qw_validsequence & QW_UPDATE_MASK;
 	newsnap = d->snapshot + newsnapindex;
 	memset(newsnap, 0, sizeof(*newsnap));
 	oldsnapindex = -1;
@@ -2610,7 +2616,7 @@ void EntityFrameQW_CL_ReadFrame(qboolean delta)
 			Con_DPrintf("WARNING: from mismatch\n");
 		if (oldsnapindex != -1)
 		{
-			if (cls.netcon->qw.outgoing_sequence - oldsnapindex >= QW_UPDATE_BACKUP-1)
+			if (cls.qw_outgoing_sequence - oldsnapindex >= QW_UPDATE_BACKUP-1)
 			{
 				Con_DPrintf("delta update too old\n");
 				newsnap->invalid = invalid = true; // too old
@@ -2622,8 +2628,7 @@ void EntityFrameQW_CL_ReadFrame(qboolean delta)
 			delta = false;
 	}
 
-	// read the number of this frame to echo back in next input packet
-	cl.qw_validsequence = cls.netcon->qw.incoming_sequence;
+	// if we can't decode this frame properly, report that to the server
 	if (invalid)
 		cl.qw_validsequence = 0;
 

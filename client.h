@@ -474,6 +474,9 @@ typedef struct client_static_s
 
 	// value of "qport" cvar at time of connection
 	int qw_qport;
+	// copied from cls.netcon->qw. variables every time they change, or set by demos (which have no cls.netcon)
+	int qw_incoming_sequence;
+	int qw_outgoing_sequence;
 
 	// current file download buffer (only saved when file is completed)
 	char qw_downloadname[MAX_QPATH];
@@ -677,6 +680,8 @@ typedef struct client_state_s
 	client_movementqueue_t movement_queue[64];
 	int movesequence;
 	int servermovesequence;
+	// whether the replay should allow a jump at the first sequence
+	qboolean movement_replay_canjump;
 
 // pitch drifting vars
 	float idealpitch;
