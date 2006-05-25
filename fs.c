@@ -247,6 +247,8 @@ FUNCTION PROTOTYPES
 void FS_Dir_f(void);
 void FS_Ls_f(void);
 
+static const char *FS_FileExtension (const char *in);
+static searchpath_t *FS_FindFile (const char *name, int* index, qboolean quiet);
 static packfile_t* FS_AddFileToPack (const char* name, pack_t* pack,
 									fs_offset_t offset, fs_offset_t packsize,
 									fs_offset_t realsize, int flags);
@@ -786,6 +788,16 @@ pack_t *FS_LoadPackPAK (const char *packfile)
 		return NULL;
 	}
 
+	info = (dpackfile_t *)Mem_Alloc(tempmempool, sizeof(*info) * numpackfiles);
+	lseek (packhandle, header.dirofs, SEEK_SET);
+	if(header.dirlen != read (packhandle, (void *)info, header.dirlen))
+	{
+		Con_Printf("%s is an incomplete PAK, not loading\n", packfile);
+		Mem_Free(info);
+		close(packhandle);
+		return NULL;
+	}
+
 	pack = (pack_t *)Mem_Alloc(fs_mempool, sizeof (pack_t));
 	pack->ignorecase = false; // PAK is case sensitive
 	strlcpy (pack->filename, packfile, sizeof (pack->filename));
@@ -794,10 +806,6 @@ pack_t *FS_LoadPackPAK (const char *packfile)
 	pack->files = (packfile_t *)Mem_Alloc(fs_mempool, numpackfiles * sizeof(packfile_t));
 	pack->next = packlist;
 	packlist = pack;
-
-	info = (dpackfile_t *)Mem_Alloc(tempmempool, sizeof(*info) * numpackfiles);
-	lseek (packhandle, header.dirofs, SEEK_SET);
-	read (packhandle, (void *)info, header.dirlen);
 
 	// parse the directory
 	for (i = 0;i < numpackfiles;i++)
@@ -814,6 +822,136 @@ pack_t *FS_LoadPackPAK (const char *packfile)
 	return pack;
 }
 
+/*
+================
+FS_AddPack_Fullpath
+
+Adds the given pack to the search path.
+The pack type is autodetected by the file extension.
+
+Returns true if the file was successfully added to the
+search path or if it was already included.
+
+If keep_plain_dirs is set, the pack will be added AFTER the first sequence of
+plain directories.
+================
+*/
+static qboolean FS_AddPack_Fullpath(const char *pakfile, qboolean *already_loaded, qboolean keep_plain_dirs)
+{
+	searchpath_t *search;
+	pack_t *pak = NULL;
+	const char *ext = FS_FileExtension(pakfile);
+
+	for(search = fs_searchpaths; search; search = search->next)
+	{
+		if(search->pack && !strcasecmp(search->pack->filename, pakfile))
+		{
+			if(already_loaded)
+				*already_loaded = true;
+			return true; // already loaded
+		}
+	}
+
+	if(already_loaded)
+		*already_loaded = false;
+
+	if(!strcasecmp(ext, "pak"))
+		pak = FS_LoadPackPAK (pakfile);
+	else if(!strcasecmp(ext, "pk3"))
+		pak = FS_LoadPackPK3 (pakfile);
+	else
+		Con_Printf("\"%s\" does not have a pack extension\n", pakfile);
+
+	if (pak)
+	{
+		if(keep_plain_dirs)
+		{
+			// find the first item whose next one is a pack or NULL
+			searchpath_t *insertion_point = 0;
+			if(fs_searchpaths && !fs_searchpaths->pack)
+			{
+				insertion_point = fs_searchpaths;
+				for(;;)
+				{
+					if(!insertion_point->next)
+						break;
+					if(insertion_point->next->pack)
+						break;
+					insertion_point = insertion_point->next;
+				}
+			}
+			// If insertion_point is NULL, this means that either there is no
+			// item in the list yet, or that the very first item is a pack. In
+			// that case, we want to insert at the beginning...
+			if(!insertion_point)
+			{
+				search = (searchpath_t *)Mem_Alloc(fs_mempool, sizeof(searchpath_t));
+				search->pack = pak;
+				search->next = fs_searchpaths;
+				fs_searchpaths = search;
+			}
+			else
+			// otherwise we want to append directly after insertion_point.
+			{
+				search = (searchpath_t *)Mem_Alloc(fs_mempool, sizeof(searchpath_t));
+				search->pack = pak;
+				search->next = insertion_point->next;
+				insertion_point->next = search;
+			}
+		}
+		else
+		{
+			search = (searchpath_t *)Mem_Alloc(fs_mempool, sizeof(searchpath_t));
+			search->pack = pak;
+			search->next = fs_searchpaths;
+			fs_searchpaths = search;
+		}
+		return true;
+	}
+	else
+	{
+		Con_Printf("unable to load pak \"%s\"\n", pakfile);
+		return false;
+	}
+}
+
+
+/*
+================
+FS_AddPack
+
+Adds the given pack to the search path and searches for it in the game path.
+The pack type is autodetected by the file extension.
+
+Returns true if the file was successfully added to the
+search path or if it was already included.
+
+If keep_plain_dirs is set, the pack will be added AFTER the first sequence of
+plain directories.
+================
+*/
+qboolean FS_AddPack(const char *pakfile, qboolean *already_loaded, qboolean keep_plain_dirs)
+{
+	char fullpath[MAX_QPATH];
+	int index;
+	searchpath_t *search;
+
+	if(already_loaded)
+		*already_loaded = false;
+
+	// then find the real name...
+	search = FS_FindFile(pakfile, &index, true);
+	if(!search || search->pack)
+	{
+		Con_Printf("could not find pak \"%s\"\n", pakfile);
+		return false;
+	}
+
+	dpsnprintf(fullpath, sizeof(fullpath), "%s%s", search->filename, pakfile);
+
+	return FS_AddPack_Fullpath(fullpath, already_loaded, keep_plain_dirs);
+}
+
 
 /*
 ================
@@ -827,7 +965,6 @@ void FS_AddGameDirectory (const char *dir)
 {
 	stringlist_t *list, *current;
 	searchpath_t *search;
-	pack_t *pak;
 	char pakfile[MAX_OSPATH];
 
 	strlcpy (fs_gamedir, dir, sizeof (fs_gamedir));
@@ -837,38 +974,20 @@ void FS_AddGameDirectory (const char *dir)
 	// add any PAK package in the directory
 	for (current = list;current;current = current->next)
 	{
-		if (matchpattern(current->text, "*.pak", true))
+		if (!strcasecmp(FS_FileExtension(current->text), "pak"))
 		{
 			dpsnprintf (pakfile, sizeof (pakfile), "%s%s", dir, current->text);
-			pak = FS_LoadPackPAK (pakfile);
-			if (pak)
-			{
-				search = (searchpath_t *)Mem_Alloc(fs_mempool, sizeof(searchpath_t));
-				search->pack = pak;
-				search->next = fs_searchpaths;
-				fs_searchpaths = search;
-			}
-			else
-				Con_Printf("unable to load pak \"%s\"\n", pakfile);
+			FS_AddPack_Fullpath(pakfile, NULL, false);
 		}
 	}
 
 	// add any PK3 package in the director
 	for (current = list;current;current = current->next)
 	{
-		if (matchpattern(current->text, "*.pk3", true))
+		if (!strcasecmp(FS_FileExtension(current->text), "pk3"))
 		{
 			dpsnprintf (pakfile, sizeof (pakfile), "%s%s", dir, current->text);
-			pak = FS_LoadPackPK3 (pakfile);
-			if (pak)
-			{
-				search = (searchpath_t *)Mem_Alloc(fs_mempool, sizeof(searchpath_t));
-				search->pack = pak;
-				search->next = fs_searchpaths;
-				fs_searchpaths = search;
-			}
-			else
-				Con_Printf("unable to load pak \"%s\"\n", pakfile);
+			FS_AddPack_Fullpath(pakfile, NULL, false);
 		}
 	}
 	freedirectory(list);
@@ -916,14 +1035,14 @@ static const char *FS_FileExtension (const char *in)
 
 	separator = strrchr(in, '/');
 	backslash = strrchr(in, '\\');
-	if (separator < backslash)
+	if (!separator || separator < backslash)
 		separator = backslash;
 	colon = strrchr(in, ':');
-	if (separator < colon)
+	if (!separator || separator < colon)
 		separator = colon;
 
 	dot = strrchr(in, '.');
-	if (dot == NULL || dot < separator)
+	if (dot == NULL || (separator && (dot < separator)))
 		return "";
 
 	return dot + 1;
@@ -989,31 +1108,13 @@ void FS_Init (void)
 			if (!com_argv[i] || com_argv[i][0] == '+' || com_argv[i][0] == '-')
 				break;
 
-			search = (searchpath_t *)Mem_Alloc(fs_mempool, sizeof(searchpath_t));
-			if (!strcasecmp (FS_FileExtension(com_argv[i]), "pak"))
+			if(!FS_AddPack_Fullpath(com_argv[i], NULL, false))
 			{
-				search->pack = FS_LoadPackPAK (com_argv[i]);
-				if (!search->pack)
-				{
-					Con_Printf ("Couldn't load packfile: %s\n", com_argv[i]);
-					Mem_Free(search);
-					continue;
-				}
-			}
-			else if (!strcasecmp (FS_FileExtension (com_argv[i]), "pk3"))
-			{
-				search->pack = FS_LoadPackPK3 (com_argv[i]);
-				if (!search->pack)
-				{
-					Con_Printf ("Couldn't load packfile: %s\n", com_argv[i]);
-					Mem_Free(search);
-					continue;
-				}
-			}
-			else
+				search = (searchpath_t *)Mem_Alloc(fs_mempool, sizeof(searchpath_t));
 				strlcpy (search->filename, com_argv[i], sizeof (search->filename));
-			search->next = fs_searchpaths;
-			fs_searchpaths = search;
+				search->next = fs_searchpaths;
+				fs_searchpaths = search;
+			}
 		}
 		return;
 	}
@@ -2307,3 +2408,12 @@ void FS_Ls_f(void)
 	FS_ListDirectoryCmd("ls", false);
 }
 
+const char *FS_WhichPack(const char *filename)
+{
+	int index;
+	searchpath_t *sp = FS_FindFile(filename, &index, true);
+	if(sp && sp->pack)
+		return sp->pack->filename;
+	else
+		return 0;
+}
