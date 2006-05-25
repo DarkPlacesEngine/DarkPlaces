@@ -336,6 +336,7 @@ void CL_PlayDemo_f (void)
 	// open the demo file
 	strlcpy (name, Cmd_Argv(1), sizeof (name));
 	FS_DefaultExtension (name, ".dem", sizeof (name));
+	cls.protocol = PROTOCOL_QUAKE;
 
 	Con_Printf("Playing demo from %s.\n", name);
 	cls.demofile = FS_Open (name, "rb", false, false);
