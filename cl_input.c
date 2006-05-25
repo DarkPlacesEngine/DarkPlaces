@@ -520,8 +520,12 @@ void CL_ClientMovement_InputQW(qw_usercmd_t *cmd)
 	n = cl.movement_numqueue;
 	cl.movement_numqueue = 0;
 	for (i = 0;i < n;i++)
+	{
 		if (cl.movement_queue[i].sequence > cls.netcon->qw.incoming_sequence)
 			cl.movement_queue[cl.movement_numqueue++] = cl.movement_queue[i];
+		else if (i == 0)
+			cl.movement_replay_canjump = !cl.movement_queue[i].jump;
+	}
 	// add to input queue if there is room
 	if (cl.movement_numqueue < (int)(sizeof(cl.movement_queue)/sizeof(cl.movement_queue[0])))
 	{
@@ -551,14 +555,22 @@ void CL_ClientMovement_Input(qboolean buttonjump, qboolean buttoncrouch)
 	if (cl.servermovesequence)
 	{
 		for (i = 0;i < n;i++)
+		{
 			if (cl.movement_queue[i].sequence > cl.servermovesequence)
 				cl.movement_queue[cl.movement_numqueue++] = cl.movement_queue[i];
+			else if (i == 0)
+				cl.movement_replay_canjump = !cl.movement_queue[i].jump;
+		}
 	}
 	else
 	{
 		for (i = 0;i < n;i++)
+		{
 			if (cl.movement_queue[i].time >= cl.mtime[0] - cl_movement_latency.value / 1000.0 && cl.movement_queue[i].time <= cl.mtime[0])
 				cl.movement_queue[cl.movement_numqueue++] = cl.movement_queue[i];
+			else if (i == 0)
+				cl.movement_replay_canjump = !cl.movement_queue[i].jump;
+		}
 	}
 	// add to input queue if there is room
 	if (cl.movement_numqueue < (int)(sizeof(cl.movement_queue)/sizeof(cl.movement_queue[0])) && cl.mtime[0] > cl.mtime[1])
@@ -1019,7 +1031,7 @@ void CL_ClientMovement_Replay(void)
 	VectorCopy(cl.entities[cl.playerentity].state_current.origin, s.origin);
 	VectorCopy(cl.mvelocity[0], s.velocity);
 	s.crouched = true; // will be updated on first move
-	s.canjump = true;
+	s.canjump = cl.movement_replay_canjump;
 
 	// set up movement variables
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)

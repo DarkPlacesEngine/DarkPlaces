@@ -504,6 +504,8 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 		{
 			*((short *)(sendbuffer + 8)) = LittleShort(cls.qw_qport);
 			packetLen += 2;
+			// also update cls.qw_outgoing_sequence
+			cls.qw_outgoing_sequence = conn->qw.outgoing_sequence;
 		}
 		if (packetLen + (sendreliable ? conn->sendMessageLength : 0) > 1400)
 		{
@@ -890,6 +892,8 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 			reliableMessagesReceived++;
 		}
 		conn->qw.incoming_sequence = sequence;
+		if (conn == cls.netcon)
+			cls.qw_incoming_sequence = conn->qw.incoming_sequence;
 		conn->qw.incoming_acknowledged = sequence_ack;
 		conn->qw.incoming_reliable_acknowledged = reliable_ack;
 		if (reliable_message)
