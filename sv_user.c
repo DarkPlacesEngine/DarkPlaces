@@ -530,9 +530,9 @@ qboolean SV_ReadClientMove (void)
 
 	if (!host_client->spawned)
 		memset(move, 0, sizeof(*move));
-	else if (move->time > (float)sv.time + 0.001f) // add a little fuzz factor due to float precision issues
+	else if (move->sequence && (float)move->time > (float)sv.time + 0.125f) // add a little fuzz factor due to float precision issues
 	{
-		Con_DPrintf("client move->time %f > sv.time %f, kicking\n", move->time, sv.time);
+		Con_DPrintf("client move->time %f > sv.time %f, kicking\n", (float)move->time, (float)sv.time);
 		// if the client is lying about time, we have definitively detected a
 		// speed cheat attempt of the worst sort, and we can immediately kick
 		// the offending player off.
