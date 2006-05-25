@@ -1126,7 +1126,7 @@ void Host_Color(int changetop, int changebottom)
 			CL_SetInfo("topcolor", va("%i", top), true, false, false, false);
 		if (changebottom >= 0)
 			CL_SetInfo("bottomcolor", va("%i", bottom), true, false, false, false);
-		if (cls.protocol != PROTOCOL_QUAKEWORLD)
+		if (cls.protocol != PROTOCOL_QUAKEWORLD && cls.netcon)
 		{
 			MSG_WriteByte(&cls.netcon->message, clc_stringcmd);
 			MSG_WriteString(&cls.netcon->message, va("color %i %i", top, bottom));
@@ -1191,7 +1191,7 @@ void Host_TopColor_f(void)
 {
 	if (Cmd_Argc() == 1)
 	{
-		Con_Printf("\"topcolor\" is \"%i\"\n", cl_color.integer >> 4);
+		Con_Printf("\"topcolor\" is \"%i\"\n", (cl_color.integer >> 4) & 15);
 		Con_Print("topcolor <0-15>\n");
 		return;
 	}
@@ -1203,7 +1203,7 @@ void Host_BottomColor_f(void)
 {
 	if (Cmd_Argc() == 1)
 	{
-		Con_Printf("\"bottomcolor\" is \"%i\"\n", cl_color.integer);
+		Con_Printf("\"bottomcolor\" is \"%i\"\n", cl_color.integer & 15);
 		Con_Print("bottomcolor <0-15>\n");
 		return;
 	}
