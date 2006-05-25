@@ -1349,7 +1349,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 
 	prog->statements = (dstatement_t *)((unsigned char *)prog->progs + prog->progs->ofs_statements);
 
-	prog->statement_profile = (int *)Mem_Alloc(prog->progs_mempool, prog->progs->numstatements * sizeof(*prog->statement_profile));
+	prog->statement_profile = (double *)Mem_Alloc(prog->progs_mempool, prog->progs->numstatements * sizeof(*prog->statement_profile));
 
 	// moved edict_size calculation down below field adding code
 

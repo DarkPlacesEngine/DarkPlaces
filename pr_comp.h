@@ -163,9 +163,10 @@ typedef struct mfunction_s
 	int		parm_start;
 	int		locals;				// total ints of parms + locals
 
-	int		profile;		// runtime
-	int		builtinsprofile; // cost of builtin functions called by this function
-	int		callcount; // times the functions has been called since the last profile call
+	// these are doubles so that they can count up to 54bits or so rather than 32bit
+	double	profile;		// runtime
+	double	builtinsprofile; // cost of builtin functions called by this function
+	double	callcount; // times the functions has been called since the last profile call
 
 	int		s_name;
 	int		s_file;			// source file defined in

@@ -266,7 +266,7 @@ typedef struct prvm_prog_s
 
 	int					*statement_linenums; // NULL if not available
 
-	int					*statement_profile; // only incremented if prvm_statementprofiling is on
+	double				*statement_profile; // only incremented if prvm_statementprofiling is on
 
 	union {
 		float *generic;
