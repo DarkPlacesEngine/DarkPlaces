@@ -301,9 +301,15 @@ void M_ToggleMenu_f (void)
 	m_entersound = true;
 
 	if (key_dest != key_menu || m_state != m_main)
+	{
+		if(Cmd_Argc() == 2 && !strcmp(Cmd_Argv(1), "1"))
+			return;
 		M_Menu_Main_f ();
+	}
 	else
 	{
+		if(Cmd_Argc() == 2 && !strcmp(Cmd_Argv(1), "0"))
+			return;
 		key_dest = key_game;
 		m_state = m_none;
 	}
