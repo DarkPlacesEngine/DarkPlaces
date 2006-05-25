@@ -273,7 +273,7 @@ void SV_WaterMove (void)
 	speed = VectorLength(host_client->edict->fields.server->velocity);
 	if (speed)
 	{
-		newspeed = speed - sv.frametime * speed * sv_friction.value;
+		newspeed = speed - sv.frametime * speed * sv_waterfriction.value;
 		if (newspeed < 0)
 			newspeed = 0;
 		temp = newspeed/speed;
