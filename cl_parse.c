@@ -1501,19 +1501,14 @@ void CL_ParseEffect2 (void)
 	CL_Effect(org, modelindex, startframe, framecount, framerate);
 }
 
-void CL_ParseBeam (model_t *m, int lightning)
+void CL_NewBeam (int ent, vec3_t start, vec3_t end, model_t *m, int lightning)
 {
-	int i, ent;
-	vec3_t start, end;
+	int i;
 	beam_t *b = NULL;
-
-	ent = (unsigned short) MSG_ReadShort ();
-	MSG_ReadVector(start, cls.protocol);
-	MSG_ReadVector(end, cls.protocol);
 
 	if (ent >= MAX_EDICTS)
 	{
-		Con_Printf("CL_ParseBeam: invalid entity number %i\n", ent);
+		Con_Printf("CL_NewBeam: invalid entity number %i\n", ent);
 		ent = 0;
 	}
 
@@ -1529,7 +1524,7 @@ void CL_ParseBeam (model_t *m, int lightning)
 	// if the entity was not found then just replace an unused beam
 	if (i == cl.max_beams)
 		for (i = 0, b = cl.beams;i < cl.max_beams;i++, b++)
-			if (!b->model || b->endtime < cl.time)
+			if (!b->model)
 				break;
 	if (i < cl.max_beams)
 	{
@@ -1537,34 +1532,30 @@ void CL_ParseBeam (model_t *m, int lightning)
 		b->entity = ent;
 		b->lightning = lightning;
 		b->model = m;
-		b->endtime = cl.time + 0.2;
+		b->endtime = cl.mtime[0] + 0.2;
 		VectorCopy (start, b->start);
 		VectorCopy (end, b->end);
-		b->relativestartvalid = 0;
-		if (ent && cl.entities[ent].state_current.active)
-		{
-			entity_state_t *p;
-			matrix4x4_t matrix, imatrix;
-			if (ent == cl.viewentity && cl.movement)
-				p = &cl.entities[b->entity].state_previous;
-			else
-				p = &cl.entities[b->entity].state_current;
-			// not really valid yet, we need to get the orientation now
-			// (ParseBeam flagged this because it is received before
-			//  entities are received, by now they have been received)
-			// note: because players create lightning in their think
-			// function (which occurs before movement), they actually
-			// have some lag in it's location, so compare to the
-			// previous player state, not the latest
-			Matrix4x4_CreateFromQuakeEntity(&matrix, p->origin[0], p->origin[1], p->origin[2], -p->angles[0], p->angles[1], p->angles[2], 1);
-			Matrix4x4_Invert_Simple(&imatrix, &matrix);
-			Matrix4x4_Transform(&imatrix, b->start, b->relativestart);
-			Matrix4x4_Transform(&imatrix, b->end, b->relativeend);
-			b->relativestartvalid = 1;
-		}
 	}
 	else
 		Con_Print("beam list overflow!\n");
+}
+
+void CL_ParseBeam (model_t *m, int lightning)
+{
+	int ent;
+	vec3_t start, end;
+
+	ent = (unsigned short) MSG_ReadShort ();
+	MSG_ReadVector(start, cls.protocol);
+	MSG_ReadVector(end, cls.protocol);
+
+	if (ent >= MAX_EDICTS)
+	{
+		Con_Printf("CL_ParseBeam: invalid entity number %i\n", ent);
+		ent = 0;
+	}
+
+	CL_NewBeam(ent, start, end, m, lightning);
 }
 
 void CL_ParseTempEntity(void)

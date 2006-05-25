@@ -269,12 +269,14 @@ void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, const r
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 	{
 		const beam_t *b = cl.beams + surfacelist[surfacelistindex];
-		vec3_t beamdir, right, up, offset;
+		vec3_t beamdir, right, up, offset, start, end;
 		float length, t1, t2;
+		
+		CL_Beam_CalculatePositions(b, start, end);
 
 		// calculate beam direction (beamdir) vector and beam length
 		// get difference vector
-		VectorSubtract(b->end, b->start, beamdir);
+		VectorSubtract(end, start, beamdir);
 		// find length of difference vector
 		length = sqrt(DotProduct(beamdir, beamdir));
 		// calculate scale to make beamdir a unit vector (normalized)
@@ -284,7 +286,7 @@ void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, const r
 
 		// calculate up vector such that it points toward viewer, and rotates around the beamdir
 		// get direction from start of beam to viewer
-		VectorSubtract(r_view.origin, b->start, up);
+		VectorSubtract(r_view.origin, start, up);
 		// remove the portion of the vector that moves along the beam
 		// (this leaves only a vector pointing directly away from the beam)
 		t1 = -DotProduct(up, beamdir);
@@ -296,7 +298,7 @@ void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, const r
 		VectorNormalize(up);
 
 		// calculate T coordinate scrolling (start and end texcoord along the beam)
-		t1 = r_refdef.time * -r_lightningbeam_scroll.value;// + beamrepeatscale * DotProduct(b->start, beamdir);
+		t1 = r_refdef.time * -r_lightningbeam_scroll.value;// + beamrepeatscale * DotProduct(start, beamdir);
 		t1 = t1 - (int) t1;
 		t2 = t1 + beamrepeatscale * length;
 
@@ -313,15 +315,15 @@ void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, const r
 
 		// polygon 1, verts 0-3
 		VectorScale(right, r_lightningbeam_thickness.value, offset);
-		R_CalcLightningBeamPolygonVertex3f(vertex3f + 0, b->start, b->end, offset);
+		R_CalcLightningBeamPolygonVertex3f(vertex3f + 0, start, end, offset);
 		// polygon 2, verts 4-7
 		VectorAdd(right, up, offset);
 		VectorScale(offset, r_lightningbeam_thickness.value * 0.70710681f, offset);
-		R_CalcLightningBeamPolygonVertex3f(vertex3f + 12, b->start, b->end, offset);
+		R_CalcLightningBeamPolygonVertex3f(vertex3f + 12, start, end, offset);
 		// polygon 3, verts 8-11
 		VectorSubtract(right, up, offset);
 		VectorScale(offset, r_lightningbeam_thickness.value * 0.70710681f, offset);
-		R_CalcLightningBeamPolygonVertex3f(vertex3f + 24, b->start, b->end, offset);
+		R_CalcLightningBeamPolygonVertex3f(vertex3f + 24, start, end, offset);
 		R_CalcLightningBeamPolygonTexCoord2f(texcoord2f + 0, t1, t2);
 		R_CalcLightningBeamPolygonTexCoord2f(texcoord2f + 8, t1 + 0.33, t2 + 0.33);
 		R_CalcLightningBeamPolygonTexCoord2f(texcoord2f + 16, t1 + 0.66, t2 + 0.66);
@@ -338,11 +340,11 @@ void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, const r
 	}
 }
 
+extern cvar_t cl_beams_polygons;
 void R_DrawLightningBeams(void)
 {
 	int i;
 	beam_t *b;
-	vec3_t org;
 
 	if (!cl_beams_polygons.integer)
 		return;
@@ -350,10 +352,17 @@ void R_DrawLightningBeams(void)
 	beamrepeatscale = 1.0f / r_lightningbeam_repeatdistance.value;
 	for (i = 0, b = cl.beams;i < cl.num_beams;i++, b++)
 	{
-		if (b->model && b->endtime >= r_refdef.time && b->lightning)
+		if (b->model && b->lightning)
 		{
-			VectorAdd(b->start, b->end, org);
-			VectorScale(org, 0.5f, org);
+			vec3_t org, start, end, dir;
+			vec_t dist;
+			CL_Beam_CalculatePositions(b, start, end);
+			// calculate the nearest point on the line (beam) for depth sorting
+			VectorSubtract(end, start, dir);
+			dist = (DotProduct(r_view.origin, dir) - DotProduct(start, dir)) / (DotProduct(end, dir) - DotProduct(start, dir));
+			dist = bound(0, dist, 1);
+			VectorLerp(start, dist, end, org);
+			// now we have the nearest point on the line, so sort with it
 			R_MeshQueue_AddTransparent(org, R_DrawLightningBeam_TransparentCallback, NULL, i, NULL);
 		}
 	}

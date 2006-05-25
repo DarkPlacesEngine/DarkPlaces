@@ -64,8 +64,9 @@ cvar_t cl_stainmaps = {CVAR_SAVE, "cl_stainmaps", "1","stains lightmaps, much fa
 cvar_t cl_stainmaps_clearonload = {CVAR_SAVE, "cl_stainmaps_clearonload", "1","clear stainmaps on map restart"};
 
 cvar_t cl_beams_polygons = {CVAR_SAVE, "cl_beams_polygons", "1","use beam polygons instead of models"};
-cvar_t cl_beams_relative = {CVAR_SAVE, "cl_beams_relative", "1","beams are relative to owner (smooth sweeps)"};
-cvar_t cl_beams_lightatend = {CVAR_SAVE, "cl_beams_lightatend", "0","make a light at the end of the beam"};
+cvar_t cl_beams_quakepositionhack = {CVAR_SAVE, "cl_beams_quakepositionhack", "1", "makes your lightning gun appear to fire from your waist (as in Quake and QuakeWorld)"};
+cvar_t cl_beams_instantaimhack = {CVAR_SAVE, "cl_beams_instantaimhack", "1", "makes your lightning gun aiming update instantly"};
+cvar_t cl_beams_lightatend = {CVAR_SAVE, "cl_beams_lightatend", "0", "make a light at the end of the beam"};
 
 cvar_t cl_noplayershadow = {CVAR_SAVE, "cl_noplayershadow", "0","hide player shadow"};
 
@@ -1381,11 +1382,44 @@ static void CL_RelinkEffects(void)
 	}
 }
 
+void CL_Beam_CalculatePositions(const beam_t *b, vec3_t start, vec3_t end)
+{
+	VectorCopy(b->start, start);
+	VectorCopy(b->end, end);
+
+	// if coming from the player, update the start position
+	if (b->entity == cl.viewentity)
+	{
+		if (cl_beams_quakepositionhack.integer && !chase_active.integer)
+		{
+			// LordHavoc: this is a stupid hack from Quake that makes your
+			// lightning appear to come from your waist and cover less of your
+			// view
+			// in Quake this hack was applied to all players (causing the
+			// infamous crotch-lightning), but in darkplaces and QuakeWorld it
+			// only applies to your own lightning, and only in first person
+			Matrix4x4_OriginFromMatrix(&cl.entities[cl.viewentity].render.matrix, start);
+		}
+		if (cl_beams_instantaimhack.integer)
+		{
+			vec3_t dir, localend;
+			vec_t len;
+			// LordHavoc: this updates the beam direction to match your
+			// viewangles
+			VectorSubtract(end, start, dir);
+			len = VectorLength(dir);
+			VectorNormalize(dir);
+			VectorSet(localend, len, 0, 0);
+			Matrix4x4_Transform(&r_view.matrix, localend, end);
+		}
+	}
+}
+
 void CL_RelinkBeams(void)
 {
 	int i;
 	beam_t *b;
-	vec3_t dist, org;
+	vec3_t dist, org, start, end;
 	float d;
 	entity_t *ent;
 	float yaw, pitch;
@@ -1402,24 +1436,14 @@ void CL_RelinkBeams(void)
 			continue;
 		}
 
-		// if coming from the player, update the start position
-		//if (b->entity == cl.viewentity)
-		//	Matrix4x4_OriginFromMatrix(&cl.entities[cl.viewentity].render.matrix, b->start);
-		if (cl_beams_relative.integer >= 1 && b->entity && (b->entity == cl.viewentity || cl_beams_relative.integer >= 2) && cl.entities[b->entity].state_current.active && b->relativestartvalid)
-		{
-			entity_render_t *r = &cl.entities[b->entity].render;
-			//Matrix4x4_OriginFromMatrix(&r->matrix, origin);
-			//Matrix4x4_CreateFromQuakeEntity(&matrix, r->origin[0], r->origin[1], r->origin[2] + 16, r->angles[0], r->angles[1], r->angles[2], 1);
-			Matrix4x4_Transform(&r->matrix, b->relativestart, b->start);
-			Matrix4x4_Transform(&r->matrix, b->relativeend, b->end);
-		}
+		CL_Beam_CalculatePositions(b, start, end);
 
 		if (b->lightning)
 		{
 			if (cl_beams_lightatend.integer)
 			{
 				// FIXME: create a matrix from the beam start/end orientation
-				Matrix4x4_CreateTranslate(&tempmatrix, b->end[0], b->end[1], b->end[2]);
+				Matrix4x4_CreateTranslate(&tempmatrix, end[0], end[1], end[2]);
 				CL_AllocDlight (NULL, &tempmatrix, 200, 0.3, 0.7, 1, 0, 0, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 			}
 			if (cl_beams_polygons.integer)
@@ -1427,8 +1451,8 @@ void CL_RelinkBeams(void)
 		}
 
 		// calculate pitch and yaw
-		VectorSubtract (b->end, b->start, dist);
-
+		// (this is similar to the QuakeC builtin function vectoangles)
+		VectorSubtract(end, start, dist);
 		if (dist[1] == 0 && dist[0] == 0)
 		{
 			yaw = 0;
@@ -1450,7 +1474,7 @@ void CL_RelinkBeams(void)
 		}
 
 		// add new entities for the lightning
-		VectorCopy (b->start, org);
+		VectorCopy (start, org);
 		d = VectorNormalizeLength(dist);
 		while (d > 0)
 		{
@@ -1742,7 +1766,8 @@ void CL_Init (void)
 	Cvar_RegisterVariable(&cl_stainmaps);
 	Cvar_RegisterVariable(&cl_stainmaps_clearonload);
 	Cvar_RegisterVariable(&cl_beams_polygons);
-	Cvar_RegisterVariable(&cl_beams_relative);
+	Cvar_RegisterVariable(&cl_beams_quakepositionhack);
+	Cvar_RegisterVariable(&cl_beams_instantaimhack);
 	Cvar_RegisterVariable(&cl_beams_lightatend);
 	Cvar_RegisterVariable(&cl_noplayershadow);
 

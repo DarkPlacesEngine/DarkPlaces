@@ -56,6 +56,7 @@
 0 bug darkplaces server: the lava+func_trains room of r1m5 is leaving items floating in the air - r1m5 is Towers of Wrath, in episode of Dissolution of Eternity, aka rogue (maichal)
 0 bug darkplaces video: generate 1024 color gamma ramps for glx on Quadro, right now hardware gamma is being disabled on these cards because they use 1024 color ramps, not 256 (div0)
 0 bug darkplaces wgl client: during video mode setup, sometimes another application's window becomes permanently top most, not darkplaces' fullscreen window, why? (tZork)
+0 bug darkplaces wgl client: hardware gamma is being retried every frame for unknown reasons, this is SEVERELY impacting framerates on win2k/xp (Jago)
 0 bug darkplaces windows sound: freezing on exit sometimes when freeing sound buffer during sound shutdown (Black)
 0 bug dpmod: allow selection of weapons with secondary ammo but no primary ammo, and switch away if trying to fire primary ammo you don't have (romi)
 0 bug dpmod: chthon stops attacking in coop if shot enough
@@ -79,8 +80,10 @@
 0 change darkplaces client: disable all possible 'cheat' things unless -developer is given on commandline, this includes r_show*, r_test, gl_lightmaps, r_fullbright
 0 change darkplaces client: get image sizes from .lmp files if present
 0 change darkplaces client: hardcode sbar image sizes so they can be replaced with higher quality images
+0 change darkplaces client: modify cl_particles_quake to make all the engine dlights be white and look as much like quake as possible (Jago)
 0 change darkplaces client: particles shouldn't be using contents checks to decide whether to die, they should use movement traces
 0 change darkplaces client: restrict wateralpha and such cvars according to what is permitted in qw serverinfo?
+0 change darkplaces client: turn off coronas on dlights (Jago)
 0 change darkplaces extensions: edit FRIK_FILE documentation to mention that fgets uses its own separate buffer, so only one fgets can be done at a time without uzing strzone, but that darkplaces uses standard tempstrings for fgets (it doesn't - change it!) and mention DP_QC_MULTIPLETEMPSTRINGS (FrikaC)
 0 change darkplaces extensions: edit FRIK_FILE documentation to mention that strcat uses its own separate buffer, and that a = strcat(a, b);a = strcat(a, c); works correctly despite this, also mention that in DP strcat uses standard tempstrings, and mention DP_QC_MULTIPLETEMPSTRINGS (FrikaC)
 0 change darkplaces general: make r_speeds 2 show timings for other subsystems such as client, sound, server, network (Carni)
@@ -336,6 +339,7 @@
 2 feature darkplaces loader: add support for fuhquake naming of map textures (textures/start/quake.tga style)
 2 feature darkplaces menu: add some basic graphics/effects options profiles so that people can choose profiles like "Classic", "Modern", "Excessive", "Realistic", or any other profiles that make sense, may also need to reorganize the graphics/effects options menus to be a bit less confusing (Tron)
 2 feature darkplaces menu: implement menu_clearkeyconfig and menu_keyconfig and the corresponding menu (diGGer)
+2 feature darkplaces menu: new game custom level/mod menu, which allows you to choose a mod and browse through maps and choose starting skill, by default it would have the current mod selected and start selected (Jago)
 2 feature darkplaces model: add model_exportobj console command to allow exporting a specified model as .obj (Randy)
 2 feature darkplaces physics: DP_SV_QCPHYSICS extension, calls SV_PhysicsQC function, which replaces the entire SV_Physics C function, calling all thinks and physics and everything (Urre)
 2 feature darkplaces protocol: .float bulge; field which makes an entity larger by moving vertices along their normals, well known as the fatboy mutator in Unreal Tournament (Wazat)

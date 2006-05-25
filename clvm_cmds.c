@@ -1032,45 +1032,6 @@ void VM_CL_particleeffectnum (void)
 	PRVM_G_FLOAT(OFS_RETURN) = i;
 }
 
-void CSQC_ParseBeam (int ent, vec3_t start, vec3_t end, model_t *m, int lightning)
-{
-	int		i;
-	beam_t	*b;
-
-	// override any beam with the same entity
-	for (i = 0, b = cl.beams;i < cl.max_beams;i++, b++)
-	{
-		if (b->entity == ent && ent)
-		{
-			//b->entity = ent;
-			b->lightning = lightning;
-			b->relativestartvalid = (ent && cl.csqcentities[ent].state_current.active) ? 2 : 0;
-			b->model = m;
-			b->endtime = cl.time + 0.2;
-			VectorCopy (start, b->start);
-			VectorCopy (end, b->end);
-			return;
-		}
-	}
-
-	// find a free beam
-	for (i = 0, b = cl.beams;i < cl.max_beams;i++, b++)
-	{
-		if (!b->model || b->endtime < cl.time)
-		{
-			b->entity = ent;
-			b->lightning = lightning;
-			b->relativestartvalid = (ent && cl.csqcentities[ent].state_current.active) ? 2 : 0;
-			b->model = m;
-			b->endtime = cl.time + 0.2;
-			VectorCopy (start, b->start);
-			VectorCopy (end, b->end);
-			return;
-		}
-	}
-	Con_Print("beam list overflow!\n");
-}
-
 // #336 void(entity ent, float effectnum, vector start, vector end[, float color]) trailparticles (EXT_CSQC)
 void VM_CL_trailparticles (void)
 {
@@ -1656,74 +1617,32 @@ void VM_CL_te_explosion2 (void)
 }
 
 
-static void VM_CL_NewBeam (int ent, float *start, float *end, model_t *m, qboolean lightning)
-{
-	beam_t	*b;
-	int		i;
-
-	if (ent >= cl.max_csqcentities)
-		CL_ExpandCSQCEntities(ent);
-
-	// override any beam with the same entity
-	for (i = 0, b = cl.beams;i < cl.max_beams;i++, b++)
-	{
-		if (b->entity == ent && ent)
-		{
-			//b->entity = ent;
-			b->lightning = lightning;
-			b->relativestartvalid = (ent && cl.csqcentities[ent].state_current.active) ? 2 : 0;
-			b->model = m;
-			b->endtime = cl.time + 0.2;
-			VectorCopy (start, b->start);
-			VectorCopy (end, b->end);
-			return;
-		}
-	}
-
-	// find a free beam
-	for (i = 0, b = cl.beams;i < cl.max_beams;i++, b++)
-	{
-		if (!b->model || b->endtime < cl.time)
-		{
-			b->entity = ent;
-			b->lightning = lightning;
-			b->relativestartvalid = (ent && cl.csqcentities[ent].state_current.active) ? 2 : 0;
-			b->model = m;
-			b->endtime = cl.time + 0.2;
-			VectorCopy (start, b->start);
-			VectorCopy (end, b->end);
-			return;
-		}
-	}
-	Con_Print("beam list overflow!\n");
-}
-
 // #428 void(entity own, vector start, vector end) te_lightning1 (DP_TE_STANDARDEFFECTBUILTINS)
 void VM_CL_te_lightning1 (void)
 {
 	VM_SAFEPARMCOUNT(3, VM_CL_te_lightning1);
-	VM_CL_NewBeam(PRVM_G_EDICTNUM(OFS_PARM0), PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM2), cl.model_bolt, true);
+	CL_NewBeam(PRVM_G_EDICTNUM(OFS_PARM0), PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM2), cl.model_bolt, true);
 }
 
 // #429 void(entity own, vector start, vector end) te_lightning2 (DP_TE_STANDARDEFFECTBUILTINS)
 void VM_CL_te_lightning2 (void)
 {
 	VM_SAFEPARMCOUNT(3, VM_CL_te_lightning2);
-	VM_CL_NewBeam(PRVM_G_EDICTNUM(OFS_PARM0), PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM2), cl.model_bolt2, true);
+	CL_NewBeam(PRVM_G_EDICTNUM(OFS_PARM0), PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM2), cl.model_bolt2, true);
 }
 
 // #430 void(entity own, vector start, vector end) te_lightning3 (DP_TE_STANDARDEFFECTBUILTINS)
 void VM_CL_te_lightning3 (void)
 {
 	VM_SAFEPARMCOUNT(3, VM_CL_te_lightning3);
-	VM_CL_NewBeam(PRVM_G_EDICTNUM(OFS_PARM0), PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM2), cl.model_bolt3, false);
+	CL_NewBeam(PRVM_G_EDICTNUM(OFS_PARM0), PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM2), cl.model_bolt3, false);
 }
 
 // #431 void(entity own, vector start, vector end) te_beam (DP_TE_STANDARDEFFECTBUILTINS)
 void VM_CL_te_beam (void)
 {
 	VM_SAFEPARMCOUNT(3, VM_CL_te_beam);
-	VM_CL_NewBeam(PRVM_G_EDICTNUM(OFS_PARM0), PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM2), cl.model_beam, false);
+	CL_NewBeam(PRVM_G_EDICTNUM(OFS_PARM0), PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM2), cl.model_beam, false);
 }
 
 // #433 void(vector org) te_plasmaburn (DP_TE_PLASMABURN)

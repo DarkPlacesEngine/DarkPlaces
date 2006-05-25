@@ -1794,7 +1794,7 @@ static void M_Options_Key (int k, char ascii)
 	}
 }
 
-#define	OPTIONS_EFFECTS_ITEMS	35
+#define	OPTIONS_EFFECTS_ITEMS	36
 
 static int options_effects_cursor;
 
@@ -1811,8 +1811,9 @@ extern cvar_t cl_stainmaps_clearonload;
 extern cvar_t r_explosionclip;
 extern cvar_t r_coronas;
 extern cvar_t gl_flashblend;
-extern cvar_t cl_beams_polygon;
-extern cvar_t cl_beams_relative;
+extern cvar_t cl_beams_polygons;
+extern cvar_t cl_beams_quakepositionhack;
+extern cvar_t cl_beams_instantaimhack;
 extern cvar_t cl_beams_lightatend;
 extern cvar_t r_lightningbeam_thickness;
 extern cvar_t r_lightningbeam_scroll;
@@ -1846,7 +1847,8 @@ static void M_Menu_Options_Effects_AdjustSliders (int dir)
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_particles_blood_alpha, bound(0.2, cl_particles_blood_alpha.value + dir * 0.1, 1));
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_particles_blood_bloodhack, !cl_particles_blood_bloodhack.integer);
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_beams_polygons, !cl_beams_polygons.integer);
-	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_beams_relative, !cl_beams_relative.integer);
+	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_beams_instantaimhack, !cl_beams_instantaimhack.integer);
+	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_beams_quakepositionhack, !cl_beams_quakepositionhack.integer);
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_beams_lightatend, !cl_beams_lightatend.integer);
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&r_lightningbeam_thickness, bound(1, r_lightningbeam_thickness.integer + dir, 10));
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&r_lightningbeam_scroll, bound(0, r_lightningbeam_scroll.integer + dir, 10));
@@ -1898,8 +1900,9 @@ static void M_Options_Effects_Draw (void)
 	M_Options_PrintCheckbox("                 Blood", true, cl_particles_blood.integer);
 	M_Options_PrintSlider(  "         Blood Opacity", true, cl_particles_blood_alpha.value, 0.2, 1);
 	M_Options_PrintCheckbox("Force New Blood Effect", true, cl_particles_blood_bloodhack.integer);
-	M_Options_PrintCheckbox("    Lightning Polygons", true, cl_beams_polygons.integer);
-	M_Options_PrintCheckbox("Lightning Smooth Sweep", true, cl_beams_relative.integer);
+	M_Options_PrintCheckbox("     Polygon Lightning", true, cl_beams_polygons.integer);
+	M_Options_PrintCheckbox("Smooth Sweep Lightning", true, cl_beams_instantaimhack.integer);
+	M_Options_PrintCheckbox(" Waist-level Lightning", true, cl_beams_quakepositionhack.integer);
 	M_Options_PrintCheckbox("   Lightning End Light", true, cl_beams_lightatend.integer);
 	M_Options_PrintSlider(  "   Lightning Thickness", cl_beams_polygons.integer, r_lightningbeam_thickness.integer, 1, 10);
 	M_Options_PrintSlider(  "      Lightning Scroll", cl_beams_polygons.integer, r_lightningbeam_scroll.integer, 0, 10);
