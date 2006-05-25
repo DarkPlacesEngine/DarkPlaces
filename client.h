@@ -55,12 +55,6 @@ typedef struct beam_s
 	struct model_s	*model;
 	float	endtime;
 	vec3_t	start, end;
-	// if this beam is owned by an entity, this is the beam start relative to
-	// that entity's matrix for per frame start updates
-	vec3_t	relativestart;
-	vec3_t	relativeend;
-	// indicates whether relativestart is valid
-	int	relativestartvalid;
 }
 beam_t;
 
@@ -963,10 +957,6 @@ void CL_Disconnect_f (void);
 
 void CL_BoundingBoxForEntity(entity_render_t *ent);
 
-extern cvar_t cl_beams_polygons;
-extern cvar_t cl_beams_relative;
-extern cvar_t cl_beams_lightatend;
-
 //
 // cl_input
 //
@@ -988,7 +978,9 @@ void CL_ValidateState(entity_state_t *s);
 void CL_MoveLerpEntityStates(entity_t *ent);
 void CL_LerpUpdate(entity_t *e);
 void CL_ParseTEnt (void);
+void CL_NewBeam (int ent, vec3_t start, vec3_t end, model_t *m, int lightning);
 void CL_RelinkBeams (void);
+void CL_Beam_CalculatePositions (const beam_t *b, vec3_t start, vec3_t end);
 
 void CL_ClearTempEntities (void);
 entity_t *CL_NewTempEntity (void);
