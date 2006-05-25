@@ -292,6 +292,66 @@ static void Mod_BuildBaseBonePoses(void)
 	}
 }
 
+static void Mod_Alias_CalculateBoundingBox(void)
+{
+	int i, j;
+	int vnum;
+	qboolean firstvertex = true;
+	float dist, yawradius, radius;
+	float *v;
+	float *vertex3f;
+	frameblend_t frameblend[4];
+	memset(frameblend, 0, sizeof(frameblend));
+	frameblend[0].lerp = 1;
+	vertex3f = Mem_Alloc(loadmodel->mempool, loadmodel->surfmesh.num_vertices * sizeof(float[3]));
+	VectorClear(loadmodel->normalmins);
+	VectorClear(loadmodel->normalmaxs);
+	yawradius = 0;
+	radius = 0;
+	for (i = 0;i < loadmodel->numframes;i++)
+	{
+		for (j = 0, frameblend[0].frame = loadmodel->animscenes[i].firstframe;j < loadmodel->animscenes[i].framecount;j++, frameblend[0].frame++)
+		{
+			Mod_Alias_GetMesh_Vertices(loadmodel, frameblend, vertex3f, NULL, NULL, NULL);
+			for (vnum = 0, v = vertex3f;vnum < loadmodel->surfmesh.num_vertices;vnum++, v += 3)
+			{
+				if (firstvertex)
+				{
+					firstvertex = false;
+					VectorCopy(v, loadmodel->normalmins);
+					VectorCopy(v, loadmodel->normalmaxs);
+				}
+				else
+				{
+					if (loadmodel->normalmins[0] > v[0]) loadmodel->normalmins[0] = v[0];
+					if (loadmodel->normalmins[1] > v[1]) loadmodel->normalmins[1] = v[1];
+					if (loadmodel->normalmins[2] > v[2]) loadmodel->normalmins[2] = v[2];
+					if (loadmodel->normalmaxs[0] < v[0]) loadmodel->normalmaxs[0] = v[0];
+					if (loadmodel->normalmaxs[1] < v[1]) loadmodel->normalmaxs[1] = v[1];
+					if (loadmodel->normalmaxs[2] < v[2]) loadmodel->normalmaxs[2] = v[2];
+				}
+				dist = v[0] * v[0] + v[1] * v[1];
+				if (yawradius < dist)
+					yawradius = dist;
+				dist += v[2] * v[2];
+				if (radius < dist)
+					radius = dist;
+			}
+		}
+	}
+	Mem_Free(vertex3f);
+	radius = sqrt(radius);
+	yawradius = sqrt(yawradius);
+	loadmodel->yawmins[0] = loadmodel->yawmins[1] = -yawradius;
+	loadmodel->yawmaxs[0] = loadmodel->yawmaxs[1] = yawradius;
+	loadmodel->yawmins[2] = loadmodel->normalmins[2];
+	loadmodel->yawmaxs[2] = loadmodel->normalmaxs[2];
+	loadmodel->rotatedmins[0] = loadmodel->rotatedmins[1] = loadmodel->rotatedmins[2] = -radius;
+	loadmodel->rotatedmaxs[0] = loadmodel->rotatedmaxs[1] = loadmodel->rotatedmaxs[2] = radius;
+	loadmodel->radius = radius;
+	loadmodel->radius2 = radius * radius;
+}
+
 static void Mod_Alias_Mesh_CompileFrameZero(void)
 {
 	frameblend_t frameblend[4] = {{0, 1}, {0, 0}, {0, 0}, {0, 0}};
@@ -371,42 +431,6 @@ static void Mod_MDLMD2MD3_TraceBox(model_t *model, int frame, trace_t *trace, co
 			Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, model->surfmesh.num_triangles, model->surfmesh.data_element3i, vertex3f, SUPERCONTENTS_SOLID, 0, surface->texture, segmentmins, segmentmaxs);
 		}
 	}
-}
-
-static void Mod_CalcAliasModelBBoxes (void)
-{
-	int vnum;
-	float dist, yawradius, radius;
-	float *v;
-	VectorClear(loadmodel->normalmins);
-	VectorClear(loadmodel->normalmaxs);
-	yawradius = 0;
-	radius = 0;
-	for (vnum = 0, v = loadmodel->surfmesh.data_morphvertex3f;vnum < loadmodel->surfmesh.num_vertices * loadmodel->surfmesh.num_morphframes;vnum++, v += 3)
-	{
-		if (loadmodel->normalmins[0] > v[0]) loadmodel->normalmins[0] = v[0];
-		if (loadmodel->normalmins[1] > v[1]) loadmodel->normalmins[1] = v[1];
-		if (loadmodel->normalmins[2] > v[2]) loadmodel->normalmins[2] = v[2];
-		if (loadmodel->normalmaxs[0] < v[0]) loadmodel->normalmaxs[0] = v[0];
-		if (loadmodel->normalmaxs[1] < v[1]) loadmodel->normalmaxs[1] = v[1];
-		if (loadmodel->normalmaxs[2] < v[2]) loadmodel->normalmaxs[2] = v[2];
-		dist = v[0] * v[0] + v[1] * v[1];
-		if (yawradius < dist)
-			yawradius = dist;
-		dist += v[2] * v[2];
-		if (radius < dist)
-			radius = dist;
-	}
-	radius = sqrt(radius);
-	yawradius = sqrt(yawradius);
-	loadmodel->yawmins[0] = loadmodel->yawmins[1] = -yawradius;
-	loadmodel->yawmaxs[0] = loadmodel->yawmaxs[1] = yawradius;
-	loadmodel->yawmins[2] = loadmodel->normalmins[2];
-	loadmodel->yawmaxs[2] = loadmodel->normalmaxs[2];
-	loadmodel->rotatedmins[0] = loadmodel->rotatedmins[1] = loadmodel->rotatedmins[2] = -radius;
-	loadmodel->rotatedmaxs[0] = loadmodel->rotatedmaxs[1] = loadmodel->rotatedmaxs[2] = radius;
-	loadmodel->radius = radius;
-	loadmodel->radius2 = radius * radius;
 }
 
 static void Mod_ConvertAliasVerts (int inverts, vec3_t scale, vec3_t translate, trivertx_t *v, float *out3f, int *vertremap)
@@ -754,7 +778,7 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->surfmesh.data_neighbor3i = (int *)Mem_Alloc(loadmodel->mempool, loadmodel->surfmesh.num_triangles * sizeof(int[3]));
 	Mod_MDL_LoadFrames (startframes, numverts, scale, translate, vertremap);
 	Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
-	Mod_CalcAliasModelBBoxes();
+	Mod_Alias_CalculateBoundingBox();
 	Mod_Alias_Mesh_CompileFrameZero();
 
 	Mem_Free(vertst);
@@ -1105,7 +1129,7 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 
 	loadmodel->surfmesh.data_neighbor3i = (int *)Mem_Alloc(loadmodel->mempool, loadmodel->surfmesh.num_triangles * sizeof(int[3]));
 	Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
-	Mod_CalcAliasModelBBoxes();
+	Mod_Alias_CalculateBoundingBox();
 	Mod_Alias_Mesh_CompileFrameZero();
 
 	surface = loadmodel->data_surfaces;
@@ -1264,7 +1288,7 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 	}
 	Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
 	Mod_Alias_Mesh_CompileFrameZero();
-	Mod_CalcAliasModelBBoxes();
+	Mod_Alias_CalculateBoundingBox();
 	Mod_FreeSkinFiles(skinfiles);
 }
 
@@ -2031,6 +2055,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 			matts = (pskmatt_t *)buffer;
 			for (index = 0, p = (pskmatt_t *)buffer;index < numrecords;index++, p++)
 			{
+				// nothing to do
 			}
 			buffer = p;
 		}
@@ -2192,9 +2217,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 				p->firstframe = LittleLong(p->firstframe);
 				p->numframes = LittleLong(p->numframes);
 				if (p->numbones != numbones)
-				{
 					Con_Printf("%s: animinfo->numbones != numbones, trying to load anyway!\n", animname);
-				}
 			}
 			animbuffer = p;
 		}
@@ -2239,20 +2262,6 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 
 	if (!numpnts || !pnts || !numvtxw || !vtxw || !numfaces || !faces || !nummatts || !matts || !numbones || !bones || !numrawweights || !rawweights || !numanims || !anims || !numanimkeys || !animkeys)
 		Host_Error("%s: missing required chunks", loadmodel->name);
-
-	// FIXME: model bbox
-	// model bbox
-	for (i = 0;i < 3;i++)
-	{
-		loadmodel->normalmins[i] = -128;
-		loadmodel->normalmaxs[i] = 128;
-		loadmodel->yawmins[i] = -128;
-		loadmodel->yawmaxs[i] = 128;
-		loadmodel->rotatedmins[i] = -128;
-		loadmodel->rotatedmaxs[i] = 128;
-	}
-	loadmodel->radius = 128;
-	loadmodel->radius2 = loadmodel->radius * loadmodel->radius;
 
 	loadmodel->numframes = 0;
 	for (index = 0;index < numanims;index++)
@@ -2436,5 +2445,6 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	Mod_BuildNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_normal3f, true);
 	Mod_BuildTextureVectorsFromNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, true);
 	Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
+	Mod_Alias_CalculateBoundingBox();
 }
 
