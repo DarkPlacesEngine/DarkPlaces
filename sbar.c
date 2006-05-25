@@ -1359,14 +1359,19 @@ float Sbar_PrintScoreboardItem(scoreboard_t *s, float x, float y)
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
 	{
 		minutes = (int)((cl.intermission ? cl.completed_time - s->qw_entertime : realtime - s->qw_entertime) / 60.0);
-		// draw colors behind score
-		c = (unsigned char *)&palette_complete[(s->colors & 0xf0) + 8];
-		DrawQ_Pic(x + 14*8, y+1, NULL, 32, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
-		c = (unsigned char *)&palette_complete[((s->colors & 15)<<4) + 8];
-		DrawQ_Pic(x + 14*8, y+4, NULL, 32, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
-		// print the text
-		//DrawQ_String(x, y, va("%c%4i %s", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
-		DrawQ_ColoredString(x, y, va("%c%4i %2i %4i %4i %-4s %s", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', bound(0, s->qw_ping, 9999), bound(0, s->qw_packetloss, 99), minutes,(int) s->frags, cl.qw_teamplay ? s->qw_team : "", s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL );
+		if (s->qw_spectator)
+			DrawQ_ColoredString(x, y, va("%c%4i %2i %4i spec %-4s %s", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', bound(0, s->qw_ping, 9999), bound(0, s->qw_packetloss, 99), minutes, cl.qw_teamplay ? s->qw_team : "", s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL );
+		else
+		{
+			// draw colors behind score
+			c = (unsigned char *)&palette_complete[(s->colors & 0xf0) + 8];
+			DrawQ_Pic(x + 14*8, y+1, NULL, 32, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
+			c = (unsigned char *)&palette_complete[((s->colors & 15)<<4) + 8];
+			DrawQ_Pic(x + 14*8, y+4, NULL, 32, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
+			// print the text
+			//DrawQ_String(x, y, va("%c%4i %s", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
+			DrawQ_ColoredString(x, y, va("%c%4i %2i %4i %4i %-4s %s", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', bound(0, s->qw_ping, 9999), bound(0, s->qw_packetloss, 99), minutes,(int) s->frags, cl.qw_teamplay ? s->qw_team : "", s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL );
+		}
 	}
 	else
 	{
@@ -1390,7 +1395,7 @@ void Sbar_DeathmatchOverlay (void)
 	if (cl.last_ping_request < realtime - 2)
 	{
 		cl.last_ping_request = realtime;
-		if (cls.protocol == PROTOCOL_QUAKEWORLD)
+		if (cls.protocol == PROTOCOL_QUAKEWORLD && cls.netcon)
 		{
 			MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
 			MSG_WriteString(&cls.netcon->message, "pings");
