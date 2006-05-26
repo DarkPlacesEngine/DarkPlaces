@@ -526,6 +526,10 @@ int SV_FlyMove (prvm_edict_t *ent, float time, float *stepnormal)
 		trace = SV_Move(ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, end, MOVE_NORMAL, ent);
 	}
 	*/
+
+	// LordHavoc: this came from QW and allows you to get out of water more easily
+	if (sv_gameplayfix_qwplayerphysics.integer && ((int)ent->fields.server->flags & FL_WATERJUMP))
+		VectorCopy(primal_velocity, ent->fields.server->velocity);
 	return blocked;
 }
 

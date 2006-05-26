@@ -269,6 +269,7 @@ extern cvar_t sv_gameplayfix_swiminbmodels;
 extern cvar_t sv_gameplayfix_setmodelrealbox;
 extern cvar_t sv_gameplayfix_blowupfallenzombies;
 extern cvar_t sv_gameplayfix_findradiusdistancetobox;
+extern cvar_t sv_gameplayfix_qwplayerphysics;
 
 extern cvar_t sys_ticrate;
 extern cvar_t sv_fixedframeratesingleplayer;
