@@ -2075,7 +2075,7 @@ void Host_Rcon_f (void) // credit: taken from QuakeWorld
 		to = cls.netcon->peeraddress;
 	else
 	{
-		if (!rcon_address.integer || !rcon_address.string[0])
+		if (!rcon_address.string[0])
 		{
 			Con_Printf ("You must either be connected, or set the rcon_address cvar to issue rcon commands\n");
 			return;
