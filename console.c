@@ -774,10 +774,27 @@ void Con_DrawNotify (void)
 		text = con_text + (i % con_totallines)*con_linewidth;
 
 		if (gamemode == GAME_NEXUIZ) {
-			int linewidth;
+			int linewidth = 0;
+			int chars = 0;
+			int finalchars = 0;
+			int j;
 
-			for (linewidth = con_linewidth; linewidth && text[linewidth-1] == ' '; linewidth--);
-			x = (vid_conwidth.integer - linewidth * con_textsize.value) * 0.5;
+			// count up to the last non-whitespace, and ignore color codes
+			for (j = 0;j < con_linewidth && text[j];j++)
+			{
+				if (text[j] == '^' && (text[j+1] >= '0' && text[j+1] <= '9'))
+				{
+					j++;
+					continue;
+				}
+				chars++;
+				if (text[j] == ' ')
+					continue;
+				finalchars = chars;
+				linewidth = j + 1;
+			}
+			// center the line using the calculated width
+			x = (vid_conwidth.integer - finalchars * con_textsize.value) * 0.5;
 		} else
 			x = 0;
 
