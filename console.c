@@ -774,7 +774,6 @@ void Con_DrawNotify (void)
 		text = con_text + (i % con_totallines)*con_linewidth;
 
 		if (gamemode == GAME_NEXUIZ) {
-			int linewidth = 0;
 			int chars = 0;
 			int finalchars = 0;
 			int j;
@@ -791,7 +790,6 @@ void Con_DrawNotify (void)
 				if (text[j] == ' ')
 					continue;
 				finalchars = chars;
-				linewidth = j + 1;
 			}
 			// center the line using the calculated width
 			x = (vid_conwidth.integer - finalchars * con_textsize.value) * 0.5;
