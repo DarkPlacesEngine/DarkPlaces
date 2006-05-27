@@ -125,11 +125,19 @@ void SCR_DrawCenterString (void)
 	color = -1;
 	do
 	{
-	// scan the width of the line
+		// scan the number of characters on the line, not counting color codes
+		int chars = 0;
 		for (l=0 ; l<vid_conwidth.integer/8 ; l++)
+		{
 			if (start[l] == '\n' || !start[l])
 				break;
-		x = (vid_conwidth.integer - l*8)/2;
+			// color codes add no visible characters, so don't count them
+			if (start[l] == '^' && (start[l+1] >= '0' && start[l+1] <= '9'))
+				l++;
+			else
+				chars++;
+		}
+		x = (vid_conwidth.integer - chars*8)/2;
 		if (l > 0)
 		{
 			if (remaining < l)
