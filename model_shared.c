@@ -223,15 +223,14 @@ model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, qboolea
 		else if (num == BSPVERSION || num == 30) Mod_Q1BSP_Load(mod, buf, bufend);
 		else Con_Printf("Mod_LoadModel: model \"%s\" is of unknown/unsupported type\n", mod->name);
 		Mem_Free(buf);
+		// no fatal errors occurred, so this model is ready to use.
+		mod->loaded = true;
 	}
 	else if (crash)
 	{
 		// LordHavoc: Sys_Error was *ANNOYING*
 		Con_Printf ("Mod_LoadModel: %s not found\n", mod->name);
 	}
-
-	// no errors occurred
-	mod->loaded = true;
 	return mod;
 }
 
