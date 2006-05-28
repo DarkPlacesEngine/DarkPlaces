@@ -57,6 +57,7 @@ cvar_t sv_progs = {0, "sv_progs", "progs.dat", "selects which quakec progs.dat f
 extern cvar_t sv_clmovement_enable;
 extern cvar_t sv_clmovement_minping;
 extern cvar_t sv_clmovement_minping_disabletime;
+extern cvar_t sv_clmovement_waitforinput;
 
 server_t sv;
 server_static_t svs;
@@ -91,6 +92,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_clmovement_enable);
 	Cvar_RegisterVariable (&sv_clmovement_minping);
 	Cvar_RegisterVariable (&sv_clmovement_minping_disabletime);
+	Cvar_RegisterVariable (&sv_clmovement_waitforinput);
 	Cvar_RegisterVariable (&sv_idealpitchscale);
 	Cvar_RegisterVariable (&sv_aim);
 	Cvar_RegisterVariable (&sv_nostep);

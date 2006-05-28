@@ -57,6 +57,9 @@ cvar_t sv_playerphysicsqc = {CVAR_NOTIFY, "sv_playerphysicsqc", "1", "enables Qu
 cvar_t sv_sound_watersplash = {0, "sv_sound_watersplash", "misc/h2ohit1.wav", "sound to play when MOVETYPE_FLY/TOSS/BOUNCE/STEP entity enters or leaves water (empty cvar disables the sound)"};
 cvar_t sv_sound_land = {0, "sv_sound_land", "demon/dland2.wav", "sound to play when MOVETYPE_STEP entity hits the ground at high speed (empty cvar disables the sound)"};
 
+// TODO: move this extern to server.h
+extern cvar_t sv_clmovement_waitforinput;
+
 #define	MOVE_EPSILON	0.01
 
 void SV_Physics_Toss (prvm_edict_t *ent);
@@ -1668,7 +1671,9 @@ void SV_Physics (void)
 			if (!host_client->spawned)
 				memset(&host_client->cmd, 0, sizeof(host_client->cmd));
 			// don't run physics here if running asynchronously
-			else if (!host_client->movesequence)
+			else if (host_client->clmovement_skipphysicsframes > 0)
+				host_client->clmovement_skipphysicsframes--;
+			else
 				SV_Physics_ClientEntity(ent);
 		}
 	}

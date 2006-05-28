@@ -913,7 +913,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 
 		// movement lerp
 		// if it's the player entity, update according to client movement
-		if (e == cl.entities + cl.playerentity && cl.movement)// && !e->csqc)
+		if (e == cl.entities + cl.playerentity && cl.movement_predicted)// && !e->csqc)
 		{
 			lerp = (cl.time - cl.movement_time[1]) / (cl.movement_time[0] - cl.movement_time[1]);
 			lerp = bound(0, lerp, 1);
