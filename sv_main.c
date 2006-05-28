@@ -53,6 +53,11 @@ cvar_t sv_gameplayfix_qwplayerphysics = {0, "sv_gameplayfix_qwplayerphysics", "1
 
 cvar_t sv_progs = {0, "sv_progs", "progs.dat", "selects which quakec progs.dat file to run" };
 
+// TODO: move these cvars here
+extern cvar_t sv_clmovement_enable;
+extern cvar_t sv_clmovement_minping;
+extern cvar_t sv_clmovement_minping_disabletime;
+
 server_t sv;
 server_static_t svs;
 
@@ -83,6 +88,9 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_accelerate);
 	Cvar_RegisterVariable (&sv_airaccelerate);
 	Cvar_RegisterVariable (&sv_wateraccelerate);
+	Cvar_RegisterVariable (&sv_clmovement_enable);
+	Cvar_RegisterVariable (&sv_clmovement_minping);
+	Cvar_RegisterVariable (&sv_clmovement_minping_disabletime);
 	Cvar_RegisterVariable (&sv_idealpitchscale);
 	Cvar_RegisterVariable (&sv_aim);
 	Cvar_RegisterVariable (&sv_nostep);
