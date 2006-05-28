@@ -748,9 +748,7 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 				vid_gammaramps = (unsigned short *)Z_Malloc(6 * vid_gammarampsize * sizeof(unsigned short));
 				vid_systemgammaramps = vid_gammaramps + 3 * vid_gammarampsize;
 			}
-			Cvar_SetValueQuick(&vid_hardwaregammasupported, VID_GetGamma(vid_systemgammaramps, vid_gammarampsize));
-			if (!vid_hardwaregammasupported.integer)
-				return;
+			VID_GetGamma(vid_systemgammaramps, vid_gammarampsize);
 		}
 
 		BOUNDCVAR(v_gamma, 0.1, 5);cachegamma = v_gamma.value;
