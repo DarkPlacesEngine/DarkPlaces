@@ -1790,11 +1790,24 @@ void R_RenderScene(void)
 			R_TimeReport("explosions");
 	}
 
+	if (gl_support_fragment_shader)
+	{
+		qglUseProgramObjectARB(0);CHECKGLERROR
+	}
 	VM_AddPolygonsToMeshQueue();
 
+	if (gl_support_fragment_shader)
+	{
+		qglUseProgramObjectARB(0);CHECKGLERROR
+	}
 	R_MeshQueue_RenderTransparent();
 	if (r_timereport_active)
 		R_TimeReport("drawtrans");
+
+	if (gl_support_fragment_shader)
+	{
+		qglUseProgramObjectARB(0);CHECKGLERROR
+	}
 
 	if (cl.csqc_vidvars.drawworld)
 	{
