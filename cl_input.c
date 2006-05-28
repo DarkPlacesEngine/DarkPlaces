@@ -925,7 +925,7 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 
 	// jump if on ground with jump button pressed but only if it has been
 	// released at least once since the last jump
-	if (s->q.jump && s->canjump && s->onground)
+	if (s->q.jump && s->onground)// && s->canjump) // FIXME: canjump doesn't work properly
 	{
 		s->velocity[2] += s->movevars_jumpvelocity;
 		s->onground = false;
