@@ -135,6 +135,9 @@ typedef struct client_s
 #endif
 	// LordHavoc: can be used for prediction or whatever...
 	float ping;
+	
+	// this is used by sv_clmovement_minping code
+	double clmovement_disable_minpingtimeout;
 
 // spawn parms are carried from level to level
 	float spawn_parms[NUM_SPAWN_PARMS];

@@ -254,7 +254,7 @@
 1 bug hmap: qbsp dies from runaway allocations if a duplicate plane is found on a brush (Tomaz)
 1 change darkplaces client: reduce number of particles used, and particle limit, to save some memory (LordHavoc)
 1 change darkplaces protocol: document the TEI stuff used in Nexuiz
-1 change darkplaces protocol: send cvar commands to client to set cl_movement_* cvars and cl_slowmo and cl_gravity (Vermeulen)
+1 change darkplaces protocol: send additional stats for movement parameters and slowmo and gravity, replacing the rather silly cl_movement and cl_slowmo and cl_gravity cvars (Vermeulen)
 1 change darkplaces renderer: add gunshot (shotgun pellet) and nail (spike) decals to the particlefont so that these can look different from explosions (Morphed)
 1 change darkplaces renderer: add r_shadow_realtime_world 2 mode (and update menu), make 1 only render rtlights if they came from a .rtlights file and mode 2 render them even if they were imported from the map, always render imported ones if editing mode is turned on (Willis)
 1 change darkplaces renderer: make "sky" keys in worldspawn override q3 sky shaders (Vermeulen)
@@ -345,7 +345,7 @@
 2 feature darkplaces protocol: .float bulge; field which makes an entity larger by moving vertices along their normals, well known as the fatboy mutator in Unreal Tournament (Wazat)
 2 feature darkplaces protocol: add effects.txt file which would describe a bunch of numbered effects usable with a .effectindex field on entities, these would range from point effects, to continuous emitters, to beams with jitter and other properties, each effect would have various info like dlight and particle spawning and beam rendering (CheapAlert, Supa, FrikaC, [TACO], Urre, Vermeulen)
 2 feature darkplaces protocol: add rcon_password system similar to quakeworld server (II`cyan)
-2 feature darkplaces protocol: svc_spawnstatic should use a delta from defaultstate, instead of its outdated custom protocol (Spike)
+2 feature darkplaces protocol: svc_spawnstatic should use a delta from defaultstate, instead of its outdated custom protocol (Spike, Dresk)
 2 feature darkplaces release: add KDE/gnome icons somehow using darkplaces72x72.png (de-we)
 2 feature darkplaces renderer: dpshader should support corona-model shaders somehow (equation: pow(normalizationcubemap(transform(eye, vertexmatrix)) dot3 '0 0 1', 8)), which are normally used around unusually shaped lights instead of flat coronas (Mitchell)
 2 feature darkplaces renderer: q3 fog brush shaders (tZork)
