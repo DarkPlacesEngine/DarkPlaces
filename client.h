@@ -657,7 +657,8 @@ typedef struct client_state_s
 
 	// client movement simulation
 	// these fields are only updated by CL_ClientMovement (called by CL_SendMove after parsing each network packet)
-	qboolean movement;
+	// set by CL_ClientMovement_Replay functions
+	qboolean movement_predicted;
 	// this is set true by svc_time parsing and causes a new movement to be
 	// queued for prediction purposes
 	qboolean movement_needupdate;
@@ -671,7 +672,7 @@ typedef struct client_state_s
 	vec3_t movement_velocity;
 	// queue of proposed moves
 	int movement_numqueue;
-	client_movementqueue_t movement_queue[64];
+	client_movementqueue_t movement_queue[256];
 	int movesequence;
 	int servermovesequence;
 	// whether the replay should allow a jump at the first sequence

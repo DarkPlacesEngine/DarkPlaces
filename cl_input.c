@@ -527,7 +527,7 @@ void CL_ClientMovement_InputQW(qw_usercmd_t *cmd)
 		if (cl.movement_queue[i].sequence > cls.netcon->qw.incoming_sequence)
 			cl.movement_queue[cl.movement_numqueue++] = cl.movement_queue[i];
 		else if (i == 0)
-			cl.movement_replay_canjump = !cl.movement_queue[i].jump;
+			cl.movement_replay_canjump = !cl.movement_queue[i].jump; // FIXME: this logic is quite broken
 	}
 	// add to input queue if there is room
 	if (cl.movement_numqueue < (int)(sizeof(cl.movement_queue)/sizeof(cl.movement_queue[0])))
@@ -551,7 +551,7 @@ void CL_ClientMovement_Input(qboolean buttonjump, qboolean buttoncrouch)
 {
 	int i;
 	int n;
-	double lasttime = cl.movement_numqueue >= 0 ? cl.movement_queue[cl.movement_numqueue - 1].time : 0;
+	double lasttime = (cls.protocol == PROTOCOL_DARKPLACES6 || cls.protocol == PROTOCOL_DARKPLACES7) ? cl.mtime[1] : (cl.movement_numqueue >= 0 ? cl.movement_queue[cl.movement_numqueue - 1].time : 0);
 	// remove stale queue items
 	n = cl.movement_numqueue;
 	cl.movement_numqueue = 0;
@@ -562,7 +562,7 @@ void CL_ClientMovement_Input(qboolean buttonjump, qboolean buttoncrouch)
 			if (cl.movement_queue[i].sequence > cl.servermovesequence)
 				cl.movement_queue[cl.movement_numqueue++] = cl.movement_queue[i];
 			else if (i == 0)
-				cl.movement_replay_canjump = !cl.movement_queue[i].jump;
+				cl.movement_replay_canjump = !cl.movement_queue[i].jump; // FIXME: this logic is quite broken
 		}
 	}
 	else
@@ -572,7 +572,7 @@ void CL_ClientMovement_Input(qboolean buttonjump, qboolean buttoncrouch)
 			if (cl.movement_queue[i].time >= cl.mtime[0] - cl_movement_latency.value / 1000.0 && cl.movement_queue[i].time <= cl.mtime[0])
 				cl.movement_queue[cl.movement_numqueue++] = cl.movement_queue[i];
 			else if (i == 0)
-				cl.movement_replay_canjump = !cl.movement_queue[i].jump;
+				cl.movement_replay_canjump = !cl.movement_queue[i].jump; // FIXME: this logic is quite broken
 		}
 	}
 	// add to input queue if there is room
@@ -1072,7 +1072,8 @@ void CL_ClientMovement_Replay(void)
 		s.movevars_stepheight = cl_movement_stepheight.value;
 	}
 
-	if (cl.movement)
+	cl.movement_predicted = (cl_movement.integer && cls.signon == SIGNONS && cl.stats[STAT_HEALTH] > 0 && !cl.intermission) && ((cls.protocol != PROTOCOL_DARKPLACES6 && cls.protocol != PROTOCOL_DARKPLACES7) || cl.servermovesequence);
+	if (cl.movement_predicted)
 	{
 		//Con_Printf("%f: ", cl.mtime[0]);
 
@@ -1182,7 +1183,6 @@ void CL_SendMove(void)
 	accumtotal++;
 #endif
 
-	cl.movement = cl_movement.integer && cls.signon == SIGNONS && cl.stats[STAT_HEALTH] > 0 && !cl.intermission;
 	if (cl_movement.integer && cls.signon == SIGNONS && cls.protocol != PROTOCOL_QUAKEWORLD)
 	{
 		if (!cl.movement_needupdate)

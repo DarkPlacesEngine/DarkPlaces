@@ -137,7 +137,9 @@ typedef struct client_s
 	float ping;
 	
 	// this is used by sv_clmovement_minping code
-	double clmovement_disable_minpingtimeout;
+	double clmovement_disabletimeout;
+	// this is used by sv_clmvoement_waitforinput code
+	int clmovement_skipphysicsframes;
 
 // spawn parms are carried from level to level
 	float spawn_parms[NUM_SPAWN_PARMS];
