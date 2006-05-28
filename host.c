@@ -625,6 +625,9 @@ void Host_Main(void)
 	//
 	//-------------------
 
+		// check for commands typed to the host
+		Host_GetConsoleCommands();
+
 		if (sv_timer > 0)
 		{
 			if (!sv.active)
@@ -645,9 +648,6 @@ void Host_Main(void)
 				// may change level or other such things we don't want to have happen in
 				// the middle of Host_Frame
 				NetConn_ServerFrame();
-
-				// check for commands typed to the host
-				Host_GetConsoleCommands();
 
 				// run the world state
 				// don't allow simulation to run too fast or too slow or logic glitches can occur
