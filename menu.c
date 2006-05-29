@@ -2089,7 +2089,7 @@ static void M_Options_Graphics_Key (int k, char ascii)
 static int		options_colorcontrol_cursor;
 
 // intensity value to match up to 50% dither to 'correct' quake
-static cvar_t menu_options_colorcontrol_correctionvalue = {0, "menu_options_colorcontrol_correctionvalue", "0.25", "intensity value that matches up to white/black dither pattern, due to Quake's grey level being quite dark this is 0.25, other games may use other values"};
+static cvar_t menu_options_colorcontrol_correctionvalue = {0, "menu_options_colorcontrol_correctionvalue", "0.5", "intensity value that matches up to white/black dither pattern, should be 0.5 for linear color"};
 
 void M_Menu_Options_ColorControl_f (void)
 {
