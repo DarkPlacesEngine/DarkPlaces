@@ -717,7 +717,7 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 	if (!force
 	 && !forcenextframe
 	 && !v_psycho.integer
-	 && vid_usinghwgamma == (vid_activewindow && v_hwgamma.integer)
+	 && cachehwgamma == (vid_activewindow && v_hwgamma.integer)
 	 && v_gamma.value == cachegamma
 	 && v_contrast.value == cachecontrast
 	 && v_brightness.value == cachebrightness
@@ -733,9 +733,24 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 	 && cachewhite[2] == v_color_white_b.value)
 		return;
 
+	BOUNDCVAR(v_gamma, 0.1, 5);cachegamma = v_gamma.value;
+	BOUNDCVAR(v_contrast, 1, 5);cachecontrast = v_contrast.value;
+	BOUNDCVAR(v_brightness, 0, 0.8);cachebrightness = v_brightness.value;
+	BOUNDCVAR(v_color_black_r, 0, 0.8);cacheblack[0] = v_color_black_r.value;
+	BOUNDCVAR(v_color_black_g, 0, 0.8);cacheblack[1] = v_color_black_g.value;
+	BOUNDCVAR(v_color_black_b, 0, 0.8);cacheblack[2] = v_color_black_b.value;
+	BOUNDCVAR(v_color_grey_r, 0, 0.95);cachegrey[0] = v_color_grey_r.value;
+	BOUNDCVAR(v_color_grey_g, 0, 0.95);cachegrey[1] = v_color_grey_g.value;
+	BOUNDCVAR(v_color_grey_b, 0, 0.95);cachegrey[2] = v_color_grey_b.value;
+	BOUNDCVAR(v_color_white_r, 1, 5);cachewhite[0] = v_color_white_r.value;
+	BOUNDCVAR(v_color_white_g, 1, 5);cachewhite[1] = v_color_white_g.value;
+	BOUNDCVAR(v_color_white_b, 1, 5);cachewhite[2] = v_color_white_b.value;
+	cachecolorenable = v_color_enable.integer;
+	cachehwgamma = vid_activewindow && v_hwgamma.integer;
+
 	forcenextframe = false;
 
-	if (vid_activewindow && v_hwgamma.integer)
+	if (cachehwgamma)
 	{
 		if (!vid_usinghwgamma)
 		{
@@ -750,21 +765,6 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 			}
 			VID_GetGamma(vid_systemgammaramps, vid_gammarampsize);
 		}
-
-		BOUNDCVAR(v_gamma, 0.1, 5);cachegamma = v_gamma.value;
-		BOUNDCVAR(v_contrast, 1, 5);cachecontrast = v_contrast.value;
-		BOUNDCVAR(v_brightness, 0, 0.8);cachebrightness = v_brightness.value;
-		BOUNDCVAR(v_color_black_r, 0, 0.8);cacheblack[0] = v_color_black_r.value;
-		BOUNDCVAR(v_color_black_g, 0, 0.8);cacheblack[1] = v_color_black_g.value;
-		BOUNDCVAR(v_color_black_b, 0, 0.8);cacheblack[2] = v_color_black_b.value;
-		BOUNDCVAR(v_color_grey_r, 0, 0.95);cachegrey[0] = v_color_grey_r.value;
-		BOUNDCVAR(v_color_grey_g, 0, 0.95);cachegrey[1] = v_color_grey_g.value;
-		BOUNDCVAR(v_color_grey_b, 0, 0.95);cachegrey[2] = v_color_grey_b.value;
-		BOUNDCVAR(v_color_white_r, 1, 5);cachewhite[0] = v_color_white_r.value;
-		BOUNDCVAR(v_color_white_g, 1, 5);cachewhite[1] = v_color_white_g.value;
-		BOUNDCVAR(v_color_white_b, 1, 5);cachewhite[2] = v_color_white_b.value;
-		cachecolorenable = v_color_enable.integer;
-		cachehwgamma = v_hwgamma.integer;
 
 		if (cachecolorenable)
 		{
