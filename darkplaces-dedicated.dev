@@ -50,36 +50,6 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit3]
-FileName=cg_math.h
-CompileCpp=0
-Folder=Header Files
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit4]
-FileName=cgame_api.h
-CompileCpp=0
-Folder=Header Files
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit5]
-FileName=cgamevm.h
-CompileCpp=0
-Folder=Header Files
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit6]
 FileName=cl_collision.h
 CompileCpp=0
 Folder=Header Files
@@ -89,7 +59,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit7]
+[Unit4]
 FileName=cl_screen.h
 CompileCpp=0
 Folder=Header Files
@@ -99,7 +69,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit8]
+[Unit5]
 FileName=cl_video.h
 CompileCpp=0
 Folder=Header Files
@@ -109,7 +79,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit9]
+[Unit6]
 FileName=client.h
 CompileCpp=0
 Folder=Header Files
@@ -119,7 +89,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit10]
+[Unit7]
 FileName=clprogdefs.h
 CompileCpp=0
 Folder=Header Files
@@ -129,7 +99,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit11]
+[Unit8]
 FileName=cmd.h
 CompileCpp=0
 Folder=Header Files
@@ -139,7 +109,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit12]
+[Unit9]
 FileName=collision.h
 CompileCpp=0
 Folder=Header Files
@@ -149,7 +119,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit13]
+[Unit10]
 FileName=common.h
 CompileCpp=0
 Folder=Header Files
@@ -159,7 +129,27 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit16]
+[Unit11]
+FileName=console.h
+CompileCpp=0
+Folder=Header Files
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit12]
+FileName=curves.h
+CompileCpp=0
+Folder=Header Files
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit13]
 FileName=cvar.h
 CompileCpp=0
 Folder=Header Files
@@ -169,27 +159,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit17]
-FileName=bspfile.h
-CompileCpp=0
-Folder=Header Files
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit18]
-FileName=draw.h
-CompileCpp=0
-Folder=Header Files
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit19]
+[Unit16]
 FileName=fs.h
 CompileCpp=0
 Folder=Header Files
@@ -199,7 +169,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit20]
+[Unit17]
 FileName=gl_backend.h
 CompileCpp=0
 Folder=Header Files
@@ -209,7 +179,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit21]
+[Unit18]
 FileName=polygon.h
 CompileCpp=0
 Folder=Header Files
@@ -219,7 +189,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit22]
+[Unit19]
 FileName=glquake.h
 CompileCpp=0
 Folder=Header Files
@@ -229,7 +199,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit23]
+[Unit20]
 FileName=image.h
 CompileCpp=0
 Folder=Header Files
@@ -239,7 +209,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit24]
+[Unit21]
 FileName=input.h
 CompileCpp=0
 Folder=Header Files
@@ -249,7 +219,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit25]
+[Unit22]
 FileName=jpeg.h
 CompileCpp=0
 Folder=Header Files
@@ -259,7 +229,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit26]
+[Unit23]
 FileName=keys.h
 CompileCpp=0
 Folder=Header Files
@@ -269,7 +239,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit27]
+[Unit24]
 FileName=lhnet.h
 CompileCpp=0
 Folder=Header Files
@@ -279,7 +249,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit28]
+[Unit25]
 FileName=mathlib.h
 CompileCpp=0
 Folder=Header Files
@@ -289,7 +259,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit29]
+[Unit26]
 FileName=matrixlib.h
 CompileCpp=0
 Folder=Header Files
@@ -299,7 +269,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit30]
+[Unit27]
 FileName=menu.h
 CompileCpp=0
 Folder=Header Files
@@ -309,7 +279,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit31]
+[Unit28]
 FileName=meshqueue.h
 CompileCpp=0
 Folder=Header Files
@@ -319,7 +289,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit32]
+[Unit29]
 FileName=model_alias.h
 CompileCpp=0
 Folder=Header Files
@@ -329,7 +299,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit33]
+[Unit30]
 FileName=model_brush.h
 CompileCpp=0
 Folder=Header Files
@@ -339,7 +309,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit34]
+[Unit31]
 FileName=model_shared.h
 CompileCpp=0
 Folder=Header Files
@@ -349,7 +319,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit35]
+[Unit32]
 FileName=model_sprite.h
 CompileCpp=0
 Folder=Header Files
@@ -359,7 +329,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit36]
+[Unit33]
 FileName=model_zymotic.h
 CompileCpp=0
 Folder=Header Files
@@ -369,7 +339,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit37]
+[Unit34]
 FileName=modelgen.h
 CompileCpp=0
 Folder=Header Files
@@ -379,7 +349,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit38]
+[Unit35]
 FileName=mprogdefs.h
 CompileCpp=0
 Folder=Header Files
@@ -389,7 +359,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit39]
+[Unit36]
 FileName=netconn.h
 CompileCpp=0
 Folder=Header Files
@@ -399,7 +369,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit40]
+[Unit37]
 FileName=palette.h
 CompileCpp=0
 Folder=Header Files
@@ -409,7 +379,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit41]
+[Unit38]
 FileName=portals.h
 CompileCpp=0
 Folder=Header Files
@@ -419,7 +389,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit42]
+[Unit39]
 FileName=pr_comp.h
 CompileCpp=0
 Folder=Header Files
@@ -429,17 +399,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit43]
-FileName=pr_execprogram.h
-CompileCpp=0
-Folder=Header Files
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit44]
+[Unit40]
 FileName=progdefs.h
 CompileCpp=0
 Folder=Header Files
@@ -449,7 +409,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit45]
+[Unit41]
 FileName=progs.h
 CompileCpp=0
 Folder=Header Files
@@ -459,7 +419,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit46]
+[Unit42]
 FileName=progsvm.h
 CompileCpp=0
 Folder=Header Files
@@ -469,7 +429,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit47]
+[Unit43]
 FileName=protocol.h
 CompileCpp=0
 Folder=Header Files
@@ -479,7 +439,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit48]
+[Unit44]
 FileName=prvm_execprogram.h
 CompileCpp=0
 Folder=Header Files
@@ -489,7 +449,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit49]
+[Unit45]
 FileName=qtypes.h
 CompileCpp=0
 Folder=Header Files
@@ -499,7 +459,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit50]
+[Unit46]
 FileName=quakedef.h
 CompileCpp=0
 Folder=Header Files
@@ -509,7 +469,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit51]
+[Unit47]
 FileName=r_lerpanim.h
 CompileCpp=0
 Folder=Header Files
@@ -519,7 +479,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit52]
+[Unit48]
 FileName=r_light.h
 CompileCpp=0
 Folder=Header Files
@@ -529,7 +489,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit53]
+[Unit49]
 FileName=r_modules.h
 CompileCpp=0
 Folder=Header Files
@@ -539,7 +499,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit54]
+[Unit50]
 FileName=r_shadow.h
 CompileCpp=0
 Folder=Header Files
@@ -549,7 +509,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit55]
+[Unit51]
 FileName=r_textures.h
 CompileCpp=0
 Folder=Header Files
@@ -559,7 +519,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit56]
+[Unit52]
 FileName=render.h
 CompileCpp=0
 Folder=Header Files
@@ -569,7 +529,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit57]
+[Unit53]
 FileName=resource.h
 CompileCpp=0
 Folder=Header Files
@@ -579,7 +539,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit58]
+[Unit54]
 FileName=sbar.h
 CompileCpp=0
 Folder=Header Files
@@ -589,7 +549,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit59]
+[Unit55]
 FileName=screen.h
 CompileCpp=0
 Folder=Header Files
@@ -599,7 +559,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit60]
+[Unit56]
 FileName=server.h
 CompileCpp=0
 Folder=Header Files
@@ -609,7 +569,17 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit62]
+[Unit57]
+FileName=sound.h
+CompileCpp=0
+Folder=Header Files
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit58]
 FileName=spritegn.h
 CompileCpp=0
 Folder=Header Files
@@ -619,7 +589,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit63]
+[Unit59]
 FileName=sys.h
 CompileCpp=0
 Folder=Header Files
@@ -629,17 +599,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit64]
-FileName=ui.h
-CompileCpp=0
-Folder=Header Files
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit65]
+[Unit60]
 FileName=vid.h
 CompileCpp=0
 Folder=Header Files
@@ -649,27 +609,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit66]
-FileName=wad.h
-CompileCpp=0
-Folder=Header Files
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit67]
-FileName=winding.h
-CompileCpp=0
-Folder=Header Files
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit68]
+[Unit62]
 FileName=world.h
 CompileCpp=0
 Folder=Header Files
@@ -679,7 +619,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit69]
+[Unit63]
 FileName=zone.h
 CompileCpp=0
 Folder=Header Files
@@ -689,7 +629,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit70]
+[Unit64]
 FileName=zone.c
 CompileCpp=0
 Folder=Source Files
@@ -699,7 +639,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit71]
+[Unit65]
 FileName=cd_shared.c
 CompileCpp=0
 Folder=Source Files
@@ -709,7 +649,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit72]
+[Unit66]
 FileName=cd_null.c
 CompileCpp=0
 Folder=Source Files
@@ -719,27 +659,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit73]
-FileName=cgame.c
-CompileCpp=0
-Folder=Source Files
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit74]
-FileName=cgamevm.c
-CompileCpp=0
-Folder=Source Files
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit75]
+[Unit67]
 FileName=cl_collision.c
 CompileCpp=0
 Folder=Source Files
@@ -749,7 +669,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit76]
+[Unit68]
 FileName=cl_demo.c
 CompileCpp=0
 Folder=Source Files
@@ -759,7 +679,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit77]
+[Unit69]
 FileName=cl_input.c
 CompileCpp=0
 Folder=Source Files
@@ -769,7 +689,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit78]
+[Unit70]
 FileName=cl_main.c
 CompileCpp=0
 Folder=Source Files
@@ -779,7 +699,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit79]
+[Unit71]
 FileName=cl_parse.c
 CompileCpp=0
 Folder=Source Files
@@ -789,7 +709,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit80]
+[Unit72]
 FileName=cl_particles.c
 CompileCpp=0
 Folder=Source Files
@@ -799,7 +719,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit81]
+[Unit73]
 FileName=cl_screen.c
 CompileCpp=0
 Folder=Source Files
@@ -809,7 +729,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit82]
+[Unit74]
 FileName=cl_video.c
 CompileCpp=0
 Folder=Source Files
@@ -819,7 +739,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit83]
+[Unit75]
 FileName=cmd.c
 CompileCpp=0
 Folder=Source Files
@@ -829,7 +749,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit84]
+[Unit76]
 FileName=collision.c
 CompileCpp=0
 Folder=Source Files
@@ -839,7 +759,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit85]
+[Unit77]
 FileName=common.c
 CompileCpp=0
 Folder=Source Files
@@ -849,7 +769,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit86]
+[Unit78]
 FileName=console.c
 CompileCpp=0
 Folder=Source Files
@@ -859,7 +779,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit87]
+[Unit79]
 FileName=polygon.c
 CompileCpp=0
 Folder=Source Files
@@ -869,7 +789,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit88]
+[Unit80]
 FileName=curves.c
 CompileCpp=0
 Folder=Source Files
@@ -879,7 +799,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit89]
+[Unit81]
 FileName=cvar.c
 CompileCpp=0
 Folder=Source Files
@@ -889,7 +809,17 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit91]
+[Unit82]
+FileName=dpvsimpledecode.c
+CompileCpp=0
+Folder=Source Files
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit83]
 FileName=filematch.c
 CompileCpp=0
 Folder=Source Files
@@ -899,7 +829,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit92]
+[Unit84]
 FileName=fractalnoise.c
 CompileCpp=0
 Folder=Source Files
@@ -909,7 +839,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit93]
+[Unit85]
 FileName=fs.c
 CompileCpp=0
 Folder=Source Files
@@ -919,7 +849,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit94]
+[Unit86]
 FileName=gl_backend.c
 CompileCpp=0
 Folder=Source Files
@@ -929,7 +859,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit95]
+[Unit87]
 FileName=gl_draw.c
 CompileCpp=0
 Folder=Source Files
@@ -939,17 +869,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit96]
-FileName=gl_models.c
-CompileCpp=0
-Folder=Source Files
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit97]
+[Unit88]
 FileName=gl_rmain.c
 CompileCpp=0
 Folder=Source Files
@@ -959,7 +879,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit98]
+[Unit89]
 FileName=gl_rsurf.c
 CompileCpp=0
 Folder=Source Files
@@ -969,17 +889,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit99]
-FileName=gl_textures.c
-CompileCpp=0
-Folder=Source Files
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit100]
+[Unit91]
 FileName=host.c
 CompileCpp=0
 Folder=Source Files
@@ -989,7 +899,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit101]
+[Unit92]
 FileName=host_cmd.c
 CompileCpp=0
 Folder=Source Files
@@ -999,7 +909,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit102]
+[Unit93]
 FileName=image.c
 CompileCpp=0
 Folder=Source Files
@@ -1009,7 +919,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit103]
+[Unit94]
 FileName=jpeg.c
 CompileCpp=0
 Folder=Source Files
@@ -1019,7 +929,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit104]
+[Unit95]
 FileName=keys.c
 CompileCpp=0
 Folder=Source Files
@@ -1029,7 +939,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit105]
+[Unit96]
 FileName=lhnet.c
 CompileCpp=0
 Folder=Source Files
@@ -1039,7 +949,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit106]
+[Unit97]
 FileName=mathlib.c
 CompileCpp=0
 Folder=Source Files
@@ -1049,7 +959,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit107]
+[Unit98]
 FileName=matrixlib.c
 CompileCpp=0
 Folder=Source Files
@@ -1059,7 +969,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit108]
+[Unit99]
 FileName=menu.c
 CompileCpp=0
 Folder=Source Files
@@ -1069,7 +979,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit109]
+[Unit100]
 FileName=meshqueue.c
 CompileCpp=0
 Folder=Source Files
@@ -1079,7 +989,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit110]
+[Unit101]
 FileName=model_alias.c
 CompileCpp=0
 Folder=Source Files
@@ -1089,7 +999,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit111]
+[Unit102]
 FileName=model_brush.c
 CompileCpp=0
 Folder=Source Files
@@ -1099,7 +1009,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit112]
+[Unit103]
 FileName=model_shared.c
 CompileCpp=0
 Folder=Source Files
@@ -1109,7 +1019,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit113]
+[Unit104]
 FileName=model_sprite.c
 CompileCpp=0
 Folder=Source Files
@@ -1119,7 +1029,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit114]
+[Unit105]
 FileName=netconn.c
 CompileCpp=0
 Folder=Source Files
@@ -1129,7 +1039,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit115]
+[Unit106]
 FileName=palette.c
 CompileCpp=0
 Folder=Source Files
@@ -1139,7 +1049,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit116]
+[Unit107]
 FileName=portals.c
 CompileCpp=0
 Folder=Source Files
@@ -1149,7 +1059,17 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit118]
+[Unit108]
+FileName=protocol.c
+CompileCpp=0
+Folder=Source Files
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit109]
 FileName=prvm_cmds.c
 CompileCpp=0
 Folder=Source Files
@@ -1159,7 +1079,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit119]
+[Unit110]
 FileName=prvm_edict.c
 CompileCpp=0
 Folder=Source Files
@@ -1169,7 +1089,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit120]
+[Unit111]
 FileName=prvm_exec.c
 CompileCpp=0
 Folder=Source Files
@@ -1179,7 +1099,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit121]
+[Unit112]
 FileName=r_crosshairs.c
 CompileCpp=0
 Folder=Source Files
@@ -1189,7 +1109,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit122]
+[Unit113]
 FileName=r_explosion.c
 CompileCpp=0
 Folder=Source Files
@@ -1199,7 +1119,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit123]
+[Unit114]
 FileName=r_lerpanim.c
 CompileCpp=0
 Folder=Source Files
@@ -1209,7 +1129,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit124]
+[Unit115]
 FileName=r_light.c
 CompileCpp=0
 Folder=Source Files
@@ -1219,7 +1139,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit125]
+[Unit116]
 FileName=r_lightning.c
 CompileCpp=0
 Folder=Source Files
@@ -1229,17 +1149,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit126]
-FileName=r_modules.c
-CompileCpp=0
-Folder=Source Files
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit127]
+[Unit118]
 FileName=r_shadow.c
 CompileCpp=0
 Folder=Source Files
@@ -1249,7 +1159,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit128]
+[Unit119]
 FileName=r_sky.c
 CompileCpp=0
 Folder=Source Files
@@ -1259,7 +1169,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit129]
+[Unit120]
 FileName=r_sprites.c
 CompileCpp=0
 Folder=Source Files
@@ -1269,7 +1179,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit130]
+[Unit121]
 FileName=sbar.c
 CompileCpp=0
 Folder=Source Files
@@ -1279,7 +1189,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit131]
+[Unit122]
 FileName=snd_null.c
 CompileCpp=0
 Folder=Source Files
@@ -1289,7 +1199,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit132]
+[Unit123]
 FileName=sv_main.c
 CompileCpp=0
 Folder=Source Files
@@ -1299,7 +1209,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit133]
+[Unit124]
 FileName=sv_move.c
 CompileCpp=0
 Folder=Source Files
@@ -1309,7 +1219,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit134]
+[Unit125]
 FileName=sv_phys.c
 CompileCpp=0
 Folder=Source Files
@@ -1319,7 +1229,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit135]
+[Unit126]
 FileName=sv_user.c
 CompileCpp=0
 Folder=Source Files
@@ -1329,7 +1239,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit136]
+[Unit127]
 FileName=sys_shared.c
 CompileCpp=0
 Folder=Source Files
@@ -1339,7 +1249,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit137]
+[Unit128]
 FileName=sys_linux.c
 CompileCpp=0
 Folder=Source Files
@@ -1349,7 +1259,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit139]
+[Unit129]
 FileName=vid_shared.c
 CompileCpp=0
 Folder=Source Files
@@ -1359,7 +1269,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit140]
+[Unit130]
 FileName=vid_null.c
 CompileCpp=0
 Folder=Source Files
@@ -1369,7 +1279,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit141]
+[Unit131]
 FileName=view.c
 CompileCpp=0
 Folder=Source Files
@@ -1379,7 +1289,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit142]
+[Unit132]
 FileName=wad.c
 CompileCpp=0
 Folder=Source Files
@@ -1389,17 +1299,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit143]
-FileName=winding.c
-CompileCpp=0
-Folder=Source Files
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit144]
+[Unit133]
 FileName=world.c
 CompileCpp=0
 Folder=Source Files
@@ -1409,7 +1309,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit145]
+[Unit134]
 FileName=builddate.c
 CompileCpp=0
 Folder=Source Files
@@ -1419,7 +1319,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit146]
+[Unit135]
 FileName=svvm_cmds.c
 CompileCpp=0
 Folder=Source Files
@@ -1429,8 +1329,108 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit147]
+[Unit136]
 FileName=mvm_cmds.c
+CompileCpp=0
+Folder=Source Files
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit137]
+FileName=prvm_cmds.h
+CompileCpp=0
+Folder=Header Files
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit139]
+FileName=image_png.h
+CompileCpp=0
+Folder=Header Files
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit140]
+FileName=lhfont.h
+CompileCpp=0
+Folder=Header Files
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit141]
+FileName=mdfour.h
+CompileCpp=0
+Folder=Header Files
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit142]
+FileName=model_dpmodel.h
+CompileCpp=0
+Folder=Header Files
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit143]
+FileName=model_psk.h
+CompileCpp=0
+Folder=Header Files
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit144]
+FileName=clvm_cmds.c
+CompileCpp=0
+Folder=Source Files
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit145]
+FileName=csprogs.c
+CompileCpp=0
+Folder=Source Files
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit146]
+FileName=mdfour.c
+CompileCpp=0
+Folder=Source Files
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit147]
+FileName=image_png.c
 CompileCpp=0
 Folder=Source Files
 Compile=1
@@ -1568,7 +1568,7 @@ ProductVersion=1.0
 AutoIncBuildNr=0
 
 [Unit90]
-FileName=dpvsimpledecode.c
+FileName=gl_textures.c
 CompileCpp=0
 Folder=Source Files
 Compile=1
@@ -1578,9 +1578,9 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit138]
-FileName=ui.c
+FileName=csprogs.h
 CompileCpp=0
-Folder=Source Files
+Folder=Header Files
 Compile=1
 Link=1
 Priority=1000
@@ -1588,7 +1588,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit14]
-FileName=console.h
+FileName=bspfile.h
 CompileCpp=0
 Folder=Header Files
 Compile=1
@@ -1598,7 +1598,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit15]
-FileName=curves.h
+FileName=draw.h
 CompileCpp=0
 Folder=Header Files
 Compile=1
@@ -1608,7 +1608,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit61]
-FileName=sound.h
+FileName=wad.h
 CompileCpp=0
 Folder=Header Files
 Compile=1
@@ -1618,7 +1618,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit117]
-FileName=protocol.c
+FileName=r_modules.c
 CompileCpp=0
 Folder=Source Files
 Compile=1
