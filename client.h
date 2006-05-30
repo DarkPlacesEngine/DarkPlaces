@@ -503,6 +503,7 @@ typedef struct client_static_s
 	qfile_t *capturevideo_soundfile;
 	short capturevideo_rgbtoyuvscaletable[3][3][256];
 	unsigned char capturevideo_yuvnormalizetable[3][256];
+	char capturevideo_basename[64];
 }
 client_static_t;
 
