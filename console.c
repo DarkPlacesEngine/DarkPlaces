@@ -747,7 +747,7 @@ void Con_DrawNotify (void)
 {
 	float	x, v;
 	char	*text;
-	int		i;
+	int		i, stop;
 	float	time;
 	char	temptext[MAX_INPUTLINE];
 	int colorindex = -1; //-1 for default
@@ -760,7 +760,9 @@ void Con_DrawNotify (void)
 		v = 8;
 	else
 		v = 0;
-	for (i= con_current-con_notify.integer+1 ; i<=con_current ; i++)
+	// make a copy of con_current here so that we can't get in a runaway loop printing new messages while drawing the notify text
+	stop = con_current;
+	for (i= stop-con_notify.integer+1 ; i<=stop ; i++)
 	{
 
 		if (i < 0)
@@ -837,7 +839,7 @@ The typing input line at the bottom should only be drawn if typing is allowed
 */
 void Con_DrawConsole (int lines)
 {
-	int i, rows, j;
+	int i, rows, j, stop;
 	float y;
 	char *text;
 	int colorindex = -1;
@@ -855,7 +857,9 @@ void Con_DrawConsole (int lines)
 	rows = (int)ceil((lines/con_textsize.value)-2);		// rows of text to draw
 	y = lines - (rows+2)*con_textsize.value;	// may start slightly negative
 
-	for (i = con_current - rows + 1;i <= con_current;i++, y += con_textsize.value)
+	// make a copy of con_current here so that we can't get in a runaway loop printing new messages while drawing the notify text
+	stop = con_current;
+	for (i = stop - rows + 1;i <= stop;i++, y += con_textsize.value)
 	{
 		j = max(i - con_backscroll, 0);
 		text = con_text + (j % con_totallines)*con_linewidth;
