@@ -504,6 +504,8 @@ void DrawQ_Begin(void)
 	GL_DepthMask(true);
 	GL_DepthTest(false);
 	GL_Color(1,1,1,1);
+	GL_AlphaTest(false);
+	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	r_refdef.draw2dstage = true;
 }
