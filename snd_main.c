@@ -1070,7 +1070,10 @@ void GetSoundtime(void)
 
 	// it is possible to miscount buffers if it has wrapped twice between
 	// calls to S_Update.  Oh well.
-	samplepos = SNDDMA_GetDMAPos();
+	if (cls.capturevideo_soundfile) // SUPER NASTY HACK to record non-realtime sound
+		samplepos = (int)((((unsigned int)((double)cls.capturevideo_frame * (double)shm->format.speed / (double)cls.capturevideo_framerate)) * (unsigned int)shm->format.channels) % (unsigned int)shm->samples);
+	else
+		samplepos = SNDDMA_GetDMAPos();
 
 	if (samplepos < oldsamplepos)
 	{

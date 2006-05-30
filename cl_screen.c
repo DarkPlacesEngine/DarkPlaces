@@ -26,10 +26,10 @@ cvar_t scr_screenshot_jpeg_quality = {CVAR_SAVE, "scr_screenshot_jpeg_quality","
 cvar_t scr_screenshot_gammaboost = {CVAR_SAVE, "scr_screenshot_gammaboost","1", "gamma correction on saved screenshots and videos, 1.0 saves unmodified images"};
 // scr_screenshot_name is defined in fs.c
 cvar_t cl_capturevideo = {0, "cl_capturevideo", "0", "enables saving of video to a file or files (default is .tga files, if scr_screenshot_jpeg is on it saves .jpg files (VERY SLOW), if any rawrgb or rawyv12 are on it saves those formats instead, note that scr_screenshot_gammaboost affects the brightness of the output)"};
-cvar_t cl_capturevideo_sound = {0, "cl_capturevideo_sound", "0", "enables saving of sound to a .wav file (warning: this requires exact sync, if your hard drive can't keep up it will abort, if your graphics can't keep up it will save duplicate frames to maintain sound sync)"};
 cvar_t cl_capturevideo_fps = {0, "cl_capturevideo_fps", "30", "how many frames per second to save (29.97 for NTSC, 30 for typical PC video, 15 can be useful)"};
 cvar_t cl_capturevideo_rawrgb = {0, "cl_capturevideo_rawrgb", "0", "saves a single .rgb video file containing raw RGB images (you'll need special processing tools to encode this to something more useful)"};
 cvar_t cl_capturevideo_rawyv12 = {0, "cl_capturevideo_rawyv12", "0", "saves a single .yv12 video file containing raw YV12 (luma plane, then half resolution chroma planes, first chroma blue then chroma red, this is the format used internally by many encoders, some tools can read it directly)"};
+cvar_t cl_capturevideo_number = {CVAR_SAVE, "cl_capturevideo_number", "1", "number to append to video filename, incremented each time a capture begins"};
 cvar_t r_letterbox = {0, "r_letterbox", "0", "reduces vertical height of view to simulate a letterboxed movie effect (can be used by mods for cutscenes)"};
 cvar_t r_stereo_separation = {0, "r_stereo_separation", "4", "separation of eyes in the world (try negative values too)"};
 cvar_t r_stereo_sidebyside = {0, "r_stereo_sidebyside", "0", "side by side views (for those who can't afford glasses but can afford eye strain)"};
@@ -536,10 +536,10 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_screenshot_jpeg_quality);
 	Cvar_RegisterVariable (&scr_screenshot_gammaboost);
 	Cvar_RegisterVariable (&cl_capturevideo);
-	Cvar_RegisterVariable (&cl_capturevideo_sound);
 	Cvar_RegisterVariable (&cl_capturevideo_fps);
 	Cvar_RegisterVariable (&cl_capturevideo_rawrgb);
 	Cvar_RegisterVariable (&cl_capturevideo_rawyv12);
+	Cvar_RegisterVariable (&cl_capturevideo_number);
 	Cvar_RegisterVariable (&r_letterbox);
 	Cvar_RegisterVariable(&r_stereo_separation);
 	Cvar_RegisterVariable(&r_stereo_sidebyside);
@@ -626,6 +626,8 @@ void SCR_CaptureVideo_BeginVideo(void)
 	cls.capturevideo_frame = 0;
 	cls.capturevideo_buffer = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * (3+3+3) + 18);
 	gamma = 1.0/scr_screenshot_gammaboost.value;
+	dpsnprintf(cls.capturevideo_basename, sizeof(cls.capturevideo_basename), "video/dpvideo%03i", cl_capturevideo_number.integer);
+	Cvar_SetValueQuick(&cl_capturevideo_number, cl_capturevideo_number.integer + 1);
 
 	/*
 	for (i = 0;i < 256;i++)
@@ -668,12 +670,12 @@ Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 	if (cl_capturevideo_rawrgb.integer)
 	{
 		cls.capturevideo_format = CAPTUREVIDEOFORMAT_RAWRGB;
-		cls.capturevideo_videofile = FS_Open ("video/dpvideo.rgb", "wb", false, true);
+		cls.capturevideo_videofile = FS_Open (va("%s.rgb", cls.capturevideo_basename), "wb", false, true);
 	}
 	else if (cl_capturevideo_rawyv12.integer)
 	{
 		cls.capturevideo_format = CAPTUREVIDEOFORMAT_RAWYV12;
-		cls.capturevideo_videofile = FS_Open ("video/dpvideo.yv12", "wb", false, true);
+		cls.capturevideo_videofile = FS_Open (va("%s.yv12", cls.capturevideo_basename), "wb", false, true);
 	}
 	else if (scr_screenshot_jpeg.integer)
 	{
@@ -686,15 +688,15 @@ Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 		cls.capturevideo_videofile = NULL;
 	}
 
-	if (cl_capturevideo_sound.integer)
+	cls.capturevideo_soundfile = FS_Open (va("%s.wav", cls.capturevideo_basename), "wb", false, true);
+	if (cls.capturevideo_soundfile)
 	{
-		cls.capturevideo_soundfile = FS_Open ("video/dpvideo.wav", "wb", false, true);
 		// wave header will be filled out when video ends
 		memset(out, 0, 44);
 		FS_Write (cls.capturevideo_soundfile, out, 44);
 	}
 	else
-		cls.capturevideo_soundfile = NULL;
+		Con_Printf("Could not open video/dpvideo.wav for writing, sound capture disabled\n");
 }
 
 void SCR_CaptureVideo_EndVideo(void)
@@ -772,6 +774,9 @@ qboolean SCR_CaptureVideo_VideoFrame(int newframenum)
 	switch (cls.capturevideo_format)
 	{
 	case CAPTUREVIDEOFORMAT_RAWYV12:
+		// if there's no videofile we have to just give up, and abort saving if there's no video or sound file
+		if (!cls.capturevideo_videofile)
+			return cls.capturevideo_soundfile != NULL;
 		// FIXME: width/height must be multiple of 2, enforce this?
 		qglReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, cls.capturevideo_buffer);CHECKGLERROR
 		// process one line at a time, and CbCr every other line at 2 pixel intervals
@@ -814,6 +819,9 @@ qboolean SCR_CaptureVideo_VideoFrame(int newframenum)
 				return false;
 		return true;
 	case CAPTUREVIDEOFORMAT_RAWRGB:
+		// if there's no videofile we have to just give up, and abort saving if there's no video or sound file
+		if (!cls.capturevideo_videofile)
+			return cls.capturevideo_soundfile != NULL;
 		qglReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, cls.capturevideo_buffer);CHECKGLERROR
 		for (;cls.capturevideo_frame < newframenum;cls.capturevideo_frame++)
 			if (!FS_Write (cls.capturevideo_videofile, cls.capturevideo_buffer, width*height*3))
@@ -823,7 +831,7 @@ qboolean SCR_CaptureVideo_VideoFrame(int newframenum)
 		qglReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, cls.capturevideo_buffer);CHECKGLERROR
 		for (;cls.capturevideo_frame < newframenum;cls.capturevideo_frame++)
 		{
-			sprintf(filename, "video/dp%06d.jpg", cls.capturevideo_frame);
+			sprintf(filename, "%s_%06d.jpg", cls.capturevideo_basename, cls.capturevideo_frame);
 			if (!JPEG_SaveImage_preflipped (filename, width, height, cls.capturevideo_buffer))
 				return false;
 		}
@@ -840,7 +848,7 @@ qboolean SCR_CaptureVideo_VideoFrame(int newframenum)
 		qglReadPixels (x, y, width, height, GL_BGR, GL_UNSIGNED_BYTE, cls.capturevideo_buffer + 18);CHECKGLERROR
 		for (;cls.capturevideo_frame < newframenum;cls.capturevideo_frame++)
 		{
-			sprintf(filename, "video/dp%06d.tga", cls.capturevideo_frame);
+			sprintf(filename, "%s_%06d.tga", cls.capturevideo_basename, cls.capturevideo_frame);
 			if (!FS_WriteFile (filename, cls.capturevideo_buffer, width*height*3 + 18))
 				return false;
 		}
@@ -875,12 +883,14 @@ void SCR_CaptureVideo(void)
 			Con_Printf("You can not change the video framerate while recording a video.\n");
 			Cvar_SetValueQuick(&cl_capturevideo_fps, cls.capturevideo_framerate);
 		}
+#if 0
 		if (cls.capturevideo_soundfile)
 		{
 			// preserve sound sync by duplicating frames when running slow
 			newframenum = (int)((Sys_DoubleTime() - cls.capturevideo_starttime) * cls.capturevideo_framerate);
 		}
 		else
+#endif
 			newframenum = cls.capturevideo_frame + 1;
 		// if falling behind more than one second, stop
 		if (newframenum - cls.capturevideo_frame > (int)ceil(cls.capturevideo_framerate))

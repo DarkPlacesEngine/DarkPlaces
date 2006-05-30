@@ -735,7 +735,7 @@ void Host_Main(void)
 				// decide the simulation time
 				if (!cls.timedemo)
 				{
-					if (cls.capturevideo_active && !cls.capturevideo_soundfile)
+					if (cls.capturevideo_active)// && !cls.capturevideo_soundfile)
 					{
 						frametime = 1.0 / cls.capturevideo_framerate;
 						cl.realframetime = max(cl.realframetime, frametime);
