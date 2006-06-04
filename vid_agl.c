@@ -53,6 +53,8 @@ static float mouse_x, mouse_y;
 static qboolean vid_isfullscreen = false;
 static qboolean vid_usingvsync = false;
 
+static qboolean sound_active = true;
+
 static int scr_width, scr_height;
 
 static AGLContext context;
@@ -325,21 +327,37 @@ static OSStatus MainWindowEventHandler (EventHandlerCallRef nextHandler, EventRe
 	return err;
 }
 
+static void VID_AppFocusChanged(qboolean windowIsActive)
+{
+	if (vid_activewindow != windowIsActive)
+	{
+		vid_activewindow = windowIsActive;
+		if (!vid_activewindow)
+			VID_RestoreSystemGamma();
+	}
+
+	if (sound_active != windowIsActive)
+	{
+		sound_active = windowIsActive;
+		if (sound_active)
+			S_UnblockSound ();
+		else
+			S_BlockSound ();
+	}
+}
+
 static void VID_ProcessPendingAsyncEvents (void)
 {
 	// Collapsed / expanded
 	if (AsyncEvent_Collapsed != vid_hidden)
 	{
 		vid_hidden = !vid_hidden;
-		vid_activewindow = false;
-		VID_RestoreSystemGamma();
+		VID_AppFocusChanged(!vid_hidden);
 	}
 
 	// Closed
 	if (AsyncEvent_Quitting)
-	{
 		Sys_Quit();
-	}
 }
 
 static void VID_BuildAGLAttrib(GLint *attrib, qboolean stencil, qboolean fullscreen)
@@ -537,6 +555,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	vid_usingmouse = false;
 	vid_hidden = false;
 	vid_activewindow = true;
+	sound_active = true;
 	GL_Init();
 
 	SelectWindow(window);
@@ -547,25 +566,27 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 
 static void Handle_KeyMod(UInt32 keymod)
 {
-	const struct keymod_to_event_s { int keybit; keynum_t event; } keymod_events [] =
+	const struct keymod_to_event_s { UInt32 keybit; keynum_t event; } keymod_events [] =
 	{
-		{cmdKey,						K_AUX1},
-		{shiftKey,						K_SHIFT},
-		{alphaLock,						K_CAPSLOCK},
-		{optionKey,						K_ALT},
-		{controlKey,					K_CTRL},
-		{kEventKeyModifierNumLockMask,	K_NUMLOCK},
-		{kEventKeyModifierFnMask,		K_AUX2}
+		{ cmdKey,						K_AUX1 },
+		{ shiftKey,						K_SHIFT },
+		{ alphaLock,					K_CAPSLOCK },
+		{ optionKey,					K_ALT },
+		{ controlKey,					K_CTRL },
+		{ kEventKeyModifierNumLockMask,	K_NUMLOCK },
+		{ kEventKeyModifierFnMask,		K_AUX2 }
 	};
 	static UInt32 prev_keymod = 0;
 	unsigned int i;
 	UInt32 modChanges;
 
 	modChanges = prev_keymod ^ keymod;
+	if (modChanges == 0)
+		return;
 
 	for (i = 0; i < sizeof(keymod_events) / sizeof(keymod_events[0]); i++)
 	{
-		int keybit = keymod_events[i].keybit;
+		UInt32 keybit = keymod_events[i].keybit;
 
 		if ((modChanges & keybit) != 0)
 			Key_Event(keymod_events[i].event, '\0', (keymod & keybit) != 0);
@@ -772,11 +793,10 @@ void Sys_SendKeyEvents(void)
 				switch (eventKind)
 				{
 					case kEventAppActivated :
-						vid_activewindow = true;
+						VID_AppFocusChanged(true);
 						break;
 					case kEventAppDeactivated:
-						vid_activewindow = false;
-						VID_RestoreSystemGamma();
+						VID_AppFocusChanged(false);
 						break;
 					case kEventAppQuit:
 						Sys_Quit();

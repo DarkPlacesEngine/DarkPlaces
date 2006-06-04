@@ -223,9 +223,10 @@ static wavinfo_t GetWavinfo (char *name, unsigned char *wav, int wavlength)
 WAV_FetchSound
 ====================
 */
-static const sfxbuffer_t* WAV_FetchSound (channel_t* ch, unsigned int start, unsigned int nbsamples)
+static const snd_buffer_t* WAV_FetchSound (channel_t* ch, unsigned int *start, unsigned int nbsampleframes)
 {
-	return (sfxbuffer_t *)ch->sfx->fetcher_data;
+	*start = 0;
+	return (snd_buffer_t *)ch->sfx->fetcher_data;
 }
 
 /*
@@ -235,17 +236,28 @@ WAV_FreeSfx
 */
 static void WAV_FreeSfx (sfx_t* sfx)
 {
-	sfxbuffer_t* sb = (sfxbuffer_t *)sfx->fetcher_data;
+	snd_buffer_t* sb = (snd_buffer_t *)sfx->fetcher_data;
 
 	// Free the sound buffer
-	sfx->memsize -= (sb->length * sfx->format.channels * sfx->format.width) + sizeof (*sb) - sizeof (sb->data);
+	sfx->memsize -= (sb->maxframes * sb->format.channels * sb->format.width) + sizeof (*sb) - sizeof (sb->samples);
 	Mem_Free(sb);
 
 	sfx->fetcher_data = NULL;
 	sfx->fetcher = NULL;
 }
 
-const snd_fetcher_t wav_fetcher = { WAV_FetchSound, NULL, WAV_FreeSfx };
+/*
+====================
+WAV_GetFormat
+====================
+*/
+static const snd_format_t* WAV_GetFormat (sfx_t* sfx)
+{
+	snd_buffer_t* sb = (snd_buffer_t *)sfx->fetcher_data;
+	return &sb->format;
+}
+
+const snd_fetcher_t wav_fetcher = { WAV_FetchSound, NULL, WAV_FreeSfx, WAV_GetFormat };
 
 
 /*
@@ -253,17 +265,16 @@ const snd_fetcher_t wav_fetcher = { WAV_FetchSound, NULL, WAV_FreeSfx };
 S_LoadWavFile
 ==============
 */
-qboolean S_LoadWavFile (const char *filename, sfx_t *s)
+qboolean S_LoadWavFile (const char *filename, sfx_t *sfx)
 {
 	fs_offset_t filesize;
 	unsigned char *data;
 	wavinfo_t info;
-	int len;
-	size_t memsize;
-	sfxbuffer_t* sb;
+	snd_format_t wav_format;
+	snd_buffer_t* sb;
 
 	// Already loaded?
-	if (s->fetcher != NULL)
+	if (sfx->fetcher != NULL)
 		return true;
 
 	// Load the file
@@ -280,48 +291,22 @@ qboolean S_LoadWavFile (const char *filename, sfx_t *s)
 
 	Con_DPrintf ("Loading WAV file \"%s\"\n", filename);
 
-	info = GetWavinfo (s->name, data, (int)filesize);
-	// Stereo sounds are allowed (intended for music)
-	if (info.channels < 1 || info.channels > 2)
+	info = GetWavinfo (sfx->name, data, (int)filesize);
+	if (info.channels < 1 || info.channels > 2)  // Stereo sounds are allowed (intended for music)
 	{
-		Con_Printf("%s has an unsupported number of channels (%i)\n",s->name, info.channels);
+		Con_Printf("%s has an unsupported number of channels (%i)\n",sfx->name, info.channels);
 		Mem_Free(data);
 		return false;
 	}
 	//if (info.channels == 2)
-	//	Log_Printf("stereosounds.log", "%s\n", s->name);
-
-	// calculate resampled length
-	len = (int) ((double) info.samples * (double) shm->format.speed / (double) info.rate);
-	len = len * info.width * info.channels;
-
-	memsize = len + sizeof (*sb) - sizeof (sb->data);
-	sb = (sfxbuffer_t *)Mem_Alloc (snd_mempool, memsize);
-	if (sb == NULL)
-	{
-		Con_Printf("failed to allocate memory for sound \"%s\"\n", s->name);
-		Mem_Free(data);
-		return false;
-	}
-	s->memsize += memsize;
-
-	s->fetcher = &wav_fetcher;
-	s->fetcher_data = sb;
-	s->format.speed = info.rate;
-	s->format.width = info.width;
-	s->format.channels = info.channels;
-	if (info.loopstart < 0)
-		s->loopstart = -1;
-	else
-		s->loopstart = (int)((double)info.loopstart * (double)shm->format.speed / (double)s->format.speed);
-	s->flags &= ~SFXFLAG_STREAMED;
+	//	Log_Printf("stereosounds.log", "%s\n", sfx->name);
 
 #if BYTE_ORDER != LITTLE_ENDIAN
 	// We must convert the WAV data from little endian
 	// to the machine endianess before resampling it
 	if (info.width == 2)
 	{
-		int i;
+		unsigned int len, i;
 		short* ptr;
 
 		len = info.samples * info.channels;
@@ -331,10 +316,26 @@ qboolean S_LoadWavFile (const char *filename, sfx_t *s)
 	}
 #endif
 
-	sb->length = (int)ResampleSfx (data + info.dataofs, info.samples, &s->format, sb->data, s->name);
-	s->format.speed = shm->format.speed;
-	s->total_length = sb->length;
-	sb->offset = 0;
+	wav_format.speed = info.rate;
+	wav_format.width = info.width;
+	wav_format.channels = info.channels;
+	sb = Snd_CreateSndBuffer (data + info.dataofs, info.samples, &wav_format, snd_renderbuffer->format.speed);
+	if (sb == NULL)
+	{
+		Mem_Free(data);
+		return false;
+	}
+	sfx->fetcher = &wav_fetcher;
+	sfx->fetcher_data = sb;
+
+	sfx->total_length = sb->nbframes;
+	sfx->memsize += sb->maxframes * sb->format.channels * sb->format.width + sizeof (*sb) - sizeof (sb->samples);
+
+	if (info.loopstart < 0)
+		sfx->loopstart = -1;
+	else
+		sfx->loopstart = (double)info.loopstart * (double)snd_renderbuffer->format.speed / (double)sb->format.speed;
+	sfx->flags &= ~SFXFLAG_STREAMED;
 
 	Mem_Free (data);
 	return true;

@@ -69,7 +69,7 @@ LIB_SOUND=$(LIB_SND_BSD)
 
 ##### BSD Make specific definitions #####
 
-MAKE:=$(MAKE)
+MAKE:=$(MAKE) -f BSDmakefile
 
 DO_LD=$(CC) -o $@ $> $(LDFLAGS)
 

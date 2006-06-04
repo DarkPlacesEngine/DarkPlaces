@@ -30,8 +30,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <commctrl.h>
 #include <dinput.h>
 
-extern void S_BlockSound (void);
-extern void S_UnblockSound (void);
 extern HINSTANCE global_hInstance;
 
 
@@ -414,7 +412,7 @@ void AppActivate(BOOL fActive, BOOL minimize)
 *
 ****************************************************************************/
 {
-	static BOOL	sound_active;
+	static qboolean sound_active = false;  // initially blocked by Sys_InitConsole()
 
 	vid_activewindow = fActive;
 	vid_hidden = minimize;

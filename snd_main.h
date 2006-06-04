@@ -24,19 +24,31 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "sound.h"
 
 
-typedef struct sfxbuffer_s
-{
-	unsigned int	length;
-	unsigned int	offset;
-	unsigned char	data[4];	// variable sized
-} sfxbuffer_t;
-
 typedef struct snd_format_s
 {
 	unsigned int	speed;
-	unsigned int	width;
-	unsigned int	channels;
+	unsigned short	width;
+	unsigned short	channels;
 } snd_format_t;
+
+typedef struct snd_buffer_s
+{
+	snd_format_t		format;
+	unsigned int		nbframes;	// current size, in sample frames
+	unsigned int		maxframes;	// max size (buffer size), in sample frames
+	unsigned char		samples[4];	// variable sized
+} snd_buffer_t;
+
+typedef struct snd_ringbuffer_s
+{
+	snd_format_t		format;
+	unsigned char*		ring;
+	unsigned int		maxframes;	// max size (buffer size), in sample frames
+	unsigned int		startframe;	// index of the first frame in the buffer
+									// if startframe == endframe, the bufffer is empty
+	unsigned int		endframe;	// index of the first EMPTY frame in the "ring" buffer
+									// may be smaller than startframe if the "ring" buffer has wrapped
+} snd_ringbuffer_t;
 
 // sfx_t flags
 #define SFXFLAG_NONE			0
@@ -51,43 +63,32 @@ struct sfx_s
 	char				name[MAX_QPATH];
 	sfx_t				*next;
 	size_t				memsize;		// total memory used (including sfx_t and fetcher data)
-	int					locks;			// One lock is automatically granted while the sfx is
+
+										// One lock is automatically granted while the sfx is
 										// playing (and removed when stopped). Locks can also be
-										// added by S_PrecacheSound and S_ServerSounds.
+	int					locks;			// added by S_PrecacheSound and S_ServerSounds.
 										// A SFX with no lock and no SFXFLAG_PERMANENTLOCK is
 										// freed at level change by S_ServerSounds.
+
 	unsigned int		flags;			// cf SFXFLAG_* defines
-	snd_format_t		format;
-	int					loopstart;
-	unsigned int		total_length;
+	int					loopstart;		// in sample frames. -1 if not looped
+	unsigned int		total_length;	// in sample frames
 	const snd_fetcher_t	*fetcher;
 	void				*fetcher_data;	// Per-sfx data for the sound fetching functions
 };
-
-typedef struct dma_s
-{
-	snd_format_t	format;
-	int				sampleframes;	// frames in buffer (frame = samples for all speakers)
-	int				samples;		// mono samples in buffer
-	int				samplepos;		// in mono samples
-	unsigned char	*buffer;
-	int				bufferlength;	// used only by certain drivers
-} dma_t;
 
 // maximum supported speakers constant
 #define SND_LISTENERS 8
 
 typedef struct channel_s
 {
-	int pad[8];
-	sfx_t			*sfx;			// sfx number
-	int pad2[8];
-	unsigned int	flags;			// cf CHANNELFLAG_* defines
+	short			listener_volume [SND_LISTENERS];	// 0-255 volume per speaker
 	int				master_vol;		// 0-255 master volume
-	short			listener_volume[SND_LISTENERS];		// 0-255 volume per speaker
-	int				end;			// end time in global paintsamples
-	int				lastptime;		// last time this channel was painted
-	int				pos;			// sample position in sfx
+	sfx_t			*sfx;			// sfx number
+	unsigned int	flags;			// cf CHANNELFLAG_* defines
+	unsigned int	end;			// end time in global paintsamples
+	unsigned int	lastptime;		// last time this channel was painted
+	unsigned int	pos;			// sample position in sfx
 	int				entnum;			// to allow overriding a specific sound
 	int				entchannel;
 	vec3_t			origin;			// origin of sound effect
@@ -95,61 +96,87 @@ typedef struct channel_s
 	void			*fetcher_data;	// Per-channel data for the sound fetching function
 } channel_t;
 
-typedef const sfxbuffer_t* (*snd_fetcher_getsb_t) (channel_t* ch, unsigned int start, unsigned int nbsamples);
+// Sound fetching functions
+// "start" is both an input and output parameter: it returns the actual start time of the sound buffer
+typedef const snd_buffer_t* (*snd_fetcher_getsb_t) (channel_t* ch, unsigned int *start, unsigned int nbsampleframes);
 typedef void (*snd_fetcher_endsb_t) (channel_t* ch);
 typedef void (*snd_fetcher_free_t) (sfx_t* sfx);
+typedef const snd_format_t* (*snd_fetcher_getfmt_t) (sfx_t* sfx);
 struct snd_fetcher_s
 {
 	snd_fetcher_getsb_t		getsb;
 	snd_fetcher_endsb_t		endsb;
 	snd_fetcher_free_t		free;
+	snd_fetcher_getfmt_t	getfmt;
 };
-
-void S_PaintChannels(int endtime);
-
-// initializes cycling through a DMA buffer and returns information on it
-qboolean SNDDMA_Init(void);
-
-// gets the current DMA position
-int SNDDMA_GetDMAPos(void);
-
-void SNDDMA_Submit(void);
-
-// shutdown the DMA xfer.
-void SNDDMA_Shutdown(void);
-
-qboolean S_LoadSound (sfx_t *s, qboolean complain);
-
-void S_LockSfx (sfx_t *sfx);
-void S_UnlockSfx (sfx_t *sfx);
-
-void *S_LockBuffer(void);
-void S_UnlockBuffer(void);
-
-extern size_t ResampleSfx (const unsigned char *in_data, size_t in_length, const snd_format_t* in_format, unsigned char *out_data, const char* sfxname);
-
-// ====================================================================
 
 // 0 to NUM_AMBIENTS - 1 = water, etc
 // NUM_AMBIENTS to NUM_AMBIENTS + MAX_DYNAMIC_CHANNELS - 1 = normal entity sounds
 // NUM_AMBIENTS + MAX_DYNAMIC_CHANNELS to total_channels = static sounds
-#define	MAX_CHANNELS			516
 #define	MAX_DYNAMIC_CHANNELS	128
-
-extern channel_t channels[MAX_CHANNELS];
+#define	MAX_CHANNELS			516
 
 extern unsigned int total_channels;
+extern channel_t channels[MAX_CHANNELS];
 
-extern int paintedtime;
-extern int soundtime;
-extern volatile dma_t *shm;
+extern snd_ringbuffer_t *snd_renderbuffer;
+extern unsigned int soundtime;	// WARNING: sound modules must NOT use it
 
+extern cvar_t _snd_mixahead;
 extern cvar_t snd_swapstereo;
 extern cvar_t snd_streaming;
 
-extern int snd_blocked;
+extern int snd_blocked;		// counter. When > 0, we stop submitting sound to the audio device
 
 extern mempool_t *snd_mempool;
+
+// If simsound is true, the sound card is not initialized and no sound is submitted to it.
+// More generally, all arch-dependent operations are skipped or emulated.
+// Used for isolating performance in the renderer.
+extern qboolean simsound;
+
+
+// ====================================================================
+//         Architecture-independent functions
+// ====================================================================
+
+void S_PaintChannels (snd_ringbuffer_t* rb, unsigned int starttime, unsigned int endtime);
+
+qboolean S_LoadSound (sfx_t *sfx, qboolean complain);
+
+void S_LockSfx (sfx_t *sfx);
+void S_UnlockSfx (sfx_t *sfx);
+
+snd_buffer_t *Snd_CreateSndBuffer (const unsigned char *samples, unsigned int sampleframes, const snd_format_t* in_format, unsigned int sb_speed);
+qboolean Snd_AppendToSndBuffer (snd_buffer_t* sb, const unsigned char *samples, unsigned int sampleframes, const snd_format_t* format);
+
+// If "buffer" is NULL, the function allocates one buffer of "sampleframes" sample frames itself
+// (if "sampleframes" is 0, the function chooses the size).
+snd_ringbuffer_t *Snd_CreateRingBuffer (const snd_format_t* format, unsigned int sampleframes, void* buffer);
+
+
+// ====================================================================
+//         Architecture-dependent functions
+// ====================================================================
+
+// Create "snd_renderbuffer" with the proper sound format if the call is successful
+// May return a suggested format if the requested format isn't available
+qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested);
+
+// Stop the sound card, delete "snd_renderbuffer" and free its other resources
+void SndSys_Shutdown (void);
+
+// Submit the contents of "snd_renderbuffer" to the sound card
+void SndSys_Submit (void);
+
+// Returns the number of sample frames consumed since the sound started
+unsigned int SndSys_GetSoundTime (void);
+
+// Get the exclusive lock on "snd_renderbuffer"
+qboolean SndSys_LockRenderBuffer (void);
+
+// Release the exclusive lock on "snd_renderbuffer"
+void SndSys_UnlockRenderBuffer (void);
 
 
 #endif
