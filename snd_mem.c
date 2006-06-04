@@ -27,32 +27,126 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 
 /*
-================
-ResampleSfx
-================
+====================
+Snd_CreateRingBuffer
+
+If "buffer" is NULL, the function allocates one buffer of "sampleframes" sample frames itself
+(if "sampleframes" is 0, the function chooses the size).
+====================
 */
-size_t ResampleSfx (const unsigned char *in_data, size_t in_length, const snd_format_t* in_format, unsigned char *out_data, const char* sfxname)
+snd_ringbuffer_t *Snd_CreateRingBuffer (const snd_format_t* format, unsigned int sampleframes, void* buffer)
+{
+	snd_ringbuffer_t *ringbuffer;
+
+	// If the caller provides a buffer, it must give us its size
+	if (sampleframes == 0 && buffer != NULL)
+		return NULL;
+
+	ringbuffer = (snd_ringbuffer_t*)Mem_Alloc(snd_mempool, sizeof (*ringbuffer));
+	memset(ringbuffer, 0, sizeof(*ringbuffer));
+	memcpy(&ringbuffer->format, format, sizeof(ringbuffer->format));
+
+	// If we haven't been given a buffer
+	if (buffer == NULL)
+	{
+		unsigned int maxframes;
+		size_t memsize;
+
+		if (sampleframes == 0)
+			maxframes = (format->speed + 1) / 2;  // Make the sound buffer large enough for containing 0.5 sec of sound
+		else
+			maxframes = sampleframes;
+
+		memsize = maxframes * format->width * format->channels;
+		ringbuffer->ring = Mem_Alloc(snd_mempool, memsize);
+		ringbuffer->maxframes = maxframes;
+	}
+	else
+	{
+		ringbuffer->ring = buffer;
+		ringbuffer->maxframes = sampleframes;
+	}
+
+	return ringbuffer;
+}
+
+
+/*
+====================
+Snd_CreateSndBuffer
+====================
+*/
+snd_buffer_t *Snd_CreateSndBuffer (const unsigned char *samples, unsigned int sampleframes, const snd_format_t* in_format, unsigned int sb_speed)
+{
+	size_t newsampleframes, memsize;
+	snd_buffer_t* sb;
+	
+	newsampleframes = (double)sampleframes * (double)sb_speed / (double)in_format->speed;
+
+	memsize = newsampleframes * in_format->channels * in_format->width;
+	memsize += sizeof (*sb) - sizeof (sb->samples);
+
+	sb = (snd_buffer_t*)Mem_Alloc (snd_mempool, memsize);
+	sb->format.channels = in_format->channels;
+	sb->format.width = in_format->width;
+	sb->format.speed = sb_speed;
+	sb->maxframes = newsampleframes;
+	sb->nbframes = 0;
+
+	if (!Snd_AppendToSndBuffer (sb, samples, sampleframes, in_format))
+	{
+		Mem_Free (sb);
+		return NULL;
+	}
+
+	return sb;
+}
+
+
+/*
+====================
+Snd_AppendToSndBuffer
+====================
+*/
+qboolean Snd_AppendToSndBuffer (snd_buffer_t* sb, const unsigned char *samples, unsigned int sampleframes, const snd_format_t* format)
 {
 	size_t srclength, outcount;
+	unsigned char *out_data;
 
-	srclength = in_length * in_format->channels;
-	outcount = (int)((double)in_length * shm->format.speed / in_format->speed);
+	//Con_DPrintf("ResampleSfx: %d samples @ %dHz -> %d samples @ %dHz\n",
+	//			sampleframes, format->speed, outcount, sb->format.speed);
 
-	//Con_DPrintf("ResampleSfx(%s): %d samples @ %dHz -> %d samples @ %dHz\n",
-	//			sfxname, in_length, in_format->speed, outcount, shm->format.speed);
+	// If the formats are incompatible
+	if (sb->format.channels != format->channels || sb->format.width != format->width)
+	{
+		Con_Print("AppendToSndBuffer: incompatible sound formats!\n");
+		return false;
+	}
+
+	outcount = (double)sampleframes * (double)sb->format.speed / (double)format->speed;
+
+	// If the sound buffer is too short
+	if (outcount > sb->maxframes - sb->nbframes)
+	{
+		Con_Print("AppendToSndBuffer: sound buffer too short!\n");
+		return false;
+	}
+
+	out_data = &sb->samples[sb->nbframes * sb->format.width * sb->format.channels];
+	srclength = sampleframes * format->channels;
 
 	// Trivial case (direct transfer)
-	if (in_format->speed == shm->format.speed)
+	if (format->speed == sb->format.speed)
 	{
-		if (in_format->width == 1)
+		if (format->width == 1)
 		{
 			size_t i;
 
 			for (i = 0; i < srclength; i++)
-				((signed char*)out_data)[i] = in_data[i] - 128;
+				((signed char*)out_data)[i] = samples[i] - 128;
 		}
-		else  // if (in_format->width == 2)
-			memcpy (out_data, in_data, srclength * in_format->width);
+		else  // if (format->width == 2)
+			memcpy (out_data, samples, srclength * format->width);
 	}
 
 	// General case (linear interpolation with a fixed-point fractional
@@ -63,17 +157,17 @@ size_t ResampleSfx (const unsigned char *in_data, size_t in_length, const snd_fo
 #	define INTEGER_BITS (sizeof(samplefrac)*8 - FRACTIONAL_BITS)
 	else
 	{
-		const unsigned int fracstep = (unsigned int)((double)in_format->speed / shm->format.speed * (1 << FRACTIONAL_BITS));
+		const unsigned int fracstep = (unsigned int)((double)format->speed / sb->format.speed * (1 << FRACTIONAL_BITS));
 		size_t remain_in = srclength, total_out = 0;
 		unsigned int samplefrac;
-		const unsigned char *in_ptr = in_data;
+		const unsigned char *in_ptr = samples;
 		unsigned char *out_ptr = out_data;
 
 		// Check that we can handle one second of that sound
-		if (in_format->speed * in_format->channels > (1 << INTEGER_BITS))
+		if (format->speed * format->channels > (1 << INTEGER_BITS))
 		{
 			Con_Printf ("ResampleSfx: sound quality too high for resampling (%uHz, %u channel(s))\n",
-					   in_format->speed, in_format->channels);
+					   format->speed, format->channels);
 			return 0;
 		}
 
@@ -88,36 +182,36 @@ size_t ResampleSfx (const unsigned char *in_data, size_t in_length, const snd_fo
 			samplefrac = 0;
 
 			// If more than 1 sec of sound remains to be converted
-			if (outcount - total_out > shm->format.speed)
+			if (outcount - total_out > sb->format.speed)
 			{
-				tmpcount = shm->format.speed;
+				tmpcount = sb->format.speed;
 				interpolation_limit = tmpcount;  // all samples can be interpolated
 			}
 			else
 			{
 				tmpcount = outcount - total_out;
-				interpolation_limit = (int)ceil((double)(((remain_in / in_format->channels) - 1) << FRACTIONAL_BITS) / fracstep);
+				interpolation_limit = (int)ceil((double)(((remain_in / format->channels) - 1) << FRACTIONAL_BITS) / fracstep);
 				if (interpolation_limit > tmpcount)
 					interpolation_limit = tmpcount;
 			}
 
 			// 16 bit samples
-			if (in_format->width == 2)
+			if (format->width == 2)
 			{
 				const short* in_ptr_short;
 
 				// Interpolated part
 				for (i = 0; i < interpolation_limit; i++)
 				{
-					srcsample = (samplefrac >> FRACTIONAL_BITS) * in_format->channels;
+					srcsample = (samplefrac >> FRACTIONAL_BITS) * format->channels;
 					in_ptr_short = &((const short*)in_ptr)[srcsample];
 
-					for (j = 0; j < in_format->channels; j++)
+					for (j = 0; j < format->channels; j++)
 					{
 						int a, b;
 
 						a = *in_ptr_short;
-						b = *(in_ptr_short + in_format->channels);
+						b = *(in_ptr_short + format->channels);
 						*((short*)out_ptr) = (((b - a) * (samplefrac & FRACTIONAL_MASK)) >> FRACTIONAL_BITS) + a;
 
 						in_ptr_short++;
@@ -130,10 +224,10 @@ size_t ResampleSfx (const unsigned char *in_data, size_t in_length, const snd_fo
 				// Non-interpolated part
 				for (/* nothing */; i < tmpcount; i++)
 				{
-					srcsample = (samplefrac >> FRACTIONAL_BITS) * in_format->channels;
+					srcsample = (samplefrac >> FRACTIONAL_BITS) * format->channels;
 					in_ptr_short = &((const short*)in_ptr)[srcsample];
 
-					for (j = 0; j < in_format->channels; j++)
+					for (j = 0; j < format->channels; j++)
 					{
 						*((short*)out_ptr) = *in_ptr_short;
 
@@ -145,22 +239,22 @@ size_t ResampleSfx (const unsigned char *in_data, size_t in_length, const snd_fo
 				}
 			}
 			// 8 bit samples
-			else  // if (in_format->width == 1)
+			else  // if (format->width == 1)
 			{
 				const unsigned char* in_ptr_byte;
 
 				// Convert up to 1 sec of sound
 				for (i = 0; i < interpolation_limit; i++)
 				{
-					srcsample = (samplefrac >> FRACTIONAL_BITS) * in_format->channels;
+					srcsample = (samplefrac >> FRACTIONAL_BITS) * format->channels;
 					in_ptr_byte = &((const unsigned char*)in_ptr)[srcsample];
 
-					for (j = 0; j < in_format->channels; j++)
+					for (j = 0; j < format->channels; j++)
 					{
 						int a, b;
 
 						a = *in_ptr_byte - 128;
-						b = *(in_ptr_byte + in_format->channels) - 128;
+						b = *(in_ptr_byte + format->channels) - 128;
 						*((signed char*)out_ptr) = (((b - a) * (samplefrac & FRACTIONAL_MASK)) >> FRACTIONAL_BITS) + a;
 
 						in_ptr_byte++;
@@ -173,10 +267,10 @@ size_t ResampleSfx (const unsigned char *in_data, size_t in_length, const snd_fo
 				// Non-interpolated part
 				for (/* nothing */; i < tmpcount; i++)
 				{
-					srcsample = (samplefrac >> FRACTIONAL_BITS) * in_format->channels;
+					srcsample = (samplefrac >> FRACTIONAL_BITS) * format->channels;
 					in_ptr_byte = &((const unsigned char*)in_ptr)[srcsample];
 
-					for (j = 0; j < in_format->channels; j++)
+					for (j = 0; j < format->channels; j++)
 					{
 						*((signed char*)out_ptr) = *in_ptr_byte - 128;
 
@@ -189,14 +283,16 @@ size_t ResampleSfx (const unsigned char *in_data, size_t in_length, const snd_fo
 			}
 
 			// Update the counters and the buffer position
-			remain_in -= in_format->speed * in_format->channels;
-			in_ptr += in_format->speed * in_format->channels * in_format->width;
+			remain_in -= format->speed * format->channels;
+			in_ptr += format->speed * format->channels * format->width;
 			total_out += tmpcount;
 		}
 	}
 
-	return outcount;
+	sb->nbframes += outcount;
+	return true;
 }
+
 
 //=============================================================================
 
@@ -205,62 +301,59 @@ size_t ResampleSfx (const unsigned char *in_data, size_t in_length, const snd_fo
 S_LoadSound
 ==============
 */
-qboolean S_LoadSound (sfx_t *s, qboolean complain)
+qboolean S_LoadSound (sfx_t *sfx, qboolean complain)
 {
 	char namebuffer[MAX_QPATH + 16];
 	size_t len;
 
-	if (!shm || !shm->format.speed)
-		return false;
+	// See if already loaded
+	if (sfx->fetcher != NULL)
+		return true;
 
 	// If we weren't able to load it previously, no need to retry
-	if (s->flags & SFXFLAG_FILEMISSING)
+	if (sfx->flags & SFXFLAG_FILEMISSING)
 		return false;
 
-	// See if in memory
-	if (s->fetcher != NULL)
-	{
-		if (s->format.speed != shm->format.speed)
-			Con_Printf ("S_LoadSound: sound %s hasn't been resampled (%uHz instead of %uHz)\n", s->name);
-		return true;
-	}
+	// No sound?
+	if (snd_renderbuffer == NULL)
+		return false;
 
 	// LordHavoc: if the sound filename does not begin with sound/, try adding it
-	if (strncasecmp(s->name, "sound/", 6))
+	if (strncasecmp(sfx->name, "sound/", 6))
 	{
-		len = dpsnprintf (namebuffer, sizeof(namebuffer), "sound/%s", s->name);
+		len = dpsnprintf (namebuffer, sizeof(namebuffer), "sound/%s", sfx->name);
 		if (len < 0)
 		{
 			// name too long
-			Con_Printf("S_LoadSound: name \"%s\" is too long\n", s->name);
+			Con_Printf("S_LoadSound: name \"%s\" is too long\n", sfx->name);
 			return false;
 		}
-		if (S_LoadWavFile (namebuffer, s))
+		if (S_LoadWavFile (namebuffer, sfx))
 			return true;
 		if (len >= 4 && !strcasecmp (namebuffer + len - 4, ".wav"))
 			strcpy (namebuffer + len - 3, "ogg");
-		if (OGG_LoadVorbisFile (namebuffer, s))
+		if (OGG_LoadVorbisFile (namebuffer, sfx))
 			return true;
 	}
 
 	// LordHavoc: then try without the added sound/ as wav and ogg
-	len = dpsnprintf (namebuffer, sizeof(namebuffer), "%s", s->name);
+	len = dpsnprintf (namebuffer, sizeof(namebuffer), "%s", sfx->name);
 	if (len < 0)
 	{
 		// name too long
-		Con_Printf("S_LoadSound: name \"%s\" is too long\n", s->name);
+		Con_Printf("S_LoadSound: name \"%s\" is too long\n", sfx->name);
 		return false;
 	}
-	if (S_LoadWavFile (namebuffer, s))
+	if (S_LoadWavFile (namebuffer, sfx))
 		return true;
 	if (len >= 4 && !strcasecmp (namebuffer + len - 4, ".wav"))
 		strcpy (namebuffer + len - 3, "ogg");
-	if (OGG_LoadVorbisFile (namebuffer, s))
+	if (OGG_LoadVorbisFile (namebuffer, sfx))
 		return true;
 
 	// Can't load the sound!
-	s->flags |= SFXFLAG_FILEMISSING;
+	sfx->flags |= SFXFLAG_FILEMISSING;
 	if (complain)
-		Con_Printf("S_LoadSound: Couldn't load \"%s\"\n", s->name);
+		Con_Printf("S_LoadSound: Couldn't load \"%s\"\n", sfx->name);
 	return false;
 }

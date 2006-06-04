@@ -1,10 +1,5 @@
 /*
-	snd_alsa.c
-
-	Support for the ALSA 1.0.1 sound driver
-
-	Copyright (C) 1999,2000  contributors of the QuakeForge project
-	Please see the file "AUTHORS" for a list of contributors
+	Copyright (C) 2006  Mathieu Olivier
 
 	This program is free software; you can redistribute it and/or
 	modify it under the terms of the GNU General Public License
@@ -26,256 +21,409 @@
 
 */
 
+// ALSA module, used by Linux
+
+
 #include <alsa/asoundlib.h>
 
 #include "quakedef.h"
 #include "snd_main.h"
 
-static snd_pcm_uframes_t buffer_size;
 
-static const char  *pcmname = NULL;
-static snd_pcm_t   *pcm;
+#define NB_PERIODS 2
 
-qboolean SNDDMA_Init (void)
+static snd_pcm_t* pcm_handle = NULL;
+static snd_pcm_sframes_t expected_delay = 0;
+static unsigned int alsasoundtime;
+
+
+/*
+====================
+SndSys_Init
+
+Create "snd_renderbuffer" with the proper sound format if the call is successful
+May return a suggested format if the requested format isn't available
+====================
+*/
+qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 {
-	int					err, i, j;
-	int					width;
-	int					channels;
-	unsigned int		rate;
-	snd_pcm_hw_params_t	*hw;
-	snd_pcm_sw_params_t	*sw;
-	snd_pcm_uframes_t	frag_size;
+	const char* pcm_name;
+	int i, err;
+	snd_pcm_hw_params_t* hw_params = NULL;
+	snd_pcm_format_t snd_pcm_format;
+	snd_pcm_uframes_t buffer_size;
 
-	snd_pcm_hw_params_alloca (&hw);
-	snd_pcm_sw_params_alloca (&sw);
+	Con_Print ("SndSys_Init: using the ALSA module\n");
 
-// COMMANDLINEOPTION: Linux ALSA Sound: -sndbits <number> sets sound precision to 8 or 16 bit (email me if you want others added)
-	width = 2;
-	if ((i=COM_CheckParm("-sndbits")) != 0)
+	// Check the requested sound format
+	if (requested->width < 1 || requested->width > 2)
 	{
-		j = atoi(com_argv[i+1]);
-		if (j == 16 || j == 8)
-			width = j / 8;
-		else
-			Con_Printf("Error: invalid sample bits: %d\n", j);
+		Con_Printf ("SndSys_Init: invalid sound width (%hu)\n",
+					requested->width);
+
+		if (suggested != NULL)
+		{
+			memcpy (suggested, requested, sizeof (suggested));
+
+			if (requested->width < 1)
+				suggested->width = 1;
+			else
+				suggested->width = 2;
+
+			Con_Printf ("SndSys_Init: suggesting sound width = %hu\n",
+						suggested->width);
+		}
+		
+		return false;
+    }
+	
+	if (pcm_handle != NULL)
+	{
+		Con_Print ("SndSys_Init: WARNING: Init called before Shutdown!\n");
+		SndSys_Shutdown ();
 	}
-
-// COMMANDLINEOPTION: Linux ALSA Sound: -sndspeed <hz> chooses 44100 hz, 22100 hz, or 11025 hz sound output rate
-	rate = 44100;
-	if ((i=COM_CheckParm("-sndspeed")) != 0)
+	
+	// Determine the name of the PCM handle we'll use
+	switch (requested->channels)
 	{
-		j = atoi(com_argv[i+1]);
-		if (j >= 1)
-			rate = j;
-		else
-			Con_Printf("Error: invalid sample rate: %d\n", rate);
+		case 4:
+			pcm_name = "surround40";
+			break;
+		case 6:
+			pcm_name = "surround51";
+			break;
+		case 8:
+			pcm_name = "surround71";
+			break;
+		default:
+			pcm_name = "default";
+			break;
 	}
-
-	for (channels = 8;channels >= 1;channels--)
-	{
-		if ((channels & 1) && channels != 1)
-			continue;
-// COMMANDLINEOPTION: Linux ALSA Sound: -sndmono sets sound output to mono
-		if ((i=COM_CheckParm("-sndmono")) != 0)
-			if (channels != 1)
-				continue;
-// COMMANDLINEOPTION: Linux ALSA Sound: -sndstereo sets sound output to stereo
-		if ((i=COM_CheckParm("-sndstereo")) != 0)
-			if (channels != 2)
-				continue;
-// COMMANDLINEOPTION: Linux ALSA Sound: -sndquad sets sound output to 4 channel surround
-		if ((i=COM_CheckParm("-sndquad")) != 0)
-			if (channels != 4)
-				continue;
-
 // COMMANDLINEOPTION: Linux ALSA Sound: -sndpcm <devicename> selects which pcm device to us, default is "default"
-		if (channels == 8)
-			pcmname = "surround71";
-		else if (channels == 6)
-			pcmname = "surround51";
-		else if (channels == 4)
-			pcmname = "surround40";
-		else
-			pcmname = "default";
-		if ((i=COM_CheckParm("-sndpcm"))!=0)
-			pcmname = com_argv[i+1];
+	i = COM_CheckParm ("-sndpcm");
+	if (i != 0 && i < com_argc - 1)
+		pcm_name = com_argv[i + 1];
 
-		Con_Printf ("ALSA: Trying PCM %s.\n", pcmname);
-
-		err = snd_pcm_open (&pcm, pcmname, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
-		if (0 > err)
-		{
-			Con_Printf ("Error: audio open error: %s\n", snd_strerror (err));
-			continue;
-		}
-
-		err = snd_pcm_hw_params_any (pcm, hw);
-		if (0 > err)
-		{
-			Con_Printf ("ALSA: error setting hw_params_any. %s\n", snd_strerror (err));
-			snd_pcm_close (pcm);
-			continue;
-		}
-
-		err = snd_pcm_hw_params_set_access (pcm, hw, SND_PCM_ACCESS_MMAP_INTERLEAVED);
-		if (0 > err)
-		{
-			Con_Printf ("ALSA: Failure to set interleaved mmap PCM access. %s\n", snd_strerror (err));
-			snd_pcm_close (pcm);
-			continue;
-		}
-
-		err = snd_pcm_hw_params_set_format (pcm, hw, width == 1 ? SND_PCM_FORMAT_U8 : SND_PCM_FORMAT_S16);
-		if (0 > err)
-		{
-			Con_Printf ("ALSA: desired bits %i not supported by driver.  %s\n", width * 8, snd_strerror (err));
-			snd_pcm_close (pcm);
-			continue;
-		}
-
-		err = snd_pcm_hw_params_set_channels (pcm, hw, channels);
-		if (0 > err)
-		{
-			Con_Printf ("ALSA: no usable channels. %s\n", snd_strerror (err));
-			snd_pcm_close (pcm);
-			continue;
-		}
-
-		err = snd_pcm_hw_params_set_rate_near (pcm, hw, &rate, 0);
-		if (0 > err)
-		{
-			Con_Printf ("ALSA: desired rate %i not supported by driver. %s\n", rate, snd_strerror (err));
-			snd_pcm_close (pcm);
-			continue;
-		}
-
-		frag_size = 64 * width * rate / 11025;
-		err = snd_pcm_hw_params_set_period_size_near (pcm, hw, &frag_size, 0);
-		if (0 > err)
-		{
-			Con_Printf ("ALSA: unable to set period size near %i. %s\n", (int) frag_size, snd_strerror (err));
-			snd_pcm_close (pcm);
-			continue;
-		}
-		err = snd_pcm_hw_params (pcm, hw);
-		if (0 > err)
-		{
-			Con_Printf ("ALSA: unable to install hw params: %s\n", snd_strerror (err));
-			snd_pcm_close (pcm);
-			continue;
-		}
-		err = snd_pcm_sw_params_current (pcm, sw);
-		if (0 > err)
-		{
-			Con_Printf ("ALSA: unable to determine current sw params. %s\n", snd_strerror (err));
-			snd_pcm_close (pcm);
-			continue;
-		}
-		err = snd_pcm_sw_params_set_start_threshold (pcm, sw, ~0U);
-		if (0 > err)
-		{
-			Con_Printf ("ALSA: unable to set playback threshold. %s\n", snd_strerror (err));
-			snd_pcm_close (pcm);
-			continue;
-		}
-		err = snd_pcm_sw_params_set_stop_threshold (pcm, sw, ~0U);
-		if (0 > err)
-		{
-			Con_Printf ("ALSA: unable to set playback stop threshold. %s\n", snd_strerror (err));
-			snd_pcm_close (pcm);
-			continue;
-		}
-		err = snd_pcm_sw_params (pcm, sw);
-		if (0 > err)
-		{
-			Con_Printf ("ALSA: unable to install sw params. %s\n", snd_strerror (err));
-			snd_pcm_close (pcm);
-			continue;
-		}
-
-		err = snd_pcm_hw_params_get_buffer_size (hw, &buffer_size);
-		if (0 > err)
-		{
-			Con_Printf ("ALSA: unable to get buffer size. %s\n", snd_strerror (err));
-			snd_pcm_close (pcm);
-			continue;
-		}
-
-		memset( (void*) shm, 0, sizeof(*shm) );
-		shm->format.channels = channels;
-		shm->format.width = width;
-		shm->format.speed = rate;
-		shm->samplepos = 0;
-		shm->sampleframes = buffer_size;
-		shm->samples = shm->sampleframes * shm->format.channels;
-		SNDDMA_GetDMAPos ();		// sets shm->buffer
-
-		return true;
+	// Open the audio device
+	Con_DPrintf ("SndSys_Init: PCM device is \"%s\"\n", pcm_name);
+	err = snd_pcm_open (&pcm_handle, pcm_name, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
+	if (err != 0)
+	{
+		Con_Printf ("SndSys_Init: can't open audio device \"%s\" (%s)\n",
+					pcm_name, snd_strerror (err));
+		return false;
 	}
+	
+	// Allocate the hardware parameters
+	err = snd_pcm_hw_params_malloc (&hw_params);
+	if (err != 0)
+	{
+		Con_Printf ("SndSys_Init: can't allocate hardware parameters (%s)\n",
+					snd_strerror (err));
+		goto init_error;
+	}
+	err = snd_pcm_hw_params_any (pcm_handle, hw_params);
+	if (err != 0)
+	{
+		Con_Printf ("SndSys_Init: can't initialize hardware parameters (%s)\n",
+					snd_strerror (err));
+		goto init_error;
+	}
+
+	// Set the access type
+	err = snd_pcm_hw_params_set_access (pcm_handle, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED);
+	if (err != 0)
+	{
+		Con_Printf ("SndSys_Init: can't set access type (%s)\n",
+					snd_strerror (err));
+		goto init_error;
+	}
+
+	// Set the sound width
+	if (requested->width == 1)
+		snd_pcm_format = SND_PCM_FORMAT_U8;
+	else
+		snd_pcm_format = SND_PCM_FORMAT_S16;
+	err = snd_pcm_hw_params_set_format (pcm_handle, hw_params, snd_pcm_format);
+	if (err != 0)
+	{
+		Con_Printf ("SndSys_Init: can't set sound width to %hu (%s)\n",
+					requested->width, snd_strerror (err));
+		goto init_error;
+	}
+
+	// Set the sound channels
+	err = snd_pcm_hw_params_set_channels (pcm_handle, hw_params, requested->channels);
+	if (err != 0)
+	{
+		Con_Printf ("SndSys_Init: can't set sound channels to %hu (%s)\n",
+					requested->channels, snd_strerror (err));
+		goto init_error;
+	}
+
+	// Set the sound speed
+	err = snd_pcm_hw_params_set_rate (pcm_handle, hw_params, requested->speed, 0);
+	if (err != 0)
+	{
+		Con_Printf ("SndSys_Init: can't set sound speed to %u (%s)\n",
+					requested->speed, snd_strerror (err));
+		goto init_error;
+	}
+
+	buffer_size = requested->speed / 5;
+	err = snd_pcm_hw_params_set_buffer_size_near (pcm_handle, hw_params, &buffer_size);
+	if (err != 0)
+	{
+		Con_Printf ("SndSys_Init: can't set sound buffer size to %lu (%s)\n",
+					buffer_size, snd_strerror (err));
+		goto init_error;
+	}
+
+	buffer_size /= NB_PERIODS;
+	err = snd_pcm_hw_params_set_period_size_near(pcm_handle, hw_params, &buffer_size, 0);
+	if (err != 0)
+	{
+		Con_Printf ("SndSys_Init: can't set sound period size to %lu (%s)\n",
+					buffer_size, snd_strerror (err));
+		goto init_error;
+	}
+
+	err = snd_pcm_hw_params (pcm_handle, hw_params);
+	if (err != 0)
+	{
+		Con_Printf ("SndSys_Init: can't set hardware parameters (%s)\n",
+					snd_strerror (err));
+		goto init_error;
+	}
+
+	snd_pcm_hw_params_free (hw_params);
+
+	snd_renderbuffer = Snd_CreateRingBuffer(requested, 0, NULL);
+	expected_delay = 0;
+	alsasoundtime = 0;
+	
+	return true;
+
+
+// It's not very clean, but it avoids a lot of duplicated code.
+init_error:
+	
+	if (hw_params != NULL)
+		snd_pcm_hw_params_free (hw_params);
+	SndSys_Shutdown ();
 	return false;
 }
 
-int SNDDMA_GetDMAPos (void)
-{
-	const snd_pcm_channel_area_t *areas;
-	snd_pcm_uframes_t offset;
-	snd_pcm_uframes_t nframes = shm->sampleframes;
-
-	if (!shm)
-		return 0;
-
-	snd_pcm_avail_update (pcm);
-	snd_pcm_mmap_begin (pcm, &areas, &offset, &nframes);
-	offset *= shm->format.channels;
-	nframes *= shm->format.channels;
-	shm->samplepos = offset;
-	shm->buffer = (unsigned char *)areas->addr;
-	return shm->samplepos;
-}
-
-void SNDDMA_Shutdown (void)
-{
-	snd_pcm_close (pcm);
-}
 
 /*
-	SNDDMA_Submit
+====================
+SndSys_Shutdown
 
-	Send sound to device if buffer isn't really the dma buffer
+Stop the sound card, delete "snd_renderbuffer" and free its other resources
+====================
 */
-void SNDDMA_Submit (void)
+void SndSys_Shutdown (void)
 {
-	int			state;
-	int			count = paintedtime - soundtime;
-	const snd_pcm_channel_area_t *areas;
-	snd_pcm_uframes_t nframes;
-	snd_pcm_uframes_t offset;
+	if (pcm_handle != NULL)
+	{
+		snd_pcm_close(pcm_handle);
+		pcm_handle = NULL;
+	}
 
-	nframes = count / shm->format.channels;
-
-	snd_pcm_avail_update (pcm);
-	snd_pcm_mmap_begin (pcm, &areas, &offset, &nframes);
-
-	state = snd_pcm_state (pcm);
-
-	switch (state) {
-		case SND_PCM_STATE_PREPARED:
-			snd_pcm_mmap_commit (pcm, offset, nframes);
-			snd_pcm_start (pcm);
-			break;
-		case SND_PCM_STATE_RUNNING:
-			snd_pcm_mmap_commit (pcm, offset, nframes);
-			break;
-		default:
-			break;
+	if (snd_renderbuffer != NULL)
+	{
+		Mem_Free(snd_renderbuffer->ring);
+		Mem_Free(snd_renderbuffer);
+		snd_renderbuffer = NULL;
 	}
 }
 
-void *S_LockBuffer(void)
+
+/*
+====================
+SndSys_Recover
+
+Try to recover from errors
+====================
+*/
+static qboolean SndSys_Recover (int err_num)
 {
-	return shm->buffer;
+	int err;
+
+	// We can only do something on underrun ("broken pipe") errors
+	if (err_num != -EPIPE)
+		return false;
+			
+	err = snd_pcm_prepare (pcm_handle);
+	if (err != 0)
+	{
+		Con_DPrintf ("SndSys_Recover: unable to recover (%s)\n",
+					 snd_strerror (err));
+
+		// TOCHECK: should we stop the playback ?
+
+		return false;
+	}
+	
+	Con_DPrint ("SndSys_Recover: recovered successfully\n");
+
+	return true;
 }
 
-void S_UnlockBuffer(void)
+
+/*
+====================
+SndSys_Write
+====================
+*/
+static snd_pcm_sframes_t SndSys_Write (const unsigned char* buffer, unsigned int nbframes)
 {
+	snd_pcm_sframes_t written;
+
+	written = snd_pcm_writei (pcm_handle, buffer, nbframes);
+	if (written < 0)
+	{
+		Con_Printf ("SndSys_Write: audio write returned %ld (%s)!\n",
+					written, snd_strerror (written));
+
+		if (SndSys_Recover (written))
+		{
+			written = snd_pcm_writei (pcm_handle, buffer, nbframes);
+			if (written < 0)
+				Con_Printf ("SndSys_Write: audio write failed again (error %ld: %s)!\n",
+							written, snd_strerror (written));
+		}
+	}
+	
+	return written;
+}
+
+
+/*
+====================
+SndSys_Submit
+
+Submit the contents of "snd_renderbuffer" to the sound card
+====================
+*/
+void SndSys_Submit (void)
+{
+	unsigned int startoffset, factor;
+ 	snd_pcm_uframes_t limit, nbframes;
+	snd_pcm_sframes_t written;
+	
+	if (pcm_handle == NULL ||
+		snd_renderbuffer->startframe == snd_renderbuffer->endframe)
+		return;
+
+	startoffset = snd_renderbuffer->startframe % snd_renderbuffer->maxframes;
+	factor = snd_renderbuffer->format.width * snd_renderbuffer->format.channels;
+	limit = snd_renderbuffer->maxframes - startoffset;
+	nbframes = snd_renderbuffer->endframe - snd_renderbuffer->startframe;
+//Con_DPrintf(">> SndSys_Submit: startframe=%u, endframe=%u (%u frames), maxframes=%u, startoffset=%u\n",
+//			snd_renderbuffer->startframe, snd_renderbuffer->endframe,
+//			nbframes, snd_renderbuffer->maxframes, startoffset);
+
+	if (nbframes > limit)
+	{
+//Con_DPrintf(">> SndSys_Submit: 2 phases-submit\n");
+		written = SndSys_Write (&snd_renderbuffer->ring[startoffset * factor], limit);
+		if (written < 0)
+			return;
+		snd_renderbuffer->startframe += written;
+		expected_delay += written;
+
+//Con_DPrintf(">> SndSys_Submit: %ld/%ld frames written\n", written, limit);
+		if ((snd_pcm_uframes_t)written != limit)
+			return;
+		
+		nbframes -= limit;
+		startoffset = 0;
+	}
+//else Con_DPrintf(">> SndSys_Submit: 1 phase-submit\n");
+
+	written = SndSys_Write (&snd_renderbuffer->ring[startoffset * factor], nbframes);
+	if (written < 0)
+		return;
+//Con_DPrintf(">> SndSys_Submit: %ld/%ld frames written\n", written, nbframes);
+	snd_renderbuffer->startframe += written;
+	expected_delay += written;
+}
+
+
+/*
+====================
+SndSys_GetSoundTime
+
+Returns the number of sample frames consumed since the sound started
+====================
+*/
+unsigned int SndSys_GetSoundTime (void)
+{
+	snd_pcm_sframes_t delay, timediff;
+	int err;
+
+	if (pcm_handle == NULL)
+		return 0;
+
+	err = snd_pcm_delay (pcm_handle, &delay);
+	if (err != 0)
+	{
+		Con_DPrintf ("SndSys_GetSoundTime: can't get playback delay (%s)\n",
+					 snd_strerror (err));
+
+		if (! SndSys_Recover (err))
+			return 0;
+
+		err = snd_pcm_delay (pcm_handle, &delay);
+		if (err != 0)
+		{
+			Con_DPrintf ("SndSys_GetSoundTime: can't get playback delay, again (%s)\n",
+						 snd_strerror (err));
+			return 0;
+		}
+	}
+
+//Con_DPrintf(">> SndSys_GetSoundTime: expected_delay=%ld, delay=%ld\n",
+//			expected_delay, delay);
+	if (expected_delay < delay)
+	{
+		Con_Printf ("SndSys_GetSoundTime: expected_delay(%ld) < delay(%ld)\n",
+					expected_delay, delay);
+		timediff = 0;
+	}
+	else
+		timediff = expected_delay - delay;
+	expected_delay = delay;
+	
+	alsasoundtime += (unsigned int)timediff;
+	
+	return alsasoundtime;
+}
+
+
+/*
+====================
+SndSys_LockRenderBuffer
+
+Get the exclusive lock on "snd_renderbuffer"
+====================
+*/
+qboolean SndSys_LockRenderBuffer (void)
+{
+	// Nothing to do
+	return true;
+}
+
+
+/*
+====================
+SndSys_UnlockRenderBuffer
+
+Release the exclusive lock on "snd_renderbuffer"
+====================
+*/
+void SndSys_UnlockRenderBuffer (void)
+{
+	// Nothing to do
 }

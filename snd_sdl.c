@@ -16,72 +16,74 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
-#include "quakedef.h"
-#include "snd_main.h"
+
+#include <math.h>
 #include <SDL.h>
 
-/*
-Info:
-SDL samples are really frames (full set of samples for all speakers)
-*/
+#include "quakedef.h"
+#include "snd_main.h"
 
-#define AUDIO_SDL_SAMPLEFRAMES		4096
-#define AUDIO_LOCALFACTOR		4
 
-typedef struct AudioState_s
+static unsigned int sdlaudiotime = 0;
+
+
+// Note: SDL calls SDL_LockAudio() right before this function, so no need to lock the audio data here
+static void Buffer_Callback (void *userdata, Uint8 *stream, int len)
 {
-	int		width;
-    int		size;
-	int		pos;
-	void	*buffer;
-} AudioState;
+	unsigned int factor, RequestedFrames, MaxFrames, FrameCount;
+	unsigned int StartOffset, EndOffset;
 
+	factor = snd_renderbuffer->format.channels * snd_renderbuffer->format.width;
+	if ((unsigned int)len % factor != 0)
+		Sys_Error("SDL sound: invalid buffer length passed to Buffer_Callback (%d bytes)\n", len);
 
-static AudioState	 as;
+	RequestedFrames = (unsigned int)len / factor;
+	
+	// Transfert up to a chunk of samples from snd_renderbuffer to stream
+	MaxFrames = snd_renderbuffer->endframe - snd_renderbuffer->startframe;
+	if (MaxFrames > RequestedFrames)
+		FrameCount = RequestedFrames;
+	else
+		FrameCount = MaxFrames;
+	StartOffset = snd_renderbuffer->startframe % snd_renderbuffer->maxframes;
+	EndOffset = (snd_renderbuffer->startframe + FrameCount) % snd_renderbuffer->maxframes;
+	if (StartOffset > EndOffset)  // if the buffer wraps
+	{
+		unsigned int PartialLength1, PartialLength2;
 
-static void Buffer_Callback(void *userdata, Uint8 *stream, int len);
+		PartialLength1 = (snd_renderbuffer->maxframes - StartOffset) * factor;
+		memcpy(stream, &snd_renderbuffer->ring[StartOffset * factor], PartialLength1);
+		
+		PartialLength2 = FrameCount * factor - PartialLength1;
+		memcpy(&stream[PartialLength1], &snd_renderbuffer->ring[0], PartialLength2);
+	}
+	else
+		memcpy(stream, &snd_renderbuffer->ring[StartOffset * factor], FrameCount * factor);
 
-/*
-==================
-S_BlockSound
-==================
-*/
-void S_BlockSound( void )
-{
-	snd_blocked++;
+	snd_renderbuffer->startframe += FrameCount;
 
-	if( snd_blocked == 1 )
-		SDL_PauseAudio( true );
+	if (FrameCount < RequestedFrames)
+		Con_DPrintf("SDL sound: %u sample frames missing\n", RequestedFrames - FrameCount);
+
+	sdlaudiotime += RequestedFrames;
 }
 
 
 /*
-==================
-S_UnblockSound
-==================
+====================
+SndSys_Init
+
+Create "snd_renderbuffer" with the proper sound format if the call is successful
+May return a suggested format if the requested format isn't available
+====================
 */
-void S_UnblockSound( void )
+qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 {
-	snd_blocked--;
-	if( snd_blocked == 0 )
-		SDL_PauseAudio( false );
-}
-
-
-/*
-==================
-SNDDMA_Init
-
-Try to find a sound device to mix for.
-Returns false if nothing is found.
-==================
-*/
-
-qboolean SNDDMA_Init(void)
-{
+	unsigned int buffersize;
 	SDL_AudioSpec wantspec;
-	int i;
-	int channels;
+	SDL_AudioSpec obtainspec;
+
+	Con_Print ("SndSys_Init: using the SDL module\n");
 
 	// Init the SDL Audio subsystem
 	if( SDL_InitSubSystem( SDL_INIT_AUDIO ) ) {
@@ -89,138 +91,132 @@ qboolean SNDDMA_Init(void)
 		return false;
 	}
 
-	for (channels = 8;channels >= 1;channels--)
-	{
-		if ((channels & 1) && channels != 1)
-			continue;
-// COMMANDLINEOPTION: SDL Sound: -sndmono sets sound output to mono
-		if ((i=COM_CheckParm("-sndmono")) != 0)
-			if (channels != 1)
-				continue;
-// COMMANDLINEOPTION: SDL Sound: -sndstereo sets sound output to stereo
-		if ((i=COM_CheckParm("-sndstereo")) != 0)
-			if (channels != 2)
-				continue;
-// COMMANDLINEOPTION: SDL Sound: -sndquad sets sound output to 4 channel surround
-		if ((i=COM_CheckParm("-sndquad")) != 0)
-			if (channels != 4)
-				continue;
-		// Init the SDL Audio subsystem
-		wantspec.callback = Buffer_Callback;
-		wantspec.userdata = NULL;
-		wantspec.freq = 44100;
-		// COMMANDLINEOPTION: SDL Sound: -sndspeed <hz> chooses sound output rate (try values such as 44100, 48000, 22050, 11025 (quake), 24000, 32000, 96000, 192000, etc)
-		i = COM_CheckParm( "-sndspeed" );
-		if( i && i != ( com_argc - 1 ) )
-			wantspec.freq = atoi( com_argv[ i+1 ] );
-		wantspec.format = AUDIO_S16SYS;
-		wantspec.channels = channels;
-		wantspec.samples = AUDIO_SDL_SAMPLEFRAMES;
+	buffersize = (unsigned int)ceil((double)requested->speed / 20.0);
 
-		if( SDL_OpenAudio( &wantspec, NULL ) )
-		{
-			Con_Printf("%s\n", SDL_GetError());
-			continue;
-		}
+	// Init the SDL Audio subsystem
+	wantspec.callback = Buffer_Callback;
+	wantspec.userdata = NULL;
+	wantspec.freq = requested->speed;
+	wantspec.format = ((requested->width == 1) ? AUDIO_U8 : AUDIO_S16SYS);
+	wantspec.channels = requested->channels;
+	wantspec.samples = CeilPowerOf2(buffersize);  // needs to be a power of 2 on some platforms.
 
-		// Init the shm structure
-		memset( (void*) shm, 0, sizeof(*shm) );
-		shm->format.channels = wantspec.channels;
-		shm->format.width = 2;
-		shm->format.speed = wantspec.freq;
+	Con_DPrintf("Wanted audio Specification:\n"
+				"\tChannels  : %i\n"
+				"\tFormat    : 0x%X\n"
+				"\tFrequency : %i\n"
+				"\tSamples   : %i\n",
+				wantspec.channels, wantspec.format, wantspec.freq, wantspec.samples);
 
-		shm->samplepos = 0;
-		shm->sampleframes = wantspec.samples * AUDIO_LOCALFACTOR;
-		shm->samples = shm->sampleframes * shm->format.channels;
-		shm->bufferlength = shm->samples * shm->format.width;
-		shm->buffer = (unsigned char *)Mem_Alloc( snd_mempool, shm->bufferlength );
-
-		// Init the as structure
-		as.buffer = shm->buffer;
-		as.width = shm->format.width;
-		as.pos = 0;
-		as.size = shm->bufferlength;
-		break;
-	}
-	if (channels < 1)
-	{
-		Con_Print( "Failed to open the audio device!\n" );
-		Con_DPrintf(
-			"Audio Specification:\n"
-			"\tChannels  : %i\n"
-			"\tFormat    : %x\n"
-			"\tFrequency : %i\n"
-			"\tSamples   : %i\n",
-			wantspec.channels, wantspec.format, wantspec.freq, wantspec.samples );
+	if( SDL_OpenAudio( &wantspec, &obtainspec ) )
+	{       
+		Con_Printf( "Failed to open the audio device! (%s)\n", SDL_GetError() );
 		return false;
 	}
 
-	SDL_PauseAudio( false );
+	Con_DPrintf("Obtained audio specification:\n"
+				"\tChannels  : %i\n"
+				"\tFormat    : 0x%X\n"
+				"\tFrequency : %i\n"
+				"\tSamples   : %i\n",
+				obtainspec.channels, obtainspec.format, obtainspec.freq, obtainspec.samples);
 
+	// If we haven't obtained what we wanted
+	if (wantspec.freq != obtainspec.freq ||
+		wantspec.format != obtainspec.format ||
+		wantspec.channels != obtainspec.channels)
+	{
+		SDL_CloseAudio();
+
+		// Pass the obtained format as a suggested format
+		if (suggested != NULL)
+		{
+			suggested->speed = obtainspec.freq;
+			// FIXME: check the format more carefully. There are plenty of unsupported cases
+			suggested->width = ((obtainspec.format == AUDIO_U8) ? 1 : 2);
+			suggested->channels = obtainspec.channels;
+		}
+
+		return false;
+	}
+
+	snd_renderbuffer = Snd_CreateRingBuffer(requested, 0, NULL);
+
+	sdlaudiotime = 0;
+	SDL_PauseAudio( false );
+	
 	return true;
 }
 
-/*
-==============
-SNDDMA_GetDMAPos
-
-return the current sample position (in mono samples read)
-inside the recirculating dma buffer, so the mixing code will know
-how many sample are required to fill it up.
-===============
-*/
-int SNDDMA_GetDMAPos(void)
-{
-	shm->samplepos = (as.pos / as.width) % shm->samples;
-	return shm->samplepos;
-}
 
 /*
-==============
-SNDDMA_Submit
+====================
+SndSys_Shutdown
 
-Send sound to device if buffer isn't really the dma buffer
-===============
+Stop the sound card, delete "snd_renderbuffer" and free its other resources
+====================
 */
-void SNDDMA_Submit(void)
-{
-
-}
-
-/*
-==============
-SNDDMA_Shutdown
-
-Reset the sound device for exiting
-===============
-*/
-void SNDDMA_Shutdown(void)
+void SndSys_Shutdown(void)
 {
 	SDL_CloseAudio();
-	Mem_Free( as.buffer );
+
+	if (snd_renderbuffer != NULL)
+	{
+		Mem_Free(snd_renderbuffer->ring);
+		Mem_Free(snd_renderbuffer);
+		snd_renderbuffer = NULL;
+	}
 }
 
-void *S_LockBuffer(void)
+
+/*
+====================
+SndSys_Submit
+
+Submit the contents of "snd_renderbuffer" to the sound card
+====================
+*/
+void SndSys_Submit (void)
+{
+	// Nothing to do here (this sound module is callback-based)
+}
+
+
+/*
+====================
+SndSys_GetSoundTime
+
+Returns the number of sample frames consumed since the sound started
+====================
+*/
+unsigned int SndSys_GetSoundTime (void)
+{
+	return sdlaudiotime;
+}
+
+
+/*
+====================
+SndSys_LockRenderBuffer
+
+Get the exclusive lock on "snd_renderbuffer"
+====================
+*/
+qboolean SndSys_LockRenderBuffer (void)
 {
 	SDL_LockAudio();
-	return shm->buffer;
+	return true;
 }
 
-void S_UnlockBuffer(void)
+
+/*
+====================
+SndSys_UnlockRenderBuffer
+
+Release the exclusive lock on "snd_renderbuffer"
+====================
+*/
+void SndSys_UnlockRenderBuffer (void)
 {
 	SDL_UnlockAudio();
 }
-
-static void Buffer_Callback(void *userdata, Uint8 *stream, int len)
-{
-	if( len > as.size )
-		len = as.size;
-	if( len > as.size - as.pos ) {
-		memcpy( stream, (Uint8*) as.buffer + as.pos, as.size - as.pos );
-		len -= as.size - as.pos;
-		as.pos = 0;
-	}
-	memcpy( stream, (Uint8*) as.buffer + as.pos, len );
-	as.pos = (as.pos + len) % as.size;
-}
-

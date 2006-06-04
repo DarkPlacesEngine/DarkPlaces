@@ -21,13 +21,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <sys/param.h>
 #include <sys/audioio.h>
 #ifndef SUNOS
-#include <sys/endian.h>
+#	include <sys/endian.h>
 #endif
 #include <sys/ioctl.h>
 
 #include <fcntl.h>
 #ifndef SUNOS
-#include <paths.h>
+#	include <paths.h>
 #endif
 #include <unistd.h>
 
@@ -35,34 +35,30 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "snd_main.h"
 
 
-static const int tryrates[] = {44100, 22050, 11025, 8000};
-
 static int audio_fd = -1;
 
-// TODO: allocate them in SNDDMA_Init, with a size depending on
-// the sound format (enough for 0.5 sec of sound for instance)
-#define SND_BUFF_SIZE 65536
-static unsigned char dma_buffer [SND_BUFF_SIZE];
-static unsigned char writebuf [SND_BUFF_SIZE];
 
+/*
+====================
+SndSys_Init
 
-qboolean SNDDMA_Init (void)
+Create "snd_renderbuffer" with the proper sound format if the call is successful
+May return a suggested format if the requested format isn't available
+====================
+*/
+qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 {
 	unsigned int i;
 	const char *snddev;
 	audio_info_t info;
 
-	memset ((void*)shm, 0, sizeof (*shm));
-
 	// Open the audio device
 #ifdef _PATH_SOUND
 	snddev = _PATH_SOUND;
-#else
-#ifndef SUNOS
-	snddev = "/dev/sound";
-#else
+#elif defined(SUNOS)
 	snddev = "/dev/audio";
-#endif
+#else
+	snddev = "/dev/sound";
 #endif
 	audio_fd = open (snddev, O_WRONLY | O_NDELAY | O_NONBLOCK);
 	if (audio_fd < 0)
@@ -71,59 +67,129 @@ qboolean SNDDMA_Init (void)
 		return false;
 	}
 
-	// Look for an appropriate sound format
-	// TODO: we should also test mono/stereo and bits
-	// TODO: support "-sndspeed", "-sndbits", "-sndmono" and "-sndstereo"
-	shm->format.channels = 2;
-	shm->format.width = 2;
-	for (i = 0; i < sizeof (tryrates) / sizeof (tryrates[0]); i++)
-	{
-		shm->format.speed = tryrates[i];
-
-		AUDIO_INITINFO (&info);
-		info.play.sample_rate = shm->format.speed;
-		info.play.channels = shm->format.channels;
-		info.play.precision = shm->format.width * 8;
-// We only handle sound cards of the same endianess than the CPU
-#if BYTE_ORDER == BIG_ENDIAN
-		info.play.encoding = AUDIO_ENCODING_SLINEAR_BE;
+	AUDIO_INITINFO (&info);
+#ifdef AUMODE_PLAY	// NetBSD / OpenBSD 
+	info.mode = AUMODE_PLAY;
+#endif
+	info.play.sample_rate = requested->speed;
+	info.play.channels = requested->channels;
+	info.play.precision = requested->width * 8;
+	if (requested->width == 1)
+#ifdef SUNOS
+		info.play.encoding = AUDIO_ENCODING_LINEAR8;
 #else
-#ifndef SUNOS
-		info.play.encoding = AUDIO_ENCODING_SLINEAR_LE;
-#else
+		info.play.encoding = AUDIO_ENCODING_ULINEAR;
+#endif
+	else
+#ifdef SUNOS
 		info.play.encoding = AUDIO_ENCODING_LINEAR;
+#else
+#	if BYTE_ORDER == BIG_ENDIAN
+		info.play.encoding = AUDIO_ENCODING_SLINEAR_BE;
+#	else
+		info.play.encoding = AUDIO_ENCODING_SLINEAR_LE;
+#	endif
 #endif
-#endif
-		if (ioctl (audio_fd, AUDIO_SETINFO, &info) == 0)
-			break;
-	}
-	if (i == sizeof (tryrates) / sizeof (tryrates[0]))
-	{
-		Con_Print("Can't select an appropriate sound output format\n");
-		close (audio_fd);
-		return false;
-	}
 
-	// Print some information
-	Con_Printf("%d bit %s sound initialized (rate: %dHz)\n",
-				info.play.precision,
-				(info.play.channels == 2) ? "stereo" : "mono",
-				info.play.sample_rate);
+	if (ioctl (audio_fd, AUDIO_SETINFO, &info) == 0)
+		break;
 
-	shm->sampleframes = sizeof (dma_buffer) / shm->format.width / shm->format.channels;
-	shm->samples = shm->sampleframes * shm->format.channels;
-	shm->samplepos = 0;
-	shm->buffer = dma_buffer;
+	// TODO: check the parameters with AUDIO_GETINFO
+	// TODO: check AUDIO_ENCODINGFLAG_EMULATED with AUDIO_GETENC
 
+	snd_renderbuffer = Snd_CreateRingBuffer(requested, 0, NULL);
 	return true;
 }
 
-int SNDDMA_GetDMAPos (void)
+
+/*
+====================
+SndSys_Shutdown
+
+Stop the sound card, delete "snd_renderbuffer" and free its other resources
+====================
+*/
+void SndSys_Shutdown (void)
+{
+	if (audio_fd >= 0)
+	{
+		close(audio_fd);
+		audio_fd = -1;
+	}
+
+	if (snd_renderbuffer != NULL)
+	{
+		Mem_Free(snd_renderbuffer->ring);
+		Mem_Free(snd_renderbuffer);
+		snd_renderbuffer = NULL;
+	}
+}
+
+
+/*
+====================
+SndSys_Submit
+
+Submit the contents of "snd_renderbuffer" to the sound card
+====================
+*/
+void SndSys_Submit (void)
+{
+	unsigned int startoffset, factor, limit, nbframes;
+	int written;
+	
+	if (audio_fd < 0 ||
+		snd_renderbuffer->startframe == snd_renderbuffer->endframe)
+		return;
+
+	startoffset = snd_renderbuffer->startframe % snd_renderbuffer->maxframes;
+	factor = snd_renderbuffer->format.width * snd_renderbuffer->format.channels;
+	limit = snd_renderbuffer->maxframes - startoffset;
+	nbframes = snd_renderbuffer->endframe - snd_renderbuffer->startframe;
+	if (nbframes > limit)
+	{
+		written = write (audio_fd, &snd_renderbuffer->ring[startoffset * factor], limit * factor);
+		if (written < 0)
+		{
+			Con_Printf("SndSys_Submit: audio write returned %d!\n", written);
+			return;
+		}
+
+		if (written % factor != 0)
+			Sys_Error("SndSys_Submit: nb of bytes written (%d) isn't aligned to a frame sample!\n", written);
+
+		snd_renderbuffer->startframe += written / factor;
+
+		if ((unsigned int)written < nbframes * factor)
+		{
+			Con_Printf("SndSys_Submit: audio can't keep up! (%d < %u)\n", written, nbframes * factor);
+			return;
+		}
+		
+		nbframes -= limit;
+		startoffset = 0;
+	}
+
+	written = write (audio_fd, &snd_renderbuffer->ring[startoffset * factor], nbframes * factor);
+	if (written < 0)
+	{
+		Con_Printf("SndSys_Submit: audio write returned %d!\n", written);
+		return;
+	}
+	snd_renderbuffer->startframe += written / factor;
+}
+
+
+/*
+====================
+SndSys_GetSoundTime
+
+Returns the number of sample frames consumed since the sound started
+====================
+*/
+unsigned int SndSys_GetSoundTime (void)
 {
 	audio_info_t info;
-
-	if (!shm)
-		return 0;
 
 	if (ioctl (audio_fd, AUDIO_GETINFO, &info) < 0)
 	{
@@ -132,70 +198,32 @@ int SNDDMA_GetDMAPos (void)
 		return 0;
 	}
 
-	return ((info.play.samples * shm->format.channels) % shm->samples);
+	return info.play.samples;
 }
 
-void SNDDMA_Shutdown (void)
-{
-	close (audio_fd);
-	audio_fd = -1;
-}
 
 /*
-==============
-SNDDMA_Submit
+====================
+SndSys_LockRenderBuffer
 
-Send sound to device if buffer isn't really the dma buffer
-===============
+Get the exclusive lock on "snd_renderbuffer"
+====================
 */
-void SNDDMA_Submit (void)
+qboolean SndSys_LockRenderBuffer (void)
 {
-	int bsize;
-	int bytes, b;
-	static int wbufp = 0;
-	unsigned char *p;
-	int idx;
-	int stop = paintedtime;
-
-	if (!shm)
-		return;
-
-	if (paintedtime < wbufp)
-		wbufp = 0; // reset
-
-	bsize = shm->format.channels * shm->format.width;
-	bytes = (paintedtime - wbufp) * bsize;
-
-	if (!bytes)
-		return;
-
-	if (bytes > sizeof (writebuf))
-	{
-		bytes = sizeof (writebuf);
-		stop = wbufp + bytes / bsize;
-	}
-
-	// Transfert the sound data from the circular dma_buffer to writebuf
-	// TODO: using 2 memcpys instead of this loop should be faster
-	p = writebuf;
-	idx = (wbufp*bsize) & (sizeof (dma_buffer) - 1);
-	for (b = bytes; b; b--)
-	{
-		*p++ = dma_buffer[idx];
-		idx = (idx + 1) & (sizeof (dma_buffer) - 1);
-	}
-
-	if (write (audio_fd, writebuf, bytes) < bytes)
-		Con_Print("audio can't keep up!\n");
-
-	wbufp = stop;
+	// Nothing to do
+	return true;
 }
 
-void *S_LockBuffer (void)
-{
-	return shm->buffer;
-}
 
-void S_UnlockBuffer (void)
+/*
+====================
+SndSys_UnlockRenderBuffer
+
+Release the exclusive lock on "snd_renderbuffer"
+====================
+*/
+void SndSys_UnlockRenderBuffer (void)
 {
+	// Nothing to do
 }

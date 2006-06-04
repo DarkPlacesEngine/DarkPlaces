@@ -256,6 +256,24 @@ void RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point, 
 
 /*-----------------------------------------------------------------*/
 
+// returns the smallest integer greater than or equal to "value", or 0 if "value" is too big
+unsigned int CeilPowerOf2(unsigned int value)
+{
+	unsigned int ceilvalue;
+
+	if (value > (1U << (sizeof(int) * 8 - 1)))
+		return 0;
+
+	ceilvalue = 1;
+	while (ceilvalue < value)
+		ceilvalue <<= 1;
+
+	return ceilvalue;
+}
+
+
+/*-----------------------------------------------------------------*/
+
 
 void PlaneClassify(mplane_t *p)
 {

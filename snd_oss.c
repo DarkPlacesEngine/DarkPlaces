@@ -20,262 +20,291 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // OSS module, used by Linux and FreeBSD
 
-#include <unistd.h>
+
 #include <fcntl.h>
-#include <stdlib.h>
-#include <sys/types.h>
 #include <sys/ioctl.h>
-#include <sys/mman.h>
-#include <sys/shm.h>
-#include <sys/wait.h>
 #include <sys/soundcard.h>
-#include <stdio.h>
+#include <unistd.h>
+
 #include "quakedef.h"
 #include "snd_main.h"
 
-int audio_fd;
 
-static int tryrates[] = {44100, 48000, 22050, 24000, 11025, 16000, 8000};
+#define NB_FRAGMENTS 4
 
-qboolean SNDDMA_Init(void)
+static int audio_fd = -1;
+static int old_osstime = 0;
+static unsigned int osssoundtime;
+
+
+/*
+====================
+SndSys_Init
+
+Create "snd_renderbuffer" with the proper sound format if the call is successful
+May return a suggested format if the requested format isn't available
+====================
+*/
+qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 {
-	int rc;
-	int fmt;
-	int tmp;
-	int i;
-	char *s;
-	struct audio_buf_info info;
-	int caps;
-	int format16bit;
+	int flags, ioctl_param, prev_value;
+	unsigned int fragmentsize;
 
-#if BYTE_ORDER == BIG_ENDIAN
-	format16bit = AFMT_S16_BE;
-#else
-	format16bit = AFMT_S16_LE;
-#endif
+	Con_DPrint("SndSys_Init: using the OSS module\n");
 
-	// open /dev/dsp, confirm capability to mmap, and get size of dma buffer
-    audio_fd = open("/dev/dsp", O_RDWR);  // we have to open it O_RDWR for mmap
+	// Check the requested sound format
+	if (requested->width < 1 || requested->width > 2)
+	{
+		Con_Printf("SndSys_Init: invalid sound width (%hu)\n",
+					requested->width);
+
+		if (suggested != NULL)
+		{
+			memcpy(suggested, requested, sizeof(suggested));
+
+			if (requested->width < 1)
+				suggested->width = 1;
+			else
+				suggested->width = 2;
+		}
+		
+		return false;
+    }
+
+	// Open /dev/dsp
+    audio_fd = open("/dev/dsp", O_WRONLY);
 	if (audio_fd < 0)
 	{
 		perror("/dev/dsp");
-		Con_Print("Could not open /dev/dsp\n");
-		return 0;
+		Con_Print("SndSys_Init: could not open /dev/dsp\n");
+		return false;
 	}
-
-	if (ioctl(audio_fd, SNDCTL_DSP_RESET, 0) < 0)
+	
+	// Use non-blocking IOs if possible
+	flags = fcntl(audio_fd, F_GETFL);
+	if (flags != -1)
 	{
-		perror("/dev/dsp");
-		Con_Print("Could not reset /dev/dsp\n");
-		close(audio_fd);
-		return 0;
-	}
-
-	if (ioctl(audio_fd, SNDCTL_DSP_GETCAPS, &caps)==-1)
-	{
-		perror("/dev/dsp");
-		Con_Print("Sound driver too old\n");
-		close(audio_fd);
-		return 0;
-	}
-
-	if (!(caps & DSP_CAP_TRIGGER) || !(caps & DSP_CAP_MMAP))
-	{
-		Con_Print("Sorry but your soundcard can't do this\n");
-		close(audio_fd);
-		return 0;
-	}
-
-	if (ioctl(audio_fd, SNDCTL_DSP_GETOSPACE, &info)==-1)
-	{
-		perror("GETOSPACE");
-		Con_Print("Um, can't do GETOSPACE?\n");
-		close(audio_fd);
-		return 0;
-	}
-
-	// set sample bits & speed
-	s = getenv("QUAKE_SOUND_SAMPLEBITS");
-	if (s)
-		shm->format.width = atoi(s) / 8;
-// COMMANDLINEOPTION: Linux OSS Sound: -sndbits <bits> chooses 8 bit or 16 bit sound output
-	else if ((i = COM_CheckParm("-sndbits")) != 0)
-		shm->format.width = atoi(com_argv[i+1]) / 8;
-
-	if (shm->format.width != 2 && shm->format.width != 1)
-	{
-		ioctl(audio_fd, SNDCTL_DSP_GETFMTS, &fmt);
-		if (fmt & format16bit)
-			shm->format.width = 2;
-		else if (fmt & AFMT_U8)
-			shm->format.width = 1;
-    }
-
-	s = getenv("QUAKE_SOUND_SPEED");
-	if (s)
-		shm->format.speed = atoi(s);
-// COMMANDLINEOPTION: Linux OSS Sound: -sndspeed <hz> chooses 44100 hz, 22100 hz, or 11025 hz sound output rate
-	else if ((i = COM_CheckParm("-sndspeed")) != 0)
-		shm->format.speed = atoi(com_argv[i+1]);
-	else
-	{
-		for (i = 0;i < (int) sizeof(tryrates) / (int) sizeof(tryrates[0]);i++)
-			if (!ioctl(audio_fd, SNDCTL_DSP_SPEED, &tryrates[i]))
-				break;
-
-		shm->format.speed = tryrates[i];
-    }
-
-	s = getenv("QUAKE_SOUND_CHANNELS");
-	if (s)
-		shm->format.channels = atoi(s);
-// COMMANDLINEOPTION: Linux OSS Sound: -sndmono sets sound output to mono
-	else if ((i = COM_CheckParm("-sndmono")) != 0)
-		shm->format.channels = 1;
-// COMMANDLINEOPTION: Linux OSS Sound: -sndstereo sets sound output to stereo
-	else // if ((i = COM_CheckParm("-sndstereo")) != 0)
-		shm->format.channels = 2;
-
-	tmp = (shm->format.channels == 2);
-	rc = ioctl(audio_fd, SNDCTL_DSP_STEREO, &tmp);
-	if (rc < 0)
-	{
-		perror("/dev/dsp");
-		Con_Printf("Could not set /dev/dsp to stereo=%d\n", tmp);
-		close(audio_fd);
-		return 0;
-	}
-
-	rc = ioctl(audio_fd, SNDCTL_DSP_SPEED, &shm->format.speed);
-	if (rc < 0)
-	{
-		perror("/dev/dsp");
-		Con_Printf("Could not set /dev/dsp speed to %d\n", shm->format.speed);
-		close(audio_fd);
-		return 0;
-	}
-
-	if (shm->format.width == 2)
-	{
-		rc = format16bit;
-		rc = ioctl(audio_fd, SNDCTL_DSP_SETFMT, &rc);
-		if (rc < 0)
-		{
-			perror("/dev/dsp");
-			Con_Print("Could not support 16-bit data.  Try 8-bit.\n");
-			close(audio_fd);
-			return 0;
-		}
-	}
-	else if (shm->format.width == 1)
-	{
-		rc = AFMT_U8;
-		rc = ioctl(audio_fd, SNDCTL_DSP_SETFMT, &rc);
-		if (rc < 0)
-		{
-			perror("/dev/dsp");
-			Con_Print("Could not support 8-bit data.\n");
-			close(audio_fd);
-			return 0;
-		}
+		if (fcntl(audio_fd, F_SETFL, flags | O_NONBLOCK) == -1)
+			Con_Print("SndSys_Init : fcntl(F_SETFL, O_NONBLOCK) failed!\n");
 	}
 	else
+		Con_Print("SndSys_Init: fcntl(F_GETFL) failed!\n");
+
+	// Set the fragment size (up to "NB_FRAGMENTS" fragments of "fragmentsize" bytes)
+	fragmentsize = requested->speed * requested->channels * requested->width / 5;
+	fragmentsize = (unsigned int)ceilf((float)fragmentsize / (float)NB_FRAGMENTS);
+	fragmentsize = CeilPowerOf2(fragmentsize);
+	ioctl_param = (NB_FRAGMENTS << 16) | log2i(fragmentsize);
+	if (ioctl(audio_fd, SNDCTL_DSP_SETFRAGMENT, &ioctl_param) == -1)
 	{
-		perror("/dev/dsp");
-		Con_Printf("%d-bit sound not supported.\n", shm->format.width * 8);
-		close(audio_fd);
-		return 0;
+		Con_Print ("SndSys_Init: could not set the fragment size\n");
+		SndSys_Shutdown ();
+		return false;
 	}
 
-	shm->sampleframes = info.fragstotal * info.fragsize / shm->format.width / shm->format.channels;
-	shm->samples = shm->sampleframes * shm->format.channels;
-
-	// memory map the dma buffer
-	shm->bufferlength = info.fragstotal * info.fragsize;
-	shm->buffer = (unsigned char *) mmap(NULL, shm->bufferlength, PROT_WRITE, MAP_FILE|MAP_SHARED, audio_fd, 0);
-	if (!shm->buffer || shm->buffer == (unsigned char *)-1)
+	// Set the sound width
+	if (requested->width == 1)
+		ioctl_param = AFMT_U8;
+	else
+		ioctl_param = AFMT_S16_NE;
+	prev_value = ioctl_param;
+	if (ioctl(audio_fd, SNDCTL_DSP_SETFMT, &ioctl_param) == -1 ||
+		ioctl_param != prev_value)
 	{
-		perror("/dev/dsp");
-		Con_Print("Could not mmap /dev/dsp\n");
-		close(audio_fd);
-		return 0;
+		if (ioctl_param != prev_value && suggested != NULL)
+		{
+			memcpy(suggested, requested, sizeof(suggested));
+
+			if (ioctl_param == AFMT_S16_NE)
+				suggested->width = 2;
+			else
+				suggested->width = 1;
+		}
+
+		Con_Printf("SndSys_Init: could not set the sound width to %hu\n",
+					requested->width);
+		SndSys_Shutdown();
+		return false;
 	}
 
-	// toggle the trigger & start her up
-	tmp = 0;
-	rc  = ioctl(audio_fd, SNDCTL_DSP_SETTRIGGER, &tmp);
-	if (rc < 0)
+	// Set the sound channels
+	ioctl_param = requested->channels;
+	if (ioctl(audio_fd, SNDCTL_DSP_CHANNELS, &ioctl_param) == -1 ||
+		ioctl_param != requested->channels)
 	{
-		perror("/dev/dsp");
-		Con_Print("Could not toggle.\n");
-		close(audio_fd);
-		return 0;
-	}
-	tmp = PCM_ENABLE_OUTPUT;
-	rc = ioctl(audio_fd, SNDCTL_DSP_SETTRIGGER, &tmp);
-	if (rc < 0)
-	{
-		perror("/dev/dsp");
-		Con_Print("Could not toggle.\n");
-		close(audio_fd);
-		return 0;
+		if (ioctl_param != requested->channels && suggested != NULL)
+		{
+			memcpy(suggested, requested, sizeof(suggested));
+			suggested->channels = ioctl_param;
+		}
+
+		Con_Printf("SndSys_Init: could not set the number of channels to %hu\n",
+					requested->channels);
+		SndSys_Shutdown();
+		return false;
 	}
 
-	shm->samplepos = 0;
+	// Set the sound speed
+	ioctl_param = requested->speed;
+	if (ioctl(audio_fd, SNDCTL_DSP_SPEED, &ioctl_param) == -1 ||
+		(unsigned int)ioctl_param != requested->speed)
+	{
+		if ((unsigned int)ioctl_param != requested->speed && suggested != NULL)
+		{
+			memcpy(suggested, requested, sizeof(suggested));
+			suggested->speed = ioctl_param;
+		}
 
-	return 1;
+		Con_Printf("SndSys_Init: could not set the sound speed to %u\n",
+					requested->speed);
+		SndSys_Shutdown();
+		return false;
+	}
+	
+	old_osstime = 0;
+	osssoundtime = 0;
+	snd_renderbuffer = Snd_CreateRingBuffer(requested, 0, NULL);
+	return true;
 }
 
-int SNDDMA_GetDMAPos(void)
-{
-
-	struct count_info count;
-
-	if (!shm) return 0;
-
-	if (ioctl(audio_fd, SNDCTL_DSP_GETOPTR, &count)==-1)
-	{
-		perror("/dev/dsp");
-		Con_Print("Uh, sound dead.\n");
-		S_Shutdown();
-		return 0;
-	}
-	shm->samplepos = count.ptr / shm->format.width;
-
-	return shm->samplepos;
-}
-
-void SNDDMA_Shutdown(void)
-{
-	int tmp;
-	// unmap the memory
-	munmap(shm->buffer, shm->bufferlength);
-	// stop the sound
-	tmp = 0;
-	ioctl(audio_fd, SNDCTL_DSP_SETTRIGGER, &tmp);
-	ioctl(audio_fd, SNDCTL_DSP_RESET, 0);
-	// close the device
-	close(audio_fd);
-	audio_fd = -1;
-}
 
 /*
-==============
-SNDDMA_Submit
+====================
+SndSys_Shutdown
 
-Send sound to device if buffer isn't really the dma buffer
-===============
+Stop the sound card, delete "snd_renderbuffer" and free its other resources
+====================
 */
-void SNDDMA_Submit(void)
+void SndSys_Shutdown (void)
 {
+	// Stop the sound and close the device
+	if (audio_fd >= 0)
+	{
+		ioctl(audio_fd, SNDCTL_DSP_RESET, 0);
+		close(audio_fd);
+		audio_fd = -1;
+	}
+
+	if (snd_renderbuffer != NULL)
+	{
+		Mem_Free(snd_renderbuffer->ring);
+		Mem_Free(snd_renderbuffer);
+		snd_renderbuffer = NULL;
+	}
 }
 
-void *S_LockBuffer(void)
+
+/*
+====================
+SndSys_Submit
+
+Submit the contents of "snd_renderbuffer" to the sound card
+====================
+*/
+void SndSys_Submit (void)
 {
-	return shm->buffer;
+	unsigned int startoffset, factor, limit, nbframes;
+	int written;
+	
+	if (audio_fd < 0 ||
+		snd_renderbuffer->startframe == snd_renderbuffer->endframe)
+		return;
+
+	startoffset = snd_renderbuffer->startframe % snd_renderbuffer->maxframes;
+	factor = snd_renderbuffer->format.width * snd_renderbuffer->format.channels;
+	limit = snd_renderbuffer->maxframes - startoffset;
+	nbframes = snd_renderbuffer->endframe - snd_renderbuffer->startframe;
+	if (nbframes > limit)
+	{
+		written = write (audio_fd, &snd_renderbuffer->ring[startoffset * factor], limit * factor);
+		if (written < 0)
+		{
+			Con_Printf("SndSys_Submit: audio write returned %d!\n", written);
+			return;
+		}
+
+		if (written % factor != 0)
+			Sys_Error("SndSys_Submit: nb of bytes written (%d) isn't aligned to a frame sample!\n", written);
+
+		snd_renderbuffer->startframe += written / factor;
+
+		if ((unsigned int)written < nbframes * factor)
+		{
+			Con_Printf("SndSys_Submit: audio can't keep up! (%d < %u)\n", written, nbframes * factor);
+			return;
+		}
+		
+		nbframes -= limit;
+		startoffset = 0;
+	}
+
+	written = write (audio_fd, &snd_renderbuffer->ring[startoffset * factor], nbframes * factor);
+	if (written < 0)
+	{
+		Con_Printf("SndSys_Submit: audio write returned %d!\n", written);
+		return;
+	}
+	snd_renderbuffer->startframe += written / factor;
 }
 
-void S_UnlockBuffer(void)
+
+/*
+====================
+SndSys_GetSoundTime
+
+Returns the number of sample frames consumed since the sound started
+====================
+*/
+unsigned int SndSys_GetSoundTime (void)
 {
+	struct count_info count;
+	int new_osstime;
+	unsigned int timediff;
+
+	// TODO: use SNDCTL_DSP_GETODELAY instead
+	if (ioctl (audio_fd, SNDCTL_DSP_GETOPTR, &count) == -1)
+	{
+		Con_Print ("SndSys_GetSoundTimeDiff: can't ioctl (SNDCTL_DSP_GETOPTR)\n");
+		return 0;
+	}
+	new_osstime = count.bytes / (snd_renderbuffer->format.width * snd_renderbuffer->format.channels);
+
+	if (new_osstime >= old_osstime)
+		timediff = new_osstime - old_osstime;
+	else
+	{
+		Con_Print ("SndSys_GetSoundTime: osstime wrapped\n");
+		timediff = 0;
+	}
+
+	old_osstime = new_osstime;
+	osssoundtime += timediff;
+	return osssoundtime;
 }
 
+
+/*
+====================
+SndSys_LockRenderBuffer
+
+Get the exclusive lock on "snd_renderbuffer"
+====================
+*/
+qboolean SndSys_LockRenderBuffer (void)
+{
+	// Nothing to do
+	return true;
+}
+
+
+/*
+====================
+SndSys_UnlockRenderBuffer
+
+Release the exclusive lock on "snd_renderbuffer"
+====================
+*/
+void SndSys_UnlockRenderBuffer (void)
+{
+	// Nothing to do
+}

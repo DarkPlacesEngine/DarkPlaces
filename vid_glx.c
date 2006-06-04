@@ -17,12 +17,6 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
-//#include <termios.h>
-//#include <sys/ioctl.h>
-//#include <sys/stat.h>
-//#include <sys/vt.h>
-//#include <stdarg.h>
-//#include <stdio.h>
 #include <signal.h>
 
 #include <dlfcn.h>
@@ -574,7 +568,7 @@ void VID_Finish (qboolean allowmousegrab)
 			Con_Print("glXSwapIntervalSGI didn't accept the vid_vsync change, it will take effect on next vid_restart (GLX_SGI_swap_control does not allow turning off vsync)\n");
 	}
 
-// handle the mouse state when windowed if that's changed
+	// handle the mouse state when windowed if that's changed
 	vid_usemouse = false;
 	if (allowmousegrab && vid_mouse.integer && !key_consoleactive && (key_dest != key_game || !cls.demoplayback))
 		vid_usemouse = true;
@@ -849,6 +843,20 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 
 void Sys_SendKeyEvents(void)
 {
+	static qboolean sound_active = true;
+
+	// enable/disable sound on focus gain/loss
+	if (!vid_activewindow && sound_active)
+	{
+		S_BlockSound ();
+		sound_active = false;
+	}
+	else if (vid_activewindow && !sound_active)
+	{
+		S_UnblockSound ();
+		sound_active = true;
+	}
+
 	HandleEvents();
 }
 

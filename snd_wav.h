@@ -28,7 +28,7 @@
 
 extern const snd_fetcher_t wav_fetcher;
 
-qboolean S_LoadWavFile (const char *filename, sfx_t *s);
+qboolean S_LoadWavFile (const char *filename, sfx_t *sfx);
 
 
 #endif

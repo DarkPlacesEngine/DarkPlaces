@@ -20,9 +20,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 
-// snd_coreaudio.c
-// all other sound mixing is portable
-
 #include <limits.h>
 
 #include <CoreAudio/AudioHardware.h>
@@ -30,101 +27,149 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "quakedef.h"
 #include "snd_main.h"
 
-// BUFFER_SIZE must be an even multiple of CHUNK_SIZE
-#define CHUNK_SIZE 2048
-#define BUFFER_SIZE 16384
 
-static unsigned int submissionChunk;
-static unsigned int maxMixedSamples;
-static short *s_mixedSamples;
-static int s_chunkCount;  // number of chunks submitted
-static qboolean s_isRunning;
+#define CHUNK_SIZE 1024
 
-static AudioDeviceID outputDeviceID;
-static AudioStreamBasicDescription outputStreamBasicDescription;
+static unsigned int submissionChunk = 0;  // in sample frames
+static unsigned int coreaudiotime = 0;  // based on the number of chunks submitted so far
+static qboolean s_isRunning = false;
+static pthread_mutex_t coreaudio_mutex;
+static AudioDeviceID outputDeviceID = kAudioDeviceUnknown;
 
 
 /*
-===============
+====================
 audioDeviceIOProc
-===============
+====================
 */
-
-OSStatus audioDeviceIOProc(AudioDeviceID inDevice,
-						   const AudioTimeStamp *inNow,
-						   const AudioBufferList *inInputData,
-						   const AudioTimeStamp *inInputTime,
-						   AudioBufferList *outOutputData,
-						   const AudioTimeStamp *inOutputTime,
-						   void *inClientData)
+static OSStatus audioDeviceIOProc(AudioDeviceID inDevice,
+								  const AudioTimeStamp *inNow,
+								  const AudioBufferList *inInputData,
+								  const AudioTimeStamp *inInputTime,
+								  AudioBufferList *outOutputData,
+								  const AudioTimeStamp *inOutputTime,
+								  void *inClientData)
 {
-	int	offset;
-	short *samples;
-	unsigned int sampleIndex;
 	float *outBuffer;
-	float scale;
+	unsigned int frameCount, factor;
 
-	offset = (s_chunkCount * submissionChunk) % maxMixedSamples;
-	samples = s_mixedSamples + offset;
-
-	outBuffer = (float *)outOutputData->mBuffers[0].mData;
-
-	// If we have run out of samples, return silence
-	if (s_chunkCount * submissionChunk > shm->format.channels * paintedtime)
+	outBuffer = (float*)outOutputData->mBuffers[0].mData;
+	factor = snd_renderbuffer->format.channels * snd_renderbuffer->format.width;
+	frameCount = 0;
+	
+	// Lock the snd_renderbuffer
+	if (SndSys_LockRenderBuffer())
 	{
-		memset(outBuffer, 0, sizeof(*outBuffer) * submissionChunk);
-	}
-	else
-	{
+		unsigned int maxFrames, sampleIndex, sampleCount;
+		unsigned int startOffset, endOffset;
+		const short *samples;
+		const float scale = 1.0f / SHRT_MAX;
+
+		// Transfert up to a chunk of sample frames from snd_renderbuffer to outBuffer
+		maxFrames = snd_renderbuffer->endframe - snd_renderbuffer->startframe;
+		if (maxFrames >= submissionChunk)
+			frameCount = submissionChunk;
+		else
+			frameCount = maxFrames;
+
 		// Convert the samples from shorts to floats.  Scale the floats to be [-1..1].
-		scale = (1.0f / SHRT_MAX);
-		for (sampleIndex = 0; sampleIndex < submissionChunk; sampleIndex++)
-			outBuffer[sampleIndex] = samples[sampleIndex] * scale;
+		startOffset = snd_renderbuffer->startframe % snd_renderbuffer->maxframes;
+		endOffset = (snd_renderbuffer->startframe + frameCount) % snd_renderbuffer->maxframes;
+		if (startOffset > endOffset)  // if the buffer wraps
+		{
+			sampleCount = (snd_renderbuffer->maxframes - startOffset) * snd_renderbuffer->format.channels;
+			samples = (const short*)(&snd_renderbuffer->ring[startOffset * factor]);
+			for (sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++)
+				outBuffer[sampleIndex] = samples[sampleIndex] * scale;
+			
+			outBuffer = &outBuffer[sampleCount];
+			sampleCount = frameCount * snd_renderbuffer->format.channels - sampleCount;
+			samples = (const short*)(&snd_renderbuffer->ring[0]);
+			for (sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++)
+				outBuffer[sampleIndex] = samples[sampleIndex] * scale;
+		}
+		else
+		{
+			sampleCount = frameCount * snd_renderbuffer->format.channels;
+			samples = (const short*)(&snd_renderbuffer->ring[startOffset * factor]);
+			for (sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++)
+				outBuffer[sampleIndex] = samples[sampleIndex] * scale;
+		}
 
-		s_chunkCount++; // this is the next buffer we will submit
+		snd_renderbuffer->startframe += frameCount;
+
+		// Unlock the snd_renderbuffer
+		SndSys_UnlockRenderBuffer();
 	}
 
+	// If there was not enough samples, complete with silence samples
+	if (frameCount < submissionChunk)
+	{
+		unsigned int missingFrames;
+		
+		missingFrames = submissionChunk - frameCount;
+		Con_DPrintf("audioDeviceIOProc: %u sample frames missing\n", missingFrames);
+		memset(&outBuffer[frameCount * snd_renderbuffer->format.channels], 0, missingFrames * sizeof(outBuffer[0]));
+	}
+
+	coreaudiotime += submissionChunk;
 	return 0;
 }
 
+
 /*
-===============
-SNDDMA_Init
-===============
+====================
+SndSys_Init
+
+Create "snd_renderbuffer" with the proper sound format if the call is successful
+May return a suggested format if the requested format isn't available
+====================
 */
-qboolean SNDDMA_Init(void)
+qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 {
 	OSStatus status;
 	UInt32 propertySize, bufferByteCount;
+	AudioStreamBasicDescription streamDesc;
 
 	if (s_isRunning)
 		return true;
 
 	Con_Printf("Initializing CoreAudio...\n");
+	
+	// We only accept 16-bit samples for the moment
+	if (requested->width != 2)
+	{
+		// Suggest a 16-bit format instead
+		if (suggested != NULL)
+		{
+			memcpy (suggested, requested, sizeof (suggested));
+			suggested->width = 2;
+		}
 
+		return false;
+	}
+	
 	// Get the output device
 	propertySize = sizeof(outputDeviceID);
 	status = AudioHardwareGetProperty(kAudioHardwarePropertyDefaultOutputDevice, &propertySize, &outputDeviceID);
 	if (status)
 	{
-		Con_Printf("AudioHardwareGetProperty returned %d\n", status);
+		Con_Printf("CoreAudio: AudioDeviceGetProperty() returned %d when getting kAudioHardwarePropertyDefaultOutputDevice\n", status);
 		return false;
 	}
-
 	if (outputDeviceID == kAudioDeviceUnknown)
 	{
-		Con_Printf("AudioHardwareGetProperty: outputDeviceID is kAudioDeviceUnknown\n");
+		Con_Printf("CoreAudio: outputDeviceID is kAudioDeviceUnknown\n");
 		return false;
 	}
 
 	// Configure the output device
-	// TODO: support "-sndspeed", "-sndmono" and "-sndstereo"
 	propertySize = sizeof(bufferByteCount);
-	bufferByteCount = CHUNK_SIZE * sizeof(float);
+	bufferByteCount = CHUNK_SIZE * sizeof(float) * requested->channels;
 	status = AudioDeviceSetProperty(outputDeviceID, NULL, 0, false, kAudioDevicePropertyBufferSize, propertySize, &bufferByteCount);
 	if (status)
 	{
-		Con_Printf("AudioDeviceSetProperty: returned %d when setting kAudioDevicePropertyBufferSize to %d\n", status, CHUNK_SIZE);
+		Con_Printf("CoreAudio: AudioDeviceSetProperty() returned %d when setting kAudioDevicePropertyBufferSize to %d\n", status, CHUNK_SIZE);
 		return false;
 	}
 
@@ -132,101 +177,90 @@ qboolean SNDDMA_Init(void)
 	status = AudioDeviceGetProperty(outputDeviceID, 0, false, kAudioDevicePropertyBufferSize, &propertySize, &bufferByteCount);
 	if (status)
 	{
-		Con_Printf("AudioDeviceGetProperty: returned %d when setting kAudioDevicePropertyBufferSize\n", status);
+		Con_Printf("CoreAudio: AudioDeviceGetProperty() returned %d when setting kAudioDevicePropertyBufferSize\n", status);
 		return false;
 	}
+
 	submissionChunk = bufferByteCount / sizeof(float);
-	Con_DPrintf("   Chunk size = %d samples\n", submissionChunk);
+	if (submissionChunk % requested->channels != 0)
+	{
+		Con_Print("CoreAudio: chunk size is NOT a multiple of the number of channels\n");
+		return false;
+	}
+	submissionChunk /= requested->channels;
+	Con_DPrintf("   Chunk size = %d sample frames\n", submissionChunk);
 
 	// Print out the device status
-	propertySize = sizeof(outputStreamBasicDescription);
-	status = AudioDeviceGetProperty(outputDeviceID, 0, false, kAudioDevicePropertyStreamFormat, &propertySize, &outputStreamBasicDescription);
+	propertySize = sizeof(streamDesc);
+	status = AudioDeviceGetProperty(outputDeviceID, 0, false, kAudioDevicePropertyStreamFormat, &propertySize, &streamDesc);
 	if (status)
 	{
-		Con_Printf("AudioDeviceGetProperty: returned %d when getting kAudioDevicePropertyStreamFormat\n", status);
+		Con_Printf("CoreAudio: AudioDeviceGetProperty() returned %d when getting kAudioDevicePropertyStreamFormat\n", status);
 		return false;
 	}
-	Con_DPrintf("   Hardware format:\n");
-	Con_DPrintf("    %5d mSampleRate\n", (unsigned int)outputStreamBasicDescription.mSampleRate);
+	Con_DPrint ("   Hardware format:\n");
+	Con_DPrintf("    %5d mSampleRate\n", (unsigned int)streamDesc.mSampleRate);
 	Con_DPrintf("     %c%c%c%c mFormatID\n",
-				(outputStreamBasicDescription.mFormatID & 0xff000000) >> 24,
-				(outputStreamBasicDescription.mFormatID & 0x00ff0000) >> 16,
-				(outputStreamBasicDescription.mFormatID & 0x0000ff00) >>  8,
-				(outputStreamBasicDescription.mFormatID & 0x000000ff) >>  0);
-	Con_DPrintf("    %5d mBytesPerPacket\n", outputStreamBasicDescription.mBytesPerPacket);
-	Con_DPrintf("    %5d mFramesPerPacket\n", outputStreamBasicDescription.mFramesPerPacket);
-	Con_DPrintf("    %5d mBytesPerFrame\n", outputStreamBasicDescription.mBytesPerFrame);
-	Con_DPrintf("    %5d mChannelsPerFrame\n", outputStreamBasicDescription.mChannelsPerFrame);
-	Con_DPrintf("    %5d mBitsPerChannel\n", outputStreamBasicDescription.mBitsPerChannel);
+				(streamDesc.mFormatID & 0xff000000) >> 24,
+				(streamDesc.mFormatID & 0x00ff0000) >> 16,
+				(streamDesc.mFormatID & 0x0000ff00) >>  8,
+				(streamDesc.mFormatID & 0x000000ff) >>  0);
+	Con_DPrintf("    %5d mBytesPerPacket\n", streamDesc.mBytesPerPacket);
+	Con_DPrintf("    %5d mFramesPerPacket\n", streamDesc.mFramesPerPacket);
+	Con_DPrintf("    %5d mBytesPerFrame\n", streamDesc.mBytesPerFrame);
+	Con_DPrintf("    %5d mChannelsPerFrame\n", streamDesc.mChannelsPerFrame);
+	Con_DPrintf("    %5d mBitsPerChannel\n", streamDesc.mBitsPerChannel);
 
-	if(outputStreamBasicDescription.mFormatID != kAudioFormatLinearPCM)
+	if(streamDesc.mFormatID != kAudioFormatLinearPCM)
 	{
-		Con_Printf("Default Audio Device doesn't support Linear PCM!\n");
+		Con_Print("CoreAudio: Default audio device doesn't support linear PCM!\n");
 		return false;
 	}
 
-	// Start sound running
+	// Add the callback function
 	status = AudioDeviceAddIOProc(outputDeviceID, audioDeviceIOProc, NULL);
 	if (status)
 	{
-		Con_Printf("AudioDeviceAddIOProc: returned %d\n", status);
+		Con_Printf("CoreAudio: AudioDeviceAddIOProc() returned %d\n", status);
 		return false;
 	}
 
-	maxMixedSamples = BUFFER_SIZE;
-	s_mixedSamples = (short *)Mem_Alloc (snd_mempool, sizeof(*s_mixedSamples) * maxMixedSamples);
-	Con_DPrintf("   Buffer size = %d samples (%d chunks)\n",
-				maxMixedSamples, (maxMixedSamples / submissionChunk));
+	// We haven't sent any sample frames yet
+	coreaudiotime = 0;
 
-	// Tell the main app what we expect from it
-	memset ((void*)shm, 0, sizeof (*shm));
-	shm->format.speed = outputStreamBasicDescription.mSampleRate;
-	shm->format.channels = outputStreamBasicDescription.mChannelsPerFrame;
-	shm->format.width = 2;
-	shm->sampleframes = maxMixedSamples / shm->format.channels;
-	shm->samples = maxMixedSamples;
-	shm->buffer = (unsigned char *)s_mixedSamples;
-	shm->samplepos = 0;
+	if (pthread_mutex_init(&coreaudio_mutex, NULL) != 0)
+	{
+		Con_Print("CoreAudio: can't create pthread mutex\n");
+		AudioDeviceRemoveIOProc(outputDeviceID, audioDeviceIOProc);
+		return false;
+	}
 
-	// We haven't enqueued anything yet
-	s_chunkCount = 0;
+	snd_renderbuffer = Snd_CreateRingBuffer(requested, 0, NULL);
 
+	// Start sound running
 	status = AudioDeviceStart(outputDeviceID, audioDeviceIOProc);
 	if (status)
 	{
-		Con_Printf("AudioDeviceStart: returned %d\n", status);
+		Con_Printf("CoreAudio: AudioDeviceStart() returned %d\n", status);
+		pthread_mutex_destroy(&coreaudio_mutex);
+		AudioDeviceRemoveIOProc(outputDeviceID, audioDeviceIOProc);
 		return false;
 	}
-
 	s_isRunning = true;
 
-	Con_Printf("   Initialization successful\n");
-
+	Con_Print("   Initialization successful\n");
 	return true;
 }
 
-/*
-===============
-SNDDMA_GetDMAPos
-
-return the current sample position (in mono samples read)
-inside the recirculating dma buffer, so the mixing code will know
-how many sample are required to fill it up.
-===============
-*/
-int SNDDMA_GetDMAPos(void)
-{
-	return (s_chunkCount * submissionChunk) % shm->samples;
-}
 
 /*
-===============
-SNDDMA_Shutdown
+====================
+SndSys_Shutdown
 
-Reset the sound device for exiting
-===============
+Stop the sound card, delete "snd_renderbuffer" and free its other resources
+====================
 */
-void SNDDMA_Shutdown(void)
+void SndSys_Shutdown(void)
 {
 	OSStatus status;
 
@@ -239,8 +273,9 @@ void SNDDMA_Shutdown(void)
 		Con_Printf("AudioDeviceStop: returned %d\n", status);
 		return;
 	}
-
 	s_isRunning = false;
+	
+	pthread_mutex_destroy(&coreaudio_mutex);
 
 	status = AudioDeviceRemoveIOProc(outputDeviceID, audioDeviceIOProc);
 	if (status)
@@ -249,38 +284,62 @@ void SNDDMA_Shutdown(void)
 		return;
 	}
 
-	Mem_Free(s_mixedSamples);
-	s_mixedSamples = NULL;
-	shm->buffer = NULL;
+	if (snd_renderbuffer != NULL)
+	{
+		Mem_Free(snd_renderbuffer->ring);
+		Mem_Free(snd_renderbuffer);
+		snd_renderbuffer = NULL;
+	}
 }
 
-/*
-===============
-SNDDMA_Submit
-===============
-*/
-void SNDDMA_Submit(void)
-{
-	// nothing to do (CoreAudio is callback-based)
-}
 
 /*
-===============
-S_LockBuffer
-===============
+====================
+SndSys_Submit
+
+Submit the contents of "snd_renderbuffer" to the sound card
+====================
 */
-void *S_LockBuffer(void)
+void SndSys_Submit (void)
 {
-	// not necessary (just return the buffer)
-	return shm->buffer;
+	// Nothing to do here (this sound module is callback-based)
 }
 
+
 /*
-===============
-S_UnlockBuffer
-===============
+====================
+SndSys_GetSoundTime
+
+Returns the number of sample frames consumed since the sound started
+====================
 */
-void S_UnlockBuffer(void)
+unsigned int SndSys_GetSoundTime (void)
 {
-	// not necessary
+	return coreaudiotime;
+}
+
+
+/*
+====================
+SndSys_LockRenderBuffer
+
+Get the exclusive lock on "snd_renderbuffer"
+====================
+*/
+qboolean SndSys_LockRenderBuffer (void)
+{
+	return (pthread_mutex_lock(&coreaudio_mutex) == 0);
+}
+
+
+/*
+====================
+SndSys_UnlockRenderBuffer
+
+Release the exclusive lock on "snd_renderbuffer"
+====================
+*/
+void SndSys_UnlockRenderBuffer (void)
+{
+    pthread_mutex_unlock(&coreaudio_mutex);
 }

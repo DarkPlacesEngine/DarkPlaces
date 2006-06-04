@@ -279,6 +279,7 @@ static keynum_t buttonremap[18] =
 
 void Sys_SendKeyEvents( void )
 {
+	static qboolean sound_active = true;
 	SDL_Event event;
 
 	while( SDL_PollEvent( &event ) )
@@ -308,6 +309,18 @@ void Sys_SendKeyEvents( void )
 					Key_Event( buttonremap[event.button.button - 1], 0, false );
 				break;
 		}
+
+	// enable/disable sound on focus gain/loss
+	if (!vid_activewindow && sound_active)
+	{
+		S_BlockSound ();
+		sound_active = false;
+	}
+	else if (vid_activewindow && !sound_active)
+	{
+		S_UnblockSound ();
+		sound_active = true;
+	}
 }
 
 /////////////////

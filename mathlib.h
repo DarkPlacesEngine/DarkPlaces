@@ -53,8 +53,15 @@ extern vec3_t vec3_origin;
 #define lhrandom(MIN,MAX) (((double)rand() / RAND_MAX) * ((MAX)-(MIN)) + (MIN))
 
 #define invpow(base,number) (log(number) / log(base))
+
+// returns log base 2 of "n" (WARNING: "n" MUST be a power of 2!)
 #define log2i(n) ((((n) & 0xAAAAAAAA) != 0 ? 1 : 0) | (((n) & 0xCCCCCCCC) != 0 ? 2 : 0) | (((n) & 0xF0F0F0F0) != 0 ? 4 : 0) | (((n) & 0xFF00FF00) != 0 ? 8 : 0) | (((n) & 0xFFFF0000) != 0 ? 16 : 0))
+
+// TOCHECK: what is this function supposed to do?
 #define bit2i(n) log2i((n) << 1)
+
+// returns the smallest integer greater than or equal to "value", or 0 if "value" is too big
+unsigned int CeilPowerOf2(unsigned int value);
 
 #define DEG2RAD(a) ((a) * ((float) M_PI / 180.0f))
 #define RAD2DEG(a) ((a) * (180.0f / (float) M_PI))

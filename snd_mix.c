@@ -17,10 +17,10 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
-// snd_mix.c -- portable code to mix sounds
 
 #include "quakedef.h"
 #include "snd_main.h"
+
 
 typedef struct portable_samplepair_s
 {
@@ -31,285 +31,299 @@ typedef struct portable_samplepair_s
 #define	PAINTBUFFER_SIZE 2048
 portable_sampleframe_t paintbuffer[PAINTBUFFER_SIZE];
 
+
 // FIXME: this desyncs with the video too easily
 extern void SCR_CaptureVideo_SoundFrame(unsigned char *bufstereo16le, size_t length, int rate);
-void S_CaptureAVISound(portable_sampleframe_t *buf, size_t length)
+static void S_CaptureAVISound(size_t length)
 {
-	int n;
 	size_t i;
 	unsigned char out[PAINTBUFFER_SIZE * 4];
+	unsigned char* out_ptr;
+
 	if (!cls.capturevideo_active)
 		return;
+
 	// write the sound buffer as little endian 16bit interleaved stereo
-	for(i = 0;i < length;i++)
+	for(i = 0, out_ptr = out; i < length; i++, out_ptr += 4)
 	{
-		n = buf[i].sample[0];
-		n = bound(-32768, n, 32767);
-		out[i*4+0] = n & 0xFF;
-		out[i*4+1] = (n >> 8) & 0xFF;
-		n = buf[i].sample[1];
-		n = bound(-32768, n, 32767);
-		out[i*4+2] = n & 0xFF;
-		out[i*4+3] = (n >> 8) & 0xFF;
+		int n0, n1;
+
+		n0 = paintbuffer[i].sample[0];
+		n0 = bound(-32768, n0, 32767);
+		out_ptr[0] = (unsigned char)n0;
+		out_ptr[1] = (unsigned char)(n0 >> 8);
+
+		n1 = paintbuffer[i].sample[1];
+		n1 = bound(-32768, n1, 32767);
+		out_ptr[2] = (unsigned char)n1;
+		out_ptr[3] = (unsigned char)(n1 >> 8);
 	}
-	SCR_CaptureVideo_SoundFrame(out, length, shm->format.speed);
+	SCR_CaptureVideo_SoundFrame(out, length, snd_renderbuffer->format.speed);
 }
 
-// TODO: rewrite this function
-void S_TransferPaintBuffer(int endtime)
+static unsigned int S_TransferPaintBuffer(snd_ringbuffer_t* rb, unsigned int starttime, unsigned int endtime)
 {
-	void *pbuf;
-	int i;
-	portable_sampleframe_t *snd_p;
-	int lpaintedtime;
-	int snd_frames;
-	int val;
-	if ((pbuf = S_LockBuffer()))
+	unsigned int partialend;
+
+	// Lock submitbuffer
+	if (!simsound && !SndSys_LockRenderBuffer())
+		return 0;
+	
+	partialend = starttime;
+	while (partialend < endtime)  // handle recirculating buffer issues
 	{
-		snd_p = paintbuffer;
-		lpaintedtime = paintedtime;
-		for (lpaintedtime = paintedtime;lpaintedtime < endtime;lpaintedtime += snd_frames)
+		unsigned int startoffset, maxframes, nbframes, i;
+		void *rb_ptr;
+		portable_sampleframe_t *painted_ptr;
+		int val;
+
+		startoffset = partialend % rb->maxframes;
+		maxframes = rb->maxframes - startoffset;
+		nbframes = endtime - partialend;
+		if (nbframes > maxframes)
+			nbframes = maxframes;
+
+		rb_ptr = &rb->ring[startoffset * rb->format.width * rb->format.channels];
+		painted_ptr = &paintbuffer[partialend - starttime];
+
+		if (rb->format.width == 2)  // 16bit
 		{
-			// handle recirculating buffer issues
-			i = lpaintedtime & (shm->sampleframes - 1);
-			snd_frames = shm->sampleframes - i;
-			if (snd_frames > endtime - lpaintedtime)
-				snd_frames = endtime - lpaintedtime;
-			if (shm->format.width == 2)
+			short *snd_out = (short*)rb_ptr;
+			if (rb->format.channels == 8)  // 7.1 surround
 			{
-				// 16bit
-				short *snd_out = (short *) pbuf + i * shm->format.channels;
-				if (shm->format.channels == 8)
+				if (snd_swapstereo.value)
 				{
-					// 7.1 surround
-					if (snd_swapstereo.value)
+					for (i = 0; i < nbframes; i++, painted_ptr++)
 					{
-						for (i = 0;i < snd_frames;i++, snd_p++)
-						{
-							*snd_out++ = bound(-32768, snd_p->sample[1], 32767);
-							*snd_out++ = bound(-32768, snd_p->sample[0], 32767);
-							*snd_out++ = bound(-32768, snd_p->sample[3], 32767);
-							*snd_out++ = bound(-32768, snd_p->sample[2], 32767);
-							*snd_out++ = bound(-32768, snd_p->sample[4], 32767);
-							*snd_out++ = bound(-32768, snd_p->sample[5], 32767);
-							*snd_out++ = bound(-32768, snd_p->sample[6], 32767);
-							*snd_out++ = bound(-32768, snd_p->sample[7], 32767);
-						}
-					}
-					else
-					{
-						for (i = 0;i < snd_frames;i++, snd_p++)
-						{
-							*snd_out++ = bound(-32768, snd_p->sample[0], 32767);
-							*snd_out++ = bound(-32768, snd_p->sample[1], 32767);
-							*snd_out++ = bound(-32768, snd_p->sample[2], 32767);
-							*snd_out++ = bound(-32768, snd_p->sample[3], 32767);
-							*snd_out++ = bound(-32768, snd_p->sample[4], 32767);
-							*snd_out++ = bound(-32768, snd_p->sample[5], 32767);
-							*snd_out++ = bound(-32768, snd_p->sample[6], 32767);
-							*snd_out++ = bound(-32768, snd_p->sample[7], 32767);
-						}
+						*snd_out++ = bound(-32768, painted_ptr->sample[1], 32767);
+						*snd_out++ = bound(-32768, painted_ptr->sample[0], 32767);
+						*snd_out++ = bound(-32768, painted_ptr->sample[3], 32767);
+						*snd_out++ = bound(-32768, painted_ptr->sample[2], 32767);
+						*snd_out++ = bound(-32768, painted_ptr->sample[4], 32767);
+						*snd_out++ = bound(-32768, painted_ptr->sample[5], 32767);
+						*snd_out++ = bound(-32768, painted_ptr->sample[6], 32767);
+						*snd_out++ = bound(-32768, painted_ptr->sample[7], 32767);
 					}
 				}
-				else if (shm->format.channels == 6)
+				else
 				{
-					// 5.1 surround
-					if (snd_swapstereo.value)
+					for (i = 0;i < nbframes;i++, painted_ptr++)
 					{
-						for (i = 0;i < snd_frames;i++, snd_p++)
-						{
-							*snd_out++ = bound(-32768, snd_p->sample[1], 32767);
-							*snd_out++ = bound(-32768, snd_p->sample[0], 32767);
-							*snd_out++ = bound(-32768, snd_p->sample[3], 32767);
-							*snd_out++ = bound(-32768, snd_p->sample[2], 32767);
-							*snd_out++ = bound(-32768, snd_p->sample[4], 32767);
-							*snd_out++ = bound(-32768, snd_p->sample[5], 32767);
-						}
+						*snd_out++ = bound(-32768, painted_ptr->sample[0], 32767);
+						*snd_out++ = bound(-32768, painted_ptr->sample[1], 32767);
+						*snd_out++ = bound(-32768, painted_ptr->sample[2], 32767);
+						*snd_out++ = bound(-32768, painted_ptr->sample[3], 32767);
+						*snd_out++ = bound(-32768, painted_ptr->sample[4], 32767);
+						*snd_out++ = bound(-32768, painted_ptr->sample[5], 32767);
+						*snd_out++ = bound(-32768, painted_ptr->sample[6], 32767);
+						*snd_out++ = bound(-32768, painted_ptr->sample[7], 32767);
 					}
-					else
-					{
-						for (i = 0;i < snd_frames;i++, snd_p++)
-						{
-							*snd_out++ = bound(-32768, snd_p->sample[0], 32767);
-							*snd_out++ = bound(-32768, snd_p->sample[1], 32767);
-							*snd_out++ = bound(-32768, snd_p->sample[2], 32767);
-							*snd_out++ = bound(-32768, snd_p->sample[3], 32767);
-							*snd_out++ = bound(-32768, snd_p->sample[4], 32767);
-							*snd_out++ = bound(-32768, snd_p->sample[5], 32767);
-						}
-					}
-				}
-				else if (shm->format.channels == 4)
-				{
-					// 4.0 surround
-					if (snd_swapstereo.value)
-					{
-						for (i = 0;i < snd_frames;i++, snd_p++)
-						{
-							*snd_out++ = bound(-32768, snd_p->sample[1], 32767);
-							*snd_out++ = bound(-32768, snd_p->sample[0], 32767);
-							*snd_out++ = bound(-32768, snd_p->sample[3], 32767);
-							*snd_out++ = bound(-32768, snd_p->sample[2], 32767);
-						}
-					}
-					else
-					{
-						for (i = 0;i < snd_frames;i++, snd_p++)
-						{
-							*snd_out++ = bound(-32768, snd_p->sample[0], 32767);
-							*snd_out++ = bound(-32768, snd_p->sample[1], 32767);
-							*snd_out++ = bound(-32768, snd_p->sample[2], 32767);
-							*snd_out++ = bound(-32768, snd_p->sample[3], 32767);
-						}
-					}
-				}
-				else if (shm->format.channels == 2)
-				{
-					// 2.0 stereo
-					if (snd_swapstereo.value)
-					{
-						for (i = 0;i < snd_frames;i++, snd_p++)
-						{
-							*snd_out++ = bound(-32768, snd_p->sample[1], 32767);
-							*snd_out++ = bound(-32768, snd_p->sample[0], 32767);
-						}
-					}
-					else
-					{
-						for (i = 0;i < snd_frames;i++, snd_p++)
-						{
-							*snd_out++ = bound(-32768, snd_p->sample[0], 32767);
-							*snd_out++ = bound(-32768, snd_p->sample[1], 32767);
-						}
-					}
-				}
-				else if (shm->format.channels == 1)
-				{
-					// 1.0 mono
-					for (i = 0;i < snd_frames;i++, snd_p++)
-						*snd_out++ = bound(-32768, (snd_p->sample[0] + snd_p->sample[1]) >> 1, 32767);
 				}
 			}
-			else
+			else if (rb->format.channels == 6)  // 5.1 surround
 			{
-				// 8bit
-				unsigned char *snd_out = (unsigned char *) pbuf + i * shm->format.channels;
-				if (shm->format.channels == 8)
+				if (snd_swapstereo.value)
 				{
-					// 7.1 surround
-					if (snd_swapstereo.value)
+					for (i = 0; i < nbframes; i++, painted_ptr++)
 					{
-						for (i = 0;i < snd_frames;i++, snd_p++)
-						{
-							val = (snd_p->sample[1] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-							val = (snd_p->sample[0] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-							val = (snd_p->sample[3] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-							val = (snd_p->sample[2] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-							val = (snd_p->sample[4] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-							val = (snd_p->sample[5] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-							val = (snd_p->sample[6] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-							val = (snd_p->sample[7] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-						}
-					}
-					else
-					{
-						for (i = 0;i < snd_frames;i++, snd_p++)
-						{
-							val = (snd_p->sample[0] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-							val = (snd_p->sample[1] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-							val = (snd_p->sample[2] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-							val = (snd_p->sample[3] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-							val = (snd_p->sample[4] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-							val = (snd_p->sample[5] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-							val = (snd_p->sample[6] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-							val = (snd_p->sample[7] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-						}
+						*snd_out++ = bound(-32768, painted_ptr->sample[1], 32767);
+						*snd_out++ = bound(-32768, painted_ptr->sample[0], 32767);
+						*snd_out++ = bound(-32768, painted_ptr->sample[3], 32767);
+						*snd_out++ = bound(-32768, painted_ptr->sample[2], 32767);
+						*snd_out++ = bound(-32768, painted_ptr->sample[4], 32767);
+						*snd_out++ = bound(-32768, painted_ptr->sample[5], 32767);
 					}
 				}
-				else if (shm->format.channels == 6)
+				else
 				{
-					// 5.1 surround
-					if (snd_swapstereo.value)
+					for (i = 0; i < nbframes; i++, painted_ptr++)
 					{
-						for (i = 0;i < snd_frames;i++, snd_p++)
-						{
-							val = (snd_p->sample[1] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-							val = (snd_p->sample[0] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-							val = (snd_p->sample[3] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-							val = (snd_p->sample[2] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-							val = (snd_p->sample[4] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-							val = (snd_p->sample[5] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-						}
-					}
-					else
-					{
-						for (i = 0;i < snd_frames;i++, snd_p++)
-						{
-							val = (snd_p->sample[0] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-							val = (snd_p->sample[1] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-							val = (snd_p->sample[2] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-							val = (snd_p->sample[3] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-							val = (snd_p->sample[4] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-							val = (snd_p->sample[5] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-						}
+						*snd_out++ = bound(-32768, painted_ptr->sample[0], 32767);
+						*snd_out++ = bound(-32768, painted_ptr->sample[1], 32767);
+						*snd_out++ = bound(-32768, painted_ptr->sample[2], 32767);
+						*snd_out++ = bound(-32768, painted_ptr->sample[3], 32767);
+						*snd_out++ = bound(-32768, painted_ptr->sample[4], 32767);
+						*snd_out++ = bound(-32768, painted_ptr->sample[5], 32767);
 					}
 				}
-				else if (shm->format.channels == 4)
+			}
+			else if (rb->format.channels == 4)  // 4.0 surround
+			{
+				if (snd_swapstereo.value)
 				{
-					// 4.0 surround
-					if (snd_swapstereo.value)
+					for (i = 0; i < nbframes; i++, painted_ptr++)
 					{
-						for (i = 0;i < snd_frames;i++, snd_p++)
-						{
-							val = (snd_p->sample[1] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-							val = (snd_p->sample[0] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-							val = (snd_p->sample[3] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-							val = (snd_p->sample[2] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-						}
-					}
-					else
-					{
-						for (i = 0;i < snd_frames;i++, snd_p++)
-						{
-							val = (snd_p->sample[0] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-							val = (snd_p->sample[1] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-							val = (snd_p->sample[2] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-							val = (snd_p->sample[3] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-						}
+						*snd_out++ = bound(-32768, painted_ptr->sample[1], 32767);
+						*snd_out++ = bound(-32768, painted_ptr->sample[0], 32767);
+						*snd_out++ = bound(-32768, painted_ptr->sample[3], 32767);
+						*snd_out++ = bound(-32768, painted_ptr->sample[2], 32767);
 					}
 				}
-				else if (shm->format.channels == 2)
+				else
 				{
-					// 2.0 stereo
-					if (snd_swapstereo.value)
+					for (i = 0; i < nbframes; i++, painted_ptr++)
 					{
-						for (i = 0;i < snd_frames;i++, snd_p++)
-						{
-							val = (snd_p->sample[1] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-							val = (snd_p->sample[0] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-						}
-					}
-					else
-					{
-						for (i = 0;i < snd_frames;i++, snd_p++)
-						{
-							val = (snd_p->sample[0] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-							val = (snd_p->sample[1] >> 8) + 128;*snd_out++ = bound(0, val, 255);
-						}
+						*snd_out++ = bound(-32768, painted_ptr->sample[0], 32767);
+						*snd_out++ = bound(-32768, painted_ptr->sample[1], 32767);
+						*snd_out++ = bound(-32768, painted_ptr->sample[2], 32767);
+						*snd_out++ = bound(-32768, painted_ptr->sample[3], 32767);
 					}
 				}
-				else if (shm->format.channels == 1)
+			}
+			else if (rb->format.channels == 2)  // 2.0 stereo
+			{
+				if (snd_swapstereo.value)
 				{
-					// 1.0 mono
-					for (i = 0;i < snd_frames;i++, snd_p++)
+					for (i = 0; i < nbframes; i++, painted_ptr++)
 					{
-						val = ((snd_p->sample[0]+snd_p->sample[1]) >> 9) + 128;*snd_out++ = bound(0, val, 255);
+						*snd_out++ = bound(-32768, painted_ptr->sample[1], 32767);
+						*snd_out++ = bound(-32768, painted_ptr->sample[0], 32767);
 					}
+				}
+				else
+				{
+					for (i = 0; i < nbframes; i++, painted_ptr++)
+					{
+						*snd_out++ = bound(-32768, painted_ptr->sample[0], 32767);
+						*snd_out++ = bound(-32768, painted_ptr->sample[1], 32767);
+					}
+				}
+			}
+			else if (rb->format.channels == 1)  // 1.0 mono
+			{
+				for (i = 0; i < nbframes; i++, painted_ptr++)
+				{
+					val = (painted_ptr->sample[0] + painted_ptr->sample[1]) >> 1;
+					*snd_out++ = bound(-32768, val, 32767);
 				}
 			}
 		}
-		S_UnlockBuffer();
+		else  // 8bit
+		{
+			unsigned char *snd_out = (unsigned char*)rb_ptr;
+			if (rb->format.channels == 8)  // 7.1 surround
+			{
+				if (snd_swapstereo.value)
+				{
+					for (i = 0; i < nbframes; i++, painted_ptr++)
+					{
+						val = (painted_ptr->sample[1] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+						val = (painted_ptr->sample[0] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+						val = (painted_ptr->sample[3] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+						val = (painted_ptr->sample[2] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+						val = (painted_ptr->sample[4] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+						val = (painted_ptr->sample[5] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+						val = (painted_ptr->sample[6] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+						val = (painted_ptr->sample[7] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+					}
+				}
+				else
+				{
+					for (i = 0; i < nbframes; i++, painted_ptr++)
+					{
+						val = (painted_ptr->sample[0] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+						val = (painted_ptr->sample[1] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+						val = (painted_ptr->sample[2] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+						val = (painted_ptr->sample[3] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+						val = (painted_ptr->sample[4] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+						val = (painted_ptr->sample[5] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+						val = (painted_ptr->sample[6] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+						val = (painted_ptr->sample[7] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+					}
+				}
+			}
+			else if (rb->format.channels == 6)  // 5.1 surround
+			{
+				if (snd_swapstereo.value)
+				{
+					for (i = 0; i < nbframes; i++, painted_ptr++)
+					{
+						val = (painted_ptr->sample[1] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+						val = (painted_ptr->sample[0] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+						val = (painted_ptr->sample[3] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+						val = (painted_ptr->sample[2] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+						val = (painted_ptr->sample[4] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+						val = (painted_ptr->sample[5] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+					}
+				}
+				else
+				{
+					for (i = 0; i < nbframes; i++, painted_ptr++)
+					{
+						val = (painted_ptr->sample[0] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+						val = (painted_ptr->sample[1] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+						val = (painted_ptr->sample[2] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+						val = (painted_ptr->sample[3] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+						val = (painted_ptr->sample[4] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+						val = (painted_ptr->sample[5] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+					}
+				}
+			}
+			else if (rb->format.channels == 4)  // 4.0 surround
+			{
+				if (snd_swapstereo.value)
+				{
+					for (i = 0; i < nbframes; i++, painted_ptr++)
+					{
+						val = (painted_ptr->sample[1] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+						val = (painted_ptr->sample[0] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+						val = (painted_ptr->sample[3] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+						val = (painted_ptr->sample[2] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+					}
+				}
+				else
+				{
+					for (i = 0; i < nbframes; i++, painted_ptr++)
+					{
+						val = (painted_ptr->sample[0] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+						val = (painted_ptr->sample[1] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+						val = (painted_ptr->sample[2] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+						val = (painted_ptr->sample[3] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+					}
+				}
+			}
+			else if (rb->format.channels == 2)  // 2.0 stereo
+			{
+				if (snd_swapstereo.value)
+				{
+					for (i = 0; i < nbframes; i++, painted_ptr++)
+					{
+						val = (painted_ptr->sample[1] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+						val = (painted_ptr->sample[0] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+					}
+				}
+				else
+				{
+					for (i = 0; i < nbframes; i++, painted_ptr++)
+					{
+						val = (painted_ptr->sample[0] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+						val = (painted_ptr->sample[1] >> 8) + 128; *snd_out++ = bound(0, val, 255);
+					}
+				}
+			}
+			else if (rb->format.channels == 1)  // 1.0 mono
+			{
+				for (i = 0;i < nbframes;i++, painted_ptr++)
+				{
+					val = ((painted_ptr->sample[0] + painted_ptr->sample[1]) >> 9) + 128;
+					*snd_out++ = bound(0, val, 255);
+				}
+			}
+		}
+
+		partialend += nbframes;
 	}
+
+	rb->endframe = endtime;
+
+	// Remove outdated samples from the ring buffer, if any
+	if (rb->startframe < soundtime)
+		rb->startframe = soundtime;
+
+	if (!simsound)
+		SndSys_UnlockRenderBuffer();
+
+	return endtime - starttime;
 }
 
 
@@ -321,32 +335,287 @@ CHANNEL MIXING
 ===============================================================================
 */
 
-qboolean SND_PaintChannel (channel_t *ch, int endtime);
-
-void S_PaintChannels(int endtime)
+static qboolean SND_PaintChannel (channel_t *ch, unsigned int count)
 {
-	unsigned int i, j;
-	int end;
-	channel_t *ch;
-	sfx_t *sfx;
-	int ltime, count;
+	int snd_vol, vol[SND_LISTENERS];
+	const snd_buffer_t *sb;
+	unsigned int i, sb_offset;
 
+	// If this channel manages its own volume
+	if (ch->flags & CHANNELFLAG_FULLVOLUME)
+		snd_vol = 256;
+	else
+		snd_vol = (int)(volume.value * 256);
+
+	for (i = 0;i < SND_LISTENERS;i++)
+		vol[i] = ch->listener_volume[i] * snd_vol;
+
+	sb_offset = ch->pos;
+	sb = ch->sfx->fetcher->getsb (ch, &sb_offset, count);
+	if (sb == NULL)
+	{
+		Con_DPrintf("SND_PaintChannel: ERROR: can't get sound buffer from sfx \"%s\"\n",
+					ch->sfx->name, count);
+	}
+	else
+	{
+#if SND_LISTENERS != 8
+#		error the following code only supports up to 8 channels, update it
+#endif
+		if (sb->format.width == 1)
+		{
+			const signed char *samples = (signed char*)sb->samples + (ch->pos - sb_offset) * sb->format.channels;
+
+			// Stereo sound support
+			if (sb->format.channels == 2)
+			{
+				if (vol[6] + vol[7] > 0)
+				{
+					for (i = 0;i < count;i++)
+					{
+						paintbuffer[i].sample[0] += (samples[0] * vol[0]) >> 8;
+						paintbuffer[i].sample[1] += (samples[1] * vol[1]) >> 8;
+						paintbuffer[i].sample[2] += (samples[0] * vol[2]) >> 8;
+						paintbuffer[i].sample[3] += (samples[1] * vol[3]) >> 8;
+						paintbuffer[i].sample[4] += ((samples[0] + samples[1]) * vol[4]) >> 9;
+						paintbuffer[i].sample[5] += ((samples[0] + samples[1]) * vol[5]) >> 9;
+						paintbuffer[i].sample[6] += (samples[0] * vol[6]) >> 8;
+						paintbuffer[i].sample[7] += (samples[1] * vol[7]) >> 8;
+						samples += 2;
+					}
+				}
+				else if (vol[4] + vol[5] > 0)
+				{
+					for (i = 0;i < count;i++)
+					{
+						paintbuffer[i].sample[0] += (samples[0] * vol[0]) >> 8;
+						paintbuffer[i].sample[1] += (samples[1] * vol[1]) >> 8;
+						paintbuffer[i].sample[2] += (samples[0] * vol[2]) >> 8;
+						paintbuffer[i].sample[3] += (samples[1] * vol[3]) >> 8;
+						paintbuffer[i].sample[4] += ((samples[0] + samples[1]) * vol[4]) >> 9;
+						paintbuffer[i].sample[5] += ((samples[0] + samples[1]) * vol[5]) >> 9;
+						samples += 2;
+					}
+				}
+				else if (vol[2] + vol[3] > 0)
+				{
+					for (i = 0;i < count;i++)
+					{
+						paintbuffer[i].sample[0] += (samples[0] * vol[0]) >> 8;
+						paintbuffer[i].sample[1] += (samples[1] * vol[1]) >> 8;
+						paintbuffer[i].sample[2] += (samples[0] * vol[2]) >> 8;
+						paintbuffer[i].sample[3] += (samples[1] * vol[3]) >> 8;
+						samples += 2;
+					}
+				}
+				else if (vol[0] + vol[1] > 0)
+				{
+					for (i = 0;i < count;i++)
+					{
+						paintbuffer[i].sample[0] += (samples[0] * vol[0]) >> 8;
+						paintbuffer[i].sample[1] += (samples[1] * vol[1]) >> 8;
+						samples += 2;
+					}
+				}
+			}
+			else if (sb->format.channels == 1)
+			{
+				if (vol[6] + vol[7] > 0)
+				{
+					for (i = 0;i < count;i++)
+					{
+						paintbuffer[i].sample[0] += (samples[0] * vol[0]) >> 8;
+						paintbuffer[i].sample[1] += (samples[0] * vol[1]) >> 8;
+						paintbuffer[i].sample[2] += (samples[0] * vol[2]) >> 8;
+						paintbuffer[i].sample[3] += (samples[0] * vol[3]) >> 8;
+						paintbuffer[i].sample[4] += (samples[0] * vol[4]) >> 8;
+						paintbuffer[i].sample[5] += (samples[0] * vol[5]) >> 8;
+						paintbuffer[i].sample[6] += (samples[0] * vol[6]) >> 8;
+						paintbuffer[i].sample[7] += (samples[0] * vol[7]) >> 8;
+						samples += 1;
+					}
+				}
+				else if (vol[4] + vol[5] > 0)
+				{
+					for (i = 0;i < count;i++)
+					{
+						paintbuffer[i].sample[0] += (samples[0] * vol[0]) >> 8;
+						paintbuffer[i].sample[1] += (samples[0] * vol[1]) >> 8;
+						paintbuffer[i].sample[2] += (samples[0] * vol[2]) >> 8;
+						paintbuffer[i].sample[3] += (samples[0] * vol[3]) >> 8;
+						paintbuffer[i].sample[4] += (samples[0] * vol[4]) >> 8;
+						paintbuffer[i].sample[5] += (samples[0] * vol[5]) >> 8;
+						samples += 1;
+					}
+				}
+				else if (vol[2] + vol[3] > 0)
+				{
+					for (i = 0;i < count;i++)
+					{
+						paintbuffer[i].sample[0] += (samples[0] * vol[0]) >> 8;
+						paintbuffer[i].sample[1] += (samples[0] * vol[1]) >> 8;
+						paintbuffer[i].sample[2] += (samples[0] * vol[2]) >> 8;
+						paintbuffer[i].sample[3] += (samples[0] * vol[3]) >> 8;
+						samples += 1;
+					}
+				}
+				else if (vol[0] + vol[1] > 0)
+				{
+					for (i = 0;i < count;i++)
+					{
+						paintbuffer[i].sample[0] += (samples[0] * vol[0]) >> 8;
+						paintbuffer[i].sample[1] += (samples[0] * vol[1]) >> 8;
+						samples += 1;
+					}
+				}
+			}
+			else
+				return false; // unsupported number of channels in sound
+		}
+		else if (sb->format.width == 2)
+		{
+			const signed short *samples = (signed short*)sb->samples + (ch->pos - sb_offset) * sb->format.channels;
+
+			// Stereo sound support
+			if (sb->format.channels == 2)
+			{
+				if (vol[6] + vol[7] > 0)
+				{
+					for (i = 0;i < count;i++)
+					{
+						paintbuffer[i].sample[0] += (samples[0] * vol[0]) >> 16;
+						paintbuffer[i].sample[1] += (samples[1] * vol[1]) >> 16;
+						paintbuffer[i].sample[2] += (samples[0] * vol[2]) >> 16;
+						paintbuffer[i].sample[3] += (samples[1] * vol[3]) >> 16;
+						paintbuffer[i].sample[4] += ((samples[0] + samples[1]) * vol[4]) >> 17;
+						paintbuffer[i].sample[5] += ((samples[0] + samples[1]) * vol[5]) >> 17;
+						paintbuffer[i].sample[6] += (samples[0] * vol[6]) >> 16;
+						paintbuffer[i].sample[7] += (samples[1] * vol[7]) >> 16;
+						samples += 2;
+					}
+				}
+				else if (vol[4] + vol[5] > 0)
+				{
+					for (i = 0;i < count;i++)
+					{
+						paintbuffer[i].sample[0] += (samples[0] * vol[0]) >> 16;
+						paintbuffer[i].sample[1] += (samples[1] * vol[1]) >> 16;
+						paintbuffer[i].sample[2] += (samples[0] * vol[2]) >> 16;
+						paintbuffer[i].sample[3] += (samples[1] * vol[3]) >> 16;
+						paintbuffer[i].sample[4] += ((samples[0] + samples[1]) * vol[4]) >> 17;
+						paintbuffer[i].sample[5] += ((samples[0] + samples[1]) * vol[5]) >> 17;
+						samples += 2;
+					}
+				}
+				else if (vol[2] + vol[3] > 0)
+				{
+					for (i = 0;i < count;i++)
+					{
+						paintbuffer[i].sample[0] += (samples[0] * vol[0]) >> 16;
+						paintbuffer[i].sample[1] += (samples[1] * vol[1]) >> 16;
+						paintbuffer[i].sample[2] += (samples[0] * vol[2]) >> 16;
+						paintbuffer[i].sample[3] += (samples[1] * vol[3]) >> 16;
+						samples += 2;
+					}
+				}
+				else if (vol[0] + vol[1] > 0)
+				{
+					for (i = 0;i < count;i++)
+					{
+						paintbuffer[i].sample[0] += (samples[0] * vol[0]) >> 16;
+						paintbuffer[i].sample[1] += (samples[1] * vol[1]) >> 16;
+						samples += 2;
+					}
+				}
+			}
+			else if (sb->format.channels == 1)
+			{
+				if (vol[6] + vol[7] > 0)
+				{
+					for (i = 0;i < count;i++)
+					{
+						paintbuffer[i].sample[0] += (samples[0] * vol[0]) >> 16;
+						paintbuffer[i].sample[1] += (samples[0] * vol[1]) >> 16;
+						paintbuffer[i].sample[2] += (samples[0] * vol[2]) >> 16;
+						paintbuffer[i].sample[3] += (samples[0] * vol[3]) >> 16;
+						paintbuffer[i].sample[4] += (samples[0] * vol[4]) >> 16;
+						paintbuffer[i].sample[5] += (samples[0] * vol[5]) >> 16;
+						paintbuffer[i].sample[6] += (samples[0] * vol[6]) >> 16;
+						paintbuffer[i].sample[7] += (samples[0] * vol[7]) >> 16;
+						samples += 1;
+					}
+				}
+				else if (vol[4] + vol[5] > 0)
+				{
+					for (i = 0;i < count;i++)
+					{
+						paintbuffer[i].sample[0] += (samples[0] * vol[0]) >> 16;
+						paintbuffer[i].sample[1] += (samples[0] * vol[1]) >> 16;
+						paintbuffer[i].sample[2] += (samples[0] * vol[2]) >> 16;
+						paintbuffer[i].sample[3] += (samples[0] * vol[3]) >> 16;
+						paintbuffer[i].sample[4] += (samples[0] * vol[4]) >> 16;
+						paintbuffer[i].sample[5] += (samples[0] * vol[5]) >> 16;
+						samples += 1;
+					}
+				}
+				else if (vol[2] + vol[3] > 0)
+				{
+					for (i = 0;i < count;i++)
+					{
+						paintbuffer[i].sample[0] += (samples[0] * vol[0]) >> 16;
+						paintbuffer[i].sample[1] += (samples[0] * vol[1]) >> 16;
+						paintbuffer[i].sample[2] += (samples[0] * vol[2]) >> 16;
+						paintbuffer[i].sample[3] += (samples[0] * vol[3]) >> 16;
+						samples += 1;
+					}
+				}
+				else if (vol[0] + vol[1] > 0)
+				{
+					for (i = 0;i < count;i++)
+					{
+						paintbuffer[i].sample[0] += (samples[0] * vol[0]) >> 16;
+						paintbuffer[i].sample[1] += (samples[0] * vol[1]) >> 16;
+						samples += 1;
+					}
+				}
+			}
+			else
+				return false; // unsupported number of channels in sound
+		}
+	}
+
+	ch->pos += count;
+	return true;
+}
+
+void S_PaintChannels (snd_ringbuffer_t* rb, unsigned int starttime, unsigned int endtime)
+{
+	unsigned int paintedtime;
+
+	paintedtime = starttime;
 	while (paintedtime < endtime)
 	{
-		// if paintbuffer is smaller than DMA buffer
-		end = endtime;
-		if (endtime - paintedtime > PAINTBUFFER_SIZE)
-			end = paintedtime + PAINTBUFFER_SIZE;
+		unsigned int partialend, i, framecount;
+		channel_t *ch;
+
+		// if paintbuffer is too small
+		if (endtime > paintedtime + PAINTBUFFER_SIZE)
+			partialend = paintedtime + PAINTBUFFER_SIZE;
+		else
+			partialend = endtime;
 
 		// clear the paint buffer
-		memset (&paintbuffer, 0, (end - paintedtime) * sizeof (paintbuffer[0]));
+		memset (paintbuffer, 0, (partialend - paintedtime) * sizeof (paintbuffer[0]));
 
 		// paint in the channels.
 		ch = channels;
-		for (i=0; i<total_channels ; i++, ch++)
+		for (i = 0; i < total_channels ; i++, ch++)
 		{
+			sfx_t *sfx;
+			unsigned int ltime, j;
+
 			sfx = ch->sfx;
-			if (!sfx)
+			if (sfx == NULL)
 				continue;
 			for (j = 0;j < SND_LISTENERS;j++)
 				if (ch->listener_volume[j])
@@ -359,7 +628,7 @@ void S_PaintChannels(int endtime)
 			// if the channel is paused
 			if (ch->flags & CHANNELFLAG_PAUSED)
 			{
-				int pausedtime = end - paintedtime;
+				int pausedtime = partialend - paintedtime;
 				ch->lastptime += pausedtime;
 				ch->end += pausedtime;
 				continue;
@@ -375,12 +644,15 @@ void S_PaintChannels(int endtime)
 				{
 					int loopstart;
 
-					if (ch->flags & CHANNELFLAG_FORCELOOP)
-						loopstart = 0;
-					else
-						loopstart = -1;
 					if (sfx->loopstart >= 0)
-						loopstart = sfx->loopstart;
+						loopstart = bound(0, sfx->loopstart, (int)sfx->total_length - 1);
+					else
+					{
+						if (ch->flags & CHANNELFLAG_FORCELOOP)
+							loopstart = 0;
+						else
+							loopstart = -1;
+					}
 
 					// If the sound is looped
 					if (loopstart >= 0)
@@ -392,23 +664,23 @@ void S_PaintChannels(int endtime)
 			}
 
 			ltime = paintedtime;
-			while (ltime < end)
+			while (ltime < partialend)
 			{
+				int count;
 				qboolean stop_paint;
 
 				// paint up to end
-				if (ch->end < end)
-					count = (int)ch->end - ltime;
+				if (ch->end < partialend)
+					count = ch->end - ltime;
 				else
-					count = end - ltime;
+					count = partialend - ltime;
 
 				if (count > 0)
 				{
-					for (j = 0;j < SND_LISTENERS;j++)
+					for (j = 0; j < SND_LISTENERS; j++)
 						ch->listener_volume[j] = bound(0, ch->listener_volume[j], 255);
 
-					stop_paint = !SND_PaintChannel (ch, count);
-
+					stop_paint = !SND_PaintChannel (ch, (unsigned int)count);
 					if (!stop_paint)
 					{
 						ltime += count;
@@ -439,256 +711,15 @@ void S_PaintChannels(int endtime)
 			}
 		}
 
-		// transfer out according to DMA format
-		S_CaptureAVISound (paintbuffer, end - paintedtime);
-		S_TransferPaintBuffer(end);
-		paintedtime = end;
+		S_CaptureAVISound (partialend - paintedtime);
+		framecount = S_TransferPaintBuffer (rb, paintedtime, partialend);
+		paintedtime += framecount;
+
+		// If there was not enough free space in the sound buffer, stop here
+		if (paintedtime != partialend)
+		{
+			Con_DPrintf(">> S_PaintChannels: Not enough free space in the sound buffer ( %u != %u)\n", paintedtime, partialend);
+			break;
+		}
 	}
 }
-
-
-qboolean SND_PaintChannel (channel_t *ch, int count)
-{
-	int snd_vol, vol[SND_LISTENERS];
-	const sfxbuffer_t *sb;
-	int i;
-
-	// If this channel manages its own volume
-	if (ch->flags & CHANNELFLAG_FULLVOLUME)
-		snd_vol = 256;
-	else
-		snd_vol = (int)(volume.value * 256);
-
-	for (i = 0;i < SND_LISTENERS;i++)
-		vol[i] = ch->listener_volume[i] * snd_vol;
-
-	sb = ch->sfx->fetcher->getsb (ch, ch->pos, count);
-	if (sb == NULL)
-		return false;
-
-#if SND_LISTENERS != 8
-#error this code only supports up to 8 channels, update it
-#endif
-
-	if (ch->sfx->format.width == 1)
-	{
-		const signed char *sfx = (signed char *)sb->data + (ch->pos - sb->offset) * ch->sfx->format.channels;
-		// Stereo sound support
-		if (ch->sfx->format.channels == 2)
-		{
-			if (vol[6] + vol[7] > 0)
-			{
-				for (i = 0;i < count;i++)
-				{
-					paintbuffer[i].sample[0] += (sfx[0] * vol[0]) >> 8;
-					paintbuffer[i].sample[1] += (sfx[1] * vol[1]) >> 8;
-					paintbuffer[i].sample[2] += (sfx[0] * vol[2]) >> 8;
-					paintbuffer[i].sample[3] += (sfx[1] * vol[3]) >> 8;
-					paintbuffer[i].sample[4] += ((sfx[0]+sfx[1]) * vol[4]) >> 9;
-					paintbuffer[i].sample[5] += ((sfx[0]+sfx[1]) * vol[5]) >> 9;
-					paintbuffer[i].sample[6] += (sfx[0] * vol[6]) >> 8;
-					paintbuffer[i].sample[7] += (sfx[1] * vol[7]) >> 8;
-					sfx += 2;
-				}
-			}
-			else if (vol[4] + vol[5] > 0)
-			{
-				for (i = 0;i < count;i++)
-				{
-					paintbuffer[i].sample[0] += (sfx[0] * vol[0]) >> 8;
-					paintbuffer[i].sample[1] += (sfx[1] * vol[1]) >> 8;
-					paintbuffer[i].sample[2] += (sfx[0] * vol[2]) >> 8;
-					paintbuffer[i].sample[3] += (sfx[1] * vol[3]) >> 8;
-					paintbuffer[i].sample[4] += ((sfx[0]+sfx[1]) * vol[4]) >> 9;
-					paintbuffer[i].sample[5] += ((sfx[0]+sfx[1]) * vol[5]) >> 9;
-					sfx += 2;
-				}
-			}
-			else if (vol[2] + vol[3] > 0)
-			{
-				for (i = 0;i < count;i++)
-				{
-					paintbuffer[i].sample[0] += (sfx[0] * vol[0]) >> 8;
-					paintbuffer[i].sample[1] += (sfx[1] * vol[1]) >> 8;
-					paintbuffer[i].sample[2] += (sfx[0] * vol[2]) >> 8;
-					paintbuffer[i].sample[3] += (sfx[1] * vol[3]) >> 8;
-					sfx += 2;
-				}
-			}
-			else if (vol[0] + vol[1] > 0)
-			{
-				for (i = 0;i < count;i++)
-				{
-					paintbuffer[i].sample[0] += (sfx[0] * vol[0]) >> 8;
-					paintbuffer[i].sample[1] += (sfx[1] * vol[1]) >> 8;
-					sfx += 2;
-				}
-			}
-		}
-		else if (ch->sfx->format.channels == 1)
-		{
-			if (vol[6] + vol[7] > 0)
-			{
-				for (i = 0;i < count;i++)
-				{
-					paintbuffer[i].sample[0] += (sfx[0] * vol[0]) >> 8;
-					paintbuffer[i].sample[1] += (sfx[0] * vol[1]) >> 8;
-					paintbuffer[i].sample[2] += (sfx[0] * vol[2]) >> 8;
-					paintbuffer[i].sample[3] += (sfx[0] * vol[3]) >> 8;
-					paintbuffer[i].sample[4] += (sfx[0] * vol[4]) >> 8;
-					paintbuffer[i].sample[5] += (sfx[0] * vol[5]) >> 8;
-					paintbuffer[i].sample[6] += (sfx[0] * vol[6]) >> 8;
-					paintbuffer[i].sample[7] += (sfx[0] * vol[7]) >> 8;
-					sfx += 1;
-				}
-			}
-			else if (vol[4] + vol[5] > 0)
-			{
-				for (i = 0;i < count;i++)
-				{
-					paintbuffer[i].sample[0] += (sfx[0] * vol[0]) >> 8;
-					paintbuffer[i].sample[1] += (sfx[0] * vol[1]) >> 8;
-					paintbuffer[i].sample[2] += (sfx[0] * vol[2]) >> 8;
-					paintbuffer[i].sample[3] += (sfx[0] * vol[3]) >> 8;
-					paintbuffer[i].sample[4] += (sfx[0] * vol[4]) >> 8;
-					paintbuffer[i].sample[5] += (sfx[0] * vol[5]) >> 8;
-					sfx += 1;
-				}
-			}
-			else if (vol[2] + vol[3] > 0)
-			{
-				for (i = 0;i < count;i++)
-				{
-					paintbuffer[i].sample[0] += (sfx[0] * vol[0]) >> 8;
-					paintbuffer[i].sample[1] += (sfx[0] * vol[1]) >> 8;
-					paintbuffer[i].sample[2] += (sfx[0] * vol[2]) >> 8;
-					paintbuffer[i].sample[3] += (sfx[0] * vol[3]) >> 8;
-					sfx += 1;
-				}
-			}
-			else if (vol[0] + vol[1] > 0)
-			{
-				for (i = 0;i < count;i++)
-				{
-					paintbuffer[i].sample[0] += (sfx[0] * vol[0]) >> 8;
-					paintbuffer[i].sample[1] += (sfx[0] * vol[1]) >> 8;
-					sfx += 1;
-				}
-			}
-		}
-		else
-			return true; // unsupported number of channels in sound
-	}
-	else if (ch->sfx->format.width == 2)
-	{
-		const signed short *sfx = (signed short *)sb->data + (ch->pos - sb->offset) * ch->sfx->format.channels;
-		// Stereo sound support
-		if (ch->sfx->format.channels == 2)
-		{
-			if (vol[6] + vol[7] > 0)
-			{
-				for (i = 0;i < count;i++)
-				{
-					paintbuffer[i].sample[0] += (sfx[0] * vol[0]) >> 16;
-					paintbuffer[i].sample[1] += (sfx[1] * vol[1]) >> 16;
-					paintbuffer[i].sample[2] += (sfx[0] * vol[2]) >> 16;
-					paintbuffer[i].sample[3] += (sfx[1] * vol[3]) >> 16;
-					paintbuffer[i].sample[4] += ((sfx[0]+sfx[1]) * vol[4]) >> 17;
-					paintbuffer[i].sample[5] += ((sfx[0]+sfx[1]) * vol[5]) >> 17;
-					paintbuffer[i].sample[6] += (sfx[0] * vol[6]) >> 16;
-					paintbuffer[i].sample[7] += (sfx[1] * vol[7]) >> 16;
-					sfx += 2;
-				}
-			}
-			else if (vol[4] + vol[5] > 0)
-			{
-				for (i = 0;i < count;i++)
-				{
-					paintbuffer[i].sample[0] += (sfx[0] * vol[0]) >> 16;
-					paintbuffer[i].sample[1] += (sfx[1] * vol[1]) >> 16;
-					paintbuffer[i].sample[2] += (sfx[0] * vol[2]) >> 16;
-					paintbuffer[i].sample[3] += (sfx[1] * vol[3]) >> 16;
-					paintbuffer[i].sample[4] += ((sfx[0]+sfx[1]) * vol[4]) >> 17;
-					paintbuffer[i].sample[5] += ((sfx[0]+sfx[1]) * vol[5]) >> 17;
-					sfx += 2;
-				}
-			}
-			else if (vol[2] + vol[3] > 0)
-			{
-				for (i = 0;i < count;i++)
-				{
-					paintbuffer[i].sample[0] += (sfx[0] * vol[0]) >> 16;
-					paintbuffer[i].sample[1] += (sfx[1] * vol[1]) >> 16;
-					paintbuffer[i].sample[2] += (sfx[0] * vol[2]) >> 16;
-					paintbuffer[i].sample[3] += (sfx[1] * vol[3]) >> 16;
-					sfx += 2;
-				}
-			}
-			else if (vol[0] + vol[1] > 0)
-			{
-				for (i = 0;i < count;i++)
-				{
-					paintbuffer[i].sample[0] += (sfx[0] * vol[0]) >> 16;
-					paintbuffer[i].sample[1] += (sfx[1] * vol[1]) >> 16;
-					sfx += 2;
-				}
-			}
-		}
-		else if (ch->sfx->format.channels == 1)
-		{
-			if (vol[6] + vol[7] > 0)
-			{
-				for (i = 0;i < count;i++)
-				{
-					paintbuffer[i].sample[0] += (sfx[0] * vol[0]) >> 16;
-					paintbuffer[i].sample[1] += (sfx[0] * vol[1]) >> 16;
-					paintbuffer[i].sample[2] += (sfx[0] * vol[2]) >> 16;
-					paintbuffer[i].sample[3] += (sfx[0] * vol[3]) >> 16;
-					paintbuffer[i].sample[4] += (sfx[0] * vol[4]) >> 16;
-					paintbuffer[i].sample[5] += (sfx[0] * vol[5]) >> 16;
-					paintbuffer[i].sample[6] += (sfx[0] * vol[6]) >> 16;
-					paintbuffer[i].sample[7] += (sfx[0] * vol[7]) >> 16;
-					sfx += 1;
-				}
-			}
-			else if (vol[4] + vol[5] > 0)
-			{
-				for (i = 0;i < count;i++)
-				{
-					paintbuffer[i].sample[0] += (sfx[0] * vol[0]) >> 16;
-					paintbuffer[i].sample[1] += (sfx[0] * vol[1]) >> 16;
-					paintbuffer[i].sample[2] += (sfx[0] * vol[2]) >> 16;
-					paintbuffer[i].sample[3] += (sfx[0] * vol[3]) >> 16;
-					paintbuffer[i].sample[4] += (sfx[0] * vol[4]) >> 16;
-					paintbuffer[i].sample[5] += (sfx[0] * vol[5]) >> 16;
-					sfx += 1;
-				}
-			}
-			else if (vol[2] + vol[3] > 0)
-			{
-				for (i = 0;i < count;i++)
-				{
-					paintbuffer[i].sample[0] += (sfx[0] * vol[0]) >> 16;
-					paintbuffer[i].sample[1] += (sfx[0] * vol[1]) >> 16;
-					paintbuffer[i].sample[2] += (sfx[0] * vol[2]) >> 16;
-					paintbuffer[i].sample[3] += (sfx[0] * vol[3]) >> 16;
-					sfx += 1;
-				}
-			}
-			else if (vol[0] + vol[1] > 0)
-			{
-				for (i = 0;i < count;i++)
-				{
-					paintbuffer[i].sample[0] += (sfx[0] * vol[0]) >> 16;
-					paintbuffer[i].sample[1] += (sfx[0] * vol[1]) >> 16;
-					sfx += 1;
-				}
-			}
-		}
-		else
-			return true; // unsupported number of channels in sound
-	}
-	ch->pos += count;
-	return true;
-}
-
