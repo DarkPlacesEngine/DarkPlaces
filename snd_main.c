@@ -1279,7 +1279,7 @@ static void S_PaintAndSubmit (void)
 {
 	unsigned int newsoundtime, paintedtime, endtime, maxtime, usedframes;
 
-	if (snd_renderbuffer == NULL || snd_blocked > 0)
+	if (snd_renderbuffer == NULL || snd_blocked > 0 || nosound.integer)
 		return;
 
 	// Update sound time
@@ -1328,7 +1328,7 @@ void S_Update(const matrix4x4_t *listenermatrix)
 	channel_t *ch, *combine;
 	matrix4x4_t basematrix, rotatematrix;
 
-	if (!snd_initialized.integer || snd_blocked > 0 || snd_renderbuffer == NULL)
+	if (snd_renderbuffer == NULL || snd_blocked > 0 || nosound.integer)
 		return;
 
 	Matrix4x4_Invert_Simple(&basematrix, listenermatrix);
