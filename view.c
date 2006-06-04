@@ -38,7 +38,7 @@ cvar_t cl_bob = {0, "cl_bob","0.02", "view bobbing amount"};
 cvar_t cl_bobcycle = {0, "cl_bobcycle","0.6", "view bobbing speed"};
 cvar_t cl_bobup = {0, "cl_bobup","0.5", "view bobbing adjustment that makes the up or down swing of the bob last longer"};
 
-cvar_t cl_bobmodel = {0, "cl_bobmodel", "1", "enables gun bobbing"};
+cvar_t cl_bobmodel = {CVAR_SAVE, "cl_bobmodel", "1", "enables gun bobbing"};
 cvar_t cl_bobmodel_side = {0, "cl_bobmodel_side", "0.05", "gun bobbing sideways sway amount"};
 cvar_t cl_bobmodel_up = {0, "cl_bobmodel_up", "0.02", "gun bobbing upward movement amount"};
 cvar_t cl_bobmodel_speed = {0, "cl_bobmodel_speed", "7", "gun bobbing speed"};
