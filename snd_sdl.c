@@ -142,6 +142,12 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 
 	snd_renderbuffer = Snd_CreateRingBuffer(requested, 0, NULL);
 
+#ifdef __linux__
+	alsaspeakerlayout = true;
+#else
+	alsaspeakerlayout = false;
+#endif
+
 	sdlaudiotime = 0;
 	SDL_PauseAudio( false );
 	

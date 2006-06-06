@@ -53,6 +53,9 @@ speakerlayout_t;
 
 static speakerlayout_t snd_speakerlayout;
 
+// Our speaker layouts are based on ALSA. They differ from those
+// Win32 APIs and Mac OS X use when there's more than 4 channels.
+// (rear left + rear right, and front center + LFE are swapped).
 #define SND_SPEAKERLAYOUTS (sizeof(snd_speakerlayouts) / sizeof(snd_speakerlayouts[0]))
 static const speakerlayout_t snd_speakerlayouts[] =
 {
@@ -152,8 +155,10 @@ static sfx_t *known_sfx = NULL;
 static qboolean sound_spatialized = false;
 
 qboolean simsound = false;
+qboolean alsaspeakerlayout = false;
 
 int snd_blocked = 0;
+static int current_swapstereo = 0;
 
 // Cvars declared in sound.h (part of the sound API)
 cvar_t bgmvolume = {CVAR_SAVE, "bgmvolume", "1", "volume of background music (such as CD music or replacement files such as sound/cdtracks/track002.ogg)"};
@@ -343,6 +348,60 @@ static qboolean S_ChooseCheaperFormat (snd_format_t* format, qboolean fixed_spee
 }
 
 
+#define SWAP_LISTENERS(l1, l2, tmpl) { tmpl = (l1); (l1) = (l2); (l2) = tmpl; }
+
+void S_SetSpeakerLayout (void)
+{
+	unsigned int i;
+	listener_t swaplistener;
+	listener_t *listeners;
+
+	for (i = 0; i < SND_SPEAKERLAYOUTS; i++)
+		if (snd_speakerlayouts[i].channels == snd_renderbuffer->format.channels)
+			break;
+	if (i >= SND_SPEAKERLAYOUTS)
+	{
+		Con_Printf("S_SetSpeakerLayout: Can't find the speaker layout for %hu channels. Defaulting to mono output\n",
+				   snd_renderbuffer->format.channels);
+		i = SND_SPEAKERLAYOUTS - 1;
+	}
+
+	snd_speakerlayout = snd_speakerlayouts[i];
+	listeners = snd_speakerlayout.listeners;
+
+	// Swap the left and right channels if snd_swapstereo is set
+	if (snd_swapstereo.integer)
+	{
+		switch (snd_speakerlayout.channels)
+		{
+			case 8:
+				SWAP_LISTENERS(listeners[6], listeners[7], swaplistener);
+				// no break
+			case 4:
+			case 6:
+				SWAP_LISTENERS(listeners[2], listeners[3], swaplistener);
+				// no break
+			case 2:
+				SWAP_LISTENERS(listeners[0], listeners[1], swaplistener);
+				break;
+
+			default:
+			case 1:
+				// Nothing to do
+				break;
+		}
+	}
+
+	// Convert our layout (= ALSA) to Win32/CoreAudio layout if necessary
+	if (!alsaspeakerlayout &&
+		(snd_speakerlayout.channels == 6 || snd_speakerlayout.channels == 8))
+	{
+		SWAP_LISTENERS(listeners[2], listeners[4], swaplistener);
+		SWAP_LISTENERS(listeners[3], listeners[5], swaplistener);
+	}
+}
+
+
 void S_Startup (void)
 {
 	qboolean fixed_speed, fixed_width, fixed_channels;
@@ -350,7 +409,6 @@ void S_Startup (void)
 	static snd_format_t prev_render_format = {0, 0, 0};
 	const char* env;
 	int i;
-	unsigned int layout_id;
 
 	if (!snd_initialized.integer)
 		return;
@@ -477,6 +535,7 @@ void S_Startup (void)
 						chosen_fmt.speed, chosen_fmt.width * 8,
 						chosen_fmt.channels);
 
+			alsaspeakerlayout = false;
 			memset(&suggest_fmt, 0, sizeof(suggest_fmt));
 			accepted = SndSys_Init(&chosen_fmt, &suggest_fmt);
 
@@ -516,6 +575,10 @@ void S_Startup (void)
 	Con_Printf("Sound format: %dHz, %d channels, %d bits per sample\n",
 			   chosen_fmt.speed, chosen_fmt.channels, chosen_fmt.width * 8);
 
+	if (chosen_fmt.channels > 4)
+		Con_Printf("Using %s speaker layout for 3D sound\n",
+				   alsaspeakerlayout ? "ALSA" : "standard");
+
 	// Update the cvars
 	snd_speed.integer = chosen_fmt.speed;
 	snd_width.integer = chosen_fmt.width;
@@ -541,18 +604,8 @@ void S_Startup (void)
 	snd_renderbuffer->startframe = soundtime;
 	snd_renderbuffer->endframe = soundtime;
 
-	// select speaker layout
-	for (layout_id = 0; layout_id < SND_SPEAKERLAYOUTS; layout_id++)
-		if (snd_speakerlayouts[layout_id].channels == snd_renderbuffer->format.channels)
-			break;
-	if (layout_id >= SND_SPEAKERLAYOUTS)
-	{
-		Con_Printf("S_Startup: invalid number of channels (%hu). Can't find the corresponding speaker layout.\n"
-				   "Defaulting to mono output\n",
-				   snd_renderbuffer->format.channels);
-		layout_id = SND_SPEAKERLAYOUTS - 1;
-	}
-	snd_speakerlayout = snd_speakerlayouts[layout_id];
+	S_SetSpeakerLayout();
+	current_swapstereo = snd_swapstereo.integer;
 }
 
 void S_Shutdown(void)
@@ -1330,6 +1383,13 @@ void S_Update(const matrix4x4_t *listenermatrix)
 
 	if (snd_renderbuffer == NULL || snd_blocked > 0 || nosound.integer)
 		return;
+
+	// If snd_swapstereo has changed, recompute the speaker layout
+	if (current_swapstereo != snd_swapstereo.integer)
+	{
+		current_swapstereo = snd_swapstereo.integer;
+		S_SetSpeakerLayout();
+	}
 
 	Matrix4x4_Invert_Simple(&basematrix, listenermatrix);
 	Matrix4x4_OriginFromMatrix(listenermatrix, listener_origin);

@@ -161,6 +161,12 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 		return false;
 	}
 	
+#ifdef __linux__
+	alsaspeakerlayout = true;
+#else
+	alsaspeakerlayout = false;
+#endif
+
 	old_osstime = 0;
 	osssoundtime = 0;
 	snd_renderbuffer = Snd_CreateRingBuffer(requested, 0, NULL);
@@ -228,9 +234,9 @@ void SndSys_Submit (void)
 
 		snd_renderbuffer->startframe += written / factor;
 
-		if ((unsigned int)written < nbframes * factor)
+		if ((unsigned int)written < limit * factor)
 		{
-			Con_Printf("SndSys_Submit: audio can't keep up! (%d < %u)\n", written, nbframes * factor);
+			Con_Printf("SndSys_Submit: audio can't keep up! (%u < %u)\n", written, limit * factor);
 			return;
 		}
 		
@@ -244,7 +250,14 @@ void SndSys_Submit (void)
 		Con_Printf("SndSys_Submit: audio write returned %d!\n", written);
 		return;
 	}
+
+	if (written % factor != 0)
+		Sys_Error("SndSys_Submit: nb of bytes written (%d) isn't aligned to a frame sample!\n", written);
+
 	snd_renderbuffer->startframe += written / factor;
+
+	if ((unsigned int)written < nbframes * factor)
+		Con_Printf("SndSys_Submit: audio can't keep up! (%u < %u)\n", written, nbframes * factor);
 }
 
 

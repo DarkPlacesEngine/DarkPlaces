@@ -135,6 +135,8 @@ extern mempool_t *snd_mempool;
 // Used for isolating performance in the renderer.
 extern qboolean simsound;
 
+extern qboolean alsaspeakerlayout;
+
 
 // ====================================================================
 //         Architecture-independent functions
