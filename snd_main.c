@@ -260,7 +260,7 @@ static void S_SoundList_f (void)
 		{
 			unsigned int size;
 			const snd_format_t* format;
-			
+
 			size = sfx->memsize;
 			format = sfx->fetcher->getfmt(sfx);
 			Con_Printf ("%c%c%c%c(%2db, %6s) %8i : %s\n",
@@ -326,7 +326,7 @@ static qboolean S_ChooseCheaperFormat (snd_format_t* format, qboolean fixed_spee
 	{
 		unsigned int suggest_speeds [] = { 44100, 22050, 11025 };
 		unsigned int i;
-		
+
 		for (i = 0; i < sizeof(suggest_speeds) / sizeof(suggest_speeds[0]); i++)
 			if (format->speed > suggest_speeds[i])
 			{
@@ -487,7 +487,7 @@ void S_Startup (void)
 			chosen_fmt.speed = prev_render_format.speed;
 		}
 	}
-	
+
 	// Sanity checks
 	if (chosen_fmt.speed < SND_MIN_SPEED)
 	{
@@ -521,7 +521,7 @@ void S_Startup (void)
 		chosen_fmt.channels = SND_MAX_CHANNELS;
 		fixed_channels = false;
 	}
-	
+
 	// create the sound buffer used for sumitting the samples to the plaform-dependent module
 	if (!simsound)
 	{
@@ -1102,7 +1102,8 @@ int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 		return -1;
 	if (!sfx->fetcher)
 	{
-		Con_DPrintf ("S_StartSound: \"%s\" hasn't been precached\n", sfx->name);
+		// this is very annoying when it was precached but the file could not be loaded
+		//Con_DPrintf ("S_StartSound: \"%s\" hasn't been precached\n", sfx->name);
 		return -1;
 	}
 
@@ -1220,7 +1221,7 @@ void S_StopAllSounds (void)
 	{
 		int clear;
 		size_t memsize;
-		
+
 		clear = (snd_renderbuffer->format.width == 1) ? 0x80 : 0;
 		memsize = snd_renderbuffer->maxframes * snd_renderbuffer->format.width * snd_renderbuffer->format.channels;
 		memset(snd_renderbuffer->ring, clear, memsize);
@@ -1342,7 +1343,7 @@ static void S_PaintAndSubmit (void)
 		newsoundtime = (unsigned int)((realtime - snd_starttime) * (double)snd_renderbuffer->format.speed);
 	else
 		newsoundtime = SndSys_GetSoundTime();
-	
+
 	newsoundtime += extrasoundtime;
 	if (newsoundtime < soundtime)
 		Con_Printf("S_PaintAndSubmit: WARNING: newsoundtime < soundtime (%u < %u)\n",
