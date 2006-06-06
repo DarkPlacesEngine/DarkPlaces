@@ -201,6 +201,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 	snd_renderbuffer = Snd_CreateRingBuffer(requested, 0, NULL);
 	expected_delay = 0;
 	alsasoundtime = 0;
+	alsaspeakerlayout = true;
 	
 	return true;
 
