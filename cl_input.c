@@ -1546,6 +1546,7 @@ void CL_InitInput (void)
 	Cvar_RegisterVariable(&cl_movement_friction);
 	Cvar_RegisterVariable(&cl_movement_edgefriction);
 	Cvar_RegisterVariable(&cl_movement_stepheight);
+	Cvar_RegisterVariable(&cl_movement_airaccelerate);
 	Cvar_RegisterVariable(&cl_movement_accelerate);
 	Cvar_RegisterVariable(&cl_movement_jumpvelocity);
 	Cvar_RegisterVariable(&cl_gravity);
