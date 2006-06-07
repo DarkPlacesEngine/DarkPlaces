@@ -1357,6 +1357,12 @@ void Image_MipReduce(const unsigned char *in, unsigned char *out, int *width, in
 	if (*depth != 1 || destdepth != 1)
 	{
 		Con_Printf ("Image_Resample: 3D resampling not supported\n");
+		if (*width > destwidth)
+			width >>= 1;
+		if (*height > destheight)
+			height >>= 1;
+		if (*depth > destdepth)
+			depth >>= 1;
 		return;
 	}
 	nextrow = *width * bytesperpixel;
