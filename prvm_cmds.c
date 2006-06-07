@@ -749,13 +749,20 @@ void VM_remove (void)
 	VM_SAFEPARMCOUNT(1, VM_remove);
 
 	ed = PRVM_G_EDICT(OFS_PARM0);
-	if( PRVM_NUM_FOR_EDICT(ed) <= prog->reserved_edicts ) {
+	if( PRVM_NUM_FOR_EDICT(ed) <= prog->reserved_edicts )
+	{
 		Con_DPrint( "VM_remove: tried to remove the null entity or a reserved entity!\n" );
-	} else if( ed->priv.required->free ) {
-		Con_DPrint( "VM_remove: tried to remove an already freed entity!\n" );
-	} else {
-		PRVM_ED_Free (ed);
+		if (developer.integer >= 1)
+			PRVM_PrintState();
 	}
+	else if( ed->priv.required->free )
+	{
+		Con_DPrint( "VM_remove: tried to remove an already freed entity!\n" );
+		if (developer.integer >= 1)
+			PRVM_PrintState();
+	}
+	else
+		PRVM_ED_Free (ed);
 //	if (ed == prog->edicts)
 //		PRVM_ERROR ("remove: tried to remove world");
 //	if (PRVM_NUM_FOR_EDICT(ed) <= sv.maxclients)
