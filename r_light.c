@@ -61,7 +61,7 @@ void r_light_shutdown(void)
 void r_light_newmap(void)
 {
 	int i;
-	for (i = 0;i < 256;i++)
+	for (i = 0;i < MAX_LIGHTSTYLES;i++)
 		r_refdef.lightstylevalue[i] = 264;		// normal light value
 }
 
