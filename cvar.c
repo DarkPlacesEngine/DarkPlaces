@@ -518,8 +518,9 @@ void Cvar_WriteVariables (qfile_t *f)
 {
 	cvar_t	*var;
 
+	// don't save cvars that match their default value
 	for (var = cvar_vars ; var ; var = var->next)
-		if (var->flags & CVAR_SAVE)
+		if (var->flags & CVAR_SAVE && strcmp(var->string, var->defstring))
 			FS_Printf(f, "%s%s \"%s\"\n", var->flags & CVAR_ALLOCATED ? "seta " : "", var->name, var->string);
 }
 
