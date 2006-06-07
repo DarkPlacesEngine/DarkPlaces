@@ -1233,7 +1233,8 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 	texture_t *tx, *tx2, *anims[10], *altanims[10];
 	dmiptexlump_t *m;
 	unsigned char *data, *mtdata;
-	char name[MAX_QPATH];
+	const char *s;
+	char mapname[MAX_QPATH], name[MAX_QPATH];
 
 	loadmodel->data_textures = NULL;
 
@@ -1277,6 +1278,11 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 
 	if (!m)
 		return;
+
+	s = loadmodel->name;
+	if (!strncasecmp(s, "maps/", 4))
+		s += 4;
+	FS_StripExtension(s, mapname, sizeof(mapname));
 
 	// just to work around bounds checking when debugging with it (array index out of bounds error thing)
 	dofs = m->dataofs;
@@ -1346,7 +1352,8 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			}
 			else
 			{
-				if (!Mod_LoadSkinFrame(&tx->skin, gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s", tx->name), TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false, true))
+				if (!Mod_LoadSkinFrame(&tx->skin, gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s/%s", mapname, tx->name), TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false, true)
+				 && !Mod_LoadSkinFrame(&tx->skin, gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s", tx->name), TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false, true))
 				{
 					// did not find external texture, load it from the bsp or wad3
 					if (loadmodel->brush.ishlbsp)
