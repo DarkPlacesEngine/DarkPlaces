@@ -596,7 +596,7 @@ Key_SetBinding (int keynum, int bindmap, const char *binding)
 	char *newbinding;
 	size_t l;
 
-	if (keynum == -1)
+	if (keynum == -1 || keynum >= MAX_KEYS)
 		return;
 
 // free old bindings
@@ -657,7 +657,7 @@ Key_In_Bind_f (void)
 	}
 
 	b = Key_StringToKeynum (Cmd_Argv (2));
-	if (b == -1) {
+	if (b == -1 || b >= MAX_KEYS) {
 		Con_Printf("\"%s\" isn't a valid key\n", Cmd_Argv (2));
 		return;
 	}
@@ -752,7 +752,7 @@ Key_Bind_f (void)
 		return;
 	}
 	b = Key_StringToKeynum (Cmd_Argv (1));
-	if (b == -1) {
+	if (b == -1 || b >= MAX_KEYS) {
 		Con_Printf("\"%s\" isn't a valid key\n", Cmd_Argv (1));
 		return;
 	}
@@ -823,6 +823,8 @@ Key_Init (void)
 const char *Key_GetBind (int key)
 {
 	const char *bind;
+	if (key < 0 || key >= MAX_KEYS)
+		return NULL;
 	bind = keybindings[key_bmap][key];
 	if (!bind)
 		bind = keybindings[key_bmap2][key];
@@ -842,6 +844,9 @@ Key_Event (int key, char ascii, qboolean down)
 {
 	const char *bind;
 	qboolean q;
+
+	if (key < 0 || key >= MAX_KEYS)
+		return;
 
 	// get key binding
 	bind = keybindings[key_bmap][key];
@@ -962,7 +967,7 @@ Key_Event (int key, char ascii, qboolean down)
 	// ignore binds while a video is played, let the video system handle the key event
 	if (cl_videoplaying)
 	{
-		CL_Video_KeyEvent (key, ascii, keydown[key] != 0); 
+		CL_Video_KeyEvent (key, ascii, keydown[key] != 0);
 		return;
 	}
 
