@@ -665,7 +665,14 @@ void VID_CheckExtensions(void)
 
 // COMMANDLINEOPTION: GL: -notexture3d disables GL_EXT_texture3D (required for spherical lights, otherwise they render as a column)
 	if ((gl_texture3d = GL_CheckExtension("GL_EXT_texture3D", texture3dextfuncs, "-notexture3d", false)))
+	{
 		qglGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, &gl_max_3d_texture_size);
+		if (gl_max_3d_texture_size < 32)
+		{
+			gl_texture3d = false;
+			Con_Printf("GL_EXT_texture3D reported bogus GL_MAX_3D_TEXTURE_SIZE, disabled\n");
+		}
+	}
 // COMMANDLINEOPTION: GL: -nocubemap disables GL_ARB_texture_cube_map (required for bumpmapping)
 	if ((gl_texturecubemap = GL_CheckExtension("GL_ARB_texture_cube_map", NULL, "-nocubemap", false)))
 		qglGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE_ARB, &gl_max_cube_map_texture_size);
