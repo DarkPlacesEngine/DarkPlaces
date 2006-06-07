@@ -757,7 +757,7 @@ static void R_Shadow_MakeTextures(void)
 		}
 	}
 	r_shadow_attenuation2dtexture = R_LoadTexture2D(r_shadow_texturepool, "attenuation2d", ATTEN2DSIZE, ATTEN2DSIZE, data, TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_CLAMP | TEXF_ALPHA, NULL);
-	if (r_shadow_texture3d.integer)
+	if (r_shadow_texture3d.integer && gl_texture3d)
 	{
 		for (z = 0;z < ATTEN3DSIZE;z++)
 		{
