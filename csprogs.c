@@ -512,11 +512,18 @@ void CL_VM_Init (void)
 		return;
 	}
 	else
+	{
+		if (developer.integer < 100)
+		{
+			Con_DPrintf("CL_VM_Init: CSQC is broken, and is not being loaded because developer is less than 100.\n");
+			return;
+		}
 		if(!sv.active && !csqc_progcrc.integer)	//[515]: because cheaters may use csqc while server didn't allowed it !
 		{
 			Con_Printf("CL_VM_Init: server didn't sent CSQC crc, so CSQC is disabled\n");
 			return;
 		}
+	}
 
 	PRVM_Begin;
 	PRVM_InitProg(PRVM_CLIENTPROG);
