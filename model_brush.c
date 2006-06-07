@@ -1280,8 +1280,8 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		return;
 
 	s = loadmodel->name;
-	if (!strncasecmp(s, "maps/", 4))
-		s += 4;
+	if (!strncasecmp(s, "maps/", 5))
+		s += 5;
 	FS_StripExtension(s, mapname, sizeof(mapname));
 
 	// just to work around bounds checking when debugging with it (array index out of bounds error thing)
