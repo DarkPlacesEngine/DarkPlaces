@@ -133,7 +133,7 @@ float furthestplanedist_float(const float *normal, const colpointf_t *points, in
 }
 
 
-colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalplanes, const colplanef_t *originalplanes)
+colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalplanes, const colplanef_t *originalplanes, int supercontents)
 {
 	// TODO: planesbuf could be replaced by a remapping table
 	int j, k, m, w;
@@ -262,7 +262,6 @@ colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalpla
 		// add the new plane
 		VectorCopy(originalplanes[j].normal, planesbuf[numplanesbuf].normal);
 		planesbuf[numplanesbuf].dist = originalplanes[j].dist;
-		planesbuf[numplanesbuf].supercontents = originalplanes[j].supercontents;
 		planesbuf[numplanesbuf].q3surfaceflags = originalplanes[j].q3surfaceflags;
 		planesbuf[numplanesbuf].texture = originalplanes[j].texture;
 		numplanesbuf++;
@@ -285,6 +284,7 @@ colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalpla
 
 	// allocate the brush and copy to it
 	brush = (colbrushf_t *)Mem_Alloc(mempool, sizeof(colbrushf_t) + sizeof(colpointf_t) * numpointsbuf + sizeof(colplanef_t) * numplanesbuf + sizeof(int) * numelementsbuf);
+	brush->supercontents = supercontents;
 	brush->numplanes = numplanesbuf;
 	brush->numpoints = numpointsbuf;
 	brush->numtriangles = numelementsbuf / 3;
@@ -303,10 +303,8 @@ colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalpla
 		brush->planes[j].normal[1] = planesbuf[j].normal[1];
 		brush->planes[j].normal[2] = planesbuf[j].normal[2];
 		brush->planes[j].dist = planesbuf[j].dist;
-		brush->planes[j].supercontents = planesbuf[j].supercontents;
 		brush->planes[j].q3surfaceflags = planesbuf[j].q3surfaceflags;
 		brush->planes[j].texture = planesbuf[j].texture;
-		brush->supercontents |= brush->planes[j].supercontents;
 	}
 	for (j = 0;j < brush->numtriangles * 3;j++)
 		brush->elements[j] = elementsbuf[j];
@@ -518,7 +516,7 @@ colbrushf_t *Collision_AllocBrushFromPermanentPolygonFloat(mempool_t *mempool, i
 // NOTE: start and end of each brush pair must have same numplanes/numpoints
 void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, const colbrushf_t *thatbrush_start, const colbrushf_t *thatbrush_end)
 {
-	int nplane, nplane2, fstartsolid = true, fendsolid = true, brushsolid, hitsupercontents = 0, hitq3surfaceflags = 0;
+	int nplane, nplane2, fstartsolid = true, fendsolid = true, brushsolid, hitq3surfaceflags = 0;
 	float enterfrac = -1, leavefrac = 1, d1, d2, f, imove, newimpactnormal[3], enterfrac2 = -1;
 	const colplanef_t *startplane, *endplane;
 	texture_t *hittexture = NULL;
@@ -585,7 +583,6 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush
 					enterfrac = f;
 					enterfrac2 = f - collision_impactnudge.value * imove;
 					VectorLerp(startplane->normal, enterfrac, endplane->normal, newimpactnormal);
-					hitsupercontents = startplane->supercontents;
 					hitq3surfaceflags = startplane->q3surfaceflags;
 					hittexture = startplane->texture;
 				}
@@ -640,7 +637,7 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush
 			if (enterfrac < trace->realfraction)
 			{
 				enterfrac2 = enterfrac - collision_impactnudge.value * imove;
-				trace->hitsupercontents = thatbrush_start->planes[0].supercontents;
+				trace->hitsupercontents = thatbrush_start->supercontents;
 				trace->hitq3surfaceflags = thatbrush_start->planes[0].q3surfaceflags;
 				trace->hittexture = thatbrush_start->planes[0].texture;
 				trace->realfraction = bound(0, enterfrac, 1);
@@ -651,7 +648,7 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush
 		else
 #endif
 		{
-			trace->hitsupercontents = hitsupercontents;
+			trace->hitsupercontents = thatbrush_start->supercontents;
 			trace->hitq3surfaceflags = hitq3surfaceflags;
 			trace->hittexture = hittexture;
 			trace->realfraction = bound(0, enterfrac, 1);
@@ -664,7 +661,7 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush
 // NOTE: start and end brush pair must have same numplanes/numpoints
 void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const vec3_t lineend, const colbrushf_t *thatbrush_start, const colbrushf_t *thatbrush_end)
 {
-	int nplane, fstartsolid = true, fendsolid = true, brushsolid, hitsupercontents = 0, hitq3surfaceflags = 0;
+	int nplane, fstartsolid = true, fendsolid = true, brushsolid, hitq3surfaceflags = 0;
 	float enterfrac = -1, leavefrac = 1, d1, d2, f, imove, newimpactnormal[3], enterfrac2 = -1;
 	const colplanef_t *startplane, *endplane;
 	texture_t *hittexture = NULL;
@@ -709,7 +706,6 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 					enterfrac = f;
 					enterfrac2 = f - collision_impactnudge.value * imove;
 					VectorLerp(startplane->normal, enterfrac, endplane->normal, newimpactnormal);
-					hitsupercontents = startplane->supercontents;
 					hitq3surfaceflags = startplane->q3surfaceflags;
 					hittexture = startplane->texture;
 				}
@@ -764,7 +760,7 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 			if (enterfrac < trace->realfraction)
 			{
 				enterfrac2 = enterfrac - collision_impactnudge.value * imove;
-				trace->hitsupercontents = hitsupercontents;
+				trace->hitsupercontents = thatbrush_start->supercontents;
 				trace->hitq3surfaceflags = hitq3surfaceflags;
 				trace->hittexture = hittexture;
 				trace->realfraction = bound(0, enterfrac, 1);
@@ -775,7 +771,7 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 		else
 #endif
 		{
-			trace->hitsupercontents = hitsupercontents;
+			trace->hitsupercontents = thatbrush_start->supercontents;
 			trace->hitq3surfaceflags = hitq3surfaceflags;
 			trace->hittexture = hittexture;
 			trace->realfraction = bound(0, enterfrac, 1);
@@ -846,7 +842,6 @@ void Collision_TraceBrushTriangleMeshFloat(trace_t *trace, const colbrushf_t *th
 	polyf_brush.supercontents = supercontents;
 	for (i = 0;i < polyf_brush.numplanes;i++)
 	{
-		polyf_brush.planes[i].supercontents = supercontents;
 		polyf_brush.planes[i].q3surfaceflags = q3surfaceflags;
 		polyf_brush.planes[i].texture = texture;
 	}
@@ -961,7 +956,6 @@ void Collision_TraceBrushPolygonTransformFloat(trace_t *trace, const colbrushf_t
 		Matrix4x4_Transform(polygonmatrixend, points + i * 3, polyf_brushend.points[i].v);
 	for (i = 0;i < polyf_brushstart.numplanes;i++)
 	{
-		polyf_brushstart.planes[i].supercontents = supercontents;
 		polyf_brushstart.planes[i].q3surfaceflags = q3surfaceflags;
 		polyf_brushstart.planes[i].texture = texture;
 	}
@@ -1038,7 +1032,6 @@ colbrushf_t *Collision_BrushForBox(const matrix4x4_t *matrix, const vec3_t mins,
 	brush->supercontents = supercontents;
 	for (j = 0;j < brush->numplanes;j++)
 	{
-		brush->planes[j].supercontents = supercontents;
 		brush->planes[j].q3surfaceflags = q3surfaceflags;
 		brush->planes[j].texture = texture;
 		brush->planes[j].dist = furthestplanedist_float(brush->planes[j].normal, brush->points, brush->numpoints);

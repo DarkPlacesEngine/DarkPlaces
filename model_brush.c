@@ -903,12 +903,12 @@ void Collision_ClipTrace_Box(trace_t *trace, const vec3_t cmins, const vec3_t cm
 	cbox_planes[3].normal[0] =  0;cbox_planes[3].normal[1] = -1;cbox_planes[3].normal[2] =  0;cbox_planes[3].dist = maxs[1] - cmins[1];
 	cbox_planes[4].normal[0] =  0;cbox_planes[4].normal[1] =  0;cbox_planes[4].normal[2] =  1;cbox_planes[4].dist = cmaxs[2] - mins[2];
 	cbox_planes[5].normal[0] =  0;cbox_planes[5].normal[1] =  0;cbox_planes[5].normal[2] = -1;cbox_planes[5].dist = maxs[2] - cmins[2];
-	cbox_planes[0].supercontents = boxsupercontents;cbox_planes[0].q3surfaceflags = boxq3surfaceflags;cbox_planes[0].texture = boxtexture;
-	cbox_planes[1].supercontents = boxsupercontents;cbox_planes[1].q3surfaceflags = boxq3surfaceflags;cbox_planes[1].texture = boxtexture;
-	cbox_planes[2].supercontents = boxsupercontents;cbox_planes[2].q3surfaceflags = boxq3surfaceflags;cbox_planes[2].texture = boxtexture;
-	cbox_planes[3].supercontents = boxsupercontents;cbox_planes[3].q3surfaceflags = boxq3surfaceflags;cbox_planes[3].texture = boxtexture;
-	cbox_planes[4].supercontents = boxsupercontents;cbox_planes[4].q3surfaceflags = boxq3surfaceflags;cbox_planes[4].texture = boxtexture;
-	cbox_planes[5].supercontents = boxsupercontents;cbox_planes[5].q3surfaceflags = boxq3surfaceflags;cbox_planes[5].texture = boxtexture;
+	cbox_planes[0].q3surfaceflags = boxq3surfaceflags;cbox_planes[0].texture = boxtexture;
+	cbox_planes[1].q3surfaceflags = boxq3surfaceflags;cbox_planes[1].texture = boxtexture;
+	cbox_planes[2].q3surfaceflags = boxq3surfaceflags;cbox_planes[2].texture = boxtexture;
+	cbox_planes[3].q3surfaceflags = boxq3surfaceflags;cbox_planes[3].texture = boxtexture;
+	cbox_planes[4].q3surfaceflags = boxq3surfaceflags;cbox_planes[4].texture = boxtexture;
+	cbox_planes[5].q3surfaceflags = boxq3surfaceflags;cbox_planes[5].texture = boxtexture;
 	memset(trace, 0, sizeof(trace_t));
 	trace->hitsupercontentsmask = hitsupercontentsmask;
 	trace->fraction = 1;
@@ -4493,12 +4493,11 @@ static void Mod_Q3BSP_LoadBrushes(lump_t *l)
 		{
 			VectorCopy(out->firstbrushside[j].plane->normal, planes[j].normal);
 			planes[j].dist = out->firstbrushside[j].plane->dist;
-			planes[j].supercontents = out->firstbrushside[j].texture->supercontents;
 			planes[j].q3surfaceflags = out->firstbrushside[j].texture->surfaceflags;
 			planes[j].texture = out->firstbrushside[j].texture;
 		}
 		// make the colbrush from the planes
-		out->colbrushf = Collision_NewBrushFromPlanes(loadmodel->mempool, out->numbrushsides, planes);
+		out->colbrushf = Collision_NewBrushFromPlanes(loadmodel->mempool, out->numbrushsides, planes, out->texture->supercontents);
 	}
 	if (planes)
 		Mem_Free(planes);
