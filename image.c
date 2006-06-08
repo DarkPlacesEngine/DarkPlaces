@@ -801,17 +801,22 @@ imageformat_t imageformats_tenebrae[] =
 	{"override/%s.tga", LoadTGA},
 	{"override/%s.png", PNG_LoadImage},
 	{"override/%s.jpg", JPEG_LoadImage},
+	{"override/%s.pcx", LoadPCX},
 	{NULL, NULL}
 };
 
 imageformat_t imageformats_nopath[] =
 {
+	{"override/%s.tga", LoadTGA},
+	{"override/%s.png", PNG_LoadImage},
+	{"override/%s.jpg", JPEG_LoadImage},
 	{"textures/%s.tga", LoadTGA},
 	{"textures/%s.png", PNG_LoadImage},
 	{"textures/%s.jpg", JPEG_LoadImage},
 	{"%s.tga", LoadTGA},
 	{"%s.png", PNG_LoadImage},
 	{"%s.jpg", JPEG_LoadImage},
+	{"%s.pcx", LoadPCX},
 	{NULL, NULL}
 };
 
