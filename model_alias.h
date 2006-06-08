@@ -129,7 +129,9 @@ typedef struct md2_s
 // the pitch and yaw are encoded as 8 bits each
 typedef struct md3vertex_s
 {
-	short origin[3], normalpitchyaw;
+	short origin[3];
+	unsigned char pitch;
+	unsigned char yaw;
 }
 md3vertex_t;
 
@@ -227,6 +229,9 @@ aliasbone_t;
 #include "model_dpmodel.h"
 
 #include "model_psk.h"
+
+// for decoding md3 model latlong vertex normals
+float mod_md3_sin[320];
 
 #endif
 

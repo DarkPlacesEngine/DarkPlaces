@@ -2378,7 +2378,7 @@ void RSurf_ActiveEntity(const entity_render_t *ent, qboolean wantnormals, qboole
 		R_Mesh_ResizeArrays(rsurface_model->surfmesh.num_vertices);
 	R_Mesh_Matrix(&ent->matrix);
 	Matrix4x4_Transform(&ent->inversematrix, r_view.origin, rsurface_modelorg);
-	if ((rsurface_entity->frameblend[0].lerp != 1 || rsurface_entity->frameblend[0].frame != 0) && (rsurface_model->surfmesh.data_morphvertex3f || rsurface_model->surfmesh.data_vertexweightindex4i))
+	if ((rsurface_entity->frameblend[0].lerp != 1 || rsurface_entity->frameblend[0].frame != 0) && rsurface_model->surfmesh.isanimated)
 	{
 		if (wanttangents)
 		{

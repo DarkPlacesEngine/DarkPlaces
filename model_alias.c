@@ -29,14 +29,19 @@ cvar_t r_skeletal_debugtranslatex = {0, "r_skeletal_debugtranslatex", "1", "deve
 cvar_t r_skeletal_debugtranslatey = {0, "r_skeletal_debugtranslatey", "1", "development cvar for testing skeletal model code"};
 cvar_t r_skeletal_debugtranslatez = {0, "r_skeletal_debugtranslatez", "1", "development cvar for testing skeletal model code"};
 
+float mod_md3_sin[320];
+
 void Mod_AliasInit (void)
 {
+	int i;
 	Cvar_RegisterVariable(&r_skeletal_debugbone);
 	Cvar_RegisterVariable(&r_skeletal_debugbonecomponent);
 	Cvar_RegisterVariable(&r_skeletal_debugbonevalue);
 	Cvar_RegisterVariable(&r_skeletal_debugtranslatex);
 	Cvar_RegisterVariable(&r_skeletal_debugtranslatey);
 	Cvar_RegisterVariable(&r_skeletal_debugtranslatez);
+	for (i = 0;i < 320;i++)
+		mod_md3_sin[i] = sin(i * M_PI * 2.0f / 256.0);
 }
 
 void Mod_Alias_GetMesh_Vertices(const model_t *model, const frameblend_t *frameblend, float *vertex3f, float *normal3f, float *svector3f, float *tvector3f)
@@ -141,45 +146,105 @@ void Mod_Alias_GetMesh_Vertices(const model_t *model, const frameblend_t *frameb
 			}
 		}
 	}
-	else if (model->surfmesh.data_morphvertex3f)
+	else if (model->surfmesh.data_morphmd3vertex)
 	{
 		// vertex morph
+		int i, numblends, blendnum;
 		int numverts = model->surfmesh.num_vertices;
-		const float *vertsbase = model->surfmesh.data_morphvertex3f;
-		const float *verts1 = vertsbase + numverts * 3 * frameblend[0].frame;
-		if (frameblend[1].lerp)
+		numblends = 0;
+		for (blendnum = 0;blendnum < 4;blendnum++)
 		{
-			int i;
-			float lerp1 = frameblend[0].lerp;
-			const float *verts2 = vertsbase + numverts * 3 * frameblend[1].frame;
-			float lerp2 = frameblend[1].lerp;
-			if (frameblend[2].lerp)
-			{
-				const float *verts3 = vertsbase + numverts * 3 * frameblend[2].frame;
-				float lerp3 = frameblend[2].lerp;
-				if (frameblend[3].lerp)
-				{
-					const float *verts4 = vertsbase + numverts * 3 * frameblend[3].frame;
-					float lerp4 = frameblend[3].lerp;
-					for (i = 0;i < numverts * 3;i++)
-						vertex3f[i] = lerp1 * verts1[i] + lerp2 * verts2[i] + lerp3 * verts3[i] + lerp4 * verts4[i];
-				}
-				else
-					for (i = 0;i < numverts * 3;i++)
-						vertex3f[i] = lerp1 * verts1[i] + lerp2 * verts2[i] + lerp3 * verts3[i];
-			}
-			else
-				for (i = 0;i < numverts * 3;i++)
-					vertex3f[i] = lerp1 * verts1[i] + lerp2 * verts2[i];
+			//VectorMA(translate, model->surfmesh.num_morphmdlframetranslate, frameblend[blendnum].lerp, translate);
+			if (frameblend[blendnum].lerp > 0)
+				numblends = blendnum + 1;
 		}
-		else
-			memcpy(vertex3f, verts1, numverts * 3 * sizeof(float));
+		memset(vertex3f, 0, numverts * sizeof(float[3]));
 		if (normal3f)
+			for (i = 0;i < numverts;i++)
+				VectorClear(normal3f + i * 3);
+		for (blendnum = 0;blendnum < numblends;blendnum++)
 		{
-			Mod_BuildNormals(0, model->surfmesh.num_vertices, model->surfmesh.num_triangles, vertex3f, model->surfmesh.data_element3i, normal3f, r_smoothnormals_areaweighting.integer);
+			const md3vertex_t *verts = model->surfmesh.data_morphmd3vertex + numverts * frameblend[blendnum].frame;
+			float scale = frameblend[blendnum].lerp * (1.0f / 64.0f);
+			for (i = 0;i < numverts;i++)
+			{
+				vertex3f[i * 3 + 0] += verts[i].origin[0] * scale;
+				vertex3f[i * 3 + 1] += verts[i].origin[1] * scale;
+				vertex3f[i * 3 + 2] += verts[i].origin[2] * scale;
+			}
+			// the yaw and pitch stored in md3 models are 8bit quantized angles
+			// (0-255), and as such a lookup table is very well suited to
+			// decoding them, and since cosine is equivilant to sine with an
+			// extra 45 degree rotation, this uses one lookup table for both
+			// sine and cosine with a +64 bias to get cosine.
+			if (normal3f)
+			{
+				float lerp = frameblend[blendnum].lerp;
+				for (i = 0;i < numverts;i++)
+				{
+					normal3f[i * 3 + 0] += mod_md3_sin[verts[i].yaw + 64] * mod_md3_sin[verts[i].pitch     ] * lerp;
+					normal3f[i * 3 + 1] += mod_md3_sin[verts[i].yaw     ] * mod_md3_sin[verts[i].pitch     ] * lerp;
+					normal3f[i * 3 + 2] +=                                  mod_md3_sin[verts[i].pitch + 64] * lerp;
+				}
+			}
+		}
+		if (normal3f)
 			if (svector3f)
 				Mod_BuildTextureVectorsFromNormals(0, model->surfmesh.num_vertices, model->surfmesh.num_triangles, vertex3f, model->surfmesh.data_texcoordtexture2f, normal3f, model->surfmesh.data_element3i, svector3f, tvector3f, r_smoothnormals_areaweighting.integer);
+	}
+	else if (model->surfmesh.data_morphmdlvertex)
+	{
+		// vertex morph
+		int i, numblends, blendnum;
+		int numverts = model->surfmesh.num_vertices;
+		float translate[3];
+		VectorClear(translate);
+		numblends = 0;
+		for (blendnum = 0;blendnum < 4;blendnum++)
+		{
+			if (model->surfmesh.data_morphmd2framesize6f)
+				VectorMA(translate, frameblend[blendnum].lerp, model->surfmesh.data_morphmd2framesize6f + frameblend[blendnum].frame * 6 + 3, translate);
+			else
+				VectorMA(translate, frameblend[blendnum].lerp, model->surfmesh.num_morphmdlframetranslate, translate);
+			if (frameblend[blendnum].lerp > 0)
+				numblends = blendnum + 1;
 		}
+		for (i = 0;i < numverts;i++)
+			VectorCopy(translate, vertex3f + i * 3);
+		if (normal3f)
+			for (i = 0;i < numverts;i++)
+				VectorClear(normal3f + i * 3);
+		for (blendnum = 0;blendnum < numblends;blendnum++)
+		{
+			const trivertx_t *verts = model->surfmesh.data_morphmdlvertex + numverts * frameblend[blendnum].frame;
+			float scale[3];
+			if (model->surfmesh.data_morphmd2framesize6f)
+				VectorScale(model->surfmesh.data_morphmd2framesize6f + frameblend[blendnum].frame * 6, frameblend[blendnum].lerp, scale);
+			else
+				VectorScale(model->surfmesh.num_morphmdlframescale, frameblend[blendnum].lerp, scale);
+			for (i = 0;i < numverts;i++)
+			{
+				vertex3f[i * 3 + 0] += verts[i].v[0] * scale[0];
+				vertex3f[i * 3 + 1] += verts[i].v[1] * scale[1];
+				vertex3f[i * 3 + 2] += verts[i].v[2] * scale[2];
+			}
+			// the vertex normals in mdl models are an index into a table of
+			// 162 unique values, this very crude quantization reduces the
+			// vertex normal to only one byte, which saves a lot of space but
+			// also makes lighting pretty coarse
+			if (normal3f)
+			{
+				float lerp = frameblend[blendnum].lerp;
+				for (i = 0;i < numverts;i++)
+				{
+					const float *vn = m_bytenormals[verts[i].lightnormalindex];
+					VectorMA(normal3f + i*3, lerp, vn, normal3f + i*3);
+				}
+			}
+		}
+		if (normal3f)
+			if (svector3f)
+				Mod_BuildTextureVectorsFromNormals(0, model->surfmesh.num_vertices, model->surfmesh.num_triangles, vertex3f, model->surfmesh.data_texcoordtexture2f, normal3f, model->surfmesh.data_element3i, svector3f, tvector3f, r_smoothnormals_areaweighting.integer);
 	}
 	else
 		Host_Error("model %s has no skeletal or vertex morph animation data", model->name);
@@ -433,27 +498,23 @@ static void Mod_MDLMD2MD3_TraceBox(model_t *model, int frame, trace_t *trace, co
 	}
 }
 
-static void Mod_ConvertAliasVerts (int inverts, vec3_t scale, vec3_t translate, trivertx_t *v, float *out3f, int *vertremap)
+static void Mod_ConvertAliasVerts (int inverts, trivertx_t *v, trivertx_t *out, int *vertremap)
 {
 	int i, j;
-	vec3_t temp;
 	for (i = 0;i < inverts;i++)
 	{
 		if (vertremap[i] < 0 && vertremap[i+inverts] < 0) // only used vertices need apply...
 			continue;
-		temp[0] = v[i].v[0] * scale[0] + translate[0];
-		temp[1] = v[i].v[1] * scale[1] + translate[1];
-		temp[2] = v[i].v[2] * scale[2] + translate[2];
 		j = vertremap[i]; // not onseam
 		if (j >= 0)
-			VectorCopy(temp, out3f + j * 3);
+			out[j] = v[i];
 		j = vertremap[i+inverts]; // onseam
 		if (j >= 0)
-			VectorCopy(temp, out3f + j * 3);
+			out[j] = v[i];
 	}
 }
 
-static void Mod_MDL_LoadFrames (unsigned char* datapointer, int inverts, vec3_t scale, vec3_t translate, int *vertremap)
+static void Mod_MDL_LoadFrames (unsigned char* datapointer, int inverts, int *vertremap)
 {
 	int i, f, pose, groupframes;
 	float interval;
@@ -508,7 +569,7 @@ static void Mod_MDL_LoadFrames (unsigned char* datapointer, int inverts, vec3_t 
 		{
 			pinframe = (daliasframe_t *)datapointer;
 			datapointer += sizeof(daliasframe_t);
-			Mod_ConvertAliasVerts(inverts, scale, translate, (trivertx_t *)datapointer, loadmodel->surfmesh.data_morphvertex3f + pose * loadmodel->surfmesh.num_vertices * 3, vertremap);
+			Mod_ConvertAliasVerts(inverts, (trivertx_t *)datapointer, loadmodel->surfmesh.data_morphmdlvertex + pose * loadmodel->surfmesh.num_vertices, vertremap);
 			datapointer += sizeof(trivertx_t) * inverts;
 			pose++;
 		}
@@ -589,7 +650,7 @@ static void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfi
 void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	int i, j, version, totalskins, skinwidth, skinheight, groupframes, groupskins, numverts;
-	float scales, scalet, scale[3], translate[3], interval;
+	float scales, scalet, interval;
 	msurface_t *surface;
 	unsigned char *data;
 	mdl_t *pinmodel;
@@ -651,8 +712,8 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 
 	for (i = 0;i < 3;i++)
 	{
-		scale[i] = LittleFloat (pinmodel->scale[i]);
-		translate[i] = LittleFloat (pinmodel->scale_origin[i]);
+		loadmodel->surfmesh.num_morphmdlframescale[i] = LittleFloat (pinmodel->scale[i]);
+		loadmodel->surfmesh.num_morphmdlframetranslate[i] = LittleFloat (pinmodel->scale_origin[i]);
 	}
 
 	startskins = datapointer;
@@ -774,9 +835,9 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 
 // load the frames
 	loadmodel->animscenes = (animscene_t *)Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numframes);
-	loadmodel->surfmesh.data_morphvertex3f = (float *)Mem_Alloc(loadmodel->mempool, sizeof(float[3]) * loadmodel->surfmesh.num_morphframes * loadmodel->surfmesh.num_vertices);
+	loadmodel->surfmesh.data_morphmdlvertex = (trivertx_t *)Mem_Alloc(loadmodel->mempool, sizeof(trivertx_t) * loadmodel->surfmesh.num_morphframes * loadmodel->surfmesh.num_vertices);
 	loadmodel->surfmesh.data_neighbor3i = (int *)Mem_Alloc(loadmodel->mempool, loadmodel->surfmesh.num_triangles * sizeof(int[3]));
-	Mod_MDL_LoadFrames (startframes, numverts, scale, translate, vertremap);
+	Mod_MDL_LoadFrames (startframes, numverts, vertremap);
 	Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
 	Mod_Alias_CalculateBoundingBox();
 	Mod_Alias_Mesh_CompileFrameZero();
@@ -887,25 +948,14 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 	surface->num_triangles = loadmodel->surfmesh.num_triangles;
 	surface->num_firstvertex = 0;
 	surface->num_vertices = loadmodel->surfmesh.num_vertices;
-}
 
-static void Mod_MD2_ConvertVerts (vec3_t scale, vec3_t translate, trivertx_t *v, float *out3f, int numverts, int *vertremap)
-{
-	int i;
-	trivertx_t *in;
-	for (i = 0;i < numverts;i++, out3f += 3)
-	{
-		in = v + vertremap[i];
-		out3f[0] = in->v[0] * scale[0] + translate[0];
-		out3f[1] = in->v[1] * scale[1] + translate[1];
-		out3f[2] = in->v[2] * scale[2] + translate[2];
-	}
+	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || loadmodel->animscenes[i].framecount > 1;
 }
 
 void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 {
-	int i, j, k, hashindex, num, numxyz, numst, xyz, st, skinwidth, skinheight, *vertremap, version, end, numverts;
-	float *stverts, s, t, scale[3], translate[3];
+	int i, j, hashindex, numxyz, numst, xyz, st, skinwidth, skinheight, *vertremap, version, end;
+	float iskinwidth, iskinheight;
 	unsigned char *data;
 	msurface_t *surface;
 	md2_t *pinmodel;
@@ -917,8 +967,8 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 	struct md2verthash_s
 	{
 		struct md2verthash_s *next;
-		int xyz;
-		float st[2];
+		unsigned short xyz;
+		unsigned short st;
 	}
 	*hash, **md2verthash, *md2verthashdata;
 	skinframe_t tempskinframe;
@@ -961,20 +1011,27 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 	if (LittleLong(pinmodel->ofs_glcmds) <= 0 || LittleLong(pinmodel->ofs_glcmds) >= end)
 		Host_Error ("%s is not a valid model", loadmodel->name);
 
-	loadmodel->num_surfaces = 1;
-	loadmodel->nummodelsurfaces = loadmodel->num_surfaces;
-	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int));
-	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
-	loadmodel->surfacelist = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
-	loadmodel->surfacelist[0] = 0;
-
 	loadmodel->numskins = LittleLong(pinmodel->num_skins);
 	numxyz = LittleLong(pinmodel->num_xyz);
 	numst = LittleLong(pinmodel->num_st);
 	loadmodel->surfmesh.num_triangles = LittleLong(pinmodel->num_tris);
 	loadmodel->numframes = LittleLong(pinmodel->num_frames);
 	loadmodel->surfmesh.num_morphframes = loadmodel->numframes;
-	loadmodel->animscenes = (animscene_t *)Mem_Alloc(loadmodel->mempool, loadmodel->numframes * sizeof(animscene_t));
+	skinwidth = LittleLong(pinmodel->skinwidth);
+	skinheight = LittleLong(pinmodel->skinheight);
+	iskinwidth = 1.0f / skinwidth;
+	iskinheight = 1.0f / skinheight;
+
+	loadmodel->num_surfaces = 1;
+	loadmodel->nummodelsurfaces = loadmodel->num_surfaces;
+	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->numframes * sizeof(animscene_t) + loadmodel->numframes * sizeof(float[6]) + loadmodel->surfmesh.num_triangles * sizeof(int[3]) + loadmodel->surfmesh.num_triangles * sizeof(int[3]));
+	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
+	loadmodel->surfacelist = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
+	loadmodel->surfacelist[0] = 0;
+	loadmodel->animscenes = (animscene_t *)data;data += loadmodel->numframes * sizeof(animscene_t);
+	loadmodel->surfmesh.data_morphmd2framesize6f = (float *)data;data += loadmodel->numframes * sizeof(float[6]);
+	loadmodel->surfmesh.data_element3i = (int *)data;data += loadmodel->surfmesh.num_triangles * sizeof(int[3]);
+	loadmodel->surfmesh.data_neighbor3i = (int *)data;data += loadmodel->surfmesh.num_triangles * sizeof(int[3]);
 
 	loadmodel->flags = 0; // there are no MD2 flags
 	loadmodel->synctype = ST_RAND;
@@ -1026,31 +1083,10 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 	// load the triangles and stvert data
 	inst = (unsigned short *)(base + LittleLong(pinmodel->ofs_st));
 	intri = (md2triangle_t *)(base + LittleLong(pinmodel->ofs_tris));
-	skinwidth = LittleLong(pinmodel->skinwidth);
-	skinheight = LittleLong(pinmodel->skinheight);
-
-	stverts = (float *)Mem_Alloc(tempmempool, numst * sizeof(float[2]));
-	s = 1.0f / skinwidth;
-	t = 1.0f / skinheight;
-	for (i = 0;i < numst;i++)
-	{
-		j = (unsigned short) LittleShort(inst[i*2+0]);
-		k = (unsigned short) LittleShort(inst[i*2+1]);
-		if (j >= skinwidth || k >= skinheight)
-		{
-			Con_Printf("%s has an invalid skin coordinate (%i %i) on vert %i, changing to 0 0\n", loadmodel->name, j, k, i);
-			j = 0;
-			k = 0;
-		}
-		stverts[i*2+0] = j * s;
-		stverts[i*2+1] = k * t;
-	}
-
-	md2verthash = (struct md2verthash_s **)Mem_Alloc(tempmempool, 256 * sizeof(hash));
+	md2verthash = (struct md2verthash_s **)Mem_Alloc(tempmempool, 65536 * sizeof(hash));
 	md2verthashdata = (struct md2verthash_s *)Mem_Alloc(tempmempool, loadmodel->surfmesh.num_triangles * 3 * sizeof(*hash));
 	// swap the triangle list
-	num = 0;
-	loadmodel->surfmesh.data_element3i = (int *)Mem_Alloc(loadmodel->mempool, loadmodel->surfmesh.num_triangles * sizeof(int[3]));
+	loadmodel->surfmesh.num_vertices = 0;
 	for (i = 0;i < loadmodel->surfmesh.num_triangles;i++)
 	{
 		for (j = 0;j < 3;j++)
@@ -1067,18 +1103,15 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 				Con_Printf("%s has an invalid st index (%i) on triangle %i, resetting to 0\n", loadmodel->name, st, i);
 				st = 0;
 			}
-			s = stverts[st*2+0];
-			t = stverts[st*2+1];
-			hashindex = (xyz * 17 + st) & 255;
+			hashindex = (xyz * 256 + st) & 65535;
 			for (hash = md2verthash[hashindex];hash;hash = hash->next)
-				if (hash->xyz == xyz && hash->st[0] == s && hash->st[1] == t)
+				if (hash->xyz == xyz && hash->st == st)
 					break;
 			if (hash == NULL)
 			{
-				hash = md2verthashdata + num++;
+				hash = md2verthashdata + loadmodel->surfmesh.num_vertices++;
 				hash->xyz = xyz;
-				hash->st[0] = s;
-				hash->st[1] = t;
+				hash->st = st;
 				hash->next = md2verthash[hashindex];
 				md2verthash[hashindex] = hash;
 			}
@@ -1086,18 +1119,25 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 		}
 	}
 
-	Mem_Free(stverts);
-
-	numverts = num;
-	loadmodel->surfmesh.num_vertices = numverts;
-	vertremap = (int *)Mem_Alloc(loadmodel->mempool, num * sizeof(int));
-	loadmodel->surfmesh.data_texcoordtexture2f = (float *)Mem_Alloc(loadmodel->mempool, num * sizeof(float[2]));
-	for (i = 0;i < num;i++)
+	vertremap = (int *)Mem_Alloc(loadmodel->mempool, loadmodel->surfmesh.num_vertices * sizeof(int));
+	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->surfmesh.num_vertices * sizeof(float[2]) + loadmodel->surfmesh.num_vertices * loadmodel->surfmesh.num_morphframes * sizeof(trivertx_t));
+	loadmodel->surfmesh.data_texcoordtexture2f = (float *)data;data += loadmodel->surfmesh.num_vertices * sizeof(float[2]);
+	loadmodel->surfmesh.data_morphmdlvertex = (trivertx_t *)data;data += loadmodel->surfmesh.num_vertices * loadmodel->surfmesh.num_morphframes * sizeof(trivertx_t);
+	for (i = 0;i < loadmodel->surfmesh.num_vertices;i++)
 	{
+		int sts, stt;
 		hash = md2verthashdata + i;
 		vertremap[i] = hash->xyz;
-		loadmodel->surfmesh.data_texcoordtexture2f[i*2+0] = hash->st[0];
-		loadmodel->surfmesh.data_texcoordtexture2f[i*2+1] = hash->st[1];
+		sts = LittleShort(inst[hash->st*2+0]);
+		stt = LittleShort(inst[hash->st*2+1]);
+		if (sts < 0 || sts >= skinwidth || stt < 0 || stt >= skinheight)
+		{
+			Con_Printf("%s has an invalid skin coordinate (%i %i) on vert %i, changing to 0 0\n", loadmodel->name, sts, stt, i);
+			sts = 0;
+			stt = 0;
+		}
+		loadmodel->surfmesh.data_texcoordtexture2f[i*2+0] = sts * iskinwidth;
+		loadmodel->surfmesh.data_texcoordtexture2f[i*2+1] = stt * iskinheight;
 	}
 
 	Mem_Free(md2verthash);
@@ -1105,17 +1145,24 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 
 	// load the frames
 	datapointer = (base + LittleLong(pinmodel->ofs_frames));
-	loadmodel->surfmesh.data_morphvertex3f = (float *)Mem_Alloc(loadmodel->mempool, numverts * loadmodel->surfmesh.num_morphframes * sizeof(float[3]));
 	for (i = 0;i < loadmodel->surfmesh.num_morphframes;i++)
 	{
+		int k;
+		trivertx_t *v;
+		trivertx_t *out;
 		pinframe = (md2frame_t *)datapointer;
 		datapointer += sizeof(md2frame_t);
+		// store the frame scale/translate into the appropriate array
 		for (j = 0;j < 3;j++)
 		{
-			scale[j] = LittleFloat(pinframe->scale[j]);
-			translate[j] = LittleFloat(pinframe->translate[j]);
+			loadmodel->surfmesh.data_morphmd2framesize6f[i*6+j] = LittleFloat(pinframe->scale[j]);
+			loadmodel->surfmesh.data_morphmd2framesize6f[i*6+3+j] = LittleFloat(pinframe->translate[j]);
 		}
-		Mod_MD2_ConvertVerts(scale, translate, (trivertx_t *)datapointer, loadmodel->surfmesh.data_morphvertex3f + i * numverts * 3, numverts, vertremap);
+		// convert the vertices
+		v = (trivertx_t *)datapointer;
+		out = loadmodel->surfmesh.data_morphmdlvertex + i * loadmodel->surfmesh.num_vertices;
+		for (k = 0;k < loadmodel->surfmesh.num_vertices;k++)
+			out[k] = v[vertremap[k]];
 		datapointer += numxyz * sizeof(trivertx_t);
 
 		strcpy(loadmodel->animscenes[i].name, pinframe->name);
@@ -1127,7 +1174,6 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 
 	Mem_Free(vertremap);
 
-	loadmodel->surfmesh.data_neighbor3i = (int *)Mem_Alloc(loadmodel->mempool, loadmodel->surfmesh.num_triangles * sizeof(int[3]));
 	Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
 	Mod_Alias_CalculateBoundingBox();
 	Mod_Alias_Mesh_CompileFrameZero();
@@ -1138,6 +1184,8 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 	surface->num_triangles = loadmodel->surfmesh.num_triangles;
 	surface->num_firstvertex = 0;
 	surface->num_vertices = loadmodel->surfmesh.num_vertices;
+
+	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || loadmodel->animscenes[i].framecount > 1;
 }
 
 void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
@@ -1231,7 +1279,7 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 
 	loadmodel->nummodelsurfaces = loadmodel->num_surfaces;
 	loadmodel->num_textures = loadmodel->num_surfaces;
-	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + meshtriangles * sizeof(int[3]) + meshvertices * sizeof(float[2]) + meshvertices * loadmodel->numframes * sizeof(float[3]));
+	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + meshtriangles * sizeof(int[3]) + meshvertices * sizeof(float[2]) + meshvertices * loadmodel->numframes * sizeof(md3vertex_t));
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
 	loadmodel->surfacelist = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
 	loadmodel->data_textures = (texture_t *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
@@ -1241,7 +1289,7 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->surfmesh.data_element3i = (int *)data;data += meshtriangles * sizeof(int[3]);
 	loadmodel->surfmesh.data_neighbor3i = (int *)data;data += meshtriangles * sizeof(int[3]);
 	loadmodel->surfmesh.data_texcoordtexture2f = (float *)data;data += meshvertices * sizeof(float[2]);
-	loadmodel->surfmesh.data_morphvertex3f = (float *)data;data += meshvertices * loadmodel->numframes * sizeof(float[3]);
+	loadmodel->surfmesh.data_morphmd3vertex = (md3vertex_t *)data;data += meshvertices * loadmodel->numframes * sizeof(md3vertex_t);
 
 	meshvertices = 0;
 	meshtriangles = 0;
@@ -1268,13 +1316,15 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 		}
 		for (j = 0;j < loadmodel->numframes;j++)
 		{
-			const short *in4s = (short *)((unsigned char *)pinmesh + LittleLong(pinmesh->lump_framevertices)) + j * surface->num_vertices * 4;
-			float *out3f = loadmodel->surfmesh.data_morphvertex3f + 3 * (j * loadmodel->surfmesh.num_vertices + surface->num_firstvertex);
-			for (k = 0;k < surface->num_vertices;k++, in4s += 4, out3f += 3)
+			const md3vertex_t *in = (md3vertex_t *)((unsigned char *)pinmesh + LittleLong(pinmesh->lump_framevertices)) + j * surface->num_vertices;
+			md3vertex_t *out = loadmodel->surfmesh.data_morphmd3vertex + surface->num_firstvertex + j * loadmodel->surfmesh.num_vertices;
+			for (k = 0;k < surface->num_vertices;k++, in++, out++)
 			{
-				out3f[0] = LittleShort(in4s[0]) * (1.0f / 64.0f);
-				out3f[1] = LittleShort(in4s[1]) * (1.0f / 64.0f);
-				out3f[2] = LittleShort(in4s[2]) * (1.0f / 64.0f);
+				out->origin[0] = LittleShort(in->origin[0]);
+				out->origin[1] = LittleShort(in->origin[1]);
+				out->origin[2] = LittleShort(in->origin[2]);
+				out->pitch = in->pitch;
+				out->yaw = in->yaw;
 			}
 		}
 
@@ -1290,6 +1340,8 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 	Mod_Alias_Mesh_CompileFrameZero();
 	Mod_Alias_CalculateBoundingBox();
 	Mod_FreeSkinFiles(skinfiles);
+
+	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || loadmodel->animscenes[i].framecount > 1;
 }
 
 void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
@@ -1600,6 +1652,8 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	Mod_BuildNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_normal3f, true);
 	Mod_BuildTextureVectorsFromNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, true);
 	Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
+
+	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || loadmodel->animscenes[i].framecount > 1;
 }
 
 void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
@@ -1890,6 +1944,8 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	Mod_BuildBaseBonePoses();
 	Mod_BuildTextureVectorsFromNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, true);
 	Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
+
+	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || loadmodel->animscenes[i].framecount > 1;
 }
 
 static void Mod_PSKMODEL_AnimKeyToMatrix(float *origin, float *quat, matrix4x4_t *m)
@@ -2446,5 +2502,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	Mod_BuildTextureVectorsFromNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, true);
 	Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
 	Mod_Alias_CalculateBoundingBox();
+
+	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || loadmodel->animscenes[i].framecount > 1;
 }
 
