@@ -72,6 +72,9 @@ typedef struct overridetagnameset_s
 }
 overridetagnameset_t;
 
+struct md3vertex_s;
+struct trivertex_s;
+
 // used for mesh lists in q1bsp/q3bsp map models
 // (the surfaces reference portions of these meshes)
 typedef struct surfmesh_s
@@ -90,10 +93,16 @@ typedef struct surfmesh_s
 	int *data_lightmapoffsets; // index into surface's lightmap samples for vertex lighting
 	// morph blending, these are zero if model is skeletal or static
 	int num_morphframes;
-	float *data_morphvertex3f;
+	struct md3vertex_s *data_morphmd3vertex;
+	struct trivertx_s *data_morphmdlvertex;
+	float *data_morphmd2framesize6f;
+	float num_morphmdlframescale[3];
+	float num_morphmdlframetranslate[3];
 	// skeletal blending, these are NULL if model is morph or static
 	int *data_vertexweightindex4i;
 	float *data_vertexweightinfluence4f;
+	// set if there is some kind of animation on this model
+	qboolean isanimated;
 }
 surfmesh_t;
 
