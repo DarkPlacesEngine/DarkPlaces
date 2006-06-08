@@ -43,6 +43,7 @@ cvar_t r_showcollisionbrushes = {0, "r_showcollisionbrushes", "0", "draws collis
 cvar_t r_showcollisionbrushes_polygonfactor = {0, "r_showcollisionbrushes_polygonfactor", "-1", "expands outward the brush polygons a little bit, used to make collision brushes appear infront of walls"};
 cvar_t r_showcollisionbrushes_polygonoffset = {0, "r_showcollisionbrushes_polygonoffset", "0", "nudges brush polygon depth in hardware depth units, used to make collision brushes appear infront of walls"};
 cvar_t r_showdisabledepthtest = {0, "r_showdisabledepthtest", "0", "disables depth testing on r_show* cvars, allowing you to see what hidden geometry the graphics card is processing"};
+cvar_t r_drawportals = {0, "r_drawportals", "0", "shows portals (separating polygons) in world interior in quake1 maps"};
 cvar_t r_drawentities = {0, "r_drawentities","1", "draw entities (doors, players, projectiles, etc)"};
 cvar_t r_drawviewmodel = {0, "r_drawviewmodel","1", "draw your weapon model"};
 cvar_t r_speeds = {0, "r_speeds","0", "displays rendering statistics and per-subsystem timings"};
@@ -983,6 +984,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_showcollisionbrushes_polygonfactor);
 	Cvar_RegisterVariable(&r_showcollisionbrushes_polygonoffset);
 	Cvar_RegisterVariable(&r_showdisabledepthtest);
+	Cvar_RegisterVariable(&r_drawportals);
 	Cvar_RegisterVariable(&r_drawentities);
 	Cvar_RegisterVariable(&r_drawviewmodel);
 	Cvar_RegisterVariable(&r_speeds);
@@ -1701,6 +1703,7 @@ void CSQC_R_RenderScene (void)
 
 extern void R_DrawLightningBeams (void);
 extern void VM_AddPolygonsToMeshQueue (void);
+extern void R_DrawPortals (void);
 void R_RenderScene(void)
 {
 	// don't let sound skip if going slow
@@ -1795,6 +1798,13 @@ void R_RenderScene(void)
 		qglUseProgramObjectARB(0);CHECKGLERROR
 	}
 	VM_AddPolygonsToMeshQueue();
+
+	if (r_drawportals.integer)
+	{
+		R_DrawPortals();
+		if (r_timereport_active)
+			R_TimeReport("portals");
+	}
 
 	if (gl_support_fragment_shader)
 	{
