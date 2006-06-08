@@ -160,9 +160,9 @@ void SndSys_Submit (void)
 
 		snd_renderbuffer->startframe += written / factor;
 
-		if ((unsigned int)written < nbframes * factor)
+		if ((unsigned int)written < limit * factor)
 		{
-			Con_Printf("SndSys_Submit: audio can't keep up! (%d < %u)\n", written, nbframes * factor);
+			Con_Printf("SndSys_Submit: audio can't keep up! (%u < %u)\n", written, limit * factor);
 			return;
 		}
 		
