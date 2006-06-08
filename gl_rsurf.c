@@ -26,7 +26,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MAX_LIGHTMAP_SIZE 256
 
 cvar_t r_ambient = {0, "r_ambient", "0", "brighter world cheat (not allowed in multiplayer), value is 0-128"};
-cvar_t r_drawportals = {0, "r_drawportals", "0", "shows portals (separating polygons) in world interior in quake1 maps"};
 cvar_t r_lockpvs = {0, "r_lockpvs", "0", "disables pvs switching, allows you to walk around and inspect what is visible from a given location in the map (anything not visible from your current location will not be drawn)"};
 cvar_t r_lockvisibility = {0, "r_lockvisibility", "0", "disables visibility updates, allows you to walk around and inspect what is visible from a given viewpoint in the map (anything offscreen at the moment this is enabled will not be drawn)"};
 cvar_t r_useportalculling = {0, "r_useportalculling", "1", "use advanced portal culling visibility method to improve performance over just Potentially Visible Set, provides an even more significant speed improvement in unvised maps"};
@@ -360,7 +359,7 @@ static void R_DrawPortal_Callback(const entity_render_t *ent, const rtlight_t *r
 }
 
 // LordHavoc: this is just a nice debugging tool, very slow
-static void R_DrawPortals(void)
+void R_DrawPortals(void)
 {
 	int i, leafnum;
 	mportal_t *portal;
@@ -497,9 +496,6 @@ void R_View_WorldVisibility(void)
 			}
 		}
 	}
-
-	if (r_drawportals.integer)
-		R_DrawPortals();
 }
 
 void R_Q1BSP_DrawSky(entity_render_t *ent)
@@ -956,7 +952,6 @@ void GL_Surf_Init(void)
 {
 
 	Cvar_RegisterVariable(&r_ambient);
-	Cvar_RegisterVariable(&r_drawportals);
 	Cvar_RegisterVariable(&r_lockpvs);
 	Cvar_RegisterVariable(&r_lockvisibility);
 	Cvar_RegisterVariable(&r_useportalculling);
