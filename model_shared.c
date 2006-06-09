@@ -49,7 +49,7 @@ static void mod_start(void)
 	model_t *mod;
 
 	for (i = 0, mod = mod_known;i < mod_numknown;i++, mod++)
-		if (mod->name[0])
+		if (mod->name[0] && mod->name[0] != '*')
 			if (mod->used)
 				Mod_LoadModel(mod, true, false, mod->isworldmodel);
 }
@@ -60,7 +60,7 @@ static void mod_shutdown(void)
 	model_t *mod;
 
 	for (i = 0, mod = mod_known;i < mod_numknown;i++, mod++)
-		if (mod->loaded)
+		if (mod->loaded || mod->mempool)
 			Mod_UnloadModel(mod);
 }
 
@@ -178,7 +178,7 @@ model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, qboolea
 
 	Con_DPrintf("loading model %s\n", mod->name);
 	// LordHavoc: unload the existing model in this slot (if there is one)
-	if (mod->loaded)
+	if (mod->loaded || mod->mempool)
 		Mod_UnloadModel(mod);
 
 	// load the model
@@ -197,15 +197,16 @@ model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, qboolea
 	VectorSet(mod->rotatedmins, -mod->radius, -mod->radius, -mod->radius);
 	VectorSet(mod->rotatedmaxs, mod->radius, mod->radius, mod->radius);
 
-	// all models use memory, so allocate a memory pool
-	mod->mempool = Mem_AllocPool(mod->name, 0, NULL);
-	// all models load textures, so allocate a texture pool
-	if (cls.state != ca_dedicated)
-		mod->texturepool = R_AllocTexturePool();
-
 	if (buf)
 	{
 		char *bufend = (char *)buf + filesize;
+
+		// all models use memory, so allocate a memory pool
+		mod->mempool = Mem_AllocPool(mod->name, 0, NULL);
+		// all models load textures, so allocate a texture pool
+		if (cls.state != ca_dedicated)
+			mod->texturepool = R_AllocTexturePool();
+
 		num = LittleLong(*((int *)buf));
 		// call the apropriate loader
 		loadmodel = mod;
@@ -357,7 +358,7 @@ void Mod_Reload()
 	model_t *mod;
 
 	for (i = 0, mod = mod_known;i < mod_numknown;i++, mod++)
-		if (mod->name[0])
+		if (mod->name[0] && mod->name[0] != '*')
 			if (mod->used)
 				Mod_LoadModel(mod, true, true, mod->isworldmodel);
 }
