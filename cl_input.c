@@ -993,6 +993,7 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 	{
 		if (s->waterjumptime <= 0)
 		{
+			vec_t f;
 			vec_t vel_straight;
 			vec_t vel_z;
 			vec3_t vel_perpend;
@@ -1014,7 +1015,7 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 			VectorMA(s->velocity, -vel_straight, wishdir, vel_perpend);
 			vel_perpend[2] -= vel_z;
 
-			vec_t f = wishspeed - vel_straight;
+			f = wishspeed - vel_straight;
 			if(f > 0)
 				vel_straight += min(f, s->movevars_accelerate * s->q.frametime * wishspeed) * s->movevars_airaccel_qw;
 			if(wishspeed > 0)
