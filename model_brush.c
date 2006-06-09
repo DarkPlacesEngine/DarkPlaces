@@ -4309,7 +4309,7 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 					dpsnprintf(loadmodel->brush.skybox, sizeof(loadmodel->brush.skybox), "%s_", shader->skyboxname);
 				}
 			}
-			else if ((shader->surfaceparms & Q3SURFACEPARM_NODRAW) || shader->numlayers == 0)
+			else if ((out->surfaceflags & Q3SURFACEFLAG_NODRAW) || shader->numlayers == 0)
 				out->basematerialflags |= MATERIALFLAG_NODRAW;
 			else if (shader->surfaceparms & Q3SURFACEPARM_LAVA)
 				out->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_FULLBRIGHT;
