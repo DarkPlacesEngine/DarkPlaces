@@ -618,10 +618,7 @@ blocking.
 void Curl_Run()
 {
 	if(!cl_curl_enabled.integer)
-	{
-		Con_Print("curl support not enabled. Set cl_curl_enabled to 1 to enable.\n");
 		return;
-	}
 
 	if(!curl_dll)
 		return;
@@ -836,7 +833,10 @@ void Curl_Curl_f(void)
 	const char *name = 0;
 
 	if(!cl_curl_enabled.integer)
+	{
+		Con_Print("curl support not enabled. Set cl_curl_enabled to 1 to enable.\n");
 		return;
+	}
 
 	if(!curl_dll)
 		return;
