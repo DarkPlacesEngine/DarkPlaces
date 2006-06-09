@@ -949,7 +949,7 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 	surface->num_firstvertex = 0;
 	surface->num_vertices = loadmodel->surfmesh.num_vertices;
 
-	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || loadmodel->animscenes[i].framecount > 1;
+	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || loadmodel->animscenes[0].framecount > 1;
 }
 
 void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
@@ -1185,7 +1185,7 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 	surface->num_firstvertex = 0;
 	surface->num_vertices = loadmodel->surfmesh.num_vertices;
 
-	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || loadmodel->animscenes[i].framecount > 1;
+	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || loadmodel->animscenes[0].framecount > 1;
 }
 
 void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
@@ -1341,7 +1341,7 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 	Mod_Alias_CalculateBoundingBox();
 	Mod_FreeSkinFiles(skinfiles);
 
-	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || loadmodel->animscenes[i].framecount > 1;
+	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || loadmodel->animscenes[0].framecount > 1;
 }
 
 void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
@@ -1653,7 +1653,7 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	Mod_BuildTextureVectorsFromNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, true);
 	Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
 
-	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || loadmodel->animscenes[i].framecount > 1;
+	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || loadmodel->animscenes[0].framecount > 1;
 }
 
 void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
@@ -1945,7 +1945,7 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	Mod_BuildTextureVectorsFromNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, true);
 	Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
 
-	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || loadmodel->animscenes[i].framecount > 1;
+	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || loadmodel->animscenes[0].framecount > 1;
 }
 
 static void Mod_PSKMODEL_AnimKeyToMatrix(float *origin, float *quat, matrix4x4_t *m)
@@ -2503,6 +2503,6 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
 	Mod_Alias_CalculateBoundingBox();
 
-	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || loadmodel->animscenes[i].framecount > 1;
+	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || loadmodel->animscenes[0].framecount > 1;
 }
 
