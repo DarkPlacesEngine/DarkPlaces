@@ -165,6 +165,11 @@ qboolean Cvar_Command (void);
 // command.  Returns true if the command was a variable reference that
 // was handled. (print or change)
 
+void Cvar_LockDefaults_f (void);
+void Cvar_ResetToDefaults_All_f (void);
+void Cvar_ResetToDefaults_NoSaveOnly_f (void);
+void Cvar_ResetToDefaults_SaveOnly_f (void);
+
 void Cvar_WriteVariables (qfile_t *f);
 // Writes lines containing "set variable value" for all variables
 // with the archive flag set to true.

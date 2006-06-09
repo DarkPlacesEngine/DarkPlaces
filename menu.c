@@ -2730,7 +2730,7 @@ static void M_Reset_Key (int key, char ascii)
 	{
 	case 'Y':
 	case 'y':
-		Cbuf_AddText ("exec default.cfg\n");
+		Cbuf_AddText ("cvar_resettodefaults_all;exec default.cfg\n");
 		// no break here since we also exit the menu
 
 	case K_ESCAPE:
