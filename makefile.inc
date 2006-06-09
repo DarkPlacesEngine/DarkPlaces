@@ -54,6 +54,7 @@ OBJ_NOCD=cd_null.o
 
 # Common objects
 OBJ_COMMON= \
+	libcurl.o \
 	cd_shared.o \
 	cl_collision.o \
 	cl_demo.o \

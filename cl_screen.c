@@ -4,6 +4,7 @@
 #include "image.h"
 #include "jpeg.h"
 #include "cl_collision.h"
+#include "libcurl.h"
 #include "csprogs.h"
 
 cvar_t scr_viewsize = {CVAR_SAVE, "viewsize","100", "how large the view should be, 110 disables inventory bar, 120 disables status bar"};
@@ -303,27 +304,88 @@ void SCR_DrawBrand (void)
 
 /*
 ==============
-SCR_DrawDownload
+SCR_DrawQWDownload
 ==============
 */
-static void SCR_DrawDownload(void)
+static int SCR_DrawQWDownload(int offset)
 {
 	int len;
 	float x, y;
 	float size = 8;
 	char temp[256];
 	if (!cls.qw_downloadname[0])
-		return;
+		return 0;
 	dpsnprintf(temp, sizeof(temp), "Downloading %s ...  %3i%%\n", cls.qw_downloadname, cls.qw_downloadpercent);
 	len = (int)strlen(temp);
 	x = (vid_conwidth.integer - len*size) / 2;
-	y = vid_conheight.integer - size;
+	y = vid_conheight.integer - size - offset;
 	DrawQ_Pic(0, y, NULL, vid_conwidth.integer, size, 0, 0, 0, 0.5, 0);
 	DrawQ_String(x, y, temp, len, size, size, 1, 1, 1, 1, 0);
+	return 8;
+}
+
+/*
+==============
+SCR_DrawCurlDownload
+==============
+*/
+static int SCR_DrawCurlDownload(int offset)
+{
+	int len;
+	int nDownloads;
+	int i;
+	float x, y;
+	float size = 8;
+	Curl_downloadinfo_t *downinfo;
+	char temp[256];
+	const char *addinfo;
+
+	downinfo = Curl_GetDownloadInfo(&nDownloads, &addinfo);
+	if(!downinfo)
+		return 0;
+
+	y = vid_conheight.integer - size * nDownloads - offset;
+
+	if(addinfo)
+	{
+		len = (int)strlen(addinfo);
+		x = (vid_conwidth.integer - len*size) / 2;
+		DrawQ_Pic(0, y - size, NULL, vid_conwidth.integer, size, 1, 1, 1, 0.8, 0);
+		DrawQ_String(x, y - size, addinfo, len, size, size, 0, 0, 0, 1, 0);
+	}
+
+	for(i = 0; i != nDownloads; ++i)
+	{
+		if(downinfo[i].queued)
+			dpsnprintf(temp, sizeof(temp), "Still in queue: %s\n", downinfo[i].filename);
+		else if(downinfo[i].progress <= 0)
+			dpsnprintf(temp, sizeof(temp), "Downloading %s ...  ???.?%% @ %.1f KiB/s\n", downinfo[i].filename, downinfo[i].speed / 1024.0);
+		else
+			dpsnprintf(temp, sizeof(temp), "Downloading %s ...  %5.1f%% @ %.1f KiB/s\n", downinfo[i].filename, 100.0 * downinfo[i].progress, downinfo[i].speed / 1024.0);
+		len = (int)strlen(temp);
+		x = (vid_conwidth.integer - len*size) / 2;
+		DrawQ_Pic(0, y + i * size, NULL, vid_conwidth.integer, size, 0, 0, 0, 0.8, 0);
+		DrawQ_String(x, y + i * size, temp, len, size, size, 1, 1, 1, 1, 0);
+	}
+
+	Z_Free(downinfo);
+
+	return 8 * (nDownloads + (addinfo ? 1 : 0));
+}
+
+/*
+==============
+SCR_DrawDownload
+==============
+*/
+static void SCR_DrawDownload()
+{
+	int offset = 0;
+	offset += SCR_DrawQWDownload(offset);
+	offset += SCR_DrawCurlDownload(offset);
 }
 
 //=============================================================================
-
 
 /*
 ==================

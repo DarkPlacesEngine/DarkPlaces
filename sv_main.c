@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // sv_main.c -- server main program
 
 #include "quakedef.h"
+#include "libcurl.h"
 
 void SV_VM_Init();
 void SV_VM_Setup();
@@ -1676,6 +1677,10 @@ void SV_SpawnServer (const char *server)
 	scr_centertime_off = 0;
 
 	svs.changelevel_issued = false;		// now safe to issue another
+
+	// make the map a required file for clients
+	Curl_ClearRequirements();
+	Curl_RequireFile(modelname);
 
 //
 // tell all connected clients that we are going to a new level

@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <time.h>
 #include "quakedef.h"
+#include "libcurl.h"
 #include "cdaudio.h"
 #include "cl_video.h"
 #include "progsvm.h"
@@ -619,6 +620,8 @@ void Host_Main(void)
 
 		NetConn_UpdateSockets();
 
+		Curl_Run();
+
 	//-------------------
 	//
 	// server operations
@@ -922,6 +925,7 @@ static void Host_Init (void)
 	// initialize various cvars that could not be initialized earlier
 	Memory_Init_Commands();
 	Con_Init_Commands();
+	Curl_Init_Commands();
 	Cmd_Init_Commands();
 	Sys_Init_Commands();
 	COM_Init_Commands();
@@ -932,6 +936,7 @@ static void Host_Init (void)
 	Mathlib_Init();
 
 	NetConn_Init();
+	Curl_Init();
 	//PR_Init();
 	//PR_Cmd_Init();
 	PRVM_Init();
@@ -1086,6 +1091,7 @@ void Host_Shutdown(void)
 
 	CDAudio_Shutdown ();
 	S_Terminate ();
+	Curl_Shutdown ();
 	NetConn_Shutdown ();
 	//PR_Shutdown ();
 

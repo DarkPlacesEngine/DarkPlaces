@@ -344,6 +344,24 @@ model_t *Mod_ForName(const char *name, qboolean crash, qboolean checkdisk, qbool
 	return model;
 }
 
+/*
+==================
+Mod_Reload
+
+Reloads all models if they have changed
+==================
+*/
+void Mod_Reload()
+{
+	int i;
+	model_t *mod;
+
+	for (i = 0, mod = mod_known;i < mod_numknown;i++, mod++)
+		if (mod->name[0])
+			if (mod->used)
+				Mod_LoadModel(mod, true, true, mod->isworldmodel);
+}
+
 unsigned char *mod_base;
 
 

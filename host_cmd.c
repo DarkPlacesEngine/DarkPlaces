@@ -19,6 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "quakedef.h"
+#include "libcurl.h"
 
 int current_skill;
 cvar_t sv_cheats = {0, "sv_cheats", "0", "enables cheat commands in any game, and cheat impulses in dpmod"};
@@ -1512,6 +1513,8 @@ void Host_Begin_f (void)
 		Con_Print("begin is not valid from the console\n");
 		return;
 	}
+
+	Curl_SendRequirements();
 
 	host_client->spawned = true;
 }
