@@ -281,6 +281,8 @@ cvar_t cl_movement_accelerate = {0, "cl_movement_accelerate", "10", "how fast yo
 cvar_t cl_movement_airaccelerate = {0, "cl_movement_airaccelerate", "-1", "how fast you accelerate while in the air (should match sv_airaccelerate), if less than 0 the cl_movement_accelerate variable is used instead"};
 cvar_t cl_movement_wateraccelerate = {0, "cl_movement_wateraccelerate", "-1", "how fast you accelerate while in the air (should match sv_airaccelerate), if less than 0 the cl_movement_accelerate variable is used instead"};
 cvar_t cl_movement_jumpvelocity = {0, "cl_movement_jumpvelocity", "270", "how fast you move upward when you begin a jump (should match the quakec code)"};
+cvar_t cl_movement_airaccel_qw = {0, "cl_movement_airaccel_qw", "1", "ratio of QW-style air control as opposed to simple acceleration (should match sv_airaccel_qw)"};
+cvar_t cl_movement_airaccel_sideways_friction = {0, "cl_movement_airaccel_sideways_friction", "0", "anti-sideways movement stabilization (should match sv_airaccel_sideways_friction)"};
 cvar_t cl_gravity = {0, "cl_gravity", "800", "how much gravity to apply in client physics (should match sv_gravity)"};
 cvar_t cl_slowmo = {0, "cl_slowmo", "1", "speed of game time (should match slowmo)"};
 
@@ -639,6 +641,8 @@ typedef struct cl_clientmovement_state_s
 	float movevars_edgefriction;
 	float movevars_maxairspeed;
 	float movevars_stepheight;
+	float movevars_airaccel_qw;
+	float movevars_airaccel_sideways_friction;
 
 	// user command
 	client_movementqueue_t q;
@@ -989,18 +993,37 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 	{
 		if (s->waterjumptime <= 0)
 		{
+			vec_t vel_straight;
+			vec_t vel_z;
+			vec3_t vel_perpend;
+
 			// apply air speed limit
 			wishspeed = min(wishspeed, s->movevars_maxairspeed);
-			// Nexuiz has no upper bound on air acceleration, but little control
-			if (gamemode == GAME_NEXUIZ)
-				addspeed = wishspeed;
-			else
-				addspeed = wishspeed - DotProduct(s->velocity, wishdir);
+
+			/*
+			addspeed = wishspeed - DotProduct(s->velocity, wishdir);
 			if (addspeed > 0)
 			{
 				accelspeed = min(s->movevars_accelerate * s->q.frametime * wishspeed, addspeed);
 				VectorMA(s->velocity, accelspeed, wishdir, s->velocity);
 			}
+			*/
+
+			vel_straight = DotProduct(s->velocity, wishdir);
+			vel_z = s->velocity[2];
+			VectorMA(s->velocity, -vel_straight, wishdir, vel_perpend);
+			vel_perpend[2] -= vel_z;
+
+			vec_t f = wishspeed - vel_straight;
+			if(f > 0)
+				vel_straight += min(f, s->movevars_accelerate * s->q.frametime * wishspeed) * s->movevars_airaccel_qw;
+			if(wishspeed > 0)
+				vel_straight += min(wishspeed, s->movevars_accelerate * s->q.frametime * wishspeed) * (1 - s->movevars_airaccel_qw);
+
+			VectorM(1 - (s->q.frametime * (wishspeed / s->movevars_maxairspeed) * s->movevars_airaccel_sideways_friction), vel_perpend, vel_perpend);
+
+			VectorMA(vel_perpend, vel_straight, wishdir, s->velocity);
+			s->velocity[2] += vel_z;
 		}
 		s->velocity[2] -= cl_gravity.value * s->q.frametime;
 		CL_ClientMovement_Move(s);
@@ -1053,6 +1076,8 @@ void CL_ClientMovement_Replay(void)
 		s.movevars_edgefriction = cl_movement_edgefriction.value;
 		s.movevars_maxairspeed = cl_movement_maxairspeed.value;
 		s.movevars_stepheight = cl_movement_stepheight.value;
+		s.movevars_airaccel_qw = 1.0;
+		s.movevars_airaccel_sideways_friction = 0.0;
 	}
 	else
 	{
@@ -1070,6 +1095,8 @@ void CL_ClientMovement_Replay(void)
 		s.movevars_edgefriction = cl_movement_edgefriction.value;
 		s.movevars_maxairspeed = cl_movement_maxairspeed.value;
 		s.movevars_stepheight = cl_movement_stepheight.value;
+		s.movevars_airaccel_qw = cl_movement_airaccel_qw.value;
+		s.movevars_airaccel_sideways_friction = cl_movement_airaccel_sideways_friction.value;
 	}
 
 	cl.movement_predicted = (cl_movement.integer && cls.signon == SIGNONS && cl.stats[STAT_HEALTH] > 0 && !cl.intermission) && ((cls.protocol != PROTOCOL_DARKPLACES6 && cls.protocol != PROTOCOL_DARKPLACES7) || cl.servermovesequence);
@@ -1549,6 +1576,8 @@ void CL_InitInput (void)
 	Cvar_RegisterVariable(&cl_movement_airaccelerate);
 	Cvar_RegisterVariable(&cl_movement_accelerate);
 	Cvar_RegisterVariable(&cl_movement_jumpvelocity);
+	Cvar_RegisterVariable(&cl_movement_airaccel_qw);
+	Cvar_RegisterVariable(&cl_movement_airaccel_sideways_friction);
 	Cvar_RegisterVariable(&cl_gravity);
 	Cvar_RegisterVariable(&cl_slowmo);
 
