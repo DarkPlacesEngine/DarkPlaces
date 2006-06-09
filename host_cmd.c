@@ -918,7 +918,7 @@ void Host_Playerskin_f (void)
 	if (cmd_source == src_command)
 	{
 		Cvar_Set ("_cl_playerskin", newPath);
-		CL_SetInfo("playermodel", newPath, true, false, false, false);
+		CL_SetInfo("playerskin", newPath, true, false, false, false);
 		return;
 	}
 
@@ -938,8 +938,8 @@ void Host_Playerskin_f (void)
 		PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_playerskin)->string = PRVM_SetEngineString(host_client->playerskin);
 	if (strcmp(host_client->old_skin, host_client->playerskin))
 	{
-		if (host_client->spawned)
-			SV_BroadcastPrintf("%s changed skin to %s\n", host_client->name, host_client->playerskin);
+		//if (host_client->spawned)
+		//	SV_BroadcastPrintf("%s changed skin to %s\n", host_client->name, host_client->playerskin);
 		strcpy(host_client->old_skin, host_client->playerskin);
 		/*// send notification to all clients
 		MSG_WriteByte (&sv.reliable_datagram, svc_updatepskin);

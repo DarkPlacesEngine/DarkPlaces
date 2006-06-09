@@ -281,6 +281,12 @@ static void Cmd_Exec_f (void)
 	}
 	Con_DPrintf("execing %s\n",Cmd_Argv(1));
 
+	// if executing default.cfg for the first time, lock the cvar defaults
+	// it may seem backwards to insert this text BEFORE the default.cfg
+	// but Cbuf_InsertText inserts before, so this actually ends up after it.
+	if (!strcmp(Cmd_Argv(1), "default.cfg"))
+		Cbuf_InsertText("\ncvar_lockdefaults\n");
+
 	Cbuf_InsertText (f);
 	Mem_Free(f);
 }
@@ -323,7 +329,7 @@ static void Cmd_Toggle_f(void)
 	{ // Correct Arguments Specified
 		// Acquire Potential CVar
 		cvar_t* cvCVar = Cvar_FindVar( Cmd_Argv(1) );
-		
+
 		if(cvCVar != NULL)
 		{ // Valid CVar
 			if(nNumArgs == 2)
@@ -660,6 +666,11 @@ void Cmd_Init_Commands (void)
 	// Added/Modified by EvilTypeGuy eviltypeguy@qeradiant.com
 	Cmd_AddCommand ("cmdlist", Cmd_List_f, "lists all console commands beginning with the specified prefix");
 	Cmd_AddCommand ("cvarlist", Cvar_List_f, "lists all console variables beginning with the specified prefix");
+
+	Cmd_AddCommand ("cvar_lockdefaults", Cvar_LockDefaults_f, "stores the current values of all cvars into their default values, only used once during startup after parsing default.cfg");
+	Cmd_AddCommand ("cvar_resettodefaults_all", Cvar_ResetToDefaults_All_f, "sets all cvars to their locked default values");
+	Cmd_AddCommand ("cvar_resettodefaults_nosaveonly", Cvar_ResetToDefaults_NoSaveOnly_f, "sets all non-saved cvars to their locked default values (variables that will not be saved to config.cfg)");
+	Cmd_AddCommand ("cvar_resettodefaults_saveonly", Cvar_ResetToDefaults_SaveOnly_f, "sets all saved cvars to their locked default values (variables that will be saved to config.cfg)");
 
 	// DRESK - 5/14/06
 	// Support Doom3-style Toggle Command

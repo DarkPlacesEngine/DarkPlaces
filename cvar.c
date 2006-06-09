@@ -416,15 +416,6 @@ cvar_t *Cvar_Get (const char *name, const char *value, int flags)
 	{
 		cvar->flags |= flags;
 		Cvar_SetQuick_Internal (cvar, value);
-		// also set the default value (but only once)
-		if (~cvar->flags & CVAR_DEFAULTSET)
-		{
-			cvar->flags |= CVAR_DEFAULTSET;
-
-			Z_Free(cvar->defstring);
-			cvar->defstring = (char *)Z_Malloc(strlen(value) + 1);
-			strcpy(cvar->defstring, value);
-		}
 		return cvar;
 	}
 
@@ -438,7 +429,7 @@ cvar_t *Cvar_Get (const char *name, const char *value, int flags)
 // allocate a new cvar, cvar name, and cvar string
 // FIXME: these never get Z_Free'd
 	cvar = (cvar_t *)Z_Malloc(sizeof(cvar_t));
-	cvar->flags = flags | CVAR_ALLOCATED | CVAR_DEFAULTSET;
+	cvar->flags = flags | CVAR_ALLOCATED;
 	cvar->name = (char *)Z_Malloc(strlen(name)+1);
 	strcpy(cvar->name, name);
 	cvar->string = (char *)Z_Malloc(strlen(value)+1);
@@ -503,6 +494,53 @@ qboolean	Cvar_Command (void)
 	if (developer.integer >= 100)
 		Con_DPrint("\n");
 	return true;
+}
+
+
+void Cvar_LockDefaults_f (void)
+{
+	cvar_t *var;
+	// lock in the default values of all cvars
+	for (var = cvar_vars ; var ; var = var->next)
+	{
+		if (!(var->flags & CVAR_DEFAULTSET))
+		{
+			//Con_Printf("locking cvar %s (%s -> %s)\n", var->name, var->string, var->defstring);
+			var->flags |= CVAR_DEFAULTSET;
+			Z_Free(var->defstring);
+			var->defstring = (char *)Z_Malloc(strlen(var->string) + 1);
+			strcpy(var->defstring, var->string);
+		}
+	}
+}
+
+
+void Cvar_ResetToDefaults_All_f (void)
+{
+	cvar_t *var;
+	// restore the default values of all cvars
+	for (var = cvar_vars ; var ; var = var->next)
+		Cvar_SetQuick(var, var->defstring);
+}
+
+
+void Cvar_ResetToDefaults_NoSaveOnly_f (void)
+{
+	cvar_t *var;
+	// restore the default values of all cvars
+	for (var = cvar_vars ; var ; var = var->next)
+		if (!(var->flags & CVAR_SAVE))
+			Cvar_SetQuick(var, var->defstring);
+}
+
+
+void Cvar_ResetToDefaults_SaveOnly_f (void)
+{
+	cvar_t *var;
+	// restore the default values of all cvars
+	for (var = cvar_vars ; var ; var = var->next)
+		if (var->flags & CVAR_SAVE)
+			Cvar_SetQuick(var, var->defstring);
 }
 
 
