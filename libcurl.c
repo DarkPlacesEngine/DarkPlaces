@@ -832,14 +832,17 @@ void Curl_Curl_f(void)
 	const char *url;
 	const char *name = 0;
 
+	if(!curl_dll)
+	{
+		Con_Print("libcurl DLL not found, this command is inactive.\n");
+		return;
+	}
+
 	if(!cl_curl_enabled.integer)
 	{
 		Con_Print("curl support not enabled. Set cl_curl_enabled to 1 to enable.\n");
 		return;
 	}
-
-	if(!curl_dll)
-		return;
 
 	for(i = 0; i != Cmd_Argc(); ++i)
 		Con_DPrintf("%s ", Cmd_Argv(i));
