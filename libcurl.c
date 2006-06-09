@@ -1153,8 +1153,7 @@ void Curl_SendRequirements()
 	// for each requirement, find the pack name
 	char sendbuffer[4096] = "";
 	requirement *req;
-
-	strlcat(sendbuffer, "curl --clear_autodownload\n", sizeof(sendbuffer));
+	qboolean foundone = false;
 
 	for(req = requirements; req; req = req->next)
 	{
@@ -1173,6 +1172,9 @@ void Curl_SendRequirements()
 
 		if(packurl && *packurl && strcmp(packurl, "-"))
 		{
+			if(!foundone)
+				strlcat(sendbuffer, "curl --clear_autodownload\n", sizeof(sendbuffer));
+
 			strlcat(sendbuffer, "curl --pak --forthismap --as ", sizeof(sendbuffer));
 			strlcat(sendbuffer, thispack, sizeof(sendbuffer));
 			strlcat(sendbuffer, " --for ", sizeof(sendbuffer));
@@ -1181,10 +1183,13 @@ void Curl_SendRequirements()
 			strlcat(sendbuffer, packurl, sizeof(sendbuffer));
 			strlcat(sendbuffer, thispack, sizeof(sendbuffer));
 			strlcat(sendbuffer, "\n", sizeof(sendbuffer));
+
+			foundone = true;
 		}
 	}
 
-	strlcat(sendbuffer, "curl --finish_autodownload\n", sizeof(sendbuffer));
+	if(foundone)
+		strlcat(sendbuffer, "curl --finish_autodownload\n", sizeof(sendbuffer));
 
 	if(strlen(sendbuffer) + 1 < sizeof(sendbuffer))
 		Host_ClientCommands("%s", sendbuffer);
