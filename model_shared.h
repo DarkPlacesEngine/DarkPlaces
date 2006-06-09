@@ -603,6 +603,7 @@ extern unsigned char *mod_base;
 extern cvar_t r_fullbrights;
 
 void Mod_Init (void);
+void Mod_Reload (void);
 model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, qboolean isworldmodel);
 model_t *Mod_FindName (const char *name);
 model_t *Mod_ForName (const char *name, qboolean crash, qboolean checkdisk, qboolean isworldmodel);

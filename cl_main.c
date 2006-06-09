@@ -25,6 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "image.h"
 #include "csprogs.h"
 #include "r_shadow.h"
+#include "libcurl.h"
 
 // we need to declare some mouse variables here, because the menu system
 // references them even when on a unix system.
@@ -394,6 +395,9 @@ void CL_EstablishConnection(const char *host)
 
 	// stop demo loop in case this fails
 	CL_Disconnect();
+
+	// if downloads are running, cancel their finishing action
+	Curl_Clear_forthismap();
 
 	// make sure the client ports are open before attempting to connect
 	NetConn_UpdateSockets();
