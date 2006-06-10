@@ -1100,12 +1100,9 @@ int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 
 	if (snd_renderbuffer == NULL || sfx == NULL || nosound.integer)
 		return -1;
-	if (!sfx->fetcher)
-	{
-		// this is very annoying when it was precached but the file could not be loaded
-		//Con_DPrintf ("S_StartSound: \"%s\" hasn't been precached\n", sfx->name);
+
+	if (sfx->fetcher == NULL)
 		return -1;
-	}
 
 	if (entnum && entnum >= cl.max_entities)
 		CL_ExpandEntities(entnum);

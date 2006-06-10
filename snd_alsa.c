@@ -265,8 +265,6 @@ static qboolean SndSys_Recover (int err_num)
 
 		return false;
 	}
-	
-	Con_DPrint ("SndSys_Recover: recovered successfully\n");
 
 	return true;
 }
@@ -284,15 +282,16 @@ static snd_pcm_sframes_t SndSys_Write (const unsigned char* buffer, unsigned int
 	written = snd_pcm_writei (pcm_handle, buffer, nbframes);
 	if (written < 0)
 	{
-		Con_Printf ("SndSys_Write: audio write returned %ld (%s)!\n",
-					written, snd_strerror (written));
+		if (developer.integer >= 100)
+			Con_Printf ("SndSys_Write: audio write returned %ld (%s)!\n",
+						 written, snd_strerror (written));
 
 		if (SndSys_Recover (written))
 		{
 			written = snd_pcm_writei (pcm_handle, buffer, nbframes);
 			if (written < 0)
-				Con_Printf ("SndSys_Write: audio write failed again (error %ld: %s)!\n",
-							written, snd_strerror (written));
+				Con_DPrintf ("SndSys_Write: audio write failed again (error %ld: %s)!\n",
+							 written, snd_strerror (written));
 		}
 	}
 	
@@ -321,32 +320,26 @@ void SndSys_Submit (void)
 	factor = snd_renderbuffer->format.width * snd_renderbuffer->format.channels;
 	limit = snd_renderbuffer->maxframes - startoffset;
 	nbframes = snd_renderbuffer->endframe - snd_renderbuffer->startframe;
-//Con_DPrintf(">> SndSys_Submit: startframe=%u, endframe=%u (%u frames), maxframes=%u, startoffset=%u\n",
-//			snd_renderbuffer->startframe, snd_renderbuffer->endframe,
-//			nbframes, snd_renderbuffer->maxframes, startoffset);
 
 	if (nbframes > limit)
 	{
-//Con_DPrintf(">> SndSys_Submit: 2 phases-submit\n");
 		written = SndSys_Write (&snd_renderbuffer->ring[startoffset * factor], limit);
 		if (written < 0)
 			return;
 		snd_renderbuffer->startframe += written;
 		expected_delay += written;
 
-//Con_DPrintf(">> SndSys_Submit: %ld/%ld frames written\n", written, limit);
 		if ((snd_pcm_uframes_t)written != limit)
 			return;
 		
 		nbframes -= limit;
 		startoffset = 0;
 	}
-//else Con_DPrintf(">> SndSys_Submit: 1 phase-submit\n");
 
 	written = SndSys_Write (&snd_renderbuffer->ring[startoffset * factor], nbframes);
 	if (written < 0)
 		return;
-//Con_DPrintf(">> SndSys_Submit: %ld/%ld frames written\n", written, nbframes);
+
 	snd_renderbuffer->startframe += written;
 	expected_delay += written;
 }
@@ -370,8 +363,9 @@ unsigned int SndSys_GetSoundTime (void)
 	err = snd_pcm_delay (pcm_handle, &delay);
 	if (err != 0)
 	{
-		Con_DPrintf ("SndSys_GetSoundTime: can't get playback delay (%s)\n",
-					 snd_strerror (err));
+		if (developer.integer >= 100)
+			Con_DPrintf ("SndSys_GetSoundTime: can't get playback delay (%s)\n",
+					 	 snd_strerror (err));
 
 		if (! SndSys_Recover (err))
 			return 0;
@@ -385,12 +379,10 @@ unsigned int SndSys_GetSoundTime (void)
 		}
 	}
 
-//Con_DPrintf(">> SndSys_GetSoundTime: expected_delay=%ld, delay=%ld\n",
-//			expected_delay, delay);
 	if (expected_delay < delay)
 	{
-		Con_Printf ("SndSys_GetSoundTime: expected_delay(%ld) < delay(%ld)\n",
-					expected_delay, delay);
+		Con_DPrintf ("SndSys_GetSoundTime: expected_delay(%ld) < delay(%ld)\n",
+					 expected_delay, delay);
 		timediff = 0;
 	}
 	else
