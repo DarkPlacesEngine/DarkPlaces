@@ -126,6 +126,12 @@ extern cvar_t _snd_mixahead;
 extern cvar_t snd_swapstereo;
 extern cvar_t snd_streaming;
 
+#define SND_CHANNELLAYOUT_AUTO		0
+#define SND_CHANNELLAYOUT_STANDARD	1
+#define SND_CHANNELLAYOUT_ALSA		2
+extern cvar_t snd_channellayout;
+
+
 extern int snd_blocked;		// counter. When > 0, we stop submitting sound to the audio device
 
 extern mempool_t *snd_mempool;
@@ -134,8 +140,6 @@ extern mempool_t *snd_mempool;
 // More generally, all arch-dependent operations are skipped or emulated.
 // Used for isolating performance in the renderer.
 extern qboolean simsound;
-
-extern qboolean alsaspeakerlayout;
 
 
 // ====================================================================

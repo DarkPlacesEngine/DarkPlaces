@@ -162,12 +162,10 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 		SndSys_Shutdown();
 		return false;
 	}
-	
-#ifdef __linux__
-	alsaspeakerlayout = true;
-#else
-	alsaspeakerlayout = false;
-#endif
+
+	// TOCHECK: I'm not sure which channel layout OSS uses for 5.1 and 7.1
+	if (snd_channellayout.integer == SND_CHANNELLAYOUT_AUTO)
+		Cvar_SetValueQuick (&snd_channellayout, SND_CHANNELLAYOUT_ALSA);
 
 	old_osstime = 0;
 	osssoundtime = 0;
