@@ -1330,7 +1330,10 @@ static void S_PaintAndSubmit (void)
 {
 	unsigned int newsoundtime, paintedtime, endtime, maxtime, usedframes;
 
-	if (snd_renderbuffer == NULL || snd_blocked > 0 || nosound.integer)
+	if (snd_renderbuffer == NULL || nosound.integer)
+		return;
+	
+	if (snd_blocked > 0 && !cls.capturevideo_soundfile)
 		return;
 
 	// Update sound time
@@ -1379,7 +1382,10 @@ void S_Update(const matrix4x4_t *listenermatrix)
 	channel_t *ch, *combine;
 	matrix4x4_t basematrix, rotatematrix;
 
-	if (snd_renderbuffer == NULL || snd_blocked > 0 || nosound.integer)
+	if (snd_renderbuffer == NULL || nosound.integer)
+		return;
+	
+	if (snd_blocked > 0 && !cls.capturevideo_soundfile)
 		return;
 
 	// If snd_swapstereo has changed, recompute the speaker layout
