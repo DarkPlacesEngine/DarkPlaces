@@ -89,6 +89,8 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 	}
 	else
 		Con_Print("SndSys_Init: fcntl(F_GETFL) failed!\n");
+	
+	ioctl(audio_fd, SNDCTL_DSP_RESET, NULL);
 
 	// Set the fragment size (up to "NB_FRAGMENTS" fragments of "fragmentsize" bytes)
 	fragmentsize = requested->speed * requested->channels * requested->width / 5;
@@ -186,7 +188,7 @@ void SndSys_Shutdown (void)
 	// Stop the sound and close the device
 	if (audio_fd >= 0)
 	{
-		ioctl(audio_fd, SNDCTL_DSP_RESET, 0);
+		ioctl(audio_fd, SNDCTL_DSP_RESET, NULL);
 		close(audio_fd);
 		audio_fd = -1;
 	}
