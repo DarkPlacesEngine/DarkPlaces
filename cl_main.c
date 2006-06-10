@@ -50,8 +50,10 @@ cvar_t m_side = {CVAR_SAVE, "m_side","0.8","mouse side speed multiplier"};
 
 cvar_t freelook = {CVAR_SAVE, "freelook", "1","mouse controls pitch instead of forward/back"};
 
+#ifdef AUTODEMO_BROKEN
 cvar_t cl_autodemo = {0, "cl_autodemo", "0", "records every game played, using the date/time and map name to name the demo file" };
 cvar_t cl_autodemo_nameformat = {0, "cl_autodemo_nameformat", "%Y-%m-%d_%H-%M", "The format of the cl_autodemo filename, followed by the map name" };
+#endif
 
 cvar_t r_draweffects = {0, "r_draweffects", "1","renders temporary sprite effects"};
 
@@ -1753,8 +1755,10 @@ void CL_Init (void)
 	Cmd_AddCommand ("playdemo", CL_PlayDemo_f, "watch a demo file");
 	Cmd_AddCommand ("timedemo", CL_TimeDemo_f, "play back a demo as fast as possible and save statistics to benchmark.log");
 
+#ifdef AUTODEMO_BROKEN
 	Cvar_RegisterVariable (&cl_autodemo);
 	Cvar_RegisterVariable (&cl_autodemo_nameformat);
+#endif
 
 	Cmd_AddCommand ("fog", CL_Fog_f, "set global fog parameters (density red green blue)");
 

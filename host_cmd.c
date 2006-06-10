@@ -285,6 +285,7 @@ void Host_Map_f (void)
 	if (sv.active && cls.state == ca_disconnected)
 		CL_EstablishConnection("local:1");
 
+#ifdef AUTODEMO_BROKEN
 // if cl_autodemo is set, automatically start recording a demo if one isn't being recorded already
 	if (cl_autodemo.integer && !cls.demorecording)
 	{
@@ -305,6 +306,7 @@ void Host_Map_f (void)
 
 		cls.demorecording = true;
 	}
+#endif
 }
 
 /*
