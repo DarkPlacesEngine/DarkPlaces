@@ -153,6 +153,8 @@ extern cvar_t gl_dither;
 
 extern cvar_t r_smoothnormals_areaweighting;
 
+extern cvar_t r_test;
+
 #include "gl_backend.h"
 
 #include "r_light.h"
@@ -267,6 +269,8 @@ typedef struct r_glsl_permutation_s
 	int loc_DiffuseScale;
 	int loc_SpecularScale;
 	int loc_SpecularPower;
+	int loc_GlowScale;
+	int loc_SceneBrightness;
 	int loc_OffsetMapping_Scale;
 	int loc_AmbientColor;
 	int loc_DiffuseColor;

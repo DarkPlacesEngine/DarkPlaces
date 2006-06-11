@@ -2045,9 +2045,9 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 
 		blendmode = p->type->blendmode;
 
-		cr = p->color[0] * (1.0f / 255.0f);
-		cg = p->color[1] * (1.0f / 255.0f);
-		cb = p->color[2] * (1.0f / 255.0f);
+		cr = p->color[0] * (1.0f / 255.0f) * r_view.colorscale;
+		cg = p->color[1] * (1.0f / 255.0f) * r_view.colorscale;
+		cb = p->color[2] * (1.0f / 255.0f) * r_view.colorscale;
 		ca = p->alpha * (1.0f / 255.0f);
 		if (blendmode == PBLEND_MOD)
 		{
@@ -2077,9 +2077,9 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 			cb = cb * ifog;
 			if (blendmode == PBLEND_ALPHA)
 			{
-				cr += r_refdef.fogcolor[0] * fog;
-				cg += r_refdef.fogcolor[1] * fog;
-				cb += r_refdef.fogcolor[2] * fog;
+				cr += r_refdef.fogcolor[0] * fog * r_view.colorscale;
+				cg += r_refdef.fogcolor[1] * fog * r_view.colorscale;
+				cb += r_refdef.fogcolor[2] * fog * r_view.colorscale;
 			}
 		}
 		c4f[0] = c4f[4] = c4f[8] = c4f[12] = cr;

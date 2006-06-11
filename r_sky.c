@@ -268,7 +268,8 @@ int skyboxelements[6*2*3] =
 static void R_SkyBox(void)
 {
 	int i;
-	GL_Color(1, 1, 1, 1);
+	// FIXME: fixed function path can't properly handle r_view.colorscale > 1
+	GL_Color(1 * r_view.colorscale, 1 * r_view.colorscale, 1 * r_view.colorscale, 1);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(false);
 	GL_DepthTest(false); // don't modify or read zbuffer
@@ -365,7 +366,8 @@ static void R_SkySphere(void)
 	speedscale -= (int)speedscale;
 	Matrix4x4_CreateTranslate(&scroll2matrix, speedscale, speedscale, 0);
 
-	GL_Color(1, 1, 1, 1);
+	// FIXME: fixed function path can't properly handle r_view.colorscale > 1
+	GL_Color(1 * r_view.colorscale, 1 * r_view.colorscale, 1 * r_view.colorscale, 1);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(true);
 	GL_DepthTest(false); // don't modify or read zbuffer
@@ -375,7 +377,7 @@ static void R_SkySphere(void)
 	R_Mesh_TexBind(0, R_GetTexture(r_refdef.worldmodel->brush.solidskytexture));
 	R_Mesh_TexCoordPointer(0, 2, skysphere_texcoord2f);
 	R_Mesh_TexMatrix(0, &scroll1matrix);
-	if (r_textureunits.integer >= 2)
+	if (r_textureunits.integer >= 2 && r_view.colorscale == 1)
 	{
 		// one pass using GL_DECAL or GL_INTERPOLATE_ARB for alpha layer
 		R_Mesh_TexBind(1, R_GetTexture(r_refdef.worldmodel->brush.alphaskytexture));

@@ -962,7 +962,7 @@ void R_Shadow_RenderMode_VisibleShadowVolumes(void)
 	GL_DepthMask(false);
 	GL_DepthTest(!r_showdisabledepthtest.integer);
 	qglPolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);CHECKGLERROR
-	GL_Color(0.0, 0.0125, 0.1, 1);
+	GL_Color(0.0, 0.0125 * r_view.colorscale, 0.1 * r_view.colorscale, 1);
 	GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 1);
 	qglDepthFunc(GL_GEQUAL);CHECKGLERROR
 	qglCullFace(GL_FRONT);CHECKGLERROR // this culls back
@@ -979,7 +979,7 @@ void R_Shadow_RenderMode_VisibleLighting(qboolean stenciltest, qboolean transpar
 	GL_DepthMask(false);
 	GL_DepthTest(!r_showdisabledepthtest.integer);
 	qglPolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);CHECKGLERROR
-	GL_Color(0.1, 0.0125, 0, 1);
+	GL_Color(0.1 * r_view.colorscale, 0.0125 * r_view.colorscale, 0, 1);
 	GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 1);
 	if (transparent)
 	{
@@ -1075,6 +1075,7 @@ qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 	// if that mesh is not empty, check what area of the screen it covers
 	x1 = y1 = x2 = y2 = 0;
 	v[3] = 1.0f;
+	//Con_Printf("%i vertices to transform...\n", mesh.numvertices);
 	for (i = 0;i < mesh.numvertices;i++)
 	{
 		VectorCopy(mesh.vertex3f + i * 3, v);
@@ -1112,7 +1113,7 @@ qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 		return true;
 
 	// the light area is visible, set up the scissor rectangle
-	GL_Scissor(ix1, vid.height - iy2, ix2 - ix1, iy2 - iy1);
+	GL_Scissor(ix1, iy1, ix2 - ix1, iy2 - iy1);
 	//qglScissor(ix1, iy1, ix2 - ix1, iy2 - iy1);CHECKGLERROR
 	//qglEnable(GL_SCISSOR_TEST);CHECKGLERROR
 	r_refdef.stats.lights_scissored++;
@@ -1275,7 +1276,7 @@ static void R_Shadow_GenTexCoords_Specular_NormalCubeMap(int numsurfaces, msurfa
 static void R_Shadow_RenderSurfacesLighting_VisibleLighting(int numsurfaces, msurface_t **surfacelist, const vec3_t lightcolorbase, const vec3_t lightcolorpants, const vec3_t lightcolorshirt, rtexture_t *basetexture, rtexture_t *pantstexture, rtexture_t *shirttexture, rtexture_t *normalmaptexture, rtexture_t *glosstexture, float specularscale, qboolean dopants, qboolean doshirt)
 {
 	// used to display how many times a surface is lit for level design purposes
-	GL_Color(0.1, 0.025, 0, 1);
+	GL_Color(0.1 * r_view.colorscale, 0.025 * r_view.colorscale, 0, 1);
 	R_Mesh_ColorPointer(NULL);
 	R_Mesh_ResetTextureState();
 	RSurf_PrepareVerticesForBatch(false, false, numsurfaces, surfacelist);
@@ -1793,25 +1794,25 @@ static void R_Shadow_RenderSurfacesLighting_Light_Dot3(int numsurfaces, msurface
 	RSurf_PrepareVerticesForBatch(true, true, numsurfaces, surfacelist);
 	R_Mesh_ColorPointer(NULL);
 	if (doambient)
-		R_Shadow_RenderSurfacesLighting_Light_Dot3_AmbientPass(numsurfaces, surfacelist, lightcolorbase, basetexture, r_shadow_rtlight->ambientscale);
+		R_Shadow_RenderSurfacesLighting_Light_Dot3_AmbientPass(numsurfaces, surfacelist, lightcolorbase, basetexture, r_shadow_rtlight->ambientscale * r_view.colorscale);
 	if (dodiffuse)
-		R_Shadow_RenderSurfacesLighting_Light_Dot3_DiffusePass(numsurfaces, surfacelist, lightcolorbase, basetexture, normalmaptexture, r_shadow_rtlight->diffusescale);
+		R_Shadow_RenderSurfacesLighting_Light_Dot3_DiffusePass(numsurfaces, surfacelist, lightcolorbase, basetexture, normalmaptexture, r_shadow_rtlight->diffusescale * r_view.colorscale);
 	if (dopants)
 	{
 		if (doambient)
-			R_Shadow_RenderSurfacesLighting_Light_Dot3_AmbientPass(numsurfaces, surfacelist, lightcolorpants, pantstexture, r_shadow_rtlight->ambientscale);
+			R_Shadow_RenderSurfacesLighting_Light_Dot3_AmbientPass(numsurfaces, surfacelist, lightcolorpants, pantstexture, r_shadow_rtlight->ambientscale * r_view.colorscale);
 		if (dodiffuse)
-			R_Shadow_RenderSurfacesLighting_Light_Dot3_DiffusePass(numsurfaces, surfacelist, lightcolorpants, pantstexture, normalmaptexture, r_shadow_rtlight->diffusescale);
+			R_Shadow_RenderSurfacesLighting_Light_Dot3_DiffusePass(numsurfaces, surfacelist, lightcolorpants, pantstexture, normalmaptexture, r_shadow_rtlight->diffusescale * r_view.colorscale);
 	}
 	if (doshirt)
 	{
 		if (doambient)
-			R_Shadow_RenderSurfacesLighting_Light_Dot3_AmbientPass(numsurfaces, surfacelist, lightcolorshirt, shirttexture, r_shadow_rtlight->ambientscale);
+			R_Shadow_RenderSurfacesLighting_Light_Dot3_AmbientPass(numsurfaces, surfacelist, lightcolorshirt, shirttexture, r_shadow_rtlight->ambientscale * r_view.colorscale);
 		if (dodiffuse)
-			R_Shadow_RenderSurfacesLighting_Light_Dot3_DiffusePass(numsurfaces, surfacelist, lightcolorshirt, shirttexture, normalmaptexture, r_shadow_rtlight->diffusescale);
+			R_Shadow_RenderSurfacesLighting_Light_Dot3_DiffusePass(numsurfaces, surfacelist, lightcolorshirt, shirttexture, normalmaptexture, r_shadow_rtlight->diffusescale * r_view.colorscale);
 	}
 	if (dospecular)
-		R_Shadow_RenderSurfacesLighting_Light_Dot3_SpecularPass(numsurfaces, surfacelist, lightcolorbase, glosstexture, normalmaptexture, specularscale);
+		R_Shadow_RenderSurfacesLighting_Light_Dot3_SpecularPass(numsurfaces, surfacelist, lightcolorbase, glosstexture, normalmaptexture, specularscale * r_view.colorscale);
 }
 
 void R_Shadow_RenderSurfacesLighting_Light_Vertex_Pass(const model_t *model, int numsurfaces, msurface_t **surfacelist, vec3_t diffusecolor2, vec3_t ambientcolor2)
@@ -1928,12 +1929,12 @@ static void R_Shadow_RenderSurfacesLighting_Light_Vertex(int numsurfaces, msurfa
 	float ambientcolorpants[3], diffusecolorpants[3];
 	float ambientcolorshirt[3], diffusecolorshirt[3];
 	rmeshstate_t m;
-	VectorScale(lightcolorbase, r_shadow_rtlight->ambientscale * 2, ambientcolorbase);
-	VectorScale(lightcolorbase, r_shadow_rtlight->diffusescale * 2, diffusecolorbase);
-	VectorScale(lightcolorpants, r_shadow_rtlight->ambientscale * 2, ambientcolorpants);
-	VectorScale(lightcolorpants, r_shadow_rtlight->diffusescale * 2, diffusecolorpants);
-	VectorScale(lightcolorshirt, r_shadow_rtlight->ambientscale * 2, ambientcolorshirt);
-	VectorScale(lightcolorshirt, r_shadow_rtlight->diffusescale * 2, diffusecolorshirt);
+	VectorScale(lightcolorbase, r_shadow_rtlight->ambientscale * 2 * r_view.colorscale, ambientcolorbase);
+	VectorScale(lightcolorbase, r_shadow_rtlight->diffusescale * 2 * r_view.colorscale, diffusecolorbase);
+	VectorScale(lightcolorpants, r_shadow_rtlight->ambientscale * 2 * r_view.colorscale, ambientcolorpants);
+	VectorScale(lightcolorpants, r_shadow_rtlight->diffusescale * 2 * r_view.colorscale, diffusecolorpants);
+	VectorScale(lightcolorshirt, r_shadow_rtlight->ambientscale * 2 * r_view.colorscale, ambientcolorshirt);
+	VectorScale(lightcolorshirt, r_shadow_rtlight->diffusescale * 2 * r_view.colorscale, diffusecolorshirt);
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 	R_Mesh_ColorPointer(rsurface_array_color4f);
 	memset(&m, 0, sizeof(m));
