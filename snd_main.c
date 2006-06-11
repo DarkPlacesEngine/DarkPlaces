@@ -141,7 +141,7 @@ unsigned int total_channels;
 snd_ringbuffer_t *snd_renderbuffer = NULL;
 unsigned int soundtime = 0;
 static unsigned int oldpaintedtime = 0;
-unsigned int extrasoundtime = 0;
+static unsigned int extrasoundtime = 0;
 static double snd_starttime = 0.0;
 
 vec3_t listener_origin;
@@ -155,6 +155,8 @@ static sfx_t *known_sfx = NULL;
 static qboolean sound_spatialized = false;
 
 qboolean simsound = false;
+
+static qboolean recording_sound = false;
 
 int snd_blocked = 0;
 static int current_swapstereo = false;
@@ -632,6 +634,7 @@ void S_Startup (void)
 		extrasoundtime = 0;
 	snd_renderbuffer->startframe = soundtime;
 	snd_renderbuffer->endframe = soundtime;
+	recording_sound = false;
 }
 
 void S_Shutdown(void)
@@ -1373,9 +1376,30 @@ static void S_PaintAndSubmit (void)
 
 	newsoundtime += extrasoundtime;
 	if (newsoundtime < soundtime)
-		Con_Printf("S_PaintAndSubmit: WARNING: newsoundtime < soundtime (%u < %u)\n",
-				   newsoundtime, soundtime);
+	{
+		if ((cls.capturevideo_soundfile != NULL) != recording_sound)
+		{
+			unsigned int additionaltime;
+
+			// add some time to extrasoundtime make newsoundtime higher
+
+			// The extra time must be a multiple of the render buffer size
+			// to avoid modifying the current position in the buffer,
+			// some modules write directly to a shared (DMA) buffer
+			additionaltime = (soundtime - newsoundtime) + snd_renderbuffer->maxframes - 1;
+			additionaltime -= additionaltime % snd_renderbuffer->maxframes;
+			
+			extrasoundtime += additionaltime;
+			newsoundtime += additionaltime;
+			Con_DPrintf("S_PaintAndSubmit: new extra sound time = %u\n",
+						extrasoundtime);
+		}
+		else
+			Con_Printf("S_PaintAndSubmit: WARNING: newsoundtime < soundtime (%u < %u)\n",
+					   newsoundtime, soundtime);
+	}
 	soundtime = newsoundtime;
+	recording_sound = (cls.capturevideo_soundfile != NULL);
 
 	// Check to make sure that we haven't overshot
 	paintedtime = snd_renderbuffer->endframe;
