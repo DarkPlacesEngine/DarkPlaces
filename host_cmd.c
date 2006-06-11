@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 int current_skill;
 cvar_t sv_cheats = {0, "sv_cheats", "0", "enables cheat commands in any game, and cheat impulses in dpmod"};
-cvar_t rcon_password = {0, "rcon_password", "", "password to authenticate rcon commands"};
+cvar_t rcon_password = {CVAR_PRIVATE, "rcon_password", "", "password to authenticate rcon commands"};
 cvar_t rcon_address = {0, "rcon_address", "", "server address to send rcon commands to (when not connected to a server)"};
 cvar_t team = {CVAR_USERINFO | CVAR_SAVE, "team", "none", "QW team (4 character limit, example: blue)"};
 cvar_t skin = {CVAR_USERINFO | CVAR_SAVE, "skin", "", "QW player skin name (example: base)"};
@@ -1992,7 +1992,7 @@ void Host_SendCvar_f (void)
 
 	if(Cmd_Argc() != 2)
 		return;
-	if(!(c = Cvar_FindVar(Cmd_Argv(1))))
+	if(!(c = Cvar_FindVar(Cmd_Argv(1))) || (c->flags & CVAR_PRIVATE))
 		return;
 	if (cls.state != ca_dedicated)
 		Cmd_ForwardStringToServer(va("sentcvar %s %s\n", c->name, c->string));

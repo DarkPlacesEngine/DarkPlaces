@@ -63,8 +63,10 @@ interface from being ambiguous.
 #define CVAR_READONLY 4
 #define CVAR_SERVERINFO 8
 #define CVAR_USERINFO 16
+// CVAR_PRIVATE means do not $ expand or sendcvar this cvar under any circumstances (rcon_password uses this)
+#define CVAR_PRIVATE 32
 // used to determine if flags is valid
-#define CVAR_MAXFLAGSVAL 31
+#define CVAR_MAXFLAGSVAL 63
 // for internal use only!
 #define CVAR_DEFAULTSET (1<<30)
 #define CVAR_ALLOCATED (1<<31)
