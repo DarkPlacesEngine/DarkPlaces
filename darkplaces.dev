@@ -1,7 +1,7 @@
 [Project]
 FileName=darkplaces.dev
 Name=DarkPlaces
-UnitCount=157
+UnitCount=156
 Type=0
 Ver=1
 ObjFiles=
@@ -1189,16 +1189,6 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit117]
-FileName=r_crosshairs.c
-CompileCpp=0
-Folder=Source Files
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
 [Unit118]
 FileName=r_explosion.c
 CompileCpp=0
@@ -1589,7 +1579,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit158]
+[Unit117]
 FileName=builddate.c
 CompileCpp=0
 Folder=Source Files

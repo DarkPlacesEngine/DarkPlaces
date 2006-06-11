@@ -40,7 +40,6 @@ extern cvar_t showdate;
 
 extern cvar_t crosshair;
 extern cvar_t crosshair_size;
-extern cvar_t crosshair_static;
 
 extern cvar_t scr_conalpha;
 extern cvar_t scr_conbrightness;

@@ -96,6 +96,12 @@ cvar_t sbar_alpha_fg = {CVAR_SAVE, "sbar_alpha_fg", "1", "opacity value of the s
 
 cvar_t cl_deathscoreboard = {0, "cl_deathscoreboard", "1", "shows scoreboard (+showscores) while dead"};
 
+cvar_t crosshair_color_red = {CVAR_SAVE, "crosshair_color_red", "1", "customizable crosshair color"};
+cvar_t crosshair_color_green = {CVAR_SAVE, "crosshair_color_green", "0", "customizable crosshair color"};
+cvar_t crosshair_color_blue = {CVAR_SAVE, "crosshair_color_blue", "0", "customizable crosshair color"};
+cvar_t crosshair_color_alpha = {CVAR_SAVE, "crosshair_color_alpha", "1", "how opaque the crosshair should be"};
+cvar_t crosshair_size = {CVAR_SAVE, "crosshair_size", "1", "adjusts size of the crosshair on the screen"};
+
 void Sbar_MiniDeathmatchOverlay (int x, int y);
 void Sbar_DeathmatchOverlay (void);
 void Sbar_IntermissionOverlay (void);
@@ -337,16 +343,22 @@ void sbar_newmap(void)
 
 void Sbar_Init (void)
 {
-	Cmd_AddCommand ("+showscores", Sbar_ShowScores, "show scoreboard");
-	Cmd_AddCommand ("-showscores", Sbar_DontShowScores, "hide scoreboard");
-	Cvar_RegisterVariable (&showfps);
-	Cvar_RegisterVariable (&showtime);
-	Cvar_RegisterVariable (&showtime_format);
-	Cvar_RegisterVariable (&showdate);
-	Cvar_RegisterVariable (&showdate_format);
-	Cvar_RegisterVariable (&sbar_alpha_bg);
-	Cvar_RegisterVariable (&sbar_alpha_fg);
-	Cvar_RegisterVariable (&cl_deathscoreboard);
+	Cmd_AddCommand("+showscores", Sbar_ShowScores, "show scoreboard");
+	Cmd_AddCommand("-showscores", Sbar_DontShowScores, "hide scoreboard");
+	Cvar_RegisterVariable(&showfps);
+	Cvar_RegisterVariable(&showtime);
+	Cvar_RegisterVariable(&showtime_format);
+	Cvar_RegisterVariable(&showdate);
+	Cvar_RegisterVariable(&showdate_format);
+	Cvar_RegisterVariable(&sbar_alpha_bg);
+	Cvar_RegisterVariable(&sbar_alpha_fg);
+	Cvar_RegisterVariable(&cl_deathscoreboard);
+
+	Cvar_RegisterVariable(&crosshair_color_red);
+	Cvar_RegisterVariable(&crosshair_color_green);
+	Cvar_RegisterVariable(&crosshair_color_blue);
+	Cvar_RegisterVariable(&crosshair_color_alpha);
+	Cvar_RegisterVariable(&crosshair_size);
 
 	R_RegisterModule("sbar", sbar_start, sbar_shutdown, sbar_newmap);
 }
@@ -1014,6 +1026,8 @@ extern float v_dmg_time, v_dmg_roll, v_dmg_pitch;
 extern cvar_t v_kicktime;
 void Sbar_Draw (void)
 {
+	cachepic_t *pic;
+
 	if(cl.csqc_vidvars.drawenginesbar)	//[515]: csqc drawsbar
 	{
 		if (cl.intermission == 1)
@@ -1337,8 +1351,8 @@ void Sbar_Draw (void)
 
 	Sbar_ShowFPS();
 
-	if(cl.csqc_vidvars.drawcrosshair)
-		R_Draw2DCrosshair();
+	if (cl.csqc_vidvars.drawcrosshair && crosshair.integer >= 1 && crosshair.integer <= NUMCROSSHAIRS && !cl.intermission && !r_letterbox.value && (pic = r_crosshairs[crosshair.integer]))
+		DrawQ_Pic((vid_conwidth.integer - pic->width * crosshair_size.value) * 0.5f, (vid_conheight.integer - pic->height * crosshair_size.value) * 0.5f, pic, pic->width * crosshair_size.value, pic->height * crosshair_size.value, crosshair_color_red.value, crosshair_color_green.value, crosshair_color_blue.value, crosshair_color_alpha.value, 0);
 
 	if (cl_prydoncursor.integer)
 		DrawQ_Pic((cl.cmd.cursor_screen[0] + 1) * 0.5 * vid_conwidth.integer, (cl.cmd.cursor_screen[1] + 1) * 0.5 * vid_conheight.integer, Draw_CachePic(va("gfx/prydoncursor%03i", cl_prydoncursor.integer), true), 0, 0, 1, 1, 1, 1, 0);

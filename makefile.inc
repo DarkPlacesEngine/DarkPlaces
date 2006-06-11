@@ -106,7 +106,6 @@ OBJ_COMMON= \
 	prvm_cmds.o \
 	prvm_edict.o \
 	prvm_exec.o \
-	r_crosshairs.o \
 	r_explosion.o \
 	r_lerpanim.o \
 	r_light.o \

@@ -1023,7 +1023,6 @@ extern void GL_Main_Init(void);
 extern void R_Shadow_Init(void);
 extern void R_Sky_Init(void);
 extern void GL_Surf_Init(void);
-extern void R_Crosshairs_Init(void);
 extern void R_Light_Init(void);
 extern void R_Particles_Init(void);
 extern void R_Explosion_Init(void);
@@ -1041,11 +1040,10 @@ void Render_Init(void)
 	R_Shadow_Init();
 	R_Sky_Init();
 	GL_Surf_Init();
-	R_Crosshairs_Init();
+	Sbar_Init();
 	R_Light_Init();
 	R_Particles_Init();
 	R_Explosion_Init();
-	Sbar_Init();
 	R_LightningBeams_Init();
 	Mod_RenderInit();
 }
@@ -1824,12 +1822,6 @@ void R_RenderScene(void)
 		R_DrawCoronas();
 		if (r_timereport_active)
 			R_TimeReport("coronas");
-	}
-	if(cl.csqc_vidvars.drawcrosshair)
-	{
-		R_DrawWorldCrosshair();
-		if (r_timereport_active)
-			R_TimeReport("crosshair");
 	}
 
 	// don't let sound skip if going slow
