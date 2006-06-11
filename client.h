@@ -1265,6 +1265,9 @@ typedef struct r_view_s
 
 	// which color components to allow (for anaglyph glasses)
 	int colormask[4];
+
+	// global RGB color multiplier for rendering, this is required by HDR
+	float colorscale;
 }
 r_view_t;
 

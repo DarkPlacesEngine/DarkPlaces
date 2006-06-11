@@ -348,9 +348,9 @@ static void R_DrawPortal_Callback(const entity_render_t *ent, const rtlight_t *r
 	R_Mesh_ResetTextureState();
 
 	i = surfacelist[0];
-	GL_Color(((i & 0x0007) >> 0) * (1.0f / 7.0f),
-			 ((i & 0x0038) >> 3) * (1.0f / 7.0f),
-			 ((i & 0x01C0) >> 6) * (1.0f / 7.0f),
+	GL_Color(((i & 0x0007) >> 0) * (1.0f / 7.0f) * r_view.colorscale,
+			 ((i & 0x0038) >> 3) * (1.0f / 7.0f) * r_view.colorscale,
+			 ((i & 0x01C0) >> 6) * (1.0f / 7.0f) * r_view.colorscale,
 			 0.125f);
 	for (i = 0, v = vertex3f;i < numpoints;i++, v += 3)
 		VectorCopy(portal->points[i].position, v);

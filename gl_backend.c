@@ -727,7 +727,7 @@ void GL_TransformToScreen(const vec4_t in, vec4_t out)
 	Matrix4x4_Transform4 (&backend_projectmatrix, temp, out);
 	iw = 1.0f / out[3];
 	out[0] = r_view.x + (out[0] * iw + 1.0f) * r_view.width * 0.5f;
-	out[1] = r_view.y + (out[1] * iw + 1.0f) * r_view.height * 0.5f;
+	out[1] = r_view.y + r_view.height - (out[1] * iw + 1.0f) * r_view.height * 0.5f;
 	out[2] = r_view.z + (out[2] * iw + 1.0f) * r_view.depth * 0.5f;
 }
 

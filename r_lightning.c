@@ -246,17 +246,18 @@ void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, const r
 		r_lightningbeams_setuptexture();
 
 	R_Mesh_VertexPointer(vertex3f);
+	// FIXME: fixed function path can't properly handle r_view.colorscale > 1
 	if (r_refdef.fogenabled)
 	{
 		// per vertex colors if fog is used
 		R_Mesh_ColorPointer(color4f);
-		R_FogLightningBeam_Vertex3f_Color4f(vertex3f, color4f, 12, r_lightningbeam_color_red.value, r_lightningbeam_color_green.value, r_lightningbeam_color_blue.value, 1);
+		R_FogLightningBeam_Vertex3f_Color4f(vertex3f, color4f, 12, r_lightningbeam_color_red.value * r_view.colorscale, r_lightningbeam_color_green.value * r_view.colorscale, r_lightningbeam_color_blue.value * r_view.colorscale, 1);
 	}
 	else
 	{
 		// solid color if fog is not used
 		R_Mesh_ColorPointer(NULL);
-		GL_Color(r_lightningbeam_color_red.value, r_lightningbeam_color_green.value, r_lightningbeam_color_blue.value, 1);
+		GL_Color(r_lightningbeam_color_red.value * r_view.colorscale, r_lightningbeam_color_green.value * r_view.colorscale, r_lightningbeam_color_blue.value * r_view.colorscale, 1);
 	}
 	memset(&m, 0, sizeof(m));
 	if (r_lightningbeam_qmbtexture.integer)
@@ -271,7 +272,7 @@ void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, const r
 		const beam_t *b = cl.beams + surfacelist[surfacelistindex];
 		vec3_t beamdir, right, up, offset, start, end;
 		float length, t1, t2;
-		
+
 		CL_Beam_CalculatePositions(b, start, end);
 
 		// calculate beam direction (beamdir) vector and beam length
