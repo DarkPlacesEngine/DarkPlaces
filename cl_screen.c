@@ -440,7 +440,7 @@ void SCR_DrawConsole (void)
 	else
 	{
 		con_vislines = 0;
-		if (key_dest == key_game || key_dest == key_message)
+		if ((key_dest == key_game || key_dest == key_message) && !r_letterbox.value)
 			Con_DrawNotify ();	// only draw notify in game
 	}
 }
