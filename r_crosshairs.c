@@ -2,6 +2,10 @@
 #include "quakedef.h"
 #include "cl_collision.h"
 
+cvar_t crosshair_useteamcolor = {CVAR_SAVE, "crosshair_useteamcolor", "0", "uses team color instead of customizable crosshair color"};
+cvar_t crosshair_color_red = {CVAR_SAVE, "crosshair_color_red", "1", "customizable crosshair color"};
+cvar_t crosshair_color_green = {CVAR_SAVE, "crosshair_color_green", "0", "customizable crosshair color"};
+cvar_t crosshair_color_blue = {CVAR_SAVE, "crosshair_color_blue", "0", "customizable crosshair color"};
 cvar_t crosshair_brightness = {CVAR_SAVE, "crosshair_brightness", "1", "how bright the crosshair should be"};
 cvar_t crosshair_alpha = {CVAR_SAVE, "crosshair_alpha", "1", "how opaque the crosshair should be"};
 cvar_t crosshair_flashspeed = {CVAR_SAVE, "crosshair_flashspeed", "2", "speed at which the crosshair flashes"};
@@ -11,6 +15,10 @@ cvar_t crosshair_static = {CVAR_SAVE, "crosshair_static", "1", "if 1 the crossha
 
 void R_Crosshairs_Init(void)
 {
+	Cvar_RegisterVariable(&crosshair_useteamcolor);
+	Cvar_RegisterVariable(&crosshair_color_red);
+	Cvar_RegisterVariable(&crosshair_color_green);
+	Cvar_RegisterVariable(&crosshair_color_blue);
 	Cvar_RegisterVariable(&crosshair_brightness);
 	Cvar_RegisterVariable(&crosshair_alpha);
 	Cvar_RegisterVariable(&crosshair_flashspeed);
@@ -22,24 +30,24 @@ void R_Crosshairs_Init(void)
 void R_GetCrosshairColor(float *out)
 {
 	int i;
-	unsigned char *color;
+	vec3_t color;
 	float scale, base;
-	if (cl.viewentity >= 1 && cl.viewentity <= cl.maxclients)
+	if (crosshair_useteamcolor.integer && cl.viewentity >= 1 && cl.viewentity <= cl.maxclients)
 	{
 		i = (cl.scores[cl.viewentity-1].colors & 0xF) << 4;
 		if (i >= 208 && i < 224) // blue
 			i += 8;
 		else if (i < 128 || i >= 224) // 128-224 are backwards ranges (bright to dark, rather than dark to bright)
 			i += 15;
+		VectorScale((unsigned char *) &palette_complete[i], (1.0f / 255.0f), color);
 	}
 	else
-		i = 15;
-	color = (unsigned char *) &palette_complete[i];
+		VectorSet(color, crosshair_color_red.value, crosshair_color_green.value, crosshair_color_blue.value);
 	if (crosshair_flashspeed.value >= 0.01f)
 		base = (sin(realtime * crosshair_flashspeed.value * (M_PI*2.0f)) * crosshair_flashrange.value);
 	else
 		base = 0.0f;
-	scale = crosshair_brightness.value * (1.0f / 255.0f);
+	scale = crosshair_brightness.value;
 	out[0] = color[0] * scale + base;
 	out[1] = color[1] * scale + base;
 	out[2] = color[2] * scale + base;
