@@ -8,8 +8,6 @@ cvar_t crosshair_color_green = {CVAR_SAVE, "crosshair_color_green", "0", "custom
 cvar_t crosshair_color_blue = {CVAR_SAVE, "crosshair_color_blue", "0", "customizable crosshair color"};
 cvar_t crosshair_brightness = {CVAR_SAVE, "crosshair_brightness", "1", "how bright the crosshair should be"};
 cvar_t crosshair_alpha = {CVAR_SAVE, "crosshair_alpha", "1", "how opaque the crosshair should be"};
-cvar_t crosshair_flashspeed = {CVAR_SAVE, "crosshair_flashspeed", "2", "speed at which the crosshair flashes"};
-cvar_t crosshair_flashrange = {CVAR_SAVE, "crosshair_flashrange", "0.1", "how much the crosshair flashes"};
 cvar_t crosshair_size = {CVAR_SAVE, "crosshair_size", "1", "adjusts size of the crosshair on the screen"};
 cvar_t crosshair_static = {CVAR_SAVE, "crosshair_static", "1", "if 1 the crosshair is a 2D overlay, if 0 it is a sprite in the world indicating where your weapon will hit in standard quake mods (if the mod has the weapon somewhere else this won't be accurate)"};
 
@@ -21,8 +19,6 @@ void R_Crosshairs_Init(void)
 	Cvar_RegisterVariable(&crosshair_color_blue);
 	Cvar_RegisterVariable(&crosshair_brightness);
 	Cvar_RegisterVariable(&crosshair_alpha);
-	Cvar_RegisterVariable(&crosshair_flashspeed);
-	Cvar_RegisterVariable(&crosshair_flashrange);
 	Cvar_RegisterVariable(&crosshair_size);
 	Cvar_RegisterVariable(&crosshair_static);
 }
@@ -31,7 +27,7 @@ void R_GetCrosshairColor(float *out)
 {
 	int i;
 	vec3_t color;
-	float scale, base;
+	float scale;
 	if (crosshair_useteamcolor.integer && cl.viewentity >= 1 && cl.viewentity <= cl.maxclients)
 	{
 		i = (cl.scores[cl.viewentity-1].colors & 0xF) << 4;
@@ -43,14 +39,10 @@ void R_GetCrosshairColor(float *out)
 	}
 	else
 		VectorSet(color, crosshair_color_red.value, crosshair_color_green.value, crosshair_color_blue.value);
-	if (crosshair_flashspeed.value >= 0.01f)
-		base = (sin(realtime * crosshair_flashspeed.value * (M_PI*2.0f)) * crosshair_flashrange.value);
-	else
-		base = 0.0f;
 	scale = crosshair_brightness.value;
-	out[0] = color[0] * scale + base;
-	out[1] = color[1] * scale + base;
-	out[2] = color[2] * scale + base;
+	out[0] = color[0] * scale;
+	out[1] = color[1] * scale;
+	out[2] = color[2] * scale;
 	out[3] = crosshair_alpha.value;
 
 	// clamp the colors and alpha
