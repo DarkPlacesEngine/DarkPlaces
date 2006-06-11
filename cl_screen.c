@@ -51,7 +51,6 @@ float		scr_con_current;
 
 extern int	con_vislines;
 
-void DrawCrosshair(int num);
 static void SCR_ScreenShot_f (void);
 static void R_Envmap_f (void);
 
