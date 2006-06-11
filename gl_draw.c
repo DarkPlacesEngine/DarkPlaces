@@ -263,10 +263,8 @@ static rtexture_t *draw_generatecrosshair(int num)
 		}
 		else
 		{
-			data[i][0] = 255;
-			data[i][1] = 255;
-			data[i][2] = 255;
-			data[i][3] = (unsigned char) ((int) (in[i] - '0') * 255 / 7);
+			data[i][0] = data[i][1] = data[i][2] = (unsigned char) ((int) (in[i] - '0') * 127 / 7 + 128);
+			data[i][3] = 255;
 		}
 	}
 	return R_LoadTexture2D(drawtexturepool, va("crosshair%i", num), 16, 16, &data[0][0], TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
