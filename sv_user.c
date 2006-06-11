@@ -559,10 +559,14 @@ qboolean SV_ReadClientMove (void)
 		{
 			double frametime = bound(0, move->time - oldmovetime, 0.1);
 			double oldframetime = prog->globals.server->frametime;
+			double oldframetime2 = sv.frametime;
 			//if (move->time - oldmovetime >= 0.1001)
 			//	Con_DPrintf("client move exceeds 100ms!  (time %f -> time %f)\n", oldmovetime, move->time);
+			// the server and qc frametime values must be changed temporarily
+			sv.frametime = frametime;
 			prog->globals.server->frametime = frametime;
 			SV_Physics_ClientEntity(host_client->edict);
+			sv.frametime = oldframetime2;
 			prog->globals.server->frametime = oldframetime;
 			host_client->clmovement_skipphysicsframes = sv_clmovement_waitforinput.integer;
 		}
