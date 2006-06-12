@@ -708,6 +708,7 @@ void Force_CenterView_f (void)
 	cl.viewangles[PITCH] = 0;
 }
 
+static int gamma_forcenextframe = false;
 static float cachegamma, cachebrightness, cachecontrast, cacheblack[3], cachegrey[3], cachewhite[3];
 static int cachecolorenable, cachehwgamma;
 #define BOUNDCVAR(cvar, m1, m2) c = &(cvar);f = bound(m1, c->value, m2);if (c->value != f) Cvar_SetValueQuick(c, f);
@@ -722,7 +723,7 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 		return;
 
 	if (!force
-	 && !forcenextframe
+	 && !gamma_forcenextframe
 	 && !v_psycho.integer
 	 && cachehwgamma == (vid_activewindow && v_hwgamma.integer)
 	 && v_gamma.value == cachegamma
@@ -843,6 +844,8 @@ void VID_RestoreSystemGamma(void)
 	{
 		vid_usinghwgamma = false;
 		Cvar_SetValueQuick(&vid_hardwaregammasupported, VID_SetGamma(vid_systemgammaramps, vid_gammarampsize));
+		// force gamma situation to be reexamined next frame
+		gamma_forcenextframe = true;
 	}
 }
 
