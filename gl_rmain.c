@@ -334,6 +334,18 @@ static const char *builtinshaderstring =
 "\n"
 "// common definitions between vertex shader and fragment shader:\n"
 "\n"
+"#ifdef __GLSL_CG_DATA_TYPES\n"
+"#define myhalf half\n"
+"#define myhvec2 hvec2\n"
+"#define myhvec3 hvec3\n"
+"#define myhvec4 hvec4\n"
+"#else\n"
+"#define myhalf float\n"
+"#define myhvec2 vec2\n"
+"#define myhvec3 vec3\n"
+"#define myhvec4 vec4\n"
+"#endif\n"
+"\n"
 "varying vec2 TexCoord;\n"
 "varying vec2 TexCoordLightmap;\n"
 "\n"
@@ -428,25 +440,25 @@ static const char *builtinshaderstring =
 "uniform sampler2D Texture_Deluxemap;\n"
 "uniform sampler2D Texture_Glow;\n"
 "\n"
-"uniform vec3 LightColor;\n"
-"uniform vec3 AmbientColor;\n"
-"uniform vec3 DiffuseColor;\n"
-"uniform vec3 SpecularColor;\n"
-"uniform vec3 Color_Pants;\n"
-"uniform vec3 Color_Shirt;\n"
-"uniform vec3 FogColor;\n"
+"uniform myhvec3 LightColor;\n"
+"uniform myhvec3 AmbientColor;\n"
+"uniform myhvec3 DiffuseColor;\n"
+"uniform myhvec3 SpecularColor;\n"
+"uniform myhvec3 Color_Pants;\n"
+"uniform myhvec3 Color_Shirt;\n"
+"uniform myhvec3 FogColor;\n"
 "\n"
-"uniform float GlowScale;\n"
-"uniform float SceneBrightness;\n"
+"uniform myhalf GlowScale;\n"
+"uniform myhalf SceneBrightness;\n"
 "\n"
 "uniform float OffsetMapping_Scale;\n"
 "uniform float OffsetMapping_Bias;\n"
 "uniform float FogRangeRecip;\n"
 "\n"
-"uniform float AmbientScale;\n"
-"uniform float DiffuseScale;\n"
-"uniform float SpecularScale;\n"
-"uniform float SpecularPower;\n"
+"uniform myhalf AmbientScale;\n"
+"uniform myhalf DiffuseScale;\n"
+"uniform myhalf SpecularScale;\n"
+"uniform myhalf SpecularPower;\n"
 "\n"
 "void main(void)\n"
 "{\n"
@@ -461,7 +473,9 @@ static const char *builtinshaderstring =
 "\n"
 "#ifdef USEOFFSETMAPPING_RELIEFMAPPING\n"
 "	// 14 sample relief mapping: linear search and then binary search\n"
-"	vec3 OffsetVector = vec3(EyeVector.xy * (1.0 / EyeVector.z) * depthbias * OffsetMapping_Scale * vec2(-0.1, 0.1), -0.1);\n"
+"	//vec3 OffsetVector = vec3(EyeVector.xy * (1.0 / EyeVector.z) * depthbias * OffsetMapping_Scale * vec2(-0.1, 0.1), -0.1);\n"
+"	//vec3 OffsetVector = vec3(normalize(EyeVector.xy) * OffsetMapping_Scale * vec2(-0.1, 0.1), -0.1);\n"
+"	vec3 OffsetVector = vec3(eyedir.xy * OffsetMapping_Scale * vec2(-0.1, 0.1), -0.1);\n"
 "	vec3 RT = vec3(TexCoord - OffsetVector.xy * 10.0, 1.0) + OffsetVector;\n"
 "	if (RT.z > texture2D(Texture_Normal, RT.xy).a) RT += OffsetVector;\n"
 "	if (RT.z > texture2D(Texture_Normal, RT.xy).a) RT += OffsetVector;\n"
@@ -478,20 +492,54 @@ static const char *builtinshaderstring =
 "	if (RT.z > texture2D(Texture_Normal, RT.xy).a) RT += OffsetVector;OffsetVector *= 0.5;RT -= OffsetVector;\n"
 "	if (RT.z > texture2D(Texture_Normal, RT.xy).a) RT += OffsetVector;OffsetVector *= 0.5;RT -= OffsetVector;\n"
 "	TexCoord = RT.xy;\n"
-"#else\n"
+"#elif 1\n"
 "	// 3 sample offset mapping (only 3 samples because of ATI Radeon 9500-9800/X300 limits)\n"
-"	vec2 OffsetVector = vec2((EyeVector.xy * (1.0 / EyeVector.z) * depthbias) * OffsetMapping_Scale * vec2(-0.333, 0.333));\n"
+"	//vec2 OffsetVector = vec2(EyeVector.xy * (1.0 / EyeVector.z) * depthbias) * OffsetMapping_Scale * vec2(-0.333, 0.333);\n"
+"	//vec2 OffsetVector = vec2(normalize(EyeVector.xy)) * OffsetMapping_Scale * vec2(-0.333, 0.333);\n"
+"	vec2 OffsetVector = vec2(eyedir.xy) * OffsetMapping_Scale * vec2(-0.333, 0.333);\n"
 "	//TexCoord += OffsetVector * 3.0;\n"
 "	TexCoord -= OffsetVector * texture2D(Texture_Normal, TexCoord).a;\n"
 "	TexCoord -= OffsetVector * texture2D(Texture_Normal, TexCoord).a;\n"
 "	TexCoord -= OffsetVector * texture2D(Texture_Normal, TexCoord).a;\n"
+"#elif 0\n"
+"	// 10 sample offset mapping\n"
+"	//vec2 OffsetVector = vec2(EyeVector.xy * (1.0 / EyeVector.z) * depthbias) * OffsetMapping_Scale * vec2(-0.333, 0.333);\n"
+"	//vec2 OffsetVector = vec2(normalize(EyeVector.xy)) * OffsetMapping_Scale * vec2(-0.333, 0.333);\n"
+"	vec2 OffsetVector = vec2(eyedir.xy) * OffsetMapping_Scale * vec2(-0.1, 0.1);\n"
+"	//TexCoord += OffsetVector * 3.0;\n"
+"	TexCoord -= OffsetVector * texture2D(Texture_Normal, TexCoord).a;\n"
+"	TexCoord -= OffsetVector * texture2D(Texture_Normal, TexCoord).a;\n"
+"	TexCoord -= OffsetVector * texture2D(Texture_Normal, TexCoord).a;\n"
+"	TexCoord -= OffsetVector * texture2D(Texture_Normal, TexCoord).a;\n"
+"	TexCoord -= OffsetVector * texture2D(Texture_Normal, TexCoord).a;\n"
+"	TexCoord -= OffsetVector * texture2D(Texture_Normal, TexCoord).a;\n"
+"	TexCoord -= OffsetVector * texture2D(Texture_Normal, TexCoord).a;\n"
+"	TexCoord -= OffsetVector * texture2D(Texture_Normal, TexCoord).a;\n"
+"	TexCoord -= OffsetVector * texture2D(Texture_Normal, TexCoord).a;\n"
+"	TexCoord -= OffsetVector * texture2D(Texture_Normal, TexCoord).a;\n"
+"#elif 1\n"
+"	// parallax mapping as described in the paper\n"
+"	// 'Parallax Mapping with Offset Limiting: A Per-Pixel Approximation of Uneven Surfaces' by Terry Welsh\n"
+"	// The paper provides code in the ARB fragment program assembly language\n"
+"	// I translated it to GLSL but may have done something wrong - SavageX\n"
+"	// LordHavoc: removed bias and simplified to one line\n"
+"	// LordHavoc: this is just a single sample offsetmapping...\n"
+"	TexCoordOffset += vec2(eyedir.x, -1.0 * eyedir.y) * OffsetMapping_Scale * texture2D(Texture_Normal, TexCoord).a;\n"
+"#else\n"
+"	// parallax mapping as described in the paper\n"
+"	// 'Parallax Mapping with Offset Limiting: A Per-Pixel Approximation of Uneven Surfaces' by Terry Welsh\n"
+"	// The paper provides code in the ARB fragment program assembly language\n"
+"	// I translated it to GLSL but may have done something wrong - SavageX\n"
+"	float height = texture2D(Texture_Normal, TexCoord).a;\n"
+"	height = (height - 0.5) * OffsetMapping_Scale; // bias and scale\n"
+"	TexCoordOffset += height * vec2(eyedir.x, -1.0 * eyedir.y);\n"
 "#endif\n"
 "#endif\n"
 "\n"
 "	// combine the diffuse textures (base, pants, shirt)\n"
-"	vec4 color = vec4(texture2D(Texture_Color, TexCoord));\n"
+"	myhvec4 color = myhvec4(texture2D(Texture_Color, TexCoord));\n"
 "#ifdef USECOLORMAPPING\n"
-"	color.rgb += vec3(texture2D(Texture_Pants, TexCoord)) * Color_Pants + vec3(texture2D(Texture_Shirt, TexCoord)) * Color_Shirt;\n"
+"	color.rgb += myhvec3(texture2D(Texture_Pants, TexCoord)) * Color_Pants + myhvec3(texture2D(Texture_Shirt, TexCoord)) * Color_Shirt;\n"
 "#endif\n"
 "\n"
 "\n"
@@ -501,20 +549,20 @@ static const char *builtinshaderstring =
 "	// light source\n"
 "\n"
 "	// get the surface normal and light normal\n"
-"	vec3 surfacenormal = normalize(vec3(texture2D(Texture_Normal, TexCoord)) - 0.5);\n"
-"	vec3 diffusenormal = vec3(normalize(LightVector));\n"
+"	myhvec3 surfacenormal = normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5));\n"
+"	myhvec3 diffusenormal = myhvec3(normalize(LightVector));\n"
 "\n"
 "	// calculate directional shading\n"
-"	color.rgb *= (AmbientScale + DiffuseScale * max(dot(surfacenormal, diffusenormal), 0.0));\n"
+"	color.rgb *= AmbientScale + DiffuseScale * myhalf(max(float(dot(surfacenormal, diffusenormal)), 0.0));\n"
 "#ifdef USESPECULAR\n"
-"	vec3 specularnormal = vec3(normalize(diffusenormal + vec3(normalize(EyeVector))));\n"
-"	color.rgb += vec3(texture2D(Texture_Gloss, TexCoord)) * SpecularScale * pow(max(dot(surfacenormal, specularnormal), 0.0), SpecularPower);\n"
+"	myhvec3 specularnormal = normalize(diffusenormal + myhvec3(normalize(EyeVector)));\n"
+"	color.rgb += myhvec3(texture2D(Texture_Gloss, TexCoord)) * SpecularScale * pow(myhalf(max(float(dot(surfacenormal, specularnormal)), 0.0)), SpecularPower);\n"
 "#endif\n"
 "\n"
 "#ifdef USECUBEFILTER\n"
 "	// apply light cubemap filter\n"
 "	//color.rgb *= normalize(CubeVector) * 0.5 + 0.5;//vec3(textureCube(Texture_Cube, CubeVector));\n"
-"	color.rgb *= vec3(textureCube(Texture_Cube, CubeVector));\n"
+"	color.rgb *= myhvec3(textureCube(Texture_Cube, CubeVector));\n"
 "#endif\n"
 "\n"
 "	// apply light color\n"
@@ -528,7 +576,7 @@ static const char *builtinshaderstring =
 "	//\n"
 "	// pow(1-(x*x+y*y+z*z), 4) is far more realistic but needs large lights to\n"
 "	// provide significant illumination, large = slow = pain.\n"
-"	color.rgb *= max(1.0 - dot(CubeVector, CubeVector), 0.0);\n"
+"	color.rgb *= myhalf(max(1.0 - dot(CubeVector, CubeVector), 0.0));\n"
 "\n"
 "\n"
 "\n"
@@ -537,87 +585,87 @@ static const char *builtinshaderstring =
 "	// directional model lighting\n"
 "\n"
 "	// get the surface normal and light normal\n"
-"	vec3 surfacenormal = normalize(vec3(texture2D(Texture_Normal, TexCoord)) - 0.5);\n"
-"	vec3 diffusenormal = vec3(normalize(LightVector));\n"
+"	myhvec3 surfacenormal = normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5));\n"
+"	myhvec3 diffusenormal = myhvec3(normalize(LightVector));\n"
 "\n"
 "	// calculate directional shading\n"
-"	color.rgb *= AmbientColor + DiffuseColor * max(dot(surfacenormal, diffusenormal), 0.0);\n"
+"	color.rgb *= AmbientColor + DiffuseColor * myhalf(max(float(dot(surfacenormal, diffusenormal)), 0.0));\n"
 "#ifdef USESPECULAR\n"
-"	vec3 specularnormal = vec3(normalize(diffusenormal + vec3(normalize(EyeVector))));\n"
-"	color.rgb += vec3(texture2D(Texture_Gloss, TexCoord)) * SpecularColor * pow(max(dot(surfacenormal, specularnormal), 0.0), SpecularPower);\n"
+"	myhvec3 specularnormal = normalize(diffusenormal + myhvec3(normalize(EyeVector)));\n"
+"	color.rgb += myhvec3(texture2D(Texture_Gloss, TexCoord)) * SpecularColor * pow(myhalf(max(float(dot(surfacenormal, specularnormal)), 0.0)), SpecularPower);\n"
 "#endif\n"
 "\n"
 "\n"
 "\n"
 "\n"
-"#elif defined(MODE_LIGHTDIRECTIONMAP_MODELSPACE)\n"
+"#elif defined(MODE_LIGHTDIRECTIONMAP_MODELSPACE) || defined(MODE_LIGHTDIRECTIONMAP_TANGENTSPACE)\n"
 "	// deluxemap lightmapping using light vectors in modelspace (evil q3map2)\n"
 "\n"
 "	// get the surface normal and light normal\n"
-"	vec3 surfacenormal = normalize(vec3(texture2D(Texture_Normal, TexCoord)) - 0.5);\n"
-"	vec3 diffusenormal_modelspace = vec3(texture2D(Texture_Deluxemap, TexCoordLightmap)) - 0.5;\n"
-"	vec3 diffusenormal = normalize(vec3(dot(diffusenormal_modelspace, VectorS), dot(diffusenormal_modelspace, VectorT), dot(diffusenormal_modelspace, VectorR)));\n"
+"	myhvec3 surfacenormal = normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5));\n"
 "\n"
+"#ifdef MODE_LIGHTDIRECTIONMAP_MODELSPACE\n"
+"	myhvec3 diffusenormal_modelspace = myhvec3(texture2D(Texture_Deluxemap, TexCoordLightmap)) - myhvec3(0.5);\n"
+"	myhvec3 diffusenormal = normalize(myhvec3(dot(diffusenormal_modelspace, myhvec3(VectorS)), dot(diffusenormal_modelspace, myhvec3(VectorT)), dot(diffusenormal_modelspace, myhvec3(VectorR))));\n"
+"#else\n"
+"	myhvec3 diffusenormal = normalize(myhvec3(texture2D(Texture_Deluxemap, TexCoordLightmap)) - myhvec3(0.5));\n"
+"#endif\n"
 "	// calculate directional shading\n"
-"	vec3 tempcolor = color.rgb * (DiffuseScale * max(dot(surfacenormal, diffusenormal), 0.0));\n"
+"	myhvec3 tempcolor = color.rgb * (DiffuseScale * myhalf(max(float(dot(surfacenormal, diffusenormal)), 0.0)));\n"
 "#ifdef USESPECULAR\n"
-"	vec3 specularnormal = vec3(normalize(diffusenormal + vec3(normalize(EyeVector))));\n"
-"	tempcolor += vec3(texture2D(Texture_Gloss, TexCoord)) * SpecularScale * pow(max(dot(surfacenormal, specularnormal), 0.0), SpecularPower);\n"
+"	myhvec3 specularnormal = myhvec3(normalize(diffusenormal + myhvec3(normalize(EyeVector))));\n"
+"	tempcolor += myhvec3(texture2D(Texture_Gloss, TexCoord)) * SpecularScale * pow(myhalf(max(float(dot(surfacenormal, specularnormal)), 0.0)), SpecularPower);\n"
 "#endif\n"
 "\n"
 "	// apply lightmap color\n"
-"	color.rgb = tempcolor * vec3(texture2D(Texture_Lightmap, TexCoordLightmap)) + color.rgb * vec3(AmbientScale);\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"#elif defined(MODE_LIGHTDIRECTIONMAP_TANGENTSPACE)\n"
-"	// deluxemap lightmapping using light vectors in tangentspace\n"
-"\n"
-"	// get the surface normal and light normal\n"
-"	vec3 surfacenormal = normalize(vec3(texture2D(Texture_Normal, TexCoord)) - 0.5);\n"
-"	vec3 diffusenormal = normalize(vec3(texture2D(Texture_Deluxemap, TexCoordLightmap)) - 0.5);\n"
-"\n"
-"	// calculate directional shading\n"
-"	vec3 tempcolor = color.rgb * (DiffuseScale * max(dot(surfacenormal, diffusenormal), 0.0));\n"
-"#ifdef USESPECULAR\n"
-"	vec3 specularnormal = vec3(normalize(diffusenormal + vec3(normalize(EyeVector))));\n"
-"	tempcolor += vec3(texture2D(Texture_Gloss, TexCoord)) * SpecularScale * pow(max(dot(surfacenormal, specularnormal), 0.0), SpecularPower);\n"
-"#endif\n"
-"\n"
-"	// apply lightmap color\n"
-"	color.rgb = tempcolor * vec3(texture2D(Texture_Lightmap, TexCoordLightmap)) + color.rgb * vec3(AmbientScale);\n"
-"\n"
-"\n"
+"	color.rgb = tempcolor * myhvec3(texture2D(Texture_Lightmap, TexCoordLightmap)) + color.rgb * AmbientScale;\n"
 "\n"
 "\n"
 "#else // MODE none (lightmap)\n"
 "	// apply lightmap color\n"
-"	color.rgb *= vec3(texture2D(Texture_Lightmap, TexCoordLightmap)) * DiffuseScale + vec3(AmbientScale);\n"
+"	color.rgb *= myhvec3(texture2D(Texture_Lightmap, TexCoordLightmap)) * DiffuseScale + myhvec3(AmbientScale);\n"
 "#endif // MODE\n"
 "\n"
-"	color *= gl_Color;\n"
+"	color *= myhvec4(gl_Color);\n"
 "\n"
 "#ifdef USEGLOW\n"
-"	color.rgb += vec3(texture2D(Texture_Glow, TexCoord)) * GlowScale;\n"
+"	color.rgb += myhvec3(texture2D(Texture_Glow, TexCoord)) * GlowScale;\n"
 "#endif\n"
 "\n"
 "#ifdef USEFOG\n"
 "	// apply fog\n"
-"	float fog = texture2D(Texture_FogMask, vec2(length(EyeVectorModelSpace)*FogRangeRecip, 0.0)).x;\n"
+"	myhalf fog = myhalf(texture2D(Texture_FogMask, myhvec2(length(EyeVectorModelSpace)*FogRangeRecip, 0.0)).x);\n"
 "	color.rgb = color.rgb * fog + FogColor * (1.0 - fog);\n"
 "#endif\n"
 "\n"
 "	color.rgb *= SceneBrightness;\n"
 "\n"
-"	gl_FragColor = color;\n"
+"	gl_FragColor = vec4(color);\n"
 "}\n"
 "\n"
 "#endif // FRAGMENT_SHADER\n"
 ;
 
+// NOTE: MUST MATCH ORDER OF SHADERPERMUTATION_* DEFINES!
+const char *permutationinfo[][2] =
+{
+	{"#define MODE_LIGHTSOURCE\n", " lightsource"},
+	{"#define MODE_LIGHTDIRECTIONMAP_MODELSPACE\n", " lightdirectionmap_modelspace"},
+	{"#define MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n", " lightdirectionmap_tangentspace"},
+	{"#define MODE_LIGHTDIRECTION\n", " lightdirection"},
+	{"#define USEGLOW\n", " glow"},
+	{"#define USEFOG\n", " fog"},
+	{"#define USECOLORMAPPING\n", " colormapping"},
+	{"#define USESPECULAR\n", " specular"},
+	{"#define USECUBEFILTER\n", " cubefilter"},
+	{"#define USEOFFSETMAPPING\n", " offsetmapping"},
+	{"#define USEOFFSETMAPPING_RELIEFMAPPING\n", " reliefmapping"},
+	{NULL, NULL}
+};
+
 void R_GLSL_CompilePermutation(int permutation)
 {
+	int i;
 	r_glsl_permutation_t *p = r_glsl_permutations + permutation;
 	int vertstrings_count;
 	int fragstrings_count;
@@ -633,71 +681,20 @@ void R_GLSL_CompilePermutation(int permutation)
 	vertstrings_count = 1;
 	fragstrings_count = 1;
 	permutationname[0] = 0;
-	if (permutation & SHADERPERMUTATION_MODE_LIGHTSOURCE)
+	for (i = 0;permutationinfo[i][0];i++)
 	{
-		vertstrings_list[vertstrings_count++] = "#define MODE_LIGHTSOURCE\n";
-		fragstrings_list[fragstrings_count++] = "#define MODE_LIGHTSOURCE\n";
-		strlcat(permutationname, " lightsource", sizeof(permutationname));
-	}
-	if (permutation & SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP_MODELSPACE)
-	{
-		vertstrings_list[vertstrings_count++] = "#define MODE_LIGHTDIRECTIONMAP_MODELSPACE\n";
-		fragstrings_list[fragstrings_count++] = "#define MODE_LIGHTDIRECTIONMAP_MODELSPACE\n";
-		strlcat(permutationname, " lightdirectionmap_modelspace", sizeof(permutationname));
-	}
-	if (permutation & SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP_TANGENTSPACE)
-	{
-		vertstrings_list[vertstrings_count++] = "#define MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n";
-		fragstrings_list[fragstrings_count++] = "#define MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n";
-		strlcat(permutationname, " lightdirectionmap_tangentspace", sizeof(permutationname));
-	}
-	if (permutation & SHADERPERMUTATION_MODE_LIGHTDIRECTION)
-	{
-		vertstrings_list[vertstrings_count++] = "#define MODE_LIGHTDIRECTION\n";
-		fragstrings_list[fragstrings_count++] = "#define MODE_LIGHTDIRECTION\n";
-		strlcat(permutationname, " lightdirection", sizeof(permutationname));
-	}
-	if (permutation & SHADERPERMUTATION_GLOW)
-	{
-		vertstrings_list[vertstrings_count++] = "#define USEGLOW\n";
-		fragstrings_list[fragstrings_count++] = "#define USEGLOW\n";
-		strlcat(permutationname, " glow", sizeof(permutationname));
-	}
-	if (permutation & SHADERPERMUTATION_COLORMAPPING)
-	{
-		vertstrings_list[vertstrings_count++] = "#define USECOLORMAPPING\n";
-		fragstrings_list[fragstrings_count++] = "#define USECOLORMAPPING\n";
-		strlcat(permutationname, " colormapping", sizeof(permutationname));
-	}
-	if (permutation & SHADERPERMUTATION_SPECULAR)
-	{
-		vertstrings_list[vertstrings_count++] = "#define USESPECULAR\n";
-		fragstrings_list[fragstrings_count++] = "#define USESPECULAR\n";
-		strlcat(permutationname, " specular", sizeof(permutationname));
-	}
-	if (permutation & SHADERPERMUTATION_FOG)
-	{
-		vertstrings_list[vertstrings_count++] = "#define USEFOG\n";
-		fragstrings_list[fragstrings_count++] = "#define USEFOG\n";
-		strlcat(permutationname, " fog", sizeof(permutationname));
-	}
-	if (permutation & SHADERPERMUTATION_CUBEFILTER)
-	{
-		vertstrings_list[vertstrings_count++] = "#define USECUBEFILTER\n";
-		fragstrings_list[fragstrings_count++] = "#define USECUBEFILTER\n";
-		strlcat(permutationname, " cubefilter", sizeof(permutationname));
-	}
-	if (permutation & SHADERPERMUTATION_OFFSETMAPPING)
-	{
-		vertstrings_list[vertstrings_count++] = "#define USEOFFSETMAPPING\n";
-		fragstrings_list[fragstrings_count++] = "#define USEOFFSETMAPPING\n";
-		strlcat(permutationname, " offsetmapping", sizeof(permutationname));
-	}
-	if (permutation & SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING)
-	{
-		vertstrings_list[vertstrings_count++] = "#define USEOFFSETMAPPING_RELIEFMAPPING\n";
-		fragstrings_list[fragstrings_count++] = "#define USEOFFSETMAPPING_RELIEFMAPPING\n";
-		strlcat(permutationname, " OFFSETMAPPING_RELIEFMAPPING", sizeof(permutationname));
+		if (permutation & (1<<i))
+		{
+			vertstrings_list[vertstrings_count++] = permutationinfo[i][0];
+			fragstrings_list[fragstrings_count++] = permutationinfo[i][0];
+			strlcat(permutationname, permutationinfo[i][1], sizeof(permutationname));
+		}
+		else
+		{
+			// keep line numbers correct
+			vertstrings_list[vertstrings_count++] = "\n";
+			fragstrings_list[fragstrings_count++] = "\n";
+		}
 	}
 	shaderstring = (char *)FS_LoadFile("glsl/default.glsl", r_main_mempool, false, NULL);
 	if (shaderstring)
