@@ -434,13 +434,11 @@ static void HandleEvents(void)
 		case MapNotify:
 			// window restored
 			vid_hidden = false;
-			vid_activewindow = false;
 			VID_RestoreSystemGamma();
 			break;
 		case UnmapNotify:
 			// window iconified/rolledup/whatever
 			vid_hidden = true;
-			vid_activewindow = false;
 			VID_RestoreSystemGamma();
 			break;
 		case FocusIn:
