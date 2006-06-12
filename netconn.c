@@ -2209,7 +2209,7 @@ void NetConn_QueryMasters(qboolean querydp, qboolean queryqw)
 				// search internet
 				for (masternum = 0;sv_masters[masternum].name;masternum++)
 				{
-					if (sv_masters[masternum].string && LHNETADDRESS_FromString(&masteraddress, sv_masters[masternum].string, DPMASTER_PORT) && LHNETADDRESS_GetAddressType(&masteraddress) == LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(cl_sockets[i])))
+					if (sv_masters[masternum].string && sv_masters[masternum].string[0] && LHNETADDRESS_FromString(&masteraddress, sv_masters[masternum].string, DPMASTER_PORT) && LHNETADDRESS_GetAddressType(&masteraddress) == LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(cl_sockets[i])))
 					{
 						masterquerycount++;
 						NetConn_WriteString(cl_sockets[i], request, &masteraddress);
@@ -2284,7 +2284,7 @@ void NetConn_Heartbeat(int priority)
 	{
 		nextheartbeattime = realtime + sv_heartbeatperiod.value;
 		for (masternum = 0;sv_masters[masternum].name;masternum++)
-			if (sv_masters[masternum].string && LHNETADDRESS_FromString(&masteraddress, sv_masters[masternum].string, DPMASTER_PORT) && (mysocket = NetConn_ChooseServerSocketForAddress(&masteraddress)))
+			if (sv_masters[masternum].string && sv_masters[masternum].string[0] && LHNETADDRESS_FromString(&masteraddress, sv_masters[masternum].string, DPMASTER_PORT) && (mysocket = NetConn_ChooseServerSocketForAddress(&masteraddress)))
 				NetConn_WriteString(mysocket, "\377\377\377\377heartbeat DarkPlaces\x0A", &masteraddress);
 	}
 }
