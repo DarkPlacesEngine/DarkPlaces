@@ -26,6 +26,8 @@ endif  # ifneq ($(filter %BSD,$(DP_ARCH)),)
 endif  # ifdef windir
 endif  # ifndef DP_MAKE_TARGET
 
+CFLAGS_MAKEDEP=-MD
+
 # If we're not on compiling for Win32, we need additional information
 ifneq ($(DP_MAKE_TARGET), mingw)
 	DP_ARCH:=$(shell uname)
@@ -88,6 +90,10 @@ ifeq ($(DP_MAKE_TARGET), macosx)
 	EXE_CLNEXUIZ=$(EXE_MACOSXCLNEXUIZ)
 	EXE_SVNEXUIZ=$(EXE_UNIXSVNEXUIZ)
 	EXE_SDLNEXUIZ=$(EXE_UNIXSDLNEXUIZ)
+
+	ifeq ($(word 2, $(filter -arch, $(CC))), -arch)
+		CFLAGS_MAKEDEP=
+	endif
 endif
 
 # SunOS configuration (Solaris)
