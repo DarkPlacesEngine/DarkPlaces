@@ -7,6 +7,7 @@ DP_MAKE_TARGET=bsd
 .endif
 DP_ARCH != uname
 
+CFLAGS_MAKEDEP=-MD
 
 # Command used to delete files
 CMD_RM=$(CMD_UNIXRM)
