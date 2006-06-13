@@ -791,9 +791,9 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting)
 		{
 			if (modellighting)
 				permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTION;
-			else
+			else if (r_glsl_deluxemapping.integer >= 1 && rsurface_lightmaptexture)
 			{
-				if (r_glsl_deluxemapping.integer >= 1 && r_refdef.worldmodel && r_refdef.worldmodel->brushq3.deluxemapping && rsurface_lightmaptexture)
+				if (r_refdef.worldmodel && r_refdef.worldmodel->brushq3.deluxemapping)
 				{
 					if (r_refdef.worldmodel->brushq3.deluxemapping_modelspace)
 						permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP_MODELSPACE;
