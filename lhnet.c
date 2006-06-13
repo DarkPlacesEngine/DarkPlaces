@@ -104,7 +104,7 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 	struct hostent *hostentry;
 	const char *colon;
 	char name[128];
-	if (!address || !string)
+	if (!address || !string || !*string)
 		return 0;
 	memset(address, 0, sizeof(*address));
 	address->addresstype = LHNETADDRESSTYPE_NONE;
