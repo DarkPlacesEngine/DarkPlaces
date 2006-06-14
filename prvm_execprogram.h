@@ -229,7 +229,7 @@
 					prog->xfunction->profile += (st - startst);
 					st += st->b - 1;	// offset the s++
 					startst = st;
-					if (++jumpcount == 1000000000)
+					if (++jumpcount == 10000000)
 					{
 						prog->xstatement = st - prog->statements;
 						PRVM_ERROR("runaway loop counter hit limit of %d jumps\ntip: if having trouble identifying the problem, try typing profile now in %s", jumpcount, PRVM_NAME);
@@ -243,7 +243,7 @@
 					prog->xfunction->profile += (st - startst);
 					st += st->b - 1;	// offset the s++
 					startst = st;
-					if (++jumpcount == 1000000000)
+					if (++jumpcount == 10000000)
 					{
 						prog->xstatement = st - prog->statements;
 						PRVM_ERROR("runaway loop counter hit limit of %d jumps\ntip: if having trouble identifying the problem, try typing profile now in %s", jumpcount, PRVM_NAME);
@@ -255,7 +255,7 @@
 				prog->xfunction->profile += (st - startst);
 				st += st->a - 1;	// offset the s++
 				startst = st;
-				if (++jumpcount == 1000000000)
+				if (++jumpcount == 10000000)
 				{
 					prog->xstatement = st - prog->statements;
 					PRVM_ERROR("runaway loop counter hit limit of %d jumps\ntip: if having trouble identifying the problem, try typing profile now in %s", jumpcount, PRVM_NAME);
