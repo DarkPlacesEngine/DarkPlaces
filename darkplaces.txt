@@ -1,4 +1,4 @@
-DarkPlaces engine readme : updated 20060215
+DarkPlaces engine readme : updated 20060614
 
 About the DarkPlaces glquake engine:
 DarkPlaces engine was started because I was unsatisfied with the other engines
@@ -15,10 +15,16 @@ I am not very good at writing documentation, so this readme is organized as a
 feature list, with information on each feature, I hope it is still adequate
 documentation.
 
+If you have any suggestions for features to document in detail in the readme or any other questions/comments/bugreports/suggestions/etc, send me an email at lordhavoc@ghdigital.com
+
+
+
 Input Tips:
 If mouse movement is jerky but framerate is high, try typing "gl_finish 1"
 (without quotes) into the console (makes cpu wait for gpu before ending frame,
 which gives lousy input drivers a chance to catch up).
+
+
 
 Graphics Tips:
 Visit the Color Control submenu of Options, it's near the top, fiddle with
@@ -45,6 +51,8 @@ To make your server show up on the server browser (in the Join Game menu),
 either set sv_public 1 in the console, or use the multiplayer new game menu
 and check the Public server checkbox.
 
+
+
 Thanks to:
 Tomaz for adding features, fixing many bugs, and being generally helpful.
 Andreas 'Black' Kirsch for much work on the QuakeC VM (menu.dat, someday clprogs.dat) and other contributions.
@@ -59,9 +67,6 @@ de-we for the great icons.
 |Rain| for running my favorite anynet IRC server and his bot feh (which although a bit antisocial never seems to grow tired of being my calculator).
 VorteX for the DP_QC_GETTAGINFO extension.
 Ludwig Nussel for the ~/.games/darkplaces/ user directory support on non-Windows platforms (allowing games to be installed in a non-writable system location as is the standard on UNIX but still save configs to the user's home directory).
-
-Questions/comments/bugreports/suggestions?
-Send email to lordhavoc@ghdigital.com.
 
 
 
@@ -92,7 +97,7 @@ These have incomplete support and will likely change before their release.
 Graphics features:
 Redesigned effects including smoke, blood, bubbles and explosions.
 Better looking dynamic lights.
-External texture support (see dpextensions.qc DP_GFX_EXTERNALTEXTURES)
+External texture support (see Replacement Content section below)
 Realtime bumpmapped lighting/shadowing support (see r_shadow_help in game)
 .rtlights file support (improves performance/appearance of realtime lighting)
 .rtlights file editing (see r_editlights_help in game)
@@ -126,11 +131,15 @@ Fixed view blends (glquake was quite broken).
 JPEG texture support using libjpeg (Thanks Elric)
 PK3 archive support with compression support using zlib (Thanks Elric)
 
+
+
 Sound features:
 Ogg and wav file overrides for cd tracks (example: sound/cdtracks/track01.ogg or .wav) (Thanks Elric)
 Streaming ogg sounds to save memory (Ogg sounds over a certain size are streamed automatically) (Thanks Elric)
 Ogg Vorbis sound support (all .wav sounds look for .ogg if the .wav is missing, useful for making mods smaller, particularly for ambientsound() music) (Thanks Elric)
 Stereo wav support (useful for music as ambientsound() calls)
+
+
 
 Client features:
 showtime cvar.
@@ -153,6 +162,8 @@ Server browser for public (sv_public 1) darkplaces servers.
 log_file cvar to log console messages to a file.
 condump command to dump recent console history to a file.
 
+
+
 Server features: (Note server only supports darkplaces clients)
 Allows clients to connect through firewalls (automatic feature)
 Works behind firewalls unlike NetQuake (must port forward UDP packets on the relevant port from the firewall to the server, as with any game)
@@ -166,6 +177,8 @@ sys_ticrate applies to listen (client) servers as well as dedicated.
 sv_public cvar to advertise to master server.
 log_file cvar to log console messages to a file.
 condump command to dump recent console history to a file.
+
+
 
 Modding features:
 HalfLife map support (place your HalfLife wads in quake/id1/textures/ or quake/MODDIR/textures/ as the maps need them)
@@ -193,6 +206,47 @@ More sound channels.
 More dynamic lights (32 changed to 256).
 More precached models and sounds (256 changed to 4096).
 Many more features documented in dpextensions.qc. (bullet tracing on models, qc player input, etc)
+
+
+
+Replacement Content:
+Formats supported: tga, png, jpg, pcx, lmp
+
+All texture layers are optional except diffuse (the others are NOT loaded without it):
+skins:
+progs/player.mdl_0.tga - diffuse
+progs/player.mdl_0_norm.tga - normalmap (can have alpha channel with bumpmap height for offsetmapping/reliefmapping)
+progs/player.mdl_0_bump.tga - bumpmap (not loaded if normalmap is present)
+progs/player.mdl_0_glow.tga - glow map (use _luma if tenebrae compatibility is a concern)
+progs/player.mdl_0_luma.tga - alternate tenebrae-compatible name for glow map (use one or the other)
+progs/player.mdl_0_pants.tga - pants image, greyscale and does not cover the same pixels as the diffuse texture (this is additive blended ('Screen' mode in photoshop) ontop of the diffuse texture with a color tint according to your pants color)
+progs/player.mdl_0_shirt.tga - shirt image, same type as pants
+
+map-specific textures:  (overrides textures for a specific map)
+textures/e1m1/ecop1_6.tga
+textures/e1m1/ecop1_6_norm.tga
+textures/e1m1/ecop1_6_bump.tga
+textures/e1m1/ecop1_6_glow.tga
+textures/e1m1/ecop1_6_luma.tga
+textures/e1m1/ecop1_6_pants.tga - pants and shirt layers are possible on bmodel entities with quakec modifications to set their .colormap field
+textures/e1m1/ecop1_6_shirt.tga
+
+map textures:
+textures/quake.tga
+textures/quake_norm.tga
+textures/quake_bump.tga
+textures/quake_glow.tga
+textures/quake_luma.tga
+textures/quake_pants.tga
+textures/quake_shirt.tga
+
+hud and menu pictures:
+gfx/conchars.tga
+
+replacement models:
+same as in Quake, you can replace a model with exactly the same file name (including file extension), so for example an md3 player model has to be renamed progs/player.mdl, and a small box of shells in md3 format has to be renamed maps/b_shell0.bsp
+
+
 
 Commandline options as of 2004-10-05:
 BSD GLX: -gl_driver <drivername> selects a GL driver library, default is libGL.so.1, useful only for using fxmesa or similar, if you don't know what this is for, you don't need it
