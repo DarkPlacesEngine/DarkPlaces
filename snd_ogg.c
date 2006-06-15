@@ -410,7 +410,6 @@ static const snd_buffer_t* OGG_FetchSound (channel_t* ch, unsigned int* start, u
 	ogg_stream_perchannel_t* per_ch;
 	sfx_t* sfx;
 	ogg_stream_persfx_t* per_sfx;
-	snd_format_t* ogg_format;
 	snd_buffer_t* sb;
 	int newlength, done, ret, bigendian;
 	unsigned int real_start;
@@ -419,14 +418,18 @@ static const snd_buffer_t* OGG_FetchSound (channel_t* ch, unsigned int* start, u
 	per_ch = (ogg_stream_perchannel_t *)ch->fetcher_data;
 	sfx = ch->sfx;
 	per_sfx = (ogg_stream_persfx_t *)sfx->fetcher_data;
-	ogg_format = &per_sfx->format;
 
 	// If there's no fetcher structure attached to the channel yet
 	if (per_ch == NULL)
 	{
 		size_t buff_len, memsize;
+		snd_format_t sb_format;
 
-		buff_len = STREAM_BUFFER_SIZE(ogg_format);
+		sb_format.speed = snd_renderbuffer->format.speed;
+		sb_format.width = per_sfx->format.width;
+		sb_format.channels = per_sfx->format.channels;
+
+		buff_len = STREAM_BUFFER_SIZE(&sb_format);
 		memsize = sizeof (*per_ch) - sizeof (per_ch->sb.samples) + buff_len;
 		per_ch = (ogg_stream_perchannel_t *)Mem_Alloc (snd_mempool, memsize);
 		sfx->memsize += memsize;
@@ -444,9 +447,7 @@ static const snd_buffer_t* OGG_FetchSound (channel_t* ch, unsigned int* start, u
 		per_ch->bs = 0;
 
 		per_ch->sb_offset = 0;
-		per_ch->sb.format.speed = snd_renderbuffer->format.speed;
-		per_ch->sb.format.width = ogg_format->width;
-		per_ch->sb.format.channels = ogg_format->channels;
+		per_ch->sb.format = sb_format;
 		per_ch->sb.nbframes = 0;
 		per_ch->sb.maxframes = buff_len / (per_ch->sb.format.channels * per_ch->sb.format.width);
 
