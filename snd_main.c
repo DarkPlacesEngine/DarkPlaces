@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 
 #define SND_MIN_SPEED 8000
-#define SND_MAX_SPEED 96000
+#define SND_MAX_SPEED 48000
 #define SND_MIN_WIDTH 1
 #define SND_MAX_WIDTH 2
 #define SND_MIN_CHANNELS 1
@@ -301,54 +301,73 @@ void S_SoundInfo_f(void)
 }
 
 
-// TODO: make this function smarter...
 static qboolean S_ChooseCheaperFormat (snd_format_t* format, qboolean fixed_speed, qboolean fixed_width, qboolean fixed_channels)
 {
-	// Can we decrease the number of channels?
-	if (!fixed_channels && format->channels > 1)
+	static const snd_format_t thresholds [] =
 	{
-		unsigned short channels = format->channels;
+		// speed			width			channels
+		{ SND_MIN_SPEED,	SND_MIN_WIDTH,	SND_MIN_CHANNELS },
+		{ 11025,			1,				2 },
+		{ 22050,			2,				2 },
+		{ 44100,			2,				2 },
+		{ 48000,			2,				6 },
+		{ SND_MAX_SPEED,	SND_MAX_WIDTH,	SND_MAX_CHANNELS },
+	};
+	const unsigned int nb_thresholds = sizeof(thresholds) / sizeof(thresholds[0]);
+	unsigned int speed_level, width_level, channels_level;
 
-		// If it has an odd number of channels(?!), make it even
-		if (channels & 1)
-			channels--;
-		else
-		{
-			// Remove 2 speakers, unless it's a stereo format
-			if (channels != 2)
-				channels -= 2;
-			else
-				channels = 1;
-		}
+	// If we have reached the minimum values, there's nothing more we can do
+	if ((format->speed == thresholds[0].speed || fixed_speed) &&
+		(format->width == thresholds[0].width || fixed_width) &&
+		(format->channels == thresholds[0].channels || fixed_channels))
+		return false;
 
-		format->channels = channels;
+	// Check the min and max values
+	#define CHECK_BOUNDARIES(param)								\
+	if (format->param < thresholds[0].param)					\
+	{															\
+		format->param = thresholds[0].param;					\
+		return true;											\
+	}															\
+	if (format->param > thresholds[nb_thresholds - 1].param)	\
+	{															\
+		format->param = thresholds[nb_thresholds - 1].param;	\
+		return true;											\
+	}
+	CHECK_BOUNDARIES(speed);
+	CHECK_BOUNDARIES(width);
+	CHECK_BOUNDARIES(channels);
+	#undef CHECK_BOUNDARIES
+	
+	// Find the level of each parameter
+	#define FIND_LEVEL(param)									\
+	param##_level = 0;											\
+	while (param##_level < nb_thresholds - 1)					\
+	{															\
+		if (format->param <= thresholds[param##_level].param)	\
+			break;												\
+																\
+		param##_level++;										\
+	}
+	FIND_LEVEL(speed);
+	FIND_LEVEL(width);
+	FIND_LEVEL(channels);
+	#undef FIND_LEVEL
+
+	// Decrease the parameter with the highest level to the previous level
+	if (channels_level >= speed_level && channels_level >= width_level && !fixed_channels)
+	{
+		format->channels = thresholds[channels_level - 1].channels;
+		return true;
+	}
+	if (speed_level >= width_level && !fixed_speed)
+	{
+		format->speed = thresholds[speed_level - 1].speed;
 		return true;
 	}
 
-	// Can we decrease the speed?
-	if (!fixed_speed)
-	{
-		unsigned int suggest_speeds [] = { 44100, 22050, 11025 };
-		unsigned int i;
-
-		for (i = 0; i < sizeof(suggest_speeds) / sizeof(suggest_speeds[0]); i++)
-			if (format->speed > suggest_speeds[i])
-			{
-				format->speed = suggest_speeds[i];
-				return true;
-			}
-
-		// the speed is already low
-	}
-
-	// Can we decrease the number of bits per sample?
-	if (!fixed_width && format->width > 1)
-	{
-		format->width = 1;
-		return true;
-	}
-
-	return false;
+	format->width = thresholds[width_level - 1].width;
+	return true;
 }
 
 
