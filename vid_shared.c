@@ -716,7 +716,6 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 {
 	cvar_t *c;
 	float f;
-	static int forcenextframe = false;
 
 	// LordHavoc: don't mess with gamma tables if running dedicated
 	if (cls.state == ca_dedicated)
@@ -756,7 +755,7 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 	cachecolorenable = v_color_enable.integer;
 	cachehwgamma = vid_activewindow && v_hwgamma.integer;
 
-	forcenextframe = false;
+	gamma_forcenextframe = false;
 
 	if (cachehwgamma)
 	{
@@ -797,7 +796,7 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 			static float n[3], nd[3], nt[3];
 			static int init = true;
 			unsigned short *ramp;
-			forcenextframe = true;
+			gamma_forcenextframe = true;
 			if (init)
 			{
 				init = false;
