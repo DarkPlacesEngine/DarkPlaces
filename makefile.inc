@@ -16,6 +16,8 @@ CC=gcc
 # No specific CPU (386 compatible)
 CPUOPTIMIZATIONS=
 
+SDL_CONFIG?=sdl-config
+
 
 ###### Sound and audio CD #####
 
@@ -141,6 +143,7 @@ CFLAGS_COMMON=$(CFLAGS_MAKEDEP) -Wall -Wsign-compare
 CFLAGS_DEBUG=-ggdb
 CFLAGS_PROFILE=-g -pg -ggdb
 CFLAGS_RELEASE=
+CFLAGS_SDL=`$(SDL_CONFIG) --cflags`
 
 OPTIM_DEBUG=$(CPUOPTIMIZATIONS)
 OPTIM_RELEASE=-O2 -fno-strict-aliasing -ffast-math -funroll-loops $(CPUOPTIMIZATIONS)
@@ -161,7 +164,7 @@ OBJ_GLX= builddate.c sys_linux.o vid_glx.o $(OBJ_SOUND) $(OBJ_CD) $(OBJ_COMMON)
 LDFLAGS_UNIXCOMMON=-lm
 LDFLAGS_UNIXCL=-L$(UNIX_X11LIBPATH) -lX11 -lXext -lXxf86dga -lXxf86vm $(LIB_SOUND)
 
-LDFLAGS_UNIXSDL=`sdl-config --libs`
+LDFLAGS_UNIXSDL=`$(SDL_CONFIG) --libs`
 EXE_UNIXCL=darkplaces-glx
 EXE_UNIXSV=darkplaces-dedicated
 EXE_UNIXSDL=darkplaces-sdl
@@ -193,7 +196,7 @@ OBJ_MACOSXCD=$(OBJ_NOCD)
 # Link
 LDFLAGS_MACOSXCL=$(LDFLAGS_UNIXCOMMON) -ldl -framework Carbon $(LIB_SOUND)
 LDFLAGS_MACOSXSV=$(LDFLAGS_UNIXCOMMON) -ldl
-LDFLAGS_MACOSXSDL=$(LDFLAGS_UNIXCOMMON) -ldl `sdl-config --static-libs`
+LDFLAGS_MACOSXSDL=$(LDFLAGS_UNIXCOMMON) -ldl `$(SDL_CONFIG) --static-libs`
 
 OBJ_AGL= builddate.c sys_linux.o vid_agl.o $(OBJ_SOUND) $(OBJ_CD) $(OBJ_COMMON)
 
@@ -240,7 +243,7 @@ OBJ_WGL= builddate.c sys_win.o vid_wgl.o conproc.o $(OBJ_SND_WIN) $(OBJ_WINCD) $
 LDFLAGS_WINCOMMON=-lwinmm -lwsock32
 LDFLAGS_WINCL=$(LDFLAGS_WINCOMMON) -mwindows -luser32 -lgdi32 -ldxguid -ldinput -lcomctl32
 LDFLAGS_WINSV=$(LDFLAGS_WINCOMMON) -mconsole
-LDFLAGS_WINSDL=$(LDFLAGS_WINCOMMON) `sdl-config --libs`
+LDFLAGS_WINSDL=$(LDFLAGS_WINCOMMON) `$(SDL_CONFIG) --libs`
 EXE_WINCL=darkplaces.exe
 EXE_WINSV=darkplaces-dedicated.exe
 EXE_WINSDL=darkplaces-sdl.exe
@@ -381,16 +384,16 @@ vid_glx.o: vid_glx.c
 	$(DO_CC) -I/usr/X11R6/include
 
 vid_sdl.o: vid_sdl.c
-	$(DO_CC) `sdl-config --cflags`
+	$(DO_CC) $(CFLAGS_SDL)
 
 sys_sdl.o: sys_sdl.c
-	$(DO_CC) `sdl-config --cflags`
+	$(DO_CC) $(CFLAGS_SDL)
 
 snd_sdl.o: snd_sdl.c
-	$(DO_CC) `sdl-config --cflags`
+	$(DO_CC) $(CFLAGS_SDL)
 
 cd_sdl.o: cd_sdl.c
-	$(DO_CC) `sdl-config --cflags`
+	$(DO_CC) $(CFLAGS_SDL)
 
 darkplaces.o: %.o : %.rc
 	windres -o $@ $<
