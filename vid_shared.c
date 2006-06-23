@@ -829,12 +829,21 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 		// if custom gamma ramps failed (Windows stupidity), restore to system gamma
 		if(!vid_hardwaregammasupported.integer)
 		{
-			VID_RestoreSystemGamma();
-			Cvar_SetValueQuick(&vid_hardwaregammasupported, false);
+			if (vid_usinghwgamma)
+			{
+				vid_usinghwgamma = false;
+				VID_SetGamma(vid_systemgammaramps, vid_gammarampsize);
+			}
 		}
 	}
 	else
-		VID_RestoreSystemGamma();
+	{
+		if (vid_usinghwgamma)
+		{
+			vid_usinghwgamma = false;
+			VID_SetGamma(vid_systemgammaramps, vid_gammarampsize);
+		}
+	}
 }
 
 void VID_RestoreSystemGamma(void)
