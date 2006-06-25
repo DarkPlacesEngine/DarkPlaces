@@ -18,6 +18,8 @@ CPUOPTIMIZATIONS=
 
 SDL_CONFIG?=sdl-config
 
+DP_FS_BASEDIR?=
+
 
 ###### Sound and audio CD #####
 
@@ -56,7 +58,6 @@ OBJ_NOCD=cd_null.o
 
 # Common objects
 OBJ_COMMON= \
-	libcurl.o \
 	cd_shared.o \
 	cl_collision.o \
 	cl_demo.o \
@@ -90,6 +91,7 @@ OBJ_COMMON= \
 	jpeg.o \
 	keys.o \
 	lhnet.o \
+	libcurl.o \
 	mathlib.o \
 	matrixlib.o \
 	mdfour.o \
@@ -138,8 +140,7 @@ OBJ_SDL= builddate.c sys_sdl.o vid_sdl.o $(OBJ_SND_COMMON) snd_sdl.o cd_sdl.o $(
 
 
 # Compilation
-# CFLAGS_COMMON=-MD -Wall -Werror
-CFLAGS_COMMON=$(CFLAGS_MAKEDEP) -Wall -Wsign-compare
+CFLAGS_COMMON=$(CFLAGS_MAKEDEP) -DDP_FS_BASEDIR=\"$(DP_FS_BASEDIR)\" -Wall -Wsign-compare
 CFLAGS_DEBUG=-ggdb
 CFLAGS_PROFILE=-g -pg -ggdb
 CFLAGS_RELEASE=

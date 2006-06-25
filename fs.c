@@ -1061,8 +1061,14 @@ void FS_Init (void)
 
 	fs_mempool = Mem_AllocPool("file management", 0, NULL);
 
-	strcpy(fs_basedir, "");
 	strcpy(fs_gamedir, "");
+
+// If the base directory is explicitly defined by the compilation process
+#ifdef DP_FS_BASEDIR
+	strcpy(fs_basedir, DP_FS_BASEDIR);
+
+#else
+	strcpy(fs_basedir, "");
 
 #ifdef MACOSX
 	// FIXME: is there a better way to find the directory outside the .app?
@@ -1076,6 +1082,7 @@ void FS_Init (void)
 		strlcpy(fs_basedir, com_argv[0], sizeof(fs_basedir));
 		fs_basedir[split - com_argv[0]] = 0;
 	}
+#endif
 #endif
 
 	PK3_OpenLibrary ();
