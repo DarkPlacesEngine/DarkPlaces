@@ -295,6 +295,11 @@ static snd_pcm_sframes_t SndSys_Write (const unsigned char* buffer, unsigned int
 							 written, snd_strerror (written));
 		}
 	}
+	if (written > 0)
+	{
+		snd_renderbuffer->startframe += written;
+		expected_delay += written;
+	}
 	
 	return written;
 }
@@ -325,12 +330,7 @@ void SndSys_Submit (void)
 	if (nbframes > limit)
 	{
 		written = SndSys_Write (&snd_renderbuffer->ring[startoffset * factor], limit);
-		if (written < 0)
-			return;
-		snd_renderbuffer->startframe += written;
-		expected_delay += written;
-
-		if ((snd_pcm_uframes_t)written != limit)
+		if (written < 0 || (snd_pcm_uframes_t)written != limit)
 			return;
 		
 		nbframes -= limit;
@@ -340,9 +340,6 @@ void SndSys_Submit (void)
 	written = SndSys_Write (&snd_renderbuffer->ring[startoffset * factor], nbframes);
 	if (written < 0)
 		return;
-
-	snd_renderbuffer->startframe += written;
-	expected_delay += written;
 }
 
 
