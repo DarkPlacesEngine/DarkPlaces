@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // OSS module, used by Linux and FreeBSD
 
 
+#include <errno.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/soundcard.h>
@@ -90,10 +91,8 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 	else
 		Con_Print("SndSys_Init: fcntl(F_GETFL) failed!\n");
 	
-	ioctl(audio_fd, SNDCTL_DSP_RESET, NULL);
-
 	// Set the fragment size (up to "NB_FRAGMENTS" fragments of "fragmentsize" bytes)
-	fragmentsize = requested->speed * requested->channels * requested->width / 5;
+	fragmentsize = requested->speed * requested->channels * requested->width / 10;
 	fragmentsize = (unsigned int)ceilf((float)fragmentsize / (float)NB_FRAGMENTS);
 	fragmentsize = CeilPowerOf2(fragmentsize);
 	ioctl_param = (NB_FRAGMENTS << 16) | log2i(fragmentsize);
@@ -103,6 +102,8 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 		SndSys_Shutdown ();
 		return false;
 	}
+	Con_Printf ("SndSys_Init: using %u fragments of %u bytes\n",
+				ioctl_param >> 16, 1 << (ioctl_param & 0xFFFF));
 
 	// Set the sound width
 	if (requested->width == 1)
@@ -202,6 +203,42 @@ void SndSys_Shutdown (void)
 
 /*
 ====================
+SndSys_Write
+====================
+*/
+static int SndSys_Write (const unsigned char* buffer, unsigned int nb_bytes)
+{
+	int written;
+	unsigned int factor;
+
+	written = write (audio_fd, buffer, nb_bytes);
+	if (written < 0)
+	{
+		if (errno != EAGAIN)
+			Con_Printf ("SndSys_Write: audio write returned %d! (errno= %d)\n",
+						written, errno);
+		return written;
+	}
+
+	factor = snd_renderbuffer->format.width * snd_renderbuffer->format.channels;
+	if (written % factor != 0)
+		Sys_Error ("SndSys_Write: nb of bytes written (%d) isn't aligned to a frame sample!\n",
+				   written);
+
+	snd_renderbuffer->startframe += written / factor;
+
+	if ((unsigned int)written < nb_bytes)
+	{
+		Con_DPrintf("SndSys_Submit: audio can't keep up! (%u < %u)\n",
+					written, nb_bytes);
+	}
+
+	return written;
+}
+
+
+/*
+====================
 SndSys_Submit
 
 Submit the contents of "snd_renderbuffer" to the sound card
@@ -222,42 +259,15 @@ void SndSys_Submit (void)
 	nbframes = snd_renderbuffer->endframe - snd_renderbuffer->startframe;
 	if (nbframes > limit)
 	{
-		written = write (audio_fd, &snd_renderbuffer->ring[startoffset * factor], limit * factor);
-		if (written < 0)
-		{
-			Con_Printf("SndSys_Submit: audio write returned %d!\n", written);
+		written = SndSys_Write (&snd_renderbuffer->ring[startoffset * factor], limit * factor);
+		if (written < 0 || (unsigned int)written < limit * factor)
 			return;
-		}
-
-		if (written % factor != 0)
-			Sys_Error("SndSys_Submit: nb of bytes written (%d) isn't aligned to a frame sample!\n", written);
-
-		snd_renderbuffer->startframe += written / factor;
-
-		if ((unsigned int)written < limit * factor)
-		{
-			Con_Printf("SndSys_Submit: audio can't keep up! (%u < %u)\n", written, limit * factor);
-			return;
-		}
 		
 		nbframes -= limit;
 		startoffset = 0;
 	}
 
-	written = write (audio_fd, &snd_renderbuffer->ring[startoffset * factor], nbframes * factor);
-	if (written < 0)
-	{
-		Con_Printf("SndSys_Submit: audio write returned %d!\n", written);
-		return;
-	}
-
-	if (written % factor != 0)
-		Sys_Error("SndSys_Submit: nb of bytes written (%d) isn't aligned to a frame sample!\n", written);
-
-	snd_renderbuffer->startframe += written / factor;
-
-	if ((unsigned int)written < nbframes * factor)
-		Con_Printf("SndSys_Submit: audio can't keep up! (%u < %u)\n", written, nbframes * factor);
+	SndSys_Write (&snd_renderbuffer->ring[startoffset * factor], nbframes * factor);
 }
 
 
@@ -274,7 +284,6 @@ unsigned int SndSys_GetSoundTime (void)
 	int new_osstime;
 	unsigned int timediff;
 
-	// TODO: use SNDCTL_DSP_GETODELAY instead
 	if (ioctl (audio_fd, SNDCTL_DSP_GETOPTR, &count) == -1)
 	{
 		Con_Print ("SndSys_GetSoundTimeDiff: can't ioctl (SNDCTL_DSP_GETOPTR)\n");

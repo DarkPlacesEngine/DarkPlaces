@@ -32,7 +32,6 @@ typedef struct portable_samplepair_s
 portable_sampleframe_t paintbuffer[PAINTBUFFER_SIZE];
 
 
-// FIXME: this desyncs with the video too easily
 extern void SCR_CaptureVideo_SoundFrame(unsigned char *bufstereo16le, size_t length, int rate);
 static void S_CaptureAVISound(size_t length)
 {
