@@ -350,7 +350,10 @@ static void Curl_EndDownload(downloadinfo *di, CurlStatus status, CURLcode error
 	{
 		ok = FS_AddPack(di->filename, NULL, true);
 		if(ok && di->forthismap)
+		{
 			Mod_Reload();
+			R_Modules_NewMap();
+		}
 	}
 
 	if(!ok && di->forthismap)
@@ -560,7 +563,10 @@ void Curl_Begin(const char *URL, const char *name, qboolean ispak, qboolean fort
 					Con_DPrintf("(pak was already loaded)\n");
 				else
 					if(forthismap)
+					{
 						Mod_Reload();
+						R_Modules_NewMap();
+					}
 				return;
 			}
 			else
