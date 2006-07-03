@@ -724,7 +724,7 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 	if (!force
 	 && !gamma_forcenextframe
 	 && !v_psycho.integer
-	 && cachehwgamma == (vid_activewindow && v_hwgamma.integer)
+	 && cachehwgamma == (vid_activewindow ? v_hwgamma.integer : 0)
 	 && v_gamma.value == cachegamma
 	 && v_contrast.value == cachecontrast
 	 && v_brightness.value == cachebrightness
@@ -753,7 +753,7 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 	BOUNDCVAR(v_color_white_g, 1, 5);cachewhite[1] = v_color_white_g.value;
 	BOUNDCVAR(v_color_white_b, 1, 5);cachewhite[2] = v_color_white_b.value;
 	cachecolorenable = v_color_enable.integer;
-	cachehwgamma = vid_activewindow && v_hwgamma.integer;
+	cachehwgamma = vid_activewindow ? v_hwgamma.integer : 0;
 
 	gamma_forcenextframe = false;
 
@@ -826,7 +826,7 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 		}
 
 		// set vid_hardwaregammasupported to true if VID_SetGamma succeeds, OR if vid_hwgamma is >= 2 (forced gamma - ignores driver return value)
-		Cvar_SetValueQuick(&vid_hardwaregammasupported, VID_SetGamma(vid_gammaramps, vid_gammarampsize) || v_hwgamma.integer >= 2);
+		Cvar_SetValueQuick(&vid_hardwaregammasupported, VID_SetGamma(vid_gammaramps, vid_gammarampsize) || cachehwgamma >= 2);
 		// if custom gamma ramps failed (Windows stupidity), restore to system gamma
 		if(!vid_hardwaregammasupported.integer)
 		{
