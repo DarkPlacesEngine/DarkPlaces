@@ -1,7 +1,7 @@
 /*
 	DarkPlaces file system
 
-	Copyright (C) 2003-2005 Mathieu Olivier
+	Copyright (C) 2003-2006 Mathieu Olivier
 
 	This program is free software; you can redistribute it and/or
 	modify it under the terms of the GNU General Public License
@@ -1068,11 +1068,10 @@ void FS_Init (void)
 	strcpy(fs_basedir, DP_FS_BASEDIR);
 #else
 	strcpy(fs_basedir, "");
-#endif
 
 #ifdef MACOSX
 	// FIXME: is there a better way to find the directory outside the .app?
-	if (!fs_basedir[0] && strstr(com_argv[0], ".app/"))
+	if (strstr(com_argv[0], ".app/"))
 	{
 		char *split;
 
@@ -1082,6 +1081,7 @@ void FS_Init (void)
 		strlcpy(fs_basedir, com_argv[0], sizeof(fs_basedir));
 		fs_basedir[split - com_argv[0]] = 0;
 	}
+#endif
 #endif
 
 	PK3_OpenLibrary ();

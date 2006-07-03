@@ -7,8 +7,6 @@ DP_MAKE_TARGET=bsd
 .endif
 DP_ARCH != uname
 
-CFLAGS_MAKEDEP=-MD
-
 # Command used to delete files
 CMD_RM=$(CMD_UNIXRM)
 
@@ -65,6 +63,16 @@ LIB_SOUND=$(LIB_SND_OSS)
 .if $(DP_SOUND_API) == "BSD"
 OBJ_SOUND=$(OBJ_SND_BSD)
 LIB_SOUND=$(LIB_SND_BSD)
+.endif
+
+
+##### Extra CFLAGS #####
+
+CFLAGS_MAKEDEP=-MD
+.ifdef DP_FS_BASEDIR
+CFLAGS_FS=-DDP_FS_BASEDIR='\"$(DP_FS_BASEDIR)\"'
+.else
+CFLAGS_FS=
 .endif
 
 
