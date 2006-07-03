@@ -376,12 +376,15 @@ static void M_Demo_Key (int k, char ascii)
 /* MAIN MENU */
 
 static int	m_main_cursor;
+static qboolean m_missingdata = false;
 
 static int MAIN_ITEMS = 4; // Nehahra: Menu Disable
 
 
 void M_Menu_Main_f (void)
 {
+	const char *s;
+	s = "gfx/mainmenu";
 	if (gamemode == GAME_NEHAHRA)
 	{
 		if (NehGameType == TYPE_DEMO)
@@ -393,17 +396,21 @@ void M_Menu_Main_f (void)
 	}
 	else if (gamemode == GAME_NETHERWORLD)//VORTEX: menu restarting item
 		MAIN_ITEMS = 6;
-	else if (gamemode == GAME_TRANSFUSION) {
+	else if (gamemode == GAME_TRANSFUSION)
+	{
+		s = "gfx/menu/mainmenu0";
 		if (sv.active && !cl.intermission && cl.islocalgame)
 			MAIN_ITEMS = 8;
 		else
 			MAIN_ITEMS = 7;
 	}
-	else if (gamemode == GAME_NEXUIZ) {
-		MAIN_ITEMS = 2;
-	}
 	else
 		MAIN_ITEMS = 5;
+
+	// check if the game data is missing and use a different main menu if so
+	m_missingdata = Draw_CachePic (s, true)->tex == r_texture_notexture;
+	if (m_missingdata)
+		MAIN_ITEMS = 2;
 
 	/*
 	if (key_dest != key_menu)
@@ -422,6 +429,23 @@ static void M_Main_Draw (void)
 {
 	int		f;
 	cachepic_t	*p;
+
+	if (m_missingdata)
+	{
+		float y;
+		const char *s;
+		M_Background(640, 480); //fall back is always to 640x480, this makes it most readable at that.
+		y = 480/3-16;
+		s = "You have reached this menu due to missing or unlocatable content/data";M_PrintRed ((640-strlen(s)*8)*0.5, (480/3)-16, s);y+=8;
+		y+=8;
+		s = "You may consider adding";M_Print ((640-strlen(s)*8)*0.5, y, s);y+=8;
+		s = "-basedir /path/to/game";M_Print ((640-strlen(s)*8)*0.5, y, s);y+=8;
+		s = "to your launch commandline";M_Print ((640-strlen(s)*8)*0.5, y, s);y+=8;
+		M_Print (640/2 - 48, 480/2, "Open Console"); //The console usually better shows errors (failures)
+		M_Print (640/2 - 48, 480/2 + 8, "Quit");
+		M_DrawCharacter(640/2 - 56, 480/2 + (8 * m_main_cursor), 12+((int)(realtime*4)&1));
+		return;
+	}
 
 	if (gamemode == GAME_TRANSFUSION) {
 		int y1, y2, y3;
@@ -444,18 +468,7 @@ static void M_Main_Draw (void)
 		M_DrawPic (0, 120 + m_main_cursor * 40, va("gfx/menu/mainmenu%iselected", y3));
 		return;
 	}
-	else if (gamemode == GAME_NEXUIZ)
-	{
-		M_Background(640, 480); //fall back is always to 640x480, this makes it most readable at that.
-		M_PrintRed (40, (480/3)-16, "You have reached this menu due to missing or unlocatable content/data");
-		M_Print ((640/2)-92, (480/3), "You may consider adding");
-		M_Print ((640/2)-136, (480/3)+8, "-basedir /path/to/nexuiz");
-		M_Print ((640/2)-76, (480/3)+16, "to your launch commandline");
-		M_Print (640/2 - 48, 480/2, "Open Console"); //The console usually better shows errors (failures)
-		M_Print (640/2 - 48, 480/2 + 8, "Quit");
-		M_DrawCharacter(640/2 - 56, 480/2 + (8 * m_main_cursor), 12+((int)(realtime*4)&1));
-		return;
-	}
+
 	M_Background(320, 200);
 	M_DrawPic (16, 4, "gfx/qplaque");
 	p = Draw_CachePic ("gfx/ttl_main", true);
@@ -506,7 +519,24 @@ static void M_Main_Key (int key, char ascii)
 	case K_ENTER:
 		m_entersound = true;
 
-		if (gamemode == GAME_NEHAHRA)
+		if (m_missingdata)
+		{
+			switch (m_main_cursor)
+			{
+			case 0:
+				if (cls.state == ca_connected)
+				{
+					m_state = m_none;
+					key_dest = key_game;
+				}
+				Con_ToggleConsole_f ();
+				break;
+			case 1:
+				M_Menu_Quit_f ();
+				break;
+			}
+		}
+		else if (gamemode == GAME_NEHAHRA)
 		{
 			switch (NehGameType)
 			{
@@ -691,22 +721,6 @@ static void M_Main_Key (int key, char ascii)
 					M_Menu_Quit_f ();
 					break;
 				}
-			}
-		}
-		else if (gamemode == GAME_NEXUIZ) {
-			switch (m_main_cursor)
-			{
-			case 0:
-				if (cls.state == ca_connected)
-				{
-					m_state = m_none;
-					key_dest = key_game;
-				}
-				Con_ToggleConsole_f ();
-				break;
-			case 1:
-				M_Menu_Quit_f ();
-				break;
 			}
 		}
 		else
@@ -3130,6 +3144,12 @@ static int M_QuitMessage(char *line1, char *line2, char *line3, char *line4, cha
 
 static int M_ChooseQuitMessage(int request)
 {
+	if (m_missingdata)
+	{
+		// frag related quit messages are pointless for a fallback menu, so use something generic
+		if (request-- == 0) return M_QuitMessage("Are you sure you want to quit?","Press Y to quit, N to stay",NULL,NULL,NULL,NULL,NULL,NULL);
+		return 0;
+	}
 	switch (gamemode)
 	{
 	case GAME_NORMAL:
@@ -3175,9 +3195,6 @@ static int M_ChooseQuitMessage(int request)
 		if (request-- == 0) return M_QuitMessage("You prefer free beer over free speech?","Press Y to quit, N to stay",NULL,NULL,NULL,NULL,NULL,NULL);
 		if (request-- == 0) return M_QuitMessage("Is OpenQuartz Propaganda?","Press Y to quit, N to stay",NULL,NULL,NULL,NULL,NULL,NULL);
 		break;
-	case GAME_NEXUIZ: //frag related quit messages are pointless for a fallback menu!
-		if (request-- == 0) return M_QuitMessage("Are you sure you want to quit?","Press Y to quit, N to stay",NULL,NULL,NULL,NULL,NULL,NULL);
-		break;
 	default:
 		if (request-- == 0) return M_QuitMessage("Tired of fragging already?",NULL,NULL,NULL,NULL,NULL,NULL,NULL);
 		if (request-- == 0) return M_QuitMessage("Quit now and forfeit your bodycount?",NULL,NULL,NULL,NULL,NULL,NULL,NULL);
@@ -3199,7 +3216,7 @@ void M_Menu_Quit_f (void)
 	m_state = m_quit;
 	m_entersound = true;
 	// count how many there are
-	for (n = 0;M_ChooseQuitMessage(n);n++);
+	for (n = 1;M_ChooseQuitMessage(n);n++);
 	// choose one
 	M_ChooseQuitMessage(rand() % n);
 }
@@ -3251,8 +3268,8 @@ static void M_Quit_Draw (void)
 	}
 	lines = (lastline - firstline) + 1;
 	M_Background(linelength * 8 + 16, lines * 8 + 16);
-	if (gamemode != GAME_NEXUIZ) //since this is a fallback menu for Nexuiz (no graphics), it is very hard to read with the box
-		M_DrawTextBox(0, 0, linelength, lines); //this is less obtrusive than hacking up the M_DrawTextBox function for Nexuiz
+	if (!m_missingdata) //since this is a fallback menu for missing data, it is very hard to read with the box
+		M_DrawTextBox(0, 0, linelength, lines); //this is less obtrusive than hacking up the M_DrawTextBox function
 	for (i = 0, l = firstline;i < lines;i++, l++)
 		M_Print(8 + 4 * (linelength - strlen(m_quit_message[l])), 8 + 8 * i, m_quit_message[l]);
 }
@@ -4618,7 +4635,7 @@ void M_Draw (void)
 		break;
 	}
 
-	if (gamemode == GAME_TRANSFUSION) {
+	if (gamemode == GAME_TRANSFUSION && !m_missingdata) {
 		if (m_state != m_credits) {
 			cachepic_t	*p, *drop1, *drop2, *drop3;
 			int g, scale_x, scale_y, scale_y_repeat, top_offset;
