@@ -734,14 +734,17 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 			continue;
 
 		// if the entity is standing on the pusher, it will definitely be moved
-		if (!(((int)check->fields.server->flags & FL_ONGROUND) && PRVM_PROG_TO_EDICT(check->fields.server->groundentity) == pusher))
+		if (((int)check->fields.server->flags & FL_ONGROUND) && PRVM_PROG_TO_EDICT(check->fields.server->groundentity) == pusher)
+		{
+			// remove the onground flag for non-players
+			if (check->fields.server->movetype != MOVETYPE_WALK)
+				check->fields.server->flags = (int)check->fields.server->flags & ~FL_ONGROUND;
+		}
+		else
 		{
 			// if the entity is not inside the pusher's final position, leave it alone
 			if (!SV_ClipMoveToEntity(pusher, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, 0, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY).startsolid)
 				continue;
-			// remove the onground flag for non-players
-			if (check->fields.server->movetype != MOVETYPE_WALK)
-				check->fields.server->flags = (int)check->fields.server->flags & ~FL_ONGROUND;
 		}
 
 
@@ -1317,22 +1320,23 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 // if onground, return without moving
 	if ((int)ent->fields.server->flags & FL_ONGROUND)
 	{
-		// don't stick to ground if onground and moving upward
-		if (ent->fields.server->velocity[2] >= (1.0 / 32.0))
-			ent->fields.server->flags -= FL_ONGROUND;
-		else
+		if (ent->fields.server->velocity[2] >= (1.0 / 32.0) && sv_gameplayfix_upwardvelocityclearsongroundflag.integer)
 		{
-			prvm_edict_t *ground = PRVM_PROG_TO_EDICT(ent->fields.server->groundentity);
-			if (ground->fields.server->solid == SOLID_BSP || !sv_gameplayfix_noairborncorpse.integer)
-				return;
+			// don't stick to ground if onground and moving upward
+			ent->fields.server->flags -= FL_ONGROUND;
+		}
+		else if (!ent->fields.server->groundentity || !sv_gameplayfix_noairborncorpse.integer)
+		{
+			// we can trust FL_ONGROUND if groundentity is world because it never moves
+			return;
+		}
+		else if (ent->priv.server->suspendedinairflag && PRVM_PROG_TO_EDICT(ent->fields.server->groundentity)->priv.server->free)
+		{
 			// if ent was supported by a brush model on previous frame,
-			// and groundentity is now freed, set groundentity to 0 (floating)
-			if (ent->priv.server->suspendedinairflag && ground->priv.server->free)
-			{
-				// leave it suspended in the air
-				ent->fields.server->groundentity = 0;
-				return;
-			}
+			// and groundentity is now freed, set groundentity to 0 (world)
+			// which leaves it suspended in the air
+			ent->fields.server->groundentity = 0;
+			return;
 		}
 	}
 	ent->priv.server->suspendedinairflag = false;
@@ -1447,9 +1451,8 @@ void SV_Physics_Step (prvm_edict_t *ent)
 		if (flags & FL_ONGROUND)
 		{
 			// freefall if onground and moving upward
-			// freefall if not standing on a world surface (it may be a lift)
-			prvm_edict_t *ground = PRVM_PROG_TO_EDICT(ent->fields.server->groundentity);
-			if (ent->fields.server->velocity[2] >= (1.0 / 32.0) || (ground->fields.server->solid != SOLID_BSP && sv_gameplayfix_noairborncorpse.integer))
+			// freefall if not standing on a world surface (it may be a lift or trap door)
+			if ((ent->fields.server->velocity[2] >= (1.0 / 32.0) && sv_gameplayfix_upwardvelocityclearsongroundflag.integer) || ent->fields.server->groundentity)
 			{
 				ent->fields.server->flags -= FL_ONGROUND;
 				SV_AddGravity(ent);
