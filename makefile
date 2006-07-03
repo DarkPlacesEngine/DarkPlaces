@@ -26,8 +26,6 @@ endif  # ifneq ($(filter %BSD,$(DP_ARCH)),)
 endif  # ifdef windir
 endif  # ifndef DP_MAKE_TARGET
 
-CFLAGS_MAKEDEP=-MD
-
 # If we're not on compiling for Win32, we need additional information
 ifneq ($(DP_MAKE_TARGET), mingw)
 	DP_ARCH:=$(shell uname)
@@ -206,6 +204,16 @@ endif
 ifeq ($(DP_SOUND_API), WIN)
 	OBJ_SOUND=$(OBJ_SND_WIN)
 	LIB_SOUND=$(LIB_SND_WIN)
+endif
+
+
+##### Extra CFLAGS #####
+
+CFLAGS_MAKEDEP?=-MD
+ifdef DP_FS_BASEDIR
+	CFLAGS_FS=-DDP_FS_BASEDIR='\"$(DP_FS_BASEDIR)\"'
+else
+	CFLAGS_FS=
 endif
 
 
