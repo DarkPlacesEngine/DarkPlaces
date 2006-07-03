@@ -135,7 +135,7 @@ typedef struct client_s
 #endif
 	// LordHavoc: can be used for prediction or whatever...
 	float ping;
-	
+
 	// this is used by sv_clmovement_minping code
 	double clmovement_disabletimeout;
 	// this is used by sv_clmvoement_waitforinput code
@@ -275,6 +275,7 @@ extern cvar_t sv_gameplayfix_setmodelrealbox;
 extern cvar_t sv_gameplayfix_blowupfallenzombies;
 extern cvar_t sv_gameplayfix_findradiusdistancetobox;
 extern cvar_t sv_gameplayfix_qwplayerphysics;
+extern cvar_t sv_gameplayfix_upwardvelocityclearsongroundflag;
 
 extern cvar_t sys_ticrate;
 extern cvar_t sv_fixedframeratesingleplayer;
