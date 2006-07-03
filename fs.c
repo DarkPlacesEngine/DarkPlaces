@@ -1066,13 +1066,13 @@ void FS_Init (void)
 // If the base directory is explicitly defined by the compilation process
 #ifdef DP_FS_BASEDIR
 	strcpy(fs_basedir, DP_FS_BASEDIR);
-
 #else
 	strcpy(fs_basedir, "");
+#endif
 
 #ifdef MACOSX
 	// FIXME: is there a better way to find the directory outside the .app?
-	if (strstr(com_argv[0], ".app/"))
+	if (!fs_basedir[0] && strstr(com_argv[0], ".app/"))
 	{
 		char *split;
 
@@ -1082,7 +1082,6 @@ void FS_Init (void)
 		strlcpy(fs_basedir, com_argv[0], sizeof(fs_basedir));
 		fs_basedir[split - com_argv[0]] = 0;
 	}
-#endif
 #endif
 
 	PK3_OpenLibrary ();
