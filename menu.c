@@ -398,7 +398,7 @@ void M_Menu_Main_f (void)
 		MAIN_ITEMS = 6;
 	else if (gamemode == GAME_TRANSFUSION)
 	{
-		s = "gfx/menu/mainmenu0";
+		s = "gfx/menu/mainmenu1";
 		if (sv.active && !cl.intermission && cl.islocalgame)
 			MAIN_ITEMS = 8;
 		else
