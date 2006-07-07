@@ -338,7 +338,7 @@ static qboolean S_ChooseCheaperFormat (snd_format_t* format, qboolean fixed_spee
 	CHECK_BOUNDARIES(width);
 	CHECK_BOUNDARIES(channels);
 	#undef CHECK_BOUNDARIES
-	
+
 	// Find the level of each parameter
 	#define FIND_LEVEL(param)									\
 	param##_level = 0;											\
@@ -420,7 +420,7 @@ static void S_SetChannelLayout (void)
 	if (snd_channellayout.integer < SND_CHANNELLAYOUT_AUTO ||
 		snd_channellayout.integer > SND_CHANNELLAYOUT_ALSA)
 		Cvar_SetValueQuick (&snd_channellayout, SND_CHANNELLAYOUT_STANDARD);
-	
+
 	if (snd_channellayout.integer == SND_CHANNELLAYOUT_AUTO)
 	{
 		// If we're in the sound engine initialization
@@ -1381,7 +1381,7 @@ static void S_PaintAndSubmit (void)
 
 	if (snd_renderbuffer == NULL || nosound.integer)
 		return;
-	
+
 	if (snd_blocked > 0 && !cls.capturevideo_soundfile)
 		return;
 
@@ -1407,7 +1407,7 @@ static void S_PaintAndSubmit (void)
 			// some modules write directly to a shared (DMA) buffer
 			additionaltime = (soundtime - newsoundtime) + snd_renderbuffer->maxframes - 1;
 			additionaltime -= additionaltime % snd_renderbuffer->maxframes;
-			
+
 			extrasoundtime += additionaltime;
 			newsoundtime += additionaltime;
 			Con_DPrintf("S_PaintAndSubmit: new extra sound time = %u\n",
@@ -1454,7 +1454,7 @@ void S_Update(const matrix4x4_t *listenermatrix)
 
 	if (snd_renderbuffer == NULL || nosound.integer)
 		return;
-	
+
 	if (snd_blocked > 0 && !cls.capturevideo_soundfile)
 		return;
 
