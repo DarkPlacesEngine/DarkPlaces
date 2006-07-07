@@ -631,7 +631,7 @@ void Host_Loadgame_f (void)
 	}
 
 	// version
-	COM_ParseToken(&t, false);
+	COM_ParseTokenConsole(&t);
 	version = atoi(com_token);
 	if (version != SAVEGAME_VERSION)
 	{
@@ -647,21 +647,21 @@ void Host_Loadgame_f (void)
 
 	for (i = 0;i < NUM_SPAWN_PARMS;i++)
 	{
-		COM_ParseToken(&t, false);
+		COM_ParseTokenConsole(&t);
 		spawn_parms[i] = atof(com_token);
 	}
 	// skill
-	COM_ParseToken(&t, false);
+	COM_ParseTokenConsole(&t);
 // this silliness is so we can load 1.06 save files, which have float skill values
 	current_skill = (int)(atof(com_token) + 0.5);
 	Cvar_SetValue ("skill", (float)current_skill);
 
 	// mapname
-	COM_ParseToken(&t, false);
+	COM_ParseTokenConsole(&t);
 	strcpy (mapname, com_token);
 
 	// time
-	COM_ParseToken(&t, false);
+	COM_ParseTokenConsole(&t);
 	time = atof(com_token);
 
 	allowcheats = sv_cheats.integer != 0;
@@ -682,7 +682,7 @@ void Host_Loadgame_f (void)
 	{
 		// light style
 		oldt = t;
-		COM_ParseToken(&t, false);
+		COM_ParseTokenConsole(&t);
 		// if this is a 64 lightstyle savegame produced by Quake, stop now
 		// we have to check this because darkplaces saves 256 lightstyle savegames
 		if (com_token[0] == '{')
@@ -700,7 +700,7 @@ void Host_Loadgame_f (void)
 	for(;;)
 	{
 		oldt = t;
-		COM_ParseToken(&t, false);
+		COM_ParseTokenConsole(&t);
 		if (com_token[0] == '{')
 		{
 			t = oldt;
@@ -715,10 +715,10 @@ void Host_Loadgame_f (void)
 	for (;;)
 	{
 		start = t;
-		while (COM_ParseToken(&t, false))
+		while (COM_ParseTokenConsole(&t))
 			if (!strcmp(com_token, "}"))
 				break;
-		if (!COM_ParseToken(&start, false))
+		if (!COM_ParseTokenConsole(&start))
 		{
 			// end of file
 			break;
@@ -1582,7 +1582,7 @@ void Host_Kick_f (void)
 		if (Cmd_Argc() > 2)
 		{
 			message = Cmd_Args();
-			COM_ParseToken(&message, false);
+			COM_ParseTokenConsole(&message);
 			if (byNumber)
 			{
 				message++;							// skip the #

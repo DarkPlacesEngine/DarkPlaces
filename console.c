@@ -977,7 +977,7 @@ qboolean GetMapList (const char *s, char *completedname, int completednamebuffer
 				for (;;)
 				{
 					int l;
-					if (!COM_ParseToken(&data, false))
+					if (!COM_ParseTokenConsole(&data))
 						break;
 					if (com_token[0] == '{')
 						continue;
@@ -988,7 +988,7 @@ qboolean GetMapList (const char *s, char *completedname, int completednamebuffer
 					for (l = 0;l < (int)sizeof(keyname) - 1 && com_token[k+l] && com_token[k+l] > ' ';l++)
 						keyname[l] = com_token[k+l];
 					keyname[l] = 0;
-					if (!COM_ParseToken(&data, false))
+					if (!COM_ParseTokenConsole(&data))
 						break;
 					if (developer.integer >= 100)
 						Con_Printf("key: %s %s\n", keyname, com_token);
