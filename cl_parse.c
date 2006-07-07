@@ -315,13 +315,13 @@ void CL_ParseEntityLump(char *entdata)
 	data = entdata;
 	if (!data)
 		return;
-	if (!COM_ParseToken(&data, false))
+	if (!COM_ParseTokenConsole(&data))
 		return; // error
 	if (com_token[0] != '{')
 		return; // error
 	while (1)
 	{
-		if (!COM_ParseToken(&data, false))
+		if (!COM_ParseTokenConsole(&data))
 			return; // error
 		if (com_token[0] == '}')
 			break; // end of worldspawn
@@ -331,7 +331,7 @@ void CL_ParseEntityLump(char *entdata)
 			strlcpy (key, com_token, sizeof (key));
 		while (key[strlen(key)-1] == ' ') // remove trailing spaces
 			key[strlen(key)-1] = 0;
-		if (!COM_ParseToken(&data, false))
+		if (!COM_ParseTokenConsole(&data))
 			return; // error
 		strlcpy (value, com_token, sizeof (value));
 		if (!strcmp("sky", key))
