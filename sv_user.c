@@ -706,6 +706,7 @@ void SV_ReadClientMessage(void)
 			 || strncasecmp(s, "pause", 5) == 0
 			 || strncasecmp(s, "kick", 4) == 0
 			 || strncasecmp(s, "ping", 4) == 0
+			 || strncasecmp(s, "pings", 5) == 0
 			 || strncasecmp(s, "ban", 3) == 0
 			 || strncasecmp(s, "pmodel", 6) == 0
 			 || strncasecmp(s, "rate", 4) == 0

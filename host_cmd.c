@@ -2324,6 +2324,71 @@ void Host_Packet_f (void) // credit: taken from QuakeWorld
 		NetConn_Write(mysocket, send, out - send, &address);
 }
 
+/*
+====================
+Host_Pings_f
+
+Send back ping and packet loss update for all current players to this player
+====================
+*/
+void Host_Pings_f (void)
+{
+	int		i, j, ping, packetloss;
+	char temp[128];
+
+	if (cmd_source == src_command)
+	{
+		Cmd_ForwardToServer ();
+		return;
+	}
+	if (!host_client->netconnection)
+		return;
+
+	if (sv.protocol != PROTOCOL_QUAKEWORLD)
+	{
+		MSG_WriteByte(&host_client->netconnection->message, svc_stufftext);
+		MSG_WriteUnterminatedString(&host_client->netconnection->message, "pingplreport");
+	}
+	for (i = 0;i < svs.maxclients;i++)
+	{
+		packetloss = 0;
+		if (svs.clients[i].netconnection)
+			for (j = 0;j < 100;j++)
+				packetloss += svs.clients[i].netconnection->packetlost[j];
+		ping = (int)floor(svs.clients[i].ping*1000+0.5);
+		ping = bound(0, ping, 9999);
+		if (sv.protocol == PROTOCOL_QUAKEWORLD)
+		{
+			// send qw_svc_updateping and qw_svc_updatepl messages
+			MSG_WriteByte(&host_client->netconnection->message, qw_svc_updateping);
+			MSG_WriteShort(&host_client->netconnection->message, ping);
+			MSG_WriteByte(&host_client->netconnection->message, qw_svc_updatepl);
+			MSG_WriteByte(&host_client->netconnection->message, packetloss);
+		}
+		else
+		{
+			// write the string into the packet as multiple unterminated strings to avoid needing a local buffer
+			dpsnprintf(temp, sizeof(temp), " %d %d", ping, packetloss);
+			MSG_WriteUnterminatedString(&host_client->netconnection->message, temp);
+		}
+	}
+	if (sv.protocol != PROTOCOL_QUAKEWORLD)
+		MSG_WriteString(&host_client->netconnection->message, "\n");
+}
+
+void Host_PingPLReport_f(void)
+{
+	int i;
+	int l = Cmd_Argc();
+	if (l > cl.maxclients)
+		l = cl.maxclients;
+	for (i = 0;i < l;i++)
+	{
+		cl.scores[i].qw_ping = atoi(Cmd_Argv(1+i*2));
+		cl.scores[i].qw_packetloss = atoi(Cmd_Argv(1+i*2+1));
+	}
+}
+
 //=============================================================================
 
 /*
@@ -2414,6 +2479,9 @@ void Host_InitCommands (void)
 	Cmd_AddCommand ("packet", Host_Packet_f, "send a packet to the specified address:port containing a text string");
 	Cmd_AddCommand ("topcolor", Host_TopColor_f, "QW command to set top color without changing bottom color");
 	Cmd_AddCommand ("bottomcolor", Host_BottomColor_f, "QW command to set bottom color without changing top color");
+
+	Cmd_AddCommand ("pings", Host_Pings_f, "command sent by clients to request updated ping and packetloss of players on scoreboard (originally from QW, but also used on NQ servers)");
+	Cmd_AddCommand ("pingplreport", Host_PingPLReport_f, "command sent by server containing client ping and packet loss values for scoreboard, triggered by pings command from client (not used by QW servers)");
 
 	Cvar_RegisterVariable (&team);
 	Cvar_RegisterVariable (&skin);

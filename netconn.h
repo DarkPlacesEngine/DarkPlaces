@@ -185,6 +185,10 @@ typedef struct netconn_s
 	}
 	qw;
 
+	// this tracks which of the last 100 received packet sequence numbers were lost
+	int packetlostcounter;
+	unsigned char packetlost[100];
+
 	char address[128];
 } netconn_t;
 

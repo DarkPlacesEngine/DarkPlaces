@@ -1187,7 +1187,7 @@ CL_SendMove
 extern cvar_t cl_netinputpacketspersecond;
 void CL_SendMove(void)
 {
-	int i;
+	int i, j, packetloss;
 	int bits;
 	int impulse;
 	sizebuf_t buf;
@@ -1334,8 +1334,9 @@ void CL_SendMove(void)
 				checksumindex = buf.cursize;
 				MSG_WriteByte(&buf, 0);
 				// packet loss percentage
-				// FIXME: netgraph stuff
-				MSG_WriteByte(&buf, 0);
+				for (j = 0, packetloss = 0;j < 100;j++)
+					packetloss += cls.netcon->packetlost[j];
+				MSG_WriteByte(&buf, packetloss);
 				// write most recent 3 moves
 				i = (cls.netcon->qw.outgoing_sequence-2) & QW_UPDATE_MASK;
 				cmd = &cl.qw_moves[i];
