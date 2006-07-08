@@ -1370,33 +1370,19 @@ float Sbar_PrintScoreboardItem(scoreboard_t *s, float x, float y)
 {
 	int minutes;
 	unsigned char *c;
-	if (cls.protocol == PROTOCOL_QUAKEWORLD)
-	{
-		minutes = (int)((cl.intermission ? cl.completed_time - s->qw_entertime : realtime - s->qw_entertime) / 60.0);
-		if (s->qw_spectator)
-			DrawQ_ColoredString(x, y, va("%c%4i %2i %4i spec %-4s %s", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', bound(0, s->qw_ping, 9999), bound(0, s->qw_packetloss, 99), minutes, cl.qw_teamplay ? s->qw_team : "", s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL );
-		else
-		{
-			// draw colors behind score
-			c = (unsigned char *)&palette_complete[(s->colors & 0xf0) + 8];
-			DrawQ_Pic(x + 14*8, y+1, NULL, 32, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
-			c = (unsigned char *)&palette_complete[((s->colors & 15)<<4) + 8];
-			DrawQ_Pic(x + 14*8, y+4, NULL, 32, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
-			// print the text
-			//DrawQ_String(x, y, va("%c%4i %s", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
-			DrawQ_ColoredString(x, y, va("%c%4i %2i %4i %4i %-4s %s", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', bound(0, s->qw_ping, 9999), bound(0, s->qw_packetloss, 99), minutes,(int) s->frags, cl.qw_teamplay ? s->qw_team : "", s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL );
-		}
-	}
+	minutes = (int)((cl.intermission ? cl.completed_time - s->qw_entertime : realtime - s->qw_entertime) / 60.0);
+	if (s->qw_spectator)
+		DrawQ_ColoredString(x, y, va("%4i %3i %4i spect %-4s %c%s", bound(0, s->qw_ping, 9999), bound(0, s->qw_packetloss, 99), minutes, cl.qw_teamplay ? s->qw_team : "", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL );
 	else
 	{
 		// draw colors behind score
 		c = (unsigned char *)&palette_complete[(s->colors & 0xf0) + 8];
-		DrawQ_Pic(x + 1*8, y+1, NULL, 32, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
+		DrawQ_Pic(x + 14*8, y+1, NULL, 40, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
 		c = (unsigned char *)&palette_complete[((s->colors & 15)<<4) + 8];
-		DrawQ_Pic(x + 1*8, y+4, NULL, 32, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
+		DrawQ_Pic(x + 14*8, y+4, NULL, 40, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
 		// print the text
 		//DrawQ_String(x, y, va("%c%4i %s", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
-		DrawQ_ColoredString(x, y, va("%c%4i %s", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL );
+		DrawQ_ColoredString(x, y, va("%4i %3i %4i %5i %-4s %c%s", bound(0, s->qw_ping, 9999), bound(0, s->qw_packetloss, 99), minutes,(int) s->frags, cl.qw_teamplay ? s->qw_team : "", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL );
 	}
 	return 8;
 }
@@ -1406,12 +1392,17 @@ void Sbar_DeathmatchOverlay (void)
 	int i, x, y;
 
 	// request new ping times every two second
-	if (cl.last_ping_request < realtime - 2)
+	if (cl.last_ping_request < realtime - 2 && cls.netcon)
 	{
 		cl.last_ping_request = realtime;
-		if (cls.protocol == PROTOCOL_QUAKEWORLD && cls.netcon)
+		if (cls.protocol == PROTOCOL_QUAKEWORLD)
 		{
 			MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
+			MSG_WriteString(&cls.netcon->message, "pings");
+		}
+		else
+		{
+			MSG_WriteByte(&cls.netcon->message, clc_stringcmd);
 			MSG_WriteString(&cls.netcon->message, "pings");
 		}
 	}
@@ -1421,11 +1412,10 @@ void Sbar_DeathmatchOverlay (void)
 	// scores
 	Sbar_SortFrags ();
 	// draw the text
-	if (cls.protocol == PROTOCOL_QUAKEWORLD)
-		x = (vid_conwidth.integer - (6 + 17 + 15) * 8) / 2;
-	else
-		x = (vid_conwidth.integer - (6 + 15) * 8) / 2;
+	x = (vid_conwidth.integer - (6 + 18 + 15) * 8) / 2;
 	y = 40;
+	DrawQ_ColoredString(x, y, va("ping pl%% time frags team  name"), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL );
+	y += 8;
 
 	if (Sbar_IsTeammatch ())
 	{

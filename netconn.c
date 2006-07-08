@@ -846,6 +846,8 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 	if (length < 8)
 		return 0;
 
+	// TODO: add netgraph stuff rather than just packetloss counting...
+
 	if (protocol == PROTOCOL_QUAKEWORLD)
 	{
 		int sequence, sequence_ack;
@@ -876,15 +878,22 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 		sequence_ack &= ~(1<<31);
 		if (sequence <= conn->qw.incoming_sequence)
 		{
-			Con_DPrint("Got a stale datagram\n");
+			//Con_DPrint("Got a stale datagram\n");
 			return 0;
 		}
 		count = sequence - (conn->qw.incoming_sequence + 1);
 		if (count > 0)
 		{
 			droppedDatagrams += count;
-			Con_DPrintf("Dropped %u datagram(s)\n", count);
+			//Con_DPrintf("Dropped %u datagram(s)\n", count);
+			while (count--)
+			{
+				conn->packetlost[conn->packetlostcounter] = true;
+				conn->packetlostcounter = (conn->packetlostcounter + 1) % 100;
+			}
 		}
+		conn->packetlost[conn->packetlostcounter] = false;
+		conn->packetlostcounter = (conn->packetlostcounter + 1) % 100;
 		if (reliable_ack == conn->qw.reliable_sequence)
 		{
 			// received, now we will be able to send another reliable message
@@ -931,8 +940,15 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 					{
 						count = sequence - conn->nq.unreliableReceiveSequence;
 						droppedDatagrams += count;
-						Con_DPrintf("Dropped %u datagram(s)\n", count);
+						//Con_DPrintf("Dropped %u datagram(s)\n", count);
+						while (count--)
+						{
+							conn->packetlost[conn->packetlostcounter] = true;
+							conn->packetlostcounter = (conn->packetlostcounter + 1) % 100;
+						}
 					}
+					conn->packetlost[conn->packetlostcounter] = false;
+					conn->packetlostcounter = (conn->packetlostcounter + 1) % 100;
 					conn->nq.unreliableReceiveSequence = sequence + 1;
 					conn->lastMessageTime = realtime;
 					conn->timeout = realtime + net_messagetimeout.value;
@@ -945,8 +961,8 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 						return 2;
 					}
 				}
-				else
-					Con_DPrint("Got a stale datagram\n");
+				//else
+				//	Con_DPrint("Got a stale datagram\n");
 				return 1;
 			}
 			else if (flags & NETFLAG_ACK)
@@ -999,11 +1015,11 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 						else
 							conn->sendMessageLength = 0;
 					}
-					else
-						Con_DPrint("Duplicate ACK received\n");
+					//else
+					//	Con_DPrint("Duplicate ACK received\n");
 				}
-				else
-					Con_DPrint("Stale ACK received\n");
+				//else
+				//	Con_DPrint("Stale ACK received\n");
 				return 1;
 			}
 			else if (flags & NETFLAG_DATA)
