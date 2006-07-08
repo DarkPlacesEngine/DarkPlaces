@@ -27,18 +27,68 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <mmsystem.h>
 #include <dsound.h>
 
+// ==============================================================================
+
+#ifndef _WAVEFORMATEXTENSIBLE_
+#define _WAVEFORMATEXTENSIBLE_
+typedef struct
+{
+	WAVEFORMATEX Format;
+	union
+	{
+		WORD wValidBitsPerSample;	// bits of precision
+		WORD wSamplesPerBlock;		// valid if wBitsPerSample==0
+		WORD wReserved;				// If neither applies, set to zero
+	} Samples;
+    DWORD dwChannelMask;			// which channels are present in stream
+    GUID SubFormat;
+} WAVEFORMATEXTENSIBLE, *PWAVEFORMATEXTENSIBLE;
+#endif
+
+#if !defined(WAVE_FORMAT_EXTENSIBLE)
+#	define WAVE_FORMAT_EXTENSIBLE 0xFFFE
+#endif
+
+// Some speaker positions
+#ifndef SPEAKER_FRONT_LEFT
+#	define SPEAKER_FRONT_LEFT				0x1
+#	define SPEAKER_FRONT_RIGHT				0x2
+#	define SPEAKER_FRONT_CENTER				0x4
+#	define SPEAKER_LOW_FREQUENCY			0x8
+#	define SPEAKER_BACK_LEFT				0x10
+#	define SPEAKER_BACK_RIGHT				0x20
+#	define SPEAKER_FRONT_LEFT_OF_CENTER		0x40
+#	define SPEAKER_FRONT_RIGHT_OF_CENTER	0x80
+// ... we never use the other values
+#endif
+
+// KSDATAFORMAT_SUBTYPE_PCM = GUID "00000001-0000-0010-8000-00aa00389b71"
+static const GUID MY_KSDATAFORMAT_SUBTYPE_PCM =
+{
+	0x00000001,
+	0x0000,
+	0x0010,
+	{
+		0x80, 0x00,
+		0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71
+	}
+};
+
+
+// ==============================================================================
+
 extern HWND mainwindow;
 
 HRESULT (WINAPI *pDirectSoundCreate)(GUID FAR *lpGUID, LPDIRECTSOUND FAR *lplpDS, IUnknown FAR *pUnkOuter);
 
 // Wave output: 64KB in 64 buffers of 1KB
 // (64KB is > 1 sec at 16-bit 22050 Hz mono, and is 1/3 sec at 16-bit 44100 Hz stereo)
-#define	WAV_BUFFERS				64
-#define	WAV_MASK				(WAV_BUFFERS - 1)
-#define	WAV_BUFFER_SIZE			1024
+#define	WAV_BUFFERS		64
+#define	WAV_MASK		(WAV_BUFFERS - 1)
+static unsigned int wav_buffer_size;
 
 // DirectSound output: 64KB in 1 buffer
-#define SECONDARY_BUFFER_SIZE	(64 * 1024)
+#define SECONDARY_BUFFER_SIZE(fmt_ptr) ((fmt_ptr)->width * (fmt_ptr)->channels * (fmt_ptr)->speed / 2)
 
 typedef enum sndinitstat_e {SIS_SUCCESS, SIS_FAILURE, SIS_NOTAVAIL} sndinitstat;
 
@@ -84,29 +134,77 @@ sndinitstat SNDDMA_InitDirect (void);
 
 /*
 ==================
+SndSys_BuildWaveFormat
+==================
+*/
+static qboolean SndSys_BuildWaveFormat (const snd_format_t* requested, WAVEFORMATEXTENSIBLE* fmt_ptr)
+{
+	WAVEFORMATEX* pfmtex;
+
+	memset (fmt_ptr, 0, sizeof(*fmt_ptr));
+
+	pfmtex = &fmt_ptr->Format;
+	pfmtex->nChannels = requested->channels;
+    pfmtex->wBitsPerSample = requested->width * 8;
+    pfmtex->nSamplesPerSec = requested->speed;
+	pfmtex->nBlockAlign = pfmtex->nChannels * pfmtex->wBitsPerSample / 8;
+	pfmtex->nAvgBytesPerSec = pfmtex->nSamplesPerSec * pfmtex->nBlockAlign;
+
+	if (requested->channels <= 2)
+	{
+		pfmtex->wFormatTag = WAVE_FORMAT_PCM;
+		pfmtex->cbSize = 0;
+	}
+	else
+	{
+		pfmtex->wFormatTag = WAVE_FORMAT_EXTENSIBLE;
+		pfmtex->cbSize = sizeof(*fmt_ptr) - sizeof(fmt_ptr->Format);
+		fmt_ptr->Samples.wValidBitsPerSample = fmt_ptr->Format.wBitsPerSample;
+		fmt_ptr->SubFormat = MY_KSDATAFORMAT_SUBTYPE_PCM;
+
+		// Build the channel mask
+		fmt_ptr->dwChannelMask = SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT;
+		switch (requested->channels)
+		{
+			case 8:
+				fmt_ptr->dwChannelMask |= SPEAKER_FRONT_LEFT_OF_CENTER | SPEAKER_FRONT_RIGHT_OF_CENTER;
+				// no break
+			case 6:
+				fmt_ptr->dwChannelMask |= SPEAKER_FRONT_CENTER | SPEAKER_LOW_FREQUENCY;
+				// no break
+			case 4:
+				fmt_ptr->dwChannelMask |= SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT;
+				break;
+
+			default:
+				Con_Printf("SndSys_BuildWaveFormat: invalid number of channels (%hu)\n", requested->channels);
+				return false;
+		}
+	}
+
+	return true;
+}
+
+
+/*
+==================
 SndSys_InitDirectSound
 
 DirectSound 5 support
 ==================
 */
-static sndinitstat SndSys_InitDirectSound (const snd_format_t* requested, snd_format_t* suggested)
+static sndinitstat SndSys_InitDirectSound (const snd_format_t* requested)
 {
-	DSBUFFERDESC	dsbuf;
-	DSBCAPS			dsbcaps;
-	DWORD			dwSize;
-	DSCAPS			dscaps;
-	WAVEFORMATEX	format, pformat;
-	HRESULT			hresult;
-	int				reps;
+	DSBUFFERDESC			dsbuf;
+	DSBCAPS					dsbcaps;
+	DWORD					dwSize;
+	DSCAPS					dscaps;
+	WAVEFORMATEXTENSIBLE	format, pformat;
+	HRESULT					hresult;
+	int						reps;
 
-	memset (&format, 0, sizeof(format));
-	format.wFormatTag = WAVE_FORMAT_PCM;
-    format.nChannels = requested->channels;
-    format.wBitsPerSample = requested->width * 8;
-    format.nSamplesPerSec = requested->speed;
-    format.nBlockAlign = format.nChannels * format.wBitsPerSample / 8;
-    format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
-    format.cbSize = 0;
+	if (! SndSys_BuildWaveFormat(requested, &format))
+		return SIS_FAILURE;
 
 	if (!hInstDS)
 	{
@@ -186,7 +284,7 @@ static sndinitstat SndSys_InitDirectSound (const snd_format_t* requested, snd_fo
 		{
 			pformat = format;
 
-			if (DS_OK != IDirectSoundBuffer_SetFormat (pDSPBuf, &pformat))
+			if (DS_OK != IDirectSoundBuffer_SetFormat (pDSPBuf, (WAVEFORMATEX*)&pformat))
 			{
 				Con_Print("Set primary sound buffer format: no\n");
 			}
@@ -208,20 +306,20 @@ static sndinitstat SndSys_InitDirectSound (const snd_format_t* requested, snd_fo
 		memset (&dsbuf, 0, sizeof(dsbuf));
 		dsbuf.dwSize = sizeof(DSBUFFERDESC);
 		dsbuf.dwFlags = DSBCAPS_CTRLFREQUENCY | DSBCAPS_LOCSOFTWARE;
-		dsbuf.dwBufferBytes = SECONDARY_BUFFER_SIZE;
-		dsbuf.lpwfxFormat = &format;
+		dsbuf.dwBufferBytes = SECONDARY_BUFFER_SIZE(requested);
+		dsbuf.lpwfxFormat = (WAVEFORMATEX*)&format;
 
 		memset(&dsbcaps, 0, sizeof(dsbcaps));
 		dsbcaps.dwSize = sizeof(dsbcaps);
 
 		result = IDirectSound_CreateSoundBuffer(pDS, &dsbuf, &pDSBuf, NULL);
 		if (result != DS_OK ||
-			requested->channels != format.nChannels ||
-			requested->width != format.wBitsPerSample / 8 ||
-			requested->speed != format.nSamplesPerSec)
+			requested->channels != format.Format.nChannels ||
+			requested->width != format.Format.wBitsPerSample / 8 ||
+			requested->speed != format.Format.nSamplesPerSec)
 		{
 			Con_Printf("DS:CreateSoundBuffer Failed (%d): channels=%u, width=%u, speed=%u\n",
-					   result, format.nChannels, format.wBitsPerSample / 8, format.nSamplesPerSec);
+					   result, format.Format.nChannels, format.Format.wBitsPerSample / 8, format.Format.nSamplesPerSec);
 			SndSys_Shutdown ();
 			return SIS_FAILURE;
 		}
@@ -308,24 +406,17 @@ SndSys_InitMmsystem
 Crappy windows multimedia base
 ==================
 */
-static qboolean SndSys_InitMmsystem (const snd_format_t* requested, snd_format_t* suggested)
+static qboolean SndSys_InitMmsystem (const snd_format_t* requested)
 {
-	WAVEFORMATEX  format;
+	WAVEFORMATEXTENSIBLE format;
 	int				i;
 	HRESULT			hr;
 
-	memset (&format, 0, sizeof(format));
-	format.wFormatTag = WAVE_FORMAT_PCM;
-    format.nChannels = requested->channels;
-    format.wBitsPerSample = requested->width * 8;
-    format.nSamplesPerSec = requested->speed;
-    format.nBlockAlign = format.nChannels * format.wBitsPerSample / 8;
-    format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
-    format.cbSize = 0;
+	if (! SndSys_BuildWaveFormat(requested, &format))
+		return false;
 
 	// Open a waveform device for output using window callback
-	while ((hr = waveOutOpen((LPHWAVEOUT)&hWaveOut, WAVE_MAPPER,
-					&format,
+	while ((hr = waveOutOpen((LPHWAVEOUT)&hWaveOut, WAVE_MAPPER, (WAVEFORMATEX*)&format,
 					0, 0L, CALLBACK_NULL)) != MMSYSERR_NOERROR)
 	{
 		if (hr != MMSYSERR_ALLOCATED)
@@ -345,12 +436,14 @@ static qboolean SndSys_InitMmsystem (const snd_format_t* requested, snd_format_t
 		}
 	}
 
+	wav_buffer_size = (requested->speed / 2 / WAV_BUFFERS) * requested->channels * requested->width;
+
 	/*
 	 * Allocate and lock memory for the waveform data. The memory
 	 * for waveform data must be globally allocated with
 	 * GMEM_MOVEABLE and GMEM_SHARE flags.
 	 */
-	gSndBufSize = WAV_BUFFERS*WAV_BUFFER_SIZE;
+	gSndBufSize = WAV_BUFFERS * wav_buffer_size;
 	hData = GlobalAlloc(GMEM_MOVEABLE | GMEM_SHARE, gSndBufSize);
 	if (!hData)
 	{
@@ -372,8 +465,7 @@ static qboolean SndSys_InitMmsystem (const snd_format_t* requested, snd_format_t
 	 * also be globally allocated with GMEM_MOVEABLE and
 	 * GMEM_SHARE flags.
 	 */
-	hWaveHdr = GlobalAlloc(GMEM_MOVEABLE | GMEM_SHARE,
-		(DWORD) sizeof(WAVEHDR) * WAV_BUFFERS);
+	hWaveHdr = GlobalAlloc(GMEM_MOVEABLE | GMEM_SHARE, (DWORD) sizeof(WAVEHDR) * WAV_BUFFERS);
 
 	if (hWaveHdr == NULL)
 	{
@@ -396,11 +488,10 @@ static qboolean SndSys_InitMmsystem (const snd_format_t* requested, snd_format_t
 	// After allocation, set up and prepare headers
 	for (i=0 ; i<WAV_BUFFERS ; i++)
 	{
-		lpWaveHdr[i].dwBufferLength = WAV_BUFFER_SIZE;
-		lpWaveHdr[i].lpData = lpData + i*WAV_BUFFER_SIZE;
+		lpWaveHdr[i].dwBufferLength = wav_buffer_size;
+		lpWaveHdr[i].lpData = lpData + i * wav_buffer_size;
 
-		if (waveOutPrepareHeader(hWaveOut, lpWaveHdr+i, sizeof(WAVEHDR)) !=
-				MMSYSERR_NOERROR)
+		if (waveOutPrepareHeader(hWaveOut, lpWaveHdr+i, sizeof(WAVEHDR)) != MMSYSERR_NOERROR)
 		{
 			Con_Print("Sound: failed to prepare wave headers\n");
 			SndSys_Shutdown ();
@@ -447,7 +538,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 	// Init DirectSound
 	if (!wavonly)
 	{
-		stat = SndSys_InitDirectSound (requested, suggested);
+		stat = SndSys_InitDirectSound (requested);
 
 		if (stat == SIS_SUCCESS)
 			Con_Print("DirectSound initialized\n");
@@ -461,7 +552,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 	// to have sound)
 	if (!dsound_init && (stat != SIS_NOTAVAIL))
 	{
-		if (SndSys_InitMmsystem (requested, suggested))
+		if (SndSys_InitMmsystem (requested))
 			Con_Print("Wave sound (MMSYSTEM) initialized\n");
 		else
 			Con_Print("Wave sound failed to init\n");
@@ -561,12 +652,12 @@ void SndSys_Submit (void)
 		return;
 
 	paintpot += (snd_renderbuffer->endframe - prev_painted) * snd_renderbuffer->format.channels * snd_renderbuffer->format.width;
-	if (paintpot > WAV_BUFFERS * WAV_BUFFER_SIZE)
-		paintpot = WAV_BUFFERS * WAV_BUFFER_SIZE;
+	if (paintpot > WAV_BUFFERS * wav_buffer_size)
+		paintpot = WAV_BUFFERS * wav_buffer_size;
 	prev_painted = snd_renderbuffer->endframe;
 
 	// submit new sound blocks
-	while (paintpot > WAV_BUFFER_SIZE)
+	while (paintpot > wav_buffer_size)
 	{
 		h = lpWaveHdr + (snd_sent & WAV_MASK);
 
@@ -585,7 +676,7 @@ void SndSys_Submit (void)
 			return;
 		}
 
-		paintpot -= WAV_BUFFER_SIZE;
+		paintpot -= wav_buffer_size;
 	}
 
 }
@@ -600,17 +691,23 @@ Returns the number of sample frames consumed since the sound started
 */
 unsigned int SndSys_GetSoundTime (void)
 {
-	unsigned int s;
+	unsigned int factor;
+
+	factor = snd_renderbuffer->format.width * snd_renderbuffer->format.channels;
 
 	if (dsound_init)
 	{
 		DWORD dwTime;
+		unsigned int diff;
 
 		IDirectSoundBuffer_GetCurrentPosition(pDSBuf, &dwTime, NULL);
-		s = (dwTime - dwStartTime) & (gSndBufSize - 1);
+		if (dwTime > dwStartTime)
+			diff = dwTime - dwStartTime;
+		else
+			diff = gSndBufSize - dwStartTime + dwTime;
 		dwStartTime = dwTime;
 
-		dsound_time += s / (snd_renderbuffer->format.width * snd_renderbuffer->format.channels);
+		dsound_time += diff / factor;
 		return dsound_time;
 	}
 
@@ -631,9 +728,7 @@ unsigned int SndSys_GetSoundTime (void)
 			snd_completed++;	// this buffer has been played
 		}
 
-		s = snd_completed * WAV_BUFFER_SIZE;
-
-		return s / (snd_renderbuffer->format.width * snd_renderbuffer->format.channels);
+		return (snd_completed * wav_buffer_size) / factor;
 	}
 
 	return 0;
