@@ -197,6 +197,57 @@ void IN_JumpUp (void) {KeyUp(&in_jump);}
 
 void IN_Impulse (void) {in_impulse=atoi(Cmd_Argv(1));}
 
+int in_bestweapon_info[][5] =
+{
+	{'1', 1, IT_AXE, STAT_SHELLS, 0},
+	{'2', 2, IT_SHOTGUN, STAT_SHELLS, 1},
+	{'3', 3, IT_SUPER_SHOTGUN, STAT_SHELLS, 1},
+	{'4', 4, IT_NAILGUN, STAT_NAILS, 1},
+	{'5', 5, IT_SUPER_NAILGUN, STAT_NAILS, 1},
+	{'6', 6, IT_GRENADE_LAUNCHER, STAT_ROCKETS, 1},
+	{'7', 7, IT_ROCKET_LAUNCHER, STAT_ROCKETS, 1},
+	{'8', 8, IT_LIGHTNING, STAT_CELLS, 1},
+	{'9', 9, 128, STAT_CELLS, 1}, // generic energy weapon for mods
+	{'p', 209, 128, STAT_CELLS, 1}, // dpmod plasma gun
+	{'w', 210, 8388608, STAT_CELLS, 1}, // dpmod plasma wave cannon
+	{'l', 225, HIT_LASER_CANNON, STAT_CELLS, 1}, // hipnotic laser cannon
+	{'h', 226, HIT_MJOLNIR, STAT_CELLS, 0}, // hipnotic mjolnir hammer
+	{-1, 0, 0, 0, 0}
+};
+void IN_BestWeapon (void)
+{
+	int i, n;
+	const char *s;
+	if (Cmd_Argc() != 2)
+	{
+		Con_Printf("bestweapon requires 1 parameter\n");
+		return;
+	}
+	s = Cmd_Argv(1);
+	for (i = 0;s[i];i++)
+	{
+		// figure out which weapon this character refers to
+		for (n = 0;in_bestweapon_info[n][0] >= 0;n++)
+		{
+			if (in_bestweapon_info[n][0] == s[i])
+			{
+				// we found out what weapon this character refers to
+				// check if the inventory contains the weapon and enough ammo
+				if ((cl.stats[STAT_ITEMS] & in_bestweapon_info[n][2]) && (cl.stats[in_bestweapon_info[n][3]] >= in_bestweapon_info[n][4]))
+				{
+					// we found one of the weapons the player wanted
+					// send an impulse to switch to it
+					in_impulse = in_bestweapon_info[n][1];
+					return;
+				}
+				break;
+			}
+		}
+		// if we couldn't identify the weapon we just ignore it and continue checking for other weapons
+	}
+	// if we couldn't find any of the weapons, there's nothing more we can do...
+}
+
 /*
 ===============
 CL_KeyState
@@ -1568,6 +1619,9 @@ void CL_InitInput (void)
 	Cmd_AddCommand ("-button15", IN_Button15Up, "deactivate button15");
 	Cmd_AddCommand ("+button16", IN_Button16Down, "activate button16 (behavior depends on mod)");
 	Cmd_AddCommand ("-button16", IN_Button16Up, "deactivate button16");
+
+	// LordHavoc: added bestweapon command
+	Cmd_AddCommand ("bestweapon", IN_BestWeapon, "send an impulse number to server to select the first usable weapon out of several (example: 87654321)");
 
 	Cvar_RegisterVariable(&cl_movement);
 	Cvar_RegisterVariable(&cl_movement_latency);
