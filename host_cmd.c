@@ -55,7 +55,8 @@ void Host_Status_f (void)
 
 	if (cmd_source == src_command)
 	{
-		if (!sv.active)
+		// if running a client, try to send over network so the client's status report parser will see the report
+		if (cls.state == ca_connected)
 		{
 			Cmd_ForwardToServer ();
 			return;
@@ -64,6 +65,9 @@ void Host_Status_f (void)
 	}
 	else
 		print = SV_ClientPrintf;
+
+	if (!sv.active)
+		return;
 
 	for (players = 0, j = 0;j < svs.maxclients;j++)
 		if (svs.clients[j].active)
@@ -88,7 +92,7 @@ void Host_Status_f (void)
 		}
 		else
 			hours = 0;
-		print ("#%-2u %-16.16s  %3i  %2i:%02i:%02i\n", j+1, client->name, (int)client->edict->fields.server->frags, hours, minutes, seconds);
+		print ("#%-3u %-16.16s  %3i  %2i:%02i:%02i\n", j+1, client->name, (int)client->edict->fields.server->frags, hours, minutes, seconds);
 		print ("   %s\n", client->netconnection ? client->netconnection->address : "botclient");
 	}
 }
@@ -213,6 +217,7 @@ Host_Ping_f
 
 ==================
 */
+void Host_Pings_f (void); // called by Host_Ping_f
 void Host_Ping_f (void)
 {
 	int i;
@@ -221,7 +226,8 @@ void Host_Ping_f (void)
 
 	if (cmd_source == src_command)
 	{
-		if (!sv.active)
+		// if running a client, try to send over network so the client's ping report parser will see the report
+		if (cls.state == ca_connected)
 		{
 			Cmd_ForwardToServer ();
 			return;
@@ -231,6 +237,9 @@ void Host_Ping_f (void)
 	else
 		print = SV_ClientPrintf;
 
+	if (!sv.active)
+		return;
+
 	print("Client ping times:\n");
 	for (i = 0, client = svs.clients;i < svs.maxclients;i++, client++)
 	{
@@ -238,6 +247,9 @@ void Host_Ping_f (void)
 			continue;
 		print("%4i %s\n", (int)floor(client->ping*1000+0.5), client->name);
 	}
+
+	// now call the Pings command also, which will send a report that contains packet loss for the scoreboard (as well as a simpler ping report)
+	Host_Pings_f();
 }
 
 /*

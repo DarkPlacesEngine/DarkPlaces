@@ -595,6 +595,16 @@ typedef struct particle_s
 }
 particle_t;
 
+typedef enum cl_parsingtextmode_e
+{
+	CL_PARSETEXTMODE_NONE,
+	CL_PARSETEXTMODE_PING,
+	CL_PARSETEXTMODE_STATUS,
+	CL_PARSETEXTMODE_STATUS_PLAYERID,
+	CL_PARSETEXTMODE_STATUS_PLAYERIP
+}
+cl_parsingtextmode_t;
+
 //
 // the client_state_t structure is wiped completely at every
 // server signon
@@ -772,6 +782,10 @@ typedef struct client_state_s
 
 	// [cl.maxclients]
 	scoreboard_t *scores;
+
+	// keep track of svc_print parsing state (analyzes ping reports and status reports)
+	cl_parsingtextmode_t parsingtextmode;
+	int parsingtextplayerindex;
 
 	// entity database stuff
 	// latest received entity frame numbers
@@ -1124,6 +1138,8 @@ void R_MoveExplosions(void);
 void R_NewExplosion(const vec3_t org);
 
 #include "cl_screen.h"
+
+extern qboolean sb_showscores;
 
 #define NUMCROSSHAIRS 32
 extern cachepic_t *r_crosshairs[NUMCROSSHAIRS+1];
