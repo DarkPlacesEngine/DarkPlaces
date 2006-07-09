@@ -1219,11 +1219,13 @@ void CL_SendMove(void)
 	}
 	else
 	{
-		if (realtime < lastsendtime + 1.0 / bound(10, cl_netinputpacketspersecond.value, 100))
+		double packettime = 1.0 / bound(10, cl_netinputpacketspersecond.value, 100);
+		// don't send too often or else network connections can get clogged by a high renderer framerate
+		if (realtime < lastsendtime + packettime)
 			return;
 		// don't let it fall behind if CL_SendMove hasn't been called recently
 		// (such is the case when framerate is too low for instance)
-		lastsendtime = max(lastsendtime + 1.0 / bound(10, cl_netinputpacketspersecond.value, 100), realtime);
+		lastsendtime = max(lastsendtime + packettime, realtime);
 	}
 #if MOVEAVERAGING
 	// average the accumulated changes
