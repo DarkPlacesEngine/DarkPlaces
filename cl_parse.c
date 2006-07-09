@@ -2043,6 +2043,109 @@ void CL_ParseTempEntity(void)
 	}
 }
 
+// look for anything interesting like player IP addresses or ping reports
+qboolean CL_ExaminePrintString(const char *text)
+{
+	const char *t;
+	if (!strcmp(text, "Client ping times:\n"))
+	{
+		cl.parsingtextmode = CL_PARSETEXTMODE_PING;
+		cl.parsingtextplayerindex = 0;
+		return !sb_showscores;
+	}
+	if (!strncmp(text, "host:    ", 9))
+	{
+		cl.parsingtextmode = CL_PARSETEXTMODE_STATUS;
+		cl.parsingtextplayerindex = 0;
+		return true;
+	}
+	if (cl.parsingtextmode == CL_PARSETEXTMODE_PING)
+	{
+		// if anything goes wrong, we'll assume this is not a ping report
+		cl.parsingtextmode = CL_PARSETEXTMODE_NONE;
+		t = text;
+		while (*t == ' ')
+			t++;
+		if (*t >= '0' && *t <= '9')
+		{
+			int ping = atoi(t);
+			while (*t >= '0' && *t <= '9')
+				t++;
+			if (*t == ' ')
+			{
+				int charindex = 0;
+				t++;
+				for (charindex = 0;cl.scores[cl.parsingtextplayerindex].name[charindex] == t[charindex];charindex++)
+					;
+				if (cl.scores[cl.parsingtextplayerindex].name[charindex] == 0 && t[charindex] == '\n')
+				{
+					cl.scores[cl.parsingtextplayerindex].qw_ping = bound(0, ping, 9999);
+					for (cl.parsingtextplayerindex++;cl.parsingtextplayerindex < cl.maxclients && !cl.scores[cl.parsingtextplayerindex].name[0];cl.parsingtextplayerindex++)
+						;
+					if (cl.parsingtextplayerindex < cl.maxclients)
+					{
+						// we parsed a valid ping entry, so expect another to follow
+						cl.parsingtextmode = CL_PARSETEXTMODE_PING;
+					}
+					return !sb_showscores;
+				}
+			}
+		}
+	}
+	if (cl.parsingtextmode == CL_PARSETEXTMODE_STATUS)
+	{
+		if (!strncmp(text, "players: ", 9))
+		{
+			cl.parsingtextmode = CL_PARSETEXTMODE_STATUS_PLAYERID;
+			cl.parsingtextplayerindex = 0;
+			return true;
+		}
+		else if (!strstr(text, ": "))
+		{
+			cl.parsingtextmode = CL_PARSETEXTMODE_NONE; // status report ended
+			return true;
+		}
+	}
+	if (cl.parsingtextmode == CL_PARSETEXTMODE_STATUS_PLAYERID)
+	{
+		// if anything goes wrong, we'll assume this is not a status report
+		cl.parsingtextmode = CL_PARSETEXTMODE_NONE;
+		if (text[0] == '#' && text[1] >= '0' && text[1] <= '9')
+		{
+			t = text + 1;
+			cl.parsingtextplayerindex = atoi(t);
+			while (*t >= '0' && *t <= '9')
+				t++;
+			if (*t == ' ')
+			{
+				cl.parsingtextmode = CL_PARSETEXTMODE_STATUS_PLAYERIP;
+				return true;
+			}
+		}
+	}
+	if (cl.parsingtextmode == CL_PARSETEXTMODE_STATUS_PLAYERIP)
+	{
+		// if anything goes wrong, we'll assume this is not a status report
+		cl.parsingtextmode = CL_PARSETEXTMODE_NONE;
+		if (text[0] == ' ')
+		{
+			t = text;
+			while (*t == ' ')
+				t++;
+			// botclient is perfectly valid, but we don't care about bots
+			if (strcmp(t, "botclient\n"))
+			{
+				lhnetaddress_t address;
+				LHNETADDRESS_FromString(&address, t, 0);
+				// TODO: log the IP address and player name?
+			}
+			cl.parsingtextmode = CL_PARSETEXTMODE_STATUS_PLAYERID;
+			return true;
+		}
+	}
+	return true;
+}
+
 #define SHOWNET(x) if(cl_shownet.integer==2)Con_Printf("%3i:%s\n", msg_readcount-1, x);
 
 //[515]: csqc
@@ -2178,10 +2281,14 @@ void CL_ParseServerMessage(void)
 
 			case qw_svc_print:
 				i = MSG_ReadByte();
-				if (i == 3) // chat
-					CSQC_AddPrintText(va("\1%s", MSG_ReadString()));	//[515]: csqc
-				else
-					CSQC_AddPrintText(MSG_ReadString());
+				temp = MSG_ReadString();
+				if (CL_ExaminePrintString(temp)) // look for anything interesting like player IP addresses or ping reports
+				{
+					if (i == 3) // chat
+						CSQC_AddPrintText(va("\1%s", temp));	//[515]: csqc
+					else
+						CSQC_AddPrintText(temp);
+				}
 				break;
 
 			case qw_svc_centerprint:
@@ -2542,7 +2649,9 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case svc_print:
-				CSQC_AddPrintText(MSG_ReadString());	//[515]: csqc
+				temp = MSG_ReadString();
+				if (CL_ExaminePrintString(temp)) // look for anything interesting like player IP addresses or ping reports
+					CSQC_AddPrintText(temp);	//[515]: csqc
 				break;
 
 			case svc_centerprint:
