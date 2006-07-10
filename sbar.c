@@ -1370,7 +1370,7 @@ float Sbar_PrintScoreboardItem(scoreboard_t *s, float x, float y)
 {
 	int minutes;
 	unsigned char *c;
-	minutes = (int)((cl.intermission ? cl.completed_time - s->qw_entertime : realtime - s->qw_entertime) / 60.0);
+	minutes = (int)((cl.intermission ? cl.completed_time - s->qw_entertime : cl.time - s->qw_entertime) / 60.0);
 	if (s->qw_spectator)
 	{
 		if (s->qw_ping || s->qw_packetloss)
