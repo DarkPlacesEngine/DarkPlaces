@@ -2370,7 +2370,7 @@ void CL_ParseServerMessage(void)
 				if (i >= cl.maxclients)
 					Host_Error("CL_ParseServerMessage: svc_updateentertime >= cl.maxclients");
 				// seconds ago
-				cl.scores[i].qw_entertime = realtime - MSG_ReadFloat();
+				cl.scores[i].qw_entertime = cl.time - MSG_ReadFloat();
 				break;
 
 			case qw_svc_spawnbaseline:
