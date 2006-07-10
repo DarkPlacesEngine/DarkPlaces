@@ -786,6 +786,12 @@ typedef struct client_state_s
 	// keep track of svc_print parsing state (analyzes ping reports and status reports)
 	cl_parsingtextmode_t parsingtextmode;
 	int parsingtextplayerindex;
+	// set by scoreboard code when sending ping command, this causes the next ping results to be hidden
+	// (which could eat the wrong ping report if the player issues one
+	//  manually, but they would still see a ping report, just a later one
+	//  caused by the scoreboard code rather than the one they intentionally
+	//  issued)
+	qboolean parsingtextexpectingpingforscores;
 
 	// entity database stuff
 	// latest received entity frame numbers
