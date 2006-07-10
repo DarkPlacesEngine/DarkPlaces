@@ -2051,10 +2051,11 @@ qboolean CL_ExaminePrintString(const char *text)
 	{
 		cl.parsingtextmode = CL_PARSETEXTMODE_PING;
 		cl.parsingtextplayerindex = 0;
-		return !sb_showscores;
+		return !cl.parsingtextexpectingpingforscores;
 	}
 	if (!strncmp(text, "host:    ", 9))
 	{
+		cl.parsingtextexpectingpingforscores = false;
 		cl.parsingtextmode = CL_PARSETEXTMODE_STATUS;
 		cl.parsingtextplayerindex = 0;
 		return true;
@@ -2062,6 +2063,8 @@ qboolean CL_ExaminePrintString(const char *text)
 	if (cl.parsingtextmode == CL_PARSETEXTMODE_PING)
 	{
 		// if anything goes wrong, we'll assume this is not a ping report
+		qboolean expected = cl.parsingtextexpectingpingforscores;
+		cl.parsingtextexpectingpingforscores = false;
 		cl.parsingtextmode = CL_PARSETEXTMODE_NONE;
 		t = text;
 		while (*t == ' ')
@@ -2086,8 +2089,9 @@ qboolean CL_ExaminePrintString(const char *text)
 					{
 						// we parsed a valid ping entry, so expect another to follow
 						cl.parsingtextmode = CL_PARSETEXTMODE_PING;
+						cl.parsingtextexpectingpingforscores = expected;
 					}
-					return !sb_showscores;
+					return !expected;
 				}
 			}
 		}
