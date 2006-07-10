@@ -4158,18 +4158,26 @@ static void Mod_Q3BSP_LoadShaders(void)
 						shader->surfaceparms |= Q3SURFACEPARM_ALPHASHADOW;
 					else if (!strcasecmp(parameter[1], "areaportal"))
 						shader->surfaceparms |= Q3SURFACEPARM_AREAPORTAL;
+					else if (!strcasecmp(parameter[1], "botclip"))
+						shader->surfaceparms |= Q3SURFACEPARM_BOTCLIP;
 					else if (!strcasecmp(parameter[1], "clusterportal"))
 						shader->surfaceparms |= Q3SURFACEPARM_CLUSTERPORTAL;
 					else if (!strcasecmp(parameter[1], "detail"))
 						shader->surfaceparms |= Q3SURFACEPARM_DETAIL;
 					else if (!strcasecmp(parameter[1], "donotenter"))
 						shader->surfaceparms |= Q3SURFACEPARM_DONOTENTER;
+					else if (!strcasecmp(parameter[1], "dust"))
+						shader->surfaceparms |= Q3SURFACEPARM_DUST;
+					else if (!strcasecmp(parameter[1], "hint"))
+						shader->surfaceparms |= Q3SURFACEPARM_HINT;
 					else if (!strcasecmp(parameter[1], "fog"))
 						shader->surfaceparms |= Q3SURFACEPARM_FOG;
 					else if (!strcasecmp(parameter[1], "lava"))
 						shader->surfaceparms |= Q3SURFACEPARM_LAVA;
 					else if (!strcasecmp(parameter[1], "lightfilter"))
 						shader->surfaceparms |= Q3SURFACEPARM_LIGHTFILTER;
+					else if (!strcasecmp(parameter[1], "lightgrid"))
+						shader->surfaceparms |= Q3SURFACEPARM_LIGHTGRID;
 					else if (!strcasecmp(parameter[1], "metalsteps"))
 						shader->surfaceparms |= Q3SURFACEPARM_METALSTEPS;
 					else if (!strcasecmp(parameter[1], "nodamage"))
