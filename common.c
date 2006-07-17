@@ -1395,7 +1395,7 @@ void InfoString_SetValue(char *buffer, size_t bufferlength, const char *key, con
 		for (pos2++;buffer[pos2] && buffer[pos2] != '\\';pos2++);
 		for (pos2++;buffer[pos2] && buffer[pos2] != '\\';pos2++);
 	}
-	if (bufferlength <= 1 + strlen(key) + 1 + strlen(value) + strlen(buffer + pos2))
+	if (bufferlength <= pos + 1 + strlen(key) + 1 + strlen(value) + strlen(buffer + pos2))
 	{
 		Con_Printf("InfoString_SetValue: no room for \"%s\" \"%s\" in infostring\n", key, value);
 		return;
