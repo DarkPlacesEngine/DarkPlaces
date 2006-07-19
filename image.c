@@ -712,11 +712,6 @@ unsigned char *LoadLMP (const unsigned char *f, int filesize, int matchwidth, in
 	return image_buffer;
 }
 
-static unsigned char *LoadLMPRGBA (const unsigned char *f, int filesize, int matchwidth, int matchheight)
-{
-	return LoadLMP(f, filesize, matchwidth, matchheight, false);
-}
-
 
 typedef struct q2wal_s
 {
@@ -836,7 +831,6 @@ imageformat_t imageformats_gfx[] =
 	{"%s.png", PNG_LoadImage},
 	{"%s.jpg", JPEG_LoadImage},
 	{"%s.pcx", LoadPCX},
-	{"%s.lmp", LoadLMPRGBA},
 	{NULL, NULL}
 };
 

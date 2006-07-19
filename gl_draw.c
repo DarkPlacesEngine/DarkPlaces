@@ -302,8 +302,10 @@ cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 {
 	int crc, hashkey;
 	cachepic_t *pic;
-	qpic_t *p;
 	int flags;
+	fs_offset_t lmpsize;
+	unsigned char *lmpdata;
+	char lmpname[MAX_QPATH];
 
 	if (!strncmp(CLVIDEOPREFIX, path, sizeof(CLVIDEOPREFIX) - 1))
 	{
@@ -338,53 +340,91 @@ cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 	if (!strcmp(path, "gfx/colorcontrol/ditherpattern"))
 		flags |= TEXF_CLAMP;
 
-	// load the pic from disk
+	// load a high quality image from disk if possible
 	pic->tex = loadtextureimage(drawtexturepool, path, 0, 0, false, flags);
 	if (pic->tex == NULL && !strncmp(path, "gfx/", 4))
 	{
-		// compatibility with older versions
+		// compatibility with older versions which did not require gfx/ prefix
 		pic->tex = loadtextureimage(drawtexturepool, path + 4, 0, 0, false, flags);
-		// failed to find gfx/whatever.tga or similar, try the wad
-		if (pic->tex == NULL && (p = (qpic_t *)W_GetLumpName (path + 4)))
+	}
+	// if a high quality image was loaded, set the pic's size to match it, just
+	// in case there's no low quality version to get the size from
+	if (pic->tex)
+	{
+		pic->width = R_TextureWidth(pic->tex);
+		pic->height = R_TextureHeight(pic->tex);
+	}
+
+	// now read the low quality version (wad or lmp file), and take the pic
+	// size from that even if we don't upload the texture, this way the pics
+	// show up the right size in the menu even if they were replaced with
+	// higher or lower resolution versions
+	dpsnprintf(lmpname, sizeof(lmpname), "%s.lmp", path);
+	if (!strncmp(path, "gfx/", 4) && (lmpdata = FS_LoadFile(lmpname, tempmempool, false, &lmpsize)))
+	{
+		if (lmpsize >= 9)
 		{
-			if (!strcmp(path, "gfx/conchars"))
-			{
-				// conchars is a raw image and with color 0 as transparent instead of 255
-				pic->tex = R_LoadTexture2D(drawtexturepool, path, 128, 128, (unsigned char *)p, TEXTYPE_PALETTE, flags, palette_font);
-			}
-			else
-				pic->tex = R_LoadTexture2D(drawtexturepool, path, p->width, p->height, p->data, TEXTYPE_PALETTE, flags, palette_transparent);
+			pic->width = lmpdata[0] + lmpdata[1] * 256 + lmpdata[2] * 65536 + lmpdata[3] * 16777216;
+			pic->height = lmpdata[4] + lmpdata[5] * 256 + lmpdata[6] * 65536 + lmpdata[7] * 16777216;
+			// if no high quality replacement image was found, upload the original low quality texture
+			if (!pic->tex)
+				pic->tex = R_LoadTexture2D(drawtexturepool, path, pic->width, pic->height, lmpdata + 8, TEXTYPE_PALETTE, flags, palette_transparent);
+		}
+		Mem_Free(lmpdata);
+	}
+	else if ((lmpdata = W_GetLumpName (path + 4)))
+	{
+		if (!strcmp(path, "gfx/conchars"))
+		{
+			// conchars is a raw image and with color 0 as transparent instead of 255
+			pic->width = 128;
+			pic->height = 128;
+			// if no high quality replacement image was found, upload the original low quality texture
+			if (!pic->tex)
+				pic->tex = R_LoadTexture2D(drawtexturepool, path, 128, 128, lmpdata, TEXTYPE_PALETTE, flags, palette_font);
+		}
+		else
+		{
+			pic->width = lmpdata[0] + lmpdata[1] * 256 + lmpdata[2] * 65536 + lmpdata[3] * 16777216;
+			pic->height = lmpdata[4] + lmpdata[5] * 256 + lmpdata[6] * 65536 + lmpdata[7] * 16777216;
+			// if no high quality replacement image was found, upload the original low quality texture
+			if (!pic->tex)
+				pic->tex = R_LoadTexture2D(drawtexturepool, path, pic->width, pic->height, lmpdata + 8, TEXTYPE_PALETTE, flags, palette_transparent);
 		}
 	}
 
-	if (pic->tex == NULL && !strcmp(path, "gfx/conchars"))
-		pic->tex = draw_generateconchars();
-	if (pic->tex == NULL && !strcmp(path, "ui/mousepointer"))
-		pic->tex = draw_generatemousepointer();
-	if (pic->tex == NULL && !strcmp(path, "gfx/prydoncursor001"))
-		pic->tex = draw_generatemousepointer();
-	if (pic->tex == NULL && !strcmp(path, "gfx/crosshair1"))
-		pic->tex = draw_generatecrosshair(0);
-	if (pic->tex == NULL && !strcmp(path, "gfx/crosshair2"))
-		pic->tex = draw_generatecrosshair(1);
-	if (pic->tex == NULL && !strcmp(path, "gfx/crosshair3"))
-		pic->tex = draw_generatecrosshair(2);
-	if (pic->tex == NULL && !strcmp(path, "gfx/crosshair4"))
-		pic->tex = draw_generatecrosshair(3);
-	if (pic->tex == NULL && !strcmp(path, "gfx/crosshair5"))
-		pic->tex = draw_generatecrosshair(4);
-	if (pic->tex == NULL && !strcmp(path, "gfx/crosshair6"))
-		pic->tex = draw_generatecrosshair(5);
-	if (pic->tex == NULL && !strcmp(path, "gfx/colorcontrol/ditherpattern"))
-		pic->tex = draw_generateditherpattern();
+	// if it's not found on disk, check if it's one of the builtin images
 	if (pic->tex == NULL)
 	{
-		Con_Printf("Draw_CachePic: failed to load %s\n", path);
-		pic->tex = r_texture_notexture;
+		if (pic->tex == NULL && !strcmp(path, "gfx/conchars"))
+			pic->tex = draw_generateconchars();
+		if (pic->tex == NULL && !strcmp(path, "ui/mousepointer"))
+			pic->tex = draw_generatemousepointer();
+		if (pic->tex == NULL && !strcmp(path, "gfx/prydoncursor001"))
+			pic->tex = draw_generatemousepointer();
+		if (pic->tex == NULL && !strcmp(path, "gfx/crosshair1"))
+			pic->tex = draw_generatecrosshair(0);
+		if (pic->tex == NULL && !strcmp(path, "gfx/crosshair2"))
+			pic->tex = draw_generatecrosshair(1);
+		if (pic->tex == NULL && !strcmp(path, "gfx/crosshair3"))
+			pic->tex = draw_generatecrosshair(2);
+		if (pic->tex == NULL && !strcmp(path, "gfx/crosshair4"))
+			pic->tex = draw_generatecrosshair(3);
+		if (pic->tex == NULL && !strcmp(path, "gfx/crosshair5"))
+			pic->tex = draw_generatecrosshair(4);
+		if (pic->tex == NULL && !strcmp(path, "gfx/crosshair6"))
+			pic->tex = draw_generatecrosshair(5);
+		if (pic->tex == NULL && !strcmp(path, "gfx/colorcontrol/ditherpattern"))
+			pic->tex = draw_generateditherpattern();
+		if (pic->tex == NULL)
+		{
+			Con_Printf("Draw_CachePic: failed to load %s\n", path);
+			pic->tex = r_texture_notexture;
+		}
+		pic->width = R_TextureWidth(pic->tex);
+		pic->height = R_TextureHeight(pic->tex);
 	}
 
-	pic->width = R_TextureWidth(pic->tex);
-	pic->height = R_TextureHeight(pic->tex);
 	return pic;
 }
 
