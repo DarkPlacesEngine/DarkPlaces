@@ -24,9 +24,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "wad.h"
 
 
-void SwapPic (qpic_t *pic);
-
-
 /*
 ==================
 W_CleanupName
@@ -58,7 +55,7 @@ static void W_CleanupName (const char *in, char *out)
 		out[i] = 0;
 }
 
-void *W_GetLumpName(const char *name)
+unsigned char *W_GetLumpName(const char *name)
 {
 	int i;
 	fs_offset_t filesize;
@@ -96,8 +93,6 @@ void *W_GetLumpName(const char *name)
 					lump->filepos = LittleLong(lump->filepos);
 					lump->size = LittleLong(lump->size);
 					W_CleanupName (lump->name, lump->name);
-					if (lump->type == TYP_QPIC)
-						SwapPic ( (qpic_t *)(wad_base + lump->filepos));
 				}
 			}
 		}
@@ -105,7 +100,7 @@ void *W_GetLumpName(const char *name)
 
 	for (lump = wad_lumps, i = 0;i < wad_numlumps;i++, lump++)
 		if (!strcmp(clean, lump->name))
-			return (void *)(wad_base + lump->filepos);
+			return (wad_base + lump->filepos);
 
 	if (wad_base)
 		Con_DPrintf("W_GetLumpByName(\"%s\"): couldn't find file in gfx.wad\n", name);
@@ -121,12 +116,6 @@ automatic byte swapping
 
 =============================================================================
 */
-
-void SwapPic (qpic_t *pic)
-{
-	pic->width = LittleLong(pic->width);
-	pic->height = LittleLong(pic->height);
-}
 
 // LordHavoc: added alternate WAD2/WAD3 system for HalfLife texture wads
 #define TEXWAD_MAXIMAGES 16384
