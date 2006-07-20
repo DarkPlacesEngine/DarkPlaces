@@ -88,7 +88,9 @@ HRESULT (WINAPI *pDirectSoundCreate)(GUID FAR *lpGUID, LPDIRECTSOUND FAR *lplpDS
 static unsigned int wav_buffer_size;
 
 // DirectSound output: 64KB in 1 buffer
-#define SECONDARY_BUFFER_SIZE(fmt_ptr) ((fmt_ptr)->width * (fmt_ptr)->channels * (fmt_ptr)->speed / 2)
+//#define SECONDARY_BUFFER_SIZE(fmt_ptr) ((fmt_ptr)->width * (fmt_ptr)->channels * (fmt_ptr)->speed / 2)
+// LordHavoc: changed this to be a multiple of 32768
+#define SECONDARY_BUFFER_SIZE(fmt_ptr) ((fmt_ptr)->channels * 32768)
 
 typedef enum sndinitstat_e {SIS_SUCCESS, SIS_FAILURE, SIS_NOTAVAIL} sndinitstat;
 
