@@ -703,10 +703,7 @@ unsigned int SndSys_GetSoundTime (void)
 		unsigned int diff;
 
 		IDirectSoundBuffer_GetCurrentPosition(pDSBuf, &dwTime, NULL);
-		if (dwTime > dwStartTime)
-			diff = dwTime - dwStartTime;
-		else
-			diff = gSndBufSize - dwStartTime + dwTime;
+		diff = (unsigned int)(dwTime - dwStartTime) % (unsigned int)gSndBufSize;
 		dwStartTime = dwTime;
 
 		dsound_time += diff / factor;
