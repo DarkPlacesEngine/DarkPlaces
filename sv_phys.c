@@ -571,7 +571,7 @@ SV_PushEntity
 Does not change the entities velocity at all
 ============
 */
-trace_t SV_PushEntity (prvm_edict_t *ent, vec3_t push)
+trace_t SV_PushEntity (prvm_edict_t *ent, vec3_t push, qboolean failonstartsolid)
 {
 	int type;
 	trace_t trace;
@@ -587,6 +587,8 @@ trace_t SV_PushEntity (prvm_edict_t *ent, vec3_t push)
 		type = MOVE_NORMAL;
 
 	trace = SV_Move (ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, end, type, ent);
+	if (trace.startsolid && failonstartsolid)
+		return trace;
 
 	VectorCopy (trace.endpos, ent->fields.server->origin);
 	SV_LinkEdict (ent, true);
@@ -767,40 +769,48 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 
 		// try moving the contacted entity
 		pusher->fields.server->solid = SOLID_NOT;
-		trace = SV_PushEntity (check, move);
+		trace = SV_PushEntity (check, move, true);
 		// FIXME: turn players specially
 		check->fields.server->angles[1] += trace.fraction * moveangle[1];
 		pusher->fields.server->solid = savesolid; // was SOLID_BSP
+		Con_Printf("%s:%d frac %f startsolid %d bmodelstartsolid %d allsolid %d\n", __FILE__, __LINE__, trace.fraction, trace.startsolid, trace.bmodelstartsolid, trace.allsolid);
 
 		// if it is still inside the pusher, block
 		if (SV_ClipMoveToEntity(pusher, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, 0, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY).startsolid)
 		{
+					Con_Printf("%s:%d\n", __FILE__, __LINE__);
 			// try moving the contacted entity a tiny bit further to account for precision errors
 			vec3_t move2;
 			pusher->fields.server->solid = SOLID_NOT;
 			VectorScale(move, 1.1, move2);
 			VectorCopy (check->priv.server->moved_from, check->fields.server->origin);
 			VectorCopy (check->priv.server->moved_fromangles, check->fields.server->angles);
-			SV_PushEntity (check, move2);
+			SV_PushEntity (check, move2, true);
 			pusher->fields.server->solid = savesolid;
 			if (SV_ClipMoveToEntity(pusher, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, 0, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY).startsolid)
 			{
+					Con_Printf("%s:%d\n", __FILE__, __LINE__);
 				// try moving the contacted entity a tiny bit less to account for precision errors
 				pusher->fields.server->solid = SOLID_NOT;
 				VectorScale(move, 0.9, move2);
 				VectorCopy (check->priv.server->moved_from, check->fields.server->origin);
 				VectorCopy (check->priv.server->moved_fromangles, check->fields.server->angles);
-				SV_PushEntity (check, move2);
+				SV_PushEntity (check, move2, true);
 				pusher->fields.server->solid = savesolid;
 				if (SV_ClipMoveToEntity(pusher, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, 0, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY).startsolid)
 				{
+					Con_Printf("%s:%d\n", __FILE__, __LINE__);
 					// still inside pusher, so it's really blocked
 
 					// fail the move
 					if (check->fields.server->mins[0] == check->fields.server->maxs[0])
+					{
+					Con_Printf("%s:%d\n", __FILE__, __LINE__);
 						continue;
+					}
 					if (check->fields.server->solid == SOLID_NOT || check->fields.server->solid == SOLID_TRIGGER)
 					{
+					Con_Printf("%s:%d\n", __FILE__, __LINE__);
 						// corpse
 						check->fields.server->mins[0] = check->fields.server->mins[1] = 0;
 						VectorCopy (check->fields.server->mins, check->fields.server->maxs);
@@ -1053,7 +1063,7 @@ int SV_TryUnstick (prvm_edict_t *ent, vec3_t oldvel)
 			case 7: dir[0] = -2; dir[1] = -2; break;
 		}
 
-		SV_PushEntity (ent, dir);
+		SV_PushEntity (ent, dir, false);
 
 		// retry the original move
 		ent->fields.server->velocity[0] = oldvel[0];
@@ -1144,7 +1154,7 @@ void SV_WalkMove (prvm_edict_t *ent)
 		VectorClear (upmove);
 		upmove[2] = sv_stepheight.value;
 		// FIXME: don't link?
-		SV_PushEntity(ent, upmove);
+		SV_PushEntity(ent, upmove, false);
 
 		// move forward
 		ent->fields.server->velocity[2] = 0;
@@ -1185,7 +1195,7 @@ void SV_WalkMove (prvm_edict_t *ent)
 	VectorClear (downmove);
 	downmove[2] = -sv_stepheight.value + start_velocity[2]*sv.frametime;
 	// FIXME: don't link?
-	downtrace = SV_PushEntity (ent, downmove);
+	downtrace = SV_PushEntity (ent, downmove, false);
 
 	if (downtrace.fraction < 1 && downtrace.plane.normal[2] > 0.7)
 	{
@@ -1352,14 +1362,14 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 
 // move origin
 	VectorScale (ent->fields.server->velocity, sv.frametime, move);
-	trace = SV_PushEntity (ent, move);
+	trace = SV_PushEntity (ent, move, true);
 	if (ent->priv.server->free)
 		return;
 	if (trace.bmodelstartsolid)
 	{
 		// try to unstick the entity
 		SV_UnstickEntity(ent);
-		trace = SV_PushEntity (ent, move);
+		trace = SV_PushEntity (ent, move, false);
 		if (ent->priv.server->free)
 			return;
 	}
