@@ -773,12 +773,11 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 		// FIXME: turn players specially
 		check->fields.server->angles[1] += trace.fraction * moveangle[1];
 		pusher->fields.server->solid = savesolid; // was SOLID_BSP
-		Con_Printf("%s:%d frac %f startsolid %d bmodelstartsolid %d allsolid %d\n", __FILE__, __LINE__, trace.fraction, trace.startsolid, trace.bmodelstartsolid, trace.allsolid);
+		//Con_Printf("%s:%d frac %f startsolid %d bmodelstartsolid %d allsolid %d\n", __FILE__, __LINE__, trace.fraction, trace.startsolid, trace.bmodelstartsolid, trace.allsolid);
 
 		// if it is still inside the pusher, block
 		if (SV_ClipMoveToEntity(pusher, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, 0, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY).startsolid)
 		{
-					Con_Printf("%s:%d\n", __FILE__, __LINE__);
 			// try moving the contacted entity a tiny bit further to account for precision errors
 			vec3_t move2;
 			pusher->fields.server->solid = SOLID_NOT;
@@ -789,7 +788,6 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 			pusher->fields.server->solid = savesolid;
 			if (SV_ClipMoveToEntity(pusher, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, 0, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY).startsolid)
 			{
-					Con_Printf("%s:%d\n", __FILE__, __LINE__);
 				// try moving the contacted entity a tiny bit less to account for precision errors
 				pusher->fields.server->solid = SOLID_NOT;
 				VectorScale(move, 0.9, move2);
@@ -799,18 +797,13 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 				pusher->fields.server->solid = savesolid;
 				if (SV_ClipMoveToEntity(pusher, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, 0, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY).startsolid)
 				{
-					Con_Printf("%s:%d\n", __FILE__, __LINE__);
 					// still inside pusher, so it's really blocked
 
 					// fail the move
 					if (check->fields.server->mins[0] == check->fields.server->maxs[0])
-					{
-					Con_Printf("%s:%d\n", __FILE__, __LINE__);
 						continue;
-					}
 					if (check->fields.server->solid == SOLID_NOT || check->fields.server->solid == SOLID_TRIGGER)
 					{
-					Con_Printf("%s:%d\n", __FILE__, __LINE__);
 						// corpse
 						check->fields.server->mins[0] = check->fields.server->mins[1] = 0;
 						VectorCopy (check->fields.server->mins, check->fields.server->maxs);
