@@ -111,6 +111,7 @@ qboolean PNG_OpenLibrary (void)
 		"libpng12.0.dylib",
 #else
 		"libpng12.so.0",
+		"libpng.so", // FreeBSD
 #endif
 		NULL
 	};
