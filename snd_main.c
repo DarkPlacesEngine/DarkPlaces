@@ -627,9 +627,12 @@ void S_Startup (void)
 			   chosen_fmt.speed, chosen_fmt.channels, chosen_fmt.width * 8);
 
 	// Update the cvars
-	snd_speed.integer = chosen_fmt.speed;
-	snd_width.integer = chosen_fmt.width;
-	snd_channels.integer = chosen_fmt.channels;
+	if (snd_speed.integer != (int)chosen_fmt.speed)
+		Cvar_SetValueQuick(&snd_speed, chosen_fmt.speed);
+	if (snd_width.integer != chosen_fmt.width)
+		Cvar_SetValueQuick(&snd_width, chosen_fmt.width);
+	if (snd_channels.integer != chosen_fmt.channels)
+		Cvar_SetValueQuick(&snd_channels, chosen_fmt.channels);
 
 	current_channellayout_used = SND_CHANNELLAYOUT_AUTO;
 	S_SetChannelLayout();
