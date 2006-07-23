@@ -152,10 +152,14 @@ static qboolean SndSys_BuildWaveFormat (const snd_format_t* requested, WAVEFORMA
 	pfmtex->nBlockAlign = pfmtex->nChannels * pfmtex->wBitsPerSample / 8;
 	pfmtex->nAvgBytesPerSec = pfmtex->nSamplesPerSec * pfmtex->nBlockAlign;
 
+	// LordHavoc: disabled this WAVE_FORMAT_EXTENSIBLE support because it does not seem to be working
+#if 0
 	if (requested->channels <= 2)
 	{
+#endif
 		pfmtex->wFormatTag = WAVE_FORMAT_PCM;
 		pfmtex->cbSize = 0;
+#if 0
 	}
 	else
 	{
@@ -183,6 +187,7 @@ static qboolean SndSys_BuildWaveFormat (const snd_format_t* requested, WAVEFORMA
 				return false;
 		}
 	}
+#endif
 
 	return true;
 }
