@@ -3850,6 +3850,19 @@ static episode_t defeatindetail2episodes[] =
 	{"ATAC Campaign", 0, 3},
 };
 
+static level_t prydonlevels[] =
+{
+	{"curig2", "Capel Curig"},	// 0
+
+	{"tdastart", "Gateway"},				// 1
+};
+
+static episode_t prydonepisodes[] =
+{
+	{"Prydon Gate", 0, 1},
+	{"The Dark Age", 1, 1}
+};
+
 static gamelevels_t sharewarequakegame = {"Shareware Quake", quakelevels, quakeepisodes, 2};
 static gamelevels_t registeredquakegame = {"Quake", quakelevels, quakeepisodes, 7};
 static gamelevels_t hipnoticgame = {"Scourge of Armagon", hipnoticlevels, hipnoticepisodes, 6};
@@ -3860,6 +3873,7 @@ static gamelevels_t goodvsbad2game = {"Good Vs. Bad 2", goodvsbad2levels, goodvs
 static gamelevels_t battlemechgame = {"Battlemech", battlemechlevels, battlemechepisodes, 1};
 static gamelevels_t openquartzgame = {"OpenQuartz", openquartzlevels, openquartzepisodes, 3};
 static gamelevels_t defeatindetail2game = {"Defeat In Detail 2", defeatindetail2levels, defeatindetail2episodes, 1};
+static gamelevels_t prydongame = {"Prydon Gate", prydonlevels, prydonepisodes, 2};
 
 typedef struct gameinfo_s
 {
@@ -3880,13 +3894,22 @@ static gameinfo_t gamelist[] =
 	{GAME_BATTLEMECH, &battlemechgame, &battlemechgame},
 	{GAME_OPENQUARTZ, &openquartzgame, &openquartzgame},
 	{GAME_DEFEATINDETAIL2, &defeatindetail2game, &defeatindetail2game},
-	{(gamemode_t)-1, &sharewarequakegame, &registeredquakegame} // final fallback
+	{GAME_PRYDON, &prydongame, &prydongame},
+	{GAME_NORMAL, NULL, NULL} // terminator
 };
 
 static gamelevels_t *lookupgameinfo(void)
 {
-	int i;
-	for (i = 0;gamelist[i].gameid >= 0 && gamelist[i].gameid != gamemode;i++);
+	int i = 0;
+	while (gamelist[i].gameid != gamemode)
+	{
+		if (gamelist[i].notregistered == NULL)
+		{
+			i = 0;
+			break;
+		}
+		i++;
+	}
 	if (registered.integer)
 		return gamelist[i].registered;
 	else

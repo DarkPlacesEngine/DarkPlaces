@@ -261,10 +261,7 @@ void PF_sprint (void)
 	entnum = PRVM_G_EDICTNUM(OFS_PARM0);
 
 	if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active)
-	{
-		Con_Print("tried to sprint to a non-client\n");
-		return;
-	}
+		PF_WARNING("tried to centerprint to a non-client\n");
 
 	client = svs.clients + entnum-1;
 	if (!client->netconnection)
@@ -294,10 +291,7 @@ void PF_centerprint (void)
 	entnum = PRVM_G_EDICTNUM(OFS_PARM0);
 
 	if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active)
-	{
-		Con_Print("tried to sprint to a non-client\n");
-		return;
-	}
+		PF_WARNING("tried to centerprint to a non-client\n");
 
 	client = svs.clients + entnum-1;
 	if (!client->netconnection)
@@ -722,10 +716,7 @@ void PF_stuffcmd (void)
 
 	entnum = PRVM_G_EDICTNUM(OFS_PARM0);
 	if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active)
-	{
-		Con_Print("Can't stuffcmd to a non-client\n");
-		return;
-	}
+		PF_WARNING("Can't stuffcmd to a non-client\n");
 
 	VM_VarString(1, string, sizeof(string));
 
