@@ -303,15 +303,15 @@ void MSG_WriteFloat (sizebuf_t *sb, float f)
 
 void MSG_WriteString (sizebuf_t *sb, const char *s)
 {
-	if (!s)
-		SZ_Write (sb, (unsigned char *)"", 1);
+	if (!s || !*s)
+		MSG_WriteChar (sb, 0);
 	else
 		SZ_Write (sb, (unsigned char *)s, (int)strlen(s)+1);
 }
 
 void MSG_WriteUnterminatedString (sizebuf_t *sb, const char *s)
 {
-	if (s)
+	if (s && *s)
 		SZ_Write (sb, (unsigned char *)s, (int)strlen(s));
 }
 
@@ -633,7 +633,13 @@ void Com_HexDumpToConsole(const unsigned char *data, int size)
 		{
 			if (j < n)
 			{
-				if (d[j] >= ' ' && d[j] <= 127)
+				// color change prefix character has to be treated specially
+				if (d[j] == STRING_COLOR_TAG)
+				{
+					*cur++ = STRING_COLOR_TAG;
+					*cur++ = STRING_COLOR_TAG;
+				}
+				else if (d[j] >= ' ')
 					*cur++ = d[j];
 				else
 					*cur++ = '.';

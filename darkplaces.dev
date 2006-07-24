@@ -1,7 +1,7 @@
 [Project]
 FileName=darkplaces.dev
 Name=DarkPlaces
-UnitCount=156
+UnitCount=155
 Type=0
 Ver=1
 ObjFiles=
@@ -1439,27 +1439,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit144]
-FileName=builddate.c
-CompileCpp=0
-Folder=Source Files
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
 [Unit145]
-FileName=svvm_cmds.c
-CompileCpp=0
-Folder=Source Files
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit146]
 FileName=mvm_cmds.c
 CompileCpp=0
 Folder=Source Files
@@ -1469,7 +1449,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit147]
+[Unit146]
 FileName=prvm_cmds.h
 CompileCpp=0
 Folder=Header Files
@@ -1479,7 +1459,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit148]
+[Unit147]
 FileName=csprogs.h
 CompileCpp=0
 Folder=Header Files
@@ -1489,7 +1469,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit149]
+[Unit148]
 FileName=image_png.h
 CompileCpp=0
 Folder=Header Files
@@ -1499,7 +1479,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit150]
+[Unit149]
 FileName=lhfont.h
 CompileCpp=0
 Folder=Header Files
@@ -1509,7 +1489,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit151]
+[Unit150]
 FileName=mdfour.h
 CompileCpp=0
 Folder=Header Files
@@ -1519,7 +1499,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit152]
+[Unit151]
 FileName=model_dpmodel.h
 CompileCpp=0
 Folder=Header Files
@@ -1529,7 +1509,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit153]
+[Unit152]
 FileName=model_psk.h
 CompileCpp=0
 Folder=Header Files
@@ -1539,7 +1519,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit154]
+[Unit153]
 FileName=csprogs.c
 CompileCpp=0
 Folder=Source Files
@@ -1549,8 +1529,18 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit155]
+[Unit154]
 FileName=image_png.c
+CompileCpp=0
+Folder=Source Files
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit155]
+FileName=mdfour.c
 CompileCpp=0
 Folder=Source Files
 Compile=1
@@ -1609,6 +1599,16 @@ AutoIncBuildNr=0
 
 [Unit122]
 FileName=r_modules.c
+CompileCpp=0
+Folder=Source Files
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit144]
+FileName=svvm_cmds.c
 CompileCpp=0
 Folder=Source Files
 Compile=1
