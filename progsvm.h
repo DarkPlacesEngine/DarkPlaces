@@ -429,6 +429,7 @@ void *_PRVM_Alloc (size_t buffersize, const char *filename, int fileline);
 void _PRVM_Free (void *buffer, const char *filename, int fileline);
 void _PRVM_FreeAll (const char *filename, int fileline);
 
+void PRVM_Profile (int maxfunctions, int mininstructions);
 void PRVM_Profile_f (void);
 void PRVM_PrintFunction_f (void);
 

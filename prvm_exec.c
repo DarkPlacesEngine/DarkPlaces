@@ -266,30 +266,11 @@ void PRVM_StackTrace (void)
 }
 
 
-/*
-============
-PRVM_Profile_f
-
-============
-*/
-void PRVM_Profile_f (void)
+void PRVM_Profile (int maxfunctions, int mininstructions)
 {
 	mfunction_t *f, *best;
-	int i, num, howmany;
+	int i, num;
 	double max;
-
-	howmany = 1<<30;
-	if (Cmd_Argc() == 3)
-		howmany = atoi(Cmd_Argv(2));
-	else if (Cmd_Argc() != 2)
-	{
-		Con_Print("prvm_profile <program name>\n");
-		return;
-	}
-
-	PRVM_Begin;
-	if(!PRVM_SetProgFromString(Cmd_Argv(1)))
-		return;
 
 	Con_Printf( "%s Profile:\n[CallCount] [Statements] [BuiltinCost]\n", PRVM_NAME );
 
@@ -309,7 +290,7 @@ void PRVM_Profile_f (void)
 		}
 		if (best)
 		{
-			if (num < howmany)
+			if (num < maxfunctions && max >= mininstructions)
 			{
 				if (best->first_statement < 0)
 					Con_Printf("%9.0f ----- builtin ----- %s\n", best->callcount, PRVM_GetString(best->s_name));
@@ -322,6 +303,32 @@ void PRVM_Profile_f (void)
 			best->callcount = 0;
 		}
 	} while (best);
+}
+
+/*
+============
+PRVM_Profile_f
+
+============
+*/
+void PRVM_Profile_f (void)
+{
+	int howmany;
+
+	howmany = 1<<30;
+	if (Cmd_Argc() == 3)
+		howmany = atoi(Cmd_Argv(2));
+	else if (Cmd_Argc() != 2)
+	{
+		Con_Print("prvm_profile <program name>\n");
+		return;
+	}
+
+	PRVM_Begin;
+	if(!PRVM_SetProgFromString(Cmd_Argv(1)))
+		return;
+
+	PRVM_Profile(howmany, 1);
 
 	PRVM_End;
 }

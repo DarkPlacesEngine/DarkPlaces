@@ -232,7 +232,8 @@
 					if (++jumpcount == 10000000)
 					{
 						prog->xstatement = st - prog->statements;
-						PRVM_ERROR("runaway loop counter hit limit of %d jumps\ntip: if having trouble identifying the problem, try typing profile now in %s", jumpcount, PRVM_NAME);
+						PRVM_Profile(1<<30, 1000000);
+						PRVM_ERROR("runaway loop counter hit limit of %d jumps\ntip: read above for list of most-executed functions", jumpcount, PRVM_NAME);
 					}
 				}
 				break;
@@ -246,7 +247,8 @@
 					if (++jumpcount == 10000000)
 					{
 						prog->xstatement = st - prog->statements;
-						PRVM_ERROR("runaway loop counter hit limit of %d jumps\ntip: if having trouble identifying the problem, try typing profile now in %s", jumpcount, PRVM_NAME);
+						PRVM_Profile(1<<30, 1000000);
+						PRVM_ERROR("runaway loop counter hit limit of %d jumps\ntip: read above for list of most-executed functions", jumpcount, PRVM_NAME);
 					}
 				}
 				break;
@@ -258,7 +260,8 @@
 				if (++jumpcount == 10000000)
 				{
 					prog->xstatement = st - prog->statements;
-					PRVM_ERROR("runaway loop counter hit limit of %d jumps\ntip: if having trouble identifying the problem, try typing profile now in %s", jumpcount, PRVM_NAME);
+					PRVM_Profile(1<<30, 1000000);
+					PRVM_ERROR("runaway loop counter hit limit of %d jumps\ntip: read above for list of most-executed functions", jumpcount, PRVM_NAME);
 				}
 				break;
 
