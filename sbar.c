@@ -642,7 +642,9 @@ Sbar_DrawScoreboard
 void Sbar_DrawScoreboard (void)
 {
 	Sbar_SoloScoreboard ();
-	if (cl.gametype == GAME_DEATHMATCH)
+	// LordHavoc: changed to draw the deathmatch overlays in any multiplayer mode
+	//if (cl.gametype == GAME_DEATHMATCH)
+	if (!cl.islocalgame)
 		Sbar_DeathmatchOverlay ();
 }
 
@@ -1234,7 +1236,9 @@ void Sbar_Draw (void)
 		else // Quake and others
 		{
 			sbar_y = vid_conheight.integer - SBAR_HEIGHT;
-			if (cl.gametype == GAME_DEATHMATCH && gamemode != GAME_TRANSFUSION)
+			// LordHavoc: changed to draw the deathmatch overlays in any multiplayer mode
+			//if (cl.gametype == GAME_DEATHMATCH && gamemode != GAME_TRANSFUSION)
+			if (!cl.islocalgame && gamemode != GAME_TRANSFUSION)
 				sbar_x = 0;
 			else
 				sbar_x = (vid_conwidth.integer - 320)/2;
@@ -1339,7 +1343,9 @@ void Sbar_Draw (void)
 
 			}
 
-			if (vid_conwidth.integer > 320 && cl.gametype == GAME_DEATHMATCH)
+			// LordHavoc: changed to draw the deathmatch overlays in any multiplayer mode
+			//if (vid_conwidth.integer > 320 && cl.gametype == GAME_DEATHMATCH)
+			if (!cl.islocalgame && vid_conwidth.integer > 320)
 			{
 				if (gamemode == GAME_TRANSFUSION)
 					Sbar_MiniDeathmatchOverlay (0, 0);
@@ -1501,7 +1507,9 @@ void Sbar_IntermissionOverlay (void)
 	int		dig;
 	int		num;
 
-	if (cl.gametype == GAME_DEATHMATCH)
+	// LordHavoc: changed to draw the deathmatch overlays in any multiplayer mode
+	//if (cl.gametype == GAME_DEATHMATCH)
+	if (!cl.islocalgame)
 	{
 		Sbar_DeathmatchOverlay ();
 		return;
