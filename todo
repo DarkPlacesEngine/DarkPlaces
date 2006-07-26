@@ -1,6 +1,5 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
 -d (Baalz) bug darkplaces input: figure out what's wrong with ctrl key in Linux, hitting character keys tends to do nothing, and holding a character key and then hitting ctrl tends to leave the character key stuck on, this sounds like a window manager issue, but somehow quake3 works around it (Baalz)
--d (Black) bug darkplaces console: $* expansion should not include $0 (Black)
 -d (Carni) bug darkplaces client: prydon cursor highlighting of EF_SELECTABLE entities flickers with lower server framerate than client framerate (carni)
 -d (Edward Holness) feature darkplaces console: add condump command to output recent console history (note: wordwrap will remain, trailing spaces will be stripped though), and add it to the readme (Edward Holness)
 -d (Gilgamesh) feature darkplaces protocol: add back colormod extension (FrikaC, Uffe, Gilgamesh, Wazat)
@@ -10,8 +9,6 @@
 -d (Kinn) bug darkplaces WGL client: default WGL input back to GDI, the DirectInput driver is malfunctioning, losing key release messages, stuttering mouse input, and lacks mouse wheel support (Wazat, Kinn)
 -d (Mabus) bug darkplaces loading: test zlib support with entirely pk3'd id1 data (should crash because of zlib not being setup early enough - fix this) (Mabus)
 -d (Mitchell) bug darkplaces renderer: fix fogging in realtime lighting mode, need to split the shaders into two stages, this will also fix decal bugs with fog (Mitchell)
--d (Monster) change darkplaces: enable deathmatch scoreboard stuff in coop! (Monster)
--d (Morphed) bug darkplaces renderer: Morphed's colormapping experiments in nexuiz show a difference in gloss color with GLSL vs dot3 path, http://img494.imageshack.us/img494/8745/nexuiz0000258lf.jpg http://www.nexuiz.com/forums/index.php?showtopic=1531 - and apparently it looks right or wrong depending on view point, suddenly switching (Morphed)
 -d (Mr Fribbles) feature darkplaces particles: reimplement quake effects for a cl_particles_quake mode (Mr Fribbles, metlslime)
 -d (QuakeMatt) change darkplaces menu: remove gl_combine from menu as it's not saved to config and really shouldn't be changed except when debugging drivers (QuakeMatt)
 -d (RenegadeC) bug darkplaces prvm: VM_remove does not print a stack trace (RenegadeC)
@@ -526,6 +523,7 @@ d bug darkplaces collision: check Urre's sltest.bsp and slopestuck.dem and fix t
 d bug darkplaces collision: frikbots are falling through the map (Sajt)
 d bug darkplaces commands: say command is not posting to server console (Vermeulen)
 d bug darkplaces compatibility: targetquake does not work, figure out why
+d bug darkplaces console: $* expansion should not include $0 (Black)
 d bug darkplaces console: $variable expansion is not working on forwarded commands like "say I'm $_cl_name", it does work on local commands like set (esteel, Black)
 d bug darkplaces console: alias test "echo 1";test;echo 2 should print 1 then 2, not 2 then 1 or an error (div0, FrikaC)
 d bug darkplaces console: chat messages are showing up in brown quake characters and having ^7 and such printed literally
@@ -570,6 +568,7 @@ d bug darkplaces prvm: the merged remove is causing a Host_Error on already remo
 d bug darkplaces prvm: unknown opcode warnings are missing a \n
 d bug darkplaces quakec: to stop crashing on 64bit the quakec vm needs a string manager that can allocate/free negative integer indices to the strzone strings, and also automatically add engine strings
 d bug darkplaces renderer/server: scaled sprites (or possibly all models) are getting culled as if they were not scaled (KrimZon)
+d bug darkplaces renderer: Morphed's colormapping experiments in nexuiz show a difference in gloss color with GLSL vs dot3 path, http://img494.imageshack.us/img494/8745/nexuiz0000258lf.jpg http://www.nexuiz.com/forums/index.php?showtopic=1531 - and apparently it looks right or wrong depending on view point, suddenly switching (Morphed)
 d bug darkplaces renderer: add r_shadow_glsl_geforcefxlowquality cvar to make make GLSL shaders use "half" data type, automatically set this if on GFFX (MauveBib, SavageX)
 d bug darkplaces renderer: alternate anims are not showing up in wall renderer - they are working for rtlights however (LordHavoc)
 d bug darkplaces renderer: animated textures are not being lit by static rtlights
@@ -645,6 +644,7 @@ d change darkplaces renderer: make r_showtris only affect ingame view
 d change darkplaces renderer: make sprites use skinframe_t instead of their own texture/fogtexture pointers
 d change darkplaces renderer: write rendering functions that take msurface_t * lists and migrate most of renderer to them (LordHavoc)
 d change darkplaces server: make dedicated server not load images (maybe all fail?)
+d change darkplaces: enable deathmatch scoreboard stuff in coop! (Monster)
 d change dpmod: use sv_maxairspeed cvar (engine) rather than sv_airmaxspeed (qc) cvar in playermovement.qc and default.cfg
 d change dpmodel: include the example script in the build zips, not just in the files directory
 d change dpmodel: keep all bones instead of removing unused ones (Ghostface)
