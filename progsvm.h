@@ -547,6 +547,7 @@ qboolean PRVM_ProgLoaded(int prognr);
 
 int	PRVM_GetProgNr(void);
 
+void VM_Warning(const char *fmt, ...);
 
 // TODO: fill in the params
 //void PRVM_Create();
