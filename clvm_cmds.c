@@ -16,10 +16,6 @@
 //4 feature darkplaces csqc: add builtin to clientside qc for reading triangles of model meshes (useful to orient a ui along a triangle of a model mesh)
 //4 feature darkplaces csqc: add builtins to clientside qc for gl calls
 
-#ifndef PF_WARNING
-#define PF_WARNING(s) do{Con_Printf(s);PRVM_PrintState();return;}while(0)
-#endif
-
 //[515]: really need new list ?
 char *vm_cl_extensions =
 "DP_CON_SET "
@@ -145,9 +141,15 @@ void VM_CL_setorigin (void)
 
 	e = PRVM_G_EDICT(OFS_PARM0);
 	if (e == prog->edicts)
-		PF_WARNING("setorigin: can not modify world entity\n");
+	{
+		VM_Warning("setorigin: can not modify world entity\n");
+		return;
+	}
 	if (e->priv.required->free)
-		PF_WARNING("setorigin: can not modify free entity\n");
+	{
+		VM_Warning("setorigin: can not modify free entity\n");
+		return;
+	}
 	org = PRVM_G_VECTOR(OFS_PARM1);
 	VectorCopy (org, e->fields.client->origin);
 }
@@ -196,9 +198,15 @@ void VM_CL_setsize (void)
 
 	e = PRVM_G_EDICT(OFS_PARM0);
 	if (e == prog->edicts)
-		PF_WARNING("setsize: can not modify world entity\n");
+	{
+		VM_Warning("setsize: can not modify world entity\n");
+		return;
+	}
 	if (e->priv.server->free)
-		PF_WARNING("setsize: can not modify free entity\n");
+	{
+		VM_Warning("setsize: can not modify free entity\n");
+		return;
+	}
 	min = PRVM_G_VECTOR(OFS_PARM1);
 	max = PRVM_G_VECTOR(OFS_PARM2);
 
@@ -225,13 +233,22 @@ void VM_CL_sound (void)
 	attenuation = PRVM_G_FLOAT(OFS_PARM4);
 
 	if (volume < 0 || volume > 255)
-		PF_WARNING("VM_CL_sound: volume must be in range 0-1\n");
+	{
+		VM_Warning("VM_CL_sound: volume must be in range 0-1\n");
+		return;
+	}
 
 	if (attenuation < 0 || attenuation > 4)
-		PF_WARNING("VM_CL_sound: attenuation must be in range 0-4\n");
+	{
+		VM_Warning("VM_CL_sound: attenuation must be in range 0-4\n");
+		return;
+	}
 
 	if (channel < 0 || channel > 7)
-		PF_WARNING("VM_CL_sound: channel must be in range 0-7\n");
+	{
+		VM_Warning("VM_CL_sound: channel must be in range 0-7\n");
+		return;
+	}
 
 	S_StartSound(32768 + PRVM_NUM_FOR_EDICT(entity), channel, S_FindName(sample), entity->fields.client->origin, volume, attenuation);
 }
@@ -315,12 +332,15 @@ void VM_CL_precache_model (void)
 			if(!cl.csqc_model_precache[i])
 				break;
 		if(i == MAX_MODELS)
-			PF_WARNING("VM_CL_precache_model: no free models\n");
+		{
+			VM_Warning("VM_CL_precache_model: no free models\n");
+			return;
+		}
 		cl.csqc_model_precache[i] = (model_t*)m;
 		PRVM_G_FLOAT(OFS_RETURN) = -(i+1);
 		return;
 	}
-	Con_Printf("VM_CL_precache_model: model \"%s\" not found\n", name);
+	VM_Warning("VM_CL_precache_model: model \"%s\" not found\n", name);
 }
 
 int CSQC_EntitiesInBox (vec3_t mins, vec3_t maxs, int maxlist, prvm_edict_t **list)
@@ -411,9 +431,15 @@ void VM_CL_droptofloor (void)
 
 	ent = PRVM_PROG_TO_EDICT(prog->globals.client->self);
 	if (ent == prog->edicts)
-		PF_WARNING("droptofloor: can not modify world entity\n");
+	{
+		VM_Warning("droptofloor: can not modify world entity\n");
+		return;
+	}
 	if (ent->priv.server->free)
-		PF_WARNING("droptofloor: can not modify free entity\n");
+	{
+		VM_Warning("droptofloor: can not modify free entity\n");
+		return;
+	}
 
 	VectorCopy (ent->fields.client->origin, end);
 	end[2] -= 256;
@@ -442,7 +468,10 @@ void VM_CL_lightstyle (void)
 	i = (int)PRVM_G_FLOAT(OFS_PARM0);
 	c = PRVM_G_STRING(OFS_PARM1);
 	if (i >= cl.max_lightstyle)
-		PF_WARNING("VM_CL_lightstyle >= MAX_LIGHTSTYLES\n");
+	{
+		VM_Warning("VM_CL_lightstyle >= MAX_LIGHTSTYLES\n");
+		return;
+	}
 	strlcpy (cl.lightstyle[i].map,  MSG_ReadString(), sizeof (cl.lightstyle[i].map));
 	cl.lightstyle[i].map[MAX_STYLESTRING - 1] = 0;
 	cl.lightstyle[i].length = (int)strlen(cl.lightstyle[i].map);
@@ -550,9 +579,15 @@ void VM_CL_changeyaw (void)
 
 	ent = PRVM_G_EDICT(OFS_PARM0);
 	if (ent == prog->edicts)
-		PF_WARNING("changeyaw: can not modify world entity\n");
+	{
+		VM_Warning("changeyaw: can not modify world entity\n");
+		return;
+	}
 	if (ent->priv.server->free)
-		PF_WARNING("changeyaw: can not modify free entity\n");
+	{
+		VM_Warning("changeyaw: can not modify free entity\n");
+		return;
+	}
 	current = ANGLEMOD(ent->fields.client->angles[1]);
 	ideal = PRVM_G_FLOAT(OFS_PARM1);
 	speed = PRVM_G_FLOAT(OFS_PARM2);
@@ -593,9 +628,15 @@ void VM_CL_changepitch (void)
 
 	ent = PRVM_G_EDICT(OFS_PARM0);
 	if (ent == prog->edicts)
-		PF_WARNING("changepitch: can not modify world entity\n");
+	{
+		VM_Warning("changepitch: can not modify world entity\n");
+		return;
+	}
 	if (ent->priv.server->free)
-		PF_WARNING("changepitch: can not modify free entity\n");
+	{
+		VM_Warning("changepitch: can not modify free entity\n");
+		return;
+	}
 	current = ANGLEMOD( ent->fields.client->angles[0] );
 	ideal = PRVM_G_FLOAT(OFS_PARM1);
 	speed = PRVM_G_FLOAT(OFS_PARM2);
@@ -636,7 +677,10 @@ void VM_CL_tracetoss (void)
 
 	ent = PRVM_G_EDICT(OFS_PARM0);
 	if (ent == prog->edicts)
-		PF_WARNING("tracetoss: can not use world entity\n");
+	{
+		VM_Warning("tracetoss: can not use world entity\n");
+		return;
+	}
 	ignore = PRVM_G_EDICT(OFS_PARM1);
 
 //FIXME
@@ -845,8 +889,8 @@ void VM_R_SetView (void)
 	case VF_CL_VIEWANGLES_Z:cl.viewangles[2] = k;
 							break;
 
-	default:				Con_Printf("VM_R_SetView : unknown parm %i\n", c);
-							PRVM_G_FLOAT(OFS_RETURN) = 0;
+	default:				PRVM_G_FLOAT(OFS_RETURN) = 0;
+							VM_Warning("VM_R_SetView : unknown parm %i\n", c);
 							return;
 	}
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
@@ -921,7 +965,7 @@ void VM_CL_getstatf (void)
 	i = (int)PRVM_G_FLOAT(OFS_PARM0);
 	if(i < 0 || i >= MAX_CL_STATS)
 	{
-		Con_Printf("VM_CL_getstatf: index>=MAX_CL_STATS or index<0\n");
+		VM_Warning("VM_CL_getstatf: index>=MAX_CL_STATS or index<0\n");
 		return;
 	}
 	dat.l = cl.stats[i];
@@ -937,7 +981,7 @@ void VM_CL_getstati (void)
 
 	if(index < 0 || index >= MAX_CL_STATS)
 	{
-		Con_Printf("VM_CL_getstati: index>=MAX_CL_STATS or index<0\n");
+		VM_Warning("VM_CL_getstati: index>=MAX_CL_STATS or index<0\n");
 		return;
 	}
 	i = cl.stats[index];
@@ -953,7 +997,7 @@ void VM_CL_getstats (void)
 	i = (int)PRVM_G_FLOAT(OFS_PARM0);
 	if(i < 0 || i > MAX_CL_STATS-4)
 	{
-		Con_Printf("VM_CL_getstats: index>MAX_CL_STATS-4 or index<0\n");
+		VM_Warning("VM_CL_getstats: index>MAX_CL_STATS-4 or index<0\n");
 		return;
 	}
 	t = VM_GetTempString();
@@ -982,16 +1026,25 @@ void VM_CL_setmodelindex (void)
 	{
 		i = -(i+1);
 		if(i >= MAX_MODELS)
-			PF_WARNING("VM_CL_setmodelindex >= MAX_MODELS\n");
+		{
+			VM_Warning("VM_CL_setmodelindex >= MAX_MODELS\n");
+			return;
+		}
 		m = cl.csqc_model_precache[i];
 	}
 	else
 		if(i >= MAX_MODELS)
-			PF_WARNING("VM_CL_setmodelindex >= MAX_MODELS\n");
+		{
+			VM_Warning("VM_CL_setmodelindex >= MAX_MODELS\n");
+			return;
+		}
 		else
 			m = cl.model_precache[i];
 	if(!m)
-		PF_WARNING("VM_CL_setmodelindex: null model\n");
+	{
+		VM_Warning("VM_CL_setmodelindex: null model\n");
+		return;
+	}
 	t->fields.client->model = PRVM_SetEngineString(m->name);
 	t->fields.client->modelindex = i;
 }
@@ -1009,13 +1062,19 @@ void VM_CL_modelnameforindex (void)
 	{
 		i = -(i+1);
 		if(i >= MAX_MODELS)
-			PF_WARNING("VM_CL_modelnameforindex >= MAX_MODELS\n");
+		{
+			VM_Warning("VM_CL_modelnameforindex >= MAX_MODELS\n");
+			return;
+		}
 		if(cl.csqc_model_precache[i])
 			PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(cl.csqc_model_precache[i]->name);
 		return;
 	}
 	if(i >= MAX_MODELS)
-		PF_WARNING("VM_CL_modelnameforindex >= MAX_MODELS\n");
+	{
+		VM_Warning("VM_CL_modelnameforindex >= MAX_MODELS\n");
+		return;
+	}
 	if(cl.model_precache[i])
 		PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(cl.model_precache[i]->name);
 }
@@ -1049,7 +1108,7 @@ void VM_CL_trailparticles (void)
 
 	if (entnum >= MAX_EDICTS)
 	{
-		Con_Printf("CSQC_ParseBeam: invalid entity number %i\n", entnum);
+		VM_Warning("CSQC_ParseBeam: invalid entity number %i\n", entnum);
 		return;
 	}
 	if (entnum >= cl.max_csqcentities)
@@ -1831,9 +1890,15 @@ void VM_CL_setattachment (void)
 	model_t *model;
 
 	if (e == prog->edicts)
-		PF_WARNING("setattachment: can not modify world entity\n");
+	{
+		VM_Warning("setattachment: can not modify world entity\n");
+		return;
+	}
 	if (e->priv.server->free)
-		PF_WARNING("setattachment: can not modify free entity\n");
+	{
+		VM_Warning("setattachment: can not modify free entity\n");
+		return;
+	}
 
 	if (tagentity == NULL)
 		tagentity = prog->edicts;
@@ -2069,9 +2134,15 @@ void VM_CL_gettagindex (void)
 	int modelindex, tag_index;
 
 	if (ent == prog->edicts)
-		PF_WARNING("gettagindex: can't affect world entity\n");
+	{
+		VM_Warning("gettagindex: can't affect world entity\n");
+		return;
+	}
 	if (ent->priv.server->free)
-		PF_WARNING("gettagindex: can't affect free entity\n");
+	{
+		VM_Warning("gettagindex: can't affect free entity\n");
+		return;
+	}
 
 	modelindex = (int)ent->fields.client->modelindex;
 	if(modelindex < 0)
@@ -2102,10 +2173,10 @@ void VM_CL_gettaginfo (void)
 	switch(returncode)
 	{
 		case 1:
-			PF_WARNING("gettagindex: can't affect world entity\n");
+			VM_Warning("gettagindex: can't affect world entity\n");
 			break;
 		case 2:
-			PF_WARNING("gettagindex: can't affect free entity\n");
+			VM_Warning("gettagindex: can't affect free entity\n");
 			break;
 		case 3:
 			Con_DPrintf("CL_GetTagMatrix(entity #%i): null or non-precached model\n", PRVM_NUM_FOR_EDICT(e));
@@ -2275,7 +2346,7 @@ void VM_CL_selecttraceline (void)
 
 	if((csqcents && ignore > cl.num_csqcentities) || (!csqcents && ignore > cl.num_entities))
 	{
-		Con_Printf("VM_CL_selecttraceline: out of entities\n");
+		VM_Warning("VM_CL_selecttraceline: out of entities\n");
 		return;
 	}
 	else

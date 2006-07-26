@@ -51,7 +51,10 @@ void VM_M_precache_sound (void)
 	VM_CheckEmptyString (s);
 
 	if(snd_initialized.integer && !S_PrecacheSound (s,true, true))
-		Con_Printf("VM_precache_sound: Failed to load %s for %s\n", s, PRVM_NAME);
+	{
+		VM_Warning("VM_precache_sound: Failed to load %s for %s\n", s, PRVM_NAME);
+		return;
+	}
 }
 
 /*
@@ -247,14 +250,16 @@ void VM_M_writetofile(void)
 	VM_SAFEPARMCOUNT(2, VM_M_writetofile);
 
 	file = VM_GetFileHandle( (int)PRVM_G_FLOAT(OFS_PARM0) );
-	if( !file ) {
+	if( !file )
+	{
+		VM_Warning("VM_M_writetofile: invalid or closed file handle\n");
 		return;
 	}
 
 	ent = PRVM_G_EDICT(OFS_PARM1);
 	if(ent->priv.required->free)
 	{
-		Con_Printf("VM_M_writetofile: %s: entity %i is free !\n", PRVM_NAME, PRVM_EDICT_NUM(OFS_PARM1));
+		VM_Warning("VM_M_writetofile: %s: entity %i is free !\n", PRVM_NAME, PRVM_EDICT_NUM(OFS_PARM1));
 		return;
 	}
 
@@ -369,7 +374,7 @@ void VM_M_getserverliststat( void )
 		PRVM_G_FLOAT ( OFS_RETURN ) = serverlist_sortdescending;
 		return;
 	default:
-		Con_Printf( "VM_M_getserverliststat: bad type %i!\n", type );
+		VM_Warning( "VM_M_getserverliststat: bad type %i!\n", type );
 	}
 }
 
@@ -412,8 +417,9 @@ void VM_M_setserverlistmaskstring( void )
 		mask = &serverlist_andmasks[masknr];
 	else if( masknr >= 512 && masknr - 512 <= SERVERLIST_ORMASKCOUNT )
 		mask = &serverlist_ormasks[masknr - 512 ];
-	else {
-		Con_Printf( "VM_M_setserverlistmaskstring: invalid mask number %i\n", masknr );
+	else
+	{
+		VM_Warning( "VM_M_setserverlistmaskstring: invalid mask number %i\n", masknr );
 		return;
 	}
 
@@ -436,7 +442,7 @@ void VM_M_setserverlistmaskstring( void )
 			strncpy( mask->info.game, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.game)  );
 			break;
 		default:
-			Con_Printf( "VM_M_setserverlistmaskstring: Bad field number %i passed!\n", field );
+			VM_Warning( "VM_M_setserverlistmaskstring: Bad field number %i passed!\n", field );
 			return;
 	}
 
@@ -467,8 +473,9 @@ void VM_M_setserverlistmasknumber( void )
 		mask = &serverlist_andmasks[masknr];
 	else if( masknr >= 512 && masknr - 512 <= SERVERLIST_ORMASKCOUNT )
 		mask = &serverlist_ormasks[masknr - 512 ];
-	else {
-		Con_Printf( "VM_M_setserverlistmasknumber: invalid mask number %i\n", masknr );
+	else
+	{
+		VM_Warning( "VM_M_setserverlistmasknumber: invalid mask number %i\n", masknr );
 		return;
 	}
 
@@ -489,7 +496,7 @@ void VM_M_setserverlistmasknumber( void )
 			mask->info.protocol = number;
 			break;
 		default:
-			Con_Printf( "VM_M_setserverlistmasknumber: Bad field number %i passed!\n", field );
+			VM_Warning( "VM_M_setserverlistmasknumber: Bad field number %i passed!\n", field );
 			return;
 	}
 

@@ -3,7 +3,6 @@
 //============================================================================
 // Server
 
-#define PF_WARNING(s) do{Con_Printf(s);PRVM_PrintState();return;}while(0)
 cvar_t sv_aim = {CVAR_SAVE, "sv_aim", "2", "maximum cosine angle for quake's vertical autoaim, a value above 1 completely disables the autoaim, quake used 0.93"}; //"0.93"}; // LordHavoc: disabled autoaim by default
 
 
@@ -156,9 +155,15 @@ void PF_setorigin (void)
 
 	e = PRVM_G_EDICT(OFS_PARM0);
 	if (e == prog->edicts)
-		PF_WARNING("setorigin: can not modify world entity\n");
+	{
+		VM_Warning("setorigin: can not modify world entity\n");
+		return;
+	}
 	if (e->priv.server->free)
-		PF_WARNING("setorigin: can not modify free entity\n");
+	{
+		VM_Warning("setorigin: can not modify free entity\n");
+		return;
+	}
 	org = PRVM_G_VECTOR(OFS_PARM1);
 	VectorCopy (org, e->fields.server->origin);
 	SV_LinkEdict (e, false);
@@ -198,9 +203,15 @@ void PF_setsize (void)
 
 	e = PRVM_G_EDICT(OFS_PARM0);
 	if (e == prog->edicts)
-		PF_WARNING("setsize: can not modify world entity\n");
+	{
+		VM_Warning("setsize: can not modify world entity\n");
+		return;
+	}
 	if (e->priv.server->free)
-		PF_WARNING("setsize: can not modify free entity\n");
+	{
+		VM_Warning("setsize: can not modify free entity\n");
+		return;
+	}
 	min = PRVM_G_VECTOR(OFS_PARM1);
 	max = PRVM_G_VECTOR(OFS_PARM2);
 	SetMinMaxSize (e, min, max, false);
@@ -223,9 +234,15 @@ void PF_setmodel (void)
 
 	e = PRVM_G_EDICT(OFS_PARM0);
 	if (e == prog->edicts)
-		PF_WARNING("setmodel: can not modify world entity\n");
+	{
+		VM_Warning("setmodel: can not modify world entity\n");
+		return;
+	}
 	if (e->priv.server->free)
-		PF_WARNING("setmodel: can not modify free entity\n");
+	{
+		VM_Warning("setmodel: can not modify free entity\n");
+		return;
+	}
 	i = SV_ModelIndex(PRVM_G_STRING(OFS_PARM1), 1);
 	e->fields.server->model = PRVM_SetEngineString(sv.model_precache[i]);
 	e->fields.server->modelindex = i;
@@ -261,7 +278,10 @@ void PF_sprint (void)
 	entnum = PRVM_G_EDICTNUM(OFS_PARM0);
 
 	if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active)
-		PF_WARNING("tried to centerprint to a non-client\n");
+	{
+		VM_Warning("tried to centerprint to a non-client\n");
+		return;
+	}
 
 	client = svs.clients + entnum-1;
 	if (!client->netconnection)
@@ -291,7 +311,10 @@ void PF_centerprint (void)
 	entnum = PRVM_G_EDICTNUM(OFS_PARM0);
 
 	if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active)
-		PF_WARNING("tried to centerprint to a non-client\n");
+	{
+		VM_Warning("tried to centerprint to a non-client\n");
+		return;
+	}
 
 	client = svs.clients + entnum-1;
 	if (!client->netconnection)
@@ -399,13 +422,22 @@ void PF_sound (void)
 	attenuation = PRVM_G_FLOAT(OFS_PARM4);
 
 	if (volume < 0 || volume > 255)
-		PF_WARNING("SV_StartSound: volume must be in range 0-1\n");
+	{
+		VM_Warning("SV_StartSound: volume must be in range 0-1\n");
+		return;
+	}
 
 	if (attenuation < 0 || attenuation > 4)
-		PF_WARNING("SV_StartSound: attenuation must be in range 0-4\n");
+	{
+		VM_Warning("SV_StartSound: attenuation must be in range 0-4\n");
+		return;
+	}
 
 	if (channel < 0 || channel > 7)
-		PF_WARNING("SV_StartSound: channel must be in range 0-7\n");
+	{
+		VM_Warning("SV_StartSound: channel must be in range 0-7\n");
+		return;
+	}
 
 	SV_StartSound (entity, channel, sample, volume, attenuation);
 }
@@ -550,7 +582,10 @@ void PF_tracetoss (void)
 
 	ent = PRVM_G_EDICT(OFS_PARM0);
 	if (ent == prog->edicts)
-		PF_WARNING("tracetoss: can not use world entity\n");
+	{
+		VM_Warning("tracetoss: can not use world entity\n");
+		return;
+	}
 	ignore = PRVM_G_EDICT(OFS_PARM1);
 
 	trace = SV_Trace_Toss (ent, ignore);
@@ -716,7 +751,10 @@ void PF_stuffcmd (void)
 
 	entnum = PRVM_G_EDICTNUM(OFS_PARM0);
 	if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active)
-		PF_WARNING("Can't stuffcmd to a non-client\n");
+	{
+		VM_Warning("Can't stuffcmd to a non-client\n");
+		return;
+	}
 
 	VM_VarString(1, string, sizeof(string));
 
@@ -831,9 +869,15 @@ void PF_walkmove (void)
 
 	ent = PRVM_PROG_TO_EDICT(prog->globals.server->self);
 	if (ent == prog->edicts)
-		PF_WARNING("walkmove: can not modify world entity\n");
+	{
+		VM_Warning("walkmove: can not modify world entity\n");
+		return;
+	}
 	if (ent->priv.server->free)
-		PF_WARNING("walkmove: can not modify free entity\n");
+	{
+		VM_Warning("walkmove: can not modify free entity\n");
+		return;
+	}
 	yaw = PRVM_G_FLOAT(OFS_PARM0);
 	dist = PRVM_G_FLOAT(OFS_PARM1);
 
@@ -876,9 +920,15 @@ void PF_droptofloor (void)
 
 	ent = PRVM_PROG_TO_EDICT(prog->globals.server->self);
 	if (ent == prog->edicts)
-		PF_WARNING("droptofloor: can not modify world entity\n");
+	{
+		VM_Warning("droptofloor: can not modify world entity\n");
+		return;
+	}
 	if (ent->priv.server->free)
-		PF_WARNING("droptofloor: can not modify free entity\n");
+	{
+		VM_Warning("droptofloor: can not modify free entity\n");
+		return;
+	}
 
 	VectorCopy (ent->fields.server->origin, end);
 	end[2] -= 256;
@@ -981,9 +1031,15 @@ void PF_aim (void)
 
 	ent = PRVM_G_EDICT(OFS_PARM0);
 	if (ent == prog->edicts)
-		PF_WARNING("aim: can not use world entity\n");
+	{
+		VM_Warning("aim: can not use world entity\n");
+		return;
+	}
 	if (ent->priv.server->free)
-		PF_WARNING("aim: can not use free entity\n");
+	{
+		VM_Warning("aim: can not use free entity\n");
+		return;
+	}
 	speed = PRVM_G_FLOAT(OFS_PARM1);
 
 	VectorCopy (ent->fields.server->origin, start);
@@ -1061,9 +1117,15 @@ void PF_changeyaw (void)
 
 	ent = PRVM_PROG_TO_EDICT(prog->globals.server->self);
 	if (ent == prog->edicts)
-		PF_WARNING("changeyaw: can not modify world entity\n");
+	{
+		VM_Warning("changeyaw: can not modify world entity\n");
+		return;
+	}
 	if (ent->priv.server->free)
-		PF_WARNING("changeyaw: can not modify free entity\n");
+	{
+		VM_Warning("changeyaw: can not modify free entity\n");
+		return;
+	}
 	current = ANGLEMOD(ent->fields.server->angles[1]);
 	ideal = ent->fields.server->ideal_yaw;
 	speed = ent->fields.server->yaw_speed;
@@ -1108,22 +1170,28 @@ void PF_changepitch (void)
 
 	ent = PRVM_G_EDICT(OFS_PARM0);
 	if (ent == prog->edicts)
-		PF_WARNING("changepitch: can not modify world entity\n");
+	{
+		VM_Warning("changepitch: can not modify world entity\n");
+		return;
+	}
 	if (ent->priv.server->free)
-		PF_WARNING("changepitch: can not modify free entity\n");
+	{
+		VM_Warning("changepitch: can not modify free entity\n");
+		return;
+	}
 	current = ANGLEMOD( ent->fields.server->angles[0] );
 	if ((val = PRVM_GETEDICTFIELDVALUE(ent, eval_idealpitch)))
 		ideal = val->_float;
 	else
 	{
-		PF_WARNING("PF_changepitch: .float idealpitch and .float pitch_speed must be defined to use changepitch\n");
+		VM_Warning("PF_changepitch: .float idealpitch and .float pitch_speed must be defined to use changepitch\n");
 		return;
 	}
 	if ((val = PRVM_GETEDICTFIELDVALUE(ent, eval_pitch_speed)))
 		speed = val->_float;
 	else
 	{
-		PF_WARNING("PF_changepitch: .float idealpitch and .float pitch_speed must be defined to use changepitch\n");
+		VM_Warning("PF_changepitch: .float idealpitch and .float pitch_speed must be defined to use changepitch\n");
 		return;
 	}
 
@@ -1186,14 +1254,14 @@ sizebuf_t *WriteDest (void)
 		entnum = PRVM_NUM_FOR_EDICT(ent);
 		if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active || !svs.clients[entnum-1].netconnection)
 		{
-			Con_Printf ("WriteDest: tried to write to non-client\n");
+			Con_Printf ("WriteDest: tried to write to non-client\n");PRVM_PrintState();
 			return &sv.reliable_datagram;
 		}
 		else
 			return &svs.clients[entnum-1].netconnection->message;
 
 	default:
-		Con_Printf ("WriteDest: bad destination\n");
+		Con_Printf ("WriteDest: bad destination\n");PRVM_PrintState();
 	case MSG_ALL:
 		return &sv.reliable_datagram;
 
@@ -1262,9 +1330,15 @@ void PF_makestatic (void)
 
 	ent = PRVM_G_EDICT(OFS_PARM0);
 	if (ent == prog->edicts)
-		PF_WARNING("makestatic: can not modify world entity\n");
+	{
+		VM_Warning("makestatic: can not modify world entity\n");
+		return;
+	}
 	if (ent->priv.server->free)
-		PF_WARNING("makestatic: can not modify free entity\n");
+	{
+		VM_Warning("makestatic: can not modify free entity\n");
+		return;
+	}
 
 	large = false;
 	if (ent->fields.server->modelindex >= 256 || ent->fields.server->frame >= 256)
@@ -1361,7 +1435,7 @@ void PF_registercvar (void)
 // check for overlap with a command
 	if (Cmd_Exists (name))
 	{
-		Con_Printf("PF_registercvar: %s is a command\n", name);
+		VM_Warning("PF_registercvar: %s is a command\n", name);
 		return;
 	}
 
@@ -1494,7 +1568,7 @@ void PF_SV_AddStat (void)
 		vm_autosentstats = (autosentstat_t *)Z_Malloc((MAX_CL_STATS-32) * sizeof(autosentstat_t));
 		if(!vm_autosentstats)
 		{
-			Con_Printf("PF_SV_AddStat: not enough memory\n");
+			VM_Warning("PF_SV_AddStat: not enough memory\n");
 			return;
 		}
 	}
@@ -1505,17 +1579,17 @@ void PF_SV_AddStat (void)
 
 	if(i < 0)
 	{
-		Con_Printf("PF_SV_AddStat: index may not be less than 32\n");
+		VM_Warning("PF_SV_AddStat: index may not be less than 32\n");
 		return;
 	}
 	if(i >= (MAX_CL_STATS-32))
 	{
-		Con_Printf("PF_SV_AddStat: index >= MAX_CL_STATS\n");
+		VM_Warning("PF_SV_AddStat: index >= MAX_CL_STATS\n");
 		return;
 	}
 	if(i > (MAX_CL_STATS-32-4) && type == 1)
 	{
-		Con_Printf("PF_SV_AddStat: index > (MAX_CL_STATS-4) with string\n");
+		VM_Warning("PF_SV_AddStat: index > (MAX_CL_STATS-4) with string\n");
 		return;
 	}
 	vm_autosentstats[i].type		= type;
@@ -1538,14 +1612,26 @@ void PF_copyentity (void)
 	prvm_edict_t *in, *out;
 	in = PRVM_G_EDICT(OFS_PARM0);
 	if (in == prog->edicts)
-		PF_WARNING("copyentity: can not read world entity\n");
+	{
+		VM_Warning("copyentity: can not read world entity\n");
+		return;
+	}
 	if (in->priv.server->free)
-		PF_WARNING("copyentity: can not read free entity\n");
+	{
+		VM_Warning("copyentity: can not read free entity\n");
+		return;
+	}
 	out = PRVM_G_EDICT(OFS_PARM1);
 	if (out == prog->edicts)
-		PF_WARNING("copyentity: can not modify world entity\n");
+	{
+		VM_Warning("copyentity: can not modify world entity\n");
+		return;
+	}
 	if (out->priv.server->free)
-		PF_WARNING("copyentity: can not modify free entity\n");
+	{
+		VM_Warning("copyentity: can not modify free entity\n");
+		return;
+	}
 	memcpy(out->fields.server, in->fields.server, prog->progs->entityfields * 4);
 }
 
@@ -1605,11 +1691,17 @@ void PF_effect (void)
 	const char *s;
 	s = PRVM_G_STRING(OFS_PARM1);
 	if (!s || !s[0])
-		PF_WARNING("effect: no model specified\n");
+	{
+		VM_Warning("effect: no model specified\n");
+		return;
+	}
 
 	i = SV_ModelIndex(s, 1);
 	if (!i)
-		PF_WARNING("effect: model not precached\n");
+	{
+		VM_Warning("effect: model not precached\n");
+		return;
+	}
 	SV_StartEffect(PRVM_G_VECTOR(OFS_PARM0), i, (int)PRVM_G_FLOAT(OFS_PARM2), (int)PRVM_G_FLOAT(OFS_PARM3), (int)PRVM_G_FLOAT(OFS_PARM4));
 }
 
@@ -2234,9 +2326,15 @@ void PF_setattachment (void)
 	model_t *model;
 
 	if (e == prog->edicts)
-		PF_WARNING("setattachment: can not modify world entity\n");
+	{
+		VM_Warning("setattachment: can not modify world entity\n");
+		return;
+	}
 	if (e->priv.server->free)
-		PF_WARNING("setattachment: can not modify free entity\n");
+	{
+		VM_Warning("setattachment: can not modify free entity\n");
+		return;
+	}
 
 	if (tagentity == NULL)
 		tagentity = prog->edicts;
@@ -2410,9 +2508,15 @@ void PF_gettagindex (void)
 	int modelindex, tag_index;
 
 	if (ent == prog->edicts)
-		PF_WARNING("gettagindex: can't affect world entity\n");
+	{
+		VM_Warning("gettagindex: can't affect world entity\n");
+		return;
+	}
 	if (ent->priv.server->free)
-		PF_WARNING("gettagindex: can't affect free entity\n");
+	{
+		VM_Warning("gettagindex: can't affect free entity\n");
+		return;
+	}
 
 	modelindex = (int)ent->fields.server->modelindex;
 	tag_index = 0;
@@ -2441,10 +2545,10 @@ void PF_gettaginfo (void)
 	switch(returncode)
 	{
 		case 1:
-			PF_WARNING("gettagindex: can't affect world entity\n");
+			VM_Warning("gettagindex: can't affect world entity\n");
 			break;
 		case 2:
-			PF_WARNING("gettagindex: can't affect free entity\n");
+			VM_Warning("gettagindex: can't affect free entity\n");
 			break;
 		case 3:
 			Con_DPrintf("SV_GetTagMatrix(entity #%i): null or non-precached model\n", PRVM_NUM_FOR_EDICT(e));
@@ -2465,9 +2569,15 @@ void PF_dropclient (void)
 	client_t *oldhostclient;
 	clientnum = PRVM_G_EDICTNUM(OFS_PARM0) - 1;
 	if (clientnum < 0 || clientnum >= svs.maxclients)
-		PF_WARNING("dropclient: not a client\n");
+	{
+		VM_Warning("dropclient: not a client\n");
+		return;
+	}
 	if (!svs.clients[clientnum].active)
-		PF_WARNING("dropclient: that client slot is not connected\n");
+	{
+		VM_Warning("dropclient: that client slot is not connected\n");
+		return;
+	}
 	oldhostclient = host_client;
 	host_client = svs.clients + clientnum;
 	SV_DropClient(false);

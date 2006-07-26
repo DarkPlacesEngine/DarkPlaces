@@ -6,6 +6,21 @@
 
 #include "prvm_cmds.h"
 
+// LordHavoc: changed this to NOT use a return statement, so that it can be used in functions that must return a value
+void VM_Warning(const char *fmt, ...)
+{
+	va_list argptr;
+	char msg[MAX_INPUTLINE];
+
+	va_start(argptr,fmt);
+	dpvsnprintf(msg,sizeof(msg),fmt,argptr);
+	va_end(argptr);
+
+	Con_Print(msg);
+	PRVM_PrintState();
+}
+
+
 //============================================================================
 // Common
 
@@ -123,7 +138,7 @@ void VM_error (void)
 		PRVM_ED_Print(ed);
 	}
 
-	PRVM_ERROR ("%s: Program error in function %s:\n%s\n", PRVM_NAME, PRVM_GetString(prog->xfunction->s_name), string);
+	PRVM_ERROR ("%s: Program error in function %s:\n%s\nTip: read above for entity information\n", PRVM_NAME, PRVM_GetString(prog->xfunction->s_name), string);
 }
 
 /*
@@ -153,7 +168,7 @@ void VM_objerror (void)
 	else
 		// objerror has to display the object fields -> else call
 		PRVM_ERROR ("VM_objecterror: self not defined !");
-	Con_Printf("%s OBJECT ERROR in %s:\n%s\n", PRVM_NAME, PRVM_GetString(prog->xfunction->s_name), string);
+	Con_Printf("%s OBJECT ERROR in %s:\n%s\nTip: read above for entity information\n", PRVM_NAME, PRVM_GetString(prog->xfunction->s_name), string);
 }
 
 /*
@@ -188,7 +203,7 @@ void VM_bprint (void)
 
 	if(!sv.active)
 	{
-		Con_Printf("VM_bprint: game is not server(%s) !\n", PRVM_NAME);
+		VM_Warning("VM_bprint: game is not server(%s) !\n", PRVM_NAME);
 		return;
 	}
 
@@ -215,7 +230,7 @@ void VM_sprint (void)
 	clientnum = (int)PRVM_G_FLOAT(OFS_PARM0);
 	if (!sv.active  || clientnum < 0 || clientnum >= svs.maxclients || !svs.clients[clientnum].active)
 	{
-		Con_Printf("VM_sprint: %s: invalid client or server is not active !\n", PRVM_NAME);
+		VM_Warning("VM_sprint: %s: invalid client or server is not active !\n", PRVM_NAME);
 		return;
 	}
 
@@ -442,8 +457,8 @@ void VM_localsound(void)
 
 	if(!S_LocalSound (s))
 	{
-		Con_Printf("VM_localsound: Failed to play %s for %s !\n", s, PRVM_NAME);
 		PRVM_G_FLOAT(OFS_RETURN) = -4;
+		VM_Warning("VM_localsound: Failed to play %s for %s !\n", s, PRVM_NAME);
 		return;
 	}
 
@@ -1226,7 +1241,7 @@ void VM_changelevel (void)
 
 	if(!sv.active)
 	{
-		Con_Printf("VM_changelevel: game is not server (%s)\n", PRVM_NAME);
+		VM_Warning("VM_changelevel: game is not server (%s)\n", PRVM_NAME);
 		return;
 	}
 
@@ -1344,7 +1359,7 @@ void VM_registercvar (void)
 // check for overlap with a command
 	if (Cmd_Exists (name))
 	{
-		Con_Printf("VM_registercvar: %s is a command\n", name);
+		VM_Warning("VM_registercvar: %s is a command\n", name);
 		return;
 	}
 
@@ -1545,8 +1560,8 @@ void VM_fopen(void)
 			break;
 	if (filenum >= MAX_VMFILES)
 	{
-		Con_Printf("VM_fopen: %s ran out of file handles (%i)\n", PRVM_NAME, MAX_VMFILES);
 		PRVM_G_FLOAT(OFS_RETURN) = -2;
+		VM_Warning("VM_fopen: %s ran out of file handles (%i)\n", PRVM_NAME, MAX_VMFILES);
 		return;
 	}
 	mode = (int)PRVM_G_FLOAT(OFS_PARM1);
@@ -1562,8 +1577,8 @@ void VM_fopen(void)
 		modestring = "wb";
 		break;
 	default:
-		Con_Printf("VM_fopen: %s: no such mode %i (valid: 0 = read, 1 = append, 2 = write)\n", PRVM_NAME, mode);
 		PRVM_G_FLOAT(OFS_RETURN) = -3;
+		VM_Warning("VM_fopen: %s: no such mode %i (valid: 0 = read, 1 = append, 2 = write)\n", PRVM_NAME, mode);
 		return;
 	}
 	filename = PRVM_G_STRING(OFS_PARM0);
@@ -1574,15 +1589,15 @@ void VM_fopen(void)
 
 	if (VM_FILES[filenum] == NULL)
 	{
-		if (developer.integer >= 10)
-			Con_Printf("VM_fopen: %s: %s mode %s failed\n", PRVM_NAME, filename, modestring);
 		PRVM_G_FLOAT(OFS_RETURN) = -1;
+		if (developer.integer >= 10)
+			VM_Warning("VM_fopen: %s: %s mode %s failed\n", PRVM_NAME, filename, modestring);
 	}
 	else
 	{
-		if (developer.integer >= 10)
-			Con_Printf("VM_fopen: %s: %s mode %s opened as #%i\n", PRVM_NAME, filename, modestring, filenum);
 		PRVM_G_FLOAT(OFS_RETURN) = filenum;
+		if (developer.integer >= 10)
+			VM_Warning("VM_fopen: %s: %s mode %s opened as #%i\n", PRVM_NAME, filename, modestring, filenum);
 	}
 }
 
@@ -1603,18 +1618,18 @@ void VM_fclose(void)
 	filenum = (int)PRVM_G_FLOAT(OFS_PARM0);
 	if (filenum < 0 || filenum >= MAX_VMFILES)
 	{
-		Con_Printf("VM_fclose: invalid file handle %i used in %s\n", filenum, PRVM_NAME);
+		VM_Warning("VM_fclose: invalid file handle %i used in %s\n", filenum, PRVM_NAME);
 		return;
 	}
 	if (VM_FILES[filenum] == NULL)
 	{
-		Con_Printf("VM_fclose: no such file handle %i (or file has been closed) in %s\n", filenum, PRVM_NAME);
+		VM_Warning("VM_fclose: no such file handle %i (or file has been closed) in %s\n", filenum, PRVM_NAME);
 		return;
 	}
-	if (developer.integer >= 10)
-		Con_Printf("VM_fclose: %s: #%i closed\n", PRVM_NAME, filenum);
 	FS_Close(VM_FILES[filenum]);
 	VM_FILES[filenum] = NULL;
+	if (developer.integer >= 10)
+		VM_Warning("VM_fclose: %s: #%i closed\n", PRVM_NAME, filenum);
 }
 
 /*
@@ -1636,12 +1651,12 @@ void VM_fgets(void)
 	filenum = (int)PRVM_G_FLOAT(OFS_PARM0);
 	if (filenum < 0 || filenum >= MAX_VMFILES)
 	{
-		Con_Printf("VM_fgets: invalid file handle %i used in %s\n", filenum, PRVM_NAME);
+		VM_Warning("VM_fgets: invalid file handle %i used in %s\n", filenum, PRVM_NAME);
 		return;
 	}
 	if (VM_FILES[filenum] == NULL)
 	{
-		Con_Printf("VM_fgets: no such file handle %i (or file has been closed) in %s\n", filenum, PRVM_NAME);
+		VM_Warning("VM_fgets: no such file handle %i (or file has been closed) in %s\n", filenum, PRVM_NAME);
 		return;
 	}
 	end = 0;
@@ -1688,12 +1703,12 @@ void VM_fputs(void)
 	filenum = (int)PRVM_G_FLOAT(OFS_PARM0);
 	if (filenum < 0 || filenum >= MAX_VMFILES)
 	{
-		Con_Printf("VM_fputs: invalid file handle %i used in %s\n", filenum, PRVM_NAME);
+		VM_Warning("VM_fputs: invalid file handle %i used in %s\n", filenum, PRVM_NAME);
 		return;
 	}
 	if (VM_FILES[filenum] == NULL)
 	{
-		Con_Printf("VM_fputs: no such file handle %i (or file has been closed) in %s\n", filenum, PRVM_NAME);
+		VM_Warning("VM_fputs: no such file handle %i (or file has been closed) in %s\n", filenum, PRVM_NAME);
 		return;
 	}
 	VM_VarString(1, string, sizeof(string));
@@ -1847,7 +1862,7 @@ void VM_clcommand (void)
 	i = (int)PRVM_G_FLOAT(OFS_PARM0);
 	if (!sv.active  || i < 0 || i >= svs.maxclients || !svs.clients[i].active)
 	{
-		Con_Printf("VM_clientcommand: %s: invalid client/server is not active !\n", PRVM_NAME);
+		VM_Warning("VM_clientcommand: %s: invalid client/server is not active !\n", PRVM_NAME);
 		return;
 	}
 
@@ -2117,8 +2132,8 @@ void VM_loadfromfile(void)
 	// \ is a windows-ism (so it's naughty to use it, / works on all platforms)
 	if ((filename[0] == '.' && filename[1] == '.') || filename[0] == '/' || strrchr(filename, ':') || strrchr(filename, '\\'))
 	{
-		Con_Printf("VM_loadfromfile: %s dangerous or non-portable filename \"%s\" not allowed. (contains : or \\ or begins with .. or /)\n", PRVM_NAME, filename);
 		PRVM_G_FLOAT(OFS_RETURN) = -4;
+		VM_Warning("VM_loadfromfile: %s dangerous or non-portable filename \"%s\" not allowed. (contains : or \\ or begins with .. or /)\n", PRVM_NAME, filename);
 		return;
 	}
 
@@ -2195,8 +2210,8 @@ void VM_search_begin(void)
 
 	if(handle >= MAX_VMSEARCHES)
 	{
-		Con_Printf("VM_search_begin: %s ran out of search handles (%i)\n", PRVM_NAME, MAX_VMSEARCHES);
 		PRVM_G_FLOAT(OFS_RETURN) = -2;
+		VM_Warning("VM_search_begin: %s ran out of search handles (%i)\n", PRVM_NAME, MAX_VMSEARCHES);
 		return;
 	}
 
@@ -2222,12 +2237,12 @@ void VM_search_end(void)
 
 	if(handle < 0 || handle >= MAX_VMSEARCHES)
 	{
-		Con_Printf("VM_search_end: invalid handle %i used in %s\n", handle, PRVM_NAME);
+		VM_Warning("VM_search_end: invalid handle %i used in %s\n", handle, PRVM_NAME);
 		return;
 	}
 	if(VM_SEARCHLIST[handle] == NULL)
 	{
-		Con_Printf("VM_search_end: no such handle %i in %s\n", handle, PRVM_NAME);
+		VM_Warning("VM_search_end: no such handle %i in %s\n", handle, PRVM_NAME);
 		return;
 	}
 
@@ -2251,12 +2266,12 @@ void VM_search_getsize(void)
 
 	if(handle < 0 || handle >= MAX_VMSEARCHES)
 	{
-		Con_Printf("VM_search_getsize: invalid handle %i used in %s\n", handle, PRVM_NAME);
+		VM_Warning("VM_search_getsize: invalid handle %i used in %s\n", handle, PRVM_NAME);
 		return;
 	}
 	if(VM_SEARCHLIST[handle] == NULL)
 	{
-		Con_Printf("VM_search_getsize: no such handle %i in %s\n", handle, PRVM_NAME);
+		VM_Warning("VM_search_getsize: no such handle %i in %s\n", handle, PRVM_NAME);
 		return;
 	}
 
@@ -2281,17 +2296,17 @@ void VM_search_getfilename(void)
 
 	if(handle < 0 || handle >= MAX_VMSEARCHES)
 	{
-		Con_Printf("VM_search_getfilename: invalid handle %i used in %s\n", handle, PRVM_NAME);
+		VM_Warning("VM_search_getfilename: invalid handle %i used in %s\n", handle, PRVM_NAME);
 		return;
 	}
 	if(VM_SEARCHLIST[handle] == NULL)
 	{
-		Con_Printf("VM_search_getfilename: no such handle %i in %s\n", handle, PRVM_NAME);
+		VM_Warning("VM_search_getfilename: no such handle %i in %s\n", handle, PRVM_NAME);
 		return;
 	}
 	if(filenum < 0 || filenum >= VM_SEARCHLIST[handle]->numfilenames)
 	{
-		Con_Printf("VM_search_getfilename: invalid filenum %i in %s\n", filenum, PRVM_NAME);
+		VM_Warning("VM_search_getfilename: invalid filenum %i in %s\n", filenum, PRVM_NAME);
 		return;
 	}
 
@@ -2404,8 +2419,8 @@ void VM_drawcharacter(void)
 	character = (char) PRVM_G_FLOAT(OFS_PARM1);
 	if(character == 0)
 	{
-		Con_Printf("VM_drawcharacter: %s passed null character !\n",PRVM_NAME);
 		PRVM_G_FLOAT(OFS_RETURN) = -1;
+		VM_Warning("VM_drawcharacter: %s passed null character !\n",PRVM_NAME);
 		return;
 	}
 
@@ -2416,8 +2431,8 @@ void VM_drawcharacter(void)
 
 	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
 	{
-		Con_Printf("VM_drawcharacter: %s: wrong DRAWFLAG %i !\n",PRVM_NAME,flag);
 		PRVM_G_FLOAT(OFS_RETURN) = -2;
+		VM_Warning("VM_drawcharacter: %s: wrong DRAWFLAG %i !\n",PRVM_NAME,flag);
 		return;
 	}
 
@@ -2426,8 +2441,8 @@ void VM_drawcharacter(void)
 
 	if(!scale[0] || !scale[1])
 	{
-		Con_Printf("VM_drawcharacter: scale %s is null !\n", (scale[0] == 0) ? ((scale[1] == 0) ? "x and y" : "x") : "y");
 		PRVM_G_FLOAT(OFS_RETURN) = -3;
+		VM_Warning("VM_drawcharacter: scale %s is null !\n", (scale[0] == 0) ? ((scale[1] == 0) ? "x and y" : "x") : "y");
 		return;
 	}
 
@@ -2452,8 +2467,8 @@ void VM_drawstring(void)
 	string = PRVM_G_STRING(OFS_PARM1);
 	if(!string)
 	{
-		Con_Printf("VM_drawstring: %s passed null string !\n",PRVM_NAME);
 		PRVM_G_FLOAT(OFS_RETURN) = -1;
+		VM_Warning("VM_drawstring: %s passed null string !\n",PRVM_NAME);
 		return;
 	}
 
@@ -2466,15 +2481,15 @@ void VM_drawstring(void)
 
 	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
 	{
-		Con_Printf("VM_drawstring: %s: wrong DRAWFLAG %i !\n",PRVM_NAME,flag);
 		PRVM_G_FLOAT(OFS_RETURN) = -2;
+		VM_Warning("VM_drawstring: %s: wrong DRAWFLAG %i !\n",PRVM_NAME,flag);
 		return;
 	}
 
 	if(!scale[0] || !scale[1])
 	{
-		Con_Printf("VM_drawstring: scale %s is null !\n", (scale[0] == 0) ? ((scale[1] == 0) ? "x and y" : "x") : "y");
 		PRVM_G_FLOAT(OFS_RETURN) = -3;
+		VM_Warning("VM_drawstring: scale %s is null !\n", (scale[0] == 0) ? ((scale[1] == 0) ? "x and y" : "x") : "y");
 		return;
 	}
 
@@ -2503,8 +2518,8 @@ void VM_drawpic(void)
 
 	if(!picname)
 	{
-		Con_Printf("VM_drawpic: %s passed null picture name !\n", PRVM_NAME);
 		PRVM_G_FLOAT(OFS_RETURN) = -1;
+		VM_Warning("VM_drawpic: %s passed null picture name !\n", PRVM_NAME);
 		return;
 	}
 
@@ -2513,8 +2528,8 @@ void VM_drawpic(void)
 	// is pic cached ? no function yet for that
 	if(!1)
 	{
-		Con_Printf("VM_drawpic: %s: %s not cached !\n", PRVM_NAME, picname);
 		PRVM_G_FLOAT(OFS_RETURN) = -4;
+		VM_Warning("VM_drawpic: %s: %s not cached !\n", PRVM_NAME, picname);
 		return;
 	}
 
@@ -2525,8 +2540,8 @@ void VM_drawpic(void)
 
 	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
 	{
-		Con_Printf("VM_drawstring: %s: wrong DRAWFLAG %i !\n",PRVM_NAME,flag);
 		PRVM_G_FLOAT(OFS_RETURN) = -2;
+		VM_Warning("VM_drawstring: %s: wrong DRAWFLAG %i !\n",PRVM_NAME,flag);
 		return;
 	}
 
@@ -2559,8 +2574,8 @@ void VM_drawfill(void)
 
 	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
 	{
-		Con_Printf("VM_drawstring: %s: wrong DRAWFLAG %i !\n",PRVM_NAME,flag);
 		PRVM_G_FLOAT(OFS_RETURN) = -2;
+		VM_Warning("VM_drawstring: %s: wrong DRAWFLAG %i !\n",PRVM_NAME,flag);
 		return;
 	}
 
@@ -2977,7 +2992,7 @@ void VM_R_PolygonBegin (void)
 		VM_InitPolygons();
 	if(vm_polygonbegin)
 	{
-		Con_Printf("VM_R_PolygonBegin: called twice without VM_R_PolygonEnd after first\n");
+		VM_Warning("VM_R_PolygonBegin: called twice without VM_R_PolygonEnd after first\n");
 		return;
 	}
 	if(vm_drawpolygons_num >= vm_polygons_num)
@@ -3019,7 +3034,7 @@ void VM_R_PolygonVertex (void)
 
 	if(!vm_polygonbegin)
 	{
-		Con_Printf("VM_R_PolygonVertex: VM_R_PolygonBegin wasn't called\n");
+		VM_Warning("VM_R_PolygonVertex: VM_R_PolygonBegin wasn't called\n");
 		return;
 	}
 	coords	= PRVM_G_VECTOR(OFS_PARM0);
@@ -3030,7 +3045,7 @@ void VM_R_PolygonVertex (void)
 	p = &vm_polygons[vm_drawpolygons_num];
 	if(vm_current_vertices > 4)
 	{
-		Con_Printf("VM_R_PolygonVertex: may have 4 vertices max\n");
+		VM_Warning("VM_R_PolygonVertex: may have 4 vertices max\n");
 		return;
 	}
 
@@ -3061,9 +3076,10 @@ void VM_R_PolygonEnd (void)
 {
 	if(!vm_polygonbegin)
 	{
-		Con_Printf("VM_R_PolygonEnd: VM_R_PolygonBegin wasn't called\n");
+		VM_Warning("VM_R_PolygonEnd: VM_R_PolygonBegin wasn't called\n");
 		return;
 	}
+	vm_polygonbegin = false;
 	if(vm_current_vertices > 2 || (vm_current_vertices >= 2 && vm_polygons[vm_drawpolygons_num].flags & VM_POLYGON_FLLINES))
 	{
 		if(vm_polygons[vm_drawpolygons_num].flags & VM_POLYGON_FL2D)	//[515]: don't use qcpolygons memory if 2D
@@ -3072,8 +3088,7 @@ void VM_R_PolygonEnd (void)
 			vm_drawpolygons_num++;
 	}
 	else
-		Con_Printf("VM_R_PolygonEnd: %i vertices isn't a good choice\n", vm_current_vertices);
-	vm_polygonbegin = false;
+		VM_Warning("VM_R_PolygonEnd: %i vertices isn't a good choice\n", vm_current_vertices);
 }
 
 void VM_AddPolygonsToMeshQueue (void)
@@ -3446,7 +3461,7 @@ void VM_buf_del (void)
 		BufStr_ClearBuffer((int)PRVM_G_FLOAT(OFS_PARM0));
 	else
 	{
-		Con_Printf("VM_buf_del: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
+		VM_Warning("VM_buf_del: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
 		return;
 	}
 }
@@ -3467,7 +3482,7 @@ void VM_buf_getsize (void)
 	if(!b)
 	{
 		PRVM_G_FLOAT(OFS_RETURN) = -1;
-		Con_Printf("VM_buf_getsize: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
+		VM_Warning("VM_buf_getsize: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
 		return;
 	}
 	else
@@ -3490,19 +3505,19 @@ void VM_buf_copy (void)
 	b1 = BUFSTR_BUFFER((int)PRVM_G_FLOAT(OFS_PARM0));
 	if(!b1)
 	{
-		Con_Printf("VM_buf_copy: invalid source buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
+		VM_Warning("VM_buf_copy: invalid source buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
 		return;
 	}
 	i = (int)PRVM_G_FLOAT(OFS_PARM1);
 	if(i == (int)PRVM_G_FLOAT(OFS_PARM0))
 	{
-		Con_Printf("VM_buf_copy: source == destination (%i) in %s\n", i, PRVM_NAME);
+		VM_Warning("VM_buf_copy: source == destination (%i) in %s\n", i, PRVM_NAME);
 		return;
 	}
 	b2 = BUFSTR_BUFFER(i);
 	if(!b2)
 	{
-		Con_Printf("VM_buf_copy: invalid destination buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM1), PRVM_NAME);
+		VM_Warning("VM_buf_copy: invalid destination buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM1), PRVM_NAME);
 		return;
 	}
 
@@ -3517,7 +3532,7 @@ void VM_buf_copy (void)
 			b2->strings[i] = (char *)Z_Malloc(strlen(b1->strings[i])+1);
 			if(!b2->strings[i])
 			{
-				Con_Printf("VM_buf_copy: not enough memory for buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM1), PRVM_NAME);
+				VM_Warning("VM_buf_copy: not enough memory for buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM1), PRVM_NAME);
 				break;
 			}
 			strcpy(b2->strings[i], b1->strings[i]);
@@ -3541,12 +3556,12 @@ void VM_buf_sort (void)
 	b = BUFSTR_BUFFER((int)PRVM_G_FLOAT(OFS_PARM0));
 	if(!b)
 	{
-		Con_Printf("VM_buf_sort: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
+		VM_Warning("VM_buf_sort: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
 		return;
 	}
 	if(b->num_strings <= 0)
 	{
-		Con_Printf("VM_buf_sort: tried to sort empty buffer %i in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
+		VM_Warning("VM_buf_sort: tried to sort empty buffer %i in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
 		return;
 	}
 	buf_sortpower = (int)PRVM_G_FLOAT(OFS_PARM1);
@@ -3594,7 +3609,7 @@ void VM_buf_implode (void)
 	PRVM_G_INT(OFS_RETURN) = 0;
 	if(!b)
 	{
-		Con_Printf("VM_buf_implode: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
+		VM_Warning("VM_buf_implode: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
 		return;
 	}
 	if(!b->num_strings)
@@ -3640,13 +3655,13 @@ void VM_bufstr_get (void)
 	b = BUFSTR_BUFFER((int)PRVM_G_FLOAT(OFS_PARM0));
 	if(!b)
 	{
-		Con_Printf("VM_bufstr_get: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
+		VM_Warning("VM_bufstr_get: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
 		return;
 	}
 	strindex = (int)PRVM_G_FLOAT(OFS_PARM1);
 	if(strindex < 0 || strindex > MAX_QCSTR_STRINGS)
 	{
-		Con_Printf("VM_bufstr_get: invalid string index %i used in %s\n", strindex, PRVM_NAME);
+		VM_Warning("VM_bufstr_get: invalid string index %i used in %s\n", strindex, PRVM_NAME);
 		return;
 	}
 	PRVM_G_INT(OFS_RETURN) = 0;
@@ -3675,19 +3690,19 @@ void VM_bufstr_set (void)
 	b = BUFSTR_BUFFER(bufindex);
 	if(!b)
 	{
-		Con_Printf("VM_bufstr_set: invalid buffer %i used in %s\n", bufindex, PRVM_NAME);
+		VM_Warning("VM_bufstr_set: invalid buffer %i used in %s\n", bufindex, PRVM_NAME);
 		return;
 	}
 	strindex = (int)PRVM_G_FLOAT(OFS_PARM1);
 	if(strindex < 0 || strindex > MAX_QCSTR_STRINGS)
 	{
-		Con_Printf("VM_bufstr_set: invalid string index %i used in %s\n", strindex, PRVM_NAME);
+		VM_Warning("VM_bufstr_set: invalid string index %i used in %s\n", strindex, PRVM_NAME);
 		return;
 	}
 	news = PRVM_G_STRING(OFS_PARM2);
 	if(!news)
 	{
-		Con_Printf("VM_bufstr_set: null string used in %s\n", PRVM_NAME);
+		VM_Warning("VM_bufstr_set: null string used in %s\n", PRVM_NAME);
 		return;
 	}
 	if(b->strings[strindex])
@@ -3717,13 +3732,13 @@ void VM_bufstr_add (void)
 	PRVM_G_FLOAT(OFS_RETURN) = -1;
 	if(!b)
 	{
-		Con_Printf("VM_bufstr_add: invalid buffer %i used in %s\n", bufindex, PRVM_NAME);
+		VM_Warning("VM_bufstr_add: invalid buffer %i used in %s\n", bufindex, PRVM_NAME);
 		return;
 	}
 	string = PRVM_G_STRING(OFS_PARM1);
 	if(!string)
 	{
-		Con_Printf("VM_bufstr_add: null string used in %s\n", PRVM_NAME);
+		VM_Warning("VM_bufstr_add: null string used in %s\n", PRVM_NAME);
 		return;
 	}
 
@@ -3735,7 +3750,7 @@ void VM_bufstr_add (void)
 		strindex = BufStr_FindFreeString(b);
 		if(strindex < 0)
 		{
-			Con_Printf("VM_bufstr_add: buffer %i has no free string slots in %s\n", bufindex, PRVM_NAME);
+			VM_Warning("VM_bufstr_add: buffer %i has no free string slots in %s\n", bufindex, PRVM_NAME);
 			return;
 		}
 	}
@@ -3744,7 +3759,7 @@ void VM_bufstr_add (void)
 	{
 		if(b->num_strings == MAX_QCSTR_STRINGS)
 		{
-			Con_Printf("VM_bufstr_add: buffer %i has no free string slots in %s\n", bufindex, PRVM_NAME);
+			VM_Warning("VM_bufstr_add: buffer %i has no free string slots in %s\n", bufindex, PRVM_NAME);
 			return;
 		}
 		b->strings[b->num_strings] = NULL;
@@ -3773,13 +3788,13 @@ void VM_bufstr_free (void)
 	b = BUFSTR_BUFFER((int)PRVM_G_FLOAT(OFS_PARM0));
 	if(!b)
 	{
-		Con_Printf("VM_bufstr_free: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
+		VM_Warning("VM_bufstr_free: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
 		return;
 	}
 	i = (int)PRVM_G_FLOAT(OFS_PARM1);
 	if(i < 0 || i > MAX_QCSTR_STRINGS)
 	{
-		Con_Printf("VM_bufstr_free: invalid string index %i used in %s\n", i, PRVM_NAME);
+		VM_Warning("VM_bufstr_free: invalid string index %i used in %s\n", i, PRVM_NAME);
 		return;
 	}
 	if(b->strings[i])
