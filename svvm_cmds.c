@@ -1254,14 +1254,14 @@ sizebuf_t *WriteDest (void)
 		entnum = PRVM_NUM_FOR_EDICT(ent);
 		if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active || !svs.clients[entnum-1].netconnection)
 		{
-			Con_Printf ("WriteDest: tried to write to non-client\n");PRVM_PrintState();
+			VM_Warning ("WriteDest: tried to write to non-client\n");
 			return &sv.reliable_datagram;
 		}
 		else
 			return &svs.clients[entnum-1].netconnection->message;
 
 	default:
-		Con_Printf ("WriteDest: bad destination\n");PRVM_PrintState();
+		VM_Warning ("WriteDest: bad destination\n");
 	case MSG_ALL:
 		return &sv.reliable_datagram;
 
