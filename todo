@@ -116,6 +116,7 @@
 0 change dpmod: make shamblers be worth 5 frags, shalrath be worth 3 frags, and fiends be worth 2 frags (Zenex)
 0 change dpmod: stop using playernogun/playergun models, go back to ordinary player.mdl, this saves a bit of memory
 0 change hmap2: qbsp should do tjunc fixing on leaky maps
+0 change revelation: change the wabbit kill message to " was hunting wabbit but shot " " instead"
 0 change zmodel: include the example script in the build zips, not just in the files directory
 0 cleanup darkplaces cleanup: remove cgame* files and any references
 0 cleanup darkplaces cleanup: remove ui.* files and any references
@@ -236,7 +237,6 @@
 0 optimization darkplaces server: implement first unused/last used entity range optimization on entity spawn/remove similar to the client particles (LordHavoc)
 0 optimization darkplaces visibility: R_Q1BSP_BoxTouchingPVS and R_Q3BSP_BoxTouchingPVS should check pvsframe on nodes as well as leafs (Vic)
 0 optimization darkplaces: calculate worldmodel farclip (corner to corner radius) at load
-0 revelation: change the wabbit kill message to " was hunting wabbit but shot " " instead"
 1 bug darkplaces WGL client: figure out why for some people GDI input has stuttering problems with gl_finish 0 mode (Kinn, Urre, romi, Spike, Black)
 1 bug darkplaces WGL/GLX/SDL client bug: if sound is unavailable (causing a freeze waiting for it to become available), the config is reset (SavageX)
 1 bug darkplaces bsd filesystem: read() is failing (not returning the requested amount) on freebsd when reading files, whether actual files or in a pk3 - somehow it is still able to read the pk3 zip directory though (suminigashi, Elric)
