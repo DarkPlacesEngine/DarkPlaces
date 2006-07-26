@@ -47,7 +47,17 @@
 				OPC->vector[2] = OPB->_float * OPA->vector[2];
 				break;
 			case OP_DIV_F:
-				OPC->_float = OPA->_float / OPB->_float;
+				if( OPB->_float != 0.0f )
+				{
+					OPC->_float = OPA->_float / OPB->_float;
+				} 
+				else 
+				{
+					if( developer.integer >= 1 ) {
+						VM_Warning( "Attempted division by zero in %s\n", PRVM_NAME );
+					}
+					OPC->_float = 0.0f;
+				}
 				break;
 			case OP_BITAND:
 				OPC->_float = (int)OPA->_float & (int)OPB->_float;
