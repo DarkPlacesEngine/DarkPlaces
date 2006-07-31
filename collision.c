@@ -2,8 +2,9 @@
 #include "quakedef.h"
 #include "polygon.h"
 
-#define COLLISION_SNAPSCALE (8.0f)
+#define COLLISION_SNAPSCALE (32.0f)
 #define COLLISION_SNAP (1.0f / COLLISION_SNAPSCALE)
+#define COLLISION_PLANE_DIST_EPSILON (1.0f / 32.0f)
 
 cvar_t collision_impactnudge = {0, "collision_impactnudge", "0.03125", "how much to back off from the impact"};
 cvar_t collision_startnudge = {0, "collision_startnudge", "0", "how much to bias collision trace start"};
@@ -76,12 +77,12 @@ void Collision_ValidateBrush(colbrushf_t *brush)
 			for (k = 0;k < brush->numplanes;k++)
 			{
 				d = DotProduct(brush->points[j].v, brush->planes[k].normal) - brush->planes[k].dist;
-				if (d > (1.0f / 8.0f))
+				if (d > COLLISION_PLANE_DIST_EPSILON)
 				{
 					Con_Printf("Collision_ValidateBrush: point #%i (%f %f %f) infront of plane #%i (%f %f %f %f)\n", j, brush->points[j].v[0], brush->points[j].v[1], brush->points[j].v[2], k, brush->planes[k].normal[0], brush->planes[k].normal[1], brush->planes[k].normal[2], brush->planes[k].dist);
 					printbrush = true;
 				}
-				if (fabs(d) > 0.125f)
+				if (fabs(d) > COLLISION_PLANE_DIST_EPSILON)
 					pointsoffplanes++;
 				else
 					pointonplanes++;
@@ -138,6 +139,7 @@ colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalpla
 	// TODO: planesbuf could be replaced by a remapping table
 	int j, k, m, w;
 	int numpointsbuf = 0, maxpointsbuf = 256, numplanesbuf = 0, maxplanesbuf = 256, numelementsbuf = 0, maxelementsbuf = 256;
+	double maxdist;
 	colbrushf_t *brush;
 	colpointf_t pointsbuf[256];
 	colplanef_t planesbuf[256];
@@ -154,6 +156,12 @@ colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalpla
 	memset(polypointbuf, 0, sizeof(polypointbuf));
 	memset(p, 0, sizeof(p));
 #endif
+	// figure out how large a bounding box we need to properly compute this brush
+	maxdist = 0;
+	for (j = 0;j < numoriginalplanes;j++)
+		maxdist = max(maxdist, originalplanes[j].dist);
+	// now make it large enough to enclose the entire brush, and round it off to a reasonable multiple of 1024
+	maxdist = floor(maxdist * (4.0 / 1024.0) + 1) * 1024.0;
 	// construct a collision brush (points, planes, and renderable mesh) from
 	// a set of planes, this also optimizes out any unnecessary planes (ones
 	// whose polygon is clipped away by the other planes)
@@ -175,7 +183,7 @@ colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalpla
 
 		// create a large polygon from the plane
 		w = 0;
-		PolygonD_QuadForPlane(p[w], originalplanes[j].normal[0], originalplanes[j].normal[1], originalplanes[j].normal[2], originalplanes[j].dist, 1024.0*1024.0*1024.0);
+		PolygonD_QuadForPlane(p[w], originalplanes[j].normal[0], originalplanes[j].normal[1], originalplanes[j].normal[2], originalplanes[j].dist, maxdist);
 		pnumpoints = 4;
 		// clip it by all other planes
 		for (k = 0;k < numoriginalplanes && pnumpoints && pnumpoints <= pmaxpoints;k++)
@@ -184,7 +192,7 @@ colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalpla
 			{
 				// we want to keep the inside of the brush plane so we flip
 				// the cutting plane
-				PolygonD_Divide(pnumpoints, p[w], -originalplanes[k].normal[0], -originalplanes[k].normal[1], -originalplanes[k].normal[2], -originalplanes[k].dist, 1.0/32.0, pmaxpoints, p[!w], &pnumpoints, 0, NULL, NULL, NULL);
+				PolygonD_Divide(pnumpoints, p[w], -originalplanes[k].normal[0], -originalplanes[k].normal[1], -originalplanes[k].normal[2], -originalplanes[k].dist, COLLISION_PLANE_DIST_EPSILON, pmaxpoints, p[!w], &pnumpoints, 0, NULL, NULL, NULL);
 				w = !w;
 			}
 		}
@@ -200,7 +208,7 @@ colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalpla
 			int l, m;
 			m = 0;
 			for (l = 0;l < numoriginalplanes;l++)
-				if (fabs(DotProduct(&p[w][k*3], originalplanes[l].normal) - originalplanes[l].dist) < 1.0/8.0)
+				if (fabs(DotProduct(&p[w][k*3], originalplanes[l].normal) - originalplanes[l].dist) < COLLISION_PLANE_DIST_EPSILON)
 					m++;
 			if (m < 3)
 				break;
@@ -271,7 +279,7 @@ colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalpla
 	for (j = 0;j < numplanesbuf;j++)
 	{
 		float d = furthestplanedist_float(planesbuf[j].normal, pointsbuf, numpointsbuf);
-		if (fabs(planesbuf[j].dist - d) > (1.0f/32.0f))
+		if (fabs(planesbuf[j].dist - d) > COLLISION_PLANE_DIST_EPSILON)
 			Con_Printf("plane %f %f %f %f mismatches dist %f\n", planesbuf[j].normal[0], planesbuf[j].normal[1], planesbuf[j].normal[2], planesbuf[j].dist, d);
 	}
 
@@ -494,7 +502,7 @@ void Collision_CalcPlanesForPolygonBrushFloat(colbrushf_t *brush)
 		{
 			int j;
 			for (j = 0, p = brush->points;j < brush->numpoints;j++, p++)
-				if (DotProduct(p->v, brush->planes[i].normal) > brush->planes[i].dist + (1.0 / 32.0))
+				if (DotProduct(p->v, brush->planes[i].normal) > brush->planes[i].dist + COLLISION_PLANE_DIST_EPSILON)
 					Con_Printf("Error in brush plane generation, plane %i\n", i);
 		}
 	}
@@ -540,7 +548,7 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush
 					return;
 				}
 				f = furthestplanedist_float(startplane->normal, thisbrush_start->points, thisbrush_start->numpoints);
-				if (fabs(f - startplane->dist) > 0.125f)
+				if (fabs(f - startplane->dist) > COLLISION_PLANE_DIST_EPSILON)
 					Con_Printf("startplane->dist %f != calculated %f (thisbrush_start)\n", startplane->dist, f);
 			}
 			d1 = nearestplanedist_float(startplane->normal, thisbrush_start->points, thisbrush_start->numpoints) - furthestplanedist_float(startplane->normal, thatbrush_start->points, thatbrush_start->numpoints) - collision_startnudge.value;
@@ -559,7 +567,7 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush
 					return;
 				}
 				f = furthestplanedist_float(startplane->normal, thatbrush_start->points, thatbrush_start->numpoints);
-				if (fabs(f - startplane->dist) > 0.125f)
+				if (fabs(f - startplane->dist) > COLLISION_PLANE_DIST_EPSILON)
 					Con_Printf("startplane->dist %f != calculated %f (thatbrush_start)\n", startplane->dist, f);
 			}
 			d1 = nearestplanedist_float(startplane->normal, thisbrush_start->points, thisbrush_start->numpoints) - startplane->dist - collision_startnudge.value;
@@ -685,7 +693,7 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 			if (thatbrush_start->numpoints)
 			{
 				f = furthestplanedist_float(startplane->normal, thatbrush_start->points, thatbrush_start->numpoints);
-				if (fabs(f - startplane->dist) > 0.125f)
+				if (fabs(f - startplane->dist) > COLLISION_PLANE_DIST_EPSILON)
 					Con_Printf("startplane->dist %f != calculated %f\n", startplane->dist, f);
 			}
 		}

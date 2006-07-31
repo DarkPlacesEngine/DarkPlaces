@@ -2832,6 +2832,7 @@ static void RemovePortalFromNodes(portal_t *portal)
 	}
 }
 
+#define PORTAL_DIST_EPSILON (1.0 / 32.0)
 static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 {
 	int i, side;
@@ -2857,6 +2858,7 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 	nodeportal = AllocPortal();
 	nodeportal->plane = *plane;
 
+	// TODO: calculate node bounding boxes during recursion and calculate a maximum plane size accordingly to improve precision (as most maps do not need 1 billion unit plane polygons)
 	PolygonD_QuadForPlane(nodeportal->points, nodeportal->plane.normal[0], nodeportal->plane.normal[1], nodeportal->plane.normal[2], nodeportal->plane.dist, 1024.0*1024.0*1024.0);
 	nodeportal->numpoints = 4;
 	side = 0;	// shut up compiler warning
@@ -2878,7 +2880,7 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 
 		for (i = 0;i < nodeportal->numpoints*3;i++)
 			frontpoints[i] = nodeportal->points[i];
-		PolygonD_Divide(nodeportal->numpoints, frontpoints, clipplane.normal[0], clipplane.normal[1], clipplane.normal[2], clipplane.dist, 1.0/32.0, MAX_PORTALPOINTS, nodeportal->points, &nodeportal->numpoints, 0, NULL, NULL, NULL);
+		PolygonD_Divide(nodeportal->numpoints, frontpoints, clipplane.normal[0], clipplane.normal[1], clipplane.normal[2], clipplane.dist, PORTAL_DIST_EPSILON, MAX_PORTALPOINTS, nodeportal->points, &nodeportal->numpoints, 0, NULL, NULL, NULL);
 		if (nodeportal->numpoints <= 0 || nodeportal->numpoints >= MAX_PORTALPOINTS)
 			break;
 	}
@@ -2916,7 +2918,7 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 		RemovePortalFromNodes(portal);
 
 		// cut the portal into two portals, one on each side of the node plane
-		PolygonD_Divide(portal->numpoints, portal->points, plane->normal[0], plane->normal[1], plane->normal[2], plane->dist, 1.0/32.0, MAX_PORTALPOINTS, frontpoints, &numfrontpoints, MAX_PORTALPOINTS, backpoints, &numbackpoints, NULL);
+		PolygonD_Divide(portal->numpoints, portal->points, plane->normal[0], plane->normal[1], plane->normal[2], plane->dist, PORTAL_DIST_EPSILON, MAX_PORTALPOINTS, frontpoints, &numfrontpoints, MAX_PORTALPOINTS, backpoints, &numbackpoints, NULL);
 
 		if (!numfrontpoints)
 		{
