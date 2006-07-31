@@ -2,8 +2,9 @@
 #include "quakedef.h"
 #include "polygon.h"
 
-#define COLLISION_SNAPSCALE (32.0f)
+#define COLLISION_SNAPSCALE (64.0f)
 #define COLLISION_SNAP (1.0f / COLLISION_SNAPSCALE)
+#define COLLISION_SNAP2 (2.0f / COLLISION_SNAPSCALE)
 #define COLLISION_PLANE_DIST_EPSILON (1.0f / 32.0f)
 
 cvar_t collision_impactnudge = {0, "collision_impactnudge", "0.03125", "how much to back off from the impact"};
@@ -237,7 +238,7 @@ colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalpla
 		{
 			// check if there is already a matching point (no duplicates)
 			for (m = 0;m < numpointsbuf;m++)
-				if (VectorDistance2(&p[w][k*3], pointsbuf[m].v) < COLLISION_SNAP)
+				if (VectorDistance2(&p[w][k*3], pointsbuf[m].v) < COLLISION_SNAP2)
 					break;
 
 			// if there is no match, add a new one
