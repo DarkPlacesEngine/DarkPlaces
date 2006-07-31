@@ -27,8 +27,34 @@ int cl_available = true;
 
 qboolean vid_supportrefreshrate = false;
 
+cvar_t joy_detected = {CVAR_READONLY, "joy_detected", "0", "number of joysticks detected by engine"};
+cvar_t joy_enable = {0, "joy_enable", "1", "enables joystick support"};
+cvar_t joy_index = {0, "joy_index", "0", "selects which joystick to use if you have multiple"};
+cvar_t joy_axisforward = {0, "joy_axisforward", "1", "which joystick axis to query for forward/backward movement"};
+cvar_t joy_axisside = {0, "joy_axisside", "0", "which joystick axis to query for right/left movement"};
+cvar_t joy_axisup = {0, "joy_axisup", "-1", "which joystick axis to query for up/down movement"};
+cvar_t joy_axispitch = {0, "joy_axispitch", "3", "which joystick axis to query for looking up/down"};
+cvar_t joy_axisyaw = {0, "joy_axisyaw", "2", "which joystick axis to query for looking right/left"};
+cvar_t joy_axisroll = {0, "joy_axisroll", "-1", "which joystick axis to query for tilting head right/left"};
+cvar_t joy_deadzoneforward = {0, "joy_deadzoneforward", "0", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
+cvar_t joy_deadzoneside = {0, "joy_deadzoneside", "0", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
+cvar_t joy_deadzoneup = {0, "joy_deadzoneup", "0", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
+cvar_t joy_deadzonepitch = {0, "joy_deadzonepitch", "0", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
+cvar_t joy_deadzoneyaw = {0, "joy_deadzoneyaw", "0", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
+cvar_t joy_deadzoneroll = {0, "joy_deadzoneroll", "0", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
+cvar_t joy_sensitivityforward = {0, "joy_sensitivityforward", "-1", "movement multiplier"};
+cvar_t joy_sensitivityside = {0, "joy_sensitivityside", "1", "movement multiplier"};
+cvar_t joy_sensitivityup = {0, "joy_sensitivityup", "1", "movement multiplier"};
+cvar_t joy_sensitivitypitch = {0, "joy_sensitivitypitch", "1", "movement multiplier"};
+cvar_t joy_sensitivityyaw = {0, "joy_sensitivityyaw", "-1", "movement multiplier"};
+cvar_t joy_sensitivityroll = {0, "joy_sensitivityroll", "1", "movement multiplier"};
+
+
 static qboolean vid_usingmouse;
 static qboolean vid_isfullscreen;
+static int vid_numjoysticks = 0;
+#define MAX_JOYSTICKS 8
+static SDL_Joystick *vid_joysticks[MAX_JOYSTICKS];
 
 static SDL_Surface *screen;
 
@@ -227,14 +253,44 @@ static void IN_Activate( qboolean grab )
 	}
 }
 
+static double IN_JoystickGetAxis(SDL_Joystick *joy, int axis, double sensitivity, double deadzone)
+{
+	double value;
+	if (axis < 0 || axis >= SDL_JoystickNumAxes(joy))
+		return 0; // no such axis on this joystick
+	value = SDL_JoystickGetAxis(joy, axis) * (1.0 / 32767.0);
+	value = bound(-1, value, 1);
+	if (fabs(value) < deadzone)
+		return 0; // within deadzone around center
+	return value * sensitivity;
+}
+
 void IN_Move( void )
 {
+	int j;
+	int x, y;
 	if( vid_usingmouse )
 	{
-		int x, y;
 		SDL_GetRelativeMouseState( &x, &y );
 		in_mouse_x = x;
 		in_mouse_y = y;
+	}
+	if (vid_numjoysticks && joy_enable.integer && joy_index.integer >= 0 && joy_index.integer < vid_numjoysticks)
+	{
+		SDL_Joystick *joy = vid_joysticks[joy_index.integer];
+		int numballs = SDL_JoystickNumBalls(joy);
+		for (j = 0;j < numballs;j++)
+		{
+			SDL_JoystickGetBall(joy, j, &x, &y);
+			in_mouse_x += x;
+			in_mouse_y += y;
+		}
+		cl.cmd.forwardmove += IN_JoystickGetAxis(joy, joy_axisforward.integer, joy_sensitivityforward.value, joy_deadzoneforward.value) * cl_forwardspeed.value;
+		cl.cmd.sidemove    += IN_JoystickGetAxis(joy, joy_axisside.integer, joy_sensitivityside.value, joy_deadzoneside.value) * cl_sidespeed.value;
+		cl.cmd.upmove      += IN_JoystickGetAxis(joy, joy_axisup.integer, joy_sensitivityup.value, joy_deadzoneup.value) * cl_upspeed.value;
+		cl.viewangles[0]   += IN_JoystickGetAxis(joy, joy_axispitch.integer, joy_sensitivitypitch.value, joy_deadzonepitch.value) * cl.realframetime * cl_pitchspeed.value;
+		cl.viewangles[1]   += IN_JoystickGetAxis(joy, joy_axisyaw.integer, joy_sensitivityyaw.value, joy_deadzoneyaw.value) * cl.realframetime * cl_yawspeed.value;
+		//cl.viewangles[2]   += IN_JoystickGetAxis(joy, joy_axisroll.integer, joy_sensitivityroll.value, joy_deadzoneroll.value) * cl.realframetime * cl_rollspeed.value;
 	}
 }
 
@@ -301,12 +357,16 @@ void Sys_SendKeyEvents( void )
 				}
 				break;
 			case SDL_MOUSEBUTTONDOWN:
-				if (event.button.button <= 18)
-					Key_Event( buttonremap[event.button.button - 1], 0, true );
-				break;
 			case SDL_MOUSEBUTTONUP:
 				if (event.button.button <= 18)
-					Key_Event( buttonremap[event.button.button - 1], 0, false );
+					Key_Event( buttonremap[event.button.button - 1], 0, event.button.state == SDL_PRESSED );
+				break;
+			case SDL_JOYBUTTONDOWN:
+				if (!joy_enable.integer)
+					break; // ignore down events if joystick has been disabled
+			case SDL_JOYBUTTONUP:
+				if (event.jbutton.button < 48)
+					Key_Event( event.jbutton.button + (event.jbutton.button < 16 ? K_JOY1 : K_AUX1 - 16), 0, (event.jbutton.state == SDL_PRESSED) );
 				break;
 		}
 
@@ -335,10 +395,36 @@ void *GL_GetProcAddress(const char *name)
 }
 
 static int Sys_EventFilter( SDL_Event *event );
+static qboolean vid_sdl_initjoysticksystem = false;
 void VID_Init (void)
 {
+	Cvar_RegisterVariable(&joy_detected);
+	Cvar_RegisterVariable(&joy_enable);
+	Cvar_RegisterVariable(&joy_index);
+	Cvar_RegisterVariable(&joy_axisforward);
+	Cvar_RegisterVariable(&joy_axisside);
+	Cvar_RegisterVariable(&joy_axisup);
+	Cvar_RegisterVariable(&joy_axispitch);
+	Cvar_RegisterVariable(&joy_axisyaw);
+	//Cvar_RegisterVariable(&joy_axisroll);
+	Cvar_RegisterVariable(&joy_deadzoneforward);
+	Cvar_RegisterVariable(&joy_deadzoneside);
+	Cvar_RegisterVariable(&joy_deadzoneup);
+	Cvar_RegisterVariable(&joy_deadzonepitch);
+	Cvar_RegisterVariable(&joy_deadzoneyaw);
+	//Cvar_RegisterVariable(&joy_deadzoneroll);
+	Cvar_RegisterVariable(&joy_sensitivityforward);
+	Cvar_RegisterVariable(&joy_sensitivityside);
+	Cvar_RegisterVariable(&joy_sensitivityup);
+	Cvar_RegisterVariable(&joy_sensitivitypitch);
+	Cvar_RegisterVariable(&joy_sensitivityyaw);
+	//Cvar_RegisterVariable(&joy_sensitivityroll);
+
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
-		Sys_Error ("Failed to init video: %s", SDL_GetError());
+		Sys_Error ("Failed to init SDL video subsystem: %s", SDL_GetError());
+	vid_sdl_initjoysticksystem = SDL_Init(SDL_INIT_JOYSTICK) >= 0;
+	if (vid_sdl_initjoysticksystem)
+		Con_Printf("Failed to init SDL joystick subsystem: %s\n", SDL_GetError());
 	vid_isfullscreen = false;
 }
 
@@ -448,7 +534,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	screen = SDL_SetVideoMode(width, height, bpp, flags);
 	if (screen == NULL)
 	{
-		Con_Printf("Failed to set video mode to %ix%i: %s\n", width, height, SDL_GetError);
+		Con_Printf("Failed to set video mode to %ix%i: %s\n", width, height, SDL_GetError());
 		VID_Shutdown();
 		return false;
 	}
@@ -473,6 +559,23 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	gl_videosyncavailable = false;
 
 	GL_Init();
+
+	vid_numjoysticks = SDL_NumJoysticks();
+	vid_numjoysticks = bound(0, vid_numjoysticks, MAX_JOYSTICKS);
+	Cvar_SetValueQuick(&joy_detected, vid_numjoysticks);
+	Con_Printf("%d SDL joystick(s) found:\n", vid_numjoysticks);
+	memset(vid_joysticks, 0, sizeof(vid_joysticks));
+	for (i = 0;i < vid_numjoysticks;i++)
+	{
+		SDL_Joystick *joy;
+		joy = vid_joysticks[i] = SDL_JoystickOpen(i);
+		if (!joy)
+		{
+			Con_Printf("joystick #%i: open failed: %s\n", i, SDL_GetError());
+			continue;
+		}
+		Con_Printf("joystick #%i: opened \"%s\" with %i axes, %i buttons, %i balls\n", i, SDL_JoystickName(i), (int)SDL_JoystickNumAxes(joy), (int)SDL_JoystickNumButtons(joy), (int)SDL_JoystickNumBalls(joy));
+	}
 
 	vid_hidden = false;
 	vid_activewindow = false;
