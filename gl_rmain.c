@@ -2225,10 +2225,12 @@ void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, rtexture_
 	}
 }
 
-int R_Mesh_AddVertex3f(rmesh_t *mesh, const float *v)
+int R_Mesh_AddVertex(rmesh_t *mesh, float x, float y, float z)
 {
 	int i;
 	float *vertex3f;
+	float v[3];
+	VectorSet(v, x, y, z);
 	for (i = 0, vertex3f = mesh->vertex3f;i < mesh->numvertices;i++, vertex3f += 3)
 		if (VectorDistance2(v, vertex3f) < mesh->epsilon2)
 			break;
@@ -2249,12 +2251,12 @@ void R_Mesh_AddPolygon3f(rmesh_t *mesh, int numvertices, float *vertex3f)
 {
 	int i;
 	int *e, element[3];
-	element[0] = R_Mesh_AddVertex3f(mesh, vertex3f);vertex3f += 3;
-	element[1] = R_Mesh_AddVertex3f(mesh, vertex3f);vertex3f += 3;
+	element[0] = R_Mesh_AddVertex(mesh, vertex3f[0], vertex3f[1], vertex3f[2]);vertex3f += 3;
+	element[1] = R_Mesh_AddVertex(mesh, vertex3f[0], vertex3f[1], vertex3f[2]);vertex3f += 3;
 	e = mesh->element3i + mesh->numtriangles * 3;
 	for (i = 0;i < numvertices - 2;i++, vertex3f += 3)
 	{
-		element[2] = R_Mesh_AddVertex3f(mesh, vertex3f);
+		element[2] = R_Mesh_AddVertex(mesh, vertex3f[0], vertex3f[1], vertex3f[2]);
 		if (mesh->numtriangles < mesh->maxtriangles)
 		{
 			*e++ = element[0];
@@ -2266,29 +2268,58 @@ void R_Mesh_AddPolygon3f(rmesh_t *mesh, int numvertices, float *vertex3f)
 	}
 }
 
+void R_Mesh_AddPolygon3d(rmesh_t *mesh, int numvertices, double *vertex3d)
+{
+	int i;
+	int *e, element[3];
+	element[0] = R_Mesh_AddVertex(mesh, vertex3d[0], vertex3d[1], vertex3d[2]);vertex3d += 3;
+	element[1] = R_Mesh_AddVertex(mesh, vertex3d[0], vertex3d[1], vertex3d[2]);vertex3d += 3;
+	e = mesh->element3i + mesh->numtriangles * 3;
+	for (i = 0;i < numvertices - 2;i++, vertex3d += 3)
+	{
+		element[2] = R_Mesh_AddVertex(mesh, vertex3d[0], vertex3d[1], vertex3d[2]);
+		if (mesh->numtriangles < mesh->maxtriangles)
+		{
+			*e++ = element[0];
+			*e++ = element[1];
+			*e++ = element[2];
+			mesh->numtriangles++;
+		}
+		element[1] = element[2];
+	}
+}
+
+#define R_MESH_PLANE_DIST_EPSILON (1.0 / 32.0)
 void R_Mesh_AddBrushMeshFromPlanes(rmesh_t *mesh, int numplanes, mplane_t *planes)
 {
 	int planenum, planenum2;
 	int w;
 	int tempnumpoints;
 	mplane_t *plane, *plane2;
-	float temppoints[2][256*3];
+	double maxdist;
+	double temppoints[2][256*3];
+	// figure out how large a bounding box we need to properly compute this brush
+	maxdist = 0;
+	for (w = 0;w < numplanes;w++)
+		maxdist = max(maxdist, planes[w].dist);
+	// now make it large enough to enclose the entire brush, and round it off to a reasonable multiple of 1024
+	maxdist = floor(maxdist * (4.0 / 1024.0) + 1) * 1024.0;
 	for (planenum = 0, plane = planes;planenum < numplanes;planenum++, plane++)
 	{
 		w = 0;
 		tempnumpoints = 4;
-		PolygonF_QuadForPlane(temppoints[w], plane->normal[0], plane->normal[1], plane->normal[2], plane->normal[3], 1024.0*1024.0*1024.0);
+		PolygonD_QuadForPlane(temppoints[w], plane->normal[0], plane->normal[1], plane->normal[2], plane->normal[3], maxdist);
 		for (planenum2 = 0, plane2 = planes;planenum2 < numplanes && tempnumpoints >= 3;planenum2++, plane2++)
 		{
 			if (planenum2 == planenum)
 				continue;
-			PolygonF_Divide(tempnumpoints, temppoints[w], plane2->normal[0], plane2->normal[1], plane2->normal[2], plane2->dist, 1.0/32.0, 0, NULL, NULL, 256, temppoints[!w], &tempnumpoints, NULL);
+			PolygonD_Divide(tempnumpoints, temppoints[w], plane2->normal[0], plane2->normal[1], plane2->normal[2], plane2->dist, R_MESH_PLANE_DIST_EPSILON, 0, NULL, NULL, 256, temppoints[!w], &tempnumpoints, NULL);
 			w = !w;
 		}
 		if (tempnumpoints < 3)
 			continue;
 		// generate elements forming a triangle fan for this polygon
-		R_Mesh_AddPolygon3f(mesh, tempnumpoints, temppoints[w]);
+		R_Mesh_AddPolygon3d(mesh, tempnumpoints, temppoints[w]);
 	}
 }
 
