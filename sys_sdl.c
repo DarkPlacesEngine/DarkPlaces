@@ -208,6 +208,9 @@ int main (int argc, char *argv[])
 	fcntl(0, F_SETFL, fcntl (0, F_GETFL, 0) | FNDELAY);
 #endif
 
+	// we don't know which systems we'll want to init, yet...
+	SDL_Init(0);
+
 	Host_Main();
 
 	return 0;
