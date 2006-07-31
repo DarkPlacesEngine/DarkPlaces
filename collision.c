@@ -2,10 +2,10 @@
 #include "quakedef.h"
 #include "polygon.h"
 
-#define COLLISION_SNAPSCALE (64.0f)
+#define COLLISION_SNAPSCALE (32.0f)
 #define COLLISION_SNAP (1.0f / COLLISION_SNAPSCALE)
 #define COLLISION_SNAP2 (2.0f / COLLISION_SNAPSCALE)
-#define COLLISION_PLANE_DIST_EPSILON (1.0f / 32.0f)
+#define COLLISION_PLANE_DIST_EPSILON (2.0f / COLLISION_SNAPSCALE)
 
 cvar_t collision_impactnudge = {0, "collision_impactnudge", "0.03125", "how much to back off from the impact"};
 cvar_t collision_startnudge = {0, "collision_startnudge", "0", "how much to bias collision trace start"};
@@ -189,6 +189,8 @@ colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalpla
 		// clip it by all other planes
 		for (k = 0;k < numoriginalplanes && pnumpoints && pnumpoints <= pmaxpoints;k++)
 		{
+			// skip the plane this polygon
+			// (nothing happens if it is processed, this is just an optimization)
 			if (k != j)
 			{
 				// we want to keep the inside of the brush plane so we flip
