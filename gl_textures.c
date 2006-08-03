@@ -452,6 +452,7 @@ static void r_textures_start(void)
 	// LordHavoc: allow any alignment
 	CHECKGLERROR
 	qglPixelStorei(GL_UNPACK_ALIGNMENT, 1);CHECKGLERROR
+	qglPixelStorei(GL_PACK_ALIGNMENT, 1);CHECKGLERROR
 
 	texturemempool = Mem_AllocPool("texture management", 0, NULL);
 

@@ -110,6 +110,7 @@ typedef double GLclampd;
 #define GL_TEXTURE_BORDER_COLOR			0x1004
 #define GL_TEXTURE_MAG_FILTER			0x2800
 #define GL_TEXTURE_MIN_FILTER			0x2801
+#define GL_PACK_ALIGNMENT			0x0D05
 #define GL_UNPACK_ALIGNMENT			0x0CF5
 #define GL_TEXTURE_BINDING_1D                   0x8068
 #define GL_TEXTURE_BINDING_2D                   0x8069
