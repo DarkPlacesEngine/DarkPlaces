@@ -414,10 +414,10 @@ void CSQC_AddPrintText (const char *msg)
 			csqc_printtextbuf[0] = 0;
 		}
 		else
-			strcat(csqc_printtextbuf, msg);
+			strlcat(csqc_printtextbuf, msg, CSQC_PRINTBUFFERLEN);
 		return;
 	}
-	strcat(csqc_printtextbuf, msg);
+	strlcat(csqc_printtextbuf, msg, CSQC_PRINTBUFFERLEN);
 	CL_VM_Parse_Print(csqc_printtextbuf);
 	csqc_printtextbuf[0] = 0;
 }

@@ -280,7 +280,7 @@ Key_Console (int key, char ascii)
 			if (i > 0)
 			{
 				cbd[i]=0;
-				strcat(key_lines[edit_line], cbd);
+				strlcat(key_lines[edit_line], cbd, sizeof(key_lines[edit_line]));
 				key_linepos += i;
 			}
 			Z_Free(cbd);

@@ -317,7 +317,7 @@ void VM_M_findkeysforcommand(void)
 	M_FindKeysForCommand(cmd, keys);
 
 	for(i = 0; i < NUMKEYS; i++)
-		ret = strcat(ret, va(" \'%i\'", keys[i]));
+		strlcat(ret, va(" \'%i\'", keys[i]), VM_STRINGTEMP_LENGTH);
 
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(ret);
 }
@@ -427,19 +427,19 @@ void VM_M_setserverlistmaskstring( void )
 
 	switch( field ) {
 		case SLIF_CNAME:
-			strncpy( mask->info.cname, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.cname) );
+			strlcpy( mask->info.cname, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.cname) );
 			break;
 		case SLIF_NAME:
-			strncpy( mask->info.name, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.name)  );
+			strlcpy( mask->info.name, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.name)  );
 			break;
 		case SLIF_MAP:
-			strncpy( mask->info.map, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.map)  );
+			strlcpy( mask->info.map, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.map)  );
 			break;
 		case SLIF_MOD:
-			strncpy( mask->info.mod, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.mod)  );
+			strlcpy( mask->info.mod, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.mod)  );
 			break;
 		case SLIF_GAME:
-			strncpy( mask->info.game, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.game)  );
+			strlcpy( mask->info.game, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.game)  );
 			break;
 		default:
 			VM_Warning( "VM_M_setserverlistmaskstring: Bad field number %i passed!\n", field );
