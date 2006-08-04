@@ -392,13 +392,16 @@ void *dpvsimpledecode_open(char *filename, char **errorstring)
 							s->videopixels = (unsigned int *)Z_Malloc(s->info_imagewidth * s->info_imageheight * sizeof(*s->videopixels));
 							if (s->videopixels != NULL)
 							{
-								wavename = (char *)Z_Malloc(strlen(filename) + 10);
+								size_t namelen;
+								
+								namelen = strlen(filename) + 10;
+								wavename = (char *)Z_Malloc(namelen);
 								if (wavename)
 								{
 									sfx_t* sfx;
 
 									StripExtension(filename, wavename);
-									strcat(wavename, ".wav");
+									strlcat(wavename, ".wav", namelen);
 									sfx = S_PrecacheSound (wavename, false, false);
 									if (sfx != NULL)
 										s->sndchan = S_StartSound (-1, 0, sfx, vec3_origin, 1.0f, 0);

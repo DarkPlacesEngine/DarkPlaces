@@ -607,10 +607,10 @@ void PRVM_ED_Print(prvm_edict_t *ed)
 			tempstring2[sizeof(tempstring2)-1] = 0;
 			name = tempstring2;
 		}
-		strcat(tempstring, name);
+		strlcat(tempstring, name, sizeof(tempstring));
 		for (l = strlen(name);l < 14;l++)
-			strcat(tempstring, " ");
-		strcat(tempstring, " ");
+			strlcat(tempstring, " ", sizeof(tempstring));
+		strlcat(tempstring, " ", sizeof(tempstring));
 
 		name = PRVM_ValueString((etype_t)d->type, (prvm_eval_t *)v);
 		if (strlen(name) > sizeof(tempstring2)-4)
@@ -620,8 +620,8 @@ void PRVM_ED_Print(prvm_edict_t *ed)
 			tempstring2[sizeof(tempstring2)-1] = 0;
 			name = tempstring2;
 		}
-		strcat(tempstring, name);
-		strcat(tempstring, "\n");
+		strlcat(tempstring, name, sizeof(tempstring));
+		strlcat(tempstring, "\n", sizeof(tempstring));
 		if (strlen(tempstring) >= sizeof(tempstring)/2)
 		{
 			Con_Print(tempstring);
@@ -1616,32 +1616,32 @@ void PRVM_Fields_f (void)
 		switch(d->type & ~DEF_SAVEGLOBAL)
 		{
 		case ev_string:
-			strcat(tempstring, "string   ");
+			strlcat(tempstring, "string   ", sizeof(tempstring));
 			break;
 		case ev_entity:
-			strcat(tempstring, "entity   ");
+			strlcat(tempstring, "entity   ", sizeof(tempstring));
 			break;
 		case ev_function:
-			strcat(tempstring, "function ");
+			strlcat(tempstring, "function ", sizeof(tempstring));
 			break;
 		case ev_field:
-			strcat(tempstring, "field    ");
+			strlcat(tempstring, "field    ", sizeof(tempstring));
 			break;
 		case ev_void:
-			strcat(tempstring, "void     ");
+			strlcat(tempstring, "void     ", sizeof(tempstring));
 			break;
 		case ev_float:
-			strcat(tempstring, "float    ");
+			strlcat(tempstring, "float    ", sizeof(tempstring));
 			break;
 		case ev_vector:
-			strcat(tempstring, "vector   ");
+			strlcat(tempstring, "vector   ", sizeof(tempstring));
 			break;
 		case ev_pointer:
-			strcat(tempstring, "pointer  ");
+			strlcat(tempstring, "pointer  ", sizeof(tempstring));
 			break;
 		default:
 			sprintf (tempstring2, "bad type %i ", d->type & ~DEF_SAVEGLOBAL);
-			strcat(tempstring, tempstring2);
+			strlcat(tempstring, tempstring2, sizeof(tempstring));
 			break;
 		}
 		if (strlen(name) > sizeof(tempstring2)-4)
@@ -1651,12 +1651,12 @@ void PRVM_Fields_f (void)
 			tempstring2[sizeof(tempstring2)-1] = 0;
 			name = tempstring2;
 		}
-		strcat(tempstring, name);
+		strlcat(tempstring, name, sizeof(tempstring));
 		for (j = (int)strlen(name);j < 25;j++)
-			strcat(tempstring, " ");
+			strlcat(tempstring, " ", sizeof(tempstring));
 		sprintf(tempstring2, "%5d", counts[i]);
-		strcat(tempstring, tempstring2);
-		strcat(tempstring, "\n");
+		strlcat(tempstring, tempstring2, sizeof(tempstring));
+		strlcat(tempstring, "\n", sizeof(tempstring));
 		if (strlen(tempstring) >= sizeof(tempstring)/2)
 		{
 			Con_Print(tempstring);

@@ -72,11 +72,11 @@ static qboolean WakeVideo( clvideo_t * video )
 
 static clvideo_t* OpenVideo( clvideo_t *video, const char *filename, const char *name, int owner )
 {
-	strncpy( video->filename, filename, MAX_QPATH );
+	strlcpy( video->filename, filename, sizeof(video->filename) );
 	video->ownertag = owner;
 	if( strncmp( name, CLVIDEOPREFIX, sizeof( CLVIDEOPREFIX ) - 1 ) )
 		return NULL;
-	strncpy( video->cpif.name, name, MAX_QPATH );
+	strlcpy( video->cpif.name, name, sizeof(video->cpif.name) );
 
 	if( !OpenStream( video ) )
 		return NULL;

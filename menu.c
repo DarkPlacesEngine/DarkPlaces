@@ -2656,8 +2656,8 @@ static void M_Keys_Draw (void)
 				if (keys[j] != -1)
 				{
 					if (j > 0)
-						strcat(keystring, " or ");
-					strcat(keystring, Key_KeynumToString (keys[j]));
+						strlcat(keystring, " or ", sizeof(keystring));
+					strlcat(keystring, Key_KeynumToString (keys[j]), sizeof(keystring));
 				}
 			}
 		}

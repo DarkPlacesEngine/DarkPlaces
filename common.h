@@ -228,6 +228,13 @@ char	*va(const char *format, ...);
 extern int dpsnprintf (char *buffer, size_t buffersize, const char *format, ...);
 extern int dpvsnprintf (char *buffer, size_t buffersize, const char *format, va_list args);
 
+// A bunch of functions are forbidden for security reasons (and also to please MSVS 2005, for some of them)
+#define strcat DO_NOT_USE_STRCAT__USE_STRLCAT
+#define strncat DO_NOT_USE_STRNCAT__USE_STRLCAT_OR_MEMCPY
+//#define strcpy DO_NOT_USE_STRCPY__USE_STRLCPY
+#define strncpy DO_NOT_USE_STRNCPY__USE_STRLCPY_OR_MEMCPY
+//#define sprintf DO_NOT_USE_SPRINTF__USE_DPSNPRINTF
+
 
 //============================================================================
 

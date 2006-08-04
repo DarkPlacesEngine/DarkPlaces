@@ -1678,7 +1678,7 @@ static void Mod_Q1BSP_ParseWadsFromEntityLump(const char *data)
 							k = value[i];
 							value[i] = 0;
 							strcpy(wadname, "textures/");
-							strcat(wadname, &value[j]);
+							strlcat(wadname, &value[j], sizeof(wadname));
 							W_LoadTextureWadFile(wadname, false);
 							j = i+1;
 							if (!k)

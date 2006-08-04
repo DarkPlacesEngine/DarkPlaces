@@ -3621,17 +3621,13 @@ void VM_buf_implode (void)
 			l += strlen(b->strings[i]);
 			if(l>=4095)
 				break;
-			k = strcat(k, b->strings[i]);
-			if(!k)
-				break;
+			strlcat(k, b->strings[i], VM_STRINGTEMP_LENGTH);
 			if(sep && (i != b->num_strings-1))
 			{
 				l += strlen(sep);
 				if(l>=4095)
 					break;
-				k = strcat(k, sep);
-				if(!k)
-					break;
+				strlcat(k, sep, VM_STRINGTEMP_LENGTH);
 			}
 		}
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(k);
