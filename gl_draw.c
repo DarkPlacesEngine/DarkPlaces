@@ -458,7 +458,7 @@ cachepic_t *Draw_NewPic(const char *picname, int width, int height, int alpha, u
 				return cachepics; // return the first one
 			}
 			pic = cachepics + (numcachepics++);
-			strcpy (pic->name, picname);
+			strlcpy (pic->name, picname, sizeof(pic->name));
 			// link into list
 			pic->chain = cachepichash[hashkey];
 			cachepichash[hashkey] = pic;

@@ -252,7 +252,7 @@ int LHNETADDRESS_ToString(const lhnetaddress_t *address, char *string, int strin
 		{
 			if (stringbuffersize >= 6)
 			{
-				strcpy(string, "local");
+				memcpy(string, "local", 6);
 				return 1;
 			}
 		}

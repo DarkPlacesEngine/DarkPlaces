@@ -257,7 +257,7 @@ static int GL_OpenLibrary(void)
 		Con_Printf("Unable to open symbol list for %s\n", name);
 		return false;
 	}
-	strcpy(gl_driver, name);
+	strlcpy(gl_driver, name, sizeof(gl_driver));
 	return true;
 }
 

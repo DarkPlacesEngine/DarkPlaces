@@ -557,7 +557,7 @@ static void Mod_MDL_LoadFrames (unsigned char* datapointer, int inverts, int *ve
 		// get scene name from first frame
 		pinframe = (daliasframe_t *)datapointer;
 
-		strcpy(scene->name, pinframe->name);
+		strlcpy(scene->name, pinframe->name, sizeof(scene->name));
 		scene->firstframe = pose;
 		scene->framecount = groupframes;
 		scene->framerate = 1.0f / interval;
@@ -930,7 +930,7 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 
 			// store the info about the new skin
 			Mod_BuildAliasSkinFromSkinFrame(loadmodel->data_textures + totalskins * loadmodel->num_surfaces, &tempskinframe);
-			strcpy(loadmodel->skinscenes[loadmodel->numskins].name, name);
+			strlcpy(loadmodel->skinscenes[loadmodel->numskins].name, name, sizeof(loadmodel->skinscenes[loadmodel->numskins].name));
 			loadmodel->skinscenes[loadmodel->numskins].firstframe = totalskins;
 			loadmodel->skinscenes[loadmodel->numskins].framecount = 1;
 			loadmodel->skinscenes[loadmodel->numskins].framerate = 10.0f;
@@ -1165,7 +1165,7 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 			out[k] = v[vertremap[k]];
 		datapointer += numxyz * sizeof(trivertx_t);
 
-		strcpy(loadmodel->animscenes[i].name, pinframe->name);
+		strlcpy(loadmodel->animscenes[i].name, pinframe->name, sizeof(loadmodel->animscenes[i].name));
 		loadmodel->animscenes[i].firstframe = i;
 		loadmodel->animscenes[i].framecount = 1;
 		loadmodel->animscenes[i].framerate = 10;
@@ -1240,7 +1240,7 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->animscenes = (animscene_t *)Mem_Alloc(loadmodel->mempool, loadmodel->numframes * sizeof(animscene_t));
 	for (i = 0, pinframe = (md3frameinfo_t *)((unsigned char *)pinmodel + LittleLong(pinmodel->lump_frameinfo));i < loadmodel->numframes;i++, pinframe++)
 	{
-		strcpy(loadmodel->animscenes[i].name, pinframe->name);
+		strlcpy(loadmodel->animscenes[i].name, pinframe->name, sizeof(loadmodel->animscenes[i].name));
 		loadmodel->animscenes[i].firstframe = i;
 		loadmodel->animscenes[i].framecount = 1;
 		loadmodel->animscenes[i].framerate = 10;
@@ -1253,7 +1253,7 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->data_tags = (aliastag_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_tagframes * loadmodel->num_tags * sizeof(aliastag_t));
 	for (i = 0, pintag = (md3tag_t *)((unsigned char *)pinmodel + LittleLong(pinmodel->lump_tags));i < loadmodel->num_tagframes * loadmodel->num_tags;i++, pintag++)
 	{
-		strcpy(loadmodel->data_tags[i].name, pintag->name);
+		strlcpy(loadmodel->data_tags[i].name, pintag->name, sizeof(loadmodel->data_tags[i].name));
 		loadmodel->data_tags[i].matrix = identitymatrix;
 		for (j = 0;j < 3;j++)
 		{

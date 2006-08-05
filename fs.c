@@ -1061,13 +1061,13 @@ void FS_Init (void)
 
 	fs_mempool = Mem_AllocPool("file management", 0, NULL);
 
-	strcpy(fs_gamedir, "");
+	strlcpy(fs_gamedir, "", sizeof(fs_gamedir));
 
 // If the base directory is explicitly defined by the compilation process
 #ifdef DP_FS_BASEDIR
-	strcpy(fs_basedir, DP_FS_BASEDIR);
+	strlcpy(fs_basedir, DP_FS_BASEDIR, sizeof(fs_basedir));
 #else
-	strcpy(fs_basedir, "");
+	strlcpy(fs_basedir, "", sizeof(fs_basedir));
 
 #ifdef MACOSX
 	// FIXME: is there a better way to find the directory outside the .app?
@@ -2073,17 +2073,19 @@ FS_StripExtension
 void FS_StripExtension (const char *in, char *out, size_t size_out)
 {
 	char *last = NULL;
+	char currentchar;
 
 	if (size_out == 0)
 		return;
 
-	while (*in && size_out > 1)
+	while ((currentchar = *in) && size_out > 1)
 	{
-		if (*in == '.')
+		if (currentchar == '.')
 			last = out;
-		else if (*in == '/' || *in == '\\' || *in == ':')
+		else if (currentchar == '/' || currentchar == '\\' || currentchar == ':')
 			last = NULL;
-		*out++ = *in++;
+		*out++ = currentchar;
+		in++;
 		size_out--;
 	}
 	if (last)
@@ -2221,7 +2223,7 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 			pak = searchpath->pack;
 			for (i = 0;i < pak->numfiles;i++)
 			{
-				strcpy(temp, pak->files[i].name);
+				strlcpy(temp, pak->files[i].name, sizeof(temp));
 				while (temp[0])
 				{
 					if (matchpattern(temp, (char *)pattern, true))
@@ -2301,10 +2303,12 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 		numchars = 0;
 		for (listtemp = liststart;listtemp;listtemp = listtemp->next)
 		{
+			size_t textlen;
 			search->filenames[numfiles] = search->filenamesbuffer + numchars;
-			strcpy(search->filenames[numfiles], listtemp->text);
+			textlen = strlen(listtemp->text) + 1;
+			memcpy(search->filenames[numfiles], listtemp->text, textlen);
 			numfiles++;
-			numchars += (int)strlen(listtemp->text) + 1;
+			numchars += (int)textlen;
 		}
 		if (liststart)
 			stringlistfree(liststart);

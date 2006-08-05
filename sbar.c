@@ -553,19 +553,30 @@ void Sbar_SortFrags (void)
 		{
 			if (color != (cl.scores[fragsort[i]].colors & 15))
 			{
+				const char* teamname;
+
 				color = cl.scores[fragsort[i]].colors & 15;
 				teamlines++;
 
-				if (color == 4)
-					strcpy(teams[teamlines-1].name, "^1Red Team");
-				else if (color == 13)
-					strcpy(teams[teamlines-1].name, "^4Blue Team");
-				else if (color == 9)
-					strcpy(teams[teamlines-1].name, "^6Pink Team");
-				else if (color == 12)
-					strcpy(teams[teamlines-1].name, "^3Yellow Team");
-				else
-					strcpy(teams[teamlines-1].name, "Total Team Score");
+				switch (color)
+				{
+					case 4:
+						teamname = "^1Red Team";
+						break;
+					case 13:
+						teamname = "^4Blue Team";
+						break;
+					case 9:
+						teamname = "^6Pink Team";
+						break;
+					case 12:
+						teamname = "^3Yellow Team";
+						break;
+					default:
+						teamname = "Total Team Score";
+						break;
+				}
+				strlcpy(teams[teamlines-1].name, teamname, sizeof(teams[teamlines-1].name));
 
 				teams[teamlines-1].frags = 0;
 				teams[teamlines-1].colors = color + 16 * color;

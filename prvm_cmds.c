@@ -535,7 +535,7 @@ void VM_cvar_string(void)
 
 	cvar_string = Cvar_VariableString(name);
 
-	strcpy(out, cvar_string);
+	strlcpy(out, cvar_string, VM_STRINGTEMP_LENGTH);
 
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(out);
 }
@@ -566,7 +566,7 @@ void VM_cvar_defstring (void)
 
 	cvar_string = Cvar_VariableDefString(name);
 
-	strcpy(out, cvar_string);
+	strlcpy(out, cvar_string, VM_STRINGTEMP_LENGTH);
 
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(out);
 }
@@ -1819,12 +1819,14 @@ void VM_strzone(void)
 {
 	char *out;
 	char string[VM_STRINGTEMP_LENGTH];
+	size_t alloclen;
 
 	VM_SAFEPARMCOUNT(1,VM_strzone);
 
 	VM_VarString(0, string, sizeof(string));
-	PRVM_G_INT(OFS_RETURN) = PRVM_AllocString(strlen(string) + 1, &out);
-	strcpy(out, string);
+	alloclen = strlen(string) + 1;
+	PRVM_G_INT(OFS_RETURN) = PRVM_AllocString(alloclen, &out);
+	memcpy(out, string, alloclen);
 }
 
 /*
@@ -1896,13 +1898,15 @@ void VM_tokenize (void)
 	pos = 0;
 	while(COM_ParseToken(&p, false))
 	{
+		size_t tokenlen;
 		if (num_tokens >= (int)(sizeof(tokens)/sizeof(tokens[0])))
 			break;
-		if (pos + strlen(com_token) + 1 > sizeof(tokenbuf))
+		tokenlen = strlen(com_token) + 1;
+		if (pos + tokenlen > sizeof(tokenbuf))
 			break;
 		tokens[num_tokens++] = tokenbuf + pos;
-		strcpy(tokenbuf + pos, com_token);
-		pos += strlen(com_token) + 1;
+		memcpy(tokenbuf + pos, com_token, tokenlen);
+		pos += tokenlen;
 	}
 
 	PRVM_G_FLOAT(OFS_RETURN) = num_tokens;
@@ -2309,7 +2313,7 @@ void VM_search_getfilename(void)
 	}
 
 	tmp = VM_GetTempString();
-	strcpy(tmp, VM_SEARCHLIST[handle]->filenames[filenum]);
+	strlcpy(tmp, VM_SEARCHLIST[handle]->filenames[filenum], VM_STRINGTEMP_LENGTH);
 
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(tmp);
 }
@@ -2663,7 +2667,7 @@ void VM_keynumtostring (void)
 
 	tmp = VM_GetTempString();
 
-	strcpy(tmp, Key_KeynumToString(keynum));
+	strlcpy(tmp, Key_KeynumToString(keynum), VM_STRINGTEMP_LENGTH);
 
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(tmp);
 }
@@ -3283,7 +3287,7 @@ void VM_altstr_set( void )
 		return;
 	}
 
-	strcpy( out, in );
+	strlcpy(out, in, VM_STRINGTEMP_LENGTH);
 	PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( outstr );
 }
 
@@ -3322,7 +3326,7 @@ void VM_altstr_ins(void)
 	for( ; *set ; *out++ = *set++ );
 	*out++ = '\'';
 
-	strcpy( out, in );
+	strlcpy(out, in, VM_STRINGTEMP_LENGTH);
 	PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( outstr );
 }
 
@@ -3527,13 +3531,15 @@ void VM_buf_copy (void)
 	for(i=0;i<b1->num_strings;i++)
 		if(b1->strings[i] && b1->strings[i][0])
 		{
-			b2->strings[i] = (char *)Z_Malloc(strlen(b1->strings[i])+1);
+			size_t stringlen;
+			stringlen = strlen(b1->strings[i]) + 1;
+			b2->strings[i] = (char *)Z_Malloc(stringlen);
 			if(!b2->strings[i])
 			{
 				VM_Warning("VM_buf_copy: not enough memory for buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM1), PRVM_NAME);
 				break;
 			}
-			strcpy(b2->strings[i], b1->strings[i]);
+			memcpy(b2->strings[i], b1->strings[i], stringlen);
 		}
 }
 
@@ -3677,6 +3683,7 @@ void VM_bufstr_set (void)
 	int				bufindex, strindex;
 	qcstrbuffer_t	*b;
 	const char		*news;
+	size_t			alloclen;
 
 	VM_SAFEPARMCOUNT(3, VM_bufstr_set);
 
@@ -3701,8 +3708,9 @@ void VM_bufstr_set (void)
 	}
 	if(b->strings[strindex])
 		Z_Free(b->strings[strindex]);
-	b->strings[strindex] = (char *)Z_Malloc(strlen(news)+1);
-	strcpy(b->strings[strindex], news);
+	alloclen = strlen(news) + 1;
+	b->strings[strindex] = (char *)Z_Malloc(alloclen);
+	memcpy(b->strings[strindex], news, alloclen);
 }
 
 /*
@@ -3718,6 +3726,7 @@ void VM_bufstr_add (void)
 	int				bufindex, order, strindex;
 	qcstrbuffer_t	*b;
 	const char		*string;
+	size_t			alloclen;
 
 	VM_SAFEPARMCOUNT(3, VM_bufstr_add);
 
@@ -3761,8 +3770,9 @@ void VM_bufstr_add (void)
 	}
 	if(b->strings[strindex])
 		Z_Free(b->strings[strindex]);
-	b->strings[strindex] = (char *)Z_Malloc(strlen(string)+1);
-	strcpy(b->strings[strindex], string);
+	alloclen = strlen(string) + 1;
+	b->strings[strindex] = (char *)Z_Malloc(alloclen);
+	memcpy(b->strings[strindex], string, alloclen);
 	PRVM_G_FLOAT(OFS_RETURN) = strindex;
 }
 

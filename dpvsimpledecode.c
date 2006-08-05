@@ -333,30 +333,6 @@ static int dpvsimpledecode_setpixelformat(dpvsimpledecodestream_t *s, unsigned i
 
 // opening and closing streams
 
-static void StripExtension(char *in, char *out)
-{
-	char *dot, *c;
-	dot = NULL;
-	for (c = in;*c;c++)
-	{
-		if (*c == ':' || *c == '\\' || *c == '/')
-			dot = NULL;
-		if (*c == '.')
-			dot = c;
-	}
-	if (dot == NULL)
-	{
-		// nothing to remove
-		strcpy(out, in);
-		return;
-	}
-	else
-	{
-		memcpy(out, in, dot - in);
-		out[dot - in] = 0;
-	}
-}
-
 // opens a stream
 void *dpvsimpledecode_open(char *filename, char **errorstring)
 {
@@ -400,7 +376,7 @@ void *dpvsimpledecode_open(char *filename, char **errorstring)
 								{
 									sfx_t* sfx;
 
-									StripExtension(filename, wavename);
+									FS_StripExtension(filename, wavename, namelen);
 									strlcat(wavename, ".wav", namelen);
 									sfx = S_PrecacheSound (wavename, false, false);
 									if (sfx != NULL)

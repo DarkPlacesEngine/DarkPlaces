@@ -688,7 +688,7 @@ static int GL_OpenLibrary(const char *name)
 		Con_Printf("Unable to LoadLibrary %s\n", name);
 		return false;
 	}
-	strcpy(gl_driver, name);
+	strlcpy(gl_driver, name, sizeof(gl_driver));
 	return true;
 }
 

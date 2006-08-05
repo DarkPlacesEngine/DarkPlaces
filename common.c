@@ -1416,7 +1416,7 @@ void InfoString_SetValue(char *buffer, size_t bufferlength, const char *key, con
 	else
 	{
 		// just remove the key from the text
-		strcpy(buffer + pos, buffer + pos2);
+		strlcpy(buffer + pos, buffer + pos2, bufferlength - pos);
 	}
 }
 

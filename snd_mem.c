@@ -331,7 +331,7 @@ qboolean S_LoadSound (sfx_t *sfx, qboolean complain)
 		if (S_LoadWavFile (namebuffer, sfx))
 			return true;
 		if (len >= 4 && !strcasecmp (namebuffer + len - 4, ".wav"))
-			strcpy (namebuffer + len - 3, "ogg");
+			memcpy (namebuffer + len - 3, "ogg", 4);
 		if (OGG_LoadVorbisFile (namebuffer, sfx))
 			return true;
 	}
@@ -347,7 +347,7 @@ qboolean S_LoadSound (sfx_t *sfx, qboolean complain)
 	if (S_LoadWavFile (namebuffer, sfx))
 		return true;
 	if (len >= 4 && !strcasecmp (namebuffer + len - 4, ".wav"))
-		strcpy (namebuffer + len - 3, "ogg");
+		memcpy (namebuffer + len - 3, "ogg", 4);
 	if (OGG_LoadVorbisFile (namebuffer, sfx))
 		return true;
 

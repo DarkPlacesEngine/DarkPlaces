@@ -705,7 +705,8 @@ void Con_DrawInput (void)
 	if (!key_consoleactive)
 		return;		// don't draw anything
 
-	text = strcpy(editlinecopy, key_lines[edit_line]);
+	strlcpy(editlinecopy, key_lines[edit_line], sizeof(editlinecopy));
+	text = editlinecopy;
 
 	// Advanced Console Editing by Radix radix@planetquake.com
 	// Added/Modified by EvilTypeGuy eviltypeguy@qeradiant.com
@@ -818,7 +819,7 @@ void Con_DrawNotify (void)
 		while ((int)strlen(temptext) >= con_linewidth)
 		{
 			DrawQ_ColoredString( 0, v, temptext, con_linewidth, con_textsize.value, con_textsize.value, 1.0, 1.0, 1.0, 1.0, 0, &colorindex );
-			strcpy(temptext, &temptext[con_linewidth]);
+			strlcpy(temptext, &temptext[con_linewidth], sizeof(temptext));
 			v += con_textsize.value;
 		}
 		if (strlen(temptext) > 0)
@@ -918,7 +919,7 @@ qboolean GetMapList (const char *s, char *completedname, int completednamebuffer
 		const char *data = NULL;
 		char keyname[64];
 		char entfilename[MAX_QPATH];
-		strcpy(message, "^1**ERROR**^7");
+		strlcpy(message, "^1**ERROR**^7", sizeof(message));
 		p = 0;
 		f = FS_Open(t->filenames[i], "rb", true, false);
 		if(f)
@@ -960,7 +961,7 @@ qboolean GetMapList (const char *s, char *completedname, int completednamebuffer
 			else
 				p = 0;
 			strlcpy(entfilename, t->filenames[i], sizeof(entfilename));
-			strcpy(entfilename + strlen(entfilename) - 4, ".ent");
+			memcpy(entfilename + strlen(entfilename) - 4, ".ent", 5);
 			entities = (char *)FS_LoadFile(entfilename, tempmempool, true, NULL);
 			if (!entities && lumplen >= 10)
 			{
@@ -1008,12 +1009,12 @@ qboolean GetMapList (const char *s, char *completedname, int completednamebuffer
 		*(t->filenames[i]+len[i]+5) = 0;
 		switch(p)
 		{
-		case Q3BSPVERSION:	strcpy((char *)buf, "Q3");break;
-		case Q2BSPVERSION:	strcpy((char *)buf, "Q2");break;
-		case BSPVERSION:	strcpy((char *)buf, "Q1");break;
-		case MCBSPVERSION:	strcpy((char *)buf, "MC");break;
-		case 30:			strcpy((char *)buf, "HL");break;
-		default:			strcpy((char *)buf, "??");break;
+		case Q3BSPVERSION:	strlcpy((char *)buf, "Q3", sizeof(buf));break;
+		case Q2BSPVERSION:	strlcpy((char *)buf, "Q2", sizeof(buf));break;
+		case BSPVERSION:	strlcpy((char *)buf, "Q1", sizeof(buf));break;
+		case MCBSPVERSION:	strlcpy((char *)buf, "MC", sizeof(buf));break;
+		case 30:			strlcpy((char *)buf, "HL", sizeof(buf));break;
+		default:			strlcpy((char *)buf, "??", sizeof(buf));break;
 		}
 		Con_Printf("%16s (%s) %s\n", t->filenames[i]+5, buf, message);
 	}
@@ -1161,7 +1162,7 @@ void Con_CompleteCommandLine (void)
 	if (!(c + v + a))	// No possible matches
 	{
 		if(s2[0])
-			strcpy(&key_lines[edit_line][key_linepos], s2);
+			strlcpy(&key_lines[edit_line][key_linepos], s2, sizeof(key_lines[edit_line]) - key_linepos);
 		return;
 	}
 

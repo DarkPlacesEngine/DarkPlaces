@@ -762,9 +762,13 @@ unsigned char *LoadWAL (const unsigned char *f, int filesize, int matchwidth, in
 }
 
 
-void Image_StripImageExtension (const char *in, char *out)
+static void Image_StripImageExtension (const char *in, char *out, size_t size_out)
 {
 	const char *end, *temp;
+	
+	if (size_out == 0)
+		return;
+
 	end = in + strlen(in);
 	if ((end - in) >= 4)
 	{
@@ -775,12 +779,15 @@ void Image_StripImageExtension (const char *in, char *out)
 		 || strcmp(temp, ".png") == 0
 		 || strcmp(temp, ".jpg") == 0)
 			end = temp;
-		while (in < end)
+		while (in < end && size_out > 1)
+		{
 			*out++ = *in++;
+			size_out--;
+		}
 		*out++ = 0;
 	}
 	else
-		strcpy(out, in);
+		strlcpy(out, in, size_out);
 }
 
 typedef struct imageformat_s
@@ -853,8 +860,7 @@ unsigned char *loadimagepixels (const char *filename, qboolean complain, int mat
 		Mem_CheckSentinelsGlobal();
 	if (developer_texturelogging.integer)
 		Log_Printf("textures.log", "%s\n", filename);
-	strlcpy(basename, filename, sizeof(basename));
-	Image_StripImageExtension(basename, basename); // strip filename extensions to allow replacement by other types
+	Image_StripImageExtension(filename, basename, sizeof(basename)); // strip filename extensions to allow replacement by other types
 	// replace *'s with #, so commandline utils don't get confused when dealing with the external files
 	for (c = basename;*c;c++)
 		if (*c == '*')
@@ -1558,8 +1564,7 @@ int image_loadskin(imageskin_t *s, const char *shadername)
 	unsigned char *bumppixels;
 	int bumppixels_width, bumppixels_height;
 	char name[MAX_QPATH];
-	strlcpy(name, shadername, sizeof(name));
-	Image_StripImageExtension(name, name);
+	Image_StripImageExtension(shadername, name, sizeof(name));
 	memset(s, 0, sizeof(*s));
 	s->basepixels = loadimagepixels(name, false, 0, 0);
 	if (s->basepixels == NULL)

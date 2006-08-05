@@ -1218,7 +1218,7 @@ void VM_CL_getplayerkey (void)
 	t[0] = 0;
 
 	if(!strcasecmp(c, "name"))
-		strcpy(t, cl.scores[i].name);
+		strlcpy(t, cl.scores[i].name, sizeof(t));
 	else
 		if(!strcasecmp(c, "frags"))
 			sprintf(t, "%i", cl.scores[i].frags);
@@ -1243,7 +1243,7 @@ void VM_CL_getplayerkey (void)
 	if(!t[0])
 		return;
 	temp = VM_GetTempString();
-	strcpy(temp, t);
+	strlcpy(temp, t, VM_STRINGTEMP_LENGTH);
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(temp);
 }
 
@@ -1268,8 +1268,11 @@ void VM_CL_registercmd (void)
 	VM_SAFEPARMCOUNT(1, VM_CL_registercmd);
 	if(!Cmd_Exists(PRVM_G_STRING(OFS_PARM0)))
 	{
-		t = (char *)Z_Malloc(strlen(PRVM_G_STRING(OFS_PARM0))+1);
-		strcpy(t, PRVM_G_STRING(OFS_PARM0));
+		size_t alloclen;
+		
+		alloclen = strlen(PRVM_G_STRING(OFS_PARM0)) + 1;
+		t = (char *)Z_Malloc(alloclen);
+		memcpy(t, PRVM_G_STRING(OFS_PARM0), alloclen);
 		Cmd_AddCommand(t, NULL, "console command created by QuakeC");
 	}
 	else
@@ -1341,7 +1344,7 @@ void VM_CL_ReadString (void)
 	PRVM_G_INT(OFS_RETURN) = 0;
 	if(s)
 	{
-		strcpy(t, s);
+		strlcpy(t, s, VM_STRINGTEMP_LENGTH);
 		PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(t);
 	}
 }

@@ -1256,7 +1256,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 	// fill out all slots with notexture
 	for (i = 0, tx = loadmodel->data_textures;i < loadmodel->num_textures;i++, tx++)
 	{
-		strcpy(tx->name, "NO TEXTURE FOUND");
+		strlcpy(tx->name, "NO TEXTURE FOUND", sizeof(tx->name));
 		tx->width = 16;
 		tx->height = 16;
 		tx->skin.base = r_texture_notexture;
@@ -1323,7 +1323,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 				name[j] += 'a' - 'A';
 
 		tx = loadmodel->data_textures + i;
-		strcpy(tx->name, name);
+		strlcpy(tx->name, name, sizeof(tx->name));
 		tx->width = mtwidth;
 		tx->height = mtheight;
 
@@ -1650,9 +1650,9 @@ static void Mod_Q1BSP_ParseWadsFromEntityLump(const char *data)
 		if (com_token[0] == '}')
 			break; // end of worldspawn
 		if (com_token[0] == '_')
-			strcpy(key, com_token + 1);
+			strlcpy(key, com_token + 1, sizeof(key));
 		else
-			strcpy(key, com_token);
+			strlcpy(key, com_token, sizeof(key));
 		while (key[strlen(key)-1] == ' ') // remove trailing spaces
 			key[strlen(key)-1] = 0;
 		if (!COM_ParseTokenConsole(&data))
@@ -1677,7 +1677,7 @@ static void Mod_Q1BSP_ParseWadsFromEntityLump(const char *data)
 						{
 							k = value[i];
 							value[i] = 0;
-							strcpy(wadname, "textures/");
+							strlcpy(wadname, "textures/", sizeof(wadname));
 							strlcat(wadname, &value[j], sizeof(wadname));
 							W_LoadTextureWadFile(wadname, false);
 							j = i+1;
@@ -3349,7 +3349,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 			// copy the base model to this one
 			*mod = *loadmodel;
 			// rename the clone back to its proper name
-			strcpy(mod->name, name);
+			strlcpy(mod->name, name, sizeof(mod->name));
 			// textures and memory belong to the main model
 			mod->texturepool = NULL;
 			mod->mempool = NULL;
@@ -3919,14 +3919,14 @@ static void Mod_Q3BSP_LoadEntities(lump_t *l)
 			if (com_token[0] == '}')
 				break; // end of worldspawn
 			if (com_token[0] == '_')
-				strcpy(key, com_token + 1);
+				strlcpy(key, com_token + 1, sizeof(key));
 			else
-				strcpy(key, com_token);
+				strlcpy(key, com_token, sizeof(key));
 			while (key[strlen(key)-1] == ' ') // remove trailing spaces
 				key[strlen(key)-1] = 0;
 			if (!COM_ParseTokenConsole(&data))
 				break; // error
-			strcpy(value, com_token);
+			strlcpy(value, com_token, sizeof(value));
 			if (!strcmp("gridsize", key))
 			{
 				if (sscanf(value, "%f %f %f", &v[0], &v[1], &v[2]) == 3 && v[0] != 0 && v[1] != 0 && v[2] != 0)
@@ -5756,7 +5756,7 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer, void *bufferend)
 			sprintf(name, "*%i", i);
 			mod = Mod_FindName(name);
 			*mod = *loadmodel;
-			strcpy(mod->name, name);
+			strlcpy(mod->name, name, sizeof(mod->name));
 			// textures and memory belong to the main model
 			mod->texturepool = NULL;
 			mod->mempool = NULL;

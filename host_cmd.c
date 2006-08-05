@@ -292,7 +292,7 @@ void Host_Map_f (void)
 
 	svs.serverflags = 0;			// haven't completed an episode yet
 	allowcheats = sv_cheats.integer != 0;
-	strcpy(level, Cmd_Argv(1));
+	strlcpy(level, Cmd_Argv(1), sizeof(level));
 	SV_SpawnServer(level);
 	if (sv.active && cls.state == ca_disconnected)
 		CL_EstablishConnection("local:1");
@@ -352,7 +352,7 @@ void Host_Changelevel_f (void)
 	SV_SaveSpawnparms ();
 	SV_VM_End();
 	allowcheats = sv_cheats.integer != 0;
-	strcpy(level, Cmd_Argv(1));
+	strlcpy(level, Cmd_Argv(1), sizeof(level));
 	SV_SpawnServer(level);
 	if (sv.active && cls.state == ca_disconnected)
 		CL_EstablishConnection("local:1");
@@ -386,7 +386,7 @@ void Host_Restart_f (void)
 	key_dest = key_game;
 
 	allowcheats = sv_cheats.integer != 0;
-	strcpy(mapname, sv.name);
+	strlcpy(mapname, sv.name, sizeof(mapname));
 	SV_SpawnServer(mapname);
 	if (sv.active && cls.state == ca_disconnected)
 		CL_EstablishConnection("local:1");
@@ -628,7 +628,7 @@ void Host_Loadgame_f (void)
 		return;
 	}
 
-	strcpy (filename, Cmd_Argv(1));
+	strlcpy (filename, Cmd_Argv(1), sizeof(filename));
 	FS_DefaultExtension (filename, ".sav", sizeof (filename));
 
 	Con_Printf("Loading game from %s...\n", filename);
@@ -670,7 +670,7 @@ void Host_Loadgame_f (void)
 
 	// mapname
 	COM_ParseTokenConsole(&t);
-	strcpy (mapname, com_token);
+	strlcpy (mapname, com_token, sizeof(mapname));
 
 	// time
 	COM_ParseTokenConsole(&t);
@@ -835,7 +835,7 @@ void Host_Name_f (void)
 	{
 		if (host_client->spawned)
 			SV_BroadcastPrintf("%s changed name to %s\n", host_client->old_name, host_client->name);
-		strcpy(host_client->old_name, host_client->name);
+		strlcpy(host_client->old_name, host_client->name, sizeof(host_client->old_name));
 		// send notification to all clients
 		MSG_WriteByte (&sv.reliable_datagram, svc_updatename);
 		MSG_WriteByte (&sv.reliable_datagram, host_client - svs.clients);
@@ -894,7 +894,7 @@ void Host_Playermodel_f (void)
 		PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_playermodel)->string = PRVM_SetEngineString(host_client->playermodel);
 	if (strcmp(host_client->old_model, host_client->playermodel))
 	{
-		strcpy(host_client->old_model, host_client->playermodel);
+		strlcpy(host_client->old_model, host_client->playermodel, sizeof(host_client->old_model));
 		/*// send notification to all clients
 		MSG_WriteByte (&sv.reliable_datagram, svc_updatepmodel);
 		MSG_WriteByte (&sv.reliable_datagram, host_client - svs.clients);
@@ -954,7 +954,7 @@ void Host_Playerskin_f (void)
 	{
 		//if (host_client->spawned)
 		//	SV_BroadcastPrintf("%s changed skin to %s\n", host_client->name, host_client->playerskin);
-		strcpy(host_client->old_skin, host_client->playerskin);
+		strlcpy(host_client->old_skin, host_client->playerskin, sizeof(host_client->old_skin));
 		/*// send notification to all clients
 		MSG_WriteByte (&sv.reliable_datagram, svc_updatepskin);
 		MSG_WriteByte (&sv.reliable_datagram, host_client - svs.clients);

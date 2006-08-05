@@ -215,6 +215,7 @@ Cvar_Set
 void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 {
 	qboolean changed;
+	size_t valuelen;
 
 	changed = strcmp(var->string, value);
 	// LordHavoc: don't reallocate when there is no change
@@ -222,13 +223,14 @@ void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 		return;
 
 	// LordHavoc: don't reallocate when the buffer is the same size
-	if (!var->string || strlen(var->string) != strlen(value))
+	valuelen = strlen(value);
+	if (!var->string || strlen(var->string) != valuelen)
 	{
 		Z_Free (var->string);	// free the old value string
 
-		var->string = (char *)Z_Malloc (strlen(value)+1);
+		var->string = (char *)Z_Malloc (valuelen + 1);
 	}
-	strcpy (var->string, value);
+	memcpy (var->string, value, valuelen + 1);
 	var->value = atof (var->string);
 	var->integer = (int) var->value;
 	if ((var->flags & CVAR_NOTIFY) && changed && sv.active)
@@ -315,6 +317,7 @@ void Cvar_RegisterVariable (cvar_t *variable)
 	int hashindex;
 	cvar_t *current, *next, *cvar;
 	char *oldstr;
+	size_t alloclen;
 
 	if (developer.integer >= 100)
 		Con_Printf("Cvar_RegisterVariable({\"%s\", \"%s\", %i});\n", variable->name, variable->string, variable->flags);
@@ -371,10 +374,11 @@ void Cvar_RegisterVariable (cvar_t *variable)
 
 // copy the value off, because future sets will Z_Free it
 	oldstr = variable->string;
-	variable->string = (char *)Z_Malloc (strlen(variable->string)+1);
-	strcpy (variable->string, oldstr);
-	variable->defstring = (char *)Z_Malloc (strlen(variable->string)+1);
-	strcpy (variable->defstring, oldstr);
+	alloclen = strlen(variable->string) + 1;
+	variable->string = (char *)Z_Malloc (alloclen);
+	memcpy (variable->string, oldstr, alloclen);
+	variable->defstring = (char *)Z_Malloc (alloclen);
+	memcpy (variable->defstring, oldstr, alloclen);
 	variable->value = atof (variable->string);
 	variable->integer = (int) variable->value;
 
@@ -406,6 +410,7 @@ cvar_t *Cvar_Get (const char *name, const char *value, int flags)
 {
 	int hashindex;
 	cvar_t *current, *next, *cvar;
+	size_t alloclen;
 
 	if (developer.integer >= 100)
 		Con_Printf("Cvar_Get(\"%s\", \"%s\", %i);\n", name, value, flags);
@@ -427,15 +432,18 @@ cvar_t *Cvar_Get (const char *name, const char *value, int flags)
 	}
 
 // allocate a new cvar, cvar name, and cvar string
+// TODO: factorize the following code with the one at the end of Cvar_RegisterVariable()
 // FIXME: these never get Z_Free'd
 	cvar = (cvar_t *)Z_Malloc(sizeof(cvar_t));
 	cvar->flags = flags | CVAR_ALLOCATED;
-	cvar->name = (char *)Z_Malloc(strlen(name)+1);
-	strcpy(cvar->name, name);
-	cvar->string = (char *)Z_Malloc(strlen(value)+1);
-	strcpy(cvar->string, value);
-	cvar->defstring = (char *)Z_Malloc(strlen(value)+1);
-	strcpy(cvar->defstring, value);
+	alloclen = strlen(name) + 1;
+	cvar->name = (char *)Z_Malloc(alloclen);
+	memcpy(cvar->name, name, alloclen);
+	alloclen = strlen(value) + 1;
+	cvar->string = (char *)Z_Malloc(alloclen);
+	memcpy(cvar->string, value, alloclen);
+	cvar->defstring = (char *)Z_Malloc(alloclen);
+	memcpy(cvar->defstring, value, alloclen);
 	cvar->value = atof (cvar->string);
 	cvar->integer = (int) cvar->value;
 	cvar->description = "custom cvar";
@@ -505,11 +513,14 @@ void Cvar_LockDefaults_f (void)
 	{
 		if (!(var->flags & CVAR_DEFAULTSET))
 		{
+			size_t alloclen;
+
 			//Con_Printf("locking cvar %s (%s -> %s)\n", var->name, var->string, var->defstring);
 			var->flags |= CVAR_DEFAULTSET;
 			Z_Free(var->defstring);
-			var->defstring = (char *)Z_Malloc(strlen(var->string) + 1);
-			strcpy(var->defstring, var->string);
+			alloclen = strlen(var->string) + 1;
+			var->defstring = (char *)Z_Malloc(alloclen);
+			memcpy(var->defstring, var->string, alloclen);
 		}
 	}
 }
