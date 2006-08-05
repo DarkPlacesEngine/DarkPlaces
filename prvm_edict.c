@@ -848,7 +848,7 @@ void PRVM_ED_ParseGlobals (const char *data)
 		if (com_token[0] == '}')
 			break;
 
-		strcpy (keyname, com_token);
+		strlcpy (keyname, com_token, sizeof(keyname));
 
 		// parse value
 		if (!COM_ParseTokenConsole(&data))
@@ -1047,7 +1047,7 @@ const char *PRVM_ED_ParseEdict (const char *data, prvm_edict_t *ent)
 		// and allow them to be turned into vectors. (FIXME...)
 		if (!strcmp(com_token, "angle"))
 		{
-			strcpy (com_token, "angles");
+			strlcpy (com_token, "angles", sizeof(com_token));
 			anglehack = true;
 		}
 		else
@@ -1055,9 +1055,9 @@ const char *PRVM_ED_ParseEdict (const char *data, prvm_edict_t *ent)
 
 		// FIXME: change light to _light to get rid of this hack
 		if (!strcmp(com_token, "light"))
-			strcpy (com_token, "light_lev");	// hack for single light def
+			strlcpy (com_token, "light_lev", sizeof(com_token));	// hack for single light def
 
-		strcpy (keyname, com_token);
+		strlcpy (keyname, com_token, sizeof(keyname));
 
 		// another hack to fix keynames with trailing spaces
 		n = strlen(keyname);
@@ -1097,7 +1097,7 @@ const char *PRVM_ED_ParseEdict (const char *data, prvm_edict_t *ent)
 		if (anglehack)
 		{
 			char	temp[32];
-			strcpy (temp, com_token);
+			strlcpy (temp, com_token, sizeof(temp));
 			sprintf (com_token, "0 %s 0", temp);
 		}
 

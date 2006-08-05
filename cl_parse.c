@@ -2251,7 +2251,7 @@ void CL_ParseServerMessage(void)
 				{
 					char description[32*64], temp[64];
 					int count;
-					strcpy(description, "packet dump: ");
+					strlcpy(description, "packet dump: ", sizeof(description));
 					i = cmdcount - 32;
 					if (i < 0)
 						i = 0;
@@ -2591,7 +2591,7 @@ void CL_ParseServerMessage(void)
 				{
 					char description[32*64], temp[64];
 					int count;
-					strcpy (description, "packet dump: ");
+					strlcpy (description, "packet dump: ", sizeof(description));
 					i = cmdcount - 32;
 					if (i < 0)
 						i = 0;

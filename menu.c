@@ -880,7 +880,7 @@ static void M_ScanSaves (void)
 
 	for (i=0 ; i<MAX_SAVEGAMES ; i++)
 	{
-		strcpy (m_filenames[i], "--- UNUSED SLOT ---");
+		strlcpy (m_filenames[i], "--- UNUSED SLOT ---", sizeof(m_filenames[i]));
 		loadable[i] = false;
 		sprintf (name, "s%i.sav", (int)i);
 		f = FS_Open (name, "rb", false, false);
@@ -1299,7 +1299,7 @@ void M_Menu_Setup_f (void)
 	key_dest = key_menu;
 	m_state = m_setup;
 	m_entersound = true;
-	strcpy(setup_myname, cl_name.string);
+	strlcpy(setup_myname, cl_name.string, sizeof(setup_myname));
 	setup_top = setup_oldtop = cl_color.integer >> 4;
 	setup_bottom = setup_oldbottom = cl_color.integer & 15;
 	setup_rate = cl_rate.integer;
@@ -2647,7 +2647,7 @@ static void M_Keys_Draw (void)
 
 		// LordHavoc: redesigned to print more than 2 keys, inspired by Tomaz's MiniRacer
 		if (keys[0] == -1)
-			strcpy(keystring, "???");
+			strlcpy(keystring, "???", sizeof(keystring));
 		else
 		{
 			keystring[0] = 0;

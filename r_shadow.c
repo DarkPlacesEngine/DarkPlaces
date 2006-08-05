@@ -2072,7 +2072,7 @@ void R_RTLight_Update(dlight_t *light, int isstatic)
 	rtlight->cullmaxs[2] = rtlight->shadoworigin[2] + rtlight->radius;
 	rtlight->cubemapname[0] = 0;
 	if (light->cubemapname[0])
-		strcpy(rtlight->cubemapname, light->cubemapname);
+		strlcpy(rtlight->cubemapname, light->cubemapname, sizeof(rtlight->cubemapname));
 	else if (light->cubemapnum > 0)
 		sprintf(rtlight->cubemapname, "cubemaps/%i", light->cubemapnum);
 	rtlight->shadow = light->shadow;
@@ -2577,7 +2577,7 @@ rtexture_t *R_Shadow_Cubemap(const char *basename)
 	if (i >= MAX_CUBEMAPS)
 		return r_texture_whitecube;
 	numcubemaps++;
-	strcpy(cubemaps[i].basename, basename);
+	strlcpy(cubemaps[i].basename, basename, sizeof(cubemaps[i].basename));
 	cubemaps[i].texture = R_Shadow_LoadCubemap(cubemaps[i].basename);
 	if (!cubemaps[i].texture)
 		cubemaps[i].texture = r_texture_whitecube;
@@ -2782,8 +2782,10 @@ void R_Shadow_LoadWorldLights(void)
 			// remove quotes on cubemapname
 			if (cubemapname[0] == '"' && cubemapname[strlen(cubemapname) - 1] == '"')
 			{
-				cubemapname[strlen(cubemapname)-1] = 0;
-				strcpy(cubemapname, cubemapname + 1);
+				size_t namelen;
+				namelen = strlen(cubemapname) - 2;
+				memmove(cubemapname, cubemapname + 1, namelen);
+				cubemapname[namelen] = '\0';
 			}
 			if (a < 8)
 			{
@@ -2950,14 +2952,14 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 			if (com_token[0] == '}')
 				break; // end of entity
 			if (com_token[0] == '_')
-				strcpy(key, com_token + 1);
+				strlcpy(key, com_token + 1, sizeof(key));
 			else
-				strcpy(key, com_token);
+				strlcpy(key, com_token, sizeof(key));
 			while (key[strlen(key)-1] == ' ') // remove trailing spaces
 				key[strlen(key)-1] = 0;
 			if (!COM_ParseTokenConsole(&data))
 				break; // error
-			strcpy(value, com_token);
+			strlcpy(value, com_token, sizeof(value));
 
 			// now that we have the key pair worked out...
 			if (!strcmp("light", key))
@@ -3432,7 +3434,7 @@ void R_Shadow_EditLights_Edit_f(void)
 			return;
 		}
 		if (Cmd_Argc() == 3)
-			strcpy(cubemapname, Cmd_Argv(2));
+			strlcpy(cubemapname, Cmd_Argv(2), sizeof(cubemapname));
 		else
 			cubemapname[0] = 0;
 	}
@@ -3702,7 +3704,7 @@ void R_Shadow_EditLights_CopyInfo_f(void)
 	r_shadow_bufferlight.radius = r_shadow_selectedlight->radius;
 	r_shadow_bufferlight.style = r_shadow_selectedlight->style;
 	if (r_shadow_selectedlight->cubemapname)
-		strcpy(r_shadow_bufferlight.cubemapname, r_shadow_selectedlight->cubemapname);
+		strlcpy(r_shadow_bufferlight.cubemapname, r_shadow_selectedlight->cubemapname, sizeof(r_shadow_bufferlight.cubemapname));
 	else
 		r_shadow_bufferlight.cubemapname[0] = 0;
 	r_shadow_bufferlight.shadow = r_shadow_selectedlight->shadow;

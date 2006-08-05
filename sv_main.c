@@ -414,8 +414,8 @@ void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 
 	Con_DPrintf("Client %s connected\n", client->netconnection ? client->netconnection->address : "botclient");
 
-	strcpy(client->name, "unconnected");
-	strcpy(client->old_name, "unconnected");
+	strlcpy(client->name, "unconnected", sizeof(client->name));
+	strlcpy(client->old_name, "unconnected", sizeof(client->old_name));
 	client->spawned = false;
 	client->edict = PRVM_EDICT_NUM(clientnum+1);
 	if (client->netconnection)
@@ -1292,7 +1292,7 @@ void SV_UpdateToReliableMessages (void)
 		{
 			if (host_client->spawned)
 				SV_BroadcastPrintf("%s changed name to %s\n", host_client->old_name, host_client->name);
-			strcpy(host_client->old_name, host_client->name);
+			strlcpy(host_client->old_name, host_client->name, sizeof(host_client->old_name));
 			// send notification to all clients
 			MSG_WriteByte (&sv.reliable_datagram, svc_updatename);
 			MSG_WriteByte (&sv.reliable_datagram, i);
@@ -1792,7 +1792,7 @@ void SV_SpawnServer (const char *server)
 	worldmodel->used = true;
 
 	strlcpy (sv.name, server, sizeof (sv.name));
-	strcpy(sv.modelname, modelname);
+	strlcpy(sv.modelname, modelname, sizeof(sv.modelname));
 	sv.worldmodel = worldmodel;
 	sv.models[1] = sv.worldmodel;
 

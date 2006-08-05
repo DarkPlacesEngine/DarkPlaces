@@ -358,7 +358,7 @@ Key_Console (int key, char ascii)
 	{
 		if (key_linepos > 1)
 		{
-			strcpy(key_lines[edit_line] + key_linepos - 1, key_lines[edit_line] + key_linepos);
+			strlcpy(key_lines[edit_line] + key_linepos - 1, key_lines[edit_line] + key_linepos, sizeof(key_lines[edit_line]) + 1 - key_linepos);
 			key_linepos--;
 		}
 		return;
@@ -367,8 +367,10 @@ Key_Console (int key, char ascii)
 	// delete char on cursor
 	if (key == K_DEL || key == K_KP_DEL)
 	{
-		if (key_linepos < (int)strlen(key_lines[edit_line]))
-			strcpy(key_lines[edit_line] + key_linepos, key_lines[edit_line] + key_linepos + 1);
+		size_t linelen;
+		linelen = strlen(key_lines[edit_line]);
+		if (key_linepos < (int)linelen)
+			memmove(key_lines[edit_line] + key_linepos, key_lines[edit_line] + key_linepos + 1, linelen - key_linepos);
 		return;
 	}
 
@@ -410,9 +412,11 @@ Key_Console (int key, char ascii)
 	{
 		if (history_line > 0 && key_lines[history_line-1][1])
 		{
+			size_t linelen;
 			history_line--;
-			strcpy(key_lines[edit_line], key_lines[history_line]);
-			key_linepos = (int)strlen(key_lines[edit_line]);
+			linelen = strlen(key_lines[edit_line]);
+			memcpy(key_lines[edit_line], key_lines[history_line], linelen + 1);
+			key_linepos = (int)linelen;
 		}
 		return;
 	}
@@ -429,8 +433,10 @@ Key_Console (int key, char ascii)
 		}
 		else
 		{
-			strcpy(key_lines[edit_line], key_lines[history_line]);
-			key_linepos = (int)strlen(key_lines[edit_line]);
+			size_t linelen;
+			linelen = strlen(key_lines[edit_line]);
+			memcpy(key_lines[edit_line], key_lines[history_line], linelen + 1);
+			key_linepos = (int)linelen;
 		}
 		return;
 	}
@@ -607,7 +613,7 @@ Key_SetBinding (int keynum, int bindmap, const char *binding)
 // allocate memory for new binding
 	l = strlen (binding);
 	newbinding = (char *)Z_Malloc (l + 1);
-	strcpy (newbinding, binding);
+	memcpy (newbinding, binding, l + 1);
 	newbinding[l] = 0;
 	keybindings[bindmap][keynum] = newbinding;
 }

@@ -118,7 +118,7 @@ void Mod_UnloadModel (model_t *mod)
 	char name[MAX_QPATH];
 	qboolean isworldmodel;
 	qboolean used;
-	strcpy(name, mod->name);
+	strlcpy(name, mod->name, sizeof(name));
 	isworldmodel = mod->isworldmodel;
 	used = mod->used;
 	// free textures/memory attached to the model
@@ -127,7 +127,7 @@ void Mod_UnloadModel (model_t *mod)
 	// clear the struct to make it available
 	memset(mod, 0, sizeof(model_t));
 	// restore the fields we want to preserve
-	strcpy(mod->name, name);
+	strlcpy(mod->name, name, sizeof(mod->name));
 	mod->isworldmodel = isworldmodel;
 	mod->used = used;
 	mod->loaded = false;
@@ -323,7 +323,7 @@ model_t *Mod_FindName(const char *name)
 	if (mod_numknown == i)
 		mod_numknown++;
 	mod = mod_known + i;
-	strcpy (mod->name, name);
+	strlcpy (mod->name, name, sizeof(mod->name));
 	mod->loaded = false;
 	mod->used = true;
 	return mod;

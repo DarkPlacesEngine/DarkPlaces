@@ -401,6 +401,7 @@ static void Cmd_Alias_f (void)
 	char		cmd[MAX_INPUTLINE];
 	int			i, c;
 	const char		*s;
+	size_t		alloclen;
 
 	if (Cmd_Argc() == 1)
 	{
@@ -456,8 +457,9 @@ static void Cmd_Alias_f (void)
 	}
 	strlcat (cmd, "\n", sizeof (cmd));
 
-	a->value = (char *)Z_Malloc (strlen (cmd) + 1);
-	strcpy (a->value, cmd);
+	alloclen = strlen (cmd) + 1;
+	a->value = (char *)Z_Malloc (alloclen);
+	memcpy (a->value, cmd, alloclen);
 }
 
 /*
@@ -772,7 +774,7 @@ static void Cmd_TokenizeString (const char *text)
 				Con_Printf("Cmd_TokenizeString: ran out of %i character buffer space for command arguements\n", CMD_TOKENIZELENGTH);
 				break;
 			}
-			strcpy (cmd_tokenizebuffer + cmd_tokenizebufferpos, com_token);
+			memcpy (cmd_tokenizebuffer + cmd_tokenizebufferpos, com_token, l);
 			cmd_argv[cmd_argc] = cmd_tokenizebuffer + cmd_tokenizebufferpos;
 			cmd_tokenizebufferpos += l;
 			cmd_argc++;

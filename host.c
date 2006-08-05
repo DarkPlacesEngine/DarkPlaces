@@ -132,7 +132,7 @@ void Host_Error (const char *error, ...)
 		Sys_Error ("Host_Error: recursively entered (original error was: %s    new error is: %s)", hosterrorstring2, hosterrorstring1);
 	hosterror = true;
 
-	strcpy(hosterrorstring2, hosterrorstring1);
+	strlcpy(hosterrorstring2, hosterrorstring1, sizeof(hosterrorstring2));
 
 	CL_Parse_DumpPacket();
 

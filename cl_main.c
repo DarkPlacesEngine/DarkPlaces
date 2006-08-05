@@ -442,13 +442,16 @@ static void CL_PrintEntities_f(void)
 
 	for (i = 0, ent = cl.entities;i < cl.num_entities;i++, ent++)
 	{
+		const char* modelname;
+
 		if (!ent->state_current.active)
 			continue;
 
 		if (ent->render.model)
-			strlcpy (name, ent->render.model->name, 25);
+			modelname = ent->render.model->name;
 		else
-			strcpy(name, "--no model--");
+			modelname = "--no model--";
+		strlcpy(name, modelname, 25);
 		for (j = (int)strlen(name);j < 25;j++)
 			name[j] = ' ';
 		Con_Printf("%3i: %s:%4i (%5i %5i %5i) [%3i %3i %3i] %4.2f %5.3f\n", i, name, ent->render.frame, (int) ent->render.matrix.m[0][3], (int) ent->render.matrix.m[1][3], (int) ent->render.matrix.m[2][3], (int) ent->render.angles[0] % 360, (int) ent->render.angles[1] % 360, (int) ent->render.angles[2] % 360, ent->render.scale, ent->render.alpha);
