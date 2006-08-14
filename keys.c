@@ -302,6 +302,8 @@ Key_Console (int key, char ascii)
 		Cbuf_AddText (key_lines[edit_line]+1);	// skip the ]
 		Cbuf_AddText ("\n");
 		Con_Printf("%s\n",key_lines[edit_line]);
+		if(key_lines[edit_line][1] == 0) // empty line (just a [)?
+			return; // no, no, you can't submit empty lines to the history...
 		// LordHavoc: redesigned edit_line/history_line
 		edit_line = 31;
 		history_line = edit_line;
@@ -414,7 +416,7 @@ Key_Console (int key, char ascii)
 		{
 			size_t linelen;
 			history_line--;
-			linelen = strlen(key_lines[edit_line]);
+			linelen = strlen(key_lines[history_line]);
 			memcpy(key_lines[edit_line], key_lines[history_line], linelen + 1);
 			key_linepos = (int)linelen;
 		}
@@ -434,7 +436,7 @@ Key_Console (int key, char ascii)
 		else
 		{
 			size_t linelen;
-			linelen = strlen(key_lines[edit_line]);
+			linelen = strlen(key_lines[history_line]);
 			memcpy(key_lines[edit_line], key_lines[history_line], linelen + 1);
 			key_linepos = (int)linelen;
 		}
