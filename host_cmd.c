@@ -244,7 +244,7 @@ void Host_Ping_f (void)
 	{
 		if (!client->active)
 			continue;
-		print("%4i %s\n", (int)floor(client->ping*1000+0.5), client->name);
+		print("%4i %s\n", bound(0, (int)floor(client->ping*1000+0.5), 9999), client->name);
 	}
 
 	// now call the Pings command also, which will send a report that contains packet loss for the scoreboard (as well as a simpler ping report)
