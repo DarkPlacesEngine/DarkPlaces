@@ -96,8 +96,9 @@ static int CDAudio_GetAudioDiskInfo (void)
 }
 
 
-void CDAudio_Play (unsigned char track, qboolean looping)
+void CDAudio_Play_byName (const char *trackname, qboolean looping)
 {
+	unsigned char track;
 	sfx_t* sfx;
 
 	Host_StartVideo();
@@ -105,21 +106,34 @@ void CDAudio_Play (unsigned char track, qboolean looping)
 	if (!enabled)
 		return;
 
-	track = remap[track];
-	if (track < 1)
+	if(strspn(trackname, "0123456789") == strlen(trackname))
 	{
-		Con_Printf("CDAudio: Bad track number %u.\n", track);
-		return;
+		track = (unsigned char) atoi(trackname);
+		track = remap[track];
+		if (track < 1)
+		{
+			Con_Printf("CDAudio: Bad track number %u.\n", track);
+			return;
+		}
 	}
+	else
+		track = 0;
 
 	if (cdPlaying && cdPlayTrack == track && faketrack == -1)
 		return;
 	CDAudio_Stop ();
 
 	// Try playing a fake track (sound file) first
-	sfx = S_PrecacheSound (va ("cdtracks/track%02u.wav", track), false, false);
-	if (sfx == NULL || !S_IsSoundPrecached (sfx))
-		sfx = S_PrecacheSound (va ("cdtracks/track%03u.wav", track), false, false);
+	if(track >= 1)
+	{
+		sfx = S_PrecacheSound (va ("cdtracks/track%02u.wav", track), false, false);
+		if (sfx == NULL || !S_IsSoundPrecached (sfx))
+			sfx = S_PrecacheSound (va ("cdtracks/track%03u.wav", track), false, false);
+	}
+	else
+	{
+		sfx = S_PrecacheSound (va("cdtracks/%s.wav", trackname), false, false);
+	}
 	if (sfx != NULL)
 	{
 		faketrack = S_StartSound (-1, 0, sfx, vec3_origin, cdvolume, 0);
@@ -128,13 +142,22 @@ void CDAudio_Play (unsigned char track, qboolean looping)
 			if (looping)
 				S_SetChannelFlag (faketrack, CHANNELFLAG_FORCELOOP, true);
 			S_SetChannelFlag (faketrack, CHANNELFLAG_FULLVOLUME, true);
-			Con_Printf ("Fake CD track %u playing...\n", track);
+			if(track >= 1)
+				Con_Printf ("Fake CD track %u playing...\n", track);
+			else
+				Con_Printf ("BGM track %s playing...\n", trackname);
 		}
 	}
 
 	// If we can't play a fake CD track, try the real one
 	if (faketrack == -1)
 	{
+		if(track < 1)
+		{
+			Con_Print("Could not load BGM track.\n");
+			return;
+		}
+	
 		if (!cdValid)
 		{
 			CDAudio_GetAudioDiskInfo();
@@ -163,6 +186,12 @@ void CDAudio_Play (unsigned char track, qboolean looping)
 		CDAudio_Pause ();
 }
 
+void CDAudio_Play (unsigned char track, qboolean looping)
+{
+	char buf[20];
+	dpsnprintf(buf, sizeof(buf), "%d", (int) track);
+	CDAudio_Play_byName(buf, looping);
+}
 
 void CDAudio_Stop (void)
 {
@@ -269,13 +298,13 @@ static void CD_f (void)
 
 	if (strcasecmp(command, "play") == 0)
 	{
-		CDAudio_Play((unsigned char)atoi(Cmd_Argv (2)), false);
+		CDAudio_Play_byName(Cmd_Argv (2), false);
 		return;
 	}
 
 	if (strcasecmp(command, "loop") == 0)
 	{
-		CDAudio_Play((unsigned char)atoi(Cmd_Argv (2)), true);
+		CDAudio_Play_byName(Cmd_Argv (2), true);
 		return;
 	}
 
