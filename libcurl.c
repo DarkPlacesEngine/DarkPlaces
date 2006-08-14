@@ -5,6 +5,7 @@
 static cvar_t cl_curl_maxdownloads = {1, "cl_curl_maxdownloads","1", "maximum number of concurrent HTTP/FTP downloads"};
 static cvar_t cl_curl_maxspeed = {1, "cl_curl_maxspeed","100", "maximum download speed (KiB/s)"};
 static cvar_t sv_curl_defaulturl = {1, "sv_curl_defaulturl","", "default autodownload source URL"};
+static cvar_t sv_curl_serverpackages = {1, "sv_curl_serverpackages","", "list of required files for the clients, separated by spaces"};
 static cvar_t cl_curl_enabled = {1, "cl_curl_enabled","0", "whether client's download support is enabled"};
 
 /*
@@ -50,6 +51,8 @@ typedef enum
 	CINIT(RESUME_FROM, LONG, 21),
 	CINIT(FOLLOWLOCATION, LONG, 52),  /* use Location: Luke! */
 	CINIT(PRIVATE, OBJECTPOINT, 103),
+	CINIT(LOW_SPEED_LIMIT, LONG , 19),
+	CINIT(LOW_SPEED_TIME, LONG, 20),
 }
 CURLoption;
 typedef enum
@@ -182,6 +185,107 @@ downloadinfo;
 static downloadinfo *downloads = NULL;
 static int numdownloads = 0;
 
+static int numdownloads_fail = 0;
+static int numdownloads_success = 0;
+static int numdownloads_added = 0;
+static char command_when_done[256] = "";
+static char command_when_error[256] = "";
+
+/*
+====================
+Curl_CommandWhenDone
+
+Sets the command which is to be executed when the last download completes AND
+all downloads since last server connect ended with a successful status.
+Setting the command to NULL clears it.
+====================
+*/
+void Curl_CommandWhenDone(const char *cmd)
+{
+	if(!curl_dll)
+		return;
+	if(cmd)
+		strlcpy(command_when_done, cmd, sizeof(command_when_done));
+	else
+		*command_when_done = 0;
+}
+
+/*
+FIXME
+Do not use yet. Not complete.
+Problem: what counts as an error?
+*/
+
+void Curl_CommandWhenError(const char *cmd)
+{
+	if(!curl_dll)
+		return;
+	if(cmd)
+		strlcpy(command_when_error, cmd, sizeof(command_when_error));
+	else
+		*command_when_error = 0;
+}
+
+/*
+====================
+Curl_Clear_forthismap
+
+Clears the "will disconnect on failure" flags.
+====================
+*/
+void Curl_Clear_forthismap()
+{
+	downloadinfo *di;
+	for(di = downloads; di; di = di->next)
+		di->forthismap = false;
+	Curl_CommandWhenError(NULL);
+	Curl_CommandWhenDone(NULL);
+	numdownloads_fail = 0;
+	numdownloads_success = 0;
+	numdownloads_added = 0;
+}
+
+/* obsolete: numdownloads_added contains the same
+static qboolean Curl_Have_forthismap()
+{
+	downloadinfo *di;
+	for(di = downloads; di; di = di->next)
+		if(di->forthismap)
+			return true;
+	return false;
+}
+*/
+
+/*
+====================
+Curl_CheckCommandWhenDone
+
+Checks if a "done command" is to be executed.
+All downloads finished, at least one success since connect, no single failure
+-> execute the command.
+*/
+static void Curl_CheckCommandWhenDone()
+{
+	if(!curl_dll)
+		return;
+	if(numdownloads_added && (numdownloads_success == numdownloads_added) && *command_when_done)
+	{
+		Con_DPrintf("Map downloads occurred, executing %s\n", command_when_done);
+		Cbuf_AddText("\n");
+		Cbuf_AddText(command_when_done);
+		Cbuf_AddText("\n");
+		Curl_Clear_forthismap(NULL);
+	}
+	else if(numdownloads_added && numdownloads_fail && *command_when_error)
+	{
+		Con_DPrintf("Map downloads FAILED, executing %s\n", command_when_error);
+		Cbuf_AddText("\n");
+		Cbuf_AddText(command_when_error);
+		Cbuf_AddText("\n");
+		Curl_Clear_forthismap(NULL);
+	}
+}
+
 /*
 ====================
 CURL_CloseLibrary
@@ -272,29 +376,6 @@ CurlStatus;
 
 /*
 ====================
-Curl_Clear_forthismap
-
-Clears the "will disconnect on failure" flags.
-====================
-*/
-void Curl_Clear_forthismap()
-{
-	downloadinfo *di;
-	for(di = downloads; di; di = di->next)
-		di->forthismap = false;
-}
-
-static qboolean Curl_Have_forthismap()
-{
-	downloadinfo *di;
-	for(di = downloads; di; di = di->next)
-		if(di->forthismap)
-			return true;
-	return false;
-}
-
-/*
-====================
 Curl_EndDownload
 
 stops a download. It receives a status (CURL_DOWNLOAD_SUCCESS,
@@ -347,23 +428,7 @@ static void Curl_EndDownload(downloadinfo *di, CurlStatus status, CURLcode error
 		FS_Close(di->stream);
 
 	if(ok && di->ispak)
-	{
 		ok = FS_AddPack(di->filename, NULL, true);
-		if(ok && di->forthismap)
-		{
-			Mod_Reload();
-			R_Modules_NewMap();
-		}
-	}
-
-	if(!ok && di->forthismap)
-	{
-		// BAD. Something went totally wrong.
-		// The best we can do is clean up the forthismap flags...
-		Curl_Clear_forthismap();
-		// and disconnect.
-		CL_Disconnect_f();
-	}
 
 	if(di->prev)
 		di->prev->next = di->next;
@@ -371,9 +436,18 @@ static void Curl_EndDownload(downloadinfo *di, CurlStatus status, CURLcode error
 		downloads = di->next;
 	if(di->next)
 		di->next->prev = di->prev;
-	Z_Free(di);
 
 	--numdownloads;
+	if(di->forthismap)
+	{
+		if(ok)
+			++numdownloads_success;
+		else
+			++numdownloads_fail;
+	}
+	Z_Free(di);
+
+	Curl_CheckCommandWhenDone();
 }
 
 /*
@@ -419,6 +493,8 @@ static void CheckPendingDownloads()
 				qcurl_easy_setopt(di->curle, CURLOPT_RESUME_FROM, (long) di->startpos);
 				qcurl_easy_setopt(di->curle, CURLOPT_FOLLOWLOCATION, 1);
 				qcurl_easy_setopt(di->curle, CURLOPT_WRITEFUNCTION, CURL_fwrite);
+				qcurl_easy_setopt(di->curle, CURLOPT_LOW_SPEED_LIMIT, (long) 256);
+				qcurl_easy_setopt(di->curle, CURLOPT_LOW_SPEED_TIME, (long) 45);
 				qcurl_easy_setopt(di->curle, CURLOPT_WRITEDATA, (void *) di);
 				qcurl_easy_setopt(di->curle, CURLOPT_PRIVATE, (void *) di);
 				qcurl_multi_add_handle(curlm, di->curle);
@@ -546,8 +622,13 @@ void Curl_Begin(const char *URL, const char *name, qboolean ispak, qboolean fort
 				Con_Printf("Can't download %s, already getting it from %s!\n", fn, di->url);
 
 				// however, if it was not for this map yet...
-				if(forthismap)
+				if(forthismap && !di->forthismap)
+				{
 					di->forthismap = true;
+					// this "fakes" a download attempt so the client will wait for
+					// the download to finish and then reconnect
+					++numdownloads_added;
+				}
 
 				return;
 			}
@@ -562,11 +643,13 @@ void Curl_Begin(const char *URL, const char *name, qboolean ispak, qboolean fort
 				if(already_loaded)
 					Con_DPrintf("(pak was already loaded)\n");
 				else
+				{
 					if(forthismap)
 					{
-						Mod_Reload();
-						R_Modules_NewMap();
+						++numdownloads_added;
+						++numdownloads_success;
 					}
+				}
 				return;
 			}
 			else
@@ -594,6 +677,8 @@ void Curl_Begin(const char *URL, const char *name, qboolean ispak, qboolean fort
 			}
 		}
 
+		if(forthismap)
+			++numdownloads_added;
 		di = (downloadinfo *) Z_Malloc(sizeof(*di));
 		strlcpy(di->filename, fn, sizeof(di->filename));
 		strlcpy(di->url, URL, sizeof(di->url));
@@ -656,7 +741,6 @@ void Curl_Run()
 				downloadinfo *di;
 				CurlStatus failed = CURL_DOWNLOAD_SUCCESS;
 				CURLcode result;
-
 				qcurl_easy_getinfo(msg->easy_handle, CURLINFO_PRIVATE, &di);
 				result = msg->data.result;
 				if(result)
@@ -827,7 +911,14 @@ For internal use:
 curl [--pak] [--forthismap] [--for filename filename...] url
 	--pak: after downloading, load the package into the virtual file system
 	--for filename...: only download of at least one of the named files is missing
-	--forthismap: disconnect on failure
+	--forthismap: don't reconnect on failure
+
+curl --clear_autodownload
+	clears the download success/failure counters
+
+curl --finish_autodownload
+	if at least one download has been started, disconnect and drop to the menu
+	once the last download completes successfully, reconnect to the current server
 ====================
 */
 void Curl_Curl_f(void)
@@ -918,7 +1009,18 @@ void Curl_Curl_f(void)
 		}
 		else if(!strcmp(a, "--finish_autodownload"))
 		{
-			// nothing
+			if(numdownloads_added)
+			{
+				char donecommand[256];
+				if(cls.netcon)
+				{
+					dpsnprintf(donecommand, sizeof(donecommand), "connect %s", cls.netcon->address);
+					Curl_CommandWhenDone(donecommand);
+				}
+				CL_Disconnect();
+
+				Curl_CheckCommandWhenDone();
+			}
 			return;
 		}
 		else if(*a == '-')
@@ -945,6 +1047,7 @@ void Curl_Init_Commands(void)
 	Cvar_RegisterVariable (&cl_curl_maxdownloads);
 	Cvar_RegisterVariable (&cl_curl_maxspeed);
 	Cvar_RegisterVariable (&sv_curl_defaulturl);
+	Cvar_RegisterVariable (&sv_curl_serverpackages);
 	Cmd_AddCommand ("curl", Curl_Curl_f, "download data from an URL and add to search path");
 }
 
@@ -998,11 +1101,13 @@ Curl_downloadinfo_t *Curl_GetDownloadInfo(int *nDownloads, const char **addition
 	
 	if(additional_info)
 	{
-		// TODO put something better here?
-		// maybe... check if the file is actually needed for the current map?
-		if(Curl_Have_forthismap())
+		// TODO: can I clear command_when_done as soon as the first download fails?
+		if(*command_when_done && !numdownloads_fail && numdownloads_added)
 		{
-			dpsnprintf(addinfo, sizeof(addinfo), "please wait for the download to complete");
+			if(strncmp(command_when_done, "connect ", 8))
+				dpsnprintf(addinfo, sizeof(addinfo), "(will do '%s' when done)", command_when_done);
+			else
+				dpsnprintf(addinfo, sizeof(addinfo), "(will join %s when done)", command_when_done + 8);
 			*additional_info = addinfo;
 		}
 		else
@@ -1111,24 +1216,6 @@ static requirement *requirements = NULL;
 
 /*
 ====================
-Curl_ClearRequirements
-
-Clears the list of required files for playing on the current map.
-This should be called at every map change.
-====================
-*/
-void Curl_ClearRequirements()
-{
-	while(requirements)
-	{
-		requirement *req = requirements;
-		requirements = requirements->next;
-		Z_Free(req);
-	}
-}
-
-/*
-====================
 Curl_RequireFile
 
 Adds the given file to the list of requirements.
@@ -1144,12 +1231,38 @@ void Curl_RequireFile(const char *filename)
 
 /*
 ====================
+Curl_ClearRequirements
+
+Clears the list of required files for playing on the current map.
+This should be called at every map change.
+====================
+*/
+void Curl_ClearRequirements()
+{
+	const char *p;
+	while(requirements)
+	{
+		requirement *req = requirements;
+		requirements = requirements->next;
+		Z_Free(req);
+	}
+	p = sv_curl_serverpackages.string;
+	Con_DPrintf("Require all of: %s\n", p);
+	while(COM_ParseTokenConsole(&p))
+	{
+		Con_DPrintf("Require: %s\n", com_token);
+		Curl_RequireFile(com_token);
+	}
+}
+
+/*
+====================
 Curl_SendRequirements
 
 Makes the current host_clients download all files he needs.
 This is done by sending him the following console commands:
 
-	curl --start_autodownload
+	curl --clear_autodownload
 	curl --pak --for maps/pushmoddm1.bsp --forthismap http://where/this/darn/map/is/pushmoddm1.pk3
 	curl --finish_autodownload
 ====================
