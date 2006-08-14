@@ -383,6 +383,14 @@ void SV_SendServerinfo (client_t *client)
 	MSG_WriteByte (&client->netconnection->message, svc_signonnum);
 	MSG_WriteByte (&client->netconnection->message, 1);
 
+	{
+		client_t *save;
+		save = host_client;
+		host_client = client;
+		Curl_SendRequirements();
+		host_client = save;
+	}
+
 	client->spawned = false;		// need prespawn, spawn, etc
 }
 
