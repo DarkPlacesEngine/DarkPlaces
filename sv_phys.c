@@ -374,6 +374,7 @@ int SV_FlyMove (prvm_edict_t *ent, float time, float *stepnormal)
 		Con_Print("\n");
 #endif
 
+#if 0
 		if (trace.bmodelstartsolid)
 		{
 			// LordHavoc: note: this code is what makes entities stick in place
@@ -383,6 +384,7 @@ int SV_FlyMove (prvm_edict_t *ent, float time, float *stepnormal)
 			VectorClear(ent->fields.server->velocity);
 			return 3;
 		}
+#endif
 
 		// break if it moved the entire distance
 		if (trace.fraction == 1)
