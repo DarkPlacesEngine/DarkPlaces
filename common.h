@@ -210,7 +210,6 @@ extern const char **com_argv;
 int COM_CheckParm (const char *parm);
 void COM_Init (void);
 void COM_Shutdown (void);
-void COM_InitArgv (void);
 void COM_InitGameType (void);
 
 char	*va(const char *format, ...);

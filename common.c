@@ -36,8 +36,6 @@ char com_token[MAX_INPUTLINE];
 int com_argc;
 const char **com_argv;
 
-char com_cmdline[MAX_INPUTLINE];
-
 gamemode_t gamemode;
 const char *gamename;
 const char *gamedirname1;
@@ -897,69 +895,6 @@ int COM_CheckParm (const char *parm)
 	return 0;
 }
 
-/*
-================
-COM_CheckRegistered
-
-Looks for the pop.txt file and verifies it.
-Sets the "registered" cvar.
-Immediately exits out if an alternate game was attempted to be started without
-being registered.
-================
-*/
-void COM_CheckRegistered (void)
-{
-	Cvar_Set ("cmdline", com_cmdline);
-
-	if (gamemode == GAME_NORMAL && !FS_FileExists("gfx/pop.lmp"))
-	{
-		if (fs_modified)
-			Con_Print("Playing shareware version, with modification.\nwarning: most mods require full quake data.\n");
-		else
-			Con_Print("Playing shareware version.\n");
-		return;
-	}
-
-	Cvar_Set ("registered", "1");
-	Con_Print("Playing registered version.\n");
-}
-
-
-/*
-================
-COM_InitArgv
-================
-*/
-void COM_InitArgv (void)
-{
-	int i, j, n;
-	// reconstitute the command line for the cmdline externally visible cvar
-	n = 0;
-	for (j = 0;(j < MAX_NUM_ARGVS) && (j < com_argc);j++)
-	{
-		i = 0;
-		if (strstr(com_argv[j], " "))
-		{
-			// arg contains whitespace, store quotes around it
-			com_cmdline[n++] = '\"';
-			while ((n < ((int)sizeof(com_cmdline) - 1)) && com_argv[j][i])
-				com_cmdline[n++] = com_argv[j][i++];
-			com_cmdline[n++] = '\"';
-		}
-		else
-		{
-			while ((n < ((int)sizeof(com_cmdline) - 1)) && com_argv[j][i])
-				com_cmdline[n++] = com_argv[j][i++];
-		}
-		if (n < ((int)sizeof(com_cmdline) - 1))
-			com_cmdline[n++] = ' ';
-		else
-			break;
-	}
-	com_cmdline[n] = 0;
-}
-
-
 //===========================================================================
 
 // Game mods
@@ -1077,8 +1012,37 @@ COM_Init
 */
 void COM_Init_Commands (void)
 {
+	int i, j, n;
+	char com_cmdline[MAX_INPUTLINE];
+
 	Cvar_RegisterVariable (&registered);
 	Cvar_RegisterVariable (&cmdline);
+
+	// reconstitute the command line for the cmdline externally visible cvar
+	n = 0;
+	for (j = 0;(j < MAX_NUM_ARGVS) && (j < com_argc);j++)
+	{
+		i = 0;
+		if (strstr(com_argv[j], " "))
+		{
+			// arg contains whitespace, store quotes around it
+			com_cmdline[n++] = '\"';
+			while ((n < ((int)sizeof(com_cmdline) - 1)) && com_argv[j][i])
+				com_cmdline[n++] = com_argv[j][i++];
+			com_cmdline[n++] = '\"';
+		}
+		else
+		{
+			while ((n < ((int)sizeof(com_cmdline) - 1)) && com_argv[j][i])
+				com_cmdline[n++] = com_argv[j][i++];
+		}
+		if (n < ((int)sizeof(com_cmdline) - 1))
+			com_cmdline[n++] = ' ';
+		else
+			break;
+	}
+	com_cmdline[n] = 0;
+	Cvar_Set ("cmdline", com_cmdline);
 }
 
 /*
