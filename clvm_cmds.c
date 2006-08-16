@@ -1269,7 +1269,7 @@ void VM_CL_registercmd (void)
 	if(!Cmd_Exists(PRVM_G_STRING(OFS_PARM0)))
 	{
 		size_t alloclen;
-		
+
 		alloclen = strlen(PRVM_G_STRING(OFS_PARM0)) + 1;
 		t = (char *)Z_Malloc(alloclen);
 		memcpy(t, PRVM_G_STRING(OFS_PARM0), alloclen);
@@ -2295,7 +2295,7 @@ static int Is_Text_Color (char c, char t)
 	char c2 = c - (c & 128);
 	char t2 = t - (t & 128);
 
-	if(c != '^' && c2 != '^')		return 0;
+	if(c != STRING_COLOR_TAG && c2 != STRING_COLOR_TAG)		return 0;
 	if(t >= '0' && t <= '9')		a = 1;
 	if(t2 >= '0' && t2 <= '9')		a = 1;
 /*	if(t >= 'A' && t <= 'Z')		a = 2;

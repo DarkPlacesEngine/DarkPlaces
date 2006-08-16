@@ -639,12 +639,12 @@ void Con_Print(const char *msg)
 					{
 						switch(*in)
 						{
-							case '^':
+							case STRING_COLOR_TAG:
 								switch(in[1])
 								{
-									case '^':
+									case STRING_COLOR_TAG:
 										++in;
-										*out++ = '^';
+										*out++ = STRING_COLOR_TAG;
 										break;
 									case '0':
 									case '7':
@@ -698,7 +698,7 @@ void Con_Print(const char *msg)
 										*out++ = 0x1B; *out++ = '['; *out++ = '0'; *out++ = ';'; *out++ = '1'; *out++ = 'm';
 										break;
 									default:
-										*out++ = '^';
+										*out++ = STRING_COLOR_TAG;
 										break;
 								}
 								break;
@@ -737,12 +737,12 @@ void Con_Print(const char *msg)
 					{
 						switch(*in)
 						{
-							case '^':
+							case STRING_COLOR_TAG:
 								switch(in[1])
 								{
-									case '^':
+									case STRING_COLOR_TAG:
 										++in;
-										*out++ = '^';
+										*out++ = STRING_COLOR_TAG;
 										break;
 									case '0':
 									case '1':
@@ -757,7 +757,7 @@ void Con_Print(const char *msg)
 										++in;
 										break;
 									default:
-										*out++ = '^';
+										*out++ = STRING_COLOR_TAG;
 										break;
 								}
 								break;
@@ -938,7 +938,7 @@ void Con_DrawNotify (void)
 			// count up to the last non-whitespace, and ignore color codes
 			for (j = 0;j < con_linewidth && text[j];j++)
 			{
-				if (text[j] == '^' && (text[j+1] >= '0' && text[j+1] <= '9'))
+				if (text[j] == STRING_COLOR_TAG && (text[j+1] >= '0' && text[j+1] <= '9'))
 				{
 					j++;
 					continue;

@@ -132,7 +132,7 @@ void SCR_DrawCenterString (void)
 			if (start[l] == '\n' || !start[l])
 				break;
 			// color codes add no visible characters, so don't count them
-			if (start[l] == '^' && (start[l+1] >= '0' && start[l+1] <= '9'))
+			if (start[l] == STRING_COLOR_TAG && (start[l+1] >= '0' && start[l+1] <= '9'))
 				l++;
 			else
 				chars++;
