@@ -1122,43 +1122,66 @@ void FS_Init (void)
 				fs_searchpaths = search;
 			}
 		}
-		return;
 	}
-
-	// add the game-specific paths
-	// gamedirname1 (typically id1)
-	FS_AddGameHierarchy (gamedirname1);
-
-	// add the game-specific path, if any
-	if (gamedirname2)
+	else
 	{
-		fs_modified = true;
-		FS_AddGameHierarchy (gamedirname2);
-	}
+		// add the game-specific paths
+		// gamedirname1 (typically id1)
+		FS_AddGameHierarchy (gamedirname1);
 
-	// set the com_modname (reported in server info)
-	strlcpy(com_modname, gamedirname1, sizeof(com_modname));
-
-	// -game <gamedir>
-	// Adds basedir/gamedir as an override game
-	// LordHavoc: now supports multiple -game directories
-	for (i = 1;i < com_argc;i++)
-	{
-		if (!com_argv[i])
-			continue;
-		if (!strcmp (com_argv[i], "-game") && i < com_argc-1)
+		// add the game-specific path, if any
+		if (gamedirname2)
 		{
-			i++;
 			fs_modified = true;
-			FS_AddGameHierarchy (com_argv[i]);
-			// update the com_modname
-			strlcpy (com_modname, com_argv[i], sizeof (com_modname));
+			FS_AddGameHierarchy (gamedirname2);
 		}
+
+		// set the com_modname (reported in server info)
+		strlcpy(com_modname, gamedirname1, sizeof(com_modname));
+
+		// -game <gamedir>
+		// Adds basedir/gamedir as an override game
+		// LordHavoc: now supports multiple -game directories
+		for (i = 1;i < com_argc;i++)
+		{
+			if (!com_argv[i])
+				continue;
+			if (!strcmp (com_argv[i], "-game") && i < com_argc-1)
+			{
+				i++;
+				fs_modified = true;
+				FS_AddGameHierarchy (com_argv[i]);
+				// update the com_modname
+				strlcpy (com_modname, com_argv[i], sizeof (com_modname));
+			}
+		}
+
+		// If "-condebug" is in the command line, remove the previous log file
+		if (COM_CheckParm ("-condebug") != 0)
+			unlink (va("%s/qconsole.log", fs_gamedir));
 	}
 
-	// If "-condebug" is in the command line, remove the previous log file
-	if (COM_CheckParm ("-condebug") != 0)
-		unlink (va("%s/qconsole.log", fs_gamedir));
+	// look for the pop.lmp file and set registered to true if it is found
+	if (gamemode == GAME_NORMAL && !FS_FileExists("gfx/pop.lmp"))
+	{
+		if (fs_modified)
+			Con_Print("Playing shareware version, with modification.\nwarning: most mods require full quake data.\n");
+		else
+			Con_Print("Playing shareware version.\n");
+	}
+	else
+	{
+		Cvar_Set ("registered", "1");
+		if (gamemode == GAME_NORMAL || gamemode == GAME_HIPNOTIC || gamemode == GAME_ROGUE)
+			Con_Print("Playing registered version.\n");
+	}
+
+	// set the default screenshot name to either the mod name or the
+	// gamemode screenshot name
+	if (fs_modified)
+		Cvar_SetQuick (&scr_screenshot_name, com_modname);
+	else
+		Cvar_SetQuick (&scr_screenshot_name, gamescreenshotname);
 }
 
 void FS_Init_Commands(void)
@@ -1168,13 +1191,6 @@ void FS_Init_Commands(void)
 	Cmd_AddCommand ("path", FS_Path_f, "print searchpath (game directories and archives)");
 	Cmd_AddCommand ("dir", FS_Dir_f, "list files in searchpath matching an * filename pattern, one per line");
 	Cmd_AddCommand ("ls", FS_Ls_f, "list files in searchpath matching an * filename pattern, multiple per line");
-
-	// set the default screenshot name to either the mod name or the
-	// gamemode screenshot name
-	if (fs_modified)
-		Cvar_SetQuick (&scr_screenshot_name, com_modname);
-	else
-		Cvar_SetQuick (&scr_screenshot_name, gamescreenshotname);
 }
 
 /*

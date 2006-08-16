@@ -45,6 +45,15 @@ cvar_t con_notifytime = {CVAR_SAVE, "con_notifytime","3", "how long notify lines
 cvar_t con_notify = {CVAR_SAVE, "con_notify","4", "how many notify lines to show (0-32)"};
 cvar_t con_textsize = {CVAR_SAVE, "con_textsize","8", "console text size in virtual 2D pixels"};	//[515]: console text size in pixels
 
+
+cvar_t sys_specialcharactertranslation = {0, "sys_specialcharactertranslation", "1", "terminal console conchars to ASCII translation (set to 0 if your conchars.tga is for an 8bit character set or if you want raw output)"};
+#ifdef WIN32
+cvar_t sys_colortranslation = {0, "sys_colortranslation", "0",
+#else
+cvar_t sys_colortranslation = {0, "sys_colortranslation", "1",
+#endif
+                                                               "terminal console color translation (supported values: 0 = strip color codes, 1 = translate to ANSI codes, 2 = no translation)"};
+
 #define MAX_NOTIFYLINES 32
 // cl.time time the line was generated for transparent notify lines
 float con_times[MAX_NOTIFYLINES];
@@ -398,16 +407,16 @@ void Con_Init (void)
 	logqueue = (unsigned char *)Mem_Alloc (tempmempool, logq_size);
 	logq_ind = 0;
 
+	Cvar_RegisterVariable (&sys_colortranslation);
+	Cvar_RegisterVariable (&sys_specialcharactertranslation);
+
 	Cvar_RegisterVariable (&log_file);
 
 	// support for the classic Quake option
 // COMMANDLINEOPTION: Console: -condebug logs console messages to qconsole.log, see also log_file
 	if (COM_CheckParm ("-condebug") != 0)
 		Cvar_SetQuick (&log_file, "qconsole.log");
-}
 
-void Con_Init_Commands (void)
-{
 	// register our cvars
 	Cvar_RegisterVariable (&con_notifytime);
 	Cvar_RegisterVariable (&con_notify);
@@ -612,9 +621,154 @@ void Con_Print(const char *msg)
 			if (!sys_nostdout)
 			{
 				unsigned char *p;
-				for (p = (unsigned char *) line;*p; p++)
-					*p = qfont_table[*p];
-				Sys_PrintToTerminal(line);
+				if(sys_specialcharactertranslation.integer)
+				{
+					for (p = (unsigned char *) line;*p; p++)
+						*p = qfont_table[*p];
+				}
+
+				if(sys_colortranslation.integer == 1) // ANSI
+				{
+					static char printline[MAX_INPUTLINE * 4 + 3];
+						// 2 can become 7 bytes, rounding that up to 8, and 3 bytes are added at the end
+						// a newline can transform into four bytes, but then prevents the three extra bytes from appearing
+					int lastcolor = 0;
+					const char *in;
+					char *out;
+					for(in = line, out = printline; *in; ++in)
+					{
+						switch(*in)
+						{
+							case '^':
+								switch(in[1])
+								{
+									case '^':
+										++in;
+										*out++ = '^';
+										break;
+									case '0':
+									case '7':
+										// normal color
+										++in;
+										if(lastcolor == 0) break; else lastcolor = 0;
+										*out++ = 0x1B; *out++ = '['; *out++ = 'm';
+										break;
+									case '1':
+										// light red
+										++in;
+										if(lastcolor == 1) break; else lastcolor = 1;
+										*out++ = 0x1B; *out++ = '['; *out++ = '1'; *out++ = ';'; *out++ = '3'; *out++ = '1'; *out++ = 'm';
+										break;
+									case '2':
+										// light green
+										++in;
+										if(lastcolor == 2) break; else lastcolor = 2;
+										*out++ = 0x1B; *out++ = '['; *out++ = '1'; *out++ = ';'; *out++ = '3'; *out++ = '2'; *out++ = 'm';
+										break;
+									case '3':
+										// yellow
+										++in;
+										if(lastcolor == 3) break; else lastcolor = 3;
+										*out++ = 0x1B; *out++ = '['; *out++ = '1'; *out++ = ';'; *out++ = '3'; *out++ = '3'; *out++ = 'm';
+										break;
+									case '4':
+										// light blue
+										++in;
+										if(lastcolor == 4) break; else lastcolor = 4;
+										*out++ = 0x1B; *out++ = '['; *out++ = '1'; *out++ = ';'; *out++ = '3'; *out++ = '4'; *out++ = 'm';
+										break;
+									case '5':
+										// light cyan
+										++in;
+										if(lastcolor == 5) break; else lastcolor = 5;
+										*out++ = 0x1B; *out++ = '['; *out++ = '1'; *out++ = ';'; *out++ = '3'; *out++ = '6'; *out++ = 'm';
+										break;
+									case '6':
+										// light magenta
+										++in;
+										if(lastcolor == 6) break; else lastcolor = 6;
+										*out++ = 0x1B; *out++ = '['; *out++ = '1'; *out++ = ';'; *out++ = '3'; *out++ = '5'; *out++ = 'm';
+										break;
+									// 7 handled above
+									case '8':
+									case '9':
+										// bold normal color
+										++in;
+										if(lastcolor == 8) break; else lastcolor = 8;
+										*out++ = 0x1B; *out++ = '['; *out++ = '0'; *out++ = ';'; *out++ = '1'; *out++ = 'm';
+										break;
+									default:
+										*out++ = '^';
+										break;
+								}
+								break;
+							case '\n':
+								if(lastcolor != 0)
+								{
+									*out++ = 0x1B; *out++ = '['; *out++ = 'm';
+									lastcolor = 0;
+								}
+								*out++ = *in;
+								break;
+							default:
+								*out++ = *in;
+								break;
+						}
+					}
+					if(lastcolor != 0)
+					{
+						*out++ = 0x1B;
+						*out++ = '[';
+						*out++ = 'm';
+					}
+					*out++ = 0;
+					Sys_PrintToTerminal(printline);
+				}
+				else if(sys_colortranslation.integer == 2) // Quake
+				{
+					Sys_PrintToTerminal(line);
+				}
+				else // strip
+				{
+					static char printline[MAX_INPUTLINE]; // it can only get shorter here
+					const char *in;
+					char *out;
+					for(in = line, out = printline; *in; ++in)
+					{
+						switch(*in)
+						{
+							case '^':
+								switch(in[1])
+								{
+									case '^':
+										++in;
+										*out++ = '^';
+										break;
+									case '0':
+									case '1':
+									case '2':
+									case '3':
+									case '4':
+									case '5':
+									case '6':
+									case '7':
+									case '8':
+									case '9':
+										++in;
+										break;
+									default:
+										*out++ = '^';
+										break;
+								}
+								break;
+							default:
+								*out++ = *in;
+								break;
+						}
+					}
+					*out++ = 0;
+					Sys_PrintToTerminal(printline);
+				}
 			}
 			// empty the line buffer
 			index = 0;

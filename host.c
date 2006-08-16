@@ -841,7 +841,6 @@ extern void FS_Shutdown(void);
 extern void PR_Cmd_Init(void);
 extern void COM_Init_Commands(void);
 extern void FS_Init_Commands(void);
-extern void COM_CheckRegistered(void);
 extern qboolean host_stuffcmdsrun;
 
 /*
@@ -853,6 +852,9 @@ static void Host_Init (void)
 {
 	int i;
 	const char* os;
+
+	// LordHavoc: quake never seeded the random number generator before... heh
+	srand(time(NULL));
 
 	// FIXME: this is evil, but possibly temporary
 // COMMANDLINEOPTION: Console: -developer enables warnings and other notices (RECOMMENDED for mod developers)
@@ -872,20 +874,28 @@ static void Host_Init (void)
 		developer_memorydebug.string = "100";
 	}
 
-	// LordHavoc: quake never seeded the random number generator before... heh
-	srand(time(NULL));
+// COMMANDLINEOPTION: Console: -nostdout disables text output to the terminal the game was launched from
+	if (COM_CheckParm("-nostdout"))
+		sys_nostdout = 1;
 
 	// used by everything
 	Memory_Init();
 
-	// initialize console and logging
-	Con_Init();
-
 	// initialize console command/cvar/alias/command execution systems
 	Cmd_Init();
 
-	// parse commandline
-	COM_InitArgv();
+	// initialize memory subsystem cvars/commands
+	Memory_Init_Commands();
+
+	// initialize console and logging and its cvars/commands
+	Con_Init();
+
+	// initialize various cvars that could not be initialized earlier
+	Curl_Init_Commands();
+	Cmd_Init_Commands();
+	Sys_Init_Commands();
+	COM_Init_Commands();
+	FS_Init_Commands();
 
 	// initialize console window (only used by sys_win.c)
 	Sys_InitConsole();
@@ -912,28 +922,13 @@ static void Host_Init (void)
 	os = "Unknown";
 #endif
 	dpsnprintf (engineversion, sizeof (engineversion), "%s %s %s", gamename, os, buildstring);
-
-// COMMANDLINEOPTION: Console: -nostdout disables text output to the terminal the game was launched from
-	if (COM_CheckParm("-nostdout"))
-		sys_nostdout = 1;
-	else
-		Con_Printf("%s\n", engineversion);
-
-	// initialize filesystem (including fs_basedir, fs_gamedir, -path, -game, scr_screenshot_name)
-	FS_Init();
-
-	// initialize various cvars that could not be initialized earlier
-	Memory_Init_Commands();
-	Con_Init_Commands();
-	Curl_Init_Commands();
-	Cmd_Init_Commands();
-	Sys_Init_Commands();
-	COM_Init_Commands();
-	FS_Init_Commands();
-	COM_CheckRegistered();
+	Con_Printf("%s\n", engineversion);
 
 	// initialize ixtable
 	Mathlib_Init();
+
+	// initialize filesystem (including fs_basedir, fs_gamedir, -path, -game, scr_screenshot_name)
+	FS_Init();
 
 	NetConn_Init();
 	Curl_Init();
