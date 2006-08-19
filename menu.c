@@ -3298,7 +3298,7 @@ void M_Menu_LanConfig_f (void)
 	if (StartingGame)
 		lanConfig_cursor = 1;
 	lanConfig_port = 26000;
-	sprintf(lanConfig_portname, "%u", lanConfig_port);
+	sprintf(lanConfig_portname, "%u", (unsigned int) lanConfig_port);
 
 	M_Update_Return_Reason("");
 }
@@ -3464,7 +3464,7 @@ static void M_LanConfig_Key (int key, char ascii)
 	l =  atoi(lanConfig_portname);
 	if (l <= 65535)
 		lanConfig_port = l;
-	sprintf(lanConfig_portname, "%u", lanConfig_port);
+	sprintf(lanConfig_portname, "%u", (unsigned int) lanConfig_port);
 }
 
 //=============================================================================

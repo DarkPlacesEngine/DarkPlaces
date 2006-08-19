@@ -274,7 +274,7 @@ static void Curl_CheckCommandWhenDone()
 		Cbuf_AddText("\n");
 		Cbuf_AddText(command_when_done);
 		Cbuf_AddText("\n");
-		Curl_Clear_forthismap(NULL);
+		Curl_Clear_forthismap();
 	}
 	else if(numdownloads_added && numdownloads_fail && *command_when_error)
 	{
@@ -282,7 +282,7 @@ static void Curl_CheckCommandWhenDone()
 		Cbuf_AddText("\n");
 		Cbuf_AddText(command_when_error);
 		Cbuf_AddText("\n");
-		Curl_Clear_forthismap(NULL);
+		Curl_Clear_forthismap();
 	}
 }
 

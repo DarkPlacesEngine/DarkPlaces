@@ -422,7 +422,7 @@ char *PRVM_ValueString (etype_t type, prvm_eval_t *val)
 		sprintf (line, "pointer");
 		break;
 	default:
-		sprintf (line, "bad type %i", type);
+		sprintf (line, "bad type %i", (int) type);
 		break;
 	}
 
