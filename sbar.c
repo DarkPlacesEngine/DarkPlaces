@@ -173,6 +173,13 @@ void sbar_start(void)
 		sb_items[4] = Draw_CachePic ("gfx/sb_energy", true);
 		sb_items[5] = Draw_CachePic ("gfx/sb_str", true);
 
+		sb_items[11] = Draw_CachePic ("gfx/sb_flag_red_taken", true);
+		sb_items[12] = Draw_CachePic ("gfx/sb_flag_red_lost", true);
+		sb_items[13] = Draw_CachePic ("gfx/sb_flag_red_carring", true);
+		sb_items[15] = Draw_CachePic ("gfx/sb_flag_blue_taken", true);
+		sb_items[16] = Draw_CachePic ("gfx/sb_flag_blue_lost", true);
+		sb_items[17] = Draw_CachePic ("gfx/sb_flag_blue_carring", true);
+
 		sb_sbar = Draw_CachePic("gfx/sbar", true);
 		sb_sbar_minimal = Draw_CachePic("gfx/sbar_minimal", true);
 		sb_sbar_overlay = Draw_CachePic("gfx/sbar_overlay", true);
@@ -1134,14 +1141,13 @@ void Sbar_Draw (void)
 				else
 					Sbar_DrawAlphaPic (0, 0, sb_sbar_minimal, sbar_alpha_fg.value);
 
-				// special items
-				if (cl.stats[STAT_ITEMS] & IT_INVULNERABILITY)
-				{
-					// Nexuiz has no anum pics
-					//Sbar_DrawNum (36, 0, 666, 3, 1);
-					// Nexuiz has no disc pic
-					//Sbar_DrawPic (0, 0, sb_disc);
-				}
+				// flag icons
+				int redflag = ((cl.stats[STAT_ITEMS]>>15) & 3);
+				if (redflag)
+					Sbar_DrawPic (10, -85, sb_items[redflag+10]);
+				int blueflag = ((cl.stats[STAT_ITEMS]>>17) & 3);
+				if (blueflag)
+					Sbar_DrawPic (10, -145, sb_items[blueflag+14]);
 
 				// armor
 				Sbar_DrawXNum ((340-3*24), 12, cl.stats[STAT_ARMOR], 3, 24, 0.6,0.7,0.8,1,0);
