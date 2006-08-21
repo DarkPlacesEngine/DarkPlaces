@@ -175,10 +175,10 @@ void sbar_start(void)
 
 		sb_items[11] = Draw_CachePic ("gfx/sb_flag_red_taken", true);
 		sb_items[12] = Draw_CachePic ("gfx/sb_flag_red_lost", true);
-		sb_items[13] = Draw_CachePic ("gfx/sb_flag_red_carring", true);
+		sb_items[13] = Draw_CachePic ("gfx/sb_flag_red_carrying", true);
 		sb_items[15] = Draw_CachePic ("gfx/sb_flag_blue_taken", true);
 		sb_items[16] = Draw_CachePic ("gfx/sb_flag_blue_lost", true);
-		sb_items[17] = Draw_CachePic ("gfx/sb_flag_blue_carring", true);
+		sb_items[17] = Draw_CachePic ("gfx/sb_flag_blue_carrying", true);
 
 		sb_sbar = Draw_CachePic("gfx/sbar", true);
 		sb_sbar_minimal = Draw_CachePic("gfx/sbar_minimal", true);
