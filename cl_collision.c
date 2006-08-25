@@ -181,9 +181,7 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t normal, int *hitent, entity_render_t *ignoreent, qboolean csqcents)
 {
 	float maxfrac, maxrealfrac;
-	int n, entsnum;
-	entity_t *entlist;
-	unsigned char *entactivelist;
+	int n;
 	entity_render_t *ent;
 	float tracemins[3], tracemaxs[3];
 	trace_t trace;
@@ -211,25 +209,18 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 	tracemins[2] = min(start[2], end[2]);
 	tracemaxs[2] = max(start[2], end[2]);
 
-	if(csqcents)
+	if (csqcents)
 	{
-		entlist = cl.csqcentities;
-		entactivelist = cl.csqcentities_active;
-		entsnum = cl.num_csqcentities;
-	}
-	else
-	{
-		entlist = cl.entities;
-		entactivelist = cl.entities_active;
-		entsnum = cl.num_entities;
+		Con_Printf("CL_SelectTraceline: csqc entity collisions in this function are broken and this function will be removed in the future (it is not part of the csqc spec).\n");
+		return maxfrac;
 	}
 
 	// look for embedded bmodels
-	for (n = 0;n < entsnum;n++)
+	for (n = 0;n < cl.num_entities;n++)
 	{
-		if (!entactivelist[n])
+		if (!cl.entities_active[n])
 			continue;
-		ent = &entlist[n].render;
+		ent = &cl.entities[n].render;
 		if (!BoxesOverlap(ent->mins, ent->maxs, tracemins, tracemaxs))
 			continue;
 		if (!ent->model || !ent->model->TraceBox)
@@ -237,7 +228,7 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 		if ((ent->flags & RENDER_EXTERIORMODEL) && !chase_active.integer)
 			continue;
 		// if transparent and not selectable, skip entity
-		if (!(entlist[n].state_current.effects & EF_SELECTABLE) && (ent->alpha < 1 || (ent->effects & (EF_ADDITIVE | EF_NODEPTHTEST))))
+		if (!(cl.entities[n].state_current.effects & EF_SELECTABLE) && (ent->alpha < 1 || (ent->effects & (EF_ADDITIVE | EF_NODEPTHTEST))))
 			continue;
 		if (ent == ignoreent)
 			continue;
