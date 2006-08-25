@@ -292,8 +292,8 @@ CLIENT SPAWNING
 ==============================================================================
 */
 
-static const char *SV_InitCmd;	//[515]: svprogs able to send cmd to client on connect
-extern qboolean csqc_loaded;
+extern cvar_t csqc_progname;	//[515]: csqc crc check and right csprogs name according to progs.dat
+extern cvar_t csqc_progcrc;
 /*
 ================
 SV_SendServerinfo
@@ -341,13 +341,15 @@ void SV_SendServerinfo (client_t *client)
 	dpsnprintf (message, sizeof (message), "\nServer: %s build %s (progs %i crc)", gamename, buildstring, prog->filecrc);
 	MSG_WriteString (&client->netconnection->message,message);
 
-	// FIXME: LordHavoc: this does not work on dedicated servers, needs fixing.
-//[515]: init csprogs according to version of svprogs, check the crc, etc.
-	if(csqc_loaded && (cls.state == ca_dedicated || PRVM_NUM_FOR_EDICT(client->edict) != 1))
+	//[515]: init csprogs according to version of svprogs, check the crc, etc.
+	if (FS_FileExists(csqc_progname.string))
 	{
+		prvm_eval_t *val;
 		MSG_WriteByte (&client->netconnection->message, svc_stufftext);
-		if(SV_InitCmd)
-			MSG_WriteString (&client->netconnection->message, va("csqc_progcrc %i;%s\n", csqc_progcrc.integer, SV_InitCmd));
+		//[515]: init stufftext string (it is sent before svc_serverinfo)
+		val = PRVM_GETGLOBALFIELDVALUE(PRVM_ED_FindGlobalOffset("SV_InitCmd"));
+		if (val)
+			MSG_WriteString (&client->netconnection->message, va("csqc_progcrc %i\n%s\n", csqc_progcrc.integer, PRVM_GetString(val->string)));
 		else
 			MSG_WriteString (&client->netconnection->message, va("csqc_progcrc %i\n", csqc_progcrc.integer));
 	}
@@ -2193,8 +2195,6 @@ mfunction_t *EndFrameQC;
 //KrimZon - SERVER COMMANDS IN QUAKEC
 mfunction_t *SV_ParseClientCommandQC;
 
-ddef_t *PRVM_ED_FindGlobal(const char *name);
-
 void SV_VM_FindEdictFieldOffsets(void)
 {
 	eval_gravity = PRVM_ED_FindFieldOffset("gravity");
@@ -2267,13 +2267,6 @@ void SV_VM_FindEdictFieldOffsets(void)
 	EndFrameQC = PRVM_ED_FindFunction ("EndFrame");
 	//KrimZon - SERVER COMMANDS IN QUAKEC
 	SV_ParseClientCommandQC = PRVM_ED_FindFunction ("SV_ParseClientCommand");
-
-	//[515]: init stufftext string (it is sent before svc_serverinfo)
-	if(PRVM_ED_FindGlobal("SV_InitCmd") && PRVM_ED_FindGlobal("SV_InitCmd")->type & ev_string)
-		SV_InitCmd = PRVM_G_STRING(PRVM_ED_FindGlobal("SV_InitCmd")->ofs);
-	else
-		SV_InitCmd = NULL;
-
 	gval_trace_dpstartcontents = PRVM_ED_FindGlobalOffset("trace_dpstartcontents");
 	gval_trace_dphitcontents = PRVM_ED_FindGlobalOffset("trace_dphitcontents");
 	gval_trace_dphitq3surfaceflags = PRVM_ED_FindGlobalOffset("trace_dphitq3surfaceflags");
@@ -2350,6 +2343,9 @@ prvm_required_field_t reqfields[] =
 
 void SV_VM_Setup(void)
 {
+	unsigned char *csprogsdata;
+	fs_offset_t csprogsdatasize;
+	unsigned int csprogsdatacrc;
 	PRVM_Begin;
 	PRVM_InitProg( PRVM_SERVERPROG );
 
@@ -2384,6 +2380,16 @@ void SV_VM_Setup(void)
 	EntityFrameCSQC_ClearVersions();//[515]: csqc
 
 	PRVM_End;
+
+	// see if there is a csprogs.dat installed, and if so, set the csqc_progcrc accordingly, this will be sent to connecting clients to tell them to only load a matching csprogs.dat file
+	csprogsdatacrc = 0;
+	csprogsdata = FS_LoadFile(csqc_progname.string, tempmempool, true, &csprogsdatasize);
+	if (csprogsdata)
+	{
+		csprogsdatacrc = CRC_Block(csprogsdata, csprogsdatasize);
+		Mem_Free(csprogsdata);
+	}
+	Cvar_SetValueQuick(&csqc_progcrc, csprogsdatacrc);
 }
 
 void SV_VM_Begin(void)
