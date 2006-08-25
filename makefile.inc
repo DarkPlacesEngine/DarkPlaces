@@ -147,8 +147,8 @@ CFLAGS_SDL=`$(SDL_CONFIG) --cflags`
 OPTIM_DEBUG=$(CPUOPTIMIZATIONS)
 #OPTIM_RELEASE=-O2 -fno-strict-aliasing -ffast-math -funroll-loops $(CPUOPTIMIZATIONS)
 #OPTIM_RELEASE=-O2 -fno-strict-aliasing -fno-math-errno -fno-trapping-math -ffinite-math-only -fno-signaling-nans -fcx-limited-range -funroll-loops $(CPUOPTIMIZATIONS)
-#OPTIM_RELEASE=-O2 -funroll-loops $(CPUOPTIMIZATIONS)
-OPTIM_RELEASE=-O2 $(CPUOPTIMIZATIONS)
+#OPTIM_RELEASE=-O2 -fno-strict-aliasing -funroll-loops $(CPUOPTIMIZATIONS)
+OPTIM_RELEASE=-O2 -fno-strict-aliasing $(CPUOPTIMIZATIONS)
 
 DO_CC=$(CC) $(CFLAGS) -c $< -o $@
 
