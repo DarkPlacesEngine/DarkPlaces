@@ -1369,7 +1369,6 @@ void CL_ParseClientdata (void)
 		cl.stats[STAT_ITEMS] = MSG_ReadLong ();
 
 	cl.onground = (bits & SU_ONGROUND) != 0;
-	csqc_onground = cl.onground;	//[515]: cause without this csqc will receive not right value on svc_print =/
 	cl.inwater = (bits & SU_INWATER) != 0;
 
 	if (cls.protocol == PROTOCOL_DARKPLACES5)
@@ -2200,6 +2199,7 @@ void CL_ParseServerMessage(void)
 		cl.mtime[1] = cl.mtime[0];
 		cl.mtime[0] = realtime; // qw has no clock
 		cl.movement_needupdate = true;
+		cl.onground = false; // since there's no clientdata parsing, clear the onground flag here
 		// if true the cl.viewangles are interpolated from cl.mviewangles[]
 		// during this frame
 		// (makes spectating players much smoother and prevents mouse movement from turning)
