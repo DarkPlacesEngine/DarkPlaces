@@ -559,7 +559,7 @@ void CL_UpdatePrydonCursor(void)
 	VectorScale(scale, 1000000, scale);
 
 	// calculate current view matrix
-	V_CalcRefdef();
+	//V_CalcRefdef();
 	VectorClear(temp);
 	Matrix4x4_Transform(&r_view.matrix, temp, cl.cmd.cursor_start);
 	VectorSet(temp, cl.cmd.cursor_screen[2] * scale[2], cl.cmd.cursor_screen[0] * scale[0], cl.cmd.cursor_screen[1] * scale[1]);
@@ -1176,9 +1176,9 @@ void CL_ClientMovement_Replay(void)
 		// get the first movement queue entry to know whether to crouch and such
 		s.q = cl.movement_queue[0];
 	}
+
 	// store replay location
 	CL_ClientMovement_UpdateStatus(&s);
-	cl.onground = s.onground;
 	cl.movement_time[1] = cl.movement_time[0];
 	cl.movement_time[0] = cl.movement_queue[cl.movement_numqueue-1].time;
 	VectorCopy(cl.movement_origin, cl.movement_oldorigin);
@@ -1186,6 +1186,27 @@ void CL_ClientMovement_Replay(void)
 	VectorCopy(s.velocity, cl.movement_velocity);
 	//VectorCopy(s.origin, cl.entities[cl.playerentity].state_current.origin);
 	//VectorSet(cl.entities[cl.playerentity].state_current.angles, 0, cl.viewangles[1], 0);
+
+	// update the onground flag if appropriate
+	// when not predicted, cl.onground is only cleared by cl_parse.c, but can
+	// be set forcefully here to hide server inconsistencies in the onground
+	// flag (such as when stepping up stairs, the onground flag tends to turn
+	// off briefly due to precision errors, particularly at high framerates),
+	// such inconsistencies can mess up the gun bobbing and stair smoothing,
+	// so they must be avoided.
+	if (cl.movement_predicted)
+		cl.onground = s.onground;
+	else if (s.onground)
+		cl.onground = true;
+
+	// react to onground state changes (for gun bob)
+	if (cl.onground)
+	{
+		if (!cl.oldonground)
+			cl.hitgroundtime = cl.time;
+		cl.lastongroundtime = cl.time;
+	}
+	cl.oldonground = cl.onground;
 }
 
 void QW_MSG_WriteDeltaUsercmd(sizebuf_t *buf, qw_usercmd_t *from, qw_usercmd_t *to)
