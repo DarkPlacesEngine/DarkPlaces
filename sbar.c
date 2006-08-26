@@ -1119,6 +1119,7 @@ void Sbar_Draw (void)
 				int i;
 				double time;
 				float fade;
+				int redflag, blueflag;
 
 				// we have a max time 2s (min time = 0)
 				if ((time = cl.time - cl.weapontime) < 2)
@@ -1142,10 +1143,10 @@ void Sbar_Draw (void)
 					Sbar_DrawAlphaPic (0, 0, sb_sbar_minimal, sbar_alpha_fg.value);
 
 				// flag icons
-				int redflag = ((cl.stats[STAT_ITEMS]>>15) & 3);
+				redflag = ((cl.stats[STAT_ITEMS]>>15) & 3);
 				if (redflag)
 					Sbar_DrawPic (10, -85, sb_items[redflag+10]);
-				int blueflag = ((cl.stats[STAT_ITEMS]>>17) & 3);
+				blueflag = ((cl.stats[STAT_ITEMS]>>17) & 3);
 				if (blueflag)
 					Sbar_DrawPic (10, -145, sb_items[blueflag+14]);
 
