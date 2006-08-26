@@ -796,7 +796,7 @@ extern void V_CalcViewBlend(void);
 
 extern void V_CalcRefdef(void);
 // note this is a recursive function, but it can never get in a runaway loop (because of the delayedlink flags)
-void CL_LinkNetworkEntity(entity_t *e)
+void CL_UpdateNetworkEntity(entity_t *e)
 {
 	matrix4x4_t *matrix, blendmatrix, tempmatrix, matrix2;
 	//matrix4x4_t dlightmatrix;
@@ -865,7 +865,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 			if (!e->csqc)
 			{
 				if (cl.viewentity)
-					CL_LinkNetworkEntity(cl.entities + cl.viewentity);
+					CL_UpdateNetworkEntity(cl.entities + cl.viewentity);
 				if (e == &cl.viewent && cl.entities[cl.viewentity].state_current.active)
 				{
 					e->state_current.alpha = cl.entities[cl.viewentity].state_current.alpha;
@@ -893,7 +893,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 			if (!t->state_current.active)
 				return;
 			// note: this can link to world
-			CL_LinkNetworkEntity(t);
+			CL_UpdateNetworkEntity(t);
 			// make relative to the entity
 			matrix = &t->render.matrix;
 			// some properties of the tag entity carry over
@@ -1175,12 +1175,108 @@ void CL_LinkNetworkEntity(entity_t *e)
 		 && !(e->render.flags & (RENDER_VIEWMODEL | RENDER_TRANSPARENT))
 		 && (!(e->render.flags & RENDER_EXTERIORMODEL) || (!cl.intermission && cls.protocol != PROTOCOL_NEHAHRAMOVIE && !cl_noplayershadow.integer)))
 			e->render.flags |= RENDER_SHADOW;
-		// as soon as player is known we can call V_CalcRefDef
-		if (!csqc_loaded)
-		if (e->state_current.number == cl.viewentity)
-			V_CalcRefdef();
 		if (e->render.model && e->render.model->name[0] == '*' && e->render.model->TraceBox)
 			cl.brushmodel_entities[cl.num_brushmodel_entities++] = e->state_current.number;
+		// because the player may be attached to another entity, V_CalcRefdef must be deferred until here...
+		if (e->state_current.number == cl.viewentity)
+			V_CalcRefdef();
+	}
+}
+
+
+/*
+===============
+CL_UpdateEntities
+===============
+*/
+static void CL_UpdateEntities(void)
+{
+	entity_t *ent;
+	int i;
+
+	ent = &cl.viewent;
+	ent->state_previous = ent->state_current;
+	ent->state_current = defaultstate;
+	ent->state_current.time = cl.time;
+	ent->state_current.number = -1;
+	ent->state_current.active = true;
+	ent->state_current.modelindex = cl.stats[STAT_WEAPON];
+	ent->state_current.frame = cl.stats[STAT_WEAPONFRAME];
+	ent->state_current.flags = RENDER_VIEWMODEL;
+	if ((cl.stats[STAT_HEALTH] <= 0 && cl_deathnoviewmodel.integer) || cl.intermission)
+		ent->state_current.modelindex = 0;
+	else if (cl.stats[STAT_ITEMS] & IT_INVISIBILITY)
+	{
+		if (gamemode == GAME_TRANSFUSION)
+			ent->state_current.alpha = 128;
+		else
+			ent->state_current.modelindex = 0;
+	}
+
+	// reset animation interpolation on weaponmodel if model changed
+	if (ent->state_previous.modelindex != ent->state_current.modelindex)
+	{
+		ent->render.frame = ent->render.frame1 = ent->render.frame2 = ent->state_current.frame;
+		ent->render.frame1time = ent->render.frame2time = cl.time;
+		ent->render.framelerp = 1;
+	}
+
+	// start on the entity after the world
+	entitylinkframenumber++;
+	for (i = 1;i < cl.num_entities;i++)
+	{
+		if (cl.entities_active[i])
+		{
+			ent = cl.entities + i;
+			if (ent->state_current.active)
+				CL_UpdateNetworkEntity(ent);
+			else
+				cl.entities_active[i] = false;
+		}
+	}
+	CL_UpdateNetworkEntity(&cl.viewent);
+}
+
+// note this is a recursive function, but it can never get in a runaway loop (because of the delayedlink flags)
+void CL_LinkNetworkEntity(entity_t *e)
+{
+	entity_t *t;
+	if (e->persistent.linkframe != entitylinkframenumber)
+	{
+		e->persistent.linkframe = entitylinkframenumber;
+		// skip inactive entities and world
+		if (!e->state_current.active || e == cl.entities || e == cl.csqcentities)
+			return;
+		if (e->render.flags & RENDER_VIEWMODEL && !e->state_current.tagentity)
+		{
+			if (!r_drawviewmodel.integer || chase_active.integer || r_refdef.envmap)
+				return;
+			if (!e->csqc)
+			if (cl.viewentity)
+				CL_LinkNetworkEntity(cl.entities + cl.viewentity);
+		}
+		else
+		{
+			// if the tag entity is currently impossible, skip it
+			if (!e->csqc)
+			{
+				if (e->state_current.tagentity >= cl.num_entities)
+					return;
+				t = cl.entities + e->state_current.tagentity;
+			}
+			else
+			{
+				if (e->state_current.tagentity >= cl.num_csqcentities)
+					return;
+				t = cl.csqcentities + e->state_current.tagentity;
+			}
+			// if the tag entity is inactive, skip it
+			if (!t->state_current.active)
+				return;
+			// note: this can link to world
+			CL_LinkNetworkEntity(t);
+		}
+
 		// don't show entities with no modelindex (note: this still shows
 		// entities which have a modelindex that resolved to a NULL model)
 		if (e->render.model && !(e->render.effects & EF_NODRAW) && r_refdef.numentities < r_refdef.maxentities)
@@ -1205,25 +1301,6 @@ void CL_RelinkWorld(void)
 	VectorSet(ent->render.colormod, 1, 1, 1);
 	r_refdef.worldentity = &ent->render;
 	r_refdef.worldmodel = cl.worldmodel;
-}
-
-void CL_RelinkCSQCWorld(void)	//[515]: csqc
-{
-	entity_t *ent = &cl.csqcentities[0];
-	if(!csqc_loaded)
-		return;
-//	cl.brushmodel_entities[cl.num_brushmodel_entities++] = 0;
-	// FIXME: this should be done at load
-	ent->render.matrix = identitymatrix;
-	ent->render.inversematrix = identitymatrix;
-	R_LerpAnimation(&ent->render);
-	CL_BoundingBoxForEntity(&ent->render);
-	ent->render.flags = RENDER_SHADOW;
-	if (!r_fullbright.integer)
-		ent->render.flags |= RENDER_LIGHT;
-	VectorSet(ent->render.colormod, 1, 1, 1);
-//	r_refdef.worldentity = &ent->render;
-//	r_refdef.worldmodel = cl.worldmodel;
 }
 
 static void CL_RelinkStaticEntities(void)
@@ -1253,82 +1330,23 @@ static void CL_RelinkStaticEntities(void)
 CL_RelinkEntities
 ===============
 */
-static void CL_RelinkNetworkEntities(int drawmask)
+static void CL_RelinkNetworkEntities(void)
 {
 	entity_t *ent;
-	int i, k;
-
-	if(!csqc_loaded)
-	{
-		ent = &cl.viewent;
-		ent->state_previous = ent->state_current;
-		ent->state_current = defaultstate;
-		ent->state_current.time = cl.time;
-		ent->state_current.number = -1;
-		ent->state_current.active = true;
-		ent->state_current.modelindex = cl.stats[STAT_WEAPON];
-		ent->state_current.frame = cl.stats[STAT_WEAPONFRAME];
-		ent->state_current.flags = RENDER_VIEWMODEL;
-		if ((cl.stats[STAT_HEALTH] <= 0 && cl_deathnoviewmodel.integer) || cl.intermission)
-			ent->state_current.modelindex = 0;
-		else if (cl.stats[STAT_ITEMS] & IT_INVISIBILITY)
-		{
-			if (gamemode == GAME_TRANSFUSION)
-				ent->state_current.alpha = 128;
-			else
-				ent->state_current.modelindex = 0;
-		}
-
-		// reset animation interpolation on weaponmodel if model changed
-		if (ent->state_previous.modelindex != ent->state_current.modelindex)
-		{
-			ent->render.frame = ent->render.frame1 = ent->render.frame2 = ent->state_current.frame;
-			ent->render.frame1time = ent->render.frame2time = cl.time;
-			ent->render.framelerp = 1;
-		}
-	}
+	int i;
 
 	// start on the entity after the world
-	entitylinkframenumber++;
-	if(drawmask & ENTMASK_ENGINE || !csqc_loaded)
+	for (i = 1;i < cl.num_entities;i++)
 	{
-		for (i = 1;i < cl.num_entities;i++)
+		if (cl.entities_active[i])
 		{
-			if (cl.entities_active[i])
-			{
-				ent = cl.entities + i;
-				if (!(drawmask & ENTMASK_ENGINEVIEWMODELS))
-				if (ent->state_current.flags & RENDER_VIEWMODEL)	//[515]: csqc drawmask
-				{
-					cl.entities_active[i] = false;
-					continue;
-				}
-				if (ent->state_current.active)
-					CL_LinkNetworkEntity(ent);
-				else
-					cl.entities_active[i] = false;
-			}
+			ent = cl.entities + i;
+			if (ent->state_current.active)
+				CL_LinkNetworkEntity(ent);
+			else
+				cl.entities_active[i] = false;
 		}
 	}
-
-	//[515]: csqc
-	if(csqc_loaded)
-	{
-		for (i=1,k=cl.num_csqcentities;k;i++)
-		{
-			if (cl.csqcentities_active[i])
-			{
-				--k;
-				ent = cl.csqcentities + i;
-				if (ent->state_current.active)
-					CL_LinkNetworkEntity(ent);
-				else
-					cl.csqcentities_active[i] = false;
-			}
-		}
-	}
-	else
-		CL_LinkNetworkEntity(&cl.viewent);
 }
 
 static void CL_RelinkEffects(void)
@@ -1552,25 +1570,15 @@ void CL_LerpPlayer(float frac)
 
 void CSQC_RelinkAllEntities (int drawmask)
 {
-	cl.num_brushmodel_entities = 0;
-	CL_RelinkNetworkEntities(drawmask);
-	if(drawmask & ENTMASK_ENGINE)
-	{
-		// move particles
-		CL_MoveParticles();
-		R_MoveExplosions();
-	}
-
 	// link stuff
-	CL_RelinkWorld();
-	CL_RelinkCSQCWorld();	//[515]: csqc
-	if(drawmask & ENTMASK_ENGINE)
+	if (drawmask & ENTMASK_ENGINE)
 	{
-		CL_RelinkStaticEntities();
-		CL_RelinkBeams();
-		CL_RelinkEffects();
+		CL_RelinkNetworkEntities();
 		CL_RelinkQWNails();
 	}
+
+	if (drawmask & ENTMASK_ENGINEVIEWMODELS)
+		CL_LinkNetworkEntity(&cl.viewent); // link gun model
 }
 
 /*
@@ -1580,7 +1588,8 @@ CL_ReadFromServer
 Read all incoming data from the server
 ===============
 */
-extern void CL_ClientMovement_Replay();
+extern void CL_ClientMovement_Replay(void);
+extern void CL_StairSmoothing(void);//view.c
 
 int CL_ReadFromServer(void)
 {
@@ -1601,32 +1610,38 @@ int CL_ReadFromServer(void)
 		V_DriftPitch();
 		V_FadeViewFlashs();
 
-		// relink network entities (note: this sets up the view!)
+		// move particles
+		CL_MoveParticles();
+		R_MoveExplosions();
+
+		// process network entities (note: this sets up the view!)
 		CL_ClientMovement_Replay();
+		cl.num_brushmodel_entities = 0;
+		// now that the player entity has been updated we can call V_CalcRefdef
+		V_CalcRefdef();
+		CL_UpdateEntities();
+
+		entitylinkframenumber++;
+		// link stuff
+		CL_RelinkWorld();
+		CL_RelinkStaticEntities();
+		CL_RelinkBeams();
+		CL_RelinkEffects();
+
 		if(!csqc_loaded)	//[515]: csqc
 		{
-			cl.num_brushmodel_entities = 0;
-			CL_RelinkNetworkEntities(65535);
-
-			// move particles
-			CL_MoveParticles();
-			R_MoveExplosions();
-
-			// link stuff
-			CL_RelinkWorld();
-			CL_RelinkCSQCWorld();	//[515]: csqc
-			CL_RelinkStaticEntities();
-			CL_RelinkBeams();
-			CL_RelinkEffects();
+			CL_RelinkNetworkEntities();
+			CL_LinkNetworkEntity(&cl.viewent); // link gun model
 			CL_RelinkQWNails();
 		}
 		else
 			csqc_frame = true;
 
-		CL_UpdateLights();
-
 		// update view blend
 		V_CalcViewBlend();
+
+		CL_UpdateLights();
+		CL_StairSmoothing();
 
 		// update the r_refdef time again because cl.time may have changed
 		r_refdef.time = cl.time;

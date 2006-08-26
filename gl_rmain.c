@@ -1799,43 +1799,6 @@ void R_RenderView(void)
 		return; //Host_Error ("R_RenderView: NULL worldmodel");
 
 	CHECKGLERROR
-	if (r_timereport_active)
-		R_TimeReport("setup");
-
-	R_View_Update();
-	if (r_timereport_active)
-		R_TimeReport("visibility");
-
-	// GL is weird because it's bottom to top, r_view.y is top to bottom
-	R_ResetViewRendering();
-
-	R_ClearScreen();
-	if (r_timereport_active)
-		R_TimeReport("clear");
-
-	// this produces a bloom texture to be used in R_BlendView() later
-	if (r_hdr.integer)
-		R_HDR_RenderBloomTexture();
-
-	r_view.colorscale = r_hdr_scenebrightness.value;
-	R_RenderScene();
-
-	R_BlendView();
-	if (r_timereport_active)
-		R_TimeReport("blendview");
-
-	GL_Scissor(0, 0, vid.width, vid.height);
-	GL_ScissorTest(false);
-	CHECKGLERROR
-}
-
-//[515]: csqc
-void CSQC_R_ClearScreen (void)
-{
-	if (!r_refdef.entities/* || !r_refdef.worldmodel*/)
-		return; //Host_Error ("R_RenderView: NULL worldmodel");
-
-	CHECKGLERROR
 	GL_ScissorTest(true);
 	GL_DepthMask(true);
 	if (r_timereport_active)
@@ -1845,17 +1808,6 @@ void CSQC_R_ClearScreen (void)
 	if (r_timereport_active)
 		R_TimeReport("visibility");
 
-	R_ResetViewRendering();
-
-	R_ClearScreen();
-	if (r_timereport_active)
-		R_TimeReport("clear");
-	CHECKGLERROR
-}
-
-//[515]: csqc
-void CSQC_R_RenderScene (void)
-{
 	R_ResetViewRendering();
 
 	R_ClearScreen();
@@ -1883,6 +1835,8 @@ extern void VM_AddPolygonsToMeshQueue (void);
 extern void R_DrawPortals (void);
 void R_RenderScene(void)
 {
+	DrawQ_Finish();
+
 	// don't let sound skip if going slow
 	if (r_refdef.extraupdate)
 		S_ExtraUpdate ();

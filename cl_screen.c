@@ -1318,7 +1318,6 @@ void SCR_DrawScreen (void)
 	}
 
 	// draw 2D stuff
-	DrawQ_Begin();
 
 	//FIXME: force menu if nothing else to look at?
 	//if (key_dest == key_game && cls.signon != SIGNONS && cls.state == ca_disconnected)

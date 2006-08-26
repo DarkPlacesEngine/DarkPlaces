@@ -637,6 +637,8 @@ typedef struct client_state_s
 	float weapontime;
 	// use pain anim frame if cl.time < this
 	float faceanimtime;
+	// for stair smoothing
+	float stairoffset;
 
 	// color shifts for damage, powerups
 	cshift_t cshifts[NUM_CSHIFTS];
@@ -925,9 +927,6 @@ extern cvar_t cl_pitchspeed;
 extern cvar_t cl_anglespeedkey;
 
 extern cvar_t cl_autofire;
-
-extern cvar_t csqc_progname;	//[515]: csqc crc check and right csprogs name according to progs.dat
-extern cvar_t csqc_progcrc;
 
 extern cvar_t cl_shownet;
 extern cvar_t cl_nolerp;

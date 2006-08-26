@@ -74,8 +74,8 @@ DRAWFLAG_NUMFLAGS
 #define STRING_COLOR_DEFAULT		7
 #define STRING_COLOR_DEFAULT_STR	"^7"
 
-// sets r_defdef.draw2dstage and prepares for 2D rendering
-void DrawQ_Begin(void);
+// all of these functions will set r_defdef.draw2dstage if not in 2D rendering mode (and of course prepare for 2D rendering in that case)
+
 // draw an image (or a filled rectangle if pic == NULL)
 void DrawQ_Pic(float x, float y, cachepic_t *pic, float width, float height, float red, float green, float blue, float alpha, int flags);
 // draw a text string

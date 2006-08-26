@@ -529,14 +529,17 @@ void GL_Draw_Init (void)
 	R_RegisterModule("GL_Draw", gl_draw_start, gl_draw_shutdown, gl_draw_newmap);
 }
 
-void DrawQ_Begin(void)
+static void _DrawQ_Setup(void)
 {
-	GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 1);
-
+	if (r_refdef.draw2dstage)
+		return;
+	r_refdef.draw2dstage = true;
 	CHECKGLERROR
 	qglViewport(r_view.x, vid.height - (r_view.y + r_view.height), r_view.width, r_view.height);CHECKGLERROR
+	GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 1);
 	GL_SetupView_Mode_Ortho(0, 0, vid_conwidth.integer, vid_conheight.integer, -10, 100);
 	qglDepthFunc(GL_LEQUAL);CHECKGLERROR
+	qglDisable(GL_POLYGON_OFFSET_FILL);CHECKGLERROR
 	R_Mesh_Matrix(&identitymatrix);
 
 	GL_DepthMask(true);
@@ -545,11 +548,15 @@ void DrawQ_Begin(void)
 	GL_AlphaTest(false);
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	r_refdef.draw2dstage = true;
+	if (gl_support_fragment_shader)
+	{
+		qglUseProgramObjectARB(0);CHECKGLERROR
+	}
 }
 
 static void _DrawQ_ProcessDrawFlag(int flags)
 {
+	_DrawQ_Setup();
 	CHECKGLERROR
 	if(flags == DRAWFLAG_ADDITIVE)
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
@@ -563,11 +570,6 @@ static void _DrawQ_ProcessDrawFlag(int flags)
 
 void DrawQ_Pic(float x, float y, cachepic_t *pic, float width, float height, float red, float green, float blue, float alpha, int flags)
 {
-	if (!r_refdef.draw2dstage)
-	{
-		Con_Printf("DrawQ_Pic: not in 2d rendering stage!\n");
-		return;
-	}
 	DrawQ_SuperPic(x,y,pic,width,height,0,0,red,green,blue,alpha,1,0,red,green,blue,alpha,0,1,red,green,blue,alpha,1,1,red,green,blue,alpha,flags);
 }
 
@@ -578,12 +580,6 @@ void DrawQ_String_Real(float x, float y, const char *string, int maxlen, float w
 	int batchcount;
 	float vertex3f[QUADELEMENTS_MAXQUADS*4*3];
 	float texcoord2f[QUADELEMENTS_MAXQUADS*4*2];
-
-	if (!r_refdef.draw2dstage)
-	{
-		Con_Printf("DrawQ_String: not in 2d rendering stage!\n");
-		return;
-	}
 
 	if (alpha < (1.0f / 255.0f))
 		return;
@@ -644,12 +640,6 @@ void DrawQ_String_Real(float x, float y, const char *string, int maxlen, float w
 
 void DrawQ_String(float x, float y, const char *string, int maxlen, float scalex, float scaley, float red, float green, float blue, float alpha, int flags)
 {
-	if (!r_refdef.draw2dstage)
-	{
-		Con_Printf("DrawQ_String: not in 2d rendering stage!\n");
-		return;
-	}
-
 	if (r_textshadow.integer)
 		DrawQ_String_Real(x+scalex*0.25,y+scaley*0.25,string,maxlen,scalex,scaley,0,0,0,alpha*0.8,flags);
 
@@ -694,11 +684,6 @@ void DrawQ_ColoredString( float x, float y, const char *text, int maxlen, float 
 	int colorindex;
 	const char *start, *current;
 
-	if (!r_refdef.draw2dstage)
-	{
-		Con_Printf("DrawQ_ColoredString: not in 2d rendering stage!\n");
-		return;
-	}
 	if( !outcolor || *outcolor == -1 ) {
 		colorindex = STRING_COLOR_DEFAULT;
 	} else {
@@ -773,12 +758,6 @@ void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height
 {
 	float floats[36];
 
-	if (!r_refdef.draw2dstage)
-	{
-		Con_Printf("DrawQ_SuperPic: not in 2d rendering stage!\n");
-		return;
-	}
-
 	_DrawQ_ProcessDrawFlag(flags);
 
 	R_Mesh_VertexPointer(floats);
@@ -813,12 +792,6 @@ void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height
 
 void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags)
 {
-	if (!r_refdef.draw2dstage)
-	{
-		Con_Printf("DrawQ_Mesh: not in 2d rendering stage!\n");
-		return;
-	}
-
 	_DrawQ_ProcessDrawFlag(flags);
 
 	R_Mesh_VertexPointer(mesh->data_vertex3f);
@@ -836,12 +809,6 @@ void DrawQ_LineLoop (drawqueuemesh_t *mesh, int flags)
 {
 	int num;
 
-	if (!r_refdef.draw2dstage)
-	{
-		Con_Printf("DrawQ_LineLoop: not in 2d rendering stage!\n");
-		return;
-	}
-
 	_DrawQ_ProcessDrawFlag(flags);
 
 	GL_Color(1,1,1,1);
@@ -857,32 +824,13 @@ void DrawQ_LineLoop (drawqueuemesh_t *mesh, int flags)
 	CHECKGLERROR
 }
 
-//LordHavoc: FIXME: this is nasty!
-void DrawQ_LineWidth (float width)
-{
-	if (!r_refdef.draw2dstage)
-	{
-		Con_Printf("DrawQ_LineWidth: not in 2d rendering stage!\n");
-		return;
-	}
-	CHECKGLERROR
-	qglLineWidth(width);CHECKGLERROR
-}
-
 //[515]: this is old, delete
 void DrawQ_Line (float width, float x1, float y1, float x2, float y2, float r, float g, float b, float alpha, int flags)
 {
-	if (!r_refdef.draw2dstage)
-	{
-		Con_Printf("DrawQ_Line: not in 2d rendering stage!\n");
-		return;
-	}
+	_DrawQ_ProcessDrawFlag(flags);
 
 	CHECKGLERROR
-	if(width > 0)
-		DrawQ_LineWidth(width);
-
-	_DrawQ_ProcessDrawFlag(flags);
+	qglLineWidth(width);CHECKGLERROR
 
 	GL_Color(r,g,b,alpha);
 	CHECKGLERROR
@@ -895,11 +843,7 @@ void DrawQ_Line (float width, float x1, float y1, float x2, float y2, float r, f
 
 void DrawQ_SetClipArea(float x, float y, float width, float height)
 {
-	if (!r_refdef.draw2dstage)
-	{
-		Con_Printf("DrawQ_SetClipArea: not in 2d rendering stage!\n");
-		return;
-	}
+	_DrawQ_Setup();
 
 	// We have to convert the con coords into real coords
 	// OGL uses top to bottom
@@ -910,22 +854,12 @@ void DrawQ_SetClipArea(float x, float y, float width, float height)
 
 void DrawQ_ResetClipArea(void)
 {
-	if (!r_refdef.draw2dstage)
-	{
-		Con_Printf("DrawQ_ResetClipArea: not in 2d rendering stage!\n");
-		return;
-	}
+	_DrawQ_Setup();
 	GL_ScissorTest(false);
 }
 
 void DrawQ_Finish(void)
 {
-	if (!r_refdef.draw2dstage)
-	{
-		Con_Printf("R_DrawQueue: not in 2d rendering stage!\n");
-		return;
-	}
-
 	r_refdef.draw2dstage = false;
 }
 

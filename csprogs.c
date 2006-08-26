@@ -43,7 +43,6 @@ static char *cl_required_func[] =
 
 static int cl_numrequiredfunc = sizeof(cl_required_func) / sizeof(char*);
 
-unsigned int			csqc_drawmask = 0;
 static char				*csqc_printtextbuf = NULL;
 static unsigned short	*csqc_sv2csqcents;	//[515]: server entities numbers on client side. FIXME : make pointers instead of numbers ?
 
@@ -141,7 +140,7 @@ static void CSQC_SetGlobals (void)
 	CSQC_END
 }
 
-static void CSQC_Predraw (prvm_edict_t *ed)
+void CSQC_Predraw (prvm_edict_t *ed)
 {
 	int b;
 	if(!ed->fields.client->predraw)
@@ -152,7 +151,7 @@ static void CSQC_Predraw (prvm_edict_t *ed)
 	prog->globals.client->self = b;
 }
 
-static void CSQC_Think (prvm_edict_t *ed)
+void CSQC_Think (prvm_edict_t *ed)
 {
 	int b;
 	if(ed->fields.client->think)
@@ -166,58 +165,112 @@ static void CSQC_Think (prvm_edict_t *ed)
 	}
 }
 
-//[515]: weird too
-static qboolean CSQC_EdictToEntity (prvm_edict_t *ed, entity_t *e)
+extern cvar_t cl_noplayershadow;
+qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 {
 	int i;
 	prvm_eval_t *val;
+	entity_t *e;
+	matrix4x4_t tagmatrix, matrix2;
 
-	i = (int)ed->fields.client->modelindex;
-	e->state_current.modelindex = 0;
-	if(i >= MAX_MODELS || i <= -MAX_MODELS)	//[515]: make work as error ?
-	{
-		Con_Print("CSQC_EdictToEntity: modelindex >= MAX_MODELS\n");
-		ed->fields.client->modelindex = 0;
-	}
-	else
-		e->state_current.modelindex = i;
-	if(!e->state_current.modelindex)
+	e = CL_NewTempEntity();
+	if (!e)
 		return false;
 
-	e->state_current.time = cl.time;
+	i = (int)ed->fields.client->modelindex;
+	if(i >= MAX_MODELS || i <= -MAX_MODELS)	//[515]: make work as error ?
+	{
+		Con_Print("CSQC_AddRenderEdict: modelindex >= MAX_MODELS\n");
+		ed->fields.client->modelindex = i = 0;
+	}
+
+	// model setup and some modelflags
+	if (i < MAX_MODELS)
+		e->render.model = cl.model_precache[e->state_current.modelindex];
+	else
+		e->render.model = cl.csqc_model_precache[65536-e->state_current.modelindex];
+
+	if (!e->render.model)
+		return false;
+
+	e->render.colormap = (int)ed->fields.client->colormap;
+	e->render.frame = (int)ed->fields.client->frame;
+	e->render.skinnum = (int)ed->fields.client->skin;
+	e->render.effects |= e->render.model->flags2 & (EF_FULLBRIGHT | EF_ADDITIVE);
+
+	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_alpha)) && val->_float)		e->render.alpha = val->_float;
+	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_scale)) && val->_float)		e->render.scale = val->_float;
+	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_colormod)) && VectorLength2(val->vector))	VectorCopy(val->vector, e->render.colormod);
+	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_effects)) && val->_float)	e->render.effects = (int)val->_float;
+	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_tag_entity)) && val->edict)
+	{
+		int tagentity;
+		int tagindex;
+		tagentity = val->edict;
+		if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_tag_index)) && val->_float)
+			tagindex = (int)val->_float;
+		// FIXME: calculate tag matrix
+		Matrix4x4_CreateIdentity(&tagmatrix);
+	}
+	else
+		Matrix4x4_CreateIdentity(&tagmatrix);
+
+	if(i & RF_USEAXIS)	//FIXME!!!
+	{
+		vec3_t left;
+		VectorNegate(prog->globals.client->v_right, left);
+		Matrix4x4_FromVectors(&matrix2, prog->globals.client->v_forward, left, prog->globals.client->v_up, ed->fields.client->origin);
+	}
+	else
+	{
+		vec3_t angles;
+		VectorCopy(ed->fields.client->angles, angles);
+		// if model is alias, reverse pitch direction
+		if (e->render.model->type == mod_alias)
+			angles[0] = -angles[0];
+
+		// set up the render matrix
+		// FIXME: e->render.scale should go away
+		Matrix4x4_CreateFromQuakeEntity(&matrix2, ed->fields.client->origin[0], ed->fields.client->origin[1], ed->fields.client->origin[2], angles[0], angles[1], angles[2], e->render.scale);
+	}
+
+	// concat the matrices to make the entity relative to its tag
+	Matrix4x4_Concat(&e->render.matrix, &tagmatrix, &matrix2);
+	// make the other useful stuff
+	Matrix4x4_Invert_Simple(&e->render.inversematrix, &e->render.matrix);
+	CL_BoundingBoxForEntity(&e->render);
+
+	// FIXME: csqc has frame1/frame2/frame1time/frame2time/lerpfrac but this implementation's cl_entvars_t lacks those fields
+	e->render.frame1 = e->render.frame = ed->fields.client->frame;
+	e->render.frame1time = e->render.frame2time = 0;
+	e->render.framelerp = 0;
+	R_LerpAnimation(&e->render);
 
 	i = 0;
 	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_renderflags)) && val->_float)
 	{
 		i = (int)val->_float;
-		if(i & RF_VIEWMODEL)	e->state_current.flags |= RENDER_VIEWMODEL;
-		if(i & RF_EXTERNALMODEL)e->state_current.flags |= RENDER_EXTERIORMODEL;
-		if(i & RF_DEPTHHACK)	e->state_current.effects |= EF_NODEPTHTEST;
-		if(i & RF_ADDITIVE)		e->state_current.effects |= EF_ADDITIVE;
+		if(i & RF_VIEWMODEL)	e->render.flags |= RENDER_VIEWMODEL;
+		if(i & RF_EXTERNALMODEL)e->render.flags |= RENDER_EXTERIORMODEL;
+		if(i & RF_DEPTHHACK)	e->render.effects |= EF_NODEPTHTEST;
+		if(i & RF_ADDITIVE)		e->render.effects |= EF_ADDITIVE;
 	}
 
-	if(i & RF_USEAXIS)	//FIXME!!!
-		VectorCopy(ed->fields.client->angles, e->persistent.newangles);
-	else
-		VectorCopy(ed->fields.client->angles, e->persistent.newangles);
-
-	VectorCopy(ed->fields.client->origin, e->persistent.neworigin);
-	VectorCopy(ed->fields.client->origin, e->state_current.origin);
-	e->state_current.colormap = (int)ed->fields.client->colormap;
-	e->state_current.effects = (int)ed->fields.client->effects;
-	e->state_current.frame = (int)ed->fields.client->frame;
-	e->state_current.skin = (int)ed->fields.client->skin;
-
-	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_alpha)) && val->_float)		e->state_current.alpha = (int)(val->_float*255);
-	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_scale)) && val->_float)		e->state_current.scale = (int)(val->_float*16);
-	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_colormod)) && VectorLength2(val->vector))	{int j;for (j = 0;j < 3;j++) e->state_current.colormod[j] = (unsigned char)bound(0, val->vector[j] * 32.0f, 255);}
-	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_effects)) && val->_float)	e->state_current.effects = (int)val->_float;
-	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_tag_entity)) && val->edict)
-	{
-		e->state_current.tagentity = val->edict;
-		if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_tag_index)) && val->_float)
-			e->state_current.tagindex = (int)val->_float;
-	}
+	// transparent stuff can't be lit during the opaque stage
+	if (e->render.effects & (EF_ADDITIVE | EF_NODEPTHTEST) || e->render.alpha < 1)
+		e->render.flags |= RENDER_TRANSPARENT;
+	// double sided rendering mode causes backfaces to be visible
+	// (mostly useful on transparent stuff)
+	if (e->render.effects & EF_DOUBLESIDED)
+		e->render.flags |= RENDER_NOCULLFACE;
+	// either fullbright or lit
+	if (!(e->render.effects & EF_FULLBRIGHT) && !r_fullbright.integer)
+		e->render.flags |= RENDER_LIGHT;
+	// hide player shadow during intermission or nehahra movie
+	if (!(e->render.effects & EF_NOSHADOW)
+	 && !(e->render.flags & (RENDER_VIEWMODEL | RENDER_TRANSPARENT))
+	 && (!(e->render.flags & RENDER_EXTERIORMODEL) || (!cl.intermission && cls.protocol != PROTOCOL_NEHAHRAMOVIE && !cl_noplayershadow.integer)))
+		e->render.flags |= RENDER_SHADOW;
 
 	return true;
 }
@@ -226,73 +279,9 @@ void CSQC_ClearCSQCEntities (void)
 {
 	memset(cl.csqcentities_active, 0, sizeof(cl.csqcentities_active));
 	cl.num_csqcentities = 0;
-	csqc_drawmask = 0;
 }
 
 void CL_ExpandCSQCEntities (int num);
-
-void CSQC_RelinkCSQCEntities (void)
-{
-	int			i;
-	entity_t	*e;
-	prvm_edict_t *ed;
-
-	*prog->time = cl.time;
-	for(i=1;i<prog->num_edicts;i++)
-	{
-		if(i >= cl.max_csqcentities)
-			CL_ExpandCSQCEntities(i);
-
-		e = &cl.csqcentities[i];
-		ed = &prog->edicts[i];
-		if(ed->priv.required->free)
-		{
-			e->state_current.active = false;
-			cl.csqcentities_active[i] = false;
-			continue;
-		}
-		VectorAdd(ed->fields.client->origin, ed->fields.client->mins, ed->fields.client->absmin);
-		VectorAdd(ed->fields.client->origin, ed->fields.client->maxs, ed->fields.client->absmax);
-		CSQC_Think(ed);
-		if(ed->priv.required->free)
-		{
-			e->state_current.active = false;
-			cl.csqcentities_active[i] = false;
-			continue;
-		}
-		CSQC_Predraw(ed);
-		if(ed->priv.required->free)
-		{
-			e->state_current.active = false;
-			cl.csqcentities_active[i] = false;
-			continue;
-		}
-		if(!cl.csqcentities_active[i])
-		if(!((int)ed->fields.client->drawmask & csqc_drawmask))
-			continue;
-
-		e->state_previous	= e->state_current;
-		e->state_current	= defaultstate;
-		if((cl.csqcentities_active[i] = CSQC_EdictToEntity(ed, e)))
-		{
-			if(!e->state_current.active)
-			{
-				if(!e->state_previous.active)
-					VectorCopy(ed->fields.client->origin, e->persistent.trail_origin);//[515]: hack to make good gibs =/
-				e->state_previous = e->state_current;
-				e->state_current.active = true;
-			}
-			e->persistent.lerpdeltatime = 0;//prog->globals.client->frametime;
-			cl.num_csqcentities++;
-		}
-	}
-}
-
-//[515]: omfg... it's all weird =/
-void CSQC_AddEntity (int n)
-{
-	cl.csqcentities_active[n] = true;
-}
 
 qboolean CL_VM_InputEvent (qboolean pressed, int key)
 {
@@ -318,7 +307,6 @@ qboolean CL_VM_UpdateView (void)
 		//VectorCopy(cl.viewangles, oldangles);
 		*prog->time = cl.time;
 		CSQC_SetGlobals();
-		csqc_drawmask = 0;
 		cl.num_csqcentities = 0;
 		PRVM_ExecuteProgram (prog->globals.client->CSQC_UpdateView, CL_F_UPDATEVIEW);
 		//VectorCopy(oldangles, cl.viewangles);
@@ -546,7 +534,7 @@ void CL_VM_Init (void)
 
 	if(!sv.active && !cls.demoplayback && prog->filecrc != (unsigned short)csqc_progcrc.integer)
 	{
-		Con_Printf("^1Your CSQC version differs from server's one (%i!=%i)\n", prog->filecrc, csqc_progcrc.integer);
+		Con_Printf("^1Your %s is not the same version as the server (CRC is %i but should be %i)\n", prog->filecrc, csqc_progcrc.integer);
 		PRVM_ResetProg();
 		CL_Disconnect();
 		return;

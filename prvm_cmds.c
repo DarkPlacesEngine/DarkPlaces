@@ -715,19 +715,19 @@ void VM_itof(void)
 
 /*
 ========================
-VM_itoe
+VM_ftoe
 
-intt ftoi(float num)
+entity ftoe(float num)
 ========================
 */
-void VM_ftoi(void)
+void VM_ftoe(void)
 {
 	int ent;
-	VM_SAFEPARMCOUNT(1, VM_ftoi);
+	VM_SAFEPARMCOUNT(1, VM_ftoe);
 
 	ent = (int)PRVM_G_FLOAT(OFS_PARM0);
-	if(PRVM_PROG_TO_EDICT(ent)->priv.required->free)
-		PRVM_ERROR ("VM_ftoe: %s tried to access a freed entity (entity %i)!", PRVM_NAME, ent);
+	if (ent < 0 || ent >= MAX_EDICTS || PRVM_PROG_TO_EDICT(ent)->priv.required->free)
+		ent = 0; // return world instead of a free or invalid entity
 
 	PRVM_G_INT(OFS_RETURN) = ent;
 }
@@ -1150,15 +1150,14 @@ float	rint(float)
 */
 void VM_rint (void)
 {
-	float	f;
-
+	float f;
 	VM_SAFEPARMCOUNT(1,VM_rint);
 
 	f = PRVM_G_FLOAT(OFS_PARM0);
 	if (f > 0)
-		PRVM_G_FLOAT(OFS_RETURN) = (int)(f + 0.5);
+		PRVM_G_FLOAT(OFS_RETURN) = floor(f + 0.5);
 	else
-		PRVM_G_FLOAT(OFS_RETURN) = (int)(f - 0.5);
+		PRVM_G_FLOAT(OFS_RETURN) = ceil(f - 0.5);
 }
 
 /*
@@ -3011,7 +3010,7 @@ void VM_R_PolygonBegin (void)
 	if(picname[0])
 		p->tex = Draw_CachePic(picname, true)->tex;
 	else
-		p->tex = r_texture_notexture;
+		p->tex = r_texture_white;
 	p->flags = (unsigned char)PRVM_G_FLOAT(OFS_PARM1);
 	vm_current_vertices = 0;
 	vm_polygonbegin = true;
@@ -3053,8 +3052,7 @@ void VM_R_PolygonVertex (void)
 
 	p->data[vm_current_vertices*3]		= coords[0];
 	p->data[1+vm_current_vertices*3]	= coords[1];
-	if(!(p->flags & VM_POLYGON_FL2D))
-		p->data[2+vm_current_vertices*3]	= coords[2];
+	p->data[2+vm_current_vertices*3]	= coords[2];
 
 	p->data[12+vm_current_vertices*2]	= tx[0];
 	if(!(p->flags & VM_POLYGON_FLLINES))
