@@ -313,6 +313,32 @@ extern matrix4x4_t viewmodelmatrix;
 
 /*
 ==================
+CL_StairSmoothing
+
+==================
+*/
+void CL_StairSmoothing (void)
+{
+	if (v_dmg_time > 0)
+		v_dmg_time -= (cl.time - cl.oldtime);
+
+	// stair smoothing
+	if (cl.onground && cl.stairoffset < 0)
+	{
+		cl.stairoffset += (cl.time - cl.oldtime) * cl_stairsmoothspeed.value;
+		cl.stairoffset = bound(-16, cl.stairoffset, 0);
+	}
+	else if (cl.onground && cl.stairoffset > 0)
+	{
+		cl.stairoffset -= (cl.time - cl.oldtime) * cl_stairsmoothspeed.value;
+		cl.stairoffset = bound(0, cl.stairoffset, 16);
+	}
+	else
+		cl.stairoffset = 0;
+}
+
+/*
+==================
 V_CalcRefdef
 
 ==================
@@ -336,6 +362,13 @@ void V_CalcRefdef (void)
 		// and the angles from the input system
 		Matrix4x4_OriginFromMatrix(&ent->render.matrix, vieworg);
 		VectorCopy(cl.viewangles, viewangles);
+
+		// update the stairoffset if the player entity has gone up or down without leaving the ground
+		//Con_Printf("cl.onground %i oldz %f newz %f\n", cl.onground, oldz, vieworg[2]);
+		cl.stairoffset -= vieworg[2] - oldz;
+		oldz = vieworg[2];
+		cl.stairoffset = bound(-16, cl.stairoffset, 16);
+
 		// interpolate the angles if playing a demo or spectating someone
 		if (cls.demoplayback || cl.fixangle[0])
 		{
@@ -369,28 +402,8 @@ void V_CalcRefdef (void)
 			// TODO: add a cvar to disable this
 			viewangles[PITCH] += cl.qw_weaponkick;
 
-			if (cl.onground)
-			{
-				if (!cl.oldonground)
-					cl.hitgroundtime = cl.time;
-				cl.lastongroundtime = cl.time;
-			}
-			cl.oldonground = cl.onground;
-
-			// stair smoothing
-			//Con_Printf("cl.onground %i oldz %f newz %f\n", cl.onground, oldz, vieworg[2]);
-			if (cl.onground && oldz < vieworg[2])
-			{
-				oldz += (cl.time - cl.oldtime) * cl_stairsmoothspeed.value;
-				oldz = vieworg[2] = bound(vieworg[2] - 16, oldz, vieworg[2]);
-			}
-			else if (cl.onground && oldz > vieworg[2])
-			{
-				oldz -= (cl.time - cl.oldtime) * cl_stairsmoothspeed.value;
-				oldz = vieworg[2] = bound(vieworg[2], oldz, vieworg[2] + 16);
-			}
-			else
-				oldz = vieworg[2];
+			// bias by stair smoothing offset
+			vieworg[2] += cl.stairoffset;
 
 			if (chase_active.value)
 			{
@@ -435,7 +448,6 @@ void V_CalcRefdef (void)
 				{
 					viewangles[ROLL] += v_dmg_time/v_kicktime.value*v_dmg_roll;
 					viewangles[PITCH] += v_dmg_time/v_kicktime.value*v_dmg_pitch;
-					v_dmg_time -= cl.realframetime;
 				}
 				// origin
 				VectorAdd(vieworg, cl.punchvector, vieworg);

@@ -760,15 +760,12 @@ void VM_CL_getlight (void)
 
 //============================================================================
 //[515]: SCENE MANAGER builtins
-void V_CalcRefdef (void);//view.c
-void CSQC_R_ClearScreen (void);//gl_rmain.c
-void CSQC_R_RenderScene (void);//gl_rmain.c
-void CSQC_AddEntity (int n);//csprogs.c
-void CSQC_ClearCSQCEntities (void);
+extern void V_CalcRefdef (void);//view.c
+extern qboolean CSQC_AddRenderEdict (prvm_edict_t *ed);//csprogs.c
+extern void CSQC_ClearCSQCEntities (void);//csprogs.c
 
 matrix4x4_t csqc_listenermatrix;
 qboolean csqc_usecsqclistener = false, csqc_frame = false;//[515]: per-frame
-qboolean csqc_onground;
 
 static void CSQC_R_RecalcView (void)
 {
@@ -784,23 +781,46 @@ void VM_R_ClearScene (void)
 {
 	VM_SAFEPARMCOUNT(0, VM_R_ClearScene);
 //	CSQC_R_RecalcView();
-	if(csqc_frame)
-		CSQC_ClearCSQCEntities();
-	CSQC_R_ClearScreen();
+	CSQC_ClearCSQCEntities();
 }
 
 //#301 void(float mask) addentities (EXT_CSQC)
+extern void CSQC_Predraw (prvm_edict_t *ed);//csprogs.c
+extern void CSQC_Think (prvm_edict_t *ed);//csprogs.c
 void VM_R_AddEntities (void)
 {
+	int			i, drawmask;
+	prvm_edict_t *ed;
 	VM_SAFEPARMCOUNT(1, VM_R_AddEntities);
-	csqc_drawmask = (int)PRVM_G_FLOAT(OFS_PARM0);
+	drawmask = (int)PRVM_G_FLOAT(OFS_PARM0);
+	CSQC_RelinkAllEntities(drawmask);
+
+	*prog->time = cl.time;
+	for(i=1;i<prog->num_edicts;i++)
+	{
+		ed = &prog->edicts[i];
+		if(ed->priv.required->free)
+			continue;
+		VectorAdd(ed->fields.client->origin, ed->fields.client->mins, ed->fields.client->absmin);
+		VectorAdd(ed->fields.client->origin, ed->fields.client->maxs, ed->fields.client->absmax);
+		CSQC_Think(ed);
+		if(ed->priv.required->free)
+			continue;
+		// note that for RF_USEAXIS entities, Predraw sets v_forward/v_right/v_up globals that are read by CSQC_AddRenderEdict
+		CSQC_Predraw(ed);
+		if(ed->priv.required->free)
+			continue;
+		if(!((int)ed->fields.client->drawmask & drawmask))
+			continue;
+		CSQC_AddRenderEdict(ed);
+	}
 }
 
 //#302 void(entity ent) addentity (EXT_CSQC)
 void VM_R_AddEntity (void)
 {
 	VM_SAFEPARMCOUNT(1, VM_R_AddEntity);
-	CSQC_AddEntity(PRVM_NUM_FOR_EDICT(PRVM_G_EDICT(OFS_PARM0)));
+	CSQC_AddRenderEdict(PRVM_G_EDICT(OFS_PARM0));
 }
 
 //#303 float(float property, ...) setproperty (EXT_CSQC)
@@ -900,14 +920,7 @@ void VM_R_SetView (void)
 void VM_R_RenderScene (void) //#134
 {
 	VM_SAFEPARMCOUNT(0, VM_R_RenderScene);
-
-	if(csqc_frame)
-	{
-		CSQC_RelinkCSQCEntities();
-		CSQC_RelinkAllEntities(csqc_drawmask);
-	}
-
-	CSQC_R_RenderScene();
+	R_RenderView();
 }
 
 //#305 void(vector org, float radius, vector lightcolours) adddynamiclight (EXT_CSQC)
@@ -1296,7 +1309,7 @@ void VM_CL_playernum (void)
 //#355 float() cl_onground (EXT_CSQC)
 void VM_CL_onground (void)
 {
-	PRVM_G_FLOAT(OFS_RETURN) = csqc_onground;
+	PRVM_G_FLOAT(OFS_RETURN) = cl.onground;
 }
 
 //#360 float() readbyte (EXT_CSQC)

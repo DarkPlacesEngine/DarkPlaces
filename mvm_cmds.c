@@ -862,7 +862,7 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_search_getfilename, // 77
 	VM_chr,
 	VM_itof,
-	VM_ftoi,		// 80
+	VM_ftoe,		// 80
 	VM_itof,		// isString
 	VM_altstr_count,
 	VM_altstr_prepare,

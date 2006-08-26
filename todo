@@ -34,9 +34,11 @@
 -f (James D) bug darkplaces server: losing runes on episode completion, completing episode 1 then 2 then 3 causes it to forget 1, then 4 causes it to forget 2 and 3, making it impossible to open the boss gate (James D)
 -f (Wazat) bug darkplaces: client's slowmo detection (measuring packet times and comparing to game time changes) may be making the game unpleasant (Wazat)
 0 bug darkplaces client: GAME_NEHAHRA: make sure cutscenes and movies work, got a report of seeing a black screen (NightFright)
+0 bug darkplaces client: hipnotic: health is one character to the right on the sbar, covering up the key icons (M`Shacron)
 0 bug darkplaces client: it has been reported that sometimes level changes on quakeworld servers don't load a map, this may be related to downloading? (Baker)
 0 bug darkplaces client: svc_effect should post a warning and do nothing if given a framerate below 1 (Willis)
 0 bug darkplaces console: commandline history won't scroll back past a blank line - the blank line should not be entered into history (Elric)
+0 bug darkplaces console: when cursoring up and down through command history, shorter lines sometimes contain some text from the previous line
 0 bug darkplaces csqc: after the drawqueue was eliminated, the CSQC probably can't draw 2D polygons the same way, so it may need fixing ([515])
 0 bug darkplaces csqc: engine-based rocket entities have a trail but they don't glow if csqc is used
 0 bug darkplaces csqc: it's broken!

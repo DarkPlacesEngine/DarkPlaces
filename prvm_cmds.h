@@ -99,7 +99,7 @@ string	search_getfilename(float handle, float num)
 string	chr(float ascii)
 
 float	itof(intt ent)
-intt	ftoi(float num)
+entity	ftoe(float num)
 
 -------will be removed soon----------
 float	altstr_count(string)
@@ -235,7 +235,7 @@ void VM_vtos (void);
 void VM_etos (void);
 void VM_stof(void);
 void VM_itof(void);
-void VM_ftoi(void);
+void VM_ftoe(void);
 void VM_spawn (void);
 void VM_remove (void);
 void VM_find (void);
