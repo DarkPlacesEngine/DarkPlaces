@@ -2470,6 +2470,9 @@ void EntityStateQW_ReadPlayerUpdate(void)
 	// if this is an update on our player, update interpolation state
 	if (enumber == cl.playerentity)
 	{
+		// force a recalculation of the player prediction
+		cl.movement_replay = true;
+
 		VectorCopy (cl.mpunchangle[0], cl.mpunchangle[1]);
 		VectorCopy (cl.mpunchvector[0], cl.mpunchvector[1]);
 		VectorCopy (cl.mvelocity[0], cl.mvelocity[1]);
