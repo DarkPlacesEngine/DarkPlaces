@@ -1085,6 +1085,18 @@ void NetConn_ConnectionEstablished(lhnetsocket_t *mysocket, lhnetaddress_t *peer
 	cls.protocol = initialprotocol;
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
 		Cmd_ForwardStringToServer("new");
+	if (cls.protocol == PROTOCOL_QUAKE)
+	{
+		// write a keepalive (svc_nop) as it seems to greatly improve the
+		// chances of connecting to a netquake server
+		sizebuf_t msg;
+		unsigned char buf[4];
+		memset(&msg, 0, sizeof(msg));
+		msg.data = buf;
+		msg.maxsize = sizeof(buf);
+		MSG_WriteChar(&msg, svc_nop);
+		NetConn_SendUnreliableMessage(cls.netcon, &msg, cls.protocol);
+	}
 }
 
 int NetConn_IsLocalGame(void)
@@ -1441,9 +1453,9 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 					length -= 4;
 					LHNETADDRESS_SetPort(&clientportaddress, port);
 				}
-				M_Update_Return_Reason("Accepted");
 				// update the server IP in the userinfo (QW servers expect this, and it is used by the reconnect command)
 				InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "*ip", addressstring2);
+				M_Update_Return_Reason("Accepted");
 				NetConn_ConnectionEstablished(mysocket, &clientportaddress, PROTOCOL_QUAKE);
 			}
 			break;
@@ -1453,7 +1465,6 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			cls.connect_trying = false;
 			M_Update_Return_Reason((char *)data);
 			break;
-		// TODO: fix this code so that lan searches for quake servers will work
 		case CCREP_SERVER_INFO:
 			if (developer.integer >= 10)
 				Con_Printf("Datagram_ParseConnectionless: received CCREP_SERVER_INFO from %s.\n", addressstring2);
