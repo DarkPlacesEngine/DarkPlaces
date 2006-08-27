@@ -50,10 +50,14 @@
 				if( OPB->_float != 0.0f )
 				{
 					OPC->_float = OPA->_float / OPB->_float;
-				} 
-				else 
+				}
+				else
 				{
-					if( developer.integer >= 1 ) {
+					if( developer.integer >= 1 )
+					{
+						prog->xfunction->profile += (st - startst);
+						startst = st;
+						prog->xstatement = st - prog->statements;
 						VM_Warning( "Attempted division by zero in %s\n", PRVM_NAME );
 					}
 					OPC->_float = 0.0f;
