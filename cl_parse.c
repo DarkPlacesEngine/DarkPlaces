@@ -2052,7 +2052,14 @@ qboolean CL_ExaminePrintString(const char *text)
 	if (!strcmp(text, "Client ping times:\n"))
 	{
 		cl.parsingtextmode = CL_PARSETEXTMODE_PING;
-		cl.parsingtextplayerindex = 0;
+		for(cl.parsingtextplayerindex = 0; cl.parsingtextplayerindex < cl.maxclients && !cl.scores[cl.parsingtextplayerindex].name[0]; cl.parsingtextplayerindex++)
+			;
+		if (cl.parsingtextplayerindex >= cl.maxclients) // should never happen, since the client itself should be in cl.scores
+		{
+			Con_Printf("ping reply but empty scoreboard?!?\n");
+			cl.parsingtextmode = CL_PARSETEXTMODE_NONE;
+			cl.parsingtextexpectingpingforscores = false;
+		}
 		return !cl.parsingtextexpectingpingforscores;
 	}
 	if (!strncmp(text, "host:    ", 9))
@@ -2071,10 +2078,10 @@ qboolean CL_ExaminePrintString(const char *text)
 		t = text;
 		while (*t == ' ')
 			t++;
-		if (*t >= '0' && *t <= '9')
+		if ((*t >= '0' && *t <= '9') || *t == '-')
 		{
 			int ping = atoi(t);
-			while (*t >= '0' && *t <= '9')
+			while ((*t >= '0' && *t <= '9') || *t == '-')
 				t++;
 			if (*t == ' ')
 			{
@@ -2095,6 +2102,15 @@ qboolean CL_ExaminePrintString(const char *text)
 					}
 					return !expected;
 				}
+				else if (!strncmp(t, "unconnected\n", 12))
+				{
+					// just ignore
+					cl.parsingtextmode = CL_PARSETEXTMODE_PING;
+					cl.parsingtextexpectingpingforscores = expected;
+					return !expected;
+				}
+				else
+					Con_Printf("player names '%s' and '%s' didn't match\n", cl.scores[cl.parsingtextplayerindex].name, t);
 			}
 		}
 	}
