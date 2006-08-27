@@ -86,7 +86,7 @@ cvar_t pausable = {0, "pausable","1", "allow players to pause or not"};
 cvar_t temp1 = {0, "temp1","0", "general cvar for mods to use, in stock id1 this selects which death animation to use on players (0 = random death, other values select specific death scenes)"};
 
 cvar_t timestamps = {CVAR_SAVE, "timestamps", "0", "prints timestamps on console messages"};
-cvar_t timeformat = {CVAR_SAVE, "timeformat", "[%b %e %X] ", "time format to use on timestamped console messages"};
+cvar_t timeformat = {CVAR_SAVE, "timeformat", "[%Y-%m-%d %H:%M:%S] ", "time format to use on timestamped console messages"};
 
 /*
 ================
