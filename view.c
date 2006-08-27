@@ -364,7 +364,7 @@ void V_CalcRefdef (void)
 		VectorCopy(cl.viewangles, viewangles);
 
 		// update the stairoffset if the player entity has gone up or down without leaving the ground
-		//Con_Printf("cl.onground %i oldz %f newz %f\n", cl.onground, oldz, vieworg[2]);
+		//Con_Printf("cl.onground %i oldz %f newz %f vel %f %f %f\n", cl.onground, oldz, vieworg[2], cl.movement_velocity[0], cl.movement_velocity[1], cl.movement_velocity[2]);
 		cl.stairoffset -= vieworg[2] - oldz;
 		oldz = vieworg[2];
 		cl.stairoffset = bound(-16, cl.stairoffset, 16);

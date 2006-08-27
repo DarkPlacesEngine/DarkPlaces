@@ -1411,6 +1411,9 @@ void CL_ParseClientdata (void)
 
 	// viewzoom interpolation
 	cl.mviewzoom[0] = (float) max(cl.stats[STAT_VIEWZOOM], 2) * (1.0f / 255.0f);
+
+	// force a recalculation of the player prediction
+	cl.movement_replay = true;
 }
 
 /*
@@ -2207,6 +2210,9 @@ void CL_ParseServerMessage(void)
 		cl.fixangle[0] = false;
 		if (!cls.demoplayback)
 			VectorCopy(cl.mviewangles[0], cl.mviewangles[1]);
+
+		// force a recalculation of the player prediction
+		cl.movement_replay = true;
 
 		// slightly kill qw player entities each frame
 		for (i = 1;i < cl.maxclients;i++)

@@ -1110,6 +1110,7 @@ void CL_ClientMovement_Replay(void)
 	VectorCopy(cl.mvelocity[0], s.velocity);
 	s.crouched = true; // will be updated on first move
 	s.canjump = cl.movement_replay_canjump;
+	//Con_Printf("movement replay starting org %f %f %f vel %f %f %f\n", s.origin[0], s.origin[1], s.origin[2], s.velocity[0], s.velocity[1], s.velocity[2]);
 
 	// set up movement variables
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
