@@ -793,7 +793,7 @@ typedef struct client_state_s
 	//  manually, but they would still see a ping report, just a later one
 	//  caused by the scoreboard code rather than the one they intentionally
 	//  issued)
-	qboolean parsingtextexpectingpingforscores;
+	int parsingtextexpectingpingforscores;
 
 	// entity database stuff
 	// latest received entity frame numbers

@@ -2058,13 +2058,14 @@ qboolean CL_ExaminePrintString(const char *text)
 		{
 			Con_Printf("ping reply but empty scoreboard?!?\n");
 			cl.parsingtextmode = CL_PARSETEXTMODE_NONE;
-			cl.parsingtextexpectingpingforscores = false;
+			cl.parsingtextexpectingpingforscores = 0;
 		}
+		cl.parsingtextexpectingpingforscores = cl.parsingtextexpectingpingforscores ? 2 : 0;
 		return !cl.parsingtextexpectingpingforscores;
 	}
 	if (!strncmp(text, "host:    ", 9))
 	{
-		cl.parsingtextexpectingpingforscores = false;
+		// cl.parsingtextexpectingpingforscores = false; // really?
 		cl.parsingtextmode = CL_PARSETEXTMODE_STATUS;
 		cl.parsingtextplayerindex = 0;
 		return true;
@@ -2073,7 +2074,7 @@ qboolean CL_ExaminePrintString(const char *text)
 	{
 		// if anything goes wrong, we'll assume this is not a ping report
 		qboolean expected = cl.parsingtextexpectingpingforscores;
-		cl.parsingtextexpectingpingforscores = false;
+		cl.parsingtextexpectingpingforscores = 0;
 		cl.parsingtextmode = CL_PARSETEXTMODE_NONE;
 		t = text;
 		while (*t == ' ')
