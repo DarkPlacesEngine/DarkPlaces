@@ -2087,22 +2087,25 @@ qboolean CL_ExaminePrintString(const char *text)
 			{
 				int charindex = 0;
 				t++;
-				for (charindex = 0;cl.scores[cl.parsingtextplayerindex].name[charindex] == t[charindex];charindex++)
-					;
-				if (cl.scores[cl.parsingtextplayerindex].name[charindex] == 0 && t[charindex] == '\n')
+				if(cl.parsingtextplayerindex < cl.maxclients)
 				{
-					cl.scores[cl.parsingtextplayerindex].qw_ping = bound(0, ping, 9999);
-					for (cl.parsingtextplayerindex++;cl.parsingtextplayerindex < cl.maxclients && !cl.scores[cl.parsingtextplayerindex].name[0];cl.parsingtextplayerindex++)
+					for (charindex = 0;cl.scores[cl.parsingtextplayerindex].name[charindex] == t[charindex];charindex++)
 						;
-					if (cl.parsingtextplayerindex < cl.maxclients)
+					if (cl.scores[cl.parsingtextplayerindex].name[charindex] == 0 && t[charindex] == '\n')
 					{
-						// we parsed a valid ping entry, so expect another to follow
-						cl.parsingtextmode = CL_PARSETEXTMODE_PING;
-						cl.parsingtextexpectingpingforscores = expected;
+						cl.scores[cl.parsingtextplayerindex].qw_ping = bound(0, ping, 9999);
+						for (cl.parsingtextplayerindex++;cl.parsingtextplayerindex < cl.maxclients && !cl.scores[cl.parsingtextplayerindex].name[0];cl.parsingtextplayerindex++)
+							;
+						//if (cl.parsingtextplayerindex < cl.maxclients) // we could still get unconnecteds!
+						{
+							// we parsed a valid ping entry, so expect another to follow
+							cl.parsingtextmode = CL_PARSETEXTMODE_PING;
+							cl.parsingtextexpectingpingforscores = expected;
+						}
+						return !expected;
 					}
-					return !expected;
 				}
-				else if (!strncmp(t, "unconnected\n", 12))
+				if (!strncmp(t, "unconnected\n", 12))
 				{
 					// just ignore
 					cl.parsingtextmode = CL_PARSETEXTMODE_PING;
@@ -2110,7 +2113,7 @@ qboolean CL_ExaminePrintString(const char *text)
 					return !expected;
 				}
 				else
-					Con_Printf("player names '%s' and '%s' didn't match\n", cl.scores[cl.parsingtextplayerindex].name, t);
+					Con_DPrintf("player names '%s' and '%s' didn't match\n", cl.scores[cl.parsingtextplayerindex].name, t);
 			}
 		}
 	}
