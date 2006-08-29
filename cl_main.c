@@ -324,6 +324,8 @@ void CL_Disconnect(void)
 // stop sounds (especially looping!)
 	S_StopAllSounds ();
 
+	cl.parsingtextexpectingpingforscores = 0; // just in case no reply has come yet
+
 	// clear contents blends
 	cl.cshifts[0].percent = 0;
 	cl.cshifts[1].percent = 0;

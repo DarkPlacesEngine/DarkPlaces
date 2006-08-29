@@ -1462,9 +1462,20 @@ void Sbar_DeathmatchOverlay (void)
 		else if (cls.protocol == PROTOCOL_QUAKE || cls.protocol == PROTOCOL_QUAKEDP || cls.protocol == PROTOCOL_NEHAHRAMOVIE || cls.protocol == PROTOCOL_DARKPLACES1 || cls.protocol == PROTOCOL_DARKPLACES2 || cls.protocol == PROTOCOL_DARKPLACES3 || cls.protocol == PROTOCOL_DARKPLACES4 || cls.protocol == PROTOCOL_DARKPLACES5 || cls.protocol == PROTOCOL_DARKPLACES6 || cls.protocol == PROTOCOL_DARKPLACES7)
 		{
 			// these servers usually lack the pings command and so a less efficient "ping" command must be sent, which on modern DP servers will also reply with a pingplreport command after the ping listing
-			cl.parsingtextexpectingpingforscores = true; // hide the output of the next ping report
-			MSG_WriteByte(&cls.netcon->message, clc_stringcmd);
-			MSG_WriteString(&cls.netcon->message, "ping");
+			static int ping_anyway_counter = 0;
+			if(cl.parsingtextexpectingpingforscores == 1)
+			{
+				Con_DPrintf("want to send ping, but still waiting for other reply\n");
+				if(++ping_anyway_counter >= 5)
+					cl.parsingtextexpectingpingforscores = 0;
+			}
+			if(cl.parsingtextexpectingpingforscores != 1)
+			{
+				ping_anyway_counter = 0;
+				cl.parsingtextexpectingpingforscores = 1; // hide the output of the next ping report
+				MSG_WriteByte(&cls.netcon->message, clc_stringcmd);
+				MSG_WriteString(&cls.netcon->message, "ping");
+			}
 		}
 		else
 		{
