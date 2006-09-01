@@ -77,7 +77,7 @@ cvar_t vid_mouse = {CVAR_SAVE, "vid_mouse", "1", "whether to use the mouse in wi
 cvar_t vid_minwidth = {0, "vid_minwidth", "0", "minimum vid_width that is acceptable (to be set in default.cfg in mods)"};
 cvar_t vid_minheight = {0, "vid_minheight", "0", "minimum vid_height that is acceptable (to be set in default.cfg in mods)"};
 cvar_t gl_combine = {0, "gl_combine", "1", "faster rendering by using GL_ARB_texture_env_combine extension (part of OpenGL 1.3 and above)"};
-cvar_t gl_finish = {0, "gl_finish", "0", "make the cpu wait for the graphics processor at the end of each frame render (can help with strange input or video lag problems on some machines)"};
+cvar_t gl_finish = {0, "gl_finish", "0", "make the cpu wait for the graphics processor at the end of each rendered frame (can help with strange input or video lag problems on some machines)"};
 
 cvar_t v_gamma = {CVAR_SAVE, "v_gamma", "1", "inverse gamma correction value, a brightness effect that does not affect white or black, and tends to make the image grey and dull"};
 cvar_t v_contrast = {CVAR_SAVE, "v_contrast", "1", "brightness of white (values above 1 give a brighter image with increased color saturation, unlike v_gamma)"};
