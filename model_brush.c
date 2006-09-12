@@ -4608,6 +4608,7 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l)
 	q3dlightmap_t *in;
 	rtexture_t **out;
 	int i, count;
+	unsigned char *c;
 
 	if (!l->filelen)
 		return;
@@ -4619,6 +4620,36 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l)
 
 	loadmodel->brushq3.data_lightmaps = out;
 	loadmodel->brushq3.num_lightmaps = count;
+
+	// deluxemapped q3bsp files have an even number of lightmaps, and surfaces
+	// always index even numbered ones (0, 2, 4, ...), the odd numbered
+	// lightmaps are the deluxemaps (light direction textures), so if we
+	// encounter any odd numbered lightmaps it is not a deluxemapped bsp, it
+	// is also not a deluxemapped bsp if it has an odd number of lightmaps or
+	// less than 2
+	loadmodel->brushq3.deluxemapping = true;
+	loadmodel->brushq3.deluxemapping_modelspace = true;
+	if (count < 2 || (count & 1))
+		loadmodel->brushq3.deluxemapping = false;
+
+	// q3map2 sometimes (or always?) makes a second blank lightmap for no
+	// reason when only one lightmap is used, which can throw off the
+	// deluxemapping detection method, so check 2-lightmap bsp's specifically
+	// to see if the second lightmap is blank, if so it is not deluxemapped.
+	if (count == 2)
+	{
+		c = in[count - 1].rgb;
+		for (i = 0;i < 128*128*3;i++)
+			if (c[i])
+				break;
+		if (i == 128*128*3)
+		{
+			// all pixels in the unused lightmap were black...
+			loadmodel->brushq3.deluxemapping = false;
+		}
+	}
+
+	// further deluxemapping detection is done in Mod_Q3BSP_LoadFaces
 
 	for (i = 0;i < count;i++, in++, out++)
 		*out = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", i), 128, 128, in->rgb, TEXTYPE_RGB, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
@@ -4649,15 +4680,8 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 	loadmodel->data_surfaces = out;
 	loadmodel->num_surfaces = count;
 
-	// deluxemapped q3bsp files have an even number of lightmaps, and surfaces
-	// always index even numbered ones (0, 2, 4, ...), the odd numbered
-	// lightmaps are the deluxemaps (light direction textures), so if we
-	// encounter any odd numbered lightmaps it is not a deluxemapped bsp, it
-	// is also not a deluxemapped bsp if it has an odd number of lightmaps or
-	// less than 2
-	loadmodel->brushq3.deluxemapping = true;
-	loadmodel->brushq3.deluxemapping_modelspace = true;
-	if (loadmodel->brushq3.num_lightmaps >= 2 && !(loadmodel->brushq3.num_lightmaps & 1))
+	// now that we have surfaces to look at, see if any of them index an odd numbered lightmap, if so this is not a deluxemapped bsp file
+	if (loadmodel->brushq3.deluxemapping)
 	{
 		for (i = 0;i < count;i++)
 		{
@@ -4669,8 +4693,6 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			}
 		}
 	}
-	else
-		loadmodel->brushq3.deluxemapping = false;
 	Con_DPrintf("%s is %sdeluxemapped\n", loadmodel->name, loadmodel->brushq3.deluxemapping ? "" : "not ");
 
 	i = 0;
