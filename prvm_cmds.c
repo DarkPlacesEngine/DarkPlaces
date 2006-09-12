@@ -29,19 +29,7 @@ void VM_Warning(const char *fmt, ...)
 static char vm_string_temp[VM_STRINGTEMP_BUFFERS][VM_STRINGTEMP_LENGTH];
 static int vm_string_tempindex = 0;
 
-// qc file handling
-#define MAX_VMFILES		256
-#define MAX_PRVMFILES	MAX_VMFILES * PRVM_MAXPROGS
-#define VM_FILES ((qfile_t**)(vm_files + PRVM_GetProgNr() * MAX_VMFILES))
-
-qfile_t *vm_files[MAX_PRVMFILES];
-
-// qc fs search handling
-#define MAX_VMSEARCHES 128
-#define TOTAL_VMSEARCHES MAX_VMSEARCHES * PRVM_MAXPROGS
-#define VM_SEARCHLIST ((fssearch_t**)(vm_fssearchlist + PRVM_GetProgNr() * MAX_VMSEARCHES))
-
-fssearch_t *vm_fssearchlist[TOTAL_VMSEARCHES];
+// TODO: move vm_files and vm_fssearchlist to prvm_prog_t struct
 
 char *VM_GetTempString(void)
 {
@@ -1506,34 +1494,34 @@ setcolor(clientent, value)
 void VM_Files_Init(void)
 {
 	int i;
-	for (i = 0;i < MAX_VMFILES;i++)
-		VM_FILES[i] = NULL;
+	for (i = 0;i < PRVM_MAX_OPENFILES;i++)
+		prog->openfiles[i] = NULL;
 }
 
 void VM_Files_CloseAll(void)
 {
 	int i;
-	for (i = 0;i < MAX_VMFILES;i++)
+	for (i = 0;i < PRVM_MAX_OPENFILES;i++)
 	{
-		if (VM_FILES[i])
-			FS_Close(VM_FILES[i]);
-		VM_FILES[i] = NULL;
+		if (prog->openfiles[i])
+			FS_Close(prog->openfiles[i]);
+		prog->openfiles[i] = NULL;
 	}
 }
 
 qfile_t *VM_GetFileHandle( int index )
 {
-	if (index < 0 || index >= MAX_VMFILES)
+	if (index < 0 || index >= PRVM_MAX_OPENFILES)
 	{
 		Con_Printf("VM_GetFileHandle: invalid file handle %i used in %s\n", index, PRVM_NAME);
 		return NULL;
 	}
-	if (VM_FILES[index] == NULL)
+	if (prog->openfiles[index] == NULL)
 	{
 		Con_Printf("VM_GetFileHandle: no such file handle %i (or file has been closed) in %s\n", index, PRVM_NAME);
 		return NULL;
 	}
-	return VM_FILES[index];
+	return prog->openfiles[index];
 }
 
 /*
@@ -1553,13 +1541,13 @@ void VM_fopen(void)
 
 	VM_SAFEPARMCOUNT(2,VM_fopen);
 
-	for (filenum = 0;filenum < MAX_VMFILES;filenum++)
-		if (VM_FILES[filenum] == NULL)
+	for (filenum = 0;filenum < PRVM_MAX_OPENFILES;filenum++)
+		if (prog->openfiles[filenum] == NULL)
 			break;
-	if (filenum >= MAX_VMFILES)
+	if (filenum >= PRVM_MAX_OPENFILES)
 	{
 		PRVM_G_FLOAT(OFS_RETURN) = -2;
-		VM_Warning("VM_fopen: %s ran out of file handles (%i)\n", PRVM_NAME, MAX_VMFILES);
+		VM_Warning("VM_fopen: %s ran out of file handles (%i)\n", PRVM_NAME, PRVM_MAX_OPENFILES);
 		return;
 	}
 	mode = (int)PRVM_G_FLOAT(OFS_PARM1);
@@ -1581,11 +1569,11 @@ void VM_fopen(void)
 	}
 	filename = PRVM_G_STRING(OFS_PARM0);
 
-	VM_FILES[filenum] = FS_Open(va("data/%s", filename), modestring, false, false);
-	if (VM_FILES[filenum] == NULL && mode == 0)
-		VM_FILES[filenum] = FS_Open(va("%s", filename), modestring, false, false);
+	prog->openfiles[filenum] = FS_Open(va("data/%s", filename), modestring, false, false);
+	if (prog->openfiles[filenum] == NULL && mode == 0)
+		prog->openfiles[filenum] = FS_Open(va("%s", filename), modestring, false, false);
 
-	if (VM_FILES[filenum] == NULL)
+	if (prog->openfiles[filenum] == NULL)
 	{
 		PRVM_G_FLOAT(OFS_RETURN) = -1;
 		if (developer.integer >= 10)
@@ -1614,18 +1602,18 @@ void VM_fclose(void)
 	VM_SAFEPARMCOUNT(1,VM_fclose);
 
 	filenum = (int)PRVM_G_FLOAT(OFS_PARM0);
-	if (filenum < 0 || filenum >= MAX_VMFILES)
+	if (filenum < 0 || filenum >= PRVM_MAX_OPENFILES)
 	{
 		VM_Warning("VM_fclose: invalid file handle %i used in %s\n", filenum, PRVM_NAME);
 		return;
 	}
-	if (VM_FILES[filenum] == NULL)
+	if (prog->openfiles[filenum] == NULL)
 	{
 		VM_Warning("VM_fclose: no such file handle %i (or file has been closed) in %s\n", filenum, PRVM_NAME);
 		return;
 	}
-	FS_Close(VM_FILES[filenum]);
-	VM_FILES[filenum] = NULL;
+	FS_Close(prog->openfiles[filenum]);
+	prog->openfiles[filenum] = NULL;
 	if (developer.integer >= 10)
 		VM_Warning("VM_fclose: %s: #%i closed\n", PRVM_NAME, filenum);
 }
@@ -1647,12 +1635,12 @@ void VM_fgets(void)
 	VM_SAFEPARMCOUNT(1,VM_fgets);
 
 	filenum = (int)PRVM_G_FLOAT(OFS_PARM0);
-	if (filenum < 0 || filenum >= MAX_VMFILES)
+	if (filenum < 0 || filenum >= PRVM_MAX_OPENFILES)
 	{
 		VM_Warning("VM_fgets: invalid file handle %i used in %s\n", filenum, PRVM_NAME);
 		return;
 	}
-	if (VM_FILES[filenum] == NULL)
+	if (prog->openfiles[filenum] == NULL)
 	{
 		VM_Warning("VM_fgets: no such file handle %i (or file has been closed) in %s\n", filenum, PRVM_NAME);
 		return;
@@ -1660,7 +1648,7 @@ void VM_fgets(void)
 	end = 0;
 	for (;;)
 	{
-		c = FS_Getc(VM_FILES[filenum]);
+		c = FS_Getc(prog->openfiles[filenum]);
 		if (c == '\r' || c == '\n' || c < 0)
 			break;
 		if (end < VM_STRINGTEMP_LENGTH - 1)
@@ -1670,9 +1658,9 @@ void VM_fgets(void)
 	// remove \n following \r
 	if (c == '\r')
 	{
-		c = FS_Getc(VM_FILES[filenum]);
+		c = FS_Getc(prog->openfiles[filenum]);
 		if (c != '\n')
-			FS_UnGetc(VM_FILES[filenum], (unsigned char)c);
+			FS_UnGetc(prog->openfiles[filenum], (unsigned char)c);
 	}
 	if (developer.integer >= 100)
 		Con_Printf("fgets: %s: %s\n", PRVM_NAME, string);
@@ -1699,19 +1687,19 @@ void VM_fputs(void)
 	VM_SAFEPARMCOUNT(2,VM_fputs);
 
 	filenum = (int)PRVM_G_FLOAT(OFS_PARM0);
-	if (filenum < 0 || filenum >= MAX_VMFILES)
+	if (filenum < 0 || filenum >= PRVM_MAX_OPENFILES)
 	{
 		VM_Warning("VM_fputs: invalid file handle %i used in %s\n", filenum, PRVM_NAME);
 		return;
 	}
-	if (VM_FILES[filenum] == NULL)
+	if (prog->openfiles[filenum] == NULL)
 	{
 		VM_Warning("VM_fputs: no such file handle %i (or file has been closed) in %s\n", filenum, PRVM_NAME);
 		return;
 	}
 	VM_VarString(1, string, sizeof(string));
 	if ((stringlength = (int)strlen(string)))
-		FS_Write(VM_FILES[filenum], string, stringlength);
+		FS_Write(prog->openfiles[filenum], string, stringlength);
 	if (developer.integer >= 100)
 		Con_Printf("fputs: %s: %s\n", PRVM_NAME, string);
 }
@@ -2171,17 +2159,21 @@ void VM_modulo(void)
 
 void VM_Search_Init(void)
 {
-	memset(VM_SEARCHLIST,0,sizeof(fssearch_t*[MAX_VMSEARCHES]));
+	int i;
+	for (i = 0;i < PRVM_MAX_OPENSEARCHES;i++)
+		prog->opensearches[i] = NULL;
 }
 
 void VM_Search_Reset(void)
 {
 	int i;
 	// reset the fssearch list
-	for(i = 0; i < MAX_VMSEARCHES; i++)
-		if(VM_SEARCHLIST[i])
-			FS_FreeSearch(VM_SEARCHLIST[i]);
-	memset(VM_SEARCHLIST,0,sizeof(fssearch_t*[MAX_VMSEARCHES]));
+	for(i = 0; i < PRVM_MAX_OPENSEARCHES; i++)
+	{
+		if(prog->opensearches[i])
+			FS_FreeSearch(prog->opensearches[i]);
+		prog->opensearches[i] = NULL;
+	}
 }
 
 /*
@@ -2206,18 +2198,18 @@ void VM_search_begin(void)
 	caseinsens = (int)PRVM_G_FLOAT(OFS_PARM1);
 	quiet = (int)PRVM_G_FLOAT(OFS_PARM2);
 
-	for(handle = 0; handle < MAX_VMSEARCHES; handle++)
-		if(!VM_SEARCHLIST[handle])
+	for(handle = 0; handle < PRVM_MAX_OPENSEARCHES; handle++)
+		if(!prog->opensearches[handle])
 			break;
 
-	if(handle >= MAX_VMSEARCHES)
+	if(handle >= PRVM_MAX_OPENSEARCHES)
 	{
 		PRVM_G_FLOAT(OFS_RETURN) = -2;
-		VM_Warning("VM_search_begin: %s ran out of search handles (%i)\n", PRVM_NAME, MAX_VMSEARCHES);
+		VM_Warning("VM_search_begin: %s ran out of search handles (%i)\n", PRVM_NAME, PRVM_MAX_OPENSEARCHES);
 		return;
 	}
 
-	if(!(VM_SEARCHLIST[handle] = FS_Search(pattern,caseinsens, quiet)))
+	if(!(prog->opensearches[handle] = FS_Search(pattern,caseinsens, quiet)))
 		PRVM_G_FLOAT(OFS_RETURN) = -1;
 	else
 		PRVM_G_FLOAT(OFS_RETURN) = handle;
@@ -2237,19 +2229,19 @@ void VM_search_end(void)
 
 	handle = (int)PRVM_G_FLOAT(OFS_PARM0);
 
-	if(handle < 0 || handle >= MAX_VMSEARCHES)
+	if(handle < 0 || handle >= PRVM_MAX_OPENSEARCHES)
 	{
 		VM_Warning("VM_search_end: invalid handle %i used in %s\n", handle, PRVM_NAME);
 		return;
 	}
-	if(VM_SEARCHLIST[handle] == NULL)
+	if(prog->opensearches[handle] == NULL)
 	{
 		VM_Warning("VM_search_end: no such handle %i in %s\n", handle, PRVM_NAME);
 		return;
 	}
 
-	FS_FreeSearch(VM_SEARCHLIST[handle]);
-	VM_SEARCHLIST[handle] = NULL;
+	FS_FreeSearch(prog->opensearches[handle]);
+	prog->opensearches[handle] = NULL;
 }
 
 /*
@@ -2266,18 +2258,18 @@ void VM_search_getsize(void)
 
 	handle = (int)PRVM_G_FLOAT(OFS_PARM0);
 
-	if(handle < 0 || handle >= MAX_VMSEARCHES)
+	if(handle < 0 || handle >= PRVM_MAX_OPENSEARCHES)
 	{
 		VM_Warning("VM_search_getsize: invalid handle %i used in %s\n", handle, PRVM_NAME);
 		return;
 	}
-	if(VM_SEARCHLIST[handle] == NULL)
+	if(prog->opensearches[handle] == NULL)
 	{
 		VM_Warning("VM_search_getsize: no such handle %i in %s\n", handle, PRVM_NAME);
 		return;
 	}
 
-	PRVM_G_FLOAT(OFS_RETURN) = VM_SEARCHLIST[handle]->numfilenames;
+	PRVM_G_FLOAT(OFS_RETURN) = prog->opensearches[handle]->numfilenames;
 }
 
 /*
@@ -2296,24 +2288,24 @@ void VM_search_getfilename(void)
 	handle = (int)PRVM_G_FLOAT(OFS_PARM0);
 	filenum = (int)PRVM_G_FLOAT(OFS_PARM1);
 
-	if(handle < 0 || handle >= MAX_VMSEARCHES)
+	if(handle < 0 || handle >= PRVM_MAX_OPENSEARCHES)
 	{
 		VM_Warning("VM_search_getfilename: invalid handle %i used in %s\n", handle, PRVM_NAME);
 		return;
 	}
-	if(VM_SEARCHLIST[handle] == NULL)
+	if(prog->opensearches[handle] == NULL)
 	{
 		VM_Warning("VM_search_getfilename: no such handle %i in %s\n", handle, PRVM_NAME);
 		return;
 	}
-	if(filenum < 0 || filenum >= VM_SEARCHLIST[handle]->numfilenames)
+	if(filenum < 0 || filenum >= prog->opensearches[handle]->numfilenames)
 	{
 		VM_Warning("VM_search_getfilename: invalid filenum %i in %s\n", filenum, PRVM_NAME);
 		return;
 	}
 
 	tmp = VM_GetTempString();
-	strlcpy(tmp, VM_SEARCHLIST[handle]->filenames[filenum], VM_STRINGTEMP_LENGTH);
+	strlcpy(tmp, prog->opensearches[handle]->filenames[filenum], VM_STRINGTEMP_LENGTH);
 
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(tmp);
 }
