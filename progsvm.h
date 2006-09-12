@@ -245,8 +245,8 @@ typedef struct prvm_builtin_mem_s
 #define PRVM_FE_CHAIN		4
 #define PRVM_OP_STATE		1
 
-#define	PRVM_MAX_STACK_DEPTH		256
-#define	PRVM_LOCALSTACK_SIZE		2048
+#define	PRVM_MAX_STACK_DEPTH		1024
+#define	PRVM_LOCALSTACK_SIZE		16384
 
 typedef void (*prvm_builtin_t) (void);
 
