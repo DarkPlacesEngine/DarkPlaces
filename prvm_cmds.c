@@ -1505,7 +1505,9 @@ setcolor(clientent, value)
 
 void VM_Files_Init(void)
 {
-	memset(VM_FILES, 0, sizeof(qfile_t*[MAX_VMFILES]));
+	int i;
+	for (i = 0;i < MAX_VMFILES;i++)
+		VM_FILES[i] = NULL;
 }
 
 void VM_Files_CloseAll(void)
@@ -1515,9 +1517,8 @@ void VM_Files_CloseAll(void)
 	{
 		if (VM_FILES[i])
 			FS_Close(VM_FILES[i]);
-		//VM_FILES[i] = NULL;
+		VM_FILES[i] = NULL;
 	}
-	memset(VM_FILES,0,sizeof(qfile_t*[MAX_VMFILES])); // this should be faster (is it ?)
 }
 
 qfile_t *VM_GetFileHandle( int index )
