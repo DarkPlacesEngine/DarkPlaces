@@ -248,6 +248,9 @@ typedef struct prvm_builtin_mem_s
 #define	PRVM_MAX_STACK_DEPTH		1024
 #define	PRVM_LOCALSTACK_SIZE		16384
 
+#define PRVM_MAX_OPENFILES 256
+#define PRVM_MAX_OPENSEARCHES 128
+
 typedef void (*prvm_builtin_t) (void);
 
 // [INIT] variables flagged with this token can be initialized by 'you'
@@ -309,6 +312,9 @@ typedef struct prvm_prog_s
 
 	//============================================================================
 	// until this point everything also exists (with the pr_ prefix) in the old vm
+
+	qfile_t				*openfiles[PRVM_MAX_OPENFILES];
+	fssearch_t			*opensearches[PRVM_MAX_OPENSEARCHES];
 
 	// copies of some vars that were former read from sv
 	int					num_edicts;
