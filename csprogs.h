@@ -1,6 +1,8 @@
 #ifndef CSPROGS_H
 #define CSPROGS_H
 
+#define CL_NAME "client"
+
 #define CL_MAX_EDICTS  (1<<12)
 
 #define ENTMASK_ENGINE				1

@@ -1742,9 +1742,6 @@ void CL_Init (void)
 //
 // register our commands
 //
-	Cvar_RegisterVariable (&csqc_progname);
-	Cvar_RegisterVariable (&csqc_progcrc);
-
 	Cvar_RegisterVariable (&cl_upspeed);
 	Cvar_RegisterVariable (&cl_forwardspeed);
 	Cvar_RegisterVariable (&cl_backspeed);

@@ -326,7 +326,6 @@ typedef struct prvm_prog_s
 	// number of reserved edicts (allocated from 1)
 	int					reserved_edicts; // [INIT]
 
-
 	prvm_edict_t		*edicts;
 	void				*edictsfields;
 	void				*edictprivate;
@@ -520,7 +519,6 @@ void PRVM_FreeString(int num);
 #define PRVM_Begin
 #define PRVM_End	prog = 0
 #endif
-
 
 //#define PRVM_SAFENAME
 #ifndef PRVM_SAFENAME
