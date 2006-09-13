@@ -516,11 +516,13 @@ void CL_VM_Init (void)
 	PRVM_Begin;
 	PRVM_InitProg(PRVM_CLIENTPROG);
 
+	csqc_mempool = Mem_AllocPool("CSQC", 0, NULL);
+
 	// allocate the mempools
 	prog->progs_mempool = Mem_AllocPool(csqc_progname.string, 0, NULL);
 	prog->headercrc = CL_PROGHEADER_CRC;
 	prog->edictprivate_size = 0; // no private struct used
-	prog->name = csqc_progname.string;
+	prog->name = CL_NAME;
 	prog->num_edicts = 1;
 	prog->limit_edicts = CL_MAX_EDICTS;
 	prog->extensionstring = vm_cl_extensions;
@@ -552,8 +554,6 @@ void CL_VM_Init (void)
 			CL_Disconnect();
 		return;
 	}
-
-	csqc_mempool = Mem_AllocPool("CSQC", 0, NULL);
 
 	//[515]: optional fields & funcs
 	CL_VM_FindEdictFieldOffsets();

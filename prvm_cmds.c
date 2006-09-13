@@ -17,7 +17,8 @@ void VM_Warning(const char *fmt, ...)
 	va_end(argptr);
 
 	Con_Print(msg);
-	PRVM_PrintState();
+	// TODO: either add a cvar/cmd to control the state dumping or replace some of the calls with Con_Printf [9/13/2006 Black]
+	//PRVM_PrintState();
 }
 
 
@@ -29,8 +30,8 @@ void VM_Warning(const char *fmt, ...)
 static char vm_string_temp[VM_STRINGTEMP_BUFFERS][VM_STRINGTEMP_LENGTH];
 static int vm_string_tempindex = 0;
 
-// TODO: move vm_files and vm_fssearchlist to prvm_prog_t struct
-
+// TODO: (move vm_files and vm_fssearchlist to prvm_prog_t struct)
+// TODO: move vm_files and vm_fssearchlist back [9/13/2006 Black]
 char *VM_GetTempString(void)
 {
 	char *s;

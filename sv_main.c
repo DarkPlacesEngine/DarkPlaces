@@ -79,6 +79,13 @@ SV_Init
 */
 void SV_Init (void)
 {
+	// init the csqc progs cvars, since they are updated/used by the server code
+	// TODO: fix this since this is a quick hack to make some of [515]'s broken code run ;) [9/13/2006 Black]
+	extern cvar_t csqc_progname;
+	extern cvar_t csqc_progcrc;
+	Cvar_RegisterVariable (&csqc_progname);
+	Cvar_RegisterVariable (&csqc_progcrc);
+
 	Cmd_AddCommand("sv_saveentfile", SV_SaveEntFile_f, "save map entities to .ent file (to allow external editing)");
 	Cvar_RegisterVariable (&sv_maxvelocity);
 	Cvar_RegisterVariable (&sv_gravity);
@@ -2350,6 +2357,7 @@ void SV_VM_Setup(void)
 	PRVM_InitProg( PRVM_SERVERPROG );
 
 	// allocate the mempools
+	// TODO: move the magic numbers/constants into #defines [9/13/2006 Black]
 	prog->progs_mempool = Mem_AllocPool("Server Progs", 0, NULL);
 	prog->builtins = vm_sv_builtins;
 	prog->numbuiltins = vm_sv_numbuiltins;
