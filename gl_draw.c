@@ -267,7 +267,7 @@ static rtexture_t *draw_generatecrosshair(int num)
 			data[i][3] = 255;
 		}
 	}
-	return R_LoadTexture2D(drawtexturepool, va("crosshair%i", num), 16, 16, &data[0][0], TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
+	return R_LoadTexture2D(drawtexturepool, va("crosshair%i", num+1), 16, 16, &data[0][0], TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
 }
 
 static rtexture_t *draw_generateditherpattern(void)
@@ -418,7 +418,9 @@ cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 			pic->tex = draw_generateditherpattern();
 		if (pic->tex == NULL)
 		{
-			Con_Printf("Draw_CachePic: failed to load %s\n", path);
+			// don't complain about missing gfx/crosshair images
+			if (strncmp(path, "gfx/crosshair", 13))
+				Con_Printf("Draw_CachePic: failed to load %s\n", path);
 			pic->tex = r_texture_notexture;
 		}
 		pic->width = R_TextureWidth(pic->tex);
