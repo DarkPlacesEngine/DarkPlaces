@@ -404,9 +404,39 @@ typedef enum capturevideoformat_e
 	CAPTUREVIDEOFORMAT_TARGA,
 	CAPTUREVIDEOFORMAT_JPEG,
 	CAPTUREVIDEOFORMAT_RAWRGB,
-	CAPTUREVIDEOFORMAT_RAWYV12
+	CAPTUREVIDEOFORMAT_RAWYV12,
+	CAPTUREVIDEOFORMAT_AVI_I420
 }
 capturevideoformat_t;
+
+typedef struct capturevideostate_s
+{
+	double starttime;
+	double framerate;
+	// for AVI saving some values have to be written after capture ends
+	fs_offset_t videofile_totalframes_offset1;
+	fs_offset_t videofile_totalframes_offset2;
+	fs_offset_t videofile_totalsampleframes_offset;
+	qfile_t *videofile;
+	qfile_t *soundfile;
+	qboolean active;
+	qboolean error;
+	capturevideoformat_t format;
+	int soundrate;
+	int frame;
+	int soundsampleframe; // for AVI saving
+	unsigned char *buffer;
+	sizebuf_t riffbuffer;
+	unsigned char riffbufferdata[128];
+	// note: riffindex buffer has an allocated ->data member, not static like most!
+	sizebuf_t riffindexbuffer;
+	int riffstacklevel;
+	fs_offset_t riffstackstartoffset[4];
+	short rgbtoyuvscaletable[3][3][256];
+	unsigned char yuvnormalizetable[3][256];
+	char basename[64];
+}
+capturevideostate_t;
 
 //
 // the client_static_t structure is persistent through an arbitrary number
@@ -492,18 +522,7 @@ typedef struct client_static_s
 	char userinfo[MAX_USERINFO_STRING];
 
 	// video capture stuff
-	qboolean capturevideo_active;
-	capturevideoformat_t capturevideo_format;
-	double capturevideo_starttime;
-	double capturevideo_framerate;
-	int capturevideo_soundrate;
-	int capturevideo_frame;
-	unsigned char *capturevideo_buffer;
-	qfile_t *capturevideo_videofile;
-	qfile_t *capturevideo_soundfile;
-	short capturevideo_rgbtoyuvscaletable[3][3][256];
-	unsigned char capturevideo_yuvnormalizetable[3][256];
-	char capturevideo_basename[64];
+	capturevideostate_t capturevideo;
 }
 client_static_t;
 

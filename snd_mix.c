@@ -39,7 +39,7 @@ static void S_CaptureAVISound(size_t length)
 	unsigned char out[PAINTBUFFER_SIZE * 4];
 	unsigned char* out_ptr;
 
-	if (!cls.capturevideo_active)
+	if (!cls.capturevideo.active)
 		return;
 
 	// write the sound buffer as little endian 16bit interleaved stereo
@@ -67,7 +67,7 @@ static unsigned int S_TransferPaintBuffer(snd_ringbuffer_t* rb, unsigned int sta
 	// Lock submitbuffer
 	if (!simsound && !SndSys_LockRenderBuffer())
 		return 0;
-	
+
 	partialend = starttime;
 	while (partialend < endtime)  // handle recirculating buffer issues
 	{
