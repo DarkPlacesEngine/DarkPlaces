@@ -84,5 +84,6 @@ void S_SetChannelVolume (unsigned int ch_ind, float fvol);
 void S_BlockSound (void);
 void S_UnblockSound (void);
 
+int S_GetSoundRate (void);
 
 #endif

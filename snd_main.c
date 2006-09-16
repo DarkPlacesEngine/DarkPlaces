@@ -301,6 +301,12 @@ void S_SoundInfo_f(void)
 }
 
 
+int S_GetSoundRate(void)
+{
+	return snd_renderbuffer ? snd_renderbuffer->format.speed : 0;
+}
+
+
 static qboolean S_ChooseCheaperFormat (snd_format_t* format, qboolean fixed_speed, qboolean fixed_width, qboolean fixed_channels)
 {
 	static const snd_format_t thresholds [] =
@@ -1385,12 +1391,12 @@ static void S_PaintAndSubmit (void)
 	if (snd_renderbuffer == NULL || nosound.integer)
 		return;
 
-	if (snd_blocked > 0 && !cls.capturevideo_soundfile)
+	if (snd_blocked > 0 && !cls.capturevideo.soundfile)
 		return;
 
 	// Update sound time
-	if (cls.capturevideo_soundfile) // SUPER NASTY HACK to record non-realtime sound
-		newsoundtime = (unsigned int)((double)cls.capturevideo_frame * (double)snd_renderbuffer->format.speed / (double)cls.capturevideo_framerate);
+	if (cls.capturevideo.soundfile) // SUPER NASTY HACK to record non-realtime sound
+		newsoundtime = (unsigned int)((double)cls.capturevideo.frame * (double)snd_renderbuffer->format.speed / (double)cls.capturevideo.framerate);
 	else if (simsound)
 		newsoundtime = (unsigned int)((realtime - snd_starttime) * (double)snd_renderbuffer->format.speed);
 	else
@@ -1399,7 +1405,7 @@ static void S_PaintAndSubmit (void)
 	newsoundtime += extrasoundtime;
 	if (newsoundtime < soundtime)
 	{
-		if ((cls.capturevideo_soundfile != NULL) != recording_sound)
+		if ((cls.capturevideo.soundfile != NULL) != recording_sound)
 		{
 			unsigned int additionaltime;
 
@@ -1421,7 +1427,7 @@ static void S_PaintAndSubmit (void)
 					   newsoundtime, soundtime);
 	}
 	soundtime = newsoundtime;
-	recording_sound = (cls.capturevideo_soundfile != NULL);
+	recording_sound = (cls.capturevideo.soundfile != NULL);
 
 	// Check to make sure that we haven't overshot
 	paintedtime = snd_renderbuffer->endframe;
@@ -1458,7 +1464,7 @@ void S_Update(const matrix4x4_t *listenermatrix)
 	if (snd_renderbuffer == NULL || nosound.integer)
 		return;
 
-	if (snd_blocked > 0 && !cls.capturevideo_soundfile)
+	if (snd_blocked > 0 && !cls.capturevideo.soundfile)
 		return;
 
 	// If snd_swapstereo or snd_channellayout has changed, recompute the channel layout
