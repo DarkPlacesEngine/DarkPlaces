@@ -738,10 +738,15 @@ void Host_Main(void)
 				// decide the simulation time
 				if (!cls.timedemo)
 				{
-					if (cls.capturevideo.active)// && !cls.capturevideo.soundfile)
+					if (cls.capturevideo.active)
 					{
-						frametime = 1.0 / cls.capturevideo.framerate;
-						cl.realframetime = max(cl.realframetime, frametime);
+						if (cls.capturevideo.realtime)
+							frametime = cl.realframetime = max(cl.realframetime, 1.0 / cls.capturevideo.framerate);
+						else
+						{
+							frametime = 1.0 / cls.capturevideo.framerate;
+							cl.realframetime = max(cl.realframetime, frametime);
+						}
 					}
 					else if (vid_activewindow)
 						frametime = cl.realframetime = max(cl.realframetime, 1.0 / cl_maxfps.value);
