@@ -994,6 +994,8 @@ Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 		SCR_CaptureVideo_RIFF_Push("ISFT", NULL);
 		SCR_CaptureVideo_RIFF_WriteTerminatedString(engineversion);
 		SCR_CaptureVideo_RIFF_Pop();
+		// enable this junk filler if you like the LIST movi to always begin at 4KB in the file (why?)
+#if 0
 		SCR_CaptureVideo_RIFF_Push("JUNK", NULL);
 		x = 4096 - SCR_CaptureVideo_RIFF_GetPosition();
 		while (x > 0)
@@ -1004,6 +1006,7 @@ Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 			x -= i;
 		}
 		SCR_CaptureVideo_RIFF_Pop();
+#endif
 		SCR_CaptureVideo_RIFF_Pop();
 		// begin the actual video section now
 		SCR_CaptureVideo_RIFF_Push("LIST", "movi");
