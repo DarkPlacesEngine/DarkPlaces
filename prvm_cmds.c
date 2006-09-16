@@ -1577,14 +1577,14 @@ void VM_fopen(void)
 	if (prog->openfiles[filenum] == NULL)
 	{
 		PRVM_G_FLOAT(OFS_RETURN) = -1;
-		if (developer.integer >= 10)
+		if (developer.integer >= 100)
 			VM_Warning("VM_fopen: %s: %s mode %s failed\n", PRVM_NAME, filename, modestring);
 	}
 	else
 	{
 		PRVM_G_FLOAT(OFS_RETURN) = filenum;
-		if (developer.integer >= 10)
-			VM_Warning("VM_fopen: %s: %s mode %s opened as #%i\n", PRVM_NAME, filename, modestring, filenum);
+		if (developer.integer >= 100)
+			Con_Printf("VM_fopen: %s: %s mode %s opened as #%i\n", PRVM_NAME, filename, modestring, filenum);
 	}
 }
 
@@ -1615,8 +1615,8 @@ void VM_fclose(void)
 	}
 	FS_Close(prog->openfiles[filenum]);
 	prog->openfiles[filenum] = NULL;
-	if (developer.integer >= 10)
-		VM_Warning("VM_fclose: %s: #%i closed\n", PRVM_NAME, filenum);
+	if (developer.integer >= 100)
+		Con_Printf("VM_fclose: %s: #%i closed\n", PRVM_NAME, filenum);
 }
 
 /*
