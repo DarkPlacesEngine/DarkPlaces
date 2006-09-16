@@ -826,7 +826,6 @@ void SCR_CaptureVideo_BeginVideo(void)
 	double gamma, g;
 	int width = vid.width, height = vid.height, x;
 	unsigned int i;
-	unsigned char out[44];
 	if (cls.capturevideo.active)
 		return;
 	memset(&cls.capturevideo, 0, sizeof(cls.capturevideo));
@@ -1025,8 +1024,6 @@ Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 
 void SCR_CaptureVideo_EndVideo(void)
 {
-	int i, n;
-	unsigned char out[44];
 	if (!cls.capturevideo.active)
 		return;
 	cls.capturevideo.active = false;
@@ -1120,7 +1117,6 @@ qboolean SCR_CaptureVideo_VideoFrame(int newframenum)
 {
 	int x = 0, y = 0, width = vid.width, height = vid.height;
 	unsigned char *in, *out;
-	char filename[32];
 	CHECKGLERROR
 	//return SCR_ScreenShot(filename, cls.capturevideo.buffer, cls.capturevideo.buffer + vid.width * vid.height * 3, cls.capturevideo.buffer + vid.width * vid.height * 6, 0, 0, vid.width, vid.height, false, false, false, jpeg, true);
 	// speed is critical here, so do saving as directly as possible
