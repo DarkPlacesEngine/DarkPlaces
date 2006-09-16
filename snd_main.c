@@ -1391,11 +1391,11 @@ static void S_PaintAndSubmit (void)
 	if (snd_renderbuffer == NULL || nosound.integer)
 		return;
 
-	if (snd_blocked > 0 && !cls.capturevideo.soundfile)
+	if (snd_blocked > 0 && !(cls.capturevideo.soundrate && !cls.capturevideo.realtime))
 		return;
 
 	// Update sound time
-	if (cls.capturevideo.soundfile) // SUPER NASTY HACK to record non-realtime sound
+	if (cls.capturevideo.soundrate && !cls.capturevideo.realtime) // SUPER NASTY HACK to record non-realtime sound
 		newsoundtime = (unsigned int)((double)cls.capturevideo.frame * (double)snd_renderbuffer->format.speed / (double)cls.capturevideo.framerate);
 	else if (simsound)
 		newsoundtime = (unsigned int)((realtime - snd_starttime) * (double)snd_renderbuffer->format.speed);
@@ -1405,7 +1405,7 @@ static void S_PaintAndSubmit (void)
 	newsoundtime += extrasoundtime;
 	if (newsoundtime < soundtime)
 	{
-		if ((cls.capturevideo.soundfile != NULL) != recording_sound)
+		if ((cls.capturevideo.soundrate != 0) != recording_sound)
 		{
 			unsigned int additionaltime;
 
@@ -1427,7 +1427,7 @@ static void S_PaintAndSubmit (void)
 					   newsoundtime, soundtime);
 	}
 	soundtime = newsoundtime;
-	recording_sound = (cls.capturevideo.soundfile != NULL);
+	recording_sound = (cls.capturevideo.soundrate != 0);
 
 	// Check to make sure that we haven't overshot
 	paintedtime = snd_renderbuffer->endframe;
@@ -1464,7 +1464,7 @@ void S_Update(const matrix4x4_t *listenermatrix)
 	if (snd_renderbuffer == NULL || nosound.integer)
 		return;
 
-	if (snd_blocked > 0 && !cls.capturevideo.soundfile)
+	if (snd_blocked > 0 && !(cls.capturevideo.soundrate && !cls.capturevideo.realtime))
 		return;
 
 	// If snd_swapstereo or snd_channellayout has changed, recompute the channel layout

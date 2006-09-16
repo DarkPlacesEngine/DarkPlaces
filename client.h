@@ -401,10 +401,6 @@ qw_downloadtype_t;
 
 typedef enum capturevideoformat_e
 {
-	CAPTUREVIDEOFORMAT_TARGA,
-	CAPTUREVIDEOFORMAT_JPEG,
-	CAPTUREVIDEOFORMAT_RAWRGB,
-	CAPTUREVIDEOFORMAT_RAWYV12,
 	CAPTUREVIDEOFORMAT_AVI_I420
 }
 capturevideoformat_t;
@@ -418,8 +414,8 @@ typedef struct capturevideostate_s
 	fs_offset_t videofile_totalframes_offset2;
 	fs_offset_t videofile_totalsampleframes_offset;
 	qfile_t *videofile;
-	qfile_t *soundfile;
 	qboolean active;
+	qboolean realtime;
 	qboolean error;
 	capturevideoformat_t format;
 	int soundrate;
