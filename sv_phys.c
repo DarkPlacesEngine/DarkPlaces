@@ -573,7 +573,7 @@ SV_PushEntity
 Does not change the entities velocity at all
 ============
 */
-trace_t SV_PushEntity (prvm_edict_t *ent, vec3_t push, qboolean failonstartsolid)
+static trace_t SV_PushEntity (prvm_edict_t *ent, vec3_t push, qboolean failonbmodelstartsolid)
 {
 	int type;
 	trace_t trace;
@@ -589,7 +589,7 @@ trace_t SV_PushEntity (prvm_edict_t *ent, vec3_t push, qboolean failonstartsolid
 		type = MOVE_NORMAL;
 
 	trace = SV_Move (ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, end, type, ent);
-	if (trace.startsolid && failonstartsolid)
+	if (trace.bmodelstartsolid && failonbmodelstartsolid)
 		return trace;
 
 	VectorCopy (trace.endpos, ent->fields.server->origin);
