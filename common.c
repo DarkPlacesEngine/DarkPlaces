@@ -970,6 +970,12 @@ static const gamemode_info_t gamemode_info [] =
 // GAME_DEFEATINDETAIL2
 // COMMANDLINEOPTION: Game: -did2 runs the game Defeat In Detail 2
 { "did2",			"-did2",		"Defeat In Detail 2",	"data",		NULL, 			"did2_",		"did2" },
+// GAME_DARSANA
+// COMMANDLINEOPTION: Game: -darsana runs the game Darsana
+{ "darsana",		"-darsana",	"Darsana",			"ddata",	NULL, 			"darsana",			"darsana" },
+// GAME_CONTAGIONTHEORY
+// COMMANDLINEOPTION: Game: -contagiontheory runs the game Contagion Theory
+{ "contagiontheory",		"-contagiontheory",	"Contagion Theory",			"ctdata",	NULL, 			"ct",			"contagiontheory" },
 };
 
 void COM_InitGameType (void)
