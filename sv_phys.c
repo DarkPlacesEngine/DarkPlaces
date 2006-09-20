@@ -595,7 +595,7 @@ static trace_t SV_PushEntity (prvm_edict_t *ent, vec3_t push, qboolean failonbmo
 	VectorCopy (trace.endpos, ent->fields.server->origin);
 	SV_LinkEdict (ent, true);
 
-	if (trace.ent && (!((int)ent->fields.server->flags & FL_ONGROUND) || ent->fields.server->groundentity != PRVM_EDICT_TO_PROG(trace.ent)))
+	if (ent->fields.server->solid >= SOLID_TRIGGER && trace.ent && (!((int)ent->fields.server->flags & FL_ONGROUND) || ent->fields.server->groundentity != PRVM_EDICT_TO_PROG(trace.ent)))
 		SV_Impact (ent, &trace);
 	return trace;
 }
