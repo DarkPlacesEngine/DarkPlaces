@@ -391,6 +391,47 @@ static void Con_Maps_f (void)
 		GetMapList("", NULL, 0);
 }
 
+void Con_ConDump_f (void)
+{
+	int i, l;
+	qboolean allblankssofar;
+	const char *text;
+	qfile_t *file;
+	char temp[MAX_INPUTLINE+2];
+	if (Cmd_Argc() != 2)
+	{
+		Con_Printf("usage: condump <filename>\n");
+		return;
+	}
+	file = FS_Open(Cmd_Argv(1), "wb", false, false);
+	if (!file)
+	{
+		Con_Printf("condump: unable to write file \"%s\"\n", file);
+		return;
+	}
+	// iterate over the entire console history buffer line by line
+	allblankssofar = true;
+	for (i = 0;i < con_totallines;i++)
+	{
+		text = con_text + ((con_current + 1 + i) % con_totallines)*con_linewidth;
+		// count the used characters on this line
+		for (l = min(con_linewidth, (int)sizeof(temp));l > 0 && text[l-1] == ' ';l--);
+		// if not a blank line, begin output
+		if (l)
+			allblankssofar = false;
+		// output the current line to the file
+		if (!allblankssofar)
+		{
+			if (l)
+				memcpy(temp, text, l);
+			temp[l] = '\n';
+			temp[l+1] = 0;
+			FS_Print(file, temp);
+		}
+	}
+	FS_Close(file);
+}
+
 /*
 ================
 Con_Init
@@ -428,6 +469,7 @@ void Con_Init (void)
 	Cmd_AddCommand ("messagemode2", Con_MessageMode2_f, "input a chat message to say to only your team");
 	Cmd_AddCommand ("clear", Con_Clear_f, "clear console history");
 	Cmd_AddCommand ("maps", Con_Maps_f, "list information about available maps");	// By [515]
+	Cmd_AddCommand ("condump", Con_ConDump_f, "output console history to a file (see also log_file)");
 
 	con_initialized = true;
 	Con_Print("Console initialized.\n");
