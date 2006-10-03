@@ -146,7 +146,6 @@ static double snd_starttime = 0.0;
 
 vec3_t listener_origin;
 matrix4x4_t listener_matrix[SND_LISTENERS];
-vec_t sound_nominal_clip_dist=1000.0;
 mempool_t *snd_mempool;
 
 // Linked list of known sfx
@@ -168,6 +167,7 @@ cvar_t bgmvolume = {CVAR_SAVE, "bgmvolume", "1", "volume of background music (su
 cvar_t volume = {CVAR_SAVE, "volume", "0.7", "volume of sound effects"};
 cvar_t snd_initialized = { CVAR_READONLY, "snd_initialized", "0", "indicates the sound subsystem is active"};
 cvar_t snd_staticvolume = {CVAR_SAVE, "snd_staticvolume", "1", "volume of ambient sound effects (such as swampy sounds at the start of e1m2)"};
+cvar_t snd_soundradius = {0, "snd_soundradius", "1000", "radius of weapon sounds and other standard sound effects (monster idle noises are half this radius and flickering light noises are one third of this radius)"};
 
 // Cvars declared in snd_main.h (shared with other snd_*.c files)
 cvar_t _snd_mixahead = {CVAR_SAVE, "_snd_mixahead", "0.1", "how much sound to mix ahead of time"};
@@ -736,6 +736,7 @@ void S_Init(void)
 	Cvar_RegisterVariable(&_snd_mixahead);
 	Cvar_RegisterVariable(&snd_swapstereo); // for people with backwards sound wiring
 	Cvar_RegisterVariable(&snd_channellayout);
+	Cvar_RegisterVariable(&snd_soundradius);
 
 	Cvar_SetValueQuick(&snd_initialized, true);
 
@@ -1140,10 +1141,10 @@ void S_PlaySfxOnChannel (sfx_t *sfx, channel_t *target_chan, unsigned int flags,
 	{
 		if (sfx->loopstart == -1)
 			Con_DPrintf("Quake compatibility warning: Static sound \"%s\" is not looped\n", sfx->name);
-		target_chan->dist_mult = attenuation / (64.0f * sound_nominal_clip_dist);
+		target_chan->dist_mult = attenuation / (64.0f * snd_soundradius.value);
 	}
 	else
-		target_chan->dist_mult = attenuation / sound_nominal_clip_dist;
+		target_chan->dist_mult = attenuation / snd_soundradius.value;
 
 	// Lock the SFX during play
 	S_LockSfx (sfx);
