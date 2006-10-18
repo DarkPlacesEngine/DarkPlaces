@@ -47,8 +47,10 @@
 0 bug darkplaces loader: occasional crash due to memory corruption when doing "deathmatch 1;map start" during demo loop (Willis)
 0 bug darkplaces loader: q3bsp deluxemap detection can fail on some files, thinking they have deluxemaps even though they don't? (jimmmy)
 0 bug darkplaces loader: q3bsp lightgrid loading seems to be ignoring the "gridsize" key of worldspawn, but how?
+0 bug darkplaces physics: GAME_TAOV: Vigil's movement isn't working properly, the qc uses MOVETYPE_STEP and clears FL_ONGROUND every frame and moves using velocity, this is causing a landing sound every frame and causing the player to slide down minor slopes very quickly, this did not occur in Quake, and seems that it must be related to a velocity_z check or FL_ONGROUND check in the MOVETYPE_STEP physics code (RenegadeC, xaGe)
 0 bug darkplaces physics: in Prydon Gate the func_door2 entities are stuck in eachother, causing a continuous spew of warnings and causing one of them to be teleported slightly upward which looks bad (FrikaC)
 0 bug darkplaces readme: commandline options are slightly out of date, update them (Baker)
+0 bug darkplaces readme: it would be a very good idea to add documentation of sv_gameplayfix_* cvars in the readme as a means to run broken mods (xaGe)
 0 bug darkplaces renderer: GL13 path has broken handling of unlit surfaces in Nexuiz toxic.bsp - the small red light surfaces are black in GL13 path (m0rfar)
 0 bug darkplaces renderer: modify r_showtris_polygonoffset to push back all filled geometry, not lines, because polygonoffset will not affect GL_LINES at all
 0 bug darkplaces renderer: monsters teleporting in really slow down rendering, perhaps the teleport light is casting huge shadows?  new information suggests it is the particles. (romi, lcatlnx)

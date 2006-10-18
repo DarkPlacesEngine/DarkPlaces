@@ -728,7 +728,7 @@ void VID_Init(void)
 	IN_Init();
 }
 
-int VID_InitMode (int fullscreen, int width, int height, int bpp, int refreshrate)
+int VID_InitMode (int fullscreen, int width, int height, int bpp, int refreshrate, int stereobuffer)
 {
 	int i;
 	HDC hdc;
@@ -775,6 +775,9 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp, int refreshrat
 		pfd.cStencilBits = 0;
 		pfd.cAlphaBits = 0;
 	}
+
+	if (stereobuffer)
+		pfd.dwFlags |= PFD_STEREO;
 
 	gldrivername = "opengl32.dll";
 // COMMANDLINEOPTION: Windows WGL: -gl_driver <drivername> selects a GL driver library, default is opengl32.dll, useful only for 3dfxogl.dll or 3dfxvgl.dll, if you don't know what this is for, you don't need it
