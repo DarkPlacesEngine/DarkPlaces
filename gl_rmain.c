@@ -2611,6 +2611,7 @@ void RSurf_CleanUp(void)
 
 void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generatetangents, int texturenumsurfaces, msurface_t **texturesurfacelist)
 {
+	// if vertices are dynamic (animated models), generate them into the temporary rsurface_array_model* arrays and point rsurface_model* at them instead of the static data from the model itself
 	if (rsurface_generatedvertex)
 	{
 		if (rsurface_texture->textureflags & (Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2))
@@ -2629,6 +2630,7 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 			Mod_BuildTextureVectorsFromNormals(0, rsurface_model->surfmesh.num_vertices, rsurface_model->surfmesh.num_triangles, rsurface_modelvertex3f, rsurface_model->surfmesh.data_texcoordtexture2f, rsurface_modelnormal3f, rsurface_model->surfmesh.data_element3i, rsurface_array_modelsvector3f, rsurface_array_modeltvector3f, r_smoothnormals_areaweighting.integer);
 		}
 	}
+	// if vertices are deformed (sprite flares and things in maps, possibly water waves, bulges and other deformations), generate them into rsurface_deform* arrays from whatever the rsurface_model* array pointers point to (may be static model data or generated data for an animated model)
 	if (rsurface_texture->textureflags & (Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2))
 	{
 		int texturesurfaceindex;
@@ -2637,7 +2639,7 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 		Matrix4x4_Transform(&rsurface_entity->inversematrix, r_view.forward, forward);
 		Matrix4x4_Transform(&rsurface_entity->inversematrix, r_view.right, right);
 		Matrix4x4_Transform(&rsurface_entity->inversematrix, r_view.up, up);
-		// make deformed versions of only the vertices used by the specified surfaces
+		// make deformed versions of only the model vertices used by the specified surfaces
 		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
 			int i, j;
@@ -2647,7 +2649,7 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 			{
 				VectorClear(center);
 				for (i = 0;i < 4;i++)
-					VectorAdd(center, (rsurface_vertex3f + 3 * surface->num_firstvertex) + (j+i) * 3, center);
+					VectorAdd(center, (rsurface_modelvertex3f + 3 * surface->num_firstvertex) + (j+i) * 3, center);
 				VectorScale(center, 0.25f, center);
 				if (rsurface_texture->textureflags & Q3TEXTUREFLAG_AUTOSPRITE2)
 				{
@@ -2661,10 +2663,10 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 					VectorSet(up, 0, 0, 1);
 				}
 				// FIXME: calculate vectors from triangle edges instead of using texture vectors as an easy way out?
-				Matrix4x4_FromVectors(&matrix1, (rsurface_normal3f + 3 * surface->num_firstvertex) + j*3, (rsurface_svector3f + 3 * surface->num_firstvertex) + j*3, (rsurface_tvector3f + 3 * surface->num_firstvertex) + j*3, center);
+				Matrix4x4_FromVectors(&matrix1, (rsurface_modelnormal3f + 3 * surface->num_firstvertex) + j*3, (rsurface_modelsvector3f + 3 * surface->num_firstvertex) + j*3, (rsurface_modeltvector3f + 3 * surface->num_firstvertex) + j*3, center);
 				Matrix4x4_Invert_Simple(&imatrix1, &matrix1);
 				for (i = 0;i < 4;i++)
-					Matrix4x4_Transform(&imatrix1, (rsurface_vertex3f + 3 * surface->num_firstvertex) + (j+i)*3, v[i]);
+					Matrix4x4_Transform(&imatrix1, (rsurface_modelvertex3f + 3 * surface->num_firstvertex) + (j+i)*3, v[i]);
 				for (i = 0;i < 4;i++)
 					VectorMAMAMAM(1, center, v[i][0], forward, v[i][1], right, v[i][2], up, rsurface_array_deformedvertex3f + (surface->num_firstvertex+i+j) * 3);
 			}
