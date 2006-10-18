@@ -520,7 +520,7 @@ void CL_Move (void)
 extern void V_CalcRefdef(void);
 void CL_UpdatePrydonCursor(void)
 {
-	vec3_t temp, scale;
+	vec3_t temp;
 
 	if (!cl_prydoncursor.integer)
 		VectorClear(cl.cmd.cursor_screen);
@@ -551,18 +551,11 @@ void CL_UpdatePrydonCursor(void)
 	cl.cmd.cursor_screen[1] = bound(-1, cl.cmd.cursor_screen[1], 1);
 	cl.cmd.cursor_screen[2] = 1;
 
-	scale[0] = -r_view.frustum_x;
-	scale[1] = -r_view.frustum_y;
-	scale[2] = 1;
-
-	// trace distance
-	VectorScale(scale, 1000000, scale);
-
 	// calculate current view matrix
 	//V_CalcRefdef();
-	VectorClear(temp);
-	Matrix4x4_Transform(&r_view.matrix, temp, cl.cmd.cursor_start);
-	VectorSet(temp, cl.cmd.cursor_screen[2] * scale[2], cl.cmd.cursor_screen[0] * scale[0], cl.cmd.cursor_screen[1] * scale[1]);
+	Matrix4x4_OriginFromMatrix(&r_view.matrix, cl.cmd.cursor_start);
+	// calculate direction vector of cursor in viewspace by using frustum slopes
+	VectorSet(temp, cl.cmd.cursor_screen[2] * 1000000, cl.cmd.cursor_screen[0] * -r_view.frustum_x * 1000000, cl.cmd.cursor_screen[1] * -r_view.frustum_y * 1000000);
 	Matrix4x4_Transform(&r_view.matrix, temp, cl.cmd.cursor_end);
 	// trace from view origin to the cursor
 	cl.cmd.cursor_fraction = CL_SelectTraceLine(cl.cmd.cursor_start, cl.cmd.cursor_end, cl.cmd.cursor_impact, cl.cmd.cursor_normal, &cl.cmd.cursor_entitynumber, (chase_active.integer || cl.intermission) ? &cl.entities[cl.playerentity].render : NULL, false);
