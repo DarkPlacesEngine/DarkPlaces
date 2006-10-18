@@ -1642,7 +1642,18 @@ void SCR_UpdateLoadingScreen (void)
 	texcoord2f[2] = 1;texcoord2f[3] = 0;
 	texcoord2f[4] = 1;texcoord2f[5] = 1;
 	texcoord2f[6] = 0;texcoord2f[7] = 1;
-	R_Mesh_Draw(0, 4, 2, polygonelements);
+	if (vid.stereobuffer)
+	{
+		qglDrawBuffer(GL_BACK_LEFT);
+		R_Mesh_Draw(0, 4, 2, polygonelements);
+		qglDrawBuffer(GL_BACK_RIGHT);
+		R_Mesh_Draw(0, 4, 2, polygonelements);
+	}
+	else
+	{
+		qglDrawBuffer(GL_BACK);
+		R_Mesh_Draw(0, 4, 2, polygonelements);
+	}
 	R_Mesh_Finish();
 	// refresh
 	VID_Finish(false);
@@ -1732,7 +1743,7 @@ void CL_UpdateScreen(void)
 	if (r_timereport_active)
 		R_TimeReport("clear");
 
-	if (r_stereo_redblue.integer || r_stereo_redgreen.integer || r_stereo_redcyan.integer || r_stereo_sidebyside.integer)
+	if (vid.stereobuffer || r_stereo_redblue.integer || r_stereo_redgreen.integer || r_stereo_redcyan.integer || r_stereo_sidebyside.integer)
 	{
 		matrix4x4_t originalmatrix = r_view.matrix;
 		r_view.matrix.m[0][3] = originalmatrix.m[0][3] + r_stereo_separation.value * -0.5f * r_view.matrix.m[0][1];
@@ -1748,6 +1759,9 @@ void CL_UpdateScreen(void)
 			r_view.colormask[1] = 0;
 			r_view.colormask[2] = 0;
 		}
+
+		if (vid.stereobuffer)
+			qglDrawBuffer(GL_BACK_RIGHT);
 
 		SCR_DrawScreen();
 
@@ -1765,12 +1779,18 @@ void CL_UpdateScreen(void)
 			r_view.colormask[2] = r_stereo_redcyan.integer || r_stereo_redblue.integer;
 		}
 
+		if (vid.stereobuffer)
+			qglDrawBuffer(GL_BACK_LEFT);
+
 		SCR_DrawScreen();
 
 		r_view.matrix = originalmatrix;
 	}
 	else
+	{
+		qglDrawBuffer(GL_BACK);
 		SCR_DrawScreen();
+	}
 
 	SCR_CaptureVideo();
 

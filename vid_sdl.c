@@ -470,7 +470,7 @@ static void VID_OutputVersion()
 					version->major, version->minor, version->patch );
 }
 
-int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate)
+int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate, int stereobuffer)
 {
 	int i;
 	int flags = SDL_OPENGL;
@@ -530,6 +530,8 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 		SDL_GL_SetAttribute (SDL_GL_BLUE_SIZE, 1);
 		SDL_GL_SetAttribute (SDL_GL_DEPTH_SIZE, 16);
 	}
+	if (stereobuffer)
+		SDL_GL_SetAttribute (SDL_GL_STEREO, 1);
 
 	screen = SDL_SetVideoMode(width, height, bpp, flags);
 	if (screen == NULL)

@@ -360,7 +360,7 @@ static void VID_ProcessPendingAsyncEvents (void)
 		Sys_Quit();
 }
 
-static void VID_BuildAGLAttrib(GLint *attrib, qboolean stencil, qboolean fullscreen)
+static void VID_BuildAGLAttrib(GLint *attrib, qboolean stencil, qboolean fullscreen, qboolean stereobuffer)
 {
 	*attrib++ = AGL_RGBA;
 	*attrib++ = AGL_RED_SIZE;*attrib++ = 1;
@@ -377,10 +377,12 @@ static void VID_BuildAGLAttrib(GLint *attrib, qboolean stencil, qboolean fullscr
 	}
 	if (fullscreen)
 		*attrib++ = AGL_FULLSCREEN;
+	if (stereobuffer)
+		*attrib++ = AGL_STEREO;
 	*attrib++ = AGL_NONE;
 }
 
-int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate)
+int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate, int stereobuffer)
 {
     const EventTypeSpec winEvents[] =
 	{
@@ -445,7 +447,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 							   GetEventTypeCount(winEvents), winEvents, window, NULL);
 
 	// Create the desired attribute list
-	VID_BuildAGLAttrib(attributes, bpp == 32, fullscreen);
+	VID_BuildAGLAttrib(attributes, bpp == 32, fullscreen, stereobuffer);
 
 	if (!fullscreen)
 	{

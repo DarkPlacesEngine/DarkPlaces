@@ -32,6 +32,7 @@ typedef struct viddef_s
 	int bitsperpixel;
 	int fullscreen;
 	int refreshrate;
+	int stereobuffer;
 } viddef_t;
 
 // global video state
@@ -117,7 +118,7 @@ int VID_SetMode (int modenum);
 // sets the mode; only used by the Quake engine for resetting to mode 0 (the
 // base mode) on memory allocation failures
 
-int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate);
+int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate, int stereobuffer);
 // allocates and opens an appropriate OpenGL context (and its window)
 
 
