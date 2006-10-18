@@ -43,6 +43,8 @@ cvar_t cl_bobmodel_side = {0, "cl_bobmodel_side", "0.05", "gun bobbing sideways 
 cvar_t cl_bobmodel_up = {0, "cl_bobmodel_up", "0.02", "gun bobbing upward movement amount"};
 cvar_t cl_bobmodel_speed = {0, "cl_bobmodel_speed", "7", "gun bobbing speed"};
 
+cvar_t cl_viewmodel_scale = {0, "cl_viewmodel_scale", "0.3", "changes size of gun model, lower values prevent poking into walls but cause strange artifacts on lighting and especially r_stereo/vid_stereobuffer options where the size of the gun becomes visible"};
+
 cvar_t v_kicktime = {0, "v_kicktime", "0.5", "how long a view kick from damage lasts"};
 cvar_t v_kickroll = {0, "v_kickroll", "0.6", "how much a view kick from damage rolls your view"};
 cvar_t v_kickpitch = {0, "v_kickpitch", "0.6", "how much a view kick from damage pitches your view"};
@@ -527,7 +529,7 @@ void V_CalcRefdef (void)
 			else
 				Matrix4x4_CreateFromQuakeEntity(&r_view.matrix, vieworg[0], vieworg[1], vieworg[2], viewangles[0], viewangles[1], viewangles[2] + v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value, 1);
 			// calculate a viewmodel matrix for use in view-attached entities
-			Matrix4x4_CreateFromQuakeEntity(&viewmodelmatrix, gunorg[0], gunorg[1], gunorg[2], viewangles[0], viewangles[1], viewangles[2], 0.3);
+			Matrix4x4_CreateFromQuakeEntity(&viewmodelmatrix, gunorg[0], gunorg[1], gunorg[2], viewangles[0], viewangles[1], viewangles[2], cl_viewmodel_scale.value);
 			VectorCopy(vieworg, csqc_origin);
 			VectorCopy(viewangles, csqc_angles);
 		}
@@ -693,6 +695,8 @@ void V_Init (void)
 	Cvar_RegisterVariable (&cl_bobmodel_side);
 	Cvar_RegisterVariable (&cl_bobmodel_up);
 	Cvar_RegisterVariable (&cl_bobmodel_speed);
+
+	Cvar_RegisterVariable (&cl_viewmodel_scale);
 
 	Cvar_RegisterVariable (&v_kicktime);
 	Cvar_RegisterVariable (&v_kickroll);
