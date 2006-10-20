@@ -1400,9 +1400,9 @@ float Sbar_PrintScoreboardItem(scoreboard_t *s, float x, float y)
 		if (s->qw_spectator)
 		{
 			if (s->qw_ping || s->qw_packetloss)
-				DrawQ_ColoredString(x, y, va("%4i %3i %4i spectator  %c%s", bound(0, s->qw_ping, 9999), bound(0, s->qw_packetloss, 99), minutes, cl.qw_teamplay ? s->qw_team : "", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL );
+				DrawQ_ColoredString(x, y, va("%4i %3i %4i spectator  %c%s", bound(0, s->qw_ping, 9999), bound(0, s->qw_packetloss, 99), minutes, (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL );
 			else
-				DrawQ_ColoredString(x, y, va("         %4i spectator  %c%s", minutes, cl.qw_teamplay ? s->qw_team : "", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL );
+				DrawQ_ColoredString(x, y, va("         %4i spectator  %c%s", minutes, (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL );
 		}
 		else
 		{
