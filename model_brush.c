@@ -5002,7 +5002,8 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 
 	// free the no longer needed vertex data
 	loadmodel->brushq3.num_vertices = 0;
-	Mem_Free(loadmodel->brushq3.data_vertex3f);
+	if (loadmodel->brushq3.data_vertex3f)
+		Mem_Free(loadmodel->brushq3.data_vertex3f);
 	loadmodel->brushq3.data_vertex3f = NULL;
 	loadmodel->brushq3.data_normal3f = NULL;
 	loadmodel->brushq3.data_texcoordtexture2f = NULL;
@@ -5010,7 +5011,8 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 	loadmodel->brushq3.data_color4f = NULL;
 	// free the no longer needed triangle data
 	loadmodel->brushq3.num_triangles = 0;
-	Mem_Free(loadmodel->brushq3.data_element3i);
+	if (loadmodel->brushq3.data_element3i)
+		Mem_Free(loadmodel->brushq3.data_element3i);
 	loadmodel->brushq3.data_element3i = NULL;
 }
 
