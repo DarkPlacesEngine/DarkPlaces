@@ -878,8 +878,9 @@ typedef struct client_state_s
 	// updated from serverinfo
 	int qw_teamplay;
 
-	// indicates whether the player is spectating
-	qboolean qw_spectator;
+	// unused: indicates whether the player is spectating
+	// use cl.scores[cl.playerentity].qw_spectator instead
+	//qboolean qw_spectator;
 
 	// movement parameters for client prediction
 	float qw_movevars_gravity;

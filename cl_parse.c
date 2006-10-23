@@ -1017,7 +1017,8 @@ void CL_ParseServerInfo (void)
 
 		// parse player number
 		i = MSG_ReadByte();
-		cl.qw_spectator = (i & 128) != 0;
+		// cl.qw_spectator is an unneeded flag, cl.scores[cl.playerentity].qw_spectator works better (it can be updated by the server during the game)
+		//cl.qw_spectator = (i & 128) != 0;
 		cl.playerentity = cl.viewentity = (i & 127) + 1;
 		cl.scores = (scoreboard_t *)Mem_Alloc(cls.levelmempool, cl.maxclients*sizeof(*cl.scores));
 
