@@ -71,8 +71,8 @@ sizebuf_t net_message;
 static unsigned char net_message_buf[NET_MAXMESSAGE];
 
 cvar_t net_messagetimeout = {0, "net_messagetimeout","300", "drops players who have not sent any packets for this many seconds"};
-cvar_t net_messagerejointimeout = {0, "net_messagerejointimeout","10", "give a player this much time in seconds to rejoin and continue playing (not losing frags and such)"};
 cvar_t net_connecttimeout = {0, "net_connecttimeout","10", "after requesting a connection, the client must reply within this many seconds or be dropped (cuts down on connect floods)"};
+cvar_t net_connectfloodblockingtimeout = {0, "net_connectfloodblockingtimeout", "5", "when a connection packet is received, it will block all future connect packets from that IP address for this many seconds (cuts down on connect floods)"};
 cvar_t hostname = {CVAR_SAVE, "hostname", "UNNAMED", "server message to show in server browser"};
 cvar_t developer_networking = {0, "developer_networking", "0", "prints all received and sent packets (recommended only for debugging)"};
 
@@ -841,7 +841,7 @@ void NetConn_UpdateSockets(void)
 	}
 }
 
-static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int length, protocolversion_t protocol)
+static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int length, protocolversion_t protocol, double newtimeout)
 {
 	if (length < 8)
 		return 0;
@@ -908,7 +908,7 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 		if (reliable_message)
 			conn->qw.incoming_reliable_sequence ^= 1;
 		conn->lastMessageTime = realtime;
-		conn->timeout = realtime + net_messagetimeout.value;
+		conn->timeout = realtime + newtimeout;
 		unreliableMessagesReceived++;
 		SZ_Clear(&net_message);
 		SZ_Write(&net_message, data, length);
@@ -951,7 +951,7 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 					conn->packetlostcounter = (conn->packetlostcounter + 1) % 100;
 					conn->nq.unreliableReceiveSequence = sequence + 1;
 					conn->lastMessageTime = realtime;
-					conn->timeout = realtime + net_messagetimeout.value;
+					conn->timeout = realtime + newtimeout;
 					unreliableMessagesReceived++;
 					if (length > 0)
 					{
@@ -975,7 +975,7 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 						if (conn->nq.ackSequence != conn->nq.sendSequence)
 							Con_DPrint("ack sequencing error\n");
 						conn->lastMessageTime = realtime;
-						conn->timeout = realtime + net_messagetimeout.value;
+						conn->timeout = realtime + newtimeout;
 						if (conn->sendMessageLength > MAX_PACKETFRAGMENT)
 						{
 							unsigned int packetLen;
@@ -1031,7 +1031,7 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 				if (sequence == conn->nq.receiveSequence)
 				{
 					conn->lastMessageTime = realtime;
-					conn->timeout = realtime + net_messagetimeout.value;
+					conn->timeout = realtime + newtimeout;
 					conn->nq.receiveSequence++;
 					if( conn->receiveMessageLength + length <= (int)sizeof( conn->receiveMessage ) ) {
 						memcpy(conn->receiveMessage + conn->receiveMessageLength, data, length);
@@ -1422,7 +1422,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		return true;
 	}
 	// quakeworld ingame packet
-	if (fromserver && cls.protocol == PROTOCOL_QUAKEWORLD && length >= 8 && (ret = NetConn_ReceivedMessage(cls.netcon, data, length, cls.protocol)) == 2)
+	if (fromserver && cls.protocol == PROTOCOL_QUAKEWORLD && length >= 8 && (ret = NetConn_ReceivedMessage(cls.netcon, data, length, cls.protocol, net_messagetimeout.value)) == 2)
 	{
 		ret = 0;
 		CL_ParseServerMessage();
@@ -1506,7 +1506,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		return true;
 	}
 	ret = 0;
-	if (fromserver && length >= (int)NET_HEADERSIZE && (ret = NetConn_ReceivedMessage(cls.netcon, data, length, cls.protocol)) == 2)
+	if (fromserver && length >= (int)NET_HEADERSIZE && (ret = NetConn_ReceivedMessage(cls.netcon, data, length, cls.protocol, net_messagetimeout.value)) == 2)
 		CL_ParseServerMessage();
 	return ret;
 }
@@ -1728,13 +1728,50 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 	return true;
 }
 
+static qboolean NetConn_PreventConnectFlood(lhnetaddress_t *peeraddress)
+{
+	int floodslotnum, bestfloodslotnum;
+	double bestfloodtime;
+	lhnetaddress_t noportpeeraddress;
+	// see if this is a connect flood
+	noportpeeraddress = *peeraddress;
+	LHNETADDRESS_SetPort(&noportpeeraddress, 0);
+	bestfloodslotnum = 0;
+	bestfloodtime = sv.connectfloodaddresses[bestfloodslotnum].lasttime;
+	for (floodslotnum = 0;floodslotnum < MAX_CONNECTFLOODADDRESSES;floodslotnum++)
+	{
+		if (bestfloodtime >= sv.connectfloodaddresses[floodslotnum].lasttime)
+		{
+			bestfloodtime = sv.connectfloodaddresses[floodslotnum].lasttime;
+			bestfloodslotnum = floodslotnum;
+		}
+		if (sv.connectfloodaddresses[floodslotnum].lasttime && LHNETADDRESS_Compare(&noportpeeraddress, &sv.connectfloodaddresses[floodslotnum].address) == 0)
+		{
+			// this address matches an ongoing flood address
+			if (realtime < sv.connectfloodaddresses[floodslotnum].lasttime + net_connectfloodblockingtimeout.value)
+			{
+				// renew the ban on this address so it does not expire
+				// until the flood has subsided
+				sv.connectfloodaddresses[floodslotnum].lasttime = realtime;
+				return true;
+			}
+			// the flood appears to have subsided, so allow this
+			bestfloodslotnum = floodslotnum; // reuse the same slot
+			break;
+		}
+	}
+	// begin a new timeout on this address
+	sv.connectfloodaddresses[bestfloodslotnum].address = noportpeeraddress;
+	sv.connectfloodaddresses[bestfloodslotnum].lasttime = realtime;
+	return false;
+}
+
 extern void SV_SendServerinfo (client_t *client);
 static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *data, int length, lhnetaddress_t *peeraddress)
 {
 	int i, ret, clientnum, best;
 	double besttime;
 	client_t *client;
-	netconn_t *conn;
 	char *s, *string, response[1400], addressstring2[128], stringbuf[16384];
 
 	if (!sv.active)
@@ -1795,81 +1832,81 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		{
 			string += 7;
 			length -= 7;
-			if ((s = SearchInfostring(string, "challenge")))
+
+			if (!(s = SearchInfostring(string, "challenge")))
+				return true;
+			// validate the challenge
+			for (i = 0;i < MAX_CHALLENGES;i++)
+				if (!LHNETADDRESS_Compare(peeraddress, &challenge[i].address) && !strcmp(challenge[i].string, s))
+					break;
+			// if the challenge is not recognized, drop the packet
+			if (i == MAX_CHALLENGES)
+				return true;
+
+			// check engine protocol
+			if (strcmp(SearchInfostring(string, "protocol"), "darkplaces 3"))
 			{
-				// validate the challenge
-				for (i = 0;i < MAX_CHALLENGES;i++)
-					if (!LHNETADDRESS_Compare(peeraddress, &challenge[i].address) && !strcmp(challenge[i].string, s))
-						break;
-				if (i < MAX_CHALLENGES)
+				if (developer.integer >= 10)
+					Con_Printf("Datagram_ParseConnectionless: sending \"reject Wrong game protocol.\" to %s.\n", addressstring2);
+				NetConn_WriteString(mysocket, "\377\377\377\377reject Wrong game protocol.", peeraddress);
+				return true;
+			}
+
+			// see if this is a duplicate connection request or a disconnected
+			// client who is rejoining to the same client slot
+			for (clientnum = 0, client = svs.clients;clientnum < svs.maxclients;clientnum++, client++)
+			{
+				if (client->netconnection && LHNETADDRESS_Compare(peeraddress, &client->netconnection->peeraddress) == 0)
 				{
-					// check engine protocol
-					if (strcmp(SearchInfostring(string, "protocol"), "darkplaces 3"))
+					// this is a known client...
+					if (client->spawned)
 					{
+						// client crashed and is coming back,
+						// keep their stuff intact
 						if (developer.integer >= 10)
-							Con_Printf("Datagram_ParseConnectionless: sending \"reject Wrong game protocol.\" to %s.\n", addressstring2);
-						NetConn_WriteString(mysocket, "\377\377\377\377reject Wrong game protocol.", peeraddress);
+							Con_Printf("Datagram_ParseConnectionless: sending \"accept\" to %s.\n", addressstring2);
+						NetConn_WriteString(mysocket, "\377\377\377\377accept", peeraddress);
+						SV_SendServerinfo(client);
 					}
 					else
 					{
-						// see if this is a duplicate connection request
-						for (clientnum = 0, client = svs.clients;clientnum < svs.maxclients;clientnum++, client++)
-							if (client->netconnection && LHNETADDRESS_Compare(peeraddress, &client->netconnection->peeraddress) == 0)
-								break;
-						if (clientnum < svs.maxclients && realtime - client->connecttime < net_messagerejointimeout.value)
-						{
-							// client is still trying to connect,
-							// so we send a duplicate reply
-							if (developer.integer >= 10)
-								Con_Printf("Datagram_ParseConnectionless: sending duplicate accept to %s.\n", addressstring2);
-							NetConn_WriteString(mysocket, "\377\377\377\377accept", peeraddress);
-						}
-#if 0
-						else if (clientnum < svs.maxclients)
-						{
-							if (realtime - client->netconnection->lastMessageTime >= net_messagerejointimeout.value)
-							{
-								// client crashed and is coming back, keep their stuff intact
-								SV_SendServerinfo(client);
-								//host_client = client;
-								//SV_DropClient (true);
-							}
-							// else ignore them
-						}
-#endif
-						else
-						{
-							// this is a new client, find a slot
-							for (clientnum = 0, client = svs.clients;clientnum < svs.maxclients;clientnum++, client++)
-								if (!client->active)
-									break;
-							if (clientnum < svs.maxclients)
-							{
-								// prepare the client struct
-								if ((conn = NetConn_Open(mysocket, peeraddress)))
-								{
-									// allocated connection
-									if (developer.integer >= 10)
-										Con_Printf("Datagram_ParseConnectionless: sending \"accept\" to %s.\n", conn->address);
-									NetConn_WriteString(mysocket, "\377\377\377\377accept", peeraddress);
-									// now set up the client
-									SV_VM_Begin();
-									SV_ConnectClient(clientnum, conn);
-									SV_VM_End();
-									NetConn_Heartbeat(1);
-								}
-							}
-							else
-							{
-								// server is full
-								if (developer.integer >= 10)
-									Con_Printf("Datagram_ParseConnectionless: sending \"reject Server is full.\" to %s.\n", addressstring2);
-								NetConn_WriteString(mysocket, "\377\377\377\377reject Server is full.", peeraddress);
-							}
-						}
+						// client is still trying to connect,
+						// so we send a duplicate reply
+						if (developer.integer >= 10)
+							Con_Printf("Datagram_ParseConnectionless: sending duplicate accept to %s.\n", addressstring2);
+						NetConn_WriteString(mysocket, "\377\377\377\377accept", peeraddress);
 					}
+					return true;
 				}
 			}
+
+			if (NetConn_PreventConnectFlood(peeraddress))
+				return true;
+
+			// find an empty client slot for this new client
+			for (clientnum = 0, client = svs.clients;clientnum < svs.maxclients;clientnum++, client++)
+			{
+				netconn_t *conn;
+				if (!client->active && (conn = NetConn_Open(mysocket, peeraddress)))
+				{
+					// allocated connection
+					if (developer.integer >= 10)
+						Con_Printf("Datagram_ParseConnectionless: sending \"accept\" to %s.\n", conn->address);
+					NetConn_WriteString(mysocket, "\377\377\377\377accept", peeraddress);
+					// now set up the client
+					SV_VM_Begin();
+					SV_ConnectClient(clientnum, conn);
+					SV_VM_End();
+					NetConn_Heartbeat(1);
+					return true;
+				}
+			}
+
+			// no empty slots found - server is full
+			if (developer.integer >= 10)
+				Con_Printf("Datagram_ParseConnectionless: sending \"reject Server is full.\" to %s.\n", addressstring2);
+			NetConn_WriteString(mysocket, "\377\377\377\377reject Server is full.", peeraddress);
+
 			return true;
 		}
 		if (length >= 7 && !memcmp(string, "getinfo", 7))
@@ -1972,102 +2009,97 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		case CCREQ_CONNECT:
 			if (developer.integer >= 10)
 				Con_Printf("Datagram_ParseConnectionless: received CCREQ_CONNECT from %s.\n", addressstring2);
-			if (length >= (int)strlen("QUAKE") + 1 + 1)
+			if (length < (int)strlen("QUAKE") + 1 + 1)
+				break;
+
+			if (memcmp(data, "QUAKE", strlen("QUAKE") + 1) != 0 || (int)data[strlen("QUAKE") + 1] != NET_PROTOCOL_VERSION)
 			{
-				if (memcmp(data, "QUAKE", strlen("QUAKE") + 1) != 0 || (int)data[strlen("QUAKE") + 1] != NET_PROTOCOL_VERSION)
+				if (developer.integer >= 10)
+					Con_Printf("Datagram_ParseConnectionless: sending CCREP_REJECT \"Incompatible version.\" to %s.\n", addressstring2);
+				SZ_Clear(&net_message);
+				// save space for the header, filled in later
+				MSG_WriteLong(&net_message, 0);
+				MSG_WriteByte(&net_message, CCREP_REJECT);
+				MSG_WriteString(&net_message, "Incompatible version.\n");
+				*((int *)net_message.data) = BigLong(NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
+				NetConn_Write(mysocket, net_message.data, net_message.cursize, peeraddress);
+				SZ_Clear(&net_message);
+				break;
+			}
+
+			// see if this connect request comes from a known client
+			for (clientnum = 0, client = svs.clients;clientnum < svs.maxclients;clientnum++, client++)
+			{
+				if (client->netconnection && LHNETADDRESS_Compare(peeraddress, &client->netconnection->peeraddress) == 0)
 				{
+					// this is either a duplicate connection request
+					// or coming back from a timeout
+					// (if so, keep their stuff intact)
+
+					// send a reply
 					if (developer.integer >= 10)
-						Con_Printf("Datagram_ParseConnectionless: sending CCREP_REJECT \"Incompatible version.\" to %s.\n", addressstring2);
+						Con_Printf("Datagram_ParseConnectionless: sending duplicate CCREP_ACCEPT to %s.\n", addressstring2);
 					SZ_Clear(&net_message);
 					// save space for the header, filled in later
 					MSG_WriteLong(&net_message, 0);
-					MSG_WriteByte(&net_message, CCREP_REJECT);
-					MSG_WriteString(&net_message, "Incompatible version.\n");
+					MSG_WriteByte(&net_message, CCREP_ACCEPT);
+					MSG_WriteLong(&net_message, LHNETADDRESS_GetPort(LHNET_AddressFromSocket(client->netconnection->mysocket)));
 					*((int *)net_message.data) = BigLong(NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
 					NetConn_Write(mysocket, net_message.data, net_message.cursize, peeraddress);
 					SZ_Clear(&net_message);
-				}
-				else
-				{
-					// see if this is a duplicate connection request
-					for (clientnum = 0, client = svs.clients;clientnum < svs.maxclients;clientnum++, client++)
-						if (client->netconnection && LHNETADDRESS_Compare(peeraddress, &client->netconnection->peeraddress) == 0)
-							break;
-					if (clientnum < svs.maxclients)
-					{
-						// duplicate connection request
-						if (realtime - client->connecttime < 2.0)
-						{
-							// client is still trying to connect,
-							// so we send a duplicate reply
-							if (developer.integer >= 10)
-								Con_Printf("Datagram_ParseConnectionless: sending duplicate CCREP_ACCEPT to %s.\n", addressstring2);
-							SZ_Clear(&net_message);
-							// save space for the header, filled in later
-							MSG_WriteLong(&net_message, 0);
-							MSG_WriteByte(&net_message, CCREP_ACCEPT);
-							MSG_WriteLong(&net_message, LHNETADDRESS_GetPort(LHNET_AddressFromSocket(client->netconnection->mysocket)));
-							*((int *)net_message.data) = BigLong(NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
-							NetConn_Write(mysocket, net_message.data, net_message.cursize, peeraddress);
-							SZ_Clear(&net_message);
-						}
-#if 0
-						else if (realtime - client->netconnection->lastMessageTime >= net_messagerejointimeout.value)
-						{
-							SV_SendServerinfo(client);
-							// the old client hasn't sent us anything
-							// in quite a while, so kick off and let
-							// the retry take care of it...
-							//host_client = client;
-							//SV_DropClient (true);
-						}
-#endif
-					}
-					else
-					{
-						// this is a new client, find a slot
-						for (clientnum = 0, client = svs.clients;clientnum < svs.maxclients;clientnum++, client++)
-							if (!client->active)
-								break;
-						if (clientnum < svs.maxclients && (client->netconnection = conn = NetConn_Open(mysocket, peeraddress)) != NULL)
-						{
-							// connect to the client
-							// everything is allocated, just fill in the details
-							strlcpy (conn->address, addressstring2, sizeof (conn->address));
-							if (developer.integer >= 10)
-								Con_Printf("Datagram_ParseConnectionless: sending CCREP_ACCEPT to %s.\n", addressstring2);
-							// send back the info about the server connection
-							SZ_Clear(&net_message);
-							// save space for the header, filled in later
-							MSG_WriteLong(&net_message, 0);
-							MSG_WriteByte(&net_message, CCREP_ACCEPT);
-							MSG_WriteLong(&net_message, LHNETADDRESS_GetPort(LHNET_AddressFromSocket(conn->mysocket)));
-							*((int *)net_message.data) = BigLong(NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
-							NetConn_Write(mysocket, net_message.data, net_message.cursize, peeraddress);
-							SZ_Clear(&net_message);
-							// now set up the client struct
-							SV_VM_Begin();
-							SV_ConnectClient(clientnum, conn);
-							SV_VM_End();
-							NetConn_Heartbeat(1);
-						}
-						else
-						{
-							if (developer.integer >= 10)
-								Con_Printf("Datagram_ParseConnectionless: sending CCREP_REJECT \"Server is full.\" to %s.\n", addressstring2);
-							// no room; try to let player know
-							SZ_Clear(&net_message);
-							// save space for the header, filled in later
-							MSG_WriteLong(&net_message, 0);
-							MSG_WriteByte(&net_message, CCREP_REJECT);
-							MSG_WriteString(&net_message, "Server is full.\n");
-							*((int *)net_message.data) = BigLong(NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
-							NetConn_Write(mysocket, net_message.data, net_message.cursize, peeraddress);
-							SZ_Clear(&net_message);
-						}
-					}
+
+					// if client is already spawned, re-send the
+					// serverinfo message as they'll need it to play
+					if (client->spawned)
+						SV_SendServerinfo(client);
+					return true;
 				}
 			}
+
+			// this is a new client, check for connection flood
+			if (NetConn_PreventConnectFlood(peeraddress))
+				break;
+
+			// find a slot for the new client
+			for (clientnum = 0, client = svs.clients;clientnum < svs.maxclients;clientnum++, client++)
+			{
+				netconn_t *conn;
+				if (!client->active && (client->netconnection = conn = NetConn_Open(mysocket, peeraddress)) != NULL)
+				{
+					// connect to the client
+					// everything is allocated, just fill in the details
+					strlcpy (conn->address, addressstring2, sizeof (conn->address));
+					if (developer.integer >= 10)
+						Con_Printf("Datagram_ParseConnectionless: sending CCREP_ACCEPT to %s.\n", addressstring2);
+					// send back the info about the server connection
+					SZ_Clear(&net_message);
+					// save space for the header, filled in later
+					MSG_WriteLong(&net_message, 0);
+					MSG_WriteByte(&net_message, CCREP_ACCEPT);
+					MSG_WriteLong(&net_message, LHNETADDRESS_GetPort(LHNET_AddressFromSocket(conn->mysocket)));
+					*((int *)net_message.data) = BigLong(NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
+					NetConn_Write(mysocket, net_message.data, net_message.cursize, peeraddress);
+					SZ_Clear(&net_message);
+					// now set up the client struct
+					SV_VM_Begin();
+					SV_ConnectClient(clientnum, conn);
+					SV_VM_End();
+					NetConn_Heartbeat(1);
+					return true;
+				}
+			}
+
+			if (developer.integer >= 10)
+				Con_Printf("Datagram_ParseConnectionless: sending CCREP_REJECT \"Server is full.\" to %s.\n", addressstring2);
+			// no room; try to let player know
+			SZ_Clear(&net_message);
+			// save space for the header, filled in later
+			MSG_WriteLong(&net_message, 0);
+			MSG_WriteByte(&net_message, CCREP_REJECT);
+			MSG_WriteString(&net_message, "Server is full.\n");
+			*((int *)net_message.data) = BigLong(NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
+			NetConn_Write(mysocket, net_message.data, net_message.cursize, peeraddress);
+			SZ_Clear(&net_message);
 			break;
 		case CCREQ_SERVER_INFO:
 			if (developer.integer >= 10)
@@ -2165,7 +2197,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 	}
 	if (host_client)
 	{
-		if ((ret = NetConn_ReceivedMessage(host_client->netconnection, data, length, sv.protocol)) == 2)
+		if ((ret = NetConn_ReceivedMessage(host_client->netconnection, data, length, sv.protocol, host_client->spawned ? net_messagetimeout.value : net_connecttimeout.value)) == 2)
 		{
 			SV_VM_Begin();
 			SV_ReadClientMessage();
@@ -2393,8 +2425,8 @@ void NetConn_Init(void)
 	Cvar_RegisterVariable(&net_slist_timeout);
 	Cvar_RegisterVariable(&net_slist_maxtries);
 	Cvar_RegisterVariable(&net_messagetimeout);
-	Cvar_RegisterVariable(&net_messagerejointimeout);
 	Cvar_RegisterVariable(&net_connecttimeout);
+	Cvar_RegisterVariable(&net_connectfloodblockingtimeout);
 	Cvar_RegisterVariable(&cl_netlocalping);
 	Cvar_RegisterVariable(&cl_netpacketloss);
 	Cvar_RegisterVariable(&hostname);
