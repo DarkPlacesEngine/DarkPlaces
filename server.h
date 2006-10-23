@@ -40,6 +40,14 @@ typedef struct server_static_s
 
 typedef enum server_state_e {ss_loading, ss_active} server_state_t;
 
+#define MAX_CONNECTFLOODADDRESSES 16
+typedef struct server_connectfloodaddress_s
+{
+	double lasttime;
+	lhnetaddress_t address;
+}
+server_connectfloodaddress_t;
+
 typedef struct server_s
 {
 	// false if only a net client
@@ -91,6 +99,11 @@ typedef struct server_s
 	sizebuf_t signon;
 	// LordHavoc: increased signon message buffer from 8192
 	unsigned char signon_buf[NET_MAXMESSAGE];
+
+	// connection flood blocking
+	// note this is in server_t rather than server_static_t so that it is
+	// reset on each map command (such as New Game in singleplayer)
+	server_connectfloodaddress_t connectfloodaddresses[MAX_CONNECTFLOODADDRESSES];
 } server_t;
 
 // if defined this does ping smoothing, otherwise it does not
