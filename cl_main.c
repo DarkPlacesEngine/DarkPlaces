@@ -441,6 +441,7 @@ static void CL_PrintEntities_f(void)
 	entity_t *ent;
 	int i, j;
 	char name[32];
+	vec3_t org;
 
 	for (i = 0, ent = cl.entities;i < cl.num_entities;i++, ent++)
 	{
@@ -456,7 +457,8 @@ static void CL_PrintEntities_f(void)
 		strlcpy(name, modelname, 25);
 		for (j = (int)strlen(name);j < 25;j++)
 			name[j] = ' ';
-		Con_Printf("%3i: %s:%4i (%5i %5i %5i) [%3i %3i %3i] %4.2f %5.3f\n", i, name, ent->render.frame, (int) ent->render.matrix.m[0][3], (int) ent->render.matrix.m[1][3], (int) ent->render.matrix.m[2][3], (int) ent->render.angles[0] % 360, (int) ent->render.angles[1] % 360, (int) ent->render.angles[2] % 360, ent->render.scale, ent->render.alpha);
+		Matrix4x4_OriginFromMatrix(&ent->render.matrix, org);
+		Con_Printf("%3i: %s:%4i (%5i %5i %5i) [%3i %3i %3i] %4.2f %5.3f\n", i, name, ent->render.frame, (int) org[0], (int) org[1], (int) org[2], (int) ent->render.angles[0] % 360, (int) ent->render.angles[1] % 360, (int) ent->render.angles[2] % 360, ent->render.scale, ent->render.alpha);
 	}
 }
 
@@ -464,57 +466,50 @@ static void CL_PrintEntities_f(void)
 //static const vec3_t nomodelmaxs = {16, 16, 16};
 void CL_BoundingBoxForEntity(entity_render_t *ent)
 {
+	vec3_t org;
 	model_t *model = ent->model;
+	Matrix4x4_OriginFromMatrix(&ent->matrix, org);
 	if (model)
 	{
-		//if (ent->angles[0] || ent->angles[2])
+		// NOTE: this directly extracts vector components from the matrix, which relies on the matrix orientation!
 		if (ent->matrix.m[2][0] != 0 || ent->matrix.m[2][1] != 0)
 		{
 			// pitch or roll
-			ent->mins[0] = ent->matrix.m[0][3] + model->rotatedmins[0];
-			ent->mins[1] = ent->matrix.m[1][3] + model->rotatedmins[1];
-			ent->mins[2] = ent->matrix.m[2][3] + model->rotatedmins[2];
-			ent->maxs[0] = ent->matrix.m[0][3] + model->rotatedmaxs[0];
-			ent->maxs[1] = ent->matrix.m[1][3] + model->rotatedmaxs[1];
-			ent->maxs[2] = ent->matrix.m[2][3] + model->rotatedmaxs[2];
-			//VectorAdd(ent->origin, model->rotatedmins, ent->mins);
-			//VectorAdd(ent->origin, model->rotatedmaxs, ent->maxs);
+			ent->mins[0] = org[0] + model->rotatedmins[0];
+			ent->mins[1] = org[1] + model->rotatedmins[1];
+			ent->mins[2] = org[2] + model->rotatedmins[2];
+			ent->maxs[0] = org[0] + model->rotatedmaxs[0];
+			ent->maxs[1] = org[1] + model->rotatedmaxs[1];
+			ent->maxs[2] = org[2] + model->rotatedmaxs[2];
 		}
-		//else if (ent->angles[1])
 		else if (ent->matrix.m[0][1] != 0 || ent->matrix.m[1][0] != 0)
 		{
 			// yaw
-			ent->mins[0] = ent->matrix.m[0][3] + model->yawmins[0];
-			ent->mins[1] = ent->matrix.m[1][3] + model->yawmins[1];
-			ent->mins[2] = ent->matrix.m[2][3] + model->yawmins[2];
-			ent->maxs[0] = ent->matrix.m[0][3] + model->yawmaxs[0];
-			ent->maxs[1] = ent->matrix.m[1][3] + model->yawmaxs[1];
-			ent->maxs[2] = ent->matrix.m[2][3] + model->yawmaxs[2];
-			//VectorAdd(ent->origin, model->yawmins, ent->mins);
-			//VectorAdd(ent->origin, model->yawmaxs, ent->maxs);
+			ent->mins[0] = org[0] + model->yawmins[0];
+			ent->mins[1] = org[1] + model->yawmins[1];
+			ent->mins[2] = org[2] + model->yawmins[2];
+			ent->maxs[0] = org[0] + model->yawmaxs[0];
+			ent->maxs[1] = org[1] + model->yawmaxs[1];
+			ent->maxs[2] = org[2] + model->yawmaxs[2];
 		}
 		else
 		{
-			ent->mins[0] = ent->matrix.m[0][3] + model->normalmins[0];
-			ent->mins[1] = ent->matrix.m[1][3] + model->normalmins[1];
-			ent->mins[2] = ent->matrix.m[2][3] + model->normalmins[2];
-			ent->maxs[0] = ent->matrix.m[0][3] + model->normalmaxs[0];
-			ent->maxs[1] = ent->matrix.m[1][3] + model->normalmaxs[1];
-			ent->maxs[2] = ent->matrix.m[2][3] + model->normalmaxs[2];
-			//VectorAdd(ent->origin, model->normalmins, ent->mins);
-			//VectorAdd(ent->origin, model->normalmaxs, ent->maxs);
+			ent->mins[0] = org[0] + model->normalmins[0];
+			ent->mins[1] = org[1] + model->normalmins[1];
+			ent->mins[2] = org[2] + model->normalmins[2];
+			ent->maxs[0] = org[0] + model->normalmaxs[0];
+			ent->maxs[1] = org[1] + model->normalmaxs[1];
+			ent->maxs[2] = org[2] + model->normalmaxs[2];
 		}
 	}
 	else
 	{
-		ent->mins[0] = ent->matrix.m[0][3] - 16;
-		ent->mins[1] = ent->matrix.m[1][3] - 16;
-		ent->mins[2] = ent->matrix.m[2][3] - 16;
-		ent->maxs[0] = ent->matrix.m[0][3] + 16;
-		ent->maxs[1] = ent->matrix.m[1][3] + 16;
-		ent->maxs[2] = ent->matrix.m[2][3] + 16;
-		//VectorAdd(ent->origin, nomodelmins, ent->mins);
-		//VectorAdd(ent->origin, nomodelmaxs, ent->maxs);
+		ent->mins[0] = org[0] - 16;
+		ent->mins[1] = org[1] - 16;
+		ent->mins[2] = org[2] - 16;
+		ent->maxs[0] = org[0] + 16;
+		ent->maxs[1] = org[1] + 16;
+		ent->maxs[2] = org[2] + 16;
 	}
 }
 
@@ -634,13 +629,9 @@ dlightsetup:
 	memset (dl, 0, sizeof(*dl));
 	Matrix4x4_Normalize(&dl->matrix, matrix);
 	dl->ent = ent;
-	dl->origin[0] = dl->matrix.m[0][3];
-	dl->origin[1] = dl->matrix.m[1][3];
-	dl->origin[2] = dl->matrix.m[2][3];
+	Matrix4x4_OriginFromMatrix(&dl->matrix, dl->origin);
 	CL_FindNonSolidLocation(dl->origin, dl->origin, 6);
-	dl->matrix.m[0][3] = dl->origin[0];
-	dl->matrix.m[1][3] = dl->origin[1];
-	dl->matrix.m[2][3] = dl->origin[2];
+	Matrix4x4_SetOrigin(&dl->matrix, dl->origin[0], dl->origin[1], dl->origin[2]);
 	dl->radius = radius;
 	dl->color[0] = red;
 	dl->color[1] = green;
@@ -1016,11 +1007,7 @@ void CL_UpdateNetworkEntity(entity_t *e)
 			Matrix4x4_Transform(&e->render.matrix, o, origin);
 		}
 		else
-		{
-			origin[0] = e->render.matrix.m[0][3];
-			origin[1] = e->render.matrix.m[1][3];
-			origin[2] = e->render.matrix.m[2][3];
-		}
+			Matrix4x4_OriginFromMatrix(&e->render.matrix, origin);
 		trailtype = EFFECT_NONE;
 		dlightradius = 0;
 		dlightcolor[0] = 0;
@@ -1083,9 +1070,7 @@ void CL_UpdateNetworkEntity(entity_t *e)
 			Matrix4x4_Transform(&e->render.matrix, muzzleflashorigin, v2);
 			trace = CL_TraceBox(origin, vec3_origin, vec3_origin, v2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_SKY, false);
 			tempmatrix = e->render.matrix;
-			tempmatrix.m[0][3] = trace.endpos[0];
-			tempmatrix.m[1][3] = trace.endpos[1];
-			tempmatrix.m[2][3] = trace.endpos[2];
+			Matrix4x4_SetOrigin(&tempmatrix, trace.endpos[0], trace.endpos[1], trace.endpos[2]);
 			CL_AllocDlight(NULL, &tempmatrix, 100, e->persistent.muzzleflash, e->persistent.muzzleflash, e->persistent.muzzleflash, 0, 0, 0, -1, true, 0, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 			e->persistent.muzzleflash -= (cl.time - cl.oldtime) * 10;
 		}
@@ -1124,7 +1109,7 @@ void CL_UpdateNetworkEntity(entity_t *e)
 			//dlightmatrix = e->render.matrix;
 			// hack to make glowing player light shine on their gun
 			//if (e->state_current.number == cl.viewentity/* && !chase_active.integer*/)
-			//	dlightmatrix.m[2][3] += 30;
+			//	Matrix4x4_AdjustOrigin(&dlightmatrix, 0, 0, 30);
 			CL_AllocDlight(&e->render, &e->render.matrix, dlightradius, dlightcolor[0], dlightcolor[1], dlightcolor[2], 0, 0, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		}
 		// custom rtlight

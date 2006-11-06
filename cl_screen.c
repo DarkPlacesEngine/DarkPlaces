@@ -1746,9 +1746,9 @@ void CL_UpdateScreen(void)
 	if (vid.stereobuffer || r_stereo_redblue.integer || r_stereo_redgreen.integer || r_stereo_redcyan.integer || r_stereo_sidebyside.integer)
 	{
 		matrix4x4_t originalmatrix = r_view.matrix;
-		r_view.matrix.m[0][3] = originalmatrix.m[0][3] + r_stereo_separation.value * -0.5f * r_view.matrix.m[0][1];
-		r_view.matrix.m[1][3] = originalmatrix.m[1][3] + r_stereo_separation.value * -0.5f * r_view.matrix.m[1][1];
-		r_view.matrix.m[2][3] = originalmatrix.m[2][3] + r_stereo_separation.value * -0.5f * r_view.matrix.m[2][1];
+		matrix4x4_t offsetmatrix;
+		Matrix4x4_CreateTranslate(&offsetmatrix, 0, r_stereo_separation.value * -0.5f, 0);
+		Matrix4x4_Concat(&r_view.matrix, &offsetmatrix, &originalmatrix);
 
 		if (r_stereo_sidebyside.integer)
 			r_stereo_side = 0;
@@ -1765,9 +1765,8 @@ void CL_UpdateScreen(void)
 
 		SCR_DrawScreen();
 
-		r_view.matrix.m[0][3] = originalmatrix.m[0][3] + r_stereo_separation.value * 0.5f * r_view.matrix.m[0][1];
-		r_view.matrix.m[1][3] = originalmatrix.m[1][3] + r_stereo_separation.value * 0.5f * r_view.matrix.m[1][1];
-		r_view.matrix.m[2][3] = originalmatrix.m[2][3] + r_stereo_separation.value * 0.5f * r_view.matrix.m[2][1];
+		Matrix4x4_CreateTranslate(&offsetmatrix, 0, r_stereo_separation.value * 0.5f, 0);
+		Matrix4x4_Concat(&r_view.matrix, &offsetmatrix, &originalmatrix);
 
 		if (r_stereo_sidebyside.integer)
 			r_stereo_side = 1;

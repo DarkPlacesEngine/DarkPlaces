@@ -201,7 +201,7 @@ void Matrix4x4_CreateIdentity (matrix4x4_t *out)
 	out->m[3][3]=1.0f;
 }
 
-void Matrix4x4_CreateTranslate (matrix4x4_t *out, float x, float y, float z)
+void Matrix4x4_CreateTranslate (matrix4x4_t *out, double x, double y, double z)
 {
 	out->m[0][0]=1.0f;
 	out->m[0][1]=0.0f;
@@ -221,9 +221,9 @@ void Matrix4x4_CreateTranslate (matrix4x4_t *out, float x, float y, float z)
 	out->m[3][3]=1.0f;
 }
 
-void Matrix4x4_CreateRotate (matrix4x4_t *out, float angle, float x, float y, float z)
+void Matrix4x4_CreateRotate (matrix4x4_t *out, double angle, double x, double y, double z)
 {
-	float len, c, s;
+	double len, c, s;
 
 	len = x*x+y*y+z*z;
 	if (len != 0.0f)
@@ -254,7 +254,7 @@ void Matrix4x4_CreateRotate (matrix4x4_t *out, float angle, float x, float y, fl
 	out->m[3][3]=1.0f;
 }
 
-void Matrix4x4_CreateScale (matrix4x4_t *out, float x)
+void Matrix4x4_CreateScale (matrix4x4_t *out, double x)
 {
 	out->m[0][0]=x;
 	out->m[0][1]=0.0f;
@@ -274,7 +274,7 @@ void Matrix4x4_CreateScale (matrix4x4_t *out, float x)
 	out->m[3][3]=1.0f;
 }
 
-void Matrix4x4_CreateScale3 (matrix4x4_t *out, float x, float y, float z)
+void Matrix4x4_CreateScale3 (matrix4x4_t *out, double x, double y, double z)
 {
 	out->m[0][0]=x;
 	out->m[0][1]=0.0f;
@@ -294,7 +294,7 @@ void Matrix4x4_CreateScale3 (matrix4x4_t *out, float x, float y, float z)
 	out->m[3][3]=1.0f;
 }
 
-void Matrix4x4_CreateFromQuakeEntity(matrix4x4_t *out, float x, float y, float z, float pitch, float yaw, float roll, float scale)
+void Matrix4x4_CreateFromQuakeEntity(matrix4x4_t *out, double x, double y, double z, double pitch, double yaw, double roll, double scale)
 {
 	double angle, sr, sp, sy, cr, cp, cy;
 
@@ -430,9 +430,141 @@ void Matrix4x4_FromVectors(matrix4x4_t *out, const float vx[3], const float vy[3
 	out->m[3][3] = 1.0f;
 }
 
-void Matrix4x4_Blend (matrix4x4_t *out, const matrix4x4_t *in1, const matrix4x4_t *in2, float blend)
+void Matrix4x4_FromArrayDoubleGL (matrix4x4_t *out, const double in[16])
 {
-	float iblend = 1 - blend;
+	out->m[0][0] = in[0];
+	out->m[1][0] = in[1];
+	out->m[2][0] = in[2];
+	out->m[3][0] = in[3];
+	out->m[0][1] = in[4];
+	out->m[1][1] = in[5];
+	out->m[2][1] = in[6];
+	out->m[3][1] = in[7];
+	out->m[0][2] = in[8];
+	out->m[1][2] = in[9];
+	out->m[2][2] = in[10];
+	out->m[3][2] = in[11];
+	out->m[0][3] = in[12];
+	out->m[1][3] = in[13];
+	out->m[2][3] = in[14];
+	out->m[3][3] = in[15];
+}
+
+void Matrix4x4_FromArrayDoubleD3D (matrix4x4_t *out, const double in[16])
+{
+	out->m[0][0] = in[0];
+	out->m[0][1] = in[1];
+	out->m[0][2] = in[2];
+	out->m[0][3] = in[3];
+	out->m[1][0] = in[4];
+	out->m[1][1] = in[5];
+	out->m[1][2] = in[6];
+	out->m[1][3] = in[7];
+	out->m[2][0] = in[8];
+	out->m[2][1] = in[9];
+	out->m[2][2] = in[10];
+	out->m[2][3] = in[11];
+	out->m[3][0] = in[12];
+	out->m[3][1] = in[13];
+	out->m[3][2] = in[14];
+	out->m[3][3] = in[15];
+}
+
+void Matrix4x4_ToArray12FloatGL(const matrix4x4_t *in, float out[12])
+{
+	out[ 0] = in->m[0][0];
+	out[ 1] = in->m[1][0];
+	out[ 2] = in->m[2][0];
+	out[ 3] = in->m[0][1];
+	out[ 4] = in->m[1][1];
+	out[ 5] = in->m[2][1];
+	out[ 6] = in->m[0][2];
+	out[ 7] = in->m[1][2];
+	out[ 8] = in->m[2][2];
+	out[ 9] = in->m[0][3];
+	out[10] = in->m[1][3];
+	out[11] = in->m[2][3];
+}
+
+void Matrix4x4_FromArray12FloatGL(matrix4x4_t *out, const float in[12])
+{
+	out->m[0][0] = in[0];
+	out->m[1][0] = in[1];
+	out->m[2][0] = in[2];
+	out->m[3][0] = 0;
+	out->m[0][1] = in[3];
+	out->m[1][1] = in[4];
+	out->m[2][1] = in[5];
+	out->m[3][1] = 0;
+	out->m[0][2] = in[6];
+	out->m[1][2] = in[7];
+	out->m[2][2] = in[8];
+	out->m[3][2] = 0;
+	out->m[0][3] = in[9];
+	out->m[1][3] = in[10];
+	out->m[2][3] = in[11];
+	out->m[3][3] = 1;
+}
+
+void Matrix4x4_ToArray12FloatD3D(const matrix4x4_t *in, float out[12])
+{
+	out[ 0] = in->m[0][0];
+	out[ 1] = in->m[0][1];
+	out[ 2] = in->m[0][2];
+	out[ 3] = in->m[0][3];
+	out[ 4] = in->m[1][0];
+	out[ 5] = in->m[1][1];
+	out[ 6] = in->m[1][2];
+	out[ 7] = in->m[1][3];
+	out[ 8] = in->m[2][0];
+	out[ 9] = in->m[2][1];
+	out[10] = in->m[2][2];
+	out[11] = in->m[2][3];
+}
+
+void Matrix4x4_FromArray12FloatD3D(matrix4x4_t *out, const float in[12])
+{
+	out->m[0][0] = in[0];
+	out->m[0][1] = in[1];
+	out->m[0][2] = in[2];
+	out->m[0][3] = in[3];
+	out->m[1][0] = in[4];
+	out->m[1][1] = in[5];
+	out->m[1][2] = in[6];
+	out->m[1][3] = in[7];
+	out->m[2][0] = in[8];
+	out->m[2][1] = in[9];
+	out->m[2][2] = in[10];
+	out->m[2][3] = in[11];
+	out->m[3][0] = 0;
+	out->m[3][1] = 0;
+	out->m[3][2] = 0;
+	out->m[3][3] = 1;
+}
+
+void Matrix4x4_FromOriginQuat(matrix4x4_t *m, double ox, double oy, double oz, double x, double y, double z, double w)
+{
+	m->m[0][0]=1-2*(y*y+z*z);m->m[0][1]=  2*(x*y-z*w);m->m[0][2]=  2*(x*z+y*w);m->m[0][3]=ox;
+	m->m[1][0]=  2*(x*y+z*w);m->m[1][1]=1-2*(x*x+z*z);m->m[1][2]=  2*(y*z-x*w);m->m[1][3]=oy;
+	m->m[2][0]=  2*(x*z-y*w);m->m[2][1]=  2*(y*z+x*w);m->m[2][2]=1-2*(x*x+y*y);m->m[2][3]=oz;
+	m->m[3][0]=  0          ;m->m[3][1]=  0          ;m->m[3][2]=  0          ;m->m[3][3]=1;
+}
+
+// LordHavoc: I got this code from:
+//http://www.doom3world.org/phpbb2/viewtopic.php?t=2884
+void Matrix4x4_FromDoom3Joint(matrix4x4_t *m, double ox, double oy, double oz, double x, double y, double z)
+{
+	double w = 1.0 - (x*x+y*y+z*z);
+	w = w > 0.0 ? -sqrt(w) : 0.0;
+	m->m[0][0]=1-2*(y*y+z*z);m->m[0][1]=  2*(x*y-z*w);m->m[0][2]=  2*(x*z+y*w);m->m[0][3]=ox;
+	m->m[1][0]=  2*(x*y+z*w);m->m[1][1]=1-2*(x*x+z*z);m->m[1][2]=  2*(y*z-x*w);m->m[1][3]=oy;
+	m->m[2][0]=  2*(x*z-y*w);m->m[2][1]=  2*(y*z+x*w);m->m[2][2]=1-2*(x*x+y*y);m->m[2][3]=oz;
+	m->m[3][0]=  0          ;m->m[3][1]=  0          ;m->m[3][2]=  0          ;m->m[3][3]=1;
+}
+
+void Matrix4x4_Blend (matrix4x4_t *out, const matrix4x4_t *in1, const matrix4x4_t *in2, double blend)
+{
+	double iblend = 1 - blend;
 	out->m[0][0] = in1->m[0][0] * iblend + in2->m[0][0] * blend;
 	out->m[0][1] = in1->m[0][1] * iblend + in2->m[0][1] * blend;
 	out->m[0][2] = in1->m[0][2] * iblend + in2->m[0][2] * blend;
@@ -477,7 +609,7 @@ void Matrix4x4_Transform3x3 (const matrix4x4_t *in, const float v[3], float out[
 /*
 void Matrix4x4_SimpleUntransform (const matrix4x4_t *in, const float v[3], float out[3])
 {
-	float t[3];
+	double t[3];
 	t[0] = v[0] - in->m[0][3];
 	t[1] = v[1] - in->m[1][3];
 	t[2] = v[2] - in->m[2][3];
@@ -488,7 +620,7 @@ void Matrix4x4_SimpleUntransform (const matrix4x4_t *in, const float v[3], float
 */
 
 // FIXME: optimize
-void Matrix4x4_ConcatTranslate (matrix4x4_t *out, float x, float y, float z)
+void Matrix4x4_ConcatTranslate (matrix4x4_t *out, double x, double y, double z)
 {
 	matrix4x4_t base, temp;
 	base = *out;
@@ -497,7 +629,7 @@ void Matrix4x4_ConcatTranslate (matrix4x4_t *out, float x, float y, float z)
 }
 
 // FIXME: optimize
-void Matrix4x4_ConcatRotate (matrix4x4_t *out, float angle, float x, float y, float z)
+void Matrix4x4_ConcatRotate (matrix4x4_t *out, double angle, double x, double y, double z)
 {
 	matrix4x4_t base, temp;
 	base = *out;
@@ -506,7 +638,7 @@ void Matrix4x4_ConcatRotate (matrix4x4_t *out, float angle, float x, float y, fl
 }
 
 // FIXME: optimize
-void Matrix4x4_ConcatScale (matrix4x4_t *out, float x)
+void Matrix4x4_ConcatScale (matrix4x4_t *out, double x)
 {
 	matrix4x4_t base, temp;
 	base = *out;
@@ -515,7 +647,7 @@ void Matrix4x4_ConcatScale (matrix4x4_t *out, float x)
 }
 
 // FIXME: optimize
-void Matrix4x4_ConcatScale3 (matrix4x4_t *out, float x, float y, float z)
+void Matrix4x4_ConcatScale3 (matrix4x4_t *out, double x, double y, double z)
 {
 	matrix4x4_t base, temp;
 	base = *out;
@@ -530,9 +662,23 @@ void Matrix4x4_OriginFromMatrix (const matrix4x4_t *in, float *out)
 	out[2] = in->m[2][3];
 }
 
-float Matrix4x4_ScaleFromMatrix (const matrix4x4_t *in)
+double Matrix4x4_ScaleFromMatrix (const matrix4x4_t *in)
 {
 	// we only support uniform scaling, so assume the first row is enough
 	return (float)sqrt(in->m[0][0] * in->m[0][0] + in->m[0][1] * in->m[0][1] + in->m[0][2] * in->m[0][2]);
+}
+
+void Matrix4x4_SetOrigin (matrix4x4_t *out, double x, double y, double z)
+{
+	out->m[0][3] = x;
+	out->m[1][3] = y;
+	out->m[2][3] = z;
+}
+
+void Matrix4x4_AdjustOrigin (matrix4x4_t *out, double x, double y, double z)
+{
+	out->m[0][3] += x;
+	out->m[1][3] += y;
+	out->m[2][3] += z;
 }
 
