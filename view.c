@@ -394,7 +394,7 @@ void V_CalcRefdef (void)
 			else
 			{
 				r_view.matrix = ent->render.matrix;
-				r_view.matrix.m[2][3] += cl.stats[STAT_VIEWHEIGHT];
+				Matrix4x4_AdjustOrigin(&r_view.matrix, 0, 0, cl.stats[STAT_VIEWHEIGHT]);
 			}
 			viewmodelmatrix = r_view.matrix;
 		}

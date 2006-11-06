@@ -269,22 +269,7 @@ int Mod_Alias_GetTagMatrix(const model_t *model, int poseframe, int tagindex, ma
 			R_ConcatTransforms(boneframe + model->data_bones[tagindex].parent * 12, tempbonematrix, bonematrix);
 			tagindex = model->data_bones[tagindex].parent;
 		}
-		outmatrix->m[0][0] = bonematrix[0];
-		outmatrix->m[0][1] = bonematrix[1];
-		outmatrix->m[0][2] = bonematrix[2];
-		outmatrix->m[0][3] = bonematrix[3];
-		outmatrix->m[1][0] = bonematrix[4];
-		outmatrix->m[1][1] = bonematrix[5];
-		outmatrix->m[1][2] = bonematrix[6];
-		outmatrix->m[1][3] = bonematrix[7];
-		outmatrix->m[2][0] = bonematrix[8];
-		outmatrix->m[2][1] = bonematrix[9];
-		outmatrix->m[2][2] = bonematrix[10];
-		outmatrix->m[2][3] = bonematrix[11];
-		outmatrix->m[3][0] = 0;
-		outmatrix->m[3][1] = 0;
-		outmatrix->m[3][2] = 0;
-		outmatrix->m[3][3] = 1;
+		Matrix4x4_FromArray12FloatD3D(outmatrix, bonematrix);
 	}
 	else if (model->num_tags)
 	{
@@ -1948,15 +1933,6 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || loadmodel->animscenes[0].framecount > 1;
 }
 
-static void Mod_PSKMODEL_AnimKeyToMatrix(float *origin, float *quat, matrix4x4_t *m)
-{
-	float x = quat[0], y = quat[1], z = quat[2], w = quat[3];
-	m->m[0][0]=1-2*(y*y+z*z);m->m[0][1]=  2*(x*y-z*w);m->m[0][2]=  2*(x*z+y*w);m->m[0][3]=origin[0];
-	m->m[1][0]=  2*(x*y+z*w);m->m[1][1]=1-2*(x*x+z*z);m->m[1][2]=  2*(y*z-x*w);m->m[1][3]=origin[1];
-	m->m[2][0]=  2*(x*z-y*w);m->m[2][1]=  2*(y*z+x*w);m->m[2][2]=1-2*(x*x+y*y);m->m[2][3]=origin[2];
-	m->m[3][0]=  0          ;m->m[3][1]=  0          ;m->m[3][2]=  0          ;m->m[3][3]=1;
-}
-
 // no idea why PSK/PSA files contain weird quaternions but they do...
 #define PSKQUATNEGATIONS
 void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
@@ -2476,20 +2452,10 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	// load the poses from the animkeys
 	for (index = 0;index < numanimkeys;index++)
 	{
+		pskanimkeys_t *k = animkeys + index;
 		matrix4x4_t matrix;
-		Mod_PSKMODEL_AnimKeyToMatrix(animkeys[index].origin, animkeys[index].quat, &matrix);
-		loadmodel->data_poses[index*12+0] = matrix.m[0][0];
-		loadmodel->data_poses[index*12+1] = matrix.m[0][1];
-		loadmodel->data_poses[index*12+2] = matrix.m[0][2];
-		loadmodel->data_poses[index*12+3] = matrix.m[0][3];
-		loadmodel->data_poses[index*12+4] = matrix.m[1][0];
-		loadmodel->data_poses[index*12+5] = matrix.m[1][1];
-		loadmodel->data_poses[index*12+6] = matrix.m[1][2];
-		loadmodel->data_poses[index*12+7] = matrix.m[1][3];
-		loadmodel->data_poses[index*12+8] = matrix.m[2][0];
-		loadmodel->data_poses[index*12+9] = matrix.m[2][1];
-		loadmodel->data_poses[index*12+10] = matrix.m[2][2];
-		loadmodel->data_poses[index*12+11] = matrix.m[2][3];
+		Matrix4x4_FromOriginQuat(&matrix, k->origin[0], k->origin[1], k->origin[2], k->quat[0], k->quat[1], k->quat[2], k->quat[3]);
+		Matrix4x4_ToArray12FloatD3D(&matrix, loadmodel->data_poses + index*12);
 	}
 	Mod_FreeSkinFiles(skinfiles);
 	Mem_Free(animfilebuffer);

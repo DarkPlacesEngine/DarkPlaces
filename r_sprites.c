@@ -11,9 +11,8 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 	float scale;
 
 	// nudge it toward the view to make sure it isn't in a wall
-	org[0] = ent->matrix.m[0][3] - r_view.forward[0];
-	org[1] = ent->matrix.m[1][3] - r_view.forward[1];
-	org[2] = ent->matrix.m[2][3] - r_view.forward[2];
+	Matrix4x4_OriginFromMatrix(&ent->matrix, org);
+	VectorSubtract(org, r_view.forward, org);
 	switch(model->sprite.sprnum_type)
 	{
 	case SPR_VP_PARALLEL_UPRIGHT:

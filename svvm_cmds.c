@@ -2492,7 +2492,7 @@ int SV_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 			// (don't count Z, or jumping messes it up)
 			bob = sqrt(ent->fields.server->velocity[0]*ent->fields.server->velocity[0] + ent->fields.server->velocity[1]*ent->fields.server->velocity[1])*cl_bob.value;
 			bob = bob*0.3 + bob*0.7*cycle;
-			out->m[2][3] += bound(-7, bob, 4);
+			Matrix4x4_AdjustOrigin(out, 0, 0, bound(-7, bob, 4));
 		}
 		*/
 	}

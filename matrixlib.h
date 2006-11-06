@@ -43,29 +43,48 @@ void Matrix4x4_Normalize (matrix4x4_t *out, matrix4x4_t *in1);
 void Matrix4x4_CreateIdentity (matrix4x4_t *out);
 // creates a translate matrix
 // (moves vectors)
-void Matrix4x4_CreateTranslate (matrix4x4_t *out, float x, float y, float z);
+void Matrix4x4_CreateTranslate (matrix4x4_t *out, double x, double y, double z);
 // creates a rotate matrix
 // (rotates vectors)
-void Matrix4x4_CreateRotate (matrix4x4_t *out, float angle, float x, float y, float z);
+void Matrix4x4_CreateRotate (matrix4x4_t *out, double angle, double x, double y, double z);
 // creates a scaling matrix
 // (expands or contracts vectors)
 // (warning: do not apply this kind of matrix to direction vectors)
-void Matrix4x4_CreateScale (matrix4x4_t *out, float x);
+void Matrix4x4_CreateScale (matrix4x4_t *out, double x);
 // creates a squishing matrix
 // (expands or contracts vectors differently in different axis)
 // (warning: this is not reversed by Invert_Simple)
 // (warning: do not apply this kind of matrix to direction vectors)
-void Matrix4x4_CreateScale3 (matrix4x4_t *out, float x, float y, float z);
+void Matrix4x4_CreateScale3 (matrix4x4_t *out, double x, double y, double z);
 // creates a matrix for a quake entity
-void Matrix4x4_CreateFromQuakeEntity(matrix4x4_t *out, float x, float y, float z, float pitch, float yaw, float roll, float scale);
+void Matrix4x4_CreateFromQuakeEntity(matrix4x4_t *out, double x, double y, double z, double pitch, double yaw, double roll, double scale);
 
 // converts a matrix4x4 to a set of 3D vectors for the 3 axial directions, and the translate
 void Matrix4x4_ToVectors(const matrix4x4_t *in, float vx[3], float vy[3], float vz[3], float t[3]);
 // creates a matrix4x4 from a set of 3D vectors for axial directions, and translate
 void Matrix4x4_FromVectors(matrix4x4_t *out, const float vx[3], const float vy[3], const float vz[3], const float t[3]);
 
+// creates a matrix4x4 from a float[16] array in the OpenGL orientation
+void Matrix4x4_FromArrayDoubleGL(matrix4x4_t *out, const double in[16]);
+// creates a matrix4x4 from a float[16] array in the Direct3D orientation
+void Matrix4x4_FromArrayDoubleD3D(matrix4x4_t *out, const double in[16]);
+
+// converts a matrix4x4 to a float[12] array in the OpenGL orientation
+void Matrix4x4_ToArray12FloatGL(const matrix4x4_t *in, float out[12]);
+// creates a matrix4x4 from a float[12] array in the OpenGL orientation
+void Matrix4x4_FromArray12FloatGL(matrix4x4_t *out, const float in[12]);
+// converts a matrix4x4 to a float[12] array in the Direct3D orientation
+void Matrix4x4_ToArray12FloatD3D(const matrix4x4_t *in, float out[12]);
+// creates a matrix4x4 from a float[12] array in the Direct3D orientation
+void Matrix4x4_FromArray12FloatD3D(matrix4x4_t *out, const float in[12]);
+
+// creates a matrix4x4 from an origin and quaternion (used mostly with skeletal model formats such as PSK)
+void Matrix4x4_FromOriginQuat(matrix4x4_t *m, double ox, double oy, double oz, double x, double y, double z, double w);
+// creates a matrix4x4 from an origin and canonical unit-length quaternion (used mostly with skeletal model formats such as MD5)
+void Matrix4x4_FromDoom3Joint(matrix4x4_t *m, double ox, double oy, double oz, double x, double y, double z);
+
 // blends two matrices together, at a given percentage (blend controls percentage of in2)
-void Matrix4x4_Blend (matrix4x4_t *out, const matrix4x4_t *in1, const matrix4x4_t *in2, float blend);
+void Matrix4x4_Blend (matrix4x4_t *out, const matrix4x4_t *in1, const matrix4x4_t *in2, double blend);
 
 // transforms a 3D vector through a matrix4x4
 void Matrix4x4_Transform (const matrix4x4_t *in, const float v[3], float out[3]);
@@ -82,17 +101,22 @@ void Matrix4x4_Transform3x3 (const matrix4x4_t *in, const float v[3], float out[
 
 // ease of use functions
 // immediately applies a Translate to the matrix
-void Matrix4x4_ConcatTranslate (matrix4x4_t *out, float x, float y, float z);
+void Matrix4x4_ConcatTranslate (matrix4x4_t *out, double x, double y, double z);
 // immediately applies a Rotate to the matrix
-void Matrix4x4_ConcatRotate (matrix4x4_t *out, float angle, float x, float y, float z);
+void Matrix4x4_ConcatRotate (matrix4x4_t *out, double angle, double x, double y, double z);
 // immediately applies a Scale to the matrix
-void Matrix4x4_ConcatScale (matrix4x4_t *out, float x);
+void Matrix4x4_ConcatScale (matrix4x4_t *out, double x);
 // immediately applies a Scale3 to the matrix
-void Matrix4x4_ConcatScale3 (matrix4x4_t *out, float x, float y, float z);
+void Matrix4x4_ConcatScale3 (matrix4x4_t *out, double x, double y, double z);
 
 // extracts origin vector (translate) from matrix
 void Matrix4x4_OriginFromMatrix (const matrix4x4_t *in, float *out);
 // extracts scaling factor from matrix (only works for uniform scaling)
-float Matrix4x4_ScaleFromMatrix (const matrix4x4_t *in);
+double Matrix4x4_ScaleFromMatrix (const matrix4x4_t *in);
+
+// replaces origin vector (translate) in matrix
+void Matrix4x4_SetOrigin (matrix4x4_t *out, double x, double y, double z);
+// moves origin vector (translate) in matrix by a simple translate
+void Matrix4x4_AdjustOrigin (matrix4x4_t *out, double x, double y, double z);
 
 #endif
