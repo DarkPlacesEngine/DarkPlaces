@@ -472,7 +472,11 @@ void CL_BoundingBoxForEntity(entity_render_t *ent)
 	if (model)
 	{
 		// NOTE: this directly extracts vector components from the matrix, which relies on the matrix orientation!
+#ifdef MATRIX4x4_OPENGLORIENTATION
+		if (ent->matrix.m[0][2] != 0 || ent->matrix.m[1][2] != 0)
+#else
 		if (ent->matrix.m[2][0] != 0 || ent->matrix.m[2][1] != 0)
+#endif
 		{
 			// pitch or roll
 			ent->mins[0] = org[0] + model->rotatedmins[0];
@@ -482,7 +486,11 @@ void CL_BoundingBoxForEntity(entity_render_t *ent)
 			ent->maxs[1] = org[1] + model->rotatedmaxs[1];
 			ent->maxs[2] = org[2] + model->rotatedmaxs[2];
 		}
+#ifdef MATRIX4x4_OPENGLORIENTATION
+		else if (ent->matrix.m[1][0] != 0 || ent->matrix.m[0][1] != 0)
+#else
 		else if (ent->matrix.m[0][1] != 0 || ent->matrix.m[1][0] != 0)
+#endif
 		{
 			// yaw
 			ent->mins[0] = org[0] + model->yawmins[0];

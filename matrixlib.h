@@ -6,6 +6,8 @@
 #define M_PI		3.14159265358979323846	// matches value in gcc v2 math.h
 #endif
 
+#define MATRIX4x4_OPENGLORIENTATION
+
 typedef struct matrix4x4_s
 {
 	float m[4][4];
@@ -28,9 +30,6 @@ void Matrix4x4_Concat (matrix4x4_t *out, const matrix4x4_t *in1, const matrix4x4
 // swaps the rows and columns of the matrix
 // (is this useful for anything?)
 void Matrix4x4_Transpose (matrix4x4_t *out, const matrix4x4_t *in1);
-// swaps the rows and columns of the rotation matrix
-// (inverting the rotation, but leaving everything else the same)
-void Matrix4x4_Transpose3x3 (matrix4x4_t *out, const matrix4x4_t *in1);
 // creates a matrix that does the opposite of the matrix provided
 // only supports translate, rotate, scale (not scale3) matrices
 void Matrix4x4_Invert_Simple (matrix4x4_t *out, const matrix4x4_t *in1);
