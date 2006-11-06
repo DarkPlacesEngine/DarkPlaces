@@ -277,7 +277,7 @@ int Mod_Alias_GetTagMatrix(const model_t *model, int poseframe, int tagindex, ma
 			return 4;
 		if (poseframe >= model->num_tagframes)
 			return 6;
-		*outmatrix = model->data_tags[poseframe * model->num_tags + tagindex].matrix;
+		Matrix4x4_FromArray12FloatGL(outmatrix, model->data_tags[poseframe * model->num_tags + tagindex].matrixgl);
 	}
 	return 0;
 }
@@ -1238,14 +1238,11 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->data_tags = (aliastag_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_tagframes * loadmodel->num_tags * sizeof(aliastag_t));
 	for (i = 0, pintag = (md3tag_t *)((unsigned char *)pinmodel + LittleLong(pinmodel->lump_tags));i < loadmodel->num_tagframes * loadmodel->num_tags;i++, pintag++)
 	{
-		float m[12];
 		strlcpy(loadmodel->data_tags[i].name, pintag->name, sizeof(loadmodel->data_tags[i].name));
-		loadmodel->data_tags[i].matrix = identitymatrix;
 		for (j = 0;j < 9;j++)
-			m[j] = LittleFloat(pintag->rotationmatrix[j]);
+			loadmodel->data_tags[i].matrixgl[j] = LittleFloat(pintag->rotationmatrix[j]);
 		for (j = 0;j < 3;j++)
-			m[9+j] = LittleFloat(pintag->origin[j]);
-		Matrix4x4_FromArray12FloatGL(&loadmodel->data_tags[i].matrix, m);
+			loadmodel->data_tags[i].matrixgl[9+j] = LittleFloat(pintag->origin[j]);
 		//Con_Printf("model \"%s\" frame #%i tag #%i \"%s\"\n", loadmodel->name, i / loadmodel->num_tags, i % loadmodel->num_tags, loadmodel->data_tags[i].name);
 	}
 
