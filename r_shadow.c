@@ -2053,8 +2053,7 @@ void R_Shadow_RenderSurfacesLighting(int numsurfaces, msurface_t **surfacelist)
 
 void R_RTLight_Update(dlight_t *light, int isstatic)
 {
-	int j, k;
-	float scale;
+	double scale;
 	rtlight_t *rtlight = &light->rtlight;
 	R_RTLight_Uncompile(rtlight);
 	memset(rtlight, 0, sizeof(*rtlight));
@@ -2085,12 +2084,11 @@ void R_RTLight_Update(dlight_t *light, int isstatic)
 	rtlight->specularscale = light->specularscale;
 	rtlight->flags = light->flags;
 	Matrix4x4_Invert_Simple(&rtlight->matrix_worldtolight, &light->matrix);
-	// ConcatScale won't work here because this needs to scale rotate and
-	// translate, not just rotate
-	scale = 1.0f / rtlight->radius;
-	for (k = 0;k < 3;k++)
-		for (j = 0;j < 4;j++)
-			rtlight->matrix_worldtolight.m[k][j] *= scale;
+	// this has to scale both rotate and translate because this is an already
+	// inverted matrix (it transforms from world to light space, not the other
+	// way around)
+	scale = 1.0 / rtlight->radius;
+	Matrix4x4_Scale(&rtlight->matrix_worldtolight, scale, scale);
 }
 
 // compiles rtlight geometry

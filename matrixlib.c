@@ -430,6 +430,26 @@ void Matrix4x4_FromVectors(matrix4x4_t *out, const float vx[3], const float vy[3
 	out->m[3][3] = 1.0f;
 }
 
+void Matrix4x4_ToArrayDoubleGL(const matrix4x4_t *in, double out[16])
+{
+	out[ 0] = in->m[0][0];
+	out[ 1] = in->m[1][0];
+	out[ 2] = in->m[2][0];
+	out[ 3] = in->m[3][0];
+	out[ 4] = in->m[0][1];
+	out[ 5] = in->m[1][1];
+	out[ 6] = in->m[2][1];
+	out[ 7] = in->m[3][1];
+	out[ 8] = in->m[0][2];
+	out[ 9] = in->m[1][2];
+	out[10] = in->m[2][2];
+	out[11] = in->m[3][2];
+	out[12] = in->m[0][3];
+	out[13] = in->m[1][3];
+	out[14] = in->m[2][3];
+	out[15] = in->m[3][3];
+}
+
 void Matrix4x4_FromArrayDoubleGL (matrix4x4_t *out, const double in[16])
 {
 	out->m[0][0] = in[0];
@@ -448,6 +468,26 @@ void Matrix4x4_FromArrayDoubleGL (matrix4x4_t *out, const double in[16])
 	out->m[1][3] = in[13];
 	out->m[2][3] = in[14];
 	out->m[3][3] = in[15];
+}
+
+void Matrix4x4_ToArrayDoubleD3D(const matrix4x4_t *in, double out[16])
+{
+	out[ 0] = in->m[0][0];
+	out[ 1] = in->m[0][1];
+	out[ 2] = in->m[0][2];
+	out[ 3] = in->m[0][3];
+	out[ 4] = in->m[1][0];
+	out[ 5] = in->m[1][1];
+	out[ 6] = in->m[1][2];
+	out[ 7] = in->m[1][3];
+	out[ 8] = in->m[2][0];
+	out[ 9] = in->m[2][1];
+	out[10] = in->m[2][2];
+	out[11] = in->m[2][3];
+	out[12] = in->m[3][0];
+	out[13] = in->m[3][1];
+	out[14] = in->m[3][2];
+	out[15] = in->m[3][3];
 }
 
 void Matrix4x4_FromArrayDoubleD3D (matrix4x4_t *out, const double in[16])
@@ -682,3 +722,18 @@ void Matrix4x4_AdjustOrigin (matrix4x4_t *out, double x, double y, double z)
 	out->m[2][3] += z;
 }
 
+void Matrix4x4_Scale (matrix4x4_t *out, double rotatescale, double originscale)
+{
+	out->m[0][0] *= rotatescale;
+	out->m[0][1] *= rotatescale;
+	out->m[0][2] *= rotatescale;
+	out->m[0][3] *= originscale;
+	out->m[1][0] *= rotatescale;
+	out->m[1][1] *= rotatescale;
+	out->m[1][2] *= rotatescale;
+	out->m[1][3] *= originscale;
+	out->m[2][0] *= rotatescale;
+	out->m[2][1] *= rotatescale;
+	out->m[2][2] *= rotatescale;
+	out->m[2][3] *= originscale;
+}

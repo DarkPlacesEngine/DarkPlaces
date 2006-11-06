@@ -6,12 +6,12 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 {
 	int i;
 	model_t *model = ent->model;
-	vec3_t left, up, org, color, diffusecolor, diffusenormal;
+	vec3_t left, up, org, color, diffusecolor, diffusenormal, mforward, mleft, mup;
 	mspriteframe_t *frame;
 	float scale;
 
 	// nudge it toward the view to make sure it isn't in a wall
-	Matrix4x4_OriginFromMatrix(&ent->matrix, org);
+	Matrix4x4_ToVectors(&ent->matrix, mforward, mleft, mup, org);
 	VectorSubtract(org, r_view.forward, org);
 	switch(model->sprite.sprnum_type)
 	{
@@ -43,33 +43,25 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 	case SPR_VP_PARALLEL:
 		// normal sprite
 		// faces view plane
-		left[0] = r_view.left[0] * ent->scale;
-		left[1] = r_view.left[1] * ent->scale;
-		left[2] = r_view.left[2] * ent->scale;
-		up[0] = r_view.up[0] * ent->scale;
-		up[1] = r_view.up[1] * ent->scale;
-		up[2] = r_view.up[2] * ent->scale;
+		VectorScale(r_view.left, ent->scale, left);
+		VectorScale(r_view.up, ent->scale, up);
 		break;
 	case SPR_ORIENTED:
 		// bullet marks on walls
 		// ignores viewer entirely
-		left[0] = ent->matrix.m[0][1];
-		left[1] = ent->matrix.m[1][1];
-		left[2] = ent->matrix.m[2][1];
-		up[0] = ent->matrix.m[0][2];
-		up[1] = ent->matrix.m[1][2];
-		up[2] = ent->matrix.m[2][2];
+		VectorCopy(mleft, left);
+		VectorCopy(mup, up);
 		break;
 	case SPR_VP_PARALLEL_ORIENTED:
 		// I have no idea what people would use this for...
 		// oriented relative to view space
 		// FIXME: test this and make sure it mimicks software
-		left[0] = ent->matrix.m[0][1] * r_view.forward[0] + ent->matrix.m[1][1] * r_view.left[0] + ent->matrix.m[2][1] * r_view.up[0];
-		left[1] = ent->matrix.m[0][1] * r_view.forward[1] + ent->matrix.m[1][1] * r_view.left[1] + ent->matrix.m[2][1] * r_view.up[1];
-		left[2] = ent->matrix.m[0][1] * r_view.forward[2] + ent->matrix.m[1][1] * r_view.left[2] + ent->matrix.m[2][1] * r_view.up[2];
-		up[0] = ent->matrix.m[0][2] * r_view.forward[0] + ent->matrix.m[1][2] * r_view.left[0] + ent->matrix.m[2][2] * r_view.up[0];
-		up[1] = ent->matrix.m[0][2] * r_view.forward[1] + ent->matrix.m[1][2] * r_view.left[1] + ent->matrix.m[2][2] * r_view.up[1];
-		up[2] = ent->matrix.m[0][2] * r_view.forward[2] + ent->matrix.m[1][2] * r_view.left[2] + ent->matrix.m[2][2] * r_view.up[2];
+		left[0] = mleft[0] * r_view.forward[0] + mleft[1] * r_view.left[0] + mleft[2] * r_view.up[0];
+		left[1] = mleft[0] * r_view.forward[1] + mleft[1] * r_view.left[1] + mleft[2] * r_view.up[1];
+		left[2] = mleft[0] * r_view.forward[2] + mleft[1] * r_view.left[2] + mleft[2] * r_view.up[2];
+		up[0] = mup[0] * r_view.forward[0] + mup[1] * r_view.left[0] + mup[2] * r_view.up[0];
+		up[1] = mup[0] * r_view.forward[1] + mup[1] * r_view.left[1] + mup[2] * r_view.up[1];
+		up[2] = mup[0] * r_view.forward[2] + mup[1] * r_view.left[2] + mup[2] * r_view.up[2];
 		break;
 	}
 

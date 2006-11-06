@@ -64,9 +64,13 @@ void Matrix4x4_ToVectors(const matrix4x4_t *in, float vx[3], float vy[3], float 
 // creates a matrix4x4 from a set of 3D vectors for axial directions, and translate
 void Matrix4x4_FromVectors(matrix4x4_t *out, const float vx[3], const float vy[3], const float vz[3], const float t[3]);
 
-// creates a matrix4x4 from a float[16] array in the OpenGL orientation
+// converts a matrix4x4 to a double[16] array in the OpenGL orientation
+void Matrix4x4_ToArrayDoubleGL(const matrix4x4_t *in, double out[16]);
+// creates a matrix4x4 from a double[16] array in the OpenGL orientation
 void Matrix4x4_FromArrayDoubleGL(matrix4x4_t *out, const double in[16]);
-// creates a matrix4x4 from a float[16] array in the Direct3D orientation
+// converts a matrix4x4 to a double[16] array in the Direct3D orientation
+void Matrix4x4_ToArrayDoubleD3D(const matrix4x4_t *in, double out[16]);
+// creates a matrix4x4 from a double[16] array in the Direct3D orientation
 void Matrix4x4_FromArrayDoubleD3D(matrix4x4_t *out, const double in[16]);
 
 // converts a matrix4x4 to a float[12] array in the OpenGL orientation
@@ -118,5 +122,7 @@ double Matrix4x4_ScaleFromMatrix (const matrix4x4_t *in);
 void Matrix4x4_SetOrigin (matrix4x4_t *out, double x, double y, double z);
 // moves origin vector (translate) in matrix by a simple translate
 void Matrix4x4_AdjustOrigin (matrix4x4_t *out, double x, double y, double z);
+// scales vectors of a matrix in place and allows you to scale origin as well
+void Matrix4x4_Scale (matrix4x4_t *out, double rotatescale, double originscale);
 
 #endif
