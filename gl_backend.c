@@ -73,7 +73,6 @@ void SCR_ScreenShot_f (void);
 static matrix4x4_t backend_viewmatrix;
 static matrix4x4_t backend_modelmatrix;
 static matrix4x4_t backend_modelviewmatrix;
-static matrix4x4_t backend_glmodelviewmatrix;
 static matrix4x4_t backend_projectmatrix;
 
 static unsigned int backendunits, backendimageunits, backendarrayunits, backendactive;
@@ -1034,11 +1033,12 @@ void R_Mesh_Matrix(const matrix4x4_t *matrix)
 {
 	if (memcmp(matrix, &backend_modelmatrix, sizeof(matrix4x4_t)))
 	{
+		double glmatrix[16];
 		backend_modelmatrix = *matrix;
 		Matrix4x4_Concat(&backend_modelviewmatrix, &backend_viewmatrix, matrix);
-		Matrix4x4_Transpose(&backend_glmodelviewmatrix, &backend_modelviewmatrix);
+		Matrix4x4_ToArrayDoubleGL(&backend_modelviewmatrix, glmatrix);
 		CHECKGLERROR
-		qglLoadMatrixf(&backend_glmodelviewmatrix.m[0][0]);CHECKGLERROR
+		qglLoadMatrixd(glmatrix);CHECKGLERROR
 	}
 }
 
@@ -1511,14 +1511,14 @@ void R_Mesh_TexMatrix(unsigned int unitnum, const matrix4x4_t *matrix)
 		// texmatrix specified, check if it is different
 		if (!unit->texmatrixenabled || memcmp(&unit->matrix, matrix, sizeof(matrix4x4_t)))
 		{
-			matrix4x4_t tempmatrix;
+			double glmatrix[16];
 			unit->texmatrixenabled = true;
 			unit->matrix = *matrix;
 			CHECKGLERROR
-			Matrix4x4_Transpose(&tempmatrix, &unit->matrix);
+			Matrix4x4_ToArrayDoubleGL(&unit->matrix, glmatrix);
 			qglMatrixMode(GL_TEXTURE);CHECKGLERROR
 			GL_ActiveTexture(unitnum);
-			qglLoadMatrixf(&tempmatrix.m[0][0]);CHECKGLERROR
+			qglLoadMatrixd(glmatrix);CHECKGLERROR
 			qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
 		}
 	}
