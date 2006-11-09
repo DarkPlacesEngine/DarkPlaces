@@ -787,10 +787,15 @@ netconn_t *NetConn_Open(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress)
 	return conn;
 }
 
+void NetConn_ClearConnectFlood(lhnetaddress_t *peeraddress);
 void NetConn_Close(netconn_t *conn)
 {
 	netconn_t *c;
 	// remove connection from list
+
+	// allow the client to reconnect immediately
+	NetConn_ClearConnectFlood(&(conn->peeraddress));
+
 	if (conn == netconn_list)
 		netconn_list = conn->next;
 	else
@@ -1753,6 +1758,7 @@ static qboolean NetConn_PreventConnectFlood(lhnetaddress_t *peeraddress)
 				// renew the ban on this address so it does not expire
 				// until the flood has subsided
 				sv.connectfloodaddresses[floodslotnum].lasttime = realtime;
+				//Con_Printf("Flood detected!\n");
 				return true;
 			}
 			// the flood appears to have subsided, so allow this
@@ -1763,7 +1769,28 @@ static qboolean NetConn_PreventConnectFlood(lhnetaddress_t *peeraddress)
 	// begin a new timeout on this address
 	sv.connectfloodaddresses[bestfloodslotnum].address = noportpeeraddress;
 	sv.connectfloodaddresses[bestfloodslotnum].lasttime = realtime;
+	//Con_Printf("Flood detection initiated!\n");
 	return false;
+}
+
+void NetConn_ClearConnectFlood(lhnetaddress_t *peeraddress)
+{
+	int floodslotnum;
+	lhnetaddress_t noportpeeraddress;
+	// see if this is a connect flood
+	noportpeeraddress = *peeraddress;
+	LHNETADDRESS_SetPort(&noportpeeraddress, 0);
+	for (floodslotnum = 0;floodslotnum < MAX_CONNECTFLOODADDRESSES;floodslotnum++)
+	{
+		if (sv.connectfloodaddresses[floodslotnum].lasttime && LHNETADDRESS_Compare(&noportpeeraddress, &sv.connectfloodaddresses[floodslotnum].address) == 0)
+		{
+			// this address matches an ongoing flood address
+			// remove the ban
+			sv.connectfloodaddresses[floodslotnum].address.addresstype = LHNETADDRESSTYPE_NONE;
+			sv.connectfloodaddresses[floodslotnum].lasttime = 0;
+			//Con_Printf("Flood cleared!\n");
+		}
+	}
 }
 
 extern void SV_SendServerinfo (client_t *client);
