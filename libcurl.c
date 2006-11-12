@@ -970,7 +970,10 @@ void Curl_Curl_f(void)
 			else
 			{
 				downloadinfo *di = Curl_Find(url);
-				Curl_EndDownload(di, CURL_DOWNLOAD_ABORTED, CURLE_OK);
+				if(di)
+					Curl_EndDownload(di, CURL_DOWNLOAD_ABORTED, CURLE_OK);
+				else
+					Con_Print("download not found\n");
 			}
 			return;
 		}
