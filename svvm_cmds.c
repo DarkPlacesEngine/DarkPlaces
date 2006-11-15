@@ -2384,7 +2384,7 @@ void SV_GetEntityMatrix (prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatri
 	if (viewmatrix)
 		Matrix4x4_CreateFromQuakeEntity(out, ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2] + ent->fields.server->view_ofs[2], ent->fields.server->v_angle[0], ent->fields.server->v_angle[1], ent->fields.server->v_angle[2], scale);
 	else
-		Matrix4x4_CreateFromQuakeEntity(out, ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2], -ent->fields.server->angles[0], ent->fields.server->angles[1], ent->fields.server->angles[2], scale * 0.333);
+		Matrix4x4_CreateFromQuakeEntity(out, ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2], -ent->fields.server->angles[0], ent->fields.server->angles[1], ent->fields.server->angles[2], scale * cl_viewmodel_scale.value);
 }
 
 int SV_GetEntityLocalTagMatrix(prvm_edict_t *ent, int tagindex, matrix4x4_t *out)
