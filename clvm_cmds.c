@@ -773,7 +773,7 @@ static void CSQC_R_RecalcView (void)
 	viewmodelmatrix = identitymatrix;
 	r_view.matrix = identitymatrix;
 	Matrix4x4_CreateFromQuakeEntity(&r_view.matrix, csqc_origin[0], csqc_origin[1], csqc_origin[2], csqc_angles[0], csqc_angles[1], csqc_angles[2], 1);
-	Matrix4x4_CreateFromQuakeEntity(&viewmodelmatrix, csqc_origin[0], csqc_origin[1], csqc_origin[2], csqc_angles[0], csqc_angles[1], csqc_angles[2], 0.3);
+	Matrix4x4_CreateFromQuakeEntity(&viewmodelmatrix, csqc_origin[0], csqc_origin[1], csqc_origin[2], csqc_angles[0], csqc_angles[1], csqc_angles[2], cl_viewmodel_scale.value);
 }
 
 //#300 void() clearscene (EXT_CSQC)

@@ -254,6 +254,7 @@ extern int current_skill;
 // chase
 //
 extern cvar_t chase_active;
+extern cvar_t cl_viewmodel_scale;
 
 void Chase_Init (void);
 void Chase_Reset (void);

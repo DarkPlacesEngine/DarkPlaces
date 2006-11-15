@@ -1748,7 +1748,7 @@ void CL_UpdateScreen(void)
 		matrix4x4_t originalmatrix = r_view.matrix;
 		matrix4x4_t offsetmatrix;
 		Matrix4x4_CreateTranslate(&offsetmatrix, 0, r_stereo_separation.value * -0.5f, 0);
-		Matrix4x4_Concat(&r_view.matrix, &offsetmatrix, &originalmatrix);
+		Matrix4x4_Concat(&r_view.matrix, &originalmatrix, &offsetmatrix);
 
 		if (r_stereo_sidebyside.integer)
 			r_stereo_side = 0;
@@ -1766,7 +1766,7 @@ void CL_UpdateScreen(void)
 		SCR_DrawScreen();
 
 		Matrix4x4_CreateTranslate(&offsetmatrix, 0, r_stereo_separation.value * 0.5f, 0);
-		Matrix4x4_Concat(&r_view.matrix, &offsetmatrix, &originalmatrix);
+		Matrix4x4_Concat(&r_view.matrix, &originalmatrix, &offsetmatrix);
 
 		if (r_stereo_sidebyside.integer)
 			r_stereo_side = 1;
