@@ -132,7 +132,7 @@ static void CSQC_SetGlobals (void)
 		prog->globals.client->input_buttons = csqc_buttons;
 		VectorSet(prog->globals.client->input_movevalues, cl.cmd.forwardmove, cl.cmd.sidemove, cl.cmd.upmove);
 		//VectorCopy(cl.movement_origin, csqc_origin);
-		VectorCopy(cl.entities[cl.viewentity].render.origin, csqc_origin);
+		Matrix4x4_OriginFromMatrix(&cl.entities[cl.viewentity].render.matrix, csqc_origin);
 		VectorCopy(csqc_origin, prog->globals.client->pmove_org);
 		prog->globals.client->maxclients = cl.maxclients;
 		//VectorCopy(cl.movement_velocity, prog->globals.client->pmove_vel);
@@ -234,17 +234,15 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 		Matrix4x4_CreateFromQuakeEntity(&matrix2, ed->fields.client->origin[0], ed->fields.client->origin[1], ed->fields.client->origin[2], angles[0], angles[1], angles[2], e->render.scale);
 	}
 
-	// concat the matrices to make the entity relative to its tag
-	Matrix4x4_Concat(&e->render.matrix, &tagmatrix, &matrix2);
-	// make the other useful stuff
-	Matrix4x4_Invert_Simple(&e->render.inversematrix, &e->render.matrix);
-	CL_BoundingBoxForEntity(&e->render);
-
 	// FIXME: csqc has frame1/frame2/frame1time/frame2time/lerpfrac but this implementation's cl_entvars_t lacks those fields
 	e->render.frame1 = e->render.frame = ed->fields.client->frame;
 	e->render.frame1time = e->render.frame2time = 0;
 	e->render.framelerp = 0;
-	R_LerpAnimation(&e->render);
+
+	// concat the matrices to make the entity relative to its tag
+	Matrix4x4_Concat(&e->render.matrix, &tagmatrix, &matrix2);
+	// make the other useful stuff
+	CL_UpdateRenderEntity(&e->render);
 
 	i = 0;
 	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_renderflags)) && val->_float)
@@ -357,7 +355,6 @@ void CL_VM_Parse_StuffCmd (const char *msg)
 	if(msg[2] == 'q')
 	if(msg[3] == 'c')
 	{
-		Cvar_SetQuick(&csqc_progcrc, "0");
 		csqc_progcrc.flags = 0;
 		Cmd_ExecuteString (msg, src_command);
 		csqc_progcrc.flags = CVAR_READONLY;
@@ -484,13 +481,35 @@ void Cmd_ClearCsqcFuncs (void);
 
 void CL_VM_Init (void)
 {
+	unsigned char *csprogsdata;
+	fs_offset_t csprogsdatasize;
+	unsigned int csprogsdatacrc;
 	entity_t *ent;
 
 	csqc_loaded = false;
 	memset(cl.csqc_model_precache, 0, sizeof(cl.csqc_model_precache));
 	memset(&cl.csqc_vidvars, true, sizeof(csqc_vidvars_t));
 
-	if(!FS_FileExists(csqc_progname.string))
+	// if the server is not requesting a csprogs, then we're done here
+	if (!csqc_progcrc.integer)
+		return;
+
+	// see if there is a csprogs.dat installed, and if so, set the csqc_progcrc accordingly, this will be sent to connecting clients to tell them to only load a matching csprogs.dat file
+	csprogsdatacrc = 0;
+	csprogsdata = FS_LoadFile(csqc_progname.string, tempmempool, true, &csprogsdatasize);
+	if (csprogsdata)
+	{
+		csprogsdatacrc = CRC_Block(csprogsdata, csprogsdatasize);
+		Mem_Free(csprogsdata);
+		if(csprogsdatacrc != (unsigned short)csqc_progcrc.integer && !sv.active && !cls.demoplayback)
+		{
+			Con_Printf("^1Your %s is not the same version as the server (CRC is %i but should be %i)\n", csqc_progname.string, prog->filecrc, csqc_progcrc.integer);
+			PRVM_ResetProg();
+			CL_Disconnect();
+			return;
+		}
+	}
+	else
 	{
 		if(!sv.active && csqc_progcrc.integer)
 		{
@@ -498,19 +517,6 @@ void CL_VM_Init (void)
 			CL_Disconnect();
 		}
 		return;
-	}
-	else
-	{
-		if (developer.integer < 100)
-		{
-			Con_DPrintf("CL_VM_Init: CSQC is broken, and is not being loaded because developer is less than 100.\n");
-			return;
-		}
-		if(!sv.active && !csqc_progcrc.integer)	//[515]: because cheaters may use csqc while server didn't allowed it !
-		{
-			Con_Printf("CL_VM_Init: server didn't sent CSQC crc, so CSQC is disabled\n");
-			return;
-		}
 	}
 
 	PRVM_Begin;
@@ -543,10 +549,7 @@ void CL_VM_Init (void)
 	}
 
 	if(prog->loaded)
-	{
-		Cvar_SetValueQuick(&csqc_progcrc, prog->filecrc);
 		Con_Printf("CSQC ^5loaded (crc=%i)\n", csqc_progcrc.integer);
-	}
 	else
 	{
 		CL_VM_Error("CSQC ^2failed to load\n");
@@ -582,12 +585,10 @@ void CL_VM_Init (void)
 	// entire entity array was cleared, so just fill in a few fields
 	ent->state_current.active = true;
 	ent->render.model = cl.worldmodel = cl.model_precache[1];
-	ent->render.scale = 1; // some of the renderer still relies on scale
 	ent->render.alpha = 1;
 	ent->render.flags = RENDER_SHADOW | RENDER_LIGHT;
 	Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, 0, 0, 0, 0, 0, 0, 1);
-	Matrix4x4_Invert_Simple(&ent->render.inversematrix, &ent->render.matrix);
-	CL_BoundingBoxForEntity(&ent->render);
+	CL_UpdateRenderEntity(&ent->render);
 }
 
 void CL_VM_ShutDown (void)

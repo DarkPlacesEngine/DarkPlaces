@@ -2378,7 +2378,9 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 			 && (r_refdef.worldmodel == NULL || r_refdef.worldmodel->brush.BoxTouchingLeafPVS == NULL || r_refdef.worldmodel->brush.BoxTouchingLeafPVS(r_refdef.worldmodel, leafpvs, ent->mins, ent->maxs)))
 			{
 				// about the VectorDistance2 - light emitting entities should not cast their own shadow
-				if ((ent->flags & RENDER_SHADOW) && model->DrawShadowVolume && VectorDistance2(ent->origin, rtlight->shadoworigin) > 0.1)
+				vec3_t org;
+				Matrix4x4_OriginFromMatrix(&ent->matrix, org);
+				if ((ent->flags & RENDER_SHADOW) && model->DrawShadowVolume && VectorDistance2(org, rtlight->shadoworigin) > 0.1)
 					shadowentities[numshadowentities++] = ent;
 				if (r_viewcache.entityvisible[i] && (ent->flags & RENDER_LIGHT) && model->DrawLight)
 					lightentities[numlightentities++] = ent;

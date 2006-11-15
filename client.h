@@ -207,9 +207,9 @@ frameblend_t;
 typedef struct entity_render_s
 {
 	// location
-	vec3_t origin;
+	//vec3_t origin;
 	// orientation
-	vec3_t angles;
+	//vec3_t angles;
 	// transform matrix for model to world
 	matrix4x4_t matrix;
 	// transform matrix for world to model
@@ -603,7 +603,7 @@ typedef struct particle_s
 	float		airfriction; // how much air friction affects this object (objects with a low mass/size ratio tend to get more air friction)
 	float		liquidfriction; // how much liquid friction affects this object (objects with a low mass/size ratio tend to get more liquid friction)
 	unsigned char		color[4];
-	unsigned short owner; // decal stuck to this entity
+	unsigned int		owner; // decal stuck to this entity
 	model_t		*ownermodel; // model the decal is stuck to (used to make sure the entity is still alive)
 	vec3_t		relativeorigin; // decal at this location in entity's coordinate space
 	vec3_t		relativedirection; // decal oriented this way relative to entity's coordinate space
@@ -992,7 +992,7 @@ void CL_EstablishConnection(const char *host);
 void CL_Disconnect (void);
 void CL_Disconnect_f (void);
 
-void CL_BoundingBoxForEntity(entity_render_t *ent);
+void CL_UpdateRenderEntity(entity_render_t *ent);
 
 //
 // cl_input

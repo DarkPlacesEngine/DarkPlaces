@@ -188,13 +188,11 @@ void CL_ClearState(void)
 	// entire entity array was cleared, so just fill in a few fields
 	ent->state_current.active = true;
 	ent->render.model = cl.worldmodel = NULL; // no world model yet
-	ent->render.scale = 1; // some of the renderer still relies on scale
 	ent->render.alpha = 1;
 	ent->render.colormap = -1; // no special coloring
 	ent->render.flags = RENDER_SHADOW | RENDER_LIGHT;
 	Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, 0, 0, 0, 0, 0, 0, 1);
-	Matrix4x4_Invert_Simple(&ent->render.inversematrix, &ent->render.matrix);
-	CL_BoundingBoxForEntity(&ent->render);
+	CL_UpdateRenderEntity(&ent->render);
 
 	// noclip is turned off at start
 	noclip_anglehack = false;
@@ -441,7 +439,6 @@ static void CL_PrintEntities_f(void)
 	entity_t *ent;
 	int i, j;
 	char name[32];
-	vec3_t org;
 
 	for (i = 0, ent = cl.entities;i < cl.num_entities;i++, ent++)
 	{
@@ -457,18 +454,25 @@ static void CL_PrintEntities_f(void)
 		strlcpy(name, modelname, 25);
 		for (j = (int)strlen(name);j < 25;j++)
 			name[j] = ' ';
-		Matrix4x4_OriginFromMatrix(&ent->render.matrix, org);
-		Con_Printf("%3i: %s:%4i (%5i %5i %5i) [%3i %3i %3i] %4.2f %5.3f\n", i, name, ent->render.frame, (int) org[0], (int) org[1], (int) org[2], (int) ent->render.angles[0] % 360, (int) ent->render.angles[1] % 360, (int) ent->render.angles[2] % 360, ent->render.scale, ent->render.alpha);
+		Con_Printf("%3i: %s:%4i (%5i %5i %5i) [%3i %3i %3i] %4.2f %5.3f\n", i, name, ent->render.frame, (int) ent->state_current.origin[0], (int) ent->state_current.origin[1], (int) ent->state_current.origin[2], (int) ent->state_current.angles[0] % 360, (int) ent->state_current.angles[1] % 360, (int) ent->state_current.angles[2] % 360, ent->render.scale, ent->render.alpha);
 	}
 }
 
 //static const vec3_t nomodelmins = {-16, -16, -16};
 //static const vec3_t nomodelmaxs = {16, 16, 16};
-void CL_BoundingBoxForEntity(entity_render_t *ent)
+void CL_UpdateRenderEntity(entity_render_t *ent)
 {
 	vec3_t org;
+	vec_t scale;
 	model_t *model = ent->model;
+	// update the inverse matrix for the renderer
+	Matrix4x4_Invert_Simple(&ent->inversematrix, &ent->matrix);
+	// update the animation blend state
+	R_LerpAnimation(ent);
+	// we need the matrix origin to center the box
 	Matrix4x4_OriginFromMatrix(&ent->matrix, org);
+	// update entity->render.scale because the renderer needs it
+	ent->scale = scale = Matrix4x4_ScaleFromMatrix(&ent->matrix);
 	if (model)
 	{
 		// NOTE: this directly extracts vector components from the matrix, which relies on the matrix orientation!
@@ -479,12 +483,8 @@ void CL_BoundingBoxForEntity(entity_render_t *ent)
 #endif
 		{
 			// pitch or roll
-			ent->mins[0] = org[0] + model->rotatedmins[0];
-			ent->mins[1] = org[1] + model->rotatedmins[1];
-			ent->mins[2] = org[2] + model->rotatedmins[2];
-			ent->maxs[0] = org[0] + model->rotatedmaxs[0];
-			ent->maxs[1] = org[1] + model->rotatedmaxs[1];
-			ent->maxs[2] = org[2] + model->rotatedmaxs[2];
+			VectorMA(org, scale, model->rotatedmins, ent->mins);
+			VectorMA(org, scale, model->rotatedmaxs, ent->maxs);
 		}
 #ifdef MATRIX4x4_OPENGLORIENTATION
 		else if (ent->matrix.m[1][0] != 0 || ent->matrix.m[0][1] != 0)
@@ -493,21 +493,13 @@ void CL_BoundingBoxForEntity(entity_render_t *ent)
 #endif
 		{
 			// yaw
-			ent->mins[0] = org[0] + model->yawmins[0];
-			ent->mins[1] = org[1] + model->yawmins[1];
-			ent->mins[2] = org[2] + model->yawmins[2];
-			ent->maxs[0] = org[0] + model->yawmaxs[0];
-			ent->maxs[1] = org[1] + model->yawmaxs[1];
-			ent->maxs[2] = org[2] + model->yawmaxs[2];
+			VectorMA(org, scale, model->yawmins, ent->mins);
+			VectorMA(org, scale, model->yawmaxs, ent->maxs);
 		}
 		else
 		{
-			ent->mins[0] = org[0] + model->normalmins[0];
-			ent->mins[1] = org[1] + model->normalmins[1];
-			ent->mins[2] = org[2] + model->normalmins[2];
-			ent->maxs[0] = org[0] + model->normalmaxs[0];
-			ent->maxs[1] = org[1] + model->normalmaxs[1];
-			ent->maxs[2] = org[2] + model->normalmaxs[2];
+			VectorMA(org, scale, model->normalmins, ent->mins);
+			VectorMA(org, scale, model->normalmaxs, ent->maxs);
 		}
 	}
 	else
@@ -569,7 +561,6 @@ entity_t *CL_NewTempEntity(void)
 	r_refdef.entities[r_refdef.numentities++] = &ent->render;
 
 	ent->render.colormap = -1; // no special coloring
-	ent->render.scale = 1;
 	ent->render.alpha = 1;
 	VectorSet(ent->render.colormod, 1, 1, 1);
 	return ent;
@@ -776,9 +767,7 @@ void CL_AddQWCTFFlagModel(entity_t *player, int skin)
 	// attach the flag to the player matrix
 	Matrix4x4_CreateFromQuakeEntity(&flagmatrix, -f, -22, 0, 0, 0, -45, 1);
 	Matrix4x4_Concat(&flag->render.matrix, &player->render.matrix, &flagmatrix);
-	Matrix4x4_Invert_Simple(&flag->render.inversematrix, &flag->render.matrix);
-	R_LerpAnimation(&flag->render);
-	CL_BoundingBoxForEntity(&flag->render);
+	CL_UpdateRenderEntity(&flag->render);
 }
 
 #define MAXVIEWMODELS 32
@@ -995,7 +984,6 @@ void CL_UpdateNetworkEntity(entity_t *e)
 			e->render.frame2time = cl.time;
 			e->render.framelerp = 0;
 		}
-		R_LerpAnimation(&e->render);
 
 		// set up the render matrix
 		// FIXME: e->render.scale should go away
@@ -1003,8 +991,7 @@ void CL_UpdateNetworkEntity(entity_t *e)
 		// concat the matrices to make the entity relative to its tag
 		Matrix4x4_Concat(&e->render.matrix, matrix, &matrix2);
 		// make the other useful stuff
-		Matrix4x4_Invert_Simple(&e->render.inversematrix, &e->render.matrix);
-		CL_BoundingBoxForEntity(&e->render);
+		CL_UpdateRenderEntity(&e->render);
 
 		// handle effects now that we know where this entity is in the world...
 		if (e->render.model && e->render.model->soundfromcenter)
@@ -1287,9 +1274,7 @@ void CL_RelinkWorld(void)
 	cl.brushmodel_entities[cl.num_brushmodel_entities++] = 0;
 	// FIXME: this should be done at load
 	ent->render.matrix = identitymatrix;
-	ent->render.inversematrix = identitymatrix;
-	R_LerpAnimation(&ent->render);
-	CL_BoundingBoxForEntity(&ent->render);
+	CL_UpdateRenderEntity(&ent->render);
 	ent->render.flags = RENDER_SHADOW;
 	if (!r_fullbright.integer)
 		ent->render.flags |= RENDER_LIGHT;
@@ -1396,9 +1381,7 @@ static void CL_RelinkEffects(void)
 				VectorSet(ent->render.colormod, 1, 1, 1);
 
 				Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, e->origin[0], e->origin[1], e->origin[2], 0, 0, 0, 1);
-				Matrix4x4_Invert_Simple(&ent->render.inversematrix, &ent->render.matrix);
-				R_LerpAnimation(&ent->render);
-				CL_BoundingBoxForEntity(&ent->render);
+				CL_UpdateRenderEntity(&ent->render);
 			}
 		}
 	}
@@ -1510,9 +1493,7 @@ void CL_RelinkBeams(void)
 			//ent->render.angles[1] = yaw;
 			//ent->render.angles[2] = rand()%360;
 			Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, org[0], org[1], org[2], -pitch, yaw, lhrandom(0, 360), 1);
-			Matrix4x4_Invert_Simple(&ent->render.inversematrix, &ent->render.matrix);
-			R_LerpAnimation(&ent->render);
-			CL_BoundingBoxForEntity(&ent->render);
+			CL_UpdateRenderEntity(&ent->render);
 			VectorMA(org, 30, dist, org);
 			d -= 30;
 		}
@@ -1544,9 +1525,7 @@ static void CL_RelinkQWNails(void)
 		VectorSet(ent->render.colormod, 1, 1, 1);
 
 		Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, v[0], v[1], v[2], v[3], v[4], v[5], 1);
-		Matrix4x4_Invert_Simple(&ent->render.inversematrix, &ent->render.matrix);
-		R_LerpAnimation(&ent->render);
-		CL_BoundingBoxForEntity(&ent->render);
+		CL_UpdateRenderEntity(&ent->render);
 	}
 }
 
