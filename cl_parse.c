@@ -492,7 +492,7 @@ static void QW_CL_RequestNextDownload(void)
 		// now that we have a world model, set up the world entity, renderer
 		// modules and csqc
 		cl.entities[0].render.model = cl.worldmodel = cl.model_precache[1];
-		CL_BoundingBoxForEntity(&cl.entities[0].render);
+		CL_UpdateRenderEntity(&cl.entities[0].render);
 
 		R_Modules_NewMap();
 
@@ -1158,7 +1158,7 @@ void CL_ParseServerInfo (void)
 
 		// we now have the worldmodel so we can set up the game world
 		cl.entities[0].render.model = cl.worldmodel = cl.model_precache[1];
-		CL_BoundingBoxForEntity(&cl.entities[0].render);
+		CL_UpdateRenderEntity(&cl.entities[0].render);
 		R_Modules_NewMap();
 	}
 
@@ -1441,14 +1441,12 @@ void CL_ParseStatic (int large)
 	ent->render.skinnum = ent->state_baseline.skin;
 	ent->render.effects = ent->state_baseline.effects;
 	ent->render.alpha = 1;
-	//ent->render.scale = 1;
 
 	//VectorCopy (ent->state_baseline.origin, ent->render.origin);
 	//VectorCopy (ent->state_baseline.angles, ent->render.angles);
 
 	Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, ent->state_baseline.origin[0], ent->state_baseline.origin[1], ent->state_baseline.origin[2], ent->state_baseline.angles[0], ent->state_baseline.angles[1], ent->state_baseline.angles[2], 1);
-	Matrix4x4_Invert_Simple(&ent->render.inversematrix, &ent->render.matrix);
-	CL_BoundingBoxForEntity(&ent->render);
+	CL_UpdateRenderEntity(&ent->render);
 
 	// This is definitely cheating...
 	if (ent->render.model == NULL)

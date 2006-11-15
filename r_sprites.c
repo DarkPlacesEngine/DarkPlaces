@@ -71,7 +71,9 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 		color[0] = color[1] = color[2] = 1;
 	else
 	{
-		R_CompleteLightPoint(color, diffusecolor, diffusenormal, ent->origin, true);
+		vec3_t org;
+		Matrix4x4_OriginFromMatrix(&ent->matrix, org);
+		R_CompleteLightPoint(color, diffusecolor, diffusenormal, org, true);
 		VectorMA(color, 0.5f, diffusecolor, color);
 	}
 	color[0] *= ent->colormod[0];
@@ -92,9 +94,11 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 
 void R_Model_Sprite_Draw(entity_render_t *ent)
 {
+	vec3_t org;
 	if (ent->frameblend[0].frame < 0)
 		return;
 
-	R_MeshQueue_AddTransparent(ent->effects & EF_NODEPTHTEST ? r_view.origin : ent->origin, R_Model_Sprite_Draw_TransparentCallback, ent, 0, r_shadow_rtlight);
+	Matrix4x4_OriginFromMatrix(&ent->matrix, org);
+	R_MeshQueue_AddTransparent(ent->effects & EF_NODEPTHTEST ? r_view.origin : org, R_Model_Sprite_Draw_TransparentCallback, ent, 0, r_shadow_rtlight);
 }
 

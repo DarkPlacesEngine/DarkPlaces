@@ -1138,7 +1138,11 @@ static void R_UpdateEntityLighting(entity_render_t *ent)
 	VectorClear(ent->modellight_diffuse);
 	VectorClear(ent->modellight_lightdir);
 	if ((ent->flags & RENDER_LIGHT) && r_refdef.worldmodel && r_refdef.worldmodel->brush.LightPoint)
-		r_refdef.worldmodel->brush.LightPoint(r_refdef.worldmodel, ent->origin, ent->modellight_ambient, ent->modellight_diffuse, tempdiffusenormal);
+	{
+		vec3_t org;
+		Matrix4x4_OriginFromMatrix(&ent->matrix, org);
+		r_refdef.worldmodel->brush.LightPoint(r_refdef.worldmodel, org, ent->modellight_ambient, ent->modellight_diffuse, tempdiffusenormal);
+	}
 	else // highly rare
 		VectorSet(ent->modellight_ambient, 1, 1, 1);
 	Matrix4x4_Transform3x3(&ent->inversematrix, tempdiffusenormal, ent->modellight_lightdir);
@@ -1780,10 +1784,6 @@ void R_UpdateVariables(void)
 	for (i = 0;i < r_refdef.numentities;i++)
 	{
 		entity_render_t *ent = r_refdef.entities[i];
-		// some of the renderer still relies on origin...
-		Matrix4x4_OriginFromMatrix(&ent->matrix, ent->origin);
-		// some of the renderer still relies on scale...
-		ent->scale = Matrix4x4_ScaleFromMatrix(&ent->matrix);
 		R_UpdateEntityLighting(ent);
 	}
 }
@@ -2069,9 +2069,11 @@ void R_DrawNoModel_TransparentCallback(const entity_render_t *ent, const rtlight
 	R_Mesh_VertexPointer(nomodelvertex3f);
 	if (r_refdef.fogenabled)
 	{
+		vec3_t org;
 		memcpy(color4f, nomodelcolor4f, sizeof(float[6*4]));
 		R_Mesh_ColorPointer(color4f);
-		f2 = VERTEXFOGTABLE(VectorDistance(ent->origin, r_view.origin));
+		Matrix4x4_OriginFromMatrix(&ent->matrix, org);
+		f2 = VERTEXFOGTABLE(VectorDistance(org, r_view.origin));
 		f1 = 1 - f2;
 		for (i = 0, c = color4f;i < 6;i++, c += 4)
 		{
@@ -2096,8 +2098,10 @@ void R_DrawNoModel_TransparentCallback(const entity_render_t *ent, const rtlight
 
 void R_DrawNoModel(entity_render_t *ent)
 {
+	vec3_t org;
+	Matrix4x4_OriginFromMatrix(&ent->matrix, org);
 	//if ((ent->effects & EF_ADDITIVE) || (ent->alpha < 1))
-		R_MeshQueue_AddTransparent(ent->effects & EF_NODEPTHTEST ? r_view.origin : ent->origin, R_DrawNoModel_TransparentCallback, ent, 0, r_shadow_rtlight);
+		R_MeshQueue_AddTransparent(ent->effects & EF_NODEPTHTEST ? r_view.origin : org, R_DrawNoModel_TransparentCallback, ent, 0, r_shadow_rtlight);
 	//else
 	//	R_DrawNoModelCallback(ent, 0);
 }
