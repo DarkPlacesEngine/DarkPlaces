@@ -22,6 +22,9 @@
 		Boston, MA  02111-1307, USA
 */
 
+// on UNIX platforms we need to define this so that video saving does not cause a SIGFSZ (file size) signal when a video clip exceeds 2GB
+#define _FILE_OFFSET_BITS 64
+
 #include "quakedef.h"
 
 #include <limits.h>
