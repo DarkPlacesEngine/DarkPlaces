@@ -270,6 +270,11 @@ void VM_max (void);
 void VM_bound (void);
 void VM_pow (void);
 void VM_copyentity (void);
+void VM_asin (void);
+void VM_acos (void);
+void VM_atan (void);
+void VM_atan2 (void);
+void VM_tan (void);
 
 void VM_Files_Init(void);
 void VM_Files_CloseAll(void);

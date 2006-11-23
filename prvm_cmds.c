@@ -1279,6 +1279,67 @@ void VM_sqrt (void)
 }
 
 /*
+=========
+VM_asin
+
+float	asin(float)
+=========
+*/
+void VM_asin (void)
+{
+	VM_SAFEPARMCOUNT(1,VM_asin);
+	PRVM_G_FLOAT(OFS_RETURN) = asin(PRVM_G_FLOAT(OFS_PARM0));
+}
+
+/*
+=========
+VM_acos
+float	acos(float)
+=========
+*/
+void VM_acos (void)
+{
+	VM_SAFEPARMCOUNT(1,VM_acos);
+	PRVM_G_FLOAT(OFS_RETURN) = acos(PRVM_G_FLOAT(OFS_PARM0));
+}
+
+/*
+=========
+VM_atan
+float	atan(float)
+=========
+*/
+void VM_atan (void)
+{
+	VM_SAFEPARMCOUNT(1,VM_atan);
+	PRVM_G_FLOAT(OFS_RETURN) = atan(PRVM_G_FLOAT(OFS_PARM0));
+}
+
+/*
+=========
+VM_atan2
+float	atan2(float,float)
+=========
+*/
+void VM_atan2 (void)
+{
+	VM_SAFEPARMCOUNT(2,VM_atan2);
+	PRVM_G_FLOAT(OFS_RETURN) = atan2(PRVM_G_FLOAT(OFS_PARM0), PRVM_G_FLOAT(OFS_PARM1));
+}
+
+/*
+=========
+VM_tan
+float	tan(float)
+=========
+*/
+void VM_tan (void)
+{
+	VM_SAFEPARMCOUNT(1,VM_tan);
+	PRVM_G_FLOAT(OFS_RETURN) = tan(PRVM_G_FLOAT(OFS_PARM0));
+}
+
+/*
 =================
 VM_randomvec
 
