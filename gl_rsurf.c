@@ -338,7 +338,7 @@ static void R_DrawPortal_Callback(const entity_render_t *ent, const rtlight_t *r
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
-	qglDisable(GL_CULL_FACE);CHECKGLERROR
+	GL_CullFace(GL_NONE);
 	R_Mesh_Matrix(&identitymatrix);
 
 	numpoints = min(portal->numpoints, POLYGONELEMENTS_MAXPOINTS);
@@ -355,7 +355,6 @@ static void R_DrawPortal_Callback(const entity_render_t *ent, const rtlight_t *r
 	for (i = 0, v = vertex3f;i < numpoints;i++, v += 3)
 		VectorCopy(portal->points[i].position, v);
 	R_Mesh_Draw(0, numpoints, numpoints - 2, polygonelements);
-	qglEnable(GL_CULL_FACE);CHECKGLERROR
 }
 
 // LordHavoc: this is just a nice debugging tool, very slow
@@ -874,7 +873,6 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 			R_Shadow_RenderSurfacesLighting(batchnumsurfaces, batchsurfacelist);
 		batchnumsurfaces = 0;
 	}
-	qglEnable(GL_CULL_FACE);CHECKGLERROR
 }
 
 //Made by [515]

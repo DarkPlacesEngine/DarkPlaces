@@ -542,6 +542,7 @@ static void _DrawQ_Setup(void)
 	GL_SetupView_Mode_Ortho(0, 0, vid_conwidth.integer, vid_conheight.integer, -10, 100);
 	qglDepthFunc(GL_LEQUAL);CHECKGLERROR
 	qglDisable(GL_POLYGON_OFFSET_FILL);CHECKGLERROR
+	GL_CullFace(GL_FRONT); // quake is backwards, this culls back faces
 	R_Mesh_Matrix(&identitymatrix);
 
 	GL_DepthMask(true);

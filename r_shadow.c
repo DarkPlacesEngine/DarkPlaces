@@ -715,11 +715,11 @@ void R_Shadow_RenderVolume(int numvertices, int numtriangles, const float *verte
 	if (r_shadow_rendermode == R_SHADOW_RENDERMODE_STENCIL)
 	{
 		// decrement stencil if backface is behind depthbuffer
-		qglCullFace(GL_BACK);CHECKGLERROR // quake is backwards, this culls front faces
+		GL_CullFace(GL_BACK); // quake is backwards, this culls front faces
 		qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);CHECKGLERROR
 		R_Mesh_Draw(0, numvertices, numtriangles, element3i);
 		// increment stencil if frontface is behind depthbuffer
-		qglCullFace(GL_FRONT);CHECKGLERROR // quake is backwards, this culls back faces
+		GL_CullFace(GL_FRONT); // quake is backwards, this culls back faces
 		qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);CHECKGLERROR
 	}
 	R_Mesh_Draw(0, numvertices, numtriangles, element3i);
@@ -821,10 +821,7 @@ void R_Shadow_RenderMode_Begin(void)
 	R_Mesh_ResetTextureState();
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(false);
-	GL_DepthTest(true);
 	GL_Color(0, 0, 0, 1);
-	qglCullFace(GL_FRONT);CHECKGLERROR // quake is backwards, this culls back faces
-	qglEnable(GL_CULL_FACE);CHECKGLERROR
 	GL_Scissor(r_view.x, r_view.y, r_view.width, r_view.height);
 
 	r_shadow_rendermode = R_SHADOW_RENDERMODE_NONE;
@@ -870,16 +867,14 @@ void R_Shadow_RenderMode_StencilShadowVolumes(void)
 	GL_ColorMask(0, 0, 0, 0);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(false);
-	GL_DepthTest(true);
 	qglPolygonOffset(r_refdef.shadowpolygonfactor, r_refdef.shadowpolygonoffset);CHECKGLERROR
 	qglDepthFunc(GL_LESS);CHECKGLERROR
-	qglCullFace(GL_FRONT);CHECKGLERROR // quake is backwards, this culls back faces
 	qglEnable(GL_STENCIL_TEST);CHECKGLERROR
 	qglStencilFunc(GL_ALWAYS, 128, ~0);CHECKGLERROR
 	r_shadow_rendermode = r_shadow_shadowingrendermode;
 	if (r_shadow_rendermode == R_SHADOW_RENDERMODE_STENCILTWOSIDE)
 	{
-		qglDisable(GL_CULL_FACE);CHECKGLERROR
+		GL_CullFace(GL_NONE);
 		qglEnable(GL_STENCIL_TEST_TWO_SIDE_EXT);CHECKGLERROR
 		qglActiveStencilFaceEXT(GL_BACK);CHECKGLERROR // quake is backwards, this is front faces
 		qglStencilMask(~0);CHECKGLERROR
@@ -890,7 +885,7 @@ void R_Shadow_RenderMode_StencilShadowVolumes(void)
 	}
 	else
 	{
-		qglEnable(GL_CULL_FACE);CHECKGLERROR
+		GL_CullFace(GL_FRONT); // quake is backwards, this culls back faces
 		qglStencilMask(~0);CHECKGLERROR
 		// this is changed by every shadow render so its value here is unimportant
 		qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);CHECKGLERROR
@@ -905,7 +900,6 @@ void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent)
 	R_Shadow_RenderMode_Reset();
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 	GL_DepthMask(false);
-	GL_DepthTest(true);
 	qglPolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);CHECKGLERROR
 	//qglDisable(GL_POLYGON_OFFSET_FILL);CHECKGLERROR
 	GL_Color(1, 1, 1, 1);
@@ -918,8 +912,6 @@ void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent)
 	{
 		qglDepthFunc(GL_EQUAL);CHECKGLERROR
 	}
-	qglCullFace(GL_FRONT);CHECKGLERROR // quake is backwards, this culls back faces
-	qglEnable(GL_CULL_FACE);CHECKGLERROR
 	if (stenciltest)
 	{
 		qglEnable(GL_STENCIL_TEST);CHECKGLERROR
@@ -960,13 +952,10 @@ void R_Shadow_RenderMode_VisibleShadowVolumes(void)
 	R_Shadow_RenderMode_Reset();
 	GL_BlendFunc(GL_ONE, GL_ONE);
 	GL_DepthMask(false);
-	GL_DepthTest(!r_showdisabledepthtest.integer);
 	qglPolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);CHECKGLERROR
 	GL_Color(0.0, 0.0125 * r_view.colorscale, 0.1 * r_view.colorscale, 1);
 	GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 1);
 	qglDepthFunc(GL_GEQUAL);CHECKGLERROR
-	qglCullFace(GL_FRONT);CHECKGLERROR // this culls back
-	qglDisable(GL_CULL_FACE);CHECKGLERROR
 	qglDisable(GL_STENCIL_TEST);CHECKGLERROR
 	r_shadow_rendermode = R_SHADOW_RENDERMODE_VISIBLEVOLUMES;
 }
@@ -977,7 +966,6 @@ void R_Shadow_RenderMode_VisibleLighting(qboolean stenciltest, qboolean transpar
 	R_Shadow_RenderMode_Reset();
 	GL_BlendFunc(GL_ONE, GL_ONE);
 	GL_DepthMask(false);
-	GL_DepthTest(!r_showdisabledepthtest.integer);
 	qglPolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);CHECKGLERROR
 	GL_Color(0.1 * r_view.colorscale, 0.0125 * r_view.colorscale, 0, 1);
 	GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 1);
@@ -989,8 +977,6 @@ void R_Shadow_RenderMode_VisibleLighting(qboolean stenciltest, qboolean transpar
 	{
 		qglDepthFunc(GL_EQUAL);CHECKGLERROR
 	}
-	qglCullFace(GL_FRONT);CHECKGLERROR // this culls back
-	qglEnable(GL_CULL_FACE);CHECKGLERROR
 	if (stenciltest)
 	{
 		qglEnable(GL_STENCIL_TEST);CHECKGLERROR
@@ -1009,15 +995,12 @@ void R_Shadow_RenderMode_End(void)
 	R_Shadow_RenderMode_ActiveLight(NULL);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(true);
-	GL_DepthTest(true);
 	qglPolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);CHECKGLERROR
 	//qglDisable(GL_POLYGON_OFFSET_FILL);CHECKGLERROR
 	GL_Color(1, 1, 1, 1);
 	GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 1);
 	GL_Scissor(r_view.x, r_view.y, r_view.width, r_view.height);
 	qglDepthFunc(GL_LEQUAL);CHECKGLERROR
-	qglCullFace(GL_FRONT);CHECKGLERROR // quake is backwards, this culls back faces
-	qglEnable(GL_CULL_FACE);CHECKGLERROR
 	qglDisable(GL_STENCIL_TEST);CHECKGLERROR
 	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);CHECKGLERROR
 	if (gl_support_stenciltwoside)
@@ -1981,14 +1964,8 @@ void R_Shadow_RenderSurfacesLighting(int numsurfaces, msurface_t **surfacelist)
 	lightcolorbase[2] = r_shadow_rtlight->currentcolor[2] * rsurface_entity->colormod[2] * rsurface_texture->currentalpha;
 	if ((r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * VectorLength2(lightcolorbase) + (r_shadow_rtlight->specularscale * rsurface_texture->specularscale) * VectorLength2(lightcolorbase) < (1.0f / 1048576.0f))
 		return;
-	if ((rsurface_texture->textureflags & Q3TEXTUREFLAG_TWOSIDED) || (rsurface_entity->flags & RENDER_NOCULLFACE))
-	{
-		qglDisable(GL_CULL_FACE);CHECKGLERROR
-	}
-	else
-	{
-		qglEnable(GL_CULL_FACE);CHECKGLERROR
-	}
+	GL_DepthTest(!(rsurface_texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
+	GL_CullFace(((rsurface_texture->textureflags & Q3TEXTUREFLAG_TWOSIDED) || (rsurface_entity->flags & RENDER_NOCULLFACE)) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
 	if (rsurface_texture->colormapping)
 	{
 		qboolean dopants = rsurface_texture->skin.pants != NULL && VectorLength2(rsurface_entity->colormap_pantscolor) >= (1.0f / 1048576.0f);
@@ -2012,6 +1989,7 @@ void R_Shadow_RenderSurfacesLighting(int numsurfaces, msurface_t **surfacelist)
 		switch (r_shadow_rendermode)
 		{
 		case R_SHADOW_RENDERMODE_VISIBLELIGHTING:
+			GL_DepthTest(!(rsurface_texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST) && !r_showdisabledepthtest.integer);
 			R_Shadow_RenderSurfacesLighting_VisibleLighting(numsurfaces, surfacelist, lightcolorbase, lightcolorpants, lightcolorshirt, rsurface_texture->basetexture, rsurface_texture->skin.pants, rsurface_texture->skin.shirt, rsurface_texture->skin.nmap, rsurface_texture->glosstexture, r_shadow_rtlight->specularscale * rsurface_texture->specularscale, dopants, doshirt);
 			break;
 		case R_SHADOW_RENDERMODE_LIGHT_GLSL:
@@ -2033,6 +2011,7 @@ void R_Shadow_RenderSurfacesLighting(int numsurfaces, msurface_t **surfacelist)
 		switch (r_shadow_rendermode)
 		{
 		case R_SHADOW_RENDERMODE_VISIBLELIGHTING:
+			GL_DepthTest(!(rsurface_texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST) && !r_showdisabledepthtest.integer);
 			R_Shadow_RenderSurfacesLighting_VisibleLighting(numsurfaces, surfacelist, lightcolorbase, vec3_origin, vec3_origin, rsurface_texture->basetexture, r_texture_black, r_texture_black, rsurface_texture->skin.nmap, rsurface_texture->glosstexture, r_shadow_rtlight->specularscale * rsurface_texture->specularscale, false, false);
 			break;
 		case R_SHADOW_RENDERMODE_LIGHT_GLSL:
@@ -2209,11 +2188,11 @@ void R_Shadow_DrawEntityShadow(entity_render_t *ent, int numsurfaces, int *surfa
 				if (r_shadow_rendermode == R_SHADOW_RENDERMODE_STENCIL)
 				{
 					// decrement stencil if backface is behind depthbuffer
-					qglCullFace(GL_BACK);CHECKGLERROR // quake is backwards, this culls front faces
+					GL_CullFace(GL_BACK); // quake is backwards, this culls front faces
 					qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);CHECKGLERROR
 					R_Mesh_Draw(0, mesh->numverts, mesh->numtriangles, mesh->element3i);
 					// increment stencil if frontface is behind depthbuffer
-					qglCullFace(GL_FRONT);CHECKGLERROR // quake is backwards, this culls back faces
+					GL_CullFace(GL_FRONT); // quake is backwards, this culls back faces
 					qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);CHECKGLERROR
 				}
 				R_Mesh_Draw(0, mesh->numverts, mesh->numtriangles, mesh->element3i);

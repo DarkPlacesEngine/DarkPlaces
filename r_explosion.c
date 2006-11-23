@@ -188,6 +188,7 @@ static void R_DrawExplosion_TransparentCallback(const entity_render_t *ent, cons
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
+	GL_CullFace(GL_FRONT); // quake is backwards, this culls back faces
 	R_Mesh_Matrix(&identitymatrix);
 
 	R_Mesh_ColorPointer(NULL);

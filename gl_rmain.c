@@ -1179,7 +1179,7 @@ static void R_View_UpdateEntityVisible (void)
 		for (i = 0;i < r_refdef.numentities;i++)
 		{
 			ent = r_refdef.entities[i];
-			r_viewcache.entityvisible[i] = !(ent->flags & renderimask) && !R_CullBox(ent->mins, ent->maxs) && (ent->effects & EF_NODEPTHTEST);
+			r_viewcache.entityvisible[i] = !(ent->flags & renderimask) && !R_CullBox(ent->mins, ent->maxs);
 		}
 	}
 }
@@ -3309,10 +3309,7 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 	r_refdef.stats.entities_surfaces += texturenumsurfaces;
 	CHECKGLERROR
 	GL_DepthTest(!(rsurface_texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
-	if ((rsurface_texture->textureflags & Q3TEXTUREFLAG_TWOSIDED) || (rsurface_entity->flags & RENDER_NOCULLFACE))
-	{
-		qglDisable(GL_CULL_FACE);CHECKGLERROR
-	}
+	GL_CullFace(((rsurface_texture->textureflags & Q3TEXTUREFLAG_TWOSIDED) || (rsurface_entity->flags & RENDER_NOCULLFACE)) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
 	if (r_showsurfaces.integer)
 		R_DrawTextureSurfaceList_ShowSurfaces(texturenumsurfaces, texturesurfacelist);
 	else if (rsurface_texture->currentmaterialflags & MATERIALFLAG_SKY)
@@ -3328,10 +3325,6 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 	}
 	CHECKGLERROR
 	GL_LockArrays(0, 0);
-	if ((rsurface_texture->textureflags & Q3TEXTUREFLAG_TWOSIDED) || (rsurface_entity->flags & RENDER_NOCULLFACE))
-	{
-		qglEnable(GL_CULL_FACE);CHECKGLERROR
-	}
 }
 
 #define BATCHSIZE 256
