@@ -4,7 +4,8 @@
 // Menu
 
 char *vm_m_extensions =
-"DP_CINEMATIC_DPV";
+"DP_CINEMATIC_DPV "
+"DP_QC_ASINACOSATANATAN2TAN";
 
 /*
 =========
@@ -910,7 +911,12 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_cin_restart, // 465
 	VM_drawline,	// 466
 	0,0,0,0,	// 470
-	e10,			// 480
+	VM_asin,					// #471 float(float s) VM_asin (DP_QC_ASINACOSATANATAN2TAN)
+	VM_acos,					// #472 float(float c) VM_acos (DP_QC_ASINACOSATANATAN2TAN)
+	VM_atan,					// #473 float(float t) VM_atan (DP_QC_ASINACOSATANATAN2TAN)
+	VM_atan2,					// #474 float(float c, float s) VM_atan2 (DP_QC_ASINACOSATANATAN2TAN)
+	VM_tan,						// #475 float(float a) VM_tan (DP_QC_ASINACOSATANATAN2TAN)
+	0,0,0,0,0,			// 480
 	e10,			// 490
 	e10,			// 500
 	e100,			// 600

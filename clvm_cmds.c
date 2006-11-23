@@ -49,6 +49,7 @@ char *vm_cl_extensions =
 "DP_MONSTERWALK "
 "DP_MOVETYPEBOUNCEMISSILE "
 "DP_MOVETYPEFOLLOW "
+"DP_QC_ASINACOSATANATAN2TAN "
 "DP_QC_CHANGEPITCH "
 "DP_QC_COPYENTITY "
 "DP_QC_CVAR_STRING "
@@ -2722,7 +2723,17 @@ VM_bufstr_get,				// #466 string(float bufhandle, float string_index) bufstr_get
 VM_bufstr_set,				// #467 void(float bufhandle, float string_index, string str) bufstr_set (DP_QC_STRINGBUFFERS)
 VM_bufstr_add,				// #468 float(float bufhandle, string str, float order) bufstr_add (DP_QC_STRINGBUFFERS)
 VM_bufstr_free,				// #469 void(float bufhandle, float string_index) bufstr_free (DP_QC_STRINGBUFFERS)
-e10, e10, e10			// #470-499 (LordHavoc)
+NULL,						// #470
+VM_asin,					// #471 float(float s) VM_asin (DP_QC_ASINACOSATANATAN2TAN)
+VM_acos,					// #472 float(float c) VM_acos (DP_QC_ASINACOSATANATAN2TAN)
+VM_atan,					// #473 float(float t) VM_atan (DP_QC_ASINACOSATANATAN2TAN)
+VM_atan2,					// #474 float(float c, float s) VM_atan2 (DP_QC_ASINACOSATANATAN2TAN)
+VM_tan,						// #475 float(float a) VM_tan (DP_QC_ASINACOSATANATAN2TAN)
+NULL,						// #476
+NULL,						// #477
+NULL,						// #478
+NULL,						// #479
+e10, e10			// #480-499 (LordHavoc)
 };
 
 const int vm_cl_numbuiltins = sizeof(vm_cl_builtins) / sizeof(prvm_builtin_t);
