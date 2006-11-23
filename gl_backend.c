@@ -341,6 +341,8 @@ gltextureunit_t;
 
 static struct gl_state_s
 {
+	int cullface;
+	int cullfaceenable;
 	int blendfunc1;
 	int blendfunc2;
 	int blend;
@@ -467,6 +469,8 @@ void GL_Backend_ResetState(void)
 	gl_state.lockrange_count = 0;
 	gl_state.pointer_vertex = NULL;
 	gl_state.pointer_color = NULL;
+	gl_state.cullface = GL_FRONT; // quake is backwards, this culls back faces
+	gl_state.cullfaceenable = true;
 
 	CHECKGLERROR
 
@@ -475,7 +479,7 @@ void GL_Backend_ResetState(void)
 	qglDisable(GL_ALPHA_TEST);CHECKGLERROR
 	qglBlendFunc(gl_state.blendfunc1, gl_state.blendfunc2);CHECKGLERROR
 	qglDisable(GL_BLEND);CHECKGLERROR
-	qglCullFace(GL_FRONT);CHECKGLERROR
+	qglCullFace(gl_state.cullface);CHECKGLERROR
 	qglEnable(GL_CULL_FACE);CHECKGLERROR
 	qglDepthFunc(GL_LEQUAL);CHECKGLERROR
 	qglEnable(GL_DEPTH_TEST);CHECKGLERROR
@@ -579,6 +583,35 @@ void GL_DepthTest(int state)
 		else
 		{
 			qglDisable(GL_DEPTH_TEST);CHECKGLERROR
+		}
+	}
+}
+
+void GL_CullFace(int state)
+{
+	if (gl_state.cullface != state)
+	{
+		CHECKGLERROR
+		if (state != GL_NONE)
+		{
+			if (!gl_state.cullfaceenable)
+			{
+				gl_state.cullfaceenable = true;
+				qglEnable(GL_CULL_FACE);CHECKGLERROR
+			}
+			if (gl_state.cullface != state)
+			{
+				gl_state.cullface = state;
+				qglCullFace(state);CHECKGLERROR
+			}
+		}
+		else
+		{
+			if (gl_state.cullfaceenable)
+			{
+				gl_state.cullfaceenable = false;
+				qglDisable(GL_CULL_FACE);CHECKGLERROR
+			}
 		}
 	}
 }

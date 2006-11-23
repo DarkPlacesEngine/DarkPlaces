@@ -1614,7 +1614,6 @@ void SCR_UpdateLoadingScreen (void)
 	qglColorMask(1,1,1,1);CHECKGLERROR
 	//qglClearColor(0,0,0,0);CHECKGLERROR
 	//qglClear(GL_COLOR_BUFFER_BIT);CHECKGLERROR
-	//qglCullFace(GL_FRONT);CHECKGLERROR
 	//qglDisable(GL_CULL_FACE);CHECKGLERROR
 	//R_ClearScreen();
 	R_Textures_Frame();

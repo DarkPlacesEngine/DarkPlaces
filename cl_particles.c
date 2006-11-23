@@ -2033,6 +2033,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 	R_Mesh_ColorPointer(particle_color4f);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
+	GL_CullFace(GL_FRONT); // quake is backwards, this culls back faces
 
 	// first generate all the vertices at once
 	for (surfacelistindex = 0, v3f = particle_vertex3f, t2f = particle_texcoord2f, c4f = particle_color4f;surfacelistindex < numsurfaces;surfacelistindex++, v3f += 3*4, t2f += 2*4, c4f += 4*4)
