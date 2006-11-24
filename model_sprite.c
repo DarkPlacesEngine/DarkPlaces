@@ -37,9 +37,23 @@ void Mod_SpriteInit (void)
 	Cvar_RegisterVariable(&r_mipsprites);
 }
 
-static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version, const unsigned int *palette, const unsigned int *alphapalette)
+static void Mod_SpriteSetupTexture(mspriteframe_t *frame, qboolean fullbright, qboolean additive)
 {
-	int					i, j, groupframes, realframes, x, y, origin[2], width, height;
+	texture_t *texture = &frame->texture;
+	texture->basematerialflags = MATERIALFLAG_WALL;
+	if (fullbright)
+		texture->basematerialflags |= MATERIALFLAG_FULLBRIGHT;
+	if (additive)
+		texture->basematerialflags |= MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_TRANSPARENT;
+	else if (texture->skinframes[0].fog)
+		texture->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_TRANSPARENT;
+	texture->currentmaterialflags = texture->basematerialflags;
+	texture->currentskinframe = texture->skinframes + 0;
+}
+
+static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version, const unsigned int *palette, const unsigned int *alphapalette, qboolean additive)
+{
+	int					i, j, groupframes, realframes, x, y, origin[2], width, height, fullbright;
 	dspriteframetype_t	*pinframetype;
 	dspriteframe_t		*pinframe;
 	dspritegroup_t		*pingroup;
@@ -53,14 +67,10 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 		Host_Error ("Mod_Sprite_SharedSetup: Invalid # of frames: %d", loadmodel->numframes);
 
 	// LordHavoc: hack to allow sprites to be non-fullbright
+	fullbright = true;
 	for (i = 0;i < MAX_QPATH && loadmodel->name[i];i++)
-	{
 		if (loadmodel->name[i] == '!')
-		{
-			loadmodel->flags2 &= ~EF_FULLBRIGHT;
-			break;
-		}
-	}
+			fullbright = false;
 
 //
 // load the frames
@@ -157,20 +167,22 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 					sprintf (name, "%s_%i_%i", loadmodel->name, i, j);
 				else
 					sprintf (name, "%s_%i", loadmodel->name, i);
-				Mod_LoadSkinFrame(&loadmodel->sprite.sprdata_frames[realframes].skin, name, (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, false, false);
+				Mod_LoadSkinFrame(&loadmodel->sprite.sprdata_frames[realframes].texture.skinframes[0], name, (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, false, false);
 
-				if (!loadmodel->sprite.sprdata_frames[realframes].skin.base)
+				if (!loadmodel->sprite.sprdata_frames[realframes].texture.skinframes[0].base)
 				{
 					if (groupframes > 1)
 						sprintf (fogname, "%s_%i_%ifog", loadmodel->name, i, j);
 					else
 						sprintf (fogname, "%s_%ifog", loadmodel->name, i);
 					if (version == SPRITE32_VERSION)
-						Mod_LoadSkinFrame_Internal(&loadmodel->sprite.sprdata_frames[realframes].skin, name, (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, false, false, datapointer, width, height, 32, NULL, NULL);
+						Mod_LoadSkinFrame_Internal(&loadmodel->sprite.sprdata_frames[realframes].texture.skinframes[0], name, (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, false, false, datapointer, width, height, 32, NULL, NULL);
 					else //if (version == SPRITE_VERSION || version == SPRITEHL_VERSION)
-						Mod_LoadSkinFrame_Internal(&loadmodel->sprite.sprdata_frames[realframes].skin, name, (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, false, false, datapointer, width, height, 8, palette, alphapalette);
+						Mod_LoadSkinFrame_Internal(&loadmodel->sprite.sprdata_frames[realframes].texture.skinframes[0], name, (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, false, false, datapointer, width, height, 8, palette, alphapalette);
 				}
 			}
+
+			Mod_SpriteSetupTexture(&loadmodel->sprite.sprdata_frames[realframes], fullbright, additive);
 
 			if (version == SPRITE32_VERSION)
 				datapointer += width * height * 4;
@@ -219,7 +231,7 @@ void Mod_IDSP_Load(model_t *mod, void *buffer, void *bufferend)
 		loadmodel->sprite.sprnum_type = LittleLong (pinqsprite->type);
 		loadmodel->synctype = (synctype_t)LittleLong (pinqsprite->synctype);
 
-		Mod_Sprite_SharedSetup(datapointer, LittleLong (pinqsprite->version), NULL, NULL);
+		Mod_Sprite_SharedSetup(datapointer, LittleLong (pinqsprite->version), NULL, NULL, false);
 	}
 	else if (version == SPRITEHL_VERSION)
 	{
@@ -262,7 +274,7 @@ void Mod_IDSP_Load(model_t *mod, void *buffer, void *bufferend)
 				palette[i][2] = *in++;
 				palette[i][3] = 255;
 			}
-			loadmodel->flags2 |= EF_ADDITIVE;
+			// also passes additive == true to Mod_Sprite_SharedSetup
 			break;
 		case SPRHL_INDEXALPHA:
 			for (i = 0;i < 256;i++)
@@ -283,6 +295,7 @@ void Mod_IDSP_Load(model_t *mod, void *buffer, void *bufferend)
 				palette[i][3] = 255;
 			}
 			palette[255][0] = palette[255][1] = palette[255][2] = palette[255][3] = 0;
+			// should this use alpha test or alpha blend?  (currently blend)
 			break;
 		default:
 			Host_Error("Mod_IDSP_Load: unknown texFormat (%i, should be 0, 1, 2, or 3)", i);
@@ -297,7 +310,7 @@ void Mod_IDSP_Load(model_t *mod, void *buffer, void *bufferend)
 			alphapalette[i][3] = palette[i][3];
 		}
 
-		Mod_Sprite_SharedSetup(datapointer, LittleLong (pinhlsprite->version), (unsigned int *)(&palette[0][0]), (unsigned int *)(&alphapalette[0][0]));
+		Mod_Sprite_SharedSetup(datapointer, LittleLong (pinhlsprite->version), (unsigned int *)(&palette[0][0]), (unsigned int *)(&alphapalette[0][0]), rendermode == SPRHL_ADDITIVE);
 	}
 	else
 		Host_Error("Mod_IDSP_Load: %s has wrong version number (%i). Only %i (quake), %i (HalfLife), and %i (sprite32) supported",
@@ -307,12 +320,11 @@ void Mod_IDSP_Load(model_t *mod, void *buffer, void *bufferend)
 
 void Mod_IDS2_Load(model_t *mod, void *buffer, void *bufferend)
 {
-	int i, version;
+	int i, version, fullbright;
 	const dsprite2_t *pinqsprite;
 	float modelradius;
 
 	loadmodel->type = mod_sprite;
-	loadmodel->flags2 = EF_FULLBRIGHT;
 
 	loadmodel->DrawSky = NULL;
 	loadmodel->Draw = R_Model_Sprite_Draw;
@@ -332,15 +344,11 @@ void Mod_IDS2_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->sprite.sprnum_type = SPR_VP_PARALLEL;
 	loadmodel->synctype = ST_SYNC;
 
-	// Hack to allow sprites to be non-fullbright
+	// LordHavoc: hack to allow sprites to be non-fullbright
+	fullbright = true;
 	for (i = 0;i < MAX_QPATH && loadmodel->name[i];i++)
-	{
 		if (loadmodel->name[i] == '!')
-		{
-			loadmodel->flags2 &= ~EF_FULLBRIGHT;
-			break;
-		}
-	}
+			fullbright = false;
 
 	loadmodel->animscenes = (animscene_t *)Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numframes);
 	loadmodel->sprite.sprdata_frames = (mspriteframe_t *)Mem_Alloc(loadmodel->mempool, sizeof(mspriteframe_t) * loadmodel->numframes);
@@ -381,11 +389,13 @@ void Mod_IDS2_Load(model_t *mod, void *buffer, void *bufferend)
 
 		if (width > 0 && height > 0 && cls.state != ca_dedicated)
 		{
-			Mod_LoadSkinFrame(&sprframe->skin, pinframe->name, (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, false, false);
+			Mod_LoadSkinFrame(&sprframe->texture.skinframes[0], pinframe->name, (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, false, false);
 			// TODO: use a default texture if we can't load it?
-			if (sprframe->skin.base == NULL)
+			if (sprframe->texture.skinframes[0].base == NULL)
 				Host_Error("Mod_IDS2_Load: failed to load %s", pinframe->name);
 		}
+
+		Mod_SpriteSetupTexture(sprframe, fullbright, false);
 	}
 
 	modelradius = sqrt(modelradius);

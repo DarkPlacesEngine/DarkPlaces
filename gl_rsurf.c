@@ -903,7 +903,7 @@ void R_ReplaceWorldTexture (void)
 	{
 		if(t->width && !strcasecmp(t->name, r))
 		{
-			if(Mod_LoadSkinFrame(&t->skin, (char*)newt, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false, r_fullbrights.integer))
+			if(Mod_LoadSkinFrame(&t->skinframes[0], (char*)newt, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false, r_fullbrights.integer))
 			{
 				Con_Printf("%s replaced with %s\n", r, newt);
 				return;
@@ -911,7 +911,7 @@ void R_ReplaceWorldTexture (void)
 			else
 			{
 				Con_Printf("%s was not found\n", newt);
-				Mod_LoadSkinFrame(&t->skin, (char*)r, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false, r_fullbrights.integer);//back to default
+				Mod_LoadSkinFrame(&t->skinframes[0], (char*)r, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false, r_fullbrights.integer);//back to default
 				return;
 			}
 		}
@@ -928,7 +928,7 @@ void R_ListWorldTextures (void)
 
 	Con_Print("Worldmodel textures :\n");
 	for(i=0,t=m->data_textures;i<m->num_textures;i++,t++)
-		if(t->skin.base != r_texture_notexture)
+		if (t->numskinframes)
 			Con_Printf("%s\n", t->name);
 }
 

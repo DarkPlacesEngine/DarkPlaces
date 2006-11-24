@@ -141,6 +141,8 @@ typedef struct shadowmesh_s
 }
 shadowmesh_t;
 
+#define TEXTURE_MAXFRAMES 64
+
 typedef enum texturelayertype_e
 {
 	TEXTURELAYERTYPE_INVALID,
@@ -188,8 +190,11 @@ typedef struct texture_s
 	// current material flags (updated each bmodel render)
 	int currentmaterialflags;
 
-	// loaded the same as model skins
-	skinframe_t skin;
+	// textures to use when rendering this material
+	skinframe_t *currentskinframe;
+	int numskinframes;
+	float skinframerate;
+	skinframe_t skinframes[TEXTURE_MAXFRAMES];
 
 	// total frames in sequence and alternate sequence
 	int anim_total[2];

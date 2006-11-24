@@ -7,7 +7,6 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 	int i;
 	model_t *model = ent->model;
 	vec3_t left, up, org, color, diffusecolor, diffusenormal, mforward, mleft, mup;
-	mspriteframe_t *frame;
 	float scale;
 
 	// nudge it toward the view to make sure it isn't in a wall
@@ -85,9 +84,11 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 	{
 		if (ent->frameblend[i].lerp >= 0.01f)
 		{
-			frame = model->sprite.sprdata_frames + ent->frameblend[i].frame;
+			mspriteframe_t *frame = model->sprite.sprdata_frames + ent->frameblend[i].frame;
+			texture_t *texture = &frame->texture;
+			R_UpdateTextureInfo(ent, texture);
 			// FIXME: negate left and right in loader
-			R_DrawSprite(GL_SRC_ALPHA, (ent->effects & EF_ADDITIVE) ? GL_ONE : GL_ONE_MINUS_SRC_ALPHA, frame->skin.base, frame->skin.fog, (ent->effects & EF_NODEPTHTEST), org, left, up, frame->left, frame->right, frame->down, frame->up, color[0], color[1], color[2], ent->alpha * ent->frameblend[i].lerp);
+			R_DrawSprite(texture->currentlayers[0].blendfunc1, texture->currentlayers[0].blendfunc2, frame->texture.currentskinframe->base, frame->texture.currentskinframe->fog, (ent->effects & EF_NODEPTHTEST), org, left, up, frame->left, frame->right, frame->down, frame->up, color[0], color[1], color[2], ent->alpha * ent->frameblend[i].lerp);
 		}
 	}
 }

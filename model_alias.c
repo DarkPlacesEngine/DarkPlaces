@@ -561,23 +561,25 @@ static void Mod_MDL_LoadFrames (unsigned char* datapointer, int inverts, int *ve
 	}
 }
 
-static skinframe_t missingskinframe;
-static void Mod_BuildAliasSkinFromSkinFrame(texture_t *skin, skinframe_t *skinframe)
+static void Mod_BuildAliasSkinFromSkinFrame(texture_t *texture, skinframe_t *skinframe)
 {
-	// hack
-	if (skinframe == NULL)
+	texture->currentframe = texture;
+	texture->numskinframes = 1;
+	texture->skinframerate = 1;
+	texture->currentskinframe = texture->skinframes + 0;
+	if (skinframe)
+		texture->skinframes[0] = *skinframe;
+	else
 	{
-		skinframe = &missingskinframe;
-		memset(skinframe, 0, sizeof(*skinframe));
-		skinframe->base = r_texture_notexture;
+		// hack
+		memset(texture->skinframes, 0, sizeof(texture->skinframes));
+		texture->skinframes[0].base = r_texture_notexture;
 	}
 
-	skin->skin = *skinframe;
-	skin->currentframe = skin;
-	skin->basematerialflags = MATERIALFLAG_WALL;
-	if (skin->skin.fog)
-		skin->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_TRANSPARENT;
-	skin->currentmaterialflags = skin->basematerialflags;
+	texture->basematerialflags = MATERIALFLAG_WALL;
+	if (texture->currentskinframe->fog)
+		texture->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_TRANSPARENT;
+	texture->currentmaterialflags = texture->basematerialflags;
 }
 
 static void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfile, char *meshname, char *shadername)
