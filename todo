@@ -33,6 +33,7 @@
 -d (yummyluv) feature darkplaces protocol: add buttons 9-16 (yummyluv)
 -f (James D) bug darkplaces server: losing runes on episode completion, completing episode 1 then 2 then 3 causes it to forget 1, then 4 causes it to forget 2 and 3, making it impossible to open the boss gate (James D)
 -f (Wazat) bug darkplaces: client's slowmo detection (measuring packet times and comparing to game time changes) may be making the game unpleasant (Wazat)
+0 change darkplaces client: put depthtest flag in texturelayer_t
 0 bug hmap2: handle \" properly in hmap2 cmdlib.c COM_Parse (sort)
 0 bug darkplaces client: GAME_NEHAHRA: make sure cutscenes and movies work, got a report of seeing a black screen (NightFright)
 0 bug darkplaces client: hipnotic: health is one character to the right on the sbar, covering up the key icons (M`Shacron)
