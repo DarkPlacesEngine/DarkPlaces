@@ -294,6 +294,11 @@ void VM_stov(void);
 void VM_strzone(void);
 void VM_strunzone(void);
 
+// DRESK - String Length (not counting color codes)
+void VM_strlennocol(void);
+// DRESK - Decolorized String
+void VM_strdecolorize(void);
+
 void VM_clcommand (void);
 
 void VM_tokenize (void);

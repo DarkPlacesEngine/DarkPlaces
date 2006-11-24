@@ -1787,6 +1787,138 @@ void VM_strlen(void)
 		PRVM_G_FLOAT(OFS_RETURN) = 0;
 }
 
+// DRESK - Decolorized String
+/*
+=========
+VM_strdecolorize
+
+string	strdecolorize(string s)
+=========
+*/
+// string (string s) strdecolorize = #472; // returns the passed in string with color codes stripped
+void VM_strdecolorize(void)
+{
+	char *szNewString;
+	const char *szString;
+	size_t nCnt;
+	int nPos;
+	int nFillPos;
+	int bFinished;
+		nPos = 0;
+		nFillPos = 0;
+		nCnt = 0;
+		bFinished = 0;
+
+	// Prepare Strings
+	VM_SAFEPARMCOUNT(1,VM_strdecolorize);
+	szString = PRVM_G_STRING(OFS_PARM0);
+	szNewString = VM_GetTempString();
+
+	while(!bFinished)
+	{ // Traverse through String
+		if( szString[nPos] == '\n' || szString[nPos] == '\r' || szString[nPos] <= 0)
+		{ // String End Found
+			szNewString[nFillPos++] = szString[nPos];
+			bFinished = 1;
+		}
+		else
+		if( szString[nPos] == STRING_COLOR_TAG)
+		{ // Color Code Located
+			if( szString[nPos + 1] == STRING_COLOR_TAG)
+			{ // Valid Characters to Include
+				szNewString[nFillPos++] = szString[nPos];
+				nPos = nPos + 1;
+				szNewString[nFillPos++] = szString[nPos];
+			}
+			else
+			if( szString[nPos + 1] >= '0' && szString[nPos + 1] <= '9' )
+			{ // Color Code Found; Increment Position
+				nPos = nPos + 1;
+			}
+			else
+			{ // Unknown Color Code; Include
+				szNewString[nFillPos++] = szString[nPos];
+				nPos = nPos + 1;
+			}
+		}
+		else
+			// Include Character
+			szNewString[nFillPos++] = szString[nPos];
+
+			// Increment Position
+			nPos = nPos + 1;
+	}
+
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(szNewString);
+}
+
+// DRESK - String Length (not counting color codes)
+/*
+=========
+VM_strlennocol
+
+float	strlennocol(string s)
+=========
+*/
+// float(string s) strlennocol = #471; // returns how many characters are in a string not including color codes
+// For example, ^2Dresk returns a length of 5
+void VM_strlennocol(void)
+{
+	const char *szString;
+	size_t nCnt;
+	int nPos;
+	int bFinished;
+		nPos = 0;
+		nCnt = 0;
+		bFinished = 0;
+
+	VM_SAFEPARMCOUNT(1,VM_strlennocol);
+
+	szString = PRVM_G_STRING(OFS_PARM0);
+	if(szString)
+	{ // Valid String
+		while(!bFinished)
+		{ // Count Characters
+			// SV_BroadcastPrintf("Position '%d'; Character '%c'; Length '%d'\n", nPos, szString[nPos], nCnt);
+
+			if( szString[nPos] == '\n' || szString[nPos] == '\r' || szString[nPos] <= 0)
+			{ // String End Found
+				// SV_BroadcastPrintf("Found End of String at '%d'\n", nPos);
+				bFinished = 1;
+			}
+			else
+			if( szString[nPos] == STRING_COLOR_TAG)
+			{ // Color Code Located
+				if( szString[nPos + 1] == STRING_COLOR_TAG)
+				{ // Increment Length; Skip Color Code
+					nCnt = nCnt + 1;
+					nPos = nPos + 1;
+				}
+				else
+				if( szString[nPos + 1] >= '0' && szString[nPos + 1] <= '9' )
+				{ // Color Code Found; Increment Position
+					// SV_BroadcastPrintf("Found Color Codes at '%d'\n", nPos);
+					nPos = nPos + 1;
+				}
+				else
+				{ // Unknown Color Code; Increment Length!
+					nPos = nPos + 1;
+					nCnt = nCnt + 1;
+				}
+			}
+			else
+				// Increment String Length
+				nCnt = nCnt + 1;
+
+			// Increment Position
+			nPos = nPos + 1;
+		}
+		PRVM_G_FLOAT(OFS_RETURN) = nCnt;
+	}
+	else
+		PRVM_G_FLOAT(OFS_RETURN) = 0;
+}
+
 /*
 =========
 VM_strcat
