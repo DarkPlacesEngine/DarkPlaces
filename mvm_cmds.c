@@ -5,7 +5,8 @@
 
 char *vm_m_extensions =
 "DP_CINEMATIC_DPV "
-"DP_QC_ASINACOSATANATAN2TAN";
+"DP_QC_ASINACOSATANATAN2TAN "
+"DP_QC_STRINGCOLORFUNCTIONS";
 
 /*
 =========
@@ -916,7 +917,9 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_atan,					// #473 float(float t) VM_atan (DP_QC_ASINACOSATANATAN2TAN)
 	VM_atan2,					// #474 float(float c, float s) VM_atan2 (DP_QC_ASINACOSATANATAN2TAN)
 	VM_tan,						// #475 float(float a) VM_tan (DP_QC_ASINACOSATANATAN2TAN)
-	0,0,0,0,0,			// 480
+	VM_strlennocol,				// #476 float(string s) : DRESK - String Length (not counting color codes) (DP_QC_STRINGCOLORFUNCTIONS)
+	VM_strdecolorize,			// #477 string(string s) : DRESK - Decolorized String (DP_QC_STRINGCOLORFUNCTIONS)
+	0,0,0,			// 480
 	e10,			// 490
 	e10,			// 500
 	e100,			// 600
