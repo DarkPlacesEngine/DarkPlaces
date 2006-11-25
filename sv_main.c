@@ -2191,6 +2191,8 @@ int eval_SendEntity;
 int eval_Version;
 int eval_customizeentityforclient;
 int eval_dphitcontentsmask;
+// DRESK - Support for Entity Contents Transition Event
+int eval_contentstransition;
 
 int gval_trace_dpstartcontents;
 int gval_trace_dphitcontents;
@@ -2267,6 +2269,8 @@ void SV_VM_FindEdictFieldOffsets(void)
 	eval_Version = PRVM_ED_FindFieldOffset("Version");
 	eval_customizeentityforclient = PRVM_ED_FindFieldOffset("customizeentityforclient");
 	eval_dphitcontentsmask = PRVM_ED_FindFieldOffset("dphitcontentsmask");
+	// DRESK - Support for Entity Contents Transition Event
+	eval_contentstransition = PRVM_ED_FindFieldOffset("contentstransition");
 
 	// LordHavoc: allowing QuakeC to override the player movement code
 	SV_PlayerPhysicsQC = PRVM_ED_FindFunction ("SV_PlayerPhysics");
@@ -2346,6 +2350,8 @@ prvm_required_field_t reqfields[] =
 	{ev_string, "playerskin"},
 	{ev_function, "SendEntity"},
 	{ev_function, "customizeentityforclient"},
+	// DRESK - Support for Entity Contents Transition Event
+	{ev_function, "contentstransition"},
 };
 
 void SV_VM_Setup(void)

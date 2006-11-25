@@ -130,6 +130,8 @@ extern int eval_SendEntity;
 extern int eval_Version;
 extern int eval_customizeentityforclient;
 extern int eval_dphitcontentsmask;
+// DRESK - Support for Entity Contents Transition Event
+extern int eval_contentstransition;
 
 extern int gval_trace_dpstartcontents;
 extern int gval_trace_dphitcontents;

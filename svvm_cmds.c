@@ -91,6 +91,7 @@ char *vm_sv_extensions =
 "DP_SV_DRAWONLYTOCLIENT "
 "DP_SV_DROPCLIENT "
 "DP_SV_EFFECT "
+"DP_SV_ENTITYCONTENTSTRANSITION "
 "DP_SV_NODRAWTOCLIENT "
 "DP_SV_PING "
 "DP_SV_PLAYERPHYSICS "
@@ -2858,7 +2859,7 @@ VM_atan,					// #473 float(float t) VM_atan (DP_QC_ASINACOSATANATAN2TAN)
 VM_atan2,					// #474 float(float c, float s) VM_atan2 (DP_QC_ASINACOSATANATAN2TAN)
 VM_tan,						// #475 float(float a) VM_tan (DP_QC_ASINACOSATANATAN2TAN)
 VM_strlennocol,				// #476 float(string s) : DRESK - String Length (not counting color codes) (DP_QC_STRINGCOLORFUNCTIONS)
-VM_strdecolorize,			// #477 string(string s) : DRESK - Decolorized String (DP_QC_STRINGCOLORFUNCTIONS)
+VM_strdecolorize,			// #477 string(string s) : DRESK - Decolorized String (DP_SV_STRINGCOLORFUNCTIONS)
 NULL,						// #478
 NULL,						// #479
 e10, e10					// #480-499 (LordHavoc)

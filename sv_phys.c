@@ -121,6 +121,46 @@ void SV_CheckAllEnts (void)
 	}
 }
 
+// DRESK - Support for Entity Contents Transition Event
+/*
+================
+SV_CheckContentsTransition
+
+returns true if entity had a valid contentstransition function call
+================
+*/
+int SV_CheckContentsTransition(prvm_edict_t *ent, const int nContents)
+{
+	int bValidFunctionCall;
+	prvm_eval_t *contentstransition;
+
+	// Default Valid Function Call to False
+	bValidFunctionCall = false;
+
+	if(ent->fields.server->watertype != nContents)
+	{ // Changed Contents
+		// Acquire Contents Transition Function from QC
+		contentstransition = PRVM_GETEDICTFIELDVALUE(ent, eval_contentstransition);
+
+		if(contentstransition->function)
+		{ // Valid Function; Execute
+			// Assign Valid Function
+			bValidFunctionCall = true;
+			// Prepare Parameters (Original Contents, New Contents)
+				// Original Contents
+				PRVM_G_FLOAT(OFS_PARM0) = ent->fields.server->watertype;
+				// New Contents
+				PRVM_G_FLOAT(OFS_PARM1) = nContents;
+			// Execute VM Function
+			PRVM_ExecuteProgram(contentstransition->function, "contentstransition: NULL function");
+		}
+	}
+
+	// Return if Function Call was Valid
+	return bValidFunctionCall;
+}
+
+
 /*
 ================
 SV_CheckVelocity
@@ -974,18 +1014,34 @@ SV_CheckWater
 qboolean SV_CheckWater (prvm_edict_t *ent)
 {
 	int cont;
+	int nNativeContents;
 	vec3_t point;
 
 	point[0] = ent->fields.server->origin[0];
 	point[1] = ent->fields.server->origin[1];
 	point[2] = ent->fields.server->origin[2] + ent->fields.server->mins[2] + 1;
 
+	// DRESK - Support for Entity Contents Transition Event
+	// NOTE: Some logic needed to be slightly re-ordered
+	// to not affect performance and allow for the feature.
+
+	// Acquire Super Contents Prior to Resets
+	cont = SV_PointSuperContents(point);
+	// Acquire Native Contents Here
+	nNativeContents = Mod_Q1BSP_NativeContentsFromSuperContents(NULL, cont);
+
+	// DRESK - Support for Entity Contents Transition Event
+	if(ent->fields.server->watertype)
+		// Entity did NOT Spawn; Check
+		SV_CheckContentsTransition(ent, nNativeContents);
+
+
 	ent->fields.server->waterlevel = 0;
 	ent->fields.server->watertype = CONTENTS_EMPTY;
 	cont = SV_PointSuperContents(point);
 	if (cont & (SUPERCONTENTS_LIQUIDSMASK))
 	{
-		ent->fields.server->watertype = Mod_Q1BSP_NativeContentsFromSuperContents(NULL, cont);
+		ent->fields.server->watertype = nNativeContents;
 		ent->fields.server->waterlevel = 1;
 		point[2] = ent->fields.server->origin[2] + (ent->fields.server->mins[2] + ent->fields.server->maxs[2])*0.5;
 		if (SV_PointSuperContents(point) & (SUPERCONTENTS_LIQUIDSMASK))
@@ -1294,9 +1350,16 @@ void SV_CheckWaterTransition (prvm_edict_t *ent)
 		return;
 	}
 
-	// check if the entity crossed into or out of water
-	if (sv_sound_watersplash.string && ((ent->fields.server->watertype == CONTENTS_WATER || ent->fields.server->watertype == CONTENTS_SLIME) != (cont == CONTENTS_WATER || cont == CONTENTS_SLIME)))
-		SV_StartSound (ent, 0, sv_sound_watersplash.string, 255, 1);
+	// DRESK - Support for Entity Contents Transition Event
+	// NOTE: Call here BEFORE updating the watertype below,
+	// and suppress watersplash sound if a valid function
+	// call was made to allow for custom "splash" sounds.
+	if( !SV_CheckContentsTransition(ent, cont) )
+	{ // Contents Transition Function Invalid; Potentially Play Water Sound
+		// check if the entity crossed into or out of water
+		if (sv_sound_watersplash.string && ((ent->fields.server->watertype == CONTENTS_WATER || ent->fields.server->watertype == CONTENTS_SLIME) != (cont == CONTENTS_WATER || cont == CONTENTS_SLIME)))
+			SV_StartSound (ent, 0, sv_sound_watersplash.string, 255, 1);
+	}
 
 	if (cont <= CONTENTS_WATER)
 	{
