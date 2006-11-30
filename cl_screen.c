@@ -43,6 +43,7 @@ cvar_t scr_zoomwindow = {CVAR_SAVE, "scr_zoomwindow", "0", "displays a zoomed in
 cvar_t scr_zoomwindow_viewsizex = {CVAR_SAVE, "scr_zoomwindow_viewsizex", "20", "horizontal viewsize of zoom window"};
 cvar_t scr_zoomwindow_viewsizey = {CVAR_SAVE, "scr_zoomwindow_viewsizey", "20", "vertical viewsize of zoom window"};
 cvar_t scr_zoomwindow_fov = {CVAR_SAVE, "scr_zoomwindow_fov", "20", "fov of zoom window"};
+cvar_t scr_stipple = {0, "scr_stipple", "0", "interlacing-like stippling of the display"};
 
 
 int jpeg_supported = false;
@@ -612,6 +613,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable(&scr_zoomwindow_viewsizex);
 	Cvar_RegisterVariable(&scr_zoomwindow_viewsizey);
 	Cvar_RegisterVariable(&scr_zoomwindow_fov);
+	Cvar_RegisterVariable(&scr_stipple);
 
 	Cmd_AddCommand ("sizeup",SCR_SizeUp_f, "increase view size (increases viewsize cvar)");
 	Cmd_AddCommand ("sizedown",SCR_SizeDown_f, "decrease view size (decreases viewsize cvar)");
@@ -1738,6 +1740,28 @@ void CL_UpdateScreen(void)
 	qglColorMask(1,1,1,1);CHECKGLERROR
 	qglClearColor(0,0,0,0);CHECKGLERROR
 	qglClear(GL_COLOR_BUFFER_BIT);CHECKGLERROR
+
+	if(scr_stipple.integer)
+	{
+		GLubyte stipple[128];
+		int i, s, width, parts;
+		static int frame = 0;
+		++frame;
+
+		s = scr_stipple.integer;
+		parts = (s & 007);
+		width = (s & 070) >> 3;
+
+		qglEnable(GL_POLYGON_STIPPLE); // 0x0B42
+		for(i = 0; i < 128; ++i)
+		{
+			int line = i/4;
+			stipple[i] = (((line >> width) + frame) & ((1 << parts) - 1)) ? 0x00 : 0xFF;
+		}
+		qglPolygonStipple(stipple);
+	}
+	else
+		qglDisable(GL_POLYGON_STIPPLE);
 
 	if (r_timereport_active)
 		R_TimeReport("clear");

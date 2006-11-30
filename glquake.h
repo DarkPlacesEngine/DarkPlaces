@@ -239,6 +239,9 @@ extern int gl_max_anisotropy;
 #define GL_POINT_SMOOTH                         0x0B10
 #define GL_LINE_SMOOTH                          0x0B20
 #define GL_POLYGON_SMOOTH                       0x0B41
+
+#define GL_POLYGON_STIPPLE                0x0B42
+
 #endif
 
 extern int gl_max_texture_size;
@@ -553,6 +556,7 @@ extern void (GLAPIENTRY *qglGetActiveUniformARB)(GLhandleARB programObj, GLuint 
 extern void (GLAPIENTRY *qglGetUniformfvARB)(GLhandleARB programObj, GLint location, GLfloat *params);
 extern void (GLAPIENTRY *qglGetUniformivARB)(GLhandleARB programObj, GLint location, GLint *params);
 extern void (GLAPIENTRY *qglGetShaderSourceARB)(GLhandleARB obj, GLsizei maxLength, GLsizei *length, GLcharARB *source);
+extern void (GLAPIENTRY *qglPolygonStipple)(const GLubyte *mask);
 #ifndef GL_PROGRAM_OBJECT_ARB
 #define GL_PROGRAM_OBJECT_ARB					0x8B40
 #define GL_OBJECT_TYPE_ARB						0x8B4E

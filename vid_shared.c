@@ -240,6 +240,7 @@ void (GLAPIENTRY *qglScissor)(GLint x, GLint y, GLsizei width, GLsizei height);
 
 void (GLAPIENTRY *qglPolygonOffset)(GLfloat factor, GLfloat units);
 void (GLAPIENTRY *qglPolygonMode)(GLenum face, GLenum mode);
+void (GLAPIENTRY *qglPolygonStipple)(const GLubyte *mask);
 
 //[515]: added on 29.07.2005
 void (GLAPIENTRY *qglLineWidth)(GLfloat width);
@@ -468,6 +469,7 @@ static dllfunction_t opengl110funcs[] =
 	{"glScissor", (void **) &qglScissor},
 	{"glPolygonOffset", (void **) &qglPolygonOffset},
 	{"glPolygonMode", (void **) &qglPolygonMode},
+	{"glPolygonStipple", (void **) &qglPolygonStipple},
 	{NULL, NULL}
 };
 
