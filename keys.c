@@ -23,6 +23,8 @@
 #include "quakedef.h"
 #include "cl_video.h"
 
+cvar_t con_closeontoggleconsole = {CVAR_SAVE, "con_closeontoggleconsole","0", "allows toggleconsole binds to close the console as well"};
+
 /*
 key up events are sent even if in console mode
 */
@@ -302,7 +304,7 @@ Key_Console (int key, char ascii)
 		Cbuf_AddText (key_lines[edit_line]+1);	// skip the ]
 		Cbuf_AddText ("\n");
 		Con_Printf("%s\n",key_lines[edit_line]);
-		if(key_lines[edit_line][1] == 0) // empty line (just a [)?
+		if(key_lines[edit_line][1] == 0) // empty line (just a ])?
 			return; // no, no, you can't submit empty lines to the history...
 		// LordHavoc: redesigned edit_line/history_line
 		edit_line = 31;
@@ -826,6 +828,8 @@ Key_Init (void)
 	Cmd_AddCommand ("bind", Key_Bind_f, "binds a command to the specified key in bindmap 0");
 	Cmd_AddCommand ("unbind", Key_Unbind_f, "removes a command on the specified key in bindmap 0");
 	Cmd_AddCommand ("unbindall", Key_Unbindall_f, "removes all commands from all keys in all bindmaps (leaving only shift-escape and escape)");
+
+	Cvar_RegisterVariable (&con_closeontoggleconsole);
 }
 
 const char *Key_GetBind (int key)
@@ -959,13 +963,13 @@ Key_Event (int key, char ascii, qboolean down)
 		return;
 	}
 
-#if 1
+#if 0
 	// ignore binds (other than the above escape/F1-F12 keys) while in console
 	if (key_consoleactive && down)
 #else
 	// respond to toggleconsole binds while in console unless the pressed key
 	// happens to be the color prefix character (such as on German keyboards)
-	if (key_consoleactive && down && (strncmp(bind, "toggleconsole", strlen("toggleconsole")) || ascii == STRING_COLOR_TAG))
+	if (key_consoleactive && down && (!con_closeontoggleconsole.integer || !bind || strncmp(bind, "toggleconsole", strlen("toggleconsole")) || ascii == STRING_COLOR_TAG))
 #endif
 	{
 		Key_Console (key, ascii);
