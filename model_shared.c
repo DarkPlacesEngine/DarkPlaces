@@ -972,13 +972,18 @@ void Mod_ShadowMesh_Free(shadowmesh_t *mesh)
 	}
 }
 
-static rtexture_t *GL_TextureForSkinLayer(const unsigned char *in, int width, int height, const char *name, const unsigned int *palette, int textureflags)
+static rtexture_t *GL_TextureForSkinLayer(const unsigned char *in, int width, int height, const char *name, const unsigned int *palette, int textureflags, qboolean force)
 {
 	int i;
-	for (i = 0;i < width*height;i++)
-		if (((unsigned char *)&palette[in[i]])[3] > 0)
-			return R_LoadTexture2D (loadmodel->texturepool, name, width, height, in, TEXTYPE_PALETTE, textureflags, palette);
-	return NULL;
+	if (!force)
+	{
+		for (i = 0;i < width*height;i++)
+			if (((unsigned char *)&palette[in[i]])[3] > 0)
+				break;
+		if (i == width*height)
+			return NULL;
+	}
+	return R_LoadTexture2D (loadmodel->texturepool, name, width, height, in, TEXTYPE_PALETTE, textureflags, palette);
 }
 
 int Mod_LoadSkinFrame(skinframe_t *skinframe, const char *basename, int textureflags, int loadpantsandshirt, int loadglowtexture)
@@ -1067,16 +1072,16 @@ int Mod_LoadSkinFrame_Internal(skinframe_t *skinframe, const char *basename, int
 			Mem_Free(temp1);
 		}
 		// use either a custom palette, or the quake palette
-		skinframe->base = skinframe->merged = GL_TextureForSkinLayer(skindata, width, height, va("%s_merged", basename), palette ? palette : (loadglowtexture ? palette_nofullbrights : ((textureflags & TEXF_ALPHA) ? palette_transparent : palette_complete)), textureflags); // all
+		skinframe->base = skinframe->merged = GL_TextureForSkinLayer(skindata, width, height, va("%s_merged", basename), palette ? palette : (loadglowtexture ? palette_nofullbrights : ((textureflags & TEXF_ALPHA) ? palette_transparent : palette_complete)), textureflags, true); // all
 		if (!palette && loadglowtexture)
-			skinframe->glow = GL_TextureForSkinLayer(skindata, width, height, va("%s_glow", basename), palette_onlyfullbrights, textureflags); // glow
+			skinframe->glow = GL_TextureForSkinLayer(skindata, width, height, va("%s_glow", basename), palette_onlyfullbrights, textureflags, false); // glow
 		if (!palette && loadpantsandshirt)
 		{
-			skinframe->pants = GL_TextureForSkinLayer(skindata, width, height, va("%s_pants", basename), palette_pantsaswhite, textureflags); // pants
-			skinframe->shirt = GL_TextureForSkinLayer(skindata, width, height, va("%s_shirt", basename), palette_shirtaswhite, textureflags); // shirt
+			skinframe->pants = GL_TextureForSkinLayer(skindata, width, height, va("%s_pants", basename), palette_pantsaswhite, textureflags, false); // pants
+			skinframe->shirt = GL_TextureForSkinLayer(skindata, width, height, va("%s_shirt", basename), palette_shirtaswhite, textureflags, false); // shirt
 		}
 		if (skinframe->pants || skinframe->shirt)
-			skinframe->base = GL_TextureForSkinLayer(skindata, width, height, va("%s_nospecial", basename),loadglowtexture ? palette_nocolormapnofullbrights : palette_nocolormap, textureflags); // no special colors
+			skinframe->base = GL_TextureForSkinLayer(skindata, width, height, va("%s_nospecial", basename),loadglowtexture ? palette_nocolormapnofullbrights : palette_nocolormap, textureflags, false); // no special colors
 		if (textureflags & TEXF_ALPHA)
 		{
 			// if not using a custom alphapalette, use the quake one
@@ -1086,7 +1091,7 @@ int Mod_LoadSkinFrame_Internal(skinframe_t *skinframe, const char *basename, int
 				if (((unsigned char *)alphapalette)[skindata[i]*4+3] < 255)
 					break;
 			if (i < width * height)
-				skinframe->fog = GL_TextureForSkinLayer(skindata, width, height, va("%s_fog", basename), alphapalette, textureflags); // fog mask
+				skinframe->fog = GL_TextureForSkinLayer(skindata, width, height, va("%s_fog", basename), alphapalette, textureflags, true); // fog mask
 		}
 	}
 	else
