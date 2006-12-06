@@ -2542,8 +2542,24 @@ rsurfmode_t rsurface_mode;
 texture_t *rsurface_glsl_texture;
 qboolean rsurface_glsl_uselightmap;
 
+void RSurf_CleanUp(void)
+{
+	CHECKGLERROR
+	if (rsurface_mode == RSURFMODE_GLSL)
+	{
+		qglUseProgramObjectARB(0);CHECKGLERROR
+	}
+	GL_AlphaTest(false);
+	rsurface_mode = RSURFMODE_NONE;
+	rsurface_lightmaptexture = NULL;
+	rsurface_texture = NULL;
+	rsurface_glsl_texture = NULL;
+	rsurface_glsl_uselightmap = false;
+}
+
 void RSurf_ActiveEntity(const entity_render_t *ent, qboolean wantnormals, qboolean wanttangents)
 {
+	RSurf_CleanUp();
 	Matrix4x4_Transform(&ent->inversematrix, r_view.origin, rsurface_modelorg);
 	rsurface_entity = ent;
 	rsurface_model = ent->model;
@@ -2591,26 +2607,6 @@ void RSurf_ActiveEntity(const entity_render_t *ent, qboolean wantnormals, qboole
 	rsurface_svector3f = rsurface_modelsvector3f;
 	rsurface_tvector3f = rsurface_modeltvector3f;
 	rsurface_normal3f  = rsurface_modelnormal3f;
-	rsurface_mode = RSURFMODE_NONE;
-	rsurface_lightmaptexture = NULL;
-	rsurface_texture = NULL;
-	rsurface_glsl_texture = NULL;
-	rsurface_glsl_uselightmap = false;
-}
-
-void RSurf_CleanUp(void)
-{
-	CHECKGLERROR
-	if (rsurface_mode == RSURFMODE_GLSL)
-	{
-		qglUseProgramObjectARB(0);CHECKGLERROR
-	}
-	GL_AlphaTest(false);
-	rsurface_mode = RSURFMODE_NONE;
-	rsurface_lightmaptexture = NULL;
-	rsurface_texture = NULL;
-	rsurface_glsl_texture = NULL;
-	rsurface_glsl_uselightmap = false;
 }
 
 void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generatetangents, int texturenumsurfaces, msurface_t **texturesurfacelist)
@@ -2681,6 +2677,13 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 		rsurface_svector3f = rsurface_array_deformedsvector3f;
 		rsurface_tvector3f = rsurface_array_deformedtvector3f;
 		rsurface_normal3f = rsurface_array_deformednormal3f;
+	}
+	else
+	{
+		rsurface_vertex3f = rsurface_modelvertex3f;
+		rsurface_svector3f = rsurface_modelsvector3f;
+		rsurface_tvector3f = rsurface_modeltvector3f;
+		rsurface_normal3f = rsurface_modelnormal3f;
 	}
 	R_Mesh_VertexPointer(rsurface_vertex3f);
 }
@@ -3350,20 +3353,20 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 		if (t != surface->texture || rsurface_lightmaptexture != surface->lightmaptexture)
 		{
 			if (batchcount > 0)
-				R_DrawTextureSurfaceList(batchcount, texturesurfacelist);
+				if (!(rsurface_texture->currentmaterialflags & MATERIALFLAG_SKY)) // transparent sky is too difficult
+					R_DrawTextureSurfaceList(batchcount, texturesurfacelist);
 			batchcount = 0;
 			t = surface->texture;
 			rsurface_lightmaptexture = surface->lightmaptexture;
 			R_UpdateTextureInfo(ent, t);
 			rsurface_texture = t->currentframe;
 		}
-		if (rsurface_texture->currentmaterialflags & MATERIALFLAG_SKY)
-			continue; // transparent sky is too difficult
 
 		texturesurfacelist[batchcount++] = surface;
 	}
 	if (batchcount > 0)
-		R_DrawTextureSurfaceList(batchcount, texturesurfacelist);
+		if (!(rsurface_texture->currentmaterialflags & MATERIALFLAG_SKY)) // transparent sky is too difficult
+			R_DrawTextureSurfaceList(batchcount, texturesurfacelist);
 	RSurf_CleanUp();
 }
 
