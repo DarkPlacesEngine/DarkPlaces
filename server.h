@@ -68,6 +68,10 @@ typedef struct server_s
 	int lastcheck;
 	double lastchecktime;
 
+	// crc of clientside progs at time of level start
+	int csqc_progcrc; // -1 = no progs
+	char csqc_progname[MAX_QPATH]; // copied from csqc_progname at level start
+
 	// map name
 	char name[64];
 	// maps/<name>.bsp, for model_precache[0]

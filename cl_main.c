@@ -31,7 +31,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // references them even when on a unix system.
 
 cvar_t csqc_progname = {0, "csqc_progname","csprogs.dat","name of csprogs.dat file to load"};	//[515]: csqc crc check and right csprogs name according to progs.dat
-cvar_t csqc_progcrc = {CVAR_READONLY, "csqc_progcrc","0","CRC of csprogs.dat file to load"};
+cvar_t csqc_progcrc = {CVAR_READONLY, "csqc_progcrc","-1","CRC of csprogs.dat file to load (-1 is none), only used during level changes and then reset to -1"};
 
 cvar_t cl_shownet = {0, "cl_shownet","0","1 = print packet size, 2 = print packet message list"};
 cvar_t cl_nolerp = {0, "cl_nolerp", "0","network update smoothing"};
@@ -1544,6 +1544,17 @@ void CL_LerpPlayer(float frac)
 
 void CSQC_RelinkAllEntities (int drawmask)
 {
+	// process network entities (note: this sets up the view!)
+	cl.num_brushmodel_entities = 0;
+	CL_UpdateEntities();
+
+	entitylinkframenumber++;
+	// link stuff
+	CL_RelinkWorld();
+	CL_RelinkStaticEntities();
+	CL_RelinkBeams();
+	CL_RelinkEffects();
+
 	// link stuff
 	if (drawmask & ENTMASK_ENGINE)
 	{
@@ -1553,6 +1564,9 @@ void CSQC_RelinkAllEntities (int drawmask)
 
 	if (drawmask & ENTMASK_ENGINEVIEWMODELS)
 		CL_LinkNetworkEntity(&cl.viewent); // link gun model
+
+	// update view blend
+	V_CalcViewBlend();
 }
 
 /*
@@ -1588,31 +1602,34 @@ int CL_ReadFromServer(void)
 		CL_MoveParticles();
 		R_MoveExplosions();
 
-		// process network entities (note: this sets up the view!)
+		// predict current player location
 		CL_ClientMovement_Replay();
-		cl.num_brushmodel_entities = 0;
+
 		// now that the player entity has been updated we can call V_CalcRefdef
 		V_CalcRefdef();
-		CL_UpdateEntities();
-
-		entitylinkframenumber++;
-		// link stuff
-		CL_RelinkWorld();
-		CL_RelinkStaticEntities();
-		CL_RelinkBeams();
-		CL_RelinkEffects();
 
 		if(!csqc_loaded)	//[515]: csqc
 		{
+			// process network entities (note: this sets up the view!)
+			cl.num_brushmodel_entities = 0;
+			CL_UpdateEntities();
+
+			entitylinkframenumber++;
+			// link stuff
+			CL_RelinkWorld();
+			CL_RelinkStaticEntities();
+			CL_RelinkBeams();
+			CL_RelinkEffects();
+
 			CL_RelinkNetworkEntities();
 			CL_LinkNetworkEntity(&cl.viewent); // link gun model
 			CL_RelinkQWNails();
+
+			// update view blend
+			V_CalcViewBlend();
 		}
 		else
 			csqc_frame = true;
-
-		// update view blend
-		V_CalcViewBlend();
 
 		CL_UpdateLights();
 		CL_StairSmoothing();

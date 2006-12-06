@@ -81,7 +81,7 @@ void SV_Init (void)
 {
 	// init the csqc progs cvars, since they are updated/used by the server code
 	// TODO: fix this since this is a quick hack to make some of [515]'s broken code run ;) [9/13/2006 Black]
-	extern cvar_t csqc_progname;
+	extern cvar_t csqc_progname;	//[515]: csqc crc check and right csprogs name according to progs.dat
 	extern cvar_t csqc_progcrc;
 	Cvar_RegisterVariable (&csqc_progname);
 	Cvar_RegisterVariable (&csqc_progcrc);
@@ -299,8 +299,6 @@ CLIENT SPAWNING
 ==============================================================================
 */
 
-extern cvar_t csqc_progname;	//[515]: csqc crc check and right csprogs name according to progs.dat
-extern cvar_t csqc_progcrc;
 /*
 ================
 SV_SendServerinfo
@@ -349,16 +347,21 @@ void SV_SendServerinfo (client_t *client)
 	MSG_WriteString (&client->netconnection->message,message);
 
 	//[515]: init csprogs according to version of svprogs, check the crc, etc.
-	if (FS_FileExists(csqc_progname.string))
+	if (sv.csqc_progcrc >= 0)
 	{
 		prvm_eval_t *val;
-		MSG_WriteByte (&client->netconnection->message, svc_stufftext);
+		Con_DPrintf("sending csqc info to client (\"%s\" with crc %i)\n", sv.csqc_progname, sv.csqc_progcrc);
 		//[515]: init stufftext string (it is sent before svc_serverinfo)
 		val = PRVM_GETGLOBALFIELDVALUE(PRVM_ED_FindGlobalOffset("SV_InitCmd"));
+		MSG_WriteByte (&client->netconnection->message, svc_stufftext);
+		MSG_WriteString (&client->netconnection->message, va("csqc_progname %s\n", sv.csqc_progname));
+		MSG_WriteByte (&client->netconnection->message, svc_stufftext);
+		MSG_WriteString (&client->netconnection->message, va("csqc_progcrc %i\n", sv.csqc_progcrc));
 		if (val)
-			MSG_WriteString (&client->netconnection->message, va("csqc_progcrc %i\n%s\n", csqc_progcrc.integer, PRVM_GetString(val->string)));
-		else
-			MSG_WriteString (&client->netconnection->message, va("csqc_progcrc %i\n", csqc_progcrc.integer));
+		{
+			MSG_WriteByte (&client->netconnection->message, svc_stufftext);
+			MSG_WriteString (&client->netconnection->message, va("%s\n", PRVM_GetString(val->string)));
+		}
 	}
 
 	MSG_WriteByte (&client->netconnection->message, svc_serverinfo);
@@ -2356,9 +2359,10 @@ prvm_required_field_t reqfields[] =
 
 void SV_VM_Setup(void)
 {
+	extern cvar_t csqc_progname;	//[515]: csqc crc check and right csprogs name according to progs.dat
+	extern cvar_t csqc_progcrc;
 	unsigned char *csprogsdata;
 	fs_offset_t csprogsdatasize;
-	unsigned int csprogsdatacrc;
 	PRVM_Begin;
 	PRVM_InitProg( PRVM_SERVERPROG );
 
@@ -2396,14 +2400,16 @@ void SV_VM_Setup(void)
 	PRVM_End;
 
 	// see if there is a csprogs.dat installed, and if so, set the csqc_progcrc accordingly, this will be sent to connecting clients to tell them to only load a matching csprogs.dat file
-	csprogsdatacrc = 0;
+	sv.csqc_progcrc = -1;
+	sv.csqc_progname[0] = 0;
 	csprogsdata = FS_LoadFile(csqc_progname.string, tempmempool, true, &csprogsdatasize);
 	if (csprogsdata)
 	{
-		csprogsdatacrc = CRC_Block(csprogsdata, csprogsdatasize);
+		strlcpy(sv.csqc_progname, csqc_progname.string, sizeof(sv.csqc_progname));
+		sv.csqc_progcrc = CRC_Block(csprogsdata, csprogsdatasize);
 		Mem_Free(csprogsdata);
+		Con_DPrintf("server detected csqc progs file \"%s\" with crc %i\n", sv.csqc_progname, sv.csqc_progcrc);
 	}
-	Cvar_SetValueQuick(&csqc_progcrc, csprogsdatacrc);
 }
 
 void SV_VM_Begin(void)
