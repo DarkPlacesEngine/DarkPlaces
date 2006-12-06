@@ -770,7 +770,7 @@ static void R_Q1BSP_DrawLight_TransparentCallback(const entity_render_t *ent, co
 	int surfacelistindex, batchcount;
 	texture_t *t;
 	msurface_t *batchsurfaces[BATCHSIZE];
-	// note: in practice this never actualy batches, oh well
+	// note: in practice this never actually batches, oh well
 	R_Shadow_RenderMode_Begin();
 	R_Shadow_RenderMode_ActiveLight((rtlight_t *)rtlight);
 	R_Shadow_RenderMode_Lighting(false, true);
