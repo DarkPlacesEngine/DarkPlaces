@@ -2682,7 +2682,7 @@ void VM_drawstring(void)
 	}
 
 	if(pos[2] || scale[2])
-		Con_Printf("VM_drawstring: z value%c from %s discarded\n",(pos[2] && scale[2]) ? 's' : 0,((pos[2] && scale[2]) ? "pos and scale" : (pos[2] ? "pos" : "scale")));
+		Con_Printf("VM_drawstring: z value%s from %s discarded\n",(pos[2] && scale[2]) ? "s" : " ",((pos[2] && scale[2]) ? "pos and scale" : (pos[2] ? "pos" : "scale")));
 
 	DrawQ_String (pos[0], pos[1], string, 0, scale[0], scale[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag);
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
@@ -2729,12 +2729,12 @@ void VM_drawpic(void)
 	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
 	{
 		PRVM_G_FLOAT(OFS_RETURN) = -2;
-		VM_Warning("VM_drawstring: %s: wrong DRAWFLAG %i !\n",PRVM_NAME,flag);
+		VM_Warning("VM_drawpic: %s: wrong DRAWFLAG %i !\n",PRVM_NAME,flag);
 		return;
 	}
 
 	if(pos[2] || size[2])
-		Con_Printf("VM_drawstring: z value%c from %s discarded\n",(pos[2] && size[2]) ? 's' : 0,((pos[2] && size[2]) ? "pos and size" : (pos[2] ? "pos" : "size")));
+		Con_Printf("VM_drawpic: z value%s from %s discarded\n",(pos[2] && size[2]) ? "s" : " ",((pos[2] && size[2]) ? "pos and size" : (pos[2] ? "pos" : "size")));
 
 	DrawQ_Pic(pos[0], pos[1], Draw_CachePic(picname, true), size[0], size[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag);
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
@@ -2763,12 +2763,12 @@ void VM_drawfill(void)
 	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
 	{
 		PRVM_G_FLOAT(OFS_RETURN) = -2;
-		VM_Warning("VM_drawstring: %s: wrong DRAWFLAG %i !\n",PRVM_NAME,flag);
+		VM_Warning("VM_drawfill: %s: wrong DRAWFLAG %i !\n",PRVM_NAME,flag);
 		return;
 	}
 
 	if(pos[2] || size[2])
-		Con_Printf("VM_drawstring: z value%c from %s discarded\n",(pos[2] && size[2]) ? 's' : 0,((pos[2] && size[2]) ? "pos and size" : (pos[2] ? "pos" : "size")));
+		Con_Printf("VM_drawfill: z value%s from %s discarded\n",(pos[2] && size[2]) ? "s" : " ",((pos[2] && size[2]) ? "pos and size" : (pos[2] ? "pos" : "size")));
 
 	DrawQ_Pic(pos[0], pos[1], NULL, size[0], size[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM3), flag);
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
