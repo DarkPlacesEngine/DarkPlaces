@@ -486,7 +486,7 @@ void CL_VM_Init (void)
 {
 	unsigned char *csprogsdata;
 	fs_offset_t csprogsdatasize;
-	unsigned int csprogsdatacrc, requiredcrc;
+	int csprogsdatacrc, requiredcrc;
 	entity_t *ent;
 
 	// reset csqc_progcrc after reading it, so that changing servers doesn't
