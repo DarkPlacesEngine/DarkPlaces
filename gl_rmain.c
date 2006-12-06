@@ -1171,6 +1171,8 @@ static void R_View_UpdateEntityVisible (void)
 		{
 			ent = r_refdef.entities[i];
 			r_viewcache.entityvisible[i] = !(ent->flags & renderimask) && !R_CullBox(ent->mins, ent->maxs) && ((ent->effects & EF_NODEPTHTEST) || r_refdef.worldmodel->brush.BoxTouchingVisibleLeafs(r_refdef.worldmodel, r_viewcache.world_leafvisible, ent->mins, ent->maxs));
+			if (r_viewcache.entityvisible[i])
+				R_UpdateEntityLighting(ent);
 		}
 	}
 	else
@@ -1180,6 +1182,8 @@ static void R_View_UpdateEntityVisible (void)
 		{
 			ent = r_refdef.entities[i];
 			r_viewcache.entityvisible[i] = !(ent->flags & renderimask) && !R_CullBox(ent->mins, ent->maxs);
+			if (r_viewcache.entityvisible[i])
+				R_UpdateEntityLighting(ent);
 		}
 	}
 }
@@ -1713,8 +1717,6 @@ matrix4x4_t r_waterscrollmatrix;
 
 void R_UpdateVariables(void)
 {
-	int i;
-
 	R_Textures_Frame();
 
 	r_refdef.farclip = 4096;
@@ -1779,13 +1781,6 @@ void R_UpdateVariables(void)
 	}
 	else
 		r_refdef.fogenabled = false;
-
-	// update some cached entity properties...
-	for (i = 0;i < r_refdef.numentities;i++)
-	{
-		entity_render_t *ent = r_refdef.entities[i];
-		R_UpdateEntityLighting(ent);
-	}
 }
 
 /*
