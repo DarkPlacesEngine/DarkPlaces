@@ -110,7 +110,7 @@ void CL_VM_Error (const char *format, ...)	//[515]: hope it will be never execut
 	csqc_loaded = false;
 	Mem_FreePool(&csqc_mempool);
 
-	Cvar_SetValueQuick(&csqc_progcrc, 0);
+	Cvar_SetValueQuick(&csqc_progcrc, -1);
 
 //	Host_AbortCurrentFrame();	//[515]: hmmm... if server says it needs csqc then client MUST disconnect
 	Host_Error(va("CL_VM_Error: %s", errorstring));
@@ -349,15 +349,18 @@ qboolean CL_VM_Parse_TempEntity (void)
 
 void CL_VM_Parse_StuffCmd (const char *msg)
 {
-	if(!csqc_loaded)	//[515]: add more here
 	if(msg[0] == 'c')
 	if(msg[1] == 's')
 	if(msg[2] == 'q')
 	if(msg[3] == 'c')
 	{
-		csqc_progcrc.flags = 0;
+		// if this is setting a csqc variable, deprotect csqc_progcrc
+		// temporarily so that it can be set by the cvar command,
+		// and then reprotect it afterwards
+		int flags = csqc_progcrc.flags;
+		csqc_progcrc.flags &= ~CVAR_READONLY;
 		Cmd_ExecuteString (msg, src_command);
-		csqc_progcrc.flags = CVAR_READONLY;
+		csqc_progcrc.flags = flags;
 		return;
 	}
 	if(!csqc_loaded || !CSQC_Parse_StuffCmd)
@@ -483,37 +486,47 @@ void CL_VM_Init (void)
 {
 	unsigned char *csprogsdata;
 	fs_offset_t csprogsdatasize;
-	unsigned int csprogsdatacrc;
+	unsigned int csprogsdatacrc, requiredcrc;
 	entity_t *ent;
+
+	// reset csqc_progcrc after reading it, so that changing servers doesn't
+	// expect csqc on the next server
+	requiredcrc = csqc_progcrc.integer;
+	Cvar_SetValueQuick(&csqc_progcrc, -1);
 
 	csqc_loaded = false;
 	memset(cl.csqc_model_precache, 0, sizeof(cl.csqc_model_precache));
 	memset(&cl.csqc_vidvars, true, sizeof(csqc_vidvars_t));
 
 	// if the server is not requesting a csprogs, then we're done here
-	if (!csqc_progcrc.integer)
+	if (requiredcrc < 0)
 		return;
 
-	// see if there is a csprogs.dat installed, and if so, set the csqc_progcrc accordingly, this will be sent to connecting clients to tell them to only load a matching csprogs.dat file
-	csprogsdatacrc = 0;
+	// see if the requested csprogs.dat file matches the requested crc
+	csprogsdatacrc = -1;
 	csprogsdata = FS_LoadFile(csqc_progname.string, tempmempool, true, &csprogsdatasize);
 	if (csprogsdata)
 	{
 		csprogsdatacrc = CRC_Block(csprogsdata, csprogsdatasize);
 		Mem_Free(csprogsdata);
-		if(csprogsdatacrc != (unsigned short)csqc_progcrc.integer && !sv.active && !cls.demoplayback)
+		if (csprogsdatacrc != requiredcrc)
 		{
-			Con_Printf("^1Your %s is not the same version as the server (CRC is %i but should be %i)\n", csqc_progname.string, prog->filecrc, csqc_progcrc.integer);
-			PRVM_ResetProg();
+			if (cls.demoplayback)
+				Con_Printf("^1Your %s is not the same version as the demo was recorded with (CRC is %i but should be %i)\n", csqc_progname.string, csprogsdatacrc, requiredcrc);
+			else
+				Con_Printf("^1Your %s is not the same version as the server (CRC is %i but should be %i)\n", csqc_progname.string, csprogsdatacrc, requiredcrc);
 			CL_Disconnect();
 			return;
 		}
 	}
 	else
 	{
-		if(!sv.active && csqc_progcrc.integer)
+		if (requiredcrc >= 0)
 		{
-			Con_Printf("CL_VM_Init: server requires CSQC, but \"%s\" wasn't found\n", csqc_progname.string);
+			if (cls.demoplayback)
+				Con_Printf("CL_VM_Init: demo requires CSQC, but \"%s\" wasn't found\n", csqc_progname.string);
+			else
+				Con_Printf("CL_VM_Init: server requires CSQC, but \"%s\" wasn't found\n", csqc_progname.string);
 			CL_Disconnect();
 		}
 		return;
@@ -540,16 +553,8 @@ void CL_VM_Init (void)
 
 	PRVM_LoadProgs(csqc_progname.string, cl_numrequiredfunc, cl_required_func, 0, NULL);
 
-	if(!sv.active && !cls.demoplayback && prog->filecrc != (unsigned short)csqc_progcrc.integer)
-	{
-		Con_Printf("^1Your %s is not the same version as the server (CRC is %i but should be %i)\n", prog->filecrc, csqc_progcrc.integer);
-		PRVM_ResetProg();
-		CL_Disconnect();
-		return;
-	}
-
 	if(prog->loaded)
-		Con_Printf("CSQC ^5loaded (crc=%i)\n", csqc_progcrc.integer);
+		Con_Printf("CSQC ^5loaded (crc=%i)\n", csprogsdatacrc);
 	else
 	{
 		CL_VM_Error("CSQC ^2failed to load\n");
@@ -594,7 +599,7 @@ void CL_VM_Init (void)
 void CL_VM_ShutDown (void)
 {
 	Cmd_ClearCsqcFuncs();
-	Cvar_SetValueQuick(&csqc_progcrc, 0);
+	Cvar_SetValueQuick(&csqc_progcrc, -1);
 	if(!csqc_loaded)
 		return;
 	CSQC_BEGIN
