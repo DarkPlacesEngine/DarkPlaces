@@ -1145,7 +1145,7 @@ void CL_ClientMovement_Replay(void)
 		s.movevars_airaccel_sideways_friction = cl_movement_airaccel_sideways_friction.value;
 	}
 
-	cl.movement_predicted = (cl_movement.integer && cls.signon == SIGNONS && cl.stats[STAT_HEALTH] > 0 && !cl.intermission) && ((cls.protocol != PROTOCOL_DARKPLACES6 && cls.protocol != PROTOCOL_DARKPLACES7) || cl.servermovesequence);
+	cl.movement_predicted = (cl_movement.integer && !cls.demoplayback && cls.signon == SIGNONS && cl.stats[STAT_HEALTH] > 0 && !cl.intermission) && ((cls.protocol != PROTOCOL_DARKPLACES6 && cls.protocol != PROTOCOL_DARKPLACES7) || cl.servermovesequence);
 	if (cl.movement_predicted)
 	{
 		//Con_Printf("%f: ", cl.mtime[0]);
