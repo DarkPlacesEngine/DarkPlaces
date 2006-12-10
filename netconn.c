@@ -1893,7 +1893,9 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 						if (developer.integer >= 10)
 							Con_Printf("Datagram_ParseConnectionless: sending \"accept\" to %s.\n", addressstring2);
 						NetConn_WriteString(mysocket, "\377\377\377\377accept", peeraddress);
+						SV_VM_Begin();
 						SV_SendServerinfo(client);
+						SV_VM_End();
 					}
 					else
 					{
@@ -2078,7 +2080,11 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 					// if client is already spawned, re-send the
 					// serverinfo message as they'll need it to play
 					if (client->spawned)
+					{
+						SV_VM_Begin();
 						SV_SendServerinfo(client);
+						SV_VM_End();
+					}
 					return true;
 				}
 			}
