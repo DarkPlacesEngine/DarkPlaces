@@ -512,11 +512,16 @@ void CL_VM_Init (void)
 		if (csprogsdatacrc != requiredcrc)
 		{
 			if (cls.demoplayback)
-				Con_Printf("^1Your %s is not the same version as the demo was recorded with (CRC is %i but should be %i)\n", csqc_progname.string, csprogsdatacrc, requiredcrc);
+			{
+				Con_Printf("^1Warning: Your %s is not the same version as the demo was recorded with (CRC is %i but should be %i)\n", csqc_progname.string, csprogsdatacrc, requiredcrc);
+				return;
+			}
 			else
+			{
 				Con_Printf("^1Your %s is not the same version as the server (CRC is %i but should be %i)\n", csqc_progname.string, csprogsdatacrc, requiredcrc);
-			CL_Disconnect();
-			return;
+				CL_Disconnect();
+				return;
+			}
 		}
 	}
 	else
