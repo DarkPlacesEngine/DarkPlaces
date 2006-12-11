@@ -46,28 +46,17 @@ void Mod_AliasInit (void)
 
 void Mod_Alias_GetMesh_Vertices(const model_t *model, const frameblend_t *frameblend, float *vertex3f, float *normal3f, float *svector3f, float *tvector3f)
 {
+#define MAX_BONES 256
 	if (model->surfmesh.data_vertexweightindex4i)
 	{
-		int i, k, blends;
-		const float *v = model->surfmesh.data_vertex3f;
-		const float *n = model->surfmesh.data_normal3f;
-		const float *sv = model->surfmesh.data_svector3f;
-		const float *tv = model->surfmesh.data_tvector3f;
-		const int *wi = model->surfmesh.data_vertexweightindex4i;
-		const float *wf = model->surfmesh.data_vertexweightinfluence4f;
-		float *matrix, m[12], bonepose[256][12], boneposerelative[256][12];
 		// vertex weighted skeletal
-		memset(vertex3f, 0, model->surfmesh.num_vertices * sizeof(float[3]));
-		if (normal3f)
-			memset(normal3f, 0, model->surfmesh.num_vertices * sizeof(float[3]));
-		if (svector3f)
-		{
-			memset(svector3f, 0, model->surfmesh.num_vertices * sizeof(float[3]));
-			memset(tvector3f, 0, model->surfmesh.num_vertices * sizeof(float[3]));
-		}
+		int i, k;
+		float boneposerelative[MAX_BONES][12];
 		// interpolate matrices and concatenate them to their parents
 		for (i = 0;i < model->num_bones;i++)
 		{
+			int blends;
+			float *matrix, m[12], bonepose[MAX_BONES][12];
 			for (k = 0;k < 12;k++)
 				m[k] = 0;
 			for (blends = 0;blends < 4 && frameblend[blends].lerp > 0;blends++)
@@ -91,57 +80,132 @@ void Mod_Alias_GetMesh_Vertices(const model_t *model, const frameblend_t *frameb
 			R_ConcatTransforms(bonepose[i], model->data_baseboneposeinverse + i * 12, boneposerelative[i]);
 		}
 		// blend the vertex bone weights
-		if (svector3f)
+		// special case for the extremely common wf[0] == 1 because it saves 12 adds and multiplies (w[0] is always 1 if only one bone controls this vertex, artists only use multiple bones for certain special cases)
+		// special case for the first bone because it avoids the need to memset the arrays before filling
 		{
-			for (i = 0;i < model->surfmesh.num_vertices;i++, v += 3, n += 3, sv += 3, tv += 3, wi += 4, wf += 4, vertex3f += 3, normal3f += 3, svector3f += 3, tvector3f += 3)
-			{
-				for (k = 0;k < 4 && wf[k];k++)
-				{
-					const float *m = boneposerelative[wi[k]];
-					float f = wf[k];
-					vertex3f[0] += f * (v[0] * m[0] + v[1] * m[1] + v[2] * m[ 2] + m[ 3]);
-					vertex3f[1] += f * (v[0] * m[4] + v[1] * m[5] + v[2] * m[ 6] + m[ 7]);
-					vertex3f[2] += f * (v[0] * m[8] + v[1] * m[9] + v[2] * m[10] + m[11]);
-					normal3f[0] += f * (n[0] * m[0] + n[1] * m[1] + n[2] * m[ 2]);
-					normal3f[1] += f * (n[0] * m[4] + n[1] * m[5] + n[2] * m[ 6]);
-					normal3f[2] += f * (n[0] * m[8] + n[1] * m[9] + n[2] * m[10]);
-					svector3f[0] += f * (sv[0] * m[0] + sv[1] * m[1] + sv[2] * m[ 2]);
-					svector3f[1] += f * (sv[0] * m[4] + sv[1] * m[5] + sv[2] * m[ 6]);
-					svector3f[2] += f * (sv[0] * m[8] + sv[1] * m[9] + sv[2] * m[10]);
-					tvector3f[0] += f * (tv[0] * m[0] + tv[1] * m[1] + tv[2] * m[ 2]);
-					tvector3f[1] += f * (tv[0] * m[4] + tv[1] * m[5] + tv[2] * m[ 6]);
-					tvector3f[2] += f * (tv[0] * m[8] + tv[1] * m[9] + tv[2] * m[10]);
-				}
-			}
-		}
-		else if (normal3f)
-		{
-			for (i = 0;i < model->surfmesh.num_vertices;i++, v += 3, n += 3, wi += 4, wf += 4, vertex3f += 3, normal3f += 3)
-			{
-				for (k = 0;k < 4 && wf[k];k++)
-				{
-					const float *m = boneposerelative[wi[k]];
-					float f = wf[k];
-					vertex3f[0] += f * (v[0] * m[0] + v[1] * m[1] + v[2] * m[ 2] + m[ 3]);
-					vertex3f[1] += f * (v[0] * m[4] + v[1] * m[5] + v[2] * m[ 6] + m[ 7]);
-					vertex3f[2] += f * (v[0] * m[8] + v[1] * m[9] + v[2] * m[10] + m[11]);
-					normal3f[0] += f * (n[0] * m[0] + n[1] * m[1] + n[2] * m[ 2]);
-					normal3f[1] += f * (n[0] * m[4] + n[1] * m[5] + n[2] * m[ 6]);
-					normal3f[2] += f * (n[0] * m[8] + n[1] * m[9] + n[2] * m[10]);
-				}
-			}
-		}
-		else
-		{
+			const float *v = model->surfmesh.data_vertex3f;
+			const int *wi = model->surfmesh.data_vertexweightindex4i;
+			const float *wf = model->surfmesh.data_vertexweightinfluence4f;
 			for (i = 0;i < model->surfmesh.num_vertices;i++, v += 3, wi += 4, wf += 4, vertex3f += 3)
 			{
-				for (k = 0;k < 4 && wf[k];k++)
+				if (wf[0] == 1)
 				{
-					const float *m = boneposerelative[wi[k]];
-					float f = wf[k];
-					vertex3f[0] += f * (v[0] * m[0] + v[1] * m[1] + v[2] * m[ 2] + m[ 3]);
-					vertex3f[1] += f * (v[0] * m[4] + v[1] * m[5] + v[2] * m[ 6] + m[ 7]);
-					vertex3f[2] += f * (v[0] * m[8] + v[1] * m[9] + v[2] * m[10] + m[11]);
+					const float *m = boneposerelative[wi[0]];
+					vertex3f[0] = (v[0] * m[0] + v[1] * m[1] + v[2] * m[ 2] + m[ 3]);
+					vertex3f[1] = (v[0] * m[4] + v[1] * m[5] + v[2] * m[ 6] + m[ 7]);
+					vertex3f[2] = (v[0] * m[8] + v[1] * m[9] + v[2] * m[10] + m[11]);
+				}
+				else
+				{
+					const float *m = boneposerelative[wi[0]];
+					float f = wf[0];
+					vertex3f[0] = f * (v[0] * m[0] + v[1] * m[1] + v[2] * m[ 2] + m[ 3]);
+					vertex3f[1] = f * (v[0] * m[4] + v[1] * m[5] + v[2] * m[ 6] + m[ 7]);
+					vertex3f[2] = f * (v[0] * m[8] + v[1] * m[9] + v[2] * m[10] + m[11]);
+					for (k = 1;k < 4 && wf[k];k++)
+					{
+						const float *m = boneposerelative[wi[k]];
+						float f = wf[k];
+						vertex3f[0] += f * (v[0] * m[0] + v[1] * m[1] + v[2] * m[ 2] + m[ 3]);
+						vertex3f[1] += f * (v[0] * m[4] + v[1] * m[5] + v[2] * m[ 6] + m[ 7]);
+						vertex3f[2] += f * (v[0] * m[8] + v[1] * m[9] + v[2] * m[10] + m[11]);
+					}
+				}
+			}
+		}
+		if (normal3f)
+		{
+			const float *n = model->surfmesh.data_normal3f;
+			const int *wi = model->surfmesh.data_vertexweightindex4i;
+			const float *wf = model->surfmesh.data_vertexweightinfluence4f;
+			for (i = 0;i < model->surfmesh.num_vertices;i++, n += 3, wi += 4, wf += 4, normal3f += 3)
+			{
+				if (wf[0] == 1)
+				{
+					const float *m = boneposerelative[wi[0]];
+					normal3f[0] = (n[0] * m[0] + n[1] * m[1] + n[2] * m[ 2]);
+					normal3f[1] = (n[0] * m[4] + n[1] * m[5] + n[2] * m[ 6]);
+					normal3f[2] = (n[0] * m[8] + n[1] * m[9] + n[2] * m[10]);
+				}
+				else
+				{
+					const float *m = boneposerelative[wi[0]];
+					float f = wf[0];
+					normal3f[0] = f * (n[0] * m[0] + n[1] * m[1] + n[2] * m[ 2]);
+					normal3f[1] = f * (n[0] * m[4] + n[1] * m[5] + n[2] * m[ 6]);
+					normal3f[2] = f * (n[0] * m[8] + n[1] * m[9] + n[2] * m[10]);
+					for (k = 1;k < 4 && wf[k];k++)
+					{
+						const float *m = boneposerelative[wi[k]];
+						float f = wf[k];
+						normal3f[0] += f * (n[0] * m[0] + n[1] * m[1] + n[2] * m[ 2]);
+						normal3f[1] += f * (n[0] * m[4] + n[1] * m[5] + n[2] * m[ 6]);
+						normal3f[2] += f * (n[0] * m[8] + n[1] * m[9] + n[2] * m[10]);
+					}
+				}
+			}
+		}
+		if (svector3f)
+		{
+			const float *sv = model->surfmesh.data_svector3f;
+			const int *wi = model->surfmesh.data_vertexweightindex4i;
+			const float *wf = model->surfmesh.data_vertexweightinfluence4f;
+			for (i = 0;i < model->surfmesh.num_vertices;i++, sv += 3, wi += 4, wf += 4, svector3f += 3)
+			{
+				if (wf[0] == 1)
+				{
+					const float *m = boneposerelative[wi[0]];
+					svector3f[0] = (sv[0] * m[0] + sv[1] * m[1] + sv[2] * m[ 2]);
+					svector3f[1] = (sv[0] * m[4] + sv[1] * m[5] + sv[2] * m[ 6]);
+					svector3f[2] = (sv[0] * m[8] + sv[1] * m[9] + sv[2] * m[10]);
+				}
+				else
+				{
+					const float *m = boneposerelative[wi[0]];
+					float f = wf[0];
+					svector3f[0] = f * (sv[0] * m[0] + sv[1] * m[1] + sv[2] * m[ 2]);
+					svector3f[1] = f * (sv[0] * m[4] + sv[1] * m[5] + sv[2] * m[ 6]);
+					svector3f[2] = f * (sv[0] * m[8] + sv[1] * m[9] + sv[2] * m[10]);
+					for (k = 1;k < 4 && wf[k];k++)
+					{
+						const float *m = boneposerelative[wi[k]];
+						float f = wf[k];
+						svector3f[0] += f * (sv[0] * m[0] + sv[1] * m[1] + sv[2] * m[ 2]);
+						svector3f[1] += f * (sv[0] * m[4] + sv[1] * m[5] + sv[2] * m[ 6]);
+						svector3f[2] += f * (sv[0] * m[8] + sv[1] * m[9] + sv[2] * m[10]);
+					}
+				}
+			}
+		}
+		if (tvector3f)
+		{
+			const float *tv = model->surfmesh.data_tvector3f;
+			const int *wi = model->surfmesh.data_vertexweightindex4i;
+			const float *wf = model->surfmesh.data_vertexweightinfluence4f;
+			for (i = 0;i < model->surfmesh.num_vertices;i++, tv += 3, wi += 4, wf += 4, tvector3f += 3)
+			{
+				if (wf[0] == 1)
+				{
+					const float *m = boneposerelative[wi[0]];
+					tvector3f[0] = (tv[0] * m[0] + tv[1] * m[1] + tv[2] * m[ 2]);
+					tvector3f[1] = (tv[0] * m[4] + tv[1] * m[5] + tv[2] * m[ 6]);
+					tvector3f[2] = (tv[0] * m[8] + tv[1] * m[9] + tv[2] * m[10]);
+				}
+				else
+				{
+					const float *m = boneposerelative[wi[0]];
+					float f = wf[0];
+					tvector3f[0] = f * (tv[0] * m[0] + tv[1] * m[1] + tv[2] * m[ 2]);
+					tvector3f[1] = f * (tv[0] * m[4] + tv[1] * m[5] + tv[2] * m[ 6]);
+					tvector3f[2] = f * (tv[0] * m[8] + tv[1] * m[9] + tv[2] * m[10]);
+					for (k = 1;k < 4 && wf[k];k++)
+					{
+						const float *m = boneposerelative[wi[k]];
+						float f = wf[k];
+						tvector3f[0] += f * (tv[0] * m[0] + tv[1] * m[1] + tv[2] * m[ 2]);
+						tvector3f[1] += f * (tv[0] * m[4] + tv[1] * m[5] + tv[2] * m[ 6]);
+						tvector3f[2] += f * (tv[0] * m[8] + tv[1] * m[9] + tv[2] * m[10]);
+					}
 				}
 			}
 		}
@@ -158,19 +222,28 @@ void Mod_Alias_GetMesh_Vertices(const model_t *model, const frameblend_t *frameb
 			if (frameblend[blendnum].lerp > 0)
 				numblends = blendnum + 1;
 		}
-		memset(vertex3f, 0, numverts * sizeof(float[3]));
-		if (normal3f)
-			for (i = 0;i < numverts;i++)
-				VectorClear(normal3f + i * 3);
+		// special case for the first blend because it avoids some adds and the need to memset the arrays first
 		for (blendnum = 0;blendnum < numblends;blendnum++)
 		{
 			const md3vertex_t *verts = model->surfmesh.data_morphmd3vertex + numverts * frameblend[blendnum].frame;
 			float scale = frameblend[blendnum].lerp * (1.0f / 64.0f);
-			for (i = 0;i < numverts;i++)
+			if (blendnum == 0)
 			{
-				vertex3f[i * 3 + 0] += verts[i].origin[0] * scale;
-				vertex3f[i * 3 + 1] += verts[i].origin[1] * scale;
-				vertex3f[i * 3 + 2] += verts[i].origin[2] * scale;
+				for (i = 0;i < numverts;i++)
+				{
+					vertex3f[i * 3 + 0] = verts[i].origin[0] * scale;
+					vertex3f[i * 3 + 1] = verts[i].origin[1] * scale;
+					vertex3f[i * 3 + 2] = verts[i].origin[2] * scale;
+				}
+			}
+			else
+			{
+				for (i = 0;i < numverts;i++)
+				{
+					vertex3f[i * 3 + 0] += verts[i].origin[0] * scale;
+					vertex3f[i * 3 + 1] += verts[i].origin[1] * scale;
+					vertex3f[i * 3 + 2] += verts[i].origin[2] * scale;
+				}
 			}
 			// the yaw and pitch stored in md3 models are 8bit quantized angles
 			// (0-255), and as such a lookup table is very well suited to
@@ -180,14 +253,27 @@ void Mod_Alias_GetMesh_Vertices(const model_t *model, const frameblend_t *frameb
 			if (normal3f)
 			{
 				float lerp = frameblend[blendnum].lerp;
-				for (i = 0;i < numverts;i++)
+				if (blendnum == 0)
 				{
-					normal3f[i * 3 + 0] += mod_md3_sin[verts[i].yaw + 64] * mod_md3_sin[verts[i].pitch     ] * lerp;
-					normal3f[i * 3 + 1] += mod_md3_sin[verts[i].yaw     ] * mod_md3_sin[verts[i].pitch     ] * lerp;
-					normal3f[i * 3 + 2] +=                                  mod_md3_sin[verts[i].pitch + 64] * lerp;
+					for (i = 0;i < numverts;i++)
+					{
+						normal3f[i * 3 + 0] = mod_md3_sin[verts[i].yaw + 64] * mod_md3_sin[verts[i].pitch     ] * lerp;
+						normal3f[i * 3 + 1] = mod_md3_sin[verts[i].yaw     ] * mod_md3_sin[verts[i].pitch     ] * lerp;
+						normal3f[i * 3 + 2] =                                  mod_md3_sin[verts[i].pitch + 64] * lerp;
+					}
+				}
+				else
+				{
+					for (i = 0;i < numverts;i++)
+					{
+						normal3f[i * 3 + 0] += mod_md3_sin[verts[i].yaw + 64] * mod_md3_sin[verts[i].pitch     ] * lerp;
+						normal3f[i * 3 + 1] += mod_md3_sin[verts[i].yaw     ] * mod_md3_sin[verts[i].pitch     ] * lerp;
+						normal3f[i * 3 + 2] +=                                  mod_md3_sin[verts[i].pitch + 64] * lerp;
+					}
 				}
 			}
 		}
+		// md3 model vertices do not include tangents, so we have to generate them (extremely slow)
 		if (normal3f)
 			if (svector3f)
 				Mod_BuildTextureVectorsFromNormals(0, model->surfmesh.num_vertices, model->surfmesh.num_triangles, vertex3f, model->surfmesh.data_texcoordtexture2f, normal3f, model->surfmesh.data_element3i, svector3f, tvector3f, r_smoothnormals_areaweighting.integer);
@@ -200,6 +286,8 @@ void Mod_Alias_GetMesh_Vertices(const model_t *model, const frameblend_t *frameb
 		float translate[3];
 		VectorClear(translate);
 		numblends = 0;
+		// blend the frame translates to avoid redundantly doing so on each vertex
+		// (a bit of a brain twister but it works)
 		for (blendnum = 0;blendnum < 4;blendnum++)
 		{
 			if (model->surfmesh.data_morphmd2framesize6f)
@@ -209,11 +297,7 @@ void Mod_Alias_GetMesh_Vertices(const model_t *model, const frameblend_t *frameb
 			if (frameblend[blendnum].lerp > 0)
 				numblends = blendnum + 1;
 		}
-		for (i = 0;i < numverts;i++)
-			VectorCopy(translate, vertex3f + i * 3);
-		if (normal3f)
-			for (i = 0;i < numverts;i++)
-				VectorClear(normal3f + i * 3);
+		// special case for the first blend because it avoids some adds and the need to memset the arrays first
 		for (blendnum = 0;blendnum < numblends;blendnum++)
 		{
 			const trivertx_t *verts = model->surfmesh.data_morphmdlvertex + numverts * frameblend[blendnum].frame;
@@ -222,11 +306,23 @@ void Mod_Alias_GetMesh_Vertices(const model_t *model, const frameblend_t *frameb
 				VectorScale(model->surfmesh.data_morphmd2framesize6f + frameblend[blendnum].frame * 6, frameblend[blendnum].lerp, scale);
 			else
 				VectorScale(model->surfmesh.num_morphmdlframescale, frameblend[blendnum].lerp, scale);
-			for (i = 0;i < numverts;i++)
+			if (blendnum == 0)
 			{
-				vertex3f[i * 3 + 0] += verts[i].v[0] * scale[0];
-				vertex3f[i * 3 + 1] += verts[i].v[1] * scale[1];
-				vertex3f[i * 3 + 2] += verts[i].v[2] * scale[2];
+				for (i = 0;i < numverts;i++)
+				{
+					vertex3f[i * 3 + 0] = translate[0] + verts[i].v[0] * scale[0];
+					vertex3f[i * 3 + 1] = translate[1] + verts[i].v[1] * scale[1];
+					vertex3f[i * 3 + 2] = translate[2] + verts[i].v[2] * scale[2];
+				}
+			}
+			else
+			{
+				for (i = 0;i < numverts;i++)
+				{
+					vertex3f[i * 3 + 0] += verts[i].v[0] * scale[0];
+					vertex3f[i * 3 + 1] += verts[i].v[1] * scale[1];
+					vertex3f[i * 3 + 2] += verts[i].v[2] * scale[2];
+				}
 			}
 			// the vertex normals in mdl models are an index into a table of
 			// 162 unique values, this very crude quantization reduces the
@@ -235,10 +331,21 @@ void Mod_Alias_GetMesh_Vertices(const model_t *model, const frameblend_t *frameb
 			if (normal3f)
 			{
 				float lerp = frameblend[blendnum].lerp;
-				for (i = 0;i < numverts;i++)
+				if (blendnum == 0)
 				{
-					const float *vn = m_bytenormals[verts[i].lightnormalindex];
-					VectorMA(normal3f + i*3, lerp, vn, normal3f + i*3);
+					for (i = 0;i < numverts;i++)
+					{
+						const float *vn = m_bytenormals[verts[i].lightnormalindex];
+						VectorScale(vn, lerp, normal3f + i*3);
+					}
+				}
+				else
+				{
+					for (i = 0;i < numverts;i++)
+					{
+						const float *vn = m_bytenormals[verts[i].lightnormalindex];
+						VectorMA(normal3f + i*3, lerp, vn, normal3f + i*3);
+					}
 				}
 			}
 		}
