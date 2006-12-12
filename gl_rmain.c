@@ -1050,8 +1050,8 @@ void Render_Init(void)
 {
 	gl_backend_init();
 	R_Textures_Init();
-	GL_Main_Init();
 	GL_Draw_Init();
+	GL_Main_Init();
 	R_Shadow_Init();
 	R_Sky_Init();
 	GL_Surf_Init();

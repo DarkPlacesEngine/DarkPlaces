@@ -105,7 +105,7 @@ void R_ClearScreen(void);
 // invoke refresh of frame
 void SCR_UpdateScreen(void);
 // invoke refresh of loading plaque (nothing else seen)
-void SCR_UpdateLoadingScreen(void);
+void SCR_UpdateLoadingScreen(qboolean clear);
 
 #endif
 
