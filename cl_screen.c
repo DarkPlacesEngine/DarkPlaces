@@ -461,7 +461,7 @@ void SCR_BeginLoadingPlaque (void)
 
 	Host_StartVideo();
 	S_StopAllSounds();
-	SCR_UpdateLoadingScreen();
+	SCR_UpdateLoadingScreen(false);
 }
 
 //=============================================================================
@@ -1600,7 +1600,7 @@ void SCR_DrawScreen (void)
 		R_TimeReport("meshfinish");
 }
 
-void SCR_UpdateLoadingScreen (void)
+void SCR_UpdateLoadingScreen (qboolean clear)
 {
 	float x, y;
 	cachepic_t *pic;
@@ -1614,8 +1614,12 @@ void SCR_UpdateLoadingScreen (void)
 	//qglDisable(GL_SCISSOR_TEST);CHECKGLERROR
 	//qglDepthMask(1);CHECKGLERROR
 	qglColorMask(1,1,1,1);CHECKGLERROR
-	//qglClearColor(0,0,0,0);CHECKGLERROR
-	//qglClear(GL_COLOR_BUFFER_BIT);CHECKGLERROR
+	qglClearColor(0,0,0,0);CHECKGLERROR
+	// when starting up a new video mode, make sure the screen is cleared to black
+	if (clear)
+	{
+		qglClear(GL_COLOR_BUFFER_BIT);CHECKGLERROR
+	}
 	//qglDisable(GL_CULL_FACE);CHECKGLERROR
 	//R_ClearScreen();
 	R_Textures_Frame();
@@ -1645,19 +1649,20 @@ void SCR_UpdateLoadingScreen (void)
 	texcoord2f[6] = 0;texcoord2f[7] = 1;
 	if (vid.stereobuffer)
 	{
-		qglDrawBuffer(GL_BACK_LEFT);
+		qglDrawBuffer(GL_FRONT_LEFT);
 		R_Mesh_Draw(0, 4, 2, polygonelements);
-		qglDrawBuffer(GL_BACK_RIGHT);
+		qglDrawBuffer(GL_FRONT_RIGHT);
 		R_Mesh_Draw(0, 4, 2, polygonelements);
 	}
 	else
 	{
-		qglDrawBuffer(GL_BACK);
+		qglDrawBuffer(GL_FRONT);
 		R_Mesh_Draw(0, 4, 2, polygonelements);
 	}
 	R_Mesh_Finish();
 	// refresh
-	VID_Finish(false);
+	// not necessary when rendering to GL_FRONT buffers
+	//VID_Finish(false);
 }
 
 void CL_UpdateScreen(void)

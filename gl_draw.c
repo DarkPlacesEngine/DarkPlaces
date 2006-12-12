@@ -511,6 +511,9 @@ static void gl_draw_start(void)
 	char_texture = Draw_CachePic("gfx/conchars", true)->tex;
 	for (i = 1;i <= NUMCROSSHAIRS;i++)
 		r_crosshairs[i] = Draw_CachePic(va("gfx/crosshair%i", i), true);
+
+	// draw the loading screen so people have something to see in the newly opened window
+	SCR_UpdateLoadingScreen(true);
 }
 
 static void gl_draw_shutdown(void)
