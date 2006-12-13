@@ -1,7 +1,7 @@
 [Project]
 FileName=darkplaces.dev
 Name=DarkPlaces
-UnitCount=155
+UnitCount=158
 Type=0
 Ver=1
 ObjFiles=
@@ -1550,7 +1550,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit156]
-FileName=mdfour.c
+FileName=libcurl.c
 CompileCpp=0
 Folder=Source Files
 Compile=1
@@ -1560,9 +1560,9 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit157]
-FileName=clvm_cmds.c
+FileName=libcurl.h
 CompileCpp=0
-Folder=Source Files
+Folder=Header Files
 Compile=1
 Link=1
 Priority=1000
@@ -1609,6 +1609,16 @@ BuildCmd=
 
 [Unit144]
 FileName=svvm_cmds.c
+CompileCpp=0
+Folder=Source Files
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit158]
+FileName=clvm_cmds.c
 CompileCpp=0
 Folder=Source Files
 Compile=1
