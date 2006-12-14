@@ -287,6 +287,9 @@ static void Cmd_Exec_f (void)
 	if (!strcmp(Cmd_Argv(1), "default.cfg"))
 		Cbuf_InsertText("\ncvar_lockdefaults\n");
 
+	// insert newline after the text to make sure the last line is terminated (some text editors omit the trailing newline)
+	// (note: insertion order here is backwards from execution order, so this adds it after the text, by calling it before...)
+	Cbuf_InsertText ("\n");
 	Cbuf_InsertText (f);
 	Mem_Free(f);
 }
