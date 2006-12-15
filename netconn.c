@@ -1092,14 +1092,14 @@ void NetConn_ConnectionEstablished(lhnetsocket_t *mysocket, lhnetaddress_t *peer
 		Cmd_ForwardStringToServer("new");
 	if (cls.protocol == PROTOCOL_QUAKE)
 	{
-		// write a keepalive (svc_nop) as it seems to greatly improve the
+		// write a keepalive (clc_nop) as it seems to greatly improve the
 		// chances of connecting to a netquake server
 		sizebuf_t msg;
 		unsigned char buf[4];
 		memset(&msg, 0, sizeof(msg));
 		msg.data = buf;
 		msg.maxsize = sizeof(buf);
-		MSG_WriteChar(&msg, svc_nop);
+		MSG_WriteChar(&msg, clc_nop);
 		NetConn_SendUnreliableMessage(cls.netcon, &msg, cls.protocol);
 	}
 }
