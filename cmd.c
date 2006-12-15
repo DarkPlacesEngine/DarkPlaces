@@ -225,6 +225,10 @@ void Cmd_StuffCmds_f (void)
 		return;
 	}
 
+	// no reason to run the commandline arguments twice
+	if (host_stuffcmdsrun)
+		return;
+
 	host_stuffcmdsrun = true;
 	for (i = 0;i < com_argc;i++)
 	{
