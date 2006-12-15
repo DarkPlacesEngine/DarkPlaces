@@ -300,7 +300,7 @@ void CL_KeepaliveMessage (void)
 		memset(&msg, 0, sizeof(msg));
 		msg.data = buf;
 		msg.maxsize = sizeof(buf);
-		MSG_WriteChar(&msg, svc_nop);
+		MSG_WriteChar(&msg, clc_nop);
 		NetConn_SendUnreliableMessage(cls.netcon, &msg, cls.protocol);
 	}
 }
