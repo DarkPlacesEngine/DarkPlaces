@@ -4230,8 +4230,6 @@ static void M_NetStart_Change (int dir)
 
 	case 8:
 		Cvar_SetValueQuick (&sv_maxrate, sv_maxrate.integer + dir*500);
-		if (sv_maxrate.integer > NET_MAXRATE)
-			Cvar_SetValueQuick (&sv_maxrate, NET_MAXRATE);
 		if (sv_maxrate.integer < NET_MINRATE)
 			Cvar_SetValueQuick (&sv_maxrate, NET_MINRATE);
 		break;

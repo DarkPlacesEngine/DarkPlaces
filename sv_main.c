@@ -1234,7 +1234,7 @@ void SV_SendClientDatagram (client_t *client)
 	else
 	{
 		// PROTOCOL_DARKPLACES5 and later support packet size limiting of updates
-		maxrate = bound(NET_MINRATE, sv_maxrate.integer, NET_MAXRATE);
+		maxrate = max(NET_MINRATE, sv_maxrate.integer);
 		if (sv_maxrate.integer != maxrate)
 			Cvar_SetValueQuick(&sv_maxrate, maxrate);
 

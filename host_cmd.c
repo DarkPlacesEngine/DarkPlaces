@@ -1233,7 +1233,7 @@ void Host_Rate_f(void)
 	if (Cmd_Argc() != 2)
 	{
 		Con_Printf("\"rate\" is \"%i\"\n", cl_rate.integer);
-		Con_Print("rate <500-25000>\n");
+		Con_Print("rate <bytespersecond>\n");
 		return;
 	}
 
@@ -1241,7 +1241,7 @@ void Host_Rate_f(void)
 
 	if (cmd_source == src_command)
 	{
-		Cvar_SetValue ("_cl_rate", bound(NET_MINRATE, rate, NET_MAXRATE));
+		Cvar_SetValue ("_cl_rate", max(NET_MINRATE, rate));
 		CL_SetInfo("rate", va("%i", rate), true, false, false, false);
 		return;
 	}
