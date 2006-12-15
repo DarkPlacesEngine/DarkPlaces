@@ -30,8 +30,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 cvar_t registered = {0, "registered","0", "indicates if this is running registered quake (whether gfx/qpop.lmp was found)"};
 cvar_t cmdline = {0, "cmdline","0", "contains commandline the engine was launched with"};
 
-extern qboolean fs_modified;   // set true if using non-id files
-
 char com_token[MAX_INPUTLINE];
 int com_argc;
 const char **com_argv;
