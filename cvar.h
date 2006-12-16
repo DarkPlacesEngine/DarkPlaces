@@ -167,6 +167,7 @@ qboolean Cvar_Command (void);
 // command.  Returns true if the command was a variable reference that
 // was handled. (print or change)
 
+void Cvar_UnlockDefaults (void);
 void Cvar_LockDefaults_f (void);
 void Cvar_ResetToDefaults_All_f (void);
 void Cvar_ResetToDefaults_NoSaveOnly_f (void);

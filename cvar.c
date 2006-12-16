@@ -505,6 +505,15 @@ qboolean	Cvar_Command (void)
 }
 
 
+void Cvar_UnlockDefaults (void)
+{
+	cvar_t *var;
+	// unlock the default values of all cvars
+	for (var = cvar_vars ; var ; var = var->next)
+		var->flags &= ~CVAR_DEFAULTSET;
+}
+
+
 void Cvar_LockDefaults_f (void)
 {
 	cvar_t *var;
