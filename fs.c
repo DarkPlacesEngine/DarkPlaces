@@ -225,7 +225,6 @@ typedef struct pack_s
 	int ignorecase;  // PK3 ignores case
 	int numfiles;
 	packfile_t *files;
-	struct pack_s *next;
 } pack_t;
 
 
@@ -266,8 +265,6 @@ VARIABLES
 */
 
 mempool_t *fs_mempool;
-
-pack_t *packlist = NULL;
 
 searchpath_t *fs_searchpaths = NULL;
 
@@ -586,8 +583,6 @@ pack_t *FS_LoadPackPK3 (const char *packfile)
 	pack->handle = packhandle;
 	pack->numfiles = eocd.nbentries;
 	pack->files = (packfile_t *)Mem_Alloc(fs_mempool, eocd.nbentries * sizeof(packfile_t));
-	pack->next = packlist;
-	packlist = pack;
 
 	real_nb_files = PK3_BuildFileList (pack, &eocd);
 	if (real_nb_files < 0)
@@ -807,8 +802,6 @@ pack_t *FS_LoadPackPAK (const char *packfile)
 	pack->handle = packhandle;
 	pack->numfiles = 0;
 	pack->files = (packfile_t *)Mem_Alloc(fs_mempool, numpackfiles * sizeof(packfile_t));
-	pack->next = packlist;
-	packlist = pack;
 
 	// parse the directory
 	for (i = 0;i < numpackfiles;i++)
