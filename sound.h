@@ -60,6 +60,7 @@ void S_Terminate (void);
 
 void S_Startup (void);
 void S_Shutdown (void);
+void S_Reload_f (void);
 
 void S_Update(const matrix4x4_t *listenermatrix);
 void S_ExtraUpdate (void);
