@@ -213,9 +213,11 @@ Host_InitLocal
 ======================
 */
 void Host_SaveConfig_f(void);
+void Host_LoadConfig_f(void);
 static void Host_InitLocal (void)
 {
 	Cmd_AddCommand("saveconfig", Host_SaveConfig_f, "save settings to config.cfg immediately (also automatic when quitting)");
+	Cmd_AddCommand("loadconfig", Host_LoadConfig_f, "reset everything and reload configs");
 
 	Cvar_RegisterVariable (&host_framerate);
 	Cvar_RegisterVariable (&host_speeds);
@@ -277,6 +279,21 @@ void Host_SaveConfig_f(void)
 	}
 }
 
+
+/*
+===============
+Host_LoadConfig_f
+
+Resets key bindings and cvars to defaults and then reloads scripts
+===============
+*/
+void Host_LoadConfig_f(void)
+{
+	// unlock the cvar default strings so they can be updated by the new default.cfg
+	Cvar_UnlockDefaults();
+	// reset cvars to their defaults, and then exec startup scripts again
+	Cbuf_InsertText("cvar_resettodefaults_all;exec quake.rc\n");
+}
 
 /*
 =================
