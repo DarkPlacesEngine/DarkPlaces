@@ -91,6 +91,10 @@ qboolean S_IsSoundPrecached (const sfx_t *sfx)
 	return false;
 }
 
+void S_Reload_f (void)
+{
+}
+
 sfx_t *S_FindName (const char *name)
 {
 	return NULL;

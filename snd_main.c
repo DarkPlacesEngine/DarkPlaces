@@ -724,6 +724,7 @@ void S_Init(void)
 	Cmd_AddCommand("soundlist", S_SoundList_f, "list loaded sounds");
 	Cmd_AddCommand("soundinfo", S_SoundInfo_f, "print sound system information (such as channels and speed)");
 	Cmd_AddCommand("snd_restart", S_Restart_f, "restart sound system");
+	Cmd_AddCommand("snd_reload", S_Reload_f, "reload all sound files");
 
 	Cvar_RegisterVariable(&nosound);
 	Cvar_RegisterVariable(&snd_precache);
@@ -772,6 +773,28 @@ void S_Terminate (void)
 
 /*
 ==================
+S_Reload_f
+==================
+*/
+void S_Reload_f (void)
+{
+	int i;
+
+	// stop any active sounds
+	S_StopAllSounds();
+
+	// because the ambient sounds will be freed, clear the pointers
+	for (i = 0;i < (int)sizeof (ambient_sfxs) / (int)sizeof (ambient_sfxs[0]);i++)
+		ambient_sfxs[i] = NULL;
+
+	// now free all sounds
+	while (known_sfx != NULL)
+		S_FreeSfx (known_sfx, true);
+}
+
+
+/*
+==================
 S_FindName
 ==================
 */
@@ -789,6 +812,7 @@ sfx_t *S_FindName (const char *name)
 	}
 
 	// Look for this sound in the list of known sfx
+	// TODO: hash table search?
 	for (sfx = known_sfx; sfx != NULL; sfx = sfx->next)
 		if(!strcmp (sfx->name, name))
 			return sfx;
@@ -1265,6 +1289,9 @@ void S_StopAllSounds (void)
 	// TOCHECK: is this test necessary?
 	if (snd_renderbuffer == NULL)
 		return;
+
+	// stop CD audio because it may be using a faketrack
+	CDAudio_Stop();
 
 	for (i = 0; i < total_channels; i++)
 		S_StopChannel (i);
