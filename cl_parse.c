@@ -996,21 +996,9 @@ void CL_ParseServerInfo (void)
 
 		str = MSG_ReadString();
 		Con_Printf("server gamedir is %s\n", str);
-#if 0
-		// FIXME: change gamedir if needed!
-		if (strcasecmp(gamedirfile, str))
-		{
-			Host_SaveConfig_f();
-			cflag = 1;
-		}
 
-		Com_Gamedir(str); // change gamedir
-
-		if (cflag)
-		{
-			// exec the new config stuff
-		}
-#endif
+		// change gamedir if needed
+		FS_ChangeGameDir(str);
 
 		cl.gametype = GAME_DEATHMATCH;
 		cl.maxclients = 32;

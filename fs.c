@@ -273,7 +273,10 @@ searchpath_t *fs_searchpaths = NULL;
 char fs_gamedir[MAX_OSPATH];
 char fs_basedir[MAX_OSPATH];
 
-qboolean fs_modified;   // set true if using non-id files
+// list of active game directories (empty if not running a mod)
+#define MAX_GAMEDIRS 16
+int fs_numgamedirs = 0;
+char fs_gamedirs[MAX_GAMEDIRS][MAX_QPATH];
 
 cvar_t scr_screenshot_name = {0, "scr_screenshot_name","dp", "prefix name for saved screenshots (changes based on -game commandline, as well as which game mode is running)"};
 
@@ -1047,13 +1050,182 @@ static const char *FS_FileExtension (const char *in)
 
 /*
 ================
+FS_ClearSearchPath
+================
+*/
+void FS_ClearSearchPath (void)
+{
+	while (fs_searchpaths)
+	{
+		searchpath_t *search = fs_searchpaths;
+		fs_searchpaths = search->next;
+		if (search->pack)
+		{
+			if (search->pack->files)
+				Mem_Free(search->pack->files);
+			Mem_Free(search->pack);
+		}
+		Mem_Free(search);
+	}
+}
+
+
+/*
+================
+FS_Rescan_f
+================
+*/
+void FS_Rescan_f (void)
+{
+	int i;
+	qboolean fs_modified = false;
+
+	FS_ClearSearchPath();
+
+	// add the game-specific paths
+	// gamedirname1 (typically id1)
+	FS_AddGameHierarchy (gamedirname1);
+	// update the com_modname (used for server info)
+	strlcpy(com_modname, gamedirname1, sizeof(com_modname));
+
+	// add the game-specific path, if any
+	// (only used for mission packs and the like, which should set fs_modified)
+	if (gamedirname2)
+	{
+		fs_modified = true;
+		FS_AddGameHierarchy (gamedirname2);
+	}
+
+	// -game <gamedir>
+	// Adds basedir/gamedir as an override game
+	// LordHavoc: now supports multiple -game directories
+	// set the com_modname (reported in server info)
+	for (i = 0;i < fs_numgamedirs;i++)
+	{
+		fs_modified = true;
+		FS_AddGameHierarchy (fs_gamedirs[i]);
+		// update the com_modname (used server info)
+		strlcpy (com_modname, com_argv[i], sizeof (com_modname));
+	}
+
+	// set the default screenshot name to either the mod name or the
+	// gamemode screenshot name
+	if (strcmp(com_modname, gamedirname1))
+		Cvar_SetQuick (&scr_screenshot_name, com_modname);
+	else
+		Cvar_SetQuick (&scr_screenshot_name, gamescreenshotname);
+
+	// If "-condebug" is in the command line, remove the previous log file
+	if (COM_CheckParm ("-condebug") != 0)
+		unlink (va("%s/qconsole.log", fs_gamedir));
+
+	// look for the pop.lmp file and set registered to true if it is found
+	if ((gamemode == GAME_NORMAL || gamemode == GAME_HIPNOTIC || gamemode == GAME_ROGUE) && !FS_FileExists("gfx/pop.lmp"))
+	{
+		if (fs_modified)
+			Con_Print("Playing shareware version, with modification.\nwarning: most mods require full quake data.\n");
+		else
+			Con_Print("Playing shareware version.\n");
+	}
+	else
+	{
+		Cvar_Set ("registered", "1");
+		if (gamemode == GAME_NORMAL || gamemode == GAME_HIPNOTIC || gamemode == GAME_ROGUE)
+			Con_Print("Playing registered version.\n");
+	}
+}
+
+
+/*
+================
+FS_ChangeGameDir
+================
+*/
+void Host_SaveConfig_f (void);
+void Host_LoadConfig_f (void);
+qboolean FS_ChangeGameDir(const char *string)
+{
+	// if already using the requested gamedir, do nothing
+	if (fs_numgamedirs == 1 && !strcmp(fs_gamedirs[0], string))
+		return false;
+
+	// save the current config
+	Host_SaveConfig_f();
+
+	// change to the new gamedir
+	fs_numgamedirs = 1;
+	strlcpy(fs_gamedirs[0], string, sizeof(fs_gamedirs[0]));
+
+	// reinitialize filesystem to detect the new paks
+	FS_Rescan_f();
+
+	// exec the new config
+	Host_LoadConfig_f();
+
+	// reinitialize the loaded sounds
+	S_Reload_f();
+
+	// reinitialize renderer (this reloads hud/console background/etc)
+	R_Modules_Restart();
+
+	return true;
+}
+
+/*
+================
+FS_GameDir_f
+================
+*/
+void FS_GameDir_f (void)
+{
+	int i;
+
+	if (Cmd_Argc() < 2)
+	{
+		Con_Printf("gamedirs active:");
+		for (i = 0;i < fs_numgamedirs;i++)
+			Con_Printf(" %s", fs_gamedirs[i]);
+		Con_Printf("\n");
+		return;
+	}
+
+	if (cls.state != ca_disconnected || sv.active)
+	{
+		Con_Printf("Can not change gamedir while client is connected or server is running!\n");
+		return;
+	}
+
+	Host_SaveConfig_f();
+
+	fs_numgamedirs = 0;
+	for (i = 1;i < Cmd_Argc() && fs_numgamedirs < MAX_GAMEDIRS;i++)
+	{
+		strlcpy(fs_gamedirs[fs_numgamedirs], Cmd_Argv(i), sizeof(fs_gamedirs[fs_numgamedirs]));
+		fs_numgamedirs++;
+	}
+
+	// reinitialize filesystem to detect the new paks
+	FS_Rescan_f();
+
+	// exec the new config
+	Host_LoadConfig_f();
+
+	// reinitialize the loaded sounds
+	S_Reload_f();
+
+	// reinitialize renderer (this reloads hud/console background/etc)
+	R_Modules_Restart();
+}
+
+
+/*
+================
 FS_Init
 ================
 */
 void FS_Init (void)
 {
 	int i;
-	searchpath_t *search;
 
 	fs_mempool = Mem_AllocPool("file management", 0, NULL);
 
@@ -1098,92 +1270,32 @@ void FS_Init (void)
 	if (fs_basedir[0] && fs_basedir[strlen(fs_basedir) - 1] != '/' && fs_basedir[strlen(fs_basedir) - 1] != '\\')
 		strlcat(fs_basedir, "/", sizeof(fs_basedir));
 
-	// -path <dir or packfile> [<dir or packfile>] ...
-	// Fully specifies the exact search path, overriding the generated one
-// COMMANDLINEOPTION: Filesystem: -path <path ..> specifies the full search path manually, overriding the generated one, example: -path c:\quake\id1 c:\quake\pak0.pak c:\quake\pak1.pak (not recommended)
-	i = COM_CheckParm ("-path");
-	if (i)
+	// -game <gamedir>
+	// Adds basedir/gamedir as an override game
+	// LordHavoc: now supports multiple -game directories
+	for (i = 1;i < com_argc && fs_numgamedirs < MAX_GAMEDIRS;i++)
 	{
-		fs_modified = true;
-		while (++i < com_argc)
+		if (!com_argv[i])
+			continue;
+		if (!strcmp (com_argv[i], "-game") && i < com_argc-1)
 		{
-			if (!com_argv[i] || com_argv[i][0] == '+' || com_argv[i][0] == '-')
-				break;
-
-			if(!FS_AddPack_Fullpath(com_argv[i], NULL, false))
-			{
-				search = (searchpath_t *)Mem_Alloc(fs_mempool, sizeof(searchpath_t));
-				strlcpy (search->filename, com_argv[i], sizeof (search->filename));
-				search->next = fs_searchpaths;
-				fs_searchpaths = search;
-			}
+			i++;
+			// add the gamedir to the list of active gamedirs
+			strlcpy (fs_gamedirs[fs_numgamedirs], com_argv[i], sizeof(fs_gamedirs[fs_numgamedirs]));
+			fs_numgamedirs++;
 		}
 	}
-	else
-	{
-		// add the game-specific paths
-		// gamedirname1 (typically id1)
-		FS_AddGameHierarchy (gamedirname1);
 
-		// add the game-specific path, if any
-		if (gamedirname2)
-		{
-			fs_modified = true;
-			FS_AddGameHierarchy (gamedirname2);
-		}
-
-		// set the com_modname (reported in server info)
-		strlcpy(com_modname, gamedirname1, sizeof(com_modname));
-
-		// -game <gamedir>
-		// Adds basedir/gamedir as an override game
-		// LordHavoc: now supports multiple -game directories
-		for (i = 1;i < com_argc;i++)
-		{
-			if (!com_argv[i])
-				continue;
-			if (!strcmp (com_argv[i], "-game") && i < com_argc-1)
-			{
-				i++;
-				fs_modified = true;
-				FS_AddGameHierarchy (com_argv[i]);
-				// update the com_modname
-				strlcpy (com_modname, com_argv[i], sizeof (com_modname));
-			}
-		}
-
-		// If "-condebug" is in the command line, remove the previous log file
-		if (COM_CheckParm ("-condebug") != 0)
-			unlink (va("%s/qconsole.log", fs_gamedir));
-	}
-
-	// look for the pop.lmp file and set registered to true if it is found
-	if (gamemode == GAME_NORMAL && !FS_FileExists("gfx/pop.lmp"))
-	{
-		if (fs_modified)
-			Con_Print("Playing shareware version, with modification.\nwarning: most mods require full quake data.\n");
-		else
-			Con_Print("Playing shareware version.\n");
-	}
-	else
-	{
-		Cvar_Set ("registered", "1");
-		if (gamemode == GAME_NORMAL || gamemode == GAME_HIPNOTIC || gamemode == GAME_ROGUE)
-			Con_Print("Playing registered version.\n");
-	}
-
-	// set the default screenshot name to either the mod name or the
-	// gamemode screenshot name
-	if (fs_modified)
-		Cvar_SetQuick (&scr_screenshot_name, com_modname);
-	else
-		Cvar_SetQuick (&scr_screenshot_name, gamescreenshotname);
+	// update the searchpath
+	FS_Rescan_f();
 }
 
 void FS_Init_Commands(void)
 {
 	Cvar_RegisterVariable (&scr_screenshot_name);
 
+	Cmd_AddCommand ("gamedir", FS_GameDir_f, "changes active gamedir list (can take multiple arguments), not including base directory (example usage: gamedir ctf)");
+	Cmd_AddCommand ("fs_rescan", FS_Rescan_f, "rescans filesystem for new pack archives and any other changes");
 	Cmd_AddCommand ("path", FS_Path_f, "print searchpath (game directories and archives)");
 	Cmd_AddCommand ("dir", FS_Dir_f, "list files in searchpath matching an * filename pattern, one per line");
 	Cmd_AddCommand ("ls", FS_Ls_f, "list files in searchpath matching an * filename pattern, multiple per line");
