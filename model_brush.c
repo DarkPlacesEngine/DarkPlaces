@@ -3945,6 +3945,7 @@ static void Mod_Q3BSP_LoadEntities(lump_t *l)
 
 typedef struct q3shaderinfo_layer_s
 {
+	int alphatest;
 	int clampmap;
 	float framerate;
 	int numframes;
@@ -4100,11 +4101,8 @@ static void Mod_Q3BSP_LoadShaders(void)
 								}
 							}
 						}
-						if (layer == shader->layers + 0)
-						{
-							if (numparameters >= 2 && !strcasecmp(parameter[0], "alphafunc"))
-								shader->textureflags |= Q3TEXTUREFLAG_ALPHATEST;
-						}
+						if (numparameters >= 2 && !strcasecmp(parameter[0], "alphafunc"))
+							layer->alphatest = true;
 						if (numparameters >= 2 && (!strcasecmp(parameter[0], "map") || !strcasecmp(parameter[0], "clampmap")))
 						{
 							if (!strcasecmp(parameter[0], "clampmap"))
@@ -4151,7 +4149,7 @@ static void Mod_Q3BSP_LoadShaders(void)
 				numparameters = 0;
 				for (j = 0;strcasecmp(com_token, "\n") && strcasecmp(com_token, "}");j++)
 				{
-					if (j < 4)
+					if (j < TEXTURE_MAXFRAMES + 4)
 					{
 						strlcpy(parameter[j], com_token, sizeof(parameter[j]));
 						numparameters = j + 1;
@@ -4271,7 +4269,7 @@ static void Mod_Q3BSP_LoadShaders(void)
 			if (shader->numlayers)
 			{
 				shader->primarylayer = shader->layers + 0;
-				if (shader->layers[1].blendfunc[0] == GL_SRC_ALPHA && shader->layers[1].blendfunc[1] == GL_ONE_MINUS_SRC_ALPHA)
+				if ((shader->layers[1].blendfunc[0] == GL_SRC_ALPHA && shader->layers[1].blendfunc[1] == GL_ONE_MINUS_SRC_ALPHA) || shader->layers[1].alphatest)
 				{
 					// terrain blending or other effects
 					shader->backgroundlayer = shader->layers + 0;
@@ -4385,6 +4383,8 @@ Q3 shader blendfuncs actually used in the game (* = supported by DP)
 					else
 						out->basematerialflags |= MATERIALFLAG_CUSTOMBLEND | MATERIALFLAG_FULLBRIGHT | MATERIALFLAG_BLENDED | MATERIALFLAG_TRANSPARENT;
 				}
+				if (shader->layers[0].alphatest)
+					shader->textureflags |= Q3TEXTUREFLAG_ALPHATEST;
 			}
 			if (!shader->lighting)
 				out->basematerialflags |= MATERIALFLAG_FULLBRIGHT;
@@ -5298,15 +5298,20 @@ static void Mod_Q3BSP_LoadPVS(lump_t *l)
 static void Mod_Q3BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal)
 {
 	int i, j, k, index[3];
-	float transformed[3], blend1, blend2, blend, yaw, pitch, sinpitch;
+	float transformed[3], blend1, blend2, blend, yaw, pitch, sinpitch, stylescale;
 	q3dlightgrid_t *a, *s;
+
+	// scale lighting by lightstyle[0] so that darkmode in dpmod works properly
+	stylescale = r_refdef.lightstylevalue[0] * (1.0f / 264.0f);
+
 	if (!model->brushq3.num_lightgrid)
 	{
-		ambientcolor[0] = 1;
-		ambientcolor[1] = 1;
-		ambientcolor[2] = 1;
+		ambientcolor[0] = stylescale;
+		ambientcolor[1] = stylescale;
+		ambientcolor[2] = stylescale;
 		return;
 	}
+
 	Matrix4x4_Transform(&model->brushq3.num_lightgrid_indexfromworld, p, transformed);
 	//Matrix4x4_Print(&model->brushq3.num_lightgrid_indexfromworld);
 	//Con_Printf("%f %f %f transformed %f %f %f clamped ", p[0], p[1], p[2], transformed[0], transformed[1], transformed[2]);
@@ -5317,6 +5322,7 @@ static void Mod_Q3BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientc
 	index[1] = (int)floor(transformed[1]);
 	index[2] = (int)floor(transformed[2]);
 	//Con_Printf("%f %f %f index %i %i %i:\n", transformed[0], transformed[1], transformed[2], index[0], index[1], index[2]);
+
 	// now lerp the values
 	VectorClear(diffusenormal);
 	a = &model->brushq3.data_lightgrid[(index[2] * model->brushq3.num_lightgrid_isize[1] + index[1]) * model->brushq3.num_lightgrid_isize[0] + index[0]];
@@ -5332,7 +5338,7 @@ static void Mod_Q3BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientc
 				continue;
 			for (i = 0;i < 2;i++)
 			{
-				blend = blend2 * (i ? (transformed[0] - index[0]) : (1 - (transformed[0] - index[0])));
+				blend = blend2 * (i ? (transformed[0] - index[0]) : (1 - (transformed[0] - index[0]))) * stylescale;
 				if (blend < 0.001f || index[0] + i >= model->brushq3.num_lightgrid_isize[0])
 					continue;
 				s = a + (k * model->brushq3.num_lightgrid_isize[1] + j) * model->brushq3.num_lightgrid_isize[0] + i;
@@ -5348,6 +5354,8 @@ static void Mod_Q3BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientc
 			}
 		}
 	}
+
+	// normalize the light direction before turning
 	VectorNormalize(diffusenormal);
 	//Con_Printf("result: ambient %f %f %f diffuse %f %f %f diffusenormal %f %f %f\n", ambientcolor[0], ambientcolor[1], ambientcolor[2], diffusecolor[0], diffusecolor[1], diffusecolor[2], diffusenormal[0], diffusenormal[1], diffusenormal[2]);
 }
