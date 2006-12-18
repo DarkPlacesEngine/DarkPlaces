@@ -1282,6 +1282,7 @@ void S_StopSound(int entnum, int entchannel)
 		}
 }
 
+extern void CDAudio_Stop(void);
 void S_StopAllSounds (void)
 {
 	unsigned int i;
