@@ -1105,7 +1105,7 @@ void FS_Rescan_f (void)
 		fs_modified = true;
 		FS_AddGameHierarchy (fs_gamedirs[i]);
 		// update the com_modname (used server info)
-		strlcpy (com_modname, com_argv[i], sizeof (com_modname));
+		strlcpy (com_modname, fs_gamedirs[i], sizeof (com_modname));
 	}
 
 	// set the default screenshot name to either the mod name or the
