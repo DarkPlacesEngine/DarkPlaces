@@ -765,7 +765,7 @@ unsigned char *LoadWAL (const unsigned char *f, int filesize, int matchwidth, in
 static void Image_StripImageExtension (const char *in, char *out, size_t size_out)
 {
 	const char *end, *temp;
-	
+
 	if (size_out == 0)
 		return;
 
@@ -1358,6 +1358,7 @@ void Image_Resample (const void *indata, int inwidth, int inheight, int indepth,
 // in can be the same as out
 void Image_MipReduce(const unsigned char *in, unsigned char *out, int *width, int *height, int *depth, int destwidth, int destheight, int destdepth, int bytesperpixel)
 {
+	const unsigned char *inrow;
 	int x, y, nextrow;
 	if (*depth != 1 || destdepth != 1)
 	{
@@ -1370,6 +1371,9 @@ void Image_MipReduce(const unsigned char *in, unsigned char *out, int *width, in
 			*depth >>= 1;
 		return;
 	}
+	// note: if given odd width/height this discards the last row/column of
+	// pixels, rather than doing a proper box-filter scale down
+	inrow = in;
 	nextrow = *width * bytesperpixel;
 	if (*width > destwidth)
 	{
@@ -1380,9 +1384,9 @@ void Image_MipReduce(const unsigned char *in, unsigned char *out, int *width, in
 			*height >>= 1;
 			if (bytesperpixel == 4)
 			{
-				for (y = 0;y < *height;y++)
+				for (y = 0;y < *height;y++, inrow += nextrow * 2)
 				{
-					for (x = 0;x < *width;x++)
+					for (in = inrow, x = 0;x < *width;x++)
 					{
 						out[0] = (unsigned char) ((in[0] + in[4] + in[nextrow  ] + in[nextrow+4]) >> 2);
 						out[1] = (unsigned char) ((in[1] + in[5] + in[nextrow+1] + in[nextrow+5]) >> 2);
@@ -1391,14 +1395,13 @@ void Image_MipReduce(const unsigned char *in, unsigned char *out, int *width, in
 						out += 4;
 						in += 8;
 					}
-					in += nextrow; // skip a line
 				}
 			}
 			else if (bytesperpixel == 3)
 			{
-				for (y = 0;y < *height;y++)
+				for (y = 0;y < *height;y++, inrow += nextrow * 2)
 				{
-					for (x = 0;x < *width;x++)
+					for (in = inrow, x = 0;x < *width;x++)
 					{
 						out[0] = (unsigned char) ((in[0] + in[3] + in[nextrow  ] + in[nextrow+3]) >> 2);
 						out[1] = (unsigned char) ((in[1] + in[4] + in[nextrow+1] + in[nextrow+4]) >> 2);
@@ -1406,7 +1409,6 @@ void Image_MipReduce(const unsigned char *in, unsigned char *out, int *width, in
 						out += 3;
 						in += 6;
 					}
-					in += nextrow; // skip a line
 				}
 			}
 			else
@@ -1417,9 +1419,9 @@ void Image_MipReduce(const unsigned char *in, unsigned char *out, int *width, in
 			// reduce width
 			if (bytesperpixel == 4)
 			{
-				for (y = 0;y < *height;y++)
+				for (y = 0;y < *height;y++, inrow += nextrow)
 				{
-					for (x = 0;x < *width;x++)
+					for (in = inrow, x = 0;x < *width;x++)
 					{
 						out[0] = (unsigned char) ((in[0] + in[4]) >> 1);
 						out[1] = (unsigned char) ((in[1] + in[5]) >> 1);
@@ -1432,9 +1434,9 @@ void Image_MipReduce(const unsigned char *in, unsigned char *out, int *width, in
 			}
 			else if (bytesperpixel == 3)
 			{
-				for (y = 0;y < *height;y++)
+				for (y = 0;y < *height;y++, inrow += nextrow)
 				{
-					for (x = 0;x < *width;x++)
+					for (in = inrow, x = 0;x < *width;x++)
 					{
 						out[0] = (unsigned char) ((in[0] + in[3]) >> 1);
 						out[1] = (unsigned char) ((in[1] + in[4]) >> 1);
@@ -1456,9 +1458,9 @@ void Image_MipReduce(const unsigned char *in, unsigned char *out, int *width, in
 			*height >>= 1;
 			if (bytesperpixel == 4)
 			{
-				for (y = 0;y < *height;y++)
+				for (y = 0;y < *height;y++, inrow += nextrow * 2)
 				{
-					for (x = 0;x < *width;x++)
+					for (in = inrow, x = 0;x < *width;x++)
 					{
 						out[0] = (unsigned char) ((in[0] + in[nextrow  ]) >> 1);
 						out[1] = (unsigned char) ((in[1] + in[nextrow+1]) >> 1);
@@ -1467,14 +1469,13 @@ void Image_MipReduce(const unsigned char *in, unsigned char *out, int *width, in
 						out += 4;
 						in += 4;
 					}
-					in += nextrow; // skip a line
 				}
 			}
 			else if (bytesperpixel == 3)
 			{
-				for (y = 0;y < *height;y++)
+				for (y = 0;y < *height;y++, inrow += nextrow * 2)
 				{
-					for (x = 0;x < *width;x++)
+					for (in = inrow, x = 0;x < *width;x++)
 					{
 						out[0] = (unsigned char) ((in[0] + in[nextrow  ]) >> 1);
 						out[1] = (unsigned char) ((in[1] + in[nextrow+1]) >> 1);
@@ -1482,7 +1483,6 @@ void Image_MipReduce(const unsigned char *in, unsigned char *out, int *width, in
 						out += 3;
 						in += 3;
 					}
-					in += nextrow; // skip a line
 				}
 			}
 			else

@@ -33,6 +33,8 @@ int gl_stencil = false;
 int gl_texture3d = false;
 // GL_ARB_texture_cubemap
 int gl_texturecubemap = false;
+// GL_ARB_texture_non_power_of_two
+int gl_support_arb_texture_non_power_of_two = false;
 // GL_ARB_texture_env_dot3
 int gl_dot3arb = false;
 // GL_SGIS_texture_edge_clamp
@@ -627,6 +629,7 @@ void VID_CheckExtensions(void)
 	gl_supportslockarrays = false;
 	gl_texture3d = false;
 	gl_texturecubemap = false;
+	gl_support_arb_texture_non_power_of_two = false;
 	gl_dot3arb = false;
 	gl_support_clamptoedge = false;
 	gl_support_anisotropy = false;
@@ -679,6 +682,7 @@ void VID_CheckExtensions(void)
 // COMMANDLINEOPTION: GL: -nocubemap disables GL_ARB_texture_cube_map (required for bumpmapping)
 	if ((gl_texturecubemap = GL_CheckExtension("GL_ARB_texture_cube_map", NULL, "-nocubemap", false)))
 		qglGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE_ARB, &gl_max_cube_map_texture_size);
+	gl_support_arb_texture_non_power_of_two = GL_CheckExtension("GL_ARB_texture_non_power_of_two", NULL, "-notexturenonpoweroftwo", false);
 // COMMANDLINEOPTION: GL: -nocva disables GL_EXT_compiled_vertex_array (renders faster)
 	gl_supportslockarrays = GL_CheckExtension("GL_EXT_compiled_vertex_array", compiledvertexarrayfuncs, "-nocva", false);
 // COMMANDLINEOPTION: GL: -noedgeclamp disables GL_EXT_texture_edge_clamp or GL_SGIS_texture_edge_clamp (recommended, some cards do not support the other texture clamp method)
