@@ -86,7 +86,8 @@ typedef struct gltexture_s
 	int texturetype;
 	// palette if the texture is TEXTYPE_PALETTE
 	const unsigned int *palette;
-	// power of 2 size, after gl_picmip and gl_max_size are applied
+	// actual stored texture size after gl_picmip and gl_max_size are applied
+	// (power of 2 if gl_support_arb_texture_non_power_of_two is not supported)
 	int tilewidth, tileheight, tiledepth;
 	// 1 or 6 depending on texturetype
 	int sides;
@@ -351,20 +352,35 @@ static void GL_Texture_CalcImageSize(int texturetype, int flags, int inwidth, in
 
 	if (outwidth)
 	{
-		for (width2 = 1;width2 < inwidth;width2 <<= 1);
-		for (width2 >>= picmip;width2 > maxsize;width2 >>= 1);
+		if (gl_support_arb_texture_non_power_of_two)
+			width2 = min(inwidth >> picmip, maxsize);
+		else
+		{
+			for (width2 = 1;width2 < inwidth;width2 <<= 1);
+			for (width2 >>= picmip;width2 > maxsize;width2 >>= 1);
+		}
 		*outwidth = max(1, width2);
 	}
 	if (outheight)
 	{
-		for (height2 = 1;height2 < inheight;height2 <<= 1);
-		for (height2 >>= picmip;height2 > maxsize;height2 >>= 1);
+		if (gl_support_arb_texture_non_power_of_two)
+			height2 = min(inheight >> picmip, maxsize);
+		else
+		{
+			for (height2 = 1;height2 < inheight;height2 <<= 1);
+			for (height2 >>= picmip;height2 > maxsize;height2 >>= 1);
+		}
 		*outheight = max(1, height2);
 	}
 	if (outdepth)
 	{
-		for (depth2 = 1;depth2 < indepth;depth2 <<= 1);
-		for (depth2 >>= picmip;depth2 > maxsize;depth2 >>= 1);
+		if (gl_support_arb_texture_non_power_of_two)
+			depth2 = min(indepth >> picmip, maxsize);
+		else
+		{
+			for (depth2 = 1;depth2 < indepth;depth2 <<= 1);
+			for (depth2 >>= picmip;depth2 > maxsize;depth2 >>= 1);
+		}
 		*outdepth = max(1, depth2);
 	}
 }
@@ -649,9 +665,18 @@ static void R_Upload(gltexture_t *glt, unsigned char *data, int fragx, int fragy
 	qglBindTexture(gltexturetypeenums[glt->texturetype], glt->texnum);CHECKGLERROR
 
 	// these are rounded up versions of the size to do better resampling
-	for (width  = 1;width  < glt->inputwidth ;width  <<= 1);
-	for (height = 1;height < glt->inputheight;height <<= 1);
-	for (depth  = 1;depth  < glt->inputdepth ;depth  <<= 1);
+	if (gl_support_arb_texture_non_power_of_two)
+	{
+		width = glt->inputwidth;
+		height = glt->inputheight;
+		depth = glt->inputdepth;
+	}
+	else
+	{
+		for (width  = 1;width  < glt->inputwidth ;width  <<= 1);
+		for (height = 1;height < glt->inputheight;height <<= 1);
+		for (depth  = 1;depth  < glt->inputdepth ;depth  <<= 1);
+	}
 
 	R_MakeResizeBufferBigger(width * height * depth * glt->sides * glt->bytesperpixel);
 	R_MakeResizeBufferBigger(fragwidth * fragheight * fragdepth * glt->sides * glt->bytesperpixel);

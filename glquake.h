@@ -399,6 +399,9 @@ extern int gl_support_clamptoedge;
 extern void (GLAPIENTRY *qglActiveStencilFaceEXT)(GLenum);
 extern int gl_support_stenciltwoside;
 
+//GL_ARB_texture_non_power_of_two
+extern int gl_support_arb_texture_non_power_of_two;
+
 extern void (GLAPIENTRY *qglScissor)(GLint x, GLint y, GLsizei width, GLsizei height);
 
 extern void (GLAPIENTRY *qglClearColor)(GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha);
