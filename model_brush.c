@@ -4343,7 +4343,7 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 				out->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_WATERALPHA;
 			else
 				out->basematerialflags |= MATERIALFLAG_WALL;
-			if (shader->textureflags & Q3TEXTUREFLAG_ALPHATEST)
+			if (shader->layers[0].alphatest)
 				out->basematerialflags |= MATERIALFLAG_ALPHATEST | MATERIALFLAG_TRANSPARENT;
 			out->customblendfunc[0] = GL_ONE;
 			out->customblendfunc[1] = GL_ZERO;
@@ -4383,8 +4383,6 @@ Q3 shader blendfuncs actually used in the game (* = supported by DP)
 					else
 						out->basematerialflags |= MATERIALFLAG_CUSTOMBLEND | MATERIALFLAG_FULLBRIGHT | MATERIALFLAG_BLENDED | MATERIALFLAG_TRANSPARENT;
 				}
-				if (shader->layers[0].alphatest)
-					shader->textureflags |= Q3TEXTUREFLAG_ALPHATEST;
 			}
 			if (!shader->lighting)
 				out->basematerialflags |= MATERIALFLAG_FULLBRIGHT;
