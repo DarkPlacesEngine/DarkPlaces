@@ -157,7 +157,7 @@ static void gl_backend_start(void)
 		Con_Printf("glDrawRangeElements detected (max vertices %i, max indices %i)\n", gl_maxdrawrangeelementsvertices, gl_maxdrawrangeelementsindices);
 	}
 
-	backendunits = min(MAX_TEXTUREUNITS, gl_textureunits);
+	backendunits = bound(1, gl_textureunits, MAX_TEXTUREUNITS);
 	backendimageunits = backendunits;
 	backendarrayunits = backendunits;
 	if (gl_support_fragment_shader)
@@ -168,6 +168,8 @@ static void gl_backend_start(void)
 		qglGetIntegerv(GL_MAX_TEXTURE_COORDS_ARB, (int *)&backendarrayunits);
 		CHECKGLERROR
 		Con_Printf("GLSL shader support detected: texture units = %i texenv, %i image, %i array\n", backendunits, backendimageunits, backendarrayunits);
+		backendimageunits = bound(1, backendimageunits, MAX_TEXTUREUNITS);
+		backendarrayunits = bound(1, backendarrayunits, MAX_TEXTUREUNITS);
 	}
 	else if (backendunits > 1)
 		Con_Printf("multitexture detected: texture units = %i\n", backendunits);
