@@ -160,9 +160,9 @@ colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalpla
 	// figure out how large a bounding box we need to properly compute this brush
 	maxdist = 0;
 	for (j = 0;j < numoriginalplanes;j++)
-		maxdist = max(maxdist, originalplanes[j].dist);
+		maxdist = max(maxdist, fabs(originalplanes[j].dist));
 	// now make it large enough to enclose the entire brush, and round it off to a reasonable multiple of 1024
-	maxdist = floor(maxdist * (4.0 / 1024.0) + 1) * 1024.0;
+	maxdist = floor(maxdist * (4.0 / 1024.0) + 2) * 1024.0;
 	// construct a collision brush (points, planes, and renderable mesh) from
 	// a set of planes, this also optimizes out any unnecessary planes (ones
 	// whose polygon is clipped away by the other planes)
@@ -200,11 +200,13 @@ colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalpla
 			}
 		}
 		// if nothing is left, skip it
-		if (pnumpoints < 3)
-		{
-			//Con_Printf("Collision_NewBrushFromPlanes: warning: polygon for plane %f %f %f %f clipped away\n", originalplanes[j].normal[0], originalplanes[j].normal[1], originalplanes[j].normal[2], originalplanes[j].dist);
-			continue;
-		}
+		// LordHavoc: do not skip planes, because they may be bevel planes
+		// added by the map compiler to allow sliding along edges
+		//if (pnumpoints < 3)
+		//{
+		//	//Con_Printf("Collision_NewBrushFromPlanes: warning: polygon for plane %f %f %f %f clipped away\n", originalplanes[j].normal[0], originalplanes[j].normal[1], originalplanes[j].normal[2], originalplanes[j].dist);
+		//	continue;
+		//}
 
 		for (k = 0;k < pnumpoints;k++)
 		{
@@ -527,7 +529,7 @@ colbrushf_t *Collision_AllocBrushFromPermanentPolygonFloat(mempool_t *mempool, i
 // NOTE: start and end of each brush pair must have same numplanes/numpoints
 void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, const colbrushf_t *thatbrush_start, const colbrushf_t *thatbrush_end)
 {
-	int nplane, nplane2, fstartsolid = true, fendsolid = true, brushsolid, hitq3surfaceflags = 0;
+	int nplane, nplane2, hitq3surfaceflags = 0;
 	float enterfrac = -1, leavefrac = 1, d1, d2, f, imove, newimpactnormal[3], enterfrac2 = -1;
 	const colplanef_t *startplane, *endplane;
 	texture_t *hittexture = NULL;
@@ -578,20 +580,31 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush
 		}
 		//Con_Printf("%c%i: d1 = %f, d2 = %f, d1 / (d1 - d2) = %f\n", nplane2 != nplane ? 'b' : 'a', nplane2, d1, d2, d1 / (d1 - d2));
 
-		if(d1 > d2)
+		if (d1 > d2)
 		{
 			// moving into brush
-			if(d2 > 0)
+			if (d2 > 0)
 				return;
-			if(d1 > 0)
+			if (d1 > 0)
 			{
 				// enter
-				fstartsolid = false;
 				imove = 1 / (d1 - d2);
 				f = (d1 - collision_enternudge.value) * imove;
+				// check if this will reduce the collision time range
 				if (enterfrac < f)
 				{
+					// reduced collision time range
 					enterfrac = f;
+					// if the collision time range is now empty, no collision
+					if (enterfrac > leavefrac)
+						return;
+					// if the collision would be further away than the trace's
+					// existing collision data, we don't care about this
+					// collision
+					if (enterfrac > trace->realfraction)
+						return;
+					// calculate the nudged fraction and impact normal we'll
+					// need if we accept this collision later
 					enterfrac2 = f - collision_impactnudge.value * imove;
 					VectorLerp(startplane->normal, enterfrac, endplane->normal, newimpactnormal);
 					hitq3surfaceflags = startplane->q3surfaceflags;
@@ -602,77 +615,58 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush
 		else
 		{
 			// moving out of brush
-			if(d1 > 0)
+			if (d1 > 0)
 				return;
-			if(d2 > 0)
+			if (d2 > 0)
 			{
 				// leave
-				fendsolid = false;
 				f = (d1 + collision_leavenudge.value) / (d1 - d2);
+				// check if this will reduce the collision time range
 				if (leavefrac > f)
+				{
+					// reduced collision time range
 					leavefrac = f;
+					// if the collision time range is now empty, no collision
+					if (enterfrac > leavefrac)
+						return;
+				}
 			}
 		}
 	}
 
-	brushsolid = trace->hitsupercontentsmask & thatbrush_start->supercontents;
-	if (fstartsolid)
+	// at this point we know the trace overlaps the brush because it was not
+	// rejected at any point in the loop above
+
+	// see if this brush can block the trace or not according to contents
+	if (trace->hitsupercontentsmask & thatbrush_start->supercontents)
 	{
-		trace->startsupercontents |= thatbrush_start->supercontents;
-		if (brushsolid)
+		if (enterfrac == -1)
 		{
+			trace->startsupercontents |= thatbrush_start->supercontents;
 			trace->startsolid = true;
-			if (fendsolid)
+			if (leavefrac < 1)
 				trace->allsolid = true;
 		}
+		// store out the impact information
+		trace->hitsupercontents = thatbrush_start->supercontents;
+		trace->hitq3surfaceflags = hitq3surfaceflags;
+		trace->hittexture = hittexture;
+		trace->realfraction = bound(0, enterfrac, 1);
+		trace->fraction = bound(0, enterfrac2, 1);
+		VectorCopy(newimpactnormal, trace->plane.normal);
 	}
-
-	// LordHavoc: we need an epsilon nudge here because for a point trace the
-	// penetrating line segment is normally zero length if this brush was
-	// generated from a polygon (infinitely thin), and could even be slightly
-	// positive or negative due to rounding errors in that case.
-	if (brushsolid && enterfrac > -1 && enterfrac < trace->realfraction && enterfrac - (1.0f / 1024.0f) <= leavefrac)
+	else
 	{
-#if 0
-		// broken
-		if (thatbrush_start->ispolygon)
-		{
-			d1 = nearestplanedist_float(thatbrush_start->planes[0].normal, thisbrush_start->points, thisbrush_start->numpoints) - thatbrush_start->planes[0].dist - collision_startnudge.value;
-			d2 = nearestplanedist_float(thatbrush_end->planes[0].normal, thisbrush_end->points, thisbrush_end->numpoints) - thatbrush_end->planes[0].dist - collision_endnudge.value;
-			move = d1 - d2;
-			if (move <= 0 || d2 > collision_enternudge.value || d1 < 0)
-				return;
-			// enter
-			imove = 1 / move;
-			enterfrac = (d1 - collision_enternudge.value) * imove;
-			if (enterfrac < trace->realfraction)
-			{
-				enterfrac2 = enterfrac - collision_impactnudge.value * imove;
-				trace->hitsupercontents = thatbrush_start->supercontents;
-				trace->hitq3surfaceflags = thatbrush_start->planes[0].q3surfaceflags;
-				trace->hittexture = thatbrush_start->planes[0].texture;
-				trace->realfraction = bound(0, enterfrac, 1);
-				trace->fraction = bound(0, enterfrac2, 1);
-				VectorLerp(thatbrush_start->planes[0].normal, enterfrac, thatbrush_end->planes[0].normal, trace->plane.normal);
-			}
-		}
-		else
-#endif
-		{
-			trace->hitsupercontents = thatbrush_start->supercontents;
-			trace->hitq3surfaceflags = hitq3surfaceflags;
-			trace->hittexture = hittexture;
-			trace->realfraction = bound(0, enterfrac, 1);
-			trace->fraction = bound(0, enterfrac2, 1);
-			VectorCopy(newimpactnormal, trace->plane.normal);
-		}
+		// this brush can not block the trace, but it can update start contents
+		if (enterfrac == -1)
+			trace->startsupercontents |= thatbrush_start->supercontents;
 	}
 }
 
 // NOTE: start and end brush pair must have same numplanes/numpoints
 void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const vec3_t lineend, const colbrushf_t *thatbrush_start, const colbrushf_t *thatbrush_end)
 {
-	int nplane, fstartsolid = true, fendsolid = true, brushsolid, hitq3surfaceflags = 0;
+	int nplane, hitq3surfaceflags = 0;
 	float enterfrac = -1, leavefrac = 1, d1, d2, f, imove, newimpactnormal[3], enterfrac2 = -1;
 	const colplanef_t *startplane, *endplane;
 	texture_t *hittexture = NULL;
@@ -709,12 +703,23 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 			if (d1 > 0)
 			{
 				// enter
-				fstartsolid = false;
 				imove = 1 / (d1 - d2);
 				f = (d1 - collision_enternudge.value) * imove;
+				// check if this will reduce the collision time range
 				if (enterfrac < f)
 				{
+					// reduced collision time range
 					enterfrac = f;
+					// if the collision time range is now empty, no collision
+					if (enterfrac > leavefrac)
+						return;
+					// if the collision would be further away than the trace's
+					// existing collision data, we don't care about this
+					// collision
+					if (enterfrac > trace->realfraction)
+						return;
+					// calculate the nudged fraction and impact normal we'll
+					// need if we accept this collision later
 					enterfrac2 = f - collision_impactnudge.value * imove;
 					VectorLerp(startplane->normal, enterfrac, endplane->normal, newimpactnormal);
 					hitq3surfaceflags = startplane->q3surfaceflags;
@@ -730,65 +735,46 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 			if (d2 > 0)
 			{
 				// leave
-				fendsolid = false;
 				f = (d1 + collision_leavenudge.value) / (d1 - d2);
+				// check if this will reduce the collision time range
 				if (leavefrac > f)
+				{
+					// reduced collision time range
 					leavefrac = f;
+					// if the collision time range is now empty, no collision
+					if (enterfrac > leavefrac)
+						return;
+				}
 			}
 		}
 	}
 
-	brushsolid = trace->hitsupercontentsmask & thatbrush_start->supercontents;
-	if (fstartsolid)
+	// at this point we know the trace overlaps the brush because it was not
+	// rejected at any point in the loop above
+
+	// see if this brush can block the trace or not according to contents
+	if (trace->hitsupercontentsmask & thatbrush_start->supercontents)
 	{
-		trace->startsupercontents |= thatbrush_start->supercontents;
-		if (brushsolid)
+		if (enterfrac == -1)
 		{
+			trace->startsupercontents |= thatbrush_start->supercontents;
 			trace->startsolid = true;
-			if (fendsolid)
+			if (leavefrac < 1)
 				trace->allsolid = true;
 		}
+		// store out the impact information
+		trace->hitsupercontents = thatbrush_start->supercontents;
+		trace->hitq3surfaceflags = hitq3surfaceflags;
+		trace->hittexture = hittexture;
+		trace->realfraction = bound(0, enterfrac, 1);
+		trace->fraction = bound(0, enterfrac2, 1);
+		VectorCopy(newimpactnormal, trace->plane.normal);
 	}
-
-	// LordHavoc: we need an epsilon nudge here because for a point trace the
-	// penetrating line segment is normally zero length if this brush was
-	// generated from a polygon (infinitely thin), and could even be slightly
-	// positive or negative due to rounding errors in that case.
-	if (brushsolid && enterfrac > -1 && enterfrac < trace->realfraction && enterfrac <= leavefrac)
+	else
 	{
-#if 0
-		// broken
-		if (thatbrush_start->ispolygon)
-		{
-			d1 = DotProduct(thatbrush_start->planes[0].normal, linestart) - thatbrush_start->planes[0].dist - collision_startnudge.value;
-			d2 = DotProduct(thatbrush_end->planes[0].normal, lineend) - thatbrush_end->planes[0].dist - collision_endnudge.value;
-			move = d1 - d2;
-			if (move <= 0 || d2 > collision_enternudge.value || d1 < 0)
-				return;
-			// enter
-			imove = 1 / move;
-			enterfrac = (d1 - collision_enternudge.value) * imove;
-			if (enterfrac < trace->realfraction)
-			{
-				enterfrac2 = enterfrac - collision_impactnudge.value * imove;
-				trace->hitsupercontents = thatbrush_start->supercontents;
-				trace->hitq3surfaceflags = hitq3surfaceflags;
-				trace->hittexture = hittexture;
-				trace->realfraction = bound(0, enterfrac, 1);
-				trace->fraction = bound(0, enterfrac2, 1);
-				VectorLerp(thatbrush_start->planes[0].normal, enterfrac, thatbrush_end->planes[0].normal, trace->plane.normal);
-			}
-		}
-		else
-#endif
-		{
-			trace->hitsupercontents = thatbrush_start->supercontents;
-			trace->hitq3surfaceflags = hitq3surfaceflags;
-			trace->hittexture = hittexture;
-			trace->realfraction = bound(0, enterfrac, 1);
-			trace->fraction = bound(0, enterfrac2, 1);
-			VectorCopy(newimpactnormal, trace->plane.normal);
-		}
+		// this brush can not block the trace, but it can update start contents
+		if (enterfrac == -1)
+			trace->startsupercontents |= thatbrush_start->supercontents;
 	}
 }
 
