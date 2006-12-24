@@ -1842,6 +1842,10 @@ void SV_SpawnServer (const char *server)
 	ent->fields.server->modelindex = 1;		// world model
 	ent->fields.server->solid = SOLID_BSP;
 	ent->fields.server->movetype = MOVETYPE_PUSH;
+	VectorCopy(sv.worldmodel->normalmins, ent->fields.server->mins);
+	VectorCopy(sv.worldmodel->normalmaxs, ent->fields.server->maxs);
+	VectorCopy(sv.worldmodel->normalmins, ent->fields.server->absmin);
+	VectorCopy(sv.worldmodel->normalmaxs, ent->fields.server->absmax);
 
 	if (coop.value)
 		prog->globals.server->coop = coop.integer;
