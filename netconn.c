@@ -27,7 +27,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define DPMASTER_PORT 27950
 
 // note this defaults on for dedicated servers, off for listen servers
-cvar_t sv_public = {0, "sv_public", "0", "advertises this server on the master server (so that players can find it in the server browser)"};
+cvar_t sv_public = {0, "sv_public", "0", "1: advertises this server on the master server (so that players can find it in the server browser); 0: allow direct queries only; -1: do not respond to direct queries; -2: do not allow anyone to connect"};
 static cvar_t sv_heartbeatperiod = {CVAR_SAVE, "sv_heartbeatperiod", "120", "how often to send heartbeat in seconds (only used if sv_public is 1)"};
 
 static cvar_t sv_masters [] =
@@ -1833,7 +1833,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			Com_HexDumpToConsole(data, length);
 		}
 
-		if (length >= 12 && !memcmp(string, "getchallenge", 12))
+		if (length >= 12 && !memcmp(string, "getchallenge", 12) && sv_public.integer > -2)
 		{
 			for (i = 0, best = 0, besttime = realtime;i < MAX_CHALLENGES;i++)
 			{
@@ -1855,7 +1855,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			NetConn_WriteString(mysocket, va("\377\377\377\377challenge %s", challenge[i].string), peeraddress);
 			return true;
 		}
-		if (length > 8 && !memcmp(string, "connect\\", 8))
+		if (length > 8 && !memcmp(string, "connect\\", 8) && sv_public.integer > -2)
 		{
 			string += 7;
 			length -= 7;
@@ -1938,7 +1938,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 
 			return true;
 		}
-		if (length >= 7 && !memcmp(string, "getinfo", 7))
+		if (length >= 7 && !memcmp(string, "getinfo", 7) && sv_public.integer > -1)
 		{
 			const char *challenge = NULL;
 
@@ -1954,7 +1954,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			}
 			return true;
 		}
-		if (length >= 9 && !memcmp(string, "getstatus", 9))
+		if (length >= 9 && !memcmp(string, "getstatus", 9) && sv_public.integer > -1)
 		{
 			const char *challenge = NULL;
 
@@ -2039,6 +2039,8 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			if (developer.integer >= 10)
 				Con_Printf("Datagram_ParseConnectionless: received CCREQ_CONNECT from %s.\n", addressstring2);
 			if (length < (int)strlen("QUAKE") + 1 + 1)
+				break;
+			if(sv_public.integer <= -2)
 				break;
 
 			if (memcmp(data, "QUAKE", strlen("QUAKE") + 1) != 0 || (int)data[strlen("QUAKE") + 1] != NET_PROTOCOL_VERSION)
@@ -2137,6 +2139,8 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		case CCREQ_SERVER_INFO:
 			if (developer.integer >= 10)
 				Con_Printf("Datagram_ParseConnectionless: received CCREQ_SERVER_INFO from %s.\n", addressstring2);
+			if(sv_public.integer <= -1)
+				break;
 			if (sv.active && !strcmp(MSG_ReadString(), "QUAKE"))
 			{
 				int numclients;
@@ -2166,6 +2170,8 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		case CCREQ_PLAYER_INFO:
 			if (developer.integer >= 10)
 				Con_Printf("Datagram_ParseConnectionless: received CCREQ_PLAYER_INFO from %s.\n", addressstring2);
+			if(sv_public.integer <= -1)
+				break;
 			if (sv.active)
 			{
 				int playerNumber, activeNumber, clientNumber;
@@ -2197,6 +2203,8 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		case CCREQ_RULE_INFO:
 			if (developer.integer >= 10)
 				Con_Printf("Datagram_ParseConnectionless: received CCREQ_RULE_INFO from %s.\n", addressstring2);
+			if(sv_public.integer <= -1)
+				break;
 			if (sv.active)
 			{
 				char *prevCvarName;
@@ -2374,7 +2382,7 @@ void NetConn_Heartbeat(int priority)
 
 	// make advertising optional and don't advertise singleplayer games, and
 	// only send a heartbeat as often as the admin wants
-	if (sv.active && sv_public.integer && svs.maxclients >= 2 && (priority > 1 || realtime > nextheartbeattime))
+	if (sv.active && sv_public.integer > 0 && svs.maxclients >= 2 && (priority > 1 || realtime > nextheartbeattime))
 	{
 		nextheartbeattime = realtime + sv_heartbeatperiod.value;
 		for (masternum = 0;sv_masters[masternum].name;masternum++)
