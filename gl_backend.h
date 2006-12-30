@@ -11,7 +11,7 @@ extern int polygonelements[(POLYGONELEMENTS_MAXPOINTS-2)*3];
 extern int quadelements[QUADELEMENTS_MAXQUADS*6];
 
 void GL_SetupView_Orientation_Identity(void);
-void GL_SetupView_Orientation_FromEntity(matrix4x4_t *matrix);
+void GL_SetupView_Orientation_FromEntity(const matrix4x4_t *matrix);
 void GL_SetupView_Mode_Perspective(double frustumx, double frustumy, double zNear, double zFar);
 void GL_SetupView_Mode_PerspectiveInfiniteFarClip(double frustumx, double frustumy, double zNear);
 void GL_SetupView_Mode_Ortho(double x1, double y1, double x2, double y2, double zNear, double zFar);

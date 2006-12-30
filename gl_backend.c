@@ -246,7 +246,7 @@ void GL_SetupView_Orientation_Identity (void)
 	memset(&backend_modelmatrix, 0, sizeof(backend_modelmatrix));
 }
 
-void GL_SetupView_Orientation_FromEntity(matrix4x4_t *matrix)
+void GL_SetupView_Orientation_FromEntity(const matrix4x4_t *matrix)
 {
 	matrix4x4_t tempmatrix, basematrix;
 	Matrix4x4_Invert_Simple(&tempmatrix, matrix);
