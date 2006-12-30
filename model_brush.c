@@ -1118,7 +1118,8 @@ middle sample (the one which was requested)
 void Mod_Q1BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal)
 {
 	Mod_Q1BSP_LightPoint_RecursiveBSPNode(model, ambientcolor, diffusecolor, diffusenormal, model->brush.data_nodes + model->brushq1.hulls[0].firstclipnode, p[0], p[1], p[2] + 0.125, p[2] - 65536);
-	VectorSet(diffusenormal, 0, 0, -1);
+	// pretend lighting is coming down from above (due to lack of a lightgrid to know primary lighting direction)
+	VectorSet(diffusenormal, 0, 0, 1);
 }
 
 static void Mod_Q1BSP_DecompressVis(const unsigned char *in, const unsigned char *inend, unsigned char *out, unsigned char *outend)
@@ -1263,6 +1264,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		tx->skinframerate = 1;
 		tx->currentskinframe = tx->skinframes;
 		tx->skinframes[0].base = r_texture_notexture;
+		tx->backgroundcurrentskinframe = tx->backgroundskinframes;
 		tx->basematerialflags = 0;
 		if (i == loadmodel->num_textures - 1)
 		{
@@ -4395,6 +4397,15 @@ Q3 shader blendfuncs actually used in the game (* = supported by DP)
 					if (!Mod_LoadSkinFrame(&out->skinframes[j], shader->primarylayer->texturename[j], ((shader->surfaceparms & Q3SURFACEPARM_NOMIPMAPS) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | (shader->textureflags & Q3TEXTUREFLAG_NOPICMIP ? 0 : TEXF_PICMIP) | (shader->primarylayer->clampmap ? TEXF_CLAMP : 0), false, true))
 						Con_Printf("%s: could not load texture \"%s\" (frame %i) for shader \"%s\"\n", loadmodel->name, shader->primarylayer->texturename[j], j, out->name);
 			}
+			if (shader->backgroundlayer && cls.state != ca_dedicated)
+			{
+				int j;
+				out->backgroundnumskinframes = shader->backgroundlayer->numframes;
+				out->backgroundskinframerate = shader->backgroundlayer->framerate;
+				for (j = 0;j < shader->backgroundlayer->numframes;j++)
+					if (!Mod_LoadSkinFrame(&out->backgroundskinframes[j], shader->backgroundlayer->texturename[j], ((shader->surfaceparms & Q3SURFACEPARM_NOMIPMAPS) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | (shader->textureflags & Q3TEXTUREFLAG_NOPICMIP ? 0 : TEXF_PICMIP) | (shader->backgroundlayer->clampmap ? TEXF_CLAMP : 0), false, true))
+						Con_Printf("%s: could not load texture \"%s\" (frame %i) for shader \"%s\"\n", loadmodel->name, shader->backgroundlayer->texturename[j], j, out->name);
+			}
 		}
 		else
 		{
@@ -4422,6 +4433,7 @@ Q3 shader blendfuncs actually used in the game (* = supported by DP)
 		// init the animation variables
 		out->currentframe = out;
 		out->currentskinframe = &out->skinframes[0];
+		out->backgroundcurrentskinframe = &out->backgroundskinframes[0];
 	}
 	if (c)
 		Con_DPrintf("%s: %i textures missing shaders\n", loadmodel->name, c);
