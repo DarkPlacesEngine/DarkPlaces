@@ -2561,6 +2561,7 @@ void R_DrawModelShadows(void)
 			VectorSet(relativeshadowmaxs, relativethrowdistance, relativethrowdistance, relativethrowdistance);
 			VectorNegate(ent->modellight_lightdir, relativelightdirection);
 			VectorScale(relativelightdirection, -relativethrowdistance, relativelightorigin);
+			R_Mesh_Matrix(&ent->matrix);
 			ent->model->DrawShadowVolume(ent, relativelightorigin, relativelightdirection, relativethrowdistance, ent->model->nummodelsurfaces, ent->model->surfacelist, relativeshadowmins, relativeshadowmaxs);
 		}
 	}
