@@ -670,12 +670,12 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 	*outnumsurfacespointer = info.outnumsurfaces;
 }
 
-void R_Q1BSP_CompileShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist)
+void R_Q1BSP_CompileShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativelightdirection, float lightradius, int numsurfaces, const int *surfacelist)
 {
 	model_t *model = ent->model;
 	msurface_t *surface;
 	int surfacelistindex;
-	float projectdistance = lightradius + model->radius*2 + r_shadow_projectdistance.value;
+	float projectdistance = relativelightdirection ? lightradius : lightradius + model->radius*2 + r_shadow_projectdistance.value;
 	texture_t *texture;
 	r_shadow_compilingrtlight->static_meshchain_shadow = Mod_ShadowMesh_Begin(r_main_mempool, 32768, 32768, NULL, NULL, NULL, false, false, true);
 	R_Shadow_PrepareShadowMark(model->brush.shadowmesh->numtriangles);
@@ -687,30 +687,30 @@ void R_Q1BSP_CompileShadowVolume(entity_render_t *ent, vec3_t relativelightorigi
 			continue;
 		if ((texture->textureflags & (Q3TEXTUREFLAG_TWOSIDED | Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2)) || (ent->flags & RENDER_NOCULLFACE))
 			continue;
-		R_Shadow_MarkVolumeFromBox(surface->num_firstshadowmeshtriangle, surface->num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, relativelightorigin, r_shadow_compilingrtlight->cullmins, r_shadow_compilingrtlight->cullmaxs, surface->mins, surface->maxs);
+		R_Shadow_MarkVolumeFromBox(surface->num_firstshadowmeshtriangle, surface->num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, relativelightorigin, relativelightdirection, r_shadow_compilingrtlight->cullmins, r_shadow_compilingrtlight->cullmaxs, surface->mins, surface->maxs);
 	}
-	R_Shadow_VolumeFromList(model->brush.shadowmesh->numverts, model->brush.shadowmesh->numtriangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, model->brush.shadowmesh->neighbor3i, relativelightorigin, lightradius + model->radius + projectdistance, numshadowmark, shadowmarklist);
+	R_Shadow_VolumeFromList(model->brush.shadowmesh->numverts, model->brush.shadowmesh->numtriangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, model->brush.shadowmesh->neighbor3i, relativelightorigin, relativelightdirection, projectdistance, numshadowmark, shadowmarklist);
 	r_shadow_compilingrtlight->static_meshchain_shadow = Mod_ShadowMesh_Finish(r_main_mempool, r_shadow_compilingrtlight->static_meshchain_shadow, false, false);
 }
 
-void R_Q1BSP_DrawShadowVolume_Batch(const vec3_t relativelightorigin, const vec3_t lightmins, const vec3_t lightmaxs, int texturenumsurfaces, msurface_t **texturesurfacelist)
+void R_Q1BSP_DrawShadowVolume_Batch(const vec3_t relativelightorigin, const vec3_t relativelightdirection, const vec3_t lightmins, const vec3_t lightmaxs, int texturenumsurfaces, msurface_t **texturesurfacelist)
 {
 	int texturesurfaceindex;
 	RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
 	for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 	{
 		msurface_t *surface = texturesurfacelist[texturesurfaceindex];
-		R_Shadow_MarkVolumeFromBox(surface->num_firsttriangle, surface->num_triangles, rsurface_vertex3f, rsurface_model->surfmesh.data_element3i, relativelightorigin, lightmins, lightmaxs, surface->mins, surface->maxs);
+		R_Shadow_MarkVolumeFromBox(surface->num_firsttriangle, surface->num_triangles, rsurface_vertex3f, rsurface_model->surfmesh.data_element3i, relativelightorigin, relativelightdirection, lightmins, lightmaxs, surface->mins, surface->maxs);
 	}
 }
 
-void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int modelnumsurfaces, const int *modelsurfacelist, const vec3_t lightmins, const vec3_t lightmaxs)
+void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativelightdirection, float lightradius, int modelnumsurfaces, const int *modelsurfacelist, const vec3_t lightmins, const vec3_t lightmaxs)
 {
 	model_t *model = ent->model;
 	msurface_t *surface;
 	int modelsurfacelistindex;
 	int f = 0;
-	float projectdistance = lightradius + model->radius*2 + r_shadow_projectdistance.value;
+	float projectdistance = relativelightdirection ? lightradius : lightradius + model->radius*2 + r_shadow_projectdistance.value;
 	texture_t *t = NULL;
 	const int maxsurfacelist = 1024;
 	int numsurfacelist = 0;
@@ -730,9 +730,9 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 				continue;
 			if ((t->textureflags & (Q3TEXTUREFLAG_TWOSIDED | Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2)) || (ent->flags & RENDER_NOCULLFACE))
 				continue;
-			R_Shadow_MarkVolumeFromBox(surface->num_firstshadowmeshtriangle, surface->num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, relativelightorigin, lightmins, lightmaxs, surface->mins, surface->maxs);
+			R_Shadow_MarkVolumeFromBox(surface->num_firstshadowmeshtriangle, surface->num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, relativelightorigin, relativelightdirection, lightmins, lightmaxs, surface->mins, surface->maxs);
 		}
-		R_Shadow_VolumeFromList(model->brush.shadowmesh->numverts, model->brush.shadowmesh->numtriangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, model->brush.shadowmesh->neighbor3i, relativelightorigin, lightradius + model->radius + projectdistance, numshadowmark, shadowmarklist);
+		R_Shadow_VolumeFromList(model->brush.shadowmesh->numverts, model->brush.shadowmesh->numtriangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, model->brush.shadowmesh->neighbor3i, relativelightorigin, relativelightdirection, projectdistance, numshadowmark, shadowmarklist);
 	}
 	else
 	{
@@ -747,7 +747,7 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 			{
 				if (numsurfacelist)
 				{
-					R_Q1BSP_DrawShadowVolume_Batch(relativelightorigin, lightmins, lightmaxs, numsurfacelist, surfacelist);
+					R_Q1BSP_DrawShadowVolume_Batch(relativelightorigin, relativelightdirection, lightmins, lightmaxs, numsurfacelist, surfacelist);
 					numsurfacelist = 0;
 				}
 				t = surface->texture;
@@ -758,8 +758,8 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 				surfacelist[numsurfacelist++] = surface;
 		}
 		if (numsurfacelist)
-			R_Q1BSP_DrawShadowVolume_Batch(relativelightorigin, lightmins, lightmaxs, numsurfacelist, surfacelist);
-		R_Shadow_VolumeFromList(model->surfmesh.num_vertices, model->surfmesh.num_triangles, rsurface_vertex3f, model->surfmesh.data_element3i, model->surfmesh.data_neighbor3i, relativelightorigin, projectdistance, numshadowmark, shadowmarklist);
+			R_Q1BSP_DrawShadowVolume_Batch(relativelightorigin, relativelightdirection, lightmins, lightmaxs, numsurfacelist, surfacelist);
+		R_Shadow_VolumeFromList(model->surfmesh.num_vertices, model->surfmesh.num_triangles, rsurface_vertex3f, model->surfmesh.data_element3i, model->surfmesh.data_neighbor3i, relativelightorigin, relativelightdirection, projectdistance, numshadowmark, shadowmarklist);
 	}
 }
 

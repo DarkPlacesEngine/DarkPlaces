@@ -524,12 +524,18 @@ void R_Shadow_PrepareShadowMark(int numtris)
 	numshadowmark = 0;
 }
 
-int R_Shadow_ConstructShadowVolume(int innumvertices, int innumtris, const int *inelement3i, const int *inneighbor3i, const float *invertex3f, int *outnumvertices, int *outelement3i, float *outvertex3f, const float *projectorigin, float projectdistance, int numshadowmarktris, const int *shadowmarktris)
+int R_Shadow_ConstructShadowVolume(int innumvertices, int innumtris, const int *inelement3i, const int *inneighbor3i, const float *invertex3f, int *outnumvertices, int *outelement3i, float *outvertex3f, const float *projectorigin, const float *projectdirection, float projectdistance, int numshadowmarktris, const int *shadowmarktris)
 {
 	int i, j;
 	int outtriangles = 0, outvertices = 0;
 	const int *element;
 	const float *vertex;
+	float ratio, direction[3], projectvector[3];
+
+	if (projectdirection)
+		VectorScale(projectdirection, projectdistance, projectvector);
+	else
+		VectorClear(projectvector);
 
 	if (maxvertexupdate < innumvertices)
 	{
@@ -553,26 +559,49 @@ int R_Shadow_ConstructShadowVolume(int innumvertices, int innumtris, const int *
 	for (i = 0;i < numshadowmarktris;i++)
 		shadowmark[shadowmarktris[i]] = shadowmarkcount;
 
-	for (i = 0;i < numshadowmarktris;i++)
+	// create the vertices
+	if (projectdirection)
 	{
-		element = inelement3i + shadowmarktris[i] * 3;
-		// make sure the vertices are created
-		for (j = 0;j < 3;j++)
+		for (i = 0;i < numshadowmarktris;i++)
 		{
-			if (vertexupdate[element[j]] != vertexupdatenum)
+			element = inelement3i + shadowmarktris[i] * 3;
+			for (j = 0;j < 3;j++)
 			{
-				float ratio, direction[3];
-				vertexupdate[element[j]] = vertexupdatenum;
-				vertexremap[element[j]] = outvertices;
-				vertex = invertex3f + element[j] * 3;
-				// project one copy of the vertex to the sphere radius of the light
-				// (FIXME: would projecting it to the light box be better?)
-				VectorSubtract(vertex, projectorigin, direction);
-				ratio = projectdistance / VectorLength(direction);
-				VectorCopy(vertex, outvertex3f);
-				VectorMA(projectorigin, ratio, direction, (outvertex3f + 3));
-				outvertex3f += 6;
-				outvertices += 2;
+				if (vertexupdate[element[j]] != vertexupdatenum)
+				{
+					vertexupdate[element[j]] = vertexupdatenum;
+					vertexremap[element[j]] = outvertices;
+					vertex = invertex3f + element[j] * 3;
+					// project one copy of the vertex according to projectvector
+					VectorCopy(vertex, outvertex3f);
+					VectorAdd(vertex, projectvector, (outvertex3f + 3));
+					outvertex3f += 6;
+					outvertices += 2;
+				}
+			}
+		}
+	}
+	else
+	{
+		for (i = 0;i < numshadowmarktris;i++)
+		{
+			element = inelement3i + shadowmarktris[i] * 3;
+			for (j = 0;j < 3;j++)
+			{
+				if (vertexupdate[element[j]] != vertexupdatenum)
+				{
+					vertexupdate[element[j]] = vertexupdatenum;
+					vertexremap[element[j]] = outvertices;
+					vertex = invertex3f + element[j] * 3;
+					// project one copy of the vertex to the sphere radius of the light
+					// (FIXME: would projecting it to the light box be better?)
+					VectorSubtract(vertex, projectorigin, direction);
+					ratio = projectdistance / VectorLength(direction);
+					VectorCopy(vertex, outvertex3f);
+					VectorMA(projectorigin, ratio, direction, (outvertex3f + 3));
+					outvertex3f += 6;
+					outvertices += 2;
+				}
 			}
 		}
 	}
@@ -645,7 +674,7 @@ int R_Shadow_ConstructShadowVolume(int innumvertices, int innumtris, const int *
 	return outtriangles;
 }
 
-void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f, const int *elements, const int *neighbors, const vec3_t projectorigin, float projectdistance, int nummarktris, const int *marktris)
+void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f, const int *elements, const int *neighbors, const vec3_t projectorigin, const vec3_t projectdirection, float projectdistance, int nummarktris, const int *marktris)
 {
 	int tris, outverts;
 	if (projectdistance < 0.1)
@@ -658,16 +687,17 @@ void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f,
 	// make sure shadowelements is big enough for this volume
 	if (maxshadowtriangles < nummarktris || maxshadowvertices < numverts)
 		R_Shadow_ResizeShadowArrays((numverts + 255) & ~255, (nummarktris + 255) & ~255);
-	tris = R_Shadow_ConstructShadowVolume(numverts, numtris, elements, neighbors, invertex3f, &outverts, shadowelements, shadowvertex3f, projectorigin, projectdistance, nummarktris, marktris);
+	tris = R_Shadow_ConstructShadowVolume(numverts, numtris, elements, neighbors, invertex3f, &outverts, shadowelements, shadowvertex3f, projectorigin, projectdirection, projectdistance, nummarktris, marktris);
 	r_refdef.stats.lights_dynamicshadowtriangles += tris;
 	R_Shadow_RenderVolume(outverts, tris, shadowvertex3f, shadowelements);
 }
 
-void R_Shadow_MarkVolumeFromBox(int firsttriangle, int numtris, const float *invertex3f, const int *elements, const vec3_t projectorigin, const vec3_t lightmins, const vec3_t lightmaxs, const vec3_t surfacemins, const vec3_t surfacemaxs)
+void R_Shadow_MarkVolumeFromBox(int firsttriangle, int numtris, const float *invertex3f, const int *elements, const vec3_t projectorigin, const vec3_t projectdirection, const vec3_t lightmins, const vec3_t lightmaxs, const vec3_t surfacemins, const vec3_t surfacemaxs)
 {
 	int t, tend;
 	const int *e;
 	const float *v[3];
+	float normal[3];
 	if (!BoxesOverlap(lightmins, lightmaxs, surfacemins, surfacemaxs))
 		return;
 	tend = firsttriangle + numtris;
@@ -676,26 +706,59 @@ void R_Shadow_MarkVolumeFromBox(int firsttriangle, int numtris, const float *inv
 	 && surfacemins[2] >= lightmins[2] && surfacemaxs[2] <= lightmaxs[2])
 	{
 		// surface box entirely inside light box, no box cull
-		for (t = firsttriangle, e = elements + t * 3;t < tend;t++, e += 3)
-			if (PointInfrontOfTriangle(projectorigin, invertex3f + e[0] * 3, invertex3f + e[1] * 3, invertex3f + e[2] * 3))
-				shadowmarklist[numshadowmark++] = t;
+		if (projectdirection)
+		{
+			for (t = firsttriangle, e = elements + t * 3;t < tend;t++, e += 3)
+			{
+				TriangleNormal(invertex3f + e[0] * 3, invertex3f + e[1] * 3, invertex3f + e[2] * 3, normal);
+				if (DotProduct(normal, projectdirection) < 0)
+					shadowmarklist[numshadowmark++] = t;
+			}
+		}
+		else
+		{
+			for (t = firsttriangle, e = elements + t * 3;t < tend;t++, e += 3)
+				if (PointInfrontOfTriangle(projectorigin, invertex3f + e[0] * 3, invertex3f + e[1] * 3, invertex3f + e[2] * 3))
+					shadowmarklist[numshadowmark++] = t;
+		}
 	}
 	else
 	{
 		// surface box not entirely inside light box, cull each triangle
-		for (t = firsttriangle, e = elements + t * 3;t < tend;t++, e += 3)
+		if (projectdirection)
 		{
-			v[0] = invertex3f + e[0] * 3;
-			v[1] = invertex3f + e[1] * 3;
-			v[2] = invertex3f + e[2] * 3;
-			if (PointInfrontOfTriangle(projectorigin, v[0], v[1], v[2])
-			 && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0]))
-			 && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0]))
-			 && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1]))
-			 && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1]))
-			 && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2]))
-			 && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
-				shadowmarklist[numshadowmark++] = t;
+			for (t = firsttriangle, e = elements + t * 3;t < tend;t++, e += 3)
+			{
+				v[0] = invertex3f + e[0] * 3;
+				v[1] = invertex3f + e[1] * 3;
+				v[2] = invertex3f + e[2] * 3;
+				TriangleNormal(v[0], v[1], v[2], normal);
+				if (DotProduct(normal, projectdirection) < 0
+				 && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0]))
+				 && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0]))
+				 && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1]))
+				 && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1]))
+				 && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2]))
+				 && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
+					shadowmarklist[numshadowmark++] = t;
+			}
+		}
+		else
+		{
+			for (t = firsttriangle, e = elements + t * 3;t < tend;t++, e += 3)
+			{
+				v[0] = invertex3f + e[0] * 3;
+				v[1] = invertex3f + e[1] * 3;
+				v[2] = invertex3f + e[2] * 3;
+				if (PointInfrontOfTriangle(projectorigin, v[0], v[1], v[2])
+				 && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0]))
+				 && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0]))
+				 && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1]))
+				 && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1]))
+				 && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2]))
+				 && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
+					shadowmarklist[numshadowmark++] = t;
+			}
 		}
 	}
 }
@@ -955,7 +1018,14 @@ void R_Shadow_RenderMode_VisibleShadowVolumes(void)
 	qglPolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);CHECKGLERROR
 	GL_Color(0.0, 0.0125 * r_view.colorscale, 0.1 * r_view.colorscale, 1);
 	GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 1);
-	qglDepthFunc(GL_GEQUAL);CHECKGLERROR
+	if (r_showshadowvolumes.integer >= 2)
+	{
+		qglDepthFunc(GL_ALWAYS);CHECKGLERROR
+	}
+	else
+	{
+		qglDepthFunc(GL_GEQUAL);CHECKGLERROR
+	}
 	qglDisable(GL_STENCIL_TEST);CHECKGLERROR
 	r_shadow_rendermode = R_SHADOW_RENDERMODE_VISIBLEVOLUMES;
 }
@@ -969,7 +1039,11 @@ void R_Shadow_RenderMode_VisibleLighting(qboolean stenciltest, qboolean transpar
 	qglPolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);CHECKGLERROR
 	GL_Color(0.1 * r_view.colorscale, 0.0125 * r_view.colorscale, 0, 1);
 	GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 1);
-	if (transparent)
+	if (r_showshadowvolumes.integer >= 2)
+	{
+		qglDepthFunc(GL_ALWAYS);CHECKGLERROR
+	}
+	else if (transparent)
 	{
 		qglDepthFunc(GL_LEQUAL);CHECKGLERROR
 	}
@@ -2115,7 +2189,7 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 		if (numsurfaces)
 			memcpy(rtlight->static_surfacelist, r_shadow_buffer_surfacelist, rtlight->static_numsurfaces * sizeof(*rtlight->static_surfacelist));
 		if (model->CompileShadowVolume && rtlight->shadow)
-			model->CompileShadowVolume(ent, rtlight->shadoworigin, rtlight->radius, numsurfaces, r_shadow_buffer_surfacelist);
+			model->CompileShadowVolume(ent, rtlight->shadoworigin, NULL, rtlight->radius, numsurfaces, r_shadow_buffer_surfacelist);
 		// now we're done compiling the rtlight
 		r_shadow_compilingrtlight = NULL;
 	}
@@ -2203,7 +2277,7 @@ void R_Shadow_DrawEntityShadow(entity_render_t *ent, int numsurfaces, int *surfa
 		else if (numsurfaces)
 		{
 			R_Mesh_Matrix(&ent->matrix);
-			model->DrawShadowVolume(ent, r_shadow_rtlight->shadoworigin, r_shadow_rtlight->radius, numsurfaces, surfacelist, r_shadow_rtlight->cullmins, r_shadow_rtlight->cullmaxs);
+			model->DrawShadowVolume(ent, r_shadow_rtlight->shadoworigin, NULL, r_shadow_rtlight->radius, numsurfaces, surfacelist, r_shadow_rtlight->cullmins, r_shadow_rtlight->cullmaxs);
 		}
 	}
 	else
@@ -2217,7 +2291,7 @@ void R_Shadow_DrawEntityShadow(entity_render_t *ent, int numsurfaces, int *surfa
 		relativeshadowmaxs[1] = relativeshadoworigin[1] + relativeshadowradius;
 		relativeshadowmaxs[2] = relativeshadoworigin[2] + relativeshadowradius;
 		R_Mesh_Matrix(&ent->matrix);
-		model->DrawShadowVolume(ent, relativeshadoworigin, relativeshadowradius, model->nummodelsurfaces, model->surfacelist, relativeshadowmins, relativeshadowmaxs);
+		model->DrawShadowVolume(ent, relativeshadoworigin, NULL, relativeshadowradius, model->nummodelsurfaces, model->surfacelist, relativeshadowmins, relativeshadowmaxs);
 	}
 }
 
@@ -2448,6 +2522,92 @@ void R_ShadowVolumeLighting(qboolean visible)
 
 	R_Shadow_RenderMode_End();
 }
+
+extern void R_SetupView(const matrix4x4_t *matrix);
+extern cvar_t r_shadows_throwdistance;
+void R_DrawModelShadows(void)
+{
+	int i;
+	float relativethrowdistance;
+	entity_render_t *ent;
+	vec3_t relativelightorigin;
+	vec3_t relativelightdirection;
+	vec3_t relativeshadowmins, relativeshadowmaxs;
+	float vertex3f[12];
+
+	if (!r_drawentities.integer || !gl_stencil)
+		return;
+
+	CHECKGLERROR
+	GL_Scissor(r_view.x, r_view.y, r_view.width, r_view.height);
+
+	r_shadow_rendermode = R_SHADOW_RENDERMODE_NONE;
+
+	if (gl_ext_stenciltwoside.integer)
+		r_shadow_shadowingrendermode = R_SHADOW_RENDERMODE_STENCILTWOSIDE;
+	else
+		r_shadow_shadowingrendermode = R_SHADOW_RENDERMODE_STENCIL;
+
+	R_Shadow_RenderMode_StencilShadowVolumes();
+
+	for (i = 0;i < r_refdef.numentities;i++)
+	{
+		ent = r_refdef.entities[i];
+		// cast shadows from anything that is not a submodel of the map
+		if (ent->model && ent->model->DrawShadowVolume != NULL && !ent->model->brush.submodel && (ent->flags & RENDER_SHADOW))
+		{
+			relativethrowdistance = r_shadows_throwdistance.value * Matrix4x4_ScaleFromMatrix(&ent->inversematrix);
+			VectorSet(relativeshadowmins, -relativethrowdistance, -relativethrowdistance, -relativethrowdistance);
+			VectorSet(relativeshadowmaxs, relativethrowdistance, relativethrowdistance, relativethrowdistance);
+			VectorNegate(ent->modellight_lightdir, relativelightdirection);
+			VectorScale(relativelightdirection, -relativethrowdistance, relativelightorigin);
+			ent->model->DrawShadowVolume(ent, relativelightorigin, relativelightdirection, relativethrowdistance, ent->model->nummodelsurfaces, ent->model->surfacelist, relativeshadowmins, relativeshadowmaxs);
+		}
+	}
+
+	// not really the right mode, but this will disable any silly stencil features
+	R_Shadow_RenderMode_VisibleLighting(true, true);
+
+	// vertex coordinates for a quad that covers the screen exactly
+	vertex3f[0] = 0;vertex3f[1] = 0;vertex3f[2] = 0;
+	vertex3f[3] = 1;vertex3f[4] = 0;vertex3f[5] = 0;
+	vertex3f[6] = 1;vertex3f[7] = 1;vertex3f[8] = 0;
+	vertex3f[9] = 0;vertex3f[10] = 1;vertex3f[11] = 0;
+
+	// set up ortho view for rendering this pass
+	GL_SetupView_Mode_Ortho(0, 0, 1, 1, -10, 100);
+	GL_Scissor(r_view.x, r_view.y, r_view.width, r_view.height);
+	GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 1);
+	GL_ScissorTest(true);
+	R_Mesh_Matrix(&identitymatrix);
+	R_Mesh_ResetTextureState();
+	R_Mesh_VertexPointer(vertex3f);
+	R_Mesh_ColorPointer(NULL);
+
+	// set up a 50% darkening blend on shadowed areas
+	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	GL_DepthTest(false);
+	GL_DepthMask(false);
+	qglPolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);CHECKGLERROR
+	GL_Color(0, 0, 0, 0.5);
+	GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 1);
+	qglDepthFunc(GL_ALWAYS);CHECKGLERROR
+	qglEnable(GL_STENCIL_TEST);CHECKGLERROR
+	qglStencilMask(~0);CHECKGLERROR
+	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);CHECKGLERROR
+	qglStencilFunc(GL_NOTEQUAL, 128, ~0);CHECKGLERROR
+
+	// apply the blend to the shadowed areas
+	R_Mesh_Draw(0, 4, 2, polygonelements);
+
+	// restore perspective view
+	R_SetupView(&r_view.matrix);
+
+	// restore other state to normal
+	GL_DepthTest(true);
+	R_Shadow_RenderMode_End();
+}
+
 
 //static char *suffix[6] = {"ft", "bk", "rt", "lf", "up", "dn"};
 typedef struct suffixinfo_s

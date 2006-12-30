@@ -51,6 +51,8 @@ cvar_t r_fullbright = {0, "r_fullbright","0", "make everything bright cheat (not
 cvar_t r_wateralpha = {CVAR_SAVE, "r_wateralpha","1", "opacity of water polygons"};
 cvar_t r_dynamic = {CVAR_SAVE, "r_dynamic","1", "enables dynamic lights (rocket glow and such)"};
 cvar_t r_fullbrights = {CVAR_SAVE, "r_fullbrights", "1", "enables glowing pixels in quake textures (changes need r_restart to take effect)"};
+cvar_t r_shadows = {CVAR_SAVE, "r_shadows", "0", "casts fake stencil shadows from models onto the world (rtlights are unaffected by this)"};
+cvar_t r_shadows_throwdistance = {CVAR_SAVE, "r_shadows_throwdistance", "500", "how far to cast shadows from models"};
 cvar_t r_q1bsp_skymasking = {0, "r_qb1sp_skymasking", "1", "allows sky polygons in quake1 maps to obscure other geometry"};
 
 cvar_t gl_fogenable = {0, "gl_fogenable", "0", "nehahra fog enable (for Nehahra compatibility only)"};
@@ -111,6 +113,8 @@ r_glsl_permutation_t *r_glsl_permutation;
 
 // temporary variable used by a macro
 int fogtableindex;
+
+extern void R_DrawModelShadows(void);
 
 void R_ModulateColors(float *in, float *out, int verts, float r, float g, float b)
 {
@@ -1003,6 +1007,8 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_wateralpha);
 	Cvar_RegisterVariable(&r_dynamic);
 	Cvar_RegisterVariable(&r_fullbright);
+	Cvar_RegisterVariable(&r_shadows);
+	Cvar_RegisterVariable(&r_shadows_throwdistance);
 	Cvar_RegisterVariable(&r_q1bsp_skymasking);
 	Cvar_RegisterVariable(&r_textureunits);
 	Cvar_RegisterVariable(&r_glsl);
@@ -1134,9 +1140,11 @@ int R_CullBox(const vec3_t mins, const vec3_t maxs)
 static void R_UpdateEntityLighting(entity_render_t *ent)
 {
 	vec3_t tempdiffusenormal;
+
+	// fetch the lighting from the worldmodel data
 	VectorSet(ent->modellight_ambient, r_ambient.value * (2.0f / 128.0f), r_ambient.value * (2.0f / 128.0f), r_ambient.value * (2.0f / 128.0f));
 	VectorClear(ent->modellight_diffuse);
-	VectorClear(ent->modellight_lightdir);
+	VectorClear(tempdiffusenormal);
 	if ((ent->flags & RENDER_LIGHT) && r_refdef.worldmodel && r_refdef.worldmodel->brush.LightPoint)
 	{
 		vec3_t org;
@@ -1145,8 +1153,12 @@ static void R_UpdateEntityLighting(entity_render_t *ent)
 	}
 	else // highly rare
 		VectorSet(ent->modellight_ambient, 1, 1, 1);
+
+	// move the light direction into modelspace coordinates for lighting code
 	Matrix4x4_Transform3x3(&ent->inversematrix, tempdiffusenormal, ent->modellight_lightdir);
 	VectorNormalize(ent->modellight_lightdir);
+
+	// scale ambient and directional light contributions according to rendering variables
 	ent->modellight_ambient[0] *= ent->colormod[0] * r_refdef.lightmapintensity;
 	ent->modellight_ambient[1] *= ent->colormod[1] * r_refdef.lightmapintensity;
 	ent->modellight_ambient[2] *= ent->colormod[2] * r_refdef.lightmapintensity;
@@ -1171,8 +1183,6 @@ static void R_View_UpdateEntityVisible (void)
 		{
 			ent = r_refdef.entities[i];
 			r_viewcache.entityvisible[i] = !(ent->flags & renderimask) && !R_CullBox(ent->mins, ent->maxs) && ((ent->effects & EF_NODEPTHTEST) || r_refdef.worldmodel->brush.BoxTouchingVisibleLeafs(r_refdef.worldmodel, r_viewcache.world_leafvisible, ent->mins, ent->maxs));
-			if (r_viewcache.entityvisible[i])
-				R_UpdateEntityLighting(ent);
 		}
 	}
 	else
@@ -1182,10 +1192,12 @@ static void R_View_UpdateEntityVisible (void)
 		{
 			ent = r_refdef.entities[i];
 			r_viewcache.entityvisible[i] = !(ent->flags & renderimask) && !R_CullBox(ent->mins, ent->maxs);
-			if (r_viewcache.entityvisible[i])
-				R_UpdateEntityLighting(ent);
 		}
 	}
+
+	// update entity lighting (even on hidden entities for r_shadows)
+	for (i = 0;i < r_refdef.numentities;i++)
+		R_UpdateEntityLighting(r_refdef.entities[i]);
 }
 
 // only used if skyrendermasked, and normally returns false
@@ -1377,6 +1389,16 @@ void R_ResetViewRendering(void)
 	GL_DepthTest(true);
 	R_Mesh_Matrix(&identitymatrix);
 	R_Mesh_ResetTextureState();
+}
+
+void R_SetupView(const matrix4x4_t *matrix)
+{
+	if (r_refdef.rtworldshadows || r_refdef.rtdlightshadows)
+		GL_SetupView_Mode_PerspectiveInfiniteFarClip(r_view.frustum_x, r_view.frustum_y, r_refdef.nearclip);
+	else
+		GL_SetupView_Mode_Perspective(r_view.frustum_x, r_view.frustum_y, r_refdef.nearclip, r_refdef.farclip);
+
+	GL_SetupView_Orientation_FromEntity(matrix);
 }
 
 void R_RenderScene(void);
@@ -1846,15 +1868,9 @@ void R_RenderScene(void)
 	qglEnable(GL_POLYGON_OFFSET_FILL);CHECKGLERROR
 
 	R_ResetViewRendering();
+	R_SetupView(&r_view.matrix);
 
 	R_MeshQueue_BeginScene();
-
-	if (r_refdef.rtworldshadows || r_refdef.rtdlightshadows)
-		GL_SetupView_Mode_PerspectiveInfiniteFarClip(r_view.frustum_x, r_view.frustum_y, r_refdef.nearclip);
-	else
-		GL_SetupView_Mode_Perspective(r_view.frustum_x, r_view.frustum_y, r_refdef.nearclip, r_refdef.farclip);
-
-	GL_SetupView_Orientation_FromEntity(&r_view.matrix);
 
 	R_Shadow_UpdateWorldLightSelection();
 
@@ -1897,6 +1913,15 @@ void R_RenderScene(void)
 	// don't let sound skip if going slow
 	if (r_refdef.extraupdate)
 		S_ExtraUpdate ();
+
+	if (r_shadows.integer > 0 && r_refdef.lightmapintensity > 0)
+	{
+		R_DrawModelShadows();
+
+		// don't let sound skip if going slow
+		if (r_refdef.extraupdate)
+			S_ExtraUpdate ();
+	}
 
 	R_ShadowVolumeLighting(false);
 	if (r_timereport_active)
