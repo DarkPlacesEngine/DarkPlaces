@@ -198,8 +198,9 @@ cvar_t r_shadow_bumpscale_basetexture = {0, "r_shadow_bumpscale_basetexture", "0
 cvar_t r_shadow_bumpscale_bumpmap = {0, "r_shadow_bumpscale_bumpmap", "4", "what magnitude to interpret _bump.tga textures as, higher values increase depth, requires r_restart to take effect"};
 cvar_t r_shadow_debuglight = {0, "r_shadow_debuglight", "-1", "renders only one light, for level design purposes or debugging"};
 cvar_t r_shadow_gloss = {CVAR_SAVE, "r_shadow_gloss", "1", "0 disables gloss (specularity) rendering, 1 uses gloss if textures are found, 2 forces a flat metallic specular effect on everything without textures (similar to tenebrae)"};
-cvar_t r_shadow_gloss2intensity = {0, "r_shadow_gloss2intensity", "0.25", "how bright the forced flat gloss should look if r_shadow_gloss is 2"};
-cvar_t r_shadow_glossintensity = {0, "r_shadow_glossintensity", "1", "how bright textured glossmaps should look if r_shadow_gloss is 1 or 2"};
+cvar_t r_shadow_gloss2intensity = {0, "r_shadow_gloss2intensity", "0.5", "how bright the forced flat gloss should look if r_shadow_gloss is 2"};
+cvar_t r_shadow_glossintensity = {0, "r_shadow_glossintensity", "2", "how bright textured glossmaps should look if r_shadow_gloss is 1 or 2"};
+cvar_t r_shadow_glossexponent = {0, "r_shadow_glossexponent", "32", "how 'sharp' the gloss should appear (specular power)"};
 cvar_t r_shadow_lightattenuationpower = {0, "r_shadow_lightattenuationpower", "0.5", "changes attenuation texture generation (does not affect r_glsl lighting)"};
 cvar_t r_shadow_lightattenuationscale = {0, "r_shadow_lightattenuationscale", "1", "changes attenuation texture generation (does not affect r_glsl lighting)"};
 cvar_t r_shadow_lightintensityscale = {0, "r_shadow_lightintensityscale", "1", "renders all world lights brighter or darker"};
@@ -385,6 +386,7 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_gloss);
 	Cvar_RegisterVariable(&r_shadow_gloss2intensity);
 	Cvar_RegisterVariable(&r_shadow_glossintensity);
+	Cvar_RegisterVariable(&r_shadow_glossexponent);
 	Cvar_RegisterVariable(&r_shadow_lightattenuationpower);
 	Cvar_RegisterVariable(&r_shadow_lightattenuationscale);
 	Cvar_RegisterVariable(&r_shadow_lightintensityscale);
@@ -1075,14 +1077,15 @@ void R_Shadow_RenderMode_End(void)
 	GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 1);
 	GL_Scissor(r_view.x, r_view.y, r_view.width, r_view.height);
 	qglDepthFunc(GL_LEQUAL);CHECKGLERROR
-	qglDisable(GL_STENCIL_TEST);CHECKGLERROR
-	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);CHECKGLERROR
 	if (gl_support_stenciltwoside)
 	{
 		qglDisable(GL_STENCIL_TEST_TWO_SIDE_EXT);CHECKGLERROR
 	}
+	qglDisable(GL_STENCIL_TEST);CHECKGLERROR
 	qglStencilMask(~0);CHECKGLERROR
 	qglStencilFunc(GL_ALWAYS, 128, ~0);CHECKGLERROR
+	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);CHECKGLERROR
+	GL_CullFace(GL_FRONT); // quake is backwards, this culls back faces
 	r_shadow_rendermode = R_SHADOW_RENDERMODE_NONE;
 }
 
@@ -1682,6 +1685,7 @@ static void R_Shadow_RenderSurfacesLighting_Light_Dot3_DiffusePass(int numsurfac
 
 static void R_Shadow_RenderSurfacesLighting_Light_Dot3_SpecularPass(int numsurfaces, msurface_t **surfacelist, const vec3_t lightcolorbase, rtexture_t *glosstexture, rtexture_t *normalmaptexture, float colorscale)
 {
+	float glossexponent;
 	rmeshstate_t m;
 	// FIXME: detect blendsquare!
 	//if (!gl_support_blendsquare)
@@ -1710,12 +1714,8 @@ static void R_Shadow_RenderSurfacesLighting_Light_Dot3_SpecularPass(int numsurfa
 		R_Mesh_ResetTextureState();
 		// square alpha in framebuffer a few times to make it shiny
 		GL_BlendFunc(GL_ZERO, GL_DST_ALPHA);
-		// these comments are a test run through this math for intensity 0.5
-		// 0.5 * 0.5 = 0.25 (done by the BlendFunc earlier)
-		// 0.25 * 0.25 = 0.0625 (this is another pass)
-		// 0.0625 * 0.0625 = 0.00390625 (this is another pass)
-		RSurf_DrawBatch_Simple(numsurfaces, surfacelist);
-		RSurf_DrawBatch_Simple(numsurfaces, surfacelist);
+		for (glossexponent = 2;glossexponent * 2 <= r_shadow_glossexponent.value;glossexponent *= 2)
+			RSurf_DrawBatch_Simple(numsurfaces, surfacelist);
 		GL_LockArrays(0, 0);
 
 		// fourth pass
@@ -1762,12 +1762,8 @@ static void R_Shadow_RenderSurfacesLighting_Light_Dot3_SpecularPass(int numsurfa
 		R_Mesh_ResetTextureState();
 		// square alpha in framebuffer a few times to make it shiny
 		GL_BlendFunc(GL_ZERO, GL_DST_ALPHA);
-		// these comments are a test run through this math for intensity 0.5
-		// 0.5 * 0.5 = 0.25 (done by the BlendFunc earlier)
-		// 0.25 * 0.25 = 0.0625 (this is another pass)
-		// 0.0625 * 0.0625 = 0.00390625 (this is another pass)
-		RSurf_DrawBatch_Simple(numsurfaces, surfacelist);
-		RSurf_DrawBatch_Simple(numsurfaces, surfacelist);
+		for (glossexponent = 2;glossexponent * 2 <= r_shadow_glossexponent.value;glossexponent *= 2)
+			RSurf_DrawBatch_Simple(numsurfaces, surfacelist);
 		GL_LockArrays(0, 0);
 
 		// fourth pass
@@ -1801,12 +1797,8 @@ static void R_Shadow_RenderSurfacesLighting_Light_Dot3_SpecularPass(int numsurfa
 		R_Mesh_ResetTextureState();
 		// square alpha in framebuffer a few times to make it shiny
 		GL_BlendFunc(GL_ZERO, GL_DST_ALPHA);
-		// these comments are a test run through this math for intensity 0.5
-		// 0.5 * 0.5 = 0.25 (done by the BlendFunc earlier)
-		// 0.25 * 0.25 = 0.0625 (this is another pass)
-		// 0.0625 * 0.0625 = 0.00390625 (this is another pass)
-		RSurf_DrawBatch_Simple(numsurfaces, surfacelist);
-		RSurf_DrawBatch_Simple(numsurfaces, surfacelist);
+		for (glossexponent = 2;glossexponent * 2 <= r_shadow_glossexponent.value;glossexponent *= 2)
+			RSurf_DrawBatch_Simple(numsurfaces, surfacelist);
 		GL_LockArrays(0, 0);
 
 		// fourth pass
