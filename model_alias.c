@@ -80,7 +80,7 @@ void Mod_Alias_GetMesh_Vertices(const model_t *model, const frameblend_t *frameb
 			R_ConcatTransforms(bonepose[i], model->data_baseboneposeinverse + i * 12, boneposerelative[i]);
 		}
 		// blend the vertex bone weights
-		// special case for the extremely common wf[0] == 1 because it saves 12 adds and multiplies (w[0] is always 1 if only one bone controls this vertex, artists only use multiple bones for certain special cases)
+		// special case for the extremely common wf[0] == 1 because it saves 3 multiplies per array when compared to the other case (w[0] is always 1 if only one bone controls this vertex, artists only use multiple bones for certain special cases)
 		// special case for the first bone because it avoids the need to memset the arrays before filling
 		{
 			const float *v = model->surfmesh.data_vertex3f;
