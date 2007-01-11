@@ -84,8 +84,9 @@ void Com_BlockFullChecksum (void *buffer, int len, unsigned char *outbuf);
 #endif
 
 // If we still don't know the CPU endianess at this point, we try to guess
+// normally including sys/types.h includes endian.h for the platform, which defines BYTE_ORDER, LITTLE_ENDIAN, and BIG_ENDIAN, however endian.h is a BSD-ism, and may not be present on all platforms (particularly windows)
 #ifndef BYTE_ORDER
-# if defined(WIN32)
+# if defined(WIN32) || defined (__i386) || defined(__amd64)
 #  define BYTE_ORDER LITTLE_ENDIAN
 # else
 #  if defined(SUNOS)
