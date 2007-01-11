@@ -44,6 +44,10 @@ int gl_support_anisotropy = false;
 int gl_max_anisotropy = 1;
 // GL_EXT_stencil_two_side
 int gl_support_stenciltwoside = false;
+// GL_EXT_blend_minmax
+int gl_support_ext_blend_minmax = false;
+// GL_EXT_blend_subtract
+int gl_support_ext_blend_subtract = false;
 // GL_ARB_shader_objects
 int gl_support_shader_objects = false;
 // GL_ARB_shading_language_100
@@ -247,6 +251,8 @@ void (GLAPIENTRY *qglPolygonStipple)(const GLubyte *mask);
 //[515]: added on 29.07.2005
 void (GLAPIENTRY *qglLineWidth)(GLfloat width);
 void (GLAPIENTRY *qglPointSize)(GLfloat size);
+
+void (GLAPIENTRY *qglBlendEquationEXT)(GLenum);
 
 void (GLAPIENTRY *qglActiveStencilFaceEXT)(GLenum);
 
@@ -519,6 +525,12 @@ static dllfunction_t stenciltwosidefuncs[] =
 	{NULL, NULL}
 };
 
+static dllfunction_t blendequationfuncs[] =
+{
+	{"glBlendEquationEXT", (void **) &qglBlendEquationEXT},
+	{NULL, NULL}
+};
+
 static dllfunction_t shaderobjectsfuncs[] =
 {
 	{"glDeleteObjectARB", (void **) &qglDeleteObjectARB},
@@ -635,6 +647,8 @@ void VID_CheckExtensions(void)
 	gl_support_anisotropy = false;
 	gl_max_anisotropy = 1;
 	gl_support_stenciltwoside = false;
+	gl_support_ext_blend_minmax = false;
+	gl_support_ext_blend_subtract = false;
 	gl_support_shader_objects = false;
 	gl_support_shading_language_100 = false;
 	gl_support_vertex_shader = false;
@@ -691,6 +705,9 @@ void VID_CheckExtensions(void)
 // COMMANDLINEOPTION: GL: -noanisotropy disables GL_EXT_texture_filter_anisotropic (allows higher quality texturing)
 	if ((gl_support_anisotropy = GL_CheckExtension("GL_EXT_texture_filter_anisotropic", NULL, "-noanisotropy", false)))
 		qglGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &gl_max_anisotropy);
+
+	gl_support_ext_blend_minmax = GL_CheckExtension("GL_EXT_blend_minmax", blendequationfuncs, "-noblendminmax", false);
+	gl_support_ext_blend_subtract = GL_CheckExtension("GL_EXT_blend_subtract", blendequationfuncs, "-noblendsubtract", false);
 
 // COMMANDLINEOPTION: GL: -nostenciltwoside disables GL_EXT_stencil_two_side (accelerates shadow rendering)
 	gl_support_stenciltwoside = GL_CheckExtension("GL_EXT_stencil_two_side", stenciltwosidefuncs, "-nostenciltwoside", false);
