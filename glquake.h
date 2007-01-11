@@ -399,6 +399,23 @@ extern int gl_support_clamptoedge;
 extern void (GLAPIENTRY *qglActiveStencilFaceEXT)(GLenum);
 extern int gl_support_stenciltwoside;
 
+//GL_EXT_blend_minmax
+extern int gl_support_ext_blend_minmax;
+#ifndef GL_FUNC_ADD_EXT
+#define GL_FUNC_ADD_EXT                   0x8006 // also supplied by GL_EXT_blend_subtract
+#define GL_MIN_EXT                        0x8007
+#define GL_MAX_EXT                        0x8008
+#define GL_BLEND_EQUATION_EXT             0x8009 // also supplied by GL_EXT_blend_subtract
+extern void (GLAPIENTRY *qglBlendEquationEXT)(GLenum); // also supplied by GL_EXT_blend_subtract
+#endif
+
+//GL_EXT_blend_subtract
+extern int gl_support_ext_blend_subtract;
+#ifndef GL_FUNC_SUBTRACT_EXT
+#define GL_FUNC_SUBTRACT_EXT              0x800A
+#define GL_FUNC_REVERSE_SUBTRACT_EXT      0x800B
+#endif
+
 //GL_ARB_texture_non_power_of_two
 extern int gl_support_arb_texture_non_power_of_two;
 
