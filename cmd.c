@@ -482,7 +482,8 @@ typedef struct cmd_function_s
 	struct cmd_function_s *next;
 	const char *name;
 	const char *description;
-	xcommand_t function;
+	xcommand_t consolefunction;
+	xcommand_t clientfunction;
 	qboolean csqcfunc;
 } cmd_function_t;
 
@@ -795,7 +796,7 @@ static void Cmd_TokenizeString (const char *text)
 Cmd_AddCommand
 ============
 */
-void Cmd_AddCommand (const char *cmd_name, xcommand_t function, const char *description)
+void Cmd_AddCommand_WithClientCommand (const char *cmd_name, xcommand_t consolefunction, xcommand_t clientfunction, const char *description)
 {
 	cmd_function_t *cmd;
 	cmd_function_t *prev, *current;
@@ -812,7 +813,7 @@ void Cmd_AddCommand (const char *cmd_name, xcommand_t function, const char *desc
 	{
 		if (!strcmp (cmd_name, cmd->name))
 		{
-			if (function)
+			if (consolefunction || clientfunction)
 			{
 				Con_Printf("Cmd_AddCommand: %s already defined\n", cmd_name);
 				return;
@@ -827,9 +828,10 @@ void Cmd_AddCommand (const char *cmd_name, xcommand_t function, const char *desc
 
 	cmd = (cmd_function_t *)Mem_Alloc(cmd_mempool, sizeof(cmd_function_t));
 	cmd->name = cmd_name;
-	cmd->function = function;
+	cmd->consolefunction = consolefunction;
+	cmd->clientfunction = clientfunction;
 	cmd->description = description;
-	if(!function)			//[515]: csqc
+	if(!consolefunction && !clientfunction)			//[515]: csqc
 		cmd->csqcfunc = true;
 	cmd->next = cmd_functions;
 
@@ -842,6 +844,11 @@ void Cmd_AddCommand (const char *cmd_name, xcommand_t function, const char *desc
 		cmd_functions = cmd;
 	}
 	cmd->next = current;
+}
+
+void Cmd_AddCommand (const char *cmd_name, xcommand_t function, const char *description)
+{
+	Cmd_AddCommand_WithClientCommand (cmd_name, function, NULL, description);
 }
 
 /*
@@ -1088,17 +1095,45 @@ void Cmd_ExecuteString (const char *text, cmd_source_t src)
 	{
 		if (!strcasecmp (cmd_argv[0],cmd->name))
 		{
-			if(cmd->function && !cmd->csqcfunc)
-				cmd->function ();
-			else
-				if(CL_VM_ConsoleCommand (text))	//[515]: csqc
-					return;
+			if (cmd->csqcfunc && CL_VM_ConsoleCommand (text))	//[515]: csqc
+				return;
+			switch (src)
+			{
+			case src_command:
+				if (cmd->consolefunction)
+					cmd->consolefunction ();
+				else if (cmd->clientfunction)
+				{
+					if (cls.state == ca_connected)
+					{
+						// forward remote commands to the server for execution
+						Cmd_ForwardToServer();
+					}
+					else
+						Con_Printf("Can not send command \"%s\", not connected.\n", Cmd_Argv(0));
+				}
 				else
-					if(cmd->function)
-						cmd->function ();
-			cmd_tokenizebufferpos = oldpos;
-			return;
+					Con_Printf("Command \"%s\" can not be executed\n", Cmd_Argv(0));
+				cmd_tokenizebufferpos = oldpos;
+				return;
+			case src_client:
+				if (cmd->clientfunction)
+				{
+					cmd->clientfunction ();
+					cmd_tokenizebufferpos = oldpos;
+					return;
+				}
+				break;
+			}
+			break;
 		}
+	}
+
+	// if it's a client command and no command was found, say so.
+	if (cmd_source == src_client)
+	{
+		Con_Printf("player \"%s\" tried to %s\n", host_client->name, text);
+		return;
 	}
 
 // check alias

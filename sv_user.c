@@ -696,27 +696,8 @@ void SV_ReadClientMessage(void)
 				prog->globals.server->self = PRVM_EDICT_TO_PROG(host_client->edict);
 				PRVM_ExecuteProgram ((func_t)(SV_ParseClientCommandQC - prog->functions), "QC function SV_ParseClientCommand is missing");
 			}
-			else if (strncasecmp(s, "status", 6) == 0
-			 || strncasecmp(s, "name", 4) == 0
-			 || strncasecmp(s, "say", 3) == 0
-			 || strncasecmp(s, "say_team", 8) == 0
-			 || strncasecmp(s, "tell", 4) == 0
-			 || strncasecmp(s, "color", 5) == 0
-			 || strncasecmp(s, "kill", 4) == 0
-			 || strncasecmp(s, "pause", 5) == 0
-			 || strncasecmp(s, "kick", 4) == 0
-			 || strncasecmp(s, "ping", 4) == 0
-			 || strncasecmp(s, "pings", 5) == 0
-			 || strncasecmp(s, "ban", 3) == 0
-			 || strncasecmp(s, "pmodel", 6) == 0
-			 || strncasecmp(s, "rate", 4) == 0
-			 || strncasecmp(s, "playermodel", 11) == 0
-			 || strncasecmp(s, "playerskin", 10) == 0
-			 || (gamemode == GAME_NEHAHRA && (strncasecmp(s, "max", 3) == 0 || strncasecmp(s, "monster", 7) == 0 || strncasecmp(s, "scrag", 5) == 0 || strncasecmp(s, "gimme", 5) == 0 || strncasecmp(s, "wraith", 6) == 0))
-			 || (gamemode != GAME_NEHAHRA && (strncasecmp(s, "god", 3) == 0 || strncasecmp(s, "notarget", 8) == 0 || strncasecmp(s, "fly", 3) == 0 || strncasecmp(s, "give", 4) == 0 || strncasecmp(s, "noclip", 6) == 0)))
-				Cmd_ExecuteString (s, src_client);
 			else
-				Con_Printf("%s tried to %s\n", host_client->name, s);
+				Cmd_ExecuteString (s, src_client);
 			break;
 
 		case clc_disconnect:
