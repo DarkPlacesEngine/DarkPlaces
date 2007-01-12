@@ -216,9 +216,6 @@ stop recording a demo
 */
 void CL_Stop_f (void)
 {
-	if (cmd_source != src_command)
-		return;
-
 	if (!cls.demorecording)
 	{
 		Con_Print("Not recording a demo.\n");
@@ -248,9 +245,6 @@ void CL_Record_f (void)
 {
 	int c, track;
 	char name[MAX_OSPATH];
-
-	if (cmd_source != src_command)
-		return;
 
 	c = Cmd_Argc();
 	if (c != 2 && c != 3 && c != 4)
@@ -316,9 +310,6 @@ void CL_PlayDemo_f (void)
 	char	name[MAX_QPATH];
 	int c;
 	qboolean neg = false;
-
-	if (cmd_source != src_command)
-		return;
 
 	if (Cmd_Argc() != 2)
 	{
@@ -398,9 +389,6 @@ timedemo [demoname]
 */
 void CL_TimeDemo_f (void)
 {
-	if (cmd_source != src_command)
-		return;
-
 	if (Cmd_Argc() != 2)
 	{
 		Con_Print("timedemo <demoname> : gets demo speeds\n");

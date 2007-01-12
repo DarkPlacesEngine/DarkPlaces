@@ -106,12 +106,6 @@ Sets client to godmode
 */
 void Host_God_f (void)
 {
-	if (cmd_source == src_command)
-	{
-		Cmd_ForwardToServer ();
-		return;
-	}
-
 	if (!allowcheats)
 	{
 		SV_ClientPrint("No cheats allowed, use sv_cheats 1 and restart level to enable.\n");
@@ -127,12 +121,6 @@ void Host_God_f (void)
 
 void Host_Notarget_f (void)
 {
-	if (cmd_source == src_command)
-	{
-		Cmd_ForwardToServer ();
-		return;
-	}
-
 	if (!allowcheats)
 	{
 		SV_ClientPrint("No cheats allowed, use sv_cheats 1 and restart level to enable.\n");
@@ -150,12 +138,6 @@ qboolean noclip_anglehack;
 
 void Host_Noclip_f (void)
 {
-	if (cmd_source == src_command)
-	{
-		Cmd_ForwardToServer ();
-		return;
-	}
-
 	if (!allowcheats)
 	{
 		SV_ClientPrint("No cheats allowed, use sv_cheats 1 and restart level to enable.\n");
@@ -185,12 +167,6 @@ Sets client to flymode
 */
 void Host_Fly_f (void)
 {
-	if (cmd_source == src_command)
-	{
-		Cmd_ForwardToServer ();
-		return;
-	}
-
 	if (!allowcheats)
 	{
 		SV_ClientPrint("No cheats allowed, use sv_cheats 1 and restart level to enable.\n");
@@ -278,9 +254,6 @@ void Host_Map_f (void)
 		return;
 	}
 
-	if (cmd_source != src_command)
-		return;
-
 	cls.demonum = -1;		// stop demo loop in case this fails
 
 	CL_Disconnect ();
@@ -341,8 +314,6 @@ void Host_Changelevel_f (void)
 		Host_Map_f();
 		return;
 	}
-	if (cmd_source != src_command)
-		return;
 
 	// remove menu
 	key_dest = key_game;
@@ -378,8 +349,6 @@ void Host_Restart_f (void)
 		Con_Print("Only the server may restart\n");
 		return;
 	}
-	if (cmd_source != src_command)
-		return;
 
 	// remove menu
 	key_dest = key_game;
@@ -512,9 +481,6 @@ void Host_Savegame_f (void)
 	int		i;
 	char	comment[SAVEGAME_COMMENT_LENGTH+1];
 
-	if (cmd_source != src_command)
-		return;
-
 	if (cls.state != ca_connected || !sv.active)
 	{
 		Con_Print("Not playing a local game.\n");
@@ -617,9 +583,6 @@ void Host_Loadgame_f (void)
 	int entnum;
 	int version;
 	float spawn_parms[NUM_SPAWN_PARMS];
-
-	if (cmd_source != src_command)
-		return;
 
 	if (Cmd_Argc() != 2)
 	{
@@ -1256,12 +1219,6 @@ Host_Kill_f
 */
 void Host_Kill_f (void)
 {
-	if (cmd_source == src_command)
-	{
-		Cmd_ForwardToServer ();
-		return;
-	}
-
 	if (host_client->edict->fields.server->health <= 0)
 	{
 		SV_ClientPrint("Can't suicide -- already dead!\n");
@@ -1281,12 +1238,6 @@ Host_Pause_f
 */
 void Host_Pause_f (void)
 {
-
-	if (cmd_source == src_command)
-	{
-		Cmd_ForwardToServer ();
-		return;
-	}
 	if (!pausable.integer)
 		SV_ClientPrint("Pause not allowed.\n");
 	else
@@ -1343,12 +1294,6 @@ Host_PreSpawn_f
 */
 void Host_PreSpawn_f (void)
 {
-	if (cmd_source == src_command)
-	{
-		Con_Print("prespawn is not valid from the console\n");
-		return;
-	}
-
 	if (host_client->spawned)
 	{
 		Con_Print("prespawn not valid -- already spawned\n");
@@ -1378,12 +1323,6 @@ void Host_Spawn_f (void)
 	func_t RestoreGame;
 	mfunction_t *f;
 	int stats[MAX_CL_STATS];
-
-	if (cmd_source == src_command)
-	{
-		Con_Print("spawn is not valid from the console\n");
-		return;
-	}
 
 	if (host_client->spawned)
 	{
@@ -1521,12 +1460,6 @@ Host_Begin_f
 */
 void Host_Begin_f (void)
 {
-	if (cmd_source == src_command)
-	{
-		Con_Print("begin is not valid from the console\n");
-		return;
-	}
-
 	host_client->spawned = true;
 }
 
@@ -1548,7 +1481,7 @@ void Host_Kick_f (void)
 	int i;
 	qboolean byNumber = false;
 
-	if (cmd_source != src_command || !sv.active)
+	if (!sv.active)
 		return;
 
 	SV_VM_Begin();
@@ -1631,12 +1564,6 @@ void Host_Give_f (void)
 	const char *t;
 	int v;
 	prvm_eval_t *val;
-
-	if (cmd_source == src_command)
-	{
-		Cmd_ForwardToServer ();
-		return;
-	}
 
 	if (!allowcheats)
 	{
@@ -2345,11 +2272,6 @@ void Host_Pings_f (void)
 	int		i, j, ping, packetloss;
 	char temp[128];
 
-	if (cmd_source == src_command)
-	{
-		Cmd_ForwardToServer ();
-		return;
-	}
 	if (!host_client->netconnection)
 		return;
 
@@ -2409,23 +2331,23 @@ void Host_InitCommands (void)
 {
 	dpsnprintf(cls.userinfo, sizeof(cls.userinfo), "\\name\\player\\team\\none\\topcolor\\0\\bottomcolor\\0\\rate\\10000\\msg\\1\\noaim\\1\\*ver\\%s", engineversion);
 
-	Cmd_AddCommand ("status", Host_Status_f, "print server status information");
+	Cmd_AddCommand_WithClientCommand ("status", Host_Status_f, Host_Status_f, "print server status information");
 	Cmd_AddCommand ("quit", Host_Quit_f, "quit the game");
 	if (gamemode == GAME_NEHAHRA)
 	{
-		Cmd_AddCommand ("max", Host_God_f, "god mode (invulnerability)");
-		Cmd_AddCommand ("monster", Host_Notarget_f, "notarget mode (monsters do not see you)");
-		Cmd_AddCommand ("scrag", Host_Fly_f, "fly mode (flight)");
-		Cmd_AddCommand ("wraith", Host_Noclip_f, "noclip mode (flight without collisions, move through walls)");
-		Cmd_AddCommand ("gimme", Host_Give_f, "alter inventory");
+		Cmd_AddCommand_WithClientCommand ("max", NULL, Host_God_f, "god mode (invulnerability)");
+		Cmd_AddCommand_WithClientCommand ("monster", NULL, Host_Notarget_f, "notarget mode (monsters do not see you)");
+		Cmd_AddCommand_WithClientCommand ("scrag", NULL, Host_Fly_f, "fly mode (flight)");
+		Cmd_AddCommand_WithClientCommand ("wraith", NULL, Host_Noclip_f, "noclip mode (flight without collisions, move through walls)");
+		Cmd_AddCommand_WithClientCommand ("gimme", NULL, Host_Give_f, "alter inventory");
 	}
 	else
 	{
-		Cmd_AddCommand ("god", Host_God_f, "god mode (invulnerability)");
-		Cmd_AddCommand ("notarget", Host_Notarget_f, "notarget mode (monsters do not see you)");
-		Cmd_AddCommand ("fly", Host_Fly_f, "fly mode (flight)");
-		Cmd_AddCommand ("noclip", Host_Noclip_f, "noclip mode (flight without collisions, move through walls)");
-		Cmd_AddCommand ("give", Host_Give_f, "alter inventory");
+		Cmd_AddCommand_WithClientCommand ("god", NULL, Host_God_f, "god mode (invulnerability)");
+		Cmd_AddCommand_WithClientCommand ("notarget", NULL, Host_Notarget_f, "notarget mode (monsters do not see you)");
+		Cmd_AddCommand_WithClientCommand ("fly", NULL, Host_Fly_f, "fly mode (flight)");
+		Cmd_AddCommand_WithClientCommand ("noclip", NULL, Host_Noclip_f, "noclip mode (flight without collisions, move through walls)");
+		Cmd_AddCommand_WithClientCommand ("give", NULL, Host_Give_f, "alter inventory");
 	}
 	Cmd_AddCommand ("map", Host_Map_f, "kick everyone off the server and start a new level");
 	Cmd_AddCommand ("restart", Host_Restart_f, "restart current level");
@@ -2433,13 +2355,13 @@ void Host_InitCommands (void)
 	Cmd_AddCommand ("connect", Host_Connect_f, "connect to a server by IP address or hostname");
 	Cmd_AddCommand ("reconnect", Host_Reconnect_f, "reset signon level in preparation for a new level (do not use)");
 	Cmd_AddCommand ("version", Host_Version_f, "print engine version");
-	Cmd_AddCommand ("say", Host_Say_f, "send a chat message to everyone on the server");
-	Cmd_AddCommand ("say_team", Host_Say_Team_f, "send a chat message to your team on the server");
-	Cmd_AddCommand ("tell", Host_Tell_f, "send a chat message to only one person on the server");
-	Cmd_AddCommand ("kill", Host_Kill_f, "die instantly");
-	Cmd_AddCommand ("pause", Host_Pause_f, "pause the game (if the server allows pausing)");
+	Cmd_AddCommand_WithClientCommand ("say", Host_Say_f, Host_Say_f, "send a chat message to everyone on the server");
+	Cmd_AddCommand_WithClientCommand ("say_team", Host_Say_Team_f, Host_Say_Team_f, "send a chat message to your team on the server");
+	Cmd_AddCommand_WithClientCommand ("tell", Host_Tell_f, Host_Tell_f, "send a chat message to only one person on the server");
+	Cmd_AddCommand_WithClientCommand ("kill", NULL, Host_Kill_f, "die instantly");
+	Cmd_AddCommand_WithClientCommand ("pause", NULL, Host_Pause_f, "pause the game (if the server allows pausing)");
 	Cmd_AddCommand ("kick", Host_Kick_f, "kick a player off the server by number or name");
-	Cmd_AddCommand ("ping", Host_Ping_f, "print ping times of all players on the server");
+	Cmd_AddCommand_WithClientCommand ("ping", Host_Ping_f, Host_Ping_f, "print ping times of all players on the server");
 	Cmd_AddCommand ("load", Host_Loadgame_f, "load a saved game file");
 	Cmd_AddCommand ("save", Host_Savegame_f, "save the game to a file");
 
@@ -2453,26 +2375,26 @@ void Host_InitCommands (void)
 	Cmd_AddCommand ("viewprev", Host_Viewprev_f, "change to previous animation frame of viewthing entity in current level");
 
 	Cvar_RegisterVariable (&cl_name);
-	Cmd_AddCommand ("name", Host_Name_f, "change your player name");
+	Cmd_AddCommand_WithClientCommand ("name", Host_Name_f, Host_Name_f, "change your player name");
 	Cvar_RegisterVariable (&cl_color);
-	Cmd_AddCommand ("color", Host_Color_f, "change your player shirt and pants colors");
+	Cmd_AddCommand_WithClientCommand ("color", Host_Color_f, Host_Color_f, "change your player shirt and pants colors");
 	Cvar_RegisterVariable (&cl_rate);
-	Cmd_AddCommand ("rate", Host_Rate_f, "change your network connection speed");
+	Cmd_AddCommand_WithClientCommand ("rate", Host_Rate_f, Host_Rate_f, "change your network connection speed");
 	if (gamemode == GAME_NEHAHRA)
 	{
 		Cvar_RegisterVariable (&cl_pmodel);
-		Cmd_AddCommand ("pmodel", Host_PModel_f, "change your player model choice (Nehahra specific)");
+		Cmd_AddCommand_WithClientCommand ("pmodel", Host_PModel_f, Host_PModel_f, "change your player model choice (Nehahra specific)");
 	}
 
 	// BLACK: This isnt game specific anymore (it was GAME_NEXUIZ at first)
 	Cvar_RegisterVariable (&cl_playermodel);
-	Cmd_AddCommand ("playermodel", Host_Playermodel_f, "change your player model");
+	Cmd_AddCommand_WithClientCommand ("playermodel", Host_Playermodel_f, Host_Playermodel_f, "change your player model");
 	Cvar_RegisterVariable (&cl_playerskin);
-	Cmd_AddCommand ("playerskin", Host_Playerskin_f, "change your player skin number");
+	Cmd_AddCommand_WithClientCommand ("playerskin", Host_Playerskin_f, Host_Playerskin_f, "change your player skin number");
 
-	Cmd_AddCommand ("prespawn", Host_PreSpawn_f, "signon 1 (client acknowledges that server information has been received)");
-	Cmd_AddCommand ("spawn", Host_Spawn_f, "signon 2 (client has sent player information, and is asking server to send scoreboard rankings)");
-	Cmd_AddCommand ("begin", Host_Begin_f, "signon 3 (client asks server to start sending entities, and will go to signon 4 (playing) when the first entity update is received)");
+	Cmd_AddCommand_WithClientCommand ("prespawn", NULL, Host_PreSpawn_f, "signon 1 (client acknowledges that server information has been received)");
+	Cmd_AddCommand_WithClientCommand ("spawn", NULL, Host_Spawn_f, "signon 2 (client has sent player information, and is asking server to send scoreboard rankings)");
+	Cmd_AddCommand_WithClientCommand ("begin", NULL, Host_Begin_f, "signon 3 (client asks server to start sending entities, and will go to signon 4 (playing) when the first entity update is received)");
 	Cmd_AddCommand ("maxplayers", MaxPlayers_f, "sets limit on how many players (or bots) may be connected to the server at once");
 
 	Cmd_AddCommand ("sendcvar", Host_SendCvar_f, "sends the value of a cvar to the server as a sentcvar command, for use by QuakeC");	// By [515]
@@ -2489,7 +2411,7 @@ void Host_InitCommands (void)
 	Cmd_AddCommand ("topcolor", Host_TopColor_f, "QW command to set top color without changing bottom color");
 	Cmd_AddCommand ("bottomcolor", Host_BottomColor_f, "QW command to set bottom color without changing top color");
 
-	Cmd_AddCommand ("pings", Host_Pings_f, "command sent by clients to request updated ping and packetloss of players on scoreboard (originally from QW, but also used on NQ servers)");
+	Cmd_AddCommand_WithClientCommand ("pings", NULL, Host_Pings_f, "command sent by clients to request updated ping and packetloss of players on scoreboard (originally from QW, but also used on NQ servers)");
 	Cmd_AddCommand ("pingplreport", Host_PingPLReport_f, "command sent by server containing client ping and packet loss values for scoreboard, triggered by pings command from client (not used by QW servers)");
 
 	Cvar_RegisterVariable (&team);

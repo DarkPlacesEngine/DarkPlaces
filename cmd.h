@@ -86,6 +86,7 @@ extern cmd_source_t cmd_source;
 void Cmd_Init (void);
 void Cmd_Shutdown (void);
 
+void Cmd_AddCommand_WithClientCommand (const char *cmd_name, xcommand_t consolefunction, xcommand_t clientfunction, const char *description);
 void Cmd_AddCommand (const char *cmd_name, xcommand_t function, const char *description);
 // called by the init functions of other parts of the program to
 // register commands and functions to call for them.
