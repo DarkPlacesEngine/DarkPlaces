@@ -1143,11 +1143,19 @@ FS_ChangeGameDir
 */
 void Host_SaveConfig_f (void);
 void Host_LoadConfig_f (void);
+int FS_CheckNastyPath (const char *path, qboolean isgamedir);
 qboolean FS_ChangeGameDir(const char *string)
 {
 	// if already using the requested gamedir, do nothing
 	if (fs_numgamedirs == 1 && !strcmp(fs_gamedirs[0], string))
 		return false;
+
+	// if string is nasty, reject it
+	if(FS_CheckNastyPath(string, true)) // overflowed or nasty?
+	{
+		Con_Printf("FS_ChangeGameDir(\"%s\"): nasty filename rejected\n", string);
+		return false;
+	}
 
 	// save the current config
 	Host_SaveConfig_f();
@@ -1200,6 +1208,13 @@ void FS_GameDir_f (void)
 	fs_numgamedirs = 0;
 	for (i = 1;i < Cmd_Argc() && fs_numgamedirs < MAX_GAMEDIRS;i++)
 	{
+		// if string is nasty, reject it
+		if(FS_CheckNastyPath(Cmd_Argv(i), true)) // overflowed or nasty?
+		{
+			Con_Printf("FS_GameDir_f(\"%s\"): nasty filename rejected\n", Cmd_Argv(i));
+			continue;
+		}
+
 		strlcpy(fs_gamedirs[fs_numgamedirs], Cmd_Argv(i), sizeof(fs_gamedirs[fs_numgamedirs]));
 		fs_numgamedirs++;
 	}
@@ -1490,8 +1505,12 @@ Return true if the path should be rejected due to one of the following:
    or are just not a good idea for a mod to be using.
 ====================
 */
-int FS_CheckNastyPath (const char *path)
+int FS_CheckNastyPath (const char *path, qboolean isgamedir)
 {
+	// all: never allow an empty path, as for gamedir it would access the parent directory and a non-gamedir path it is just useless
+	if (!path[0])
+		return 2;
+
 	// Windows: don't allow \ in filenames (windows-only), period.
 	// (on Windows \ is a directory separator, but / is also supported)
 	if (strstr(path, "\\"))
@@ -1508,12 +1527,32 @@ int FS_CheckNastyPath (const char *path)
 	if (strstr(path, "//"))
 		return 1; // non-portable attempt to go to parent directory
 
-	// all: don't allow going to current directory (./) or parent directory (../ or /../)
-	if (strstr(path, "./"))
+	// all: don't allow going to parent directory (../ or /../)
+	if (strstr(path, ".."))
 		return 2; // attempt to go outside the game directory
 
 	// Windows and UNIXes: don't allow absolute paths
 	if (path[0] == '/')
+		return 2; // attempt to go outside the game directory
+
+	// all: don't allow . characters before the last slash (it should only be used in filenames, not path elements), this catches all imaginable cases of ./, ../, .../, etc
+	if (strchr(path, '.'))
+	{
+		if (isgamedir)
+		{
+			// gamedir is entirely path elements, so simply forbid . entirely
+			return 2;
+		}
+		if (strchr(path, '.') < strrchr(path, '/'))
+			return 2; // possible attempt to go outside the game directory
+	}
+
+	// all: forbid trailing slash on gamedir
+	if (isgamedir && path[strlen(path)-1] == '/')
+		return 2;
+
+	// all: forbid leading dot on any filename for any reason
+	if (strstr(path, "/."))
 		return 2; // attempt to go outside the game directory
 
 	// after all these checks we're pretty sure it's a / separated filename
@@ -1651,7 +1690,7 @@ Open a file. The syntax is the same as fopen
 */
 qfile_t* FS_Open (const char* filepath, const char* mode, qboolean quiet, qboolean nonblocking)
 {
-	if (FS_CheckNastyPath(filepath))
+	if (FS_CheckNastyPath(filepath, false))
 	{
 		Con_Printf("FS_Open(\"%s\", \"%s\", %s): nasty filename rejected\n", filepath, mode, quiet ? "true" : "false");
 		return NULL;
