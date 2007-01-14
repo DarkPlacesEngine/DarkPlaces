@@ -96,6 +96,7 @@ static void CL_VM_FindEdictFieldOffsets (void)
 	}
 }
 
+void CL_VM_Error (const char *format, ...) DP_FUNC_PRINTF(1);
 void CL_VM_Error (const char *format, ...)	//[515]: hope it will be never executed =)
 {
 	char errorstring[4096];

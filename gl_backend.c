@@ -865,7 +865,7 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int numtriangles, const int *
 	unsigned int numelements = numtriangles * 3;
 	if (numvertices < 3 || numtriangles < 1)
 	{
-		Con_Printf("R_Mesh_Draw(%d, %d, %d, %08p);\n", firstvertex, numvertices, numtriangles, elements);
+		Con_Printf("R_Mesh_Draw(%d, %d, %d, %8p);\n", firstvertex, numvertices, numtriangles, elements);
 		return;
 	}
 	CHECKGLERROR

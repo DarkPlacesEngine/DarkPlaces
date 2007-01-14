@@ -38,7 +38,7 @@ void *_Mem_Alloc(mempool_t *pool, size_t size, const char *filename, int filelin
 	if (pool == NULL)
 		Sys_Error("Mem_Alloc: pool == NULL (alloc at %s:%i)", filename, fileline);
 	if (developer.integer && developer_memory.integer)
-		Con_Printf("Mem_Alloc: pool %s, file %s:%i, size %i bytes\n", pool->name, filename, fileline, size);
+		Con_Printf("Mem_Alloc: pool %s, file %s:%i, size %i bytes\n", pool->name, filename, fileline, (int)size);
 	if (developer.integer && developer_memorydebug.integer)
 		_Mem_CheckSentinelsGlobal(filename, fileline);
 	pool->totalsize += size;
@@ -139,7 +139,7 @@ static void _Mem_FreeBlock(memheader_t *mem, const char *filename, int fileline)
 		Sys_Error("Mem_Free: trashed header sentinel 2 (alloc at %s:%i, free at %s:%i)", mem->filename, mem->fileline, filename, fileline);
 	pool = mem->pool;
 	if (developer.integer && developer_memory.integer)
-		Con_Printf("Mem_Free: pool %s, alloc %s:%i, free %s:%i, size %i bytes\n", pool->name, mem->filename, mem->fileline, filename, fileline, mem->size);
+		Con_Printf("Mem_Free: pool %s, alloc %s:%i, free %s:%i, size %i bytes\n", pool->name, mem->filename, mem->fileline, filename, fileline, (int)(mem->size));
 	// unlink memheader from doubly linked list
 	if ((mem->prev ? mem->prev->next != mem : pool->chain != mem) || (mem->next && mem->next->prev != mem))
 		Sys_Error("Mem_Free: not allocated or double freed (free at %s:%i)", filename, fileline);

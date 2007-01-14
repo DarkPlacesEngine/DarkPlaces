@@ -146,7 +146,7 @@ void VM_objerror (void)
 	char string[VM_STRINGTEMP_LENGTH];
 
 	VM_VarString(0, string, sizeof(string));
-	Con_Printf("======OBJECT ERROR======\n", PRVM_NAME, PRVM_GetString(prog->xfunction->s_name), string);
+	Con_Printf("======OBJECT ERROR======\n"); // , PRVM_NAME, PRVM_GetString(prog->xfunction->s_name), string); // or include them? FIXME
 	if(prog->self)
 	{
 		ed = PRVM_G_EDICT (prog->self->ofs);
@@ -2583,7 +2583,7 @@ void VM_freepic(void)
 	s = PRVM_G_STRING(OFS_PARM0);
 
 	if(!s)
-		PRVM_ERROR ("VM_freepic: %s: NULL");
+		PRVM_ERROR ("VM_freepic: NULL");
 
 	VM_CheckEmptyString (s);
 

@@ -208,7 +208,7 @@ void CL_SetInfo(const char *key, const char *value, qboolean send, qboolean allo
 	if (strchr(key, '\"') || strchr(value, '\"') || (!allowstarkey && key[0] == '*') || (!allowmodel && (!strcasecmp(key, "pmodel") || !strcasecmp(key, "emodel"))))
 	{
 		if (!quiet)
-			Con_Printf("Can't setinfo \"%s\" \"%s\"\n");
+			Con_Printf("Can't setinfo \"%s\" \"%s\"\n", key, value);
 		return;
 	}
 	InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), key, value);

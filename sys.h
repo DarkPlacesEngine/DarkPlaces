@@ -61,7 +61,7 @@ char *Sys_TimeString(const char *timeformat);
 //
 // system IO interface (these are the sys functions that need to be implemented in a new driver atm)
 //
-void Sys_Error (const char *error, ...);
+void Sys_Error (const char *error, ...) DP_FUNC_PRINTF(1);
 // an error will cause the entire program to exit
 
 void Sys_PrintToTerminal(const char *text);

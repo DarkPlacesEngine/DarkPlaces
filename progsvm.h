@@ -382,7 +382,7 @@ typedef struct prvm_prog_s
 	void				(*init_cmd)(void); // [INIT] used by PRVM_InitProg
 	void				(*reset_cmd)(void); // [INIT] used by PRVM_ResetProg
 
-	void				(*error_cmd)(const char *format, ...); // [INIT]
+	void				(*error_cmd)(const char *format, ...) DP_FUNC_PRINTF(1); // [INIT]
 
 } prvm_prog_t;
 
@@ -551,7 +551,7 @@ qboolean PRVM_ProgLoaded(int prognr);
 
 int	PRVM_GetProgNr(void);
 
-void VM_Warning(const char *fmt, ...);
+void VM_Warning(const char *fmt, ...) DP_FUNC_PRINTF(1);
 
 // TODO: fill in the params
 //void PRVM_Create();

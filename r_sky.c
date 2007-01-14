@@ -138,7 +138,7 @@ int R_SetSkyBox(const char *sky)
 
 	if (strlen(sky) > 1000)
 	{
-		Con_Printf("sky name too long (%i, max is 1000)\n", strlen(sky));
+		Con_Printf("sky name too long (%i, max is 1000)\n", (int)strlen(sky));
 		return false;
 	}
 

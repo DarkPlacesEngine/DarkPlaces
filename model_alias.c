@@ -1452,7 +1452,7 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	pinmodel = (zymtype1header_t *)buffer;
 	pbase = (unsigned char *)buffer;
 	if (memcmp(pinmodel->id, "ZYMOTICMODEL", 12))
-		Host_Error ("Mod_ZYMOTICMODEL_Load: %s is not a zymotic model");
+		Host_Error ("Mod_ZYMOTICMODEL_Load: %s is not a zymotic model", loadmodel->name);
 	if (BigLong(pinmodel->type) != 1)
 		Host_Error ("Mod_ZYMOTICMODEL_Load: only type 1 (skeletal pose) models are currently supported (name = %s)", loadmodel->name);
 
@@ -1497,12 +1497,12 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 
 	if (pheader->numtris < 1 || pheader->numverts < 3 || pheader->numshaders < 1)
 	{
-		Con_Printf("%s has no geometry\n");
+		Con_Printf("%s has no geometry\n", loadmodel->name);
 		return;
 	}
 	if (pheader->numscenes < 1 || pheader->lump_poses.length < (int)sizeof(float[3][4]))
 	{
-		Con_Printf("%s has no animations\n");
+		Con_Printf("%s has no animations\n", loadmodel->name);
 		return;
 	}
 
@@ -1762,7 +1762,7 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	pheader = (dpmheader_t *)buffer;
 	pbase = (unsigned char *)buffer;
 	if (memcmp(pheader->id, "DARKPLACESMODEL\0", 16))
-		Host_Error ("Mod_DARKPLACESMODEL_Load: %s is not a darkplaces model");
+		Host_Error ("Mod_DARKPLACESMODEL_Load: %s is not a darkplaces model", loadmodel->name);
 	if (BigLong(pheader->type) != 2)
 		Host_Error ("Mod_DARKPLACESMODEL_Load: only type 2 (hierarchical skeletal pose) models are currently supported (name = %s)", loadmodel->name);
 
@@ -1790,12 +1790,12 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 
 	if (pheader->num_bones < 1 || pheader->num_meshs < 1)
 	{
-		Con_Printf("%s has no geometry\n");
+		Con_Printf("%s has no geometry\n", loadmodel->name);
 		return;
 	}
 	if (pheader->num_frames < 1)
 	{
-		Con_Printf("%s has no frames\n");
+		Con_Printf("%s has no frames\n", loadmodel->name);
 		return;
 	}
 
@@ -2063,7 +2063,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 
 	pchunk = (pskchunk_t *)buffer;
 	if (strcmp(pchunk->id, "ACTRHEAD"))
-		Host_Error ("Mod_PSKMODEL_Load: %s is not an Unreal Engine ActorX (.psk + .psa) model");
+		Host_Error ("Mod_PSKMODEL_Load: %s is not an Unreal Engine ActorX (.psk + .psa) model", loadmodel->name);
 
 	loadmodel->type = mod_alias;
 	loadmodel->DrawSky = NULL;
@@ -2298,7 +2298,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 			// positions from the psk, but this is hard for me to implement
 			// and people can easily make animations that match.
 			if (numanimbones != numbones)
-				Host_Error("%s: this loader only supports animations with the same bones as the mesh");
+				Host_Error("%s: this loader only supports animations with the same bones as the mesh", loadmodel->name);
 			for (index = 0, p = (pskboneinfo_t *)animbuffer;index < numrecords;index++, p++)
 			{
 				p->numchildren = LittleLong(p->numchildren);
