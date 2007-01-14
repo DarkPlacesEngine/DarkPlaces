@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 int current_skill;
 cvar_t sv_cheats = {0, "sv_cheats", "0", "enables cheat commands in any game, and cheat impulses in dpmod"};
+cvar_t sv_adminnick = {CVAR_SAVE, "sv_adminnick", "", "nick name to use for admin messages instead of host name"};
 cvar_t rcon_password = {CVAR_PRIVATE, "rcon_password", "", "password to authenticate rcon commands"};
 cvar_t rcon_address = {0, "rcon_address", "", "server address to send rcon commands to (when not connected to a server)"};
 cvar_t team = {CVAR_USERINFO | CVAR_SAVE, "team", "none", "QW team (4 character limit, example: blue)"};
@@ -969,6 +970,8 @@ void Host_Say(qboolean teamonly)
 	// note this uses the chat prefix \001
 	if (!fromServer)
 		dpsnprintf (text, sizeof(text), "\001%s" STRING_COLOR_DEFAULT_STR ": %s", host_client->name, p1);
+	else if(*(sv_adminnick.string))
+		dpsnprintf (text, sizeof(text), "\001<%s" STRING_COLOR_DEFAULT_STR "> %s", sv_adminnick.string, p1);
 	else
 		dpsnprintf (text, sizeof(text), "\001<%s" STRING_COLOR_DEFAULT_STR "> %s", hostname.string, p1);
 	p2 = text + strlen(text);
@@ -1030,6 +1033,8 @@ void Host_Tell_f(void)
 	// note this uses the chat prefix \001
 	if (!fromServer)
 		sprintf (text, "\001%s tells you: ", host_client->name);
+	else if(*(sv_adminnick.string))
+		sprintf (text, "\001<%s tells you> ", sv_adminnick.string);
 	else
 		sprintf (text, "\001<%s tells you> ", hostname.string);
 
@@ -2419,5 +2424,6 @@ void Host_InitCommands (void)
 	Cvar_RegisterVariable (&noaim);
 
 	Cvar_RegisterVariable(&sv_cheats);
+	Cvar_RegisterVariable(&sv_adminnick);
 }
 
