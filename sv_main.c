@@ -37,6 +37,8 @@ cvar_t sv_protocolname = {0, "sv_protocolname", "DP7", "selects network protocol
 cvar_t sv_ratelimitlocalplayer = {0, "sv_ratelimitlocalplayer", "0", "whether to apply rate limiting to the local player in a listen server (only useful for testing)"};
 cvar_t sv_maxrate = {CVAR_SAVE | CVAR_NOTIFY, "sv_maxrate", "10000", "upper limit on client rate cvar, should reflect your network connection quality"};
 
+extern cvar_t sv_random_seed;
+
 static cvar_t sv_cullentities_pvs = {0, "sv_cullentities_pvs", "1", "fast but loose culling of hidden entities"}; // fast but loose
 static cvar_t sv_cullentities_trace = {0, "sv_cullentities_trace", "0", "somewhat slow but very tight culling of hidden entities, minimizes network traffic and makes wallhack cheats useless"}; // tends to get false negatives, uses a timeout to keep entities visible a short time after becoming hidden
 static cvar_t sv_cullentities_stats = {0, "sv_cullentities_stats", "0", "displays stats on network entities culled by various methods for each client"};
@@ -1742,6 +1744,12 @@ void SV_SpawnServer (const char *server)
 	// if running a local client, make sure it doesn't try to access the last
 	// level's data which is no longer valiud
 	cls.signon = 0;
+
+	if(*sv_random_seed.string)
+	{
+		srand(sv_random_seed.integer);
+		Con_Printf("NOTE: random seed is %d; use for debugging/benchmarking only!\nUnset sv_random_seed to get real random numbers again.\n", sv_random_seed.integer);
+	}
 
 	SV_VM_Setup();
 
