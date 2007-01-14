@@ -683,7 +683,7 @@ static vec4_t string_colors[] =
 #define STRING_COLORS_COUNT	(sizeof(string_colors) / sizeof(vec4_t))
 
 // color is read and changed in the end
-void DrawQ_ColoredString( float x, float y, const char *text, int maxlen, float scalex, float scaley, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor )
+float DrawQ_ColoredString( float x, float y, const char *text, int maxlen, float scalex, float scaley, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor )
 {
 	vec_t *color;
 	int len;
@@ -754,10 +754,22 @@ void DrawQ_ColoredString( float x, float y, const char *text, int maxlen, float 
 		}
 	}
 
+	if( start != current ) {
+		// draw the string
+		DrawQ_String( x, y, start, current - start, scalex, scaley, basered * color[0], basegreen * color[1], baseblue * color[2], basealpha * color[3], flags );
+		// update x to be at the new start position
+		x += (current - start) * scalex;
+		// set start accordingly
+		start = current;
+	}
+
 	// return the last colorindex
 	if( outcolor ) {
 		*outcolor = colorindex;
 	}
+
+	// return the new x position
+	return x;
 }
 
 void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height, float s1, float t1, float r1, float g1, float b1, float a1, float s2, float t2, float r2, float g2, float b2, float a2, float s3, float t3, float r3, float g3, float b3, float a3, float s4, float t4, float r4, float g4, float b4, float a4, int flags)
