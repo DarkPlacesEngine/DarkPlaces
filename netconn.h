@@ -37,6 +37,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 
 #define NET_PROTOCOL_VERSION	3
+#define NET_EXTRESPONSE_MAX 16
 
 // This is the network info/connection protocol.  It is used to find Quake
 // servers, get info about them, and connect to them.  Once connected, the
@@ -310,6 +311,10 @@ extern qboolean serverlist_consoleoutput;
 // public network functions
 //
 //============================================================================
+
+extern char net_extresponse[NET_EXTRESPONSE_MAX][1400];
+extern int net_extresponse_count;
+extern int net_extresponse_last;
 
 extern double masterquerytime;
 extern int masterquerycount;
