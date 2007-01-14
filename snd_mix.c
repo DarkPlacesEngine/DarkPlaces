@@ -242,7 +242,7 @@ static qboolean SND_PaintChannel (channel_t *ch, unsigned int count)
 	if (sb == NULL)
 	{
 		Con_DPrintf("SND_PaintChannel: ERROR: can't get sound buffer from sfx \"%s\"\n",
-					ch->sfx->name, count);
+					ch->sfx->name); // , count); // or add this? FIXME
 	}
 	else
 	{

@@ -639,7 +639,7 @@ static void QW_CL_ParseModelList(void)
 		if (nummodels==MAX_MODELS)
 			Host_Error("Server sent too many model precaches");
 		if (strlen(str) >= MAX_QPATH)
-			Host_Error("Server sent a precache name of %i characters (max %i)", strlen(str), MAX_QPATH - 1);
+			Host_Error("Server sent a precache name of %i characters (max %i)", (int)strlen(str), MAX_QPATH - 1);
 		strlcpy(cl.model_name[nummodels], str, sizeof (cl.model_name[nummodels]));
 	}
 
@@ -673,7 +673,7 @@ static void QW_CL_ParseSoundList(void)
 		if (numsounds==MAX_SOUNDS)
 			Host_Error("Server sent too many sound precaches");
 		if (strlen(str) >= MAX_QPATH)
-			Host_Error("Server sent a precache name of %i characters (max %i)", strlen(str), MAX_QPATH - 1);
+			Host_Error("Server sent a precache name of %i characters (max %i)", (int)strlen(str), MAX_QPATH - 1);
 		strlcpy(cl.sound_name[numsounds], str, sizeof (cl.sound_name[numsounds]));
 	}
 
@@ -1079,7 +1079,7 @@ void CL_ParseServerInfo (void)
 			if (nummodels==MAX_MODELS)
 				Host_Error ("Server sent too many model precaches");
 			if (strlen(str) >= MAX_QPATH)
-				Host_Error ("Server sent a precache name of %i characters (max %i)", strlen(str), MAX_QPATH - 1);
+				Host_Error ("Server sent a precache name of %i characters (max %i)", (int)strlen(str), MAX_QPATH - 1);
 			strlcpy (cl.model_name[nummodels], str, sizeof (cl.model_name[nummodels]));
 		}
 		// parse sound precache list
@@ -1091,7 +1091,7 @@ void CL_ParseServerInfo (void)
 			if (numsounds==MAX_SOUNDS)
 				Host_Error("Server sent too many sound precaches");
 			if (strlen(str) >= MAX_QPATH)
-				Host_Error("Server sent a precache name of %i characters (max %i)", strlen(str), MAX_QPATH - 1);
+				Host_Error("Server sent a precache name of %i characters (max %i)", (int)strlen(str), MAX_QPATH - 1);
 			strlcpy (cl.sound_name[numsounds], str, sizeof (cl.sound_name[numsounds]));
 		}
 

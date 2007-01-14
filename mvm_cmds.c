@@ -262,7 +262,7 @@ void VM_M_writetofile(void)
 	ent = PRVM_G_EDICT(OFS_PARM1);
 	if(ent->priv.required->free)
 	{
-		VM_Warning("VM_M_writetofile: %s: entity %i is free !\n", PRVM_NAME, PRVM_EDICT_NUM(OFS_PARM1));
+		VM_Warning("VM_M_writetofile: %s: entity %i is free !\n", PRVM_NAME, PRVM_NUM_FOR_EDICT(ent));
 		return;
 	}
 

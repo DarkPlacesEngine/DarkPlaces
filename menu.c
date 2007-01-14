@@ -4840,6 +4840,7 @@ static mfunction_t *m_keyup;
 
 void MR_SetRouting (qboolean forceold);
 
+void MP_Error(const char *format, ...) DP_FUNC_PRINTF(1);
 void MP_Error(const char *format, ...)
 {
 	static qboolean processingError = false;

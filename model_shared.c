@@ -381,7 +381,7 @@ static void Mod_Print(void)
 	Con_Print("Loaded models:\n");
 	for (i = 0, mod = mod_known;i < mod_numknown;i++, mod++)
 		if (mod->name[0])
-			Con_Printf("%4iK %s\n", mod->mempool ? (mod->mempool->totalsize + 1023) / 1024 : 0, mod->name);
+			Con_Printf("%4iK %s\n", mod->mempool ? (int)((mod->mempool->totalsize + 1023) / 1024) : 0, mod->name);
 }
 
 /*

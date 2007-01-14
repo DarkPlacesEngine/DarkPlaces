@@ -247,7 +247,7 @@
 					{
 						prog->xstatement = st - prog->statements;
 						PRVM_Profile(1<<30, 1000000);
-						PRVM_ERROR("runaway loop counter hit limit of %d jumps\ntip: read above for list of most-executed functions", jumpcount, PRVM_NAME);
+						PRVM_ERROR("%s runaway loop counter hit limit of %d jumps\ntip: read above for list of most-executed functions", PRVM_NAME, jumpcount);
 					}
 				}
 				break;
@@ -262,7 +262,7 @@
 					{
 						prog->xstatement = st - prog->statements;
 						PRVM_Profile(1<<30, 1000000);
-						PRVM_ERROR("runaway loop counter hit limit of %d jumps\ntip: read above for list of most-executed functions", jumpcount, PRVM_NAME);
+						PRVM_ERROR("%s runaway loop counter hit limit of %d jumps\ntip: read above for list of most-executed functions", PRVM_NAME, jumpcount);
 					}
 				}
 				break;
@@ -275,7 +275,7 @@
 				{
 					prog->xstatement = st - prog->statements;
 					PRVM_Profile(1<<30, 1000000);
-					PRVM_ERROR("runaway loop counter hit limit of %d jumps\ntip: read above for list of most-executed functions", jumpcount, PRVM_NAME);
+					PRVM_ERROR("%s runaway loop counter hit limit of %d jumps\ntip: read above for list of most-executed functions", PRVM_NAME, jumpcount);
 				}
 				break;
 

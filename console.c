@@ -406,7 +406,7 @@ void Con_ConDump_f (void)
 	file = FS_Open(Cmd_Argv(1), "wb", false, false);
 	if (!file)
 	{
-		Con_Printf("condump: unable to write file \"%s\"\n", file);
+		Con_Printf("condump: unable to write file \"%s\"\n", Cmd_Argv(1));
 		return;
 	}
 	// iterate over the entire console history buffer line by line

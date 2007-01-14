@@ -326,7 +326,7 @@ static sndinitstat SndSys_InitDirectSound (const snd_format_t* requested)
 			requested->speed != format.Format.nSamplesPerSec)
 		{
 			Con_Printf("DS:CreateSoundBuffer Failed (%d): channels=%u, width=%u, speed=%u\n",
-					   result, format.Format.nChannels, format.Format.wBitsPerSample / 8, format.Format.nSamplesPerSec);
+					   (int)result, (unsigned)format.Format.nChannels, (unsigned)format.Format.wBitsPerSample / 8, (unsigned)format.Format.nSamplesPerSec);
 			SndSys_Shutdown ();
 			return SIS_FAILURE;
 		}

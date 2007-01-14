@@ -1434,7 +1434,7 @@ qfile_t *FS_OpenPackedFile (pack_t* pack, int pack_ind)
 	if (lseek (pack->handle, pfile->offset, SEEK_SET) == -1)
 	{
 		Con_Printf ("FS_OpenPackedFile: can't lseek to %s in %s (offset: %d)\n",
-					pfile->name, pack->filename, pfile->offset);
+					pfile->name, pack->filename, (int) pfile->offset);
 		return NULL;
 	}
 

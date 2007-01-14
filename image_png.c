@@ -205,7 +205,7 @@ void PNG_fReadData(void *png, unsigned char *data, size_t length)
 	l = my_png.tmpBuflength - my_png.tmpi;
 	if (l < length)
 	{
-		Con_Printf("PNG_fReadData: overrun by %i bytes\n", length - l);
+		Con_Printf("PNG_fReadData: overrun by %i bytes\n", (int)(length - l));
 		// a read going past the end of the file, fill in the remaining bytes
 		// with 0 just to be consistent
 		memset(data + l, 0, length - l);

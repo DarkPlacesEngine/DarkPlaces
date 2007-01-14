@@ -1310,7 +1310,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 	if (prog->progs == NULL || filesize < (fs_offset_t)sizeof(dprograms_t))
 		PRVM_ERROR ("PRVM_LoadProgs: couldn't load %s for %s", filename, PRVM_NAME);
 
-	Con_DPrintf("%s programs occupy %iK.\n", PRVM_NAME, filesize/1024);
+	Con_DPrintf("%s programs occupy %iK.\n", PRVM_NAME, (int)(filesize/1024));
 
 	prog->filecrc = CRC_Block((unsigned char *)prog->progs, filesize);
 

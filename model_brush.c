@@ -1130,7 +1130,7 @@ static void Mod_Q1BSP_DecompressVis(const unsigned char *in, const unsigned char
 	{
 		if (in == inend)
 		{
-			Con_Printf("Mod_Q1BSP_DecompressVis: input underrun on model \"%s\" (decompressed %i of %i output bytes)\n", loadmodel->name, out - outstart, outend - outstart);
+			Con_Printf("Mod_Q1BSP_DecompressVis: input underrun on model \"%s\" (decompressed %i of %i output bytes)\n", loadmodel->name, (int)(out - outstart), (int)(outend - outstart));
 			return;
 		}
 		c = *in++;
@@ -1140,14 +1140,14 @@ static void Mod_Q1BSP_DecompressVis(const unsigned char *in, const unsigned char
 		{
 			if (in == inend)
 			{
-				Con_Printf("Mod_Q1BSP_DecompressVis: input underrun (during zero-run) on model \"%s\" (decompressed %i of %i output bytes)\n", loadmodel->name, out - outstart, outend - outstart);
+				Con_Printf("Mod_Q1BSP_DecompressVis: input underrun (during zero-run) on model \"%s\" (decompressed %i of %i output bytes)\n", loadmodel->name, (int)(out - outstart), (int)(outend - outstart));
 				return;
 			}
 			for (c = *in++;c > 0;c--)
 			{
 				if (out == outend)
 				{
-					Con_Printf("Mod_Q1BSP_DecompressVis: output overrun on model \"%s\" (decompressed %i of %i output bytes)\n", loadmodel->name, out - outstart, outend - outstart);
+					Con_Printf("Mod_Q1BSP_DecompressVis: output overrun on model \"%s\" (decompressed %i of %i output bytes)\n", loadmodel->name, (int)(out - outstart), (int)(outend - outstart));
 					return;
 				}
 				*out++ = 0;
@@ -1601,7 +1601,7 @@ static void Mod_Q1BSP_LoadLighting(lump_t *l)
 			else if (filesize == 8)
 				Con_Print("Empty .lit file, ignoring\n");
 			else
-				Con_Printf("Corrupt .lit file (file size %i bytes, should be %i bytes), ignoring\n", filesize, 8 + l->filelen * 3);
+				Con_Printf("Corrupt .lit file (file size %i bytes, should be %i bytes), ignoring\n", (int) filesize, (int) (8 + l->filelen * 3));
 			if (data)
 			{
 				Mem_Free(data);
@@ -2338,7 +2338,7 @@ static void Mod_Q1BSP_LoadLeafs(lump_t *l)
 		out->numleafsurfaces = LittleShort(in->nummarksurfaces);
 		if (out->firstleafsurface < 0 || LittleShort(in->firstmarksurface) + out->numleafsurfaces > loadmodel->brush.num_leafsurfaces)
 		{
-			Con_Printf("Mod_Q1BSP_LoadLeafs: invalid leafsurface range %i:%i outside range %i:%i\n", out->firstleafsurface, out->firstleafsurface + out->numleafsurfaces, 0, loadmodel->brush.num_leafsurfaces);
+			Con_Printf("Mod_Q1BSP_LoadLeafs: invalid leafsurface range %i:%i outside range %i:%i\n", (int)(out->firstleafsurface - loadmodel->brush.data_leafsurfaces), (int)(out->firstleafsurface + out->numleafsurfaces - loadmodel->brush.data_leafsurfaces), 0, loadmodel->brush.num_leafsurfaces);
 			out->firstleafsurface = NULL;
 			out->numleafsurfaces = 0;
 		}
@@ -5245,9 +5245,9 @@ static void Mod_Q3BSP_LoadLightGrid(lump_t *l)
 	if (l->filelen)
 	{
 		if (l->filelen < count * (int)sizeof(*in))
-			Host_Error("Mod_Q3BSP_LoadLightGrid: invalid lightgrid lump size %i bytes, should be %i bytes (%ix%ix%i)", l->filelen, count * sizeof(*in), loadmodel->brushq3.num_lightgrid_dimensions[0], loadmodel->brushq3.num_lightgrid_dimensions[1], loadmodel->brushq3.num_lightgrid_dimensions[2]);
+			Host_Error("Mod_Q3BSP_LoadLightGrid: invalid lightgrid lump size %i bytes, should be %i bytes (%ix%ix%i)", l->filelen, (int)(count * sizeof(*in)), loadmodel->brushq3.num_lightgrid_dimensions[0], loadmodel->brushq3.num_lightgrid_dimensions[1], loadmodel->brushq3.num_lightgrid_dimensions[2]);
 		if (l->filelen != count * (int)sizeof(*in))
-			Con_Printf("Mod_Q3BSP_LoadLightGrid: Warning: calculated lightgrid size %i bytes does not match lump size %i", count * sizeof(*in), l->filelen);
+			Con_Printf("Mod_Q3BSP_LoadLightGrid: Warning: calculated lightgrid size %i bytes does not match lump size %i\n", (int)(count * sizeof(*in)), l->filelen);
 		out = (q3dlightgrid_t *)Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 		loadmodel->brushq3.data_lightgrid = out;
 		loadmodel->brushq3.num_lightgrid = count;
@@ -5288,7 +5288,7 @@ static void Mod_Q3BSP_LoadPVS(lump_t *l)
 		Host_Error("Mod_Q3BSP_LoadPVS: (chainlength = %i) < ((numclusters = %i) + 7) / 8", loadmodel->brush.num_pvsclusterbytes, loadmodel->brush.num_pvsclusters);
 	totalchains = loadmodel->brush.num_pvsclusterbytes * loadmodel->brush.num_pvsclusters;
 	if (l->filelen < totalchains + (int)sizeof(*in))
-		Host_Error("Mod_Q3BSP_LoadPVS: lump too small ((numclusters = %i) * (chainlength = %i) + sizeof(q3dpvs_t) == %i bytes, lump is %i bytes)", loadmodel->brush.num_pvsclusters, loadmodel->brush.num_pvsclusterbytes, totalchains + sizeof(*in), l->filelen);
+		Host_Error("Mod_Q3BSP_LoadPVS: lump too small ((numclusters = %i) * (chainlength = %i) + sizeof(q3dpvs_t) == %i bytes, lump is %i bytes)", loadmodel->brush.num_pvsclusters, loadmodel->brush.num_pvsclusterbytes, (int)(totalchains + sizeof(*in)), l->filelen);
 
 	loadmodel->brush.data_pvsclusters = (unsigned char *)Mem_Alloc(loadmodel->mempool, totalchains);
 	memcpy(loadmodel->brush.data_pvsclusters, (unsigned char *)(in + 1), totalchains);

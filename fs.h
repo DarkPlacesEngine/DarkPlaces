@@ -58,7 +58,7 @@ int FS_Close (qfile_t* file);
 fs_offset_t FS_Write (qfile_t* file, const void* data, size_t datasize);
 fs_offset_t FS_Read (qfile_t* file, void* buffer, size_t buffersize);
 int FS_Print(qfile_t* file, const char *msg);
-int FS_Printf(qfile_t* file, const char* format, ...);
+int FS_Printf(qfile_t* file, const char* format, ...) DP_FUNC_PRINTF(2);
 int FS_VPrintf(qfile_t* file, const char* format, va_list ap);
 int FS_Getc (qfile_t* file);
 int FS_UnGetc (qfile_t* file, unsigned char c);

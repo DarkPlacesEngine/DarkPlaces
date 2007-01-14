@@ -681,7 +681,7 @@ void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f,
 	int tris, outverts;
 	if (projectdistance < 0.1)
 	{
-		Con_Printf("R_Shadow_Volume: projectdistance %f\n");
+		Con_Printf("R_Shadow_Volume: projectdistance %f\n", projectdistance);
 		return;
 	}
 	if (!numverts || !nummarktris)

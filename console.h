@@ -37,9 +37,9 @@ void Con_Init (void);
 void Con_Init_Commands (void);
 void Con_DrawConsole (int lines);
 void Con_Print(const char *txt);
-void Con_Printf(const char *fmt, ...);
+void Con_Printf(const char *fmt, ...) DP_FUNC_PRINTF(1);
 void Con_DPrint(const char *msg);
-void Con_DPrintf(const char *fmt, ...);
+void Con_DPrintf(const char *fmt, ...) DP_FUNC_PRINTF(1);
 void Con_Clear_f (void);
 void Con_DrawNotify (void);
 void Con_ClearNotify (void);
@@ -65,7 +65,7 @@ void Log_Init (void);
 void Log_Close (void);
 void Log_Start (void);
 
-void Log_Printf(const char *logfilename, const char *fmt, ...);
+void Log_Printf(const char *logfilename, const char *fmt, ...) DP_FUNC_PRINTF(2);
 
 #endif
 

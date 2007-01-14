@@ -22,6 +22,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef QUAKEDEF_H
 #define QUAKEDEF_H
 
+#ifdef __GNUC__
+#define DP_FUNC_PRINTF(n) __attribute__ ((format (printf, n, n+1)))
+#else
+#define DP_FUNC_PRINTF(n)
+#endif
 
 #include <sys/types.h>
 #include <ctype.h>
@@ -238,9 +243,9 @@ void Host_InitCommands(void);
 void Host_Main(void);
 void Host_Shutdown(void);
 void Host_StartVideo(void);
-void Host_Error(const char *error, ...);
+void Host_Error(const char *error, ...) DP_FUNC_PRINTF(1);
 void Host_Quit_f(void);
-void Host_ClientCommands(const char *fmt, ...);
+void Host_ClientCommands(const char *fmt, ...) DP_FUNC_PRINTF(1);
 void Host_ShutdownServer(void);
 void Host_Reconnect_f(void);
 

@@ -580,7 +580,7 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 		{
 			if (conn->message.cursize > (int)sizeof(conn->sendMessage))
 			{
-				Con_Printf("NetConn_SendUnreliableMessage: reliable message too big (%u > %u)\n", conn->message.cursize, sizeof(conn->sendMessage));
+				Con_Printf("NetConn_SendUnreliableMessage: reliable message too big (%u > %u)\n", conn->message.cursize, (int)sizeof(conn->sendMessage));
 				conn->message.overflowed = true;
 				return -1;
 			}
@@ -2504,7 +2504,7 @@ void NetConn_Init(void)
 	{
 		if (LHNETADDRESS_FromString(&tempaddress, com_argv[i + 1], 0) == 1)
 		{
-			Con_Printf("-ip option used, setting net_address to \"%s\"\n");
+			Con_Printf("-ip option used, setting net_address to \"%s\"\n", com_argv[i + 1]);
 			Cvar_SetQuick(&net_address, com_argv[i + 1]);
 		}
 		else

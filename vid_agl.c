@@ -433,7 +433,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	carbonError = CreateNewWindow(kDocumentWindowClass, kWindowStandardFloatingAttributes | kWindowStandardHandlerAttribute, &windowBounds, &window);
 	if (carbonError != noErr || window == NULL)
 	{
-		Con_Printf("Unable to create window (error %d)\n", carbonError);
+		Con_Printf("Unable to create window (error %u)\n", (unsigned)carbonError);
 		return false;
 	}
 
@@ -739,7 +739,7 @@ void Sys_SendKeyEvents(void)
 					}
 
 					default:
-						Con_Printf (">> kEventClassMouse (UNKNOWN eventKind: %d) <<\n", eventKind);
+						Con_Printf (">> kEventClassMouse (UNKNOWN eventKind: %u) <<\n", (unsigned)eventKind);
 						break;
 				}
 			}
@@ -781,14 +781,14 @@ void Sys_SendKeyEvents(void)
 						break;
 
 					default:
-						Con_Printf (">> kEventClassKeyboard (UNKNOWN eventKind: %d) <<\n", eventKind);
+						Con_Printf (">> kEventClassKeyboard (UNKNOWN eventKind: %u) <<\n", (unsigned)eventKind);
 						break;
 				}
 				break;
 			}
 
 			case kEventClassTextInput:
-				Con_Printf(">> kEventClassTextInput (%d) <<\n", eventKind);
+				Con_Printf(">> kEventClassTextInput (%d) <<\n", (int)eventKind);
 				break;
 
 			case kEventClassApplication:
@@ -806,7 +806,7 @@ void Sys_SendKeyEvents(void)
 					case kEventAppActiveWindowChanged:
 						break;
 					default:
-						Con_Printf(">> kEventClassApplication (UNKNOWN eventKind: %d) <<\n", eventKind);
+						Con_Printf(">> kEventClassApplication (UNKNOWN eventKind: %u) <<\n", (unsigned)eventKind);
 						break;
 				}
 				break;
@@ -817,7 +817,7 @@ void Sys_SendKeyEvents(void)
 					case kEventAppleEvent :
 						break;
 					default:
-						Con_Printf(">> kEventClassAppleEvent (UNKNOWN eventKind: %d) <<\n", eventKind);
+						Con_Printf(">> kEventClassAppleEvent (UNKNOWN eventKind: %u) <<\n", (unsigned)eventKind);
 						break;
 				}
 				break;
@@ -828,7 +828,7 @@ void Sys_SendKeyEvents(void)
 					case kEventWindowUpdate :
 						break;
 					default:
-						Con_Printf(">> kEventClassWindow (UNKNOWN eventKind: %d) <<\n", eventKind);
+						Con_Printf(">> kEventClassWindow (UNKNOWN eventKind: %u) <<\n", (unsigned)eventKind);
 						break;
 				}
 				break;
