@@ -52,6 +52,9 @@ client_t *host_client;
 
 jmp_buf host_abortframe;
 
+// random seed
+cvar_t sv_random_seed = {0, "sv_random_seed", "", "random seed; when set, on every map start this random seed is used to initialize the random number generator. Don't touch it unless for benchmarking or debugging"};
+
 // pretend frames take this amount of time (in seconds), 0 = realtime
 cvar_t host_framerate = {0, "host_framerate","0", "locks frame timing to this value in seconds, 0.05 is 20fps for example, note that this can easily run too fast, use host_maxfps if you want to limit your framerate instead, or sys_ticrate to limit server speed"};
 // shows time used by certain subsystems
@@ -219,6 +222,7 @@ static void Host_InitLocal (void)
 	Cmd_AddCommand("saveconfig", Host_SaveConfig_f, "save settings to config.cfg immediately (also automatic when quitting)");
 	Cmd_AddCommand("loadconfig", Host_LoadConfig_f, "reset everything and reload configs");
 
+	Cvar_RegisterVariable (&sv_random_seed);
 	Cvar_RegisterVariable (&host_framerate);
 	Cvar_RegisterVariable (&host_speeds);
 	Cvar_RegisterVariable (&slowmo);
@@ -619,7 +623,8 @@ void Host_Main(void)
 		}
 
 		// keep the random time dependent
-		rand();
+		if(!*sv_random_seed.string)
+			rand();
 
 		cl.islocalgame = NetConn_IsLocalGame();
 
