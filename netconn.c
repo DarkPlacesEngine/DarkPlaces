@@ -1700,7 +1700,7 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 			client_t *cl = &svs.clients[i];
 			if (cl->active)
 			{
-				int nameind, cleanind;
+				int nameind, cleanind, pingvalue;
 				char curchar;
 				char cleanname [sizeof(cl->name)];
 
@@ -1718,9 +1718,14 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 					}
 				} while (curchar != '\0');
 
+				pingvalue = (int)(cl->ping * 1000.0f);
+				if(cl->netconnection)
+					pingvalue = bound(1, pingvalue, 9999);
+				else
+					pingvalue = 0;
 				length = dpsnprintf(ptr, left, "%d %d \"%s\"\n",
 									cl->frags,
-									(int)(cl->ping * 1000.0f),
+									pingvalue,
 									cleanname);
 				if(length < 0)
 					return false;
