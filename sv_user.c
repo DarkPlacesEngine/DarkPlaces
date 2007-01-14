@@ -460,7 +460,7 @@ qboolean SV_ReadClientMove (void)
 		move->sequence = MSG_ReadLong ();
 	move->time = MSG_ReadFloat ();
 	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
-	move->receivetime = sv.time;
+	move->receivetime = (float)sv.time;
 
 	// calculate average ping time
 	host_client->ping = move->receivetime - move->time;
