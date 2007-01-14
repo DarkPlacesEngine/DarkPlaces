@@ -126,6 +126,10 @@ cvar_t sv_netport = {0, "port", "26000", "server port for players to connect to"
 cvar_t net_address = {0, "net_address", "0.0.0.0", "network address to open ports on"};
 //cvar_t net_netaddress_ipv6 = {0, "net_address_ipv6", "[0:0:0:0:0:0:0:0]", "network address to open ipv6 ports on"};
 
+char net_extresponse[NET_EXTRESPONSE_MAX][1400];
+int net_extresponse_count = 0;
+int net_extresponse_last = 0;
+
 // ServerList interface
 serverlist_mask_t serverlist_andmasks[SERVERLIST_ANDMASKCOUNT];
 serverlist_mask_t serverlist_ormasks[SERVERLIST_ORMASKCOUNT];
@@ -1341,6 +1345,15 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			// begin or resume serverlist queries
 			serverlist_querysleep = false;
 			serverlist_querywaittime = realtime + 3;
+			return true;
+		}
+		if (!strncmp(string, "extResponse ", 12))
+		{
+			++net_extresponse_count;
+			if(net_extresponse_count > NET_EXTRESPONSE_MAX)
+				net_extresponse_count = NET_EXTRESPONSE_MAX;
+			net_extresponse_last = (net_extresponse_last + 1) % NET_EXTRESPONSE_MAX;
+			dpsnprintf(net_extresponse[net_extresponse_last], sizeof(net_extresponse[net_extresponse_last]), "%s %s", addressstring2, string + 12);
 			return true;
 		}
 		if (!strncmp(string, "ping", 4))

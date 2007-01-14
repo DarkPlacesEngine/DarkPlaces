@@ -782,6 +782,24 @@ void VM_M_WriteEntity (void)
 	MSG_WriteShort (VM_WriteDest(), PRVM_G_EDICTNUM(OFS_PARM0));
 }
 
+//string(void) getextresponse = #624; // returns the next extResponse packet that was sent to this client
+void VM_M_getextresponse (void)
+{
+	VM_SAFEPARMCOUNT(0,VM_argv);
+
+	if (net_extresponse_count <= 0)
+	{
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(NULL);
+	}
+	else
+	{
+		int first;
+		--net_extresponse_count;
+		first = (net_extresponse_last + NET_EXTRESPONSE_MAX - net_extresponse_count) % NET_EXTRESPONSE_MAX;
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(net_extresponse[first]);
+	}
+}
+
 prvm_builtin_t vm_m_builtins[] = {
 	0, // to be consistent with the old vm
 	// common builtings (mostly)
@@ -946,7 +964,8 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_M_refreshserverlist,
 	VM_M_getserverlistnumber,
 	VM_M_getserverlistindexforkey,
-	VM_M_addwantedserverlistkey // 623
+	VM_M_addwantedserverlistkey, // 623
+	VM_M_getextresponse
 };
 
 const int vm_m_numbuiltins = sizeof(vm_m_builtins) / sizeof(prvm_builtin_t);
