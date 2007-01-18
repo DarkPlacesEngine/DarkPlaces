@@ -614,6 +614,7 @@ RecursiveHullCheckTraceInfo_t;
 #define HULLCHECKSTATE_SOLID 1
 #define HULLCHECKSTATE_DONE 2
 
+extern cvar_t collision_prefernudgedfraction;
 static int Mod_Q1BSP_RecursiveHullCheck(RecursiveHullCheckTraceInfo_t *t, int num, double p1f, double p2f, double p1[3], double p2[3])
 {
 	// status variables, these don't need to be saved on the stack when
@@ -767,6 +768,9 @@ loc0:
 	// calculate the return fraction which is nudged off the surface a bit
 	midf = (t1 - DIST_EPSILON) / (t1 - t2);
 	t->trace->fraction = bound(0, midf, 1);
+
+	if (collision_prefernudgedfraction.integer)
+		t->trace->realfraction = t->trace->fraction;
 
 #if COLLISIONPARANOID >= 3
 	Con_Print("D");

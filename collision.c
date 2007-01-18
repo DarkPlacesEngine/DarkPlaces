@@ -12,6 +12,7 @@ cvar_t collision_startnudge = {0, "collision_startnudge", "0", "how much to bias
 cvar_t collision_endnudge = {0, "collision_endnudge", "0", "how much to bias collision trace end"};
 cvar_t collision_enternudge = {0, "collision_enternudge", "0", "how much to bias collision entry fraction"};
 cvar_t collision_leavenudge = {0, "collision_leavenudge", "0", "how much to bias collision exit fraction"};
+cvar_t collision_prefernudgedfraction = {0, "collision_prefernudgedfraction", "1", "whether to sort collision events by nudged fraction (1) or real fraction (0)"};
 
 void Collision_Init (void)
 {
@@ -20,6 +21,7 @@ void Collision_Init (void)
 	Cvar_RegisterVariable(&collision_endnudge);
 	Cvar_RegisterVariable(&collision_enternudge);
 	Cvar_RegisterVariable(&collision_leavenudge);
+	Cvar_RegisterVariable(&collision_prefernudgedfraction);
 }
 
 
@@ -682,6 +684,8 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush
 		trace->hittexture = hittexture;
 		trace->realfraction = bound(0, enterfrac, 1);
 		trace->fraction = bound(0, enterfrac2, 1);
+		if (collision_prefernudgedfraction.integer)
+			trace->realfraction = trace->fraction;
 		VectorCopy(newimpactnormal, trace->plane.normal);
 	}
 	else
@@ -797,6 +801,8 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 		trace->hittexture = hittexture;
 		trace->realfraction = bound(0, enterfrac, 1);
 		trace->fraction = bound(0, enterfrac2, 1);
+		if (collision_prefernudgedfraction.integer)
+			trace->realfraction = trace->fraction;
 		VectorCopy(newimpactnormal, trace->plane.normal);
 	}
 	else
@@ -1262,6 +1268,9 @@ void Collision_TraceLineTriangleFloat(trace_t *trace, const vec3_t linestart, co
 	// calculate a nudged fraction to keep it out of the surface
 	// (the main fraction remains perfect)
 	trace->fraction = f - collision_impactnudge.value * d;
+
+	if (collision_prefernudgedfraction.integer)
+		trace->realfraction = trace->fraction;
 
 	// store the new trace plane (because collisions only happen from
 	// the front this is always simply the triangle normal, never flipped)
