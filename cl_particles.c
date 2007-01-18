@@ -1421,7 +1421,7 @@ void CL_MoveParticles (void)
 		return;
 	}
 
-	frametime = cl.time - cl.oldtime;
+	frametime = bound(0, cl.time - cl.oldtime, 0.1);
 	gravity = frametime * sv_gravity.value;
 	dvel = 1+4*frametime;
 	decalfade = frametime * 255 / cl_decals_fadetime.value;
