@@ -119,7 +119,6 @@ static struct r_bloomstate_s
 	r_glsl_bloomshader_t *shader;
 
 	// arrays for rendering the screen passes
-	float vertex3f[12];
 	float screentexcoord2f[8];
 	float bloomtexcoord2f[8];
 	float offsettexcoord2f[8];
@@ -142,6 +141,15 @@ r_glsl_permutation_t *r_glsl_permutation;
 
 // temporary variable used by a macro
 int fogtableindex;
+
+// vertex coordinates for a quad that covers the screen exactly
+const static float r_screenvertex3f[12] =
+{
+	0, 0, 0,
+	1, 0, 0,
+	1, 1, 0,
+	0, 1, 0
+};
 
 extern void R_DrawModelShadows(void);
 
@@ -1568,12 +1576,6 @@ void R_Bloom_StartFrame(void)
 			r_bloomstate.texture_bloom = R_LoadTexture2D(r_main_texturepool, "bloom", r_bloomstate.bloomtexturewidth, r_bloomstate.bloomtextureheight, NULL, TEXTYPE_RGBA, TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_ALWAYSPRECACHE, NULL);
 	}
 
-	// vertex coordinates for a quad that covers the screen exactly
-	r_bloomstate.vertex3f[0] = 0;r_bloomstate.vertex3f[1] = 0;r_bloomstate.vertex3f[2] = 0;
-	r_bloomstate.vertex3f[3] = 1;r_bloomstate.vertex3f[4] = 0;r_bloomstate.vertex3f[5] = 0;
-	r_bloomstate.vertex3f[6] = 1;r_bloomstate.vertex3f[7] = 1;r_bloomstate.vertex3f[8] = 0;
-	r_bloomstate.vertex3f[9] = 0;r_bloomstate.vertex3f[10] = 1;r_bloomstate.vertex3f[11] = 0;
-
 	// set up a texcoord array for the full resolution screen image
 	// (we have to keep this around to copy back during final render)
 	r_bloomstate.screentexcoord2f[0] = 0;
@@ -1602,7 +1604,7 @@ void R_Bloom_CopyScreenTexture(float colorscale)
 	r_refdef.stats.bloom++;
 
 	R_ResetViewRendering();
-	R_Mesh_VertexPointer(r_bloomstate.vertex3f);
+	R_Mesh_VertexPointer(r_screenvertex3f);
 	R_Mesh_ColorPointer(NULL);
 	R_Mesh_TexCoordPointer(0, 2, r_bloomstate.screentexcoord2f);
 	R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_screen));
@@ -1648,7 +1650,7 @@ void R_Bloom_MakeTexture(void)
 	r_refdef.stats.bloom++;
 
 	R_ResetViewRendering();
-	R_Mesh_VertexPointer(r_bloomstate.vertex3f);
+	R_Mesh_VertexPointer(r_screenvertex3f);
 	R_Mesh_ColorPointer(NULL);
 
 	// we have a bloom image in the framebuffer
@@ -1786,7 +1788,7 @@ static void R_BlendView(void)
 		// the bloom texture was made earlier this render, so we just need to
 		// blend it onto the screen...
 		R_ResetViewRendering();
-		R_Mesh_VertexPointer(r_bloomstate.vertex3f);
+		R_Mesh_VertexPointer(r_screenvertex3f);
 		R_Mesh_ColorPointer(NULL);
 		GL_Color(1, 1, 1, 1);
 		GL_BlendFunc(GL_ONE, GL_ONE);
@@ -1805,7 +1807,7 @@ static void R_BlendView(void)
 		// put the original screen image back in place and blend the bloom
 		// texture on it
 		R_ResetViewRendering();
-		R_Mesh_VertexPointer(r_bloomstate.vertex3f);
+		R_Mesh_VertexPointer(r_screenvertex3f);
 		R_Mesh_ColorPointer(NULL);
 		GL_Color(1, 1, 1, 1);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
@@ -1834,7 +1836,7 @@ static void R_BlendView(void)
 	{
 		// apply a color tint to the whole view
 		R_ResetViewRendering();
-		R_Mesh_VertexPointer(r_bloomstate.vertex3f);
+		R_Mesh_VertexPointer(r_screenvertex3f);
 		R_Mesh_ColorPointer(NULL);
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		GL_Color(r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
