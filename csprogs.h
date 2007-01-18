@@ -3,7 +3,8 @@
 
 #define CL_NAME "client"
 
-#define CL_MAX_EDICTS  (1<<12)
+// LordHavoc: changed to match MAX_EDICTS
+#define CL_MAX_EDICTS MAX_EDICTS
 
 #define ENTMASK_ENGINE				1
 #define ENTMASK_ENGINEVIEWMODELS	2
