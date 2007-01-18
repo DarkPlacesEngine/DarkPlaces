@@ -1010,6 +1010,9 @@ void Host_Say_Team_f(void)
 
 void Host_Tell_f(void)
 {
+	const char *playername_start = NULL;
+	size_t playername_length = 0;
+	int playernumber = 0;
 	client_t *save;
 	int j;
 	const char *p1, *p2;
@@ -1027,7 +1030,7 @@ void Host_Tell_f(void)
 		}
 	}
 
-	if (Cmd_Argc () < 3)
+	if (Cmd_Argc () < 2)
 		return;
 
 	// note this uses the chat prefix \001
@@ -1041,10 +1044,69 @@ void Host_Tell_f(void)
 	p1 = Cmd_Args();
 	p2 = p1 + strlen(p1);
 	// remove the target name
-	while (p1 < p2 && *p1 != ' ')
-		p1++;
 	while (p1 < p2 && *p1 == ' ')
 		p1++;
+	if(*p1 == '#')
+	{
+		++p1;
+		while (p1 < p2 && *p1 == ' ')
+			p1++;
+		while (p1 < p2 && isdigit(*p1))
+		{
+			playernumber = playernumber * 10 + (*p1 - '0');
+			p1++;
+		}
+		--playernumber;
+	}
+	else if(*p1 == '"')
+	{
+		++p1;
+		playername_start = p1;
+		while (p1 < p2 && *p1 != '"')
+			p1++;
+		playername_length = p1 - playername_start;
+		if(p1 < p2)
+			p1++;
+	}
+	else
+	{
+		playername_start = p1;
+		while (p1 < p2 && *p1 != ' ')
+			p1++;
+		playername_length = p1 - playername_start;
+	}
+	while (p1 < p2 && *p1 == ' ')
+		p1++;
+	if(playername_start)
+	{
+		// set playernumber to the right client
+		char namebuf[128];
+		if(playername_length >= sizeof(namebuf))
+		{
+			if (fromServer)
+				Con_Print("Host_Tell: too long player name/ID\n");
+			else
+				SV_ClientPrint("Host_Tell: too long player name/ID\n");
+			return;
+		}
+		memcpy(namebuf, playername_start, playername_length);
+		namebuf[playername_length] = 0;
+		for (playernumber = 0; playernumber < svs.maxclients; playernumber++)
+		{
+			if (!svs.clients[playernumber].spawned)
+				continue;
+			if (strcasecmp(svs.clients[playernumber].name, namebuf) == 0)
+				break;
+		}
+	}
+	if(playernumber < 0 || playernumber >= svs.maxclients || !(svs.clients[playernumber].spawned))
+	{
+		if (fromServer)
+			Con_Print("Host_Tell: invalid player name/ID\n");
+		else
+			SV_ClientPrint("Host_Tell: invalid player name/ID\n");
+		return;
+	}
 	// remove trailing newlines
 	while (p2 > p1 && (p2[-1] == '\n' || p2[-1] == '\r'))
 		p2--;
@@ -1061,15 +1123,16 @@ void Host_Tell_f(void)
 	}
 	while (p2 > p1 && (p2[-1] == '\n' || p2[-1] == '\r'))
 		p2--;
+	if(p1 == p2)
+		return; // empty say
 	for (j = (int)strlen(text);j < (int)(sizeof(text) - 2) && p1 < p2;)
 		text[j++] = *p1++;
 	text[j++] = '\n';
 	text[j++] = 0;
 
 	save = host_client;
-	for (j = 0, host_client = svs.clients;j < svs.maxclients;j++, host_client++)
-		if (host_client->spawned && !strcasecmp(host_client->name, Cmd_Argv(1)))
-			SV_ClientPrint(text);
+	host_client = svs.clients + playernumber;
+	SV_ClientPrint(text);
 	host_client = save;
 }
 
