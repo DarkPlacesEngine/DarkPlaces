@@ -134,7 +134,9 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 		return 1;
 	}
 	// try to parse as dotted decimal ipv4 address first
-	if (sscanf(name, "%d.%d.%d.%d", &d1, &d2, &d3, &d4) == 4 && (unsigned int)d1 < 256 && (unsigned int)d2 < 256 && (unsigned int)d3 < 256 && (unsigned int)d4 < 256)
+	// note this supports partial ip addresses
+	d1 = d2 = d3 = d4 = 0;
+	if (sscanf(name, "%d.%d.%d.%d", &d1, &d2, &d3, &d4) >= 1 && (unsigned int)d1 < 256 && (unsigned int)d2 < 256 && (unsigned int)d3 < 256 && (unsigned int)d4 < 256)
 	{
 		// parsed a valid ipv4 address
 		address->addresstype = LHNETADDRESSTYPE_INET4;
