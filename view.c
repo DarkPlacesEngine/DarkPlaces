@@ -322,17 +322,17 @@ CL_StairSmoothing
 void CL_StairSmoothing (void)
 {
 	if (v_dmg_time > 0)
-		v_dmg_time -= (cl.time - cl.oldtime);
+		v_dmg_time -= bound(0, cl.time - cl.oldtime, 0.1);
 
 	// stair smoothing
 	if (cl.onground && cl.stairoffset < 0)
 	{
-		cl.stairoffset += (cl.time - cl.oldtime) * cl_stairsmoothspeed.value;
+		cl.stairoffset += bound(0, cl.time - cl.oldtime, 0.1) * cl_stairsmoothspeed.value;
 		cl.stairoffset = bound(-16, cl.stairoffset, 0);
 	}
 	else if (cl.onground && cl.stairoffset > 0)
 	{
-		cl.stairoffset -= (cl.time - cl.oldtime) * cl_stairsmoothspeed.value;
+		cl.stairoffset -= bound(0, cl.time - cl.oldtime, 0.1) * cl_stairsmoothspeed.value;
 		cl.stairoffset = bound(0, cl.stairoffset, 16);
 	}
 	else
@@ -538,6 +538,9 @@ void V_CalcRefdef (void)
 
 void V_FadeViewFlashs(void)
 {
+	// don't flash if time steps backwards
+	if (cl.time <= cl.oldtime)
+		return;
 	// drop the damage value
 	cl.cshifts[CSHIFT_DAMAGE].percent -= (cl.time - cl.oldtime)*150;
 	if (cl.cshifts[CSHIFT_DAMAGE].percent <= 0)

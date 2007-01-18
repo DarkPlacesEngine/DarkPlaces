@@ -658,7 +658,7 @@ void CL_DecayLights(void)
 	dlight_t *dl;
 	float time, f;
 
-	time = cl.time - cl.oldtime;
+	time = bound(0, cl.time - cl.oldtime, 0.1);
 	oldmax = cl.num_dlights;
 	cl.num_dlights = 0;
 	for (i = 0, dl = cl.dlights;i < oldmax;i++, dl++)
@@ -1050,9 +1050,9 @@ void CL_UpdateNetworkEntity(entity_t *e)
 				dlightcolor[2] += 1.50f;
 			}
 			if (e->render.effects & EF_FLAME)
-				CL_ParticleEffect(EFFECT_EF_FLAME, cl.time - cl.oldtime, origin, origin, vec3_origin, vec3_origin, NULL, 0);
+				CL_ParticleEffect(EFFECT_EF_FLAME, bound(0, cl.time - cl.oldtime, 0.1), origin, origin, vec3_origin, vec3_origin, NULL, 0);
 			if (e->render.effects & EF_STARDUST)
-				CL_ParticleEffect(EFFECT_EF_STARDUST, cl.time - cl.oldtime, origin, origin, vec3_origin, vec3_origin, NULL, 0);
+				CL_ParticleEffect(EFFECT_EF_STARDUST, bound(0, cl.time - cl.oldtime, 0.1), origin, origin, vec3_origin, vec3_origin, NULL, 0);
 			if (e->render.effects & (EF_FLAG1QW | EF_FLAG2QW))
 			{
 				// these are only set on player entities
@@ -1067,7 +1067,7 @@ void CL_UpdateNetworkEntity(entity_t *e)
 			tempmatrix = e->render.matrix;
 			Matrix4x4_SetOrigin(&tempmatrix, trace.endpos[0], trace.endpos[1], trace.endpos[2]);
 			CL_AllocDlight(NULL, &tempmatrix, 100, e->persistent.muzzleflash, e->persistent.muzzleflash, e->persistent.muzzleflash, 0, 0, 0, -1, true, 0, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-			e->persistent.muzzleflash -= (cl.time - cl.oldtime) * 10;
+			e->persistent.muzzleflash -= bound(0, cl.time - cl.oldtime, 0.1) * 10;
 		}
 		// LordHavoc: if the model has no flags, don't check each
 		if (e->render.model && e->render.model->flags && (!e->state_current.tagentity && !(e->render.flags & RENDER_VIEWMODEL)))
