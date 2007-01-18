@@ -212,6 +212,8 @@ Many more features documented in dpextensions.qc. (bullet tracing on models, qc 
 Replacement Content:
 Formats supported: tga, png, jpg, pcx, lmp
 
+Usually you want to put replacement content in either id1/ or another directory such as pretty/ inside your quake directory, in DarkPlaces you can run multiple -game options at once (such as -game ctf -game pretty -game dpmod to have texture overrides from pretty, maps from ctf, and gameplay from dpmod) or multiple gamedirs specified with the gamedir console command (gamedir ctf pretty dpmod).
+
 All texture layers are optional except diffuse (the others are NOT loaded without it):
 skins:
 progs/player.mdl_0.tga - diffuse
@@ -243,8 +245,36 @@ textures/quake_shirt.tga
 hud and menu pictures:
 gfx/conchars.tga
 
-replacement models:
+Replacement models:
 same as in Quake, you can replace a model with exactly the same file name (including file extension), so for example an md3 player model has to be renamed progs/player.mdl, and a small box of shells in md3 format has to be renamed maps/b_shell0.bsp
+
+.skin files:
+These files use the same format as the ones in Quake3 (except being named <modelname>_0.skin, <modelname>_1.skin, and so on), they specify what texture to use on each part of the md3 (or zym or dpm or psk) model, their contents look like this:
+torso,progs/player_default.tga                   (says that the model part named "torso" should use the image progs/player_default.tga)
+gun,progs/player_default.tga                     (says that the model part named "gun" should use the image progs/player_default.tga)
+muzzleflash,progs/player_default_muzzleflash.tga (says that the model part named "muzzleflash" should use the image progs/player_default_muzzleflash.tga - this is useful for transparent skin areas which should be kept separate from opaque skins)
+tag_head,                                        (says that the first tag is named "tag_head" - this is only useful for QuakeC mods using segmented player models so that they can look up/down without their legs rotating, don't worry about it as a user)
+tag_torso,                                       (second tag name)
+tag_weapon,                                      (third tag name)
+
+
+Example list of filenames:
+quake/id1/progs/player.mdl               (replaces the player model)
+quake/id1/progs/player.mdl_0.skin        (text file that specifies textures to use on an md3 model)
+quake/id1/progs/player_default.tga       (texture referenced by the .skin, make sure that any special parts of this are black, like pants should be black here otherwise you get pink pants when you use a red color ingame)
+quake/id1/progs/player_default_pants.tga (white pants area of the skin, this is colored by the engine according to your color settings, additive blended (which is called "Screen" mode in Photoshop if you wish to preview the layers))
+quake/id1/progs/player_default_shirt.tga (white shirt area of the skin, similar to pants described above)
+quake/id1/progs/player_default_norm.tga  (normalmap texture for player_default, alpha channel can contain a heightmap for offsetmapping (r_glsl_offsetmapping 1 in console) to use, alternatively you can use _bump.tga instead of this which is only a heightmap and the engine will generate the normalmap for you)
+quake/id1/progs/player_default_gloss.tga (glossmap (shiny areas) for player_default)
+quake/id1/progs/player_default_glow.tga  (glowmap (glowing stuff) for player_default, this is fullbrights and such, be sure the corresponding pixels are black in the player_default.tga, because just like pants/shirt this is additive blended)
+quake/id1/textures/quake.tga             (replaces the quake logo on the arch in start.bsp)
+quake/id1/textures/quake_norm.tga        (same as for a player)
+quake/id1/textures/quake_gloss.tga       (same as for a player)
+quake/id1/textures/#water1.tga           (replaces *water1 texture in the maps, # is used instead of * in filenames)
+quake/id1/gfx/conchars.tga               (replacement font image, this was in gfx.wad in quake)
+quake/id1/gfx/conback.tga                (replacement console background, just like in quake)
+quake/id1/gfx/mainmenu.tga               (replacement main menu image, just like in quake)
+quake/id1/maps/b_bh25.bsp                (replacement for normal health pack, for example this could be an md3 model instead)
 
 
 
