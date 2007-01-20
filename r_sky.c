@@ -60,7 +60,7 @@ void R_SkyStartFrame(void)
 	{
 		if (skyboxside[0] || skyboxside[1] || skyboxside[2] || skyboxside[3] || skyboxside[4] || skyboxside[5])
 			skyrenderbox = true;
-		else if (r_refdef.worldmodel->brush.solidskytexture)
+		else if (r_refdef.worldmodel && r_refdef.worldmodel->brush.solidskytexture)
 			skyrendersphere = true;
 		// for depth-masked sky, render the sky on the first sky surface encountered
 		skyrendernow = true;
