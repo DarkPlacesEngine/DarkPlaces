@@ -65,6 +65,7 @@ int FS_UnGetc (qfile_t* file, unsigned char c);
 int FS_Seek (qfile_t* file, fs_offset_t offset, int whence);
 fs_offset_t FS_Tell (qfile_t* file);
 void FS_Purge (qfile_t* file);
+int FS_CheckNastyPath (const char *path, qboolean isgamedir);
 qboolean FS_ChangeGameDir(const char *string);
 
 typedef struct fssearch_s
