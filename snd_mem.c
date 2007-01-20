@@ -80,7 +80,7 @@ snd_buffer_t *Snd_CreateSndBuffer (const unsigned char *samples, unsigned int sa
 {
 	size_t newsampleframes, memsize;
 	snd_buffer_t* sb;
-	
+
 	newsampleframes = (double)sampleframes * (double)sb_speed / (double)in_format->speed;
 
 	memsize = newsampleframes * in_format->channels * in_format->width;
@@ -311,6 +311,7 @@ qboolean S_LoadSound (sfx_t *sfx, qboolean complain)
 		return true;
 
 	// If we weren't able to load it previously, no need to retry
+	// Note: S_PrecacheSound clears this flag to cause a retry
 	if (sfx->flags & SFXFLAG_FILEMISSING)
 		return false;
 

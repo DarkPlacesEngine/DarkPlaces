@@ -949,6 +949,11 @@ sfx_t *S_PrecacheSound (const char *name, qboolean complain, qboolean lock)
 		return NULL;
 
 	sfx = S_FindName (name);
+
+	// clear the FILEMISSING flag so that S_LoadSound will try again on a
+	// previously missing file
+	sfx->flags &= ~ SFXFLAG_FILEMISSING;
+
 	if (sfx == NULL)
 		return NULL;
 
