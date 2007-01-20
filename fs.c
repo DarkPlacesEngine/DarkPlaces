@@ -1143,7 +1143,6 @@ FS_ChangeGameDir
 */
 void Host_SaveConfig_f (void);
 void Host_LoadConfig_f (void);
-int FS_CheckNastyPath (const char *path, qboolean isgamedir);
 qboolean FS_ChangeGameDir(const char *string)
 {
 	// if already using the requested gamedir, do nothing
