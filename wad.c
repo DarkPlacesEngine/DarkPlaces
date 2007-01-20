@@ -55,6 +55,10 @@ static void W_CleanupName (const char *in, char *out)
 		out[i] = 0;
 }
 
+static int wad_numlumps = 0;
+static lumpinfo_t *wad_lumps = NULL;
+static unsigned char *wad_base = NULL;
+
 unsigned char *W_GetLumpName(const char *name)
 {
 	int i;
@@ -63,16 +67,11 @@ unsigned char *W_GetLumpName(const char *name)
 	char clean[16];
 	wadinfo_t *header;
 	int infotableofs;
-	static int wad_loaded = false;
-	static int wad_numlumps = 0;
-	static lumpinfo_t *wad_lumps = NULL;
-	static unsigned char *wad_base = NULL;
 
 	W_CleanupName (name, clean);
 
-	if (!wad_loaded)
+	if (!wad_base)
 	{
-		wad_loaded = true;
 		if ((wad_base = FS_LoadFile ("gfx.wad", cls.permanentmempool, false, &filesize)))
 		{
 			if (memcmp(wad_base, "WAD2", 4))

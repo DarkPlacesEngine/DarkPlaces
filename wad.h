@@ -65,10 +65,6 @@ typedef struct lumpinfo_s
 	char		name[16];				// must be null terminated
 } lumpinfo_t;
 
-extern	int			wad_numlumps;
-extern	lumpinfo_t	*wad_lumps;
-extern	unsigned char		*wad_base;
-
 unsigned char *W_GetLumpName (const char *name);
 
 
