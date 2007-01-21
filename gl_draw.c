@@ -24,7 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "cl_video.h"
 
-cvar_t r_textshadow = {0, "r_textshadow", "0", "draws a shadow on all text to improve readability"};
+cvar_t r_textshadow = {CVAR_SAVE, "r_textshadow", "0", "draws a shadow on all text to improve readability"};
 
 static rtexture_t *char_texture;
 cachepic_t *r_crosshairs[NUMCROSSHAIRS+1];
@@ -646,8 +646,12 @@ void DrawQ_String_Real(float x, float y, const char *string, int maxlen, float w
 
 void DrawQ_String(float x, float y, const char *string, int maxlen, float scalex, float scaley, float red, float green, float blue, float alpha, int flags)
 {
-	if (r_textshadow.integer)
-		DrawQ_String_Real(x+scalex*0.25,y+scaley*0.25,string,maxlen,scalex,scaley,0,0,0,alpha*0.8,flags);
+	float shadow;
+	if (r_textshadow.integer) {
+		shadow = (1-((red+green+blue)));
+		shadow = bound(0, shadow, 1);
+		DrawQ_String_Real(x+scalex*0.25,y+scaley*0.25,string,maxlen,scalex,scaley,shadow,shadow,shadow,alpha*0.8,flags);
+	}
 
 	DrawQ_String_Real(x,y,string,maxlen,scalex,scaley,red,green,blue,alpha,flags);
 }
