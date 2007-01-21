@@ -31,10 +31,9 @@
 -d (steven a) bug darkplaces server: Blood Mage monsters are stuck in place apparently (steven a)
 -d (yummyluv) feature darkplaces protocol: add EF_DOUBLESIDED for double sided entity rendering (disable cull face for this entity) (yummyluv)
 -d (yummyluv) feature darkplaces protocol: add buttons 9-16 (yummyluv)
+-d bug darkplaces client: GAME_NEHAHRA: make sure cutscenes and movies work, got a report of seeing a black screen (NightFright)
 -f (James D) bug darkplaces server: losing runes on episode completion, completing episode 1 then 2 then 3 causes it to forget 1, then 4 causes it to forget 2 and 3, making it impossible to open the boss gate (James D)
 -f (Wazat) bug darkplaces: client's slowmo detection (measuring packet times and comparing to game time changes) may be making the game unpleasant (Wazat)
-0 bug darkplaces client: GAME_NEHAHRA: make sure cutscenes and movies work, got a report of seeing a black screen (NightFright)
-0 bug darkplaces client: hipnotic: health is one character to the right on the sbar, covering up the key icons (M`Shacron)
 0 bug darkplaces client: it has been reported that sometimes level changes on quakeworld servers don't load a map, this may be related to downloading? (Baker)
 0 bug darkplaces client: on crctf proquake servers the scoreboard does not contain exactly matching player names (READY is sometimes appended), the ping report and status parsing should ignore text after the player name
 0 bug darkplaces client: svc_effect should post a warning and do nothing if given a framerate below 1 (Willis)
@@ -530,6 +529,7 @@ d bug darkplaces client: do replay cl_movement queue each time a move is added, 
 d bug darkplaces client: figure out why multimap demos are skipping the later portions, it's probably related to the time seeking, probably not being reset (Urre)
 d bug darkplaces client: finale text during episode-end intermissions shows briefly in its entirety and all as one line (going off the screen), then disappears and begins typing slowly as it should (Sajt)
 d bug darkplaces client: fix cl_bobmodel bug which momentarily jolts the gun when you pass through a trigger, pick up an item, etc, Sajt thinks this is related to console prints as well as centerprint (Sajt)
+d bug darkplaces client: hipnotic: health is one character to the right on the sbar, covering up the key icons (M`Shacron)
 d bug darkplaces client: make "wait" command wait fornext network frame somehow when connected, to make frikbot .way files load properly (Transfusion, FrikaC)
 d bug darkplaces client: make envmap command work with the corrected layout
 d bug darkplaces client: make server queries use a queue to avoid flooding out queries too fast (Willis)
