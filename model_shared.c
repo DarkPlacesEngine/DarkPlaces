@@ -154,8 +154,16 @@ model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, qboolea
 
 	crc = 0;
 	buf = NULL;
+
+	// even if the model is loaded it still may need reloading...
+
+	// if the model is a worldmodel and is being referred to as a
+	// non-worldmodel here, then it needs reloading to get rid of the
+	// submodels
 	if (mod->isworldmodel != isworldmodel)
 		mod->loaded = false;
+
+	// if it is not loaded or checkdisk is true we need to calculate the crc
 	if (!mod->loaded || checkdisk)
 	{
 		if (checkdisk && mod->loaded)
@@ -164,13 +172,15 @@ model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, qboolea
 		if (buf)
 		{
 			crc = CRC_Block((unsigned char *)buf, filesize);
+			// we need to reload the model if the crc does not match
 			if (mod->crc != crc)
 				mod->loaded = false;
 		}
 	}
+
+	// if the model is already loaded and checks passed, just return
 	if (mod->loaded)
 	{
-		// already loaded
 		if (buf)
 			Mem_Free(buf);
 		return mod;
