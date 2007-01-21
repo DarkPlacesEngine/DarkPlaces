@@ -2484,13 +2484,14 @@ static void R_Texture_AddLayer(texture_t *t, qboolean depthmask, int blendfunc1,
 
 void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 {
+	model_t *model = ent->model;
+
 	// FIXME: identify models using a better check than ent->model->brush.shadowmesh
 	//int lightmode = ((ent->effects & EF_FULLBRIGHT) || ent->model->brush.shadowmesh) ? 0 : 2;
 
 	// switch to an alternate material if this is a q1bsp animated material
 	{
 		texture_t *texture = t;
-		model_t *model = ent->model;
 		int s = ent->skinnum;
 		if ((unsigned int)s >= (unsigned int)model->numskins)
 			s = 0;
@@ -2521,7 +2522,7 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 
 	t->currentmaterialflags = t->basematerialflags;
 	t->currentalpha = ent->alpha;
-	if (t->basematerialflags & MATERIALFLAG_WATERALPHA)
+	if (t->basematerialflags & MATERIALFLAG_WATERALPHA && (model->brush.supportwateralpha || r_novis.integer))
 		t->currentalpha *= r_wateralpha.value;
 	if (!(ent->flags & RENDER_LIGHT))
 		t->currentmaterialflags |= MATERIALFLAG_FULLBRIGHT;

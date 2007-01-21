@@ -394,6 +394,8 @@ typedef struct model_brush_s
 	rtexture_t *solidskytexture;
 	rtexture_t *alphaskytexture;
 
+	qboolean supportwateralpha;
+
 	// QuakeWorld
 	int qw_md4sum;
 	int qw_md4sum2;

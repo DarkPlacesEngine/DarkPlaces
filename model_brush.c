@@ -2368,6 +2368,26 @@ static void Mod_Q1BSP_LoadLeafs(lump_t *l)
 	}
 }
 
+qboolean Mod_Q1BSP_CheckWaterAlphaSupport(void)
+{
+	int i, j;
+	mleaf_t *leaf;
+	const unsigned char *pvs;
+	// check all liquid leafs to see if they can see into empty leafs, if any
+	// can we can assume this map supports r_wateralpha
+	for (i = 0, leaf = loadmodel->brush.data_leafs;i < loadmodel->brush.num_leafs;i++, leaf++)
+	{
+		if ((leaf->contents == CONTENTS_WATER || leaf->contents == CONTENTS_SLIME) && (leaf->clusterindex >= 0 && loadmodel->brush.data_pvsclusters))
+		{
+			pvs = loadmodel->brush.data_pvsclusters + leaf->clusterindex * loadmodel->brush.num_pvsclusterbytes;
+			for (j = 0;j < loadmodel->brush.num_leafs;j++)
+				if (leaf->contents == CONTENTS_EMPTY && CHECKPVSBIT(pvs, loadmodel->brush.data_leafs[j].clusterindex))
+					return true;
+		}
+	}
+	return false;
+}
+
 static void Mod_Q1BSP_LoadClipnodes(lump_t *l, hullinfo_t *hullinfo)
 {
 	dclipnode_t *in, *out;
@@ -3283,6 +3303,9 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	Mod_Q1BSP_LoadLeafs(&header->lumps[LUMP_LEAFS]);
 	Mod_Q1BSP_LoadNodes(&header->lumps[LUMP_NODES]);
 	Mod_Q1BSP_LoadClipnodes(&header->lumps[LUMP_CLIPNODES], &hullinfo);
+
+	// check if the map supports transparent water rendering
+	loadmodel->brush.supportwateralpha = Mod_Q1BSP_CheckWaterAlphaSupport();
 
 	if (!mod->brushq1.lightdata)
 		mod->brush.LightPoint = NULL;
@@ -5773,6 +5796,9 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer, void *bufferend)
 
 	// the MakePortals code works fine on the q3bsp data as well
 	Mod_Q1BSP_MakePortals();
+
+	// FIXME: shader alpha should replace r_wateralpha support in q3bsp
+	loadmodel->brush.supportwateralpha = true;
 
 	// make a single combined shadow mesh to allow optimized shadow volume creation
 	numshadowmeshtriangles = 0;
