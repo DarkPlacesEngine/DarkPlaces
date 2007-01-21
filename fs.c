@@ -249,7 +249,6 @@ FUNCTION PROTOTYPES
 void FS_Dir_f(void);
 void FS_Ls_f(void);
 
-static const char *FS_FileExtension (const char *in);
 static searchpath_t *FS_FindFile (const char *name, int* index, qboolean quiet);
 static packfile_t* FS_AddFileToPack (const char* name, pack_t* pack,
 									fs_offset_t offset, fs_offset_t packsize,
@@ -1028,7 +1027,7 @@ void FS_AddGameHierarchy (const char *dir)
 FS_FileExtension
 ============
 */
-static const char *FS_FileExtension (const char *in)
+const char *FS_FileExtension (const char *in)
 {
 	const char *separator, *backslash, *colon, *dot;
 
@@ -2146,6 +2145,19 @@ Give the current position in a file
 fs_offset_t FS_Tell (qfile_t* file)
 {
 	return file->position - file->buff_len + file->buff_ind;
+}
+
+
+/*
+====================
+FS_FileSize
+
+Give the total size of a file
+====================
+*/
+fs_offset_t FS_FileSize (qfile_t* file)
+{
+	return file->real_length;
 }
 
 

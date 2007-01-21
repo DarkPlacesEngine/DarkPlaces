@@ -64,7 +64,9 @@ int FS_Getc (qfile_t* file);
 int FS_UnGetc (qfile_t* file, unsigned char c);
 int FS_Seek (qfile_t* file, fs_offset_t offset, int whence);
 fs_offset_t FS_Tell (qfile_t* file);
+fs_offset_t FS_FileSize (qfile_t* file);
 void FS_Purge (qfile_t* file);
+const char *FS_FileExtension (const char *in);
 int FS_CheckNastyPath (const char *path, qboolean isgamedir);
 qboolean FS_ChangeGameDir(const char *string);
 
