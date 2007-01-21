@@ -1048,6 +1048,26 @@ const char *FS_FileExtension (const char *in)
 
 
 /*
+============
+FS_FileWithoutPath
+============
+*/
+const char *FS_FileWithoutPath (const char *in)
+{
+	const char *separator, *backslash, *colon;
+
+	separator = strrchr(in, '/');
+	backslash = strrchr(in, '\\');
+	if (!separator || separator < backslash)
+		separator = backslash;
+	colon = strrchr(in, ':');
+	if (!separator || separator < colon)
+		separator = colon;
+	return separator ? separator + 1 : in;
+}
+
+
+/*
 ================
 FS_ClearSearchPath
 ================
@@ -2600,4 +2620,58 @@ const char *FS_WhichPack(const char *filename)
 		return sp->pack->filename;
 	else
 		return 0;
+}
+
+/*
+====================
+FS_IsRegisteredQuakePack
+
+Look for a proof of purchase file file in the requested package
+
+If it is found, this file should NOT be downloaded.
+====================
+*/
+qboolean FS_IsRegisteredQuakePack(const char *name)
+{
+	searchpath_t *search;
+	pack_t *pak;
+
+	// search through the path, one element at a time
+	for (search = fs_searchpaths;search;search = search->next)
+	{
+		if (search->pack && !strcasecmp(FS_FileWithoutPath(search->filename), name))
+		{
+			int (*strcmp_funct) (const char* str1, const char* str2);
+			int left, right, middle;
+
+			pak = search->pack;
+			strcmp_funct = pak->ignorecase ? strcasecmp : strcmp;
+
+			// Look for the file (binary search)
+			left = 0;
+			right = pak->numfiles - 1;
+			while (left <= right)
+			{
+				int diff;
+
+				middle = (left + right) / 2;
+				diff = !strcmp_funct (pak->files[middle].name, "gfx/pop.lmp");
+
+				// Found it
+				if (!diff)
+					return true;
+
+				// If we're too far in the list
+				if (diff > 0)
+					right = middle - 1;
+				else
+					left = middle + 1;
+			}
+
+			// we found the requested pack but it is not registered quake
+			return false;
+		}
+	}
+
+	return false;
 }

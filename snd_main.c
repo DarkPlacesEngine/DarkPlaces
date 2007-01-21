@@ -919,6 +919,9 @@ void S_ServerSounds (char serversound [][MAX_QPATH], unsigned int numsounds)
 		sfx = S_FindName (serversound[i]);
 		if (sfx != NULL)
 		{
+			// clear the FILEMISSING flag so that S_LoadSound will try again on a
+			// previously missing file
+			sfx->flags &= ~ SFXFLAG_FILEMISSING;
 			S_LockSfx (sfx);
 			sfx->flags |= SFXFLAG_SERVERSOUND;
 		}
@@ -950,12 +953,12 @@ sfx_t *S_PrecacheSound (const char *name, qboolean complain, qboolean lock)
 
 	sfx = S_FindName (name);
 
+	if (sfx == NULL)
+		return NULL;
+
 	// clear the FILEMISSING flag so that S_LoadSound will try again on a
 	// previously missing file
 	sfx->flags &= ~ SFXFLAG_FILEMISSING;
-
-	if (sfx == NULL)
-		return NULL;
 
 	if (lock)
 		S_LockSfx (sfx);

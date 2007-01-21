@@ -36,6 +36,7 @@
 0 bug darkplaces client: GAME_NEHAHRA: make sure cutscenes and movies work, got a report of seeing a black screen (NightFright)
 0 bug darkplaces client: hipnotic: health is one character to the right on the sbar, covering up the key icons (M`Shacron)
 0 bug darkplaces client: it has been reported that sometimes level changes on quakeworld servers don't load a map, this may be related to downloading? (Baker)
+0 bug darkplaces client: on crctf proquake servers the scoreboard does not contain exactly matching player names (READY is sometimes appended), the ping report and status parsing should ignore text after the player name
 0 bug darkplaces client: svc_effect should post a warning and do nothing if given a framerate below 1 (Willis)
 0 bug darkplaces console: commandline history won't scroll back past a blank line - the blank line should not be entered into history (Elric)
 0 bug darkplaces console: when cursoring up and down through command history, shorter lines sometimes contain some text from the previous line
@@ -47,6 +48,8 @@
 0 bug darkplaces loader: occasional crash due to memory corruption when doing "deathmatch 1;map start" during demo loop (Willis)
 0 bug darkplaces loader: q3bsp deluxemap detection can fail on some files, thinking they have deluxemaps even though they don't? (jimmmy)
 0 bug darkplaces loader: q3bsp lightgrid loading seems to be ignoring the "gridsize" key of worldspawn, but how?
+0 bug darkplaces loading: when gamedir (or -game) contains a directory which listdirectory() fails on, do a Host_Error with an appropriate message, rather than running with a non-existent directory
+0 bug darkplaces model loader: a q1 mdl file with a _1.tga but no _0.tga crashes at load (daemon)
 0 bug darkplaces physics: GAME_TAOV: Vigil's movement isn't working properly, the qc uses MOVETYPE_STEP and clears FL_ONGROUND every frame and moves using velocity, this is causing a landing sound every frame and causing the player to slide down minor slopes very quickly, this did not occur in Quake, and seems that it must be related to a velocity_z check or FL_ONGROUND check in the MOVETYPE_STEP physics code (RenegadeC, xaGe)
 0 bug darkplaces physics: in Prydon Gate the func_door2 entities are stuck in eachother, causing a continuous spew of warnings and causing one of them to be teleported slightly upward which looks bad (FrikaC)
 0 bug darkplaces readme: commandline options are slightly out of date, update them (Baker)
@@ -64,6 +67,7 @@
 0 bug darkplaces server: if sv_fixedframeratesingleplayer is 0 and cl_maxfps is something like 10, the server still runs every frame, consuming massive amounts of cpu and resulting in very small frametime values
 0 bug darkplaces server: in X-Men: Ravages of Apocalypse the weapon part in x1m3 fails to follow the platform it is on, it is probably spawning inside the ceiling and for some reason not associating with the platform as its groundentity? (qwerasdf)
 0 bug darkplaces server: in X-Men: Ravages of Apocalypse the weapon part in x2m4 falls out of the level, along with a few other items in the same secret (qwerasdf)
+0 bug darkplaces server: stats[TOTAL_MONSTERS] should be networked as a stat
 0 bug darkplaces sound: remove playing sounds when their owner entity has been removed by network code, this would mean that Nexuiz could have rocket/electro noise again (Qantoursic)
 0 bug darkplaces wgl client: during video mode setup, sometimes another application's window becomes permanently top most, not darkplaces' fullscreen window, why? (tZork)
 0 bug darkplaces wgl client: hardware gamma is being retried every frame for unknown reasons, this is SEVERELY impacting framerates on win2k/xp (Jago)
@@ -79,6 +83,7 @@
 0 bug dpmod: go through http://www.inside3d.com/qip/q1/bugsmap.htm and fix map bugs by using replacement .ent files (Lardarse)
 0 bug dpmod: identify what could cause huge angles values (1187488512.0000) on a dog entity, may be related to anglemod, FacingIdeal, ai_run, or dog_run2 (Zombie13)
 0 bug dpmod: impulse 102 isn't removing the bots
+0 bug dpmod: in dpmod_qcphysics_casings the two main particles have the same mass, realistically speaking the rear one should have more mass than the front one
 0 bug dpmod: monsters don't properly chase you around corners, this is not an engine bug because they work fine in id1 but not dpmod, the knight at the start of e2m2 makes for good testing by shooting him and then hiding behind the crates (StrangerThanYou)
 0 bug dpmod: monsters falling out of level?
 0 bug dpmod: monsters shouldn't constantly do sightsounds on a slain player, it's annoying and silly
@@ -130,6 +135,8 @@
 0 feature darkplaces client: add .loc file support and say macros
 0 feature darkplaces client: add .mvd demo support
 0 feature darkplaces client: add .qwd demo support
+0 feature darkplaces client: add BX_WAL_SUPPORT to extensions and document it, the feature has been in for a long time, also update wiki.quakesrc.org accordingly
+0 feature darkplaces client: add DP_GFX_EFFECTINFO_TXT to extensions and document it, the feature has been in for a long time, also update wiki.quakesrc.org accordingly
 0 feature darkplaces client: add a cl_showspeed cvar to display a hud overlay of your current velocity, speed as length of velocity, and speed along forward vector (Spike)
 0 feature darkplaces client: add a cvar to make the renderer use a different entity for pvs than for viewing, this might be useful for a third person camera that should only see what the player sees (Urre)
 0 feature darkplaces client: add an alias to control whether the nexuiz logo.dpv splash video plays at startup and whether the menu opens, this way the config can change it before it happens, for instance to disable it, or to set up a similar thing in other games (green)
@@ -169,6 +176,7 @@
 0 feature darkplaces renderer: add rtlight "avelocity" parameter to make lights that spin, useful with cubemaps (romi)
 0 feature darkplaces renderer: make showfps display GL renderer string and CPU - figure out how to detect this from the OS
 0 feature darkplaces renderer: save r_shadow_glsl* cvars (and possibly a few others) to config because they are useful user settings (SavageX)
+0 feature darkplaces renderer: support gl_picmip -1, -2, etc like Twilight does
 0 feature darkplaces renderer: support tcgen in q3 shaders (ob3lisk)
 0 feature darkplaces server: DP_SV_FINDPVS
 0 feature darkplaces server: add .maxspeed field to control player movement speed in engine code, call it QW_SV_MAXSPEED (Carni)

@@ -83,7 +83,7 @@ char *svc_strings[128] =
 	"", // 47
 	"", // 48
 	"", // 49
-	"svc_unusedlh1", //				50		//
+	"svc_downloaddata", //				50		// [int] start [short] size [variable length] data
 	"svc_updatestatubyte", //			51		// [byte] stat [byte] value
 	"svc_effect", //			52		// [vector] org [byte] modelindex [byte] startframe [byte] framecount [byte] framerate
 	"svc_effect2", //			53		// [vector] org [short] modelindex [short] startframe [byte] framecount [byte] framerate
@@ -164,6 +164,8 @@ cvar_t cl_sound_ric1 = {0, "cl_sound_ric1", "weapons/ric1.wav", "sound to play w
 cvar_t cl_sound_ric2 = {0, "cl_sound_ric2", "weapons/ric2.wav", "sound to play with 5% chance during TE_SPIKE/TE_SUPERSPIKE (empty cvar disables sound)"};
 cvar_t cl_sound_ric3 = {0, "cl_sound_ric3", "weapons/ric3.wav", "sound to play with 10% chance during TE_SPIKE/TE_SUPERSPIKE (empty cvar disables sound)"};
 cvar_t cl_sound_r_exp3 = {0, "cl_sound_r_exp3", "weapons/r_exp3.wav", "sound to play during TE_EXPLOSION and related effects (empty cvar disables sound)"};
+cvar_t cl_serverextension_download = {0, "cl_serverextension_download", "0", "indicates whether the server supports the download command"};
+cvar_t cl_joinbeforedownloadsfinish = {0, "cl_joinbeforedownloadsfinish", "1", "if non-zero the game will begin after the map is loaded before other downloads finish"};
 
 static qboolean QW_CL_CheckOrDownloadFile(const char *filename);
 static void QW_CL_RequestNextDownload(void);
@@ -264,7 +266,7 @@ so the server doesn't disconnect.
 */
 
 static unsigned char olddata[NET_MAXMESSAGE];
-void CL_KeepaliveMessage (void)
+void CL_KeepaliveMessage (qboolean readmessages)
 {
 	float time;
 	static double nextmsg = -1;
@@ -276,18 +278,21 @@ void CL_KeepaliveMessage (void)
 	if (sv.active || !cls.netcon || cls.protocol == PROTOCOL_QUAKEWORLD)
 		return;
 
-// read messages from server, should just be nops
-	oldreadcount = msg_readcount;
-	oldbadread = msg_badread;
-	old = net_message;
-	memcpy(olddata, net_message.data, net_message.cursize);
+	if (readmessages)
+	{
+		// read messages from server, should just be nops
+		oldreadcount = msg_readcount;
+		oldbadread = msg_badread;
+		old = net_message;
+		memcpy(olddata, net_message.data, net_message.cursize);
 
-	NetConn_ClientFrame();
+		NetConn_ClientFrame();
 
-	msg_readcount = oldreadcount;
-	msg_badread = oldbadread;
-	net_message = old;
-	memcpy(net_message.data, olddata, net_message.cursize);
+		msg_readcount = oldreadcount;
+		msg_badread = oldbadread;
+		net_message = old;
+		memcpy(net_message.data, olddata, net_message.cursize);
+	}
 
 	if (cls.netcon && (time = Sys_DoubleTime()) >= nextmsg)
 	{
@@ -507,6 +512,9 @@ static void QW_CL_RequestNextDownload(void)
 			Mem_Free(cls.qw_downloadmemory);
 			cls.qw_downloadmemory = NULL;
 		}
+
+		// done loading
+		cl.loadfinished = true;
 		break;
 	case dl_sound:
 		if (cls.qw_downloadnumber == 0)
@@ -600,6 +608,7 @@ static void QW_CL_ParseDownload(void)
 	// read the fragment out of the packet
 	MSG_ReadBytes(size, cls.qw_downloadmemory + cls.qw_downloadmemorycursize);
 	cls.qw_downloadmemorycursize += size;
+	cls.qw_downloadspeedcount += size;
 
 	cls.qw_downloadpercent = percent;
 
@@ -880,6 +889,301 @@ static void CL_UpdateItemsAndWeapon(void)
 	cl.activeweapon = cl.stats[STAT_ACTIVEWEAPON];
 }
 
+void CL_BeginDownloads(qboolean aborteddownload)
+{
+	// quakeworld works differently
+	if (cls.protocol == PROTOCOL_QUAKEWORLD)
+		return;
+
+	// TODO: this would be a good place to do curl downloads
+
+	if (cl.loadmodel_current < cl.loadmodel_total)
+	{
+		// loading models
+
+		for (;cl.loadmodel_current < cl.loadmodel_total;cl.loadmodel_current++)
+		{
+			if (cl.model_precache[cl.loadmodel_current] && cl.model_precache[cl.loadmodel_current]->Draw)
+				continue;
+			if (cls.signon < SIGNONS)
+				CL_KeepaliveMessage(true);
+			cl.model_precache[cl.loadmodel_current] = Mod_ForName(cl.model_name[cl.loadmodel_current], false, false, cl.loadmodel_current == 1);
+			if (cl.model_precache[cl.loadmodel_current] && cl.model_precache[cl.loadmodel_current]->Draw && cl.loadmodel_current == 1)
+			{
+				// we now have the worldmodel so we can set up the game world
+				cl.entities[0].render.model = cl.worldmodel = cl.model_precache[1];
+				CL_UpdateRenderEntity(&cl.entities[0].render);
+				R_Modules_NewMap();
+				// check memory integrity
+				Mem_CheckSentinelsGlobal();
+				if (!cl.loadfinished && cl_joinbeforedownloadsfinish.integer)
+				{
+					cl.loadfinished = true;
+					// now issue the spawn to move on to signon 3 like normal
+					if (cls.netcon)
+						Cmd_ForwardStringToServer("spawn");
+				}
+			}
+		}
+
+		// finished loading models
+	}
+
+	if (cl.loadsound_current < cl.loadsound_total)
+	{
+		// loading sounds
+
+		for (;cl.loadsound_current < cl.loadsound_total;cl.loadsound_current++)
+		{
+			if (cl.sound_precache[cl.loadsound_current] && S_IsSoundPrecached(cl.sound_precache[cl.loadsound_current]))
+				continue;
+			if (cls.signon < SIGNONS)
+				CL_KeepaliveMessage(true);
+			// Don't lock the sfx here, S_ServerSounds already did that
+			cl.sound_precache[cl.loadsound_current] = S_PrecacheSound(cl.sound_name[cl.loadsound_current], false, false);
+		}
+
+		// finished loading sounds
+	}
+
+	// note: the reason these loops skip already-loaded things is that it
+	// enables this command to be issued during the game if desired
+
+	if (cl.downloadmodel_current < cl.loadmodel_total)
+	{
+		// loading models
+
+		for (;cl.downloadmodel_current < cl.loadmodel_total;cl.downloadmodel_current++)
+		{
+			if (aborteddownload)
+			{
+				if (cl.downloadmodel_current == 1)
+				{
+					// the worldmodel failed, but we need to set up anyway
+					cl.entities[0].render.model = cl.worldmodel = cl.model_precache[1];
+					CL_UpdateRenderEntity(&cl.entities[0].render);
+					R_Modules_NewMap();
+					// check memory integrity
+					Mem_CheckSentinelsGlobal();
+					if (!cl.loadfinished && cl_joinbeforedownloadsfinish.integer)
+					{
+						cl.loadfinished = true;
+						// now issue the spawn to move on to signon 3 like normal
+						if (cls.netcon)
+							Cmd_ForwardStringToServer("spawn");
+					}
+				}
+				aborteddownload = false;
+				continue;
+			}
+			if (cl.model_precache[cl.downloadmodel_current] && cl.model_precache[cl.downloadmodel_current]->Draw)
+				continue;
+			if (cls.signon < SIGNONS)
+				CL_KeepaliveMessage(true);
+			if (!FS_FileExists(cl.model_name[cl.downloadmodel_current]))
+			{
+				if (cl.downloadmodel_current == 1)
+					Con_Printf("Map %s not found\n", cl.model_name[cl.downloadmodel_current]);
+				else
+					Con_Printf("Model %s not found\n", cl.model_name[cl.downloadmodel_current]);
+				// regarding the * check: don't try to download submodels
+				if (cl_serverextension_download.integer && cls.netcon && cl.model_name[cl.downloadmodel_current][0] != '*')
+				{
+					Cmd_ForwardStringToServer(va("download %s", cl.model_name[cl.downloadmodel_current]));
+					// we'll try loading again when the download finishes
+					return;
+				}
+			}
+			cl.model_precache[cl.downloadmodel_current] = Mod_ForName(cl.model_name[cl.downloadmodel_current], false, false, cl.downloadmodel_current == 1);
+			if (cl.downloadmodel_current == 1)
+			{
+				// we now have the worldmodel so we can set up the game world
+				cl.entities[0].render.model = cl.worldmodel = cl.model_precache[1];
+				CL_UpdateRenderEntity(&cl.entities[0].render);
+				R_Modules_NewMap();
+				// check memory integrity
+				Mem_CheckSentinelsGlobal();
+				if (!cl.loadfinished && cl_joinbeforedownloadsfinish.integer)
+				{
+					cl.loadfinished = true;
+					// now issue the spawn to move on to signon 3 like normal
+					if (cls.netcon)
+						Cmd_ForwardStringToServer("spawn");
+				}
+			}
+		}
+
+		// finished loading models
+	}
+
+	if (cl.downloadsound_current < cl.loadsound_total)
+	{
+		// loading sounds
+
+		for (;cl.downloadsound_current < cl.loadsound_total;cl.downloadsound_current++)
+		{
+			char soundname[MAX_QPATH];
+			if (aborteddownload)
+			{
+				aborteddownload = false;
+				continue;
+			}
+			if (cl.sound_precache[cl.downloadsound_current] && S_IsSoundPrecached(cl.sound_precache[cl.downloadsound_current]))
+				continue;
+			if (cls.signon < SIGNONS)
+				CL_KeepaliveMessage(true);
+			dpsnprintf(soundname, sizeof(soundname), "sound/%s", cl.sound_name[cl.downloadsound_current]);
+			if (!FS_FileExists(soundname) && !FS_FileExists(cl.sound_name[cl.downloadsound_current]))
+			{
+				Con_Printf("Sound %s not found\n", soundname);
+				if (cl_serverextension_download.integer && cls.netcon)
+				{
+					Cmd_ForwardStringToServer(va("download %s", soundname));
+					// we'll try loading again when the download finishes
+					return;
+				}
+			}
+			// Don't lock the sfx here, S_ServerSounds already did that
+			cl.sound_precache[cl.downloadsound_current] = S_PrecacheSound(cl.sound_name[cl.downloadsound_current], false, false);
+		}
+
+		// finished loading sounds
+	}
+
+	if (!cl.loadfinished)
+	{
+		cl.loadfinished = true;
+
+		// check memory integrity
+		Mem_CheckSentinelsGlobal();
+
+		// now issue the spawn to move on to signon 3 like normal
+		if (cls.netcon)
+			Cmd_ForwardStringToServer("spawn");
+	}
+}
+
+void CL_BeginDownloads_f(void)
+{
+	CL_BeginDownloads(false);
+}
+
+extern void FS_Rescan_f(void);
+void CL_StopDownload(int size, int crc)
+{
+	if (cls.qw_downloadmemory && cls.qw_downloadmemorycursize == size && CRC_Block(cls.qw_downloadmemory, size) == crc)
+	{
+		// finished file
+		// save to disk only if we don't already have it
+		// (this is mainly for playing back demos)
+		if (!FS_FileExists(cls.qw_downloadname))
+		{
+			const char *extension;
+
+			Con_Printf("Downloaded \"%s\" (%i bytes, %i CRC)\n", cls.qw_downloadname, size, crc);
+
+			FS_WriteFile(cls.qw_downloadname, cls.qw_downloadmemory, cls.qw_downloadmemorycursize);
+
+			extension = FS_FileExtension(cls.qw_downloadname);
+			if (!strcasecmp(extension, "pak") || !strcasecmp(extension, "pk3"))
+				FS_Rescan_f();
+		}
+	}
+
+	if (cls.qw_downloadmemory)
+		Mem_Free(cls.qw_downloadmemory);
+	cls.qw_downloadmemory = NULL;
+	cls.qw_downloadname[0] = 0;
+	cls.qw_downloadmemorymaxsize = 0;
+	cls.qw_downloadmemorycursize = 0;
+	cls.qw_downloadpercent = 0;
+}
+
+void CL_ParseDownload(void)
+{
+	int i, start, size;
+	unsigned char data[65536];
+	start = MSG_ReadLong();
+	size = (unsigned short)MSG_ReadShort();
+
+	// record the start/size information to ack in the next input packet
+	for (i = 0;i < CL_MAX_DOWNLOADACKS;i++)
+	{
+		if (!cls.dp_downloadack[i].start && !cls.dp_downloadack[i].size)
+		{
+			cls.dp_downloadack[i].start = start;
+			cls.dp_downloadack[i].size = size;
+			break;
+		}
+	}
+
+	MSG_ReadBytes(size, data);
+
+	if (!cls.qw_downloadname[0])
+	{
+		if (size > 0)
+			Con_Printf("CL_ParseDownload: received %i bytes with no download active\n", size);
+		return;
+	}
+
+	if (start + size > cls.qw_downloadmemorymaxsize)
+		Host_Error("corrupt download message\n");
+
+	// only advance cursize if the data is at the expected position
+	// (gaps are unacceptable)
+	memcpy(cls.qw_downloadmemory + start, data, size);
+	cls.qw_downloadmemorycursize = start + size;
+	cls.qw_downloadpercent = (int)floor((start+size) * 100.0 / cls.qw_downloadmemorymaxsize);
+	cls.qw_downloadpercent = bound(0, cls.qw_downloadpercent, 100);
+	cls.qw_downloadspeedcount += size;
+}
+
+void CL_DownloadBegin_f(void)
+{
+	int size = atoi(Cmd_Argv(1));
+
+	if (size < 0 || size > 1<<30 || FS_CheckNastyPath(Cmd_Argv(2), false))
+	{
+		Con_Printf("cl_downloadbegin: received bogus information\n");
+		CL_StopDownload(0, 0);
+		return;
+	}
+
+	if (cls.qw_downloadname[0])
+		Con_Printf("Download of %s aborted\n", cls.qw_downloadname);
+
+	CL_StopDownload(0, 0);
+
+	// we're really beginning a download now, so initialize stuff
+	strlcpy(cls.qw_downloadname, Cmd_Argv(2), sizeof(cls.qw_downloadname));
+	cls.qw_downloadmemorymaxsize = size;
+	cls.qw_downloadmemory = Mem_Alloc(cls.permanentmempool, cls.qw_downloadmemorymaxsize);
+	cls.qw_downloadnumber++;
+
+	Cmd_ForwardStringToServer("sv_startdownload");
+}
+
+void CL_StopDownload_f(void)
+{
+	if (cls.qw_downloadname[0])
+	{
+		Con_Printf("Download of %s aborted\n", cls.qw_downloadname);
+		CL_StopDownload(0, 0);
+	}
+	CL_BeginDownloads(true);
+}
+
+void CL_DownloadFinished_f(void)
+{
+	if (Cmd_Argc() < 3)
+	{
+		Con_Printf("Malformed cl_downloadfinished command\n");
+		return;
+	}
+	CL_StopDownload(atoi(Cmd_Argv(1)), atoi(Cmd_Argv(2)));
+	CL_BeginDownloads(false);
+}
+
 /*
 =====================
 CL_SignonReply
@@ -899,6 +1203,8 @@ static void CL_SignonReply (void)
 			MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
 			MSG_WriteString (&cls.netcon->message, "prespawn");
 		}
+		else // playing a demo...  make sure loading occurs as soon as possible
+			CL_BeginDownloads(false);
 		break;
 
 	case 2:
@@ -929,8 +1235,13 @@ static void CL_SignonReply (void)
 			MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
 			MSG_WriteString (&cls.netcon->message, va("rate %i", cl_rate.integer));
 
-			MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
-			MSG_WriteString (&cls.netcon->message, "spawn");
+			// LordHavoc: changed to begin a loading stage and issue this when done
+			//MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
+			//MSG_WriteString (&cls.netcon->message, "spawn");
+
+			// execute cl_begindownloads next frame after this message is sent
+			// (so that the server can see the player name while downloading)
+			Cbuf_AddText("\ncl_begindownloads\n");
 		}
 		break;
 
@@ -968,6 +1279,9 @@ void CL_ParseServerInfo (void)
 
 	// check memory integrity
 	Mem_CheckSentinelsGlobal();
+
+	// clear cl_serverextension cvars
+	Cvar_SetValueQuick(&cl_serverextension_download, 0);
 
 //
 // wipe the client_state_t struct
@@ -1037,6 +1351,8 @@ void CL_ParseServerInfo (void)
 			MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
 			MSG_WriteString(&cls.netcon->message, va("soundlist %i %i", cl.qw_servercount, 0));
 		}
+
+		cl.loadfinished = false;
 
 		cls.state = ca_connected;
 		cls.signon = 1;
@@ -1121,33 +1437,13 @@ void CL_ParseServerInfo (void)
 		cl.sfx_r_exp3 = S_PrecacheSound(cl_sound_r_exp3.string, false, true);
 
 		// now we try to load everything that is new
-
-		// world model
-		CL_KeepaliveMessage ();
-		cl.model_precache[1] = Mod_ForName(cl.model_name[1], false, false, true);
-		if (cl.model_precache[1]->Draw == NULL)
-			Con_Printf("Map %s not found\n", cl.model_name[1]);
-
-		// normal models
-		for (i=2 ; i<nummodels ; i++)
-		{
-			CL_KeepaliveMessage();
-			if ((cl.model_precache[i] = Mod_ForName(cl.model_name[i], false, false, false))->Draw == NULL)
-				Con_Printf("Model %s not found\n", cl.model_name[i]);
-		}
-
-		// sounds
-		for (i=1 ; i<numsounds ; i++)
-		{
-			CL_KeepaliveMessage();
-			// Don't lock the sfx here, S_ServerSounds already did that
-			cl.sound_precache[i] = S_PrecacheSound (cl.sound_name[i], true, false);
-		}
-
-		// we now have the worldmodel so we can set up the game world
-		cl.entities[0].render.model = cl.worldmodel = cl.model_precache[1];
-		CL_UpdateRenderEntity(&cl.entities[0].render);
-		R_Modules_NewMap();
+		cl.loadmodel_current = 1;
+		cl.downloadmodel_current = 1;
+		cl.loadmodel_total = nummodels;
+		cl.loadsound_current = 1;
+		cl.downloadsound_current = 1;
+		cl.loadsound_total = numsounds;
+		cl.loadfinished = false;
 	}
 
 	// check memory integrity
@@ -1436,9 +1732,9 @@ void CL_ParseStatic (int large)
 	Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, ent->state_baseline.origin[0], ent->state_baseline.origin[1], ent->state_baseline.origin[2], ent->state_baseline.angles[0], ent->state_baseline.angles[1], ent->state_baseline.angles[2], 1);
 	CL_UpdateRenderEntity(&ent->render);
 
-	// This is definitely cheating...
-	if (ent->render.model == NULL)
-		cl.num_static_entities--;
+	// This is definitely a cheesy way to conserve resources...
+	//if (ent->render.model == NULL)
+	//	cl.num_static_entities--;
 }
 
 /*
@@ -2189,6 +2485,9 @@ void CL_ParseServerMessage(void)
 
 	cl.last_received_message = realtime;
 
+	if (cls.netcon && cls.signon < SIGNONS)
+		CL_KeepaliveMessage(false);
+
 //
 // if recording demos, copy the message out
 //
@@ -2229,7 +2528,7 @@ void CL_ParseServerMessage(void)
 		cl.qw_num_nails = 0;
 
 		// fade weapon view kick
-		cl.qw_weaponkick = min(cl.qw_weaponkick + 10 * (cl.time - cl.oldtime), 0);
+		cl.qw_weaponkick = min(cl.qw_weaponkick + 10 * bound(0, cl.time - cl.oldtime, 0.1), 0);
 
 		while (1)
 		{
@@ -2960,11 +3259,15 @@ void CL_ParseServerMessage(void)
 			case svc_csqcentities:
 				CSQC_ReadEntities();
 				break;
+			case svc_downloaddata:
+				CL_ParseDownload();
+				break;
 			}
 		}
 	}
 
-	CL_UpdateItemsAndWeapon();
+	if (cls.signon == SIGNONS)
+		CL_UpdateItemsAndWeapon();
 
 	EntityFrameQuake_ISeeDeadEntities();
 
@@ -2982,12 +3285,7 @@ void CL_Parse_DumpPacket(void)
 
 void CL_Parse_ErrorCleanUp(void)
 {
-	if (cls.qw_downloadmemory)
-	{
-		Mem_Free(cls.qw_downloadmemory);
-		cls.qw_downloadmemory = NULL;
-	}
-	cls.qw_downloadpercent = 0;
+	CL_StopDownload(0, 0);
 	QW_CL_StopUpload();
 }
 
@@ -3007,10 +3305,19 @@ void CL_Parse_Init(void)
 	Cvar_RegisterVariable(&cl_sound_ric3);
 	Cvar_RegisterVariable(&cl_sound_r_exp3);
 
+	Cvar_RegisterVariable(&cl_joinbeforedownloadsfinish);
+
+	// server extension cvars set by commands issued from the server during connect
+	Cvar_RegisterVariable(&cl_serverextension_download);
+
 	Cmd_AddCommand("nextul", QW_CL_NextUpload, "sends next fragment of current upload buffer (screenshot for example)");
 	Cmd_AddCommand("stopul", QW_CL_StopUpload, "aborts current upload (screenshot for example)");
 	Cmd_AddCommand("skins", QW_CL_Skins_f, "downloads missing qw skins from server");
 	Cmd_AddCommand("changing", QW_CL_Changing_f, "sent by qw servers to tell client to wait for level change");
+	Cmd_AddCommand("cl_begindownloads", CL_BeginDownloads_f, "used internally by darkplaces client while connecting (causes loading of models and sounds or triggers downloads for missing ones)");
+	Cmd_AddCommand("cl_downloadbegin", CL_DownloadBegin_f, "(networking) informs client of download file information, client replies with sv_startsoundload to begin the transfer");
+	Cmd_AddCommand("stopdownload", CL_StopDownload_f, "terminates a download");
+	Cmd_AddCommand("cl_downloadfinished", CL_DownloadFinished_f, "signals that a download has finished and provides the client with file size and crc to check its integrity");
 }
 
 void CL_Parse_Shutdown(void)

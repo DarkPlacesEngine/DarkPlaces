@@ -434,6 +434,14 @@ typedef struct capturevideostate_s
 }
 capturevideostate_t;
 
+#define CL_MAX_DOWNLOADACKS 4
+
+typedef struct cl_downloadack_s
+{
+	int start, size;
+}
+cl_downloadack_t;
+
 //
 // the client_static_t structure is persistent through an arbitrary number
 // of server connections
@@ -490,6 +498,10 @@ typedef struct client_static_s
 	// network connection
 	netconn_t *netcon;
 
+	// download information
+	// (note: qw_download variables are also used)
+	cl_downloadack_t dp_downloadack[CL_MAX_DOWNLOADACKS];
+
 	// quakeworld stuff below
 
 	// value of "qport" cvar at time of connection
@@ -506,6 +518,10 @@ typedef struct client_static_s
 	int qw_downloadnumber;
 	int qw_downloadpercent;
 	qw_downloadtype_t qw_downloadtype;
+	// transfer rate display
+	double qw_downloadspeedtime;
+	int qw_downloadspeedcount;
+	int qw_downloadspeedrate;
 
 	// current file upload buffer (for uploading screenshots to server)
 	unsigned char *qw_uploaddata;
@@ -863,6 +879,15 @@ typedef struct client_state_s
 	int num_particles;
 
 	int free_particle;
+
+	// cl_serverextension_download feature
+	int loadmodel_current;
+	int downloadmodel_current;
+	int loadmodel_total;
+	int loadsound_current;
+	int downloadsound_current;
+	int loadsound_total;
+	qboolean loadfinished;
 
 	// quakeworld stuff
 

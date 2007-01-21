@@ -332,6 +332,8 @@ void CL_Disconnect(void)
 
 	cl.worldmodel = NULL;
 
+	CL_Parse_ErrorCleanUp();
+
 	if (cls.demoplayback)
 		CL_StopPlayback();
 	else if (cls.netcon)
@@ -1290,6 +1292,9 @@ static void CL_RelinkStaticEntities(void)
 	for (i = 0, e = cl.static_entities;i < cl.num_static_entities && r_refdef.numentities < r_refdef.maxentities;i++, e++)
 	{
 		e->render.flags = 0;
+		// if the model was not loaded when the static entity was created we
+		// need to re-fetch the model pointer
+		e->render.model = cl.model_precache[e->state_baseline.modelindex];
 		// transparent stuff can't be lit during the opaque stage
 		if (e->render.effects & (EF_ADDITIVE | EF_NODEPTHTEST) || e->render.alpha < 1)
 			e->render.flags |= RENDER_TRANSPARENT;

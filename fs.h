@@ -66,9 +66,11 @@ int FS_Seek (qfile_t* file, fs_offset_t offset, int whence);
 fs_offset_t FS_Tell (qfile_t* file);
 fs_offset_t FS_FileSize (qfile_t* file);
 void FS_Purge (qfile_t* file);
+const char *FS_FileWithoutPath (const char *in);
 const char *FS_FileExtension (const char *in);
 int FS_CheckNastyPath (const char *path, qboolean isgamedir);
 qboolean FS_ChangeGameDir(const char *string);
+qboolean FS_IsRegisteredQuakePack(const char *name);
 
 typedef struct fssearch_s
 {

@@ -1549,6 +1549,19 @@ void CL_SendMove(void)
 		// PROTOCOL_DARKPLACES7 = 71 bytes per packet
 	}
 
+	if (cls.protocol != PROTOCOL_QUAKEWORLD)
+	{
+		// acknowledge any recently received data blocks
+		for (i = 0;i < CL_MAX_DOWNLOADACKS && (cls.dp_downloadack[i].start || cls.dp_downloadack[i].size);i++)
+		{
+			MSG_WriteByte(&buf, clc_ackdownloaddata);
+			MSG_WriteLong(&buf, cls.dp_downloadack[i].start);
+			MSG_WriteShort(&buf, cls.dp_downloadack[i].size);
+			cls.dp_downloadack[i].start = 0;
+			cls.dp_downloadack[i].size = 0;
+		}
+	}
+
 	// send the reliable message (forwarded commands) if there is one
 	NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol);
 
