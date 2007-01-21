@@ -28,6 +28,7 @@ extern cvar_t r_shadow_shadow_polygonfactor;
 extern cvar_t r_shadow_shadow_polygonoffset;
 extern cvar_t r_shadow_singlepassvolumegeneration;
 extern cvar_t r_shadow_texture3d;
+extern cvar_t gl_ext_separatestencil;
 extern cvar_t gl_ext_stenciltwoside;
 
 void R_Shadow_Init(void);
