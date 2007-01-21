@@ -42,6 +42,8 @@ int gl_support_clamptoedge = false;
 // GL_EXT_texture_filter_anisotropic
 int gl_support_anisotropy = false;
 int gl_max_anisotropy = 1;
+// OpenGL2.0 core glStencilOpSeparate, or GL_ATI_separate_stencil
+int gl_support_separatestencil = false;
 // GL_EXT_stencil_two_side
 int gl_support_stenciltwoside = false;
 // GL_EXT_blend_minmax
@@ -254,6 +256,8 @@ void (GLAPIENTRY *qglPointSize)(GLfloat size);
 
 void (GLAPIENTRY *qglBlendEquationEXT)(GLenum);
 
+void (GLAPIENTRY *qglStencilOpSeparate)(GLenum, GLenum, GLenum, GLenum);
+void (GLAPIENTRY *qglStencilFuncSeparate)(GLenum, GLenum, GLint, GLuint);
 void (GLAPIENTRY *qglActiveStencilFaceEXT)(GLenum);
 
 void (GLAPIENTRY *qglDeleteObjectARB)(GLhandleARB obj);
@@ -519,6 +523,20 @@ static dllfunction_t texture3dextfuncs[] =
 	{NULL, NULL}
 };
 
+static dllfunction_t atiseparatestencilfuncs[] =
+{
+	{"glStencilOpSeparateATI", (void **) &qglStencilOpSeparate},
+	{"glStencilFuncSeparateATI", (void **) &qglStencilFuncSeparate},
+	{NULL, NULL}
+};
+
+static dllfunction_t gl2separatestencilfuncs[] =
+{
+	{"glStencilOpSeparate", (void **) &qglStencilOpSeparate},
+	{"glStencilFuncSeparate", (void **) &qglStencilFuncSeparate},
+	{NULL, NULL}
+};
+
 static dllfunction_t stenciltwosidefuncs[] =
 {
 	{"glActiveStencilFaceEXT", (void **) &qglActiveStencilFaceEXT},
@@ -646,6 +664,7 @@ void VID_CheckExtensions(void)
 	gl_support_clamptoedge = false;
 	gl_support_anisotropy = false;
 	gl_max_anisotropy = 1;
+	gl_support_separatestencil = false;
 	gl_support_stenciltwoside = false;
 	gl_support_ext_blend_minmax = false;
 	gl_support_ext_blend_subtract = false;
@@ -709,6 +728,9 @@ void VID_CheckExtensions(void)
 	gl_support_ext_blend_minmax = GL_CheckExtension("GL_EXT_blend_minmax", blendequationfuncs, "-noblendminmax", false);
 	gl_support_ext_blend_subtract = GL_CheckExtension("GL_EXT_blend_subtract", blendequationfuncs, "-noblendsubtract", false);
 
+// COMMANDLINEOPTION: GL: -noseparatestencil disables use of OpenGL2.0 glStencilOpSeparate and GL_ATI_separate_stencil extensions (accelerates shadow rendering)
+	if (!(gl_support_separatestencil = GL_CheckExtension("glStencilOpSeparate", gl2separatestencilfuncs, "-noseparatestencil", false)))
+		gl_support_separatestencil = GL_CheckExtension("GL_ATI_separate_stencil", atiseparatestencilfuncs, "-noseparatestencil", false);
 // COMMANDLINEOPTION: GL: -nostenciltwoside disables GL_EXT_stencil_two_side (accelerates shadow rendering)
 	gl_support_stenciltwoside = GL_CheckExtension("GL_EXT_stencil_two_side", stenciltwosidefuncs, "-nostenciltwoside", false);
 

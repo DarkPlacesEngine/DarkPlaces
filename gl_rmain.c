@@ -1408,23 +1408,78 @@ void R_View_Update(void)
 	R_View_UpdateEntityVisible();
 }
 
-void R_ResetViewRendering(void)
+void R_SetupView(const matrix4x4_t *matrix)
+{
+	if (r_refdef.rtworldshadows || r_refdef.rtdlightshadows)
+		GL_SetupView_Mode_PerspectiveInfiniteFarClip(r_view.frustum_x, r_view.frustum_y, r_refdef.nearclip);
+	else
+		GL_SetupView_Mode_Perspective(r_view.frustum_x, r_view.frustum_y, r_refdef.nearclip, r_refdef.farclip);
+
+	GL_SetupView_Orientation_FromEntity(matrix);
+}
+
+void R_ResetViewRendering2D(void)
 {
 	if (gl_support_fragment_shader)
 	{
 		qglUseProgramObjectARB(0);CHECKGLERROR
 	}
 
+	DrawQ_Finish();
+
 	// GL is weird because it's bottom to top, r_view.y is top to bottom
 	qglViewport(r_view.x, vid.height - (r_view.y + r_view.height), r_view.width, r_view.height);CHECKGLERROR
 	GL_SetupView_Mode_Ortho(0, 0, 1, 1, -10, 100);
 	GL_Scissor(r_view.x, r_view.y, r_view.width, r_view.height);
+	GL_Color(1, 1, 1, 1);
 	GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 1);
+	GL_BlendFunc(GL_ONE, GL_ZERO);
+	GL_AlphaTest(false);
 	GL_ScissorTest(false);
 	GL_DepthMask(false);
 	GL_DepthTest(false);
 	R_Mesh_Matrix(&identitymatrix);
 	R_Mesh_ResetTextureState();
+	qglPolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);CHECKGLERROR
+	qglEnable(GL_POLYGON_OFFSET_FILL);CHECKGLERROR
+	qglDepthFunc(GL_LEQUAL);CHECKGLERROR
+	qglDisable(GL_STENCIL_TEST);CHECKGLERROR
+	qglStencilMask(~0);CHECKGLERROR
+	qglStencilFunc(GL_ALWAYS, 128, ~0);CHECKGLERROR
+	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);CHECKGLERROR
+	GL_CullFace(GL_FRONT); // quake is backwards, this culls back faces
+}
+
+void R_ResetViewRendering3D(void)
+{
+	if (gl_support_fragment_shader)
+	{
+		qglUseProgramObjectARB(0);CHECKGLERROR
+	}
+
+	DrawQ_Finish();
+
+	// GL is weird because it's bottom to top, r_view.y is top to bottom
+	qglViewport(r_view.x, vid.height - (r_view.y + r_view.height), r_view.width, r_view.height);CHECKGLERROR
+	R_SetupView(&r_view.matrix);
+	GL_Scissor(r_view.x, r_view.y, r_view.width, r_view.height);
+	GL_Color(1, 1, 1, 1);
+	GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 1);
+	GL_BlendFunc(GL_ONE, GL_ZERO);
+	GL_AlphaTest(false);
+	GL_ScissorTest(true);
+	GL_DepthMask(true);
+	GL_DepthTest(true);
+	R_Mesh_Matrix(&identitymatrix);
+	R_Mesh_ResetTextureState();
+	qglPolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);CHECKGLERROR
+	qglEnable(GL_POLYGON_OFFSET_FILL);CHECKGLERROR
+	qglDepthFunc(GL_LEQUAL);CHECKGLERROR
+	qglDisable(GL_STENCIL_TEST);CHECKGLERROR
+	qglStencilMask(~0);CHECKGLERROR
+	qglStencilFunc(GL_ALWAYS, 128, ~0);CHECKGLERROR
+	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);CHECKGLERROR
+	GL_CullFace(GL_FRONT); // quake is backwards, this culls back faces
 }
 
 /*
@@ -1487,16 +1542,6 @@ void R_ResetViewRendering(void)
 "\n"
 "#endif // FRAGMENT_SHADER\n"
 */
-
-void R_SetupView(const matrix4x4_t *matrix)
-{
-	if (r_refdef.rtworldshadows || r_refdef.rtdlightshadows)
-		GL_SetupView_Mode_PerspectiveInfiniteFarClip(r_view.frustum_x, r_view.frustum_y, r_refdef.nearclip);
-	else
-		GL_SetupView_Mode_Perspective(r_view.frustum_x, r_view.frustum_y, r_refdef.nearclip, r_refdef.farclip);
-
-	GL_SetupView_Orientation_FromEntity(matrix);
-}
 
 void R_RenderScene(void);
 
@@ -1603,7 +1648,7 @@ void R_Bloom_CopyScreenTexture(float colorscale)
 {
 	r_refdef.stats.bloom++;
 
-	R_ResetViewRendering();
+	R_ResetViewRendering2D();
 	R_Mesh_VertexPointer(r_screenvertex3f);
 	R_Mesh_ColorPointer(NULL);
 	R_Mesh_TexCoordPointer(0, 2, r_bloomstate.screentexcoord2f);
@@ -1649,7 +1694,7 @@ void R_Bloom_MakeTexture(void)
 
 	r_refdef.stats.bloom++;
 
-	R_ResetViewRendering();
+	R_ResetViewRendering2D();
 	R_Mesh_VertexPointer(r_screenvertex3f);
 	R_Mesh_ColorPointer(NULL);
 
@@ -1758,22 +1803,22 @@ void R_HDR_RenderBloomTexture(void)
 
 	// TODO: support GL_EXT_framebuffer_object rather than reusing the framebuffer?  it might improve SLI performance.
 	// TODO: add exposure compensation features
+	// TODO: add fp16 framebuffer support
 
 	r_view.colorscale = r_bloom_colorscale.value * r_hdr_scenebrightness.value;
 	R_RenderScene();
 
-	R_ResetViewRendering();
+	R_ResetViewRendering2D();
 
 	R_Bloom_CopyHDRTexture();
 	R_Bloom_MakeTexture();
 
-	R_ResetViewRendering();
-	GL_ScissorTest(true);
-	GL_DepthMask(true);
-	GL_DepthTest(true);
+	R_ResetViewRendering3D();
+
 	R_ClearScreen();
 	if (r_timereport_active)
 		R_TimeReport("clear");
+
 
 	// restore the view settings
 	r_view.width = oldwidth;
@@ -1787,7 +1832,7 @@ static void R_BlendView(void)
 		// render high dynamic range bloom effect
 		// the bloom texture was made earlier this render, so we just need to
 		// blend it onto the screen...
-		R_ResetViewRendering();
+		R_ResetViewRendering2D();
 		R_Mesh_VertexPointer(r_screenvertex3f);
 		R_Mesh_ColorPointer(NULL);
 		GL_Color(1, 1, 1, 1);
@@ -1806,7 +1851,7 @@ static void R_BlendView(void)
 		R_Bloom_MakeTexture();
 		// put the original screen image back in place and blend the bloom
 		// texture on it
-		R_ResetViewRendering();
+		R_ResetViewRendering2D();
 		R_Mesh_VertexPointer(r_screenvertex3f);
 		R_Mesh_ColorPointer(NULL);
 		GL_Color(1, 1, 1, 1);
@@ -1835,7 +1880,7 @@ static void R_BlendView(void)
 	if (r_refdef.viewblend[3] >= (1.0f / 256.0f))
 	{
 		// apply a color tint to the whole view
-		R_ResetViewRendering();
+		R_ResetViewRendering2D();
 		R_Mesh_VertexPointer(r_screenvertex3f);
 		R_Mesh_ColorPointer(NULL);
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -1926,6 +1971,8 @@ void R_RenderView(void)
 	if (!r_refdef.entities/* || !r_refdef.worldmodel*/)
 		return; //Host_Error ("R_RenderView: NULL worldmodel");
 
+	R_Shadow_UpdateWorldLightSelection();
+
 	CHECKGLERROR
 	if (r_timereport_active)
 		R_TimeReport("setup");
@@ -1934,10 +1981,8 @@ void R_RenderView(void)
 	if (r_timereport_active)
 		R_TimeReport("visibility");
 
-	R_ResetViewRendering();
-	GL_ScissorTest(true);
-	GL_DepthMask(true);
-	GL_DepthTest(true);
+	R_ResetViewRendering3D();
+
 	R_ClearScreen();
 	if (r_timereport_active)
 		R_TimeReport("clear");
@@ -1965,27 +2010,13 @@ extern void VM_AddPolygonsToMeshQueue (void);
 extern void R_DrawPortals (void);
 void R_RenderScene(void)
 {
-	DrawQ_Finish();
-
 	// don't let sound skip if going slow
 	if (r_refdef.extraupdate)
 		S_ExtraUpdate ();
 
-	CHECKGLERROR
-	if (gl_support_fragment_shader)
-	{
-		qglUseProgramObjectARB(0);CHECKGLERROR
-	}
-	qglDepthFunc(GL_LEQUAL);CHECKGLERROR
-	qglPolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);CHECKGLERROR
-	qglEnable(GL_POLYGON_OFFSET_FILL);CHECKGLERROR
-
-	R_ResetViewRendering();
-	R_SetupView(&r_view.matrix);
+	R_ResetViewRendering3D();
 
 	R_MeshQueue_BeginScene();
-
-	R_Shadow_UpdateWorldLightSelection();
 
 	R_SkyStartFrame();
 
@@ -2030,6 +2061,8 @@ void R_RenderScene(void)
 	if (r_shadows.integer > 0 && r_refdef.lightmapintensity > 0)
 	{
 		R_DrawModelShadows();
+
+		R_ResetViewRendering3D();
 
 		// don't let sound skip if going slow
 		if (r_refdef.extraupdate)
@@ -2096,13 +2129,7 @@ void R_RenderScene(void)
 	if (r_refdef.extraupdate)
 		S_ExtraUpdate ();
 
-	CHECKGLERROR
-	if (gl_support_fragment_shader)
-	{
-		qglUseProgramObjectARB(0);CHECKGLERROR
-	}
-	qglPolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);CHECKGLERROR
-	qglDisable(GL_POLYGON_OFFSET_FILL);CHECKGLERROR
+	R_ResetViewRendering2D();
 }
 
 /*
@@ -2199,6 +2226,7 @@ void R_DrawNoModel_TransparentCallback(const entity_render_t *ent, const rtlight
 		GL_DepthMask(true);
 	}
 	GL_DepthTest(!(ent->effects & EF_NODEPTHTEST));
+	GL_CullFace((ent->flags & RENDER_NOCULLFACE) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
 	R_Mesh_VertexPointer(nomodelvertex3f);
 	if (r_refdef.fogenabled)
 	{
@@ -3678,12 +3706,8 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 		const int *elements;
 		vec3_t v;
 		CHECKGLERROR
-		GL_DepthTest(true);
+		GL_DepthTest(!r_showdisabledepthtest.integer);
 		GL_DepthMask(true);
-		if (r_showdisabledepthtest.integer)
-		{
-			qglDepthFunc(GL_ALWAYS);CHECKGLERROR
-		}
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		R_Mesh_ColorPointer(NULL);
 		R_Mesh_ResetTextureState();
@@ -3754,9 +3778,5 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 			}
 		}
 		rsurface_texture = NULL;
-		if (r_showdisabledepthtest.integer)
-		{
-			qglDepthFunc(GL_LEQUAL);CHECKGLERROR
-		}
 	}
 }

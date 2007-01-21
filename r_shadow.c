@@ -146,6 +146,7 @@ typedef enum r_shadow_rendermode_e
 {
 	R_SHADOW_RENDERMODE_NONE,
 	R_SHADOW_RENDERMODE_STENCIL,
+	R_SHADOW_RENDERMODE_SEPARATESTENCIL,
 	R_SHADOW_RENDERMODE_STENCILTWOSIDE,
 	R_SHADOW_RENDERMODE_LIGHT_VERTEX,
 	R_SHADOW_RENDERMODE_LIGHT_DOT3,
@@ -219,6 +220,7 @@ cvar_t r_shadow_scissor = {0, "r_shadow_scissor", "1", "use scissor optimization
 cvar_t r_shadow_shadow_polygonfactor = {0, "r_shadow_shadow_polygonfactor", "0", "how much to enlarge shadow volume polygons when rendering (should be 0!)"};
 cvar_t r_shadow_shadow_polygonoffset = {0, "r_shadow_shadow_polygonoffset", "1", "how much to push shadow volumes into the distance when rendering, to reduce chances of zfighting artifacts (should not be less than 0)"};
 cvar_t r_shadow_texture3d = {0, "r_shadow_texture3d", "1", "use 3D voxel textures for spherical attenuation rather than cylindrical (does not affect r_glsl lighting)"};
+cvar_t gl_ext_separatestencil = {0, "gl_ext_separatetencil", "1", "make use of OpenGL 2.0 glStencilOpSeparate or GL_ATI_separate_stencil extension"};
 cvar_t gl_ext_stenciltwoside = {0, "gl_ext_stenciltwoside", "1", "make use of GL_EXT_stenciltwoside extension (NVIDIA only)"};
 cvar_t r_editlights = {0, "r_editlights", "0", "enables .rtlights file editing mode"};
 cvar_t r_editlights_cursordistance = {0, "r_editlights_cursordistance", "1024", "maximum distance of cursor from eye"};
@@ -405,6 +407,7 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_shadow_polygonfactor);
 	Cvar_RegisterVariable(&r_shadow_shadow_polygonoffset);
 	Cvar_RegisterVariable(&r_shadow_texture3d);
+	Cvar_RegisterVariable(&gl_ext_separatestencil);
 	Cvar_RegisterVariable(&gl_ext_stenciltwoside);
 	if (gamemode == GAME_TENEBRAE)
 	{
@@ -853,6 +856,8 @@ void R_Shadow_ValidateCvars(void)
 {
 	if (r_shadow_texture3d.integer && !gl_texture3d)
 		Cvar_SetValueQuick(&r_shadow_texture3d, 0);
+	if (gl_ext_separatestencil.integer && !gl_support_separatestencil)
+		Cvar_SetValueQuick(&gl_ext_separatestencil, 0);
 	if (gl_ext_stenciltwoside.integer && !gl_support_stenciltwoside)
 		Cvar_SetValueQuick(&gl_ext_stenciltwoside, 0);
 }
@@ -885,13 +890,16 @@ void R_Shadow_RenderMode_Begin(void)
 	R_Mesh_ColorPointer(NULL);
 	R_Mesh_ResetTextureState();
 	GL_BlendFunc(GL_ONE, GL_ZERO);
+	GL_DepthTest(true);
 	GL_DepthMask(false);
 	GL_Color(0, 0, 0, 1);
 	GL_Scissor(r_view.x, r_view.y, r_view.width, r_view.height);
 
 	r_shadow_rendermode = R_SHADOW_RENDERMODE_NONE;
 
-	if (gl_ext_stenciltwoside.integer)
+	if (gl_ext_separatestencil.integer)
+		r_shadow_shadowingrendermode = R_SHADOW_RENDERMODE_SEPARATESTENCIL;
+	else if (gl_ext_stenciltwoside.integer)
 		r_shadow_shadowingrendermode = R_SHADOW_RENDERMODE_STENCILTWOSIDE;
 	else
 		r_shadow_shadowingrendermode = R_SHADOW_RENDERMODE_STENCIL;
@@ -922,22 +930,36 @@ void R_Shadow_RenderMode_Reset(void)
 	}
 	R_Mesh_ColorPointer(NULL);
 	R_Mesh_ResetTextureState();
+	GL_DepthTest(true);
+	GL_DepthMask(false);
+	qglDepthFunc(GL_LEQUAL);CHECKGLERROR
+	qglPolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);CHECKGLERROR
+	qglDisable(GL_STENCIL_TEST);CHECKGLERROR
+	qglStencilMask(~0);CHECKGLERROR
+	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);CHECKGLERROR
+	qglStencilFunc(GL_ALWAYS, 128, ~0);CHECKGLERROR
+	GL_CullFace(GL_FRONT); // quake is backwards, this culls back faces
+	GL_Color(1, 1, 1, 1);
+	GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 1);
+	GL_BlendFunc(GL_ONE, GL_ZERO);
 }
 
 void R_Shadow_RenderMode_StencilShadowVolumes(void)
 {
 	CHECKGLERROR
 	R_Shadow_RenderMode_Reset();
-	GL_Color(1, 1, 1, 1);
 	GL_ColorMask(0, 0, 0, 0);
-	GL_BlendFunc(GL_ONE, GL_ZERO);
-	GL_DepthMask(false);
 	qglPolygonOffset(r_refdef.shadowpolygonfactor, r_refdef.shadowpolygonoffset);CHECKGLERROR
 	qglDepthFunc(GL_LESS);CHECKGLERROR
 	qglEnable(GL_STENCIL_TEST);CHECKGLERROR
-	qglStencilFunc(GL_ALWAYS, 128, ~0);CHECKGLERROR
 	r_shadow_rendermode = r_shadow_shadowingrendermode;
-	if (r_shadow_rendermode == R_SHADOW_RENDERMODE_STENCILTWOSIDE)
+	if (r_shadow_rendermode == R_SHADOW_RENDERMODE_SEPARATESTENCIL)
+	{
+		GL_CullFace(GL_NONE);
+		qglStencilOpSeparate(GL_BACK, GL_KEEP, GL_INCR, GL_KEEP);CHECKGLERROR // quake is backwards, this is front faces
+		qglStencilOpSeparate(GL_FRONT, GL_KEEP, GL_DECR, GL_KEEP);CHECKGLERROR // quake is backwards, this is back faces
+	}
+	else if (r_shadow_rendermode == R_SHADOW_RENDERMODE_STENCILTWOSIDE)
 	{
 		GL_CullFace(GL_NONE);
 		qglEnable(GL_STENCIL_TEST_TWO_SIDE_EXT);CHECKGLERROR
@@ -948,13 +970,6 @@ void R_Shadow_RenderMode_StencilShadowVolumes(void)
 		qglStencilMask(~0);CHECKGLERROR
 		qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);CHECKGLERROR
 	}
-	else
-	{
-		GL_CullFace(GL_FRONT); // quake is backwards, this culls back faces
-		qglStencilMask(~0);CHECKGLERROR
-		// this is changed by every shadow render so its value here is unimportant
-		qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);CHECKGLERROR
-	}
 	GL_Clear(GL_STENCIL_BUFFER_BIT);
 	r_refdef.stats.lights_clears++;
 }
@@ -964,32 +979,17 @@ void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent)
 	CHECKGLERROR
 	R_Shadow_RenderMode_Reset();
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-	GL_DepthMask(false);
-	qglPolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);CHECKGLERROR
-	//qglDisable(GL_POLYGON_OFFSET_FILL);CHECKGLERROR
-	GL_Color(1, 1, 1, 1);
-	GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 1);
-	if (transparent)
-	{
-		qglDepthFunc(GL_LEQUAL);CHECKGLERROR
-	}
-	else
+	if (!transparent)
 	{
 		qglDepthFunc(GL_EQUAL);CHECKGLERROR
 	}
 	if (stenciltest)
 	{
 		qglEnable(GL_STENCIL_TEST);CHECKGLERROR
+		// only draw light where this geometry was already rendered AND the
+		// stencil is 128 (values other than this mean shadow)
+		qglStencilFunc(GL_EQUAL, 128, ~0);CHECKGLERROR
 	}
-	else
-	{
-		qglDisable(GL_STENCIL_TEST);CHECKGLERROR
-	}
-	qglStencilMask(~0);CHECKGLERROR
-	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);CHECKGLERROR
-	// only draw light where this geometry was already rendered AND the
-	// stencil is 128 (values other than this mean shadow)
-	qglStencilFunc(GL_EQUAL, 128, ~0);CHECKGLERROR
 	r_shadow_rendermode = r_shadow_lightingrendermode;
 	// do global setup needed for the chosen lighting mode
 	if (r_shadow_rendermode == R_SHADOW_RENDERMODE_LIGHT_GLSL)
@@ -1016,19 +1016,10 @@ void R_Shadow_RenderMode_VisibleShadowVolumes(void)
 	CHECKGLERROR
 	R_Shadow_RenderMode_Reset();
 	GL_BlendFunc(GL_ONE, GL_ONE);
-	GL_DepthMask(false);
-	qglPolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);CHECKGLERROR
+	GL_DepthTest(r_showshadowvolumes.integer < 2);
 	GL_Color(0.0, 0.0125 * r_view.colorscale, 0.1 * r_view.colorscale, 1);
-	GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 1);
-	if (r_showshadowvolumes.integer >= 2)
-	{
-		qglDepthFunc(GL_ALWAYS);CHECKGLERROR
-	}
-	else
-	{
-		qglDepthFunc(GL_GEQUAL);CHECKGLERROR
-	}
-	qglDisable(GL_STENCIL_TEST);CHECKGLERROR
+	qglPolygonOffset(r_refdef.shadowpolygonfactor, r_refdef.shadowpolygonoffset);CHECKGLERROR
+	GL_CullFace(GL_NONE);
 	r_shadow_rendermode = R_SHADOW_RENDERMODE_VISIBLEVOLUMES;
 }
 
@@ -1037,29 +1028,15 @@ void R_Shadow_RenderMode_VisibleLighting(qboolean stenciltest, qboolean transpar
 	CHECKGLERROR
 	R_Shadow_RenderMode_Reset();
 	GL_BlendFunc(GL_ONE, GL_ONE);
-	GL_DepthMask(false);
-	qglPolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);CHECKGLERROR
+	GL_DepthTest(r_showlighting.integer < 2);
 	GL_Color(0.1 * r_view.colorscale, 0.0125 * r_view.colorscale, 0, 1);
-	GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 1);
-	if (r_showshadowvolumes.integer >= 2)
-	{
-		qglDepthFunc(GL_ALWAYS);CHECKGLERROR
-	}
-	else if (transparent)
-	{
-		qglDepthFunc(GL_LEQUAL);CHECKGLERROR
-	}
-	else
+	if (!transparent)
 	{
 		qglDepthFunc(GL_EQUAL);CHECKGLERROR
 	}
 	if (stenciltest)
 	{
 		qglEnable(GL_STENCIL_TEST);CHECKGLERROR
-	}
-	else
-	{
-		qglDisable(GL_STENCIL_TEST);CHECKGLERROR
 	}
 	r_shadow_rendermode = R_SHADOW_RENDERMODE_VISIBLELIGHTING;
 }
@@ -1069,23 +1046,8 @@ void R_Shadow_RenderMode_End(void)
 	CHECKGLERROR
 	R_Shadow_RenderMode_Reset();
 	R_Shadow_RenderMode_ActiveLight(NULL);
-	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(true);
-	qglPolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);CHECKGLERROR
-	//qglDisable(GL_POLYGON_OFFSET_FILL);CHECKGLERROR
-	GL_Color(1, 1, 1, 1);
-	GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 1);
 	GL_Scissor(r_view.x, r_view.y, r_view.width, r_view.height);
-	qglDepthFunc(GL_LEQUAL);CHECKGLERROR
-	if (gl_support_stenciltwoside)
-	{
-		qglDisable(GL_STENCIL_TEST_TWO_SIDE_EXT);CHECKGLERROR
-	}
-	qglDisable(GL_STENCIL_TEST);CHECKGLERROR
-	qglStencilMask(~0);CHECKGLERROR
-	qglStencilFunc(GL_ALWAYS, 128, ~0);CHECKGLERROR
-	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);CHECKGLERROR
-	GL_CullFace(GL_FRONT); // quake is backwards, this culls back faces
 	r_shadow_rendermode = R_SHADOW_RENDERMODE_NONE;
 }
 
@@ -2535,7 +2497,9 @@ void R_DrawModelShadows(void)
 
 	r_shadow_rendermode = R_SHADOW_RENDERMODE_NONE;
 
-	if (gl_ext_stenciltwoside.integer)
+	if (gl_ext_separatestencil.integer)
+		r_shadow_shadowingrendermode = R_SHADOW_RENDERMODE_SEPARATESTENCIL;
+	else if (gl_ext_stenciltwoside.integer)
 		r_shadow_shadowingrendermode = R_SHADOW_RENDERMODE_STENCILTWOSIDE;
 	else
 		r_shadow_shadowingrendermode = R_SHADOW_RENDERMODE_STENCIL;
@@ -2593,11 +2557,10 @@ void R_DrawModelShadows(void)
 	// apply the blend to the shadowed areas
 	R_Mesh_Draw(0, 4, 2, polygonelements);
 
-	// restore perspective view
-	R_SetupView(&r_view.matrix);
+	// restoring the perspective view is done by R_RenderScene
+	//R_SetupView(&r_view.matrix);
 
 	// restore other state to normal
-	GL_DepthTest(true);
 	R_Shadow_RenderMode_End();
 }
 
