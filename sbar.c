@@ -710,7 +710,7 @@ void Sbar_DrawInventory (void)
 		if (cl.stats[STAT_ITEMS] & (IT_SHOTGUN<<i) )
 		{
 			time = cl.item_gettime[i];
-			flashon = (int)((cl.time - time)*10);
+			flashon = (int)(max(0, cl.time - time)*10);
 			if (flashon >= 10)
 			{
 				if ( cl.stats[STAT_ACTIVEWEAPON] == (IT_SHOTGUN<<i)  )
@@ -734,7 +734,7 @@ void Sbar_DrawInventory (void)
 		{
 			if (cl.stats[STAT_ITEMS] & (1<<hipweapons[i]) )
 			{
-				time = cl.item_gettime[hipweapons[i]];
+				time = max(0, cl.item_gettime[hipweapons[i]]);
 				flashon = (int)((cl.time - time)*10);
 				if (flashon >= 10)
 				{
@@ -1122,7 +1122,7 @@ void Sbar_Draw (void)
 				int redflag, blueflag;
 
 				// we have a max time 2s (min time = 0)
-				if ((time = cl.time - cl.weapontime) < 2)
+				if ((time = max(0, cl.time - cl.weapontime)) < 2)
 				{
 					fade = (1.0 - 0.5 * time);
 					fade *= fade;
