@@ -646,7 +646,7 @@ SV_ReadClientMessage
 extern void SV_SendServerinfo(client_t *client);
 void SV_ReadClientMessage(void)
 {
-	int cmd, num;
+	int cmd, num, start;
 	char *s;
 
 	//MSG_BeginReading ();
@@ -708,6 +708,58 @@ void SV_ReadClientMessage(void)
 			// if ReadClientMove returns true, the client tried to speed cheat
 			if (SV_ReadClientMove ())
 				SV_DropClient (false);
+			break;
+
+		case clc_ackdownloaddata:
+			start = MSG_ReadLong();
+			num = MSG_ReadShort();
+			if (host_client->download_file && host_client->download_started)
+			{
+				if (host_client->download_expectedposition == start)
+				{
+					int size = (int)FS_FileSize(host_client->download_file);
+					// a data block was successfully received by the client,
+					// update the expected position on the next data block
+					host_client->download_expectedposition = start + num;
+					// if this was the last data block of the file, it's done
+					if (host_client->download_expectedposition >= FS_FileSize(host_client->download_file))
+					{
+						// tell the client that the download finished
+						// we need to calculate the crc now
+						//
+						// note: at this point the OS probably has the file
+						// entirely in memory, so this is a faster operation
+						// now than it was when the download started.
+						//
+						// it is also preferable to do this at the end of the
+						// download rather than the start because it reduces
+						// potential for Denial Of Service attacks against the
+						// server.
+						int crc;
+						unsigned char *temp;
+						FS_Seek(host_client->download_file, 0, SEEK_SET);
+						temp = Mem_Alloc(tempmempool, size);
+						FS_Read(host_client->download_file, temp, size);
+						crc = CRC_Block(temp, size);
+						Mem_Free(temp);
+						// calculated crc, send the file info to the client
+						// (so that it can verify the data)
+						Host_ClientCommands(va("\ncl_downloadfinished %i %i %s\n", size, crc, host_client->download_name));
+						Con_DPrintf("Download of %s by %s has finished\n", host_client->download_name, host_client->name);
+						FS_Close(host_client->download_file);
+						host_client->download_file = NULL;
+						host_client->download_name[0] = 0;
+						host_client->download_expectedposition = 0;
+						host_client->download_started = false;
+					}
+				}
+				else
+				{
+					// a data block was lost, reset to the expected position
+					// and resume sending from there
+					FS_Seek(host_client->download_file, host_client->download_expectedposition, SEEK_SET);
+				}
+			}
 			break;
 
 		case clc_ackframe:

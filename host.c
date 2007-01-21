@@ -454,6 +454,17 @@ void SV_DropClient(qboolean crash)
 		prog->globals.server->self = saveSelf;
 	}
 
+	// if a download is active, close it
+	if (host_client->download_file)
+	{
+		Con_DPrintf("Download of %s aborted when %s dropped\n", host_client->download_name, host_client->name);
+		FS_Close(host_client->download_file);
+		host_client->download_file = NULL;
+		host_client->download_name[0] = 0;
+		host_client->download_expectedposition = 0;
+		host_client->download_started = false;
+	}
+
 	// remove leaving player from scoreboard
 	//host_client->edict->fields.server->netname = PRVM_SetEngineString(host_client->name);
 	//if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_clientcolors)))

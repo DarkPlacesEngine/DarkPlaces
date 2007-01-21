@@ -316,8 +316,22 @@ static int SCR_DrawQWDownload(int offset)
 	float size = 8;
 	char temp[256];
 	if (!cls.qw_downloadname[0])
+	{
+		cls.qw_downloadspeedrate = 0;
+		cls.qw_downloadspeedtime = realtime;
+		cls.qw_downloadspeedcount = 0;
 		return 0;
-	dpsnprintf(temp, sizeof(temp), "Downloading %s ...  %3i%%\n", cls.qw_downloadname, cls.qw_downloadpercent);
+	}
+	if (realtime >= cls.qw_downloadspeedtime + 1)
+	{
+		cls.qw_downloadspeedrate = cls.qw_downloadspeedcount;
+		cls.qw_downloadspeedtime = realtime;
+		cls.qw_downloadspeedcount = 0;
+	}
+	if (cls.protocol == PROTOCOL_QUAKEWORLD)
+		dpsnprintf(temp, sizeof(temp), "Downloading %s %3i%% (%i) at %i bytes/s\n", cls.qw_downloadname, cls.qw_downloadpercent, cls.qw_downloadmemorycursize, cls.qw_downloadspeedrate);
+	else
+		dpsnprintf(temp, sizeof(temp), "Downloading %s %3i%% (%i/%i) at %i bytes/s\n", cls.qw_downloadname, cls.qw_downloadpercent, cls.qw_downloadmemorycursize, cls.qw_downloadmemorymaxsize, cls.qw_downloadspeedrate);
 	len = (int)strlen(temp);
 	x = (vid_conwidth.integer - len*size) / 2;
 	y = vid_conheight.integer - size - offset;

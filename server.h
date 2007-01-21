@@ -184,6 +184,12 @@ typedef struct client_s
 	entityframe_database_t *entitydatabase;
 	entityframe4_database_t *entitydatabase4;
 	entityframe5_database_t *entitydatabase5;
+
+	// information on an active download if any
+	qfile_t *download_file;
+	int download_expectedposition; // next position the client should ack
+	qboolean download_started;
+	char download_name[MAX_QPATH];
 } client_t;
 
 

@@ -225,7 +225,7 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define	svc_skybox			37		// [string] skyname
 
 // LordHavoc: my svc_ range, 50-59
-#define svc_unusedlh1		50		//
+#define svc_downloaddata	50		// [int] start [short] size
 #define svc_updatestatubyte	51		// [byte] stat [byte] value
 #define svc_effect			52		// [vector] org [byte] modelindex [byte] startframe [byte] framecount [byte] framerate
 #define svc_effect2			53		// [vector] org [short] modelindex [short] startframe [byte] framecount [byte] framerate
@@ -248,7 +248,7 @@ void Protocol_Names(char *buffer, size_t buffersize);
 
 // LordHavoc: my clc_ range, 50-59
 #define clc_ackframe	50		// [int] framenumber
-#define clc_unusedlh1 	51
+#define clc_ackdownloaddata	51	// [int] start [short] size   (note: exact echo of latest values received in svc_downloaddata, packet-loss handling is in the server)
 #define clc_unusedlh2 	52
 #define clc_unusedlh3 	53
 #define clc_unusedlh4 	54

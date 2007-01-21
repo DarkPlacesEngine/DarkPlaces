@@ -36,6 +36,9 @@ void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int numstates, const entity_sta
 cvar_t sv_protocolname = {0, "sv_protocolname", "DP7", "selects network protocol to host for (values include QUAKE, QUAKEDP, NEHAHRAMOVIE, DP1 and up)"};
 cvar_t sv_ratelimitlocalplayer = {0, "sv_ratelimitlocalplayer", "0", "whether to apply rate limiting to the local player in a listen server (only useful for testing)"};
 cvar_t sv_maxrate = {CVAR_SAVE | CVAR_NOTIFY, "sv_maxrate", "10000", "upper limit on client rate cvar, should reflect your network connection quality"};
+cvar_t sv_allowdownloads = {0, "sv_allowdownloads", "1", "whether to allow clients to download files from the server (does not affect http downloads)"};
+cvar_t sv_allowdownloads_inarchive = {0, "sv_allowdownloads_inarchive", "0", "whether to allow downloads from archives (pak/pk3)"};
+cvar_t sv_allowdownloads_archive = {0, "sv_allowdownloads_archive", "0", "whether to allow downloads of archives (pak/pk3)"};
 
 extern cvar_t sv_random_seed;
 
@@ -73,6 +76,8 @@ mempool_t *sv_mempool = NULL;
 extern void SV_Phys_Init (void);
 extern void SV_World_Init (void);
 static void SV_SaveEntFile_f(void);
+static void SV_StartDownload_f(void);
+static void SV_Download_f(void);
 
 /*
 ===============
@@ -89,6 +94,8 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&csqc_progcrc);
 
 	Cmd_AddCommand("sv_saveentfile", SV_SaveEntFile_f, "save map entities to .ent file (to allow external editing)");
+	Cmd_AddCommand_WithClientCommand("sv_startdownload", NULL, SV_StartDownload_f, "begins sending a file to the client (network protocol use only)");
+	Cmd_AddCommand_WithClientCommand("download", NULL, SV_Download_f, "downloads a specified file from the server");
 	Cvar_RegisterVariable (&sv_maxvelocity);
 	Cvar_RegisterVariable (&sv_gravity);
 	Cvar_RegisterVariable (&sv_friction);
@@ -124,6 +131,9 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_protocolname);
 	Cvar_RegisterVariable (&sv_ratelimitlocalplayer);
 	Cvar_RegisterVariable (&sv_maxrate);
+	Cvar_RegisterVariable (&sv_allowdownloads);
+	Cvar_RegisterVariable (&sv_allowdownloads_inarchive);
+	Cvar_RegisterVariable (&sv_allowdownloads_archive);
 	Cvar_RegisterVariable (&sv_progs);
 
 	SV_VM_Init();
@@ -364,6 +374,12 @@ void SV_SendServerinfo (client_t *client)
 			MSG_WriteByte (&client->netconnection->message, svc_stufftext);
 			MSG_WriteString (&client->netconnection->message, va("%s\n", PRVM_GetString(val->string)));
 		}
+	}
+
+	if (sv_allowdownloads.integer)
+	{
+		MSG_WriteByte (&client->netconnection->message, svc_stufftext);
+		MSG_WriteString (&client->netconnection->message, "cl_serverextension_download 1");
 	}
 
 	MSG_WriteByte (&client->netconnection->message, svc_serverinfo);
@@ -1215,7 +1231,7 @@ SV_SendClientDatagram
 static unsigned char sv_sendclientdatagram_buf[NET_MAXMESSAGE]; // FIXME?
 void SV_SendClientDatagram (client_t *client)
 {
-	int rate, maxrate, maxsize, maxsize2;
+	int rate, maxrate, maxsize, maxsize2, downloadsize;
 	sizebuf_t msg;
 	int stats[MAX_CL_STATS];
 
@@ -1248,6 +1264,11 @@ void SV_SendClientDatagram (client_t *client)
 		maxsize2 = 1400;
 	}
 
+	// while downloading, limit entity updates to half the packet
+	// (any leftover space will be used for downloading)
+	if (host_client->download_file)
+		maxsize /= 2;
+
 	msg.data = sv_sendclientdatagram_buf;
 	msg.maxsize = maxsize;
 	msg.cursize = 0;
@@ -1275,8 +1296,34 @@ void SV_SendClientDatagram (client_t *client)
 	{
 		// the player isn't totally in the game yet
 		// send small keepalive messages if too much time has passed
+		msg.maxsize = maxsize2;
 		client->keepalivetime = realtime + 5;
 		MSG_WriteChar (&msg, svc_nop);
+	}
+
+	msg.maxsize = maxsize2;
+
+	// if a download is active, see if there is room to fit some download data
+	// in this packet
+	downloadsize = maxsize * 2 - msg.cursize - 7;
+	if (host_client->download_file && host_client->download_started && downloadsize > 0)
+	{
+		fs_offset_t downloadstart;
+		unsigned char data[1400];
+		downloadstart = FS_Tell(host_client->download_file);
+		downloadsize = min(downloadsize, (int)sizeof(data));
+		downloadsize = FS_Read(host_client->download_file, data, downloadsize);
+		// note this sends empty messages if at the end of the file, which is
+		// necessary to keep the packet loss logic working
+		// (the last blocks may be lost and need to be re-sent, and that will
+		//  only occur if the client acks the empty end messages, revealing
+		//  a gap in the download progress, causing the last blocks to be
+		//  sent again)
+		MSG_WriteChar (&msg, svc_downloaddata);
+		MSG_WriteLong (&msg, downloadstart);
+		MSG_WriteShort (&msg, downloadsize);
+		if (downloadsize > 0)
+			SZ_Write (&msg, data, downloadsize);
 	}
 
 // send the datagram
@@ -1416,6 +1463,125 @@ void SV_SendClientMessages (void)
 	SV_CleanupEnts();
 }
 
+void SV_StartDownload_f(void)
+{
+	if (host_client->download_file)
+		host_client->download_started = true;
+}
+
+void SV_Download_f(void)
+{
+	const char *whichpack, *whichpack2, *extension;
+
+	if (Cmd_Argc() != 2)
+	{
+		SV_ClientPrintf("usage: download <filename>\n");
+		return;
+	}
+
+	if (FS_CheckNastyPath(Cmd_Argv(1), false))
+	{
+		SV_ClientPrintf("Download rejected: nasty filename \"%s\"\n", Cmd_Argv(1));
+		return;
+	}
+
+	if (host_client->download_file)
+	{
+		// at this point we'll assume the previous download should be aborted
+		Con_DPrintf("Download of %s aborted by %s starting a new download\n", host_client->download_name, host_client->name);
+		Host_ClientCommands("\nstopdownload\n");
+
+		// close the file and reset variables
+		FS_Close(host_client->download_file);
+		host_client->download_file = NULL;
+		host_client->download_name[0] = 0;
+		host_client->download_expectedposition = 0;
+		host_client->download_started = false;
+	}
+
+	if (!sv_allowdownloads.integer)
+	{
+		SV_ClientPrintf("Downloads are disabled on this server\n");
+		Host_ClientCommands("\nstopdownload\n");
+		return;
+	}
+
+	strlcpy(host_client->download_name, Cmd_Argv(1), sizeof(host_client->download_name));
+
+	// host_client is asking to download a specified file
+	if (developer.integer >= 100)
+		Con_Printf("Download request for %s by %s\n", host_client->download_name, host_client->name);
+
+	if (!FS_FileExists(host_client->download_name))
+	{
+		SV_ClientPrintf("Download rejected: server does not have the file \"%s\"\nYou may need to separately download or purchase the data archives for this game/mod to get this file\n", host_client->download_name);
+		Host_ClientCommands("\nstopdownload\n");
+		return;
+	}
+
+	// check if the user is trying to download part of registered Quake(r)
+	whichpack = FS_WhichPack(host_client->download_name);
+	whichpack2 = FS_WhichPack("gfx/pop.lmp");
+	if ((whichpack && whichpack2 && !strcasecmp(whichpack, whichpack2)) || FS_IsRegisteredQuakePack(host_client->download_name))
+	{
+		SV_ClientPrintf("Download rejected: file \"%s\" is part of registered Quake(r)\nYou must purchase Quake(r) from id Software or a retailer to get this file\nPlease go to http://www.idsoftware.com/games/quake/quake/index.php?game_section=buy\n", host_client->download_name);
+		Host_ClientCommands("\nstopdownload\n");
+		return;
+	}
+
+	// check if the server has forbidden archive downloads entirely
+	if (!sv_allowdownloads_inarchive.integer)
+	{
+		whichpack = FS_WhichPack(host_client->download_name);
+		if (whichpack)
+		{
+			SV_ClientPrintf("Download rejected: file \"%s\" is in an archive (\"%s\")\nYou must separately download or purchase the data archives for this game/mod to get this file\n", host_client->download_name, whichpack);
+			Host_ClientCommands("\nstopdownload\n");
+			return;
+		}
+	}
+
+	if (!sv_allowdownloads_archive.integer)
+	{
+		extension = FS_FileExtension(host_client->download_name);
+		if (!strcasecmp(extension, "pak") || !strcasecmp(extension, "pk3"))
+		{
+			SV_ClientPrintf("Download rejected: file \"%s\" is an archive\nYou must separately download or purchase the data archives for this game/mod to get this file\n", host_client->download_name);
+			Host_ClientCommands("\nstopdownload\n");
+			return;
+		}
+	}
+
+	host_client->download_file = FS_Open(host_client->download_name, "rb", true, false);
+	if (!host_client->download_file)
+	{
+		SV_ClientPrintf("Download rejected: server could not open the file \"%s\"\n", host_client->download_name);
+		Host_ClientCommands("\nstopdownload\n");
+		return;
+	}
+
+	if (FS_FileSize(host_client->download_file) > 1<<30)
+	{
+		SV_ClientPrintf("Download rejected: file \"%s\" is very large\n", host_client->download_name);
+		Host_ClientCommands("\nstopdownload\n");
+		FS_Close(host_client->download_file);
+		host_client->download_file = NULL;
+		return;
+	}
+
+	Con_DPrintf("Downloading %s to %s\n", host_client->download_name, host_client->name);
+
+	Host_ClientCommands("\ncl_downloadbegin %i %s\n", (int)FS_FileSize(host_client->download_file), host_client->download_name);
+
+	host_client->download_expectedposition = 0;
+	host_client->download_started = false;
+
+	// the rest of the download process is handled in SV_SendClientDatagram
+	// and other code dealing with svc_downloaddata and clc_ackdownloaddata
+	//
+	// no svc_downloaddata messages will be sent until sv_startdownload is
+	// sent by the client
+}
 
 /*
 ==============================================================================
