@@ -905,28 +905,7 @@ skipwhite:
 				*datapointer = NULL;
 				return false;
 			}
-			c = *data;
-			if (*data == '\\')
-			{
-				if (data[1] == '"')
-				{
-					data++;
-					c = *data;
-				}
-				else if (data[1] == '\'')
-				{
-					data++;
-					c = *data;
-				}
-				else if (data[1] == 'n')
-				{
-					data++;
-					c = '\n';
-				}
-				else if (data[1] == '\\')
-					data++;
-			}
-			com_token[len++] = c;
+			com_token[len++] = *data;
 		}
 		com_token[len] = 0;
 		*datapointer = data+1;
@@ -942,28 +921,7 @@ skipwhite:
 				*datapointer = NULL;
 				return false;
 			}
-			c = *data;
-			if (*data == '\\')
-			{
-				if (data[1] == '"')
-				{
-					data++;
-					c = *data;
-				}
-				else if (data[1] == '\'')
-				{
-					data++;
-					c = *data;
-				}
-				else if (data[1] == 'n')
-				{
-					data++;
-					c = '\n';
-				}
-				else if (data[1] == '\\')
-					data++;
-			}
-			com_token[len++] = c;
+			com_token[len++] = *data;
 		}
 		com_token[len] = 0;
 		*datapointer = data;
