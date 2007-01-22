@@ -574,6 +574,16 @@ void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float
 	cl_effect_t *e;
 	if (!modelindex) // sanity check
 		return;
+	if (framerate < 1)
+	{
+		Con_Printf("CL_Effect: framerate %f is < 1\n", framerate);
+		return;
+	}
+	if (framecount < 1)
+	{
+		Con_Printf("CL_Effect: framecount %i is < 1\n", framecount);
+		return;
+	}
 	for (i = 0, e = cl.effects;i < cl.max_effects;i++, e++)
 	{
 		if (e->active)
