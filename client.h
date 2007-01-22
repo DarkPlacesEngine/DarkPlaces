@@ -159,9 +159,16 @@ typedef struct dlight_s
 	// brightness (not really radius anymore)
 	// (worldlight: saved to .rtlights file)
 	vec_t radius;
-	// drop radius this much each second
+	// drop intensity this much each second
 	// (dlight only)
 	vec_t decay;
+	// intensity value which is dropped over time
+	// (dlight only)
+	vec_t intensity;
+	// initial values for intensity to modify
+	// (dlight only)
+	vec_t initialradius;
+	vec3_t initialcolor;
 	// light style which controls intensity of this light
 	// (worldlight: saved to .rtlights file)
 	int style;

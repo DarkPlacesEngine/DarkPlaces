@@ -1545,6 +1545,9 @@ void CL_MoveLerpEntityStates(entity_t *ent)
 		VectorCopy(ent->state_current.origin, ent->persistent.neworigin);
 		VectorCopy(ent->state_current.angles, ent->persistent.newangles);
 	}
+	// trigger muzzleflash effect if necessary
+	if (ent->state_current.effects & EF_MUZZLEFLASH)
+		ent->persistent.muzzleflash = 1;
 }
 
 /*
