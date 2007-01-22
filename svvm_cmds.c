@@ -938,9 +938,10 @@ void PF_droptofloor (void)
 
 	trace = SV_Move (ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, end, MOVE_NORMAL, ent);
 
-	if (trace.fraction != 1)
+	if (trace.fraction != 1 || (trace.startsolid && sv_gameplayfix_droptofloorstartsolid.integer))
 	{
-		VectorCopy (trace.endpos, ent->fields.server->origin);
+		if (trace.fraction < 1)
+			VectorCopy (trace.endpos, ent->fields.server->origin);
 		SV_LinkEdict (ent, false);
 		ent->fields.server->flags = (int)ent->fields.server->flags | FL_ONGROUND;
 		ent->fields.server->groundentity = PRVM_EDICT_TO_PROG(trace.ent);
