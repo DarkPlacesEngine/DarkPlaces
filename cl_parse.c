@@ -2375,7 +2375,9 @@ qboolean CL_ExaminePrintString(const char *text)
 				{
 					for (charindex = 0;cl.scores[cl.parsingtextplayerindex].name[charindex] == t[charindex];charindex++)
 						;
-					if (cl.scores[cl.parsingtextplayerindex].name[charindex] == 0 && t[charindex] == '\n')
+					// note: the matching algorithm stops at the end of the player name because some servers append text such as " READY" after the player name in the scoreboard but not in the ping report
+					//if (cl.scores[cl.parsingtextplayerindex].name[charindex] == 0 && t[charindex] == '\n')
+					if (t[charindex] == '\n')
 					{
 						cl.scores[cl.parsingtextplayerindex].qw_ping = bound(0, ping, 9999);
 						for (cl.parsingtextplayerindex++;cl.parsingtextplayerindex < cl.maxclients && !cl.scores[cl.parsingtextplayerindex].name[0];cl.parsingtextplayerindex++)
