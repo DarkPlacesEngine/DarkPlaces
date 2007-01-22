@@ -673,6 +673,7 @@ Parse a token out of a string
 int COM_ParseToken(const char **datapointer, int returnnewline)
 {
 	int len;
+	int c;
 	const char *data = *datapointer;
 
 	len = 0;
@@ -725,15 +726,27 @@ skipwhite:
 		// quoted string
 		for (data++;*data != '\"';data++)
 		{
-			if (*data == '\\' && data[1] == '"' )
-				data++;
 			if (!*data || len >= (int)sizeof(com_token) - 1)
 			{
 				com_token[0] = 0;
 				*datapointer = NULL;
 				return false;
 			}
-			com_token[len++] = *data;
+			c = *data;
+			if (*data == '\\')
+			{
+				if (data[1] == '"')
+				{
+					data++;
+					c = *data;
+				}
+				else if (data[1] == 'n')
+				{
+					data++;
+					c = '\n';
+				}
+			}
+			com_token[len++] = c;
 		}
 		com_token[len] = 0;
 		*datapointer = data+1;
@@ -803,6 +816,7 @@ Parse a token out of a string, behaving like the qwcl console
 int COM_ParseTokenConsole(const char **datapointer)
 {
 	int len;
+	int c;
 	const char *data = *datapointer;
 
 	len = 0;
@@ -844,7 +858,21 @@ skipwhite:
 				*datapointer = NULL;
 				return false;
 			}
-			com_token[len++] = *data;
+			c = *data;
+			if (*data == '\\')
+			{
+				if (data[1] == '"')
+				{
+					data++;
+					c = *data;
+				}
+				else if (data[1] == 'n')
+				{
+					data++;
+					c = '\n';
+				}
+			}
+			com_token[len++] = c;
 		}
 		com_token[len] = 0;
 		*datapointer = data+1;
