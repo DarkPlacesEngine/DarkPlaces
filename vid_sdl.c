@@ -473,6 +473,7 @@ static void VID_OutputVersion()
 int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate, int stereobuffer)
 {
 	int i;
+	static int notfirstvideomode = false;
 	int flags = SDL_OPENGL;
 	const char *drivername;
 
@@ -483,7 +484,9 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 		We cant switch from one OpenGL video mode to another.
 		Thus we first switch to some stupid 2D mode and then back to OpenGL.
 	*/
-	SDL_SetVideoMode( 0, 0, 0, 0 );
+	if (notfirstvideomode)
+		SDL_SetVideoMode( 0, 0, 0, 0 );
+	notfirstvideomode = true;
 
 	// SDL usually knows best
 	drivername = NULL;
@@ -587,6 +590,9 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 
 void VID_Shutdown (void)
 {
+	// this is needed to retry gamma after a vid_restart
+	VID_RestoreSystemGamma();
+
 	IN_Activate(false);
 	SDL_QuitSubSystem(SDL_INIT_VIDEO);
 }
