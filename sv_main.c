@@ -2546,8 +2546,7 @@ void SV_VM_Setup(void)
 	extern cvar_t csqc_progname;	//[515]: csqc crc check and right csprogs name according to progs.dat
 	extern cvar_t csqc_progcrc;
 	extern cvar_t csqc_progsize;
-	unsigned char *csprogsdata;
-	fs_offset_t csprogsdatasize;
+	size_t csprogsdatasize;
 	PRVM_Begin;
 	PRVM_InitProg( PRVM_SERVERPROG );
 
