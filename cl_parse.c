@@ -987,7 +987,7 @@ void CL_BeginDownloads(qboolean aborteddownload)
 				else
 					Con_Printf("Model %s not found\n", cl.model_name[cl.downloadmodel_current]);
 				// regarding the * check: don't try to download submodels
-				if (cl_serverextension_download.integer && cls.netcon && cl.model_name[cl.downloadmodel_current][0] != '*')
+				if (cl_serverextension_download.integer && cls.netcon && cl.model_name[cl.downloadmodel_current][0] != '*' && !sv.active)
 				{
 					Cmd_ForwardStringToServer(va("download %s", cl.model_name[cl.downloadmodel_current]));
 					// we'll try loading again when the download finishes
@@ -1036,7 +1036,7 @@ void CL_BeginDownloads(qboolean aborteddownload)
 			if (!FS_FileExists(soundname) && !FS_FileExists(cl.sound_name[cl.downloadsound_current]))
 			{
 				Con_Printf("Sound %s not found\n", soundname);
-				if (cl_serverextension_download.integer && cls.netcon)
+				if (cl_serverextension_download.integer && cls.netcon && !sv.active)
 				{
 					Cmd_ForwardStringToServer(va("download %s", soundname));
 					// we'll try loading again when the download finishes
