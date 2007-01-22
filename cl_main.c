@@ -647,7 +647,12 @@ dlightsetup:
 	dl->color[0] = red;
 	dl->color[1] = green;
 	dl->color[2] = blue;
-	dl->decay = decay;
+	dl->initialradius = radius;
+	dl->initialcolor[0] = red;
+	dl->initialcolor[1] = green;
+	dl->initialcolor[2] = blue;
+	dl->decay = decay / radius; // changed decay to be a percentage decrease
+	dl->intensity = 1; // this is what gets decayed
 	if (lifetime)
 		dl->die = cl.time + lifetime;
 	else
@@ -668,7 +673,7 @@ void CL_DecayLights(void)
 {
 	int i, oldmax;
 	dlight_t *dl;
-	float time, f;
+	float time;
 
 	time = bound(0, cl.time - cl.oldtime, 0.1);
 	oldmax = cl.num_dlights;
@@ -677,10 +682,11 @@ void CL_DecayLights(void)
 	{
 		if (dl->radius)
 		{
-			f = dl->radius - time * dl->decay;
-			if (cl.time < dl->die && f > 0)
+			dl->intensity -= time * dl->decay;
+			if (cl.time < dl->die && dl->intensity > 0)
 			{
-				dl->radius = dl->radius - time * dl->decay;
+				//dl->radius = dl->initialradius * dl->intensity;
+				VectorScale(dl->initialcolor, dl->intensity, dl->color);
 				cl.num_dlights = i + 1;
 			}
 			else
@@ -1030,8 +1036,6 @@ void CL_UpdateNetworkEntity(entity_t *e)
 				else
 					CL_EntityParticles(e);
 			}
-			if (e->render.effects & EF_MUZZLEFLASH)
-				e->persistent.muzzleflash = 1.0f;
 			if (e->render.effects & EF_DIMLIGHT)
 			{
 				dlightradius = max(dlightradius, 200);
@@ -1078,8 +1082,8 @@ void CL_UpdateNetworkEntity(entity_t *e)
 			trace = CL_TraceBox(origin, vec3_origin, vec3_origin, v2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_SKY, false);
 			tempmatrix = e->render.matrix;
 			Matrix4x4_SetOrigin(&tempmatrix, trace.endpos[0], trace.endpos[1], trace.endpos[2]);
-			CL_AllocDlight(NULL, &tempmatrix, 100, e->persistent.muzzleflash, e->persistent.muzzleflash, e->persistent.muzzleflash, 0, 0, 0, -1, true, 0, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-			e->persistent.muzzleflash -= bound(0, cl.time - cl.oldtime, 0.1) * 10;
+			CL_AllocDlight(NULL, &tempmatrix, 150, e->persistent.muzzleflash * 4.0f, e->persistent.muzzleflash * 4.0f, e->persistent.muzzleflash * 4.0f, 0, 0, 0, -1, true, 0, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			e->persistent.muzzleflash -= bound(0, cl.time - cl.oldtime, 0.1) * 20;
 		}
 		// LordHavoc: if the model has no flags, don't check each
 		if (e->render.model && e->render.model->flags && (!e->state_current.tagentity && !(e->render.flags & RENDER_VIEWMODEL)))
