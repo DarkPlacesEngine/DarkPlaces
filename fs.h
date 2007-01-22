@@ -69,8 +69,10 @@ void FS_Purge (qfile_t* file);
 const char *FS_FileWithoutPath (const char *in);
 const char *FS_FileExtension (const char *in);
 int FS_CheckNastyPath (const char *path, qboolean isgamedir);
-qboolean FS_ChangeGameDir(const char *string);
+qboolean FS_CheckGameDir(const char *gamedir);
+qboolean FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qboolean complain, qboolean failmissing);
 qboolean FS_IsRegisteredQuakePack(const char *name);
+void FS_Rescan(void);
 
 typedef struct fssearch_s
 {
