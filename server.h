@@ -70,6 +70,7 @@ typedef struct server_s
 
 	// crc of clientside progs at time of level start
 	int csqc_progcrc; // -1 = no progs
+	int csqc_progsize; // -1 = no progs
 	char csqc_progname[MAX_QPATH]; // copied from csqc_progname at level start
 
 	// map name

@@ -897,6 +897,21 @@ void CL_BeginDownloads(qboolean aborteddownload)
 
 	// TODO: this would be a good place to do curl downloads
 
+	if (cl.downloadcsqc)
+	{
+		size_t progsize;
+		cl.downloadcsqc = false;
+		if (cls.netcon
+		 && !sv.active
+		 && csqc_progname.string
+		 && csqc_progname.string[0]
+		 && csqc_progcrc.integer >= 0
+		 && cl_serverextension_download.integer
+		 && (FS_CRCFile(csqc_progname.string, &progsize) != csqc_progcrc.integer || ((int)progsize != csqc_progsize.integer && csqc_progsize.integer != -1))
+		 && !FS_FileExists(va("dlcache/%s.%i.%i", csqc_progname.string, csqc_progsize.integer, csqc_progcrc.integer)))
+			Cmd_ForwardStringToServer(va("download %s", csqc_progname.string));
+	}
+
 	if (cl.loadmodel_current < cl.loadmodel_total)
 	{
 		// loading models
@@ -1072,17 +1087,37 @@ void CL_StopDownload(int size, int crc)
 {
 	if (cls.qw_downloadmemory && cls.qw_downloadmemorycursize == size && CRC_Block(cls.qw_downloadmemory, size) == crc)
 	{
+		int existingcrc;
+		size_t existingsize;
+		const char *extension;
+
 		// finished file
 		// save to disk only if we don't already have it
 		// (this is mainly for playing back demos)
-		if (!FS_FileExists(cls.qw_downloadname))
+		existingcrc = FS_CRCFile(cls.qw_downloadname, &existingsize);
+		if (existingsize)
 		{
-			const char *extension;
-
+			if ((int)existingsize != size || existingcrc != crc)
+			{
+				// we have a mismatching file, pick another name for it
+				char name[MAX_QPATH*2];
+				dpsnprintf(name, sizeof(name), "dlcache/%s.%i.%i", cls.qw_downloadname, size, crc);
+				if (!FS_FileExists(name))
+				{
+					Con_Printf("Downloaded \"%s\" (%i bytes, %i CRC)\n", name, size, crc);
+					FS_WriteFile(name, cls.qw_downloadmemory, cls.qw_downloadmemorycursize);
+				}
+			}
+		}
+		else
+		{
+			// we either don't have it or have a mismatching file...
+			// so it's time to accept the file
+			// but if we already have a mismatching file we need to rename
+			// this new one, and if we already have this file in renamed form,
+			// we do nothing
 			Con_Printf("Downloaded \"%s\" (%i bytes, %i CRC)\n", cls.qw_downloadname, size, crc);
-
 			FS_WriteFile(cls.qw_downloadname, cls.qw_downloadmemory, cls.qw_downloadmemorycursize);
-
 			extension = FS_FileExtension(cls.qw_downloadname);
 			if (!strcasecmp(extension, "pak") || !strcasecmp(extension, "pk3"))
 				FS_Rescan();
@@ -1446,6 +1481,7 @@ void CL_ParseServerInfo (void)
 		cl.loadsound_current = 1;
 		cl.downloadsound_current = 1;
 		cl.loadsound_total = numsounds;
+		cl.downloadcsqc = true;
 		cl.loadfinished = false;
 	}
 

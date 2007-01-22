@@ -2729,3 +2729,24 @@ qboolean FS_IsRegisteredQuakePack(const char *name)
 
 	return false;
 }
+
+int FS_CRCFile(const char *filename, size_t *filesizepointer)
+{
+	int crc = -1;
+	unsigned char *filedata;
+	fs_offset_t filesize;
+	if (filesizepointer)
+		*filesizepointer = 0;
+	if (!filename || !*filename)
+		return crc;
+	filedata = FS_LoadFile(filename, tempmempool, true, &filesize);
+	if (filedata)
+	{
+		if (filesizepointer)
+			*filesizepointer = filesize;
+		crc = CRC_Block(filedata, filesize);
+		Mem_Free(filedata);
+	}
+	return crc;
+}
+
