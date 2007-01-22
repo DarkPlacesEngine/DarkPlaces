@@ -91,7 +91,25 @@ static int SV_TestEntityPosition (prvm_edict_t *ent)
 	if (trace.startsupercontents & SUPERCONTENTS_SOLID)
 		return true;
 	else
+	{
+		if (sv.worldmodel->brushq1.hulls && !VectorCompare(ent->fields.server->mins, ent->fields.server->maxs))
+		{
+			// q1bsp/hlbsp use hulls and if the entity does not exactly match
+			// a hull size it is incorrectly tested, so this code tries to
+			// 'fix' it slightly...
+			int i;
+			vec3_t v;
+			for (i = 0;i < 8;i++)
+			{
+				v[0] = (i & 1) ? ent->fields.server->maxs[0] : ent->fields.server->mins[0];
+				v[1] = (i & 2) ? ent->fields.server->maxs[1] : ent->fields.server->mins[1];
+				v[2] = (i & 4) ? ent->fields.server->maxs[2] : ent->fields.server->mins[2];
+				if (SV_PointSuperContents(v) & SUPERCONTENTS_SOLID)
+					return true;
+			}
+		}
 		return false;
+	}
 }
 
 /*
@@ -1002,7 +1020,8 @@ static void SV_UnstickEntity (prvm_edict_t *ent)
 			}
 
 	VectorCopy (org, ent->fields.server->origin);
-	Con_DPrintf("Stuck entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname));
+	if (developer.integer >= 100)
+		Con_Printf("Stuck entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname));
 }
 
 
