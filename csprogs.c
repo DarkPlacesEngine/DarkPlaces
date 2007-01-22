@@ -112,6 +112,7 @@ void CL_VM_Error (const char *format, ...)	//[515]: hope it will be never execut
 	Mem_FreePool(&csqc_mempool);
 
 	Cvar_SetValueQuick(&csqc_progcrc, -1);
+	Cvar_SetValueQuick(&csqc_progsize, -1);
 
 //	Host_AbortCurrentFrame();	//[515]: hmmm... if server says it needs csqc then client MUST disconnect
 	Host_Error(va("CL_VM_Error: %s", errorstring));
@@ -358,10 +359,13 @@ void CL_VM_Parse_StuffCmd (const char *msg)
 		// if this is setting a csqc variable, deprotect csqc_progcrc
 		// temporarily so that it can be set by the cvar command,
 		// and then reprotect it afterwards
-		int flags = csqc_progcrc.flags;
+		int crcflags = csqc_progcrc.flags;
+		int sizeflags = csqc_progcrc.flags;
 		csqc_progcrc.flags &= ~CVAR_READONLY;
+		csqc_progsize.flags &= ~CVAR_READONLY;
 		Cmd_ExecuteString (msg, src_command);
-		csqc_progcrc.flags = flags;
+		csqc_progcrc.flags = crcflags;
+		csqc_progsize.flags = sizeflags;
 		return;
 	}
 	if(!csqc_loaded || !CSQC_Parse_StuffCmd)
@@ -488,12 +492,15 @@ void CL_VM_Init (void)
 	unsigned char *csprogsdata;
 	fs_offset_t csprogsdatasize;
 	int csprogsdatacrc, requiredcrc;
+	int requiredsize;
 	entity_t *ent;
 
 	// reset csqc_progcrc after reading it, so that changing servers doesn't
 	// expect csqc on the next server
 	requiredcrc = csqc_progcrc.integer;
+	requiredsize = csqc_progsize.integer;
 	Cvar_SetValueQuick(&csqc_progcrc, -1);
+	Cvar_SetValueQuick(&csqc_progsize, -1);
 
 	csqc_loaded = false;
 	memset(cl.csqc_model_precache, 0, sizeof(cl.csqc_model_precache));
@@ -505,21 +512,23 @@ void CL_VM_Init (void)
 
 	// see if the requested csprogs.dat file matches the requested crc
 	csprogsdatacrc = -1;
-	csprogsdata = FS_LoadFile(csqc_progname.string, tempmempool, true, &csprogsdatasize);
+	csprogsdata = FS_LoadFile(va("dlcache/%s.%i.%i", csqc_progname.string, requiredsize, requiredcrc), tempmempool, true, &csprogsdatasize);
+	if (!csprogsdata)
+		csprogsdata = FS_LoadFile(csqc_progname.string, tempmempool, true, &csprogsdatasize);
 	if (csprogsdata)
 	{
 		csprogsdatacrc = CRC_Block(csprogsdata, csprogsdatasize);
 		Mem_Free(csprogsdata);
-		if (csprogsdatacrc != requiredcrc)
+		if (csprogsdatacrc != requiredcrc || csprogsdatasize != requiredsize)
 		{
 			if (cls.demoplayback)
 			{
-				Con_Printf("^1Warning: Your %s is not the same version as the demo was recorded with (CRC is %i but should be %i)\n", csqc_progname.string, csprogsdatacrc, requiredcrc);
+				Con_Printf("^1Warning: Your %s is not the same version as the demo was recorded with (CRC/size are %i/%i but should be %i/%i)\n", csqc_progname.string, csprogsdatacrc, (int)csprogsdatasize, requiredcrc, requiredsize);
 				return;
 			}
 			else
 			{
-				Con_Printf("^1Your %s is not the same version as the server (CRC is %i but should be %i)\n", csqc_progname.string, csprogsdatacrc, requiredcrc);
+				Con_Printf("^1Your %s is not the same version as the server (CRC is %i/%i but should be %i/%i)\n", csqc_progname.string, csprogsdatacrc, (int)csprogsdatasize, requiredcrc, requiredsize);
 				CL_Disconnect();
 				return;
 			}
@@ -560,7 +569,7 @@ void CL_VM_Init (void)
 	PRVM_LoadProgs(csqc_progname.string, cl_numrequiredfunc, cl_required_func, 0, NULL);
 
 	if(prog->loaded)
-		Con_Printf("CSQC ^5loaded (crc=%i)\n", csprogsdatacrc);
+		Con_Printf("CSQC ^5loaded (crc=%i, size=%i)\n", csprogsdatacrc, (int)csprogsdatasize);
 	else
 	{
 		CL_VM_Error("CSQC ^2failed to load\n");
@@ -606,6 +615,7 @@ void CL_VM_ShutDown (void)
 {
 	Cmd_ClearCsqcFuncs();
 	Cvar_SetValueQuick(&csqc_progcrc, -1);
+	Cvar_SetValueQuick(&csqc_progsize, -1);
 	if(!csqc_loaded)
 		return;
 	CSQC_BEGIN
