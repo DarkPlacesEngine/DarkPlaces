@@ -979,7 +979,7 @@ void FS_AddGameDirectory (const char *dir)
 		}
 	}
 
-	// add any PK3 package in the director
+	// add any PK3 package in the directory
 	for (current = list;current;current = current->next)
 	{
 		if (!strcasecmp(FS_FileExtension(current->text), "pk3"))
@@ -988,6 +988,7 @@ void FS_AddGameDirectory (const char *dir)
 			FS_AddPack_Fullpath(pakfile, NULL, false);
 		}
 	}
+
 	freedirectory(list);
 
 	// Add the directory to the search path
@@ -1091,10 +1092,10 @@ void FS_ClearSearchPath (void)
 
 /*
 ================
-FS_Rescan_f
+FS_Rescan
 ================
 */
-void FS_Rescan_f (void)
+void FS_Rescan (void)
 {
 	int i;
 	qboolean fs_modified = false;
@@ -1154,36 +1155,74 @@ void FS_Rescan_f (void)
 	}
 }
 
+void FS_Rescan_f(void)
+{
+	FS_Rescan();
+}
 
 /*
 ================
-FS_ChangeGameDir
+FS_ChangeGameDirs
 ================
 */
-void Host_SaveConfig_f (void);
-void Host_LoadConfig_f (void);
-qboolean FS_ChangeGameDir(const char *string)
+extern void Host_SaveConfig_f (void);
+extern void Host_LoadConfig_f (void);
+qboolean FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qboolean complain, qboolean failmissing)
 {
-	// if already using the requested gamedir, do nothing
-	if (fs_numgamedirs == 1 && !strcmp(fs_gamedirs[0], string))
-		return false;
+	int i;
 
-	// if string is nasty, reject it
-	if(FS_CheckNastyPath(string, true)) // overflowed or nasty?
+	if (cls.state != ca_disconnected || sv.active)
 	{
-		Con_Printf("FS_ChangeGameDir(\"%s\"): nasty filename rejected\n", string);
+		if (complain)
+			Con_Printf("Can not change gamedir while client is connected or server is running!\n");
 		return false;
 	}
 
-	// save the current config
+	if (fs_numgamedirs == numgamedirs)
+	{
+		for (i = 0;i < numgamedirs;i++)
+			if (strcasecmp(fs_gamedirs[i], gamedirs[i]))
+				break;
+		if (i == numgamedirs)
+			return true; // already using this set of gamedirs, do nothing
+	}
+
+	if (numgamedirs > MAX_GAMEDIRS)
+	{
+		if (complain)
+			Con_Printf("That is too many gamedirs (%i > %i)\n", numgamedirs, MAX_GAMEDIRS);
+		return false; // too many gamedirs
+	}
+
+	for (i = 0;i < numgamedirs;i++)
+	{
+		// if string is nasty, reject it
+		if(FS_CheckNastyPath(gamedirs[i], true))
+		{
+			if (complain)
+				Con_Printf("Nasty gamedir name rejected: %s\n", gamedirs[i]);
+			return false; // nasty gamedirs
+		}
+	}
+
+	for (i = 0;i < numgamedirs;i++)
+	{
+		if (!FS_CheckGameDir(gamedirs[i]) && failmissing)
+		{
+			if (complain)
+				Con_Printf("Gamedir missing: %s%s/\n", fs_basedir, gamedirs[i]);
+			return false; // missing gamedirs
+		}
+	}
+
 	Host_SaveConfig_f();
 
-	// change to the new gamedir
-	fs_numgamedirs = 1;
-	strlcpy(fs_gamedirs[0], string, sizeof(fs_gamedirs[0]));
+	fs_numgamedirs = numgamedirs;
+	for (i = 0;i < fs_numgamedirs;i++)
+		strlcpy(fs_gamedirs[i], gamedirs[i], sizeof(fs_gamedirs[i]));
 
 	// reinitialize filesystem to detect the new paks
-	FS_Rescan_f();
+	FS_Rescan();
 
 	// exec the new config
 	Host_LoadConfig_f();
@@ -1205,6 +1244,8 @@ FS_GameDir_f
 void FS_GameDir_f (void)
 {
 	int i;
+	int numgamedirs;
+	char gamedirs[MAX_GAMEDIRS][MAX_QPATH];
 
 	if (Cmd_Argc() < 2)
 	{
@@ -1215,39 +1256,42 @@ void FS_GameDir_f (void)
 		return;
 	}
 
+	numgamedirs = Cmd_Argc() - 1;
+	if (numgamedirs > MAX_GAMEDIRS)
+	{
+		Con_Printf("Too many gamedirs (%i > %i)\n", numgamedirs, MAX_GAMEDIRS);
+		return;
+	}
+
+	for (i = 0;i < numgamedirs;i++)
+		strlcpy(gamedirs[i], Cmd_Argv(i+1), sizeof(gamedirs[i]));
+
+	// allow gamedir change during demo loop
+	if (cls.demoplayback)
+		CL_Disconnect();
+
 	if (cls.state != ca_disconnected || sv.active)
 	{
+		// actually, changing during game would work fine, but would be stupid
 		Con_Printf("Can not change gamedir while client is connected or server is running!\n");
 		return;
 	}
 
-	Host_SaveConfig_f();
+	FS_ChangeGameDirs(numgamedirs, gamedirs, true, true);
+}
 
-	fs_numgamedirs = 0;
-	for (i = 1;i < Cmd_Argc() && fs_numgamedirs < MAX_GAMEDIRS;i++)
-	{
-		// if string is nasty, reject it
-		if(FS_CheckNastyPath(Cmd_Argv(i), true)) // overflowed or nasty?
-		{
-			Con_Printf("FS_GameDir_f(\"%s\"): nasty filename rejected\n", Cmd_Argv(i));
-			continue;
-		}
 
-		strlcpy(fs_gamedirs[fs_numgamedirs], Cmd_Argv(i), sizeof(fs_gamedirs[fs_numgamedirs]));
-		fs_numgamedirs++;
-	}
-
-	// reinitialize filesystem to detect the new paks
-	FS_Rescan_f();
-
-	// exec the new config
-	Host_LoadConfig_f();
-
-	// reinitialize the loaded sounds
-	S_Reload_f();
-
-	// reinitialize renderer (this reloads hud/console background/etc)
-	R_Modules_Restart();
+/*
+================
+FS_CheckGameDir
+================
+*/
+qboolean FS_CheckGameDir(const char *gamedir)
+{
+	stringlist_t *list = listdirectory(va("%s%s/", fs_basedir, gamedir));
+	if (list)
+		freedirectory(list);
+	return list != NULL;
 }
 
 
@@ -1303,6 +1347,12 @@ void FS_Init (void)
 	if (fs_basedir[0] && fs_basedir[strlen(fs_basedir) - 1] != '/' && fs_basedir[strlen(fs_basedir) - 1] != '\\')
 		strlcat(fs_basedir, "/", sizeof(fs_basedir));
 
+	if (!FS_CheckGameDir(gamedirname1))
+		Sys_Error("base gamedir %s%s/ not found!\n", fs_basedir, gamedirname1);
+
+	if (gamedirname2 && !FS_CheckGameDir(gamedirname2))
+		Sys_Error("base gamedir %s%s/ not found!\n", fs_basedir, gamedirname2);
+
 	// -game <gamedir>
 	// Adds basedir/gamedir as an override game
 	// LordHavoc: now supports multiple -game directories
@@ -1313,14 +1363,18 @@ void FS_Init (void)
 		if (!strcmp (com_argv[i], "-game") && i < com_argc-1)
 		{
 			i++;
+			if (FS_CheckNastyPath(com_argv[i], true))
+				Sys_Error("-game %s%s/ is a dangerous/non-portable path\n", fs_basedir, com_argv[i]);
+			if (!FS_CheckGameDir(com_argv[i]))
+				Sys_Error("-game %s%s/ not found!\n", fs_basedir, com_argv[i]);
 			// add the gamedir to the list of active gamedirs
 			strlcpy (fs_gamedirs[fs_numgamedirs], com_argv[i], sizeof(fs_gamedirs[fs_numgamedirs]));
 			fs_numgamedirs++;
 		}
 	}
 
-	// update the searchpath
-	FS_Rescan_f();
+	// generate the searchpath
+	FS_Rescan();
 }
 
 void FS_Init_Commands(void)

@@ -1068,7 +1068,6 @@ void CL_BeginDownloads_f(void)
 	CL_BeginDownloads(false);
 }
 
-extern void FS_Rescan_f(void);
 void CL_StopDownload(int size, int crc)
 {
 	if (cls.qw_downloadmemory && cls.qw_downloadmemorycursize == size && CRC_Block(cls.qw_downloadmemory, size) == crc)
@@ -1086,7 +1085,7 @@ void CL_StopDownload(int size, int crc)
 
 			extension = FS_FileExtension(cls.qw_downloadname);
 			if (!strcasecmp(extension, "pak") || !strcasecmp(extension, "pk3"))
-				FS_Rescan_f();
+				FS_Rescan();
 		}
 	}
 
@@ -1306,13 +1305,17 @@ void CL_ParseServerInfo (void)
 
 	if (protocol == PROTOCOL_QUAKEWORLD)
 	{
+		char gamedir[1][MAX_QPATH];
+
 		cl.qw_servercount = MSG_ReadLong();
 
 		str = MSG_ReadString();
 		Con_Printf("server gamedir is %s\n", str);
+		strlcpy(gamedir[0], str, sizeof(gamedir[0]));
 
 		// change gamedir if needed
-		FS_ChangeGameDir(str);
+		if (!FS_ChangeGameDirs(1, gamedir, true, false))
+			Host_Error("CL_ParseServerInfo: unable to switch to server specified gamedir");
 
 		cl.gametype = GAME_DEATHMATCH;
 		cl.maxclients = 32;
