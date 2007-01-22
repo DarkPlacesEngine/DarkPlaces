@@ -1107,10 +1107,10 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 	stats[STAT_CELLS] = (int)ent->fields.server->ammo_cells;
 	stats[STAT_ACTIVEWEAPON] = (int)ent->fields.server->weapon;
 	stats[STAT_VIEWZOOM] = viewzoom;
+	stats[STAT_TOTALSECRETS] = prog->globals.server->total_secrets;
+	stats[STAT_TOTALMONSTERS] = prog->globals.server->total_monsters;
 	// the QC bumps these itself by sending svc_'s, so we have to keep them
 	// zero or they'll be corrected by the engine
-	//stats[STAT_TOTALSECRETS] = prog->globals.server->total_secrets;
-	//stats[STAT_TOTALMONSTERS] = prog->globals.server->total_monsters;
 	//stats[STAT_SECRETS] = prog->globals.server->found_secrets;
 	//stats[STAT_MONSTERS] = prog->globals.server->killed_monsters;
 
