@@ -740,11 +740,18 @@ skipwhite:
 					data++;
 					c = *data;
 				}
+				else if (data[1] == '\'')
+				{
+					data++;
+					c = *data;
+				}
 				else if (data[1] == 'n')
 				{
 					data++;
 					c = '\n';
 				}
+				else if (data[1] == '\\')
+					data++;
 			}
 			com_token[len++] = c;
 		}
@@ -757,15 +764,34 @@ skipwhite:
 		// quoted string
 		for (data++;*data != '\'';data++)
 		{
-			if (*data == '\\' && data[1] == '\'' )
-				data++;
 			if (!*data || len >= (int)sizeof(com_token) - 1)
 			{
 				com_token[0] = 0;
 				*datapointer = NULL;
 				return false;
 			}
-			com_token[len++] = *data;
+			c = *data;
+			if (*data == '\\')
+			{
+				if (data[1] == '"')
+				{
+					data++;
+					c = *data;
+				}
+				else if (data[1] == '\'')
+				{
+					data++;
+					c = *data;
+				}
+				else if (data[1] == 'n')
+				{
+					data++;
+					c = '\n';
+				}
+				else if (data[1] == '\\')
+					data++;
+			}
+			com_token[len++] = c;
 		}
 		com_token[len] = 0;
 		*datapointer = data+1;
@@ -798,7 +824,28 @@ skipwhite:
 				*datapointer = NULL;
 				return false;
 			}
-			com_token[len++] = *data;
+			c = *data;
+			if (*data == '\\')
+			{
+				if (data[1] == '"')
+				{
+					data++;
+					c = *data;
+				}
+				else if (data[1] == '\'')
+				{
+					data++;
+					c = *data;
+				}
+				else if (data[1] == 'n')
+				{
+					data++;
+					c = '\n';
+				}
+				else if (data[1] == '\\')
+					data++;
+			}
+			com_token[len++] = c;
 		}
 		com_token[len] = 0;
 		*datapointer = data;
@@ -866,11 +913,18 @@ skipwhite:
 					data++;
 					c = *data;
 				}
+				else if (data[1] == '\'')
+				{
+					data++;
+					c = *data;
+				}
 				else if (data[1] == 'n')
 				{
 					data++;
 					c = '\n';
 				}
+				else if (data[1] == '\\')
+					data++;
 			}
 			com_token[len++] = c;
 		}
@@ -888,7 +942,28 @@ skipwhite:
 				*datapointer = NULL;
 				return false;
 			}
-			com_token[len++] = *data;
+			c = *data;
+			if (*data == '\\')
+			{
+				if (data[1] == '"')
+				{
+					data++;
+					c = *data;
+				}
+				else if (data[1] == '\'')
+				{
+					data++;
+					c = *data;
+				}
+				else if (data[1] == 'n')
+				{
+					data++;
+					c = '\n';
+				}
+				else if (data[1] == '\\')
+					data++;
+			}
+			com_token[len++] = c;
 		}
 		com_token[len] = 0;
 		*datapointer = data;
