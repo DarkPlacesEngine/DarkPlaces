@@ -1705,6 +1705,19 @@ void PF_effect (void)
 		VM_Warning("effect: model not precached\n");
 		return;
 	}
+
+	if (PRVM_G_FLOAT(OFS_PARM3) < 1)
+	{
+		VM_Warning("effect: framecount < 1\n");
+		return;
+	}
+
+	if (PRVM_G_FLOAT(OFS_PARM4) < 1)
+	{
+		VM_Warning("effect: framerate < 1\n");
+		return;
+	}
+
 	SV_StartEffect(PRVM_G_VECTOR(OFS_PARM0), i, (int)PRVM_G_FLOAT(OFS_PARM2), (int)PRVM_G_FLOAT(OFS_PARM3), (int)PRVM_G_FLOAT(OFS_PARM4));
 }
 
