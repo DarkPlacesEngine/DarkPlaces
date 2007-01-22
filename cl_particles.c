@@ -748,7 +748,7 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 		float i, j, k, inc, vel;
 		vec3_t dir;
 
-		inc = 4 / cl_particles_quality.value;
+		inc = 8 / cl_particles_quality.value;
 		for (i = -16;i < 16;i += inc)
 		{
 			for (j = -16;j < 16;j += inc)
@@ -762,7 +762,8 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 				}
 			}
 		}
-		CL_AllocDlight(NULL, &tempmatrix, 200, 1.0f, 1.0f, 1.0f, 600, 99.0f, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		particle(particletype + pt_static, particlepalette[14], particlepalette[14], tex_particle, 30, 0, 256, 512, 0, 0, center[0], center[1], center[2], 0, 0, 0, 0, 0, 0, 0);
+		CL_AllocDlight(NULL, &tempmatrix, 200, 2.0f, 2.0f, 2.0f, 400, 99.0f, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
 	else if (effectnameindex == EFFECT_TE_TEI_G3)
 		particle(particletype + pt_beam, 0xFFFFFF, 0xFFFFFF, tex_beam, 8, 0, 256, 256, 0, 0, originmins[0], originmins[1], originmins[2], originmaxs[0], originmaxs[1], originmaxs[2], 0, 0, 0, 0);
