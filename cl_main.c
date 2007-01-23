@@ -898,8 +898,6 @@ void CL_UpdateNetworkEntity(entity_t *e)
 	// model setup and some modelflags
 	if(e->state_current.modelindex < MAX_MODELS)
 		e->render.model = cl.model_precache[e->state_current.modelindex];
-	else
-		e->render.model = cl.csqc_model_precache[65536-e->state_current.modelindex];
 	if (e->render.model)
 	{
 		// if model is alias or this is a tenebrae-like dlight, reverse pitch direction
@@ -1308,7 +1306,7 @@ static void CL_RelinkEffects(void)
 				if(e->modelindex < MAX_MODELS)
 					ent->render.model = cl.model_precache[e->modelindex];
 				else
-					ent->render.model = cl.csqc_model_precache[65536-e->modelindex];
+					ent->render.model = cl.csqc_model_precache[-(e->modelindex+1)];
 				ent->render.frame = ent->render.frame2;
 				ent->render.colormap = -1; // no special coloring
 				ent->render.alpha = 1;

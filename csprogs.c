@@ -118,6 +118,31 @@ void CL_VM_Error (const char *format, ...)	//[515]: hope it will be never execut
 	Host_Error(va("CL_VM_Error: %s", errorstring));
 }
 
+model_t *CSQC_GetModelByIndex(int modelindex)
+{
+	if(!modelindex)
+		return NULL;
+	if (modelindex < 0)
+	{
+		modelindex = -(modelindex+1);
+		if (modelindex < MAX_MODELS)
+			return cl.csqc_model_precache[modelindex];
+	}
+	else
+	{
+		if(modelindex < MAX_MODELS)
+			return cl.model_precache[modelindex];
+	}
+	return NULL;
+}
+
+model_t *CSQC_GetModelFromEntity(prvm_edict_t *ed)
+{
+	if (!ed || ed->priv.server->free)
+		return NULL;
+	return CSQC_GetModelByIndex((int)ed->fields.client->modelindex);
+}
+
 //[515]: set globals before calling R_UpdateView, WEIRD CRAP
 static void CSQC_SetGlobals (void)
 {
@@ -171,43 +196,35 @@ extern cvar_t cl_noplayershadow;
 qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 {
 	int i;
+	float scale;
 	prvm_eval_t *val;
 	entity_t *e;
+	model_t *model;
 	matrix4x4_t tagmatrix, matrix2;
+
+	model = CSQC_GetModelFromEntity(ed);
+	if (!model)
+		return false;
 
 	e = CL_NewTempEntity();
 	if (!e)
 		return false;
 
-	i = (int)ed->fields.client->modelindex;
-	if(i >= MAX_MODELS || i <= -MAX_MODELS)	//[515]: make work as error ?
-	{
-		Con_Print("CSQC_AddRenderEdict: modelindex >= MAX_MODELS\n");
-		ed->fields.client->modelindex = i = 0;
-	}
-
-	// model setup and some modelflags
-	if (i < MAX_MODELS)
-		e->render.model = cl.model_precache[e->state_current.modelindex];
-	else
-		e->render.model = cl.csqc_model_precache[65536-e->state_current.modelindex];
-
-	if (!e->render.model)
-		return false;
-
+	e->render.model = model;
 	e->render.colormap = (int)ed->fields.client->colormap;
 	e->render.frame = (int)ed->fields.client->frame;
 	e->render.skinnum = (int)ed->fields.client->skin;
 	e->render.effects |= e->render.model->flags2 & (EF_FULLBRIGHT | EF_ADDITIVE);
+	scale = 1;
 
 	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_alpha)) && val->_float)		e->render.alpha = val->_float;
-	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_scale)) && val->_float)		e->render.scale = val->_float;
+	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_scale)) && val->_float)		e->render.scale = scale = val->_float;
 	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_colormod)) && VectorLength2(val->vector))	VectorCopy(val->vector, e->render.colormod);
 	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_effects)) && val->_float)	e->render.effects = (int)val->_float;
 	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_tag_entity)) && val->edict)
 	{
 		int tagentity;
-		int tagindex;
+		int tagindex = 0;
 		tagentity = val->edict;
 		if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_tag_index)) && val->_float)
 			tagindex = (int)val->_float;
@@ -232,8 +249,7 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 			angles[0] = -angles[0];
 
 		// set up the render matrix
-		// FIXME: e->render.scale should go away
-		Matrix4x4_CreateFromQuakeEntity(&matrix2, ed->fields.client->origin[0], ed->fields.client->origin[1], ed->fields.client->origin[2], angles[0], angles[1], angles[2], e->render.scale);
+		Matrix4x4_CreateFromQuakeEntity(&matrix2, ed->fields.client->origin[0], ed->fields.client->origin[1], ed->fields.client->origin[2], angles[0], angles[1], angles[2], scale);
 	}
 
 	// FIXME: csqc has frame1/frame2/frame1time/frame2time/lerpfrac but this implementation's cl_entvars_t lacks those fields
