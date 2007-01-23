@@ -122,6 +122,9 @@ void CL_FindNonSolidLocation(const vec3_t in, vec3_t out, vec_t radius);
 void CSQC_RelinkAllEntities (int drawmask);
 void CSQC_RelinkCSQCEntities (void);
 char *Key_GetBind (int key);
+model_t *CSQC_GetModelByIndex(int modelindex);
+model_t *CSQC_GetModelFromEntity(prvm_edict_t *ed);
+
 
 
 
@@ -167,25 +170,27 @@ void VM_CL_setmodel (void)
 
 	e = PRVM_G_EDICT(OFS_PARM0);
 	m = PRVM_G_STRING(OFS_PARM1);
-	for(i=0;i<MAX_MODELS;i++)
-		if(!cl.csqc_model_precache[i])
-			break;
-		else
-		if(!strcmp(cl.csqc_model_precache[i]->name, m))
+	for (i = 0;i < MAX_MODELS && cl.csqc_model_precache[i];i++)
+	{
+		if (!strcmp(cl.csqc_model_precache[i]->name, m))
 		{
 			e->fields.client->model = PRVM_SetEngineString(cl.csqc_model_precache[i]->name);
 			e->fields.client->modelindex = -(i+1);
 			return;
 		}
+	}
 
-	for (i=0, mod = cl.model_precache[0] ; i < MAX_MODELS ; i++, mod = cl.model_precache[i])
-		if(mod)
-		if(!strcmp(mod->name, m))
+	for (i = 0;i < MAX_MODELS;i++)
+	{
+		mod = cl.model_precache[i];
+		if (mod && !strcmp(mod->name, m))
 		{
 			e->fields.client->model = PRVM_SetEngineString(mod->name);
 			e->fields.client->modelindex = i;
 			return;
 		}
+	}
+
 	e->fields.client->modelindex = 0;
 	e->fields.client->model = 0;
 }
@@ -308,37 +313,28 @@ void VM_CL_precache_model (void)
 	VM_SAFEPARMCOUNT(1, VM_CL_precache_model);
 
 	name = PRVM_G_STRING(OFS_PARM0);
-	for(i=1;i<MAX_MODELS;i++)
-		if(!cl.csqc_model_precache[i])
-		{
-			i = 0;
-			break;
-		}
-		else
+	for (i = 1;i < MAX_MODELS && cl.csqc_model_precache[i];i++)
+	{
 		if(!strcmp(cl.csqc_model_precache[i]->name, name))
 		{
-			i = -(i+1);
-			break;
+			PRVM_G_FLOAT(OFS_RETURN) = -(i+1);
+			return;
 		}
-	if(i)
-	{
-		PRVM_G_FLOAT(OFS_RETURN) = i;
-		return;
 	}
 	PRVM_G_FLOAT(OFS_RETURN) = 0;
 	m = Mod_ForName(name, false, false, false);
 	if(m && m->loaded)
 	{
-		for(i=1;i<MAX_MODELS;i++)
-			if(!cl.csqc_model_precache[i])
-				break;
-		if(i == MAX_MODELS)
+		for (i = 1;i < MAX_MODELS;i++)
 		{
-			VM_Warning("VM_CL_precache_model: no free models\n");
-			return;
+			if (!cl.csqc_model_precache[i])
+			{
+				cl.csqc_model_precache[i] = (model_t*)m;
+				PRVM_G_FLOAT(OFS_RETURN) = -(i+1);
+				return;
+			}
 		}
-		cl.csqc_model_precache[i] = (model_t*)m;
-		PRVM_G_FLOAT(OFS_RETURN) = -(i+1);
+		VM_Warning("VM_CL_precache_model: no free models\n");
 		return;
 	}
 	VM_Warning("VM_CL_precache_model: model \"%s\" not found\n", name);
@@ -1023,73 +1019,40 @@ void VM_CL_setmodelindex (void)
 {
 	int				i;
 	prvm_edict_t	*t;
-	struct model_s	*m;
+	struct model_s	*model;
 
 	VM_SAFEPARMCOUNT(2, VM_CL_setmodelindex);
 
 	t = PRVM_G_EDICT(OFS_PARM0);
+
 	i = (int)PRVM_G_FLOAT(OFS_PARM1);
 
 	t->fields.client->model = 0;
 	t->fields.client->modelindex = 0;
 
-	if(!i)
+	if (!i)
 		return;
-	if(i<0)
-	{
-		i = -(i+1);
-		if(i >= MAX_MODELS)
-		{
-			VM_Warning("VM_CL_setmodelindex >= MAX_MODELS\n");
-			return;
-		}
-		m = cl.csqc_model_precache[i];
-	}
-	else
-		if(i >= MAX_MODELS)
-		{
-			VM_Warning("VM_CL_setmodelindex >= MAX_MODELS\n");
-			return;
-		}
-		else
-			m = cl.model_precache[i];
-	if(!m)
+
+	model = CSQC_GetModelByIndex(i);
+	if (!model)
 	{
 		VM_Warning("VM_CL_setmodelindex: null model\n");
 		return;
 	}
-	t->fields.client->model = PRVM_SetEngineString(m->name);
+	t->fields.client->model = PRVM_SetEngineString(model->name);
 	t->fields.client->modelindex = i;
 }
 
 //#334 string(float mdlindex) modelnameforindex (EXT_CSQC)
 void VM_CL_modelnameforindex (void)
 {
-	int i;
+	model_t *model;
 
 	VM_SAFEPARMCOUNT(1, VM_CL_modelnameforindex);
 
 	PRVM_G_INT(OFS_RETURN) = 0;
-	i = (int)PRVM_G_FLOAT(OFS_PARM0);
-	if(i<0)
-	{
-		i = -(i+1);
-		if(i >= MAX_MODELS)
-		{
-			VM_Warning("VM_CL_modelnameforindex >= MAX_MODELS\n");
-			return;
-		}
-		if(cl.csqc_model_precache[i])
-			PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(cl.csqc_model_precache[i]->name);
-		return;
-	}
-	if(i >= MAX_MODELS)
-	{
-		VM_Warning("VM_CL_modelnameforindex >= MAX_MODELS\n");
-		return;
-	}
-	if(cl.model_precache[i])
-		PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(cl.model_precache[i]->name);
+	model = CSQC_GetModelByIndex((int)PRVM_G_FLOAT(OFS_PARM0));
+	PRVM_G_INT(OFS_RETURN) = model ? PRVM_SetEngineString(model->name) : 0;
 }
 
 //#335 float(string effectname) particleeffectnum (EXT_CSQC)
@@ -1729,28 +1692,6 @@ void VM_CL_te_plasmaburn (void)
 //DP_QC_GETSURFACE
 
 extern void clippointtosurface(model_t *model, msurface_t *surface, vec3_t p, vec3_t out);
-static model_t *cl_getmodel(prvm_edict_t *ed)
-{
-	int modelindex;
-	model_t *model = NULL;
-	if (!ed || ed->priv.server->free)
-		return NULL;
-	modelindex = (int)ed->fields.client->modelindex;
-	if(!modelindex)
-		return NULL;
-	if(modelindex<0)
-	{
-		modelindex = -(modelindex+1);
-		if(modelindex < MAX_MODELS)
-			model = cl.csqc_model_precache[modelindex];
-	}
-	else
-	{
-		if(modelindex < MAX_MODELS)
-			model = cl.model_precache[modelindex];
-	}
-	return model;
-}
 
 static msurface_t *cl_getsurface(model_t *model, int surfacenum)
 {
@@ -1762,7 +1703,7 @@ static msurface_t *cl_getsurface(model_t *model, int surfacenum)
 // #434 float(entity e, float s) getsurfacenumpoints
 void VM_CL_getsurfacenumpoints(void)
 {
-	model_t *model = cl_getmodel(PRVM_G_EDICT(OFS_PARM0));
+	model_t *model = CSQC_GetModelFromEntity(PRVM_G_EDICT(OFS_PARM0));
 	msurface_t *surface;
 	// return 0 if no such surface
 	if (!model || !(surface = cl_getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
@@ -1784,7 +1725,7 @@ void VM_CL_getsurfacepoint(void)
 	int pointnum;
 	VectorClear(PRVM_G_VECTOR(OFS_RETURN));
 	ed = PRVM_G_EDICT(OFS_PARM0);
-	if (!(model = cl_getmodel(ed)) || !(surface = cl_getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
+	if (!(model = CSQC_GetModelFromEntity(ed)) || !(surface = cl_getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
 		return;
 	// note: this (incorrectly) assumes it is a simple polygon
 	pointnum = (int)PRVM_G_FLOAT(OFS_PARM2);
@@ -1801,7 +1742,7 @@ void VM_CL_getsurfacenormal(void)
 	msurface_t *surface;
 	vec3_t normal;
 	VectorClear(PRVM_G_VECTOR(OFS_RETURN));
-	if (!(model = cl_getmodel(PRVM_G_EDICT(OFS_PARM0))) || !(surface = cl_getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
+	if (!(model = CSQC_GetModelFromEntity(PRVM_G_EDICT(OFS_PARM0))) || !(surface = cl_getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
 		return;
 	// FIXME: implement rotation/scaling
 	// note: this (incorrectly) assumes it is a simple polygon
@@ -1818,7 +1759,7 @@ void VM_CL_getsurfacetexture(void)
 	model_t *model;
 	msurface_t *surface;
 	PRVM_G_INT(OFS_RETURN) = 0;
-	if (!(model = cl_getmodel(PRVM_G_EDICT(OFS_PARM0))) || !(surface = cl_getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
+	if (!(model = CSQC_GetModelFromEntity(PRVM_G_EDICT(OFS_PARM0))) || !(surface = cl_getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
 		return;
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(surface->texture->name);
 }
@@ -1835,7 +1776,7 @@ void VM_CL_getsurfacenearpoint(void)
 	vec_t *point;
 	PRVM_G_FLOAT(OFS_RETURN) = -1;
 	ed = PRVM_G_EDICT(OFS_PARM0);
-	if(!(model = cl_getmodel(ed)) || !model->num_surfaces)
+	if(!(model = CSQC_GetModelFromEntity(ed)) || !model->num_surfaces)
 		return;
 
 	// FIXME: implement rotation/scaling
@@ -1877,7 +1818,7 @@ void VM_CL_getsurfaceclippedpoint(void)
 	vec3_t p, out;
 	VectorClear(PRVM_G_VECTOR(OFS_RETURN));
 	ed = PRVM_G_EDICT(OFS_PARM0);
-	if (!(model = cl_getmodel(ed)) || !(surface = cl_getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
+	if (!(model = CSQC_GetModelFromEntity(ed)) || !(surface = cl_getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
 		return;
 	// FIXME: implement rotation/scaling
 	VectorSubtract(PRVM_G_VECTOR(OFS_PARM2), ed->fields.client->origin, p);
@@ -1920,21 +1861,7 @@ void VM_CL_setattachment (void)
 	if (tagentity != NULL && tagentity != prog->edicts && tagname && tagname[0])
 	{
 		modelindex = (int)tagentity->fields.client->modelindex;
-		model = NULL;
-
-		if(modelindex)
-		{
-			if(modelindex<0)
-			{
-				modelindex = -(modelindex+1);
-				if(modelindex < MAX_MODELS)
-					model = cl.csqc_model_precache[modelindex];
-			}
-			else
-				if(modelindex < MAX_MODELS)
-					model = cl.model_precache[modelindex];
-		}
-
+		model = CSQC_GetModelByIndex(modelindex);
 		if (model)
 		{
 			v->_float = Mod_Alias_GetTagIndexForName(model, (int)tagentity->fields.client->skin, tagname);
@@ -1951,27 +1878,11 @@ void VM_CL_setattachment (void)
 
 int CL_GetTagIndex (prvm_edict_t *e, const char *tagname)
 {
-	int i;
-	model_t *m;
-
-	i = (int)e->fields.client->modelindex;
-
-	if(!i)
-		return -1;
-	if(i<0)
-	{
-		i = -(i+1);
-		if(i >= MAX_MODELS)
-			return -1;
-		m = cl.csqc_model_precache[i];
-	}
+	model_t *model = CSQC_GetModelFromEntity(e);
+	if (model)
+		return Mod_Alias_GetTagIndexForName(model, (int)e->fields.client->skin, tagname);
 	else
-		if(i >= MAX_MODELS)
-			return -1;
-		else
-			m = cl.model_precache[i];
-
-	return Mod_Alias_GetTagIndexForName(m, (int)e->fields.client->skin, tagname);
+		return -1;
 };
 
 // Warnings/errors code:
@@ -1987,7 +1898,7 @@ extern cvar_t cl_bobup;
 int CL_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 {
 	prvm_eval_t *val;
-	int modelindex, reqframe, attachloop, i;
+	int reqframe, attachloop;
 	matrix4x4_t entitymatrix, tagmatrix, attachmatrix;
 	prvm_edict_t *attachent;
 	model_t *model;
@@ -1999,22 +1910,10 @@ int CL_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 	if (ent->priv.server->free)
 		return 2;
 
-	modelindex = (int)ent->fields.client->modelindex;
+	model = CSQC_GetModelFromEntity(ent);
 
-	if(!modelindex)
+	if(!model)
 		return 3;
-	if(modelindex<0)
-	{
-		modelindex = -(modelindex+1);
-		if(modelindex >= MAX_MODELS)
-			return 3;
-		model = cl.csqc_model_precache[modelindex];
-	}
-	else
-		if(modelindex >= MAX_MODELS)
-			return 3;
-		else
-			model = cl.model_precache[modelindex];
 
 	if (ent->fields.client->frame >= 0 && ent->fields.client->frame < model->numframes && model->animscenes)
 		reqframe = model->animscenes[(int)ent->fields.client->frame].firstframe;
@@ -2039,17 +1938,7 @@ int CL_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 			attachent = PRVM_EDICT_NUM(val->edict); // to this it entity our entity is attached
 			val = PRVM_GETEDICTFIELDVALUE(ent, csqc_fieldoff_tag_index);
 
-			model = NULL;
-			i = (int)attachent->fields.client->modelindex;
-			if(i<0)
-			{
-				i = -(i+1);
-				if(i < MAX_MODELS)
-					model = cl.csqc_model_precache[i];
-			}
-			else
-				if(i < MAX_MODELS)
-					model = cl.model_precache[i];
+			model = CSQC_GetModelFromEntity(attachent);
 
 			if (model && val->_float >= 1 && model->animscenes && attachent->fields.client->frame >= 0 && attachent->fields.client->frame < model->numframes)
 				Mod_Alias_GetTagMatrix(model, model->animscenes[(int)attachent->fields.client->frame].firstframe, (int)val->_float - 1, &attachmatrix);
