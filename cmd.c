@@ -216,7 +216,7 @@ qboolean host_stuffcmdsrun = false;
 void Cmd_StuffCmds_f (void)
 {
 	int		i, j, l;
-	// this is per command, and bounds checked (no buffer overflows)
+	// this is for all commandline options combined (and is bounds checked)
 	char	build[MAX_INPUTLINE];
 
 	if (Cmd_Argc () != 1)
@@ -230,11 +230,12 @@ void Cmd_StuffCmds_f (void)
 		return;
 
 	host_stuffcmdsrun = true;
+	build[0] = 0;
+	l = 0;
 	for (i = 0;i < com_argc;i++)
 	{
-		if (com_argv[i] && com_argv[i][0] == '+' && (com_argv[i][1] < '0' || com_argv[i][1] > '9'))
+		if (com_argv[i] && com_argv[i][0] == '+' && (com_argv[i][1] < '0' || com_argv[i][1] > '9') && l + strlen(com_argv[i]) - 1 <= sizeof(build) - 1)
 		{
-			l = 0;
 			j = 1;
 			while (com_argv[i][j])
 				build[l++] = com_argv[i][j++];
@@ -245,20 +246,24 @@ void Cmd_StuffCmds_f (void)
 					continue;
 				if ((com_argv[i][0] == '+' || com_argv[i][0] == '-') && (com_argv[i][1] < '0' || com_argv[i][1] > '9'))
 					break;
-				if (l + strlen(com_argv[i]) + 5 > sizeof(build))
+				if (l + strlen(com_argv[i]) + 4 > sizeof(build) - 1)
 					break;
 				build[l++] = ' ';
-				build[l++] = '\"';
+				if (strchr(com_argv[i], ' '))
+					build[l++] = '\"';
 				for (j = 0;com_argv[i][j];j++)
 					build[l++] = com_argv[i][j];
-				build[l++] = '\"';
+				if (strchr(com_argv[i], ' '))
+					build[l++] = '\"';
 			}
 			build[l++] = '\n';
-			build[l++] = 0;
-			Cbuf_InsertText (build);
 			i--;
 		}
 	}
+	// now terminate the combined string and prepend it to the command buffer
+	// we already reserved space for the terminator
+	build[l++] = 0;
+	Cbuf_InsertText (build);
 }
 
 
