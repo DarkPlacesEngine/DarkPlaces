@@ -119,7 +119,6 @@ void PF_registercvar (void);
 int Sbar_GetPlayer (int index);
 void Sbar_SortFrags (void);
 void CL_FindNonSolidLocation(const vec3_t in, vec3_t out, vec_t radius);
-void CL_ExpandCSQCEntities(int num);
 void CSQC_RelinkAllEntities (int drawmask);
 void CSQC_RelinkCSQCEntities (void);
 char *Key_GetBind (int key);
@@ -763,7 +762,6 @@ void VM_CL_getlight (void)
 //============================================================================
 //[515]: SCENE MANAGER builtins
 extern qboolean CSQC_AddRenderEdict (prvm_edict_t *ed);//csprogs.c
-extern void CSQC_ClearCSQCEntities (void);//csprogs.c
 
 matrix4x4_t csqc_listenermatrix;
 qboolean csqc_usecsqclistener = false;//[515]: per-frame
@@ -782,8 +780,6 @@ void VM_R_ClearScene (void)
 {
 	VM_SAFEPARMCOUNT(0, VM_R_ClearScene);
 	r_refdef.numentities = 0;
-//	CSQC_R_RecalcView();
-	CSQC_ClearCSQCEntities();
 }
 
 //#301 void(float mask) addentities (EXT_CSQC)
@@ -1112,24 +1108,15 @@ void VM_CL_particleeffectnum (void)
 // #336 void(entity ent, float effectnum, vector start, vector end[, float color]) trailparticles (EXT_CSQC)
 void VM_CL_trailparticles (void)
 {
-	int				i, entnum;
+	int				i;
 	float			*start, *end;
 	prvm_edict_t	*t;
 	VM_SAFEPARMCOUNT(4, VM_CL_trailparticles);
 
 	t = PRVM_G_EDICT(OFS_PARM0);
-	entnum	= PRVM_NUM_FOR_EDICT(t);
 	i		= (int)PRVM_G_FLOAT(OFS_PARM1);
 	start	= PRVM_G_VECTOR(OFS_PARM2);
 	end		= PRVM_G_VECTOR(OFS_PARM3);
-
-	if (entnum >= MAX_EDICTS)
-	{
-		VM_Warning("CSQC_ParseBeam: invalid entity number %i\n", entnum);
-		return;
-	}
-	if (entnum >= cl.max_csqcentities)
-		CL_ExpandCSQCEntities(entnum);
 
 	CL_ParticleEffect(i, VectorDistance(start, end), start, end, t->fields.client->velocity, t->fields.client->velocity, NULL, (int)PRVM_G_FLOAT(OFS_PARM4));
 }
@@ -2352,16 +2339,12 @@ void VM_CL_selecttraceline (void)
 	csqcents = (int)PRVM_G_FLOAT(OFS_PARM3);
 	ent = 0;
 
-	if((csqcents && ignore > cl.num_csqcentities) || (!csqcents && ignore > cl.num_entities))
+	if (csqcents)
 	{
-		VM_Warning("VM_CL_selecttraceline: out of entities\n");
+		VM_Warning("VM_CL_selecttraceline: csqcents flag not supported anymore, and this function is deprecated\n");
 		return;
 	}
-	else
-		if(csqcents)
-			prog->globals.client->trace_fraction = CL_SelectTraceLine(v1, v2, prog->globals.client->trace_endpos, prog->globals.client->trace_plane_normal, &prog->globals.client->trace_ent, &cl.csqcentities[ignore].render, csqcents);
-		else
-			prog->globals.client->trace_fraction = CL_SelectTraceLine(v1, v2, prog->globals.client->trace_endpos, prog->globals.client->trace_plane_normal, &ent, &cl.entities[ignore].render, csqcents);
+	prog->globals.client->trace_fraction = CL_SelectTraceLine(v1, v2, prog->globals.client->trace_endpos, prog->globals.client->trace_plane_normal, &ent, &cl.entities[ignore].render);
 	PRVM_G_FLOAT(OFS_RETURN) = ent;
 }
 

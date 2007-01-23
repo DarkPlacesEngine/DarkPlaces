@@ -107,14 +107,12 @@ void CL_ClearState(void)
 	cl.mviewzoom[0] = cl.mviewzoom[1] = 1;
 
 	cl.num_entities = 0;
-	cl.num_csqcentities = 0;	//[515]: csqc
 	cl.num_static_entities = 0;
 	cl.num_temp_entities = 0;
 	cl.num_brushmodel_entities = 0;
 
 	// tweak these if the game runs out
 	cl.max_entities = 256;
-	cl.max_csqcentities = 256;	//[515]: csqc
 	cl.max_static_entities = 256;
 	cl.max_temp_entities = 512;
 	cl.max_effects = 256;
@@ -138,9 +136,7 @@ void CL_ClearState(void)
 	cl.num_beams = 0;
 
 	cl.entities = (entity_t *)Mem_Alloc(cls.levelmempool, cl.max_entities * sizeof(entity_t));
-	cl.csqcentities = (entity_t *)Mem_Alloc(cls.levelmempool, cl.max_csqcentities * sizeof(entity_t));	//[515]: csqc
 	cl.entities_active = (unsigned char *)Mem_Alloc(cls.levelmempool, cl.max_brushmodel_entities * sizeof(unsigned char));
-	cl.csqcentities_active = (unsigned char *)Mem_Alloc(cls.levelmempool, cl.max_brushmodel_entities * sizeof(unsigned char));	//[515]: csqc
 	cl.static_entities = (entity_t *)Mem_Alloc(cls.levelmempool, cl.max_static_entities * sizeof(entity_t));
 	cl.temp_entities = (entity_t *)Mem_Alloc(cls.levelmempool, cl.max_temp_entities * sizeof(entity_t));
 	cl.effects = (cl_effect_t *)Mem_Alloc(cls.levelmempool, cl.max_effects * sizeof(cl_effect_t));
@@ -156,14 +152,6 @@ void CL_ClearState(void)
 		cl.entities[i].state_baseline = defaultstate;
 		cl.entities[i].state_previous = defaultstate;
 		cl.entities[i].state_current = defaultstate;
-	}
-
-	for (i = 0;i < cl.max_csqcentities;i++)
-	{
-		cl.csqcentities[i].state_baseline = defaultstate;	//[515]: csqc
-		cl.csqcentities[i].state_previous = defaultstate;	//[515]: csqc
-		cl.csqcentities[i].state_current = defaultstate;	//[515]: csqc
-		cl.csqcentities[i].state_current.number = -i;
 	}
 
 	if (gamemode == GAME_NEXUIZ)
@@ -271,32 +259,6 @@ void CL_ExpandEntities(int num)
 			cl.entities[i].state_baseline = defaultstate;
 			cl.entities[i].state_previous = defaultstate;
 			cl.entities[i].state_current = defaultstate;
-		}
-	}
-}
-
-void CL_ExpandCSQCEntities(int num)
-{
-	int i, oldmaxentities;
-	entity_t *oldentities;
-	if (num >= cl.max_csqcentities)
-	{
-		if (!cl.csqcentities)
-			Sys_Error("CL_ExpandCSQCEntities: cl.csqcentities not initialized\n");
-		if (num >= MAX_EDICTS)
-			Host_Error("CL_ExpandCSQCEntities: num %i >= %i\n", num, MAX_EDICTS);
-		oldmaxentities = cl.max_csqcentities;
-		oldentities = cl.csqcentities;
-		cl.max_csqcentities = (num & ~255) + 256;
-		cl.csqcentities = (entity_t *)Mem_Alloc(cls.levelmempool, cl.max_csqcentities * sizeof(entity_t));
-		memcpy(cl.csqcentities, oldentities, oldmaxentities * sizeof(entity_t));
-		Mem_Free(oldentities);
-		for (i = oldmaxentities;i < cl.max_csqcentities;i++)
-		{
-			cl.csqcentities[i].state_baseline = defaultstate;
-			cl.csqcentities[i].state_previous = defaultstate;
-			cl.csqcentities[i].state_current = defaultstate;
-			cl.csqcentities[i].state_current.number = -i;
 		}
 	}
 }
