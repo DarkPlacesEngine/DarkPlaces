@@ -480,10 +480,12 @@ typedef struct client_static_s
 	int td_startframe;
 	// realtime at second frame of timedemo (LordHavoc: changed to double)
 	double td_starttime;
-	// LordHavoc: for measuring maxfps
-	double td_minframetime;
-	// LordHavoc: for measuring minfps
-	double td_maxframetime;
+	double td_onesecondnexttime;
+	double td_onesecondframes;
+	double td_onesecondminframes;
+	double td_onesecondmaxframes;
+	double td_onesecondavgframes;
+	int td_onesecondavgcount;
 	// LordHavoc: pausedemo
 	qboolean demopaused;
 
