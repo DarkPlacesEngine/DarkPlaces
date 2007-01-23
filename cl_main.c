@@ -163,7 +163,6 @@ void CL_ClearState(void)
 		cl.csqcentities[i].state_baseline = defaultstate;	//[515]: csqc
 		cl.csqcentities[i].state_previous = defaultstate;	//[515]: csqc
 		cl.csqcentities[i].state_current = defaultstate;	//[515]: csqc
-		cl.csqcentities[i].csqc = true;
 		cl.csqcentities[i].state_current.number = -i;
 	}
 
@@ -297,7 +296,6 @@ void CL_ExpandCSQCEntities(int num)
 			cl.csqcentities[i].state_baseline = defaultstate;
 			cl.csqcentities[i].state_previous = defaultstate;
 			cl.csqcentities[i].state_current = defaultstate;
-			cl.csqcentities[i].csqc = true;
 			cl.csqcentities[i].state_current.number = -i;
 		}
 	}
@@ -795,8 +793,6 @@ int numviewmodels;
 
 matrix4x4_t viewmodelmatrix;
 
-static int entitylinkframenumber;
-
 static const vec3_t muzzleflashorigin = {18, 0, 0};
 
 extern void V_DriftPitch(void);
@@ -817,369 +813,346 @@ void CL_UpdateNetworkEntity(entity_t *e)
 	trace_t trace;
 	//entity_persistent_t *p = &e->persistent;
 	//entity_render_t *r = &e->render;
-	if (e->persistent.linkframe != entitylinkframenumber)
+	// skip inactive entities and world
+	if (!e->state_current.active || e == cl.entities)
+		return;
+	e->render.alpha = e->state_current.alpha * (1.0f / 255.0f); // FIXME: interpolate?
+	e->render.scale = e->state_current.scale * (1.0f / 16.0f); // FIXME: interpolate?
+	e->render.flags = e->state_current.flags;
+	e->render.effects = e->state_current.effects;
+	VectorScale(e->state_current.colormod, (1.0f / 32.0f), e->render.colormod);
+	if (e->state_current.flags & RENDER_COLORMAPPED)
 	{
-		e->persistent.linkframe = entitylinkframenumber;
-		// skip inactive entities and world
-		if (!e->state_current.active || e == cl.entities || e == cl.csqcentities)
-			return;
-		e->render.alpha = e->state_current.alpha * (1.0f / 255.0f); // FIXME: interpolate?
-		e->render.scale = e->state_current.scale * (1.0f / 16.0f); // FIXME: interpolate?
-		e->render.flags = e->state_current.flags;
-		e->render.effects = e->state_current.effects;
-		VectorScale(e->state_current.colormod, (1.0f / 32.0f), e->render.colormod);
-		if (e->state_current.flags & RENDER_COLORMAPPED)
-		{
-			int cb;
-			unsigned char *cbcolor;
-			e->render.colormap = e->state_current.colormap;
-			cb = (e->render.colormap & 0xF) << 4;cb += (cb >= 128 && cb < 224) ? 4 : 12;
-			cbcolor = (unsigned char *) (&palette_complete[cb]);
-			e->render.colormap_pantscolor[0] = cbcolor[0] * (1.0f / 255.0f);
-			e->render.colormap_pantscolor[1] = cbcolor[1] * (1.0f / 255.0f);
-			e->render.colormap_pantscolor[2] = cbcolor[2] * (1.0f / 255.0f);
-			cb = (e->render.colormap & 0xF0);cb += (cb >= 128 && cb < 224) ? 4 : 12;
-			cbcolor = (unsigned char *) (&palette_complete[cb]);
-			e->render.colormap_shirtcolor[0] = cbcolor[0] * (1.0f / 255.0f);
-			e->render.colormap_shirtcolor[1] = cbcolor[1] * (1.0f / 255.0f);
-			e->render.colormap_shirtcolor[2] = cbcolor[2] * (1.0f / 255.0f);
-		}
-		else if (e->state_current.colormap && cl.scores != NULL)
-		{
-			int cb;
-			unsigned char *cbcolor;
-			e->render.colormap = cl.scores[e->state_current.colormap - 1].colors; // color it
-			cb = (e->render.colormap & 0xF) << 4;cb += (cb >= 128 && cb < 224) ? 4 : 12;
-			cbcolor = (unsigned char *) (&palette_complete[cb]);
-			e->render.colormap_pantscolor[0] = cbcolor[0] * (1.0f / 255.0f);
-			e->render.colormap_pantscolor[1] = cbcolor[1] * (1.0f / 255.0f);
-			e->render.colormap_pantscolor[2] = cbcolor[2] * (1.0f / 255.0f);
-			cb = (e->render.colormap & 0xF0);cb += (cb >= 128 && cb < 224) ? 4 : 12;
-			cbcolor = (unsigned char *) (&palette_complete[cb]);
-			e->render.colormap_shirtcolor[0] = cbcolor[0] * (1.0f / 255.0f);
-			e->render.colormap_shirtcolor[1] = cbcolor[1] * (1.0f / 255.0f);
-			e->render.colormap_shirtcolor[2] = cbcolor[2] * (1.0f / 255.0f);
-		}
-		else
-		{
-			e->render.colormap = -1; // no special coloring
-			VectorClear(e->render.colormap_pantscolor);
-			VectorClear(e->render.colormap_shirtcolor);
-		}
-		e->render.skinnum = e->state_current.skin;
-		if (e->render.flags & RENDER_VIEWMODEL && !e->state_current.tagentity)
-		{
-			if (!r_drawviewmodel.integer || chase_active.integer || r_refdef.envmap)// || csqc_loaded)
-				return;
-			if (!e->csqc)
-			{
-				if (cl.viewentity)
-					CL_UpdateNetworkEntity(cl.entities + cl.viewentity);
-				if (e == &cl.viewent && cl.entities[cl.viewentity].state_current.active)
-				{
-					e->state_current.alpha = cl.entities[cl.viewentity].state_current.alpha;
-					e->state_current.effects = EF_NOSHADOW | (cl.entities[cl.viewentity].state_current.effects & (EF_ADDITIVE | EF_REFLECTIVE | EF_FULLBRIGHT | EF_NODEPTHTEST));
-				}
-			}
-			matrix = &viewmodelmatrix;
-		}
-		else
-		{
-			// if the tag entity is currently impossible, skip it
-			if (!e->csqc)
-			{
-				if (e->state_current.tagentity >= cl.num_entities)
-					return;
-				t = cl.entities + e->state_current.tagentity;
-			}
-			else
-			{
-				if (e->state_current.tagentity >= cl.num_csqcentities)
-					return;
-				t = cl.csqcentities + e->state_current.tagentity;
-			}
-			// if the tag entity is inactive, skip it
-			if (!t->state_current.active)
-				return;
-			// note: this can link to world
-			CL_UpdateNetworkEntity(t);
-			// make relative to the entity
-			matrix = &t->render.matrix;
-			// some properties of the tag entity carry over
-			e->render.flags |= t->render.flags & (RENDER_EXTERIORMODEL | RENDER_VIEWMODEL);
-			// if a valid tagindex is used, make it relative to that tag instead
-			// FIXME: use a model function to get tag info (need to handle skeletal)
-			if (e->state_current.tagentity && e->state_current.tagindex >= 1 && (model = t->render.model))
-			{
-				// blend the matrices
-				memset(&blendmatrix, 0, sizeof(blendmatrix));
-				for (j = 0;j < 4 && t->render.frameblend[j].lerp > 0;j++)
-				{
-					matrix4x4_t tagmatrix;
-					Mod_Alias_GetTagMatrix(model, t->render.frameblend[j].frame, e->state_current.tagindex - 1, &tagmatrix);
-					d = t->render.frameblend[j].lerp;
-					for (l = 0;l < 4;l++)
-						for (k = 0;k < 4;k++)
-							blendmatrix.m[l][k] += d * tagmatrix.m[l][k];
-				}
-				// concat the tag matrices onto the entity matrix
-				Matrix4x4_Concat(&tempmatrix, &t->render.matrix, &blendmatrix);
-				// use the constructed tag matrix
-				matrix = &tempmatrix;
-			}
-		}
-
-		// movement lerp
-		// if it's the player entity, update according to client movement
-		if (e == cl.entities + cl.playerentity && cl.movement_predicted)// && !e->csqc)
-		{
-			lerp = (cl.time - cl.movement_time[1]) / (cl.movement_time[0] - cl.movement_time[1]);
-			lerp = bound(0, lerp, 1);
-			VectorLerp(cl.movement_oldorigin, lerp, cl.movement_origin, origin);
-			VectorSet(angles, 0, cl.viewangles[1], 0);
-		}
-		else if (e->persistent.lerpdeltatime > 0 && (lerp = (cl.time - e->persistent.lerpstarttime) / e->persistent.lerpdeltatime) < 1)
-		{
-			// interpolate the origin and angles
-			VectorLerp(e->persistent.oldorigin, lerp, e->persistent.neworigin, origin);
-			VectorSubtract(e->persistent.newangles, e->persistent.oldangles, delta);
-			if (delta[0] < -180) delta[0] += 360;else if (delta[0] >= 180) delta[0] -= 360;
-			if (delta[1] < -180) delta[1] += 360;else if (delta[1] >= 180) delta[1] -= 360;
-			if (delta[2] < -180) delta[2] += 360;else if (delta[2] >= 180) delta[2] -= 360;
-			VectorMA(e->persistent.oldangles, lerp, delta, angles);
-		}
-		else
-		{
-			// no interpolation
-			VectorCopy(e->persistent.neworigin, origin);
-			VectorCopy(e->persistent.newangles, angles);
-		}
-
-		// model setup and some modelflags
-		if(e->state_current.modelindex < MAX_MODELS)
-			e->render.model = cl.model_precache[e->state_current.modelindex];
-		else
-			e->render.model = cl.csqc_model_precache[65536-e->state_current.modelindex];
-		if (e->render.model)
-		{
-			// if model is alias or this is a tenebrae-like dlight, reverse pitch direction
-			if (e->render.model->type == mod_alias)
-				angles[0] = -angles[0];
-			if ((e->render.model->flags & EF_ROTATE) && (!e->state_current.tagentity && !(e->render.flags & RENDER_VIEWMODEL)))
-			{
-				angles[1] = ANGLEMOD(100*cl.time);
-				if (cl_itembobheight.value)
-					origin[2] += (cos(cl.time * cl_itembobspeed.value * (2.0 * M_PI)) + 1.0) * 0.5 * cl_itembobheight.value;
-			}
-			// transfer certain model flags to effects
-			e->render.effects |= e->render.model->flags2 & (EF_FULLBRIGHT | EF_ADDITIVE);
-			if ((e->render.effects & EF_SELECTABLE) && cl.cmd.cursor_entitynumber == e->state_current.number)
-				VectorScale(e->render.colormod, 2, e->render.colormod);
-		}
-		// if model is alias or this is a tenebrae-like dlight, reverse pitch direction
-		else if (e->state_current.lightpflags & PFLAGS_FULLDYNAMIC)
-			angles[0] = -angles[0];
-
-		// animation lerp
-		if (e->render.frame2 == e->state_current.frame)
-		{
-			// update frame lerp fraction
-			e->render.framelerp = 1;
-			if (e->render.frame2time > e->render.frame1time)
-			{
-				// make sure frame lerp won't last longer than 100ms
-				// (this mainly helps with models that use framegroups and
-				// switch between them infrequently)
-				e->render.framelerp = (cl.time - e->render.frame2time) / min(e->render.frame2time - e->render.frame1time, 0.1);
-				e->render.framelerp = bound(0, e->render.framelerp, 1);
-			}
-		}
-		else
-		{
-			// begin a new frame lerp
-			e->render.frame1 = e->render.frame2;
-			e->render.frame1time = e->render.frame2time;
-			e->render.frame = e->render.frame2 = e->state_current.frame;
-			e->render.frame2time = cl.time;
-			e->render.framelerp = 0;
-		}
-
-		// set up the render matrix
-		// FIXME: e->render.scale should go away
-		Matrix4x4_CreateFromQuakeEntity(&matrix2, origin[0], origin[1], origin[2], angles[0], angles[1], angles[2], e->render.scale);
-		// concat the matrices to make the entity relative to its tag
-		Matrix4x4_Concat(&e->render.matrix, matrix, &matrix2);
-		// make the other useful stuff
-		CL_UpdateRenderEntity(&e->render);
-
-		// handle effects now that we know where this entity is in the world...
-		if (e->render.model && e->render.model->soundfromcenter)
-		{
-			// bmodels are treated specially since their origin is usually '0 0 0'
-			vec3_t o;
-			VectorMAM(0.5f, e->render.model->normalmins, 0.5f, e->render.model->normalmaxs, o);
-			Matrix4x4_Transform(&e->render.matrix, o, origin);
-		}
-		else
-			Matrix4x4_OriginFromMatrix(&e->render.matrix, origin);
-		trailtype = EFFECT_NONE;
-		dlightradius = 0;
-		dlightcolor[0] = 0;
-		dlightcolor[1] = 0;
-		dlightcolor[2] = 0;
-		// LordHavoc: if the entity has no effects, don't check each
-		if (e->render.effects)
-		{
-			if (e->render.effects & EF_BRIGHTFIELD)
-			{
-				if (gamemode == GAME_NEXUIZ)
-					trailtype = EFFECT_TR_NEXUIZPLASMA;
-				else
-					CL_EntityParticles(e);
-			}
-			if (e->render.effects & EF_DIMLIGHT)
-			{
-				dlightradius = max(dlightradius, 200);
-				dlightcolor[0] += 1.50f;
-				dlightcolor[1] += 1.50f;
-				dlightcolor[2] += 1.50f;
-			}
-			if (e->render.effects & EF_BRIGHTLIGHT)
-			{
-				dlightradius = max(dlightradius, 400);
-				dlightcolor[0] += 3.00f;
-				dlightcolor[1] += 3.00f;
-				dlightcolor[2] += 3.00f;
-			}
-			// LordHavoc: more effects
-			if (e->render.effects & EF_RED) // red
-			{
-				dlightradius = max(dlightradius, 200);
-				dlightcolor[0] += 1.50f;
-				dlightcolor[1] += 0.15f;
-				dlightcolor[2] += 0.15f;
-			}
-			if (e->render.effects & EF_BLUE) // blue
-			{
-				dlightradius = max(dlightradius, 200);
-				dlightcolor[0] += 0.15f;
-				dlightcolor[1] += 0.15f;
-				dlightcolor[2] += 1.50f;
-			}
-			if (e->render.effects & EF_FLAME)
-				CL_ParticleEffect(EFFECT_EF_FLAME, bound(0, cl.time - cl.oldtime, 0.1), origin, origin, vec3_origin, vec3_origin, NULL, 0);
-			if (e->render.effects & EF_STARDUST)
-				CL_ParticleEffect(EFFECT_EF_STARDUST, bound(0, cl.time - cl.oldtime, 0.1), origin, origin, vec3_origin, vec3_origin, NULL, 0);
-			if (e->render.effects & (EF_FLAG1QW | EF_FLAG2QW))
-			{
-				// these are only set on player entities
-				CL_AddQWCTFFlagModel(e, (e->render.effects & EF_FLAG2QW) != 0);
-			}
-		}
-		// muzzleflash fades over time, and is offset a bit
-		if (e->persistent.muzzleflash > 0)
-		{
-			Matrix4x4_Transform(&e->render.matrix, muzzleflashorigin, v2);
-			trace = CL_TraceBox(origin, vec3_origin, vec3_origin, v2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_SKY, false);
-			tempmatrix = e->render.matrix;
-			Matrix4x4_SetOrigin(&tempmatrix, trace.endpos[0], trace.endpos[1], trace.endpos[2]);
-			CL_AllocDlight(NULL, &tempmatrix, 150, e->persistent.muzzleflash * 4.0f, e->persistent.muzzleflash * 4.0f, e->persistent.muzzleflash * 4.0f, 0, 0, 0, -1, true, 0, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-			e->persistent.muzzleflash -= bound(0, cl.time - cl.oldtime, 0.1) * 20;
-		}
-		// LordHavoc: if the model has no flags, don't check each
-		if (e->render.model && e->render.model->flags && (!e->state_current.tagentity && !(e->render.flags & RENDER_VIEWMODEL)))
-		{
-			if (e->render.model->flags & EF_GIB)
-				trailtype = EFFECT_TR_BLOOD;
-			else if (e->render.model->flags & EF_ZOMGIB)
-				trailtype = EFFECT_TR_SLIGHTBLOOD;
-			else if (e->render.model->flags & EF_TRACER)
-				trailtype = EFFECT_TR_WIZSPIKE;
-			else if (e->render.model->flags & EF_TRACER2)
-				trailtype = EFFECT_TR_KNIGHTSPIKE;
-			else if (e->render.model->flags & EF_ROCKET)
-				trailtype = EFFECT_TR_ROCKET;
-			else if (e->render.model->flags & EF_GRENADE)
-			{
-				// LordHavoc: e->render.alpha == -1 is for Nehahra dem compatibility (cigar smoke)
-				trailtype = e->render.alpha == -1 ? EFFECT_TR_NEHAHRASMOKE : EFFECT_TR_GRENADE;
-			}
-			else if (e->render.model->flags & EF_TRACER3)
-				trailtype = EFFECT_TR_VORESPIKE;
-		}
-		// LordHavoc: customizable glow
-		if (e->state_current.glowsize)
-		{
-			// * 4 for the expansion from 0-255 to 0-1023 range,
-			// / 255 to scale down byte colors
-			dlightradius = max(dlightradius, e->state_current.glowsize * 4);
-			VectorMA(dlightcolor, (1.0f / 255.0f), (unsigned char *)&palette_complete[e->state_current.glowcolor], dlightcolor);
-		}
-		// make the glow dlight
-		if (dlightradius > 0 && (dlightcolor[0] || dlightcolor[1] || dlightcolor[2]) && !(e->render.flags & RENDER_VIEWMODEL))
-		{
-			//dlightmatrix = e->render.matrix;
-			// hack to make glowing player light shine on their gun
-			//if (e->state_current.number == cl.viewentity/* && !chase_active.integer*/)
-			//	Matrix4x4_AdjustOrigin(&dlightmatrix, 0, 0, 30);
-			CL_AllocDlight(&e->render, &e->render.matrix, dlightradius, dlightcolor[0], dlightcolor[1], dlightcolor[2], 0, 0, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-		}
-		// custom rtlight
-		if (e->state_current.lightpflags & PFLAGS_FULLDYNAMIC)
-		{
-			float light[4];
-			VectorScale(e->state_current.light, (1.0f / 256.0f), light);
-			light[3] = e->state_current.light[3];
-			if (light[0] == 0 && light[1] == 0 && light[2] == 0)
-				VectorSet(light, 1, 1, 1);
-			if (light[3] == 0)
-				light[3] = 350;
-			// FIXME: add ambient/diffuse/specular scales as an extension ontop of TENEBRAE_GFX_DLIGHTS?
-			CL_AllocDlight(&e->render, &e->render.matrix, light[3], light[0], light[1], light[2], 0, 0, e->state_current.skin, e->state_current.lightstyle, !(e->state_current.lightpflags & PFLAGS_NOSHADOW), (e->state_current.lightpflags & PFLAGS_CORONA) != 0, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-		}
-		// do trails
-		if (e->render.flags & RENDER_GLOWTRAIL)
-			trailtype = EFFECT_TR_GLOWTRAIL;
-		if (trailtype)
-		{
-			float len;
-			vec3_t vel;
-			VectorSubtract(e->state_current.origin, e->state_previous.origin, vel);
-			len = e->state_current.time - e->state_previous.time;
-			if (len > 0)
-				len = 1.0f / len;
-			VectorScale(vel, len, vel);
-			CL_ParticleEffect(trailtype, 1, e->persistent.trail_origin, origin, vel, vel, e, e->state_current.glowcolor);
-		}
-		VectorCopy(origin, e->persistent.trail_origin);
-		// tenebrae's sprites are all additive mode (weird)
-		if (gamemode == GAME_TENEBRAE && e->render.model && e->render.model->type == mod_sprite)
-			e->render.effects |= EF_ADDITIVE;
-		// player model is only shown with chase_active on
-		if (!e->csqc)
-		if (e->state_current.number == cl.viewentity)
-			e->render.flags |= RENDER_EXTERIORMODEL;
-		// transparent stuff can't be lit during the opaque stage
-		if (e->render.effects & (EF_ADDITIVE | EF_NODEPTHTEST) || e->render.alpha < 1)
-			e->render.flags |= RENDER_TRANSPARENT;
-		// double sided rendering mode causes backfaces to be visible
-		// (mostly useful on transparent stuff)
-		if (e->render.effects & EF_DOUBLESIDED)
-			e->render.flags |= RENDER_NOCULLFACE;
-		// either fullbright or lit
-		if (!(e->render.effects & EF_FULLBRIGHT) && !r_fullbright.integer)
-			e->render.flags |= RENDER_LIGHT;
-		// hide player shadow during intermission or nehahra movie
-		if (!(e->render.effects & EF_NOSHADOW)
-		 && !(e->render.flags & (RENDER_VIEWMODEL | RENDER_TRANSPARENT))
-		 && (!(e->render.flags & RENDER_EXTERIORMODEL) || (!cl.intermission && cls.protocol != PROTOCOL_NEHAHRAMOVIE && !cl_noplayershadow.integer)))
-			e->render.flags |= RENDER_SHADOW;
-		if (e->render.model && e->render.model->name[0] == '*' && e->render.model->TraceBox)
-			cl.brushmodel_entities[cl.num_brushmodel_entities++] = e->state_current.number;
-		// because the player may be attached to another entity, V_CalcRefdef must be deferred until here...
-		if (e->state_current.number == cl.viewentity)
-			V_CalcRefdef();
+		int cb;
+		unsigned char *cbcolor;
+		e->render.colormap = e->state_current.colormap;
+		cb = (e->render.colormap & 0xF) << 4;cb += (cb >= 128 && cb < 224) ? 4 : 12;
+		cbcolor = (unsigned char *) (&palette_complete[cb]);
+		e->render.colormap_pantscolor[0] = cbcolor[0] * (1.0f / 255.0f);
+		e->render.colormap_pantscolor[1] = cbcolor[1] * (1.0f / 255.0f);
+		e->render.colormap_pantscolor[2] = cbcolor[2] * (1.0f / 255.0f);
+		cb = (e->render.colormap & 0xF0);cb += (cb >= 128 && cb < 224) ? 4 : 12;
+		cbcolor = (unsigned char *) (&palette_complete[cb]);
+		e->render.colormap_shirtcolor[0] = cbcolor[0] * (1.0f / 255.0f);
+		e->render.colormap_shirtcolor[1] = cbcolor[1] * (1.0f / 255.0f);
+		e->render.colormap_shirtcolor[2] = cbcolor[2] * (1.0f / 255.0f);
 	}
+	else if (e->state_current.colormap && cl.scores != NULL)
+	{
+		int cb;
+		unsigned char *cbcolor;
+		e->render.colormap = cl.scores[e->state_current.colormap - 1].colors; // color it
+		cb = (e->render.colormap & 0xF) << 4;cb += (cb >= 128 && cb < 224) ? 4 : 12;
+		cbcolor = (unsigned char *) (&palette_complete[cb]);
+		e->render.colormap_pantscolor[0] = cbcolor[0] * (1.0f / 255.0f);
+		e->render.colormap_pantscolor[1] = cbcolor[1] * (1.0f / 255.0f);
+		e->render.colormap_pantscolor[2] = cbcolor[2] * (1.0f / 255.0f);
+		cb = (e->render.colormap & 0xF0);cb += (cb >= 128 && cb < 224) ? 4 : 12;
+		cbcolor = (unsigned char *) (&palette_complete[cb]);
+		e->render.colormap_shirtcolor[0] = cbcolor[0] * (1.0f / 255.0f);
+		e->render.colormap_shirtcolor[1] = cbcolor[1] * (1.0f / 255.0f);
+		e->render.colormap_shirtcolor[2] = cbcolor[2] * (1.0f / 255.0f);
+	}
+	else
+	{
+		e->render.colormap = -1; // no special coloring
+		VectorClear(e->render.colormap_pantscolor);
+		VectorClear(e->render.colormap_shirtcolor);
+	}
+	e->render.skinnum = e->state_current.skin;
+	if (e->render.flags & RENDER_VIEWMODEL && !e->state_current.tagentity)
+	{
+		if (e == &cl.viewent && cl.entities[cl.viewentity].state_current.active)
+		{
+			e->state_current.alpha = cl.entities[cl.viewentity].state_current.alpha;
+			e->state_current.effects = EF_NOSHADOW | (cl.entities[cl.viewentity].state_current.effects & (EF_ADDITIVE | EF_REFLECTIVE | EF_FULLBRIGHT | EF_NODEPTHTEST));
+		}
+		matrix = &viewmodelmatrix;
+	}
+	else
+	{
+		// if the tag entity is currently impossible, skip it
+		if (e->state_current.tagentity >= cl.num_entities)
+			return;
+		t = cl.entities + e->state_current.tagentity;
+		// if the tag entity is inactive, skip it
+		if (!t->state_current.active)
+			return;
+		// note: this can link to world
+		CL_UpdateNetworkEntity(t);
+		// make relative to the entity
+		matrix = &t->render.matrix;
+		// some properties of the tag entity carry over
+		e->render.flags |= t->render.flags & (RENDER_EXTERIORMODEL | RENDER_VIEWMODEL);
+		// if a valid tagindex is used, make it relative to that tag instead
+		// FIXME: use a model function to get tag info (need to handle skeletal)
+		if (e->state_current.tagentity && e->state_current.tagindex >= 1 && (model = t->render.model))
+		{
+			// blend the matrices
+			memset(&blendmatrix, 0, sizeof(blendmatrix));
+			for (j = 0;j < 4 && t->render.frameblend[j].lerp > 0;j++)
+			{
+				matrix4x4_t tagmatrix;
+				Mod_Alias_GetTagMatrix(model, t->render.frameblend[j].frame, e->state_current.tagindex - 1, &tagmatrix);
+				d = t->render.frameblend[j].lerp;
+				for (l = 0;l < 4;l++)
+					for (k = 0;k < 4;k++)
+						blendmatrix.m[l][k] += d * tagmatrix.m[l][k];
+			}
+			// concat the tag matrices onto the entity matrix
+			Matrix4x4_Concat(&tempmatrix, &t->render.matrix, &blendmatrix);
+			// use the constructed tag matrix
+			matrix = &tempmatrix;
+		}
+	}
+
+	// movement lerp
+	// if it's the player entity, update according to client movement
+	if (e == cl.entities + cl.playerentity && cl.movement_predicted)
+	{
+		lerp = (cl.time - cl.movement_time[1]) / (cl.movement_time[0] - cl.movement_time[1]);
+		lerp = bound(0, lerp, 1);
+		VectorLerp(cl.movement_oldorigin, lerp, cl.movement_origin, origin);
+		VectorSet(angles, 0, cl.viewangles[1], 0);
+	}
+	else if (e->persistent.lerpdeltatime > 0 && (lerp = (cl.time - e->persistent.lerpstarttime) / e->persistent.lerpdeltatime) < 1)
+	{
+		// interpolate the origin and angles
+		lerp = max(0, lerp);
+		VectorLerp(e->persistent.oldorigin, lerp, e->persistent.neworigin, origin);
+		VectorSubtract(e->persistent.newangles, e->persistent.oldangles, delta);
+		if (delta[0] < -180) delta[0] += 360;else if (delta[0] >= 180) delta[0] -= 360;
+		if (delta[1] < -180) delta[1] += 360;else if (delta[1] >= 180) delta[1] -= 360;
+		if (delta[2] < -180) delta[2] += 360;else if (delta[2] >= 180) delta[2] -= 360;
+		VectorMA(e->persistent.oldangles, lerp, delta, angles);
+	}
+	else
+	{
+		// no interpolation
+		VectorCopy(e->persistent.neworigin, origin);
+		VectorCopy(e->persistent.newangles, angles);
+	}
+
+	// model setup and some modelflags
+	if(e->state_current.modelindex < MAX_MODELS)
+		e->render.model = cl.model_precache[e->state_current.modelindex];
+	else
+		e->render.model = cl.csqc_model_precache[65536-e->state_current.modelindex];
+	if (e->render.model)
+	{
+		// if model is alias or this is a tenebrae-like dlight, reverse pitch direction
+		if (e->render.model->type == mod_alias)
+			angles[0] = -angles[0];
+		if ((e->render.model->flags & EF_ROTATE) && (!e->state_current.tagentity && !(e->render.flags & RENDER_VIEWMODEL)))
+		{
+			angles[1] = ANGLEMOD(100*cl.time);
+			if (cl_itembobheight.value)
+				origin[2] += (cos(cl.time * cl_itembobspeed.value * (2.0 * M_PI)) + 1.0) * 0.5 * cl_itembobheight.value;
+		}
+		// transfer certain model flags to effects
+		e->render.effects |= e->render.model->flags2 & (EF_FULLBRIGHT | EF_ADDITIVE);
+		if ((e->render.effects & EF_SELECTABLE) && cl.cmd.cursor_entitynumber == e->state_current.number)
+			VectorScale(e->render.colormod, 2, e->render.colormod);
+	}
+	// if model is alias or this is a tenebrae-like dlight, reverse pitch direction
+	else if (e->state_current.lightpflags & PFLAGS_FULLDYNAMIC)
+		angles[0] = -angles[0];
+
+	// animation lerp
+	if (e->render.frame2 == e->state_current.frame)
+	{
+		// update frame lerp fraction
+		e->render.framelerp = 1;
+		if (e->render.frame2time > e->render.frame1time)
+		{
+			// make sure frame lerp won't last longer than 100ms
+			// (this mainly helps with models that use framegroups and
+			// switch between them infrequently)
+			e->render.framelerp = (cl.time - e->render.frame2time) / min(e->render.frame2time - e->render.frame1time, 0.1);
+			e->render.framelerp = bound(0, e->render.framelerp, 1);
+		}
+	}
+	else
+	{
+		// begin a new frame lerp
+		e->render.frame1 = e->render.frame2;
+		e->render.frame1time = e->render.frame2time;
+		e->render.frame = e->render.frame2 = e->state_current.frame;
+		e->render.frame2time = cl.time;
+		e->render.framelerp = 0;
+	}
+
+	// set up the render matrix
+	// FIXME: e->render.scale should go away
+	Matrix4x4_CreateFromQuakeEntity(&matrix2, origin[0], origin[1], origin[2], angles[0], angles[1], angles[2], e->render.scale);
+	// concat the matrices to make the entity relative to its tag
+	Matrix4x4_Concat(&e->render.matrix, matrix, &matrix2);
+	// make the other useful stuff
+	CL_UpdateRenderEntity(&e->render);
+
+	// handle effects now that we know where this entity is in the world...
+	if (e->render.model && e->render.model->soundfromcenter)
+	{
+		// bmodels are treated specially since their origin is usually '0 0 0'
+		vec3_t o;
+		VectorMAM(0.5f, e->render.model->normalmins, 0.5f, e->render.model->normalmaxs, o);
+		Matrix4x4_Transform(&e->render.matrix, o, origin);
+	}
+	else
+		Matrix4x4_OriginFromMatrix(&e->render.matrix, origin);
+	trailtype = EFFECT_NONE;
+	dlightradius = 0;
+	dlightcolor[0] = 0;
+	dlightcolor[1] = 0;
+	dlightcolor[2] = 0;
+	// LordHavoc: if the entity has no effects, don't check each
+	if (e->render.effects)
+	{
+		if (e->render.effects & EF_BRIGHTFIELD)
+		{
+			if (gamemode == GAME_NEXUIZ)
+				trailtype = EFFECT_TR_NEXUIZPLASMA;
+			else
+				CL_EntityParticles(e);
+		}
+		if (e->render.effects & EF_DIMLIGHT)
+		{
+			dlightradius = max(dlightradius, 200);
+			dlightcolor[0] += 1.50f;
+			dlightcolor[1] += 1.50f;
+			dlightcolor[2] += 1.50f;
+		}
+		if (e->render.effects & EF_BRIGHTLIGHT)
+		{
+			dlightradius = max(dlightradius, 400);
+			dlightcolor[0] += 3.00f;
+			dlightcolor[1] += 3.00f;
+			dlightcolor[2] += 3.00f;
+		}
+		// LordHavoc: more effects
+		if (e->render.effects & EF_RED) // red
+		{
+			dlightradius = max(dlightradius, 200);
+			dlightcolor[0] += 1.50f;
+			dlightcolor[1] += 0.15f;
+			dlightcolor[2] += 0.15f;
+		}
+		if (e->render.effects & EF_BLUE) // blue
+		{
+			dlightradius = max(dlightradius, 200);
+			dlightcolor[0] += 0.15f;
+			dlightcolor[1] += 0.15f;
+			dlightcolor[2] += 1.50f;
+		}
+		if (e->render.effects & EF_FLAME)
+			CL_ParticleEffect(EFFECT_EF_FLAME, bound(0, cl.time - cl.oldtime, 0.1), origin, origin, vec3_origin, vec3_origin, NULL, 0);
+		if (e->render.effects & EF_STARDUST)
+			CL_ParticleEffect(EFFECT_EF_STARDUST, bound(0, cl.time - cl.oldtime, 0.1), origin, origin, vec3_origin, vec3_origin, NULL, 0);
+		if (e->render.effects & (EF_FLAG1QW | EF_FLAG2QW))
+		{
+			// these are only set on player entities
+			CL_AddQWCTFFlagModel(e, (e->render.effects & EF_FLAG2QW) != 0);
+		}
+	}
+	// muzzleflash fades over time, and is offset a bit
+	if (e->persistent.muzzleflash > 0)
+	{
+		Matrix4x4_Transform(&e->render.matrix, muzzleflashorigin, v2);
+		trace = CL_TraceBox(origin, vec3_origin, vec3_origin, v2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_SKY, false);
+		tempmatrix = e->render.matrix;
+		Matrix4x4_SetOrigin(&tempmatrix, trace.endpos[0], trace.endpos[1], trace.endpos[2]);
+		CL_AllocDlight(NULL, &tempmatrix, 150, e->persistent.muzzleflash * 4.0f, e->persistent.muzzleflash * 4.0f, e->persistent.muzzleflash * 4.0f, 0, 0, 0, -1, true, 0, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		e->persistent.muzzleflash -= bound(0, cl.time - cl.oldtime, 0.1) * 20;
+	}
+	// LordHavoc: if the model has no flags, don't check each
+	if (e->render.model && e->render.model->flags && (!e->state_current.tagentity && !(e->render.flags & RENDER_VIEWMODEL)))
+	{
+		if (e->render.model->flags & EF_GIB)
+			trailtype = EFFECT_TR_BLOOD;
+		else if (e->render.model->flags & EF_ZOMGIB)
+			trailtype = EFFECT_TR_SLIGHTBLOOD;
+		else if (e->render.model->flags & EF_TRACER)
+			trailtype = EFFECT_TR_WIZSPIKE;
+		else if (e->render.model->flags & EF_TRACER2)
+			trailtype = EFFECT_TR_KNIGHTSPIKE;
+		else if (e->render.model->flags & EF_ROCKET)
+			trailtype = EFFECT_TR_ROCKET;
+		else if (e->render.model->flags & EF_GRENADE)
+		{
+			// LordHavoc: e->render.alpha == -1 is for Nehahra dem compatibility (cigar smoke)
+			trailtype = e->render.alpha == -1 ? EFFECT_TR_NEHAHRASMOKE : EFFECT_TR_GRENADE;
+		}
+		else if (e->render.model->flags & EF_TRACER3)
+			trailtype = EFFECT_TR_VORESPIKE;
+	}
+	// LordHavoc: customizable glow
+	if (e->state_current.glowsize)
+	{
+		// * 4 for the expansion from 0-255 to 0-1023 range,
+		// / 255 to scale down byte colors
+		dlightradius = max(dlightradius, e->state_current.glowsize * 4);
+		VectorMA(dlightcolor, (1.0f / 255.0f), (unsigned char *)&palette_complete[e->state_current.glowcolor], dlightcolor);
+	}
+	// make the glow dlight
+	if (dlightradius > 0 && (dlightcolor[0] || dlightcolor[1] || dlightcolor[2]) && !(e->render.flags & RENDER_VIEWMODEL))
+	{
+		//dlightmatrix = e->render.matrix;
+		// hack to make glowing player light shine on their gun
+		//if (e->state_current.number == cl.viewentity/* && !chase_active.integer*/)
+		//	Matrix4x4_AdjustOrigin(&dlightmatrix, 0, 0, 30);
+		CL_AllocDlight(&e->render, &e->render.matrix, dlightradius, dlightcolor[0], dlightcolor[1], dlightcolor[2], 0, 0, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+	}
+	// custom rtlight
+	if (e->state_current.lightpflags & PFLAGS_FULLDYNAMIC)
+	{
+		float light[4];
+		VectorScale(e->state_current.light, (1.0f / 256.0f), light);
+		light[3] = e->state_current.light[3];
+		if (light[0] == 0 && light[1] == 0 && light[2] == 0)
+			VectorSet(light, 1, 1, 1);
+		if (light[3] == 0)
+			light[3] = 350;
+		// FIXME: add ambient/diffuse/specular scales as an extension ontop of TENEBRAE_GFX_DLIGHTS?
+		CL_AllocDlight(&e->render, &e->render.matrix, light[3], light[0], light[1], light[2], 0, 0, e->state_current.skin, e->state_current.lightstyle, !(e->state_current.lightpflags & PFLAGS_NOSHADOW), (e->state_current.lightpflags & PFLAGS_CORONA) != 0, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+	}
+	// do trails
+	if (e->render.flags & RENDER_GLOWTRAIL)
+		trailtype = EFFECT_TR_GLOWTRAIL;
+	if (trailtype)
+	{
+		float len;
+		vec3_t vel;
+		VectorSubtract(e->state_current.origin, e->state_previous.origin, vel);
+		len = e->state_current.time - e->state_previous.time;
+		if (len > 0)
+			len = 1.0f / len;
+		VectorScale(vel, len, vel);
+		CL_ParticleEffect(trailtype, 1, e->persistent.trail_origin, origin, vel, vel, e, e->state_current.glowcolor);
+	}
+	VectorCopy(origin, e->persistent.trail_origin);
+	// tenebrae's sprites are all additive mode (weird)
+	if (gamemode == GAME_TENEBRAE && e->render.model && e->render.model->type == mod_sprite)
+		e->render.effects |= EF_ADDITIVE;
+	// player model is only shown with chase_active on
+	if (e->state_current.number == cl.viewentity)
+		e->render.flags |= RENDER_EXTERIORMODEL;
+	// transparent stuff can't be lit during the opaque stage
+	if (e->render.effects & (EF_ADDITIVE | EF_NODEPTHTEST) || e->render.alpha < 1)
+		e->render.flags |= RENDER_TRANSPARENT;
+	// double sided rendering mode causes backfaces to be visible
+	// (mostly useful on transparent stuff)
+	if (e->render.effects & EF_DOUBLESIDED)
+		e->render.flags |= RENDER_NOCULLFACE;
+	// either fullbright or lit
+	if (!(e->render.effects & EF_FULLBRIGHT) && !r_fullbright.integer)
+		e->render.flags |= RENDER_LIGHT;
+	// hide player shadow during intermission or nehahra movie
+	if (!(e->render.effects & EF_NOSHADOW)
+	 && !(e->render.flags & (RENDER_VIEWMODEL | RENDER_TRANSPARENT))
+	 && (!(e->render.flags & RENDER_EXTERIORMODEL) || (!cl.intermission && cls.protocol != PROTOCOL_NEHAHRAMOVIE && !cl_noplayershadow.integer)))
+		e->render.flags |= RENDER_SHADOW;
+	if (e->render.model && e->render.model->name[0] == '*' && e->render.model->TraceBox)
+		cl.brushmodel_entities[cl.num_brushmodel_entities++] = e->state_current.number;
 }
 
 
@@ -1188,10 +1161,23 @@ void CL_UpdateNetworkEntity(entity_t *e)
 CL_UpdateEntities
 ===============
 */
-static void CL_UpdateEntities(void)
+void CL_UpdateEntities(void)
 {
 	entity_t *ent;
 	int i;
+
+// start on the entity after the world
+	for (i = 1;i < cl.num_entities;i++)
+	{
+		if (cl.entities_active[i])
+		{
+			ent = cl.entities + i;
+			if (ent->state_current.active)
+				CL_UpdateNetworkEntity(ent);
+			else
+				cl.entities_active[i] = false;
+		}
+	}
 
 	ent = &cl.viewent;
 	ent->state_previous = ent->state_current;
@@ -1219,70 +1205,36 @@ static void CL_UpdateEntities(void)
 		ent->render.frame1time = ent->render.frame2time = cl.time;
 		ent->render.framelerp = 1;
 	}
-
-	// start on the entity after the world
-	entitylinkframenumber++;
-	for (i = 1;i < cl.num_entities;i++)
-	{
-		if (cl.entities_active[i])
-		{
-			ent = cl.entities + i;
-			if (ent->state_current.active)
-				CL_UpdateNetworkEntity(ent);
-			else
-				cl.entities_active[i] = false;
-		}
-	}
-	CL_UpdateNetworkEntity(&cl.viewent);
+	CL_UpdateNetworkEntity(ent);
 }
 
 // note this is a recursive function, but it can never get in a runaway loop (because of the delayedlink flags)
 void CL_LinkNetworkEntity(entity_t *e)
 {
-	entity_t *t;
-	if (e->persistent.linkframe != entitylinkframenumber)
+	// skip inactive entities and world
+	if (!e->state_current.active || e == cl.entities)
+		return;
+	if (e->render.flags & RENDER_VIEWMODEL && !e->state_current.tagentity)
 	{
-		e->persistent.linkframe = entitylinkframenumber;
-		// skip inactive entities and world
-		if (!e->state_current.active || e == cl.entities || e == cl.csqcentities)
+		if (!r_drawviewmodel.integer || chase_active.integer || r_refdef.envmap)
 			return;
-		if (e->render.flags & RENDER_VIEWMODEL && !e->state_current.tagentity)
-		{
-			if (!r_drawviewmodel.integer || chase_active.integer || r_refdef.envmap)
-				return;
-			if (!e->csqc)
-			if (cl.viewentity)
-				CL_LinkNetworkEntity(cl.entities + cl.viewentity);
-		}
-		else
-		{
-			// if the tag entity is currently impossible, skip it
-			if (!e->csqc)
-			{
-				if (e->state_current.tagentity >= cl.num_entities)
-					return;
-				t = cl.entities + e->state_current.tagentity;
-			}
-			else
-			{
-				if (e->state_current.tagentity >= cl.num_csqcentities)
-					return;
-				t = cl.csqcentities + e->state_current.tagentity;
-			}
-			// if the tag entity is inactive, skip it
-			if (!t->state_current.active)
-				return;
-			// note: this can link to world
-			CL_LinkNetworkEntity(t);
-		}
-
-		// don't show entities with no modelindex (note: this still shows
-		// entities which have a modelindex that resolved to a NULL model)
-		if (e->render.model && !(e->render.effects & EF_NODRAW) && r_refdef.numentities < r_refdef.maxentities)
-			r_refdef.entities[r_refdef.numentities++] = &e->render;
-		//if (cl.viewentity && e->state_current.number == cl.viewentity)
-		//	Matrix4x4_Print(&e->render.matrix);
 	}
+	else
+	{
+		// if the tag entity is currently impossible, skip it
+		if (e->state_current.tagentity >= cl.num_entities)
+			return;
+		// if the tag entity is inactive, skip it
+		if (!cl.entities[e->state_current.tagentity].state_current.active)
+			return;
+	}
+
+	// don't show entities with no modelindex (note: this still shows
+	// entities which have a modelindex that resolved to a NULL model)
+	if (e->render.model && !(e->render.effects & EF_NODRAW) && r_refdef.numentities < r_refdef.maxentities)
+		r_refdef.entities[r_refdef.numentities++] = &e->render;
+	//if (cl.viewentity && e->state_current.number == cl.viewentity)
+	//	Matrix4x4_Print(&e->render.matrix);
 }
 
 void CL_RelinkWorld(void)
@@ -1564,11 +1516,6 @@ void CL_LerpPlayer(float frac)
 
 void CSQC_RelinkAllEntities (int drawmask)
 {
-	// process network entities (note: this sets up the view!)
-	cl.num_brushmodel_entities = 0;
-	CL_UpdateEntities();
-
-	entitylinkframenumber++;
 	// link stuff
 	CL_RelinkWorld();
 	CL_RelinkStaticEntities();
@@ -1579,11 +1526,10 @@ void CSQC_RelinkAllEntities (int drawmask)
 	if (drawmask & ENTMASK_ENGINE)
 	{
 		CL_RelinkNetworkEntities();
+		if (drawmask & ENTMASK_ENGINEVIEWMODELS)
+			CL_LinkNetworkEntity(&cl.viewent); // link gun model
 		CL_RelinkQWNails();
 	}
-
-	if (drawmask & ENTMASK_ENGINEVIEWMODELS)
-		CL_LinkNetworkEntity(&cl.viewent); // link gun model
 
 	// update view blend
 	V_CalcViewBlend();
@@ -1625,31 +1571,20 @@ int CL_ReadFromServer(void)
 		// predict current player location
 		CL_ClientMovement_Replay();
 
-		// now that the player entity has been updated we can call V_CalcRefdef
+		cl.num_brushmodel_entities = 0;
+		// process network entities
+		// first link the player
+		CL_UpdateNetworkEntity(cl.entities + cl.viewentity);
+		// set up the view
 		V_CalcRefdef();
-
-		if(!csqc_loaded)	//[515]: csqc
+		if (!csqc_loaded)
 		{
-			// process network entities (note: this sets up the view!)
-			cl.num_brushmodel_entities = 0;
+			// now link the rest of the network entities
+			// (this is instead done in VM_R_RenderScene if csqc is loaded)
 			CL_UpdateEntities();
-
-			entitylinkframenumber++;
-			// link stuff
-			CL_RelinkWorld();
-			CL_RelinkStaticEntities();
-			CL_RelinkBeams();
-			CL_RelinkEffects();
-
-			CL_RelinkNetworkEntities();
-			CL_LinkNetworkEntity(&cl.viewent); // link gun model
-			CL_RelinkQWNails();
-
-			// update view blend
-			V_CalcViewBlend();
 		}
-		else
-			csqc_frame = true;
+
+		CSQC_RelinkAllEntities(ENTMASK_ENGINE | ENTMASK_ENGINEVIEWMODELS);
 
 		CL_UpdateLights();
 		CL_StairSmoothing();
