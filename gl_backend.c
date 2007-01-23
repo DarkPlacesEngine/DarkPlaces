@@ -591,29 +591,26 @@ void GL_DepthTest(int state)
 
 void GL_CullFace(int state)
 {
-	if (gl_state.cullface != state)
+	CHECKGLERROR
+	if (state != GL_NONE)
 	{
-		CHECKGLERROR
-		if (state != GL_NONE)
+		if (!gl_state.cullfaceenable)
 		{
-			if (!gl_state.cullfaceenable)
-			{
-				gl_state.cullfaceenable = true;
-				qglEnable(GL_CULL_FACE);CHECKGLERROR
-			}
-			if (gl_state.cullface != state)
-			{
-				gl_state.cullface = state;
-				qglCullFace(state);CHECKGLERROR
-			}
+			gl_state.cullfaceenable = true;
+			qglEnable(GL_CULL_FACE);CHECKGLERROR
 		}
-		else
+		if (gl_state.cullface != state)
 		{
-			if (gl_state.cullfaceenable)
-			{
-				gl_state.cullfaceenable = false;
-				qglDisable(GL_CULL_FACE);CHECKGLERROR
-			}
+			gl_state.cullface = state;
+			qglCullFace(gl_state.cullface);CHECKGLERROR
+		}
+	}
+	else
+	{
+		if (gl_state.cullfaceenable)
+		{
+			gl_state.cullfaceenable = false;
+			qglDisable(GL_CULL_FACE);CHECKGLERROR
 		}
 	}
 }
