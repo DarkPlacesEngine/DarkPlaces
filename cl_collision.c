@@ -178,7 +178,7 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 	return cliptrace;
 }
 
-float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t normal, int *hitent, entity_render_t *ignoreent, qboolean csqcents)
+float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t normal, int *hitent, entity_render_t *ignoreent)
 {
 	float maxfrac, maxrealfrac;
 	int n;
@@ -208,12 +208,6 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 	tracemaxs[1] = max(start[1], end[1]);
 	tracemins[2] = min(start[2], end[2]);
 	tracemaxs[2] = max(start[2], end[2]);
-
-	if (csqcents)
-	{
-		Con_Printf("CL_SelectTraceline: csqc entity collisions in this function are broken and this function will be removed in the future (it is not part of the csqc spec).\n");
-		return maxfrac;
-	}
 
 	// look for embedded bmodels
 	for (n = 0;n < cl.num_entities;n++)

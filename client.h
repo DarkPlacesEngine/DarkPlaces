@@ -849,7 +849,6 @@ typedef struct client_state_s
 	vec3_t playercrouchmaxs;
 
 	int max_entities;
-	int max_csqcentities;
 	int max_static_entities;
 	int max_temp_entities;
 	int max_effects;
@@ -860,9 +859,7 @@ typedef struct client_state_s
 	int max_particles;
 
 	entity_t *entities;
-	entity_t *csqcentities;	//[515]: csqc
 	unsigned char *entities_active;
-	unsigned char *csqcentities_active;	//[515]: csqc
 	entity_t *static_entities;
 	entity_t *temp_entities;
 	cl_effect_t *effects;
@@ -873,7 +870,6 @@ typedef struct client_state_s
 	particle_t *particles;
 
 	int num_entities;
-	int num_csqcentities;	//[515]: csqc
 	int num_static_entities;
 	int num_temp_entities;
 	int num_brushmodel_entities;

@@ -556,7 +556,7 @@ void CL_UpdatePrydonCursor(void)
 	VectorSet(temp, cl.cmd.cursor_screen[2] * 1000000, cl.cmd.cursor_screen[0] * -r_view.frustum_x * 1000000, cl.cmd.cursor_screen[1] * -r_view.frustum_y * 1000000);
 	Matrix4x4_Transform(&r_view.matrix, temp, cl.cmd.cursor_end);
 	// trace from view origin to the cursor
-	cl.cmd.cursor_fraction = CL_SelectTraceLine(cl.cmd.cursor_start, cl.cmd.cursor_end, cl.cmd.cursor_impact, cl.cmd.cursor_normal, &cl.cmd.cursor_entitynumber, (chase_active.integer || cl.intermission) ? &cl.entities[cl.playerentity].render : NULL, false);
+	cl.cmd.cursor_fraction = CL_SelectTraceLine(cl.cmd.cursor_start, cl.cmd.cursor_end, cl.cmd.cursor_impact, cl.cmd.cursor_normal, &cl.cmd.cursor_entitynumber, (chase_active.integer || cl.intermission) ? &cl.entities[cl.playerentity].render : NULL);
 }
 
 void CL_ClientMovement_InputQW(qw_usercmd_t *cmd)

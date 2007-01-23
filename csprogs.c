@@ -275,14 +275,6 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 	return true;
 }
 
-void CSQC_ClearCSQCEntities (void)
-{
-	memset(cl.csqcentities_active, 0, sizeof(cl.csqcentities_active));
-	cl.num_csqcentities = 0;
-}
-
-void CL_ExpandCSQCEntities (int num);
-
 qboolean CL_VM_InputEvent (qboolean pressed, int key)
 {
 	qboolean r;
@@ -307,7 +299,7 @@ qboolean CL_VM_UpdateView (void)
 		//VectorCopy(cl.viewangles, oldangles);
 		*prog->time = cl.time;
 		CSQC_SetGlobals();
-		cl.num_csqcentities = 0;
+		r_refdef.numentities = 0;
 		PRVM_ExecuteProgram (prog->globals.client->CSQC_UpdateView, CL_F_UPDATEVIEW);
 		//VectorCopy(oldangles, cl.viewangles);
 	CSQC_END
@@ -492,7 +484,6 @@ void CL_VM_Init (void)
 	fs_offset_t csprogsdatasize;
 	int csprogsdatacrc, requiredcrc;
 	int requiredsize;
-	entity_t *ent;
 
 	// reset csqc_progcrc after reading it, so that changing servers doesn't
 	// expect csqc on the next server
@@ -598,16 +589,6 @@ void CL_VM_Init (void)
 
 	cl.csqc_vidvars.drawcrosshair = false;
 	cl.csqc_vidvars.drawenginesbar = false;
-
-	// local state
-	ent = &cl.csqcentities[0];
-	// entire entity array was cleared, so just fill in a few fields
-	ent->state_current.active = true;
-	ent->render.model = cl.worldmodel = cl.model_precache[1];
-	ent->render.alpha = 1;
-	ent->render.flags = RENDER_SHADOW | RENDER_LIGHT;
-	Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, 0, 0, 0, 0, 0, 0, 1);
-	CL_UpdateRenderEntity(&ent->render);
 }
 
 void CL_VM_ShutDown (void)
