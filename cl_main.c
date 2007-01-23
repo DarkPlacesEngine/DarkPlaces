@@ -1222,6 +1222,7 @@ static void CL_RelinkStaticEntities(void)
 		// if the model was not loaded when the static entity was created we
 		// need to re-fetch the model pointer
 		e->render.model = cl.model_precache[e->state_baseline.modelindex];
+		CL_UpdateRenderEntity(&e->render);
 		// transparent stuff can't be lit during the opaque stage
 		if (e->render.effects & (EF_ADDITIVE | EF_NODEPTHTEST) || e->render.alpha < 1)
 			e->render.flags |= RENDER_TRANSPARENT;
