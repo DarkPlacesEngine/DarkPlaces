@@ -1496,7 +1496,7 @@ void CL_ValidateState(entity_state_t *s)
 	if (!s->active)
 		return;
 
-	if (s->modelindex >= MAX_MODELS && (65536-s->modelindex) >= MAX_MODELS)
+	if (s->modelindex >= MAX_MODELS)
 		Host_Error("CL_ValidateState: modelindex (%i) >= MAX_MODELS (%i)\n", s->modelindex, MAX_MODELS);
 
 	// colormap is client index + 1
@@ -1615,7 +1615,6 @@ void CL_ParseBaseline (entity_t *ent, int large)
 		ent->state_baseline.origin[i] = MSG_ReadCoord(cls.protocol);
 		ent->state_baseline.angles[i] = MSG_ReadAngle(cls.protocol);
 	}
-	CL_ValidateState(&ent->state_baseline);
 	ent->state_previous = ent->state_current = ent->state_baseline;
 }
 
