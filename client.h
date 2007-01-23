@@ -274,8 +274,6 @@ entity_render_t;
 
 typedef struct entity_persistent_s
 {
-	int linkframe;
-
 	vec3_t trail_origin;
 
 	// particle trail
@@ -300,7 +298,6 @@ entity_persistent_t;
 
 typedef struct entity_s
 {
-	qboolean csqc;
 	// baseline state (default values)
 	entity_state_t state_baseline;
 	// previous state (interpolating from this)
@@ -1026,6 +1023,7 @@ void CL_Disconnect (void);
 void CL_Disconnect_f (void);
 
 void CL_UpdateRenderEntity(entity_render_t *ent);
+void CL_UpdateEntities(void);
 
 //
 // cl_input

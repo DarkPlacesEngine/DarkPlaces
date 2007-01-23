@@ -311,7 +311,6 @@ qboolean CL_VM_UpdateView (void)
 		PRVM_ExecuteProgram (prog->globals.client->CSQC_UpdateView, CL_F_UPDATEVIEW);
 		//VectorCopy(oldangles, cl.viewangles);
 	CSQC_END
-	csqc_frame = false;
 	return true;
 }
 

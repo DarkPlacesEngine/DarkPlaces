@@ -517,7 +517,6 @@ void CL_Move (void)
 
 #include "cl_collision.h"
 
-extern void V_CalcRefdef(void);
 void CL_UpdatePrydonCursor(void)
 {
 	vec3_t temp;
@@ -552,7 +551,6 @@ void CL_UpdatePrydonCursor(void)
 	cl.cmd.cursor_screen[2] = 1;
 
 	// calculate current view matrix
-	//V_CalcRefdef();
 	Matrix4x4_OriginFromMatrix(&r_view.matrix, cl.cmd.cursor_start);
 	// calculate direction vector of cursor in viewspace by using frustum slopes
 	VectorSet(temp, cl.cmd.cursor_screen[2] * 1000000, cl.cmd.cursor_screen[0] * -r_view.frustum_x * 1000000, cl.cmd.cursor_screen[1] * -r_view.frustum_y * 1000000);

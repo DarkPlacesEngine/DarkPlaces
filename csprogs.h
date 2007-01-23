@@ -48,7 +48,6 @@
 								// Note that to use this properly, you'll NEED to use the predraw function to set the globals.
 //#define RF_DOUBLESIDED		32
 
-extern qboolean csqc_frame;
 extern int csqc_buttons;
 extern qboolean csqc_loaded;
 extern vec3_t csqc_origin, csqc_angles;

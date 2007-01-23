@@ -762,12 +762,11 @@ void VM_CL_getlight (void)
 
 //============================================================================
 //[515]: SCENE MANAGER builtins
-extern void V_CalcRefdef (void);//view.c
 extern qboolean CSQC_AddRenderEdict (prvm_edict_t *ed);//csprogs.c
 extern void CSQC_ClearCSQCEntities (void);//csprogs.c
 
 matrix4x4_t csqc_listenermatrix;
-qboolean csqc_usecsqclistener = false, csqc_frame = false;//[515]: per-frame
+qboolean csqc_usecsqclistener = false;//[515]: per-frame
 
 static void CSQC_R_RecalcView (void)
 {
@@ -782,6 +781,7 @@ static void CSQC_R_RecalcView (void)
 void VM_R_ClearScene (void)
 {
 	VM_SAFEPARMCOUNT(0, VM_R_ClearScene);
+	r_refdef.numentities = 0;
 //	CSQC_R_RecalcView();
 	CSQC_ClearCSQCEntities();
 }
@@ -922,6 +922,8 @@ void VM_R_SetView (void)
 void VM_R_RenderScene (void) //#134
 {
 	VM_SAFEPARMCOUNT(0, VM_R_RenderScene);
+	// update all renderable network entities
+	CL_UpdateEntities();
 	R_RenderView();
 }
 
@@ -1129,7 +1131,7 @@ void VM_CL_trailparticles (void)
 	if (entnum >= cl.max_csqcentities)
 		CL_ExpandCSQCEntities(entnum);
 
-	CL_ParticleEffect(i, VectorDistance(start, end), start, end, t->fields.client->velocity, t->fields.client->velocity, &cl.csqcentities[entnum], (int)PRVM_G_FLOAT(OFS_PARM4));
+	CL_ParticleEffect(i, VectorDistance(start, end), start, end, t->fields.client->velocity, t->fields.client->velocity, NULL, (int)PRVM_G_FLOAT(OFS_PARM4));
 }
 
 //#337 void(float effectnum, vector origin, vector dir, float count) pointparticles (EXT_CSQC)

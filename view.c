@@ -351,8 +351,6 @@ void V_CalcRefdef (void)
 	entity_t *ent;
 	float vieworg[3], gunorg[3], viewangles[3];
 	trace_t trace;
-	if(csqc_loaded)
-		return;
 	VectorClear(gunorg);
 	viewmodelmatrix = identitymatrix;
 	r_view.matrix = identitymatrix;
