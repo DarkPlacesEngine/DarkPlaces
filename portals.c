@@ -15,23 +15,22 @@ static float boxpoints[4*3];
 
 static int Portal_PortalThroughPortalPlanes(tinyplane_t *clipplanes, int clipnumplanes, float *targpoints, int targnumpoints, float *out, int maxpoints)
 {
-	int numpoints, i;
-	if (targnumpoints < 3)
-		return targnumpoints;
-	if (maxpoints < 3)
-		return -1;
-	numpoints = targnumpoints;
-	memcpy(&portaltemppoints[0][0][0], targpoints, numpoints * 3 * sizeof(float));
-	for (i = 0;i < clipnumplanes;i++)
+	int numpoints = targnumpoints, i, w;
+	if (numpoints < 1)
+		return numpoints;
+	if (maxpoints > 256)
+		maxpoints = 256;
+	w = 0;
+	memcpy(&portaltemppoints[w][0][0], targpoints, numpoints * 3 * sizeof(float));
+	for (i = 0;i < clipnumplanes && numpoints > 0;i++)
 	{
-		PolygonF_Divide(numpoints, &portaltemppoints[0][0][0], clipplanes[i].normal[0], clipplanes[i].normal[1], clipplanes[i].normal[2], clipplanes[i].dist, 1.0f/32.0f, 256, &portaltemppoints[1][0][0], &numpoints, 0, NULL, NULL, NULL);
-		if (numpoints < 3)
-			return numpoints;
-		memcpy(&portaltemppoints[0][0][0], &portaltemppoints[1][0][0], numpoints * 3 * sizeof(float));
+		PolygonF_Divide(numpoints, &portaltemppoints[w][0][0], clipplanes[i].normal[0], clipplanes[i].normal[1], clipplanes[i].normal[2], clipplanes[i].dist, 1.0f/32.0f, 256, &portaltemppoints[1-w][0][0], &numpoints, 0, NULL, NULL, NULL);
+		w = 1-w;
+		numpoints = min(numpoints, 256);
 	}
-	if (numpoints > maxpoints)
-		return -1;
-	memcpy(out, &portaltemppoints[0][0][0], numpoints * 3 * sizeof(float));
+	numpoints = min(numpoints, maxpoints);
+	if (numpoints > 0)
+		memcpy(out, &portaltemppoints[w][0][0], numpoints * 3 * sizeof(float));
 	return numpoints;
 }
 
@@ -340,7 +339,9 @@ static void Portal_RecursiveFlow (portalrecursioninfo_t *info, mleaf_t *leaf, in
 								trimaxs[1] = max(v[1], max(v[4], v[7]));
 								trimins[2] = min(v[2], min(v[5], v[8]));
 								trimaxs[2] = max(v[2], max(v[5], v[8]));
-								if (BoxesOverlap(trimins, trimaxs, info->boxmins, info->boxmaxs) && Portal_PortalThroughPortalPlanes(&portalplanes[firstclipplane], numclipplanes, v, 3, &portaltemppoints2[0][0], 256) >= 3)
+								// FIXME: Portal_PortalThroughPortalPlanes is
+								// nice, but it seems to fail on some polygons
+								if (BoxesOverlap(trimins, trimaxs, info->boxmins, info->boxmaxs))// && Portal_PortalThroughPortalPlanes(&portalplanes[firstclipplane], numclipplanes, v, 3, &portaltemppoints2[0][0], 256) > 0)
 								{
 									SETPVSBIT(info->surfacepvs, surfaceindex);
 									info->surfacelist[info->numsurfaces++] = surfaceindex;
