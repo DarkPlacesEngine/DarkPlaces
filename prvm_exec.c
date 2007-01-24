@@ -488,7 +488,6 @@ PRVM_ExecuteProgram
 extern cvar_t prvm_boundscheck;
 extern cvar_t prvm_traceqc;
 extern cvar_t prvm_statementprofiling;
-extern cvar_t prvm_tempstringmemory;
 extern int		PRVM_ED_FindFieldOffset (const char *field);
 extern ddef_t*	PRVM_ED_FindGlobal(const char *name);
 extern sizebuf_t vm_tempstringsbuf;
@@ -512,19 +511,6 @@ void PRVM_ExecuteProgram (func_t fnum, const char *errormessage)
 
 	// after executing this function, delete all tempstrings it created
 	restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
-	// if there is no stack, this is a good time to reallocate the
-	// vm_tempstringsbuf if the cvar has changed
-	if (restorevm_tempstringsbuf_cursize == 0)
-	{
-		int maxsize = bound(4096, prvm_tempstringmemory.integer, 1<<30);
-		if (vm_tempstringsbuf.maxsize != maxsize || !vm_tempstringsbuf.data)
-		{
-			if (vm_tempstringsbuf.data)
-				Mem_Free(vm_tempstringsbuf.data);
-			vm_tempstringsbuf.maxsize = maxsize;
-			vm_tempstringsbuf.data = Mem_Alloc(sv_mempool, vm_tempstringsbuf.maxsize);
-		}
-	}
 
 	prog->trace = prvm_traceqc.integer;
 
