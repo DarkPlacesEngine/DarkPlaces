@@ -7,7 +7,8 @@ char *vm_m_extensions =
 "DP_CINEMATIC_DPV "
 "DP_MENU_EXTRESPONSEPACKET "
 "DP_QC_ASINACOSATANATAN2TAN "
-"DP_QC_STRINGCOLORFUNCTIONS";
+"DP_QC_STRINGCOLORFUNCTIONS "
+"DP_QC_UNLIMITEDTEMPSTRINGS";
 
 /*
 =========
@@ -181,9 +182,6 @@ void VM_M_callfunction(void)
 
 	s = PRVM_G_STRING(OFS_PARM0 + (prog->argc - 1));
 
-	if(!s)
-		PRVM_ERROR("VM_M_callfunction: null string !");
-
 	VM_CheckEmptyString(s);
 
 	func = PRVM_ED_FindFunction(s);
@@ -224,9 +222,6 @@ void VM_M_isfunction(void)
 	VM_SAFEPARMCOUNT(1, VM_M_isfunction);
 
 	s = PRVM_G_STRING(OFS_PARM0);
-
-	if(!s)
-		PRVM_ERROR("VM_M_isfunction: null string !");
 
 	VM_CheckEmptyString(s);
 
@@ -305,7 +300,7 @@ void M_FindKeysForCommand(const char *command, int *keys);
 void VM_M_findkeysforcommand(void)
 {
 	const char *cmd;
-	char *ret;
+	char ret[VM_STRINGTEMP_LENGTH];
 	int keys[NUMKEYS];
 	int i;
 
@@ -315,14 +310,13 @@ void VM_M_findkeysforcommand(void)
 
 	VM_CheckEmptyString(cmd);
 
-	(ret = VM_GetTempString())[0] = 0;
-
 	M_FindKeysForCommand(cmd, keys);
 
+	ret[0] = 0;
 	for(i = 0; i < NUMKEYS; i++)
-		strlcat(ret, va(" \'%i\'", keys[i]), VM_STRINGTEMP_LENGTH);
+		strlcat(ret, va(" \'%i\'", keys[i]), sizeof(ret));
 
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(ret);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(ret);
 }
 
 /*
@@ -412,8 +406,6 @@ void VM_M_setserverlistmaskstring( void )
 
 	VM_SAFEPARMCOUNT( 4, VM_M_setserverlistmaskstring );
 	str = PRVM_G_STRING( OFS_PARM2 );
-	if( !str )
-		PRVM_ERROR( "VM_M_setserverlistmaskstring: null string passed!" );
 
 	masknr = (int)PRVM_G_FLOAT( OFS_PARM0 );
 	if( masknr >= 0 && masknr <= SERVERLIST_ANDMASKCOUNT )
@@ -534,7 +526,7 @@ void VM_M_getserverliststring(void)
 
 	VM_SAFEPARMCOUNT(2, VM_M_getserverliststring);
 
-	PRVM_G_INT(OFS_RETURN) = 0;
+	PRVM_G_INT(OFS_RETURN) = OFS_NULL;
 
 	hostnr = (int)PRVM_G_FLOAT(OFS_PARM1);
 
@@ -586,7 +578,7 @@ void VM_M_getserverlistnumber(void)
 
 	VM_SAFEPARMCOUNT(2, VM_M_getserverliststring);
 
-	PRVM_G_INT(OFS_RETURN) = 0;
+	PRVM_G_INT(OFS_RETURN) = OFS_NULL;
 
 	hostnr = (int)PRVM_G_FLOAT(OFS_PARM1);
 
@@ -789,9 +781,7 @@ void VM_M_getextresponse (void)
 	VM_SAFEPARMCOUNT(0,VM_argv);
 
 	if (net_extresponse_count <= 0)
-	{
-		PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(NULL);
-	}
+		PRVM_G_INT(OFS_RETURN) = OFS_NULL;
 	else
 	{
 		int first;

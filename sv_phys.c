@@ -20,8 +20,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // sv_phys.c
 
 #include "quakedef.h"
-// used only for VM_GetTempString
-#include "prvm_cmds.h"
 
 /*
 
@@ -290,11 +288,7 @@ void SV_Impact (prvm_edict_t *e1, trace_t *trace)
 		if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dphittexturename)))
 		{
 			if (trace->hittexture)
-			{
-				char *s = VM_GetTempString();
-				strlcpy(s, trace->hittexture->name, VM_STRINGTEMP_LENGTH);
-				val->string = PRVM_SetEngineString(s);
-			}
+				val->string = PRVM_SetTempString(trace->hittexture->name);
 			else
 				val->string = 0;
 		}

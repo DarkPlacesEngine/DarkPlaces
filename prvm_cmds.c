@@ -25,20 +25,10 @@ void VM_Warning(const char *fmt, ...)
 //============================================================================
 // Common
 
-// temp string handling
-// LordHavoc: added this to semi-fix the problem of using many ftos calls in a print
-static char vm_string_temp[VM_STRINGTEMP_BUFFERS][VM_STRINGTEMP_LENGTH];
-static int vm_string_tempindex = 0;
-
-// TODO: (move vm_files and vm_fssearchlist to prvm_prog_t struct)
+// TODO DONE: move vm_files and vm_fssearchlist to prvm_prog_t struct
 // TODO: move vm_files and vm_fssearchlist back [9/13/2006 Black]
-char *VM_GetTempString(void)
-{
-	char *s;
-	s = vm_string_temp[vm_string_tempindex];
-	vm_string_tempindex = (vm_string_tempindex + 1) % VM_STRINGTEMP_BUFFERS;
-	return s;
-}
+// TODO: (move vm_files and vm_fssearchlist to prvm_prog_t struct again) [2007-01-23 LordHavoc]
+// TODO: will this war ever end? [2007-01-23 LordHavoc]
 
 void VM_CheckEmptyString (const char *s)
 {
@@ -508,25 +498,14 @@ const string	VM_cvar_string (string)
 */
 void VM_cvar_string(void)
 {
-	char *out;
 	const char *name;
-	const char *cvar_string;
 	VM_SAFEPARMCOUNT(1,VM_cvar_string);
 
 	name = PRVM_G_STRING(OFS_PARM0);
 
-	if(!name)
-		PRVM_ERROR("VM_cvar_string: %s: null string", PRVM_NAME);
-
 	VM_CheckEmptyString(name);
 
-	out = VM_GetTempString();
-
-	cvar_string = Cvar_VariableString(name);
-
-	strlcpy(out, cvar_string, VM_STRINGTEMP_LENGTH);
-
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(out);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(Cvar_VariableString(name));
 }
 
 
@@ -539,25 +518,14 @@ const string	VM_cvar_defstring (string)
 */
 void VM_cvar_defstring (void)
 {
-	char *out;
 	const char *name;
-	const char *cvar_string;
 	VM_SAFEPARMCOUNT(1,VM_cvar_string);
 
 	name = PRVM_G_STRING(OFS_PARM0);
 
-	if(!name)
-		PRVM_ERROR("VM_cvar_defstring: %s: null string", PRVM_NAME);
-
 	VM_CheckEmptyString(name);
 
-	out = VM_GetTempString();
-
-	cvar_string = Cvar_VariableDefString(name);
-
-	strlcpy(out, cvar_string, VM_STRINGTEMP_LENGTH);
-
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(out);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(Cvar_VariableDefString(name));
 }
 /*
 =================
@@ -605,18 +573,17 @@ string	ftos(float)
 void VM_ftos (void)
 {
 	float v;
-	char *s;
+	char s[128];
 
 	VM_SAFEPARMCOUNT(1, VM_ftos);
 
 	v = PRVM_G_FLOAT(OFS_PARM0);
 
-	s = VM_GetTempString();
 	if ((float)((int)v) == v)
 		sprintf(s, "%i", (int)v);
 	else
 		sprintf(s, "%f", v);
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(s);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(s);
 }
 
 /*
@@ -647,13 +614,12 @@ string	vtos(vector)
 
 void VM_vtos (void)
 {
-	char *s;
+	char s[512];
 
 	VM_SAFEPARMCOUNT(1,VM_vtos);
 
-	s = VM_GetTempString();
 	sprintf (s, "'%5.1f %5.1f %5.1f'", PRVM_G_VECTOR(OFS_PARM0)[0], PRVM_G_VECTOR(OFS_PARM0)[1], PRVM_G_VECTOR(OFS_PARM0)[2]);
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(s);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(s);
 }
 
 /*
@@ -666,13 +632,12 @@ string	etos(entity)
 
 void VM_etos (void)
 {
-	char *s;
+	char s[128];
 
 	VM_SAFEPARMCOUNT(1, VM_etos);
 
-	s = VM_GetTempString();
 	sprintf (s, "entity %i", PRVM_G_EDICTNUM(OFS_PARM0));
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(s);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(s);
 }
 
 /*
@@ -795,8 +760,6 @@ void VM_find (void)
 	// LordHavoc: apparently BloodMage does a find(world, weaponmodel, "") and
 	// expects it to find all the monsters, so we must be careful to support
 	// searching for ""
-	if (!s)
-		s = "";
 
 	for (e++ ; e < prog->num_edicts ; e++)
 	{
@@ -888,8 +851,6 @@ void VM_findchain (void)
 	// LordHavoc: apparently BloodMage does a find(world, weaponmodel, "") and
 	// expects it to find all the monsters, so we must be careful to support
 	// searching for ""
-	if (!s)
-		s = "";
 
 	ent = PRVM_NEXT_EDICT(prog->edicts);
 	for (i = 1;i < prog->num_edicts;i++, ent = PRVM_NEXT_EDICT(ent))
@@ -1221,8 +1182,6 @@ changelevel(string map)
 */
 void VM_changelevel (void)
 {
-	const char	*s;
-
 	VM_SAFEPARMCOUNT(1, VM_changelevel);
 
 	if(!sv.active)
@@ -1236,8 +1195,7 @@ void VM_changelevel (void)
 		return;
 	svs.changelevel_issued = true;
 
-	s = PRVM_G_STRING(OFS_PARM0);
-	Cbuf_AddText (va("changelevel %s\n",s));
+	Cbuf_AddText (va("changelevel %s\n",PRVM_G_STRING(OFS_PARM0)));
 }
 
 /*
@@ -1691,7 +1649,7 @@ string	fgets(float fhandle)
 void VM_fgets(void)
 {
 	int c, end;
-	static char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_STRINGTEMP_LENGTH];
 	int filenum;
 
 	VM_SAFEPARMCOUNT(1,VM_fgets);
@@ -1727,9 +1685,9 @@ void VM_fgets(void)
 	if (developer.integer >= 100)
 		Con_Printf("fgets: %s: %s\n", PRVM_NAME, string);
 	if (c >= 0 || end)
-		PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(string);
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(string);
 	else
-		PRVM_G_INT(OFS_RETURN) = 0;
+		PRVM_G_INT(OFS_RETURN) = OFS_NULL;
 }
 
 /*
@@ -1776,15 +1734,9 @@ float	strlen(string s)
 //float(string s) strlen = #114; // returns how many characters are in a string
 void VM_strlen(void)
 {
-	const char *s;
-
 	VM_SAFEPARMCOUNT(1,VM_strlen);
 
-	s = PRVM_G_STRING(OFS_PARM0);
-	if (s)
-		PRVM_G_FLOAT(OFS_RETURN) = strlen(s);
-	else
-		PRVM_G_FLOAT(OFS_RETURN) = 0;
+	PRVM_G_FLOAT(OFS_RETURN) = strlen(PRVM_G_STRING(OFS_PARM0));
 }
 
 // DRESK - Decolorized String
@@ -1798,7 +1750,7 @@ string	strdecolorize(string s)
 // string (string s) strdecolorize = #472; // returns the passed in string with color codes stripped
 void VM_strdecolorize(void)
 {
-	char *szNewString;
+	char szNewString[VM_STRINGTEMP_LENGTH];
 	const char *szString;
 	size_t nCnt;
 	int nPos;
@@ -1812,7 +1764,6 @@ void VM_strdecolorize(void)
 	// Prepare Strings
 	VM_SAFEPARMCOUNT(1,VM_strdecolorize);
 	szString = PRVM_G_STRING(OFS_PARM0);
-	szNewString = VM_GetTempString();
 
 	while(!bFinished)
 	{ // Traverse through String
@@ -1849,7 +1800,7 @@ void VM_strdecolorize(void)
 			nPos = nPos + 1;
 	}
 
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(szNewString);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(szNewString);
 }
 
 // DRESK - String Length (not counting color codes)
@@ -1875,48 +1826,44 @@ void VM_strlennocol(void)
 	VM_SAFEPARMCOUNT(1,VM_strlennocol);
 
 	szString = PRVM_G_STRING(OFS_PARM0);
-	if(szString)
-	{ // Valid String
-		while(!bFinished)
-		{ // Count Characters
-			// SV_BroadcastPrintf("Position '%d'; Character '%c'; Length '%d'\n", nPos, szString[nPos], nCnt);
 
-			if( szString[nPos] == '\n' || szString[nPos] == '\r' || szString[nPos] <= 0)
-			{ // String End Found
-				// SV_BroadcastPrintf("Found End of String at '%d'\n", nPos);
-				bFinished = 1;
-			}
-			else
-			if( szString[nPos] == STRING_COLOR_TAG)
-			{ // Color Code Located
-				if( szString[nPos + 1] == STRING_COLOR_TAG)
-				{ // Increment Length; Skip Color Code
-					nCnt = nCnt + 1;
-					nPos = nPos + 1;
-				}
-				else
-				if( szString[nPos + 1] >= '0' && szString[nPos + 1] <= '9' )
-				{ // Color Code Found; Increment Position
-					// SV_BroadcastPrintf("Found Color Codes at '%d'\n", nPos);
-					nPos = nPos + 1;
-				}
-				else
-				{ // Unknown Color Code; Increment Length!
-					nPos = nPos + 1;
-					nCnt = nCnt + 1;
-				}
-			}
-			else
-				// Increment String Length
-				nCnt = nCnt + 1;
+	while(!bFinished)
+	{ // Count Characters
+		// SV_BroadcastPrintf("Position '%d'; Character '%c'; Length '%d'\n", nPos, szString[nPos], nCnt);
 
-			// Increment Position
-			nPos = nPos + 1;
+		if( szString[nPos] == '\n' || szString[nPos] == '\r' || szString[nPos] <= 0)
+		{ // String End Found
+			// SV_BroadcastPrintf("Found End of String at '%d'\n", nPos);
+			bFinished = 1;
 		}
-		PRVM_G_FLOAT(OFS_RETURN) = nCnt;
+		else
+		if( szString[nPos] == STRING_COLOR_TAG)
+		{ // Color Code Located
+			if( szString[nPos + 1] == STRING_COLOR_TAG)
+			{ // Increment Length; Skip Color Code
+				nCnt = nCnt + 1;
+				nPos = nPos + 1;
+			}
+			else
+			if( szString[nPos + 1] >= '0' && szString[nPos + 1] <= '9' )
+			{ // Color Code Found; Increment Position
+				// SV_BroadcastPrintf("Found Color Codes at '%d'\n", nPos);
+				nPos = nPos + 1;
+			}
+			else
+			{ // Unknown Color Code; Increment Length!
+				nPos = nPos + 1;
+				nCnt = nCnt + 1;
+			}
+		}
+		else
+			// Increment String Length
+			nCnt = nCnt + 1;
+
+		// Increment Position
+		nPos = nPos + 1;
 	}
-	else
-		PRVM_G_FLOAT(OFS_RETURN) = 0;
+	PRVM_G_FLOAT(OFS_RETURN) = nCnt;
 }
 
 /*
@@ -1931,14 +1878,13 @@ string strcat(string,string,...[string])
 // and returns as a tempstring
 void VM_strcat(void)
 {
-	char *s;
+	char s[VM_STRINGTEMP_LENGTH];
 
 	if(prog->argc < 1)
 		PRVM_ERROR("VM_strcat wrong parameter count (min. 1 expected ) !");
 
-	s = VM_GetTempString();
-	VM_VarString(0, s, VM_STRINGTEMP_LENGTH);
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(s);
+	VM_VarString(0, s, sizeof(s));
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(s);
 }
 
 /*
@@ -1954,21 +1900,18 @@ void VM_substring(void)
 {
 	int i, start, length;
 	const char *s;
-	char *string;
+	char string[VM_STRINGTEMP_LENGTH];
 
 	VM_SAFEPARMCOUNT(3,VM_substring);
 
-	string = VM_GetTempString();
 	s = PRVM_G_STRING(OFS_PARM0);
 	start = (int)PRVM_G_FLOAT(OFS_PARM1);
 	length = (int)PRVM_G_FLOAT(OFS_PARM2);
-	if (!s)
-		s = "";
 	for (i = 0;i < start && *s;i++, s++);
-	for (i = 0;i < VM_STRINGTEMP_LENGTH - 1 && *s && i < length;i++, s++)
+	for (i = 0;i < (int)sizeof(string) - 1 && *s && i < length;i++, s++)
 		string[i] = *s;
 	string[i] = 0;
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(string);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(string);
 }
 
 /*
@@ -2066,29 +2009,35 @@ float tokenize(string s)
 //this function originally written by KrimZon, made shorter by LordHavoc
 //20040203: rewritten by LordHavoc (no longer uses allocations)
 int num_tokens = 0;
-char *tokens[256], tokenbuf[MAX_INPUTLINE];
+int tokens[256];
 void VM_tokenize (void)
 {
-	size_t pos;
 	const char *p;
+#if 0
+	size_t pos = 0;
+	char tokenbuf[MAX_INPUTLINE];
+	size_t tokenlen;
+#endif
 
 	VM_SAFEPARMCOUNT(1,VM_tokenize);
 
 	p = PRVM_G_STRING(OFS_PARM0);
 
 	num_tokens = 0;
-	pos = 0;
 	while(COM_ParseToken(&p, false))
 	{
-		size_t tokenlen;
 		if (num_tokens >= (int)(sizeof(tokens)/sizeof(tokens[0])))
 			break;
+#if 0
 		tokenlen = strlen(com_token) + 1;
 		if (pos + tokenlen > sizeof(tokenbuf))
 			break;
-		tokens[num_tokens++] = tokenbuf + pos;
+		tokens[num_tokens++] = PRVM_SetEngineString(tokenbuf + pos);
 		memcpy(tokenbuf + pos, com_token, tokenlen);
 		pos += tokenlen;
+#else
+		tokens[num_tokens++] = PRVM_SetTempString(com_token);
+#endif
 	}
 
 	PRVM_G_FLOAT(OFS_RETURN) = num_tokens;
@@ -2105,9 +2054,9 @@ void VM_argv (void)
 	token_num = (int)PRVM_G_FLOAT(OFS_PARM0);
 
 	if (token_num >= 0 && token_num < num_tokens)
-		PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(tokens[token_num]);
+		PRVM_G_INT(OFS_RETURN) = tokens[token_num];
 	else
-		PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(NULL);
+		PRVM_G_INT(OFS_RETURN) = OFS_NULL;
 }
 
 /*
@@ -2310,11 +2259,7 @@ void VM_loadfromfile(void)
 	VM_SAFEPARMCOUNT(1,VM_loadfromfile);
 
 	filename = PRVM_G_STRING(OFS_PARM0);
-	// .. is parent directory on many platforms
-	// / is parent directory on Amiga
-	// : is root of drive on Amiga (also used as a directory separator on Mac, but / works there too, so that's a bad idea)
-	// \ is a windows-ism (so it's naughty to use it, / works on all platforms)
-	if ((filename[0] == '.' && filename[1] == '.') || filename[0] == '/' || strrchr(filename, ':') || strrchr(filename, '\\'))
+	if (FS_CheckNastyPath(filename, false))
 	{
 		PRVM_G_FLOAT(OFS_RETURN) = -4;
 		VM_Warning("VM_loadfromfile: %s dangerous or non-portable filename \"%s\" not allowed. (contains : or \\ or begins with .. or /)\n", PRVM_NAME, filename);
@@ -2476,7 +2421,6 @@ string	search_getfilename(float handle, float num)
 void VM_search_getfilename(void)
 {
 	int handle, filenum;
-	char *tmp;
 	VM_SAFEPARMCOUNT(2, VM_search_getfilename);
 
 	handle = (int)PRVM_G_FLOAT(OFS_PARM0);
@@ -2498,10 +2442,7 @@ void VM_search_getfilename(void)
 		return;
 	}
 
-	tmp = VM_GetTempString();
-	strlcpy(tmp, prog->opensearches[handle]->filenames[filenum], VM_STRINGTEMP_LENGTH);
-
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(tmp);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog->opensearches[handle]->filenames[filenum]);
 }
 
 /*
@@ -2513,14 +2454,13 @@ string	chr(float ascii)
 */
 void VM_chr(void)
 {
-	char *tmp;
+	char tmp[2];
 	VM_SAFEPARMCOUNT(1, VM_chr);
 
-	tmp = VM_GetTempString();
 	tmp[0] = (unsigned char) PRVM_G_FLOAT(OFS_PARM0);
 	tmp[1] = 0;
 
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(tmp);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(tmp);
 }
 
 //=============================================================================
@@ -2556,15 +2496,11 @@ void VM_precache_pic(void)
 
 	s = PRVM_G_STRING(OFS_PARM0);
 	PRVM_G_INT(OFS_RETURN) = PRVM_G_INT(OFS_PARM0);
-
-	if(!s)
-		PRVM_ERROR ("VM_precache_pic: %s: NULL", PRVM_NAME);
-
 	VM_CheckEmptyString (s);
 
 	// AK Draw_CachePic is supposed to always return a valid pointer
 	if( Draw_CachePic(s, false)->tex == r_texture_notexture )
-		PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(NULL);
+		PRVM_G_INT(OFS_RETURN) = OFS_NULL;
 }
 
 /*
@@ -2581,10 +2517,6 @@ void VM_freepic(void)
 	VM_SAFEPARMCOUNT(1,VM_freepic);
 
 	s = PRVM_G_STRING(OFS_PARM0);
-
-	if(!s)
-		PRVM_ERROR ("VM_freepic: NULL");
-
 	VM_CheckEmptyString (s);
 
 	Draw_FreePic(s);
@@ -2653,15 +2585,6 @@ void VM_drawstring(void)
 	VM_SAFEPARMCOUNT(6,VM_drawstring);
 
 	string = PRVM_G_STRING(OFS_PARM1);
-	if(!string)
-	{
-		PRVM_G_FLOAT(OFS_RETURN) = -1;
-		VM_Warning("VM_drawstring: %s passed null string !\n",PRVM_NAME);
-		return;
-	}
-
-	//VM_CheckEmptyString(string); Why should it be checked - perhaps the menu wants to support the precolored letters, too?
-
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	scale = PRVM_G_VECTOR(OFS_PARM2);
 	rgb = PRVM_G_VECTOR(OFS_PARM3);
@@ -2703,14 +2626,6 @@ void VM_drawpic(void)
 	VM_SAFEPARMCOUNT(6,VM_drawpic);
 
 	picname = PRVM_G_STRING(OFS_PARM1);
-
-	if(!picname)
-	{
-		PRVM_G_FLOAT(OFS_RETURN) = -1;
-		VM_Warning("VM_drawpic: %s passed null picture name !\n", PRVM_NAME);
-		return;
-	}
-
 	VM_CheckEmptyString (picname);
 
 	// is pic cached ? no function yet for that
@@ -2823,10 +2738,6 @@ void VM_getimagesize(void)
 	VM_SAFEPARMCOUNT(1,VM_getimagesize);
 
 	p = PRVM_G_STRING(OFS_PARM0);
-
-	if(!p)
-		PRVM_ERROR("VM_getimagepos: %s passed null picture name !", PRVM_NAME);
-
 	VM_CheckEmptyString (p);
 
 	pic = Draw_CachePic (p, false);
@@ -2845,17 +2756,9 @@ string keynumtostring(float keynum)
 */
 void VM_keynumtostring (void)
 {
-	int keynum;
-	char *tmp;
 	VM_SAFEPARMCOUNT(1, VM_keynumtostring);
 
-	keynum = (int)PRVM_G_FLOAT(OFS_PARM0);
-
-	tmp = VM_GetTempString();
-
-	strlcpy(tmp, Key_KeynumToString(keynum), VM_STRINGTEMP_LENGTH);
-
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(tmp);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(Key_KeynumToString((int)PRVM_G_FLOAT(OFS_PARM0)));
 }
 
 /*
@@ -2867,12 +2770,9 @@ float stringtokeynum(string key)
 */
 void VM_stringtokeynum (void)
 {
-	const char *str;
 	VM_SAFEPARMCOUNT( 1, VM_keynumtostring );
 
-	str = PRVM_G_STRING( OFS_PARM0 );
-
-	PRVM_G_INT(OFS_RETURN) = Key_StringToKeynum( str );
+	PRVM_G_INT(OFS_RETURN) = Key_StringToKeynum(PRVM_G_STRING(OFS_PARM0));
 }
 
 // CL_Video interface functions
@@ -3351,17 +3251,16 @@ string altstr_prepare(string)
 */
 void VM_altstr_prepare( void )
 {
-	char *outstr, *out;
+	char *out;
 	const char *instr, *in;
 	int size;
+	char outstr[VM_STRINGTEMP_LENGTH];
 
 	VM_SAFEPARMCOUNT( 1, VM_altstr_prepare );
 
 	instr = PRVM_G_STRING( OFS_PARM0 );
-	//VM_CheckEmptyString( instr );
-	outstr = VM_GetTempString();
 
-	for( out = outstr, in = instr, size = VM_STRINGTEMP_LENGTH - 1 ; size && *in ; size--, in++, out++ )
+	for( out = outstr, in = instr, size = sizeof(outstr) - 1 ; size && *in ; size--, in++, out++ )
 		if( *in == '\'' ) {
 			*out++ = '\\';
 			*out = '\'';
@@ -3370,7 +3269,7 @@ void VM_altstr_prepare( void )
 			*out = *in;
 	*out = 0;
 
-	PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( outstr );
+	PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString( outstr );
 }
 
 /*
@@ -3383,13 +3282,13 @@ string altstr_get(string, float)
 void VM_altstr_get( void )
 {
 	const char *altstr, *pos;
-	char *outstr, *out;
+	char *out;
 	int count, size;
+	char outstr[VM_STRINGTEMP_LENGTH];
 
 	VM_SAFEPARMCOUNT( 2, VM_altstr_get );
 
 	altstr = PRVM_G_STRING( OFS_PARM0 );
-	//VM_CheckEmptyString( altstr );
 
 	count = (int)PRVM_G_FLOAT( OFS_PARM1 );
 	count = count * 2 + 1;
@@ -3402,12 +3301,11 @@ void VM_altstr_get( void )
 			count--;
 
 	if( !*pos ) {
-		PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( NULL );
+		PRVM_G_INT( OFS_RETURN ) = 0;
 		return;
 	}
 
-    outstr = VM_GetTempString();
-	for( out = outstr, size = VM_STRINGTEMP_LENGTH - 1 ; size && *pos ; size--, pos++, out++ )
+	for( out = outstr, size = sizeof(outstr) - 1 ; size && *pos ; size--, pos++, out++ )
 		if( *pos == '\\' ) {
 			if( !*++pos )
 				break;
@@ -3419,7 +3317,7 @@ void VM_altstr_get( void )
 			*out = *pos;
 
 	*out = 0;
-	PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( outstr );
+	PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString( outstr );
 }
 
 /*
@@ -3434,19 +3332,18 @@ void VM_altstr_set( void )
     int num;
 	const char *altstr, *str;
 	const char *in;
-	char *outstr, *out;
+	char *out;
+	char outstr[VM_STRINGTEMP_LENGTH];
 
 	VM_SAFEPARMCOUNT( 3, VM_altstr_set );
 
 	altstr = PRVM_G_STRING( OFS_PARM0 );
-	//VM_CheckEmptyString( altstr );
 
 	num = (int)PRVM_G_FLOAT( OFS_PARM1 );
 
 	str = PRVM_G_STRING( OFS_PARM2 );
-	//VM_CheckEmptyString( str );
 
-	outstr = out = VM_GetTempString();
+	out = outstr;
 	for( num = num * 2 + 1, in = altstr; *in && num; *out++ = *in++ )
 		if( *in == '\\' ) {
 			if( !*++in ) {
@@ -3456,10 +3353,6 @@ void VM_altstr_set( void )
 			num--;
 		}
 
-	if( !in ) {
-		PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( altstr );
-		return;
-	}
 	// copy set in
 	for( ; *str; *out++ = *str++ );
 	// now jump over the old content
@@ -3467,13 +3360,8 @@ void VM_altstr_set( void )
 		if( *in == '\'' || (*in == '\\' && !*++in) )
 			break;
 
-	if( !in ) {
-		PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( NULL );
-		return;
-	}
-
-	strlcpy(out, in, VM_STRINGTEMP_LENGTH);
-	PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( outstr );
+	strlcpy(out, in, outstr + sizeof(outstr) - out);
+	PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString( outstr );
 }
 
 /*
@@ -3490,14 +3378,14 @@ void VM_altstr_ins(void)
 	const char *set;
 	const char *instr;
 	const char *in;
-	char *outstr;
 	char *out;
+	char outstr[VM_STRINGTEMP_LENGTH];
 
 	in = instr = PRVM_G_STRING( OFS_PARM0 );
 	num = (int)PRVM_G_FLOAT( OFS_PARM1 );
 	set = setstr = PRVM_G_STRING( OFS_PARM2 );
 
-	out = outstr = VM_GetTempString();
+	out = outstr;
 	for( num = num * 2 + 2 ; *in && num > 0 ; *out++ = *in++ )
 		if( *in == '\\' ) {
 			if( !*++in ) {
@@ -3511,8 +3399,8 @@ void VM_altstr_ins(void)
 	for( ; *set ; *out++ = *set++ );
 	*out++ = '\'';
 
-	strlcpy(out, in, VM_STRINGTEMP_LENGTH);
-	PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( outstr );
+	strlcpy(out, in, outstr + sizeof(outstr) - out);
+	PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString( outstr );
 }
 
 
@@ -3788,14 +3676,14 @@ string buf_implode(float bufhandle, string glue) = #465;
 void VM_buf_implode (void)
 {
 	qcstrbuffer_t	*b;
-	char			*k;
+	char			k[VM_STRINGTEMP_LENGTH];
 	const char		*sep;
 	int				i;
 	size_t			l;
 	VM_SAFEPARMCOUNT(2, VM_buf_implode);
 
 	b = BUFSTR_BUFFER((int)PRVM_G_FLOAT(OFS_PARM0));
-	PRVM_G_INT(OFS_RETURN) = 0;
+	PRVM_G_INT(OFS_RETURN) = OFS_NULL;
 	if(!b)
 	{
 		VM_Warning("VM_buf_implode: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
@@ -3804,30 +3692,23 @@ void VM_buf_implode (void)
 	if(!b->num_strings)
 		return;
 	sep = PRVM_G_STRING(OFS_PARM1);
-	k = VM_GetTempString();
 	k[0] = 0;
 	for(l=i=0;i<b->num_strings;i++)
 		if(b->strings[i])
 		{
-			l += strlen(b->strings[i]);
-			if(l>=4095)
+			l += (i > 0 ? strlen(sep) : 0) + strlen(b->strings[i]);
+			if (l >= sizeof(k) - 1)
 				break;
-			strlcat(k, b->strings[i], VM_STRINGTEMP_LENGTH);
-			if(sep && (i != b->num_strings-1))
-			{
-				l += strlen(sep);
-				if(l>=4095)
-					break;
-				strlcat(k, sep, VM_STRINGTEMP_LENGTH);
-			}
+			strlcat(k, sep, sizeof(k));
+			strlcat(k, b->strings[i], sizeof(k));
 		}
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(k);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(k);
 }
 
 /*
 ========================
 VM_bufstr_get
-get a string from buffer, returns direct pointer, dont str_unzone it!
+get a string from buffer, returns tempstring, dont str_unzone it!
 string bufstr_get(float bufhandle, float string_index) = #465;
 ========================
 */
@@ -3837,6 +3718,7 @@ void VM_bufstr_get (void)
 	int				strindex;
 	VM_SAFEPARMCOUNT(2, VM_bufstr_get);
 
+	PRVM_G_INT(OFS_RETURN) = OFS_NULL;
 	b = BUFSTR_BUFFER((int)PRVM_G_FLOAT(OFS_PARM0));
 	if(!b)
 	{
@@ -3849,11 +3731,10 @@ void VM_bufstr_get (void)
 		VM_Warning("VM_bufstr_get: invalid string index %i used in %s\n", strindex, PRVM_NAME);
 		return;
 	}
-	PRVM_G_INT(OFS_RETURN) = 0;
 	if(b->num_strings <= strindex)
 		return;
 	if(b->strings[strindex])
-		PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(b->strings[strindex]);
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(b->strings[strindex]);
 }
 
 /*
@@ -3886,11 +3767,6 @@ void VM_bufstr_set (void)
 		return;
 	}
 	news = PRVM_G_STRING(OFS_PARM2);
-	if(!news)
-	{
-		VM_Warning("VM_bufstr_set: null string used in %s\n", PRVM_NAME);
-		return;
-	}
 	if(b->strings[strindex])
 		Z_Free(b->strings[strindex]);
 	alloclen = strlen(news) + 1;
@@ -3924,12 +3800,6 @@ void VM_bufstr_add (void)
 		return;
 	}
 	string = PRVM_G_STRING(OFS_PARM1);
-	if(!string)
-	{
-		VM_Warning("VM_bufstr_add: null string used in %s\n", PRVM_NAME);
-		return;
-	}
-
 	order = (int)PRVM_G_FLOAT(OFS_PARM2);
 	if(order)
 		strindex = b->num_strings;

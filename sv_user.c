@@ -644,6 +644,7 @@ SV_ReadClientMessage
 ===================
 */
 extern void SV_SendServerinfo(client_t *client);
+extern sizebuf_t vm_tempstringsbuf;
 void SV_ReadClientMessage(void)
 {
 	int cmd, num, start;
@@ -692,9 +693,12 @@ void SV_ReadClientMessage(void)
 				Cmd_ExecuteString (s, src_client);
 			else if (SV_ParseClientCommandQC)
 			{
-				PRVM_G_INT(OFS_PARM0) = PRVM_SetEngineString(s);
+				int restorevm_tempstringsbuf_cursize;
+				restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
+				PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(s);
 				prog->globals.server->self = PRVM_EDICT_TO_PROG(host_client->edict);
 				PRVM_ExecuteProgram ((func_t)(SV_ParseClientCommandQC - prog->functions), "QC function SV_ParseClientCommand is missing");
+				vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 			}
 			else
 				Cmd_ExecuteString (s, src_client);

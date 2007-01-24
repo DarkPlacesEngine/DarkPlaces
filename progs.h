@@ -387,6 +387,7 @@ void ED_PrintNum (int ent);
 const char *PRVM_GetString(int num);
 int PR_SetQCString(const char *s);
 int PRVM_SetEngineString(const char *s);
+int PRVM_SetTempString(const char *s);
 char *PR_AllocString(int bufferlength);
 void PR_FreeString(char *s);
 

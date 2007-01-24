@@ -158,7 +158,7 @@
 					prog->xfunction->profile += (st - startst);
 					prog->xstatement = st - prog->statements;
 					PRVM_ERROR("%s attempted to write to an out of bounds edict (%i)", PRVM_NAME, OPB->_int);
-					return;
+					goto cleanup;
 				}
 #endif
 				ptr = (prvm_eval_t *)((unsigned char *)prog->edictsfields + OPB->_int);
@@ -171,7 +171,7 @@
 					prog->xfunction->profile += (st - startst);
 					prog->xstatement = st - prog->statements;
 					PRVM_ERROR("%s attempted to write to an out of bounds edict (%i)", PRVM_NAME, OPB->_int);
-					return;
+					goto cleanup;
 				}
 #endif
 				ptr = (prvm_eval_t *)((unsigned char *)prog->edictsfields + OPB->_int);
@@ -187,7 +187,7 @@
 					prog->xfunction->profile += (st - startst);
 					prog->xstatement = st - prog->statements;
 					PRVM_ERROR("%s attempted to address an invalid field (%i) in an edict", PRVM_NAME, OPB->_int);
-					return;
+					goto cleanup;
 				}
 #endif
 				if (OPA->edict == 0 && !prog->allowworldwrites)
@@ -195,7 +195,7 @@
 					prog->xfunction->profile += (st - startst);
 					prog->xstatement = st - prog->statements;
 					PRVM_ERROR("forbidden assignment to null/world entity in %s", PRVM_NAME);
-					return;
+					goto cleanup;
 				}
 				ed = PRVM_PROG_TO_EDICT(OPA->edict);
 				OPC->_int = (unsigned char *)((int *)ed->fields.vp + OPB->_int) - (unsigned char *)prog->edictsfields;
@@ -212,7 +212,7 @@
 					prog->xfunction->profile += (st - startst);
 					prog->xstatement = st - prog->statements;
 					PRVM_ERROR("%s attempted to read an invalid field in an edict (%i)", PRVM_NAME, OPB->_int);
-					return;
+					goto cleanup;
 				}
 #endif
 				ed = PRVM_PROG_TO_EDICT(OPA->edict);
@@ -226,7 +226,7 @@
 					prog->xfunction->profile += (st - startst);
 					prog->xstatement = st - prog->statements;
 					PRVM_ERROR("%s attempted to read an invalid field in an edict (%i)", PRVM_NAME, OPB->_int);
-					return;
+					goto cleanup;
 				}
 #endif
 				ed = PRVM_PROG_TO_EDICT(OPA->edict);
@@ -325,7 +325,7 @@
 				st = prog->statements + PRVM_LeaveFunction();
 				startst = st;
 				if (prog->depth <= exitdepth)
-					return;		// all done
+					goto cleanup; // all done
 				if (prog->trace != cachedpr_trace)
 					goto chooseexecprogram;
 				break;
@@ -506,7 +506,7 @@
 					prog->xfunction->profile += (st - startst);
 					prog->xstatement = st - prog->statements;
 					PRVM_ERROR ("%s Progs attempted to write to an out of bounds edict", PRVM_NAME);
-					return;
+					goto cleanup;
 				}
 #endif
 				ptr = (prvm_eval_t *)((unsigned char *)prog->edictsfields + OPB->_int);
@@ -519,14 +519,14 @@
 					prog->xfunction->profile += (st - startst);
 					prog->xstatement = st - prog->statements;
 					PRVM_ERROR ("%s Progs attempted to read an out of bounds edict number", PRVM_NAME);
-					return;
+					goto cleanup;
 				}
 				if (OPB->_int < 0 || OPB->_int >= progs->entityfields)
 				{
 					prog->xfunction->profile += (st - startst);
 					prog->xstatement = st - prog->statements;
 					PRVM_ERROR ("%s Progs attempted to read an invalid field in an edict", PRVM_NAME);
-					return;
+					goto cleanup;
 				}
 #endif
 				ed = PRVM_PROG_TO_EDICT(OPA->edict);
@@ -545,7 +545,7 @@
 					prog->xfunction->profile += (st - startst);
 					prog->xstatement = st - prog->statements;
 					PRVM_ERROR ("%s Progs attempted to write to an invalid indexed global", PRVM_NAME);
-					return;
+					goto cleanup;
 				}
 #endif
 				pr_globals[OPB->_int] = OPA->_float;
@@ -557,7 +557,7 @@
 					prog->xfunction->profile += (st - startst);
 					prog->xstatement = st - prog->statements;
 					PRVM_ERROR ("%s Progs attempted to write to an invalid indexed global", PRVM_NAME);
-					return;
+					goto cleanup;
 				}
 #endif
 				pr_globals[OPB->_int  ] = OPA->vector[0];
@@ -573,7 +573,7 @@
 					prog->xfunction->profile += (st - startst);
 					prog->xstatement = st - prog->statements;
 					PRVM_ERROR ("%s Progs attempted to address an out of bounds global", PRVM_NAME);
-					return;
+					goto cleanup;
 				}
 #endif
 				OPC->_float = pr_globals[i];
@@ -591,7 +591,7 @@
 					prog->xfunction->profile += (st - startst);
 					prog->xstatement = st - prog->statements;
 					PRVM_ERROR ("%s Progs attempted to read an invalid indexed global", PRVM_NAME);
-					return;
+					goto cleanup;
 				}
 #endif
 				OPC->_float = pr_globals[OPA->_int];
@@ -604,7 +604,7 @@
 					prog->xfunction->profile += (st - startst);
 					prog->xstatement = st - prog->statements;
 					PRVM_ERROR ("%s Progs attempted to read an invalid indexed global", PRVM_NAME);
-					return;
+					goto cleanup;
 				}
 #endif
 				OPC->vector[0] = pr_globals[OPA->_int  ];
@@ -618,7 +618,7 @@
 					prog->xfunction->profile += (st - startst);
 					prog->xstatement = st - prog->statements;
 					PRVM_ERROR ("%s Progs boundcheck failed at line number %d, value is < 0 or >= %d", PRVM_NAME, st->b, st->c);
-					return;
+					goto cleanup;
 				}
 				break;
 
@@ -628,6 +628,7 @@
 				prog->xfunction->profile += (st - startst);
 				prog->xstatement = st - prog->statements;
 				PRVM_ERROR ("Bad opcode %i in %s", st->op, PRVM_NAME);
+				goto cleanup;
 			}
 		}
 

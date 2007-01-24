@@ -205,7 +205,6 @@ float	getserverlistindexforkey(string key)
 
 // builtins and other general functions
 
-char *VM_GetTempString(void);
 void VM_CheckEmptyString (const char *s);
 void VM_VarString(int first, char *out, int outlength);
 
