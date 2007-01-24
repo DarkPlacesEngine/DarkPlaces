@@ -37,7 +37,6 @@ cvar_t prvm_boundscheck = {0, "prvm_boundscheck", "1", "enables detection of out
 cvar_t prvm_traceqc = {0, "prvm_traceqc", "0", "prints every QuakeC statement as it is executed (only for really thorough debugging!)"};
 // LordHavoc: counts usage of each QuakeC statement
 cvar_t prvm_statementprofiling = {0, "prvm_statementprofiling", "0", "counts how many times each QuakeC statement has been executed, these counts are displayed in prvm_printfunction output (if enabled)"};
-cvar_t prvm_tempstringmemory = {0, "prvm_tempstringmemory", "8388608", "amount of temporary string memory allowed in a single QuakeC invocation (QuakeC function call made by the engine)"};
 
 //============================================================================
 // mempool handling
@@ -1774,7 +1773,6 @@ void PRVM_Init (void)
 	Cvar_RegisterVariable (&prvm_boundscheck);
 	Cvar_RegisterVariable (&prvm_traceqc);
 	Cvar_RegisterVariable (&prvm_statementprofiling);
-	Cvar_RegisterVariable (&prvm_tempstringmemory);
 
 	//VM_Cmd_Init();
 }
@@ -1986,8 +1984,7 @@ int PRVM_SetEngineString(const char *s)
 // (technically each PRVM_ExecuteProgram call saves the cursize value and
 //  restores it on return, so multiple recursive calls can share the same
 //  buffer)
-// the buffer size is controlled by the prvm_tempstringmemory cvar, causing it
-// to be reallocated between invocations if the cvar has changed
+// the buffer size is automatically grown as needed
 
 int PRVM_SetTempString(const char *s)
 {
@@ -1996,8 +1993,27 @@ int PRVM_SetTempString(const char *s)
 	if (!s)
 		return 0;
 	size = (int)strlen(s) + 1;
-	if (vm_tempstringsbuf.cursize + size >= vm_tempstringsbuf.maxsize)
-		PRVM_ERROR("PRVM_SetTempString: tempstrings buffer full!  (increase prvm_tempstringmemory cvar or reduce use of tempstrings in quakec code)\n");
+	if (developer.integer >= 300)
+		Con_Printf("PRVM_SetTempString: cursize %i, size %i\n", vm_tempstringsbuf.cursize, size);
+	if (vm_tempstringsbuf.maxsize < vm_tempstringsbuf.cursize + size)
+	{
+		sizebuf_t old = vm_tempstringsbuf;
+		if (vm_tempstringsbuf.cursize + size >= 1<<28)
+			PRVM_ERROR("PRVM_SetTempString: ran out of tempstring memory!  (refusing to grow tempstring buffer over 256MB, cursize %i, size %i)\n", vm_tempstringsbuf.cursize, size);
+		vm_tempstringsbuf.maxsize = max(vm_tempstringsbuf.maxsize, 65536);
+		while (vm_tempstringsbuf.maxsize < vm_tempstringsbuf.cursize + size)
+			vm_tempstringsbuf.maxsize *= 2;
+		if (vm_tempstringsbuf.maxsize != old.maxsize || vm_tempstringsbuf.data == NULL)
+		{
+			if (developer.integer >= 100)
+				Con_Printf("PRVM_SetTempString: enlarging tempstrings buffer (%iKB -> %iKB)\n", old.maxsize/1024, vm_tempstringsbuf.maxsize/1024);
+			vm_tempstringsbuf.data = Mem_Alloc(sv_mempool, vm_tempstringsbuf.maxsize);
+			if (old.cursize)
+				memcpy(vm_tempstringsbuf.data, old.data, old.cursize);
+			if (old.data)
+				Mem_Free(old.data);
+		}
+	}
 	t = (char *)vm_tempstringsbuf.data + vm_tempstringsbuf.cursize;
 	memcpy(t, s, size);
 	vm_tempstringsbuf.cursize += size;
