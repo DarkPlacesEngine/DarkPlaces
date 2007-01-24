@@ -7,6 +7,7 @@ cvar_t sv_aim = {CVAR_SAVE, "sv_aim", "2", "maximum cosine angle for quake's ver
 
 
 char *vm_sv_extensions =
+"BX_WAL_SUPPORT "
 "DP_CON_EXPANDCVAR "
 "DP_CON_ALIASPARAMETERS "
 "DP_BUTTONCHAT "
