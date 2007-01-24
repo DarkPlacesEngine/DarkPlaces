@@ -30,7 +30,7 @@ void GL_Scissor(int x, int y, int width, int height);
 void GL_ScissorTest(int state);
 void GL_Clear(int mask);
 
-unsigned int GL_Backend_CompileProgram(int vertexstrings_count, const char **vertexstrings_list, int fragmentstrings_count, const char **fragmentstrings_list);
+unsigned int GL_Backend_CompileProgram(int vertexstrings_count, const char **vertexstrings_list, int geometrystrings_count, const char **geometrystrings_list, int fragmentstrings_count, const char **fragmentstrings_list);
 void GL_Backend_FreeProgram(unsigned int prog);
 
 extern cvar_t gl_lockarrays;
