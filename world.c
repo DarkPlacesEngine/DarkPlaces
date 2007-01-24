@@ -643,7 +643,7 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	// precalculate passedict's owner edict pointer for comparisons
 	traceowner = passedict ? PRVM_PROG_TO_EDICT(passedict->fields.server->owner) : 0;
 
-	// clip to enttiies
+	// clip to entities
 	numtouchedicts = SV_EntitiesInBox(clipboxmins, clipboxmaxs, MAX_EDICTS, touchedicts);
 	if (numtouchedicts > MAX_EDICTS)
 	{

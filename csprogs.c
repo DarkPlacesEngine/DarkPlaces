@@ -20,7 +20,7 @@ static prvm_prog_t *csqc_tmpprog;
 #define CL_F_SHUTDOWN			"CSQC_Shutdown"
 
 //[515]: these are optional
-#define CL_F_PARSE_TEMPENTITY	"CSQC_Parse_TempEntity"	//[515]: very helpfull when you want to create your own particles/decals/etc for effects that allready exist
+#define CL_F_PARSE_TEMPENTITY	"CSQC_Parse_TempEntity"	//[515]: very helpfull when you want to create your own particles/decals/etc for effects that already exist
 #define CL_F_PARSE_STUFFCMD		"CSQC_Parse_StuffCmd"
 #define CL_F_PARSE_PRINT		"CSQC_Parse_Print"
 #define CL_F_PARSE_CENTERPRINT	"CSQC_Parse_CenterPrint"
