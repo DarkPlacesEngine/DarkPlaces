@@ -730,108 +730,73 @@ void R_Mesh_Start(void)
 	GL_Backend_ResetState();
 }
 
-unsigned int GL_Backend_CompileProgram(int vertexstrings_count, const char **vertexstrings_list, int fragmentstrings_count, const char **fragmentstrings_list)
+qboolean GL_Backend_CompileShader(int programobject, GLenum shadertypeenum, const char *shadertype, int numstrings, const char **strings)
 {
-	GLint vertexshadercompiled, fragmentshadercompiled, programlinked;
-	GLuint vertexshaderobject, fragmentshaderobject, programobject = 0;
+	int shaderobject;
+	int shadercompiled;
 	char compilelog[MAX_INPUTLINE];
+	shaderobject = qglCreateShaderObjectARB(shadertypeenum);CHECKGLERROR
+	if (!shaderobject)
+		return false;
+	qglShaderSourceARB(shaderobject, numstrings, strings, NULL);CHECKGLERROR
+	qglCompileShaderARB(shaderobject);CHECKGLERROR
+	qglGetObjectParameterivARB(shaderobject, GL_OBJECT_COMPILE_STATUS_ARB, &shadercompiled);CHECKGLERROR
+	qglGetInfoLogARB(shaderobject, sizeof(compilelog), NULL, compilelog);CHECKGLERROR
+	if (compilelog[0])
+		Con_DPrintf("%s shader compile log:\n%s\n", shadertype, compilelog);
+	if (!shadercompiled)
+	{
+		qglDeleteObjectARB(shaderobject);CHECKGLERROR
+		return false;
+	}
+	qglAttachObjectARB(programobject, shaderobject);CHECKGLERROR
+	qglDeleteObjectARB(shaderobject);CHECKGLERROR
+	return true;
+}
+
+unsigned int GL_Backend_CompileProgram(int vertexstrings_count, const char **vertexstrings_list, int geometrystrings_count, const char **geometrystrings_list, int fragmentstrings_count, const char **fragmentstrings_list)
+{
+	GLint programlinked;
+	GLuint programobject = 0;
+	char linklog[MAX_INPUTLINE];
 	CHECKGLERROR
 
 	programobject = qglCreateProgramObjectARB();CHECKGLERROR
 	if (!programobject)
 		return 0;
 
-	if (developer.integer >= 100)
-	{
-		int i;
-		Con_Printf("Compiling shader:\n");
-		if (vertexstrings_count)
-		{
-			Con_Printf("------ VERTEX SHADER ------\n");
-			for (i = 0;i < vertexstrings_count;i++)
-				Con_Print(vertexstrings_list[i]);
-			Con_Print("\n");
-		}
-		if (fragmentstrings_count)
-		{
-			Con_Printf("------ FRAGMENT SHADER ------\n");
-			for (i = 0;i < fragmentstrings_count;i++)
-				Con_Print(fragmentstrings_list[i]);
-			Con_Print("\n");
-		}
-	}
+	if (vertexstrings_count && !GL_Backend_CompileShader(programobject, GL_VERTEX_SHADER_ARB, "vertex", vertexstrings_count, vertexstrings_list))
+		goto cleanup;
 
-	if (vertexstrings_count)
-	{
-		vertexshaderobject = qglCreateShaderObjectARB(GL_VERTEX_SHADER_ARB);CHECKGLERROR
-		if (!vertexshaderobject)
-		{
-			qglDeleteObjectARB(programobject);
-			CHECKGLERROR
-			return 0;
-		}
-		qglShaderSourceARB(vertexshaderobject, vertexstrings_count, vertexstrings_list, NULL);CHECKGLERROR
-		qglCompileShaderARB(vertexshaderobject);CHECKGLERROR
-		qglGetObjectParameterivARB(vertexshaderobject, GL_OBJECT_COMPILE_STATUS_ARB, &vertexshadercompiled);CHECKGLERROR
-		qglGetInfoLogARB(vertexshaderobject, sizeof(compilelog), NULL, compilelog);CHECKGLERROR
-		if (compilelog[0])
-			Con_DPrintf("vertex shader compile log:\n%s\n", compilelog);
-		if (!vertexshadercompiled)
-		{
-			qglDeleteObjectARB(programobject);CHECKGLERROR
-			qglDeleteObjectARB(vertexshaderobject);CHECKGLERROR
-			return 0;
-		}
-		qglAttachObjectARB(programobject, vertexshaderobject);CHECKGLERROR
-		qglDeleteObjectARB(vertexshaderobject);CHECKGLERROR
-	}
+#ifdef GL_GEOMETRY_SHADER_ARB
+	if (geometrystrings_count && !GL_Backend_CompileShader(programobject, GL_GEOMETRY_SHADER_ARB, "geometry", geometrystrings_count, geometrystrings_list))
+		goto cleanup;
+#endif
 
-	if (fragmentstrings_count)
-	{
-		fragmentshaderobject = qglCreateShaderObjectARB(GL_FRAGMENT_SHADER_ARB);CHECKGLERROR
-		if (!fragmentshaderobject)
-		{
-			qglDeleteObjectARB(programobject);CHECKGLERROR
-			return 0;
-		}
-		qglShaderSourceARB(fragmentshaderobject, fragmentstrings_count, fragmentstrings_list, NULL);CHECKGLERROR
-		qglCompileShaderARB(fragmentshaderobject);CHECKGLERROR
-		qglGetObjectParameterivARB(fragmentshaderobject, GL_OBJECT_COMPILE_STATUS_ARB, &fragmentshadercompiled);CHECKGLERROR
-		qglGetInfoLogARB(fragmentshaderobject, sizeof(compilelog), NULL, compilelog);CHECKGLERROR
-		if (compilelog[0])
-			Con_DPrintf("fragment shader compile log:\n%s\n", compilelog);
-		if (!fragmentshadercompiled)
-		{
-			qglDeleteObjectARB(programobject);CHECKGLERROR
-			qglDeleteObjectARB(fragmentshaderobject);CHECKGLERROR
-			return 0;
-		}
-		qglAttachObjectARB(programobject, fragmentshaderobject);CHECKGLERROR
-		qglDeleteObjectARB(fragmentshaderobject);CHECKGLERROR
-	}
+	if (fragmentstrings_count && !GL_Backend_CompileShader(programobject, GL_FRAGMENT_SHADER_ARB, "fragment", fragmentstrings_count, fragmentstrings_list))
+		goto cleanup;
 
 	qglLinkProgramARB(programobject);CHECKGLERROR
 	qglGetObjectParameterivARB(programobject, GL_OBJECT_LINK_STATUS_ARB, &programlinked);CHECKGLERROR
-	qglGetInfoLogARB(programobject, sizeof(compilelog), NULL, compilelog);CHECKGLERROR
-	if (compilelog[0])
+	qglGetInfoLogARB(programobject, sizeof(linklog), NULL, linklog);CHECKGLERROR
+	if (linklog[0])
 	{
-		Con_DPrintf("program link log:\n%s\n", compilelog);
+		Con_DPrintf("program link log:\n%s\n", linklog);
 		// software vertex shader is ok but software fragment shader is WAY
 		// too slow, fail program if so.
 		// NOTE: this string might be ATI specific, but that's ok because the
 		// ATI R300 chip (Radeon 9500-9800/X300) is the most likely to use a
 		// software fragment shader due to low instruction and dependent
 		// texture limits.
-		if (strstr(compilelog, "fragment shader will run in software"))
+		if (strstr(linklog, "fragment shader will run in software"))
 			programlinked = false;
 	}
 	if (!programlinked)
-	{
-		qglDeleteObjectARB(programobject);CHECKGLERROR
-		return 0;
-	}
-	CHECKGLERROR
+		goto cleanup;
 	return programobject;
+cleanup:
+	qglDeleteObjectARB(programobject);CHECKGLERROR
+	return 0;
 }
 
 void GL_Backend_FreeProgram(unsigned int prog)

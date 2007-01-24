@@ -240,7 +240,14 @@ void RSurf_DrawBatch_Simple(int texturenumsurfaces, msurface_t **texturesurfacel
 #define SHADERPERMUTATION_CUBEFILTER (1<<8) // (lightsource) use cubemap light filter
 #define SHADERPERMUTATION_OFFSETMAPPING (1<<9) // adjust texcoords to roughly simulate a displacement mapped surface
 #define SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING (1<<10) // adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
+
 #define SHADERPERMUTATION_COUNT (1<<11) // how many permutations are possible
+#define SHADERPERMUTATION_COUNTMASK (SHADERPERMUTATION_COUNT - 1) // mask of valid indexing bits for r_glsl_permutations[] array
+
+// these are additional flags used only by R_GLSL_CompilePermutation
+#define SHADERPERMUTATION_USES_VERTEXSHADER (1<<29)
+#define SHADERPERMUTATION_USES_GEOMETRYSHADER (1<<30)
+#define SHADERPERMUTATION_USES_FRAGMENTSHADER (1<<31)
 
 typedef struct r_glsl_permutation_s
 {
@@ -284,7 +291,7 @@ extern r_glsl_permutation_t r_glsl_permutations[SHADERPERMUTATION_COUNT];
 // currently selected permutation
 extern r_glsl_permutation_t *r_glsl_permutation;
 
-void R_GLSL_CompilePermutation(int permutation);
+void R_GLSL_CompilePermutation(const char *shaderfilename, int permutation);
 int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting);
 void R_SwitchSurfaceShader(int permutation);
 

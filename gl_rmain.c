@@ -705,22 +705,28 @@ const char *permutationinfo[][2] =
 	{NULL, NULL}
 };
 
-void R_GLSL_CompilePermutation(int permutation)
+void R_GLSL_CompilePermutation(const char *filename, int permutation)
 {
 	int i;
-	r_glsl_permutation_t *p = r_glsl_permutations + permutation;
+	qboolean shaderfound;
+	r_glsl_permutation_t *p = r_glsl_permutations + (permutation & SHADERPERMUTATION_COUNTMASK);
 	int vertstrings_count;
+	int geomstrings_count;
 	int fragstrings_count;
 	char *shaderstring;
 	const char *vertstrings_list[SHADERPERMUTATION_COUNT+1];
+	const char *geomstrings_list[SHADERPERMUTATION_COUNT+1];
 	const char *fragstrings_list[SHADERPERMUTATION_COUNT+1];
 	char permutationname[256];
 	if (p->compiled)
 		return;
 	p->compiled = true;
+	p->program = 0;
 	vertstrings_list[0] = "#define VERTEX_SHADER\n";
+	geomstrings_list[0] = "#define GEOMETRY_SHADER\n";
 	fragstrings_list[0] = "#define FRAGMENT_SHADER\n";
 	vertstrings_count = 1;
+	geomstrings_count = 1;
 	fragstrings_count = 1;
 	permutationname[0] = 0;
 	for (i = 0;permutationinfo[i][0];i++)
@@ -728,6 +734,7 @@ void R_GLSL_CompilePermutation(int permutation)
 		if (permutation & (1<<i))
 		{
 			vertstrings_list[vertstrings_count++] = permutationinfo[i][0];
+			geomstrings_list[geomstrings_count++] = permutationinfo[i][0];
 			fragstrings_list[fragstrings_count++] = permutationinfo[i][0];
 			strlcat(permutationname, permutationinfo[i][1], sizeof(permutationname));
 		}
@@ -735,26 +742,44 @@ void R_GLSL_CompilePermutation(int permutation)
 		{
 			// keep line numbers correct
 			vertstrings_list[vertstrings_count++] = "\n";
+			geomstrings_list[geomstrings_count++] = "\n";
 			fragstrings_list[fragstrings_count++] = "\n";
 		}
 	}
-	shaderstring = (char *)FS_LoadFile("glsl/default.glsl", r_main_mempool, false, NULL);
+	shaderstring = (char *)FS_LoadFile(filename, r_main_mempool, false, NULL);
+	shaderfound = false;
 	if (shaderstring)
 	{
-		Con_DPrintf("GLSL shader text loaded from disk\n");
+		Con_DPrintf("GLSL shader text for \"%s\" loaded from disk\n", filename);
 		vertstrings_list[vertstrings_count++] = shaderstring;
+		geomstrings_list[geomstrings_count++] = shaderstring;
 		fragstrings_list[fragstrings_count++] = shaderstring;
+		shaderfound = true;
 	}
-	else
+	else if (!strcmp(filename, "glsl/default.glsl"))
 	{
+		Con_DPrintf("GLSL shader text for \"%s\" loaded from engine\n", filename);
 		vertstrings_list[vertstrings_count++] = builtinshaderstring;
+		geomstrings_list[geomstrings_count++] = builtinshaderstring;
 		fragstrings_list[fragstrings_count++] = builtinshaderstring;
+		shaderfound = true;
 	}
-	p->program = GL_Backend_CompileProgram(vertstrings_count, vertstrings_list, fragstrings_count, fragstrings_list);
+	// clear any lists that are not needed by this shader
+	if (!(permutation & SHADERPERMUTATION_USES_VERTEXSHADER))
+		vertstrings_count = 0;
+	if (!(permutation & SHADERPERMUTATION_USES_GEOMETRYSHADER))
+		geomstrings_count = 0;
+	if (!(permutation & SHADERPERMUTATION_USES_FRAGMENTSHADER))
+		fragstrings_count = 0;
+	// compile the shader program
+	if (shaderfound && vertstrings_count + geomstrings_count + fragstrings_count)
+		p->program = GL_Backend_CompileProgram(vertstrings_count, vertstrings_list, geomstrings_count, geomstrings_list, fragstrings_count, fragstrings_list);
 	if (p->program)
 	{
 		CHECKGLERROR
 		qglUseProgramObjectARB(p->program);CHECKGLERROR
+		// look up all the uniform variable names we care about, so we don't
+		// have to look them up every time we set them
 		p->loc_Texture_Normal      = qglGetUniformLocationARB(p->program, "Texture_Normal");
 		p->loc_Texture_Color       = qglGetUniformLocationARB(p->program, "Texture_Color");
 		p->loc_Texture_Gloss       = qglGetUniformLocationARB(p->program, "Texture_Gloss");
@@ -783,6 +808,7 @@ void R_GLSL_CompilePermutation(int permutation)
 		p->loc_DiffuseColor        = qglGetUniformLocationARB(p->program, "DiffuseColor");
 		p->loc_SpecularColor       = qglGetUniformLocationARB(p->program, "SpecularColor");
 		p->loc_LightDir            = qglGetUniformLocationARB(p->program, "LightDir");
+		// initialize the samplers to refer to the texture units we use
 		if (p->loc_Texture_Normal >= 0)    qglUniform1iARB(p->loc_Texture_Normal, 0);
 		if (p->loc_Texture_Color >= 0)     qglUniform1iARB(p->loc_Texture_Color, 1);
 		if (p->loc_Texture_Gloss >= 0)     qglUniform1iARB(p->loc_Texture_Gloss, 2);
@@ -817,55 +843,116 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting)
 	// combination of texture, entity, light source, and fogging, only use the
 	// minimum features necessary to avoid wasting rendering time in the
 	// fragment shader on features that are not being used
+	const char *shaderfilename = NULL;
 	int permutation = 0;
 	float specularscale = rsurface_texture->specularscale;
 	r_glsl_permutation = NULL;
+	// TODO: implement geometry-shader based shadow volumes someday
 	if (r_shadow_rtlight)
 	{
-		permutation |= SHADERPERMUTATION_MODE_LIGHTSOURCE;
+		// light source
+		shaderfilename = "glsl/default.glsl";
+		permutation = SHADERPERMUTATION_MODE_LIGHTSOURCE | SHADERPERMUTATION_USES_VERTEXSHADER | SHADERPERMUTATION_USES_FRAGMENTSHADER;
 		specularscale *= r_shadow_rtlight->specularscale;
 		if (r_shadow_rtlight->currentcubemap != r_texture_whitecube)
 			permutation |= SHADERPERMUTATION_CUBEFILTER;
+		if (specularscale > 0)
+			permutation |= SHADERPERMUTATION_SPECULAR;
+		if (r_refdef.fogenabled)
+			permutation |= SHADERPERMUTATION_FOG;
+		if (rsurface_texture->colormapping)
+			permutation |= SHADERPERMUTATION_COLORMAPPING;
+		if (r_glsl_offsetmapping.integer)
+		{
+			permutation |= SHADERPERMUTATION_OFFSETMAPPING;
+			if (r_glsl_offsetmapping_reliefmapping.integer)
+				permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
+		}
+	}
+	else if (rsurface_texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
+	{
+		// bright unshaded geometry
+		shaderfilename = "glsl/default.glsl";
+		permutation = SHADERPERMUTATION_USES_VERTEXSHADER | SHADERPERMUTATION_USES_FRAGMENTSHADER;
+		if (rsurface_texture->currentskinframe->glow)
+			permutation |= SHADERPERMUTATION_GLOW;
+		if (r_refdef.fogenabled)
+			permutation |= SHADERPERMUTATION_FOG;
+		if (rsurface_texture->colormapping)
+			permutation |= SHADERPERMUTATION_COLORMAPPING;
+		if (r_glsl_offsetmapping.integer)
+		{
+			permutation |= SHADERPERMUTATION_OFFSETMAPPING;
+			if (r_glsl_offsetmapping_reliefmapping.integer)
+				permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
+		}
+	}
+	else if (modellighting)
+	{
+		// directional model lighting
+		shaderfilename = "glsl/default.glsl";
+		permutation = SHADERPERMUTATION_USES_VERTEXSHADER | SHADERPERMUTATION_USES_FRAGMENTSHADER;
+		permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTION;
+		if (rsurface_texture->currentskinframe->glow)
+			permutation |= SHADERPERMUTATION_GLOW;
+		if (specularscale > 0)
+			permutation |= SHADERPERMUTATION_SPECULAR;
+		if (r_refdef.fogenabled)
+			permutation |= SHADERPERMUTATION_FOG;
+		if (rsurface_texture->colormapping)
+			permutation |= SHADERPERMUTATION_COLORMAPPING;
+		if (r_glsl_offsetmapping.integer)
+		{
+			permutation |= SHADERPERMUTATION_OFFSETMAPPING;
+			if (r_glsl_offsetmapping_reliefmapping.integer)
+				permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
+		}
 	}
 	else
 	{
-		if (!(rsurface_texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
+		// lightmapped wall
+		shaderfilename = "glsl/default.glsl";
+		permutation = SHADERPERMUTATION_USES_VERTEXSHADER | SHADERPERMUTATION_USES_FRAGMENTSHADER;
+		if (r_glsl_deluxemapping.integer >= 1 && rsurface_lightmaptexture && r_refdef.worldmodel && r_refdef.worldmodel->brushq3.deluxemapping)
 		{
-			if (modellighting)
-				permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTION;
-			else if (r_glsl_deluxemapping.integer >= 1 && rsurface_lightmaptexture)
-			{
-				if (r_refdef.worldmodel && r_refdef.worldmodel->brushq3.deluxemapping)
-				{
-					if (r_refdef.worldmodel->brushq3.deluxemapping_modelspace)
-						permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP_MODELSPACE;
-					else
-						permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP_TANGENTSPACE;
-				}
-				else if (r_glsl_deluxemapping.integer >= 2) // fake mode
-					permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP_TANGENTSPACE;
-			}
+			// deluxemapping (light direction texture)
+			if (rsurface_lightmaptexture && r_refdef.worldmodel && r_refdef.worldmodel->brushq3.deluxemapping && r_refdef.worldmodel->brushq3.deluxemapping_modelspace)
+				permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP_MODELSPACE;
+			else
+				permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP_TANGENTSPACE;
+			if (specularscale > 0)
+				permutation |= SHADERPERMUTATION_SPECULAR;
+		}
+		else if (r_glsl_deluxemapping.integer >= 2)
+		{
+			// fake deluxemapping (uniform light direction in tangentspace)
+			permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP_TANGENTSPACE;
+			if (specularscale > 0)
+				permutation |= SHADERPERMUTATION_SPECULAR;
+		}
+		else
+		{
+			// ordinary lightmapping
+			permutation |= 0;
 		}
 		if (rsurface_texture->currentskinframe->glow)
 			permutation |= SHADERPERMUTATION_GLOW;
+		if (r_refdef.fogenabled)
+			permutation |= SHADERPERMUTATION_FOG;
+		if (rsurface_texture->colormapping)
+			permutation |= SHADERPERMUTATION_COLORMAPPING;
+		if (r_glsl_offsetmapping.integer)
+		{
+			permutation |= SHADERPERMUTATION_OFFSETMAPPING;
+			if (r_glsl_offsetmapping_reliefmapping.integer)
+				permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
+		}
 	}
-	if (specularscale > 0)
-		permutation |= SHADERPERMUTATION_SPECULAR;
-	if (r_refdef.fogenabled)
-		permutation |= SHADERPERMUTATION_FOG;
-	if (rsurface_texture->colormapping)
-		permutation |= SHADERPERMUTATION_COLORMAPPING;
-	if (r_glsl_offsetmapping.integer)
+	if (!r_glsl_permutations[permutation & SHADERPERMUTATION_COUNTMASK].program)
 	{
-		permutation |= SHADERPERMUTATION_OFFSETMAPPING;
-		if (r_glsl_offsetmapping_reliefmapping.integer)
-			permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
-	}
-	if (!r_glsl_permutations[permutation].program)
-	{
-		if (!r_glsl_permutations[permutation].compiled)
-			R_GLSL_CompilePermutation(permutation);
-		if (!r_glsl_permutations[permutation].program)
+		if (!r_glsl_permutations[permutation & SHADERPERMUTATION_COUNTMASK].compiled)
+			R_GLSL_CompilePermutation(shaderfilename, permutation);
+		if (!r_glsl_permutations[permutation & SHADERPERMUTATION_COUNTMASK].program)
 		{
 			// remove features until we find a valid permutation
 			int i;
@@ -875,16 +962,16 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting)
 				if (permutation < i)
 					continue;
 				permutation &= i;
-				if (!r_glsl_permutations[permutation].compiled)
-					R_GLSL_CompilePermutation(permutation);
-				if (r_glsl_permutations[permutation].program)
+				if (!r_glsl_permutations[permutation & SHADERPERMUTATION_COUNTMASK].compiled)
+					R_GLSL_CompilePermutation(shaderfilename, permutation);
+				if (r_glsl_permutations[permutation & SHADERPERMUTATION_COUNTMASK].program)
 					break;
 				if (!i)
 					return 0; // utterly failed
 			}
 		}
 	}
-	r_glsl_permutation = r_glsl_permutations + permutation;
+	r_glsl_permutation = r_glsl_permutations + (permutation & SHADERPERMUTATION_COUNTMASK);
 	CHECKGLERROR
 	qglUseProgramObjectARB(r_glsl_permutation->program);CHECKGLERROR
 	R_Mesh_TexMatrix(0, &rsurface_texture->currenttexmatrix);
@@ -958,9 +1045,9 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting)
 
 void R_SwitchSurfaceShader(int permutation)
 {
-	if (r_glsl_permutation != r_glsl_permutations + permutation)
+	if (r_glsl_permutation != r_glsl_permutations + (permutation & SHADERPERMUTATION_COUNTMASK))
 	{
-		r_glsl_permutation = r_glsl_permutations + permutation;
+		r_glsl_permutation = r_glsl_permutations + (permutation & SHADERPERMUTATION_COUNTMASK);
 		CHECKGLERROR
 		qglUseProgramObjectARB(r_glsl_permutation->program);
 		CHECKGLERROR
