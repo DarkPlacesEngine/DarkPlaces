@@ -18,6 +18,7 @@
 
 //[515]: really need new list ?
 char *vm_cl_extensions =
+"BX_WAL_SUPPORT "
 "DP_CON_SET "
 "DP_CON_SETA "
 "DP_CON_STARTMAP "
