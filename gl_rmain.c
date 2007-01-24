@@ -77,15 +77,16 @@ cvar_t r_waterscroll = {CVAR_SAVE, "r_waterscroll", "1", "makes water scroll aro
 
 cvar_t r_bloom = {CVAR_SAVE, "r_bloom", "0", "enables bloom effect (makes bright pixels affect neighboring pixels)"};
 cvar_t r_bloom_colorscale = {CVAR_SAVE, "r_bloom_colorscale", "1", "how bright the glow is"};
-cvar_t r_bloom_brighten = {CVAR_SAVE, "r_bloom_brighten", "2", "how bright the glow is, after subtract/power"};
+cvar_t r_bloom_brighten = {CVAR_SAVE, "r_bloom_brighten", "1", "how bright the glow is, after subtract/power"};
 cvar_t r_bloom_blur = {CVAR_SAVE, "r_bloom_blur", "4", "how large the glow is"};
 cvar_t r_bloom_resolution = {CVAR_SAVE, "r_bloom_resolution", "320", "what resolution to perform the bloom effect at (independent of screen resolution)"};
 cvar_t r_bloom_colorexponent = {CVAR_SAVE, "r_bloom_colorexponent", "1", "how exagerated the glow is"};
-cvar_t r_bloom_colorsubtract = {CVAR_SAVE, "r_bloom_colorsubtract", "0.125", "reduces bloom colors by a certain amount"};
+cvar_t r_bloom_colorsubtract = {CVAR_SAVE, "r_bloom_colorsubtract", "0", "reduces bloom colors by a certain amount"};
 
 cvar_t r_hdr = {CVAR_SAVE, "r_hdr", "0", "enables High Dynamic Range bloom effect (higher quality version of r_bloom)"};
 cvar_t r_hdr_scenebrightness = {CVAR_SAVE, "r_hdr_scenebrightness", "1", "global rendering brightness"};
 cvar_t r_hdr_glowintensity = {CVAR_SAVE, "r_hdr_glowintensity", "1", "how bright light emitting textures should appear"};
+cvar_t r_hdr_range = {CVAR_SAVE, "r_hdr_range", "4", "how much dynamic range to render bloom with (equivilant to multiplying r_bloom_brighten by this value and dividing r_bloom_colorscale by this value)"};
 
 cvar_t r_smoothnormals_areaweighting = {0, "r_smoothnormals_areaweighting", "1", "uses significantly faster (and supposedly higher quality) area-weighted vertex normals and tangent vectors rather than summing normalized triangle normals and tangents"};
 
@@ -1064,6 +1065,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_hdr);
 	Cvar_RegisterVariable(&r_hdr_scenebrightness);
 	Cvar_RegisterVariable(&r_hdr_glowintensity);
+	Cvar_RegisterVariable(&r_hdr_range);
 	Cvar_RegisterVariable(&r_smoothnormals_areaweighting);
 	Cvar_RegisterVariable(&developer_texturelogging);
 	Cvar_RegisterVariable(&gl_lightmaps);
@@ -1690,7 +1692,7 @@ void R_Bloom_CopyHDRTexture(void)
 void R_Bloom_MakeTexture(void)
 {
 	int x, range, dir;
-	float xoffset, yoffset, r;
+	float xoffset, yoffset, r, brighten;
 
 	r_refdef.stats.bloom++;
 
@@ -1721,6 +1723,9 @@ void R_Bloom_MakeTexture(void)
 	}
 
 	range = r_bloom_blur.integer * r_bloomstate.bloomwidth / 320;
+	brighten = r_bloom_brighten.value;
+	if (r_hdr.integer)
+		brighten *= r_hdr_range.value;
 	R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_bloom));
 	R_Mesh_TexCoordPointer(0, 2, r_bloomstate.offsettexcoord2f);
 
@@ -1748,8 +1753,8 @@ void R_Bloom_MakeTexture(void)
 			// black at the edges
 			// (probably not realistic but looks good enough)
 			//r = ((range*range+1)/((float)(x*x+1)))/(range*2+1);
-			//r = (dir ? 1.0f : r_bloom_brighten.value)/(range*2+1);
-			r = (dir ? 1.0f : r_bloom_brighten.value)/(range*2+1)*(1 - x*x/(float)(range*range));
+			//r = (dir ? 1.0f : brighten)/(range*2+1);
+			r = (dir ? 1.0f : brighten)/(range*2+1)*(1 - x*x/(float)(range*range));
 			GL_Color(r, r, r, 1);
 			R_Mesh_Draw(0, 4, 2, polygonelements);
 			r_refdef.stats.bloom_drawpixels += r_bloomstate.bloomwidth * r_bloomstate.bloomheight;
@@ -1806,6 +1811,8 @@ void R_HDR_RenderBloomTexture(void)
 	// TODO: add fp16 framebuffer support
 
 	r_view.colorscale = r_bloom_colorscale.value * r_hdr_scenebrightness.value;
+	if (r_hdr.integer)
+		r_view.colorscale /= r_hdr_range.value;
 	R_RenderScene();
 
 	R_ResetViewRendering2D();

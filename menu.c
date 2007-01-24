@@ -2003,6 +2003,7 @@ extern cvar_t r_bloom_resolution;
 extern cvar_t r_hdr;
 extern cvar_t r_hdr_scenebrightness;
 extern cvar_t r_hdr_glowintensity;
+extern cvar_t r_hdr_range;
 extern cvar_t gl_picmip;
 
 static void M_Menu_Options_Graphics_AdjustSliders (int dir)
@@ -2020,14 +2021,15 @@ static void M_Menu_Options_Graphics_AdjustSliders (int dir)
 	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_shadow_realtime_world_lightmaps,		bound(0, r_shadow_realtime_world_lightmaps.value + dir * 0.1, 1));
 	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_shadow_realtime_world_shadows,			!r_shadow_realtime_world_shadows.integer);
 	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_bloom,                                 !r_bloom.integer);
+	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_hdr_scenebrightness,                   bound(0.25, r_hdr_scenebrightness.value + dir * 0.125, 4));
 	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_hdr,                                   !r_hdr.integer);
+	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_hdr_range,                             bound(1, r_hdr_range.value + dir * 0.25, 16));
 	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_hdr_glowintensity,                     bound(0, r_hdr_glowintensity.value + dir * 0.25, 4));
 	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_bloom_colorscale,                      bound(0.0625, r_bloom_colorscale.value + dir * 0.0625, 1));
 	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_bloom_colorsubtract,                   bound(0, r_bloom_colorsubtract.value + dir * 0.0625, 1-0.0625));
 	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_bloom_colorexponent,                   bound(1, r_bloom_colorexponent.value *= (dir > 0 ? 2 : 0.5), 8));
 	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_bloom_blur,                            bound(1, r_bloom_blur.value + dir * 1, 16));
 	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_bloom_resolution,                      bound(64, r_bloom_resolution.value + dir * 64, 2048));
-	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_hdr_scenebrightness,                   bound(0.25, r_hdr_scenebrightness.value + dir * 0.125, 4));
 	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&gl_picmip,                               bound(0, gl_picmip.value - dir, 3));
 	else if (options_graphics_cursor == optnum++) Cbuf_AddText ("r_restart\n");
 }
@@ -2056,8 +2058,10 @@ static void M_Options_Graphics_Draw (void)
 	M_Options_PrintCheckbox("RT World DLight Shadows", true, r_shadow_realtime_world_dlightshadows.integer);
 	M_Options_PrintSlider(  "     RT World Lightmaps", true, r_shadow_realtime_world_lightmaps.value, 0, 1);
 	M_Options_PrintCheckbox("        RT World Shadow", true, r_shadow_realtime_world_shadows.integer);
+	M_Options_PrintSlider(  "       Scene Brightness", true, r_hdr_scenebrightness.value, 0.25, 4);
 	M_Options_PrintCheckbox("           Bloom Effect", !r_hdr.integer, r_bloom.integer);
 	M_Options_PrintCheckbox("       HDR Bloom Effect", r_hdr.integer, r_hdr.integer);
+	M_Options_PrintSlider(  "      HDR Dynamic Range", true, r_hdr_range.value, 1, 16);
 	M_Options_PrintSlider(  "     HDR Glow Intensity", r_hdr.integer, r_hdr_glowintensity.value, 0, 4);
 	M_Options_PrintSlider(  "      Bloom Color Scale", r_hdr.integer || r_bloom.integer, r_bloom_colorscale.value, 0.0625, 1);
 	M_Options_PrintSlider(  "   Bloom Color Subtract", r_hdr.integer || r_bloom.integer, r_bloom_colorsubtract.value, 0, 1-0.0625);
@@ -2065,7 +2069,6 @@ static void M_Options_Graphics_Draw (void)
 	M_Options_PrintSlider(  "        Bloom Intensity", r_hdr.integer || r_bloom.integer, r_bloom_colorscale.value, 0.125, 4);
 	M_Options_PrintSlider(  "             Bloom Blur", r_hdr.integer || r_bloom.integer, r_bloom_blur.value, 1, 16);
 	M_Options_PrintSlider(  "       Bloom Resolution", r_hdr.integer || r_bloom.integer, r_bloom_resolution.value, 64, 2048);
-	M_Options_PrintSlider(  "       Scene Brightness", true, r_hdr_scenebrightness.value, 0.25, 4);
 	M_Options_PrintSlider(  "        Texture Quality", true, gl_picmip.value, 3, 0);
 	M_Options_PrintCommand( "       Restart Renderer", true);
 }
