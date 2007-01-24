@@ -185,6 +185,10 @@ int r_shadow_buffer_numsurfacepvsbytes;
 unsigned char *r_shadow_buffer_surfacepvs;
 int *r_shadow_buffer_surfacelist;
 
+// current light's cull box (copied out of an rtlight or calculated by GetLightInfo)
+vec3_t r_shadow_rtlight_cullmins;
+vec3_t r_shadow_rtlight_cullmaxs;
+
 rtexturepool_t *r_shadow_texturepool;
 rtexture_t *r_shadow_attenuation2dtexture;
 rtexture_t *r_shadow_attenuation3dtexture;
@@ -2231,7 +2235,7 @@ void R_Shadow_DrawEntityShadow(entity_render_t *ent, int numsurfaces, int *surfa
 		else if (numsurfaces)
 		{
 			R_Mesh_Matrix(&ent->matrix);
-			model->DrawShadowVolume(ent, r_shadow_rtlight->shadoworigin, NULL, r_shadow_rtlight->radius, numsurfaces, surfacelist, r_shadow_rtlight->cullmins, r_shadow_rtlight->cullmaxs);
+			model->DrawShadowVolume(ent, r_shadow_rtlight->shadoworigin, NULL, r_shadow_rtlight->radius, numsurfaces, surfacelist, r_shadow_rtlight_cullmins, r_shadow_rtlight_cullmaxs);
 		}
 	}
 	else
@@ -2318,6 +2322,9 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	if (R_CullBox(rtlight->cullmins, rtlight->cullmaxs))
 		return;
 
+	VectorCopy(rtlight->cullmins, r_shadow_rtlight_cullmins);
+	VectorCopy(rtlight->cullmaxs, r_shadow_rtlight_cullmaxs);
+
 	if (rtlight->compiled && r_shadow_realtime_world_compile.integer)
 	{
 		// compiled light, world available and can receive realtime lighting
@@ -2333,12 +2340,12 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 		// dynamic light, world available and can receive realtime lighting
 		// calculate lit surfaces and leafs
 		R_Shadow_EnlargeLeafSurfaceBuffer(r_refdef.worldmodel->brush.num_leafs, r_refdef.worldmodel->num_surfaces);
-		r_refdef.worldmodel->GetLightInfo(r_refdef.worldentity, rtlight->shadoworigin, rtlight->radius, rtlight->cullmins, rtlight->cullmaxs, r_shadow_buffer_leaflist, r_shadow_buffer_leafpvs, &numleafs, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces);
+		r_refdef.worldmodel->GetLightInfo(r_refdef.worldentity, rtlight->shadoworigin, rtlight->radius, r_shadow_rtlight_cullmins, r_shadow_rtlight_cullmaxs, r_shadow_buffer_leaflist, r_shadow_buffer_leafpvs, &numleafs, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces);
 		leaflist = r_shadow_buffer_leaflist;
 		leafpvs = r_shadow_buffer_leafpvs;
 		surfacelist = r_shadow_buffer_surfacelist;
 		// if the reduced leaf bounds are offscreen, skip it
-		if (R_CullBox(rtlight->cullmins, rtlight->cullmaxs))
+		if (R_CullBox(r_shadow_rtlight_cullmins, r_shadow_rtlight_cullmaxs))
 			return;
 	}
 	else
@@ -2360,7 +2367,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 			return;
 	}
 	// set up a scissor rectangle for this light
-	if (R_Shadow_ScissorForBBox(rtlight->cullmins, rtlight->cullmaxs))
+	if (R_Shadow_ScissorForBBox(r_shadow_rtlight_cullmins, r_shadow_rtlight_cullmaxs))
 		return;
 
 	// make a list of lit entities and shadow casting entities
@@ -2379,7 +2386,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 		{
 			model_t *model;
 			entity_render_t *ent = r_refdef.entities[i];
-			if (BoxesOverlap(ent->mins, ent->maxs, rtlight->cullmins, rtlight->cullmaxs)
+			if (BoxesOverlap(ent->mins, ent->maxs, r_shadow_rtlight_cullmins, r_shadow_rtlight_cullmaxs)
 			 && (model = ent->model)
 			 && !(ent->flags & RENDER_TRANSPARENT)
 			 && (r_refdef.worldmodel == NULL || r_refdef.worldmodel->brush.BoxTouchingLeafPVS == NULL || r_refdef.worldmodel->brush.BoxTouchingLeafPVS(r_refdef.worldmodel, leafpvs, ent->mins, ent->maxs)))
