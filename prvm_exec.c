@@ -363,7 +363,8 @@ void PRVM_PrintState(void)
 	PRVM_StackTrace ();
 }
 
-void PRVM_Crash()
+extern sizebuf_t vm_tempstringsbuf;
+void PRVM_Crash(void)
 {
 	if (prog == NULL)
 		return;
@@ -377,6 +378,9 @@ void PRVM_Crash()
 	// dump the stack so host_error can shutdown functions
 	prog->depth = 0;
 	prog->localstack_used = 0;
+
+	// delete all tempstrings (FIXME: is this safe in VM->engine->VM recursion?)
+	vm_tempstringsbuf.cursize = 0;
 
 	// reset the prog pointer
 	prog = NULL;
@@ -484,8 +488,10 @@ PRVM_ExecuteProgram
 extern cvar_t prvm_boundscheck;
 extern cvar_t prvm_traceqc;
 extern cvar_t prvm_statementprofiling;
+extern cvar_t prvm_tempstringmemory;
 extern int		PRVM_ED_FindFieldOffset (const char *field);
 extern ddef_t*	PRVM_ED_FindGlobal(const char *name);
+extern sizebuf_t vm_tempstringsbuf;
 void PRVM_ExecuteProgram (func_t fnum, const char *errormessage)
 {
 	dstatement_t	*st, *startst;
@@ -493,6 +499,7 @@ void PRVM_ExecuteProgram (func_t fnum, const char *errormessage)
 	prvm_edict_t	*ed;
 	prvm_eval_t	*ptr;
 	int		jumpcount, cachedpr_trace, exitdepth;
+	int		restorevm_tempstringsbuf_cursize;
 
 	if (!fnum || fnum >= (unsigned int)prog->progs->numfunctions)
 	{
@@ -502,6 +509,22 @@ void PRVM_ExecuteProgram (func_t fnum, const char *errormessage)
 	}
 
 	f = &prog->functions[fnum];
+
+	// after executing this function, delete all tempstrings it created
+	restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
+	// if there is no stack, this is a good time to reallocate the
+	// vm_tempstringsbuf if the cvar has changed
+	if (restorevm_tempstringsbuf_cursize == 0)
+	{
+		int maxsize = bound(4096, prvm_tempstringmemory.integer, 1<<30);
+		if (vm_tempstringsbuf.maxsize != maxsize || !vm_tempstringsbuf.data)
+		{
+			if (vm_tempstringsbuf.data)
+				Mem_Free(vm_tempstringsbuf.data);
+			vm_tempstringsbuf.maxsize = maxsize;
+			vm_tempstringsbuf.data = Mem_Alloc(sv_mempool, vm_tempstringsbuf.maxsize);
+		}
+	}
 
 	prog->trace = prvm_traceqc.integer;
 
@@ -585,4 +608,10 @@ chooseexecprogram:
 			}
 		}
 	}
+
+cleanup:
+	if (developer.integer >= 200 && vm_tempstringsbuf.cursize > restorevm_tempstringsbuf_cursize)
+		Con_Printf("PRVM_ExecuteProgram: %s used %i bytes of tempstrings\n", PRVM_GetString(prog->functions[fnum].s_name), vm_tempstringsbuf.cursize - restorevm_tempstringsbuf_cursize);
+	// delete tempstrings created by this function
+	vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 }

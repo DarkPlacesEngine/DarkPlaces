@@ -322,15 +322,19 @@ qboolean CL_VM_UpdateView (void)
 	return true;
 }
 
+extern sizebuf_t vm_tempstringsbuf;
 qboolean CL_VM_ConsoleCommand (const char *cmd)
 {
+	int restorevm_tempstringsbuf_cursize;
 	qboolean r;
 	if(!csqc_loaded)
 		return false;
 	CSQC_BEGIN
 		*prog->time = cl.time;
-		PRVM_G_INT(OFS_PARM0) = PRVM_SetEngineString(cmd);
+		restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
+		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(cmd);
 		PRVM_ExecuteProgram (prog->globals.client->CSQC_ConsoleCommand, CL_F_CONSOLECOMMAND);
+		vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 		r = CSQC_RETURNVAL;
 	CSQC_END
 	return r;
@@ -358,6 +362,7 @@ qboolean CL_VM_Parse_TempEntity (void)
 
 void CL_VM_Parse_StuffCmd (const char *msg)
 {
+	int restorevm_tempstringsbuf_cursize;
 	if(msg[0] == 'c')
 	if(msg[1] == 's')
 	if(msg[2] == 'q')
@@ -382,17 +387,22 @@ void CL_VM_Parse_StuffCmd (const char *msg)
 	}
 	CSQC_BEGIN
 		*prog->time = cl.time;
-		PRVM_G_INT(OFS_PARM0) = PRVM_SetEngineString(msg);
+		restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
+		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(msg);
 		PRVM_ExecuteProgram ((func_t)(CSQC_Parse_StuffCmd - prog->functions), CL_F_PARSE_STUFFCMD);
+		vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 	CSQC_END
 }
 
 static void CL_VM_Parse_Print (const char *msg)
 {
+	int restorevm_tempstringsbuf_cursize;
 	CSQC_BEGIN
 		*prog->time = cl.time;
-		PRVM_G_INT(OFS_PARM0) = PRVM_SetEngineString(msg);
+		restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
+		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(msg);
 		PRVM_ExecuteProgram ((func_t)(CSQC_Parse_Print - prog->functions), CL_F_PARSE_PRINT);
+		vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 	CSQC_END
 }
 
@@ -424,6 +434,7 @@ void CSQC_AddPrintText (const char *msg)
 
 void CL_VM_Parse_CenterPrint (const char *msg)
 {
+	int restorevm_tempstringsbuf_cursize;
 	if(!csqc_loaded || !CSQC_Parse_CenterPrint)
 	{
 		SCR_CenterPrint((char*)msg);
@@ -431,8 +442,10 @@ void CL_VM_Parse_CenterPrint (const char *msg)
 	}
 	CSQC_BEGIN
 		*prog->time = cl.time;
-		PRVM_G_INT(OFS_PARM0) = PRVM_SetEngineString(msg);
+		restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
+		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(msg);
 		PRVM_ExecuteProgram ((func_t)(CSQC_Parse_CenterPrint - prog->functions), CL_F_PARSE_CENTERPRINT);
+		vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 	CSQC_END
 }
 

@@ -68,6 +68,7 @@ char *vm_sv_extensions =
 "DP_QC_SINCOSSQRTPOW "
 "DP_QC_STRINGBUFFERS "
 "DP_QC_STRINGCOLORFUNCTIONS "
+"DP_QC_UNLIMITEDTEMPSTRINGS "
 "DP_QC_TRACEBOX "
 "DP_QC_TRACETOSS "
 "DP_QC_TRACE_MOVETYPE_HITMODEL "
@@ -497,11 +498,7 @@ void PF_traceline (void)
 	if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dphittexturename)))
 	{
 		if (trace.hittexture)
-		{
-			char *s = VM_GetTempString();
-			strlcpy(s, trace.hittexture->name, VM_STRINGTEMP_LENGTH);
-			val->string = PRVM_SetEngineString(s);
-		}
+			val->string = PRVM_SetTempString(trace.hittexture->name);
 		else
 			val->string = 0;
 	}
@@ -563,11 +560,7 @@ void PF_tracebox (void)
 	if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dphittexturename)))
 	{
 		if (trace.hittexture)
-		{
-			char *s = VM_GetTempString();
-			strlcpy(s, trace.hittexture->name, VM_STRINGTEMP_LENGTH);
-			val->string = PRVM_SetEngineString(s);
-		}
+			val->string = PRVM_SetTempString(trace.hittexture->name);
 		else
 			val->string = 0;
 	}
@@ -614,11 +607,7 @@ void PF_tracetoss (void)
 	if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dphittexturename)))
 	{
 		if (trace.hittexture)
-		{
-			char *s = VM_GetTempString();
-			strlcpy(s, trace.hittexture->name, VM_STRINGTEMP_LENGTH);
-			val->string = PRVM_SetEngineString(s);
-		}
+			val->string = PRVM_SetTempString(trace.hittexture->name);
 		else
 			val->string = 0;
 	}
@@ -1694,7 +1683,7 @@ void PF_effect (void)
 	int i;
 	const char *s;
 	s = PRVM_G_STRING(OFS_PARM1);
-	if (!s || !s[0])
+	if (!s[0])
 	{
 		VM_Warning("effect: no model specified\n");
 		return;
@@ -2240,10 +2229,10 @@ void PF_getsurfacetexture(void)
 {
 	model_t *model;
 	msurface_t *surface;
-	PRVM_G_INT(OFS_RETURN) = 0;
+	PRVM_G_INT(OFS_RETURN) = OFS_NULL;
 	if (!(model = getmodel(PRVM_G_EDICT(OFS_PARM0))) || !(surface = getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
 		return;
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(surface->texture->name);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(surface->texture->name);
 }
 //PF_getsurfacenearpoint, // #438 float(entity e, vector p) getsurfacenearpoint = #438;
 void PF_getsurfacenearpoint(void)

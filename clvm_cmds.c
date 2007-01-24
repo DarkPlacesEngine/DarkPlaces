@@ -65,6 +65,7 @@ char *vm_cl_extensions =
 "DP_QC_GETTAGINFO "
 "DP_QC_MINMAXBOUND "
 "DP_QC_MULTIPLETEMPSTRINGS "
+"DP_QC_UNLIMITEDTEMPSTRINGS "
 "DP_QC_RANDOMVEC "
 "DP_QC_SINCOSSQRTPOW "
 //"DP_QC_STRINGBUFFERS "	//[515]: not needed ?
@@ -297,10 +298,8 @@ void VM_CL_traceline (void)
 // #19 void(string s) precache_sound
 void VM_CL_precache_sound (void)
 {
-	const char *n;
 	VM_SAFEPARMCOUNT(1, VM_CL_precache_sound);
-	n = PRVM_G_STRING(OFS_PARM0);
-	S_PrecacheSound(n, true, false);
+	S_PrecacheSound(PRVM_G_STRING(OFS_PARM0), true, false);
 }
 
 // #20 void(string s) precache_model
@@ -1001,17 +1000,17 @@ void VM_CL_getstati (void)
 void VM_CL_getstats (void)
 {
 	int i;
-	char *t;
+	char t[17];
 	VM_SAFEPARMCOUNT(1, VM_CL_getstats);
 	i = (int)PRVM_G_FLOAT(OFS_PARM0);
 	if(i < 0 || i > MAX_CL_STATS-4)
 	{
+		PRVM_G_INT(OFS_RETURN) = OFS_NULL;
 		VM_Warning("VM_CL_getstats: index>MAX_CL_STATS-4 or index<0\n");
 		return;
 	}
-	t = VM_GetTempString();
-	strlcpy(t, (char*)&cl.stats[i], 16);
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(t);
+	strlcpy(t, (char*)&cl.stats[i], sizeof(t));
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(t);
 }
 
 //#333 void(entity e, float mdlindex) setmodelindex (EXT_CSQC)
@@ -1050,7 +1049,7 @@ void VM_CL_modelnameforindex (void)
 
 	VM_SAFEPARMCOUNT(1, VM_CL_modelnameforindex);
 
-	PRVM_G_INT(OFS_RETURN) = 0;
+	PRVM_G_INT(OFS_RETURN) = OFS_NULL;
 	model = CSQC_GetModelByIndex((int)PRVM_G_FLOAT(OFS_PARM0));
 	PRVM_G_INT(OFS_RETURN) = model ? PRVM_SetEngineString(model->name) : 0;
 }
@@ -1058,11 +1057,9 @@ void VM_CL_modelnameforindex (void)
 //#335 float(string effectname) particleeffectnum (EXT_CSQC)
 void VM_CL_particleeffectnum (void)
 {
-	const char	*n;
 	int			i;
 	VM_SAFEPARMCOUNT(1, VM_CL_particleeffectnum);
-	n = PRVM_G_STRING(OFS_PARM0);
-	i = CL_ParticleEffectIndexForName(n);
+	i = CL_ParticleEffectIndexForName(PRVM_G_STRING(OFS_PARM0));
 	if (i == 0)
 		i = -1;
 	PRVM_G_FLOAT(OFS_RETURN) = i;
@@ -1110,11 +1107,8 @@ void VM_CL_centerprint (void)
 //#342 string(float keynum) getkeybind (EXT_CSQC)
 void VM_CL_getkeybind (void)
 {
-	int i;
-
 	VM_SAFEPARMCOUNT(1, VM_CL_getkeybind);
-	i = (int)PRVM_G_FLOAT(OFS_PARM0);
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(Key_GetBind(i));
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(Key_GetBind((int)PRVM_G_FLOAT(OFS_PARM0)));
 }
 
 //#343 void(float usecursor) setcursormode (EXT_CSQC)
@@ -1169,7 +1163,6 @@ void VM_CL_getplayerkey (void)
 	int			i;
 	char		t[128];
 	const char	*c;
-	char		*temp;
 
 	VM_SAFEPARMCOUNT(2, VM_CL_getplayerkey);
 
@@ -1189,12 +1182,12 @@ void VM_CL_getplayerkey (void)
 	else
 		if(!strcasecmp(c, "frags"))
 			sprintf(t, "%i", cl.scores[i].frags);
-//	else
-//		if(!strcasecmp(c, "ping"))
-//			sprintf(t, "%i", cl.scores[i].ping);
-//	else
-//		if(!strcasecmp(c, "entertime"))
-//			sprintf(t, "%f", cl.scores[i].entertime);
+	else
+		if(!strcasecmp(c, "ping"))
+			sprintf(t, "%i", cl.scores[i].qw_ping);
+	else
+		if(!strcasecmp(c, "entertime"))
+			sprintf(t, "%f", cl.scores[i].qw_entertime);
 	else
 		if(!strcasecmp(c, "colors"))
 			sprintf(t, "%i", cl.scores[i].colors);
@@ -1209,9 +1202,7 @@ void VM_CL_getplayerkey (void)
 			sprintf(t, "%i", i+1);
 	if(!t[0])
 		return;
-	temp = VM_GetTempString();
-	strlcpy(temp, t, VM_STRINGTEMP_LENGTH);
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(temp);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(t);
 }
 
 //#349 float() isdemo (EXT_CSQC)
@@ -1305,15 +1296,7 @@ void VM_CL_ReadAngle (void)
 //#366 string() readstring (EXT_CSQC)
 void VM_CL_ReadString (void)
 {
-	char *t, *s;
-	t = VM_GetTempString();
-	s = MSG_ReadString();
-	PRVM_G_INT(OFS_RETURN) = 0;
-	if(s)
-	{
-		strlcpy(t, s, VM_STRINGTEMP_LENGTH);
-		PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(t);
-	}
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(MSG_ReadString());
 }
 
 //#367 float() readfloat (EXT_CSQC)
@@ -1758,10 +1741,10 @@ void VM_CL_getsurfacetexture(void)
 {
 	model_t *model;
 	msurface_t *surface;
-	PRVM_G_INT(OFS_RETURN) = 0;
+	PRVM_G_INT(OFS_RETURN) = OFS_NULL;
 	if (!(model = CSQC_GetModelFromEntity(PRVM_G_EDICT(OFS_PARM0))) || !(surface = cl_getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
 		return;
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(surface->texture->name);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(surface->texture->name);
 }
 
 // #438 float(entity e, vector p) getsurfacenearpoint
@@ -2193,15 +2176,12 @@ static int Is_Text_Color (char c, char t)
 void VM_uncolorstring (void) //#170
 {
 	const char	*in;
-	char		*out;
+	char		out[VM_STRINGTEMP_LENGTH];
 	int			k = 0, i = 0;
 
 	VM_SAFEPARMCOUNT(1, VM_uncolorstring);
 	in = PRVM_G_STRING(OFS_PARM0);
-	if(!in)
-		PRVM_ERROR ("VM_uncolorstring: %s: NULL\n", PRVM_NAME);
 	VM_CheckEmptyString (in);
-	out = VM_GetTempString();
 
 	while (in[k])
 	{
@@ -2215,6 +2195,7 @@ void VM_uncolorstring (void) //#170
 		++k;
 		++i;
 	}
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(out);
 }
 
 void VM_CL_selecttraceline (void)
@@ -2241,8 +2222,6 @@ void VM_charindex (void)
 {
 	const char *s;
 	s = PRVM_G_STRING(OFS_PARM0);
-	if(!s)
-		return;
 	if((unsigned)PRVM_G_FLOAT(OFS_PARM1) > strlen(s))
 		return;
 	PRVM_G_FLOAT(OFS_RETURN) = (unsigned char)s[(int)PRVM_G_FLOAT(OFS_PARM1)];
@@ -2251,13 +2230,12 @@ void VM_charindex (void)
 //#223 string(float c, ...) chr2str (FTE_STRINGS)
 void VM_chr2str (void)
 {
-	char	*t;
+	char	t[128];
 	int		i;
-	t = VM_GetTempString();
-	for(i=0;i<prog->argc;i++)
+	for(i = 0;i < prog->argc && i < (int)sizeof(t) - 1;i++)
 		t[i] = (unsigned char)PRVM_G_FLOAT(OFS_PARM0+i*3);
 	t[i] = 0;
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(t);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(t);
 }
 
 //#228 float(string s1, string s2, float len) strncmp (FTE_STRINGS)

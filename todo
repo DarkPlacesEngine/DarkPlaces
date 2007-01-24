@@ -59,7 +59,6 @@
 0 bug darkplaces readme: it would be a very good idea to add documentation of sv_gameplayfix_* cvars in the readme as a means to run broken mods (xaGe)
 0 bug darkplaces renderer: GL13 path has broken handling of unlit surfaces in Nexuiz toxic.bsp - the small red light surfaces are black in GL13 path (m0rfar)
 0 bug darkplaces renderer: monsters teleporting in really slow down rendering, perhaps the teleport light is casting huge shadows?  new information suggests it is the particles. (romi, lcatlnx)
-0 bug darkplaces renderer: there's some sort of bug with GL_CullFace, it is sometimes rendering the map using GL_CullFace(GL_NONE) depending on viewpoint
 0 bug darkplaces server: SV_PushMove is ignoring model type in its angles_x handling, where as the renderer checks only model type to determine angles_x handling (Urre)
 0 bug darkplaces server: SV_PushMove's call to SV_ClipMoveToEntity should do a trace, not just a point test, to support hollow pusher models (Urre)
 0 bug darkplaces wgl client: during video mode setup, sometimes another application's window becomes permanently top most, not darkplaces' fullscreen window, why? (tZork)
@@ -95,8 +94,8 @@
 0 change darkplaces client: particles shouldn't be using contents checks to decide whether to die, they should use movement traces
 0 change darkplaces client: restrict wateralpha and such cvars according to what is permitted in qw serverinfo?
 0 change darkplaces client: turn off coronas on dlights (Jago)
-0 change darkplaces extensions: edit FRIK_FILE documentation to mention that fgets uses its own separate buffer, so only one fgets can be done at a time without uzing strzone, but that darkplaces uses standard tempstrings for fgets (it doesn't - change it!) and mention DP_QC_MULTIPLETEMPSTRINGS (FrikaC)
-0 change darkplaces extensions: edit FRIK_FILE documentation to mention that strcat uses its own separate buffer, and that a = strcat(a, b);a = strcat(a, c); works correctly despite this, also mention that in DP strcat uses standard tempstrings, and mention DP_QC_MULTIPLETEMPSTRINGS (FrikaC)
+0 change darkplaces extensions: edit FRIK_FILE documentation to mention that fgets uses its own separate buffer, so only one fgets can be done at a time without uzing strzone, but that this is not true with DP_QC_UNLIMITEDTEMPSTRINGS (FrikaC)
+0 change darkplaces extensions: edit FRIK_FILE documentation to mention that strcat uses its own separate buffer, and that a = strcat(a, b);a = strcat(a, c); works correctly despite this, but that strcat is far more flexible with DP_QC_UNLIMITEDTEMPSTRINGS (FrikaC)
 0 change darkplaces general: make r_speeds 2 show timings for other subsystems such as client, sound, server, network (Carni)
 0 change darkplaces loader: load *lava and *teleport and *rift textures as a black diffuse texture with all the color put into a glow layer, and remove the MATERIALFLAG_FULLBRIGHT accordingly, this way replacement textures can make it not glow (Kedhrin)
 0 change darkplaces memory: optimize model loaders to use less individual allocations, especially the q1bsp loader, it is responsible for a lot of very small (1-8 byte) allocations in the memlist all report
@@ -118,8 +117,6 @@
 0 change hmap2: qbsp should do tjunc fixing on leaky maps
 0 change revelation: change the wabbit kill message to " was hunting wabbit but shot " " instead"
 0 change zmodel: include the example script in the build zips, not just in the files directory
-0 cleanup darkplaces cleanup: remove cgame* files and any references
-0 cleanup darkplaces cleanup: remove ui.* files and any references
 0 cleanup darkplaces renderer: split GLSL program compilation code into shaderobject and programobject functions to reduce code
 0 feature darkplaces client: add .loc file support and say macros
 0 feature darkplaces client: add .mvd demo support
@@ -134,6 +131,7 @@
 0 feature darkplaces dpv playback: when video ends, execute a console command, perhaps "endvideo", this could be an alias set by a mod before it began playing the video (SavageX, motorsep)
 0 feature darkplaces editlights: add r_editlights_edit commands for turn/turnx/turny/turnz to allow angle adjustments using binds (Kedhrin)
 0 feature darkplaces editlights: split rtlight drawshadows option into drawworldshadows and drawentityshadows options, this allows combinations like no world shadows (for speed) but still having entity shadows (Mitchell, romi, Kedhrin)
+0 feature darkplaces extensions: document DP_QC_UNLIMITEDTEMPSTRINGS extension explaining the new tempstring system and the prvm_tempstringmemory cvar, add a note to DP_QC_MULTIPLETEMPSTRINGS that it is superceded by DP_QC_UNLIMITEDTEMPSTRINGS when present
 0 feature darkplaces filesystem: gamedir command to switch between mods, should be able to take multiple parameters to load multiple mods ontop of eachother like the -game commandline option can (FrikaC)
 0 feature darkplaces loader: add hud_clearprecache and hud_precachepic commands to preload pics by name, these get reloaded by r_restart as well, mods can put a lot of these commands in their default.cfg to precache needed hud art (Tomaz)
 0 feature darkplaces loader: load .vis files produced by hmap2
@@ -486,10 +484,10 @@
 5 feature darkplaces client: add a "edictedit" command to open up a dialog to edit an edict (allow multiple dialogs to be open at once)
 5 feature darkplaces client: add qc debugger, which would have its own very simple fullscreen console, this would be called directly from the qc interpreter, not from client (painQuin)
 5 feature darkplaces console: r_textutf8 cvar (to parse UTF-8 codes), should affect all text rendering, using multiple conchar images for different groups of 256 characters (VorteX)
-5 feature darkplaces renderer: add ALIASSKIN_NOCULLFACE and ALIASSKIN_SORTTRIANGLES flags, and figure out how to activate them somehow (FrikaC)
 5 feature darkplaces renderer: add dpshader support
 5 feature darkplaces renderer: add some kind of sun flare support, possibly stored in a dpshader (CheapAlert)
 5 feature darkplaces renderer: do a minimap that works by simply using nearclip to sheer off anything above the eye, and draws anything below normally, or via a cvar as height coloring (Supajoe)
+5 feature darkplaces renderer: implement transparent triangle sorting within each entity (FrikaC)
 5 feature darkplaces renderer: lightshader files (probably loaded by the cubemap field already present in rtlights handling), these would indicate what attenuation textures to use for the light, what cubemap filter, which corona texture and size and so on, and all textures can be animated (romi, Urre)
 5 feature darkplaces server: split server into a separate thread when running listen mode so that a host running too slow won't spoil the game (Toddd)
 5 feature dpzoo.map: make some things that make the player bigger/smaller to demonstrate scaling and better viewheight handling and brush collisions (depends on brush collisions)
@@ -619,6 +617,7 @@ d bug darkplaces renderer: r_wateralpha 0.9 is invisible on r_glsl 0;gl_combine 
 d bug darkplaces renderer: reverse corona traceline direction so that a player in solid can see coronas (Urre)
 d bug darkplaces renderer: shadow volumes from q3bsp brush models are broken, maybe inverted or something (Vermeulen)
 d bug darkplaces renderer: text coloring is only affecting the first line of messagemode text (LordHavoc)
+d bug darkplaces renderer: there's some sort of bug with GL_CullFace, it is sometimes rendering the map using GL_CullFace(GL_NONE) depending on viewpoint
 d bug darkplaces renderer: transparent entities are not being lit by rtlights, where as transparent water belonging to an opaque entity (world) is being lit by rtlights (SavageX)
 d bug darkplaces renderer: transparent surfaces are not being lit by rtlights (Vermeulen)
 d bug darkplaces renderer: vertex normals seem to be generated backwards
@@ -679,6 +678,8 @@ d change dpmod: use sv_maxairspeed cvar (engine) rather than sv_airmaxspeed (qc)
 d change dpmodel: include the example script in the build zips, not just in the files directory
 d change dpmodel: keep all bones instead of removing unused ones (Ghostface)
 d change hmap2: increase MAXTOKEN from 1024 to 16384 (FrikaC)
+d cleanup darkplaces cleanup: remove cgame* files and any references
+d cleanup darkplaces cleanup: remove ui.* files and any references
 d cleanup darkplaces console: look at Black's recent console args changes and clean it up as he requested, particularly removing a commented block (Black)
 d cleanup darkplaces csqc: cl.csqcentities/cl.num_csqcentities/cl.max_csqcentities are probably entirely unnecessary
 d cleanup darkplaces general: get rid of fs_filesize, use parameters/local variables instead (Randy)

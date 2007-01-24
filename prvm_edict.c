@@ -37,6 +37,7 @@ cvar_t prvm_boundscheck = {0, "prvm_boundscheck", "1", "enables detection of out
 cvar_t prvm_traceqc = {0, "prvm_traceqc", "0", "prints every QuakeC statement as it is executed (only for really thorough debugging!)"};
 // LordHavoc: counts usage of each QuakeC statement
 cvar_t prvm_statementprofiling = {0, "prvm_statementprofiling", "0", "counts how many times each QuakeC statement has been executed, these counts are displayed in prvm_printfunction output (if enabled)"};
+cvar_t prvm_tempstringmemory = {0, "prvm_tempstringmemory", "8388608", "amount of temporary string memory allowed in a single QuakeC invocation (QuakeC function call made by the engine)"};
 
 //============================================================================
 // mempool handling
@@ -1773,6 +1774,7 @@ void PRVM_Init (void)
 	Cvar_RegisterVariable (&prvm_boundscheck);
 	Cvar_RegisterVariable (&prvm_traceqc);
 	Cvar_RegisterVariable (&prvm_statementprofiling);
+	Cvar_RegisterVariable (&prvm_tempstringmemory);
 
 	//VM_Cmd_Init();
 }
@@ -1870,21 +1872,63 @@ prvm_edict_t *PRVM_PROG_TO_EDICT(int n)
 */
 
 
+sizebuf_t vm_tempstringsbuf;
+
 const char *PRVM_GetString(int num)
 {
-	if (num >= 0 && num < prog->stringssize)
-		return prog->strings + num;
-	else if (num < 0 && num >= -prog->numknownstrings)
+	if (num >= 0)
 	{
-		num = -1 - num;
-		if (!prog->knownstrings[num])
-			PRVM_ERROR("PRVM_GetString: attempt to get string that is already freed");
-		return prog->knownstrings[num];
+		if (num < prog->stringssize)
+			return prog->strings + num;
+		else
+#if 1
+		if (num <= prog->stringssize + vm_tempstringsbuf.maxsize)
+		{
+			num -= prog->stringssize;
+			if (num < vm_tempstringsbuf.cursize)
+				return (char *)vm_tempstringsbuf.data + num;
+			else
+			{
+				VM_Warning("PRVM_GetString: Invalid temp-string offset (%i >= %i vm_tempstringsbuf.cursize)", num, vm_tempstringsbuf.cursize);
+				return "";
+			}
+		}
+		else
+#endif
+		{
+			VM_Warning("PRVM_GetString: Invalid constant-string offset (%i >= %i prog->stringssize)", num, prog->stringssize);
+			return "";
+		}
 	}
 	else
 	{
-		PRVM_ERROR("PRVM_GetString: invalid string offset %i", num);
-		return "";
+		num = -1 - num;
+#if 0
+		if (num >= (1<<30))
+		{
+			// special range reserved for tempstrings
+			num -= (1<<30);
+			if (num < vm_tempstringsbuf.cursize)
+				return (char *)vm_tempstringsbuf.data + num;
+			else
+			{
+				VM_Warning("PRVM_GetString: Invalid temp-string offset (%i >= %i vm_tempstringsbuf.cursize)", num, vm_tempstringsbuf.cursize);
+				return "";
+			}
+		}
+		else
+#endif
+		if (num < prog->numknownstrings)
+		{
+			if (!prog->knownstrings[num])
+				VM_Warning("PRVM_GetString: Invalid zone-string offset (%i has been freed)", num);
+			return prog->knownstrings[num];
+		}
+		else
+		{
+			VM_Warning("PRVM_GetString: Invalid zone-string offset (%i >= %i)", num, prog->numknownstrings);
+			return "";
+		}
 	}
 }
 
@@ -1895,6 +1939,15 @@ int PRVM_SetEngineString(const char *s)
 		return 0;
 	if (s >= prog->strings && s <= prog->strings + prog->stringssize)
 		PRVM_ERROR("PRVM_SetEngineString: s in prog->strings area");
+	// if it's in the tempstrings area, use a reserved range
+	// (otherwise we'd get millions of useless string offsets cluttering the database)
+	if (s >= (char *)vm_tempstringsbuf.data && s < (char *)vm_tempstringsbuf.data + vm_tempstringsbuf.maxsize)
+#if 1
+		return prog->stringssize + (s - (char *)vm_tempstringsbuf.data);
+#else
+		return -1 - ((1<<30) + (s - (char *)vm_tempstringsbuf.data));
+#endif
+	// see if it's a known string address
 	for (i = 0;i < prog->numknownstrings;i++)
 		if (prog->knownstrings[i] == s)
 			return -1 - i;
@@ -1924,6 +1977,31 @@ int PRVM_SetEngineString(const char *s)
 	prog->firstfreeknownstring = i + 1;
 	prog->knownstrings[i] = s;
 	return -1 - i;
+}
+
+// temp string handling
+
+// all tempstrings go into this buffer consecutively, and it is reset
+// whenever PRVM_ExecuteProgram returns to the engine
+// (technically each PRVM_ExecuteProgram call saves the cursize value and
+//  restores it on return, so multiple recursive calls can share the same
+//  buffer)
+// the buffer size is controlled by the prvm_tempstringmemory cvar, causing it
+// to be reallocated between invocations if the cvar has changed
+
+int PRVM_SetTempString(const char *s)
+{
+	int size;
+	char *t;
+	if (!s)
+		return 0;
+	size = (int)strlen(s) + 1;
+	if (vm_tempstringsbuf.cursize + size >= vm_tempstringsbuf.maxsize)
+		PRVM_ERROR("PRVM_SetTempString: tempstrings buffer full!  (increase prvm_tempstringmemory cvar or reduce use of tempstrings in quakec code)\n");
+	t = (char *)vm_tempstringsbuf.data + vm_tempstringsbuf.cursize;
+	memcpy(t, s, size);
+	vm_tempstringsbuf.cursize += size;
+	return PRVM_SetEngineString(t);
 }
 
 int PRVM_AllocString(size_t bufferlength, char **pointer)
