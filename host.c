@@ -350,7 +350,7 @@ void SV_BroadcastPrint(const char *msg)
 
 	for (i = 0, client = svs.clients;i < svs.maxclients;i++, client++)
 	{
-		if (client->spawned && client->netconnection)
+		if (client->active && client->netconnection)
 		{
 			MSG_WriteByte(&client->netconnection->message, svc_print);
 			MSG_WriteString(&client->netconnection->message, msg);
