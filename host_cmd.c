@@ -987,7 +987,7 @@ void Host_Say(qboolean teamonly)
 	// note: save is not a valid edict if fromServer is true
 	save = host_client;
 	for (j = 0, host_client = svs.clients;j < svs.maxclients;j++, host_client++)
-		if (host_client->spawned && (!teamonly || host_client->edict->fields.server->team == save->edict->fields.server->team))
+		if (host_client->active && (!teamonly || host_client->edict->fields.server->team == save->edict->fields.server->team))
 			SV_ClientPrint(text);
 	host_client = save;
 
@@ -1093,13 +1093,13 @@ void Host_Tell_f(void)
 		namebuf[playername_length] = 0;
 		for (playernumber = 0; playernumber < svs.maxclients; playernumber++)
 		{
-			if (!svs.clients[playernumber].spawned)
+			if (!svs.clients[playernumber].active)
 				continue;
 			if (strcasecmp(svs.clients[playernumber].name, namebuf) == 0)
 				break;
 		}
 	}
-	if(playernumber < 0 || playernumber >= svs.maxclients || !(svs.clients[playernumber].spawned))
+	if(playernumber < 0 || playernumber >= svs.maxclients || !(svs.clients[playernumber].active))
 	{
 		if (fromServer)
 			Con_Print("Host_Tell: invalid player name/ID\n");
