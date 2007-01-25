@@ -195,7 +195,7 @@ void CSQC_Think (prvm_edict_t *ed)
 extern cvar_t cl_noplayershadow;
 qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 {
-	int i;
+	int i, renderflags;
 	float scale;
 	prvm_eval_t *val;
 	entity_t *e;
@@ -216,6 +216,13 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 	e->render.skinnum = (int)ed->fields.client->skin;
 	e->render.effects |= e->render.model->flags2 & (EF_FULLBRIGHT | EF_ADDITIVE);
 	scale = 1;
+	// FIXME: renderflags should be in the cl_entvars_t
+#if 1
+	renderflags = 0;
+	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_renderflags)) && val->_float)	renderflags = (int)val->_float;
+#else
+	renderflags = (int)ed->fields.client->renderflags;
+#endif
 
 	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_alpha)) && val->_float)		e->render.alpha = val->_float;
 	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_scale)) && val->_float)		e->render.scale = scale = val->_float;
@@ -234,7 +241,7 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 	else
 		Matrix4x4_CreateIdentity(&tagmatrix);
 
-	if(i & RF_USEAXIS)	//FIXME!!!
+	if (renderflags & RF_USEAXIS)
 	{
 		vec3_t left;
 		VectorNegate(prog->globals.client->v_right, left);
