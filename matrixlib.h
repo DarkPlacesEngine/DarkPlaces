@@ -31,6 +31,12 @@ void Matrix4x4_Concat (matrix4x4_t *out, const matrix4x4_t *in1, const matrix4x4
 // (is this useful for anything?)
 void Matrix4x4_Transpose (matrix4x4_t *out, const matrix4x4_t *in1);
 // creates a matrix that does the opposite of the matrix provided
+// this is a full matrix inverter, it should be able to invert any matrix that
+// is possible to invert
+// (non-uniform scaling, rotation, shearing, and translation, possibly others)
+// warning: this function is SLOW
+int Matrix4x4_Invert_Full (matrix4x4_t *out, const matrix4x4_t *in1);
+// creates a matrix that does the opposite of the matrix provided
 // only supports translate, rotate, scale (not scale3) matrices
 void Matrix4x4_Invert_Simple (matrix4x4_t *out, const matrix4x4_t *in1);
 // creates a matrix that does the same rotation and translation as the matrix
