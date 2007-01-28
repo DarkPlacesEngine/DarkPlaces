@@ -838,7 +838,7 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 				}
 				t = surface->texture;
 				rsurface_texture = t->currentframe;
-				f = rsurface_texture->currentmaterialflags & MATERIALFLAG_NOSHADOW;
+				f = (rsurface_texture->currentmaterialflags & MATERIALFLAG_NOSHADOW) == 0;
 			}
 			if (f && surface->num_triangles)
 				surfacelist[numsurfacelist++] = surface;
