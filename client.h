@@ -1187,6 +1187,10 @@ void CL_MoveParticles(void);
 void R_MoveExplosions(void);
 void R_NewExplosion(const vec3_t org);
 
+void Debug_PolygonBegin(const char *picname, int flags, qboolean draw2d, float linewidth);
+void Debug_PolygonVertex(float x, float y, float z, float s, float t, float r, float g, float b, float a);
+void Debug_PolygonEnd(void);
+
 #include "cl_screen.h"
 
 extern qboolean sb_showscores;

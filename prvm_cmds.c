@@ -3180,13 +3180,113 @@ void VM_R_PolygonEnd (void)
 
 void VM_AddPolygonsToMeshQueue (void)
 {
-	unsigned int i;
+	int i;
 	if(!vm_drawpolygons_num)
 		return;
-	for(i = 0;i < vm_drawpolygons_num;i++)
-		VM_DrawPolygonCallback(NULL, NULL, i, NULL);
+	R_Mesh_Matrix(&identitymatrix);
+	GL_CullFace(GL_NONE);
+	for(i = 0;i < (int)vm_drawpolygons_num;i++)
+		VM_DrawPolygonCallback(NULL, NULL, 1, &i);
 	vm_drawpolygons_num = 0;
 }
+
+void Debug_PolygonBegin(const char *picname, int flags, qboolean draw2d, float linewidth)
+{
+	vm_polygon_t	*p;
+
+	if(!vm_polygons_initialized)
+		VM_InitPolygons();
+	if(vm_polygonbegin)
+	{
+		Con_Printf("Debug_PolygonBegin: called twice without Debug_PolygonEnd after first\n");
+		return;
+	}
+	// limit polygons to a vaguely sane amount, beyond this each one just
+	// replaces the last one
+	vm_drawpolygons_num = min(vm_drawpolygons_num, (1<<20)-1);
+	if(vm_drawpolygons_num >= vm_polygons_num)
+	{
+		p = (vm_polygon_t *)Mem_Alloc(vm_polygons_pool, 2 * vm_polygons_num * sizeof(vm_polygon_t));
+		memset(p, 0, 2 * vm_polygons_num * sizeof(vm_polygon_t));
+		memcpy(p, vm_polygons, vm_polygons_num * sizeof(vm_polygon_t));
+		Mem_Free(vm_polygons);
+		vm_polygons = p;
+		vm_polygons_num *= 2;
+	}
+	p = &vm_polygons[vm_drawpolygons_num];
+	if(picname && picname[0])
+		p->tex = Draw_CachePic(picname, true)->tex;
+	else
+		p->tex = r_texture_white;
+	p->flags = flags;
+	vm_current_vertices = 0;
+	vm_polygonbegin = true;
+	if(draw2d)
+		p->flags |= VM_POLYGON_FL2D;
+	if(linewidth)
+	{
+		p->data[13] = linewidth;	//[515]: linewidth
+		p->flags |= VM_POLYGON_FLLINES;
+	}
+}
+
+void Debug_PolygonVertex(float x, float y, float z, float s, float t, float r, float g, float b, float a)
+{
+	vm_polygon_t	*p;
+
+	if(!vm_polygonbegin)
+	{
+		Con_Printf("Debug_PolygonVertex: Debug_PolygonBegin wasn't called\n");
+		return;
+	}
+
+	p = &vm_polygons[vm_drawpolygons_num];
+	if(vm_current_vertices > 4)
+	{
+		Con_Printf("Debug_PolygonVertex: may have 4 vertices max\n");
+		return;
+	}
+
+	p->data[vm_current_vertices*3]		= x;
+	p->data[1+vm_current_vertices*3]	= y;
+	p->data[2+vm_current_vertices*3]	= z;
+
+	p->data[12+vm_current_vertices*2]	= s;
+	if(!(p->flags & VM_POLYGON_FLLINES))
+		p->data[13+vm_current_vertices*2]	= t;
+
+	p->data[20+vm_current_vertices*4]	= r;
+	p->data[21+vm_current_vertices*4]	= g;
+	p->data[22+vm_current_vertices*4]	= b;
+	p->data[23+vm_current_vertices*4]	= a;
+
+	vm_current_vertices++;
+	if(vm_current_vertices == 4)
+		p->flags |= VM_POLYGON_FL4V;
+	else
+		if(vm_current_vertices == 3)
+			p->flags |= VM_POLYGON_FL3V;
+}
+
+void Debug_PolygonEnd(void)
+{
+	if(!vm_polygonbegin)
+	{
+		Con_Printf("Debug_PolygonEnd: Debug_PolygonBegin wasn't called\n");
+		return;
+	}
+	vm_polygonbegin = false;
+	if(vm_current_vertices > 2 || (vm_current_vertices >= 2 && vm_polygons[vm_drawpolygons_num].flags & VM_POLYGON_FLLINES))
+	{
+		if(vm_polygons[vm_drawpolygons_num].flags & VM_POLYGON_FL2D)	//[515]: don't use qcpolygons memory if 2D
+			VM_AddPolygonTo2DScene(&vm_polygons[vm_drawpolygons_num]);
+		else
+			vm_drawpolygons_num++;
+	}
+	else
+		Con_Printf("Debug_PolygonEnd: %i vertices isn't a good choice\n", vm_current_vertices);
+}
+
 
 
 
