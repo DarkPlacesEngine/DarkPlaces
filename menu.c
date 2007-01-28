@@ -1553,7 +1553,7 @@ static void M_DrawCheckbox (int x, int y, int on)
 }
 
 
-#define OPTIONS_ITEMS 39
+#define OPTIONS_ITEMS 38
 
 static int options_cursor;
 
@@ -1976,7 +1976,7 @@ static void M_Options_Effects_Key (int k, char ascii)
 }
 
 
-#define	OPTIONS_GRAPHICS_ITEMS	16
+#define	OPTIONS_GRAPHICS_ITEMS	19
 
 static int options_graphics_cursor;
 
