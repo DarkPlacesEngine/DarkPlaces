@@ -1271,7 +1271,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		tx->basematerialflags = 0;
 		if (i == loadmodel->num_textures - 1)
 		{
-			tx->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_LIGHTBOTHSIDES;
+			tx->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_NOSHADOW;
 			tx->supercontents = mod_q1bsp_texture_water.supercontents;
 			tx->surfaceflags = mod_q1bsp_texture_water.surfaceflags;
 		}
@@ -1402,7 +1402,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			if (strncmp(tx->name,"*lava",5)
 			 && strncmp(tx->name,"*teleport",9)
 			 && strncmp(tx->name,"*rift",5)) // Scourge of Armagon texture
-				tx->basematerialflags |= MATERIALFLAG_WATERALPHA;
+				tx->basematerialflags |= MATERIALFLAG_WATERALPHA | MATERIALFLAG_NOSHADOW;
 			if (!strncmp(tx->name, "*lava", 5))
 			{
 				tx->supercontents = mod_q1bsp_texture_lava.supercontents;
@@ -1418,13 +1418,13 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 				tx->supercontents = mod_q1bsp_texture_water.supercontents;
 				tx->surfaceflags = mod_q1bsp_texture_water.surfaceflags;
 			}
-			tx->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_LIGHTBOTHSIDES;
+			tx->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_NOSHADOW;
 		}
 		else if (tx->name[0] == 's' && tx->name[1] == 'k' && tx->name[2] == 'y')
 		{
 			tx->supercontents = mod_q1bsp_texture_sky.supercontents;
 			tx->surfaceflags = mod_q1bsp_texture_sky.surfaceflags;
-			tx->basematerialflags |= MATERIALFLAG_SKY;
+			tx->basematerialflags |= MATERIALFLAG_SKY | MATERIALFLAG_NOSHADOW;
 		}
 		else
 		{
@@ -1433,7 +1433,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			tx->basematerialflags |= MATERIALFLAG_WALL;
 		}
 		if (tx->skinframes[0].fog)
-			tx->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_TRANSPARENT;
+			tx->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_TRANSPARENT | MATERIALFLAG_NOSHADOW;
 
 		// start out with no animation
 		tx->currentframe = tx;
@@ -4354,7 +4354,7 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 			out->basematerialflags = 0;
 			if (shader->surfaceparms & Q3SURFACEPARM_SKY)
 			{
-				out->basematerialflags |= MATERIALFLAG_SKY;
+				out->basematerialflags |= MATERIALFLAG_SKY | MATERIALFLAG_NOSHADOW;
 				if (shader->skyboxname[0])
 				{
 					// quake3 seems to append a _ to the skybox name, so this must do so as well
@@ -4362,17 +4362,19 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 				}
 			}
 			else if ((out->surfaceflags & Q3SURFACEFLAG_NODRAW) || shader->numlayers == 0)
-				out->basematerialflags |= MATERIALFLAG_NODRAW;
+				out->basematerialflags |= MATERIALFLAG_NODRAW | MATERIALFLAG_NOSHADOW;
 			else if (shader->surfaceparms & Q3SURFACEPARM_LAVA)
-				out->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_FULLBRIGHT;
+				out->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_FULLBRIGHT | MATERIALFLAG_NOSHADOW;
 			else if (shader->surfaceparms & Q3SURFACEPARM_SLIME)
-				out->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_WATERALPHA;
+				out->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_WATERALPHA | MATERIALFLAG_NOSHADOW;
 			else if (shader->surfaceparms & Q3SURFACEPARM_WATER)
-				out->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_WATERALPHA;
+				out->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_WATERALPHA | MATERIALFLAG_NOSHADOW;
 			else
 				out->basematerialflags |= MATERIALFLAG_WALL;
 			if (shader->layers[0].alphatest)
-				out->basematerialflags |= MATERIALFLAG_ALPHATEST | MATERIALFLAG_TRANSPARENT;
+				out->basematerialflags |= MATERIALFLAG_ALPHATEST | MATERIALFLAG_TRANSPARENT | MATERIALFLAG_NOSHADOW;
+			if (shader->textureflags & (Q3TEXTUREFLAG_TWOSIDED | Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2))
+				out->basematerialflags |= MATERIALFLAG_NOSHADOW;
 			out->customblendfunc[0] = GL_ONE;
 			out->customblendfunc[1] = GL_ZERO;
 			if (shader->numlayers > 0)
@@ -4403,13 +4405,13 @@ Q3 shader blendfuncs actually used in the game (* = supported by DP)
 				if (shader->layers[0].blendfunc[0] != GL_ONE || shader->layers[0].blendfunc[1] != GL_ZERO)
 				{
 					if (shader->layers[0].blendfunc[0] == GL_ONE && shader->layers[0].blendfunc[1] == GL_ONE)
-						out->basematerialflags |= MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_TRANSPARENT;
+						out->basematerialflags |= MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_TRANSPARENT | MATERIALFLAG_NOSHADOW;
 					else if (shader->layers[0].blendfunc[0] == GL_SRC_ALPHA && shader->layers[0].blendfunc[1] == GL_ONE)
-						out->basematerialflags |= MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_TRANSPARENT;
+						out->basematerialflags |= MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_TRANSPARENT | MATERIALFLAG_NOSHADOW;
 					else if (shader->layers[0].blendfunc[0] == GL_SRC_ALPHA && shader->layers[0].blendfunc[1] == GL_ONE_MINUS_SRC_ALPHA)
-						out->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_TRANSPARENT;
+						out->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_TRANSPARENT | MATERIALFLAG_NOSHADOW;
 					else
-						out->basematerialflags |= MATERIALFLAG_CUSTOMBLEND | MATERIALFLAG_FULLBRIGHT | MATERIALFLAG_BLENDED | MATERIALFLAG_TRANSPARENT;
+						out->basematerialflags |= MATERIALFLAG_CUSTOMBLEND | MATERIALFLAG_FULLBRIGHT | MATERIALFLAG_BLENDED | MATERIALFLAG_TRANSPARENT | MATERIALFLAG_NOSHADOW;
 				}
 			}
 			if (!shader->lighting)
@@ -4430,9 +4432,9 @@ Q3 shader blendfuncs actually used in the game (* = supported by DP)
 			Con_DPrintf("%s: No shader found for texture \"%s\"\n", loadmodel->name, out->name);
 			out->surfaceparms = 0;
 			if (out->surfaceflags & Q3SURFACEFLAG_NODRAW)
-				out->basematerialflags |= MATERIALFLAG_NODRAW;
+				out->basematerialflags |= MATERIALFLAG_NODRAW | MATERIALFLAG_NOSHADOW;
 			else if (out->surfaceflags & Q3SURFACEFLAG_SKY)
-				out->basematerialflags |= MATERIALFLAG_SKY;
+				out->basematerialflags |= MATERIALFLAG_SKY | MATERIALFLAG_NOSHADOW;
 			else
 				out->basematerialflags |= MATERIALFLAG_WALL;
 			// these are defaults

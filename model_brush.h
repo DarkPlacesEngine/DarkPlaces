@@ -93,6 +93,8 @@ mplane_t;
 #define MATERIALFLAG_BLENDED 4096
 // render using a custom blendfunc
 #define MATERIALFLAG_CUSTOMBLEND 8192
+// do not cast shadows from this material
+#define MATERIALFLAG_NOSHADOW 16384
 
 typedef struct medge_s
 {
