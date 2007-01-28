@@ -21,6 +21,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef RENDER_H
 #define RENDER_H
 
+#include "svbsp.h"
+
 // 1.0f / N table
 extern float ixtable[4096];
 
@@ -59,6 +61,9 @@ extern cvar_t r_lerpmodels;
 extern cvar_t r_waterscroll;
 
 extern cvar_t developer_texturelogging;
+
+// shadow volume bsp struct with automatically growing nodes buffer
+extern svbsp_t r_svbsp;
 
 typedef struct rmesh_s
 {
