@@ -126,6 +126,9 @@ static struct r_bloomstate_s
 }
 r_bloomstate;
 
+// shadow volume bsp struct with automatically growing nodes buffer
+svbsp_t r_svbsp;
+
 rtexture_t *r_texture_blanknormalmap;
 rtexture_t *r_texture_white;
 rtexture_t *r_texture_black;
@@ -1067,10 +1070,14 @@ void gl_main_start(void)
 	R_BuildFogTexture();
 	memset(&r_bloomstate, 0, sizeof(r_bloomstate));
 	memset(r_glsl_permutations, 0, sizeof(r_glsl_permutations));
+	memset(&r_svbsp, 0, sizeof (r_svbsp));
 }
 
 void gl_main_shutdown(void)
 {
+	if (r_svbsp.nodes)
+		Mem_Free(r_svbsp.nodes);
+	memset(&r_svbsp, 0, sizeof (r_svbsp));
 	R_FreeTexturePool(&r_main_texturepool);
 	r_texture_blanknormalmap = NULL;
 	r_texture_white = NULL;
@@ -2621,11 +2628,13 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 	if (!(ent->flags & RENDER_LIGHT))
 		t->currentmaterialflags |= MATERIALFLAG_FULLBRIGHT;
 	if (ent->effects & EF_ADDITIVE)
-		t->currentmaterialflags |= MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_TRANSPARENT;
+		t->currentmaterialflags |= MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_TRANSPARENT | MATERIALFLAG_NOSHADOW;
 	else if (t->currentalpha < 1)
-		t->currentmaterialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_TRANSPARENT;
+		t->currentmaterialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_TRANSPARENT | MATERIALFLAG_NOSHADOW;
+	if (ent->flags & RENDER_NOCULLFACE)
+		t->currentmaterialflags |= MATERIALFLAG_NOSHADOW;
 	if (ent->effects & EF_NODEPTHTEST)
-		t->currentmaterialflags |= MATERIALFLAG_NODEPTHTEST;
+		t->currentmaterialflags |= MATERIALFLAG_NODEPTHTEST | MATERIALFLAG_NOSHADOW;
 	if (t->currentmaterialflags & MATERIALFLAG_WATER && r_waterscroll.value != 0)
 		t->currenttexmatrix = r_waterscrollmatrix;
 	else

@@ -213,13 +213,14 @@ cvar_t r_shadow_portallight = {0, "r_shadow_portallight", "1", "use portal culli
 cvar_t r_shadow_projectdistance = {0, "r_shadow_projectdistance", "1000000", "how far to cast shadows"};
 cvar_t r_shadow_realtime_dlight = {CVAR_SAVE, "r_shadow_realtime_dlight", "1", "enables rendering of dynamic lights such as explosions and rocket light"};
 cvar_t r_shadow_realtime_dlight_shadows = {CVAR_SAVE, "r_shadow_realtime_dlight_shadows", "1", "enables rendering of shadows from dynamic lights"};
-cvar_t r_shadow_realtime_dlight_portalculling = {0, "r_shadow_realtime_dlight_portalculling", "0", "enables portal culling optimizations on dynamic lights (slow!  you probably don't want this!)"};
+cvar_t r_shadow_realtime_dlight_svbspculling = {0, "r_shadow_realtime_dlight_svbspculling", "0", "enables svbsp optimization on dynamic lights (very slow!)"};
 cvar_t r_shadow_realtime_world = {CVAR_SAVE, "r_shadow_realtime_world", "0", "enables rendering of full world lighting (whether loaded from the map, or a .rtlights file, or a .ent file, or a .lights file produced by hlight)"};
 cvar_t r_shadow_realtime_world_dlightshadows = {CVAR_SAVE, "r_shadow_realtime_world_dlightshadows", "1", "enables shadows from dynamic lights when using full world lighting"};
 cvar_t r_shadow_realtime_world_lightmaps = {CVAR_SAVE, "r_shadow_realtime_world_lightmaps", "0", "brightness to render lightmaps when using full world lighting, try 0.5 for a tenebrae-like appearance"};
 cvar_t r_shadow_realtime_world_shadows = {CVAR_SAVE, "r_shadow_realtime_world_shadows", "1", "enables rendering of shadows from world lights"};
 cvar_t r_shadow_realtime_world_compile = {0, "r_shadow_realtime_world_compile", "1", "enables compilation of world lights for higher performance rendering"};
 cvar_t r_shadow_realtime_world_compileshadow = {0, "r_shadow_realtime_world_compileshadow", "1", "enables compilation of shadows from world lights for higher performance rendering"};
+cvar_t r_shadow_realtime_world_compilesvbsp = {0, "r_shadow_realtime_world_compilesvbsp", "1", "enables svbsp optimization during compilation"};
 cvar_t r_shadow_scissor = {0, "r_shadow_scissor", "1", "use scissor optimization of light rendering (restricts rendering to the portion of the screen affected by the light)"};
 cvar_t r_shadow_shadow_polygonfactor = {0, "r_shadow_shadow_polygonfactor", "0", "how much to enlarge shadow volume polygons when rendering (should be 0!)"};
 cvar_t r_shadow_shadow_polygonoffset = {0, "r_shadow_shadow_polygonoffset", "1", "how much to push shadow volumes into the distance when rendering, to reduce chances of zfighting artifacts (should not be less than 0)"};
@@ -366,7 +367,6 @@ void R_Shadow_Help_f(void)
 "r_shadow_projectdistance : shadow volume projection distance\n"
 "r_shadow_realtime_dlight : use high quality dynamic lights in normal mode\n"
 "r_shadow_realtime_dlight_shadows : cast shadows from dlights\n"
-"r_shadow_realtime_dlight_portalculling : work hard to reduce graphics work\n"
 "r_shadow_realtime_world : use high quality world lighting mode\n"
 "r_shadow_realtime_world_dlightshadows : cast shadows from dlights\n"
 "r_shadow_realtime_world_lightmaps : use lightmaps in addition to lights\n"
@@ -400,13 +400,14 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_projectdistance);
 	Cvar_RegisterVariable(&r_shadow_realtime_dlight);
 	Cvar_RegisterVariable(&r_shadow_realtime_dlight_shadows);
-	Cvar_RegisterVariable(&r_shadow_realtime_dlight_portalculling);
+	Cvar_RegisterVariable(&r_shadow_realtime_dlight_svbspculling);
 	Cvar_RegisterVariable(&r_shadow_realtime_world);
 	Cvar_RegisterVariable(&r_shadow_realtime_world_dlightshadows);
 	Cvar_RegisterVariable(&r_shadow_realtime_world_lightmaps);
 	Cvar_RegisterVariable(&r_shadow_realtime_world_shadows);
 	Cvar_RegisterVariable(&r_shadow_realtime_world_compile);
 	Cvar_RegisterVariable(&r_shadow_realtime_world_compileshadow);
+	Cvar_RegisterVariable(&r_shadow_realtime_world_compilesvbsp);
 	Cvar_RegisterVariable(&r_shadow_scissor);
 	Cvar_RegisterVariable(&r_shadow_shadow_polygonfactor);
 	Cvar_RegisterVariable(&r_shadow_shadow_polygonoffset);
@@ -1041,6 +1042,7 @@ void R_Shadow_RenderMode_VisibleLighting(qboolean stenciltest, qboolean transpar
 	if (stenciltest)
 	{
 		qglEnable(GL_STENCIL_TEST);CHECKGLERROR
+		qglStencilFunc(GL_EQUAL, 128, ~0);CHECKGLERROR
 	}
 	r_shadow_rendermode = R_SHADOW_RENDERMODE_VISIBLELIGHTING;
 }

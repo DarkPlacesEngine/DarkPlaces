@@ -522,12 +522,15 @@ typedef struct r_q1bsp_getlightinfo_s
 	int outnumleafs;
 	int *outsurfacelist;
 	unsigned char *outsurfacepvs;
+	unsigned char *tempsurfacepvs;
 	int outnumsurfaces;
 	vec3_t outmins;
 	vec3_t outmaxs;
 	vec3_t lightmins;
 	vec3_t lightmaxs;
 	const unsigned char *pvs;
+	qboolean svbsp_active;
+	qboolean svbsp_insertoccluder;
 }
 r_q1bsp_getlightinfo_t;
 
@@ -548,8 +551,17 @@ void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
 			sides = BoxOnPlaneSide(info->lightmins, info->lightmaxs, plane);
 		if (sides == 3)
 		{
-			R_Q1BSP_RecursiveGetLightInfo(info, node->children[0]);
-			node = node->children[1];
+			// recurse front side first because the svbsp building prefers it
+			if (PlaneDist(info->relativelightorigin, plane) > 0)
+			{
+				R_Q1BSP_RecursiveGetLightInfo(info, node->children[0]);
+				node = node->children[1];
+			}
+			else
+			{
+				R_Q1BSP_RecursiveGetLightInfo(info, node->children[1]);
+				node = node->children[0];
+			}
 		}
 		else if (sides == 0)
 			return; // ERROR: NAN bounding box!
@@ -557,7 +569,28 @@ void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
 			node = node->children[sides - 1];
 	}
 	leaf = (mleaf_t *)node;
-	if (info->pvs == NULL || CHECKPVSBIT(info->pvs, leaf->clusterindex))
+	if (info->svbsp_active)
+	{
+		int i;
+		mportal_t *portal;
+		double points[128][3];
+		for (portal = leaf->portals;portal;portal = portal->next)
+		{
+			for (i = 0;i < portal->numpoints;i++)
+				VectorCopy(portal->points[i].position, points[i]);
+			if (SVBSP_AddPolygon(&r_svbsp, portal->numpoints, points[0], false, NULL, NULL, 0) & 2)
+				break;
+		}
+		if (portal == NULL)
+			return; // no portals of this leaf visible
+	}
+	else
+	{
+		if (info->pvs != NULL && !CHECKPVSBIT(info->pvs, leaf->clusterindex))
+			return;
+	}
+	// inserting occluders does not alter the light info
+	if (!info->svbsp_insertoccluder)
 	{
 		info->outmins[0] = min(info->outmins[0], leaf->mins[0]);
 		info->outmins[1] = min(info->outmins[1], leaf->mins[1]);
@@ -574,36 +607,100 @@ void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
 				info->outleaflist[info->outnumleafs++] = leafindex;
 			}
 		}
-		if (info->outsurfacepvs)
+	}
+	if (info->outsurfacepvs)
+	{
+		int leafsurfaceindex;
+		int surfaceindex;
+		int triangleindex, t;
+		msurface_t *surface;
+		const int *e;
+		const vec_t *v[3];
+		double v2[3][3];
+		for (leafsurfaceindex = 0;leafsurfaceindex < leaf->numleafsurfaces;leafsurfaceindex++)
 		{
-			int leafsurfaceindex;
-			for (leafsurfaceindex = 0;leafsurfaceindex < leaf->numleafsurfaces;leafsurfaceindex++)
+			surfaceindex = leaf->firstleafsurface[leafsurfaceindex];
+			if (!CHECKPVSBIT(info->outsurfacepvs, surfaceindex))
 			{
-				int surfaceindex = leaf->firstleafsurface[leafsurfaceindex];
-				if (!CHECKPVSBIT(info->outsurfacepvs, surfaceindex))
+				surface = info->model->data_surfaces + surfaceindex;
+				if (BoxesOverlap(info->lightmins, info->lightmaxs, surface->mins, surface->maxs)
+				 && (!info->svbsp_insertoccluder || !(surface->texture->currentframe->currentmaterialflags & MATERIALFLAG_NOSHADOW)))
 				{
-					msurface_t *surface = info->model->data_surfaces + surfaceindex;
-					if (BoxesOverlap(info->lightmins, info->lightmaxs, surface->mins, surface->maxs))
+					for (triangleindex = 0, t = surface->num_firstshadowmeshtriangle, e = info->model->brush.shadowmesh->element3i + t * 3;triangleindex < surface->num_triangles;triangleindex++, t++, e += 3)
 					{
-						int triangleindex, t;
-						const int *e;
-						const vec_t *v[3];
-						for (triangleindex = 0, t = surface->num_firstshadowmeshtriangle, e = info->model->brush.shadowmesh->element3i + t * 3;triangleindex < surface->num_triangles;triangleindex++, t++, e += 3)
+						v[0] = info->model->brush.shadowmesh->vertex3f + e[0] * 3;
+						v[1] = info->model->brush.shadowmesh->vertex3f + e[1] * 3;
+						v[2] = info->model->brush.shadowmesh->vertex3f + e[2] * 3;
+						if (PointInfrontOfTriangle(info->relativelightorigin, v[0], v[1], v[2])
+						 && info->lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0]))
+						 && info->lightmins[0] < max(v[0][0], max(v[1][0], v[2][0]))
+						 && info->lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1]))
+						 && info->lightmins[1] < max(v[0][1], max(v[1][1], v[2][1]))
+						 && info->lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2]))
+						 && info->lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
 						{
-							v[0] = info->model->brush.shadowmesh->vertex3f + e[0] * 3;
-							v[1] = info->model->brush.shadowmesh->vertex3f + e[1] * 3;
-							v[2] = info->model->brush.shadowmesh->vertex3f + e[2] * 3;
-							if (PointInfrontOfTriangle(info->relativelightorigin, v[0], v[1], v[2]) && info->lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && info->lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && info->lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && info->lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && info->lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && info->lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
+							if (info->svbsp_active)
 							{
-								SETPVSBIT(info->outsurfacepvs, surfaceindex);
-								info->outsurfacelist[info->outnumsurfaces++] = surfaceindex;
-								break;
+								VectorCopy(v[0], v2[0]);
+								VectorCopy(v[1], v2[1]);
+								VectorCopy(v[2], v2[2]);
+								if (!(SVBSP_AddPolygon(&r_svbsp, 3, v2[0], info->svbsp_insertoccluder, NULL, NULL, 0) & 2))
+									continue;
 							}
+							SETPVSBIT(info->outsurfacepvs, surfaceindex);
+							info->outsurfacelist[info->outnumsurfaces++] = surfaceindex;
+							break;
 						}
 					}
 				}
 			}
 		}
+	}
+}
+
+void R_Q1BSP_CallRecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, qboolean use_svbsp)
+{
+	if (use_svbsp)
+	{
+		double origin[3];
+		VectorCopy(info->relativelightorigin, origin);
+		if (!r_svbsp.nodes)
+		{
+			r_svbsp.maxnodes = max(r_svbsp.maxnodes, 1<<18);
+			r_svbsp.nodes = Mem_Alloc(r_main_mempool, r_svbsp.maxnodes * sizeof(svbsp_node_t));
+		}
+		info->svbsp_active = true;
+		info->svbsp_insertoccluder = true;
+		for (;;)
+		{
+			SVBSP_Init(&r_svbsp, origin, r_svbsp.maxnodes, r_svbsp.nodes);
+			R_Q1BSP_RecursiveGetLightInfo(info, info->model->brush.data_nodes);
+			// if that failed, retry with more nodes
+			if (r_svbsp.ranoutofnodes)
+			{
+				// an upper limit is imposed
+				if (r_svbsp.maxnodes >= 2<<22)
+					break;
+				Mem_Free(r_svbsp.nodes);
+				r_svbsp.maxnodes *= 2;
+				r_svbsp.nodes = Mem_Alloc(tempmempool, r_svbsp.maxnodes * sizeof(svbsp_node_t));
+			}
+			else
+				break;
+		}
+		// now clear the surfacepvs array because we need to redo it
+		memset(info->outsurfacepvs, 0, (info->model->nummodelsurfaces + 7) >> 3);
+		info->outnumsurfaces = 0;
+	}
+	else
+		info->svbsp_active = false;
+	info->svbsp_insertoccluder = false;
+	R_Q1BSP_RecursiveGetLightInfo(info, info->model->brush.data_nodes);
+	if (developer.integer >= 100 && use_svbsp)
+	{
+		Con_Printf("GetLightInfo: svbsp built with %i nodes, polygon stats:\n", r_svbsp.numnodes);
+		Con_Printf("occluders: %i accepted, %i rejected, %i fragments accepted, %i fragments rejected.\n", r_svbsp.stat_occluders_accepted, r_svbsp.stat_occluders_rejected, r_svbsp.stat_occluders_fragments_accepted, r_svbsp.stat_occluders_fragments_rejected);
+		Con_Printf("queries  : %i accepted, %i rejected, %i fragments accepted, %i fragments rejected.\n", r_svbsp.stat_queries_accepted, r_svbsp.stat_queries_rejected, r_svbsp.stat_queries_fragments_accepted, r_svbsp.stat_queries_fragments_rejected);
 	}
 }
 
@@ -642,21 +739,12 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 	else
 		info.pvs = NULL;
 	R_UpdateAllTextureInfo(ent);
-	if (r_shadow_compilingrtlight)
-	{
-		// use portal recursion for exact light volume culling, and exact surface checking
-		Portal_Visibility(info.model, info.relativelightorigin, info.outleaflist, info.outleafpvs, &info.outnumleafs, info.outsurfacelist, info.outsurfacepvs, &info.outnumsurfaces, NULL, 0, true, info.lightmins, info.lightmaxs, info.outmins, info.outmaxs);
-	}
-	else if (r_shadow_realtime_dlight_portalculling.integer)
-	{
-		// use portal recursion for exact light volume culling, but not the expensive exact surface checking
-		Portal_Visibility(info.model, info.relativelightorigin, info.outleaflist, info.outleafpvs, &info.outnumleafs, info.outsurfacelist, info.outsurfacepvs, &info.outnumsurfaces, NULL, 0, r_shadow_realtime_dlight_portalculling.integer >= 2, info.lightmins, info.lightmaxs, info.outmins, info.outmaxs);
-	}
-	else
-	{
-		// use BSP recursion as lights are often small
-		R_Q1BSP_RecursiveGetLightInfo(&info, info.model->brush.data_nodes);
-	}
+
+	// recurse the bsp tree, checking leafs and surfaces for visibility
+	// optionally using svbsp for exact culling of compiled lights
+	// (or if the user enables dlight svbsp culling, which is mostly for
+	//  debugging not actual use)
+	R_Q1BSP_CallRecursiveGetLightInfo(&info, r_shadow_compilingrtlight ? r_shadow_realtime_world_compilesvbsp.integer : r_shadow_realtime_dlight_svbspculling.integer);
 
 	// limit combined leaf box to light boundaries
 	outmins[0] = max(info.outmins[0] - 1, info.lightmins[0]);
@@ -683,7 +771,7 @@ void R_Q1BSP_CompileShadowVolume(entity_render_t *ent, vec3_t relativelightorigi
 	{
 		surface = model->data_surfaces + surfacelist[surfacelistindex];
 		texture = surface->texture;
-		if ((texture->basematerialflags & (MATERIALFLAG_NODRAW | MATERIALFLAG_TRANSPARENT | MATERIALFLAG_WALL)) != MATERIALFLAG_WALL)
+		if (texture->basematerialflags & MATERIALFLAG_NOSHADOW)
 			continue;
 		if ((texture->textureflags & (Q3TEXTUREFLAG_TWOSIDED | Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2)) || (ent->flags & RENDER_NOCULLFACE))
 			continue;
@@ -726,9 +814,7 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 		{
 			surface = model->data_surfaces + modelsurfacelist[modelsurfacelistindex];
 			t = surface->texture->currentframe;
-			if ((t->currentmaterialflags & (MATERIALFLAG_NODRAW | MATERIALFLAG_TRANSPARENT | MATERIALFLAG_WALL)) != MATERIALFLAG_WALL)
-				continue;
-			if ((t->textureflags & (Q3TEXTUREFLAG_TWOSIDED | Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2)) || (ent->flags & RENDER_NOCULLFACE))
+			if (t->currentmaterialflags & MATERIALFLAG_NOSHADOW)
 				continue;
 			R_Shadow_MarkVolumeFromBox(surface->num_firstshadowmeshtriangle, surface->num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, relativelightorigin, relativelightdirection, lightmins, lightmaxs, surface->mins, surface->maxs);
 		}
@@ -752,7 +838,7 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 				}
 				t = surface->texture;
 				rsurface_texture = t->currentframe;
-				f = (rsurface_texture->currentmaterialflags & (MATERIALFLAG_NODRAW | MATERIALFLAG_TRANSPARENT | MATERIALFLAG_WALL)) == MATERIALFLAG_WALL;
+				f = rsurface_texture->currentmaterialflags & MATERIALFLAG_NOSHADOW;
 			}
 			if (f && surface->num_triangles)
 				surfacelist[numsurfacelist++] = surface;

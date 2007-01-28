@@ -121,6 +121,7 @@ OBJ_COMMON= \
 	sv_move.o \
 	sv_phys.o \
 	sv_user.o \
+	svbsp.o \
 	svvm_cmds.o \
 	sys_shared.o \
 	vid_shared.o \
