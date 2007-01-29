@@ -589,7 +589,7 @@ void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
 		if (info->pvs != NULL && !CHECKPVSBIT(info->pvs, leaf->clusterindex))
 			return;
 	}
-	// inserting occluders does not alter the light info
+	// inserting occluders does not alter the leaf info
 	if (!info->svbsp_insertoccluder)
 	{
 		info->outmins[0] = min(info->outmins[0], leaf->mins[0]);
@@ -644,12 +644,15 @@ void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
 								VectorCopy(v[0], v2[0]);
 								VectorCopy(v[1], v2[1]);
 								VectorCopy(v[2], v2[2]);
-								if (!(SVBSP_AddPolygon(&r_svbsp, 3, v2[0], info->svbsp_insertoccluder, NULL, NULL, 0) & 2) || info->svbsp_insertoccluder)
+								if (!(SVBSP_AddPolygon(&r_svbsp, 3, v2[0], info->svbsp_insertoccluder, NULL, NULL, 0) & 2))
 									continue;
 							}
 							SETPVSBIT(info->outsurfacepvs, surfaceindex);
 							info->outsurfacelist[info->outnumsurfaces++] = surfaceindex;
-							break;
+							if (info->svbsp_insertoccluder)
+								continue;
+							else
+								break;
 						}
 					}
 				}
@@ -694,6 +697,33 @@ void R_Q1BSP_CallRecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, qboolean us
 	}
 	else
 		info->svbsp_active = false;
+
+	// we HAVE to mark the leaf the light is in as lit, because portals are
+	// irrelevant to a leaf that the light source is inside of
+	// (and they are all facing away, too)
+	{
+		mnode_t *node = info->model->brush.data_nodes;
+		mleaf_t *leaf;
+		while (node->plane)
+			node = node->children[(node->plane->type < 3 ? info->relativelightorigin[node->plane->type] : DotProduct(info->relativelightorigin,node->plane->normal)) < node->plane->dist];
+		leaf = (mleaf_t *)node;
+		info->outmins[0] = min(info->outmins[0], leaf->mins[0]);
+		info->outmins[1] = min(info->outmins[1], leaf->mins[1]);
+		info->outmins[2] = min(info->outmins[2], leaf->mins[2]);
+		info->outmaxs[0] = max(info->outmaxs[0], leaf->maxs[0]);
+		info->outmaxs[1] = max(info->outmaxs[1], leaf->maxs[1]);
+		info->outmaxs[2] = max(info->outmaxs[2], leaf->maxs[2]);
+		if (info->outleafpvs)
+		{
+			int leafindex = leaf - info->model->brush.data_leafs;
+			if (!CHECKPVSBIT(info->outleafpvs, leafindex))
+			{
+				SETPVSBIT(info->outleafpvs, leafindex);
+				info->outleaflist[info->outnumleafs++] = leafindex;
+			}
+		}
+	}
+
 	info->svbsp_insertoccluder = false;
 	R_Q1BSP_RecursiveGetLightInfo(info, info->model->brush.data_nodes);
 	if (developer.integer >= 100 && use_svbsp)
@@ -773,8 +803,6 @@ void R_Q1BSP_CompileShadowVolume(entity_render_t *ent, vec3_t relativelightorigi
 		texture = surface->texture;
 		if (texture->basematerialflags & MATERIALFLAG_NOSHADOW)
 			continue;
-		if ((texture->textureflags & (Q3TEXTUREFLAG_TWOSIDED | Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2)) || (ent->flags & RENDER_NOCULLFACE))
-			continue;
 		R_Shadow_MarkVolumeFromBox(surface->num_firstshadowmeshtriangle, surface->num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, relativelightorigin, relativelightdirection, r_shadow_compilingrtlight->cullmins, r_shadow_compilingrtlight->cullmaxs, surface->mins, surface->maxs);
 	}
 	R_Shadow_VolumeFromList(model->brush.shadowmesh->numverts, model->brush.shadowmesh->numtriangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, model->brush.shadowmesh->neighbor3i, relativelightorigin, relativelightdirection, projectdistance, numshadowmark, shadowmarklist);
@@ -813,8 +841,7 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 		for (modelsurfacelistindex = 0;modelsurfacelistindex < modelnumsurfaces;modelsurfacelistindex++)
 		{
 			surface = model->data_surfaces + modelsurfacelist[modelsurfacelistindex];
-			t = surface->texture->currentframe;
-			if (t->currentmaterialflags & MATERIALFLAG_NOSHADOW)
+			if (surface->texture->currentframe->currentmaterialflags & MATERIALFLAG_NOSHADOW)
 				continue;
 			R_Shadow_MarkVolumeFromBox(surface->num_firstshadowmeshtriangle, surface->num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, relativelightorigin, relativelightdirection, lightmins, lightmaxs, surface->mins, surface->maxs);
 		}
