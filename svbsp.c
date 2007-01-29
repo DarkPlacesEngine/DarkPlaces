@@ -105,17 +105,19 @@ static void SVBSP_InsertOccluderPolygonNodes(svbsp_t *b, int *parentnodenumpoint
 	basenum = b->numnodes;
 	for (i = 0, p = numpoints - 1;i < numpoints;p = i, i++)
 	{
+#if 1
 		// see if a parent plane describes this side
 		for (j = parentnodenum;j >= 0;j = b->nodes[j].parent)
 		{
-			svbsp_node_t *parentnode = b->nodes + j;
-			if (fabs(DotProduct(b->origin     , parentnode->plane) - parentnode->plane[3]) < SVBSP_CLIP_EPSILON
-			 && fabs(DotProduct(points + p * 3, parentnode->plane) - parentnode->plane[3]) < SVBSP_CLIP_EPSILON
-			 && fabs(DotProduct(points + i * 3, parentnode->plane) - parentnode->plane[3]) < SVBSP_CLIP_EPSILON)
+			double *parentnodeplane = b->nodes[j].plane;
+			if (fabs(DotProduct(b->origin     , parentnodeplane) - parentnodeplane[3]) < SVBSP_CLIP_EPSILON
+			 && fabs(DotProduct(points + p * 3, parentnodeplane) - parentnodeplane[3]) < SVBSP_CLIP_EPSILON
+			 && fabs(DotProduct(points + i * 3, parentnodeplane) - parentnodeplane[3]) < SVBSP_CLIP_EPSILON)
 				break;
 		}
 		if (j >= 0)
 			continue; // already have a matching parent plane
+#endif
 
 		// create a side plane
 		// anything infront of this is not inside the shadow volume
@@ -155,16 +157,18 @@ static void SVBSP_InsertOccluderPolygonNodes(svbsp_t *b, int *parentnodenumpoint
 		parentnodenumpointer = &node->children[1];
 	}
 
+#if 1
 	// see if a parent plane describes the face plane
 	for (j = parentnodenum;j >= 0;j = b->nodes[j].parent)
 	{
-		svbsp_node_t *parentnode = b->nodes + j;
-		if (fabs(DotProduct(points    , parentnode->plane) - parentnode->plane[3]) < SVBSP_CLIP_EPSILON
-		 && fabs(DotProduct(points + 3, parentnode->plane) - parentnode->plane[3]) < SVBSP_CLIP_EPSILON
-		 && fabs(DotProduct(points + 6, parentnode->plane) - parentnode->plane[3]) < SVBSP_CLIP_EPSILON)
+		double *parentnodeplane = b->nodes[j].plane;
+		if (fabs(DotProduct(points    , parentnodeplane) - parentnodeplane[3]) < SVBSP_CLIP_EPSILON
+		 && fabs(DotProduct(points + 3, parentnodeplane) - parentnodeplane[3]) < SVBSP_CLIP_EPSILON
+		 && fabs(DotProduct(points + 6, parentnodeplane) - parentnodeplane[3]) < SVBSP_CLIP_EPSILON)
 			break;
 	}
 	if (j < 0)
+#endif
 	{
 		// add the face-plane node
 		// infront is empty, behind is shadow
@@ -185,7 +189,7 @@ static void SVBSP_InsertOccluderPolygonNodes(svbsp_t *b, int *parentnodenumpoint
 		node->children[0] = -1; // empty
 		node->children[1] = -2; // shadow
 		// link this child into the tree
-		// (with the addition of this node, queries will now culled by it)
+		// (with the addition of this node, queries will now be culled by it)
 		*parentnodenumpointer = (int)(node - b->nodes);
 	}
 }
@@ -248,9 +252,9 @@ static int SVBSP_AddPolygonNode(svbsp_t *b, int *parentnodenumpointer, int paren
 		for (i = 0;i < numpoints-2;i++)
 		{
 			Debug_PolygonBegin(NULL, DRAWFLAG_ADDITIVE, false, 0);
-			Debug_PolygonVertex(points[0], points[1], points[2], 0, 0, 1, 0, 0, 0.25);
-			Debug_PolygonVertex(points[0 + (i + 1) * 3], points[1 + (i + 1) * 3], points[2 + (i + 1) * 3], 0, 0, 1, 0, 0, 0.25);
-			Debug_PolygonVertex(points[0 + (i + 2) * 3], points[1 + (i + 2) * 3], points[2 + (i + 2) * 3], 0, 0, 1, 0, 0, 0.25);
+			Debug_PolygonVertex(points[0], points[1], points[2], 0, 0, 0.25, 0, 0, 1);
+			Debug_PolygonVertex(points[0 + (i + 1) * 3], points[1 + (i + 1) * 3], points[2 + (i + 1) * 3], 0, 0, 0.25, 0, 0, 1);
+			Debug_PolygonVertex(points[0 + (i + 2) * 3], points[1 + (i + 2) * 3], points[2 + (i + 2) * 3], 0, 0, 0.25, 0, 0, 1);
 			Debug_PolygonEnd();
 		}
 #endif
@@ -276,9 +280,9 @@ static int SVBSP_AddPolygonNode(svbsp_t *b, int *parentnodenumpointer, int paren
 		for (i = 0;i < numpoints-2;i++)
 		{
 			Debug_PolygonBegin(NULL, DRAWFLAG_ADDITIVE, false, 0);
-			Debug_PolygonVertex(points[0], points[1], points[2], 0, 0, 0, 0, 1, 0.25);
-			Debug_PolygonVertex(points[0 + (i + 1) * 3], points[1 + (i + 1) * 3], points[2 + (i + 1) * 3], 0, 0, 0, 0, 1, 0.25);
-			Debug_PolygonVertex(points[0 + (i + 2) * 3], points[1 + (i + 2) * 3], points[2 + (i + 2) * 3], 0, 0, 0, 0, 1, 0.25);
+			Debug_PolygonVertex(points[0], points[1], points[2], 0, 0, 0, 0, 0.25, 1);
+			Debug_PolygonVertex(points[0 + (i + 1) * 3], points[1 + (i + 1) * 3], points[2 + (i + 1) * 3], 0, 0, 0, 0, 0.25, 1);
+			Debug_PolygonVertex(points[0 + (i + 2) * 3], points[1 + (i + 2) * 3], points[2 + (i + 2) * 3], 0, 0, 0, 0, 0.25, 1);
 			Debug_PolygonEnd();
 		}
 #endif
@@ -294,12 +298,13 @@ int SVBSP_AddPolygon(svbsp_t *b, int numpoints, const double *points, int insert
 	if (numpoints < 3)
 		return 0;
 #if 0
+//if (insertoccluder)
 	for (i = 0;i < numpoints-2;i++)
 	{
 		Debug_PolygonBegin(NULL, DRAWFLAG_ADDITIVE, false, 0);
-		Debug_PolygonVertex(points[0], points[1], points[2], 0, 0, 0, 1, 0, 0.25);
-		Debug_PolygonVertex(points[0 + (i + 1) * 3], points[1 + (i + 1) * 3], points[2 + (i + 1) * 3], 0, 0, 0, 1, 0, 0.25);
-		Debug_PolygonVertex(points[0 + (i + 2) * 3], points[1 + (i + 2) * 3], points[2 + (i + 2) * 3], 0, 0, 0, 1, 0, 0.25);
+		Debug_PolygonVertex(points[0], points[1], points[2], 0, 0, 0, 0.25, 0, 1);
+		Debug_PolygonVertex(points[0 + (i + 1) * 3], points[1 + (i + 1) * 3], points[2 + (i + 1) * 3], 0, 0, 0, 0.25, 0, 1);
+		Debug_PolygonVertex(points[0 + (i + 2) * 3], points[1 + (i + 2) * 3], points[2 + (i + 2) * 3], 0, 0, 0, 0.25, 0, 1);
 		Debug_PolygonEnd();
 	}
 #endif
