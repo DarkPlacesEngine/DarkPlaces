@@ -644,7 +644,7 @@ void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
 								VectorCopy(v[0], v2[0]);
 								VectorCopy(v[1], v2[1]);
 								VectorCopy(v[2], v2[2]);
-								if (!(SVBSP_AddPolygon(&r_svbsp, 3, v2[0], info->svbsp_insertoccluder, NULL, NULL, 0) & 2))
+								if (!(SVBSP_AddPolygon(&r_svbsp, 3, v2[0], info->svbsp_insertoccluder, NULL, NULL, 0) & 2) || info->svbsp_insertoccluder)
 									continue;
 							}
 							SETPVSBIT(info->outsurfacepvs, surfaceindex);
