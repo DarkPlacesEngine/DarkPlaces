@@ -394,6 +394,10 @@ SOURCE=.\sv_user.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\svbsp.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\svvm_cmds.c
 # End Source File
 # Begin Source File
@@ -715,6 +719,10 @@ SOURCE=.\sound.h
 # Begin Source File
 
 SOURCE=.\spritegn.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\svbsp.h
 # End Source File
 # Begin Source File
 
