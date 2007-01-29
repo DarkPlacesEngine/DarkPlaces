@@ -390,6 +390,10 @@ SOURCE=.\sv_user.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\svbsp.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\svvm_cmds.c
 # End Source File
 # Begin Source File
