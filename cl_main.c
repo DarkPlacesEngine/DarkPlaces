@@ -1473,6 +1473,20 @@ void CL_LerpPlayer(float frac)
 		cl.punchvector[i] = cl.mpunchvector[1][i] + frac * (cl.mpunchvector[0][i] - cl.mpunchvector[1][i]);
 		cl.velocity[i] = cl.mvelocity[1][i] + frac * (cl.mvelocity[0][i] - cl.mvelocity[1][i]);
 	}
+
+	// interpolate the angles if playing a demo or spectating someone
+	if (cls.demoplayback || cl.fixangle[0])
+	{
+		for (i = 0;i < 3;i++)
+		{
+			float d = cl.mviewangles[0][i] - cl.mviewangles[1][i];
+			if (d > 180)
+				d -= 360;
+			else if (d < -180)
+				d += 360;
+			cl.viewangles[i] = cl.mviewangles[1][i] + frac * d;
+		}
+	}
 }
 
 void CSQC_RelinkAllEntities (int drawmask)

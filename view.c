@@ -369,21 +369,6 @@ void V_CalcRefdef (void)
 		oldz = vieworg[2];
 		cl.stairoffset = bound(-16, cl.stairoffset, 16);
 
-		// interpolate the angles if playing a demo or spectating someone
-		if (cls.demoplayback || cl.fixangle[0])
-		{
-			int i;
-			float frac = bound(0, (cl.time - cl.mtime[1]) / (cl.mtime[0] - cl.mtime[1]), 1);
-			for (i = 0;i < 3;i++)
-			{
-				float d = cl.mviewangles[0][i] - cl.mviewangles[1][i];
-				if (d > 180)
-					d -= 360;
-				else if (d < -180)
-					d += 360;
-				viewangles[i] = cl.mviewangles[1][i] + frac * d;
-			}
-		}
 		if (cl.intermission)
 		{
 			// entity is a fixed camera, just copy the matrix
