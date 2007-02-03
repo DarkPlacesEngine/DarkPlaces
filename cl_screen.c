@@ -826,11 +826,9 @@ static void SCR_CaptureVideo_RIFF_OverflowCheck(int framesize)
 	cursize = SCR_CaptureVideo_RIFF_GetPosition() - cls.capturevideo.riffstackstartoffset[0];
 	// if this would overflow the windows limit of 1GB per RIFF chunk, we need
 	// to close the current RIFF chunk and open another for future frames
-	if (8 + cursize + framesize > 1<<30)
+	if (8 + cursize + framesize + cls.capturevideo.riffindexbuffer.cursize + 8 > 1<<30)
 	{
 		SCR_CaptureVideo_RIFF_Finish();
-		while (cls.capturevideo.riffstacklevel > 0)
-			SCR_CaptureVideo_RIFF_Pop();
 		// begin a new 1GB extended section of the AVI
 		SCR_CaptureVideo_RIFF_Push("RIFF", "AVIX");
 		SCR_CaptureVideo_RIFF_Push("LIST", "movi");
