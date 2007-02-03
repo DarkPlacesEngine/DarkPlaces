@@ -586,7 +586,7 @@ void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
 	}
 	else
 	{
-		if (info->pvs != NULL && !CHECKPVSBIT(info->pvs, leaf->clusterindex))
+		if (r_shadow_frontsidecasting.integer && info->pvs != NULL && !CHECKPVSBIT(info->pvs, leaf->clusterindex))
 			return;
 	}
 	// inserting occluders does not alter the leaf info
@@ -631,7 +631,7 @@ void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
 						v[0] = info->model->brush.shadowmesh->vertex3f + e[0] * 3;
 						v[1] = info->model->brush.shadowmesh->vertex3f + e[1] * 3;
 						v[2] = info->model->brush.shadowmesh->vertex3f + e[2] * 3;
-						if (PointInfrontOfTriangle(info->relativelightorigin, v[0], v[1], v[2])
+						if ((!r_shadow_frontsidecasting.integer || PointInfrontOfTriangle(info->relativelightorigin, v[0], v[1], v[2]))
 						 && info->lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0]))
 						 && info->lightmins[0] < max(v[0][0], max(v[1][0], v[2][0]))
 						 && info->lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1]))
@@ -764,7 +764,7 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 	VectorCopy(info.relativelightorigin, info.outmaxs);
 	memset(outleafpvs, 0, (info.model->brush.num_leafs + 7) >> 3);
 	memset(outsurfacepvs, 0, (info.model->nummodelsurfaces + 7) >> 3);
-	if (info.model->brush.GetPVS)
+	if (info.model->brush.GetPVS && r_shadow_frontsidecasting.integer)
 		info.pvs = info.model->brush.GetPVS(info.model, info.relativelightorigin);
 	else
 		info.pvs = NULL;

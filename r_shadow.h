@@ -14,6 +14,7 @@ extern cvar_t r_shadow_lightattenuationscale;
 extern cvar_t r_shadow_lightintensityscale;
 extern cvar_t r_shadow_portallight;
 extern cvar_t r_shadow_projectdistance;
+extern cvar_t r_shadow_frontsidecasting;
 extern cvar_t r_shadow_realtime_dlight;
 extern cvar_t r_shadow_realtime_dlight_shadows;
 extern cvar_t r_shadow_realtime_dlight_svbspculling;
