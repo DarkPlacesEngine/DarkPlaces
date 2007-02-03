@@ -193,7 +193,19 @@ void CL_ClearState(void)
 
 void CL_SetInfo(const char *key, const char *value, qboolean send, qboolean allowstarkey, qboolean allowmodel, qboolean quiet)
 {
-	if (strchr(key, '\"') || strchr(value, '\"') || (!allowstarkey && key[0] == '*') || (!allowmodel && (!strcasecmp(key, "pmodel") || !strcasecmp(key, "emodel"))))
+	int i;
+	qboolean fail = false;
+	if (!allowstarkey && key[0] == '*')
+		fail = true;
+	if (!allowmodel && (!strcasecmp(key, "pmodel") || !strcasecmp(key, "emodel")))
+		fail = true;
+	for (i = 0;key[i];i++)
+		if (key[i] <= ' ' || key[i] == '\"')
+			fail = true;
+	for (i = 0;value[i];i++)
+		if (value[i] == '\r' || value[i] == '\n' || value[i] == '\"')
+			fail = true;
+	if (fail)
 	{
 		if (!quiet)
 			Con_Printf("Can't setinfo \"%s\" \"%s\"\n", key, value);
