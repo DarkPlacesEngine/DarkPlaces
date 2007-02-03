@@ -836,7 +836,8 @@ static colbrushf_t polyf_brush;
 
 void Collision_SnapCopyPoints(int numpoints, const colpointf_t *in, colpointf_t *out, float fractionprecision, float invfractionprecision)
 {
-	while (numpoints--)
+	int i;
+	for (i = 0;i < numpoints;in++, out++)
 	{
 		out->v[0] = floor(in->v[0] * fractionprecision + 0.5f) * invfractionprecision;
 		out->v[1] = floor(in->v[1] * fractionprecision + 0.5f) * invfractionprecision;
