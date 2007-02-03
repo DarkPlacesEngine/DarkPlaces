@@ -152,11 +152,11 @@ void VM_objerror (void)
 
 /*
 =================
-VM_print (actually used only by client and menu)
+VM_print
 
 print to console
 
-print(string)
+print(...[string])
 =================
 */
 void VM_print (void)

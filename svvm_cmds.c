@@ -98,6 +98,7 @@ char *vm_sv_extensions =
 "DP_SV_PING "
 "DP_SV_PLAYERPHYSICS "
 "DP_SV_PRECACHEANYTIME "
+"DP_SV_PRINT "
 "DP_SV_PUNCHVECTOR "
 "DP_SV_ROTATINGBMODEL "
 "DP_SV_SETCOLOR "
@@ -2785,7 +2786,25 @@ e10,						// #260-#269
 e10,						// #270-#279
 e10,						// #280-#289
 e10,						// #290-#299
-e10, e10, e10, e10, e10, e10, e10, e10, e10, e10,	// #300-399
+e10,						// #300-309
+e10,						// #310-319
+e10,						// #320-329
+NULL,						// #330
+NULL,						// #331
+NULL,						// #332
+NULL,						// #333
+NULL,						// #334
+NULL,						// #335
+NULL,						// #336
+NULL,						// #337
+NULL,						// #338
+VM_print,					// #339 void(string, ...) print (DP_SV_PRINT)
+e10,						// #340-349
+e10,						// #350-359
+e10,						// #360-369
+e10,						// #370-379
+e10,						// #380-389
+e10,						// #390-399
 VM_copyentity,				// #400 void(entity from, entity to) copyentity (DP_QC_COPYENTITY)
 PF_setcolor,				// #401 void(entity ent, float colors) setcolor (DP_QC_SETCOLOR)
 VM_findchain,				// #402 entity(.string fld, string match) findchain (DP_QC_FINDCHAIN)
