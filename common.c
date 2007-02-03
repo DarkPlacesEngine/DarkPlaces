@@ -909,22 +909,6 @@ skipwhite:
 		com_token[len] = 0;
 		*datapointer = data+1;
 	}
-	else if (*data == '\'')
-	{
-		// quoted string
-		for (data++;*data != '\'';data++)
-		{
-			if (!*data || len >= (int)sizeof(com_token) - 1)
-			{
-				com_token[0] = 0;
-				*datapointer = NULL;
-				return false;
-			}
-			com_token[len++] = *data;
-		}
-		com_token[len] = 0;
-		*datapointer = data+1;
-	}
 	else
 	{
 		// regular word
