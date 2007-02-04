@@ -668,31 +668,33 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush
 	// at this point we know the trace overlaps the brush because it was not
 	// rejected at any point in the loop above
 
-	// see if this brush can block the trace or not according to contents
-	if (trace->hitsupercontentsmask & thatbrush_start->supercontents)
+	// see if the trace started outside the brush or not
+	if (enterfrac > -1)
 	{
-		if (enterfrac == -1)
+		// started outside, and overlaps, therefore there is a collision here
+		// store out the impact information
+		if (trace->hitsupercontentsmask & thatbrush_start->supercontents)
 		{
-			trace->startsupercontents |= thatbrush_start->supercontents;
+			trace->hitsupercontents = thatbrush_start->supercontents;
+			trace->hitq3surfaceflags = hitq3surfaceflags;
+			trace->hittexture = hittexture;
+			trace->realfraction = bound(0, enterfrac, 1);
+			trace->fraction = bound(0, enterfrac2, 1);
+			if (collision_prefernudgedfraction.integer)
+				trace->realfraction = trace->fraction;
+			VectorCopy(newimpactnormal, trace->plane.normal);
+		}
+	}
+	else
+	{
+		// started inside, update startsolid and friends
+		trace->startsupercontents |= thatbrush_start->supercontents;
+		if (trace->hitsupercontentsmask & thatbrush_start->supercontents)
+		{
 			trace->startsolid = true;
 			if (leavefrac < 1)
 				trace->allsolid = true;
 		}
-		// store out the impact information
-		trace->hitsupercontents = thatbrush_start->supercontents;
-		trace->hitq3surfaceflags = hitq3surfaceflags;
-		trace->hittexture = hittexture;
-		trace->realfraction = bound(0, enterfrac, 1);
-		trace->fraction = bound(0, enterfrac2, 1);
-		if (collision_prefernudgedfraction.integer)
-			trace->realfraction = trace->fraction;
-		VectorCopy(newimpactnormal, trace->plane.normal);
-	}
-	else
-	{
-		// this brush can not block the trace, but it can update start contents
-		if (enterfrac == -1)
-			trace->startsupercontents |= thatbrush_start->supercontents;
 	}
 }
 
@@ -785,31 +787,33 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 	// at this point we know the trace overlaps the brush because it was not
 	// rejected at any point in the loop above
 
-	// see if this brush can block the trace or not according to contents
-	if (trace->hitsupercontentsmask & thatbrush_start->supercontents)
+	// see if the trace started outside the brush or not
+	if (enterfrac > -1)
 	{
-		if (enterfrac == -1)
+		// started outside, and overlaps, therefore there is a collision here
+		// store out the impact information
+		if (trace->hitsupercontentsmask & thatbrush_start->supercontents)
 		{
-			trace->startsupercontents |= thatbrush_start->supercontents;
+			trace->hitsupercontents = thatbrush_start->supercontents;
+			trace->hitq3surfaceflags = hitq3surfaceflags;
+			trace->hittexture = hittexture;
+			trace->realfraction = bound(0, enterfrac, 1);
+			trace->fraction = bound(0, enterfrac2, 1);
+			if (collision_prefernudgedfraction.integer)
+				trace->realfraction = trace->fraction;
+			VectorCopy(newimpactnormal, trace->plane.normal);
+		}
+	}
+	else
+	{
+		// started inside, update startsolid and friends
+		trace->startsupercontents |= thatbrush_start->supercontents;
+		if (trace->hitsupercontentsmask & thatbrush_start->supercontents)
+		{
 			trace->startsolid = true;
 			if (leavefrac < 1)
 				trace->allsolid = true;
 		}
-		// store out the impact information
-		trace->hitsupercontents = thatbrush_start->supercontents;
-		trace->hitq3surfaceflags = hitq3surfaceflags;
-		trace->hittexture = hittexture;
-		trace->realfraction = bound(0, enterfrac, 1);
-		trace->fraction = bound(0, enterfrac2, 1);
-		if (collision_prefernudgedfraction.integer)
-			trace->realfraction = trace->fraction;
-		VectorCopy(newimpactnormal, trace->plane.normal);
-	}
-	else
-	{
-		// this brush can not block the trace, but it can update start contents
-		if (enterfrac == -1)
-			trace->startsupercontents |= thatbrush_start->supercontents;
 	}
 }
 
