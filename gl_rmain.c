@@ -3684,13 +3684,17 @@ void R_QueueTextureSurfaceList(int texturenumsurfaces, msurface_t **texturesurfa
 extern void R_BuildLightMap(const entity_render_t *ent, msurface_t *surface);
 void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 {
-	int i, j, f, flagsmask;
+	int i, j, k, l, endj, f, flagsmask;
 	int counttriangles = 0;
+	msurface_t *surface, *endsurface, **surfacechain;
 	texture_t *t;
+	q3mbrush_t *brush;
 	model_t *model = ent->model;
+	const int *elements;
 	const int maxsurfacelist = 1024;
 	int numsurfacelist = 0;
 	msurface_t *surfacelist[1024];
+	vec3_t v;
 	if (model == NULL)
 		return;
 
@@ -3705,7 +3709,6 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 	// update light styles
 	if (!skysurfaces && model->brushq1.light_styleupdatechains)
 	{
-		msurface_t *surface, **surfacechain;
 		for (i = 0;i < model->brushq1.light_styles;i++)
 		{
 			if (model->brushq1.light_stylevalue[i] != r_refdef.lightstylevalue[model->brushq1.light_style[i]])
@@ -3727,44 +3730,56 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 	numsurfacelist = 0;
 	if (ent == r_refdef.worldentity)
 	{
-		msurface_t *surface;
-		for (i = 0, j = model->firstmodelsurface, surface = model->data_surfaces + j;i < model->nummodelsurfaces;i++, j++, surface++)
+		j = model->firstmodelsurface;
+		endj = j + model->nummodelsurfaces;
+		while (j < endj)
 		{
-			if (!r_viewcache.world_surfacevisible[j])
-				continue;
-			if (t != surface->texture || rsurface_lightmaptexture != surface->lightmaptexture)
+			// quickly skip over non-visible surfaces
+			for (;j < endj && !r_viewcache.world_surfacevisible[j];j++)
+				;
+			// quickly iterate over visible surfaces
+			for (;j < endj && r_viewcache.world_surfacevisible[j];j++)
 			{
-				if (numsurfacelist)
+				// process this surface
+				surface = model->data_surfaces + j;
+				// if texture or lightmap has changed, start a new batch
+				if (t != surface->texture || rsurface_lightmaptexture != surface->lightmaptexture)
 				{
-					R_QueueTextureSurfaceList(numsurfacelist, surfacelist);
-					numsurfacelist = 0;
+					if (numsurfacelist)
+					{
+						R_QueueTextureSurfaceList(numsurfacelist, surfacelist);
+						numsurfacelist = 0;
+					}
+					t = surface->texture;
+					rsurface_lightmaptexture = surface->lightmaptexture;
+					rsurface_texture = t->currentframe;
+					f = rsurface_texture->currentmaterialflags & flagsmask;
 				}
-				t = surface->texture;
-				rsurface_lightmaptexture = surface->lightmaptexture;
-				rsurface_texture = t->currentframe;
-				f = rsurface_texture->currentmaterialflags & flagsmask;
-			}
-			if (f && surface->num_triangles)
-			{
-				// if lightmap parameters changed, rebuild lightmap texture
-				if (surface->cached_dlight)
-					R_BuildLightMap(ent, surface);
-				// add face to draw list
-				surfacelist[numsurfacelist++] = surface;
-				counttriangles += surface->num_triangles;
-				if (numsurfacelist >= maxsurfacelist)
+				// if this surface fits the criteria, add it to the list
+				if (f && surface->num_triangles)
 				{
-					R_QueueTextureSurfaceList(numsurfacelist, surfacelist);
-					numsurfacelist = 0;
+					// if lightmap parameters changed, rebuild lightmap texture
+					if (surface->cached_dlight)
+						R_BuildLightMap(ent, surface);
+					// add face to draw list
+					surfacelist[numsurfacelist++] = surface;
+					counttriangles += surface->num_triangles;
+					if (numsurfacelist >= maxsurfacelist)
+					{
+						R_QueueTextureSurfaceList(numsurfacelist, surfacelist);
+						numsurfacelist = 0;
+					}
 				}
 			}
 		}
 	}
 	else
 	{
-		msurface_t *surface;
-		for (i = 0, j = model->firstmodelsurface, surface = model->data_surfaces + j;i < model->nummodelsurfaces;i++, j++, surface++)
+		surface = model->data_surfaces + model->firstmodelsurface;
+		endsurface = surface + model->nummodelsurfaces;
+		for (;surface < endsurface;surface++)
 		{
+			// if texture or lightmap has changed, start a new batch
 			if (t != surface->texture || rsurface_lightmaptexture != surface->lightmaptexture)
 			{
 				if (numsurfacelist)
@@ -3777,6 +3792,7 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 				rsurface_texture = t->currentframe;
 				f = rsurface_texture->currentmaterialflags & flagsmask;
 			}
+			// if this surface fits the criteria, add it to the list
 			if (f && surface->num_triangles)
 			{
 				// if lightmap parameters changed, rebuild lightmap texture
@@ -3800,9 +3816,6 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 
 	if (r_showcollisionbrushes.integer && model->brush.num_brushes && !skysurfaces)
 	{
-		int i;
-		const msurface_t *surface;
-		q3mbrush_t *brush;
 		CHECKGLERROR
 		R_Mesh_Matrix(&ent->matrix);
 		R_Mesh_ColorPointer(NULL);
@@ -3822,10 +3835,6 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 
 	if (r_showtris.integer || r_shownormals.integer)
 	{
-		int k, l;
-		msurface_t *surface;
-		const int *elements;
-		vec3_t v;
 		CHECKGLERROR
 		GL_DepthTest(!r_showdisabledepthtest.integer);
 		GL_DepthMask(true);

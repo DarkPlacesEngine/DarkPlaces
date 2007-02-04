@@ -489,7 +489,11 @@ void R_View_WorldVisibility(void)
 				for (p = leaf->portals;p;p = p->next)
 				{
 					r_refdef.stats.world_portals++;
-					if (DotProduct(r_view.origin, p->plane.normal) < (p->plane.dist + 1) && !R_CullBox(p->mins, p->maxs) && !r_viewcache.world_leafvisible[p->past - model->brush.data_leafs] && CHECKPVSBIT(r_viewcache.world_pvsbits, p->past->clusterindex))
+					if (DotProduct(r_view.origin, p->plane.normal) < (p->plane.dist + 1)
+					 && !r_viewcache.world_leafvisible[p->past - model->brush.data_leafs]
+					 && CHECKPVSBIT(r_viewcache.world_pvsbits, p->past->clusterindex)
+					 && !R_CullBox(p->mins, p->maxs)
+					 && leafstackpos < (int)(sizeof(leafstack) / sizeof(leafstack[0])))
 						leafstack[leafstackpos++] = p->past;
 				}
 			}
