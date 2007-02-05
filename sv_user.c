@@ -31,7 +31,7 @@ cvar_t sv_wateraccelerate = {0, "sv_wateraccelerate", "-1", "rate at which a pla
 cvar_t sv_clmovement_enable = {0, "sv_clmovement_enable", "1", "whether to allow clients to use cl_movement prediction, which can cause choppy movement on the server which may annoy other players"};
 cvar_t sv_clmovement_minping = {0, "sv_clmovement_minping", "0", "if client ping is below this time in milliseconds, then their ability to use cl_movement prediction is disabled for a while (as they don't need it)"};
 cvar_t sv_clmovement_minping_disabletime = {0, "sv_clmovement_minping_disabletime", "1000", "when client falls below minping, disable their prediction for this many milliseconds (should be at least 1000 or else their prediction may turn on/off frequently)"};
-cvar_t sv_clmovement_waitforinput = {0, "sv_clmovement_waitforinput", "5", "when a client does not send input for this many frames, force them to move anyway (unlike QuakeWorld)"};
+cvar_t sv_clmovement_waitforinput = {0, "sv_clmovement_waitforinput", "16", "when a client does not send input for this many frames, force them to move anyway (unlike QuakeWorld)"};
 
 static usercmd_t cmd;
 
@@ -441,17 +441,14 @@ qboolean SV_ReadClientMove (void)
 {
 	qboolean kickplayer = false;
 	int i;
-	double oldmovetime;
 #ifdef NUM_PING_TIMES
 	double total;
 #endif
-	usercmd_t *move = &host_client->cmd;
+	double moveframetime;
+	usercmd_t newmove;
+	usercmd_t *move = &newmove;
 
-	oldmovetime = move->time;
-
-	// if this move has been applied, clear it, and start accumulating new data
-	if (move->applied)
-		memset(move, 0, sizeof(*move));
+	memset(move, 0, sizeof(*move));
 
 	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 
@@ -462,15 +459,9 @@ qboolean SV_ReadClientMove (void)
 	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 	move->receivetime = (float)sv.time;
 
-	// calculate average ping time
-	host_client->ping = move->receivetime - move->time;
-#ifdef NUM_PING_TIMES
-	host_client->ping_times[host_client->num_pings % NUM_PING_TIMES] = move->receivetime - move->time;
-	host_client->num_pings++;
-	for (i=0, total = 0;i < NUM_PING_TIMES;i++)
-		total += host_client->ping_times[i];
-	host_client->ping = total / NUM_PING_TIMES;
-#endif
+	// limit reported time to current time
+	// (incase the client is trying to cheat)
+	move->time = min(move->time, move->receivetime);
 
 	// read current angles
 	for (i = 0;i < 3;i++)
@@ -496,15 +487,13 @@ qboolean SV_ReadClientMove (void)
 	// be sure to bitwise OR them into the move->buttons because we want to
 	// accumulate button presses from multiple packets per actual move
 	if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE || sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5)
-		move->buttons |= MSG_ReadByte ();
+		move->buttons = MSG_ReadByte ();
 	else
-		move->buttons |= MSG_ReadLong ();
+		move->buttons = MSG_ReadLong ();
 	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 
 	// read impulse
-	i = MSG_ReadByte ();
-	if (i)
-		move->impulse = i;
+	move->impulse = MSG_ReadByte ();
 	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 
 	// PRYDON_CLIENTCURSOR
@@ -532,45 +521,66 @@ qboolean SV_ReadClientMove (void)
 		if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 	}
 
+	if (move->sequence && move->sequence <= host_client->movesequence)
+	{
+		// repeat of old input (to fight packet loss)
+		return kickplayer;
+	}
+
+	// if the previous move has not been applied yet, we need to accumulate
+	// the impulse/buttons from it
+	if (!host_client->cmd.applied)
+	{
+		if (!move->impulse)
+			move->impulse = host_client->cmd.impulse;
+		move->buttons |= host_client->cmd.impulse;
+	}
+
+	moveframetime = bound(0, move->time - host_client->cmd.time, 0.1);
+	Con_Printf("movesequence = %i (%i lost), moveframetime = %f\n", move->sequence, move->sequence ? move->sequence - host_client->movesequence - 1 : 0, moveframetime);
+
 	// disable clientside movement prediction in some cases
 	if (ceil((move->receivetime - move->time) * 1000.0) < sv_clmovement_minping.integer)
 		host_client->clmovement_disabletimeout = realtime + sv_clmovement_minping_disabletime.value / 1000.0;
 	if (!sv_clmovement_enable.integer || host_client->clmovement_disabletimeout > realtime)
 		move->sequence = 0;
 
-	if (!host_client->spawned)
-		memset(move, 0, sizeof(*move));
-	else if (move->sequence && (float)move->time > (float)sv.time + 0.125f) // add a little fuzz factor due to float precision issues
+	// calculate average ping time
+	host_client->ping = move->receivetime - move->time;
+#ifdef NUM_PING_TIMES
+	host_client->ping_times[host_client->num_pings % NUM_PING_TIMES] = move->receivetime - move->time;
+	host_client->num_pings++;
+	for (i=0, total = 0;i < NUM_PING_TIMES;i++)
+		total += host_client->ping_times[i];
+	host_client->ping = total / NUM_PING_TIMES;
+#endif
+
+	// only start accepting input once the player is spawned
+	if (host_client->spawned)
 	{
-		Con_DPrintf("client move->time %f > sv.time %f, kicking\n", (float)move->time, (float)sv.time);
-		// if the client is lying about time, we have definitively detected a
-		// speed cheat attempt of the worst sort, and we can immediately kick
-		// the offending player off.
-		// this fixes the timestamp to prevent a speed cheat from working
-		move->time = sv.time;
-		// but we kick the player for good measure
-		kickplayer = true;
-	}
-	else
-	{
-		// apply the latest accepted move to the entity fields
+		// at this point we know this input is new and should be stored
+		host_client->cmd = *move;
 		host_client->movesequence = move->sequence;
-		if (host_client->movesequence && sv_clmovement_waitforinput.integer > 0)
+		// if using prediction, we need to perform moves when packets are
+		// received, even if multiple occur in one frame
+		// (they can't go beyond the current time so there is no cheat issue
+		//  with this approach, and if they don't send input for a while they
+		//  start moving anyway, so the longest 'lagaport' possible is
+		//  determined by the sv_clmovement_waitforinput cvar)
+		if (host_client->movesequence && sv_clmovement_waitforinput.integer > 0 && moveframetime > 0)
 		{
-			double frametime = bound(0, move->time - oldmovetime, 0.1);
 			double oldframetime = prog->globals.server->frametime;
 			double oldframetime2 = sv.frametime;
-			//if (move->time - oldmovetime >= 0.1001)
-			//	Con_DPrintf("client move exceeds 100ms!  (time %f -> time %f)\n", oldmovetime, move->time);
 			// the server and qc frametime values must be changed temporarily
-			sv.frametime = frametime;
-			prog->globals.server->frametime = frametime;
+			sv.frametime = moveframetime;
+			prog->globals.server->frametime = moveframetime;
 			SV_Physics_ClientEntity(host_client->edict);
 			sv.frametime = oldframetime2;
 			prog->globals.server->frametime = oldframetime;
 			host_client->clmovement_skipphysicsframes = sv_clmovement_waitforinput.integer;
 		}
 	}
+
 	return kickplayer;
 }
 

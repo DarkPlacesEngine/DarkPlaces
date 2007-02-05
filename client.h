@@ -27,6 +27,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // LordHavoc: 256 dynamic lights
 #define MAX_DLIGHTS 256
 
+// this is the maximum number of input packets that can be lost without a
+// misprediction
+#define CL_MAX_USERCMDS 16
+
 // flags for rtlight rendering
 #define LIGHTFLAG_NORMALMODE 1
 #define LIGHTFLAG_REALTIMEMODE 2
@@ -332,6 +336,7 @@ typedef struct usercmd_s
 
 	double time;
 	double receivetime;
+	int msec; // for qw moves
 	int buttons;
 	int impulse;
 	int sequence;
@@ -566,18 +571,6 @@ typedef struct
 	qboolean drawcrosshair;
 }csqc_vidvars_t;
 
-typedef struct qw_usercmd_s
-{
-	vec3_t angles;
-	short forwardmove, sidemove, upmove;
-	unsigned char padding1[2];
-	unsigned char msec;
-	unsigned char buttons;
-	unsigned char impulse;
-	unsigned char padding2;
-}
-qw_usercmd_t;
-
 typedef enum
 {
 	PARTICLE_BILLBOARD = 0,
@@ -658,8 +651,10 @@ typedef struct client_state_s
 	// send a clc_nop periodically until connected
 	float sendnoptime;
 
-	// current input to send to the server
+	// current input being accumulated by mouse/joystick/etc input
 	usercmd_t cmd;
+	// latest moves sent to the server that have not been confirmed yet
+	usercmd_t movecmd[CL_MAX_USERCMDS];
 
 // information for local display
 	// health, etc
@@ -712,10 +707,8 @@ typedef struct client_state_s
 	// this is set true by svc_time parsing and causes a new movement to be
 	// queued for prediction purposes
 	qboolean movement_needupdate;
-	// indicates the queue has been updated and should be replayed
-	qboolean movement_replay;
 	// timestamps of latest two predicted moves for interpolation
-	double movement_time[2];
+	double movement_time[4];
 	// simulated data (this is valid even if cl.movement is false)
 	vec3_t movement_origin;
 	vec3_t movement_oldorigin;
@@ -761,6 +754,12 @@ typedef struct client_state_s
 
 	// the timestamp of the last two messages
 	double mtime[2];
+
+	// similar to cl.time but this can go past cl.mtime[0] when packets are
+	// not being received, it is still clamped to the cl.mtime[1] to
+	// cl.mtime[0] range whenever a packet is received, it just does not stop
+	// when interpolation finishes
+	double timenonlerp;
 
 	// clients view of time, time should be between mtime[0] and mtime[1] to
 	// generate a lerp point for other data, oldtime is the previous frame's
@@ -938,8 +937,6 @@ typedef struct client_state_s
 	float qw_weaponkick;
 
 	int qw_validsequence;
-
-	qw_usercmd_t qw_moves[QW_UPDATE_BACKUP];
 
 	int qw_deltasequence[QW_UPDATE_BACKUP];
 }

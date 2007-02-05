@@ -96,12 +96,19 @@ static int SV_TestEntityPosition (prvm_edict_t *ent)
 			// a hull size it is incorrectly tested, so this code tries to
 			// 'fix' it slightly...
 			int i;
-			vec3_t v;
+			vec3_t v, m1, m2, s;
+			VectorAdd(ent->fields.server->origin, ent->fields.server->mins, m1);
+			VectorAdd(ent->fields.server->origin, ent->fields.server->maxs, m2);
+			VectorSubtract(m2, m1, s);
+#define EPSILON (1.0f / 32.0f)
+			if (s[0] >= EPSILON*2) {m1[0] += EPSILON;m2[0] -= EPSILON;}
+			if (s[1] >= EPSILON*2) {m1[1] += EPSILON;m2[1] -= EPSILON;}
+			if (s[2] >= EPSILON*2) {m1[2] += EPSILON;m2[2] -= EPSILON;}
 			for (i = 0;i < 8;i++)
 			{
-				v[0] = ent->fields.server->origin[0] + ((i & 1) ? ent->fields.server->maxs[0] : ent->fields.server->mins[0]);
-				v[1] = ent->fields.server->origin[1] + ((i & 2) ? ent->fields.server->maxs[1] : ent->fields.server->mins[1]);
-				v[2] = ent->fields.server->origin[2] + ((i & 4) ? ent->fields.server->maxs[2] : ent->fields.server->mins[2]);
+				v[0] = (i & 1) ? m2[0] : m1[0];
+				v[1] = (i & 2) ? m2[1] : m1[1];
+				v[2] = (i & 4) ? m2[2] : m1[2];
 				if (SV_PointSuperContents(v) & SUPERCONTENTS_SOLID)
 					return true;
 			}
@@ -368,6 +375,8 @@ int SV_FlyMove (prvm_edict_t *ent, float time, float *stepnormal)
 	float d, time_left;
 	vec3_t dir, end, planes[MAX_CLIP_PLANES], primal_velocity, original_velocity, new_velocity;
 	trace_t trace;
+	if (time <= 0)
+		return 0;
 	blocked = 0;
 	VectorCopy(ent->fields.server->velocity, original_velocity);
 	VectorCopy(ent->fields.server->velocity, primal_velocity);
@@ -960,13 +969,6 @@ void SV_CheckStuck (prvm_edict_t *ent)
 	}
 
 	VectorCopy (ent->fields.server->origin, org);
-	VectorCopy (ent->fields.server->oldorigin, ent->fields.server->origin);
-	if (!SV_TestEntityPosition(ent))
-	{
-		Con_DPrintf("Unstuck player entity %i (classname \"%s\") by restoring oldorigin.\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname));
-		SV_LinkEdict (ent, true);
-		return;
-	}
 
 	for (z=-1 ; z< 18 ; z++)
 		for (i=-1 ; i <= 1 ; i++)
@@ -982,6 +984,14 @@ void SV_CheckStuck (prvm_edict_t *ent)
 					return;
 				}
 			}
+
+	VectorCopy (ent->fields.server->oldorigin, ent->fields.server->origin);
+	if (!SV_TestEntityPosition(ent))
+	{
+		Con_DPrintf("Unstuck player entity %i (classname \"%s\") by restoring oldorigin.\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname));
+		SV_LinkEdict (ent, true);
+		return;
+	}
 
 	VectorCopy (org, ent->fields.server->origin);
 	Con_DPrintf("Stuck player entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname));
@@ -1092,6 +1102,7 @@ void SV_WallFriction (prvm_edict_t *ent, float *stepnormal)
 	}
 }
 
+#if 0
 /*
 =====================
 SV_TryUnstick
@@ -1151,6 +1162,7 @@ int SV_TryUnstick (prvm_edict_t *ent, vec3_t oldvel)
 	Con_DPrint("TryUnstick - failure.\n");
 	return 7;
 }
+#endif
 
 /*
 =====================
@@ -1164,6 +1176,11 @@ void SV_WalkMove (prvm_edict_t *ent)
 	int clip, oldonground, originalmove_clip, originalmove_flags, originalmove_groundentity;
 	vec3_t upmove, downmove, start_origin, start_velocity, stepnormal, originalmove_origin, originalmove_velocity;
 	trace_t downtrace;
+
+	// if frametime is 0 (due to client sending the same timestamp twice),
+	// don't move
+	if (sv.frametime <= 0)
+		return;
 
 	SV_CheckVelocity(ent);
 

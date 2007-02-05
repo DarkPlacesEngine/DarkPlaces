@@ -320,7 +320,7 @@ cvar_t cl_pitchspeed = {CVAR_SAVE, "cl_pitchspeed","150","keyboard pitch turning
 cvar_t cl_anglespeedkey = {CVAR_SAVE, "cl_anglespeedkey","1.5","how much +speed multiplies keyboard turning speed"};
 
 cvar_t cl_movement = {CVAR_SAVE, "cl_movement", "0", "enables clientside prediction of your player movement"};
-cvar_t cl_movement_latency = {0, "cl_movement_latency", "0", "compensates for this much latency (ping time) on quake servers which do not really support prediction, no effect on darkplaces7 protocol servers"};
+cvar_t cl_movement_latency = {0, "cl_movement_latency", "0", "compensates for this much latency (ping time) on quake servers which do not really support prediction, no effect on darkplaces7 protocol servers or quakeworld servers"};
 cvar_t cl_movement_maxspeed = {0, "cl_movement_maxspeed", "320", "how fast you can move (should match sv_maxspeed)"};
 cvar_t cl_movement_maxairspeed = {0, "cl_movement_maxairspeed", "30", "how fast you can move while in the air (should match sv_maxairspeed)"};
 cvar_t cl_movement_stopspeed = {0, "cl_movement_stopspeed", "100", "speed below which you will be slowed rapidly to a stop rather than sliding endlessly (should match sv_stopspeed)"};
@@ -343,6 +343,7 @@ cvar_t in_pitch_max = {0, "in_pitch_max", "90", "how far upward you can aim (qua
 cvar_t m_filter = {CVAR_SAVE, "m_filter","0", "smoothes mouse movement, less responsive but smoother aiming"};
 
 cvar_t cl_netinputpacketspersecond = {CVAR_SAVE, "cl_netinputpacketspersecond","50", "how many input packets to send to server each second"};
+cvar_t cl_netinputpacketlosstolerance = {CVAR_SAVE, "cl_netinputpacketlosstolerance", "4", "how many packets in a row can be lost without movement issues when using cl_movement (technically how many input messages to repeat in each packet that have not yet been acknowledged by the server)"};
 
 cvar_t cl_nodelta = {0, "cl_nodelta", "0", "disables delta compression of non-player entities in QW network protocol"};
 
@@ -559,10 +560,15 @@ void CL_UpdatePrydonCursor(void)
 	cl.cmd.cursor_fraction = CL_SelectTraceLine(cl.cmd.cursor_start, cl.cmd.cursor_end, cl.cmd.cursor_impact, cl.cmd.cursor_normal, &cl.cmd.cursor_entitynumber, (chase_active.integer || cl.intermission) ? &cl.entities[cl.playerentity].render : NULL);
 }
 
-void CL_ClientMovement_InputQW(qw_usercmd_t *cmd)
+void CL_ClientMovement_Replay(void);
+
+void CL_ClientMovement_InputQW(void)
 {
 	int i;
 	int n;
+	// if time has not advanced, do nothing
+	if (cl.movecmd[0].time <= cl.movecmd[1].time)
+		return;
 	// remove stale queue items
 	n = cl.movement_numqueue;
 	cl.movement_numqueue = 0;
@@ -578,24 +584,26 @@ void CL_ClientMovement_InputQW(qw_usercmd_t *cmd)
 	{
 		// add to input queue
 		cl.movement_queue[cl.movement_numqueue].sequence = cls.netcon->qw.outgoing_sequence;
-		cl.movement_queue[cl.movement_numqueue].time = realtime;
-		cl.movement_queue[cl.movement_numqueue].frametime = cmd->msec / 1000.0;
-		VectorCopy(cmd->angles, cl.movement_queue[cl.movement_numqueue].viewangles);
-		cl.movement_queue[cl.movement_numqueue].move[0] = cmd->forwardmove;
-		cl.movement_queue[cl.movement_numqueue].move[1] = cmd->sidemove;
-		cl.movement_queue[cl.movement_numqueue].move[2] = cmd->upmove;
-		cl.movement_queue[cl.movement_numqueue].jump = (cmd->buttons & 2) != 0;
+		cl.movement_queue[cl.movement_numqueue].time = cl.movecmd[0].time;
+		cl.movement_queue[cl.movement_numqueue].frametime = cl.cmd.msec / 1000.0;
+		VectorCopy(cl.cmd.viewangles, cl.movement_queue[cl.movement_numqueue].viewangles);
+		cl.movement_queue[cl.movement_numqueue].move[0] = cl.cmd.forwardmove;
+		cl.movement_queue[cl.movement_numqueue].move[1] = cl.cmd.sidemove;
+		cl.movement_queue[cl.movement_numqueue].move[2] = cl.cmd.upmove;
+		cl.movement_queue[cl.movement_numqueue].jump = (cl.cmd.buttons & 2) != 0;
 		cl.movement_queue[cl.movement_numqueue].crouch = false;
 		cl.movement_numqueue++;
 	}
-	cl.movement_replay = true;
+	CL_ClientMovement_Replay();
 }
 
 void CL_ClientMovement_Input(qboolean buttonjump, qboolean buttoncrouch)
 {
 	int i;
 	int n;
-	double lasttime = (cls.protocol == PROTOCOL_DARKPLACES6 || cls.protocol == PROTOCOL_DARKPLACES7) ? cl.mtime[1] : (cl.movement_numqueue >= 0 ? cl.movement_queue[cl.movement_numqueue - 1].time : 0);
+	// if time has not advanced, do nothing
+	if (cl.movecmd[0].time <= cl.movecmd[1].time)
+		return;
 	// remove stale queue items
 	n = cl.movement_numqueue;
 	cl.movement_numqueue = 0;
@@ -613,19 +621,19 @@ void CL_ClientMovement_Input(qboolean buttonjump, qboolean buttoncrouch)
 	{
 		for (i = 0;i < n;i++)
 		{
-			if (cl.movement_queue[i].time >= cl.mtime[0] - cl_movement_latency.value / 1000.0 && cl.movement_queue[i].time <= cl.mtime[0])
+			if (cl.movement_queue[i].time >= cl.movecmd[0].time - cl_movement_latency.value / 1000.0 && cl.movement_queue[i].time <= cl.movecmd[0].time)
 				cl.movement_queue[cl.movement_numqueue++] = cl.movement_queue[i];
 			else if (i == 0)
 				cl.movement_replay_canjump = !cl.movement_queue[i].jump; // FIXME: this logic is quite broken
 		}
 	}
 	// add to input queue if there is room
-	if (cl.movement_numqueue < (int)(sizeof(cl.movement_queue)/sizeof(cl.movement_queue[0])) && cl.mtime[0] > cl.mtime[1])
+	if (cl.movement_numqueue < (int)(sizeof(cl.movement_queue)/sizeof(cl.movement_queue[0])))
 	{
 		// add to input queue
 		cl.movement_queue[cl.movement_numqueue].sequence = cl.movesequence;
-		cl.movement_queue[cl.movement_numqueue].time = cl.mtime[0];
-		cl.movement_queue[cl.movement_numqueue].frametime = bound(0, cl.mtime[0] - lasttime, 0.1);
+		cl.movement_queue[cl.movement_numqueue].time = cl.movecmd[0].time;
+		cl.movement_queue[cl.movement_numqueue].frametime = bound(0, cl.movecmd[0].time - cl.movecmd[1].time, 0.1);
 		VectorCopy(cl.viewangles, cl.movement_queue[cl.movement_numqueue].viewangles);
 		cl.movement_queue[cl.movement_numqueue].move[0] = cl.cmd.forwardmove;
 		cl.movement_queue[cl.movement_numqueue].move[1] = cl.cmd.sidemove;
@@ -634,7 +642,7 @@ void CL_ClientMovement_Input(qboolean buttonjump, qboolean buttoncrouch)
 		cl.movement_queue[cl.movement_numqueue].crouch = buttoncrouch;
 		cl.movement_numqueue++;
 	}
-	cl.movement_replay = true;
+	CL_ClientMovement_Replay();
 }
 
 typedef enum waterlevel_e
@@ -1091,10 +1099,6 @@ void CL_ClientMovement_Replay(void)
 	int i;
 	cl_clientmovement_state_t s;
 
-	if (!cl.movement_replay)
-		return;
-	cl.movement_replay = false;
-
 	// set up starting state for the series of moves
 	memset(&s, 0, sizeof(s));
 	VectorCopy(cl.entities[cl.playerentity].state_current.origin, s.origin);
@@ -1146,7 +1150,7 @@ void CL_ClientMovement_Replay(void)
 	cl.movement_predicted = (cl_movement.integer && !cls.demoplayback && cls.signon == SIGNONS && cl.stats[STAT_HEALTH] > 0 && !cl.intermission) && ((cls.protocol != PROTOCOL_DARKPLACES6 && cls.protocol != PROTOCOL_DARKPLACES7) || cl.servermovesequence);
 	if (cl.movement_predicted)
 	{
-		//Con_Printf("%f: ", cl.mtime[0]);
+		//Con_Printf("%f: ", cl.movecmd[0].time);
 
 		// replay the input queue to predict current location
 		// note: this relies on the fact there's always one queue item at the end
@@ -1168,49 +1172,53 @@ void CL_ClientMovement_Replay(void)
 		// get the first movement queue entry to know whether to crouch and such
 		s.q = cl.movement_queue[0];
 	}
+	CL_ClientMovement_UpdateStatus(&s);
 
 	// store replay location
-	CL_ClientMovement_UpdateStatus(&s);
-	cl.movement_time[1] = cl.movement_time[0];
-	cl.movement_time[0] = cl.movement_queue[cl.movement_numqueue-1].time;
-	VectorCopy(cl.movement_origin, cl.movement_oldorigin);
-	VectorCopy(s.origin, cl.movement_origin);
-	VectorCopy(s.velocity, cl.movement_velocity);
-	//VectorCopy(s.origin, cl.entities[cl.playerentity].state_current.origin);
-	//VectorSet(cl.entities[cl.playerentity].state_current.angles, 0, cl.viewangles[1], 0);
-
-	// update the onground flag if appropriate
-	// when not predicted, cl.onground is only cleared by cl_parse.c, but can
-	// be set forcefully here to hide server inconsistencies in the onground
-	// flag (such as when stepping up stairs, the onground flag tends to turn
-	// off briefly due to precision errors, particularly at high framerates),
-	// such inconsistencies can mess up the gun bobbing and stair smoothing,
-	// so they must be avoided.
-	if (cl.movement_predicted)
-		cl.onground = s.onground;
-	else if (s.onground)
-		cl.onground = true;
-
-	// react to onground state changes (for gun bob)
-	if (cl.onground)
+	if (cl.movecmd[0].time > cl.movecmd[1].time)
 	{
-		if (!cl.oldonground)
-			cl.hitgroundtime = cl.time;
-		cl.lastongroundtime = cl.time;
+		cl.movement_time[1] = cl.movecmd[1].time;
+		cl.movement_time[0] = cl.movecmd[0].time;
+		cl.movement_time[2] = cl.timenonlerp;
+		VectorCopy(cl.movement_origin, cl.movement_oldorigin);
+		VectorCopy(s.origin, cl.movement_origin);
+		VectorCopy(s.velocity, cl.movement_velocity);
+		//VectorCopy(s.origin, cl.entities[cl.playerentity].state_current.origin);
+		//VectorSet(cl.entities[cl.playerentity].state_current.angles, 0, cl.viewangles[1], 0);
+
+		// update the onground flag if appropriate
+		// when not predicted, cl.onground is only cleared by cl_parse.c, but can
+		// be set forcefully here to hide server inconsistencies in the onground
+		// flag (such as when stepping up stairs, the onground flag tends to turn
+		// off briefly due to precision errors, particularly at high framerates),
+		// such inconsistencies can mess up the gun bobbing and stair smoothing,
+		// so they must be avoided.
+		if (cl.movement_predicted)
+			cl.onground = s.onground;
+		else if (s.onground)
+			cl.onground = true;
+
+		// react to onground state changes (for gun bob)
+		if (cl.onground)
+		{
+			if (!cl.oldonground)
+				cl.hitgroundtime = cl.movecmd[0].time;
+			cl.lastongroundtime = cl.movecmd[0].time;
+		}
+		cl.oldonground = cl.onground;
 	}
-	cl.oldonground = cl.onground;
 }
 
-void QW_MSG_WriteDeltaUsercmd(sizebuf_t *buf, qw_usercmd_t *from, qw_usercmd_t *to)
+void QW_MSG_WriteDeltaUsercmd(sizebuf_t *buf, usercmd_t *from, usercmd_t *to)
 {
 	int bits;
 
 	bits = 0;
-	if (to->angles[0] != from->angles[0])
+	if (to->viewangles[0] != from->viewangles[0])
 		bits |= QW_CM_ANGLE1;
-	if (to->angles[1] != from->angles[1])
+	if (to->viewangles[1] != from->viewangles[1])
 		bits |= QW_CM_ANGLE2;
-	if (to->angles[2] != from->angles[2])
+	if (to->viewangles[2] != from->viewangles[2])
 		bits |= QW_CM_ANGLE3;
 	if (to->forwardmove != from->forwardmove)
 		bits |= QW_CM_FORWARD;
@@ -1225,11 +1233,11 @@ void QW_MSG_WriteDeltaUsercmd(sizebuf_t *buf, qw_usercmd_t *from, qw_usercmd_t *
 
 	MSG_WriteByte(buf, bits);
 	if (bits & QW_CM_ANGLE1)
-		MSG_WriteAngle16i(buf, to->angles[0]);
+		MSG_WriteAngle16i(buf, to->viewangles[0]);
 	if (bits & QW_CM_ANGLE2)
-		MSG_WriteAngle16i(buf, to->angles[1]);
+		MSG_WriteAngle16i(buf, to->viewangles[1]);
 	if (bits & QW_CM_ANGLE3)
-		MSG_WriteAngle16i(buf, to->angles[2]);
+		MSG_WriteAngle16i(buf, to->viewangles[2]);
 	if (bits & QW_CM_FORWARD)
 		MSG_WriteShort(buf, to->forwardmove);
 	if (bits & QW_CM_SIDE)
@@ -1248,33 +1256,22 @@ void QW_MSG_WriteDeltaUsercmd(sizebuf_t *buf, qw_usercmd_t *from, qw_usercmd_t *
 CL_SendMove
 ==============
 */
-extern cvar_t cl_netinputpacketspersecond;
+usercmd_t nullcmd; // for delta compression of qw moves
 void CL_SendMove(void)
 {
-	int i, j, packetloss;
+	int i, j, packetloss, maxusercmds;
 	int bits;
-	int impulse;
 	sizebuf_t buf;
-	unsigned char data[128];
+	unsigned char data[1024];
 	static double lastsendtime = 0;
-#define MOVEAVERAGING 0
-#if MOVEAVERAGING
-	static float accumforwardmove = 0, accumsidemove = 0, accumupmove = 0, accumtotal = 0; // accumulation
-#endif
-	float forwardmove, sidemove, upmove;
+	double msectime;
+	static double oldmsectime;
 
 	// if playing a demo, do nothing
 	if (!cls.netcon)
 		return;
 
-#if MOVEAVERAGING
-	// accumulate changes between messages
-	accumforwardmove += cl.cmd.forwardmove;
-	accumsidemove += cl.cmd.sidemove;
-	accumupmove += cl.cmd.upmove;
-	accumtotal++;
-#endif
-
+#if 0
 	if (cl_movement.integer && cls.signon == SIGNONS && cls.protocol != PROTOCOL_QUAKEWORLD)
 	{
 		if (!cl.movement_needupdate)
@@ -1282,6 +1279,7 @@ void CL_SendMove(void)
 		cl.movement_needupdate = false;
 	}
 	else
+#endif
 	{
 		double packettime = 1.0 / bound(10, cl_netinputpacketspersecond.value, 100);
 		// don't send too often or else network connections can get clogged by a high renderer framerate
@@ -1291,29 +1289,16 @@ void CL_SendMove(void)
 		// (such is the case when framerate is too low for instance)
 		lastsendtime = max(lastsendtime + packettime, realtime);
 	}
-#if MOVEAVERAGING
-	// average the accumulated changes
-	accumtotal = 1.0f / accumtotal;
-	forwardmove = accumforwardmove * accumtotal;
-	sidemove = accumsidemove * accumtotal;
-	upmove = accumupmove * accumtotal;
-	accumforwardmove = 0;
-	accumsidemove = 0;
-	accumupmove = 0;
-	accumtotal = 0;
-#else
-	// use the latest values
-	forwardmove = cl.cmd.forwardmove;
-	sidemove = cl.cmd.sidemove;
-	upmove = cl.cmd.upmove;
-#endif
 
-	if (cls.signon == SIGNONS)
-		CL_UpdatePrydonCursor();
+	cl.cmd.sequence = 0;
 
-	buf.maxsize = 128;
-	buf.cursize = 0;
-	buf.data = data;
+	cl.cmd.time = cls.protocol == PROTOCOL_QUAKEWORLD ? realtime : cl.timenonlerp;
+	msectime = floor(cl.cmd.time * 1000);
+	cl.cmd.msec = (unsigned char)bound(0, msectime - oldmsectime, 255);
+	// ridiculous value rejection (matches qw)
+	if (cl.cmd.msec > 250)
+		cl.cmd.msec = 100;
+	oldmsectime = msectime;
 
 	// set button bits
 	// LordHavoc: added 6 new buttons and use and chat buttons, and prydon cursor active button
@@ -1343,209 +1328,213 @@ void CL_SendMove(void)
 	if (cl.cmd.cursor_screen[0] >=  1) bits |= 16;
 	if (cl.cmd.cursor_screen[1] <= -1) bits |= 32;
 	if (cl.cmd.cursor_screen[1] >=  1) bits |= 64;
+	cl.cmd.buttons = bits;
 
-	impulse = in_impulse;
+	// set impulse
+	cl.cmd.impulse = in_impulse;
 	in_impulse = 0;
 
-	csqc_buttons = bits;
+	// movement is set by input code (forwardmove/sidemove/upmove)
 
-	if (cls.signon == SIGNONS)
+	// set viewangles
+	VectorCopy(cl.viewangles, cl.cmd.viewangles);
+
+	buf.maxsize = sizeof(data);
+	buf.cursize = 0;
+	buf.data = data;
+
+	// always dump the first two messages, because they may contain leftover inputs from the last level
+	if (cls.signon == SIGNONS && ++cl.movemessages >= 2)
 	{
-		// always dump the first two messages, because they may contain leftover inputs from the last level
-		if (++cl.movemessages >= 2)
+		// send the movement message
+		// PROTOCOL_QUAKE        clc_move = 16 bytes total
+		// PROTOCOL_QUAKEDP      clc_move = 16 bytes total
+		// PROTOCOL_NEHAHRAMOVIE clc_move = 16 bytes total
+		// PROTOCOL_DARKPLACES1  clc_move = 19 bytes total
+		// PROTOCOL_DARKPLACES2  clc_move = 25 bytes total
+		// PROTOCOL_DARKPLACES3  clc_move = 25 bytes total
+		// PROTOCOL_DARKPLACES4  clc_move = 19 bytes total
+		// PROTOCOL_DARKPLACES5  clc_move = 19 bytes total
+		// PROTOCOL_DARKPLACES6  clc_move = 52 bytes total
+		// PROTOCOL_DARKPLACES7  clc_move = 56 bytes total per move (can be up to 16 moves)
+		// PROTOCOL_QUAKEWORLD   clc_move = 34 bytes total (typically, but can reach 43 bytes, or even 49 bytes with roll)
+
+		cl.movesequence++;
+		if (cl_movement.integer)
+			cl.cmd.sequence = cl.movesequence;
+
+		// set prydon cursor info
+		CL_UpdatePrydonCursor();
+
+		// update the cl.movecmd array which holds the most recent moves
+		for (i = CL_MAX_USERCMDS - 1;i >= 1;i--)
+			cl.movecmd[i] = cl.movecmd[i-1];
+		cl.movecmd[0] = cl.cmd;
+
+		// set the maxusercmds variable to limit how many should be sent
+		if (cls.protocol == PROTOCOL_QUAKEWORLD)
 		{
-			// send the movement message
-			// PROTOCOL_QUAKE        clc_move = 16 bytes total
-			// PROTOCOL_QUAKEDP      clc_move = 16 bytes total
-			// PROTOCOL_NEHAHRAMOVIE clc_move = 16 bytes total
-			// PROTOCOL_DARKPLACES1  clc_move = 19 bytes total
-			// PROTOCOL_DARKPLACES2  clc_move = 25 bytes total
-			// PROTOCOL_DARKPLACES3  clc_move = 25 bytes total
-			// PROTOCOL_DARKPLACES4  clc_move = 19 bytes total
-			// PROTOCOL_DARKPLACES5  clc_move = 19 bytes total
-			// PROTOCOL_DARKPLACES6  clc_move = 52 bytes total
-			// PROTOCOL_DARKPLACES7  clc_move = 56 bytes total
-			// PROTOCOL_QUAKEWORLD   clc_move = 34 bytes total (typically, but can reach 43 bytes, or even 49 bytes with roll)
-			if (cls.protocol == PROTOCOL_QUAKEWORLD)
+			// qw uses exactly 3 moves
+			maxusercmds = 3;
+		}
+		else
+		{
+			// configurable number of unacknowledged moves
+			maxusercmds = bound(1, cl_netinputpacketlosstolerance.integer + 1, CL_MAX_USERCMDS);
+		}
+
+		if (cls.protocol == PROTOCOL_QUAKEWORLD)
+		{
+			int checksumindex;
+
+			CL_ClientMovement_InputQW();
+
+			MSG_WriteByte(&buf, qw_clc_move);
+			// save the position for a checksum byte
+			checksumindex = buf.cursize;
+			MSG_WriteByte(&buf, 0);
+			// packet loss percentage
+			for (j = 0, packetloss = 0;j < 100;j++)
+				packetloss += cls.netcon->packetlost[j];
+			MSG_WriteByte(&buf, packetloss);
+			// write most recent 3 moves
+			QW_MSG_WriteDeltaUsercmd(&buf, &nullcmd, &cl.movecmd[2]);
+			QW_MSG_WriteDeltaUsercmd(&buf, &cl.movecmd[2], &cl.movecmd[1]);
+			QW_MSG_WriteDeltaUsercmd(&buf, &cl.movecmd[1], &cl.movecmd[0]);
+			// calculate the checksum
+			buf.data[checksumindex] = COM_BlockSequenceCRCByteQW(buf.data + checksumindex + 1, buf.cursize - checksumindex - 1, cls.netcon->qw.outgoing_sequence);
+			// if delta compression history overflows, request no delta
+			if (cls.netcon->qw.outgoing_sequence - cl.qw_validsequence >= QW_UPDATE_BACKUP-1)
+				cl.qw_validsequence = 0;
+			// request delta compression if appropriate
+			if (cl.qw_validsequence && !cl_nodelta.integer && cls.state == ca_connected && !cls.demorecording)
 			{
-				int checksumindex;
-				double msectime;
-				static double oldmsectime;
-				qw_usercmd_t *cmd, *oldcmd;
-				qw_usercmd_t nullcmd;
-
-				//Con_Printf("code qw_clc_move\n");
-
-				i = cls.netcon->qw.outgoing_sequence & QW_UPDATE_MASK;
-				cmd = &cl.qw_moves[i];
-				memset(&nullcmd, 0, sizeof(nullcmd));
-				memset(cmd, 0, sizeof(*cmd));
-				cmd->buttons = bits;
-				cmd->impulse = impulse;
-				cmd->forwardmove = (short)bound(-32768, forwardmove, 32767);
-				cmd->sidemove = (short)bound(-32768, sidemove, 32767);
-				cmd->upmove = (short)bound(-32768, upmove, 32767);
-				VectorCopy(cl.viewangles, cmd->angles);
-				msectime = realtime * 1000;
-				cmd->msec = (unsigned char)bound(0, msectime - oldmsectime, 255);
-				// ridiculous value rejection (matches qw)
-				if (cmd->msec > 250)
-					cmd->msec = 100;
-				oldmsectime = msectime;
-
-				CL_ClientMovement_InputQW(cmd);
-
-				MSG_WriteByte(&buf, qw_clc_move);
-				// save the position for a checksum byte
-				checksumindex = buf.cursize;
-				MSG_WriteByte(&buf, 0);
-				// packet loss percentage
-				for (j = 0, packetloss = 0;j < 100;j++)
-					packetloss += cls.netcon->packetlost[j];
-				MSG_WriteByte(&buf, packetloss);
-				// write most recent 3 moves
-				i = (cls.netcon->qw.outgoing_sequence-2) & QW_UPDATE_MASK;
-				cmd = &cl.qw_moves[i];
-				QW_MSG_WriteDeltaUsercmd(&buf, &nullcmd, cmd);
-				oldcmd = cmd;
-				i = (cls.netcon->qw.outgoing_sequence-1) & QW_UPDATE_MASK;
-				cmd = &cl.qw_moves[i];
-				QW_MSG_WriteDeltaUsercmd(&buf, oldcmd, cmd);
-				oldcmd = cmd;
-				i = cls.netcon->qw.outgoing_sequence & QW_UPDATE_MASK;
-				cmd = &cl.qw_moves[i];
-				QW_MSG_WriteDeltaUsercmd(&buf, oldcmd, cmd);
-				// calculate the checksum
-				buf.data[checksumindex] = COM_BlockSequenceCRCByteQW(buf.data + checksumindex + 1, buf.cursize - checksumindex - 1, cls.netcon->qw.outgoing_sequence);
-				// if delta compression history overflows, request no delta
-				if (cls.netcon->qw.outgoing_sequence - cl.qw_validsequence >= QW_UPDATE_BACKUP-1)
-					cl.qw_validsequence = 0;
-				// request delta compression if appropriate
-				if (cl.qw_validsequence && !cl_nodelta.integer && cls.state == ca_connected && !cls.demorecording)
-				{
-					cl.qw_deltasequence[cls.netcon->qw.outgoing_sequence & QW_UPDATE_MASK] = cl.qw_validsequence;
-					MSG_WriteByte(&buf, qw_clc_delta);
-					MSG_WriteByte(&buf, cl.qw_validsequence & 255);
-				}
-				else
-					cl.qw_deltasequence[cls.netcon->qw.outgoing_sequence & QW_UPDATE_MASK] = -1;
-			}
-			else if (cls.protocol == PROTOCOL_QUAKE || cls.protocol == PROTOCOL_QUAKEDP || cls.protocol == PROTOCOL_NEHAHRAMOVIE)
-			{
-				// 5 bytes
-				MSG_WriteByte (&buf, clc_move);
-				MSG_WriteFloat (&buf, cl.mtime[0]);	// so server can get ping times
-				// 3 bytes
-				for (i = 0;i < 3;i++)
-					MSG_WriteAngle8i (&buf, cl.viewangles[i]);
-				// 6 bytes
-				MSG_WriteCoord16i (&buf, forwardmove);
-				MSG_WriteCoord16i (&buf, sidemove);
-				MSG_WriteCoord16i (&buf, upmove);
-				// 2 bytes
-				MSG_WriteByte (&buf, bits);
-				MSG_WriteByte (&buf, impulse);
-
-				CL_ClientMovement_Input((bits & 2) != 0, false);
-			}
-			else if (cls.protocol == PROTOCOL_DARKPLACES2 || cls.protocol == PROTOCOL_DARKPLACES3)
-			{
-				// 5 bytes
-				MSG_WriteByte (&buf, clc_move);
-				MSG_WriteFloat (&buf, cl.mtime[0]);	// so server can get ping times
-				// 12 bytes
-				for (i = 0;i < 3;i++)
-					MSG_WriteAngle32f (&buf, cl.viewangles[i]);
-				// 6 bytes
-				MSG_WriteCoord16i (&buf, forwardmove);
-				MSG_WriteCoord16i (&buf, sidemove);
-				MSG_WriteCoord16i (&buf, upmove);
-				// 2 bytes
-				MSG_WriteByte (&buf, bits);
-				MSG_WriteByte (&buf, impulse);
-
-				CL_ClientMovement_Input((bits & 2) != 0, false);
-			}
-			else if (cls.protocol == PROTOCOL_DARKPLACES1 || cls.protocol == PROTOCOL_DARKPLACES4 || cls.protocol == PROTOCOL_DARKPLACES5)
-			{
-				// 5 bytes
-				MSG_WriteByte (&buf, clc_move);
-				MSG_WriteFloat (&buf, cl.mtime[0]);	// so server can get ping times
-				// 6 bytes
-				for (i = 0;i < 3;i++)
-					MSG_WriteAngle16i (&buf, cl.viewangles[i]);
-				// 6 bytes
-				MSG_WriteCoord16i (&buf, forwardmove);
-				MSG_WriteCoord16i (&buf, sidemove);
-				MSG_WriteCoord16i (&buf, upmove);
-				// 2 bytes
-				MSG_WriteByte (&buf, bits);
-				MSG_WriteByte (&buf, impulse);
-
-				CL_ClientMovement_Input((bits & 2) != 0, false);
+				cl.qw_deltasequence[cls.netcon->qw.outgoing_sequence & QW_UPDATE_MASK] = cl.qw_validsequence;
+				MSG_WriteByte(&buf, qw_clc_delta);
+				MSG_WriteByte(&buf, cl.qw_validsequence & 255);
 			}
 			else
+				cl.qw_deltasequence[cls.netcon->qw.outgoing_sequence & QW_UPDATE_MASK] = -1;
+		}
+		else if (cls.protocol == PROTOCOL_QUAKE || cls.protocol == PROTOCOL_QUAKEDP || cls.protocol == PROTOCOL_NEHAHRAMOVIE)
+		{
+			CL_ClientMovement_Input((cl.movecmd[0].buttons & 2) != 0, false);
+
+			// 5 bytes
+			MSG_WriteByte (&buf, clc_move);
+			MSG_WriteFloat (&buf, cl.movecmd[0].time); // last server packet time
+			// 3 bytes
+			for (i = 0;i < 3;i++)
+				MSG_WriteAngle8i (&buf, cl.movecmd[0].viewangles[i]);
+			// 6 bytes
+			MSG_WriteCoord16i (&buf, cl.movecmd[0].forwardmove);
+			MSG_WriteCoord16i (&buf, cl.movecmd[0].sidemove);
+			MSG_WriteCoord16i (&buf, cl.movecmd[0].upmove);
+			// 2 bytes
+			MSG_WriteByte (&buf, cl.movecmd[0].buttons);
+			MSG_WriteByte (&buf, cl.movecmd[0].impulse);
+		}
+		else if (cls.protocol == PROTOCOL_DARKPLACES2 || cls.protocol == PROTOCOL_DARKPLACES3)
+		{
+			CL_ClientMovement_Input((cl.movecmd[0].buttons & 2) != 0, false);
+
+			// 5 bytes
+			MSG_WriteByte (&buf, clc_move);
+			MSG_WriteFloat (&buf, cl.movecmd[0].time); // last server packet time
+			// 12 bytes
+			for (i = 0;i < 3;i++)
+				MSG_WriteAngle32f (&buf, cl.movecmd[0].viewangles[i]);
+			// 6 bytes
+			MSG_WriteCoord16i (&buf, cl.movecmd[0].forwardmove);
+			MSG_WriteCoord16i (&buf, cl.movecmd[0].sidemove);
+			MSG_WriteCoord16i (&buf, cl.movecmd[0].upmove);
+			// 2 bytes
+			MSG_WriteByte (&buf, cl.movecmd[0].buttons);
+			MSG_WriteByte (&buf, cl.movecmd[0].impulse);
+		}
+		else if (cls.protocol == PROTOCOL_DARKPLACES1 || cls.protocol == PROTOCOL_DARKPLACES4 || cls.protocol == PROTOCOL_DARKPLACES5)
+		{
+			CL_ClientMovement_Input((cl.movecmd[0].buttons & 2) != 0, false);
+
+			// 5 bytes
+			MSG_WriteByte (&buf, clc_move);
+			MSG_WriteFloat (&buf, cl.movecmd[0].time); // last server packet time
+			// 6 bytes
+			for (i = 0;i < 3;i++)
+				MSG_WriteAngle16i (&buf, cl.movecmd[0].viewangles[i]);
+			// 6 bytes
+			MSG_WriteCoord16i (&buf, cl.movecmd[0].forwardmove);
+			MSG_WriteCoord16i (&buf, cl.movecmd[0].sidemove);
+			MSG_WriteCoord16i (&buf, cl.movecmd[0].upmove);
+			// 2 bytes
+			MSG_WriteByte (&buf, cl.movecmd[0].buttons);
+			MSG_WriteByte (&buf, cl.movecmd[0].impulse);
+		}
+		else
+		{
+			usercmd_t *cmd;
+			// FIXME: cl.movecmd[0].buttons & 16 is +button5, Nexuiz specific
+			CL_ClientMovement_Input((cl.movecmd[0].buttons & 2) != 0, (cl.movecmd[0].buttons & 16) != 0);
+
+			// send the latest moves in order, the old ones will be
+			// ignored by the server harmlessly, however if the previous
+			// packets were lost these moves will be used
+			//
+			// this reduces packet loss impact on gameplay.
+			for (j = 0, cmd = &cl.movecmd[maxusercmds-1];j < maxusercmds;j++, cmd--)
 			{
-				// 5 bytes
+				// don't repeat any stale moves
+				if (cmd->sequence && cmd->sequence < cl.servermovesequence)
+					continue;
+				// 5/9 bytes
 				MSG_WriteByte (&buf, clc_move);
 				if (cls.protocol != PROTOCOL_DARKPLACES6)
-				{
-					if (cl_movement.integer)
-					{
-						cl.movesequence++;
-						MSG_WriteLong (&buf, cl.movesequence);
-					}
-					else
-						MSG_WriteLong (&buf, 0);
-				}
-				MSG_WriteFloat (&buf, cl.mtime[0]);	// so server can get ping times
+					MSG_WriteLong (&buf, cmd->sequence);
+				MSG_WriteFloat (&buf, cmd->time); // last server packet time
 				// 6 bytes
 				for (i = 0;i < 3;i++)
-					MSG_WriteAngle16i (&buf, cl.viewangles[i]);
+					MSG_WriteAngle16i (&buf, cmd->viewangles[i]);
 				// 6 bytes
-				MSG_WriteCoord16i (&buf, forwardmove);
-				MSG_WriteCoord16i (&buf, sidemove);
-				MSG_WriteCoord16i (&buf, upmove);
+				MSG_WriteCoord16i (&buf, cmd->forwardmove);
+				MSG_WriteCoord16i (&buf, cmd->sidemove);
+				MSG_WriteCoord16i (&buf, cmd->upmove);
 				// 5 bytes
-				MSG_WriteLong (&buf, bits);
-				MSG_WriteByte (&buf, impulse);
+				MSG_WriteLong (&buf, cmd->buttons);
+				MSG_WriteByte (&buf, cmd->impulse);
 				// PRYDON_CLIENTCURSOR
 				// 30 bytes
-				MSG_WriteShort (&buf, (short)(cl.cmd.cursor_screen[0] * 32767.0f));
-				MSG_WriteShort (&buf, (short)(cl.cmd.cursor_screen[1] * 32767.0f));
-				MSG_WriteFloat (&buf, cl.cmd.cursor_start[0]);
-				MSG_WriteFloat (&buf, cl.cmd.cursor_start[1]);
-				MSG_WriteFloat (&buf, cl.cmd.cursor_start[2]);
-				MSG_WriteFloat (&buf, cl.cmd.cursor_impact[0]);
-				MSG_WriteFloat (&buf, cl.cmd.cursor_impact[1]);
-				MSG_WriteFloat (&buf, cl.cmd.cursor_impact[2]);
-				MSG_WriteShort (&buf, cl.cmd.cursor_entitynumber);
-
-				// FIXME: bits & 16 is +button5, Nexuiz specific
-				CL_ClientMovement_Input((bits & 2) != 0, (bits & 16) != 0);
+				MSG_WriteShort (&buf, (short)(cmd->cursor_screen[0] * 32767.0f));
+				MSG_WriteShort (&buf, (short)(cmd->cursor_screen[1] * 32767.0f));
+				MSG_WriteFloat (&buf, cmd->cursor_start[0]);
+				MSG_WriteFloat (&buf, cmd->cursor_start[1]);
+				MSG_WriteFloat (&buf, cmd->cursor_start[2]);
+				MSG_WriteFloat (&buf, cmd->cursor_impact[0]);
+				MSG_WriteFloat (&buf, cmd->cursor_impact[1]);
+				MSG_WriteFloat (&buf, cmd->cursor_impact[2]);
+				MSG_WriteShort (&buf, cmd->cursor_entitynumber);
 			}
 		}
-
-		if (cls.protocol != PROTOCOL_QUAKEWORLD)
-		{
-			// ack the last few frame numbers
-			// (redundent to improve handling of client->server packet loss)
-			// for LATESTFRAMENUMS == 3 case this is 15 bytes
-			for (i = 0;i < LATESTFRAMENUMS;i++)
-			{
-				if (cl.latestframenums[i] > 0)
-				{
-					if (developer_networkentities.integer >= 1)
-						Con_Printf("send clc_ackframe %i\n", cl.latestframenums[i]);
-					MSG_WriteByte(&buf, clc_ackframe);
-					MSG_WriteLong(&buf, cl.latestframenums[i]);
-				}
-			}
-		}
-
-		// PROTOCOL_DARKPLACES6 = 67 bytes per packet
-		// PROTOCOL_DARKPLACES7 = 71 bytes per packet
 	}
+
+	if (cls.protocol != PROTOCOL_QUAKEWORLD)
+	{
+		// ack the last few frame numbers
+		// (redundent to improve handling of client->server packet loss)
+		// for LATESTFRAMENUMS == 3 case this is 15 bytes
+		for (i = 0;i < LATESTFRAMENUMS;i++)
+		{
+			if (cl.latestframenums[i] > 0)
+			{
+				if (developer_networkentities.integer >= 1)
+					Con_Printf("send clc_ackframe %i\n", cl.latestframenums[i]);
+				MSG_WriteByte(&buf, clc_ackframe);
+				MSG_WriteLong(&buf, cl.latestframenums[i]);
+			}
+		}
+	}
+
+	// PROTOCOL_DARKPLACES6 = 67 bytes per packet
+	// PROTOCOL_DARKPLACES7 = 71 bytes per packet
 
 	if (cls.protocol != PROTOCOL_QUAKEWORLD)
 	{
@@ -1670,6 +1659,7 @@ void CL_InitInput (void)
 	Cvar_RegisterVariable(&m_filter);
 
 	Cvar_RegisterVariable(&cl_netinputpacketspersecond);
+	Cvar_RegisterVariable(&cl_netinputpacketlosstolerance);
 
 	Cvar_RegisterVariable(&cl_nodelta);
 }

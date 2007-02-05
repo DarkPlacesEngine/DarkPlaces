@@ -151,6 +151,7 @@
 0 feature darkplaces protocol: add lava-steam particle puff effect for bursting lava bubbles (Zombie)
 0 feature darkplaces protocol: add support for .float corona and corona_radius to control corona intensity and radius on dlights
 0 feature darkplaces prvm: if developer is >= 100, list unfreed strzone strings when level ends (div0)
+0 feature darkplaces qc: add FTE_STRINGS extension, and specifically support -1 for strncmp/strncasecmp to compare whole string (div0)
 0 feature darkplaces quakec: DP_QC_STRFTIME extension providing strftime function to find out what the current time is with a format string (FrikaC)
 0 feature darkplaces quakec: add a DP_QC_STRCATREPEAT extension providing string(float atimes, string a[, float btimes, string b, [float ctimes, string c, [float dtimes, string d]]]) strcatrepeat = #???; which repeats the given strings a given number of times and concatenates them together (like many strcat calls), can be given 2, 4, 6, or 8 parameters, stores it into a temp buffer, and returns the temp buffer (FA-Zalon)
 0 feature darkplaces readme: add documentation about r_lockpvs, r_lockvisibility, r_useportalculling, r_drawportals, r_drawcollisionbrushes, r_showtris, r_speeds, r_shadow_visiblevolumes, and r_shadow_visiblelighting.
@@ -357,6 +358,7 @@
 2 feature darkplaces client: qw skin loading/rendering
 2 feature darkplaces image: add scaling capabilities to Image_CopyMux
 2 feature darkplaces loader: add support for fuhquake naming of map textures (textures/start/quake.tga style)
+2 feature darkplaces loader: implement vertex cache optimization of models during loading, see this paper: http://home.comcast.net/~tom_forsyth/papers/fast_vert_cache_opt.html (Dresk)
 2 feature darkplaces menu: add some basic graphics/effects options profiles so that people can choose profiles like "Classic", "Modern", "Excessive", "Realistic", or any other profiles that make sense, may also need to reorganize the graphics/effects options menus to be a bit less confusing (Tron)
 2 feature darkplaces menu: implement menu_clearkeyconfig and menu_keyconfig and the corresponding menu (diGGer)
 2 feature darkplaces menu: new game custom level/mod menu, which allows you to choose a mod and browse through maps and choose starting skill, by default it would have the current mod selected and start selected (Jago)
@@ -540,6 +542,7 @@ d bug darkplaces console: when cursoring up and down through command history, sh
 d bug darkplaces csqc: engine-based rocket entities have a trail but they don't glow if csqc is used
 d bug darkplaces csqc: it's broken!
 d bug darkplaces csqc: network entity positions seem to be incorrectly updated while csqc is active, this is best tested with cl_nolerp 1 on a sys_ticrate 0.1 server, which makes the jumps in rocket movement quite noticable
+d bug darkplaces csqc: when playing back a demo, the csqc does not seem to be getting the cl.viewangles right
 d bug darkplaces general: make all text parsing routines support Mac newlines; \r with no \n (Zenex)
 d bug darkplaces hud: sometimes texture borders wrap, causing annoying seams at the edges of pics, use TEXF_CLAMP
 d bug darkplaces init: only print "Playing shareware version." notice if running GAME_QUAKE (MrBIOS)
@@ -1224,6 +1227,7 @@ d feature darkplaces renderer: add q3bsp water rendering, both scrolling and wat
 d feature darkplaces renderer: add r_shadow_visiblelighting cvar which draws redish orange polygons similar to visiblevolumes for measuring number of light passes per pixel (Harbish)
 d feature darkplaces renderer: v_hwgamma 2 should force use of hardware gamma, ignoring failure return values, this might make fancy gamma ramps work on windows if the driver can bypass windows limitations
 d feature darkplaces server: add DP_QC_WRITEUNTERMINATEDSTRING extension (shadowalker)
+d feature darkplaces server: add DP_SV_PRINT extension
 d feature darkplaces server: add filename/line number reporting to progs stack and opcode printouts (Spike)
 d feature darkplaces server: automatically choose a server port if the bind fails, just keep incrementing the port until it finds an available port (tell Spike)
 d feature darkplaces server: finish DP_QC_BOTCLIENT extension docs and implement it (MauveBib, Supajoe)

@@ -67,7 +67,6 @@ qboolean csqc_loaded = false;
 
 vec3_t csqc_origin, csqc_angles;
 static double csqc_frametime = 0;
-int csqc_buttons;
 
 static mempool_t *csqc_mempool;
 
@@ -153,10 +152,10 @@ static void CSQC_SetGlobals (void)
 		prog->globals.client->frametime = cl.time - csqc_frametime;
 		csqc_frametime = cl.time;
 		prog->globals.client->servercommandframe = cl.servermovesequence;
-		prog->globals.client->clientcommandframe = cl.movemessages;
+		prog->globals.client->clientcommandframe = cl.movesequence;
 		VectorCopy(cl.viewangles, prog->globals.client->input_angles);
 		VectorCopy(cl.viewangles, csqc_angles);
-		prog->globals.client->input_buttons = csqc_buttons;
+		prog->globals.client->input_buttons = cl.cmd.buttons;
 		VectorSet(prog->globals.client->input_movevalues, cl.cmd.forwardmove, cl.cmd.sidemove, cl.cmd.upmove);
 		//VectorCopy(cl.movement_origin, csqc_origin);
 		Matrix4x4_OriginFromMatrix(&cl.entities[cl.viewentity].render.matrix, csqc_origin);
