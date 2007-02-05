@@ -1,7 +1,7 @@
 [Project]
 FileName=darkplaces.dev
 Name=DarkPlaces
-UnitCount=158
+UnitCount=160
 Type=0
 Ver=1
 ObjFiles=
@@ -1619,6 +1619,26 @@ BuildCmd=
 
 [Unit158]
 FileName=clvm_cmds.c
+CompileCpp=0
+Folder=Source Files
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit159]
+FileName=svbsp.h
+CompileCpp=0
+Folder=Header Files
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit160]
+FileName=svbsp.c
 CompileCpp=0
 Folder=Source Files
 Compile=1
