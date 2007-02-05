@@ -1737,9 +1737,6 @@ void CL_ParseClientdata (void)
 
 	// viewzoom interpolation
 	cl.mviewzoom[0] = (float) max(cl.stats[STAT_VIEWZOOM], 2) * (1.0f / 255.0f);
-
-	// force a recalculation of the player prediction
-	cl.movement_replay = true;
 }
 
 /*
@@ -2550,7 +2547,7 @@ void CL_ParseServerMessage(void)
 	{
 		cl.mtime[1] = cl.mtime[0];
 		cl.mtime[0] = realtime; // qw has no clock
-		cl.movement_needupdate = true;
+		cl.timenonlerp = bound(cl.mtime[1], cl.timenonlerp, cl.mtime[0]);
 		cl.onground = false; // since there's no clientdata parsing, clear the onground flag here
 		// if true the cl.viewangles are interpolated from cl.mviewangles[]
 		// during this frame
@@ -2559,9 +2556,6 @@ void CL_ParseServerMessage(void)
 		cl.fixangle[0] = false;
 		if (!cls.demoplayback)
 			VectorCopy(cl.mviewangles[0], cl.mviewangles[1]);
-
-		// force a recalculation of the player prediction
-		cl.movement_replay = true;
 
 		// slightly kill qw player entities each frame
 		for (i = 1;i < cl.maxclients;i++)
@@ -2974,6 +2968,7 @@ void CL_ParseServerMessage(void)
 			case svc_time:
 				cl.mtime[1] = cl.mtime[0];
 				cl.mtime[0] = MSG_ReadFloat ();
+				cl.timenonlerp = bound(cl.mtime[1], cl.timenonlerp, cl.mtime[0]);
 				cl.movement_needupdate = true;
 				// if true the cl.viewangles are interpolated from cl.mviewangles[]
 				// during this frame

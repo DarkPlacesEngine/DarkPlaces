@@ -884,8 +884,10 @@ void CL_UpdateNetworkEntity(entity_t *e)
 	// if it's the player entity, update according to client movement
 	if (e == cl.entities + cl.playerentity && cl.movement_predicted)
 	{
-		lerp = (cl.time - cl.movement_time[1]) / (cl.movement_time[0] - cl.movement_time[1]);
+		lerp = (cl.timenonlerp - cl.movement_time[2]) / (cl.movement_time[0] - cl.movement_time[1]);
 		lerp = bound(0, lerp, 1);
+		if (cl_nolerp.integer)
+			lerp = 1;
 		VectorLerp(cl.movement_oldorigin, lerp, cl.movement_origin, origin);
 		VectorSet(angles, 0, cl.viewangles[1], 0);
 	}
@@ -1529,7 +1531,6 @@ CL_ReadFromServer
 Read all incoming data from the server
 ===============
 */
-extern void CL_ClientMovement_Replay(void);
 extern void CL_StairSmoothing(void);//view.c
 
 int CL_ReadFromServer(void)
@@ -1554,9 +1555,6 @@ int CL_ReadFromServer(void)
 		// move particles
 		CL_MoveParticles();
 		R_MoveExplosions();
-
-		// predict current player location
-		CL_ClientMovement_Replay();
 
 		cl.num_brushmodel_entities = 0;
 		// process network entities
