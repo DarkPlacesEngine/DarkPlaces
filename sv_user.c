@@ -537,7 +537,7 @@ qboolean SV_ReadClientMove (void)
 	}
 
 	moveframetime = bound(0, move->time - host_client->cmd.time, 0.1);
-	Con_Printf("movesequence = %i (%i lost), moveframetime = %f\n", move->sequence, move->sequence ? move->sequence - host_client->movesequence - 1 : 0, moveframetime);
+	//Con_Printf("movesequence = %i (%i lost), moveframetime = %f\n", move->sequence, move->sequence ? move->sequence - host_client->movesequence - 1 : 0, moveframetime);
 
 	// disable clientside movement prediction in some cases
 	if (ceil((move->receivetime - move->time) * 1000.0) < sv_clmovement_minping.integer)
