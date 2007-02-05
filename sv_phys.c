@@ -1623,7 +1623,6 @@ static void SV_Physics_Entity (prvm_edict_t *ent)
 	}
 }
 
-void SV_ApplyClientMove (void);
 void SV_Physics_ClientEntity (prvm_edict_t *ent)
 {
 	SV_ApplyClientMove();
