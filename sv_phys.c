@@ -99,9 +99,9 @@ static int SV_TestEntityPosition (prvm_edict_t *ent)
 			vec3_t v;
 			for (i = 0;i < 8;i++)
 			{
-				v[0] = ent->fields.server->origin[0] + (i & 1) ? ent->fields.server->maxs[0] : ent->fields.server->mins[0];
-				v[1] = ent->fields.server->origin[1] + (i & 2) ? ent->fields.server->maxs[1] : ent->fields.server->mins[1];
-				v[2] = ent->fields.server->origin[2] + (i & 4) ? ent->fields.server->maxs[2] : ent->fields.server->mins[2];
+				v[0] = ent->fields.server->origin[0] + ((i & 1) ? ent->fields.server->maxs[0] : ent->fields.server->mins[0]);
+				v[1] = ent->fields.server->origin[1] + ((i & 2) ? ent->fields.server->maxs[1] : ent->fields.server->mins[1]);
+				v[2] = ent->fields.server->origin[2] + ((i & 4) ? ent->fields.server->maxs[2] : ent->fields.server->mins[2]);
 				if (SV_PointSuperContents(v) & SUPERCONTENTS_SOLID)
 					return true;
 			}
