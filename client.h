@@ -644,10 +644,6 @@ typedef struct client_state_s
 	// true if playing in a local game and no one else is connected
 	int islocalgame;
 
-	// when connecting to the server throw out the first couple move messages
-	// so the player doesn't accidentally do something the first frame
-	int movemessages;
-
 	// send a clc_nop periodically until connected
 	float sendnoptime;
 
