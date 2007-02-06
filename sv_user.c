@@ -533,7 +533,7 @@ qboolean SV_ReadClientMove (void)
 	{
 		if (!move->impulse)
 			move->impulse = host_client->cmd.impulse;
-		move->buttons |= host_client->cmd.impulse;
+		move->buttons |= host_client->cmd.buttons;
 	}
 
 	moveframetime = bound(0, move->time - host_client->cmd.time, 0.1);
