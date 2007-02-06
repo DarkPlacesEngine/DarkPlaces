@@ -2547,6 +2547,7 @@ void CL_ParseServerMessage(void)
 	{
 		cl.mtime[1] = cl.mtime[0];
 		cl.mtime[0] = realtime; // qw has no clock
+		cl.time = bound(cl.mtime[1], cl.time, cl.mtime[0]);
 		cl.timenonlerp = bound(cl.mtime[1], cl.timenonlerp, cl.mtime[0]);
 		cl.onground = false; // since there's no clientdata parsing, clear the onground flag here
 		// if true the cl.viewangles are interpolated from cl.mviewangles[]
@@ -2968,6 +2969,7 @@ void CL_ParseServerMessage(void)
 			case svc_time:
 				cl.mtime[1] = cl.mtime[0];
 				cl.mtime[0] = MSG_ReadFloat ();
+				cl.time = bound(cl.mtime[1], cl.time, cl.mtime[0]);
 				cl.timenonlerp = bound(cl.mtime[1], cl.timenonlerp, cl.mtime[0]);
 				cl.movement_needupdate = true;
 				// if true the cl.viewangles are interpolated from cl.mviewangles[]
