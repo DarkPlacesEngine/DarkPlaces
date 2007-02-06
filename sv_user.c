@@ -461,7 +461,7 @@ qboolean SV_ReadClientMove (void)
 
 	// limit reported time to current time
 	// (incase the client is trying to cheat)
-	move->time = min(move->time, move->receivetime);
+	move->time = min(move->time, move->receivetime + sv.frametime);
 
 	// read current angles
 	for (i = 0;i < 3;i++)
