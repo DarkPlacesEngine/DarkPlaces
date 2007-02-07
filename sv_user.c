@@ -521,9 +521,10 @@ qboolean SV_ReadClientMove (void)
 		if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 	}
 
-	if (move->sequence && move->sequence <= host_client->movesequence)
+	if (move->sequence && move->sequence <= host_client->movesequence && move->sequence >= host_client->movesequence - 16)
 	{
 		// repeat of old input (to fight packet loss)
+		// the >= -16 check avoids frozen players after a level change
 		return kickplayer;
 	}
 
