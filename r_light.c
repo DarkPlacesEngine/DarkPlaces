@@ -77,6 +77,7 @@ void R_DrawCoronas(void)
 	int i, lnum, flag;
 	float cscale, scale, viewdist, dist;
 	dlight_t *light;
+	rtlight_t *rtlight;
 	if (r_coronas.value < 0.01)
 		return;
 	R_Mesh_Matrix(&identitymatrix);
@@ -93,17 +94,17 @@ void R_DrawCoronas(void)
 	}
 	for (i = 0;i < r_refdef.numlights;i++)
 	{
-		light = r_refdef.lights[i];
-		if ((light->flags & flag) && light->corona * r_coronas.value > 0 && (dist = (DotProduct(light->origin, r_view.forward) - viewdist)) >= 24.0f && CL_TraceBox(light->origin, vec3_origin, vec3_origin, r_view.origin, true, NULL, SUPERCONTENTS_SOLID, false).fraction == 1)
+		rtlight = &r_refdef.lights[i];
+		if ((rtlight->flags & flag) && rtlight->corona * r_coronas.value > 0 && (dist = (DotProduct(rtlight->shadoworigin, r_view.forward) - viewdist)) >= 24.0f && CL_TraceBox(rtlight->shadoworigin, vec3_origin, vec3_origin, r_view.origin, true, NULL, SUPERCONTENTS_SOLID, false).fraction == 1)
 		{
-			cscale = light->corona * r_coronas.value * 0.25f;
-			scale = light->rtlight.radius * light->rtlight.coronasizescale;
+			cscale = rtlight->corona * r_coronas.value * 0.25f;
+			scale = rtlight->radius * rtlight->coronasizescale;
 			if (gl_flashblend.integer)
 			{
 				cscale *= 4.0f;
 				scale *= 2.0f;
 			}
-			R_DrawSprite(GL_ONE, GL_ONE, lightcorona, NULL, true, light->origin, r_view.right, r_view.up, scale, -scale, -scale, scale, light->color[0] * cscale, light->color[1] * cscale, light->color[2] * cscale, 1);
+			R_DrawSprite(GL_ONE, GL_ONE, lightcorona, NULL, true, rtlight->shadoworigin, r_view.right, r_view.up, scale, -scale, -scale, scale, rtlight->color[0] * cscale, rtlight->color[1] * cscale, rtlight->color[2] * cscale, 1);
 		}
 	}
 }
@@ -133,14 +134,14 @@ void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffu
 	{
 		int i;
 		float f, v[3];
-		dlight_t *light;
+		rtlight_t *light;
 		for (i = 0;i < r_refdef.numlights;i++)
 		{
-			light = r_refdef.lights[i];
-			Matrix4x4_Transform(&light->rtlight.matrix_worldtolight, p, v);
+			light = &r_refdef.lights[i];
+			Matrix4x4_Transform(&light->matrix_worldtolight, p, v);
 			f = 1 - VectorLength2(v);
-			if (f > 0 && CL_TraceBox(p, vec3_origin, vec3_origin, light->origin, false, NULL, SUPERCONTENTS_SOLID, false).fraction == 1)
-				VectorMA(ambientcolor, f, light->rtlight.currentcolor, ambientcolor);
+			if (f > 0 && CL_TraceBox(p, vec3_origin, vec3_origin, light->shadoworigin, false, NULL, SUPERCONTENTS_SOLID, false).fraction == 1)
+				VectorMA(ambientcolor, f, light->currentcolor, ambientcolor);
 		}
 	}
 }

@@ -576,7 +576,7 @@ void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float
 	}
 }
 
-void CL_AllocDlight(entity_render_t *ent, matrix4x4_t *matrix, float radius, float red, float green, float blue, float decay, float lifetime, int cubemapnum, int style, int shadowenable, vec_t corona, vec_t coronasizescale, vec_t ambientscale, vec_t diffusescale, vec_t specularscale, int flags)
+void CL_AllocLightFlash(entity_render_t *ent, matrix4x4_t *matrix, float radius, float red, float green, float blue, float decay, float lifetime, int cubemapnum, int style, int shadowenable, vec_t corona, vec_t coronasizescale, vec_t ambientscale, vec_t diffusescale, vec_t specularscale, int flags)
 {
 	int i;
 	dlight_t *dl;
@@ -615,6 +615,7 @@ dlightsetup:
 	Matrix4x4_OriginFromMatrix(&dl->matrix, dl->origin);
 	CL_FindNonSolidLocation(dl->origin, dl->origin, 6);
 	Matrix4x4_SetOrigin(&dl->matrix, dl->origin[0], dl->origin[1], dl->origin[2]);
+	Matrix4x4_Scale(&dl->matrix, radius, 1);
 	dl->radius = radius;
 	dl->color[0] = red;
 	dl->color[1] = green;
@@ -629,7 +630,10 @@ dlightsetup:
 		dl->die = cl.time + lifetime;
 	else
 		dl->die = 0;
-	dl->cubemapnum = cubemapnum;
+	if (cubemapnum > 0)
+		dpsnprintf(dl->cubemapname, sizeof(dl->cubemapname), "cubemaps/%i", cubemapnum);
+	else
+		dl->cubemapname[0] = 0;
 	dl->style = style;
 	dl->shadow = shadowenable;
 	dl->corona = corona;
@@ -640,8 +644,7 @@ dlightsetup:
 	dl->specularscale = specularscale;
 }
 
-// called before entity relinking
-void CL_DecayLights(void)
+void CL_DecayLightFlashes(void)
 {
 	int i, oldmax;
 	dlight_t *dl;
@@ -667,25 +670,17 @@ void CL_DecayLights(void)
 	}
 }
 
-// called after entity relinking
-void CL_UpdateLights(void)
+// called before entity relinking
+void CL_RelinkLightFlashes(void)
 {
 	int i, j, k, l;
 	dlight_t *dl;
 	float frac, f;
 
-	r_refdef.numlights = 0;
 	if (r_dynamic.integer)
-	{
-		for (i = 0, dl = cl.dlights;i < cl.num_dlights;i++, dl++)
-		{
+		for (i = 0, dl = cl.dlights;i < cl.num_dlights && r_refdef.numlights < MAX_DLIGHTS;i++, dl++)
 			if (dl->radius)
-			{
-				R_RTLight_Update(dl, false);
-				r_refdef.lights[r_refdef.numlights++] = dl;
-			}
-		}
-	}
+				R_RTLight_Update(&r_refdef.lights[r_refdef.numlights++], false, &dl->matrix, dl->color, dl->style, dl->cubemapname, dl->shadow, dl->corona, dl->coronasizescale, dl->ambientscale, dl->diffusescale, dl->specularscale, dl->flags);
 
 // light animations
 // 'm' is normal light, 'a' is no light, 'z' is double bright
@@ -780,10 +775,9 @@ void CL_UpdateNetworkEntity(entity_t *e)
 	//matrix4x4_t dlightmatrix;
 	int j, k, l;
 	effectnameindex_t trailtype;
-	float origin[3], angles[3], delta[3], lerp, dlightcolor[3], dlightradius, v2[3], d;
+	float origin[3], angles[3], delta[3], lerp, d;
 	entity_t *t;
 	model_t *model;
-	trace_t trace;
 	//entity_persistent_t *p = &e->persistent;
 	//entity_render_t *r = &e->render;
 	// skip inactive entities and world
@@ -963,7 +957,8 @@ void CL_UpdateNetworkEntity(entity_t *e)
 	// make the other useful stuff
 	CL_UpdateRenderEntity(&e->render);
 
-	// handle effects now that we know where this entity is in the world...
+	// handle particle trails and such effects now that we know where this
+	// entity is in the world...
 	if (e->render.model && e->render.model->soundfromcenter)
 	{
 		// bmodels are treated specially since their origin is usually '0 0 0'
@@ -974,10 +969,6 @@ void CL_UpdateNetworkEntity(entity_t *e)
 	else
 		Matrix4x4_OriginFromMatrix(&e->render.matrix, origin);
 	trailtype = EFFECT_NONE;
-	dlightradius = 0;
-	dlightcolor[0] = 0;
-	dlightcolor[1] = 0;
-	dlightcolor[2] = 0;
 	// LordHavoc: if the entity has no effects, don't check each
 	if (e->render.effects)
 	{
@@ -988,55 +979,19 @@ void CL_UpdateNetworkEntity(entity_t *e)
 			else
 				CL_EntityParticles(e);
 		}
-		if (e->render.effects & EF_DIMLIGHT)
-		{
-			dlightradius = max(dlightradius, 200);
-			dlightcolor[0] += 1.50f;
-			dlightcolor[1] += 1.50f;
-			dlightcolor[2] += 1.50f;
-		}
-		if (e->render.effects & EF_BRIGHTLIGHT)
-		{
-			dlightradius = max(dlightradius, 400);
-			dlightcolor[0] += 3.00f;
-			dlightcolor[1] += 3.00f;
-			dlightcolor[2] += 3.00f;
-		}
-		// LordHavoc: more effects
-		if (e->render.effects & EF_RED) // red
-		{
-			dlightradius = max(dlightradius, 200);
-			dlightcolor[0] += 1.50f;
-			dlightcolor[1] += 0.15f;
-			dlightcolor[2] += 0.15f;
-		}
-		if (e->render.effects & EF_BLUE) // blue
-		{
-			dlightradius = max(dlightradius, 200);
-			dlightcolor[0] += 0.15f;
-			dlightcolor[1] += 0.15f;
-			dlightcolor[2] += 1.50f;
-		}
 		if (e->render.effects & EF_FLAME)
-			CL_ParticleEffect(EFFECT_EF_FLAME, bound(0, cl.time - cl.oldtime, 0.1), origin, origin, vec3_origin, vec3_origin, NULL, 0);
+			CL_ParticleTrail(EFFECT_EF_FLAME, bound(0, cl.time - cl.oldtime, 0.1), origin, origin, vec3_origin, vec3_origin, NULL, 0, false, true);
 		if (e->render.effects & EF_STARDUST)
-			CL_ParticleEffect(EFFECT_EF_STARDUST, bound(0, cl.time - cl.oldtime, 0.1), origin, origin, vec3_origin, vec3_origin, NULL, 0);
+			CL_ParticleTrail(EFFECT_EF_STARDUST, bound(0, cl.time - cl.oldtime, 0.1), origin, origin, vec3_origin, vec3_origin, NULL, 0, false, true);
 		if (e->render.effects & (EF_FLAG1QW | EF_FLAG2QW))
 		{
 			// these are only set on player entities
 			CL_AddQWCTFFlagModel(e, (e->render.effects & EF_FLAG2QW) != 0);
 		}
 	}
-	// muzzleflash fades over time, and is offset a bit
+	// muzzleflash fades over time
 	if (e->persistent.muzzleflash > 0)
-	{
-		Matrix4x4_Transform(&e->render.matrix, muzzleflashorigin, v2);
-		trace = CL_TraceBox(origin, vec3_origin, vec3_origin, v2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_SKY, false);
-		tempmatrix = e->render.matrix;
-		Matrix4x4_SetOrigin(&tempmatrix, trace.endpos[0], trace.endpos[1], trace.endpos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, 150, e->persistent.muzzleflash * 4.0f, e->persistent.muzzleflash * 4.0f, e->persistent.muzzleflash * 4.0f, 0, 0, 0, -1, true, 0, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		e->persistent.muzzleflash -= bound(0, cl.time - cl.oldtime, 0.1) * 20;
-	}
 	// LordHavoc: if the model has no flags, don't check each
 	if (e->render.model && e->render.model->flags && (!e->state_current.tagentity && !(e->render.flags & RENDER_VIEWMODEL)))
 	{
@@ -1058,36 +1013,6 @@ void CL_UpdateNetworkEntity(entity_t *e)
 		else if (e->render.model->flags & EF_TRACER3)
 			trailtype = EFFECT_TR_VORESPIKE;
 	}
-	// LordHavoc: customizable glow
-	if (e->state_current.glowsize)
-	{
-		// * 4 for the expansion from 0-255 to 0-1023 range,
-		// / 255 to scale down byte colors
-		dlightradius = max(dlightradius, e->state_current.glowsize * 4);
-		VectorMA(dlightcolor, (1.0f / 255.0f), (unsigned char *)&palette_complete[e->state_current.glowcolor], dlightcolor);
-	}
-	// make the glow dlight
-	if (dlightradius > 0 && (dlightcolor[0] || dlightcolor[1] || dlightcolor[2]) && !(e->render.flags & RENDER_VIEWMODEL))
-	{
-		//dlightmatrix = e->render.matrix;
-		// hack to make glowing player light shine on their gun
-		//if (e->state_current.number == cl.viewentity/* && !chase_active.integer*/)
-		//	Matrix4x4_AdjustOrigin(&dlightmatrix, 0, 0, 30);
-		CL_AllocDlight(&e->render, &e->render.matrix, dlightradius, dlightcolor[0], dlightcolor[1], dlightcolor[2], 0, 0, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-	}
-	// custom rtlight
-	if (e->state_current.lightpflags & PFLAGS_FULLDYNAMIC)
-	{
-		float light[4];
-		VectorScale(e->state_current.light, (1.0f / 256.0f), light);
-		light[3] = e->state_current.light[3];
-		if (light[0] == 0 && light[1] == 0 && light[2] == 0)
-			VectorSet(light, 1, 1, 1);
-		if (light[3] == 0)
-			light[3] = 350;
-		// FIXME: add ambient/diffuse/specular scales as an extension ontop of TENEBRAE_GFX_DLIGHTS?
-		CL_AllocDlight(&e->render, &e->render.matrix, light[3], light[0], light[1], light[2], 0, 0, e->state_current.skin, e->state_current.lightstyle, !(e->state_current.lightpflags & PFLAGS_NOSHADOW), (e->state_current.lightpflags & PFLAGS_CORONA) != 0, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-	}
 	// do trails
 	if (e->render.flags & RENDER_GLOWTRAIL)
 		trailtype = EFFECT_TR_GLOWTRAIL;
@@ -1100,7 +1025,7 @@ void CL_UpdateNetworkEntity(entity_t *e)
 		if (len > 0)
 			len = 1.0f / len;
 		VectorScale(vel, len, vel);
-		CL_ParticleEffect(trailtype, 1, e->persistent.trail_origin, origin, vel, vel, e, e->state_current.glowcolor);
+		CL_ParticleTrail(trailtype, 1, e->persistent.trail_origin, origin, vel, vel, e, e->state_current.glowcolor, false, true);
 	}
 	VectorCopy(origin, e->persistent.trail_origin);
 	// tenebrae's sprites are all additive mode (weird)
@@ -1139,10 +1064,18 @@ void CL_UpdateEntities(void)
 	entity_t *ent;
 	int i;
 
-// start on the entity after the world
+	// process network entities
+	// first link the player
+	CL_UpdateNetworkEntity(cl.entities + cl.viewentity);
+
+	// set up the view
+	V_CalcRefdef();
+
+	// start on the entity after the world
+	// skip the player entity because it was already processed
 	for (i = 1;i < cl.num_entities;i++)
 	{
-		if (cl.entities_active[i])
+		if (cl.entities_active[i] && i != cl.viewentity)
 		{
 			ent = cl.entities + i;
 			if (ent->state_current.active)
@@ -1184,6 +1117,11 @@ void CL_UpdateEntities(void)
 // note this is a recursive function, but it can never get in a runaway loop (because of the delayedlink flags)
 void CL_LinkNetworkEntity(entity_t *e)
 {
+	effectnameindex_t trailtype;
+	vec3_t origin;
+	vec3_t dlightcolor;
+	vec_t dlightradius;
+
 	// skip inactive entities and world
 	if (!e->state_current.active || e == cl.entities)
 		return;
@@ -1201,6 +1139,140 @@ void CL_LinkNetworkEntity(entity_t *e)
 		if (!cl.entities[e->state_current.tagentity].state_current.active)
 			return;
 	}
+
+	// create entity dlights associated with this entity
+	if (e->render.model && e->render.model->soundfromcenter)
+	{
+		// bmodels are treated specially since their origin is usually '0 0 0'
+		vec3_t o;
+		VectorMAM(0.5f, e->render.model->normalmins, 0.5f, e->render.model->normalmaxs, o);
+		Matrix4x4_Transform(&e->render.matrix, o, origin);
+	}
+	else
+		Matrix4x4_OriginFromMatrix(&e->render.matrix, origin);
+	trailtype = EFFECT_NONE;
+	dlightradius = 0;
+	dlightcolor[0] = 0;
+	dlightcolor[1] = 0;
+	dlightcolor[2] = 0;
+	// LordHavoc: if the entity has no effects, don't check each
+	if (e->render.effects)
+	{
+		if (e->render.effects & EF_BRIGHTFIELD)
+		{
+			if (gamemode == GAME_NEXUIZ)
+				trailtype = EFFECT_TR_NEXUIZPLASMA;
+		}
+		if (e->render.effects & EF_DIMLIGHT)
+		{
+			dlightradius = max(dlightradius, 200);
+			dlightcolor[0] += 1.50f;
+			dlightcolor[1] += 1.50f;
+			dlightcolor[2] += 1.50f;
+		}
+		if (e->render.effects & EF_BRIGHTLIGHT)
+		{
+			dlightradius = max(dlightradius, 400);
+			dlightcolor[0] += 3.00f;
+			dlightcolor[1] += 3.00f;
+			dlightcolor[2] += 3.00f;
+		}
+		// LordHavoc: more effects
+		if (e->render.effects & EF_RED) // red
+		{
+			dlightradius = max(dlightradius, 200);
+			dlightcolor[0] += 1.50f;
+			dlightcolor[1] += 0.15f;
+			dlightcolor[2] += 0.15f;
+		}
+		if (e->render.effects & EF_BLUE) // blue
+		{
+			dlightradius = max(dlightradius, 200);
+			dlightcolor[0] += 0.15f;
+			dlightcolor[1] += 0.15f;
+			dlightcolor[2] += 1.50f;
+		}
+		if (e->render.effects & EF_FLAME)
+			CL_ParticleTrail(EFFECT_EF_FLAME, 0, origin, origin, vec3_origin, vec3_origin, NULL, 0, true, false);
+		if (e->render.effects & EF_STARDUST)
+			CL_ParticleTrail(EFFECT_EF_STARDUST, 0, origin, origin, vec3_origin, vec3_origin, NULL, 0, true, false);
+	}
+	// muzzleflash fades over time, and is offset a bit
+	if (e->persistent.muzzleflash > 0 && r_refdef.numlights < MAX_DLIGHTS)
+	{
+		vec3_t v2;
+		vec3_t color;
+		trace_t trace;
+		matrix4x4_t tempmatrix;
+		Matrix4x4_Transform(&e->render.matrix, muzzleflashorigin, v2);
+		trace = CL_TraceBox(origin, vec3_origin, vec3_origin, v2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_SKY, false);
+		Matrix4x4_Normalize(&tempmatrix, &e->render.matrix);
+		Matrix4x4_SetOrigin(&tempmatrix, trace.endpos[0], trace.endpos[1], trace.endpos[2]);
+		Matrix4x4_Scale(&tempmatrix, 150, 1);
+		VectorSet(color, e->persistent.muzzleflash * 4.0f, e->persistent.muzzleflash * 4.0f, e->persistent.muzzleflash * 4.0f);
+		R_RTLight_Update(&r_refdef.lights[r_refdef.numlights++], false, &tempmatrix, color, -1, NULL, true, 0, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+	}
+	// LordHavoc: if the model has no flags, don't check each
+	if (e->render.model && e->render.model->flags && (!e->state_current.tagentity && !(e->render.flags & RENDER_VIEWMODEL)))
+	{
+		if (e->render.model->flags & EF_GIB)
+			trailtype = EFFECT_TR_BLOOD;
+		else if (e->render.model->flags & EF_ZOMGIB)
+			trailtype = EFFECT_TR_SLIGHTBLOOD;
+		else if (e->render.model->flags & EF_TRACER)
+			trailtype = EFFECT_TR_WIZSPIKE;
+		else if (e->render.model->flags & EF_TRACER2)
+			trailtype = EFFECT_TR_KNIGHTSPIKE;
+		else if (e->render.model->flags & EF_ROCKET)
+			trailtype = EFFECT_TR_ROCKET;
+		else if (e->render.model->flags & EF_GRENADE)
+		{
+			// LordHavoc: e->render.alpha == -1 is for Nehahra dem compatibility (cigar smoke)
+			trailtype = e->render.alpha == -1 ? EFFECT_TR_NEHAHRASMOKE : EFFECT_TR_GRENADE;
+		}
+		else if (e->render.model->flags & EF_TRACER3)
+			trailtype = EFFECT_TR_VORESPIKE;
+	}
+	// LordHavoc: customizable glow
+	if (e->state_current.glowsize)
+	{
+		// * 4 for the expansion from 0-255 to 0-1023 range,
+		// / 255 to scale down byte colors
+		dlightradius = max(dlightradius, e->state_current.glowsize * 4);
+		VectorMA(dlightcolor, (1.0f / 255.0f), (unsigned char *)&palette_complete[e->state_current.glowcolor], dlightcolor);
+	}
+	// make the glow dlight
+	if (dlightradius > 0 && (dlightcolor[0] || dlightcolor[1] || dlightcolor[2]) && !(e->render.flags & RENDER_VIEWMODEL) && r_refdef.numlights < MAX_DLIGHTS)
+	{
+		matrix4x4_t dlightmatrix;
+		Matrix4x4_Normalize(&dlightmatrix, &e->render.matrix);
+		// hack to make glowing player light shine on their gun
+		//if (e->state_current.number == cl.viewentity/* && !chase_active.integer*/)
+		//	Matrix4x4_AdjustOrigin(&dlightmatrix, 0, 0, 30);
+		Matrix4x4_Scale(&dlightmatrix, dlightradius, 1);
+		R_RTLight_Update(&r_refdef.lights[r_refdef.numlights++], false, &dlightmatrix, dlightcolor, -1, NULL, true, 1, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+	}
+	// custom rtlight
+	if ((e->state_current.lightpflags & PFLAGS_FULLDYNAMIC) && r_refdef.numlights < MAX_DLIGHTS)
+	{
+		matrix4x4_t dlightmatrix;
+		float light[4];
+		VectorScale(e->state_current.light, (1.0f / 256.0f), light);
+		light[3] = e->state_current.light[3];
+		if (light[0] == 0 && light[1] == 0 && light[2] == 0)
+			VectorSet(light, 1, 1, 1);
+		if (light[3] == 0)
+			light[3] = 350;
+		// FIXME: add ambient/diffuse/specular scales as an extension ontop of TENEBRAE_GFX_DLIGHTS?
+		Matrix4x4_Normalize(&dlightmatrix, &e->render.matrix);
+		Matrix4x4_Scale(&dlightmatrix, light[3], 1);
+		R_RTLight_Update(&r_refdef.lights[r_refdef.numlights++], false, &dlightmatrix, light, e->state_current.lightstyle, e->state_current.skin > 0 ? va("cubemaps/%i", e->state_current.skin) : NULL, !(e->state_current.lightpflags & PFLAGS_NOSHADOW), (e->state_current.lightpflags & PFLAGS_CORONA) != 0, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+	}
+	// do trail light
+	if (e->render.flags & RENDER_GLOWTRAIL)
+		trailtype = EFFECT_TR_GLOWTRAIL;
+	if (trailtype)
+		CL_ParticleTrail(trailtype, 0, origin, origin, vec3_origin, vec3_origin, NULL, e->state_current.glowcolor, true, false);
 
 	// don't show entities with no modelindex (note: this still shows
 	// entities which have a modelindex that resolved to a NULL model)
@@ -1391,11 +1463,13 @@ void CL_RelinkBeams(void)
 
 		if (b->lightning)
 		{
-			if (cl_beams_lightatend.integer)
+			if (cl_beams_lightatend.integer && r_refdef.numlights < MAX_DLIGHTS)
 			{
 				// FIXME: create a matrix from the beam start/end orientation
-				Matrix4x4_CreateTranslate(&tempmatrix, end[0], end[1], end[2]);
-				CL_AllocDlight (NULL, &tempmatrix, 200, 0.3, 0.7, 1, 0, 0, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+				vec3_t dlightcolor;
+				VectorSet(dlightcolor, 0.3, 0.7, 1);
+				Matrix4x4_CreateFromQuakeEntity(&tempmatrix, end[0], end[1], end[2], 0, 0, 0, 200);
+				R_RTLight_Update(&r_refdef.lights[r_refdef.numlights++], false, &tempmatrix, dlightcolor, -1, NULL, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 			}
 			if (cl_beams_polygons.integer)
 				continue;
@@ -1540,40 +1614,34 @@ int CL_ReadFromServer(void)
 	r_refdef.time = cl.time;
 	r_refdef.extraupdate = !r_speeds.integer;
 	r_refdef.numentities = 0;
+	r_refdef.numlights = 0;
 	r_view.matrix = identitymatrix;
+
+	cl.num_brushmodel_entities = 0;
 
 	if (cls.state == ca_connected && cls.signon == SIGNONS)
 	{
 		// prepare for a new frame
 		CL_LerpPlayer(CL_LerpPoint());
-		CL_DecayLights();
+		CL_DecayLightFlashes();
 		CL_ClearTempEntities();
 		V_DriftPitch();
 		V_FadeViewFlashs();
+
+		// now update all the network entities
+		CL_UpdateEntities();
+
+		CL_RelinkLightFlashes();
+		CSQC_RelinkAllEntities(ENTMASK_ENGINE | ENTMASK_ENGINEVIEWMODELS);
+
+		CL_StairSmoothing();
 
 		// move particles
 		CL_MoveParticles();
 		R_MoveExplosions();
 
-		cl.num_brushmodel_entities = 0;
-		// process network entities
-		// first link the player
-		CL_UpdateNetworkEntity(cl.entities + cl.viewentity);
-		// set up the view
-		V_CalcRefdef();
-		if (!csqc_loaded)
-		{
-			// now link the rest of the network entities
-			// (this is instead done in VM_R_RenderScene if csqc is loaded)
-			CL_UpdateEntities();
-		}
-
-		CSQC_RelinkAllEntities(ENTMASK_ENGINE | ENTMASK_ENGINEVIEWMODELS);
-
-		CL_UpdateLights();
-		CL_StairSmoothing();
-
-		// update the r_refdef time again because cl.time may have changed
+		// update the r_refdef time again because cl.time may have changed in
+		// CL_LerpPoint()
 		r_refdef.time = cl.time;
 	}
 

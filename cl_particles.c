@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "cl_collision.h"
 #include "image.h"
+#include "r_shadow.h"
 
 // must match ptype_t values
 particletype_t particletype[pt_total] =
@@ -536,7 +537,7 @@ void CL_SpawnDecalParticleForPoint(const vec3_t org, float maxdist, float size, 
 }
 
 static void CL_Sparks(const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, float sparkcount, float smokecount);
-void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor)
+void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor, qboolean spawndlight, qboolean spawnparticles)
 {
 	vec3_t center;
 	matrix4x4_t tempmatrix;
@@ -602,7 +603,7 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 		// bullet hole
 		if (cl_stainmaps.integer) R_Stain(center, 32, 96, 96, 96, 24, 128, 128, 128, 24);
 		CL_SpawnDecalParticleForPoint(center, 6, 3, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
-		CL_AllocDlight(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		CL_AllocLightFlash(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
 	else if (effectnameindex == EFFECT_TE_SUPERSPIKE)
 	{
@@ -635,7 +636,7 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 		// bullet hole
 		if (cl_stainmaps.integer) R_Stain(center, 32, 96, 96, 96, 24, 128, 128, 128, 24);
 		CL_SpawnDecalParticleForPoint(center, 6, 3, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
-		CL_AllocDlight(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		CL_AllocLightFlash(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
 	else if (effectnameindex == EFFECT_TE_BLOOD)
 	{
@@ -658,7 +659,7 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 		// plasma scorch mark
 		if (cl_stainmaps.integer) R_Stain(center, 48, 96, 96, 96, 32, 128, 128, 128, 32);
 		CL_SpawnDecalParticleForPoint(center, 6, 6, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
-		CL_AllocDlight(NULL, &tempmatrix, 200, 1, 1, 1, 1000, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		CL_AllocLightFlash(NULL, &tempmatrix, 200, 1, 1, 1, 1000, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
 	else if (effectnameindex == EFFECT_TE_GUNSHOT)
 	{
@@ -685,17 +686,17 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 		// bullet hole
 		if (cl_stainmaps.integer) R_Stain(center, 32, 96, 96, 96, 24, 128, 128, 128, 24);
 		CL_SpawnDecalParticleForPoint(center, 6, 3, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
-		CL_AllocDlight(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		CL_AllocLightFlash(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
 	else if (effectnameindex == EFFECT_TE_EXPLOSION)
 	{
 		CL_ParticleExplosion(center);
-		CL_AllocDlight(NULL, &tempmatrix, 350, 4.0f, 2.0f, 0.50f, 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		CL_AllocLightFlash(NULL, &tempmatrix, 350, 4.0f, 2.0f, 0.50f, 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
 	else if (effectnameindex == EFFECT_TE_EXPLOSIONQUAD)
 	{
 		CL_ParticleExplosion(center);
-		CL_AllocDlight(NULL, &tempmatrix, 350, 2.5f, 2.0f, 4.0f, 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		CL_AllocLightFlash(NULL, &tempmatrix, 350, 2.5f, 2.0f, 4.0f, 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
 	else if (effectnameindex == EFFECT_TE_TAREXPLOSION)
 	{
@@ -712,10 +713,10 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 		}
 		else
 			CL_ParticleExplosion(center);
-		CL_AllocDlight(NULL, &tempmatrix, 600, 1.6f, 0.8f, 2.0f, 1200, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		CL_AllocLightFlash(NULL, &tempmatrix, 600, 1.6f, 0.8f, 2.0f, 1200, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
 	else if (effectnameindex == EFFECT_TE_SMALLFLASH)
-		CL_AllocDlight(NULL, &tempmatrix, 200, 2, 2, 2, 1000, 0.2, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		CL_AllocLightFlash(NULL, &tempmatrix, 200, 2, 2, 2, 1000, 0.2, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	else if (effectnameindex == EFFECT_TE_FLAMEJET)
 	{
 		count *= cl_particles_quality.value;
@@ -763,7 +764,7 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 			}
 		}
 		particle(particletype + pt_static, particlepalette[14], particlepalette[14], tex_particle, 30, 0, 256, 512, 0, 0, center[0], center[1], center[2], 0, 0, 0, 0, 0, 0, 0);
-		CL_AllocDlight(NULL, &tempmatrix, 200, 2.0f, 2.0f, 2.0f, 400, 99.0f, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		CL_AllocLightFlash(NULL, &tempmatrix, 200, 2.0f, 2.0f, 2.0f, 400, 99.0f, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
 	else if (effectnameindex == EFFECT_TE_TEI_G3)
 		particle(particletype + pt_beam, 0xFFFFFF, 0xFFFFFF, tex_beam, 8, 0, 256, 256, 0, 0, originmins[0], originmins[1], originmins[2], originmaxs[0], originmaxs[1], originmaxs[2], 0, 0, 0, 0);
@@ -779,7 +780,7 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 	else if (effectnameindex == EFFECT_TE_TEI_BIGEXPLOSION)
 	{
 		CL_ParticleExplosion(center);
-		CL_AllocDlight(NULL, &tempmatrix, 500, 2.5f, 2.0f, 1.0f, 500, 9999, 0, -1, true, 1, 0.25, 0.5, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		CL_AllocLightFlash(NULL, &tempmatrix, 500, 2.5f, 2.0f, 1.0f, 500, 9999, 0, -1, true, 1, 0.25, 0.5, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
 	else if (effectnameindex == EFFECT_TE_TEI_PLASMAHIT)
 	{
@@ -793,21 +794,21 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 		if (cl_particles_sparks.integer)
 			for (f = 0;f < count;f += 1.0f / cl_particles_quality.value)
 				particle(particletype + pt_spark, 0x2030FF, 0x80C0FF, tex_particle, 2.0f, 0, lhrandom(64, 255), 512, 0, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]), 0, 0, 0, 465);
-		CL_AllocDlight(NULL, &tempmatrix, 500, 0.6f, 1.2f, 2.0f, 2000, 9999, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		CL_AllocLightFlash(NULL, &tempmatrix, 500, 0.6f, 1.2f, 2.0f, 2000, 9999, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
 	else if (effectnameindex == EFFECT_EF_FLAME)
 	{
 		count *= 300 * cl_particles_quality.value;
 		while (count-- > 0)
 			particle(particletype + pt_smoke, 0x6f0f00, 0xe3974f, tex_particle, 4, 0, lhrandom(64, 128), 384, -1, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]), 1, 4, 16, 128);
-		CL_AllocDlight(NULL, &tempmatrix, 200, 2.0f, 1.5f, 0.5f, 0, 0, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		CL_AllocLightFlash(NULL, &tempmatrix, 200, 2.0f, 1.5f, 0.5f, 0, 0, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
 	else if (effectnameindex == EFFECT_EF_STARDUST)
 	{
 		count *= 200 * cl_particles_quality.value;
 		while (count-- > 0)
 			particle(particletype + pt_static, 0x903010, 0xFFD030, tex_particle, 4, 0, lhrandom(64, 128), 128, 1, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]), 0.2, 0.8, 16, 128);
-		CL_AllocDlight(NULL, &tempmatrix, 200, 1.0f, 0.7f, 0.3f, 0, 0, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		CL_AllocLightFlash(NULL, &tempmatrix, 200, 1.0f, 0.7f, 0.3f, 0, 0, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
 	else if (!strncmp(particleeffectname[effectnameindex], "TR_", 3))
 	{
@@ -815,17 +816,33 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 		float len, dec, qd;
 		int smoke, blood, bubbles, r, color;
 
-		if (effectnameindex == EFFECT_TR_ROCKET)
-			CL_AllocDlight(&ent->render, &ent->render.matrix, 200, 3.0f, 1.5f, 0.5f, 0, 0, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-		else if (effectnameindex == EFFECT_TR_VORESPIKE)
+		if (spawndlight && r_refdef.numlights < MAX_DLIGHTS)
 		{
-			if (gamemode == GAME_PRYDON && !cl_particles_quake.integer)
-				CL_AllocDlight(&ent->render, &ent->render.matrix, 100, 0.3f, 0.6f, 1.2f, 0, 0, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-			else
-				CL_AllocDlight(&ent->render, &ent->render.matrix, 200, 1.2f, 0.5f, 1.0f, 0, 0, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			vec4_t light;
+			Vector4Set(light, 0, 0, 0, 0);
+
+			if (effectnameindex == EFFECT_TR_ROCKET)
+				Vector4Set(light, 3.0f, 1.5f, 0.5f, 200);
+			else if (effectnameindex == EFFECT_TR_VORESPIKE)
+			{
+				if (gamemode == GAME_PRYDON && !cl_particles_quake.integer)
+					Vector4Set(light, 0.3f, 0.6f, 1.2f, 100);
+				else
+					Vector4Set(light, 1.2f, 0.5f, 1.0f, 200);
+			}
+			else if (effectnameindex == EFFECT_TR_NEXUIZPLASMA)
+				Vector4Set(light, 0.75f, 1.5f, 3.0f, 200);
+
+			if (light[3])
+			{
+				matrix4x4_t tempmatrix;
+				Matrix4x4_CreateFromQuakeEntity(&tempmatrix, originmaxs[0], originmaxs[1], originmaxs[2], 0, 0, 0, light[3]);
+				R_RTLight_Update(&r_refdef.lights[r_refdef.numlights++], false, &tempmatrix, light, -1, NULL, true, 1, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			}
 		}
-		else if (effectnameindex == EFFECT_TR_NEXUIZPLASMA)
-			CL_AllocDlight(&ent->render, &ent->render.matrix, 200, 0.75f, 1.5f, 3.0f, 0, 0, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+
+		if (!spawnparticles)
+			return;
 
 		if (originmaxs[0] == originmins[0] && originmaxs[1] == originmins[1] && originmaxs[2] == originmins[2])
 			return;
@@ -997,7 +1014,11 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 		Con_Printf("CL_ParticleEffect_Fallback: no fallback found for effect %s\n", particleeffectname[effectnameindex]);
 }
 
-void CL_ParticleEffect(int effectnameindex, float pcount, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor)
+// this is also called on point effects with spawndlight = true and
+// spawnparticles = true
+// it is called CL_ParticleTrail because most code does not want to supply
+// these parameters, only trail handling does
+void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor, qboolean spawndlight, qboolean spawnparticles)
 {
 	vec3_t center;
 	qboolean found = false;
@@ -1039,15 +1060,30 @@ void CL_ParticleEffect(int effectnameindex, float pcount, const vec3_t originmin
 					continue;
 
 				// spawn a dlight if requested
-				if (info->lightradiusstart > 0)
+				if (info->lightradiusstart > 0 && spawndlight)
 				{
 					matrix4x4_t tempmatrix;
 					if (info->trailspacing > 0)
 						Matrix4x4_CreateTranslate(&tempmatrix, originmaxs[0], originmaxs[1], originmaxs[2]);
 					else
 						Matrix4x4_CreateTranslate(&tempmatrix, center[0], center[1], center[2]);
-					CL_AllocDlight(NULL, &tempmatrix, info->lightradiusstart, info->lightcolor[0], info->lightcolor[1], info->lightcolor[2], info->lightradiusfade, info->lighttime, info->lightcubemapnum, -1, info->lightshadow, 1, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+					if (info->lighttime > 0 && info->lightradiusfade > 0)
+					{
+						// light flash (explosion, etc)
+						// called when effect starts
+						CL_AllocLightFlash(NULL, &tempmatrix, info->lightradiusstart, info->lightcolor[0], info->lightcolor[1], info->lightcolor[2], info->lightradiusfade, info->lighttime, info->lightcubemapnum, -1, info->lightshadow, 1, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+					}
+					else
+					{
+						// glowing entity
+						// called by CL_LinkNetworkEntity
+						Matrix4x4_Scale(&tempmatrix, info->lightradiusstart, 1);
+						R_RTLight_Update(&r_refdef.lights[r_refdef.numlights++], false, &tempmatrix, info->lightcolor, -1, info->lightcubemapnum > 0 ? va("cubemaps/%i", info->lightcubemapnum) : NULL, info->lightshadow, 1, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+					}
 				}
+
+				if (!spawnparticles)
+					continue;
 
 				// spawn particles
 				tex = info->tex[0];
@@ -1106,7 +1142,12 @@ void CL_ParticleEffect(int effectnameindex, float pcount, const vec3_t originmin
 		}
 	}
 	if (!found)
-		CL_ParticleEffect_Fallback(effectnameindex, pcount, originmins, originmaxs, velocitymins, velocitymaxs, ent, palettecolor);
+		CL_ParticleEffect_Fallback(effectnameindex, pcount, originmins, originmaxs, velocitymins, velocitymaxs, ent, palettecolor, spawndlight, spawnparticles);
+}
+
+void CL_ParticleEffect(int effectnameindex, float pcount, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor)
+{
+	CL_ParticleTrail(effectnameindex, pcount, originmins, originmaxs, velocitymins, velocitymaxs, ent, palettecolor, true, true);
 }
 
 /*
