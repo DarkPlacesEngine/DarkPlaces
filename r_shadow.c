@@ -2135,16 +2135,33 @@ void R_Shadow_RenderSurfacesLighting(int numsurfaces, msurface_t **surfacelist)
 	}
 }
 
-void R_RTLight_Update(dlight_t *light, int isstatic)
+void R_RTLight_Update(rtlight_t *rtlight, int isstatic, matrix4x4_t *matrix, vec3_t color, int style, const char *cubemapname, qboolean shadow, vec_t corona, vec_t coronasizescale, vec_t ambientscale, vec_t diffusescale, vec_t specularscale, int flags)
 {
-	double scale;
-	rtlight_t *rtlight = &light->rtlight;
+	// if this light has been compiled before, free the associated data
 	R_RTLight_Uncompile(rtlight);
+
+	// clear it completely to avoid any lingering data
 	memset(rtlight, 0, sizeof(*rtlight));
 
-	VectorCopy(light->origin, rtlight->shadoworigin);
-	VectorCopy(light->color, rtlight->color);
-	rtlight->radius = light->radius;
+	// copy the properties
+	Matrix4x4_Invert_Simple(&rtlight->matrix_worldtolight, matrix);
+	Matrix4x4_OriginFromMatrix(matrix, rtlight->shadoworigin);
+	rtlight->radius = Matrix4x4_ScaleFromMatrix(matrix);
+	VectorCopy(color, rtlight->color);
+	rtlight->cubemapname[0] = 0;
+	if (cubemapname && cubemapname[0])
+		strlcpy(rtlight->cubemapname, cubemapname, sizeof(rtlight->cubemapname));
+	rtlight->shadow = shadow;
+	rtlight->corona = corona;
+	rtlight->style = style;
+	rtlight->isstatic = isstatic;
+	rtlight->coronasizescale = coronasizescale;
+	rtlight->ambientscale = ambientscale;
+	rtlight->diffusescale = diffusescale;
+	rtlight->specularscale = specularscale;
+	rtlight->flags = flags;
+
+	// compute derived data
 	//rtlight->cullradius = rtlight->radius;
 	//rtlight->cullradius2 = rtlight->radius * rtlight->radius;
 	rtlight->cullmins[0] = rtlight->shadoworigin[0] - rtlight->radius;
@@ -2153,26 +2170,6 @@ void R_RTLight_Update(dlight_t *light, int isstatic)
 	rtlight->cullmaxs[0] = rtlight->shadoworigin[0] + rtlight->radius;
 	rtlight->cullmaxs[1] = rtlight->shadoworigin[1] + rtlight->radius;
 	rtlight->cullmaxs[2] = rtlight->shadoworigin[2] + rtlight->radius;
-	rtlight->cubemapname[0] = 0;
-	if (light->cubemapname[0])
-		strlcpy(rtlight->cubemapname, light->cubemapname, sizeof(rtlight->cubemapname));
-	else if (light->cubemapnum > 0)
-		sprintf(rtlight->cubemapname, "cubemaps/%i", light->cubemapnum);
-	rtlight->shadow = light->shadow;
-	rtlight->corona = light->corona;
-	rtlight->style = light->style;
-	rtlight->isstatic = isstatic;
-	rtlight->coronasizescale = light->coronasizescale;
-	rtlight->ambientscale = light->ambientscale;
-	rtlight->diffusescale = light->diffusescale;
-	rtlight->specularscale = light->specularscale;
-	rtlight->flags = light->flags;
-	Matrix4x4_Invert_Simple(&rtlight->matrix_worldtolight, &light->matrix);
-	// this has to scale both rotate and translate because this is an already
-	// inverted matrix (it transforms from world to light space, not the other
-	// way around)
-	scale = 1.0 / rtlight->radius;
-	Matrix4x4_Scale(&rtlight->matrix_worldtolight, scale, scale);
 }
 
 // compiles rtlight geometry
@@ -2552,7 +2549,7 @@ void R_ShadowVolumeLighting(qboolean visible)
 				R_DrawRTLight(&light->rtlight, visible);
 	if (r_refdef.rtdlight)
 		for (lnum = 0;lnum < r_refdef.numlights;lnum++)
-			R_DrawRTLight(&r_refdef.lights[lnum]->rtlight, visible);
+			R_DrawRTLight(&r_refdef.lights[lnum], visible);
 
 	R_Shadow_RenderMode_End();
 }
@@ -2776,6 +2773,17 @@ dlight_t *R_Shadow_NewWorldLight(void)
 
 void R_Shadow_UpdateWorldLight(dlight_t *light, vec3_t origin, vec3_t angles, vec3_t color, vec_t radius, vec_t corona, int style, int shadowenable, const char *cubemapname, vec_t coronasizescale, vec_t ambientscale, vec_t diffusescale, vec_t specularscale, int flags)
 {
+	matrix4x4_t matrix;
+	// validate parameters
+	if (style < 0 || style >= MAX_LIGHTSTYLES)
+	{
+		Con_Printf("R_Shadow_NewWorldLight: invalid light style number %i, must be >= 0 and < %i\n", light->style, MAX_LIGHTSTYLES);
+		style = 0;
+	}
+	if (!cubemapname)
+		cubemapname = "";
+
+	// copy to light properties
 	VectorCopy(origin, light->origin);
 	light->angles[0] = angles[0] - 360 * floor(angles[0] / 360);
 	light->angles[1] = angles[1] - 360 * floor(angles[1] / 360);
@@ -2785,24 +2793,18 @@ void R_Shadow_UpdateWorldLight(dlight_t *light, vec3_t origin, vec3_t angles, ve
 	light->color[2] = max(color[2], 0);
 	light->radius = max(radius, 0);
 	light->style = style;
-	if (light->style < 0 || light->style >= MAX_LIGHTSTYLES)
-	{
-		Con_Printf("R_Shadow_NewWorldLight: invalid light style number %i, must be >= 0 and < %i\n", light->style, MAX_LIGHTSTYLES);
-		light->style = 0;
-	}
 	light->shadow = shadowenable;
 	light->corona = corona;
-	if (!cubemapname)
-		cubemapname = "";
 	strlcpy(light->cubemapname, cubemapname, sizeof(light->cubemapname));
 	light->coronasizescale = coronasizescale;
 	light->ambientscale = ambientscale;
 	light->diffusescale = diffusescale;
 	light->specularscale = specularscale;
 	light->flags = flags;
-	Matrix4x4_CreateFromQuakeEntity(&light->matrix, light->origin[0], light->origin[1], light->origin[2], light->angles[0], light->angles[1], light->angles[2], 1);
 
-	R_RTLight_Update(light, true);
+	// update renderable light data
+	Matrix4x4_CreateFromQuakeEntity(&matrix, light->origin[0], light->origin[1], light->origin[2], light->angles[0], light->angles[1], light->angles[2], light->radius);
+	R_RTLight_Update(&light->rtlight, true, &matrix, light->color, light->style, light->cubemapname[0] ? light->cubemapname : NULL, light->shadow, light->corona, light->coronasizescale, light->ambientscale, light->diffusescale, light->specularscale, light->flags);
 }
 
 void R_Shadow_FreeWorldLight(dlight_t *light)

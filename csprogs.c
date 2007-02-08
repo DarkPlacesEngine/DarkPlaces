@@ -321,7 +321,10 @@ qboolean CL_VM_UpdateView (void)
 		//VectorCopy(cl.viewangles, oldangles);
 		*prog->time = cl.time;
 		CSQC_SetGlobals();
+		// clear renderable entity and light lists to prevent crashes if the
+		// CSQC_UpdateView function does not call R_ClearScene as it should
 		r_refdef.numentities = 0;
+		r_refdef.numlights = 0;
 		PRVM_ExecuteProgram (prog->globals.client->CSQC_UpdateView, CL_F_UPDATEVIEW);
 		//VectorCopy(oldangles, cl.viewangles);
 	CSQC_END

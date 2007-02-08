@@ -150,11 +150,7 @@ typedef struct dlight_s
 	// color of light
 	// (worldlight: saved to .rtlights file)
 	vec3_t color;
-	// cubemap number to use on this light
-	// (dlight only)
-	int cubemapnum;
 	// cubemap name to use on this light
-	// (worldlight only)
 	// (worldlight: saved to .rtlights file)
 	char cubemapname[64];
 	// make light flash while selected
@@ -201,7 +197,7 @@ typedef struct dlight_s
 	// (worldlight only)
 	struct dlight_s *next;
 	// embedded rtlight struct for renderer
-	// (renderer only)
+	// (worldlight only)
 	rtlight_t rtlight;
 }
 dlight_t;
@@ -997,7 +993,7 @@ extern cvar_t cl_prydoncursor;
 
 extern client_state_t cl;
 
-extern void CL_AllocDlight (entity_render_t *ent, matrix4x4_t *matrix, float radius, float red, float green, float blue, float decay, float lifetime, int cubemapnum, int style, int shadowenable, vec_t corona, vec_t coronasizescale, vec_t ambientscale, vec_t diffusescale, vec_t specularscale, int flags);
+extern void CL_AllocLightFlash (entity_render_t *ent, matrix4x4_t *matrix, float radius, float red, float green, float blue, float decay, float lifetime, int cubemapnum, int style, int shadowenable, vec_t corona, vec_t coronasizescale, vec_t ambientscale, vec_t diffusescale, vec_t specularscale, int flags);
 
 //=============================================================================
 
@@ -1170,6 +1166,7 @@ effectnameindex_t;
 int CL_ParticleEffectIndexForName(const char *name);
 const char *CL_ParticleEffectNameForIndex(int i);
 void CL_ParticleEffect(int effectindex, float pcount, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor);
+void CL_ParticleTrail(int effectindex, float pcount, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor, qboolean spawndlight, qboolean spawnparticles);
 void CL_ParseParticleEffect (void);
 void CL_ParticleCube (const vec3_t mins, const vec3_t maxs, const vec3_t dir, int count, int colorbase, vec_t gravity, vec_t randomvel);
 void CL_ParticleRain (const vec3_t mins, const vec3_t maxs, const vec3_t dir, int count, int colorbase, int type);
@@ -1254,7 +1251,7 @@ typedef struct r_refdef_s
 	int maxentities;
 
 	// renderable dynamic lights
-	dlight_t *lights[MAX_DLIGHTS];
+	rtlight_t lights[MAX_DLIGHTS];
 	int numlights;
 
 	// 8.8bit fixed point intensities for light styles

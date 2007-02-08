@@ -76,7 +76,7 @@ void R_Shadow_UpdateWorldLightSelection(void);
 
 extern rtlight_t *r_shadow_compilingrtlight;
 
-void R_RTLight_Update(dlight_t *light, int isstatic);
+void R_RTLight_Update(rtlight_t *rtlight, int isstatic, matrix4x4_t *matrix, vec3_t color, int style, const char *cubemapname, qboolean shadow, vec_t corona, vec_t coronasizescale, vec_t ambientscale, vec_t diffusescale, vec_t specularscale, int flags);
 void R_RTLight_Compile(rtlight_t *rtlight);
 void R_RTLight_Uncompile(rtlight_t *rtlight);
 

@@ -1,12 +1,12 @@
 #include "prvm_cmds.h"
 #include "csprogs.h"
 #include "cl_collision.h"
+#include "r_shadow.h"
 
 //============================================================================
 // Client
 //[515]: unsolved PROBLEMS
 //- finish player physics code (cs_runplayerphysics)
-//- fix R_AddDynamicLight
 //- EntWasFreed ?
 //- RF_DEPTHHACK is not like it should be
 //- add builtin that sets cl.viewangles instead of reading "input_angles" global
@@ -772,11 +772,14 @@ static void CSQC_R_RecalcView (void)
 	Matrix4x4_CreateFromQuakeEntity(&viewmodelmatrix, csqc_origin[0], csqc_origin[1], csqc_origin[2], csqc_angles[0], csqc_angles[1], csqc_angles[2], cl_viewmodel_scale.value);
 }
 
+void CL_RelinkLightFlashes(void);
 //#300 void() clearscene (EXT_CSQC)
 void VM_R_ClearScene (void)
 {
 	VM_SAFEPARMCOUNT(0, VM_R_ClearScene);
+	// clear renderable entity and light lists
 	r_refdef.numentities = 0;
+	r_refdef.numlights = 0;
 }
 
 //#301 void(float mask) addentities (EXT_CSQC)
@@ -789,6 +792,7 @@ void VM_R_AddEntities (void)
 	VM_SAFEPARMCOUNT(1, VM_R_AddEntities);
 	drawmask = (int)PRVM_G_FLOAT(OFS_PARM0);
 	CSQC_RelinkAllEntities(drawmask);
+	CL_RelinkLightFlashes();
 
 	*prog->time = cl.time;
 	for(i=1;i<prog->num_edicts;i++)
@@ -915,8 +919,6 @@ void VM_R_SetView (void)
 void VM_R_RenderScene (void) //#134
 {
 	VM_SAFEPARMCOUNT(0, VM_R_RenderScene);
-	// update all renderable network entities
-	CL_UpdateEntities();
 	R_RenderView();
 }
 
@@ -924,14 +926,17 @@ void VM_R_RenderScene (void) //#134
 void VM_R_AddDynamicLight (void)
 {
 	float		*pos, *col;
-	matrix4x4_t	tempmatrix;
+	matrix4x4_t	matrix;
 	VM_SAFEPARMCOUNT(3, VM_R_AddDynamicLight);
+
+	// if we've run out of dlights, just return
+	if (r_refdef.numlights >= MAX_DLIGHTS)
+		return;
 
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	col = PRVM_G_VECTOR(OFS_PARM2);
-	Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-	CL_AllocDlight(NULL, &tempmatrix, PRVM_G_FLOAT(OFS_PARM1), col[0], col[1], col[2], 500, 0, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-	//CL_AllocDlight(NULL, &tempmatrix, PRVM_G_FLOAT(OFS_PARM1), col[0], col[1], col[2], 500, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+	Matrix4x4_CreateFromQuakeEntity(&matrix, pos[0], pos[1], pos[2], 0, 0, 0, PRVM_G_FLOAT(OFS_PARM1));
+	R_RTLight_Update(&r_refdef.lights[r_refdef.numlights++], false, &matrix, col, -1, NULL, true, 1, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 }
 
 //============================================================================
@@ -1358,7 +1363,7 @@ void VM_CL_te_explosionrgb (void)
 	CL_FindNonSolidLocation(pos, pos2, 10);
 	CL_ParticleExplosion(pos2);
 	Matrix4x4_CreateTranslate(&tempmatrix, pos2[0], pos2[1], pos2[2]);
-	CL_AllocDlight(NULL, &tempmatrix, 350, PRVM_G_VECTOR(OFS_PARM1)[0], PRVM_G_VECTOR(OFS_PARM1)[1], PRVM_G_VECTOR(OFS_PARM1)[2], 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+	CL_AllocLightFlash(NULL, &tempmatrix, 350, PRVM_G_VECTOR(OFS_PARM1)[0], PRVM_G_VECTOR(OFS_PARM1)[1], PRVM_G_VECTOR(OFS_PARM1)[2], 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 }
 
 // #408 void(vector mincorner, vector maxcorner, vector vel, float howmany, float color, float gravityflag, float randomveljitter) te_particlecube (DP_TE_PARTICLECUBE)
@@ -1484,7 +1489,7 @@ void VM_CL_te_customflash (void)
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	CL_FindNonSolidLocation(pos, pos2, 4);
 	Matrix4x4_CreateTranslate(&tempmatrix, pos2[0], pos2[1], pos2[2]);
-	CL_AllocDlight(NULL, &tempmatrix, PRVM_G_FLOAT(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM3)[0], PRVM_G_VECTOR(OFS_PARM3)[1], PRVM_G_VECTOR(OFS_PARM3)[2], PRVM_G_FLOAT(OFS_PARM1) / PRVM_G_FLOAT(OFS_PARM2), PRVM_G_FLOAT(OFS_PARM2), 0, -1, true, 1, 0.25, 1, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+	CL_AllocLightFlash(NULL, &tempmatrix, PRVM_G_FLOAT(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM3)[0], PRVM_G_VECTOR(OFS_PARM3)[1], PRVM_G_VECTOR(OFS_PARM3)[2], PRVM_G_FLOAT(OFS_PARM1) / PRVM_G_FLOAT(OFS_PARM2), PRVM_G_FLOAT(OFS_PARM2), 0, -1, true, 1, 0.25, 1, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 }
 
 // #418 void(vector org) te_gunshot (DP_TE_STANDARDEFFECTBUILTINS)
@@ -1627,7 +1632,7 @@ void VM_CL_te_explosion2 (void)
 	color[1] = tempcolor[1] * (2.0f / 255.0f);
 	color[2] = tempcolor[2] * (2.0f / 255.0f);
 	Matrix4x4_CreateTranslate(&tempmatrix, pos2[0], pos2[1], pos2[2]);
-	CL_AllocDlight(NULL, &tempmatrix, 350, color[0], color[1], color[2], 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+	CL_AllocLightFlash(NULL, &tempmatrix, 350, color[0], color[1], color[2], 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	S_StartSound(-1, 0, cl.sfx_r_exp3, pos2, 1, 1);
 }
 
