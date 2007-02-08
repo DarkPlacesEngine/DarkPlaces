@@ -1648,12 +1648,11 @@ int EntityState5_Priority(entityframe5_database_t *d, int stateindex)
 	int lowprecision, limit, priority;
 	double distance;
 	int changedbits;
-	int age;
 	entity_state_t *view, *s;
 	changedbits = d->deltabits[stateindex];
-	if (!changedbits)
-		return 0;
-	if (!d->states[stateindex].active/* && changedbits & E5_FULLUPDATE*/)
+	priority = d->priorities[stateindex];
+	// remove dead entities very quickly because they are just 2 bytes
+	if (!d->states[stateindex].active)
 		return E5_PROTOCOL_PRIORITYLEVELS - 1;
 	// check whole attachment chain to judge relevance to player
 	view = d->states + d->viewentnum;
@@ -1663,35 +1662,31 @@ int EntityState5_Priority(entityframe5_database_t *d, int stateindex)
 		if (d->maxedicts < stateindex)
 			EntityFrame5_ExpandEdicts(d, (stateindex+256)&~255);
 		s = d->states + stateindex;
+		// if it is the player, update urgently
 		if (s == view)
 			return E5_PROTOCOL_PRIORITYLEVELS - 1;
+		// if it is one of the player's viewmodels, update urgently
 		if (s->flags & RENDER_VIEWMODEL)
 			return E5_PROTOCOL_PRIORITYLEVELS - 1;
 		if (s->flags & RENDER_LOWPRECISION)
 			lowprecision = true;
 		if (!s->tagentity)
-		{
-			if (VectorCompare(s->origin, view->origin))
-				return E5_PROTOCOL_PRIORITYLEVELS - 1;
 			break;
-		}
 		stateindex = s->tagentity;
 	}
 	if (limit >= 256)
-	{
-		Con_Printf("Protocol: Runaway loop recursing tagentity links on entity %i\n", stateindex);
-		return 0;
-	}
-	// it's not a viewmodel for this client
+		Con_DPrintf("Protocol: Runaway loop recursing tagentity links on entity %i\n", stateindex);
+	// now that we have the parent entity we can make some decisions based on
+	// distance and other factors
+	// TODO: add velocity check for things moving toward you (+1 priority)
 	distance = VectorDistance(view->origin, s->origin);
-	age = d->latestframenum - d->updateframenum[stateindex];
-	priority = (E5_PROTOCOL_PRIORITYLEVELS / 2) + age - (int)(distance * (E5_PROTOCOL_PRIORITYLEVELS / 16384.0f));
-	if (lowprecision)
-		priority -= (E5_PROTOCOL_PRIORITYLEVELS / 4);
-	//if (changedbits & E5_FULLUPDATE)
-	//	priority += 4;
-	//if (changedbits & (E5_ATTACHMENT | E5_MODEL | E5_FLAGS | E5_COLORMAP))
-	//	priority += 4;
+	// if it is not far from the player, update more often
+	if (distance < 1024.0f && !lowprecision)
+		priority++;
+	if (changedbits & E5_FULLUPDATE)
+		priority++;
+	if (changedbits & (E5_ATTACHMENT | E5_MODEL | E5_FLAGS | E5_COLORMAP))
+		priority++;
 	return (int) bound(1, priority, E5_PROTOCOL_PRIORITYLEVELS - 1);
 }
 
@@ -2136,7 +2131,7 @@ void EntityFrame5_LostFrame(entityframe5_database_t *d, int framenum)
 				if (bits)
 				{
 					d->deltabits[s->number] |= bits;
-					d->priorities[s->number] = EntityState5_Priority(d, s->number);
+					d->priorities[s->number] = 1;
 				}
 			}
 			// mark lost stats
@@ -2219,7 +2214,7 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 			{
 				CLEARPVSBIT(d->visiblebits, num);
 				d->deltabits[num] = E5_FULLUPDATE;
-				d->priorities[num] = EntityState5_Priority(d, num);
+				d->priorities[num] = E5_PROTOCOL_PRIORITYLEVELS - 1;
 				d->states[num] = defaultstate;
 				d->states[num].number = num;
 			}
@@ -2233,7 +2228,7 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 		}
 		SETPVSBIT(d->visiblebits, num);
 		d->deltabits[num] |= EntityState5_DeltaBits(d->states + num, n);
-		d->priorities[num] = EntityState5_Priority(d, num);
+		d->priorities[num] = 1;
 		d->states[num] = *n;
 		d->states[num].number = num;
 		// advance to next entity so the next iteration doesn't immediately remove it
@@ -2246,7 +2241,7 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 		{
 			CLEARPVSBIT(d->visiblebits, num);
 			d->deltabits[num] = E5_FULLUPDATE;
-			d->priorities[num] = EntityState5_Priority(d, num);
+			d->priorities[num] = E5_PROTOCOL_PRIORITYLEVELS - 1;
 			d->states[num] = defaultstate;
 			d->states[num].number = num;
 		}
@@ -2264,6 +2259,11 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 	{
 		if (d->priorities[num])
 		{
+			if (d->priorities[num] < (E5_PROTOCOL_PRIORITYLEVELS - 1))
+			{
+				d->priorities[num]++;
+				d->priorities[num] = EntityState5_Priority(d, num);
+			}
 			l = num;
 			priority = d->priorities[num];
 			if (entityframe5_prioritychaincounts[priority] < ENTITYFRAME5_MAXSTATES)
