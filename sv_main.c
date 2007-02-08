@@ -1266,7 +1266,7 @@ void SV_SendClientDatagram (client_t *client)
 		// (but no one should be running that on a server!)
 		rate = bound(NET_MINRATE, client->rate, maxrate);
 		rate = (int)(rate * sys_ticrate.value);
-		maxsize = bound(100, rate, 1400);
+		maxsize = bound(50, rate, 1400);
 		maxsize2 = 1400;
 	}
 
