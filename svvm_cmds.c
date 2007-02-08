@@ -67,6 +67,7 @@ char *vm_sv_extensions =
 "DP_QC_MULTIPLETEMPSTRINGS "
 "DP_QC_RANDOMVEC "
 "DP_QC_SINCOSSQRTPOW "
+"DP_QC_STRFTIME "
 "DP_QC_STRINGBUFFERS "
 "DP_QC_STRINGCOLORFUNCTIONS "
 "DP_QC_UNLIMITEDTEMPSTRINGS "
@@ -2883,6 +2884,7 @@ VM_atan2,					// #474 float(float c, float s) VM_atan2 (DP_QC_ASINACOSATANATAN2T
 VM_tan,						// #475 float(float a) VM_tan (DP_QC_ASINACOSATANATAN2TAN)
 VM_strlennocol,				// #476 float(string s) : DRESK - String Length (not counting color codes) (DP_QC_STRINGCOLORFUNCTIONS)
 VM_strdecolorize,			// #477 string(string s) : DRESK - Decolorized String (DP_SV_STRINGCOLORFUNCTIONS)
+VM_strftime,				// #478 string(float uselocaltime, string format, ...) (DP_QC_STRFTIME)
 NULL,						// #478
 NULL,						// #479
 e10, e10					// #480-499 (LordHavoc)

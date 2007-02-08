@@ -235,6 +235,7 @@ void VM_etos (void);
 void VM_stof(void);
 void VM_itof(void);
 void VM_ftoe(void);
+void VM_strftime(void);
 void VM_spawn (void);
 void VM_remove (void);
 void VM_find (void);

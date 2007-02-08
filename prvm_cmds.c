@@ -5,6 +5,7 @@
 // also applies here
 
 #include "prvm_cmds.h"
+#include <time.h>
 
 // LordHavoc: changed this to NOT use a return statement, so that it can be used in functions that must return a value
 void VM_Warning(const char *fmt, ...)
@@ -684,6 +685,34 @@ void VM_ftoe(void)
 		ent = 0; // return world instead of a free or invalid entity
 
 	PRVM_G_INT(OFS_RETURN) = ent;
+}
+
+/*
+=========
+VM_strftime
+
+string strftime(float uselocaltime, string[, string ...])
+=========
+*/
+void VM_strftime(void)
+{
+	time_t t;
+	struct tm *tm;
+	char fmt[VM_STRINGTEMP_LENGTH];
+	char result[VM_STRINGTEMP_LENGTH];
+	VM_VarString(0, fmt, sizeof(fmt));
+	t = time(NULL);
+	if (PRVM_G_FLOAT(OFS_PARM0))
+		tm = localtime(&t);
+	else
+		tm = gmtime(&t);
+	if (!tm)
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = 0;
+		return;
+	}
+	strftime(result, sizeof(result), fmt, tm);
+	PRVM_G_FLOAT(OFS_RETURN) = PRVM_SetTempString(result);
 }
 
 /*
