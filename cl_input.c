@@ -1272,7 +1272,7 @@ void CL_SendMove(void)
 		return;
 
 #if 0
-	if (cl_movement.integer && cls.signon == SIGNONS && cls.protocol != PROTOCOL_QUAKEWORLD)
+	if (cl.movement_predicted && cls.signon == SIGNONS && cls.protocol != PROTOCOL_QUAKEWORLD)
 	{
 		if (!cl.movement_needupdate)
 			return;
@@ -1299,7 +1299,7 @@ void CL_SendMove(void)
 	// conditions for sending a move:
 	// if the move advances time or if the game is paused (in which case time
 	// is not advancing)
-	if ((cl.cmd.time > cl.movecmd[0].time || cl.mtime[0] == cl.mtime[1]) && cls.signon == SIGNONS)
+	if ((cl.cmd.time > cl.movecmd[0].time || cl.mtime[0] <= cl.mtime[1]) && cls.signon == SIGNONS)
 	{
 		// send the movement message
 		// PROTOCOL_QUAKE        clc_move = 16 bytes total
@@ -1388,7 +1388,7 @@ void CL_SendMove(void)
 				// configurable number of unacknowledged moves
 				maxusercmds = bound(1, cl_netinputpacketlosstolerance.integer + 1, CL_MAX_USERCMDS);
 				// when movement prediction is off, there's not much point in repeating old input as it will just be ignored
-				if (!cl_movement.integer)
+				if (!cl.movement_predicted)
 					maxusercmds = 1;
 			}
 
