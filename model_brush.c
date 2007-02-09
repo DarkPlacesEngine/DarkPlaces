@@ -5887,6 +5887,8 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer, void *bufferend)
 				break;
 		if (j < mod->nummodelsurfaces)
 			mod->DrawSky = R_Q1BSP_DrawSky;
+		else
+			mod->DrawSky = NULL;
 	}
 }
 
