@@ -339,9 +339,7 @@ static void Portal_RecursiveFlow (portalrecursioninfo_t *info, mleaf_t *leaf, in
 								trimaxs[1] = max(v[1], max(v[4], v[7]));
 								trimins[2] = min(v[2], min(v[5], v[8]));
 								trimaxs[2] = max(v[2], max(v[5], v[8]));
-								// FIXME: Portal_PortalThroughPortalPlanes is
-								// nice, but it seems to fail on some polygons
-								if (BoxesOverlap(trimins, trimaxs, info->boxmins, info->boxmaxs))// && Portal_PortalThroughPortalPlanes(&portalplanes[firstclipplane], numclipplanes, v, 3, &portaltemppoints2[0][0], 256) > 0)
+								if (BoxesOverlap(trimins, trimaxs, info->boxmins, info->boxmaxs) && Portal_PortalThroughPortalPlanes(&portalplanes[firstclipplane], numclipplanes, v, 3, &portaltemppoints2[0][0], 256) > 0)
 								{
 									SETPVSBIT(info->surfacepvs, surfaceindex);
 									info->surfacelist[info->numsurfaces++] = surfaceindex;
