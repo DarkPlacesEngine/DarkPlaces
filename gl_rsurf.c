@@ -774,11 +774,24 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 		info.pvs = NULL;
 	R_UpdateAllTextureInfo(ent);
 
-	// recurse the bsp tree, checking leafs and surfaces for visibility
-	// optionally using svbsp for exact culling of compiled lights
-	// (or if the user enables dlight svbsp culling, which is mostly for
-	//  debugging not actual use)
-	R_Q1BSP_CallRecursiveGetLightInfo(&info, r_shadow_compilingrtlight ? r_shadow_realtime_world_compilesvbsp.integer : r_shadow_realtime_dlight_svbspculling.integer);
+	if (r_shadow_compilingrtlight && r_shadow_realtime_world_compileportalculling.integer)
+	{
+		// use portal recursion for exact light volume culling, and exact surface checking
+		Portal_Visibility(info.model, info.relativelightorigin, info.outleaflist, info.outleafpvs, &info.outnumleafs, info.outsurfacelist, info.outsurfacepvs, &info.outnumsurfaces, NULL, 0, true, info.lightmins, info.lightmaxs, info.outmins, info.outmaxs);
+	}
+	else if (r_shadow_realtime_dlight_portalculling.integer)
+	{
+		// use portal recursion for exact light volume culling, but not the expensive exact surface checking
+		Portal_Visibility(info.model, info.relativelightorigin, info.outleaflist, info.outleafpvs, &info.outnumleafs, info.outsurfacelist, info.outsurfacepvs, &info.outnumsurfaces, NULL, 0, r_shadow_realtime_dlight_portalculling.integer >= 2, info.lightmins, info.lightmaxs, info.outmins, info.outmaxs);
+	}
+	else
+	{
+		// recurse the bsp tree, checking leafs and surfaces for visibility
+		// optionally using svbsp for exact culling of compiled lights
+		// (or if the user enables dlight svbsp culling, which is mostly for
+		//  debugging not actual use)
+		R_Q1BSP_CallRecursiveGetLightInfo(&info, r_shadow_compilingrtlight ? r_shadow_realtime_world_compilesvbsp.integer : r_shadow_realtime_dlight_svbspculling.integer);
+	}
 
 	// limit combined leaf box to light boundaries
 	outmins[0] = max(info.outmins[0] - 1, info.lightmins[0]);
