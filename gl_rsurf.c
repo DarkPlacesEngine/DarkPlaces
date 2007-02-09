@@ -774,12 +774,12 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 		info.pvs = NULL;
 	R_UpdateAllTextureInfo(ent);
 
-	if (r_shadow_compilingrtlight && r_shadow_realtime_world_compileportalculling.integer)
+	if (r_shadow_frontsidecasting.integer && r_shadow_compilingrtlight && r_shadow_realtime_world_compileportalculling.integer)
 	{
 		// use portal recursion for exact light volume culling, and exact surface checking
 		Portal_Visibility(info.model, info.relativelightorigin, info.outleaflist, info.outleafpvs, &info.outnumleafs, info.outsurfacelist, info.outsurfacepvs, &info.outnumsurfaces, NULL, 0, true, info.lightmins, info.lightmaxs, info.outmins, info.outmaxs);
 	}
-	else if (r_shadow_realtime_dlight_portalculling.integer)
+	else if (r_shadow_frontsidecasting.integer && r_shadow_realtime_dlight_portalculling.integer)
 	{
 		// use portal recursion for exact light volume culling, but not the expensive exact surface checking
 		Portal_Visibility(info.model, info.relativelightorigin, info.outleaflist, info.outleafpvs, &info.outnumleafs, info.outsurfacelist, info.outsurfacepvs, &info.outnumsurfaces, NULL, 0, r_shadow_realtime_dlight_portalculling.integer >= 2, info.lightmins, info.lightmaxs, info.outmins, info.outmaxs);
