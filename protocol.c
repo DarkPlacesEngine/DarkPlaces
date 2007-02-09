@@ -1645,44 +1645,44 @@ void EntityFrame5_ExpandEdicts(entityframe5_database_t *d, int newmax)
 
 int EntityState5_Priority(entityframe5_database_t *d, int stateindex)
 {
-	int lowprecision, limit, priority;
+	int limit, priority;
 	double distance;
 	int changedbits;
-	entity_state_t *view, *s;
-	changedbits = d->deltabits[stateindex];
+	entity_state_t *s;
+	// if it is the player, update urgently
+	if (stateindex == d->viewentnum)
+		return E5_PROTOCOL_PRIORITYLEVELS - 1;
 	priority = d->priorities[stateindex];
 	// remove dead entities very quickly because they are just 2 bytes
 	if (!d->states[stateindex].active)
-		return E5_PROTOCOL_PRIORITYLEVELS - 1;
-	// check whole attachment chain to judge relevance to player
-	view = d->states + d->viewentnum;
-	lowprecision = false;
+		return bound(1, priority + 1, E5_PROTOCOL_PRIORITYLEVELS - 1);
+	changedbits = d->deltabits[stateindex];
+	// find the root entity this one is attached to, and judge relevance by it
 	for (limit = 0;limit < 256;limit++)
 	{
+		s = d->states + stateindex;
+		if (s->flags & RENDER_VIEWMODEL)
+			stateindex = d->viewentnum;
+		else if (s->tagentity)
+			stateindex = s->tagentity;
+		else
+			break;
 		if (d->maxedicts < stateindex)
 			EntityFrame5_ExpandEdicts(d, (stateindex+256)&~255);
-		s = d->states + stateindex;
-		// if it is the player, update urgently
-		if (s == view)
-			return E5_PROTOCOL_PRIORITYLEVELS - 1;
-		// if it is one of the player's viewmodels, update urgently
-		if (s->flags & RENDER_VIEWMODEL)
-			return E5_PROTOCOL_PRIORITYLEVELS - 1;
-		if (s->flags & RENDER_LOWPRECISION)
-			lowprecision = true;
-		if (!s->tagentity)
-			break;
-		stateindex = s->tagentity;
 	}
 	if (limit >= 256)
 		Con_DPrintf("Protocol: Runaway loop recursing tagentity links on entity %i\n", stateindex);
 	// now that we have the parent entity we can make some decisions based on
 	// distance and other factors
 	// TODO: add velocity check for things moving toward you (+1 priority)
-	distance = VectorDistance(view->origin, s->origin);
+	distance = VectorDistance(d->states[d->viewentnum].origin, s->origin);
 	// if it is not far from the player, update more often
-	if (distance < 1024.0f && !lowprecision)
+	if (distance < 256.0f)
 		priority++;
+	// if it is not very far from the player, update more often
+	if (distance < 1024.0f)
+		priority++;
+	// certain changes are more noticable than others
 	if (changedbits & E5_FULLUPDATE)
 		priority++;
 	if (changedbits & (E5_ATTACHMENT | E5_MODEL | E5_FLAGS | E5_COLORMAP))
