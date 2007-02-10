@@ -2381,7 +2381,7 @@ qboolean Mod_Q1BSP_CheckWaterAlphaSupport(void)
 		{
 			pvs = loadmodel->brush.data_pvsclusters + leaf->clusterindex * loadmodel->brush.num_pvsclusterbytes;
 			for (j = 0;j < loadmodel->brush.num_leafs;j++)
-				if (leaf->contents == CONTENTS_EMPTY && CHECKPVSBIT(pvs, loadmodel->brush.data_leafs[j].clusterindex))
+				if (CHECKPVSBIT(pvs, loadmodel->brush.data_leafs[j].clusterindex) && loadmodel->brush.data_leafs[j].contents == CONTENTS_EMPTY)
 					return true;
 		}
 	}
