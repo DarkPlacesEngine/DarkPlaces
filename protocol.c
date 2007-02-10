@@ -1646,8 +1646,6 @@ void EntityFrame5_ExpandEdicts(entityframe5_database_t *d, int newmax)
 int EntityState5_Priority(entityframe5_database_t *d, int stateindex)
 {
 	int limit, priority;
-	double distance;
-	int changedbits;
 	entity_state_t *s;
 	// if it is the player, update urgently
 	if (stateindex == d->viewentnum)
@@ -1663,7 +1661,9 @@ int EntityState5_Priority(entityframe5_database_t *d, int stateindex)
 		priority++;
 		return bound(1, priority, E5_PROTOCOL_PRIORITYLEVELS - 1);
 	}
-	changedbits = d->deltabits[stateindex];
+	// certain changes are more noticable than others
+	if (d->deltabits[stateindex] & (E5_FULLUPDATE | E5_ATTACHMENT | E5_MODEL | E5_FLAGS | E5_COLORMAP))
+		priority++;
 	// find the root entity this one is attached to, and judge relevance by it
 	for (limit = 0;limit < 256;limit++)
 	{
@@ -1680,19 +1680,10 @@ int EntityState5_Priority(entityframe5_database_t *d, int stateindex)
 	if (limit >= 256)
 		Con_DPrintf("Protocol: Runaway loop recursing tagentity links on entity %i\n", stateindex);
 	// now that we have the parent entity we can make some decisions based on
-	// distance and other factors
-	// note: this origin check does not work properly on doors/lifts whose
-	// origin is normally far away
-	distance = VectorDistance(d->states[d->viewentnum].origin, s->origin);
-	// if it is not very far from the player, update more often
-	if (distance < 1024.0f)
+	// distance from the player
+	if (VectorDistance(d->states[d->viewentnum].origin, s->origin) < 1024.0f)
 		priority++;
-	// certain changes are more noticable than others
-	if (changedbits & E5_FULLUPDATE)
-		priority++;
-	else if (changedbits & (E5_ATTACHMENT | E5_MODEL | E5_FLAGS | E5_COLORMAP))
-		priority++;
-	return (int) bound(1, priority, E5_PROTOCOL_PRIORITYLEVELS - 1);
+	return bound(1, priority, E5_PROTOCOL_PRIORITYLEVELS - 1);
 }
 
 void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbits, sizebuf_t *msg)
@@ -2240,6 +2231,7 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 		}
 		SETPVSBIT(d->visiblebits, num);
 		d->deltabits[num] |= EntityState5_DeltaBits(d->states + num, n);
+		d->priorities[num] = max(d->priorities[num], 1);
 		d->states[num] = *n;
 		d->states[num].number = num;
 		// advance to next entity so the next iteration doesn't immediately remove it
