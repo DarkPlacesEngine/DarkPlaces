@@ -1171,13 +1171,6 @@ qboolean FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qboolean
 {
 	int i;
 
-	if (cls.state != ca_disconnected || sv.active)
-	{
-		if (complain)
-			Con_Printf("Can not change gamedir while client is connected or server is running!\n");
-		return false;
-	}
-
 	if (fs_numgamedirs == numgamedirs)
 	{
 		for (i = 0;i < numgamedirs;i++)
