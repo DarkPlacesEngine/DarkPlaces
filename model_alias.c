@@ -700,42 +700,30 @@ static void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfi
 		for (i = 0;skinfile;skinfile = skinfile->next, i++, skin += loadmodel->num_surfaces)
 		{
 			memset(skin, 0, sizeof(*skin));
+			Mod_BuildAliasSkinFromSkinFrame(skin, NULL);
+			// don't render unmentioned meshes
+			skin->basematerialflags = skin->currentmaterialflags = 0;
+			// see if a mesh
 			for (skinfileitem = skinfile->items;skinfileitem;skinfileitem = skinfileitem->next)
 			{
 				// leave the skin unitialized (nodraw) if the replacement is "common/nodraw" or "textures/common/nodraw"
 				if (!strcmp(skinfileitem->name, meshname) && strcmp(skinfileitem->replacement, "common/nodraw") && strcmp(skinfileitem->replacement, "textures/common/nodraw"))
 				{
-					memset(&tempskinframe, 0, sizeof(tempskinframe));
-					if (Mod_LoadSkinFrame(&tempskinframe, skinfileitem->replacement, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, true, true))
-						Mod_BuildAliasSkinFromSkinFrame(skin, &tempskinframe);
-					else
-					{
+					if (!Mod_LoadSkinFrame(&tempskinframe, skinfileitem->replacement, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, true, true))
 						if (cls.state != ca_dedicated)
-							Con_Printf("mesh \"%s\": failed to load skin #%i \"%s\", falling back to mesh's internal shader name \"%s\"\n", meshname, i, skinfileitem->replacement, shadername);
-						if (Mod_LoadSkinFrame(&tempskinframe, shadername, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, true, true))
-							Mod_BuildAliasSkinFromSkinFrame(skin, &tempskinframe);
-						else
-						{
-							if (cls.state != ca_dedicated)
-								Con_Printf("failed to load skin \"%s\"\n", shadername);
-							Mod_BuildAliasSkinFromSkinFrame(skin, NULL);
-						}
-					}
+							Con_Printf("mesh \"%s\": failed to load skin #%i \"%s\"\n", meshname, i, skinfileitem->replacement);
+					Mod_BuildAliasSkinFromSkinFrame(skin, &tempskinframe);
+					break;
 				}
 			}
 		}
 	}
 	else
 	{
-		memset(&tempskinframe, 0, sizeof(tempskinframe));
-		if (Mod_LoadSkinFrame(&tempskinframe, shadername, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, true, true))
-			Mod_BuildAliasSkinFromSkinFrame(skin, &tempskinframe);
-		else
-		{
+		if (!Mod_LoadSkinFrame(&tempskinframe, shadername, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, true, true))
 			if (cls.state != ca_dedicated)
 				Con_Printf("Can't find texture \"%s\" for mesh \"%s\", using grey checkerboard\n", shadername, meshname);
-			Mod_BuildAliasSkinFromSkinFrame(skin, NULL);
-		}
+		Mod_BuildAliasSkinFromSkinFrame(skin, &tempskinframe);
 	}
 }
 
@@ -1147,13 +1135,9 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 		loadmodel->data_textures = (texture_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t));
 		for (i = 0;i < loadmodel->numskins;i++, inskin += MD2_SKINNAME)
 		{
-			if (Mod_LoadSkinFrame(&tempskinframe, inskin, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, true, true))
-				Mod_BuildAliasSkinFromSkinFrame(loadmodel->data_textures + i * loadmodel->num_surfaces, &tempskinframe);
-			else
-			{
+			if (!Mod_LoadSkinFrame(&tempskinframe, inskin, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, true, true))
 				Con_Printf("%s is missing skin \"%s\"\n", loadmodel->name, inskin);
-				Mod_BuildAliasSkinFromSkinFrame(loadmodel->data_textures + i * loadmodel->num_surfaces, NULL);
-			}
+			Mod_BuildAliasSkinFromSkinFrame(loadmodel->data_textures + i * loadmodel->num_surfaces, &tempskinframe);
 		}
 	}
 	else

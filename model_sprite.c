@@ -167,9 +167,7 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 					sprintf (name, "%s_%i_%i", loadmodel->name, i, j);
 				else
 					sprintf (name, "%s_%i", loadmodel->name, i);
-				Mod_LoadSkinFrame(&loadmodel->sprite.sprdata_frames[realframes].texture.skinframes[0], name, (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, false, false);
-
-				if (!loadmodel->sprite.sprdata_frames[realframes].texture.skinframes[0].base)
+				if (!Mod_LoadSkinFrame(&loadmodel->sprite.sprdata_frames[realframes].texture.skinframes[0], name, (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, false, false))
 				{
 					if (groupframes > 1)
 						sprintf (fogname, "%s_%i_%ifog", loadmodel->name, i, j);
@@ -388,12 +386,8 @@ void Mod_IDS2_Load(model_t *mod, void *buffer, void *bufferend)
 			modelradius = x + y;
 
 		if (width > 0 && height > 0 && cls.state != ca_dedicated)
-		{
-			Mod_LoadSkinFrame(&sprframe->texture.skinframes[0], pinframe->name, (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, false, false);
-			// TODO: use a default texture if we can't load it?
-			if (sprframe->texture.skinframes[0].base == NULL)
+			if (!Mod_LoadSkinFrame(&sprframe->texture.skinframes[0], pinframe->name, (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, false, false))
 				Host_Error("Mod_IDS2_Load: failed to load %s", pinframe->name);
-		}
 
 		Mod_SpriteSetupTexture(sprframe, fullbright, false);
 	}
