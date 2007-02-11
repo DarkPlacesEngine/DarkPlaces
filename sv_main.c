@@ -39,6 +39,8 @@ cvar_t sv_maxrate = {CVAR_SAVE | CVAR_NOTIFY, "sv_maxrate", "10000", "upper limi
 cvar_t sv_allowdownloads = {0, "sv_allowdownloads", "1", "whether to allow clients to download files from the server (does not affect http downloads)"};
 cvar_t sv_allowdownloads_inarchive = {0, "sv_allowdownloads_inarchive", "0", "whether to allow downloads from archives (pak/pk3)"};
 cvar_t sv_allowdownloads_archive = {0, "sv_allowdownloads_archive", "0", "whether to allow downloads of archives (pak/pk3)"};
+cvar_t sv_allowdownloads_config = {0, "sv_allowdownloads_config", "0", "whether to allow downloads of config files (cfg)"};
+cvar_t sv_allowdownloads_dlcache = {0, "sv_allowdownloads_dlcache", "0", "whether to allow downloads of dlcache files (dlcache/)"};
 
 extern cvar_t sv_random_seed;
 
@@ -138,6 +140,8 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_allowdownloads);
 	Cvar_RegisterVariable (&sv_allowdownloads_inarchive);
 	Cvar_RegisterVariable (&sv_allowdownloads_archive);
+	Cvar_RegisterVariable (&sv_allowdownloads_config);
+	Cvar_RegisterVariable (&sv_allowdownloads_dlcache);
 	Cvar_RegisterVariable (&sv_progs);
 
 	SV_VM_Init();
@@ -1513,6 +1517,7 @@ void SV_Download_f(void)
 	}
 
 	strlcpy(host_client->download_name, Cmd_Argv(1), sizeof(host_client->download_name));
+	extension = FS_FileExtension(host_client->download_name);
 
 	// host_client is asking to download a specified file
 	if (developer.integer >= 100)
@@ -1547,9 +1552,28 @@ void SV_Download_f(void)
 		}
 	}
 
+	if (!sv_allowdownloads_config.integer)
+	{
+		if (!strcasecmp(extension, "cfg"))
+		{
+			SV_ClientPrintf("Download rejected: file \"%s\" is a .cfg file which is forbidden for security reasons\nYou must separately download or purchase the data archives for this game/mod to get this file\n", host_client->download_name);
+			Host_ClientCommands("\nstopdownload\n");
+			return;
+		}
+	}
+
+	if (!sv_allowdownloads_dlcache.integer)
+	{
+		if (!strncasecmp(host_client->download_name, "dlcache/", 8))
+		{
+			SV_ClientPrintf("Download rejected: file \"%s\" is in the dlcache/ directory which is forbidden for security reasons\nYou must separately download or purchase the data archives for this game/mod to get this file\n", host_client->download_name);
+			Host_ClientCommands("\nstopdownload\n");
+			return;
+		}
+	}
+
 	if (!sv_allowdownloads_archive.integer)
 	{
-		extension = FS_FileExtension(host_client->download_name);
 		if (!strcasecmp(extension, "pak") || !strcasecmp(extension, "pk3"))
 		{
 			SV_ClientPrintf("Download rejected: file \"%s\" is an archive\nYou must separately download or purchase the data archives for this game/mod to get this file\n", host_client->download_name);
