@@ -1999,6 +1999,7 @@ extern cvar_t r_bloom_colorscale;
 extern cvar_t r_bloom_colorsubtract;
 extern cvar_t r_bloom_colorexponent;
 extern cvar_t r_bloom_blur;
+extern cvar_t r_bloom_brighten;
 extern cvar_t r_bloom_resolution;
 extern cvar_t r_hdr;
 extern cvar_t r_hdr_scenebrightness;
