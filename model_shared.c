@@ -1000,6 +1000,7 @@ int Mod_LoadSkinFrame(skinframe_t *skinframe, const char *basename, int texturef
 {
 	imageskin_t s;
 	memset(skinframe, 0, sizeof(*skinframe));
+	skinframe->base = r_texture_notexture;
 	if (cls.state == ca_dedicated)
 		return false;
 	if (!image_loadskin(&s, basename))
