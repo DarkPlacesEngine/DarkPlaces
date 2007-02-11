@@ -1495,64 +1495,42 @@ void Image_MipReduce(const unsigned char *in, unsigned char *out, int *width, in
 
 void Image_HeightmapToNormalmap(const unsigned char *inpixels, unsigned char *outpixels, int width, int height, int clamp, float bumpscale)
 {
-	int x, y;
-	const unsigned char *p0, *p1, *p2;
+	int x, y, x1, x2, y1, y2;
+	const unsigned char *b, *row[3];
+	int p[5];
 	unsigned char *out;
 	float iwidth, iheight, ibumpscale, n[3];
 	iwidth = 1.0f / width;
 	iheight = 1.0f / height;
-	ibumpscale = (255.0f * 3.0f) / bumpscale;
+	ibumpscale = (255.0f * 6.0f) / bumpscale;
 	out = outpixels;
-	for (y = 0;y < height;y++)
+	for (y = 0, y1 = height-1;y < height;y1 = y, y++)
 	{
-		for (x = 0;x < width;x++)
+		y2 = y + 1;if (y2 >= height) y2 = 0;
+		row[0] = inpixels + (y1 * width) * 4;
+		row[1] = inpixels + (y  * width) * 4;
+		row[2] = inpixels + (y2 * width) * 4;
+		for (x = 0, x1 = width-1;x < width;x1 = x, x++)
 		{
-			p0 = inpixels + (y * width + x) * 4;
-			if (x == width - 1)
-			{
-				if (clamp)
-					p1 = inpixels + (y * width + x) * 4;
-				else
-					p1 = inpixels + (y * width) * 4;
-			}
-			else
-				p1 = inpixels + (y * width + x + 1) * 4;
-			if (y == height - 1)
-			{
-				if (clamp)
-					p2 = inpixels + (y * width + x) * 4;
-				else
-					p2 = inpixels + x * 4;
-			}
-			else
-				p2 = inpixels + ((y + 1) * width + x) * 4;
-			/*
-			dv[0][0] = iwidth;
-			dv[0][1] = 0;
-			dv[0][2] = ((p0[0] + p0[1] + p0[2]) * ibumpscale) - ((p1[0] + p1[1] + p1[2]) * ibumpscale);
-			dv[1][0] = 0;
-			dv[1][1] = iheight;
-			dv[1][2] = ((p2[0] + p2[1] + p2[2]) * ibumpscale) - ((p0[0] + p0[1] + p0[2]) * ibumpscale);
-			n[0] = dv[0][1]*dv[1][2]-dv[0][2]*dv[1][1];
-			n[1] = dv[0][2]*dv[1][0]-dv[0][0]*dv[1][2];
-			n[2] = dv[0][0]*dv[1][1]-dv[0][1]*dv[1][0];
-			*/
-			n[0] = ((p0[0] + p0[1] + p0[2]) - (p1[0] + p1[1] + p1[2]));
-			n[1] = ((p2[0] + p2[1] + p2[2]) - (p0[0] + p0[1] + p0[2]));
+			x2 = x + 1;if (x2 >= width) x2 = 0;
+			// left, right
+			b = row[1] + x1 * 4;p[0] = (b[0] + b[1] + b[2]);
+			b = row[1] + x2 * 4;p[1] = (b[0] + b[1] + b[2]);
+			// above, below
+			b = row[0] + x  * 4;p[2] = (b[0] + b[1] + b[2]);
+			b = row[2] + x  * 4;p[3] = (b[0] + b[1] + b[2]);
+			// center
+			b = row[1] + x  * 4;p[4] = (b[0] + b[1] + b[2]);
+			// calculate a normal from the slopes
+			n[0] = p[0] - p[1];
+			n[1] = p[3] - p[2];
 			n[2] = ibumpscale;
 			VectorNormalize(n);
-			/*
-			// this should work for the bottom right triangle if anyone wants
-			// code for that for some reason
-			n[0] = ((p3[0] + p3[1] + p3[2]) - (p1[0] + p1[1] + p1[2]));
-			n[1] = ((p2[0] + p2[1] + p2[2]) - (p3[0] + p3[1] + p3[2]));
-			n[2] = ibumpscale;
-			VectorNormalize(n);
-			*/
+			// turn it into a dot3 rgb vector texture
 			out[0] = (int)(128.0f + n[0] * 127.0f);
 			out[1] = (int)(128.0f + n[1] * 127.0f);
 			out[2] = (int)(128.0f + n[2] * 127.0f);
-			out[3] = (p0[0] + p0[1] + p0[2]) / 3;
+			out[3] = (p[4]) / 3;
 			out += 4;
 		}
 	}
