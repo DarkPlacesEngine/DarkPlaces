@@ -755,10 +755,6 @@ void CL_AddQWCTFFlagModel(entity_t *player, int skin)
 	CL_UpdateRenderEntity(&flag->render);
 }
 
-#define MAXVIEWMODELS 32
-entity_t *viewmodels[MAXVIEWMODELS];
-int numviewmodels;
-
 matrix4x4_t viewmodelmatrix;
 
 static const vec3_t muzzleflashorigin = {18, 0, 0};
@@ -771,7 +767,8 @@ extern void V_CalcRefdef(void);
 // note this is a recursive function, but it can never get in a runaway loop (because of the delayedlink flags)
 void CL_UpdateNetworkEntity(entity_t *e)
 {
-	matrix4x4_t *matrix, blendmatrix, tempmatrix, matrix2;
+	const matrix4x4_t *matrix;
+	matrix4x4_t blendmatrix, tempmatrix, matrix2;
 	//matrix4x4_t dlightmatrix;
 	int j, k, l;
 	effectnameindex_t trailtype;
@@ -827,17 +824,9 @@ void CL_UpdateNetworkEntity(entity_t *e)
 		VectorClear(e->render.colormap_shirtcolor);
 	}
 	e->render.skinnum = e->state_current.skin;
-	if (e->render.flags & RENDER_VIEWMODEL && !e->state_current.tagentity)
+	if (e->state_current.tagentity)
 	{
-		if (e == &cl.viewent && cl.entities[cl.viewentity].state_current.active)
-		{
-			e->state_current.alpha = cl.entities[cl.viewentity].state_current.alpha;
-			e->state_current.effects = EF_NOSHADOW | (cl.entities[cl.viewentity].state_current.effects & (EF_ADDITIVE | EF_REFLECTIVE | EF_FULLBRIGHT | EF_NODEPTHTEST));
-		}
-		matrix = &viewmodelmatrix;
-	}
-	else
-	{
+		// attached entity (gun held in player model's hand, etc)
 		// if the tag entity is currently impossible, skip it
 		if (e->state_current.tagentity >= cl.num_entities)
 			return;
@@ -845,7 +834,7 @@ void CL_UpdateNetworkEntity(entity_t *e)
 		// if the tag entity is inactive, skip it
 		if (!t->state_current.active)
 			return;
-		// note: this can link to world
+		// update the parent first
 		CL_UpdateNetworkEntity(t);
 		// make relative to the entity
 		matrix = &t->render.matrix;
@@ -871,6 +860,16 @@ void CL_UpdateNetworkEntity(entity_t *e)
 			// use the constructed tag matrix
 			matrix = &tempmatrix;
 		}
+	}
+	else if (e->render.flags & RENDER_VIEWMODEL)
+	{
+		// view-relative entity (guns and such)
+		matrix = &viewmodelmatrix;
+	}
+	else
+	{
+		// world-relative entity (the normal kind)
+		matrix = &identitymatrix;
 	}
 
 	// movement lerp
@@ -950,27 +949,39 @@ void CL_UpdateNetworkEntity(entity_t *e)
 	}
 
 	// set up the render matrix
-	// FIXME: e->render.scale should go away
-	Matrix4x4_CreateFromQuakeEntity(&matrix2, origin[0], origin[1], origin[2], angles[0], angles[1], angles[2], e->render.scale);
-	// concat the matrices to make the entity relative to its tag
-	Matrix4x4_Concat(&e->render.matrix, matrix, &matrix2);
+	if (matrix)
+	{
+		// attached entity, this requires a matrix multiply (concat)
+		// FIXME: e->render.scale should go away
+		Matrix4x4_CreateFromQuakeEntity(&matrix2, origin[0], origin[1], origin[2], angles[0], angles[1], angles[2], e->render.scale);
+		// concat the matrices to make the entity relative to its tag
+		Matrix4x4_Concat(&e->render.matrix, matrix, &matrix2);
+		// get the origin from the new matrix
+		Matrix4x4_OriginFromMatrix(&e->render.matrix, origin);
+	}
+	else
+	{
+		// unattached entities are faster to process
+		Matrix4x4_CreateFromQuakeEntity(&e->render.matrix, origin[0], origin[1], origin[2], angles[0], angles[1], angles[2], e->render.scale);
+	}
+
+	// bmodels are treated specially since their origin is usually '0 0 0' and
+	// their actual geometry is far from '0 0 0'
+	if (e->render.model && e->render.model->soundfromcenter)
+	{
+		vec3_t o;
+		VectorMAM(0.5f, e->render.model->normalmins, 0.5f, e->render.model->normalmaxs, o);
+		Matrix4x4_Transform(&e->render.matrix, o, origin);
+	}
+
 	// make the other useful stuff
 	CL_UpdateRenderEntity(&e->render);
 
 	// handle particle trails and such effects now that we know where this
 	// entity is in the world...
-	if (e->render.model && e->render.model->soundfromcenter)
-	{
-		// bmodels are treated specially since their origin is usually '0 0 0'
-		vec3_t o;
-		VectorMAM(0.5f, e->render.model->normalmins, 0.5f, e->render.model->normalmaxs, o);
-		Matrix4x4_Transform(&e->render.matrix, o, origin);
-	}
-	else
-		Matrix4x4_OriginFromMatrix(&e->render.matrix, origin);
 	trailtype = EFFECT_NONE;
 	// LordHavoc: if the entity has no effects, don't check each
-	if (e->render.effects)
+	if (e->render.effects & (EF_BRIGHTFIELD | EF_FLAME | EF_STARDUST | EF_FLAG1QW | EF_FLAG2QW))
 	{
 		if (e->render.effects & EF_BRIGHTFIELD)
 		{
@@ -1103,6 +1114,8 @@ void CL_UpdateEntities(void)
 		else
 			ent->state_current.modelindex = 0;
 	}
+	ent->state_current.alpha = cl.entities[cl.viewentity].state_current.alpha;
+	ent->state_current.effects = EF_NOSHADOW | (cl.entities[cl.viewentity].state_current.effects & (EF_ADDITIVE | EF_REFLECTIVE | EF_FULLBRIGHT | EF_NODEPTHTEST));
 
 	// reset animation interpolation on weaponmodel if model changed
 	if (ent->state_previous.modelindex != ent->state_current.modelindex)
@@ -1156,7 +1169,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 	dlightcolor[1] = 0;
 	dlightcolor[2] = 0;
 	// LordHavoc: if the entity has no effects, don't check each
-	if (e->render.effects)
+	if (e->render.effects & (EF_BRIGHTFIELD | EF_DIMLIGHT | EF_BRIGHTLIGHT | EF_RED | EF_BLUE | EF_FLAME | EF_STARDUST))
 	{
 		if (e->render.effects & EF_BRIGHTFIELD)
 		{
