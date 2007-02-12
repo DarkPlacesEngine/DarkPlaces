@@ -166,6 +166,7 @@ cvar_t cl_sound_ric3 = {0, "cl_sound_ric3", "weapons/ric3.wav", "sound to play w
 cvar_t cl_sound_r_exp3 = {0, "cl_sound_r_exp3", "weapons/r_exp3.wav", "sound to play during TE_EXPLOSION and related effects (empty cvar disables sound)"};
 cvar_t cl_serverextension_download = {0, "cl_serverextension_download", "0", "indicates whether the server supports the download command"};
 cvar_t cl_joinbeforedownloadsfinish = {0, "cl_joinbeforedownloadsfinish", "1", "if non-zero the game will begin after the map is loaded before other downloads finish"};
+cvar_t cl_nettimesyncmode = {0, "cl_nettimesyncmode", "2", "selects method of time synchronization in client with regard to server packets, values are: 0 = no sync, 1 = exact sync (reset timing each packet), 2 = loose sync (reset timing only if it is out of bounds), 3 = tight sync and bounding"};
 
 static qboolean QW_CL_CheckOrDownloadFile(const char *filename);
 static void QW_CL_RequestNextDownload(void);
@@ -2495,6 +2496,38 @@ qboolean CL_ExaminePrintString(const char *text)
 	return true;
 }
 
+static void CL_NetworkTimeReceived(double newtime)
+{
+	if (cl_nolerp.integer || cls.timedemo || (cl.islocalgame && !sv_fixedframeratesingleplayer.integer))
+		cl.mtime[1] = cl.mtime[0] = newtime;
+	else
+	{
+		cl.mtime[1] = max(cl.mtime[0], newtime - 0.1);
+		cl.mtime[0] = newtime;
+	}
+	if (cl_nettimesyncmode.integer == 3)
+		cl.time = cl.mtime[1];
+	if (cl_nettimesyncmode.integer == 2)
+	{
+		if (cl.time < cl.mtime[1] || cl.time > cl.mtime[0])
+			cl.time = cl.mtime[1];
+	}
+	else if (cl_nettimesyncmode.integer == 1)
+		cl.time = cl.mtime[1];
+	// this packet probably contains a player entity update, so we will need
+	// to update the prediction
+	cl.movement_needupdate = true;
+	// this may get updated later in parsing by svc_clientdata
+	cl.onground = false;
+	// if true the cl.viewangles are interpolated from cl.mviewangles[]
+	// during this frame
+	// (makes spectating players much smoother and prevents mouse movement from turning)
+	cl.fixangle[1] = cl.fixangle[0];
+	cl.fixangle[0] = false;
+	if (!cls.demoplayback)
+		VectorCopy(cl.mviewangles[0], cl.mviewangles[1]);
+}
+
 #define SHOWNET(x) if(cl_shownet.integer==2)Con_Printf("%3i:%s\n", msg_readcount-1, x);
 
 //[515]: csqc
@@ -2545,17 +2578,7 @@ void CL_ParseServerMessage(void)
 
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
 	{
-		cl.mtime[1] = cl.mtime[0];
-		cl.mtime[0] = realtime; // qw has no clock
-		cl.time = bound(cl.mtime[1], cl.time, cl.mtime[0]);
-		cl.onground = false; // since there's no clientdata parsing, clear the onground flag here
-		// if true the cl.viewangles are interpolated from cl.mviewangles[]
-		// during this frame
-		// (makes spectating players much smoother and prevents mouse movement from turning)
-		cl.fixangle[1] = cl.fixangle[0];
-		cl.fixangle[0] = false;
-		if (!cls.demoplayback)
-			VectorCopy(cl.mviewangles[0], cl.mviewangles[1]);
+		CL_NetworkTimeReceived(realtime); // qw has no clock
 
 		// slightly kill qw player entities each frame
 		for (i = 1;i < cl.maxclients;i++)
@@ -2966,17 +2989,7 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case svc_time:
-				cl.mtime[1] = cl.mtime[0];
-				cl.mtime[0] = MSG_ReadFloat ();
-				cl.time = bound(cl.mtime[1], cl.time, cl.mtime[0]);
-				cl.movement_needupdate = true;
-				// if true the cl.viewangles are interpolated from cl.mviewangles[]
-				// during this frame
-				// (makes spectating players much smoother and prevents mouse movement from turning)
-				cl.fixangle[1] = cl.fixangle[0];
-				cl.fixangle[0] = false;
-				if (!cls.demoplayback)
-					VectorCopy(cl.mviewangles[0], cl.mviewangles[1]);
+				CL_NetworkTimeReceived(MSG_ReadFloat());
 				break;
 
 			case svc_clientdata:
@@ -3347,6 +3360,8 @@ void CL_Parse_Init(void)
 
 	// server extension cvars set by commands issued from the server during connect
 	Cvar_RegisterVariable(&cl_serverextension_download);
+
+	Cvar_RegisterVariable(&cl_nettimesyncmode);
 
 	Cmd_AddCommand("nextul", QW_CL_NextUpload, "sends next fragment of current upload buffer (screenshot for example)");
 	Cmd_AddCommand("stopul", QW_CL_StopUpload, "aborts current upload (screenshot for example)");
