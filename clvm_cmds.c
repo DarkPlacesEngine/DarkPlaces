@@ -766,8 +766,6 @@ qboolean csqc_usecsqclistener = false;//[515]: per-frame
 static void CSQC_R_RecalcView (void)
 {
 	extern matrix4x4_t viewmodelmatrix;
-	viewmodelmatrix = identitymatrix;
-	r_view.matrix = identitymatrix;
 	Matrix4x4_CreateFromQuakeEntity(&r_view.matrix, csqc_origin[0], csqc_origin[1], csqc_origin[2], csqc_angles[0], csqc_angles[1], csqc_angles[2], 1);
 	Matrix4x4_CreateFromQuakeEntity(&viewmodelmatrix, csqc_origin[0], csqc_origin[1], csqc_origin[2], csqc_angles[0], csqc_angles[1], csqc_angles[2], cl_viewmodel_scale.value);
 }
@@ -915,10 +913,26 @@ void VM_R_SetView (void)
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
 
+extern void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit);
 //#304 void() renderscene (EXT_CSQC)
 void VM_R_RenderScene (void) //#134
 {
+	int i;
 	VM_SAFEPARMCOUNT(0, VM_R_RenderScene);
+	// we need to update any RENDER_VIEWMODEL entities at this point because
+	// csqc supplies its own view matrix
+	for (i = 1;i < cl.num_entities;i++)
+	{
+		if (cl.entities_active[i])
+		{
+			entity_t *ent = cl.entities + i;
+			if ((ent->render.flags & RENDER_VIEWMODEL) || ent->state_current.tagentity)
+				CL_UpdateNetworkEntity(ent, 32);
+		}
+	}
+	// and of course the engine viewmodel needs updating as well
+	CL_UpdateNetworkEntity(&cl.viewent, 32);
+	// now draw stuff!
 	R_RenderView();
 }
 
