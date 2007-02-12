@@ -762,16 +762,15 @@ static const vec3_t muzzleflashorigin = {18, 0, 0};
 extern void V_DriftPitch(void);
 extern void V_FadeViewFlashs(void);
 extern void V_CalcViewBlend(void);
-
 extern void V_CalcRefdef(void);
-// note this is a recursive function, but it can never get in a runaway loop (because of the delayedlink flags)
-void CL_UpdateNetworkEntity(entity_t *e)
+
+// note this is a recursive function, recursionlimit should be 32 or so on the initial call
+void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit)
 {
 	const matrix4x4_t *matrix;
 	matrix4x4_t blendmatrix, tempmatrix, matrix2;
 	//matrix4x4_t dlightmatrix;
 	int j, k, l;
-	effectnameindex_t trailtype;
 	float origin[3], angles[3], delta[3], lerp, d;
 	entity_t *t;
 	model_t *model;
@@ -779,6 +778,8 @@ void CL_UpdateNetworkEntity(entity_t *e)
 	//entity_render_t *r = &e->render;
 	// skip inactive entities and world
 	if (!e->state_current.active || e == cl.entities)
+		return;
+	if (recursionlimit < 1)
 		return;
 	e->render.alpha = e->state_current.alpha * (1.0f / 255.0f); // FIXME: interpolate?
 	e->render.scale = e->state_current.scale * (1.0f / 16.0f); // FIXME: interpolate?
@@ -835,7 +836,7 @@ void CL_UpdateNetworkEntity(entity_t *e)
 		if (!t->state_current.active)
 			return;
 		// update the parent first
-		CL_UpdateNetworkEntity(t);
+		CL_UpdateNetworkEntity(t, recursionlimit - 1);
 		// make relative to the entity
 		matrix = &t->render.matrix;
 		// some properties of the tag entity carry over
@@ -965,6 +966,39 @@ void CL_UpdateNetworkEntity(entity_t *e)
 		Matrix4x4_CreateFromQuakeEntity(&e->render.matrix, origin[0], origin[1], origin[2], angles[0], angles[1], angles[2], e->render.scale);
 	}
 
+	// make the other useful stuff
+	CL_UpdateRenderEntity(&e->render);
+
+	// tenebrae's sprites are all additive mode (weird)
+	if (gamemode == GAME_TENEBRAE && e->render.model && e->render.model->type == mod_sprite)
+		e->render.effects |= EF_ADDITIVE;
+	// player model is only shown with chase_active on
+	if (e->state_current.number == cl.viewentity)
+		e->render.flags |= RENDER_EXTERIORMODEL;
+	// transparent stuff can't be lit during the opaque stage
+	if (e->render.effects & (EF_ADDITIVE | EF_NODEPTHTEST) || e->render.alpha < 1)
+		e->render.flags |= RENDER_TRANSPARENT;
+	// double sided rendering mode causes backfaces to be visible
+	// (mostly useful on transparent stuff)
+	if (e->render.effects & EF_DOUBLESIDED)
+		e->render.flags |= RENDER_NOCULLFACE;
+	// either fullbright or lit
+	if (!(e->render.effects & EF_FULLBRIGHT) && !r_fullbright.integer)
+		e->render.flags |= RENDER_LIGHT;
+	// hide player shadow during intermission or nehahra movie
+	if (!(e->render.effects & EF_NOSHADOW)
+	 && !(e->render.flags & (RENDER_VIEWMODEL | RENDER_TRANSPARENT))
+	 && (!(e->render.flags & RENDER_EXTERIORMODEL) || (!cl.intermission && cls.protocol != PROTOCOL_NEHAHRAMOVIE && !cl_noplayershadow.integer)))
+		e->render.flags |= RENDER_SHADOW;
+}
+
+// creates light and trails from an entity
+void CL_UpdateNetworkEntityTrail(entity_t *e)
+{
+	//matrix4x4_t dlightmatrix;
+	effectnameindex_t trailtype;
+	vec3_t origin;
+
 	// bmodels are treated specially since their origin is usually '0 0 0' and
 	// their actual geometry is far from '0 0 0'
 	if (e->render.model && e->render.model->soundfromcenter)
@@ -973,9 +1007,6 @@ void CL_UpdateNetworkEntity(entity_t *e)
 		VectorMAM(0.5f, e->render.model->normalmins, 0.5f, e->render.model->normalmaxs, o);
 		Matrix4x4_Transform(&e->render.matrix, o, origin);
 	}
-
-	// make the other useful stuff
-	CL_UpdateRenderEntity(&e->render);
 
 	// handle particle trails and such effects now that we know where this
 	// entity is in the world...
@@ -1039,29 +1070,6 @@ void CL_UpdateNetworkEntity(entity_t *e)
 		CL_ParticleTrail(trailtype, 1, e->persistent.trail_origin, origin, vel, vel, e, e->state_current.glowcolor, false, true);
 	}
 	VectorCopy(origin, e->persistent.trail_origin);
-	// tenebrae's sprites are all additive mode (weird)
-	if (gamemode == GAME_TENEBRAE && e->render.model && e->render.model->type == mod_sprite)
-		e->render.effects |= EF_ADDITIVE;
-	// player model is only shown with chase_active on
-	if (e->state_current.number == cl.viewentity)
-		e->render.flags |= RENDER_EXTERIORMODEL;
-	// transparent stuff can't be lit during the opaque stage
-	if (e->render.effects & (EF_ADDITIVE | EF_NODEPTHTEST) || e->render.alpha < 1)
-		e->render.flags |= RENDER_TRANSPARENT;
-	// double sided rendering mode causes backfaces to be visible
-	// (mostly useful on transparent stuff)
-	if (e->render.effects & EF_DOUBLESIDED)
-		e->render.flags |= RENDER_NOCULLFACE;
-	// either fullbright or lit
-	if (!(e->render.effects & EF_FULLBRIGHT) && !r_fullbright.integer)
-		e->render.flags |= RENDER_LIGHT;
-	// hide player shadow during intermission or nehahra movie
-	if (!(e->render.effects & EF_NOSHADOW)
-	 && !(e->render.flags & (RENDER_VIEWMODEL | RENDER_TRANSPARENT))
-	 && (!(e->render.flags & RENDER_EXTERIORMODEL) || (!cl.intermission && cls.protocol != PROTOCOL_NEHAHRAMOVIE && !cl_noplayershadow.integer)))
-		e->render.flags |= RENDER_SHADOW;
-	if (e->render.model && e->render.model->name[0] == '*' && e->render.model->TraceBox)
-		cl.brushmodel_entities[cl.num_brushmodel_entities++] = e->state_current.number;
 }
 
 
@@ -1077,7 +1085,7 @@ void CL_UpdateEntities(void)
 
 	// process network entities
 	// first link the player
-	CL_UpdateNetworkEntity(cl.entities + cl.viewentity);
+	CL_UpdateNetworkEntity(cl.entities + cl.viewentity, 32);
 
 	// set up the view
 	V_CalcRefdef();
@@ -1086,11 +1094,18 @@ void CL_UpdateEntities(void)
 	// skip the player entity because it was already processed
 	for (i = 1;i < cl.num_entities;i++)
 	{
-		if (cl.entities_active[i] && i != cl.viewentity)
+		if (cl.entities_active[i])
 		{
 			ent = cl.entities + i;
 			if (ent->state_current.active)
-				CL_UpdateNetworkEntity(ent);
+			{
+				CL_UpdateNetworkEntity(ent, 32);
+				// view models should never create light/trails
+				if (!(ent->render.flags & RENDER_VIEWMODEL))
+					CL_UpdateNetworkEntityTrail(ent);
+				if (ent->render.model && ent->render.model->name[0] == '*' && ent->render.model->TraceBox)
+					cl.brushmodel_entities[cl.num_brushmodel_entities++] = ent->state_current.number;
+			}
 			else
 				cl.entities_active[i] = false;
 		}
@@ -1124,7 +1139,7 @@ void CL_UpdateEntities(void)
 		ent->render.frame1time = ent->render.frame2time = cl.time;
 		ent->render.framelerp = 1;
 	}
-	CL_UpdateNetworkEntity(ent);
+	CL_UpdateNetworkEntity(ent, 32);
 }
 
 // note this is a recursive function, but it can never get in a runaway loop (because of the delayedlink flags)
@@ -1641,7 +1656,7 @@ int CL_ReadFromServer(void)
 		V_DriftPitch();
 		V_FadeViewFlashs();
 
-		// now update all the network entities
+		// now update all the network entities and the view matrix
 		CL_UpdateEntities();
 
 		CL_RelinkLightFlashes();
