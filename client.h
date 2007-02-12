@@ -747,12 +747,6 @@ typedef struct client_state_s
 	// the timestamp of the last two messages
 	double mtime[2];
 
-	// similar to cl.time but this can go past cl.mtime[0] when packets are
-	// not being received, it is still clamped to the cl.mtime[1] to
-	// cl.mtime[0] range whenever a packet is received, it just does not stop
-	// when interpolation finishes
-	double timenonlerp;
-
 	// clients view of time, time should be between mtime[0] and mtime[1] to
 	// generate a lerp point for other data, oldtime is the previous frame's
 	// value of time, frametime is the difference between time and oldtime

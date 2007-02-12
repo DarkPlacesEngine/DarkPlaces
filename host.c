@@ -799,7 +799,6 @@ void Host_Main(void)
 
 				cl.oldtime = cl.time;
 				cl.time += frametime;
-				cl.timenonlerp += frametime;
 
 				// Collect input into cmd
 				CL_Move();
