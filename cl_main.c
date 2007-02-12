@@ -877,7 +877,7 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit)
 	// if it's the player entity, update according to client movement
 	if (e == cl.entities + cl.playerentity && cl.movement_predicted)
 	{
-		lerp = (cl.timenonlerp - cl.movement_time[2]) / (cl.movement_time[0] - cl.movement_time[1]);
+		lerp = (cl.time - cl.movement_time[2]) / (cl.movement_time[0] - cl.movement_time[1]);
 		lerp = bound(0, lerp, 1);
 		if (cl_nolerp.integer)
 			lerp = 1;

@@ -1179,7 +1179,7 @@ void CL_ClientMovement_Replay(void)
 	{
 		cl.movement_time[1] = cl.movecmd[1].time;
 		cl.movement_time[0] = cl.movecmd[0].time;
-		cl.movement_time[2] = cl.timenonlerp;
+		cl.movement_time[2] = cl.time;
 		VectorCopy(cl.movement_origin, cl.movement_oldorigin);
 		VectorCopy(s.origin, cl.movement_origin);
 		VectorCopy(s.velocity, cl.movement_velocity);
@@ -1290,7 +1290,7 @@ void CL_SendMove(void)
 		lastsendtime = max(lastsendtime + packettime, realtime);
 	}
 
-	cl.cmd.time = cls.protocol == PROTOCOL_QUAKEWORLD ? realtime : cl.timenonlerp;
+	cl.cmd.time = cls.protocol == PROTOCOL_QUAKEWORLD ? realtime : cl.time;
 
 	buf.maxsize = sizeof(data);
 	buf.cursize = 0;
