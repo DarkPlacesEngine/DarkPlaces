@@ -1119,7 +1119,7 @@ void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins
 						info->particleaccumulator += info->countabsolute + pcount * info->countmultiplier * cl_particles_quality.value;
 						trailstep = 0;
 					}
-					for (;info->particleaccumulator > 0;info->particleaccumulator--)
+					for (;info->particleaccumulator >= 1;info->particleaccumulator--)
 					{
 						if (info->tex[1] > info->tex[0])
 						{
