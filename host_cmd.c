@@ -1999,7 +1999,7 @@ void Host_SendCvar_f (void)
 	if(!(c = Cvar_FindVar(Cmd_Argv(1))) || (c->flags & CVAR_PRIVATE))
 		return;
 	if (cls.state != ca_dedicated)
-		Cmd_ForwardStringToServer(va("sentcvar %s %s\n", c->name, c->string));
+		Cmd_ForwardStringToServer(va("sentcvar %s \"%s\"\n", c->name, c->string));
 	if(!sv.active)// || !SV_ParseClientCommandQC)
 		return;
 
