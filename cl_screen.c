@@ -1572,9 +1572,6 @@ void SCR_DrawScreen (void)
 
 	// draw 2D stuff
 
-	//FIXME: force menu if nothing else to look at?
-	//if (key_dest == key_game && cls.signon != SIGNONS && cls.state == ca_disconnected)
-
 	if (cls.signon == SIGNONS)
 	{
 		SCR_DrawNet ();

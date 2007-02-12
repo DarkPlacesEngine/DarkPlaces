@@ -103,8 +103,6 @@ void R_Mesh_Draw_ShowTris(int firstvertex, int numvertices, int numtriangles, co
 qboolean SCR_ScreenShot(char *filename, unsigned char *buffer1, unsigned char *buffer2, unsigned char *buffer3, int x, int y, int width, int height, qboolean flipx, qboolean flipy, qboolean flipdiagonal, qboolean jpeg, qboolean gammacorrect);
 // used by R_Envmap_f and internally in backend, clears the frame
 void R_ClearScreen(void);
-// invoke refresh of frame
-void SCR_UpdateScreen(void);
 // invoke refresh of loading plaque (nothing else seen)
 void SCR_UpdateLoadingScreen(qboolean clear);
 

@@ -2010,7 +2010,7 @@ void R_UpdateVariables(void)
 
 	r_refdef.rtworld = r_shadow_realtime_world.integer;
 	r_refdef.rtworldshadows = r_shadow_realtime_world_shadows.integer && gl_stencil;
-	r_refdef.rtdlight = (r_shadow_realtime_world.integer || r_shadow_realtime_dlight.integer) && !gl_flashblend.integer;
+	r_refdef.rtdlight = (r_shadow_realtime_world.integer || r_shadow_realtime_dlight.integer) && !gl_flashblend.integer && r_dynamic.integer;
 	r_refdef.rtdlightshadows = r_refdef.rtdlight && (r_refdef.rtworld ? r_shadow_realtime_world_dlightshadows.integer : r_shadow_realtime_dlight_shadows.integer) && gl_stencil;
 	r_refdef.lightmapintensity = r_refdef.rtworld ? r_shadow_realtime_world_lightmaps.value : 1;
 	if (r_showsurfaces.integer)
