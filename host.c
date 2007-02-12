@@ -267,7 +267,7 @@ void Host_SaveConfig_f(void)
 // dedicated servers initialize the host but don't parse and set the
 // config.cfg cvars
 	// LordHavoc: don't save a config if it crashed in startup
-	if (host_framecount >= 3 && cls.state != ca_dedicated)
+	if (host_framecount >= 3 && cls.state != ca_dedicated && !COM_CheckParm("-benchmark"))
 	{
 		f = FS_Open ("config.cfg", "wb", false, false);
 		if (!f)
