@@ -750,6 +750,8 @@ typedef struct client_state_s
 	// clients view of time, time should be between mtime[0] and mtime[1] to
 	// generate a lerp point for other data, oldtime is the previous frame's
 	// value of time, frametime is the difference between time and oldtime
+	// note: cl.time may be beyond cl.mtime[0] if packet loss is occuring, it
+	// is only forcefully limited when a packet is received
 	double time, oldtime;
 	// how long it has been since the previous client frame in real time
 	// (not game time, for that use cl.time - cl.oldtime)
@@ -957,6 +959,7 @@ extern cvar_t cl_autofire;
 
 extern cvar_t cl_shownet;
 extern cvar_t cl_nolerp;
+extern cvar_t cl_nettimesyncmode;
 
 extern cvar_t cl_pitchdriftspeed;
 extern cvar_t lookspring;

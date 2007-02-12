@@ -500,14 +500,11 @@ static float CL_LerpPoint(void)
 {
 	float f;
 
-	// dropped packet, or start of demo
-	if (cl.mtime[1] < cl.mtime[0] - 0.1)
-		cl.mtime[1] = cl.mtime[0] - 0.1;
-
-	cl.time = bound(cl.mtime[1], cl.time, cl.mtime[0]);
+	if (cl_nettimesyncmode.integer == 3)
+		cl.time = bound(cl.mtime[1], cl.time, cl.mtime[0]);
 
 	// LordHavoc: lerp in listen games as the server is being capped below the client (usually)
-	if (cl.mtime[0] <= cl.mtime[1] || cl_nolerp.integer || cls.timedemo || (cl.islocalgame && !sv_fixedframeratesingleplayer.integer))
+	if (cl.mtime[0] <= cl.mtime[1])
 	{
 		cl.time = cl.mtime[0];
 		return 1;
@@ -769,7 +766,6 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit)
 {
 	const matrix4x4_t *matrix;
 	matrix4x4_t blendmatrix, tempmatrix, matrix2;
-	//matrix4x4_t dlightmatrix;
 	int j, k, l;
 	float origin[3], angles[3], delta[3], lerp, d;
 	entity_t *t;
@@ -995,7 +991,6 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit)
 // creates light and trails from an entity
 void CL_UpdateNetworkEntityTrail(entity_t *e)
 {
-	//matrix4x4_t dlightmatrix;
 	effectnameindex_t trailtype;
 	vec3_t origin;
 
