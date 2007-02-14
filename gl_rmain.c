@@ -2620,6 +2620,8 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 	// pick a new currentskinframe if the material is animated
 	if (t->numskinframes >= 2)
 		t->currentskinframe = t->skinframes + ((int)(t->skinframerate * (cl.time - ent->frame2time)) % t->numskinframes);
+	if (t->backgroundnumskinframes >= 2)
+		t->backgroundcurrentskinframe = t->backgroundskinframes + ((int)(t->backgroundskinframerate * (cl.time - ent->frame2time)) % t->backgroundnumskinframes);
 
 	t->currentmaterialflags = t->basematerialflags;
 	t->currentalpha = ent->alpha;
@@ -2639,19 +2641,24 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 		t->currenttexmatrix = r_waterscrollmatrix;
 	else
 		t->currenttexmatrix = identitymatrix;
+	if (t->backgroundnumskinframes && !(t->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
+		t->currentmaterialflags |= MATERIALFLAG_VERTEXTEXTUREBLEND;
 
 	t->colormapping = VectorLength2(ent->colormap_pantscolor) + VectorLength2(ent->colormap_shirtcolor) >= (1.0f / 1048576.0f);
 	t->basetexture = (!t->colormapping && t->currentskinframe->merged) ? t->currentskinframe->merged : t->currentskinframe->base;
 	t->glosstexture = r_texture_white;
+	t->backgroundbasetexture = t->backgroundnumskinframes ? ((!t->colormapping && t->backgroundcurrentskinframe->merged) ? t->backgroundcurrentskinframe->merged : t->backgroundcurrentskinframe->base) : r_texture_white;
+	t->backgroundglosstexture = r_texture_white;
 	t->specularpower = r_shadow_glossexponent.value;
 	t->specularscale = 0;
 	if (r_shadow_gloss.integer > 0)
 	{
-		if (t->currentskinframe->gloss)
+		if (t->currentskinframe->gloss || (t->backgroundcurrentskinframe && t->backgroundcurrentskinframe->gloss))
 		{
 			if (r_shadow_glossintensity.value > 0)
 			{
-				t->glosstexture = t->currentskinframe->gloss;
+				t->glosstexture = t->currentskinframe->gloss ? t->currentskinframe->gloss : r_texture_black;
+				t->backgroundglosstexture = (t->backgroundcurrentskinframe && t->backgroundcurrentskinframe->gloss) ? t->backgroundcurrentskinframe->gloss : r_texture_black;
 				t->specularscale = r_shadow_glossintensity.value;
 			}
 		}
@@ -3367,6 +3374,9 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, msurface_t **t
 			R_Mesh_TexBind(8, R_GetTexture(texturesurfacelist[0]->deluxemaptexture));
 	}
 	RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
+	if (rsurface_texture->backgroundnumskinframes && !(rsurface_texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
+	{
+	}
 }
 
 static void R_DrawTextureSurfaceList_GL13(int texturenumsurfaces, msurface_t **texturesurfacelist)
