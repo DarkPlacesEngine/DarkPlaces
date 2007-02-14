@@ -1002,6 +1002,8 @@ void CL_UpdateNetworkEntityTrail(entity_t *e)
 		VectorMAM(0.5f, e->render.model->normalmins, 0.5f, e->render.model->normalmaxs, o);
 		Matrix4x4_Transform(&e->render.matrix, o, origin);
 	}
+	else
+		Matrix4x4_OriginFromMatrix(&e->render.matrix, origin);
 
 	// handle particle trails and such effects now that we know where this
 	// entity is in the world...
