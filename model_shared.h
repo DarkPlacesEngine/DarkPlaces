@@ -195,6 +195,11 @@ typedef struct texture_s
 	int numskinframes;
 	float skinframerate;
 	skinframe_t skinframes[TEXTURE_MAXFRAMES];
+	// background layer (for terrain texture blending)
+	skinframe_t *backgroundcurrentskinframe;
+	int backgroundnumskinframes;
+	float backgroundskinframerate;
+	skinframe_t backgroundskinframes[TEXTURE_MAXFRAMES];
 
 	// total frames in sequence and alternate sequence
 	int anim_total[2];
@@ -215,6 +220,8 @@ typedef struct texture_s
 	qboolean colormapping;
 	rtexture_t *basetexture;
 	rtexture_t *glosstexture;
+	rtexture_t *backgroundbasetexture;
+	rtexture_t *backgroundglosstexture;
 	float specularscale;
 	float specularpower;
 

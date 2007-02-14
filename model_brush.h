@@ -95,6 +95,8 @@ mplane_t;
 #define MATERIALFLAG_CUSTOMBLEND 8192
 // do not cast shadows from this material
 #define MATERIALFLAG_NOSHADOW 16384
+// render using vertex alpha (q3bsp) as texture blend parameter between foreground (normal) skinframe and background skinframe
+#define MATERIALFLAG_VERTEXTEXTUREBLEND 32768
 
 typedef struct medge_s
 {
