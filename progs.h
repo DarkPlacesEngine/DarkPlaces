@@ -22,12 +22,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define PROGS_H
 #include "pr_comp.h"			// defs shared with qcc
 
-typedef struct link_s
-{
-	int entitynumber;
-	struct link_s	*prev, *next;
-} link_t;
-
 #define ENTITYGRIDAREAS 16
 #define MAX_ENTITYCLUSTERS 16
 
@@ -52,6 +46,8 @@ typedef struct edict_engineprivate_s
 	// since the areagrid can have multiple references to one entity,
 	// we should avoid extensive checking on entities already encountered
 	int areagridmarknumber;
+	// mins/maxs passed to World_LinkEdict
+	vec3_t areamins, areamaxs;
 
 	// PROTOCOL_QUAKE, PROTOCOL_QUAKEDP, PROTOCOL_NEHAHRAMOVIE, PROTOCOL_QUAKEWORLD
 	// baseline values
@@ -65,85 +61,6 @@ typedef struct edict_engineprivate_s
 	vec3_t moved_fromangles;
 }
 edict_engineprivate_t;
-
-// LordHavoc: in an effort to eliminate time wasted on GetEdictFieldValue...  see pr_edict.c for the functions which use these.
-extern int eval_gravity;
-extern int eval_button3;
-extern int eval_button4;
-extern int eval_button5;
-extern int eval_button6;
-extern int eval_button7;
-extern int eval_button8;
-extern int eval_button9;
-extern int eval_button10;
-extern int eval_button11;
-extern int eval_button12;
-extern int eval_button13;
-extern int eval_button14;
-extern int eval_button15;
-extern int eval_button16;
-extern int eval_buttonuse;
-extern int eval_buttonchat;
-extern int eval_glow_size;
-extern int eval_glow_trail;
-extern int eval_glow_color;
-extern int eval_items2;
-extern int eval_scale;
-extern int eval_alpha;
-extern int eval_renderamt; // HalfLife support
-extern int eval_rendermode; // HalfLife support
-extern int eval_fullbright;
-extern int eval_ammo_shells1;
-extern int eval_ammo_nails1;
-extern int eval_ammo_lava_nails;
-extern int eval_ammo_rockets1;
-extern int eval_ammo_multi_rockets;
-extern int eval_ammo_cells1;
-extern int eval_ammo_plasma;
-extern int eval_idealpitch;
-extern int eval_pitch_speed;
-extern int eval_viewmodelforclient;
-extern int eval_nodrawtoclient;
-extern int eval_exteriormodeltoclient;
-extern int eval_drawonlytoclient;
-extern int eval_ping;
-extern int eval_movement;
-extern int eval_pmodel;
-extern int eval_punchvector;
-extern int eval_viewzoom;
-extern int eval_clientcolors;
-extern int eval_tag_entity;
-extern int eval_tag_index;
-extern int eval_light_lev;
-extern int eval_color;
-extern int eval_style;
-extern int eval_pflags;
-extern int eval_cursor_active;
-extern int eval_cursor_screen;
-extern int eval_cursor_trace_start;
-extern int eval_cursor_trace_endpos;
-extern int eval_cursor_trace_ent;
-extern int eval_colormod;
-extern int eval_playermodel;
-extern int eval_playerskin;
-extern int eval_SendEntity;
-extern int eval_Version;
-extern int eval_customizeentityforclient;
-extern int eval_dphitcontentsmask;
-// DRESK - Support for Entity Contents Transition Event
-extern int eval_contentstransition;
-
-extern int gval_trace_dpstartcontents;
-extern int gval_trace_dphitcontents;
-extern int gval_trace_dphitq3surfaceflags;
-extern int gval_trace_dphittexturename;
-
-
-
-extern mfunction_t *SV_PlayerPhysicsQC;
-extern mfunction_t *EndFrameQC;
-//KrimZon - SERVER COMMANDS IN QUAKEC
-extern mfunction_t *SV_ParseClientCommandQC;
 
 #endif
 
@@ -220,70 +137,12 @@ typedef struct edict_s
 }
 prvm_edict_t;
 
-// LordHavoc: in an effort to eliminate time wasted on GetEdictFieldValue...  see pr_edict.c for the functions which use these.
-extern int eval_gravity;
-extern int eval_button3;
-extern int eval_button4;
-extern int eval_button5;
-extern int eval_button6;
-extern int eval_button7;
-extern int eval_button8;
-extern int eval_buttonuse;
-extern int eval_buttonchat;
-extern int eval_glow_size;
-extern int eval_glow_trail;
-extern int eval_glow_color;
-extern int eval_items2;
-extern int eval_scale;
-extern int eval_alpha;
-extern int eval_renderamt; // HalfLife support
-extern int eval_rendermode; // HalfLife support
-extern int eval_fullbright;
-extern int eval_ammo_shells1;
-extern int eval_ammo_nails1;
-extern int eval_ammo_lava_nails;
-extern int eval_ammo_rockets1;
-extern int eval_ammo_multi_rockets;
-extern int eval_ammo_cells1;
-extern int eval_ammo_plasma;
-extern int eval_idealpitch;
-extern int eval_pitch_speed;
-extern int eval_viewmodelforclient;
-extern int eval_nodrawtoclient;
-extern int eval_exteriormodeltoclient;
-extern int eval_drawonlytoclient;
-extern int eval_ping;
-extern int eval_movement;
-extern int eval_pmodel;
-extern int eval_punchvector;
-extern int eval_viewzoom;
-extern int eval_clientcolors;
-extern int eval_tag_entity;
-extern int eval_tag_index;
-extern int eval_light_lev;
-extern int eval_color;
-extern int eval_style;
-extern int eval_pflags;
-extern int eval_cursor_active;
-extern int eval_cursor_screen;
-extern int eval_cursor_trace_start;
-extern int eval_cursor_trace_endpos;
-extern int eval_cursor_trace_ent;
-extern int eval_colormod;
-extern int eval_playermodel;
-extern int eval_playerskin;
-
 #define PRVM_GETEDICTFIELDVALUE(ed, fieldoffset) (fieldoffset ? (prvm_eval_t *)((unsigned char *)ed->v + fieldoffset) : NULL)
-
-extern mfunction_t *SV_PlayerPhysicsQC;
-extern mfunction_t *EndFrameQC;
-//KrimZon - SERVER COMMANDS IN QUAKEC
-extern mfunction_t *SV_ParseClientCommandQC;
 
 //============================================================================
 
 extern	dprograms_t		*progs;
-extern	mfunction_t		*prog->functions;
+extern	mfunction_t		*pr_functions;
 extern	char			*pr_strings;
 extern	int				pr_stringssize;
 extern	ddef_t			*pr_globaldefs;

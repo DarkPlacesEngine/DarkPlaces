@@ -2209,7 +2209,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 					MSG_WriteByte(&net_message, playerNumber);
 					MSG_WriteString(&net_message, client->name);
 					MSG_WriteLong(&net_message, client->colors);
-					MSG_WriteLong(&net_message, (int)client->edict->fields.server->frags);
+					MSG_WriteLong(&net_message, client->frags);
 					MSG_WriteLong(&net_message, (int)(realtime - client->connecttime));
 					MSG_WriteString(&net_message, client->netconnection ? client->netconnection->address : "botclient");
 					*((int *)net_message.data) = BigLong(NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));

@@ -333,10 +333,10 @@
 			case OP_STATE:
 				if(prog->flag & PRVM_OP_STATE)
 				{
-					ed = PRVM_PROG_TO_EDICT(PRVM_G_INT(prog->self->ofs));
-					PRVM_E_FLOAT(ed,PRVM_ED_FindField ("nextthink")->ofs) = *prog->time + 0.1;
-					PRVM_E_FLOAT(ed,PRVM_ED_FindField ("frame")->ofs) = OPA->_float;
-					*(func_t *)((float*)ed->fields.vp + PRVM_ED_FindField ("think")->ofs) = OPB->function;
+					ed = PRVM_PROG_TO_EDICT(PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.self)->edict);
+					PRVM_GETEDICTFIELDVALUE(ed,prog->fieldoffsets.nextthink)->_float = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.time)->_float + 0.1;
+					PRVM_GETEDICTFIELDVALUE(ed,prog->fieldoffsets.frame)->_float = OPA->_float;
+					PRVM_GETEDICTFIELDVALUE(ed,prog->fieldoffsets.think)->function = OPB->function;
 				}
 				else
 				{

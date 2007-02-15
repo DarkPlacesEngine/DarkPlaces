@@ -50,11 +50,6 @@
 
 extern qboolean csqc_loaded;
 extern vec3_t csqc_origin, csqc_angles;
-extern int csqc_fieldoff_scale;
-extern int csqc_fieldoff_renderflags;
-extern int csqc_fieldoff_tag_entity;
-extern int csqc_fieldoff_tag_index;
-extern int csqc_fieldoff_dphitcontentsmask;
 extern cvar_t csqc_progname;	//[515]: csqc crc check and right csprogs name according to progs.dat
 extern cvar_t csqc_progcrc;
 extern cvar_t csqc_progsize;

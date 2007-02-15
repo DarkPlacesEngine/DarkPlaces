@@ -282,7 +282,7 @@ void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int numstates, const entity_sta
 	prvm_eval_t				*val, *val2;
 	int						csqcents = 0;
 
-	if(!eval_SendEntity || !eval_Version)
+	if(prog->fieldoffsets.SendEntity < 0 || prog->fieldoffsets.Version < 0)
 		return;
 	--csqc_clent;
 	if(!sv2csqcents_version[csqc_clent])
@@ -323,10 +323,10 @@ void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int numstates, const entity_sta
 
 //		if(!s->active)
 //			continue;
-		val = PRVM_GETEDICTFIELDVALUE((&prog->edicts[s->number]), eval_SendEntity);
+		val = PRVM_GETEDICTFIELDVALUE((&prog->edicts[s->number]), prog->fieldoffsets.SendEntity);
 		if(val->function)
 		{
-			val2 = PRVM_GETEDICTFIELDVALUE((&prog->edicts[s->number]), eval_Version);
+			val2 = PRVM_GETEDICTFIELDVALUE((&prog->edicts[s->number]), prog->fieldoffsets.Version);
 			if(sv2csqcents_version[csqc_clent][s->number] == (unsigned char)val2->_float)
 				continue;
 			if(!csqcents)
@@ -391,7 +391,7 @@ void EntityFrameQuake_WriteFrame(sizebuf_t *msg, int numstates, const entity_sta
 
 	for (i = 0, s = states;i < numstates;i++, s++)
 	{
-		val = PRVM_GETEDICTFIELDVALUE((&prog->edicts[s->number]), eval_SendEntity);
+		val = PRVM_GETEDICTFIELDVALUE((&prog->edicts[s->number]), prog->fieldoffsets.SendEntity);
 		if(val && val->function)
 			continue;
 
@@ -1048,7 +1048,7 @@ void EntityFrame_WriteFrame(sizebuf_t *msg, entityframe_database_t *d, int numst
 		ent = states + i;
 		number = ent->number;
 
-		val = PRVM_GETEDICTFIELDVALUE((&prog->edicts[number]), eval_SendEntity);
+		val = PRVM_GETEDICTFIELDVALUE((&prog->edicts[number]), prog->fieldoffsets.SendEntity);
 		if(val && val->function)
 				continue;
 		for (;onum < o->numentities && o->entitydata[onum].number < number;onum++)
@@ -1537,7 +1537,7 @@ void EntityFrame4_WriteFrame(sizebuf_t *msg, entityframe4_database_t *d, int num
 	d->currententitynumber = 1;
 	for (i = 0, n = startnumber;n < prog->max_edicts;n++)
 	{
-		val = PRVM_GETEDICTFIELDVALUE((&prog->edicts[n]), eval_SendEntity);
+		val = PRVM_GETEDICTFIELDVALUE((&prog->edicts[n]), prog->fieldoffsets.SendEntity);
 		if(val && val->function)
 			continue;
 		// find the old state to delta from
@@ -1691,7 +1691,7 @@ void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbi
 	unsigned int bits = 0;
 
 	prvm_eval_t *val;
-	val = PRVM_GETEDICTFIELDVALUE((&prog->edicts[s->number]), eval_SendEntity);
+	val = PRVM_GETEDICTFIELDVALUE((&prog->edicts[s->number]), prog->fieldoffsets.SendEntity);
 	if(val && val->function)
 		return;
 

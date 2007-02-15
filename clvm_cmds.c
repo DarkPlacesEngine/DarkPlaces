@@ -127,6 +127,7 @@ void CSQC_RelinkCSQCEntities (void);
 char *Key_GetBind (int key);
 model_t *CSQC_GetModelByIndex(int modelindex);
 model_t *CSQC_GetModelFromEntity(prvm_edict_t *ed);
+void CL_LinkEdict(prvm_edict_t *ed);
 
 
 
@@ -159,6 +160,7 @@ void VM_CL_setorigin (void)
 	}
 	org = PRVM_G_VECTOR(OFS_PARM1);
 	VectorCopy (org, e->fields.client->origin);
+	CL_LinkEdict(e);
 }
 
 // #3 void(entity e, string m) setmodel
@@ -222,6 +224,8 @@ void VM_CL_setsize (void)
 	VectorCopy (min, e->fields.client->mins);
 	VectorCopy (max, e->fields.client->maxs);
 	VectorSubtract (max, min, e->fields.client->size);
+
+	CL_LinkEdict(e);
 }
 
 // #8 void(entity e, float chan, string samp) sound
@@ -568,104 +572,6 @@ void VM_CL_particle (void)
 	CL_ParticleEffect(EFFECT_SVC_PARTICLE, count, org, org, dir, dir, NULL, color);
 }
 
-// #49 void(entity ent, float ideal_yaw, float speed_yaw) ChangeYaw
-void VM_CL_changeyaw (void)
-{
-	prvm_edict_t	*ent;
-	float			ideal, current, move, speed;
-	VM_SAFEPARMCOUNT(3, VM_CL_changeyaw);
-
-	ent = PRVM_G_EDICT(OFS_PARM0);
-	if (ent == prog->edicts)
-	{
-		VM_Warning("changeyaw: can not modify world entity\n");
-		return;
-	}
-	if (ent->priv.server->free)
-	{
-		VM_Warning("changeyaw: can not modify free entity\n");
-		return;
-	}
-	current = ANGLEMOD(ent->fields.client->angles[1]);
-	ideal = PRVM_G_FLOAT(OFS_PARM1);
-	speed = PRVM_G_FLOAT(OFS_PARM2);
-
-	if (current == ideal)
-		return;
-	move = ideal - current;
-	if (ideal > current)
-	{
-		if (move >= 180)
-			move = move - 360;
-	}
-	else
-	{
-		if (move <= -180)
-			move = move + 360;
-	}
-	if (move > 0)
-	{
-		if (move > speed)
-			move = speed;
-	}
-	else
-	{
-		if (move < -speed)
-			move = -speed;
-	}
-
-	ent->fields.client->angles[1] = ANGLEMOD (current + move);
-}
-
-// #63 void(entity ent, float ideal_pitch, float speed_pitch) changepitch (DP_QC_CHANGEPITCH)
-void VM_CL_changepitch (void)
-{
-	prvm_edict_t		*ent;
-	float				ideal, current, move, speed;
-	VM_SAFEPARMCOUNT(3, VM_CL_changepitch);
-
-	ent = PRVM_G_EDICT(OFS_PARM0);
-	if (ent == prog->edicts)
-	{
-		VM_Warning("changepitch: can not modify world entity\n");
-		return;
-	}
-	if (ent->priv.server->free)
-	{
-		VM_Warning("changepitch: can not modify free entity\n");
-		return;
-	}
-	current = ANGLEMOD( ent->fields.client->angles[0] );
-	ideal = PRVM_G_FLOAT(OFS_PARM1);
-	speed = PRVM_G_FLOAT(OFS_PARM2);
-
-	if (current == ideal)
-		return;
-	move = ideal - current;
-	if (ideal > current)
-	{
-		if (move >= 180)
-			move = move - 360;
-	}
-	else
-	{
-		if (move <= -180)
-			move = move + 360;
-	}
-	if (move > 0)
-	{
-		if (move > speed)
-			move = speed;
-	}
-	else
-	{
-		if (move < -speed)
-			move = -speed;
-	}
-
-	ent->fields.client->angles[0] = ANGLEMOD (current + move);
-}
-
 // #64 void(entity e, entity ignore) tracetoss (DP_QC_TRACETOSS)
 void VM_CL_tracetoss (void)
 {
@@ -792,7 +698,7 @@ void VM_R_AddEntities (void)
 	CSQC_RelinkAllEntities(drawmask);
 	CL_RelinkLightFlashes();
 
-	*prog->time = cl.time;
+	prog->globals.client->time = cl.time;
 	for(i=1;i<prog->num_edicts;i++)
 	{
 		ed = &prog->edicts[i];
@@ -1855,11 +1761,11 @@ void VM_CL_setattachment (void)
 	if (tagentity == NULL)
 		tagentity = prog->edicts;
 
-	v = PRVM_GETEDICTFIELDVALUE(e, csqc_fieldoff_tag_entity);
+	v = PRVM_GETEDICTFIELDVALUE(e, prog->fieldoffsets.tag_entity);
 	if (v)
 		v->edict = PRVM_EDICT_TO_PROG(tagentity);
 
-	v = PRVM_GETEDICTFIELDVALUE(e, csqc_fieldoff_tag_index);
+	v = PRVM_GETEDICTFIELDVALUE(e, prog->fieldoffsets.tag_index);
 	if (v)
 		v->_float = 0;
 	if (tagentity != NULL && tagentity != prog->edicts && tagname && tagname[0])
@@ -1934,13 +1840,13 @@ int CL_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 	else
 		tagmatrix = identitymatrix;
 
-	if ((val = PRVM_GETEDICTFIELDVALUE(ent, csqc_fieldoff_tag_entity)) && val->edict)
+	if ((val = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.tag_entity)) && val->edict)
 	{ // DP_GFX_QUAKE3MODELTAGS, scan all chain and stop on unattached entity
 		attachloop = 0;
 		do
 		{
 			attachent = PRVM_EDICT_NUM(val->edict); // to this it entity our entity is attached
-			val = PRVM_GETEDICTFIELDVALUE(ent, csqc_fieldoff_tag_index);
+			val = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.tag_index);
 
 			model = CSQC_GetModelFromEntity(attachent);
 
@@ -1950,7 +1856,7 @@ int CL_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 				attachmatrix = identitymatrix;
 
 			// apply transformation by child entity matrix
-			val = PRVM_GETEDICTFIELDVALUE(ent, csqc_fieldoff_scale);
+			val = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.scale);
 			if (val->_float == 0)
 				val->_float = 1;
 			Matrix4x4_CreateFromQuakeEntity(&entitymatrix, ent->fields.client->origin[0], ent->fields.client->origin[1], ent->fields.client->origin[2], -ent->fields.client->angles[0], ent->fields.client->angles[1], ent->fields.client->angles[2], val->_float);
@@ -1966,22 +1872,22 @@ int CL_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 			if (attachloop > 255) // prevent runaway looping
 				return 5;
 		}
-		while ((val = PRVM_GETEDICTFIELDVALUE(ent, csqc_fieldoff_tag_entity)) && val->edict);
+		while ((val = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.tag_entity)) && val->edict);
 	}
 
 	// normal or RENDER_VIEWMODEL entity (or main parent entity on attach chain)
-	val = PRVM_GETEDICTFIELDVALUE(ent, csqc_fieldoff_scale);
+	val = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.scale);
 	if (val->_float == 0)
 		val->_float = 1;
 	// Alias models have inverse pitch, bmodels can't have tags, so don't check for modeltype...
 	Matrix4x4_CreateFromQuakeEntity(&entitymatrix, ent->fields.client->origin[0], ent->fields.client->origin[1], ent->fields.client->origin[2], -ent->fields.client->angles[0], ent->fields.client->angles[1], ent->fields.client->angles[2], val->_float);
 	Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
 
-	if ((val = PRVM_GETEDICTFIELDVALUE(ent, csqc_fieldoff_renderflags)) && (RF_VIEWMODEL & (int)val->_float))
+	if ((val = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.renderflags)) && (RF_VIEWMODEL & (int)val->_float))
 	{// RENDER_VIEWMODEL magic
 		Matrix4x4_Copy(&tagmatrix, out);
 
-		val = PRVM_GETEDICTFIELDVALUE(ent, csqc_fieldoff_scale);
+		val = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.scale);
 		if (val->_float == 0)
 			val->_float = 1;
 
@@ -2088,7 +1994,7 @@ void VM_WasFreed (void)
 	VM_SAFEPARMCOUNT(1, VM_WasFreed);
 
 	e = PRVM_G_EDICT(OFS_PARM0);
-	if (!e->priv.required->free || (e->priv.required->free && (e->priv.required->freetime < 2 || (*prog->time - e->priv.required->freetime) > 0.5 )))
+	if (!e->priv.required->free || (e->priv.required->free && (e->priv.required->freetime < 2 || (prog->globals.client->time - e->priv.required->freetime) > 0.5 )))
 		PRVM_G_FLOAT(OFS_RETURN) = false;
 	else
 		PRVM_G_FLOAT(OFS_RETURN) = true;
@@ -2097,18 +2003,15 @@ void VM_WasFreed (void)
 void VM_CL_select_cube (void)
 {
 	int		i;
-	int		chain_of;
 	float	*mins2, *maxs2;
 	prvm_edict_t	*ent, *chain;
 	vec3_t	mins1, maxs1;
 
 	VM_SAFEPARMCOUNT(2, VM_CL_select_cube);
 
-	// is the same like !(prog->flag & PRVM_FE_CHAIN) - even if the operator precedence is another
-	if(!prog->flag & PRVM_FE_CHAIN)
+	if (prog->fieldoffsets.chain < 0)
 		PRVM_ERROR("VM_findchain: %s doesnt have a chain field !\n", PRVM_NAME);
 
-	chain_of = PRVM_ED_FindField("chain")->ofs;
 	chain = prog->edicts;
 
 	mins2 = PRVM_G_VECTOR(OFS_PARM0);
@@ -2126,7 +2029,7 @@ void VM_CL_select_cube (void)
 			continue;
 		if (maxs1[0] < mins2[0] || maxs1[1] < mins2[1] || maxs1[2] < mins2[2])
 			continue;
-		PRVM_E_INT(ent,chain_of) = PRVM_NUM_FOR_EDICT(chain);
+		PRVM_E_INT(ent,prog->fieldoffsets.chain) = PRVM_NUM_FOR_EDICT(chain);
 		chain = ent;
 	}
 
@@ -2136,7 +2039,6 @@ void VM_CL_select_cube (void)
 void VM_CL_select_super (void)
 {
 /*	int		i;
-	int		chain_of;
 	float	*v[8];
 	prvm_edict_t	*ent, *chain;
 	vec3_t	mins1, maxs1;
@@ -2145,11 +2047,9 @@ void VM_CL_select_super (void)
 	for(i=0;i<8;i++)
 		v[i] = PRVM_G_VECTOR(OFS_PARM0+i*3);
 
-	// is the same like !(prog->flag & PRVM_FE_CHAIN) - even if the operator precedence is another
-	if(!prog->flag & PRVM_FE_CHAIN)
+	if (prog->fieldoffsets.chain < 0)
 		PRVM_ERROR("VM_findchain: %s doesnt have a chain field !\n", PRVM_NAME);
 
-	chain_of = PRVM_ED_FindField("chain")->ofs;
 	chain = prog->edicts;
 
 	mins2 = PRVM_G_VECTOR(OFS_PARM0);
@@ -2167,7 +2067,7 @@ void VM_CL_select_super (void)
 			continue;
 		if (maxs1[0] < mins2[0] || maxs1[1] < mins2[1] || maxs1[2] < mins2[2])
 			continue;
-		PRVM_E_INT(ent,chain_of) = PRVM_NUM_FOR_EDICT(chain);
+		PRVM_E_INT(ent,prog->fieldoffsets.chain) = PRVM_NUM_FOR_EDICT(chain);
 		chain = ent;
 	}
 
@@ -2322,7 +2222,7 @@ VM_cvar,					// #45 float(string s) cvar
 VM_localcmd,				// #46 void(string s) localcmd
 VM_nextent,					// #47 entity(entity e) nextent
 VM_CL_particle,				// #48 void(vector o, vector d, float color, float count) particle
-VM_CL_changeyaw,			// #49 void(entity ent, float ideal_yaw, float speed_yaw) ChangeYaw
+VM_changeyaw,				// #49 void(entity ent) ChangeYaw
 NULL,						// #50
 VM_vectoangles,				// #51 vector(vector v) vectoangles
 0,			// #52 void(float to, float f) WriteByte
@@ -2336,7 +2236,7 @@ VM_vectoangles,				// #51 vector(vector v) vectoangles
 VM_sin,						// #60 float(float f) sin (DP_QC_SINCOSSQRTPOW)
 VM_cos,						// #61 float(float f) cos (DP_QC_SINCOSSQRTPOW)
 VM_sqrt,					// #62 float(float f) sqrt (DP_QC_SINCOSSQRTPOW)
-VM_CL_changepitch,			// #63 void(entity ent, float ideal_pitch, float speed_pitch) changepitch (DP_QC_CHANGEPITCH)
+VM_changepitch,				// #63 void(entity ent) changepitch (DP_QC_CHANGEPITCH)
 VM_CL_tracetoss,			// #64 void(entity e, entity ignore) tracetoss (DP_QC_TRACETOSS)
 VM_etos,					// #65 string(entity ent) etos (DP_QC_ETOS)
 NULL,						// #66

@@ -367,5 +367,8 @@ void VM_bufstr_set (void);
 void VM_bufstr_add (void);
 void VM_bufstr_free (void);
 
+void VM_changeyaw (void);
+void VM_changepitch (void);
+
 void VM_Cmd_Init(void);
 void VM_Cmd_Reset(void);

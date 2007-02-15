@@ -73,6 +73,9 @@ typedef struct server_s
 	int csqc_progsize; // -1 = no progs
 	char csqc_progname[MAX_QPATH]; // copied from csqc_progname at level start
 
+	// collision culling data
+	world_t world;
+
 	// map name
 	char name[64];
 	// maps/<name>.bsp, for model_precache[0]
@@ -355,7 +358,29 @@ qboolean SV_PlayerCheckGround (prvm_edict_t *ent);
 qboolean SV_CheckBottom (prvm_edict_t *ent);
 qboolean SV_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink);
 
-struct trace_s SV_ClipMoveToEntity(prvm_edict_t *ent, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int movetype, int hitsupercontents);
+// Needs to be called any time an entity changes origin, mins, maxs, or solid
+// sets ent->v.absmin and ent->v.absmax
+// if touchtriggers, calls prog functions for the intersected triggers
+void SV_LinkEdict (prvm_edict_t *ent, qboolean touch_triggers);
+
+// traces a box move against a single entity
+// mins and maxs are relative
+//
+// if the entire move stays in a single solid brush, trace.allsolid will be set
+//
+// if the starting point is in a solid, it will be allowed to move out to an
+// open area, and trace.startsolid will be set
+//
+// type is one of the MOVE_ values such as MOVE_NOMONSTERS which skips box
+// entities, only colliding with SOLID_BSP entities (doors, lifts)
+//
+// passedict is excluded from clipping checks
+struct trace_s SV_Move_ClipToEntity(prvm_edict_t *ent, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int movetype, int hitsupercontents);
+
+// traces a box move against worldmodel and all entities in the specified area
+trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, prvm_edict_t *passedict);
+
+#define SV_PointSuperContents(point) (SV_Move((point), vec3_origin, vec3_origin, (point), sv_gameplayfix_swiminbmodels.integer ? MOVE_NOMONSTERS : MOVE_WORLDONLY, NULL).startsupercontents)
 
 void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t *msg, int *stats);
 

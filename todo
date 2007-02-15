@@ -81,6 +81,7 @@
 0 bug dpmod: identify what could cause huge angles values (1187488512.0000) on a dog entity, may be related to anglemod, FacingIdeal, ai_run, or dog_run2 (Zombie13)
 0 bug dpmod: impulse 102 isn't removing the bots
 0 bug dpmod: in dpmod_qcphysics_casings the two main particles have the same mass, realistically speaking the rear one should have more mass than the front one
+0 bug dpmod: it is (rarely) possible to die and be unable to respawn
 0 bug dpmod: monsters don't properly chase you around corners, this is not an engine bug because they work fine in id1 but not dpmod, the knight at the start of e2m2 makes for good testing by shooting him and then hiding behind the crates (StrangerThanYou)
 0 bug dpmod: monsters falling out of level?
 0 bug dpmod: monsters shouldn't constantly do sightsounds on a slain player, it's annoying and silly
@@ -115,6 +116,7 @@
 0 change darkplaces renderer: rename r_drawportals to r_showportals, and move its declaration to gl_rmain.c, and make it work with r_showdisabledepthtest
 0 change darkplaces server: make "viewmodel" command code precache a new model and set it, rather than changing the meaning of the player model
 0 change darkplaces server: support sys_ticrate 0 as variable framerate mode
+0 change darkplaces: make vid_mouse 0 mouse movement work with menu.dat
 0 change dpmod: add a ghostly cvar and change skill 5 code to check it
 0 change dpmod: make shamblers be worth 5 frags, shalrath be worth 3 frags, and fiends be worth 2 frags (Zenex)
 0 change dpmod: stop using playernogun/playergun models, go back to ordinary player.mdl, this saves a bit of memory
@@ -194,9 +196,11 @@
 0 feature darkplaces windows: include P3, P4, Xeon, AthlonXP, and Athlon64-32bit optimized windows dedicated server binaries for windows server admins to use, http://www.alientrap.org/forum/viewtopic.php?t=522 (PoWaZ)
 0 feature darkplaces: .vis files - like .lit but replacement vis data, note this also requires .leaf files (knghtbrd)
 0 feature darkplaces: add DP_GFX_EFFECTINFO extension to indicate that effectinfo.txt is supported, and thoroughly document its syntax (Morphed)
+0 feature darkplaces: add a progress bar to the loading screen, this would be updated by the model/sound loading process
 0 feature dpmaster: don't filter by protocol version if query is for protocol version 0, this way server browsers can see multiple versions of a single game, should probably also add a 'any' gamename that disables gamename filtering (Angst, Elric)
 0 feature dpmaster: release an example /etc/init.d/dpdmasterd script based on the one LordHavoc is using
 0 feature dpmod: add a g_spawnprotectiontime cvar which would default to 1 (invulnerable for 1 second after spawn) to prevent mining the spawn points
+0 feature dpmod: add a gravity gun weapon, able to grab and launch monsters
 0 feature dpmod: add a summon command using KRIMZON_SV_PARSECLIENTCOMMAND which would summon the specified monster infront of you (Kedhrin)
 0 feature dpmod: add higher quality replacement sbar images
 0 feature dpmod: add knight/hell knight swords as player weapons (TimeServ)

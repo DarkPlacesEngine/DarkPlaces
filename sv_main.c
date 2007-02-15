@@ -77,10 +77,14 @@ mempool_t *sv_mempool = NULL;
 //============================================================================
 
 extern void SV_Phys_Init (void);
-extern void SV_World_Init (void);
 static void SV_SaveEntFile_f(void);
 static void SV_StartDownload_f(void);
 static void SV_Download_f(void);
+
+void SV_AreaStats_f(void)
+{
+	World_PrintAreaStats(&sv.world, "server");
+}
 
 /*
 ===============
@@ -99,6 +103,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&csqc_progsize);
 
 	Cmd_AddCommand("sv_saveentfile", SV_SaveEntFile_f, "save map entities to .ent file (to allow external editing)");
+	Cmd_AddCommand("sv_areastats", SV_AreaStats_f, "prints statistics on entity culling during collision traces");
 	Cmd_AddCommand_WithClientCommand("sv_startdownload", NULL, SV_StartDownload_f, "begins sending a file to the client (network protocol use only)");
 	Cmd_AddCommand_WithClientCommand("download", NULL, SV_Download_f, "downloads a specified file from the server");
 	Cvar_RegisterVariable (&sv_maxvelocity);
@@ -146,7 +151,6 @@ void SV_Init (void)
 
 	SV_VM_Init();
 	SV_Phys_Init();
-	SV_World_Init();
 
 	sv_mempool = Mem_AllocPool("server", 0, NULL);
 }
@@ -371,14 +375,14 @@ void SV_SendServerinfo (client_t *client)
 	{
 		prvm_eval_t *val;
 		Con_DPrintf("sending csqc info to client (\"%s\" with size %i and crc %i)\n", sv.csqc_progname, sv.csqc_progsize, sv.csqc_progcrc);
-		//[515]: init stufftext string (it is sent before svc_serverinfo)
-		val = PRVM_GETGLOBALFIELDVALUE(PRVM_ED_FindGlobalOffset("SV_InitCmd"));
 		MSG_WriteByte (&client->netconnection->message, svc_stufftext);
 		MSG_WriteString (&client->netconnection->message, va("csqc_progname %s\n", sv.csqc_progname));
 		MSG_WriteByte (&client->netconnection->message, svc_stufftext);
 		MSG_WriteString (&client->netconnection->message, va("csqc_progsize %i\n", sv.csqc_progsize));
 		MSG_WriteByte (&client->netconnection->message, svc_stufftext);
 		MSG_WriteString (&client->netconnection->message, va("csqc_progcrc %i\n", sv.csqc_progcrc));
+		//[515]: init stufftext string (it is sent before svc_serverinfo)
+		val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.SV_InitCmd);
 		if (val)
 		{
 			MSG_WriteByte (&client->netconnection->message, svc_stufftext);
@@ -557,21 +561,21 @@ qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, int 
 	modelindex = (i >= 1 && i < MAX_MODELS && *PRVM_GetString(ent->fields.server->model)) ? i : 0;
 
 	flags = 0;
-	i = (int)(PRVM_GETEDICTFIELDVALUE(ent, eval_glow_size)->_float * 0.25f);
+	i = (int)(PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.glow_size)->_float * 0.25f);
 	glowsize = (unsigned char)bound(0, i, 255);
-	if (PRVM_GETEDICTFIELDVALUE(ent, eval_glow_trail)->_float)
+	if (PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.glow_trail)->_float)
 		flags |= RENDER_GLOWTRAIL;
 
-	f = PRVM_GETEDICTFIELDVALUE(ent, eval_color)->vector[0]*256;
+	f = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.color)->vector[0]*256;
 	light[0] = (unsigned short)bound(0, f, 65535);
-	f = PRVM_GETEDICTFIELDVALUE(ent, eval_color)->vector[1]*256;
+	f = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.color)->vector[1]*256;
 	light[1] = (unsigned short)bound(0, f, 65535);
-	f = PRVM_GETEDICTFIELDVALUE(ent, eval_color)->vector[2]*256;
+	f = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.color)->vector[2]*256;
 	light[2] = (unsigned short)bound(0, f, 65535);
-	f = PRVM_GETEDICTFIELDVALUE(ent, eval_light_lev)->_float;
+	f = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.light_lev)->_float;
 	light[3] = (unsigned short)bound(0, f, 65535);
-	lightstyle = (unsigned char)PRVM_GETEDICTFIELDVALUE(ent, eval_style)->_float;
-	lightpflags = (unsigned char)PRVM_GETEDICTFIELDVALUE(ent, eval_pflags)->_float;
+	lightstyle = (unsigned char)PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.style)->_float;
+	lightpflags = (unsigned char)PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.pflags)->_float;
 
 	if (gamemode == GAME_TENEBRAE)
 	{
@@ -622,7 +626,7 @@ qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, int 
 
 	// early culling checks
 	// (final culling is done by SV_MarkWriteEntityStateToClient)
-	customizeentityforclient = PRVM_GETEDICTFIELDVALUE(ent, eval_customizeentityforclient)->function;
+	customizeentityforclient = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.customizeentityforclient)->function;
 	if (!customizeentityforclient)
 	{
 		if (e > svs.maxclients && (!modelindex && !specialvisibilityradius))
@@ -645,18 +649,18 @@ qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, int 
 	cs->modelindex = modelindex;
 	cs->skin = (unsigned)ent->fields.server->skin;
 	cs->frame = (unsigned)ent->fields.server->frame;
-	cs->viewmodelforclient = PRVM_GETEDICTFIELDVALUE(ent, eval_viewmodelforclient)->edict;
-	cs->exteriormodelforclient = PRVM_GETEDICTFIELDVALUE(ent, eval_exteriormodeltoclient)->edict;
-	cs->nodrawtoclient = PRVM_GETEDICTFIELDVALUE(ent, eval_nodrawtoclient)->edict;
-	cs->drawonlytoclient = PRVM_GETEDICTFIELDVALUE(ent, eval_drawonlytoclient)->edict;
+	cs->viewmodelforclient = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.viewmodelforclient)->edict;
+	cs->exteriormodelforclient = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.exteriormodeltoclient)->edict;
+	cs->nodrawtoclient = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.nodrawtoclient)->edict;
+	cs->drawonlytoclient = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.drawonlytoclient)->edict;
 	cs->customizeentityforclient = customizeentityforclient;
-	cs->tagentity = PRVM_GETEDICTFIELDVALUE(ent, eval_tag_entity)->edict;
-	cs->tagindex = (unsigned char)PRVM_GETEDICTFIELDVALUE(ent, eval_tag_index)->_float;
+	cs->tagentity = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.tag_entity)->edict;
+	cs->tagindex = (unsigned char)PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.tag_index)->_float;
 	cs->glowsize = glowsize;
 
 	// don't need to init cs->colormod because the defaultstate did that for us
 	//cs->colormod[0] = cs->colormod[1] = cs->colormod[2] = 32;
-	val = PRVM_GETEDICTFIELDVALUE(ent, eval_colormod);
+	val = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.colormod);
 	if (val->vector[0] || val->vector[1] || val->vector[2])
 	{
 		i = (int)(val->vector[0] * 32.0f);cs->colormod[0] = bound(0, i, 255);
@@ -667,14 +671,14 @@ qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, int 
 	cs->modelindex = modelindex;
 
 	cs->alpha = 255;
-	f = (PRVM_GETEDICTFIELDVALUE(ent, eval_alpha)->_float * 255.0f);
+	f = (PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.alpha)->_float * 255.0f);
 	if (f)
 	{
 		i = (int)f;
 		cs->alpha = (unsigned char)bound(0, i, 255);
 	}
 	// halflife
-	f = (PRVM_GETEDICTFIELDVALUE(ent, eval_renderamt)->_float);
+	f = (PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.renderamt)->_float);
 	if (f)
 	{
 		i = (int)f;
@@ -682,7 +686,7 @@ qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, int 
 	}
 
 	cs->scale = 16;
-	f = (PRVM_GETEDICTFIELDVALUE(ent, eval_scale)->_float * 16.0f);
+	f = (PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.scale)->_float * 16.0f);
 	if (f)
 	{
 		i = (int)f;
@@ -690,11 +694,11 @@ qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, int 
 	}
 
 	cs->glowcolor = 254;
-	f = (PRVM_GETEDICTFIELDVALUE(ent, eval_glow_color)->_float);
+	f = (PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.glow_color)->_float);
 	if (f)
 		cs->glowcolor = (int)f;
 
-	if (PRVM_GETEDICTFIELDVALUE(ent, eval_fullbright)->_float)
+	if (PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.fullbright)->_float)
 		cs->effects |= EF_FULLBRIGHT;
 
 	if (ent->fields.server->movetype == MOVETYPE_STEP)
@@ -1056,14 +1060,14 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 
 	// stuff the sigil bits into the high bits of items for sbar, or else
 	// mix in items2
-	val = PRVM_GETEDICTFIELDVALUE(ent, eval_items2);
+	val = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.items2);
 	if (gamemode == GAME_HIPNOTIC || gamemode == GAME_ROGUE)
 		items = (int)ent->fields.server->items | ((int)val->_float << 23);
 	else
 		items = (int)ent->fields.server->items | ((int)prog->globals.server->serverflags << 28);
 
 	VectorClear(punchvector);
-	if ((val = PRVM_GETEDICTFIELDVALUE(ent, eval_punchvector)))
+	if ((val = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.punchvector)))
 		VectorCopy(val->vector, punchvector);
 
 	// cache weapon model name and index in client struct to save time
@@ -1076,7 +1080,7 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 	}
 
 	viewzoom = 255;
-	if ((val = PRVM_GETEDICTFIELDVALUE(ent, eval_viewzoom)))
+	if ((val = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.viewzoom)))
 		viewzoom = (int)(val->_float * 255.0f);
 	if (viewzoom == 0)
 		viewzoom = 255;
@@ -1380,7 +1384,7 @@ void SV_UpdateToReliableMessages (void)
 
 		// DP_SV_CLIENTCOLORS
 		// this is always found (since it's added by the progs loader)
-		if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_clientcolors)))
+		if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.clientcolors)))
 			host_client->colors = (int)val->_float;
 		if (host_client->old_colors != host_client->colors)
 		{
@@ -1392,23 +1396,23 @@ void SV_UpdateToReliableMessages (void)
 		}
 
 		// NEXUIZ_PLAYERMODEL
-		if( eval_playermodel ) {
-			model = PRVM_GetString(PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_playermodel)->string);
+		if( prog->fieldoffsets.playermodel >= 0 ) {
+			model = PRVM_GetString(PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.playermodel)->string);
 			if (model == NULL)
 				model = "";
 			// always point the string back at host_client->name to keep it safe
 			strlcpy (host_client->playermodel, model, sizeof (host_client->playermodel));
-			PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_playermodel)->string = PRVM_SetEngineString(host_client->playermodel);
+			PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.playermodel)->string = PRVM_SetEngineString(host_client->playermodel);
 		}
 
 		// NEXUIZ_PLAYERSKIN
-		if( eval_playerskin ) {
-			skin = PRVM_GetString(PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_playerskin)->string);
+		if( prog->fieldoffsets.playerskin >= 0 ) {
+			skin = PRVM_GetString(PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.playerskin)->string);
 			if (skin == NULL)
 				skin = "";
 			// always point the string back at host_client->name to keep it safe
 			strlcpy (host_client->playerskin, skin, sizeof (host_client->playerskin));
-			PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_playerskin)->string = PRVM_SetEngineString(host_client->playerskin);
+			PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.playerskin)->string = PRVM_SetEngineString(host_client->playerskin);
 		}
 
 		// frags
@@ -1837,7 +1841,7 @@ void SV_IncreaseEdicts(void)
 			SV_UnlinkEdict(prog->edicts + i);
 		memset(&ent->priv.server->areagrid, 0, sizeof(ent->priv.server->areagrid));
 	}
-	SV_ClearWorld();
+	World_Clear(&sv.world);
 
 	prog->max_edicts   = min(prog->max_edicts + 256, MAX_EDICTS);
 	prog->edictprivate = PR_Alloc(prog->max_edicts * sizeof(edict_engineprivate_t));
@@ -2010,7 +2014,7 @@ void SV_SpawnServer (const char *server)
 	prog->allowworldwrites = true;
 	sv.paused = false;
 
-	*prog->time = sv.time = 1.0;
+	prog->globals.server->time = sv.time = 1.0;
 
 	Mod_ClearUsed();
 	worldmodel->used = true;
@@ -2023,7 +2027,9 @@ void SV_SpawnServer (const char *server)
 //
 // clear world interaction links
 //
-	SV_ClearWorld ();
+	VectorCopy(sv.worldmodel->normalmins, sv.world.areagrid_mins);
+	VectorCopy(sv.worldmodel->normalmaxs, sv.world.areagrid_maxs);
+	World_Clear(&sv.world);
 
 	strlcpy(sv.sound_precache[0], "", sizeof(sv.sound_precache[0]));
 
@@ -2151,10 +2157,10 @@ void SV_VM_CB_BeginIncreaseEdicts(void)
 	for (i = 0, ent = prog->edicts;i < prog->max_edicts;i++, ent++)
 	{
 		if (!ent->priv.server->free)
-			SV_UnlinkEdict(prog->edicts + i);
+			World_UnlinkEdict(prog->edicts + i);
 		memset(&ent->priv.server->areagrid, 0, sizeof(ent->priv.server->areagrid));
 	}
-	SV_ClearWorld();
+	World_Clear(&sv.world);
 }
 
 void SV_VM_CB_EndIncreaseEdicts(void)
@@ -2162,12 +2168,10 @@ void SV_VM_CB_EndIncreaseEdicts(void)
 	int i;
 	prvm_edict_t *ent;
 
-	for (i = 0, ent = prog->edicts;i < prog->max_edicts;i++, ent++)
-	{
-		// link every entity except world
+	// link every entity except world
+	for (i = 1, ent = prog->edicts;i < prog->max_edicts;i++, ent++)
 		if (!ent->priv.server->free)
 			SV_LinkEdict(ent, false);
-	}
 }
 
 void SV_VM_CB_InitEdict(prvm_edict_t *e)
@@ -2187,19 +2191,19 @@ void SV_VM_CB_InitEdict(prvm_edict_t *e)
 		// DP_SV_CLIENTNAME and DP_SV_CLIENTCOLORS will not immediately
 		// reset them
 		e->fields.server->netname = PRVM_SetEngineString(svs.clients[num].name);
-		if ((val = PRVM_GETEDICTFIELDVALUE(e, eval_clientcolors)))
+		if ((val = PRVM_GETEDICTFIELDVALUE(e, prog->fieldoffsets.clientcolors)))
 			val->_float = svs.clients[num].colors;
 		// NEXUIZ_PLAYERMODEL and NEXUIZ_PLAYERSKIN
-		if( eval_playermodel )
-			PRVM_GETEDICTFIELDVALUE(e, eval_playermodel)->string = PRVM_SetEngineString(svs.clients[num].playermodel);
-		if( eval_playerskin )
-			PRVM_GETEDICTFIELDVALUE(e, eval_playerskin)->string = PRVM_SetEngineString(svs.clients[num].playerskin);
+		if( prog->fieldoffsets.playermodel >= 0 )
+			PRVM_GETEDICTFIELDVALUE(e, prog->fieldoffsets.playermodel)->string = PRVM_SetEngineString(svs.clients[num].playermodel);
+		if( prog->fieldoffsets.playerskin >= 0 )
+			PRVM_GETEDICTFIELDVALUE(e, prog->fieldoffsets.playerskin)->string = PRVM_SetEngineString(svs.clients[num].playerskin);
 	}
 }
 
 void SV_VM_CB_FreeEdict(prvm_edict_t *ed)
 {
-	SV_UnlinkEdict (ed);		// unlink from world bsp
+	World_UnlinkEdict(ed);		// unlink from world bsp
 
 	ed->fields.server->model = 0;
 	ed->fields.server->takedamage = 0;
@@ -2338,163 +2342,6 @@ void SV_VM_Init(void)
 	Cvar_RegisterVariable (&cutscene); // for Nehahra but useful to other mods as well
 }
 
-// LordHavoc: in an effort to eliminate time wasted on GetEdictFieldValue...  these are defined as externs in progs.h
-int eval_gravity;
-int eval_button3;
-int eval_button4;
-int eval_button5;
-int eval_button6;
-int eval_button7;
-int eval_button8;
-int eval_button9;
-int eval_button10;
-int eval_button11;
-int eval_button12;
-int eval_button13;
-int eval_button14;
-int eval_button15;
-int eval_button16;
-int eval_buttonuse;
-int eval_buttonchat;
-int eval_glow_size;
-int eval_glow_trail;
-int eval_glow_color;
-int eval_items2;
-int eval_scale;
-int eval_alpha;
-int eval_renderamt; // HalfLife support
-int eval_rendermode; // HalfLife support
-int eval_fullbright;
-int eval_ammo_shells1;
-int eval_ammo_nails1;
-int eval_ammo_lava_nails;
-int eval_ammo_rockets1;
-int eval_ammo_multi_rockets;
-int eval_ammo_cells1;
-int eval_ammo_plasma;
-int eval_idealpitch;
-int eval_pitch_speed;
-int eval_viewmodelforclient;
-int eval_nodrawtoclient;
-int eval_exteriormodeltoclient;
-int eval_drawonlytoclient;
-int eval_ping;
-int eval_movement;
-int eval_pmodel;
-int eval_punchvector;
-int eval_viewzoom;
-int eval_clientcolors;
-int eval_tag_entity;
-int eval_tag_index;
-int eval_light_lev;
-int eval_color;
-int eval_style;
-int eval_pflags;
-int eval_cursor_active;
-int eval_cursor_screen;
-int eval_cursor_trace_start;
-int eval_cursor_trace_endpos;
-int eval_cursor_trace_ent;
-int eval_colormod;
-int eval_playermodel;
-int eval_playerskin;
-int eval_SendEntity;
-int eval_Version;
-int eval_customizeentityforclient;
-int eval_dphitcontentsmask;
-// DRESK - Support for Entity Contents Transition Event
-int eval_contentstransition;
-
-int gval_trace_dpstartcontents;
-int gval_trace_dphitcontents;
-int gval_trace_dphitq3surfaceflags;
-int gval_trace_dphittexturename;
-
-mfunction_t *SV_PlayerPhysicsQC;
-mfunction_t *EndFrameQC;
-//KrimZon - SERVER COMMANDS IN QUAKEC
-mfunction_t *SV_ParseClientCommandQC;
-
-void SV_VM_FindEdictFieldOffsets(void)
-{
-	eval_gravity = PRVM_ED_FindFieldOffset("gravity");
-	eval_button3 = PRVM_ED_FindFieldOffset("button3");
-	eval_button4 = PRVM_ED_FindFieldOffset("button4");
-	eval_button5 = PRVM_ED_FindFieldOffset("button5");
-	eval_button6 = PRVM_ED_FindFieldOffset("button6");
-	eval_button7 = PRVM_ED_FindFieldOffset("button7");
-	eval_button8 = PRVM_ED_FindFieldOffset("button8");
-	eval_button9 = PRVM_ED_FindFieldOffset("button9");
-	eval_button10 = PRVM_ED_FindFieldOffset("button10");
-	eval_button11 = PRVM_ED_FindFieldOffset("button11");
-	eval_button12 = PRVM_ED_FindFieldOffset("button12");
-	eval_button13 = PRVM_ED_FindFieldOffset("button13");
-	eval_button14 = PRVM_ED_FindFieldOffset("button14");
-	eval_button15 = PRVM_ED_FindFieldOffset("button15");
-	eval_button16 = PRVM_ED_FindFieldOffset("button16");
-	eval_buttonuse = PRVM_ED_FindFieldOffset("buttonuse");
-	eval_buttonchat = PRVM_ED_FindFieldOffset("buttonchat");
-	eval_glow_size = PRVM_ED_FindFieldOffset("glow_size");
-	eval_glow_trail = PRVM_ED_FindFieldOffset("glow_trail");
-	eval_glow_color = PRVM_ED_FindFieldOffset("glow_color");
-	eval_items2 = PRVM_ED_FindFieldOffset("items2");
-	eval_scale = PRVM_ED_FindFieldOffset("scale");
-	eval_alpha = PRVM_ED_FindFieldOffset("alpha");
-	eval_renderamt = PRVM_ED_FindFieldOffset("renderamt"); // HalfLife support
-	eval_rendermode = PRVM_ED_FindFieldOffset("rendermode"); // HalfLife support
-	eval_fullbright = PRVM_ED_FindFieldOffset("fullbright");
-	eval_ammo_shells1 = PRVM_ED_FindFieldOffset("ammo_shells1");
-	eval_ammo_nails1 = PRVM_ED_FindFieldOffset("ammo_nails1");
-	eval_ammo_lava_nails = PRVM_ED_FindFieldOffset("ammo_lava_nails");
-	eval_ammo_rockets1 = PRVM_ED_FindFieldOffset("ammo_rockets1");
-	eval_ammo_multi_rockets = PRVM_ED_FindFieldOffset("ammo_multi_rockets");
-	eval_ammo_cells1 = PRVM_ED_FindFieldOffset("ammo_cells1");
-	eval_ammo_plasma = PRVM_ED_FindFieldOffset("ammo_plasma");
-	eval_idealpitch = PRVM_ED_FindFieldOffset("idealpitch");
-	eval_pitch_speed = PRVM_ED_FindFieldOffset("pitch_speed");
-	eval_viewmodelforclient = PRVM_ED_FindFieldOffset("viewmodelforclient");
-	eval_nodrawtoclient = PRVM_ED_FindFieldOffset("nodrawtoclient");
-	eval_exteriormodeltoclient = PRVM_ED_FindFieldOffset("exteriormodeltoclient");
-	eval_drawonlytoclient = PRVM_ED_FindFieldOffset("drawonlytoclient");
-	eval_ping = PRVM_ED_FindFieldOffset("ping");
-	eval_movement = PRVM_ED_FindFieldOffset("movement");
-	eval_pmodel = PRVM_ED_FindFieldOffset("pmodel");
-	eval_punchvector = PRVM_ED_FindFieldOffset("punchvector");
-	eval_viewzoom = PRVM_ED_FindFieldOffset("viewzoom");
-	eval_clientcolors = PRVM_ED_FindFieldOffset("clientcolors");
-	eval_tag_entity = PRVM_ED_FindFieldOffset("tag_entity");
-	eval_tag_index = PRVM_ED_FindFieldOffset("tag_index");
-	eval_light_lev = PRVM_ED_FindFieldOffset("light_lev");
-	eval_color = PRVM_ED_FindFieldOffset("color");
-	eval_style = PRVM_ED_FindFieldOffset("style");
-	eval_pflags = PRVM_ED_FindFieldOffset("pflags");
-	eval_cursor_active = PRVM_ED_FindFieldOffset("cursor_active");
-	eval_cursor_screen = PRVM_ED_FindFieldOffset("cursor_screen");
-	eval_cursor_trace_start = PRVM_ED_FindFieldOffset("cursor_trace_start");
-	eval_cursor_trace_endpos = PRVM_ED_FindFieldOffset("cursor_trace_endpos");
-	eval_cursor_trace_ent = PRVM_ED_FindFieldOffset("cursor_trace_ent");
-	eval_colormod = PRVM_ED_FindFieldOffset("colormod");
-	eval_playermodel = PRVM_ED_FindFieldOffset("playermodel");
-	eval_playerskin = PRVM_ED_FindFieldOffset("playerskin");
-	eval_SendEntity = PRVM_ED_FindFieldOffset("SendEntity");
-	eval_Version = PRVM_ED_FindFieldOffset("Version");
-	eval_customizeentityforclient = PRVM_ED_FindFieldOffset("customizeentityforclient");
-	eval_dphitcontentsmask = PRVM_ED_FindFieldOffset("dphitcontentsmask");
-	// DRESK - Support for Entity Contents Transition Event
-	eval_contentstransition = PRVM_ED_FindFieldOffset("contentstransition");
-
-	// LordHavoc: allowing QuakeC to override the player movement code
-	SV_PlayerPhysicsQC = PRVM_ED_FindFunction ("SV_PlayerPhysics");
-	// LordHavoc: support for endframe
-	EndFrameQC = PRVM_ED_FindFunction ("EndFrame");
-	//KrimZon - SERVER COMMANDS IN QUAKEC
-	SV_ParseClientCommandQC = PRVM_ED_FindFunction ("SV_ParseClientCommand");
-	gval_trace_dpstartcontents = PRVM_ED_FindGlobalOffset("trace_dpstartcontents");
-	gval_trace_dphitcontents = PRVM_ED_FindGlobalOffset("trace_dphitcontents");
-	gval_trace_dphitq3surfaceflags = PRVM_ED_FindGlobalOffset("trace_dphitq3surfaceflags");
-	gval_trace_dphittexturename = PRVM_ED_FindGlobalOffset("trace_dphittexturename");
-}
-
 #define REQFIELDS (sizeof(reqfields) / sizeof(prvm_required_field_t))
 
 prvm_required_field_t reqfields[] =
@@ -2599,8 +2446,7 @@ void SV_VM_Setup(void)
 	prog->error_cmd = Host_Error;
 
 	// TODO: add a requiredfuncs list (ask LH if this is necessary at all)
-	PRVM_LoadProgs( sv_progs.string, 0, NULL, REQFIELDS, reqfields );
-	SV_VM_FindEdictFieldOffsets();
+	PRVM_LoadProgs( sv_progs.string, 0, NULL, REQFIELDS, reqfields, 0, NULL );
 
 	VM_AutoSentStats_Clear();//[515]: csqc
 	EntityFrameCSQC_ClearVersions();//[515]: csqc
@@ -2623,7 +2469,7 @@ void SV_VM_Begin(void)
 	PRVM_Begin;
 	PRVM_SetProg( PRVM_SERVERPROG );
 
-	*prog->time = (float) sv.time;
+	prog->globals.server->time = (float) sv.time;
 }
 
 void SV_VM_End(void)

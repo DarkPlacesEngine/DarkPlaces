@@ -112,9 +112,9 @@ void VM_error (void)
 
 	VM_VarString(0, string, sizeof(string));
 	Con_Printf("======%s ERROR in %s:\n%s\n", PRVM_NAME, PRVM_GetString(prog->xfunction->s_name), string);
-	if(prog->self)
+	if (prog->globaloffsets.self >= 0)
 	{
-		ed = PRVM_G_EDICT(prog->self->ofs);
+		ed = PRVM_PROG_TO_EDICT(PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.self)->edict);
 		PRVM_ED_Print(ed);
 	}
 
@@ -138,9 +138,9 @@ void VM_objerror (void)
 
 	VM_VarString(0, string, sizeof(string));
 	Con_Printf("======OBJECT ERROR======\n"); // , PRVM_NAME, PRVM_GetString(prog->xfunction->s_name), string); // or include them? FIXME
-	if(prog->self)
+	if (prog->globaloffsets.self >= 0)
 	{
-		ed = PRVM_G_EDICT (prog->self->ofs);
+		ed = PRVM_PROG_TO_EDICT(PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.self)->edict);
 		PRVM_ED_Print(ed);
 
 		PRVM_ED_Free (ed);
@@ -860,17 +860,13 @@ void VM_findchain (void)
 {
 	int		i;
 	int		f;
-	int		chain_of;
 	const char	*s, *t;
 	prvm_edict_t	*ent, *chain;
 
 	VM_SAFEPARMCOUNT(2,VM_findchain);
 
-	// is the same like !(prog->flag & PRVM_FE_CHAIN) - even if the operator precedence is another
-	if(!prog->flag & PRVM_FE_CHAIN)
+	if (prog->fieldoffsets.chain < 0)
 		PRVM_ERROR("VM_findchain: %s doesnt have a chain field !", PRVM_NAME);
-
-	chain_of = PRVM_ED_FindField("chain")->ofs;
 
 	chain = prog->edicts;
 
@@ -893,7 +889,7 @@ void VM_findchain (void)
 		if (strcmp(t,s))
 			continue;
 
-		PRVM_E_INT(ent,chain_of) = PRVM_NUM_FOR_EDICT(chain);
+		PRVM_E_INT(ent,prog->fieldoffsets.chain) = PRVM_NUM_FOR_EDICT(chain);
 		chain = ent;
 	}
 
@@ -914,16 +910,13 @@ void VM_findchainfloat (void)
 {
 	int		i;
 	int		f;
-	int		chain_of;
 	float	s;
 	prvm_edict_t	*ent, *chain;
 
 	VM_SAFEPARMCOUNT(2, VM_findchainfloat);
 
-	if(!prog->flag & PRVM_FE_CHAIN)
+	if (prog->fieldoffsets.chain < 0)
 		PRVM_ERROR("VM_findchainfloat: %s doesnt have a chain field !", PRVM_NAME);
-
-	chain_of = PRVM_ED_FindField("chain")->ofs;
 
 	chain = (prvm_edict_t *)prog->edicts;
 
@@ -939,7 +932,7 @@ void VM_findchainfloat (void)
 		if (PRVM_E_FLOAT(ent,f) != s)
 			continue;
 
-		PRVM_E_INT(ent,chain_of) = PRVM_EDICT_TO_PROG(chain);
+		PRVM_E_INT(ent,prog->fieldoffsets.chain) = PRVM_EDICT_TO_PROG(chain);
 		chain = ent;
 	}
 
@@ -999,15 +992,12 @@ void VM_findchainflags (void)
 	int		i;
 	int		f;
 	int		s;
-	int		chain_of;
 	prvm_edict_t	*ent, *chain;
 
 	VM_SAFEPARMCOUNT(2, VM_findchainflags);
 
-	if(!prog->flag & PRVM_FE_CHAIN)
+	if (prog->fieldoffsets.chain < 0)
 		PRVM_ERROR("VM_findchainflags: %s doesnt have a chain field !", PRVM_NAME);
-
-	chain_of = PRVM_ED_FindField("chain")->ofs;
 
 	chain = (prvm_edict_t *)prog->edicts;
 
@@ -1025,7 +1015,7 @@ void VM_findchainflags (void)
 		if (!((int)PRVM_E_FLOAT(ent,f) & s))
 			continue;
 
-		PRVM_E_INT(ent,chain_of) = PRVM_EDICT_TO_PROG(chain);
+		PRVM_E_INT(ent,prog->fieldoffsets.chain) = PRVM_EDICT_TO_PROG(chain);
 		chain = ent;
 	}
 
@@ -1503,42 +1493,6 @@ void VM_copyentity (void)
 	out = PRVM_G_EDICT(OFS_PARM1);
 	memcpy(out->fields.vp, in->fields.vp, prog->progs->entityfields * 4);
 }
-
-/*
-=================
-VM_setcolor
-
-sets the color of a client and broadcasts the update to all connected clients
-
-setcolor(clientent, value)
-=================
-*/
-/*void PF_setcolor (void)
-{
-	client_t *client;
-	int entnum, i;
-	prvm_eval_t *val;
-
-	entnum = PRVM_G_EDICTNUM(OFS_PARM0);
-	i = PRVM_G_FLOAT(OFS_PARM1);
-
-	if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active)
-	{
-		Con_Print("tried to setcolor a non-client\n");
-		return;
-	}
-
-	client = svs.clients + entnum-1;
-	if ((val = PRVM_GETEDICTFIELDVALUE(client->edict, eval_clientcolors)))
-		val->_float = i;
-	client->colors = i;
-	client->old_colors = i;
-	client->edict->fields.server->team = (i & 15) + 1;
-
-	MSG_WriteByte (&sv.reliable_datagram, svc_updatecolors);
-	MSG_WriteByte (&sv.reliable_datagram, entnum - 1);
-	MSG_WriteByte (&sv.reliable_datagram, i);
-}*/
 
 void VM_Files_Init(void)
 {
@@ -2089,50 +2043,6 @@ void VM_argv (void)
 }
 
 /*
-//void(entity e, entity tagentity, string tagname) setattachment = #443; // attachs e to a tag on tagentity (note: use "" to attach to entity origin/angles instead of a tag)
-void PF_setattachment (void)
-{
-	prvm_edict_t *e = PRVM_G_EDICT(OFS_PARM0);
-	prvm_edict_t *tagentity = PRVM_G_EDICT(OFS_PARM1);
-	char *tagname = PRVM_G_STRING(OFS_PARM2);
-	prvm_eval_t *v;
-	int i, modelindex;
-	model_t *model;
-
-	if (tagentity == NULL)
-		tagentity = prog->edicts;
-
-	v = PRVM_GETEDICTFIELDVALUE(e, eval_tag_entity);
-	if (v)
-		fields.server->edict = PRVM_EDICT_TO_PROG(tagentity);
-
-	v = PRVM_GETEDICTFIELDVALUE(e, eval_tag_index);
-	if (v)
-		fields.server->_float = 0;
-	if (tagentity != NULL && tagentity != prog->edicts && tagname && tagname[0])
-	{
-		modelindex = (int)tagentity->fields.server->modelindex;
-		if (modelindex >= 0 && modelindex < MAX_MODELS)
-		{
-			model = sv.models[modelindex];
-			if (model->data_overridetagnamesforskin && (unsigned int)tagentity->fields.server->skin < (unsigned int)model->numskins && model->data_overridetagnamesforskin[(unsigned int)tagentity->fields.server->skin].num_overridetagnames)
-				for (i = 0;i < model->data_overridetagnamesforskin[(unsigned int)tagentity->fields.server->skin].num_overridetagnames;i++)
-					if (!strcmp(tagname, model->data_overridetagnamesforskin[(unsigned int)tagentity->fields.server->skin].data_overridetagnames[i].name))
-						fields.server->_float = i + 1;
-			// FIXME: use a model function to get tag info (need to handle skeletal)
-			if (fields.server->_float == 0 && model->num_tags)
-				for (i = 0;i < model->num_tags;i++)
-					if (!strcmp(tagname, model->data_tags[i].name))
-						fields.server->_float = i + 1;
-			if (fields.server->_float == 0)
-				Con_DPrintf("setattachment(edict %i, edict %i, string \"%s\"): tried to find tag named \"%s\" on entity %i (model \"%s\") but could not find it\n", PRVM_NUM_FOR_EDICT(e), PRVM_NUM_FOR_EDICT(tagentity), tagname, tagname, PRVM_NUM_FOR_EDICT(tagentity), model->name);
-		}
-		else
-			Con_DPrintf("setattachment(edict %i, edict %i, string \"%s\"): tried to find tag named \"%s\" on entity %i but it has no model\n", PRVM_NUM_FOR_EDICT(e), PRVM_NUM_FOR_EDICT(tagentity), tagname, tagname, PRVM_NUM_FOR_EDICT(tagentity));
-	}
-}*/
-
-/*
 =========
 VM_isserver
 
@@ -2228,7 +2138,7 @@ void VM_gettime(void)
 {
 	VM_SAFEPARMCOUNT(0,VM_gettime);
 
-	PRVM_G_FLOAT(OFS_RETURN) = (float) *prog->time;
+	PRVM_G_FLOAT(OFS_RETURN) = (float) realtime;
 }
 
 /*
@@ -3990,6 +3900,124 @@ void VM_bufstr_free (void)
 	b->strings[i] = NULL;
 	if(i+1 == b->num_strings)
 		--b->num_strings;
+}
+
+//=============
+
+/*
+==============
+VM_changeyaw
+
+This was a major timewaster in progs, so it was converted to C
+==============
+*/
+void VM_changeyaw (void)
+{
+	prvm_edict_t		*ent;
+	float		ideal, current, move, speed;
+
+	ent = PRVM_PROG_TO_EDICT(PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.self)->edict);
+	if (ent == prog->edicts)
+	{
+		VM_Warning("changeyaw: can not modify world entity\n");
+		return;
+	}
+	if (ent->priv.server->free)
+	{
+		VM_Warning("changeyaw: can not modify free entity\n");
+		return;
+	}
+	if (prog->fieldoffsets.angles < 0 || prog->fieldoffsets.ideal_yaw < 0 || prog->fieldoffsets.yaw_speed < 0)
+	{
+		VM_Warning("changeyaw: angles, ideal_yaw, or yaw_speed field(s) not found\n");
+		return;
+	}
+	current = ANGLEMOD(PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.angles)->vector[1]);
+	ideal = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.ideal_yaw)->_float;
+	speed = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.yaw_speed)->_float;
+
+	if (current == ideal)
+		return;
+	move = ideal - current;
+	if (ideal > current)
+	{
+		if (move >= 180)
+			move = move - 360;
+	}
+	else
+	{
+		if (move <= -180)
+			move = move + 360;
+	}
+	if (move > 0)
+	{
+		if (move > speed)
+			move = speed;
+	}
+	else
+	{
+		if (move < -speed)
+			move = -speed;
+	}
+
+	PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.angles)->vector[1] = ANGLEMOD (current + move);
+}
+
+/*
+==============
+VM_changepitch
+==============
+*/
+void VM_changepitch (void)
+{
+	prvm_edict_t		*ent;
+	float		ideal, current, move, speed;
+
+	ent = PRVM_G_EDICT(OFS_PARM0);
+	if (ent == prog->edicts)
+	{
+		VM_Warning("changepitch: can not modify world entity\n");
+		return;
+	}
+	if (ent->priv.server->free)
+	{
+		VM_Warning("changepitch: can not modify free entity\n");
+		return;
+	}
+	if (prog->fieldoffsets.angles < 0 || prog->fieldoffsets.idealpitch < 0 || prog->fieldoffsets.pitch_speed < 0)
+	{
+		VM_Warning("changepitch: angles, idealpitch, or pitch_speed field(s) not found\n");
+		return;
+	}
+	current = ANGLEMOD(PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.angles)->vector[0]);
+	ideal = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.idealpitch)->_float;
+	speed = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.pitch_speed)->_float;
+
+	if (current == ideal)
+		return;
+	move = ideal - current;
+	if (ideal > current)
+	{
+		if (move >= 180)
+			move = move - 360;
+	}
+	else
+	{
+		if (move <= -180)
+			move = move + 360;
+	}
+	if (move > 0)
+	{
+		if (move > speed)
+			move = speed;
+	}
+	else
+	{
+		if (move < -speed)
+			move = -speed;
+	}
+
+	PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.angles)->vector[0] = ANGLEMOD (current + move);
 }
 
 //=============

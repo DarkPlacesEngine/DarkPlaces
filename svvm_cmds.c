@@ -492,13 +492,13 @@ void PF_traceline (void)
 		prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(trace.ent);
 	else
 		prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(prog->edicts);
-	if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dpstartcontents)))
+	if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dpstartcontents)))
 		val->_float = trace.startsupercontents;
-	if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dphitcontents)))
+	if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dphitcontents)))
 		val->_float = trace.hitsupercontents;
-	if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dphitq3surfaceflags)))
+	if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dphitq3surfaceflags)))
 		val->_float = trace.hitq3surfaceflags;
-	if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dphittexturename)))
+	if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dphittexturename)))
 	{
 		if (trace.hittexture)
 			val->string = PRVM_SetTempString(trace.hittexture->name);
@@ -554,13 +554,13 @@ void PF_tracebox (void)
 		prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(trace.ent);
 	else
 		prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(prog->edicts);
-	if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dpstartcontents)))
+	if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dpstartcontents)))
 		val->_float = trace.startsupercontents;
-	if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dphitcontents)))
+	if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dphitcontents)))
 		val->_float = trace.hitsupercontents;
-	if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dphitq3surfaceflags)))
+	if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dphitq3surfaceflags)))
 		val->_float = trace.hitq3surfaceflags;
-	if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dphittexturename)))
+	if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dphittexturename)))
 	{
 		if (trace.hittexture)
 			val->string = PRVM_SetTempString(trace.hittexture->name);
@@ -601,13 +601,13 @@ void PF_tracetoss (void)
 		prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(trace.ent);
 	else
 		prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(prog->edicts);
-	if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dpstartcontents)))
+	if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dpstartcontents)))
 		val->_float = trace.startsupercontents;
-	if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dphitcontents)))
+	if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dphitcontents)))
 		val->_float = trace.hitsupercontents;
-	if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dphitq3surfaceflags)))
+	if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dphitq3surfaceflags)))
 		val->_float = trace.hitq3surfaceflags;
-	if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dphittexturename)))
+	if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dphittexturename)))
 	{
 		if (trace.hittexture)
 			val->string = PRVM_SetTempString(trace.hittexture->name);
@@ -789,7 +789,7 @@ void PF_findradius (void)
 	maxs[0] = org[0] + (radius + 1);
 	maxs[1] = org[1] + (radius + 1);
 	maxs[2] = org[2] + (radius + 1);
-	numtouchedicts = SV_EntitiesInBox(mins, maxs, MAX_EDICTS, touchedicts);
+	numtouchedicts = World_EntitiesInBox(&sv.world, mins, maxs, MAX_EDICTS, touchedicts);
 	if (numtouchedicts > MAX_EDICTS)
 	{
 		// this never happens
@@ -1097,125 +1097,6 @@ void PF_aim (void)
 	{
 		VectorCopy (bestdir, PRVM_G_VECTOR(OFS_RETURN));
 	}
-}
-
-/*
-==============
-PF_changeyaw
-
-This was a major timewaster in progs, so it was converted to C
-==============
-*/
-void PF_changeyaw (void)
-{
-	prvm_edict_t		*ent;
-	float		ideal, current, move, speed;
-
-	ent = PRVM_PROG_TO_EDICT(prog->globals.server->self);
-	if (ent == prog->edicts)
-	{
-		VM_Warning("changeyaw: can not modify world entity\n");
-		return;
-	}
-	if (ent->priv.server->free)
-	{
-		VM_Warning("changeyaw: can not modify free entity\n");
-		return;
-	}
-	current = ANGLEMOD(ent->fields.server->angles[1]);
-	ideal = ent->fields.server->ideal_yaw;
-	speed = ent->fields.server->yaw_speed;
-
-	if (current == ideal)
-		return;
-	move = ideal - current;
-	if (ideal > current)
-	{
-		if (move >= 180)
-			move = move - 360;
-	}
-	else
-	{
-		if (move <= -180)
-			move = move + 360;
-	}
-	if (move > 0)
-	{
-		if (move > speed)
-			move = speed;
-	}
-	else
-	{
-		if (move < -speed)
-			move = -speed;
-	}
-
-	ent->fields.server->angles[1] = ANGLEMOD (current + move);
-}
-
-/*
-==============
-PF_changepitch
-==============
-*/
-void PF_changepitch (void)
-{
-	prvm_edict_t		*ent;
-	float		ideal, current, move, speed;
-	prvm_eval_t		*val;
-
-	ent = PRVM_G_EDICT(OFS_PARM0);
-	if (ent == prog->edicts)
-	{
-		VM_Warning("changepitch: can not modify world entity\n");
-		return;
-	}
-	if (ent->priv.server->free)
-	{
-		VM_Warning("changepitch: can not modify free entity\n");
-		return;
-	}
-	current = ANGLEMOD( ent->fields.server->angles[0] );
-	if ((val = PRVM_GETEDICTFIELDVALUE(ent, eval_idealpitch)))
-		ideal = val->_float;
-	else
-	{
-		VM_Warning("PF_changepitch: .float idealpitch and .float pitch_speed must be defined to use changepitch\n");
-		return;
-	}
-	if ((val = PRVM_GETEDICTFIELDVALUE(ent, eval_pitch_speed)))
-		speed = val->_float;
-	else
-	{
-		VM_Warning("PF_changepitch: .float idealpitch and .float pitch_speed must be defined to use changepitch\n");
-		return;
-	}
-
-	if (current == ideal)
-		return;
-	move = ideal - current;
-	if (ideal > current)
-	{
-		if (move >= 180)
-			move = move - 360;
-	}
-	else
-	{
-		if (move <= -180)
-			move = move + 360;
-	}
-	if (move > 0)
-	{
-		if (move > speed)
-			move = speed;
-	}
-	else
-	{
-		if (move < -speed)
-			move = -speed;
-	}
-
-	ent->fields.server->angles[0] = ANGLEMOD (current + move);
 }
 
 /*
@@ -1659,7 +1540,7 @@ void PF_setcolor (void)
 	client = svs.clients + entnum-1;
 	if (client->edict)
 	{
-		if ((val = PRVM_GETEDICTFIELDVALUE(client->edict, eval_clientcolors)))
+		if ((val = PRVM_GETEDICTFIELDVALUE(client->edict, prog->fieldoffsets.clientcolors)))
 			val->_float = i;
 		client->edict->fields.server->team = (i & 15) + 1;
 	}
@@ -2348,11 +2229,11 @@ void PF_setattachment (void)
 	if (tagentity == NULL)
 		tagentity = prog->edicts;
 
-	v = PRVM_GETEDICTFIELDVALUE(e, eval_tag_entity);
+	v = PRVM_GETEDICTFIELDVALUE(e, prog->fieldoffsets.tag_entity);
 	if (v)
 		v->edict = PRVM_EDICT_TO_PROG(tagentity);
 
-	v = PRVM_GETEDICTFIELDVALUE(e, eval_tag_index);
+	v = PRVM_GETEDICTFIELDVALUE(e, prog->fieldoffsets.tag_index);
 	if (v)
 		v->_float = 0;
 	if (tagentity != NULL && tagentity != prog->edicts && tagname && tagname[0])
@@ -2387,7 +2268,7 @@ int SV_GetTagIndex (prvm_edict_t *e, const char *tagname)
 
 void SV_GetEntityMatrix (prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatrix)
 {
-	float scale = PRVM_GETEDICTFIELDVALUE(ent, eval_scale)->_float;
+	float scale = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.scale)->_float;
 	if (scale == 0)
 		scale = 1;
 	if (viewmatrix)
@@ -2463,9 +2344,9 @@ int SV_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 		SV_GetEntityMatrix(ent, &entitymatrix, false);
 		Matrix4x4_Concat(&tagmatrix, &entitymatrix, out);
 		// next iteration we process the parent entity
-		if ((val = PRVM_GETEDICTFIELDVALUE(ent, eval_tag_entity)) && val->edict)
+		if ((val = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.tag_entity)) && val->edict)
 		{
-			tagindex = (int)PRVM_GETEDICTFIELDVALUE(ent, eval_tag_index)->_float;
+			tagindex = (int)PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.tag_index)->_float;
 			ent = PRVM_EDICT_NUM(val->edict);
 		}
 		else
@@ -2474,7 +2355,7 @@ int SV_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 	}
 
 	// RENDER_VIEWMODEL magic
-	if ((val = PRVM_GETEDICTFIELDVALUE(ent, eval_viewmodelforclient)) && val->edict)
+	if ((val = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.viewmodelforclient)) && val->edict)
 	{
 		Matrix4x4_Copy(&tagmatrix, out);
 		ent = PRVM_EDICT_NUM(val->edict);
@@ -2686,7 +2567,7 @@ VM_cvar,					// #45 float(string s) cvar
 VM_localcmd,				// #46 void(string s) localcmd
 VM_nextent,					// #47 entity(entity e) nextent
 PF_particle,				// #48 void(vector o, vector d, float color, float count) particle
-PF_changeyaw,				// #49 void() ChangeYaw
+VM_changeyaw,				// #49 void() ChangeYaw
 NULL,						// #50
 VM_vectoangles,				// #51 vector(vector v) vectoangles
 PF_WriteByte,				// #52 void(float to, float f) WriteByte
@@ -2700,7 +2581,7 @@ PF_WriteEntity,				// #59 void(float to, entity e) WriteEntity
 VM_sin,						// #60 float(float f) sin (DP_QC_SINCOSSQRTPOW)
 VM_cos,						// #61 float(float f) cos (DP_QC_SINCOSSQRTPOW)
 VM_sqrt,					// #62 float(float f) sqrt (DP_QC_SINCOSSQRTPOW)
-PF_changepitch,				// #63 void(entity ent) changepitch (DP_QC_CHANGEPITCH)
+VM_changepitch,				// #63 void(entity ent) changepitch (DP_QC_CHANGEPITCH)
 PF_tracetoss,				// #64 void(entity e, entity ignore) tracetoss (DP_QC_TRACETOSS)
 VM_etos,					// #65 string(entity ent) etos (DP_QC_ETOS)
 NULL,						// #66

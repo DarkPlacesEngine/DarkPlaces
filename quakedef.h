@@ -213,6 +213,7 @@ extern char engineversion[128];
 #include "sbar.h"
 #include "sound.h"
 #include "model_shared.h"
+#include "world.h"
 #include "client.h"
 #include "render.h"
 #include "progs.h"
@@ -220,7 +221,6 @@ extern char engineversion[128];
 #include "server.h"
 
 #include "input.h"
-#include "world.h"
 #include "keys.h"
 #include "console.h"
 #include "menu.h"

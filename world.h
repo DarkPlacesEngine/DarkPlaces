@@ -30,35 +30,55 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MOVE_WORLDONLY  3
 #define MOVE_HITMODEL   4
 
+#define AREA_GRID 512
+#define AREA_GRIDNODES (AREA_GRID * AREA_GRID)
+
+typedef struct link_s
+{
+	int entitynumber;
+	struct link_s	*prev, *next;
+} link_t;
+
+typedef struct world_s
+{
+	int areagrid_stats_calls;
+	int areagrid_stats_nodechecks;
+	int areagrid_stats_entitychecks;
+
+	link_t areagrid[AREA_GRIDNODES];
+	link_t areagrid_outside;
+	vec3_t areagrid_bias;
+	vec3_t areagrid_scale;
+	vec3_t areagrid_mins;
+	vec3_t areagrid_maxs;
+	vec3_t areagrid_size;
+	int areagrid_marknumber;
+}
+world_t;
+
+struct prvm_edict_s;
+
+// cyclic doubly-linked list functions
+void World_ClearLink(link_t *l);
+void World_RemoveLink(link_t *l);
+void World_InsertLinkBefore(link_t *l, link_t *before, int entitynumber);
+
+void World_Init(void);
 
 // called after the world model has been loaded, before linking any entities
-void SV_ClearWorld (void);
+void World_Clear(world_t *world);
+
+void World_PrintAreaStats(world_t *world, const char *worldname);
 
 // call before removing an entity, and before trying to move one,
 // so it doesn't clip against itself
-void SV_UnlinkEdict (prvm_edict_t *ent);
+void World_UnlinkEdict(struct prvm_edict_s *ent);
 
-// Needs to be called any time an entity changes origin, mins, maxs, or solid
-// sets ent->v.absmin and ent->v.absmax
-// if touchtriggers, calls prog functions for the intersected triggers
-void SV_LinkEdict (prvm_edict_t *ent, qboolean touch_triggers);
+// Needs to be called any time an entity changes origin, mins, maxs
+void World_LinkEdict(world_t *world, struct prvm_edict_s *ent, const vec3_t mins, const vec3_t maxs);
 
 // returns list of entities touching a box
-int SV_EntitiesInBox(vec3_t mins, vec3_t maxs, int maxlist, prvm_edict_t **list);
-
-// mins and maxs are relative
-// if the entire move stays in a solid volume, trace.allsolid will be set
-
-// if the starting point is in a solid, it will be allowed to move out
-// to an open area
-
-// nomonsters is used for line of sight or edge testing, where mosnters
-// shouldn't be considered solid objects
-
-// passedict is explicitly excluded from clipping checks (normally NULL)
-trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, prvm_edict_t *passedict);
-
-#define SV_PointSuperContents(point) (SV_Move((point), vec3_origin, vec3_origin, (point), sv_gameplayfix_swiminbmodels.integer ? MOVE_NOMONSTERS : MOVE_WORLDONLY, NULL).startsupercontents)
+int World_EntitiesInBox(world_t *world, vec3_t mins, vec3_t maxs, int maxlist, struct prvm_edict_s **list);
 
 #endif
 
