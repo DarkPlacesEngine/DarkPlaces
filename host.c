@@ -466,10 +466,6 @@ void SV_DropClient(qboolean crash)
 	}
 
 	// remove leaving player from scoreboard
-	//host_client->edict->fields.server->netname = PRVM_SetEngineString(host_client->name);
-	//if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_clientcolors)))
-	//	val->_float = 0;
-	//host_client->edict->fields.server->frags = 0;
 	host_client->name[0] = 0;
 	host_client->colors = 0;
 	host_client->frags = 0;
@@ -974,6 +970,7 @@ static void Host_Init (void)
 	//PR_Cmd_Init();
 	PRVM_Init();
 	Mod_Init();
+	World_Init();
 	SV_Init();
 	Host_InitCommands();
 	Host_InitLocal();

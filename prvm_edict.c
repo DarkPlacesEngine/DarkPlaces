@@ -122,18 +122,26 @@ int PRVM_ED_FindFieldOffset(const char *field)
 	ddef_t *d;
 	d = PRVM_ED_FindField(field);
 	if (!d)
-		return 0;
+		return -1;
 	return d->ofs*4;
 }
 
-ddef_t*	PRVM_ED_FindGlobal(const char *name);
 int PRVM_ED_FindGlobalOffset(const char *global)
 {
 	ddef_t *d;
 	d = PRVM_ED_FindGlobal(global);
 	if (!d)
-		return 0;
+		return -1;
 	return d->ofs*4;
+}
+
+func_t PRVM_ED_FindFunctionOffset(const char *function)
+{
+	mfunction_t *f;
+	f = PRVM_ED_FindFunction(function);
+	if (!f)
+		return 0;
+	return (func_t)(f - prog->functions);
 }
 
 qboolean PRVM_ProgLoaded(int prognr)
@@ -232,7 +240,7 @@ prvm_edict_t *PRVM_ED_Alloc (void)
 		e = PRVM_EDICT_NUM(i);
 		// the first couple seconds of server time can involve a lot of
 		// freeing and allocating, so relax the replacement policy
-		if (e->priv.required->free && ( e->priv.required->freetime < 2 || (*prog->time - e->priv.required->freetime) > 0.5 ) )
+		if (e->priv.required->free && ( e->priv.required->freetime < 2 || prog->globaloffsets.time < 0 || (PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.time)->_float - e->priv.required->freetime) > 0.5 ) )
 		{
 			PRVM_ED_ClearEdict (e);
 			return e;
@@ -269,7 +277,7 @@ void PRVM_ED_Free (prvm_edict_t *ed)
 	PRVM_GCALL(free_edict)(ed);
 
 	ed->priv.required->free = true;
-	ed->priv.required->freetime = *prog->time;
+	ed->priv.required->freetime = prog->globaloffsets.time >= 0 ? PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.time)->_float : 0;
 }
 
 //===========================================================================
@@ -1175,9 +1183,9 @@ void PRVM_ED_LoadFromFile (const char *data)
 //
 // immediately call spawn function, but only if there is a self global and a classname
 //
-		if(prog->self && prog->flag & PRVM_FE_CLASSNAME)
+		if(prog->globaloffsets.self >= 0 && prog->fieldoffsets.classname >= 0)
 		{
-			string_t handle =  *(string_t*)&((unsigned char*)ent->fields.vp)[PRVM_ED_FindFieldOffset("classname")];
+			string_t handle =  *(string_t*)&((unsigned char*)ent->fields.vp)[prog->fieldoffsets.classname];
 			if (!handle)
 			{
 				Con_Print("No classname for:\n");
@@ -1201,7 +1209,7 @@ void PRVM_ED_LoadFromFile (const char *data)
 			}
 
 			// self = ent
-			PRVM_G_INT(prog->self->ofs) = PRVM_EDICT_TO_PROG(ent);
+			PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.self)->edict = PRVM_EDICT_TO_PROG(ent);
 			PRVM_ExecuteProgram (func - prog->functions, "");
 		}
 
@@ -1211,6 +1219,146 @@ void PRVM_ED_LoadFromFile (const char *data)
 	}
 
 	Con_DPrintf("%s: %i new entities parsed, %i new inhibited, %i (%i new) spawned (whereas %i removed self, %i stayed)\n", PRVM_NAME, parsed, inhibited, prog->num_edicts, spawned, died, spawned - died);
+}
+
+void PRVM_FindOffsets(void)
+{
+	// field and global searches use -1 for NULL
+	memset(&prog->fieldoffsets, -1, sizeof(prog->fieldoffsets));
+	memset(&prog->globaloffsets, -1, sizeof(prog->globaloffsets));
+	// functions use 0 for NULL
+	memset(&prog->funcoffsets, 0, sizeof(prog->funcoffsets));
+
+	// common
+	prog->fieldoffsets.classname = PRVM_ED_FindFieldOffset("classname");
+	prog->fieldoffsets.chain = PRVM_ED_FindFieldOffset("chain");
+	prog->fieldoffsets.think = PRVM_ED_FindFieldOffset("think");
+	prog->fieldoffsets.nextthink = PRVM_ED_FindFieldOffset("nextthink");
+	prog->fieldoffsets.frame = PRVM_ED_FindFieldOffset("frame");
+	prog->fieldoffsets.angles = PRVM_ED_FindFieldOffset("angles");
+	prog->globaloffsets.self = PRVM_ED_FindGlobalOffset("self");
+	prog->globaloffsets.time = PRVM_ED_FindGlobalOffset("time");
+
+	// ssqc
+	prog->fieldoffsets.gravity = PRVM_ED_FindFieldOffset("gravity");
+	prog->fieldoffsets.button3 = PRVM_ED_FindFieldOffset("button3");
+	prog->fieldoffsets.button4 = PRVM_ED_FindFieldOffset("button4");
+	prog->fieldoffsets.button5 = PRVM_ED_FindFieldOffset("button5");
+	prog->fieldoffsets.button6 = PRVM_ED_FindFieldOffset("button6");
+	prog->fieldoffsets.button7 = PRVM_ED_FindFieldOffset("button7");
+	prog->fieldoffsets.button8 = PRVM_ED_FindFieldOffset("button8");
+	prog->fieldoffsets.button9 = PRVM_ED_FindFieldOffset("button9");
+	prog->fieldoffsets.button10 = PRVM_ED_FindFieldOffset("button10");
+	prog->fieldoffsets.button11 = PRVM_ED_FindFieldOffset("button11");
+	prog->fieldoffsets.button12 = PRVM_ED_FindFieldOffset("button12");
+	prog->fieldoffsets.button13 = PRVM_ED_FindFieldOffset("button13");
+	prog->fieldoffsets.button14 = PRVM_ED_FindFieldOffset("button14");
+	prog->fieldoffsets.button15 = PRVM_ED_FindFieldOffset("button15");
+	prog->fieldoffsets.button16 = PRVM_ED_FindFieldOffset("button16");
+	prog->fieldoffsets.buttonuse = PRVM_ED_FindFieldOffset("buttonuse");
+	prog->fieldoffsets.buttonchat = PRVM_ED_FindFieldOffset("buttonchat");
+	prog->fieldoffsets.glow_size = PRVM_ED_FindFieldOffset("glow_size");
+	prog->fieldoffsets.glow_trail = PRVM_ED_FindFieldOffset("glow_trail");
+	prog->fieldoffsets.glow_color = PRVM_ED_FindFieldOffset("glow_color");
+	prog->fieldoffsets.items2 = PRVM_ED_FindFieldOffset("items2");
+	prog->fieldoffsets.scale = PRVM_ED_FindFieldOffset("scale");
+	prog->fieldoffsets.alpha = PRVM_ED_FindFieldOffset("alpha");
+	prog->fieldoffsets.renderamt = PRVM_ED_FindFieldOffset("renderamt"); // HalfLife support
+	prog->fieldoffsets.rendermode = PRVM_ED_FindFieldOffset("rendermode"); // HalfLife support
+	prog->fieldoffsets.fullbright = PRVM_ED_FindFieldOffset("fullbright");
+	prog->fieldoffsets.ammo_shells1 = PRVM_ED_FindFieldOffset("ammo_shells1");
+	prog->fieldoffsets.ammo_nails1 = PRVM_ED_FindFieldOffset("ammo_nails1");
+	prog->fieldoffsets.ammo_lava_nails = PRVM_ED_FindFieldOffset("ammo_lava_nails");
+	prog->fieldoffsets.ammo_rockets1 = PRVM_ED_FindFieldOffset("ammo_rockets1");
+	prog->fieldoffsets.ammo_multi_rockets = PRVM_ED_FindFieldOffset("ammo_multi_rockets");
+	prog->fieldoffsets.ammo_cells1 = PRVM_ED_FindFieldOffset("ammo_cells1");
+	prog->fieldoffsets.ammo_plasma = PRVM_ED_FindFieldOffset("ammo_plasma");
+	prog->fieldoffsets.ideal_yaw = PRVM_ED_FindFieldOffset("ideal_yaw");
+	prog->fieldoffsets.yaw_speed = PRVM_ED_FindFieldOffset("yaw_speed");
+	prog->fieldoffsets.idealpitch = PRVM_ED_FindFieldOffset("idealpitch");
+	prog->fieldoffsets.pitch_speed = PRVM_ED_FindFieldOffset("pitch_speed");
+	prog->fieldoffsets.viewmodelforclient = PRVM_ED_FindFieldOffset("viewmodelforclient");
+	prog->fieldoffsets.nodrawtoclient = PRVM_ED_FindFieldOffset("nodrawtoclient");
+	prog->fieldoffsets.exteriormodeltoclient = PRVM_ED_FindFieldOffset("exteriormodeltoclient");
+	prog->fieldoffsets.drawonlytoclient = PRVM_ED_FindFieldOffset("drawonlytoclient");
+	prog->fieldoffsets.ping = PRVM_ED_FindFieldOffset("ping");
+	prog->fieldoffsets.movement = PRVM_ED_FindFieldOffset("movement");
+	prog->fieldoffsets.pmodel = PRVM_ED_FindFieldOffset("pmodel");
+	prog->fieldoffsets.punchvector = PRVM_ED_FindFieldOffset("punchvector");
+	prog->fieldoffsets.viewzoom = PRVM_ED_FindFieldOffset("viewzoom");
+	prog->fieldoffsets.clientcolors = PRVM_ED_FindFieldOffset("clientcolors");
+	prog->fieldoffsets.tag_entity = PRVM_ED_FindFieldOffset("tag_entity");
+	prog->fieldoffsets.tag_index = PRVM_ED_FindFieldOffset("tag_index");
+	prog->fieldoffsets.light_lev = PRVM_ED_FindFieldOffset("light_lev");
+	prog->fieldoffsets.color = PRVM_ED_FindFieldOffset("color");
+	prog->fieldoffsets.style = PRVM_ED_FindFieldOffset("style");
+	prog->fieldoffsets.pflags = PRVM_ED_FindFieldOffset("pflags");
+	prog->fieldoffsets.cursor_active = PRVM_ED_FindFieldOffset("cursor_active");
+	prog->fieldoffsets.cursor_screen = PRVM_ED_FindFieldOffset("cursor_screen");
+	prog->fieldoffsets.cursor_trace_start = PRVM_ED_FindFieldOffset("cursor_trace_start");
+	prog->fieldoffsets.cursor_trace_endpos = PRVM_ED_FindFieldOffset("cursor_trace_endpos");
+	prog->fieldoffsets.cursor_trace_ent = PRVM_ED_FindFieldOffset("cursor_trace_ent");
+	prog->fieldoffsets.colormod = PRVM_ED_FindFieldOffset("colormod");
+	prog->fieldoffsets.playermodel = PRVM_ED_FindFieldOffset("playermodel");
+	prog->fieldoffsets.playerskin = PRVM_ED_FindFieldOffset("playerskin");
+	prog->fieldoffsets.SendEntity = PRVM_ED_FindFieldOffset("SendEntity");
+	prog->fieldoffsets.Version = PRVM_ED_FindFieldOffset("Version");
+	prog->fieldoffsets.customizeentityforclient = PRVM_ED_FindFieldOffset("customizeentityforclient");
+	prog->fieldoffsets.dphitcontentsmask = PRVM_ED_FindFieldOffset("dphitcontentsmask");
+	prog->fieldoffsets.contentstransition = PRVM_ED_FindFieldOffset("contentstransition");
+	prog->globaloffsets.trace_dpstartcontents = PRVM_ED_FindGlobalOffset("trace_dpstartcontents");
+	prog->globaloffsets.trace_dphitcontents = PRVM_ED_FindGlobalOffset("trace_dphitcontents");
+	prog->globaloffsets.trace_dphitq3surfaceflags = PRVM_ED_FindGlobalOffset("trace_dphitq3surfaceflags");
+	prog->globaloffsets.trace_dphittexturename = PRVM_ED_FindGlobalOffset("trace_dphittexturename");
+	prog->globaloffsets.SV_InitCmd = PRVM_ED_FindGlobalOffset("SV_InitCmd");
+	prog->funcoffsets.SV_ParseClientCommand = PRVM_ED_FindFunctionOffset("SV_ParseClientCommand");
+	prog->funcoffsets.SV_PlayerPhysics = PRVM_ED_FindFunctionOffset("SV_PlayerPhysics");
+	prog->funcoffsets.SV_ChangeTeam = PRVM_ED_FindFunctionOffset("SV_ChangeTeam");
+	prog->funcoffsets.EndFrame = PRVM_ED_FindFunctionOffset("EndFrame");
+	prog->funcoffsets.RestoreGame = PRVM_ED_FindFunctionOffset("RestoreGame");
+
+	// csqc
+	prog->fieldoffsets.alpha = PRVM_ED_FindFieldOffset("alpha");
+	prog->fieldoffsets.scale = PRVM_ED_FindFieldOffset("scale");
+	//prog->fieldoffsets.fatness = PRVM_ED_FindFieldOffset("fatness");
+	prog->fieldoffsets.frame2 = PRVM_ED_FindFieldOffset("frame2");
+	prog->fieldoffsets.frame1time = PRVM_ED_FindFieldOffset("frame1time");
+	prog->fieldoffsets.frame2time = PRVM_ED_FindFieldOffset("frame2time");
+	prog->fieldoffsets.lerpfrac = PRVM_ED_FindFieldOffset("lerpfrac");
+	prog->fieldoffsets.renderflags = PRVM_ED_FindFieldOffset("renderflags");
+	//prog->fieldoffsets.forceshader = PRVM_ED_FindFieldOffset("forceshader");
+	//prog->fieldoffsets.dimension_hit = PRVM_ED_FindFieldOffset("dimension_hit");
+	//prog->fieldoffsets.dimension_solid = PRVM_ED_FindFieldOffset("dimension_solid");
+	//prog->fieldoffsets.groundentity = PRVM_ED_FindFieldOffset("groundentity");
+	//prog->fieldoffsets.hull = PRVM_ED_FindFieldOffset("hull");
+	prog->fieldoffsets.colormod = PRVM_ED_FindFieldOffset("colormod");
+	prog->fieldoffsets.effects = PRVM_ED_FindFieldOffset("effects");
+	prog->fieldoffsets.tag_entity = PRVM_ED_FindFieldOffset("tag_entity");
+	prog->fieldoffsets.tag_index = PRVM_ED_FindFieldOffset("tag_index");
+	prog->funcoffsets.CSQC_Init = PRVM_ED_FindFunctionOffset("CSQC_Init");
+	prog->funcoffsets.CSQC_InputEvent = PRVM_ED_FindFunctionOffset("CSQC_InputEvent");
+	prog->funcoffsets.CSQC_UpdateView = PRVM_ED_FindFunctionOffset("CSQC_UpdateView");
+	prog->funcoffsets.CSQC_ConsoleCommand = PRVM_ED_FindFunctionOffset("CSQC_ConsoleCommand");
+	prog->funcoffsets.CSQC_Shutdown = PRVM_ED_FindFunctionOffset("CSQC_Shutdown");
+	prog->funcoffsets.CSQC_Parse_TempEntity = PRVM_ED_FindFunctionOffset("CSQC_Parse_TempEntity");
+	prog->funcoffsets.CSQC_Parse_StuffCmd = PRVM_ED_FindFunctionOffset("CSQC_Parse_StuffCmd");
+	prog->funcoffsets.CSQC_Parse_Print = PRVM_ED_FindFunctionOffset("CSQC_Parse_Print");
+	prog->funcoffsets.CSQC_Parse_CenterPrint = PRVM_ED_FindFunctionOffset("CSQC_Parse_CenterPrint");
+	prog->funcoffsets.CSQC_Ent_Update = PRVM_ED_FindFunctionOffset("CSQC_Ent_Update");
+	prog->funcoffsets.CSQC_Ent_Remove = PRVM_ED_FindFunctionOffset("CSQC_Ent_Remove");
+	prog->funcoffsets.CSQC_Event = PRVM_ED_FindFunctionOffset("CSQC_Event");
+
+	// mqc
+	prog->funcoffsets.m_init = PRVM_ED_FindFunctionOffset("m_init");
+#ifdef NG_MENU
+	prog->funcoffsets.m_display = PRVM_ED_FindFunctionOffset("m_display");
+	prog->funcoffsets.m_hide = PRVM_ED_FindFunctionOffset("m_hide");
+#endif
+	prog->funcoffsets.m_keydown = PRVM_ED_FindFunctionOffset("m_keydown");
+	prog->funcoffsets.m_keyup = PRVM_ED_FindFunctionOffset("m_keyup");
+	prog->funcoffsets.m_draw = PRVM_ED_FindFunctionOffset("m_draw");
+	prog->funcoffsets.m_toggle = PRVM_ED_FindFunctionOffset("m_toggle");
+	prog->funcoffsets.m_shutdown = PRVM_ED_FindFunctionOffset("m_shutdown");
 }
 
 // not used
@@ -1294,7 +1442,7 @@ void PRVM_LoadLNO( const char *progname ) {
 PRVM_LoadProgs
 ===============
 */
-void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required_func, int numrequiredfields, prvm_required_field_t *required_field)
+void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required_func, int numrequiredfields, prvm_required_field_t *required_field, int numrequiredglobals, char **required_global)
 {
 	int i;
 	dstatement_t *st;
@@ -1411,6 +1559,11 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 	for(i=0 ; i < numrequiredfunc ; i++)
 		if(PRVM_ED_FindFunction(required_func[i]) == 0)
 			PRVM_ERROR("%s: %s not found in %s",PRVM_NAME, required_func[i], filename);
+
+	// check required globals
+	for(i=0 ; i < numrequiredglobals ; i++)
+		if(PRVM_ED_FindGlobal(required_global[i]) == 0)
+			PRVM_ERROR("%s: %s not found in %s",PRVM_NAME, required_global[i], filename);
 
 	for (i=0 ; i<prog->progs->numglobals ; i++)
 		((int *)prog->globals.generic)[i] = LittleLong (((int *)prog->globals.generic)[i]);
@@ -1529,19 +1682,10 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 
 	prog->flag = 0;
 
-	prog->self = PRVM_ED_FindGlobal("self");
+	PRVM_FindOffsets();
 
-	if( PRVM_ED_FindGlobal("time") && PRVM_ED_FindGlobal("time")->type & ev_float )
-		prog->time = &PRVM_G_FLOAT(PRVM_ED_FindGlobal("time")->ofs);
-
-	if(PRVM_ED_FindField ("chain"))
-		prog->flag |= PRVM_FE_CHAIN;
-
-	if(PRVM_ED_FindField ("classname"))
-		prog->flag |= PRVM_FE_CLASSNAME;
-
-	if(PRVM_ED_FindField ("nextthink") && PRVM_ED_FindField ("frame") && PRVM_ED_FindField ("think")
-		&& prog->flag && prog->self)
+	// check if OP_STATE animation is possible in this dat file
+	if (prog->fieldoffsets.nextthink >= 0 && prog->fieldoffsets.frame >= 0 && prog->fieldoffsets.think >= 0 && prog->globaloffsets.self >= 0)
 		prog->flag |= PRVM_OP_STATE;
 
 	PRVM_GCALL(init_cmd)();
@@ -1794,7 +1938,6 @@ void PRVM_InitProg(int prognr)
 
 	memset(prog, 0, sizeof(prvm_prog_t));
 
-	prog->time = &prog->_time;
 	prog->error_cmd = Host_Error;
 }
 

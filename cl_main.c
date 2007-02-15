@@ -1729,6 +1729,11 @@ static void CL_TimeRefresh_f (void)
 	Con_Printf("%f seconds (%f fps)\n", timedelta, 128/timedelta);
 }
 
+void CL_AreaStats_f(void)
+{
+	World_PrintAreaStats(&cl.world, "client");
+}
+
 /*
 ===========
 CL_Shutdown
@@ -1802,6 +1807,8 @@ void CL_Init (void)
 
 	// LordHavoc: added pausedemo
 	Cmd_AddCommand ("pausedemo", CL_PauseDemo_f, "pause demo playback (can also safely pause demo recording if using QUAKE, QUAKEDP or NEHAHRAMOVIE protocol, useful for making movies)");
+
+	Cmd_AddCommand ("cl_areastats", CL_AreaStats_f, "prints statistics on entity culling during collision traces");
 
 	Cvar_RegisterVariable(&r_draweffects);
 	Cvar_RegisterVariable(&cl_explosions_alpha_start);

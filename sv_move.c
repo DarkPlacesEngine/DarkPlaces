@@ -222,14 +222,14 @@ facing it.
 
 ======================
 */
-void PF_changeyaw (void);
+void VM_changeyaw (void);
 qboolean SV_StepDirection (prvm_edict_t *ent, float yaw, float dist)
 {
 	vec3_t		move, oldorigin;
 	float		delta;
 
 	ent->fields.server->ideal_yaw = yaw;
-	PF_changeyaw();
+	VM_changeyaw();
 
 	yaw = yaw*M_PI*2 / 360;
 	move[0] = cos(yaw)*dist;
@@ -367,9 +367,9 @@ qboolean SV_CloseEnough (prvm_edict_t *ent, prvm_edict_t *goal, float dist)
 
 	for (i=0 ; i<3 ; i++)
 	{
-		if (goal->fields.server->absmin[i] > ent->fields.server->absmax[i] + dist)
+		if (goal->priv.server->areamins[i] > ent->priv.server->areamaxs[i] + dist)
 			return false;
-		if (goal->fields.server->absmax[i] < ent->fields.server->absmin[i] - dist)
+		if (goal->priv.server->areamaxs[i] < ent->priv.server->areamins[i] - dist)
 			return false;
 	}
 	return true;

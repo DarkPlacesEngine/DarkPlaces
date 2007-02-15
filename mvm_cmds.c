@@ -200,7 +200,7 @@ void VM_M_callfunction(void)
 		else
 			PRVM_ERROR("No such builtin #%i in %s", builtinnumber, PRVM_NAME);
 	}
-	else if(func > 0)
+	else if(func - prog->functions > 0)
 	{
 		prog->argc--;
 		PRVM_ExecuteProgram(func - prog->functions,"");

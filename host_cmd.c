@@ -92,7 +92,7 @@ void Host_Status_f (void)
 		}
 		else
 			hours = 0;
-		print ("#%-3u %-16.16s  %3i  %2i:%02i:%02i\n", j+1, client->name, (int)client->edict->fields.server->frags, hours, minutes, seconds);
+		print ("#%-3u %-16.16s  %3i  %2i:%02i:%02i\n", j+1, client->name, client->frags, hours, minutes, seconds);
 		print ("   %s\n", client->netconnection ? client->netconnection->address : "botclient");
 	}
 }
@@ -853,8 +853,8 @@ void Host_Playermodel_f (void)
 
 	// point the string back at updateclient->name to keep it safe
 	strlcpy (host_client->playermodel, newPath, sizeof (host_client->playermodel));
-	if( eval_playermodel )
-		PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_playermodel)->string = PRVM_SetEngineString(host_client->playermodel);
+	if( prog->fieldoffsets.playermodel >= 0 )
+		PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.playermodel)->string = PRVM_SetEngineString(host_client->playermodel);
 	if (strcmp(host_client->old_model, host_client->playermodel))
 	{
 		strlcpy(host_client->old_model, host_client->playermodel, sizeof(host_client->old_model));
@@ -911,8 +911,8 @@ void Host_Playerskin_f (void)
 
 	// point the string back at updateclient->name to keep it safe
 	strlcpy (host_client->playerskin, newPath, sizeof (host_client->playerskin));
-	if( eval_playerskin )
-		PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_playerskin)->string = PRVM_SetEngineString(host_client->playerskin);
+	if( prog->fieldoffsets.playerskin >= 0 )
+		PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.playerskin)->string = PRVM_SetEngineString(host_client->playerskin);
 	if (strcmp(host_client->old_skin, host_client->playerskin))
 	{
 		//if (host_client->spawned)
@@ -1146,8 +1146,6 @@ cvar_t cl_color = {CVAR_SAVE, "_cl_color", "0", "internal storage cvar for curre
 void Host_Color(int changetop, int changebottom)
 {
 	int top, bottom, playercolor;
-	mfunction_t *f;
-	func_t SV_ChangeTeam;
 
 	// get top and bottom either from the provided values or the current values
 	// (allows changing only top or bottom, or both at once)
@@ -1182,20 +1180,20 @@ void Host_Color(int changetop, int changebottom)
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
 		return;
 
-	if (host_client->edict && (f = PRVM_ED_FindFunction ("SV_ChangeTeam")) && (SV_ChangeTeam = (func_t)(f - prog->functions)))
+	if (host_client->edict && prog->funcoffsets.SV_ChangeTeam)
 	{
 		Con_DPrint("Calling SV_ChangeTeam\n");
 		prog->globals.server->time = sv.time;
 		prog->globals.generic[OFS_PARM0] = playercolor;
 		prog->globals.server->self = PRVM_EDICT_TO_PROG(host_client->edict);
-		PRVM_ExecuteProgram (SV_ChangeTeam, "QC function SV_ChangeTeam is missing");
+		PRVM_ExecuteProgram(prog->funcoffsets.SV_ChangeTeam, "QC function SV_ChangeTeam is missing");
 	}
 	else
 	{
 		prvm_eval_t *val;
 		if (host_client->edict)
 		{
-			if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_clientcolors)))
+			if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.clientcolors)))
 				val->_float = playercolor;
 			host_client->edict->fields.server->team = bottom + 1;
 		}
@@ -1348,7 +1346,7 @@ static void Host_PModel_f (void)
 		return;
 	}
 
-	if (host_client->edict && (val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_pmodel)))
+	if (host_client->edict && (val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.pmodel)))
 		val->_float = i;
 }
 
@@ -1388,8 +1386,6 @@ void Host_Spawn_f (void)
 {
 	int i;
 	client_t *client;
-	func_t RestoreGame;
-	mfunction_t *f;
 	int stats[MAX_CL_STATS];
 
 	if (host_client->spawned)
@@ -1414,13 +1410,12 @@ void Host_Spawn_f (void)
 		// if this is the last client to be connected, unpause
 		sv.paused = false;
 
-		if ((f = PRVM_ED_FindFunction ("RestoreGame")))
-		if ((RestoreGame = (func_t)(f - prog->functions)))
+		if (prog->funcoffsets.RestoreGame)
 		{
 			Con_DPrint("Calling RestoreGame\n");
 			prog->globals.server->time = sv.time;
 			prog->globals.server->self = PRVM_EDICT_TO_PROG(host_client->edict);
-			PRVM_ExecuteProgram (RestoreGame, "QC function RestoreGame is missing");
+			PRVM_ExecuteProgram(prog->funcoffsets.RestoreGame, "QC function RestoreGame is missing");
 		}
 	}
 	else
@@ -1679,7 +1674,7 @@ void Host_Give_f (void)
 		break;
 
 	case 's':
-		if (gamemode == GAME_ROGUE && (val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_ammo_shells1)))
+		if (gamemode == GAME_ROGUE && (val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.ammo_shells1)))
 			val->_float = v;
 
 		host_client->edict->fields.server->ammo_shells = v;
@@ -1687,7 +1682,7 @@ void Host_Give_f (void)
 	case 'n':
 		if (gamemode == GAME_ROGUE)
 		{
-			if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_ammo_nails1)))
+			if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.ammo_nails1)))
 			{
 				val->_float = v;
 				if (host_client->edict->fields.server->weapon <= IT_LIGHTNING)
@@ -1702,7 +1697,7 @@ void Host_Give_f (void)
 	case 'l':
 		if (gamemode == GAME_ROGUE)
 		{
-			val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_ammo_lava_nails);
+			val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.ammo_lava_nails);
 			if (val)
 			{
 				val->_float = v;
@@ -1714,7 +1709,7 @@ void Host_Give_f (void)
 	case 'r':
 		if (gamemode == GAME_ROGUE)
 		{
-			val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_ammo_rockets1);
+			val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.ammo_rockets1);
 			if (val)
 			{
 				val->_float = v;
@@ -1730,7 +1725,7 @@ void Host_Give_f (void)
 	case 'm':
 		if (gamemode == GAME_ROGUE)
 		{
-			val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_ammo_multi_rockets);
+			val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.ammo_multi_rockets);
 			if (val)
 			{
 				val->_float = v;
@@ -1745,7 +1740,7 @@ void Host_Give_f (void)
 	case 'c':
 		if (gamemode == GAME_ROGUE)
 		{
-			val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_ammo_cells1);
+			val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.ammo_cells1);
 			if (val)
 			{
 				val->_float = v;
@@ -1761,7 +1756,7 @@ void Host_Give_f (void)
 	case 'p':
 		if (gamemode == GAME_ROGUE)
 		{
-			val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_ammo_plasma);
+			val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.ammo_plasma);
 			if (val)
 			{
 				val->_float = v;
@@ -2000,7 +1995,7 @@ void Host_SendCvar_f (void)
 		return;
 	if (cls.state != ca_dedicated)
 		Cmd_ForwardStringToServer(va("sentcvar %s \"%s\"\n", c->name, c->string));
-	if(!sv.active)// || !SV_ParseClientCommandQC)
+	if(!sv.active)// || !prog->funcoffsets.SV_ParseClientCommand)
 		return;
 
 	old = host_client;

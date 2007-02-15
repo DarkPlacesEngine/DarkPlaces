@@ -208,7 +208,7 @@ void DropPunchAngle (void)
 		len = 0;
 	VectorScale (host_client->edict->fields.server->punchangle, len, host_client->edict->fields.server->punchangle);
 
-	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_punchvector)))
+	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.punchvector)))
 	{
 		len = VectorNormalizeLength (val->vector);
 
@@ -660,29 +660,29 @@ void SV_ApplyClientMove (void)
 	// only send the impulse to qc once
 	move->impulse = 0;
 	VectorCopy(move->viewangles, host_client->edict->fields.server->v_angle);
-	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_button3))) val->_float = ((move->buttons >> 2) & 1);
-	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_button4))) val->_float = ((move->buttons >> 3) & 1);
-	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_button5))) val->_float = ((move->buttons >> 4) & 1);
-	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_button6))) val->_float = ((move->buttons >> 5) & 1);
-	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_button7))) val->_float = ((move->buttons >> 6) & 1);
-	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_button8))) val->_float = ((move->buttons >> 7) & 1);
-	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_button9))) val->_float = ((move->buttons >> 11) & 1);
-	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_button10))) val->_float = ((move->buttons >> 12) & 1);
-	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_button11))) val->_float = ((move->buttons >> 13) & 1);
-	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_button12))) val->_float = ((move->buttons >> 14) & 1);
-	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_button13))) val->_float = ((move->buttons >> 15) & 1);
-	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_button14))) val->_float = ((move->buttons >> 16) & 1);
-	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_button15))) val->_float = ((move->buttons >> 17) & 1);
-	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_button16))) val->_float = ((move->buttons >> 18) & 1);
-	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_buttonuse))) val->_float = ((move->buttons >> 8) & 1);
-	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_buttonchat))) val->_float = ((move->buttons >> 9) & 1);
-	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_cursor_active))) val->_float = ((move->buttons >> 10) & 1);
-	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_movement))) VectorSet(val->vector, move->forwardmove, move->sidemove, move->upmove);
-	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_cursor_screen))) VectorCopy(move->cursor_screen, val->vector);
-	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_cursor_trace_start))) VectorCopy(move->cursor_start, val->vector);
-	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_cursor_trace_endpos))) VectorCopy(move->cursor_impact, val->vector);
-	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_cursor_trace_ent))) val->edict = PRVM_EDICT_TO_PROG(PRVM_EDICT_NUM(move->cursor_entitynumber));
-	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_ping))) val->_float = host_client->ping * 1000.0;
+	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.button3))) val->_float = ((move->buttons >> 2) & 1);
+	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.button4))) val->_float = ((move->buttons >> 3) & 1);
+	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.button5))) val->_float = ((move->buttons >> 4) & 1);
+	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.button6))) val->_float = ((move->buttons >> 5) & 1);
+	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.button7))) val->_float = ((move->buttons >> 6) & 1);
+	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.button8))) val->_float = ((move->buttons >> 7) & 1);
+	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.button9))) val->_float = ((move->buttons >> 11) & 1);
+	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.button10))) val->_float = ((move->buttons >> 12) & 1);
+	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.button11))) val->_float = ((move->buttons >> 13) & 1);
+	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.button12))) val->_float = ((move->buttons >> 14) & 1);
+	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.button13))) val->_float = ((move->buttons >> 15) & 1);
+	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.button14))) val->_float = ((move->buttons >> 16) & 1);
+	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.button15))) val->_float = ((move->buttons >> 17) & 1);
+	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.button16))) val->_float = ((move->buttons >> 18) & 1);
+	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.buttonuse))) val->_float = ((move->buttons >> 8) & 1);
+	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.buttonchat))) val->_float = ((move->buttons >> 9) & 1);
+	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.cursor_active))) val->_float = ((move->buttons >> 10) & 1);
+	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.movement))) VectorSet(val->vector, move->forwardmove, move->sidemove, move->upmove);
+	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.cursor_screen))) VectorCopy(move->cursor_screen, val->vector);
+	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.cursor_trace_start))) VectorCopy(move->cursor_start, val->vector);
+	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.cursor_trace_endpos))) VectorCopy(move->cursor_impact, val->vector);
+	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.cursor_trace_ent))) val->edict = PRVM_EDICT_TO_PROG(PRVM_EDICT_NUM(move->cursor_entitynumber));
+	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.ping))) val->_float = host_client->ping * 1000.0;
 }
 
 void SV_FrameLost(int framenum)
@@ -757,13 +757,13 @@ void SV_ReadClientMessage(void)
 			 || strncasecmp(s, "begin", 5) == 0
 			 || strncasecmp(s, "prespawn", 8) == 0)
 				Cmd_ExecuteString (s, src_client);
-			else if (SV_ParseClientCommandQC)
+			else if (prog->funcoffsets.SV_ParseClientCommand)
 			{
 				int restorevm_tempstringsbuf_cursize;
 				restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
 				PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(s);
 				prog->globals.server->self = PRVM_EDICT_TO_PROG(host_client->edict);
-				PRVM_ExecuteProgram ((func_t)(SV_ParseClientCommandQC - prog->functions), "QC function SV_ParseClientCommand is missing");
+				PRVM_ExecuteProgram (prog->funcoffsets.SV_ParseClientCommand, "QC function SV_ParseClientCommand is missing");
 				vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 			}
 			else

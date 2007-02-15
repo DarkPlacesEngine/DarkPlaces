@@ -4816,22 +4816,13 @@ void M_Restart(void)
 
 //============================================================================
 // Menu prog handling
-mfunction_t *PRVM_ED_FindFunction(const char *);
-
-#define M_F_INIT		"m_init"
-#define M_F_KEYDOWN		"m_keydown"
-#define M_F_KEYUP		"m_keyup"
-#define M_F_DRAW		"m_draw"
-// normal menu names (rest)
-#define M_F_TOGGLE		"m_toggle"
-#define M_F_SHUTDOWN	"m_shutdown"
 
 static char *m_required_func[] = {
-M_F_INIT,
-M_F_KEYDOWN,
-M_F_DRAW,
-M_F_TOGGLE,
-M_F_SHUTDOWN,
+"m_init",
+"m_keydown",
+"m_draw",
+"m_toggle",
+"m_shutdown",
 };
 
 #ifdef NG_MENU
@@ -4839,9 +4830,6 @@ static qboolean m_displayed;
 #endif
 
 static int m_numrequiredfunc = sizeof(m_required_func) / sizeof(char*);
-
-static func_t m_draw, m_keydown;
-static mfunction_t *m_keyup;
 
 void MR_SetRouting (qboolean forceold);
 
@@ -4883,16 +4871,13 @@ void MP_KeyEvent (int key, char ascii, qboolean downevent)
 	PRVM_Begin;
 	PRVM_SetProg(PRVM_MENUPROG);
 
-	// set time
-	*prog->time = realtime;
-
 	// pass key
 	prog->globals.generic[OFS_PARM0] = (float) key;
 	prog->globals.generic[OFS_PARM1] = (float) ascii;
 	if (downevent)
-		PRVM_ExecuteProgram(m_keydown, M_F_KEYDOWN"(float key, float ascii) required\n");
-	else if (m_keyup)
-		PRVM_ExecuteProgram((func_t)(m_keyup - prog->functions), M_F_KEYUP"(float key, float ascii) required\n");
+		PRVM_ExecuteProgram(prog->funcoffsets.m_keydown,"m_keydown(float key, float ascii) required");
+	else if (prog->funcoffsets.m_keyup)
+		PRVM_ExecuteProgram(prog->funcoffsets.m_keyup,"m_keyup(float key, float ascii) required");
 
 	PRVM_End;
 }
@@ -4902,10 +4887,7 @@ void MP_Draw (void)
 	PRVM_Begin;
 	PRVM_SetProg(PRVM_MENUPROG);
 
-	// set time
-	*prog->time = realtime;
-
-	PRVM_ExecuteProgram(m_draw,"");
+	PRVM_ExecuteProgram(prog->funcoffsets.m_draw,"m_draw() required");
 
 	PRVM_End;
 }
@@ -4915,17 +4897,14 @@ void MP_ToggleMenu_f (void)
 	PRVM_Begin;
 	PRVM_SetProg(PRVM_MENUPROG);
 
-	// set time
-	*prog->time = realtime;
-
 #ifdef NG_MENU
 	m_displayed = !m_displayed;
 	if( m_displayed )
-		PRVM_ExecuteProgram((func_t) (PRVM_ED_FindFunction(M_F_DISPLAY) - prog->functions),"");
+		PRVM_ExecuteProgram(prog->funcoffsets.m_display,"m_display() required");
 	else
-		PRVM_ExecuteProgram((func_t) (PRVM_ED_FindFunction(M_F_HIDE) - prog->functions),"");
+		PRVM_ExecuteProgram(prog->funcoffsets.m_hide,"m_hide() required");
 #else
-	PRVM_ExecuteProgram((func_t) (PRVM_ED_FindFunction(M_F_TOGGLE) - prog->functions),"");
+	PRVM_ExecuteProgram(prog->funcoffsets.m_toggle,"m_toggle() required");
 #endif
 
 	PRVM_End;
@@ -4936,10 +4915,7 @@ void MP_Shutdown (void)
 	PRVM_Begin;
 	PRVM_SetProg(PRVM_MENUPROG);
 
-	// set time
-	*prog->time = realtime;
-
-	PRVM_ExecuteProgram((func_t) (PRVM_ED_FindFunction(M_F_SHUTDOWN) - prog->functions),"");
+	PRVM_ExecuteProgram(prog->funcoffsets.m_shutdown,"m_shutdown() required");
 
 	// reset key_dest
 	key_dest = key_game;
@@ -4980,22 +4956,14 @@ void MP_Init (void)
 	// allocate the mempools
 	prog->progs_mempool = Mem_AllocPool(M_PROG_FILENAME, 0, NULL);
 
-	PRVM_LoadProgs(M_PROG_FILENAME, m_numrequiredfunc, m_required_func, 0, NULL);
-
-	// set m_draw and m_keydown
-	m_draw = (func_t) (PRVM_ED_FindFunction(M_F_DRAW) - prog->functions);
-	m_keydown = (func_t) (PRVM_ED_FindFunction(M_F_KEYDOWN) - prog->functions);
-	m_keyup = PRVM_ED_FindFunction(M_F_KEYUP);
+	PRVM_LoadProgs(M_PROG_FILENAME, m_numrequiredfunc, m_required_func, 0, NULL, 0, NULL);
 
 #ifdef NG_MENU
 	m_displayed = false;
 #endif
 
-	// set time
-	*prog->time = realtime;
-
 	// call the prog init
-	PRVM_ExecuteProgram((func_t) (PRVM_ED_FindFunction(M_F_INIT) - prog->functions),"");
+	PRVM_ExecuteProgram(prog->funcoffsets.m_init,"m_init() required");
 
 	PRVM_End;
 }

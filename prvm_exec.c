@@ -488,8 +488,6 @@ PRVM_ExecuteProgram
 extern cvar_t prvm_boundscheck;
 extern cvar_t prvm_traceqc;
 extern cvar_t prvm_statementprofiling;
-extern int		PRVM_ED_FindFieldOffset (const char *field);
-extern ddef_t*	PRVM_ED_FindGlobal(const char *name);
 extern sizebuf_t vm_tempstringsbuf;
 void PRVM_ExecuteProgram (func_t fnum, const char *errormessage)
 {
@@ -502,8 +500,8 @@ void PRVM_ExecuteProgram (func_t fnum, const char *errormessage)
 
 	if (!fnum || fnum >= (unsigned int)prog->progs->numfunctions)
 	{
-		if (prog->self && PRVM_G_INT(prog->self->ofs))
-			PRVM_ED_Print(PRVM_PROG_TO_EDICT(PRVM_G_INT(prog->self->ofs)));
+		if (prog->globaloffsets.self >= 0 && PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.self)->edict)
+			PRVM_ED_Print(PRVM_PROG_TO_EDICT(PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.self)->edict));
 		PRVM_ERROR ("PRVM_ExecuteProgram: %s", errormessage);
 	}
 

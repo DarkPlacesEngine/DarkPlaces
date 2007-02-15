@@ -13,32 +13,13 @@
 static prvm_prog_t *csqc_tmpprog;
 
 //[515]: these are required funcs
-#define CL_F_INIT				"CSQC_Init"
-#define CL_F_INPUTEVENT			"CSQC_InputEvent"
-#define CL_F_UPDATEVIEW			"CSQC_UpdateView"
-#define CL_F_CONSOLECOMMAND		"CSQC_ConsoleCommand"
-#define CL_F_SHUTDOWN			"CSQC_Shutdown"
-
-//[515]: these are optional
-#define CL_F_PARSE_TEMPENTITY	"CSQC_Parse_TempEntity"	//[515]: very helpfull when you want to create your own particles/decals/etc for effects that already exist
-#define CL_F_PARSE_STUFFCMD		"CSQC_Parse_StuffCmd"
-#define CL_F_PARSE_PRINT		"CSQC_Parse_Print"
-#define CL_F_PARSE_CENTERPRINT	"CSQC_Parse_CenterPrint"
-#define CL_F_ENT_UPDATE			"CSQC_Ent_Update"
-#define CL_F_ENT_REMOVE			"CSQC_Ent_Remove"
-#define CL_F_EVENT				"CSQC_Event"	//[515]: engine call this for its own needs
-												//so csqc can do some things according to what engine it's running on
-												//example: to say about edicts increase, whatever...
-
-#define CSQC_PRINTBUFFERLEN		8192	//[515]: enough ?
-
 static char *cl_required_func[] =
 {
-	CL_F_INIT,
-	CL_F_INPUTEVENT,
-	CL_F_UPDATEVIEW,
-	CL_F_CONSOLECOMMAND,
-	CL_F_SHUTDOWN
+	"CSQC_Init",
+	"CSQC_InputEvent",
+	"CSQC_UpdateView",
+	"CSQC_ConsoleCommand",
+	"CSQC_Shutdown"
 };
 
 static int cl_numrequiredfunc = sizeof(cl_required_func) / sizeof(char*);
@@ -46,54 +27,12 @@ static int cl_numrequiredfunc = sizeof(cl_required_func) / sizeof(char*);
 static char				*csqc_printtextbuf = NULL;
 static unsigned short	*csqc_sv2csqcents;	//[515]: server entities numbers on client side. FIXME : make pointers instead of numbers ?
 
-static mfunction_t	*CSQC_Parse_TempEntity;
-static mfunction_t	*CSQC_Parse_StuffCmd;
-static mfunction_t	*CSQC_Parse_Print;
-static mfunction_t	*CSQC_Parse_CenterPrint;
-static mfunction_t	*CSQC_Ent_Update;
-static mfunction_t	*CSQC_Ent_Remove;
-static mfunction_t	*CSQC_Event;
-
-static int csqc_fieldoff_alpha;
-static int csqc_fieldoff_colormod;
-static int csqc_fieldoff_effects;
-int csqc_fieldoff_scale;
-int csqc_fieldoff_renderflags;
-int csqc_fieldoff_tag_entity;
-int csqc_fieldoff_tag_index;
-int csqc_fieldoff_dphitcontentsmask;
-
 qboolean csqc_loaded = false;
 
 vec3_t csqc_origin, csqc_angles;
 static double csqc_frametime = 0;
 
 static mempool_t *csqc_mempool;
-
-static void CL_VM_FindEdictFieldOffsets (void)
-{
-	csqc_fieldoff_alpha			= PRVM_ED_FindFieldOffset("alpha");
-	csqc_fieldoff_scale			= PRVM_ED_FindFieldOffset("scale");
-	csqc_fieldoff_colormod		= PRVM_ED_FindFieldOffset("colormod");
-	csqc_fieldoff_renderflags	= PRVM_ED_FindFieldOffset("renderflags");
-	csqc_fieldoff_effects		= PRVM_ED_FindFieldOffset("effects");
-	csqc_fieldoff_tag_entity	= PRVM_ED_FindFieldOffset("tag_entity");
-	csqc_fieldoff_tag_index		= PRVM_ED_FindFieldOffset("tag_index");
-
-	CSQC_Parse_TempEntity		= PRVM_ED_FindFunction (CL_F_PARSE_TEMPENTITY);
-	CSQC_Parse_StuffCmd			= PRVM_ED_FindFunction (CL_F_PARSE_STUFFCMD);
-	CSQC_Parse_Print			= PRVM_ED_FindFunction (CL_F_PARSE_PRINT);
-	CSQC_Parse_CenterPrint		= PRVM_ED_FindFunction (CL_F_PARSE_CENTERPRINT);
-	CSQC_Ent_Update				= PRVM_ED_FindFunction (CL_F_ENT_UPDATE);
-	CSQC_Ent_Remove				= PRVM_ED_FindFunction (CL_F_ENT_REMOVE);
-	CSQC_Event					= PRVM_ED_FindFunction (CL_F_EVENT);
-
-	if(CSQC_Parse_Print)
-	{
-		csqc_printtextbuf = (char *)Mem_Alloc(csqc_mempool, CSQC_PRINTBUFFERLEN);
-		csqc_printtextbuf[0] = 0;
-	}
-}
 
 void CL_VM_Error (const char *format, ...) DP_FUNC_PRINTF(1);
 void CL_VM_Error (const char *format, ...)	//[515]: hope it will be never executed =)
@@ -148,7 +87,7 @@ static void CSQC_SetGlobals (void)
 	//extern cvar_t sv_accelerate, sv_friction, sv_gravity, sv_stopspeed, sv_maxspeed;
 
 	CSQC_BEGIN
-		*prog->time = cl.time;
+		prog->globals.client->time = cl.time;
 		prog->globals.client->frametime = cl.time - csqc_frametime;
 		csqc_frametime = cl.time;
 		prog->globals.client->servercommandframe = cl.servermovesequence;
@@ -181,7 +120,7 @@ void CSQC_Think (prvm_edict_t *ed)
 {
 	int b;
 	if(ed->fields.client->think)
-	if(ed->fields.client->nextthink && ed->fields.client->nextthink <= *prog->time)
+	if(ed->fields.client->nextthink && ed->fields.client->nextthink <= prog->globals.client->time)
 	{
 		ed->fields.client->nextthink = 0;
 		b = prog->globals.client->self;
@@ -218,21 +157,21 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 	// FIXME: renderflags should be in the cl_entvars_t
 #if 1
 	renderflags = 0;
-	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_renderflags)) && val->_float)	renderflags = (int)val->_float;
+	if((val = PRVM_GETEDICTFIELDVALUE(ed, prog->fieldoffsets.renderflags)) && val->_float)	renderflags = (int)val->_float;
 #else
 	renderflags = (int)ed->fields.client->renderflags;
 #endif
 
-	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_alpha)) && val->_float)		e->render.alpha = val->_float;
-	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_scale)) && val->_float)		e->render.scale = scale = val->_float;
-	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_colormod)) && VectorLength2(val->vector))	VectorCopy(val->vector, e->render.colormod);
-	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_effects)) && val->_float)	e->render.effects = (int)val->_float;
-	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_tag_entity)) && val->edict)
+	if((val = PRVM_GETEDICTFIELDVALUE(ed, prog->fieldoffsets.alpha)) && val->_float)		e->render.alpha = val->_float;
+	if((val = PRVM_GETEDICTFIELDVALUE(ed, prog->fieldoffsets.scale)) && val->_float)		e->render.scale = scale = val->_float;
+	if((val = PRVM_GETEDICTFIELDVALUE(ed, prog->fieldoffsets.colormod)) && VectorLength2(val->vector))	VectorCopy(val->vector, e->render.colormod);
+	if((val = PRVM_GETEDICTFIELDVALUE(ed, prog->fieldoffsets.effects)) && val->_float)	e->render.effects = (int)val->_float;
+	if((val = PRVM_GETEDICTFIELDVALUE(ed, prog->fieldoffsets.tag_entity)) && val->edict)
 	{
 		int tagentity;
 		int tagindex = 0;
 		tagentity = val->edict;
-		if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_tag_index)) && val->_float)
+		if((val = PRVM_GETEDICTFIELDVALUE(ed, prog->fieldoffsets.tag_index)) && val->_float)
 			tagindex = (int)val->_float;
 		// FIXME: calculate tag matrix
 		Matrix4x4_CreateIdentity(&tagmatrix);
@@ -269,7 +208,7 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 	CL_UpdateRenderEntity(&e->render);
 
 	i = 0;
-	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_renderflags)) && val->_float)
+	if((val = PRVM_GETEDICTFIELDVALUE(ed, prog->fieldoffsets.renderflags)) && val->_float)
 	{
 		i = (int)val->_float;
 		if(i & RF_VIEWMODEL)	e->render.flags |= RENDER_VIEWMODEL;
@@ -303,10 +242,10 @@ qboolean CL_VM_InputEvent (qboolean pressed, int key)
 	if(!csqc_loaded)
 		return false;
 	CSQC_BEGIN
-		*prog->time = cl.time;
+		prog->globals.client->time = cl.time;
 		PRVM_G_FLOAT(OFS_PARM0) = pressed;
 		PRVM_G_FLOAT(OFS_PARM1) = key;
-		PRVM_ExecuteProgram (prog->globals.client->CSQC_InputEvent, CL_F_INPUTEVENT);
+		PRVM_ExecuteProgram(prog->funcoffsets.CSQC_InputEvent, "QC function CSQC_InputEvent is missing");
 		r = CSQC_RETURNVAL;
 	CSQC_END
 	return r;
@@ -319,13 +258,13 @@ qboolean CL_VM_UpdateView (void)
 		return false;
 	CSQC_BEGIN
 		//VectorCopy(cl.viewangles, oldangles);
-		*prog->time = cl.time;
+		prog->globals.client->time = cl.time;
 		CSQC_SetGlobals();
 		// clear renderable entity and light lists to prevent crashes if the
 		// CSQC_UpdateView function does not call R_ClearScene as it should
 		r_refdef.numentities = 0;
 		r_refdef.numlights = 0;
-		PRVM_ExecuteProgram (prog->globals.client->CSQC_UpdateView, CL_F_UPDATEVIEW);
+		PRVM_ExecuteProgram(prog->funcoffsets.CSQC_UpdateView, "QC function CSQC_UpdateView is missing");
 		//VectorCopy(oldangles, cl.viewangles);
 	CSQC_END
 	return true;
@@ -339,10 +278,10 @@ qboolean CL_VM_ConsoleCommand (const char *cmd)
 	if(!csqc_loaded)
 		return false;
 	CSQC_BEGIN
-		*prog->time = cl.time;
+		prog->globals.client->time = cl.time;
 		restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
 		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(cmd);
-		PRVM_ExecuteProgram (prog->globals.client->CSQC_ConsoleCommand, CL_F_CONSOLECOMMAND);
+		PRVM_ExecuteProgram(prog->funcoffsets.CSQC_ConsoleCommand, "QC function CSQC_ConsoleCommand is missing");
 		vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 		r = CSQC_RETURNVAL;
 	CSQC_END
@@ -352,20 +291,23 @@ qboolean CL_VM_ConsoleCommand (const char *cmd)
 qboolean CL_VM_Parse_TempEntity (void)
 {
 	int			t;
-	qboolean	r;
-	if(!csqc_loaded || !CSQC_Parse_TempEntity)
+	qboolean	r = false;
+	if(!csqc_loaded)
 		return false;
-	t = msg_readcount;
 	CSQC_BEGIN
-		*prog->time = cl.time;
-		PRVM_ExecuteProgram ((func_t)(CSQC_Parse_TempEntity - prog->functions), CL_F_PARSE_TEMPENTITY);
-		r = CSQC_RETURNVAL;
-	CSQC_END
-	if(!r)
+	if(prog->funcoffsets.CSQC_Parse_TempEntity)
 	{
-		msg_readcount = t;
-		msg_badread = false;
+		t = msg_readcount;
+		prog->globals.client->time = cl.time;
+		PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Parse_TempEntity, "QC function CSQC_Parse_TempEntity is missing");
+		r = CSQC_RETURNVAL;
+		if(!r)
+		{
+			msg_readcount = t;
+			msg_badread = false;
+		}
 	}
+	CSQC_END
 	return r;
 }
 
@@ -389,85 +331,103 @@ void CL_VM_Parse_StuffCmd (const char *msg)
 		csqc_progsize.flags = sizeflags;
 		return;
 	}
-	if(!csqc_loaded || !CSQC_Parse_StuffCmd)
+	if(!csqc_loaded)
 	{
 		Cbuf_AddText(msg);
 		return;
 	}
 	CSQC_BEGIN
-		*prog->time = cl.time;
+	if(prog->funcoffsets.CSQC_Parse_StuffCmd)
+	{
+		prog->globals.client->time = cl.time;
 		restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
 		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(msg);
-		PRVM_ExecuteProgram ((func_t)(CSQC_Parse_StuffCmd - prog->functions), CL_F_PARSE_STUFFCMD);
+		PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Parse_StuffCmd, "QC function CSQC_Parse_StuffCmd is missing");
 		vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
+	}
+	else
+		Cbuf_AddText(msg);
 	CSQC_END
 }
 
 static void CL_VM_Parse_Print (const char *msg)
 {
 	int restorevm_tempstringsbuf_cursize;
-	CSQC_BEGIN
-		*prog->time = cl.time;
-		restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
-		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(msg);
-		PRVM_ExecuteProgram ((func_t)(CSQC_Parse_Print - prog->functions), CL_F_PARSE_PRINT);
-		vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
-	CSQC_END
+	prog->globals.client->time = cl.time;
+	restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
+	PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(msg);
+	PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Parse_Print, "QC function CSQC_Parse_Print is missing");
+	vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 }
 
 void CSQC_AddPrintText (const char *msg)
 {
 	size_t i;
-	if(!csqc_loaded || !CSQC_Parse_Print)
+	if(!csqc_loaded)
 	{
 		Con_Print(msg);
 		return;
 	}
-	// FIXME: is this bugged?
-	i = strlen(msg)-1;
-	if(msg[i] != '\n' && msg[i] != '\r')
+	CSQC_BEGIN
+	if(prog->funcoffsets.CSQC_Parse_Print)
 	{
-		if(strlen(csqc_printtextbuf)+i >= CSQC_PRINTBUFFERLEN)
+		// FIXME: is this bugged?
+		i = strlen(msg)-1;
+		if(msg[i] != '\n' && msg[i] != '\r')
 		{
-			CL_VM_Parse_Print(csqc_printtextbuf);
-			csqc_printtextbuf[0] = 0;
+			if(strlen(csqc_printtextbuf)+i >= MAX_INPUTLINE)
+			{
+				CL_VM_Parse_Print(csqc_printtextbuf);
+				csqc_printtextbuf[0] = 0;
+			}
+			else
+				strlcat(csqc_printtextbuf, msg, MAX_INPUTLINE);
+			return;
 		}
-		else
-			strlcat(csqc_printtextbuf, msg, CSQC_PRINTBUFFERLEN);
-		return;
+		strlcat(csqc_printtextbuf, msg, MAX_INPUTLINE);
+		CL_VM_Parse_Print(csqc_printtextbuf);
+		csqc_printtextbuf[0] = 0;
 	}
-	strlcat(csqc_printtextbuf, msg, CSQC_PRINTBUFFERLEN);
-	CL_VM_Parse_Print(csqc_printtextbuf);
-	csqc_printtextbuf[0] = 0;
+	else
+		Con_Print(msg);
+	CSQC_END
 }
 
 void CL_VM_Parse_CenterPrint (const char *msg)
 {
 	int restorevm_tempstringsbuf_cursize;
-	if(!csqc_loaded || !CSQC_Parse_CenterPrint)
+	if(!csqc_loaded)
 	{
 		SCR_CenterPrint((char*)msg);
 		return;
 	}
 	CSQC_BEGIN
-		*prog->time = cl.time;
+	if(prog->funcoffsets.CSQC_Parse_CenterPrint)
+	{
+		prog->globals.client->time = cl.time;
 		restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
 		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(msg);
-		PRVM_ExecuteProgram ((func_t)(CSQC_Parse_CenterPrint - prog->functions), CL_F_PARSE_CENTERPRINT);
+		PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Parse_CenterPrint, "QC function CSQC_Parse_CenterPrint is missing");
 		vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
+	}
+	else
+		SCR_CenterPrint((char*)msg);
 	CSQC_END
 }
 
 float CL_VM_Event (float event)		//[515]: needed ? I'd say "YES", but don't know for what :D
 {
 	float r;
-	if(!csqc_loaded || !CSQC_Event)
+	if(!csqc_loaded)
 		return 0;
 	CSQC_BEGIN
-		*prog->time = cl.time;
+	if(prog->funcoffsets.CSQC_Event)
+	{
+		prog->globals.client->time = cl.time;
 		PRVM_G_FLOAT(OFS_PARM0) = event;
-		PRVM_ExecuteProgram ((func_t)(CSQC_Event - prog->functions), CL_F_EVENT);
+		PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Event, "QC function CSQC_Event is missing");
 		r = CSQC_RETURNVAL;
+	}
 	CSQC_END
 	return r;
 }
@@ -476,7 +436,7 @@ void CSQC_ReadEntities (void)
 {
 	unsigned short entnum, oldself, realentnum;
 	CSQC_BEGIN
-		*prog->time = cl.time;
+		prog->globals.client->time = cl.time;
 		oldself = prog->globals.client->self;
 		while(1)
 		{
@@ -489,7 +449,7 @@ void CSQC_ReadEntities (void)
 			{
 				if(prog->globals.client->self)
 				{
-					PRVM_ExecuteProgram((func_t)(CSQC_Ent_Remove - prog->functions), CL_F_ENT_REMOVE);
+					PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Ent_Remove, "QC function CSQC_Ent_Remove is missing");
 					csqc_sv2csqcents[realentnum] = 0;
 				}
 				else
@@ -507,11 +467,91 @@ void CSQC_ReadEntities (void)
 				}
 				else
 					PRVM_G_FLOAT(OFS_PARM0) = 0;
-				PRVM_ExecuteProgram((func_t)(CSQC_Ent_Update - prog->functions), CL_F_ENT_UPDATE);
+				PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Ent_Update, "QC function CSQC_Ent_Update is missing");
 			}
 		}
 		prog->globals.client->self = oldself;
 	CSQC_END
+}
+
+void CL_LinkEdict(prvm_edict_t *ent)
+{
+	if (ent == prog->edicts)
+		return;		// don't add the world
+
+	if (ent->priv.server->free)
+		return;
+
+	VectorAdd(ent->fields.client->origin, ent->fields.client->mins, ent->fields.client->absmin);
+	VectorAdd(ent->fields.client->origin, ent->fields.client->maxs, ent->fields.client->absmax);
+
+	World_LinkEdict(&cl.world, ent, ent->fields.client->absmin, ent->fields.client->absmax);
+}
+
+void CL_VM_CB_BeginIncreaseEdicts(void)
+{
+	int i;
+	prvm_edict_t *ent;
+
+	// links don't survive the transition, so unlink everything
+	for (i = 0, ent = prog->edicts;i < prog->max_edicts;i++, ent++)
+	{
+		if (!ent->priv.server->free)
+			World_UnlinkEdict(prog->edicts + i);
+		memset(&ent->priv.server->areagrid, 0, sizeof(ent->priv.server->areagrid));
+	}
+	World_Clear(&cl.world);
+}
+
+void CL_VM_CB_EndIncreaseEdicts(void)
+{
+	int i;
+	prvm_edict_t *ent;
+
+	// link every entity except world
+	for (i = 1, ent = prog->edicts;i < prog->max_edicts;i++, ent++)
+		if (!ent->priv.server->free)
+			CL_LinkEdict(ent);
+}
+
+void CL_VM_CB_InitEdict(prvm_edict_t *e)
+{
+	e->priv.server->move = false; // don't move on first frame
+}
+
+void CL_VM_CB_FreeEdict(prvm_edict_t *ed)
+{
+	World_UnlinkEdict(ed);
+	memset(ed->fields.client, 0, sizeof(*ed->fields.client));
+}
+
+void CL_VM_CB_CountEdicts(void)
+{
+	int		i;
+	prvm_edict_t	*ent;
+	int		active = 0, models = 0, solid = 0;
+
+	for (i=0 ; i<prog->num_edicts ; i++)
+	{
+		ent = PRVM_EDICT_NUM(i);
+		if (ent->priv.server->free)
+			continue;
+		active++;
+		if (ent->fields.client->solid)
+			solid++;
+		if (ent->fields.client->model)
+			models++;
+	}
+
+	Con_Printf("num_edicts:%3i\n", prog->num_edicts);
+	Con_Printf("active    :%3i\n", active);
+	Con_Printf("view      :%3i\n", models);
+	Con_Printf("touch     :%3i\n", solid);
+}
+
+qboolean CL_VM_CB_LoadEdict(prvm_edict_t *ent)
+{
+	return true;
 }
 
 void Cmd_ClearCsqcFuncs (void);
@@ -586,15 +626,24 @@ void CL_VM_Init (void)
 	prog->edictprivate_size = 0; // no private struct used
 	prog->name = CL_NAME;
 	prog->num_edicts = 1;
+	prog->max_edicts = 512;
 	prog->limit_edicts = CL_MAX_EDICTS;
+	prog->reserved_edicts = 0;
+	prog->edictprivate_size = sizeof(edict_engineprivate_t);
 	prog->extensionstring = vm_cl_extensions;
 	prog->builtins = vm_cl_builtins;
 	prog->numbuiltins = vm_cl_numbuiltins;
+	prog->begin_increase_edicts = CL_VM_CB_BeginIncreaseEdicts;
+	prog->end_increase_edicts = CL_VM_CB_EndIncreaseEdicts;
+	prog->init_edict = CL_VM_CB_InitEdict;
+	prog->free_edict = CL_VM_CB_FreeEdict;
+	prog->count_edicts = CL_VM_CB_CountEdicts;
+	prog->load_edict = CL_VM_CB_LoadEdict;
 	prog->init_cmd = VM_CL_Cmd_Init;
 	prog->reset_cmd = VM_CL_Cmd_Reset;
 	prog->error_cmd = CL_VM_Error;
 
-	PRVM_LoadProgs(csqc_progname.string, cl_numrequiredfunc, cl_required_func, 0, NULL);
+	PRVM_LoadProgs(csqc_progname.string, cl_numrequiredfunc, cl_required_func, 0, NULL, 0, NULL);
 
 	if(prog->loaded)
 		Con_Printf("CSQC ^5loaded (crc=%i, size=%i)\n", csprogsdatacrc, (int)csprogsdatasize);
@@ -607,17 +656,33 @@ void CL_VM_Init (void)
 	}
 
 	//[515]: optional fields & funcs
-	CL_VM_FindEdictFieldOffsets();
+	if(prog->funcoffsets.CSQC_Parse_Print)
+	{
+		csqc_printtextbuf = (char *)Mem_Alloc(csqc_mempool, MAX_INPUTLINE);
+		csqc_printtextbuf[0] = 0;
+	}
+
+	if (cl.worldmodel)
+	{
+		VectorCopy(cl.worldmodel->normalmins, cl.world.areagrid_mins);
+		VectorCopy(cl.worldmodel->normalmaxs, cl.world.areagrid_maxs);
+	}
+	else
+	{
+		VectorSet(cl.world.areagrid_mins, -4096, -4096, -4096);
+		VectorSet(cl.world.areagrid_maxs, 4096, 4096, 4096);
+	}
+	World_Clear(&cl.world);
 
 	// set time
-	*prog->time = cl.time;
+	prog->globals.client->time = cl.time;
 	csqc_frametime = 0;
 
 	prog->globals.client->mapname = PRVM_SetEngineString(cl.worldmodel->name);
 	prog->globals.client->player_localentnum = cl.playerentity;
 
 	// call the prog init
-	PRVM_ExecuteProgram((func_t) (PRVM_ED_FindFunction(CL_F_INIT) - prog->functions), CL_F_INIT);
+	PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Init, "QC function CSQC_Init is missing");
 
 	PRVM_End;
 	csqc_loaded = true;
@@ -637,8 +702,8 @@ void CL_VM_ShutDown (void)
 	if(!csqc_loaded)
 		return;
 	CSQC_BEGIN
-		*prog->time = cl.time;
-		PRVM_ExecuteProgram((func_t) (PRVM_ED_FindFunction(CL_F_SHUTDOWN) - prog->functions), CL_F_SHUTDOWN);
+		prog->globals.client->time = cl.time;
+		PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Shutdown, "QC function CSQC_Shutdown is missing");
 		PRVM_ResetProg();
 	CSQC_END
 	Con_Print("CSQC ^1unloaded\n");

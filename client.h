@@ -927,6 +927,11 @@ typedef struct client_state_s
 	int qw_validsequence;
 
 	int qw_deltasequence[QW_UPDATE_BACKUP];
+
+	// csqc stuff:
+
+	// collision culling data
+	world_t world;
 }
 client_state_t;
 
