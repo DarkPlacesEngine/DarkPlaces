@@ -430,10 +430,6 @@ SOURCE=.\world.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\world_cs.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\zone.c
 # End Source File
 # End Group
