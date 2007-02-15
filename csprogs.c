@@ -417,7 +417,7 @@ void CL_VM_Parse_CenterPrint (const char *msg)
 
 float CL_VM_Event (float event)		//[515]: needed ? I'd say "YES", but don't know for what :D
 {
-	float r;
+	float r = 0;
 	if(!csqc_loaded)
 		return 0;
 	CSQC_BEGIN
