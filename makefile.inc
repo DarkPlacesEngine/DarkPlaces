@@ -128,7 +128,6 @@ OBJ_COMMON= \
 	view.o \
 	wad.o \
 	world.o \
-	world_cs.o \
 	zone.o
 
 # note that builddate.c is very intentionally not compiled to a .o before
