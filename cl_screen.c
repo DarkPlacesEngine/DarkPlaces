@@ -1535,8 +1535,6 @@ void SCR_DrawScreen (void)
 
 		if(!CL_VM_UpdateView())
 			R_RenderView();
-		else
-			SCR_DrawConsole();
 
 		if (scr_zoomwindow.integer)
 		{
@@ -1586,8 +1584,7 @@ void SCR_DrawScreen (void)
 	CL_DrawVideo();
 	R_Shadow_EditLights_DrawSelectedLightProperties();
 
-	if(!csqc_loaded)
-		SCR_DrawConsole();
+	SCR_DrawConsole();
 
 	SCR_DrawBrand();
 
