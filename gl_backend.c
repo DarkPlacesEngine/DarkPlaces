@@ -13,6 +13,7 @@ cvar_t r_waterwarp = {CVAR_SAVE, "r_waterwarp", "1", "warp view while underwater
 cvar_t gl_polyblend = {CVAR_SAVE, "gl_polyblend", "1", "tints view while underwater, hurt, etc"};
 cvar_t gl_dither = {CVAR_SAVE, "gl_dither", "1", "enables OpenGL dithering (16bit looks bad with this off)"};
 cvar_t gl_lockarrays = {0, "gl_lockarrays", "1", "enables use of glLockArraysEXT, may cause glitches with some broken drivers"};
+cvar_t gl_lockarrays_minimumvertices = {0, "gl_lockarrays_minimumvertices", "1", "minimum number of vertices required for use of glLockArraysEXT, setting this too low may reduce performance"};
 
 int gl_maxdrawrangeelementsvertices;
 int gl_maxdrawrangeelementsindices;
@@ -227,6 +228,7 @@ void gl_backend_init(void)
 	Cvar_RegisterVariable(&gl_polyblend);
 	Cvar_RegisterVariable(&gl_dither);
 	Cvar_RegisterVariable(&gl_lockarrays);
+	Cvar_RegisterVariable(&gl_lockarrays_minimumvertices);
 	Cvar_RegisterVariable(&gl_paranoid);
 	Cvar_RegisterVariable(&gl_printcheckerror);
 #ifdef NORENDER
@@ -659,6 +661,11 @@ void GL_Color(float cr, float cg, float cb, float ca)
 
 void GL_LockArrays(int first, int count)
 {
+	if (count < gl_lockarrays_minimumvertices.integer)
+	{
+		first = 0;
+		count = 0;
+	}
 	if (gl_state.lockrange_count != count || gl_state.lockrange_first != first)
 	{
 		if (gl_state.lockrange_count)
