@@ -281,6 +281,9 @@ void CL_Record_f (void)
 		return;
 	}
 
+	if (cls.state == ca_connected)
+		CL_Disconnect();
+
 	// write the forced cd track number, or -1
 	if (c == 4)
 	{
