@@ -2029,7 +2029,7 @@ void VM_CL_select_cube (void)
 			continue;
 		if (maxs1[0] < mins2[0] || maxs1[1] < mins2[1] || maxs1[2] < mins2[2])
 			continue;
-		PRVM_E_INT(ent,prog->fieldoffsets.chain) = PRVM_NUM_FOR_EDICT(chain);
+		PRVM_GETEDICTFIELDVALUE(ent,prog->fieldoffsets.chain)->edict = PRVM_NUM_FOR_EDICT(chain);
 		chain = ent;
 	}
 
@@ -2067,7 +2067,7 @@ void VM_CL_select_super (void)
 			continue;
 		if (maxs1[0] < mins2[0] || maxs1[1] < mins2[1] || maxs1[2] < mins2[2])
 			continue;
-		PRVM_E_INT(ent,prog->fieldoffsets.chain) = PRVM_NUM_FOR_EDICT(chain);
+		PRVM_GETEDICTFIELDVALUE(ent,prog->fieldoffsets.chain)->edict = PRVM_NUM_FOR_EDICT(chain);
 		chain = ent;
 	}
 

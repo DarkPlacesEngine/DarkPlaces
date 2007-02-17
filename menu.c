@@ -28,6 +28,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define TYPE_GAME 2
 #define TYPE_BOTH 3
 
+static cvar_t forceqmenu = { 0, "forceqmenu", "0", "enables the quake menu instead of the quakec menu.dat (if present)" };
+
 static int NehGameType;
 
 enum m_state_e m_state;
@@ -408,7 +410,7 @@ void M_Menu_Main_f (void)
 		MAIN_ITEMS = 5;
 
 	// check if the game data is missing and use a different main menu if so
-	m_missingdata = Draw_CachePic (s, true)->tex == r_texture_notexture;
+	m_missingdata = !forceqmenu.integer && Draw_CachePic (s, true)->tex == r_texture_notexture;
 	if (m_missingdata)
 		MAIN_ITEMS = 2;
 
@@ -4975,8 +4977,6 @@ void MP_Restart(void)
 
 //============================================================================
 // Menu router
-
-static cvar_t forceqmenu = { 0, "forceqmenu", "0", "enables the quake menu instead of the quakec menu.dat (if present)" };
 
 void (*MR_KeyEvent) (int key, char ascii, qboolean downevent);
 void (*MR_Draw) (void);
