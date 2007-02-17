@@ -379,7 +379,7 @@ typedef struct prvm_prog_s
 
 //	prvm_builtin_mem_t  *mem_list;
 
-// now passes as parameter of PRVM_LoadProgs
+// now passed as parameter of PRVM_LoadProgs
 //	char				**required_func;
 //	int					numrequiredfunc;
 

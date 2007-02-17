@@ -889,7 +889,7 @@ void VM_findchain (void)
 		if (strcmp(t,s))
 			continue;
 
-		PRVM_E_INT(ent,prog->fieldoffsets.chain) = PRVM_NUM_FOR_EDICT(chain);
+		PRVM_GETEDICTFIELDVALUE(ent,prog->fieldoffsets.chain)->edict = PRVM_NUM_FOR_EDICT(chain);
 		chain = ent;
 	}
 
@@ -932,7 +932,7 @@ void VM_findchainfloat (void)
 		if (PRVM_E_FLOAT(ent,f) != s)
 			continue;
 
-		PRVM_E_INT(ent,prog->fieldoffsets.chain) = PRVM_EDICT_TO_PROG(chain);
+		PRVM_GETEDICTFIELDVALUE(ent,prog->fieldoffsets.chain)->edict = PRVM_EDICT_TO_PROG(chain);
 		chain = ent;
 	}
 
@@ -1015,7 +1015,7 @@ void VM_findchainflags (void)
 		if (!((int)PRVM_E_FLOAT(ent,f) & s))
 			continue;
 
-		PRVM_E_INT(ent,prog->fieldoffsets.chain) = PRVM_EDICT_TO_PROG(chain);
+		PRVM_GETEDICTFIELDVALUE(ent,prog->fieldoffsets.chain)->edict = PRVM_EDICT_TO_PROG(chain);
 		chain = ent;
 	}
 
