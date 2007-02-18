@@ -103,8 +103,8 @@ typedef struct prvm_edict_s
 	} fields;
 } prvm_edict_t;
 
-#define PRVM_EDICTFIELDVALUE(ed, fieldoffset) (fieldoffset >= 0 ? (prvm_eval_t *)((unsigned char *)ed->fields.vp + fieldoffset) : NULL)
-#define PRVM_GLOBALFIELDVALUE(fieldoffset) (fieldoffset >= 0 ? (prvm_eval_t *)((unsigned char *)prog->globals.generic + fieldoffset) : NULL)
+#define PRVM_EDICTFIELDVALUE(ed, fieldoffset) (fieldoffset >= 0 ? (prvm_eval_t *)((int *)ed->fields.vp + fieldoffset) : NULL)
+#define PRVM_GLOBALFIELDVALUE(fieldoffset) (fieldoffset >= 0 ? (prvm_eval_t *)((int *)prog->globals.generic + fieldoffset) : NULL)
 
 //============================================================================
 #define PRVM_OP_STATE		1

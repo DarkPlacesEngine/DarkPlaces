@@ -123,7 +123,7 @@ int PRVM_ED_FindFieldOffset(const char *field)
 	d = PRVM_ED_FindField(field);
 	if (!d)
 		return -1;
-	return d->ofs*4;
+	return d->ofs;
 }
 
 int PRVM_ED_FindGlobalOffset(const char *global)
@@ -132,7 +132,7 @@ int PRVM_ED_FindGlobalOffset(const char *global)
 	d = PRVM_ED_FindGlobal(global);
 	if (!d)
 		return -1;
-	return d->ofs*4;
+	return d->ofs;
 }
 
 func_t PRVM_ED_FindFunctionOffset(const char *function)
