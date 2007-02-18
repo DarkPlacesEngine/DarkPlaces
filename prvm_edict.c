@@ -1185,7 +1185,7 @@ void PRVM_ED_LoadFromFile (const char *data)
 //
 		if(prog->globaloffsets.self >= 0 && prog->fieldoffsets.classname >= 0)
 		{
-			string_t handle =  *(string_t*)&((unsigned char*)ent->fields.vp)[prog->fieldoffsets.classname];
+			string_t handle =  PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.classname)->string;
 			if (!handle)
 			{
 				Con_Print("No classname for:\n");
