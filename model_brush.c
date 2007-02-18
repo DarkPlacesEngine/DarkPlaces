@@ -4146,7 +4146,7 @@ static void Mod_Q3BSP_LoadShaders(void)
 						{
 							int i;
 							layer->numframes = min(numparameters - 2, TEXTURE_MAXFRAMES);
-							layer->framerate = atoi(parameter[1]);
+							layer->framerate = atof(parameter[1]);
 							for (i = 0;i < layer->numframes;i++)
 								strlcpy(layer->texturename[i], parameter[i + 2], sizeof(layer->texturename));
 						}
