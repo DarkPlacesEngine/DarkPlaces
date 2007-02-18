@@ -224,7 +224,7 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define	svc_hidelmp			36		// [string] slotname
 #define	svc_skybox			37		// [string] skyname
 
-// LordHavoc: my svc_ range, 50-59
+// LordHavoc: my svc_ range, 50-69
 #define svc_downloaddata	50		// [int] start [short] size
 #define svc_updatestatubyte	51		// [byte] stat [byte] value
 #define svc_effect			52		// [vector] org [byte] modelindex [byte] startframe [byte] framecount [byte] framerate
@@ -236,6 +236,8 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define svc_entities		57		// [int] deltaframe [int] thisframe [float vector] eye [variable length] entitydata
 #define svc_csqcentities	58		// [short] entnum [variable length] entitydata ... [short] 0x0000
 #define	svc_spawnstaticsound2	59	// [coord3] [short] samp [byte] vol [byte] aten
+#define svc_trailparticles	60		// [short] entnum [short] effectnum [vector] start [vector] end
+#define svc_pointparticles	61		// [short] effectnum [vector] start [vector] end [short] count
 
 //
 // client to server

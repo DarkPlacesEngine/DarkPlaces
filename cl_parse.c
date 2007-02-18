@@ -2367,6 +2367,33 @@ void CL_ParseTempEntity(void)
 	}
 }
 
+void CL_ParseTrailParticles(void)
+{
+	int entityindex;
+	int effectindex;
+	vec3_t start, end;
+	entityindex = (unsigned short)MSG_ReadShort();
+	if (entityindex >= MAX_EDICTS)
+		entityindex = 0;
+	if (entityindex >= cl.max_entities)
+		CL_ExpandEntities(entityindex);
+	effectindex = (unsigned short)MSG_ReadShort();
+	MSG_ReadVector(start, cls.protocol);
+	MSG_ReadVector(end, cls.protocol);
+	CL_ParticleEffect(effectindex, VectorDistance(start, end), start, end, vec3_origin, vec3_origin, entityindex > 0 ? cl.entities + entityindex : NULL, 0);
+}
+
+void CL_ParsePointParticles(void)
+{
+	int effectindex, count;
+	vec3_t origin, velocity;
+	effectindex = (unsigned short)MSG_ReadShort();
+	MSG_ReadVector(origin, cls.protocol);
+	MSG_ReadVector(velocity, cls.protocol);
+	count = (unsigned short)MSG_ReadShort();
+	CL_ParticleEffect(effectindex, count, origin, origin, velocity, velocity, NULL, 0);
+}
+
 // look for anything interesting like player IP addresses or ping reports
 qboolean CL_ExaminePrintString(const char *text)
 {
@@ -3312,6 +3339,12 @@ void CL_ParseServerMessage(void)
 				break;
 			case svc_downloaddata:
 				CL_ParseDownload();
+				break;
+			case svc_trailparticles:
+				CL_ParseTrailParticles();
+				break;
+			case svc_pointparticles:
+				CL_ParsePointParticles();
 				break;
 			}
 		}

@@ -8,19 +8,19 @@ cvar_t sv_aim = {CVAR_SAVE, "sv_aim", "2", "maximum cosine angle for quake's ver
 
 char *vm_sv_extensions =
 "BX_WAL_SUPPORT "
-"DP_CON_EXPANDCVAR "
-"DP_CON_ALIASPARAMETERS "
 "DP_BUTTONCHAT "
 "DP_BUTTONUSE "
 "DP_CL_LOADSKY "
+"DP_CON_ALIASPARAMETERS "
+"DP_CON_EXPANDCVAR "
 "DP_CON_SET "
 "DP_CON_SETA "
 "DP_CON_STARTMAP "
 "DP_EF_ADDITIVE "
 "DP_EF_BLUE "
+"DP_EF_DOUBLESIDED "
 "DP_EF_FLAME "
 "DP_EF_FULLBRIGHT "
-"DP_EF_DOUBLESIDED "
 "DP_EF_NODEPTHTEST "
 "DP_EF_NODRAW "
 "DP_EF_NOSHADOW "
@@ -59,7 +59,7 @@ char *vm_sv_extensions =
 "DP_QC_FINDCHAINFLOAT "
 "DP_QC_FINDFLAGS "
 "DP_QC_FINDFLOAT "
-"DP_QC_FS_SEARCH " // Black: same as in the menu qc
+"DP_QC_FS_SEARCH "
 "DP_QC_GETLIGHT "
 "DP_QC_GETSURFACE "
 "DP_QC_GETTAGINFO "
@@ -70,11 +70,11 @@ char *vm_sv_extensions =
 "DP_QC_STRFTIME "
 "DP_QC_STRINGBUFFERS "
 "DP_QC_STRINGCOLORFUNCTIONS "
-"DP_QC_UNLIMITEDTEMPSTRINGS "
 "DP_QC_TRACEBOX "
 "DP_QC_TRACETOSS "
 "DP_QC_TRACE_MOVETYPE_HITMODEL "
 "DP_QC_TRACE_MOVETYPE_WORLDONLY "
+"DP_QC_UNLIMITEDTEMPSTRINGS "
 "DP_QC_VECTORVECTORS "
 "DP_QUAKE2_MODEL "
 "DP_QUAKE2_SPRITE "
@@ -126,11 +126,11 @@ char *vm_sv_extensions =
 "KRIMZON_SV_PARSECLIENTCOMMAND "
 "NEH_CMD_PLAY2 "
 "NEH_RESTOREGAME "
+"NEXUIZ_PLAYERMODEL "
 "NXQ_GFX_LETTERBOX "
 "PRYDON_CLIENTCURSOR "
 "TENEBRAE_GFX_DLIGHTS "
 "TW_SV_STEPCONTROL "
-"NEXUIZ_PLAYERMODEL "
 ;
 
 /*
@@ -2517,6 +2517,30 @@ void PF_edict_num (void)
 	VM_RETURN_EDICT(PRVM_EDICT_NUM((int)PRVM_G_FLOAT(OFS_PARM0)));
 }
 
+// #336 void(entity ent, float effectnum, vector start, vector end) trailparticles (EXT_CSQC)
+static void VM_SV_trailparticles (void)
+{
+	VM_SAFEPARMCOUNT(4, VM_SV_trailparticles);
+
+	MSG_WriteByte(&sv.datagram, svc_trailparticles);
+	MSG_WriteShort(&sv.datagram, PRVM_G_EDICTNUM(OFS_PARM0));
+	MSG_WriteShort(&sv.datagram, (int)PRVM_G_FLOAT(OFS_PARM1));
+	MSG_WriteVector(&sv.datagram, PRVM_G_VECTOR(OFS_PARM2), sv.protocol);
+	MSG_WriteVector(&sv.datagram, PRVM_G_VECTOR(OFS_PARM3), sv.protocol);
+}
+
+//#337 void(float effectnum, vector origin, vector dir, float count) pointparticles (EXT_CSQC)
+static void VM_SV_pointparticles (void)
+{
+	VM_SAFEPARMCOUNT(4, VM_SV_pointparticles);
+
+	MSG_WriteByte(&sv.datagram, svc_pointparticles);
+	MSG_WriteShort(&sv.datagram, (int)PRVM_G_FLOAT(OFS_PARM0));
+	MSG_WriteVector(&sv.datagram, PRVM_G_VECTOR(OFS_PARM1), sv.protocol);
+	MSG_WriteVector(&sv.datagram, PRVM_G_VECTOR(OFS_PARM2), sv.protocol);
+	MSG_WriteShort(&sv.datagram, bound(0, (int)PRVM_G_FLOAT(OFS_PARM3), 65535));
+}
+
 prvm_builtin_t vm_sv_builtins[] = {
 NULL,						// #0
 PF_makevectors,				// #1 void(vector ang) makevectors
@@ -2677,8 +2701,8 @@ NULL,						// #332
 NULL,						// #333
 NULL,						// #334
 NULL,						// #335
-NULL,						// #336
-NULL,						// #337
+VM_SV_trailparticles,		// #336 void(entity ent, float effectnum, vector start, vector end) trailparticles (EXT_CSQC)
+VM_SV_pointparticles,		// #337 void(float effectnum, vector origin [, vector dir, float count]) pointparticles (EXT_CSQC)
 NULL,						// #338
 VM_print,					// #339 void(string, ...) print (DP_SV_PRINT)
 e10,						// #340-349
