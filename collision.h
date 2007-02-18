@@ -117,6 +117,26 @@ void Collision_BoundingBoxOfBrushTraceSegment(const colbrushf_t *start, const co
 float Collision_ClipTrace_Line_Sphere(double *linestart, double *lineend, double *sphereorigin, double sphereradius, double *impactpoint, double *impactnormal);
 void Collision_TraceLineTriangleFloat(trace_t *trace, const vec3_t linestart, const vec3_t lineend, const float *point0, const float *point1, const float *point2, int supercontents, int q3surfaceflags, texture_t *texture);
 
+// traces a box move against a single entity
+// mins and maxs are relative
+//
+// if the entire move stays in a single solid brush, trace.allsolid will be set
+//
+// if the starting point is in a solid, it will be allowed to move out to an
+// open area, and trace.startsolid will be set
+//
+// type is one of the MOVE_ values such as MOVE_NOMONSTERS which skips box
+// entities, only colliding with SOLID_BSP entities (doors, lifts)
+//
+// passedict is excluded from clipping checks
+void Collision_ClipToGenericEntity(trace_t *trace, model_t *model, int frame, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask);
+// like above but does not do a transform and does nothing if model is NULL
+void Collision_ClipToWorld(trace_t *trace, model_t *model, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontents);
+// combines data from two traces:
+// merges contents flags, startsolid, allsolid, inwater
+// updates fraction, endpos, plane and surface info if new fraction is shorter
+void Collision_CombineTraces(trace_t *cliptrace, const trace_t *trace, void *touch, qboolean isbmodel);
+
 // this enables rather large debugging spew!
 // settings:
 // 0 = no spew
