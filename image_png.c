@@ -50,7 +50,7 @@ static unsigned int		(*qpng_get_valid)			(void*, void*, unsigned int);
 static unsigned int		(*qpng_get_rowbytes)		(void*, void*);
 static unsigned char	(*qpng_get_channels)		(void*, void*);
 static unsigned char	(*qpng_get_bit_depth)		(void*, void*);
-static unsigned int		(*qpng_get_IHDR)			(void*, void*, unsigned int*, unsigned int*, int *, int *, int *, int *, int *);
+static unsigned int		(*qpng_get_IHDR)			(void*, void*, unsigned long*, unsigned long*, int *, int *, int *, int *, int *);
 static char*			(*qpng_get_libpng_ver)		(void*);
 
 static dllfunction_t pngfuncs[] =
@@ -189,8 +189,8 @@ static struct
 	int		BitDepth;
 	int		BytesPerPixel;
 	int		ColorType;
-	unsigned int	Height;
-	unsigned int	Width;
+	unsigned long	Height; // retarded libpng 1.2 pngconf.h uses long (64bit/32bit depending on arch)
+	unsigned long	Width; // retarded libpng 1.2 pngconf.h uses long (64bit/32bit depending on arch)
 	int		Interlace;
 	int		Compression;
 	int		Filter;
@@ -288,7 +288,21 @@ unsigned char *PNG_LoadImage (const unsigned char *raw, int filesize, int matchw
 	qpng_set_read_fn(png, ioBuffer, (void *)PNG_fReadData);
 	qpng_read_info(png, pnginfo);
 	qpng_get_IHDR(png, pnginfo, &my_png.Width, &my_png.Height,&my_png.BitDepth, &my_png.ColorType, &my_png.Interlace, &my_png.Compression, &my_png.Filter);
-	if ((matchwidth && my_png.Width != (unsigned int)matchwidth) || (matchheight && my_png.Height != (unsigned int)matchheight))
+
+	// this check guards against pngconf.h with unsigned int *width/height parameters on big endian systems by detecting the strange values and shifting them down 32bits
+	// (if it's little endian the unwritten bytes are the most significant
+	//  ones and we don't worry about that)
+	//
+	// this is only necessary because of retarded 64bit png_uint_32 types in libpng 1.2, which can (conceivably) vary by platform
+#if LONG_MAX > 4000000000
+	if (my_png.Width > LONG_MAX || my_png.Height > LONG_MAX)
+	{
+		my_png.Width >>= 32;
+		my_png.Height >>= 32;
+	}
+#endif
+
+if ((matchwidth && my_png.Width != (unsigned long)matchwidth) || (matchheight && my_png.Height != (unsigned long)matchheight))
 	{
 		qpng_destroy_read_struct(&png, &pnginfo, 0);
 		return NULL;
@@ -336,8 +350,8 @@ unsigned char *PNG_LoadImage (const unsigned char *raw, int filesize, int matchw
 	qpng_read_end(png, pnginfo);
 	qpng_destroy_read_struct(&png, &pnginfo, 0);
 
-	image_width = my_png.Width;
-	image_height = my_png.Height;
+	image_width = (int)my_png.Width;
+	image_height = (int)my_png.Height;
 	imagedata = my_png.Data;
 
 	if (my_png.BitDepth != 8)
