@@ -900,6 +900,11 @@ unsigned char *loadimagepixels (const char *filename, qboolean complain, int mat
 					Mem_CheckSentinelsGlobal();
 				return data;
 			}
+			else
+			{
+				if (developer.integer >= 1)
+					Con_Printf("Error loading image %s (file loaded but decode failed)\n", name);
+			}
 		}
 	}
 	if (complain)
