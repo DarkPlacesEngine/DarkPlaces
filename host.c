@@ -797,7 +797,7 @@ void Host_Main(void)
 				cl.time += frametime;
 
 				// Collect input into cmd
-				CL_Move();
+				CL_Input();
 
 				NetConn_ClientFrame();
 

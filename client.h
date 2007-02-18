@@ -1051,7 +1051,7 @@ void CL_SetInfo(const char *key, const char *value, qboolean send, qboolean allo
 
 int  CL_ReadFromServer (void);
 void CL_WriteToServer (void);
-void CL_Move (void);
+void CL_Input (void);
 extern qboolean cl_ignoremousemove;
 
 
