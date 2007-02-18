@@ -137,7 +137,7 @@ typedef struct edict_s
 }
 prvm_edict_t;
 
-#define PRVM_GETEDICTFIELDVALUE(ed, fieldoffset) (fieldoffset ? (prvm_eval_t *)((unsigned char *)ed->v + fieldoffset) : NULL)
+#define PRVM_EDICTFIELDVALUE(ed, fieldoffset) (fieldoffset ? (prvm_eval_t *)((unsigned char *)ed->v + fieldoffset) : NULL)
 
 //============================================================================
 

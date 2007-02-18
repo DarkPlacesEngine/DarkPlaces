@@ -114,7 +114,7 @@ void VM_error (void)
 	Con_Printf("======%s ERROR in %s:\n%s\n", PRVM_NAME, PRVM_GetString(prog->xfunction->s_name), string);
 	if (prog->globaloffsets.self >= 0)
 	{
-		ed = PRVM_PROG_TO_EDICT(PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.self)->edict);
+		ed = PRVM_PROG_TO_EDICT(PRVM_GLOBALFIELDVALUE(prog->globaloffsets.self)->edict);
 		PRVM_ED_Print(ed);
 	}
 
@@ -140,7 +140,7 @@ void VM_objerror (void)
 	Con_Printf("======OBJECT ERROR======\n"); // , PRVM_NAME, PRVM_GetString(prog->xfunction->s_name), string); // or include them? FIXME
 	if (prog->globaloffsets.self >= 0)
 	{
-		ed = PRVM_PROG_TO_EDICT(PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.self)->edict);
+		ed = PRVM_PROG_TO_EDICT(PRVM_GLOBALFIELDVALUE(prog->globaloffsets.self)->edict);
 		PRVM_ED_Print(ed);
 
 		PRVM_ED_Free (ed);
@@ -889,7 +889,7 @@ void VM_findchain (void)
 		if (strcmp(t,s))
 			continue;
 
-		PRVM_GETEDICTFIELDVALUE(ent,prog->fieldoffsets.chain)->edict = PRVM_NUM_FOR_EDICT(chain);
+		PRVM_EDICTFIELDVALUE(ent,prog->fieldoffsets.chain)->edict = PRVM_NUM_FOR_EDICT(chain);
 		chain = ent;
 	}
 
@@ -932,7 +932,7 @@ void VM_findchainfloat (void)
 		if (PRVM_E_FLOAT(ent,f) != s)
 			continue;
 
-		PRVM_GETEDICTFIELDVALUE(ent,prog->fieldoffsets.chain)->edict = PRVM_EDICT_TO_PROG(chain);
+		PRVM_EDICTFIELDVALUE(ent,prog->fieldoffsets.chain)->edict = PRVM_EDICT_TO_PROG(chain);
 		chain = ent;
 	}
 
@@ -1015,7 +1015,7 @@ void VM_findchainflags (void)
 		if (!((int)PRVM_E_FLOAT(ent,f) & s))
 			continue;
 
-		PRVM_GETEDICTFIELDVALUE(ent,prog->fieldoffsets.chain)->edict = PRVM_EDICT_TO_PROG(chain);
+		PRVM_EDICTFIELDVALUE(ent,prog->fieldoffsets.chain)->edict = PRVM_EDICT_TO_PROG(chain);
 		chain = ent;
 	}
 
@@ -3916,7 +3916,7 @@ void VM_changeyaw (void)
 	prvm_edict_t		*ent;
 	float		ideal, current, move, speed;
 
-	ent = PRVM_PROG_TO_EDICT(PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.self)->edict);
+	ent = PRVM_PROG_TO_EDICT(PRVM_GLOBALFIELDVALUE(prog->globaloffsets.self)->edict);
 	if (ent == prog->edicts)
 	{
 		VM_Warning("changeyaw: can not modify world entity\n");
@@ -3932,9 +3932,9 @@ void VM_changeyaw (void)
 		VM_Warning("changeyaw: angles, ideal_yaw, or yaw_speed field(s) not found\n");
 		return;
 	}
-	current = ANGLEMOD(PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.angles)->vector[1]);
-	ideal = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.ideal_yaw)->_float;
-	speed = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.yaw_speed)->_float;
+	current = ANGLEMOD(PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.angles)->vector[1]);
+	ideal = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.ideal_yaw)->_float;
+	speed = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.yaw_speed)->_float;
 
 	if (current == ideal)
 		return;
@@ -3960,7 +3960,7 @@ void VM_changeyaw (void)
 			move = -speed;
 	}
 
-	PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.angles)->vector[1] = ANGLEMOD (current + move);
+	PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.angles)->vector[1] = ANGLEMOD (current + move);
 }
 
 /*
@@ -3989,9 +3989,9 @@ void VM_changepitch (void)
 		VM_Warning("changepitch: angles, idealpitch, or pitch_speed field(s) not found\n");
 		return;
 	}
-	current = ANGLEMOD(PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.angles)->vector[0]);
-	ideal = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.idealpitch)->_float;
-	speed = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.pitch_speed)->_float;
+	current = ANGLEMOD(PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.angles)->vector[0]);
+	ideal = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.idealpitch)->_float;
+	speed = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.pitch_speed)->_float;
 
 	if (current == ideal)
 		return;
@@ -4017,7 +4017,7 @@ void VM_changepitch (void)
 			move = -speed;
 	}
 
-	PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.angles)->vector[0] = ANGLEMOD (current + move);
+	PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.angles)->vector[0] = ANGLEMOD (current + move);
 }
 
 //=============

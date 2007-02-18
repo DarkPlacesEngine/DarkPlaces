@@ -382,7 +382,7 @@ void SV_SendServerinfo (client_t *client)
 		MSG_WriteByte (&client->netconnection->message, svc_stufftext);
 		MSG_WriteString (&client->netconnection->message, va("csqc_progcrc %i\n", sv.csqc_progcrc));
 		//[515]: init stufftext string (it is sent before svc_serverinfo)
-		val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.SV_InitCmd);
+		val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.SV_InitCmd);
 		if (val)
 		{
 			MSG_WriteByte (&client->netconnection->message, svc_stufftext);
@@ -561,21 +561,21 @@ qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, int 
 	modelindex = (i >= 1 && i < MAX_MODELS && *PRVM_GetString(ent->fields.server->model)) ? i : 0;
 
 	flags = 0;
-	i = (int)(PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.glow_size)->_float * 0.25f);
+	i = (int)(PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.glow_size)->_float * 0.25f);
 	glowsize = (unsigned char)bound(0, i, 255);
-	if (PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.glow_trail)->_float)
+	if (PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.glow_trail)->_float)
 		flags |= RENDER_GLOWTRAIL;
 
-	f = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.color)->vector[0]*256;
+	f = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.color)->vector[0]*256;
 	light[0] = (unsigned short)bound(0, f, 65535);
-	f = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.color)->vector[1]*256;
+	f = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.color)->vector[1]*256;
 	light[1] = (unsigned short)bound(0, f, 65535);
-	f = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.color)->vector[2]*256;
+	f = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.color)->vector[2]*256;
 	light[2] = (unsigned short)bound(0, f, 65535);
-	f = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.light_lev)->_float;
+	f = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.light_lev)->_float;
 	light[3] = (unsigned short)bound(0, f, 65535);
-	lightstyle = (unsigned char)PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.style)->_float;
-	lightpflags = (unsigned char)PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.pflags)->_float;
+	lightstyle = (unsigned char)PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.style)->_float;
+	lightpflags = (unsigned char)PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.pflags)->_float;
 
 	if (gamemode == GAME_TENEBRAE)
 	{
@@ -626,7 +626,7 @@ qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, int 
 
 	// early culling checks
 	// (final culling is done by SV_MarkWriteEntityStateToClient)
-	customizeentityforclient = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.customizeentityforclient)->function;
+	customizeentityforclient = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.customizeentityforclient)->function;
 	if (!customizeentityforclient)
 	{
 		if (e > svs.maxclients && (!modelindex && !specialvisibilityradius))
@@ -649,18 +649,18 @@ qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, int 
 	cs->modelindex = modelindex;
 	cs->skin = (unsigned)ent->fields.server->skin;
 	cs->frame = (unsigned)ent->fields.server->frame;
-	cs->viewmodelforclient = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.viewmodelforclient)->edict;
-	cs->exteriormodelforclient = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.exteriormodeltoclient)->edict;
-	cs->nodrawtoclient = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.nodrawtoclient)->edict;
-	cs->drawonlytoclient = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.drawonlytoclient)->edict;
+	cs->viewmodelforclient = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.viewmodelforclient)->edict;
+	cs->exteriormodelforclient = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.exteriormodeltoclient)->edict;
+	cs->nodrawtoclient = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.nodrawtoclient)->edict;
+	cs->drawonlytoclient = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.drawonlytoclient)->edict;
 	cs->customizeentityforclient = customizeentityforclient;
-	cs->tagentity = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.tag_entity)->edict;
-	cs->tagindex = (unsigned char)PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.tag_index)->_float;
+	cs->tagentity = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.tag_entity)->edict;
+	cs->tagindex = (unsigned char)PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.tag_index)->_float;
 	cs->glowsize = glowsize;
 
 	// don't need to init cs->colormod because the defaultstate did that for us
 	//cs->colormod[0] = cs->colormod[1] = cs->colormod[2] = 32;
-	val = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.colormod);
+	val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.colormod);
 	if (val->vector[0] || val->vector[1] || val->vector[2])
 	{
 		i = (int)(val->vector[0] * 32.0f);cs->colormod[0] = bound(0, i, 255);
@@ -671,14 +671,14 @@ qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, int 
 	cs->modelindex = modelindex;
 
 	cs->alpha = 255;
-	f = (PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.alpha)->_float * 255.0f);
+	f = (PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.alpha)->_float * 255.0f);
 	if (f)
 	{
 		i = (int)f;
 		cs->alpha = (unsigned char)bound(0, i, 255);
 	}
 	// halflife
-	f = (PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.renderamt)->_float);
+	f = (PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.renderamt)->_float);
 	if (f)
 	{
 		i = (int)f;
@@ -686,7 +686,7 @@ qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, int 
 	}
 
 	cs->scale = 16;
-	f = (PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.scale)->_float * 16.0f);
+	f = (PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.scale)->_float * 16.0f);
 	if (f)
 	{
 		i = (int)f;
@@ -694,11 +694,11 @@ qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, int 
 	}
 
 	cs->glowcolor = 254;
-	f = (PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.glow_color)->_float);
+	f = (PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.glow_color)->_float);
 	if (f)
 		cs->glowcolor = (int)f;
 
-	if (PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.fullbright)->_float)
+	if (PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.fullbright)->_float)
 		cs->effects |= EF_FULLBRIGHT;
 
 	if (ent->fields.server->movetype == MOVETYPE_STEP)
@@ -1060,14 +1060,14 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 
 	// stuff the sigil bits into the high bits of items for sbar, or else
 	// mix in items2
-	val = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.items2);
+	val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.items2);
 	if (gamemode == GAME_HIPNOTIC || gamemode == GAME_ROGUE)
 		items = (int)ent->fields.server->items | ((int)val->_float << 23);
 	else
 		items = (int)ent->fields.server->items | ((int)prog->globals.server->serverflags << 28);
 
 	VectorClear(punchvector);
-	if ((val = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.punchvector)))
+	if ((val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.punchvector)))
 		VectorCopy(val->vector, punchvector);
 
 	// cache weapon model name and index in client struct to save time
@@ -1080,7 +1080,7 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 	}
 
 	viewzoom = 255;
-	if ((val = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.viewzoom)))
+	if ((val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.viewzoom)))
 		viewzoom = (int)(val->_float * 255.0f);
 	if (viewzoom == 0)
 		viewzoom = 255;
@@ -1384,7 +1384,7 @@ void SV_UpdateToReliableMessages (void)
 
 		// DP_SV_CLIENTCOLORS
 		// this is always found (since it's added by the progs loader)
-		if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.clientcolors)))
+		if ((val = PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.clientcolors)))
 			host_client->colors = (int)val->_float;
 		if (host_client->old_colors != host_client->colors)
 		{
@@ -1397,22 +1397,22 @@ void SV_UpdateToReliableMessages (void)
 
 		// NEXUIZ_PLAYERMODEL
 		if( prog->fieldoffsets.playermodel >= 0 ) {
-			model = PRVM_GetString(PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.playermodel)->string);
+			model = PRVM_GetString(PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.playermodel)->string);
 			if (model == NULL)
 				model = "";
 			// always point the string back at host_client->name to keep it safe
 			strlcpy (host_client->playermodel, model, sizeof (host_client->playermodel));
-			PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.playermodel)->string = PRVM_SetEngineString(host_client->playermodel);
+			PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.playermodel)->string = PRVM_SetEngineString(host_client->playermodel);
 		}
 
 		// NEXUIZ_PLAYERSKIN
 		if( prog->fieldoffsets.playerskin >= 0 ) {
-			skin = PRVM_GetString(PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.playerskin)->string);
+			skin = PRVM_GetString(PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.playerskin)->string);
 			if (skin == NULL)
 				skin = "";
 			// always point the string back at host_client->name to keep it safe
 			strlcpy (host_client->playerskin, skin, sizeof (host_client->playerskin));
-			PRVM_GETEDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.playerskin)->string = PRVM_SetEngineString(host_client->playerskin);
+			PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.playerskin)->string = PRVM_SetEngineString(host_client->playerskin);
 		}
 
 		// frags
@@ -2191,13 +2191,13 @@ void SV_VM_CB_InitEdict(prvm_edict_t *e)
 		// DP_SV_CLIENTNAME and DP_SV_CLIENTCOLORS will not immediately
 		// reset them
 		e->fields.server->netname = PRVM_SetEngineString(svs.clients[num].name);
-		if ((val = PRVM_GETEDICTFIELDVALUE(e, prog->fieldoffsets.clientcolors)))
+		if ((val = PRVM_EDICTFIELDVALUE(e, prog->fieldoffsets.clientcolors)))
 			val->_float = svs.clients[num].colors;
 		// NEXUIZ_PLAYERMODEL and NEXUIZ_PLAYERSKIN
 		if( prog->fieldoffsets.playermodel >= 0 )
-			PRVM_GETEDICTFIELDVALUE(e, prog->fieldoffsets.playermodel)->string = PRVM_SetEngineString(svs.clients[num].playermodel);
+			PRVM_EDICTFIELDVALUE(e, prog->fieldoffsets.playermodel)->string = PRVM_SetEngineString(svs.clients[num].playermodel);
 		if( prog->fieldoffsets.playerskin >= 0 )
-			PRVM_GETEDICTFIELDVALUE(e, prog->fieldoffsets.playerskin)->string = PRVM_SetEngineString(svs.clients[num].playerskin);
+			PRVM_EDICTFIELDVALUE(e, prog->fieldoffsets.playerskin)->string = PRVM_SetEngineString(svs.clients[num].playerskin);
 	}
 }
 

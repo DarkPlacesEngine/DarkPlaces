@@ -1761,11 +1761,11 @@ void VM_CL_setattachment (void)
 	if (tagentity == NULL)
 		tagentity = prog->edicts;
 
-	v = PRVM_GETEDICTFIELDVALUE(e, prog->fieldoffsets.tag_entity);
+	v = PRVM_EDICTFIELDVALUE(e, prog->fieldoffsets.tag_entity);
 	if (v)
 		v->edict = PRVM_EDICT_TO_PROG(tagentity);
 
-	v = PRVM_GETEDICTFIELDVALUE(e, prog->fieldoffsets.tag_index);
+	v = PRVM_EDICTFIELDVALUE(e, prog->fieldoffsets.tag_index);
 	if (v)
 		v->_float = 0;
 	if (tagentity != NULL && tagentity != prog->edicts && tagname && tagname[0])
@@ -1840,13 +1840,13 @@ int CL_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 	else
 		tagmatrix = identitymatrix;
 
-	if ((val = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.tag_entity)) && val->edict)
+	if ((val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.tag_entity)) && val->edict)
 	{ // DP_GFX_QUAKE3MODELTAGS, scan all chain and stop on unattached entity
 		attachloop = 0;
 		do
 		{
 			attachent = PRVM_EDICT_NUM(val->edict); // to this it entity our entity is attached
-			val = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.tag_index);
+			val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.tag_index);
 
 			model = CSQC_GetModelFromEntity(attachent);
 
@@ -1856,7 +1856,7 @@ int CL_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 				attachmatrix = identitymatrix;
 
 			// apply transformation by child entity matrix
-			val = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.scale);
+			val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.scale);
 			if (val->_float == 0)
 				val->_float = 1;
 			Matrix4x4_CreateFromQuakeEntity(&entitymatrix, ent->fields.client->origin[0], ent->fields.client->origin[1], ent->fields.client->origin[2], -ent->fields.client->angles[0], ent->fields.client->angles[1], ent->fields.client->angles[2], val->_float);
@@ -1872,22 +1872,22 @@ int CL_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 			if (attachloop > 255) // prevent runaway looping
 				return 5;
 		}
-		while ((val = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.tag_entity)) && val->edict);
+		while ((val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.tag_entity)) && val->edict);
 	}
 
 	// normal or RENDER_VIEWMODEL entity (or main parent entity on attach chain)
-	val = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.scale);
+	val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.scale);
 	if (val->_float == 0)
 		val->_float = 1;
 	// Alias models have inverse pitch, bmodels can't have tags, so don't check for modeltype...
 	Matrix4x4_CreateFromQuakeEntity(&entitymatrix, ent->fields.client->origin[0], ent->fields.client->origin[1], ent->fields.client->origin[2], -ent->fields.client->angles[0], ent->fields.client->angles[1], ent->fields.client->angles[2], val->_float);
 	Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
 
-	if ((val = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.renderflags)) && (RF_VIEWMODEL & (int)val->_float))
+	if ((val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.renderflags)) && (RF_VIEWMODEL & (int)val->_float))
 	{// RENDER_VIEWMODEL magic
 		Matrix4x4_Copy(&tagmatrix, out);
 
-		val = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.scale);
+		val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.scale);
 		if (val->_float == 0)
 			val->_float = 1;
 
@@ -2029,7 +2029,7 @@ void VM_CL_select_cube (void)
 			continue;
 		if (maxs1[0] < mins2[0] || maxs1[1] < mins2[1] || maxs1[2] < mins2[2])
 			continue;
-		PRVM_GETEDICTFIELDVALUE(ent,prog->fieldoffsets.chain)->edict = PRVM_NUM_FOR_EDICT(chain);
+		PRVM_EDICTFIELDVALUE(ent,prog->fieldoffsets.chain)->edict = PRVM_NUM_FOR_EDICT(chain);
 		chain = ent;
 	}
 
@@ -2067,7 +2067,7 @@ void VM_CL_select_super (void)
 			continue;
 		if (maxs1[0] < mins2[0] || maxs1[1] < mins2[1] || maxs1[2] < mins2[2])
 			continue;
-		PRVM_GETEDICTFIELDVALUE(ent,prog->fieldoffsets.chain)->edict = PRVM_NUM_FOR_EDICT(chain);
+		PRVM_EDICTFIELDVALUE(ent,prog->fieldoffsets.chain)->edict = PRVM_NUM_FOR_EDICT(chain);
 		chain = ent;
 	}
 

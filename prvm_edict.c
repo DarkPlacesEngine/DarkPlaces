@@ -240,7 +240,7 @@ prvm_edict_t *PRVM_ED_Alloc (void)
 		e = PRVM_EDICT_NUM(i);
 		// the first couple seconds of server time can involve a lot of
 		// freeing and allocating, so relax the replacement policy
-		if (e->priv.required->free && ( e->priv.required->freetime < 2 || prog->globaloffsets.time < 0 || (PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.time)->_float - e->priv.required->freetime) > 0.5 ) )
+		if (e->priv.required->free && ( e->priv.required->freetime < 2 || prog->globaloffsets.time < 0 || (PRVM_GLOBALFIELDVALUE(prog->globaloffsets.time)->_float - e->priv.required->freetime) > 0.5 ) )
 		{
 			PRVM_ED_ClearEdict (e);
 			return e;
@@ -277,7 +277,7 @@ void PRVM_ED_Free (prvm_edict_t *ed)
 	PRVM_GCALL(free_edict)(ed);
 
 	ed->priv.required->free = true;
-	ed->priv.required->freetime = prog->globaloffsets.time >= 0 ? PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.time)->_float : 0;
+	ed->priv.required->freetime = prog->globaloffsets.time >= 0 ? PRVM_GLOBALFIELDVALUE(prog->globaloffsets.time)->_float : 0;
 }
 
 //===========================================================================
@@ -1209,7 +1209,7 @@ void PRVM_ED_LoadFromFile (const char *data)
 			}
 
 			// self = ent
-			PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.self)->edict = PRVM_EDICT_TO_PROG(ent);
+			PRVM_GLOBALFIELDVALUE(prog->globaloffsets.self)->edict = PRVM_EDICT_TO_PROG(ent);
 			PRVM_ExecuteProgram (func - prog->functions, "");
 		}
 
