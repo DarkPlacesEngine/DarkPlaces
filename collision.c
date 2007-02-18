@@ -1456,3 +1456,79 @@ void Collision_BoundingBoxOfBrushTraceSegment(const colbrushf_t *start, const co
 	maxs[2] += 1;
 }
 
+//===========================================
+
+void Collision_ClipToGenericEntity(trace_t *trace, model_t *model, int frame, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask)
+{
+	float tempnormal[3], starttransformed[3], endtransformed[3];
+
+	memset(trace, 0, sizeof(*trace));
+	trace->fraction = trace->realfraction = 1;
+	VectorCopy(end, trace->endpos);
+
+	Matrix4x4_Transform(inversematrix, start, starttransformed);
+	Matrix4x4_Transform(inversematrix, end, endtransformed);
+#if COLLISIONPARANOID >= 3
+	Con_Printf("trans(%f %f %f -> %f %f %f, %f %f %f -> %f %f %f)", start[0], start[1], start[2], starttransformed[0], starttransformed[1], starttransformed[2], end[0], end[1], end[2], endtransformed[0], endtransformed[1], endtransformed[2]);
+#endif
+
+	if (model && model->TraceBox)
+		model->TraceBox(model, bound(0, frame, (model->numframes - 1)), trace, starttransformed, mins, maxs, endtransformed, hitsupercontentsmask);
+	else
+		Collision_ClipTrace_Box(trace, bodymins, bodymaxs, starttransformed, mins, maxs, endtransformed, hitsupercontentsmask, bodysupercontents, 0, NULL);
+	trace->fraction = bound(0, trace->fraction, 1);
+	trace->realfraction = bound(0, trace->realfraction, 1);
+
+	if (trace->fraction < 1)
+	{
+		VectorLerp(start, trace->fraction, end, trace->endpos);
+		VectorCopy(trace->plane.normal, tempnormal);
+		Matrix4x4_Transform3x3(matrix, tempnormal, trace->plane.normal);
+		// FIXME: should recalc trace->plane.dist
+	}
+}
+
+void Collision_ClipToWorld(trace_t *trace, model_t *model, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontents)
+{
+	memset(trace, 0, sizeof(*trace));
+	trace->fraction = trace->realfraction = 1;
+	if (model && model->TraceBox)
+		model->TraceBox(model, 0, trace, start, mins, maxs, end, hitsupercontents);
+	trace->fraction = bound(0, trace->fraction, 1);
+	trace->realfraction = bound(0, trace->realfraction, 1);
+	VectorLerp(start, trace->fraction, end, trace->endpos);
+}
+
+void Collision_CombineTraces(trace_t *cliptrace, const trace_t *trace, void *touch, qboolean isbmodel)
+{
+	// take the 'best' answers from the new trace and combine with existing data
+	if (trace->allsolid)
+		cliptrace->allsolid = true;
+	if (trace->startsolid)
+	{
+		if (isbmodel)
+			cliptrace->bmodelstartsolid = true;
+		cliptrace->startsolid = true;
+		if (cliptrace->realfraction == 1)
+			cliptrace->ent = touch;
+	}
+	// don't set this except on the world, because it can easily confuse
+	// monsters underwater if there's a bmodel involved in the trace
+	// (inopen && inwater is how they check water visibility)
+	//if (trace->inopen)
+	//	cliptrace->inopen = true;
+	if (trace->inwater)
+		cliptrace->inwater = true;
+	if (trace->realfraction < cliptrace->realfraction)
+	{
+		cliptrace->fraction = trace->fraction;
+		cliptrace->realfraction = trace->realfraction;
+		VectorCopy(trace->endpos, cliptrace->endpos);
+		cliptrace->plane = trace->plane;
+		cliptrace->ent = touch;
+		cliptrace->hitsupercontents = trace->hitsupercontents;
+		cliptrace->hitq3surfaceflags = trace->hitq3surfaceflags;
+		cliptrace->hittexture = trace->hittexture;
+	}
+	cliptrace->startsupercontents |= trace->startsupercontents;
+}
