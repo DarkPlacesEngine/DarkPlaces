@@ -404,12 +404,12 @@ qboolean cl_ignoremousemove = false;
 
 /*
 ================
-CL_Move
+CL_Input
 
 Send the intended movement message to the server
 ================
 */
-void CL_Move (void)
+void CL_Input (void)
 {
 	float mx, my;
 	static float old_mouse_x = 0, old_mouse_y = 0;
