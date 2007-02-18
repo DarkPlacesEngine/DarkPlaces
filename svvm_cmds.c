@@ -492,13 +492,13 @@ void PF_traceline (void)
 		prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(trace.ent);
 	else
 		prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(prog->edicts);
-	if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dpstartcontents)))
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dpstartcontents)))
 		val->_float = trace.startsupercontents;
-	if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dphitcontents)))
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphitcontents)))
 		val->_float = trace.hitsupercontents;
-	if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dphitq3surfaceflags)))
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphitq3surfaceflags)))
 		val->_float = trace.hitq3surfaceflags;
-	if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dphittexturename)))
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphittexturename)))
 	{
 		if (trace.hittexture)
 			val->string = PRVM_SetTempString(trace.hittexture->name);
@@ -554,13 +554,13 @@ void PF_tracebox (void)
 		prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(trace.ent);
 	else
 		prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(prog->edicts);
-	if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dpstartcontents)))
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dpstartcontents)))
 		val->_float = trace.startsupercontents;
-	if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dphitcontents)))
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphitcontents)))
 		val->_float = trace.hitsupercontents;
-	if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dphitq3surfaceflags)))
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphitq3surfaceflags)))
 		val->_float = trace.hitq3surfaceflags;
-	if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dphittexturename)))
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphittexturename)))
 	{
 		if (trace.hittexture)
 			val->string = PRVM_SetTempString(trace.hittexture->name);
@@ -601,13 +601,13 @@ void PF_tracetoss (void)
 		prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(trace.ent);
 	else
 		prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(prog->edicts);
-	if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dpstartcontents)))
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dpstartcontents)))
 		val->_float = trace.startsupercontents;
-	if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dphitcontents)))
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphitcontents)))
 		val->_float = trace.hitsupercontents;
-	if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dphitq3surfaceflags)))
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphitq3surfaceflags)))
 		val->_float = trace.hitq3surfaceflags;
-	if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dphittexturename)))
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphittexturename)))
 	{
 		if (trace.hittexture)
 			val->string = PRVM_SetTempString(trace.hittexture->name);
@@ -1540,7 +1540,7 @@ void PF_setcolor (void)
 	client = svs.clients + entnum-1;
 	if (client->edict)
 	{
-		if ((val = PRVM_GETEDICTFIELDVALUE(client->edict, prog->fieldoffsets.clientcolors)))
+		if ((val = PRVM_EDICTFIELDVALUE(client->edict, prog->fieldoffsets.clientcolors)))
 			val->_float = i;
 		client->edict->fields.server->team = (i & 15) + 1;
 	}
@@ -2229,11 +2229,11 @@ void PF_setattachment (void)
 	if (tagentity == NULL)
 		tagentity = prog->edicts;
 
-	v = PRVM_GETEDICTFIELDVALUE(e, prog->fieldoffsets.tag_entity);
+	v = PRVM_EDICTFIELDVALUE(e, prog->fieldoffsets.tag_entity);
 	if (v)
 		v->edict = PRVM_EDICT_TO_PROG(tagentity);
 
-	v = PRVM_GETEDICTFIELDVALUE(e, prog->fieldoffsets.tag_index);
+	v = PRVM_EDICTFIELDVALUE(e, prog->fieldoffsets.tag_index);
 	if (v)
 		v->_float = 0;
 	if (tagentity != NULL && tagentity != prog->edicts && tagname && tagname[0])
@@ -2268,7 +2268,7 @@ int SV_GetTagIndex (prvm_edict_t *e, const char *tagname)
 
 void SV_GetEntityMatrix (prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatrix)
 {
-	float scale = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.scale)->_float;
+	float scale = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.scale)->_float;
 	if (scale == 0)
 		scale = 1;
 	if (viewmatrix)
@@ -2344,9 +2344,9 @@ int SV_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 		SV_GetEntityMatrix(ent, &entitymatrix, false);
 		Matrix4x4_Concat(&tagmatrix, &entitymatrix, out);
 		// next iteration we process the parent entity
-		if ((val = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.tag_entity)) && val->edict)
+		if ((val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.tag_entity)) && val->edict)
 		{
-			tagindex = (int)PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.tag_index)->_float;
+			tagindex = (int)PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.tag_index)->_float;
 			ent = PRVM_EDICT_NUM(val->edict);
 		}
 		else
@@ -2355,7 +2355,7 @@ int SV_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 	}
 
 	// RENDER_VIEWMODEL magic
-	if ((val = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.viewmodelforclient)) && val->edict)
+	if ((val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.viewmodelforclient)) && val->edict)
 	{
 		Matrix4x4_Copy(&tagmatrix, out);
 		ent = PRVM_EDICT_NUM(val->edict);

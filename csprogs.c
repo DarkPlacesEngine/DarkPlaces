@@ -157,21 +157,21 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 	// FIXME: renderflags should be in the cl_entvars_t
 #if 1
 	renderflags = 0;
-	if((val = PRVM_GETEDICTFIELDVALUE(ed, prog->fieldoffsets.renderflags)) && val->_float)	renderflags = (int)val->_float;
+	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.renderflags)) && val->_float)	renderflags = (int)val->_float;
 #else
 	renderflags = (int)ed->fields.client->renderflags;
 #endif
 
-	if((val = PRVM_GETEDICTFIELDVALUE(ed, prog->fieldoffsets.alpha)) && val->_float)		e->render.alpha = val->_float;
-	if((val = PRVM_GETEDICTFIELDVALUE(ed, prog->fieldoffsets.scale)) && val->_float)		e->render.scale = scale = val->_float;
-	if((val = PRVM_GETEDICTFIELDVALUE(ed, prog->fieldoffsets.colormod)) && VectorLength2(val->vector))	VectorCopy(val->vector, e->render.colormod);
-	if((val = PRVM_GETEDICTFIELDVALUE(ed, prog->fieldoffsets.effects)) && val->_float)	e->render.effects = (int)val->_float;
-	if((val = PRVM_GETEDICTFIELDVALUE(ed, prog->fieldoffsets.tag_entity)) && val->edict)
+	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.alpha)) && val->_float)		e->render.alpha = val->_float;
+	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.scale)) && val->_float)		e->render.scale = scale = val->_float;
+	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.colormod)) && VectorLength2(val->vector))	VectorCopy(val->vector, e->render.colormod);
+	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.effects)) && val->_float)	e->render.effects = (int)val->_float;
+	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.tag_entity)) && val->edict)
 	{
 		int tagentity;
 		int tagindex = 0;
 		tagentity = val->edict;
-		if((val = PRVM_GETEDICTFIELDVALUE(ed, prog->fieldoffsets.tag_index)) && val->_float)
+		if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.tag_index)) && val->_float)
 			tagindex = (int)val->_float;
 		// FIXME: calculate tag matrix
 		Matrix4x4_CreateIdentity(&tagmatrix);
@@ -208,7 +208,7 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 	CL_UpdateRenderEntity(&e->render);
 
 	i = 0;
-	if((val = PRVM_GETEDICTFIELDVALUE(ed, prog->fieldoffsets.renderflags)) && val->_float)
+	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.renderflags)) && val->_float)
 	{
 		i = (int)val->_float;
 		if(i & RF_VIEWMODEL)	e->render.flags |= RENDER_VIEWMODEL;

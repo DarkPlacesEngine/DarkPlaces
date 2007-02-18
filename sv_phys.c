@@ -236,7 +236,7 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 
 	if (passedict)
 	{
-		val = PRVM_GETEDICTFIELDVALUE(passedict, prog->fieldoffsets.dphitcontentsmask);
+		val = PRVM_EDICTFIELDVALUE(passedict, prog->fieldoffsets.dphitcontentsmask);
 		if (val && val->_float)
 			hitsupercontentsmask = (int)val->_float;
 		else if (passedict->fields.server->solid == SOLID_SLIDEBOX)
@@ -441,13 +441,13 @@ void SV_LinkEdict_TouchAreaGrid(prvm_edict_t *ent)
 			VectorSet (prog->globals.server->trace_plane_normal, 0, 0, 1);
 			prog->globals.server->trace_plane_dist = 0;
 			prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(ent);
-			if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dpstartcontents)))
+			if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dpstartcontents)))
 				val->_float = 0;
-			if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dphitcontents)))
+			if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphitcontents)))
 				val->_float = 0;
-			if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dphitq3surfaceflags)))
+			if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphitq3surfaceflags)))
 				val->_float = 0;
-			if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dphittexturename)))
+			if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphittexturename)))
 				val->string = 0;
 			PRVM_ExecuteProgram (touch->fields.server->touch, "QC function self.touch is missing");
 		}
@@ -648,7 +648,7 @@ int SV_CheckContentsTransition(prvm_edict_t *ent, const int nContents)
 	if(ent->fields.server->watertype != nContents)
 	{ // Changed Contents
 		// Acquire Contents Transition Function from QC
-		contentstransition = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.contentstransition);
+		contentstransition = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.contentstransition);
 
 		if(contentstransition->function)
 		{ // Valid Function; Execute
@@ -771,13 +771,13 @@ void SV_Impact (prvm_edict_t *e1, trace_t *trace)
 			prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(trace->ent);
 		else
 			prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(prog->edicts);
-		if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dpstartcontents)))
+		if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dpstartcontents)))
 			val->_float = trace->startsupercontents;
-		if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dphitcontents)))
+		if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphitcontents)))
 			val->_float = trace->hitsupercontents;
-		if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dphitq3surfaceflags)))
+		if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphitq3surfaceflags)))
 			val->_float = trace->hitq3surfaceflags;
-		if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dphittexturename)))
+		if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphittexturename)))
 		{
 			if (trace->hittexture)
 				val->string = PRVM_SetTempString(trace->hittexture->name);
@@ -800,13 +800,13 @@ void SV_Impact (prvm_edict_t *e1, trace_t *trace)
 		VectorSet (prog->globals.server->trace_plane_normal, 0, 0, 1);
 		prog->globals.server->trace_plane_dist = 0;
 		prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(e1);
-		if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dpstartcontents)))
+		if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dpstartcontents)))
 			val->_float = 0;
-		if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dphitcontents)))
+		if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphitcontents)))
 			val->_float = 0;
-		if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dphitq3surfaceflags)))
+		if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphitq3surfaceflags)))
 			val->_float = 0;
-		if ((val = PRVM_GETGLOBALFIELDVALUE(prog->globaloffsets.trace_dphittexturename)))
+		if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphittexturename)))
 			val->string = 0;
 		PRVM_ExecuteProgram (e2->fields.server->touch, "QC function self.touch is missing");
 	}
@@ -1095,7 +1095,7 @@ void SV_AddGravity (prvm_edict_t *ent)
 	float ent_gravity;
 	prvm_eval_t *val;
 
-	val = PRVM_GETEDICTFIELDVALUE(ent, prog->fieldoffsets.gravity);
+	val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.gravity);
 	if (val!=0 && val->_float)
 		ent_gravity = val->_float;
 	else
@@ -2306,7 +2306,7 @@ trace_t SV_Trace_Toss (prvm_edict_t *tossent, prvm_edict_t *ignore)
 	VectorCopy(tossent->fields.server->angles   , original_angles   );
 	VectorCopy(tossent->fields.server->avelocity, original_avelocity);
 
-	val = PRVM_GETEDICTFIELDVALUE(tossent, prog->fieldoffsets.gravity);
+	val = PRVM_EDICTFIELDVALUE(tossent, prog->fieldoffsets.gravity);
 	if (val != NULL && val->_float != 0)
 		gravity = val->_float;
 	else
