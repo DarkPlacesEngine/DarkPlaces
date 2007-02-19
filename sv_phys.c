@@ -121,7 +121,7 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 #endif
 {
 	vec3_t hullmins, hullmaxs;
-	int i;
+	int i, bodysupercontents;
 	int passedictprog;
 	qboolean pointtrace;
 	prvm_edict_t *traceowner, *touch;
@@ -240,6 +240,8 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 				continue;
 		}
 
+		bodysupercontents = touch->fields.server->solid == SOLID_CORPSE ? SUPERCONTENTS_CORPSE : SUPERCONTENTS_BODY;
+
 		// might interact, so do an exact clip
 		model = NULL;
 		if ((int) touch->fields.server->solid == SOLID_BSP || type == MOVE_HITMODEL)
@@ -248,15 +250,17 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 			// if the modelindex is 0, it shouldn't be SOLID_BSP!
 			if (modelindex > 0 && modelindex < MAX_MODELS)
 				model = sv.models[(int)touch->fields.server->modelindex];
-			Matrix4x4_CreateFromQuakeEntity(&matrix, touch->fields.server->origin[0], touch->fields.server->origin[1], touch->fields.server->origin[2], touch->fields.server->angles[0], touch->fields.server->angles[1], touch->fields.server->angles[2], 1);
 		}
+		if (model)
+			Matrix4x4_CreateFromQuakeEntity(&matrix, touch->fields.server->origin[0], touch->fields.server->origin[1], touch->fields.server->origin[2], touch->fields.server->angles[0], touch->fields.server->angles[1], touch->fields.server->angles[2], 1);
 		else
 			Matrix4x4_CreateTranslate(&matrix, touch->fields.server->origin[0], touch->fields.server->origin[1], touch->fields.server->origin[2]);
 		Matrix4x4_Invert_Simple(&imatrix, &matrix);
 		if ((int)touch->fields.server->flags & FL_MONSTER)
-			Collision_ClipToGenericEntity(&trace, model, touch->fields.server->frame, touch->fields.server->mins, touch->fields.server->maxs, SUPERCONTENTS_BODY, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipend, hitsupercontentsmask);
+			Collision_ClipToGenericEntity(&trace, model, touch->fields.server->frame, touch->fields.server->mins, touch->fields.server->maxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipend, hitsupercontentsmask);
 		else
-			Collision_ClipToGenericEntity(&trace, model, touch->fields.server->frame, touch->fields.server->mins, touch->fields.server->maxs, SUPERCONTENTS_BODY, &matrix, &imatrix, clipstart, clipmins, clipmaxs, clipend, hitsupercontentsmask);
+			Collision_ClipToGenericEntity(&trace, model, touch->fields.server->frame, touch->fields.server->mins, touch->fields.server->maxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins, clipmaxs, clipend, hitsupercontentsmask);
+
 		Collision_CombineTraces(&cliptrace, &trace, (void *)touch, touch->fields.server->solid == SOLID_BSP);
 	}
 
@@ -1527,7 +1531,7 @@ Only used by players
 */
 void SV_WalkMove (prvm_edict_t *ent)
 {
-	int clip, oldonground, originalmove_clip, originalmove_flags, originalmove_groundentity;
+	int clip, oldonground, originalmove_clip, originalmove_flags, originalmove_groundentity, hitsupercontentsmask;
 	vec3_t upmove, downmove, start_origin, start_velocity, stepnormal, originalmove_origin, originalmove_velocity;
 	trace_t downtrace;
 
@@ -1535,6 +1539,8 @@ void SV_WalkMove (prvm_edict_t *ent)
 	// don't move
 	if (sv.frametime <= 0)
 		return;
+
+	hitsupercontentsmask = SV_GenericHitSuperContentsMask(ent);
 
 	SV_CheckVelocity(ent);
 
@@ -1545,7 +1551,7 @@ void SV_WalkMove (prvm_edict_t *ent)
 	VectorCopy (ent->fields.server->origin, start_origin);
 	VectorCopy (ent->fields.server->velocity, start_velocity);
 
-	clip = SV_FlyMove (ent, sv.frametime, NULL, SV_GenericHitSuperContentsMask(ent));
+	clip = SV_FlyMove (ent, sv.frametime, NULL, hitsupercontentsmask);
 
 	SV_CheckVelocity(ent);
 
@@ -1593,7 +1599,7 @@ void SV_WalkMove (prvm_edict_t *ent)
 
 		// move forward
 		ent->fields.server->velocity[2] = 0;
-		clip = SV_FlyMove (ent, sv.frametime, stepnormal, SV_GenericHitSuperContentsMask(ent));
+		clip = SV_FlyMove (ent, sv.frametime, stepnormal, hitsupercontentsmask);
 		ent->fields.server->velocity[2] += start_velocity[2];
 
 		SV_CheckVelocity(ent);

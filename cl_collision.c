@@ -156,7 +156,7 @@ extern cvar_t sv_debugmove;
 trace_t CL_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, prvm_edict_t *passedict, int hitsupercontentsmask, qboolean hitnetworkbrushmodels, qboolean hitnetworkplayers, int *hitnetworkentity, qboolean hitcsqcentities)
 {
 	vec3_t hullmins, hullmaxs;
-	int i;
+	int i, bodysupercontents;
 	int passedictprog;
 	qboolean pointtrace;
 	prvm_edict_t *traceowner, *touch;
@@ -325,6 +325,8 @@ trace_t CL_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 				continue;
 		}
 
+		bodysupercontents = touch->fields.client->solid == SOLID_CORPSE ? SUPERCONTENTS_CORPSE : SUPERCONTENTS_BODY;
+
 		// might interact, so do an exact clip
 		model = NULL;
 		if ((int) touch->fields.client->solid == SOLID_BSP || type == MOVE_HITMODEL)
@@ -332,16 +334,18 @@ trace_t CL_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 			unsigned int modelindex = (unsigned int)touch->fields.client->modelindex;
 			// if the modelindex is 0, it shouldn't be SOLID_BSP!
 			if (modelindex > 0 && modelindex < MAX_MODELS)
-				model = CL_GetModelByIndex((int)touch->fields.client->modelindex);
-			Matrix4x4_CreateFromQuakeEntity(&matrix, touch->fields.client->origin[0], touch->fields.client->origin[1], touch->fields.client->origin[2], touch->fields.client->angles[0], touch->fields.client->angles[1], touch->fields.client->angles[2], 1);
+				model = sv.models[(int)touch->fields.client->modelindex];
 		}
+		if (model)
+			Matrix4x4_CreateFromQuakeEntity(&matrix, touch->fields.client->origin[0], touch->fields.client->origin[1], touch->fields.client->origin[2], touch->fields.client->angles[0], touch->fields.client->angles[1], touch->fields.client->angles[2], 1);
 		else
 			Matrix4x4_CreateTranslate(&matrix, touch->fields.client->origin[0], touch->fields.client->origin[1], touch->fields.client->origin[2]);
 		Matrix4x4_Invert_Simple(&imatrix, &matrix);
 		if ((int)touch->fields.client->flags & FL_MONSTER)
-			Collision_ClipToGenericEntity(&trace, model, touch->fields.client->frame, touch->fields.client->mins, touch->fields.client->maxs, SUPERCONTENTS_BODY, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipend, hitsupercontentsmask);
+			Collision_ClipToGenericEntity(&trace, model, touch->fields.client->frame, touch->fields.client->mins, touch->fields.client->maxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipend, hitsupercontentsmask);
 		else
-			Collision_ClipToGenericEntity(&trace, model, touch->fields.client->frame, touch->fields.client->mins, touch->fields.client->maxs, SUPERCONTENTS_BODY, &matrix, &imatrix, clipstart, clipmins, clipmaxs, clipend, hitsupercontentsmask);
+			Collision_ClipToGenericEntity(&trace, model, touch->fields.client->frame, touch->fields.client->mins, touch->fields.client->maxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins, clipmaxs, clipend, hitsupercontentsmask);
+
 		if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
 			*hitnetworkentity = 0;
 		Collision_CombineTraces(&cliptrace, &trace, (void *)touch, touch->fields.client->solid == SOLID_BSP);
