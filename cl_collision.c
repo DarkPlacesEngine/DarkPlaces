@@ -140,6 +140,8 @@ int CL_GenericHitSuperContentsMask(const prvm_edict_t *passedict)
 		}
 		else if (passedict->fields.client->solid == SOLID_CORPSE)
 			return SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY;
+		else if (passedict->fields.client->solid == SOLID_TRIGGER)
+			return SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY;
 		else
 			return SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_CORPSE;
 	}
