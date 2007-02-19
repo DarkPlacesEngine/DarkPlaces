@@ -102,6 +102,8 @@ int SV_GenericHitSuperContentsMask(const prvm_edict_t *passedict)
 		}
 		else if (passedict->fields.server->solid == SOLID_CORPSE)
 			return SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY;
+		else if (passedict->fields.server->solid == SOLID_TRIGGER)
+			return SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY;
 		else
 			return SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_CORPSE;
 	}
@@ -807,13 +809,7 @@ int SV_FlyMove (prvm_edict_t *ent, float time, float *stepnormal, int hitsuperco
 			trace.ent = prog->edicts;
 		}
 
-		if (((int) ent->fields.server->flags & FL_ONGROUND) && ent->fields.server->groundentity == PRVM_EDICT_TO_PROG(trace.ent))
-			impact = false;
-		else
-		{
-			ent->fields.server->flags = (int)ent->fields.server->flags & ~FL_ONGROUND;
-			impact = true;
-		}
+		impact = !((int) ent->fields.server->flags & FL_ONGROUND) || ent->fields.server->groundentity != PRVM_EDICT_TO_PROG(trace.ent);
 
 		if (trace.plane.normal[2])
 		{
@@ -1153,15 +1149,10 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 			continue;
 
 		// if the entity is standing on the pusher, it will definitely be moved
-		if (((int)check->fields.server->flags & FL_ONGROUND) && PRVM_PROG_TO_EDICT(check->fields.server->groundentity) == pusher)
+		// if the entity is not standing on the pusher, but is in the pusher's
+		// final position, move it
+		if (!((int)check->fields.server->flags & FL_ONGROUND) || PRVM_PROG_TO_EDICT(check->fields.server->groundentity) != pusher)
 		{
-			// remove the onground flag for non-players
-			if (check->fields.server->movetype != MOVETYPE_WALK)
-				check->fields.server->flags = (int)check->fields.server->flags & ~FL_ONGROUND;
-		}
-		else
-		{
-			// if the entity is not inside the pusher's final position, leave it alone
 			Collision_ClipToGenericEntity(&trace, pushermodel, pusher->fields.server->frame, pusher->fields.server->mins, pusher->fields.server->maxs, SUPERCONTENTS_BODY, &pusherfinalmatrix, &pusherfinalimatrix, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY);
 			if (!trace.startsolid)
 				continue;
@@ -1192,6 +1183,11 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 		check->fields.server->angles[1] += trace.fraction * moveangle[1];
 		pusher->fields.server->solid = savesolid; // was SOLID_BSP
 		//Con_Printf("%s:%d frac %f startsolid %d bmodelstartsolid %d allsolid %d\n", __FILE__, __LINE__, trace.fraction, trace.startsolid, trace.bmodelstartsolid, trace.allsolid);
+
+		// this check is for items riding platforms that are passing under (or
+		// through) walls intended to knock the items off
+		if (trace.fraction < 1 && check->fields.server->movetype != MOVETYPE_WALK)
+			check->fields.server->flags = (int)check->fields.server->flags & ~FL_ONGROUND;
 
 		// if it is still inside the pusher, block
 		Collision_ClipToGenericEntity(&trace, pushermodel, pusher->fields.server->frame, pusher->fields.server->mins, pusher->fields.server->maxs, SUPERCONTENTS_BODY, &pusherfinalmatrix, &pusherfinalimatrix, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY);
@@ -1546,12 +1542,15 @@ void SV_WalkMove (prvm_edict_t *ent)
 
 	// do a regular slide move unless it looks like you ran into a step
 	oldonground = (int)ent->fields.server->flags & FL_ONGROUND;
-	ent->fields.server->flags = (int)ent->fields.server->flags & ~FL_ONGROUND;
 
 	VectorCopy (ent->fields.server->origin, start_origin);
 	VectorCopy (ent->fields.server->velocity, start_velocity);
 
 	clip = SV_FlyMove (ent, sv.frametime, NULL, hitsupercontentsmask);
+
+	// if the move did not hit the ground at any point, we're not on ground
+	if (!(clip & 1))
+		ent->fields.server->flags = (int)ent->fields.server->flags & ~FL_ONGROUND;
 
 	SV_CheckVelocity(ent);
 
@@ -1628,8 +1627,8 @@ void SV_WalkMove (prvm_edict_t *ent)
 		if (clip & 2 && sv_wallfriction.integer)
 			SV_WallFriction (ent, stepnormal);
 	}
-	// skip out if stepdown is enabled, moving downward, not in water, and the move started onground and ended offground
-	else if (!(sv_gameplayfix_stepdown.integer && ent->fields.server->waterlevel < 2 && start_velocity[2] < (1.0 / 32.0) && oldonground && !((int)ent->fields.server->flags & FL_ONGROUND)))
+	// don't do the down move if stepdown is disabled, moving upward, not in water, or the move started offground or ended onground
+	else if (!sv_gameplayfix_stepdown.integer || ent->fields.server->waterlevel >= 3 || start_velocity[2] >= (1.0 / 32.0) || !oldonground || ((int)ent->fields.server->flags & FL_ONGROUND))
 		return;
 
 	// move down
@@ -1641,7 +1640,7 @@ void SV_WalkMove (prvm_edict_t *ent)
 	if (downtrace.fraction < 1 && downtrace.plane.normal[2] > 0.7)
 	{
 		// this has been disabled so that you can't jump when you are stepping
-		// up while already jumping (also known as the Quake2 stair jump bug)
+		// up while already jumping (also known as the Quake2 double jump bug)
 #if 0
 		// LordHavoc: disabled this check so you can walk on monsters/players
 		//if (ent->fields.server->solid == SOLID_BSP)
