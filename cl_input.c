@@ -607,11 +607,11 @@ void CL_ClientMovement_Input(qboolean buttonjump, qboolean buttoncrouch)
 	// remove stale queue items
 	n = cl.movement_numqueue;
 	cl.movement_numqueue = 0;
-	if (cl.servermovesequence)
+	if (cls.servermovesequence)
 	{
 		for (i = 0;i < n;i++)
 		{
-			if (cl.movement_queue[i].sequence > cl.servermovesequence)
+			if (cl.movement_queue[i].sequence > cls.servermovesequence)
 				cl.movement_queue[cl.movement_numqueue++] = cl.movement_queue[i];
 			else if (i == 0)
 				cl.movement_replay_canjump = !cl.movement_queue[i].jump; // FIXME: this logic is quite broken
@@ -631,7 +631,7 @@ void CL_ClientMovement_Input(qboolean buttonjump, qboolean buttoncrouch)
 	if (cl.movement_numqueue < (int)(sizeof(cl.movement_queue)/sizeof(cl.movement_queue[0])))
 	{
 		// add to input queue
-		cl.movement_queue[cl.movement_numqueue].sequence = cl.movesequence;
+		cl.movement_queue[cl.movement_numqueue].sequence = cls.movesequence;
 		cl.movement_queue[cl.movement_numqueue].time = cl.movecmd[0].time;
 		cl.movement_queue[cl.movement_numqueue].frametime = bound(0, cl.movecmd[0].time - cl.movecmd[1].time, 0.1);
 		VectorCopy(cl.viewangles, cl.movement_queue[cl.movement_numqueue].viewangles);
@@ -1147,7 +1147,7 @@ void CL_ClientMovement_Replay(void)
 		s.movevars_airaccel_sideways_friction = cl_movement_airaccel_sideways_friction.value;
 	}
 
-	cl.movement_predicted = (cl_movement.integer && !cls.demoplayback && cls.signon == SIGNONS && cl.stats[STAT_HEALTH] > 0 && !cl.intermission) && ((cls.protocol != PROTOCOL_DARKPLACES6 && cls.protocol != PROTOCOL_DARKPLACES7) || cl.servermovesequence);
+	cl.movement_predicted = (cl_movement.integer && !cls.demoplayback && cls.signon == SIGNONS && cl.stats[STAT_HEALTH] > 0 && !cl.intermission) && ((cls.protocol != PROTOCOL_DARKPLACES6 && cls.protocol != PROTOCOL_DARKPLACES7) || cls.servermovesequence);
 	if (cl.movement_predicted)
 	{
 		//Con_Printf("%f: ", cl.movecmd[0].time);
@@ -1374,9 +1374,9 @@ void CL_SendMove(void)
 			cl.cmd.msec = 100;
 		oldmsectime = msectime;
 
-		cl.movesequence++;
+		cls.movesequence++;
 		if (cl_movement.integer)
-			cl.cmd.sequence = cl.movesequence;
+			cl.cmd.sequence = cls.movesequence;
 		else
 			cl.cmd.sequence = 0;
 
@@ -1384,7 +1384,7 @@ void CL_SendMove(void)
 		CL_UpdatePrydonCursor();
 
 		// always dump the first two messages, because they may contain leftover inputs from the last level
-		if (cl.movesequence > 2)
+		if (cls.movesequence > 2)
 		{
 			// update the cl.movecmd array which holds the most recent moves
 			for (i = CL_MAX_USERCMDS - 1;i >= 1;i--)
@@ -1507,7 +1507,7 @@ void CL_SendMove(void)
 				for (j = 0, cmd = &cl.movecmd[maxusercmds-1];j < maxusercmds;j++, cmd--)
 				{
 					// don't repeat any stale moves
-					if (cmd->sequence && cmd->sequence < cl.servermovesequence)
+					if (cmd->sequence && cmd->sequence < cls.servermovesequence)
 						continue;
 					// 5/9 bytes
 					MSG_WriteByte (&buf, clc_move);

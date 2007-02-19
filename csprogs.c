@@ -66,8 +66,8 @@ static void CSQC_SetGlobals (void)
 		prog->globals.client->time = cl.time;
 		prog->globals.client->frametime = cl.time - csqc_frametime;
 		csqc_frametime = cl.time;
-		prog->globals.client->servercommandframe = cl.servermovesequence;
-		prog->globals.client->clientcommandframe = cl.movesequence;
+		prog->globals.client->servercommandframe = cls.servermovesequence;
+		prog->globals.client->clientcommandframe = cls.movesequence;
 		VectorCopy(cl.viewangles, prog->globals.client->input_angles);
 		VectorCopy(cl.viewangles, csqc_angles);
 		prog->globals.client->input_buttons = cl.cmd.buttons;

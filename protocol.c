@@ -2038,7 +2038,7 @@ void EntityFrame5_CL_ReadFrame(void)
 	if (developer_networkentities.integer)
 		Con_Printf("recv: svc_entities %i\n", cl.latestframenums[LATESTFRAMENUMS-1]);
 	if (cls.protocol != PROTOCOL_QUAKE && cls.protocol != PROTOCOL_QUAKEDP && cls.protocol != PROTOCOL_NEHAHRAMOVIE && cls.protocol != PROTOCOL_DARKPLACES1 && cls.protocol != PROTOCOL_DARKPLACES2 && cls.protocol != PROTOCOL_DARKPLACES3 && cls.protocol != PROTOCOL_DARKPLACES4 && cls.protocol != PROTOCOL_DARKPLACES5 && cls.protocol != PROTOCOL_DARKPLACES6)
-		cl.servermovesequence = MSG_ReadLong();
+		cls.servermovesequence = MSG_ReadLong();
 	// read entity numbers until we find a 0x8000
 	// (which would be remove world entity, but is actually a terminator)
 	while ((n = (unsigned short)MSG_ReadShort()) != 0x8000 && !msg_badread)
