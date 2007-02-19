@@ -461,6 +461,8 @@ mfunction_t *PRVM_ED_FindFunction(const char *name);
 int PRVM_ED_FindFieldOffset(const char *name);
 int PRVM_ED_FindGlobalOffset(const char *name);
 func_t PRVM_ED_FindFunctionOffset(const char *name);
+#define PRVM_ED_FindFieldOffset_FromStruct(st, field) prog->fieldoffsets . field = ((int *)(&((st *)NULL)-> field ) - ((int *)NULL))
+#define PRVM_ED_FindGlobalOffset_FromStruct(st, field) prog->globaloffsets . field = ((int *)(&((st *)NULL)-> field ) - ((int *)NULL))
 
 void PRVM_MEM_IncreaseEdicts(void);
 

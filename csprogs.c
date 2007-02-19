@@ -645,15 +645,19 @@ void CL_VM_Init (void)
 
 	PRVM_LoadProgs(csqc_progname.string, cl_numrequiredfunc, cl_required_func, 0, NULL, 0, NULL);
 
-	if(prog->loaded)
-		Con_Printf("CSQC ^5loaded (crc=%i, size=%i)\n", csprogsdatacrc, (int)csprogsdatasize);
-	else
+	if (!prog->loaded)
 	{
 		CL_VM_Error("CSQC ^2failed to load\n");
 		if(!sv.active)
 			CL_Disconnect();
 		return;
 	}
+
+	Con_Printf("CSQC ^5loaded (crc=%i, size=%i)\n", csprogsdatacrc, (int)csprogsdatasize);
+
+	// check if OP_STATE animation is possible in this dat file
+	if (prog->fieldoffsets.nextthink >= 0 && prog->fieldoffsets.frame >= 0 && prog->fieldoffsets.think >= 0 && prog->globaloffsets.self >= 0)
+		prog->flag |= PRVM_OP_STATE;
 
 	//[515]: optional fields & funcs
 	if(prog->funcoffsets.CSQC_Parse_Print)
