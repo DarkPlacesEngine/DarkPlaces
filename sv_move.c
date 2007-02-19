@@ -124,7 +124,9 @@ qboolean SV_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qboolean 
 		for (i=0 ; i<2 ; i++)
 		{
 			VectorAdd (ent->fields.server->origin, move, neworg);
-			if (!noenemy)
+			if (noenemy)
+				enemy = prog->edicts;
+			else
 			{
 				enemy = PRVM_PROG_TO_EDICT(ent->fields.server->enemy);
 				if (i == 0 && enemy != prog->edicts)
