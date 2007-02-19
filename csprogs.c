@@ -630,7 +630,7 @@ void CL_VM_Init (void)
 	prog->limit_edicts = CL_MAX_EDICTS;
 	prog->reserved_edicts = 0;
 	prog->edictprivate_size = sizeof(edict_engineprivate_t);
-	prog->extensionstring = vm_cl_extensions;
+	prog->extensionstring = vm_sv_extensions;
 	prog->builtins = vm_cl_builtins;
 	prog->numbuiltins = vm_cl_numbuiltins;
 	prog->begin_increase_edicts = CL_VM_CB_BeginIncreaseEdicts;
