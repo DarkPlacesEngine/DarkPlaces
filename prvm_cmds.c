@@ -3596,7 +3596,9 @@ void VM_changeyaw (void)
 	prvm_edict_t		*ent;
 	float		ideal, current, move, speed;
 
-	VM_SAFEPARMCOUNT(0, VM_changeyaw);
+	// this is called (VERY HACKISHLY) by SV_MoveToGoal, so it can not use any
+	// parameters because they are the parameters to SV_MoveToGoal, not this
+	//VM_SAFEPARMCOUNT(0, VM_changeyaw);
 
 	ent = PRVM_PROG_TO_EDICT(PRVM_GLOBALFIELDVALUE(prog->globaloffsets.self)->edict);
 	if (ent == prog->edicts)

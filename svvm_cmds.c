@@ -963,7 +963,7 @@ VM_SV_checkbottom
 */
 static void VM_SV_checkbottom (void)
 {
-	VM_SAFEPARMCOUNT(0, VM_SV_checkbottom);
+	VM_SAFEPARMCOUNT(1, VM_SV_checkbottom);
 	PRVM_G_FLOAT(OFS_RETURN) = SV_CheckBottom (PRVM_G_EDICT(OFS_PARM0));
 }
 
