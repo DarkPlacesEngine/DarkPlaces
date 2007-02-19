@@ -1264,6 +1264,7 @@ void CL_SendMove(void)
 	sizebuf_t buf;
 	unsigned char data[1024];
 	static double lastsendtime = 0;
+	double packettime;
 	double msectime;
 	static double oldmsectime;
 
@@ -1271,26 +1272,39 @@ void CL_SendMove(void)
 	if (!cls.netcon)
 		return;
 
-#if 0
-	if (cl.movement_predicted && cls.signon == SIGNONS && cls.protocol != PROTOCOL_QUAKEWORLD)
+	packettime = 1.0 / bound(10, cl_netinputpacketspersecond.value, 100);
+	// on quakeworld servers the server replies to client input, so we send
+	// packets whenever we want to
+	// on non-quakeworld servers the client replies to server updates
+	if (cls.protocol == PROTOCOL_QUAKEWORLD)
 	{
-		if (!cl.movement_needupdate)
-			return;
-		cl.movement_needupdate = false;
-	}
-	else
-#endif
-	{
-		double packettime = 1.0 / bound(10, cl_netinputpacketspersecond.value, 100);
 		// don't send too often or else network connections can get clogged by a high renderer framerate
 		if (realtime < lastsendtime + packettime)
 			return;
-		// don't let it fall behind if CL_SendMove hasn't been called recently
-		// (such is the case when framerate is too low for instance)
-		lastsendtime = max(lastsendtime + packettime, realtime);
+		cl.cmd.time = realtime;
 	}
+	else if (cl.movement_predicted || cls.signon < SIGNONS)
+	{
+		// don't send too often or else network connections can get clogged by a high renderer framerate
+		if (realtime < lastsendtime + packettime)
+			return;
+		cl.cmd.time = cls.protocol == PROTOCOL_QUAKEWORLD ? realtime : cl.time;
+	}
+	else
+	{
+		// if not predicted, we should just reply to server packets, and
+		// report the real latest packet time rather than our interpolated
+		// time
+		if (!cl.movement_needupdate && realtime < lastsendtime + packettime)
+			return;
+		cl.cmd.time = cls.protocol == PROTOCOL_QUAKEWORLD ? realtime : cl.mtime[0];
+	}
+	// don't let it fall behind if CL_SendMove hasn't been called recently
+	// (such is the case when framerate is too low for instance)
+	lastsendtime = bound(realtime, lastsendtime + packettime, realtime + packettime);
+	// clear the note down that we sent a packet recently
+	cl.movement_needupdate = false;
 
-	cl.cmd.time = cls.protocol == PROTOCOL_QUAKEWORLD ? realtime : cl.time;
 
 	buf.maxsize = sizeof(data);
 	buf.cursize = 0;
