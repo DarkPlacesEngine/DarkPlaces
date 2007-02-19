@@ -1092,6 +1092,9 @@ void NetConn_ConnectionEstablished(lhnetsocket_t *mysocket, lhnetaddress_t *peer
 	cls.state = ca_connected;
 	cls.signon = 0;				// need all the signon messages before playing
 	cls.protocol = initialprotocol;
+	// reset move sequence numbering on this new connection
+	cls.movesequence = 0;
+	cls.servermovesequence = 0;
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
 		Cmd_ForwardStringToServer("new");
 	if (cls.protocol == PROTOCOL_QUAKE)

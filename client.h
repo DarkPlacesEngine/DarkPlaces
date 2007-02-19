@@ -509,6 +509,10 @@ typedef struct client_static_s
 	// (note: qw_download variables are also used)
 	cl_downloadack_t dp_downloadack[CL_MAX_DOWNLOADACKS];
 
+	// input sequence numbers are not reset on level change, only connect
+	int movesequence;
+	int servermovesequence;
+
 	// quakeworld stuff below
 
 	// value of "qport" cvar at time of connection
@@ -709,8 +713,6 @@ typedef struct client_state_s
 	// queue of proposed moves
 	int movement_numqueue;
 	client_movementqueue_t movement_queue[256];
-	int movesequence;
-	int servermovesequence;
 	// whether the replay should allow a jump at the first sequence
 	qboolean movement_replay_canjump;
 
