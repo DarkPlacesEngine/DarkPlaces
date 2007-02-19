@@ -63,6 +63,7 @@
 0 bug darkplaces client: it has been reported that sometimes level changes on quakeworld servers don't load a map, this may be related to downloading? (Baker)
 0 bug darkplaces client: name (and probably other userinfo properties) are not being set when entering a qw server?
 0 bug darkplaces loader: make rtlight entity loader support q3map/q3map2 lights properly, they use a spawnflag for LINEAR mode, by default they use 1/(x*x) falloff (Carni, motorsep)
+0 bug darkplaces physics: when riding a lift down (such as near the start of e1m1), the player is not being pulled down, unlike in quake, this can cause repeated fall damage on very fast lifts (scar3crow)
 0 bug darkplaces readme: commandline options are slightly out of date, update them (Baker)
 0 bug darkplaces readme: it would be a very good idea to add documentation of sv_gameplayfix_* cvars in the readme as a means to run broken mods (xaGe)
 0 bug darkplaces renderer: GL13 path has broken handling of unlit surfaces in Nexuiz toxic.bsp - the small red light surfaces are black in GL13 path (m0rfar)

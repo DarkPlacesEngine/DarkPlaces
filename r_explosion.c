@@ -171,7 +171,7 @@ void R_NewExplosion(const vec3_t org)
 				// clip start origin
 				if (e->clipping)
 				{
-					trace = CL_TraceBox(e->origin, vec3_origin, vec3_origin, e->vert[j], true, NULL, SUPERCONTENTS_SOLID, false);
+					trace = CL_Move(e->origin, vec3_origin, vec3_origin, e->vert[j], MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false);
 					VectorCopy(trace.endpos, e->vert[i]);
 				}
 			}
@@ -229,7 +229,7 @@ static void R_MoveExplosion(explosion_t *e)
 			VectorMA(e->vert[i], frametime, e->vertvel[i], end);
 			if (e->clipping)
 			{
-				trace = CL_TraceBox(e->vert[i], vec3_origin, vec3_origin, end, true, NULL, SUPERCONTENTS_SOLID, false);
+				trace = CL_Move(e->vert[i], vec3_origin, vec3_origin, end, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false);
 				if (trace.fraction < 1)
 				{
 					// clip velocity against the wall

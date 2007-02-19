@@ -14,57 +14,6 @@ char *vm_m_extensions =
 
 /*
 =========
-VM_M_precache_file
-
-string	precache_file(string)
-=========
-*/
-void VM_M_precache_file (void)
-{	// precache_file is only used to copy files with qcc, it does nothing
-	VM_SAFEPARMCOUNT(1,VM_precache_file);
-
-	PRVM_G_INT(OFS_RETURN) = PRVM_G_INT(OFS_PARM0);
-}
-
-/*
-=========
-VM_M_preache_error
-
-used instead of the other VM_precache_* functions in the builtin list
-=========
-*/
-
-void VM_M_precache_error (void)
-{
-	PRVM_ERROR ("PF_Precache_*: Precache can only be done in spawn functions");
-}
-
-/*
-=========
-VM_M_precache_sound
-
-string	precache_sound (string sample)
-=========
-*/
-void VM_M_precache_sound (void)
-{
-	const char	*s;
-
-	VM_SAFEPARMCOUNT(1, VM_precache_sound);
-
-	s = PRVM_G_STRING(OFS_PARM0);
-	PRVM_G_INT(OFS_RETURN) = PRVM_G_INT(OFS_PARM0);
-	VM_CheckEmptyString (s);
-
-	if(snd_initialized.integer && !S_PrecacheSound (s,true, true))
-	{
-		VM_Warning("VM_precache_sound: Failed to load %s for %s\n", s, PRVM_NAME);
-		return;
-	}
-}
-
-/*
-=========
 VM_M_setmousetarget
 
 setmousetarget(float target)
@@ -179,8 +128,7 @@ void VM_M_callfunction(void)
 	mfunction_t *func;
 	const char *s;
 
-	if(prog->argc == 0)
-		PRVM_ERROR("VM_M_callfunction: 1 parameter is required !");
+	VM_SAFEPARMCOUNTRANGE(1, 8, VM_M_callfunction);
 
 	s = PRVM_G_STRING(OFS_PARM0 + (prog->argc - 1));
 
@@ -233,37 +181,6 @@ void VM_M_isfunction(void)
 		PRVM_G_FLOAT(OFS_RETURN) = false;
 	else
 		PRVM_G_FLOAT(OFS_RETURN) = true;
-}
-
-/*
-=========
-VM_M_writetofile
-
-	writetofile(float fhandle, entity ent)
-=========
-*/
-void VM_M_writetofile(void)
-{
-	prvm_edict_t * ent;
-	qfile_t *file;
-
-	VM_SAFEPARMCOUNT(2, VM_M_writetofile);
-
-	file = VM_GetFileHandle( (int)PRVM_G_FLOAT(OFS_PARM0) );
-	if( !file )
-	{
-		VM_Warning("VM_M_writetofile: invalid or closed file handle\n");
-		return;
-	}
-
-	ent = PRVM_G_EDICT(OFS_PARM1);
-	if(ent->priv.required->free)
-	{
-		VM_Warning("VM_M_writetofile: %s: entity %i is free !\n", PRVM_NAME, PRVM_NUM_FOR_EDICT(ent));
-		return;
-	}
-
-	PRVM_ED_Write (file, ent);
 }
 
 /*
@@ -386,6 +303,7 @@ resetserverlistmasks()
 */
 void VM_M_resetserverlistmasks( void )
 {
+	VM_SAFEPARMCOUNT(0, VM_M_resetserverlistmasks);
 	ServerList_ResetMasks();
 }
 
@@ -511,6 +429,7 @@ resortserverlist
 */
 void VM_M_resortserverlist( void )
 {
+	VM_SAFEPARMCOUNT(0, VM_M_resortserverlist);
 	ServerList_RebuildViewList();
 }
 
@@ -690,7 +609,7 @@ void VM_M_addwantedserverlistkey( void )
 MESSAGE WRITING
 
 used only for client and menu
-severs uses VM_SV_...
+server uses VM_SV_...
 
 Write*(* data, float type, float to)
 
@@ -702,13 +621,13 @@ Write*(* data, float type, float to)
 #define	MSG_ALL			2		// reliable to all
 #define	MSG_INIT		3		// write to the init string
 
-sizebuf_t *VM_WriteDest (void)
+sizebuf_t *VM_M_WriteDest (void)
 {
 	int		dest;
 	int		destclient;
 
 	if(!sv.active)
-		PRVM_ERROR("VM_WriteDest: game is not server (%s)", PRVM_NAME);
+		PRVM_ERROR("VM_M_WriteDest: game is not server (%s)", PRVM_NAME);
 
 	dest = (int)PRVM_G_FLOAT(OFS_PARM1);
 	switch (dest)
@@ -739,42 +658,50 @@ sizebuf_t *VM_WriteDest (void)
 
 void VM_M_WriteByte (void)
 {
-	MSG_WriteByte (VM_WriteDest(), (int)PRVM_G_FLOAT(OFS_PARM0));
+	VM_SAFEPARMCOUNT(1, VM_M_WriteByte);
+	MSG_WriteByte (VM_M_WriteDest(), (int)PRVM_G_FLOAT(OFS_PARM0));
 }
 
 void VM_M_WriteChar (void)
 {
-	MSG_WriteChar (VM_WriteDest(), (int)PRVM_G_FLOAT(OFS_PARM0));
+	VM_SAFEPARMCOUNT(1, VM_M_WriteChar);
+	MSG_WriteChar (VM_M_WriteDest(), (int)PRVM_G_FLOAT(OFS_PARM0));
 }
 
 void VM_M_WriteShort (void)
 {
-	MSG_WriteShort (VM_WriteDest(), (int)PRVM_G_FLOAT(OFS_PARM0));
+	VM_SAFEPARMCOUNT(1, VM_M_WriteShort);
+	MSG_WriteShort (VM_M_WriteDest(), (int)PRVM_G_FLOAT(OFS_PARM0));
 }
 
 void VM_M_WriteLong (void)
 {
-	MSG_WriteLong (VM_WriteDest(), (int)PRVM_G_FLOAT(OFS_PARM0));
+	VM_SAFEPARMCOUNT(1, VM_M_WriteLong);
+	MSG_WriteLong (VM_M_WriteDest(), (int)PRVM_G_FLOAT(OFS_PARM0));
 }
 
 void VM_M_WriteAngle (void)
 {
-	MSG_WriteAngle (VM_WriteDest(), PRVM_G_FLOAT(OFS_PARM0), sv.protocol);
+	VM_SAFEPARMCOUNT(1, VM_M_WriteAngle);
+	MSG_WriteAngle (VM_M_WriteDest(), PRVM_G_FLOAT(OFS_PARM0), sv.protocol);
 }
 
 void VM_M_WriteCoord (void)
 {
-	MSG_WriteCoord (VM_WriteDest(), PRVM_G_FLOAT(OFS_PARM0), sv.protocol);
+	VM_SAFEPARMCOUNT(1, VM_M_WriteCoord);
+	MSG_WriteCoord (VM_M_WriteDest(), PRVM_G_FLOAT(OFS_PARM0), sv.protocol);
 }
 
 void VM_M_WriteString (void)
 {
-	MSG_WriteString (VM_WriteDest(), PRVM_G_STRING(OFS_PARM0));
+	VM_SAFEPARMCOUNT(1, VM_M_WriteString);
+	MSG_WriteString (VM_M_WriteDest(), PRVM_G_STRING(OFS_PARM0));
 }
 
 void VM_M_WriteEntity (void)
 {
-	MSG_WriteShort (VM_WriteDest(), PRVM_G_EDICTNUM(OFS_PARM0));
+	VM_SAFEPARMCOUNT(1, VM_M_WriteEntity);
+	MSG_WriteShort (VM_M_WriteDest(), PRVM_G_EDICTNUM(OFS_PARM0));
 }
 
 //string(void) getextresponse = #624; // returns the next extResponse packet that was sent to this client
@@ -793,174 +720,650 @@ void VM_M_getextresponse (void)
 	}
 }
 
+/*
+=================
+VM_M_copyentity
+
+copies data from one entity to another
+
+copyentity(entity src, entity dst)
+=================
+*/
+static void VM_M_copyentity (void)
+{
+	prvm_edict_t *in, *out;
+	VM_SAFEPARMCOUNT(2,VM_M_copyentity);
+	in = PRVM_G_EDICT(OFS_PARM0);
+	out = PRVM_G_EDICT(OFS_PARM1);
+	memcpy(out->fields.vp, in->fields.vp, prog->progs->entityfields * 4);
+}
+
 prvm_builtin_t vm_m_builtins[] = {
-	0, // to be consistent with the old vm
-	// common builtings (mostly)
-	VM_checkextension,
-	VM_error,
-	VM_objerror,
-	VM_print,
-	VM_bprint,
-	VM_sprint,
-	VM_centerprint,
-	VM_normalize,
-	VM_vlen,
-	VM_vectoyaw,	// #10
-	VM_vectoangles,
-	VM_random,
-	VM_localcmd,
-	VM_cvar,
-	VM_cvar_set,
-	VM_dprint,
-	VM_ftos,
-	VM_fabs,
-	VM_vtos,
-	VM_etos,		// 20
-	VM_stof,
-	VM_spawn,
-	VM_remove,
-	VM_find,
-	VM_findfloat,
-	VM_findchain,
-	VM_findchainfloat,
-	VM_M_precache_file,
-	VM_M_precache_sound,
-	VM_coredump,	// 30
-	VM_traceon,
-	VM_traceoff,
-	VM_eprint,
-	VM_rint,
-	VM_floor,
-	VM_ceil,
-	VM_nextent,
-	VM_sin,
-	VM_cos,
-	VM_sqrt,		// 40
-	VM_randomvec,
-	VM_registercvar,
-	VM_min,
-	VM_max,
-	VM_bound,
-	VM_pow,
-	VM_copyentity,
-	VM_fopen,
-	VM_fclose,
-	VM_fgets,		// 50
-	VM_fputs,
-	VM_strlen,
-	VM_strcat,
-	VM_substring,
-	VM_stov,
-	VM_strzone,
-	VM_strunzone,
-	VM_tokenize,
-	VM_argv,
-	VM_isserver,	// 60
-	VM_clientcount,
-	VM_clientstate,
-	VM_clcommand,
-	VM_changelevel,
-	VM_localsound,
-	VM_getmousepos,
-	VM_gettime,
-	VM_loadfromdata,
-	VM_loadfromfile,
-	VM_modulo,		// 70
-	VM_cvar_string,
-	VM_crash,
-	VM_stackdump,	// 73
-	VM_search_begin,
-	VM_search_end,
-	VM_search_getsize,
-	VM_search_getfilename, // 77
-	VM_chr,
-	VM_itof,
-	VM_ftoe,		// 80
-	VM_itof,		// isString
-	VM_altstr_count,
-	VM_altstr_prepare,
-	VM_altstr_get,
-	VM_altstr_set,
-	VM_altstr_ins,
-	VM_findflags,
-	VM_findchainflags,
-	VM_cvar_defstring, // 89
-	0, // 90
-	e10,			// 100
-	e100,			// 200
-	e100,			// 300
-	e100,			// 400
-	// msg functions
-	VM_M_WriteByte,
-	VM_M_WriteChar,
-	VM_M_WriteShort,
-	VM_M_WriteLong,
-	VM_M_WriteAngle,
-	VM_M_WriteCoord,
-	VM_M_WriteString,
-	VM_M_WriteEntity,	// 408
-	0,
-	0,				// 410
-	e10,			// 420
-	e10,			// 430
-	e10,			// 440
-	e10,			// 450
-	// draw functions
-	VM_iscachedpic,
-	VM_precache_pic,
-	VM_freepic,
-	VM_drawcharacter,
-	VM_drawstring,
-	VM_drawpic,
-	VM_drawfill,
-	VM_drawsetcliparea,
-	VM_drawresetcliparea,
-	VM_getimagesize,// 460
-	VM_cin_open,
-	VM_cin_close,
-	VM_cin_setstate,
-	VM_cin_getstate,
-	VM_cin_restart, // 465
-	VM_drawline,	// 466
-	0,0,0,0,	// 470
-	VM_asin,					// #471 float(float s) VM_asin (DP_QC_ASINACOSATANATAN2TAN)
-	VM_acos,					// #472 float(float c) VM_acos (DP_QC_ASINACOSATANATAN2TAN)
-	VM_atan,					// #473 float(float t) VM_atan (DP_QC_ASINACOSATANATAN2TAN)
-	VM_atan2,					// #474 float(float c, float s) VM_atan2 (DP_QC_ASINACOSATANATAN2TAN)
-	VM_tan,						// #475 float(float a) VM_tan (DP_QC_ASINACOSATANATAN2TAN)
-	VM_strlennocol,				// #476 float(string s) : DRESK - String Length (not counting color codes) (DP_QC_STRINGCOLORFUNCTIONS)
-	VM_strdecolorize,			// #477 string(string s) : DRESK - Decolorized String (DP_QC_STRINGCOLORFUNCTIONS)
-	VM_strftime,				// #478 string(float uselocaltime, string format, ...) (DP_QC_STRFTIME)
-	0,				// 479
-	0,				// 480
-	e10,			// 490
-	e10,			// 500
-	e100,			// 600
-	// menu functions
-	VM_M_setkeydest,
-	VM_M_getkeydest,
-	VM_M_setmousetarget,
-	VM_M_getmousetarget,
-	VM_M_callfunction,
-	VM_M_writetofile,
-	VM_M_isfunction,
-	VM_M_getresolution,
-	VM_keynumtostring,
-	VM_M_findkeysforcommand,// 610
-	VM_M_getserverliststat,
-	VM_M_getserverliststring,
-	VM_parseentitydata,
-	VM_stringtokeynum,
-	VM_M_resetserverlistmasks,
-	VM_M_setserverlistmaskstring,
-	VM_M_setserverlistmasknumber,
-	VM_M_resortserverlist,
-	VM_M_setserverlistsort,
-	VM_M_refreshserverlist,
-	VM_M_getserverlistnumber,
-	VM_M_getserverlistindexforkey,
-	VM_M_addwantedserverlistkey, // 623
-	VM_M_getextresponse
+NULL,						//   #0 NULL function (not callable)
+VM_checkextension,			//   #1
+VM_error,					//   #2
+VM_objerror,				//   #3
+VM_print,					//   #4
+VM_bprint,					//   #5
+VM_sprint,					//   #6
+VM_centerprint,				//   #7
+VM_normalize,				//   #8
+VM_vlen,					//   #9
+VM_vectoyaw,				//  #10
+VM_vectoangles,				//  #11
+VM_random,					//  #12
+VM_localcmd,				//  #13
+VM_cvar,					//  #14
+VM_cvar_set,				//  #15
+VM_dprint,					//  #16
+VM_ftos,					//  #17
+VM_fabs,					//  #18
+VM_vtos,					//  #19
+VM_etos,					//  #20
+VM_stof,					//  #21
+VM_spawn,					//  #22
+VM_remove,					//  #23
+VM_find,					//  #24
+VM_findfloat,				//  #25
+VM_findchain,				//  #26
+VM_findchainfloat,			//  #27
+VM_precache_file,			//  #28
+VM_precache_sound,			//  #29
+VM_coredump,				//  #30
+VM_traceon,					//  #31
+VM_traceoff,				//  #32
+VM_eprint,					//  #33
+VM_rint,					//  #34
+VM_floor,					//  #35
+VM_ceil,					//  #36
+VM_nextent,					//  #37
+VM_sin,						//  #38
+VM_cos,						//  #39
+VM_sqrt,					//  #40
+VM_randomvec,				//  #41
+VM_registercvar,			//  #42
+VM_min,						//  #43
+VM_max,						//  #44
+VM_bound,					//  #45
+VM_pow,						//  #46
+VM_M_copyentity,			//  #47
+VM_fopen,					//  #48
+VM_fclose,					//  #49
+VM_fgets,					//  #50
+VM_fputs,					//  #51
+VM_strlen,					//  #52
+VM_strcat,					//  #53
+VM_substring,				//  #54
+VM_stov,					//  #55
+VM_strzone,					//  #56
+VM_strunzone,				//  #57
+VM_tokenize,				//  #58
+VM_argv,					//  #59
+VM_isserver,				//  #60
+VM_clientcount,				//  #61
+VM_clientstate,				//  #62
+VM_clcommand,				//  #63
+VM_changelevel,				//  #64
+VM_localsound,				//  #65
+VM_getmousepos,				//  #66
+VM_gettime,					//  #67
+VM_loadfromdata,			//  #68
+VM_loadfromfile,			//  #69
+VM_modulo,					//  #70
+VM_cvar_string,				//  #71
+VM_crash,					//  #72
+VM_stackdump,				//  #73
+VM_search_begin,			//  #74
+VM_search_end,				//  #75
+VM_search_getsize,			//  #76
+VM_search_getfilename,		//  #77
+VM_chr,						//  #78
+VM_itof,					//  #79
+VM_ftoe,					//  #80
+VM_itof,					//  #81 isString
+VM_altstr_count,			//  #82
+VM_altstr_prepare,			//  #83
+VM_altstr_get,				//  #84
+VM_altstr_set,				//  #85
+VM_altstr_ins,				//  #86
+VM_findflags,				//  #87
+VM_findchainflags,			//  #88
+VM_cvar_defstring,			//  #89
+NULL,						//  #90
+NULL,						//  #91
+NULL,						//  #92
+NULL,						//  #93
+NULL,						//  #94
+NULL,						//  #95
+NULL,						//  #96
+NULL,						//  #97
+NULL,						//  #98
+NULL,						//  #99
+NULL,						// #100
+NULL,						// #101
+NULL,						// #102
+NULL,						// #103
+NULL,						// #104
+NULL,						// #105
+NULL,						// #106
+NULL,						// #107
+NULL,						// #108
+NULL,						// #109
+NULL,						// #110
+NULL,						// #111
+NULL,						// #112
+NULL,						// #113
+NULL,						// #114
+NULL,						// #115
+NULL,						// #116
+NULL,						// #117
+NULL,						// #118
+NULL,						// #119
+NULL,						// #120
+NULL,						// #121
+NULL,						// #122
+NULL,						// #123
+NULL,						// #124
+NULL,						// #125
+NULL,						// #126
+NULL,						// #127
+NULL,						// #128
+NULL,						// #129
+NULL,						// #130
+NULL,						// #131
+NULL,						// #132
+NULL,						// #133
+NULL,						// #134
+NULL,						// #135
+NULL,						// #136
+NULL,						// #137
+NULL,						// #138
+NULL,						// #139
+NULL,						// #140
+NULL,						// #141
+NULL,						// #142
+NULL,						// #143
+NULL,						// #144
+NULL,						// #145
+NULL,						// #146
+NULL,						// #147
+NULL,						// #148
+NULL,						// #149
+NULL,						// #150
+NULL,						// #151
+NULL,						// #152
+NULL,						// #153
+NULL,						// #154
+NULL,						// #155
+NULL,						// #156
+NULL,						// #157
+NULL,						// #158
+NULL,						// #159
+NULL,						// #160
+NULL,						// #161
+NULL,						// #162
+NULL,						// #163
+NULL,						// #164
+NULL,						// #165
+NULL,						// #166
+NULL,						// #167
+NULL,						// #168
+NULL,						// #169
+NULL,						// #170
+NULL,						// #171
+NULL,						// #172
+NULL,						// #173
+NULL,						// #174
+NULL,						// #175
+NULL,						// #176
+NULL,						// #177
+NULL,						// #178
+NULL,						// #179
+NULL,						// #180
+NULL,						// #181
+NULL,						// #182
+NULL,						// #183
+NULL,						// #184
+NULL,						// #185
+NULL,						// #186
+NULL,						// #187
+NULL,						// #188
+NULL,						// #189
+NULL,						// #190
+NULL,						// #191
+NULL,						// #192
+NULL,						// #193
+NULL,						// #194
+NULL,						// #195
+NULL,						// #196
+NULL,						// #197
+NULL,						// #198
+NULL,						// #199
+NULL,						// #200
+NULL,						// #201
+NULL,						// #202
+NULL,						// #203
+NULL,						// #204
+NULL,						// #205
+NULL,						// #206
+NULL,						// #207
+NULL,						// #208
+NULL,						// #209
+NULL,						// #210
+NULL,						// #211
+NULL,						// #212
+NULL,						// #213
+NULL,						// #214
+NULL,						// #215
+NULL,						// #216
+NULL,						// #217
+NULL,						// #218
+NULL,						// #219
+NULL,						// #220
+NULL,						// #221
+NULL,						// #222
+NULL,						// #223
+NULL,						// #224
+NULL,						// #225
+NULL,						// #226
+NULL,						// #227
+NULL,						// #228
+NULL,						// #229
+NULL,						// #230
+NULL,						// #231
+NULL,						// #232
+NULL,						// #233
+NULL,						// #234
+NULL,						// #235
+NULL,						// #236
+NULL,						// #237
+NULL,						// #238
+NULL,						// #239
+NULL,						// #240
+NULL,						// #241
+NULL,						// #242
+NULL,						// #243
+NULL,						// #244
+NULL,						// #245
+NULL,						// #246
+NULL,						// #247
+NULL,						// #248
+NULL,						// #249
+NULL,						// #250
+NULL,						// #251
+NULL,						// #252
+NULL,						// #253
+NULL,						// #254
+NULL,						// #255
+NULL,						// #256
+NULL,						// #257
+NULL,						// #258
+NULL,						// #259
+NULL,						// #260
+NULL,						// #261
+NULL,						// #262
+NULL,						// #263
+NULL,						// #264
+NULL,						// #265
+NULL,						// #266
+NULL,						// #267
+NULL,						// #268
+NULL,						// #269
+NULL,						// #270
+NULL,						// #271
+NULL,						// #272
+NULL,						// #273
+NULL,						// #274
+NULL,						// #275
+NULL,						// #276
+NULL,						// #277
+NULL,						// #278
+NULL,						// #279
+NULL,						// #280
+NULL,						// #281
+NULL,						// #282
+NULL,						// #283
+NULL,						// #284
+NULL,						// #285
+NULL,						// #286
+NULL,						// #287
+NULL,						// #288
+NULL,						// #289
+NULL,						// #290
+NULL,						// #291
+NULL,						// #292
+NULL,						// #293
+NULL,						// #294
+NULL,						// #295
+NULL,						// #296
+NULL,						// #297
+NULL,						// #298
+NULL,						// #299
+NULL,						// #300
+NULL,						// #301
+NULL,						// #302
+NULL,						// #303
+NULL,						// #304
+NULL,						// #305
+NULL,						// #306
+NULL,						// #307
+NULL,						// #308
+NULL,						// #309
+NULL,						// #310
+NULL,						// #311
+NULL,						// #312
+NULL,						// #313
+NULL,						// #314
+NULL,						// #315
+NULL,						// #316
+NULL,						// #317
+NULL,						// #318
+NULL,						// #319
+NULL,						// #320
+NULL,						// #321
+NULL,						// #322
+NULL,						// #323
+NULL,						// #324
+NULL,						// #325
+NULL,						// #326
+NULL,						// #327
+NULL,						// #328
+NULL,						// #329
+NULL,						// #330
+NULL,						// #331
+NULL,						// #332
+NULL,						// #333
+NULL,						// #334
+NULL,						// #335
+NULL,						// #336
+NULL,						// #337
+NULL,						// #338
+NULL,						// #339
+NULL,						// #340
+NULL,						// #341
+NULL,						// #342
+NULL,						// #343
+NULL,						// #344
+NULL,						// #345
+NULL,						// #346
+NULL,						// #347
+NULL,						// #348
+NULL,						// #349
+NULL,						// #350
+NULL,						// #351
+NULL,						// #352
+NULL,						// #353
+NULL,						// #354
+NULL,						// #355
+NULL,						// #356
+NULL,						// #357
+NULL,						// #358
+NULL,						// #359
+NULL,						// #360
+NULL,						// #361
+NULL,						// #362
+NULL,						// #363
+NULL,						// #364
+NULL,						// #365
+NULL,						// #366
+NULL,						// #367
+NULL,						// #368
+NULL,						// #369
+NULL,						// #370
+NULL,						// #371
+NULL,						// #372
+NULL,						// #373
+NULL,						// #374
+NULL,						// #375
+NULL,						// #376
+NULL,						// #377
+NULL,						// #378
+NULL,						// #379
+NULL,						// #380
+NULL,						// #381
+NULL,						// #382
+NULL,						// #383
+NULL,						// #384
+NULL,						// #385
+NULL,						// #386
+NULL,						// #387
+NULL,						// #388
+NULL,						// #389
+NULL,						// #390
+NULL,						// #391
+NULL,						// #392
+NULL,						// #393
+NULL,						// #394
+NULL,						// #395
+NULL,						// #396
+NULL,						// #397
+NULL,						// #398
+NULL,						// #399
+NULL,						// #400
+VM_M_WriteByte,				// #401
+VM_M_WriteChar,				// #402
+VM_M_WriteShort,			// #403
+VM_M_WriteLong,				// #404
+VM_M_WriteAngle,			// #405
+VM_M_WriteCoord,			// #406
+VM_M_WriteString,			// #407
+VM_M_WriteEntity,			// #408
+NULL,						// #409
+NULL,						// #410
+NULL,						// #411
+NULL,						// #412
+NULL,						// #413
+NULL,						// #414
+NULL,						// #415
+NULL,						// #416
+NULL,						// #417
+NULL,						// #418
+NULL,						// #419
+NULL,						// #420
+NULL,						// #421
+NULL,						// #422
+NULL,						// #423
+NULL,						// #424
+NULL,						// #425
+NULL,						// #426
+NULL,						// #427
+NULL,						// #428
+NULL,						// #429
+NULL,						// #430
+NULL,						// #431
+NULL,						// #432
+NULL,						// #433
+NULL,						// #434
+NULL,						// #435
+NULL,						// #436
+NULL,						// #437
+NULL,						// #438
+NULL,						// #439
+NULL,						// #440
+NULL,						// #441
+NULL,						// #442
+NULL,						// #443
+NULL,						// #444
+NULL,						// #445
+NULL,						// #446
+NULL,						// #447
+NULL,						// #448
+NULL,						// #449
+NULL,						// #450
+VM_iscachedpic,				// #451 draw functions...
+VM_precache_pic,			// #452
+VM_freepic,					// #453
+VM_drawcharacter,			// #454
+VM_drawstring,				// #455
+VM_drawpic,					// #456
+VM_drawfill,				// #457
+VM_drawsetcliparea,			// #458
+VM_drawresetcliparea,		// #459
+VM_getimagesize,			// #460
+VM_cin_open,				// #461
+VM_cin_close,				// #462
+VM_cin_setstate,			// #463
+VM_cin_getstate,			// #464
+VM_cin_restart, 			// #465
+VM_drawline,				// #466
+NULL,						// #467
+NULL,						// #468
+NULL,						// #469
+NULL,						// #470
+VM_asin,					// #471 float(float s) VM_asin (DP_QC_ASINACOSATANATAN2TAN)
+VM_acos,					// #472 float(float c) VM_acos (DP_QC_ASINACOSATANATAN2TAN)
+VM_atan,					// #473 float(float t) VM_atan (DP_QC_ASINACOSATANATAN2TAN)
+VM_atan2,					// #474 float(float c, float s) VM_atan2 (DP_QC_ASINACOSATANATAN2TAN)
+VM_tan,						// #475 float(float a) VM_tan (DP_QC_ASINACOSATANATAN2TAN)
+VM_strlennocol,				// #476 float(string s) : DRESK - String Length (not counting color codes) (DP_QC_STRINGCOLORFUNCTIONS)
+VM_strdecolorize,			// #477 string(string s) : DRESK - Decolorized String (DP_QC_STRINGCOLORFUNCTIONS)
+VM_strftime,				// #478 string(float uselocaltime, string format, ...) (DP_QC_STRFTIME)
+NULL,						// #479
+NULL,						// #480
+NULL,						// #481
+NULL,						// #482
+NULL,						// #483
+NULL,						// #484
+NULL,						// #485
+NULL,						// #486
+NULL,						// #487
+NULL,						// #488
+NULL,						// #489
+NULL,						// #490
+NULL,						// #491
+NULL,						// #492
+NULL,						// #493
+NULL,						// #494
+NULL,						// #495
+NULL,						// #496
+NULL,						// #497
+NULL,						// #498
+NULL,						// #499
+NULL,						// #500
+NULL,						// #501
+NULL,						// #502
+NULL,						// #503
+NULL,						// #504
+NULL,						// #505
+NULL,						// #506
+NULL,						// #507
+NULL,						// #508
+NULL,						// #509
+NULL,						// #510
+NULL,						// #511
+NULL,						// #512
+NULL,						// #513
+NULL,						// #514
+NULL,						// #515
+NULL,						// #516
+NULL,						// #517
+NULL,						// #518
+NULL,						// #519
+NULL,						// #520
+NULL,						// #521
+NULL,						// #522
+NULL,						// #523
+NULL,						// #524
+NULL,						// #525
+NULL,						// #526
+NULL,						// #527
+NULL,						// #528
+NULL,						// #529
+NULL,						// #530
+NULL,						// #531
+NULL,						// #532
+NULL,						// #533
+NULL,						// #534
+NULL,						// #535
+NULL,						// #536
+NULL,						// #537
+NULL,						// #538
+NULL,						// #539
+NULL,						// #540
+NULL,						// #541
+NULL,						// #542
+NULL,						// #543
+NULL,						// #544
+NULL,						// #545
+NULL,						// #546
+NULL,						// #547
+NULL,						// #548
+NULL,						// #549
+NULL,						// #550
+NULL,						// #551
+NULL,						// #552
+NULL,						// #553
+NULL,						// #554
+NULL,						// #555
+NULL,						// #556
+NULL,						// #557
+NULL,						// #558
+NULL,						// #559
+NULL,						// #560
+NULL,						// #561
+NULL,						// #562
+NULL,						// #563
+NULL,						// #564
+NULL,						// #565
+NULL,						// #566
+NULL,						// #567
+NULL,						// #568
+NULL,						// #569
+NULL,						// #570
+NULL,						// #571
+NULL,						// #572
+NULL,						// #573
+NULL,						// #574
+NULL,						// #575
+NULL,						// #576
+NULL,						// #577
+NULL,						// #578
+NULL,						// #579
+NULL,						// #580
+NULL,						// #581
+NULL,						// #582
+NULL,						// #583
+NULL,						// #584
+NULL,						// #585
+NULL,						// #586
+NULL,						// #587
+NULL,						// #588
+NULL,						// #589
+NULL,						// #590
+NULL,						// #591
+NULL,						// #592
+NULL,						// #593
+NULL,						// #594
+NULL,						// #595
+NULL,						// #596
+NULL,						// #597
+NULL,						// #598
+NULL,						// #599
+NULL,						// #600
+VM_M_setkeydest,			// #601 menu functions...
+VM_M_getkeydest,			// #602
+VM_M_setmousetarget,		// #603
+VM_M_getmousetarget,		// #604
+VM_M_callfunction,			// #605
+VM_writetofile,				// #606
+VM_M_isfunction,			// #607
+VM_M_getresolution,			// #608
+VM_keynumtostring,			// #609
+VM_M_findkeysforcommand,	// #610
+VM_M_getserverliststat,		// #611
+VM_M_getserverliststring,	// #612
+VM_parseentitydata,			// #613
+VM_stringtokeynum,			// #614
+VM_M_resetserverlistmasks,	// #615
+VM_M_setserverlistmaskstring,// #616
+VM_M_setserverlistmasknumber,// #617
+VM_M_resortserverlist,		// #618
+VM_M_setserverlistsort,		// #619
+VM_M_refreshserverlist,		// #620
+VM_M_getserverlistnumber,	// #621
+VM_M_getserverlistindexforkey,// #622
+VM_M_addwantedserverlistkey,// #623
+VM_M_getextresponse			// #624
 };
 
 const int vm_m_numbuiltins = sizeof(vm_m_builtins) / sizeof(prvm_builtin_t);

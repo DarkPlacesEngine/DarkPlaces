@@ -85,111 +85,28 @@ LINE TESTING IN HULLS
 ===============================================================================
 */
 
-/*
-==================
-SV_Move_ClipToEntity
-
-Handles selection or creation of a clipping hull, and offseting (and
-eventually rotation) of the end points
-==================
-*/
-trace_t SV_Move_ClipToEntity(prvm_edict_t *ent, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int movetype, int hitsupercontents)
+int SV_GenericHitSuperContentsMask(const prvm_edict_t *passedict)
 {
-	trace_t trace;
-	model_t *model = NULL;
-	matrix4x4_t matrix, imatrix;
-	float tempnormal[3], starttransformed[3], endtransformed[3];
-
-	memset(&trace, 0, sizeof(trace));
-	trace.fraction = trace.realfraction = 1;
-	VectorCopy(end, trace.endpos);
-
-	if ((int) ent->fields.server->solid == SOLID_BSP || movetype == MOVE_HITMODEL)
+	prvm_eval_t *val;
+	if (passedict)
 	{
-		unsigned int modelindex = (unsigned int)ent->fields.server->modelindex;
-		// if the modelindex is 0, it shouldn't be SOLID_BSP!
-		if (modelindex == 0)
+		val = PRVM_EDICTFIELDVALUE(passedict, prog->fieldoffsets.dphitcontentsmask);
+		if (val && val->_float)
+			return (int)val->_float;
+		else if (passedict->fields.server->solid == SOLID_SLIDEBOX)
 		{
-			Con_Printf("SV_Move_ClipToEntity: edict %i: SOLID_BSP with no model\n", PRVM_NUM_FOR_EDICT(ent));
-			return trace;
+			if ((int)passedict->fields.server->flags & FL_MONSTER)
+				return SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_MONSTERCLIP;
+			else
+				return SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP;
 		}
-		if (modelindex >= MAX_MODELS)
-		{
-			Con_Printf("SV_Move_ClipToEntity: edict %i: SOLID_BSP with invalid modelindex\n", PRVM_NUM_FOR_EDICT(ent));
-			return trace;
-		}
-		model = sv.models[modelindex];
-		if (modelindex != 0 && model == NULL)
-		{
-			Con_Printf("SV_Move_ClipToEntity: edict %i: SOLID_BSP with invalid modelindex\n", PRVM_NUM_FOR_EDICT(ent));
-			return trace;
-		}
-
-		if ((int) ent->fields.server->solid == SOLID_BSP)
-		{
-			if (!model->TraceBox)
-			{
-				Con_Printf("SV_Move_ClipToEntity: edict %i: SOLID_BSP with a non-collidable model\n", PRVM_NUM_FOR_EDICT(ent));
-				return trace;
-			}
-			//if ((int) ent->fields.server->movetype != MOVETYPE_PUSH)
-			//{
-			//	Con_Printf("SV_Move_ClipToEntity: edict %i: SOLID_BSP without MOVETYPE_PUSH\n", PRVM_NUM_FOR_EDICT(ent));
-			//	return trace;
-			//}
-		}
-		Matrix4x4_CreateFromQuakeEntity(&matrix, ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2], ent->fields.server->angles[0], ent->fields.server->angles[1], ent->fields.server->angles[2], 1);
+		else if (passedict->fields.server->solid == SOLID_CORPSE)
+			return SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY;
+		else
+			return SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_CORPSE;
 	}
 	else
-		Matrix4x4_CreateTranslate(&matrix, ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2]);
-
-	Matrix4x4_Invert_Simple(&imatrix, &matrix);
-	Matrix4x4_Transform(&imatrix, start, starttransformed);
-	Matrix4x4_Transform(&imatrix, end, endtransformed);
-#if COLLISIONPARANOID >= 3
-	Con_Printf("trans(%f %f %f -> %f %f %f, %f %f %f -> %f %f %f)", start[0], start[1], start[2], starttransformed[0], starttransformed[1], starttransformed[2], end[0], end[1], end[2], endtransformed[0], endtransformed[1], endtransformed[2]);
-#endif
-
-	if (model && model->TraceBox)
-	{
-		int frame;
-		frame = (int)ent->fields.server->frame;
-		frame = bound(0, frame, (model->numframes - 1));
-		model->TraceBox(model, frame, &trace, starttransformed, mins, maxs, endtransformed, hitsupercontents);
-	}
-	else
-		Collision_ClipTrace_Box(&trace, ent->fields.server->mins, ent->fields.server->maxs, starttransformed, mins, maxs, endtransformed, hitsupercontents, ent->fields.server->solid == SOLID_CORPSE ? SUPERCONTENTS_CORPSE : SUPERCONTENTS_BODY, 0, NULL);
-	trace.fraction = bound(0, trace.fraction, 1);
-	trace.realfraction = bound(0, trace.realfraction, 1);
-
-	if (trace.fraction < 1)
-	{
-		VectorLerp(start, trace.fraction, end, trace.endpos);
-		VectorCopy(trace.plane.normal, tempnormal);
-		Matrix4x4_Transform3x3(&matrix, tempnormal, trace.plane.normal);
-		// FIXME: should recalc trace.plane.dist
-	}
-	else
-		VectorCopy(end, trace.endpos);
-
-	return trace;
-}
-
-/*
-==================
-SV_Move_ClipToWorld
-==================
-*/
-trace_t SV_Move_ClipToWorld(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int movetype, int hitsupercontents)
-{
-	trace_t trace;
-	memset(&trace, 0, sizeof(trace));
-	trace.fraction = trace.realfraction = 1;
-	sv.worldmodel->TraceBox(sv.worldmodel, 0, &trace, start, mins, maxs, end, hitsupercontents);
-	trace.fraction = bound(0, trace.fraction, 1);
-	trace.realfraction = bound(0, trace.realfraction, 1);
-	VectorLerp(start, trace.fraction, end, trace.endpos);
-	return trace;
+		return SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_CORPSE;
 }
 
 /*
@@ -198,18 +115,16 @@ SV_Move
 ==================
 */
 #if COLLISIONPARANOID >= 1
-trace_t SV_Move_(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, prvm_edict_t *passedict)
+trace_t SV_Move_(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, prvm_edict_t *passedict, int hitsupercontentsmask)
 #else
-trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, prvm_edict_t *passedict)
+trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, prvm_edict_t *passedict, int hitsupercontentsmask)
 #endif
 {
 	vec3_t hullmins, hullmaxs;
 	int i;
-	int hitsupercontentsmask;
 	int passedictprog;
 	qboolean pointtrace;
 	prvm_edict_t *traceowner, *touch;
-	prvm_eval_t *val;
 	trace_t trace;
 	// bounding box of entire move area
 	vec3_t clipboxmins, clipboxmaxs;
@@ -221,6 +136,11 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	vec3_t clipstart, clipend;
 	// trace results
 	trace_t cliptrace;
+	// matrices to transform into/out of other entity's space
+	matrix4x4_t matrix, imatrix;
+	// model of other entity
+	model_t *model;
+	// list of entities to test for collisions
 	int numtouchedicts;
 	prvm_edict_t *touchedicts[MAX_EDICTS];
 
@@ -234,28 +154,8 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	Con_Printf("move(%f %f %f,%f %f %f)", clipstart[0], clipstart[1], clipstart[2], clipend[0], clipend[1], clipend[2]);
 #endif
 
-	if (passedict)
-	{
-		val = PRVM_EDICTFIELDVALUE(passedict, prog->fieldoffsets.dphitcontentsmask);
-		if (val && val->_float)
-			hitsupercontentsmask = (int)val->_float;
-		else if (passedict->fields.server->solid == SOLID_SLIDEBOX)
-		{
-			if ((int)passedict->fields.server->flags & FL_MONSTER)
-				hitsupercontentsmask = SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_MONSTERCLIP;
-			else
-				hitsupercontentsmask = SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP;
-		}
-		else if (passedict->fields.server->solid == SOLID_CORPSE)
-			hitsupercontentsmask = SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY;
-		else
-			hitsupercontentsmask = SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_CORPSE;
-	}
-	else
-		hitsupercontentsmask = SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_CORPSE;
-
 	// clip to world
-	cliptrace = SV_Move_ClipToWorld(clipstart, clipmins, clipmaxs, clipend, type, hitsupercontentsmask);
+	Collision_ClipToWorld(&cliptrace, sv.worldmodel, clipstart, clipmins, clipmaxs, clipend, hitsupercontentsmask);
 	cliptrace.bmodelstartsolid = cliptrace.startsolid;
 	if (cliptrace.startsolid || cliptrace.fraction < 1)
 		cliptrace.ent = prog->edicts;
@@ -306,6 +206,8 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	traceowner = passedict ? PRVM_PROG_TO_EDICT(passedict->fields.server->owner) : 0;
 
 	// clip to entities
+	// because this uses World_EntitiestoBox, we know all entity boxes overlap
+	// the clip region, so we can skip culling checks in the loop below
 	numtouchedicts = World_EntitiesInBox(&sv.world, clipboxmins, clipboxmaxs, MAX_EDICTS, touchedicts);
 	if (numtouchedicts > MAX_EDICTS)
 	{
@@ -339,56 +241,39 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 		}
 
 		// might interact, so do an exact clip
-		if ((int)touch->fields.server->flags & FL_MONSTER)
-			trace = SV_Move_ClipToEntity(touch, clipstart, clipmins2, clipmaxs2, clipend, type, hitsupercontentsmask);
+		model = NULL;
+		if ((int) touch->fields.server->solid == SOLID_BSP || type == MOVE_HITMODEL)
+		{
+			unsigned int modelindex = (unsigned int)touch->fields.server->modelindex;
+			// if the modelindex is 0, it shouldn't be SOLID_BSP!
+			if (modelindex > 0 && modelindex < MAX_MODELS)
+				model = sv.models[(int)touch->fields.server->modelindex];
+			Matrix4x4_CreateFromQuakeEntity(&matrix, touch->fields.server->origin[0], touch->fields.server->origin[1], touch->fields.server->origin[2], touch->fields.server->angles[0], touch->fields.server->angles[1], touch->fields.server->angles[2], 1);
+		}
 		else
-			trace = SV_Move_ClipToEntity(touch, clipstart, clipmins, clipmaxs, clipend, type, hitsupercontentsmask);
-		// LordHavoc: take the 'best' answers from the new trace and combine with existing data
-		if (trace.allsolid)
-			cliptrace.allsolid = true;
-		if (trace.startsolid)
-		{
-			if (touch->fields.server->solid == SOLID_BSP)
-				cliptrace.bmodelstartsolid = true;
-			cliptrace.startsolid = true;
-			if (cliptrace.realfraction == 1)
-				cliptrace.ent = touch;
-		}
-		// don't set this except on the world, because it can easily confuse
-		// monsters underwater if there's a bmodel involved in the trace
-		// (inopen && inwater is how they check water visibility)
-		//if (trace.inopen)
-		//	cliptrace.inopen = true;
-		if (trace.inwater)
-			cliptrace.inwater = true;
-		if (trace.realfraction < cliptrace.realfraction)
-		{
-			cliptrace.fraction = trace.fraction;
-			cliptrace.realfraction = trace.realfraction;
-			VectorCopy(trace.endpos, cliptrace.endpos);
-			cliptrace.plane = trace.plane;
-			cliptrace.ent = touch;
-			cliptrace.hitsupercontents = trace.hitsupercontents;
-			cliptrace.hitq3surfaceflags = trace.hitq3surfaceflags;
-			cliptrace.hittexture = trace.hittexture;
-		}
-		cliptrace.startsupercontents |= trace.startsupercontents;
+			Matrix4x4_CreateTranslate(&matrix, touch->fields.server->origin[0], touch->fields.server->origin[1], touch->fields.server->origin[2]);
+		Matrix4x4_Invert_Simple(&imatrix, &matrix);
+		if ((int)touch->fields.server->flags & FL_MONSTER)
+			Collision_ClipToGenericEntity(&trace, model, touch->fields.server->frame, touch->fields.server->mins, touch->fields.server->maxs, SUPERCONTENTS_BODY, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipend, hitsupercontentsmask);
+		else
+			Collision_ClipToGenericEntity(&trace, model, touch->fields.server->frame, touch->fields.server->mins, touch->fields.server->maxs, SUPERCONTENTS_BODY, &matrix, &imatrix, clipstart, clipmins, clipmaxs, clipend, hitsupercontentsmask);
+		Collision_CombineTraces(&cliptrace, &trace, (void *)touch, touch->fields.server->solid == SOLID_BSP);
 	}
 
 	return cliptrace;
 }
 
 #if COLLISIONPARANOID >= 1
-trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, prvm_edict_t *passedict)
+trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, prvm_edict_t *passedict, int hitsupercontentsmask)
 {
 	int endstuck;
 	trace_t trace;
 	vec3_t temp;
-	trace = SV_Move_(start, mins, maxs, end, type, passedict);
+	trace = SV_Move_(start, mins, maxs, end, type, passedict, hitsupercontentsmask);
 	if (passedict)
 	{
 		VectorCopy(trace.endpos, temp);
-		endstuck = SV_Move_(temp, mins, maxs, temp, type, passedict).startsolid;
+		endstuck = SV_Move_(temp, mins, maxs, temp, type, passedict, hitsupercontentsmask).startsolid;
 #if COLLISIONPARANOID < 3
 		if (trace.startsolid || endstuck)
 #endif
@@ -570,7 +455,7 @@ returns true if the entity is in solid currently
 */
 static int SV_TestEntityPosition (prvm_edict_t *ent)
 {
-	trace_t trace = SV_Move (ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, ent->fields.server->origin, MOVE_NOMONSTERS, ent);
+	trace_t trace = SV_Move (ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, ent->fields.server->origin, MOVE_NOMONSTERS, ent, SUPERCONTENTS_SOLID);
 	if (trace.startsupercontents & SUPERCONTENTS_SOLID)
 		return true;
 	else
@@ -745,6 +630,7 @@ SV_Impact
 Two entities have touched, so run their touch functions
 ==================
 */
+extern void VM_SetTraceGlobals(const trace_t *trace);
 void SV_Impact (prvm_edict_t *e1, trace_t *trace)
 {
 	int old_self, old_other;
@@ -754,36 +640,13 @@ void SV_Impact (prvm_edict_t *e1, trace_t *trace)
 	old_self = prog->globals.server->self;
 	old_other = prog->globals.server->other;
 
+	VM_SetTraceGlobals(trace);
+
 	prog->globals.server->time = sv.time;
 	if (!e1->priv.server->free && !e2->priv.server->free && e1->fields.server->touch && e1->fields.server->solid != SOLID_NOT)
 	{
 		prog->globals.server->self = PRVM_EDICT_TO_PROG(e1);
 		prog->globals.server->other = PRVM_EDICT_TO_PROG(e2);
-		prog->globals.server->trace_allsolid = trace->allsolid;
-		prog->globals.server->trace_startsolid = trace->startsolid;
-		prog->globals.server->trace_fraction = trace->fraction;
-		prog->globals.server->trace_inwater = trace->inwater;
-		prog->globals.server->trace_inopen = trace->inopen;
-		VectorCopy (trace->endpos, prog->globals.server->trace_endpos);
-		VectorCopy (trace->plane.normal, prog->globals.server->trace_plane_normal);
-		prog->globals.server->trace_plane_dist =  trace->plane.dist;
-		if (trace->ent)
-			prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(trace->ent);
-		else
-			prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(prog->edicts);
-		if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dpstartcontents)))
-			val->_float = trace->startsupercontents;
-		if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphitcontents)))
-			val->_float = trace->hitsupercontents;
-		if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphitq3surfaceflags)))
-			val->_float = trace->hitq3surfaceflags;
-		if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphittexturename)))
-		{
-			if (trace->hittexture)
-				val->string = PRVM_SetTempString(trace->hittexture->name);
-			else
-				val->string = 0;
-		}
 		PRVM_ExecuteProgram (e1->fields.server->touch, "QC function self.touch is missing");
 	}
 
@@ -791,14 +654,9 @@ void SV_Impact (prvm_edict_t *e1, trace_t *trace)
 	{
 		prog->globals.server->self = PRVM_EDICT_TO_PROG(e2);
 		prog->globals.server->other = PRVM_EDICT_TO_PROG(e1);
-		prog->globals.server->trace_allsolid = false;
-		prog->globals.server->trace_startsolid = false;
-		prog->globals.server->trace_fraction = 1;
-		prog->globals.server->trace_inwater = false;
-		prog->globals.server->trace_inopen = true;
-		VectorCopy (e2->fields.server->origin, prog->globals.server->trace_endpos);
-		VectorSet (prog->globals.server->trace_plane_normal, 0, 0, 1);
-		prog->globals.server->trace_plane_dist = 0;
+		VectorCopy(e2->fields.server->origin, prog->globals.server->trace_endpos);
+		VectorNegate(trace->plane.normal, prog->globals.server->trace_plane_normal);
+		prog->globals.server->trace_plane_dist = -trace->plane.dist;
 		prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(e1);
 		if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dpstartcontents)))
 			val->_float = 0;
@@ -853,7 +711,7 @@ If stepnormal is not NULL, the plane normal of any vertical wall hit will be sto
 */
 // LordHavoc: increased from 5 to 32
 #define MAX_CLIP_PLANES 32
-int SV_FlyMove (prvm_edict_t *ent, float time, float *stepnormal)
+int SV_FlyMove (prvm_edict_t *ent, float time, float *stepnormal, int hitsupercontentsmask)
 {
 	int blocked, bumpcount;
 	int i, j, impact, numplanes;
@@ -873,7 +731,7 @@ int SV_FlyMove (prvm_edict_t *ent, float time, float *stepnormal)
 			break;
 
 		VectorMA(ent->fields.server->origin, time_left, ent->fields.server->velocity, end);
-		trace = SV_Move(ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, end, MOVE_NORMAL, ent);
+		trace = SV_Move(ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, end, MOVE_NORMAL, ent, hitsupercontentsmask);
 #if 0
 		//if (trace.fraction < 0.002)
 		{
@@ -884,7 +742,7 @@ int SV_FlyMove (prvm_edict_t *ent, float time, float *stepnormal)
 			start[2] += 3;//0.03125;
 			VectorMA(ent->fields.server->origin, time_left, ent->fields.server->velocity, end);
 			end[2] += 3;//0.03125;
-			testtrace = SV_Move(start, ent->fields.server->mins, ent->fields.server->maxs, end, MOVE_NORMAL, ent);
+			testtrace = SV_Move(start, ent->fields.server->mins, ent->fields.server->maxs, end, MOVE_NORMAL, ent, hitsupercontentsmask);
 			if (trace.fraction < testtrace.fraction && !testtrace.startsolid && (testtrace.fraction == 1 || DotProduct(trace.plane.normal, ent->fields.server->velocity) < DotProduct(testtrace.plane.normal, ent->fields.server->velocity)))
 			{
 				Con_Printf("got further (new %f > old %f)\n", testtrace.fraction, trace.fraction);
@@ -899,7 +757,7 @@ int SV_FlyMove (prvm_edict_t *ent, float time, float *stepnormal)
 				VectorMA(ent->fields.server->origin, time_left, ent->fields.server->velocity, end);
 				VectorMA(start, 3, planes[i], start);
 				VectorMA(end, 3, planes[i], end);
-				testtrace = SV_Move(start, ent->fields.server->mins, ent->fields.server->maxs, end, MOVE_NORMAL, ent);
+				testtrace = SV_Move(start, ent->fields.server->mins, ent->fields.server->maxs, end, MOVE_NORMAL, ent, hitsupercontentsmask);
 				if (trace.fraction < testtrace.fraction)
 				{
 					trace = testtrace;
@@ -1074,7 +932,7 @@ int SV_FlyMove (prvm_edict_t *ent, float time, float *stepnormal)
 	{
 		// LordHavoc: fix the 'fall to your death in a wedge corner' glitch
 		// flag ONGROUND if there's ground under it
-		trace = SV_Move(ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, end, MOVE_NORMAL, ent);
+		trace = SV_Move(ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, end, MOVE_NORMAL, ent, hitsupercontentsmask);
 	}
 	*/
 
@@ -1134,7 +992,7 @@ static trace_t SV_PushEntity (prvm_edict_t *ent, vec3_t push, qboolean failonbmo
 	else
 		type = MOVE_NORMAL;
 
-	trace = SV_Move (ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, end, type, ent);
+	trace = SV_Move (ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, end, type, ent, SV_GenericHitSuperContentsMask(ent));
 	if (trace.bmodelstartsolid && failonbmodelstartsolid)
 		return trace;
 
@@ -1163,6 +1021,7 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 	static prvm_edict_t *checkentities[MAX_EDICTS];
 	model_t *pushermodel;
 	trace_t trace;
+	matrix4x4_t pusherfinalmatrix, pusherfinalimatrix;
 
 	if (!pusher->fields.server->velocity[0] && !pusher->fields.server->velocity[1] && !pusher->fields.server->velocity[2] && !pusher->fields.server->avelocity[0] && !pusher->fields.server->avelocity[1] && !pusher->fields.server->avelocity[2])
 	{
@@ -1267,6 +1126,12 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 	pusher->fields.server->ltime += movetime;
 	SV_LinkEdict (pusher, false);
 
+	pushermodel = NULL;
+	if (pusher->fields.server->modelindex >= 1 && pusher->fields.server->modelindex < MAX_MODELS)
+		pushermodel = sv.models[(int)pusher->fields.server->modelindex];
+	Matrix4x4_CreateFromQuakeEntity(&pusherfinalmatrix, pusher->fields.server->origin[0], pusher->fields.server->origin[1], pusher->fields.server->origin[2], pusher->fields.server->angles[0], pusher->fields.server->angles[1], pusher->fields.server->angles[2], 1);
+	Matrix4x4_Invert_Simple(&pusherfinalimatrix, &pusherfinalmatrix);
+
 	savesolid = pusher->fields.server->solid;
 
 // see if any solid entities are inside the final position
@@ -1293,7 +1158,8 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 		else
 		{
 			// if the entity is not inside the pusher's final position, leave it alone
-			if (!SV_Move_ClipToEntity(pusher, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, 0, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY).startsolid)
+			Collision_ClipToGenericEntity(&trace, pushermodel, pusher->fields.server->frame, pusher->fields.server->mins, pusher->fields.server->maxs, SUPERCONTENTS_BODY, &pusherfinalmatrix, &pusherfinalimatrix, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY);
+			if (!trace.startsolid)
 				continue;
 		}
 
@@ -1324,7 +1190,8 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 		//Con_Printf("%s:%d frac %f startsolid %d bmodelstartsolid %d allsolid %d\n", __FILE__, __LINE__, trace.fraction, trace.startsolid, trace.bmodelstartsolid, trace.allsolid);
 
 		// if it is still inside the pusher, block
-		if (SV_Move_ClipToEntity(pusher, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, 0, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY).startsolid)
+		Collision_ClipToGenericEntity(&trace, pushermodel, pusher->fields.server->frame, pusher->fields.server->mins, pusher->fields.server->maxs, SUPERCONTENTS_BODY, &pusherfinalmatrix, &pusherfinalimatrix, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY);
+		if (trace.startsolid)
 		{
 			// try moving the contacted entity a tiny bit further to account for precision errors
 			vec3_t move2;
@@ -1334,7 +1201,8 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 			VectorCopy (check->priv.server->moved_fromangles, check->fields.server->angles);
 			SV_PushEntity (check, move2, true);
 			pusher->fields.server->solid = savesolid;
-			if (SV_Move_ClipToEntity(pusher, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, 0, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY).startsolid)
+			Collision_ClipToGenericEntity(&trace, pushermodel, pusher->fields.server->frame, pusher->fields.server->mins, pusher->fields.server->maxs, SUPERCONTENTS_BODY, &pusherfinalmatrix, &pusherfinalimatrix, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY);
+			if (trace.startsolid)
 			{
 				// try moving the contacted entity a tiny bit less to account for precision errors
 				pusher->fields.server->solid = SOLID_NOT;
@@ -1343,7 +1211,8 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 				VectorCopy (check->priv.server->moved_fromangles, check->fields.server->angles);
 				SV_PushEntity (check, move2, true);
 				pusher->fields.server->solid = savesolid;
-				if (SV_Move_ClipToEntity(pusher, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, 0, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY).startsolid)
+				Collision_ClipToGenericEntity(&trace, pushermodel, pusher->fields.server->frame, pusher->fields.server->mins, pusher->fields.server->maxs, SUPERCONTENTS_BODY, &pusherfinalmatrix, &pusherfinalimatrix, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY);
+				if (trace.startsolid)
 				{
 					// still inside pusher, so it's really blocked
 
@@ -1629,7 +1498,7 @@ int SV_TryUnstick (prvm_edict_t *ent, vec3_t oldvel)
 		ent->fields.server->velocity[0] = oldvel[0];
 		ent->fields.server->velocity[1] = oldvel[1];
 		ent->fields.server->velocity[2] = 0;
-		clip = SV_FlyMove (ent, 0.1, NULL);
+		clip = SV_FlyMove (ent, 0.1, NULL, SV_GenericHitSuperContentsMask(ent));
 
 		if (fabs(oldorg[1] - ent->fields.server->origin[1]) > 4
 		 || fabs(oldorg[0] - ent->fields.server->origin[0]) > 4)
@@ -1676,7 +1545,7 @@ void SV_WalkMove (prvm_edict_t *ent)
 	VectorCopy (ent->fields.server->origin, start_origin);
 	VectorCopy (ent->fields.server->velocity, start_velocity);
 
-	clip = SV_FlyMove (ent, sv.frametime, NULL);
+	clip = SV_FlyMove (ent, sv.frametime, NULL, SV_GenericHitSuperContentsMask(ent));
 
 	SV_CheckVelocity(ent);
 
@@ -1724,7 +1593,7 @@ void SV_WalkMove (prvm_edict_t *ent)
 
 		// move forward
 		ent->fields.server->velocity[2] = 0;
-		clip = SV_FlyMove (ent, sv.frametime, stepnormal);
+		clip = SV_FlyMove (ent, sv.frametime, stepnormal, SV_GenericHitSuperContentsMask(ent));
 		ent->fields.server->velocity[2] += start_velocity[2];
 
 		SV_CheckVelocity(ent);
@@ -2040,7 +1909,7 @@ void SV_Physics_Step (prvm_edict_t *ent)
 				ent->fields.server->flags -= FL_ONGROUND;
 				SV_AddGravity(ent);
 				SV_CheckVelocity(ent);
-				SV_FlyMove(ent, sv.frametime, NULL);
+				SV_FlyMove(ent, sv.frametime, NULL, SV_GenericHitSuperContentsMask(ent));
 				SV_LinkEdict(ent, true);
 			}
 		}
@@ -2051,7 +1920,7 @@ void SV_Physics_Step (prvm_edict_t *ent)
 
 			SV_AddGravity(ent);
 			SV_CheckVelocity(ent);
-			SV_FlyMove(ent, sv.frametime, NULL);
+			SV_FlyMove(ent, sv.frametime, NULL, SV_GenericHitSuperContentsMask(ent));
 			SV_LinkEdict(ent, true);
 
 			// just hit ground
@@ -2287,51 +2156,3 @@ void SV_Physics (void)
 	if (!sv_freezenonclients.integer)
 		sv.time += sv.frametime;
 }
-
-
-trace_t SV_Trace_Toss (prvm_edict_t *tossent, prvm_edict_t *ignore)
-{
-	int i;
-	float gravity;
-	vec3_t move, end;
-	vec3_t original_origin;
-	vec3_t original_velocity;
-	vec3_t original_angles;
-	vec3_t original_avelocity;
-	prvm_eval_t *val;
-	trace_t trace;
-
-	VectorCopy(tossent->fields.server->origin   , original_origin   );
-	VectorCopy(tossent->fields.server->velocity , original_velocity );
-	VectorCopy(tossent->fields.server->angles   , original_angles   );
-	VectorCopy(tossent->fields.server->avelocity, original_avelocity);
-
-	val = PRVM_EDICTFIELDVALUE(tossent, prog->fieldoffsets.gravity);
-	if (val != NULL && val->_float != 0)
-		gravity = val->_float;
-	else
-		gravity = 1.0;
-	gravity *= sv_gravity.value * 0.05;
-
-	for (i = 0;i < 200;i++) // LordHavoc: sanity check; never trace more than 10 seconds
-	{
-		SV_CheckVelocity (tossent);
-		tossent->fields.server->velocity[2] -= gravity;
-		VectorMA (tossent->fields.server->angles, 0.05, tossent->fields.server->avelocity, tossent->fields.server->angles);
-		VectorScale (tossent->fields.server->velocity, 0.05, move);
-		VectorAdd (tossent->fields.server->origin, move, end);
-		trace = SV_Move (tossent->fields.server->origin, tossent->fields.server->mins, tossent->fields.server->maxs, end, MOVE_NORMAL, tossent);
-		VectorCopy (trace.endpos, tossent->fields.server->origin);
-
-		if (trace.fraction < 1)
-			break;
-	}
-
-	VectorCopy(original_origin   , tossent->fields.server->origin   );
-	VectorCopy(original_velocity , tossent->fields.server->velocity );
-	VectorCopy(original_angles   , tossent->fields.server->angles   );
-	VectorCopy(original_avelocity, tossent->fields.server->avelocity);
-
-	return trace;
-}
-

@@ -730,7 +730,7 @@ qboolean CL_ClientMovement_Unstick(cl_clientmovement_state_t *s)
 	for (i = 0;i < NUMOFFSETS;i++)
 	{
 		VectorAdd(offsets[i], s->origin, neworigin);
-		if (!CL_TraceBox(neworigin, cl.playercrouchmins, cl.playercrouchmaxs, neworigin, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true).startsolid)
+		if (!CL_Move(neworigin, cl.playercrouchmins, cl.playercrouchmaxs, neworigin, MOVE_NORMAL, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true, true, NULL, false).startsolid)
 		{
 			VectorCopy(neworigin, s->origin);
 			return true;
@@ -761,7 +761,7 @@ void CL_ClientMovement_UpdateStatus(cl_clientmovement_state_t *s)
 		// low ceiling first
 		if (s->crouched)
 		{
-			trace = CL_TraceBox(s->origin, cl.playerstandmins, cl.playerstandmaxs, s->origin, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true);
+			trace = CL_Move(s->origin, cl.playerstandmins, cl.playerstandmaxs, s->origin, MOVE_NORMAL, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true, true, NULL, false);
 			if (!trace.startsolid)
 				s->crouched = false;
 		}
@@ -780,22 +780,22 @@ void CL_ClientMovement_UpdateStatus(cl_clientmovement_state_t *s)
 	// set onground
 	VectorSet(origin1, s->origin[0], s->origin[1], s->origin[2] + 1);
 	VectorSet(origin2, s->origin[0], s->origin[1], s->origin[2] - 2);
-	trace = CL_TraceBox(origin1, s->mins, s->maxs, origin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true);
+	trace = CL_Move(origin1, s->mins, s->maxs, origin2, MOVE_NORMAL, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true, true, NULL, false);
 	s->onground = trace.fraction < 1 && trace.plane.normal[2] > 0.7 && s->velocity[2] < cl_gravity.value * s->q.frametime;
 
 	// set watertype/waterlevel
 	VectorSet(origin1, s->origin[0], s->origin[1], s->origin[2] + s->mins[2] + 1);
 	s->waterlevel = WATERLEVEL_NONE;
-	s->watertype = CL_TraceBox(origin1, vec3_origin, vec3_origin, origin1, true, NULL, 0, false).startsupercontents & SUPERCONTENTS_LIQUIDSMASK;
+	s->watertype = CL_Move(origin1, vec3_origin, vec3_origin, origin1, MOVE_NOMONSTERS, NULL, 0, true, false, NULL, false).startsupercontents & SUPERCONTENTS_LIQUIDSMASK;
 	if (s->watertype)
 	{
 		s->waterlevel = WATERLEVEL_WETFEET;
 		origin1[2] = s->origin[2] + (s->mins[2] + s->maxs[2]) * 0.5f;
-		if (CL_TraceBox(origin1, vec3_origin, vec3_origin, origin1, true, NULL, 0, false).startsupercontents & SUPERCONTENTS_LIQUIDSMASK)
+		if (CL_Move(origin1, vec3_origin, vec3_origin, origin1, MOVE_NOMONSTERS, NULL, 0, true, false, NULL, false).startsupercontents & SUPERCONTENTS_LIQUIDSMASK)
 		{
 			s->waterlevel = WATERLEVEL_SWIMMING;
 			origin1[2] = s->origin[2] + 22;
-			if (CL_TraceBox(origin1, vec3_origin, vec3_origin, origin1, true, NULL, 0, false).startsupercontents & SUPERCONTENTS_LIQUIDSMASK)
+			if (CL_Move(origin1, vec3_origin, vec3_origin, origin1, MOVE_NOMONSTERS, NULL, 0, true, false, NULL, false).startsupercontents & SUPERCONTENTS_LIQUIDSMASK)
 				s->waterlevel = WATERLEVEL_SUBMERGED;
 		}
 	}
@@ -822,20 +822,20 @@ void CL_ClientMovement_Move(cl_clientmovement_state_t *s)
 	for (bump = 0, t = s->q.frametime;bump < 8 && VectorLength2(s->velocity) > 0;bump++)
 	{
 		VectorMA(s->origin, t, s->velocity, neworigin);
-		trace = CL_TraceBox(s->origin, s->mins, s->maxs, neworigin, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true);
+		trace = CL_Move(s->origin, s->mins, s->maxs, neworigin, MOVE_NORMAL, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true, true, NULL, false);
 		if (trace.fraction < 1 && trace.plane.normal[2] == 0)
 		{
 			// may be a step or wall, try stepping up
 			// first move forward at a higher level
 			VectorSet(currentorigin2, s->origin[0], s->origin[1], s->origin[2] + s->movevars_stepheight);
 			VectorSet(neworigin2, neworigin[0], neworigin[1], s->origin[2] + s->movevars_stepheight);
-			trace2 = CL_TraceBox(currentorigin2, s->mins, s->maxs, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true);
+			trace2 = CL_Move(currentorigin2, s->mins, s->maxs, neworigin2, MOVE_NORMAL, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true, true, NULL, false);
 			if (!trace2.startsolid)
 			{
 				// then move down from there
 				VectorCopy(trace2.endpos, currentorigin2);
 				VectorSet(neworigin2, trace2.endpos[0], trace2.endpos[1], s->origin[2]);
-				trace3 = CL_TraceBox(currentorigin2, s->mins, s->maxs, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true);
+				trace3 = CL_Move(currentorigin2, s->mins, s->maxs, neworigin2, MOVE_NORMAL, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true, true, NULL, false);
 				//Con_Printf("%f %f %f %f : %f %f %f %f : %f %f %f %f\n", trace.fraction, trace.endpos[0], trace.endpos[1], trace.endpos[2], trace2.fraction, trace2.endpos[0], trace2.endpos[1], trace2.endpos[2], trace3.fraction, trace3.endpos[0], trace3.endpos[1], trace3.endpos[2]);
 				// accept the new trace if it made some progress
 				if (fabs(trace3.endpos[0] - trace.endpos[0]) >= 0.03125 || fabs(trace3.endpos[1] - trace.endpos[1]) >= 0.03125)
@@ -885,10 +885,10 @@ void CL_ClientMovement_Physics_Swim(cl_clientmovement_state_t *s)
 		AngleVectors(yawangles, forward, NULL, NULL);
 		VectorMA(s->origin, 24, forward, spot);
 		spot[2] += 8;
-		if (CL_TraceBox(spot, vec3_origin, vec3_origin, spot, true, NULL, 0, false).startsolid)
+		if (CL_Move(spot, vec3_origin, vec3_origin, spot, MOVE_NOMONSTERS, NULL, 0, true, false, NULL, false).startsolid)
 		{
 			spot[2] += 24;
-			if (!CL_TraceBox(spot, vec3_origin, vec3_origin, spot, true, NULL, 0, false).startsolid)
+			if (!CL_Move(spot, vec3_origin, vec3_origin, spot, MOVE_NOMONSTERS, NULL, 0, true, false, NULL, false).startsolid)
 			{
 				VectorScale(forward, 50, s->velocity);
 				s->velocity[2] = 310;
@@ -1017,9 +1017,9 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 			VectorSet(neworigin2, s->origin[0] + s->velocity[0]*(16/f), s->origin[1] + s->velocity[1]*(16/f), s->origin[2] + s->mins[2]);
 			VectorSet(neworigin3, neworigin2[0], neworigin2[1], neworigin2[2] - 34);
 			if (cls.protocol == PROTOCOL_QUAKEWORLD)
-				trace = CL_TraceBox(neworigin2, s->mins, s->maxs, neworigin3, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true);
+				trace = CL_Move(neworigin2, s->mins, s->maxs, neworigin3, MOVE_NORMAL, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true, true, NULL, false);
 			else
-				trace = CL_TraceBox(neworigin2, vec3_origin, vec3_origin, neworigin3, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true);
+				trace = CL_Move(neworigin2, vec3_origin, vec3_origin, neworigin3, MOVE_NORMAL, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true, true, NULL, false);
 			if (trace.fraction == 1 && !trace.startsolid)
 				friction *= s->movevars_edgefriction;
 		}

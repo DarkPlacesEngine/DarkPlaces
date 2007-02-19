@@ -1212,7 +1212,7 @@ void GL_Init (void)
 	VID_CheckExtensions();
 
 	// LordHavoc: report supported extensions
-	Con_DPrintf("\nengine extensions: %s\n", vm_sv_extensions );
+	Con_DPrintf("\nQuakeC extensions for server and client: %s\nQuakeC extensions for menu: %s\n", vm_sv_extensions, vm_m_extensions );
 
 	// clear to black (loading plaque will be seen over this)
 	CHECKGLERROR
@@ -2107,7 +2107,7 @@ void R_RenderView(void)
 }
 
 extern void R_DrawLightningBeams (void);
-extern void VM_AddPolygonsToMeshQueue (void);
+extern void VM_CL_AddPolygonsToMeshQueue (void);
 extern void R_DrawPortals (void);
 void R_RenderScene(void)
 {
@@ -2197,7 +2197,7 @@ void R_RenderScene(void)
 	{
 		qglUseProgramObjectARB(0);CHECKGLERROR
 	}
-	VM_AddPolygonsToMeshQueue();
+	VM_CL_AddPolygonsToMeshQueue();
 
 	if (r_drawportals.integer)
 	{

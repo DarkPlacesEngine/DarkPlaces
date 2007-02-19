@@ -206,6 +206,8 @@ void VM_sprint (void)
 	int			clientnum;
 	char string[VM_STRINGTEMP_LENGTH];
 
+	VM_SAFEPARMCOUNTRANGE(1, 8, VM_sprint);
+
 	//find client for this entity
 	clientnum = (int)PRVM_G_FLOAT(OFS_PARM0);
 	if (!sv.active  || clientnum < 0 || clientnum >= svs.maxclients || !svs.clients[clientnum].active)
@@ -229,13 +231,14 @@ VM_centerprint
 
 single print to the screen
 
-centerprint(clientent, value)
+centerprint(value)
 =================
 */
 void VM_centerprint (void)
 {
 	char string[VM_STRINGTEMP_LENGTH];
 
+	VM_SAFEPARMCOUNTRANGE(1, 8, VM_centerprint);
 	VM_VarString(0, string, sizeof(string));
 	SCR_CenterPrint(string);
 }
@@ -378,49 +381,6 @@ void VM_random (void)
 }
 
 /*
-=================
-PF_sound
-
-Each entity can have eight independant sound sources, like voice,
-weapon, feet, etc.
-
-Channel 0 is an auto-allocate channel, the others override anything
-already running on that entity/channel pair.
-
-An attenuation of 0 will play full volume everywhere in the level.
-Larger attenuations will drop off.
-
-=================
-*/
-/*
-void PF_sound (void)
-{
-	char		*sample;
-	int			channel;
-	prvm_edict_t		*entity;
-	int 		volume;
-	float attenuation;
-
-	entity = PRVM_G_EDICT(OFS_PARM0);
-	channel = PRVM_G_FLOAT(OFS_PARM1);
-	sample = PRVM_G_STRING(OFS_PARM2);
-	volume = PRVM_G_FLOAT(OFS_PARM3) * 255;
-	attenuation = PRVM_G_FLOAT(OFS_PARM4);
-
-	if (volume < 0 || volume > 255)
-		Host_Error ("SV_StartSound: volume = %i", volume);
-
-	if (attenuation < 0 || attenuation > 4)
-		Host_Error ("SV_StartSound: attenuation = %f", attenuation);
-
-	if (channel < 0 || channel > 7)
-		Host_Error ("SV_StartSound: channel = %i", channel);
-
-	SV_StartSound (entity, channel, sample, volume, attenuation);
-}
-*/
-
-/*
 =========
 VM_localsound
 
@@ -472,6 +432,7 @@ cmd (string, ...)
 void VM_localcmd (void)
 {
 	char string[VM_STRINGTEMP_LENGTH];
+	VM_SAFEPARMCOUNTRANGE(1, 8, VM_localcmd);
 	VM_VarString(0, string, sizeof(string));
 	Cbuf_AddText(string);
 }
@@ -552,6 +513,7 @@ dprint(...[string])
 void VM_dprint (void)
 {
 	char string[VM_STRINGTEMP_LENGTH];
+	VM_SAFEPARMCOUNTRANGE(1, 8, VM_dprint);
 	if (developer.integer)
 	{
 		VM_VarString(0, string, sizeof(string));
@@ -651,6 +613,7 @@ float stof(...[string])
 void VM_stof(void)
 {
 	char string[VM_STRINGTEMP_LENGTH];
+	VM_SAFEPARMCOUNTRANGE(1, 8, VM_stof);
 	VM_VarString(0, string, sizeof(string));
 	PRVM_G_FLOAT(OFS_RETURN) = atof(string);
 }
@@ -700,7 +663,8 @@ void VM_strftime(void)
 	struct tm *tm;
 	char fmt[VM_STRINGTEMP_LENGTH];
 	char result[VM_STRINGTEMP_LENGTH];
-	VM_VarString(0, fmt, sizeof(fmt));
+	VM_SAFEPARMCOUNTRANGE(2, 8, VM_strftime);
+	VM_VarString(1, fmt, sizeof(fmt));
 	t = time(NULL);
 	if (PRVM_G_FLOAT(OFS_PARM0))
 		tm = localtime(&t);
@@ -726,6 +690,7 @@ entity spawn()
 void VM_spawn (void)
 {
 	prvm_edict_t	*ed;
+	VM_SAFEPARMCOUNT(0, VM_spawn);
 	prog->xfunction->builtinsprofile += 20;
 	ed = PRVM_ED_Alloc();
 	VM_RETURN_EDICT(ed);
@@ -1024,6 +989,46 @@ void VM_findchainflags (void)
 
 /*
 =========
+VM_precache_sound
+
+string	precache_sound (string sample)
+=========
+*/
+void VM_precache_sound (void)
+{
+	const char *s;
+
+	VM_SAFEPARMCOUNT(1, VM_precache_sound);
+
+	s = PRVM_G_STRING(OFS_PARM0);
+	PRVM_G_INT(OFS_RETURN) = PRVM_G_INT(OFS_PARM0);
+	VM_CheckEmptyString(s);
+
+	if(snd_initialized.integer && !S_PrecacheSound(s, true, false))
+	{
+		VM_Warning("VM_precache_sound: Failed to load %s for %s\n", s, PRVM_NAME);
+		return;
+	}
+}
+
+/*
+=================
+VM_precache_file
+
+returns the same string as output
+
+does nothing, only used by qcc to build .pak archives
+=================
+*/
+void VM_precache_file (void)
+{
+	VM_SAFEPARMCOUNT(1,VM_precache_file);
+	// precache_file is only used to copy files with qcc, it does nothing
+	PRVM_G_INT(OFS_RETURN) = PRVM_G_INT(OFS_PARM0);
+}
+
+/*
+=========
 VM_coredump
 
 coredump()
@@ -1169,6 +1174,8 @@ void VM_nextent (void)
 {
 	int		i;
 	prvm_edict_t	*ent;
+
+	VM_SAFEPARMCOUNT(1, VM_nextent);
 
 	i = PRVM_G_EDICTNUM(OFS_PARM0);
 	while (1)
@@ -1358,7 +1365,7 @@ void VM_randomvec (void)
 =========
 VM_registercvar
 
-float	registercvar (string name, string value, float flags)
+float	registercvar (string name, string value[, float flags])
 =========
 */
 void VM_registercvar (void)
@@ -1366,11 +1373,11 @@ void VM_registercvar (void)
 	const char *name, *value;
 	int	flags;
 
-	VM_SAFEPARMCOUNT(3,VM_registercvar);
+	VM_SAFEPARMCOUNTRANGE(2, 3, VM_registercvar);
 
 	name = PRVM_G_STRING(OFS_PARM0);
 	value = PRVM_G_STRING(OFS_PARM1);
-	flags = (int)PRVM_G_FLOAT(OFS_PARM2);
+	flags = prog->argc >= 3 ? (int)PRVM_G_FLOAT(OFS_PARM2) : 0;
 	PRVM_G_FLOAT(OFS_RETURN) = 0;
 
 	if(flags > CVAR_MAXFLAGSVAL)
@@ -1392,6 +1399,7 @@ void VM_registercvar (void)
 	PRVM_G_FLOAT(OFS_RETURN) = 1; // success
 }
 
+
 /*
 =================
 VM_min
@@ -1403,20 +1411,19 @@ float min(float a, float b, ...[float])
 */
 void VM_min (void)
 {
+	VM_SAFEPARMCOUNTRANGE(2, 8, VM_min);
 	// LordHavoc: 3+ argument enhancement suggested by FrikaC
-	if (prog->argc == 2)
-		PRVM_G_FLOAT(OFS_RETURN) = min(PRVM_G_FLOAT(OFS_PARM0), PRVM_G_FLOAT(OFS_PARM1));
-	else if (prog->argc >= 3)
+	if (prog->argc >= 3)
 	{
 		int i;
 		float f = PRVM_G_FLOAT(OFS_PARM0);
 		for (i = 1;i < prog->argc;i++)
-			if (PRVM_G_FLOAT((OFS_PARM0+i*3)) < f)
+			if (f > PRVM_G_FLOAT((OFS_PARM0+i*3)))
 				f = PRVM_G_FLOAT((OFS_PARM0+i*3));
 		PRVM_G_FLOAT(OFS_RETURN) = f;
 	}
 	else
-		PRVM_ERROR("VM_min: %s must supply at least 2 floats", PRVM_NAME);
+		PRVM_G_FLOAT(OFS_RETURN) = min(PRVM_G_FLOAT(OFS_PARM0), PRVM_G_FLOAT(OFS_PARM1));
 }
 
 /*
@@ -1430,20 +1437,19 @@ float	max(float a, float b, ...[float])
 */
 void VM_max (void)
 {
+	VM_SAFEPARMCOUNTRANGE(2, 8, VM_max);
 	// LordHavoc: 3+ argument enhancement suggested by FrikaC
-	if (prog->argc == 2)
-		PRVM_G_FLOAT(OFS_RETURN) = max(PRVM_G_FLOAT(OFS_PARM0), PRVM_G_FLOAT(OFS_PARM1));
-	else if (prog->argc >= 3)
+	if (prog->argc >= 3)
 	{
 		int i;
 		float f = PRVM_G_FLOAT(OFS_PARM0);
 		for (i = 1;i < prog->argc;i++)
-			if (PRVM_G_FLOAT((OFS_PARM0+i*3)) > f)
+			if (f < PRVM_G_FLOAT((OFS_PARM0+i*3)))
 				f = PRVM_G_FLOAT((OFS_PARM0+i*3));
 		PRVM_G_FLOAT(OFS_RETURN) = f;
 	}
 	else
-		PRVM_ERROR("VM_max: %s must supply at least 2 floats", PRVM_NAME);
+		PRVM_G_FLOAT(OFS_RETURN) = max(PRVM_G_FLOAT(OFS_PARM0), PRVM_G_FLOAT(OFS_PARM1));
 }
 
 /*
@@ -1476,24 +1482,6 @@ void VM_pow (void)
 	PRVM_G_FLOAT(OFS_RETURN) = pow(PRVM_G_FLOAT(OFS_PARM0), PRVM_G_FLOAT(OFS_PARM1));
 }
 
-/*
-=================
-VM_copyentity
-
-copies data from one entity to another
-
-copyentity(entity src, entity dst)
-=================
-*/
-void VM_copyentity (void)
-{
-	prvm_edict_t *in, *out;
-	VM_SAFEPARMCOUNT(2,VM_copyentity);
-	in = PRVM_G_EDICT(OFS_PARM0);
-	out = PRVM_G_EDICT(OFS_PARM1);
-	memcpy(out->fields.vp, in->fields.vp, prog->progs->entityfields * 4);
-}
-
 void VM_Files_Init(void)
 {
 	int i;
@@ -1512,7 +1500,7 @@ void VM_Files_CloseAll(void)
 	}
 }
 
-qfile_t *VM_GetFileHandle( int index )
+static qfile_t *VM_GetFileHandle( int index )
 {
 	if (index < 0 || index >= PRVM_MAX_OPENFILES)
 	{
@@ -1709,6 +1697,37 @@ void VM_fputs(void)
 
 /*
 =========
+VM_writetofile
+
+	writetofile(float fhandle, entity ent)
+=========
+*/
+void VM_writetofile(void)
+{
+	prvm_edict_t * ent;
+	qfile_t *file;
+
+	VM_SAFEPARMCOUNT(2, VM_writetofile);
+
+	file = VM_GetFileHandle( (int)PRVM_G_FLOAT(OFS_PARM0) );
+	if( !file )
+	{
+		VM_Warning("VM_writetofile: invalid or closed file handle\n");
+		return;
+	}
+
+	ent = PRVM_G_EDICT(OFS_PARM1);
+	if(ent->priv.required->free)
+	{
+		VM_Warning("VM_writetofile: %s: entity %i is free !\n", PRVM_NAME, PRVM_NUM_FOR_EDICT(ent));
+		return;
+	}
+
+	PRVM_ED_Write (file, ent);
+}
+
+/*
+=========
 VM_strlen
 
 float	strlen(string s)
@@ -1862,9 +1881,7 @@ string strcat(string,string,...[string])
 void VM_strcat(void)
 {
 	char s[VM_STRINGTEMP_LENGTH];
-
-	if(prog->argc < 1)
-		PRVM_ERROR("VM_strcat wrong parameter count (min. 1 expected ) !");
+	VM_SAFEPARMCOUNTRANGE(1, 8, VM_strcat);
 
 	VM_VarString(0, s, sizeof(s));
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(s);
@@ -2053,7 +2070,7 @@ void VM_isserver(void)
 {
 	VM_SAFEPARMCOUNT(0,VM_serverstate);
 
-	PRVM_G_FLOAT(OFS_RETURN) = sv.active;
+	PRVM_G_FLOAT(OFS_RETURN) = sv.active && (svs.maxclients > 1 || cls.state == ca_dedicated);
 }
 
 /*
@@ -2833,16 +2850,49 @@ void VM_cin_restart( void )
 
 /*
 ==============
+VM_makevectors
+
+Writes new values for v_forward, v_up, and v_right based on angles
+void makevectors(vector angle)
+==============
+*/
+void VM_makevectors (void)
+{
+	prvm_eval_t *valforward, *valright, *valup;
+	valforward = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.v_forward);
+	valright = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.v_right);
+	valup = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.v_up);
+	if (!valforward || !valright || !valup)
+	{
+		VM_Warning("makevectors: could not find v_forward, v_right, or v_up global variables\n");
+		return;
+	}
+	VM_SAFEPARMCOUNT(1, VM_makevectors);
+	AngleVectors (PRVM_G_VECTOR(OFS_PARM0), valforward->vector, valright->vector, valup->vector);
+}
+
+/*
+==============
 VM_vectorvectors
 
 Writes new values for v_forward, v_up, and v_right based on the given forward vector
-vectorvectors(vector, vector)
+vectorvectors(vector)
 ==============
 */
 void VM_vectorvectors (void)
 {
-	VectorNormalize2(PRVM_G_VECTOR(OFS_PARM0), prog->globals.server->v_forward);
-	VectorVectors(prog->globals.server->v_forward, prog->globals.server->v_right, prog->globals.server->v_up);
+	prvm_eval_t *valforward, *valright, *valup;
+	valforward = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.v_forward);
+	valright = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.v_right);
+	valup = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.v_up);
+	if (!valforward || !valright || !valup)
+	{
+		VM_Warning("vectorvectors: could not find v_forward, v_right, or v_up global variables\n");
+		return;
+	}
+	VM_SAFEPARMCOUNT(1, VM_vectorvectors);
+	VectorNormalize2(PRVM_G_VECTOR(OFS_PARM0), valforward->vector);
+	VectorVectors(valforward->vector, valright->vector, valup->vector);
 }
 
 /*
@@ -2866,364 +2916,6 @@ void VM_drawline (void)
 	alpha	= PRVM_G_FLOAT(OFS_PARM4);
 	flags	= (int)PRVM_G_FLOAT(OFS_PARM5);
 	DrawQ_Line(width, c1[0], c1[1], c2[0], c2[1], rgb[0], rgb[1], rgb[2], alpha, flags);
-}
-
-//====================
-//QC POLYGON functions
-//====================
-
-typedef struct
-{
-	rtexture_t		*tex;
-	float			data[36];	//[515]: enough for polygons
-	unsigned char			flags;	//[515]: + VM_POLYGON_2D and VM_POLYGON_FL4V flags
-}vm_polygon_t;
-
-//static float			vm_polygon_linewidth = 1;
-static mempool_t		*vm_polygons_pool = NULL;
-static unsigned char			vm_current_vertices = 0;
-static qboolean			vm_polygons_initialized = false;
-static vm_polygon_t		*vm_polygons = NULL;
-static unsigned long	vm_polygons_num = 0, vm_drawpolygons_num = 0;	//[515]: ok long on 64bit ?
-static qboolean			vm_polygonbegin = false;	//[515]: for "no-crap-on-the-screen" check
-#define VM_DEFPOLYNUM 64	//[515]: enough for default ?
-
-#define VM_POLYGON_FL3V		16	//more than 2 vertices (used only for lines)
-#define VM_POLYGON_FLLINES	32
-#define VM_POLYGON_FL2D		64
-#define VM_POLYGON_FL4V		128	//4 vertices
-
-void VM_InitPolygons (void)
-{
-	vm_polygons_pool = Mem_AllocPool("VMPOLY", 0, NULL);
-	vm_polygons = (vm_polygon_t *)Mem_Alloc(vm_polygons_pool, VM_DEFPOLYNUM*sizeof(vm_polygon_t));
-	memset(vm_polygons, 0, VM_DEFPOLYNUM*sizeof(vm_polygon_t));
-	vm_polygons_num = VM_DEFPOLYNUM;
-	vm_drawpolygons_num = 0;
-	vm_polygonbegin = false;
-	vm_polygons_initialized = true;
-}
-
-void VM_DrawPolygonCallback (const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
-{
-	int surfacelistindex;
-	// LordHavoc: FIXME: this is stupid code
-	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
-	{
-		const vm_polygon_t	*p = &vm_polygons[surfacelist[surfacelistindex]];
-		int					flags = p->flags & 0x0f;
-
-		if(flags == DRAWFLAG_ADDITIVE)
-			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-		else if(flags == DRAWFLAG_MODULATE)
-			GL_BlendFunc(GL_DST_COLOR, GL_ZERO);
-		else if(flags == DRAWFLAG_2XMODULATE)
-			GL_BlendFunc(GL_DST_COLOR,GL_SRC_COLOR);
-		else
-			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-		R_Mesh_TexBind(0, R_GetTexture(p->tex));
-
-		CHECKGLERROR
-		//[515]: is speed is max ?
-		if(p->flags & VM_POLYGON_FLLINES)	//[515]: lines
-		{
-			qglLineWidth(p->data[13]);CHECKGLERROR
-			qglBegin(GL_LINE_LOOP);
-				qglTexCoord1f	(p->data[12]);
-				qglColor4f		(p->data[20], p->data[21], p->data[22], p->data[23]);
-				qglVertex3f		(p->data[0] , p->data[1],  p->data[2]);
-
-				qglTexCoord1f	(p->data[14]);
-				qglColor4f		(p->data[24], p->data[25], p->data[26], p->data[27]);
-				qglVertex3f		(p->data[3] , p->data[4],  p->data[5]);
-
-				if(p->flags & VM_POLYGON_FL3V)
-				{
-					qglTexCoord1f	(p->data[16]);
-					qglColor4f		(p->data[28], p->data[29], p->data[30], p->data[31]);
-					qglVertex3f		(p->data[6] , p->data[7],  p->data[8]);
-
-					if(p->flags & VM_POLYGON_FL4V)
-					{
-						qglTexCoord1f	(p->data[18]);
-						qglColor4f		(p->data[32], p->data[33], p->data[34], p->data[35]);
-						qglVertex3f		(p->data[9] , p->data[10],  p->data[11]);
-					}
-				}
-			qglEnd();
-			CHECKGLERROR
-		}
-		else
-		{
-			qglBegin(GL_POLYGON);
-				qglTexCoord2f	(p->data[12], p->data[13]);
-				qglColor4f		(p->data[20], p->data[21], p->data[22], p->data[23]);
-				qglVertex3f		(p->data[0] , p->data[1],  p->data[2]);
-
-				qglTexCoord2f	(p->data[14], p->data[15]);
-				qglColor4f		(p->data[24], p->data[25], p->data[26], p->data[27]);
-				qglVertex3f		(p->data[3] , p->data[4],  p->data[5]);
-
-				qglTexCoord2f	(p->data[16], p->data[17]);
-				qglColor4f		(p->data[28], p->data[29], p->data[30], p->data[31]);
-				qglVertex3f		(p->data[6] , p->data[7],  p->data[8]);
-
-				if(p->flags & VM_POLYGON_FL4V)
-				{
-					qglTexCoord2f	(p->data[18], p->data[19]);
-					qglColor4f		(p->data[32], p->data[33], p->data[34], p->data[35]);
-					qglVertex3f		(p->data[9] , p->data[10],  p->data[11]);
-				}
-			qglEnd();
-			CHECKGLERROR
-		}
-	}
-}
-
-void VM_AddPolygonTo2DScene (vm_polygon_t *p)
-{
-	drawqueuemesh_t	mesh;
-	static int		picelements[6] = {0, 1, 2, 0, 2, 3};
-
-	mesh.texture = p->tex;
-	mesh.data_element3i = picelements;
-	mesh.data_vertex3f = p->data;
-	mesh.data_texcoord2f = p->data + 12;
-	mesh.data_color4f = p->data + 20;
-	if(p->flags & VM_POLYGON_FL4V)
-	{
-		mesh.num_vertices = 4;
-		mesh.num_triangles = 2;
-	}
-	else
-	{
-		mesh.num_vertices = 3;
-		mesh.num_triangles = 1;
-	}
-	if(p->flags & VM_POLYGON_FLLINES)	//[515]: lines
-		DrawQ_LineLoop (&mesh, (p->flags&0x0f));
-	else
-		DrawQ_Mesh (&mesh, (p->flags&0x0f));
-}
-
-//void(string texturename, float flag, float 2d, float lines) R_BeginPolygon
-void VM_R_PolygonBegin (void)
-{
-	vm_polygon_t	*p;
-	const char		*picname;
-	if(prog->argc < 2)
-		VM_SAFEPARMCOUNT(2, VM_R_PolygonBegin);
-
-	if(!vm_polygons_initialized)
-		VM_InitPolygons();
-	if(vm_polygonbegin)
-	{
-		VM_Warning("VM_R_PolygonBegin: called twice without VM_R_PolygonEnd after first\n");
-		return;
-	}
-	if(vm_drawpolygons_num >= vm_polygons_num)
-	{
-		p = (vm_polygon_t *)Mem_Alloc(vm_polygons_pool, 2 * vm_polygons_num * sizeof(vm_polygon_t));
-		memset(p, 0, 2 * vm_polygons_num * sizeof(vm_polygon_t));
-		memcpy(p, vm_polygons, vm_polygons_num * sizeof(vm_polygon_t));
-		Mem_Free(vm_polygons);
-		vm_polygons = p;
-		vm_polygons_num *= 2;
-	}
-	p = &vm_polygons[vm_drawpolygons_num];
-	picname = PRVM_G_STRING(OFS_PARM0);
-	if(picname[0])
-		p->tex = Draw_CachePic(picname, true)->tex;
-	else
-		p->tex = r_texture_white;
-	p->flags = (unsigned char)PRVM_G_FLOAT(OFS_PARM1);
-	vm_current_vertices = 0;
-	vm_polygonbegin = true;
-	if(prog->argc >= 3)
-	{
-		if(PRVM_G_FLOAT(OFS_PARM2))
-			p->flags |= VM_POLYGON_FL2D;
-		if(prog->argc >= 4 && PRVM_G_FLOAT(OFS_PARM3))
-		{
-			p->data[13] = PRVM_G_FLOAT(OFS_PARM3);	//[515]: linewidth
-			p->flags |= VM_POLYGON_FLLINES;
-		}
-	}
-}
-
-//void(vector org, vector texcoords, vector rgb, float alpha) R_PolygonVertex
-void VM_R_PolygonVertex (void)
-{
-	float			*coords, *tx, *rgb, alpha;
-	vm_polygon_t	*p;
-	VM_SAFEPARMCOUNT(4, VM_R_PolygonVertex);
-
-	if(!vm_polygonbegin)
-	{
-		VM_Warning("VM_R_PolygonVertex: VM_R_PolygonBegin wasn't called\n");
-		return;
-	}
-	coords	= PRVM_G_VECTOR(OFS_PARM0);
-	tx		= PRVM_G_VECTOR(OFS_PARM1);
-	rgb		= PRVM_G_VECTOR(OFS_PARM2);
-	alpha = PRVM_G_FLOAT(OFS_PARM3);
-
-	p = &vm_polygons[vm_drawpolygons_num];
-	if(vm_current_vertices > 4)
-	{
-		VM_Warning("VM_R_PolygonVertex: may have 4 vertices max\n");
-		return;
-	}
-
-	p->data[vm_current_vertices*3]		= coords[0];
-	p->data[1+vm_current_vertices*3]	= coords[1];
-	p->data[2+vm_current_vertices*3]	= coords[2];
-
-	p->data[12+vm_current_vertices*2]	= tx[0];
-	if(!(p->flags & VM_POLYGON_FLLINES))
-		p->data[13+vm_current_vertices*2]	= tx[1];
-
-	p->data[20+vm_current_vertices*4]	= rgb[0];
-	p->data[21+vm_current_vertices*4]	= rgb[1];
-	p->data[22+vm_current_vertices*4]	= rgb[2];
-	p->data[23+vm_current_vertices*4]	= alpha;
-
-	vm_current_vertices++;
-	if(vm_current_vertices == 4)
-		p->flags |= VM_POLYGON_FL4V;
-	else
-		if(vm_current_vertices == 3)
-			p->flags |= VM_POLYGON_FL3V;
-}
-
-//void() R_EndPolygon
-void VM_R_PolygonEnd (void)
-{
-	if(!vm_polygonbegin)
-	{
-		VM_Warning("VM_R_PolygonEnd: VM_R_PolygonBegin wasn't called\n");
-		return;
-	}
-	vm_polygonbegin = false;
-	if(vm_current_vertices > 2 || (vm_current_vertices >= 2 && vm_polygons[vm_drawpolygons_num].flags & VM_POLYGON_FLLINES))
-	{
-		if(vm_polygons[vm_drawpolygons_num].flags & VM_POLYGON_FL2D)	//[515]: don't use qcpolygons memory if 2D
-			VM_AddPolygonTo2DScene(&vm_polygons[vm_drawpolygons_num]);
-		else
-			vm_drawpolygons_num++;
-	}
-	else
-		VM_Warning("VM_R_PolygonEnd: %i vertices isn't a good choice\n", vm_current_vertices);
-}
-
-void VM_AddPolygonsToMeshQueue (void)
-{
-	int i;
-	if(!vm_drawpolygons_num)
-		return;
-	R_Mesh_Matrix(&identitymatrix);
-	GL_CullFace(GL_NONE);
-	for(i = 0;i < (int)vm_drawpolygons_num;i++)
-		VM_DrawPolygonCallback(NULL, NULL, 1, &i);
-	vm_drawpolygons_num = 0;
-}
-
-void Debug_PolygonBegin(const char *picname, int flags, qboolean draw2d, float linewidth)
-{
-	vm_polygon_t	*p;
-
-	if(!vm_polygons_initialized)
-		VM_InitPolygons();
-	if(vm_polygonbegin)
-	{
-		Con_Printf("Debug_PolygonBegin: called twice without Debug_PolygonEnd after first\n");
-		return;
-	}
-	// limit polygons to a vaguely sane amount, beyond this each one just
-	// replaces the last one
-	vm_drawpolygons_num = min(vm_drawpolygons_num, (1<<20)-1);
-	if(vm_drawpolygons_num >= vm_polygons_num)
-	{
-		p = (vm_polygon_t *)Mem_Alloc(vm_polygons_pool, 2 * vm_polygons_num * sizeof(vm_polygon_t));
-		memset(p, 0, 2 * vm_polygons_num * sizeof(vm_polygon_t));
-		memcpy(p, vm_polygons, vm_polygons_num * sizeof(vm_polygon_t));
-		Mem_Free(vm_polygons);
-		vm_polygons = p;
-		vm_polygons_num *= 2;
-	}
-	p = &vm_polygons[vm_drawpolygons_num];
-	if(picname && picname[0])
-		p->tex = Draw_CachePic(picname, true)->tex;
-	else
-		p->tex = r_texture_white;
-	p->flags = flags;
-	vm_current_vertices = 0;
-	vm_polygonbegin = true;
-	if(draw2d)
-		p->flags |= VM_POLYGON_FL2D;
-	if(linewidth)
-	{
-		p->data[13] = linewidth;	//[515]: linewidth
-		p->flags |= VM_POLYGON_FLLINES;
-	}
-}
-
-void Debug_PolygonVertex(float x, float y, float z, float s, float t, float r, float g, float b, float a)
-{
-	vm_polygon_t	*p;
-
-	if(!vm_polygonbegin)
-	{
-		Con_Printf("Debug_PolygonVertex: Debug_PolygonBegin wasn't called\n");
-		return;
-	}
-
-	p = &vm_polygons[vm_drawpolygons_num];
-	if(vm_current_vertices > 4)
-	{
-		Con_Printf("Debug_PolygonVertex: may have 4 vertices max\n");
-		return;
-	}
-
-	p->data[vm_current_vertices*3]		= x;
-	p->data[1+vm_current_vertices*3]	= y;
-	p->data[2+vm_current_vertices*3]	= z;
-
-	p->data[12+vm_current_vertices*2]	= s;
-	if(!(p->flags & VM_POLYGON_FLLINES))
-		p->data[13+vm_current_vertices*2]	= t;
-
-	p->data[20+vm_current_vertices*4]	= r;
-	p->data[21+vm_current_vertices*4]	= g;
-	p->data[22+vm_current_vertices*4]	= b;
-	p->data[23+vm_current_vertices*4]	= a;
-
-	vm_current_vertices++;
-	if(vm_current_vertices == 4)
-		p->flags |= VM_POLYGON_FL4V;
-	else
-		if(vm_current_vertices == 3)
-			p->flags |= VM_POLYGON_FL3V;
-}
-
-void Debug_PolygonEnd(void)
-{
-	if(!vm_polygonbegin)
-	{
-		Con_Printf("Debug_PolygonEnd: Debug_PolygonBegin wasn't called\n");
-		return;
-	}
-	vm_polygonbegin = false;
-	if(vm_current_vertices > 2 || (vm_current_vertices >= 2 && vm_polygons[vm_drawpolygons_num].flags & VM_POLYGON_FLLINES))
-	{
-		if(vm_polygons[vm_drawpolygons_num].flags & VM_POLYGON_FL2D)	//[515]: don't use qcpolygons memory if 2D
-			VM_AddPolygonTo2DScene(&vm_polygons[vm_drawpolygons_num]);
-		else
-			vm_drawpolygons_num++;
-	}
-	else
-		Con_Printf("Debug_PolygonEnd: %i vertices isn't a good choice\n", vm_current_vertices);
 }
 
 
@@ -3420,6 +3112,8 @@ void VM_altstr_ins(void)
 	char *out;
 	char outstr[VM_STRINGTEMP_LENGTH];
 
+	VM_SAFEPARMCOUNT(3, VM_altstr_ins);
+
 	in = instr = PRVM_G_STRING( OFS_PARM0 );
 	num = (int)PRVM_G_FLOAT( OFS_PARM1 );
 	set = setstr = PRVM_G_STRING( OFS_PARM2 );
@@ -3456,6 +3150,7 @@ typedef struct
 	char	*strings[MAX_QCSTR_STRINGS];
 }qcstrbuffer_t;
 
+// FIXME: move stringbuffers to prog_t to allow multiple progs!
 static qcstrbuffer_t	*qcstringbuffers[MAX_QCSTR_BUFFERS];
 static int				num_qcstringbuffers;
 static int				buf_sortpower;
@@ -3526,21 +3221,6 @@ static int BufStr_SortStringsDOWN (const void *in1, const void *in2)
 	if(!b[0])	return -1;
 	return strncmp(b, a, buf_sortpower);
 }
-
-#ifdef REMOVETHIS
-static void VM_BufStr_Init (void)
-{
-	memset(qcstringbuffers, 0, sizeof(qcstringbuffers));
-	num_qcstringbuffers = 0;
-}
-
-static void VM_BufStr_ShutDown (void)
-{
-	int i;
-	for(i=0;i<MAX_QCSTR_BUFFERS && num_qcstringbuffers;i++)
-		BufStr_ClearBuffer(i);
-}
-#endif
 
 /*
 ========================
@@ -3916,6 +3596,8 @@ void VM_changeyaw (void)
 	prvm_edict_t		*ent;
 	float		ideal, current, move, speed;
 
+	VM_SAFEPARMCOUNT(0, VM_changeyaw);
+
 	ent = PRVM_PROG_TO_EDICT(PRVM_GLOBALFIELDVALUE(prog->globaloffsets.self)->edict);
 	if (ent == prog->edicts)
 	{
@@ -3973,6 +3655,8 @@ void VM_changepitch (void)
 	prvm_edict_t		*ent;
 	float		ideal, current, move, speed;
 
+	VM_SAFEPARMCOUNT(1, VM_changepitch);
+
 	ent = PRVM_G_EDICT(OFS_PARM0);
 	if (ent == prog->edicts)
 	{
@@ -4020,6 +3704,122 @@ void VM_changepitch (void)
 	PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.angles)->vector[0] = ANGLEMOD (current + move);
 }
 
+
+static int Is_Text_Color (char c, char t)
+{
+	int a = 0;
+	char c2 = c - (c & 128);
+	char t2 = t - (t & 128);
+
+	if(c != STRING_COLOR_TAG && c2 != STRING_COLOR_TAG)		return 0;
+	if(t >= '0' && t <= '9')		a = 1;
+	if(t2 >= '0' && t2 <= '9')		a = 1;
+/*	if(t >= 'A' && t <= 'Z')		a = 2;
+	if(t2 >= 'A' && t2 <= 'Z')		a = 2;
+
+	if(a == 1 && scr_colortext.integer > 0)
+		return 1;
+	if(a == 2 && scr_multifonts.integer > 0)
+		return 2;
+*/
+	return a;
+}
+
+void VM_uncolorstring (void)
+{
+	const char	*in;
+	char		out[VM_STRINGTEMP_LENGTH];
+	int			k = 0, i = 0;
+
+	VM_SAFEPARMCOUNT(1, VM_uncolorstring);
+	in = PRVM_G_STRING(OFS_PARM0);
+	VM_CheckEmptyString (in);
+
+	while (in[k])
+	{
+		if(in[k+1])
+		if(Is_Text_Color(in[k], in[k+1]) == 1/* || (in[k] == '&' && in[k+1] == 'r')*/)
+		{
+			k += 2;
+			continue;
+		}
+		out[i] = in[k];
+		++k;
+		++i;
+	}
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(out);
+}
+
+//#222 string(string s, float index) str2chr (FTE_STRINGS)
+void VM_str2chr (void)
+{
+	const char *s;
+	VM_SAFEPARMCOUNT(2, VM_str2chr);
+	s = PRVM_G_STRING(OFS_PARM0);
+	if((unsigned)PRVM_G_FLOAT(OFS_PARM1) > strlen(s))
+		return;
+	PRVM_G_FLOAT(OFS_RETURN) = (unsigned char)s[(int)PRVM_G_FLOAT(OFS_PARM1)];
+}
+
+//#223 string(float c, ...) chr2str (FTE_STRINGS)
+void VM_chr2str (void)
+{
+	char	t[9];
+	int		i;
+	VM_SAFEPARMCOUNTRANGE(0, 8, VM_chr2str);
+	for(i = 0;i < prog->argc && i < (int)sizeof(t) - 1;i++)
+		t[i] = (unsigned char)PRVM_G_FLOAT(OFS_PARM0+i*3);
+	t[i] = 0;
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(t);
+}
+
+//#228 float(string s1, string s2, float len) strncmp (FTE_STRINGS)
+void VM_strncmp (void)
+{
+	const char *s1, *s2;
+	VM_SAFEPARMCOUNT(1, VM_strncmp);
+	s1 = PRVM_G_STRING(OFS_PARM0);
+	s2 = PRVM_G_STRING(OFS_PARM1);
+	PRVM_G_FLOAT(OFS_RETURN) = strncmp(s1, s2, (size_t)PRVM_G_FLOAT(OFS_PARM2));
+}
+
+void VM_wasfreed (void)
+{
+	VM_SAFEPARMCOUNT(1, VM_wasfreed);
+	PRVM_G_FLOAT(OFS_RETURN) = PRVM_G_EDICT(OFS_PARM0)->priv.required->free;
+}
+
+void VM_SetTraceGlobals(const trace_t *trace)
+{
+	prvm_eval_t *val;
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_allsolid)))
+		val->_float = trace->allsolid;
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_startsolid)))
+		val->_float = trace->startsolid;
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_fraction)))
+		val->_float = trace->fraction;
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_inwater)))
+		val->_float = trace->inwater;
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_inopen)))
+		val->_float = trace->inopen;
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_endpos)))
+		VectorCopy(trace->endpos, val->vector);
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_plane_normal)))
+		VectorCopy(trace->plane.normal, val->vector);
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_plane_dist)))
+		val->_float = trace->plane.dist;
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_ent)))
+		val->edict = PRVM_EDICT_TO_PROG(trace->ent ? trace->ent : prog->edicts);
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dpstartcontents)))
+		val->_float = trace->startsupercontents;
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphitcontents)))
+		val->_float = trace->hitsupercontents;
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphitq3surfaceflags)))
+		val->_float = trace->hitq3surfaceflags;
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphittexturename)))
+		val->string = trace->hittexture ? PRVM_SetTempString(trace->hittexture->name) : 0;
+}
+
 //=============
 
 void VM_Cmd_Init(void)
@@ -4028,11 +3828,6 @@ void VM_Cmd_Init(void)
 	VM_Files_Init();
 	VM_Search_Init();
 //	VM_BufStr_Init();
-	if(vm_polygons_initialized)
-	{
-		Mem_FreePool(&vm_polygons_pool);
-		vm_polygons_initialized = false;
-	}
 }
 
 void VM_Cmd_Reset(void)
@@ -4041,10 +3836,5 @@ void VM_Cmd_Reset(void)
 	VM_Search_Reset();
 	VM_Files_CloseAll();
 //	VM_BufStr_ShutDown();
-	if(vm_polygons_initialized)
-	{
-		Mem_FreePool(&vm_polygons_pool);
-		vm_polygons_initialized = false;
-	}
 }
 

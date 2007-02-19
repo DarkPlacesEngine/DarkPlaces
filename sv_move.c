@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // sv_move.c -- monster movement
 
 #include "quakedef.h"
+#include "prvm_cmds.h"
 
 /*
 =============
@@ -69,7 +70,7 @@ realcheck:
 	start[0] = stop[0] = (mins[0] + maxs[0])*0.5;
 	start[1] = stop[1] = (mins[1] + maxs[1])*0.5;
 	stop[2] = start[2] - 2*sv_stepheight.value;
-	trace = SV_Move (start, vec3_origin, vec3_origin, stop, MOVE_NOMONSTERS, ent);
+	trace = SV_Move (start, vec3_origin, vec3_origin, stop, MOVE_NOMONSTERS, ent, SV_GenericHitSuperContentsMask(ent));
 
 	if (trace.fraction == 1.0)
 		return false;
@@ -82,7 +83,7 @@ realcheck:
 			start[0] = stop[0] = x ? maxs[0] : mins[0];
 			start[1] = stop[1] = y ? maxs[1] : mins[1];
 
-			trace = SV_Move (start, vec3_origin, vec3_origin, stop, MOVE_NOMONSTERS, ent);
+			trace = SV_Move (start, vec3_origin, vec3_origin, stop, MOVE_NOMONSTERS, ent, SV_GenericHitSuperContentsMask(ent));
 
 			if (trace.fraction != 1.0 && trace.endpos[2] > bottom)
 				bottom = trace.endpos[2];
@@ -101,11 +102,10 @@ SV_movestep
 
 Called by monster program code.
 The move will be adjusted for slopes and stairs, but if the move isn't
-possible, no move is done, false is returned, and
-prog->globals.server->trace_normal is set to the normal of the blocking wall
+possible, no move is done and false is returned
 =============
 */
-qboolean SV_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink)
+qboolean SV_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qboolean noenemy, qboolean settrace)
 {
 	float		dz;
 	vec3_t		oldorg, neworg, end, traceendpos;
@@ -124,16 +124,19 @@ qboolean SV_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink)
 		for (i=0 ; i<2 ; i++)
 		{
 			VectorAdd (ent->fields.server->origin, move, neworg);
-			enemy = PRVM_PROG_TO_EDICT(ent->fields.server->enemy);
-			if (i == 0 && enemy != prog->edicts)
+			if (!noenemy)
 			{
-				dz = ent->fields.server->origin[2] - PRVM_PROG_TO_EDICT(ent->fields.server->enemy)->fields.server->origin[2];
-				if (dz > 40)
-					neworg[2] -= 8;
-				if (dz < 30)
-					neworg[2] += 8;
+				enemy = PRVM_PROG_TO_EDICT(ent->fields.server->enemy);
+				if (i == 0 && enemy != prog->edicts)
+				{
+					dz = ent->fields.server->origin[2] - PRVM_PROG_TO_EDICT(ent->fields.server->enemy)->fields.server->origin[2];
+					if (dz > 40)
+						neworg[2] -= 8;
+					if (dz < 30)
+						neworg[2] += 8;
+				}
 			}
-			trace = SV_Move (ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, neworg, MOVE_NORMAL, ent);
+			trace = SV_Move (ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, neworg, MOVE_NORMAL, ent, SV_GenericHitSuperContentsMask(ent));
 
 			if (trace.fraction == 1)
 			{
@@ -159,12 +162,12 @@ qboolean SV_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink)
 	VectorCopy (neworg, end);
 	end[2] -= sv_stepheight.value*2;
 
-	trace = SV_Move (neworg, ent->fields.server->mins, ent->fields.server->maxs, end, MOVE_NORMAL, ent);
+	trace = SV_Move (neworg, ent->fields.server->mins, ent->fields.server->maxs, end, MOVE_NORMAL, ent, SV_GenericHitSuperContentsMask(ent));
 
 	if (trace.startsolid)
 	{
 		neworg[2] -= sv_stepheight.value;
-		trace = SV_Move (neworg, ent->fields.server->mins, ent->fields.server->maxs, end, MOVE_NORMAL, ent);
+		trace = SV_Move (neworg, ent->fields.server->mins, ent->fields.server->maxs, end, MOVE_NORMAL, ent, SV_GenericHitSuperContentsMask(ent));
 		if (trace.startsolid)
 			return false;
 	}
@@ -237,7 +240,7 @@ qboolean SV_StepDirection (prvm_edict_t *ent, float yaw, float dist)
 	move[2] = 0;
 
 	VectorCopy (ent->fields.server->origin, oldorigin);
-	if (SV_movestep (ent, move, false))
+	if (SV_movestep (ent, move, false, false, false))
 	{
 		delta = ent->fields.server->angles[YAW] - ent->fields.server->ideal_yaw;
 		if (delta > 45 && delta < 315)
@@ -385,6 +388,8 @@ void SV_MoveToGoal (void)
 {
 	prvm_edict_t		*ent, *goal;
 	float		dist;
+
+	VM_SAFEPARMCOUNT(1, SV_MoveToGoal);
 
 	ent = PRVM_PROG_TO_EDICT(prog->globals.server->self);
 	goal = PRVM_PROG_TO_EDICT(ent->fields.server->goalentity);
