@@ -866,7 +866,7 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit)
 	}
 
 	// movement lerp
-	// if it's the player entity, update according to client movement
+	// if it's the predicted player entity, update according to client movement
 	if (e == cl.entities + cl.playerentity && cl.movement_predicted)
 	{
 		lerp = (cl.time - cl.movement_time[2]) / (cl.movement_time[0] - cl.movement_time[1]);
@@ -1625,8 +1625,6 @@ CL_ReadFromServer
 Read all incoming data from the server
 ===============
 */
-extern void CL_StairSmoothing(void);//view.c
-
 int CL_ReadFromServer(void)
 {
 	CL_ReadDemoMessage();
@@ -1654,8 +1652,6 @@ int CL_ReadFromServer(void)
 
 		CL_RelinkLightFlashes();
 		CSQC_RelinkAllEntities(ENTMASK_ENGINE | ENTMASK_ENGINEVIEWMODELS);
-
-		CL_StairSmoothing();
 
 		// move particles
 		CL_MoveParticles();
