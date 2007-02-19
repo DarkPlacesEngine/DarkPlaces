@@ -2448,6 +2448,35 @@ void SV_VM_Setup(void)
 	// TODO: add a requiredfuncs list (ask LH if this is necessary at all)
 	PRVM_LoadProgs( sv_progs.string, 0, NULL, REQFIELDS, reqfields, 0, NULL );
 
+	// some mods compiled with scrambling compilers lack certain critical
+	// global names and field names such as "self" and "time" and "nextthink"
+	// so we have to set these offsets manually, matching the entvars_t
+	PRVM_ED_FindFieldOffset_FromStruct(entvars_t, angles);
+	PRVM_ED_FindFieldOffset_FromStruct(entvars_t, chain);
+	PRVM_ED_FindFieldOffset_FromStruct(entvars_t, classname);
+	PRVM_ED_FindFieldOffset_FromStruct(entvars_t, frame);
+	PRVM_ED_FindFieldOffset_FromStruct(entvars_t, groundentity);
+	PRVM_ED_FindFieldOffset_FromStruct(entvars_t, ideal_yaw);
+	PRVM_ED_FindFieldOffset_FromStruct(entvars_t, nextthink);
+	PRVM_ED_FindFieldOffset_FromStruct(entvars_t, think);
+	PRVM_ED_FindFieldOffset_FromStruct(entvars_t, yaw_speed);
+	PRVM_ED_FindGlobalOffset_FromStruct(globalvars_t, self);
+	PRVM_ED_FindGlobalOffset_FromStruct(globalvars_t, time);
+	PRVM_ED_FindGlobalOffset_FromStruct(globalvars_t, v_forward);
+	PRVM_ED_FindGlobalOffset_FromStruct(globalvars_t, v_right);
+	PRVM_ED_FindGlobalOffset_FromStruct(globalvars_t, v_up);
+	PRVM_ED_FindGlobalOffset_FromStruct(globalvars_t, trace_allsolid);
+	PRVM_ED_FindGlobalOffset_FromStruct(globalvars_t, trace_startsolid);
+	PRVM_ED_FindGlobalOffset_FromStruct(globalvars_t, trace_fraction);
+	PRVM_ED_FindGlobalOffset_FromStruct(globalvars_t, trace_inwater);
+	PRVM_ED_FindGlobalOffset_FromStruct(globalvars_t, trace_inopen);
+	PRVM_ED_FindGlobalOffset_FromStruct(globalvars_t, trace_endpos);
+	PRVM_ED_FindGlobalOffset_FromStruct(globalvars_t, trace_plane_normal);
+	PRVM_ED_FindGlobalOffset_FromStruct(globalvars_t, trace_plane_dist);
+	PRVM_ED_FindGlobalOffset_FromStruct(globalvars_t, trace_ent);
+	// OP_STATE is always supported on server (due to entvars_t)
+	prog->flag |= PRVM_OP_STATE;
+
 	VM_AutoSentStats_Clear();//[515]: csqc
 	EntityFrameCSQC_ClearVersions();//[515]: csqc
 

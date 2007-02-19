@@ -1684,10 +1684,6 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 
 	PRVM_FindOffsets();
 
-	// check if OP_STATE animation is possible in this dat file
-	if (prog->fieldoffsets.nextthink >= 0 && prog->fieldoffsets.frame >= 0 && prog->fieldoffsets.think >= 0 && prog->globaloffsets.self >= 0)
-		prog->flag |= PRVM_OP_STATE;
-
 	PRVM_GCALL(init_cmd)();
 
 	// init mempools

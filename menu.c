@@ -4960,6 +4960,9 @@ void MP_Init (void)
 
 	PRVM_LoadProgs(M_PROG_FILENAME, m_numrequiredfunc, m_required_func, 0, NULL, 0, NULL);
 
+	// note: OP_STATE is not supported by menu qc, we don't even try to detect
+	// it here
+
 #ifdef NG_MENU
 	m_displayed = false;
 #endif
