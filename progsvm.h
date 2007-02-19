@@ -120,14 +120,18 @@ typedef void (*prvm_builtin_t) (void);
 // NOTE: field offsets use -1 for NULL
 typedef struct prvm_prog_fieldoffsets_s
 {
-	int classname; // common
-	int chain; // common - used by find builtins
-	int think; // common - used by OP_STATE
-	int nextthink; // common - used by OP_STATE
-	int frame; // common - used by OP_STATE
+	// server and client use a lot of similar fields, so this is combined
+	int SendEntity; // ssqc
+	int Version; // ssqc
+	int alpha; // ssqc / csqc
+	int ammo_cells1; // ssqc - Dissolution of Eternity mission pack
+	int ammo_lava_nails; // ssqc - Dissolution of Eternity mission pack
+	int ammo_multi_rockets; // ssqc - Dissolution of Eternity mission pack
+	int ammo_nails1; // ssqc - Dissolution of Eternity mission pack
+	int ammo_plasma; // ssqc - Dissolution of Eternity mission pack
+	int ammo_rockets1; // ssqc - Dissolution of Eternity mission pack
+	int ammo_shells1; // ssqc - Dissolution of Eternity mission pack
 	int angles; // common - used by changeyaw/changepitch
-
-	int gravity; // ssqc
 	int button3; // ssqc
 	int button4; // ssqc
 	int button5; // ssqc
@@ -142,96 +146,91 @@ typedef struct prvm_prog_fieldoffsets_s
 	int button14; // ssqc
 	int button15; // ssqc
 	int button16; // ssqc
-	int buttonuse; // ssqc
 	int buttonchat; // ssqc
-	int glow_size; // ssqc
-	int glow_trail; // ssqc
-	int glow_color; // ssqc
-	int items2; // ssqc
-	int scale; // ssqc / csqc
-	int alpha; // ssqc / csqc
-	int renderamt; // ssqc - HalfLife support
-	int rendermode; // ssqc - HalfLife support
-	int fullbright; // ssqc - Nehahra support
-	int ammo_shells1; // ssqc - Dissolution of Eternity mission pack
-	int ammo_nails1; // ssqc - Dissolution of Eternity mission pack
-	int ammo_lava_nails; // ssqc - Dissolution of Eternity mission pack
-	int ammo_rockets1; // ssqc - Dissolution of Eternity mission pack
-	int ammo_multi_rockets; // ssqc - Dissolution of Eternity mission pack
-	int ammo_cells1; // ssqc - Dissolution of Eternity mission pack
-	int ammo_plasma; // ssqc - Dissolution of Eternity mission pack
-	int ideal_yaw; // ssqc / csqc
-	int yaw_speed; // ssqc / csqc
-	int idealpitch; // ssqc / csqc
-	int pitch_speed; // ssqc / csqc
-	int viewmodelforclient; // ssqc
-	int nodrawtoclient; // ssqc
-	int exteriormodeltoclient; // ssqc
-	int drawonlytoclient; // ssqc
-	int ping; // ssqc
-	int movement; // ssqc
-	int pmodel; // ssqc
-	int punchvector; // ssqc
-	int viewzoom; // ssqc
+	int buttonuse; // ssqc
+	int chain; // common - used by find builtins
+	int classname; // common
 	int clientcolors; // ssqc
-	int tag_entity; // ssqc
-	int tag_index; // ssqc
-	int light_lev; // ssqc
 	int color; // ssqc
-	int style; // ssqc
-	int pflags; // ssqc
+	int colormod; // ssqc / csqc
+	int contentstransition; // ssqc
 	int cursor_active; // ssqc
 	int cursor_screen; // ssqc
-	int cursor_trace_start; // ssqc
 	int cursor_trace_endpos; // ssqc
 	int cursor_trace_ent; // ssqc
-	int colormod; // ssqc / csqc
+	int cursor_trace_start; // ssqc
+	int customizeentityforclient; // ssqc
+	int dimension_hit; // ssqc / csqc
+	int dimension_solid; // ssqc / csqc
+	int dphitcontentsmask; // ssqc / csqc
+	int drawonlytoclient; // ssqc
+	int effects; // ssqc / csqc
+	int exteriormodeltoclient; // ssqc
+	int fatness; // ssqc / csqc
+	int forceshader; // csqc
+	int frame1time; // csqc
+	int frame2; // csqc
+	int frame2time; // csqc
+	int frame; // common - used by OP_STATE
+	int fullbright; // ssqc - Nehahra support
+	int glow_color; // ssqc
+	int glow_size; // ssqc
+	int glow_trail; // ssqc
+	int gravity; // ssqc
+	int groundentity; // ssqc / csqc
+	int hull; // ssqc / csqc
+	int ideal_yaw; // ssqc / csqc
+	int idealpitch; // ssqc / csqc
+	int items2; // ssqc
+	int lerpfrac; // csqc
+	int light_lev; // ssqc
+	int movement; // ssqc
+	int nextthink; // common - used by OP_STATE
+	int nodrawtoclient; // ssqc
+	int pflags; // ssqc
+	int ping; // ssqc
+	int pitch_speed; // ssqc / csqc
 	int playermodel; // ssqc
 	int playerskin; // ssqc
-	int SendEntity; // ssqc
-	int Version; // ssqc
-	int customizeentityforclient; // ssqc
-	int dphitcontentsmask; // ssqc
-	int contentstransition; // ssqc
-	//int fatness; // ssqc / csqc
-	//int dimension_hit; // ssqc / csqc
-	//int dimension_solid; // ssqc / csqc
-
-	// csqc
-	int frame2;
-	int frame1time;
-	int frame2time;
-	int lerpfrac;
-	int renderflags;
-	//int forceshader;
-	int groundentity;
-	//int hull;
-	int effects;
-	//int tag_entity;
-	//int tag_index;
-	//int dphitcontentsmask;
-
-	// mqc
+	int pmodel; // ssqc
+	int punchvector; // ssqc
+	int renderamt; // ssqc - HalfLife support
+	int renderflags; // csqc
+	int rendermode; // ssqc - HalfLife support
+	int scale; // ssqc / csqc
+	int style; // ssqc
+	int tag_entity; // ssqc / csqc
+	int tag_index; // ssqc / csqc
+	int think; // common - used by OP_STATE
+	int viewmodelforclient; // ssqc
+	int viewzoom; // ssqc
+	int yaw_speed; // ssqc / csqc
 }
 prvm_prog_fieldoffsets_t;
 
 // NOTE: global offsets use -1 for NULL
 typedef struct prvm_prog_globaloffsets_s
 {
-	// common
-	int self;
-	int time;
-
-	// ssqc
-	int trace_dpstartcontents;
-	int trace_dphitcontents;
-	int trace_dphitq3surfaceflags;
-	int trace_dphittexturename;
-	int SV_InitCmd;
-
-	// csqc
-
-	// mqc
+	// server and client use a lot of similar globals, so this is combined
+	int SV_InitCmd; // ssqc
+	int self; // common
+	int time; // ssqc / csqc
+	int v_forward; // ssqc / csqc
+	int v_right; // ssqc / csqc
+	int v_up; // ssqc / csqc
+	int trace_allsolid; // ssqc / csqc
+	int trace_startsolid; // ssqc / csqc
+	int trace_fraction; // ssqc / csqc
+	int trace_inwater; // ssqc / csqc
+	int trace_inopen; // ssqc / csqc
+	int trace_endpos; // ssqc / csqc
+	int trace_plane_normal; // ssqc / csqc
+	int trace_plane_dist; // ssqc / csqc
+	int trace_ent; // ssqc / csqc
+	int trace_dphitcontents; // ssqc / csqc
+	int trace_dphitq3surfaceflags; // ssqc / csqc
+	int trace_dphittexturename; // ssqc / csqc
+	int trace_dpstartcontents; // ssqc / csqc
 }
 prvm_prog_globaloffsets_t;
 
@@ -239,40 +238,33 @@ prvm_prog_globaloffsets_t;
 // NOTE: function offsets use 0 for NULL
 typedef struct prvm_prog_funcoffsets_s
 {
-	// common
+	func_t CSQC_ConsoleCommand; // csqc
+	func_t CSQC_Ent_Remove; // csqc
+	func_t CSQC_Ent_Update; // csqc
+	func_t CSQC_Event; // csqc [515]: engine call this for its own needs so csqc can do some things according to what engine it's running on.  example: to say about edicts increase, whatever...
+	func_t CSQC_Init; // csqc
+	func_t CSQC_InputEvent; // csqc
+	func_t CSQC_Parse_CenterPrint; // csqc
+	func_t CSQC_Parse_Print; // csqc
+	func_t CSQC_Parse_StuffCmd; // csqc
+	func_t CSQC_Parse_TempEntity; // csqc [515]: very helpfull when you want to create your own particles/decals/etc for effects that already exist
+	func_t CSQC_Shutdown; // csqc
+	func_t CSQC_UpdateView; // csqc
+	func_t EndFrame; // ssqc
+	func_t RestoreGame; // ssqc
+	func_t SV_ChangeTeam; // ssqc
+	func_t SV_ParseClientCommand; // ssqc
+	func_t SV_PlayerPhysics; // ssqc
 
-	// ssqc
-	func_t SV_PlayerPhysics;
-	func_t SV_ParseClientCommand;
-	func_t SV_ChangeTeam;
-	func_t EndFrame;
-	func_t RestoreGame;
-
-	// csqc
-	func_t CSQC_Init;
-	func_t CSQC_InputEvent;
-	func_t CSQC_UpdateView;
-	func_t CSQC_ConsoleCommand;
-	func_t CSQC_Shutdown;
-	func_t CSQC_Parse_TempEntity; //[515]: very helpfull when you want to create your own particles/decals/etc for effects that already exist
-	func_t CSQC_Parse_StuffCmd;
-	func_t CSQC_Parse_Print;
-	func_t CSQC_Parse_CenterPrint;
-	func_t CSQC_Ent_Update;
-	func_t CSQC_Ent_Remove;
-	func_t CSQC_Event; //[515]: engine call this for its own needs so csqc can do some things according to what engine it's running on.  example: to say about edicts increase, whatever...
-
-	// mqc
-	func_t m_init;
-#ifdef NG_MENU
-	func_t m_display;
-	func_t m_hide;
-#endif
-	func_t m_keydown;
-	func_t m_keyup;
-	func_t m_draw;
-	func_t m_toggle;
-	func_t m_shutdown;
+	// menu qc only uses some functions, nothing else
+	func_t m_display; // mqc
+	func_t m_draw; // mqc
+	func_t m_hide; // mqc
+	func_t m_init; // mqc
+	func_t m_keydown; // mqc
+	func_t m_keyup; // mqc
+	func_t m_shutdown; // mqc
+	func_t m_toggle; // mqc
 }
 prvm_prog_funcoffsets_t;
 
@@ -427,8 +419,7 @@ extern const int vm_sv_numbuiltins;
 extern const int vm_cl_numbuiltins;
 extern const int vm_m_numbuiltins;
 
-extern char * vm_sv_extensions;
-extern char * vm_cl_extensions;
+extern char * vm_sv_extensions; // client also uses this
 extern char * vm_m_extensions;
 
 void VM_SV_Cmd_Init(void);
