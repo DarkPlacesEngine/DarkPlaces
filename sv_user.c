@@ -68,7 +68,7 @@ void SV_SetIdealPitch (void)
 		bottom[1] = top[1];
 		bottom[2] = top[2] - 160;
 
-		tr = SV_Move (top, vec3_origin, vec3_origin, bottom, MOVE_NOMONSTERS, host_client->edict);
+		tr = SV_Move (top, vec3_origin, vec3_origin, bottom, MOVE_NOMONSTERS, host_client->edict, SUPERCONTENTS_SOLID);
 		// if looking at a wall, leave ideal the way is was
 		if (tr.startsolid)
 			return;
@@ -134,7 +134,7 @@ void SV_UserFriction (void)
 	start[2] = host_client->edict->fields.server->origin[2] + host_client->edict->fields.server->mins[2];
 	stop[2] = start[2] - 34;
 
-	trace = SV_Move (start, vec3_origin, vec3_origin, stop, MOVE_NOMONSTERS, host_client->edict);
+	trace = SV_Move (start, vec3_origin, vec3_origin, stop, MOVE_NOMONSTERS, host_client->edict, SV_GenericHitSuperContentsMask(host_client->edict));
 
 	if (trace.fraction == 1.0)
 		friction = sv_friction.value*sv_edgefriction.value;

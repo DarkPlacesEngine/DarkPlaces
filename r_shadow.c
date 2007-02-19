@@ -2883,7 +2883,7 @@ void R_Shadow_SelectLightInView(void)
 		if (rating >= 0.95)
 		{
 			rating /= (1 + 0.0625f * sqrt(DotProduct(temp, temp)));
-			if (bestrating < rating && CL_TraceBox(light->origin, vec3_origin, vec3_origin, r_view.origin, true, NULL, SUPERCONTENTS_SOLID, false).fraction == 1.0f)
+			if (bestrating < rating && CL_Move(light->origin, vec3_origin, vec3_origin, r_view.origin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction == 1.0f)
 			{
 				bestrating = rating;
 				best = light;
@@ -3312,7 +3312,7 @@ void R_Shadow_SetCursorLocationForView(void)
 	vec3_t dest, endpos;
 	trace_t trace;
 	VectorMA(r_view.origin, r_editlights_cursordistance.value, r_view.forward, dest);
-	trace = CL_TraceBox(r_view.origin, vec3_origin, vec3_origin, dest, true, NULL, SUPERCONTENTS_SOLID, false);
+	trace = CL_Move(r_view.origin, vec3_origin, vec3_origin, dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false);
 	if (trace.fraction < 1)
 	{
 		dist = trace.fraction * r_editlights_cursordistance.value;

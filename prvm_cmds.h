@@ -189,18 +189,15 @@ float	getserverlistindexforkey(string key)
 // nice helper macros
 
 #ifndef VM_NOPARMCHECK
-#define VM_SAFEPARMCOUNT(p,f)	if(prog->argc != p) PRVM_ERROR(#f " wrong parameter count (" #p " expected ) !")
+#define VM_SAFEPARMCOUNTRANGE(p1,p2,f)	if(prog->argc < p1 || prog->argc > p2) PRVM_ERROR(#f " wrong parameter count %i (" #p1 " to " #p2 " expected ) !", prog->argc)
+#define VM_SAFEPARMCOUNT(p,f)	if(prog->argc != p) PRVM_ERROR(#f " wrong parameter count %i (" #p " expected ) !", prog->argc)
 #else
+#define VM_SAFEPARMCOUNTRANGE(p1,p2,f)
 #define VM_SAFEPARMCOUNT(p,f)
 #endif
 
 #define	VM_RETURN_EDICT(e)		(((int *)prog->globals.generic)[OFS_RETURN] = PRVM_EDICT_TO_PROG(e))
 
-#define e10 NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL
-#define e100 e10,e10,e10,e10,e10,e10,e10,e10,e10,e10
-#define e1000 e100,e100,e100,e100,e100,e100,e100,e100,e100,e100
-
-#define VM_STRINGTEMP_BUFFERS 16
 #define VM_STRINGTEMP_LENGTH MAX_INPUTLINE
 
 // builtins and other general functions
@@ -245,7 +242,6 @@ void VM_findchainfloat (void);
 void VM_findflags (void);
 void VM_findchainflags (void);
 void VM_precache_file (void);
-void VM_precache_error (void);
 void VM_precache_sound (void);
 void VM_coredump (void);
 
@@ -269,7 +265,6 @@ void VM_min (void);
 void VM_max (void);
 void VM_bound (void);
 void VM_pow (void);
-void VM_copyentity (void);
 void VM_asin (void);
 void VM_acos (void);
 void VM_atan (void);
@@ -283,9 +278,7 @@ void VM_fopen(void);
 void VM_fclose(void);
 void VM_fgets(void);
 void VM_fputs(void);
-// used by M_WriteToFile
-// should be only called from a builtin
-qfile_t *VM_GetFileHandle( int index );
+void VM_writetofile(void); // only used by menu
 
 void VM_strlen(void);
 void VM_strcat(void);
@@ -332,6 +325,7 @@ void VM_drawsetcliparea(void);
 void VM_drawresetcliparea(void);
 void VM_getimagesize(void);
 
+void VM_makevectors (void);
 void VM_vectorvectors (void);
 
 void VM_keynumtostring (void);
@@ -344,9 +338,6 @@ void VM_cin_getstate( void );
 void VM_cin_restart( void );
 
 void VM_drawline (void);
-void VM_R_PolygonBegin (void);
-void VM_R_PolygonVertex (void);
-void VM_R_PolygonEnd (void);
 
 void VM_bitshift (void);
 
@@ -369,6 +360,15 @@ void VM_bufstr_free (void);
 
 void VM_changeyaw (void);
 void VM_changepitch (void);
+
+void VM_uncolorstring (void);
+void VM_str2chr (void);
+void VM_chr2str (void);
+void VM_strncmp (void);
+void VM_registercvar (void);
+void VM_wasfreed (void);
+
+void VM_SetTraceGlobals(const trace_t *trace);
 
 void VM_Cmd_Init(void);
 void VM_Cmd_Reset(void);

@@ -83,9 +83,10 @@ void R_DrawCoronas(void)
 	R_Mesh_Matrix(&identitymatrix);
 	viewdist = DotProduct(r_view.origin, r_view.forward);
 	flag = r_refdef.rtworld ? LIGHTFLAG_REALTIMEMODE : LIGHTFLAG_NORMALMODE;
+	// FIXME: these traces should scan all render entities instead of cl.world
 	for (lnum = 0, light = r_shadow_worldlightchain;light;light = light->next, lnum++)
 	{
-		if ((light->flags & flag) && light->corona * r_coronas.value > 0 && (r_shadow_debuglight.integer < 0 || r_shadow_debuglight.integer == lnum) && (dist = (DotProduct(light->rtlight.shadoworigin, r_view.forward) - viewdist)) >= 24.0f && CL_TraceBox(light->rtlight.shadoworigin, vec3_origin, vec3_origin, r_view.origin, true, NULL, SUPERCONTENTS_SOLID, false).fraction == 1)
+		if ((light->flags & flag) && light->corona * r_coronas.value > 0 && (r_shadow_debuglight.integer < 0 || r_shadow_debuglight.integer == lnum) && (dist = (DotProduct(light->rtlight.shadoworigin, r_view.forward) - viewdist)) >= 24.0f && CL_Move(light->rtlight.shadoworigin, vec3_origin, vec3_origin, r_view.origin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction == 1)
 		{
 			cscale = light->rtlight.corona * r_coronas.value * 0.25f;
 			scale = light->rtlight.radius * light->rtlight.coronasizescale;
@@ -95,7 +96,7 @@ void R_DrawCoronas(void)
 	for (i = 0;i < r_refdef.numlights;i++)
 	{
 		rtlight = &r_refdef.lights[i];
-		if ((rtlight->flags & flag) && rtlight->corona * r_coronas.value > 0 && (dist = (DotProduct(rtlight->shadoworigin, r_view.forward) - viewdist)) >= 24.0f && CL_TraceBox(rtlight->shadoworigin, vec3_origin, vec3_origin, r_view.origin, true, NULL, SUPERCONTENTS_SOLID, false).fraction == 1)
+		if ((rtlight->flags & flag) && rtlight->corona * r_coronas.value > 0 && (dist = (DotProduct(rtlight->shadoworigin, r_view.forward) - viewdist)) >= 24.0f && CL_Move(rtlight->shadoworigin, vec3_origin, vec3_origin, r_view.origin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction == 1)
 		{
 			cscale = rtlight->corona * r_coronas.value * 0.25f;
 			scale = rtlight->radius * rtlight->coronasizescale;
@@ -140,7 +141,7 @@ void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffu
 			light = &r_refdef.lights[i];
 			Matrix4x4_Transform(&light->matrix_worldtolight, p, v);
 			f = 1 - VectorLength2(v);
-			if (f > 0 && CL_TraceBox(p, vec3_origin, vec3_origin, light->shadoworigin, false, NULL, SUPERCONTENTS_SOLID, false).fraction == 1)
+			if (f > 0 && CL_Move(p, vec3_origin, vec3_origin, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction == 1)
 				VectorMA(ambientcolor, f, light->currentcolor, ambientcolor);
 		}
 	}

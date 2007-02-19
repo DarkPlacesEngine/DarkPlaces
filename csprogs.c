@@ -2,6 +2,7 @@
 #include "progsvm.h"
 #include "clprogdefs.h"
 #include "csprogs.h"
+#include "cl_collision.h"
 
 //============================================================================
 // Client prog handling
@@ -54,31 +55,6 @@ void CL_VM_Error (const char *format, ...)	//[515]: hope it will be never execut
 
 //	Host_AbortCurrentFrame();	//[515]: hmmm... if server says it needs csqc then client MUST disconnect
 	Host_Error(va("CL_VM_Error: %s", errorstring));
-}
-
-model_t *CSQC_GetModelByIndex(int modelindex)
-{
-	if(!modelindex)
-		return NULL;
-	if (modelindex < 0)
-	{
-		modelindex = -(modelindex+1);
-		if (modelindex < MAX_MODELS)
-			return cl.csqc_model_precache[modelindex];
-	}
-	else
-	{
-		if(modelindex < MAX_MODELS)
-			return cl.model_precache[modelindex];
-	}
-	return NULL;
-}
-
-model_t *CSQC_GetModelFromEntity(prvm_edict_t *ed)
-{
-	if (!ed || ed->priv.server->free)
-		return NULL;
-	return CSQC_GetModelByIndex((int)ed->fields.client->modelindex);
 }
 
 //[515]: set globals before calling R_UpdateView, WEIRD CRAP
@@ -140,7 +116,7 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 	model_t *model;
 	matrix4x4_t tagmatrix, matrix2;
 
-	model = CSQC_GetModelFromEntity(ed);
+	model = CL_GetModelFromEdict(ed);
 	if (!model)
 		return false;
 
@@ -154,14 +130,8 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 	e->render.skinnum = (int)ed->fields.client->skin;
 	e->render.effects |= e->render.model->flags2 & (EF_FULLBRIGHT | EF_ADDITIVE);
 	scale = 1;
-	// FIXME: renderflags should be in the cl_entvars_t
-#if 1
 	renderflags = 0;
 	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.renderflags)) && val->_float)	renderflags = (int)val->_float;
-#else
-	renderflags = (int)ed->fields.client->renderflags;
-#endif
-
 	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.alpha)) && val->_float)		e->render.alpha = val->_float;
 	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.scale)) && val->_float)		e->render.scale = scale = val->_float;
 	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.colormod)) && VectorLength2(val->vector))	VectorCopy(val->vector, e->render.colormod);
@@ -184,6 +154,7 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 		vec3_t left;
 		VectorNegate(prog->globals.client->v_right, left);
 		Matrix4x4_FromVectors(&matrix2, prog->globals.client->v_forward, left, prog->globals.client->v_up, ed->fields.client->origin);
+		Matrix4x4_Scale(&matrix2, scale, 1);
 	}
 	else
 	{
@@ -472,20 +443,6 @@ void CSQC_ReadEntities (void)
 		}
 		prog->globals.client->self = oldself;
 	CSQC_END
-}
-
-void CL_LinkEdict(prvm_edict_t *ent)
-{
-	if (ent == prog->edicts)
-		return;		// don't add the world
-
-	if (ent->priv.server->free)
-		return;
-
-	VectorAdd(ent->fields.client->origin, ent->fields.client->mins, ent->fields.client->absmin);
-	VectorAdd(ent->fields.client->origin, ent->fields.client->maxs, ent->fields.client->absmax);
-
-	World_LinkEdict(&cl.world, ent, ent->fields.client->absmin, ent->fields.client->absmax);
 }
 
 void CL_VM_CB_BeginIncreaseEdicts(void)

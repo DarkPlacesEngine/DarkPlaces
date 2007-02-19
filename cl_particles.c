@@ -521,7 +521,7 @@ void CL_SpawnDecalParticleForPoint(const vec3_t org, float maxdist, float size, 
 	{
 		VectorRandom(org2);
 		VectorMA(org, maxdist, org2, org2);
-		trace = CL_TraceBox(org, vec3_origin, vec3_origin, org2, true, &hitent, SUPERCONTENTS_SOLID | SUPERCONTENTS_SKY, false);
+		trace = CL_Move(org, vec3_origin, vec3_origin, org2, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_SKY, true, false, &hitent, false);
 		// take the closest trace result that doesn't end up hitting a NOMARKS
 		// surface (sky for example)
 		if (bestfrac > trace.fraction && !(trace.hitq3surfaceflags & Q3SURFACEFLAG_NOMARKS))
@@ -1324,7 +1324,7 @@ void CL_ParticleExplosion (const vec3_t org)
 						v[0] = org[0] + lhrandom(-48, 48);
 						v[1] = org[1] + lhrandom(-48, 48);
 						v[2] = org[2] + lhrandom(-48, 48);
-						trace = CL_TraceBox(org, vec3_origin, vec3_origin, v, true, NULL, SUPERCONTENTS_SOLID, false);
+						trace = CL_Move(org, vec3_origin, vec3_origin, v, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false);
 						if (trace.fraction >= 0.1)
 							break;
 					}
@@ -1534,7 +1534,7 @@ void CL_MoveParticles (void)
 			VectorCopy(p->org, org);
 			if (p->bounce)
 			{
-				trace = CL_TraceBox(oldorg, vec3_origin, vec3_origin, p->org, true, &hitent, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | (p->type == particletype + pt_rain ? SUPERCONTENTS_LIQUIDSMASK : 0), false);
+				trace = CL_Move(oldorg, vec3_origin, vec3_origin, p->org, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | (p->type == particletype + pt_rain ? SUPERCONTENTS_LIQUIDSMASK : 0), true, false, &hitent, false);
 				// if the trace started in or hit something of SUPERCONTENTS_NODROP
 				// or if the trace hit something flagged as NOIMPACT
 				// then remove the particle

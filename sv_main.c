@@ -1722,6 +1722,126 @@ int SV_SoundIndex(const char *s, int precachemode)
 	return 0;
 }
 
+// MUST match effectnameindex_t in client.h
+static const char *standardeffectnames[EFFECT_TOTAL] =
+{
+	"",
+	"TE_GUNSHOT",
+	"TE_GUNSHOTQUAD",
+	"TE_SPIKE",
+	"TE_SPIKEQUAD",
+	"TE_SUPERSPIKE",
+	"TE_SUPERSPIKEQUAD",
+	"TE_WIZSPIKE",
+	"TE_KNIGHTSPIKE",
+	"TE_EXPLOSION",
+	"TE_EXPLOSIONQUAD",
+	"TE_TAREXPLOSION",
+	"TE_TELEPORT",
+	"TE_LAVASPLASH",
+	"TE_SMALLFLASH",
+	"TE_FLAMEJET",
+	"EF_FLAME",
+	"TE_BLOOD",
+	"TE_SPARK",
+	"TE_PLASMABURN",
+	"TE_TEI_G3",
+	"TE_TEI_SMOKE",
+	"TE_TEI_BIGEXPLOSION",
+	"TE_TEI_PLASMAHIT",
+	"EF_STARDUST",
+	"TR_ROCKET",
+	"TR_GRENADE",
+	"TR_BLOOD",
+	"TR_WIZSPIKE",
+	"TR_SLIGHTBLOOD",
+	"TR_KNIGHTSPIKE",
+	"TR_VORESPIKE",
+	"TR_NEHAHRASMOKE",
+	"TR_NEXUIZPLASMA",
+	"TR_GLOWTRAIL",
+	"SVC_PARTICLE"
+};
+
+/*
+================
+SV_ParticleEffectIndex
+
+================
+*/
+int SV_ParticleEffectIndex(const char *name)
+{
+	int i, argc, linenumber, effectnameindex;
+	fs_offset_t filesize;
+	unsigned char *filedata;
+	const char *text, *textstart, *textend;
+	char argv[16][1024];
+	if (!sv.particleeffectnamesloaded)
+	{
+		sv.particleeffectnamesloaded = true;
+		memset(sv.particleeffectname, 0, sizeof(sv.particleeffectname));
+		for (i = 0;i < EFFECT_TOTAL;i++)
+			strlcpy(sv.particleeffectname[i], standardeffectnames[i], sizeof(sv.particleeffectname[i]));
+		filedata = FS_LoadFile("effectinfo.txt", tempmempool, true, &filesize);
+		if (filedata)
+		{
+			textstart = (const char *)filedata;
+			textend = (const char *)filedata + filesize;
+			text = textstart;
+			for (linenumber = 1;;linenumber++)
+			{
+				argc = 0;
+				for (;;)
+				{
+					if (!COM_ParseToken(&text, true) || !strcmp(com_token, "\n"))
+						break;
+					if (argc < 16)
+					{
+						strlcpy(argv[argc], com_token, sizeof(argv[argc]));
+						argc++;
+					}
+				}
+				if (com_token[0] == 0)
+					break; // if the loop exited and it's not a \n, it's EOF
+				if (argc < 1)
+					continue;
+				if (!strcmp(argv[0], "effect"))
+				{
+					if (argc == 2)
+					{
+						for (effectnameindex = 1;effectnameindex < SV_MAX_PARTICLEEFFECTNAME;effectnameindex++)
+						{
+							if (sv.particleeffectname[effectnameindex][0])
+							{
+								if (!strcmp(sv.particleeffectname[effectnameindex], argv[1]))
+									break;
+							}
+							else
+							{
+								strlcpy(sv.particleeffectname[effectnameindex], argv[1], sizeof(sv.particleeffectname[effectnameindex]));
+								break;
+							}
+						}
+						// if we run out of names, abort
+						if (effectnameindex == SV_MAX_PARTICLEEFFECTNAME)
+						{
+							Con_Printf("effectinfo.txt:%i: too many effects!\n", linenumber);
+							break;
+						}
+					}
+				}
+			}
+			Mem_Free(filedata);
+		}
+	}
+	// search for the name
+	for (effectnameindex = 1;effectnameindex < SV_MAX_PARTICLEEFFECTNAME && sv.particleeffectname[effectnameindex][0];effectnameindex++)
+		if (!strcmp(sv.particleeffectname[effectnameindex], name))
+			return effectnameindex;
+	// return 0 if we couldn't find it
+	return 0;
+}
+
 /*
 ================
 SV_CreateBaseline

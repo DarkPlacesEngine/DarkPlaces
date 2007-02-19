@@ -1230,7 +1230,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 		trace_t trace;
 		matrix4x4_t tempmatrix;
 		Matrix4x4_Transform(&e->render.matrix, muzzleflashorigin, v2);
-		trace = CL_TraceBox(origin, vec3_origin, vec3_origin, v2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_SKY, false);
+		trace = CL_Move(origin, vec3_origin, vec3_origin, v2, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_SKY, true, false, NULL, false);
 		Matrix4x4_Normalize(&tempmatrix, &e->render.matrix);
 		Matrix4x4_SetOrigin(&tempmatrix, trace.endpos[0], trace.endpos[1], trace.endpos[2]);
 		Matrix4x4_Scale(&tempmatrix, 150, 1);

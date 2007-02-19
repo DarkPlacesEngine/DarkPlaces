@@ -134,31 +134,20 @@ char *vm_sv_extensions =
 ;
 
 /*
-==============
-PF_makevectors
-
-Writes new values for v_forward, v_up, and v_right based on angles
-makevectors(vector)
-==============
-*/
-void PF_makevectors (void)
-{
-	AngleVectors (PRVM_G_VECTOR(OFS_PARM0), prog->globals.server->v_forward, prog->globals.server->v_right, prog->globals.server->v_up);
-}
-
-/*
 =================
-PF_setorigin
+VM_SV_setorigin
 
 This is the only valid way to move an object without using the physics of the world (setting velocity and waiting).  Directly changing origin will not set internal links correctly, so clipping would be messed up.  This should be called when an object is spawned, and then only if it is teleported.
 
 setorigin (entity, origin)
 =================
 */
-void PF_setorigin (void)
+static void VM_SV_setorigin (void)
 {
 	prvm_edict_t	*e;
 	float	*org;
+
+	VM_SAFEPARMCOUNT(2, VM_setorigin);
 
 	e = PRVM_G_EDICT(OFS_PARM0);
 	if (e == prog->edicts)
@@ -195,7 +184,7 @@ void SetMinMaxSize (prvm_edict_t *e, float *min, float *max, qboolean rotate)
 
 /*
 =================
-PF_setsize
+VM_SV_setsize
 
 the size box is rotated by the current angle
 LordHavoc: no it isn't...
@@ -203,10 +192,12 @@ LordHavoc: no it isn't...
 setsize (entity, minvector, maxvector)
 =================
 */
-void PF_setsize (void)
+static void VM_SV_setsize (void)
 {
 	prvm_edict_t	*e;
 	float	*min, *max;
+
+	VM_SAFEPARMCOUNT(3, VM_setsize);
 
 	e = PRVM_G_EDICT(OFS_PARM0);
 	if (e == prog->edicts)
@@ -227,17 +218,19 @@ void PF_setsize (void)
 
 /*
 =================
-PF_setmodel
+VM_SV_setmodel
 
 setmodel(entity, model)
 =================
 */
 static vec3_t quakemins = {-16, -16, -16}, quakemaxs = {16, 16, 16};
-void PF_setmodel (void)
+static void VM_SV_setmodel (void)
 {
 	prvm_edict_t	*e;
 	model_t	*mod;
 	int		i;
+
+	VM_SAFEPARMCOUNT(2, VM_setmodel);
 
 	e = PRVM_G_EDICT(OFS_PARM0);
 	if (e == prog->edicts)
@@ -269,18 +262,20 @@ void PF_setmodel (void)
 
 /*
 =================
-PF_sprint
+VM_SV_sprint
 
 single print to a specific client
 
 sprint(clientent, value)
 =================
 */
-void PF_sprint (void)
+static void VM_SV_sprint (void)
 {
 	client_t	*client;
 	int			entnum;
 	char string[VM_STRINGTEMP_LENGTH];
+
+	VM_SAFEPARMCOUNTRANGE(2, 8, VM_SV_sprint);
 
 	entnum = PRVM_G_EDICTNUM(OFS_PARM0);
 
@@ -302,18 +297,20 @@ void PF_sprint (void)
 
 /*
 =================
-PF_centerprint
+VM_SV_centerprint
 
 single print to a specific client
 
 centerprint(clientent, value)
 =================
 */
-void PF_centerprint (void)
+static void VM_SV_centerprint (void)
 {
 	client_t	*client;
 	int			entnum;
 	char string[VM_STRINGTEMP_LENGTH];
+
+	VM_SAFEPARMCOUNTRANGE(2, 8, VM_SV_centerprint);
 
 	entnum = PRVM_G_EDICTNUM(OFS_PARM0);
 
@@ -334,16 +331,18 @@ void PF_centerprint (void)
 
 /*
 =================
-PF_particle
+VM_SV_particle
 
 particle(origin, color, count)
 =================
 */
-void PF_particle (void)
+static void VM_SV_particle (void)
 {
 	float		*org, *dir;
 	float		color;
 	float		count;
+
+	VM_SAFEPARMCOUNT(4, VM_SV_particle);
 
 	org = PRVM_G_VECTOR(OFS_PARM0);
 	dir = PRVM_G_VECTOR(OFS_PARM1);
@@ -355,16 +354,18 @@ void PF_particle (void)
 
 /*
 =================
-PF_ambientsound
+VM_SV_ambientsound
 
 =================
 */
-void PF_ambientsound (void)
+static void VM_SV_ambientsound (void)
 {
 	const char	*samp;
 	float		*pos;
 	float 		vol, attenuation;
 	int			soundnum, large;
+
+	VM_SAFEPARMCOUNT(4, VM_SV_ambientsound);
 
 	pos = PRVM_G_VECTOR (OFS_PARM0);
 	samp = PRVM_G_STRING(OFS_PARM1);
@@ -401,7 +402,7 @@ void PF_ambientsound (void)
 
 /*
 =================
-PF_sound
+VM_SV_sound
 
 Each entity can have eight independant sound sources, like voice,
 weapon, feet, etc.
@@ -414,13 +415,15 @@ Larger attenuations will drop off.
 
 =================
 */
-void PF_sound (void)
+static void VM_SV_sound (void)
 {
 	const char	*sample;
 	int			channel;
 	prvm_edict_t		*entity;
 	int 		volume;
 	float attenuation;
+
+	VM_SAFEPARMCOUNT(5, VM_SV_sound);
 
 	entity = PRVM_G_EDICT(OFS_PARM0);
 	channel = (int)PRVM_G_FLOAT(OFS_PARM1);
@@ -451,22 +454,23 @@ void PF_sound (void)
 
 /*
 =================
-PF_traceline
+VM_SV_traceline
 
 Used for use tracing and shot targeting
 Traces are blocked by bbox and exact bsp entityes, and also slide box entities
 if the tryents flag is set.
 
-traceline (vector1, vector2, tryents)
+traceline (vector1, vector2, movetype, ignore)
 =================
 */
-void PF_traceline (void)
+static void VM_SV_traceline (void)
 {
 	float	*v1, *v2;
 	trace_t	trace;
 	int		move;
 	prvm_edict_t	*ent;
-	prvm_eval_t *val;
+
+	VM_SAFEPARMCOUNTRANGE(4, 8, VM_SV_traceline); // allow more parameters for future expansion
 
 	prog->xfunction->builtinsprofile += 30;
 
@@ -478,39 +482,15 @@ void PF_traceline (void)
 	if (IS_NAN(v1[0]) || IS_NAN(v1[1]) || IS_NAN(v1[2]) || IS_NAN(v2[0]) || IS_NAN(v1[2]) || IS_NAN(v2[2]))
 		PRVM_ERROR("%s: NAN errors detected in traceline('%f %f %f', '%f %f %f', %i, entity %i)\n", PRVM_NAME, v1[0], v1[1], v1[2], v2[0], v2[1], v2[2], move, PRVM_EDICT_TO_PROG(ent));
 
-	trace = SV_Move (v1, vec3_origin, vec3_origin, v2, move, ent);
+	trace = SV_Move (v1, vec3_origin, vec3_origin, v2, move, ent, SV_GenericHitSuperContentsMask(ent));
 
-	prog->globals.server->trace_allsolid = trace.allsolid;
-	prog->globals.server->trace_startsolid = trace.startsolid;
-	prog->globals.server->trace_fraction = trace.fraction;
-	prog->globals.server->trace_inwater = trace.inwater;
-	prog->globals.server->trace_inopen = trace.inopen;
-	VectorCopy (trace.endpos, prog->globals.server->trace_endpos);
-	VectorCopy (trace.plane.normal, prog->globals.server->trace_plane_normal);
-	prog->globals.server->trace_plane_dist =  trace.plane.dist;
-	if (trace.ent)
-		prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(trace.ent);
-	else
-		prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(prog->edicts);
-	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dpstartcontents)))
-		val->_float = trace.startsupercontents;
-	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphitcontents)))
-		val->_float = trace.hitsupercontents;
-	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphitq3surfaceflags)))
-		val->_float = trace.hitq3surfaceflags;
-	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphittexturename)))
-	{
-		if (trace.hittexture)
-			val->string = PRVM_SetTempString(trace.hittexture->name);
-		else
-			val->string = 0;
-	}
+	VM_SetTraceGlobals(&trace);
 }
 
 
 /*
 =================
-PF_tracebox
+VM_SV_tracebox
 
 Used for use tracing and shot targeting
 Traces are blocked by bbox and exact bsp entityes, and also slide box entities
@@ -520,13 +500,14 @@ tracebox (vector1, vector mins, vector maxs, vector2, tryents)
 =================
 */
 // LordHavoc: added this for my own use, VERY useful, similar to traceline
-void PF_tracebox (void)
+static void VM_SV_tracebox (void)
 {
 	float	*v1, *v2, *m1, *m2;
 	trace_t	trace;
 	int		move;
 	prvm_edict_t	*ent;
-	prvm_eval_t *val;
+
+	VM_SAFEPARMCOUNTRANGE(6, 8, VM_SV_tracebox); // allow more parameters for future expansion
 
 	prog->xfunction->builtinsprofile += 30;
 
@@ -540,42 +521,64 @@ void PF_tracebox (void)
 	if (IS_NAN(v1[0]) || IS_NAN(v1[1]) || IS_NAN(v1[2]) || IS_NAN(v2[0]) || IS_NAN(v1[2]) || IS_NAN(v2[2]))
 		PRVM_ERROR("%s: NAN errors detected in tracebox('%f %f %f', '%f %f %f', '%f %f %f', '%f %f %f', %i, entity %i)\n", PRVM_NAME, v1[0], v1[1], v1[2], m1[0], m1[1], m1[2], m2[0], m2[1], m2[2], v2[0], v2[1], v2[2], move, PRVM_EDICT_TO_PROG(ent));
 
-	trace = SV_Move (v1, m1, m2, v2, move, ent);
+	trace = SV_Move (v1, m1, m2, v2, move, ent, SV_GenericHitSuperContentsMask(ent));
 
-	prog->globals.server->trace_allsolid = trace.allsolid;
-	prog->globals.server->trace_startsolid = trace.startsolid;
-	prog->globals.server->trace_fraction = trace.fraction;
-	prog->globals.server->trace_inwater = trace.inwater;
-	prog->globals.server->trace_inopen = trace.inopen;
-	VectorCopy (trace.endpos, prog->globals.server->trace_endpos);
-	VectorCopy (trace.plane.normal, prog->globals.server->trace_plane_normal);
-	prog->globals.server->trace_plane_dist =  trace.plane.dist;
-	if (trace.ent)
-		prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(trace.ent);
-	else
-		prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(prog->edicts);
-	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dpstartcontents)))
-		val->_float = trace.startsupercontents;
-	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphitcontents)))
-		val->_float = trace.hitsupercontents;
-	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphitq3surfaceflags)))
-		val->_float = trace.hitq3surfaceflags;
-	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphittexturename)))
-	{
-		if (trace.hittexture)
-			val->string = PRVM_SetTempString(trace.hittexture->name);
-		else
-			val->string = 0;
-	}
+	VM_SetTraceGlobals(&trace);
 }
 
-extern trace_t SV_Trace_Toss (prvm_edict_t *ent, prvm_edict_t *ignore);
-void PF_tracetoss (void)
+static trace_t SV_Trace_Toss (prvm_edict_t *tossent, prvm_edict_t *ignore)
+{
+	int i;
+	float gravity;
+	vec3_t move, end;
+	vec3_t original_origin;
+	vec3_t original_velocity;
+	vec3_t original_angles;
+	vec3_t original_avelocity;
+	prvm_eval_t *val;
+	trace_t trace;
+
+	VectorCopy(tossent->fields.server->origin   , original_origin   );
+	VectorCopy(tossent->fields.server->velocity , original_velocity );
+	VectorCopy(tossent->fields.server->angles   , original_angles   );
+	VectorCopy(tossent->fields.server->avelocity, original_avelocity);
+
+	val = PRVM_EDICTFIELDVALUE(tossent, prog->fieldoffsets.gravity);
+	if (val != NULL && val->_float != 0)
+		gravity = val->_float;
+	else
+		gravity = 1.0;
+	gravity *= sv_gravity.value * 0.05;
+
+	for (i = 0;i < 200;i++) // LordHavoc: sanity check; never trace more than 10 seconds
+	{
+		SV_CheckVelocity (tossent);
+		tossent->fields.server->velocity[2] -= gravity;
+		VectorMA (tossent->fields.server->angles, 0.05, tossent->fields.server->avelocity, tossent->fields.server->angles);
+		VectorScale (tossent->fields.server->velocity, 0.05, move);
+		VectorAdd (tossent->fields.server->origin, move, end);
+		trace = SV_Move (tossent->fields.server->origin, tossent->fields.server->mins, tossent->fields.server->maxs, end, MOVE_NORMAL, tossent, SV_GenericHitSuperContentsMask(tossent));
+		VectorCopy (trace.endpos, tossent->fields.server->origin);
+
+		if (trace.fraction < 1)
+			break;
+	}
+
+	VectorCopy(original_origin   , tossent->fields.server->origin   );
+	VectorCopy(original_velocity , tossent->fields.server->velocity );
+	VectorCopy(original_angles   , tossent->fields.server->angles   );
+	VectorCopy(original_avelocity, tossent->fields.server->avelocity);
+
+	return trace;
+}
+
+static void VM_SV_tracetoss (void)
 {
 	trace_t	trace;
 	prvm_edict_t	*ent;
 	prvm_edict_t	*ignore;
-	prvm_eval_t *val;
+
+	VM_SAFEPARMCOUNT(2, VM_SV_tracetoss);
 
 	prog->xfunction->builtinsprofile += 600;
 
@@ -589,54 +592,15 @@ void PF_tracetoss (void)
 
 	trace = SV_Trace_Toss (ent, ignore);
 
-	prog->globals.server->trace_allsolid = trace.allsolid;
-	prog->globals.server->trace_startsolid = trace.startsolid;
-	prog->globals.server->trace_fraction = trace.fraction;
-	prog->globals.server->trace_inwater = trace.inwater;
-	prog->globals.server->trace_inopen = trace.inopen;
-	VectorCopy (trace.endpos, prog->globals.server->trace_endpos);
-	VectorCopy (trace.plane.normal, prog->globals.server->trace_plane_normal);
-	prog->globals.server->trace_plane_dist =  trace.plane.dist;
-	if (trace.ent)
-		prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(trace.ent);
-	else
-		prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(prog->edicts);
-	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dpstartcontents)))
-		val->_float = trace.startsupercontents;
-	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphitcontents)))
-		val->_float = trace.hitsupercontents;
-	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphitq3surfaceflags)))
-		val->_float = trace.hitq3surfaceflags;
-	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphittexturename)))
-	{
-		if (trace.hittexture)
-			val->string = PRVM_SetTempString(trace.hittexture->name);
-		else
-			val->string = 0;
-	}
-}
-
-
-/*
-=================
-PF_checkpos
-
-Returns true if the given entity can move to the given position from it's
-current position by walking or rolling.
-FIXME: make work...
-scalar checkpos (entity, vector)
-=================
-*/
-void PF_checkpos (void)
-{
+	VM_SetTraceGlobals(&trace);
 }
 
 //============================================================================
 
-int checkpvsbytes;
-unsigned char checkpvs[MAX_MAP_LEAFS/8];
+static int checkpvsbytes;
+static unsigned char checkpvs[MAX_MAP_LEAFS/8];
 
-int PF_newcheckclient (int check)
+static int VM_SV_newcheckclient (int check)
 {
 	int		i;
 	prvm_edict_t	*ent;
@@ -677,7 +641,7 @@ int PF_newcheckclient (int check)
 
 /*
 =================
-PF_checkclient
+VM_SV_checkclient
 
 Returns a client (or object that has a client enemy) that would be a
 valid target.
@@ -691,15 +655,17 @@ name checkclient ()
 =================
 */
 int c_invis, c_notvis;
-void PF_checkclient (void)
+static void VM_SV_checkclient (void)
 {
 	prvm_edict_t	*ent, *self;
 	vec3_t	view;
 
+	VM_SAFEPARMCOUNT(0, VM_SV_checkclient);
+
 	// find a new check if on a new frame
 	if (sv.time - sv.lastchecktime >= 0.1)
 	{
-		sv.lastcheck = PF_newcheckclient (sv.lastcheck);
+		sv.lastcheck = VM_SV_newcheckclient (sv.lastcheck);
 		sv.lastchecktime = sv.time;
 	}
 
@@ -731,18 +697,20 @@ void PF_checkclient (void)
 
 /*
 =================
-PF_stuffcmd
+VM_SV_stuffcmd
 
 Sends text over to the client's execution buffer
 
 stuffcmd (clientent, value, ...)
 =================
 */
-void PF_stuffcmd (void)
+static void VM_SV_stuffcmd (void)
 {
 	int		entnum;
 	client_t	*old;
 	char	string[VM_STRINGTEMP_LENGTH];
+
+	VM_SAFEPARMCOUNTRANGE(2, 8, VM_SV_stuffcmd);
 
 	entnum = PRVM_G_EDICTNUM(OFS_PARM0);
 	if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active)
@@ -761,14 +729,14 @@ void PF_stuffcmd (void)
 
 /*
 =================
-PF_findradius
+VM_SV_findradius
 
 Returns a chain of entities that have origins within a spherical area
 
 findradius (origin, radius)
 =================
 */
-void PF_findradius (void)
+static void VM_SV_findradius (void)
 {
 	prvm_edict_t *ent, *chain;
 	vec_t radius, radius2;
@@ -776,6 +744,8 @@ void PF_findradius (void)
 	int i;
 	int numtouchedicts;
 	prvm_edict_t *touchedicts[MAX_EDICTS];
+
+	VM_SAFEPARMCOUNT(2, VM_SV_findradius);
 
 	chain = (prvm_edict_t *)prog->edicts;
 
@@ -826,38 +796,37 @@ void PF_findradius (void)
 	VM_RETURN_EDICT(chain);
 }
 
-void PF_precache_file (void)
-{	// precache_file is only used to copy files with qcc, it does nothing
-	PRVM_G_INT(OFS_RETURN) = PRVM_G_INT(OFS_PARM0);
-}
-
-
-void PF_precache_sound (void)
+static void VM_SV_precache_sound (void)
 {
+	VM_SAFEPARMCOUNT(1, VM_SV_precache_sound);
 	SV_SoundIndex(PRVM_G_STRING(OFS_PARM0), 2);
 	PRVM_G_INT(OFS_RETURN) = PRVM_G_INT(OFS_PARM0);
 }
 
-void PF_precache_model (void)
+static void VM_SV_precache_model (void)
 {
+	VM_SAFEPARMCOUNT(1, VM_SV_precache_model);
 	SV_ModelIndex(PRVM_G_STRING(OFS_PARM0), 2);
 	PRVM_G_INT(OFS_RETURN) = PRVM_G_INT(OFS_PARM0);
 }
 
 /*
 ===============
-PF_walkmove
+VM_SV_walkmove
 
-float(float yaw, float dist) walkmove
+float(float yaw, float dist[, settrace]) walkmove
 ===============
 */
-void PF_walkmove (void)
+static void VM_SV_walkmove (void)
 {
 	prvm_edict_t	*ent;
 	float	yaw, dist;
 	vec3_t	move;
 	mfunction_t	*oldf;
 	int 	oldself;
+	qboolean	settrace;
+
+	VM_SAFEPARMCOUNTRANGE(2, 3, VM_SV_walkmove);
 
 	// assume failure if it returns early
 	PRVM_G_FLOAT(OFS_RETURN) = 0;
@@ -875,6 +844,7 @@ void PF_walkmove (void)
 	}
 	yaw = PRVM_G_FLOAT(OFS_PARM0);
 	dist = PRVM_G_FLOAT(OFS_PARM1);
+	settrace = prog->argc >= 3 && PRVM_G_FLOAT(OFS_PARM2);
 
 	if ( !( (int)ent->fields.server->flags & (FL_ONGROUND|FL_FLY|FL_SWIM) ) )
 		return;
@@ -889,7 +859,7 @@ void PF_walkmove (void)
 	oldf = prog->xfunction;
 	oldself = prog->globals.server->self;
 
-	PRVM_G_FLOAT(OFS_RETURN) = SV_movestep(ent, move, true);
+	PRVM_G_FLOAT(OFS_RETURN) = SV_movestep(ent, move, true, false, settrace);
 
 
 // restore program state
@@ -899,16 +869,18 @@ void PF_walkmove (void)
 
 /*
 ===============
-PF_droptofloor
+VM_SV_droptofloor
 
 void() droptofloor
 ===============
 */
-void PF_droptofloor (void)
+static void VM_SV_droptofloor (void)
 {
 	prvm_edict_t		*ent;
 	vec3_t		end;
 	trace_t		trace;
+
+	VM_SAFEPARMCOUNTRANGE(0, 2, VM_SV_droptofloor); // allow 2 parameters because the id1 defs.qc had an incorrect prototype
 
 	// assume failure if it returns early
 	PRVM_G_FLOAT(OFS_RETURN) = 0;
@@ -928,7 +900,7 @@ void PF_droptofloor (void)
 	VectorCopy (ent->fields.server->origin, end);
 	end[2] -= 256;
 
-	trace = SV_Move (ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, end, MOVE_NORMAL, ent);
+	trace = SV_Move (ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, end, MOVE_NORMAL, ent, SV_GenericHitSuperContentsMask(ent));
 
 	if (trace.fraction != 1 || (trace.startsolid && sv_gameplayfix_droptofloorstartsolid.integer))
 	{
@@ -945,17 +917,19 @@ void PF_droptofloor (void)
 
 /*
 ===============
-PF_lightstyle
+VM_SV_lightstyle
 
 void(float style, string value) lightstyle
 ===============
 */
-void PF_lightstyle (void)
+static void VM_SV_lightstyle (void)
 {
 	int		style;
 	const char	*val;
 	client_t	*client;
 	int			j;
+
+	VM_SAFEPARMCOUNT(2, VM_SV_lightstyle);
 
 	style = (int)PRVM_G_FLOAT(OFS_PARM0);
 	val = PRVM_G_STRING(OFS_PARM1);
@@ -984,33 +958,35 @@ void PF_lightstyle (void)
 
 /*
 =============
-PF_checkbottom
+VM_SV_checkbottom
 =============
 */
-void PF_checkbottom (void)
+static void VM_SV_checkbottom (void)
 {
+	VM_SAFEPARMCOUNT(0, VM_SV_checkbottom);
 	PRVM_G_FLOAT(OFS_RETURN) = SV_CheckBottom (PRVM_G_EDICT(OFS_PARM0));
 }
 
 /*
 =============
-PF_pointcontents
+VM_SV_pointcontents
 =============
 */
-void PF_pointcontents (void)
+static void VM_SV_pointcontents (void)
 {
+	VM_SAFEPARMCOUNT(1, VM_SV_pointcontents);
 	PRVM_G_FLOAT(OFS_RETURN) = Mod_Q1BSP_NativeContentsFromSuperContents(NULL, SV_PointSuperContents(PRVM_G_VECTOR(OFS_PARM0)));
 }
 
 /*
 =============
-PF_aim
+VM_SV_aim
 
 Pick a vector for the player to shoot along
 vector aim(entity, missilespeed)
 =============
 */
-void PF_aim (void)
+static void VM_SV_aim (void)
 {
 	prvm_edict_t	*ent, *check, *bestent;
 	vec3_t	start, dir, end, bestdir;
@@ -1018,6 +994,8 @@ void PF_aim (void)
 	trace_t	tr;
 	float	dist, bestdist;
 	float	speed;
+
+	VM_SAFEPARMCOUNT(2, VM_SV_aim);
 
 	// assume failure if it returns early
 	VectorCopy(prog->globals.server->v_forward, PRVM_G_VECTOR(OFS_RETURN));
@@ -1044,7 +1022,7 @@ void PF_aim (void)
 // try sending a trace straight
 	VectorCopy (prog->globals.server->v_forward, dir);
 	VectorMA (start, 2048, dir, end);
-	tr = SV_Move (start, vec3_origin, vec3_origin, end, MOVE_NORMAL, ent);
+	tr = SV_Move (start, vec3_origin, vec3_origin, end, MOVE_NORMAL, ent, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY);
 	if (tr.ent && ((prvm_edict_t *)tr.ent)->fields.server->takedamage == DAMAGE_AIM
 	&& (!teamplay.integer || ent->fields.server->team <=0 || ent->fields.server->team != ((prvm_edict_t *)tr.ent)->fields.server->team) )
 	{
@@ -1076,7 +1054,7 @@ void PF_aim (void)
 		dist = DotProduct (dir, prog->globals.server->v_forward);
 		if (dist < bestdist)
 			continue;	// to far to turn
-		tr = SV_Move (start, vec3_origin, vec3_origin, end, MOVE_NORMAL, ent);
+		tr = SV_Move (start, vec3_origin, vec3_origin, end, MOVE_NORMAL, ent, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY);
 		if (tr.ent == check)
 		{	// can shoot at this one
 			bestdist = dist;
@@ -1152,58 +1130,69 @@ sizebuf_t *WriteDest (void)
 	return NULL;
 }
 
-void PF_WriteByte (void)
+static void VM_SV_WriteByte (void)
 {
+	VM_SAFEPARMCOUNT(2, VM_SV_WriteByte);
 	MSG_WriteByte (WriteDest(), (int)PRVM_G_FLOAT(OFS_PARM1));
 }
 
-void PF_WriteChar (void)
+static void VM_SV_WriteChar (void)
 {
+	VM_SAFEPARMCOUNT(2, VM_SV_WriteChar);
 	MSG_WriteChar (WriteDest(), (int)PRVM_G_FLOAT(OFS_PARM1));
 }
 
-void PF_WriteShort (void)
+static void VM_SV_WriteShort (void)
 {
+	VM_SAFEPARMCOUNT(2, VM_SV_WriteShort);
 	MSG_WriteShort (WriteDest(), (int)PRVM_G_FLOAT(OFS_PARM1));
 }
 
-void PF_WriteLong (void)
+static void VM_SV_WriteLong (void)
 {
+	VM_SAFEPARMCOUNT(2, VM_SV_WriteLong);
 	MSG_WriteLong (WriteDest(), (int)PRVM_G_FLOAT(OFS_PARM1));
 }
 
-void PF_WriteAngle (void)
+static void VM_SV_WriteAngle (void)
 {
+	VM_SAFEPARMCOUNT(2, VM_SV_WriteAngle);
 	MSG_WriteAngle (WriteDest(), PRVM_G_FLOAT(OFS_PARM1), sv.protocol);
 }
 
-void PF_WriteCoord (void)
+static void VM_SV_WriteCoord (void)
 {
+	VM_SAFEPARMCOUNT(2, VM_SV_WriteCoord);
 	MSG_WriteCoord (WriteDest(), PRVM_G_FLOAT(OFS_PARM1), sv.protocol);
 }
 
-void PF_WriteString (void)
+static void VM_SV_WriteString (void)
 {
+	VM_SAFEPARMCOUNT(2, VM_SV_WriteString);
 	MSG_WriteString (WriteDest(), PRVM_G_STRING(OFS_PARM1));
 }
 
-void PF_WriteUnterminatedString (void)
+static void VM_SV_WriteUnterminatedString (void)
 {
+	VM_SAFEPARMCOUNT(2, VM_SV_WriteUnterminatedString);
 	MSG_WriteUnterminatedString (WriteDest(), PRVM_G_STRING(OFS_PARM1));
 }
 
 
-void PF_WriteEntity (void)
+static void VM_SV_WriteEntity (void)
 {
+	VM_SAFEPARMCOUNT(2, VM_SV_WriteEntity);
 	MSG_WriteShort (WriteDest(), PRVM_G_EDICTNUM(OFS_PARM1));
 }
 
 //////////////////////////////////////////////////////////
 
-void PF_makestatic (void)
+static void VM_SV_makestatic (void)
 {
 	prvm_edict_t *ent;
 	int i, large;
+
+	VM_SAFEPARMCOUNT(1, VM_SV_makestatic);
 
 	ent = PRVM_G_EDICT(OFS_PARM0);
 	if (ent == prog->edicts)
@@ -1250,14 +1239,16 @@ void PF_makestatic (void)
 
 /*
 ==============
-PF_setspawnparms
+VM_SV_setspawnparms
 ==============
 */
-void PF_setspawnparms (void)
+static void VM_SV_setspawnparms (void)
 {
 	prvm_edict_t	*ent;
 	int		i;
 	client_t	*client;
+
+	VM_SAFEPARMCOUNT(0, VM_SV_setspawnparms);
 
 	ent = PRVM_G_EDICT(OFS_PARM0);
 	i = PRVM_NUM_FOR_EDICT(ent);
@@ -1275,7 +1266,7 @@ void PF_setspawnparms (void)
 
 /*
 =================
-PF_getlight
+VM_SV_getlight
 
 Returns a color vector indicating the lighting at the requested point.
 
@@ -1285,10 +1276,11 @@ Returns a color vector indicating the lighting at the requested point.
 getlight(vector)
 =================
 */
-void PF_getlight (void)
+static void VM_SV_getlight (void)
 {
 	vec3_t ambientcolor, diffusecolor, diffusenormal;
 	vec_t *p;
+	VM_SAFEPARMCOUNT(1, VM_SV_getlight);
 	p = PRVM_G_VECTOR(OFS_PARM0);
 	VectorClear(ambientcolor);
 	VectorClear(diffusecolor);
@@ -1296,29 +1288,6 @@ void PF_getlight (void)
 	if (sv.worldmodel && sv.worldmodel->brush.LightPoint)
 		sv.worldmodel->brush.LightPoint(sv.worldmodel, p, ambientcolor, diffusecolor, diffusenormal);
 	VectorMA(ambientcolor, 0.5, diffusecolor, PRVM_G_VECTOR(OFS_RETURN));
-}
-
-void PF_registercvar (void)
-{
-	const char *name, *value;
-	name = PRVM_G_STRING(OFS_PARM0);
-	value = PRVM_G_STRING(OFS_PARM1);
-	PRVM_G_FLOAT(OFS_RETURN) = 0;
-
-// first check to see if it has already been defined
-	if (Cvar_FindVar (name))
-		return;
-
-// check for overlap with a command
-	if (Cmd_Exists (name))
-	{
-		VM_Warning("PF_registercvar: %s is a command\n", name);
-		return;
-	}
-
-	Cvar_Get(name, value, 0);
-
-	PRVM_G_FLOAT(OFS_RETURN) = 1; // success
 }
 
 typedef struct
@@ -1435,10 +1404,12 @@ void VM_SV_WriteAutoSentStats (client_t *client, prvm_edict_t *ent, sizebuf_t *m
 //          1: string (4 stats carrying a total of 16 charactures)
 //          2: float (one stat, float converted to an integer for transportation)
 //          8: integer (one stat, not converted to an int, so this can be used to transport floats as floats - what a unique idea!)
-void PF_SV_AddStat (void)
+static void VM_SV_AddStat (void)
 {
 	int		off, i;
 	unsigned char	type;
+
+	VM_SAFEPARMCOUNT(2, VM_SV_AddStat);
 
 	if(!vm_autosentstats)
 	{
@@ -1477,16 +1448,17 @@ void PF_SV_AddStat (void)
 
 /*
 =================
-PF_copyentity
+VM_SV_copyentity
 
 copies data from one entity to another
 
 copyentity(src, dst)
 =================
 */
-void PF_copyentity (void)
+static void VM_SV_copyentity (void)
 {
 	prvm_edict_t *in, *out;
+	VM_SAFEPARMCOUNT(2, VM_SV_copyentity);
 	in = PRVM_G_EDICT(OFS_PARM0);
 	if (in == prog->edicts)
 	{
@@ -1509,25 +1481,27 @@ void PF_copyentity (void)
 		VM_Warning("copyentity: can not modify free entity\n");
 		return;
 	}
-	memcpy(out->fields.server, in->fields.server, prog->progs->entityfields * 4);
+	memcpy(out->fields.vp, in->fields.vp, prog->progs->entityfields * 4);
+	SV_LinkEdict(out, false);
 }
 
 
 /*
 =================
-PF_setcolor
+VM_SV_setcolor
 
 sets the color of a client and broadcasts the update to all connected clients
 
 setcolor(clientent, value)
 =================
 */
-void PF_setcolor (void)
+static void VM_SV_setcolor (void)
 {
 	client_t *client;
 	int entnum, i;
 	prvm_eval_t *val;
 
+	VM_SAFEPARMCOUNT(2, VM_SV_setcolor);
 	entnum = PRVM_G_EDICTNUM(OFS_PARM0);
 	i = (int)PRVM_G_FLOAT(OFS_PARM1);
 
@@ -1557,15 +1531,16 @@ void PF_setcolor (void)
 
 /*
 =================
-PF_effect
+VM_SV_effect
 
 effect(origin, modelname, startframe, framecount, framerate)
 =================
 */
-void PF_effect (void)
+static void VM_SV_effect (void)
 {
 	int i;
 	const char *s;
+	VM_SAFEPARMCOUNT(5, VM_SV_effect);
 	s = PRVM_G_STRING(OFS_PARM1);
 	if (!s[0])
 	{
@@ -1595,8 +1570,9 @@ void PF_effect (void)
 	SV_StartEffect(PRVM_G_VECTOR(OFS_PARM0), i, (int)PRVM_G_FLOAT(OFS_PARM2), (int)PRVM_G_FLOAT(OFS_PARM3), (int)PRVM_G_FLOAT(OFS_PARM4));
 }
 
-void PF_te_blood (void)
+static void VM_SV_te_blood (void)
 {
+	VM_SAFEPARMCOUNT(3, VM_SV_te_blood);
 	if (PRVM_G_FLOAT(OFS_PARM2) < 1)
 		return;
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
@@ -1613,8 +1589,9 @@ void PF_te_blood (void)
 	MSG_WriteByte(&sv.datagram, bound(0, (int) PRVM_G_FLOAT(OFS_PARM2), 255));
 }
 
-void PF_te_bloodshower (void)
+static void VM_SV_te_bloodshower (void)
 {
+	VM_SAFEPARMCOUNT(4, VM_SV_te_bloodshower);
 	if (PRVM_G_FLOAT(OFS_PARM3) < 1)
 		return;
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
@@ -1633,8 +1610,9 @@ void PF_te_bloodshower (void)
 	MSG_WriteShort(&sv.datagram, (int)bound(0, PRVM_G_FLOAT(OFS_PARM3), 65535));
 }
 
-void PF_te_explosionrgb (void)
+static void VM_SV_te_explosionrgb (void)
 {
+	VM_SAFEPARMCOUNT(2, VM_SV_te_explosionrgb);
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_EXPLOSIONRGB);
 	// origin
@@ -1647,8 +1625,9 @@ void PF_te_explosionrgb (void)
 	MSG_WriteByte(&sv.datagram, bound(0, (int) (PRVM_G_VECTOR(OFS_PARM1)[2] * 255), 255));
 }
 
-void PF_te_particlecube (void)
+static void VM_SV_te_particlecube (void)
 {
+	VM_SAFEPARMCOUNT(7, VM_SV_te_particlecube);
 	if (PRVM_G_FLOAT(OFS_PARM3) < 1)
 		return;
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
@@ -1675,8 +1654,9 @@ void PF_te_particlecube (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_FLOAT(OFS_PARM6), sv.protocol);
 }
 
-void PF_te_particlerain (void)
+static void VM_SV_te_particlerain (void)
 {
+	VM_SAFEPARMCOUNT(5, VM_SV_te_particlerain);
 	if (PRVM_G_FLOAT(OFS_PARM3) < 1)
 		return;
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
@@ -1699,8 +1679,9 @@ void PF_te_particlerain (void)
 	MSG_WriteByte(&sv.datagram, (int)PRVM_G_FLOAT(OFS_PARM4));
 }
 
-void PF_te_particlesnow (void)
+static void VM_SV_te_particlesnow (void)
 {
+	VM_SAFEPARMCOUNT(5, VM_SV_te_particlesnow);
 	if (PRVM_G_FLOAT(OFS_PARM3) < 1)
 		return;
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
@@ -1723,8 +1704,9 @@ void PF_te_particlesnow (void)
 	MSG_WriteByte(&sv.datagram, (int)PRVM_G_FLOAT(OFS_PARM4));
 }
 
-void PF_te_spark (void)
+static void VM_SV_te_spark (void)
 {
+	VM_SAFEPARMCOUNT(3, VM_SV_te_spark);
 	if (PRVM_G_FLOAT(OFS_PARM2) < 1)
 		return;
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
@@ -1741,8 +1723,9 @@ void PF_te_spark (void)
 	MSG_WriteByte(&sv.datagram, bound(0, (int) PRVM_G_FLOAT(OFS_PARM2), 255));
 }
 
-void PF_te_gunshotquad (void)
+static void VM_SV_te_gunshotquad (void)
 {
+	VM_SAFEPARMCOUNT(1, VM_SV_te_gunshotquad);
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_GUNSHOTQUAD);
 	// origin
@@ -1751,8 +1734,9 @@ void PF_te_gunshotquad (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
 }
 
-void PF_te_spikequad (void)
+static void VM_SV_te_spikequad (void)
 {
+	VM_SAFEPARMCOUNT(1, VM_SV_te_spikequad);
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_SPIKEQUAD);
 	// origin
@@ -1761,8 +1745,9 @@ void PF_te_spikequad (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
 }
 
-void PF_te_superspikequad (void)
+static void VM_SV_te_superspikequad (void)
 {
+	VM_SAFEPARMCOUNT(1, VM_SV_te_superspikequad);
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_SUPERSPIKEQUAD);
 	// origin
@@ -1771,8 +1756,9 @@ void PF_te_superspikequad (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
 }
 
-void PF_te_explosionquad (void)
+static void VM_SV_te_explosionquad (void)
 {
+	VM_SAFEPARMCOUNT(1, VM_SV_te_explosionquad);
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_EXPLOSIONQUAD);
 	// origin
@@ -1781,8 +1767,9 @@ void PF_te_explosionquad (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
 }
 
-void PF_te_smallflash (void)
+static void VM_SV_te_smallflash (void)
 {
+	VM_SAFEPARMCOUNT(1, VM_SV_te_smallflash);
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_SMALLFLASH);
 	// origin
@@ -1791,8 +1778,9 @@ void PF_te_smallflash (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
 }
 
-void PF_te_customflash (void)
+static void VM_SV_te_customflash (void)
 {
+	VM_SAFEPARMCOUNT(4, VM_SV_te_customflash);
 	if (PRVM_G_FLOAT(OFS_PARM1) < 8 || PRVM_G_FLOAT(OFS_PARM2) < (1.0 / 256.0))
 		return;
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
@@ -1811,8 +1799,9 @@ void PF_te_customflash (void)
 	MSG_WriteByte(&sv.datagram, (int)bound(0, PRVM_G_VECTOR(OFS_PARM3)[2] * 255, 255));
 }
 
-void PF_te_gunshot (void)
+static void VM_SV_te_gunshot (void)
 {
+	VM_SAFEPARMCOUNT(1, VM_SV_te_gunshot);
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_GUNSHOT);
 	// origin
@@ -1821,8 +1810,9 @@ void PF_te_gunshot (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
 }
 
-void PF_te_spike (void)
+static void VM_SV_te_spike (void)
 {
+	VM_SAFEPARMCOUNT(1, VM_SV_te_spike);
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_SPIKE);
 	// origin
@@ -1831,8 +1821,9 @@ void PF_te_spike (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
 }
 
-void PF_te_superspike (void)
+static void VM_SV_te_superspike (void)
 {
+	VM_SAFEPARMCOUNT(1, VM_SV_te_superspike);
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_SUPERSPIKE);
 	// origin
@@ -1841,8 +1832,9 @@ void PF_te_superspike (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
 }
 
-void PF_te_explosion (void)
+static void VM_SV_te_explosion (void)
 {
+	VM_SAFEPARMCOUNT(1, VM_SV_te_explosion);
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_EXPLOSION);
 	// origin
@@ -1851,8 +1843,9 @@ void PF_te_explosion (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
 }
 
-void PF_te_tarexplosion (void)
+static void VM_SV_te_tarexplosion (void)
 {
+	VM_SAFEPARMCOUNT(1, VM_SV_te_tarexplosion);
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_TAREXPLOSION);
 	// origin
@@ -1861,8 +1854,9 @@ void PF_te_tarexplosion (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
 }
 
-void PF_te_wizspike (void)
+static void VM_SV_te_wizspike (void)
 {
+	VM_SAFEPARMCOUNT(1, VM_SV_te_wizspike);
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_WIZSPIKE);
 	// origin
@@ -1871,8 +1865,9 @@ void PF_te_wizspike (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
 }
 
-void PF_te_knightspike (void)
+static void VM_SV_te_knightspike (void)
 {
+	VM_SAFEPARMCOUNT(1, VM_SV_te_knightspike);
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_KNIGHTSPIKE);
 	// origin
@@ -1881,8 +1876,9 @@ void PF_te_knightspike (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
 }
 
-void PF_te_lavasplash (void)
+static void VM_SV_te_lavasplash (void)
 {
+	VM_SAFEPARMCOUNT(1, VM_SV_te_lavasplash);
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_LAVASPLASH);
 	// origin
@@ -1891,8 +1887,9 @@ void PF_te_lavasplash (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
 }
 
-void PF_te_teleport (void)
+static void VM_SV_te_teleport (void)
 {
+	VM_SAFEPARMCOUNT(1, VM_SV_te_teleport);
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_TELEPORT);
 	// origin
@@ -1901,8 +1898,9 @@ void PF_te_teleport (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
 }
 
-void PF_te_explosion2 (void)
+static void VM_SV_te_explosion2 (void)
 {
+	VM_SAFEPARMCOUNT(3, VM_SV_te_explosion2);
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_EXPLOSION2);
 	// origin
@@ -1914,8 +1912,9 @@ void PF_te_explosion2 (void)
 	MSG_WriteByte(&sv.datagram, (int)PRVM_G_FLOAT(OFS_PARM2));
 }
 
-void PF_te_lightning1 (void)
+static void VM_SV_te_lightning1 (void)
 {
+	VM_SAFEPARMCOUNT(3, VM_SV_te_lightning1);
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_LIGHTNING1);
 	// owner entity
@@ -1930,8 +1929,9 @@ void PF_te_lightning1 (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM2)[2], sv.protocol);
 }
 
-void PF_te_lightning2 (void)
+static void VM_SV_te_lightning2 (void)
 {
+	VM_SAFEPARMCOUNT(3, VM_SV_te_lightning2);
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_LIGHTNING2);
 	// owner entity
@@ -1946,8 +1946,9 @@ void PF_te_lightning2 (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM2)[2], sv.protocol);
 }
 
-void PF_te_lightning3 (void)
+static void VM_SV_te_lightning3 (void)
 {
+	VM_SAFEPARMCOUNT(3, VM_SV_te_lightning3);
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_LIGHTNING3);
 	// owner entity
@@ -1962,8 +1963,9 @@ void PF_te_lightning3 (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM2)[2], sv.protocol);
 }
 
-void PF_te_beam (void)
+static void VM_SV_te_beam (void)
 {
+	VM_SAFEPARMCOUNT(3, VM_SV_te_beam);
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_BEAM);
 	// owner entity
@@ -1978,8 +1980,9 @@ void PF_te_beam (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM2)[2], sv.protocol);
 }
 
-void PF_te_plasmaburn (void)
+static void VM_SV_te_plasmaburn (void)
 {
+	VM_SAFEPARMCOUNT(1, VM_SV_te_plasmaburn);
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_PLASMABURN);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[0], sv.protocol);
@@ -1987,8 +1990,9 @@ void PF_te_plasmaburn (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
 }
 
-void PF_te_flamejet (void)
+static void VM_SV_te_flamejet (void)
 {
+	VM_SAFEPARMCOUNT(3, VM_SV_te_flamejet);
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_FLAMEJET);
 	// org
@@ -2059,10 +2063,11 @@ static msurface_t *getsurface(model_t *model, int surfacenum)
 
 
 //PF_getsurfacenumpoints, // #434 float(entity e, float s) getsurfacenumpoints = #434;
-void PF_getsurfacenumpoints(void)
+static void VM_SV_getsurfacenumpoints(void)
 {
 	model_t *model;
 	msurface_t *surface;
+	VM_SAFEPARMCOUNT(2, VM_SV_getsurfacenumpoints);
 	// return 0 if no such surface
 	if (!(model = getmodel(PRVM_G_EDICT(OFS_PARM0))) || !(surface = getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
 	{
@@ -2074,12 +2079,13 @@ void PF_getsurfacenumpoints(void)
 	PRVM_G_FLOAT(OFS_RETURN) = surface->num_vertices;
 }
 //PF_getsurfacepoint,     // #435 vector(entity e, float s, float n) getsurfacepoint = #435;
-void PF_getsurfacepoint(void)
+static void VM_SV_getsurfacepoint(void)
 {
 	prvm_edict_t *ed;
 	model_t *model;
 	msurface_t *surface;
 	int pointnum;
+	VM_SAFEPARMCOUNT(3, VM_SV_getsurfacepoint);
 	VectorClear(PRVM_G_VECTOR(OFS_RETURN));
 	ed = PRVM_G_EDICT(OFS_PARM0);
 	if (!(model = getmodel(ed)) || !(surface = getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
@@ -2092,11 +2098,12 @@ void PF_getsurfacepoint(void)
 	VectorAdd(&(model->surfmesh.data_vertex3f + 3 * surface->num_firstvertex)[pointnum * 3], ed->fields.server->origin, PRVM_G_VECTOR(OFS_RETURN));
 }
 //PF_getsurfacenormal,    // #436 vector(entity e, float s) getsurfacenormal = #436;
-void PF_getsurfacenormal(void)
+static void VM_SV_getsurfacenormal(void)
 {
 	model_t *model;
 	msurface_t *surface;
 	vec3_t normal;
+	VM_SAFEPARMCOUNT(2, VM_SV_getsurfacenormal);
 	VectorClear(PRVM_G_VECTOR(OFS_RETURN));
 	if (!(model = getmodel(PRVM_G_EDICT(OFS_PARM0))) || !(surface = getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
 		return;
@@ -2109,17 +2116,18 @@ void PF_getsurfacenormal(void)
 	VectorCopy(normal, PRVM_G_VECTOR(OFS_RETURN));
 }
 //PF_getsurfacetexture,   // #437 string(entity e, float s) getsurfacetexture = #437;
-void PF_getsurfacetexture(void)
+static void VM_SV_getsurfacetexture(void)
 {
 	model_t *model;
 	msurface_t *surface;
+	VM_SAFEPARMCOUNT(2, VM_SV_getsurfacetexture);
 	PRVM_G_INT(OFS_RETURN) = OFS_NULL;
 	if (!(model = getmodel(PRVM_G_EDICT(OFS_PARM0))) || !(surface = getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
 		return;
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(surface->texture->name);
 }
 //PF_getsurfacenearpoint, // #438 float(entity e, vector p) getsurfacenearpoint = #438;
-void PF_getsurfacenearpoint(void)
+static void VM_SV_getsurfacenearpoint(void)
 {
 	int surfacenum, best;
 	vec3_t clipped, p;
@@ -2128,6 +2136,7 @@ void PF_getsurfacenearpoint(void)
 	model_t *model;
 	msurface_t *surface;
 	vec_t *point;
+	VM_SAFEPARMCOUNT(2, VM_SV_getsurfacenearpoint);
 	PRVM_G_FLOAT(OFS_RETURN) = -1;
 	ed = PRVM_G_EDICT(OFS_PARM0);
 	point = PRVM_G_VECTOR(OFS_PARM1);
@@ -2167,12 +2176,13 @@ void PF_getsurfacenearpoint(void)
 	PRVM_G_FLOAT(OFS_RETURN) = best;
 }
 //PF_getsurfaceclippedpoint, // #439 vector(entity e, float s, vector p) getsurfaceclippedpoint = #439;
-void PF_getsurfaceclippedpoint(void)
+static void VM_SV_getsurfaceclippedpoint(void)
 {
 	prvm_edict_t *ed;
 	model_t *model;
 	msurface_t *surface;
 	vec3_t p, out;
+	VM_SAFEPARMCOUNT(3, VM_SV_te_getsurfaceclippedpoint);
 	VectorClear(PRVM_G_VECTOR(OFS_RETURN));
 	ed = PRVM_G_EDICT(OFS_PARM0);
 	if (!(model = getmodel(ed)) || !(surface = getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
@@ -2186,10 +2196,11 @@ void PF_getsurfaceclippedpoint(void)
 
 //void(entity e, string s) clientcommand = #440; // executes a command string as if it came from the specified client
 //this function originally written by KrimZon, made shorter by LordHavoc
-void PF_clientcommand (void)
+static void VM_SV_clientcommand (void)
 {
 	client_t *temp_client;
 	int i;
+	VM_SAFEPARMCOUNT(2, VM_SV_clientcommand);
 
 	//find client for this entity
 	i = (PRVM_NUM_FOR_EDICT(PRVM_G_EDICT(OFS_PARM0)) - 1);
@@ -2206,7 +2217,7 @@ void PF_clientcommand (void)
 }
 
 //void(entity e, entity tagentity, string tagname) setattachment = #443; // attachs e to a tag on tagentity (note: use "" to attach to entity origin/angles instead of a tag)
-void PF_setattachment (void)
+static void VM_SV_setattachment (void)
 {
 	prvm_edict_t *e = PRVM_G_EDICT(OFS_PARM0);
 	prvm_edict_t *tagentity = PRVM_G_EDICT(OFS_PARM1);
@@ -2214,6 +2225,7 @@ void PF_setattachment (void)
 	prvm_eval_t *v;
 	int modelindex;
 	model_t *model;
+	VM_SAFEPARMCOUNT(3, VM_SV_setattachment);
 
 	if (e == prog->edicts)
 	{
@@ -2391,11 +2403,16 @@ int SV_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 
 //float(entity ent, string tagname) gettagindex;
 
-void PF_gettagindex (void)
+static void VM_SV_gettagindex (void)
 {
-	prvm_edict_t *ent = PRVM_G_EDICT(OFS_PARM0);
-	const char *tag_name = PRVM_G_STRING(OFS_PARM1);
+	prvm_edict_t *ent;
+	const char *tag_name;
 	int modelindex, tag_index;
+
+	VM_SAFEPARMCOUNT(2, VM_SV_gettagindex);
+
+	ent = PRVM_G_EDICT(OFS_PARM0);
+	tag_name = PRVM_G_STRING(OFS_PARM1);
 
 	if (ent == prog->edicts)
 	{
@@ -2422,12 +2439,17 @@ void PF_gettagindex (void)
 };
 
 //vector(entity ent, float tagindex) gettaginfo;
-void PF_gettaginfo (void)
+static void VM_SV_gettaginfo (void)
 {
-	prvm_edict_t *e = PRVM_G_EDICT(OFS_PARM0);
-	int tagindex = (int)PRVM_G_FLOAT(OFS_PARM1);
+	prvm_edict_t *e;
+	int tagindex;
 	matrix4x4_t tag_matrix;
 	int returncode;
+
+	VM_SAFEPARMCOUNT(2, VM_SV_gettaginfo);
+
+	e = PRVM_G_EDICT(OFS_PARM0);
+	tagindex = (int)PRVM_G_FLOAT(OFS_PARM1);
 
 	returncode = SV_GetTagMatrix(&tag_matrix, e, tagindex);
 	Matrix4x4_ToVectors(&tag_matrix, prog->globals.server->v_forward, prog->globals.server->v_right, prog->globals.server->v_up, PRVM_G_VECTOR(OFS_RETURN));
@@ -2453,10 +2475,11 @@ void PF_gettaginfo (void)
 }
 
 //void(entity clent) dropclient (DP_SV_DROPCLIENT)
-void PF_dropclient (void)
+static void VM_SV_dropclient (void)
 {
 	int clientnum;
 	client_t *oldhostclient;
+	VM_SAFEPARMCOUNT(1, VM_SV_dropclient);
 	clientnum = PRVM_G_EDICTNUM(OFS_PARM0) - 1;
 	if (clientnum < 0 || clientnum >= svs.maxclients)
 	{
@@ -2475,10 +2498,11 @@ void PF_dropclient (void)
 }
 
 //entity() spawnclient (DP_SV_BOTCLIENT)
-void PF_spawnclient (void)
+static void VM_SV_spawnclient (void)
 {
 	int i;
 	prvm_edict_t	*ed;
+	VM_SAFEPARMCOUNT(0, VM_SV_spawnclient);
 	prog->xfunction->builtinsprofile += 2;
 	ed = prog->edicts;
 	for (i = 0;i < svs.maxclients;i++)
@@ -2498,9 +2522,10 @@ void PF_spawnclient (void)
 }
 
 //float(entity clent) clienttype (DP_SV_BOTCLIENT)
-void PF_clienttype (void)
+static void VM_SV_clienttype (void)
 {
 	int clientnum;
+	VM_SAFEPARMCOUNT(1, VM_SV_clienttype);
 	clientnum = PRVM_G_EDICTNUM(OFS_PARM0) - 1;
 	if (clientnum < 0 || clientnum >= svs.maxclients)
 		PRVM_G_FLOAT(OFS_RETURN) = 3;
@@ -2512,9 +2537,100 @@ void PF_clienttype (void)
 		PRVM_G_FLOAT(OFS_RETURN) = 2;
 }
 
-void PF_edict_num (void)
+/*
+===============
+VM_SV_serverkey
+
+string(string key) serverkey
+===============
+*/
+void VM_SV_serverkey(void)
 {
-	VM_RETURN_EDICT(PRVM_EDICT_NUM((int)PRVM_G_FLOAT(OFS_PARM0)));
+	char string[VM_STRINGTEMP_LENGTH];
+	VM_SAFEPARMCOUNT(1, VM_SV_serverkey);
+	InfoString_GetValue(svs.serverinfo, PRVM_G_STRING(OFS_PARM0), string, sizeof(string));
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(string);
+}
+
+//#333 void(entity e, float mdlindex) setmodelindex (EXT_CSQC)
+static void VM_SV_setmodelindex (void)
+{
+	prvm_edict_t	*e;
+	model_t	*mod;
+	int		i;
+	VM_SAFEPARMCOUNT(2, VM_SV_setmodelindex);
+
+	e = PRVM_G_EDICT(OFS_PARM0);
+	if (e == prog->edicts)
+	{
+		VM_Warning("setmodelindex: can not modify world entity\n");
+		return;
+	}
+	if (e->priv.server->free)
+	{
+		VM_Warning("setmodelindex: can not modify free entity\n");
+		return;
+	}
+	i = (int)PRVM_G_FLOAT(OFS_PARM1);
+	if (i <= 0 || i > MAX_MODELS)
+	{
+		VM_Warning("setmodelindex: invalid modelindex\n");
+		return;
+	}
+	if (!sv.model_precache[i][0])
+	{
+		VM_Warning("setmodelindex: model not precached\n");
+		return;
+	}
+
+	e->fields.server->model = PRVM_SetEngineString(sv.model_precache[i]);
+	e->fields.server->modelindex = i;
+
+	mod = sv.models[i];
+
+	if (mod)
+	{
+		if (mod->type != mod_alias || sv_gameplayfix_setmodelrealbox.integer)
+			SetMinMaxSize (e, mod->normalmins, mod->normalmaxs, true);
+		else
+			SetMinMaxSize (e, quakemins, quakemaxs, true);
+	}
+	else
+		SetMinMaxSize (e, vec3_origin, vec3_origin, true);
+}
+
+//#334 string(float mdlindex) modelnameforindex (EXT_CSQC)
+static void VM_SV_modelnameforindex (void)
+{
+	int i;
+	VM_SAFEPARMCOUNT(1, VM_SV_modelnameforindex);
+
+	PRVM_G_INT(OFS_RETURN) = OFS_NULL;
+
+	i = (int)PRVM_G_FLOAT(OFS_PARM0);
+	if (i <= 0 || i > MAX_MODELS)
+	{
+		VM_Warning("modelnameforindex: invalid modelindex\n");
+		return;
+	}
+	if (!sv.model_precache[i][0])
+	{
+		VM_Warning("modelnameforindex: model not precached\n");
+		return;
+	}
+
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(sv.model_precache[i]);
+}
+
+//#335 float(string effectname) particleeffectnum (EXT_CSQC)
+static void VM_SV_particleeffectnum (void)
+{
+	int			i;
+	VM_SAFEPARMCOUNT(1, VM_SV_particleeffectnum);
+	i = SV_ParticleEffectIndex(PRVM_G_STRING(OFS_PARM0));
+	if (i == 0)
+		i = -1;
+	PRVM_G_FLOAT(OFS_RETURN) = i;
 }
 
 // #336 void(entity ent, float effectnum, vector start, vector end) trailparticles (EXT_CSQC)
@@ -2542,257 +2658,510 @@ static void VM_SV_pointparticles (void)
 }
 
 prvm_builtin_t vm_sv_builtins[] = {
-NULL,						// #0
-PF_makevectors,				// #1 void(vector ang) makevectors
-PF_setorigin,				// #2 void(entity e, vector o) setorigin
-PF_setmodel,				// #3 void(entity e, string m) setmodel
-PF_setsize,					// #4 void(entity e, vector min, vector max) setsize
-NULL,						// #5 void(entity e, vector min, vector max) setabssize
-VM_break,					// #6 void() break
-VM_random,					// #7 float() random
-PF_sound,					// #8 void(entity e, float chan, string samp) sound
-VM_normalize,				// #9 vector(vector v) normalize
-VM_error,					// #10 void(string e) error
-VM_objerror,				// #11 void(string e) objerror
-VM_vlen,					// #12 float(vector v) vlen
-VM_vectoyaw,				// #13 float(vector v) vectoyaw
-VM_spawn,					// #14 entity() spawn
-VM_remove,					// #15 void(entity e) remove
-PF_traceline,				// #16 float(vector v1, vector v2, float tryents) traceline
-PF_checkclient,				// #17 entity() clientlist
-VM_find,					// #18 entity(entity start, .string fld, string match) find
-PF_precache_sound,			// #19 void(string s) precache_sound
-PF_precache_model,			// #20 void(string s) precache_model
-PF_stuffcmd,				// #21 void(entity client, string s)stuffcmd
-PF_findradius,				// #22 entity(vector org, float rad) findradius
-VM_bprint,					// #23 void(string s) bprint
-PF_sprint,					// #24 void(entity client, string s) sprint
-VM_dprint,					// #25 void(string s) dprint
-VM_ftos,					// #26 void(string s) ftos
-VM_vtos,					// #27 void(string s) vtos
-VM_coredump,				// #28 void() coredump
-VM_traceon,					// #29 void() traceon
-VM_traceoff,				// #30 void() traceoff
-VM_eprint,					// #31 void(entity e) eprint
-PF_walkmove,				// #32 float(float yaw, float dist) walkmove
-NULL,						// #33
-PF_droptofloor,				// #34 float() droptofloor
-PF_lightstyle,				// #35 void(float style, string value) lightstyle
-VM_rint,					// #36 float(float v) rint
-VM_floor,					// #37 float(float v) floor
-VM_ceil,					// #38 float(float v) ceil
-NULL,						// #39
-PF_checkbottom,				// #40 float(entity e) checkbottom
-PF_pointcontents,			// #41 float(vector v) pointcontents
-NULL,						// #42
-VM_fabs,					// #43 float(float f) fabs
-PF_aim,						// #44 vector(entity e, float speed) aim
-VM_cvar,					// #45 float(string s) cvar
-VM_localcmd,				// #46 void(string s) localcmd
-VM_nextent,					// #47 entity(entity e) nextent
-PF_particle,				// #48 void(vector o, vector d, float color, float count) particle
-VM_changeyaw,				// #49 void() ChangeYaw
-NULL,						// #50
-VM_vectoangles,				// #51 vector(vector v) vectoangles
-PF_WriteByte,				// #52 void(float to, float f) WriteByte
-PF_WriteChar,				// #53 void(float to, float f) WriteChar
-PF_WriteShort,				// #54 void(float to, float f) WriteShort
-PF_WriteLong,				// #55 void(float to, float f) WriteLong
-PF_WriteCoord,				// #56 void(float to, float f) WriteCoord
-PF_WriteAngle,				// #57 void(float to, float f) WriteAngle
-PF_WriteString,				// #58 void(float to, string s) WriteString
-PF_WriteEntity,				// #59 void(float to, entity e) WriteEntity
-VM_sin,						// #60 float(float f) sin (DP_QC_SINCOSSQRTPOW)
-VM_cos,						// #61 float(float f) cos (DP_QC_SINCOSSQRTPOW)
-VM_sqrt,					// #62 float(float f) sqrt (DP_QC_SINCOSSQRTPOW)
-VM_changepitch,				// #63 void(entity ent) changepitch (DP_QC_CHANGEPITCH)
-PF_tracetoss,				// #64 void(entity e, entity ignore) tracetoss (DP_QC_TRACETOSS)
-VM_etos,					// #65 string(entity ent) etos (DP_QC_ETOS)
-NULL,						// #66
-SV_MoveToGoal,				// #67 void(float step) movetogoal
-PF_precache_file,			// #68 string(string s) precache_file
-PF_makestatic,				// #69 void(entity e) makestatic
-VM_changelevel,				// #70 void(string s) changelevel
-NULL,						// #71
-VM_cvar_set,				// #72 void(string var, string val) cvar_set
-PF_centerprint,				// #73 void(entity client, strings) centerprint
-PF_ambientsound,			// #74 void(vector pos, string samp, float vol, float atten) ambientsound
-PF_precache_model,			// #75 string(string s) precache_model2
-PF_precache_sound,			// #76 string(string s) precache_sound2
-PF_precache_file,			// #77 string(string s) precache_file2
-PF_setspawnparms,			// #78 void(entity e) setspawnparms
-NULL,						// #79
-NULL,						// #80
-VM_stof,					// #81 float(string s) stof (FRIK_FILE)
-NULL,						// #82
-NULL,						// #83
-NULL,						// #84
-NULL,						// #85
-NULL,						// #86
-NULL,						// #87
-NULL,						// #88
-NULL,						// #89
-PF_tracebox,				// #90 void(vector v1, vector min, vector max, vector v2, float nomonsters, entity forent) tracebox (DP_QC_TRACEBOX)
-VM_randomvec,				// #91 vector() randomvec (DP_QC_RANDOMVEC)
-PF_getlight,				// #92 vector(vector org) getlight (DP_QC_GETLIGHT)
-PF_registercvar,			// #93 float(string name, string value) registercvar (DP_REGISTERCVAR)
-VM_min,						// #94 float(float a, floats) min (DP_QC_MINMAXBOUND)
-VM_max,						// #95 float(float a, floats) max (DP_QC_MINMAXBOUND)
-VM_bound,					// #96 float(float minimum, float val, float maximum) bound (DP_QC_MINMAXBOUND)
-VM_pow,						// #97 float(float f, float f) pow (DP_QC_SINCOSSQRTPOW)
-VM_findfloat,				// #98 entity(entity start, .float fld, float match) findfloat (DP_QC_FINDFLOAT)
-VM_checkextension,			// #99 float(string s) checkextension (the basis of the extension system)
-NULL,						// #100
-NULL,						// #101
-NULL,						// #102
-NULL,						// #103
-NULL,						// #104
-NULL,						// #105
-NULL,						// #106
-NULL,						// #107
-NULL,						// #108
-NULL,						// #109
-VM_fopen,					// #110 float(string filename, float mode) fopen (FRIK_FILE)
-VM_fclose,					// #111 void(float fhandle) fclose (FRIK_FILE)
-VM_fgets,					// #112 string(float fhandle) fgets (FRIK_FILE)
-VM_fputs,					// #113 void(float fhandle, string s) fputs (FRIK_FILE)
-VM_strlen,					// #114 float(string s) strlen (FRIK_FILE)
-VM_strcat,					// #115 string(string s1, string s2) strcat (FRIK_FILE)
-VM_substring,				// #116 string(string s, float start, float length) substring (FRIK_FILE)
-VM_stov,					// #117 vector(string) stov (FRIK_FILE)
-VM_strzone,					// #118 string(string s) strzone (FRIK_FILE)
-VM_strunzone,				// #119 void(string s) strunzone (FRIK_FILE)
-e10, e10, e10, e10, e10, e10, e10, e10,		// #120-199
+NULL,							// #0 NULL function (not callable) (QUAKE)
+VM_makevectors,					// #1 void(vector ang) makevectors (QUAKE)
+VM_SV_setorigin,				// #2 void(entity e, vector o) setorigin (QUAKE)
+VM_SV_setmodel,					// #3 void(entity e, string m) setmodel (QUAKE)
+VM_SV_setsize,					// #4 void(entity e, vector min, vector max) setsize (QUAKE)
+NULL,							// #5 void(entity e, vector min, vector max) setabssize (QUAKE)
+VM_break,						// #6 void() break (QUAKE)
+VM_random,						// #7 float() random (QUAKE)
+VM_SV_sound,					// #8 void(entity e, float chan, string samp) sound (QUAKE)
+VM_normalize,					// #9 vector(vector v) normalize (QUAKE)
+VM_error,						// #10 void(string e) error (QUAKE)
+VM_objerror,					// #11 void(string e) objerror (QUAKE)
+VM_vlen,						// #12 float(vector v) vlen (QUAKE)
+VM_vectoyaw,					// #13 float(vector v) vectoyaw (QUAKE)
+VM_spawn,						// #14 entity() spawn (QUAKE)
+VM_remove,						// #15 void(entity e) remove (QUAKE)
+VM_SV_traceline,				// #16 float(vector v1, vector v2, float tryents) traceline (QUAKE)
+VM_SV_checkclient,				// #17 entity() checkclient (QUAKE)
+VM_find,						// #18 entity(entity start, .string fld, string match) find (QUAKE)
+VM_SV_precache_sound,			// #19 void(string s) precache_sound (QUAKE)
+VM_SV_precache_model,			// #20 void(string s) precache_model (QUAKE)
+VM_SV_stuffcmd,					// #21 void(entity client, string s, ...) stuffcmd (QUAKE)
+VM_SV_findradius,				// #22 entity(vector org, float rad) findradius (QUAKE)
+VM_bprint,						// #23 void(string s, ...) bprint (QUAKE)
+VM_SV_sprint,					// #24 void(entity client, string s, ...) sprint (QUAKE)
+VM_dprint,						// #25 void(string s, ...) dprint (QUAKE)
+VM_ftos,						// #26 string(float f) ftos (QUAKE)
+VM_vtos,						// #27 string(vector v) vtos (QUAKE)
+VM_coredump,					// #28 void() coredump (QUAKE)
+VM_traceon,						// #29 void() traceon (QUAKE)
+VM_traceoff,					// #30 void() traceoff (QUAKE)
+VM_eprint,						// #31 void(entity e) eprint (QUAKE)
+VM_SV_walkmove,					// #32 float(float yaw, float dist) walkmove (QUAKE)
+NULL,							// #33 (QUAKE)
+VM_SV_droptofloor,				// #34 float() droptofloor (QUAKE)
+VM_SV_lightstyle,				// #35 void(float style, string value) lightstyle (QUAKE)
+VM_rint,						// #36 float(float v) rint (QUAKE)
+VM_floor,						// #37 float(float v) floor (QUAKE)
+VM_ceil,						// #38 float(float v) ceil (QUAKE)
+NULL,							// #39 (QUAKE)
+VM_SV_checkbottom,				// #40 float(entity e) checkbottom (QUAKE)
+VM_SV_pointcontents,			// #41 float(vector v) pointcontents (QUAKE)
+NULL,							// #42 (QUAKE)
+VM_fabs,						// #43 float(float f) fabs (QUAKE)
+VM_SV_aim,						// #44 vector(entity e, float speed) aim (QUAKE)
+VM_cvar,						// #45 float(string s) cvar (QUAKE)
+VM_localcmd,					// #46 void(string s) localcmd (QUAKE)
+VM_nextent,						// #47 entity(entity e) nextent (QUAKE)
+VM_SV_particle,					// #48 void(vector o, vector d, float color, float count) particle (QUAKE)
+VM_changeyaw,					// #49 void() ChangeYaw (QUAKE)
+NULL,							// #50 (QUAKE)
+VM_vectoangles,					// #51 vector(vector v) vectoangles (QUAKE)
+VM_SV_WriteByte,				// #52 void(float to, float f) WriteByte (QUAKE)
+VM_SV_WriteChar,				// #53 void(float to, float f) WriteChar (QUAKE)
+VM_SV_WriteShort,				// #54 void(float to, float f) WriteShort (QUAKE)
+VM_SV_WriteLong,				// #55 void(float to, float f) WriteLong (QUAKE)
+VM_SV_WriteCoord,				// #56 void(float to, float f) WriteCoord (QUAKE)
+VM_SV_WriteAngle,				// #57 void(float to, float f) WriteAngle (QUAKE)
+VM_SV_WriteString,				// #58 void(float to, string s) WriteString (QUAKE)
+VM_SV_WriteEntity,				// #59 void(float to, entity e) WriteEntity (QUAKE)
+VM_sin,							// #60 float(float f) sin (DP_QC_SINCOSSQRTPOW) (QUAKE)
+VM_cos,							// #61 float(float f) cos (DP_QC_SINCOSSQRTPOW) (QUAKE)
+VM_sqrt,						// #62 float(float f) sqrt (DP_QC_SINCOSSQRTPOW) (QUAKE)
+VM_changepitch,					// #63 void(entity ent) changepitch (DP_QC_CHANGEPITCH) (QUAKE)
+VM_SV_tracetoss,				// #64 void(entity e, entity ignore) tracetoss (DP_QC_TRACETOSS) (QUAKE)
+VM_etos,						// #65 string(entity ent) etos (DP_QC_ETOS) (QUAKE)
+NULL,							// #66 (QUAKE)
+SV_MoveToGoal,					// #67 void(float step) movetogoal (QUAKE)
+VM_precache_file,				// #68 string(string s) precache_file (QUAKE)
+VM_SV_makestatic,				// #69 void(entity e) makestatic (QUAKE)
+VM_changelevel,					// #70 void(string s) changelevel (QUAKE)
+NULL,							// #71 (QUAKE)
+VM_cvar_set,					// #72 void(string var, string val) cvar_set (QUAKE)
+VM_SV_centerprint,				// #73 void(entity client, strings) centerprint (QUAKE)
+VM_SV_ambientsound,				// #74 void(vector pos, string samp, float vol, float atten) ambientsound (QUAKE)
+VM_SV_precache_model,			// #75 string(string s) precache_model2 (QUAKE)
+VM_SV_precache_sound,			// #76 string(string s) precache_sound2 (QUAKE)
+VM_precache_file,				// #77 string(string s) precache_file2 (QUAKE)
+VM_SV_setspawnparms,			// #78 void(entity e) setspawnparms (QUAKE)
+NULL,							// #79 void(entity killer, entity killee) logfrag (QUAKEWORLD)
+NULL,							// #80 string(entity e, string keyname) infokey (QUAKEWORLD)
+VM_stof,						// #81 float(string s) stof (FRIK_FILE)
+NULL,							// #82 void(vector where, float set) multicast (QUAKEWORLD)
+NULL,							// #83 (QUAKE)
+NULL,							// #84 (QUAKE)
+NULL,							// #85 (QUAKE)
+NULL,							// #86 (QUAKE)
+NULL,							// #87 (QUAKE)
+NULL,							// #88 (QUAKE)
+NULL,							// #89 (QUAKE)
+VM_SV_tracebox,					// #90 void(vector v1, vector min, vector max, vector v2, float nomonsters, entity forent) tracebox (DP_QC_TRACEBOX)
+VM_randomvec,					// #91 vector() randomvec (DP_QC_RANDOMVEC)
+VM_SV_getlight,					// #92 vector(vector org) getlight (DP_QC_GETLIGHT)
+VM_registercvar,				// #93 float(string name, string value) registercvar (DP_REGISTERCVAR)
+VM_min,							// #94 float(float a, floats) min (DP_QC_MINMAXBOUND)
+VM_max,							// #95 float(float a, floats) max (DP_QC_MINMAXBOUND)
+VM_bound,						// #96 float(float minimum, float val, float maximum) bound (DP_QC_MINMAXBOUND)
+VM_pow,							// #97 float(float f, float f) pow (DP_QC_SINCOSSQRTPOW)
+VM_findfloat,					// #98 entity(entity start, .float fld, float match) findfloat (DP_QC_FINDFLOAT)
+VM_checkextension,				// #99 float(string s) checkextension (the basis of the extension system)
+// FrikaC and Telejano range  #100-#199
+NULL,							// #100
+NULL,							// #101
+NULL,							// #102
+NULL,							// #103
+NULL,							// #104
+NULL,							// #105
+NULL,							// #106
+NULL,							// #107
+NULL,							// #108
+NULL,							// #109
+VM_fopen,						// #110 float(string filename, float mode) fopen (FRIK_FILE)
+VM_fclose,						// #111 void(float fhandle) fclose (FRIK_FILE)
+VM_fgets,						// #112 string(float fhandle) fgets (FRIK_FILE)
+VM_fputs,						// #113 void(float fhandle, string s) fputs (FRIK_FILE)
+VM_strlen,						// #114 float(string s) strlen (FRIK_FILE)
+VM_strcat,						// #115 string(string s1, string s2, ...) strcat (FRIK_FILE)
+VM_substring,					// #116 string(string s, float start, float length) substring (FRIK_FILE)
+VM_stov,						// #117 vector(string) stov (FRIK_FILE)
+VM_strzone,						// #118 string(string s) strzone (FRIK_FILE)
+VM_strunzone,					// #119 void(string s) strunzone (FRIK_FILE)
+NULL,							// #120
+NULL,							// #121
+NULL,							// #122
+NULL,							// #123
+NULL,							// #124
+NULL,							// #125
+NULL,							// #126
+NULL,							// #127
+NULL,							// #128
+NULL,							// #129
+NULL,							// #130
+NULL,							// #131
+NULL,							// #132
+NULL,							// #133
+NULL,							// #134
+NULL,							// #135
+NULL,							// #136
+NULL,							// #137
+NULL,							// #138
+NULL,							// #139
+NULL,							// #140
+NULL,							// #141
+NULL,							// #142
+NULL,							// #143
+NULL,							// #144
+NULL,							// #145
+NULL,							// #146
+NULL,							// #147
+NULL,							// #148
+NULL,							// #149
+NULL,							// #150
+NULL,							// #151
+NULL,							// #152
+NULL,							// #153
+NULL,							// #154
+NULL,							// #155
+NULL,							// #156
+NULL,							// #157
+NULL,							// #158
+NULL,							// #159
+NULL,							// #160
+NULL,							// #161
+NULL,							// #162
+NULL,							// #163
+NULL,							// #164
+NULL,							// #165
+NULL,							// #166
+NULL,							// #167
+NULL,							// #168
+NULL,							// #169
+NULL,							// #170
+NULL,							// #171
+NULL,							// #172
+NULL,							// #173
+NULL,							// #174
+NULL,							// #175
+NULL,							// #176
+NULL,							// #177
+NULL,							// #178
+NULL,							// #179
+NULL,							// #180
+NULL,							// #181
+NULL,							// #182
+NULL,							// #183
+NULL,							// #184
+NULL,							// #185
+NULL,							// #186
+NULL,							// #187
+NULL,							// #188
+NULL,							// #189
+NULL,							// #190
+NULL,							// #191
+NULL,							// #192
+NULL,							// #193
+NULL,							// #194
+NULL,							// #195
+NULL,							// #196
+NULL,							// #197
+NULL,							// #198
+NULL,							// #199
 // FTEQW range #200-#299
-NULL,						// #200
-NULL,						// #201
-NULL,						// #202
-NULL,						// #203
-NULL,						// #204
-NULL,						// #205
-NULL,						// #206
-NULL,						// #207
-NULL,						// #208
-NULL,						// #209
-NULL,						// #210
-NULL,						// #211
-NULL,						// #212
-NULL,						// #213
-NULL,						// #214
-NULL,						// #215
-NULL,						// #216
-NULL,						// #217
-VM_bitshift,				// #218 float(float number, float quantity) bitshift (EXT_BITSHIFT)
-NULL,						// #219
-e10,						// #220-#229
-e10,						// #230-#239
-e10,						// #240-#249
-e10,						// #250-#259
-e10,						// #260-#269
-e10,						// #270-#279
-e10,						// #280-#289
-e10,						// #290-#299
-e10,						// #300-309
-e10,						// #310-319
-e10,						// #320-329
-NULL,						// #330
-NULL,						// #331
-NULL,						// #332
-NULL,						// #333
-NULL,						// #334
-NULL,						// #335
-VM_SV_trailparticles,		// #336 void(entity ent, float effectnum, vector start, vector end) trailparticles (EXT_CSQC)
-VM_SV_pointparticles,		// #337 void(float effectnum, vector origin [, vector dir, float count]) pointparticles (EXT_CSQC)
-NULL,						// #338
-VM_print,					// #339 void(string, ...) print (DP_SV_PRINT)
-e10,						// #340-349
-e10,						// #350-359
-e10,						// #360-369
-e10,						// #370-379
-e10,						// #380-389
-e10,						// #390-399
-VM_copyentity,				// #400 void(entity from, entity to) copyentity (DP_QC_COPYENTITY)
-PF_setcolor,				// #401 void(entity ent, float colors) setcolor (DP_QC_SETCOLOR)
-VM_findchain,				// #402 entity(.string fld, string match) findchain (DP_QC_FINDCHAIN)
-VM_findchainfloat,			// #403 entity(.float fld, float match) findchainfloat (DP_QC_FINDCHAINFLOAT)
-PF_effect,					// #404 void(vector org, string modelname, float startframe, float endframe, float framerate) effect (DP_SV_EFFECT)
-PF_te_blood,				// #405 void(vector org, vector velocity, float howmany) te_blood (DP_TE_BLOOD)
-PF_te_bloodshower,			// #406 void(vector mincorner, vector maxcorner, float explosionspeed, float howmany) te_bloodshower (DP_TE_BLOODSHOWER)
-PF_te_explosionrgb,			// #407 void(vector org, vector color) te_explosionrgb (DP_TE_EXPLOSIONRGB)
-PF_te_particlecube,			// #408 void(vector mincorner, vector maxcorner, vector vel, float howmany, float color, float gravityflag, float randomveljitter) te_particlecube (DP_TE_PARTICLECUBE)
-PF_te_particlerain,			// #409 void(vector mincorner, vector maxcorner, vector vel, float howmany, float color) te_particlerain (DP_TE_PARTICLERAIN)
-PF_te_particlesnow,			// #410 void(vector mincorner, vector maxcorner, vector vel, float howmany, float color) te_particlesnow (DP_TE_PARTICLESNOW)
-PF_te_spark,				// #411 void(vector org, vector vel, float howmany) te_spark (DP_TE_SPARK)
-PF_te_gunshotquad,			// #412 void(vector org) te_gunshotquad (DP_QUADEFFECTS1)
-PF_te_spikequad,			// #413 void(vector org) te_spikequad (DP_QUADEFFECTS1)
-PF_te_superspikequad,		// #414 void(vector org) te_superspikequad (DP_QUADEFFECTS1)
-PF_te_explosionquad,		// #415 void(vector org) te_explosionquad (DP_QUADEFFECTS1)
-PF_te_smallflash,			// #416 void(vector org) te_smallflash (DP_TE_SMALLFLASH)
-PF_te_customflash,			// #417 void(vector org, float radius, float lifetime, vector color) te_customflash (DP_TE_CUSTOMFLASH)
-PF_te_gunshot,				// #418 void(vector org) te_gunshot (DP_TE_STANDARDEFFECTBUILTINS)
-PF_te_spike,				// #419 void(vector org) te_spike (DP_TE_STANDARDEFFECTBUILTINS)
-PF_te_superspike,			// #420 void(vector org) te_superspike (DP_TE_STANDARDEFFECTBUILTINS)
-PF_te_explosion,			// #421 void(vector org) te_explosion (DP_TE_STANDARDEFFECTBUILTINS)
-PF_te_tarexplosion,			// #422 void(vector org) te_tarexplosion (DP_TE_STANDARDEFFECTBUILTINS)
-PF_te_wizspike,				// #423 void(vector org) te_wizspike (DP_TE_STANDARDEFFECTBUILTINS)
-PF_te_knightspike,			// #424 void(vector org) te_knightspike (DP_TE_STANDARDEFFECTBUILTINS)
-PF_te_lavasplash,			// #425 void(vector org) te_lavasplash (DP_TE_STANDARDEFFECTBUILTINS)
-PF_te_teleport,				// #426 void(vector org) te_teleport (DP_TE_STANDARDEFFECTBUILTINS)
-PF_te_explosion2,			// #427 void(vector org, float colorstart, float colorlength) te_explosion2 (DP_TE_STANDARDEFFECTBUILTINS)
-PF_te_lightning1,			// #428 void(entity own, vector start, vector end) te_lightning1 (DP_TE_STANDARDEFFECTBUILTINS)
-PF_te_lightning2,			// #429 void(entity own, vector start, vector end) te_lightning2 (DP_TE_STANDARDEFFECTBUILTINS)
-PF_te_lightning3,			// #430 void(entity own, vector start, vector end) te_lightning3 (DP_TE_STANDARDEFFECTBUILTINS)
-PF_te_beam,					// #431 void(entity own, vector start, vector end) te_beam (DP_TE_STANDARDEFFECTBUILTINS)
-VM_vectorvectors,			// #432 void(vector dir) vectorvectors (DP_QC_VECTORVECTORS)
-PF_te_plasmaburn,			// #433 void(vector org) te_plasmaburn (DP_TE_PLASMABURN)
-PF_getsurfacenumpoints,		// #434 float(entity e, float s) getsurfacenumpoints (DP_QC_GETSURFACE)
-PF_getsurfacepoint,			// #435 vector(entity e, float s, float n) getsurfacepoint (DP_QC_GETSURFACE)
-PF_getsurfacenormal,		// #436 vector(entity e, float s) getsurfacenormal (DP_QC_GETSURFACE)
-PF_getsurfacetexture,		// #437 string(entity e, float s) getsurfacetexture (DP_QC_GETSURFACE)
-PF_getsurfacenearpoint,		// #438 float(entity e, vector p) getsurfacenearpoint (DP_QC_GETSURFACE)
-PF_getsurfaceclippedpoint,	// #439 vector(entity e, float s, vector p) getsurfaceclippedpoint (DP_QC_GETSURFACE)
-PF_clientcommand,			// #440 void(entity e, string s) clientcommand (KRIMZON_SV_PARSECLIENTCOMMAND)
-VM_tokenize,				// #441 float(string s) tokenize (KRIMZON_SV_PARSECLIENTCOMMAND)
-VM_argv,					// #442 string(float n) argv (KRIMZON_SV_PARSECLIENTCOMMAND)
-PF_setattachment,			// #443 void(entity e, entity tagentity, string tagname) setattachment (DP_GFX_QUAKE3MODELTAGS)
-VM_search_begin,			// #444 float(string pattern, float caseinsensitive, float quiet) search_begin (DP_FS_SEARCH)
-VM_search_end,				// #445 void(float handle) search_end (DP_FS_SEARCH)
-VM_search_getsize,			// #446 float(float handle) search_getsize (DP_FS_SEARCH)
-VM_search_getfilename,		// #447 string(float handle, float num) search_getfilename (DP_FS_SEARCH)
-VM_cvar_string,				// #448 string(string s) cvar_string (DP_QC_CVAR_STRING)
-VM_findflags,				// #449 entity(entity start, .float fld, float match) findflags (DP_QC_FINDFLAGS)
-VM_findchainflags,			// #450 entity(.float fld, float match) findchainflags (DP_QC_FINDCHAINFLAGS)
-PF_gettagindex,				// #451 float(entity ent, string tagname) gettagindex (DP_QC_GETTAGINFO)
-PF_gettaginfo,				// #452 vector(entity ent, float tagindex) gettaginfo (DP_QC_GETTAGINFO)
-PF_dropclient,				// #453 void(entity clent) dropclient (DP_SV_DROPCLIENT)
-PF_spawnclient,				// #454 entity() spawnclient (DP_SV_BOTCLIENT)
-PF_clienttype,				// #455 float(entity clent) clienttype (DP_SV_BOTCLIENT)
-PF_WriteUnterminatedString,	// #456 void(float to, string s) WriteUnterminatedString (DP_SV_WRITEUNTERMINATEDSTRING)
-PF_te_flamejet,				// #457 void(vector org, vector vel, float howmany) te_flamejet = #457 (DP_TE_FLAMEJET)
-NULL,						// #458
-PF_edict_num,				// #459 entity(float num) (??)
-VM_buf_create,				// #460 float() buf_create (DP_QC_STRINGBUFFERS)
-VM_buf_del,					// #461 void(float bufhandle) buf_del (DP_QC_STRINGBUFFERS)
-VM_buf_getsize,				// #462 float(float bufhandle) buf_getsize (DP_QC_STRINGBUFFERS)
-VM_buf_copy,				// #463 void(float bufhandle_from, float bufhandle_to) buf_copy (DP_QC_STRINGBUFFERS)
-VM_buf_sort,				// #464 void(float bufhandle, float sortpower, float backward) buf_sort (DP_QC_STRINGBUFFERS)
-VM_buf_implode,				// #465 string(float bufhandle, string glue) buf_implode (DP_QC_STRINGBUFFERS)
-VM_bufstr_get,				// #466 string(float bufhandle, float string_index) bufstr_get (DP_QC_STRINGBUFFERS)
-VM_bufstr_set,				// #467 void(float bufhandle, float string_index, string str) bufstr_set (DP_QC_STRINGBUFFERS)
-VM_bufstr_add,				// #468 float(float bufhandle, string str, float order) bufstr_add (DP_QC_STRINGBUFFERS)
-VM_bufstr_free,				// #469 void(float bufhandle, float string_index) bufstr_free (DP_QC_STRINGBUFFERS)
-PF_SV_AddStat,				// #470 void(float index, float type, .void field) SV_AddStat (EXT_CSQC)
-VM_asin,					// #471 float(float s) VM_asin (DP_QC_ASINACOSATANATAN2TAN)
-VM_acos,					// #472 float(float c) VM_acos (DP_QC_ASINACOSATANATAN2TAN)
-VM_atan,					// #473 float(float t) VM_atan (DP_QC_ASINACOSATANATAN2TAN)
-VM_atan2,					// #474 float(float c, float s) VM_atan2 (DP_QC_ASINACOSATANATAN2TAN)
-VM_tan,						// #475 float(float a) VM_tan (DP_QC_ASINACOSATANATAN2TAN)
-VM_strlennocol,				// #476 float(string s) : DRESK - String Length (not counting color codes) (DP_QC_STRINGCOLORFUNCTIONS)
-VM_strdecolorize,			// #477 string(string s) : DRESK - Decolorized String (DP_SV_STRINGCOLORFUNCTIONS)
-VM_strftime,				// #478 string(float uselocaltime, string format, ...) (DP_QC_STRFTIME)
-NULL,						// #478
-NULL,						// #479
-e10, e10					// #480-499 (LordHavoc)
+NULL,							// #200
+NULL,							// #201
+NULL,							// #202
+NULL,							// #203
+NULL,							// #204
+NULL,							// #205
+NULL,							// #206
+NULL,							// #207
+NULL,							// #208
+NULL,							// #209
+NULL,							// #210
+NULL,							// #211
+NULL,							// #212
+NULL,							// #213
+NULL,							// #214
+NULL,							// #215
+NULL,							// #216
+NULL,							// #217
+VM_bitshift,					// #218 float(float number, float quantity) bitshift (EXT_BITSHIFT)
+NULL,							// #219
+NULL,							// #220
+NULL,							// #221
+VM_str2chr,						// #222 float(string str, float ofs) str2chr (FTE_STRINGS)
+VM_chr2str,						// #223 string(float c, ...) chr2str (FTE_STRINGS)
+NULL,							// #224
+NULL,							// #225
+NULL,							// #226
+NULL,							// #227
+VM_strncmp,						// #228 float(string s1, string s2, float len) strncmp (FTE_STRINGS)
+NULL,							// #229
+NULL,							// #230
+NULL,							// #231
+VM_SV_AddStat,					// #232 void(float index, float type, .void field) SV_AddStat (EXT_CSQC)
+NULL,							// #233
+NULL,							// #234
+NULL,							// #235
+NULL,							// #236
+NULL,							// #237
+NULL,							// #238
+NULL,							// #239
+NULL,							// #240
+NULL,							// #241
+NULL,							// #242
+NULL,							// #243
+NULL,							// #244
+NULL,							// #245
+NULL,							// #246
+NULL,							// #247
+NULL,							// #248
+NULL,							// #249
+NULL,							// #250
+NULL,							// #251
+NULL,							// #252
+NULL,							// #253
+NULL,							// #254
+NULL,							// #255
+NULL,							// #256
+NULL,							// #257
+NULL,							// #258
+NULL,							// #259
+NULL,							// #260
+NULL,							// #261
+NULL,							// #262
+NULL,							// #263
+NULL,							// #264
+NULL,							// #265
+NULL,							// #266
+NULL,							// #267
+NULL,							// #268
+NULL,							// #269
+NULL,							// #270
+NULL,							// #271
+NULL,							// #272
+NULL,							// #273
+NULL,							// #274
+NULL,							// #275
+NULL,							// #276
+NULL,							// #277
+NULL,							// #278
+NULL,							// #279
+NULL,							// #280
+NULL,							// #281
+NULL,							// #282
+NULL,							// #283
+NULL,							// #284
+NULL,							// #285
+NULL,							// #286
+NULL,							// #287
+NULL,							// #288
+NULL,							// #289
+NULL,							// #290
+NULL,							// #291
+NULL,							// #292
+NULL,							// #293
+NULL,							// #294
+NULL,							// #295
+NULL,							// #296
+NULL,							// #297
+NULL,							// #298
+NULL,							// #299
+// CSQC range #300-#399
+NULL,							// #300 void() clearscene (EXT_CSQC)
+NULL,							// #301 void(float mask) addentities (EXT_CSQC)
+NULL,							// #302 void(entity ent) addentity (EXT_CSQC)
+NULL,							// #303 float(float property, ...) setproperty (EXT_CSQC)
+NULL,							// #304 void() renderscene (EXT_CSQC)
+NULL,							// #305 void(vector org, float radius, vector lightcolours) adddynamiclight (EXT_CSQC)
+NULL,							// #306 void(string texturename, float flag[, float is2d, float lines]) R_BeginPolygon
+NULL,							// #307 void(vector org, vector texcoords, vector rgb, float alpha) R_PolygonVertex
+NULL,							// #308 void() R_EndPolygon
+NULL,							// #309
+NULL,							// #310 vector (vector v) cs_unproject (EXT_CSQC)
+NULL,							// #311 vector (vector v) cs_project (EXT_CSQC)
+NULL,							// #312
+NULL,							// #313
+NULL,							// #314
+NULL,							// #315 void(float width, vector pos1, vector pos2, float flag) drawline (EXT_CSQC)
+NULL,							// #316 float(string name) iscachedpic (EXT_CSQC)
+NULL,							// #317 string(string name, float trywad) precache_pic (EXT_CSQC)
+NULL,							// #318 vector(string picname) draw_getimagesize (EXT_CSQC)
+NULL,							// #319 void(string name) freepic (EXT_CSQC)
+NULL,							// #320 float(vector position, float character, vector scale, vector rgb, float alpha, float flag) drawcharacter (EXT_CSQC)
+NULL,							// #321 float(vector position, string text, vector scale, vector rgb, float alpha, float flag) drawstring (EXT_CSQC)
+NULL,							// #322 float(vector position, string pic, vector size, vector rgb, float alpha, float flag) drawpic (EXT_CSQC)
+NULL,							// #323 float(vector position, vector size, vector rgb, float alpha, float flag) drawfill (EXT_CSQC)
+NULL,							// #324 void(float x, float y, float width, float height) drawsetcliparea
+NULL,							// #325 void(void) drawresetcliparea
+NULL,							// #326
+NULL,							// #327
+NULL,							// #328
+NULL,							// #329
+NULL,							// #330 float(float stnum) getstatf (EXT_CSQC)
+NULL,							// #331 float(float stnum) getstati (EXT_CSQC)
+NULL,							// #332 string(float firststnum) getstats (EXT_CSQC)
+VM_SV_setmodelindex,			// #333 void(entity e, float mdlindex) setmodelindex (EXT_CSQC)
+VM_SV_modelnameforindex,		// #334 string(float mdlindex) modelnameforindex (EXT_CSQC)
+VM_SV_particleeffectnum,		// #335 float(string effectname) particleeffectnum (EXT_CSQC)
+VM_SV_trailparticles,			// #336 void(entity ent, float effectnum, vector start, vector end) trailparticles (EXT_CSQC)
+VM_SV_pointparticles,			// #337 void(float effectnum, vector origin [, vector dir, float count]) pointparticles (EXT_CSQC)
+NULL,							// #338 void(string s, ...) centerprint (EXT_CSQC)
+VM_print,						// #339 void(string s, ...) print (EXT_CSQC, DP_SV_PRINT)
+NULL,							// #340 string(float keynum) keynumtostring (EXT_CSQC)
+NULL,							// #341 float(string keyname) stringtokeynum (EXT_CSQC)
+NULL,							// #342 string(float keynum) getkeybind (EXT_CSQC)
+NULL,							// #343 void(float usecursor) setcursormode (EXT_CSQC)
+NULL,							// #344 vector() getmousepos (EXT_CSQC)
+NULL,							// #345 float(float framenum) getinputstate (EXT_CSQC)
+NULL,							// #346 void(float sens) setsensitivityscaler (EXT_CSQC)
+NULL,							// #347 void() runstandardplayerphysics (EXT_CSQC)
+NULL,							// #348 string(float playernum, string keyname) getplayerkeyvalue (EXT_CSQC)
+NULL,							// #349 float() isdemo (EXT_CSQC)
+VM_isserver,					// #350 float() isserver (EXT_CSQC)
+NULL,							// #351 void(vector origin, vector forward, vector right, vector up) SetListener (EXT_CSQC)
+NULL,							// #352 void(string cmdname) registercommand (EXT_CSQC)
+VM_wasfreed,					// #353 float(entity ent) wasfreed (EXT_CSQC) (should be availabe on server too)
+VM_SV_serverkey,				// #354 string(string key) serverkey (EXT_CSQC)
+NULL,							// #355
+NULL,							// #356
+NULL,							// #357
+NULL,							// #358
+NULL,							// #359
+NULL,							// #360 float() readbyte (EXT_CSQC)
+NULL,							// #361 float() readchar (EXT_CSQC)
+NULL,							// #362 float() readshort (EXT_CSQC)
+NULL,							// #363 float() readlong (EXT_CSQC)
+NULL,							// #364 float() readcoord (EXT_CSQC)
+NULL,							// #365 float() readangle (EXT_CSQC)
+NULL,							// #366 string() readstring (EXT_CSQC)
+NULL,							// #367 float() readfloat (EXT_CSQC)
+NULL,							// #368
+NULL,							// #369
+NULL,							// #370
+NULL,							// #371
+NULL,							// #372
+NULL,							// #373
+NULL,							// #374
+NULL,							// #375
+NULL,							// #376
+NULL,							// #377
+NULL,							// #378
+NULL,							// #379
+NULL,							// #380
+NULL,							// #381
+NULL,							// #382
+NULL,							// #383
+NULL,							// #384
+NULL,							// #385
+NULL,							// #386
+NULL,							// #387
+NULL,							// #388
+NULL,							// #389
+NULL,							// #390
+NULL,							// #391
+NULL,							// #392
+NULL,							// #393
+NULL,							// #394
+NULL,							// #395
+NULL,							// #396
+NULL,							// #397
+NULL,							// #398
+NULL,							// #399
+// LordHavoc's range #400-#499
+VM_SV_copyentity,				// #400 void(entity from, entity to) copyentity (DP_QC_COPYENTITY)
+VM_SV_setcolor,					// #401 void(entity ent, float colors) setcolor (DP_QC_SETCOLOR)
+VM_findchain,					// #402 entity(.string fld, string match) findchain (DP_QC_FINDCHAIN)
+VM_findchainfloat,				// #403 entity(.float fld, float match) findchainfloat (DP_QC_FINDCHAINFLOAT)
+VM_SV_effect,					// #404 void(vector org, string modelname, float startframe, float endframe, float framerate) effect (DP_SV_EFFECT)
+VM_SV_te_blood,					// #405 void(vector org, vector velocity, float howmany) te_blood (DP_TE_BLOOD)
+VM_SV_te_bloodshower,			// #406 void(vector mincorner, vector maxcorner, float explosionspeed, float howmany) te_bloodshower (DP_TE_BLOODSHOWER)
+VM_SV_te_explosionrgb,			// #407 void(vector org, vector color) te_explosionrgb (DP_TE_EXPLOSIONRGB)
+VM_SV_te_particlecube,			// #408 void(vector mincorner, vector maxcorner, vector vel, float howmany, float color, float gravityflag, float randomveljitter) te_particlecube (DP_TE_PARTICLECUBE)
+VM_SV_te_particlerain,			// #409 void(vector mincorner, vector maxcorner, vector vel, float howmany, float color) te_particlerain (DP_TE_PARTICLERAIN)
+VM_SV_te_particlesnow,			// #410 void(vector mincorner, vector maxcorner, vector vel, float howmany, float color) te_particlesnow (DP_TE_PARTICLESNOW)
+VM_SV_te_spark,					// #411 void(vector org, vector vel, float howmany) te_spark (DP_TE_SPARK)
+VM_SV_te_gunshotquad,			// #412 void(vector org) te_gunshotquad (DP_QUADEFFECTS1)
+VM_SV_te_spikequad,				// #413 void(vector org) te_spikequad (DP_QUADEFFECTS1)
+VM_SV_te_superspikequad,		// #414 void(vector org) te_superspikequad (DP_QUADEFFECTS1)
+VM_SV_te_explosionquad,			// #415 void(vector org) te_explosionquad (DP_QUADEFFECTS1)
+VM_SV_te_smallflash,			// #416 void(vector org) te_smallflash (DP_TE_SMALLFLASH)
+VM_SV_te_customflash,			// #417 void(vector org, float radius, float lifetime, vector color) te_customflash (DP_TE_CUSTOMFLASH)
+VM_SV_te_gunshot,				// #418 void(vector org) te_gunshot (DP_TE_STANDARDEFFECTBUILTINS)
+VM_SV_te_spike,					// #419 void(vector org) te_spike (DP_TE_STANDARDEFFECTBUILTINS)
+VM_SV_te_superspike,			// #420 void(vector org) te_superspike (DP_TE_STANDARDEFFECTBUILTINS)
+VM_SV_te_explosion,				// #421 void(vector org) te_explosion (DP_TE_STANDARDEFFECTBUILTINS)
+VM_SV_te_tarexplosion,			// #422 void(vector org) te_tarexplosion (DP_TE_STANDARDEFFECTBUILTINS)
+VM_SV_te_wizspike,				// #423 void(vector org) te_wizspike (DP_TE_STANDARDEFFECTBUILTINS)
+VM_SV_te_knightspike,			// #424 void(vector org) te_knightspike (DP_TE_STANDARDEFFECTBUILTINS)
+VM_SV_te_lavasplash,			// #425 void(vector org) te_lavasplash (DP_TE_STANDARDEFFECTBUILTINS)
+VM_SV_te_teleport,				// #426 void(vector org) te_teleport (DP_TE_STANDARDEFFECTBUILTINS)
+VM_SV_te_explosion2,			// #427 void(vector org, float colorstart, float colorlength) te_explosion2 (DP_TE_STANDARDEFFECTBUILTINS)
+VM_SV_te_lightning1,			// #428 void(entity own, vector start, vector end) te_lightning1 (DP_TE_STANDARDEFFECTBUILTINS)
+VM_SV_te_lightning2,			// #429 void(entity own, vector start, vector end) te_lightning2 (DP_TE_STANDARDEFFECTBUILTINS)
+VM_SV_te_lightning3,			// #430 void(entity own, vector start, vector end) te_lightning3 (DP_TE_STANDARDEFFECTBUILTINS)
+VM_SV_te_beam,					// #431 void(entity own, vector start, vector end) te_beam (DP_TE_STANDARDEFFECTBUILTINS)
+VM_vectorvectors,				// #432 void(vector dir) vectorvectors (DP_QC_VECTORVECTORS)
+VM_SV_te_plasmaburn,			// #433 void(vector org) te_plasmaburn (DP_TE_PLASMABURN)
+VM_SV_getsurfacenumpoints,		// #434 float(entity e, float s) getsurfacenumpoints (DP_QC_GETSURFACE)
+VM_SV_getsurfacepoint,			// #435 vector(entity e, float s, float n) getsurfacepoint (DP_QC_GETSURFACE)
+VM_SV_getsurfacenormal,			// #436 vector(entity e, float s) getsurfacenormal (DP_QC_GETSURFACE)
+VM_SV_getsurfacetexture,		// #437 string(entity e, float s) getsurfacetexture (DP_QC_GETSURFACE)
+VM_SV_getsurfacenearpoint,		// #438 float(entity e, vector p) getsurfacenearpoint (DP_QC_GETSURFACE)
+VM_SV_getsurfaceclippedpoint,	// #439 vector(entity e, float s, vector p) getsurfaceclippedpoint (DP_QC_GETSURFACE)
+VM_SV_clientcommand,			// #440 void(entity e, string s) clientcommand (KRIMZON_SV_PARSECLIENTCOMMAND)
+VM_tokenize,					// #441 float(string s) tokenize (KRIMZON_SV_PARSECLIENTCOMMAND)
+VM_argv,						// #442 string(float n) argv (KRIMZON_SV_PARSECLIENTCOMMAND)
+VM_SV_setattachment,			// #443 void(entity e, entity tagentity, string tagname) setattachment (DP_GFX_QUAKE3MODELTAGS)
+VM_search_begin,				// #444 float(string pattern, float caseinsensitive, float quiet) search_begin (DP_FS_SEARCH)
+VM_search_end,					// #445 void(float handle) search_end (DP_FS_SEARCH)
+VM_search_getsize,				// #446 float(float handle) search_getsize (DP_FS_SEARCH)
+VM_search_getfilename,			// #447 string(float handle, float num) search_getfilename (DP_FS_SEARCH)
+VM_cvar_string,					// #448 string(string s) cvar_string (DP_QC_CVAR_STRING)
+VM_findflags,					// #449 entity(entity start, .float fld, float match) findflags (DP_QC_FINDFLAGS)
+VM_findchainflags,				// #450 entity(.float fld, float match) findchainflags (DP_QC_FINDCHAINFLAGS)
+VM_SV_gettagindex,				// #451 float(entity ent, string tagname) gettagindex (DP_QC_GETTAGINFO)
+VM_SV_gettaginfo,				// #452 vector(entity ent, float tagindex) gettaginfo (DP_QC_GETTAGINFO)
+VM_SV_dropclient,				// #453 void(entity clent) dropclient (DP_SV_DROPCLIENT)
+VM_SV_spawnclient,				// #454 entity() spawnclient (DP_SV_BOTCLIENT)
+VM_SV_clienttype,				// #455 float(entity clent) clienttype (DP_SV_BOTCLIENT)
+VM_SV_WriteUnterminatedString,	// #456 void(float to, string s) WriteUnterminatedString (DP_SV_WRITEUNTERMINATEDSTRING)
+VM_SV_te_flamejet,				// #457 void(vector org, vector vel, float howmany) te_flamejet = #457 (DP_TE_FLAMEJET)
+NULL,							// #458
+VM_ftoe,						// #459 entity(float num) entitybyindex (DP_QC_EDICT_NUM)
+VM_buf_create,					// #460 float() buf_create (DP_QC_STRINGBUFFERS)
+VM_buf_del,						// #461 void(float bufhandle) buf_del (DP_QC_STRINGBUFFERS)
+VM_buf_getsize,					// #462 float(float bufhandle) buf_getsize (DP_QC_STRINGBUFFERS)
+VM_buf_copy,					// #463 void(float bufhandle_from, float bufhandle_to) buf_copy (DP_QC_STRINGBUFFERS)
+VM_buf_sort,					// #464 void(float bufhandle, float sortpower, float backward) buf_sort (DP_QC_STRINGBUFFERS)
+VM_buf_implode,					// #465 string(float bufhandle, string glue) buf_implode (DP_QC_STRINGBUFFERS)
+VM_bufstr_get,					// #466 string(float bufhandle, float string_index) bufstr_get (DP_QC_STRINGBUFFERS)
+VM_bufstr_set,					// #467 void(float bufhandle, float string_index, string str) bufstr_set (DP_QC_STRINGBUFFERS)
+VM_bufstr_add,					// #468 float(float bufhandle, string str, float order) bufstr_add (DP_QC_STRINGBUFFERS)
+VM_bufstr_free,					// #469 void(float bufhandle, float string_index) bufstr_free (DP_QC_STRINGBUFFERS)
+NULL,							// #470
+VM_asin,						// #471 float(float s) VM_asin (DP_QC_ASINACOSATANATAN2TAN)
+VM_acos,						// #472 float(float c) VM_acos (DP_QC_ASINACOSATANATAN2TAN)
+VM_atan,						// #473 float(float t) VM_atan (DP_QC_ASINACOSATANATAN2TAN)
+VM_atan2,						// #474 float(float c, float s) VM_atan2 (DP_QC_ASINACOSATANATAN2TAN)
+VM_tan,							// #475 float(float a) VM_tan (DP_QC_ASINACOSATANATAN2TAN)
+VM_strlennocol,					// #476 float(string s) : DRESK - String Length (not counting color codes) (DP_QC_STRINGCOLORFUNCTIONS)
+VM_strdecolorize,				// #477 string(string s) : DRESK - Decolorized String (DP_SV_STRINGCOLORFUNCTIONS)
+VM_strftime,					// #478 string(float uselocaltime, string format, ...) (DP_QC_STRFTIME)
+NULL,							// #479
+NULL,							// #480
+NULL,							// #481
+NULL,							// #482
+NULL,							// #483
+NULL,							// #484
+NULL,							// #485
+NULL,							// #486
+NULL,							// #487
+NULL,							// #488
+NULL,							// #489
+NULL,							// #490
+NULL,							// #491
+NULL,							// #492
+NULL,							// #493
+NULL,							// #494
+NULL,							// #495
+NULL,							// #496
+NULL,							// #497
+NULL,							// #498
+NULL,							// #499
 };
 
 const int vm_sv_numbuiltins = sizeof(vm_sv_builtins) / sizeof(prvm_builtin_t);
