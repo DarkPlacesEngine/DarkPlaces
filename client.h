@@ -662,7 +662,8 @@ typedef struct client_state_s
 	// use pain anim frame if cl.time < this
 	float faceanimtime;
 	// for stair smoothing
-	float stairoffset;
+	float stairsmoothz;
+	double stairsmoothtime;
 
 	// color shifts for damage, powerups
 	cshift_t cshifts[NUM_CSHIFTS];

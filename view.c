@@ -315,41 +315,14 @@ extern matrix4x4_t viewmodelmatrix;
 
 /*
 ==================
-CL_StairSmoothing
-
-==================
-*/
-void CL_StairSmoothing (void)
-{
-	if (v_dmg_time > 0)
-		v_dmg_time -= bound(0, cl.time - cl.oldtime, 0.1);
-
-	// stair smoothing
-	if (cl.onground && cl.stairoffset < 0)
-	{
-		cl.stairoffset += bound(0, cl.time - cl.oldtime, 0.1) * cl_stairsmoothspeed.value;
-		cl.stairoffset = bound(-16, cl.stairoffset, 0);
-	}
-	else if (cl.onground && cl.stairoffset > 0)
-	{
-		cl.stairoffset -= bound(0, cl.time - cl.oldtime, 0.1) * cl_stairsmoothspeed.value;
-		cl.stairoffset = bound(0, cl.stairoffset, 16);
-	}
-	else
-		cl.stairoffset = 0;
-}
-
-/*
-==================
 V_CalcRefdef
 
 ==================
 */
 void V_CalcRefdef (void)
 {
-	static float oldz;
 	entity_t *ent;
-	float vieworg[3], gunorg[3], viewangles[3];
+	float vieworg[3], gunorg[3], viewangles[3], smoothtime;
 	trace_t trace;
 	VectorClear(gunorg);
 	viewmodelmatrix = identitymatrix;
@@ -363,16 +336,13 @@ void V_CalcRefdef (void)
 		Matrix4x4_OriginFromMatrix(&ent->render.matrix, vieworg);
 		VectorCopy(cl.viewangles, viewangles);
 
-		// update the stairoffset if the player entity has gone up or down without leaving the ground
-		//Con_Printf("cl.onground %i oldz %f newz %f vel %f %f %f\n", cl.onground, oldz, vieworg[2], cl.movement_velocity[0], cl.movement_velocity[1], cl.movement_velocity[2]);
-		if (cl.onground)
-		{
-			cl.stairoffset -= vieworg[2] - oldz;
-			cl.stairoffset = bound(-16, cl.stairoffset, 16);
-		}
-		else
-			cl.stairoffset = 0;
-		oldz = vieworg[2];
+		// calculate how much time has passed since the last V_CalcRefdef
+		smoothtime = bound(0, cl.time - cl.stairsmoothtime, 0.1);
+		cl.stairsmoothtime = cl.time;
+
+		// fade damage flash
+		if (v_dmg_time > 0)
+			v_dmg_time -= bound(0, smoothtime, 0.1);
 
 		if (cl.intermission)
 		{
@@ -388,12 +358,20 @@ void V_CalcRefdef (void)
 		}
 		else
 		{
+			// smooth stair stepping, but only if onground and enabled
+			if (!cl.onground || cl_stairsmoothspeed.value <= 0)
+				cl.stairsmoothz = vieworg[2];
+			else
+			{
+				if (cl.stairsmoothz < vieworg[2])
+					vieworg[2] = cl.stairsmoothz = bound(vieworg[2] - 16, cl.stairsmoothz + smoothtime * cl_stairsmoothspeed.value, vieworg[2]);
+				else if (cl.stairsmoothz > vieworg[2])
+					vieworg[2] = cl.stairsmoothz = bound(vieworg[2], cl.stairsmoothz - smoothtime * cl_stairsmoothspeed.value, vieworg[2] + 16);
+			}
+
 			// apply qw weapon recoil effect (this did not work in QW)
 			// TODO: add a cvar to disable this
 			viewangles[PITCH] += cl.qw_weaponkick;
-
-			// bias by stair smoothing offset
-			vieworg[2] += cl.stairoffset;
 
 			if (chase_active.value)
 			{
