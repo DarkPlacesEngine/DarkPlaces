@@ -412,8 +412,7 @@ CL_PrintEntities_f
 static void CL_PrintEntities_f(void)
 {
 	entity_t *ent;
-	int i, j;
-	char name[32];
+	int i;
 
 	for (i = 0, ent = cl.entities;i < cl.num_entities;i++, ent++)
 	{
@@ -426,10 +425,7 @@ static void CL_PrintEntities_f(void)
 			modelname = ent->render.model->name;
 		else
 			modelname = "--no model--";
-		strlcpy(name, modelname, 25);
-		for (j = (int)strlen(name);j < 25;j++)
-			name[j] = ' ';
-		Con_Printf("%3i: %s:%4i (%5i %5i %5i) [%3i %3i %3i] %4.2f %5.3f\n", i, name, ent->render.frame, (int) ent->state_current.origin[0], (int) ent->state_current.origin[1], (int) ent->state_current.origin[2], (int) ent->state_current.angles[0] % 360, (int) ent->state_current.angles[1] % 360, (int) ent->state_current.angles[2] % 360, ent->render.scale, ent->render.alpha);
+		Con_Printf("%3i: %-25s:%4i (%5i %5i %5i) [%3i %3i %3i] %4.2f %5.3f\n", i, modelname, ent->render.frame, (int) ent->state_current.origin[0], (int) ent->state_current.origin[1], (int) ent->state_current.origin[2], (int) ent->state_current.angles[0] % 360, (int) ent->state_current.angles[1] % 360, (int) ent->state_current.angles[2] % 360, ent->render.scale, ent->render.alpha);
 	}
 }
 
