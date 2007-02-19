@@ -516,9 +516,7 @@ static void Mod_Alias_Mesh_CompileFrameZero(void)
 	loadmodel->surfmesh.data_svector3f = loadmodel->surfmesh.data_vertex3f + loadmodel->surfmesh.num_vertices * 3;
 	loadmodel->surfmesh.data_tvector3f = loadmodel->surfmesh.data_vertex3f + loadmodel->surfmesh.num_vertices * 6;
 	loadmodel->surfmesh.data_normal3f = loadmodel->surfmesh.data_vertex3f + loadmodel->surfmesh.num_vertices * 9;
-	Mod_Alias_GetMesh_Vertices(loadmodel, frameblend, loadmodel->surfmesh.data_vertex3f, NULL, NULL, NULL);
-	Mod_BuildNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_normal3f, true);
-	Mod_BuildTextureVectorsFromNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, true);
+	Mod_Alias_GetMesh_Vertices(loadmodel, frameblend, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_normal3f, loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f);
 }
 
 static void Mod_MDLMD2MD3_TraceBox(model_t *model, int frame, trace_t *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask)
