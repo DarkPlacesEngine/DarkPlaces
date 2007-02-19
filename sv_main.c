@@ -46,6 +46,7 @@ extern cvar_t sv_random_seed;
 
 static cvar_t sv_cullentities_pvs = {0, "sv_cullentities_pvs", "1", "fast but loose culling of hidden entities"}; // fast but loose
 static cvar_t sv_cullentities_trace = {0, "sv_cullentities_trace", "0", "somewhat slow but very tight culling of hidden entities, minimizes network traffic and makes wallhack cheats useless"}; // tends to get false negatives, uses a timeout to keep entities visible a short time after becoming hidden
+static cvar_t sv_cullentities_nevercullbmodels = {0, "sv_cullentities_nevercullbmodels", "0", "if enabled the clients are always notified of moving doors and lifts and other submodels of world (warning: eats a lot of network bandwidth on some levels!)"};
 static cvar_t sv_cullentities_stats = {0, "sv_cullentities_stats", "0", "displays stats on network entities culled by various methods for each client"};
 static cvar_t sv_entpatch = {0, "sv_entpatch", "1", "enables loading of .ent files to override entities in the bsp (for example Threewave CTF server pack contains .ent patch files enabling play of CTF on id1 maps)"};
 
@@ -126,6 +127,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_nostep);
 	Cvar_RegisterVariable (&sv_cullentities_pvs);
 	Cvar_RegisterVariable (&sv_cullentities_trace);
+	Cvar_RegisterVariable (&sv_cullentities_nevercullbmodels);
 	Cvar_RegisterVariable (&sv_cullentities_stats);
 	Cvar_RegisterVariable (&sv_entpatch);
 	Cvar_RegisterVariable (&sv_gameplayfix_grenadebouncedownslopes);
@@ -837,6 +839,7 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 		if (!s->modelindex && s->specialvisibilityradius == 0)
 			return;
 
+		isbmodel = (model = sv.models[s->modelindex]) != NULL && model->name[0] == '*';
 		// viewmodels don't have visibility checking
 		if (s->viewmodelforclient)
 		{
@@ -854,7 +857,8 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 		}
 		// always send world submodels in newer protocols because they don't
 		// generate much traffic (in old protocols they hog bandwidth)
-		else if (!(s->effects & EF_NODEPTHTEST) && !((isbmodel = (model = sv.models[s->modelindex]) != NULL && model->name[0] == '*') && (sv.protocol != PROTOCOL_QUAKE && sv.protocol != PROTOCOL_QUAKEDP && sv.protocol != PROTOCOL_NEHAHRAMOVIE)))
+		// but only if sv_cullentities_alwayssendbmodels is on
+		else if (!(s->effects & EF_NODEPTHTEST) && (!isbmodel || !sv_cullentities_nevercullbmodels.integer || sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE))
 		{
 			// entity has survived every check so far, check if visible
 			ed = PRVM_EDICT_NUM(s->number);
