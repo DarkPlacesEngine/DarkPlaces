@@ -1397,7 +1397,7 @@ void VM_SV_WriteAutoSentStats (client_t *client, prvm_edict_t *ent, sizebuf_t *m
 	}
 }
 
-// void(float index, float type, .void field) SV_AddStat = #470;
+// void(float index, float type, .void field) SV_AddStat = #232;
 // Set up an auto-sent player stat.
 // Client's get thier own fields sent to them. Index may not be less than 32.
 // Type is a value equating to the ev_ values found in qcc to dictate types. Valid ones are:
@@ -1409,7 +1409,7 @@ static void VM_SV_AddStat (void)
 	int		off, i;
 	unsigned char	type;
 
-	VM_SAFEPARMCOUNT(2, VM_SV_AddStat);
+	VM_SAFEPARMCOUNT(3, VM_SV_AddStat);
 
 	if(!vm_autosentstats)
 	{
