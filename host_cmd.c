@@ -2418,7 +2418,7 @@ void Host_InitCommands (void)
 	Cmd_AddCommand ("restart", Host_Restart_f, "restart current level");
 	Cmd_AddCommand ("changelevel", Host_Changelevel_f, "change to another level, bringing along all connected clients");
 	Cmd_AddCommand ("connect", Host_Connect_f, "connect to a server by IP address or hostname");
-	Cmd_AddCommand ("reconnect", Host_Reconnect_f, "reset signon level in preparation for a new level (do not use)");
+	Cmd_AddCommand ("reconnect", Host_Reconnect_f, "reconnect to the last server you were on, or resets a quakeworld connection (do not use if currently playing on a netquake server)");
 	Cmd_AddCommand ("version", Host_Version_f, "print engine version");
 	Cmd_AddCommand_WithClientCommand ("say", Host_Say_f, Host_Say_f, "send a chat message to everyone on the server");
 	Cmd_AddCommand_WithClientCommand ("say_team", Host_Say_Team_f, Host_Say_Team_f, "send a chat message to your team on the server");
