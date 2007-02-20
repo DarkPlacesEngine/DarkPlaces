@@ -371,36 +371,38 @@ This is sent just before a server changes levels
 */
 void Host_Reconnect_f (void)
 {
+	char temp[128];
+	// if not connected, reconnect to the most recent server
+	if (!cls.netcon)
+	{
+		// if we have connected to a server recently, the userinfo
+		// will still contain its IP address, so get the address...
+		InfoString_GetValue(cls.userinfo, "*ip", temp, sizeof(temp));
+		if (temp[0])
+			CL_EstablishConnection(temp);
+		else
+			Con_Printf("Reconnect to what server?  (you have not connected to a server yet)\n");
+		return;
+	}
+	// if connected, do something based on protocol
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
 	{
+		// quakeworld can just re-login
 		if (cls.qw_downloadmemory)  // don't change when downloading
 			return;
 
 		S_StopAllSounds();
 
-		if (cls.netcon)
+		if (cls.state == ca_connected && cls.signon < SIGNONS)
 		{
-			if (cls.state == ca_connected && cls.signon < SIGNONS)
-			{
-				Con_Printf("reconnecting...\n");
-				MSG_WriteChar(&cls.netcon->message, qw_clc_stringcmd);
-				MSG_WriteString(&cls.netcon->message, "new");
-			}
-			else
-			{
-				char temp[128];
-				// if we have connected to a server recently, the userinfo
-				// will still contain its IP address, so get the address...
-				InfoString_GetValue(cls.userinfo, "*ip", temp, sizeof(temp));
-				if (temp[0])
-					CL_EstablishConnection(temp);
-				else
-					Con_Printf("Reconnect to what server?  (you have not connected to a server yet)\n");
-			}
+			Con_Printf("reconnecting...\n");
+			MSG_WriteChar(&cls.netcon->message, qw_clc_stringcmd);
+			MSG_WriteString(&cls.netcon->message, "new");
 		}
 	}
 	else
 	{
+		// netquake uses reconnect on level changes (silly)
 		if (Cmd_Argc() != 1)
 		{
 			Con_Print("reconnect : wait for signon messages again\n");
