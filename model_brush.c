@@ -986,6 +986,76 @@ void Collision_ClipTrace_Box(trace_t *trace, const vec3_t cmins, const vec3_t cm
 #endif
 }
 
+static int Mod_Q1BSP_TraceLineOfSight_RecursiveNodeCheck(mnode_t *node, double p1[3], double p2[3])
+{
+	double t1, t2;
+	double midf, mid[3];
+	int ret, side;
+
+	// check for empty
+	while (node->plane)
+	{
+		// find the point distances
+		mplane_t *plane = node->plane;
+		if (plane->type < 3)
+		{
+			t1 = p1[plane->type] - plane->dist;
+			t2 = p2[plane->type] - plane->dist;
+		}
+		else
+		{
+			t1 = DotProduct (plane->normal, p1) - plane->dist;
+			t2 = DotProduct (plane->normal, p2) - plane->dist;
+		}
+
+		if (t1 < 0)
+		{
+			if (t2 < 0)
+			{
+				node = node->children[1];
+				continue;
+			}
+			side = 1;
+		}
+		else
+		{
+			if (t2 >= 0)
+			{
+				node = node->children[0];
+				continue;
+			}
+			side = 0;
+		}
+
+		midf = t1 / (t1 - t2);
+		VectorLerp(p1, midf, p2, mid);
+
+		// recurse both sides, front side first
+		// return 2 if empty is followed by solid (hit something)
+		// do not return 2 if both are solid or both empty,
+		// or if start is solid and end is empty
+		// as these degenerate cases usually indicate the eye is in solid and
+		// should see the target point anyway
+		ret = Mod_Q1BSP_TraceLineOfSight_RecursiveNodeCheck(node->children[side    ], p1, mid);
+		if (ret != 0)
+			return ret;
+		ret = Mod_Q1BSP_TraceLineOfSight_RecursiveNodeCheck(node->children[side ^ 1], mid, p2);
+		if (ret != 1)
+			return ret;
+		return 2;
+	}
+	return ((mleaf_t *)node)->clusterindex < 0;
+}
+
+static qboolean Mod_Q1BSP_TraceLineOfSight(struct model_s *model, const vec3_t start, const vec3_t end)
+{
+	// this function currently only supports same size start and end
+	double tracestart[3], traceend[3];
+	VectorCopy(start, tracestart);
+	VectorCopy(end, traceend);
+	return Mod_Q1BSP_TraceLineOfSight_RecursiveNodeCheck(model->brush.data_nodes, tracestart, traceend) != 2;
+}
+
 static int Mod_Q1BSP_LightPoint_RecursiveBSPNode(model_t *model, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal, const mnode_t *node, float x, float y, float startz, float endz)
 {
 	int side;
@@ -3276,6 +3346,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 
 	mod->soundfromcenter = true;
 	mod->TraceBox = Mod_Q1BSP_TraceBox;
+	mod->brush.TraceLineOfSight = Mod_Q1BSP_TraceLineOfSight;
 	mod->brush.SuperContentsFromNativeContents = Mod_Q1BSP_SuperContentsFromNativeContents;
 	mod->brush.NativeContentsFromSuperContents = Mod_Q1BSP_NativeContentsFromSuperContents;
 	mod->brush.GetPVS = Mod_Q1BSP_GetPVS;
@@ -3443,6 +3514,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 		mod->DrawLight = R_Q1BSP_DrawLight;
 		if (i != 0)
 		{
+			mod->brush.TraceLineOfSight = NULL;
 			mod->brush.GetPVS = NULL;
 			mod->brush.FatPVS = NULL;
 			mod->brush.BoxTouchingPVS = NULL;
@@ -5789,6 +5861,7 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer, void *bufferend)
 
 	mod->soundfromcenter = true;
 	mod->TraceBox = Mod_Q3BSP_TraceBox;
+	mod->brush.TraceLineOfSight = Mod_Q1BSP_TraceLineOfSight;
 	mod->brush.SuperContentsFromNativeContents = Mod_Q3BSP_SuperContentsFromNativeContents;
 	mod->brush.NativeContentsFromSuperContents = Mod_Q3BSP_NativeContentsFromSuperContents;
 	mod->brush.GetPVS = Mod_Q1BSP_GetPVS;
@@ -5898,6 +5971,7 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer, void *bufferend)
 			// textures and memory belong to the main model
 			mod->texturepool = NULL;
 			mod->mempool = NULL;
+			mod->brush.TraceLineOfSight = NULL;
 			mod->brush.GetPVS = NULL;
 			mod->brush.FatPVS = NULL;
 			mod->brush.BoxTouchingPVS = NULL;
