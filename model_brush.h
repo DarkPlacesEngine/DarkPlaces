@@ -117,6 +117,8 @@ typedef struct mnode_s
 	// for bounding box culling
 	vec3_t mins;
 	vec3_t maxs;
+	// supercontents from all brushes inside this node or leaf
+	int combinedsupercontents;
 
 	// this part unique to node
 	struct mnode_s *children[2];
@@ -136,11 +138,14 @@ typedef struct mleaf_s
 	// for bounding box culling
 	vec3_t mins;
 	vec3_t maxs;
+	// supercontents from all brushes inside this node or leaf
+	int combinedsupercontents;
 
 	// this part unique to leaf
 	// common
 	int clusterindex; // -1 is not in pvs, >= 0 is pvs bit number
 	int areaindex; // q3bsp
+	int containscollisionsurfaces; // indicates whether the leafsurfaces contains q3 patches
 	int numleafsurfaces;
 	int *firstleafsurface;
 	int numleafbrushes; // q3bsp

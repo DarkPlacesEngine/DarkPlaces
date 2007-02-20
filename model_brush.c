@@ -2260,8 +2260,33 @@ static void Mod_Q1BSP_LoadNodes_RecursiveSetParent(mnode_t *node, mnode_t *paren
 	node->parent = parent;
 	if (node->plane)
 	{
+		// this is a node, recurse to children
 		Mod_Q1BSP_LoadNodes_RecursiveSetParent(node->children[0], node);
 		Mod_Q1BSP_LoadNodes_RecursiveSetParent(node->children[1], node);
+		// combine supercontents of children
+		node->combinedsupercontents = node->children[0]->combinedsupercontents | node->children[1]->combinedsupercontents;
+	}
+	else
+	{
+		int j;
+		mleaf_t *leaf = (mleaf_t *)node;
+		// if this is a leaf, calculate supercontents mask from all collidable
+		// primitives in the leaf (brushes and collision surfaces)
+		// also flag if the leaf contains any collision surfaces
+		leaf->combinedsupercontents = 0;
+		// combine the supercontents values of all brushes in this leaf
+		for (j = 0;j < leaf->numleafbrushes;j++)
+			leaf->combinedsupercontents |= loadmodel->brush.data_brushes[leaf->firstleafbrush[j]].texture->supercontents;
+		// check if this leaf contains any collision surfaces (q3 patches)
+		for (j = 0;j < leaf->numleafsurfaces;j++)
+		{
+			msurface_t *surface = loadmodel->data_surfaces + leaf->firstleafsurface[j];
+			if (surface->num_collisiontriangles)
+			{
+				leaf->containscollisionsurfaces = true;
+				leaf->combinedsupercontents |= surface->texture->supercontents;
+			}
+		}
 	}
 }
 
@@ -5436,6 +5461,9 @@ static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, model_t *model,
 	// walk the tree until we hit a leaf, recursing for any split cases
 	while (node->plane)
 	{
+		// abort if this part of the bsp tree can not be hit by this trace
+//		if (!(node->combinedsupercontents & trace->hitsupercontentsmask))
+//			return;
 		plane = node->plane;
 		// axial planes are much more common than non-axial, so an optimized
 		// axial case pays off here
@@ -5472,6 +5500,9 @@ static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, model_t *model,
 			return;
 		}
 	}
+	// abort if this part of the bsp tree can not be hit by this trace
+//	if (!(node->combinedsupercontents & trace->hitsupercontentsmask))
+//		return;
 	// hit a leaf
 	nodesegmentmins[0] = min(start[0], end[0]) - 1;
 	nodesegmentmins[1] = min(start[1], end[1]) - 1;
@@ -5491,7 +5522,7 @@ static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, model_t *model,
 		}
 	}
 	// can't do point traces on curves (they have no thickness)
-	if (mod_q3bsp_curves_collisions.integer && !VectorCompare(start, end))
+	if (leaf->containscollisionsurfaces && mod_q3bsp_curves_collisions.integer && !VectorCompare(start, end))
 	{
 		// line trace the curves
 		for (i = 0;i < leaf->numleafsurfaces;i++)
@@ -5518,6 +5549,9 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, model_t *model
 	// walk the tree until we hit a leaf, recursing for any split cases
 	while (node->plane)
 	{
+		// abort if this part of the bsp tree can not be hit by this trace
+//		if (!(node->combinedsupercontents & trace->hitsupercontentsmask))
+//			return;
 		plane = node->plane;
 		// axial planes are much more common than non-axial, so an optimized
 		// axial case pays off here
@@ -5550,6 +5584,9 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, model_t *model
 		// take whichever side the segment box is on
 		node = node->children[sides - 1];
 	}
+	// abort if this part of the bsp tree can not be hit by this trace
+//	if (!(node->combinedsupercontents & trace->hitsupercontentsmask))
+//		return;
 	nodesegmentmins[0] = max(segmentmins[0], node->mins[0] - 1);
 	nodesegmentmins[1] = max(segmentmins[1], node->mins[1] - 1);
 	nodesegmentmins[2] = max(segmentmins[2], node->mins[2] - 1);
@@ -5567,7 +5604,7 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, model_t *model
 			Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, brush, brush);
 		}
 	}
-	if (mod_q3bsp_curves_collisions.integer)
+	if (leaf->containscollisionsurfaces && mod_q3bsp_curves_collisions.integer)
 	{
 		for (i = 0;i < leaf->numleafsurfaces;i++)
 		{
