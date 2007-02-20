@@ -849,13 +849,18 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 
 		VectorSubtract(originmaxs, originmins, dir);
 		len = VectorNormalizeLength(dir);
-		dec = -ent->persistent.trail_time;
-		ent->persistent.trail_time += len;
-		if (ent->persistent.trail_time < 0.01f)
-			return;
+		if (ent)
+		{
+			dec = -ent->persistent.trail_time;
+			ent->persistent.trail_time += len;
+			if (ent->persistent.trail_time < 0.01f)
+				return;
 
-		// if we skip out, leave it reset
-		ent->persistent.trail_time = 0.0f;
+			// if we skip out, leave it reset
+			ent->persistent.trail_time = 0.0f;
+		}
+		else
+			dec = 0;
 
 		// advance into this frame to reach the first puff location
 		VectorMA(originmins, dec, dir, pos);
@@ -1008,7 +1013,8 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 			len -= dec;
 			VectorMA (pos, dec, dir, pos);
 		}
-		ent->persistent.trail_time = len;
+		if (ent)
+			ent->persistent.trail_time = len;
 	}
 	else if (developer.integer >= 1)
 		Con_Printf("CL_ParticleEffect_Fallback: no fallback found for effect %s\n", particleeffectname[effectnameindex]);
