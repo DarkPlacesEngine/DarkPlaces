@@ -638,6 +638,7 @@ q3dpvs_t;
 #define Q3SURFACEPARM_DUST 268435456
 #define Q3SURFACEPARM_BOTCLIP 536870912
 #define Q3SURFACEPARM_LIGHTGRID 1073741824
+#define Q3SURFACEPARM_ANTIPORTAL 2147483648
 
 // various flags from shaders, used for special effects not otherwise classified
 #define Q3TEXTUREFLAG_TWOSIDED 1
