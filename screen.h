@@ -45,5 +45,7 @@ extern cvar_t scr_conalpha;
 extern cvar_t scr_conbrightness;
 extern cvar_t r_letterbox;
 
+extern cvar_t scr_refresh;
+
 #endif
 

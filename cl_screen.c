@@ -44,6 +44,7 @@ cvar_t scr_zoomwindow_viewsizex = {CVAR_SAVE, "scr_zoomwindow_viewsizex", "20", 
 cvar_t scr_zoomwindow_viewsizey = {CVAR_SAVE, "scr_zoomwindow_viewsizey", "20", "vertical viewsize of zoom window"};
 cvar_t scr_zoomwindow_fov = {CVAR_SAVE, "scr_zoomwindow_fov", "20", "fov of zoom window"};
 cvar_t scr_stipple = {0, "scr_stipple", "0", "interlacing-like stippling of the display"};
+cvar_t scr_refresh = {0, "scr_refresh", "1", "allows you to completely shut off rendering for benchmarking purposes"};
 
 
 int jpeg_supported = false;
@@ -628,6 +629,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable(&scr_zoomwindow_viewsizey);
 	Cvar_RegisterVariable(&scr_zoomwindow_fov);
 	Cvar_RegisterVariable(&scr_stipple);
+	Cvar_RegisterVariable(&scr_refresh);
 
 	Cmd_AddCommand ("sizeup",SCR_SizeUp_f, "increase view size (increases viewsize cvar)");
 	Cmd_AddCommand ("sizedown",SCR_SizeDown_f, "decrease view size (decreases viewsize cvar)");
@@ -1613,7 +1615,7 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 	float vertex3f[12];
 	float texcoord2f[8];
 	// don't do anything if not initialized yet
-	if (vid_hidden)
+	if (vid_hidden || !scr_refresh.integer)
 		return;
 	CHECKGLERROR
 	qglViewport(0, 0, vid.width, vid.height);CHECKGLERROR
@@ -1675,10 +1677,10 @@ void CL_UpdateScreen(void)
 {
 	float conwidth, conheight;
 
-	if (vid_hidden)
+	if (vid_hidden || !scr_refresh.integer)
 		return;
 
-	if (!scr_initialized || !con_initialized || vid_hidden)
+	if (!scr_initialized || !con_initialized)
 		return;				// not initialized yet
 
 	// don't allow cheats in multiplayer
