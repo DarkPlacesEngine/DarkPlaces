@@ -4261,8 +4261,10 @@ static void Mod_Q3BSP_LoadShaders(void)
 						shader->surfaceparms |= Q3SURFACEPARM_WATER;
 					else if (!strcasecmp(parameter[1], "pointlight"))
 						shader->surfaceparms |= Q3SURFACEPARM_POINTLIGHT;
+					else if (!strcasecmp(parameter[1], "antiportal"))
+						shader->surfaceparms |= Q3SURFACEPARM_ANTIPORTAL;
 					else
-						Con_Printf("%s parsing warning: unknown surfaceparm \"%s\"\n", search->filenames[fileindex], parameter[1]);
+						Con_DPrintf("%s parsing warning: unknown surfaceparm \"%s\"\n", search->filenames[fileindex], parameter[1]);
 				}
 				else if (!strcasecmp(parameter[0], "sky") && numparameters >= 2)
 				{
@@ -4436,6 +4438,8 @@ Q3 shader blendfuncs actually used in the game (* = supported by DP)
 						Con_Printf("%s: could not load texture \"%s\" (frame %i) for shader \"%s\"\n", loadmodel->name, shader->backgroundlayer->texturename[j], j, out->name);
 			}
 		}
+		else if (!strcmp(out->name, "noshader"))
+			out->surfaceparms = 0;
 		else
 		{
 			c++;
