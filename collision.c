@@ -10,7 +10,7 @@
 cvar_t collision_impactnudge = {0, "collision_impactnudge", "0.03125", "how much to back off from the impact"};
 cvar_t collision_startnudge = {0, "collision_startnudge", "0", "how much to bias collision trace start"};
 cvar_t collision_endnudge = {0, "collision_endnudge", "0", "how much to bias collision trace end"};
-cvar_t collision_enternudge = {0, "collision_enternudge", "0", "how much to bias collision entry fraction"};
+cvar_t collision_enternudge = {0, "collision_enternudge", "0.03125", "how much to bias collision entry fraction"};
 cvar_t collision_leavenudge = {0, "collision_leavenudge", "0", "how much to bias collision exit fraction"};
 cvar_t collision_prefernudgedfraction = {0, "collision_prefernudgedfraction", "1", "whether to sort collision events by nudged fraction (1) or real fraction (0)"};
 
@@ -614,13 +614,15 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush
 		if (d1 > d2)
 		{
 			// moving into brush
-			if (d2 > 0)
+			if (d2 >= collision_enternudge.value)
 				return;
 			if (d1 > 0)
 			{
 				// enter
 				imove = 1 / (d1 - d2);
 				f = (d1 - collision_enternudge.value) * imove;
+				if (f < 0)
+					f = 0;
 				// check if this will reduce the collision time range
 				if (enterfrac < f)
 				{
@@ -636,7 +638,7 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush
 						return;
 					// calculate the nudged fraction and impact normal we'll
 					// need if we accept this collision later
-					enterfrac2 = f - collision_impactnudge.value * imove;
+					enterfrac2 = (d1 - collision_impactnudge.value) * imove;
 					VectorLerp(startplane->normal, enterfrac, endplane->normal, newimpactnormal);
 					hitq3surfaceflags = startplane->q3surfaceflags;
 					hittexture = startplane->texture;
@@ -652,6 +654,8 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush
 			{
 				// leave
 				f = (d1 + collision_leavenudge.value) / (d1 - d2);
+				if (f > 1)
+					f = 1;
 				// check if this will reduce the collision time range
 				if (leavefrac > f)
 				{
@@ -733,13 +737,15 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 		if (d1 > d2)
 		{
 			// moving into brush
-			if (d2 > 0)
+			if (d2 >= collision_enternudge.value)
 				return;
 			if (d1 > 0)
 			{
 				// enter
 				imove = 1 / (d1 - d2);
 				f = (d1 - collision_enternudge.value) * imove;
+				if (f < 0)
+					f = 0;
 				// check if this will reduce the collision time range
 				if (enterfrac < f)
 				{
@@ -755,7 +761,7 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 						return;
 					// calculate the nudged fraction and impact normal we'll
 					// need if we accept this collision later
-					enterfrac2 = f - collision_impactnudge.value * imove;
+					enterfrac2 = (d1 - collision_impactnudge.value) * imove;
 					VectorLerp(startplane->normal, enterfrac, endplane->normal, newimpactnormal);
 					hitq3surfaceflags = startplane->q3surfaceflags;
 					hittexture = startplane->texture;
