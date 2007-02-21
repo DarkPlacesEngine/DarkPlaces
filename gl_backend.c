@@ -12,7 +12,7 @@ cvar_t r_render = {0, "r_render", "1", "enables rendering calls (you want this o
 cvar_t r_waterwarp = {CVAR_SAVE, "r_waterwarp", "1", "warp view while underwater"};
 cvar_t gl_polyblend = {CVAR_SAVE, "gl_polyblend", "1", "tints view while underwater, hurt, etc"};
 cvar_t gl_dither = {CVAR_SAVE, "gl_dither", "1", "enables OpenGL dithering (16bit looks bad with this off)"};
-cvar_t gl_lockarrays = {0, "gl_lockarrays", "1", "enables use of glLockArraysEXT, may cause glitches with some broken drivers"};
+cvar_t gl_lockarrays = {0, "gl_lockarrays", "0", "enables use of glLockArraysEXT, may cause glitches with some broken drivers, and may be slower than normal"};
 cvar_t gl_lockarrays_minimumvertices = {0, "gl_lockarrays_minimumvertices", "1", "minimum number of vertices required for use of glLockArraysEXT, setting this too low may reduce performance"};
 
 int gl_maxdrawrangeelementsvertices;
