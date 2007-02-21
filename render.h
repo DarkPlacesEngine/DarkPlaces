@@ -215,7 +215,7 @@ extern qboolean rsurface_generatedvertex;
 extern const entity_render_t *rsurface_entity;
 extern const model_t *rsurface_model;
 extern texture_t *rsurface_texture;
-extern rtexture_t *rsurface_lightmaptexture;
+extern qboolean rsurface_uselightmaptexture;
 extern rsurfmode_t rsurface_mode;
 
 void RSurf_ActiveEntity(const entity_render_t *ent, qboolean wantnormals, qboolean wanttangents);
