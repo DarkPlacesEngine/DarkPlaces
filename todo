@@ -60,6 +60,7 @@
 -f (esteel) bug darkplaces server: having a csprogs.dat file installed can crash dedicated servers (esteel)
 -f bug darkplaces model loader: a q1 mdl file with a _1.tga but no _0.tga crashes at load (daemon)
 -f bug darkplaces physics: GAME_TAOV: Vigil's movement isn't working properly, the qc uses MOVETYPE_STEP and clears FL_ONGROUND every frame and moves using velocity, this is causing a landing sound every frame and causing the player to slide down minor slopes very quickly, this did not occur in Quake, and seems that it must be related to a velocity_z check or FL_ONGROUND check in the MOVETYPE_STEP physics code (RenegadeC, xaGe)
+0 bug darkplaces client: can't move mouse around in nexuiz menu if vid_mouse is 0
 0 bug darkplaces client: it has been reported that sometimes level changes on quakeworld servers don't load a map, this may be related to downloading? (Baker)
 0 bug darkplaces client: name (and probably other userinfo properties) are not being set when entering a qw server?
 0 bug darkplaces loader: make rtlight entity loader support q3map/q3map2 lights properly, they use a spawnflag for LINEAR mode, by default they use 1/(x*x) falloff (Carni, motorsep)
@@ -157,6 +158,7 @@
 0 feature darkplaces qc: add FTE_STRINGS extension, and specifically support -1 for strncmp/strncasecmp to compare whole string (div0)
 0 feature darkplaces quakec: DP_QC_STRFTIME extension providing strftime function to find out what the current time is with a format string (FrikaC)
 0 feature darkplaces quakec: add a DP_QC_STRCATREPEAT extension providing string(float atimes, string a[, float btimes, string b, [float ctimes, string c, [float dtimes, string d]]]) strcatrepeat = #???; which repeats the given strings a given number of times and concatenates them together (like many strcat calls), can be given 2, 4, 6, or 8 parameters, stores it into a temp buffer, and returns the temp buffer (FA-Zalon)
+0 feature darkplaces quakec: add crossproduct builtin, as DP_QC_CROSSPRODUCT, and suggest that this is a viable alternative to vectorvectors when you have two vectors already
 0 feature darkplaces readme: add documentation about r_lockpvs, r_lockvisibility, r_useportalculling, r_drawportals, r_drawcollisionbrushes, r_showtris, r_speeds, r_shadow_visiblevolumes, and r_shadow_visiblelighting.
 0 feature darkplaces readme: add log_file and log_sync documentation (Edward Holness)
 0 feature darkplaces readme: document the ctrl-escape hotkey for toggleconsole (LordHavoc)
@@ -528,6 +530,7 @@ d bug darkplaces client: make server queries use a queue to avoid flooding out q
 d bug darkplaces client: missing bolt/beam models should not produce warnings
 d bug darkplaces client: on crctf proquake servers the scoreboard does not contain exactly matching player names (READY is sometimes appended), the ping report and status parsing should ignore text after the player name
 d bug darkplaces client: quakeworld servers often stuffcmd the cvars topcolor, bottomcolor, pants, team, skin, noaim, so commands for these need to be added (topcolor/bottomcolor will modify _cl_color, the others can be real cvars)
+d bug darkplaces client: seta commands create cvars that are not saved to config because they match their 'default' value
 d bug darkplaces client: te_customflash isn't working? (Wazat)
 d bug darkplaces client: userinfo strings are not being updated by name/color commands
 d bug darkplaces collision: check Urre's sltest.bsp and slopestuck.dem and fix the sticking bug, which only happens with sv_newflymove 1 (Urre)
