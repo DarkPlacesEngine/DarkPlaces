@@ -3090,6 +3090,19 @@ static void RSurf_DrawBatch_WithLightmapSwitching(int texturenumsurfaces, msurfa
 	}
 	else if (r_batchmode.integer == 1)
 	{
+#if 0
+		Con_Printf("%s batch sizes ignoring lightmap:", rsurface_texture->name);
+		for (i = 0;i < texturenumsurfaces;i = j)
+		{
+			surface = texturesurfacelist[i];
+			for (j = i + 1, surface2 = surface + 1;j < texturenumsurfaces;j++, surface2++)
+				if (texturesurfacelist[j] != surface2)
+					break;
+			Con_Printf(" %i", j - i);
+		}
+		Con_Printf("\n");
+		Con_Printf("%s batch sizes honoring lightmap:", rsurface_texture->name);
+#endif
 		for (i = 0;i < texturenumsurfaces;i = j)
 		{
 			surface = texturesurfacelist[i];
@@ -3099,12 +3112,18 @@ static void RSurf_DrawBatch_WithLightmapSwitching(int texturenumsurfaces, msurfa
 			for (j = i + 1, surface2 = surface + 1;j < texturenumsurfaces;j++, surface2++)
 				if (texturesurfacelist[j] != surface2 || texturesurfacelist[j]->lightmaptexture != surface->lightmaptexture)
 					break;
+#if 0
+			Con_Printf(" %i", j - i);
+#endif
 			surface2 = texturesurfacelist[j-1];
 			numvertices = surface2->num_firstvertex + surface2->num_vertices - surface->num_firstvertex;
 			numtriangles = surface2->num_firsttriangle + surface2->num_triangles - surface->num_firsttriangle;
 			GL_LockArrays(surface->num_firstvertex, numvertices);
 			R_Mesh_Draw(surface->num_firstvertex, numvertices, numtriangles, (rsurface_model->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
 		}
+#if 0
+		Con_Printf("\n");
+#endif
 	}
 	else
 	{
