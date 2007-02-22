@@ -2813,8 +2813,6 @@ const model_t *rsurface_model;
 texture_t *rsurface_texture;
 qboolean rsurface_uselightmaptexture;
 rsurfmode_t rsurface_mode;
-texture_t *rsurface_glsl_texture;
-qboolean rsurface_glsl_uselightmap;
 int rsurface_lightmode; // 0 = lightmap or fullbright, 1 = color array from q3bsp, 2 = vertex shaded model
 
 void RSurf_CleanUp(void)
@@ -2828,8 +2826,6 @@ void RSurf_CleanUp(void)
 	rsurface_mode = RSURFMODE_NONE;
 	rsurface_uselightmaptexture = false;
 	rsurface_texture = NULL;
-	rsurface_glsl_texture = NULL;
-	rsurface_glsl_uselightmap = false;
 }
 
 void RSurf_ActiveEntity(const entity_render_t *ent, qboolean wantnormals, qboolean wanttangents)
@@ -3392,50 +3388,45 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, msurface_t **t
 	if (rsurface_mode != RSURFMODE_GLSL)
 	{
 		rsurface_mode = RSURFMODE_GLSL;
-		rsurface_glsl_texture = NULL;
-		rsurface_glsl_uselightmap = false;
 		R_Mesh_ResetTextureState();
 	}
-	if (rsurface_glsl_texture != rsurface_texture || rsurface_glsl_uselightmap != rsurface_uselightmaptexture)
-	{
-		rsurface_glsl_texture = rsurface_texture;
-		rsurface_glsl_uselightmap = rsurface_uselightmaptexture;
-		R_SetupSurfaceShader(vec3_origin, rsurface_lightmode == 2);
-		//permutation_deluxemapping = permutation_lightmapping = R_SetupSurfaceShader(vec3_origin, rsurface_lightmode == 2, false);
-		//if (r_glsl_deluxemapping.integer)
-		//	permutation_deluxemapping = R_SetupSurfaceShader(vec3_origin, rsurface_lightmode == 2, true);
-		R_Mesh_TexCoordPointer(0, 2, rsurface_model->surfmesh.data_texcoordtexture2f);
-		R_Mesh_TexCoordPointer(4, 2, rsurface_model->surfmesh.data_texcoordlightmap2f);
-		RSurf_PrepareVerticesForBatch(true, true, texturenumsurfaces, texturesurfacelist);
-		R_Mesh_TexCoordPointer(1, 3, rsurface_svector3f);
-		R_Mesh_TexCoordPointer(2, 3, rsurface_tvector3f);
-		R_Mesh_TexCoordPointer(3, 3, rsurface_normal3f);
-		if (rsurface_texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
-		{
-			R_Mesh_TexBind(7, R_GetTexture(r_texture_white));
-			if (r_glsl_permutation->loc_Texture_Deluxemap >= 0)
-				R_Mesh_TexBind(8, R_GetTexture(r_texture_blanknormalmap));
-			R_Mesh_ColorPointer(NULL);
-		}
-		else if (rsurface_uselightmaptexture)
-		{
-			R_Mesh_TexBind(7, R_GetTexture(texturesurfacelist[0]->lightmaptexture));
-			if (r_glsl_permutation->loc_Texture_Deluxemap >= 0)
-				R_Mesh_TexBind(8, R_GetTexture(texturesurfacelist[0]->deluxemaptexture));
-			R_Mesh_ColorPointer(NULL);
-		}
-		else
-		{
-			R_Mesh_TexBind(7, R_GetTexture(r_texture_white));
-			if (r_glsl_permutation->loc_Texture_Deluxemap >= 0)
-				R_Mesh_TexBind(8, R_GetTexture(r_texture_blanknormalmap));
-			R_Mesh_ColorPointer(rsurface_model->surfmesh.data_lightmapcolor4f);
-		}
-	}
-	else
-		RSurf_PrepareVerticesForBatch(true, true, texturenumsurfaces, texturesurfacelist);
+
+	R_SetupSurfaceShader(vec3_origin, rsurface_lightmode == 2);
+	//permutation_deluxemapping = permutation_lightmapping = R_SetupSurfaceShader(vec3_origin, rsurface_lightmode == 2, false);
+	//if (r_glsl_deluxemapping.integer)
+	//	permutation_deluxemapping = R_SetupSurfaceShader(vec3_origin, rsurface_lightmode == 2, true);
 	if (!r_glsl_permutation)
 		return;
+
+	RSurf_PrepareVerticesForBatch(true, true, texturenumsurfaces, texturesurfacelist);
+	R_Mesh_TexCoordPointer(0, 2, rsurface_model->surfmesh.data_texcoordtexture2f);
+	R_Mesh_TexCoordPointer(1, 3, rsurface_svector3f);
+	R_Mesh_TexCoordPointer(2, 3, rsurface_tvector3f);
+	R_Mesh_TexCoordPointer(3, 3, rsurface_normal3f);
+	R_Mesh_TexCoordPointer(4, 2, rsurface_model->surfmesh.data_texcoordlightmap2f);
+
+	if (rsurface_texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
+	{
+		R_Mesh_TexBind(7, R_GetTexture(r_texture_white));
+		if (r_glsl_permutation->loc_Texture_Deluxemap >= 0)
+			R_Mesh_TexBind(8, R_GetTexture(r_texture_blanknormalmap));
+		R_Mesh_ColorPointer(NULL);
+	}
+	else if (rsurface_uselightmaptexture)
+	{
+		R_Mesh_TexBind(7, R_GetTexture(texturesurfacelist[0]->lightmaptexture));
+		if (r_glsl_permutation->loc_Texture_Deluxemap >= 0)
+			R_Mesh_TexBind(8, R_GetTexture(texturesurfacelist[0]->deluxemaptexture));
+		R_Mesh_ColorPointer(NULL);
+	}
+	else
+	{
+		R_Mesh_TexBind(7, R_GetTexture(r_texture_white));
+		if (r_glsl_permutation->loc_Texture_Deluxemap >= 0)
+			R_Mesh_TexBind(8, R_GetTexture(r_texture_blanknormalmap));
+		R_Mesh_ColorPointer(rsurface_model->surfmesh.data_lightmapcolor4f);
+	}
+
 	if (rsurface_uselightmaptexture && !(rsurface_texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
 		RSurf_DrawBatch_WithLightmapSwitching(texturenumsurfaces, texturesurfacelist, 7, r_glsl_permutation->loc_Texture_Deluxemap >= 0 ? 8 : -1);
 	else
@@ -3699,13 +3690,13 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 	GL_LockArrays(0, 0);
 }
 
-#define BATCHSIZE 256
 static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
 	int surfacelistindex;
 	int batchcount;
 	texture_t *t;
-	msurface_t *texturesurfacelist[BATCHSIZE];
+	msurface_t *texturesurfacelist[1024];
+
 	// if the model is static it doesn't matter what value we give for
 	// wantnormals and wanttangents, so this logic uses only rules applicable
 	// to a model, knowing that they are meaningless otherwise
@@ -3713,6 +3704,7 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 		RSurf_ActiveEntity(ent, false, false);
 	else
 		RSurf_ActiveEntity(ent, true, r_glsl.integer && gl_support_fragment_shader);
+
 	batchcount = 0;
 	t = NULL;
 	rsurface_uselightmaptexture = false;
@@ -3735,8 +3727,8 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 		texturesurfacelist[batchcount++] = surface;
 	}
 	if (batchcount > 0)
-		if (!(rsurface_texture->currentmaterialflags & MATERIALFLAG_SKY)) // transparent sky is too difficult
-			R_DrawTextureSurfaceList(batchcount, texturesurfacelist);
+		R_DrawTextureSurfaceList(batchcount, texturesurfacelist);
+
 	RSurf_CleanUp();
 }
 
