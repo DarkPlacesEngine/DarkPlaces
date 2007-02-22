@@ -4809,7 +4809,7 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 			}
 		}
 	}
-	if (endlightmap < 2 || (endlightmap & 1))
+	if (endlightmap < 2)
 		loadmodel->brushq3.deluxemapping = false;
 
 	// q3map2 sometimes (or always?) makes a second blank lightmap for no
