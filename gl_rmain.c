@@ -2587,9 +2587,6 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 {
 	model_t *model = ent->model;
 
-	// FIXME: identify models using a better check than ent->model->brush.shadowmesh
-	//int lightmode = ((ent->effects & EF_FULLBRIGHT) || ent->model->brush.shadowmesh) ? 0 : 2;
-
 	// switch to an alternate material if this is a q1bsp animated material
 	{
 		texture_t *texture = t;
@@ -2818,6 +2815,7 @@ qboolean rsurface_uselightmaptexture;
 rsurfmode_t rsurface_mode;
 texture_t *rsurface_glsl_texture;
 qboolean rsurface_glsl_uselightmap;
+int rsurface_lightmode; // 0 = lightmap or fullbright, 1 = color array from q3bsp, 2 = vertex shaded model
 
 void RSurf_CleanUp(void)
 {
@@ -3400,23 +3398,14 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, msurface_t **t
 	}
 	if (rsurface_glsl_texture != rsurface_texture || rsurface_glsl_uselightmap != rsurface_uselightmaptexture)
 	{
-		int lightmode;
 		rsurface_glsl_texture = rsurface_texture;
 		rsurface_glsl_uselightmap = rsurface_uselightmaptexture;
-		GL_DepthTest(!(rsurface_texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
-		GL_CullFace(((rsurface_texture->textureflags & Q3TEXTUREFLAG_TWOSIDED) || (rsurface_entity->flags & RENDER_NOCULLFACE)) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
-		GL_BlendFunc(rsurface_texture->currentlayers[0].blendfunc1, rsurface_texture->currentlayers[0].blendfunc2);
-		GL_DepthMask(!(rsurface_texture->currentmaterialflags & MATERIALFLAG_BLENDED));
-		GL_Color(rsurface_entity->colormod[0], rsurface_entity->colormod[1], rsurface_entity->colormod[2], rsurface_texture->currentalpha);
-		// FIXME: identify models using a better check than rsurface_model->brush.shadowmesh
-		lightmode = ((rsurface_texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT) || rsurface_model->brush.shadowmesh) ? 0 : 2;
-		R_SetupSurfaceShader(vec3_origin, lightmode == 2);
-		//permutation_deluxemapping = permutation_lightmapping = R_SetupSurfaceShader(vec3_origin, lightmode == 2, false);
+		R_SetupSurfaceShader(vec3_origin, rsurface_lightmode == 2);
+		//permutation_deluxemapping = permutation_lightmapping = R_SetupSurfaceShader(vec3_origin, rsurface_lightmode == 2, false);
 		//if (r_glsl_deluxemapping.integer)
-		//	permutation_deluxemapping = R_SetupSurfaceShader(vec3_origin, lightmode == 2, true);
+		//	permutation_deluxemapping = R_SetupSurfaceShader(vec3_origin, rsurface_lightmode == 2, true);
 		R_Mesh_TexCoordPointer(0, 2, rsurface_model->surfmesh.data_texcoordtexture2f);
 		R_Mesh_TexCoordPointer(4, 2, rsurface_model->surfmesh.data_texcoordlightmap2f);
-		GL_AlphaTest((rsurface_texture->currentmaterialflags & MATERIALFLAG_ALPHATEST) != 0);
 		RSurf_PrepareVerticesForBatch(true, true, texturenumsurfaces, texturesurfacelist);
 		R_Mesh_TexCoordPointer(1, 3, rsurface_svector3f);
 		R_Mesh_TexCoordPointer(2, 3, rsurface_tvector3f);
@@ -3460,17 +3449,11 @@ static void R_DrawTextureSurfaceList_GL13(int texturenumsurfaces, msurface_t **t
 {
 	// OpenGL 1.3 path - anything not completely ancient
 	int texturesurfaceindex;
-	int lightmode;
 	qboolean applycolor;
 	qboolean applyfog;
 	rmeshstate_t m;
 	int layerindex;
 	const texturelayer_t *layer;
-	CHECKGLERROR
-	GL_DepthTest(!(rsurface_texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
-	GL_CullFace(((rsurface_texture->textureflags & Q3TEXTUREFLAG_TWOSIDED) || (rsurface_entity->flags & RENDER_NOCULLFACE)) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
-	// FIXME: identify models using a better check than rsurface_model->brush.shadowmesh
-	lightmode = ((rsurface_texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT) || rsurface_model->brush.shadowmesh) ? 0 : 2;
 	if (rsurface_mode != RSURFMODE_MULTIPASS)
 		rsurface_mode = RSURFMODE_MULTIPASS;
 	RSurf_PrepareVerticesForBatch(true, false, texturenumsurfaces, texturesurfacelist);
@@ -3520,7 +3503,7 @@ static void R_DrawTextureSurfaceList_GL13(int texturenumsurfaces, msurface_t **t
 			m.texrgbscale[1] = layertexrgbscale;
 			m.pointer_texcoord[1] = rsurface_model->surfmesh.data_texcoordtexture2f;
 			R_Mesh_TextureState(&m);
-			RSurf_DrawBatch_Lightmap(texturenumsurfaces, texturesurfacelist, layercolor[0], layercolor[1], layercolor[2], layercolor[3], lightmode, applycolor, applyfog);
+			RSurf_DrawBatch_Lightmap(texturenumsurfaces, texturesurfacelist, layercolor[0], layercolor[1], layercolor[2], layercolor[3], rsurface_lightmode, applycolor, applyfog);
 			break;
 		case TEXTURELAYERTYPE_TEXTURE:
 			memset(&m, 0, sizeof(m));
@@ -3576,16 +3559,10 @@ static void R_DrawTextureSurfaceList_GL11(int texturenumsurfaces, msurface_t **t
 {
 	// OpenGL 1.1 - crusty old voodoo path
 	int texturesurfaceindex;
-	int lightmode;
 	qboolean applyfog;
 	rmeshstate_t m;
 	int layerindex;
 	const texturelayer_t *layer;
-	CHECKGLERROR
-	GL_DepthTest(!(rsurface_texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
-	GL_CullFace(((rsurface_texture->textureflags & Q3TEXTUREFLAG_TWOSIDED) || (rsurface_entity->flags & RENDER_NOCULLFACE)) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
-	// FIXME: identify models using a better check than rsurface_model->brush.shadowmesh
-	lightmode = ((rsurface_texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT) || rsurface_model->brush.shadowmesh) ? 0 : 2;
 	if (rsurface_mode != RSURFMODE_MULTIPASS)
 		rsurface_mode = RSURFMODE_MULTIPASS;
 	RSurf_PrepareVerticesForBatch(true, false, texturenumsurfaces, texturesurfacelist);
@@ -3616,7 +3593,7 @@ static void R_DrawTextureSurfaceList_GL11(int texturenumsurfaces, msurface_t **t
 				m.tex[0] = R_GetTexture(r_texture_white);
 				m.pointer_texcoord[0] = rsurface_model->surfmesh.data_texcoordlightmap2f;
 				R_Mesh_TextureState(&m);
-				RSurf_DrawBatch_Lightmap(texturenumsurfaces, texturesurfacelist, 1, 1, 1, 1, lightmode, false, false);
+				RSurf_DrawBatch_Lightmap(texturenumsurfaces, texturesurfacelist, 1, 1, 1, 1, rsurface_lightmode, false, false);
 				GL_LockArrays(0, 0);
 				// then apply the texture to it
 				GL_BlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
@@ -3635,7 +3612,7 @@ static void R_DrawTextureSurfaceList_GL11(int texturenumsurfaces, msurface_t **t
 				m.texmatrix[0] = layer->texmatrix;
 				m.pointer_texcoord[0] = rsurface_model->surfmesh.data_texcoordtexture2f;
 				R_Mesh_TextureState(&m);
-				RSurf_DrawBatch_Lightmap(texturenumsurfaces, texturesurfacelist, layer->color[0], layer->color[1], layer->color[2], layer->color[3], lightmode == 2 ? 2 : 1, layer->color[0] != 1 || layer->color[1] != 1 || layer->color[2] != 1 || layer->color[3] != 1, applyfog);
+				RSurf_DrawBatch_Lightmap(texturenumsurfaces, texturesurfacelist, layer->color[0], layer->color[1], layer->color[2], layer->color[3], rsurface_lightmode == 2 ? 2 : 1, layer->color[0] != 1 || layer->color[1] != 1 || layer->color[2] != 1 || layer->color[3] != 1, applyfog);
 			}
 			break;
 		case TEXTURELAYERTYPE_TEXTURE:
@@ -3703,6 +3680,14 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 		R_DrawTextureSurfaceList_Sky(texturenumsurfaces, texturesurfacelist);
 	else if (rsurface_texture->currentnumlayers)
 	{
+		GL_DepthTest(!(rsurface_texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
+		GL_CullFace(((rsurface_texture->textureflags & Q3TEXTUREFLAG_TWOSIDED) || (rsurface_entity->flags & RENDER_NOCULLFACE)) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
+		GL_BlendFunc(rsurface_texture->currentlayers[0].blendfunc1, rsurface_texture->currentlayers[0].blendfunc2);
+		GL_DepthMask(!(rsurface_texture->currentmaterialflags & MATERIALFLAG_BLENDED));
+		GL_Color(rsurface_entity->colormod[0], rsurface_entity->colormod[1], rsurface_entity->colormod[2], rsurface_texture->currentalpha);
+		GL_AlphaTest((rsurface_texture->currentmaterialflags & MATERIALFLAG_ALPHATEST) != 0);
+		// FIXME: identify models using a better check than rsurface_model->brush.shadowmesh
+		rsurface_lightmode = ((rsurface_texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT) || rsurface_model->brush.shadowmesh) ? 0 : 2;
 		if (r_glsl.integer && gl_support_fragment_shader)
 			R_DrawTextureSurfaceList_GL20(texturenumsurfaces, texturesurfacelist);
 		else if (gl_combine.integer && r_textureunits.integer >= 2)
