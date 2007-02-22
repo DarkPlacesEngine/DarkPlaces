@@ -4790,6 +4790,8 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 	// reason when only one lightmap is used, which can throw off the
 	// deluxemapping detection method, so check 2-lightmap bsp's specifically
 	// to see if the second lightmap is blank, if so it is not deluxemapped.
+	loadmodel->brushq3.deluxemapping = !(count & 1);
+	loadmodel->brushq3.deluxemapping_modelspace = true;
 	endlightmap = 0;
 	if (loadmodel->brushq3.deluxemapping)
 	{
