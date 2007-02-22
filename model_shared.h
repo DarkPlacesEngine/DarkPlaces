@@ -480,7 +480,10 @@ typedef struct model_brushq3_s
 
 	// lightmap textures
 	int num_lightmaps;
+	int num_lightmapmergepower;
+	int num_lightmapmerge;
 	rtexture_t **data_lightmaps;
+	rtexture_t **data_deluxemaps;
 
 	// voxel light data with directional shading
 	int num_lightgrid;

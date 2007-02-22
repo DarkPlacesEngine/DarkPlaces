@@ -43,6 +43,7 @@ cvar_t r_subdivisions_collision_maxvertices = {0, "r_subdivisions_collision_maxv
 cvar_t mod_q3bsp_curves_collisions = {0, "mod_q3bsp_curves_collisions", "1", "enables collisions with curves (SLOW)"};
 cvar_t mod_q3bsp_optimizedtraceline = {0, "mod_q3bsp_optimizedtraceline", "1", "whether to use optimized traceline code for line traces (as opposed to tracebox code)"};
 cvar_t mod_q3bsp_debugtracebrush = {0, "mod_q3bsp_debugtracebrush", "0", "selects different tracebrush bsp recursion algorithms (for debugging purposes only)"};
+cvar_t mod_q3bsp_lightmapmergepower = {CVAR_SAVE, "mod_q3bsp_lightmapmergepower", "5", "merges the quake3 128x128 lightmap textures into larger lightmap group textures to speed up rendering, 1 = 256x256, 2 = 512x512, 3 = 1024x1024, 4 = 2048x2048, 5 = 4096x4096, ..."};
 
 static texture_t mod_q1bsp_texture_solid;
 static texture_t mod_q1bsp_texture_sky;
@@ -69,6 +70,7 @@ void Mod_BrushInit(void)
 	Cvar_RegisterVariable(&mod_q3bsp_curves_collisions);
 	Cvar_RegisterVariable(&mod_q3bsp_optimizedtraceline);
 	Cvar_RegisterVariable(&mod_q3bsp_debugtracebrush);
+	Cvar_RegisterVariable(&mod_q3bsp_lightmapmergepower);
 
 	memset(&mod_q1bsp_texture_solid, 0, sizeof(mod_q1bsp_texture_solid));
 	strlcpy(mod_q1bsp_texture_solid.name, "solid" , sizeof(mod_q1bsp_texture_solid.name));
@@ -4766,11 +4768,10 @@ static void Mod_Q3BSP_LoadTriangles(lump_t *l)
 	}
 }
 
-static void Mod_Q3BSP_LoadLightmaps(lump_t *l)
+static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 {
 	q3dlightmap_t *in;
-	rtexture_t **out;
-	int i, count;
+	int i, j, count, power, power2, mask, endlightmap;
 	unsigned char *c;
 
 	if (!l->filelen)
@@ -4779,29 +4780,45 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l)
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q3BSP_LoadLightmaps: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = (rtexture_t **)Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
-	loadmodel->brushq3.data_lightmaps = out;
-	loadmodel->brushq3.num_lightmaps = count;
-
-	// deluxemapped q3bsp files have an even number of lightmaps, and surfaces
-	// always index even numbered ones (0, 2, 4, ...), the odd numbered
-	// lightmaps are the deluxemaps (light direction textures), so if we
-	// encounter any odd numbered lightmaps it is not a deluxemapped bsp, it
-	// is also not a deluxemapped bsp if it has an odd number of lightmaps or
-	// less than 2
-	loadmodel->brushq3.deluxemapping = true;
-	loadmodel->brushq3.deluxemapping_modelspace = true;
-	if (count < 2 || (count & 1))
+	// now check the surfaces to see if any of them index an odd numbered
+	// lightmap, if so this is not a deluxemapped bsp file
+	//
+	// also check what lightmaps are actually used, because q3map2 sometimes
+	// (always?) makes an unused one at the end, which
+	// q3map2 sometimes (or always?) makes a second blank lightmap for no
+	// reason when only one lightmap is used, which can throw off the
+	// deluxemapping detection method, so check 2-lightmap bsp's specifically
+	// to see if the second lightmap is blank, if so it is not deluxemapped.
+	endlightmap = 0;
+	if (loadmodel->brushq3.deluxemapping)
+	{
+		int facecount = faceslump->filelen / sizeof(q3dface_t);
+		q3dface_t *faces = (q3dface_t *)(mod_base + faceslump->fileofs);
+		for (i = 0;i < facecount;i++)
+		{
+			j = LittleLong(faces[i].lightmapindex);
+			if (j >= 0)
+			{
+				endlightmap = max(endlightmap, j + 1);
+				if ((j & 1) || j + 1 >= count)
+				{
+					loadmodel->brushq3.deluxemapping = false;
+					break;
+				}
+			}
+		}
+	}
+	if (endlightmap < 2 || (endlightmap & 1))
 		loadmodel->brushq3.deluxemapping = false;
 
 	// q3map2 sometimes (or always?) makes a second blank lightmap for no
 	// reason when only one lightmap is used, which can throw off the
 	// deluxemapping detection method, so check 2-lightmap bsp's specifically
 	// to see if the second lightmap is blank, if so it is not deluxemapped.
-	if (count == 2)
+	if (endlightmap == 1 && count == 2)
 	{
-		c = in[count - 1].rgb;
+		c = in[1].rgb;
 		for (i = 0;i < 128*128*3;i++)
 			if (c[i])
 				break;
@@ -4812,10 +4829,39 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l)
 		}
 	}
 
-	// further deluxemapping detection is done in Mod_Q3BSP_LoadFaces
+	Con_DPrintf("%s is %sdeluxemapped\n", loadmodel->name, loadmodel->brushq3.deluxemapping ? "" : "not ");
 
-	for (i = 0;i < count;i++, in++, out++)
-		*out = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", i), 128, 128, in->rgb, TEXTYPE_RGB, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
+	// figure out what the most reasonable merge power is within limits
+	loadmodel->brushq3.num_lightmapmergepower = 0;
+	for (power = 1;power <= mod_q3bsp_lightmapmergepower.integer && (1 << power) <= gl_max_texture_size && (1 << (power * 2)) < 4 * (count >> loadmodel->brushq3.deluxemapping);power++)
+		loadmodel->brushq3.num_lightmapmergepower = power;
+	loadmodel->brushq3.num_lightmapmerge = 1 << loadmodel->brushq3.num_lightmapmergepower;
+
+	loadmodel->brushq3.num_lightmaps = ((count >> loadmodel->brushq3.deluxemapping) + (1 << (loadmodel->brushq3.num_lightmapmergepower * 2)) - 1) >> (loadmodel->brushq3.num_lightmapmergepower * 2);
+	loadmodel->brushq3.data_lightmaps = (rtexture_t **)Mem_Alloc(loadmodel->mempool, loadmodel->brushq3.num_lightmaps * sizeof(rtexture_t *));
+	if (loadmodel->brushq3.deluxemapping)
+		loadmodel->brushq3.data_deluxemaps = (rtexture_t **)Mem_Alloc(loadmodel->mempool, loadmodel->brushq3.num_lightmaps * sizeof(rtexture_t *));
+
+	j = 128 << loadmodel->brushq3.num_lightmapmergepower;
+	if (loadmodel->brushq3.data_lightmaps)
+		for (i = 0;i < loadmodel->brushq3.num_lightmaps;i++)
+			loadmodel->brushq3.data_lightmaps[i] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", i), j, j, NULL, TEXTYPE_RGB, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
+
+	if (loadmodel->brushq3.data_deluxemaps)
+		for (i = 0;i < loadmodel->brushq3.num_lightmaps;i++)
+			loadmodel->brushq3.data_deluxemaps[i] = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%04i", i), j, j, NULL, TEXTYPE_RGB, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
+
+	power = loadmodel->brushq3.num_lightmapmergepower;
+	power2 = power * 2;
+	mask = (1 << power) - 1;
+	for (i = 0;i < count;i++)
+	{
+		j = i >> loadmodel->brushq3.deluxemapping;
+		if (loadmodel->brushq3.deluxemapping && (i & 1))
+			R_UpdateTexture(loadmodel->brushq3.data_deluxemaps[j >> power2], in[i].rgb, (j & mask) * 128, ((j >> power) & mask) * 128, 128, 128);
+		else
+			R_UpdateTexture(loadmodel->brushq3.data_lightmaps [j >> power2], in[i].rgb, (j & mask) * 128, ((j >> power) & mask) * 128, 128, 128);
+	}
 }
 
 static void Mod_Q3BSP_LoadFaces(lump_t *l)
@@ -4823,6 +4869,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 	q3dface_t *in, *oldin;
 	msurface_t *out, *oldout;
 	int i, oldi, j, n, count, invalidelements, patchsize[2], finalwidth, finalheight, xtess, ytess, finalvertices, finaltriangles, firstvertex, firstelement, type, oldnumtriangles, oldnumtriangles2, meshvertices, meshtriangles, numvertices, numtriangles;
+	float lightmaptcbase[2], lightmaptcscale;
 	//int *originalelement3i;
 	//int *originalneighbor3i;
 	float *originalvertex3f;
@@ -4842,21 +4889,6 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 
 	loadmodel->data_surfaces = out;
 	loadmodel->num_surfaces = count;
-
-	// now that we have surfaces to look at, see if any of them index an odd numbered lightmap, if so this is not a deluxemapped bsp file
-	if (loadmodel->brushq3.deluxemapping)
-	{
-		for (i = 0;i < count;i++)
-		{
-			n = LittleLong(in[i].lightmapindex);
-			if (n >= 0 && ((n & 1) || n + 1 >= loadmodel->brushq3.num_lightmaps))
-			{
-				loadmodel->brushq3.deluxemapping = false;
-				break;
-			}
-		}
-	}
-	Con_DPrintf("%s is %sdeluxemapped\n", loadmodel->name, loadmodel->brushq3.deluxemapping ? "" : "not ");
 
 	i = 0;
 	oldi = i;
@@ -4895,26 +4927,22 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			out->effect = NULL;
 		else
 			out->effect = loadmodel->brushq3.data_effects + n;
+
+		out->lightmaptexture = NULL;
+		out->deluxemaptexture = r_texture_blanknormalmap;
 		n = LittleLong(in->lightmapindex);
-		if (n >= loadmodel->brushq3.num_lightmaps)
+		if (n < 0)
+			n = -1;
+		else if (n >= (loadmodel->brushq3.num_lightmaps << (loadmodel->brushq3.num_lightmapmergepower * 2)))
 		{
 			Con_Printf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): invalid lightmapindex %i (%i lightmaps)\n", i, out->texture->name, n, loadmodel->brushq3.num_lightmaps);
 			n = -1;
 		}
-		else if (n < 0)
-			n = -1;
-		if (n == -1)
-		{
-			out->lightmaptexture = NULL;
-			out->deluxemaptexture = r_texture_blanknormalmap;
-		}
 		else
 		{
-			out->lightmaptexture = loadmodel->brushq3.data_lightmaps[n];
+			out->lightmaptexture = loadmodel->brushq3.data_lightmaps[n >> (loadmodel->brushq3.num_lightmapmergepower * 2 + loadmodel->brushq3.deluxemapping)];
 			if (loadmodel->brushq3.deluxemapping)
-				out->deluxemaptexture = loadmodel->brushq3.data_lightmaps[n+1];
-			else
-				out->deluxemaptexture = r_texture_blanknormalmap;
+				out->deluxemaptexture = loadmodel->brushq3.data_deluxemaps[n >> (loadmodel->brushq3.num_lightmapmergepower * 2 + loadmodel->brushq3.deluxemapping)];
 		}
 
 		firstvertex = LittleLong(in->firstvertex);
@@ -5005,7 +5033,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		{
 		case Q3FACETYPE_POLYGON:
 		case Q3FACETYPE_MESH:
-			// no processing necessary
+			// no processing necessary, except for lightmap merging
 			for (j = 0;j < out->num_vertices;j++)
 			{
 				(loadmodel->surfmesh.data_vertex3f + 3 * out->num_firstvertex)[j * 3 + 0] = loadmodel->brushq3.data_vertex3f[(firstvertex + j) * 3 + 0];
@@ -5135,6 +5163,20 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		VectorClear(out->maxs);
 		if (out->num_vertices)
 		{
+			int lightmapindex = LittleLong(in->lightmapindex);
+			if (lightmapindex >= 0)
+			{
+				lightmapindex >>= loadmodel->brushq3.deluxemapping;
+				lightmaptcscale = 1.0f / loadmodel->brushq3.num_lightmapmerge;
+				lightmaptcbase[0] = ((lightmapindex                                             ) & (loadmodel->brushq3.num_lightmapmerge - 1)) * lightmaptcscale;
+				lightmaptcbase[1] = ((lightmapindex >> loadmodel->brushq3.num_lightmapmergepower) & (loadmodel->brushq3.num_lightmapmerge - 1)) * lightmaptcscale;
+				// modify the lightmap texcoords to match this region of the merged lightmap
+				for (j = 0, v = loadmodel->surfmesh.data_texcoordlightmap2f + 2 * out->num_firstvertex;j < out->num_vertices;j++, v += 2)
+				{
+					v[0] = v[0] * lightmaptcscale + lightmaptcbase[0];
+					v[1] = v[1] * lightmaptcscale + lightmaptcbase[1];
+				}
+			}
 			VectorCopy((loadmodel->surfmesh.data_vertex3f + 3 * out->num_firstvertex), out->mins);
 			VectorCopy((loadmodel->surfmesh.data_vertex3f + 3 * out->num_firstvertex), out->maxs);
 			for (j = 1, v = (loadmodel->surfmesh.data_vertex3f + 3 * out->num_firstvertex) + 3;j < out->num_vertices;j++, v += 3)
@@ -5910,7 +5952,7 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	Mod_Q3BSP_LoadEffects(&header->lumps[Q3LUMP_EFFECTS]);
 	Mod_Q3BSP_LoadVertices(&header->lumps[Q3LUMP_VERTICES]);
 	Mod_Q3BSP_LoadTriangles(&header->lumps[Q3LUMP_TRIANGLES]);
-	Mod_Q3BSP_LoadLightmaps(&header->lumps[Q3LUMP_LIGHTMAPS]);
+	Mod_Q3BSP_LoadLightmaps(&header->lumps[Q3LUMP_LIGHTMAPS], &header->lumps[Q3LUMP_FACES]);
 	Mod_Q3BSP_LoadFaces(&header->lumps[Q3LUMP_FACES]);
 	Mod_Q3BSP_LoadModels(&header->lumps[Q3LUMP_MODELS]);
 	Mod_Q3BSP_LoadLeafBrushes(&header->lumps[Q3LUMP_LEAFBRUSHES]);
