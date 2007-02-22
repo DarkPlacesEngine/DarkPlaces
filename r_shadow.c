@@ -209,6 +209,7 @@ cvar_t r_shadow_glossexponent = {0, "r_shadow_glossexponent", "32", "how 'sharp'
 cvar_t r_shadow_lightattenuationpower = {0, "r_shadow_lightattenuationpower", "0.5", "changes attenuation texture generation (does not affect r_glsl lighting)"};
 cvar_t r_shadow_lightattenuationscale = {0, "r_shadow_lightattenuationscale", "1", "changes attenuation texture generation (does not affect r_glsl lighting)"};
 cvar_t r_shadow_lightintensityscale = {0, "r_shadow_lightintensityscale", "1", "renders all world lights brighter or darker"};
+cvar_t r_shadow_lightradiusscale = {0, "r_shadow_lightradiusscale", "1", "renders all world lights larger or smaller"};
 cvar_t r_shadow_portallight = {0, "r_shadow_portallight", "1", "use portal culling to exactly determine lit triangles when compiling world lights"};
 cvar_t r_shadow_projectdistance = {0, "r_shadow_projectdistance", "1000000", "how far to cast shadows"};
 cvar_t r_shadow_frontsidecasting = {0, "r_shadow_frontsidecasting", "1", "whether to cast shadows from illuminated triangles (front side of model) or unlit triangles (back side of model)"};
@@ -366,6 +367,7 @@ void R_Shadow_Help_f(void)
 "r_shadow_lightattenuationpower : used to generate attenuation texture\n"
 "r_shadow_lightattenuationscale : used to generate attenuation texture\n"
 "r_shadow_lightintensityscale : scale rendering brightness of all lights\n"
+"r_shadow_lightradiusscale : scale rendering radius of all lights\n"
 "r_shadow_portallight : use portal visibility for static light precomputation\n"
 "r_shadow_projectdistance : shadow volume projection distance\n"
 "r_shadow_realtime_dlight : use high quality dynamic lights in normal mode\n"
@@ -399,6 +401,7 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_lightattenuationpower);
 	Cvar_RegisterVariable(&r_shadow_lightattenuationscale);
 	Cvar_RegisterVariable(&r_shadow_lightintensityscale);
+	Cvar_RegisterVariable(&r_shadow_lightradiusscale);
 	Cvar_RegisterVariable(&r_shadow_portallight);
 	Cvar_RegisterVariable(&r_shadow_projectdistance);
 	Cvar_RegisterVariable(&r_shadow_frontsidecasting);
@@ -2141,6 +2144,9 @@ void R_Shadow_RenderSurfacesLighting(int numsurfaces, msurface_t **surfacelist)
 
 void R_RTLight_Update(rtlight_t *rtlight, int isstatic, matrix4x4_t *matrix, vec3_t color, int style, const char *cubemapname, qboolean shadow, vec_t corona, vec_t coronasizescale, vec_t ambientscale, vec_t diffusescale, vec_t specularscale, int flags)
 {
+	matrix4x4_t tempmatrix = *matrix;
+	Matrix4x4_Scale(&tempmatrix, r_shadow_lightradiusscale.value, 1);
+
 	// if this light has been compiled before, free the associated data
 	R_RTLight_Uncompile(rtlight);
 
@@ -2148,9 +2154,9 @@ void R_RTLight_Update(rtlight_t *rtlight, int isstatic, matrix4x4_t *matrix, vec
 	memset(rtlight, 0, sizeof(*rtlight));
 
 	// copy the properties
-	Matrix4x4_Invert_Simple(&rtlight->matrix_worldtolight, matrix);
-	Matrix4x4_OriginFromMatrix(matrix, rtlight->shadoworigin);
-	rtlight->radius = Matrix4x4_ScaleFromMatrix(matrix);
+	Matrix4x4_Invert_Simple(&rtlight->matrix_worldtolight, &tempmatrix);
+	Matrix4x4_OriginFromMatrix(&tempmatrix, rtlight->shadoworigin);
+	rtlight->radius = Matrix4x4_ScaleFromMatrix(&tempmatrix);
 	VectorCopy(color, rtlight->color);
 	rtlight->cubemapname[0] = 0;
 	if (cubemapname && cubemapname[0])
