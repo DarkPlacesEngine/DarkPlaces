@@ -3692,9 +3692,9 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 
 static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
-	int surfacelistindex;
-	int batchcount;
-	texture_t *t;
+	int i, j;
+	int texturenumsurfaces, endsurface;
+	msurface_t *surface;
 	msurface_t *texturesurfacelist[1024];
 
 	// if the model is static it doesn't matter what value we give for
@@ -3705,55 +3705,57 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 	else
 		RSurf_ActiveEntity(ent, true, r_glsl.integer && gl_support_fragment_shader);
 
-	batchcount = 0;
-	t = NULL;
-	rsurface_uselightmaptexture = false;
-	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
+	for (i = 0;i < numsurfaces;i = j)
 	{
-		msurface_t *surface = ent->model->data_surfaces + surfacelist[surfacelistindex];
-
-		if (t != surface->texture || rsurface_uselightmaptexture != (surface->lightmaptexture != NULL))
+		j = i + 1;
+		surface = rsurface_model->data_surfaces + surfacelist[i];
+		rsurface_texture = surface->texture;
+		rsurface_uselightmaptexture = surface->lightmaptexture != NULL;
+		// scan ahead until we find a different texture
+		endsurface = min(i + 1024, numsurfaces);
+		texturenumsurfaces = 0;
+		for (;j < endsurface;j++)
 		{
-			if (batchcount > 0)
-				if (!(rsurface_texture->currentmaterialflags & MATERIALFLAG_SKY)) // transparent sky is too difficult
-					R_DrawTextureSurfaceList(batchcount, texturesurfacelist);
-			batchcount = 0;
-			t = surface->texture;
-			rsurface_uselightmaptexture = (surface->lightmaptexture != NULL);
-			R_UpdateTextureInfo(ent, t);
-			rsurface_texture = t->currentframe;
+			surface = rsurface_model->data_surfaces + surfacelist[j];
+			if (rsurface_texture != surface->texture || rsurface_uselightmaptexture != (surface->lightmaptexture != NULL))
+				break;
+			texturesurfacelist[texturenumsurfaces++] = surface;
 		}
-
-		texturesurfacelist[batchcount++] = surface;
+		// render the range of surfaces
+		R_DrawTextureSurfaceList(texturenumsurfaces, texturesurfacelist);
 	}
-	if (batchcount > 0)
-		R_DrawTextureSurfaceList(batchcount, texturesurfacelist);
 
 	RSurf_CleanUp();
 }
 
-void R_QueueTextureSurfaceList(int texturenumsurfaces, msurface_t **texturesurfacelist)
+void R_QueueSurfaceList(int numsurfaces, msurface_t **surfacelist)
 {
-	int texturesurfaceindex;
+	int i, j;
 	vec3_t tempcenter, center;
-	if (rsurface_texture->currentmaterialflags & MATERIALFLAG_BLENDED)
+	// break the surface list down into batches by texture and use of lightmapping
+	for (i = 0;i < numsurfaces;i = j)
 	{
-		// drawing sky transparently would be too difficult
-		if (!(rsurface_texture->currentmaterialflags & MATERIALFLAG_SKY))
+		j = i + 1;
+		rsurface_texture = surfacelist[i]->texture;
+		rsurface_uselightmaptexture = surfacelist[i]->lightmaptexture != NULL;
+		if (rsurface_texture->currentmaterialflags & MATERIALFLAG_BLENDED)
 		{
-			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
-			{
-				const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
-				tempcenter[0] = (surface->mins[0] + surface->maxs[0]) * 0.5f;
-				tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
-				tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
-				Matrix4x4_Transform(&rsurface_entity->matrix, tempcenter, center);
-				R_MeshQueue_AddTransparent(rsurface_texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_view.origin : center, R_DrawSurface_TransparentCallback, rsurface_entity, surface - rsurface_model->data_surfaces, r_shadow_rtlight);
-			}
+			// transparent surfaces get pushed off into the transparent queue
+			const msurface_t *surface = surfacelist[i];
+			tempcenter[0] = (surface->mins[0] + surface->maxs[0]) * 0.5f;
+			tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
+			tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
+			Matrix4x4_Transform(&rsurface_entity->matrix, tempcenter, center);
+			R_MeshQueue_AddTransparent(rsurface_texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_view.origin : center, R_DrawSurface_TransparentCallback, rsurface_entity, surface - rsurface_model->data_surfaces, r_shadow_rtlight);
+		}
+		else
+		{
+			// simply scan ahead until we find a different texture
+			for (;j < numsurfaces && rsurface_texture == surfacelist[j]->texture && rsurface_uselightmaptexture == (surfacelist[j]->lightmaptexture != NULL);j++);
+			// render the range of surfaces
+			R_DrawTextureSurfaceList(j - i, surfacelist + i);
 		}
 	}
-	else
-		R_DrawTextureSurfaceList(texturenumsurfaces, texturesurfacelist);
 }
 
 extern void R_BuildLightMap(const entity_render_t *ent, msurface_t *surface);
@@ -3817,21 +3819,8 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 			{
 				// process this surface
 				surface = model->data_surfaces + j;
-				// if texture or lightmap has changed, start a new batch
-				if (t != surface->texture || rsurface_uselightmaptexture != (surface->lightmaptexture != NULL))
-				{
-					if (numsurfacelist)
-					{
-						R_QueueTextureSurfaceList(numsurfacelist, surfacelist);
-						numsurfacelist = 0;
-					}
-					t = surface->texture;
-					rsurface_uselightmaptexture = surface->lightmaptexture != NULL;
-					rsurface_texture = t->currentframe;
-					f = rsurface_texture->currentmaterialflags & flagsmask;
-				}
 				// if this surface fits the criteria, add it to the list
-				if (f && surface->num_triangles)
+				if (surface->texture->currentmaterialflags & flagsmask && surface->num_triangles)
 				{
 					// if lightmap parameters changed, rebuild lightmap texture
 					if (surface->cached_dlight)
@@ -3841,7 +3830,7 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 					counttriangles += surface->num_triangles;
 					if (numsurfacelist >= maxsurfacelist)
 					{
-						R_QueueTextureSurfaceList(numsurfacelist, surfacelist);
+						R_QueueSurfaceList(numsurfacelist, surfacelist);
 						numsurfacelist = 0;
 					}
 				}
@@ -3854,21 +3843,8 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 		endsurface = surface + model->nummodelsurfaces;
 		for (;surface < endsurface;surface++)
 		{
-			// if texture or lightmap has changed, start a new batch
-			if (t != surface->texture || rsurface_uselightmaptexture != (surface->lightmaptexture != NULL))
-			{
-				if (numsurfacelist)
-				{
-					R_QueueTextureSurfaceList(numsurfacelist, surfacelist);
-					numsurfacelist = 0;
-				}
-				t = surface->texture;
-				rsurface_uselightmaptexture = (surface->lightmaptexture != NULL);
-				rsurface_texture = t->currentframe;
-				f = rsurface_texture->currentmaterialflags & flagsmask;
-			}
 			// if this surface fits the criteria, add it to the list
-			if (f && surface->num_triangles)
+			if (surface->texture->currentmaterialflags & flagsmask && surface->num_triangles)
 			{
 				// if lightmap parameters changed, rebuild lightmap texture
 				if (surface->cached_dlight)
@@ -3878,14 +3854,14 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 				counttriangles += surface->num_triangles;
 				if (numsurfacelist >= maxsurfacelist)
 				{
-					R_QueueTextureSurfaceList(numsurfacelist, surfacelist);
+					R_QueueSurfaceList(numsurfacelist, surfacelist);
 					numsurfacelist = 0;
 				}
 			}
 		}
 	}
 	if (numsurfacelist)
-		R_QueueTextureSurfaceList(numsurfacelist, surfacelist);
+		R_QueueSurfaceList(numsurfacelist, surfacelist);
 	r_refdef.stats.entities_triangles += counttriangles;
 	RSurf_CleanUp();
 
