@@ -4776,6 +4776,8 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 
 	if (!l->filelen)
 		return;
+	if (cls.state == ca_dedicated)
+		return;
 	in = (q3dlightmap_t *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q3BSP_LoadLightmaps: funny lump size in %s",loadmodel->name);
@@ -4930,21 +4932,24 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		else
 			out->effect = loadmodel->brushq3.data_effects + n;
 
-		out->lightmaptexture = NULL;
-		out->deluxemaptexture = r_texture_blanknormalmap;
-		n = LittleLong(in->lightmapindex);
-		if (n < 0)
-			n = -1;
-		else if (n >= (loadmodel->brushq3.num_lightmaps << (loadmodel->brushq3.num_lightmapmergepower * 2)))
+		if (cls.state != ca_dedicated)
 		{
-			Con_Printf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): invalid lightmapindex %i (%i lightmaps)\n", i, out->texture->name, n, loadmodel->brushq3.num_lightmaps);
-			n = -1;
-		}
-		else
-		{
-			out->lightmaptexture = loadmodel->brushq3.data_lightmaps[n >> (loadmodel->brushq3.num_lightmapmergepower * 2 + loadmodel->brushq3.deluxemapping)];
-			if (loadmodel->brushq3.deluxemapping)
-				out->deluxemaptexture = loadmodel->brushq3.data_deluxemaps[n >> (loadmodel->brushq3.num_lightmapmergepower * 2 + loadmodel->brushq3.deluxemapping)];
+			out->lightmaptexture = NULL;
+			out->deluxemaptexture = r_texture_blanknormalmap;
+			n = LittleLong(in->lightmapindex);
+			if (n < 0)
+				n = -1;
+			else if (n >= (loadmodel->brushq3.num_lightmaps << (loadmodel->brushq3.num_lightmapmergepower * 2)))
+			{
+				Con_Printf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): invalid lightmapindex %i (%i lightmaps)\n", i, out->texture->name, n, loadmodel->brushq3.num_lightmaps);
+				n = -1;
+			}
+			else
+			{
+				out->lightmaptexture = loadmodel->brushq3.data_lightmaps[n >> (loadmodel->brushq3.num_lightmapmergepower * 2 + loadmodel->brushq3.deluxemapping)];
+				if (loadmodel->brushq3.deluxemapping)
+					out->deluxemaptexture = loadmodel->brushq3.data_deluxemaps[n >> (loadmodel->brushq3.num_lightmapmergepower * 2 + loadmodel->brushq3.deluxemapping)];
+			}
 		}
 
 		firstvertex = LittleLong(in->firstvertex);
@@ -5166,7 +5171,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		if (out->num_vertices)
 		{
 			int lightmapindex = LittleLong(in->lightmapindex);
-			if (lightmapindex >= 0)
+			if (lightmapindex >= 0 && cls.state != ca_dedicated)
 			{
 				lightmapindex >>= loadmodel->brushq3.deluxemapping;
 				lightmaptcscale = 1.0f / loadmodel->brushq3.num_lightmapmerge;
