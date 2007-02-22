@@ -12,6 +12,7 @@ extern cvar_t r_shadow_glossexponent;
 extern cvar_t r_shadow_lightattenuationpower;
 extern cvar_t r_shadow_lightattenuationscale;
 extern cvar_t r_shadow_lightintensityscale;
+extern cvar_t r_shadow_lightradiusscale;
 extern cvar_t r_shadow_portallight;
 extern cvar_t r_shadow_projectdistance;
 extern cvar_t r_shadow_frontsidecasting;
