@@ -10,7 +10,7 @@
 cvar_t collision_impactnudge = {0, "collision_impactnudge", "0.03125", "how much to back off from the impact"};
 cvar_t collision_startnudge = {0, "collision_startnudge", "0", "how much to bias collision trace start"};
 cvar_t collision_endnudge = {0, "collision_endnudge", "0", "how much to bias collision trace end"};
-cvar_t collision_enternudge = {0, "collision_enternudge", "0.03125", "how much to bias collision entry fraction"};
+cvar_t collision_enternudge = {0, "collision_enternudge", "0", "how much to bias collision entry fraction"};
 cvar_t collision_leavenudge = {0, "collision_leavenudge", "0", "how much to bias collision exit fraction"};
 cvar_t collision_prefernudgedfraction = {0, "collision_prefernudgedfraction", "1", "whether to sort collision events by nudged fraction (1) or real fraction (0)"};
 
