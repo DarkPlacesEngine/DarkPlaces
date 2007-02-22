@@ -3446,13 +3446,13 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, msurface_t **t
 	}
 
 	R_SetupSurfaceShader(vec3_origin, rsurface_lightmode == 2);
-	//permutation_deluxemapping = permutation_lightmapping = R_SetupSurfaceShader(vec3_origin, rsurface_lightmode == 2, false);
-	//if (r_glsl_deluxemapping.integer)
-	//	permutation_deluxemapping = R_SetupSurfaceShader(vec3_origin, rsurface_lightmode == 2, true);
 	if (!r_glsl_permutation)
 		return;
 
-	RSurf_PrepareVerticesForBatch(true, true, texturenumsurfaces, texturesurfacelist);
+	if (rsurface_lightmode == 2)
+		RSurf_PrepareVerticesForBatch(true, r_glsl_permutation->loc_Texture_Normal, texturenumsurfaces, texturesurfacelist);
+	else
+		RSurf_PrepareVerticesForBatch(r_glsl_permutation->loc_Texture_Normal, r_glsl_permutation->loc_Texture_Normal, texturenumsurfaces, texturesurfacelist);
 	R_Mesh_TexCoordPointer(0, 2, rsurface_model->surfmesh.data_texcoordtexture2f);
 	R_Mesh_TexCoordPointer(1, 3, rsurface_svector3f);
 	R_Mesh_TexCoordPointer(2, 3, rsurface_tvector3f);
