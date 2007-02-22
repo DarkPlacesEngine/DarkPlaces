@@ -3762,6 +3762,7 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 {
 	int i, j;
 	int texturenumsurfaces, endsurface;
+	texture_t *texture;
 	msurface_t *surface;
 	msurface_t *texturesurfacelist[1024];
 
@@ -3777,7 +3778,8 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 	{
 		j = i + 1;
 		surface = rsurface_model->data_surfaces + surfacelist[i];
-		rsurface_texture = surface->texture;
+		texture = surface->texture;
+		rsurface_texture = texture->currentframe;
 		rsurface_uselightmaptexture = surface->lightmaptexture != NULL;
 		// scan ahead until we find a different texture
 		endsurface = min(i + 1024, numsurfaces);
@@ -3786,7 +3788,7 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 		for (;j < endsurface;j++)
 		{
 			surface = rsurface_model->data_surfaces + surfacelist[j];
-			if (rsurface_texture != surface->texture || rsurface_uselightmaptexture != (surface->lightmaptexture != NULL))
+			if (texture != surface->texture || rsurface_uselightmaptexture != (surface->lightmaptexture != NULL))
 				break;
 			texturesurfacelist[texturenumsurfaces++] = surface;
 		}
@@ -3801,11 +3803,17 @@ void R_QueueSurfaceList(int numsurfaces, msurface_t **surfacelist)
 {
 	int i, j;
 	vec3_t tempcenter, center;
+	texture_t *texture;
 	// break the surface list down into batches by texture and use of lightmapping
 	for (i = 0;i < numsurfaces;i = j)
 	{
 		j = i + 1;
-		rsurface_texture = surfacelist[i]->texture;
+		// texture is the base texture pointer, rsurface_texture is the
+		// current frame/skin the texture is directing us to use (for example
+		// if a model has 2 skins and it is on skin 1, then skin 0 tells us to
+		// use skin 1 instead)
+		texture = surfacelist[i]->texture;
+		rsurface_texture = texture->currentframe;
 		rsurface_uselightmaptexture = surfacelist[i]->lightmaptexture != NULL;
 		if (rsurface_texture->currentmaterialflags & MATERIALFLAG_BLENDED)
 		{
@@ -3820,7 +3828,7 @@ void R_QueueSurfaceList(int numsurfaces, msurface_t **surfacelist)
 		else
 		{
 			// simply scan ahead until we find a different texture
-			for (;j < numsurfaces && rsurface_texture == surfacelist[j]->texture && rsurface_uselightmaptexture == (surfacelist[j]->lightmaptexture != NULL);j++);
+			for (;j < numsurfaces && texture == surfacelist[j]->texture && rsurface_uselightmaptexture == (surfacelist[j]->lightmaptexture != NULL);j++);
 			// render the range of surfaces
 			R_DrawTextureSurfaceList(j - i, surfacelist + i);
 		}
@@ -3889,7 +3897,7 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 				// process this surface
 				surface = model->data_surfaces + j;
 				// if this surface fits the criteria, add it to the list
-				if (surface->texture->currentmaterialflags & flagsmask && surface->num_triangles)
+				if (surface->texture->basematerialflags & flagsmask && surface->num_triangles)
 				{
 					// if lightmap parameters changed, rebuild lightmap texture
 					if (surface->cached_dlight)
@@ -3913,7 +3921,7 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 		for (;surface < endsurface;surface++)
 		{
 			// if this surface fits the criteria, add it to the list
-			if (surface->texture->currentmaterialflags & flagsmask && surface->num_triangles)
+			if (surface->texture->basematerialflags & flagsmask && surface->num_triangles)
 			{
 				// if lightmap parameters changed, rebuild lightmap texture
 				if (surface->cached_dlight)
