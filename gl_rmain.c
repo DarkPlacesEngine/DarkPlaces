@@ -3307,7 +3307,7 @@ static void RSurf_DrawBatch_Lightmap(int texturenumsurfaces, msurface_t **textur
 	}
 	R_Mesh_ColorPointer(rsurface_lightmapcolor4f);
 	GL_Color(r, g, b, a);
-	if (rsurface_uselightmaptexture && !(rsurface_texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
+	if (lightmode == 0 && rsurface_uselightmaptexture && !(rsurface_texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
 		RSurf_DrawBatch_WithLightmapSwitching(texturenumsurfaces, texturesurfacelist, 0, -1);
 	else
 		RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
@@ -3714,6 +3714,7 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 		// scan ahead until we find a different texture
 		endsurface = min(i + 1024, numsurfaces);
 		texturenumsurfaces = 0;
+		texturesurfacelist[texturenumsurfaces++] = surface;
 		for (;j < endsurface;j++)
 		{
 			surface = rsurface_model->data_surfaces + surfacelist[j];
