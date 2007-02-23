@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "cdaudio.h"
 #include "cl_collision.h"
 #include "csprogs.h"
+#include "libcurl.h"
 
 char *svc_strings[128] =
 {
@@ -896,7 +897,16 @@ void CL_BeginDownloads(qboolean aborteddownload)
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
 		return;
 
-	// TODO: this would be a good place to do curl downloads
+	// this would be a good place to do curl downloads
+	if(Curl_Have_forthismap())
+	{
+		Curl_Register_predownload(); // come back later
+		return;
+	}
+
+	// if we got here...
+	// curl is done, so let's start with the business
+	cl.loadbegun = true;
 
 	if (cl.downloadcsqc)
 	{
@@ -1081,7 +1091,12 @@ void CL_BeginDownloads(qboolean aborteddownload)
 
 void CL_BeginDownloads_f(void)
 {
-	CL_BeginDownloads(false);
+	// prevent cl_begindownloads from being issued multiple times in one match
+	// to prevent accidentally cancelled downloads
+	if(cl.loadbegun)
+		Con_DPrintf("cl_begindownloads is only valid once per match\n");
+	else
+		CL_BeginDownloads(false);
 }
 
 void CL_StopDownload(int size, int crc)
@@ -1391,6 +1406,7 @@ void CL_ParseServerInfo (void)
 			MSG_WriteString(&cls.netcon->message, va("soundlist %i %i", cl.qw_servercount, 0));
 		}
 
+		cl.loadbegun = false;
 		cl.loadfinished = false;
 
 		cls.state = ca_connected;
@@ -1483,6 +1499,7 @@ void CL_ParseServerInfo (void)
 		cl.downloadsound_current = 1;
 		cl.loadsound_total = numsounds;
 		cl.downloadcsqc = true;
+		cl.loadbegun = false;
 		cl.loadfinished = false;
 	}
 
@@ -1754,6 +1771,14 @@ void CL_ParseStatic (int large)
 	ent = &cl.static_entities[cl.num_static_entities++];
 	CL_ParseBaseline (ent, large);
 
+	if (ent->state_baseline.modelindex == 0)
+	{
+		Con_DPrintf("svc_parsestatic: static entity without model at %f %f %f\n", ent->state_baseline.origin[0], ent->state_baseline.origin[1], ent->state_baseline.origin[2]);
+		cl.num_static_entities--;
+		// This is definitely a cheesy way to conserve resources...
+		return;
+	}
+
 // copy it to the current state
 	ent->render.model = cl.model_precache[ent->state_baseline.modelindex];
 	ent->render.frame = ent->render.frame1 = ent->render.frame2 = ent->state_baseline.frame;
@@ -1770,10 +1795,6 @@ void CL_ParseStatic (int large)
 
 	Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, ent->state_baseline.origin[0], ent->state_baseline.origin[1], ent->state_baseline.origin[2], ent->state_baseline.angles[0], ent->state_baseline.angles[1], ent->state_baseline.angles[2], 1);
 	CL_UpdateRenderEntity(&ent->render);
-
-	// This is definitely a cheesy way to conserve resources...
-	//if (ent->render.model == NULL)
-	//	cl.num_static_entities--;
 }
 
 /*

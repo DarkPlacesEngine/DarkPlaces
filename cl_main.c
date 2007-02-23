@@ -289,6 +289,8 @@ void CL_Disconnect(void)
 	if (cls.state == ca_dedicated)
 		return;
 
+	Curl_Clear_forthismap();
+
 	Con_DPrintf("CL_Disconnect\n");
 
 	CL_VM_ShutDown();

@@ -883,6 +883,7 @@ typedef struct client_state_s
 	int downloadsound_current;
 	int loadsound_total;
 	qboolean downloadcsqc;
+	qboolean loadbegun;
 	qboolean loadfinished;
 
 	// quakeworld stuff
