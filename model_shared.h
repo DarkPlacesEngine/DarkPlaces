@@ -718,5 +718,8 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend);
 void Mod_IDSP_Load(model_t *mod, void *buffer, void *bufferend);
 void Mod_IDS2_Load(model_t *mod, void *buffer, void *bufferend);
 
+// utility
+qboolean Mod_CanSeeBox_Trace(int numsamples, float t, model_t *model, vec3_t eye, vec3_t minsX, vec3_t maxsX);
+
 #endif	// MODEL_SHARED_H
 

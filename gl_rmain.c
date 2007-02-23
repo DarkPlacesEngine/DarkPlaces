@@ -46,6 +46,10 @@ cvar_t r_showdisabledepthtest = {0, "r_showdisabledepthtest", "0", "disables dep
 cvar_t r_drawportals = {0, "r_drawportals", "0", "shows portals (separating polygons) in world interior in quake1 maps"};
 cvar_t r_drawentities = {0, "r_drawentities","1", "draw entities (doors, players, projectiles, etc)"};
 cvar_t r_drawviewmodel = {0, "r_drawviewmodel","1", "draw your weapon model"};
+cvar_t r_cullentities_trace = {0, "r_cullentities_trace", "1", "probabistically cull invisible entities"};
+cvar_t r_cullentities_trace_samples = {0, "r_cullentities_trace_samples", "2", "number of samples to test for entity culling"};
+cvar_t r_cullentities_trace_enlarge = {0, "r_cullentities_trace_enlarge", "0", "box enlargement for entity culling"};
+cvar_t r_cullentities_trace_delay = {0, "r_cullentities_trace_delay", "1", "number of seconds until the entity gets actually culled"};
 cvar_t r_speeds = {0, "r_speeds","0", "displays rendering statistics and per-subsystem timings"};
 cvar_t r_fullbright = {0, "r_fullbright","0", "make everything bright cheat (not allowed in multiplayer)"};
 cvar_t r_wateralpha = {CVAR_SAVE, "r_wateralpha","1", "opacity of water polygons"};
@@ -1132,6 +1136,10 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_showdisabledepthtest);
 	Cvar_RegisterVariable(&r_drawportals);
 	Cvar_RegisterVariable(&r_drawentities);
+	Cvar_RegisterVariable(&r_cullentities_trace);
+	Cvar_RegisterVariable(&r_cullentities_trace_samples);
+	Cvar_RegisterVariable(&r_cullentities_trace_enlarge);
+	Cvar_RegisterVariable(&r_cullentities_trace_delay);
 	Cvar_RegisterVariable(&r_drawviewmodel);
 	Cvar_RegisterVariable(&r_speeds);
 	Cvar_RegisterVariable(&r_fullbrights);
@@ -1316,6 +1324,20 @@ static void R_View_UpdateEntityVisible (void)
 		{
 			ent = r_refdef.entities[i];
 			r_viewcache.entityvisible[i] = !(ent->flags & renderimask) && !R_CullBox(ent->mins, ent->maxs) && ((ent->effects & EF_NODEPTHTEST) || r_refdef.worldmodel->brush.BoxTouchingVisibleLeafs(r_refdef.worldmodel, r_viewcache.world_leafvisible, ent->mins, ent->maxs));
+		}
+		if(r_cullentities_trace.integer)
+		{
+			for (i = 0;i < r_refdef.numentities;i++)
+			{
+				ent = r_refdef.entities[i];
+				if(r_viewcache.entityvisible[i] && !(ent->effects & EF_NODEPTHTEST) && !(ent->model && (ent->model->name[0] == '*')))
+				{
+					if(Mod_CanSeeBox_Trace(r_cullentities_trace_samples.integer, r_cullentities_trace_enlarge.value, r_refdef.worldmodel, r_view.origin, ent->mins, ent->maxs))
+						ent->last_trace_visibility = realtime;
+					if(ent->last_trace_visibility < realtime - r_cullentities_trace_delay.value)
+						r_viewcache.entityvisible[i] = 0;
+				}
+			}
 		}
 	}
 	else

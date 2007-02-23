@@ -6083,3 +6083,39 @@ void Mod_MAP_Load(model_t *mod, void *buffer, void *bufferend)
 	Host_Error("Mod_MAP_Load: not yet implemented");
 }
 
+qboolean Mod_CanSeeBox_Trace(int numsamples, float t, model_t *model, vec3_t eye, vec3_t minsX, vec3_t maxsX)
+{
+	// we already have done PVS culling at this point...
+	// so we don't need to do it again.
+	
+	int i;
+	vec3_t testorigin, mins, maxs;
+
+	testorigin[0] = (minsX[0] + maxsX[0]) * 0.5;
+	testorigin[1] = (minsX[1] + maxsX[1]) * 0.5;
+	testorigin[2] = (minsX[2] + maxsX[2]) * 0.5;
+
+	if(model->brush.TraceLineOfSight(model, eye, testorigin))
+		return 1;
+
+	// expand the box a little
+	mins[0] = (t+1) * minsX[0] - t * maxsX[0];
+	maxs[0] = (t+1) * maxsX[0] - t * minsX[0];
+	mins[1] = (t+1) * minsX[1] - t * maxsX[1];
+	maxs[1] = (t+1) * maxsX[1] - t * minsX[1];
+	mins[2] = (t+1) * minsX[2] - t * maxsX[2];
+	maxs[2] = (t+1) * maxsX[2] - t * minsX[2];
+
+	for(i = 0; i != numsamples; ++i)
+	{
+		testorigin[0] = lhrandom(mins[0], maxs[0]);
+		testorigin[1] = lhrandom(mins[1], maxs[1]);
+		testorigin[2] = lhrandom(mins[2], maxs[2]);
+
+		if(model->brush.TraceLineOfSight(model, eye, testorigin))
+			return 1;
+	}
+
+	return 0;
+}
+

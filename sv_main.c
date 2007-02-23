@@ -46,6 +46,10 @@ extern cvar_t sv_random_seed;
 
 static cvar_t sv_cullentities_pvs = {0, "sv_cullentities_pvs", "1", "fast but loose culling of hidden entities"}; // fast but loose
 static cvar_t sv_cullentities_trace = {0, "sv_cullentities_trace", "0", "somewhat slow but very tight culling of hidden entities, minimizes network traffic and makes wallhack cheats useless"}; // tends to get false negatives, uses a timeout to keep entities visible a short time after becoming hidden
+static cvar_t sv_cullentities_trace_samples = {0, "sv_cullentities_trace_samples", "1", "number of samples to test for entity culling"};
+static cvar_t sv_cullentities_trace_samples_extra = {0, "sv_cullentities_trace_samples", "2", "number of samples to test for entity culling when the entity affects its surroundings by e.g. dlight"};
+static cvar_t sv_cullentities_trace_enlarge = {0, "sv_cullentities_trace_enlarge", "0", "box enlargement for entity culling"};
+static cvar_t sv_cullentities_trace_delay = {0, "sv_cullentities_trace_delay", "1", "number of seconds until the entity gets actually culled"};
 static cvar_t sv_cullentities_nevercullbmodels = {0, "sv_cullentities_nevercullbmodels", "0", "if enabled the clients are always notified of moving doors and lifts and other submodels of world (warning: eats a lot of network bandwidth on some levels!)"};
 static cvar_t sv_cullentities_stats = {0, "sv_cullentities_stats", "0", "displays stats on network entities culled by various methods for each client"};
 static cvar_t sv_entpatch = {0, "sv_entpatch", "1", "enables loading of .ent files to override entities in the bsp (for example Threewave CTF server pack contains .ent patch files enabling play of CTF on id1 maps)"};
@@ -127,6 +131,10 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_nostep);
 	Cvar_RegisterVariable (&sv_cullentities_pvs);
 	Cvar_RegisterVariable (&sv_cullentities_trace);
+	Cvar_RegisterVariable (&sv_cullentities_trace_samples);
+	Cvar_RegisterVariable (&sv_cullentities_trace_samples_extra);
+	Cvar_RegisterVariable (&sv_cullentities_trace_enlarge);
+	Cvar_RegisterVariable (&sv_cullentities_trace_delay);
 	Cvar_RegisterVariable (&sv_cullentities_nevercullbmodels);
 	Cvar_RegisterVariable (&sv_cullentities_stats);
 	Cvar_RegisterVariable (&sv_entpatch);
@@ -807,7 +815,6 @@ static client_t *sv_writeentitiestoclient_client;
 void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 {
 	int isbmodel;
-	vec3_t testorigin;
 	model_t *model;
 	prvm_edict_t *ed;
 	if (sententitiesconsideration[s->number] == sententitiesmark)
@@ -892,33 +899,8 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 			// or not seen by random tracelines
 			if (sv_cullentities_trace.integer && !isbmodel)
 			{
-				// LordHavoc: test center first
-				testorigin[0] = (ed->priv.server->cullmins[0] + ed->priv.server->cullmaxs[0]) * 0.5f;
-				testorigin[1] = (ed->priv.server->cullmins[1] + ed->priv.server->cullmaxs[1]) * 0.5f;
-				testorigin[2] = (ed->priv.server->cullmins[2] + ed->priv.server->cullmaxs[2]) * 0.5f;
-				if (sv.worldmodel->brush.TraceLineOfSight(sv.worldmodel, sv_writeentitiestoclient_testeye, testorigin))
-					sv_writeentitiestoclient_client->visibletime[s->number] = realtime + 1;
-				else
-				{
-					// LordHavoc: test random offsets, to maximize chance of detection
-					testorigin[0] = lhrandom(ed->priv.server->cullmins[0], ed->priv.server->cullmaxs[0]);
-					testorigin[1] = lhrandom(ed->priv.server->cullmins[1], ed->priv.server->cullmaxs[1]);
-					testorigin[2] = lhrandom(ed->priv.server->cullmins[2], ed->priv.server->cullmaxs[2]);
-					if (sv.worldmodel->brush.TraceLineOfSight(sv.worldmodel, sv_writeentitiestoclient_testeye, testorigin))
-						sv_writeentitiestoclient_client->visibletime[s->number] = realtime + 1;
-					else
-					{
-						if (s->specialvisibilityradius)
-						{
-							// LordHavoc: test random offsets, to maximize chance of detection
-							testorigin[0] = lhrandom(ed->priv.server->cullmins[0], ed->priv.server->cullmaxs[0]);
-							testorigin[1] = lhrandom(ed->priv.server->cullmins[1], ed->priv.server->cullmaxs[1]);
-							testorigin[2] = lhrandom(ed->priv.server->cullmins[2], ed->priv.server->cullmaxs[2]);
-							if (sv.worldmodel->brush.TraceLineOfSight(sv.worldmodel, sv_writeentitiestoclient_testeye, testorigin))
-								sv_writeentitiestoclient_client->visibletime[s->number] = realtime + 1;
-						}
-					}
-				}
+				if(Mod_CanSeeBox_Trace(s->specialvisibilityradius ? sv_cullentities_trace_samples_extra.integer : sv_cullentities_trace_samples.integer, sv_cullentities_trace_enlarge.value, sv.worldmodel, sv_writeentitiestoclient_testeye, ed->priv.server->cullmins, ed->priv.server->cullmaxs))
+					sv_writeentitiestoclient_client->visibletime[s->number] = realtime + sv_cullentities_trace_delay.value;
 				if (realtime > sv_writeentitiestoclient_client->visibletime[s->number])
 				{
 					sv_writeentitiestoclient_culled_trace++;

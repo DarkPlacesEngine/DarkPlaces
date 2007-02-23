@@ -269,6 +269,9 @@ typedef struct entity_render_s
 	vec3_t modellight_ambient;
 	vec3_t modellight_diffuse; // q3bsp
 	vec3_t modellight_lightdir; // q3bsp
+
+	// last time visible during trace culling
+	double last_trace_visibility;
 }
 entity_render_t;
 
