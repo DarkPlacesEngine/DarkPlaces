@@ -4782,6 +4782,7 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q3BSP_LoadLightmaps: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
+	loadmodel->brushq3.num_originallightmaps = count;
 
 	// now check the surfaces to see if any of them index an odd numbered
 	// lightmap, if so this is not a deluxemapped bsp file
@@ -4841,18 +4842,18 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 		loadmodel->brushq3.num_lightmapmergepower = power;
 	loadmodel->brushq3.num_lightmapmerge = 1 << loadmodel->brushq3.num_lightmapmergepower;
 
-	loadmodel->brushq3.num_lightmaps = ((count >> loadmodel->brushq3.deluxemapping) + (1 << (loadmodel->brushq3.num_lightmapmergepower * 2)) - 1) >> (loadmodel->brushq3.num_lightmapmergepower * 2);
-	loadmodel->brushq3.data_lightmaps = (rtexture_t **)Mem_Alloc(loadmodel->mempool, loadmodel->brushq3.num_lightmaps * sizeof(rtexture_t *));
+	loadmodel->brushq3.num_mergedlightmaps = ((count >> loadmodel->brushq3.deluxemapping) + (1 << (loadmodel->brushq3.num_lightmapmergepower * 2)) - 1) >> (loadmodel->brushq3.num_lightmapmergepower * 2);
+	loadmodel->brushq3.data_lightmaps = (rtexture_t **)Mem_Alloc(loadmodel->mempool, loadmodel->brushq3.num_mergedlightmaps * sizeof(rtexture_t *));
 	if (loadmodel->brushq3.deluxemapping)
-		loadmodel->brushq3.data_deluxemaps = (rtexture_t **)Mem_Alloc(loadmodel->mempool, loadmodel->brushq3.num_lightmaps * sizeof(rtexture_t *));
+		loadmodel->brushq3.data_deluxemaps = (rtexture_t **)Mem_Alloc(loadmodel->mempool, loadmodel->brushq3.num_mergedlightmaps * sizeof(rtexture_t *));
 
 	j = 128 << loadmodel->brushq3.num_lightmapmergepower;
 	if (loadmodel->brushq3.data_lightmaps)
-		for (i = 0;i < loadmodel->brushq3.num_lightmaps;i++)
+		for (i = 0;i < loadmodel->brushq3.num_mergedlightmaps;i++)
 			loadmodel->brushq3.data_lightmaps[i] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", i), j, j, NULL, TEXTYPE_RGB, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
 
 	if (loadmodel->brushq3.data_deluxemaps)
-		for (i = 0;i < loadmodel->brushq3.num_lightmaps;i++)
+		for (i = 0;i < loadmodel->brushq3.num_mergedlightmaps;i++)
 			loadmodel->brushq3.data_deluxemaps[i] = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%04i", i), j, j, NULL, TEXTYPE_RGB, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
 
 	power = loadmodel->brushq3.num_lightmapmergepower;
@@ -4939,9 +4940,9 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			n = LittleLong(in->lightmapindex);
 			if (n < 0)
 				n = -1;
-			else if (n >= (loadmodel->brushq3.num_lightmaps << (loadmodel->brushq3.num_lightmapmergepower * 2)))
+			else if (n >= loadmodel->brushq3.num_originallightmaps)
 			{
-				Con_Printf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): invalid lightmapindex %i (%i lightmaps)\n", i, out->texture->name, n, loadmodel->brushq3.num_lightmaps);
+				Con_Printf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): invalid lightmapindex %i (%i lightmaps)\n", i, out->texture->name, n, loadmodel->brushq3.num_originallightmaps);
 				n = -1;
 			}
 			else
@@ -6087,7 +6088,7 @@ qboolean Mod_CanSeeBox_Trace(int numsamples, float t, model_t *model, vec3_t eye
 {
 	// we already have done PVS culling at this point...
 	// so we don't need to do it again.
-	
+
 	int i;
 	vec3_t testorigin, mins, maxs;
 
