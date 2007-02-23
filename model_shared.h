@@ -479,7 +479,8 @@ typedef struct model_brushq3_s
 	q3deffect_t *data_effects;
 
 	// lightmap textures
-	int num_lightmaps;
+	int num_originallightmaps;
+	int num_mergedlightmaps;
 	int num_lightmapmergepower;
 	int num_lightmapmerge;
 	rtexture_t **data_lightmaps;
