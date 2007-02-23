@@ -2287,10 +2287,10 @@ void R_Shadow_DrawEntityShadow(entity_render_t *ent, int numsurfaces, int *surfa
 	vec_t relativeshadowradius;
 	if (ent == r_refdef.worldentity)
 	{
+		RSurf_ActiveWorldEntity();
 		if (r_shadow_rtlight->compiled && r_shadow_realtime_world_compile.integer && r_shadow_realtime_world_compileshadow.integer)
 		{
 			shadowmesh_t *mesh;
-			R_Mesh_Matrix(&ent->matrix);
 			CHECKGLERROR
 			for (mesh = r_shadow_rtlight->static_meshchain_shadow;mesh;mesh = mesh->next)
 			{
@@ -2313,13 +2313,11 @@ void R_Shadow_DrawEntityShadow(entity_render_t *ent, int numsurfaces, int *surfa
 			CHECKGLERROR
 		}
 		else if (numsurfaces)
-		{
-			R_Mesh_Matrix(&ent->matrix);
 			model->DrawShadowVolume(ent, r_shadow_rtlight->shadoworigin, NULL, r_shadow_rtlight->radius, numsurfaces, surfacelist, r_shadow_rtlight_cullmins, r_shadow_rtlight_cullmaxs);
-		}
 	}
 	else
 	{
+		RSurf_ActiveModelEntity(ent, false, false);
 		Matrix4x4_Transform(&ent->inversematrix, r_shadow_rtlight->shadoworigin, relativeshadoworigin);
 		relativeshadowradius = r_shadow_rtlight->radius / ent->scale;
 		relativeshadowmins[0] = relativeshadoworigin[0] - relativeshadowradius;
@@ -2328,7 +2326,6 @@ void R_Shadow_DrawEntityShadow(entity_render_t *ent, int numsurfaces, int *surfa
 		relativeshadowmaxs[0] = relativeshadoworigin[0] + relativeshadowradius;
 		relativeshadowmaxs[1] = relativeshadoworigin[1] + relativeshadowradius;
 		relativeshadowmaxs[2] = relativeshadoworigin[2] + relativeshadowradius;
-		R_Mesh_Matrix(&ent->matrix);
 		model->DrawShadowVolume(ent, relativeshadoworigin, NULL, relativeshadowradius, model->nummodelsurfaces, model->surfacelist, relativeshadowmins, relativeshadowmaxs);
 	}
 }
@@ -2336,7 +2333,10 @@ void R_Shadow_DrawEntityShadow(entity_render_t *ent, int numsurfaces, int *surfa
 void R_Shadow_SetupEntityLight(const entity_render_t *ent)
 {
 	// set up properties for rendering light onto this entity
-	RSurf_ActiveEntity(ent, true, true);
+	if (ent == r_refdef.worldentity)
+		RSurf_ActiveWorldEntity();
+	else
+		RSurf_ActiveModelEntity(ent, true, true);
 	Matrix4x4_Concat(&r_shadow_entitytolight, &r_shadow_rtlight->matrix_worldtolight, &ent->matrix);
 	Matrix4x4_Concat(&r_shadow_entitytoattenuationxyz, &matrix_attenuationxyz, &r_shadow_entitytolight);
 	Matrix4x4_Concat(&r_shadow_entitytoattenuationz, &matrix_attenuationz, &r_shadow_entitytolight);
@@ -2604,7 +2604,7 @@ void R_DrawModelShadows(void)
 			VectorSet(relativeshadowmaxs, relativethrowdistance, relativethrowdistance, relativethrowdistance);
 			VectorNegate(ent->modellight_lightdir, relativelightdirection);
 			VectorScale(relativelightdirection, -relativethrowdistance, relativelightorigin);
-			R_Mesh_Matrix(&ent->matrix);
+			RSurf_ActiveModelEntity(ent, false, false);
 			ent->model->DrawShadowVolume(ent, relativelightorigin, relativelightdirection, relativethrowdistance, ent->model->nummodelsurfaces, ent->model->surfacelist, relativeshadowmins, relativeshadowmaxs);
 		}
 	}

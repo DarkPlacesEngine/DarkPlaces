@@ -1283,6 +1283,8 @@ f bug darkplaces renderer: modify r_showtris_polygonoffset to push back all fill
 f bug darkplaces renderer: r_editlights 1 causes crashes on level change 40% of the time? (romi)
 f bug darkplaces renderer: rtlight "style" values are broken, e1m6 trap hall for example (romi)
 f bug darkplaces renderer: the quake logo shadow is missing in e1m5 rtlights, too much vis optimization... (romi)
+0 bug darkplaces renderer: if an animated model is entirely transparent, the RSurf_ActiveModelEntity call updating vertices is completely wasted
+0 bug darkplaces renderer: if an animated model has transparent surfaces, each one calls RSurf_ActiveModelEntity, recomputing all vertices
 f bug darkplaces server: items still falling through the floor in nexuiz, and they seem to fall through more often at smaller sys_ticrate values such as 0.02 rather than 0.05 (GreEn`mArine)
 f change darkplaces client: hardcode sbar image sizes so they can be replaced with higher quality images
 f darkplaces client: add chase_pitch cvar to control pitch angle of chase camera, and chase_angle cvar to control yaw angle of chase camera, and add back chase_right cvar (Electro)

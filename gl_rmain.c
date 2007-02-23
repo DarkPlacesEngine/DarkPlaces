@@ -2851,10 +2851,29 @@ void RSurf_CleanUp(void)
 	rsurface_texture = NULL;
 }
 
-void RSurf_ActiveEntity(const entity_render_t *ent, qboolean wantnormals, qboolean wanttangents)
+void RSurf_ActiveWorldEntity(void)
 {
 	RSurf_CleanUp();
-	Matrix4x4_Transform(&ent->inversematrix, r_view.origin, rsurface_modelorg);
+	rsurface_entity = r_refdef.worldentity;
+	rsurface_model = r_refdef.worldmodel;
+	if (rsurface_array_size < rsurface_model->surfmesh.num_vertices)
+		R_Mesh_ResizeArrays(rsurface_model->surfmesh.num_vertices);
+	R_Mesh_Matrix(&identitymatrix);
+	VectorCopy(r_view.origin, rsurface_modelorg);
+	rsurface_modelvertex3f  = rsurface_model->surfmesh.data_vertex3f;
+	rsurface_modelsvector3f = rsurface_model->surfmesh.data_svector3f;
+	rsurface_modeltvector3f = rsurface_model->surfmesh.data_tvector3f;
+	rsurface_modelnormal3f  = rsurface_model->surfmesh.data_normal3f;
+	rsurface_generatedvertex = false;
+	rsurface_vertex3f  = rsurface_modelvertex3f;
+	rsurface_svector3f = rsurface_modelsvector3f;
+	rsurface_tvector3f = rsurface_modeltvector3f;
+	rsurface_normal3f  = rsurface_modelnormal3f;
+}
+
+void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, qboolean wanttangents)
+{
+	RSurf_CleanUp();
 	rsurface_entity = ent;
 	rsurface_model = ent->model;
 	if (rsurface_array_size < rsurface_model->surfmesh.num_vertices)
@@ -3791,10 +3810,12 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 	// if the model is static it doesn't matter what value we give for
 	// wantnormals and wanttangents, so this logic uses only rules applicable
 	// to a model, knowing that they are meaningless otherwise
-	if ((ent->effects & EF_FULLBRIGHT) || r_showsurfaces.integer || VectorLength2(ent->modellight_diffuse) < (1.0f / 256.0f))
-		RSurf_ActiveEntity(ent, false, false);
+	if (ent == r_refdef.worldentity)
+		RSurf_ActiveWorldEntity();
+	else if ((ent->effects & EF_FULLBRIGHT) || r_showsurfaces.integer || VectorLength2(ent->modellight_diffuse) < (1.0f / 256.0f))
+		RSurf_ActiveModelEntity(ent, false, false);
 	else
-		RSurf_ActiveEntity(ent, true, r_glsl.integer && gl_support_fragment_shader);
+		RSurf_ActiveModelEntity(ent, true, r_glsl.integer && gl_support_fragment_shader);
 
 	for (i = 0;i < numsurfaces;i = j)
 	{
@@ -3964,9 +3985,87 @@ void R_DrawTrianglesAndNormals(entity_render_t *ent, qboolean drawtris, qboolean
 }
 
 extern void R_BuildLightMap(const entity_render_t *ent, msurface_t *surface);
-void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
+void R_DrawWorldSurfaces(qboolean skysurfaces)
 {
 	int i, j, endj, f, flagsmask;
+	int counttriangles = 0;
+	msurface_t *surface, **surfacechain;
+	texture_t *t;
+	model_t *model = r_refdef.worldmodel;
+	const int maxsurfacelist = 1024;
+	int numsurfacelist = 0;
+	msurface_t *surfacelist[1024];
+	if (model == NULL)
+		return;
+
+	RSurf_ActiveWorldEntity();
+
+	// update light styles
+	if (!skysurfaces && model->brushq1.light_styleupdatechains)
+	{
+		for (i = 0;i < model->brushq1.light_styles;i++)
+		{
+			if (model->brushq1.light_stylevalue[i] != r_refdef.lightstylevalue[model->brushq1.light_style[i]])
+			{
+				model->brushq1.light_stylevalue[i] = r_refdef.lightstylevalue[model->brushq1.light_style[i]];
+				if ((surfacechain = model->brushq1.light_styleupdatechains[i]))
+					for (;(surface = *surfacechain);surfacechain++)
+						surface->cached_dlight = true;
+			}
+		}
+	}
+
+	R_UpdateAllTextureInfo(r_refdef.worldentity);
+	flagsmask = skysurfaces ? MATERIALFLAG_SKY : (MATERIALFLAG_WATER | MATERIALFLAG_WALL);
+	f = 0;
+	t = NULL;
+	rsurface_uselightmaptexture = false;
+	rsurface_texture = NULL;
+	numsurfacelist = 0;
+	j = model->firstmodelsurface;
+	endj = j + model->nummodelsurfaces;
+	while (j < endj)
+	{
+		// quickly skip over non-visible surfaces
+		for (;j < endj && !r_viewcache.world_surfacevisible[j];j++)
+			;
+		// quickly iterate over visible surfaces
+		for (;j < endj && r_viewcache.world_surfacevisible[j];j++)
+		{
+			// process this surface
+			surface = model->data_surfaces + j;
+			// if this surface fits the criteria, add it to the list
+			if (surface->texture->basematerialflags & flagsmask && surface->num_triangles)
+			{
+				// if lightmap parameters changed, rebuild lightmap texture
+				if (surface->cached_dlight)
+					R_BuildLightMap(r_refdef.worldentity, surface);
+				// add face to draw list
+				surfacelist[numsurfacelist++] = surface;
+				counttriangles += surface->num_triangles;
+				if (numsurfacelist >= maxsurfacelist)
+				{
+					R_QueueSurfaceList(numsurfacelist, surfacelist);
+					numsurfacelist = 0;
+				}
+			}
+		}
+	}
+	if (numsurfacelist)
+		R_QueueSurfaceList(numsurfacelist, surfacelist);
+	r_refdef.stats.entities_triangles += counttriangles;
+	RSurf_CleanUp();
+
+	if (r_showcollisionbrushes.integer && !skysurfaces)
+		R_DrawCollisionBrushes(r_refdef.worldentity);
+
+	if (r_showtris.integer || r_shownormals.integer)
+		R_DrawTrianglesAndNormals(r_refdef.worldentity, r_showtris.integer, r_shownormals.integer, flagsmask);
+}
+
+void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces)
+{
+	int i, f, flagsmask;
 	int counttriangles = 0;
 	msurface_t *surface, *endsurface, **surfacechain;
 	texture_t *t;
@@ -3980,10 +4079,12 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 	// if the model is static it doesn't matter what value we give for
 	// wantnormals and wanttangents, so this logic uses only rules applicable
 	// to a model, knowing that they are meaningless otherwise
-	if ((ent->effects & EF_FULLBRIGHT) || r_showsurfaces.integer || VectorLength2(ent->modellight_diffuse) < (1.0f / 256.0f))
-		RSurf_ActiveEntity(ent, false, false);
+	if (ent == r_refdef.worldentity)
+		RSurf_ActiveWorldEntity();
+	else if ((ent->effects & EF_FULLBRIGHT) || r_showsurfaces.integer || VectorLength2(ent->modellight_diffuse) < (1.0f / 256.0f))
+		RSurf_ActiveModelEntity(ent, false, false);
 	else
-		RSurf_ActiveEntity(ent, true, r_glsl.integer && gl_support_fragment_shader);
+		RSurf_ActiveModelEntity(ent, true, r_glsl.integer && gl_support_fragment_shader);
 
 	// update light styles
 	if (!skysurfaces && model->brushq1.light_styleupdatechains)
@@ -4007,58 +4108,23 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 	rsurface_uselightmaptexture = false;
 	rsurface_texture = NULL;
 	numsurfacelist = 0;
-	if (ent == r_refdef.worldentity)
+	surface = model->data_surfaces + model->firstmodelsurface;
+	endsurface = surface + model->nummodelsurfaces;
+	for (;surface < endsurface;surface++)
 	{
-		j = model->firstmodelsurface;
-		endj = j + model->nummodelsurfaces;
-		while (j < endj)
+		// if this surface fits the criteria, add it to the list
+		if (surface->texture->basematerialflags & flagsmask && surface->num_triangles)
 		{
-			// quickly skip over non-visible surfaces
-			for (;j < endj && !r_viewcache.world_surfacevisible[j];j++)
-				;
-			// quickly iterate over visible surfaces
-			for (;j < endj && r_viewcache.world_surfacevisible[j];j++)
+			// if lightmap parameters changed, rebuild lightmap texture
+			if (surface->cached_dlight)
+				R_BuildLightMap(ent, surface);
+			// add face to draw list
+			surfacelist[numsurfacelist++] = surface;
+			counttriangles += surface->num_triangles;
+			if (numsurfacelist >= maxsurfacelist)
 			{
-				// process this surface
-				surface = model->data_surfaces + j;
-				// if this surface fits the criteria, add it to the list
-				if (surface->texture->basematerialflags & flagsmask && surface->num_triangles)
-				{
-					// if lightmap parameters changed, rebuild lightmap texture
-					if (surface->cached_dlight)
-						R_BuildLightMap(ent, surface);
-					// add face to draw list
-					surfacelist[numsurfacelist++] = surface;
-					counttriangles += surface->num_triangles;
-					if (numsurfacelist >= maxsurfacelist)
-					{
-						R_QueueSurfaceList(numsurfacelist, surfacelist);
-						numsurfacelist = 0;
-					}
-				}
-			}
-		}
-	}
-	else
-	{
-		surface = model->data_surfaces + model->firstmodelsurface;
-		endsurface = surface + model->nummodelsurfaces;
-		for (;surface < endsurface;surface++)
-		{
-			// if this surface fits the criteria, add it to the list
-			if (surface->texture->basematerialflags & flagsmask && surface->num_triangles)
-			{
-				// if lightmap parameters changed, rebuild lightmap texture
-				if (surface->cached_dlight)
-					R_BuildLightMap(ent, surface);
-				// add face to draw list
-				surfacelist[numsurfacelist++] = surface;
-				counttriangles += surface->num_triangles;
-				if (numsurfacelist >= maxsurfacelist)
-				{
-					R_QueueSurfaceList(numsurfacelist, surfacelist);
-					numsurfacelist = 0;
-				}
+				R_QueueSurfaceList(numsurfacelist, surfacelist);
+				numsurfacelist = 0;
 			}
 		}
 	}

@@ -505,7 +505,10 @@ void R_Q1BSP_DrawSky(entity_render_t *ent)
 {
 	if (ent->model == NULL)
 		return;
-	R_DrawSurfaces(ent, true);
+	if (ent == r_refdef.worldentity)
+		R_DrawWorldSurfaces(true);
+	else
+		R_DrawModelSurfaces(ent, true);
 }
 
 void R_Q1BSP_Draw(entity_render_t *ent)
@@ -513,7 +516,10 @@ void R_Q1BSP_Draw(entity_render_t *ent)
 	model_t *model = ent->model;
 	if (model == NULL)
 		return;
-	R_DrawSurfaces(ent, false);
+	if (ent == r_refdef.worldentity)
+		R_DrawWorldSurfaces(false);
+	else
+		R_DrawModelSurfaces(ent, false);
 }
 
 typedef struct r_q1bsp_getlightinfo_s
@@ -849,7 +855,6 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 	else
 	{
 		projectdistance = lightradius + model->radius*2;
-		RSurf_ActiveEntity(ent, false, false);
 		R_Shadow_PrepareShadowMark(model->surfmesh.num_triangles);
 		// identify lit faces within the bounding box
 		for (modelsurfacelistindex = 0;modelsurfacelistindex < modelnumsurfaces;modelsurfacelistindex++)
@@ -926,7 +931,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 	msurface_t *batchsurfacelist[RSURF_MAX_BATCHSURFACES];
 	texture_t *tex;
 	CHECKGLERROR
-	RSurf_ActiveEntity(ent, true, true);
+	RSurf_ActiveModelEntity(ent, true, true);
 	R_UpdateAllTextureInfo(ent);
 	CHECKGLERROR
 	// this is a double loop because non-visible surface skipping has to be
