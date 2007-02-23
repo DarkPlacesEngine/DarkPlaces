@@ -185,6 +185,8 @@ downloadinfo;
 static downloadinfo *downloads = NULL;
 static int numdownloads = 0;
 
+static qboolean noclear = FALSE;
+
 static int numdownloads_fail = 0;
 static int numdownloads_success = 0;
 static int numdownloads_added = 0;
@@ -236,6 +238,8 @@ Clears the "will disconnect on failure" flags.
 void Curl_Clear_forthismap()
 {
 	downloadinfo *di;
+	if(noclear)
+		return;
 	for(di = downloads; di; di = di->next)
 		di->forthismap = false;
 	Curl_CommandWhenError(NULL);
@@ -245,16 +249,23 @@ void Curl_Clear_forthismap()
 	numdownloads_added = 0;
 }
 
-/* obsolete: numdownloads_added contains the same
-static qboolean Curl_Have_forthismap()
-{
-	downloadinfo *di;
-	for(di = downloads; di; di = di->next)
-		if(di->forthismap)
-			return true;
-	return false;
-}
+/*
+====================
+Curl_Have_forthismap
+
+Returns true if a download needed for the current game is running.
+====================
 */
+qboolean Curl_Have_forthismap()
+{
+	return numdownloads_added;
+}
+
+void Curl_Register_predownload()
+{
+	Curl_CommandWhenDone("cl_begindownloads");
+	Curl_CommandWhenError("cl_begindownloads");
+}
 
 /*
 ====================
@@ -446,8 +457,6 @@ static void Curl_EndDownload(downloadinfo *di, CurlStatus status, CURLcode error
 			++numdownloads_fail;
 	}
 	Z_Free(di);
-
-	Curl_CheckCommandWhenDone();
 }
 
 /*
@@ -709,11 +718,15 @@ blocking.
 */
 void Curl_Run()
 {
+	noclear = FALSE;
+
 	if(!cl_curl_enabled.integer)
 		return;
 
 	if(!curl_dll)
 		return;
+
+	Curl_CheckCommandWhenDone();
 
 	if(!downloads)
 		return;
@@ -1017,12 +1030,18 @@ void Curl_Curl_f(void)
 				char donecommand[256];
 				if(cls.netcon)
 				{
-					dpsnprintf(donecommand, sizeof(donecommand), "connect %s", cls.netcon->address);
-					Curl_CommandWhenDone(donecommand);
+					if(cls.signon >= 3)
+					{
+						dpsnprintf(donecommand, sizeof(donecommand), "connect %s", cls.netcon->address);
+						Curl_CommandWhenDone(donecommand);
+						noclear = TRUE;
+						CL_Disconnect();
+						noclear = FALSE;
+						Curl_CheckCommandWhenDone();
+					}
+					else
+						Curl_Register_predownload();
 				}
-				CL_Disconnect();
-
-				Curl_CheckCommandWhenDone();
 			}
 			return;
 		}
@@ -1107,10 +1126,12 @@ Curl_downloadinfo_t *Curl_GetDownloadInfo(int *nDownloads, const char **addition
 		// TODO: can I clear command_when_done as soon as the first download fails?
 		if(*command_when_done && !numdownloads_fail && numdownloads_added)
 		{
-			if(strncmp(command_when_done, "connect ", 8))
-				dpsnprintf(addinfo, sizeof(addinfo), "(will do '%s' when done)", command_when_done);
-			else
+			if(!strncmp(command_when_done, "connect ", 8))
 				dpsnprintf(addinfo, sizeof(addinfo), "(will join %s when done)", command_when_done + 8);
+			else if(!strcmp(command_when_done, "cl_begindownloads"))
+				dpsnprintf(addinfo, sizeof(addinfo), "(will enter the game when done)");
+			else
+				dpsnprintf(addinfo, sizeof(addinfo), "(will do '%s' when done)", command_when_done);
 			*additional_info = addinfo;
 		}
 		else

@@ -6,6 +6,8 @@ void Curl_Init_Commands();
 void Curl_Shutdown();
 void Curl_CancelAll();
 void Curl_Clear_forthismap();
+qboolean Curl_Have_forthismap();
+void Curl_Register_predownload();
 
 void Curl_ClearRequirements();
 void Curl_RequireFile(const char *filename);

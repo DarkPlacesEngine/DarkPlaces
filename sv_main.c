@@ -406,6 +406,15 @@ void SV_SendServerinfo (client_t *client)
 		MSG_WriteString (&client->netconnection->message, "cl_serverextension_download 1");
 	}
 
+	// send at this time so it's guaranteed to get executed at the right time
+	{
+		client_t *save;
+		save = host_client;
+		host_client = client;
+		Curl_SendRequirements();
+		host_client = save;
+	}
+
 	MSG_WriteByte (&client->netconnection->message, svc_serverinfo);
 	MSG_WriteLong (&client->netconnection->message, Protocol_NumberForEnum(sv.protocol));
 	MSG_WriteByte (&client->netconnection->message, svs.maxclients);
@@ -436,14 +445,6 @@ void SV_SendServerinfo (client_t *client)
 
 	MSG_WriteByte (&client->netconnection->message, svc_signonnum);
 	MSG_WriteByte (&client->netconnection->message, 1);
-
-	{
-		client_t *save;
-		save = host_client;
-		host_client = client;
-		Curl_SendRequirements();
-		host_client = save;
-	}
 
 	client->spawned = false;		// need prespawn, spawn, etc
 }
