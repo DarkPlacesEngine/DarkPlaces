@@ -2861,7 +2861,7 @@ void RSurf_ActiveEntity(const entity_render_t *ent, qboolean wantnormals, qboole
 		R_Mesh_ResizeArrays(rsurface_model->surfmesh.num_vertices);
 	R_Mesh_Matrix(&ent->matrix);
 	Matrix4x4_Transform(&ent->inversematrix, r_view.origin, rsurface_modelorg);
-	if ((rsurface_entity->frameblend[0].lerp != 1 || rsurface_entity->frameblend[0].frame != 0) && rsurface_model->surfmesh.isanimated)
+	if (rsurface_model->surfmesh.isanimated && (rsurface_entity->frameblend[0].lerp != 1 || rsurface_entity->frameblend[0].frame != 0))
 	{
 		if (wanttangents)
 		{
@@ -3857,6 +3857,112 @@ void R_QueueSurfaceList(int numsurfaces, msurface_t **surfacelist)
 	}
 }
 
+void R_DrawCollisionBrushes(entity_render_t *ent)
+{
+	int i;
+	q3mbrush_t *brush;
+	msurface_t *surface;
+	model_t *model = ent->model;
+	if (!model->brush.num_brushes)
+		return;
+	CHECKGLERROR
+	R_Mesh_ColorPointer(NULL);
+	R_Mesh_ResetTextureState();
+	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+	GL_DepthMask(false);
+	GL_DepthTest(!r_showdisabledepthtest.integer);
+	qglPolygonOffset(r_refdef.polygonfactor + r_showcollisionbrushes_polygonfactor.value, r_refdef.polygonoffset + r_showcollisionbrushes_polygonoffset.value);CHECKGLERROR
+	for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)
+		if (brush->colbrushf && brush->colbrushf->numtriangles)
+			R_DrawCollisionBrush(brush->colbrushf);
+	for (i = 0, surface = model->data_surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surface++)
+		if (surface->num_collisiontriangles)
+			R_DrawCollisionSurface(ent, surface);
+	qglPolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);CHECKGLERROR
+}
+
+void R_DrawTrianglesAndNormals(entity_render_t *ent, qboolean drawtris, qboolean drawnormals, int flagsmask)
+{
+	int i, j, k, l;
+	const int *elements;
+	msurface_t *surface;
+	model_t *model = ent->model;
+	vec3_t v;
+	CHECKGLERROR
+	GL_DepthTest(!r_showdisabledepthtest.integer);
+	GL_DepthMask(true);
+	GL_BlendFunc(GL_ONE, GL_ZERO);
+	R_Mesh_ColorPointer(NULL);
+	R_Mesh_ResetTextureState();
+	for (i = 0, j = model->firstmodelsurface, surface = model->data_surfaces + j;i < model->nummodelsurfaces;i++, j++, surface++)
+	{
+		if (ent == r_refdef.worldentity && !r_viewcache.world_surfacevisible[j])
+			continue;
+		rsurface_texture = surface->texture->currentframe;
+		if ((rsurface_texture->currentmaterialflags & flagsmask) && surface->num_triangles)
+		{
+			RSurf_PrepareVerticesForBatch(true, true, 1, &surface);
+			if (drawtris)
+			{
+				if (!rsurface_texture->currentlayers->depthmask)
+					GL_Color(r_showtris.value * r_view.colorscale, 0, 0, 1);
+				else if (ent == r_refdef.worldentity)
+					GL_Color(r_showtris.value * r_view.colorscale, r_showtris.value * r_view.colorscale, r_showtris.value * r_view.colorscale, 1);
+				else
+					GL_Color(0, r_showtris.value * r_view.colorscale, 0, 1);
+				elements = (ent->model->surfmesh.data_element3i + 3 * surface->num_firsttriangle);
+				CHECKGLERROR
+				qglBegin(GL_LINES);
+				for (k = 0;k < surface->num_triangles;k++, elements += 3)
+				{
+					qglArrayElement(elements[0]);qglArrayElement(elements[1]);
+					qglArrayElement(elements[1]);qglArrayElement(elements[2]);
+					qglArrayElement(elements[2]);qglArrayElement(elements[0]);
+				}
+				qglEnd();
+				CHECKGLERROR
+			}
+			if (drawnormals)
+			{
+				GL_Color(r_shownormals.value * r_view.colorscale, 0, 0, 1);
+				qglBegin(GL_LINES);
+				for (k = 0, l = surface->num_firstvertex;k < surface->num_vertices;k++, l++)
+				{
+					VectorCopy(rsurface_vertex3f + l * 3, v);
+					qglVertex3f(v[0], v[1], v[2]);
+					VectorMA(v, 8, rsurface_svector3f + l * 3, v);
+					qglVertex3f(v[0], v[1], v[2]);
+				}
+				qglEnd();
+				CHECKGLERROR
+				GL_Color(0, 0, r_shownormals.value * r_view.colorscale, 1);
+				qglBegin(GL_LINES);
+				for (k = 0, l = surface->num_firstvertex;k < surface->num_vertices;k++, l++)
+				{
+					VectorCopy(rsurface_vertex3f + l * 3, v);
+					qglVertex3f(v[0], v[1], v[2]);
+					VectorMA(v, 8, rsurface_tvector3f + l * 3, v);
+					qglVertex3f(v[0], v[1], v[2]);
+				}
+				qglEnd();
+				CHECKGLERROR
+				GL_Color(0, r_shownormals.value * r_view.colorscale, 0, 1);
+				qglBegin(GL_LINES);
+				for (k = 0, l = surface->num_firstvertex;k < surface->num_vertices;k++, l++)
+				{
+					VectorCopy(rsurface_vertex3f + l * 3, v);
+					qglVertex3f(v[0], v[1], v[2]);
+					VectorMA(v, 8, rsurface_normal3f + l * 3, v);
+					qglVertex3f(v[0], v[1], v[2]);
+				}
+				qglEnd();
+				CHECKGLERROR
+			}
+		}
+	}
+	rsurface_texture = NULL;
+}
+
 extern void R_BuildLightMap(const entity_render_t *ent, msurface_t *surface);
 void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 {
@@ -3964,99 +4070,9 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 	r_refdef.stats.entities_triangles += counttriangles;
 	RSurf_CleanUp();
 
-	if (r_showcollisionbrushes.integer && model->brush.num_brushes && !skysurfaces)
-	{
-		CHECKGLERROR
-		R_Mesh_Matrix(&ent->matrix);
-		R_Mesh_ColorPointer(NULL);
-		R_Mesh_ResetTextureState();
-		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-		GL_DepthMask(false);
-		GL_DepthTest(!r_showdisabledepthtest.integer);
-		qglPolygonOffset(r_refdef.polygonfactor + r_showcollisionbrushes_polygonfactor.value, r_refdef.polygonoffset + r_showcollisionbrushes_polygonoffset.value);CHECKGLERROR
-		for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)
-			if (brush->colbrushf && brush->colbrushf->numtriangles)
-				R_DrawCollisionBrush(brush->colbrushf);
-		for (i = 0, surface = model->data_surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surface++)
-			if (surface->num_collisiontriangles)
-				R_DrawCollisionSurface(ent, surface);
-		qglPolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);CHECKGLERROR
-	}
+	if (r_showcollisionbrushes.integer && !skysurfaces)
+		R_DrawCollisionBrushes(ent);
 
 	if (r_showtris.integer || r_shownormals.integer)
-	{
-		CHECKGLERROR
-		GL_DepthTest(!r_showdisabledepthtest.integer);
-		GL_DepthMask(true);
-		GL_BlendFunc(GL_ONE, GL_ZERO);
-		R_Mesh_ColorPointer(NULL);
-		R_Mesh_ResetTextureState();
-		for (i = 0, j = model->firstmodelsurface, surface = model->data_surfaces + j;i < model->nummodelsurfaces;i++, j++, surface++)
-		{
-			if (ent == r_refdef.worldentity && !r_viewcache.world_surfacevisible[j])
-				continue;
-			rsurface_texture = surface->texture->currentframe;
-			if ((rsurface_texture->currentmaterialflags & flagsmask) && surface->num_triangles)
-			{
-				RSurf_PrepareVerticesForBatch(true, true, 1, &surface);
-				if (r_showtris.integer)
-				{
-					if (!rsurface_texture->currentlayers->depthmask)
-						GL_Color(r_showtris.value * r_view.colorscale, 0, 0, 1);
-					else if (ent == r_refdef.worldentity)
-						GL_Color(r_showtris.value * r_view.colorscale, r_showtris.value * r_view.colorscale, r_showtris.value * r_view.colorscale, 1);
-					else
-						GL_Color(0, r_showtris.value * r_view.colorscale, 0, 1);
-					elements = (ent->model->surfmesh.data_element3i + 3 * surface->num_firsttriangle);
-					CHECKGLERROR
-					qglBegin(GL_LINES);
-					for (k = 0;k < surface->num_triangles;k++, elements += 3)
-					{
-						qglArrayElement(elements[0]);qglArrayElement(elements[1]);
-						qglArrayElement(elements[1]);qglArrayElement(elements[2]);
-						qglArrayElement(elements[2]);qglArrayElement(elements[0]);
-					}
-					qglEnd();
-					CHECKGLERROR
-				}
-				if (r_shownormals.integer)
-				{
-					GL_Color(r_shownormals.value * r_view.colorscale, 0, 0, 1);
-					qglBegin(GL_LINES);
-					for (k = 0, l = surface->num_firstvertex;k < surface->num_vertices;k++, l++)
-					{
-						VectorCopy(rsurface_vertex3f + l * 3, v);
-						qglVertex3f(v[0], v[1], v[2]);
-						VectorMA(v, 8, rsurface_svector3f + l * 3, v);
-						qglVertex3f(v[0], v[1], v[2]);
-					}
-					qglEnd();
-					CHECKGLERROR
-					GL_Color(0, 0, r_shownormals.value * r_view.colorscale, 1);
-					qglBegin(GL_LINES);
-					for (k = 0, l = surface->num_firstvertex;k < surface->num_vertices;k++, l++)
-					{
-						VectorCopy(rsurface_vertex3f + l * 3, v);
-						qglVertex3f(v[0], v[1], v[2]);
-						VectorMA(v, 8, rsurface_tvector3f + l * 3, v);
-						qglVertex3f(v[0], v[1], v[2]);
-					}
-					qglEnd();
-					CHECKGLERROR
-					GL_Color(0, r_shownormals.value * r_view.colorscale, 0, 1);
-					qglBegin(GL_LINES);
-					for (k = 0, l = surface->num_firstvertex;k < surface->num_vertices;k++, l++)
-					{
-						VectorCopy(rsurface_vertex3f + l * 3, v);
-						qglVertex3f(v[0], v[1], v[2]);
-						VectorMA(v, 8, rsurface_normal3f + l * 3, v);
-						qglVertex3f(v[0], v[1], v[2]);
-					}
-					qglEnd();
-					CHECKGLERROR
-				}
-			}
-		}
-		rsurface_texture = NULL;
-	}
+		R_DrawTrianglesAndNormals(ent, r_showtris.integer, r_shownormals.integer, flagsmask);
 }
