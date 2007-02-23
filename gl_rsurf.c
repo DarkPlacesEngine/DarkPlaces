@@ -955,7 +955,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 			surface = batchsurfacelist[k];
 			tex = surface->texture;
 			rsurface_texture = tex->currentframe;
-			for (l = k;l < batchnumsurfaces && tex == batchsurfacelist[l]->texture;l++);
+			for (l = k;l < batchnumsurfaces && tex == batchsurfacelist[l]->texture;l++)
 				r_refdef.stats.lights_lighttriangles += batchsurfacelist[l]->num_triangles;
 			if (rsurface_texture->currentmaterialflags & (MATERIALFLAG_WALL | MATERIALFLAG_WATER))
 			{
