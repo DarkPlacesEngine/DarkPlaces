@@ -86,6 +86,7 @@ void Mod_Alias_GetMesh_Vertices(const model_t *model, const frameblend_t *frameb
 			const float *v = model->surfmesh.data_vertex3f;
 			const int *wi = model->surfmesh.data_vertexweightindex4i;
 			const float *wf = model->surfmesh.data_vertexweightinfluence4f;
+			memset(vertex3f, 0, sizeof(float[3]) * model->surfmesh.num_vertices);
 			for (i = 0;i < model->surfmesh.num_vertices;i++, v += 3, wi += 4, wf += 4, vertex3f += 3)
 			{
 				if (wf[0] == 1)
@@ -118,6 +119,7 @@ void Mod_Alias_GetMesh_Vertices(const model_t *model, const frameblend_t *frameb
 			const float *n = model->surfmesh.data_normal3f;
 			const int *wi = model->surfmesh.data_vertexweightindex4i;
 			const float *wf = model->surfmesh.data_vertexweightinfluence4f;
+			memset(normal3f, 0, sizeof(float[3]) * model->surfmesh.num_vertices);
 			for (i = 0;i < model->surfmesh.num_vertices;i++, n += 3, wi += 4, wf += 4, normal3f += 3)
 			{
 				if (wf[0] == 1)
@@ -150,6 +152,7 @@ void Mod_Alias_GetMesh_Vertices(const model_t *model, const frameblend_t *frameb
 			const float *sv = model->surfmesh.data_svector3f;
 			const int *wi = model->surfmesh.data_vertexweightindex4i;
 			const float *wf = model->surfmesh.data_vertexweightinfluence4f;
+			memset(svector3f, 0, sizeof(float[3]) * model->surfmesh.num_vertices);
 			for (i = 0;i < model->surfmesh.num_vertices;i++, sv += 3, wi += 4, wf += 4, svector3f += 3)
 			{
 				if (wf[0] == 1)
@@ -182,6 +185,7 @@ void Mod_Alias_GetMesh_Vertices(const model_t *model, const frameblend_t *frameb
 			const float *tv = model->surfmesh.data_tvector3f;
 			const int *wi = model->surfmesh.data_vertexweightindex4i;
 			const float *wf = model->surfmesh.data_vertexweightinfluence4f;
+			memset(tvector3f, 0, sizeof(float[3]) * model->surfmesh.num_vertices);
 			for (i = 0;i < model->surfmesh.num_vertices;i++, tv += 3, wi += 4, wf += 4, tvector3f += 3)
 			{
 				if (wf[0] == 1)
