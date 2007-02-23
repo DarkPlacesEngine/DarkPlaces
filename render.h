@@ -218,7 +218,8 @@ extern texture_t *rsurface_texture;
 extern qboolean rsurface_uselightmaptexture;
 extern rsurfmode_t rsurface_mode;
 
-void RSurf_ActiveEntity(const entity_render_t *ent, qboolean wantnormals, qboolean wanttangents);
+void RSurf_ActiveWorldEntity(void);
+void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, qboolean wanttangents);
 void RSurf_CleanUp(void);
 
 void R_Mesh_ResizeArrays(int newvertices);
@@ -229,7 +230,8 @@ struct msurface_s;
 void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t);
 void R_UpdateAllTextureInfo(entity_render_t *ent);
 void R_QueueTextureSurfaceList(int texturenumsurfaces, msurface_t **texturesurfacelist);
-void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces);
+void R_DrawWorldSurfaces(qboolean skysurfaces);
+void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces);
 
 void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generatetangents, int texturenumsurfaces, msurface_t **texturesurfacelist);
 void RSurf_DrawBatch_Simple(int texturenumsurfaces, msurface_t **texturesurfacelist);
