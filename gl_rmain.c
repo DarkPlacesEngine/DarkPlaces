@@ -3966,17 +3966,14 @@ void R_DrawTrianglesAndNormals(entity_render_t *ent, qboolean drawtris, qboolean
 extern void R_BuildLightMap(const entity_render_t *ent, msurface_t *surface);
 void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 {
-	int i, j, k, l, endj, f, flagsmask;
+	int i, j, endj, f, flagsmask;
 	int counttriangles = 0;
 	msurface_t *surface, *endsurface, **surfacechain;
 	texture_t *t;
-	q3mbrush_t *brush;
 	model_t *model = ent->model;
-	const int *elements;
 	const int maxsurfacelist = 1024;
 	int numsurfacelist = 0;
 	msurface_t *surfacelist[1024];
-	vec3_t v;
 	if (model == NULL)
 		return;
 
