@@ -922,7 +922,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 {
 	model_t *model = ent->model;
 	msurface_t *surface;
-	int i, j, k, l, endsurface, batchnumsurfaces;
+	int i, k, l, endsurface, batchnumsurfaces;
 	msurface_t *batchsurfacelist[RSURF_MAX_BATCHSURFACES];
 	texture_t *tex;
 	CHECKGLERROR
@@ -933,30 +933,30 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 	// fast, and even if this is not the world model (and hence no visibility
 	// checking) the input surface list and batch buffer are different formats
 	// so some processing is necessary.  (luckily models have few surfaces)
-	for (i = 0;i < numsurfaces;i = j)
+	for (i = 0;i < numsurfaces;)
 	{
 		batchnumsurfaces = 0;
 		endsurface = min(i + RSURF_MAX_BATCHSURFACES, numsurfaces);
 		if (ent == r_refdef.worldentity)
 		{
-			for (j = i;j < endsurface;j++)
-				if (r_viewcache.world_surfacevisible[surfacelist[j]])
-					batchsurfacelist[batchnumsurfaces++] = model->data_surfaces + surfacelist[j];
+			for (;i < endsurface;i++)
+				if (r_viewcache.world_surfacevisible[surfacelist[i]])
+					batchsurfacelist[batchnumsurfaces++] = model->data_surfaces + surfacelist[i];
 		}
 		else
 		{
-			for (j = i;j < endsurface;j++)
-				batchsurfacelist[batchnumsurfaces++] = model->data_surfaces + surfacelist[j];
+			for (;i < endsurface;i++)
+				batchsurfacelist[batchnumsurfaces++] = model->data_surfaces + surfacelist[i];
 		}
 		if (!batchnumsurfaces)
 			continue;
 		for (k = 0;k < batchnumsurfaces;k = l)
 		{
-			l = k + 1;
 			surface = batchsurfacelist[k];
 			tex = surface->texture;
 			rsurface_texture = tex->currentframe;
-			for (;l < batchnumsurfaces && tex == batchsurfacelist[k]->texture;l++);
+			for (l = k;l < batchnumsurfaces && tex == batchsurfacelist[l]->texture;l++);
+				r_refdef.stats.lights_lighttriangles += batchsurfacelist[l]->num_triangles;
 			if (rsurface_texture->currentmaterialflags & (MATERIALFLAG_WALL | MATERIALFLAG_WATER))
 			{
 				if (rsurface_texture->currentmaterialflags & MATERIALFLAG_BLENDED)
