@@ -556,13 +556,12 @@ void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
 		if (!plane)
 			break;
 		if (plane->type < 3)
-			sides = ((info->lightmaxs[plane->type] >= plane->dist) | ((info->lightmins[plane->type] < plane->dist) << 1));
-		else
-			sides = BoxOnPlaneSide(info->lightmins, info->lightmaxs, plane);
-		if (sides == 3)
 		{
-			// recurse front side first because the svbsp building prefers it
-			if (PlaneDist(info->relativelightorigin, plane) > 0)
+			if (info->lightmins[plane->type] > plane->dist)
+				node = node->children[0];
+			else if (info->lightmaxs[plane->type] < plane->dist)
+				node = node->children[1];
+			else if (info->relativelightorigin[plane->type] >= plane->dist)
 			{
 				R_Q1BSP_RecursiveGetLightInfo(info, node->children[0]);
 				node = node->children[1];
@@ -573,10 +572,28 @@ void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
 				node = node->children[0];
 			}
 		}
-		else if (sides == 0)
-			return; // ERROR: NAN bounding box!
 		else
-			node = node->children[sides - 1];
+		{
+			sides = BoxOnPlaneSide(info->lightmins, info->lightmaxs, plane);
+			if (sides == 3)
+			{
+				// recurse front side first because the svbsp building prefers it
+				if (PlaneDist(info->relativelightorigin, plane) >= 0)
+				{
+					R_Q1BSP_RecursiveGetLightInfo(info, node->children[0]);
+					node = node->children[1];
+				}
+				else
+				{
+					R_Q1BSP_RecursiveGetLightInfo(info, node->children[1]);
+					node = node->children[0];
+				}
+			}
+			else if (sides == 0)
+				return; // ERROR: NAN bounding box!
+			else
+				node = node->children[sides - 1];
+		}
 	}
 	leaf = (mleaf_t *)node;
 	if (info->svbsp_active)
@@ -659,9 +676,7 @@ void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
 							}
 							SETPVSBIT(info->outsurfacepvs, surfaceindex);
 							info->outsurfacelist[info->outnumsurfaces++] = surfaceindex;
-							if (info->svbsp_insertoccluder)
-								continue;
-							else
+							if (!info->svbsp_insertoccluder)
 								break;
 						}
 					}
