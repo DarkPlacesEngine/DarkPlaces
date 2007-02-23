@@ -64,6 +64,7 @@
 0 bug darkplaces client: it has been reported that sometimes level changes on quakeworld servers don't load a map, this may be related to downloading? (Baker)
 0 bug darkplaces client: name (and probably other userinfo properties) are not being set when entering a qw server?
 0 bug darkplaces client: when going through a teleporter the cl_movement prediction still interpolates the move (div0)
+0 bug darkplaces docs: host_maxfps is gone, correct the darkplaces.txt and host.c cvar description for host_framerate
 0 bug darkplaces loader: make rtlight entity loader support q3map/q3map2 lights properly, they use a spawnflag for LINEAR mode, by default they use 1/(x*x) falloff (Carni, motorsep)
 0 bug darkplaces physics: when riding a lift down (such as near the start of e1m1), the player is not being pulled down, unlike in quake, this can cause repeated fall damage on very fast lifts (scar3crow)
 0 bug darkplaces readme: commandline options are slightly out of date, update them (Baker)
