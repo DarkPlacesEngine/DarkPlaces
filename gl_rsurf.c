@@ -653,31 +653,61 @@ void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
 				if (BoxesOverlap(info->lightmins, info->lightmaxs, surface->mins, surface->maxs)
 				 && (!info->svbsp_insertoccluder || !(surface->texture->currentframe->currentmaterialflags & MATERIALFLAG_NOSHADOW)))
 				{
-					for (triangleindex = 0, t = surface->num_firstshadowmeshtriangle, e = info->model->brush.shadowmesh->element3i + t * 3;triangleindex < surface->num_triangles;triangleindex++, t++, e += 3)
+					if (BoxInsideBox(surface->mins, surface->maxs, info->lightmins, info->lightmaxs))
 					{
-						v[0] = info->model->brush.shadowmesh->vertex3f + e[0] * 3;
-						v[1] = info->model->brush.shadowmesh->vertex3f + e[1] * 3;
-						v[2] = info->model->brush.shadowmesh->vertex3f + e[2] * 3;
-						if ((!r_shadow_frontsidecasting.integer || PointInfrontOfTriangle(info->relativelightorigin, v[0], v[1], v[2]))
-						 && info->lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0]))
-						 && info->lightmins[0] < max(v[0][0], max(v[1][0], v[2][0]))
-						 && info->lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1]))
-						 && info->lightmins[1] < max(v[0][1], max(v[1][1], v[2][1]))
-						 && info->lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2]))
-						 && info->lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
+						// surface is entirely inside light box
+						for (triangleindex = 0, t = surface->num_firstshadowmeshtriangle, e = info->model->brush.shadowmesh->element3i + t * 3;triangleindex < surface->num_triangles;triangleindex++, t++, e += 3)
 						{
-							if (info->svbsp_active)
+							v[0] = info->model->brush.shadowmesh->vertex3f + e[0] * 3;
+							v[1] = info->model->brush.shadowmesh->vertex3f + e[1] * 3;
+							v[2] = info->model->brush.shadowmesh->vertex3f + e[2] * 3;
+							if ((!r_shadow_frontsidecasting.integer || PointInfrontOfTriangle(info->relativelightorigin, v[0], v[1], v[2])))
 							{
-								VectorCopy(v[0], v2[0]);
-								VectorCopy(v[1], v2[1]);
-								VectorCopy(v[2], v2[2]);
-								if (!(SVBSP_AddPolygon(&r_svbsp, 3, v2[0], info->svbsp_insertoccluder, NULL, NULL, 0) & 2))
-									continue;
+								if (info->svbsp_active)
+								{
+									VectorCopy(v[0], v2[0]);
+									VectorCopy(v[1], v2[1]);
+									VectorCopy(v[2], v2[2]);
+									if (!(SVBSP_AddPolygon(&r_svbsp, 3, v2[0], info->svbsp_insertoccluder, NULL, NULL, 0) & 2))
+										continue;
+								}
+								SETPVSBIT(info->outsurfacepvs, surfaceindex);
+								info->outsurfacelist[info->outnumsurfaces++] = surfaceindex;
+								if (!info->svbsp_insertoccluder)
+									break;
 							}
-							SETPVSBIT(info->outsurfacepvs, surfaceindex);
-							info->outsurfacelist[info->outnumsurfaces++] = surfaceindex;
-							if (!info->svbsp_insertoccluder)
-								break;
+						}
+					}
+					else
+					{
+						// surface is partially clipped by lightbox
+						// check each triangle's bounding box
+						for (triangleindex = 0, t = surface->num_firstshadowmeshtriangle, e = info->model->brush.shadowmesh->element3i + t * 3;triangleindex < surface->num_triangles;triangleindex++, t++, e += 3)
+						{
+							v[0] = info->model->brush.shadowmesh->vertex3f + e[0] * 3;
+							v[1] = info->model->brush.shadowmesh->vertex3f + e[1] * 3;
+							v[2] = info->model->brush.shadowmesh->vertex3f + e[2] * 3;
+							if ((!r_shadow_frontsidecasting.integer || PointInfrontOfTriangle(info->relativelightorigin, v[0], v[1], v[2]))
+							 && info->lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0]))
+							 && info->lightmins[0] < max(v[0][0], max(v[1][0], v[2][0]))
+							 && info->lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1]))
+							 && info->lightmins[1] < max(v[0][1], max(v[1][1], v[2][1]))
+							 && info->lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2]))
+							 && info->lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
+							{
+								if (info->svbsp_active)
+								{
+									VectorCopy(v[0], v2[0]);
+									VectorCopy(v[1], v2[1]);
+									VectorCopy(v[2], v2[2]);
+									if (!(SVBSP_AddPolygon(&r_svbsp, 3, v2[0], info->svbsp_insertoccluder, NULL, NULL, 0) & 2))
+										continue;
+								}
+								SETPVSBIT(info->outsurfacepvs, surfaceindex);
+								info->outsurfacelist[info->outnumsurfaces++] = surfaceindex;
+								if (!info->svbsp_insertoccluder)
+									break;
+							}
 						}
 					}
 				}
