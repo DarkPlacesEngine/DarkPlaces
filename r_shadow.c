@@ -2466,18 +2466,38 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 		{
 			model_t *model;
 			entity_render_t *ent = r_refdef.entities[i];
-			if (BoxesOverlap(ent->mins, ent->maxs, r_shadow_rtlight_cullmins, r_shadow_rtlight_cullmaxs)
-			 && (model = ent->model)
-			 && !(ent->flags & RENDER_TRANSPARENT)
-			 && (r_refdef.worldmodel == NULL || r_refdef.worldmodel->brush.BoxTouchingLeafPVS == NULL || r_refdef.worldmodel->brush.BoxTouchingLeafPVS(r_refdef.worldmodel, leafpvs, ent->mins, ent->maxs)))
+			vec3_t org;
+			if (!BoxesOverlap(ent->mins, ent->maxs, r_shadow_rtlight_cullmins, r_shadow_rtlight_cullmaxs))
+				continue;
+			if (!(model = ent->model))
+				continue;
+			if (r_viewcache.entityvisible[i] && model->DrawLight && (ent->flags & RENDER_LIGHT))
 			{
+				// this entity wants to receive light, is visible, and is
+				// inside the light box
+				// TODO: check if the surfaces in the model can receive light
+				// so now check if it's in a leaf seen by the light
+				if (r_refdef.worldmodel && r_refdef.worldmodel->brush.BoxTouchingLeafPVS && !r_refdef.worldmodel->brush.BoxTouchingLeafPVS(r_refdef.worldmodel, leafpvs, ent->mins, ent->maxs))
+					continue;
+				lightentities[numlightentities++] = ent;
+				// since it is lit, it probably also casts a shadow...
 				// about the VectorDistance2 - light emitting entities should not cast their own shadow
-				vec3_t org;
 				Matrix4x4_OriginFromMatrix(&ent->matrix, org);
 				if ((ent->flags & RENDER_SHADOW) && model->DrawShadowVolume && VectorDistance2(org, rtlight->shadoworigin) > 0.1)
 					shadowentities[numshadowentities++] = ent;
-				if (r_viewcache.entityvisible[i] && (ent->flags & RENDER_LIGHT) && model->DrawLight)
-					lightentities[numlightentities++] = ent;
+			}
+			else if (ent->flags & RENDER_SHADOW)
+			{
+				// this entity is not receiving light, but may still need to
+				// cast a shadow...
+				// TODO: check if the surfaces in the model can cast shadow
+				// now check if it is in a leaf seen by the light
+				if (r_refdef.worldmodel && r_refdef.worldmodel->brush.BoxTouchingLeafPVS && !r_refdef.worldmodel->brush.BoxTouchingLeafPVS(r_refdef.worldmodel, leafpvs, ent->mins, ent->maxs))
+					continue;
+				// about the VectorDistance2 - light emitting entities should not cast their own shadow
+				Matrix4x4_OriginFromMatrix(&ent->matrix, org);
+				if ((ent->flags & RENDER_SHADOW) && model->DrawShadowVolume && VectorDistance2(org, rtlight->shadoworigin) > 0.1)
+					shadowentities[numshadowentities++] = ent;
 			}
 		}
 	}
