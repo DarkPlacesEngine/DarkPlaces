@@ -1192,9 +1192,14 @@ static void VM_SV_makestatic (void)
 	prvm_edict_t *ent;
 	int i, large;
 
-	VM_SAFEPARMCOUNT(1, VM_SV_makestatic);
+	// allow 0 parameters due to an id1 qc bug in which this function is used
+	// with no parameters (but directly after setmodel with self in OFS_PARM0)
+	VM_SAFEPARMCOUNTRANGE(0, 1, VM_SV_makestatic);
 
-	ent = PRVM_G_EDICT(OFS_PARM0);
+	if (prog->argc >= 1)
+		ent = PRVM_G_EDICT(OFS_PARM0);
+	else
+		ent = PRVM_PROG_TO_EDICT(prog->globals.server->self);
 	if (ent == prog->edicts)
 	{
 		VM_Warning("makestatic: can not modify world entity\n");
