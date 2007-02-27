@@ -3,7 +3,7 @@
 #include "libcurl.h"
 
 static cvar_t cl_curl_maxdownloads = {CVAR_SAVE, "cl_curl_maxdownloads","1", "maximum number of concurrent HTTP/FTP downloads"};
-static cvar_t cl_curl_maxspeed = CVAR_SAVE, "cl_curl_maxspeed","100", "maximum download speed (KiB/s)"};
+static cvar_t cl_curl_maxspeed = {CVAR_SAVE, "cl_curl_maxspeed","100", "maximum download speed (KiB/s)"};
 static cvar_t sv_curl_defaulturl = {CVAR_SAVE, "sv_curl_defaulturl","", "default autodownload source URL"};
 static cvar_t sv_curl_serverpackages = {CVAR_SAVE, "sv_curl_serverpackages","", "list of required files for the clients, separated by spaces"};
 static cvar_t cl_curl_enabled = {CVAR_SAVE, "cl_curl_enabled","0", "whether client's download support is enabled"};
