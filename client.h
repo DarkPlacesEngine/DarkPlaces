@@ -1113,7 +1113,6 @@ extern cvar_t cl_particles_blood;
 extern cvar_t cl_particles_blood_alpha;
 extern cvar_t cl_particles_blood_bloodhack;
 extern cvar_t cl_particles_bulletimpacts;
-extern cvar_t cl_particles_explosions_bubbles;
 extern cvar_t cl_particles_explosions_smoke;
 extern cvar_t cl_particles_explosions_sparks;
 extern cvar_t cl_particles_explosions_shell;
