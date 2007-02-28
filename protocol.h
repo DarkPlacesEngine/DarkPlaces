@@ -319,8 +319,6 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define RENDER_COLORMAPPED 32
 #define RENDER_SHADOW 65536 // cast shadow
 #define RENDER_LIGHT 131072 // receive light
-#define RENDER_TRANSPARENT 262144 // can't light during opaque stage
-#define RENDER_NOCULLFACE 524288 // render as double sided (disable GL_CULL_FACE)
 
 // this is 88 bytes
 typedef struct entity_state_s

@@ -1205,19 +1205,11 @@ static void VM_CL_makestatic (void)
 			Matrix4x4_CreateFromQuakeEntity(&staticent->render.matrix, ent->fields.client->origin[0], ent->fields.client->origin[1], ent->fields.client->origin[2], ent->fields.client->angles[0], ent->fields.client->angles[1], ent->fields.client->angles[2], staticent->render.scale);
 		CL_UpdateRenderEntity(&staticent->render);
 
-		// transparent stuff can't be lit during the opaque stage
-		if (staticent->render.effects & (EF_ADDITIVE | EF_NODEPTHTEST) || staticent->render.alpha < 1)
-			staticent->render.flags |= RENDER_TRANSPARENT;
-		// double sided rendering mode causes backfaces to be visible
-		// (mostly useful on transparent stuff)
-		if (staticent->render.effects & EF_DOUBLESIDED)
-			staticent->render.flags |= RENDER_NOCULLFACE;
 		// either fullbright or lit
 		if (!(staticent->render.effects & EF_FULLBRIGHT) && !r_fullbright.integer)
 			staticent->render.flags |= RENDER_LIGHT;
 		// turn off shadows from transparent objects
-		if (!(staticent->render.effects & EF_NOSHADOW)
-		 && !(staticent->render.flags & RENDER_TRANSPARENT))
+		if (!(staticent->render.effects & (EF_NOSHADOW | EF_ADDITIVE | EF_NODEPTHTEST)) && (staticent->render.alpha >= 1))
 			staticent->render.flags |= RENDER_SHADOW;
 	}
 	else

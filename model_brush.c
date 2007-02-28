@@ -4398,6 +4398,7 @@ static void Mod_Q3BSP_LoadShaders(void)
 			// identify if this is a blended terrain shader or similar
 			if (shader->numlayers)
 			{
+				shader->backgroundlayer = NULL;
 				shader->primarylayer = shader->layers + 0;
 				if ((shader->layers[0].blendfunc[0] == GL_ONE       && shader->layers[0].blendfunc[1] == GL_ZERO                && !shader->layers[0].alphatest)
 				&& ((shader->layers[1].blendfunc[0] == GL_SRC_ALPHA && shader->layers[1].blendfunc[1] == GL_ONE_MINUS_SRC_ALPHA && !shader->layers[0].alphatest)
@@ -4409,7 +4410,10 @@ static void Mod_Q3BSP_LoadShaders(void)
 				}
 				// now see if the lightmap came first, and if so choose the second texture instead
 				if (!strcasecmp(shader->primarylayer->texturename[0], "$lightmap"))
+				{
+					shader->backgroundlayer = NULL;
 					shader->primarylayer = shader->layers + 1;
+				}
 			}
 		}
 		Mem_Free(f);
@@ -4477,7 +4481,9 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 				out->basematerialflags |= MATERIALFLAG_WALL;
 			if (shader->layers[0].alphatest)
 				out->basematerialflags |= MATERIALFLAG_ALPHATEST | MATERIALFLAG_TRANSPARENT | MATERIALFLAG_NOSHADOW;
-			if (shader->textureflags & (Q3TEXTUREFLAG_TWOSIDED | Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2))
+			if (shader->textureflags & Q3TEXTUREFLAG_TWOSIDED)
+				out->basematerialflags |= MATERIALFLAG_NOSHADOW | MATERIALFLAG_NOCULLFACE;
+			if (shader->textureflags & (Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2))
 				out->basematerialflags |= MATERIALFLAG_NOSHADOW;
 			out->customblendfunc[0] = GL_ONE;
 			out->customblendfunc[1] = GL_ZERO;

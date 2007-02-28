@@ -188,19 +188,13 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 		if(i & RF_ADDITIVE)		e->render.effects |= EF_ADDITIVE;
 	}
 
-	// transparent stuff can't be lit during the opaque stage
-	if (e->render.effects & (EF_ADDITIVE | EF_NODEPTHTEST) || e->render.alpha < 1)
-		e->render.flags |= RENDER_TRANSPARENT;
-	// double sided rendering mode causes backfaces to be visible
-	// (mostly useful on transparent stuff)
-	if (e->render.effects & EF_DOUBLESIDED)
-		e->render.flags |= RENDER_NOCULLFACE;
 	// either fullbright or lit
 	if (!(e->render.effects & EF_FULLBRIGHT) && !r_fullbright.integer)
 		e->render.flags |= RENDER_LIGHT;
 	// hide player shadow during intermission or nehahra movie
-	if (!(e->render.effects & EF_NOSHADOW)
-	 && !(e->render.flags & (RENDER_VIEWMODEL | RENDER_TRANSPARENT))
+	if (!(e->render.effects & (EF_NOSHADOW | EF_ADDITIVE | EF_NODEPTHTEST))
+	 &&  (e->render.alpha >= 1)
+	 && !(e->render.flags & RENDER_VIEWMODEL)
 	 && (!(e->render.flags & RENDER_EXTERIORMODEL) || (!cl.intermission && cls.protocol != PROTOCOL_NEHAHRAMOVIE && !cl_noplayershadow.integer)))
 		e->render.flags |= RENDER_SHADOW;
 

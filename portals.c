@@ -323,7 +323,7 @@ static void Portal_RecursiveFlow (portalrecursioninfo_t *info, mleaf_t *leaf, in
 						int j;
 						const int *elements;
 						const float *vertex3f;
-						float v[9], trimins[3], trimaxs[3];
+						float v[9];
 						vertex3f = info->model->surfmesh.data_vertex3f;
 						elements = (info->model->surfmesh.data_element3i + 3 * surface->num_firsttriangle);
 						for (j = 0;j < surface->num_triangles;j++, elements += 3)
@@ -331,20 +331,11 @@ static void Portal_RecursiveFlow (portalrecursioninfo_t *info, mleaf_t *leaf, in
 							VectorCopy(vertex3f + elements[0] * 3, v + 0);
 							VectorCopy(vertex3f + elements[1] * 3, v + 3);
 							VectorCopy(vertex3f + elements[2] * 3, v + 6);
-							if (PointInfrontOfTriangle(info->eye, v + 0, v + 3, v + 6))
+							if (PointInfrontOfTriangle(info->eye, v + 0, v + 3, v + 6) && TriangleOverlapsBox(v, v + 3, v + 6, info->boxmins, info->boxmaxs) && Portal_PortalThroughPortalPlanes(&portalplanes[firstclipplane], numclipplanes, v, 3, &portaltemppoints2[0][0], 256) > 0)
 							{
-								trimins[0] = min(v[0], min(v[3], v[6]));
-								trimaxs[0] = max(v[0], max(v[3], v[6]));
-								trimins[1] = min(v[1], min(v[4], v[7]));
-								trimaxs[1] = max(v[1], max(v[4], v[7]));
-								trimins[2] = min(v[2], min(v[5], v[8]));
-								trimaxs[2] = max(v[2], max(v[5], v[8]));
-								if (BoxesOverlap(trimins, trimaxs, info->boxmins, info->boxmaxs) && Portal_PortalThroughPortalPlanes(&portalplanes[firstclipplane], numclipplanes, v, 3, &portaltemppoints2[0][0], 256) > 0)
-								{
-									SETPVSBIT(info->surfacepvs, surfaceindex);
-									info->surfacelist[info->numsurfaces++] = surfaceindex;
-									break;
-								}
+								SETPVSBIT(info->surfacepvs, surfaceindex);
+								info->surfacelist[info->numsurfaces++] = surfaceindex;
+								break;
 							}
 						}
 					}

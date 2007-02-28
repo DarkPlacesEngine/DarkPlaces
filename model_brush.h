@@ -97,6 +97,8 @@ mplane_t;
 #define MATERIALFLAG_NOSHADOW 16384
 // render using vertex alpha (q3bsp) as texture blend parameter between foreground (normal) skinframe and background skinframe
 #define MATERIALFLAG_VERTEXTEXTUREBLEND 32768
+// disables GL_CULL_FACE on this texture (making it double sided)
+#define MATERIALFLAG_NOCULLFACE 65536
 
 typedef struct medge_s
 {
