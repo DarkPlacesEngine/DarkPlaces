@@ -789,9 +789,7 @@ void R_Shadow_MarkVolumeFromBox(int firsttriangle, int numtris, const float *inv
 	if (!BoxesOverlap(lightmins, lightmaxs, surfacemins, surfacemaxs))
 		return;
 	tend = firsttriangle + numtris;
-	if (surfacemins[0] >= lightmins[0] && surfacemaxs[0] <= lightmaxs[0]
-	 && surfacemins[1] >= lightmins[1] && surfacemaxs[1] <= lightmaxs[1]
-	 && surfacemins[2] >= lightmins[2] && surfacemaxs[2] <= lightmaxs[2])
+	if (BoxInsideBox(surfacemins, surfacemaxs, lightmins, lightmaxs))
 	{
 		// surface box entirely inside light box, no box cull
 		if (projectdirection)
@@ -822,12 +820,7 @@ void R_Shadow_MarkVolumeFromBox(int firsttriangle, int numtris, const float *inv
 				v[2] = invertex3f + e[2] * 3;
 				TriangleNormal(v[0], v[1], v[2], normal);
 				if (r_shadow_frontsidecasting.integer == (DotProduct(normal, projectdirection) < 0)
-				 && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0]))
-				 && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0]))
-				 && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1]))
-				 && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1]))
-				 && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2]))
-				 && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
+				 && TriangleOverlapsBox(v[0], v[1], v[2], lightmins, lightmaxs))
 					shadowmarklist[numshadowmark++] = t;
 			}
 		}
@@ -839,12 +832,7 @@ void R_Shadow_MarkVolumeFromBox(int firsttriangle, int numtris, const float *inv
 				v[1] = invertex3f + e[1] * 3;
 				v[2] = invertex3f + e[2] * 3;
 				if (r_shadow_frontsidecasting.integer == PointInfrontOfTriangle(projectorigin, v[0], v[1], v[2])
-				 && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0]))
-				 && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0]))
-				 && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1]))
-				 && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1]))
-				 && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2]))
-				 && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
+				 && TriangleOverlapsBox(v[0], v[1], v[2], lightmins, lightmaxs))
 					shadowmarklist[numshadowmark++] = t;
 			}
 		}
@@ -2077,7 +2065,7 @@ void R_Shadow_RenderSurfacesLighting(int numsurfaces, msurface_t **surfacelist)
 	if ((r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * VectorLength2(lightcolorbase) + (r_shadow_rtlight->specularscale * rsurface_texture->specularscale) * VectorLength2(lightcolorbase) < (1.0f / 1048576.0f))
 		return;
 	GL_DepthTest(!(rsurface_texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
-	GL_CullFace(((rsurface_texture->textureflags & Q3TEXTUREFLAG_TWOSIDED) || (rsurface_entity->flags & RENDER_NOCULLFACE)) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
+	GL_CullFace((rsurface_texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
 	if (rsurface_texture->colormapping)
 	{
 		qboolean dopants = rsurface_texture->currentskinframe->pants != NULL && VectorLength2(rsurface_entity->colormap_pantscolor) >= (1.0f / 1048576.0f);

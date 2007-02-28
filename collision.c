@@ -889,12 +889,7 @@ void Collision_TraceBrushTriangleMeshFloat(trace_t *trace, const colbrushf_t *th
 	}
 	for (i = 0;i < numtriangles;i++, element3i += 3)
 	{
-		if (segmentmaxs[0] >= min(vertex3f[element3i[0]*3+0], min(vertex3f[element3i[1]*3+0], vertex3f[element3i[2]*3+0]))
-		 && segmentmins[0] <= max(vertex3f[element3i[0]*3+0], max(vertex3f[element3i[1]*3+0], vertex3f[element3i[2]*3+0]))
-		 && segmentmaxs[1] >= min(vertex3f[element3i[0]*3+1], min(vertex3f[element3i[1]*3+1], vertex3f[element3i[2]*3+1]))
-		 && segmentmins[1] <= max(vertex3f[element3i[0]*3+1], max(vertex3f[element3i[1]*3+1], vertex3f[element3i[2]*3+1]))
-		 && segmentmaxs[2] >= min(vertex3f[element3i[0]*3+2], min(vertex3f[element3i[1]*3+2], vertex3f[element3i[2]*3+2]))
-		 && segmentmins[2] <= max(vertex3f[element3i[0]*3+2], max(vertex3f[element3i[1]*3+2], vertex3f[element3i[2]*3+2])))
+		if (TriangleOverlapsBox(vertex3f + element3i[0]*3, vertex3f + element3i[1]*3, vertex3f + element3i[2]*3, segmentmins, segmentmaxs))
 		{
 			VectorCopy(vertex3f + element3i[0] * 3, polyf_points[0].v);
 			VectorCopy(vertex3f + element3i[1] * 3, polyf_points[1].v);
@@ -947,12 +942,7 @@ void Collision_TraceLineTriangleMeshFloat(trace_t *trace, const vec3_t linestart
 	}
 	for (i = 0;i < numtriangles;i++, element3i += 3)
 	{
-		if (segmentmaxs[0] >= min(vertex3f[element3i[0]*3+0], min(vertex3f[element3i[1]*3+0], vertex3f[element3i[2]*3+0]))
-		 && segmentmins[0] <= max(vertex3f[element3i[0]*3+0], max(vertex3f[element3i[1]*3+0], vertex3f[element3i[2]*3+0]))
-		 && segmentmaxs[1] >= min(vertex3f[element3i[0]*3+1], min(vertex3f[element3i[1]*3+1], vertex3f[element3i[2]*3+1]))
-		 && segmentmins[1] <= max(vertex3f[element3i[0]*3+1], max(vertex3f[element3i[1]*3+1], vertex3f[element3i[2]*3+1]))
-		 && segmentmaxs[2] >= min(vertex3f[element3i[0]*3+2], min(vertex3f[element3i[1]*3+2], vertex3f[element3i[2]*3+2]))
-		 && segmentmins[2] <= max(vertex3f[element3i[0]*3+2], max(vertex3f[element3i[1]*3+2], vertex3f[element3i[2]*3+2])))
+		if (TriangleOverlapsBox(vertex3f + element3i[0]*3, vertex3 + [element3i[1]*3, vertex3f + element3i[2]*3, segmentmins, segmentmaxs))
 		{
 			VectorCopy(vertex3f + element3i[0] * 3, polyf_points[0].v);
 			VectorCopy(vertex3f + element3i[1] * 3, polyf_points[1].v);
