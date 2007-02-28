@@ -1122,7 +1122,7 @@ void GL_Main_Init(void)
 {
 	r_main_mempool = Mem_AllocPool("Renderer", 0, NULL);
 
-	Cmd_AddCommand("r_glsl_restart", R_GLSL_Restart_f, "unloads GLSL shaders, they will then be reloaded as needed\n");
+	Cmd_AddCommand("r_glsl_restart", R_GLSL_Restart_f, "unloads GLSL shaders, they will then be reloaded as needed");
 	FOG_registercvars(); // FIXME: move this fog stuff to client?
 	Cvar_RegisterVariable(&r_nearclip);
 	Cvar_RegisterVariable(&r_showsurfaces);
