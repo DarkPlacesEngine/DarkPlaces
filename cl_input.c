@@ -1607,7 +1607,7 @@ void CL_InitInput (void)
 	Cmd_AddCommand ("-lookup", IN_LookupUp, "stop looking upward");
 	Cmd_AddCommand ("+lookdown", IN_LookdownDown, "look downward");
 	Cmd_AddCommand ("-lookdown", IN_LookdownUp, "stop looking downward");
-	Cmd_AddCommand ("+strafe", IN_StrafeDown, "activate strafing mode (move instead of turn)\n");
+	Cmd_AddCommand ("+strafe", IN_StrafeDown, "activate strafing mode (move instead of turn)");
 	Cmd_AddCommand ("-strafe", IN_StrafeUp, "deactivate strafing mode");
 	Cmd_AddCommand ("+moveleft", IN_MoveleftDown, "strafe left");
 	Cmd_AddCommand ("-moveleft", IN_MoveleftUp, "stop strafing left");
