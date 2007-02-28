@@ -4399,7 +4399,9 @@ static void Mod_Q3BSP_LoadShaders(void)
 			if (shader->numlayers)
 			{
 				shader->primarylayer = shader->layers + 0;
-				if ((shader->layers[1].blendfunc[0] == GL_SRC_ALPHA && shader->layers[1].blendfunc[1] == GL_ONE_MINUS_SRC_ALPHA) || shader->layers[1].alphatest)
+				if ((shader->layers[0].blendfunc[0] == GL_ONE       && shader->layers[0].blendfunc[1] == GL_ZERO                && !shader->layers[0].alphatest)
+				&& ((shader->layers[1].blendfunc[0] == GL_SRC_ALPHA && shader->layers[1].blendfunc[1] == GL_ONE_MINUS_SRC_ALPHA && !shader->layers[0].alphatest)
+				||  (shader->layers[1].blendfunc[0] == GL_ONE       && shader->layers[1].blendfunc[1] == GL_ZERO                &&  shader->layers[1].alphatest)))
 				{
 					// terrain blending or other effects
 					shader->backgroundlayer = shader->layers + 0;
