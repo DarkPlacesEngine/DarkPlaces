@@ -47,7 +47,7 @@ extern cvar_t sv_random_seed;
 static cvar_t sv_cullentities_pvs = {0, "sv_cullentities_pvs", "1", "fast but loose culling of hidden entities"}; // fast but loose
 static cvar_t sv_cullentities_trace = {0, "sv_cullentities_trace", "0", "somewhat slow but very tight culling of hidden entities, minimizes network traffic and makes wallhack cheats useless"}; // tends to get false negatives, uses a timeout to keep entities visible a short time after becoming hidden
 static cvar_t sv_cullentities_trace_samples = {0, "sv_cullentities_trace_samples", "1", "number of samples to test for entity culling"};
-static cvar_t sv_cullentities_trace_samples_extra = {0, "sv_cullentities_trace_samples", "2", "number of samples to test for entity culling when the entity affects its surroundings by e.g. dlight"};
+static cvar_t sv_cullentities_trace_samples_extra = {0, "sv_cullentities_trace_samples_extra", "2", "number of samples to test for entity culling when the entity affects its surroundings by e.g. dlight"};
 static cvar_t sv_cullentities_trace_enlarge = {0, "sv_cullentities_trace_enlarge", "0", "box enlargement for entity culling"};
 static cvar_t sv_cullentities_trace_delay = {0, "sv_cullentities_trace_delay", "1", "number of seconds until the entity gets actually culled"};
 static cvar_t sv_cullentities_nevercullbmodels = {0, "sv_cullentities_nevercullbmodels", "0", "if enabled the clients are always notified of moving doors and lifts and other submodels of world (warning: eats a lot of network bandwidth on some levels!)"};
