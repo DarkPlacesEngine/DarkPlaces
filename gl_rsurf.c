@@ -533,6 +533,8 @@ typedef struct r_q1bsp_getlightinfo_s
 	int *outsurfacelist;
 	unsigned char *outsurfacepvs;
 	unsigned char *tempsurfacepvs;
+	unsigned char *outshadowtrispvs;
+	unsigned char *outlighttrispvs;
 	int outnumsurfaces;
 	vec3_t outmins;
 	vec3_t outmaxs;
@@ -653,62 +655,75 @@ void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
 				if (BoxesOverlap(info->lightmins, info->lightmaxs, surface->mins, surface->maxs)
 				 && (!info->svbsp_insertoccluder || !(surface->texture->currentframe->currentmaterialflags & MATERIALFLAG_NOSHADOW)))
 				{
-					if (BoxInsideBox(surface->mins, surface->maxs, info->lightmins, info->lightmaxs))
+					qboolean addedtris = false;
+					qboolean insidebox = BoxInsideBox(surface->mins, surface->maxs, info->lightmins, info->lightmaxs);
+					for (triangleindex = 0, t = surface->num_firstshadowmeshtriangle, e = info->model->brush.shadowmesh->element3i + t * 3;triangleindex < surface->num_triangles;triangleindex++, t++, e += 3)
 					{
-						// surface is entirely inside light box
-						for (triangleindex = 0, t = surface->num_firstshadowmeshtriangle, e = info->model->brush.shadowmesh->element3i + t * 3;triangleindex < surface->num_triangles;triangleindex++, t++, e += 3)
+						v[0] = info->model->brush.shadowmesh->vertex3f + e[0] * 3;
+						v[1] = info->model->brush.shadowmesh->vertex3f + e[1] * 3;
+						v[2] = info->model->brush.shadowmesh->vertex3f + e[2] * 3;
+						if (insidebox || TriangleOverlapsBox(v[0], v[1], v[2], info->lightmins, info->lightmaxs))
 						{
-							v[0] = info->model->brush.shadowmesh->vertex3f + e[0] * 3;
-							v[1] = info->model->brush.shadowmesh->vertex3f + e[1] * 3;
-							v[2] = info->model->brush.shadowmesh->vertex3f + e[2] * 3;
-							if ((!r_shadow_frontsidecasting.integer || PointInfrontOfTriangle(info->relativelightorigin, v[0], v[1], v[2])))
+							if (info->svbsp_insertoccluder)
+							{
+								if (!(surface->texture->currentframe->currentmaterialflags & MATERIALFLAG_NOCULLFACE) && r_shadow_frontsidecasting.integer != PointInfrontOfTriangle(info->relativelightorigin, v[0], v[1], v[2]))
+									continue;
+								if (surface->texture->currentframe->currentmaterialflags & MATERIALFLAG_NOSHADOW)
+									continue;
+								VectorCopy(v[0], v2[0]);
+								VectorCopy(v[1], v2[1]);
+								VectorCopy(v[2], v2[2]);
+								if (!(SVBSP_AddPolygon(&r_svbsp, 3, v2[0], true, NULL, NULL, 0) & 2))
+									continue;
+								addedtris = true;
+							}
+							else
 							{
 								if (info->svbsp_active)
 								{
 									VectorCopy(v[0], v2[0]);
 									VectorCopy(v[1], v2[1]);
 									VectorCopy(v[2], v2[2]);
-									if (!(SVBSP_AddPolygon(&r_svbsp, 3, v2[0], info->svbsp_insertoccluder, NULL, NULL, 0) & 2))
+									if (!(SVBSP_AddPolygon(&r_svbsp, 3, v2[0], false, NULL, NULL, 0) & 2))
 										continue;
 								}
-								SETPVSBIT(info->outsurfacepvs, surfaceindex);
-								info->outsurfacelist[info->outnumsurfaces++] = surfaceindex;
-								if (!info->svbsp_insertoccluder)
-									break;
+								if (surface->texture->currentframe->currentmaterialflags & MATERIALFLAG_NOCULLFACE)
+								{
+									// if the material is double sided we
+									// can't cull by direction
+									SETPVSBIT(info->outlighttrispvs, t);
+									addedtris = true;
+									if (!(surface->texture->currentframe->currentmaterialflags & MATERIALFLAG_NOSHADOW))
+										SETPVSBIT(info->outshadowtrispvs, t);
+								}
+								else if (r_shadow_frontsidecasting.integer)
+								{
+									// front side casting occludes backfaces,
+									// so they are completely useless as both
+									// casters and lit polygons
+									if (!PointInfrontOfTriangle(info->relativelightorigin, v[0], v[1], v[2]))
+										continue;
+									SETPVSBIT(info->outlighttrispvs, t);
+									addedtris = true;
+									if (!(surface->texture->currentframe->currentmaterialflags & MATERIALFLAG_NOSHADOW))
+										SETPVSBIT(info->outshadowtrispvs, t);
+								}
+								else
+								{
+									// back side casting does not occlude
+									// anything so we can't cull lit polygons
+									SETPVSBIT(info->outlighttrispvs, t);
+									addedtris = true;
+									if (!PointInfrontOfTriangle(info->relativelightorigin, v[0], v[1], v[2]) && !(surface->texture->currentframe->currentmaterialflags & MATERIALFLAG_NOSHADOW))
+										SETPVSBIT(info->outshadowtrispvs, t);
+								}
 							}
 						}
 					}
-					else
+					if (addedtris)
 					{
-						// surface is partially clipped by lightbox
-						// check each triangle's bounding box
-						for (triangleindex = 0, t = surface->num_firstshadowmeshtriangle, e = info->model->brush.shadowmesh->element3i + t * 3;triangleindex < surface->num_triangles;triangleindex++, t++, e += 3)
-						{
-							v[0] = info->model->brush.shadowmesh->vertex3f + e[0] * 3;
-							v[1] = info->model->brush.shadowmesh->vertex3f + e[1] * 3;
-							v[2] = info->model->brush.shadowmesh->vertex3f + e[2] * 3;
-							if ((!r_shadow_frontsidecasting.integer || PointInfrontOfTriangle(info->relativelightorigin, v[0], v[1], v[2]))
-							 && info->lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0]))
-							 && info->lightmins[0] < max(v[0][0], max(v[1][0], v[2][0]))
-							 && info->lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1]))
-							 && info->lightmins[1] < max(v[0][1], max(v[1][1], v[2][1]))
-							 && info->lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2]))
-							 && info->lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
-							{
-								if (info->svbsp_active)
-								{
-									VectorCopy(v[0], v2[0]);
-									VectorCopy(v[1], v2[1]);
-									VectorCopy(v[2], v2[2]);
-									if (!(SVBSP_AddPolygon(&r_svbsp, 3, v2[0], info->svbsp_insertoccluder, NULL, NULL, 0) & 2))
-										continue;
-								}
-								SETPVSBIT(info->outsurfacepvs, surfaceindex);
-								info->outsurfacelist[info->outnumsurfaces++] = surfaceindex;
-								if (!info->svbsp_insertoccluder)
-									break;
-							}
-						}
+						SETPVSBIT(info->outsurfacepvs, surfaceindex);
+						info->outsurfacelist[info->outnumsurfaces++] = surfaceindex;
 					}
 				}
 			}
@@ -789,7 +804,7 @@ void R_Q1BSP_CallRecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, qboolean us
 	}
 }
 
-void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outleaflist, unsigned char *outleafpvs, int *outnumleafspointer, int *outsurfacelist, unsigned char *outsurfacepvs, int *outnumsurfacespointer)
+void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outleaflist, unsigned char *outleafpvs, int *outnumleafspointer, int *outsurfacelist, unsigned char *outsurfacepvs, int *outnumsurfacespointer, unsigned char *outshadowtrispvs, unsigned char *outlighttrispvs)
 {
 	r_q1bsp_getlightinfo_t info;
 	VectorCopy(relativelightorigin, info.relativelightorigin);
@@ -814,11 +829,18 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 	info.outnumleafs = 0;
 	info.outsurfacelist = outsurfacelist;
 	info.outsurfacepvs = outsurfacepvs;
+	info.outshadowtrispvs = outshadowtrispvs;
+	info.outlighttrispvs = outlighttrispvs;
 	info.outnumsurfaces = 0;
 	VectorCopy(info.relativelightorigin, info.outmins);
 	VectorCopy(info.relativelightorigin, info.outmaxs);
 	memset(outleafpvs, 0, (info.model->brush.num_leafs + 7) >> 3);
 	memset(outsurfacepvs, 0, (info.model->nummodelsurfaces + 7) >> 3);
+	if (info.model->brush.shadowmesh)
+		memset(outshadowtrispvs, 0, (info.model->brush.shadowmesh->numtriangles + 7) >> 3);
+	else
+		memset(outshadowtrispvs, 0, (info.model->surfmesh.num_triangles + 7) >> 3);
+	memset(outlighttrispvs, 0, (info.model->surfmesh.num_triangles + 7) >> 3);
 	if (info.model->brush.GetPVS && r_shadow_frontsidecasting.integer)
 		info.pvs = info.model->brush.GetPVS(info.model, info.relativelightorigin);
 	else
@@ -828,12 +850,12 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 	if (r_shadow_frontsidecasting.integer && r_shadow_compilingrtlight && r_shadow_realtime_world_compileportalculling.integer)
 	{
 		// use portal recursion for exact light volume culling, and exact surface checking
-		Portal_Visibility(info.model, info.relativelightorigin, info.outleaflist, info.outleafpvs, &info.outnumleafs, info.outsurfacelist, info.outsurfacepvs, &info.outnumsurfaces, NULL, 0, true, info.lightmins, info.lightmaxs, info.outmins, info.outmaxs);
+		Portal_Visibility(info.model, info.relativelightorigin, info.outleaflist, info.outleafpvs, &info.outnumleafs, info.outsurfacelist, info.outsurfacepvs, &info.outnumsurfaces, NULL, 0, true, info.lightmins, info.lightmaxs, info.outmins, info.outmaxs, info.outshadowtrispvs, info.outlighttrispvs);
 	}
 	else if (r_shadow_frontsidecasting.integer && r_shadow_realtime_dlight_portalculling.integer)
 	{
 		// use portal recursion for exact light volume culling, but not the expensive exact surface checking
-		Portal_Visibility(info.model, info.relativelightorigin, info.outleaflist, info.outleafpvs, &info.outnumleafs, info.outsurfacelist, info.outsurfacepvs, &info.outnumsurfaces, NULL, 0, r_shadow_realtime_dlight_portalculling.integer >= 2, info.lightmins, info.lightmaxs, info.outmins, info.outmaxs);
+		Portal_Visibility(info.model, info.relativelightorigin, info.outleaflist, info.outleafpvs, &info.outnumleafs, info.outsurfacelist, info.outsurfacepvs, &info.outnumsurfaces, NULL, 0, r_shadow_realtime_dlight_portalculling.integer >= 2, info.lightmins, info.lightmaxs, info.outmins, info.outmaxs, info.outshadowtrispvs, info.outlighttrispvs);
 	}
 	else
 	{
@@ -915,15 +937,14 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 	}
 }
 
-#define BATCHSIZE 256
+#define BATCHSIZE 1024
 
 static void R_Q1BSP_DrawLight_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
-	int i, j, batchnumsurfaces, endsurface;
+	int i, j, endsurface;
 	texture_t *t;
 	msurface_t *surface;
-	msurface_t *batchsurfaces[BATCHSIZE];
-	// note: in practice this never actually batches, oh well
+	// note: in practice this never actually receives batches), oh well
 	R_Shadow_RenderMode_Begin();
 	R_Shadow_RenderMode_ActiveLight((rtlight_t *)rtlight);
 	R_Shadow_RenderMode_Lighting(false, true);
@@ -936,49 +957,34 @@ static void R_Q1BSP_DrawLight_TransparentCallback(const entity_render_t *ent, co
 		R_UpdateTextureInfo(ent, t);
 		rsurface_texture = t->currentframe;
 		endsurface = min(j + BATCHSIZE, numsurfaces);
-		batchnumsurfaces = 0;
-		batchsurfaces[batchnumsurfaces++] = surface;
-		for (;j < endsurface;j++)
+		for (j = i;j < endsurface;j++)
 		{
 			surface = rsurface_model->data_surfaces + surfacelist[j];
 			if (t != surface->texture)
-				continue;
-			batchsurfaces[batchnumsurfaces++] = surface;
+				break;
+			RSurf_PrepareVerticesForBatch(true, true, 1, &surface);
+			R_Shadow_RenderLighting(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, ent->model->surfmesh.data_element3i + surface->num_firsttriangle * 3);
 		}
-		R_Shadow_RenderSurfacesLighting(batchnumsurfaces, batchsurfaces);
 	}
 	R_Shadow_RenderMode_End();
 }
 
-static void R_Q1BSP_DrawLight_TransparentBatch(int batchnumsurfaces, msurface_t **batchsurfacelist)
-{
-	int batchsurfaceindex;
-	msurface_t *batchsurface;
-	vec3_t tempcenter, center;
-	for (batchsurfaceindex = 0;batchsurfaceindex < batchnumsurfaces;batchsurfaceindex++)
-	{
-		batchsurface = batchsurfacelist[batchsurfaceindex];
-		tempcenter[0] = (batchsurface->mins[0] + batchsurface->maxs[0]) * 0.5f;
-		tempcenter[1] = (batchsurface->mins[1] + batchsurface->maxs[1]) * 0.5f;
-		tempcenter[2] = (batchsurface->mins[2] + batchsurface->maxs[2]) * 0.5f;
-		Matrix4x4_Transform(&rsurface_entity->matrix, tempcenter, center);
-		R_MeshQueue_AddTransparent(rsurface_texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_view.origin : center, R_Q1BSP_DrawLight_TransparentCallback, rsurface_entity, batchsurface - rsurface_model->data_surfaces, r_shadow_rtlight);
-	}
-}
-
 #define RSURF_MAX_BATCHSURFACES 1024
 
-void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surfacelist)
+void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surfacelist, const unsigned char *trispvs)
 {
 	model_t *model = ent->model;
 	msurface_t *surface;
-	int i, k, l, endsurface, batchnumsurfaces;
+	int i, k, l, m, mend, endsurface, batchnumsurfaces, batchnumtriangles, batchfirstvertex, batchlastvertex;
+	const int *element3i;
 	msurface_t *batchsurfacelist[RSURF_MAX_BATCHSURFACES];
+	int batchelements[BATCHSIZE*3];
 	texture_t *tex;
 	CHECKGLERROR
 	RSurf_ActiveModelEntity(ent, true, true);
 	R_UpdateAllTextureInfo(ent);
 	CHECKGLERROR
+	element3i = rsurface_model->surfmesh.data_element3i;
 	// this is a double loop because non-visible surface skipping has to be
 	// fast, and even if this is not the world model (and hence no visibility
 	// checking) the input surface list and batch buffer are different formats
@@ -1005,14 +1011,73 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 			surface = batchsurfacelist[k];
 			tex = surface->texture;
 			rsurface_texture = tex->currentframe;
-			for (l = k;l < batchnumsurfaces && tex == batchsurfacelist[l]->texture;l++)
-				r_refdef.stats.lights_lighttriangles += batchsurfacelist[l]->num_triangles;
 			if (rsurface_texture->currentmaterialflags & (MATERIALFLAG_WALL | MATERIALFLAG_WATER))
 			{
 				if (rsurface_texture->currentmaterialflags & MATERIALFLAG_BLENDED)
-					R_Q1BSP_DrawLight_TransparentBatch(l - k, batchsurfacelist + k);
+				{
+					vec3_t tempcenter, center;
+					for (l = k;l < batchnumsurfaces && tex == batchsurfacelist[l]->texture;l++)
+					{
+						surface = batchsurfacelist[l];
+						tempcenter[0] = (surface->mins[0] + surface->maxs[0]) * 0.5f;
+						tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
+						tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
+						Matrix4x4_Transform(&rsurface_entity->matrix, tempcenter, center);
+						R_MeshQueue_AddTransparent(rsurface_texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_view.origin : center, R_Q1BSP_DrawLight_TransparentCallback, rsurface_entity, surface - rsurface_model->data_surfaces, r_shadow_rtlight);
+					}
+				}
 				else
-					R_Shadow_RenderSurfacesLighting(l - k, batchsurfacelist + k);
+				{
+					batchnumtriangles = 0;
+					// note: this only accepts consecutive surfaces because
+					// non-consecutive surfaces often have extreme vertex
+					// ranges (due to large numbers of surfaces omitted
+					// between them)
+					surface = batchsurfacelist[k];
+					for (l = k;l < batchnumsurfaces && surface == batchsurfacelist[l] && tex == surface->texture;l++, surface++)
+					{
+						RSurf_PrepareVerticesForBatch(true, true, 1, &surface);
+						for (m = surface->num_firsttriangle, mend = m + surface->num_triangles;m < mend;m++)
+						{
+							if (r_shadow_culltriangles.integer)
+							{
+								if (trispvs)
+								{
+									if (!CHECKPVSBIT(trispvs, m))
+										continue;
+								}
+								else
+								{
+									if (r_shadow_frontsidecasting.integer && !PointInfrontOfTriangle(r_shadow_entitylightorigin, rsurface_vertex3f + element3i[m*3+0]*3, rsurface_vertex3f + element3i[m*3+1]*3, rsurface_vertex3f + element3i[m*3+2]*3))
+										continue;
+								}
+							}
+							batchelements[batchnumtriangles*3+0] = element3i[m*3+0];
+							batchelements[batchnumtriangles*3+1] = element3i[m*3+1];
+							batchelements[batchnumtriangles*3+2] = element3i[m*3+2];
+							batchnumtriangles++;
+							r_refdef.stats.lights_lighttriangles++;
+							if (batchnumtriangles >= BATCHSIZE)
+							{
+								Mod_VertexRangeFromElements(batchnumtriangles*3, batchelements, &batchfirstvertex, &batchlastvertex);
+								R_Shadow_RenderLighting(batchfirstvertex, batchlastvertex + 1 - batchfirstvertex, batchnumtriangles, batchelements);
+								batchnumtriangles = 0;
+							}
+						}
+						r_refdef.stats.lights_lighttriangles += batchsurfacelist[l]->num_triangles;
+					}
+					if (batchnumtriangles > 0)
+					{
+						Mod_VertexRangeFromElements(batchnumtriangles*3, batchelements, &batchfirstvertex, &batchlastvertex);
+						R_Shadow_RenderLighting(batchfirstvertex, batchlastvertex + 1 - batchfirstvertex, batchnumtriangles, batchelements);
+					}
+				}
+			}
+			else
+			{
+				// skip ahead to the next texture
+				for (l = k;l < batchnumsurfaces && tex == batchsurfacelist[l]->texture;l++)
+					;
 			}
 		}
 	}

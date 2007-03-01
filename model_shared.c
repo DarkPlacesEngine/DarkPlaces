@@ -1358,3 +1358,24 @@ int Mod_RemoveDegenerateTriangles(int numtriangles, const int *inelement3i, int 
 	return outtriangles;
 }
 
+void Mod_VertexRangeFromElements(int numelements, const int *elements, int *firstvertexpointer, int *lastvertexpointer)
+{
+	int i, e;
+	int firstvertex, lastvertex;
+	if (numelements > 0 && elements)
+	{
+		firstvertex = lastvertex = elements[0];
+		for (i = 1;i < numelements;i++)
+		{
+			e = elements[i];
+			firstvertex = min(firstvertex, e);
+			lastvertex = max(lastvertex, e);
+		}
+	}
+	else
+		firstvertex = lastvertex = 0;
+	if (firstvertexpointer)
+		*firstvertexpointer = firstvertex;
+	if (lastvertexpointer)
+		*lastvertexpointer = lastvertex;
+}

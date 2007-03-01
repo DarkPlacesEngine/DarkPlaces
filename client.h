@@ -126,6 +126,19 @@ typedef struct rtlight_s
 	// surfaces seen by light
 	int static_numsurfaces;
 	int *static_surfacelist;
+	// flag bits indicating which triangles of the world model should cast
+	// shadows, and which ones should be lit
+	//
+	// this avoids redundantly scanning the triangles in each surface twice
+	// for whether they should cast shadows, once in culling and once in the
+	// actual shadowmarklist production.
+	int static_numshadowtrispvsbytes;
+	unsigned char *static_shadowtrispvs;
+	// this allows the lighting batch code to skip backfaces andother culled
+	// triangles not relevant for lighting
+	// (important on big surfaces such as terrain)
+	int static_numlighttrispvsbytes;
+	unsigned char *static_lighttrispvs;
 }
 rtlight_t;
 
