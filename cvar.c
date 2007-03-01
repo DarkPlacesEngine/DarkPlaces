@@ -250,6 +250,28 @@ void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 #endif
 	if ((var->flags & CVAR_USERINFO) && cls.state != ca_dedicated)
 		CL_SetInfo(var->name, var->string, true, false, false, false);
+	else if ((var->flags & CVAR_NQUSERINFOHACK) && cls.state != ca_dedicated)
+	{
+		// update the cls.userinfo to have proper values for the
+		// silly nq config variables.
+		//
+		// this is done when these variables are changed rather than at
+		// connect time because if the user or code checks the userinfo and it
+		// holds weird values it may cause confusion...
+		if (!strcmp(var->name, "_cl_color"))
+		{
+			CL_SetInfo("topcolor", va("%i", (var->integer >> 4) & 15), true, false, false, false);
+			CL_SetInfo("bottomcolor", va("%i", (var->integer) & 15), true, false, false, false);
+		}
+		else if (!strcmp(var->name, "_cl_rate"))
+			CL_SetInfo("rate", va("%i", var->integer), true, false, false, false);
+		else if (!strcmp(var->name, "_cl_playerskin"))
+			CL_SetInfo("playerskin", var->string, true, false, false, false);
+		else if (!strcmp(var->name, "_cl_playermodel"))
+			CL_SetInfo("playermodel", var->string, true, false, false, false);
+		else if (!strcmp(var->name, "_cl_name"))
+			CL_SetInfo("name", var->string, true, false, false, false);
+	}
 }
 
 void Cvar_SetQuick (cvar_t *var, const char *value)
