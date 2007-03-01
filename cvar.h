@@ -65,8 +65,10 @@ interface from being ambiguous.
 #define CVAR_USERINFO 16
 // CVAR_PRIVATE means do not $ expand or sendcvar this cvar under any circumstances (rcon_password uses this)
 #define CVAR_PRIVATE 32
+// this means that this cvar should update a userinfo key but the name does not correspond directly to the userinfo key to update, and may require additional conversion ("_cl_color" for example should update "topcolor" and "bottomcolor")
+#define CVAR_NQUSERINFOHACK 64
 // used to determine if flags is valid
-#define CVAR_MAXFLAGSVAL 63
+#define CVAR_MAXFLAGSVAL 127
 // for internal use only!
 #define CVAR_DEFAULTSET (1<<30)
 #define CVAR_ALLOCATED (1<<31)

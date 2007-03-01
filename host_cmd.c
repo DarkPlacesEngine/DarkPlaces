@@ -756,7 +756,7 @@ void Host_Loadgame_f (void)
 Host_Name_f
 ======================
 */
-cvar_t cl_name = {CVAR_SAVE, "_cl_name", "player", "internal storage cvar for current player name (changed by name command)"};
+cvar_t cl_name = {CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_name", "player", "internal storage cvar for current player name (changed by name command)"};
 void Host_Name_f (void)
 {
 	int i, j;
@@ -813,7 +813,7 @@ void Host_Name_f (void)
 Host_Playermodel_f
 ======================
 */
-cvar_t cl_playermodel = {CVAR_SAVE, "_cl_playermodel", "", "internal storage cvar for current player model in Nexuiz (changed by playermodel command)"};
+cvar_t cl_playermodel = {CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_playermodel", "", "internal storage cvar for current player model in Nexuiz (changed by playermodel command)"};
 // the old cl_playermodel in cl_main has been renamed to __cl_playermodel
 void Host_Playermodel_f (void)
 {
@@ -872,7 +872,7 @@ void Host_Playermodel_f (void)
 Host_Playerskin_f
 ======================
 */
-cvar_t cl_playerskin = {CVAR_SAVE, "_cl_playerskin", "", "internal storage cvar for current player skin in Nexuiz (changed by playerskin command)"};
+cvar_t cl_playerskin = {CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_playerskin", "", "internal storage cvar for current player skin in Nexuiz (changed by playerskin command)"};
 void Host_Playerskin_f (void)
 {
 	int i, j;
@@ -1144,7 +1144,7 @@ void Host_Tell_f(void)
 Host_Color_f
 ==================
 */
-cvar_t cl_color = {CVAR_SAVE, "_cl_color", "0", "internal storage cvar for current player colors (changed by color command)"};
+cvar_t cl_color = {CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_color", "0", "internal storage cvar for current player colors (changed by color command)"};
 void Host_Color(int changetop, int changebottom)
 {
 	int top, bottom, playercolor;
@@ -1256,7 +1256,7 @@ void Host_BottomColor_f(void)
 	Host_Color(-1, atoi(Cmd_Argv(1)));
 }
 
-cvar_t cl_rate = {CVAR_SAVE, "_cl_rate", "10000", "internal storage cvar for current rate (changed by rate command)"};
+cvar_t cl_rate = {CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_rate", "10000", "internal storage cvar for current rate (changed by rate command)"};
 void Host_Rate_f(void)
 {
 	int rate;
@@ -1325,7 +1325,7 @@ LordHavoc: only supported for Nehahra, I personally think this is dumb, but Mind
 LordHavoc: correction, Mindcrime will be removing pmodel in the future, but it's still stuck here for compatibility.
 ======================
 */
-cvar_t cl_pmodel = {CVAR_SAVE, "_cl_pmodel", "0", "internal storage cvar for current player model number in nehahra (changed by pmodel command)"};
+cvar_t cl_pmodel = {CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_pmodel", "0", "internal storage cvar for current player model number in nehahra (changed by pmodel command)"};
 static void Host_PModel_f (void)
 {
 	int i;
