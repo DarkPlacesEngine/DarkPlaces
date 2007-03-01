@@ -2544,6 +2544,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	}
 }
 
+void R_Shadow_DrawLightSprites(void);
 void R_ShadowVolumeLighting(qboolean visible)
 {
 	int lnum, flag;
@@ -2551,6 +2552,9 @@ void R_ShadowVolumeLighting(qboolean visible)
 
 	if (r_refdef.worldmodel && strncmp(r_refdef.worldmodel->name, r_shadow_mapname, sizeof(r_shadow_mapname)))
 		R_Shadow_EditLights_Reload_f();
+
+	if (r_editlights.integer)
+		R_Shadow_DrawLightSprites();
 
 	R_Shadow_RenderMode_Begin();
 
@@ -3352,7 +3356,6 @@ void R_Shadow_UpdateWorldLightSelection(void)
 	{
 		R_Shadow_SetCursorLocationForView();
 		R_Shadow_SelectLightInView();
-		R_Shadow_DrawLightSprites();
 	}
 	else
 		R_Shadow_SelectLight(NULL);
