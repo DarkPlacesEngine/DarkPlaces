@@ -315,40 +315,37 @@ static void Portal_RecursiveFlow (portalrecursioninfo_t *info, mleaf_t *leaf, in
 		for (i = 0;i < leaf->numleafsurfaces;i++)
 		{
 			int surfaceindex = leaf->firstleafsurface[i];
-			if (!CHECKPVSBIT(info->surfacepvs, surfaceindex))
+			msurface_t *surface = info->model->data_surfaces + surfaceindex;
+			if (BoxesOverlap(surface->mins, surface->maxs, info->boxmins, info->boxmaxs))
 			{
-				msurface_t *surface = info->model->data_surfaces + surfaceindex;
-				if (BoxesOverlap(surface->mins, surface->maxs, info->boxmins, info->boxmaxs))
+				qboolean insidebox = BoxInsideBox(surface->mins, surface->maxs, info->boxmins, info->boxmaxs);
+				qboolean addedtris = false;
+				int t, tend;
+				const int *elements;
+				const float *vertex3f;
+				float v[9];
+				vertex3f = info->model->surfmesh.data_vertex3f;
+				elements = (info->model->surfmesh.data_element3i + 3 * surface->num_firsttriangle);
+				for (t = surface->num_firsttriangle, tend = t + surface->num_triangles;t < tend;t++, elements += 3)
 				{
-					qboolean insidebox = BoxInsideBox(surface->mins, surface->maxs, info->boxmins, info->boxmaxs);
-					qboolean addedtris = false;
-					int t, tend;
-					const int *elements;
-					const float *vertex3f;
-					float v[9];
-					vertex3f = info->model->surfmesh.data_vertex3f;
-					elements = (info->model->surfmesh.data_element3i + 3 * surface->num_firsttriangle);
-					for (t = surface->num_firsttriangle, tend = t + surface->num_triangles;t < tend;t++, elements += 3)
+					VectorCopy(vertex3f + elements[0] * 3, v + 0);
+					VectorCopy(vertex3f + elements[1] * 3, v + 3);
+					VectorCopy(vertex3f + elements[2] * 3, v + 6);
+					if (PointInfrontOfTriangle(info->eye, v + 0, v + 3, v + 6)
+					 && (insidebox || TriangleOverlapsBox(v, v + 3, v + 6, info->boxmins, info->boxmaxs))
+					 && (!info->exact || Portal_PortalThroughPortalPlanes(&portalplanes[firstclipplane], numclipplanes, v, 3, &portaltemppoints2[0][0], 256) > 0))
 					{
-						VectorCopy(vertex3f + elements[0] * 3, v + 0);
-						VectorCopy(vertex3f + elements[1] * 3, v + 3);
-						VectorCopy(vertex3f + elements[2] * 3, v + 6);
-						if (PointInfrontOfTriangle(info->eye, v + 0, v + 3, v + 6)
-						 && (insidebox || TriangleOverlapsBox(v, v + 3, v + 6, info->boxmins, info->boxmaxs))
-						 && (!info->exact || Portal_PortalThroughPortalPlanes(&portalplanes[firstclipplane], numclipplanes, v, 3, &portaltemppoints2[0][0], 256) > 0))
-						{
-							addedtris = true;
-							if (info->shadowtrispvs)
-								SETPVSBIT(info->shadowtrispvs, t);
-							if (info->lighttrispvs)
-								SETPVSBIT(info->lighttrispvs, t);
-						}
+						addedtris = true;
+						if (info->shadowtrispvs)
+							SETPVSBIT(info->shadowtrispvs, t);
+						if (info->lighttrispvs)
+							SETPVSBIT(info->lighttrispvs, t);
 					}
-					if (addedtris)
-					{
-						SETPVSBIT(info->surfacepvs, surfaceindex);
-						info->surfacelist[info->numsurfaces++] = surfaceindex;
-					}
+				}
+				if (addedtris && !CHECKPVSBIT(info->surfacepvs, surfaceindex))
+				{
+					SETPVSBIT(info->surfacepvs, surfaceindex);
+					info->surfacelist[info->numsurfaces++] = surfaceindex;
 				}
 			}
 		}
