@@ -445,20 +445,6 @@ void SV_ReadClientMove (void)
 	usercmd_t newmove;
 	usercmd_t *move = &newmove;
 
-	// reset stale client move state if a level change has occurred
-	if (host_client->cmd.receivetime > sv.time + 0.1 || !host_client->spawned)
-	{
-		memset(&host_client->cmd, 0, sizeof(host_client->cmd));
-		host_client->movesequence = 0;
-#ifdef NUM_PING_TIMES
-		for (i=0;i < NUM_PING_TIMES;i++)
-			host_client->ping_times[i] = 0;
-		host_client->num_pings = 0;
-#endif
-		host_client->ping = 0;
-		host_client->clmovement_disabletimeout = realtime + 0.1;
-	}
-
 	memset(move, 0, sizeof(*move));
 
 	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);

@@ -62,7 +62,6 @@
 -f bug darkplaces physics: GAME_TAOV: Vigil's movement isn't working properly, the qc uses MOVETYPE_STEP and clears FL_ONGROUND every frame and moves using velocity, this is causing a landing sound every frame and causing the player to slide down minor slopes very quickly, this did not occur in Quake, and seems that it must be related to a velocity_z check or FL_ONGROUND check in the MOVETYPE_STEP physics code (RenegadeC, xaGe)
 0 bug darkplaces client: can't move mouse around in nexuiz menu if vid_mouse is 0
 0 bug darkplaces client: it has been reported that sometimes level changes on quakeworld servers don't load a map, this may be related to downloading? (Baker)
-0 bug darkplaces client: name (and probably other userinfo properties) are not being set when entering a qw server?
 0 bug darkplaces client: when going through a teleporter the cl_movement prediction still interpolates the move (div0)
 0 bug darkplaces docs: host_maxfps is gone, correct the darkplaces.txt and host.c cvar description for host_framerate
 0 bug darkplaces loader: make rtlight entity loader support q3map/q3map2 lights properly, they use a spawnflag for LINEAR mode, by default they use 1/(x*x) falloff (Carni, motorsep)
@@ -533,6 +532,7 @@ d bug darkplaces client: make "wait" command wait fornext network frame somehow 
 d bug darkplaces client: make envmap command work with the corrected layout
 d bug darkplaces client: make server queries use a queue to avoid flooding out queries too fast (Willis)
 d bug darkplaces client: missing bolt/beam models should not produce warnings
+d bug darkplaces client: name (and probably other userinfo properties) are not being set when entering a qw server?
 d bug darkplaces client: on crctf proquake servers the scoreboard does not contain exactly matching player names (READY is sometimes appended), the ping report and status parsing should ignore text after the player name
 d bug darkplaces client: quakeworld servers often stuffcmd the cvars topcolor, bottomcolor, pants, team, skin, noaim, so commands for these need to be added (topcolor/bottomcolor will modify _cl_color, the others can be real cvars)
 d bug darkplaces client: seta commands create cvars that are not saved to config because they match their 'default' value
