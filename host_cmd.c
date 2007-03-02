@@ -1993,10 +1993,17 @@ void Host_SendCvar_f (void)
 
 	if(Cmd_Argc() != 2)
 		return;
-	if(!(c = Cvar_FindVar(Cmd_Argv(1))) || (c->flags & CVAR_PRIVATE))
+	c = Cvar_FindVar(Cmd_Argv(1));
+	if (cls.state == ca_connected)
+	{
+		// LordHavoc: if there is no such cvar or if it is private, send a
+		// reply indicating that it has no value
+		if(!c || (c->flags & CVAR_PRIVATE))
+			Cmd_ForwardStringToServer(va("sentcvar %s\n", c->name));
+		else
+			Cmd_ForwardStringToServer(va("sentcvar %s \"%s\"\n", c->name, c->string));
 		return;
-	if (cls.state != ca_dedicated)
-		Cmd_ForwardStringToServer(va("sentcvar %s \"%s\"\n", c->name, c->string));
+	}
 	if(!sv.active)// || !prog->funcoffsets.SV_ParseClientCommand)
 		return;
 
