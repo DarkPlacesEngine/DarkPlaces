@@ -757,49 +757,53 @@ void Force_CenterView_f (void)
 static int gamma_forcenextframe = false;
 static float cachegamma, cachebrightness, cachecontrast, cacheblack[3], cachegrey[3], cachewhite[3];
 static int cachecolorenable, cachehwgamma;
-#define BOUNDCVAR(cvar, m1, m2) c = &(cvar);f = bound(m1, c->value, m2);if (c->value != f) Cvar_SetValueQuick(c, f);
 void VID_UpdateGamma(qboolean force, int rampsize)
 {
 	cvar_t *c;
 	float f;
+	int wantgamma;
 
 	// LordHavoc: don't mess with gamma tables if running dedicated
 	if (cls.state == ca_dedicated)
 		return;
 
-	if (!force
-	 && !gamma_forcenextframe
-	 && !v_psycho.integer
-	 && cachehwgamma == (vid_activewindow ? v_hwgamma.integer : 0)
-	 && v_gamma.value == cachegamma
-	 && v_contrast.value == cachecontrast
-	 && v_brightness.value == cachebrightness
-	 && cachecolorenable == v_color_enable.integer
-	 && cacheblack[0] == v_color_black_r.value
-	 && cacheblack[1] == v_color_black_g.value
-	 && cacheblack[2] == v_color_black_b.value
-	 && cachegrey[0] == v_color_grey_r.value
-	 && cachegrey[1] == v_color_grey_g.value
-	 && cachegrey[2] == v_color_grey_b.value
-	 && cachewhite[0] == v_color_white_r.value
-	 && cachewhite[1] == v_color_white_g.value
-	 && cachewhite[2] == v_color_white_b.value)
-		return;
+	wantgamma = (vid_activewindow ? v_hwgamma.integer : 0);
+#define BOUNDCVAR(cvar, m1, m2) c = &(cvar);f = bound(m1, c->value, m2);if (c->value != f) Cvar_SetValueQuick(c, f);
+	BOUNDCVAR(v_gamma, 0.1, 5);
+	BOUNDCVAR(v_contrast, 1, 5);
+	BOUNDCVAR(v_brightness, 0, 0.8);
+	BOUNDCVAR(v_color_black_r, 0, 0.8);
+	BOUNDCVAR(v_color_black_g, 0, 0.8);
+	BOUNDCVAR(v_color_black_b, 0, 0.8);
+	BOUNDCVAR(v_color_grey_r, 0, 0.95);
+	BOUNDCVAR(v_color_grey_g, 0, 0.95);
+	BOUNDCVAR(v_color_grey_b, 0, 0.95);
+	BOUNDCVAR(v_color_white_r, 1, 5);
+	BOUNDCVAR(v_color_white_g, 1, 5);
+	BOUNDCVAR(v_color_white_b, 1, 5);
+#undef BOUNDCVAR
 
-	BOUNDCVAR(v_gamma, 0.1, 5);cachegamma = v_gamma.value;
-	BOUNDCVAR(v_contrast, 1, 5);cachecontrast = v_contrast.value;
-	BOUNDCVAR(v_brightness, 0, 0.8);cachebrightness = v_brightness.value;
-	BOUNDCVAR(v_color_black_r, 0, 0.8);cacheblack[0] = v_color_black_r.value;
-	BOUNDCVAR(v_color_black_g, 0, 0.8);cacheblack[1] = v_color_black_g.value;
-	BOUNDCVAR(v_color_black_b, 0, 0.8);cacheblack[2] = v_color_black_b.value;
-	BOUNDCVAR(v_color_grey_r, 0, 0.95);cachegrey[0] = v_color_grey_r.value;
-	BOUNDCVAR(v_color_grey_g, 0, 0.95);cachegrey[1] = v_color_grey_g.value;
-	BOUNDCVAR(v_color_grey_b, 0, 0.95);cachegrey[2] = v_color_grey_b.value;
-	BOUNDCVAR(v_color_white_r, 1, 5);cachewhite[0] = v_color_white_r.value;
-	BOUNDCVAR(v_color_white_g, 1, 5);cachewhite[1] = v_color_white_g.value;
-	BOUNDCVAR(v_color_white_b, 1, 5);cachewhite[2] = v_color_white_b.value;
-	cachecolorenable = v_color_enable.integer;
-	cachehwgamma = vid_activewindow ? v_hwgamma.integer : 0;
+	if (force || v_psycho.integer)
+		gamma_forcenextframe = true;
+#define GAMMACHECK(cache, value) if (cache != (value)) gamma_forcenextframe = true;cache = (value)
+	GAMMACHECK(cachehwgamma    , wantgamma);
+	GAMMACHECK(cachegamma      , v_gamma.value);
+	GAMMACHECK(cachecontrast   , v_contrast.value);
+	GAMMACHECK(cachebrightness , v_brightness.value);
+	GAMMACHECK(cachecolorenable, v_color_enable.integer);
+	GAMMACHECK(cacheblack[0]   , v_color_black_r.value);
+	GAMMACHECK(cacheblack[1]   , v_color_black_g.value);
+	GAMMACHECK(cacheblack[2]   , v_color_black_b.value);
+	GAMMACHECK(cachegrey[0]    , v_color_grey_r.value);
+	GAMMACHECK(cachegrey[1]    , v_color_grey_g.value);
+	GAMMACHECK(cachegrey[2]    , v_color_grey_b.value);
+	GAMMACHECK(cachewhite[0]   , v_color_white_r.value);
+	GAMMACHECK(cachewhite[1]   , v_color_white_g.value);
+	GAMMACHECK(cachewhite[2]   , v_color_white_b.value);
+#undef GAMMACHECK
+
+	if (!gamma_forcenextframe)
+		return;
 
 	gamma_forcenextframe = false;
 
