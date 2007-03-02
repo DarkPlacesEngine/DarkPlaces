@@ -447,6 +447,16 @@ void SV_SendServerinfo (client_t *client)
 	MSG_WriteByte (&client->netconnection->message, 1);
 
 	client->spawned = false;		// need prespawn, spawn, etc
+
+	// clear movement info until client enters the new level properly
+	memset(&client->cmd, 0, sizeof(client->cmd));
+	client->movesequence = 0;
+#ifdef NUM_PING_TIMES
+	for (i = 0;i < NUM_PING_TIMES;i++)
+		client->ping_times[i] = 0;
+	client->num_pings = 0;
+#endif
+	client->ping = 0;
 }
 
 /*
