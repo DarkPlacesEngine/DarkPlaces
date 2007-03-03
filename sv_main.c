@@ -779,10 +779,17 @@ qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, int 
 		cullmaxs[1] = max(cullmaxs[1], cs->origin[1] + specialvisibilityradius);
 		cullmaxs[2] = max(cullmaxs[2], cs->origin[2] + specialvisibilityradius);
 	}
+	// calculate center of bbox for network prioritization purposes
+	VectorMAM(0.5f, cullmins, 0.5f, cullmaxs, cs->netcenter);
+	// if culling box has moved, update pvs cluster links
 	if (!VectorCompare(cullmins, ent->priv.server->cullmins) || !VectorCompare(cullmaxs, ent->priv.server->cullmaxs))
 	{
 		VectorCopy(cullmins, ent->priv.server->cullmins);
 		VectorCopy(cullmaxs, ent->priv.server->cullmaxs);
+		// a value of -1 for pvs_numclusters indicates that the links are not
+		// cached, and should be re-tested each time, this is the case if the
+		// culling box touches too many pvs clusters to store, or if the world
+		// model does not support FindBoxClusters
 		ent->priv.server->pvs_numclusters = -1;
 		if (sv.worldmodel && sv.worldmodel->brush.FindBoxClusters)
 		{

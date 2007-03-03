@@ -8,6 +8,7 @@ entity_state_t defaultstate =
 {
 	// ! means this is not sent to client
 	0,//double time; // ! time this state was built (used on client for interpolation)
+	{0,0,0},//float netcenter[3]; // ! for network prioritization, this is the center of the bounding box (which may differ from the origin)
 	{0,0,0},//float origin[3];
 	{0,0,0},//float angles[3];
 	0,//int number; // entity number this state is for
@@ -35,7 +36,7 @@ entity_state_t defaultstate =
 	0,//unsigned char tagindex;
 	{32, 32, 32},//unsigned char colormod[3];
 	// padding to a multiple of 8 bytes (to align the double time)
-	{0,0,0,0,0,0}//unsigned char unused[6]; // !
+	{0,0}//unsigned char unused[2]; // !
 };
 
 // LordHavoc: I own protocol ranges 96, 97, 3500-3599
@@ -1681,7 +1682,7 @@ int EntityState5_Priority(entityframe5_database_t *d, int stateindex)
 		Con_DPrintf("Protocol: Runaway loop recursing tagentity links on entity %i\n", stateindex);
 	// now that we have the parent entity we can make some decisions based on
 	// distance from the player
-	if (VectorDistance(d->states[d->viewentnum].origin, s->origin) < 1024.0f)
+	if (VectorDistance(d->states[d->viewentnum].netcenter, s->netcenter) < 1024.0f)
 		priority++;
 	return bound(1, priority, E5_PROTOCOL_PRIORITYLEVELS - 1);
 }

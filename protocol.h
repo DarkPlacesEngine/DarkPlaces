@@ -320,11 +320,12 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define RENDER_SHADOW 65536 // cast shadow
 #define RENDER_LIGHT 131072 // receive light
 
-// this is 88 bytes
+// this is 96 bytes
 typedef struct entity_state_s
 {
 	// ! means this is not sent to client
 	double time; // ! time this state was built (used on client for interpolation)
+	float netcenter[3]; // ! for network prioritization, this is the center of the bounding box (which may differ from the origin)
 	float origin[3];
 	float angles[3];
 	int number; // entity number this state is for
@@ -352,7 +353,7 @@ typedef struct entity_state_s
 	unsigned char tagindex;
 	unsigned char colormod[3];
 	// padding to a multiple of 8 bytes (to align the double time)
-	unsigned char unused[6];
+	unsigned char unused[2];
 }
 entity_state_t;
 
