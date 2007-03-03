@@ -584,8 +584,13 @@ void SV_ExecuteClientMoves(void)
 				// update ping time for qc to see while executing this move
 				host_client->ping = host_client->cmd.receivetime - host_client->cmd.time;
 				// the server and qc frametime values must be changed temporarily
-				sv.frametime = moveframetime;
-				prog->globals.server->frametime = moveframetime;
+				prog->globals.server->frametime = sv.frametime = moveframetime;
+				// if move is more than 50ms, split it into two moves (this matches QWSV behavior and the client prediction)
+				if (sv.frametime > 0.05)
+				{
+					prog->globals.server->frametime = sv.frametime = moveframetime * 0.5f;
+					SV_Physics_ClientEntity(host_client->edict);
+				}
 				SV_Physics_ClientEntity(host_client->edict);
 				sv.frametime = oldframetime2;
 				prog->globals.server->frametime = oldframetime;
