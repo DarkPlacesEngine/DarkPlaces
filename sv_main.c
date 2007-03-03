@@ -50,6 +50,7 @@ static cvar_t sv_cullentities_trace_samples = {0, "sv_cullentities_trace_samples
 static cvar_t sv_cullentities_trace_samples_extra = {0, "sv_cullentities_trace_samples_extra", "2", "number of samples to test for entity culling when the entity affects its surroundings by e.g. dlight"};
 static cvar_t sv_cullentities_trace_enlarge = {0, "sv_cullentities_trace_enlarge", "0", "box enlargement for entity culling"};
 static cvar_t sv_cullentities_trace_delay = {0, "sv_cullentities_trace_delay", "1", "number of seconds until the entity gets actually culled"};
+static cvar_t sv_cullentities_trace_prediction = {0, "sv_cullentities_trace_prediction", "1", "also trace from the predicted player position"};
 static cvar_t sv_cullentities_nevercullbmodels = {0, "sv_cullentities_nevercullbmodels", "0", "if enabled the clients are always notified of moving doors and lifts and other submodels of world (warning: eats a lot of network bandwidth on some levels!)"};
 static cvar_t sv_cullentities_stats = {0, "sv_cullentities_stats", "0", "displays stats on network entities culled by various methods for each client"};
 static cvar_t sv_entpatch = {0, "sv_entpatch", "1", "enables loading of .ent files to override entities in the bsp (for example Threewave CTF server pack contains .ent patch files enabling play of CTF on id1 maps)"};
@@ -135,6 +136,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_cullentities_trace_samples_extra);
 	Cvar_RegisterVariable (&sv_cullentities_trace_enlarge);
 	Cvar_RegisterVariable (&sv_cullentities_trace_delay);
+	Cvar_RegisterVariable (&sv_cullentities_trace_prediction);
 	Cvar_RegisterVariable (&sv_cullentities_nevercullbmodels);
 	Cvar_RegisterVariable (&sv_cullentities_stats);
 	Cvar_RegisterVariable (&sv_entpatch);
@@ -910,8 +912,45 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 			// or not seen by random tracelines
 			if (sv_cullentities_trace.integer && !isbmodel)
 			{
-				if(Mod_CanSeeBox_Trace(s->specialvisibilityradius ? sv_cullentities_trace_samples_extra.integer : sv_cullentities_trace_samples.integer, sv_cullentities_trace_enlarge.value, sv.worldmodel, sv_writeentitiestoclient_testeye, ed->priv.server->cullmins, ed->priv.server->cullmaxs))
+				int samples = s->specialvisibilityradius ? sv_cullentities_trace_samples_extra.integer : sv_cullentities_trace_samples.integer;
+				float enlarge = sv_cullentities_trace_enlarge.value;
+
+				qboolean visible = TRUE;
+
+				do
+				{
+					if(Mod_CanSeeBox_Trace(samples, enlarge, sv.worldmodel, sv_writeentitiestoclient_testeye, ed->priv.server->cullmins, ed->priv.server->cullmaxs))
+						break; // directly visible from the server's view
+
+					if(sv_cullentities_trace_prediction.integer)
+					{
+						vec3_t predeye;
+
+						// get player velocity
+						float predtime = bound(0, host_client->ping, 0.2); // / 2
+							// sorry, no wallhacking by high ping please, and at 200ms
+							// ping a FPS is annoying to play anyway and a player is
+							// likely to have changed his direction
+						VectorMA(sv_writeentitiestoclient_testeye, predtime, host_client->edict->fields.server->velocity, predeye);
+						if(sv.worldmodel->brush.TraceLineOfSight(sv.worldmodel, sv_writeentitiestoclient_testeye, predeye)) // must be able to go there...
+						{
+							if(Mod_CanSeeBox_Trace(samples, enlarge, sv.worldmodel, predeye, ed->priv.server->cullmins, ed->priv.server->cullmaxs))
+								break; // directly visible from the predicted view
+						}
+						else
+						{
+							//Con_DPrintf("Trying to walk into solid in a pingtime... not predicting for culling\n");
+						}
+					}
+
+					// when we get here, we can't see the entity
+					visible = FALSE;
+				}
+				while(0);
+
+				if(visible)
 					sv_writeentitiestoclient_client->visibletime[s->number] = realtime + sv_cullentities_trace_delay.value;
+
 				if (realtime > sv_writeentitiestoclient_client->visibletime[s->number])
 				{
 					sv_writeentitiestoclient_culled_trace++;
