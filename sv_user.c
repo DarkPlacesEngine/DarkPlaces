@@ -456,6 +456,9 @@ void SV_ReadClientMove (void)
 	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 	move->receivetime = (float)sv.time;
 
+#if DEBUGMOVES
+	Con_Printf("%s move%i #%i %ims (%ims) %i %i '%i %i %i' '%i %i %i'\n", move->time > move->receivetime ? "^3read future" : "^4read normal", sv_numreadmoves + 1, move->sequence, (int)floor((move->time - host_client->cmd.time) * 1000.0 + 0.5), (int)floor(move->time * 1000.0 + 0.5), move->impulse, move->buttons, (int)move->viewangles[0], (int)move->viewangles[1], (int)move->viewangles[2], (int)move->forwardmove, (int)move->sidemove, (int)move->upmove);
+#endif
 	// limit reported time to current time
 	// (incase the client is trying to cheat)
 	move->time = min(move->time, move->receivetime + sv.frametime);
@@ -528,7 +531,7 @@ void SV_ReadClientMove (void)
 	}
 
 	// disable clientside movement prediction in some cases
-	if (ceil((move->receivetime - move->time) * 1000.0) < sv_clmovement_minping.integer)
+	if (ceil(max(move->receivetime - move->time, 0) * 1000.0) < sv_clmovement_minping.integer)
 		host_client->clmovement_disabletimeout = realtime + sv_clmovement_minping_disabletime.value / 1000.0;
 	if (!sv_clmovement_enable.integer || host_client->clmovement_disabletimeout > realtime)
 		move->sequence = 0;
@@ -553,6 +556,9 @@ void SV_ExecuteClientMoves(void)
 	// only start accepting input once the player is spawned
 	if (!host_client->spawned)
 		return;
+#if DEBUGMOVES
+	Con_Printf("SV_ExecuteClientMoves: read %i moves at sv.time %f\n", sv_numreadmoves, (float)sv.time);
+#endif
 	if (sv_readmoves[sv_numreadmoves-1].sequence && sv_clmovement_enable.integer && sv_clmovement_waitforinput.integer > 0)
 	{
 		// process the moves in order and ignore old ones
@@ -565,6 +571,9 @@ void SV_ExecuteClientMoves(void)
 			usercmd_t *move = sv_readmoves + moveindex;
 			if (host_client->cmd.sequence < move->sequence || moveindex == sv_numreadmoves - 1)
 			{
+#if DEBUGMOVES
+				Con_Printf("%smove #%i %ims (%ims) %i %i '%i %i %i' '%i %i %i'\n", (move->time - host_client->cmd.time) > sv.frametime ? "^1" : "^2", move->sequence, (int)floor((move->time - host_client->cmd.time) * 1000.0 + 0.5), (int)floor(move->time * 1000.0 + 0.5), move->impulse, move->buttons, (int)move->viewangles[0], (int)move->viewangles[1], (int)move->viewangles[2], (int)move->forwardmove, (int)move->sidemove, (int)move->upmove);
+#endif
 				// this is a new move
 				moveframetime = bound(0, move->time - host_client->cmd.time, 0.1);
 				//Con_Printf("movesequence = %i (%i lost), moveframetime = %f\n", move->sequence, move->sequence ? move->sequence - host_client->movesequence - 1 : 0, moveframetime);
