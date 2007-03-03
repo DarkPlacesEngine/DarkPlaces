@@ -781,7 +781,7 @@ void CL_ClientMovement_UpdateStatus(cl_clientmovement_state_t *s)
 	VectorSet(origin1, s->origin[0], s->origin[1], s->origin[2] + 1);
 	VectorSet(origin2, s->origin[0], s->origin[1], s->origin[2] - 2);
 	trace = CL_Move(origin1, s->mins, s->maxs, origin2, MOVE_NORMAL, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true, true, NULL, false);
-	s->onground = trace.fraction < 1 && trace.plane.normal[2] > 0.7 && s->velocity[2] < cl_gravity.value * s->q.frametime;
+	s->onground = trace.fraction < 1 && trace.plane.normal[2] > 0.7 && s->velocity[2] < 0.5f * cl_gravity.value * s->q.frametime;
 
 	// set watertype/waterlevel
 	VectorSet(origin1, s->origin[0], s->origin[1], s->origin[2] + s->mins[2] + 1);
