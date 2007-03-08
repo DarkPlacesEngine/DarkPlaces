@@ -559,6 +559,8 @@ void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
 		//	return;
 		if (!plane)
 			break;
+		//if (!r_shadow_compilingrtlight && R_CullBoxCustomPlanes(node->mins, node->maxs, r_shadow_rtlight_numfrustumplanes, r_shadow_rtlight_frustumplanes))
+		//	return;
 		if (plane->type < 3)
 		{
 			if (info->lightmins[plane->type] > plane->dist)

@@ -1276,6 +1276,53 @@ int R_CullBox(const vec3_t mins, const vec3_t maxs)
 	return false;
 }
 
+int R_CullBoxCustomPlanes(const vec3_t mins, const vec3_t maxs, int numplanes, const mplane_t *planes)
+{
+	int i;
+	const mplane_t *p;
+	for (i = 0;i < numplanes;i++)
+	{
+		p = planes + i;
+		switch(p->signbits)
+		{
+		default:
+		case 0:
+			if (p->normal[0]*maxs[0] + p->normal[1]*maxs[1] + p->normal[2]*maxs[2] < p->dist)
+				return true;
+			break;
+		case 1:
+			if (p->normal[0]*mins[0] + p->normal[1]*maxs[1] + p->normal[2]*maxs[2] < p->dist)
+				return true;
+			break;
+		case 2:
+			if (p->normal[0]*maxs[0] + p->normal[1]*mins[1] + p->normal[2]*maxs[2] < p->dist)
+				return true;
+			break;
+		case 3:
+			if (p->normal[0]*mins[0] + p->normal[1]*mins[1] + p->normal[2]*maxs[2] < p->dist)
+				return true;
+			break;
+		case 4:
+			if (p->normal[0]*maxs[0] + p->normal[1]*maxs[1] + p->normal[2]*mins[2] < p->dist)
+				return true;
+			break;
+		case 5:
+			if (p->normal[0]*mins[0] + p->normal[1]*maxs[1] + p->normal[2]*mins[2] < p->dist)
+				return true;
+			break;
+		case 6:
+			if (p->normal[0]*maxs[0] + p->normal[1]*mins[1] + p->normal[2]*mins[2] < p->dist)
+				return true;
+			break;
+		case 7:
+			if (p->normal[0]*mins[0] + p->normal[1]*mins[1] + p->normal[2]*mins[2] < p->dist)
+				return true;
+			break;
+		}
+	}
+	return false;
+}
+
 //==================================================================================
 
 static void R_UpdateEntityLighting(entity_render_t *ent)
@@ -1402,6 +1449,8 @@ void R_DrawModels(void)
 
 static void R_View_SetFrustum(void)
 {
+	double slopex, slopey;
+
 	// break apart the view matrix into vectors for various purposes
 	Matrix4x4_ToVectors(&r_view.matrix, r_view.forward, r_view.left, r_view.up, r_view.origin);
 	VectorNegate(r_view.left, r_view.right);
@@ -1470,10 +1519,12 @@ static void R_View_SetFrustum(void)
 
 
 
-	VectorMAM(1, r_view.forward, 1.0 / -r_view.frustum_x, r_view.left, r_view.frustum[0].normal);
-	VectorMAM(1, r_view.forward, 1.0 /  r_view.frustum_x, r_view.left, r_view.frustum[1].normal);
-	VectorMAM(1, r_view.forward, 1.0 / -r_view.frustum_y, r_view.up, r_view.frustum[2].normal);
-	VectorMAM(1, r_view.forward, 1.0 /  r_view.frustum_y, r_view.up, r_view.frustum[3].normal);
+	slopex = 1.0 / r_view.frustum_x;
+	slopey = 1.0 / r_view.frustum_y;
+	VectorMA(r_view.forward, -slopex, r_view.left, r_view.frustum[0].normal);
+	VectorMA(r_view.forward,  slopex, r_view.left, r_view.frustum[1].normal);
+	VectorMA(r_view.forward, -slopey, r_view.up  , r_view.frustum[2].normal);
+	VectorMA(r_view.forward,  slopey, r_view.up  , r_view.frustum[3].normal);
 	VectorCopy(r_view.forward, r_view.frustum[4].normal);
 	VectorNormalize(r_view.frustum[0].normal);
 	VectorNormalize(r_view.frustum[1].normal);
@@ -1489,6 +1540,12 @@ static void R_View_SetFrustum(void)
 	PlaneClassify(&r_view.frustum[2]);
 	PlaneClassify(&r_view.frustum[3]);
 	PlaneClassify(&r_view.frustum[4]);
+
+	// calculate frustum corners, which are used to calculate deformed frustum planes for shadow caster culling
+	VectorMAMAMAM(1, r_view.origin, 1024, r_view.forward, -1024 * slopex, r_view.left, -1024 * slopey, r_view.up, r_view.frustumcorner[0]);
+	VectorMAMAMAM(1, r_view.origin, 1024, r_view.forward,  1024 * slopex, r_view.left, -1024 * slopey, r_view.up, r_view.frustumcorner[1]);
+	VectorMAMAMAM(1, r_view.origin, 1024, r_view.forward, -1024 * slopex, r_view.left,  1024 * slopey, r_view.up, r_view.frustumcorner[2]);
+	VectorMAMAMAM(1, r_view.origin, 1024, r_view.forward,  1024 * slopex, r_view.left,  1024 * slopey, r_view.up, r_view.frustumcorner[3]);
 
 	// LordHavoc: note to all quake engine coders, Quake had a special case
 	// for 90 degrees which assumed a square view (wrong), so I removed it,

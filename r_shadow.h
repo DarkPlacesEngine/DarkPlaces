@@ -65,6 +65,13 @@ extern matrix4x4_t r_shadow_entitytoattenuationxyz;
 // this transforms only the Z to S, and T is always 0.5
 extern matrix4x4_t r_shadow_entitytoattenuationz;
 
+// current light's cull box (copied out of an rtlight or calculated by GetLightInfo)
+extern vec3_t r_shadow_rtlight_cullmins;
+extern vec3_t r_shadow_rtlight_cullmaxs;
+// current light's culling planes
+extern int r_shadow_rtlight_numfrustumplanes;
+extern mplane_t r_shadow_rtlight_frustumplanes[12+6+6]; // see R_Shadow_ComputeShadowCasterCullingPlanes
+
 void R_Shadow_RenderVolume(int numvertices, int numtriangles, const float *vertex3f, const int *element3i);
 qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs);
 

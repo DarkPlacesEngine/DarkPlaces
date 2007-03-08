@@ -136,6 +136,7 @@ void R_DrawExplosions(void);
 #define gl_alpha_format 4
 
 int R_CullBox(const vec3_t mins, const vec3_t maxs);
+int R_CullBoxCustomPlanes(const vec3_t mins, const vec3_t maxs, int numplanes, const mplane_t *planes);
 
 #include "r_modules.h"
 
