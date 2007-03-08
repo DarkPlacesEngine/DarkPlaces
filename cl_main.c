@@ -760,7 +760,7 @@ extern void V_CalcViewBlend(void);
 extern void V_CalcRefdef(void);
 
 // note this is a recursive function, recursionlimit should be 32 or so on the initial call
-void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit)
+void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolate)
 {
 	const matrix4x4_t *matrix;
 	matrix4x4_t blendmatrix, tempmatrix, matrix2;
@@ -830,7 +830,7 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit)
 		if (!t->state_current.active)
 			return;
 		// update the parent first
-		CL_UpdateNetworkEntity(t, recursionlimit - 1);
+		CL_UpdateNetworkEntity(t, recursionlimit - 1, interpolate);
 		// make relative to the entity
 		matrix = &t->render.matrix;
 		// some properties of the tag entity carry over
@@ -878,7 +878,7 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit)
 		VectorLerp(cl.movement_oldorigin, lerp, cl.movement_origin, origin);
 		VectorSet(angles, 0, cl.viewangles[1], 0);
 	}
-	else if (e->persistent.lerpdeltatime > 0 && (lerp = (cl.time - e->persistent.lerpstarttime) / e->persistent.lerpdeltatime) < 1)
+	else if (interpolate && e->persistent.lerpdeltatime > 0 && (lerp = (cl.time - e->persistent.lerpstarttime) / e->persistent.lerpdeltatime) < 1)
 	{
 		// interpolate the origin and angles
 		lerp = max(0, lerp);
@@ -1064,23 +1064,64 @@ void CL_UpdateNetworkEntityTrail(entity_t *e)
 
 /*
 ===============
-CL_UpdateEntities
+CL_UpdateViewEntities
 ===============
 */
-void CL_UpdateEntities(void)
+void CL_UpdateViewEntities(void)
+{
+	int i;
+	// update any RENDER_VIEWMODEL entities to use the new view matrix
+	for (i = 1;i < cl.num_entities;i++)
+	{
+		if (cl.entities_active[i])
+		{
+			entity_t *ent = cl.entities + i;
+			if ((ent->render.flags & RENDER_VIEWMODEL) || ent->state_current.tagentity)
+				CL_UpdateNetworkEntity(ent, 32, true);
+		}
+	}
+	// and of course the engine viewmodel needs updating as well
+	CL_UpdateNetworkEntity(&cl.viewent, 32, true);
+}
+
+/*
+===============
+CL_UpdateNetworkCollisionEntities
+===============
+*/
+void CL_UpdateNetworkCollisionEntities(void)
 {
 	entity_t *ent;
 	int i;
 
-	// process network entities
-	// first link the player
-	CL_UpdateNetworkEntity(cl.entities + cl.viewentity, 32);
+	// start on the entity after the world
+	cl.num_brushmodel_entities = 0;
+	for (i = 1;i < cl.num_entities;i++)
+	{
+		if (cl.entities_active[i])
+		{
+			ent = cl.entities + i;
+			if (ent->state_current.active && ent->render.model && ent->render.model->name[0] == '*' && ent->render.model->TraceBox)
+			{
+				// do not interpolate the bmodels for this
+				CL_UpdateNetworkEntity(ent, 32, false);
+				cl.brushmodel_entities[cl.num_brushmodel_entities++] = ent->state_current.number;
+			}
+		}
+	}
+}
 
-	// set up the view
-	V_CalcRefdef();
+/*
+===============
+CL_UpdateNetworkEntities
+===============
+*/
+void CL_UpdateNetworkEntities(void)
+{
+	entity_t *ent;
+	int i;
 
 	// start on the entity after the world
-	// skip the player entity because it was already processed
 	for (i = 1;i < cl.num_entities;i++)
 	{
 		if (cl.entities_active[i])
@@ -1088,18 +1129,20 @@ void CL_UpdateEntities(void)
 			ent = cl.entities + i;
 			if (ent->state_current.active)
 			{
-				CL_UpdateNetworkEntity(ent, 32);
+				CL_UpdateNetworkEntity(ent, 32, true);
 				// view models should never create light/trails
 				if (!(ent->render.flags & RENDER_VIEWMODEL))
 					CL_UpdateNetworkEntityTrail(ent);
-				if (ent->render.model && ent->render.model->name[0] == '*' && ent->render.model->TraceBox)
-					cl.brushmodel_entities[cl.num_brushmodel_entities++] = ent->state_current.number;
 			}
 			else
 				cl.entities_active[i] = false;
 		}
 	}
+}
 
+void CL_UpdateViewModel(void)
+{
+	entity_t *ent;
 	ent = &cl.viewent;
 	ent->state_previous = ent->state_current;
 	ent->state_current = defaultstate;
@@ -1128,7 +1171,7 @@ void CL_UpdateEntities(void)
 		ent->render.frame1time = ent->render.frame2time = cl.time;
 		ent->render.framelerp = 1;
 	}
-	CL_UpdateNetworkEntity(ent, 32);
+	CL_UpdateNetworkEntity(ent, 32, true);
 }
 
 // note this is a recursive function, but it can never get in a runaway loop (because of the delayedlink flags)
@@ -1640,8 +1683,28 @@ int CL_ReadFromServer(void)
 		V_DriftPitch();
 		V_FadeViewFlashs();
 
-		// now update all the network entities and the view matrix
-		CL_UpdateEntities();
+		if (cl.movement_predicted)
+		{
+			// if prediction is enabled we have to update all the collidable
+			// network entities before the prediction code can be run
+			CL_UpdateNetworkCollisionEntities();
+		}
+
+		// now update the player prediction
+		CL_ClientMovement_Replay();
+
+		// update the player entity (which may be predicted)
+		CL_UpdateNetworkEntity(cl.entities + cl.viewentity, 32, true);
+
+		// now update the view (which depends on that player entity)
+		V_CalcRefdef();
+
+		// now update all the network entities and create particle trails
+		// (some entities may depend on the view)
+		CL_UpdateNetworkEntities();
+
+		// update the engine-based viewmodel
+		CL_UpdateViewModel();
 
 		CL_RelinkLightFlashes();
 		CSQC_RelinkAllEntities(ENTMASK_ENGINE | ENTMASK_ENGINEVIEWMODELS);

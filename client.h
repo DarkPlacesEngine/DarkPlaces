@@ -717,6 +717,8 @@ typedef struct client_state_s
 	// these fields are only updated by CL_ClientMovement (called by CL_SendMove after parsing each network packet)
 	// set by CL_ClientMovement_Replay functions
 	qboolean movement_predicted;
+	// if true the CL_ClientMovement_Replay function will update origin, etc
+	qboolean movement_replay;
 	// this is set true by svc_time parsing and causes a new movement to be
 	// queued for prediction purposes
 	qboolean movement_needupdate;
@@ -1032,7 +1034,7 @@ void CL_Disconnect (void);
 void CL_Disconnect_f (void);
 
 void CL_UpdateRenderEntity(entity_render_t *ent);
-void CL_UpdateEntities(void);
+void CL_UpdateViewEntities(void);
 
 //
 // cl_input
@@ -1058,6 +1060,7 @@ void CL_ParseTEnt (void);
 void CL_NewBeam (int ent, vec3_t start, vec3_t end, model_t *m, int lightning);
 void CL_RelinkBeams (void);
 void CL_Beam_CalculatePositions (const beam_t *b, vec3_t start, vec3_t end);
+void CL_ClientMovement_Replay(void);
 
 void CL_ClearTempEntities (void);
 entity_t *CL_NewTempEntity (void);

@@ -758,25 +758,13 @@ static void VM_CL_R_SetView (void)
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
 
-extern void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit);
 //#304 void() renderscene (EXT_CSQC)
 static void VM_CL_R_RenderScene (void)
 {
-	int i;
 	VM_SAFEPARMCOUNT(0, VM_CL_R_RenderScene);
 	// we need to update any RENDER_VIEWMODEL entities at this point because
 	// csqc supplies its own view matrix
-	for (i = 1;i < cl.num_entities;i++)
-	{
-		if (cl.entities_active[i])
-		{
-			entity_t *ent = cl.entities + i;
-			if ((ent->render.flags & RENDER_VIEWMODEL) || ent->state_current.tagentity)
-				CL_UpdateNetworkEntity(ent, 32);
-		}
-	}
-	// and of course the engine viewmodel needs updating as well
-	CL_UpdateNetworkEntity(&cl.viewent, 32);
+	CL_UpdateViewEntities();
 	// now draw stuff!
 	R_RenderView();
 }
