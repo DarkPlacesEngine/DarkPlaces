@@ -193,6 +193,9 @@ unsigned char *r_shadow_buffer_lighttrispvs;
 // current light's cull box (copied out of an rtlight or calculated by GetLightInfo)
 vec3_t r_shadow_rtlight_cullmins;
 vec3_t r_shadow_rtlight_cullmaxs;
+// current light's culling planes
+int r_shadow_rtlight_numfrustumplanes;
+mplane_t r_shadow_rtlight_frustumplanes[12+6+6]; // see R_Shadow_ComputeShadowCasterCullingPlanes
 
 rtexturepool_t *r_shadow_texturepool;
 rtexture_t *r_shadow_attenuation2dtexture;
@@ -2124,6 +2127,7 @@ void R_RTLight_Update(rtlight_t *rtlight, int isstatic, matrix4x4_t *matrix, vec
 	memset(rtlight, 0, sizeof(*rtlight));
 
 	// copy the properties
+	rtlight->matrix_lighttoworld = tempmatrix;
 	Matrix4x4_Invert_Simple(&rtlight->matrix_worldtolight, &tempmatrix);
 	Matrix4x4_OriginFromMatrix(&tempmatrix, rtlight->shadoworigin);
 	rtlight->radius = Matrix4x4_ScaleFromMatrix(&tempmatrix);
@@ -2276,6 +2280,159 @@ void R_Shadow_UncompileWorldLights(void)
 	dlight_t *light;
 	for (light = r_shadow_worldlightchain;light;light = light->next)
 		R_RTLight_Uncompile(&light->rtlight);
+}
+
+void R_Shadow_ComputeShadowCasterCullingPlanes(rtlight_t *rtlight)
+{
+	int i, j;
+	mplane_t plane;
+	// reset the count of frustum planes
+	// see r_shadow_rtlight_frustumplanes definition for how much this array
+	// can hold
+	r_shadow_rtlight_numfrustumplanes = 0;
+
+#if 1
+	// generate a deformed frustum that includes the light origin, this is
+	// used to cull shadow casting surfaces that can not possibly cast a
+	// shadow onto the visible light-receiving surfaces, which can be a
+	// performance gain
+	//
+	// if the light origin is onscreen the result will be 4 planes exactly
+	// if the light origin is offscreen on only one axis the result will
+	// be exactly 5 planes (split-side case)
+	// if the light origin is offscreen on two axes the result will be
+	// exactly 4 planes (stretched corner case)
+	for (i = 0;i < 4;i++)
+	{
+		// quickly reject standard frustum planes that put the light
+		// origin outside the frustum
+		if (PlaneDiff(rtlight->shadoworigin, &r_view.frustum[i]) < -0.03125)
+			continue;
+		// copy the plane
+		r_shadow_rtlight_frustumplanes[r_shadow_rtlight_numfrustumplanes++] = r_view.frustum[i];
+	}
+	// if all the standard frustum planes were accepted, the light is onscreen
+	// otherwise we need to generate some more planes below...
+	if (r_shadow_rtlight_numfrustumplanes < 4)
+	{
+		// at least one of the stock frustum planes failed, so we need to
+		// create one or two custom planes to enclose the light origin
+		for (i = 0;i < 4;i++)
+		{
+			// create a plane using the view origin and light origin, and a
+			// single point from the frustum corner set
+			TriangleNormal(r_view.origin, r_view.frustumcorner[i], rtlight->shadoworigin, plane.normal);
+			VectorNormalize(plane.normal);
+			plane.dist = DotProduct(r_view.origin, plane.normal);
+			// see if this plane is backwards and flip it if so
+			for (j = 0;j < 4;j++)
+				if (j != i && DotProduct(r_view.frustumcorner[j], plane.normal) - plane.dist < -0.03125)
+					break;
+			if (j < 4)
+			{
+				VectorNegate(plane.normal, plane.normal);
+				plane.dist *= -1;
+				// flipped plane, test again to see if it is now valid
+				for (j = 0;j < 4;j++)
+					if (j != i && DotProduct(r_view.frustumcorner[j], plane.normal) - plane.dist < -0.03125)
+						break;
+				// if the plane is still not valid, then it is dividing the
+				// frustum and has to be rejected
+				if (j < 4)
+					continue;
+			}
+			// we have created a valid plane, compute extra info
+			PlaneClassify(&plane);
+			// copy the plane
+			r_shadow_rtlight_frustumplanes[r_shadow_rtlight_numfrustumplanes++] = plane;
+#if 1
+			// if we've found 5 frustum planes then we have constructed a
+			// proper split-side case and do not need to keep searching for
+			// planes to enclose the light origin
+			if (r_shadow_rtlight_numfrustumplanes == 5)
+				break;
+#endif
+		}
+	}
+#endif
+
+#if 0
+	for (i = 0;i < r_shadow_rtlight_numfrustumplanes;i++)
+	{
+		plane = r_shadow_rtlight_frustumplanes[i];
+		Con_Printf("light %p plane #%i %f %f %f : %f (%f %f %f %f %f)\n", rtlight, i, plane.normal[0], plane.normal[1], plane.normal[2], plane.dist, PlaneDiff(r_view.frustumcorner[0], &plane), PlaneDiff(r_view.frustumcorner[1], &plane), PlaneDiff(r_view.frustumcorner[2], &plane), PlaneDiff(r_view.frustumcorner[3], &plane), PlaneDiff(rtlight->shadoworigin, &plane));
+	}
+#endif
+
+#if 0
+	// now add the light-space box planes if the light box is rotated, as any
+	// caster outside the oriented light box is irrelevant (even if it passed
+	// the worldspace light box, which is axial)
+	if (rtlight->matrix_lighttoworld.m[0][0] != 1 || rtlight->matrix_lighttoworld.m[1][1] != 1 || rtlight->matrix_lighttoworld.m[2][2] != 1)
+	{
+		for (i = 0;i < 6;i++)
+		{
+			vec3_t v;
+			VectorClear(v);
+			v[i >> 1] = (i & 1) ? -1 : 1;
+			Matrix4x4_Transform(&rtlight->matrix_lighttoworld, v, plane.normal);
+			VectorSubtract(plane.normal, rtlight->shadoworigin, plane.normal);
+			plane.dist = VectorNormalizeLength(plane.normal);
+			plane.dist += DotProduct(plane.normal, rtlight->shadoworigin);
+			r_shadow_rtlight_frustumplanes[r_shadow_rtlight_numfrustumplanes++] = plane;
+		}
+	}
+#endif
+
+#if 0
+	// add the world-space reduced box planes
+	for (i = 0;i < 6;i++)
+	{
+		VectorClear(plane.normal);
+		plane.normal[i >> 1] = (i & 1) ? -1 : 1;
+		plane.dist = (i & 1) ? -r_shadow_rtlight_cullmaxs[i >> 1] : r_shadow_rtlight_cullmins[i >> 1];
+		r_shadow_rtlight_frustumplanes[r_shadow_rtlight_numfrustumplanes++] = plane;
+	}
+#endif
+
+#if 0
+	{
+	int j, oldnum;
+	vec3_t points[8];
+	vec_t bestdist;
+	// reduce all plane distances to tightly fit the rtlight cull box, which
+	// is in worldspace
+	VectorSet(points[0], r_shadow_rtlight_cullmins[0], r_shadow_rtlight_cullmins[1], r_shadow_rtlight_cullmins[2]);
+	VectorSet(points[1], r_shadow_rtlight_cullmaxs[0], r_shadow_rtlight_cullmins[1], r_shadow_rtlight_cullmins[2]);
+	VectorSet(points[2], r_shadow_rtlight_cullmins[0], r_shadow_rtlight_cullmaxs[1], r_shadow_rtlight_cullmins[2]);
+	VectorSet(points[3], r_shadow_rtlight_cullmaxs[0], r_shadow_rtlight_cullmaxs[1], r_shadow_rtlight_cullmins[2]);
+	VectorSet(points[4], r_shadow_rtlight_cullmins[0], r_shadow_rtlight_cullmins[1], r_shadow_rtlight_cullmaxs[2]);
+	VectorSet(points[5], r_shadow_rtlight_cullmaxs[0], r_shadow_rtlight_cullmins[1], r_shadow_rtlight_cullmaxs[2]);
+	VectorSet(points[6], r_shadow_rtlight_cullmins[0], r_shadow_rtlight_cullmaxs[1], r_shadow_rtlight_cullmaxs[2]);
+	VectorSet(points[7], r_shadow_rtlight_cullmaxs[0], r_shadow_rtlight_cullmaxs[1], r_shadow_rtlight_cullmaxs[2]);
+	oldnum = r_shadow_rtlight_numfrustumplanes;
+	r_shadow_rtlight_numfrustumplanes = 0;
+	for (j = 0;j < oldnum;j++)
+	{
+		// find the nearest point on the box to this plane
+		bestdist = DotProduct(r_shadow_rtlight_frustumplanes[j].normal, points[0]);
+		for (i = 1;i < 8;i++)
+		{
+			dist = DotProduct(r_shadow_rtlight_frustumplanes[j].normal, points[i]);
+			if (bestdist > dist)
+				bestdist = dist;
+		}
+		Con_Printf("light %p %splane #%i %f %f %f : %f < %f\n", rtlight, r_shadow_rtlight_frustumplanes[j].dist < bestdist + 0.03125 ? "^2" : "^1", j, r_shadow_rtlight_frustumplanes[j].normal[0], r_shadow_rtlight_frustumplanes[j].normal[1], r_shadow_rtlight_frustumplanes[j].normal[2], r_shadow_rtlight_frustumplanes[j].dist, bestdist);
+		// if the nearest point is near or behind the plane, we want this
+		// plane, otherwise the plane is useless as it won't cull anything
+		if (r_shadow_rtlight_frustumplanes[j].dist < bestdist + 0.03125)
+		{
+			PlaneClassify(&r_shadow_rtlight_frustumplanes[j]);
+			r_shadow_rtlight_frustumplanes[r_shadow_rtlight_numfrustumplanes++] = r_shadow_rtlight_frustumplanes[j];
+		}
+	}
+	}
+#endif
 }
 
 void R_Shadow_DrawWorldShadow(int numsurfaces, int *surfacelist, const unsigned char *trispvs)
@@ -2479,6 +2636,8 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	if (R_Shadow_ScissorForBBox(r_shadow_rtlight_cullmins, r_shadow_rtlight_cullmaxs))
 		return;
 
+	R_Shadow_ComputeShadowCasterCullingPlanes(rtlight);
+
 	// make a list of lit entities and shadow casting entities
 	numlightentities = 0;
 	numshadowentities = 0;
@@ -2491,6 +2650,10 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 			entity_render_t *ent = r_refdef.entities[i];
 			vec3_t org;
 			if (!BoxesOverlap(ent->mins, ent->maxs, r_shadow_rtlight_cullmins, r_shadow_rtlight_cullmaxs))
+				continue;
+			// skip the object entirely if it is not within the valid
+			// shadow-casting region (which includes the lit region)
+			if (R_CullBoxCustomPlanes(ent->mins, ent->maxs, r_shadow_rtlight_numfrustumplanes, r_shadow_rtlight_frustumplanes))
 				continue;
 			if (!(model = ent->model))
 				continue;

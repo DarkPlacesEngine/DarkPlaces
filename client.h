@@ -69,6 +69,8 @@ typedef struct rtlight_s
 	// note that the world to light matrices are inversely scaled (divided) by lightradius
 
 	// core properties
+	// matrix for transforming light filter coordinates to world coordinates
+	matrix4x4_t matrix_lighttoworld;
 	// matrix for transforming world coordinates to light filter coordinates
 	matrix4x4_t matrix_worldtolight;
 	// typically 1 1 1, can be lower (dim) or higher (overbright)
@@ -1338,6 +1340,7 @@ typedef struct r_view_s
 	vec3_t up;
 	mplane_t frustum[5];
 	float frustum_x, frustum_y;
+	vec3_t frustumcorner[4];
 
 	// screen area to render in
 	int x;
