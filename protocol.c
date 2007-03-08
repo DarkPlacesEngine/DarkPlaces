@@ -64,7 +64,7 @@ protocolversioninfo[] =
 };
 
 static mempool_t *sv2csqc = NULL;
-int csqc_clent = 0;
+int csqc_clientnum = 0;
 sizebuf_t *sv2csqcbuf = NULL;
 static unsigned char *sv2csqcents_version[MAX_SCOREBOARD];
 
@@ -273,107 +273,150 @@ void EntityFrameCSQC_InitClientVersions (int client, qboolean clear)
 	memset(sv2csqcents_version[client], 0, MAX_EDICTS);
 }
 
-//[515]: we use only one array per-client for SendEntity feature
-void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int numstates, const entity_state_t *states)
+// FIXME FIXME FIXME: at this time the CSQC entity writing does not store
+// packet logs and thus if an update is lost it is never repeated, this makes
+// csqc entities useless at the moment.
+
+void EntityFrameCSQC_WriteState (sizebuf_t *msg, int number, qboolean doupdate, qboolean *sectionstarted)
 {
-	sizebuf_t				buf;
-	unsigned char					data[2048];
-	const entity_state_t	*s;
-	unsigned short			i, t, t2, t0;
-	prvm_eval_t				*val, *val2;
-	int						csqcents = 0;
-
-	if(prog->fieldoffsets.SendEntity < 0 || prog->fieldoffsets.Version < 0)
-		return;
-	--csqc_clent;
-	if(!sv2csqcents_version[csqc_clent])
-		EntityFrameCSQC_InitClientVersions(csqc_clent, false);
-
-	for (csqcents = i = 0, s = states;i < numstates;i++, s++)
+	int version;
+	prvm_eval_t *val, *val2;
+	version = 0;
+	if (doupdate)
 	{
-		//[515]: entities remove
-		if(i+1 >= numstates)
-			t2 = prog->num_edicts;
-		else
-			t2 = states[i+1].number;
-		if(!i)
+		if (msg->cursize + !*sectionstarted + 2 + 1 + 2 > msg->maxsize)
+			return;
+		val2 = PRVM_EDICTFIELDVALUE((&prog->edicts[number]), prog->fieldoffsets.Version);
+		version = (int)val2->_float;
+		// LordHavoc: do some validity checks on self.Version
+		// if Version reaches 8388608, it has already exhausted half of the
+		// reliable integer space in a 32bit float, and should be reset to 1
+		// FIXME: we should set all client versions of this entity to -1
+		// so that it will not be skipped accidentally in some cases after
+		// the reset
+		if (version < 0)
+			val2->_float = 0;
+		if (version >= 8388608)
 		{
-			t0 = 1;
-			t2 = s->number;
+			int i;
+			val2->_float = 1;
+			// since we just reset the Version field to 1, it may accidentally
+			// end up being equal to an existing client version now or in the
+			// future, so to fix this situation we have to loop over all
+			// clients and change their versions for this entity to be -1
+			// which never matches, thus causing them to receive the update
+			// soon, as they should
+			for (i = 0;i < svs.maxclients;i++)
+				if (sv2csqcents_version[i] && sv2csqcents_version[i][number])
+					sv2csqcents_version[i][number] = -1;
 		}
-		else
-			t0 = s->number+1;
-		for(t=t0; t<t2 ;t++)
-			if(sv2csqcents_version[csqc_clent][t])
-			{
-				if(!csqcents)
-				{
-					csqcents = 1;
-					memset(&buf, 0, sizeof(buf));
-					buf.data = data;
-					buf.maxsize = sizeof(data);
-					sv2csqcbuf = &buf;
-					SZ_Clear(&buf);
-					MSG_WriteByte(&buf, svc_csqcentities);
-				}
-				sv2csqcents_version[csqc_clent][t] = 0;
-				MSG_WriteShort(&buf, (unsigned short)t | 0x8000);
-				csqcents++;
-			}
-		//[515]: entities remove
-
-//		if(!s->active)
-//			continue;
-		val = PRVM_EDICTFIELDVALUE((&prog->edicts[s->number]), prog->fieldoffsets.SendEntity);
-		if(val->function)
+	}
+	// if the version already matches, we don't need to do anything as the
+	// latest version has already been sent.
+	if (sv2csqcents_version[csqc_clientnum][number] == version)
+		return;
+	if (version)
+	{
+		// if there's no SendEntity function, treat it as a remove
+		val = PRVM_EDICTFIELDVALUE((&prog->edicts[number]), prog->fieldoffsets.SendEntity);
+		if (val->function)
 		{
-			val2 = PRVM_EDICTFIELDVALUE((&prog->edicts[s->number]), prog->fieldoffsets.Version);
-			if(sv2csqcents_version[csqc_clent][s->number] == (unsigned char)val2->_float)
-				continue;
-			if(!csqcents)
-			{
-				csqcents = 1;
-				memset(&buf, 0, sizeof(buf));
-				buf.data = data;
-				buf.maxsize = sizeof(data);
-				sv2csqcbuf = &buf;
-				SZ_Clear(&buf);
-				MSG_WriteByte(&buf, svc_csqcentities);
-			}
-			if((unsigned char)val2->_float == 0)
-				val2->_float = 1;
-			MSG_WriteShort(&buf, s->number);
-			((int *)prog->globals.generic)[OFS_PARM0] = csqc_clent+1;
-			prog->globals.server->self = s->number;
+			// there is a function to call, save the cursize value incase we
+			// have to do a rollback due to overflow
+			int oldcursize = msg->cursize;
+			if(!*sectionstarted)
+				MSG_WriteByte(msg, svc_csqcentities);
+			MSG_WriteShort(msg, number);
+			((int *)prog->globals.generic)[OFS_PARM0] = csqc_clientnum+1;
+			prog->globals.server->self = number;
 			PRVM_ExecuteProgram(val->function, "Null SendEntity\n");
-			if(!prog->globals.generic[OFS_RETURN])
+			if(prog->globals.generic[OFS_RETURN])
 			{
-				buf.cursize -= 2;
-				if(sv2csqcents_version[csqc_clent][s->number])
+				if (msg->cursize + 2 > msg->maxsize)
 				{
-					sv2csqcents_version[csqc_clent][s->number] = 0;
-					MSG_WriteShort(&buf, (unsigned short)s->number | 0x8000);
-					csqcents++;
+					// if the packet no longer has enough room to write the
+					// final index code that ends the message, rollback to the
+					// state before we tried to write anything and then return
+					msg->cursize = oldcursize;
+					msg->overflowed = false;
+					return;
 				}
+				// an update has been successfully written, update the version
+				sv2csqcents_version[csqc_clientnum][number] = version;
+				// and take note that we have begun the svc_csqcentities
+				// section of the packet
+				*sectionstarted = 1;
+				return;
 			}
 			else
 			{
-				sv2csqcents_version[csqc_clent][s->number] = (unsigned char)val2->_float;
-				csqcents++;
+				// rollback the buffer to its state before the writes
+				msg->cursize = oldcursize;
+				// if the function returned FALSE, simply write a remove
+				// this is done by falling through to the remove code below
+				version = 0;
 			}
-			if (msg->cursize + buf.cursize > msg->maxsize)
-				break;
 		}
 	}
-	if(csqcents)
+	// write a remove message if needed
+	// if already removed, do nothing
+	if (!sv2csqcents_version[csqc_clientnum][number])
+		return;
+	// if there isn't enough room to write the remove message, just return, as
+	// it will be handled in a later packet
+	if (msg->cursize + !*sectionstarted + 2 + 2 > msg->maxsize)
+		return;
+	// first write the message identifier if needed
+	if(!*sectionstarted)
 	{
-		if(csqcents > 1)
-		{
-			MSG_WriteShort(&buf, 0);
-			SZ_Write(msg, buf.data, buf.cursize);
-		}
-		sv2csqcbuf = NULL;
+		*sectionstarted = 1;
+		MSG_WriteByte(msg, svc_csqcentities);
 	}
+	// write the remove message
+	MSG_WriteShort(msg, (unsigned short)number | 0x8000);
+	sv2csqcents_version[csqc_clientnum][number] = 0;
+}
+
+//[515]: we use only one array per-client for SendEntity feature
+void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int numstates, const entity_state_t *states)
+{
+	int i, num;
+	qboolean sectionstarted = false;
+	const entity_state_t *n;
+
+	// if this server progs is not CSQC-aware, return early
+	if(prog->fieldoffsets.SendEntity < 0 || prog->fieldoffsets.Version < 0)
+		return;
+	// make sure there is enough room to store the svc_csqcentities byte,
+	// the terminator (0x0000) and at least one entity update
+	if (msg->cursize + 32 >= msg->maxsize)
+		return;
+	if(!sv2csqcents_version[csqc_clientnum])
+		EntityFrameCSQC_InitClientVersions(csqc_clientnum, false);
+
+	sv2csqcbuf = msg;
+	num = 1;
+	for (i = 0, n = states;i < numstates;i++, n++)
+	{
+		// all entities between the previous entity state and this one are dead
+		for (;num < n->number;num++)
+			if(sv2csqcents_version[csqc_clientnum][num])
+				EntityFrameCSQC_WriteState(msg, num, false, &sectionstarted);
+		// update this entity
+		EntityFrameCSQC_WriteState(msg, num, true, &sectionstarted);
+		// advance to next entity so the next iteration doesn't immediately remove it
+		num++;
+	}
+	// all remaining entities are dead
+	for (;num < prog->num_edicts;num++)
+		if(sv2csqcents_version[csqc_clientnum][num])
+			EntityFrameCSQC_WriteState(msg, num, false, &sectionstarted);
+	if (sectionstarted)
+	{
+		// write index 0 to end the update (0 is never used by real entities)
+		MSG_WriteShort(msg, 0);
+	}
+	sv2csqcbuf = NULL;
 }
 
 void EntityFrameQuake_WriteFrame(sizebuf_t *msg, int numstates, const entity_state_t *states)
@@ -2204,7 +2247,7 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 	}
 
 	// detect changes in states
-	num = 0;
+	num = 1;
 	for (i = 0, n = states;i < numstates;i++, n++)
 	{
 		// mark gaps in entity numbering as removed entities
