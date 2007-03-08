@@ -560,8 +560,6 @@ void CL_UpdatePrydonCursor(void)
 	cl.cmd.cursor_fraction = CL_SelectTraceLine(cl.cmd.cursor_start, cl.cmd.cursor_end, cl.cmd.cursor_impact, cl.cmd.cursor_normal, &cl.cmd.cursor_entitynumber, (chase_active.integer || cl.intermission) ? &cl.entities[cl.playerentity].render : NULL);
 }
 
-void CL_ClientMovement_Replay(void);
-
 void CL_ClientMovement_InputQW(void)
 {
 	int i;
@@ -594,7 +592,8 @@ void CL_ClientMovement_InputQW(void)
 		cl.movement_queue[cl.movement_numqueue].crouch = false;
 		cl.movement_numqueue++;
 	}
-	CL_ClientMovement_Replay();
+
+	cl.movement_replay = true;
 }
 
 void CL_ClientMovement_Input(qboolean buttonjump, qboolean buttoncrouch)
@@ -642,7 +641,8 @@ void CL_ClientMovement_Input(qboolean buttonjump, qboolean buttoncrouch)
 		cl.movement_queue[cl.movement_numqueue].crouch = buttoncrouch;
 		cl.movement_numqueue++;
 	}
-	CL_ClientMovement_Replay();
+
+	cl.movement_replay = true;
 }
 
 typedef enum waterlevel_e
@@ -1174,39 +1174,54 @@ void CL_ClientMovement_Replay(void)
 	}
 	CL_ClientMovement_UpdateStatus(&s);
 
-	// store replay location
-	if (cl.movecmd[0].time > cl.movecmd[1].time)
+	if (cl.movement_replay)
 	{
-		cl.movement_time[1] = cl.movecmd[1].time;
-		cl.movement_time[0] = cl.movecmd[0].time;
-		cl.movement_time[2] = cl.time;
-		VectorCopy(cl.movement_origin, cl.movement_oldorigin);
+		cl.movement_replay = false;
+		// update interpolation timestamps if time has passed
+		if (cl.movecmd[0].time != cl.movecmd[1].time)
+		{
+			cl.movement_time[1] = cl.movecmd[1].time;
+			cl.movement_time[0] = cl.movecmd[0].time;
+			cl.movement_time[2] = cl.time;
+			VectorCopy(cl.movement_origin, cl.movement_oldorigin);
+			//VectorCopy(s.origin, cl.entities[cl.playerentity].state_current.origin);
+			//VectorSet(cl.entities[cl.playerentity].state_current.angles, 0, cl.viewangles[1], 0);
+		}
+
+		// update the interpolation target position and velocity
 		VectorCopy(s.origin, cl.movement_origin);
 		VectorCopy(s.velocity, cl.movement_velocity);
-		//VectorCopy(s.origin, cl.entities[cl.playerentity].state_current.origin);
-		//VectorSet(cl.entities[cl.playerentity].state_current.angles, 0, cl.viewangles[1], 0);
-
-		// update the onground flag if appropriate
-		// when not predicted, cl.onground is only cleared by cl_parse.c, but can
-		// be set forcefully here to hide server inconsistencies in the onground
-		// flag (such as when stepping up stairs, the onground flag tends to turn
-		// off briefly due to precision errors, particularly at high framerates),
-		// such inconsistencies can mess up the gun bobbing and stair smoothing,
-		// so they must be avoided.
-		if (cl.movement_predicted)
-			cl.onground = s.onground;
-		else if (s.onground)
-			cl.onground = true;
-
-		// react to onground state changes (for gun bob)
-		if (cl.onground)
-		{
-			if (!cl.oldonground)
-				cl.hitgroundtime = cl.movecmd[0].time;
-			cl.lastongroundtime = cl.movecmd[0].time;
-		}
-		cl.oldonground = cl.onground;
 	}
+
+	// update the onground flag if appropriate
+	if (cl.movement_predicted)
+	{
+		// when predicted we simply set the flag according to the UpdateStatus
+		cl.onground = s.onground;
+	}
+	else
+	{
+		// when not predicted, cl.onground is cleared by cl_parse.c each time
+		// an update packet is received, but can be forced on here to hide
+		// server inconsistencies in the onground flag
+		// (which mostly occur when stepping up stairs at very high framerates
+		//  where after the step up the move continues forward and not
+		//  downward so the ground is not detected)
+		//
+		// such onground inconsistencies can cause jittery gun bobbing and
+		// stair smoothing, so we set onground if UpdateStatus says so
+		if (s.onground)
+			cl.onground = true;
+	}
+
+	// react to onground state changes (for gun bob)
+	if (cl.onground)
+	{
+		if (!cl.oldonground)
+			cl.hitgroundtime = cl.movecmd[0].time;
+		cl.lastongroundtime = cl.movecmd[0].time;
+	}
+	cl.oldonground = cl.onground;
 }
 
 void QW_MSG_WriteDeltaUsercmd(sizebuf_t *buf, usercmd_t *from, usercmd_t *to)
