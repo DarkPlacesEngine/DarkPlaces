@@ -67,9 +67,15 @@ unsigned int CeilPowerOf2(unsigned int value);
 #define RAD2DEG(a) ((a) * (180.0f / (float) M_PI))
 #define ANGLEMOD(a) (((int) ((a) * (65536.0f / 360.0f)) & 65535) * (360.0f / 65536.0f))
 
+#define DotProduct4(a,b) ((a)[0]*(b)[0]+(a)[1]*(b)[1]+(a)[2]*(b)[2]+(a)[3]*(b)[3])
+#define Vector4Clear(a) ((a)[0]=(a)[1]=(a)[2]=(a)[3]=0)
+#define Vector4Compare(a,b) (((a)[0]==(b)[0])&&((a)[1]==(b)[1])&&((a)[2]==(b)[2])&&((a)[3]==(b)[3]))
+#define Vector4Copy(a,b) ((b)[0]=(a)[0],(b)[1]=(a)[1],(b)[2]=(a)[2],(b)[3]=(a)[3])
+#define Vector4Negate(a,b) ((b)[0]=-((a)[0]),(b)[1]=-((a)[1]),(b)[2]=-((a)[2]),(b)[3]=-((a)[3]))
+#define Vector4Set(a,b,c,d,e) ((a)[0]=(b),(a)[1]=(c),(a)[2]=(d),(a)[3]=(e))
+
 #define VectorNegate(a,b) ((b)[0]=-((a)[0]),(b)[1]=-((a)[1]),(b)[2]=-((a)[2]))
 #define VectorSet(a,b,c,d) ((a)[0]=(b),(a)[1]=(c),(a)[2]=(d))
-#define Vector4Set(a,b,c,d,e) ((a)[0]=(b),(a)[1]=(c),(a)[2]=(d),(a)[3]=(e))
 #define VectorClear(a) ((a)[0]=(a)[1]=(a)[2]=0)
 #define DotProduct(a,b) ((a)[0]*(b)[0]+(a)[1]*(b)[1]+(a)[2]*(b)[2])
 #define VectorSubtract(a,b,c) ((c)[0]=(a)[0]-(b)[0],(c)[1]=(a)[1]-(b)[1],(c)[2]=(a)[2]-(b)[2])
