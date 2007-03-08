@@ -472,8 +472,10 @@ void R_View_WorldVisibility(void)
 			leafstackpos = 1;
 			while (leafstackpos)
 			{
-				r_refdef.stats.world_leafs++;
 				leaf = leafstack[--leafstackpos];
+				if (r_viewcache.world_leafvisible[leaf - model->brush.data_leafs])
+					continue;
+				r_refdef.stats.world_leafs++;
 				r_viewcache.world_leafvisible[leaf - model->brush.data_leafs] = true;
 				// mark any surfaces bounding this leaf
 				if (leaf->numleafsurfaces)
