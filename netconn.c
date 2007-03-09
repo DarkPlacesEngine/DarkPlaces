@@ -38,8 +38,7 @@ static cvar_t sv_masters [] =
 	{CVAR_SAVE, "sv_master4", "", "user-chosen master server 4"},
 	{0, "sv_masterextra1", "ghdigital.com", "default master server 1 (admin: LordHavoc)"}, // admin: LordHavoc
 	{0, "sv_masterextra2", "dpmaster.deathmask.net", "default master server 2 (admin: Willis)"}, // admin: Willis
-	{0, "sv_masterextra3", "12.166.196.192", "default master server 3 (admin: Venim)"}, // admin: Venim
-	{0, "sv_masterextra4", "excalibur.nvg.ntnu.no", "default master server 4 (admin: tChr)"}, // admin: tChr
+	{0, "sv_masterextra3", "excalibur.nvg.ntnu.no", "default master server 3 (admin: tChr)"}, // admin: tChr
 	{0, NULL, NULL, NULL}
 };
 
