@@ -74,6 +74,9 @@ cvar_t cl_beams_lightatend = {CVAR_SAVE, "cl_beams_lightatend", "0", "make a lig
 
 cvar_t cl_noplayershadow = {CVAR_SAVE, "cl_noplayershadow", "0","hide player shadow"};
 
+cvar_t cl_dlights_decayradius = {CVAR_SAVE, "cl_dlights_decayradius", "1", "reduces size of light flashes over time"};
+cvar_t cl_dlights_decaybrightness = {CVAR_SAVE, "cl_dlights_decaybrightness", "1", "reduces brightness of light flashes over time"};
+
 cvar_t qport = {0, "qport", "0", "identification key for playing on qw servers (allows you to maintain a connection to a quakeworld server even if your port changes)"};
 
 cvar_t cl_prydoncursor = {0, "cl_prydoncursor", "0", "enables a mouse pointer which is able to click on entities in the world, useful for point and click mods, see PRYDON_CLIENTCURSOR extension in dpextensions.qc"};
@@ -610,7 +613,6 @@ dlightsetup:
 	Matrix4x4_OriginFromMatrix(&dl->matrix, dl->origin);
 	CL_FindNonSolidLocation(dl->origin, dl->origin, 6);
 	Matrix4x4_SetOrigin(&dl->matrix, dl->origin[0], dl->origin[1], dl->origin[2]);
-	Matrix4x4_Scale(&dl->matrix, radius, 1);
 	dl->radius = radius;
 	dl->color[0] = red;
 	dl->color[1] = green;
@@ -655,8 +657,14 @@ void CL_DecayLightFlashes(void)
 			dl->intensity -= time * dl->decay;
 			if (cl.time < dl->die && dl->intensity > 0)
 			{
-				//dl->radius = dl->initialradius * dl->intensity;
-				VectorScale(dl->initialcolor, dl->intensity, dl->color);
+				if (cl_dlights_decayradius.integer)
+					dl->radius = dl->initialradius * dl->intensity;
+				else
+					dl->radius = dl->initialradius;
+				if (cl_dlights_decaybrightness.integer)
+					VectorScale(dl->initialcolor, dl->intensity, dl->color);
+				else
+					VectorCopy(dl->initialcolor, dl->color);
 				cl.num_dlights = i + 1;
 			}
 			else
@@ -671,11 +679,20 @@ void CL_RelinkLightFlashes(void)
 	int i, j, k, l;
 	dlight_t *dl;
 	float frac, f;
+	matrix4x4_t tempmatrix;
 
 	if (r_dynamic.integer)
+	{
 		for (i = 0, dl = cl.dlights;i < cl.num_dlights && r_refdef.numlights < MAX_DLIGHTS;i++, dl++)
+		{
 			if (dl->radius)
-				R_RTLight_Update(&r_refdef.lights[r_refdef.numlights++], false, &dl->matrix, dl->color, dl->style, dl->cubemapname, dl->shadow, dl->corona, dl->coronasizescale, dl->ambientscale, dl->diffusescale, dl->specularscale, dl->flags);
+			{
+				tempmatrix = dl->matrix;
+				Matrix4x4_Scale(&tempmatrix, dl->radius, 1);
+				R_RTLight_Update(&r_refdef.lights[r_refdef.numlights++], false, &tempmatrix, dl->color, dl->style, dl->cubemapname, dl->shadow, dl->corona, dl->coronasizescale, dl->ambientscale, dl->diffusescale, dl->specularscale, dl->flags);
+			}
+		}
+	}
 
 // light animations
 // 'm' is normal light, 'a' is no light, 'z' is double bright
@@ -1871,6 +1888,8 @@ void CL_Init (void)
 	Cvar_RegisterVariable(&cl_beams_instantaimhack);
 	Cvar_RegisterVariable(&cl_beams_lightatend);
 	Cvar_RegisterVariable(&cl_noplayershadow);
+	Cvar_RegisterVariable(&cl_dlights_decayradius);
+	Cvar_RegisterVariable(&cl_dlights_decaybrightness);
 
 	Cvar_RegisterVariable(&cl_prydoncursor);
 
