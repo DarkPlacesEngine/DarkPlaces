@@ -1253,7 +1253,7 @@ static void VM_SV_setspawnparms (void)
 	int		i;
 	client_t	*client;
 
-	VM_SAFEPARMCOUNT(0, VM_SV_setspawnparms);
+	VM_SAFEPARMCOUNT(1, VM_SV_setspawnparms);
 
 	ent = PRVM_G_EDICT(OFS_PARM0);
 	i = PRVM_NUM_FOR_EDICT(ent);
