@@ -100,6 +100,7 @@
 0 bug hmap2 -vis: test that bitlongs code works properly on big endian systems such as Mac (LordHavoc)
 0 bug hmap2: figure out why there is a subtle difference between bmodel lighting and wall lighting, something to do with nudges causing different attenuation? (Urre)
 0 bug hmap2: handle \" properly in hmap2 cmdlib.c COM_Parse (sort)
+0 bug hmap2: the plane-distance based projection size for polygons doesn't work in certain wedge cases where two sides of a wedge brush are very near origin but the entirety of the wedge brush is much larger
 0 bug hmap: strip .map extension from filename if present
 0 change darkplaces client: disable all possible 'cheat' things unless -developer is given on commandline, this includes r_show*, r_test, gl_lightmaps, r_fullbright, and would require changing -developer to only set developer to 1 rather than 100, as 100 is too annoying
 0 change darkplaces client: implement inversion of non-uniform scaling in Matrix4x4_Invert_Simple or replace it with a full featured matrix inverter

@@ -514,6 +514,7 @@ void R_TimeReport(char *desc)
 void R_TimeReport_Frame(void)
 {
 	int i, j, lines, y;
+	cl_locnode_t *loc;
 
 	if (r_speeds_string[0])
 	{
@@ -551,6 +552,11 @@ void R_TimeReport_Frame(void)
 		speedstringcount = 0;
 		r_speeds_string[0] = 0;
 		r_timereport_active = false;
+		// put the location name in the r_speeds display as it greatly helps
+		// when creating loc files
+		loc = CL_Locs_FindNearest(cl.movement_origin);
+		if (loc)
+			sprintf(r_speeds_string + strlen(r_speeds_string), "Location: %s\n", loc->name);
 		sprintf(r_speeds_string + strlen(r_speeds_string), "org:'%+8.2f %+8.2f %+8.2f' dir:'%+2.3f %+2.3f %+2.3f'\n", r_view.origin[0], r_view.origin[1], r_view.origin[2], r_view.forward[0], r_view.forward[1], r_view.forward[2]);
 		sprintf(r_speeds_string + strlen(r_speeds_string), "%5i entities%6i surfaces%6i triangles%5i leafs%5i portals%6i particles\n", r_refdef.stats.entities, r_refdef.stats.entities_surfaces, r_refdef.stats.entities_triangles, r_refdef.stats.world_leafs, r_refdef.stats.world_portals, r_refdef.stats.particles);
 		sprintf(r_speeds_string + strlen(r_speeds_string), "%4i lights%4i clears%4i scissored%7i light%7i shadow%7i dynamic\n", r_refdef.stats.lights, r_refdef.stats.lights_clears, r_refdef.stats.lights_scissored, r_refdef.stats.lights_lighttriangles, r_refdef.stats.lights_shadowtriangles, r_refdef.stats.lights_dynamicshadowtriangles);
