@@ -910,6 +910,10 @@ void CL_BeginDownloads(qboolean aborteddownload)
 	// curl is done, so let's start with the business
 	cl.loadbegun = true;
 
+	// if already downloading something from the previous level, don't stop it
+	if (cls.qw_downloadname[0])
+		return;
+
 	if (cl.downloadcsqc)
 	{
 		size_t progsize;
