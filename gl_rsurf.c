@@ -61,7 +61,7 @@ void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 	if (!model->brushq1.lightdata)
 	{
 		for (i = 0;i < size3;i++)
-			bl[i] = 255*256;
+			bl[i] = 128*256;
 	}
 	else
 	{

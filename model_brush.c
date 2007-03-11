@@ -1193,9 +1193,17 @@ middle sample (the one which was requested)
 
 void Mod_Q1BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal)
 {
-	Mod_Q1BSP_LightPoint_RecursiveBSPNode(model, ambientcolor, diffusecolor, diffusenormal, model->brush.data_nodes + model->brushq1.hulls[0].firstclipnode, p[0], p[1], p[2] + 0.125, p[2] - 65536);
 	// pretend lighting is coming down from above (due to lack of a lightgrid to know primary lighting direction)
 	VectorSet(diffusenormal, 0, 0, 1);
+
+	if (!model->brushq1.lightdata)
+	{
+		VectorSet(ambientcolor, 1, 1, 1);
+		VectorSet(diffusecolor, 0, 0, 0);
+		return;
+	}
+
+	Mod_Q1BSP_LightPoint_RecursiveBSPNode(model, ambientcolor, diffusecolor, diffusenormal, model->brush.data_nodes + model->brushq1.hulls[0].firstclipnode, p[0], p[1], p[2] + 0.125, p[2] - 65536);
 }
 
 static void Mod_Q1BSP_DecompressVis(const unsigned char *in, const unsigned char *inend, unsigned char *out, unsigned char *outend)
@@ -3405,9 +3413,6 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 
 	// check if the map supports transparent water rendering
 	loadmodel->brush.supportwateralpha = Mod_Q1BSP_CheckWaterAlphaSupport();
-
-	if (!mod->brushq1.lightdata)
-		mod->brush.LightPoint = NULL;
 
 	if (mod->brushq1.data_compressedpvs)
 		Mem_Free(mod->brushq1.data_compressedpvs);
