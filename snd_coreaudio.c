@@ -57,7 +57,7 @@ static OSStatus audioDeviceIOProc(AudioDeviceID inDevice,
 	outBuffer = (float*)outOutputData->mBuffers[0].mData;
 	factor = snd_renderbuffer->format.channels * snd_renderbuffer->format.width;
 	frameCount = 0;
-	
+
 	// Lock the snd_renderbuffer
 	if (SndSys_LockRenderBuffer())
 	{
@@ -82,7 +82,7 @@ static OSStatus audioDeviceIOProc(AudioDeviceID inDevice,
 			samples = (const short*)(&snd_renderbuffer->ring[startOffset * factor]);
 			for (sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++)
 				outBuffer[sampleIndex] = samples[sampleIndex] * scale;
-			
+
 			outBuffer = &outBuffer[sampleCount];
 			sampleCount = frameCount * snd_renderbuffer->format.channels - sampleCount;
 			samples = (const short*)(&snd_renderbuffer->ring[0]);
@@ -107,9 +107,10 @@ static OSStatus audioDeviceIOProc(AudioDeviceID inDevice,
 	if (frameCount < submissionChunk)
 	{
 		unsigned int missingFrames;
-		
+
 		missingFrames = submissionChunk - frameCount;
-		Con_DPrintf("audioDeviceIOProc: %u sample frames missing\n", missingFrames);
+		if (developer.integer >= 200)
+			Con_Printf("audioDeviceIOProc: %u sample frames missing\n", missingFrames);
 		memset(&outBuffer[frameCount * snd_renderbuffer->format.channels], 0, missingFrames * sizeof(outBuffer[0]));
 	}
 
@@ -136,7 +137,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 		return true;
 
 	Con_Printf("Initializing CoreAudio...\n");
-	
+
 	// We only accept 16-bit samples for the moment
 	if (requested->width != 2)
 	{
@@ -149,7 +150,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 
 		return false;
 	}
-	
+
 	// Get the output device
 	propertySize = sizeof(outputDeviceID);
 	status = AudioHardwareGetProperty(kAudioHardwarePropertyDefaultOutputDevice, &propertySize, &outputDeviceID);
@@ -275,7 +276,7 @@ void SndSys_Shutdown(void)
 		return;
 	}
 	s_isRunning = false;
-	
+
 	pthread_mutex_destroy(&coreaudio_mutex);
 
 	status = AudioDeviceRemoveIOProc(outputDeviceID, audioDeviceIOProc);

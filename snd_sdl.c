@@ -38,7 +38,7 @@ static void Buffer_Callback (void *userdata, Uint8 *stream, int len)
 		Sys_Error("SDL sound: invalid buffer length passed to Buffer_Callback (%d bytes)\n", len);
 
 	RequestedFrames = (unsigned int)len / factor;
-	
+
 	// Transfert up to a chunk of samples from snd_renderbuffer to stream
 	MaxFrames = snd_renderbuffer->endframe - snd_renderbuffer->startframe;
 	if (MaxFrames > RequestedFrames)
@@ -53,7 +53,7 @@ static void Buffer_Callback (void *userdata, Uint8 *stream, int len)
 
 		PartialLength1 = (snd_renderbuffer->maxframes - StartOffset) * factor;
 		memcpy(stream, &snd_renderbuffer->ring[StartOffset * factor], PartialLength1);
-		
+
 		PartialLength2 = FrameCount * factor - PartialLength1;
 		memcpy(&stream[PartialLength1], &snd_renderbuffer->ring[0], PartialLength2);
 	}
@@ -62,7 +62,7 @@ static void Buffer_Callback (void *userdata, Uint8 *stream, int len)
 
 	snd_renderbuffer->startframe += FrameCount;
 
-	if (FrameCount < RequestedFrames && developer.integer >= 100)
+	if (FrameCount < RequestedFrames && developer.integer >= 200)
 		Con_DPrintf("SDL sound: %u sample frames missing\n", RequestedFrames - FrameCount);
 
 	sdlaudiotime += RequestedFrames;
@@ -109,7 +109,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 				wantspec.channels, wantspec.format, wantspec.freq, wantspec.samples);
 
 	if( SDL_OpenAudio( &wantspec, &obtainspec ) )
-	{       
+	{
 		Con_Printf( "Failed to open the audio device! (%s)\n", SDL_GetError() );
 		return false;
 	}
@@ -144,7 +144,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 	if (snd_channellayout.integer == SND_CHANNELLAYOUT_AUTO)
 	{
 		int newlayout;
-		
+
 #ifdef __linux__
 		newlayout = SND_CHANNELLAYOUT_ALSA;
 #else
@@ -155,7 +155,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 
 	sdlaudiotime = 0;
 	SDL_PauseAudio( false );
-	
+
 	return true;
 }
 
