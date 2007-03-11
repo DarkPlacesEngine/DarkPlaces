@@ -1263,7 +1263,7 @@ void FS_GameDir_f (void)
 	if (cls.demoplayback)
 		CL_Disconnect();
 
-	if (cls.state != ca_disconnected || sv.active)
+	if (cls.state == ca_connected || sv.active)
 	{
 		// actually, changing during game would work fine, but would be stupid
 		Con_Printf("Can not change gamedir while client is connected or server is running!\n");
