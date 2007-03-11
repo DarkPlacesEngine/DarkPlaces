@@ -83,6 +83,9 @@ cvar_t cl_prydoncursor = {0, "cl_prydoncursor", "0", "enables a mouse pointer wh
 
 cvar_t cl_deathnoviewmodel = {0, "cl_deathnoviewmodel", "1", "hides gun model when dead"};
 
+cvar_t cl_locs_enable = {CVAR_SAVE, "locs_enable", "1", "enables replacement of certain % codes in chat messages: %l (location), %d (last death location), %h (health), %a (armor), %x (rockets), %c (cells), %r (rocket launcher status), %p (powerup status), %w (weapon status), %t (current time in level)"};
+cvar_t cl_locs_show = {0, "locs_show", "0", "shows defined locations for editing purposes"};
+
 client_static_t	cls;
 client_state_t	cl;
 
@@ -1799,6 +1802,247 @@ void CL_AreaStats_f(void)
 	World_PrintAreaStats(&cl.world, "client");
 }
 
+cl_locnode_t *CL_Locs_FindNearest(const vec3_t point)
+{
+	int i;
+	cl_locnode_t *loc;
+	cl_locnode_t *best;
+	vec3_t nearestpoint;
+	vec_t dist, bestdist;
+	best = NULL;
+	bestdist = 0;
+	for (loc = cl.locnodes;loc;loc = loc->next)
+	{
+		for (i = 0;i < 3;i++)
+			nearestpoint[i] = bound(loc->mins[i], point[i], loc->maxs[i]);
+		dist = VectorDistance2(nearestpoint, point);
+		if (bestdist > dist || !best)
+		{
+			bestdist = dist;
+			best = loc;
+			if (bestdist < 1)
+				break;
+		}
+	}
+	return best;
+}
+
+void CL_Locs_FindLocationName(char *buffer, size_t buffersize, vec3_t point)
+{
+	cl_locnode_t *loc;
+	loc = CL_Locs_FindNearest(point);
+	if (loc)
+		strlcpy(buffer, loc->name, buffersize);
+	else
+		dpsnprintf(buffer, buffersize, "LOC=%.0f:%.0f:%.0f", point[0], point[1], point[2]);
+}
+
+void CL_Locs_FreeNode(cl_locnode_t *node)
+{
+	cl_locnode_t **pointer, **next;
+	for (pointer = &cl.locnodes;*pointer;pointer = next)
+	{
+		next = &(*pointer)->next;
+		if (*pointer == node)
+		{
+			*pointer = node->next;
+			Mem_Free(node);
+		}
+	}
+	Con_Printf("CL_Locs_FreeNode: no such node! (%p)\n", node);
+}
+
+void CL_Locs_AddNode(vec3_t mins, vec3_t maxs, const char *namestart, const char *nameend)
+{
+	cl_locnode_t *node, **pointer;
+	int namelen = (int)(nameend - namestart);
+	node = Mem_Alloc(cls.levelmempool, sizeof(cl_locnode_t) + namelen + 1);
+	VectorSet(node->mins, min(mins[0], maxs[0]), min(mins[1], maxs[1]), min(mins[2], maxs[2]));
+	VectorSet(node->maxs, max(mins[0], maxs[0]), max(mins[1], maxs[1]), max(mins[2], maxs[2]));
+	node->name = (char *)(node + 1);
+	memcpy(node->name, namestart, namelen);
+	node->name[namelen] = 0;
+	// link it into the tail of the list to preserve the order
+	for (pointer = &cl.locnodes;*pointer;pointer = &(*pointer)->next)
+		;
+	*pointer = node;
+}
+
+void CL_Locs_Add_f(void)
+{
+	vec3_t mins, maxs;
+	if (Cmd_Argc() != 5 && Cmd_Argc() != 8)
+	{
+		Con_Printf("usage: %s x y z[ x y z] name\n", Cmd_Argv(0));
+		return;
+	}
+	mins[0] = atof(Cmd_Argv(1));
+	mins[1] = atof(Cmd_Argv(2));
+	mins[2] = atof(Cmd_Argv(3));
+	if (Cmd_Argc() == 8)
+	{
+		maxs[0] = atof(Cmd_Argv(4));
+		maxs[1] = atof(Cmd_Argv(5));
+		maxs[2] = atof(Cmd_Argv(6));
+		CL_Locs_AddNode(mins, maxs, Cmd_Argv(7), Cmd_Argv(7) + strlen(Cmd_Argv(7)));
+	}
+	else
+		CL_Locs_AddNode(mins, mins, Cmd_Argv(4), Cmd_Argv(4) + strlen(Cmd_Argv(4)));
+}
+
+void CL_Locs_RemoveNearest_f(void)
+{
+	cl_locnode_t *loc;
+	loc = CL_Locs_FindNearest(r_view.origin);
+	if (loc)
+		CL_Locs_FreeNode(loc);
+	else
+		Con_Printf("no loc point or box found for your location\n");
+}
+
+void CL_Locs_Clear_f(void)
+{
+	while (cl.locnodes)
+		CL_Locs_FreeNode(cl.locnodes);
+}
+
+void CL_Locs_Save_f(void)
+{
+	cl_locnode_t *loc;
+	qfile_t *outfile;
+	char locfilename[MAX_QPATH];
+	if (!cl.locnodes)
+	{
+		Con_Printf("No loc points/boxes exist!\n");
+		return;
+	}
+	if (cls.state != ca_connected || !cl.worldmodel)
+	{
+		Con_Printf("No level loaded!\n");
+		return;
+	}
+	FS_StripExtension(cl.worldmodel->name, locfilename, sizeof(locfilename));
+	strlcat(locfilename, ".loc", sizeof(locfilename));
+
+	outfile = FS_Open(locfilename, "w", false, false);
+	if (!outfile)
+		return;
+	// if any boxes are used then this is a proquake-format loc file, which
+	// allows comments, so add some relevant information at the start
+	for (loc = cl.locnodes;loc;loc = loc->next)
+		if (!VectorCompare(loc->mins, loc->maxs))
+			break;
+	if (loc)
+	{
+		FS_Printf(outfile, "// %s %s saved by %s\n// x,y,z,x,y,z,\"name\"\n\n", locfilename, Sys_TimeString("%Y-%m-%d"), engineversion);
+		for (loc = cl.locnodes;loc;loc = loc->next)
+			if (VectorCompare(loc->mins, loc->maxs))
+				break;
+		if (loc)
+			Con_Printf("Warning: writing loc file containing a mixture of qizmo-style points and proquake-style boxes may not work in qizmo or proquake!\n");
+	}
+	for (loc = cl.locnodes;loc;loc = loc->next)
+	{
+		if (VectorCompare(loc->mins, loc->maxs))
+			FS_Printf(outfile, "%.0f %.0f %.0f %s\n", loc->mins[0]*8, loc->mins[1]*8, loc->mins[2]*8, loc->name);
+		else
+			FS_Printf(outfile, "%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,\"%s\"\n", loc->mins[0], loc->mins[1], loc->mins[2], loc->maxs[0], loc->maxs[1], loc->maxs[2], loc->name);
+	}
+	FS_Close(outfile);
+}
+
+void CL_Locs_Reload_f(void)
+{
+	int i, linenumber, limit;
+	char *filedata, *text, *textend, *linestart, *linetext, *lineend;
+	fs_offset_t filesize;
+	vec3_t mins, maxs;
+	char locfilename[MAX_QPATH];
+
+	if (cls.state != ca_connected || !cl.worldmodel)
+	{
+		Con_Printf("No level loaded!\n");
+		return;
+	}
+	FS_StripExtension(cl.worldmodel->name, locfilename, sizeof(locfilename));
+	strlcat(locfilename, ".loc", sizeof(locfilename));
+
+	CL_Locs_Clear_f();
+
+	filedata = (char *)FS_LoadFile(locfilename, cls.levelmempool, false, &filesize);
+	if (!filedata)
+		return;
+	text = filedata;
+	textend = filedata + filesize;
+	for (linenumber = 1;text < textend;linenumber++)
+	{
+		linestart = text;
+		for (;text < textend && *text != '\r' && *text != '\n';text++)
+			;
+		lineend = text;
+		if (text + 1 < textend && *text == '\r' && text[1] == '\n')
+			text++;
+		if (text < textend)
+			text++;
+		// trim trailing whitespace
+		while (lineend > linestart && lineend[-1] <= ' ')
+			lineend--;
+		// trim leading whitespace
+		while (linestart < lineend && *linestart <= ' ')
+			linestart++;
+		// check if this is a comment
+		if (linestart + 2 <= lineend && !strncmp(linestart, "//", 2))
+			continue;
+		linetext = linestart;
+		limit = 3;
+		for (i = 0;i < limit;i++)
+		{
+			if (linetext >= lineend)
+				break;
+			// note: a missing number is interpreted as 0
+			if (i < 3)
+				mins[i] = atof(linetext);
+			else
+				maxs[i - 3] = atof(linetext);
+			// now advance past the number
+			while (linetext < lineend && *linetext > ' ' && *linetext != ',')
+				linetext++;
+			// advance through whitespace
+			if (linetext < lineend)
+			{
+				if (*linetext <= ' ')
+					linetext++;
+				else if (*linetext == ',')
+				{
+					linetext++;
+					limit = 6;
+				}
+			}
+		}
+		// if this is a quoted name, remove the quotes
+		if (linetext < lineend && *linetext == '"')
+		{
+			lineend--;
+			linetext++;
+		}
+		// valid line parsed
+		if (i == 3 || i == 6)
+		{
+			// if a point was parsed, it needs to be scaled down by 8 (since
+			// point-based loc files were invented by a proxy which dealt
+			// directly with quake protocol coordinates, which are *8), turn
+			// it into a box
+			if (i == 3)
+			{
+				VectorScale(mins, (1.0 / 8.0), mins);
+				VectorCopy(mins, maxs);
+			}
+			// add the point or box to the list
+			CL_Locs_AddNode(mins, maxs, linetext, lineend);
+		}
+	}
+}
+
 /*
 ===========
 CL_Shutdown
@@ -1900,6 +2144,14 @@ void CL_Init (void)
 	Cvar_SetValueQuick(&qport, (rand() * RAND_MAX + rand()) & 0xffff);
 
 	Cmd_AddCommand("timerefresh", CL_TimeRefresh_f, "turn quickly and print rendering statistcs");
+
+	Cvar_RegisterVariable(&cl_locs_enable);
+	Cvar_RegisterVariable(&cl_locs_show);
+	Cmd_AddCommand("locs_add", CL_Locs_Add_f, "add a point or box location (usage: x y z[ x y z] \"name\", if two sets of xyz are supplied it is a box, otherwise point)");
+	Cmd_AddCommand("locs_removenearest", CL_Locs_RemoveNearest_f, "remove the nearest point or box (note: you need to be very near a box to remove it)");
+	Cmd_AddCommand("locs_clear", CL_Locs_Clear_f, "remove all loc points/boxes");
+	Cmd_AddCommand("locs_reload", CL_Locs_Reload_f, "reload .loc file for this map");
+	Cmd_AddCommand("locs_save", CL_Locs_Save_f, "save .loc file for this map containing currently defined points and boxes");
 
 	CL_Parse_Init();
 	CL_Particles_Init();

@@ -403,6 +403,7 @@ static qboolean QW_CL_CheckOrDownloadFile(const char *filename)
 	return false;
 }
 
+extern void CL_Locs_Reload_f(void);
 static void QW_CL_ProcessUserInfo(int slot);
 static void QW_CL_RequestNextDownload(void)
 {
@@ -501,6 +502,7 @@ static void QW_CL_RequestNextDownload(void)
 		cl.entities[0].render.model = cl.worldmodel = cl.model_precache[1];
 		CL_UpdateRenderEntity(&cl.entities[0].render);
 
+		CL_Locs_Reload_f();
 		R_Modules_NewMap();
 
 		// TODO: add pmodel/emodel player.mdl/eyes.mdl CRCs to userinfo
@@ -939,6 +941,7 @@ void CL_BeginDownloads(qboolean aborteddownload)
 				// we now have the worldmodel so we can set up the game world
 				cl.entities[0].render.model = cl.worldmodel = cl.model_precache[1];
 				CL_UpdateRenderEntity(&cl.entities[0].render);
+				CL_Locs_Reload_f();
 				R_Modules_NewMap();
 				// check memory integrity
 				Mem_CheckSentinelsGlobal();
@@ -988,6 +991,7 @@ void CL_BeginDownloads(qboolean aborteddownload)
 					// the worldmodel failed, but we need to set up anyway
 					cl.entities[0].render.model = cl.worldmodel = cl.model_precache[1];
 					CL_UpdateRenderEntity(&cl.entities[0].render);
+					CL_Locs_Reload_f();
 					R_Modules_NewMap();
 					// check memory integrity
 					Mem_CheckSentinelsGlobal();
@@ -1026,6 +1030,7 @@ void CL_BeginDownloads(qboolean aborteddownload)
 				// we now have the worldmodel so we can set up the game world
 				cl.entities[0].render.model = cl.worldmodel = cl.model_precache[1];
 				CL_UpdateRenderEntity(&cl.entities[0].render);
+				CL_Locs_Reload_f();
 				R_Modules_NewMap();
 				// check memory integrity
 				Mem_CheckSentinelsGlobal();

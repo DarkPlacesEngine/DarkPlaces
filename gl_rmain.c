@@ -2189,6 +2189,8 @@ void R_RenderView(void)
 extern void R_DrawLightningBeams (void);
 extern void VM_CL_AddPolygonsToMeshQueue (void);
 extern void R_DrawPortals (void);
+extern cvar_t cl_locs_show;
+static void R_DrawLocs(void);
 void R_RenderScene(void)
 {
 	// don't let sound skip if going slow
@@ -2278,6 +2280,13 @@ void R_RenderScene(void)
 		qglUseProgramObjectARB(0);CHECKGLERROR
 	}
 	VM_CL_AddPolygonsToMeshQueue();
+
+	if (cl_locs_show.integer)
+	{
+		R_DrawLocs();
+		if (r_timereport_active)
+			R_TimeReport("showlocs");
+	}
 
 	if (r_drawportals.integer)
 	{
@@ -3940,6 +3949,80 @@ void R_QueueSurfaceList(int numsurfaces, msurface_t **surfacelist, int flagsmask
 			// render the range of surfaces
 			R_DrawTextureSurfaceList(j - i, surfacelist + i);
 		}
+	}
+}
+
+float locboxvertex3f[6*4*3] =
+{
+	1,0,1, 1,0,0, 1,1,0, 1,1,1,
+	0,1,1, 0,1,0, 0,0,0, 0,0,1,
+	1,1,1, 1,1,0, 0,1,0, 0,1,1,
+	0,0,1, 0,0,0, 1,0,0, 1,0,1,
+	0,0,1, 1,0,1, 1,1,1, 0,1,1,
+	1,0,0, 0,0,0, 0,1,0, 1,1,0
+};
+
+int locboxelement3i[6*2*3] =
+{
+	 0, 1, 2, 0, 2, 3,
+	 4, 5, 6, 4, 6, 7,
+	 8, 9,10, 8,10,11,
+	12,13,14, 12,14,15,
+	16,17,18, 16,18,19,
+	20,21,22, 20,22,23
+};
+
+void R_DrawLoc_Callback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
+{
+	int i, j;
+	cl_locnode_t *loc = (cl_locnode_t *)ent;
+	vec3_t mins, size;
+	float vertex3f[6*4*3];
+	CHECKGLERROR
+	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	GL_DepthMask(false);
+	GL_DepthTest(true);
+	GL_CullFace(GL_NONE);
+	R_Mesh_Matrix(&identitymatrix);
+
+	R_Mesh_VertexPointer(vertex3f);
+	R_Mesh_ColorPointer(NULL);
+	R_Mesh_ResetTextureState();
+
+	i = surfacelist[0];
+	GL_Color(((i & 0x0007) >> 0) * (1.0f / 7.0f) * r_view.colorscale,
+			 ((i & 0x0038) >> 3) * (1.0f / 7.0f) * r_view.colorscale,
+			 ((i & 0x01C0) >> 6) * (1.0f / 7.0f) * r_view.colorscale,
+			surfacelist[0] < 0 ? 0.5f : 0.125f);
+
+	if (VectorCompare(loc->mins, loc->maxs))
+	{
+		VectorSet(size, 2, 2, 2);
+		VectorMA(loc->mins, -0.5f, size, mins);
+	}
+	else
+	{
+		VectorCopy(loc->mins, mins);
+		VectorSubtract(loc->maxs, loc->mins, size);
+	}
+
+	for (i = 0;i < 6*4*3;)
+		for (j = 0;j < 3;j++, i++)
+			vertex3f[i] = mins[j] + size[j] * locboxvertex3f[i];
+
+	R_Mesh_Draw(0, 6*4, 6*2, locboxelement3i);
+}
+
+void R_DrawLocs(void)
+{
+	int index;
+	cl_locnode_t *loc, *nearestloc;
+	vec3_t center;
+	nearestloc = CL_Locs_FindNearest(cl.movement_origin);
+	for (loc = cl.locnodes, index = 0;loc;loc = loc->next, index++)
+	{
+		VectorLerp(loc->mins, 0.5f, loc->maxs, center);
+		R_MeshQueue_AddTransparent(center, R_DrawLoc_Callback, (entity_render_t *)loc, loc == nearestloc ? -1 : index, NULL);
 	}
 }
 

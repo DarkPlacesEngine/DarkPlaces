@@ -653,6 +653,14 @@ typedef enum cl_parsingtextmode_e
 }
 cl_parsingtextmode_t;
 
+typedef struct cl_locnode_s
+{
+	struct cl_locnode_s *next;
+	char *name;
+	vec3_t mins, maxs;
+}
+cl_locnode_t;
+
 //
 // the client_state_t structure is wiped completely at every
 // server signon
@@ -956,6 +964,12 @@ typedef struct client_state_s
 
 	// collision culling data
 	world_t world;
+
+	// loc file stuff (points and boxes describing locations in the level)
+	cl_locnode_t *locnodes;
+	// this is updated to cl.movement_origin whenever health is < 1
+	// used by %d print in say/say_team messages if cl_locs_enable is on
+	vec3_t lastdeathorigin;
 }
 client_state_t;
 
@@ -1017,9 +1031,14 @@ extern cvar_t cl_stainmaps_clearonload;
 
 extern cvar_t cl_prydoncursor;
 
+extern cvar_t cl_locs_enable;
+
 extern client_state_t cl;
 
 extern void CL_AllocLightFlash (entity_render_t *ent, matrix4x4_t *matrix, float radius, float red, float green, float blue, float decay, float lifetime, int cubemapnum, int style, int shadowenable, vec_t corona, vec_t coronasizescale, vec_t ambientscale, vec_t diffusescale, vec_t specularscale, int flags);
+
+cl_locnode_t *CL_Locs_FindNearest(const vec3_t point);
+void CL_Locs_FindLocationName(char *buffer, size_t buffersize, vec3_t point);
 
 //=============================================================================
 
