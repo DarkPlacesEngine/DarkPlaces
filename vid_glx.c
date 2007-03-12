@@ -287,7 +287,8 @@ static void IN_Activate (qboolean grab)
 #endif
 				XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, vid.width / 2, vid.height / 2);
 
-			XGrabKeyboard(vidx11_display, win, False, GrabModeAsync, GrabModeAsync, CurrentTime);
+			if (vid_grabkeyboard.integer)
+				XGrabKeyboard(vidx11_display, win, False, GrabModeAsync, GrabModeAsync, CurrentTime);
 
 			mouse_x = mouse_y = 0;
 			cl_ignoremousemove = true;
