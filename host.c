@@ -961,7 +961,7 @@ static void Host_Init (void)
 	// initialize ixtable
 	Mathlib_Init();
 
-	// initialize filesystem (including fs_basedir, fs_gamedir, -path, -game, scr_screenshot_name)
+	// initialize filesystem (including fs_basedir, fs_gamedir, -game, scr_screenshot_name)
 	FS_Init();
 
 	NetConn_Init();
