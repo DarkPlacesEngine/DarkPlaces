@@ -374,7 +374,6 @@ _snd_mixahead                                     0.1                 how much s
 ambient_fade                                      100                 rate of volume fading when moving from one environment to another
 ambient_level                                     0.3                 volume of environment noises (water and wind)
 bgmvolume                                         1                   volume of background music (such as CD music or replacement files such as sound/cdtracks/track002.ogg)
-bgmvolume                                         1                   volume of background music (such as CD music or replacement files such as sound/cdtracks/track002.ogg)
 cdaudioinitialized                                0                   indicates if CD Audio system is active
 chase_active                                      0                   enables chase cam
 chase_back                                        48                  chase cam distance from the player
@@ -830,13 +829,11 @@ slowmo                                            1.0                 controls g
 snd_channellayout                                 0                   channel layout. Can be 0 (auto - snd_restart needed), 1 (standard layout), or 2 (ALSA layout)
 snd_channels                                      2                   number of channels for the sound ouput (2 for stereo; up to 8 supported for 3D sound)
 snd_initialized                                   0                   indicates the sound subsystem is active
-snd_initialized                                   0                   indicates the sound subsystem is active
 snd_noextraupdate                                 0                   disables extra sound mixer calls that are meant to reduce the chance of sound breakup at very low framerates
 snd_precache                                      1                   loads sounds before they are used
 snd_show                                          0                   shows some statistics about sound mixing
 snd_soundradius                                   1000                radius of weapon sounds and other standard sound effects (monster idle noises are half this radius and flickering light noises are one third of this radius)
 snd_speed                                         48000               sound output frequency, in hertz
-snd_staticvolume                                  1                   volume of ambient sound effects (such as swampy sounds at the start of e1m2)
 snd_staticvolume                                  1                   volume of ambient sound effects (such as swampy sounds at the start of e1m2)
 snd_streaming                                     1                   enables keeping compressed ogg sound files compressed, decompressing them only as needed, otherwise they will be decompressed completely at load (may use a lot of memory)
 snd_swapstereo                                    0                   swaps left/right speakers for old ISA soundblaster cards
@@ -920,7 +917,6 @@ sys_colortranslation                              1                   terminal c
 sys_specialcharactertranslation                   1                   terminal console conchars to ASCII translation (set to 0 if your conchars.tga is for an 8bit character set or if you want raw output)
 sys_ticrate                                       0.05                how long a server frame is in seconds, 0.05 is 20fps server rate, 0.1 is 10fps (can not be set higher than 0.1), 0 runs as many server frames as possible (makes games against bots a little smoother, overwhelms network players)
 sys_usetimegettime                                1                   use windows timeGetTime function (which has issues on some motherboards) for timing rather than QueryPerformanceCounter timer (which has issues on multicore/multiprocessor machines and processors which are designed to conserve power)
-sys_usetimegettime                                1                   use windows timeGetTime function (which has issues on some motherboards) for timing rather than QueryPerformanceCounter timer (which has issues on multicore/multiprocessor machines and processors which are designed to conserve power)
 team                                              none                QW team (4 character limit, example: blue)
 teamplay                                          0                   teamplay mode, values depend on mod but typically 0 = no teams, 1 = no team damage no self damage, 2 = team damage and self damage, some mods support 3 = no team damage but can damage self
 temp1                                             0                   general cvar for mods to use, in stock id1 this selects which death animation to use on players (0 = random death, other values select specific death scenes)
@@ -974,7 +970,6 @@ vid_stereobuffer                                  0                   enables 'q
 vid_vsync                                         0                   sync to vertical blank, prevents 'tearing' (seeing part of one frame and part of another on the screen at the same time), automatically disabled when doing timedemo benchmarks
 vid_width                                         640                 resolution
 viewsize                                          100                 how large the view should be, 110 disables inventory bar, 120 disables status bar
-volume                                            0.7                 volume of sound effects
 volume                                            0.7                 volume of sound effects
 
 
