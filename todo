@@ -149,8 +149,6 @@
 0 feature dpmod: add mode with respawning monsters
 0 feature dpmod: change kill awards to use DP_SV_CLIENTFLASHPIC (Tomaz)
 0 feature dpmod: find a way to make deathmatch 7 get more difficult as kills increase?  (Zombie13)
-0 feature dpmod: include .lit and .dlit files for all id1 maps
-0 feature dpmod: include .vis files for all id1 maps
 0 feature dpmod: make a editlights.cfg containing a lot of light editing binds as bindmap 5, also aliases to turn on/off that bindmap, so users can bind one key to the switch command to switch to a light editing mode and back again any time they want (HReaper)
 0 feature dpmod: make rocket launcher ai code use altfire to detonate rockets near players (Vermeulen)
 0 feature dpmod: make run animation play back according to movement speed (along v_forward), instead of just playing a continuous loop based on time (Urre)
@@ -161,7 +159,6 @@
 0 feature dpmod: try not adding gravity when onground to see if it gets rid of ramp sliding (Midgar)
 0 feature dpmod: update stats to count monster kills in dm 7 and such
 0 feature dpmodel: add support for compiling a model relative to a bone, for exporting head/upper/legs md3 player models more easily (Morphed)
-0 feature dpmodel: merge in jalisk0's patches for halflife2 smd import: http://www.quakesrc.org/forums/viewtopic.php?t=4731
 0 feature dpzoo.map: flame jet
 0 feature dpzoo.map: func_train with sky brushes
 0 feature dpzoo.map: particlecube
@@ -175,7 +172,6 @@
 0 feature hmap2: add CAULK texture support - delete surfaces using this texture, or at least don't link them (Tomaz)
 0 feature hmap2: produce .vis files which contain a numvisleafs, an array of visofs values for all the leafs of the bsp, and the new data for the visibility lump, this would avoid the need for vispatch
 0 feature lhfire: make a lhfire.txt and move the scripting info to it, add some more general explanation and tips
-0 feature zmodel: add "rotate" command to rotate around yaw (Vermeulen)
 0 optimization darkplaces client: add cl_null.c so that dedicated server doesn't need client
 0 optimization darkplaces collision: Collision_TraceBrushBrush should compare enterfrac changes to realfraction and skip out if further, also leavefrac (Vic)
 0 optimization darkplaces collision: Mod_Q3BSP_TraceBrush_RecursiveBSPNode can be optimized to take a clipflags parameter like R_Q3BSP_RecursiveWorldNode (Vic)
@@ -1242,8 +1238,10 @@ d feature darkplaces sound: add snd_speed and snd_channels cvars (hyenur)
 d feature darkplaces sound: make Host_Shutdown clear sound buffer to avoid looping while quitting (up2nogood)
 d feature darkplaces video: add widescreen mode support, with 3 lists of resolutions in the menu based on aspect ratio setting, using this list http://www.deathmask.net/misc/widescreen.txt and figure out how to bias the fov based on aspect (Willis)
 d feature darkplaces: showfps should show spf when below 1fps (Sajt)
+d feature dpmodel: merge in jalisk0's patches for halflife2 smd import: http://www.quakesrc.org/forums/viewtopic.php?t=4731
 d feature hmap2: make water have lightmaps (unless -nowaterlightmaps is specified)
 d feature modeltools: add a makesp2 tool to make a very simple .sp2 sprite given a base name and frame size, the format is IDS2<version><numframes>{<width><height><handlex><handley><name[64]>} (Morphed)
+d feature zmodel: add "rotate" command to rotate around yaw (Vermeulen)
 d hmap2 -qbsp: degenerate edge error that occurs in mrinsane's newmap.map file, tyrqbsp does not have this problem (mrinsane)
 d hmap2 -vis: fix CompressVis bitbytes to be correct (Transfusion)
 d hmap2: add -ambientlight option, with warning that it does not produce a .light file (Harb)
@@ -1339,5 +1337,7 @@ f dpmod: figure out why the dbsg isn't selectable in deathmatch 7 mode
 f dpmod: make tarbabies have a self.resist_explosive = 3; like zombies (Sajt)
 f feature darkplaces client: add back cl_particles_lighting cvar and add back the particle lighting (romi)
 f feature darkplaces server: add an extension to check if a file exists outside the data directory, FRIK_FILE can do this but only inside data directory (Error)
+f feature dpmod: include .lit and .dlit files for all id1 maps - this idea was rejected due to download size
+f feature dpmod: include .vis files for all id1 maps - this idea rejected due to lack of .vis support and download size
 f hqbsp: CreateBrushFaces should use RadiusFromBounds for its rotation box code, but hmap is obsolete (Vic)
 f optimization darkplaces visibility: R_Q3BSP_RecursiveWorldNode should take clipflags parameter and do not cull a node against a plane if the parent node is totally on one side of the plane (Vic)
