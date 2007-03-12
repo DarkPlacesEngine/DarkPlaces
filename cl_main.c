@@ -1968,14 +1968,22 @@ void CL_Locs_Reload_f(void)
 		Con_Printf("No level loaded!\n");
 		return;
 	}
-	FS_StripExtension(cl.worldmodel->name, locfilename, sizeof(locfilename));
-	strlcat(locfilename, ".loc", sizeof(locfilename));
 
 	CL_Locs_Clear_f();
 
+	// try maps/something.loc first (LordHavoc: where I think they should be)
+	FS_StripExtension(cl.worldmodel->name, locfilename, sizeof(locfilename));
+	strlcat(locfilename, ".loc", sizeof(locfilename));
 	filedata = (char *)FS_LoadFile(locfilename, cls.levelmempool, false, &filesize);
 	if (!filedata)
-		return;
+	{
+		// try proquake name as well (LordHavoc: I hate path mangling)
+		FS_StripExtension(va("locs/%s", FS_FileWithoutPath(cl.worldmodel->name)), locfilename, sizeof(locfilename));
+		strlcat(locfilename, ".loc", sizeof(locfilename));
+		filedata = (char *)FS_LoadFile(locfilename, cls.levelmempool, false, &filesize);
+		if (!filedata)
+			return;
+	}
 	text = filedata;
 	textend = filedata + filesize;
 	for (linenumber = 1;text < textend;linenumber++)

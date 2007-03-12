@@ -130,7 +130,6 @@
 0 change hmap2: qbsp should do tjunc fixing on leaky maps
 0 change revelation: change the wabbit kill message to " was hunting wabbit but shot " " instead"
 0 change zmodel: include the example script in the build zips, not just in the files directory
-0 feature darkplaces client: add .loc file support and say macros
 0 feature darkplaces client: add .mvd demo support
 0 feature darkplaces client: add .qwd demo support
 0 feature darkplaces client: add DP_GFX_EFFECTINFO_TXT to extensions and document it, the feature has been in for a long time, also update wiki.quakesrc.org accordingly
@@ -1212,6 +1211,7 @@ d dpzoo.map: rain
 d dpzoo.map: skybox
 d dpzoo.map: snow
 d dpzoo.map: transparent glass bmodels (DP_ENT_ALPHA)
+d feature darkplaces client: add .loc file support and say macros
 d feature darkplaces client: add BX_WAL_SUPPORT to extensions and document it, the feature has been in for a long time, also update wiki.quakesrc.org accordingly
 d feature darkplaces client: add a sv_fixedframeratesingleplayer cvar (default off), to allow fixed framerate singleplayer mods, mainly useful for physics (Urre)
 d feature darkplaces client: add showbrand cvar which would show gfx/brand.tga in the left/right top/bottom corner (depending on value of scr_showbrand) all the time, this would be useful for screenshots (Spirit_of_85)
