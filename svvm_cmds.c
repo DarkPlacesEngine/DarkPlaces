@@ -3,7 +3,7 @@
 //============================================================================
 // Server
 
-cvar_t sv_aim = {CVAR_SAVE, "sv_aim", "2", "maximum cosine angle for quake's vertical autoaim, a value above 1 completely disables the autoaim, quake used 0.93"}; //"0.93"}; // LordHavoc: disabled autoaim by default
+cvar_t sv_aim = {CVAR_SAVE, "sv_aim", "2", "maximum cosine angle for quake's vertical autoaim, a value above 1 completely disables the autoaim, quake used 0.93"};
 
 
 char *vm_sv_extensions =

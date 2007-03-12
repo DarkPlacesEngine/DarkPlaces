@@ -5045,7 +5045,7 @@ void MR_Init_Commands(void)
 	Cvar_RegisterVariable (&forceqmenu);
 	Cvar_RegisterVariable (&menu_options_colorcontrol_correctionvalue);
 	if (gamemode == GAME_NETHERWORLD)
-		Cmd_AddCommand ("menu_fallback", MP_Fallback, "switch to engine menu (unload menu.dat)"); //Force to old-style menu
+		Cmd_AddCommand ("menu_fallback", MP_Fallback, "switch to engine menu (unload menu.dat)");
 	Cmd_AddCommand ("menu_restart",MR_Restart, "restart menu system (reloads menu.dat");
 	Cmd_AddCommand ("togglemenu", Call_MR_ToggleMenu_f, "opens or closes menu");
 }
