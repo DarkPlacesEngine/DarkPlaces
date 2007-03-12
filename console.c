@@ -48,11 +48,10 @@ cvar_t con_textsize = {CVAR_SAVE, "con_textsize","8", "console text size in virt
 
 cvar_t sys_specialcharactertranslation = {0, "sys_specialcharactertranslation", "1", "terminal console conchars to ASCII translation (set to 0 if your conchars.tga is for an 8bit character set or if you want raw output)"};
 #ifdef WIN32
-cvar_t sys_colortranslation = {0, "sys_colortranslation", "0",
+cvar_t sys_colortranslation = {0, "sys_colortranslation", "0", "terminal console color translation (supported values: 0 = strip color codes, 1 = translate to ANSI codes, 2 = no translation)"};
 #else
-cvar_t sys_colortranslation = {0, "sys_colortranslation", "1",
+cvar_t sys_colortranslation = {0, "sys_colortranslation", "1", "terminal console color translation (supported values: 0 = strip color codes, 1 = translate to ANSI codes, 2 = no translation)"};
 #endif
-                                                               "terminal console color translation (supported values: 0 = strip color codes, 1 = translate to ANSI codes, 2 = no translation)"};
 
 #define MAX_NOTIFYLINES 32
 // cl.time time the line was generated for transparent notify lines
