@@ -56,7 +56,7 @@ jmp_buf host_abortframe;
 cvar_t sv_random_seed = {0, "sv_random_seed", "", "random seed; when set, on every map start this random seed is used to initialize the random number generator. Don't touch it unless for benchmarking or debugging"};
 
 // pretend frames take this amount of time (in seconds), 0 = realtime
-cvar_t host_framerate = {0, "host_framerate","0", "locks frame timing to this value in seconds, 0.05 is 20fps for example, note that this can easily run too fast, use host_maxfps if you want to limit your framerate instead, or sys_ticrate to limit server speed"};
+cvar_t host_framerate = {0, "host_framerate","0", "locks frame timing to this value in seconds, 0.05 is 20fps for example, note that this can easily run too fast, use cl_maxfps if you want to limit your framerate instead, or sys_ticrate to limit server speed"};
 // shows time used by certain subsystems
 cvar_t host_speeds = {0, "host_speeds","0", "reports how much time is used in server/graphics/sound"};
 // LordHavoc: framerate independent slowmo
@@ -1041,16 +1041,6 @@ static void Host_Init (void)
 	// check for special demo mode
 // COMMANDLINEOPTION: Client: -demo <demoname> runs a playdemo and quits
 	i = COM_CheckParm("-demo");
-	if (i && i + 1 < com_argc)
-	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
-	{
-		Cbuf_AddText(va("playdemo %s\n", com_argv[i + 1]));
-		Cbuf_Execute();
-	}
-
-	// check for special demolooponly mode
-// COMMANDLINEOPTION: Client: -demolooponly <demoname> runs a playdemo and quits
-	i = COM_CheckParm("-demolooponly");
 	if (i && i + 1 < com_argc)
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{

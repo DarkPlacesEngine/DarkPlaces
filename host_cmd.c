@@ -1925,7 +1925,7 @@ void Host_Startdemos_f (void)
 {
 	int		i, c;
 
-	if (cls.state == ca_dedicated || COM_CheckParm("-listen") || COM_CheckParm("-benchmark") || COM_CheckParm("-demo") || COM_CheckParm("-demolooponly"))
+	if (cls.state == ca_dedicated || COM_CheckParm("-listen") || COM_CheckParm("-benchmark") || COM_CheckParm("-demo"))
 		return;
 
 	c = Cmd_Argc() - 1;
