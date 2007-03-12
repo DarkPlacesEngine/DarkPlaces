@@ -168,10 +168,16 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 		Matrix4x4_CreateFromQuakeEntity(&matrix2, ed->fields.client->origin[0], ed->fields.client->origin[1], ed->fields.client->origin[2], angles[0], angles[1], angles[2], scale);
 	}
 
-	// FIXME: csqc has frame1/frame2/frame1time/frame2time/lerpfrac but this implementation's cl_entvars_t lacks those fields
+	// set up the animation data
+	// self.frame is the interpolation target (new frame)
+	// self.frame1time is the animation base time for the interpolation target
+	// self.frame2 is the interpolation start (previous frame)
+	// self.frame2time is the animation base time for the interpolation start
 	e->render.frame1 = e->render.frame = ed->fields.client->frame;
-	e->render.frame1time = e->render.frame2time = 0;
-	e->render.framelerp = 0;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame2))) e->render.frame1 = val->_float;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame1time))) e->render.frame2time = val->_float;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame2time))) e->render.frame1time = val->_float;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.lerpfrac))) e->render.framelerp = val->_float;
 
 	// concat the matrices to make the entity relative to its tag
 	Matrix4x4_Concat(&e->render.matrix, &tagmatrix, &matrix2);
