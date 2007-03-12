@@ -43,7 +43,7 @@ char con_text[CON_TEXTSIZE];
 
 cvar_t con_notifytime = {CVAR_SAVE, "con_notifytime","3", "how long notify lines last, in seconds"};
 cvar_t con_notify = {CVAR_SAVE, "con_notify","4", "how many notify lines to show (0-32)"};
-cvar_t con_textsize = {CVAR_SAVE, "con_textsize","8", "console text size in virtual 2D pixels"};	//[515]: console text size in pixels
+cvar_t con_textsize = {CVAR_SAVE, "con_textsize","8", "console text size in virtual 2D pixels"};
 
 
 cvar_t sys_specialcharactertranslation = {0, "sys_specialcharactertranslation", "1", "terminal console conchars to ASCII translation (set to 0 if your conchars.tga is for an 8bit character set or if you want raw output)"};
@@ -468,7 +468,7 @@ void Con_Init (void)
 	Cmd_AddCommand ("messagemode", Con_MessageMode_f, "input a chat message to say to everyone");
 	Cmd_AddCommand ("messagemode2", Con_MessageMode2_f, "input a chat message to say to only your team");
 	Cmd_AddCommand ("clear", Con_Clear_f, "clear console history");
-	Cmd_AddCommand ("maps", Con_Maps_f, "list information about available maps");	// By [515]
+	Cmd_AddCommand ("maps", Con_Maps_f, "list information about available maps");
 	Cmd_AddCommand ("condump", Con_ConDump_f, "output console history to a file (see also log_file)");
 
 	con_initialized = true;

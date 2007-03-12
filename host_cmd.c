@@ -2469,7 +2469,7 @@ void Host_InitCommands (void)
 	Cmd_AddCommand_WithClientCommand ("begin", NULL, Host_Begin_f, "signon 3 (client asks server to start sending entities, and will go to signon 4 (playing) when the first entity update is received)");
 	Cmd_AddCommand ("maxplayers", MaxPlayers_f, "sets limit on how many players (or bots) may be connected to the server at once");
 
-	Cmd_AddCommand ("sendcvar", Host_SendCvar_f, "sends the value of a cvar to the server as a sentcvar command, for use by QuakeC");	// By [515]
+	Cmd_AddCommand ("sendcvar", Host_SendCvar_f, "sends the value of a cvar to the server as a sentcvar command, for use by QuakeC");
 
 	Cvar_RegisterVariable (&rcon_password);
 	Cvar_RegisterVariable (&rcon_address);

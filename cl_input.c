@@ -337,8 +337,8 @@ cvar_t cl_movement_airaccel_sideways_friction = {0, "cl_movement_airaccel_sidewa
 cvar_t cl_gravity = {0, "cl_gravity", "800", "how much gravity to apply in client physics (should match sv_gravity)"};
 cvar_t cl_slowmo = {0, "cl_slowmo", "1", "speed of game time (should match slowmo)"};
 
-cvar_t in_pitch_min = {0, "in_pitch_min", "-90", "how far downward you can aim (quake used -70"}; // quake used -70
-cvar_t in_pitch_max = {0, "in_pitch_max", "90", "how far upward you can aim (quake used 80"}; // quake used 80
+cvar_t in_pitch_min = {0, "in_pitch_min", "-90", "how far downward you can aim (quake used -70"};
+cvar_t in_pitch_max = {0, "in_pitch_max", "90", "how far upward you can aim (quake used 80"};
 
 cvar_t m_filter = {CVAR_SAVE, "m_filter","0", "smoothes mouse movement, less responsive but smoother aiming"};
 
