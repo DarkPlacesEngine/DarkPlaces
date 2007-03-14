@@ -35,6 +35,7 @@ double bsplinesample(int dimensions, double t, double *param)
 	double o = 0;
 	for (i = 0;i < dimensions + 1;i++)
 		o += param[i] * factorial(dimensions)/(factorial(i)*factorial(dimensions-i)) * pow(t, i) * pow(1 - t, dimensions - i);
+	return o;
 }
 */
 
