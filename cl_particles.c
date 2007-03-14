@@ -179,6 +179,8 @@ cvar_t cl_particles_bulletimpacts = {CVAR_SAVE, "cl_particles_bulletimpacts", "1
 cvar_t cl_particles_explosions_smoke = {CVAR_SAVE, "cl_particles_explosions_smokes", "0", "enables smoke from explosions"};
 cvar_t cl_particles_explosions_sparks = {CVAR_SAVE, "cl_particles_explosions_sparks", "1", "enables sparks from explosions"};
 cvar_t cl_particles_explosions_shell = {CVAR_SAVE, "cl_particles_explosions_shell", "0", "enables polygonal shell from explosions"};
+cvar_t cl_particles_rain = {CVAR_SAVE, "cl_particles_rain", "1", "enables rain effects"};
+cvar_t cl_particles_snow = {CVAR_SAVE, "cl_particles_snow", "1", "enables snow effects"};
 cvar_t cl_particles_smoke = {CVAR_SAVE, "cl_particles_smoke", "1", "enables smoke (used by multiple effects)"};
 cvar_t cl_particles_smoke_alpha = {CVAR_SAVE, "cl_particles_smoke_alpha", "0.5", "smoke brightness"};
 cvar_t cl_particles_smoke_alphafade = {CVAR_SAVE, "cl_particles_smoke_alphafade", "0.55", "brightness fade per second"};
@@ -424,6 +426,8 @@ void CL_Particles_Init (void)
 	Cvar_RegisterVariable (&cl_particles_explosions_sparks);
 	Cvar_RegisterVariable (&cl_particles_explosions_shell);
 	Cvar_RegisterVariable (&cl_particles_bulletimpacts);
+	Cvar_RegisterVariable (&cl_particles_rain);
+	Cvar_RegisterVariable (&cl_particles_snow);
 	Cvar_RegisterVariable (&cl_particles_smoke);
 	Cvar_RegisterVariable (&cl_particles_smoke_alpha);
 	Cvar_RegisterVariable (&cl_particles_smoke_alphafade);
@@ -1112,6 +1116,8 @@ void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins
 					case pt_spark: if (!cl_particles_sparks.integer) continue;break;
 					case pt_bubble: if (!cl_particles_bubbles.integer) continue;break;
 					case pt_blood: if (!cl_particles_blood.integer) continue;break;
+					case pt_rain: if (!cl_particles_rain.integer) continue;break;
+					case pt_snow: if (!cl_particles_snow.integer) continue;break;
 					default: break;
 					}
 					VectorCopy(originmins, trailpos);
@@ -1421,6 +1427,7 @@ void CL_ParticleRain (const vec3_t mins, const vec3_t maxs, const vec3_t dir, in
 	switch(type)
 	{
 	case 0:
+		if (!cl_particles_rain.integer) break;
 		count *= 4; // ick, this should be in the mod or maps?
 
 		while(count--)
@@ -1433,6 +1440,7 @@ void CL_ParticleRain (const vec3_t mins, const vec3_t maxs, const vec3_t dir, in
 		}
 		break;
 	case 1:
+		if (!cl_particles_snow.integer) break;
 		while(count--)
 		{
 			k = particlepalette[colorbase + (rand()&3)];
