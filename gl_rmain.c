@@ -3888,6 +3888,7 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 		j = i + 1;
 		surface = rsurface_model->data_surfaces + surfacelist[i];
 		texture = surface->texture;
+		R_UpdateTextureInfo(ent, texture);
 		rsurface_texture = texture->currentframe;
 		rsurface_uselightmaptexture = surface->lightmaptexture != NULL;
 		// scan ahead until we find a different texture
