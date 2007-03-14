@@ -46,6 +46,7 @@ GLboolean (*qaglSetFullScreen) (AGLContext ctx, GLsizei width, GLsizei height, G
 GLboolean (*qaglSetInteger) (AGLContext ctx, GLenum pname, const GLint *params);
 void (*qaglSwapBuffers) (AGLContext ctx);
 
+static qboolean multithreadedgl;
 static qboolean mouse_avail = true;
 static qboolean vid_usingmouse = false;
 static float mouse_x, mouse_y;
@@ -56,6 +57,8 @@ static qboolean vid_usingvsync = false;
 static qboolean sound_active = true;
 
 static int scr_width, scr_height;
+
+static cvar_t apple_multithreadedgl = {CVAR_SAVE, "apple_multithreadedgl", "0", "makes use of a second thread for the OpenGL driver (if possible) rather than using the engine thread (note: this is done automatically on most other operating systems)"};
 
 static AGLContext context;
 static WindowRef window;
@@ -146,6 +149,33 @@ void VID_Finish (qboolean allowmousegrab)
 		qaglSwapBuffers(context);
 	}
 	VID_UpdateGamma(false, GAMMA_TABLE_SIZE);
+
+#ifdef kCGLCEMPEngine
+	if (apple_multithreadedgl.integer)
+	{
+		if (!multithreadedgl)
+		{
+			CGLError err = 0;
+			CGLContextObj ctx = CGLGetCurrentContext();
+			err = CGLEnable(ctx, kCGLEMPEngine);
+			if (err == kCGLNoError)
+				multithreadedgl = true;
+			else
+				Cvar_SetQuickValue(&apple_multithreadedgl, 0);
+		}
+	}
+	else
+	{
+		if (multithreadedgl)
+		{
+			multithreadedgl = false;
+			CGLDisable(ctx, kCGLEMPEngine);
+		}
+	}
+#else
+	if (apple_multithreadedgl.integer)
+		Cvar_SetQuickValue(&apple_multithreadedgl, 0);
+#endif
 }
 
 int VID_SetGamma(unsigned short *ramps, int rampsize)
@@ -228,6 +258,7 @@ void InitSig(void)
 void VID_Init(void)
 {
 	InitSig(); // trap evil signals
+	Cvar_RegisterVariable(&apple_multithreadedgl);
 // COMMANDLINEOPTION: Input: -nomouse disables mouse support (see also vid_mouse cvar)
 	if (COM_CheckParm ("-nomouse") || COM_CheckParm("-safe"))
 		mouse_avail = false;
@@ -553,6 +584,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	gl_platform = "AGL";
 	gl_videosyncavailable = true;
 
+	multithreadedgl = false;
 	vid_isfullscreen = fullscreen;
 	vid_usingmouse = false;
 	vid_hidden = false;
