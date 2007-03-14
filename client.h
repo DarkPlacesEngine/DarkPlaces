@@ -1153,6 +1153,8 @@ extern cvar_t cl_particles_bulletimpacts;
 extern cvar_t cl_particles_explosions_smoke;
 extern cvar_t cl_particles_explosions_sparks;
 extern cvar_t cl_particles_explosions_shell;
+extern cvar_t cl_particles_rain;
+extern cvar_t cl_particles_snow;
 extern cvar_t cl_particles_smoke;
 extern cvar_t cl_particles_smoke_alpha;
 extern cvar_t cl_particles_smoke_alphafade;

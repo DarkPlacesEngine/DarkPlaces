@@ -9,10 +9,12 @@
 0 bug darkplaces server: SV_PushMove is ignoring model type in its angles_x handling, where as the renderer checks only model type to determine angles_x handling (Urre)
 0 bug darkplaces server: SV_PushMove's call to SV_ClipMoveToEntity should do a trace, not just a point test, to support hollow pusher models (Urre)
 0 bug darkplaces server: savegames do not save precaches, which means that automatic precaching frequently results in invalid modelindex values when reloading the savegame, and this bug also exists in many quake mods that randomly choose multiple variants of a monster, each with separate precaches, resulting in a different precache order when reloading the savegame
+0 bug darkplaces server: when server quits, it does not notify the master that it is quitting, it should send out a couple forced heartbeats and dpmaster should be modified to remove servers that do not respond to queries within a reason time (jitspoe, div0)
 0 bug darkplaces wgl client: during video mode setup, sometimes another application's window becomes permanently top most, not darkplaces' fullscreen window, why? (tZork)
 0 bug darkplaces windows sound: freezing on exit sometimes when freeing sound buffer during sound shutdown (Black)
 0 bug darkplaces: q1bsp loader computes wrong submodel size for submodels with no surfaces, such as a func_wall comprised entirely of SKIP or CAULK brushes (neg|ke)
 0 bug darkplaces: surround sound fails in windows client, falls back to stereo (greenmarine)
+0 bug dpmaster: if server does not reply within 5 seconds to a query it should be removed (jitspoe, div0)
 0 bug dpmod: LinkDoors seems to ignore .origin on door entities when comparing if they overlap
 0 bug dpmod: allow selection of weapons with secondary ammo but no primary ammo, and switch away if trying to fire primary ammo you don't have (romi)
 0 bug dpmod: chthon stops attacking in coop if shot enough
@@ -139,6 +141,7 @@
 0 feature darkplaces: .vis files - like .lit but replacement vis data, note this also requires .leaf files (knghtbrd)
 0 feature darkplaces: add DP_GFX_EFFECTINFO extension to indicate that effectinfo.txt is supported, and thoroughly document its syntax (Morphed)
 0 feature darkplaces: add a progress bar to the loading screen, this would be updated by the model/sound loading process
+0 feature dpmaster: add back qw and q2 server support, with records not matching for different protocols to prevent qw/q2 protocols being used to poison q3 protocol records
 0 feature dpmaster: don't filter by protocol version if query is for protocol version 0, this way server browsers can see multiple versions of a single game, should probably also add a 'any' gamename that disables gamename filtering (Angst, Elric)
 0 feature dpmaster: release an example /etc/init.d/dpdmasterd script based on the one LordHavoc is using
 0 feature dpmod: add a g_spawnprotectiontime cvar which would default to 1 (invulnerable for 1 second after spawn) to prevent mining the spawn points
