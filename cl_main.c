@@ -2022,36 +2022,42 @@ void CL_Locs_Reload_f(void)
 			// advance through whitespace
 			if (linetext < lineend)
 			{
-				if (*linetext <= ' ')
-					linetext++;
-				else if (*linetext == ',')
+				if (*linetext == ',')
 				{
 					linetext++;
 					limit = 6;
+					// note: comma can be followed by whitespace
+				}
+				if (*linetext <= ' ')
+				{
+					// skip whitespace
+					while (linetext < lineend && *linetext <= ' ')
+						linetext++;
 				}
 			}
 		}
 		// if this is a quoted name, remove the quotes
-		if (linetext < lineend && *linetext == '"')
+		if (i == 6)
 		{
+			if (linetext >= lineend || *linetext != '"')
+				continue; // proquake location names are always quoted
 			lineend--;
 			linetext++;
 		}
-		// valid line parsed
-		if (i == 3 || i == 6)
+		// if a point was parsed, it needs to be scaled down by 8 (since
+		// point-based loc files were invented by a proxy which dealt
+		// directly with quake protocol coordinates, which are *8), turn
+		// it into a box
+		else if (i == 3)
 		{
-			// if a point was parsed, it needs to be scaled down by 8 (since
-			// point-based loc files were invented by a proxy which dealt
-			// directly with quake protocol coordinates, which are *8), turn
-			// it into a box
-			if (i == 3)
-			{
-				VectorScale(mins, (1.0 / 8.0), mins);
-				VectorCopy(mins, maxs);
-			}
-			// add the point or box to the list
-			CL_Locs_AddNode(mins, maxs, linetext, lineend);
+			VectorScale(mins, (1.0 / 8.0), mins);
+			VectorCopy(mins, maxs);
 		}
+		else
+			continue;
+		// valid line parsed
+		// add the point or box to the list
+		CL_Locs_AddNode(mins, maxs, linetext, lineend);
 	}
 }
 
