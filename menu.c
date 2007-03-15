@@ -1555,7 +1555,7 @@ static void M_DrawCheckbox (int x, int y, int on)
 }
 
 
-#define OPTIONS_ITEMS 38
+#define OPTIONS_ITEMS 25
 
 static int options_cursor;
 
@@ -1570,86 +1570,31 @@ extern cvar_t slowmo;
 extern dllhandle_t jpeg_dll;
 extern cvar_t gl_texture_anisotropy;
 extern cvar_t r_textshadow;
+extern cvar_t r_hdr_scenebrightness;
 
 static void M_Menu_Options_AdjustSliders (int dir)
 {
 	int optnum;
+	double f;
 	S_LocalSound ("sound/misc/menu3.wav");
 
-	optnum = 7;
-	if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&vid_conwidth, bound(320, vid_conwidth.value + dir * 64, 2048));
-	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&vid_conheight, bound(240, vid_conheight.value + dir * 48, 1536));
-	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&scr_conalpha, bound(0, scr_conalpha.value + dir * 0.2, 1));
-	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&scr_conbrightness, bound(0, scr_conbrightness.value + dir * 0.2, 1));
-	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&sbar_alpha_bg, bound(0, sbar_alpha_bg.value + dir * 0.1, 1));
-	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&sbar_alpha_fg, bound(0, sbar_alpha_fg.value + dir * 0.1, 1));
-	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&scr_viewsize, bound(30, scr_viewsize.value + dir * 10, 120));
-	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&scr_fov, bound(1, scr_fov.integer + dir * 1, 170));
-	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&scr_screenshot_jpeg, !scr_screenshot_jpeg.integer);
-	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&scr_screenshot_jpeg_quality, bound(0, scr_screenshot_jpeg_quality.value + dir * 0.1, 1));
-	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&scr_screenshot_gammaboost, bound(0.1, scr_screenshot_gammaboost.value + dir * 0.1, 4));
-	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&r_sky, !r_sky.integer);
-	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&gl_dither, !gl_dither.integer);
-	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&gl_texture_anisotropy, bound(1, gl_texture_anisotropy.integer + dir, gl_max_anisotropy));
-	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&slowmo, bound(0, slowmo.value + dir * 0.25, 5));
-	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&bgmvolume, bound(0, bgmvolume.value + dir * 0.1, 1));
-	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&volume, bound(0, volume.value + dir * 0.1, 1));
-	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&snd_staticvolume, bound(0, snd_staticvolume.value + dir * 0.1, 1));
-	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&r_textshadow, !r_textshadow.integer);
-	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&crosshair, bound(0, crosshair.integer + dir, 6));
-	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&crosshair_size, bound(1, crosshair_size.value + dir, 5));
-	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&showfps, !showfps.integer);
-	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&showtime, !showtime.integer);
-	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&showdate, !showdate.integer);
-	else if (options_cursor == optnum++)
-	{
-		if (cl_forwardspeed.value > 200)
-		{
-			Cvar_SetValueQuick (&cl_forwardspeed, 200);
-			Cvar_SetValueQuick (&cl_backspeed, 200);
-		}
-		else
-		{
-			Cvar_SetValueQuick (&cl_forwardspeed, 400);
-			Cvar_SetValueQuick (&cl_backspeed, 400);
-		}
-	}
-	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&lookspring, !lookspring.integer);
-	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&lookstrafe, !lookstrafe.integer);
-	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&sensitivity, bound(1, sensitivity.value + dir * 0.5, 50));
-	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&freelook, !freelook.integer);
-	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&m_pitch, -m_pitch.value);
-	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&vid_mouse, !vid_mouse.integer);
+	optnum = 0;
+	     if (options_cursor == optnum++) ;
+	else if (options_cursor == optnum++) ;
+	else if (options_cursor == optnum++) ;
+	else if (options_cursor == optnum++) ;
+	else if (options_cursor == optnum++) Cvar_SetValueQuick(&crosshair, bound(0, crosshair.integer + dir, 6));
+	else if (options_cursor == optnum++) Cvar_SetValueQuick(&sensitivity, bound(1, sensitivity.value + dir * 0.5, 50));
+	else if (options_cursor == optnum++) Cvar_SetValueQuick(&m_pitch, -m_pitch.value);
+	else if (options_cursor == optnum++) Cvar_SetValueQuick(&scr_fov, bound(1, scr_fov.integer + dir * 1, 170));
+	else if (options_cursor == optnum++) Cvar_SetValueQuick(&showfps, !showfps.integer);
+	else if (options_cursor == optnum++) {f = !(showdate.integer && showtime.integer);Cvar_SetValueQuick(&showdate, f);Cvar_SetValueQuick(&showtime, f);}
+	else if (options_cursor == optnum++) ;
+	else if (options_cursor == optnum++) Cvar_SetValueQuick(&r_hdr_scenebrightness, bound(1, r_hdr_scenebrightness.value + dir * 0.0625, 4));
+	else if (options_cursor == optnum++) Cvar_SetValueQuick(&v_contrast, bound(1, v_contrast.value + dir * 0.0625, 4));
+	else if (options_cursor == optnum++) Cvar_SetValueQuick(&v_gamma, bound(0.5, v_gamma.value + dir * 0.0625, 3));
+	else if (options_cursor == optnum++) Cvar_SetValueQuick(&volume, bound(0, volume.value + dir * 0.0625, 1));
+	else if (options_cursor == optnum++) Cvar_SetValueQuick(&bgmvolume, bound(0, bgmvolume.value + dir * 0.0625, 1));
 }
 
 static int optnum;
@@ -1710,41 +1655,28 @@ static void M_Options_Draw (void)
 	M_Options_PrintCommand( "Customize controls", true);
 	M_Options_PrintCommand( "     Go to console", true);
 	M_Options_PrintCommand( " Reset to defaults", true);
-	M_Options_PrintCommand( "             Video", true);
-	M_Options_PrintCommand( "           Effects", true);
-	M_Options_PrintCommand( "          Graphics", true);
-	M_Options_PrintCommand( "     Color Control", true);
-	M_Options_PrintSlider(  "  2D Screen Width ", true, vid_conwidth.value, 320, 2048);
-	M_Options_PrintSlider(  "  2D Screen Height", true, vid_conheight.value, 240, 1536);
-	M_Options_PrintSlider(  "     Console Alpha", true, scr_conalpha.value, 0, 1);
-	M_Options_PrintSlider(  "Conback Brightness", true, scr_conbrightness.value, 0, 1);
-	M_Options_PrintSlider(  "     Sbar Alpha BG", true, sbar_alpha_bg.value, 0, 1);
-	M_Options_PrintSlider(  "     Sbar Alpha FG", true, sbar_alpha_fg.value, 0, 1);
-	M_Options_PrintSlider(  "       Screen size", true, scr_viewsize.value, 30, 120);
-	M_Options_PrintSlider(  "     Field of View", true, scr_fov.integer, 1, 170);
-	M_Options_PrintCheckbox("  JPEG screenshots", jpeg_dll != NULL, scr_screenshot_jpeg.integer);
-	M_Options_PrintSlider(  "      JPEG quality", jpeg_dll != NULL, scr_screenshot_jpeg_quality.value, 0, 1);
-	M_Options_PrintSlider(  "  Screenshot Gamma", jpeg_dll != NULL, scr_screenshot_gammaboost.value, 0.1, 4);
-	M_Options_PrintCheckbox("               Sky", true, r_sky.integer);
-	M_Options_PrintCheckbox("         Dithering", true, gl_dither.integer);
-	M_Options_PrintSlider(  "Anisotropic Filter", gl_support_anisotropy, gl_texture_anisotropy.integer, 1, gl_max_anisotropy);
-	M_Options_PrintSlider(  "        Game Speed", sv.active, slowmo.value, 0, 5);
-	M_Options_PrintSlider(  "   CD Music Volume", cdaudioinitialized.integer, bgmvolume.value, 0, 1);
-	M_Options_PrintSlider(  "      Sound Volume", snd_initialized.integer, volume.value, 0, 1);
-	M_Options_PrintSlider(gamemode == GAME_GOODVSBAD2 ? "      Music Volume" : "    Ambient Volume", snd_initialized.integer, snd_staticvolume.value, 0, 1);
-	M_Options_PrintCheckbox("       Text Shadow", true, r_textshadow.integer);
+	M_Options_PrintCommand( " Change Video Mode", true);
 	M_Options_PrintSlider(  "         Crosshair", true, crosshair.value, 0, 5);
-	M_Options_PrintSlider(  "    Crosshair Size", true, crosshair_size.value, 1, 5);
-	M_Options_PrintCheckbox("    Show Framerate", true, showfps.integer);
-	M_Options_PrintCheckbox("         Show Time", true, showtime.integer);
-	M_Options_PrintCheckbox("         Show Date", true, showdate.integer);
-	M_Options_PrintCheckbox("        Always Run", true, cl_forwardspeed.value > 200);
-	M_Options_PrintCheckbox("        Lookspring", true, lookspring.integer);
-	M_Options_PrintCheckbox("        Lookstrafe", true, lookstrafe.integer);
 	M_Options_PrintSlider(  "       Mouse Speed", true, sensitivity.value, 1, 50);
-	M_Options_PrintCheckbox("        Mouse Look", true, freelook.integer);
 	M_Options_PrintCheckbox("      Invert Mouse", true, m_pitch.value < 0);
-	M_Options_PrintCheckbox("         Use Mouse", true, vid_mouse.integer);
+	M_Options_PrintSlider(  "     Field of View", true, scr_fov.integer, 1, 170);
+	M_Options_PrintCheckbox("    Show Framerate", true, showfps.integer);
+	M_Options_PrintCheckbox("Show Date and Time", true, showdate.integer && showtime.integer);
+	M_Options_PrintCommand( " Custom Brightness", true);
+	M_Options_PrintSlider(  "   Game Brightness", true, r_hdr_scenebrightness.value, 1, 4);
+	M_Options_PrintSlider(  " Screen Brightness", true, v_contrast.value, 1, 2);
+	M_Options_PrintSlider(  "      Screen Gamma", true, v_gamma.value, 0.5, 3);
+	M_Options_PrintSlider(  "      Sound Volume", snd_initialized.integer, volume.value, 0, 1);
+	M_Options_PrintSlider(  "      Music Volume", cdaudioinitialized.integer, bgmvolume.value, 0, 1);
+	M_Options_PrintCommand( "Effects: Customize", true);
+	M_Options_PrintCommand( "Effects:     Quake", true);
+	M_Options_PrintCommand( "Effects:    Normal", true);
+	M_Options_PrintCommand( "Effects:      High", true);
+	M_Options_PrintCommand( "Lighting:Customize", true);
+	M_Options_PrintCommand( "Lighting:   Flares", true);
+	M_Options_PrintCommand( "Lighting:   Normal", true);
+	M_Options_PrintCommand( "Lighting:     High", true);
+	M_Options_PrintCommand( "Lighting:     Full", true);
 }
 
 
@@ -1774,14 +1706,35 @@ static void M_Options_Key (int k, char ascii)
 		case 3:
 			M_Menu_Video_f ();
 			break;
-		case 4:
+		case 10:
+			M_Menu_Options_ColorControl_f ();
+			break;
+		case 16: // Customize Effects
 			M_Menu_Options_Effects_f ();
 			break;
-		case 5:
+		case 17: // Effects: Quake
+			Cbuf_AddText("cl_particles 1;cl_particles_quake 1;cl_particles_quality 1;cl_particles_explosions_shell 0;r_explosionclip 1;cl_stainmaps 0;cl_stainmaps_clearonload 1;cl_decals 0;cl_particles_bulletimpacts 1;cl_particles_smoke 1;cl_particles_sparks 1;cl_particles_bubbles 1;cl_particles_blood 1;cl_particles_blood_alpha 1;cl_particles_blood_bloodhack 0;cl_beams_polygons 0;cl_beams_instantaimhack 1;cl_beams_quakepositionhack 1;cl_beams_lightatend 0;r_lerpmodels 1;r_lerpsprites 1;gl_polyblend 1;r_skyscroll1 1;r_skyscroll2 2;r_waterwarp 1;r_wateralpha 1;r_waterscroll 1\n");
+			break;
+		case 18: // Effects: Normal
+			Cbuf_AddText("cl_particles 1;cl_particles_quake 0;cl_particles_quality 1;cl_particles_explosions_shell 0;r_explosionclip 1;cl_stainmaps 0;cl_stainmaps_clearonload 1;cl_decals 1;cl_particles_bulletimpacts 1;cl_particles_smoke 1;cl_particles_sparks 1;cl_particles_bubbles 1;cl_particles_blood 1;cl_particles_blood_alpha 1;cl_particles_blood_bloodhack 1;cl_beams_polygons 1;cl_beams_instantaimhack 1;cl_beams_quakepositionhack 1;cl_beams_lightatend 0;r_lerpmodels 1;r_lerpsprites 1;gl_polyblend 1;r_skyscroll1 1;r_skyscroll2 2;r_waterwarp 1;r_wateralpha 1;r_waterscroll 1\n");
+			break;
+		case 19: // Effects: High
+			Cbuf_AddText("cl_particles 1;cl_particles_quake 0;cl_particles_quality 2;cl_particles_explosions_shell 0;r_explosionclip 1;cl_stainmaps 1;cl_stainmaps_clearonload 1;cl_decals 1;cl_particles_bulletimpacts 1;cl_particles_smoke 1;cl_particles_sparks 1;cl_particles_bubbles 1;cl_particles_blood 1;cl_particles_blood_alpha 1;cl_particles_blood_bloodhack 1;cl_beams_polygons 1;cl_beams_instantaimhack 1;cl_beams_quakepositionhack 1;cl_beams_lightatend 1;r_lerpmodels 1;r_lerpsprites 1;gl_polyblend 1;r_skyscroll1 1;r_skyscroll2 2;r_waterwarp 1;r_wateralpha 1;r_waterscroll 1\n");
+			break;
+		case 20:
 			M_Menu_Options_Graphics_f ();
 			break;
-		case 6:
-			M_Menu_Options_ColorControl_f ();
+		case 21: // Lighting: Flares
+			Cbuf_AddText("r_coronas 1;gl_flashblend 1;r_shadow_gloss 0;r_shadow_realtime_dlight 0;r_shadow_realtime_dlight_shadows 0;r_shadow_realtime_world 0;r_shadow_realtime_world_dlightshadows 1;r_shadow_realtime_world_lightmaps 0;r_shadow_realtime_world_shadows 1;r_bloom 0;r_hdr 0");
+			break;
+		case 22: // Lighting: Normal
+			Cbuf_AddText("r_coronas 1;gl_flashblend 0;r_shadow_gloss 1;r_shadow_realtime_dlight 1;r_shadow_realtime_dlight_shadows 0;r_shadow_realtime_world 0;r_shadow_realtime_world_dlightshadows 1;r_shadow_realtime_world_lightmaps 0;r_shadow_realtime_world_shadows 1;r_bloom 0;r_hdr 0");
+			break;
+		case 23: // Lighting: High
+			Cbuf_AddText("r_coronas 1;gl_flashblend 0;r_shadow_gloss 1;r_shadow_realtime_dlight 1;r_shadow_realtime_dlight_shadows 1;r_shadow_realtime_world 0;r_shadow_realtime_world_dlightshadows 1;r_shadow_realtime_world_lightmaps 0;r_shadow_realtime_world_shadows 1;r_bloom 1;r_hdr 0");
+			break;
+		case 24: // Lighting: Full
+			Cbuf_AddText("r_coronas 1;gl_flashblend 0;r_shadow_gloss 1;r_shadow_realtime_dlight 1;r_shadow_realtime_dlight_shadows 1;r_shadow_realtime_world 1;r_shadow_realtime_world_dlightshadows 1;r_shadow_realtime_world_lightmaps 0;r_shadow_realtime_world_shadows 1;r_bloom 1;r_hdr 0");
 			break;
 		default:
 			M_Menu_Options_AdjustSliders (1);
@@ -1813,7 +1766,7 @@ static void M_Options_Key (int k, char ascii)
 	}
 }
 
-#define	OPTIONS_EFFECTS_ITEMS	36
+#define	OPTIONS_EFFECTS_ITEMS	34
 
 static int options_effects_cursor;
 
@@ -1848,9 +1801,7 @@ static void M_Menu_Options_Effects_AdjustSliders (int dir)
 	S_LocalSound ("sound/misc/menu3.wav");
 
 	optnum = 0;
-	     if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&r_coronas, bound(0, r_coronas.value + dir * 0.125, 4));
-	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&gl_flashblend, !gl_flashblend.integer);
-	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_particles, !cl_particles.integer);
+	     if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_particles, !cl_particles.integer);
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_particles_quake, !cl_particles_quake.integer);
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_particles_quality, bound(1, cl_particles_quality.value + dir * 0.5, 4));
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_particles_explosions_shell, !cl_particles_explosions_shell.integer);
@@ -1902,8 +1853,6 @@ static void M_Options_Effects_Draw (void)
 	visible = (int)((menu_height - 32) / 8);
 	opty = 32 - bound(0, optcursor - (visible >> 1), max(0, OPTIONS_EFFECTS_ITEMS - visible)) * 8;
 
-	M_Options_PrintSlider(  "      Corona Intensity", true, r_coronas.value, 0, 4);
-	M_Options_PrintCheckbox("      Use Only Coronas", true, gl_flashblend.integer);
 	M_Options_PrintCheckbox("             Particles", true, cl_particles.integer);
 	M_Options_PrintCheckbox(" Quake-style Particles", true, cl_particles_quake.integer);
 	M_Options_PrintSlider(  "     Particles Quality", true, cl_particles_quality.value, 1, 4);
@@ -1978,7 +1927,7 @@ static void M_Options_Effects_Key (int k, char ascii)
 }
 
 
-#define	OPTIONS_GRAPHICS_ITEMS	20
+#define	OPTIONS_GRAPHICS_ITEMS	21
 
 static int options_graphics_cursor;
 
@@ -2016,7 +1965,9 @@ static void M_Menu_Options_Graphics_AdjustSliders (int dir)
 
 	optnum = 0;
 
-		 if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_shadow_gloss,							bound(0, r_shadow_gloss.integer + dir, 2));
+	     if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_coronas, bound(0, r_coronas.value + dir * 0.125, 4));
+	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&gl_flashblend, !gl_flashblend.integer);
+	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_shadow_gloss,							bound(0, r_shadow_gloss.integer + dir, 2));
 	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_shadow_realtime_dlight,				!r_shadow_realtime_dlight.integer);
 	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_shadow_realtime_dlight_shadows,		!r_shadow_realtime_dlight_shadows.integer);
 	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_shadow_realtime_world,					!r_shadow_realtime_world.integer);
@@ -2034,7 +1985,6 @@ static void M_Menu_Options_Graphics_AdjustSliders (int dir)
 	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_bloom_brighten,                        bound(1, r_bloom_brighten.value + dir * 0.0625, 4));
 	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_bloom_blur,                            bound(1, r_bloom_blur.value + dir * 1, 16));
 	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_bloom_resolution,                      bound(64, r_bloom_resolution.value + dir * 64, 2048));
-	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&gl_picmip,                               bound(0, gl_picmip.value - dir, 3));
 	else if (options_graphics_cursor == optnum++) Cbuf_AddText ("r_restart\n");
 }
 
@@ -2055,17 +2005,19 @@ static void M_Options_Graphics_Draw (void)
 	visible = (int)((menu_height - 32) / 8);
 	opty = 32 - bound(0, optcursor - (visible >> 1), max(0, OPTIONS_GRAPHICS_ITEMS - visible)) * 8;
 
+	M_Options_PrintSlider(  "       Corona Intensity", true, r_coronas.value, 0, 4);
+	M_Options_PrintCheckbox("       Use Only Coronas", true, gl_flashblend.integer);
 	M_Options_PrintSlider(  "             Gloss Mode", true, r_shadow_gloss.integer, 0, 2);
-	M_Options_PrintCheckbox("             RT DLights", true, r_shadow_realtime_dlight.integer);
-	M_Options_PrintCheckbox("      RT DLight Shadows", true, r_shadow_realtime_dlight_shadows.integer);
+	M_Options_PrintCheckbox("             RT DLights", !gl_flashblend.integer, r_shadow_realtime_dlight.integer);
+	M_Options_PrintCheckbox("      RT DLight Shadows", !gl_flashblend.integer, r_shadow_realtime_dlight_shadows.integer);
 	M_Options_PrintCheckbox("               RT World", true, r_shadow_realtime_world.integer);
-	M_Options_PrintCheckbox("RT World DLight Shadows", true, r_shadow_realtime_world_dlightshadows.integer);
+	M_Options_PrintCheckbox("RT World DLight Shadows", !gl_flashblend.integer, r_shadow_realtime_world_dlightshadows.integer);
 	M_Options_PrintSlider(  "     RT World Lightmaps", true, r_shadow_realtime_world_lightmaps.value, 0, 1);
 	M_Options_PrintCheckbox("        RT World Shadow", true, r_shadow_realtime_world_shadows.integer);
 	M_Options_PrintSlider(  "       Scene Brightness", true, r_hdr_scenebrightness.value, 0.25, 4);
 	M_Options_PrintCheckbox("           Bloom Effect", !r_hdr.integer, r_bloom.integer);
-	M_Options_PrintCheckbox("       HDR Bloom Effect", r_hdr.integer, r_hdr.integer);
-	M_Options_PrintSlider(  "      HDR Dynamic Range", true, r_hdr_range.value, 1, 16);
+	M_Options_PrintCheckbox("       HDR Bloom Effect", true, r_hdr.integer);
+	M_Options_PrintSlider(  "      HDR Dynamic Range", r_hdr.integer, r_hdr_range.value, 1, 16);
 	M_Options_PrintSlider(  "     HDR Glow Intensity", r_hdr.integer, r_hdr_glowintensity.value, 0, 4);
 	M_Options_PrintSlider(  "      Bloom Color Scale", r_hdr.integer || r_bloom.integer, r_bloom_colorscale.value, 0.0625, 1);
 	M_Options_PrintSlider(  "   Bloom Color Subtract", r_hdr.integer || r_bloom.integer, r_bloom_colorsubtract.value, 0, 1-0.0625);
@@ -2073,7 +2025,6 @@ static void M_Options_Graphics_Draw (void)
 	M_Options_PrintSlider(  "        Bloom Intensity", r_hdr.integer || r_bloom.integer, r_bloom_brighten.value, 1, 4);
 	M_Options_PrintSlider(  "             Bloom Blur", r_hdr.integer || r_bloom.integer, r_bloom_blur.value, 1, 16);
 	M_Options_PrintSlider(  "       Bloom Resolution", r_hdr.integer || r_bloom.integer, r_bloom_resolution.value, 64, 2048);
-	M_Options_PrintSlider(  "        Texture Quality", true, gl_picmip.value, 3, 0);
 	M_Options_PrintCommand( "       Restart Renderer", true);
 }
 
@@ -2860,9 +2811,9 @@ video_resolution_t video_resolutions[] =
 #define VID_DEFAULT 3
 #define VID_RES_COUNT ((int)(sizeof(video_resolutions) / sizeof(video_resolutions[0])) - 1)
 
-#define VIDEO_ITEMS 7
+#define VIDEO_ITEMS 9
 static int video_cursor = 0;
-static int video_cursor_table[] = {56, 68, 88, 100, 112, 132, 162};
+static int video_cursor_table[] = {56, 68, 88, 100, 112, 132, 162, 174, 186};
 static int video_resolution;
 
 void M_Menu_Video_f (void)
@@ -2948,6 +2899,12 @@ static void M_Video_Draw (void)
 	M_ItemPrint(16, video_cursor_table[6], "         Vertical Sync", gl_videosyncavailable);
 	M_DrawCheckbox(220, video_cursor_table[6], vid_vsync.integer);
 
+	M_ItemPrint(16, video_cursor_table[7], "    Anisotropic Filter", gl_support_anisotropy);
+	M_DrawSlider(220, video_cursor_table[7], gl_texture_anisotropy.integer, 1, gl_max_anisotropy);
+
+	M_ItemPrint(16, video_cursor_table[8], "       Texture Quality", true);
+	M_DrawSlider(220, video_cursor_table[8], gl_picmip.value, 3, 0);
+
 	// Cursor
 	M_DrawCharacter(200, video_cursor_table[video_cursor], 12+((int)(realtime*4)&1));
 }
@@ -2990,6 +2947,12 @@ static void M_Menu_Video_AdjustSliders (int dir)
 
 		case 6:
 			Cvar_SetValueQuick (&vid_vsync, !vid_vsync.integer);
+			break;
+		case 7:
+			Cvar_SetValueQuick (&gl_texture_anisotropy, bound(1, gl_texture_anisotropy.value * (dir < 0 ? 0.5 : 2.0), gl_max_anisotropy));
+			break;
+		case 8:
+			Cvar_SetValueQuick (&gl_picmip, bound(0, gl_picmip.value - dir, 3));
 			break;
 	}
 }
