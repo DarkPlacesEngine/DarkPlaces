@@ -628,6 +628,7 @@ d bug darkplaces server: the lava+func_trains room of r1m5 is leaving items floa
 d bug darkplaces server: when trying to load a map that is missing the model is still precached permanently, causing 'not found' warnings every time r_restart/vid_restart are used
 d bug darkplaces sound: sound is sometimes coming from the wrong side apparently (lcatlnx)
 d bug darkplaces sound: spatialization bug occurs in The Ascension of Vigil, making all player and monster sounds far to the right (RenegadeC)
+d bug darkplaces sound: svc_staticsound messages are being received before sounds are precached, causing no ambient sounds to work (esteel)
 d bug darkplaces video: generate 1024 color gamma ramps for glx on Quadro, right now hardware gamma is being disabled on these cards because they use 1024 color ramps, not 256 (div0)
 d bug darkplaces wgl client: hardware gamma is being retried every frame for unknown reasons, this is SEVERELY impacting framerates on win2k/xp (Jago)
 d bug darkplaces windows general: include libcurl dll from Nexuiz 2.0 in future releases (Baker)

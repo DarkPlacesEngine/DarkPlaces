@@ -1542,7 +1542,7 @@ static void M_DrawSlider (int x, int y, float num, float rangemin, float rangema
 	if (fabs((int)num - num) < 0.01)
 		sprintf(text, "%i", (int)num);
 	else
-		sprintf(text, "%.2f", num);
+		sprintf(text, "%.3f", num);
 	M_Print(x + (SLIDER_RANGE+2) * 8, y, text);
 }
 
@@ -1605,8 +1605,9 @@ static void M_Options_PrintCommand(const char *s, int enabled)
 {
 	if (opty >= 32)
 	{
-		DrawQ_Pic(menu_x, menu_y + opty, NULL, 320, 8, optnum == optcursor ? (0.5 + 0.2 * sin(realtime * M_PI)) : 0, 0, 0, 0.5, 0);
-		M_ItemPrint(0, opty, s, enabled);
+		if (optnum == optcursor)
+			DrawQ_Pic(menu_x + 48, menu_y + opty, NULL, 320, 8, optnum == optcursor ? (0.5 + 0.2 * sin(realtime * M_PI)) : 0, 0, 0, 0.5, 0);
+		M_ItemPrint(0 + 48, opty, s, enabled);
 	}
 	opty += 8;
 	optnum++;
@@ -1616,9 +1617,10 @@ static void M_Options_PrintCheckbox(const char *s, int enabled, int yes)
 {
 	if (opty >= 32)
 	{
-		DrawQ_Pic(menu_x, menu_y + opty, NULL, 320, 8, optnum == optcursor ? (0.5 + 0.2 * sin(realtime * M_PI)) : 0, 0, 0, 0.5, 0);
-		M_ItemPrint(0, opty, s, enabled);
-		M_DrawCheckbox(0 + (int)strlen(s) * 8 + 8, opty, yes);
+		if (optnum == optcursor)
+			DrawQ_Pic(menu_x + 48, menu_y + opty, NULL, 320, 8, optnum == optcursor ? (0.5 + 0.2 * sin(realtime * M_PI)) : 0, 0, 0, 0.5, 0);
+		M_ItemPrint(0 + 48, opty, s, enabled);
+		M_DrawCheckbox(0 + 48 + (int)strlen(s) * 8 + 8, opty, yes);
 	}
 	opty += 8;
 	optnum++;
@@ -1628,9 +1630,10 @@ static void M_Options_PrintSlider(const char *s, int enabled, float value, float
 {
 	if (opty >= 32)
 	{
-		DrawQ_Pic(menu_x, menu_y + opty, NULL, 320, 8, optnum == optcursor ? (0.5 + 0.2 * sin(realtime * M_PI)) : 0, 0, 0, 0.5, 0);
-		M_ItemPrint(0, opty, s, enabled);
-		M_DrawSlider(0 + (int)strlen(s) * 8 + 8, opty, value, minvalue, maxvalue);
+		if (optnum == optcursor)
+			DrawQ_Pic(menu_x + 48, menu_y + opty, NULL, 320, 8, optnum == optcursor ? (0.5 + 0.2 * sin(realtime * M_PI)) : 0, 0, 0, 0.5, 0);
+		M_ItemPrint(0 + 48, opty, s, enabled);
+		M_DrawSlider(0 + 48 + (int)strlen(s) * 8 + 8, opty, value, minvalue, maxvalue);
 	}
 	opty += 8;
 	optnum++;
@@ -1652,31 +1655,31 @@ static void M_Options_Draw (void)
 	visible = (int)((menu_height - 32) / 8);
 	opty = 32 - bound(0, optcursor - (visible >> 1), max(0, OPTIONS_ITEMS - visible)) * 8;
 
-	M_Options_PrintCommand( "Customize controls", true);
-	M_Options_PrintCommand( "     Go to console", true);
-	M_Options_PrintCommand( " Reset to defaults", true);
-	M_Options_PrintCommand( " Change Video Mode", true);
-	M_Options_PrintSlider(  "         Crosshair", true, crosshair.value, 0, 5);
-	M_Options_PrintSlider(  "       Mouse Speed", true, sensitivity.value, 1, 50);
-	M_Options_PrintCheckbox("      Invert Mouse", true, m_pitch.value < 0);
-	M_Options_PrintSlider(  "     Field of View", true, scr_fov.integer, 1, 170);
-	M_Options_PrintCheckbox("    Show Framerate", true, showfps.integer);
-	M_Options_PrintCheckbox("Show Date and Time", true, showdate.integer && showtime.integer);
-	M_Options_PrintCommand( " Custom Brightness", true);
-	M_Options_PrintSlider(  "   Game Brightness", true, r_hdr_scenebrightness.value, 1, 4);
-	M_Options_PrintSlider(  " Screen Brightness", true, v_contrast.value, 1, 2);
-	M_Options_PrintSlider(  "      Screen Gamma", true, v_gamma.value, 0.5, 3);
-	M_Options_PrintSlider(  "      Sound Volume", snd_initialized.integer, volume.value, 0, 1);
-	M_Options_PrintSlider(  "      Music Volume", cdaudioinitialized.integer, bgmvolume.value, 0, 1);
-	M_Options_PrintCommand( "Effects: Customize", true);
-	M_Options_PrintCommand( "Effects:     Quake", true);
-	M_Options_PrintCommand( "Effects:    Normal", true);
-	M_Options_PrintCommand( "Effects:      High", true);
-	M_Options_PrintCommand( "Lighting:Customize", true);
-	M_Options_PrintCommand( "Lighting:   Flares", true);
-	M_Options_PrintCommand( "Lighting:   Normal", true);
-	M_Options_PrintCommand( "Lighting:     High", true);
-	M_Options_PrintCommand( "Lighting:     Full", true);
+	M_Options_PrintCommand( "    Customize controls", true);
+	M_Options_PrintCommand( "         Go to console", true);
+	M_Options_PrintCommand( "     Reset to defaults", true);
+	M_Options_PrintCommand( "     Change Video Mode", true);
+	M_Options_PrintSlider(  "             Crosshair", true, crosshair.value, 0, 5);
+	M_Options_PrintSlider(  "           Mouse Speed", true, sensitivity.value, 1, 50);
+	M_Options_PrintCheckbox("          Invert Mouse", true, m_pitch.value < 0);
+	M_Options_PrintSlider(  "         Field of View", true, scr_fov.integer, 1, 170);
+	M_Options_PrintCheckbox("        Show Framerate", true, showfps.integer);
+	M_Options_PrintCheckbox("    Show Date and Time", true, showdate.integer && showtime.integer);
+	M_Options_PrintCommand( "     Custom Brightness", true);
+	M_Options_PrintSlider(  "       Game Brightness", true, r_hdr_scenebrightness.value, 1, 4);
+	M_Options_PrintSlider(  "            Brightness", true, v_contrast.value, 1, 2);
+	M_Options_PrintSlider(  "                 Gamma", true, v_gamma.value, 0.5, 3);
+	M_Options_PrintSlider(  "          Sound Volume", snd_initialized.integer, volume.value, 0, 1);
+	M_Options_PrintSlider(  "          Music Volume", cdaudioinitialized.integer, bgmvolume.value, 0, 1);
+	M_Options_PrintCommand( "     Customize Effects", true);
+	M_Options_PrintCommand( "       Effects:  Quake", true);
+	M_Options_PrintCommand( "       Effects: Normal", true);
+	M_Options_PrintCommand( "       Effects:   High", true);
+	M_Options_PrintCommand( "    Customize Lighting", true);
+	M_Options_PrintCommand( "      Lighting: Flares", true);
+	M_Options_PrintCommand( "      Lighting: Normal", true);
+	M_Options_PrintCommand( "      Lighting:   High", true);
+	M_Options_PrintCommand( "      Lighting:   Full", true);
 }
 
 
@@ -2005,27 +2008,27 @@ static void M_Options_Graphics_Draw (void)
 	visible = (int)((menu_height - 32) / 8);
 	opty = 32 - bound(0, optcursor - (visible >> 1), max(0, OPTIONS_GRAPHICS_ITEMS - visible)) * 8;
 
-	M_Options_PrintSlider(  "       Corona Intensity", true, r_coronas.value, 0, 4);
-	M_Options_PrintCheckbox("       Use Only Coronas", true, gl_flashblend.integer);
-	M_Options_PrintSlider(  "             Gloss Mode", true, r_shadow_gloss.integer, 0, 2);
-	M_Options_PrintCheckbox("             RT DLights", !gl_flashblend.integer, r_shadow_realtime_dlight.integer);
-	M_Options_PrintCheckbox("      RT DLight Shadows", !gl_flashblend.integer, r_shadow_realtime_dlight_shadows.integer);
-	M_Options_PrintCheckbox("               RT World", true, r_shadow_realtime_world.integer);
-	M_Options_PrintCheckbox("RT World DLight Shadows", !gl_flashblend.integer, r_shadow_realtime_world_dlightshadows.integer);
-	M_Options_PrintSlider(  "     RT World Lightmaps", true, r_shadow_realtime_world_lightmaps.value, 0, 1);
-	M_Options_PrintCheckbox("        RT World Shadow", true, r_shadow_realtime_world_shadows.integer);
-	M_Options_PrintSlider(  "       Scene Brightness", true, r_hdr_scenebrightness.value, 0.25, 4);
-	M_Options_PrintCheckbox("           Bloom Effect", !r_hdr.integer, r_bloom.integer);
-	M_Options_PrintCheckbox("       HDR Bloom Effect", true, r_hdr.integer);
-	M_Options_PrintSlider(  "      HDR Dynamic Range", r_hdr.integer, r_hdr_range.value, 1, 16);
-	M_Options_PrintSlider(  "     HDR Glow Intensity", r_hdr.integer, r_hdr_glowintensity.value, 0, 4);
-	M_Options_PrintSlider(  "      Bloom Color Scale", r_hdr.integer || r_bloom.integer, r_bloom_colorscale.value, 0.0625, 1);
-	M_Options_PrintSlider(  "   Bloom Color Subtract", r_hdr.integer || r_bloom.integer, r_bloom_colorsubtract.value, 0, 1-0.0625);
-	M_Options_PrintSlider(  "   Bloom Color Exponent", r_hdr.integer || r_bloom.integer, r_bloom_colorexponent.value, 1, 8);
-	M_Options_PrintSlider(  "        Bloom Intensity", r_hdr.integer || r_bloom.integer, r_bloom_brighten.value, 1, 4);
-	M_Options_PrintSlider(  "             Bloom Blur", r_hdr.integer || r_bloom.integer, r_bloom_blur.value, 1, 16);
-	M_Options_PrintSlider(  "       Bloom Resolution", r_hdr.integer || r_bloom.integer, r_bloom_resolution.value, 64, 2048);
-	M_Options_PrintCommand( "       Restart Renderer", true);
+	M_Options_PrintSlider(  "      Corona Intensity", true, r_coronas.value, 0, 4);
+	M_Options_PrintCheckbox("      Use Only Coronas", true, gl_flashblend.integer);
+	M_Options_PrintSlider(  "            Gloss Mode", true, r_shadow_gloss.integer, 0, 2);
+	M_Options_PrintCheckbox("            RT DLights", !gl_flashblend.integer, r_shadow_realtime_dlight.integer);
+	M_Options_PrintCheckbox("     RT DLight Shadows", !gl_flashblend.integer, r_shadow_realtime_dlight_shadows.integer);
+	M_Options_PrintCheckbox("              RT World", true, r_shadow_realtime_world.integer);
+	M_Options_PrintCheckbox("RTWorld DLight Shadows", !gl_flashblend.integer, r_shadow_realtime_world_dlightshadows.integer);
+	M_Options_PrintSlider(  "    RT World Lightmaps", true, r_shadow_realtime_world_lightmaps.value, 0, 1);
+	M_Options_PrintCheckbox("       RT World Shadow", true, r_shadow_realtime_world_shadows.integer);
+	M_Options_PrintSlider(  "      Scene Brightness", true, r_hdr_scenebrightness.value, 0.25, 4);
+	M_Options_PrintCheckbox("          Bloom Effect", !r_hdr.integer, r_bloom.integer);
+	M_Options_PrintCheckbox("      HDR Bloom Effect", true, r_hdr.integer);
+	M_Options_PrintSlider(  "     HDR Dynamic Range", r_hdr.integer, r_hdr_range.value, 1, 16);
+	M_Options_PrintSlider(  "    HDR Glow Intensity", r_hdr.integer, r_hdr_glowintensity.value, 0, 4);
+	M_Options_PrintSlider(  "     Bloom Color Scale", r_hdr.integer || r_bloom.integer, r_bloom_colorscale.value, 0.0625, 1);
+	M_Options_PrintSlider(  "  Bloom Color Subtract", r_hdr.integer || r_bloom.integer, r_bloom_colorsubtract.value, 0, 1-0.0625);
+	M_Options_PrintSlider(  "  Bloom Color Exponent", r_hdr.integer || r_bloom.integer, r_bloom_colorexponent.value, 1, 8);
+	M_Options_PrintSlider(  "       Bloom Intensity", r_hdr.integer || r_bloom.integer, r_bloom_brighten.value, 1, 4);
+	M_Options_PrintSlider(  "            Bloom Blur", r_hdr.integer || r_bloom.integer, r_bloom_blur.value, 1, 16);
+	M_Options_PrintSlider(  "      Bloom Resolution", r_hdr.integer || r_bloom.integer, r_bloom_resolution.value, 64, 2048);
+	M_Options_PrintCommand( "      Restart Renderer", true);
 }
 
 
