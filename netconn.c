@@ -1454,9 +1454,12 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		int n;
 		serverlist_info_t *info;
 
-		c = data[4];
-		data += 5;
-		length -= 5;
+		data += 4;
+		length -= 4;
+		SZ_Clear(&net_message);
+		SZ_Write(&net_message, data, length);
+		MSG_BeginReading();
+		c = MSG_ReadByte();
 		switch (c)
 		{
 		case CCREP_ACCEPT:
@@ -1466,13 +1469,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			{
 				lhnetaddress_t clientportaddress;
 				clientportaddress = *peeraddress;
-				if (length >= 4)
-				{
-					unsigned int port = (data[0] << 0) | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
-					data += 4;
-					length -= 4;
-					LHNETADDRESS_SetPort(&clientportaddress, port);
-				}
+				LHNETADDRESS_SetPort(&clientportaddress, MSG_ReadLong());
 				// update the server IP in the userinfo (QW servers expect this, and it is used by the reconnect command)
 				InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "*ip", addressstring2);
 				M_Update_Return_Reason("Accepted");
@@ -1483,7 +1480,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			if (developer.integer >= 10)
 				Con_Printf("Datagram_ParseConnectionless: received CCREP_REJECT from %s.\n", addressstring2);
 			cls.connect_trying = false;
-			M_Update_Return_Reason((char *)data);
+			M_Update_Return_Reason((char *)MSG_ReadString());
 			break;
 		case CCREP_SERVER_INFO:
 			if (developer.integer >= 10)
@@ -1521,6 +1518,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		default:
 			break;
 		}
+		SZ_Clear(&net_message);
 		// we may not have liked the packet, but it was a valid control
 		// packet, so we're done processing this packet now
 		return true;
@@ -2050,20 +2048,26 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 	//  Quake packet flood Denial Of Service attacks)
 	if (length >= 5 && (i = BigLong(*((int *)data))) && (i & (~NETFLAG_LENGTH_MASK)) == (int)NETFLAG_CTL && (i & NETFLAG_LENGTH_MASK) == length && (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE || sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3))
 	{
-		int c = data[4];
-		data += 5;
-		length -= 5;
+		int c;
+		int protocolnumber;
+		const char *protocolname;
+		data += 4;
+		length -= 4;
+		SZ_Clear(&net_message);
+		SZ_Write(&net_message, data, length);
+		MSG_BeginReading();
+		c = MSG_ReadByte();
 		switch (c)
 		{
 		case CCREQ_CONNECT:
 			if (developer.integer >= 10)
 				Con_Printf("Datagram_ParseConnectionless: received CCREQ_CONNECT from %s.\n", addressstring2);
-			if (length < (int)strlen("QUAKE") + 1 + 1)
-				break;
 			if(sv_public.integer <= -2)
 				break;
 
-			if (memcmp(data, "QUAKE", strlen("QUAKE") + 1) != 0 || (int)data[strlen("QUAKE") + 1] != NET_PROTOCOL_VERSION)
+			protocolname = MSG_ReadString();
+			protocolnumber = MSG_ReadByte();
+			if (strcmp(protocolname, "QUAKE") || protocolnumber != NET_PROTOCOL_VERSION)
 			{
 				if (developer.integer >= 10)
 					Con_Printf("Datagram_ParseConnectionless: sending CCREP_REJECT \"Incompatible version.\" to %s.\n", addressstring2);
@@ -2252,6 +2256,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		default:
 			break;
 		}
+		SZ_Clear(&net_message);
 		// we may not have liked the packet, but it was a valid control
 		// packet, so we're done processing this packet now
 		return true;
