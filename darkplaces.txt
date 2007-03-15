@@ -427,7 +427,6 @@ cl_movement_airaccelerate                         -1                  how fast y
 cl_movement_edgefriction                          2                   how much to slow down when you may be about to fall off a ledge (should match edgefriction)
 cl_movement_friction                              4                   how fast you slow down (should match sv_friction)
 cl_movement_jumpvelocity                          270                 how fast you move upward when you begin a jump (should match the quakec code)
-cl_movement_latency                               0                   compensates for this much latency (ping time) on quake servers which do not really support prediction, no effect on darkplaces7 protocol servers or quakeworld servers
 cl_movement_maxairspeed                           30                  how fast you can move while in the air (should match sv_maxairspeed)
 cl_movement_maxspeed                              320                 how fast you can move (should match sv_maxspeed)
 cl_movement_stepheight                            18                  how tall a step you can step in one instant (should match sv_stepheight)

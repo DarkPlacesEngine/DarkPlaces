@@ -320,7 +320,6 @@ cvar_t cl_pitchspeed = {CVAR_SAVE, "cl_pitchspeed","150","keyboard pitch turning
 cvar_t cl_anglespeedkey = {CVAR_SAVE, "cl_anglespeedkey","1.5","how much +speed multiplies keyboard turning speed"};
 
 cvar_t cl_movement = {CVAR_SAVE, "cl_movement", "0", "enables clientside prediction of your player movement"};
-cvar_t cl_movement_latency = {0, "cl_movement_latency", "0", "compensates for this much latency (ping time) on quake servers which do not really support prediction, no effect on darkplaces7 protocol servers or quakeworld servers"};
 cvar_t cl_movement_maxspeed = {0, "cl_movement_maxspeed", "320", "how fast you can move (should match sv_maxspeed)"};
 cvar_t cl_movement_maxairspeed = {0, "cl_movement_maxairspeed", "30", "how fast you can move while in the air (should match sv_maxairspeed)"};
 cvar_t cl_movement_stopspeed = {0, "cl_movement_stopspeed", "100", "speed below which you will be slowed rapidly to a stop rather than sliding endlessly (should match sv_stopspeed)"};
@@ -611,16 +610,6 @@ void CL_ClientMovement_Input(qboolean buttonjump, qboolean buttoncrouch)
 		for (i = 0;i < n;i++)
 		{
 			if (cl.movement_queue[i].sequence > cls.servermovesequence)
-				cl.movement_queue[cl.movement_numqueue++] = cl.movement_queue[i];
-			else if (i == 0)
-				cl.movement_replay_canjump = !cl.movement_queue[i].jump; // FIXME: this logic is quite broken
-		}
-	}
-	else
-	{
-		for (i = 0;i < n;i++)
-		{
-			if (cl.movement_queue[i].time >= cl.movecmd[0].time - cl_movement_latency.value / 1000.0 && cl.movement_queue[i].time <= cl.movecmd[0].time)
 				cl.movement_queue[cl.movement_numqueue++] = cl.movement_queue[i];
 			else if (i == 0)
 				cl.movement_replay_canjump = !cl.movement_queue[i].jump; // FIXME: this logic is quite broken
@@ -1147,7 +1136,7 @@ void CL_ClientMovement_Replay(void)
 		s.movevars_airaccel_sideways_friction = cl_movement_airaccel_sideways_friction.value;
 	}
 
-	cl.movement_predicted = (cl_movement.integer && !cls.demoplayback && cls.signon == SIGNONS && cl.stats[STAT_HEALTH] > 0 && !cl.intermission) && ((cls.protocol != PROTOCOL_DARKPLACES6 && cls.protocol != PROTOCOL_DARKPLACES7) || cls.servermovesequence);
+	cl.movement_predicted = cls.servermovesequence && (cl_movement.integer && !cls.demoplayback && cls.signon == SIGNONS && cl.stats[STAT_HEALTH] > 0 && !cl.intermission);
 	if (cl.movement_predicted)
 	{
 		//Con_Printf("%f: ", cl.movecmd[0].time);
@@ -1676,7 +1665,6 @@ void CL_InitInput (void)
 	Cmd_AddCommand ("bestweapon", IN_BestWeapon, "send an impulse number to server to select the first usable weapon out of several (example: 87654321)");
 
 	Cvar_RegisterVariable(&cl_movement);
-	Cvar_RegisterVariable(&cl_movement_latency);
 	Cvar_RegisterVariable(&cl_movement_maxspeed);
 	Cvar_RegisterVariable(&cl_movement_maxairspeed);
 	Cvar_RegisterVariable(&cl_movement_stopspeed);
