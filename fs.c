@@ -961,35 +961,38 @@ then loads and adds pak1.pak pak2.pak ...
 */
 void FS_AddGameDirectory (const char *dir)
 {
-	stringlist_t *list, *current;
+	int i;
+	stringlist_t list;
 	searchpath_t *search;
 	char pakfile[MAX_OSPATH];
 
 	strlcpy (fs_gamedir, dir, sizeof (fs_gamedir));
 
-	list = listdirectory(dir);
+	stringlistinit(&list);
+	listdirectory(&list, dir);
+	stringlistsort(&list);
 
 	// add any PAK package in the directory
-	for (current = list;current;current = current->next)
+	for (i = 0;i < list.numstrings;i++)
 	{
-		if (!strcasecmp(FS_FileExtension(current->text), "pak"))
+		if (!strcasecmp(FS_FileExtension(list.strings[i]), "pak"))
 		{
-			dpsnprintf (pakfile, sizeof (pakfile), "%s%s", dir, current->text);
+			dpsnprintf (pakfile, sizeof (pakfile), "%s%s", dir, list.strings[i]);
 			FS_AddPack_Fullpath(pakfile, NULL, false);
 		}
 	}
 
 	// add any PK3 package in the directory
-	for (current = list;current;current = current->next)
+	for (i = 0;i < list.numstrings;i++)
 	{
-		if (!strcasecmp(FS_FileExtension(current->text), "pk3"))
+		if (!strcasecmp(FS_FileExtension(list.strings[i]), "pk3"))
 		{
-			dpsnprintf (pakfile, sizeof (pakfile), "%s%s", dir, current->text);
+			dpsnprintf (pakfile, sizeof (pakfile), "%s%s", dir, list.strings[i]);
 			FS_AddPack_Fullpath(pakfile, NULL, false);
 		}
 	}
 
-	freedirectory(list);
+	stringlistfreecontents(&list);
 
 	// Add the directory to the search path
 	// (unpacked files have the priority over packed files)
@@ -1281,10 +1284,13 @@ FS_CheckGameDir
 */
 qboolean FS_CheckGameDir(const char *gamedir)
 {
-	stringlist_t *list = listdirectory(va("%s%s/", fs_basedir, gamedir));
-	if (list)
-		freedirectory(list);
-	return list != NULL;
+	qboolean success;
+	stringlist_t list;
+	stringlistinit(&list);
+	listdirectory(&list, va("%s%s/", fs_basedir, gamedir));
+	success = list.numstrings > 0;
+	stringlistfreecontents(&list);
+	return success;
 }
 
 
@@ -2423,8 +2429,9 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 	fssearch_t *search;
 	searchpath_t *searchpath;
 	pack_t *pak;
-	int i, basepathlength, numfiles, numchars;
-	stringlist_t *dir, *dirfile, *liststart, *listcurrent, *listtemp;
+	int i, basepathlength, numfiles, numchars, resultlistindex, dirlistindex;
+	stringlist_t resultlist;
+	stringlist_t dirlist;
 	const char *slash, *backslash, *colon, *separator;
 	char *basepath;
 	char netpath[MAX_OSPATH];
@@ -2439,10 +2446,9 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 		return NULL;
 	}
 
+	stringlistinit(&resultlist);
+	stringlistinit(&dirlist);
 	search = NULL;
-	liststart = NULL;
-	listcurrent = NULL;
-	listtemp = NULL;
 	slash = strrchr(pattern, '/');
 	backslash = strrchr(pattern, '\\');
 	colon = strrchr(pattern, ':');
@@ -2469,14 +2475,12 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 				{
 					if (matchpattern(temp, (char *)pattern, true))
 					{
-						for (listtemp = liststart;listtemp;listtemp = listtemp->next)
-							if (!strcmp(listtemp->text, temp))
+						for (resultlistindex = 0;resultlistindex < resultlist.numstrings;resultlistindex++)
+							if (!strcmp(resultlist.strings[resultlistindex], temp))
 								break;
-						if (listtemp == NULL)
+						if (resultlistindex == resultlist.numstrings)
 						{
-							listcurrent = stringlistappend(listcurrent, temp);
-							if (liststart == NULL)
-								liststart = listcurrent;
+							stringlistappend(&resultlist, temp);
 							if (!quiet)
 								Con_DPrintf("SearchPackFile: %s : %s\n", pak->filename, temp);
 						}
@@ -2501,59 +2505,52 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 		{
 			// get a directory listing and look at each name
 			dpsnprintf(netpath, sizeof (netpath), "%s%s", searchpath->filename, basepath);
-			if ((dir = listdirectory(netpath)))
+			stringlistinit(&dirlist);
+			listdirectory(&dirlist, netpath);
+			for (dirlistindex = 0;dirlistindex < dirlist.numstrings;dirlistindex++)
 			{
-				for (dirfile = dir;dirfile;dirfile = dirfile->next)
+				dpsnprintf(temp, sizeof(temp), "%s%s", basepath, dirlist.strings[dirlistindex]);
+				if (matchpattern(temp, (char *)pattern, true))
 				{
-					dpsnprintf(temp, sizeof(temp), "%s%s", basepath, dirfile->text);
-					if (matchpattern(temp, (char *)pattern, true))
+					for (resultlistindex = 0;resultlistindex < resultlist.numstrings;resultlistindex++)
+						if (!strcmp(resultlist.strings[resultlistindex], temp))
+							break;
+					if (resultlistindex == resultlist.numstrings)
 					{
-						for (listtemp = liststart;listtemp;listtemp = listtemp->next)
-							if (!strcmp(listtemp->text, temp))
-								break;
-						if (listtemp == NULL)
-						{
-							listcurrent = stringlistappend(listcurrent, temp);
-							if (liststart == NULL)
-								liststart = listcurrent;
-							if (!quiet)
-								Con_DPrintf("SearchDirFile: %s\n", temp);
-						}
+						stringlistappend(&resultlist, temp);
+						if (!quiet)
+							Con_DPrintf("SearchDirFile: %s\n", temp);
 					}
 				}
-				freedirectory(dir);
 			}
+			stringlistfreecontents(&dirlist);
 		}
 	}
 
-	if (liststart)
+	if (resultlist.numstrings)
 	{
-		liststart = stringlistsort(liststart);
-		numfiles = 0;
+		stringlistsort(&resultlist);
+		numfiles = resultlist.numstrings;
 		numchars = 0;
-		for (listtemp = liststart;listtemp;listtemp = listtemp->next)
-		{
-			numfiles++;
-			numchars += (int)strlen(listtemp->text) + 1;
-		}
+		for (resultlistindex = 0;resultlistindex < resultlist.numstrings;resultlistindex++)
+			numchars += (int)strlen(resultlist.strings[resultlistindex]) + 1;
 		search = (fssearch_t *)Z_Malloc(sizeof(fssearch_t) + numchars + numfiles * sizeof(char *));
 		search->filenames = (char **)((char *)search + sizeof(fssearch_t));
 		search->filenamesbuffer = (char *)((char *)search + sizeof(fssearch_t) + numfiles * sizeof(char *));
 		search->numfilenames = (int)numfiles;
 		numfiles = 0;
 		numchars = 0;
-		for (listtemp = liststart;listtemp;listtemp = listtemp->next)
+		for (resultlistindex = 0;resultlistindex < resultlist.numstrings;resultlistindex++)
 		{
 			size_t textlen;
 			search->filenames[numfiles] = search->filenamesbuffer + numchars;
-			textlen = strlen(listtemp->text) + 1;
-			memcpy(search->filenames[numfiles], listtemp->text, textlen);
+			textlen = strlen(resultlist.strings[resultlistindex]) + 1;
+			memcpy(search->filenames[numfiles], resultlist.strings[resultlistindex], textlen);
 			numfiles++;
 			numchars += (int)textlen;
 		}
-		if (liststart)
-			stringlistfree(liststart);
 	}
+	stringlistfreecontents(&resultlist);
 
 	Mem_Free(basepath);
 	return search;

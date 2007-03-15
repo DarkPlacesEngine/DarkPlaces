@@ -289,16 +289,18 @@ int COM_ReadAndTokenizeLine(const char **text, char **argv, int maxargc, char *t
 
 typedef struct stringlist_s
 {
-	struct stringlist_s *next;
-	char *text;
+	// maxstrings changes as needed, causing reallocation of strings[] array
+	int maxstrings;
+	int numstrings;
+	char **strings;
 } stringlist_t;
 
 int matchpattern(const char *in, const char *pattern, int caseinsensitive);
-stringlist_t *stringlistappend(stringlist_t *current, char *text);
-void stringlistfree(stringlist_t *current);
-stringlist_t *stringlistsort(stringlist_t *start);
-stringlist_t *listdirectory(const char *path);
-void freedirectory(stringlist_t *list);
+void stringlistinit(stringlist_t *list);
+void stringlistfreecontents(stringlist_t *list);
+void stringlistappend(stringlist_t *list, char *text);
+void stringlistsort(stringlist_t *list);
+void listdirectory(stringlist_t *list, const char *path);
 
 char *SearchInfostring(const char *infostring, const char *key);
 

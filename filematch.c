@@ -57,79 +57,76 @@ int matchpattern(const char *in, const char *pattern, int caseinsensitive)
 	return 1; // success
 }
 
-// a little chained strings system
-stringlist_t *stringlistappend(stringlist_t *current, char *text)
+// a little strings system
+void stringlistinit(stringlist_t *list)
 {
-	stringlist_t *newitem;
-	size_t textlen;
-
-	textlen = strlen(text) + 1;
-	newitem = (stringlist_t *)Z_Malloc(textlen + sizeof(stringlist_t));
-	newitem->next = NULL;
-	newitem->text = (char *)(newitem + 1);
-	memcpy(newitem->text, text, textlen);
-	if (current)
-		current->next = newitem;
-	return newitem;
+	memset(list, 0, sizeof(*list));
 }
 
-void stringlistfree(stringlist_t *current)
+void stringlistfreecontents(stringlist_t *list)
 {
-	stringlist_t *next;
-	while (current)
+	int i;
+	for (i = 0;i < list->numstrings;i++)
 	{
-		next = current->next;
-		Z_Free(current);
-		current = next;
+		if (list->strings[i])
+			Z_Free(list->strings[i]);
+		list->strings[i] = NULL;
 	}
+	list->numstrings = 0;
+	list->maxstrings = 0;
+	if (list->strings)
+		Z_Free(list->strings);
 }
 
-stringlist_t *stringlistsort(stringlist_t *start)
+void stringlistappend(stringlist_t *list, char *text)
 {
-	int notdone;
-	stringlist_t *current, *previous, *temp2, *temp3, *temp4;
-	// exit early if there's nothing to sort
-	if (start == NULL || start->next == NULL)
-		return start;
-	notdone = 1;
-	while (notdone)
+	size_t textlen;
+	char **oldstrings;
+
+	if (list->numstrings >= list->maxstrings)
 	{
-		current = start;
-		notdone = 0;
-		previous = NULL;
-		while (current && current->next)
+		oldstrings = list->strings;
+		list->maxstrings += 4096;
+		list->strings = Z_Malloc(list->maxstrings * sizeof(*list->strings));
+		if (list->numstrings)
+			memcpy(list->strings, oldstrings, list->numstrings * sizeof(*list->strings));
+		if (oldstrings)
+			Z_Free(oldstrings);
+	}
+	textlen = strlen(text) + 1;
+	list->strings[list->numstrings] = Z_Malloc(textlen);
+	memcpy(list->strings[list->numstrings], text, textlen);
+	list->numstrings++;
+}
+
+void stringlistsort(stringlist_t *list)
+{
+	int i, j;
+	char *temp;
+	// this is a selection sort (finds the best entry for each slot)
+	for (i = 0;i < list->numstrings - 1;i++)
+	{
+		for (j = i + 1;j < list->numstrings;j++)
 		{
-			if (strcmp(current->text, current->next->text) > 0)
+			if (strcmp(list->strings[i], list->strings[j]) > 0)
 			{
-				// current is greater than next
-				notdone = 1;
-				temp2 = current->next;
-				temp3 = current;
-				temp4 = current->next->next;
-				if (previous)
-					previous->next = temp2;
-				else
-					start = temp2;
-				temp2->next = temp3;
-				temp3->next = temp4;
-				break;
+				temp = list->strings[i];
+				list->strings[i] = list->strings[j];
+				list->strings[j] = temp;
 			}
-			previous = current;
-			current = current->next;
 		}
 	}
-	return start;
 }
 
 // operating system specific code
 #ifdef WIN32
 #include <io.h>
-stringlist_t *listdirectory(const char *path)
+void listdirectory(stringlist_t *list, const char *path)
 {
+	int i;
 	char pattern[4096], *c;
 	struct _finddata_t n_file;
 	long hFile;
-	stringlist_t *start, *current;
 	strlcpy (pattern, path, sizeof (pattern));
 	strlcat (pattern, "*", sizeof (pattern));
 	// ask for the directory listing handle
@@ -137,49 +134,31 @@ stringlist_t *listdirectory(const char *path)
 	if(hFile == -1)
 		return NULL;
 	// start a new chain with the the first name
-	start = current = stringlistappend(NULL, n_file.name);
+	stringlistappend(list, n_file.name);
 	// iterate through the directory
 	while (_findnext(hFile, &n_file) == 0)
-		current = stringlistappend(current, n_file.name);
+		stringlistappend(list, n_file.name);
 	_findclose(hFile);
 
 	// convert names to lowercase because windows does not care, but pattern matching code often does
-	for (current = start;current;current = current->next)
-		for (c = current->text;*c;c++)
+	for (i = 0;i < list->numstrings;i++)
+		for (c = list->strings[i];*c;c++)
 			if (*c >= 'A' && *c <= 'Z')
 				*c += 'a' - 'A';
-
-	// sort the list alphanumerically
-	return stringlistsort(start);
 }
 #else
 #include <dirent.h>
-stringlist_t *listdirectory(const char *path)
+void listdirectory(stringlist_t *list, const char *path)
 {
 	DIR *dir;
 	struct dirent *ent;
-	stringlist_t *start, *current;
 	dir = opendir(path);
 	if (!dir)
-		return NULL;
-	start = current = NULL;
+		return;
 	while ((ent = readdir(dir)))
-	{
 		if (strcmp(ent->d_name, ".") && strcmp(ent->d_name, ".."))
-		{
-			current = stringlistappend(current, ent->d_name);
-			if (!start)
-				start = current;
-		}
-	}
+			stringlistappend(list, ent->d_name);
 	closedir(dir);
-	// sort the list alphanumerically
-	return stringlistsort(start);
 }
 #endif
-
-void freedirectory(stringlist_t *list)
-{
-	stringlistfree(list);
-}
 
