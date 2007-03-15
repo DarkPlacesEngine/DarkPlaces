@@ -132,7 +132,7 @@ void listdirectory(stringlist_t *list, const char *path)
 	// ask for the directory listing handle
 	hFile = _findfirst(pattern, &n_file);
 	if(hFile == -1)
-		return NULL;
+		return;
 	// start a new chain with the the first name
 	stringlistappend(list, n_file.name);
 	// iterate through the directory
