@@ -1224,7 +1224,7 @@ qboolean GetMapList (const char *s, char *completedname, int completednamebuffer
 				goto endcomplete;
 	}
 endcomplete:
-	if(p > o)
+	if(p > o && completedname && completednamebufferlength > 0)
 	{
 		memset(completedname, 0, completednamebufferlength);
 		memcpy(completedname, (t->filenames[0]+5), min(p, completednamebufferlength - 1));
