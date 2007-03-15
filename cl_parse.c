@@ -505,7 +505,9 @@ static void QW_CL_RequestNextDownload(void)
 		CL_Locs_Reload_f();
 		R_Modules_NewMap();
 
-		// TODO: add pmodel/emodel player.mdl/eyes.mdl CRCs to userinfo
+		// add pmodel/emodel CRCs to userinfo
+		CL_SetInfo("pmodel", va("%i", FS_CRCFile("progs/player.mdl", NULL)), true, true, true, true);
+		CL_SetInfo("emodel", va("%i", FS_CRCFile("progs/eyes.mdl", NULL)), true, true, true, true);
 
 		// done checking sounds and models, send a prespawn command now
 		MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
