@@ -1856,15 +1856,18 @@ void CL_Locs_FreeNode(cl_locnode_t *node)
 	Con_Printf("CL_Locs_FreeNode: no such node! (%p)\n", node);
 }
 
-void CL_Locs_AddNode(vec3_t mins, vec3_t maxs, const char *namestart, const char *nameend)
+void CL_Locs_AddNode(vec3_t mins, vec3_t maxs, const char *name)
 {
 	cl_locnode_t *node, **pointer;
-	int namelen = (int)(nameend - namestart);
+	int namelen;
+	if (!name)
+		name = "";
+	namelen = strlen(name);
 	node = Mem_Alloc(cls.levelmempool, sizeof(cl_locnode_t) + namelen + 1);
 	VectorSet(node->mins, min(mins[0], maxs[0]), min(mins[1], maxs[1]), min(mins[2], maxs[2]));
 	VectorSet(node->maxs, max(mins[0], maxs[0]), max(mins[1], maxs[1]), max(mins[2], maxs[2]));
 	node->name = (char *)(node + 1);
-	memcpy(node->name, namestart, namelen);
+	memcpy(node->name, name, namelen);
 	node->name[namelen] = 0;
 	// link it into the tail of the list to preserve the order
 	for (pointer = &cl.locnodes;*pointer;pointer = &(*pointer)->next)
@@ -1888,10 +1891,10 @@ void CL_Locs_Add_f(void)
 		maxs[0] = atof(Cmd_Argv(4));
 		maxs[1] = atof(Cmd_Argv(5));
 		maxs[2] = atof(Cmd_Argv(6));
-		CL_Locs_AddNode(mins, maxs, Cmd_Argv(7), Cmd_Argv(7) + strlen(Cmd_Argv(7)));
+		CL_Locs_AddNode(mins, maxs, Cmd_Argv(7));
 	}
 	else
-		CL_Locs_AddNode(mins, mins, Cmd_Argv(4), Cmd_Argv(4) + strlen(Cmd_Argv(4)));
+		CL_Locs_AddNode(mins, mins, Cmd_Argv(4));
 }
 
 void CL_Locs_RemoveNearest_f(void)
@@ -1948,7 +1951,36 @@ void CL_Locs_Save_f(void)
 	for (loc = cl.locnodes;loc;loc = loc->next)
 	{
 		if (VectorCompare(loc->mins, loc->maxs))
-			FS_Printf(outfile, "%.0f %.0f %.0f %s\n", loc->mins[0]*8, loc->mins[1]*8, loc->mins[2]*8, loc->name);
+		{
+			int len;
+			const char *s;
+			const char *in = loc->name;
+			char name[MAX_INPUTLINE];
+			for (len = 0;len < (int)sizeof(name) - 1 && *in;)
+			{
+				if (*in == ' ') {s = "$loc_name_separator";in++;}
+				else if (!strncmp(in, "SSG", 3)) {s = "$loc_name_ssg";in += 3;}
+				else if (!strncmp(in, "NG", 2)) {s = "$loc_name_ng";in += 2;}
+				else if (!strncmp(in, "SNG", 3)) {s = "$loc_name_sng";in += 3;}
+				else if (!strncmp(in, "GL", 2)) {s = "$loc_name_gl";in += 2;}
+				else if (!strncmp(in, "RL", 2)) {s = "$loc_name_rl";in += 2;}
+				else if (!strncmp(in, "LG", 2)) {s = "$loc_name_lg";in += 2;}
+				else if (!strncmp(in, "GA", 2)) {s = "$loc_name_ga";in += 2;}
+				else if (!strncmp(in, "YA", 2)) {s = "$loc_name_ya";in += 2;}
+				else if (!strncmp(in, "RA", 2)) {s = "$loc_name_ra";in += 2;}
+				else if (!strncmp(in, "MEGA", 4)) {s = "$loc_name_mh";in += 4;}
+				else s = NULL;
+				if (s)
+				{
+					while (len < (int)sizeof(name) - 1 && *s)
+						name[len++] = *s++;
+					continue;
+				}
+				name[len++] = *in++;
+			}
+			name[len] = 0;
+			FS_Printf(outfile, "%.0f %.0f %.0f %s\n", loc->mins[0]*8, loc->mins[1]*8, loc->mins[2]*8, name);
+		}
 		else
 			FS_Printf(outfile, "%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,\"%s\"\n", loc->mins[0], loc->mins[1], loc->mins[2], loc->maxs[0], loc->maxs[1], loc->maxs[2], loc->name);
 	}
@@ -1957,11 +1989,13 @@ void CL_Locs_Save_f(void)
 
 void CL_Locs_Reload_f(void)
 {
-	int i, linenumber, limit;
+	int i, linenumber, limit, len;
+	const char *s;
 	char *filedata, *text, *textend, *linestart, *linetext, *lineend;
 	fs_offset_t filesize;
 	vec3_t mins, maxs;
 	char locfilename[MAX_QPATH];
+	char name[MAX_INPUTLINE];
 
 	if (cls.state != ca_connected || !cl.worldmodel)
 	{
@@ -2043,6 +2077,11 @@ void CL_Locs_Reload_f(void)
 				continue; // proquake location names are always quoted
 			lineend--;
 			linetext++;
+			len = min(lineend - linetext, (int)sizeof(name) - 1);
+			memcpy(name, linetext, len);
+			name[len] = 0;
+			// add the box to the list
+			CL_Locs_AddNode(mins, maxs, name);
 		}
 		// if a point was parsed, it needs to be scaled down by 8 (since
 		// point-based loc files were invented by a proxy which dealt
@@ -2050,14 +2089,39 @@ void CL_Locs_Reload_f(void)
 		// it into a box
 		else if (i == 3)
 		{
+			// interpret silly fuhquake macros
+			for (len = 0;len < (int)sizeof(name) - 1 && linetext < lineend;)
+			{
+				if (*linetext == '$')
+				{
+					if (linetext + 18 <= lineend && !strncmp(linetext, "$loc_name_separator", 19)) {s = " ";linetext += 19;}
+					else if (linetext + 13 <= lineend && !strncmp(linetext, "$loc_name_ssg", 13)) {s = "SSG";linetext += 13;}
+					else if (linetext + 12 <= lineend && !strncmp(linetext, "$loc_name_ng", 12)) {s = "NG";linetext += 12;}
+					else if (linetext + 13 <= lineend && !strncmp(linetext, "$loc_name_sng", 13)) {s = "SNG";linetext += 13;}
+					else if (linetext + 12 <= lineend && !strncmp(linetext, "$loc_name_gl", 12)) {s = "GL";linetext += 12;}
+					else if (linetext + 12 <= lineend && !strncmp(linetext, "$loc_name_rl", 12)) {s = "RL";linetext += 12;}
+					else if (linetext + 12 <= lineend && !strncmp(linetext, "$loc_name_lg", 12)) {s = "LG";linetext += 12;}
+					else if (linetext + 12 <= lineend && !strncmp(linetext, "$loc_name_ga", 12)) {s = "GA";linetext += 12;}
+					else if (linetext + 12 <= lineend && !strncmp(linetext, "$loc_name_ya", 12)) {s = "YA";linetext += 12;}
+					else if (linetext + 12 <= lineend && !strncmp(linetext, "$loc_name_ra", 12)) {s = "RA";linetext += 12;}
+					else if (linetext + 12 <= lineend && !strncmp(linetext, "$loc_name_mh", 12)) {s = "MEGA";linetext += 12;}
+					else s = NULL;
+					if (s)
+					{
+						while (len < (int)sizeof(name) - 1 && *s)
+							name[len++] = *s++;
+						continue;
+					}
+				}
+				name[len++] = *linetext++;
+			}
+			name[len] = 0;
+			// add the point to the list
 			VectorScale(mins, (1.0 / 8.0), mins);
-			VectorCopy(mins, maxs);
+			CL_Locs_AddNode(mins, mins, name);
 		}
 		else
 			continue;
-		// valid line parsed
-		// add the point or box to the list
-		CL_Locs_AddNode(mins, maxs, linetext, lineend);
 	}
 }
 
