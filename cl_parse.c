@@ -954,9 +954,9 @@ void CL_BeginDownloads(qboolean aborteddownload)
 				if (!cl.loadfinished && cl_joinbeforedownloadsfinish.integer)
 				{
 					cl.loadfinished = true;
-					// now issue the spawn to move on to signon 3 like normal
+					// now issue the spawn to move on to signon 2 like normal
 					if (cls.netcon)
-						Cmd_ForwardStringToServer("spawn");
+						Cmd_ForwardStringToServer("prespawn");
 				}
 			}
 		}
@@ -1004,9 +1004,9 @@ void CL_BeginDownloads(qboolean aborteddownload)
 					if (!cl.loadfinished && cl_joinbeforedownloadsfinish.integer)
 					{
 						cl.loadfinished = true;
-						// now issue the spawn to move on to signon 3 like normal
+						// now issue the spawn to move on to signon 2 like normal
 						if (cls.netcon)
-							Cmd_ForwardStringToServer("spawn");
+							Cmd_ForwardStringToServer("prespawn");
 					}
 				}
 				aborteddownload = false;
@@ -1043,9 +1043,9 @@ void CL_BeginDownloads(qboolean aborteddownload)
 				if (!cl.loadfinished && cl_joinbeforedownloadsfinish.integer)
 				{
 					cl.loadfinished = true;
-					// now issue the spawn to move on to signon 3 like normal
+					// now issue the spawn to move on to signon 2 like normal
 					if (cls.netcon)
-						Cmd_ForwardStringToServer("spawn");
+						Cmd_ForwardStringToServer("prespawn");
 				}
 			}
 		}
@@ -1094,9 +1094,9 @@ void CL_BeginDownloads(qboolean aborteddownload)
 		// check memory integrity
 		Mem_CheckSentinelsGlobal();
 
-		// now issue the spawn to move on to signon 3 like normal
+		// now issue the spawn to move on to signon 2 like normal
 		if (cls.netcon)
-			Cmd_ForwardStringToServer("spawn");
+			Cmd_ForwardStringToServer("prespawn");
 	}
 }
 
@@ -1245,6 +1245,34 @@ void CL_DownloadFinished_f(void)
 	CL_BeginDownloads(false);
 }
 
+static void CL_SendPlayerInfo(void)
+{
+	MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
+	MSG_WriteString (&cls.netcon->message, va("name \"%s\"", cl_name.string));
+
+	MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
+	MSG_WriteString (&cls.netcon->message, va("color %i %i", cl_color.integer >> 4, cl_color.integer & 15));
+
+	MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
+	MSG_WriteString (&cls.netcon->message, va("rate %i", cl_rate.integer));
+
+	if (cl_pmodel.integer)
+	{
+		MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
+		MSG_WriteString (&cls.netcon->message, va("pmodel %i", cl_pmodel.integer));
+	}
+	if (*cl_playermodel.string)
+	{
+		MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
+		MSG_WriteString (&cls.netcon->message, va("playermodel %s", cl_playermodel.string));
+	}
+	if (*cl_playerskin.string)
+	{
+		MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
+		MSG_WriteString (&cls.netcon->message, va("playerskin %s", cl_playerskin.string));
+	}
+}
+
 /*
 =====================
 CL_SignonReply
@@ -1261,8 +1289,17 @@ static void CL_SignonReply (void)
 	case 1:
 		if (cls.netcon)
 		{
-			MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
-			MSG_WriteString (&cls.netcon->message, "prespawn");
+			// send player info before we begin downloads
+			// (so that the server can see the player name while downloading)
+			CL_SendPlayerInfo();
+
+			// execute cl_begindownloads next frame
+			// (after any commands added by svc_stufftext have been executed)
+			// when done with downloads the "prespawn" will be sent
+			Cbuf_AddText("\ncl_begindownloads\n");
+
+			//MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
+			//MSG_WriteString (&cls.netcon->message, "prespawn");
 		}
 		else // playing a demo...  make sure loading occurs as soon as possible
 			CL_BeginDownloads(false);
@@ -1271,38 +1308,13 @@ static void CL_SignonReply (void)
 	case 2:
 		if (cls.netcon)
 		{
-			MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
-			MSG_WriteString (&cls.netcon->message, va("name \"%s\"", cl_name.string));
-
-			MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
-			MSG_WriteString (&cls.netcon->message, va("color %i %i", cl_color.integer >> 4, cl_color.integer & 15));
-
-			if (cl_pmodel.integer)
-			{
-				MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
-				MSG_WriteString (&cls.netcon->message, va("pmodel %i", cl_pmodel.integer));
-			}
-			if (*cl_playermodel.string)
-			{
-				MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
-				MSG_WriteString (&cls.netcon->message, va("playermodel %s", cl_playermodel.string));
-			}
-			if (*cl_playerskin.string)
-			{
-				MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
-				MSG_WriteString (&cls.netcon->message, va("playerskin %s", cl_playerskin.string));
-			}
-
-			MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
-			MSG_WriteString (&cls.netcon->message, va("rate %i", cl_rate.integer));
+			// LordHavoc: quake sent the player info here but due to downloads
+			// it is sent earlier instead
+			// CL_SendPlayerInfo();
 
 			// LordHavoc: changed to begin a loading stage and issue this when done
-			//MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
-			//MSG_WriteString (&cls.netcon->message, "spawn");
-
-			// execute cl_begindownloads next frame after this message is sent
-			// (so that the server can see the player name while downloading)
-			Cbuf_AddText("\ncl_begindownloads\n");
+			MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
+			MSG_WriteString (&cls.netcon->message, "spawn");
 		}
 		break;
 
