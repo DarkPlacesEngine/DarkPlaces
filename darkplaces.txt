@@ -488,7 +488,7 @@ collision_impactnudge                             0.03125             how much t
 collision_leavenudge                              0                   how much to bias collision exit fraction
 collision_prefernudgedfraction                    1                   whether to sort collision events by nudged fraction (1) or real fraction (0)
 collision_startnudge                              0                   how much to bias collision trace start
-con_closeontoggleconsole                          0                   allows toggleconsole binds to close the console as well
+con_closeontoggleconsole                          1                   allows toggleconsole binds to close the console as well
 con_notify                                        4                   how many notify lines to show (0-32)
 con_notifytime                                    3                   how long notify lines last, in seconds
 con_textsize                                      8                   console text size in virtual 2D pixels
