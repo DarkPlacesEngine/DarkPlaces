@@ -23,7 +23,7 @@
 #include "quakedef.h"
 #include "cl_video.h"
 
-cvar_t con_closeontoggleconsole = {CVAR_SAVE, "con_closeontoggleconsole","0", "allows toggleconsole binds to close the console as well"};
+cvar_t con_closeontoggleconsole = {CVAR_SAVE, "con_closeontoggleconsole","1", "allows toggleconsole binds to close the console as well"};
 
 /*
 key up events are sent even if in console mode
