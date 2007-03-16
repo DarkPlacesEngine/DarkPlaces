@@ -1528,6 +1528,37 @@ void CL_ParseServerInfo (void)
 
 	// check memory integrity
 	Mem_CheckSentinelsGlobal();
+
+// if cl_autodemo is set, automatically start recording a demo if one isn't being recorded already
+	if (cl_autodemo.integer && cls.netcon && cls.protocol != PROTOCOL_QUAKEWORLD)
+	{
+		char demofile[MAX_OSPATH];
+		char levelname[MAX_QPATH];
+
+		if (cls.demorecording)
+		{
+			// finish the previous level's demo file
+			CL_Stop_f();
+		}
+
+		// start a new demo file
+		strlcpy(levelname, FS_FileWithoutPath(cl.model_name[1]), sizeof(levelname));
+		if (strrchr(levelname, '.'))
+			*(strrchr(levelname, '.')) = 0;
+		dpsnprintf (demofile, sizeof(demofile), "%s_%s.dem", Sys_TimeString (cl_autodemo_nameformat.string), levelname);
+
+		Con_Printf ("Auto-recording to %s.\n", demofile);
+
+		cls.demofile = FS_Open (demofile, "wb", false, false);
+		if (cls.demofile)
+		{
+			cls.forcetrack = -1;
+			FS_Printf (cls.demofile, "%i\n", cls.forcetrack);
+			cls.demorecording = true;
+		}
+		else
+			Con_Print ("ERROR: couldn't open.\n");
+	}
 }
 
 void CL_ValidateState(entity_state_t *s)
@@ -2624,8 +2655,11 @@ void CL_ParseServerMessage(void)
 	char		*cmdlogname[32], *temp;
 	int			cmdindex, cmdcount = 0;
 
-	if (cls.demorecording)
-		CL_WriteDemoMessage ();
+	// LordHavoc: moved demo message writing from before the packet parse to
+	// after the packet parse so that CL_Stop_f can be called by cl_autodemo
+	// code in CL_ParseServerinfo
+	//if (cls.demorecording)
+	//	CL_WriteDemoMessage (&net_message);
 
 	cl.last_received_message = realtime;
 
@@ -3400,6 +3434,11 @@ void CL_ParseServerMessage(void)
 	EntityFrameQuake_ISeeDeadEntities();
 
 	parsingerror = false;
+
+	// LordHavoc: this was at the start of the function before cl_autodemo was
+	// implemented
+	if (cls.demorecording)
+		CL_WriteDemoMessage (&net_message);
 }
 
 void CL_Parse_DumpPacket(void)

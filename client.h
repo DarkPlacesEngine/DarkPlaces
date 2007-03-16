@@ -1108,7 +1108,7 @@ int Key_StringToKeynum (const char *str);
 //
 void CL_StopPlayback(void);
 void CL_ReadDemoMessage(void);
-void CL_WriteDemoMessage(void);
+void CL_WriteDemoMessage(sizebuf_t *mesage);
 
 void CL_NextDemo(void);
 void CL_Stop_f(void);
