@@ -161,7 +161,7 @@ void VID_Finish (qboolean allowmousegrab)
 			if (err == kCGLNoError)
 				multithreadedgl = true;
 			else
-				Cvar_SetQuickValue(&apple_multithreadedgl, 0);
+				Cvar_SetValueQuick(&apple_multithreadedgl, 0);
 		}
 	}
 	else
@@ -174,7 +174,7 @@ void VID_Finish (qboolean allowmousegrab)
 	}
 #else
 	if (apple_multithreadedgl.integer)
-		Cvar_SetQuickValue(&apple_multithreadedgl, 0);
+		Cvar_SetValueQuick(&apple_multithreadedgl, 0);
 #endif
 }
 
