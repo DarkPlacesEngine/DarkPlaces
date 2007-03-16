@@ -99,7 +99,7 @@ CL_WriteDemoMessage
 Dumps the current net message, prefixed by the length and view angles
 ====================
 */
-void CL_WriteDemoMessage (void)
+void CL_WriteDemoMessage (sizebuf_t *message)
 {
 	int		len;
 	int		i;
@@ -108,14 +108,14 @@ void CL_WriteDemoMessage (void)
 	if (cls.demopaused) // LordHavoc: pausedemo
 		return;
 
-	len = LittleLong (net_message.cursize);
+	len = LittleLong (message->cursize);
 	FS_Write (cls.demofile, &len, 4);
 	for (i=0 ; i<3 ; i++)
 	{
 		f = LittleFloat (cl.viewangles[i]);
 		FS_Write (cls.demofile, &f, 4);
 	}
-	FS_Write (cls.demofile, net_message.data, net_message.cursize);
+	FS_Write (cls.demofile, message->data, message->cursize);
 }
 
 /*
@@ -232,6 +232,9 @@ stop recording a demo
 */
 void CL_Stop_f (void)
 {
+	sizebuf_t buf;
+	unsigned char bufdata[64];
+
 	if (!cls.demorecording)
 	{
 		Con_Print("Not recording a demo.\n");
@@ -239,9 +242,12 @@ void CL_Stop_f (void)
 	}
 
 // write a disconnect message to the demo file
-	SZ_Clear (&net_message);
-	MSG_WriteByte (&net_message, svc_disconnect);
-	CL_WriteDemoMessage ();
+	// LordHavoc: don't replace the net_message when doing this
+	buf.data = bufdata;
+	buf.maxsize = sizeof(bufdata);
+	SZ_Clear(&buf);
+	MSG_WriteByte(&buf, svc_disconnect);
+	CL_WriteDemoMessage(&buf);
 
 // finish up
 	FS_Close (cls.demofile);
