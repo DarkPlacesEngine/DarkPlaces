@@ -269,29 +269,6 @@ void Host_Map_f (void)
 	SV_SpawnServer(level);
 	if (sv.active && cls.state == ca_disconnected)
 		CL_EstablishConnection("local:1");
-
-#ifdef AUTODEMO_BROKEN
-// if cl_autodemo is set, automatically start recording a demo if one isn't being recorded already
-	if (cl_autodemo.integer && !cls.demorecording)
-	{
-		char demofile[MAX_OSPATH];
-
-		dpsnprintf (demofile, sizeof(demofile), "%s_%s.dem", Sys_TimeString (cl_autodemo_nameformat.string), level);
-
-		Con_Printf ("Recording to %s.\n", demofile);
-
-		cls.demofile = FS_Open (demofile, "wb", false, false);
-		if (cls.demofile)
-		{
-			cls.forcetrack = -1;
-			FS_Printf (cls.demofile, "%i\n", cls.forcetrack);
-		}
-		else
-			Con_Print ("ERROR: couldn't open.\n");
-
-		cls.demorecording = true;
-	}
-#endif
 }
 
 /*
@@ -781,7 +758,6 @@ void Host_Name_f (void)
 	if (cmd_source == src_command)
 	{
 		Cvar_Set ("_cl_name", newName);
-		CL_SetInfo("name", newName, true, false, false, false);
 		return;
 	}
 
@@ -839,7 +815,6 @@ void Host_Playermodel_f (void)
 	if (cmd_source == src_command)
 	{
 		Cvar_Set ("_cl_playermodel", newPath);
-		CL_SetInfo("playermodel", newPath, true, false, false, false);
 		return;
 	}
 
@@ -897,7 +872,6 @@ void Host_Playerskin_f (void)
 	if (cmd_source == src_command)
 	{
 		Cvar_Set ("_cl_playerskin", newPath);
-		CL_SetInfo("playerskin", newPath, true, false, false, false);
 		return;
 	}
 
@@ -1167,15 +1141,6 @@ void Host_Color(int changetop, int changebottom)
 	if (cmd_source == src_command)
 	{
 		Cvar_SetValueQuick(&cl_color, playercolor);
-		if (changetop >= 0)
-			CL_SetInfo("topcolor", va("%i", top), true, false, false, false);
-		if (changebottom >= 0)
-			CL_SetInfo("bottomcolor", va("%i", bottom), true, false, false, false);
-		if (cls.protocol != PROTOCOL_QUAKEWORLD && cls.netcon)
-		{
-			MSG_WriteByte(&cls.netcon->message, clc_stringcmd);
-			MSG_WriteString(&cls.netcon->message, va("color %i %i", top, bottom));
-		}
 		return;
 	}
 
@@ -1273,7 +1238,6 @@ void Host_Rate_f(void)
 	if (cmd_source == src_command)
 	{
 		Cvar_SetValue ("_cl_rate", max(NET_MINRATE, rate));
-		CL_SetInfo("rate", va("%i", rate), true, false, false, false);
 		return;
 	}
 

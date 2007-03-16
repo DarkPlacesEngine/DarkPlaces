@@ -260,8 +260,14 @@ void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 		// holds weird values it may cause confusion...
 		if (!strcmp(var->name, "_cl_color"))
 		{
-			CL_SetInfo("topcolor", va("%i", (var->integer >> 4) & 15), true, false, false, false);
-			CL_SetInfo("bottomcolor", va("%i", (var->integer) & 15), true, false, false, false);
+			int top = (var->integer >> 4) & 15, bottom = var->integer & 15;
+			CL_SetInfo("topcolor", va("%i", top), true, false, false, false);
+			CL_SetInfo("bottomcolor", va("%i", bottom), true, false, false, false);
+			if (cls.protocol != PROTOCOL_QUAKEWORLD && cls.netcon)
+			{
+				MSG_WriteByte(&cls.netcon->message, clc_stringcmd);
+				MSG_WriteString(&cls.netcon->message, va("color %i %i", top, bottom));
+			}
 		}
 		else if (!strcmp(var->name, "_cl_rate"))
 			CL_SetInfo("rate", va("%i", var->integer), true, false, false, false);
