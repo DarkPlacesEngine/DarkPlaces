@@ -957,7 +957,7 @@ vid_conwidth                                      640                 virtual wi
 vid_dga                                           1                   make use of DGA mouse input
 vid_dga_mouseaccel                                1                   speed of mouse when using DGA mouse input
 vid_fullscreen                                    1                   use fullscreen (1) or windowed (0)
-vid_grabkeyboard                                  0                   whether to grab the keyboard when mouse is active (prevents use of volume control keys, music player keys, etc on some keyboards)
+vid_grabkeyboard                                  1                   whether to grab the keyboard when mouse is active (prevents use of volume control keys, music player keys, etc on some keyboards)
 vid_hardwaregammasupported                        1                   indicates whether hardware gamma is supported (updated by attempts to set hardware gamma ramps)
 vid_height                                        480                 resolution
 vid_minheight                                     0                   minimum vid_height that is acceptable (to be set in default.cfg in mods)
