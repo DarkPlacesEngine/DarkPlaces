@@ -4538,7 +4538,7 @@ Q3 shader blendfuncs actually used in the game (* = supported by DP)
 				out->skinframerate = shader->primarylayer->framerate;
 				for (j = 0;j < shader->primarylayer->numframes;j++)
 					if (!Mod_LoadSkinFrame(&out->skinframes[j], shader->primarylayer->texturename[j], ((shader->surfaceparms & Q3SURFACEPARM_NOMIPMAPS) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | (shader->textureflags & Q3TEXTUREFLAG_NOPICMIP ? 0 : TEXF_PICMIP) | (shader->primarylayer->clampmap ? TEXF_CLAMP : 0), false, true))
-						Con_Printf("%s: could not load texture \"%s\" (frame %i) for shader \"%s\"\n", loadmodel->name, shader->primarylayer->texturename[j], j, out->name);
+						Con_DPrintf("%s: could not load texture \"%s\" (frame %i) for shader \"%s\"\n", loadmodel->name, shader->primarylayer->texturename[j], j, out->name);
 			}
 			if (shader->backgroundlayer && cls.state != ca_dedicated)
 			{
@@ -4547,7 +4547,7 @@ Q3 shader blendfuncs actually used in the game (* = supported by DP)
 				out->backgroundskinframerate = shader->backgroundlayer->framerate;
 				for (j = 0;j < shader->backgroundlayer->numframes;j++)
 					if (!Mod_LoadSkinFrame(&out->backgroundskinframes[j], shader->backgroundlayer->texturename[j], ((shader->surfaceparms & Q3SURFACEPARM_NOMIPMAPS) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | (shader->textureflags & Q3TEXTUREFLAG_NOPICMIP ? 0 : TEXF_PICMIP) | (shader->backgroundlayer->clampmap ? TEXF_CLAMP : 0), false, true))
-						Con_Printf("%s: could not load texture \"%s\" (frame %i) for shader \"%s\"\n", loadmodel->name, shader->backgroundlayer->texturename[j], j, out->name);
+						Con_DPrintf("%s: could not load texture \"%s\" (frame %i) for shader \"%s\"\n", loadmodel->name, shader->backgroundlayer->texturename[j], j, out->name);
 			}
 		}
 		else if (!strcmp(out->name, "noshader"))
@@ -4573,7 +4573,7 @@ Q3 shader blendfuncs actually used in the game (* = supported by DP)
 			//	out->surfaceparms |= Q3SURFACEPARM_TRANS;
 			if (cls.state != ca_dedicated)
 				if (!Mod_LoadSkinFrame(&out->skinframes[0], out->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false, true))
-					Con_Printf("%s: could not load texture for missing shader \"%s\"\n", loadmodel->name, out->name);
+					Con_DPrintf("%s: could not load texture for missing shader \"%s\"\n", loadmodel->name, out->name);
 		}
 		// init the animation variables
 		out->currentframe = out;

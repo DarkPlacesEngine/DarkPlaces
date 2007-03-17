@@ -1,5 +1,6 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
 0 bug darkplaces client: can't move mouse around in nexuiz menu if vid_mouse is 0
+0 bug darkplaces client: decals are not sticking to submodels
 0 bug darkplaces loader: make rtlight entity loader support q3map/q3map2 lights properly, they use a spawnflag for LINEAR mode, by default they use 1/(x*x) falloff (Carni, motorsep)
 0 bug darkplaces readme: it would be a very good idea to add documentation of sv_gameplayfix_* cvars in the readme as a means to run broken mods (xaGe)
 0 bug darkplaces renderer: GL13 path has broken handling of unlit surfaces in Nexuiz toxic.bsp - the small red light surfaces are black in GL13 path (m0rfar)
@@ -1196,6 +1197,7 @@ d feature darkplaces client: add a sv_fixedframeratesingleplayer cvar (default o
 d feature darkplaces client: add showbrand cvar which would show gfx/brand.tga in the left/right top/bottom corner (depending on value of scr_showbrand) all the time, this would be useful for screenshots (Spirit_of_85)
 d feature darkplaces client: cl_capture_video avi support would be nice, the Intel(r) 4:2:0 codec seems to be standard on Windows XP so this should be easy
 d feature darkplaces client: make tab completion able to complete map names when using a map or changelevel command (Zenex, Eksess)
+d feature darkplaces client: play sound/misc/talk2.wav instead of sound/misc/talk.wav for team chat messages, and indicate team chat messages with () around the playre name, which is compatible with other engines (Yellow No. 5)
 d feature darkplaces client: query qw masters for server browser
 d feature darkplaces client: v_deathtilt cvar (Sajt, MauveBib)
 d feature darkplaces console: "toggle" console command present in doom3: toggle <cvar>, and toggle <cvar> <value1> <value2> (Dresk)

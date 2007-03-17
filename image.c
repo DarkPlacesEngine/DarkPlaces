@@ -903,7 +903,7 @@ unsigned char *loadimagepixels (const char *filename, qboolean complain, int mat
 			else
 			{
 				if (developer.integer >= 1)
-					Con_Printf("Error loading image %s (file loaded but decode failed)\n", name);
+					Con_DPrintf("Error loading image %s (file loaded but decode failed)\n", name);
 			}
 		}
 	}
