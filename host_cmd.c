@@ -944,8 +944,10 @@ void Host_Say(qboolean teamonly)
 		p1++;
 	}
 	// note this uses the chat prefix \001
-	if (!fromServer)
+	if (!fromServer && !teamonly)
 		dpsnprintf (text, sizeof(text), "\001%s" STRING_COLOR_DEFAULT_STR ": %s", host_client->name, p1);
+	else if (!fromServer && teamonly)
+		dpsnprintf (text, sizeof(text), "\001(%s" STRING_COLOR_DEFAULT_STR "): %s", host_client->name, p1);
 	else if(*(sv_adminnick.string))
 		dpsnprintf (text, sizeof(text), "\001<%s" STRING_COLOR_DEFAULT_STR "> %s", sv_adminnick.string, p1);
 	else
