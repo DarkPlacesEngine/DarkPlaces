@@ -636,7 +636,12 @@ void Con_Print(const char *msg)
 			{
 				// play talk wav
 				if (*msg == 1)
-					S_LocalSound ("sound/misc/talk.wav");
+				{
+					if (msg[1] == '(' && cl.foundtalk2wav)
+						S_LocalSound ("sound/misc/talk2.wav");
+					else
+						S_LocalSound ("sound/misc/talk.wav");
+				}
 				line[index++] = STRING_COLOR_TAG;
 				line[index++] = '3';
 				msg++;

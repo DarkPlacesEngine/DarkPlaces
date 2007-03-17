@@ -505,6 +505,8 @@ static void QW_CL_RequestNextDownload(void)
 		CL_Locs_Reload_f();
 		R_Modules_NewMap();
 
+		cl.foundtalk2wav = FS_FileExists("sound/misc/talk2.wav");
+
 		// add pmodel/emodel CRCs to userinfo
 		CL_SetInfo("pmodel", va("%i", FS_CRCFile("progs/player.mdl", NULL)), true, true, true, true);
 		CL_SetInfo("emodel", va("%i", FS_CRCFile("progs/eyes.mdl", NULL)), true, true, true, true);
@@ -949,6 +951,7 @@ void CL_BeginDownloads(qboolean aborteddownload)
 				CL_UpdateRenderEntity(&cl.entities[0].render);
 				CL_Locs_Reload_f();
 				R_Modules_NewMap();
+				cl.foundtalk2wav = FS_FileExists("sound/misc/talk2.wav");
 				// check memory integrity
 				Mem_CheckSentinelsGlobal();
 				if (!cl.loadfinished && cl_joinbeforedownloadsfinish.integer)
@@ -999,6 +1002,7 @@ void CL_BeginDownloads(qboolean aborteddownload)
 					CL_UpdateRenderEntity(&cl.entities[0].render);
 					CL_Locs_Reload_f();
 					R_Modules_NewMap();
+					cl.foundtalk2wav = FS_FileExists("sound/misc/talk2.wav");
 					// check memory integrity
 					Mem_CheckSentinelsGlobal();
 					if (!cl.loadfinished && cl_joinbeforedownloadsfinish.integer)
@@ -1038,6 +1042,7 @@ void CL_BeginDownloads(qboolean aborteddownload)
 				CL_UpdateRenderEntity(&cl.entities[0].render);
 				CL_Locs_Reload_f();
 				R_Modules_NewMap();
+				cl.foundtalk2wav = FS_FileExists("sound/misc/talk2.wav");
 				// check memory integrity
 				Mem_CheckSentinelsGlobal();
 				if (!cl.loadfinished && cl_joinbeforedownloadsfinish.integer)
@@ -3199,7 +3204,7 @@ void CL_ParseServerMessage(void)
 						{
 							model_t *model = Mod_ForName(s, false, false, i == 1);
 							if (!model)
-								Con_Printf("svc_precache: Mod_ForName(\"%s\") failed\n", s);
+								Con_DPrintf("svc_precache: Mod_ForName(\"%s\") failed\n", s);
 							cl.model_precache[i] = model;
 						}
 						else
@@ -3212,7 +3217,7 @@ void CL_ParseServerMessage(void)
 						{
 							sfx_t *sfx = S_PrecacheSound (s, true, false);
 							if (!sfx && snd_initialized.integer)
-								Con_Printf("svc_precache: S_PrecacheSound(\"%s\") failed\n", s);
+								Con_DPrintf("svc_precache: S_PrecacheSound(\"%s\") failed\n", s);
 							cl.sound_precache[i] = sfx;
 						}
 						else
