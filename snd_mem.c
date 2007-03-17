@@ -326,7 +326,7 @@ qboolean S_LoadSound (sfx_t *sfx, qboolean complain)
 		if (len < 0)
 		{
 			// name too long
-			Con_Printf("S_LoadSound: name \"%s\" is too long\n", sfx->name);
+			Con_DPrintf("S_LoadSound: name \"%s\" is too long\n", sfx->name);
 			return false;
 		}
 		if (S_LoadWavFile (namebuffer, sfx))
@@ -342,7 +342,7 @@ qboolean S_LoadSound (sfx_t *sfx, qboolean complain)
 	if (len < 0)
 	{
 		// name too long
-		Con_Printf("S_LoadSound: name \"%s\" is too long\n", sfx->name);
+		Con_DPrintf("S_LoadSound: name \"%s\" is too long\n", sfx->name);
 		return false;
 	}
 	if (S_LoadWavFile (namebuffer, sfx))
@@ -355,6 +355,6 @@ qboolean S_LoadSound (sfx_t *sfx, qboolean complain)
 	// Can't load the sound!
 	sfx->flags |= SFXFLAG_FILEMISSING;
 	if (complain)
-		Con_Printf("S_LoadSound: Couldn't load \"%s\"\n", sfx->name);
+		Con_DPrintf("S_LoadSound: Couldn't load \"%s\"\n", sfx->name);
 	return false;
 }
