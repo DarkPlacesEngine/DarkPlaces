@@ -320,6 +320,7 @@ cvar_t cl_pitchspeed = {CVAR_SAVE, "cl_pitchspeed","150","keyboard pitch turning
 cvar_t cl_anglespeedkey = {CVAR_SAVE, "cl_anglespeedkey","1.5","how much +speed multiplies keyboard turning speed"};
 
 cvar_t cl_movement = {CVAR_SAVE, "cl_movement", "0", "enables clientside prediction of your player movement"};
+cvar_t cl_movement_minping = {CVAR_SAVE, "cl_movement_minping", "50", "whether to use prediction when ping is lower than this value in milliseconds"};
 cvar_t cl_movement_maxspeed = {0, "cl_movement_maxspeed", "320", "how fast you can move (should match sv_maxspeed)"};
 cvar_t cl_movement_maxairspeed = {0, "cl_movement_maxairspeed", "30", "how fast you can move while in the air (should match sv_maxairspeed)"};
 cvar_t cl_movement_stopspeed = {0, "cl_movement_stopspeed", "100", "speed below which you will be slowed rapidly to a stop rather than sliding endlessly (should match sv_stopspeed)"};
@@ -1086,6 +1087,7 @@ void CL_ClientMovement_PlayerMove(cl_clientmovement_state_t *s)
 void CL_ClientMovement_Replay(void)
 {
 	int i;
+	double totalmovetime;
 	cl_clientmovement_state_t s;
 
 	// set up starting state for the series of moves
@@ -1136,7 +1138,10 @@ void CL_ClientMovement_Replay(void)
 		s.movevars_airaccel_sideways_friction = cl_movement_airaccel_sideways_friction.value;
 	}
 
-	cl.movement_predicted = cls.servermovesequence && (cl_movement.integer && !cls.demoplayback && cls.signon == SIGNONS && cl.stats[STAT_HEALTH] > 0 && !cl.intermission);
+	totalmovetime = 0;
+	for (i = 0;i < cl.movement_numqueue - 1;i++)
+		totalmovetime += cl.movement_queue[i].frametime;
+	cl.movement_predicted = totalmovetime * 1000.0 >= cl_movement_minping.value && cls.servermovesequence && (cl_movement.integer && !cls.demoplayback && cls.signon == SIGNONS && cl.stats[STAT_HEALTH] > 0 && !cl.intermission);
 	if (cl.movement_predicted)
 	{
 		//Con_Printf("%f: ", cl.movecmd[0].time);
@@ -1404,7 +1409,7 @@ void CL_SendMove(void)
 				// configurable number of unacknowledged moves
 				maxusercmds = bound(1, cl_netinputpacketlosstolerance.integer + 1, CL_MAX_USERCMDS);
 				// when movement prediction is off, there's not much point in repeating old input as it will just be ignored
-				if (!cl.movement_predicted)
+				if (!cl.cmd.sequence)
 					maxusercmds = 1;
 			}
 
@@ -1665,6 +1670,7 @@ void CL_InitInput (void)
 	Cmd_AddCommand ("bestweapon", IN_BestWeapon, "send an impulse number to server to select the first usable weapon out of several (example: 87654321)");
 
 	Cvar_RegisterVariable(&cl_movement);
+	Cvar_RegisterVariable(&cl_movement_minping);
 	Cvar_RegisterVariable(&cl_movement_maxspeed);
 	Cvar_RegisterVariable(&cl_movement_maxairspeed);
 	Cvar_RegisterVariable(&cl_movement_stopspeed);
