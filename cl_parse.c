@@ -168,6 +168,7 @@ cvar_t cl_sound_r_exp3 = {0, "cl_sound_r_exp3", "weapons/r_exp3.wav", "sound to 
 cvar_t cl_serverextension_download = {0, "cl_serverextension_download", "0", "indicates whether the server supports the download command"};
 cvar_t cl_joinbeforedownloadsfinish = {0, "cl_joinbeforedownloadsfinish", "1", "if non-zero the game will begin after the map is loaded before other downloads finish"};
 cvar_t cl_nettimesyncmode = {0, "cl_nettimesyncmode", "2", "selects method of time synchronization in client with regard to server packets, values are: 0 = no sync, 1 = exact sync (reset timing each packet), 2 = loose sync (reset timing only if it is out of bounds), 3 = tight sync and bounding"};
+cvar_t cl_iplog_name = {CVAR_SAVE, "cl_iplog_name", "darkplaces_iplog.txt", "name of iplog file containing player addresses for iplog_list command and automatic ip logging when parsing status command"};
 
 static qboolean QW_CL_CheckOrDownloadFile(const char *filename);
 static void QW_CL_RequestNextDownload(void);
@@ -2474,10 +2475,161 @@ void CL_ParsePointParticles(void)
 	CL_ParticleEffect(effectindex, count, origin, origin, velocity, velocity, NULL, 0);
 }
 
+typedef struct cl_iplog_item_s
+{
+	char *address;
+	char *name;
+}
+cl_iplog_item_t;
+
+static qboolean cl_iplog_loaded = false;
+static int cl_iplog_numitems = 0;
+static int cl_iplog_maxitems = 0;
+static cl_iplog_item_t *cl_iplog_items;
+
+static void CL_IPLog_Load(void);
+static void CL_IPLog_Add(const char *address, const char *name, qboolean checkexisting, qboolean addtofile)
+{
+	int i;
+	if (!address || !address[0] || !name || !name[0])
+		return;
+	if (!cl_iplog_loaded)
+		CL_IPLog_Load();
+	if (developer.integer >= 100)
+		Con_Printf("CL_IPLog_Add(\"%s\", \"%s\", %i, %i);\n", address, name, checkexisting, addtofile);
+	// see if it already exists
+	if (checkexisting)
+	{
+		for (i = 0;i < cl_iplog_numitems;i++)
+		{
+			if (!strcmp(cl_iplog_items[i].address, address) && !strcmp(cl_iplog_items[i].name, name))
+			{
+				if (developer.integer >= 100)
+					Con_Printf("... found existing \"%s\" \"%s\"\n", cl_iplog_items[i].address, cl_iplog_items[i].name);
+				return;
+			}
+		}
+	}
+	// it does not already exist in the iplog, so add it
+	if (cl_iplog_maxitems <= cl_iplog_numitems || !cl_iplog_items)
+	{
+		cl_iplog_item_t *olditems = cl_iplog_items;
+		cl_iplog_maxitems = max(1024, cl_iplog_maxitems + 256);
+		cl_iplog_items = Mem_Alloc(cls.permanentmempool, cl_iplog_maxitems * sizeof(cl_iplog_item_t));
+		if (olditems)
+		{
+			if (cl_iplog_numitems)
+				memcpy(cl_iplog_items, olditems, cl_iplog_numitems * sizeof(cl_iplog_item_t));
+			Mem_Free(olditems);
+		}
+	}
+	cl_iplog_items[cl_iplog_numitems].address = Mem_Alloc(cls.permanentmempool, strlen(address) + 1);
+	cl_iplog_items[cl_iplog_numitems].name = Mem_Alloc(cls.permanentmempool, strlen(name) + 1);
+	strlcpy(cl_iplog_items[cl_iplog_numitems].address, address, strlen(address) + 1);
+	// TODO: maybe it would be better to strip weird characters from name when
+	// copying it here rather than using a straight strcpy?
+	strlcpy(cl_iplog_items[cl_iplog_numitems].name, name, strlen(name) + 1);
+	cl_iplog_numitems++;
+	if (addtofile)
+	{
+		// add it to the iplog.txt file
+		// TODO: this ought to open the one in the userpath version of the base
+		// gamedir, not the current gamedir
+		Log_Printf(cl_iplog_name.string, "%s %s\n", address, name);
+		if (developer.integer >= 100)
+			Con_Printf("CL_IPLog_Add: appending this line to %s: %s %s\n", cl_iplog_name.string, address, name);
+	}
+}
+
+static void CL_IPLog_Load(void)
+{
+	int i, len, linenumber;
+	char *text, *textend;
+	unsigned char *filedata;
+	fs_offset_t filesize;
+	char line[MAX_INPUTLINE];
+	char address[MAX_INPUTLINE];
+	cl_iplog_loaded = true;
+	// TODO: this ought to open the one in the userpath version of the base
+	// gamedir, not the current gamedir
+	filedata = FS_LoadFile(cl_iplog_name.string, tempmempool, true, &filesize);
+	if (!filedata)
+		return;
+	text = (char *)filedata;
+	textend = text + filesize;
+	for (linenumber = 1;text < textend;linenumber++)
+	{
+		for (len = 0;text < textend && *text != '\r' && *text != '\n';text++)
+			if (len < (int)sizeof(line) - 1)
+				line[len++] = *text;
+		line[len] = 0;
+		if (text < textend && *text == '\r' && text[1] == '\n')
+			text++;
+		if (text < textend && *text == '\n')
+			text++;
+		if (line[0] == '/' && line[1] == '/')
+			continue; // skip comments if anyone happens to add them
+		for (i = 0;i < len && line[i] > ' ';i++)
+			address[i] = line[i];
+		address[i] = 0;
+		// skip exactly one space character
+		i++;
+		// address contains the address with termination,
+		// line + i contains the name with termination
+		if (address[0] && line[i])
+			CL_IPLog_Add(address, line + i, false, false);
+		else
+			Con_Printf("%s:%i: could not parse address and name:\n%s\n", cl_iplog_name.string, linenumber, line);
+	}
+}
+
+static void CL_IPLog_List_f(void)
+{
+	int i, j;
+	const char *addressprefix;
+	if (Cmd_Argc() > 2)
+	{
+		Con_Printf("usage: %s 123.456.789.\n", Cmd_Argv(0));
+		return;
+	}
+	addressprefix = "";
+	if (Cmd_Argc() >= 2)
+		addressprefix = Cmd_Argv(1);
+	if (!cl_iplog_loaded)
+		CL_IPLog_Load();
+	if (addressprefix && addressprefix[0])
+		Con_Printf("Listing iplog addresses beginning with %s\n", addressprefix);
+	else
+		Con_Printf("Listing all iplog entries\n");
+	Con_Printf("address         name\n");
+	for (i = 0;i < cl_iplog_numitems;i++)
+	{
+		if (addressprefix && addressprefix[0])
+		{
+			for (j = 0;addressprefix[j];j++)
+				if (addressprefix[j] != cl_iplog_items[i].address[j])
+					break;
+			// if this address does not begin with the addressprefix string
+			// simply omit it from the output
+			if (addressprefix[j])
+				continue;
+		}
+		// if name is less than 15 characters, left justify it and pad
+		// if name is more than 15 characters, print all of it, not worrying
+		// about the fact it will misalign the columns
+		if (strlen(cl_iplog_items[i].address) < 15)
+			Con_Printf("%-15s %s\n", cl_iplog_items[i].address, cl_iplog_items[i].name);
+		else
+			Con_Printf("%5s %s\n", cl_iplog_items[i].address, cl_iplog_items[i].name);
+	}
+}
+
 // look for anything interesting like player IP addresses or ping reports
 qboolean CL_ExaminePrintString(const char *text)
 {
+	int len;
 	const char *t;
+	char temp[MAX_INPUTLINE];
 	if (!strcmp(text, "Client ping times:\n"))
 	{
 		cl.parsingtextmode = CL_PARSETEXTMODE_PING;
@@ -2570,7 +2722,7 @@ qboolean CL_ExaminePrintString(const char *text)
 		if (text[0] == '#' && text[1] >= '0' && text[1] <= '9')
 		{
 			t = text + 1;
-			cl.parsingtextplayerindex = atoi(t);
+			cl.parsingtextplayerindex = atoi(t) - 1;
 			while (*t >= '0' && *t <= '9')
 				t++;
 			if (*t == ' ')
@@ -2578,6 +2730,7 @@ qboolean CL_ExaminePrintString(const char *text)
 				cl.parsingtextmode = CL_PARSETEXTMODE_STATUS_PLAYERIP;
 				return true;
 			}
+			// the player name follows here, along with frags and time
 		}
 	}
 	if (cl.parsingtextmode == CL_PARSETEXTMODE_STATUS_PLAYERIP)
@@ -2589,12 +2742,21 @@ qboolean CL_ExaminePrintString(const char *text)
 			t = text;
 			while (*t == ' ')
 				t++;
+			for (len = 0;*t && *t != '\n';t++)
+				if (len < (int)sizeof(temp) - 1)
+					temp[len++] = *t;
+			temp[len] = 0;
 			// botclient is perfectly valid, but we don't care about bots
-			if (strcmp(t, "botclient\n"))
+			// also don't try to look up the name of an invalid player index
+			if (strcmp(temp, "botclient")
+			 && cl.parsingtextplayerindex >= 0
+			 && cl.parsingtextplayerindex < cl.maxclients
+			 && cl.scores[cl.parsingtextplayerindex].name[0])
 			{
-				lhnetaddress_t address;
-				LHNETADDRESS_FromString(&address, t, 0);
-				// TODO: log the IP address and player name?
+				// log the player name and IP address string
+				// (this operates entirely on strings to avoid issues with the
+				//  nature of a network address)
+				CL_IPLog_Add(temp, cl.scores[cl.parsingtextplayerindex].name, true, true);
 			}
 			cl.parsingtextmode = CL_PARSETEXTMODE_STATUS_PLAYERID;
 			return true;
@@ -3483,6 +3645,7 @@ void CL_Parse_Init(void)
 	Cvar_RegisterVariable(&cl_serverextension_download);
 
 	Cvar_RegisterVariable(&cl_nettimesyncmode);
+	Cvar_RegisterVariable(&cl_iplog_name);
 
 	Cmd_AddCommand("nextul", QW_CL_NextUpload, "sends next fragment of current upload buffer (screenshot for example)");
 	Cmd_AddCommand("stopul", QW_CL_StopUpload, "aborts current upload (screenshot for example)");
@@ -3492,6 +3655,7 @@ void CL_Parse_Init(void)
 	Cmd_AddCommand("cl_downloadbegin", CL_DownloadBegin_f, "(networking) informs client of download file information, client replies with sv_startsoundload to begin the transfer");
 	Cmd_AddCommand("stopdownload", CL_StopDownload_f, "terminates a download");
 	Cmd_AddCommand("cl_downloadfinished", CL_DownloadFinished_f, "signals that a download has finished and provides the client with file size and crc to check its integrity");
+	Cmd_AddCommand("iplog_list", CL_IPLog_List_f, "lists names of players whose IP address begins with the supplied text (example: iplog_list 123.456.789)");
 }
 
 void CL_Parse_Shutdown(void)

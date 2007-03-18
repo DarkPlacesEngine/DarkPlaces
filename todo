@@ -75,6 +75,7 @@
 0 feature darkplaces client: add a cvar to make the renderer use a different entity for pvs than for viewing, this might be useful for a third person camera that should only see what the player sees (Urre)
 0 feature darkplaces client: add an alias to control whether the nexuiz logo.dpv splash video plays at startup and whether the menu opens, this way the config can change it before it happens, for instance to disable it, or to set up a similar thing in other games (green)
 0 feature darkplaces client: add ezQuake-style hud layout as an option - http://quake.tek.pl/_sshots/candy/redfog.png
+0 feature darkplaces client: add test and test2 commands, test queries a server and prints player list,  (Yellow No. 5)
 0 feature darkplaces console: centerprint and notify text printing should not count color codes in their length estimation (Dresk)
 0 feature darkplaces dpv playback: when video ends, execute a console command, perhaps "endvideo", this could be an alias set by a mod before it began playing the video (SavageX, motorsep)
 0 feature darkplaces editlights: add r_editlights_edit commands for turn/turnx/turny/turnz to allow angle adjustments using binds (Kedhrin)
