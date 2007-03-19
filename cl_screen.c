@@ -1677,6 +1677,8 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 	// refresh
 	// not necessary when rendering to GL_FRONT buffers
 	//VID_Finish(false);
+	// however this IS necessary on Windows Vista
+	qglFinish();
 }
 
 void CL_UpdateScreen(void)
