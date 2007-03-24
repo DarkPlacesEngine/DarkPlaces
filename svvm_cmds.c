@@ -275,9 +275,17 @@ static void VM_SV_sprint (void)
 	int			entnum;
 	char string[VM_STRINGTEMP_LENGTH];
 
+	VM_VarString(1, string, sizeof(string));
+
 	VM_SAFEPARMCOUNTRANGE(2, 8, VM_SV_sprint);
 
 	entnum = PRVM_G_EDICTNUM(OFS_PARM0);
+	// LordHavoc: div0 requested that sprintto world  operate like print
+	if (entnum == 0)
+	{
+		Con_Print(string);
+		return;
+	}
 
 	if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active)
 	{
@@ -289,7 +297,6 @@ static void VM_SV_sprint (void)
 	if (!client->netconnection)
 		return;
 
-	VM_VarString(1, string, sizeof(string));
 	MSG_WriteChar(&client->netconnection->message,svc_print);
 	MSG_WriteString(&client->netconnection->message, string);
 }
