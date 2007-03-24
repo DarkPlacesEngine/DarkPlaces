@@ -2001,6 +2001,9 @@ static void SV_Physics_Entity (prvm_edict_t *ent)
 
 void SV_Physics_ClientEntity (prvm_edict_t *ent)
 {
+	// LordHavoc: clear fixangle here rather than on send, because input is
+	// not always received every frame from predicted clients
+	ent->fields.server->fixangle = 0;
 	SV_ApplyClientMove();
 	// make sure the velocity is sane (not a NaN)
 	SV_CheckVelocity(ent);

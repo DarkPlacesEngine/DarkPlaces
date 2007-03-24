@@ -1095,7 +1095,10 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 		MSG_WriteByte (msg, svc_setangle);
 		for (i=0 ; i < 3 ; i++)
 			MSG_WriteAngle (msg, ent->fields.server->angles[i], sv.protocol);
-		ent->fields.server->fixangle = 0;
+		// LordHavoc: moved fixangle = 0 to the physics code so it is
+		// repeatedly sent to predicted clients even though they don't always
+		// move each frame
+		//ent->fields.server->fixangle = 0;
 	}
 
 	// stuff the sigil bits into the high bits of items for sbar, or else
