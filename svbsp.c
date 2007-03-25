@@ -2,18 +2,33 @@
 // Shadow Volume BSP code written by Forest "LordHavoc" Hale on 2003-11-06 and placed into public domain.
 // Modified by LordHavoc (to make it work and other nice things like that) on 2007-01-24 and 2007-01-25
 
-#ifdef USEMALLOC
-#include "string.h"
-#define Mem_Alloc(p,s) malloc(s)
-#define Mem_Free free
-#else
-#include "quakedef.h"
-#endif
-#include "polygon.h"
+#include <math.h>
+#include <string.h>
 #include "svbsp.h"
+#include "polygon.h"
 
 #define MAX_SVBSP_POLYGONPOINTS 64
 #define SVBSP_CLIP_EPSILON (1.0 / 1024.0)
+
+#define SVBSP_DotProduct(a,b) ((a)[0]*(b)[0]+(a)[1]*(b)[1]+(a)[2]*(b)[2])
+
+static void SVBSP_PlaneFromPoints(double *plane4f, const double *p1, const double *p2, const double *p3)
+{
+	double ilength;
+	// calculate unnormalized plane
+	plane4f[0] = (p1[1] - p2[1]) * (p3[2] - p2[2]) - (p1[2] - p2[2]) * (p3[1] - p2[1]);
+	plane4f[1] = (p1[2] - p2[2]) * (p3[0] - p2[0]) - (p1[0] - p2[0]) * (p3[2] - p2[2]);
+	plane4f[2] = (p1[0] - p2[0]) * (p3[1] - p2[1]) - (p1[1] - p2[1]) * (p3[0] - p2[0]);
+	plane4f[3] = SVBSP_DotProduct(plane4f, p1);
+	// normalize the plane normal and adjust distance accordingly
+	ilength = sqrt(SVBSP_DotProduct(plane4f, plane4f));
+	if (ilength)
+		ilength = 1.0 / ilength;
+	plane4f[0] *= ilength;
+	plane4f[1] *= ilength;
+	plane4f[2] *= ilength;
+	plane4f[3] *= ilength;
+}
 
 void SVBSP_Init(svbsp_t *b, const double *origin, int maxnodes, svbsp_node_t *nodes)
 {
@@ -110,9 +125,9 @@ static void SVBSP_InsertOccluderPolygonNodes(svbsp_t *b, int *parentnodenumpoint
 		for (j = parentnodenum;j >= 0;j = b->nodes[j].parent)
 		{
 			double *parentnodeplane = b->nodes[j].plane;
-			if (fabs(DotProduct(b->origin     , parentnodeplane) - parentnodeplane[3]) < SVBSP_CLIP_EPSILON
-			 && fabs(DotProduct(points + p * 3, parentnodeplane) - parentnodeplane[3]) < SVBSP_CLIP_EPSILON
-			 && fabs(DotProduct(points + i * 3, parentnodeplane) - parentnodeplane[3]) < SVBSP_CLIP_EPSILON)
+			if (fabs(SVBSP_DotProduct(b->origin     , parentnodeplane) - parentnodeplane[3]) < SVBSP_CLIP_EPSILON
+			 && fabs(SVBSP_DotProduct(points + p * 3, parentnodeplane) - parentnodeplane[3]) < SVBSP_CLIP_EPSILON
+			 && fabs(SVBSP_DotProduct(points + i * 3, parentnodeplane) - parentnodeplane[3]) < SVBSP_CLIP_EPSILON)
 				break;
 		}
 		if (j >= 0)
@@ -122,9 +137,7 @@ static void SVBSP_InsertOccluderPolygonNodes(svbsp_t *b, int *parentnodenumpoint
 		// create a side plane
 		// anything infront of this is not inside the shadow volume
 		node = b->nodes + b->numnodes++;
-		TriangleNormal(b->origin, points + p * 3, points + i * 3, node->plane);
-		VectorNormalize(node->plane);
-		node->plane[3] = DotProduct(node->plane, b->origin);
+		SVBSP_PlaneFromPoints(node->plane, b->origin, points + p * 3, points + i * 3);
 		// we need to flip the plane if it puts any part of the polygon on the
 		// wrong side
 		// (in this way this code treats all polygons as double sided)
@@ -136,7 +149,7 @@ static void SVBSP_InsertOccluderPolygonNodes(svbsp_t *b, int *parentnodenumpoint
 		// sufficient)
 		for (j = 0;j < numpoints;j++)
 		{
-			double d = DotProduct(points + j * 3, node->plane) - node->plane[3];
+			double d = SVBSP_DotProduct(points + j * 3, node->plane) - node->plane[3];
 			if (d < -SVBSP_CLIP_EPSILON)
 				break;
 			if (d > SVBSP_CLIP_EPSILON)
@@ -162,9 +175,9 @@ static void SVBSP_InsertOccluderPolygonNodes(svbsp_t *b, int *parentnodenumpoint
 	for (j = parentnodenum;j >= 0;j = b->nodes[j].parent)
 	{
 		double *parentnodeplane = b->nodes[j].plane;
-		if (fabs(DotProduct(points    , parentnodeplane) - parentnodeplane[3]) < SVBSP_CLIP_EPSILON
-		 && fabs(DotProduct(points + 3, parentnodeplane) - parentnodeplane[3]) < SVBSP_CLIP_EPSILON
-		 && fabs(DotProduct(points + 6, parentnodeplane) - parentnodeplane[3]) < SVBSP_CLIP_EPSILON)
+		if (fabs(SVBSP_DotProduct(points    , parentnodeplane) - parentnodeplane[3]) < SVBSP_CLIP_EPSILON
+		 && fabs(SVBSP_DotProduct(points + 3, parentnodeplane) - parentnodeplane[3]) < SVBSP_CLIP_EPSILON
+		 && fabs(SVBSP_DotProduct(points + 6, parentnodeplane) - parentnodeplane[3]) < SVBSP_CLIP_EPSILON)
 			break;
 	}
 	if (j < 0)
@@ -173,12 +186,10 @@ static void SVBSP_InsertOccluderPolygonNodes(svbsp_t *b, int *parentnodenumpoint
 		// add the face-plane node
 		// infront is empty, behind is shadow
 		node = b->nodes + b->numnodes++;
-		TriangleNormal(points, points + 3, points + 6, node->plane);
-		VectorNormalize(node->plane);
-		node->plane[3] = DotProduct(node->plane, points);
+		SVBSP_PlaneFromPoints(node->plane, points, points + 3, points + 6);
 		// this is a flip check similar to the one above
 		// this one checks if the plane faces the origin, if not, flip it
-		if (DotProduct(b->origin, node->plane) - node->plane[3] < -SVBSP_CLIP_EPSILON)
+		if (SVBSP_DotProduct(b->origin, node->plane) - node->plane[3] < -SVBSP_CLIP_EPSILON)
 		{
 			node->plane[0] *= -1;
 			node->plane[1] *= -1;
@@ -208,9 +219,9 @@ static int SVBSP_AddPolygonNode(svbsp_t *b, int *parentnodenumpointer, int paren
 		svbsp_node_t *node = b->nodes + *parentnodenumpointer;
 		parentnodenum = *parentnodenumpointer;
 #if 1
-		if (DotProduct(points, node->plane) >= node->plane[3] + SVBSP_CLIP_EPSILON)
+		if (SVBSP_DotProduct(points, node->plane) >= node->plane[3] + SVBSP_CLIP_EPSILON)
 		{
-			for (i = 1;i < numpoints && DotProduct(points + i * 3, node->plane) >= node->plane[3] + SVBSP_CLIP_EPSILON;i++);
+			for (i = 1;i < numpoints && SVBSP_DotProduct(points + i * 3, node->plane) >= node->plane[3] + SVBSP_CLIP_EPSILON;i++);
 			if (i == numpoints)
 			{
 				// no need to split, just go to one side
@@ -218,9 +229,9 @@ static int SVBSP_AddPolygonNode(svbsp_t *b, int *parentnodenumpointer, int paren
 				continue;
 			}
 		}
-		else if (DotProduct(points, node->plane) <= node->plane[3] - SVBSP_CLIP_EPSILON)
+		else if (SVBSP_DotProduct(points, node->plane) <= node->plane[3] - SVBSP_CLIP_EPSILON)
 		{
-			for (i = 1;i < numpoints && DotProduct(points + i * 3, node->plane) <= node->plane[3] - SVBSP_CLIP_EPSILON;i++);
+			for (i = 1;i < numpoints && SVBSP_DotProduct(points + i * 3, node->plane) <= node->plane[3] - SVBSP_CLIP_EPSILON;i++);
 			if (i == numpoints)
 			{
 				// no need to split, just go to one side
