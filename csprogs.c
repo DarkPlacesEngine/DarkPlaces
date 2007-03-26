@@ -184,14 +184,12 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 	// make the other useful stuff
 	CL_UpdateRenderEntity(&e->render);
 
-	i = 0;
-	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.renderflags)) && val->_float)
+	if(renderflags)
 	{
-		i = (int)val->_float;
-		if(i & RF_VIEWMODEL)	e->render.flags |= RENDER_VIEWMODEL;
-		if(i & RF_EXTERNALMODEL)e->render.flags |= RENDER_EXTERIORMODEL;
-		if(i & RF_DEPTHHACK)	e->render.effects |= EF_NODEPTHTEST;
-		if(i & RF_ADDITIVE)		e->render.effects |= EF_ADDITIVE;
+		if(renderflags & RF_VIEWMODEL)	e->render.flags |= RENDER_VIEWMODEL;
+		if(renderflags & RF_EXTERNALMODEL)e->render.flags |= RENDER_EXTERIORMODEL;
+		if(renderflags & RF_DEPTHHACK)	e->render.effects |= EF_NODEPTHTEST;
+		if(renderflags & RF_ADDITIVE)		e->render.effects |= EF_ADDITIVE;
 	}
 
 	// either fullbright or lit
