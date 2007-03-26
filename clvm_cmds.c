@@ -351,8 +351,6 @@ int CSQC_EntitiesInBox (vec3_t mins, vec3_t maxs, int maxlist, prvm_edict_t **li
 	{
 		if (ent->priv.required->free)
 			continue;
-//		VectorAdd(ent->fields.client->origin, ent->fields.client->mins, ent->fields.client->absmin);
-//		VectorAdd(ent->fields.client->origin, ent->fields.client->maxs, ent->fields.client->absmax);
 		if(BoxesOverlap(mins, maxs, ent->fields.client->absmin, ent->fields.client->absmax))
 			list[k++] = ent;
 	}
@@ -644,8 +642,6 @@ static void VM_CL_R_AddEntities (void)
 		ed = &prog->edicts[i];
 		if(ed->priv.required->free)
 			continue;
-		VectorAdd(ed->fields.client->origin, ed->fields.client->mins, ed->fields.client->absmin);
-		VectorAdd(ed->fields.client->origin, ed->fields.client->maxs, ed->fields.client->absmax);
 		CSQC_Think(ed);
 		if(ed->priv.required->free)
 			continue;
