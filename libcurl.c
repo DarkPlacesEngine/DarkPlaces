@@ -642,7 +642,7 @@ void Curl_Begin(const char *URL, const char *name, qboolean ispak, qboolean fort
 				return;
 			}
 		}
-		
+
 		if(ispak && FS_FileExists(fn))
 		{
 			qboolean already_loaded;
@@ -737,7 +737,7 @@ void Curl_Run()
 	{
 		int remaining;
 		CURLMcode mc;
-		
+
 		do
 		{
 			mc = qcurl_multi_perform(curlm, &remaining);
@@ -773,7 +773,7 @@ void Curl_Run()
 							break;
 					}
 				}
-				
+
 				Curl_EndDownload(di, failed, result);
 			}
 		}
@@ -1030,7 +1030,7 @@ void Curl_Curl_f(void)
 				char donecommand[256];
 				if(cls.netcon)
 				{
-					if(cls.loadbegun) // curling won't inhibit loading the map any more when at this stage, so bail out and force a reconnect
+					if(cl.loadbegun) // curling won't inhibit loading the map any more when at this stage, so bail out and force a reconnect
 					{
 						dpsnprintf(donecommand, sizeof(donecommand), "connect %s", cls.netcon->address);
 						Curl_CommandWhenDone(donecommand);
@@ -1120,7 +1120,7 @@ Curl_downloadinfo_t *Curl_GetDownloadInfo(int *nDownloads, const char **addition
 		}
 		++i;
 	}
-	
+
 	if(additional_info)
 	{
 		// TODO: can I clear command_when_done as soon as the first download fails?
@@ -1178,7 +1178,7 @@ static const char *Curl_FindPackURL(const char *filename)
 		char *p = buf;
 		char *pattern = NULL, *patternend = NULL, *url = NULL, *urlend = NULL;
 		qboolean eof = false;
-		
+
 		pattern = p;
 		while(!eof)
 		{
