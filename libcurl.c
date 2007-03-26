@@ -1030,7 +1030,7 @@ void Curl_Curl_f(void)
 				char donecommand[256];
 				if(cls.netcon)
 				{
-					if(cls.signon >= 3)
+					if(cls.loadbegun) // curling won't inhibit loading the map any more when at this stage, so bail out and force a reconnect
 					{
 						dpsnprintf(donecommand, sizeof(donecommand), "connect %s", cls.netcon->address);
 						Curl_CommandWhenDone(donecommand);
