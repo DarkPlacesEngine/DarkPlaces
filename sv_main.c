@@ -2541,6 +2541,7 @@ prvm_required_field_t reqfields[] =
 	{ev_float, "buttonuse"},
 	{ev_float, "clientcolors"},
 	{ev_float, "cursor_active"},
+	{ev_float, "disableclientprediction"},
 	{ev_float, "fullbright"},
 	{ev_float, "glow_color"},
 	{ev_float, "glow_size"},
