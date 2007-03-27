@@ -109,8 +109,8 @@ void SCR_DrawCenterString (void)
 	int		remaining;
 	int		color;
 
-// the finale prints the characters one at a time
-	if (cl.intermission)
+// the finale prints the characters one at a time, except if printspeed is an absurdly high value
+	if (cl.intermission && scr_printspeed.value < 1000000)
 		remaining = (int)(scr_printspeed.value * (cl.time - scr_centertime_start));
 	else
 		remaining = 9999;
