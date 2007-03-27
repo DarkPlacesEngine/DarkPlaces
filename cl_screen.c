@@ -21,7 +21,7 @@ cvar_t scr_showram = {CVAR_SAVE, "showram","1", "show ram icon if low on surface
 cvar_t scr_showturtle = {CVAR_SAVE, "showturtle","0", "show turtle icon when framerate is too low (not used)"};
 cvar_t scr_showpause = {CVAR_SAVE, "showpause","1", "show pause icon when game is paused"};
 cvar_t scr_showbrand = {0, "showbrand","0", "shows gfx/brand.tga in a corner of the screen (different values select different positions, including centered)"};
-cvar_t scr_printspeed = {0, "scr_printspeed","1000000", "speed of intermission printing (episode end texts), a value of 1000000 or higher disables the slow printing"};
+cvar_t scr_printspeed = {0, "scr_printspeed","0", "speed of intermission printing (episode end texts), a value of 0 disables the slow printing"};
 cvar_t vid_conwidth = {CVAR_SAVE, "vid_conwidth", "640", "virtual width of 2D graphics system"};
 cvar_t vid_conheight = {CVAR_SAVE, "vid_conheight", "480", "virtual height of 2D graphics system"};
 cvar_t vid_pixelheight = {CVAR_SAVE, "vid_pixelheight", "1", "adjusts vertical field of vision to account for non-square pixels (1280x1024 on a CRT monitor for example)"};
@@ -110,7 +110,7 @@ void SCR_DrawCenterString (void)
 	int		color;
 
 // the finale prints the characters one at a time, except if printspeed is an absurdly high value
-	if (cl.intermission && scr_printspeed.value < 1000000)
+	if (cl.intermission && scr_printspeed.value > 0 && scr_printspeed.value < 1000000)
 		remaining = (int)(scr_printspeed.value * (cl.time - scr_centertime_start));
 	else
 		remaining = 9999;
