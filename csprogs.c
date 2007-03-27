@@ -109,7 +109,7 @@ void CSQC_Think (prvm_edict_t *ed)
 extern cvar_t cl_noplayershadow;
 qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 {
-	int i, renderflags;
+	int renderflags;
 	float scale;
 	prvm_eval_t *val;
 	entity_t *e;
