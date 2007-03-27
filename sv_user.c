@@ -530,12 +530,6 @@ void SV_ReadClientMove (void)
 		move->buttons |= host_client->cmd.buttons;
 	}
 
-	// disable clientside movement prediction in some cases
-	if (ceil(max(move->receivetime - move->time, 0) * 1000.0) < sv_clmovement_minping.integer)
-		host_client->clmovement_disabletimeout = realtime + sv_clmovement_minping_disabletime.value / 1000.0;
-	if (!sv_clmovement_enable.integer || host_client->clmovement_disabletimeout > realtime)
-		move->sequence = 0;
-
 	// now store this move for later execution
 	// (we have to buffer the moves because of old ones being repeated)
 	if (sv_numreadmoves < CL_MAX_USERCMDS)
@@ -551,6 +545,7 @@ void SV_ExecuteClientMoves(void)
 #ifdef NUM_PING_TIMES
 	double total;
 #endif
+	prvm_eval_t *val;
 	if (sv_numreadmoves < 1)
 		return;
 	// only start accepting input once the player is spawned
@@ -559,7 +554,11 @@ void SV_ExecuteClientMoves(void)
 #if DEBUGMOVES
 	Con_Printf("SV_ExecuteClientMoves: read %i moves at sv.time %f\n", sv_numreadmoves, (float)sv.time);
 #endif
-	if (sv_readmoves[sv_numreadmoves-1].sequence && sv_clmovement_enable.integer && sv_clmovement_waitforinput.integer > 0)
+	// disable clientside movement prediction in some cases
+	if (ceil(max(sv_readmoves[sv_numreadmoves-1].receivetime - sv_readmoves[sv_numreadmoves-1].time, 0) * 1000.0) < sv_clmovement_minping.integer)
+		host_client->clmovement_disabletimeout = realtime + sv_clmovement_minping_disabletime.value / 1000.0;
+	// several conditions govern whether clientside movement prediction is allowed
+	if (sv_readmoves[sv_numreadmoves-1].sequence && sv_clmovement_enable.integer && sv_clmovement_waitforinput.integer > 0 && host_client->clmovement_disabletimeout <= realtime && host_client->edict->fields.server->movetype == MOVETYPE_WALK && (!(val = PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.disableclientprediction)) || !val->_float))
 	{
 		// process the moves in order and ignore old ones
 		// but always trust the latest move
@@ -569,7 +568,7 @@ void SV_ExecuteClientMoves(void)
 		for (moveindex = 0;moveindex < sv_numreadmoves;moveindex++)
 		{
 			usercmd_t *move = sv_readmoves + moveindex;
-			if (host_client->cmd.sequence < move->sequence || moveindex == sv_numreadmoves - 1)
+			if (host_client->movesequence < move->sequence || moveindex == sv_numreadmoves - 1)
 			{
 #if DEBUGMOVES
 				Con_Printf("%smove #%i %ims (%ims) %i %i '%i %i %i' '%i %i %i'\n", (move->time - host_client->cmd.time) > sv.frametime ? "^1" : "^2", move->sequence, (int)floor((move->time - host_client->cmd.time) * 1000.0 + 0.5), (int)floor(move->time * 1000.0 + 0.5), move->impulse, move->buttons, (int)move->viewangles[0], (int)move->viewangles[1], (int)move->viewangles[2], (int)move->forwardmove, (int)move->sidemove, (int)move->upmove);
@@ -623,8 +622,8 @@ void SV_ExecuteClientMoves(void)
 		}
 		// now copy the new move
 		host_client->cmd = sv_readmoves[sv_numreadmoves-1];
+		host_client->movesequence = 0;
 	}
-	host_client->movesequence = host_client->cmd.sequence;
 
 	// calculate average ping time
 	host_client->ping = host_client->cmd.receivetime - host_client->cmd.time;
