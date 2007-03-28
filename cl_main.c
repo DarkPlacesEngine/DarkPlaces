@@ -377,7 +377,8 @@ void CL_EstablishConnection(const char *host)
 	cls.demonum = -1;
 
 	// stop demo loop in case this fails
-	CL_Disconnect();
+	if (cls.demoplayback)
+		CL_StopPlayback();
 
 	// if downloads are running, cancel their finishing action
 	Curl_Clear_forthismap();
