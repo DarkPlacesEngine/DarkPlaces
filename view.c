@@ -34,14 +34,14 @@ when crossing a water boudnary.
 cvar_t cl_rollspeed = {0, "cl_rollspeed", "200", "how much strafing is necessary to tilt the view"};
 cvar_t cl_rollangle = {0, "cl_rollangle", "2.0", "how much to tilt the view when strafing"};
 
-cvar_t cl_bob = {0, "cl_bob","0.02", "view bobbing amount"};
-cvar_t cl_bobcycle = {0, "cl_bobcycle","0.6", "view bobbing speed"};
-cvar_t cl_bobup = {0, "cl_bobup","0.5", "view bobbing adjustment that makes the up or down swing of the bob last longer"};
+cvar_t cl_bob = {CVAR_SAVE, "cl_bob","0.02", "view bobbing amount"};
+cvar_t cl_bobcycle = {CVAR_SAVE, "cl_bobcycle","0.6", "view bobbing speed"};
+cvar_t cl_bobup = {CVAR_SAVE, "cl_bobup","0.5", "view bobbing adjustment that makes the up or down swing of the bob last longer"};
 
 cvar_t cl_bobmodel = {CVAR_SAVE, "cl_bobmodel", "1", "enables gun bobbing"};
-cvar_t cl_bobmodel_side = {0, "cl_bobmodel_side", "0.05", "gun bobbing sideways sway amount"};
-cvar_t cl_bobmodel_up = {0, "cl_bobmodel_up", "0.02", "gun bobbing upward movement amount"};
-cvar_t cl_bobmodel_speed = {0, "cl_bobmodel_speed", "7", "gun bobbing speed"};
+cvar_t cl_bobmodel_side = {CVAR_SAVE, "cl_bobmodel_side", "0.05", "gun bobbing sideways sway amount"};
+cvar_t cl_bobmodel_up = {CVAR_SAVE, "cl_bobmodel_up", "0.02", "gun bobbing upward movement amount"};
+cvar_t cl_bobmodel_speed = {CVAR_SAVE, "cl_bobmodel_speed", "7", "gun bobbing speed"};
 
 cvar_t cl_viewmodel_scale = {0, "cl_viewmodel_scale", "0.3", "changes size of gun model, lower values prevent poking into walls but cause strange artifacts on lighting and especially r_stereo/vid_stereobuffer options where the size of the gun becomes visible"};
 
