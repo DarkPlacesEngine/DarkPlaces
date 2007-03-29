@@ -244,13 +244,14 @@ void RSurf_DrawBatch_Simple(int texturenumsurfaces, msurface_t **texturesurfacel
 #define SHADERPERMUTATION_GLOW (1<<4) // (lightmap) blend in an additive glow texture
 #define SHADERPERMUTATION_FOG (1<<5) // tint the color by fog color or black if using additive blend mode
 #define SHADERPERMUTATION_COLORMAPPING (1<<6) // indicates this is a colormapped skin
-#define SHADERPERMUTATION_SPECULAR (1<<7) // (lightsource or deluxemapping) render specular effects
-#define SHADERPERMUTATION_CUBEFILTER (1<<8) // (lightsource) use cubemap light filter
-#define SHADERPERMUTATION_OFFSETMAPPING (1<<9) // adjust texcoords to roughly simulate a displacement mapped surface
-#define SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING (1<<10) // adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
+#define SHADERPERMUTATION_DIFFUSE (1<<7) // (lightsource) whether to use directional shading
+#define SHADERPERMUTATION_SPECULAR (1<<8) // (lightsource or deluxemapping) render specular effects
+#define SHADERPERMUTATION_CUBEFILTER (1<<9) // (lightsource) use cubemap light filter
+#define SHADERPERMUTATION_OFFSETMAPPING (1<<10) // adjust texcoords to roughly simulate a displacement mapped surface
+#define SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING (1<<11) // adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
 
-#define SHADERPERMUTATION_COUNT (1<<11) // how many permutations are possible
-#define SHADERPERMUTATION_COUNTMASK (SHADERPERMUTATION_COUNT - 1) // mask of valid indexing bits for r_glsl_permutations[] array
+#define SHADERPERMUTATION_MAX (1<<12) // how many permutations are possible
+#define SHADERPERMUTATION_MASK (SHADERPERMUTATION_MAX - 1) // mask of valid indexing bits for r_glsl_permutations[] array
 
 // these are additional flags used only by R_GLSL_CompilePermutation
 #define SHADERPERMUTATION_USES_VERTEXSHADER (1<<29)
@@ -267,6 +268,7 @@ typedef struct r_glsl_permutation_s
 	int loc_Texture_Color;
 	int loc_Texture_Gloss;
 	int loc_Texture_Cube;
+	int loc_Texture_Attenuation;
 	int loc_Texture_FogMask;
 	int loc_Texture_Pants;
 	int loc_Texture_Shirt;
@@ -295,12 +297,12 @@ typedef struct r_glsl_permutation_s
 r_glsl_permutation_t;
 
 // information about each possible shader permutation
-extern r_glsl_permutation_t r_glsl_permutations[SHADERPERMUTATION_COUNT];
+extern r_glsl_permutation_t r_glsl_permutations[SHADERPERMUTATION_MAX];
 // currently selected permutation
 extern r_glsl_permutation_t *r_glsl_permutation;
 
 void R_GLSL_CompilePermutation(const char *shaderfilename, int permutation);
-int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting);
+int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, float ambientscale, float diffusescale, float specularscale);
 void R_SwitchSurfaceShader(int permutation);
 
 #endif
