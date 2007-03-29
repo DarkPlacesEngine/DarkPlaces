@@ -2121,7 +2121,7 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 	lightcolorbase[2] = r_shadow_rtlight->currentcolor[2] * rsurface_entity->colormod[2] * rsurface_texture->currentalpha;
 	ambientscale = r_shadow_rtlight->ambientscale;
 	diffusescale = r_shadow_rtlight->diffusescale;
-	specularscale = ambientscale, diffusescale, specularscale;
+	specularscale = specularscale;
 	if (!r_shadow_usenormalmap.integer)
 	{
 		ambientscale += 1.0f * diffusescale;
