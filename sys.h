@@ -74,7 +74,7 @@ double Sys_DoubleTime (void);
 
 char *Sys_ConsoleInput (void);
 
-void Sys_Sleep(int milliseconds);
+void Sys_Sleep(int microseconds);
 // called to yield for a little bit so as
 // not to hog cpu when paused or debugging
 
