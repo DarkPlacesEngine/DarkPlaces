@@ -10,6 +10,7 @@ char *vm_m_extensions =
 "DP_QC_ASINACOSATANATAN2TAN "
 "DP_QC_STRFTIME "
 "DP_QC_STRINGCOLORFUNCTIONS "
+"DP_QC_TOKENIZEBYSEPARATOR "
 "DP_QC_UNLIMITEDTEMPSTRINGS";
 
 /*
@@ -1218,7 +1219,7 @@ VM_tan,						// #475 float(float a) VM_tan (DP_QC_ASINACOSATANATAN2TAN)
 VM_strlennocol,				// #476 float(string s) : DRESK - String Length (not counting color codes) (DP_QC_STRINGCOLORFUNCTIONS)
 VM_strdecolorize,			// #477 string(string s) : DRESK - Decolorized String (DP_QC_STRINGCOLORFUNCTIONS)
 VM_strftime,				// #478 string(float uselocaltime, string format, ...) (DP_QC_STRFTIME)
-NULL,						// #479
+VM_tokenizebyseparator,		// #479 float(string s) tokenizebyseparator (DP_QC_TOKENIZEBYSEPARATOR)
 NULL,						// #480
 NULL,						// #481
 NULL,						// #482
