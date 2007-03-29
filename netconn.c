@@ -2294,6 +2294,11 @@ void NetConn_ServerFrame(void)
 	}
 }
 
+void NetConn_SleepMicroseconds(int microseconds)
+{
+	LHNET_SleepUntilPacket_Microseconds(microseconds);
+}
+
 void NetConn_QueryMasters(qboolean querydp, qboolean queryqw)
 {
 	int i;

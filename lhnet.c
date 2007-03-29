@@ -495,6 +495,28 @@ static const char *LHNETPRIVATE_StrError(void)
 #endif
 }
 
+void LHNET_SleepUntilPacket_Microseconds(int microseconds)
+{
+	fd_set fdreadset;
+	struct timeval tv;
+	int lastfd;
+	lhnetsocket_t *s;
+	FD_ZERO(&fdreadset);
+	lastfd = 0;
+	for (s = lhnet_socketlist.next;s != &lhnet_socketlist;s = s->next)
+	{
+		if (s->address.addresstype == LHNETADDRESSTYPE_INET4 || s->address.addresstype == LHNETADDRESSTYPE_INET6)
+		{
+			if (lastfd < s->inetsocket)
+				lastfd = s->inetsocket;
+			FD_SET(s->inetsocket, &fdreadset);
+		}
+	}
+	tv.tv_sec = microseconds / 1000000;
+	tv.tv_usec = microseconds % 1000000;
+	select(lastfd + 1, &fdreadset, NULL, NULL, &tv);
+}
+
 lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 {
 	lhnetsocket_t *lhnetsocket, *s;
