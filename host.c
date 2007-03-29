@@ -91,6 +91,8 @@ cvar_t temp1 = {0, "temp1","0", "general cvar for mods to use, in stock id1 this
 cvar_t timestamps = {CVAR_SAVE, "timestamps", "0", "prints timestamps on console messages"};
 cvar_t timeformat = {CVAR_SAVE, "timeformat", "[%Y-%m-%d %H:%M:%S] ", "time format to use on timestamped console messages"};
 
+cvar_t sv_checkforpacketsduringsleep = {0, "sv_checkforpacketsduringsleep", "0", "uses select() function to wait between frames which can be interrupted by packets being received, instead of Sleep()/usleep()/SDL_Sleep() functions which do not check for packets"};
+
 /*
 ================
 Host_AbortCurrentFrame
@@ -250,6 +252,8 @@ static void Host_InitLocal (void)
 
 	Cvar_RegisterVariable (&timestamps);
 	Cvar_RegisterVariable (&timeformat);
+
+	Cvar_RegisterVariable (&sv_checkforpacketsduringsleep);
 }
 
 
@@ -577,7 +581,10 @@ void Host_Main(void)
 	static double time2 = 0;
 	static double time3 = 0;
 	// these are static because of setjmp/longjmp warnings in mingw32 gcc 2.95.3
-	static double frameoldtime, framenewtime, frametime, cl_timer, sv_timer;
+	static double frameoldtime, framenewtime, framedeltatime, cl_timer, sv_timer;
+	double clframetime;
+	double wait;
+	int pass1, pass2, pass3;
 
 	Host_Init();
 
@@ -592,18 +599,12 @@ void Host_Main(void)
 
 		frameoldtime = framenewtime;
 		framenewtime = Sys_DoubleTime();
-		frametime = framenewtime - frameoldtime;
-		realtime += frametime;
-
-		// if there is some time remaining from last frame, rest the timers
-		if (cl_timer >= 0)
-			cl_timer = 0;
-		if (sv_timer >= 0)
-			sv_timer = 0;
+		framedeltatime = framenewtime - frameoldtime;
+		realtime += framedeltatime;
 
 		// accumulate the new frametime into the timers
-		cl_timer += frametime;
-		sv_timer += frametime;
+		cl_timer += framedeltatime;
+		sv_timer += framedeltatime;
 
 		if (slowmo.value < 0)
 			Cvar_SetValue("slowmo", 0);
@@ -611,23 +612,6 @@ void Host_Main(void)
 			Cvar_SetValue("host_framerate", 0);
 		if (cl_maxfps.value < 1)
 			Cvar_SetValue("cl_maxfps", 1);
-
-		// if the accumulators haven't become positive yet, keep waiting
-		if (!cls.timedemo && cl_timer <= 0 && sv_timer <= 0)
-		{
-			double wait;
-			int msleft;
-			if (cls.state == ca_dedicated)
-				wait = sv_timer;
-			else if (!sv.active)
-				wait = cl_timer;
-			else
-				wait = max(cl_timer, sv_timer);
-			msleft = (int)floor(wait * -1000.0);
-			if (msleft >= 1)
-				Sys_Sleep(msleft);
-			continue;
-		}
 
 		// keep the random time dependent
 		if(!*sv_random_seed.string)
@@ -638,6 +622,18 @@ void Host_Main(void)
 		// get new key events
 		Sys_SendKeyEvents();
 
+		NetConn_UpdateSockets();
+
+		// receive packets on each main loop iteration, as the main loop may
+		// be undersleeping due to select() detecting a new packet
+		if (sv.active)
+			NetConn_ServerFrame();
+
+		Curl_Run();
+
+		// check for commands typed to the host
+		Host_GetConsoleCommands();
+
 		// when a server is running we only execute console commands on server frames
 		// (this mainly allows frikbot .way config files to work properly by staying in sync with the server qc)
 		// otherwise we execute them on all frames
@@ -647,9 +643,31 @@ void Host_Main(void)
 			Cbuf_Execute();
 		}
 
-		NetConn_UpdateSockets();
+		//Con_Printf("%6.0f %6.0f\n", cl_timer * 1000000.0, sv_timer * 1000000.0);
 
-		Curl_Run();
+		// if the accumulators haven't become positive yet, wait a while
+		if (cls.state == ca_dedicated)
+			wait = sv_timer * -1000000.0;
+		else if (!sv.active)
+			wait = cl_timer * -1000000.0;
+		else
+			wait = max(cl_timer, sv_timer) * -1000000.0;
+		if (wait > 100000)
+			wait = 100000;
+		if (!cls.timedemo && wait > 0)
+		{
+			if (sv_checkforpacketsduringsleep.integer)
+			{
+				if (wait >= 1)
+					NetConn_SleepMicroseconds((int)wait);
+			}
+			else
+			{
+				if (wait >= 1000)
+					Sys_Sleep((int)wait / 1000);
+			}
+			continue;
+		}
 
 	//-------------------
 	//
@@ -657,91 +675,81 @@ void Host_Main(void)
 	//
 	//-------------------
 
-		// check for commands typed to the host
-		Host_GetConsoleCommands();
+		// limit the frametime steps to no more than 100ms each
+		if (cl_timer > 0.1)
+			cl_timer = 0.1;
+		if (sv_timer > 0.1)
+			sv_timer = 0.1;
 
-		if (sv_timer > 0)
+		if (sv.active && sv_timer > 0)
 		{
-			if (!sv.active)
+			// execute one or more server frames, with an upper limit on how much
+			// execution time to spend on server frames to avoid freezing the game if
+			// the server is overloaded, this execution time limit means the game will
+			// slow down if the server is taking too long.
+			int framecount, framelimit = 1;
+			double advancetime, aborttime = 0;
+
+			// run the world state
+			// don't allow simulation to run too fast or too slow or logic glitches can occur
+
+			// stop running server frames if the wall time reaches this value
+			if (sys_ticrate.value <= 0)
+				advancetime = sv_timer;
+			else if (cl.islocalgame && !sv_fixedframeratesingleplayer.integer)
 			{
-				// if there is no server, run server timing at 10fps
-				sv_timer -= 0.1;
+				// synchronize to the client frametime, but no less than 10ms and no more than sys_ticrate
+				advancetime = bound(0.01, cl_timer, sys_ticrate.value);
+				framelimit = 10;
+				aborttime = Sys_DoubleTime() + 0.1;
 			}
 			else
 			{
-				// execute one or more server frames, with an upper limit on how much
-				// execution time to spend on server frames to avoid freezing the game if
-				// the server is overloaded, this execution time limit means the game will
-				// slow down if the server is taking too long.
-				int framecount, framelimit = 1;
-				double advancetime, aborttime = 0;
-
-				// receive server packets now, which might contain rcon commands, which
-				// may change level or other such things we don't want to have happen in
-				// the middle of Host_Frame
-				NetConn_ServerFrame();
-
-				// run the world state
-				// don't allow simulation to run too fast or too slow or logic glitches can occur
-
-				// stop running server frames if the wall time reaches this value
-				if (sys_ticrate.value <= 0)
-					advancetime = sv_timer;
-				else if (cl.islocalgame && !sv_fixedframeratesingleplayer.integer)
+				advancetime = sys_ticrate.value;
+				// listen servers can run multiple server frames per client frame
+				if (cls.state == ca_connected)
 				{
-					// synchronize to the client frametime, but no less than 10ms and no more than sys_ticrate
-					advancetime = bound(0.01, cl_timer, sys_ticrate.value);
 					framelimit = 10;
 					aborttime = Sys_DoubleTime() + 0.1;
 				}
-				else
-				{
-					advancetime = sys_ticrate.value;
-					// listen servers can run multiple server frames per client frame
-					if (cls.state == ca_connected)
-					{
-						framelimit = 10;
-						aborttime = Sys_DoubleTime() + 0.1;
-					}
-				}
-				advancetime = min(advancetime, 0.1);
-
-				// only advance time if not paused
-				// the game also pauses in singleplayer when menu or console is used
-				sv.frametime = advancetime * slowmo.value;
-				if (host_framerate.value)
-					sv.frametime = host_framerate.value;
-				if (sv.paused || (cl.islocalgame && (key_dest != key_game || key_consoleactive)))
-					sv.frametime = 0;
-
-				// setup the VM frame
-				SV_VM_Begin();
-
-				for (framecount = 0;framecount < framelimit && sv_timer > 0;framecount++)
-				{
-					sv_timer -= advancetime;
-
-					// move things around and think unless paused
-					if (sv.frametime)
-						SV_Physics();
-
-					// send all messages to the clients
-					SV_SendClientMessages();
-
-					// clear the general datagram
-					SV_ClearDatagram();
-
-					// if this server frame took too long, break out of the loop
-					if (framelimit > 1 && Sys_DoubleTime() >= aborttime)
-						break;
-				}
-
-				// end the server VM frame
-				SV_VM_End();
-
-				// send an heartbeat if enough time has passed since the last one
-				NetConn_Heartbeat(0);
 			}
+			advancetime = min(advancetime, 0.1);
+
+			// only advance time if not paused
+			// the game also pauses in singleplayer when menu or console is used
+			sv.frametime = advancetime * slowmo.value;
+			if (host_framerate.value)
+				sv.frametime = host_framerate.value;
+			if (sv.paused || (cl.islocalgame && (key_dest != key_game || key_consoleactive)))
+				sv.frametime = 0;
+
+			// setup the VM frame
+			SV_VM_Begin();
+
+			for (framecount = 0;framecount < framelimit && sv_timer > 0;framecount++)
+			{
+				sv_timer -= advancetime;
+
+				// move things around and think unless paused
+				if (sv.frametime)
+					SV_Physics();
+
+				// send all messages to the clients
+				SV_SendClientMessages();
+
+				// clear the general datagram
+				SV_ClearDatagram();
+
+				// if this server frame took too long, break out of the loop
+				if (framelimit > 1 && Sys_DoubleTime() >= aborttime)
+					break;
+			}
+
+			// end the server VM frame
+			SV_VM_End();
+
+			// send an heartbeat if enough time has passed since the last one
+			NetConn_Heartbeat(0);
 		}
 
 	//-------------------
@@ -750,94 +758,80 @@ void Host_Main(void)
 	//
 	//-------------------
 
-		if (cl_timer > 0 || cls.timedemo)
+		if (cls.state != ca_dedicated && (cl_timer > 0 || cls.timedemo))
 		{
-			if (cls.state == ca_dedicated)
+			// decide the simulation time
+			if (cls.capturevideo.active)
 			{
-				// if there is no client, run client timing at 10fps
-				cl_timer -= 0.1;
-				if (host_speeds.integer)
-					time1 = time2 = Sys_DoubleTime();
+				if (cls.capturevideo.realtime)
+					clframetime = cl.realframetime = max(cl_timer, 1.0 / cls.capturevideo.framerate);
+				else
+				{
+					clframetime = 1.0 / cls.capturevideo.framerate;
+					cl.realframetime = max(cl_timer, clframetime);
+				}
+			}
+			else if (vid_activewindow)
+				clframetime = cl.realframetime = max(cl_timer, 1.0 / cl_maxfps.value);
+			else
+				clframetime = cl.realframetime = 0.1;
+
+			// apply slowmo scaling
+			clframetime *= slowmo.value;
+
+			// host_framerate overrides all else
+			if (host_framerate.value)
+				clframetime = host_framerate.value;
+
+			if (cls.timedemo)
+				clframetime = cl.realframetime = cl_timer;
+
+			// deduct the frame time from the accumulator
+			cl_timer -= cl.realframetime;
+
+			cl.oldtime = cl.time;
+			cl.time += clframetime;
+
+			// Collect input into cmd
+			CL_Input();
+
+			NetConn_ClientFrame();
+
+			if (cls.state == ca_connected)
+			{
+				CL_ReadFromServer();
+				// if running the server remotely, send intentions now after
+				// the incoming messages have been read
+				//if (!cl.islocalgame)
+				//	CL_SendCmd();
+			}
+
+			// update video
+			if (host_speeds.integer)
+				time1 = Sys_DoubleTime();
+
+			//ui_update();
+
+			CL_VideoFrame();
+
+			CL_UpdateScreen();
+
+			if (host_speeds.integer)
+				time2 = Sys_DoubleTime();
+
+			// update audio
+			if(csqc_usecsqclistener)
+			{
+				S_Update(&csqc_listenermatrix);
+				csqc_usecsqclistener = false;
 			}
 			else
-			{
-				double frametime;
-				frametime = cl.realframetime = min(cl_timer, 1);
+				S_Update(&r_view.matrix);
 
-				// decide the simulation time
-				if (!cls.timedemo)
-				{
-					if (cls.capturevideo.active)
-					{
-						if (cls.capturevideo.realtime)
-							frametime = cl.realframetime = max(cl.realframetime, 1.0 / cls.capturevideo.framerate);
-						else
-						{
-							frametime = 1.0 / cls.capturevideo.framerate;
-							cl.realframetime = max(cl.realframetime, frametime);
-						}
-					}
-					else if (vid_activewindow)
-						frametime = cl.realframetime = max(cl.realframetime, 1.0 / cl_maxfps.value);
-					else
-						frametime = cl.realframetime = 0.1;
-
-					// deduct the frame time from the accumulator
-					cl_timer -= cl.realframetime;
-
-					// apply slowmo scaling
-					frametime *= slowmo.value;
-
-					// host_framerate overrides all else
-					if (host_framerate.value)
-						frametime = host_framerate.value;
-				}
-
-				cl.oldtime = cl.time;
-				cl.time += frametime;
-
-				// Collect input into cmd
-				CL_Input();
-
-				NetConn_ClientFrame();
-
-				if (cls.state == ca_connected)
-				{
-					CL_ReadFromServer();
-					// if running the server remotely, send intentions now after
-					// the incoming messages have been read
-					//if (!cl.islocalgame)
-					//	CL_SendCmd();
-				}
-
-				// update video
-				if (host_speeds.integer)
-					time1 = Sys_DoubleTime();
-
-				//ui_update();
-
-				CL_VideoFrame();
-
-				CL_UpdateScreen();
-
-				if (host_speeds.integer)
-					time2 = Sys_DoubleTime();
-
-				// update audio
-				if(csqc_usecsqclistener)
-				{
-					S_Update(&csqc_listenermatrix);
-					csqc_usecsqclistener = false;
-				}
-				else
-					S_Update(&r_view.matrix);
-
-				CDAudio_Update();
-			}
+			CDAudio_Update();
 
 			if (host_speeds.integer)
 			{
-				int pass1, pass2, pass3;
 				pass1 = (int)((time1 - time3)*1000000);
 				time3 = Sys_DoubleTime();
 				pass2 = (int)((time2 - time1)*1000000);
@@ -846,6 +840,12 @@ void Host_Main(void)
 							pass1+pass2+pass3, pass1, pass2, pass3);
 			}
 		}
+
+		// if there is some time remaining from this frame, reset the timers
+		if (cl_timer >= 0)
+			cl_timer = 0;
+		if (sv_timer >= 0)
+			sv_timer = 0;
 
 		host_framecount++;
 	}

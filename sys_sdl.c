@@ -155,11 +155,11 @@ char *Sys_ConsoleInput(void)
 	return NULL;
 }
 
-void Sys_Sleep(int milliseconds)
+void Sys_Sleep(int microseconds)
 {
-	if (milliseconds < 1)
-		milliseconds = 1;
-	SDL_Delay(milliseconds);
+	if (microseconds < 1000)
+		microseconds = 1000;
+	SDL_Delay(microseconds / 1000);
 }
 
 char *Sys_GetClipboardData (void)
