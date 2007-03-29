@@ -295,6 +295,7 @@ void VM_strdecolorize(void);
 void VM_clcommand (void);
 
 void VM_tokenize (void);
+void VM_tokenizebyseparator (void);
 void VM_argv (void);
 
 void VM_isserver(void);

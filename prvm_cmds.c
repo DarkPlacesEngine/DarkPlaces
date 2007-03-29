@@ -2013,11 +2013,6 @@ int tokens[256];
 void VM_tokenize (void)
 {
 	const char *p;
-#if 0
-	size_t pos = 0;
-	char tokenbuf[MAX_INPUTLINE];
-	size_t tokenlen;
-#endif
 
 	VM_SAFEPARMCOUNT(1,VM_tokenize);
 
@@ -2028,16 +2023,73 @@ void VM_tokenize (void)
 	{
 		if (num_tokens >= (int)(sizeof(tokens)/sizeof(tokens[0])))
 			break;
-#if 0
-		tokenlen = strlen(com_token) + 1;
-		if (pos + tokenlen > sizeof(tokenbuf))
-			break;
-		tokens[num_tokens++] = PRVM_SetEngineString(tokenbuf + pos);
-		memcpy(tokenbuf + pos, com_token, tokenlen);
-		pos += tokenlen;
-#else
 		tokens[num_tokens++] = PRVM_SetTempString(com_token);
-#endif
+	}
+
+	PRVM_G_FLOAT(OFS_RETURN) = num_tokens;
+}
+
+/*
+=========
+VM_tokenizebyseparator
+
+float tokenizebyseparator(string s, string separator1, ...)
+=========
+*/
+//float(string s, string separator1, ...) tokenizebyseparator = #479; // takes apart a string into individal words (access them with argv), returns how many
+//this function returns the token preceding each instance of a separator (of
+//which there can be multiple), and the text following the last separator
+//useful for parsing certain kinds of data like IP addresses
+//example:
+//numnumbers = tokenizebyseparator("10.1.2.3", ".");
+//returns 4 and the tokens "10" "1" "2" "3".
+void VM_tokenizebyseparator (void)
+{
+	int j, k;
+	int numseparators;
+	int separatorlen[7];
+	const char *separators[7];
+	const char *p;
+	char tokentext[MAX_INPUTLINE];
+
+	VM_SAFEPARMCOUNTRANGE(2, 8,VM_tokenizebyseparator);
+
+	p = PRVM_G_STRING(OFS_PARM0);
+
+	numseparators = 0;;
+	for (j = 1;j < prog->argc;j++)
+	{
+		// skip any blank separator strings
+		if (!PRVM_G_STRING(OFS_PARM0 + j)[0])
+			continue;
+		separators[numseparators] = PRVM_G_STRING(OFS_PARM0 + j);
+		separatorlen[numseparators] = strlen(separators[numseparators]);
+		numseparators++;
+	}
+
+	num_tokens = 0;
+	for (num_tokens = 0;num_tokens < (int)(sizeof(tokens)/sizeof(tokens[0]));num_tokens++)
+	{
+		while (*p)
+		{
+			for (k = 0;k < numseparators;k++)
+			{
+				if (!strncmp(p, separators[k], separatorlen[k]))
+				{
+					p += separatorlen[k];
+					break;
+				}
+			}
+			if (k < numseparators)
+				break;
+			if (j < (int)sizeof(tokentext[MAX_INPUTLINE]-1))
+				tokentext[j++] = *p;
+			p++;
+		}
+		tokentext[j] = 0;
+		tokens[num_tokens] = PRVM_SetTempString(tokentext);
+		if (!*p)
+			break;
 	}
 
 	PRVM_G_FLOAT(OFS_RETURN) = num_tokens;
