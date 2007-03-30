@@ -1119,7 +1119,7 @@ void CL_UpdateNetworkCollisionEntities(void)
 
 	// start on the entity after the world
 	cl.num_brushmodel_entities = 0;
-	for (i = 1;i < cl.num_entities;i++)
+	for (i = cl.maxclients + 1;i < cl.num_entities;i++)
 	{
 		if (cl.entities_active[i])
 		{
@@ -1128,7 +1128,7 @@ void CL_UpdateNetworkCollisionEntities(void)
 			{
 				// do not interpolate the bmodels for this
 				CL_UpdateNetworkEntity(ent, 32, false);
-				cl.brushmodel_entities[cl.num_brushmodel_entities++] = ent->state_current.number;
+				cl.brushmodel_entities[cl.num_brushmodel_entities++] = i;
 			}
 		}
 	}
@@ -1368,7 +1368,6 @@ void CL_LinkNetworkEntity(entity_t *e)
 void CL_RelinkWorld(void)
 {
 	entity_t *ent = &cl.entities[0];
-	cl.brushmodel_entities[cl.num_brushmodel_entities++] = 0;
 	// FIXME: this should be done at load
 	ent->render.matrix = identitymatrix;
 	CL_UpdateRenderEntity(&ent->render);
@@ -1706,12 +1705,9 @@ int CL_ReadFromServer(void)
 		V_DriftPitch();
 		V_FadeViewFlashs();
 
-		if (cl.movement_predicted)
-		{
-			// if prediction is enabled we have to update all the collidable
-			// network entities before the prediction code can be run
-			CL_UpdateNetworkCollisionEntities();
-		}
+		// if prediction is enabled we have to update all the collidable
+		// network entities before the prediction code can be run
+		CL_UpdateNetworkCollisionEntities();
 
 		// now update the player prediction
 		CL_ClientMovement_Replay();
