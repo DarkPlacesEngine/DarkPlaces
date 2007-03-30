@@ -1410,7 +1410,7 @@ static void CL_Smoke(const vec3_t originmins, const vec3_t originmaxs, const vec
 	{
 		smokecount *= cl_particles_quality.value;
 		while(smokecount-- > 0)
-			particle(particletype + pt_smoke, 0x101010, 0x101010, tex_smoke[rand()&7], 4, 0, 255, 512, 0, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]), 0, 0, 0, 16);
+			particle(particletype + pt_smoke, 0x101010, 0x101010, tex_smoke[rand()&7], 2, 2, 255, 256, 0, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]), 0, 0, 0, smokecount > 0 ? 16 : 0);
 	}
 }
 
@@ -1552,6 +1552,7 @@ void CL_MoveParticles (void)
 
 		content = 0;
 
+		p->size += p->sizeincrease * frametime;
 		p->alpha -= p->alphafade * frametime;
 
 		if (p->alpha <= 0)
@@ -1598,7 +1599,7 @@ void CL_MoveParticles (void)
 						p->liquidfriction = 0;
 						p->gravity = 0;
 						p->size *= 1.0f;
-						p->sizeincrease = p->size * 16;
+						p->sizeincrease = p->size * 2;
 						count = rand() & 3;
 						while(count--)
 							particle(particletype + pt_spark, 0x000000, 0x707070, tex_particle, 0.25f, 0, lhrandom(64, 255), 512, 1, 0, p->org[0], p->org[1], p->org[2], p->vel[0]*16, p->vel[1]*16, sv_gravity.value * 0.04 + p->vel[2]*16, 0, 0, 0, 32);
