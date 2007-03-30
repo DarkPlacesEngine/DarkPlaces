@@ -613,8 +613,8 @@ void Host_Main(void)
 		if (cl_maxfps.value < 1)
 			Cvar_SetValue("cl_maxfps", 1);
 
-		// keep the random time dependent
-		if(!*sv_random_seed.string)
+		// keep the random time dependent, but not when playing demos/benchmarking
+		if(!*sv_random_seed.string && !cls.demoplayback)
 			rand();
 
 		cl.islocalgame = NetConn_IsLocalGame();
@@ -888,7 +888,10 @@ static void Host_Init (void)
 	const char* os;
 
 	// LordHavoc: quake never seeded the random number generator before... heh
-	srand(time(NULL));
+	if (COM_CheckParm("-benchmark"))
+		srand(0); // predictable random sequence for -benchmark
+	else
+		srand(time(NULL));
 
 	// FIXME: this is evil, but possibly temporary
 // COMMANDLINEOPTION: Console: -developer enables warnings and other notices (RECOMMENDED for mod developers)

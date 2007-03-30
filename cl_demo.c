@@ -421,6 +421,8 @@ void CL_TimeDemo_f (void)
 		return;
 	}
 
+	srand(0); // predictable random sequence for benchmarking
+
 	CL_PlayDemo_f ();
 
 // cls.td_starttime will be grabbed at the second frame of the demo, so
