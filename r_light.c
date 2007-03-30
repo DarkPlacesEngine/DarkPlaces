@@ -94,7 +94,7 @@ void R_DrawCoronas(void)
 			continue;
 		cscale = rtlight->corona * r_coronas.value* 0.25f;
 		scale = rtlight->radius * rtlight->coronasizescale;
-		if (VectorDistance2(rtlight->shadoworigin, r_view.origin) < 32.0f * 32.0f)
+		if (VectorDistance2(rtlight->shadoworigin, r_view.origin) < 16.0f * 16.0f)
 			continue;
 		if (CL_Move(rtlight->shadoworigin, vec3_origin, vec3_origin, r_view.origin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction < 1)
 			continue;
@@ -107,7 +107,7 @@ void R_DrawCoronas(void)
 			continue;
 		if (rtlight->corona <= 0)
 			continue;
-		if (VectorDistance2(rtlight->shadoworigin, r_view.origin) < 16.0f * 16.0f)
+		if (VectorDistance2(rtlight->shadoworigin, r_view.origin) < 32.0f * 32.0f)
 			continue;
 		if (gl_flashblend.integer)
 		{
