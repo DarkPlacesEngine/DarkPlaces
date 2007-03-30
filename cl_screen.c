@@ -1691,15 +1691,6 @@ void CL_UpdateScreen(void)
 	if (!scr_initialized || !con_initialized)
 		return;				// not initialized yet
 
-	// don't allow cheats in multiplayer
-	if (!cl.islocalgame && cl.worldmodel)
-	{
-		if (r_fullbright.integer != 0)
-			Cvar_Set ("r_fullbright", "0");
-		if (r_ambient.value != 0)
-			Cvar_Set ("r_ambient", "0");
-	}
-
 	conwidth = bound(320, vid_conwidth.value, 2048);
 	conheight = bound(200, vid_conheight.value, 1536);
 	if (vid_conwidth.value != conwidth)
