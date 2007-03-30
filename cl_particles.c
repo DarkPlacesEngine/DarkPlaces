@@ -1590,6 +1590,8 @@ void CL_MoveParticles (void)
 							p->type = NULL;
 							continue;
 						}
+						if (cl_stainmaps.integer)
+							R_Stain(p->org, 32, 32, 16, 16, (int)(p->alpha * p->size * (1.0f / 40.0f)), 192, 48, 48, (int)(p->alpha * p->size * (1.0f / 40.0f)));
 						if (!cl_decals.integer)
 						{
 							p->type = NULL;
@@ -1598,8 +1600,6 @@ void CL_MoveParticles (void)
 						// convert from a blood particle to a blood decal
 						VectorCopy(trace.plane.normal, p->vel);
 						VectorAdd(p->org, p->vel, p->org);
-						if (cl_stainmaps.integer)
-							R_Stain(p->org, 32, 32, 16, 16, (int)(p->alpha * p->size * (1.0f / 40.0f)), 192, 48, 48, (int)(p->alpha * p->size * (1.0f / 40.0f)));
 
 						p->type = particletype + pt_decal;
 						p->texnum = tex_blooddecal[rand()&7];
