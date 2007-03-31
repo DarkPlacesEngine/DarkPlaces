@@ -1090,15 +1090,23 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 	SV_SetIdealPitch ();		// how much to look up / down ideally
 
 // a fixangle might get lost in a dropped packet.  Oh well.
-	if ( ent->fields.server->fixangle )
+	if(ent->fields.server->fixangle)
+	{
+		// angle fixing was requested by global thinking code...
+		// so store the current angles for later use
+		memcpy(host_client->fixangle_angles, ent->fields.server->angles, sizeof(host_client->fixangle_angles));
+		host_client->fixangle_angles_set = TRUE;
+
+		// and clear fixangle for the next frame
+		ent->fields.server->fixangle = 0;
+	}
+
+	if (host_client->fixangle_angles_set)
 	{
 		MSG_WriteByte (msg, svc_setangle);
 		for (i=0 ; i < 3 ; i++)
-			MSG_WriteAngle (msg, ent->fields.server->angles[i], sv.protocol);
-		// LordHavoc: moved fixangle = 0 to the physics code so it is
-		// repeatedly sent to predicted clients even though they don't always
-		// move each frame
-		//ent->fields.server->fixangle = 0;
+			MSG_WriteAngle (msg, host_client->fixangle_angles[i], sv.protocol);
+		host_client->fixangle_angles_set = FALSE;
 	}
 
 	// stuff the sigil bits into the high bits of items for sbar, or else
