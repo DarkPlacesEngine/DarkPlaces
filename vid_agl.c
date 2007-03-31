@@ -25,6 +25,7 @@
 #include <signal.h>
 #include <AGL/agl.h>
 #include <Carbon/Carbon.h>
+#include "vid_agl_mackeys.h" // this is SDL/src/video/maccommon/SDL_mackeys.h
 #include "quakedef.h"
 
 
@@ -629,72 +630,176 @@ static void Handle_KeyMod(UInt32 keymod)
 	prev_keymod = keymod;
 }
 
-static void Handle_Key(unsigned char charcode, qboolean keypressed)
+static void Handle_Key(unsigned char charcode, UInt32 mackeycode, qboolean keypressed)
 {
 	unsigned int keycode = 0;
 	char ascii = '\0';
 
-	switch (charcode)
+	switch (mackeycode)
 	{
-		case kHomeCharCode:
-			keycode = K_HOME;
-			break;
-		case kEnterCharCode:
-			keycode = K_KP_ENTER;
-			break;
-		case kEndCharCode:
-			keycode = K_END;
-			break;
-		case kBackspaceCharCode:
-			keycode = K_BACKSPACE;
-			break;
-		case kTabCharCode:
-			keycode = K_TAB;
-			break;
-		case kPageUpCharCode:
-			keycode = K_PGUP;
-			break;
-		case kPageDownCharCode:
-			keycode = K_PGDN;
-			break;
-		case kReturnCharCode:
-			keycode = K_ENTER;
-			break;
-		case kEscapeCharCode:
+		case MK_ESCAPE:
 			keycode = K_ESCAPE;
 			break;
-		case kLeftArrowCharCode:
-			keycode = K_LEFTARROW;
+		case MK_F1:
+			keycode = K_F1;
 			break;
-		case kRightArrowCharCode:
-			keycode = K_RIGHTARROW;
+		case MK_F2:
+			keycode = K_F2;
 			break;
-		case kUpArrowCharCode:
-			keycode = K_UPARROW;
+		case MK_F3:
+			keycode = K_F3;
 			break;
-		case kDownArrowCharCode :
-			keycode = K_DOWNARROW;
+		case MK_F4:
+			keycode = K_F4;
 			break;
-		case kDeleteCharCode:
+		case MK_F5:
+			keycode = K_F5;
+			break;
+		case MK_F6:
+			keycode = K_F6;
+			break;
+		case MK_F7:
+			keycode = K_F7;
+			break;
+		case MK_F8:
+			keycode = K_F8;
+			break;
+		case MK_F9:
+			keycode = K_F9;
+			break;
+		case MK_F10:
+			keycode = K_F10;
+			break;
+		case MK_F11:
+			keycode = K_F11;
+			break;
+		case MK_F12:
+			keycode = K_F12;
+			break;
+		case MK_SCROLLOCK:
+			keycode = K_SCROLLOCK;
+			break;
+		case MK_PAUSE:
+			keycode = K_PAUSE;
+			break;
+		case MK_BACKSPACE:
+			keycode = K_BACKSPACE;
+			break;
+		case MK_INSERT:
+			keycode = K_INS;
+			break;
+		case MK_HOME:
+			keycode = K_HOME;
+			break;
+		case MK_PAGEUP:
+			keycode = K_PGUP;
+			break;
+		case MK_NUMLOCK:
+			keycode = K_NUMLOCK;
+			break;
+		case MK_KP_EQUALS:
+			keycode = K_KP_EQUALS;
+			break;
+		case MK_KP_DIVIDE:
+			keycode = K_KP_DIVIDE;
+			break;
+		case MK_KP_MULTIPLY:
+			keycode = K_KP_MULTIPLY;
+			break;
+		case MK_TAB:
+			keycode = K_TAB;
+			break;
+		case MK_DELETE:
 			keycode = K_DEL;
 			break;
-		case 0:
-		case 191:
-			// characters 0 and 191 are sent by the mouse buttons (?!)
+		case MK_END:
+			keycode = K_END;
+			break;
+		case MK_PAGEDOWN:
+			keycode = K_PGDN;
+			break;
+		case MK_KP7:
+			keycode = K_KP_7;
+			break;
+		case MK_KP8:
+			keycode = K_KP_8;
+			break;
+		case MK_KP9:
+			keycode = K_KP_9;
+			break;
+		case MK_KP_MINUS:
+			keycode = K_KP_MINUS;
+			break;
+		case MK_CAPSLOCK:
+			keycode = K_CAPSLOCK;
+			break;
+		case MK_RETURN:
+			keycode = K_ENTER;
+			break;
+		case MK_KP4:
+			keycode = K_KP_4;
+			break;
+		case MK_KP5:
+			keycode = K_KP_5;
+			break;
+		case MK_KP6:
+			keycode = K_KP_6;
+			break;
+		case MK_KP_PLUS:
+			keycode = K_KP_PLUS;
+			break;
+		case MK_KP1:
+			keycode = K_KP_1;
+			break;
+		case MK_KP2:
+			keycode = K_KP_2;
+			break;
+		case MK_KP3:
+			keycode = K_KP_3;
+			break;
+		case MK_KP_ENTER:
+		case MK_IBOOK_ENTER:
+			keycode = K_KP_ENTER;
+			break;
+		case MK_KP0:
+			keycode = K_KP_0;
+			break;
+		case MK_KP_PERIOD:
+			keycode = K_KP_PERIOD;
 			break;
 		default:
-			if ('A' <= charcode && charcode <= 'Z')
+			switch(charcode)
 			{
-				keycode = charcode + ('a' - 'A');  // lowercase it
-				ascii = charcode;
+				case kUpArrowCharCode:
+					keycode = K_UPARROW;
+					break;
+				case kLeftArrowCharCode:
+					keycode = K_LEFTARROW;
+					break;
+				case kDownArrowCharCode:
+					keycode = K_DOWNARROW;
+					break;
+				case kRightArrowCharCode:
+					keycode = K_RIGHTARROW;
+					break;
+				case 0:
+				case 191:
+					// characters 0 and 191 are sent by the mouse buttons (?!)
+					break;
+				default:
+					if ('A' <= charcode && charcode <= 'Z')
+					{
+						keycode = charcode + ('a' - 'A');  // lowercase it
+						ascii = charcode;
+					}
+					else if (charcode >= 32)
+					{
+						keycode = charcode;
+						ascii = charcode;
+					}
+					else
+						Con_Printf(">> UNKNOWN char/keycode: %d/%u <<\n", charcode, (unsigned) mackeycode);
 			}
-			else if (charcode >= 32)
-			{
-				keycode = charcode;
-				ascii = charcode;
-			}
-			else
-				Con_Printf(">> UNKNOWN charcode: %d <<\n", charcode);
 	}
 
 	if (keycode != 0)
@@ -778,21 +883,24 @@ void Sys_SendKeyEvents(void)
 
 			case kEventClassKeyboard:
 			{
-				char keycode;
+				char charcode;
+				UInt32 keycode;
 
 				switch (eventKind)
 				{
 					case kEventRawKeyDown:
-						GetEventParameter(theEvent, kEventParamKeyMacCharCodes, typeChar, NULL, sizeof(keycode), NULL, &keycode);
-						Handle_Key(keycode, true);
+						GetEventParameter(theEvent, kEventParamKeyMacCharCodes, typeChar, NULL, sizeof(charcode), NULL, &charcode);
+						GetEventParameter(theEvent, kEventParamKeyCode, typeUInt32, NULL, sizeof(keycode), NULL, &keycode);
+						Handle_Key(charcode, keycode, true);
 						break;
 
 					case kEventRawKeyRepeat:
 						break;
 
 					case kEventRawKeyUp:
-						GetEventParameter(theEvent, kEventParamKeyMacCharCodes, typeChar, NULL, sizeof(keycode), NULL, &keycode);
-						Handle_Key(keycode, false);
+						GetEventParameter(theEvent, kEventParamKeyMacCharCodes, typeChar, NULL, sizeof(charcode), NULL, &charcode);
+						GetEventParameter(theEvent, kEventParamKeyCode, typeUInt32, NULL, sizeof(keycode), NULL, &keycode);
+						Handle_Key(charcode, keycode, false);
 						break;
 
 					case kEventRawKeyModifiersChanged:
