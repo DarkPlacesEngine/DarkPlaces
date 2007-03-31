@@ -2001,9 +2001,6 @@ static void SV_Physics_Entity (prvm_edict_t *ent)
 
 void SV_Physics_ClientEntity (prvm_edict_t *ent)
 {
-	// LordHavoc: clear fixangle here rather than on send, because input is
-	// not always received every frame from predicted clients
-	ent->fields.server->fixangle = 0;
 	SV_ApplyClientMove();
 	// make sure the velocity is sane (not a NaN)
 	SV_CheckVelocity(ent);
@@ -2094,6 +2091,17 @@ void SV_Physics_ClientEntity (prvm_edict_t *ent)
 	prog->globals.server->time = sv.time;
 	prog->globals.server->self = PRVM_EDICT_TO_PROG(ent);
 	PRVM_ExecuteProgram (prog->globals.server->PlayerPostThink, "QC function PlayerPostThink is missing");
+
+	if(ent->fields.server->fixangle)
+	{
+		// angle fixing was requested by physics code...
+		// so store the current angles for later use
+		memcpy(host_client->fixangle_angles, ent->fields.server->angles, sizeof(host_client->fixangle_angles));
+		host_client->fixangle_angles_set = TRUE;
+
+		// and clear fixangle for the next frame
+		ent->fields.server->fixangle = 0;
+	}
 }
 
 /*

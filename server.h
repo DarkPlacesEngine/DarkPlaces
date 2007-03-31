@@ -198,6 +198,10 @@ typedef struct client_s
 	int download_expectedposition; // next position the client should ack
 	qboolean download_started;
 	char download_name[MAX_QPATH];
+
+	// fixangle data
+	qboolean fixangle_angles_set;
+	vec3_t fixangle_angles;
 } client_t;
 
 
