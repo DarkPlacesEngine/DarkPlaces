@@ -58,6 +58,8 @@ int gl_support_shading_language_100 = false;
 int gl_support_vertex_shader = false;
 // GL_ARB_fragment_shader
 int gl_support_fragment_shader = false;
+//GL_ARB_vertex_buffer_object
+int gl_support_arb_vertex_buffer_object;
 
 // LordHavoc: if window is hidden, don't update screen
 qboolean vid_hidden = true;
@@ -347,6 +349,16 @@ GLint (GLAPIENTRY *qglGetAttribLocationARB)(GLhandleARB programObj, const GLchar
 //void (GLAPIENTRY *qglGetVertexAttribfvARB)(GLuint index, GLenum pname, GLfloat *params);
 //void (GLAPIENTRY *qglGetVertexAttribivARB)(GLuint index, GLenum pname, GLint *params);
 //void (GLAPIENTRY *qglGetVertexAttribPointervARB)(GLuint index, GLenum pname, GLvoid **pointer);
+
+//GL_ARB_vertex_buffer_object
+void (GLAPIENTRY *qglBindBufferARB) (GLenum target, GLuint buffer);
+void (GLAPIENTRY *qglDeleteBuffersARB) (GLsizei n, const GLuint *buffers);
+void (GLAPIENTRY *qglGenBuffersARB) (GLsizei n, GLuint *buffers);
+GLboolean (GLAPIENTRY *qglIsBufferARB) (GLuint buffer);
+GLvoid* (GLAPIENTRY *qglMapBufferARB) (GLenum target, GLenum access);
+GLboolean (GLAPIENTRY *qglUnmapBufferARB) (GLenum target);
+void (GLAPIENTRY *qglBufferDataARB) (GLenum target, GLsizeiptrARB size, const GLvoid *data, GLenum usage);
+void (GLAPIENTRY *qglBufferSubDataARB) (GLenum target, GLintptrARB offset, GLsizeiptrARB size, const GLvoid *data);
 
 int GL_CheckExtension(const char *name, const dllfunction_t *funcs, const char *disableparm, int silent)
 {
@@ -645,6 +657,18 @@ static dllfunction_t vertexshaderfuncs[] =
 	{NULL, NULL}
 };
 
+static dllfunction_t vbofuncs[] =
+{
+	{"glBindBufferARB"    , (void **) &qglBindBufferARB},
+	{"glDeleteBuffersARB" , (void **) &qglDeleteBuffersARB},
+	{"glGenBuffersARB"    , (void **) &qglGenBuffersARB},
+	{"glIsBufferARB"      , (void **) &qglIsBufferARB},
+	{"glMapBufferARB"     , (void **) &qglMapBufferARB},
+	{"glUnmapBufferARB"   , (void **) &qglUnmapBufferARB},
+	{"glBufferDataARB"    , (void **) &qglBufferDataARB},
+	{"glBufferSubDataARB" , (void **) &qglBufferSubDataARB},
+	{NULL, NULL}
+};
 
 void VID_CheckExtensions(void)
 {
@@ -673,6 +697,7 @@ void VID_CheckExtensions(void)
 	gl_support_shading_language_100 = false;
 	gl_support_vertex_shader = false;
 	gl_support_fragment_shader = false;
+	gl_support_arb_vertex_buffer_object = false;
 
 	if (!GL_CheckExtension("OpenGL 1.1.0", opengl110funcs, NULL, false))
 		Sys_Error("OpenGL 1.1.0 functions not found");
@@ -734,6 +759,9 @@ void VID_CheckExtensions(void)
 		gl_support_separatestencil = GL_CheckExtension("GL_ATI_separate_stencil", atiseparatestencilfuncs, "-noseparatestencil", false);
 // COMMANDLINEOPTION: GL: -nostenciltwoside disables GL_EXT_stencil_two_side (which accelerate shadow rendering)
 	gl_support_stenciltwoside = GL_CheckExtension("GL_EXT_stencil_two_side", stenciltwosidefuncs, "-nostenciltwoside", false);
+
+// COMMANDLINEOPTION: GL: -novbo disables GL_ARB_vertex_buffer_object (which accelerates rendering)
+	gl_support_arb_vertex_buffer_object = GL_CheckExtension("GL_ARB_vertex_buffer_object", vbofuncs, "-novbo", false);
 
 	// we don't care if it's an extension or not, they are identical functions, so keep it simple in the rendering code
 	if (qglDrawRangeElements == NULL)
