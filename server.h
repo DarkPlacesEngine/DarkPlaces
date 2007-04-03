@@ -362,6 +362,7 @@ void SV_BroadcastPrint(const char *msg);
 void SV_BroadcastPrintf(const char *fmt, ...) DP_FUNC_PRINTF(1);
 
 void SV_Physics (void);
+void SV_Physics_ClientMove (void);
 void SV_Physics_ClientEntity (prvm_edict_t *ent);
 
 qboolean SV_PlayerCheckGround (prvm_edict_t *ent);

@@ -1999,20 +1999,26 @@ static void SV_Physics_Entity (prvm_edict_t *ent)
 	}
 }
 
-void SV_Physics_ClientEntity (prvm_edict_t *ent)
+void SV_Physics_ClientMove(void)
 {
-	SV_ApplyClientMove();
-	// make sure the velocity is sane (not a NaN)
-	SV_CheckVelocity(ent);
-	// LordHavoc: QuakeC replacement for SV_ClientThink (player movement)
-	if (prog->funcoffsets.SV_PlayerPhysics && sv_playerphysicsqc.integer)
+	prvm_edict_t *ent;
+	ent = host_client->edict;
+	SV_ClientThink();
+	if (!SV_CheckWater (ent) && ! ((int)ent->fields.server->flags & FL_WATERJUMP) )
+		SV_AddGravity (ent);
+	SV_CheckStuck (ent);
+	SV_WalkMove (ent);
+}
+
+void SV_Physics_ClientEntity(prvm_edict_t *ent)
+{
+	// don't do physics on disconnected clients, FrikBot relies on this
+	if (!host_client->spawned)
 	{
-		prog->globals.server->time = sv.time;
-		prog->globals.server->self = PRVM_EDICT_TO_PROG(ent);
-		PRVM_ExecuteProgram (prog->funcoffsets.SV_PlayerPhysics, "QC function SV_PlayerPhysics is missing");
+		memset(&host_client->cmd, 0, sizeof(host_client->cmd));
+		return;
 	}
-	else
-		SV_ClientThink ();
+
 	// make sure the velocity is sane (not a NaN)
 	SV_CheckVelocity(ent);
 	// LordHavoc: a hack to ensure that the (rather silly) id1 quakec
@@ -2042,44 +2048,42 @@ void SV_Physics_ClientEntity (prvm_edict_t *ent)
 		SV_Physics_Follow (ent);
 		break;
 	case MOVETYPE_NOCLIP:
-		if (SV_RunThink(ent))
-		{
-			SV_CheckWater(ent);
-			VectorMA(ent->fields.server->origin, sv.frametime, ent->fields.server->velocity, ent->fields.server->origin);
-			VectorMA(ent->fields.server->angles, sv.frametime, ent->fields.server->avelocity, ent->fields.server->angles);
-		}
+		SV_RunThink(ent);
+		SV_CheckWater(ent);
+		VectorMA(ent->fields.server->origin, sv.frametime, ent->fields.server->velocity, ent->fields.server->origin);
+		VectorMA(ent->fields.server->angles, sv.frametime, ent->fields.server->avelocity, ent->fields.server->angles);
 		break;
 	case MOVETYPE_STEP:
 		SV_Physics_Step (ent);
 		break;
 	case MOVETYPE_WALK:
-		if (SV_RunThink (ent))
-		{
-			if (!SV_CheckWater (ent) && ! ((int)ent->fields.server->flags & FL_WATERJUMP) )
-				SV_AddGravity (ent);
-			SV_CheckStuck (ent);
-			SV_WalkMove (ent);
-		}
+		SV_RunThink (ent);
+		// don't run physics here if running asynchronously
+		if (host_client->clmovement_skipphysicsframes <= 0)
+			SV_Physics_ClientMove();
 		break;
 	case MOVETYPE_TOSS:
 	case MOVETYPE_BOUNCE:
 	case MOVETYPE_BOUNCEMISSILE:
 	case MOVETYPE_FLYMISSILE:
 		// regular thinking
-		if (SV_RunThink (ent))
-			SV_Physics_Toss (ent);
+		SV_RunThink (ent);
+		SV_Physics_Toss (ent);
 		break;
 	case MOVETYPE_FLY:
-		if (SV_RunThink (ent))
-		{
-			SV_CheckWater (ent);
-			SV_WalkMove (ent);
-		}
+		SV_RunThink (ent);
+		SV_CheckWater (ent);
+		SV_WalkMove (ent);
 		break;
 	default:
 		Con_Printf ("SV_Physics_ClientEntity: bad movetype %i\n", (int)ent->fields.server->movetype);
 		break;
 	}
+
+	// decrement the countdown variable used to decide when to go back to
+	// synchronous physics
+	if (host_client->clmovement_skipphysicsframes > 0)
+		host_client->clmovement_skipphysicsframes--;
 
 	SV_CheckVelocity (ent);
 
@@ -2134,19 +2138,8 @@ void SV_Physics (void)
 
 	// run physics on the client entities
 	for (i = 1, ent = PRVM_EDICT_NUM(i), host_client = svs.clients;i <= svs.maxclients;i++, ent = PRVM_NEXT_EDICT(ent), host_client++)
-	{
 		if (!ent->priv.server->free)
-		{
-			// don't do physics on disconnected clients, FrikBot relies on this
-			if (!host_client->spawned)
-				memset(&host_client->cmd, 0, sizeof(host_client->cmd));
-			// don't run physics here if running asynchronously
-			else if (host_client->clmovement_skipphysicsframes > 0)
-				host_client->clmovement_skipphysicsframes--;
-			else
 				SV_Physics_ClientEntity(ent);
-		}
-	}
 
 	// run physics on all the non-client entities
 	if (!sv_freezenonclients.integer)
