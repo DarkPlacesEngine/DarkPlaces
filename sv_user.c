@@ -615,8 +615,10 @@ void SV_ExecuteClientMoves(void)
 				if (sv.frametime > 0.05)
 				{
 					prog->globals.server->frametime = sv.frametime = moveframetime * 0.5f;
+					SV_ClientThink();
 					SV_Physics_ClientMove();
 				}
+				SV_ClientThink();
 				SV_Physics_ClientMove();
 				sv.frametime = oldframetime2;
 				prog->globals.server->frametime = oldframetime;

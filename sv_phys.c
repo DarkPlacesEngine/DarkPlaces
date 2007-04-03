@@ -2003,7 +2003,6 @@ void SV_Physics_ClientMove(void)
 {
 	prvm_edict_t *ent;
 	ent = host_client->edict;
-	SV_ClientThink();
 	if (!SV_CheckWater (ent) && ! ((int)ent->fields.server->flags & FL_WATERJUMP) )
 		SV_AddGravity (ent);
 	SV_CheckStuck (ent);
@@ -2018,6 +2017,8 @@ void SV_Physics_ClientEntity(prvm_edict_t *ent)
 		memset(&host_client->cmd, 0, sizeof(host_client->cmd));
 		return;
 	}
+
+	SV_ClientThink();
 
 	// make sure the velocity is sane (not a NaN)
 	SV_CheckVelocity(ent);
