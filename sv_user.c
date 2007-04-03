@@ -379,9 +379,24 @@ the move fields specify an intended velocity in pix/sec
 the angle fields specify an exact angular motion in degrees
 ===================
 */
+extern cvar_t sv_playerphysicsqc;
 void SV_ClientThink (void)
 {
 	vec3_t v_angle;
+
+	SV_ApplyClientMove();
+	// make sure the velocity is sane (not a NaN)
+	SV_CheckVelocity(host_client->edict);
+
+	// LordHavoc: QuakeC replacement for SV_ClientThink (player movement)
+	if (prog->funcoffsets.SV_PlayerPhysics && sv_playerphysicsqc.integer)
+	{
+		prog->globals.server->time = sv.time;
+		prog->globals.server->self = PRVM_EDICT_TO_PROG(host_client->edict);
+		PRVM_ExecuteProgram (prog->funcoffsets.SV_PlayerPhysics, "QC function SV_PlayerPhysics is missing");
+		SV_CheckVelocity(host_client->edict);
+		return;
+	}
 
 	if (host_client->edict->fields.server->movetype == MOVETYPE_NONE)
 		return;
@@ -409,6 +424,7 @@ void SV_ClientThink (void)
 	if ( (int)host_client->edict->fields.server->flags & FL_WATERJUMP )
 	{
 		SV_WaterJump ();
+		SV_CheckVelocity(host_client->edict);
 		return;
 	}
 
@@ -426,10 +442,12 @@ void SV_ClientThink (void)
 	if ((host_client->edict->fields.server->waterlevel >= 2) && (host_client->edict->fields.server->movetype != MOVETYPE_NOCLIP))
 	{
 		SV_WaterMove ();
+		SV_CheckVelocity(host_client->edict);
 		return;
 	}
 
 	SV_AirMove ();
+	SV_CheckVelocity(host_client->edict);
 }
 
 /*
@@ -597,9 +615,9 @@ void SV_ExecuteClientMoves(void)
 				if (sv.frametime > 0.05)
 				{
 					prog->globals.server->frametime = sv.frametime = moveframetime * 0.5f;
-					SV_Physics_ClientEntity(host_client->edict);
+					SV_Physics_ClientMove();
 				}
-				SV_Physics_ClientEntity(host_client->edict);
+				SV_Physics_ClientMove();
 				sv.frametime = oldframetime2;
 				prog->globals.server->frametime = oldframetime;
 				host_client->clmovement_skipphysicsframes = sv_clmovement_waitforinput.integer;
