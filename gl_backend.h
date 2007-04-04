@@ -56,6 +56,8 @@ typedef struct rmeshstate_s
 	// pointers
 	const float *pointer_texcoord[MAX_TEXTUREUNITS]; // 2D
 	const float *pointer_texcoord3f[MAX_TEXTUREUNITS]; // 3D
+	int pointer_texcoord_bufferobject[MAX_TEXTUREUNITS]; // 2D and 3D
+	size_t pointer_texcoord_bufferoffset[MAX_TEXTUREUNITS]; // 2D and 3D
 }
 rmeshstate_t;
 
