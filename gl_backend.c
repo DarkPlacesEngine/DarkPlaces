@@ -14,6 +14,7 @@ cvar_t gl_polyblend = {CVAR_SAVE, "gl_polyblend", "1", "tints view while underwa
 cvar_t gl_dither = {CVAR_SAVE, "gl_dither", "1", "enables OpenGL dithering (16bit looks bad with this off)"};
 cvar_t gl_lockarrays = {0, "gl_lockarrays", "0", "enables use of glLockArraysEXT, may cause glitches with some broken drivers, and may be slower than normal"};
 cvar_t gl_lockarrays_minimumvertices = {0, "gl_lockarrays_minimumvertices", "1", "minimum number of vertices required for use of glLockArraysEXT, setting this too low may reduce performance"};
+cvar_t gl_vbo = {0, "gl_vbo", "1", "make use of GL_ARB_vertex_buffer_object extension to store static geometry in video memory for faster rendering"};
 
 int gl_maxdrawrangeelementsvertices;
 int gl_maxdrawrangeelementsindices;
@@ -229,6 +230,7 @@ void gl_backend_init(void)
 	Cvar_RegisterVariable(&gl_dither);
 	Cvar_RegisterVariable(&gl_lockarrays);
 	Cvar_RegisterVariable(&gl_lockarrays_minimumvertices);
+	Cvar_RegisterVariable(&gl_vbo);
 	Cvar_RegisterVariable(&gl_paranoid);
 	Cvar_RegisterVariable(&gl_printcheckerror);
 #ifdef NORENDER
@@ -872,9 +874,11 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int numtriangles, const int *
 	unsigned int numelements = numtriangles * 3;
 	if (numvertices < 3 || numtriangles < 1)
 	{
-		Con_Printf("R_Mesh_Draw(%d, %d, %d, %8p);\n", firstvertex, numvertices, numtriangles, elements);
+		Con_Printf("R_Mesh_Draw(%d, %d, %d, %8p, %i, %p);\n", firstvertex, numvertices, numtriangles, elements, bufferobject, (void *)bufferoffset);
 		return;
 	}
+	if (!gl_vbo.integer)
+		bufferobject = 0;
 	CHECKGLERROR
 	r_refdef.stats.meshes++;
 	r_refdef.stats.meshes_elements += numelements;
@@ -1084,6 +1088,8 @@ void R_Mesh_Finish(void)
 int R_Mesh_CreateStaticEBO(void *data, size_t size)
 {
 	GLuint bufferobject;
+	if (!gl_vbo.integer)
+		return 0;
 	qglGenBuffersARB(1, &bufferobject);
 	GL_BindEBO(bufferobject);
 	qglBufferDataARB(GL_ELEMENT_ARRAY_BUFFER_ARB, size, data, GL_STATIC_DRAW_ARB);
@@ -1098,6 +1104,8 @@ void R_Mesh_DestroyEBO(int bufferobject)
 int R_Mesh_CreateStaticVBO(void *data, size_t size)
 {
 	GLuint bufferobject;
+	if (!gl_vbo.integer)
+		return 0;
 	qglGenBuffersARB(1, &bufferobject);
 	GL_BindVBO(bufferobject);
 	qglBufferDataARB(GL_ARRAY_BUFFER_ARB, size, data, GL_STATIC_DRAW_ARB);
@@ -1124,6 +1132,8 @@ void R_Mesh_Matrix(const matrix4x4_t *matrix)
 
 void R_Mesh_VertexPointer(const float *vertex3f, int bufferobject, size_t bufferoffset)
 {
+	if (!gl_vbo.integer)
+		bufferobject = 0;
 	if (gl_state.pointer_vertex != vertex3f || gl_state.pointer_vertex_buffer != bufferobject || gl_state.pointer_vertex_offset != bufferoffset)
 	{
 		gl_state.pointer_vertex = vertex3f;
@@ -1137,8 +1147,13 @@ void R_Mesh_VertexPointer(const float *vertex3f, int bufferobject, size_t buffer
 
 void R_Mesh_ColorPointer(const float *color4f, int bufferobject, size_t bufferoffset)
 {
-	if (color4f || bufferobject)
+	// note: this can not rely on bufferobject to decide whether a color array
+	// is supplied, because surfmesh_t shares one vbo for all arrays, which
+	// means that a valid vbo may be supplied even if there is no color array.
+	if (color4f)
 	{
+		if (!gl_vbo.integer)
+			bufferobject = 0;
 		// caller wants color array enabled
 		if (!gl_state.pointer_color_enabled)
 		{
@@ -1175,8 +1190,12 @@ void R_Mesh_TexCoordPointer(unsigned int unitnum, unsigned int numcomponents, co
 	gltextureunit_t *unit = gl_state.units + unitnum;
 	// update array settings
 	CHECKGLERROR
-	if (texcoord || bufferobject)
+	// note: there is no need to check bufferobject here because all cases
+	// that involve a valid bufferobject also supply a texcoord array
+	if (texcoord)
 	{
+		if (!gl_vbo.integer)
+			bufferobject = 0;
 		// texture array unit is enabled, enable the array
 		if (!unit->arrayenabled)
 		{
@@ -1708,9 +1727,9 @@ void R_Mesh_TextureState(const rmeshstate_t *m)
 	for (i = 0;i < backendarrayunits;i++)
 	{
 		if (m->pointer_texcoord3f[i])
-			R_Mesh_TexCoordPointer(i, 3, m->pointer_texcoord3f[i], 0, 0);
+			R_Mesh_TexCoordPointer(i, 3, m->pointer_texcoord3f[i], m->pointer_texcoord_bufferobject[i], m->pointer_texcoord_bufferoffset[i]);
 		else
-			R_Mesh_TexCoordPointer(i, 2, m->pointer_texcoord[i], 0, 0);
+			R_Mesh_TexCoordPointer(i, 2, m->pointer_texcoord[i], m->pointer_texcoord_bufferobject[i], m->pointer_texcoord_bufferoffset[i]);
 	}
 	for (i = 0;i < backendunits;i++)
 	{
