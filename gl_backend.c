@@ -330,10 +330,12 @@ void GL_SetupView_Mode_Ortho (double x1, double y1, double x2, double y2, double
 
 typedef struct gltextureunit_s
 {
+	const void *pointer_texcoord;
+	size_t pointer_texcoord_offset;
+	int pointer_texcoord_buffer;
 	int t1d, t2d, t3d, tcubemap;
 	int arrayenabled;
 	unsigned int arraycomponents;
-	const void *pointer_texcoord;
 	int rgbscale, alphascale;
 	int combinergb, combinealpha;
 	// FIXME: add more combine stuff
@@ -361,10 +363,39 @@ static struct gl_state_s
 	float color4f[4];
 	int lockrange_first;
 	int lockrange_count;
+	int vertexbufferobject;
+	int elementbufferobject;
+	qboolean pointer_color_enabled;
 	const void *pointer_vertex;
 	const void *pointer_color;
+	size_t pointer_vertex_offset;
+	size_t pointer_color_offset;
+	int pointer_vertex_buffer;
+	int pointer_color_buffer;
 }
 gl_state;
+
+static void GL_BindVBO(int bufferobject)
+{
+	if (gl_state.vertexbufferobject != bufferobject)
+	{
+		gl_state.vertexbufferobject = bufferobject;
+		CHECKGLERROR
+		qglBindBufferARB(GL_ARRAY_BUFFER_ARB, bufferobject);
+		CHECKGLERROR
+	}
+}
+
+static void GL_BindEBO(int bufferobject)
+{
+	if (gl_state.elementbufferobject != bufferobject)
+	{
+		gl_state.elementbufferobject = bufferobject;
+		CHECKGLERROR
+		qglBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, bufferobject);
+		CHECKGLERROR
+	}
+}
 
 void GL_SetupTextureState(void)
 {
@@ -383,6 +414,8 @@ void GL_SetupTextureState(void)
 		unit->arrayenabled = false;
 		unit->arraycomponents = 0;
 		unit->pointer_texcoord = NULL;
+		unit->pointer_texcoord_buffer = 0;
+		unit->pointer_texcoord_offset = 0;
 		unit->rgbscale = 1;
 		unit->alphascale = 1;
 		unit->combinergb = GL_MODULATE;
@@ -409,6 +442,7 @@ void GL_SetupTextureState(void)
 	for (i = 0;i < backendarrayunits;i++)
 	{
 		GL_ClientActiveTexture(i);
+		GL_BindVBO(0);
 		qglTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), NULL);CHECKGLERROR
 		qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 	}
@@ -471,8 +505,6 @@ void GL_Backend_ResetState(void)
 	gl_state.color4f[0] = gl_state.color4f[1] = gl_state.color4f[2] = gl_state.color4f[3] = 1;
 	gl_state.lockrange_first = 0;
 	gl_state.lockrange_count = 0;
-	gl_state.pointer_vertex = NULL;
-	gl_state.pointer_color = NULL;
 	gl_state.cullface = GL_FRONT; // quake is backwards, this culls back faces
 	gl_state.cullfaceenable = true;
 
@@ -488,6 +520,12 @@ void GL_Backend_ResetState(void)
 	qglDepthFunc(GL_LEQUAL);CHECKGLERROR
 	qglEnable(GL_DEPTH_TEST);CHECKGLERROR
 	qglDepthMask(gl_state.depthmask);CHECKGLERROR
+
+	if (gl_support_arb_vertex_buffer_object)
+	{
+		qglBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
+		qglBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
+	}
 
 	qglVertexPointer(3, GL_FLOAT, sizeof(float[3]), NULL);CHECKGLERROR
 	qglEnableClientState(GL_VERTEX_ARRAY);CHECKGLERROR
@@ -647,7 +685,7 @@ void GL_ColorMask(int r, int g, int b, int a)
 
 void GL_Color(float cr, float cg, float cb, float ca)
 {
-	if (gl_state.pointer_color || gl_state.color4f[0] != cr || gl_state.color4f[1] != cg || gl_state.color4f[2] != cb || gl_state.color4f[3] != ca)
+	if (gl_state.pointer_color_enabled || gl_state.color4f[0] != cr || gl_state.color4f[1] != cg || gl_state.color4f[2] != cb || gl_state.color4f[3] != ca)
 	{
 		gl_state.color4f[0] = cr;
 		gl_state.color4f[1] = cg;
@@ -831,6 +869,8 @@ void GL_Backend_RenumberElements(int *out, int count, const int *in, int offset)
 int paranoidblah = 0;
 void R_Mesh_Draw(int firstvertex, int numvertices, int numtriangles, const int *elements)
 {
+	int bufferobject = 0;
+	size_t offset = 0;
 	unsigned int numelements = numtriangles * 3;
 	if (numvertices < 3 || numtriangles < 1)
 	{
@@ -844,18 +884,25 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int numtriangles, const int *
 	{
 		unsigned int i, j, size;
 		const int *p;
+		// note: there's no validation done here on buffer objects because it
+		// is somewhat difficult to get at the data, and gl_paranoid can be
+		// used without buffer objects if the need arises
+		// (the data could be gotten using glMapBuffer but it would be very
+		//  slow due to uncachable video memory reads)
 		if (!qglIsEnabled(GL_VERTEX_ARRAY))
 			Con_Print("R_Mesh_Draw: vertex array not enabled\n");
 		CHECKGLERROR
-		for (j = 0, size = numvertices * 3, p = (int *)((float *)gl_state.pointer_vertex + firstvertex * 3);j < size;j++, p++)
-			paranoidblah += *p;
-		if (gl_state.pointer_color)
+		if (gl_state.pointer_vertex)
+			for (j = 0, size = numvertices * 3, p = (int *)((float *)gl_state.pointer_vertex + firstvertex * 3);j < size;j++, p++)
+				paranoidblah += *p;
+		if (gl_state.pointer_color_enabled)
 		{
 			if (!qglIsEnabled(GL_COLOR_ARRAY))
 				Con_Print("R_Mesh_Draw: color array set but not enabled\n");
 			CHECKGLERROR
-			for (j = 0, size = numvertices * 4, p = (int *)((float *)gl_state.pointer_color + firstvertex * 4);j < size;j++, p++)
-				paranoidblah += *p;
+			if (gl_state.pointer_color && gl_state.pointer_color_enabled)
+				for (j = 0, size = numvertices * 4, p = (int *)((float *)gl_state.pointer_color + firstvertex * 4);j < size;j++, p++)
+					paranoidblah += *p;
 		}
 		for (i = 0;i < backendarrayunits;i++)
 		{
@@ -865,8 +912,9 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int numtriangles, const int *
 				if (!qglIsEnabled(GL_TEXTURE_COORD_ARRAY))
 					Con_Print("R_Mesh_Draw: texcoord array set but not enabled\n");
 				CHECKGLERROR
-				for (j = 0, size = numvertices * gl_state.units[i].arraycomponents, p = (int *)((float *)gl_state.units[i].pointer_texcoord + firstvertex * gl_state.units[i].arraycomponents);j < size;j++, p++)
-					paranoidblah += *p;
+				if (gl_state.units[i].pointer_texcoord && gl_state.units[i].arrayenabled)
+					for (j = 0, size = numvertices * gl_state.units[i].arraycomponents, p = (int *)((float *)gl_state.units[i].pointer_texcoord + firstvertex * gl_state.units[i].arraycomponents);j < size;j++, p++)
+						paranoidblah += *p;
 			}
 		}
 		for (i = 0;i < (unsigned int) numtriangles * 3;i++)
@@ -891,7 +939,7 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int numtriangles, const int *
 			{
 				for (j = 0;j < backendarrayunits;j++)
 				{
-					if (gl_state.units[j].pointer_texcoord)
+					if (gl_state.units[j].pointer_texcoord && gl_state.units[j].arrayenabled)
 					{
 						if (backendarrayunits > 1)
 						{
@@ -941,7 +989,7 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int numtriangles, const int *
 						}
 					}
 				}
-				if (gl_state.pointer_color)
+				if (gl_state.pointer_color && gl_state.pointer_color_enabled)
 				{
 					p = ((const GLfloat *)(gl_state.pointer_color)) + elements[i] * 4;
 					qglColor4f(p[0], p[1], p[2], p[3]);
@@ -965,12 +1013,14 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int numtriangles, const int *
 		}
 		else if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
 		{
-			qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices, numelements, GL_UNSIGNED_INT, elements);
+			GL_BindEBO(bufferobject);
+			qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices, numelements, GL_UNSIGNED_INT, bufferobject ? (void *)offset : elements);
 			CHECKGLERROR
 		}
 		else
 		{
-			qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, elements);
+			GL_BindEBO(bufferobject);
+			qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, bufferobject ? (void *)offset : elements);
 			CHECKGLERROR
 		}
 	}
@@ -1048,56 +1098,82 @@ void R_Mesh_Matrix(const matrix4x4_t *matrix)
 
 void R_Mesh_VertexPointer(const float *vertex3f)
 {
-	if (gl_state.pointer_vertex != vertex3f)
+	int bufferobject = 0;
+	size_t offset = 0;
+	if (gl_state.pointer_vertex != vertex3f || gl_state.pointer_vertex_buffer != bufferobject || gl_state.pointer_vertex_offset != offset)
 	{
 		gl_state.pointer_vertex = vertex3f;
+		gl_state.pointer_vertex_buffer = bufferobject;
+		gl_state.pointer_vertex_offset = offset;
 		CHECKGLERROR
-		qglVertexPointer(3, GL_FLOAT, sizeof(float[3]), gl_state.pointer_vertex);
-		CHECKGLERROR
+		GL_BindVBO(bufferobject);
+		qglVertexPointer(3, GL_FLOAT, sizeof(float[3]), bufferobject ? (void *)offset : vertex3f);CHECKGLERROR
 	}
 }
 
 void R_Mesh_ColorPointer(const float *color4f)
 {
-	if (gl_state.pointer_color != color4f)
+	int bufferobject = 0;
+	size_t offset = 0;
+	if (color4f || bufferobject)
 	{
-		CHECKGLERROR
-		if (!gl_state.pointer_color)
+		// caller wants color array enabled
+		if (!gl_state.pointer_color_enabled)
 		{
+			gl_state.pointer_color_enabled = true;
+			CHECKGLERROR
 			qglEnableClientState(GL_COLOR_ARRAY);CHECKGLERROR
 		}
-		else if (!color4f)
+		if (gl_state.pointer_color != color4f || gl_state.pointer_color_buffer != bufferobject || gl_state.pointer_color_offset != offset)
 		{
+			gl_state.pointer_color = color4f;
+			gl_state.pointer_color_buffer = bufferobject;
+			gl_state.pointer_color_offset = offset;
+			CHECKGLERROR
+			GL_BindVBO(bufferobject);
+			qglColorPointer(4, GL_FLOAT, sizeof(float[4]), bufferobject ? (void *)offset : color4f);CHECKGLERROR
+		}
+	}
+	else
+	{
+		// caller wants color array disabled
+		if (gl_state.pointer_color_enabled)
+		{
+			gl_state.pointer_color_enabled = false;
+			CHECKGLERROR
 			qglDisableClientState(GL_COLOR_ARRAY);CHECKGLERROR
 			// when color array is on the glColor gets trashed, set it again
 			qglColor4f(gl_state.color4f[0], gl_state.color4f[1], gl_state.color4f[2], gl_state.color4f[3]);CHECKGLERROR
 		}
-		gl_state.pointer_color = color4f;
-		qglColorPointer(4, GL_FLOAT, sizeof(float[4]), gl_state.pointer_color);CHECKGLERROR
 	}
 }
 
 void R_Mesh_TexCoordPointer(unsigned int unitnum, unsigned int numcomponents, const float *texcoord)
 {
+	int bufferobject = 0;
+	size_t offset;
 	gltextureunit_t *unit = gl_state.units + unitnum;
 	// update array settings
 	CHECKGLERROR
-	if (texcoord)
+	if (texcoord || bufferobject)
 	{
-		// texcoord array
-		if (unit->pointer_texcoord != texcoord || unit->arraycomponents != numcomponents)
-		{
-			unit->pointer_texcoord = texcoord;
-			unit->arraycomponents = numcomponents;
-			GL_ClientActiveTexture(unitnum);
-			qglTexCoordPointer(unit->arraycomponents, GL_FLOAT, sizeof(float) * unit->arraycomponents, unit->pointer_texcoord);CHECKGLERROR
-		}
 		// texture array unit is enabled, enable the array
 		if (!unit->arrayenabled)
 		{
 			unit->arrayenabled = true;
 			GL_ClientActiveTexture(unitnum);
 			qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
+		}
+		// texcoord array
+		if (unit->pointer_texcoord != texcoord || unit->pointer_texcoord_buffer != bufferobject || unit->pointer_texcoord_offset != offset || unit->arraycomponents != numcomponents)
+		{
+			unit->pointer_texcoord = texcoord;
+			unit->pointer_texcoord_buffer = bufferobject;
+			unit->pointer_texcoord_offset = offset;
+			unit->arraycomponents = numcomponents;
+			GL_ClientActiveTexture(unitnum);
+			GL_BindVBO(bufferobject);
+			qglTexCoordPointer(unit->arraycomponents, GL_FLOAT, sizeof(float) * unit->arraycomponents, bufferobject ? (void *)offset : texcoord);CHECKGLERROR
 		}
 	}
 	else
