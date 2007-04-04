@@ -969,7 +969,7 @@ static void R_Q1BSP_DrawLight_TransparentCallback(const entity_render_t *ent, co
 			if (t != surface->texture)
 				break;
 			RSurf_PrepareVerticesForBatch(true, true, 1, &surface);
-			R_Shadow_RenderLighting(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, ent->model->surfmesh.data_element3i + surface->num_firsttriangle * 3);
+			R_Shadow_RenderLighting(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, ent->model->surfmesh.data_element3i + surface->num_firsttriangle * 3, ent->model->surfmesh.ebo, (sizeof(int[3]) * surface->num_firsttriangle));
 		}
 	}
 	R_Shadow_RenderMode_End();
@@ -982,6 +982,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 	model_t *model = ent->model;
 	msurface_t *surface;
 	int i, k, l, m, mend, endsurface, batchnumsurfaces, batchnumtriangles, batchfirstvertex, batchlastvertex;
+	qboolean usebufferobject;
 	const int *element3i;
 	msurface_t *batchsurfacelist[RSURF_MAX_BATCHSURFACES];
 	int batchelements[BATCHSIZE*3];
@@ -1034,6 +1035,8 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 				}
 				else
 				{
+					// use the bufferobject if all triangles are accepted
+					usebufferobject = true;
 					batchnumtriangles = 0;
 					// note: this only accepts consecutive surfaces because
 					// non-consecutive surfaces often have extreme vertex
@@ -1050,12 +1053,18 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 								if (trispvs)
 								{
 									if (!CHECKPVSBIT(trispvs, m))
+									{
+										usebufferobject = false;
 										continue;
+									}
 								}
 								else
 								{
 									if (r_shadow_frontsidecasting.integer && !PointInfrontOfTriangle(r_shadow_entitylightorigin, rsurface_vertex3f + element3i[m*3+0]*3, rsurface_vertex3f + element3i[m*3+1]*3, rsurface_vertex3f + element3i[m*3+2]*3))
+									{
+										usebufferobject = false;
 										continue;
+									}
 								}
 							}
 							batchelements[batchnumtriangles*3+0] = element3i[m*3+0];
@@ -1066,8 +1075,9 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 							if (batchnumtriangles >= BATCHSIZE)
 							{
 								Mod_VertexRangeFromElements(batchnumtriangles*3, batchelements, &batchfirstvertex, &batchlastvertex);
-								R_Shadow_RenderLighting(batchfirstvertex, batchlastvertex + 1 - batchfirstvertex, batchnumtriangles, batchelements);
+								R_Shadow_RenderLighting(batchfirstvertex, batchlastvertex + 1 - batchfirstvertex, batchnumtriangles, batchelements, 0, 0);
 								batchnumtriangles = 0;
+								usebufferobject = false;
 							}
 						}
 						r_refdef.stats.lights_lighttriangles += batchsurfacelist[l]->num_triangles;
@@ -1075,7 +1085,10 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 					if (batchnumtriangles > 0)
 					{
 						Mod_VertexRangeFromElements(batchnumtriangles*3, batchelements, &batchfirstvertex, &batchlastvertex);
-						R_Shadow_RenderLighting(batchfirstvertex, batchlastvertex + 1 - batchfirstvertex, batchnumtriangles, batchelements);
+						if (usebufferobject)
+							R_Shadow_RenderLighting(batchfirstvertex, batchlastvertex + 1 - batchfirstvertex, batchnumtriangles, batchelements, ent->model->surfmesh.ebo, sizeof(int[3]) * batchsurfacelist[k]->num_firsttriangle);
+						else
+							R_Shadow_RenderLighting(batchfirstvertex, batchlastvertex + 1 - batchfirstvertex, batchnumtriangles, batchelements, 0, 0);
 					}
 				}
 			}
