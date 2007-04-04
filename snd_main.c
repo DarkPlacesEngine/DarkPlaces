@@ -1403,17 +1403,20 @@ void S_UpdateAmbientSounds (void)
 
 		// Don't adjust volume too fast
 		// FIXME: this rounds off to an int each frame, meaning there is little to no fade at extremely high framerates!
-		if (chan->master_vol < vol)
+		if (cl.time > cl.oldtime)
 		{
-			chan->master_vol += (int)(cl.realframetime * ambient_fade.value);
-			if (chan->master_vol > vol)
-				chan->master_vol = vol;
-		}
-		else if (chan->master_vol > vol)
-		{
-			chan->master_vol -= (int)(cl.realframetime * ambient_fade.value);
 			if (chan->master_vol < vol)
-				chan->master_vol = vol;
+			{
+				chan->master_vol += (int)((cl.time - cl.oldtime) * ambient_fade.value);
+				if (chan->master_vol > vol)
+					chan->master_vol = vol;
+			}
+			else if (chan->master_vol > vol)
+			{
+				chan->master_vol -= (int)((cl.time - cl.oldtime) * ambient_fade.value);
+				if (chan->master_vol < vol)
+					chan->master_vol = vol;
+			}
 		}
 
 		for (i = 0;i < SND_LISTENERS;i++)
