@@ -594,11 +594,11 @@ void DrawQ_String_Real(float x, float y, const char *string, int maxlen, float w
 
 	GL_Color(red, green, blue, alpha);
 
-	R_Mesh_VertexPointer(vertex3f);
-	R_Mesh_ColorPointer(NULL);
+	R_Mesh_VertexPointer(vertex3f, 0, 0);
+	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
 	R_Mesh_TexBind(0, R_GetTexture(char_texture));
-	R_Mesh_TexCoordPointer(0, 2, texcoord2f);
+	R_Mesh_TexCoordPointer(0, 2, texcoord2f, 0, 0);
 
 	at = texcoord2f;
 	av = vertex3f;
@@ -629,7 +629,7 @@ void DrawQ_String_Real(float x, float y, const char *string, int maxlen, float w
 		if (batchcount >= QUADELEMENTS_MAXQUADS)
 		{
 			GL_LockArrays(0, batchcount * 4);
-			R_Mesh_Draw(0, batchcount * 4, batchcount * 2, quadelements);
+			R_Mesh_Draw(0, batchcount * 4, batchcount * 2, quadelements, 0, 0);
 			GL_LockArrays(0, 0);
 			batchcount = 0;
 			at = texcoord2f;
@@ -639,7 +639,7 @@ void DrawQ_String_Real(float x, float y, const char *string, int maxlen, float w
 	if (batchcount > 0)
 	{
 		GL_LockArrays(0, batchcount * 4);
-		R_Mesh_Draw(0, batchcount * 4, batchcount * 2, quadelements);
+		R_Mesh_Draw(0, batchcount * 4, batchcount * 2, quadelements, 0, 0);
 		GL_LockArrays(0, 0);
 	}
 }
@@ -782,8 +782,8 @@ void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height
 
 	_DrawQ_ProcessDrawFlag(flags);
 
-	R_Mesh_VertexPointer(floats);
-	R_Mesh_ColorPointer(floats + 20);
+	R_Mesh_VertexPointer(floats, 0, 0);
+	R_Mesh_ColorPointer(floats + 20, 0, 0);
 	R_Mesh_ResetTextureState();
 	if (pic)
 	{
@@ -792,7 +792,7 @@ void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height
 		if (height == 0)
 			height = pic->height;
 		R_Mesh_TexBind(0, R_GetTexture(pic->tex));
-		R_Mesh_TexCoordPointer(0, 2, floats + 12);
+		R_Mesh_TexCoordPointer(0, 2, floats + 12, 0, 0);
 		floats[12] = s1;floats[13] = t1;
 		floats[14] = s2;floats[15] = t2;
 		floats[16] = s4;floats[17] = t4;
@@ -809,21 +809,21 @@ void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height
 	floats[28] = r4;floats[29] = g4;floats[30] = b4;floats[31] = a4;
 	floats[32] = r3;floats[33] = g3;floats[34] = b3;floats[35] = a3;
 
-	R_Mesh_Draw(0, 4, 2, polygonelements);
+	R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
 }
 
 void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags)
 {
 	_DrawQ_ProcessDrawFlag(flags);
 
-	R_Mesh_VertexPointer(mesh->data_vertex3f);
-	R_Mesh_ColorPointer(mesh->data_color4f);
+	R_Mesh_VertexPointer(mesh->data_vertex3f, 0, 0);
+	R_Mesh_ColorPointer(mesh->data_color4f, 0, 0);
 	R_Mesh_ResetTextureState();
 	R_Mesh_TexBind(0, R_GetTexture(mesh->texture));
-	R_Mesh_TexCoordPointer(0, 2, mesh->data_texcoord2f);
+	R_Mesh_TexCoordPointer(0, 2, mesh->data_texcoord2f, 0, 0);
 
 	GL_LockArrays(0, mesh->num_vertices);
-	R_Mesh_Draw(0, mesh->num_vertices, mesh->num_triangles, mesh->data_element3i);
+	R_Mesh_Draw(0, mesh->num_vertices, mesh->num_triangles, mesh->data_element3i, 0, 0);
 	GL_LockArrays(0, 0);
 }
 
@@ -892,8 +892,8 @@ void R_DrawGamma(void)
 	if (!vid_usinghwgamma)
 	{
 		// all the blends ignore depth
-		R_Mesh_VertexPointer(blendvertex3f);
-		R_Mesh_ColorPointer(NULL);
+		R_Mesh_VertexPointer(blendvertex3f, 0, 0);
+		R_Mesh_ColorPointer(NULL, 0, 0);
 		R_Mesh_ResetTextureState();
 		GL_DepthMask(true);
 		GL_DepthTest(false);
@@ -911,7 +911,7 @@ void R_DrawGamma(void)
 			while (c[0] >= 1.01f || c[1] >= 1.01f || c[2] >= 1.01f)
 			{
 				GL_Color(bound(0, c[0] - 1, 1), bound(0, c[1] - 1, 1), bound(0, c[2] - 1, 1), 1);
-				R_Mesh_Draw(0, 3, 1, polygonelements);
+				R_Mesh_Draw(0, 3, 1, polygonelements, 0, 0);
 				VectorScale(c, 0.5, c);
 			}
 		}
@@ -927,7 +927,7 @@ void R_DrawGamma(void)
 		{
 			GL_BlendFunc(GL_ONE, GL_ONE);
 			GL_Color(c[0], c[1], c[2], 1);
-			R_Mesh_Draw(0, 3, 1, polygonelements);
+			R_Mesh_Draw(0, 3, 1, polygonelements, 0, 0);
 		}
 	}
 }

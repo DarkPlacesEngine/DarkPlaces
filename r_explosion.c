@@ -191,7 +191,7 @@ static void R_DrawExplosion_TransparentCallback(const entity_render_t *ent, cons
 	GL_CullFace(GL_FRONT); // quake is backwards, this culls back faces
 	R_Mesh_Matrix(&identitymatrix);
 
-	R_Mesh_ColorPointer(NULL);
+	R_Mesh_ColorPointer(NULL, 0, 0);
 	memset(&m, 0, sizeof(m));
 	m.tex[0] = R_GetTexture(explosiontexture);
 	m.pointer_texcoord[0] = explosiontexcoord2f[0];
@@ -199,11 +199,11 @@ static void R_DrawExplosion_TransparentCallback(const entity_render_t *ent, cons
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 	{
 		const explosion_t *e = explosion + surfacelist[surfacelistindex];
-		R_Mesh_VertexPointer(e->vert[0]);
+		R_Mesh_VertexPointer(e->vert[0], 0, 0);
 		// FIXME: fixed function path can't properly handle r_view.colorscale > 1
 		GL_Color(e->alpha * r_view.colorscale, e->alpha * r_view.colorscale, e->alpha * r_view.colorscale, 1);
 		GL_LockArrays(0, numverts);
-		R_Mesh_Draw(0, numverts, numtriangles, explosiontris[0]);
+		R_Mesh_Draw(0, numverts, numtriangles, explosiontris[0], 0, 0);
 		GL_LockArrays(0, 0);
 	}
 }

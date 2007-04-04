@@ -273,15 +273,15 @@ static void R_SkyBox(void)
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(false);
 	GL_DepthTest(false); // don't modify or read zbuffer
-	R_Mesh_VertexPointer(skyboxvertex3f);
-	R_Mesh_ColorPointer(NULL);
+	R_Mesh_VertexPointer(skyboxvertex3f, 0, 0);
+	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
-	R_Mesh_TexCoordPointer(0, 2, skyboxtexcoord2f);
+	R_Mesh_TexCoordPointer(0, 2, skyboxtexcoord2f, 0, 0);
 	GL_LockArrays(0, 6*4);
 	for (i = 0;i < 6;i++)
 	{
 		R_Mesh_TexBind(0, R_GetTexture(skyboxside[i]));
-		R_Mesh_Draw(0, 6*4, 2, skyboxelements + i * 6);
+		R_Mesh_Draw(0, 6*4, 2, skyboxelements + i * 6, 0, 0);
 	}
 	GL_LockArrays(0, 0);
 }
@@ -371,34 +371,34 @@ static void R_SkySphere(void)
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(true);
 	GL_DepthTest(false); // don't modify or read zbuffer
-	R_Mesh_VertexPointer(skysphere_vertex3f);
-	R_Mesh_ColorPointer(NULL);
+	R_Mesh_VertexPointer(skysphere_vertex3f, 0, 0);
+	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
 	R_Mesh_TexBind(0, R_GetTexture(r_refdef.worldmodel->brush.solidskytexture));
-	R_Mesh_TexCoordPointer(0, 2, skysphere_texcoord2f);
+	R_Mesh_TexCoordPointer(0, 2, skysphere_texcoord2f, 0, 0);
 	R_Mesh_TexMatrix(0, &scroll1matrix);
 	if (r_textureunits.integer >= 2 && r_view.colorscale == 1)
 	{
 		// one pass using GL_DECAL or GL_INTERPOLATE_ARB for alpha layer
 		R_Mesh_TexBind(1, R_GetTexture(r_refdef.worldmodel->brush.alphaskytexture));
 		R_Mesh_TexCombine(1, gl_combine.integer ? GL_INTERPOLATE_ARB : GL_DECAL, GL_MODULATE, 1, 1);
-		R_Mesh_TexCoordPointer(1, 2, skysphere_texcoord2f);
+		R_Mesh_TexCoordPointer(1, 2, skysphere_texcoord2f, 0, 0);
 		R_Mesh_TexMatrix(1, &scroll2matrix);
 		GL_LockArrays(0, skysphere_numverts);
-		R_Mesh_Draw(0, skysphere_numverts, skysphere_numtriangles, skysphere_element3i);
+		R_Mesh_Draw(0, skysphere_numverts, skysphere_numtriangles, skysphere_element3i, 0, 0);
 		GL_LockArrays(0, 0);
 	}
 	else
 	{
 		// two pass
 		GL_LockArrays(0, skysphere_numverts);
-		R_Mesh_Draw(0, skysphere_numverts, skysphere_numtriangles, skysphere_element3i);
+		R_Mesh_Draw(0, skysphere_numverts, skysphere_numtriangles, skysphere_element3i, 0, 0);
 
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		R_Mesh_TexBind(0, R_GetTexture(r_refdef.worldmodel->brush.alphaskytexture));
 		R_Mesh_TexMatrix(0, &scroll2matrix);
 		GL_LockArrays(0, skysphere_numverts);
-		R_Mesh_Draw(0, skysphere_numverts, skysphere_numtriangles, skysphere_element3i);
+		R_Mesh_Draw(0, skysphere_numverts, skysphere_numtriangles, skysphere_element3i, 0, 0);
 		GL_LockArrays(0, 0);
 	}
 }

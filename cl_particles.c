@@ -2125,9 +2125,9 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 
 	R_Mesh_Matrix(&identitymatrix);
 	R_Mesh_ResetTextureState();
-	R_Mesh_VertexPointer(particle_vertex3f);
-	R_Mesh_TexCoordPointer(0, 2, particle_texcoord2f);
-	R_Mesh_ColorPointer(particle_color4f);
+	R_Mesh_VertexPointer(particle_vertex3f, 0, 0);
+	R_Mesh_TexCoordPointer(0, 2, particle_texcoord2f, 0, 0);
+	R_Mesh_ColorPointer(particle_color4f, 0, 0);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
 	GL_CullFace(GL_FRONT); // quake is backwards, this culls back faces
@@ -2282,7 +2282,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 		if (blendmode != p->type->blendmode)
 		{
 			if (batchcount > 0)
-				R_Mesh_Draw(batchstart * 4, batchcount * 4, batchcount * 2, particle_element3i + batchstart * 6);
+				R_Mesh_Draw(batchstart * 4, batchcount * 4, batchcount * 2, particle_element3i + batchstart * 6, 0, 0);
 			batchcount = 0;
 			batchstart = surfacelistindex;
 			blendmode = p->type->blendmode;
@@ -2296,7 +2296,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 		if (texture != particletexture[p->texnum].texture)
 		{
 			if (batchcount > 0)
-				R_Mesh_Draw(batchstart * 4, batchcount * 4, batchcount * 2, particle_element3i + batchstart * 6);
+				R_Mesh_Draw(batchstart * 4, batchcount * 4, batchcount * 2, particle_element3i + batchstart * 6, 0, 0);
 			batchcount = 0;
 			batchstart = surfacelistindex;
 			texture = particletexture[p->texnum].texture;
@@ -2306,7 +2306,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 		batchcount++;
 	}
 	if (batchcount > 0)
-		R_Mesh_Draw(batchstart * 4, batchcount * 4, batchcount * 2, particle_element3i + batchstart * 6);
+		R_Mesh_Draw(batchstart * 4, batchcount * 4, batchcount * 2, particle_element3i + batchstart * 6, 0, 0);
 	GL_LockArrays(0, 0);
 }
 

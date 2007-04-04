@@ -1816,9 +1816,9 @@ void R_Bloom_CopyScreenTexture(float colorscale)
 	r_refdef.stats.bloom++;
 
 	R_ResetViewRendering2D();
-	R_Mesh_VertexPointer(r_screenvertex3f);
-	R_Mesh_ColorPointer(NULL);
-	R_Mesh_TexCoordPointer(0, 2, r_bloomstate.screentexcoord2f);
+	R_Mesh_VertexPointer(r_screenvertex3f, 0, 0);
+	R_Mesh_ColorPointer(NULL, 0, 0);
+	R_Mesh_TexCoordPointer(0, 2, r_bloomstate.screentexcoord2f, 0, 0);
 	R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_screen));
 
 	// copy view into the screen texture
@@ -1833,7 +1833,7 @@ void R_Bloom_CopyScreenTexture(float colorscale)
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_Color(colorscale, colorscale, colorscale, 1);
 	// TODO: optimize with multitexture or GLSL
-	R_Mesh_Draw(0, 4, 2, polygonelements);
+	R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
 	r_refdef.stats.bloom_drawpixels += r_bloomstate.bloomwidth * r_bloomstate.bloomheight;
 
 	// we now have a bloom image in the framebuffer
@@ -1862,8 +1862,8 @@ void R_Bloom_MakeTexture(void)
 	r_refdef.stats.bloom++;
 
 	R_ResetViewRendering2D();
-	R_Mesh_VertexPointer(r_screenvertex3f);
-	R_Mesh_ColorPointer(NULL);
+	R_Mesh_VertexPointer(r_screenvertex3f, 0, 0);
+	R_Mesh_ColorPointer(NULL, 0, 0);
 
 	// we have a bloom image in the framebuffer
 	CHECKGLERROR
@@ -1876,8 +1876,8 @@ void R_Bloom_MakeTexture(void)
 		GL_BlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
 		GL_Color(r, r, r, 1);
 		R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_bloom));
-		R_Mesh_TexCoordPointer(0, 2, r_bloomstate.bloomtexcoord2f);
-		R_Mesh_Draw(0, 4, 2, polygonelements);
+		R_Mesh_TexCoordPointer(0, 2, r_bloomstate.bloomtexcoord2f, 0, 0);
+		R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
 		r_refdef.stats.bloom_drawpixels += r_bloomstate.bloomwidth * r_bloomstate.bloomheight;
 
 		// copy the vertically blurred bloom view to a texture
@@ -1892,7 +1892,7 @@ void R_Bloom_MakeTexture(void)
 	if (r_hdr.integer)
 		brighten *= r_hdr_range.value;
 	R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_bloom));
-	R_Mesh_TexCoordPointer(0, 2, r_bloomstate.offsettexcoord2f);
+	R_Mesh_TexCoordPointer(0, 2, r_bloomstate.offsettexcoord2f, 0, 0);
 
 	for (dir = 0;dir < 2;dir++)
 	{
@@ -1921,7 +1921,7 @@ void R_Bloom_MakeTexture(void)
 			//r = (dir ? 1.0f : brighten)/(range*2+1);
 			r = (dir ? 1.0f : brighten)/(range*2+1)*(1 - x*x/(float)(range*range));
 			GL_Color(r, r, r, 1);
-			R_Mesh_Draw(0, 4, 2, polygonelements);
+			R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
 			r_refdef.stats.bloom_drawpixels += r_bloomstate.bloomwidth * r_bloomstate.bloomheight;
 			GL_BlendFunc(GL_ONE, GL_ONE);
 		}
@@ -1939,17 +1939,17 @@ void R_Bloom_MakeTexture(void)
 	{
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_bloom));
-		R_Mesh_TexCoordPointer(0, 2, r_bloomstate.bloomtexcoord2f);
+		R_Mesh_TexCoordPointer(0, 2, r_bloomstate.bloomtexcoord2f, 0, 0);
 		GL_Color(1, 1, 1, 1);
-		R_Mesh_Draw(0, 4, 2, polygonelements);
+		R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
 		r_refdef.stats.bloom_drawpixels += r_bloomstate.bloomwidth * r_bloomstate.bloomheight;
 
 		GL_BlendFunc(GL_ONE, GL_ONE);
 		qglBlendEquationEXT(GL_FUNC_REVERSE_SUBTRACT_EXT);
 		R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
-		R_Mesh_TexCoordPointer(0, 2, r_bloomstate.bloomtexcoord2f);
+		R_Mesh_TexCoordPointer(0, 2, r_bloomstate.bloomtexcoord2f, 0, 0);
 		GL_Color(r_bloom_colorsubtract.value, r_bloom_colorsubtract.value, r_bloom_colorsubtract.value, 1);
-		R_Mesh_Draw(0, 4, 2, polygonelements);
+		R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
 		r_refdef.stats.bloom_drawpixels += r_bloomstate.bloomwidth * r_bloomstate.bloomheight;
 		qglBlendEquationEXT(GL_FUNC_ADD_EXT);
 
@@ -2005,13 +2005,13 @@ static void R_BlendView(void)
 		// the bloom texture was made earlier this render, so we just need to
 		// blend it onto the screen...
 		R_ResetViewRendering2D();
-		R_Mesh_VertexPointer(r_screenvertex3f);
-		R_Mesh_ColorPointer(NULL);
+		R_Mesh_VertexPointer(r_screenvertex3f, 0, 0);
+		R_Mesh_ColorPointer(NULL, 0, 0);
 		GL_Color(1, 1, 1, 1);
 		GL_BlendFunc(GL_ONE, GL_ONE);
 		R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_bloom));
-		R_Mesh_TexCoordPointer(0, 2, r_bloomstate.bloomtexcoord2f);
-		R_Mesh_Draw(0, 4, 2, polygonelements);
+		R_Mesh_TexCoordPointer(0, 2, r_bloomstate.bloomtexcoord2f, 0, 0);
+		R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
 		r_refdef.stats.bloom_drawpixels += r_view.width * r_view.height;
 	}
 	else if (r_bloomstate.enabled)
@@ -2024,40 +2024,40 @@ static void R_BlendView(void)
 		// put the original screen image back in place and blend the bloom
 		// texture on it
 		R_ResetViewRendering2D();
-		R_Mesh_VertexPointer(r_screenvertex3f);
-		R_Mesh_ColorPointer(NULL);
+		R_Mesh_VertexPointer(r_screenvertex3f, 0, 0);
+		R_Mesh_ColorPointer(NULL, 0, 0);
 		GL_Color(1, 1, 1, 1);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		// do both in one pass if possible
 		R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_bloom));
-		R_Mesh_TexCoordPointer(0, 2, r_bloomstate.bloomtexcoord2f);
+		R_Mesh_TexCoordPointer(0, 2, r_bloomstate.bloomtexcoord2f, 0, 0);
 		if (r_textureunits.integer >= 2 && gl_combine.integer)
 		{
 			R_Mesh_TexCombine(1, GL_ADD, GL_ADD, 1, 1);
 			R_Mesh_TexBind(1, R_GetTexture(r_bloomstate.texture_screen));
-			R_Mesh_TexCoordPointer(1, 2, r_bloomstate.screentexcoord2f);
+			R_Mesh_TexCoordPointer(1, 2, r_bloomstate.screentexcoord2f, 0, 0);
 		}
 		else
 		{
-			R_Mesh_Draw(0, 4, 2, polygonelements);
+			R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
 			r_refdef.stats.bloom_drawpixels += r_view.width * r_view.height;
 			// now blend on the bloom texture
 			GL_BlendFunc(GL_ONE, GL_ONE);
 			R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_screen));
-			R_Mesh_TexCoordPointer(0, 2, r_bloomstate.screentexcoord2f);
+			R_Mesh_TexCoordPointer(0, 2, r_bloomstate.screentexcoord2f, 0, 0);
 		}
-		R_Mesh_Draw(0, 4, 2, polygonelements);
+		R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
 		r_refdef.stats.bloom_drawpixels += r_view.width * r_view.height;
 	}
 	if (r_refdef.viewblend[3] >= (1.0f / 256.0f))
 	{
 		// apply a color tint to the whole view
 		R_ResetViewRendering2D();
-		R_Mesh_VertexPointer(r_screenvertex3f);
-		R_Mesh_ColorPointer(NULL);
+		R_Mesh_VertexPointer(r_screenvertex3f, 0, 0);
+		R_Mesh_ColorPointer(NULL, 0, 0);
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		GL_Color(r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
-		R_Mesh_Draw(0, 4, 2, polygonelements);
+		R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
 	}
 }
 
@@ -2343,10 +2343,10 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 			c[2] = c[2] * f1 + r_refdef.fogcolor[2] * f2;
 		}
 	}
-	R_Mesh_VertexPointer(vertex3f);
-	R_Mesh_ColorPointer(color);
+	R_Mesh_VertexPointer(vertex3f, 0, 0);
+	R_Mesh_ColorPointer(color, 0, 0);
 	R_Mesh_ResetTextureState();
-	R_Mesh_Draw(8, 12);
+	R_Mesh_Draw(8, 12, 0, 0);
 }
 */
 
@@ -2408,12 +2408,12 @@ void R_DrawNoModel_TransparentCallback(const entity_render_t *ent, const rtlight
 	}
 	GL_DepthTest(!(ent->effects & EF_NODEPTHTEST));
 	GL_CullFace((ent->effects & EF_DOUBLESIDED) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
-	R_Mesh_VertexPointer(nomodelvertex3f);
+	R_Mesh_VertexPointer(nomodelvertex3f, 0, 0);
 	if (r_refdef.fogenabled)
 	{
 		vec3_t org;
 		memcpy(color4f, nomodelcolor4f, sizeof(float[6*4]));
-		R_Mesh_ColorPointer(color4f);
+		R_Mesh_ColorPointer(color4f, 0, 0);
 		Matrix4x4_OriginFromMatrix(&ent->matrix, org);
 		f2 = VERTEXFOGTABLE(VectorDistance(org, r_view.origin));
 		f1 = 1 - f2;
@@ -2428,14 +2428,14 @@ void R_DrawNoModel_TransparentCallback(const entity_render_t *ent, const rtlight
 	else if (ent->alpha != 1)
 	{
 		memcpy(color4f, nomodelcolor4f, sizeof(float[6*4]));
-		R_Mesh_ColorPointer(color4f);
+		R_Mesh_ColorPointer(color4f, 0, 0);
 		for (i = 0, c = color4f;i < 6;i++, c += 4)
 			c[3] *= ent->alpha;
 	}
 	else
-		R_Mesh_ColorPointer(nomodelcolor4f);
+		R_Mesh_ColorPointer(nomodelcolor4f, 0, 0);
 	R_Mesh_ResetTextureState();
-	R_Mesh_Draw(0, 6, 8, nomodelelements);
+	R_Mesh_Draw(0, 6, 8, nomodelelements, 0, 0);
 }
 
 void R_DrawNoModel(entity_render_t *ent)
@@ -2507,21 +2507,21 @@ void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, rtexture_
 	vertex3f[10] = origin[1] + left[1] * scalex1 + up[1] * scaley1;
 	vertex3f[11] = origin[2] + left[2] * scalex1 + up[2] * scaley1;
 
-	R_Mesh_VertexPointer(vertex3f);
-	R_Mesh_ColorPointer(NULL);
+	R_Mesh_VertexPointer(vertex3f, 0, 0);
+	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
 	R_Mesh_TexBind(0, R_GetTexture(texture));
-	R_Mesh_TexCoordPointer(0, 2, spritetexcoord2f);
+	R_Mesh_TexCoordPointer(0, 2, spritetexcoord2f, 0, 0);
 	// FIXME: fixed function path can't properly handle r_view.colorscale > 1
 	GL_Color(cr * ifog * r_view.colorscale, cg * ifog * r_view.colorscale, cb * ifog * r_view.colorscale, ca);
-	R_Mesh_Draw(0, 4, 2, polygonelements);
+	R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
 
 	if (blendfunc2 == GL_ONE_MINUS_SRC_ALPHA)
 	{
 		R_Mesh_TexBind(0, R_GetTexture(fogtexture));
 		GL_BlendFunc(blendfunc1, GL_ONE);
 		GL_Color(r_refdef.fogcolor[0] * fog * r_view.colorscale, r_refdef.fogcolor[1] * fog * r_view.colorscale, r_refdef.fogcolor[2] * fog * r_view.colorscale, ca);
-		R_Mesh_Draw(0, 4, 2, polygonelements);
+		R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
 	}
 }
 
@@ -2626,11 +2626,11 @@ void R_Mesh_AddBrushMeshFromPlanes(rmesh_t *mesh, int numplanes, mplane_t *plane
 static void R_DrawCollisionBrush(const colbrushf_t *brush)
 {
 	int i;
-	R_Mesh_VertexPointer(brush->points->v);
+	R_Mesh_VertexPointer(brush->points->v, 0, 0);
 	i = (int)(((size_t)brush) / sizeof(colbrushf_t));
 	GL_Color((i & 31) * (1.0f / 32.0f) * r_view.colorscale, ((i >> 5) & 31) * (1.0f / 32.0f) * r_view.colorscale, ((i >> 10) & 31) * (1.0f / 32.0f) * r_view.colorscale, 0.2f);
 	GL_LockArrays(0, brush->numpoints);
-	R_Mesh_Draw(0, brush->numpoints, brush->numtriangles, brush->elements);
+	R_Mesh_Draw(0, brush->numpoints, brush->numtriangles, brush->elements, 0, 0);
 	GL_LockArrays(0, 0);
 }
 
@@ -2639,11 +2639,11 @@ static void R_DrawCollisionSurface(const entity_render_t *ent, const msurface_t 
 	int i;
 	if (!surface->num_collisiontriangles)
 		return;
-	R_Mesh_VertexPointer(surface->data_collisionvertex3f);
+	R_Mesh_VertexPointer(surface->data_collisionvertex3f, 0, 0);
 	i = (int)(((size_t)surface) / sizeof(msurface_t));
 	GL_Color((i & 31) * (1.0f / 32.0f) * r_view.colorscale, ((i >> 5) & 31) * (1.0f / 32.0f) * r_view.colorscale, ((i >> 10) & 31) * (1.0f / 32.0f) * r_view.colorscale, 0.2f);
 	GL_LockArrays(0, surface->num_collisionvertices);
-	R_Mesh_Draw(0, surface->num_collisionvertices, surface->num_collisiontriangles, surface->data_collisionelement3i);
+	R_Mesh_Draw(0, surface->num_collisionvertices, surface->num_collisiontriangles, surface->data_collisionelement3i, 0, 0);
 	GL_LockArrays(0, 0);
 }
 
@@ -3056,7 +3056,7 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 		rsurface_tvector3f = rsurface_modeltvector3f;
 		rsurface_normal3f = rsurface_modelnormal3f;
 	}
-	R_Mesh_VertexPointer(rsurface_vertex3f);
+	R_Mesh_VertexPointer(rsurface_vertex3f, 0, 0);
 }
 
 void RSurf_DrawBatch_Simple(int texturenumsurfaces, msurface_t **texturesurfacelist)
@@ -3072,7 +3072,7 @@ void RSurf_DrawBatch_Simple(int texturenumsurfaces, msurface_t **texturesurfacel
 	if (texturenumsurfaces == 1)
 	{
 		GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
-		R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (rsurface_model->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
+		R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (rsurface_model->surfmesh.data_element3i + 3 * surface->num_firsttriangle), 0, 0);
 	}
 	else if (r_batchmode.integer == 2)
 	{
@@ -3085,7 +3085,7 @@ void RSurf_DrawBatch_Simple(int texturenumsurfaces, msurface_t **texturesurfacel
 			j = i + 1;
 			if (surface->num_triangles > MAXBATCHTRIANGLES)
 			{
-				R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (rsurface_model->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
+				R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (rsurface_model->surfmesh.data_element3i + 3 * surface->num_firsttriangle), 0, 0);
 				continue;
 			}
 			memcpy(batchelements, rsurface_model->surfmesh.data_element3i + 3 * surface->num_firsttriangle, surface->num_triangles * sizeof(int[3]));
@@ -3104,7 +3104,7 @@ void RSurf_DrawBatch_Simple(int texturenumsurfaces, msurface_t **texturesurfacel
 			}
 			surface2 = texturesurfacelist[j-1];
 			numvertices = endvertex - firstvertex;
-			R_Mesh_Draw(firstvertex, numvertices, batchtriangles, batchelements);
+			R_Mesh_Draw(firstvertex, numvertices, batchtriangles, batchelements, 0, 0);
 		}
 	}
 	else if (r_batchmode.integer == 1)
@@ -3119,7 +3119,7 @@ void RSurf_DrawBatch_Simple(int texturenumsurfaces, msurface_t **texturesurfacel
 			numvertices = surface2->num_firstvertex + surface2->num_vertices - surface->num_firstvertex;
 			numtriangles = surface2->num_firsttriangle + surface2->num_triangles - surface->num_firsttriangle;
 			GL_LockArrays(surface->num_firstvertex, numvertices);
-			R_Mesh_Draw(surface->num_firstvertex, numvertices, numtriangles, (rsurface_model->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
+			R_Mesh_Draw(surface->num_firstvertex, numvertices, numtriangles, (rsurface_model->surfmesh.data_element3i + 3 * surface->num_firsttriangle), 0, 0);
 		}
 	}
 	else
@@ -3128,7 +3128,7 @@ void RSurf_DrawBatch_Simple(int texturenumsurfaces, msurface_t **texturesurfacel
 		{
 			surface = texturesurfacelist[i];
 			GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
-			R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (rsurface_model->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
+			R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (rsurface_model->surfmesh.data_element3i + 3 * surface->num_firsttriangle), 0, 0);
 		}
 	}
 }
@@ -3150,7 +3150,7 @@ static void RSurf_DrawBatch_WithLightmapSwitching(int texturenumsurfaces, msurfa
 		if (deluxemaptexunit >= 0)
 			R_Mesh_TexBind(deluxemaptexunit, R_GetTexture(surface->deluxemaptexture));
 		GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
-		R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (rsurface_model->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
+		R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (rsurface_model->surfmesh.data_element3i + 3 * surface->num_firsttriangle), 0, 0);
 	}
 	else if (r_batchmode.integer == 2)
 	{
@@ -3166,7 +3166,7 @@ static void RSurf_DrawBatch_WithLightmapSwitching(int texturenumsurfaces, msurfa
 			j = i + 1;
 			if (surface->num_triangles > MAXBATCHTRIANGLES)
 			{
-				R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (rsurface_model->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
+				R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (rsurface_model->surfmesh.data_element3i + 3 * surface->num_firsttriangle), 0, 0);
 				continue;
 			}
 			memcpy(batchelements, rsurface_model->surfmesh.data_element3i + 3 * surface->num_firsttriangle, surface->num_triangles * sizeof(int[3]));
@@ -3185,7 +3185,7 @@ static void RSurf_DrawBatch_WithLightmapSwitching(int texturenumsurfaces, msurfa
 			}
 			surface2 = texturesurfacelist[j-1];
 			numvertices = endvertex - firstvertex;
-			R_Mesh_Draw(firstvertex, numvertices, batchtriangles, batchelements);
+			R_Mesh_Draw(firstvertex, numvertices, batchtriangles, batchelements, 0, 0);
 		}
 	}
 	else if (r_batchmode.integer == 1)
@@ -3219,7 +3219,7 @@ static void RSurf_DrawBatch_WithLightmapSwitching(int texturenumsurfaces, msurfa
 			numvertices = surface2->num_firstvertex + surface2->num_vertices - surface->num_firstvertex;
 			numtriangles = surface2->num_firsttriangle + surface2->num_triangles - surface->num_firsttriangle;
 			GL_LockArrays(surface->num_firstvertex, numvertices);
-			R_Mesh_Draw(surface->num_firstvertex, numvertices, numtriangles, (rsurface_model->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
+			R_Mesh_Draw(surface->num_firstvertex, numvertices, numtriangles, (rsurface_model->surfmesh.data_element3i + 3 * surface->num_firsttriangle), 0, 0);
 		}
 #if 0
 		Con_Printf("\n");
@@ -3234,7 +3234,7 @@ static void RSurf_DrawBatch_WithLightmapSwitching(int texturenumsurfaces, msurfa
 			if (deluxemaptexunit >= 0)
 				R_Mesh_TexBind(deluxemaptexunit, R_GetTexture(surface->deluxemaptexture));
 			GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
-			R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (rsurface_model->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
+			R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (rsurface_model->surfmesh.data_element3i + 3 * surface->num_firsttriangle), 0, 0);
 		}
 	}
 }
@@ -3252,7 +3252,7 @@ static void RSurf_DrawBatch_ShowSurfaces(int texturenumsurfaces, msurface_t **te
 			{
 				float f = ((j + surface->num_firsttriangle) & 31) * (1.0f / 31.0f) * r_view.colorscale;
 				GL_Color(f, f, f, 1);
-				R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, 1, (rsurface_model->surfmesh.data_element3i + 3 * (j + surface->num_firsttriangle)));
+				R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, 1, (rsurface_model->surfmesh.data_element3i + 3 * (j + surface->num_firsttriangle)), 0, 0);
 			}
 		}
 	}
@@ -3264,7 +3264,7 @@ static void RSurf_DrawBatch_ShowSurfaces(int texturenumsurfaces, msurface_t **te
 			int k = (int)(((size_t)surface) / sizeof(msurface_t));
 			GL_Color((k & 15) * (1.0f / 16.0f) * r_view.colorscale, ((k >> 4) & 15) * (1.0f / 16.0f) * r_view.colorscale, ((k >> 8) & 15) * (1.0f / 16.0f) * r_view.colorscale, 1);
 			GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
-			R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (rsurface_model->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
+			R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (rsurface_model->surfmesh.data_element3i + 3 * surface->num_firsttriangle), 0, 0);
 		}
 	}
 }
@@ -3336,7 +3336,7 @@ static void RSurf_DrawBatch_GL11_Lightmap(int texturenumsurfaces, msurface_t **t
 	rsurface_lightmapcolor4f = NULL;
 	if (applyfog)   RSurf_DrawBatch_GL11_ApplyFog(texturenumsurfaces, texturesurfacelist);
 	if (applycolor) RSurf_DrawBatch_GL11_ApplyColor(texturenumsurfaces, texturesurfacelist, r, g, b, a);
-	R_Mesh_ColorPointer(rsurface_lightmapcolor4f);
+	R_Mesh_ColorPointer(rsurface_lightmapcolor4f, 0, 0);
 	GL_Color(r, g, b, a);
 	RSurf_DrawBatch_WithLightmapSwitching(texturenumsurfaces, texturesurfacelist, 0, -1);
 }
@@ -3348,7 +3348,7 @@ static void RSurf_DrawBatch_GL11_Unlit(int texturenumsurfaces, msurface_t **text
 	rsurface_lightmapcolor4f = NULL;
 	if (applyfog)   RSurf_DrawBatch_GL11_ApplyFog(texturenumsurfaces, texturesurfacelist);
 	if (applycolor) RSurf_DrawBatch_GL11_ApplyColor(texturenumsurfaces, texturesurfacelist, r, g, b, a);
-	R_Mesh_ColorPointer(rsurface_lightmapcolor4f);
+	R_Mesh_ColorPointer(rsurface_lightmapcolor4f, 0, 0);
 	GL_Color(r, g, b, a);
 	RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
 }
@@ -3403,7 +3403,7 @@ static void RSurf_DrawBatch_GL11_VertexColor(int texturenumsurfaces, msurface_t 
 		rsurface_lightmapcolor4f = rsurface_model->surfmesh.data_lightmapcolor4f;
 	if (applyfog)   RSurf_DrawBatch_GL11_ApplyFog(texturenumsurfaces, texturesurfacelist);
 	if (applycolor) RSurf_DrawBatch_GL11_ApplyColor(texturenumsurfaces, texturesurfacelist, r, g, b, a);
-	R_Mesh_ColorPointer(rsurface_lightmapcolor4f);
+	R_Mesh_ColorPointer(rsurface_lightmapcolor4f, 0, 0);
 	GL_Color(r, g, b, a);
 	RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
 }
@@ -3462,7 +3462,7 @@ static void RSurf_DrawBatch_GL11_VertexShade(int texturenumsurfaces, msurface_t 
 	}
 	if (applyfog)   RSurf_DrawBatch_GL11_ApplyFog(texturenumsurfaces, texturesurfacelist);
 	if (applycolor) RSurf_DrawBatch_GL11_ApplyColor(texturenumsurfaces, texturesurfacelist, r, g, b, a);
-	R_Mesh_ColorPointer(rsurface_lightmapcolor4f);
+	R_Mesh_ColorPointer(rsurface_lightmapcolor4f, 0, 0);
 	GL_Color(r, g, b, a);
 	RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
 }
@@ -3476,7 +3476,7 @@ static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, msurfa
 		rsurface_mode = RSURFMODE_SHOWSURFACES;
 		GL_DepthMask(true);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
-		R_Mesh_ColorPointer(NULL);
+		R_Mesh_ColorPointer(NULL, 0, 0);
 		R_Mesh_ResetTextureState();
 	}
 	RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
@@ -3515,7 +3515,7 @@ static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, msurface_t **te
 	if (rsurface_model->type == mod_brushq1 && r_q1bsp_skymasking.integer && !r_viewcache.world_novis)
 	{
 		GL_Color(r_refdef.fogcolor[0] * r_view.colorscale, r_refdef.fogcolor[1] * r_view.colorscale, r_refdef.fogcolor[2] * r_view.colorscale, 1);
-		R_Mesh_ColorPointer(NULL);
+		R_Mesh_ColorPointer(NULL, 0, 0);
 		R_Mesh_ResetTextureState();
 		if (skyrendermasked)
 		{
@@ -3553,32 +3553,32 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, msurface_t **t
 		RSurf_PrepareVerticesForBatch(true, r_glsl_permutation->loc_Texture_Normal, texturenumsurfaces, texturesurfacelist);
 	else
 		RSurf_PrepareVerticesForBatch(r_glsl_permutation->loc_Texture_Normal, r_glsl_permutation->loc_Texture_Normal, texturenumsurfaces, texturesurfacelist);
-	R_Mesh_TexCoordPointer(0, 2, rsurface_model->surfmesh.data_texcoordtexture2f);
-	R_Mesh_TexCoordPointer(1, 3, rsurface_svector3f);
-	R_Mesh_TexCoordPointer(2, 3, rsurface_tvector3f);
-	R_Mesh_TexCoordPointer(3, 3, rsurface_normal3f);
-	R_Mesh_TexCoordPointer(4, 2, rsurface_model->surfmesh.data_texcoordlightmap2f);
+	R_Mesh_TexCoordPointer(0, 2, rsurface_model->surfmesh.data_texcoordtexture2f, 0, 0);
+	R_Mesh_TexCoordPointer(1, 3, rsurface_svector3f, 0, 0);
+	R_Mesh_TexCoordPointer(2, 3, rsurface_tvector3f, 0, 0);
+	R_Mesh_TexCoordPointer(3, 3, rsurface_normal3f, 0, 0);
+	R_Mesh_TexCoordPointer(4, 2, rsurface_model->surfmesh.data_texcoordlightmap2f, 0, 0);
 
 	if (rsurface_texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
 	{
 		R_Mesh_TexBind(7, R_GetTexture(r_texture_white));
 		if (r_glsl_permutation->loc_Texture_Deluxemap >= 0)
 			R_Mesh_TexBind(8, R_GetTexture(r_texture_blanknormalmap));
-		R_Mesh_ColorPointer(NULL);
+		R_Mesh_ColorPointer(NULL, 0, 0);
 	}
 	else if (rsurface_uselightmaptexture)
 	{
 		R_Mesh_TexBind(7, R_GetTexture(texturesurfacelist[0]->lightmaptexture));
 		if (r_glsl_permutation->loc_Texture_Deluxemap >= 0)
 			R_Mesh_TexBind(8, R_GetTexture(texturesurfacelist[0]->deluxemaptexture));
-		R_Mesh_ColorPointer(NULL);
+		R_Mesh_ColorPointer(NULL, 0, 0);
 	}
 	else
 	{
 		R_Mesh_TexBind(7, R_GetTexture(r_texture_white));
 		if (r_glsl_permutation->loc_Texture_Deluxemap >= 0)
 			R_Mesh_TexBind(8, R_GetTexture(r_texture_blanknormalmap));
-		R_Mesh_ColorPointer(rsurface_model->surfmesh.data_lightmapcolor4f);
+		R_Mesh_ColorPointer(rsurface_model->surfmesh.data_lightmapcolor4f, 0, 0);
 	}
 
 	if (rsurface_uselightmaptexture && !(rsurface_texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
@@ -3635,7 +3635,7 @@ static void R_DrawTextureSurfaceList_GL13(int texturenumsurfaces, msurface_t **t
 		}
 		layercolor[3] = layer->color[3];
 		applycolor = layercolor[0] != 1 || layercolor[1] != 1 || layercolor[2] != 1 || layercolor[3] != 1;
-		R_Mesh_ColorPointer(NULL);
+		R_Mesh_ColorPointer(NULL, 0, 0);
 		applyfog = (layer->flags & TEXTURELAYERFLAG_FOGDARKEN) != 0;
 		switch (layer->type)
 		{
@@ -3675,7 +3675,7 @@ static void R_DrawTextureSurfaceList_GL13(int texturenumsurfaces, msurface_t **t
 			}
 			R_Mesh_TextureState(&m);
 			// generate a color array for the fog pass
-			R_Mesh_ColorPointer(rsurface_array_color4f);
+			R_Mesh_ColorPointer(rsurface_array_color4f, 0, 0);
 			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 			{
 				int i;
@@ -3730,7 +3730,7 @@ static void R_DrawTextureSurfaceList_GL11(int texturenumsurfaces, msurface_t **t
 		}
 		GL_DepthMask(layer->depthmask);
 		GL_BlendFunc(layer->blendfunc1, layer->blendfunc2);
-		R_Mesh_ColorPointer(NULL);
+		R_Mesh_ColorPointer(NULL, 0, 0);
 		applyfog = (layer->flags & TEXTURELAYERFLAG_FOGDARKEN) != 0;
 		switch (layer->type)
 		{
@@ -3784,7 +3784,7 @@ static void R_DrawTextureSurfaceList_GL11(int texturenumsurfaces, msurface_t **t
 			break;
 		case TEXTURELAYERTYPE_FOG:
 			// singletexture fogging
-			R_Mesh_ColorPointer(rsurface_array_color4f);
+			R_Mesh_ColorPointer(rsurface_array_color4f, 0, 0);
 			if (layer->texture)
 			{
 				memset(&m, 0, sizeof(m));
@@ -3978,8 +3978,8 @@ void R_DrawLoc_Callback(const entity_render_t *ent, const rtlight_t *rtlight, in
 	GL_CullFace(GL_NONE);
 	R_Mesh_Matrix(&identitymatrix);
 
-	R_Mesh_VertexPointer(vertex3f);
-	R_Mesh_ColorPointer(NULL);
+	R_Mesh_VertexPointer(vertex3f, 0, 0);
+	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
 
 	i = surfacelist[0];
@@ -4003,7 +4003,7 @@ void R_DrawLoc_Callback(const entity_render_t *ent, const rtlight_t *rtlight, in
 		for (j = 0;j < 3;j++, i++)
 			vertex3f[i] = mins[j] + size[j] * locboxvertex3f[i];
 
-	R_Mesh_Draw(0, 6*4, 6*2, locboxelement3i);
+	R_Mesh_Draw(0, 6*4, 6*2, locboxelement3i, 0, 0);
 }
 
 void R_DrawLocs(void)
@@ -4028,7 +4028,7 @@ void R_DrawCollisionBrushes(entity_render_t *ent)
 	if (!model->brush.num_brushes)
 		return;
 	CHECKGLERROR
-	R_Mesh_ColorPointer(NULL);
+	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 	GL_DepthMask(false);
@@ -4054,7 +4054,7 @@ void R_DrawTrianglesAndNormals(entity_render_t *ent, qboolean drawtris, qboolean
 	GL_DepthTest(!r_showdisabledepthtest.integer);
 	GL_DepthMask(true);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
-	R_Mesh_ColorPointer(NULL);
+	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
 	for (i = 0, j = model->firstmodelsurface, surface = model->data_surfaces + j;i < model->nummodelsurfaces;i++, j++, surface++)
 	{

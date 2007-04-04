@@ -343,8 +343,8 @@ static void R_DrawPortal_Callback(const entity_render_t *ent, const rtlight_t *r
 
 	numpoints = min(portal->numpoints, POLYGONELEMENTS_MAXPOINTS);
 
-	R_Mesh_VertexPointer(vertex3f);
-	R_Mesh_ColorPointer(NULL);
+	R_Mesh_VertexPointer(vertex3f, 0, 0);
+	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
 
 	i = surfacelist[0];
@@ -354,7 +354,7 @@ static void R_DrawPortal_Callback(const entity_render_t *ent, const rtlight_t *r
 			 0.125f);
 	for (i = 0, v = vertex3f;i < numpoints;i++, v += 3)
 		VectorCopy(portal->points[i].position, v);
-	R_Mesh_Draw(0, numpoints, numpoints - 2, polygonelements);
+	R_Mesh_Draw(0, numpoints, numpoints - 2, polygonelements, 0, 0);
 }
 
 // LordHavoc: this is just a nice debugging tool, very slow
