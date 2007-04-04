@@ -3,6 +3,8 @@
 0 bug darkplaces client: decals are not sticking to submodels
 0 bug darkplaces client: if you press 1 during the demo loop when quake starts, escape doesn't do anything until you hit some other key (daemon)
 0 bug darkplaces loader: make rtlight entity loader support q3map/q3map2 lights properly, they use a spawnflag for LINEAR mode, by default they use 1/(x*x) falloff (Carni, motorsep)
+0 bug darkplaces loader: mcbsp hull selection is ignoring the custom hulls supported by mcbsp (div0)
+0 bug darkplaces loader: q1bsp loader computes wrong submodel size for submodels with no surfaces, such as a func_wall comprised entirely of SKIP or CAULK brushes (neg|ke)
 0 bug darkplaces readme: it would be a very good idea to add documentation of sv_gameplayfix_* cvars in the readme as a means to run broken mods (xaGe)
 0 bug darkplaces renderer: GL13 path has broken handling of unlit surfaces in Nexuiz toxic.bsp - the small red light surfaces are black in GL13 path (m0rfar)
 0 bug darkplaces renderer: if an animated model has transparent surfaces, each one calls RSurf_ActiveModelEntity, recomputing all vertices
@@ -15,8 +17,7 @@
 0 bug darkplaces server: when server quits, it does not notify the master that it is quitting, it should send out a couple forced heartbeats and dpmaster should be modified to remove servers that do not respond to queries within a reason time (jitspoe, div0)
 0 bug darkplaces wgl client: during video mode setup, sometimes another application's window becomes permanently top most, not darkplaces' fullscreen window, why? (tZork)
 0 bug darkplaces windows sound: freezing on exit sometimes when freeing sound buffer during sound shutdown (Black)
-0 bug darkplaces: q1bsp loader computes wrong submodel size for submodels with no surfaces, such as a func_wall comprised entirely of SKIP or CAULK brushes (neg|ke)
-0 bug darkplaces: surround sound fails in windows client, falls back to stereo (greenmarine)
+0 bug darkplaces windows sound: surround sound fails in windows client, falls back to stereo (greenmarine)
 0 bug dpmaster: if server does not reply within 5 seconds to a query it should be removed (jitspoe, div0)
 0 bug dpmod: LinkDoors seems to ignore .origin on door entities when comparing if they overlap
 0 bug dpmod: allow selection of weapons with secondary ammo but no primary ammo, and switch away if trying to fire primary ammo you don't have (romi)
