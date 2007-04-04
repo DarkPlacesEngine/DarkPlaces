@@ -97,6 +97,7 @@ Mod_Init
 */
 static void Mod_Print(void);
 static void Mod_Precache (void);
+static void Mod_BuildVBOs(void);
 void Mod_Init (void)
 {
 	Mod_BrushInit();
@@ -121,6 +122,10 @@ void Mod_UnloadModel (model_t *mod)
 	strlcpy(name, mod->name, sizeof(name));
 	isworldmodel = mod->isworldmodel;
 	used = mod->used;
+	if (mod->surfmesh.ebo)
+		R_Mesh_DestroyEBO(mod->surfmesh.ebo);
+	if (mod->surfmesh.vbo)
+		R_Mesh_DestroyVBO(mod->surfmesh.vbo);
 	// free textures/memory attached to the model
 	R_FreeTexturePool(&mod->texturepool);
 	Mem_FreePool(&mod->mempool);
@@ -234,6 +239,9 @@ model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, qboolea
 		else if (num == BSPVERSION || num == 30) Mod_Q1BSP_Load(mod, buf, bufend);
 		else Con_Printf("Mod_LoadModel: model \"%s\" is of unknown/unsupported type\n", mod->name);
 		Mem_Free(buf);
+
+		Mod_BuildVBOs();
+
 		// no fatal errors occurred, so this model is ready to use.
 		mod->loaded = true;
 	}
@@ -905,7 +913,42 @@ shadowmesh_t *Mod_ShadowMesh_Begin(mempool_t *mempool, int maxverts, int maxtria
 	return Mod_ShadowMesh_Alloc(mempool, maxverts, maxtriangles, map_diffuse, map_specular, map_normal, light, neighbors, expandable);
 }
 
-shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh, int light, int neighbors)
+static void Mod_ShadowMesh_CreateVBOs(shadowmesh_t *mesh)
+{
+	if (!gl_support_arb_vertex_buffer_object)
+		return;
+
+	// element buffer is easy because it's just one array
+	if (mesh->numtriangles)
+		mesh->ebo = R_Mesh_CreateStaticEBO(mesh->element3i, mesh->numtriangles * sizeof(int[3]));
+
+	// vertex buffer is several arrays and we put them in the same buffer
+	//
+	// is this wise?  the texcoordtexture2f array is used with dynamic
+	// vertex/svector/tvector/normal when rendering animated models, on the
+	// other hand animated models don't use a lot of vertices anyway...
+	if (mesh->numverts)
+	{
+		size_t size;
+		unsigned char *data, *mem;
+		size = 0;
+		mesh->vbooffset_vertex3f           = size;if (mesh->vertex3f          ) size += mesh->numverts * sizeof(float[3]);
+		mesh->vbooffset_svector3f          = size;if (mesh->svector3f         ) size += mesh->numverts * sizeof(float[3]);
+		mesh->vbooffset_tvector3f          = size;if (mesh->tvector3f         ) size += mesh->numverts * sizeof(float[3]);
+		mesh->vbooffset_normal3f           = size;if (mesh->normal3f          ) size += mesh->numverts * sizeof(float[3]);
+		mesh->vbooffset_texcoord2f         = size;if (mesh->texcoord2f        ) size += mesh->numverts * sizeof(float[2]);
+		data = mem = (unsigned char *)Mem_Alloc(tempmempool, size);
+		if (mesh->vertex3f          ) {memcpy(data, mesh->vertex3f          , mesh->numverts * sizeof(float[3]));data += mesh->numverts * sizeof(float[3]);}
+		if (mesh->svector3f         ) {memcpy(data, mesh->svector3f         , mesh->numverts * sizeof(float[3]));data += mesh->numverts * sizeof(float[3]);}
+		if (mesh->tvector3f         ) {memcpy(data, mesh->tvector3f         , mesh->numverts * sizeof(float[3]));data += mesh->numverts * sizeof(float[3]);}
+		if (mesh->normal3f          ) {memcpy(data, mesh->normal3f          , mesh->numverts * sizeof(float[3]));data += mesh->numverts * sizeof(float[3]);}
+		if (mesh->texcoord2f        ) {memcpy(data, mesh->texcoord2f        , mesh->numverts * sizeof(float[2]));data += mesh->numverts * sizeof(float[2]);}
+		mesh->vbo = R_Mesh_CreateStaticVBO(mem, size);
+		Mem_Free(mem);
+	}
+}
+
+shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh, qboolean light, qboolean neighbors, qboolean createvbo)
 {
 	shadowmesh_t *mesh, *newmesh, *nextmesh;
 	// reallocate meshs to conserve space
@@ -917,6 +960,8 @@ shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh,
 			newmesh = Mod_ShadowMesh_ReAlloc(mempool, mesh, light, neighbors);
 			newmesh->next = firstmesh;
 			firstmesh = newmesh;
+			if (createvbo)
+				Mod_ShadowMesh_CreateVBOs(newmesh);
 		}
 		Mem_Free(mesh);
 	}
@@ -977,6 +1022,10 @@ void Mod_ShadowMesh_Free(shadowmesh_t *mesh)
 	shadowmesh_t *nextmesh;
 	for (;mesh;mesh = nextmesh)
 	{
+		if (mesh->ebo)
+			R_Mesh_DestroyEBO(mesh->ebo);
+		if (mesh->vbo)
+			R_Mesh_DestroyVBO(mesh->vbo);
 		nextmesh = mesh->next;
 		Mem_Free(mesh);
 	}
@@ -1378,4 +1427,43 @@ void Mod_VertexRangeFromElements(int numelements, const int *elements, int *firs
 		*firstvertexpointer = firstvertex;
 	if (lastvertexpointer)
 		*lastvertexpointer = lastvertex;
+}
+
+static void Mod_BuildVBOs(void)
+{
+	if (!gl_support_arb_vertex_buffer_object)
+		return;
+
+	// element buffer is easy because it's just one array
+	if (loadmodel->surfmesh.num_triangles)
+		loadmodel->surfmesh.ebo = R_Mesh_CreateStaticEBO(loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles * sizeof(int[3]));
+
+	// vertex buffer is several arrays and we put them in the same buffer
+	//
+	// is this wise?  the texcoordtexture2f array is used with dynamic
+	// vertex/svector/tvector/normal when rendering animated models, on the
+	// other hand animated models don't use a lot of vertices anyway...
+	if (loadmodel->surfmesh.num_vertices)
+	{
+		size_t size;
+		unsigned char *data, *mem;
+		size = 0;
+		loadmodel->surfmesh.vbooffset_vertex3f           = size;if (loadmodel->surfmesh.data_vertex3f          ) size += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
+		loadmodel->surfmesh.vbooffset_svector3f          = size;if (loadmodel->surfmesh.data_svector3f         ) size += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
+		loadmodel->surfmesh.vbooffset_tvector3f          = size;if (loadmodel->surfmesh.data_tvector3f         ) size += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
+		loadmodel->surfmesh.vbooffset_normal3f           = size;if (loadmodel->surfmesh.data_normal3f          ) size += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
+		loadmodel->surfmesh.vbooffset_texcoordtexture2f  = size;if (loadmodel->surfmesh.data_texcoordtexture2f ) size += loadmodel->surfmesh.num_vertices * sizeof(float[2]);
+		loadmodel->surfmesh.vbooffset_texcoordlightmap2f = size;if (loadmodel->surfmesh.data_texcoordlightmap2f) size += loadmodel->surfmesh.num_vertices * sizeof(float[2]);
+		loadmodel->surfmesh.vbooffset_lightmapcolor4f    = size;if (loadmodel->surfmesh.data_lightmapcolor4f   ) size += loadmodel->surfmesh.num_vertices * sizeof(float[4]);
+		data = mem = (unsigned char *)Mem_Alloc(tempmempool, size);
+		if (loadmodel->surfmesh.data_vertex3f          ) {memcpy(data, loadmodel->surfmesh.data_vertex3f          , loadmodel->surfmesh.num_vertices * sizeof(float[3]));data += loadmodel->surfmesh.num_vertices * sizeof(float[3]);}
+		if (loadmodel->surfmesh.data_svector3f         ) {memcpy(data, loadmodel->surfmesh.data_svector3f         , loadmodel->surfmesh.num_vertices * sizeof(float[3]));data += loadmodel->surfmesh.num_vertices * sizeof(float[3]);}
+		if (loadmodel->surfmesh.data_tvector3f         ) {memcpy(data, loadmodel->surfmesh.data_tvector3f         , loadmodel->surfmesh.num_vertices * sizeof(float[3]));data += loadmodel->surfmesh.num_vertices * sizeof(float[3]);}
+		if (loadmodel->surfmesh.data_normal3f          ) {memcpy(data, loadmodel->surfmesh.data_normal3f          , loadmodel->surfmesh.num_vertices * sizeof(float[3]));data += loadmodel->surfmesh.num_vertices * sizeof(float[3]);}
+		if (loadmodel->surfmesh.data_texcoordtexture2f ) {memcpy(data, loadmodel->surfmesh.data_texcoordtexture2f , loadmodel->surfmesh.num_vertices * sizeof(float[2]));data += loadmodel->surfmesh.num_vertices * sizeof(float[2]);}
+		if (loadmodel->surfmesh.data_texcoordlightmap2f) {memcpy(data, loadmodel->surfmesh.data_texcoordlightmap2f, loadmodel->surfmesh.num_vertices * sizeof(float[2]));data += loadmodel->surfmesh.num_vertices * sizeof(float[2]);}
+		if (loadmodel->surfmesh.data_lightmapcolor4f   ) {memcpy(data, loadmodel->surfmesh.data_lightmapcolor4f   , loadmodel->surfmesh.num_vertices * sizeof(float[4]));data += loadmodel->surfmesh.num_vertices * sizeof(float[4]);}
+		loadmodel->surfmesh.vbo = R_Mesh_CreateStaticVBO(mem, size);
+		Mem_Free(mem);
+	}
 }
