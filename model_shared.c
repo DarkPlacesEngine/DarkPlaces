@@ -930,19 +930,19 @@ static void Mod_ShadowMesh_CreateVBOs(shadowmesh_t *mesh)
 	if (mesh->numverts)
 	{
 		size_t size;
-		unsigned char *data, *mem;
+		unsigned char *mem;
 		size = 0;
 		mesh->vbooffset_vertex3f           = size;if (mesh->vertex3f          ) size += mesh->numverts * sizeof(float[3]);
 		mesh->vbooffset_svector3f          = size;if (mesh->svector3f         ) size += mesh->numverts * sizeof(float[3]);
 		mesh->vbooffset_tvector3f          = size;if (mesh->tvector3f         ) size += mesh->numverts * sizeof(float[3]);
 		mesh->vbooffset_normal3f           = size;if (mesh->normal3f          ) size += mesh->numverts * sizeof(float[3]);
 		mesh->vbooffset_texcoord2f         = size;if (mesh->texcoord2f        ) size += mesh->numverts * sizeof(float[2]);
-		data = mem = (unsigned char *)Mem_Alloc(tempmempool, size);
-		if (mesh->vertex3f          ) {memcpy(data, mesh->vertex3f          , mesh->numverts * sizeof(float[3]));data += mesh->numverts * sizeof(float[3]);}
-		if (mesh->svector3f         ) {memcpy(data, mesh->svector3f         , mesh->numverts * sizeof(float[3]));data += mesh->numverts * sizeof(float[3]);}
-		if (mesh->tvector3f         ) {memcpy(data, mesh->tvector3f         , mesh->numverts * sizeof(float[3]));data += mesh->numverts * sizeof(float[3]);}
-		if (mesh->normal3f          ) {memcpy(data, mesh->normal3f          , mesh->numverts * sizeof(float[3]));data += mesh->numverts * sizeof(float[3]);}
-		if (mesh->texcoord2f        ) {memcpy(data, mesh->texcoord2f        , mesh->numverts * sizeof(float[2]));data += mesh->numverts * sizeof(float[2]);}
+		mem = (unsigned char *)Mem_Alloc(tempmempool, size);
+		if (mesh->vertex3f          ) memcpy(mem + mesh->vbooffset_vertex3f          , mesh->vertex3f          , mesh->numverts * sizeof(float[3]));
+		if (mesh->svector3f         ) memcpy(mem + mesh->vbooffset_svector3f         , mesh->svector3f         , mesh->numverts * sizeof(float[3]));
+		if (mesh->tvector3f         ) memcpy(mem + mesh->vbooffset_tvector3f         , mesh->tvector3f         , mesh->numverts * sizeof(float[3]));
+		if (mesh->normal3f          ) memcpy(mem + mesh->vbooffset_normal3f          , mesh->normal3f          , mesh->numverts * sizeof(float[3]));
+		if (mesh->texcoord2f        ) memcpy(mem + mesh->vbooffset_texcoord2f        , mesh->texcoord2f        , mesh->numverts * sizeof(float[2]));
 		mesh->vbo = R_Mesh_CreateStaticVBO(mem, size);
 		Mem_Free(mem);
 	}
@@ -1446,7 +1446,7 @@ static void Mod_BuildVBOs(void)
 	if (loadmodel->surfmesh.num_vertices)
 	{
 		size_t size;
-		unsigned char *data, *mem;
+		unsigned char *mem;
 		size = 0;
 		loadmodel->surfmesh.vbooffset_vertex3f           = size;if (loadmodel->surfmesh.data_vertex3f          ) size += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
 		loadmodel->surfmesh.vbooffset_svector3f          = size;if (loadmodel->surfmesh.data_svector3f         ) size += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
@@ -1455,14 +1455,14 @@ static void Mod_BuildVBOs(void)
 		loadmodel->surfmesh.vbooffset_texcoordtexture2f  = size;if (loadmodel->surfmesh.data_texcoordtexture2f ) size += loadmodel->surfmesh.num_vertices * sizeof(float[2]);
 		loadmodel->surfmesh.vbooffset_texcoordlightmap2f = size;if (loadmodel->surfmesh.data_texcoordlightmap2f) size += loadmodel->surfmesh.num_vertices * sizeof(float[2]);
 		loadmodel->surfmesh.vbooffset_lightmapcolor4f    = size;if (loadmodel->surfmesh.data_lightmapcolor4f   ) size += loadmodel->surfmesh.num_vertices * sizeof(float[4]);
-		data = mem = (unsigned char *)Mem_Alloc(tempmempool, size);
-		if (loadmodel->surfmesh.data_vertex3f          ) {memcpy(data, loadmodel->surfmesh.data_vertex3f          , loadmodel->surfmesh.num_vertices * sizeof(float[3]));data += loadmodel->surfmesh.num_vertices * sizeof(float[3]);}
-		if (loadmodel->surfmesh.data_svector3f         ) {memcpy(data, loadmodel->surfmesh.data_svector3f         , loadmodel->surfmesh.num_vertices * sizeof(float[3]));data += loadmodel->surfmesh.num_vertices * sizeof(float[3]);}
-		if (loadmodel->surfmesh.data_tvector3f         ) {memcpy(data, loadmodel->surfmesh.data_tvector3f         , loadmodel->surfmesh.num_vertices * sizeof(float[3]));data += loadmodel->surfmesh.num_vertices * sizeof(float[3]);}
-		if (loadmodel->surfmesh.data_normal3f          ) {memcpy(data, loadmodel->surfmesh.data_normal3f          , loadmodel->surfmesh.num_vertices * sizeof(float[3]));data += loadmodel->surfmesh.num_vertices * sizeof(float[3]);}
-		if (loadmodel->surfmesh.data_texcoordtexture2f ) {memcpy(data, loadmodel->surfmesh.data_texcoordtexture2f , loadmodel->surfmesh.num_vertices * sizeof(float[2]));data += loadmodel->surfmesh.num_vertices * sizeof(float[2]);}
-		if (loadmodel->surfmesh.data_texcoordlightmap2f) {memcpy(data, loadmodel->surfmesh.data_texcoordlightmap2f, loadmodel->surfmesh.num_vertices * sizeof(float[2]));data += loadmodel->surfmesh.num_vertices * sizeof(float[2]);}
-		if (loadmodel->surfmesh.data_lightmapcolor4f   ) {memcpy(data, loadmodel->surfmesh.data_lightmapcolor4f   , loadmodel->surfmesh.num_vertices * sizeof(float[4]));data += loadmodel->surfmesh.num_vertices * sizeof(float[4]);}
+		mem = (unsigned char *)Mem_Alloc(tempmempool, size);
+		if (loadmodel->surfmesh.data_vertex3f          ) memcpy(mem + loadmodel->surfmesh.vbooffset_vertex3f          , loadmodel->surfmesh.data_vertex3f          , loadmodel->surfmesh.num_vertices * sizeof(float[3]));
+		if (loadmodel->surfmesh.data_svector3f         ) memcpy(mem + loadmodel->surfmesh.vbooffset_svector3f         , loadmodel->surfmesh.data_svector3f         , loadmodel->surfmesh.num_vertices * sizeof(float[3]));
+		if (loadmodel->surfmesh.data_tvector3f         ) memcpy(mem + loadmodel->surfmesh.vbooffset_tvector3f         , loadmodel->surfmesh.data_tvector3f         , loadmodel->surfmesh.num_vertices * sizeof(float[3]));
+		if (loadmodel->surfmesh.data_normal3f          ) memcpy(mem + loadmodel->surfmesh.vbooffset_normal3f          , loadmodel->surfmesh.data_normal3f          , loadmodel->surfmesh.num_vertices * sizeof(float[3]));
+		if (loadmodel->surfmesh.data_texcoordtexture2f ) memcpy(mem + loadmodel->surfmesh.vbooffset_texcoordtexture2f , loadmodel->surfmesh.data_texcoordtexture2f , loadmodel->surfmesh.num_vertices * sizeof(float[2]));
+		if (loadmodel->surfmesh.data_texcoordlightmap2f) memcpy(mem + loadmodel->surfmesh.vbooffset_texcoordlightmap2f, loadmodel->surfmesh.data_texcoordlightmap2f, loadmodel->surfmesh.num_vertices * sizeof(float[2]));
+		if (loadmodel->surfmesh.data_lightmapcolor4f   ) memcpy(mem + loadmodel->surfmesh.vbooffset_lightmapcolor4f   , loadmodel->surfmesh.data_lightmapcolor4f   , loadmodel->surfmesh.num_vertices * sizeof(float[4]));
 		loadmodel->surfmesh.vbo = R_Mesh_CreateStaticVBO(mem, size);
 		Mem_Free(mem);
 	}

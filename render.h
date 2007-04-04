@@ -206,11 +206,33 @@ typedef enum rsurfmode_e
 }
 rsurfmode_t;
 
+extern float *rsurface_modelvertex3f;
+extern int rsurface_modelvertex3f_bufferobject;
+extern size_t rsurface_modelvertex3f_bufferoffset;
+extern float *rsurface_modelsvector3f;
+extern int rsurface_modelsvector3f_bufferobject;
+extern size_t rsurface_modelsvector3f_bufferoffset;
+extern float *rsurface_modeltvector3f;
+extern int rsurface_modeltvector3f_bufferobject;
+extern size_t rsurface_modeltvector3f_bufferoffset;
+extern float *rsurface_modelnormal3f;
+extern int rsurface_modelnormal3f_bufferobject;
+extern size_t rsurface_modelnormal3f_bufferoffset;
 extern float *rsurface_vertex3f;
+extern int rsurface_vertex3f_bufferobject;
+extern size_t rsurface_vertex3f_bufferoffset;
 extern float *rsurface_svector3f;
+extern int rsurface_svector3f_bufferobject;
+extern size_t rsurface_svector3f_bufferoffset;
 extern float *rsurface_tvector3f;
+extern int rsurface_tvector3f_bufferobject;
+extern size_t rsurface_tvector3f_bufferoffset;
 extern float *rsurface_normal3f;
+extern int rsurface_normal3f_bufferobject;
+extern size_t rsurface_normal3f_bufferoffset;
 extern float *rsurface_lightmapcolor4f;
+extern int rsurface_lightmapcolor4f_bufferobject;
+extern size_t rsurface_lightmapcolor4f_bufferoffset;
 extern vec3_t rsurface_modelorg;
 extern qboolean rsurface_generatedvertex;
 extern const entity_render_t *rsurface_entity;
