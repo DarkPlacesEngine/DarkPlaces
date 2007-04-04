@@ -168,7 +168,8 @@ void SCR_CheckDrawCenterString (void)
 	if (scr_center_lines > scr_erase_lines)
 		scr_erase_lines = scr_center_lines;
 
-	scr_centertime_off -= cl.realframetime;
+	if (cl.time > cl.oldtime)
+		scr_centertime_off -= cl.time - cl.oldtime;
 
 	// don't draw if this is a normal stats-screen intermission,
 	// only if it is not an intermission, or a finale intermission
