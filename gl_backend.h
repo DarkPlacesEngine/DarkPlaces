@@ -69,6 +69,17 @@ void R_Mesh_Start(void);
 // (only valid after R_Mesh_Start)
 void R_Mesh_Finish(void);
 
+// allocates a static element array buffer object
+// (storing triangle data in video memory)
+int R_Mesh_CreateStaticEBO(void *data, size_t size);
+// frees an element array buffer object
+void R_Mesh_DestroyEBO(int bufferobject);
+// allocates a static vertex array buffer object
+// (storing vertex data in video memory)
+int R_Mesh_CreateStaticVBO(void *data, size_t size);
+// frees a vertex array buffer object
+void R_Mesh_DestroyVBO(int bufferobject);
+
 // sets up the requested vertex transform matrix
 void R_Mesh_Matrix(const matrix4x4_t *matrix);
 // sets the vertex array pointer

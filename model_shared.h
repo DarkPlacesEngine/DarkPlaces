@@ -79,9 +79,13 @@ struct trivertex_s;
 // (the surfaces reference portions of these meshes)
 typedef struct surfmesh_s
 {
+	// triangle data in system memory
 	int num_triangles; // number of triangles in the mesh
 	int *data_element3i; // int[tris*3] triangles of the mesh, 3 indices into vertex arrays for each
 	int *data_neighbor3i; // int[tris*3] neighboring triangle on each edge (-1 if none)
+	// element buffer object (stores triangles in video memory)
+	int ebo;
+	// vertex data in system memory
 	int num_vertices; // number of vertices in the mesh
 	float *data_vertex3f; // float[verts*3] vertex locations
 	float *data_svector3f; // float[verts*3] direction of 'S' (right) texture axis for each vertex
@@ -91,6 +95,15 @@ typedef struct surfmesh_s
 	float *data_texcoordlightmap2f; // float[verts*2] texcoords for lightmap texture
 	float *data_lightmapcolor4f;
 	int *data_lightmapoffsets; // index into surface's lightmap samples for vertex lighting
+	// vertex buffer object (stores geometry in video memory)
+	int vbo;
+	size_t vbooffset_vertex3f;
+	size_t vbooffset_svector3f;
+	size_t vbooffset_tvector3f;
+	size_t vbooffset_normal3f;
+	size_t vbooffset_texcoordtexture2f;
+	size_t vbooffset_texcoordlightmap2f;
+	size_t vbooffset_lightmapcolor4f;
 	// morph blending, these are zero if model is skeletal or static
 	int num_morphframes;
 	struct md3vertex_s *data_morphmd3vertex;
@@ -138,6 +151,17 @@ typedef struct shadowmesh_s
 	// these are NULL after Mod_ShadowMesh_Finish is performed, only used
 	// while building meshes
 	shadowmeshvertexhash_t **vertexhashtable, *vertexhashentries;
+	// element buffer object (stores triangles in video memory)
+	// (created by Mod_ShadowMesh_Finish if possible)
+	int ebo;
+	// vertex buffer object (stores vertices in video memory)
+	// (created by Mod_ShadowMesh_Finish if possible)
+	int vbo;
+	size_t vbooffset_vertex3f;
+	size_t vbooffset_svector3f;
+	size_t vbooffset_tvector3f;
+	size_t vbooffset_normal3f;
+	size_t vbooffset_texcoord2f;
 }
 shadowmesh_t;
 
@@ -650,7 +674,7 @@ int Mod_ShadowMesh_AddVertex(shadowmesh_t *mesh, float *vertex14f);
 void Mod_ShadowMesh_AddTriangle(mempool_t *mempool, shadowmesh_t *mesh, rtexture_t *map_diffuse, rtexture_t *map_specular, rtexture_t *map_normal, float *vertex14f);
 void Mod_ShadowMesh_AddMesh(mempool_t *mempool, shadowmesh_t *mesh, rtexture_t *map_diffuse, rtexture_t *map_specular, rtexture_t *map_normal, const float *vertex3f, const float *svector3f, const float *tvector3f, const float *normal3f, const float *texcoord2f, int numtris, const int *element3i);
 shadowmesh_t *Mod_ShadowMesh_Begin(mempool_t *mempool, int maxverts, int maxtriangles, rtexture_t *map_diffuse, rtexture_t *map_specular, rtexture_t *map_normal, int light, int neighbors, int expandable);
-shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh, int light, int neighbors);
+shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh, qboolean light, qboolean neighbors, qboolean createvbo);
 void Mod_ShadowMesh_CalcBBox(shadowmesh_t *firstmesh, vec3_t mins, vec3_t maxs, vec3_t center, float *radius);
 void Mod_ShadowMesh_Free(shadowmesh_t *mesh);
 

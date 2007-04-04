@@ -1081,6 +1081,34 @@ void R_Mesh_Finish(void)
 	qglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);CHECKGLERROR
 }
 
+int R_Mesh_CreateStaticEBO(void *data, size_t size)
+{
+	GLuint bufferobject;
+	qglGenBuffersARB(1, &bufferobject);
+	GL_BindEBO(bufferobject);
+	qglBufferDataARB(GL_ELEMENT_ARRAY_BUFFER_ARB, size, data, GL_STATIC_DRAW_ARB);
+	return (int)bufferobject;
+}
+
+void R_Mesh_DestroyEBO(int bufferobject)
+{
+	qglDeleteBuffersARB(1, (GLuint *)&bufferobject);
+}
+
+int R_Mesh_CreateStaticVBO(void *data, size_t size)
+{
+	GLuint bufferobject;
+	qglGenBuffersARB(1, &bufferobject);
+	GL_BindVBO(bufferobject);
+	qglBufferDataARB(GL_ARRAY_BUFFER_ARB, size, data, GL_STATIC_DRAW_ARB);
+	return (int)bufferobject;
+}
+
+void R_Mesh_DestroyVBO(int bufferobject)
+{
+	qglDeleteBuffersARB(1, (GLuint *)&bufferobject);
+}
+
 void R_Mesh_Matrix(const matrix4x4_t *matrix)
 {
 	if (memcmp(matrix, &backend_modelmatrix, sizeof(matrix4x4_t)))
