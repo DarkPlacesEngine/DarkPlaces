@@ -245,18 +245,18 @@ void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, const r
 	if (!r_lightningbeam_qmbtexture.integer && r_lightningbeamtexture == NULL)
 		r_lightningbeams_setuptexture();
 
-	R_Mesh_VertexPointer(vertex3f);
+	R_Mesh_VertexPointer(vertex3f, 0, 0);
 	// FIXME: fixed function path can't properly handle r_view.colorscale > 1
 	if (r_refdef.fogenabled)
 	{
 		// per vertex colors if fog is used
-		R_Mesh_ColorPointer(color4f);
+		R_Mesh_ColorPointer(color4f, 0, 0);
 		R_FogLightningBeam_Vertex3f_Color4f(vertex3f, color4f, 12, r_lightningbeam_color_red.value * r_view.colorscale, r_lightningbeam_color_green.value * r_view.colorscale, r_lightningbeam_color_blue.value * r_view.colorscale, 1);
 	}
 	else
 	{
 		// solid color if fog is not used
-		R_Mesh_ColorPointer(NULL);
+		R_Mesh_ColorPointer(NULL, 0, 0);
 		GL_Color(r_lightningbeam_color_red.value * r_view.colorscale, r_lightningbeam_color_green.value * r_view.colorscale, r_lightningbeam_color_blue.value * r_view.colorscale, 1);
 	}
 	memset(&m, 0, sizeof(m));
@@ -336,7 +336,7 @@ void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, const r
 
 		// draw the 3 polygons as one batch of 6 triangles using the 12 vertices
 		GL_LockArrays(0, 12);
-		R_Mesh_Draw(0, 12, 6, r_lightningbeamelements);
+		R_Mesh_Draw(0, 12, 6, r_lightningbeamelements, 0, 0);
 		GL_LockArrays(0, 0);
 	}
 }

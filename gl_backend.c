@@ -867,10 +867,8 @@ void GL_Backend_RenumberElements(int *out, int count, const int *in, int offset)
 
 // renders triangles using vertices from the active arrays
 int paranoidblah = 0;
-void R_Mesh_Draw(int firstvertex, int numvertices, int numtriangles, const int *elements)
+void R_Mesh_Draw(int firstvertex, int numvertices, int numtriangles, const int *elements, int bufferobject, size_t bufferoffset)
 {
-	int bufferobject = 0;
-	size_t offset = 0;
 	unsigned int numelements = numtriangles * 3;
 	if (numvertices < 3 || numtriangles < 1)
 	{
@@ -1014,13 +1012,13 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int numtriangles, const int *
 		else if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
 		{
 			GL_BindEBO(bufferobject);
-			qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices, numelements, GL_UNSIGNED_INT, bufferobject ? (void *)offset : elements);
+			qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices, numelements, GL_UNSIGNED_INT, bufferobject ? (void *)bufferoffset : elements);
 			CHECKGLERROR
 		}
 		else
 		{
 			GL_BindEBO(bufferobject);
-			qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, bufferobject ? (void *)offset : elements);
+			qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, bufferobject ? (void *)bufferoffset : elements);
 			CHECKGLERROR
 		}
 	}
@@ -1096,25 +1094,21 @@ void R_Mesh_Matrix(const matrix4x4_t *matrix)
 	}
 }
 
-void R_Mesh_VertexPointer(const float *vertex3f)
+void R_Mesh_VertexPointer(const float *vertex3f, int bufferobject, size_t bufferoffset)
 {
-	int bufferobject = 0;
-	size_t offset = 0;
-	if (gl_state.pointer_vertex != vertex3f || gl_state.pointer_vertex_buffer != bufferobject || gl_state.pointer_vertex_offset != offset)
+	if (gl_state.pointer_vertex != vertex3f || gl_state.pointer_vertex_buffer != bufferobject || gl_state.pointer_vertex_offset != bufferoffset)
 	{
 		gl_state.pointer_vertex = vertex3f;
 		gl_state.pointer_vertex_buffer = bufferobject;
-		gl_state.pointer_vertex_offset = offset;
+		gl_state.pointer_vertex_offset = bufferoffset;
 		CHECKGLERROR
 		GL_BindVBO(bufferobject);
-		qglVertexPointer(3, GL_FLOAT, sizeof(float[3]), bufferobject ? (void *)offset : vertex3f);CHECKGLERROR
+		qglVertexPointer(3, GL_FLOAT, sizeof(float[3]), bufferobject ? (void *)bufferoffset : vertex3f);CHECKGLERROR
 	}
 }
 
-void R_Mesh_ColorPointer(const float *color4f)
+void R_Mesh_ColorPointer(const float *color4f, int bufferobject, size_t bufferoffset)
 {
-	int bufferobject = 0;
-	size_t offset = 0;
 	if (color4f || bufferobject)
 	{
 		// caller wants color array enabled
@@ -1124,14 +1118,14 @@ void R_Mesh_ColorPointer(const float *color4f)
 			CHECKGLERROR
 			qglEnableClientState(GL_COLOR_ARRAY);CHECKGLERROR
 		}
-		if (gl_state.pointer_color != color4f || gl_state.pointer_color_buffer != bufferobject || gl_state.pointer_color_offset != offset)
+		if (gl_state.pointer_color != color4f || gl_state.pointer_color_buffer != bufferobject || gl_state.pointer_color_offset != bufferoffset)
 		{
 			gl_state.pointer_color = color4f;
 			gl_state.pointer_color_buffer = bufferobject;
-			gl_state.pointer_color_offset = offset;
+			gl_state.pointer_color_offset = bufferoffset;
 			CHECKGLERROR
 			GL_BindVBO(bufferobject);
-			qglColorPointer(4, GL_FLOAT, sizeof(float[4]), bufferobject ? (void *)offset : color4f);CHECKGLERROR
+			qglColorPointer(4, GL_FLOAT, sizeof(float[4]), bufferobject ? (void *)bufferoffset : color4f);CHECKGLERROR
 		}
 	}
 	else
@@ -1148,10 +1142,8 @@ void R_Mesh_ColorPointer(const float *color4f)
 	}
 }
 
-void R_Mesh_TexCoordPointer(unsigned int unitnum, unsigned int numcomponents, const float *texcoord)
+void R_Mesh_TexCoordPointer(unsigned int unitnum, unsigned int numcomponents, const float *texcoord, int bufferobject, size_t bufferoffset)
 {
-	int bufferobject = 0;
-	size_t offset;
 	gltextureunit_t *unit = gl_state.units + unitnum;
 	// update array settings
 	CHECKGLERROR
@@ -1165,15 +1157,15 @@ void R_Mesh_TexCoordPointer(unsigned int unitnum, unsigned int numcomponents, co
 			qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 		}
 		// texcoord array
-		if (unit->pointer_texcoord != texcoord || unit->pointer_texcoord_buffer != bufferobject || unit->pointer_texcoord_offset != offset || unit->arraycomponents != numcomponents)
+		if (unit->pointer_texcoord != texcoord || unit->pointer_texcoord_buffer != bufferobject || unit->pointer_texcoord_offset != bufferoffset || unit->arraycomponents != numcomponents)
 		{
 			unit->pointer_texcoord = texcoord;
 			unit->pointer_texcoord_buffer = bufferobject;
-			unit->pointer_texcoord_offset = offset;
+			unit->pointer_texcoord_offset = bufferoffset;
 			unit->arraycomponents = numcomponents;
 			GL_ClientActiveTexture(unitnum);
 			GL_BindVBO(bufferobject);
-			qglTexCoordPointer(unit->arraycomponents, GL_FLOAT, sizeof(float) * unit->arraycomponents, bufferobject ? (void *)offset : texcoord);CHECKGLERROR
+			qglTexCoordPointer(unit->arraycomponents, GL_FLOAT, sizeof(float) * unit->arraycomponents, bufferobject ? (void *)bufferoffset : texcoord);CHECKGLERROR
 		}
 	}
 	else
@@ -1688,9 +1680,9 @@ void R_Mesh_TextureState(const rmeshstate_t *m)
 	for (i = 0;i < backendarrayunits;i++)
 	{
 		if (m->pointer_texcoord3f[i])
-			R_Mesh_TexCoordPointer(i, 3, m->pointer_texcoord3f[i]);
+			R_Mesh_TexCoordPointer(i, 3, m->pointer_texcoord3f[i], 0, 0);
 		else
-			R_Mesh_TexCoordPointer(i, 2, m->pointer_texcoord[i]);
+			R_Mesh_TexCoordPointer(i, 2, m->pointer_texcoord[i], 0, 0);
 	}
 	for (i = 0;i < backendunits;i++)
 	{

@@ -72,11 +72,11 @@ void R_Mesh_Finish(void);
 // sets up the requested vertex transform matrix
 void R_Mesh_Matrix(const matrix4x4_t *matrix);
 // sets the vertex array pointer
-void R_Mesh_VertexPointer(const float *vertex3f);
+void R_Mesh_VertexPointer(const float *vertex3f, int bufferobject, size_t bufferoffset);
 // sets the color array pointer (GL_Color only works when this is NULL)
-void R_Mesh_ColorPointer(const float *color4f);
+void R_Mesh_ColorPointer(const float *color4f, int bufferobject, size_t bufferoffset);
 // sets the texcoord array pointer for an array unit
-void R_Mesh_TexCoordPointer(unsigned int unitnum, unsigned int numcomponents, const float *texcoord);
+void R_Mesh_TexCoordPointer(unsigned int unitnum, unsigned int numcomponents, const float *texcoord, int bufferobject, size_t bufferoffset);
 // sets all textures bound to an image unit (multiple can be non-zero at once, according to OpenGL rules the highest one overrides the others)
 void R_Mesh_TexBindAll(unsigned int unitnum, int tex1d, int tex2d, int tex3d, int texcubemap);
 // sets these are like TexBindAll with only one of the texture indices non-zero
@@ -95,7 +95,7 @@ void R_Mesh_TextureState(const rmeshstate_t *m);
 void R_Mesh_ResetTextureState(void);
 
 // renders a mesh
-void R_Mesh_Draw(int firstvertex, int numvertices, int numtriangles, const int *elements);
+void R_Mesh_Draw(int firstvertex, int numvertices, int numtriangles, const int *elements, int bufferobject, size_t bufferoffset);
 // renders a mesh as lines
 void R_Mesh_Draw_ShowTris(int firstvertex, int numvertices, int numtriangles, const int *elements);
 

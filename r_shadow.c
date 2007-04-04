@@ -900,19 +900,19 @@ void R_Shadow_RenderVolume(int numvertices, int numtriangles, const float *verte
 	}
 	r_refdef.stats.lights_shadowtriangles += numtriangles;
 	CHECKGLERROR
-	R_Mesh_VertexPointer(vertex3f);
+	R_Mesh_VertexPointer(vertex3f, 0, 0);
 	GL_LockArrays(0, numvertices);
 	if (r_shadow_rendermode == R_SHADOW_RENDERMODE_STENCIL)
 	{
 		// decrement stencil if backface is behind depthbuffer
 		GL_CullFace(GL_BACK); // quake is backwards, this culls front faces
 		qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);CHECKGLERROR
-		R_Mesh_Draw(0, numvertices, numtriangles, element3i);
+		R_Mesh_Draw(0, numvertices, numtriangles, element3i, 0, 0);
 		// increment stencil if frontface is behind depthbuffer
 		GL_CullFace(GL_FRONT); // quake is backwards, this culls back faces
 		qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);CHECKGLERROR
 	}
-	R_Mesh_Draw(0, numvertices, numtriangles, element3i);
+	R_Mesh_Draw(0, numvertices, numtriangles, element3i, 0, 0);
 	GL_LockArrays(0, 0);
 	CHECKGLERROR
 }
@@ -1003,7 +1003,7 @@ void R_Shadow_RenderMode_Begin(void)
 		R_Shadow_MakeTextures();
 
 	CHECKGLERROR
-	R_Mesh_ColorPointer(NULL);
+	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthTest(true);
@@ -1044,7 +1044,7 @@ void R_Shadow_RenderMode_Reset(void)
 	{
 		qglDisable(GL_STENCIL_TEST_TWO_SIDE_EXT);CHECKGLERROR
 	}
-	R_Mesh_ColorPointer(NULL);
+	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
 	GL_DepthTest(true);
 	GL_DepthMask(false);
@@ -1468,24 +1468,24 @@ static void R_Shadow_RenderLighting_VisibleLighting(int firstvertex, int numvert
 {
 	// used to display how many times a surface is lit for level design purposes
 	GL_Color(0.1 * r_view.colorscale, 0.025 * r_view.colorscale, 0, 1);
-	R_Mesh_ColorPointer(NULL);
+	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
-	R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i);
+	R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i, 0, 0);
 }
 
 static void R_Shadow_RenderLighting_Light_GLSL(int firstvertex, int numvertices, int numtriangles, const int *element3i, const vec3_t lightcolorbase, const vec3_t lightcolorpants, const vec3_t lightcolorshirt, rtexture_t *basetexture, rtexture_t *pantstexture, rtexture_t *shirttexture, rtexture_t *normalmaptexture, rtexture_t *glosstexture, float ambientscale, float diffusescale, float specularscale, qboolean dopants, qboolean doshirt)
 {
 	// ARB2 GLSL shader path (GFFX5200, Radeon 9500)
 	R_SetupSurfaceShader(lightcolorbase, false, ambientscale, diffusescale, specularscale);
-	R_Mesh_TexCoordPointer(0, 2, rsurface_model->surfmesh.data_texcoordtexture2f);
-	R_Mesh_TexCoordPointer(1, 3, rsurface_svector3f);
-	R_Mesh_TexCoordPointer(2, 3, rsurface_tvector3f);
-	R_Mesh_TexCoordPointer(3, 3, rsurface_normal3f);
+	R_Mesh_TexCoordPointer(0, 2, rsurface_model->surfmesh.data_texcoordtexture2f, 0, 0);
+	R_Mesh_TexCoordPointer(1, 3, rsurface_svector3f, 0, 0);
+	R_Mesh_TexCoordPointer(2, 3, rsurface_tvector3f, 0, 0);
+	R_Mesh_TexCoordPointer(3, 3, rsurface_normal3f, 0, 0);
 	if (rsurface_texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
 	{
 		qglDepthFunc(GL_EQUAL);CHECKGLERROR
 	}
-	R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i);
+	R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i, 0, 0);
 	if (rsurface_texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
 	{
 		qglDepthFunc(GL_LEQUAL);CHECKGLERROR
@@ -1500,7 +1500,7 @@ static void R_Shadow_RenderLighting_Light_Dot3_Finalize(int firstvertex, int num
 	for (renders = 0;renders < 64 && (r > 0 || g > 0 || b > 0);renders++, r--, g--, b--)
 	{
 		GL_Color(bound(0, r, 1), bound(0, g, 1), bound(0, b, 1), 1);
-		R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i);
+		R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i, 0, 0);
 	}
 }
 
@@ -1591,7 +1591,7 @@ static void R_Shadow_RenderLighting_Light_Dot3_AmbientPass(int firstvertex, int 
 		R_Mesh_TextureState(&m);
 		GL_ColorMask(0,0,0,1);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
-		R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i);
+		R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i, 0, 0);
 
 		// second pass
 		memset(&m, 0, sizeof(m));
@@ -1641,7 +1641,7 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		R_Mesh_TextureState(&m);
 		GL_ColorMask(0,0,0,1);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
-		R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i);
+		R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i, 0, 0);
 
 		// second pass
 		memset(&m, 0, sizeof(m));
@@ -1666,7 +1666,7 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		R_Mesh_TextureState(&m);
 		GL_ColorMask(0,0,0,1);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
-		R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i);
+		R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i, 0, 0);
 
 		// second pass
 		memset(&m, 0, sizeof(m));
@@ -1679,7 +1679,7 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		m.pointer_texcoord3f[1] = rsurface_array_texcoord3f;
 		R_Mesh_TextureState(&m);
 		GL_BlendFunc(GL_DST_ALPHA, GL_ZERO);
-		R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i);
+		R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i, 0, 0);
 
 		// second pass
 		memset(&m, 0, sizeof(m));
@@ -1708,7 +1708,7 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		R_Mesh_TextureState(&m);
 		GL_ColorMask(0,0,0,1);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
-		R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i);
+		R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i, 0, 0);
 
 		// second pass
 		memset(&m, 0, sizeof(m));
@@ -1740,7 +1740,7 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		R_Mesh_TextureState(&m);
 		GL_ColorMask(0,0,0,1);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
-		R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i);
+		R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i, 0, 0);
 
 		// second pass
 		memset(&m, 0, sizeof(m));
@@ -1768,7 +1768,7 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		R_Mesh_TextureState(&m);
 		GL_ColorMask(0,0,0,1);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
-		R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i);
+		R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i, 0, 0);
 
 		// second pass
 		memset(&m, 0, sizeof(m));
@@ -1781,7 +1781,7 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		m.pointer_texcoord3f[1] = rsurface_array_texcoord3f;
 		R_Mesh_TextureState(&m);
 		GL_BlendFunc(GL_DST_ALPHA, GL_ZERO);
-		R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i);
+		R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i, 0, 0);
 
 		// second pass
 		memset(&m, 0, sizeof(m));
@@ -1825,14 +1825,14 @@ static void R_Shadow_RenderLighting_Light_Dot3_SpecularPass(int firstvertex, int
 		GL_ColorMask(0,0,0,1);
 		// this squares the result
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ZERO);
-		R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i);
+		R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i, 0, 0);
 
 		// second and third pass
 		R_Mesh_ResetTextureState();
 		// square alpha in framebuffer a few times to make it shiny
 		GL_BlendFunc(GL_ZERO, GL_DST_ALPHA);
 		for (glossexponent = 2;glossexponent * 2 <= r_shadow_glossexponent.value;glossexponent *= 2)
-			R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i);
+			R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i, 0, 0);
 
 		// fourth pass
 		memset(&m, 0, sizeof(m));
@@ -1841,7 +1841,7 @@ static void R_Shadow_RenderLighting_Light_Dot3_SpecularPass(int firstvertex, int
 		m.texmatrix[0] = r_shadow_entitytoattenuationxyz;
 		R_Mesh_TextureState(&m);
 		GL_BlendFunc(GL_DST_ALPHA, GL_ZERO);
-		R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i);
+		R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i, 0, 0);
 
 		// fifth pass
 		memset(&m, 0, sizeof(m));
@@ -1870,14 +1870,14 @@ static void R_Shadow_RenderLighting_Light_Dot3_SpecularPass(int firstvertex, int
 		GL_ColorMask(0,0,0,1);
 		// this squares the result
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ZERO);
-		R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i);
+		R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i, 0, 0);
 
 		// second and third pass
 		R_Mesh_ResetTextureState();
 		// square alpha in framebuffer a few times to make it shiny
 		GL_BlendFunc(GL_ZERO, GL_DST_ALPHA);
 		for (glossexponent = 2;glossexponent * 2 <= r_shadow_glossexponent.value;glossexponent *= 2)
-			R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i);
+			R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i, 0, 0);
 
 		// fourth pass
 		memset(&m, 0, sizeof(m));
@@ -1903,14 +1903,14 @@ static void R_Shadow_RenderLighting_Light_Dot3_SpecularPass(int firstvertex, int
 		GL_ColorMask(0,0,0,1);
 		// this squares the result
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ZERO);
-		R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i);
+		R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i, 0, 0);
 
 		// second and third pass
 		R_Mesh_ResetTextureState();
 		// square alpha in framebuffer a few times to make it shiny
 		GL_BlendFunc(GL_ZERO, GL_DST_ALPHA);
 		for (glossexponent = 2;glossexponent * 2 <= r_shadow_glossexponent.value;glossexponent *= 2)
-			R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i);
+			R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i, 0, 0);
 
 		// fourth pass
 		memset(&m, 0, sizeof(m));
@@ -1922,7 +1922,7 @@ static void R_Shadow_RenderLighting_Light_Dot3_SpecularPass(int firstvertex, int
 		m.texmatrix[1] = r_shadow_entitytoattenuationz;
 		R_Mesh_TextureState(&m);
 		GL_BlendFunc(GL_DST_ALPHA, GL_ZERO);
-		R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i);
+		R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i, 0, 0);
 
 		// fifth pass
 		memset(&m, 0, sizeof(m));
@@ -1950,7 +1950,7 @@ static void R_Shadow_RenderLighting_Light_Dot3(int firstvertex, int numvertices,
 	qboolean dospecular = specularscale > 0;
 	if (!doambient && !dodiffuse && !dospecular)
 		return;
-	R_Mesh_ColorPointer(NULL);
+	R_Mesh_ColorPointer(NULL, 0, 0);
 	if (doambient)
 		R_Shadow_RenderLighting_Light_Dot3_AmbientPass(firstvertex, numvertices, numtriangles, element3i, lightcolorbase, basetexture, ambientscale * r_view.colorscale);
 	if (dodiffuse)
@@ -2023,7 +2023,7 @@ void R_Shadow_RenderLighting_Light_Vertex_Pass(const model_t *model, int firstve
 				newe += 3;
 				if (newnumtriangles >= 1024)
 				{
-					R_Mesh_Draw(newfirstvertex, newlastvertex - newfirstvertex + 1, newnumtriangles, newelements);
+					R_Mesh_Draw(newfirstvertex, newlastvertex - newfirstvertex + 1, newnumtriangles, newelements, 0, 0);
 					newnumtriangles = 0;
 					newe = newelements;
 					stop = false;
@@ -2032,7 +2032,7 @@ void R_Shadow_RenderLighting_Light_Vertex_Pass(const model_t *model, int firstve
 		}
 		if (newnumtriangles >= 1)
 		{
-			R_Mesh_Draw(newfirstvertex, newlastvertex - newfirstvertex + 1, newnumtriangles, newelements);
+			R_Mesh_Draw(newfirstvertex, newlastvertex - newfirstvertex + 1, newnumtriangles, newelements, 0, 0);
 			stop = false;
 		}
 		// if we couldn't find any lit triangles, exit early
@@ -2076,7 +2076,7 @@ static void R_Shadow_RenderLighting_Light_Vertex(int firstvertex, int numvertice
 	VectorScale(lightcolorshirt, ambientscale * 2 * r_view.colorscale, ambientcolorshirt);
 	VectorScale(lightcolorshirt, diffusescale * 2 * r_view.colorscale, diffusecolorshirt);
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-	R_Mesh_ColorPointer(rsurface_array_color4f);
+	R_Mesh_ColorPointer(rsurface_array_color4f, 0, 0);
 	memset(&m, 0, sizeof(m));
 	m.tex[0] = R_GetTexture(basetexture);
 	m.texmatrix[0] = rsurface_texture->currenttexmatrix;
@@ -2526,19 +2526,19 @@ void R_Shadow_DrawWorldShadow(int numsurfaces, int *surfacelist, const unsigned 
 		for (mesh = r_shadow_rtlight->static_meshchain_shadow;mesh;mesh = mesh->next)
 		{
 			r_refdef.stats.lights_shadowtriangles += mesh->numtriangles;
-			R_Mesh_VertexPointer(mesh->vertex3f);
+			R_Mesh_VertexPointer(mesh->vertex3f, 0, 0);
 			GL_LockArrays(0, mesh->numverts);
 			if (r_shadow_rendermode == R_SHADOW_RENDERMODE_STENCIL)
 			{
 				// decrement stencil if backface is behind depthbuffer
 				GL_CullFace(GL_BACK); // quake is backwards, this culls front faces
 				qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);CHECKGLERROR
-				R_Mesh_Draw(0, mesh->numverts, mesh->numtriangles, mesh->element3i);
+				R_Mesh_Draw(0, mesh->numverts, mesh->numtriangles, mesh->element3i, 0, 0);
 				// increment stencil if frontface is behind depthbuffer
 				GL_CullFace(GL_FRONT); // quake is backwards, this culls back faces
 				qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);CHECKGLERROR
 			}
-			R_Mesh_Draw(0, mesh->numverts, mesh->numtriangles, mesh->element3i);
+			R_Mesh_Draw(0, mesh->numverts, mesh->numtriangles, mesh->element3i, 0, 0);
 			GL_LockArrays(0, 0);
 		}
 		CHECKGLERROR
@@ -2924,8 +2924,8 @@ void R_DrawModelShadows(void)
 	GL_ScissorTest(true);
 	R_Mesh_Matrix(&identitymatrix);
 	R_Mesh_ResetTextureState();
-	R_Mesh_VertexPointer(vertex3f);
-	R_Mesh_ColorPointer(NULL);
+	R_Mesh_VertexPointer(vertex3f, 0, 0);
+	R_Mesh_ColorPointer(NULL, 0, 0);
 
 	// set up a 50% darkening blend on shadowed areas
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -2941,7 +2941,7 @@ void R_DrawModelShadows(void)
 	qglStencilFunc(GL_NOTEQUAL, 128, ~0);CHECKGLERROR
 
 	// apply the blend to the shadowed areas
-	R_Mesh_Draw(0, 4, 2, polygonelements);
+	R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
 
 	// restoring the perspective view is done by R_RenderScene
 	//R_SetupView(&r_view.matrix);

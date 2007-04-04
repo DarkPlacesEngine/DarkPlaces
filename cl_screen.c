@@ -1648,11 +1648,11 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 	GL_Color(1,1,1,1);
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	GL_DepthTest(false);
-	R_Mesh_VertexPointer(vertex3f);
-	R_Mesh_ColorPointer(NULL);
+	R_Mesh_VertexPointer(vertex3f, 0, 0);
+	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
 	R_Mesh_TexBind(0, R_GetTexture(pic->tex));
-	R_Mesh_TexCoordPointer(0, 2, texcoord2f);
+	R_Mesh_TexCoordPointer(0, 2, texcoord2f, 0, 0);
 	vertex3f[2] = vertex3f[5] = vertex3f[8] = vertex3f[11] = 0;
 	vertex3f[0] = vertex3f[9] = x;
 	vertex3f[1] = vertex3f[4] = y;
@@ -1665,14 +1665,14 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 	if (vid.stereobuffer)
 	{
 		qglDrawBuffer(GL_FRONT_LEFT);
-		R_Mesh_Draw(0, 4, 2, polygonelements);
+		R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
 		qglDrawBuffer(GL_FRONT_RIGHT);
-		R_Mesh_Draw(0, 4, 2, polygonelements);
+		R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
 	}
 	else
 	{
 		qglDrawBuffer(GL_FRONT);
-		R_Mesh_Draw(0, 4, 2, polygonelements);
+		R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
 	}
 	R_Mesh_Finish();
 	// refresh
