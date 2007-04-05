@@ -157,7 +157,7 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 #ifdef STANDALONETEST
 	if (i < MAX_NAMECACHE)
 #else
-	if (i < MAX_NAMECACHE && Sys_DoubleTime() < namecache[i].expirationtime)
+	if (i < MAX_NAMECACHE && realtime < namecache[i].expirationtime)
 #endif
 	{
 		*address = namecache[i].address;
@@ -188,7 +188,7 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 				namecache[namecacheposition].name[i] = name[i];
 			namecache[namecacheposition].name[i] = 0;
 #ifndef STANDALONETEST
-			namecache[namecacheposition].expirationtime = Sys_DoubleTime() + 12 * 3600; // 12 hours
+			namecache[namecacheposition].expirationtime = realtime + 12 * 3600; // 12 hours
 #endif
 			namecache[namecacheposition].address = *address;
 			namecacheposition = (namecacheposition + 1) % MAX_NAMECACHE;
@@ -208,7 +208,7 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 				namecache[namecacheposition].name[i] = name[i];
 			namecache[namecacheposition].name[i] = 0;
 #ifndef STANDALONETEST
-			namecache[namecacheposition].expirationtime = Sys_DoubleTime() + 12 * 3600; // 12 hours
+			namecache[namecacheposition].expirationtime = realtime + 12 * 3600; // 12 hours
 #endif
 			namecache[namecacheposition].address = *address;
 			namecacheposition = (namecacheposition + 1) % MAX_NAMECACHE;
@@ -225,7 +225,7 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 		namecache[namecacheposition].name[i] = name[i];
 	namecache[namecacheposition].name[i] = 0;
 #ifndef STANDALONETEST
-	namecache[namecacheposition].expirationtime = Sys_DoubleTime() + 12 * 3600; // 12 hours
+	namecache[namecacheposition].expirationtime = realtime + 12 * 3600; // 12 hours
 #endif
 	namecache[namecacheposition].address.addresstype = LHNETADDRESSTYPE_NONE;
 	namecacheposition = (namecacheposition + 1) % MAX_NAMECACHE;
@@ -666,7 +666,7 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 				continue;
 			}
 #ifndef STANDALONETEST
-			if (cl_netlocalping.value && (Sys_DoubleTime() - cl_netlocalping.value * (1.0 / 2000.0)) < p->sentdoubletime)
+			if (cl_netlocalping.value && (realtime - cl_netlocalping.value * (1.0 / 2000.0)) < p->sentdoubletime)
 				continue;
 #endif
 			if (value == 0 && p->destinationport == lhnetsocket->address.addressdata.loop.port)
@@ -762,7 +762,7 @@ int LHNET_Write(lhnetsocket_t *lhnetsocket, const void *content, int contentleng
 		p->next->prev = p;
 		p->prev->next = p;
 #ifndef STANDALONETEST
-		p->sentdoubletime = Sys_DoubleTime();
+		p->sentdoubletime = realtime;
 #endif
 		value = contentlength;
 	}

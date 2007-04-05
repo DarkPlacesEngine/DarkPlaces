@@ -1002,7 +1002,7 @@ void Sbar_ShowFPS(void)
 		static double framerate = 0;
 		static int framecount = 0;
 		double newtime;
-		newtime = Sys_DoubleTime();
+		newtime = realtime;
 		if (newtime >= nexttime)
 		{
 			framerate = framecount / (newtime - lasttime);

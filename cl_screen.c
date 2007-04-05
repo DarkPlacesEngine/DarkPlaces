@@ -854,7 +854,7 @@ void SCR_CaptureVideo_BeginVideo(void)
 	memset(&cls.capturevideo, 0, sizeof(cls.capturevideo));
 	// soundrate is figured out on the first SoundFrame
 	cls.capturevideo.active = true;
-	cls.capturevideo.starttime = Sys_DoubleTime();
+	cls.capturevideo.starttime = realtime;
 	cls.capturevideo.framerate = bound(1, cl_capturevideo_fps.value, 1000);
 	cls.capturevideo.soundrate = S_GetSoundRate();
 	cls.capturevideo.frame = 0;
@@ -1210,7 +1210,7 @@ void SCR_CaptureVideo(void)
 		if (cls.capturevideo.realtime)
 		{
 			// preserve sound sync by duplicating frames when running slow
-			newframenum = (int)((Sys_DoubleTime() - cls.capturevideo.starttime) * cls.capturevideo.framerate);
+			newframenum = (int)((realtime - cls.capturevideo.starttime) * cls.capturevideo.framerate);
 		}
 		else
 			newframenum = cls.capturevideo.frame + 1;
