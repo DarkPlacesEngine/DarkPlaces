@@ -2004,13 +2004,16 @@ void SV_Physics_ClientMove(void)
 	prvm_edict_t *ent;
 	ent = host_client->edict;
 
-	// call player physics
+	// call player physics, this needs the proper frametime
+	prog->globals.server->frametime = sv.frametime;
 	SV_ClientThink();
 
-	// call standard client pre-think
+	// call standard client pre-think, with frametime = 0
 	prog->globals.server->time = sv.time;
+	prog->globals.server->frametime = 0;
 	prog->globals.server->self = PRVM_EDICT_TO_PROG(ent);
 	PRVM_ExecuteProgram (prog->globals.server->PlayerPreThink, "QC function PlayerPreThink is missing");
+	prog->globals.server->frametime = sv.frametime;
 
 	// make sure the velocity is sane (not a NaN)
 	SV_CheckVelocity(ent);
@@ -2033,10 +2036,12 @@ void SV_Physics_ClientMove(void)
 
 	SV_CheckVelocity (ent);
 
-	// call standard player post-think
+	// call standard player post-think, with frametime = 0
 	prog->globals.server->time = sv.time;
+	prog->globals.server->frametime = 0;
 	prog->globals.server->self = PRVM_EDICT_TO_PROG(ent);
 	PRVM_ExecuteProgram (prog->globals.server->PlayerPostThink, "QC function PlayerPostThink is missing");
+	prog->globals.server->frametime = sv.frametime;
 
 	if(ent->fields.server->fixangle)
 	{
