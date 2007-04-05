@@ -892,11 +892,13 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 	// also don't use the predicted location if fixangle was set on both of
 	// the most recent server messages, as that cause means you are spectating
 	// someone or watching a cutscene of some sort
+	if (cl_nolerp.integer || cls.timedemo)
+		interpolate = false;
 	if (e == cl.entities + cl.playerentity && cl.movement_predicted && (!cl.fixangle[1] || !cl.fixangle[0]))
 	{
 		lerp = (cl.time - cl.movement_time[2]) / (cl.movement_time[0] - cl.movement_time[1]);
 		lerp = bound(0, lerp, 1);
-		if (!interpolate || cl_nolerp.integer || cl.fixangle[0])
+		if (!interpolate)
 			lerp = 1;
 		VectorLerp(cl.movement_oldorigin, lerp, cl.movement_origin, origin);
 		VectorSet(angles, 0, cl.viewangles[1], 0);
