@@ -577,12 +577,11 @@ Runs all active servers
 static void Host_Init(void);
 void Host_Main(void)
 {
-	static double time1 = 0;
-	static double time2 = 0;
-	static double time3 = 0;
-	// these are static because of setjmp/longjmp warnings in mingw32 gcc 2.95.3
-	static double frameoldtime, framenewtime, framedeltatime, cl_timer, sv_timer;
-	double clframetime;
+	double time1 = 0;
+	double time2 = 0;
+	double time3 = 0;
+	double cl_timer, sv_timer;
+	double clframetime, deltarealtime, oldrealtime;
 	double wait;
 	int pass1, pass2, pass3;
 
@@ -591,20 +590,18 @@ void Host_Main(void)
 	cl_timer = 0;
 	sv_timer = 0;
 
-	framenewtime = Sys_DoubleTime();
+	realtime = Sys_DoubleTime();
 	for (;;)
 	{
 		if (setjmp(host_abortframe))
 			continue;			// something bad happened, or the server disconnected
 
-		frameoldtime = framenewtime;
-		framenewtime = Sys_DoubleTime();
-		framedeltatime = framenewtime - frameoldtime;
-		realtime += framedeltatime;
+		oldrealtime = realtime;
+		realtime = Sys_DoubleTime();
 
-		// accumulate the new frametime into the timers
-		cl_timer += framedeltatime;
-		sv_timer += framedeltatime;
+		deltarealtime = realtime - oldrealtime;
+		cl_timer += deltarealtime;
+		sv_timer += deltarealtime;
 
 		if (slowmo.value < 0)
 			Cvar_SetValue("slowmo", 0);
@@ -701,7 +698,7 @@ void Host_Main(void)
 				// synchronize to the client frametime, but no less than 10ms and no more than sys_ticrate
 				advancetime = bound(0.01, cl_timer, sys_ticrate.value);
 				framelimit = 10;
-				aborttime = Sys_DoubleTime() + 0.1;
+				aborttime = realtime + 0.1;
 			}
 			else
 			{
@@ -710,7 +707,7 @@ void Host_Main(void)
 				if (cls.state == ca_connected)
 				{
 					framelimit = 10;
-					aborttime = Sys_DoubleTime() + 0.1;
+					aborttime = realtime + 0.1;
 				}
 			}
 			advancetime = min(advancetime, 0.1);
