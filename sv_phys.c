@@ -2003,10 +2003,51 @@ void SV_Physics_ClientMove(void)
 {
 	prvm_edict_t *ent;
 	ent = host_client->edict;
+
+	// call player physics
+	SV_ClientThink();
+
+	// call standard client pre-think
+	prog->globals.server->time = sv.time;
+	prog->globals.server->self = PRVM_EDICT_TO_PROG(ent);
+	PRVM_ExecuteProgram (prog->globals.server->PlayerPreThink, "QC function PlayerPreThink is missing");
+
+	// make sure the velocity is sane (not a NaN)
+	SV_CheckVelocity(ent);
+	// LordHavoc: a hack to ensure that the (rather silly) id1 quakec
+	// player_run/player_stand1 does not horribly malfunction if the
+	// velocity becomes a number that is both == 0 and != 0
+	// (sounds to me like NaN but to be absolutely safe...)
+	if (DotProduct(ent->fields.server->velocity, ent->fields.server->velocity) < 0.0001)
+		VectorClear(ent->fields.server->velocity);
+
+	// perform MOVETYPE_WALK behavior
 	if (!SV_CheckWater (ent) && ! ((int)ent->fields.server->flags & FL_WATERJUMP) )
 		SV_AddGravity (ent);
 	SV_CheckStuck (ent);
 	SV_WalkMove (ent);
+
+	SV_CheckVelocity (ent);
+
+	SV_LinkEdict (ent, true);
+
+	SV_CheckVelocity (ent);
+
+	// call standard player post-think
+	prog->globals.server->time = sv.time;
+	prog->globals.server->self = PRVM_EDICT_TO_PROG(ent);
+	PRVM_ExecuteProgram (prog->globals.server->PlayerPostThink, "QC function PlayerPostThink is missing");
+
+	if(ent->fields.server->fixangle)
+	{
+		// angle fixing was requested by physics code...
+		// so store the current angles for later use
+		memcpy(host_client->fixangle_angles, ent->fields.server->angles, sizeof(host_client->fixangle_angles));
+		host_client->fixangle_angles_set = TRUE;
+
+		// and clear fixangle for the next frame
+		ent->fields.server->fixangle = 0;
+	}
 }
 
 void SV_Physics_ClientEntity(prvm_edict_t *ent)
@@ -2028,6 +2069,7 @@ void SV_Physics_ClientEntity(prvm_edict_t *ent)
 	// (sounds to me like NaN but to be absolutely safe...)
 	if (DotProduct(ent->fields.server->velocity, ent->fields.server->velocity) < 0.0001)
 		VectorClear(ent->fields.server->velocity);
+
 	// call standard client pre-think
 	prog->globals.server->time = sv.time;
 	prog->globals.server->self = PRVM_EDICT_TO_PROG(ent);
@@ -2061,7 +2103,12 @@ void SV_Physics_ClientEntity(prvm_edict_t *ent)
 		SV_RunThink (ent);
 		// don't run physics here if running asynchronously
 		if (host_client->clmovement_skipphysicsframes <= 0)
-			SV_Physics_ClientMove();
+		{
+			if (!SV_CheckWater (ent) && ! ((int)ent->fields.server->flags & FL_WATERJUMP) )
+				SV_AddGravity (ent);
+			SV_CheckStuck (ent);
+			SV_WalkMove (ent);
+		}
 		break;
 	case MOVETYPE_TOSS:
 	case MOVETYPE_BOUNCE:
@@ -2088,11 +2135,11 @@ void SV_Physics_ClientEntity(prvm_edict_t *ent)
 
 	SV_CheckVelocity (ent);
 
-	// call standard player post-think
 	SV_LinkEdict (ent, true);
 
 	SV_CheckVelocity (ent);
 
+	// call standard player post-think
 	prog->globals.server->time = sv.time;
 	prog->globals.server->self = PRVM_EDICT_TO_PROG(ent);
 	PRVM_ExecuteProgram (prog->globals.server->PlayerPostThink, "QC function PlayerPostThink is missing");
