@@ -404,8 +404,7 @@ static void _ServerList_Test(void)
 
 void ServerList_QueryList(qboolean querydp, qboolean queryqw)
 {
-	//masterquerytime = realtime;
-	masterquerytime = Sys_DoubleTime();
+	masterquerytime = realtime;
 	masterquerycount = 0;
 	masterreplycount = 0;
 	serverquerycount = 0;
@@ -1138,8 +1137,7 @@ static int NetConn_ClientParsePacket_ServerList_ProcessReply(const char *address
 		// store the data the engine cares about (address and ping)
 		strlcpy(serverlist_cache[serverlist_cachecount].info.cname, addressstring, sizeof(serverlist_cache[serverlist_cachecount].info.cname));
 		serverlist_cache[serverlist_cachecount].info.ping = 100000;
-		//serverlist_cache[serverlist_cachecount].querytime = realtime;
-		serverlist_cache[serverlist_cachecount].querytime = Sys_DoubleTime();
+		serverlist_cache[serverlist_cachecount].querytime = realtime;
 		// if not in the slist menu we should print the server to console
 		if (serverlist_consoleoutput)
 			Con_Printf("querying %s\n", addressstring);
@@ -1148,7 +1146,7 @@ static int NetConn_ClientParsePacket_ServerList_ProcessReply(const char *address
 	// if this is the first reply from this server, count it as having replied
 	if (serverlist_cache[n].info.ping == 100000)
 		serverreplycount++;
-	pingtime = (int)((Sys_DoubleTime() - serverlist_cache[n].querytime) * 1000.0 + 0.5);
+	pingtime = (int)((realtime - serverlist_cache[n].querytime) * 1000.0 + 0.5);
 	pingtime = bound(0, pingtime, 9999);
 	// update the ping
 	serverlist_cache[n].info.ping = min(serverlist_cache[n].info.ping, pingtime);
@@ -1590,8 +1588,7 @@ void NetConn_QueryQueueFrame(void)
 					NetConn_WriteString(cl_sockets[socket], "\377\377\377\377getinfo", &address);
 			}
 
-			//entry->querytime = realtime;
-			entry->querytime = Sys_DoubleTime();
+			entry->querytime = realtime;
 			entry->querycounter++;
 
 			// if not in the slist menu we should print the server to console
