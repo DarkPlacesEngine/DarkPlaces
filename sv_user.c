@@ -643,6 +643,8 @@ void SV_ExecuteClientMoves(void)
 		// now copy the new move
 		host_client->cmd = sv_readmoves[sv_numreadmoves-1];
 		host_client->movesequence = 0;
+		// make sure that normal physics takes over immediately
+		host_client->clmovement_skipphysicsframes = 0;
 	}
 
 	// calculate average ping time
