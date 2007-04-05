@@ -1620,7 +1620,7 @@ void CL_MoveLerpEntityStates(entity_t *ent)
 		ent->persistent.muzzleflash = 0;
 		VectorCopy(ent->state_current.origin, ent->persistent.trail_origin);
 	}
-	else if (cls.timedemo || cl_nolerp.integer || DotProduct(odelta, odelta) > 1000*1000 || (cl.fixangle[0] && !cl.fixangle[1]))
+	else if (DotProduct(odelta, odelta) > 1000*1000 || (cl.fixangle[0] && !cl.fixangle[1]))
 	{
 		// don't interpolate the move
 		// (the fixangle[] check detects teleports, but not constant fixangles
@@ -2767,7 +2767,7 @@ qboolean CL_ExaminePrintString(const char *text)
 
 static void CL_NetworkTimeReceived(double newtime)
 {
-	if (cl_nolerp.integer || cls.timedemo || (cl.islocalgame && !sv_fixedframeratesingleplayer.integer))
+	if (cls.timedemo || (cl.islocalgame && !sv_fixedframeratesingleplayer.integer))
 		cl.mtime[1] = cl.mtime[0] = newtime;
 	else
 	{
