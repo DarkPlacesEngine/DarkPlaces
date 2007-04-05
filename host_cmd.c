@@ -761,13 +761,13 @@ void Host_Name_f (void)
 		return;
 	}
 
-	if (sv.time < host_client->nametime)
+	if (realtime < host_client->nametime)
 	{
 		SV_ClientPrintf("You can't change name more than once every 5 seconds!\n");
 		return;
 	}
 
-	host_client->nametime = sv.time + 5;
+	host_client->nametime = realtime + 5;
 
 	// point the string back at updateclient->name to keep it safe
 	strlcpy (host_client->name, newName, sizeof (host_client->name));
@@ -819,13 +819,13 @@ void Host_Playermodel_f (void)
 	}
 
 	/*
-	if (sv.time < host_client->nametime)
+	if (realtime < host_client->nametime)
 	{
 		SV_ClientPrintf("You can't change playermodel more than once every 5 seconds!\n");
 		return;
 	}
 
-	host_client->nametime = sv.time + 5;
+	host_client->nametime = realtime + 5;
 	*/
 
 	// point the string back at updateclient->name to keep it safe
@@ -876,13 +876,13 @@ void Host_Playerskin_f (void)
 	}
 
 	/*
-	if (sv.time < host_client->nametime)
+	if (realtime < host_client->nametime)
 	{
 		SV_ClientPrintf("You can't change playermodel more than once every 5 seconds!\n");
 		return;
 	}
 
-	host_client->nametime = sv.time + 5;
+	host_client->nametime = realtime + 5;
 	*/
 
 	// point the string back at updateclient->name to keep it safe
