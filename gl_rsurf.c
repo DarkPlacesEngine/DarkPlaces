@@ -1020,7 +1020,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 			rsurface_texture = tex->currentframe;
 			if (rsurface_texture->currentmaterialflags & (MATERIALFLAG_WALL | MATERIALFLAG_WATER))
 			{
-				if (rsurface_texture->currentmaterialflags & MATERIALFLAG_BLENDED)
+				if (rsurface_texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED)
 				{
 					vec3_t tempcenter, center;
 					for (l = k;l < batchnumsurfaces && tex == batchsurfacelist[l]->texture;l++)
