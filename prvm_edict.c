@@ -2091,7 +2091,7 @@ int PRVM_SetEngineString(const char *s)
 			return -1 - i;
 	// new unknown engine string
 	if (developer.integer >= 200)
-		Con_Printf("new engine string %p\n", s);
+		Con_Printf("new engine string %p = \"%s\"\n", s, s);
 	for (i = prog->firstfreeknownstring;i < prog->numknownstrings;i++)
 		if (!prog->knownstrings[i])
 			break;
