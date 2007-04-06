@@ -2767,22 +2767,27 @@ qboolean CL_ExaminePrintString(const char *text)
 
 static void CL_NetworkTimeReceived(double newtime)
 {
-	if (cls.timedemo || (cl.islocalgame && !sv_fixedframeratesingleplayer.integer))
-		cl.mtime[1] = cl.mtime[0] = newtime;
+	if (cls.timedemo || (cl.islocalgame && !sv_fixedframeratesingleplayer.integer) || cl.mtime[0] == newtime || cls.signon < SIGNONS)
+		cl.time = cl.mtime[1] = cl.mtime[0] = newtime;
 	else
 	{
 		cl.mtime[1] = max(cl.mtime[0], newtime - 0.1);
 		cl.mtime[0] = newtime;
-	}
-	if (cl_nettimesyncmode.integer == 3)
-		cl.time = cl.mtime[1];
-	if (cl_nettimesyncmode.integer == 2)
-	{
-		if (cl.time < cl.mtime[1] || cl.time > cl.mtime[0])
+		if (developer.integer >= 10)
+		{
+			if (cl.time < cl.mtime[1] - (cl.mtime[0] - cl.mtime[1]))
+				Con_Printf("--- cl.time < cl.mtime[1] (%f < %f ... %f)\n", cl.time, cl.mtime[1], cl.mtime[0]);
+			else if (cl.time > cl.mtime[0] + (cl.mtime[0] - cl.mtime[1]))
+				Con_Printf("--- cl.time > cl.mtime[0] (%f > %f ... %f)\n", cl.time, cl.mtime[1], cl.mtime[0]);
+		}
+		if (cl_nettimesyncmode.integer == 2)
+		{
+			if (cl.time < cl.mtime[1] || cl.time > cl.mtime[0] + (cl.mtime[0] - cl.mtime[1]))
+				cl.time = cl.mtime[1];
+		}
+		else if (cl_nettimesyncmode.integer)
 			cl.time = cl.mtime[1];
 	}
-	else if (cl_nettimesyncmode.integer == 1)
-		cl.time = cl.mtime[1];
 	// this packet probably contains a player entity update, so we will need
 	// to update the prediction
 	cl.movement_needupdate = true;
