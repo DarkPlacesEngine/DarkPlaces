@@ -34,11 +34,12 @@ cvar_t cl_capturevideo_realtime = {0, "cl_capturevideo_realtime", "0", "causes v
 cvar_t cl_capturevideo_fps = {0, "cl_capturevideo_fps", "30", "how many frames per second to save (29.97 for NTSC, 30 for typical PC video, 15 can be useful)"};
 cvar_t cl_capturevideo_number = {CVAR_SAVE, "cl_capturevideo_number", "1", "number to append to video filename, incremented each time a capture begins"};
 cvar_t r_letterbox = {0, "r_letterbox", "0", "reduces vertical height of view to simulate a letterboxed movie effect (can be used by mods for cutscenes)"};
-cvar_t r_stereo_separation = {0, "r_stereo_separation", "4", "separation of eyes in the world (try negative values too)"};
-cvar_t r_stereo_sidebyside = {0, "r_stereo_sidebyside", "0", "side by side views (for those who can't afford glasses but can afford eye strain)"};
+cvar_t r_stereo_separation = {0, "r_stereo_separation", "4", "separation distance of eyes in the world (negative values are only useful for cross-eyed viewing)"};
+cvar_t r_stereo_sidebyside = {0, "r_stereo_sidebyside", "0", "side by side views for those who can't afford glasses but can afford eye strain (note: use a negative r_stereo_separation if you want cross-eyed viewing)"};
 cvar_t r_stereo_redblue = {0, "r_stereo_redblue", "0", "red/blue anaglyph stereo glasses (note: most of these glasses are actually red/cyan, try that one too)"};
 cvar_t r_stereo_redcyan = {0, "r_stereo_redcyan", "0", "red/cyan anaglyph stereo glasses, the kind given away at drive-in movies like Creature From The Black Lagoon In 3D"};
 cvar_t r_stereo_redgreen = {0, "r_stereo_redgreen", "0", "red/green anaglyph stereo glasses (for those who don't mind yellow)"};
+cvar_t r_stereo_angle = {0, "r_stereo_angle", "0", "separation angle of eyes (makes the views look different directions, as an example, 90 gives a 90 degree separation where the views are 45 degrees left and 45 degrees right)"};
 cvar_t scr_zoomwindow = {CVAR_SAVE, "scr_zoomwindow", "0", "displays a zoomed in overlay window"};
 cvar_t scr_zoomwindow_viewsizex = {CVAR_SAVE, "scr_zoomwindow_viewsizex", "20", "horizontal viewsize of zoom window"};
 cvar_t scr_zoomwindow_viewsizey = {CVAR_SAVE, "scr_zoomwindow_viewsizey", "20", "vertical viewsize of zoom window"};
@@ -631,6 +632,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable(&r_stereo_redblue);
 	Cvar_RegisterVariable(&r_stereo_redcyan);
 	Cvar_RegisterVariable(&r_stereo_redgreen);
+	Cvar_RegisterVariable(&r_stereo_angle);
 	Cvar_RegisterVariable(&scr_zoomwindow);
 	Cvar_RegisterVariable(&scr_zoomwindow_viewsizex);
 	Cvar_RegisterVariable(&scr_zoomwindow_viewsizey);
@@ -1779,11 +1781,13 @@ void CL_UpdateScreen(void)
 	if (r_timereport_active)
 		R_TimeReport("clear");
 
+	qglDrawBuffer(GL_BACK);
+
 	if (vid.stereobuffer || r_stereo_redblue.integer || r_stereo_redgreen.integer || r_stereo_redcyan.integer || r_stereo_sidebyside.integer)
 	{
 		matrix4x4_t originalmatrix = r_view.matrix;
 		matrix4x4_t offsetmatrix;
-		Matrix4x4_CreateTranslate(&offsetmatrix, 0, r_stereo_separation.value * -0.5f, 0);
+		Matrix4x4_CreateFromQuakeEntity(&offsetmatrix, 0, r_stereo_separation.value * 0.5f, 0, 0, r_stereo_angle.value * 0.5f, 0, 1);
 		Matrix4x4_Concat(&r_view.matrix, &originalmatrix, &offsetmatrix);
 
 		if (r_stereo_sidebyside.integer)
@@ -1801,7 +1805,7 @@ void CL_UpdateScreen(void)
 
 		SCR_DrawScreen();
 
-		Matrix4x4_CreateTranslate(&offsetmatrix, 0, r_stereo_separation.value * 0.5f, 0);
+		Matrix4x4_CreateFromQuakeEntity(&offsetmatrix, 0, r_stereo_separation.value * -0.5f, 0, 0, r_stereo_angle.value * -0.5f, 0, 1);
 		Matrix4x4_Concat(&r_view.matrix, &originalmatrix, &offsetmatrix);
 
 		if (r_stereo_sidebyside.integer)
@@ -1822,10 +1826,7 @@ void CL_UpdateScreen(void)
 		r_view.matrix = originalmatrix;
 	}
 	else
-	{
-		qglDrawBuffer(GL_BACK);
 		SCR_DrawScreen();
-	}
 
 	SCR_CaptureVideo();
 
