@@ -2707,9 +2707,9 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 	if (!(ent->flags & RENDER_LIGHT))
 		t->currentmaterialflags |= MATERIALFLAG_FULLBRIGHT;
 	if (ent->effects & EF_ADDITIVE)
-		t->currentmaterialflags |= MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_TRANSPARENT | MATERIALFLAG_NOSHADOW;
+		t->currentmaterialflags |= MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
 	else if (t->currentalpha < 1)
-		t->currentmaterialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_TRANSPARENT | MATERIALFLAG_NOSHADOW;
+		t->currentmaterialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
 	if (ent->effects & EF_DOUBLESIDED)
 		t->currentmaterialflags |= MATERIALFLAG_NOSHADOW | MATERIALFLAG_NOCULLFACE;
 	if (ent->effects & EF_NODEPTHTEST)
@@ -2718,7 +2718,7 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 		t->currenttexmatrix = r_waterscrollmatrix;
 	else
 		t->currenttexmatrix = identitymatrix;
-	if (t->backgroundnumskinframes && !(t->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
+	if (t->backgroundnumskinframes && !(t->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED))
 		t->currentmaterialflags |= MATERIALFLAG_VERTEXTEXTUREBLEND;
 
 	t->colormapping = VectorLength2(ent->colormap_pantscolor) + VectorLength2(ent->colormap_shirtcolor) >= (1.0f / 1048576.0f);
@@ -3584,7 +3584,7 @@ static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, msurfa
 static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, msurface_t **texturesurfacelist)
 {
 	// transparent sky would be ridiculous
-	if ((rsurface_texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
+	if ((rsurface_texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED))
 		return;
 	if (rsurface_mode != RSURFMODE_SKY)
 	{
@@ -3683,7 +3683,7 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, msurface_t **t
 		RSurf_DrawBatch_WithLightmapSwitching(texturenumsurfaces, texturesurfacelist, 7, r_glsl_permutation->loc_Texture_Deluxemap >= 0 ? 8 : -1);
 	else
 		RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
-	if (rsurface_texture->backgroundnumskinframes && !(rsurface_texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
+	if (rsurface_texture->backgroundnumskinframes && !(rsurface_texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED))
 	{
 	}
 }
@@ -4040,7 +4040,7 @@ void R_QueueSurfaceList(int numsurfaces, msurface_t **surfacelist, int flagsmask
 				;
 			continue;
 		}
-		if (rsurface_texture->currentmaterialflags & MATERIALFLAG_BLENDED)
+		if (rsurface_texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED)
 		{
 			// transparent surfaces get pushed off into the transparent queue
 			const msurface_t *surface = surfacelist[i];

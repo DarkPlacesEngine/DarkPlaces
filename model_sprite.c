@@ -44,9 +44,9 @@ static void Mod_SpriteSetupTexture(mspriteframe_t *frame, qboolean fullbright, q
 	if (fullbright)
 		texture->basematerialflags |= MATERIALFLAG_FULLBRIGHT;
 	if (additive)
-		texture->basematerialflags |= MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_TRANSPARENT | MATERIALFLAG_NOSHADOW;
+		texture->basematerialflags |= MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
 	else if (texture->skinframes[0].fog)
-		texture->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_TRANSPARENT | MATERIALFLAG_NOSHADOW;
+		texture->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
 	texture->currentmaterialflags = texture->basematerialflags;
 	texture->currentskinframe = texture->skinframes + 0;
 }
