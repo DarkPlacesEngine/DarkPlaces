@@ -2714,6 +2714,8 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 		t->currentmaterialflags |= MATERIALFLAG_NOSHADOW | MATERIALFLAG_NOCULLFACE;
 	if (ent->effects & EF_NODEPTHTEST)
 		t->currentmaterialflags |= MATERIALFLAG_NODEPTHTEST | MATERIALFLAG_NOSHADOW;
+	if (ent->flags & RENDER_VIEWMODEL)
+		t->currentmaterialflags |= MATERIALFLAG_VIEWMODEL;
 	if (t->currentmaterialflags & MATERIALFLAG_WATER && r_waterscroll.value != 0)
 		t->currenttexmatrix = r_waterscrollmatrix;
 	else

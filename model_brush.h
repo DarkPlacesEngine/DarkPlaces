@@ -97,8 +97,10 @@ mplane_t;
 #define MATERIALFLAG_VERTEXTEXTUREBLEND 32768
 // disables GL_CULL_FACE on this texture (making it double sided)
 #define MATERIALFLAG_NOCULLFACE 65536
+// render after the normal scene
+#define MATERIALFLAG_VIEWMODEL 131072
 // combined mask of all attributes that require depth sorted rendering
-#define MATERIALFLAGMASK_DEPTHSORTED (MATERIALFLAG_BLENDED | MATERIALFLAG_NODEPTHTEST)
+#define MATERIALFLAGMASK_DEPTHSORTED (MATERIALFLAG_BLENDED | MATERIALFLAG_NODEPTHTEST | MATERIALFLAG_VIEWMODEL)
 
 typedef struct medge_s
 {
