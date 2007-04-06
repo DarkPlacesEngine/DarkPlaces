@@ -2773,7 +2773,7 @@ static void CL_NetworkTimeReceived(double newtime)
 	{
 		cl.mtime[1] = max(cl.mtime[0], newtime - 0.1);
 		cl.mtime[0] = newtime;
-		if (developer.integer >= 10)
+		if (developer.integer >= 100 && vid_activewindow)
 		{
 			if (cl.time < cl.mtime[1] - (cl.mtime[0] - cl.mtime[1]))
 				Con_Printf("--- cl.time < cl.mtime[1] (%f < %f ... %f)\n", cl.time, cl.mtime[1], cl.mtime[0]);
