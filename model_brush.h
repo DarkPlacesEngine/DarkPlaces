@@ -63,8 +63,6 @@ mplane_t;
 
 //#define SURF_PLANEBACK 2
 
-// set for anything to be transparent sorted
-#define MATERIALFLAG_TRANSPARENT 1
 // use alpha blend on this material
 #define MATERIALFLAG_ALPHA 2
 // use additive blend on this material
@@ -99,6 +97,8 @@ mplane_t;
 #define MATERIALFLAG_VERTEXTEXTUREBLEND 32768
 // disables GL_CULL_FACE on this texture (making it double sided)
 #define MATERIALFLAG_NOCULLFACE 65536
+// combined mask of all attributes that require depth sorted rendering
+#define MATERIALFLAGMASK_DEPTHSORTED (MATERIALFLAG_BLENDED | MATERIALFLAG_NODEPTHTEST)
 
 typedef struct medge_s
 {
