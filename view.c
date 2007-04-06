@@ -39,8 +39,8 @@ cvar_t cl_bobcycle = {CVAR_SAVE, "cl_bobcycle","0.6", "view bobbing speed"};
 cvar_t cl_bobup = {CVAR_SAVE, "cl_bobup","0.5", "view bobbing adjustment that makes the up or down swing of the bob last longer"};
 
 cvar_t cl_bobmodel = {CVAR_SAVE, "cl_bobmodel", "1", "enables gun bobbing"};
-cvar_t cl_bobmodel_side = {CVAR_SAVE, "cl_bobmodel_side", "0.05", "gun bobbing sideways sway amount"};
-cvar_t cl_bobmodel_up = {CVAR_SAVE, "cl_bobmodel_up", "0.02", "gun bobbing upward movement amount"};
+cvar_t cl_bobmodel_side = {CVAR_SAVE, "cl_bobmodel_side", "0.15", "gun bobbing sideways sway amount"};
+cvar_t cl_bobmodel_up = {CVAR_SAVE, "cl_bobmodel_up", "0.06", "gun bobbing upward movement amount"};
 cvar_t cl_bobmodel_speed = {CVAR_SAVE, "cl_bobmodel_speed", "7", "gun bobbing speed"};
 
 cvar_t cl_viewmodel_scale = {0, "cl_viewmodel_scale", "0.3", "changes size of gun model, lower values prevent poking into walls but cause strange artifacts on lighting and especially r_stereo/vid_stereobuffer options where the size of the gun becomes visible"};
@@ -482,9 +482,9 @@ void V_CalcRefdef (void)
 
 						bspeed = bound (0, xyspeed, 400) * 0.01f;
 						AngleVectors (viewangles, forward, right, up);
-						bob = bspeed * cl_bobmodel_side.value * sin (s) * t;
+						bob = bspeed * cl_bobmodel_side.value * cl_viewmodel_scale.value * sin (s) * t;
 						VectorMA (gunorg, bob, right, gunorg);
-						bob = bspeed * cl_bobmodel_up.value * cos (s * 2) * t;
+						bob = bspeed * cl_bobmodel_up.value * cl_viewmodel_scale.value * cos (s * 2) * t;
 						VectorMA (gunorg, bob, up, gunorg);
 					}
 				}
