@@ -283,7 +283,7 @@ static snd_pcm_sframes_t SndSys_Write (const unsigned char* buffer, unsigned int
 	written = snd_pcm_writei (pcm_handle, buffer, nbframes);
 	if (written < 0)
 	{
-		if (developer.integer >= 100)
+		if (developer.integer >= 1000)
 			Con_Printf ("SndSys_Write: audio write returned %ld (%s)!\n",
 						 written, snd_strerror (written));
 
@@ -361,7 +361,7 @@ unsigned int SndSys_GetSoundTime (void)
 	err = snd_pcm_delay (pcm_handle, &delay);
 	if (err != 0)
 	{
-		if (developer.integer >= 100)
+		if (developer.integer >= 1000)
 			Con_DPrintf ("SndSys_GetSoundTime: can't get playback delay (%s)\n",
 					 	 snd_strerror (err));
 

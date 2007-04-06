@@ -62,7 +62,7 @@ static void Buffer_Callback (void *userdata, Uint8 *stream, int len)
 
 	snd_renderbuffer->startframe += FrameCount;
 
-	if (FrameCount < RequestedFrames && developer.integer >= 200)
+	if (FrameCount < RequestedFrames && developer.integer >= 1000)
 		Con_DPrintf("SDL sound: %u sample frames missing\n", RequestedFrames - FrameCount);
 
 	sdlaudiotime += RequestedFrames;
