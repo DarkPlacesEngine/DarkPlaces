@@ -75,7 +75,7 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 			texture_t *texture = &frame->texture;
 			R_UpdateTextureInfo(ent, texture);
 			// FIXME: negate left and right in loader
-			R_DrawSprite(texture->currentlayers[0].blendfunc1, texture->currentlayers[0].blendfunc2, frame->texture.currentskinframe->base, frame->texture.currentskinframe->fog, (ent->effects & EF_NODEPTHTEST), org, left, up, frame->left, frame->right, frame->down, frame->up, texture->currentlayers[0].color[0], texture->currentlayers[0].color[1], texture->currentlayers[0].color[2], ent->alpha * ent->frameblend[i].lerp);
+			R_DrawSprite(texture->currentlayers[0].blendfunc1, texture->currentlayers[0].blendfunc2, frame->texture.currentskinframe->base, frame->texture.currentskinframe->fog, (texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST), (texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE), org, left, up, frame->left, frame->right, frame->down, frame->up, texture->currentlayers[0].color[0], texture->currentlayers[0].color[1], texture->currentlayers[0].color[2], ent->alpha * ent->frameblend[i].lerp);
 		}
 	}
 }

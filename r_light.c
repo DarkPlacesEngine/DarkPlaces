@@ -98,7 +98,7 @@ void R_DrawCoronas(void)
 			continue;
 		if (CL_Move(rtlight->shadoworigin, vec3_origin, vec3_origin, r_view.origin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction < 1)
 			continue;
-		R_DrawSprite(GL_ONE, GL_ONE, lightcorona, NULL, true, rtlight->shadoworigin, r_view.right, r_view.up, scale, -scale, -scale, scale, rtlight->color[0] * cscale, rtlight->color[1] * cscale, rtlight->color[2] * cscale, 1);
+		R_DrawSprite(GL_ONE, GL_ONE, lightcorona, NULL, true, false, rtlight->shadoworigin, r_view.right, r_view.up, scale, -scale, -scale, scale, rtlight->color[0] * cscale, rtlight->color[1] * cscale, rtlight->color[2] * cscale, 1);
 	}
 	for (i = 0;i < r_refdef.numlights;i++)
 	{
@@ -123,7 +123,7 @@ void R_DrawCoronas(void)
 			continue;
 		if (CL_Move(rtlight->shadoworigin, vec3_origin, vec3_origin, r_view.origin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction < 1)
 			continue;
-		R_DrawSprite(GL_ONE, GL_ONE, lightcorona, NULL, true, rtlight->shadoworigin, r_view.right, r_view.up, scale, -scale, -scale, scale, rtlight->color[0] * cscale, rtlight->color[1] * cscale, rtlight->color[2] * cscale, 1);
+		R_DrawSprite(GL_ONE, GL_ONE, lightcorona, NULL, true, false, rtlight->shadoworigin, r_view.right, r_view.up, scale, -scale, -scale, scale, rtlight->color[0] * cscale, rtlight->color[1] * cscale, rtlight->color[2] * cscale, 1);
 	}
 }
 

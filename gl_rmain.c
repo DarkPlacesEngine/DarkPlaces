@@ -1361,14 +1361,14 @@ static void R_View_UpdateEntityVisible (void)
 		for (i = 0;i < r_refdef.numentities;i++)
 		{
 			ent = r_refdef.entities[i];
-			r_viewcache.entityvisible[i] = !(ent->flags & renderimask) && !R_CullBox(ent->mins, ent->maxs) && ((ent->effects & EF_NODEPTHTEST) || r_refdef.worldmodel->brush.BoxTouchingVisibleLeafs(r_refdef.worldmodel, r_viewcache.world_leafvisible, ent->mins, ent->maxs));
+			r_viewcache.entityvisible[i] = !(ent->flags & renderimask) && !R_CullBox(ent->mins, ent->maxs) && ((ent->effects & EF_NODEPTHTEST) || (ent->flags & RENDER_VIEWMODEL) || r_refdef.worldmodel->brush.BoxTouchingVisibleLeafs(r_refdef.worldmodel, r_viewcache.world_leafvisible, ent->mins, ent->maxs));
 		}
 		if(r_cullentities_trace.integer)
 		{
 			for (i = 0;i < r_refdef.numentities;i++)
 			{
 				ent = r_refdef.entities[i];
-				if(r_viewcache.entityvisible[i] && !(ent->effects & EF_NODEPTHTEST) && !(ent->model && (ent->model->name[0] == '*')))
+				if(r_viewcache.entityvisible[i] && !(ent->effects & EF_NODEPTHTEST) && !(ent->flags & RENDER_VIEWMODEL) && !(ent->model && (ent->model->name[0] == '*')))
 				{
 					if(Mod_CanSeeBox_Trace(r_cullentities_trace_samples.integer, r_cullentities_trace_enlarge.value, r_refdef.worldmodel, r_view.origin, ent->mins, ent->maxs))
 						ent->last_trace_visibility = realtime;
@@ -1604,6 +1604,7 @@ void R_ResetViewRendering2D(void)
 	GL_AlphaTest(false);
 	GL_ScissorTest(false);
 	GL_DepthMask(false);
+	GL_DepthRange(0, 1);
 	GL_DepthTest(false);
 	R_Mesh_Matrix(&identitymatrix);
 	R_Mesh_ResetTextureState();
@@ -1636,6 +1637,7 @@ void R_ResetViewRendering3D(void)
 	GL_AlphaTest(false);
 	GL_ScissorTest(true);
 	GL_DepthMask(true);
+	GL_DepthRange(0, 1);
 	GL_DepthTest(true);
 	R_Mesh_Matrix(&identitymatrix);
 	R_Mesh_ResetTextureState();
@@ -2320,6 +2322,7 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 	float *v, *c, f1, f2, diff[3], vertex3f[8*3], color4f[8*4];
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	GL_DepthMask(false);
+	GL_DepthRange(0, 1);
 	GL_DepthTest(true);
 	R_Mesh_Matrix(&identitymatrix);
 
@@ -2406,6 +2409,7 @@ void R_DrawNoModel_TransparentCallback(const entity_render_t *ent, const rtlight
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		GL_DepthMask(true);
 	}
+	GL_DepthRange(0, (ent->flags & RENDER_VIEWMODEL) ? 0.0625 : 1);
 	GL_DepthTest(!(ent->effects & EF_NODEPTHTEST));
 	GL_CullFace((ent->effects & EF_DOUBLESIDED) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
 	R_Mesh_VertexPointer(nomodelvertex3f, 0, 0);
@@ -2480,7 +2484,7 @@ void R_CalcBeam_Vertex3f (float *vert, const vec3_t org1, const vec3_t org2, flo
 
 float spritetexcoord2f[4*2] = {0, 1, 0, 0, 1, 0, 1, 1};
 
-void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, rtexture_t *fogtexture, int depthdisable, const vec3_t origin, const vec3_t left, const vec3_t up, float scalex1, float scalex2, float scaley1, float scaley2, float cr, float cg, float cb, float ca)
+void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, rtexture_t *fogtexture, qboolean depthdisable, qboolean depthshort, const vec3_t origin, const vec3_t left, const vec3_t up, float scalex1, float scalex2, float scaley1, float scaley2, float cr, float cg, float cb, float ca)
 {
 	float fog = 0.0f, ifog;
 	float vertex3f[12];
@@ -2492,6 +2496,7 @@ void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, rtexture_
 	R_Mesh_Matrix(&identitymatrix);
 	GL_BlendFunc(blendfunc1, blendfunc2);
 	GL_DepthMask(false);
+	GL_DepthRange(0, depthshort ? 0.0625 : 1);
 	GL_DepthTest(!depthdisable);
 
 	vertex3f[ 0] = origin[0] + left[0] * scalex2 + up[0] * scaley1;
@@ -2713,9 +2718,9 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 	if (ent->effects & EF_DOUBLESIDED)
 		t->currentmaterialflags |= MATERIALFLAG_NOSHADOW | MATERIALFLAG_NOCULLFACE;
 	if (ent->effects & EF_NODEPTHTEST)
-		t->currentmaterialflags |= MATERIALFLAG_NODEPTHTEST | MATERIALFLAG_NOSHADOW;
+		t->currentmaterialflags |= MATERIALFLAG_SHORTDEPTHRANGE;
 	if (ent->flags & RENDER_VIEWMODEL)
-		t->currentmaterialflags |= MATERIALFLAG_VIEWMODEL;
+		t->currentmaterialflags |= MATERIALFLAG_SHORTDEPTHRANGE;
 	if (t->currentmaterialflags & MATERIALFLAG_WATER && r_waterscroll.value != 0)
 		t->currenttexmatrix = r_waterscrollmatrix;
 	else
@@ -3569,6 +3574,7 @@ static void RSurf_DrawBatch_GL11_VertexShade(int texturenumsurfaces, msurface_t 
 
 static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, msurface_t **texturesurfacelist)
 {
+	GL_DepthRange(0, (rsurface_texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE) ? 0.0625 : 1);
 	GL_DepthTest(!(rsurface_texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
 	GL_CullFace((rsurface_texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
 	if (rsurface_mode != RSURFMODE_SHOWSURFACES)
@@ -3603,6 +3609,7 @@ static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, msurface_t **te
 		// restore entity matrix
 		R_Mesh_Matrix(&rsurface_entity->matrix);
 	}
+	GL_DepthRange(0, (rsurface_texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE) ? 0.0625 : 1);
 	GL_DepthTest(!(rsurface_texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
 	GL_CullFace((rsurface_texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
 	GL_DepthMask(true);
@@ -3956,6 +3963,7 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 		R_DrawTextureSurfaceList_Sky(texturenumsurfaces, texturesurfacelist);
 	else if (rsurface_texture->currentnumlayers)
 	{
+		GL_DepthRange(0, (rsurface_texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE) ? 0.0625 : 1);
 		GL_DepthTest(!(rsurface_texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
 		GL_CullFace((rsurface_texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
 		GL_BlendFunc(rsurface_texture->currentlayers[0].blendfunc1, rsurface_texture->currentlayers[0].blendfunc2);
@@ -4092,6 +4100,7 @@ void R_DrawLoc_Callback(const entity_render_t *ent, const rtlight_t *rtlight, in
 	CHECKGLERROR
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	GL_DepthMask(false);
+	GL_DepthRange(0, 1);
 	GL_DepthTest(true);
 	GL_CullFace(GL_NONE);
 	R_Mesh_Matrix(&identitymatrix);
@@ -4150,6 +4159,7 @@ void R_DrawCollisionBrushes(entity_render_t *ent)
 	R_Mesh_ResetTextureState();
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 	GL_DepthMask(false);
+	GL_DepthRange(0, 1);
 	GL_DepthTest(!r_showdisabledepthtest.integer);
 	qglPolygonOffset(r_refdef.polygonfactor + r_showcollisionbrushes_polygonfactor.value, r_refdef.polygonoffset + r_showcollisionbrushes_polygonoffset.value);CHECKGLERROR
 	for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)
@@ -4169,6 +4179,7 @@ void R_DrawTrianglesAndNormals(entity_render_t *ent, qboolean drawtris, qboolean
 	model_t *model = ent->model;
 	vec3_t v;
 	CHECKGLERROR
+	GL_DepthRange(0, 1);
 	GL_DepthTest(!r_showdisabledepthtest.integer);
 	GL_DepthMask(true);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
