@@ -1062,7 +1062,7 @@ void R_Shadow_RenderMode_Reset(void)
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 }
 
-void R_Shadow_RenderMode_StencilShadowVolumes(void)
+void R_Shadow_RenderMode_StencilShadowVolumes(qboolean clearstencil)
 {
 	CHECKGLERROR
 	R_Shadow_RenderMode_Reset();
@@ -1088,7 +1088,8 @@ void R_Shadow_RenderMode_StencilShadowVolumes(void)
 		qglStencilMask(~0);CHECKGLERROR
 		qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);CHECKGLERROR
 	}
-	GL_Clear(GL_STENCIL_BUFFER_BIT);
+	if (clearstencil)
+		GL_Clear(GL_STENCIL_BUFFER_BIT);
 	r_refdef.stats.lights_clears++;
 }
 
@@ -2918,7 +2919,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 		if (gl_stencil)
 		{
 			usestencil = true;
-			R_Shadow_RenderMode_StencilShadowVolumes();
+			R_Shadow_RenderMode_StencilShadowVolumes(true);
 			if (numsurfaces)
 				R_Shadow_DrawWorldShadow(numsurfaces, surfacelist, shadowtrispvs);
 			for (i = 0;i < numshadowentities;i++)
@@ -3018,7 +3019,7 @@ void R_DrawModelShadows(void)
 	else
 		r_shadow_shadowingrendermode = R_SHADOW_RENDERMODE_STENCIL;
 
-	R_Shadow_RenderMode_StencilShadowVolumes();
+	R_Shadow_RenderMode_StencilShadowVolumes(true);
 
 	for (i = 0;i < r_refdef.numentities;i++)
 	{
