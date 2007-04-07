@@ -983,7 +983,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 	model_t *model = ent->model;
 	msurface_t *surface;
 	int i, k, l, m, mend, endsurface, batchnumsurfaces, batchnumtriangles, batchfirstvertex, batchlastvertex;
-	qboolean usebufferobject;
+	qboolean usebufferobject, culltriangles;
 	const int *element3i;
 	msurface_t *batchsurfacelist[RSURF_MAX_BATCHSURFACES];
 	int batchelements[BATCHSIZE*3];
@@ -992,6 +992,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 	RSurf_ActiveModelEntity(ent, true, true);
 	R_UpdateAllTextureInfo(ent);
 	CHECKGLERROR
+	culltriangles = r_shadow_culltriangles.integer && !(ent->flags & RENDER_NOSELFSHADOW);
 	element3i = rsurface_model->surfmesh.data_element3i;
 	// this is a double loop because non-visible surface skipping has to be
 	// fast, and even if this is not the world model (and hence no visibility
@@ -1049,7 +1050,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 						RSurf_PrepareVerticesForBatch(true, true, 1, &surface);
 						for (m = surface->num_firsttriangle, mend = m + surface->num_triangles;m < mend;m++)
 						{
-							if (r_shadow_culltriangles.integer)
+							if (culltriangles)
 							{
 								if (trispvs)
 								{

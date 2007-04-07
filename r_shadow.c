@@ -2749,15 +2749,19 @@ void R_Shadow_DrawEntityLight(entity_render_t *ent, int numsurfaces, int *surfac
 
 void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 {
-	int i, usestencil;
+	int i;
 	float f;
 	int numleafs, numsurfaces;
 	int *leaflist, *surfacelist;
 	unsigned char *leafpvs, *shadowtrispvs, *lighttrispvs;
 	int numlightentities;
+	int numlightentities_noselfshadow;
 	int numshadowentities;
+	int numshadowentities_noselfshadow;
 	entity_render_t *lightentities[MAX_EDICTS];
+	entity_render_t *lightentities_noselfshadow[MAX_EDICTS];
 	entity_render_t *shadowentities[MAX_EDICTS];
+	entity_render_t *shadowentities_noselfshadow[MAX_EDICTS];
 
 	// skip lights that don't light because of ambientscale+diffusescale+specularscale being 0 (corona only lights)
 	// skip lights that are basically invisible (color 0 0 0)
@@ -2850,7 +2854,9 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 
 	// make a list of lit entities and shadow casting entities
 	numlightentities = 0;
+	numlightentities_noselfshadow = 0;
 	numshadowentities = 0;
+	numshadowentities_noselfshadow = 0;
 	// add dynamic entities that are lit by the light
 	if (r_drawentities.integer)
 	{
@@ -2875,12 +2881,26 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 				// so now check if it's in a leaf seen by the light
 				if (r_refdef.worldmodel && r_refdef.worldmodel->brush.BoxTouchingLeafPVS && !r_refdef.worldmodel->brush.BoxTouchingLeafPVS(r_refdef.worldmodel, leafpvs, ent->mins, ent->maxs))
 					continue;
-				lightentities[numlightentities++] = ent;
+				if (ent->flags & RENDER_NOSELFSHADOW)
+					lightentities_noselfshadow[numlightentities_noselfshadow++] = ent;
+				else
+					lightentities[numlightentities++] = ent;
 				// since it is lit, it probably also casts a shadow...
 				// about the VectorDistance2 - light emitting entities should not cast their own shadow
 				Matrix4x4_OriginFromMatrix(&ent->matrix, org);
 				if ((ent->flags & RENDER_SHADOW) && model->DrawShadowVolume && VectorDistance2(org, rtlight->shadoworigin) > 0.1)
-					shadowentities[numshadowentities++] = ent;
+				{
+					// note: exterior models without the RENDER_NOSELFSHADOW
+					// flag still create a RENDER_NOSELFSHADOW shadow but
+					// are lit normally, this means that they are
+					// self-shadowing but do not shadow other
+					// RENDER_NOSELFSHADOW entities such as the gun
+					// (very weird, but keeps the player shadow off the gun)
+					if (ent->flags & (RENDER_NOSELFSHADOW | RENDER_EXTERIORMODEL))
+						shadowentities_noselfshadow[numshadowentities_noselfshadow++] = ent;
+					else
+						shadowentities[numshadowentities++] = ent;
+				}
 			}
 			else if (ent->flags & RENDER_SHADOW)
 			{
@@ -2893,7 +2913,12 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 				// about the VectorDistance2 - light emitting entities should not cast their own shadow
 				Matrix4x4_OriginFromMatrix(&ent->matrix, org);
 				if ((ent->flags & RENDER_SHADOW) && model->DrawShadowVolume && VectorDistance2(org, rtlight->shadoworigin) > 0.1)
-					shadowentities[numshadowentities++] = ent;
+				{
+					if (ent->flags & (RENDER_NOSELFSHADOW | RENDER_EXTERIORMODEL))
+						shadowentities_noselfshadow[numshadowentities_noselfshadow++] = ent;
+					else
+						shadowentities[numshadowentities++] = ent;
+				}
 			}
 		}
 	}
@@ -2911,51 +2936,95 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	// count this light in the r_speeds
 	r_refdef.stats.lights++;
 
-	usestencil = false;
-	if (numsurfaces + numshadowentities && rtlight->shadow && (rtlight->isstatic ? r_refdef.rtworldshadows : r_refdef.rtdlightshadows))
+	if (r_showshadowvolumes.integer && numsurfaces + numshadowentities + numshadowentities_noselfshadow && rtlight->shadow && (rtlight->isstatic ? r_refdef.rtworldshadows : r_refdef.rtdlightshadows))
+	{
+		// optionally draw visible shape of the shadow volumes
+		// for performance analysis by level designers
+		R_Shadow_RenderMode_VisibleShadowVolumes();
+		if (numsurfaces)
+			R_Shadow_DrawWorldShadow(numsurfaces, surfacelist, shadowtrispvs);
+		for (i = 0;i < numshadowentities;i++)
+			R_Shadow_DrawEntityShadow(shadowentities[i]);
+		for (i = 0;i < numshadowentities_noselfshadow;i++)
+			R_Shadow_DrawEntityShadow(shadowentities_noselfshadow[i]);
+	}
+
+	if (gl_stencil && numsurfaces + numshadowentities + numshadowentities_noselfshadow && rtlight->shadow && (rtlight->isstatic ? r_refdef.rtworldshadows : r_refdef.rtdlightshadows))
 	{
 		// draw stencil shadow volumes to mask off pixels that are in shadow
 		// so that they won't receive lighting
-		if (gl_stencil)
-		{
-			usestencil = true;
-			R_Shadow_RenderMode_StencilShadowVolumes(true);
-			if (numsurfaces)
-				R_Shadow_DrawWorldShadow(numsurfaces, surfacelist, shadowtrispvs);
-			for (i = 0;i < numshadowentities;i++)
-				R_Shadow_DrawEntityShadow(shadowentities[i]);
-		}
-
-		// optionally draw visible shape of the shadow volumes
-		// for performance analysis by level designers
-		if (r_showshadowvolumes.integer)
-		{
-			R_Shadow_RenderMode_VisibleShadowVolumes();
-			if (numsurfaces)
-				R_Shadow_DrawWorldShadow(numsurfaces, surfacelist, shadowtrispvs);
-			for (i = 0;i < numshadowentities;i++)
-				R_Shadow_DrawEntityShadow(shadowentities[i]);
-		}
-	}
-
-	if (numsurfaces + numlightentities)
-	{
-		// draw lighting in the unmasked areas
-		R_Shadow_RenderMode_Lighting(usestencil, false);
+		R_Shadow_RenderMode_StencilShadowVolumes(true);
 		if (numsurfaces)
-			R_Shadow_DrawWorldLight(numsurfaces, surfacelist, lighttrispvs);
-		for (i = 0;i < numlightentities;i++)
-			R_Shadow_DrawEntityLight(lightentities[i], numsurfaces, surfacelist);
-
-		// optionally draw the illuminated areas
-		// for performance analysis by level designers
-		if (r_showlighting.integer)
+			R_Shadow_DrawWorldShadow(numsurfaces, surfacelist, shadowtrispvs);
+		for (i = 0;i < numshadowentities;i++)
+			R_Shadow_DrawEntityShadow(shadowentities[i]);
+		if (numlightentities_noselfshadow)
 		{
-			R_Shadow_RenderMode_VisibleLighting(usestencil && !r_showdisabledepthtest.integer, false);
+			// draw lighting in the unmasked areas
+			R_Shadow_RenderMode_Lighting(true, false);
+			for (i = 0;i < numlightentities_noselfshadow;i++)
+				R_Shadow_DrawEntityLight(lightentities_noselfshadow[i], numsurfaces, surfacelist);
+
+			// optionally draw the illuminated areas
+			// for performance analysis by level designers
+			if (r_showlighting.integer)
+			{
+				R_Shadow_RenderMode_VisibleLighting(!r_showdisabledepthtest.integer, false);
+				for (i = 0;i < numlightentities_noselfshadow;i++)
+					R_Shadow_DrawEntityLight(lightentities_noselfshadow[i], numsurfaces, surfacelist);
+			}
+
+			R_Shadow_RenderMode_StencilShadowVolumes(false);
+		}
+		for (i = 0;i < numshadowentities_noselfshadow;i++)
+			R_Shadow_DrawEntityShadow(shadowentities_noselfshadow[i]);
+
+		if (numsurfaces + numlightentities)
+		{
+			// draw lighting in the unmasked areas
+			R_Shadow_RenderMode_Lighting(true, false);
 			if (numsurfaces)
 				R_Shadow_DrawWorldLight(numsurfaces, surfacelist, lighttrispvs);
 			for (i = 0;i < numlightentities;i++)
 				R_Shadow_DrawEntityLight(lightentities[i], numsurfaces, surfacelist);
+
+			// optionally draw the illuminated areas
+			// for performance analysis by level designers
+			if (r_showlighting.integer)
+			{
+				R_Shadow_RenderMode_VisibleLighting(!r_showdisabledepthtest.integer, false);
+				if (numsurfaces)
+					R_Shadow_DrawWorldLight(numsurfaces, surfacelist, lighttrispvs);
+				for (i = 0;i < numlightentities;i++)
+					R_Shadow_DrawEntityLight(lightentities[i], numsurfaces, surfacelist);
+			}
+		}
+	}
+	else
+	{
+		if (numsurfaces + numlightentities)
+		{
+			// draw lighting in the unmasked areas
+			R_Shadow_RenderMode_Lighting(false, false);
+			if (numsurfaces)
+				R_Shadow_DrawWorldLight(numsurfaces, surfacelist, lighttrispvs);
+			for (i = 0;i < numlightentities;i++)
+				R_Shadow_DrawEntityLight(lightentities[i], numsurfaces, surfacelist);
+			for (i = 0;i < numlightentities_noselfshadow;i++)
+				R_Shadow_DrawEntityLight(lightentities_noselfshadow[i], numsurfaces, surfacelist);
+
+			// optionally draw the illuminated areas
+			// for performance analysis by level designers
+			if (r_showlighting.integer)
+			{
+				R_Shadow_RenderMode_VisibleLighting(false, false);
+				if (numsurfaces)
+					R_Shadow_DrawWorldLight(numsurfaces, surfacelist, lighttrispvs);
+				for (i = 0;i < numlightentities;i++)
+					R_Shadow_DrawEntityLight(lightentities[i], numsurfaces, surfacelist);
+				for (i = 0;i < numlightentities_noselfshadow;i++)
+					R_Shadow_DrawEntityLight(lightentities_noselfshadow[i], numsurfaces, surfacelist);
+			}
 		}
 	}
 }

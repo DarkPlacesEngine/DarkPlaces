@@ -2008,6 +2008,8 @@ void EntityState5_ReadUpdate(entity_state_t *s)
 				Con_Print(" SHADOW");
 			if (s->flags & RENDER_LIGHT)
 				Con_Print(" LIGHT");
+			if (s->flags & RENDER_NOSELFSHADOW)
+				Con_Print(" NOSELFSHADOW");
 			Con_Print(")");
 		}
 		if (bits & E5_ALPHA)
