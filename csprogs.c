@@ -201,6 +201,8 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 	 && !(e->render.flags & RENDER_VIEWMODEL)
 	 && (!(e->render.flags & RENDER_EXTERIORMODEL) || (!cl.intermission && cls.protocol != PROTOCOL_NEHAHRAMOVIE && !cl_noplayershadow.integer)))
 		e->render.flags |= RENDER_SHADOW;
+	if (e->render.flags & (RENDER_EXTERIORMODEL | RENDER_VIEWMODEL))
+		e->render.flags |= RENDER_NOSELFSHADOW;
 
 	return true;
 }
