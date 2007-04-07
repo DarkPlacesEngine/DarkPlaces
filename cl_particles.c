@@ -2129,6 +2129,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 	R_Mesh_TexCoordPointer(0, 2, particle_texcoord2f, 0, 0);
 	R_Mesh_ColorPointer(particle_color4f, 0, 0);
 	GL_DepthMask(false);
+	GL_DepthRange(0, 1);
 	GL_DepthTest(true);
 	GL_CullFace(GL_FRONT); // quake is backwards, this culls back faces
 

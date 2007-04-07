@@ -478,7 +478,7 @@ cl_stainmaps                                      1                   stains lig
 cl_stainmaps_clearonload                          1                   clear stainmaps on map restart
 cl_stairsmoothspeed                               160                 how fast your view moves upward/downward when running up/down stairs
 cl_upspeed                                        400                 vertical movement speed (while swimming or flying)
-cl_viewmodel_scale                                0.3                 changes size of gun model, lower values prevent poking into walls but cause strange artifacts on lighting and especially r_stereo/vid_stereobuffer options where the size of the gun becomes visible
+cl_viewmodel_scale                                1                   changes size of gun model, lower values prevent poking into walls but cause strange artifacts on lighting and especially r_stereo/vid_stereobuffer options where the size of the gun becomes visible
 cl_yawspeed                                       140                 keyboard yaw turning speed
 cmdline                                           0                   contains commandline the engine was launched with
 collision_endnudge                                0                   how much to bias collision trace end

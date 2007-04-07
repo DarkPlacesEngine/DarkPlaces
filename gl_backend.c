@@ -357,6 +357,7 @@ static struct gl_state_s
 	GLboolean depthmask;
 	int colormask; // stored as bottom 4 bits: r g b a (3 2 1 0 order)
 	int depthtest;
+	float depthrange[2];
 	int alphatest;
 	int scissortest;
 	unsigned int unit;
@@ -628,6 +629,16 @@ void GL_DepthTest(int state)
 		{
 			qglDisable(GL_DEPTH_TEST);CHECKGLERROR
 		}
+	}
+}
+
+void GL_DepthRange(float nearfrac, float farfrac)
+{
+	if (gl_state.depthrange[0] != nearfrac || gl_state.depthrange[1] != farfrac)
+	{
+		gl_state.depthrange[0] = nearfrac;
+		gl_state.depthrange[1] = farfrac;
+		qglDepthRange(nearfrac, farfrac);
 	}
 }
 

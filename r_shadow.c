@@ -1006,6 +1006,7 @@ void R_Shadow_RenderMode_Begin(void)
 	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
 	GL_BlendFunc(GL_ONE, GL_ZERO);
+	GL_DepthRange(0, 1);
 	GL_DepthTest(true);
 	GL_DepthMask(false);
 	GL_Color(0, 0, 0, 1);
@@ -1046,6 +1047,7 @@ void R_Shadow_RenderMode_Reset(void)
 	}
 	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
+	GL_DepthRange(0, 1);
 	GL_DepthTest(true);
 	GL_DepthMask(false);
 	qglDepthFunc(GL_LEQUAL);CHECKGLERROR
@@ -1132,6 +1134,7 @@ void R_Shadow_RenderMode_VisibleShadowVolumes(void)
 	CHECKGLERROR
 	R_Shadow_RenderMode_Reset();
 	GL_BlendFunc(GL_ONE, GL_ONE);
+	GL_DepthRange(0, 1);
 	GL_DepthTest(r_showshadowvolumes.integer < 2);
 	GL_Color(0.0, 0.0125 * r_view.colorscale, 0.1 * r_view.colorscale, 1);
 	qglPolygonOffset(r_refdef.shadowpolygonfactor, r_refdef.shadowpolygonoffset);CHECKGLERROR
@@ -1144,6 +1147,7 @@ void R_Shadow_RenderMode_VisibleLighting(qboolean stenciltest, qboolean transpar
 	CHECKGLERROR
 	R_Shadow_RenderMode_Reset();
 	GL_BlendFunc(GL_ONE, GL_ONE);
+	GL_DepthRange(0, 1);
 	GL_DepthTest(r_showlighting.integer < 2);
 	GL_Color(0.1 * r_view.colorscale, 0.0125 * r_view.colorscale, 0, 1);
 	if (!transparent)
@@ -2237,7 +2241,6 @@ static void R_Shadow_RenderLighting_Light_Vertex(int firstvertex, int numvertice
 void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles, const int *element3i, int element3i_bufferobject, size_t element3i_bufferoffset)
 {
 	float ambientscale, diffusescale, specularscale;
-	// FIXME: support MATERIALFLAG_NODEPTHTEST
 	vec3_t lightcolorbase, lightcolorpants, lightcolorshirt;
 	// calculate colors to render this texture with
 	lightcolorbase[0] = r_shadow_rtlight->currentcolor[0] * rsurface_entity->colormod[0] * rsurface_texture->currentalpha;
@@ -2254,6 +2257,7 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 	}
 	if ((ambientscale + diffusescale) * VectorLength2(lightcolorbase) + specularscale * VectorLength2(lightcolorbase) < (1.0f / 1048576.0f))
 		return;
+	GL_DepthRange(0, (rsurface_texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE) ? 0.0625 : 1);
 	GL_DepthTest(!(rsurface_texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
 	GL_CullFace((rsurface_texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
 	if (rsurface_texture->colormapping)
@@ -3053,6 +3057,7 @@ void R_DrawModelShadows(void)
 
 	// set up a 50% darkening blend on shadowed areas
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	GL_DepthRange(0, 1);
 	GL_DepthTest(false);
 	GL_DepthMask(false);
 	qglPolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);CHECKGLERROR
@@ -3272,7 +3277,7 @@ void R_Shadow_DrawCursor_TransparentCallback(const entity_render_t *ent, const r
 {
 	// this is never batched (there can be only one)
 	float scale = r_editlights_cursorgrid.value * 0.5f;
-	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, r_crosshairs[1]->tex, NULL, false, r_editlights_cursorlocation, r_view.right, r_view.up, scale, -scale, -scale, scale, 1, 1, 1, 0.5f);
+	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, r_crosshairs[1]->tex, NULL, false, false, r_editlights_cursorlocation, r_view.right, r_view.up, scale, -scale, -scale, scale, 1, 1, 1, 0.5f);
 }
 
 void R_Shadow_DrawLightSprite_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
@@ -3286,7 +3291,7 @@ void R_Shadow_DrawLightSprite_TransparentCallback(const entity_render_t *ent, co
 		intensity = 0.75 + 0.25 * sin(realtime * M_PI * 4.0);
 	if (!light->shadow)
 		intensity *= 0.5f;
-	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, r_crosshairs[surfacelist[0]]->tex, NULL, false, light->origin, r_view.right, r_view.up, 8, -8, -8, 8, intensity, intensity, intensity, 0.5);
+	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, r_crosshairs[surfacelist[0]]->tex, NULL, false, false, light->origin, r_view.right, r_view.up, 8, -8, -8, 8, intensity, intensity, intensity, 0.5f);
 }
 
 void R_Shadow_DrawLightSprites(void)
