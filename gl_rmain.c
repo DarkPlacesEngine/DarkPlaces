@@ -591,7 +591,7 @@ static const char *builtinshaderstring =
 "	color.rgb = LightColor * myhalf(texture2D(Texture_Attenuation, vec2(length(CubeVector), 0.0))) * color.rgb * (AmbientScale + DiffuseScale * myhalf(max(float(dot(surfacenormal, diffusenormal)), 0.0)));\n"
 "#else\n"
 "	// calculate directionless shading\n"
-"	color.rgb = color.rgb * LightColor * myhalf(texture2D(Texture_Attenuation, length(CubeVector)));\n"
+"	color.rgb = color.rgb * LightColor * myhalf(texture2D(Texture_Attenuation, vec2(length(CubeVector), 0.0)));\n"
 "#endif\n"
 "#endif\n"
 "\n"
