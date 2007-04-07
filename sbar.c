@@ -1185,10 +1185,10 @@ void Sbar_Draw (void)
 				// flag icons
 				redflag = ((cl.stats[STAT_ITEMS]>>15) & 3);
 				if (redflag)
-					Sbar_DrawPic (10, -85, sb_items[redflag+10]);
+					Sbar_DrawPic (10 - sbar_x, -85, sb_items[redflag+10]);
 				blueflag = ((cl.stats[STAT_ITEMS]>>17) & 3);
 				if (blueflag)
-					Sbar_DrawPic (10, -145, sb_items[blueflag+14]);
+					Sbar_DrawPic (10 - sbar_x, -145, sb_items[blueflag+14]);
 
 				// armor
 				Sbar_DrawXNum ((340-3*24), 12, cl.stats[STAT_ARMOR], 3, 24, 0.6,0.7,0.8,1,0);
