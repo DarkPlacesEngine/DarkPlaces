@@ -25,7 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define MAX_LIGHTMAP_SIZE 256
 
-cvar_t r_ambient = {0, "r_ambient", "0", "brighter world cheat (not allowed in multiplayer), value is 0-128"};
+cvar_t r_ambient = {0, "r_ambient", "0", "brightens map, value is 0-128"};
 cvar_t r_lockpvs = {0, "r_lockpvs", "0", "disables pvs switching, allows you to walk around and inspect what is visible from a given location in the map (anything not visible from your current location will not be drawn)"};
 cvar_t r_lockvisibility = {0, "r_lockvisibility", "0", "disables visibility updates, allows you to walk around and inspect what is visible from a given viewpoint in the map (anything offscreen at the moment this is enabled will not be drawn)"};
 cvar_t r_useportalculling = {0, "r_useportalculling", "1", "use advanced portal culling visibility method to improve performance over just Potentially Visible Set, provides an even more significant speed improvement in unvised maps"};
