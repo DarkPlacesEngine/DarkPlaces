@@ -645,7 +645,7 @@ prvm_boundscheck                                  1                   enables de
 prvm_statementprofiling                           0                   counts how many times each QuakeC statement has been executed, these counts are displayed in prvm_printfunction output (if enabled)
 prvm_traceqc                                      0                   prints every QuakeC statement as it is executed (only for really thorough debugging!)
 qport                                             0                   identification key for playing on qw servers (allows you to maintain a connection to a quakeworld server even if your port changes)
-r_ambient                                         0                   brighter world cheat (not allowed in multiplayer), value is 0-128
+r_ambient                                         0                   brightens map, value is 0-128
 r_batchmode                                       1                   selects method of rendering multiple surfaces with one driver call (values are 0, 1, 2, etc...)
 r_bloom                                           0                   enables bloom effect (makes bright pixels affect neighboring pixels)
 r_bloom_blur                                      4                   how large the glow is
@@ -673,7 +673,7 @@ r_editlights_cursorpushback                       0                   how far to
 r_editlights_cursorpushoff                        4                   how far to push the cursor off the impacted surface
 r_editlights_quakelightsizescale                  1                   changes size of light entities loaded from a map
 r_explosionclip                                   1                   enables collision detection for explosion shell (so that it flattens against walls and floors)
-r_fullbright                                      0                   make everything bright cheat (not allowed in multiplayer)
+r_fullbright                                      0                   makes map very bright and renders faster
 r_fullbrights                                     1                   enables glowing pixels in quake textures (changes need r_restart to take effect)
 r_glsl                                            1                   enables use of OpenGL 2.0 pixel shaders for lighting
 r_glsl_deluxemapping                              1                   use per pixel lighting on deluxemap-compiled q3bsp maps (or a value of 2 forces deluxemap shading even without deluxemaps)
