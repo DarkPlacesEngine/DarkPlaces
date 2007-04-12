@@ -1782,11 +1782,9 @@ For program optimization
 static void CL_TimeRefresh_f (void)
 {
 	int i;
-	float timestart, timedelta, oldangles[3];
+	float timestart, timedelta;
 
 	r_refdef.extraupdate = false;
-	VectorCopy(cl.viewangles, oldangles);
-	VectorClear(cl.viewangles);
 
 	timestart = Sys_DoubleTime();
 	for (i = 0;i < 128;i++)
@@ -1796,7 +1794,6 @@ static void CL_TimeRefresh_f (void)
 	}
 	timedelta = Sys_DoubleTime() - timestart;
 
-	VectorCopy(oldangles, cl.viewangles);
 	Con_Printf("%f seconds (%f fps)\n", timedelta, 128/timedelta);
 }
 
