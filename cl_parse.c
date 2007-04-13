@@ -167,7 +167,7 @@ cvar_t cl_sound_ric3 = {0, "cl_sound_ric3", "weapons/ric3.wav", "sound to play w
 cvar_t cl_sound_r_exp3 = {0, "cl_sound_r_exp3", "weapons/r_exp3.wav", "sound to play during TE_EXPLOSION and related effects (empty cvar disables sound)"};
 cvar_t cl_serverextension_download = {0, "cl_serverextension_download", "0", "indicates whether the server supports the download command"};
 cvar_t cl_joinbeforedownloadsfinish = {0, "cl_joinbeforedownloadsfinish", "1", "if non-zero the game will begin after the map is loaded before other downloads finish"};
-cvar_t cl_nettimesyncmode = {0, "cl_nettimesyncmode", "2", "selects method of time synchronization in client with regard to server packets, values are: 0 = no sync, 1 = exact sync (reset timing each packet), 2 = loose sync (reset timing only if it is out of bounds), 3 = tight sync and bounding, 4 = bounded loose sync (reset if significantly wrong, otherwise bound)"};
+cvar_t cl_nettimesyncmode = {0, "cl_nettimesyncmode", "5", "selects method of time synchronization in client with regard to server packets, values are: 0 = no sync, 1 = exact sync (reset timing each packet), 2 = loose sync (reset timing only if it is out of bounds), 3 = tight sync and bounding, 4 = bounded loose sync (reset if significantly wrong, otherwise bound), 5 = nearly-exact sync (if time is deviating by more than a millisecond it uses exact sync, otherwise no sync)"};
 cvar_t cl_iplog_name = {CVAR_SAVE, "cl_iplog_name", "darkplaces_iplog.txt", "name of iplog file containing player addresses for iplog_list command and automatic ip logging when parsing status command"};
 
 static qboolean QW_CL_CheckOrDownloadFile(const char *filename);
@@ -2792,6 +2792,12 @@ static void CL_NetworkTimeReceived(double newtime)
 				cl.time = cl.mtime[1];
 			// clamp it to the valid range
 			cl.time = bound(cl.mtime[1], cl.time, cl.mtime[0]);
+		}
+		else if (cl_nettimesyncmode.integer == 5)
+		{
+			// if it's more than one millisecond off, fix it
+			if (fabs(cl.time - cl.mtime[1]) > 0.001)
+				cl.time = cl.mtime[1];
 		}
 		else if (cl_nettimesyncmode.integer)
 			cl.time = cl.mtime[1];
