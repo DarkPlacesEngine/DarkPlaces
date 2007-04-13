@@ -595,7 +595,6 @@ typedef struct model_s
 	aliasbone_t		*data_bones;
 	int				num_poses;
 	float			*data_poses;
-	float			*data_basebonepose;
 	float			*data_baseboneposeinverse;
 	// textures of this model
 	int				num_textures;
