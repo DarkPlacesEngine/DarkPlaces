@@ -1538,7 +1538,7 @@ void SCR_DrawScreen (void)
 		// this it simply assumes the requested fov is the vertical fov
 		// for a 4x3 display, if the ratio is not 4x3 this makes the fov
 		// higher/lower according to the ratio
-		r_view.frustum_y = tan(scr_fov.value * cl.viewzoom * M_PI / 360.0) * (3.0/4.0);
+		r_view.frustum_y = tan(scr_fov.value * M_PI / 360.0) * (3.0/4.0) * cl.viewzoom;
 		r_view.frustum_x = r_view.frustum_y * (float)r_view.width / (float)r_view.height / vid_pixelheight.value;
 
 		r_view.frustum_x *= r_refdef.frustumscale_x;
@@ -1558,7 +1558,7 @@ void SCR_DrawScreen (void)
 			r_view.y = 0;
 			r_view.z = 0;
 
-			r_view.frustum_y = tan(scr_zoomwindow_fov.value * cl.viewzoom * M_PI / 360.0) * (3.0/4.0);
+			r_view.frustum_y = tan(scr_zoomwindow_fov.value * M_PI / 360.0) * (3.0/4.0) * cl.viewzoom;
 			r_view.frustum_x = r_view.frustum_y * vid_pixelheight.value * (float)r_view.width / (float)r_view.height;
 
 			r_view.frustum_x *= r_refdef.frustumscale_x;
