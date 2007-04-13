@@ -415,13 +415,14 @@ static void Mod_BuildBaseBonePoses(void)
 {
 	int i, k;
 	double scale;
+	float *basebonepose = Mem_Alloc(tempmempool, loadmodel->num_bones * sizeof(float[12]));
 	float *in12f = loadmodel->data_poses;
-	float *out12f = loadmodel->data_basebonepose;
+	float *out12f = basebonepose;
 	float *outinv12f = loadmodel->data_baseboneposeinverse;
 	for (i = 0;i < loadmodel->num_bones;i++, in12f += 12, out12f += 12, outinv12f += 12)
 	{
 		if (loadmodel->data_bones[i].parent >= 0)
-			R_ConcatTransforms(loadmodel->data_basebonepose + 12 * loadmodel->data_bones[i].parent, in12f, out12f);
+			R_ConcatTransforms(basebonepose + 12 * loadmodel->data_bones[i].parent, in12f, out12f);
 		else
 			for (k = 0;k < 12;k++)
 				out12f[k] = in12f[k];
@@ -451,6 +452,7 @@ static void Mod_BuildBaseBonePoses(void)
 		outinv12f[ 7] = -(out12f[ 3] * outinv12f[ 4] + out12f[ 7] * outinv12f[ 5] + out12f[11] * outinv12f[ 6]);
 		outinv12f[11] = -(out12f[ 3] * outinv12f[ 8] + out12f[ 7] * outinv12f[ 9] + out12f[11] * outinv12f[10]);
 	}
+	Mem_Free(basebonepose);
 }
 
 static void Mod_Alias_CalculateBoundingBox(void)
@@ -1588,7 +1590,7 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 
 	loadmodel->nummodelsurfaces = loadmodel->num_surfaces;
 	loadmodel->num_textures = loadmodel->num_surfaces;
-	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + meshtriangles * sizeof(int[3]) + meshvertices * sizeof(float[14]) + meshvertices * sizeof(int[4]) + meshvertices * sizeof(float[4]) + loadmodel->num_poses * sizeof(float[12]) + loadmodel->num_bones * 2 * sizeof(float[12]));
+	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + meshtriangles * sizeof(int[3]) + meshvertices * sizeof(float[14]) + meshvertices * sizeof(int[4]) + meshvertices * sizeof(float[4]) + loadmodel->num_poses * sizeof(float[12]) + loadmodel->num_bones * sizeof(float[12]));
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
 	loadmodel->surfacelist = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
 	loadmodel->data_textures = (texture_t *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
@@ -1604,7 +1606,6 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->surfmesh.data_vertexweightindex4i = (int *)data;data += meshvertices * sizeof(int[4]);
 	loadmodel->surfmesh.data_vertexweightinfluence4f = (float *)data;data += meshvertices * sizeof(float[4]);
 	loadmodel->data_poses = (float *)data;data += loadmodel->num_poses * sizeof(float[12]);
-	loadmodel->data_basebonepose = (float *)data;data += loadmodel->num_bones * sizeof(float[12]);
 	loadmodel->data_baseboneposeinverse = (float *)data;data += loadmodel->num_bones * sizeof(float[12]);
 
 	//zymlump_t lump_poses; // float pose[numposes][numbones][3][4]; // animation data
@@ -1828,7 +1829,7 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->num_poses = loadmodel->num_bones * loadmodel->numframes;
 	loadmodel->num_textures = loadmodel->nummodelsurfaces = loadmodel->num_surfaces = pheader->num_meshs;
 	// do most allocations as one merged chunk
-	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + meshtriangles * sizeof(int[3]) + meshvertices * (sizeof(float[14]) + sizeof(int[4]) + sizeof(float[4])) + loadmodel->num_poses * sizeof(float[12]) + loadmodel->num_bones * 2 * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t));
+	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + meshtriangles * sizeof(int[3]) + meshvertices * (sizeof(float[14]) + sizeof(int[4]) + sizeof(float[4])) + loadmodel->num_poses * sizeof(float[12]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t));
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
 	loadmodel->surfacelist = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
 	loadmodel->data_textures = (texture_t *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
@@ -1844,7 +1845,6 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->surfmesh.data_vertexweightindex4i = (int *)data;data += meshvertices * sizeof(int[4]);
 	loadmodel->surfmesh.data_vertexweightinfluence4f = (float *)data;data += meshvertices * sizeof(float[4]);
 	loadmodel->data_poses = (float *)data;data += loadmodel->num_poses * sizeof(float[12]);
-	loadmodel->data_basebonepose = (float *)data;data += loadmodel->num_bones * sizeof(float[12]);
 	loadmodel->data_baseboneposeinverse = (float *)data;data += loadmodel->num_bones * sizeof(float[12]);
 	loadmodel->skinscenes = (animscene_t *)data;data += loadmodel->numskins * sizeof(animscene_t);
 	loadmodel->data_bones = (aliasbone_t *)data;data += loadmodel->num_bones * sizeof(aliasbone_t);
@@ -2405,7 +2405,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->num_poses = loadmodel->num_bones * loadmodel->numframes;
 	loadmodel->num_textures = loadmodel->nummodelsurfaces = loadmodel->num_surfaces = nummatts;
 	// do most allocations as one merged chunk
-	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + meshtriangles * sizeof(int[3]) + meshvertices * (sizeof(float[14]) + sizeof(int[4]) + sizeof(float[4])) + loadmodel->num_poses * sizeof(float[12]) + loadmodel->num_bones * 2 * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t));
+	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + meshtriangles * sizeof(int[3]) + meshvertices * (sizeof(float[14]) + sizeof(int[4]) + sizeof(float[4])) + loadmodel->num_poses * sizeof(float[12]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t));
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
 	loadmodel->surfacelist = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
 	loadmodel->data_textures = (texture_t *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
@@ -2421,7 +2421,6 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->surfmesh.data_vertexweightindex4i = (int *)data;data += meshvertices * sizeof(int[4]);
 	loadmodel->surfmesh.data_vertexweightinfluence4f = (float *)data;data += meshvertices * sizeof(float[4]);
 	loadmodel->data_poses = (float *)data;data += loadmodel->num_poses * sizeof(float[12]);
-	loadmodel->data_basebonepose = (float *)data;data += loadmodel->num_bones * sizeof(float[12]);
 	loadmodel->data_baseboneposeinverse = (float *)data;data += loadmodel->num_bones * sizeof(float[12]);
 	loadmodel->skinscenes = (animscene_t *)data;data += loadmodel->numskins * sizeof(animscene_t);
 	loadmodel->data_bones = (aliasbone_t *)data;data += loadmodel->num_bones * sizeof(aliasbone_t);
