@@ -609,7 +609,7 @@ void VID_Init(void)
 #endif
 	InitSig(); // trap evil signals
 // COMMANDLINEOPTION: Input: -nomouse disables mouse support (see also vid_mouse cvar)
-	if (COM_CheckParm ("-nomouse") || COM_CheckParm("-safe"))
+	if (COM_CheckParm ("-nomouse"))
 		mouse_avail = false;
 }
 

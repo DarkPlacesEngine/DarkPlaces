@@ -407,7 +407,7 @@ int CDAudio_Init (void)
 		return -1;
 
 // COMMANDLINEOPTION: Sound: -nocdaudio disables CD audio support
-	if (COM_CheckParm("-nocdaudio") || COM_CheckParm("-safe"))
+	if (COM_CheckParm("-nocdaudio"))
 		return -1;
 
 	CDAudio_SysInit();

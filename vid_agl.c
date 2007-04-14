@@ -261,7 +261,7 @@ void VID_Init(void)
 	InitSig(); // trap evil signals
 	Cvar_RegisterVariable(&apple_multithreadedgl);
 // COMMANDLINEOPTION: Input: -nomouse disables mouse support (see also vid_mouse cvar)
-	if (COM_CheckParm ("-nomouse") || COM_CheckParm("-safe"))
+	if (COM_CheckParm ("-nomouse"))
 		mouse_avail = false;
 }
 
