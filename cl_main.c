@@ -52,7 +52,7 @@ cvar_t m_side = {CVAR_SAVE, "m_side","0.8","mouse side speed multiplier"};
 cvar_t freelook = {CVAR_SAVE, "freelook", "1","mouse controls pitch instead of forward/back"};
 
 cvar_t cl_autodemo = {CVAR_SAVE, "cl_autodemo", "0", "records every game played, using the date/time and map name to name the demo file" };
-cvar_t cl_autodemo_nameformat = {CVAR_SAVE, "cl_autodemo_nameformat", "%Y-%m-%d_%H-%M", "The format of the cl_autodemo filename, followed by the map name" };
+cvar_t cl_autodemo_nameformat = {CVAR_SAVE, "cl_autodemo_nameformat", "autodemos/%Y-%m-%d_%H-%M", "The format of the cl_autodemo filename, followed by the map name" };
 
 cvar_t r_draweffects = {0, "r_draweffects", "1","renders temporary sprite effects"};
 
