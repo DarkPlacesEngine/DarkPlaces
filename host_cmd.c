@@ -1955,17 +1955,19 @@ void Host_SendCvar_f (void)
 {
 	int		i;
 	cvar_t	*c;
+	const char *cvarname;
 	client_t *old;
 
 	if(Cmd_Argc() != 2)
 		return;
-	c = Cvar_FindVar(Cmd_Argv(1));
+	cvarname = Cmd_Argv(1);
 	if (cls.state == ca_connected)
 	{
+		c = Cvar_FindVar(cvarname);
 		// LordHavoc: if there is no such cvar or if it is private, send a
 		// reply indicating that it has no value
 		if(!c || (c->flags & CVAR_PRIVATE))
-			Cmd_ForwardStringToServer(va("sentcvar %s\n", c->name));
+			Cmd_ForwardStringToServer(va("sentcvar %s\n", cvarname));
 		else
 			Cmd_ForwardStringToServer(va("sentcvar %s \"%s\"\n", c->name, c->string));
 		return;
@@ -1982,7 +1984,7 @@ void Host_SendCvar_f (void)
 		if(svs.clients[i].active && svs.clients[i].netconnection)
 		{
 			host_client = &svs.clients[i];
-			Host_ClientCommands(va("sendcvar %s\n", c->name));
+			Host_ClientCommands(va("sendcvar %s\n", cvarname));
 		}
 	host_client = old;
 }
