@@ -708,7 +708,7 @@ void S_Init(void)
 	Cvar_RegisterVariable(&snd_channels);
 
 // COMMANDLINEOPTION: Sound: -nosound disables sound (including CD audio)
-	if (COM_CheckParm("-nosound") || COM_CheckParm("-safe"))
+	if (COM_CheckParm("-nosound"))
 		return;
 
 	snd_mempool = Mem_AllocPool("sound", 0, NULL);
