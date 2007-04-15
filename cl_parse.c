@@ -2795,7 +2795,7 @@ static void CL_NetworkTimeReceived(double newtime)
 		}
 		else if (cl_nettimesyncmode.integer == 5)
 		{
-			if (cl.time < cl.mtime[1] || cl.time > cl.mtime[1] + (cl.mtime[0] - cl.mtime[1]) / (8.0))
+			if (cl.time < cl.mtime[1] || cl.time > cl.mtime[1] + (cl.mtime[0] - cl.mtime[1]) / (4.0))
 				cl.time = cl.mtime[1];
 		}
 		else if (cl_nettimesyncmode.integer)
