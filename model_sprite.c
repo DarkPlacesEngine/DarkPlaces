@@ -391,7 +391,7 @@ void Mod_IDS2_Load(model_t *mod, void *buffer, void *bufferend)
 
 		if (width > 0 && height > 0 && cls.state != ca_dedicated)
 			if (!Mod_LoadSkinFrame(&sprframe->texture.skinframes[0], pinframe->name, texflags, false, false))
-				Host_Error("Mod_IDS2_Load: failed to load %s", pinframe->name);
+				Con_Printf("Mod_IDS2_Load: failed to load %s", pinframe->name);
 
 		Mod_SpriteSetupTexture(sprframe, fullbright, false);
 	}
