@@ -256,6 +256,7 @@ typedef struct prvm_prog_funcoffsets_s
 	func_t SV_ChangeTeam; // ssqc
 	func_t SV_ParseClientCommand; // ssqc
 	func_t SV_PlayerPhysics; // ssqc
+	func_t GameCommand; // any
 
 	// menu qc only uses some functions, nothing else
 	func_t m_display; // mqc
