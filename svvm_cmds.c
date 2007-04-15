@@ -132,6 +132,8 @@ char *vm_sv_extensions =
 "PRYDON_CLIENTCURSOR "
 "TENEBRAE_GFX_DLIGHTS "
 "TW_SV_STEPCONTROL "
+"DP_SV_CMD "
+"DP_QC_CMD "
 ;
 
 /*

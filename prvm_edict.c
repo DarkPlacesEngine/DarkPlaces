@@ -38,6 +38,8 @@ cvar_t prvm_traceqc = {0, "prvm_traceqc", "0", "prints every QuakeC statement as
 // LordHavoc: counts usage of each QuakeC statement
 cvar_t prvm_statementprofiling = {0, "prvm_statementprofiling", "0", "counts how many times each QuakeC statement has been executed, these counts are displayed in prvm_printfunction output (if enabled)"};
 
+extern sizebuf_t vm_tempstringsbuf;
+
 //============================================================================
 // mempool handling
 
@@ -987,6 +989,71 @@ qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s)
 
 /*
 =============
+PRVM_GameCommand_f
+
+Console command to send a string to QC function GameCommand of the
+indicated progs
+
+Usage:
+  sv_cmd adminmsg 3 "do not teamkill"
+  cl_cmd someclientcommand
+  menu_cmd somemenucommand
+
+All progs can support this extension; sg calls it in server QC, cg in client
+QC, mg in menu QC.
+=============
+*/
+void PRVM_GameCommand(const char *whichprogs, const char *whichcmd)
+{
+	if(Cmd_Argc() < 1)
+	{
+		Con_Printf("%s text...\n", whichcmd);
+		return;
+	}
+
+	PRVM_Begin;
+	if(!PRVM_SetProgFromString(whichprogs))
+	// note: this is not PRVM_SetProg because that one aborts "hard" using PRVM_Error
+	// also, it makes printing error messages easier!
+	{
+		Con_Printf("%s program not loaded.\n", whichprogs);
+		return;
+	}
+
+	if(!prog->funcoffsets.GameCommand)
+	{
+		Con_Printf("%s program do not support GameCommand!\n", whichprogs);
+	}
+	else
+	{
+		int restorevm_tempstringsbuf_cursize;
+		const char *s;
+
+		s = Cmd_Args();
+
+		restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
+		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(s ? s : "");
+		PRVM_ExecuteProgram (prog->funcoffsets.GameCommand, "QC function GameCommand is missing");
+		vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
+	}
+
+	PRVM_End;
+}
+void PRVM_GameCommand_Server_f(void)
+{
+	PRVM_GameCommand("server", "sv_cmd");
+}
+void PRVM_GameCommand_Client_f(void)
+{
+	PRVM_GameCommand("client", "cl_cmd");
+}
+void PRVM_GameCommand_Menu_f(void)
+{
+	PRVM_GameCommand("menu", "menu_cmd");
+}
+
+/*
+=============
 PRVM_ED_EdictSet_f
 
 Console command to set a field of a specified edict
@@ -1331,6 +1398,7 @@ void PRVM_FindOffsets(void)
 	prog->funcoffsets.SV_ChangeTeam                   = PRVM_ED_FindFunctionOffset("SV_ChangeTeam");
 	prog->funcoffsets.SV_ParseClientCommand           = PRVM_ED_FindFunctionOffset("SV_ParseClientCommand");
 	prog->funcoffsets.SV_PlayerPhysics                = PRVM_ED_FindFunctionOffset("SV_PlayerPhysics");
+	prog->funcoffsets.GameCommand                     = PRVM_ED_FindFunctionOffset("GameCommand");
 	prog->globaloffsets.SV_InitCmd                    = PRVM_ED_FindGlobalOffset("SV_InitCmd");
 	prog->globaloffsets.self                          = PRVM_ED_FindGlobalOffset("self");
 	prog->globaloffsets.time                          = PRVM_ED_FindGlobalOffset("time");
@@ -1910,6 +1978,9 @@ void PRVM_Init (void)
 	Cmd_AddCommand ("prvm_globalset", PRVM_GlobalSet_f, "sets value of a specified global variable in the selected VM (server, client, menu)");
 	Cmd_AddCommand ("prvm_edictset", PRVM_ED_EdictSet_f, "changes value of a specified property of a specified entity in the selected VM (server, client, menu)");
 	Cmd_AddCommand ("prvm_printfunction", PRVM_PrintFunction_f, "prints a disassembly (QuakeC instructions) of the specified function in the selected VM (server, client, menu)");
+	Cmd_AddCommand ("cl_cmd", PRVM_GameCommand_Client_f, "calls the client QC function GameCommand with the supplied string as argument");
+	Cmd_AddCommand ("menu_cmd", PRVM_GameCommand_Menu_f, "calls the menu QC function GameCommand with the supplied string as argument");
+	Cmd_AddCommand ("sv_cmd", PRVM_GameCommand_Server_f, "calls the server QC function GameCommand with the supplied string as argument");
 	// LordHavoc: optional runtime bounds checking (speed drain, but worth it for security, on by default - breaks most QCCX features (used by CRMod and others))
 	Cvar_RegisterVariable (&prvm_boundscheck);
 	Cvar_RegisterVariable (&prvm_traceqc);
