@@ -26,6 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "image.h"
 
 cvar_t r_mipsprites = {CVAR_SAVE, "r_mipsprites", "1", "mipmaps skins (so they become blurrier in the distance), unlike skins the sprites do not have strange border colors"};
+cvar_t r_picmipsprites = {CVAR_SAVE, "r_picmipsprites", "1", "make gl_picmip affect sprites too (saves some graphics memory in sprite heavy games)"};
 
 /*
 ===============
@@ -35,6 +36,7 @@ Mod_SpriteInit
 void Mod_SpriteInit (void)
 {
 	Cvar_RegisterVariable(&r_mipsprites);
+	Cvar_RegisterVariable(&r_picmipsprites);
 }
 
 static void Mod_SpriteSetupTexture(mspriteframe_t *frame, qboolean fullbright, qboolean additive)
@@ -61,6 +63,7 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 	float				modelradius, interval;
 	char				name[MAX_QPATH], fogname[MAX_QPATH];
 	const void			*startframes;
+	int                 texflags = (r_mipsprites.integer ? TEXF_MIPMAP : 0) | (r_picmipsprites.integer ? TEXF_PICMIP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE;
 	modelradius = 0;
 
 	if (loadmodel->numframes < 1)
@@ -167,16 +170,16 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 					sprintf (name, "%s_%i_%i", loadmodel->name, i, j);
 				else
 					sprintf (name, "%s_%i", loadmodel->name, i);
-				if (!Mod_LoadSkinFrame(&loadmodel->sprite.sprdata_frames[realframes].texture.skinframes[0], name, (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, false, false))
+				if (!Mod_LoadSkinFrame(&loadmodel->sprite.sprdata_frames[realframes].texture.skinframes[0], name, texflags, false, false))
 				{
 					if (groupframes > 1)
 						sprintf (fogname, "%s_%i_%ifog", loadmodel->name, i, j);
 					else
 						sprintf (fogname, "%s_%ifog", loadmodel->name, i);
 					if (version == SPRITE32_VERSION)
-						Mod_LoadSkinFrame_Internal(&loadmodel->sprite.sprdata_frames[realframes].texture.skinframes[0], name, (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, false, false, datapointer, width, height, 32, NULL, NULL);
+						Mod_LoadSkinFrame_Internal(&loadmodel->sprite.sprdata_frames[realframes].texture.skinframes[0], name, texflags, false, false, datapointer, width, height, 32, NULL, NULL);
 					else //if (version == SPRITE_VERSION || version == SPRITEHL_VERSION)
-						Mod_LoadSkinFrame_Internal(&loadmodel->sprite.sprdata_frames[realframes].texture.skinframes[0], name, (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, false, false, datapointer, width, height, 8, palette, alphapalette);
+						Mod_LoadSkinFrame_Internal(&loadmodel->sprite.sprdata_frames[realframes].texture.skinframes[0], name, texflags, false, false, datapointer, width, height, 8, palette, alphapalette);
 				}
 			}
 
@@ -321,6 +324,7 @@ void Mod_IDS2_Load(model_t *mod, void *buffer, void *bufferend)
 	int i, version, fullbright;
 	const dsprite2_t *pinqsprite;
 	float modelradius;
+	int texflags = (r_mipsprites.integer ? TEXF_MIPMAP : 0) | (r_picmipsprites.integer ? TEXF_PICMIP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE;
 
 	loadmodel->type = mod_sprite;
 
@@ -386,7 +390,7 @@ void Mod_IDS2_Load(model_t *mod, void *buffer, void *bufferend)
 			modelradius = x + y;
 
 		if (width > 0 && height > 0 && cls.state != ca_dedicated)
-			if (!Mod_LoadSkinFrame(&sprframe->texture.skinframes[0], pinframe->name, (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, false, false))
+			if (!Mod_LoadSkinFrame(&sprframe->texture.skinframes[0], pinframe->name, texflags, false, false))
 				Host_Error("Mod_IDS2_Load: failed to load %s", pinframe->name);
 
 		Mod_SpriteSetupTexture(sprframe, fullbright, false);
