@@ -309,7 +309,7 @@ void CL_KeepaliveMessage (qboolean readmessages)
 		msg.data = buf;
 		msg.maxsize = sizeof(buf);
 		MSG_WriteChar(&msg, clc_nop);
-		NetConn_SendUnreliableMessage(cls.netcon, &msg, cls.protocol);
+		NetConn_SendUnreliableMessage(cls.netcon, &msg, cls.protocol, 10000);
 	}
 }
 

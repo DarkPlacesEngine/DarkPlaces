@@ -338,9 +338,9 @@ void CL_Disconnect(void)
 			Con_DPrint("Sending clc_disconnect\n");
 			MSG_WriteByte(&buf, clc_disconnect);
 		}
-		NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol);
-		NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol);
-		NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol);
+		NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol, 10000);
+		NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol, 10000);
+		NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol, 10000);
 		NetConn_Close(cls.netcon);
 		cls.netcon = NULL;
 	}

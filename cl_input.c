@@ -1314,12 +1314,18 @@ void CL_SendMove(void)
 			return;
 		cl.cmd.time = cl.mtime[0];
 	}
+
 	// don't let it fall behind if CL_SendMove hasn't been called recently
 	// (such is the case when framerate is too low for instance)
 	lastsendtime = bound(realtime, lastsendtime + packettime, realtime + packettime);
 	// set the flag indicating that we sent a packet recently
 	cl.movement_needupdate = false;
 
+	// don't send a new input packet if the connection is still saturated from
+	// the last one (or chat messages, etc)
+	// note: this behavior comes from QW
+	if (!NetConn_CanSend(cls.netcon))
+		return;
 
 	buf.maxsize = sizeof(data);
 	buf.cursize = 0;
@@ -1432,8 +1438,10 @@ void CL_SendMove(void)
 				checksumindex = buf.cursize;
 				MSG_WriteByte(&buf, 0);
 				// packet loss percentage
-				for (j = 0, packetloss = 0;j < 100;j++)
-					packetloss += cls.netcon->packetlost[j];
+				for (j = 0, packetloss = 0;j < NETGRAPH_PACKETS;j++)
+					if (cls.netcon->incoming_unreliablesize[i] == NETGRAPH_LOSTPACKET)
+						packetloss++;
+				packetloss = packetloss * 100 / NETGRAPH_PACKETS;
 				MSG_WriteByte(&buf, packetloss);
 				// write most recent 3 moves
 				QW_MSG_WriteDeltaUsercmd(&buf, &nullcmd, &cl.movecmd[2]);
@@ -1564,7 +1572,7 @@ void CL_SendMove(void)
 		{
 			if (cl.latestframenums[i] > 0)
 			{
-				if (developer_networkentities.integer >= 1)
+				if (developer_networkentities.integer >= 10)
 					Con_Printf("send clc_ackframe %i\n", cl.latestframenums[i]);
 				MSG_WriteByte(&buf, clc_ackframe);
 				MSG_WriteLong(&buf, cl.latestframenums[i]);
@@ -1589,7 +1597,7 @@ void CL_SendMove(void)
 	}
 
 	// send the reliable message (forwarded commands) if there is one
-	NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol);
+	NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol, max(20*(buf.cursize+40), cl_rate.integer));
 
 	if (cls.netcon->message.overflowed)
 	{

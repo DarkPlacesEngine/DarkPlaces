@@ -1357,36 +1357,42 @@ SV_SendClientDatagram
 static unsigned char sv_sendclientdatagram_buf[NET_MAXMESSAGE]; // FIXME?
 void SV_SendClientDatagram (client_t *client)
 {
-	int rate, maxrate, maxsize, maxsize2, downloadsize;
+	int clientrate, maxrate, maxsize, maxsize2, downloadsize;
 	sizebuf_t msg;
 	int stats[MAX_CL_STATS];
 
+	// PROTOCOL_DARKPLACES5 and later support packet size limiting of updates
+	maxrate = max(NET_MINRATE, sv_maxrate.integer);
+	if (sv_maxrate.integer != maxrate)
+		Cvar_SetValueQuick(&sv_maxrate, maxrate);
+	// clientrate determines the 'cleartime' of a packet
+	// (how long to wait before sending another, based on this packet's size)
+	clientrate = bound(NET_MINRATE, client->rate, maxrate);
+
 	if (LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) == LHNETADDRESSTYPE_LOOP && !sv_ratelimitlocalplayer.integer)
 	{
-		// for good singleplayer, send huge packets
+		// for good singleplayer, send huge packets and never limit frequency
+		clientrate = 1000000000;
 		maxsize = sizeof(sv_sendclientdatagram_buf);
 		maxsize2 = sizeof(sv_sendclientdatagram_buf);
 	}
 	else if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE || sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4)
 	{
-		// no rate limiting support on older protocols because dp protocols
-		// 1-4 kick the client off if they overflow, and quake protocol shows
-		// less than the full entity set if rate limited
+		// no packet size limit support on older protocols because DP1-4 kick
+		// the client off if they overflow, and quake protocol shows less than
+		// the full entity set if rate limited
 		maxsize = 1400;
 		maxsize2 = 1400;
 	}
 	else
 	{
-		// PROTOCOL_DARKPLACES5 and later support packet size limiting of updates
-		maxrate = max(NET_MINRATE, sv_maxrate.integer);
-		if (sv_maxrate.integer != maxrate)
-			Cvar_SetValueQuick(&sv_maxrate, maxrate);
-
+		// DP5 and later protocols support packet size limiting which is a
+		// better method than limiting packet frequency as QW does
+		//
 		// this rate limiting does not understand sys_ticrate 0
 		// (but no one should be running that on a server!)
-		rate = bound(NET_MINRATE, client->rate, maxrate);
-		rate = (int)(rate * sys_ticrate.value);
-		maxsize = bound(50, rate, 1400);
+		maxsize = (int)(clientrate * sys_ticrate.value);
+		maxsize = bound(100, maxsize, 1400);
 		maxsize2 = 1400;
 	}
 
@@ -1399,7 +1405,16 @@ void SV_SendClientDatagram (client_t *client)
 	msg.maxsize = maxsize;
 	msg.cursize = 0;
 
-	if (host_client->spawned)
+	// obey rate limit by limiting packet frequency if the packet size
+	// limiting fails
+	// (usually this is caused by reliable messages)
+	if (!NetConn_CanSend(client->netconnection))
+	{
+		// send the datagram
+		NetConn_SendUnreliableMessage (client->netconnection, &msg, sv.protocol, clientrate);
+		return;
+	}
+	else if (host_client->spawned)
 	{
 		MSG_WriteByte (&msg, svc_time);
 		MSG_WriteFloat (&msg, sv.time);
@@ -1457,7 +1472,7 @@ void SV_SendClientDatagram (client_t *client)
 	}
 
 // send the datagram
-	NetConn_SendUnreliableMessage (client->netconnection, &msg, sv.protocol);
+	NetConn_SendUnreliableMessage (client->netconnection, &msg, sv.protocol, clientrate);
 }
 
 /*

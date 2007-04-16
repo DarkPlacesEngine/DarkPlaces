@@ -2324,8 +2324,10 @@ void Host_Pings_f (void)
 	{
 		packetloss = 0;
 		if (svs.clients[i].netconnection)
-			for (j = 0;j < 100;j++)
-				packetloss += svs.clients[i].netconnection->packetlost[j];
+			for (j = 0;j < NETGRAPH_PACKETS;j++)
+				if (svs.clients[i].netconnection->incoming_unreliablesize[j] == NETGRAPH_LOSTPACKET)
+					packetloss++;
+		packetloss = packetloss * 100 / NETGRAPH_PACKETS;
 		ping = (int)floor(svs.clients[i].ping*1000+0.5);
 		ping = bound(0, ping, 9999);
 		if (sv.protocol == PROTOCOL_QUAKEWORLD)
