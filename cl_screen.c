@@ -46,6 +46,7 @@ cvar_t scr_zoomwindow_viewsizey = {CVAR_SAVE, "scr_zoomwindow_viewsizey", "20", 
 cvar_t scr_zoomwindow_fov = {CVAR_SAVE, "scr_zoomwindow_fov", "20", "fov of zoom window"};
 cvar_t scr_stipple = {0, "scr_stipple", "0", "interlacing-like stippling of the display"};
 cvar_t scr_refresh = {0, "scr_refresh", "1", "allows you to completely shut off rendering for benchmarking purposes"};
+cvar_t shownetgraph = {CVAR_SAVE, "shownetgraph", "0", "shows a graph of packet sizes and other information"};
 
 
 int jpeg_supported = false;
@@ -182,6 +183,86 @@ void SCR_CheckDrawCenterString (void)
 		return;
 
 	SCR_DrawCenterString ();
+}
+
+void SCR_DrawNetGraph_DrawGraph (int graphx, int graphy, int barwidth, int barheight, int bardivide, const char *label, float textsize, int packetcounter, int numparameters, const int **parameters, const float parametercolors[][4])
+{
+	int j, k, x, y, index, offset, height;
+	// dim background
+	DrawQ_Pic (graphx, graphy, NULL, barwidth * NETGRAPH_PACKETS, barheight + textsize, 0, 0, 0, 0.5, 0);
+	// draw a label
+	DrawQ_String (graphx, graphy + barheight, label, 0, textsize, textsize, 1, 1, 1, 1, 0);
+	// draw the bar graph itself
+	for (j = 0;j < NETGRAPH_PACKETS;j++)
+	{
+		x = graphx + j * barwidth;
+		y = graphy + barheight;
+		index = (packetcounter + j) % NETGRAPH_PACKETS;
+		if (parameters[0][index] == NETGRAPH_LOSTPACKET)
+			DrawQ_Pic(x, y - barheight, NULL, barwidth, barheight, 1, 0, 0, 1, 0);
+		else if (parameters[0][index] == NETGRAPH_CHOKEDPACKET)
+			DrawQ_Pic(x, y - min(2, barheight), NULL, barwidth, min(2, barheight), 1, 1, 0, 1, 0);
+		else
+		{
+			offset = 0;
+			for (k = 0;k < numparameters;k++)
+			{
+				height = (parameters[k][index] + bardivide - 1) / bardivide;
+				height = min(height, barheight - offset);
+				offset += height;
+				if (height)
+					DrawQ_Pic(x, y - offset, NULL, barwidth, height, parametercolors[k][0], parametercolors[k][1], parametercolors[k][2], parametercolors[k][3], 0);
+			}
+		}
+	}
+}
+
+const float netgraphcolors[3][4] =
+{
+	{1  , 0.5, 0  , 1},
+	{1  , 1  , 1  , 1},
+	{0  , 1  , 0  , 1},
+};
+
+void SCR_DrawNetGraph_DrawConnection (netconn_t *conn, int graphx, int graphy, int barwidth, int barheight, int bardivide, const char *labelincoming, int separator, const char *labeloutgoing, float textsize)
+{
+	int numparameters;
+	const int *parameters[3];
+	numparameters = 3;
+	parameters[0] = conn->incoming_unreliablesize;
+	parameters[1] = conn->incoming_reliablesize;
+	parameters[2] = conn->incoming_acksize;
+	SCR_DrawNetGraph_DrawGraph(graphx, graphy, barwidth, barheight, bardivide, labelincoming, textsize, conn->incoming_packetcounter, numparameters, parameters, netgraphcolors);
+	parameters[0] = conn->outgoing_unreliablesize;
+	parameters[1] = conn->outgoing_reliablesize;
+	parameters[2] = conn->outgoing_acksize;
+	SCR_DrawNetGraph_DrawGraph(graphx + barwidth * NETGRAPH_PACKETS + separator, graphy, barwidth, barheight, bardivide, labeloutgoing, textsize, conn->outgoing_packetcounter, numparameters, parameters, netgraphcolors);
+}
+
+/*
+==============
+SCR_DrawNetGraph
+==============
+*/
+void SCR_DrawNetGraph (void)
+{
+	int separator, barwidth, barheight, bardivide, netgraph_x, netgraph_y, textsize;
+
+	if (cls.state != ca_connected)
+		return;
+	if (!cls.netcon)
+		return;
+	if (!shownetgraph.integer)
+		return;
+
+	separator = 4;
+	textsize = 8;
+	barwidth = 1;
+	barheight = 50;
+	bardivide = 20;
+	netgraph_x = 0;
+	netgraph_y = vid_conheight.integer - 48 - barheight - textsize;
+	SCR_DrawNetGraph_DrawConnection(cls.netcon, netgraph_x, netgraph_y, barwidth, barheight, bardivide, "incoming", separator, "outgoing", textsize);
 }
 
 /*
@@ -639,6 +720,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable(&scr_zoomwindow_fov);
 	Cvar_RegisterVariable(&scr_stipple);
 	Cvar_RegisterVariable(&scr_refresh);
+	Cvar_RegisterVariable(&shownetgraph);
 
 	Cmd_AddCommand ("sizeup",SCR_SizeUp_f, "increase view size (increases viewsize cvar)");
 	Cmd_AddCommand ("sizedown",SCR_SizeDown_f, "decrease view size (decreases viewsize cvar)");
@@ -1591,6 +1673,7 @@ void SCR_DrawScreen (void)
 		SHOWLMP_drawall();
 		SCR_CheckDrawCenterString();
 	}
+	SCR_DrawNetGraph ();
 	MR_Draw();
 	CL_DrawVideo();
 	R_Shadow_EditLights_DrawSelectedLightProperties();

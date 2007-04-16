@@ -169,10 +169,6 @@ typedef struct netconn_s
 
 		int			qport;
 
-	// bandwidth estimator
-		double		cleartime;			// if realtime > nc->cleartime, free to go
-		double		rate;				// seconds / byte
-
 	// sequencing variables
 		int			incoming_sequence;
 		int			incoming_acknowledged;
@@ -186,9 +182,23 @@ typedef struct netconn_s
 	}
 	qw;
 
-	// this tracks which of the last 100 received packet sequence numbers were lost
-	int packetlostcounter;
-	unsigned char packetlost[100];
+	// bandwidth estimator
+	double		cleartime;			// if realtime > nc->cleartime, free to go
+
+	// this tracks packet loss and packet sizes on the most recent packets
+	// used by shownetgraph feature
+#define NETGRAPH_PACKETS 100
+#define NETGRAPH_NOPACKET 0
+#define NETGRAPH_LOSTPACKET -1
+#define NETGRAPH_CHOKEDPACKET -2
+	int incoming_packetcounter;
+	int incoming_reliablesize[NETGRAPH_PACKETS];
+	int incoming_unreliablesize[NETGRAPH_PACKETS];
+	int incoming_acksize[NETGRAPH_PACKETS];
+	int outgoing_packetcounter;
+	int outgoing_reliablesize[NETGRAPH_PACKETS];
+	int outgoing_unreliablesize[NETGRAPH_PACKETS];
+	int outgoing_acksize[NETGRAPH_PACKETS];
 
 	char address[128];
 } netconn_t;
@@ -331,7 +341,8 @@ extern cvar_t sv_netport;
 extern cvar_t net_address;
 //extern cvar_t net_netaddress_ipv6;
 
-int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolversion_t protocol);
+qboolean NetConn_CanSend(netconn_t *conn);
+int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolversion_t protocol, int rate);
 void NetConn_CloseClientPorts(void);
 void NetConn_OpenClientPorts(void);
 void NetConn_CloseServerPorts(void);
