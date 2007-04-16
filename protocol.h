@@ -363,6 +363,13 @@ entity_state_t;
 extern entity_state_t defaultstate;
 // reads a quake entity from the network stream
 void EntityFrameQuake_ReadEntity(int bits);
+// checks for stats changes and sets corresponding host_client->statsdeltabits
+// (also updates host_client->stats array)
+void Protocol_UpdateClientStats(const int *stats);
+// writes reliable messages updating stats (not used by DP6 and later
+// protocols which send updates in their WriteFrame function using a different
+// method of reliable messaging)
+void Protocol_WriteStatsReliable(void);
 // writes a list of quake entities to the network stream
 // (or as many will fit)
 void EntityFrameQuake_WriteFrame(sizebuf_t *msg, int numstates, const entity_state_t *states);
@@ -734,10 +741,6 @@ typedef struct entityframe5_database_s
 	// (derived from states)
 	unsigned char *visiblebits; // [(maxedicts+7)/8]
 
-	// delta compression of stats
-	unsigned char statsdeltabits[(MAX_CL_STATS+7)/8];
-	int stats[MAX_CL_STATS];
-
 	// old notes
 
 	// this is used to decide which changestates to set each frame
@@ -760,7 +763,7 @@ int EntityState5_DeltaBitsForState(entity_state_t *o, entity_state_t *n);
 void EntityFrame5_CL_ReadFrame(void);
 void EntityFrame5_LostFrame(entityframe5_database_t *d, int framenum);
 void EntityFrame5_AckFrame(entityframe5_database_t *d, int framenum);
-void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int numstates, const entity_state_t *states, int viewentnum, int *stats, int movesequence);
+void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int numstates, const entity_state_t *states, int viewentnum, int movesequence);
 
 extern cvar_t developer_networkentities;
 
