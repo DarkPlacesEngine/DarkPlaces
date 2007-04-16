@@ -202,7 +202,7 @@ static int XLateKey(XKeyEvent *ev, char *ascii)
 		case XK_Insert:key = K_INS; break;
 		case XK_KP_Insert: key = K_KP_INS; break;
 
-		case XK_KP_Multiply: key = '*'; break;
+		case XK_KP_Multiply: key = K_KP_MULTIPLY; break;
 		case XK_KP_Add:  key = K_KP_PLUS; break;
 		case XK_KP_Subtract: key = K_KP_MINUS; break;
 		case XK_KP_Divide: key = K_KP_SLASH; break;
