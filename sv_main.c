@@ -370,6 +370,9 @@ void SV_SendServerinfo (client_t *client)
 	if (client->entitydatabase5)
 		EntityFrame5_FreeDatabase(client->entitydatabase5);
 
+	memset(client->stats, 0, sizeof(client->stats));
+	memset(client->statsdeltabits, 0, sizeof(client->statsdeltabits));
+
 	if (sv.protocol != PROTOCOL_QUAKE && sv.protocol != PROTOCOL_QUAKEDP && sv.protocol != PROTOCOL_NEHAHRAMOVIE)
 	{
 		if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3)
@@ -558,6 +561,18 @@ static int numsendentities;
 static entity_state_t sendentities[MAX_EDICTS];
 static entity_state_t *sendentitiesindex[MAX_EDICTS];
 
+static int sententitiesmark = 0;
+static int sententities[MAX_EDICTS];
+static int sententitiesconsideration[MAX_EDICTS];
+static int sv_writeentitiestoclient_culled_pvs;
+static int sv_writeentitiestoclient_culled_trace;
+static int sv_writeentitiestoclient_visibleentities;
+static int sv_writeentitiestoclient_totalentities;
+//static entity_frame_t sv_writeentitiestoclient_entityframe;
+static int sv_writeentitiestoclient_clentnum;
+static vec3_t sv_writeentitiestoclient_testeye;
+static client_t *sv_writeentitiestoclient_client;
+
 qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, int e)
 {
 	int i;
@@ -721,7 +736,7 @@ qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, int 
 
 	if (ent->fields.server->movetype == MOVETYPE_STEP)
 		cs->flags |= RENDER_STEP;
-	if ((cs->effects & EF_LOWPRECISION) && cs->origin[0] >= -32768 && cs->origin[1] >= -32768 && cs->origin[2] >= -32768 && cs->origin[0] <= 32767 && cs->origin[1] <= 32767 && cs->origin[2] <= 32767)
+	if (cs->number != sv_writeentitiestoclient_clentnum/* && (cs->effects & EF_LOWPRECISION)*/ && cs->origin[0] >= -32768 && cs->origin[1] >= -32768 && cs->origin[2] >= -32768 && cs->origin[0] <= 32767 && cs->origin[1] <= 32767 && cs->origin[2] <= 32767)
 		cs->flags |= RENDER_LOWPRECISION;
 	if (ent->fields.server->colormap >= 1024)
 		cs->flags |= RENDER_COLORMAPPED;
@@ -814,18 +829,6 @@ void SV_PrepareEntitiesForSending(void)
 		}
 	}
 }
-
-static int sententitiesmark = 0;
-static int sententities[MAX_EDICTS];
-static int sententitiesconsideration[MAX_EDICTS];
-static int sv_writeentitiestoclient_culled_pvs;
-static int sv_writeentitiestoclient_culled_trace;
-static int sv_writeentitiestoclient_visibleentities;
-static int sv_writeentitiestoclient_totalentities;
-//static entity_frame_t sv_writeentitiestoclient_entityframe;
-static int sv_writeentitiestoclient_clentnum;
-static vec3_t sv_writeentitiestoclient_testeye;
-static client_t *sv_writeentitiestoclient_client;
 
 void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 {
@@ -1312,14 +1315,29 @@ void SV_WriteUnreliableMessages(client_t *client, sizebuf_t *msg)
 {
 	// scan the splitpoints to find out how many we can fit in
 	int numsegments, j, split;
-	for (numsegments = 0;numsegments < client->unreliablemsg_splitpoints;numsegments++)
-		if (msg->cursize + client->unreliablemsg_splitpoint[numsegments] > msg->maxsize)
-			break;
+	if (!client->unreliablemsg_splitpoints)
+		return;
+	// always accept the first one if it's within 1400 bytes, this ensures
+	// that very big datagrams which are over the rate limit still get
+	// through, just to keep it working
+	if (msg->cursize + client->unreliablemsg_splitpoint[0] > msg->maxsize && msg->maxsize < 1400)
+	{
+		numsegments = 1;
+		msg->maxsize = 1400;
+	}
+	else
+		for (numsegments = 0;numsegments < client->unreliablemsg_splitpoints;numsegments++)
+			if (msg->cursize + client->unreliablemsg_splitpoint[numsegments] > msg->maxsize)
+				break;
 	if (numsegments > 0)
 	{
 		// some will fit, so add the ones that will fit
 		split = client->unreliablemsg_splitpoint[numsegments-1];
-		SZ_Write(msg, client->unreliablemsg.data, split);
+		// note this discards ones that were accepted by the segments scan but
+		// can not fit, such as a really huge first one that will never ever
+		// fit in a packet...
+		if (msg->cursize + split <= msg->maxsize)
+			SZ_Write(msg, client->unreliablemsg.data, split);
 		// remove the part we sent, keeping any remaining data
 		client->unreliablemsg.cursize -= split;
 		if (client->unreliablemsg.cursize > 0)
