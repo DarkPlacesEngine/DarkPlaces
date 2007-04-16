@@ -1461,7 +1461,7 @@ void EntityFrame4_CL_ReadFrame(void)
 	cl.latestframenums[LATESTFRAMENUMS-1] = framenum = MSG_ReadLong();
 	// read the start number
 	enumber = (unsigned short) MSG_ReadShort();
-	if (developer_networkentities.integer >= 1)
+	if (developer_networkentities.integer >= 10)
 	{
 		Con_Printf("recv svc_entities num:%i ref:%i database: ref:%i commits:", framenum, referenceframenum, d->referenceframenum);
 		for (i = 0;i < MAX_ENTITY_HISTORY;i++)
@@ -1613,7 +1613,7 @@ void EntityFrame4_WriteFrame(sizebuf_t *msg, entityframe4_database_t *d, int num
 	MSG_WriteByte(msg, svc_entities);
 	MSG_WriteLong(msg, d->referenceframenum);
 	MSG_WriteLong(msg, d->currentcommit->framenum);
-	if (developer_networkentities.integer >= 1)
+	if (developer_networkentities.integer >= 10)
 	{
 		Con_Printf("send svc_entities num:%i ref:%i (database: ref:%i commits:", d->currentcommit->framenum, d->referenceframenum, d->referenceframenum);
 		for (i = 0;i < MAX_ENTITY_HISTORY;i++)
@@ -1783,6 +1783,7 @@ int EntityState5_Priority(entityframe5_database_t *d, int stateindex)
 void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbits, sizebuf_t *msg)
 {
 	unsigned int bits = 0;
+	qboolean lowprecision;
 
 	prvm_eval_t *val;
 	val = PRVM_EDICTFIELDVALUE((&prog->edicts[s->number]), prog->fieldoffsets.SendEntity);
@@ -1794,9 +1795,10 @@ void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbi
 	else
 	{
 		bits = changedbits;
-		if ((bits & E5_ORIGIN) && (!(s->flags & RENDER_LOWPRECISION) || s->origin[0] < -4096 || s->origin[0] >= 4096 || s->origin[1] < -4096 || s->origin[1] >= 4096 || s->origin[2] < -4096 || s->origin[2] >= 4096))
+		lowprecision = (s->flags & RENDER_LOWPRECISION);
+		if ((bits & E5_ORIGIN) && (!lowprecision || s->origin[0] < -4096 || s->origin[0] >= 4096 || s->origin[1] < -4096 || s->origin[1] >= 4096 || s->origin[2] < -4096 || s->origin[2] >= 4096))
 			bits |= E5_ORIGIN32;
-		if ((bits & E5_ANGLES) && !(s->flags & RENDER_LOWPRECISION))
+		if ((bits & E5_ANGLES) && !lowprecision)
 			bits |= E5_ANGLES16;
 		if ((bits & E5_MODEL) && s->modelindex >= 256)
 			bits |= E5_MODEL16;
@@ -1914,7 +1916,7 @@ void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbi
 	}
 }
 
-void EntityState5_ReadUpdate(entity_state_t *s)
+void EntityState5_ReadUpdate(entity_state_t *s, int number)
 {
 	int bits;
 	bits = MSG_ReadByte();
@@ -2025,7 +2027,7 @@ void EntityState5_ReadUpdate(entity_state_t *s)
 
 	if (developer_networkentities.integer >= 2)
 	{
-		Con_Printf("ReadFields e%i", s->number);
+		Con_Printf("ReadFields e%i", number);
 
 		if (bits & E5_ORIGIN)
 			Con_Printf(" E5_ORIGIN %f %f %f", s->origin[0], s->origin[1], s->origin[2]);
@@ -2131,7 +2133,7 @@ void EntityFrame5_CL_ReadFrame(void)
 	for (i = 0;i < LATESTFRAMENUMS-1;i++)
 		cl.latestframenums[i] = cl.latestframenums[i+1];
 	cl.latestframenums[LATESTFRAMENUMS-1] = MSG_ReadLong();
-	if (developer_networkentities.integer)
+	if (developer_networkentities.integer >= 10)
 		Con_Printf("recv: svc_entities %i\n", cl.latestframenums[LATESTFRAMENUMS-1]);
 	if (cls.protocol != PROTOCOL_QUAKE && cls.protocol != PROTOCOL_QUAKEDP && cls.protocol != PROTOCOL_NEHAHRAMOVIE && cls.protocol != PROTOCOL_DARKPLACES1 && cls.protocol != PROTOCOL_DARKPLACES2 && cls.protocol != PROTOCOL_DARKPLACES3 && cls.protocol != PROTOCOL_DARKPLACES4 && cls.protocol != PROTOCOL_DARKPLACES5 && cls.protocol != PROTOCOL_DARKPLACES6)
 		cls.servermovesequence = MSG_ReadLong();
@@ -2162,7 +2164,7 @@ void EntityFrame5_CL_ReadFrame(void)
 		else
 		{
 			// update entity
-			EntityState5_ReadUpdate(s);
+			EntityState5_ReadUpdate(s, enumber);
 		}
 		// set the cl.entities_active flag
 		cl.entities_active[enumber] = s->active;
@@ -2348,12 +2350,17 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 	{
 		if (d->priorities[num])
 		{
-			if (d->priorities[num] < (E5_PROTOCOL_PRIORITYLEVELS - 1))
-				d->priorities[num] = EntityState5_Priority(d, num);
-			l = num;
-			priority = d->priorities[num];
-			if (entityframe5_prioritychaincounts[priority] < ENTITYFRAME5_MAXSTATES)
-				entityframe5_prioritychains[priority][entityframe5_prioritychaincounts[priority]++] = num;
+			if (d->deltabits[num])
+			{
+				if (d->priorities[num] < (E5_PROTOCOL_PRIORITYLEVELS - 1))
+					d->priorities[num] = EntityState5_Priority(d, num);
+				l = num;
+				priority = d->priorities[num];
+				if (entityframe5_prioritychaincounts[priority] < ENTITYFRAME5_MAXSTATES)
+					entityframe5_prioritychains[priority][entityframe5_prioritychaincounts[priority]++] = num;
+			}
+			else
+				d->priorities[num] = 0;
 		}
 	}
 
@@ -2386,7 +2393,7 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 		}
 	}
 	// write state updates
-	if (developer_networkentities.integer)
+	if (developer_networkentities.integer >= 10)
 		Con_Printf("send: svc_entities %i\n", framenum);
 	d->latestframenum = framenum;
 	MSG_WriteByte(msg, svc_entities);
