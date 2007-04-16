@@ -598,4 +598,6 @@ cleanup:
 		Con_Printf("PRVM_ExecuteProgram: %s used %i bytes of tempstrings\n", PRVM_GetString(prog->functions[fnum].s_name), vm_tempstringsbuf.cursize - restorevm_tempstringsbuf_cursize);
 	// delete tempstrings created by this function
 	vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
+
+	SV_FlushBroadcastMessages();
 }

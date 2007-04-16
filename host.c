@@ -734,9 +734,6 @@ void Host_Main(void)
 				// send all messages to the clients
 				SV_SendClientMessages();
 
-				// clear the general datagram
-				SV_ClearDatagram();
-
 				// if this server frame took too long, break out of the loop
 				if (framelimit > 1 && Sys_DoubleTime() >= aborttime)
 					break;

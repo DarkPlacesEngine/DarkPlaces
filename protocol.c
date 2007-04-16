@@ -419,6 +419,56 @@ void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int numstates, const entity_sta
 	sv2csqcbuf = NULL;
 }
 
+void Protocol_UpdateClientStats(const int *stats)
+{
+	int i;
+	// update the stats array and set deltabits for any changed stats
+	for (i = 0;i < MAX_CL_STATS;i++)
+	{
+		if (host_client->stats[i] != stats[i])
+		{
+			host_client->statsdeltabits[i >> 3] |= 1 << (i & 7);
+			host_client->stats[i] = stats[i];
+		}
+	}
+}
+
+void Protocol_WriteStatsReliable(void)
+{
+	int i;
+	if (!host_client->netconnection)
+		return;
+	// detect changes in stats and write reliable messages
+	for (i = 0;i < MAX_CL_STATS;i++)
+	{
+		// quickly skip zero bytes
+		if (!host_client->statsdeltabits[i >> 3])
+		{
+			i |= 7;
+			continue;
+		}
+		// check if this bit is set
+		if (host_client->statsdeltabits[i >> 3] & (1 << (i & 7)))
+		{
+			host_client->statsdeltabits[i >> 3] -= (1 << (i & 7));
+			// send the stat as a byte if possible
+			if (host_client->stats[i] >= 0 && host_client->stats[i] < 256)
+			{
+				MSG_WriteByte(&host_client->netconnection->message, svc_updatestatubyte);
+				MSG_WriteByte(&host_client->netconnection->message, i);
+				MSG_WriteByte(&host_client->netconnection->message, host_client->stats[i]);
+			}
+			else
+			{
+				MSG_WriteByte(&host_client->netconnection->message, svc_updatestat);
+				MSG_WriteByte(&host_client->netconnection->message, i);
+				MSG_WriteLong(&host_client->netconnection->message, host_client->stats[i]);
+			}
+		}
+	}
+}
+
+
 void EntityFrameQuake_WriteFrame(sizebuf_t *msg, int numstates, const entity_state_t *states)
 {
 	const entity_state_t *s;
@@ -2184,13 +2234,13 @@ void EntityFrame5_LostFrame(entityframe5_database_t *d, int framenum)
 			for (j = 0;j < MAX_CL_STATS;j++)
 			{
 				for (l = 0;l < (MAX_CL_STATS+7)/8;l++)
-					statsdeltabits[l] = p->statsdeltabits[l] & ~d->statsdeltabits[l];
+					statsdeltabits[l] = p->statsdeltabits[l] & ~host_client->statsdeltabits[l];
 				for (k = 0, p2 = d->packetlog;k < ENTITYFRAME5_MAXPACKETLOGS;k++, p2++)
 					if (p2->packetnumber > framenum)
 						for (l = 0;l < (MAX_CL_STATS+7)/8;l++)
 							statsdeltabits[l] = p->statsdeltabits[l] & ~p2->statsdeltabits[l];
 				for (l = 0;l < (MAX_CL_STATS+7)/8;l++)
-					d->statsdeltabits[l] |= statsdeltabits[l];
+					host_client->statsdeltabits[l] |= statsdeltabits[l];
 			}
 			// delete this packet log as it is now obsolete
 			p->packetnumber = 0;
@@ -2207,7 +2257,7 @@ void EntityFrame5_AckFrame(entityframe5_database_t *d, int framenum)
 			d->packetlog[i].packetnumber = 0;
 }
 
-void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int numstates, const entity_state_t *states, int viewentnum, int *stats, int movesequence)
+void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int numstates, const entity_state_t *states, int viewentnum, int movesequence)
 {
 	const entity_state_t *n;
 	int i, num, l, framenum, packetlognumber, priority;
@@ -2237,16 +2287,6 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 	memset(&buf, 0, sizeof(buf));
 	buf.data = data;
 	buf.maxsize = sizeof(data);
-
-	// detect changes in stats
-	for (i = 0;i < MAX_CL_STATS;i++)
-	{
-		if (d->stats[i] != stats[i])
-		{
-			d->statsdeltabits[i>>3] |= (1<<(i&7));
-			d->stats[i] = stats[i];
-		}
-	}
 
 	// detect changes in states
 	num = 1;
@@ -2326,21 +2366,21 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 	{
 		for (i = 0;i < MAX_CL_STATS && msg->cursize + 6 + 11 <= msg->maxsize;i++)
 		{
-			if (d->statsdeltabits[i>>3] & (1<<(i&7)))
+			if (host_client->statsdeltabits[i>>3] & (1<<(i&7)))
 			{
-				d->statsdeltabits[i>>3] &= ~(1<<(i&7));
+				host_client->statsdeltabits[i>>3] &= ~(1<<(i&7));
 				packetlog->statsdeltabits[i>>3] |= (1<<(i&7));
-				if (d->stats[i] >= 0 && d->stats[i] < 256)
+				if (host_client->stats[i] >= 0 && host_client->stats[i] < 256)
 				{
 					MSG_WriteByte(msg, svc_updatestatubyte);
 					MSG_WriteByte(msg, i);
-					MSG_WriteByte(msg, d->stats[i]);
+					MSG_WriteByte(msg, host_client->stats[i]);
 				}
 				else
 				{
 					MSG_WriteByte(msg, svc_updatestat);
 					MSG_WriteByte(msg, i);
-					MSG_WriteLong(msg, d->stats[i]);
+					MSG_WriteLong(msg, host_client->stats[i]);
 				}
 			}
 		}

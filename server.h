@@ -193,6 +193,15 @@ typedef struct client_s
 	entityframe4_database_t *entitydatabase4;
 	entityframe5_database_t *entitydatabase5;
 
+	// delta compression of stats
+	unsigned char statsdeltabits[(MAX_CL_STATS+7)/8];
+	int stats[MAX_CL_STATS];
+
+	unsigned char unreliablemsg_data[NET_MAXMESSAGE];
+	sizebuf_t unreliablemsg;
+	int unreliablemsg_splitpoints;
+	int unreliablemsg_splitpoint[NET_MAXMESSAGE/16];
+
 	// information on an active download if any
 	qfile_t *download_file;
 	int download_expectedposition; // next position the client should ack
@@ -337,7 +346,6 @@ void SV_ConnectClient (int clientnum, netconn_t *netconnection);
 void SV_DropClient (qboolean crash);
 
 void SV_SendClientMessages (void);
-void SV_ClearDatagram (void);
 
 void SV_ReadClientMessage(void);
 
@@ -381,6 +389,7 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 
 #define SV_PointSuperContents(point) (SV_Move((point), vec3_origin, vec3_origin, (point), sv_gameplayfix_swiminbmodels.integer ? MOVE_NOMONSTERS : MOVE_WORLDONLY, NULL, 0).startsupercontents)
 
+void SV_FlushBroadcastMessages(void);
 void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t *msg, int *stats);
 
 void SV_MoveToGoal (void);

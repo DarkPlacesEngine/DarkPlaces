@@ -1309,102 +1309,51 @@ typedef struct
 {
 	unsigned char	type;	// 1/2/8 or other value if isn't used
 	int		fieldoffset;
-}autosentstat_t;
+}customstat_t;
 
-static autosentstat_t *vm_autosentstats = NULL;	//[515]: it starts from 0, not 32
-static int vm_autosentstats_last;
+static customstat_t *vm_customstats = NULL;	//[515]: it starts from 0, not 32
+static int vm_customstats_last;
 
-void VM_AutoSentStats_Clear (void)
+void VM_CustomStats_Clear (void)
 {
-	if(vm_autosentstats)
+	if(vm_customstats)
 	{
-		Z_Free(vm_autosentstats);
-		vm_autosentstats = NULL;
-		vm_autosentstats_last = -1;
+		Z_Free(vm_customstats);
+		vm_customstats = NULL;
+		vm_customstats_last = -1;
 	}
 }
 
-//[515]: add check if even bigger ? "try to use two stats, cause it's too big" ?
-#define VM_SENDSTAT(a,b,c)\
-{\
-/*	if((c))*/\
-	if((c)==(unsigned char)(c))\
-	{\
-		MSG_WriteByte((a), svc_updatestatubyte);\
-		MSG_WriteByte((a), (b));\
-		MSG_WriteByte((a), (c));\
-	}\
-	else\
-	{\
-		MSG_WriteByte((a), svc_updatestat);\
-		MSG_WriteByte((a), (b));\
-		MSG_WriteLong((a), (c));\
-	}\
-}\
-
-void VM_SV_WriteAutoSentStats (client_t *client, prvm_edict_t *ent, sizebuf_t *msg, int *stats)
+void VM_SV_UpdateCustomStats (client_t *client, prvm_edict_t *ent, sizebuf_t *msg, int *stats)
 {
-	int			i, v, *si;
+	int			i;
 	char		s[17];
-	const char	*t;
-	qboolean	send;
-	union
-	{
-		float	f;
-		int		i;
-	}k;
 
-	if(!vm_autosentstats)
+	if(!vm_customstats)
 		return;
 
-	send = (sv.protocol != PROTOCOL_QUAKE && sv.protocol != PROTOCOL_QUAKEDP && sv.protocol != PROTOCOL_NEHAHRAMOVIE && sv.protocol != PROTOCOL_DARKPLACES1 && sv.protocol != PROTOCOL_DARKPLACES2 && sv.protocol != PROTOCOL_DARKPLACES3 && sv.protocol != PROTOCOL_DARKPLACES4 && sv.protocol != PROTOCOL_DARKPLACES5);
-
-	for(i=0; i<vm_autosentstats_last+1 ;i++)
+	for(i=0; i<vm_customstats_last+1 ;i++)
 	{
-		if(!vm_autosentstats[i].type)
+		if(!vm_customstats[i].type)
 			continue;
-		switch(vm_autosentstats[i].type)
+		switch(vm_customstats[i].type)
 		{
-		//string
+		//string as 16 bytes
 		case 1:
-			t = PRVM_E_STRING(ent, vm_autosentstats[i].fieldoffset);
-			if(t && t[0])
-			{
-				memset(s, 0, 17);
-				strlcpy(s, t, 16);
-				si = (int*)s;
-				if (!send)
-				{
-					stats[i+32] = si[0];
-					stats[i+33] = si[1];
-					stats[i+34] = si[2];
-					stats[i+35] = si[3];
-				}
-				else
-				{
-					VM_SENDSTAT(msg, i+32, si[0]);
-					VM_SENDSTAT(msg, i+33, si[1]);
-					VM_SENDSTAT(msg, i+34, si[2]);
-					VM_SENDSTAT(msg, i+35, si[3]);
-				}
-			}
+			memset(s, 0, 17);
+			strlcpy(s, PRVM_E_STRING(ent, vm_customstats[i].fieldoffset), 16);
+			stats[i+32] = s[ 0] + s[ 1] * 256 + s[ 2] * 65536 + s[ 3] * 16777216;
+			stats[i+33] = s[ 4] + s[ 5] * 256 + s[ 6] * 65536 + s[ 7] * 16777216;
+			stats[i+34] = s[ 8] + s[ 9] * 256 + s[10] * 65536 + s[11] * 16777216;
+			stats[i+35] = s[12] + s[13] * 256 + s[14] * 65536 + s[15] * 16777216;
 			break;
-		//float
+		//float field sent as-is
 		case 2:
-			k.f = PRVM_E_FLOAT(ent, vm_autosentstats[i].fieldoffset);	//[515]: use PRVM_E_INT ?
-			k.i = LittleLong (k.i);
-			if (!send)
-				stats[i+32] = k.i;
-			else
-				VM_SENDSTAT(msg, i+32, k.i);
+			stats[i+32] = PRVM_E_INT(ent, vm_customstats[i].fieldoffset);
 			break;
-		//integer
+		//integer value of float field
 		case 8:
-			v = (int)PRVM_E_FLOAT(ent, vm_autosentstats[i].fieldoffset);	//[515]: use PRVM_E_INT ?
-			if (!send)
-				stats[i+32] = v;
-			else
-				VM_SENDSTAT(msg, i+32, v);
+			stats[i+32] = (int)PRVM_E_FLOAT(ent, vm_customstats[i].fieldoffset);
 			break;
 		default:
 			break;
@@ -1426,10 +1375,10 @@ static void VM_SV_AddStat (void)
 
 	VM_SAFEPARMCOUNT(3, VM_SV_AddStat);
 
-	if(!vm_autosentstats)
+	if(!vm_customstats)
 	{
-		vm_autosentstats = (autosentstat_t *)Z_Malloc((MAX_CL_STATS-32) * sizeof(autosentstat_t));
-		if(!vm_autosentstats)
+		vm_customstats = (customstat_t *)Z_Malloc((MAX_CL_STATS-32) * sizeof(customstat_t));
+		if(!vm_customstats)
 		{
 			VM_Warning("PF_SV_AddStat: not enough memory\n");
 			return;
@@ -1455,10 +1404,10 @@ static void VM_SV_AddStat (void)
 		VM_Warning("PF_SV_AddStat: index > (MAX_CL_STATS-4) with string\n");
 		return;
 	}
-	vm_autosentstats[i].type		= type;
-	vm_autosentstats[i].fieldoffset	= off;
-	if(vm_autosentstats_last < i)
-		vm_autosentstats_last = i;
+	vm_customstats[i].type		= type;
+	vm_customstats[i].fieldoffset	= off;
+	if(vm_customstats_last < i)
+		vm_customstats_last = i;
 }
 
 /*
@@ -1602,6 +1551,7 @@ static void VM_SV_te_blood (void)
 	MSG_WriteByte(&sv.datagram, bound(-128, (int) PRVM_G_VECTOR(OFS_PARM1)[2], 127));
 	// count
 	MSG_WriteByte(&sv.datagram, bound(0, (int) PRVM_G_FLOAT(OFS_PARM2), 255));
+	SV_FlushBroadcastMessages();
 }
 
 static void VM_SV_te_bloodshower (void)
@@ -1623,6 +1573,7 @@ static void VM_SV_te_bloodshower (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_FLOAT(OFS_PARM2), sv.protocol);
 	// count
 	MSG_WriteShort(&sv.datagram, (int)bound(0, PRVM_G_FLOAT(OFS_PARM3), 65535));
+	SV_FlushBroadcastMessages();
 }
 
 static void VM_SV_te_explosionrgb (void)
@@ -1638,6 +1589,7 @@ static void VM_SV_te_explosionrgb (void)
 	MSG_WriteByte(&sv.datagram, bound(0, (int) (PRVM_G_VECTOR(OFS_PARM1)[0] * 255), 255));
 	MSG_WriteByte(&sv.datagram, bound(0, (int) (PRVM_G_VECTOR(OFS_PARM1)[1] * 255), 255));
 	MSG_WriteByte(&sv.datagram, bound(0, (int) (PRVM_G_VECTOR(OFS_PARM1)[2] * 255), 255));
+	SV_FlushBroadcastMessages();
 }
 
 static void VM_SV_te_particlecube (void)
@@ -1667,6 +1619,7 @@ static void VM_SV_te_particlecube (void)
 	MSG_WriteByte(&sv.datagram, ((int) PRVM_G_FLOAT(OFS_PARM5)) != 0);
 	// randomvel
 	MSG_WriteCoord(&sv.datagram, PRVM_G_FLOAT(OFS_PARM6), sv.protocol);
+	SV_FlushBroadcastMessages();
 }
 
 static void VM_SV_te_particlerain (void)
@@ -1692,6 +1645,7 @@ static void VM_SV_te_particlerain (void)
 	MSG_WriteShort(&sv.datagram, (int)bound(0, PRVM_G_FLOAT(OFS_PARM3), 65535));
 	// color
 	MSG_WriteByte(&sv.datagram, (int)PRVM_G_FLOAT(OFS_PARM4));
+	SV_FlushBroadcastMessages();
 }
 
 static void VM_SV_te_particlesnow (void)
@@ -1717,6 +1671,7 @@ static void VM_SV_te_particlesnow (void)
 	MSG_WriteShort(&sv.datagram, (int)bound(0, PRVM_G_FLOAT(OFS_PARM3), 65535));
 	// color
 	MSG_WriteByte(&sv.datagram, (int)PRVM_G_FLOAT(OFS_PARM4));
+	SV_FlushBroadcastMessages();
 }
 
 static void VM_SV_te_spark (void)
@@ -1736,6 +1691,7 @@ static void VM_SV_te_spark (void)
 	MSG_WriteByte(&sv.datagram, bound(-128, (int) PRVM_G_VECTOR(OFS_PARM1)[2], 127));
 	// count
 	MSG_WriteByte(&sv.datagram, bound(0, (int) PRVM_G_FLOAT(OFS_PARM2), 255));
+	SV_FlushBroadcastMessages();
 }
 
 static void VM_SV_te_gunshotquad (void)
@@ -1747,6 +1703,7 @@ static void VM_SV_te_gunshotquad (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[0], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[1], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
+	SV_FlushBroadcastMessages();
 }
 
 static void VM_SV_te_spikequad (void)
@@ -1758,6 +1715,7 @@ static void VM_SV_te_spikequad (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[0], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[1], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
+	SV_FlushBroadcastMessages();
 }
 
 static void VM_SV_te_superspikequad (void)
@@ -1769,6 +1727,7 @@ static void VM_SV_te_superspikequad (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[0], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[1], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
+	SV_FlushBroadcastMessages();
 }
 
 static void VM_SV_te_explosionquad (void)
@@ -1780,6 +1739,7 @@ static void VM_SV_te_explosionquad (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[0], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[1], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
+	SV_FlushBroadcastMessages();
 }
 
 static void VM_SV_te_smallflash (void)
@@ -1791,6 +1751,7 @@ static void VM_SV_te_smallflash (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[0], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[1], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
+	SV_FlushBroadcastMessages();
 }
 
 static void VM_SV_te_customflash (void)
@@ -1812,6 +1773,7 @@ static void VM_SV_te_customflash (void)
 	MSG_WriteByte(&sv.datagram, (int)bound(0, PRVM_G_VECTOR(OFS_PARM3)[0] * 255, 255));
 	MSG_WriteByte(&sv.datagram, (int)bound(0, PRVM_G_VECTOR(OFS_PARM3)[1] * 255, 255));
 	MSG_WriteByte(&sv.datagram, (int)bound(0, PRVM_G_VECTOR(OFS_PARM3)[2] * 255, 255));
+	SV_FlushBroadcastMessages();
 }
 
 static void VM_SV_te_gunshot (void)
@@ -1823,6 +1785,7 @@ static void VM_SV_te_gunshot (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[0], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[1], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
+	SV_FlushBroadcastMessages();
 }
 
 static void VM_SV_te_spike (void)
@@ -1834,6 +1797,7 @@ static void VM_SV_te_spike (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[0], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[1], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
+	SV_FlushBroadcastMessages();
 }
 
 static void VM_SV_te_superspike (void)
@@ -1845,6 +1809,7 @@ static void VM_SV_te_superspike (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[0], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[1], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
+	SV_FlushBroadcastMessages();
 }
 
 static void VM_SV_te_explosion (void)
@@ -1856,6 +1821,7 @@ static void VM_SV_te_explosion (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[0], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[1], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
+	SV_FlushBroadcastMessages();
 }
 
 static void VM_SV_te_tarexplosion (void)
@@ -1867,6 +1833,7 @@ static void VM_SV_te_tarexplosion (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[0], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[1], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
+	SV_FlushBroadcastMessages();
 }
 
 static void VM_SV_te_wizspike (void)
@@ -1878,6 +1845,7 @@ static void VM_SV_te_wizspike (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[0], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[1], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
+	SV_FlushBroadcastMessages();
 }
 
 static void VM_SV_te_knightspike (void)
@@ -1889,6 +1857,7 @@ static void VM_SV_te_knightspike (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[0], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[1], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
+	SV_FlushBroadcastMessages();
 }
 
 static void VM_SV_te_lavasplash (void)
@@ -1900,6 +1869,7 @@ static void VM_SV_te_lavasplash (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[0], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[1], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
+	SV_FlushBroadcastMessages();
 }
 
 static void VM_SV_te_teleport (void)
@@ -1911,6 +1881,7 @@ static void VM_SV_te_teleport (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[0], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[1], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
+	SV_FlushBroadcastMessages();
 }
 
 static void VM_SV_te_explosion2 (void)
@@ -1925,6 +1896,7 @@ static void VM_SV_te_explosion2 (void)
 	// color
 	MSG_WriteByte(&sv.datagram, (int)PRVM_G_FLOAT(OFS_PARM1));
 	MSG_WriteByte(&sv.datagram, (int)PRVM_G_FLOAT(OFS_PARM2));
+	SV_FlushBroadcastMessages();
 }
 
 static void VM_SV_te_lightning1 (void)
@@ -1942,6 +1914,7 @@ static void VM_SV_te_lightning1 (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM2)[0], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM2)[1], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM2)[2], sv.protocol);
+	SV_FlushBroadcastMessages();
 }
 
 static void VM_SV_te_lightning2 (void)
@@ -1959,6 +1932,7 @@ static void VM_SV_te_lightning2 (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM2)[0], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM2)[1], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM2)[2], sv.protocol);
+	SV_FlushBroadcastMessages();
 }
 
 static void VM_SV_te_lightning3 (void)
@@ -1976,6 +1950,7 @@ static void VM_SV_te_lightning3 (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM2)[0], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM2)[1], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM2)[2], sv.protocol);
+	SV_FlushBroadcastMessages();
 }
 
 static void VM_SV_te_beam (void)
@@ -1993,6 +1968,7 @@ static void VM_SV_te_beam (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM2)[0], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM2)[1], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM2)[2], sv.protocol);
+	SV_FlushBroadcastMessages();
 }
 
 static void VM_SV_te_plasmaburn (void)
@@ -2003,6 +1979,7 @@ static void VM_SV_te_plasmaburn (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[0], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[1], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
+	SV_FlushBroadcastMessages();
 }
 
 static void VM_SV_te_flamejet (void)
@@ -2020,6 +1997,7 @@ static void VM_SV_te_flamejet (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM1)[2], sv.protocol);
 	// count
 	MSG_WriteByte(&sv.datagram, (int)PRVM_G_FLOAT(OFS_PARM2));
+	SV_FlushBroadcastMessages();
 }
 
 void clippointtosurface(model_t *model, msurface_t *surface, vec3_t p, vec3_t out)
@@ -2658,6 +2636,7 @@ static void VM_SV_trailparticles (void)
 	MSG_WriteShort(&sv.datagram, (int)PRVM_G_FLOAT(OFS_PARM1));
 	MSG_WriteVector(&sv.datagram, PRVM_G_VECTOR(OFS_PARM2), sv.protocol);
 	MSG_WriteVector(&sv.datagram, PRVM_G_VECTOR(OFS_PARM3), sv.protocol);
+	SV_FlushBroadcastMessages();
 }
 
 //#337 void(float effectnum, vector origin, vector dir, float count) pointparticles (EXT_CSQC)
@@ -2670,6 +2649,7 @@ static void VM_SV_pointparticles (void)
 	MSG_WriteVector(&sv.datagram, PRVM_G_VECTOR(OFS_PARM1), sv.protocol);
 	MSG_WriteVector(&sv.datagram, PRVM_G_VECTOR(OFS_PARM2), sv.protocol);
 	MSG_WriteShort(&sv.datagram, bound(0, (int)PRVM_G_FLOAT(OFS_PARM3), 65535));
+	SV_FlushBroadcastMessages();
 }
 
 prvm_builtin_t vm_sv_builtins[] = {

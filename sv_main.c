@@ -25,10 +25,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 void SV_VM_Init();
 void SV_VM_Setup();
 
-void VM_AutoSentStats_Clear (void);
+void VM_CustomStats_Clear (void);
 void EntityFrameCSQC_ClearVersions (void);
 void EntityFrameCSQC_InitClientVersions (int client, qboolean clear);
-void VM_SV_WriteAutoSentStats (client_t *client, prvm_edict_t *ent, sizebuf_t *msg, int *stats);
+void VM_SV_UpdateCustomStats (client_t *client, prvm_edict_t *ent, sizebuf_t *msg, int *stats);
 void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int numstates, const entity_state_t *states);
 
 
@@ -209,6 +209,7 @@ void SV_StartParticle (vec3_t org, vec3_t dir, int color, int count)
 		MSG_WriteChar (&sv.datagram, (int)bound(-128, dir[i]*16, 127));
 	MSG_WriteByte (&sv.datagram, count);
 	MSG_WriteByte (&sv.datagram, color);
+	SV_FlushBroadcastMessages();
 }
 
 /*
@@ -246,6 +247,7 @@ void SV_StartEffect (vec3_t org, int modelindex, int startframe, int framecount,
 		MSG_WriteByte (&sv.datagram, framecount);
 		MSG_WriteByte (&sv.datagram, framerate);
 	}
+	SV_FlushBroadcastMessages();
 }
 
 /*
@@ -325,6 +327,7 @@ void SV_StartSound (prvm_edict_t *entity, int channel, const char *sample, int v
 		MSG_WriteByte (&sv.datagram, sound_num);
 	for (i = 0;i < 3;i++)
 		MSG_WriteCoord (&sv.datagram, entity->fields.server->origin[i]+0.5*(entity->fields.server->mins[i]+entity->fields.server->maxs[i]), sv.protocol);
+	SV_FlushBroadcastMessages();
 }
 
 /*
@@ -495,6 +498,9 @@ void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 	client->edict = PRVM_EDICT_NUM(clientnum+1);
 	if (client->netconnection)
 		client->netconnection->message.allowoverflow = true;		// we can catch it
+	// prepare the unreliable message buffer
+	client->unreliablemsg.data = client->unreliablemsg_data;
+	client->unreliablemsg.maxsize = sizeof(client->unreliablemsg_data);
 	// updated by receiving "rate" command from client
 	client->rate = NET_MINRATE;
 	// no limits for local player
@@ -533,17 +539,6 @@ FRAME UPDATES
 
 ===============================================================================
 */
-
-/*
-==================
-SV_ClearDatagram
-
-==================
-*/
-void SV_ClearDatagram (void)
-{
-	SZ_Clear (&sv.datagram);
-}
 
 /*
 =============================================================================
@@ -977,7 +972,7 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 entity_state_t sendstates[MAX_EDICTS];
 extern int csqc_clientnum;
 
-void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *msg, int *stats)
+void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *msg)
 {
 	int i, numsendstates;
 	entity_state_t *s;
@@ -1026,13 +1021,22 @@ void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *
 	EntityFrameCSQC_WriteFrame(msg, numsendstates, sendstates);
 
 	if (client->entitydatabase5)
-		EntityFrame5_WriteFrame(msg, client->entitydatabase5, numsendstates, sendstates, client - svs.clients + 1, stats, client->movesequence);
+		EntityFrame5_WriteFrame(msg, client->entitydatabase5, numsendstates, sendstates, client - svs.clients + 1, client->movesequence);
 	else if (client->entitydatabase4)
+	{
 		EntityFrame4_WriteFrame(msg, client->entitydatabase4, numsendstates, sendstates);
+		Protocol_WriteStatsReliable();
+	}
 	else if (client->entitydatabase)
+	{
 		EntityFrame_WriteFrame(msg, client->entitydatabase, numsendstates, sendstates, client - svs.clients + 1);
+		Protocol_WriteStatsReliable();
+	}
 	else
+	{
 		EntityFrameQuake_WriteFrame(msg, numsendstates, sendstates);
+		Protocol_WriteStatsReliable();
+	}
 }
 
 /*
@@ -1288,6 +1292,45 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 	}
 }
 
+void SV_FlushBroadcastMessages(void)
+{
+	int i;
+	client_t *client;
+	if (sv.datagram.cursize <= 0)
+		return;
+	for (i = 0, client = svs.clients;i < svs.maxclients;i++, client++)
+	{
+		if (!client->spawned || !client->netconnection || client->unreliablemsg.cursize + sv.datagram.cursize > client->unreliablemsg.maxsize || client->unreliablemsg_splitpoints >= (int)(sizeof(client->unreliablemsg_splitpoint)/sizeof(client->unreliablemsg_splitpoint[0])))
+			continue;
+		SZ_Write(&client->unreliablemsg, sv.datagram.data, sv.datagram.cursize);
+		client->unreliablemsg_splitpoint[client->unreliablemsg_splitpoints++] = client->unreliablemsg.cursize;
+	}
+	SZ_Clear(&sv.datagram);
+}
+
+void SV_WriteUnreliableMessages(client_t *client, sizebuf_t *msg)
+{
+	// scan the splitpoints to find out how many we can fit in
+	int numsegments, j, split;
+	for (numsegments = 0;numsegments < client->unreliablemsg_splitpoints;numsegments++)
+		if (msg->cursize + client->unreliablemsg_splitpoint[numsegments] > msg->maxsize)
+			break;
+	if (numsegments > 0)
+	{
+		// some will fit, so add the ones that will fit
+		split = client->unreliablemsg_splitpoint[numsegments-1];
+		SZ_Write(msg, client->unreliablemsg.data, split);
+		// remove the part we sent, keeping any remaining data
+		client->unreliablemsg.cursize -= split;
+		if (client->unreliablemsg.cursize > 0)
+			memmove(client->unreliablemsg.data, client->unreliablemsg.data + split, client->unreliablemsg.cursize);
+		// adjust remaining splitpoints
+		client->unreliablemsg_splitpoints -= numsegments;
+		for (j = 0;j < client->unreliablemsg_splitpoints;j++)
+			client->unreliablemsg_splitpoint[j] = client->unreliablemsg_splitpoint[numsegments + j] - split;
+	}
+}
+
 /*
 =======================
 SV_SendClientDatagram
@@ -1345,17 +1388,21 @@ void SV_SendClientDatagram (client_t *client)
 
 		// add the client specific data to the datagram
 		SV_WriteClientdataToMessage (client, client->edict, &msg, stats);
-		VM_SV_WriteAutoSentStats (client, client->edict, &msg, stats);
-		SV_WriteEntitiesToClient (client, client->edict, &msg, stats);
+		// now update the stats[] array using any registered custom fields
+		VM_SV_UpdateCustomStats (client, client->edict, &msg, stats);
+		// set host_client->statsdeltabits
+		Protocol_UpdateClientStats (stats);
 
-		// expand packet size to allow effects to go over the rate limit
-		// (dropping them is FAR too ugly)
-		msg.maxsize = maxsize2;
+		// add as many queued unreliable messages (effects) as we can fit
+		// limit effects to half of the remaining space
+		msg.maxsize -= (msg.maxsize - msg.cursize) / 2;
+		if (client->unreliablemsg.cursize)
+			SV_WriteUnreliableMessages (client, &msg);
 
-		// copy the server datagram if there is space
-		// FIXME: put in delayed queue of effects to send
-		if (sv.datagram.cursize > 0 && msg.cursize + sv.datagram.cursize <= msg.maxsize)
-			SZ_Write (&msg, sv.datagram.data, sv.datagram.cursize);
+		msg.maxsize = maxsize;
+
+		// now write as many entities as we can fit, and also sends stats
+		SV_WriteEntitiesToClient (client, client->edict, &msg);
 	}
 	else if (realtime > client->keepalivetime)
 	{
@@ -1497,6 +1544,8 @@ void SV_SendClientMessages (void)
 
 	if (sv.protocol == PROTOCOL_QUAKEWORLD)
 		Sys_Error("SV_SendClientMessages: no quakeworld support\n");
+
+	SV_FlushBroadcastMessages();
 
 // update frags, names, etc
 	SV_UpdateToReliableMessages();
@@ -2649,7 +2698,7 @@ void SV_VM_Setup(void)
 	// OP_STATE is always supported on server (due to entvars_t)
 	prog->flag |= PRVM_OP_STATE;
 
-	VM_AutoSentStats_Clear();//[515]: csqc
+	VM_CustomStats_Clear();//[515]: csqc
 	EntityFrameCSQC_ClearVersions();//[515]: csqc
 
 	PRVM_End;
