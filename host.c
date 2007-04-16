@@ -731,13 +731,13 @@ void Host_Main(void)
 				if (sv.frametime)
 					SV_Physics();
 
-				// send all messages to the clients
-				SV_SendClientMessages();
-
 				// if this server frame took too long, break out of the loop
 				if (framelimit > 1 && Sys_DoubleTime() >= aborttime)
 					break;
 			}
+
+			// send all messages to the clients
+			SV_SendClientMessages();
 
 			// end the server VM frame
 			SV_VM_End();
