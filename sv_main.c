@@ -1411,7 +1411,7 @@ void SV_SendClientDatagram (client_t *client)
 	if (!NetConn_CanSend(client->netconnection))
 	{
 		// send the datagram
-		NetConn_SendUnreliableMessage (client->netconnection, &msg, sv.protocol, clientrate);
+		//NetConn_SendUnreliableMessage (client->netconnection, &msg, sv.protocol, clientrate);
 		return;
 	}
 	else if (host_client->spawned)
