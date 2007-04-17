@@ -283,7 +283,7 @@ void SCR_DrawNetGraph (void)
 	index = 0;
 	netgraph_x = (vid_conwidth.integer + separator2) - (1 + (index % netgraphsperrow)) * (barwidth * NETGRAPH_PACKETS * 2 + separator1 + separator2);
 	netgraph_y = (vid_conheight.integer - 48 + separator2) - (1 + (index / netgraphsperrow)) * (barheight + textsize + separator2);
-	SCR_DrawNetGraph_DrawConnection_Client(cls.netcon, netgraph_x, netgraph_y, barwidth, barheight, bardivide, "world", separator1, "input", textsize);
+	SCR_DrawNetGraph_DrawConnection_Client(cls.netcon, netgraph_x, netgraph_y, barwidth, barheight, bardivide, "incoming", separator1, "outgoing", textsize);
 	index++;
 
 	if (sv.active && shownetgraph.integer >= 2)
