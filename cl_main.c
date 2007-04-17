@@ -503,7 +503,7 @@ static float CL_LerpPoint(void)
 {
 	float f;
 
-	if (cl_nettimesyncmode.integer == 3)
+	if (cl_nettimesyncboundmode.integer == 1)
 		cl.time = bound(cl.mtime[1], cl.time, cl.mtime[0]);
 
 	// LordHavoc: lerp in listen games as the server is being capped below the client (usually)

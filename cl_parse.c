@@ -167,7 +167,9 @@ cvar_t cl_sound_ric3 = {0, "cl_sound_ric3", "weapons/ric3.wav", "sound to play w
 cvar_t cl_sound_r_exp3 = {0, "cl_sound_r_exp3", "weapons/r_exp3.wav", "sound to play during TE_EXPLOSION and related effects (empty cvar disables sound)"};
 cvar_t cl_serverextension_download = {0, "cl_serverextension_download", "0", "indicates whether the server supports the download command"};
 cvar_t cl_joinbeforedownloadsfinish = {CVAR_SAVE, "cl_joinbeforedownloadsfinish", "1", "if non-zero the game will begin after the map is loaded before other downloads finish"};
-cvar_t cl_nettimesyncmode = {CVAR_SAVE, "cl_nettimesyncmode", "5", "selects method of time synchronization in client with regard to server packets, values are: 0 = no sync, 1 = exact sync (reset timing each packet), 2 = loose sync (reset timing only if it is out of bounds), 3 = tight sync and bounding, 4 = bounded loose sync (reset if significantly wrong, otherwise bound), 5 = loose sync with low tolerance (reset timing if slightly out of bounds), 6 = adaptive sync (tries to correct timing errors gradually), 7  = adaptive sync + loose sync (adapts slowly to reduce cumulative error, and also corrects large errors immediately)"};
+cvar_t cl_nettimesyncfactor = {CVAR_SAVE, "cl_nettimesyncfactor", "0", "rate at which client time adapts to match server time, 1 = instantly, 0.125 = slowly, 0 = not at all (bounding still applies)"};
+cvar_t cl_nettimesyncboundmode = {CVAR_SAVE, "cl_nettimesyncboundmode", "4", "method of restricting client time to valid values, 0 = no correction, 1 = tight bounding (jerky with packet loss), 2 = loose bounding (corrects it if out of bounds), 3 = leniant bounding (ignores temporary errors due to varying framerate), 4 = slow adjustment method from Quake3"};
+cvar_t cl_nettimesyncboundtolerance = {CVAR_SAVE, "cl_nettimesyncboundtolerance", "0.25", "how much error is tolerated by bounding check, as a fraction of frametime, 0.25 = up to 25% margin of error tolerated, 1 = use only new time, 0 = use only old time (same effect as setting cl_nettimesyncfactor to 1)"};
 cvar_t cl_iplog_name = {CVAR_SAVE, "cl_iplog_name", "darkplaces_iplog.txt", "name of iplog file containing player addresses for iplog_list command and automatic ip logging when parsing status command"};
 
 static qboolean QW_CL_CheckOrDownloadFile(const char *filename);
@@ -2765,8 +2767,10 @@ qboolean CL_ExaminePrintString(const char *text)
 	return true;
 }
 
+extern cvar_t slowmo;
 static void CL_NetworkTimeReceived(double newtime)
 {
+	double timehigh;
 	if (cls.timedemo || (cl.islocalgame && !sv_fixedframeratesingleplayer.integer) || cl.mtime[0] == newtime || cls.signon < SIGNONS)
 		cl.time = cl.mtime[1] = cl.mtime[0] = newtime;
 	else
@@ -2780,34 +2784,31 @@ static void CL_NetworkTimeReceived(double newtime)
 			else if (cl.time > cl.mtime[0] + (cl.mtime[0] - cl.mtime[1]))
 				Con_Printf("--- cl.time > cl.mtime[0] (%f > %f ... %f)\n", cl.time, cl.mtime[1], cl.mtime[0]);
 		}
-		if (cl_nettimesyncmode.integer == 2)
-		{
-			if (cl.time < cl.mtime[1] || cl.time > cl.mtime[0])
-				cl.time = cl.mtime[1];
-		}
-		else if (cl_nettimesyncmode.integer == 4)
-		{
-			// if it's significantly out of bounds, reset it to cl.mtime[1]
-			if (cl.time > cl.mtime[0] + (cl.mtime[0] - cl.mtime[1]))
-				cl.time = cl.mtime[1];
-			// clamp it to the valid range
+		cl.time += (cl.mtime[1] - cl.time) * bound(0, cl_nettimesyncfactor.value, 1);
+		timehigh = cl.mtime[1] + (cl.mtime[0] - cl.mtime[1]) * cl_nettimesyncboundtolerance.value;
+		if (cl_nettimesyncboundmode.integer == 1)
 			cl.time = bound(cl.mtime[1], cl.time, cl.mtime[0]);
-		}
-		else if (cl_nettimesyncmode.integer == 5)
+		else if (cl_nettimesyncboundmode.integer == 2)
 		{
-			if (cl.time < cl.mtime[1] || cl.time > cl.mtime[1] + (cl.mtime[0] - cl.mtime[1]) / (4.0))
+			if (cl.time < cl.mtime[1] || cl.time > timehigh)
 				cl.time = cl.mtime[1];
 		}
-		else if (cl_nettimesyncmode.integer == 6)
-			cl.time = cl.mtime[1] * (1.0 / 8.0) + cl.time * (7.0 / 8.0);
-		else if (cl_nettimesyncmode.integer == 7)
+		else if (cl_nettimesyncboundmode.integer == 3)
 		{
-			cl.time = cl.mtime[1] * (1.0 / 16.0) + cl.time * (15.0 / 16.0);
-			if (cl.time < cl.mtime[1] || cl.time > cl.mtime[1] + (cl.mtime[0] - cl.mtime[1]) / (4.0))
+			if ((cl.time < cl.mtime[1] && cl.oldtime < cl.mtime[1]) || (cl.time > timehigh && cl.oldtime > timehigh))
 				cl.time = cl.mtime[1];
 		}
-		else if (cl_nettimesyncmode.integer)
-			cl.time = cl.mtime[1];
+		else if (cl_nettimesyncboundmode.integer == 4)
+		{
+			if (fabs(cl.time - cl.mtime[1]) > 0.5)
+				cl.time = cl.mtime[1]; // reset
+			else if (fabs(cl.time - cl.mtime[1]) > 0.1)
+				cl.time += 0.5 * (cl.mtime[1] - cl.time); // fast
+			else if (cl.time > cl.mtime[1])
+				cl.time -= 0.002 * slowmo.value; // fall into the past by 2ms
+			else
+				cl.time += 0.001 * slowmo.value; // creep forward 1ms
+		}
 	}
 	// this packet probably contains a player entity update, so we will need
 	// to update the prediction
@@ -3670,7 +3671,9 @@ void CL_Parse_Init(void)
 	// server extension cvars set by commands issued from the server during connect
 	Cvar_RegisterVariable(&cl_serverextension_download);
 
-	Cvar_RegisterVariable(&cl_nettimesyncmode);
+	Cvar_RegisterVariable(&cl_nettimesyncfactor);
+	Cvar_RegisterVariable(&cl_nettimesyncboundmode);
+	Cvar_RegisterVariable(&cl_nettimesyncboundtolerance);
 	Cvar_RegisterVariable(&cl_iplog_name);
 
 	Cmd_AddCommand("nextul", QW_CL_NextUpload, "sends next fragment of current upload buffer (screenshot for example)");
