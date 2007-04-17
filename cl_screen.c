@@ -260,8 +260,8 @@ void SCR_DrawNetGraph (void)
 	barwidth = 1;
 	barheight = 50;
 	bardivide = 20;
-	netgraph_x = 0;
-	netgraph_y = vid_conheight.integer - 48 - barheight - textsize;
+	netgraph_x = vid_conwidth.integer - (barwidth * NETGRAPH_PACKETS * 2 + separator);
+	netgraph_y = vid_conheight.integer - (48 + barheight + textsize);
 	SCR_DrawNetGraph_DrawConnection(cls.netcon, netgraph_x, netgraph_y, barwidth, barheight, bardivide, "incoming", separator, "outgoing", textsize);
 }
 
