@@ -1682,17 +1682,13 @@ void CSQC_RelinkAllEntities (int drawmask)
 
 /*
 ===============
-CL_ReadFromServer
+CL_UpdateWorld
 
-Read all incoming data from the server
+Update client game world for a new frame
 ===============
 */
-int CL_ReadFromServer(void)
+void CL_UpdateWorld(void)
 {
-	CL_ReadDemoMessage();
-	CL_SendMove();
-
-	r_refdef.time = cl.time;
 	r_refdef.extraupdate = !r_speeds.integer;
 	r_refdef.numentities = 0;
 	r_refdef.numlights = 0;
@@ -1735,13 +1731,9 @@ int CL_ReadFromServer(void)
 		// move particles
 		CL_MoveParticles();
 		R_MoveExplosions();
-
-		// update the r_refdef time again because cl.time may have changed in
-		// CL_LerpPoint()
-		r_refdef.time = cl.time;
 	}
 
-	return 0;
+	r_refdef.time = cl.time;
 }
 
 // LordHavoc: pausedemo command

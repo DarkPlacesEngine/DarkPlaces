@@ -1097,7 +1097,7 @@ void CL_ExpandEntities(int num);
 void CL_SetInfo(const char *key, const char *value, qboolean send, qboolean allowstarkey, qboolean allowmodel, qboolean quiet);
 
 
-int  CL_ReadFromServer (void);
+void CL_UpdateWorld (void);
 void CL_WriteToServer (void);
 void CL_Input (void);
 extern qboolean cl_ignoremousemove;

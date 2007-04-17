@@ -789,16 +789,17 @@ void Host_Main(void)
 			// Collect input into cmd
 			CL_Input();
 
+			// check for new packets
 			NetConn_ClientFrame();
 
-			if (cls.state == ca_connected)
-			{
-				CL_ReadFromServer();
-				// if running the server remotely, send intentions now after
-				// the incoming messages have been read
-				//if (!cl.islocalgame)
-				//	CL_SendCmd();
-			}
+			// read a new frame from a demo if needed
+			CL_ReadDemoMessage();
+
+			// now that packets have been read, send input to server
+			CL_SendMove();
+
+			// update client world (interpolate entities, create trails, etc)
+			CL_UpdateWorld();
 
 			// update video
 			if (host_speeds.integer)
