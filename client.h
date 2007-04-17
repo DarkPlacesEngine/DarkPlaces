@@ -1004,7 +1004,9 @@ extern cvar_t cl_autofire;
 
 extern cvar_t cl_shownet;
 extern cvar_t cl_nolerp;
-extern cvar_t cl_nettimesyncmode;
+extern cvar_t cl_nettimesyncfactor;
+extern cvar_t cl_nettimesyncboundmode;
+extern cvar_t cl_nettimesyncboundtolerance;
 
 extern cvar_t cl_pitchdriftspeed;
 extern cvar_t lookspring;
