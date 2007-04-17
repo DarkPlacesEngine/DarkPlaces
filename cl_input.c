@@ -1321,12 +1321,6 @@ void CL_SendMove(void)
 	// set the flag indicating that we sent a packet recently
 	cl.movement_needupdate = false;
 
-	// don't send a new input packet if the connection is still saturated from
-	// the last one (or chat messages, etc)
-	// note: this behavior comes from QW
-	if (!NetConn_CanSend(cls.netcon))
-		return;
-
 	buf.maxsize = sizeof(data);
 	buf.cursize = 0;
 	buf.data = data;
@@ -1336,6 +1330,12 @@ void CL_SendMove(void)
 	// is not advancing)
 	if ((cl.cmd.time > cl.movecmd[0].time || cl.mtime[0] <= cl.mtime[1]) && cls.signon == SIGNONS)
 	{
+		// don't send a new input packet if the connection is still saturated from
+		// the last one (or chat messages, etc)
+		// note: this behavior comes from QW
+		if (!NetConn_CanSend(cls.netcon))
+			return;
+
 		// send the movement message
 		// PROTOCOL_QUAKE        clc_move = 16 bytes total
 		// PROTOCOL_QUAKEDP      clc_move = 16 bytes total
@@ -1563,7 +1563,7 @@ void CL_SendMove(void)
 		}
 	}
 
-	if (cls.protocol != PROTOCOL_QUAKEWORLD)
+	if (cls.protocol != PROTOCOL_QUAKEWORLD && buf.cursize)
 	{
 		// ack the last few frame numbers
 		// (redundent to improve handling of client->server packet loss)
@@ -1597,7 +1597,8 @@ void CL_SendMove(void)
 	}
 
 	// send the reliable message (forwarded commands) if there is one
-	NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol, max(20*(buf.cursize+40), cl_rate.integer));
+	if (buf.cursize || cls.netcon->message.cursize)
+		NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol, max(20*(buf.cursize+40), cl_rate.integer));
 
 	if (cls.netcon->message.overflowed)
 	{
