@@ -1,7 +1,9 @@
+
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
 0 bug darkplaces client: can't move mouse around in nexuiz menu if vid_mouse is 0
 0 bug darkplaces client: decals are not sticking to submodels
 0 bug darkplaces client: if you press 1 during the demo loop when quake starts, escape doesn't do anything until you hit some other key (daemon)
+0 bug darkplaces loader: crash when a mdl model has more replacement skins than the model contains (Lardarse)
 0 bug darkplaces loader: make rtlight entity loader support q3map/q3map2 lights properly, they use a spawnflag for LINEAR mode, by default they use 1/(x*x) falloff (Carni, motorsep)
 0 bug darkplaces loader: mcbsp hull selection is ignoring the custom hulls supported by mcbsp (div0)
 0 bug darkplaces loader: q1bsp loader computes wrong submodel size for submodels with no surfaces, such as a func_wall comprised entirely of SKIP or CAULK brushes (neg|ke)
