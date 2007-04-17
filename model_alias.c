@@ -1025,6 +1025,14 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 			//increase skin counts
 			loadmodel->numskins++;
 			totalskins++;
+
+			// fix up the pointers since they are pointing at the old textures array
+			// FIXME: this is a hack!
+			for (j = 0;j < loadmodel->numskins * loadmodel->num_surfaces;j++)
+			{
+				loadmodel->data_textures[j].currentframe = &loadmodel->data_textures[j];
+				loadmodel->data_textures[j].currentskinframe = &loadmodel->data_textures[j].skinframes[0];
+			}
 		}
 	}
 
