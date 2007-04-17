@@ -46,7 +46,7 @@ cvar_t scr_zoomwindow_viewsizey = {CVAR_SAVE, "scr_zoomwindow_viewsizey", "20", 
 cvar_t scr_zoomwindow_fov = {CVAR_SAVE, "scr_zoomwindow_fov", "20", "fov of zoom window"};
 cvar_t scr_stipple = {0, "scr_stipple", "0", "interlacing-like stippling of the display"};
 cvar_t scr_refresh = {0, "scr_refresh", "1", "allows you to completely shut off rendering for benchmarking purposes"};
-cvar_t shownetgraph = {CVAR_SAVE, "shownetgraph", "0", "shows a graph of packet sizes and other information"};
+cvar_t shownetgraph = {CVAR_SAVE, "shownetgraph", "0", "shows a graph of packet sizes and other information, 0 = off, 1 = show client netgraph, 2 = show client and server netgraphs (when hosting a server)"};
 
 
 int jpeg_supported = false;
@@ -224,7 +224,7 @@ const float netgraphcolors[3][4] =
 	{0  , 1  , 0  , 1},
 };
 
-void SCR_DrawNetGraph_DrawConnection (netconn_t *conn, int graphx, int graphy, int barwidth, int barheight, int bardivide, const char *labelincoming, int separator, const char *labeloutgoing, float textsize)
+void SCR_DrawNetGraph_DrawConnection_Client (netconn_t *conn, int graphx, int graphy, int barwidth, int barheight, int bardivide, const char *labelincoming, int separator, const char *labeloutgoing, float textsize)
 {
 	int numparameters;
 	const int *parameters[3];
@@ -239,6 +239,21 @@ void SCR_DrawNetGraph_DrawConnection (netconn_t *conn, int graphx, int graphy, i
 	SCR_DrawNetGraph_DrawGraph(graphx + barwidth * NETGRAPH_PACKETS + separator, graphy, barwidth, barheight, bardivide, labeloutgoing, textsize, conn->outgoing_packetcounter, numparameters, parameters, netgraphcolors);
 }
 
+void SCR_DrawNetGraph_DrawConnection_Server (netconn_t *conn, int graphx, int graphy, int barwidth, int barheight, int bardivide, const char *labeloutgoing, int separator, const char *labelincoming, float textsize)
+{
+	int numparameters;
+	const int *parameters[3];
+	numparameters = 3;
+	parameters[0] = conn->outgoing_unreliablesize;
+	parameters[1] = conn->outgoing_reliablesize;
+	parameters[2] = conn->outgoing_acksize;
+	SCR_DrawNetGraph_DrawGraph(graphx, graphy, barwidth, barheight, bardivide, labeloutgoing, textsize, conn->outgoing_packetcounter, numparameters, parameters, netgraphcolors);
+	parameters[0] = conn->incoming_unreliablesize;
+	parameters[1] = conn->incoming_reliablesize;
+	parameters[2] = conn->incoming_acksize;
+	SCR_DrawNetGraph_DrawGraph(graphx + barwidth * NETGRAPH_PACKETS + separator, graphy, barwidth, barheight, bardivide, labelincoming, textsize, conn->incoming_packetcounter, numparameters, parameters, netgraphcolors);
+}
+
 /*
 ==============
 SCR_DrawNetGraph
@@ -246,7 +261,7 @@ SCR_DrawNetGraph
 */
 void SCR_DrawNetGraph (void)
 {
-	int separator, barwidth, barheight, bardivide, netgraph_x, netgraph_y, textsize;
+	int i, separator1, separator2, barwidth, barheight, bardivide, netgraph_x, netgraph_y, textsize, index, netgraphsperrow;
 
 	if (cls.state != ca_connected)
 		return;
@@ -255,14 +270,34 @@ void SCR_DrawNetGraph (void)
 	if (!shownetgraph.integer)
 		return;
 
-	separator = 4;
+	separator1 = 2;
+	separator2 = 4;
 	textsize = 8;
 	barwidth = 1;
 	barheight = 50;
 	bardivide = 20;
-	netgraph_x = vid_conwidth.integer - (barwidth * NETGRAPH_PACKETS * 2 + separator);
-	netgraph_y = vid_conheight.integer - (48 + barheight + textsize);
-	SCR_DrawNetGraph_DrawConnection(cls.netcon, netgraph_x, netgraph_y, barwidth, barheight, bardivide, "incoming", separator, "outgoing", textsize);
+
+	netgraphsperrow = (vid_conwidth.integer + separator2) / (barwidth * NETGRAPH_PACKETS * 2 + separator1 + separator2);
+	netgraphsperrow = max(netgraphsperrow, 1);
+
+	index = 0;
+	netgraph_x = (vid_conwidth.integer + separator2) - (1 + (index % netgraphsperrow)) * (barwidth * NETGRAPH_PACKETS * 2 + separator1 + separator2);
+	netgraph_y = (vid_conheight.integer - 48 + separator2) - (1 + (index / netgraphsperrow)) * (barheight + textsize + separator2);
+	SCR_DrawNetGraph_DrawConnection_Client(cls.netcon, netgraph_x, netgraph_y, barwidth, barheight, bardivide, "world", separator1, "input", textsize);
+	index++;
+
+	if (sv.active && shownetgraph.integer >= 2)
+	{
+		for (i = 0;i < svs.maxclients;i++)
+		{
+			if (!svs.clients[i].netconnection)
+				continue;
+			netgraph_x = (vid_conwidth.integer + separator2) - (1 + (index % netgraphsperrow)) * (barwidth * NETGRAPH_PACKETS * 2 + separator1 + separator2);
+			netgraph_y = (vid_conheight.integer - 48 + separator2) - (1 + (index / netgraphsperrow)) * (barheight + textsize + separator2);
+			SCR_DrawNetGraph_DrawConnection_Server(svs.clients[i].netconnection, netgraph_x, netgraph_y, barwidth, barheight, bardivide, va("%s", svs.clients[i].name), separator1, "", textsize);
+			index++;
+		}
+	}
 }
 
 /*
