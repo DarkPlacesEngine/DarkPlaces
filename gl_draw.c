@@ -711,8 +711,6 @@ float DrawQ_String(float startx, float starty, const char *text, int maxlen, flo
 			x += r_textshadow.value;
 			y += r_textshadow.value;
 		}
-		// because this loop increments x before it draws, we must bias x first
-		x -= w;
 		for (i = 0;i < maxlen && text[i];i++, x += w)
 		{
 			if (text[i] == ' ')
