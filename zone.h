@@ -158,6 +158,8 @@ void Mem_ExpandableArray_NewArray(memexpandablearray_t *l, mempool_t *mempool, s
 void Mem_ExpandableArray_FreeArray(memexpandablearray_t *l);
 void *Mem_ExpandableArray_AllocRecord(memexpandablearray_t *l);
 void Mem_ExpandableArray_FreeRecord(memexpandablearray_t *l, void *record);
+size_t Mem_ExpandableArray_IndexRange(memexpandablearray_t *l);
+void *Mem_ExpandableArray_RecordAtIndex(memexpandablearray_t *l, size_t index);
 
 // used for temporary allocations
 extern mempool_t *tempmempool;

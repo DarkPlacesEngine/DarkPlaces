@@ -458,6 +458,28 @@ void Mem_ExpandableArray_FreeRecord(memexpandablearray_t *l, void *record)
 	}
 }
 
+size_t Mem_ExpandableArray_IndexRange(memexpandablearray_t *l)
+{
+	size_t i, j, k;
+	if (!l->numarrays)
+		return 0;
+	i = l->numarrays - 1;
+	for (j = 0, k = 0;k < l->arrays[i].numflaggedrecords;j++)
+		if (l->arrays[i].allocflags[j])
+			k++;
+	return l->numrecordsperarray * i + j;
+}
+
+void *Mem_ExpandableArray_RecordAtIndex(memexpandablearray_t *l, size_t index)
+{
+	size_t i, j;
+	i = index / l->numrecordsperarray;
+	j = index % l->numrecordsperarray;
+	if (i >= l->numarrays || !l->arrays[i].allocflags[j])
+		return NULL;
+	return (void *)l->arrays[i].data + j * l->recordsize;
+}
+
 
 // used for temporary memory allocations around the engine, not for longterm
 // storage, if anything in this pool stays allocated during gameplay, it is
