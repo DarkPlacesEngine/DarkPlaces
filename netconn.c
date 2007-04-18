@@ -1901,6 +1901,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 	double besttime;
 	client_t *client;
 	char *s, *string, response[1400], addressstring2[128], stringbuf[16384];
+	qboolean islocal = (LHNETADDRESS_GetAddressType(peeraddress) == LHNETADDRESSTYPE_LOOP);
 
 	if (!sv.active)
 		return false;
@@ -1934,7 +1935,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			Com_HexDumpToConsole(data, length);
 		}
 
-		if (length >= 12 && !memcmp(string, "getchallenge", 12) && sv_public.integer > -2)
+		if (length >= 12 && !memcmp(string, "getchallenge", 12) && (islocal || sv_public.integer > -2))
 		{
 			for (i = 0, best = 0, besttime = realtime;i < MAX_CHALLENGES;i++)
 			{
@@ -1956,7 +1957,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			NetConn_WriteString(mysocket, va("\377\377\377\377challenge %s", challenge[i].string), peeraddress);
 			return true;
 		}
-		if (length > 8 && !memcmp(string, "connect\\", 8) && sv_public.integer > -2)
+		if (length > 8 && !memcmp(string, "connect\\", 8) && (islocal || sv_public.integer > -2))
 		{
 			string += 7;
 			length -= 7;
@@ -2039,7 +2040,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 
 			return true;
 		}
-		if (length >= 7 && !memcmp(string, "getinfo", 7) && sv_public.integer > -1)
+		if (length >= 7 && !memcmp(string, "getinfo", 7) && (islocal || sv_public.integer > -1))
 		{
 			const char *challenge = NULL;
 
@@ -2055,7 +2056,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			}
 			return true;
 		}
-		if (length >= 9 && !memcmp(string, "getstatus", 9) && sv_public.integer > -1)
+		if (length >= 9 && !memcmp(string, "getstatus", 9) && (islocal || sv_public.integer > -1))
 		{
 			const char *challenge = NULL;
 
@@ -2145,7 +2146,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		case CCREQ_CONNECT:
 			if (developer.integer >= 10)
 				Con_Printf("Datagram_ParseConnectionless: received CCREQ_CONNECT from %s.\n", addressstring2);
-			if(sv_public.integer <= -2)
+			if(!islocal && sv_public.integer <= -2)
 				break;
 
 			protocolname = MSG_ReadString();
@@ -2246,7 +2247,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		case CCREQ_SERVER_INFO:
 			if (developer.integer >= 10)
 				Con_Printf("Datagram_ParseConnectionless: received CCREQ_SERVER_INFO from %s.\n", addressstring2);
-			if(sv_public.integer <= -1)
+			if(!islocal && sv_public.integer <= -1)
 				break;
 			if (sv.active && !strcmp(MSG_ReadString(), "QUAKE"))
 			{
@@ -2277,7 +2278,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		case CCREQ_PLAYER_INFO:
 			if (developer.integer >= 10)
 				Con_Printf("Datagram_ParseConnectionless: received CCREQ_PLAYER_INFO from %s.\n", addressstring2);
-			if(sv_public.integer <= -1)
+			if(!islocal && sv_public.integer <= -1)
 				break;
 			if (sv.active)
 			{
@@ -2310,7 +2311,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		case CCREQ_RULE_INFO:
 			if (developer.integer >= 10)
 				Con_Printf("Datagram_ParseConnectionless: received CCREQ_RULE_INFO from %s.\n", addressstring2);
-			if(sv_public.integer <= -1)
+			if(!islocal && sv_public.integer <= -1)
 				break;
 			if (sv.active)
 			{
