@@ -1783,7 +1783,6 @@ int EntityState5_Priority(entityframe5_database_t *d, int stateindex)
 void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbits, sizebuf_t *msg)
 {
 	unsigned int bits = 0;
-	qboolean lowprecision;
 
 	prvm_eval_t *val;
 	val = PRVM_EDICTFIELDVALUE((&prog->edicts[s->number]), prog->fieldoffsets.SendEntity);
@@ -1795,10 +1794,9 @@ void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbi
 	else
 	{
 		bits = changedbits;
-		lowprecision = (s->flags & RENDER_LOWPRECISION);
-		if ((bits & E5_ORIGIN) && (!lowprecision || s->origin[0] < -4096 || s->origin[0] >= 4096 || s->origin[1] < -4096 || s->origin[1] >= 4096 || s->origin[2] < -4096 || s->origin[2] >= 4096))
+		if ((bits & E5_ORIGIN) && !(s->flags & RENDER_EXTERIORMODEL) && (s->origin[0] < -4096 || s->origin[0] >= 4096 || s->origin[1] < -4096 || s->origin[1] >= 4096 || s->origin[2] < -4096 || s->origin[2] >= 4096))
 			bits |= E5_ORIGIN32;
-		if ((bits & E5_ANGLES) && !lowprecision)
+		if ((bits & E5_ANGLES) && !(s->flags & RENDER_LOWPRECISION))
 			bits |= E5_ANGLES16;
 		if ((bits & E5_MODEL) && s->modelindex >= 256)
 			bits |= E5_MODEL16;
