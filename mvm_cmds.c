@@ -407,6 +407,12 @@ void VM_M_setserverlistmasknumber( void )
 		case SLIF_NUMPLAYERS:
 			mask->info.numplayers = number;
 			break;
+		case SLIF_NUMBOTS:
+			mask->info.numbots = number;
+			break;
+		case SLIF_NUMHUMANS:
+			mask->info.numhumans = number;
+			break;
 		case SLIF_PING:
 			mask->info.ping = number;
 			break;
@@ -519,6 +525,12 @@ void VM_M_getserverlistnumber(void)
 		case SLIF_NUMPLAYERS:
 			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.numplayers;
 			break;
+		case SLIF_NUMBOTS:
+			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.numbots;
+			break;
+		case SLIF_NUMHUMANS:
+			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.numhumans;
+			break;
 		case SLIF_PING:
 			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.ping;
 			break;
@@ -589,6 +601,10 @@ void VM_M_getserverlistindexforkey( void )
 		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_MAXPLAYERS;
 	else if( !strcmp( key, "numplayers" ) )
 		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_NUMPLAYERS;
+	else if( !strcmp( key, "numbotss" ) )
+		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_NUMBOTS;
+	else if( !strcmp( key, "numhumans" ) )
+		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_NUMHUMANS;
 	else if( !strcmp( key, "protocol" ) )
 		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_PROTOCOL;
 	else
