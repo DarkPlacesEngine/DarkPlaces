@@ -736,7 +736,7 @@ qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, int 
 
 	if (ent->fields.server->movetype == MOVETYPE_STEP)
 		cs->flags |= RENDER_STEP;
-	if (cs->number != sv_writeentitiestoclient_clentnum/* && (cs->effects & EF_LOWPRECISION)*/ && cs->origin[0] >= -32768 && cs->origin[1] >= -32768 && cs->origin[2] >= -32768 && cs->origin[0] <= 32767 && cs->origin[1] <= 32767 && cs->origin[2] <= 32767)
+	if (cs->number != sv_writeentitiestoclient_clentnum && (cs->effects & EF_LOWPRECISION) && cs->origin[0] >= -32768 && cs->origin[1] >= -32768 && cs->origin[2] >= -32768 && cs->origin[0] <= 32767 && cs->origin[1] <= 32767 && cs->origin[2] <= 32767)
 		cs->flags |= RENDER_LOWPRECISION;
 	if (ent->fields.server->colormap >= 1024)
 		cs->flags |= RENDER_COLORMAPPED;
