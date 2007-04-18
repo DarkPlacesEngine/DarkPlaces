@@ -672,7 +672,7 @@ static void DrawQ_GetTextColor(float color[4], int colorindex, float r, float g,
 float DrawQ_String(float startx, float starty, const char *text, int maxlen, float w, float h, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor, qboolean ignorecolorcodes)
 {
 	int i, num, shadow, colorindex;
-	float x, y, s, t, u, v;
+	float x = startx, y, s, t, u, v;
 	float *av, *at, *ac;
 	float color[4];
 	int batchcount;
@@ -713,24 +713,28 @@ float DrawQ_String(float startx, float starty, const char *text, int maxlen, flo
 		}
 		// because this loop increments x before it draws, we must bias x first
 		x -= w;
-		for (i = 0;i < maxlen && text[i];)
+		for (i = 0;i < maxlen && text[i];i++, x += w)
 		{
+			if (text[i] == ' ')
+				continue;
 			if (text[i] == STRING_COLOR_TAG && !ignorecolorcodes && i + 1 < maxlen)
 			{
 				if (text[i+1] == STRING_COLOR_TAG)
+				{
 					i++;
+					if (text[i] == ' ')
+						continue;
+				}
 				else if (text[i+1] >= '0' && text[i+1] <= '9')
 				{
 					colorindex = text[i+1] - '0';
 					DrawQ_GetTextColor(color, colorindex, basered, basegreen, baseblue, basealpha, shadow);
-					i += 2;
+					i++;
+					x -= w;
 					continue;
 				}
 			}
-			num = text[i++];
-			x += w;
-			if (num == ' ')
-				continue;
+			num = text[i];
 			s = (num & 15)*0.0625f + (0.5f / 256.0f);
 			t = (num >> 4)*0.0625f + (0.5f / 256.0f);
 			u = 0.0625f - (1.0f / 256.0f);
