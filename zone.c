@@ -380,6 +380,84 @@ qboolean Mem_IsAllocated(mempool_t *pool, void *data)
 	return false;
 }
 
+void Mem_ExpandableArray_NewArray(memexpandablearray_t *l, mempool_t *mempool, size_t recordsize, int numrecordsperarray)
+{
+	memset(l, 0, sizeof(*l));
+	l->mempool = mempool;
+	l->recordsize = recordsize;
+	l->numrecordsperarray = numrecordsperarray;
+}
+
+void Mem_ExpandableArray_FreeArray(memexpandablearray_t *l)
+{
+	size_t i;
+	if (l->maxarrays)
+	{
+		for (i = 0;i != l->numarrays;l++)
+			Mem_Free(l->arrays[i].data);
+		Mem_Free(l->arrays);
+	}
+	memset(l, 0, sizeof(*l));
+}
+
+void *Mem_ExpandableArray_AllocRecord(memexpandablearray_t *l)
+{
+	size_t i, j;
+	for (i = 0;;i++)
+	{
+		if (i == l->numarrays)
+		{
+			if (l->numarrays == l->maxarrays)
+			{
+				memexpandablearray_array_t *oldarrays = l->arrays;
+				l->maxarrays = max(l->maxarrays * 2, 128);
+				l->arrays = Mem_Alloc(l->mempool, l->maxarrays * sizeof(*l->arrays));
+				if (oldarrays)
+				{
+					memcpy(l->arrays, oldarrays, l->numarrays * sizeof(*l->arrays));
+					Mem_Free(oldarrays);
+				}
+			}
+			l->arrays[i].numflaggedrecords = 0;
+			l->arrays[i].data = Mem_Alloc(l->mempool, (l->recordsize + 1) * l->numrecordsperarray);
+			l->arrays[i].allocflags = l->arrays[i].data + l->recordsize * l->numrecordsperarray;
+			l->numarrays++;
+		}
+		if (l->arrays[i].numflaggedrecords < l->numrecordsperarray)
+		{
+			for (j = 0;j < l->numrecordsperarray;j++)
+			{
+				if (!l->arrays[i].allocflags[j])
+				{
+					l->arrays[i].allocflags[j] = true;
+					l->arrays[i].numflaggedrecords++;
+					return (void *)(l->arrays[i].data + l->recordsize * j);
+				}
+			}
+		}
+	}
+}
+
+void Mem_ExpandableArray_FreeRecord(memexpandablearray_t *l, void *record)
+{
+	size_t i, j;
+	unsigned char *p = (unsigned char *)record;
+	for (i = 0;i != l->numarrays;i++)
+	{
+		if (p >= l->arrays[i].data && p < (l->arrays[i].data + l->recordsize * l->numrecordsperarray))
+		{
+			j = (p - l->arrays[i].data) / l->recordsize;
+			if (p != l->arrays[i].data + j * l->recordsize)
+				Sys_Error("Mem_ExpandableArray_FreeRecord: no such record %p\n", p);
+			if (!l->arrays[i].allocflags[j])
+				Sys_Error("Mem_ExpandableArray_FreeRecord: record %p is already free!\n", p);
+			l->arrays[i].allocflags[j] = false;
+			l->arrays[i].numflaggedrecords--;
+			return;
+		}
+	}
+}
+
 
 // used for temporary memory allocations around the engine, not for longterm
 // storage, if anything in this pool stays allocated during gameplay, it is
