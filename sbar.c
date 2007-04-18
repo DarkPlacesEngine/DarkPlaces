@@ -715,11 +715,8 @@ static void Sbar_DrawWeapon(int nr, float fade, int active)
 	const int w_width = 300, w_height = 100, w_space = 10;
 	const float w_scale = 0.4;
 
-	DrawQ_Pic(vid_conwidth.integer - (w_width + w_space) * w_scale, (w_height + w_space) * w_scale * nr + w_space, sb_weapons[0][nr], w_width * w_scale, w_height * w_scale, (active) ? 1 : 0.6, active ? 1 : 0.6, active ? 1 : 1, fade * sbar_alpha_fg.value, DRAWFLAG_ADDITIVE);
+	DrawQ_Pic(vid_conwidth.integer - (w_width + w_space) * w_scale, (w_height + w_space) * w_scale * nr + w_space, sb_weapons[0][nr], w_width * w_scale, w_height * w_scale, (active) ? 1 : 0.6, active ? 1 : 0.6, active ? 1 : 1, fade * sbar_alpha_fg.value, DRAWFLAG_NORMAL);
 	//DrawQ_String(vid_conwidth.integer - (w_space + font_size ), (w_height + w_space) * w_scale * nr + w_space, va("%i",nr+1), 0, font_size, font_size, 1, 0, 0, fade, 0, NULL, true);
-
-	if (active)
-		DrawQ_Fill(vid_conwidth.integer - (w_width + w_space) * w_scale, (w_height + w_space) * w_scale * nr + w_space, w_width * w_scale, w_height * w_scale, 0.3, 0.3, 0.3, fade * sbar_alpha_fg.value, DRAWFLAG_ADDITIVE);
 }
 
 /*
@@ -1157,15 +1154,14 @@ void Sbar_Draw (void)
 			else if (sb_lines)
 			{
 				int i;
-				double time;
 				float fade;
 				int redflag, blueflag;
 
-				// we have a max time 2s (min time = 0)
-				if ((time = max(0, cl.time - cl.weapontime)) < 2)
+				// calculate intensity to draw weapons bar at
+				fade = 3 - 2 * (cl.time - cl.weapontime);
+				if (fade > 0)
 				{
-					fade = (1.0 - 0.5 * time);
-					fade *= fade;
+					fade = min(fade, 1);
 					for (i = 0; i < 8;i++)
 						if (cl.stats[STAT_ITEMS] & (1 << i))
 							Sbar_DrawWeapon(i + 1, fade, (i + 2 == cl.stats[STAT_ACTIVEWEAPON]));
