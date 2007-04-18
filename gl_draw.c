@@ -577,7 +577,55 @@ static void _DrawQ_ProcessDrawFlag(int flags)
 
 void DrawQ_Pic(float x, float y, cachepic_t *pic, float width, float height, float red, float green, float blue, float alpha, int flags)
 {
-	DrawQ_SuperPic(x,y,pic,width,height,0,0,red,green,blue,alpha,1,0,red,green,blue,alpha,0,1,red,green,blue,alpha,1,1,red,green,blue,alpha,flags);
+	float floats[20];
+
+	_DrawQ_ProcessDrawFlag(flags);
+	GL_Color(red, green, blue, alpha);
+
+	R_Mesh_VertexPointer(floats, 0, 0);
+	R_Mesh_ColorPointer(NULL, 0, 0);
+	R_Mesh_ResetTextureState();
+	if (pic)
+	{
+		if (width == 0)
+			width = pic->width;
+		if (height == 0)
+			height = pic->height;
+		R_Mesh_TexBind(0, R_GetTexture(pic->tex));
+		R_Mesh_TexCoordPointer(0, 2, floats + 12, 0, 0);
+		floats[12] = 0;floats[13] = 0;
+		floats[14] = 1;floats[15] = 0;
+		floats[16] = 1;floats[17] = 1;
+		floats[18] = 0;floats[19] = 1;
+	}
+
+	floats[2] = floats[5] = floats[8] = floats[11] = 0;
+	floats[0] = floats[9] = x;
+	floats[1] = floats[4] = y;
+	floats[3] = floats[6] = x + width;
+	floats[7] = floats[10] = y + height;
+
+	R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
+}
+
+void DrawQ_Fill(float x, float y, float width, float height, float red, float green, float blue, float alpha, int flags)
+{
+	float floats[12];
+
+	_DrawQ_ProcessDrawFlag(flags);
+	GL_Color(red, green, blue, alpha);
+
+	R_Mesh_VertexPointer(floats, 0, 0);
+	R_Mesh_ColorPointer(NULL, 0, 0);
+	R_Mesh_ResetTextureState();
+
+	floats[2] = floats[5] = floats[8] = floats[11] = 0;
+	floats[0] = floats[9] = x;
+	floats[1] = floats[4] = y;
+	floats[3] = floats[6] = x + width;
+	floats[7] = floats[10] = y + height;
+
+	R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
 }
 
 // color tag printing

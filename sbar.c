@@ -719,7 +719,7 @@ static void Sbar_DrawWeapon(int nr, float fade, int active)
 	//DrawQ_String(vid_conwidth.integer - (w_space + font_size ), (w_height + w_space) * w_scale * nr + w_space, va("%i",nr+1), 0, font_size, font_size, 1, 0, 0, fade, 0, NULL, true);
 
 	if (active)
-		DrawQ_Pic(vid_conwidth.integer - (w_width + w_space) * w_scale, (w_height + w_space) * w_scale * nr + w_space, NULL, w_width * w_scale, w_height * w_scale, 0.3, 0.3, 0.3, fade * sbar_alpha_fg.value, DRAWFLAG_ADDITIVE);
+		DrawQ_Fill(vid_conwidth.integer - (w_width + w_space) * w_scale, (w_height + w_space) * w_scale * nr + w_space, w_width * w_scale, w_height * w_scale, 0.3, 0.3, 0.3, fade * sbar_alpha_fg.value, DRAWFLAG_ADDITIVE);
 }
 
 /*
@@ -897,9 +897,9 @@ void Sbar_DrawFrags (void)
 
 		// draw background
 		c = (unsigned char *)&palette_complete[(s->colors & 0xf0) + 8];
-		DrawQ_Pic (sbar_x + x + 10, sbar_y     - 23, NULL, 28, 4, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
+		DrawQ_Fill (sbar_x + x + 10, sbar_y     - 23, 28, 4, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
 		c = (unsigned char *)&palette_complete[((s->colors & 15)<<4) + 8];
-		DrawQ_Pic (sbar_x + x + 10, sbar_y + 4 - 23, NULL, 28, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
+		DrawQ_Fill (sbar_x + x + 10, sbar_y + 4 - 23, 28, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
 
 		// draw number
 		f = s->frags;
@@ -941,9 +941,9 @@ void Sbar_DrawFace (void)
 		// draw background
 		Sbar_DrawPic (112, 0, rsb_teambord);
 		c = (unsigned char *)&palette_complete[(s->colors & 0xf0) + 8];
-		DrawQ_Pic (sbar_x + 113, vid_conheight.integer-SBAR_HEIGHT+3, NULL, 22, 9, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
+		DrawQ_Fill (sbar_x + 113, vid_conheight.integer-SBAR_HEIGHT+3, 22, 9, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
 		c = (unsigned char *)&palette_complete[((s->colors & 15)<<4) + 8];
-		DrawQ_Pic (sbar_x + 113, vid_conheight.integer-SBAR_HEIGHT+12, NULL, 22, 9, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
+		DrawQ_Fill (sbar_x + 113, vid_conheight.integer-SBAR_HEIGHT+12, 22, 9, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
 
 		// draw number
 		f = s->frags;
@@ -1033,7 +1033,7 @@ void Sbar_ShowFPS(void)
 		if (fpsstring[0])
 		{
 			fps_x = vid_conwidth.integer - fps_scalex * strlen(fpsstring);
-			DrawQ_Pic(fps_x, fps_y, NULL, fps_scalex * strlen(fpsstring), fps_scaley, 0, 0, 0, 0.5, 0);
+			DrawQ_Fill(fps_x, fps_y, fps_scalex * strlen(fpsstring), fps_scaley, 0, 0, 0, 0.5, 0);
 			if (red)
 				DrawQ_String(fps_x, fps_y, fpsstring, 0, fps_scalex, fps_scaley, 1, 0, 0, 1, 0, NULL, true);
 			else
@@ -1043,14 +1043,14 @@ void Sbar_ShowFPS(void)
 		if (timestring[0])
 		{
 			fps_x = vid_conwidth.integer - fps_scalex * strlen(timestring);
-			DrawQ_Pic(fps_x, fps_y, NULL, fps_scalex * strlen(timestring), fps_scaley, 0, 0, 0, 0.5, 0);
+			DrawQ_Fill(fps_x, fps_y, fps_scalex * strlen(timestring), fps_scaley, 0, 0, 0, 0.5, 0);
 			DrawQ_String(fps_x, fps_y, timestring, 0, fps_scalex, fps_scaley, 1, 1, 1, 1, 0, NULL, true);
 			fps_y += fps_scaley;
 		}
 		if (datestring[0])
 		{
 			fps_x = vid_conwidth.integer - fps_scalex * strlen(datestring);
-			DrawQ_Pic(fps_x, fps_y, NULL, fps_scalex * strlen(datestring), fps_scaley, 0, 0, 0, 0.5, 0);
+			DrawQ_Fill(fps_x, fps_y, fps_scalex * strlen(datestring), fps_scaley, 0, 0, 0, 0.5, 0);
 			DrawQ_String(fps_x, fps_y, datestring, 0, fps_scalex, fps_scaley, 1, 1, 1, 1, 0, NULL, true);
 			fps_y += fps_scaley;
 		}
@@ -1448,9 +1448,9 @@ float Sbar_PrintScoreboardItem(scoreboard_t *s, float x, float y)
 		{
 			// draw colors behind score
 			c = (unsigned char *)&palette_complete[(s->colors & 0xf0) + 8];
-			DrawQ_Pic(x + 14*8, y+1, NULL, 40, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
+			DrawQ_Fill(x + 14*8, y+1, 40, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
 			c = (unsigned char *)&palette_complete[((s->colors & 15)<<4) + 8];
-			DrawQ_Pic(x + 14*8, y+4, NULL, 40, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
+			DrawQ_Fill(x + 14*8, y+4, 40, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
 			// print the text
 			//DrawQ_String(x, y, va("%c%4i %s", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL, true);
 			if (s->qw_ping || s->qw_packetloss)
@@ -1472,9 +1472,9 @@ float Sbar_PrintScoreboardItem(scoreboard_t *s, float x, float y)
 		{
 			// draw colors behind score
 			c = (unsigned char *)&palette_complete[(s->colors & 0xf0) + 8];
-			DrawQ_Pic(x + 9*8, y+1, NULL, 40, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
+			DrawQ_Fill(x + 9*8, y+1, 40, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
 			c = (unsigned char *)&palette_complete[((s->colors & 15)<<4) + 8];
-			DrawQ_Pic(x + 9*8, y+4, NULL, 40, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
+			DrawQ_Fill(x + 9*8, y+4, 40, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
 			// print the text
 			//DrawQ_String(x, y, va("%c%4i %s", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL, true);
 			if (s->qw_ping || s->qw_packetloss)

@@ -195,9 +195,9 @@ void SCR_DrawNetGraph_DrawGraph (int graphx, int graphy, int barwidth, int barhe
 		y = graphy + barheight;
 		index = (packetcounter + j) % NETGRAPH_PACKETS;
 		if (parameters[0][index] == NETGRAPH_LOSTPACKET)
-			DrawQ_Pic(x, y - barheight, NULL, barwidth, barheight, 1, 0, 0, 1, 0);
+			DrawQ_Fill(x, y - barheight, barwidth, barheight, 1, 0, 0, 1, 0);
 		else if (parameters[0][index] == NETGRAPH_CHOKEDPACKET)
-			DrawQ_Pic(x, y - min(2, barheight), NULL, barwidth, min(2, barheight), 1, 1, 0, 1, 0);
+			DrawQ_Fill(x, y - min(2, barheight), barwidth, min(2, barheight), 1, 1, 0, 1, 0);
 		else
 		{
 			offset = 0;
@@ -207,7 +207,7 @@ void SCR_DrawNetGraph_DrawGraph (int graphx, int graphy, int barwidth, int barhe
 				height = min(height, barheight - offset);
 				offset += height;
 				if (height)
-					DrawQ_Pic(x, y - offset, NULL, barwidth, height, parametercolors[k][0], parametercolors[k][1], parametercolors[k][2], parametercolors[k][3], 0);
+					DrawQ_Fill(x, y - offset, barwidth, height, parametercolors[k][0], parametercolors[k][1], parametercolors[k][2], parametercolors[k][3], 0);
 			}
 		}
 	}
@@ -225,8 +225,8 @@ void SCR_DrawNetGraph_DrawConnection_Client (netconn_t *conn, int graphx, int gr
 	int numparameters;
 	const int *parameters[3];
 	// dim background
-	DrawQ_Pic (graphx                                          , graphy, NULL, barwidth * NETGRAPH_PACKETS, barheight + textsize, 0, 0, 0, 0.5, 0);
-	DrawQ_Pic (graphx + barwidth * NETGRAPH_PACKETS + separator, graphy, NULL, barwidth * NETGRAPH_PACKETS, barheight + textsize, 0, 0, 0, 0.5, 0);
+	DrawQ_Fill(graphx                                          , graphy, barwidth * NETGRAPH_PACKETS, barheight + textsize, 0, 0, 0, 0.5, 0);
+	DrawQ_Fill(graphx + barwidth * NETGRAPH_PACKETS + separator, graphy, barwidth * NETGRAPH_PACKETS, barheight + textsize, 0, 0, 0, 0.5, 0);
 	// draw the bar graphs
 	numparameters = 3;
 	parameters[0] = conn->incoming_unreliablesize;
@@ -247,8 +247,8 @@ void SCR_DrawNetGraph_DrawConnection_Server (netconn_t *conn, int graphx, int gr
 	int numparameters;
 	const int *parameters[3];
 	// dim background
-	DrawQ_Pic (graphx                                          , graphy, NULL, barwidth * NETGRAPH_PACKETS, barheight + textsize, 0, 0, 0, 0.5, 0);
-	DrawQ_Pic (graphx + barwidth * NETGRAPH_PACKETS + separator, graphy, NULL, barwidth * NETGRAPH_PACKETS, barheight + textsize, 0, 0, 0, 0.5, 0);
+	DrawQ_Fill(graphx                                          , graphy, barwidth * NETGRAPH_PACKETS, barheight + textsize, 0, 0, 0, 0.5, 0);
+	DrawQ_Fill(graphx + barwidth * NETGRAPH_PACKETS + separator, graphy, barwidth * NETGRAPH_PACKETS, barheight + textsize, 0, 0, 0, 0.5, 0);
 	// draw the bar graphs
 	numparameters = 3;
 	parameters[0] = conn->outgoing_unreliablesize;
@@ -464,7 +464,7 @@ static int SCR_DrawQWDownload(int offset)
 	len = (int)strlen(temp);
 	x = (vid_conwidth.integer - len*size) / 2;
 	y = vid_conheight.integer - size - offset;
-	DrawQ_Pic(0, y, NULL, vid_conwidth.integer, size, 0, 0, 0, 0.5, 0);
+	DrawQ_Fill(0, y, vid_conwidth.integer, size, 0, 0, 0, 0.5, 0);
 	DrawQ_String(x, y, temp, len, size, size, 1, 1, 1, 1, 0, NULL, true);
 	return 8;
 }
@@ -495,7 +495,7 @@ static int SCR_DrawCurlDownload(int offset)
 	{
 		len = (int)strlen(addinfo);
 		x = (vid_conwidth.integer - len*size) / 2;
-		DrawQ_Pic(0, y - size, NULL, vid_conwidth.integer, size, 1, 1, 1, 0.8, 0);
+		DrawQ_Fill(0, y - size, vid_conwidth.integer, size, 1, 1, 1, 0.8, 0);
 		DrawQ_String(x, y - size, addinfo, len, size, size, 0, 0, 0, 1, 0, NULL, true);
 	}
 
@@ -509,7 +509,7 @@ static int SCR_DrawCurlDownload(int offset)
 			dpsnprintf(temp, sizeof(temp), "Downloading %s ...  %5.1f%% @ %.1f KiB/s\n", downinfo[i].filename, 100.0 * downinfo[i].progress, downinfo[i].speed / 1024.0);
 		len = (int)strlen(temp);
 		x = (vid_conwidth.integer - len*size) / 2;
-		DrawQ_Pic(0, y + i * size, NULL, vid_conwidth.integer, size, 0, 0, 0, 0.8, 0);
+		DrawQ_Fill(0, y + i * size, vid_conwidth.integer, size, 0, 0, 0, 0.8, 0);
 		DrawQ_String(x, y + i * size, temp, len, size, size, 1, 1, 1, 1, 0, NULL, true);
 	}
 
@@ -660,7 +660,7 @@ void R_TimeReport_Frame(void)
 				lines++;
 		y = vid_conheight.integer - sb_lines - lines * 8;
 		i = j = 0;
-		DrawQ_Pic(0, y, NULL, vid_conwidth.integer, lines * 8, 0, 0, 0, 0.5, 0);
+		DrawQ_Fill(0, y, vid_conwidth.integer, lines * 8, 0, 0, 0, 0.5, 0);
 		while (r_speeds_string[i])
 		{
 			j = i;

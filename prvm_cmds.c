@@ -2693,7 +2693,7 @@ void VM_drawfill(void)
 	if(pos[2] || size[2])
 		Con_Printf("VM_drawfill: z value%s from %s discarded\n",(pos[2] && size[2]) ? "s" : " ",((pos[2] && size[2]) ? "pos and size" : (pos[2] ? "pos" : "size")));
 
-	DrawQ_Pic(pos[0], pos[1], NULL, size[0], size[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM3), flag);
+	DrawQ_Fill(pos[0], pos[1], size[0], size[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM3), flag);
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
 

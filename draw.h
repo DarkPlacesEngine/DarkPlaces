@@ -78,6 +78,8 @@ DRAWFLAG_NUMFLAGS
 
 // draw an image (or a filled rectangle if pic == NULL)
 void DrawQ_Pic(float x, float y, cachepic_t *pic, float width, float height, float red, float green, float blue, float alpha, int flags);
+// draw a filled rectangle (slightly faster than DrawQ_Pic with pic = NULL)
+void DrawQ_Fill(float x, float y, float width, float height, float red, float green, float blue, float alpha, int flags);
 // draw a text string,
 // with optional color tag support,
 // returns final unclipped x coordinate
