@@ -15,10 +15,10 @@
 0 bug darkplaces server: SV_PushMove's call to SV_ClipMoveToEntity should do a trace, not just a point test, to support hollow pusher models (Urre)
 0 bug darkplaces server: player entered the game is printed twice, test with +map start
 0 bug darkplaces server: savegames do not save precaches, which means that automatic precaching frequently results in invalid modelindex values when reloading the savegame, and this bug also exists in many quake mods that randomly choose multiple variants of a monster, each with separate precaches, resulting in a different precache order when reloading the savegame
-0 bug darkplaces server: when server quits, it does not notify the master that it is quitting, it should send out a couple forced heartbeats and dpmaster should be modified to remove servers that do not respond to queries within a reason time (jitspoe, div0)
 0 bug darkplaces wgl client: during video mode setup, sometimes another application's window becomes permanently top most, not darkplaces' fullscreen window, why? (tZork)
 0 bug darkplaces windows sound: freezing on exit sometimes when freeing sound buffer during sound shutdown (Black)
 0 bug darkplaces windows sound: surround sound fails in windows client, falls back to stereo (greenmarine)
+0 bug dpmaster: if server does not reply to queries in a reasonable period of time it should be removed from the list, this is necessary for the server to be removed when it shuts down and sends out two heartbeats to let the master know that it is shutting down, and isn't there to reply to queries (jitspoe, div0)
 0 bug dpmaster: if server does not reply within 5 seconds to a query it should be removed (jitspoe, div0)
 0 bug dpmod: LinkDoors seems to ignore .origin on door entities when comparing if they overlap
 0 bug dpmod: allow selection of weapons with secondary ammo but no primary ammo, and switch away if trying to fire primary ammo you don't have (romi)
@@ -638,6 +638,7 @@ d bug darkplaces server: stats[TOTAL_MONSTERS] should be networked as a stat
 d bug darkplaces server: stepping while jumping is setting FL_GROUND (allowing the quake2 doublejump bug)
 d bug darkplaces server: sv_jumpstep should be defaulted to off because it makes it possible to reach places one should not be able to reach in quake, it can be turned on by particular games if desired (div0, SavageX, Kazashi)
 d bug darkplaces server: the lava+func_trains room of r1m5 is leaving items floating in the air - r1m5 is Towers of Wrath, in episode of Dissolution of Eternity, aka rogue (maichal)
+d bug darkplaces server: when server quits, it does not notify the master that it is quitting, it should send out a couple forced heartbeats and assume the master server will remove it because it does not respond (jitspoe, div0)
 d bug darkplaces server: when trying to load a map that is missing the model is still precached permanently, causing 'not found' warnings every time r_restart/vid_restart are used
 d bug darkplaces sound: sound is sometimes coming from the wrong side apparently (lcatlnx)
 d bug darkplaces sound: spatialization bug occurs in The Ascension of Vigil, making all player and monster sounds far to the right (RenegadeC)

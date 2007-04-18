@@ -459,9 +459,12 @@ SV_TestEntityPosition
 returns true if the entity is in solid currently
 ============
 */
-static int SV_TestEntityPosition (prvm_edict_t *ent)
+static int SV_TestEntityPosition (prvm_edict_t *ent, vec3_t offset)
 {
-	trace_t trace = SV_Move (ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, ent->fields.server->origin, MOVE_NOMONSTERS, ent, SUPERCONTENTS_SOLID);
+	vec3_t org;
+	trace_t trace;
+	VectorAdd(ent->fields.server->origin, offset, org);
+	trace = SV_Move (org, ent->fields.server->mins, ent->fields.server->maxs, ent->fields.server->origin, MOVE_NOMONSTERS, ent, SUPERCONTENTS_SOLID);
 	if (trace.startsupercontents & SUPERCONTENTS_SOLID)
 		return true;
 	else
@@ -471,10 +474,11 @@ static int SV_TestEntityPosition (prvm_edict_t *ent)
 			// q1bsp/hlbsp use hulls and if the entity does not exactly match
 			// a hull size it is incorrectly tested, so this code tries to
 			// 'fix' it slightly...
+			// FIXME: this breaks entities larger than the hull size
 			int i;
 			vec3_t v, m1, m2, s;
-			VectorAdd(ent->fields.server->origin, ent->fields.server->mins, m1);
-			VectorAdd(ent->fields.server->origin, ent->fields.server->maxs, m2);
+			VectorAdd(org, ent->fields.server->mins, m1);
+			VectorAdd(org, ent->fields.server->maxs, m2);
 			VectorSubtract(m2, m1, s);
 #define EPSILON (1.0f / 32.0f)
 			if (s[0] >= EPSILON*2) {m1[0] += EPSILON;m2[0] -= EPSILON;}
@@ -489,8 +493,11 @@ static int SV_TestEntityPosition (prvm_edict_t *ent)
 					return true;
 			}
 		}
-		return false;
 	}
+	// if the trace found a better position for the entity, move it there
+	if (VectorDistance2(trace.endpos, ent->fields.server->origin) >= 0.0001)
+		VectorCopy(trace.endpos, ent->fields.server->origin);
+	return false;
 }
 
 /*
@@ -515,7 +522,7 @@ void SV_CheckAllEnts (void)
 		 || check->fields.server->movetype == MOVETYPE_NOCLIP)
 			continue;
 
-		if (SV_TestEntityPosition (check))
+		if (SV_TestEntityPosition (check, vec3_origin))
 			Con_Print("entity in invalid position\n");
 	}
 }
@@ -1344,20 +1351,17 @@ clipping hull.
 void SV_CheckStuck (prvm_edict_t *ent)
 {
 	int i;
-	vec3_t org;
+	vec3_t offset;
 
-	if (!SV_TestEntityPosition(ent))
+	if (!SV_TestEntityPosition(ent, vec3_origin))
 	{
 		VectorCopy (ent->fields.server->origin, ent->fields.server->oldorigin);
 		return;
 	}
 
-	VectorCopy (ent->fields.server->origin, org);
-
 	for (i = 0;i < (int)(sizeof(unstickoffsets) / sizeof(unstickoffsets[0]));i += 3)
 	{
-		VectorAdd(org, unstickoffsets + i, ent->fields.server->origin);
-		if (!SV_TestEntityPosition(ent))
+		if (!SV_TestEntityPosition(ent, unstickoffsets + i))
 		{
 			Con_DPrintf("Unstuck player entity %i (classname \"%s\") with offset %f %f %f.\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname), unstickoffsets[i+0], unstickoffsets[i+1], unstickoffsets[i+2]);
 			SV_LinkEdict (ent, true);
@@ -1365,33 +1369,28 @@ void SV_CheckStuck (prvm_edict_t *ent)
 		}
 	}
 
-	VectorCopy (ent->fields.server->oldorigin, ent->fields.server->origin);
-	if (!SV_TestEntityPosition(ent))
+	VectorSubtract(ent->fields.server->oldorigin, ent->fields.server->origin, offset);
+	if (!SV_TestEntityPosition(ent, offset))
 	{
 		Con_DPrintf("Unstuck player entity %i (classname \"%s\") by restoring oldorigin.\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname));
 		SV_LinkEdict (ent, true);
 		return;
 	}
 
-	VectorCopy (org, ent->fields.server->origin);
 	Con_DPrintf("Stuck player entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname));
 }
 
 static void SV_UnstickEntity (prvm_edict_t *ent)
 {
 	int i;
-	vec3_t org;
 
 	// if not stuck in a bmodel, just return
-	if (!SV_TestEntityPosition(ent))
+	if (!SV_TestEntityPosition(ent, vec3_origin))
 		return;
-
-	VectorCopy (ent->fields.server->origin, org);
 
 	for (i = 0;i < (int)(sizeof(unstickoffsets) / sizeof(unstickoffsets[0]));i += 3)
 	{
-		VectorAdd(org, unstickoffsets + i, ent->fields.server->origin);
-		if (!SV_TestEntityPosition(ent))
+		if (!SV_TestEntityPosition(ent, unstickoffsets + i))
 		{
 			Con_DPrintf("Unstuck entity %i (classname \"%s\") with offset %f %f %f.\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname), unstickoffsets[i+0], unstickoffsets[i+1], unstickoffsets[i+2]);
 			SV_LinkEdict (ent, true);
@@ -1399,7 +1398,6 @@ static void SV_UnstickEntity (prvm_edict_t *ent)
 		}
 	}
 
-	VectorCopy (org, ent->fields.server->origin);
 	if (developer.integer >= 100)
 		Con_Printf("Stuck entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname));
 }
