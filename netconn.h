@@ -246,8 +246,12 @@ typedef struct serverlist_info_s
 	char name[128];
 	// max client number
 	int maxplayers;
-	// number of currently connected players
+	// number of currently connected players (including bots)
 	int numplayers;
+	// number of currently connected players that are bots
+	int numbots;
+	// number of currently connected players that are not bots
+	int numhumans;
 	// protocol version
 	int protocol;
 	// game data version
@@ -267,6 +271,8 @@ typedef enum
 	SLIF_MAXPLAYERS,
 	SLIF_NUMPLAYERS,
 	SLIF_PROTOCOL,
+	SLIF_NUMBOTS,
+	SLIF_NUMHUMANS,
 	SLIF_COUNT
 } serverlist_infofield_t;
 

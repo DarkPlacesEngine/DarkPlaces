@@ -184,6 +184,12 @@ static qboolean _ServerList_Entry_Compare( serverlist_entry_t *A, serverlist_ent
 		case SLIF_NUMPLAYERS:
 			result = A->info.numplayers - B->info.numplayers;
 			break;
+		case SLIF_NUMBOTS:
+			result = A->info.numbots - B->info.numbots;
+			break;
+		case SLIF_NUMHUMANS:
+			result = A->info.numhumans - B->info.numhumans;
+			break;
 		case SLIF_PROTOCOL:
 			result = A->info.protocol - B->info.protocol;
 			break;
@@ -284,6 +290,10 @@ static qboolean _ServerList_Entry_Mask( serverlist_mask_t *mask, serverlist_info
 	if( !_ServerList_CompareInt( info->maxplayers, mask->tests[SLIF_MAXPLAYERS], mask->info.maxplayers ) )
 		return false;
 	if( !_ServerList_CompareInt( info->numplayers, mask->tests[SLIF_NUMPLAYERS], mask->info.numplayers ) )
+		return false;
+	if( !_ServerList_CompareInt( info->numplayers, mask->tests[SLIF_NUMBOTS], mask->info.numbots ) )
+		return false;
+	if( !_ServerList_CompareInt( info->numplayers, mask->tests[SLIF_NUMHUMANS], mask->info.numhumans ) )
 		return false;
 	if( !_ServerList_CompareInt( info->protocol, mask->tests[SLIF_PROTOCOL], mask->info.protocol ))
 		return false;
@@ -1217,7 +1227,7 @@ static void NetConn_ClientParsePacket_ServerList_UpdateCache(int n)
 {
 	serverlist_info_t *info = &serverlist_cache[n].info;
 	// update description strings for engine menu and console output
-	dpsnprintf(serverlist_cache[n].line1, sizeof(serverlist_cache[n].line1), "^%c%5d^7 ^%c%3u^7/%3u %-65.65s", info->ping >= 300 ? '1' : (info->ping >= 200 ? '3' : '7'), (int)info->ping, ((info->numplayers > 0 && info->numplayers < info->maxplayers) ? (info->numplayers >= 4 ? '7' : '3') : '1'), info->numplayers, info->maxplayers, info->name);
+	dpsnprintf(serverlist_cache[n].line1, sizeof(serverlist_cache[n].line1), "^%c%5d^7 ^%c%3u^7/%3u %-65.65s", info->ping >= 300 ? '1' : (info->ping >= 200 ? '3' : '7'), (int)info->ping, ((info->numhumans > 0 && info->numhumans < info->maxplayers) ? (info->numhumans >= 4 ? '7' : '3') : '1'), info->numplayers, info->maxplayers, info->name);
 	dpsnprintf(serverlist_cache[n].line2, sizeof(serverlist_cache[n].line2), "^4%-21.21s %-19.19s ^%c%-17.17s^4 %-20.20s", info->cname, info->game, (info->gameversion != gameversion.integer) ? '1' : '4', info->mod, info->map);
 	if (serverlist_cache[n].query == SQS_QUERIED)
 		ServerList_ViewList_Remove(&serverlist_cache[n]);
@@ -1303,14 +1313,25 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				return true;
 
 			info = &serverlist_cache[n].info;
-			if ((s = SearchInfostring(string, "gamename"     )) != NULL) strlcpy(info->game, s, sizeof (info->game));else info->game[0] = 0;
-			if ((s = SearchInfostring(string, "modname"      )) != NULL) strlcpy(info->mod , s, sizeof (info->mod ));else info->mod[0]  = 0;
-			if ((s = SearchInfostring(string, "mapname"      )) != NULL) strlcpy(info->map , s, sizeof (info->map ));else info->map[0]  = 0;
-			if ((s = SearchInfostring(string, "hostname"     )) != NULL) strlcpy(info->name, s, sizeof (info->name));else info->name[0] = 0;
-			if ((s = SearchInfostring(string, "protocol"     )) != NULL) info->protocol = atoi(s);else info->protocol = -1;
-			if ((s = SearchInfostring(string, "clients"      )) != NULL) info->numplayers = atoi(s);else info->numplayers = 0;
-			if ((s = SearchInfostring(string, "sv_maxclients")) != NULL) info->maxplayers = atoi(s);else info->maxplayers  = 0;
-			if ((s = SearchInfostring(string, "gameversion"  )) != NULL) info->gameversion = atoi(s);else info->gameversion = 0;
+			info->game[0] = 0;
+			info->mod[0]  = 0;
+			info->map[0]  = 0;
+			info->name[0] = 0;
+			info->protocol = -1;
+			info->numplayers = 0;
+			info->numbots = 0;
+			info->maxplayers  = 0;
+			info->gameversion = 0;
+			if ((s = SearchInfostring(string, "gamename"     )) != NULL) strlcpy(info->game, s, sizeof (info->game));
+			if ((s = SearchInfostring(string, "modname"      )) != NULL) strlcpy(info->mod , s, sizeof (info->mod ));
+			if ((s = SearchInfostring(string, "mapname"      )) != NULL) strlcpy(info->map , s, sizeof (info->map ));
+			if ((s = SearchInfostring(string, "hostname"     )) != NULL) strlcpy(info->name, s, sizeof (info->name));
+			if ((s = SearchInfostring(string, "protocol"     )) != NULL) info->protocol = atoi(s);
+			if ((s = SearchInfostring(string, "clients"      )) != NULL) info->numplayers = atoi(s);
+			if ((s = SearchInfostring(string, "bots"         )) != NULL) info->numbots = atoi(s);
+			if ((s = SearchInfostring(string, "sv_maxclients")) != NULL) info->maxplayers = atoi(s);
+			if ((s = SearchInfostring(string, "gameversion"  )) != NULL) info->gameversion = atoi(s);
+			info->numhumans = info->numplayers - info->numbots;
 
 			NetConn_ClientParsePacket_ServerList_UpdateCache(n);
 
