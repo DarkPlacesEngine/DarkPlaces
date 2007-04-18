@@ -135,6 +135,30 @@ void _Mem_CheckSentinelsGlobal(const char *filename, int fileline);
 // if pool is NULL this searches ALL pools for the allocation
 qboolean Mem_IsAllocated(mempool_t *pool, void *data);
 
+typedef struct memexpandablearray_array_s
+{
+	unsigned char *data;
+	unsigned char *allocflags;
+	size_t numflaggedrecords;
+}
+memexpandablearray_array_t;
+
+typedef struct memexpandablearray_s
+{
+	mempool_t *mempool;
+	size_t recordsize;
+	size_t numrecordsperarray;
+	size_t numarrays;
+	size_t maxarrays;
+	memexpandablearray_array_t *arrays;
+}
+memexpandablearray_t;
+
+void Mem_ExpandableArray_NewArray(memexpandablearray_t *l, mempool_t *mempool, size_t recordsize, int numrecordsperarray);
+void Mem_ExpandableArray_FreeArray(memexpandablearray_t *l);
+void *Mem_ExpandableArray_AllocRecord(memexpandablearray_t *l);
+void Mem_ExpandableArray_FreeRecord(memexpandablearray_t *l, void *record);
+
 // used for temporary allocations
 extern mempool_t *tempmempool;
 
