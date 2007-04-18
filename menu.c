@@ -167,8 +167,8 @@ static void M_Background(int width, int height)
 	menu_height = bound(1, height, vid_conheight.integer);
 	menu_x = (vid_conwidth.integer - menu_width) * 0.5;
 	menu_y = (vid_conheight.integer - menu_height) * 0.5;
-	//DrawQ_Pic(menu_x, menu_y, NULL, menu_width, menu_height, 0, 0, 0, 0.5, 0);
-	DrawQ_Pic(0, 0, NULL, vid_conwidth.integer, vid_conheight.integer, 0, 0, 0, 0.5, 0);
+	//DrawQ_Fill(menu_x, menu_y, menu_width, menu_height, 0, 0, 0, 0.5, 0);
+	DrawQ_Fill(0, 0, vid_conwidth.integer, vid_conheight.integer, 0, 0, 0, 0.5, 0);
 }
 
 /*
@@ -1606,7 +1606,7 @@ static void M_Options_PrintCommand(const char *s, int enabled)
 	if (opty >= 32)
 	{
 		if (optnum == optcursor)
-			DrawQ_Pic(menu_x + 48, menu_y + opty, NULL, 320, 8, optnum == optcursor ? (0.5 + 0.2 * sin(realtime * M_PI)) : 0, 0, 0, 0.5, 0);
+			DrawQ_Fill(menu_x + 48, menu_y + opty, 320, 8, optnum == optcursor ? (0.5 + 0.2 * sin(realtime * M_PI)) : 0, 0, 0, 0.5, 0);
 		M_ItemPrint(0 + 48, opty, s, enabled);
 	}
 	opty += 8;
@@ -1618,7 +1618,7 @@ static void M_Options_PrintCheckbox(const char *s, int enabled, int yes)
 	if (opty >= 32)
 	{
 		if (optnum == optcursor)
-			DrawQ_Pic(menu_x + 48, menu_y + opty, NULL, 320, 8, optnum == optcursor ? (0.5 + 0.2 * sin(realtime * M_PI)) : 0, 0, 0, 0.5, 0);
+			DrawQ_Fill(menu_x + 48, menu_y + opty, 320, 8, optnum == optcursor ? (0.5 + 0.2 * sin(realtime * M_PI)) : 0, 0, 0, 0.5, 0);
 		M_ItemPrint(0 + 48, opty, s, enabled);
 		M_DrawCheckbox(0 + 48 + (int)strlen(s) * 8 + 8, opty, yes);
 	}
@@ -1631,7 +1631,7 @@ static void M_Options_PrintSlider(const char *s, int enabled, float value, float
 	if (opty >= 32)
 	{
 		if (optnum == optcursor)
-			DrawQ_Pic(menu_x + 48, menu_y + opty, NULL, 320, 8, optnum == optcursor ? (0.5 + 0.2 * sin(realtime * M_PI)) : 0, 0, 0, 0.5, 0);
+			DrawQ_Fill(menu_x + 48, menu_y + opty, 320, 8, optnum == optcursor ? (0.5 + 0.2 * sin(realtime * M_PI)) : 0, 0, 0, 0.5, 0);
 		M_ItemPrint(0 + 48, opty, s, enabled);
 		M_DrawSlider(0 + 48 + (int)strlen(s) * 8 + 8, opty, value, minvalue, maxvalue);
 	}
@@ -2222,7 +2222,7 @@ static void M_Options_ColorControl_Draw (void)
 	M_Options_PrintSlider(  "          White: Grey ", v_color_enable.integer, (v_color_white_r.value + v_color_white_g.value + v_color_white_b.value) / 3, 1, 5);
 
 	opty += 4;
-	DrawQ_Pic(menu_x, menu_y + opty, NULL, 320, 4 + 64 + 8 + 64 + 4, 0, 0, 0, 1, 0);opty += 4;
+	DrawQ_Fill(menu_x, menu_y + opty, 320, 4 + 64 + 8 + 64 + 4, 0, 0, 0, 1, 0);opty += 4;
 	s = (float) 312 / 2 * vid.width / vid_conwidth.integer;
 	t = (float) 4 / 2 * vid.height / vid_conheight.integer;
 	DrawQ_SuperPic(menu_x + 4, menu_y + opty, dither, 312, 4, 0,0, 1,0,0,1, s,0, 1,0,0,1, 0,t, 1,0,0,1, s,t, 1,0,0,1, 0);opty += 4;
@@ -2241,19 +2241,19 @@ static void M_Options_ColorControl_Draw (void)
 	v = t * 0.5;
 	opty += 8;
 	x = 4;
-	DrawQ_Pic(menu_x + x, menu_y + opty, NULL, 64, 48, c, 0, 0, 1, 0);
+	DrawQ_Fill(menu_x + x, menu_y + opty, 64, 48, c, 0, 0, 1, 0);
 	DrawQ_SuperPic(menu_x + x + 16, menu_y + opty + 16, dither, 16, 16, 0,0, 1,0,0,1, s,0, 1,0,0,1, 0,t, 1,0,0,1, s,t, 1,0,0,1, 0);
 	DrawQ_SuperPic(menu_x + x + 32, menu_y + opty + 16, dither, 16, 16, 0,0, 1,0,0,1, u,0, 1,0,0,1, 0,v, 1,0,0,1, u,v, 1,0,0,1, 0);
 	x += 80;
-	DrawQ_Pic(menu_x + x, menu_y + opty, NULL, 64, 48, 0, c, 0, 1, 0);
+	DrawQ_Fill(menu_x + x, menu_y + opty, 64, 48, 0, c, 0, 1, 0);
 	DrawQ_SuperPic(menu_x + x + 16, menu_y + opty + 16, dither, 16, 16, 0,0, 0,1,0,1, s,0, 0,1,0,1, 0,t, 0,1,0,1, s,t, 0,1,0,1, 0);
 	DrawQ_SuperPic(menu_x + x + 32, menu_y + opty + 16, dither, 16, 16, 0,0, 0,1,0,1, u,0, 0,1,0,1, 0,v, 0,1,0,1, u,v, 0,1,0,1, 0);
 	x += 80;
-	DrawQ_Pic(menu_x + x, menu_y + opty, NULL, 64, 48, 0, 0, c, 1, 0);
+	DrawQ_Fill(menu_x + x, menu_y + opty, 64, 48, 0, 0, c, 1, 0);
 	DrawQ_SuperPic(menu_x + x + 16, menu_y + opty + 16, dither, 16, 16, 0,0, 0,0,1,1, s,0, 0,0,1,1, 0,t, 0,0,1,1, s,t, 0,0,1,1, 0);
 	DrawQ_SuperPic(menu_x + x + 32, menu_y + opty + 16, dither, 16, 16, 0,0, 0,0,1,1, u,0, 0,0,1,1, 0,v, 0,0,1,1, u,v, 0,0,1,1, 0);
 	x += 80;
-	DrawQ_Pic(menu_x + x, menu_y + opty, NULL, 64, 48, c, c, c, 1, 0);
+	DrawQ_Fill(menu_x + x, menu_y + opty, 64, 48, c, c, c, 1, 0);
 	DrawQ_SuperPic(menu_x + x + 16, menu_y + opty + 16, dither, 16, 16, 0,0, 1,1,1,1, s,0, 1,1,1,1, 0,t, 1,1,1,1, s,t, 1,1,1,1, 0);
 	DrawQ_SuperPic(menu_x + x + 32, menu_y + opty + 16, dither, 16, 16, 0,0, 1,1,1,1, u,0, 1,1,1,1, 0,v, 1,1,1,1, u,v, 1,1,1,1, 0);
 }
@@ -4372,7 +4372,7 @@ static void M_ServerList_Draw (void)
 	{
 		for (n = start;n < end;n++)
 		{
-			DrawQ_Pic(menu_x, menu_y + y, NULL, 640, 16, n == slist_cursor ? (0.5 + 0.2 * sin(realtime * M_PI)) : 0, 0, 0, 0.5, 0);
+			DrawQ_Fill(menu_x, menu_y + y, 640, 16, n == slist_cursor ? (0.5 + 0.2 * sin(realtime * M_PI)) : 0, 0, 0, 0.5, 0);
 			M_PrintColored(0, y, serverlist_viewlist[n]->line1);y += 8;
 			M_PrintColored(0, y, serverlist_viewlist[n]->line2);y += 8;
 		}
