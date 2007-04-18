@@ -1731,24 +1731,30 @@ static void NetConn_BuildChallengeString(char *buffer, int bufferlength)
 
 static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg, size_t out_size, qboolean fullstatus)
 {
-	unsigned int nb_clients = 0, i;
+	unsigned int nb_clients = 0, nb_bots = 0, i;
 	int length;
 
 	// How many clients are there?
 	for (i = 0;i < (unsigned int)svs.maxclients;i++)
+	{
 		if (svs.clients[i].active)
+		{
 			nb_clients++;
+			if (!svs.clients[i].netconnection)
+				nb_bots++;
+		}
+	}
 
 	// TODO: we should add more information for the full status string
 	length = dpsnprintf(out_msg, out_size,
 						"\377\377\377\377%s\x0A"
 						"\\gamename\\%s\\modname\\%s\\gameversion\\%d\\sv_maxclients\\%d"
-						"\\clients\\%d\\mapname\\%s\\hostname\\%s\\protocol\\%d"
+						"\\clients\\%d\\bots\\%d\\mapname\\%s\\hostname\\%s\\protocol\\%d"
 						"%s%s"
 						"%s",
 						fullstatus ? "statusResponse" : "infoResponse",
 						gamename, com_modname, gameversion.integer, svs.maxclients,
-						nb_clients, sv.name, hostname.string, NET_PROTOCOL_VERSION,
+						nb_clients, nb_bots, sv.name, hostname.string, NET_PROTOCOL_VERSION,
 						challenge ? "\\challenge\\" : "", challenge ? challenge : "",
 						fullstatus ? "\n" : "");
 
