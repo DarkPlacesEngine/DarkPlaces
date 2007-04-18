@@ -1,6 +1,5 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
 0 bug darkplaces client: can't move mouse around in nexuiz menu if vid_mouse is 0
-0 bug darkplaces client: decals are not sticking to submodels
 0 bug darkplaces client: if you press 1 during the demo loop when quake starts, escape doesn't do anything until you hit some other key (daemon)
 0 bug darkplaces loader: crash when a mdl model has more replacement skins than the model contains (Lardarse)
 0 bug darkplaces loader: make rtlight entity loader support q3map/q3map2 lights properly, they use a spawnflag for LINEAR mode, by default they use 1/(x*x) falloff (Carni, motorsep)
@@ -14,7 +13,6 @@
 0 bug darkplaces server csqc networking: csqc entity sending code does not currently detect packet loss and repeat lost entities (FrikaC, Chris Page, div0)
 0 bug darkplaces server: SV_PushMove is ignoring model type in its angles_x handling, where as the renderer checks only model type to determine angles_x handling (Urre)
 0 bug darkplaces server: SV_PushMove's call to SV_ClipMoveToEntity should do a trace, not just a point test, to support hollow pusher models (Urre)
-0 bug darkplaces server: entity unsticking code should try 1 unit horizontal offsets, then diagonals, then vertical, not diagonal + vertical
 0 bug darkplaces server: player entered the game is printed twice, test with +map start
 0 bug darkplaces server: savegames do not save precaches, which means that automatic precaching frequently results in invalid modelindex values when reloading the savegame, and this bug also exists in many quake mods that randomly choose multiple variants of a monster, each with separate precaches, resulting in a different precache order when reloading the savegame
 0 bug darkplaces server: when server quits, it does not notify the master that it is quitting, it should send out a couple forced heartbeats and dpmaster should be modified to remove servers that do not respond to queries within a reason time (jitspoe, div0)
@@ -622,6 +620,7 @@ d bug darkplaces server: client ping times are often negative after a level chan
 d bug darkplaces server: don't clear player entity when loading a savegame
 d bug darkplaces server: dropclient() is not calling ClientDisconnect on bots during the first level they exist in, it is called on later levels (Urre)
 d bug darkplaces server: effect() builtin should post a warning and do nothing if given a framerate below 1 (Willis)
+d bug darkplaces server: entity unsticking code should try 1 unit horizontal offsets, then diagonals, then vertical, not diagonal + vertical
 d bug darkplaces server: error() qc builtin does not print error message, just Host_Error: Program error or something similar (evilfrog)
 d bug darkplaces server: having a csprogs.dat file installed can crash dedicated servers (esteel)
 d bug darkplaces server: if sv_fixedframeratesingleplayer is 0 and cl_maxfps is something like 10, the server still runs every frame, consuming massive amounts of cpu and resulting in very small frametime values
@@ -1287,6 +1286,7 @@ d sv_user.qc: figure out why looking up/down slows movement and fix it (Vermeule
 d zmodel: fix scale and origin commands (Vermeulen)
 f LordHavoc: examine .mb (Maya Binary) file from Electro and learn its format (Electro)
 f bug darkplaces capturevideo: cl_capturevideo 1 with sound off is not locking the framerate of a server (Vermeulen)
+f bug darkplaces client: decals are not sticking to submodels
 f bug darkplaces client: it has been reported that sometimes level changes on quakeworld servers don't load a map, this may be related to downloading? (Baker)
 f bug darkplaces client: occasionally when level changes on remote server, Host_Error occurs (LordHavoc)
 f bug darkplaces client: occasionally when level changes on remote server, connection stops and console scrolls wildly without user intervention, and it does not print any kind of error to the terminal, vid_restart in this state causes a crash (LordHavoc)
