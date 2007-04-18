@@ -1,4 +1,3 @@
-
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
 0 bug darkplaces client: can't move mouse around in nexuiz menu if vid_mouse is 0
 0 bug darkplaces client: decals are not sticking to submodels
@@ -15,6 +14,7 @@
 0 bug darkplaces server csqc networking: csqc entity sending code does not currently detect packet loss and repeat lost entities (FrikaC, Chris Page, div0)
 0 bug darkplaces server: SV_PushMove is ignoring model type in its angles_x handling, where as the renderer checks only model type to determine angles_x handling (Urre)
 0 bug darkplaces server: SV_PushMove's call to SV_ClipMoveToEntity should do a trace, not just a point test, to support hollow pusher models (Urre)
+0 bug darkplaces server: entity unsticking code should try 1 unit horizontal offsets, then diagonals, then vertical, not diagonal + vertical
 0 bug darkplaces server: player entered the game is printed twice, test with +map start
 0 bug darkplaces server: savegames do not save precaches, which means that automatic precaching frequently results in invalid modelindex values when reloading the savegame, and this bug also exists in many quake mods that randomly choose multiple variants of a monster, each with separate precaches, resulting in a different precache order when reloading the savegame
 0 bug darkplaces server: when server quits, it does not notify the master that it is quitting, it should send out a couple forced heartbeats and dpmaster should be modified to remove servers that do not respond to queries within a reason time (jitspoe, div0)

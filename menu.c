@@ -183,30 +183,30 @@ static void M_DrawCharacter (float cx, float cy, int num)
 	char temp[2];
 	temp[0] = num;
 	temp[1] = 0;
-	DrawQ_String(menu_x + cx, menu_y + cy, temp, 1, 8, 8, 1, 1, 1, 1, 0);
+	DrawQ_String(menu_x + cx, menu_y + cy, temp, 1, 8, 8, 1, 1, 1, 1, 0, NULL, true);
 }
 
 static void M_PrintColored(float cx, float cy, const char *str)
 {
-	DrawQ_ColoredString(menu_x + cx, menu_y + cy, str, 0, 8, 8, 1, 1, 1, 1, 0, NULL);
+	DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 1, 1, 1, 1, 0, NULL, false);
 }
 
 static void M_Print(float cx, float cy, const char *str)
 {
-	DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 1, 1, 1, 1, 0);
+	DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 1, 1, 1, 1, 0, NULL, true);
 }
 
 static void M_PrintRed(float cx, float cy, const char *str)
 {
-	DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 1, 0, 0, 1, 0);
+	DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 1, 0, 0, 1, 0, NULL, true);
 }
 
 static void M_ItemPrint(float cx, float cy, const char *str, int unghosted)
 {
 	if (unghosted)
-		DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 1, 1, 1, 1, 0);
+		DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 1, 1, 1, 1, 0, NULL, true);
 	else
-		DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 0.4, 0.4, 0.4, 1, 0);
+		DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 0.4, 0.4, 0.4, 1, 0, NULL, true);
 }
 
 static void M_DrawPic(float cx, float cy, const char *picname)

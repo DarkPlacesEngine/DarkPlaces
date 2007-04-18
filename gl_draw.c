@@ -580,84 +580,6 @@ void DrawQ_Pic(float x, float y, cachepic_t *pic, float width, float height, flo
 	DrawQ_SuperPic(x,y,pic,width,height,0,0,red,green,blue,alpha,1,0,red,green,blue,alpha,0,1,red,green,blue,alpha,1,1,red,green,blue,alpha,flags);
 }
 
-void DrawQ_String_Real(float x, float y, const char *string, int maxlen, float w, float h, float red, float green, float blue, float alpha, int flags)
-{
-	int i, num;
-	float *av, *at;
-	int batchcount;
-	float vertex3f[QUADELEMENTS_MAXQUADS*4*3];
-	float texcoord2f[QUADELEMENTS_MAXQUADS*4*2];
-
-	if (alpha < (1.0f / 255.0f))
-		return;
-
-	_DrawQ_ProcessDrawFlag(flags);
-
-	GL_Color(red, green, blue, alpha);
-
-	R_Mesh_VertexPointer(vertex3f, 0, 0);
-	R_Mesh_ColorPointer(NULL, 0, 0);
-	R_Mesh_ResetTextureState();
-	R_Mesh_TexBind(0, R_GetTexture(char_texture));
-	R_Mesh_TexCoordPointer(0, 2, texcoord2f, 0, 0);
-
-	at = texcoord2f;
-	av = vertex3f;
-	batchcount = 0;
-
-	if (maxlen < 1)
-		maxlen = 9999;
-	for (i = 0;i < maxlen && x < vid_conwidth.integer && (num = string[i]);i++, x += w)
-	{
-		float s, t, u, v;
-		if (num == ' ')
-			continue;
-		s = (num & 15)*0.0625f + (0.5f / 256.0f);
-		t = (num >> 4)*0.0625f + (0.5f / 256.0f);
-		u = 0.0625f - (1.0f / 256.0f);
-		v = 0.0625f - (1.0f / 256.0f);
-		at[ 0] = s  ;at[ 1] = t  ;
-		at[ 2] = s+u;at[ 3] = t  ;
-		at[ 4] = s+u;at[ 5] = t+v;
-		at[ 6] = s  ;at[ 7] = t+v;
-		av[ 0] = x  ;av[ 1] = y  ;av[ 2] = 10;
-		av[ 3] = x+w;av[ 4] = y  ;av[ 5] = 10;
-		av[ 6] = x+w;av[ 7] = y+h;av[ 8] = 10;
-		av[ 9] = x  ;av[10] = y+h;av[11] = 10;
-		at += 8;
-		av += 12;
-		batchcount++;
-		if (batchcount >= QUADELEMENTS_MAXQUADS)
-		{
-			GL_LockArrays(0, batchcount * 4);
-			R_Mesh_Draw(0, batchcount * 4, batchcount * 2, quadelements, 0, 0);
-			GL_LockArrays(0, 0);
-			batchcount = 0;
-			at = texcoord2f;
-			av = vertex3f;
-		}
-	}
-	if (batchcount > 0)
-	{
-		GL_LockArrays(0, batchcount * 4);
-		R_Mesh_Draw(0, batchcount * 4, batchcount * 2, quadelements, 0, 0);
-		GL_LockArrays(0, 0);
-	}
-}
-
-void DrawQ_String(float x, float y, const char *string, int maxlen, float scalex, float scaley, float red, float green, float blue, float alpha, int flags)
-{
-	float shadow;
-	if (r_textshadow.value)
-	{
-		shadow = (1-((red+green+blue)));
-		shadow = bound(0, shadow, 1);
-		DrawQ_String_Real(x+r_textshadow.value,y+r_textshadow.value,string,maxlen,scalex,scaley,shadow,shadow,shadow,alpha*0.8,flags);
-	}
-
-	DrawQ_String_Real(x,y,string,maxlen,scalex,scaley,red,green,blue,alpha,flags);
-}
-
 // color tag printing
 static vec4_t string_colors[] =
 {
@@ -688,95 +610,165 @@ static vec4_t string_colors[] =
 
 #define STRING_COLORS_COUNT	(sizeof(string_colors) / sizeof(vec4_t))
 
-// color is read and changed in the end
-float DrawQ_ColoredString( float x, float y, const char *text, int maxlen, float scalex, float scaley, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor )
+static void DrawQ_GetTextColor(float color[4], int colorindex, float r, float g, float b, float a, qboolean shadow)
 {
-	vec_t *color;
-	int len;
-	int colorindex;
-	const char *start, *current;
-
-	if( !outcolor || *outcolor == -1 ) {
-		colorindex = STRING_COLOR_DEFAULT;
-	} else {
-		colorindex = *outcolor;
+	Vector4Copy(string_colors[colorindex], color);
+	Vector4Set(color, color[0] * r, color[1] * g, color[2] * b, color[3] * a);
+	if (shadow)
+	{
+		float shadowalpha = color[0]+color[1]+color[2] * 0.8;
+		Vector4Set(color, 0, 0, 0, color[3] * bound(0, shadowalpha, 1));
 	}
-	color = string_colors[colorindex];
+}
 
-	if( maxlen < 1)
-		len = (int)strlen( text );
-	else
-		len = min( maxlen, (int) strlen( text ) );
+float DrawQ_String(float startx, float starty, const char *text, int maxlen, float w, float h, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor, qboolean ignorecolorcodes)
+{
+	int i, num, shadow, colorindex;
+	float x, y, s, t, u, v;
+	float *av, *at, *ac;
+	float color[4];
+	int batchcount;
+	float vertex3f[QUADELEMENTS_MAXQUADS*4*3];
+	float texcoord2f[QUADELEMENTS_MAXQUADS*4*2];
+	float color4f[QUADELEMENTS_MAXQUADS*4*4];
 
-	start = current = text;
-	while( len > 0 ) {
-		// check for color control char
-		if( *current == STRING_COLOR_TAG ) {
-			// get next char
-			current++;
-			len--;
-			if( len == 0 ) {
-				break;
+	if (maxlen < 1)
+		maxlen = 1<<30;
+
+	_DrawQ_ProcessDrawFlag(flags);
+
+	R_Mesh_ColorPointer(color4f, 0, 0);
+	R_Mesh_ResetTextureState();
+	R_Mesh_TexBind(0, R_GetTexture(char_texture));
+	R_Mesh_TexCoordPointer(0, 2, texcoord2f, 0, 0);
+	R_Mesh_VertexPointer(vertex3f, 0, 0);
+
+	ac = color4f;
+	at = texcoord2f;
+	av = vertex3f;
+	batchcount = 0;
+
+	for (shadow = r_textshadow.value != 0;shadow >= 0;shadow--)
+	{
+		if (!outcolor || *outcolor == -1)
+			colorindex = STRING_COLOR_DEFAULT;
+		else
+			colorindex = *outcolor;
+		DrawQ_GetTextColor(color, colorindex, basered, basegreen, baseblue, basealpha, shadow);
+
+		x = startx;
+		y = starty;
+		if (shadow)
+		{
+			x += r_textshadow.value;
+			y += r_textshadow.value;
+		}
+		// because this loop increments x before it draws, we must bias x first
+		x -= w;
+		for (i = 0;i < maxlen && text[i];)
+		{
+			if (text[i] == STRING_COLOR_TAG && !ignorecolorcodes && i + 1 < maxlen)
+			{
+				if (text[i+1] == STRING_COLOR_TAG)
+					i++;
+				else if (text[i+1] >= '0' && text[i+1] <= '9')
+				{
+					colorindex = text[i+1] - '0';
+					DrawQ_GetTextColor(color, colorindex, basered, basegreen, baseblue, basealpha, shadow);
+					i += 2;
+					continue;
+				}
 			}
-			// display the tag char?
-			if( *current == STRING_COLOR_TAG ) {
-				// only display one of the two
-				start = current;
-				// get the next char
-				current++;
-				len--;
-			} else if( '0' <= *current && *current <= '9' ) {
-				colorindex = 0;
-				do {
-					colorindex = colorindex * 10 + (*current - '0');
-					// only read as long as it makes a valid index
-					if( colorindex >= (int)STRING_COLORS_COUNT ) {
-						// undo the last operation
-						colorindex /= 10;
-						break;
-					}
-					current++;
-					len--;
-				} while( len > 0 && '0' <= *current && *current <= '9' );
-				// set the color
-				color = string_colors[colorindex];
-				// we jump over the color tag
-				start = current;
+			num = text[i++];
+			x += w;
+			if (num == ' ')
+				continue;
+			s = (num & 15)*0.0625f + (0.5f / 256.0f);
+			t = (num >> 4)*0.0625f + (0.5f / 256.0f);
+			u = 0.0625f - (1.0f / 256.0f);
+			v = 0.0625f - (1.0f / 256.0f);
+			ac[ 0] = color[0];ac[ 1] = color[1];ac[ 2] = color[2];ac[ 3] = color[3];
+			ac[ 4] = color[0];ac[ 5] = color[1];ac[ 6] = color[2];ac[ 7] = color[3];
+			ac[ 8] = color[0];ac[ 9] = color[1];ac[10] = color[2];ac[11] = color[3];
+			ac[12] = color[0];ac[13] = color[1];ac[14] = color[2];ac[15] = color[3];
+			at[ 0] = s  ;at[ 1] = t  ;
+			at[ 2] = s+u;at[ 3] = t  ;
+			at[ 4] = s+u;at[ 5] = t+v;
+			at[ 6] = s  ;at[ 7] = t+v;
+			av[ 0] = x  ;av[ 1] = y  ;av[ 2] = 10;
+			av[ 3] = x+w;av[ 4] = y  ;av[ 5] = 10;
+			av[ 6] = x+w;av[ 7] = y+h;av[ 8] = 10;
+			av[ 9] = x  ;av[10] = y+h;av[11] = 10;
+			ac += 16;
+			at += 8;
+			av += 12;
+			batchcount++;
+			if (batchcount >= QUADELEMENTS_MAXQUADS)
+			{
+				if (basealpha >= (1.0f / 255.0f))
+				{
+					GL_LockArrays(0, batchcount * 4);
+					R_Mesh_Draw(0, batchcount * 4, batchcount * 2, quadelements, 0, 0);
+					GL_LockArrays(0, 0);
+				}
+				batchcount = 0;
+				ac = color4f;
+				at = texcoord2f;
+				av = vertex3f;
 			}
 		}
-		// go on and read normal text in until the next control char
-		while( len > 0 && *current != STRING_COLOR_TAG ) {
-			current++;
-			len--;
-		}
-		// display the text
-		if( start != current ) {
-			// draw the string
-			DrawQ_String( x, y, start, current - start, scalex, scaley, basered * color[0], basegreen * color[1], baseblue * color[2], basealpha * color[3], flags );
-			// update x to be at the new start position
-			x += (current - start) * scalex;
-			// set start accordingly
-			start = current;
+	}
+	if (batchcount > 0)
+	{
+		if (basealpha >= (1.0f / 255.0f))
+		{
+			GL_LockArrays(0, batchcount * 4);
+			R_Mesh_Draw(0, batchcount * 4, batchcount * 2, quadelements, 0, 0);
+			GL_LockArrays(0, 0);
 		}
 	}
-
-	if( start != current ) {
-		// draw the string
-		DrawQ_String( x, y, start, current - start, scalex, scaley, basered * color[0], basegreen * color[1], baseblue * color[2], basealpha * color[3], flags );
-		// update x to be at the new start position
-		x += (current - start) * scalex;
-		// set start accordingly
-		start = current;
-	}
-
-	// return the last colorindex
-	if( outcolor ) {
-		*outcolor = colorindex;
-	}
-
-	// return the new x position
+	// note: this relies on the proper text (not shadow) being drawn last
 	return x;
 }
+
+#if 0
+// not used
+static int DrawQ_BuildColoredText(char *output2c, size_t maxoutchars, const char *text, int maxreadchars, qboolean ignorecolorcodes, int *outcolor)
+{
+	int color, numchars = 0;
+	char *outputend2c = output2c + maxoutchars - 2;
+	if (!outcolor || *outcolor == -1)
+		color = STRING_COLOR_DEFAULT;
+	else
+		color = *outcolor;
+	if (!maxreadchars)
+		maxreadchars = 1<<30;
+	textend = text + maxreadchars;
+	while (text != textend && *text)
+	{
+		if (*text == STRING_COLOR_TAG && !ignorecolorcodes && text + 1 != textend)
+		{
+			if (text[1] == STRING_COLOR_TAG)
+				text++;
+			else if (text[1] >= '0' && text[1] <= '9')
+			{
+				color = text[1] - '0';
+				text += 2;
+				continue;
+			}
+		}
+		if (output2c >= outputend2c)
+			break;
+		*output2c++ = *text++;
+		*output2c++ = color;
+		numchars++;
+	}
+	output2c[0] = output2c[1] = 0;
+	if (outcolor)
+		*outcolor = color;
+	return numchars;
+}
+#endif
 
 void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height, float s1, float t1, float r1, float g1, float b1, float a1, float s2, float t2, float r2, float g2, float b2, float a2, float s3, float t3, float r3, float g3, float b3, float a3, float s4, float t4, float r4, float g4, float b4, float a4, int flags)
 {

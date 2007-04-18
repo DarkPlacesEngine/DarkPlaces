@@ -148,7 +148,7 @@ void SCR_DrawCenterString (void)
 		{
 			if (remaining < l)
 				l = remaining;
-			DrawQ_ColoredString(x, y, start, l, 8, 8, 1, 1, 1, 1, 0, &color);
+			DrawQ_String(x, y, start, l, 8, 8, 1, 1, 1, 1, 0, &color, false);
 			remaining -= l;
 			if (remaining <= 0)
 				return;
@@ -188,10 +188,6 @@ void SCR_CheckDrawCenterString (void)
 void SCR_DrawNetGraph_DrawGraph (int graphx, int graphy, int barwidth, int barheight, int bardivide, const char *label, float textsize, int packetcounter, int numparameters, const int **parameters, const float parametercolors[][4])
 {
 	int j, k, x, y, index, offset, height;
-	// dim background
-	DrawQ_Pic (graphx, graphy, NULL, barwidth * NETGRAPH_PACKETS, barheight + textsize, 0, 0, 0, 0.5, 0);
-	// draw a label
-	DrawQ_String (graphx, graphy + barheight, label, 0, textsize, textsize, 1, 1, 1, 1, 0);
 	// draw the bar graph itself
 	for (j = 0;j < NETGRAPH_PACKETS;j++)
 	{
@@ -228,6 +224,10 @@ void SCR_DrawNetGraph_DrawConnection_Client (netconn_t *conn, int graphx, int gr
 {
 	int numparameters;
 	const int *parameters[3];
+	// dim background
+	DrawQ_Pic (graphx                                          , graphy, NULL, barwidth * NETGRAPH_PACKETS, barheight + textsize, 0, 0, 0, 0.5, 0);
+	DrawQ_Pic (graphx + barwidth * NETGRAPH_PACKETS + separator, graphy, NULL, barwidth * NETGRAPH_PACKETS, barheight + textsize, 0, 0, 0, 0.5, 0);
+	// draw the bar graphs
 	numparameters = 3;
 	parameters[0] = conn->incoming_unreliablesize;
 	parameters[1] = conn->incoming_reliablesize;
@@ -237,21 +237,31 @@ void SCR_DrawNetGraph_DrawConnection_Client (netconn_t *conn, int graphx, int gr
 	parameters[1] = conn->outgoing_reliablesize;
 	parameters[2] = conn->outgoing_acksize;
 	SCR_DrawNetGraph_DrawGraph(graphx + barwidth * NETGRAPH_PACKETS + separator, graphy, barwidth, barheight, bardivide, labeloutgoing, textsize, conn->outgoing_packetcounter, numparameters, parameters, netgraphcolors);
+	// draw labels
+	DrawQ_String(graphx                                          , graphy + barheight, labelincoming, 0, textsize, textsize, 1, 1, 1, 1, 0, NULL, false);
+	DrawQ_String(graphx + barwidth * NETGRAPH_PACKETS + separator, graphy + barheight, labeloutgoing, 0, textsize, textsize, 1, 1, 1, 1, 0, NULL, false);
 }
 
 void SCR_DrawNetGraph_DrawConnection_Server (netconn_t *conn, int graphx, int graphy, int barwidth, int barheight, int bardivide, const char *labeloutgoing, int separator, const char *labelincoming, float textsize)
 {
 	int numparameters;
 	const int *parameters[3];
+	// dim background
+	DrawQ_Pic (graphx                                          , graphy, NULL, barwidth * NETGRAPH_PACKETS, barheight + textsize, 0, 0, 0, 0.5, 0);
+	DrawQ_Pic (graphx + barwidth * NETGRAPH_PACKETS + separator, graphy, NULL, barwidth * NETGRAPH_PACKETS, barheight + textsize, 0, 0, 0, 0.5, 0);
+	// draw the bar graphs
 	numparameters = 3;
 	parameters[0] = conn->outgoing_unreliablesize;
 	parameters[1] = conn->outgoing_reliablesize;
 	parameters[2] = conn->outgoing_acksize;
-	SCR_DrawNetGraph_DrawGraph(graphx, graphy, barwidth, barheight, bardivide, labeloutgoing, textsize, conn->outgoing_packetcounter, numparameters, parameters, netgraphcolors);
+	SCR_DrawNetGraph_DrawGraph(graphx                                          , graphy, barwidth, barheight, bardivide, labeloutgoing, textsize, conn->outgoing_packetcounter, numparameters, parameters, netgraphcolors);
 	parameters[0] = conn->incoming_unreliablesize;
 	parameters[1] = conn->incoming_reliablesize;
 	parameters[2] = conn->incoming_acksize;
 	SCR_DrawNetGraph_DrawGraph(graphx + barwidth * NETGRAPH_PACKETS + separator, graphy, barwidth, barheight, bardivide, labelincoming, textsize, conn->incoming_packetcounter, numparameters, parameters, netgraphcolors);
+	// draw labels
+	DrawQ_String(graphx                                          , graphy + barheight, labeloutgoing, 0, textsize, textsize, 1, 1, 1, 1, 0, NULL, false);
+	DrawQ_String(graphx + barwidth * NETGRAPH_PACKETS + separator, graphy + barheight, labelincoming, 0, textsize, textsize, 1, 1, 1, 1, 0, NULL, false);
 }
 
 /*
@@ -455,7 +465,7 @@ static int SCR_DrawQWDownload(int offset)
 	x = (vid_conwidth.integer - len*size) / 2;
 	y = vid_conheight.integer - size - offset;
 	DrawQ_Pic(0, y, NULL, vid_conwidth.integer, size, 0, 0, 0, 0.5, 0);
-	DrawQ_String(x, y, temp, len, size, size, 1, 1, 1, 1, 0);
+	DrawQ_String(x, y, temp, len, size, size, 1, 1, 1, 1, 0, NULL, true);
 	return 8;
 }
 
@@ -486,7 +496,7 @@ static int SCR_DrawCurlDownload(int offset)
 		len = (int)strlen(addinfo);
 		x = (vid_conwidth.integer - len*size) / 2;
 		DrawQ_Pic(0, y - size, NULL, vid_conwidth.integer, size, 1, 1, 1, 0.8, 0);
-		DrawQ_String(x, y - size, addinfo, len, size, size, 0, 0, 0, 1, 0);
+		DrawQ_String(x, y - size, addinfo, len, size, size, 0, 0, 0, 1, 0, NULL, true);
 	}
 
 	for(i = 0; i != nDownloads; ++i)
@@ -500,7 +510,7 @@ static int SCR_DrawCurlDownload(int offset)
 		len = (int)strlen(temp);
 		x = (vid_conwidth.integer - len*size) / 2;
 		DrawQ_Pic(0, y + i * size, NULL, vid_conwidth.integer, size, 0, 0, 0, 0.8, 0);
-		DrawQ_String(x, y + i * size, temp, len, size, size, 1, 1, 1, 1, 0);
+		DrawQ_String(x, y + i * size, temp, len, size, size, 1, 1, 1, 1, 0, NULL, true);
 	}
 
 	Z_Free(downinfo);
@@ -657,7 +667,7 @@ void R_TimeReport_Frame(void)
 			while (r_speeds_string[i] && r_speeds_string[i] != '\n')
 				i++;
 			if (i - j > 0)
-				DrawQ_String(0, y, r_speeds_string + j, i - j, 8, 8, 1, 1, 1, 1, 0);
+				DrawQ_String(0, y, r_speeds_string + j, i - j, 8, 8, 1, 1, 1, 1, 0, NULL, true);
 			if (r_speeds_string[i] == '\n')
 				i++;
 			y += 8;
