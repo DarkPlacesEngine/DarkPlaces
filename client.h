@@ -1240,8 +1240,7 @@ extern qboolean sb_showscores;
 extern cachepic_t *r_crosshairs[NUMCROSSHAIRS+1];
 
 #define FOGTABLEWIDTH 1024
-extern int fogtableindex;
-#define VERTEXFOGTABLE(dist) (fogtableindex = (int)((dist) * r_refdef.fogtabledistmultiplier), r_refdef.fogtable[bound(0, fogtableindex, FOGTABLEWIDTH - 1)])
+#define VERTEXFOGTABLE(dist) (r_refdef.fogtable[min((unsigned int)((dist) * r_refdef.fogtabledistmultiplier), FOGTABLEWIDTH - 1)])
 
 typedef struct r_refdef_stats_s
 {
