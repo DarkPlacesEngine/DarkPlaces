@@ -189,6 +189,9 @@ void SCR_DrawNetGraph_DrawGraph (int graphx, int graphy, int barwidth, int barhe
 {
 	int j, k, x, y, index, offset, height;
 	// draw the bar graph itself
+	// advance the packet counter because it is the latest packet column being
+	// built up and should come last
+	packetcounter = (packetcounter + 1) % NETGRAPH_PACKETS;
 	for (j = 0;j < NETGRAPH_PACKETS;j++)
 	{
 		x = graphx + j * barwidth;
