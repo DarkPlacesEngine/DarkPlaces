@@ -601,7 +601,7 @@ void VM_M_getserverlistindexforkey( void )
 		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_MAXPLAYERS;
 	else if( !strcmp( key, "numplayers" ) )
 		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_NUMPLAYERS;
-	else if( !strcmp( key, "numbotss" ) )
+	else if( !strcmp( key, "numbots" ) )
 		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_NUMBOTS;
 	else if( !strcmp( key, "numhumans" ) )
 		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_NUMHUMANS;
