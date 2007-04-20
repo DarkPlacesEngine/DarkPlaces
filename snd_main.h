@@ -113,7 +113,7 @@ struct snd_fetcher_s
 // 0 to NUM_AMBIENTS - 1 = water, etc
 // NUM_AMBIENTS to NUM_AMBIENTS + MAX_DYNAMIC_CHANNELS - 1 = normal entity sounds
 // NUM_AMBIENTS + MAX_DYNAMIC_CHANNELS to total_channels = static sounds
-#define	MAX_DYNAMIC_CHANNELS	128
+#define	MAX_DYNAMIC_CHANNELS	512
 #define	MAX_CHANNELS			516
 
 extern unsigned int total_channels;
