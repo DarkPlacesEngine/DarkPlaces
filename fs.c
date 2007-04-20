@@ -278,6 +278,7 @@ int fs_numgamedirs = 0;
 char fs_gamedirs[MAX_GAMEDIRS][MAX_QPATH];
 
 cvar_t scr_screenshot_name = {0, "scr_screenshot_name","dp", "prefix name for saved screenshots (changes based on -game commandline, as well as which game mode is running)"};
+cvar_t fs_empty_files_in_pack_mark_deletions = {0, "fs_empty_files_in_pack_mark_deletions", "0", "if enabled, empty files in a pak/pk3 count as not existing but cancel the search in further packs, effectively allowing patch pak/pk3 files to 'delete' files"};
 
 
 /*
@@ -1379,6 +1380,7 @@ void FS_Init (void)
 void FS_Init_Commands(void)
 {
 	Cvar_RegisterVariable (&scr_screenshot_name);
+	Cvar_RegisterVariable (&fs_empty_files_in_pack_mark_deletions);
 
 	Cmd_AddCommand ("gamedir", FS_GameDir_f, "changes active gamedir list (can take multiple arguments), not including base directory (example usage: gamedir ctf)");
 	Cmd_AddCommand ("fs_rescan", FS_Rescan_f, "rescans filesystem for new pack archives and any other changes");
@@ -1672,6 +1674,17 @@ static searchpath_t *FS_FindFile (const char *name, int* index, qboolean quiet)
 				// Found it
 				if (!diff)
 				{
+					if (fs_empty_files_in_pack_mark_deletions.integer && pak->files[middle].realsize == 0)
+					{
+						// yes, but the first one is empty so we treat it as not being there
+						if (!quiet && developer.integer >= 10)
+							Con_Printf("FS_FindFile: %s is marked as deleted\n", name);
+
+						if (index != NULL)
+							*index = -1;
+						return NULL;
+					}
+
 					if (!quiet && developer.integer >= 10)
 						Con_Printf("FS_FindFile: %s in %s\n",
 									pak->files[middle].name, pak->filename);
