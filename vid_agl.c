@@ -24,10 +24,14 @@
 #include <dlfcn.h>
 #include <signal.h>
 #include <AGL/agl.h>
+#include <OpenGL/OpenGL.h>
 #include <Carbon/Carbon.h>
 #include "vid_agl_mackeys.h" // this is SDL/src/video/maccommon/SDL_mackeys.h
 #include "quakedef.h"
 
+#ifndef kCGLCEMPEngine
+#define kCGLCEMPEngine 313
+#endif
 
 // Tell startup code that we have a client
 int cl_available = true;
@@ -46,6 +50,9 @@ GLboolean (*qaglSetDrawable) (AGLContext ctx, AGLDrawable draw);
 GLboolean (*qaglSetFullScreen) (AGLContext ctx, GLsizei width, GLsizei height, GLsizei freq, GLint device);
 GLboolean (*qaglSetInteger) (AGLContext ctx, GLenum pname, const GLint *params);
 void (*qaglSwapBuffers) (AGLContext ctx);
+CGLError (*qCGLEnable) (CGLContextObj ctx, CGLContextEnable pname);
+CGLError (*qCGLDisable) (CGLContextObj ctx, CGLContextEnable pname);
+CGLContextObj (*qCGLGetCurrentContext) (void);
 
 static qboolean multithreadedgl;
 static qboolean mouse_avail = true;
@@ -151,32 +158,41 @@ void VID_Finish (qboolean allowmousegrab)
 	}
 	VID_UpdateGamma(false, GAMMA_TABLE_SIZE);
 
-#ifdef kCGLCEMPEngine
 	if (apple_multithreadedgl.integer)
 	{
 		if (!multithreadedgl)
 		{
-			CGLError err = 0;
-			CGLContextObj ctx = CGLGetCurrentContext();
-			err = CGLEnable(ctx, kCGLEMPEngine);
-			if (err == kCGLNoError)
-				multithreadedgl = true;
+			if(qCGLGetCurrentContext && qCGLEnable && qCGLDisable)
+			{
+				CGLContextObj ctx = qCGLGetCurrentContext();
+				CGLError e = qCGLEnable(ctx, kCGLCEMPEngine);
+				if(e == kCGLNoError)
+					multithreadedgl = true;
+				else
+				{
+					Con_Printf("WARNING: can't enable multithreaded GL, error %d\n", (int) e);
+					Cvar_SetValueQuick(&apple_multithreadedgl, 0);
+				}
+			}
 			else
+			{
+				Con_Printf("WARNING: can't enable multithreaded GL, CGL functions not present\n", (int) e);
 				Cvar_SetValueQuick(&apple_multithreadedgl, 0);
+			}
 		}
 	}
 	else
 	{
 		if (multithreadedgl)
 		{
-			multithreadedgl = false;
-			CGLDisable(ctx, kCGLEMPEngine);
+			if(qCGLGetCurrentContext && qCGLEnable && qCGLDisable)
+			{
+				CGLContextObj ctx = qCGLGetCurrentContext();
+				qCGLDisable(ctx, kCGLCEMPEngine);
+				multithreadedgl = false;
+			}
 		}
 	}
-#else
-	if (apple_multithreadedgl.integer)
-		Cvar_SetValueQuick(&apple_multithreadedgl, 0);
-#endif
 }
 
 int VID_SetGamma(unsigned short *ramps, int rampsize)
@@ -266,9 +282,13 @@ void VID_Init(void)
 }
 
 static void *prjobj = NULL;
+static void *cglobj = NULL;
 
 static void GL_CloseLibrary(void)
 {
+	if (cglobj)
+		dlclose(cglobj);
+	cglobj = NULL;
 	if (prjobj)
 		dlclose(prjobj);
 	prjobj = NULL;
@@ -281,6 +301,7 @@ static void GL_CloseLibrary(void)
 static int GL_OpenLibrary(void)
 {
 	const char *name = "/System/Library/Frameworks/AGL.framework/AGL";
+	const char *name2 = "/System/Library/Frameworks/OpenGL.framework/OpenGL";
 
 	Con_Printf("Loading OpenGL driver %s\n", name);
 	GL_CloseLibrary();
@@ -290,12 +311,24 @@ static int GL_OpenLibrary(void)
 		return false;
 	}
 	strlcpy(gl_driver, name, sizeof(gl_driver));
+
+	Con_Printf("Loading OpenGL driver %s\n", name2);
+	if (!(cglobj = dlopen(name2, RTLD_LAZY)))
+		Con_Printf("Unable to open symbol list for %s; multithreaded GL disabled\n", name);
+
 	return true;
 }
 
 void *GL_GetProcAddress(const char *name)
 {
 	return dlsym(prjobj, name);
+}
+
+static void *CGL_GetProcAddress(const char *name)
+{
+	if(!cglobj)
+		return NULL;
+	return dlsym(cglobj, name);
 }
 
 void VID_Shutdown(void)
@@ -452,6 +485,12 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 		ReleaseWindow(window);
 		return false;
 	}
+
+	qCGLEnable = (CGLError (*) (CGLContextObj ctx, CGLContextEnable pname)) CGL_GetProcAddress("CGLEnable");
+	qCGLDisable = (CGLError (*) (CGLContextObj ctx, CGLContextEnable pname)) CGL_GetProcAddress("CGLDisable");
+	qCGLGetCurrentContext = (CGLContextObj (*) (void)) CGL_GetProcAddress("CGLGetCurrentContext");
+	if(!qCGLEnable || !qCGLDisable || !qCGLGetCurrentContext)
+		Con_Printf("CGL functions not found; disabling multithreaded OpenGL\n");
 
 	// Ignore the events from the previous window
 	AsyncEvent_Quitting = false;
