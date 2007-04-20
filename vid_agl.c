@@ -176,7 +176,7 @@ void VID_Finish (qboolean allowmousegrab)
 			}
 			else
 			{
-				Con_Printf("WARNING: can't enable multithreaded GL, CGL functions not present\n", (int) e);
+				Con_Printf("WARNING: can't enable multithreaded GL, CGL functions not present\n");
 				Cvar_SetValueQuick(&apple_multithreadedgl, 0);
 			}
 		}
