@@ -291,9 +291,9 @@ static qboolean _ServerList_Entry_Mask( serverlist_mask_t *mask, serverlist_info
 		return false;
 	if( !_ServerList_CompareInt( info->numplayers, mask->tests[SLIF_NUMPLAYERS], mask->info.numplayers ) )
 		return false;
-	if( !_ServerList_CompareInt( info->numplayers, mask->tests[SLIF_NUMBOTS], mask->info.numbots ) )
+	if( !_ServerList_CompareInt( info->numbots, mask->tests[SLIF_NUMBOTS], mask->info.numbots ) )
 		return false;
-	if( !_ServerList_CompareInt( info->numplayers, mask->tests[SLIF_NUMHUMANS], mask->info.numhumans ) )
+	if( !_ServerList_CompareInt( info->numhumans, mask->tests[SLIF_NUMHUMANS], mask->info.numhumans ) )
 		return false;
 	if( !_ServerList_CompareInt( info->protocol, mask->tests[SLIF_PROTOCOL], mask->info.protocol ))
 		return false;
@@ -392,8 +392,15 @@ void ServerList_RebuildViewList(void)
 
 void ServerList_ResetMasks(void)
 {
+	int i;
+
 	memset( &serverlist_andmasks, 0, sizeof( serverlist_andmasks ) );
 	memset( &serverlist_ormasks, 0, sizeof( serverlist_ormasks ) );
+	// numbots needs to be compared to -1 to always succeed
+	for(i = 0; i < SERVERLIST_ANDMASKCOUNT; ++i)
+		serverlist_andmasks[i].info.numbots = -1;
+	for(i = 0; i < SERVERLIST_ORMASKCOUNT; ++i)
+		serverlist_ormasks[i].info.numbots = -1;
 }
 
 #if 0
@@ -1319,7 +1326,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			info->name[0] = 0;
 			info->protocol = -1;
 			info->numplayers = 0;
-			info->numbots = 0;
+			info->numbots = -1;
 			info->maxplayers  = 0;
 			info->gameversion = 0;
 			if ((s = SearchInfostring(string, "gamename"     )) != NULL) strlcpy(info->game, s, sizeof (info->game));
@@ -1331,7 +1338,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			if ((s = SearchInfostring(string, "bots"         )) != NULL) info->numbots = atoi(s);
 			if ((s = SearchInfostring(string, "sv_maxclients")) != NULL) info->maxplayers = atoi(s);
 			if ((s = SearchInfostring(string, "gameversion"  )) != NULL) info->gameversion = atoi(s);
-			info->numhumans = info->numplayers - info->numbots;
+			info->numhumans = info->numplayers - max(0, info->numbots);
 
 			NetConn_ClientParsePacket_ServerList_UpdateCache(n);
 
