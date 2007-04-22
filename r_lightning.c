@@ -219,7 +219,7 @@ void R_FogLightningBeam_Vertex3f_Color4f(const float *v, float *c, int numverts,
 	float fog;
 	for (i = 0;i < numverts;i++, v += 3, c += 4)
 	{
-		fog = FogPoint_Model(v);
+		fog = FogPoint_World(v);
 		c[0] = r * fog;
 		c[1] = g * fog;
 		c[2] = b * fog;
