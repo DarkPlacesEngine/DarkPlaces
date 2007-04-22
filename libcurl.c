@@ -281,7 +281,7 @@ static void Curl_CheckCommandWhenDone()
 		return;
 	if(numdownloads_added && (numdownloads_success == numdownloads_added) && *command_when_done)
 	{
-		Con_DPrintf("Map downloads occurred, executing %s\n", command_when_done);
+		Con_DPrintf("cURL downloads occurred, executing %s\n", command_when_done);
 		Cbuf_AddText("\n");
 		Cbuf_AddText(command_when_done);
 		Cbuf_AddText("\n");
@@ -289,7 +289,7 @@ static void Curl_CheckCommandWhenDone()
 	}
 	else if(numdownloads_added && numdownloads_fail && *command_when_error)
 	{
-		Con_DPrintf("Map downloads FAILED, executing %s\n", command_when_error);
+		Con_DPrintf("cURL downloads FAILED, executing %s\n", command_when_error);
 		Cbuf_AddText("\n");
 		Cbuf_AddText(command_when_error);
 		Cbuf_AddText("\n");
