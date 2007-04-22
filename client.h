@@ -1239,8 +1239,8 @@ extern qboolean sb_showscores;
 #define NUMCROSSHAIRS 32
 extern cachepic_t *r_crosshairs[NUMCROSSHAIRS+1];
 
-#define FOGTABLEWIDTH 1024
-#define VERTEXFOGTABLE(dist) (r_refdef.fogtable[min((unsigned int)((dist) * r_refdef.fogtabledistmultiplier), FOGTABLEWIDTH - 1)])
+float FogPoint_World(const vec3_t p);
+float FogPoint_Model(const vec3_t p);
 
 typedef struct r_refdef_stats_s
 {
@@ -1311,8 +1311,9 @@ typedef struct r_refdef_s
 	vec3_t fogcolor;
 	vec_t fogrange;
 	vec_t fograngerecip;
-	vec_t fogtabledistmultiplier;
-	float fogtable[FOGTABLEWIDTH];
+	vec_t fogmasktabledistmultiplier;
+#define FOGMASKTABLEWIDTH 1024
+	float fogmasktable[FOGMASKTABLEWIDTH];
 	float fog_density;
 	float fog_red;
 	float fog_green;

@@ -2138,7 +2138,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 	{
 		particletexture_t *tex;
 		const float *org;
-		float up2[3], v[3], right[3], up[3], fog, ifog, cr, cg, cb, ca, size;
+		float up2[3], v[3], right[3], up[3], fog, cr, cg, cb, ca, size;
 
 		p = cl.particles + surfacelist[surfacelistindex];
 
@@ -2169,13 +2169,13 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 		}
 		if (r_refdef.fogenabled)
 		{
-			fog = VERTEXFOGTABLE(VectorDistance(p->org, r_view.origin));
-			ifog = 1 - fog;
-			cr = cr * ifog;
-			cg = cg * ifog;
-			cb = cb * ifog;
+			fog = FogPoint_World(p->org);
+			cr = cr * fog;
+			cg = cg * fog;
+			cb = cb * fog;
 			if (blendmode == PBLEND_ALPHA)
 			{
+				fog = 1 - fog;
 				cr += r_refdef.fogcolor[0] * fog * r_view.colorscale;
 				cg += r_refdef.fogcolor[1] * fog * r_view.colorscale;
 				cb += r_refdef.fogcolor[2] * fog * r_view.colorscale;

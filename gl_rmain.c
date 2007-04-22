@@ -199,31 +199,16 @@ void FOG_clear(void)
 	r_refdef.fog_density = r_refdef.fog_red = r_refdef.fog_green = r_refdef.fog_blue = 0.0f;
 }
 
-// FIXME: move this to client?
-void FOG_registercvars(void)
+float FogPoint_World(const vec3_t p)
 {
-	int x;
-	double r, alpha;
+	int fogmasktableindex = (int)(VectorDistance((p), r_view.origin) * r_refdef.fogmasktabledistmultiplier);
+	return r_refdef.fogmasktable[min(fogmasktableindex, FOGMASKTABLEWIDTH - 1)];
+}
 
-	if (gamemode == GAME_NEHAHRA)
-	{
-		Cvar_RegisterVariable (&gl_fogenable);
-		Cvar_RegisterVariable (&gl_fogdensity);
-		Cvar_RegisterVariable (&gl_fogred);
-		Cvar_RegisterVariable (&gl_foggreen);
-		Cvar_RegisterVariable (&gl_fogblue);
-		Cvar_RegisterVariable (&gl_fogstart);
-		Cvar_RegisterVariable (&gl_fogend);
-	}
-
-	r = (-1.0/256.0) * (FOGTABLEWIDTH * FOGTABLEWIDTH);
-	for (x = 0;x < FOGTABLEWIDTH;x++)
-	{
-		alpha = exp(r / ((double)x*(double)x));
-		if (x == FOGTABLEWIDTH - 1)
-			alpha = 1;
-		r_refdef.fogtable[x] = bound(0, alpha, 1);
-	}
+float FogPoint_Model(const vec3_t p)
+{
+	int fogmasktableindex = (int)(VectorDistance((p), rsurface_modelorg) * r_refdef.fogmasktabledistmultiplier);
+	return r_refdef.fogmasktable[min(fogmasktableindex, FOGMASKTABLEWIDTH - 1)];
 }
 
 static void R_BuildBlankTextures(void)
@@ -349,25 +334,19 @@ static void R_BuildNormalizationCube(void)
 static void R_BuildFogTexture(void)
 {
 	int x, b;
-	double r, alpha;
 #define FOGWIDTH 64
 	unsigned char data1[FOGWIDTH][4];
 	//unsigned char data2[FOGWIDTH][4];
-	r = (-1.0/256.0) * (FOGWIDTH * FOGWIDTH);
 	for (x = 0;x < FOGWIDTH;x++)
 	{
-		alpha = exp(r / ((double)x*(double)x));
-		if (x == FOGWIDTH - 1)
-			alpha = 1;
-		b = (int)(256.0 * alpha);
-		b = bound(0, b, 255);
-		data1[x][0] = 255 - b;
-		data1[x][1] = 255 - b;
-		data1[x][2] = 255 - b;
+		b = (int)(r_refdef.fogmasktable[x * (FOGMASKTABLEWIDTH - 1) / (FOGWIDTH - 1)] * 255);
+		data1[x][0] = b;
+		data1[x][1] = b;
+		data1[x][2] = b;
 		data1[x][3] = 255;
-		//data2[x][0] = b;
-		//data2[x][1] = b;
-		//data2[x][2] = b;
+		//data2[x][0] = 255 - b;
+		//data2[x][1] = 255 - b;
+		//data2[x][2] = 255 - b;
 		//data2[x][3] = 255;
 	}
 	r_texture_fogattenuation = R_LoadTexture2D(r_main_texturepool, "fogattenuation", FOGWIDTH, 1, &data1[0][0], TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP, NULL);
@@ -1056,6 +1035,18 @@ void R_SwitchSurfaceShader(int permutation)
 
 void gl_main_start(void)
 {
+	int x;
+	double r, alpha;
+
+	r = (-1.0/256.0) * (FOGMASKTABLEWIDTH * FOGMASKTABLEWIDTH);
+	for (x = 0;x < FOGMASKTABLEWIDTH;x++)
+	{
+		alpha = 1 - exp(r / ((double)x*(double)x));
+		if (x == FOGMASKTABLEWIDTH - 1)
+			alpha = 0;
+		r_refdef.fogmasktable[x] = bound(0, alpha, 1);
+	}
+
 	r_main_texturepool = R_AllocTexturePool();
 	R_BuildBlankTextures();
 	R_BuildNoTexture();
@@ -1115,7 +1106,17 @@ void GL_Main_Init(void)
 	r_main_mempool = Mem_AllocPool("Renderer", 0, NULL);
 
 	Cmd_AddCommand("r_glsl_restart", R_GLSL_Restart_f, "unloads GLSL shaders, they will then be reloaded as needed");
-	FOG_registercvars(); // FIXME: move this fog stuff to client?
+	// FIXME: the client should set up r_refdef.fog stuff including the fogmasktable
+	if (gamemode == GAME_NEHAHRA)
+	{
+		Cvar_RegisterVariable (&gl_fogenable);
+		Cvar_RegisterVariable (&gl_fogdensity);
+		Cvar_RegisterVariable (&gl_fogred);
+		Cvar_RegisterVariable (&gl_foggreen);
+		Cvar_RegisterVariable (&gl_fogblue);
+		Cvar_RegisterVariable (&gl_fogstart);
+		Cvar_RegisterVariable (&gl_fogend);
+	}
 	Cvar_RegisterVariable(&r_nearclip);
 	Cvar_RegisterVariable(&r_showsurfaces);
 	Cvar_RegisterVariable(&r_showtris);
@@ -2129,7 +2130,7 @@ void R_UpdateVariables(void)
 		// (0.9986 * 256 == 255.6)
 		r_refdef.fogrange = 400 / r_refdef.fog_density;
 		r_refdef.fograngerecip = 1.0f / r_refdef.fogrange;
-		r_refdef.fogtabledistmultiplier = FOGTABLEWIDTH * r_refdef.fograngerecip;
+		r_refdef.fogmasktabledistmultiplier = FOGMASKTABLEWIDTH * r_refdef.fograngerecip;
 		// fog color was already set
 	}
 	else
@@ -2340,8 +2341,8 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 	{
 		for (i = 0, v = vertex, c = color;i < 8;i++, v += 4, c += 4)
 		{
-			f2 = VERTEXFOGTABLE(VectorDistance(v, r_view.origin));
-			f1 = 1 - f2;
+			f1 = FogPoint_World(v);
+			f2 = 1 - f1;
 			c[0] = c[0] * f1 + r_refdef.fogcolor[0] * f2;
 			c[1] = c[1] * f1 + r_refdef.fogcolor[1] * f2;
 			c[2] = c[2] * f1 + r_refdef.fogcolor[2] * f2;
@@ -2420,8 +2421,8 @@ void R_DrawNoModel_TransparentCallback(const entity_render_t *ent, const rtlight
 		memcpy(color4f, nomodelcolor4f, sizeof(float[6*4]));
 		R_Mesh_ColorPointer(color4f, 0, 0);
 		Matrix4x4_OriginFromMatrix(&ent->matrix, org);
-		f2 = VERTEXFOGTABLE(VectorDistance(org, r_view.origin));
-		f1 = 1 - f2;
+		f1 = FogPoint_World(org);
+		f2 = 1 - f1;
 		for (i = 0, c = color4f;i < 6;i++, c += 4)
 		{
 			c[0] = (c[0] * f1 + r_refdef.fogcolor[0] * f2);
@@ -2487,12 +2488,11 @@ float spritetexcoord2f[4*2] = {0, 1, 0, 0, 1, 0, 1, 1};
 
 void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, rtexture_t *fogtexture, qboolean depthdisable, qboolean depthshort, const vec3_t origin, const vec3_t left, const vec3_t up, float scalex1, float scalex2, float scaley1, float scaley2, float cr, float cg, float cb, float ca)
 {
-	float fog = 0.0f, ifog;
+	float fog = 1.0f;
 	float vertex3f[12];
 
 	if (r_refdef.fogenabled)
-		fog = VERTEXFOGTABLE(VectorDistance(origin, r_view.origin));
-	ifog = 1 - fog;
+		fog = FogPoint_World(origin);
 
 	R_Mesh_Matrix(&identitymatrix);
 	GL_BlendFunc(blendfunc1, blendfunc2);
@@ -2519,13 +2519,14 @@ void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, rtexture_
 	R_Mesh_TexBind(0, R_GetTexture(texture));
 	R_Mesh_TexCoordPointer(0, 2, spritetexcoord2f, 0, 0);
 	// FIXME: fixed function path can't properly handle r_view.colorscale > 1
-	GL_Color(cr * ifog * r_view.colorscale, cg * ifog * r_view.colorscale, cb * ifog * r_view.colorscale, ca);
+	GL_Color(cr * fog * r_view.colorscale, cg * fog * r_view.colorscale, cb * fog * r_view.colorscale, ca);
 	R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
 
 	if (blendfunc2 == GL_ONE_MINUS_SRC_ALPHA)
 	{
 		R_Mesh_TexBind(0, R_GetTexture(fogtexture));
 		GL_BlendFunc(blendfunc1, GL_ONE);
+		fog = 1 - fog;
 		GL_Color(r_refdef.fogcolor[0] * fog * r_view.colorscale, r_refdef.fogcolor[1] * fog * r_view.colorscale, r_refdef.fogcolor[2] * fog * r_view.colorscale, ca);
 		R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
 	}
@@ -3371,7 +3372,7 @@ static void RSurf_DrawBatch_GL11_ApplyFog(int texturenumsurfaces, msurface_t **t
 			const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 			for (i = 0, v = (rsurface_vertex3f + 3 * surface->num_firstvertex), c = (rsurface_lightmapcolor4f + 4 * surface->num_firstvertex), c2 = (rsurface_array_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, v += 3, c += 4, c2 += 4)
 			{
-				f = 1 - VERTEXFOGTABLE(VectorDistance(v, rsurface_modelorg));
+				f = FogPoint_Model(v);
 				c2[0] = c[0] * f;
 				c2[1] = c[1] * f;
 				c2[2] = c[2] * f;
@@ -3386,7 +3387,7 @@ static void RSurf_DrawBatch_GL11_ApplyFog(int texturenumsurfaces, msurface_t **t
 			const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 			for (i = 0, v = (rsurface_vertex3f + 3 * surface->num_firstvertex), c2 = (rsurface_array_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, v += 3, c2 += 4)
 			{
-				f = 1 - VERTEXFOGTABLE(VectorDistance(v, rsurface_modelorg));
+				f = FogPoint_Model(v);
 				c2[0] = f;
 				c2[1] = f;
 				c2[2] = f;
@@ -3799,7 +3800,7 @@ static void R_DrawTextureSurfaceList_GL13(int texturenumsurfaces, msurface_t **t
 				const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 				for (i = 0, v = (rsurface_vertex3f + 3 * surface->num_firstvertex), c = (rsurface_array_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, v += 3, c += 4)
 				{
-					f = VERTEXFOGTABLE(VectorDistance(v, rsurface_modelorg));
+					f = 1 - FogPoint_Model(v);
 					c[0] = layercolor[0];
 					c[1] = layercolor[1];
 					c[2] = layercolor[2];
@@ -3929,7 +3930,7 @@ static void R_DrawTextureSurfaceList_GL11(int texturenumsurfaces, msurface_t **t
 				const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 				for (i = 0, v = (rsurface_vertex3f + 3 * surface->num_firstvertex), c = (rsurface_array_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, v += 3, c += 4)
 				{
-					f = VERTEXFOGTABLE(VectorDistance(v, rsurface_modelorg));
+					f = 1 - FogPoint_Model(v);
 					c[0] = layer->color[0];
 					c[1] = layer->color[1];
 					c[2] = layer->color[2];
