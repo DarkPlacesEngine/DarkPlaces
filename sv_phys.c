@@ -1191,9 +1191,10 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 		pusher->fields.server->solid = savesolid; // was SOLID_BSP
 		//Con_Printf("%s:%d frac %f startsolid %d bmodelstartsolid %d allsolid %d\n", __FILE__, __LINE__, trace.fraction, trace.startsolid, trace.bmodelstartsolid, trace.allsolid);
 
-		// this check is for items riding platforms that are passing under (or
-		// through) walls intended to knock the items off
-		if (trace.fraction < 1 && check->fields.server->movetype != MOVETYPE_WALK)
+		// this trace.fraction < 1 check causes items to fall off of pushers
+		// if they pass under or through a wall
+		// the groundentity check causes items to fall off of ledges
+		if (check->fields.server->movetype != MOVETYPE_WALK && (trace.fraction < 1 || PRVM_PROG_TO_EDICT(check->fields.server->groundentity) != pusher))
 			check->fields.server->flags = (int)check->fields.server->flags & ~FL_ONGROUND;
 
 		// if it is still inside the pusher, block
