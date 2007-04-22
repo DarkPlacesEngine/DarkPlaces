@@ -216,13 +216,13 @@ void R_CalcLightningBeamPolygonTexCoord2f(float *tc, float t1, float t2)
 void R_FogLightningBeam_Vertex3f_Color4f(const float *v, float *c, int numverts, float r, float g, float b, float a)
 {
 	int i;
-	float ifog;
+	float fog;
 	for (i = 0;i < numverts;i++, v += 3, c += 4)
 	{
-		ifog = 1 - VERTEXFOGTABLE(VectorDistance(v, r_view.origin));
-		c[0] = r * ifog;
-		c[1] = g * ifog;
-		c[2] = b * ifog;
+		fog = FogPoint_Model(v);
+		c[0] = r * fog;
+		c[1] = g * fog;
+		c[2] = b * fog;
 		c[3] = a;
 	}
 }

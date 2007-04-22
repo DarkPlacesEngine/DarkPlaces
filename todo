@@ -60,6 +60,7 @@
 0 change darkplaces protocol: PRYDON_CLIENTCURSOR should use a stat and .prydoncursor field instead of the cl_prydoncursor cvar, because stuffcmd is a bit icky (FrikaC)
 0 change darkplaces protocol: increase maxplayers limit to 65535, send maxplayers as an int in the serverinfo packet, send colormap indices as a short, send svc_update* using short player indices (discoloda)
 0 change darkplaces protocol: make svc_cdtrack use strings rather than a numbers in next DP protocol, so that named tracks can be used by maps
+0 change darkplaces protocol: send origin and angle updates as individual components in entities like Quake did, rather than combined ORIGIN/ANGLE bits like DP5/6/7 do
 0 change darkplaces protocol: use q3 print "print message" command packet instead of qw print 'nmessage' command packet? (div0, KadaverJack)
 0 change darkplaces prvm: prvm_globals should print values of globals like entity fields do, not just names
 0 change darkplaces readme: make sure that cl_capturevideo is documented

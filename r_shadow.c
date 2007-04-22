@@ -1287,7 +1287,8 @@ static void R_Shadow_RenderLighting_Light_Vertex_Shading(int firstvertex, int nu
 					VectorCopy(ambientcolor, color4f);
 				if (r_refdef.fogenabled)
 				{
-					float f = VERTEXFOGTABLE(VectorDistance(v, rsurface_modelorg));
+					float f;
+					f = FogPoint_Model(vertex3f);
 					VectorScale(color4f, f, color4f);
 				}
 				color4f[3] = 1;
@@ -1302,7 +1303,7 @@ static void R_Shadow_RenderLighting_Light_Vertex_Shading(int firstvertex, int nu
 				{
 					float f;
 					Matrix4x4_Transform(&r_shadow_entitytolight, vertex3f, v);
-					f = VERTEXFOGTABLE(VectorDistance(v, rsurface_modelorg));
+					f = FogPoint_Model(vertex3f);
 					VectorScale(color4f, f, color4f);
 				}
 				color4f[3] = 1;
@@ -1334,7 +1335,8 @@ static void R_Shadow_RenderLighting_Light_Vertex_Shading(int firstvertex, int nu
 					}
 					if (r_refdef.fogenabled)
 					{
-						float f = VERTEXFOGTABLE(VectorDistance(v, rsurface_modelorg));
+						float f;
+						f = FogPoint_Model(vertex3f);
 						VectorScale(color4f, f, color4f);
 					}
 				}
@@ -1355,7 +1357,8 @@ static void R_Shadow_RenderLighting_Light_Vertex_Shading(int firstvertex, int nu
 					color4f[2] = ambientcolor[2] * distintensity;
 					if (r_refdef.fogenabled)
 					{
-						float f = VERTEXFOGTABLE(VectorDistance(v, rsurface_modelorg));
+						float f;
+						f = FogPoint_Model(vertex3f);
 						VectorScale(color4f, f, color4f);
 					}
 				}
@@ -1391,7 +1394,8 @@ static void R_Shadow_RenderLighting_Light_Vertex_Shading(int firstvertex, int nu
 					}
 					if (r_refdef.fogenabled)
 					{
-						float f = VERTEXFOGTABLE(VectorDistance(v, rsurface_modelorg));
+						float f;
+						f = FogPoint_Model(vertex3f);
 						VectorScale(color4f, f, color4f);
 					}
 				}
@@ -1413,7 +1417,8 @@ static void R_Shadow_RenderLighting_Light_Vertex_Shading(int firstvertex, int nu
 					color4f[2] = ambientcolor[2] * distintensity;
 					if (r_refdef.fogenabled)
 					{
-						float f = VERTEXFOGTABLE(VectorDistance(v, rsurface_modelorg));
+						float f;
+						f = FogPoint_Model(vertex3f);
 						VectorScale(color4f, f, color4f);
 					}
 				}
