@@ -34,6 +34,7 @@ r_view_t r_view;
 r_viewcache_t r_viewcache;
 
 cvar_t r_nearclip = {0, "r_nearclip", "1", "distance from camera of nearclip plane" };
+cvar_t r_showbboxes = {0, "r_showbboxes", "0", "shows bounding boxes of server entities, value controls opacity scaling (1 = 10%,  10 = 100%)"};
 cvar_t r_showsurfaces = {0, "r_showsurfaces", "0", "1 shows surfaces as different colors, or a value of 2 shows triangle draw order (for analyzing whether meshes are optimized for vertex cache)"};
 cvar_t r_showtris = {0, "r_showtris", "0", "shows triangle outlines, value controls brightness (can be above 1)"};
 cvar_t r_shownormals = {0, "r_shownormals", "0", "shows per-vertex surface normals and tangent vectors for bumpmapped lighting"};
@@ -1118,6 +1119,7 @@ void GL_Main_Init(void)
 		Cvar_RegisterVariable (&gl_fogend);
 	}
 	Cvar_RegisterVariable(&r_nearclip);
+	Cvar_RegisterVariable(&r_showbboxes);
 	Cvar_RegisterVariable(&r_showsurfaces);
 	Cvar_RegisterVariable(&r_showtris);
 	Cvar_RegisterVariable(&r_shownormals);
@@ -2186,6 +2188,7 @@ extern void VM_CL_AddPolygonsToMeshQueue (void);
 extern void R_DrawPortals (void);
 extern cvar_t cl_locs_show;
 static void R_DrawLocs(void);
+static void R_DrawEntityBBoxes(void);
 void R_RenderScene(void)
 {
 	// don't let sound skip if going slow
@@ -2290,6 +2293,13 @@ void R_RenderScene(void)
 			R_TimeReport("portals");
 	}
 
+	if (r_showbboxes.value > 0)
+	{
+		R_DrawEntityBBoxes();
+		if (r_timereport_active)
+			R_TimeReport("bboxes");
+	}
+
 	if (gl_support_fragment_shader)
 	{
 		qglUseProgramObjectARB(0);CHECKGLERROR
@@ -2317,18 +2327,27 @@ void R_RenderScene(void)
 	R_ResetViewRendering2D();
 }
 
-/*
+static const int bboxelements[36] =
+{
+	5, 1, 3, 5, 3, 7,
+	6, 2, 0, 6, 0, 4,
+	7, 3, 2, 7, 2, 6,
+	4, 0, 1, 4, 1, 5,
+	4, 5, 7, 4, 7, 6,
+	1, 0, 2, 1, 2, 3,
+};
+
 void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, float ca)
 {
 	int i;
-	float *v, *c, f1, f2, diff[3], vertex3f[8*3], color4f[8*4];
+	float *v, *c, f1, f2, vertex3f[8*3], color4f[8*4];
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	GL_DepthMask(false);
 	GL_DepthRange(0, 1);
-	GL_DepthTest(true);
 	R_Mesh_Matrix(&identitymatrix);
+	R_Mesh_ResetTextureState();
 
-	vertex3f[ 0] = mins[0];vertex3f[ 1] = mins[1];vertex3f[ 2] = mins[2];
+	vertex3f[ 0] = mins[0];vertex3f[ 1] = mins[1];vertex3f[ 2] = mins[2]; //
 	vertex3f[ 3] = maxs[0];vertex3f[ 4] = mins[1];vertex3f[ 5] = mins[2];
 	vertex3f[ 6] = mins[0];vertex3f[ 7] = maxs[1];vertex3f[ 8] = mins[2];
 	vertex3f[ 9] = maxs[0];vertex3f[10] = maxs[1];vertex3f[11] = mins[2];
@@ -2336,10 +2355,10 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 	vertex3f[15] = maxs[0];vertex3f[16] = mins[1];vertex3f[17] = maxs[2];
 	vertex3f[18] = mins[0];vertex3f[19] = maxs[1];vertex3f[20] = maxs[2];
 	vertex3f[21] = maxs[0];vertex3f[22] = maxs[1];vertex3f[23] = maxs[2];
-	R_FillColors(color, 8, cr, cg, cb, ca);
+	R_FillColors(color4f, 8, cr, cg, cb, ca);
 	if (r_refdef.fogenabled)
 	{
-		for (i = 0, v = vertex, c = color;i < 8;i++, v += 4, c += 4)
+		for (i = 0, v = vertex3f, c = color4f;i < 8;i++, v += 3, c += 4)
 		{
 			f1 = FogPoint_World(v);
 			f2 = 1 - f1;
@@ -2349,11 +2368,60 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 		}
 	}
 	R_Mesh_VertexPointer(vertex3f, 0, 0);
-	R_Mesh_ColorPointer(color, 0, 0);
+	R_Mesh_ColorPointer(color4f, 0, 0);
 	R_Mesh_ResetTextureState();
-	R_Mesh_Draw(8, 12, 0, 0);
+	R_Mesh_Draw(0, 8, 12, bboxelements, 0, 0);
 }
-*/
+
+static void R_DrawEntityBBoxes_Callback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
+{
+	int i;
+	float color[4];
+	prvm_edict_t *edict;
+	// this function draws bounding boxes of server entities
+	if (!sv.active)
+		return;
+	SV_VM_Begin();
+	for (i = 0;i < numsurfaces;i++)
+	{
+		edict = PRVM_EDICT_NUM(surfacelist[i]);
+		switch ((int)edict->fields.server->solid)
+		{
+			case SOLID_NOT:      Vector4Set(color, 1, 1, 1, 0.05);break;
+			case SOLID_TRIGGER:  Vector4Set(color, 1, 0, 1, 0.10);break;
+			case SOLID_BBOX:     Vector4Set(color, 0, 1, 0, 0.10);break;
+			case SOLID_SLIDEBOX: Vector4Set(color, 1, 0, 0, 0.10);break;
+			case SOLID_BSP:      Vector4Set(color, 0, 0, 1, 0.05);break;
+			default:             Vector4Set(color, 0, 0, 0, 0.50);break;
+		}
+		color[3] *= r_showbboxes.value;
+		color[3] = bound(0, color[3], 1);
+		GL_DepthTest(!r_showdisabledepthtest.integer);
+		GL_CullFace(GL_BACK);
+		R_DrawBBoxMesh(edict->priv.server->areamins, edict->priv.server->areamaxs, color[0], color[1], color[2], color[3]);
+	}
+	SV_VM_End();
+}
+
+static void R_DrawEntityBBoxes(void)
+{
+	int i;
+	prvm_edict_t *edict;
+	vec3_t center;
+	// this function draws bounding boxes of server entities
+	if (!sv.active)
+		return;
+	SV_VM_Begin();
+	for (i = 0;i < prog->num_edicts;i++)
+	{
+		edict = PRVM_EDICT_NUM(i);
+		if (edict->priv.server->free)
+			continue;
+		VectorLerp(edict->priv.server->areamins, 0.5f, edict->priv.server->areamaxs, center);
+		R_MeshQueue_AddTransparent(center, R_DrawEntityBBoxes_Callback, (entity_render_t *)NULL, i, (rtlight_t *)NULL);
+	}
+	SV_VM_End();
+}
 
 int nomodelelements[24] =
 {
