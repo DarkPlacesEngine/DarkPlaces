@@ -2451,6 +2451,19 @@ void SV_VM_CB_InitEdict(prvm_edict_t *e)
 			PRVM_EDICTFIELDVALUE(e, prog->fieldoffsets.playermodel)->string = PRVM_SetEngineString(svs.clients[num].playermodel);
 		if( prog->fieldoffsets.playerskin >= 0 )
 			PRVM_EDICTFIELDVALUE(e, prog->fieldoffsets.playerskin)->string = PRVM_SetEngineString(svs.clients[num].playerskin);
+		// Assign netaddress (IP Address, etc)
+		if(prog->fieldoffsets.netaddress >= 0)
+		{ // Valid Field; Process
+			if(svs.clients[num].netconnection != NULL)
+			{// Valid Address; Assign
+				// Acquire Readable Address
+				LHNETADDRESS_ToString(&svs.clients[num].netconnection->peeraddress, svs.clients[num].netaddress, sizeof(svs.clients[num].netaddress), false);
+				PRVM_EDICTFIELDVALUE(e, prog->fieldoffsets.netaddress)->string = PRVM_SetEngineString(svs.clients[num].netaddress);
+			}
+			else
+				// Invalid / Bot
+				PRVM_EDICTFIELDVALUE(e, prog->fieldoffsets.netaddress)->string = PRVM_SetEngineString("null/botclient");
+		}
 	}
 }
 
@@ -2641,6 +2654,7 @@ prvm_required_field_t reqfields[] =
 	{ev_float, "items2"},
 	{ev_float, "light_lev"},
 	{ev_float, "pflags"},
+	{ev_string, "netaddress"},
 	{ev_float, "ping"},
 	{ev_float, "pitch_speed"},
 	{ev_float, "pmodel"},
