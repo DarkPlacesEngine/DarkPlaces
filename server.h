@@ -176,6 +176,9 @@ typedef struct client_s
 	char playermodel[MAX_QPATH], old_model[MAX_QPATH];
 	char playerskin[MAX_QPATH], old_skin[MAX_QPATH];
 
+	// netaddress support
+	char netaddress[MAX_QPATH];
+
 	// visibility state
 	float visibletime[MAX_EDICTS];
 

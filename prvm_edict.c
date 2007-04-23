@@ -1361,6 +1361,7 @@ void PRVM_FindOffsets(void)
 	prog->fieldoffsets.lerpfrac                       = PRVM_ED_FindFieldOffset("lerpfrac");
 	prog->fieldoffsets.light_lev                      = PRVM_ED_FindFieldOffset("light_lev");
 	prog->fieldoffsets.movement                       = PRVM_ED_FindFieldOffset("movement");
+	prog->fieldoffsets.netaddress                     = PRVM_ED_FindFieldOffset("netaddress");
 	prog->fieldoffsets.nextthink                      = PRVM_ED_FindFieldOffset("nextthink");
 	prog->fieldoffsets.nodrawtoclient                 = PRVM_ED_FindFieldOffset("nodrawtoclient");
 	prog->fieldoffsets.pflags                         = PRVM_ED_FindFieldOffset("pflags");

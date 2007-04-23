@@ -187,6 +187,7 @@ typedef struct prvm_prog_fieldoffsets_s
 	int light_lev; // ssqc
 	int movement; // ssqc
 	int nextthink; // common - used by OP_STATE
+	int netaddress; // ssqc
 	int nodrawtoclient; // ssqc
 	int pflags; // ssqc
 	int ping; // ssqc
