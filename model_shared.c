@@ -1045,145 +1045,88 @@ static rtexture_t *GL_TextureForSkinLayer(const unsigned char *in, int width, in
 	return R_LoadTexture2D (loadmodel->texturepool, name, width, height, in, TEXTYPE_PALETTE, textureflags, palette);
 }
 
-typedef struct imageskin_s
+int Mod_LoadSkinFrame(skinframe_t *skinframe, const char *basename, int textureflags, qboolean loadpantsandshirt, qboolean loadglowtexture)
 {
-	unsigned char *basepixels;int basepixels_width;int basepixels_height;
-	unsigned char *nmappixels;int nmappixels_width;int nmappixels_height;
-	unsigned char *glowpixels;int glowpixels_width;int glowpixels_height;
-	unsigned char *glosspixels;int glosspixels_width;int glosspixels_height;
-	unsigned char *pantspixels;int pantspixels_width;int pantspixels_height;
-	unsigned char *shirtpixels;int shirtpixels_width;int shirtpixels_height;
-	unsigned char *maskpixels;int maskpixels_width;int maskpixels_height;
-}
-imageskin_t;
-
-int Mod_LoadSkinFrame(skinframe_t *skinframe, const char *basename, int textureflags, int loadpantsandshirt, int loadglowtexture)
-{
+	// FIXME: it should be possible to disable loading gloss and normalmap using cvars, to prevent wasted loading time and memory usage
+	qboolean loadnormalmap = true;
+	qboolean loadgloss = true;
 	int j;
-	imageskin_t s;
+	unsigned char *pixels;
+	unsigned char *bumppixels;
+	unsigned char *basepixels;
+	int basepixels_width;
+	int basepixels_height;
 	char name[MAX_QPATH];
-	memset(&s, 0, sizeof(s));
 	memset(skinframe, 0, sizeof(*skinframe));
 	Image_StripImageExtension(basename, name, sizeof(name));
 	skinframe->base = r_texture_notexture;
 	if (cls.state == ca_dedicated)
 		return false;
 
-	s.basepixels = loadimagepixels(name, false, 0, 0);
-	if (s.basepixels == NULL)
+	basepixels = loadimagepixels(name, false, 0, 0);
+	if (basepixels == NULL)
 		return false;
-	s.basepixels_width = image_width;
-	s.basepixels_height = image_height;
+	basepixels_width = image_width;
+	basepixels_height = image_height;
+	skinframe->base = R_LoadTexture2D (loadmodel->texturepool, basename, basepixels_width, basepixels_height, basepixels, TEXTYPE_RGBA, textureflags, NULL);
 
-	for (j = 3;j < s.basepixels_width * s.basepixels_height * 4;j += 4)
-		if (s.basepixels[j] < 255)
+	for (j = 3;j < basepixels_width * basepixels_height * 4;j += 4)
+		if (basepixels[j] < 255)
 			break;
-	if (j < s.basepixels_width * s.basepixels_height * 4)
+	if (j < basepixels_width * basepixels_height * 4)
 	{
 		// has transparent pixels
-		s.maskpixels = (unsigned char *)Mem_Alloc(loadmodel->mempool, s.basepixels_width * s.basepixels_height * 4);
-		s.maskpixels_width = s.basepixels_width;
-		s.maskpixels_height = s.basepixels_height;
-		memcpy(s.maskpixels, s.basepixels, s.maskpixels_width * s.maskpixels_height * 4);
-		for (j = 0;j < s.basepixels_width * s.basepixels_height * 4;j += 4)
+		pixels = (unsigned char *)Mem_Alloc(loadmodel->mempool, image_width * image_height * 4);
+		for (j = 0;j < image_width * image_height * 4;j += 4)
 		{
-			s.maskpixels[j+0] = 255;
-			s.maskpixels[j+1] = 255;
-			s.maskpixels[j+2] = 255;
+			pixels[j+0] = 255;
+			pixels[j+1] = 255;
+			pixels[j+2] = 255;
+			pixels[j+3] = basepixels[j+3];
 		}
+		skinframe->fog = R_LoadTexture2D (loadmodel->texturepool, va("%s_mask", basename), image_width, image_height, pixels, TEXTYPE_RGBA, textureflags, NULL);
+		Mem_Free(pixels);
 	}
 
 	// _luma is supported for tenebrae compatibility
 	// (I think it's a very stupid name, but oh well)
-	if ((s.glowpixels = loadimagepixels(va("%s_glow", name), false, 0, 0)) != NULL
-	 || (s.glowpixels = loadimagepixels(va("%s_luma", name), false, 0, 0)) != NULL)
+	if (loadglowtexture && ((pixels = loadimagepixels(va("%s_glow", name), false, 0, 0)) != NULL || (pixels = loadimagepixels(va("%s_luma", name), false, 0, 0)) != NULL)) {skinframe->glow = R_LoadTexture2D (loadmodel->texturepool, va("%s_glow", basename), image_width, image_height, pixels, TEXTYPE_RGBA, textureflags, NULL);Mem_Free(pixels);pixels = NULL;}
+	// _norm is the name used by tenebrae and has been adopted as standard
+	if (loadnormalmap)
 	{
-		s.glowpixels_width = image_width;
-		s.glowpixels_height = image_height;
-	}
-	// _norm is the name used by tenebrae
-	// (I don't like the name much)
-	if ((s.nmappixels = loadimagepixels(va("%s_norm", name), false, 0, 0)) != NULL)
-	{
-		s.nmappixels_width = image_width;
-		s.nmappixels_height = image_height;
-	}
-	else
-	{
-		unsigned char *bumppixels;
-		if ((bumppixels = loadimagepixels(va("%s_bump", name), false, 0, 0)) != NULL)
+		if ((pixels = loadimagepixels(va("%s_norm", name), false, 0, 0)) != NULL)
 		{
-			if (r_shadow_bumpscale_bumpmap.value > 0)
-			{
-				s.nmappixels = (unsigned char *)Mem_Alloc(loadmodel->mempool, image_width * image_height * 4);
-				s.nmappixels_width = image_width;
-				s.nmappixels_height = image_height;
-				Image_HeightmapToNormalmap(bumppixels, s.nmappixels, s.nmappixels_width, s.nmappixels_height, false, r_shadow_bumpscale_bumpmap.value);
-			}
+			skinframe->nmap = R_LoadTexture2D (loadmodel->texturepool, va("%s_nmap", basename), image_width, image_height, pixels, TEXTYPE_RGBA, textureflags, NULL);
+			Mem_Free(pixels);
+			pixels = NULL;
+		}
+		else if (r_shadow_bumpscale_bumpmap.value > 0 && (bumppixels = loadimagepixels(va("%s_bump", name), false, 0, 0)) != NULL)
+		{
+			pixels = (unsigned char *)Mem_Alloc(loadmodel->mempool, image_width * image_height * 4);
+			Image_HeightmapToNormalmap(bumppixels, pixels, image_width, image_height, false, r_shadow_bumpscale_bumpmap.value);
+			skinframe->nmap = R_LoadTexture2D (loadmodel->texturepool, va("%s_nmap", basename), image_width, image_height, pixels, TEXTYPE_RGBA, textureflags, NULL);
+			Mem_Free(pixels);
 			Mem_Free(bumppixels);
 		}
-		else
+		else if (r_shadow_bumpscale_basetexture.value > 0)
 		{
-			if (r_shadow_bumpscale_basetexture.value > 0)
-			{
-				s.nmappixels = (unsigned char *)Mem_Alloc(loadmodel->mempool, s.basepixels_width * s.basepixels_height * 4);
-				s.nmappixels_width = s.basepixels_width;
-				s.nmappixels_height = s.basepixels_height;
-				Image_HeightmapToNormalmap(s.basepixels, s.nmappixels, s.nmappixels_width, s.nmappixels_height, false, r_shadow_bumpscale_basetexture.value);
-			}
+			pixels = (unsigned char *)Mem_Alloc(loadmodel->mempool, basepixels_width * basepixels_height * 4);
+			Image_HeightmapToNormalmap(basepixels, pixels, basepixels_width, basepixels_height, false, r_shadow_bumpscale_basetexture.value);
+			skinframe->nmap = R_LoadTexture2D (loadmodel->texturepool, va("%s_nmap", basename), basepixels_width, basepixels_height, pixels, TEXTYPE_RGBA, textureflags, NULL);
+			Mem_Free(pixels);
 		}
 	}
-	if ((s.glosspixels = loadimagepixels(va("%s_gloss", name), false, 0, 0)) != NULL)
-	{
-		s.glosspixels_width = image_width;
-		s.glosspixels_height = image_height;
-	}
-	if ((s.pantspixels = loadimagepixels(va("%s_pants", name), false, 0, 0)) != NULL)
-	{
-		s.pantspixels_width = image_width;
-		s.pantspixels_height = image_height;
-	}
-	if ((s.shirtpixels = loadimagepixels(va("%s_shirt", name), false, 0, 0)) != NULL)
-	{
-		s.shirtpixels_width = image_width;
-		s.shirtpixels_height = image_height;
-	}
+	if (loadgloss         && (pixels = loadimagepixels(va("%s_gloss", name), false, 0, 0)) != NULL) {skinframe->gloss = R_LoadTexture2D (loadmodel->texturepool, va("%s_gloss", basename), image_width, image_height, pixels, TEXTYPE_RGBA, textureflags, NULL);Mem_Free(pixels);pixels = NULL;}
+	if (loadpantsandshirt && (pixels = loadimagepixels(va("%s_pants", name), false, 0, 0)) != NULL) {skinframe->pants = R_LoadTexture2D (loadmodel->texturepool, va("%s_pants", basename), image_width, image_height, pixels, TEXTYPE_RGBA, textureflags, NULL);Mem_Free(pixels);pixels = NULL;}
+	if (loadpantsandshirt && (pixels = loadimagepixels(va("%s_shirt", name), false, 0, 0)) != NULL) {skinframe->shirt = R_LoadTexture2D (loadmodel->texturepool, va("%s_shirt", basename), image_width, image_height, pixels, TEXTYPE_RGBA, textureflags, NULL);Mem_Free(pixels);pixels = NULL;}
 
-	skinframe->base = R_LoadTexture2D (loadmodel->texturepool, basename, s.basepixels_width, s.basepixels_height, s.basepixels, TEXTYPE_RGBA, textureflags, NULL);
-	if (s.nmappixels != NULL)
-		skinframe->nmap = R_LoadTexture2D (loadmodel->texturepool, va("%s_nmap", basename), s.nmappixels_width, s.nmappixels_height, s.nmappixels, TEXTYPE_RGBA, textureflags, NULL);
-	if (s.glosspixels != NULL)
-		skinframe->gloss = R_LoadTexture2D (loadmodel->texturepool, va("%s_gloss", basename), s.glosspixels_width, s.glosspixels_height, s.glosspixels, TEXTYPE_RGBA, textureflags, NULL);
-	if (s.glowpixels != NULL && loadglowtexture)
-		skinframe->glow = R_LoadTexture2D (loadmodel->texturepool, va("%s_glow", basename), s.glowpixels_width, s.glowpixels_height, s.glowpixels, TEXTYPE_RGBA, textureflags, NULL);
-	if (s.maskpixels != NULL)
-		skinframe->fog = R_LoadTexture2D (loadmodel->texturepool, va("%s_mask", basename), s.maskpixels_width, s.maskpixels_height, s.maskpixels, TEXTYPE_RGBA, textureflags, NULL);
-	if (loadpantsandshirt)
-	{
-		if (s.pantspixels != NULL)
-			skinframe->pants = R_LoadTexture2D (loadmodel->texturepool, va("%s_pants", basename), s.pantspixels_width, s.pantspixels_height, s.pantspixels, TEXTYPE_RGBA, textureflags, NULL);
-		if (s.shirtpixels != NULL)
-			skinframe->shirt = R_LoadTexture2D (loadmodel->texturepool, va("%s_shirt", basename), s.shirtpixels_width, s.shirtpixels_height, s.shirtpixels, TEXTYPE_RGBA, textureflags, NULL);
-	}
 	if (!skinframe->base)
 		skinframe->base = r_texture_notexture;
 	if (!skinframe->nmap)
 		skinframe->nmap = r_texture_blanknormalmap;
 
-	if (s.basepixels)
-		Mem_Free(s.basepixels);
-	if (s.maskpixels)
-		Mem_Free(s.maskpixels);
-	if (s.nmappixels)
-		Mem_Free(s.nmappixels);
-	if (s.glowpixels)
-		Mem_Free(s.glowpixels);
-	if (s.glosspixels)
-		Mem_Free(s.glosspixels);
-	if (s.pantspixels)
-		Mem_Free(s.pantspixels);
-	if (s.shirtpixels)
-		Mem_Free(s.shirtpixels);
+	if (basepixels)
+		Mem_Free(basepixels);
 
 	return true;
 }
