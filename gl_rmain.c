@@ -4178,9 +4178,10 @@ void R_DrawTrianglesAndNormals(entity_render_t *ent, qboolean drawtris, qboolean
 				qglBegin(GL_LINES);
 				for (k = 0;k < surface->num_triangles;k++, elements += 3)
 				{
-					qglArrayElement(elements[0]);qglArrayElement(elements[1]);
-					qglArrayElement(elements[1]);qglArrayElement(elements[2]);
-					qglArrayElement(elements[2]);qglArrayElement(elements[0]);
+#define GLVERTEXELEMENT(n) qglVertex3f(rsurface_vertex3f[elements[n]*3+0], rsurface_vertex3f[elements[n]*3+1], rsurface_vertex3f[elements[n]*3+2])
+					GLVERTEXELEMENT(0);GLVERTEXELEMENT(1);
+					GLVERTEXELEMENT(1);GLVERTEXELEMENT(2);
+					GLVERTEXELEMENT(2);GLVERTEXELEMENT(0);
 				}
 				qglEnd();
 				CHECKGLERROR
