@@ -477,7 +477,7 @@ void *Mem_ExpandableArray_RecordAtIndex(memexpandablearray_t *l, size_t index)
 	j = index % l->numrecordsperarray;
 	if (i >= l->numarrays || !l->arrays[i].allocflags[j])
 		return NULL;
-	return (void *)l->arrays[i].data + j * l->recordsize;
+	return (void *)(l->arrays[i].data + j * l->recordsize);
 }
 
 
