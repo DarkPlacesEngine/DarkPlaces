@@ -762,30 +762,16 @@ unsigned char *LoadWAL (const unsigned char *f, int filesize, int matchwidth, in
 }
 
 
-static void Image_StripImageExtension (const char *in, char *out, size_t size_out)
+void Image_StripImageExtension (const char *in, char *out, size_t size_out)
 {
-	const char *end, *temp;
+	const char *ext;
 
 	if (size_out == 0)
 		return;
 
-	end = in + strlen(in);
-	if ((end - in) >= 4)
-	{
-		temp = end - 4;
-		if (strcmp(temp, ".tga") == 0
-		 || strcmp(temp, ".pcx") == 0
-		 || strcmp(temp, ".lmp") == 0
-		 || strcmp(temp, ".png") == 0
-		 || strcmp(temp, ".jpg") == 0)
-			end = temp;
-		while (in < end && size_out > 1)
-		{
-			*out++ = *in++;
-			size_out--;
-		}
-		*out++ = 0;
-	}
+	ext = FS_FileExtension(in);
+	if (ext && (!strcmp(ext, "tga") || !strcmp(ext, "pcx") || !strcmp(ext, "lmp") || !strcmp(ext, "png") || !strcmp(ext, "jpg")))
+		FS_StripExtension(in, out, size_out);
 	else
 		strlcpy(out, in, size_out);
 }
@@ -1540,120 +1526,3 @@ void Image_HeightmapToNormalmap(const unsigned char *inpixels, unsigned char *ou
 		}
 	}
 }
-
-int image_loadskin(imageskin_t *s, const char *shadername)
-{
-	int j;
-	unsigned char *bumppixels;
-	int bumppixels_width, bumppixels_height;
-	char name[MAX_QPATH];
-	Image_StripImageExtension(shadername, name, sizeof(name));
-	memset(s, 0, sizeof(*s));
-	s->basepixels = loadimagepixels(name, false, 0, 0);
-	if (s->basepixels == NULL)
-		return false;
-	s->basepixels_width = image_width;
-	s->basepixels_height = image_height;
-
-	bumppixels = NULL;bumppixels_width = 0;bumppixels_height = 0;
-	for (j = 3;j < s->basepixels_width * s->basepixels_height * 4;j += 4)
-		if (s->basepixels[j] < 255)
-			break;
-	if (j < s->basepixels_width * s->basepixels_height * 4)
-	{
-		// has transparent pixels
-		s->maskpixels = (unsigned char *)Mem_Alloc(loadmodel->mempool, s->basepixels_width * s->basepixels_height * 4);
-		s->maskpixels_width = s->basepixels_width;
-		s->maskpixels_height = s->basepixels_height;
-		memcpy(s->maskpixels, s->basepixels, s->maskpixels_width * s->maskpixels_height * 4);
-		for (j = 0;j < s->basepixels_width * s->basepixels_height * 4;j += 4)
-		{
-			s->maskpixels[j+0] = 255;
-			s->maskpixels[j+1] = 255;
-			s->maskpixels[j+2] = 255;
-		}
-	}
-
-	// _luma is supported for tenebrae compatibility
-	// (I think it's a very stupid name, but oh well)
-	if ((s->glowpixels = loadimagepixels(va("%s_glow", name), false, 0, 0)) != NULL
-	 || (s->glowpixels = loadimagepixels(va("%s_luma", name), false, 0, 0)) != NULL)
-	{
-		s->glowpixels_width = image_width;
-		s->glowpixels_height = image_height;
-	}
-	// _norm is the name used by tenebrae
-	// (I don't like the name much)
-	if ((s->nmappixels = loadimagepixels(va("%s_norm", name), false, 0, 0)) != NULL)
-	{
-		s->nmappixels_width = image_width;
-		s->nmappixels_height = image_height;
-	}
-	else if ((bumppixels = loadimagepixels(va("%s_bump", name), false, 0, 0)) != NULL)
-	{
-		bumppixels_width = image_width;
-		bumppixels_height = image_height;
-	}
-	if ((s->glosspixels = loadimagepixels(va("%s_gloss", name), false, 0, 0)) != NULL)
-	{
-		s->glosspixels_width = image_width;
-		s->glosspixels_height = image_height;
-	}
-	if ((s->pantspixels = loadimagepixels(va("%s_pants", name), false, 0, 0)) != NULL)
-	{
-		s->pantspixels_width = image_width;
-		s->pantspixels_height = image_height;
-	}
-	if ((s->shirtpixels = loadimagepixels(va("%s_shirt", name), false, 0, 0)) != NULL)
-	{
-		s->shirtpixels_width = image_width;
-		s->shirtpixels_height = image_height;
-	}
-
-	if (s->nmappixels == NULL)
-	{
-		if (bumppixels != NULL)
-		{
-			if (r_shadow_bumpscale_bumpmap.value > 0)
-			{
-				s->nmappixels = (unsigned char *)Mem_Alloc(loadmodel->mempool, bumppixels_width * bumppixels_height * 4);
-				s->nmappixels_width = bumppixels_width;
-				s->nmappixels_height = bumppixels_height;
-				Image_HeightmapToNormalmap(bumppixels, s->nmappixels, s->nmappixels_width, s->nmappixels_height, false, r_shadow_bumpscale_bumpmap.value);
-			}
-		}
-		else
-		{
-			if (r_shadow_bumpscale_basetexture.value > 0)
-			{
-				s->nmappixels = (unsigned char *)Mem_Alloc(loadmodel->mempool, s->basepixels_width * s->basepixels_height * 4);
-				s->nmappixels_width = s->basepixels_width;
-				s->nmappixels_height = s->basepixels_height;
-				Image_HeightmapToNormalmap(s->basepixels, s->nmappixels, s->nmappixels_width, s->nmappixels_height, false, r_shadow_bumpscale_basetexture.value);
-			}
-		}
-	}
-	if (bumppixels != NULL)
-		Mem_Free(bumppixels);
-	return true;
-}
-
-void image_freeskin(imageskin_t *s)
-{
-	if (s->basepixels)
-		Mem_Free(s->basepixels);
-	if (s->maskpixels)
-		Mem_Free(s->maskpixels);
-	if (s->nmappixels)
-		Mem_Free(s->nmappixels);
-	if (s->glowpixels)
-		Mem_Free(s->glowpixels);
-	if (s->glosspixels)
-		Mem_Free(s->glosspixels);
-	if (s->pantspixels)
-		Mem_Free(s->pantspixels);
-	if (s->shirtpixels)
-		Mem_Free(s->shirtpixels);
-	memset(s, 0, sizeof(*s));
-}
-
