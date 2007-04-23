@@ -1070,22 +1070,25 @@ int Mod_LoadSkinFrame(skinframe_t *skinframe, const char *basename, int texturef
 	basepixels_height = image_height;
 	skinframe->base = R_LoadTexture2D (loadmodel->texturepool, basename, basepixels_width, basepixels_height, basepixels, TEXTYPE_RGBA, textureflags, NULL);
 
-	for (j = 3;j < basepixels_width * basepixels_height * 4;j += 4)
-		if (basepixels[j] < 255)
-			break;
-	if (j < basepixels_width * basepixels_height * 4)
+	if (textureflags & TEXF_ALPHA)
 	{
-		// has transparent pixels
-		pixels = (unsigned char *)Mem_Alloc(loadmodel->mempool, image_width * image_height * 4);
-		for (j = 0;j < image_width * image_height * 4;j += 4)
+		for (j = 3;j < basepixels_width * basepixels_height * 4;j += 4)
+			if (basepixels[j] < 255)
+				break;
+		if (j < basepixels_width * basepixels_height * 4)
 		{
-			pixels[j+0] = 255;
-			pixels[j+1] = 255;
-			pixels[j+2] = 255;
-			pixels[j+3] = basepixels[j+3];
+			// has transparent pixels
+			pixels = (unsigned char *)Mem_Alloc(loadmodel->mempool, image_width * image_height * 4);
+			for (j = 0;j < image_width * image_height * 4;j += 4)
+			{
+				pixels[j+0] = 255;
+				pixels[j+1] = 255;
+				pixels[j+2] = 255;
+				pixels[j+3] = basepixels[j+3];
+			}
+			skinframe->fog = R_LoadTexture2D (loadmodel->texturepool, va("%s_mask", basename), image_width, image_height, pixels, TEXTYPE_RGBA, textureflags, NULL);
+			Mem_Free(pixels);
 		}
-		skinframe->fog = R_LoadTexture2D (loadmodel->texturepool, va("%s_mask", basename), image_width, image_height, pixels, TEXTYPE_RGBA, textureflags, NULL);
-		Mem_Free(pixels);
 	}
 
 	// _luma is supported for tenebrae compatibility
