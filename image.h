@@ -18,6 +18,8 @@ void Image_GammaRemapRGB(const unsigned char *in, unsigned char *out, int pixels
 // converts 8bit image data to RGBA, in can not be the same as out
 void Image_Copy8bitRGBA(const unsigned char *in, unsigned char *out, int pixels, const unsigned int *pal);
 
+void Image_StripImageExtension (const char *in, char *out, size_t size_out);
+
 unsigned char *LoadTGA (const unsigned char *f, int filesize, int matchwidth, int matchheight);
 
 // loads a texture, as pixel data
@@ -42,21 +44,6 @@ void Image_MipReduce(const unsigned char *in, unsigned char *out, int *width, in
 unsigned char *LoadLMP (const unsigned char *f, int filesize, int matchwidth, int matchheight, qboolean loadAs8Bit);
 
 void Image_HeightmapToNormalmap(const unsigned char *inpixels, unsigned char *outpixels, int width, int height, int clamp, float bumpscale);
-
-typedef struct imageskin_s
-{
-	unsigned char *basepixels;int basepixels_width;int basepixels_height;
-	unsigned char *nmappixels;int nmappixels_width;int nmappixels_height;
-	unsigned char *glowpixels;int glowpixels_width;int glowpixels_height;
-	unsigned char *glosspixels;int glosspixels_width;int glosspixels_height;
-	unsigned char *pantspixels;int pantspixels_width;int pantspixels_height;
-	unsigned char *shirtpixels;int shirtpixels_width;int shirtpixels_height;
-	unsigned char *maskpixels;int maskpixels_width;int maskpixels_height;
-}
-imageskin_t;
-
-int image_loadskin(imageskin_t *s, const char *name);
-void image_freeskin(imageskin_t *s);
 
 #endif
 
