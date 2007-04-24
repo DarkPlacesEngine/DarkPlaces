@@ -393,7 +393,7 @@ void Mem_ExpandableArray_FreeArray(memexpandablearray_t *l)
 	size_t i;
 	if (l->maxarrays)
 	{
-		for (i = 0;i != l->numarrays;l++)
+		for (i = 0;i != l->numarrays;i++)
 			Mem_Free(l->arrays[i].data);
 		Mem_Free(l->arrays);
 	}
