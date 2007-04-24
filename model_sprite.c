@@ -217,7 +217,6 @@ void Mod_IDSP_Load(model_t *mod, void *buffer, void *bufferend)
 	datapointer = (unsigned char *)buffer;
 
 	loadmodel->type = mod_sprite;
-	loadmodel->flags2 = EF_FULLBRIGHT;
 
 	loadmodel->DrawSky = NULL;
 	loadmodel->Draw = R_Model_Sprite_Draw;

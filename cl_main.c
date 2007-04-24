@@ -944,23 +944,24 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 		e->render.model = cl.model_precache[e->state_current.modelindex];
 	if (e->render.model)
 	{
+		// models can set flags such as EF_ROCKET
+		e->render.effects |= e->render.model->effects;
 		// if model is alias or this is a tenebrae-like dlight, reverse pitch direction
 		if (e->render.model->type == mod_alias)
 			angles[0] = -angles[0];
-		if ((e->render.model->flags & EF_ROTATE) && (!e->state_current.tagentity && !(e->render.flags & RENDER_VIEWMODEL)))
-		{
-			angles[1] = ANGLEMOD(100*cl.time);
-			if (cl_itembobheight.value)
-				origin[2] += (cos(cl.time * cl_itembobspeed.value * (2.0 * M_PI)) + 1.0) * 0.5 * cl_itembobheight.value;
-		}
-		// transfer certain model flags to effects
-		e->render.effects |= e->render.model->flags2 & (EF_FULLBRIGHT | EF_ADDITIVE);
 		if ((e->render.effects & EF_SELECTABLE) && cl.cmd.cursor_entitynumber == e->state_current.number)
 			VectorScale(e->render.colormod, 2, e->render.colormod);
 	}
 	// if model is alias or this is a tenebrae-like dlight, reverse pitch direction
 	else if (e->state_current.lightpflags & PFLAGS_FULLDYNAMIC)
 		angles[0] = -angles[0];
+
+	if ((e->render.effects & EF_ROTATE) && !(e->render.flags & RENDER_VIEWMODEL))
+	{
+		angles[1] = ANGLEMOD(100*cl.time);
+		if (cl_itembobheight.value)
+			origin[2] += (cos(cl.time * cl_itembobspeed.value * (2.0 * M_PI)) + 1.0) * 0.5 * cl_itembobheight.value;
+	}
 
 	// animation lerp
 	if (e->render.frame2 == e->state_current.frame)
@@ -1046,7 +1047,7 @@ void CL_UpdateNetworkEntityTrail(entity_t *e)
 	// entity is in the world...
 	trailtype = EFFECT_NONE;
 	// LordHavoc: if the entity has no effects, don't check each
-	if (e->render.effects & (EF_BRIGHTFIELD | EF_FLAME | EF_STARDUST | EF_FLAG1QW | EF_FLAG2QW))
+	if (e->render.effects & (EF_BRIGHTFIELD | EF_FLAME | EF_STARDUST))
 	{
 		if (e->render.effects & EF_BRIGHTFIELD)
 		{
@@ -1059,34 +1060,34 @@ void CL_UpdateNetworkEntityTrail(entity_t *e)
 			CL_ParticleTrail(EFFECT_EF_FLAME, bound(0, cl.time - cl.oldtime, 0.1), origin, origin, vec3_origin, vec3_origin, NULL, 0, false, true);
 		if (e->render.effects & EF_STARDUST)
 			CL_ParticleTrail(EFFECT_EF_STARDUST, bound(0, cl.time - cl.oldtime, 0.1), origin, origin, vec3_origin, vec3_origin, NULL, 0, false, true);
-		if (e->render.effects & (EF_FLAG1QW | EF_FLAG2QW))
-		{
-			// these are only set on player entities
-			CL_AddQWCTFFlagModel(e, (e->render.effects & EF_FLAG2QW) != 0);
-		}
+	}
+	if (e->render.internaleffects & (INTEF_FLAG1QW | INTEF_FLAG2QW))
+	{
+		// these are only set on player entities
+		CL_AddQWCTFFlagModel(e, (e->render.internaleffects & INTEF_FLAG2QW) != 0);
 	}
 	// muzzleflash fades over time
 	if (e->persistent.muzzleflash > 0)
 		e->persistent.muzzleflash -= bound(0, cl.time - cl.oldtime, 0.1) * 20;
-	// LordHavoc: if the model has no flags, don't check each
-	if (e->render.model && e->render.model->flags && !(e->render.flags & RENDER_VIEWMODEL))
+	// LordHavoc: if the entity has no effects, don't check each
+	if (e->render.model && e->render.effects && !(e->render.flags & RENDER_VIEWMODEL))
 	{
-		if (e->render.model->flags & EF_GIB)
+		if (e->render.effects & EF_GIB)
 			trailtype = EFFECT_TR_BLOOD;
-		else if (e->render.model->flags & EF_ZOMGIB)
+		else if (e->render.effects & EF_ZOMGIB)
 			trailtype = EFFECT_TR_SLIGHTBLOOD;
-		else if (e->render.model->flags & EF_TRACER)
+		else if (e->render.effects & EF_TRACER)
 			trailtype = EFFECT_TR_WIZSPIKE;
-		else if (e->render.model->flags & EF_TRACER2)
+		else if (e->render.effects & EF_TRACER2)
 			trailtype = EFFECT_TR_KNIGHTSPIKE;
-		else if (e->render.model->flags & EF_ROCKET)
+		else if (e->render.effects & EF_ROCKET)
 			trailtype = EFFECT_TR_ROCKET;
-		else if (e->render.model->flags & EF_GRENADE)
+		else if (e->render.effects & EF_GRENADE)
 		{
 			// LordHavoc: e->render.alpha == -1 is for Nehahra dem compatibility (cigar smoke)
 			trailtype = e->render.alpha == -1 ? EFFECT_TR_NEHAHRASMOKE : EFFECT_TR_GRENADE;
 		}
-		else if (e->render.model->flags & EF_TRACER3)
+		else if (e->render.effects & EF_TRACER3)
 			trailtype = EFFECT_TR_VORESPIKE;
 	}
 	// do trails
@@ -1207,7 +1208,7 @@ void CL_UpdateViewModel(void)
 			ent->state_current.modelindex = 0;
 	}
 	ent->state_current.alpha = cl.entities[cl.viewentity].state_current.alpha;
-	ent->state_current.effects = EF_NOSHADOW | (cl.entities[cl.viewentity].state_current.effects & (EF_ADDITIVE | EF_REFLECTIVE | EF_FULLBRIGHT | EF_NODEPTHTEST));
+	ent->state_current.effects = EF_NOSHADOW | (cl.entities[cl.viewentity].state_current.effects & (EF_ADDITIVE | EF_FULLBRIGHT | EF_NODEPTHTEST));
 
 	// reset animation interpolation on weaponmodel if model changed
 	if (ent->state_previous.modelindex != ent->state_current.modelindex)
@@ -1318,24 +1319,24 @@ void CL_LinkNetworkEntity(entity_t *e)
 		R_RTLight_Update(&r_refdef.lights[r_refdef.numlights++], false, &tempmatrix, color, -1, NULL, true, 0, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
 	// LordHavoc: if the model has no flags, don't check each
-	if (e->render.model && e->render.model->flags && !(e->render.flags & RENDER_VIEWMODEL))
+	if (e->render.model && e->render.effects && !(e->render.flags & RENDER_VIEWMODEL))
 	{
-		if (e->render.model->flags & EF_GIB)
+		if (e->render.effects & EF_GIB)
 			trailtype = EFFECT_TR_BLOOD;
-		else if (e->render.model->flags & EF_ZOMGIB)
+		else if (e->render.effects & EF_ZOMGIB)
 			trailtype = EFFECT_TR_SLIGHTBLOOD;
-		else if (e->render.model->flags & EF_TRACER)
+		else if (e->render.effects & EF_TRACER)
 			trailtype = EFFECT_TR_WIZSPIKE;
-		else if (e->render.model->flags & EF_TRACER2)
+		else if (e->render.effects & EF_TRACER2)
 			trailtype = EFFECT_TR_KNIGHTSPIKE;
-		else if (e->render.model->flags & EF_ROCKET)
+		else if (e->render.effects & EF_ROCKET)
 			trailtype = EFFECT_TR_ROCKET;
-		else if (e->render.model->flags & EF_GRENADE)
+		else if (e->render.effects & EF_GRENADE)
 		{
 			// LordHavoc: e->render.alpha == -1 is for Nehahra dem compatibility (cigar smoke)
 			trailtype = e->render.alpha == -1 ? EFFECT_TR_NEHAHRASMOKE : EFFECT_TR_GRENADE;
 		}
-		else if (e->render.model->flags & EF_TRACER3)
+		else if (e->render.effects & EF_TRACER3)
 			trailtype = EFFECT_TR_VORESPIKE;
 	}
 	// LordHavoc: customizable glow
