@@ -447,7 +447,7 @@ static void CL_ModelIndexList_f(void)
 {
 	int nModelIndexCnt = 1;
 
-	while(cl.model_precache[nModelIndexCnt])
+	while(cl.model_precache[nModelIndexCnt] && nModelIndexCnt != MAX_MODELS)
 	{ // Valid Model
 		Con_Printf("%i : %s\n", nModelIndexCnt, cl.model_precache[nModelIndexCnt]->name);
 		nModelIndexCnt++;
