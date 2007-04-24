@@ -436,6 +436,24 @@ static void CL_PrintEntities_f(void)
 	}
 }
 
+/*
+===============
+CL_ModelIndexList_f
+
+List all models in the client modelindex
+===============
+*/
+static void CL_ModelIndexList_f(void)
+{
+	int nModelIndexCnt = 1;
+
+	while(cl.model_precache[nModelIndexCnt])
+	{ // Valid Model
+		Con_Printf("%i : %s\n", nModelIndexCnt, cl.model_precache[nModelIndexCnt]->name);
+		nModelIndexCnt++;
+	}
+}
+
 //static const vec3_t nomodelmins = {-16, -16, -16};
 //static const vec3_t nomodelmaxs = {16, 16, 16};
 void CL_UpdateRenderEntity(entity_render_t *ent)
@@ -2176,6 +2194,9 @@ void CL_Init (void)
 	Cmd_AddCommand ("stop", CL_Stop_f, "stop recording or playing a demo");
 	Cmd_AddCommand ("playdemo", CL_PlayDemo_f, "watch a demo file");
 	Cmd_AddCommand ("timedemo", CL_TimeDemo_f, "play back a demo as fast as possible and save statistics to benchmark.log");
+
+	// Support Client-side Model Index List
+	Cmd_AddCommand ("cl_modelindexlist", CL_ModelIndexList_f, "list all models in the client modelindex");
 
 	Cvar_RegisterVariable (&cl_autodemo);
 	Cvar_RegisterVariable (&cl_autodemo_nameformat);
