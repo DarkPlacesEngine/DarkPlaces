@@ -17,11 +17,11 @@ char *Sys_TimeString(const char *timeformat)
 
 
 extern qboolean host_shuttingdown;
-void Sys_Quit (void)
+void Sys_Quit (int returnvalue)
 {
 	host_shuttingdown = true;
 	Host_Shutdown();
-	exit(0);
+	exit(returnvalue);
 }
 
 /*

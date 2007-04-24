@@ -465,7 +465,7 @@ void Sys_SendKeyEvents (void)
 	while (PeekMessage (&msg, NULL, 0, 0, PM_NOREMOVE))
 	{
 		if (!GetMessage (&msg, NULL, 0, 0))
-			Sys_Quit ();
+			Sys_Quit (1);
 
 		TranslateMessage (&msg);
 		DispatchMessage (&msg);
@@ -618,7 +618,7 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 
 		case WM_CLOSE:
 			if (MessageBox (mainwindow, "Are you sure you want to quit?", "Confirm Exit", MB_YESNO | MB_SETFOREGROUND | MB_ICONQUESTION) == IDYES)
-				Sys_Quit ();
+				Sys_Quit (0);
 
 			break;
 

@@ -254,8 +254,7 @@ void signal_handler(int sig)
 {
 	printf("Received signal %d, exiting...\n", sig);
 	VID_RestoreSystemGamma();
-	Sys_Quit();
-	exit(0);
+	Sys_Quit(1);
 }
 
 void InitSig(void)
@@ -422,7 +421,7 @@ static void VID_ProcessPendingAsyncEvents (void)
 
 	// Closed
 	if (AsyncEvent_Quitting)
-		Sys_Quit();
+		Sys_Quit(0);
 }
 
 static void VID_BuildAGLAttrib(GLint *attrib, qboolean stencil, qboolean fullscreen, qboolean stereobuffer)
@@ -980,7 +979,7 @@ void Sys_SendKeyEvents(void)
 						VID_AppFocusChanged(false);
 						break;
 					case kEventAppQuit:
-						Sys_Quit();
+						Sys_Quit(0);
 						break;
 					case kEventAppActiveWindowChanged:
 						break;
