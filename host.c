@@ -418,7 +418,7 @@ if (crash = true), don't bother sending signofs
 void SV_DropClient(qboolean crash)
 {
 	int i;
-	Con_Printf("Client \"%s\" dropped\n", host_client->name);
+	Con_Printf("Client \"%s^%i\" dropped\n", host_client->name, STRING_COLOR_DEFAULT);
 
 	// make sure edict is not corrupt (from a level change for example)
 	host_client->edict = PRVM_EDICT_NUM(host_client - svs.clients + 1);

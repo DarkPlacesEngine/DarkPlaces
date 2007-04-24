@@ -1401,7 +1401,7 @@ void Host_Spawn_f (void)
 		PRVM_ExecuteProgram (prog->globals.server->ClientConnect, "QC function ClientConnect is missing");
 
 		if (svs.maxclients > 1 || cls.state == ca_dedicated)
-			Con_Printf("%s entered the game\n", host_client->name);
+			Con_Printf("%s^%i entered the game\n", host_client->name, STRING_COLOR_DEFAULT);
 
 		PRVM_ExecuteProgram (prog->globals.server->PutClientInServer, "QC function PutClientInServer is missing");
 	}
