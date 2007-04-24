@@ -674,6 +674,8 @@ static void Mod_MDL_LoadFrames (unsigned char* datapointer, int inverts, int *ve
 
 static void Mod_BuildAliasSkinFromSkinFrame(texture_t *texture, skinframe_t *skinframe)
 {
+	if (cls.state == ca_dedicated)
+		return;
 	// hack
 	if (!skinframe)
 		skinframe = R_SkinFrame_LoadMissing();
