@@ -72,7 +72,7 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 		if (ent->frameblend[i].lerp >= 0.01f)
 		{
 			mspriteframe_t *frame = model->sprite.sprdata_frames + ent->frameblend[i].frame;
-			texture_t *texture = &frame->texture;
+			texture_t *texture = model->data_textures + ent->frameblend[i].frame;
 			R_UpdateTextureInfo(ent, texture);
 			// FIXME: negate left and right in loader
 			R_DrawSprite(texture->currentlayers[0].blendfunc1, texture->currentlayers[0].blendfunc2, texture->basetexture, texture->currentskinframe->fog, (texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST), (texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE), org, left, up, frame->left, frame->right, frame->down, frame->up, texture->currentlayers[0].color[0], texture->currentlayers[0].color[1], texture->currentlayers[0].color[2], ent->alpha * ent->frameblend[i].lerp);
