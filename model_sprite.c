@@ -394,7 +394,7 @@ void Mod_IDS2_Load(model_t *mod, void *buffer, void *bufferend)
 			if (!(sprframe->texture.skinframes[0] = R_SkinFrame_LoadExternal(pinframe->name, texflags)))
 			{
 				Con_Printf("Mod_IDS2_Load: failed to load %s", pinframe->name);
-				sprframe->texture.skinframes[0] = R_SkinFrame_LoadExternal("missing", TEXF_PRECACHE);
+				sprframe->texture.skinframes[0] = R_SkinFrame_LoadMissing();
 			}
 		}
 
