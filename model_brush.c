@@ -4583,12 +4583,15 @@ Q3 shader blendfuncs actually used in the game (* = supported by DP)
 			//	out->surfaceparms |= Q3SURFACEPARM_NODRAW;
 			//if (R_TextureHasAlpha(out->skinframes[0].base))
 			//	out->surfaceparms |= Q3SURFACEPARM_TRANS;
+			out->numskinframes = 1;
 			if (cls.state != ca_dedicated)
 				if (!(out->skinframes[0] = R_SkinFrame_LoadExternal(out->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP)))
 					Con_DPrintf("%s: could not load texture for missing shader \"%s\"\n", loadmodel->name, out->name);
 		}
 		// init the animation variables
 		out->currentframe = out;
+		if (out->numskinframes < 1)
+			out->numskinframes = 1;
 		if (!out->skinframes[0])
 			out->skinframes[0] = R_SkinFrame_LoadMissing();
 		out->currentskinframe = out->skinframes[0];
