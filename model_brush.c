@@ -1344,17 +1344,23 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 	loadmodel->data_textures = (texture_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_textures * sizeof(texture_t));
 
 	// fill out all slots with notexture
-	skinframe = R_SkinFrame_LoadMissing();
+	if (cls.state != ca_dedicated)
+		skinframe = R_SkinFrame_LoadMissing();
+	else
+		skinframe = NULL;
 	for (i = 0, tx = loadmodel->data_textures;i < loadmodel->num_textures;i++, tx++)
 	{
 		strlcpy(tx->name, "NO TEXTURE FOUND", sizeof(tx->name));
 		tx->width = 16;
 		tx->height = 16;
-		tx->numskinframes = 1;
-		tx->skinframerate = 1;
-		tx->skinframes[0] = skinframe;
-		tx->currentskinframe = tx->skinframes[0];
-		tx->basematerialflags = 0;
+		if (cls.state != ca_dedicated)
+		{
+			tx->numskinframes = 1;
+			tx->skinframerate = 1;
+			tx->skinframes[0] = skinframe;
+			tx->currentskinframe = tx->skinframes[0];
+			tx->basematerialflags = 0;
+		}
 		if (i == loadmodel->num_textures - 1)
 		{
 			tx->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_NOSHADOW;
@@ -1427,6 +1433,35 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			Con_Printf("warning: unnamed texture in %s, renaming to %s\n", loadmodel->name, tx->name);
 		}
 
+		if (tx->name[0] == '*')
+		{
+			if (!strncmp(tx->name, "*lava", 5))
+			{
+				tx->supercontents = mod_q1bsp_texture_lava.supercontents;
+				tx->surfaceflags = mod_q1bsp_texture_lava.surfaceflags;
+			}
+			else if (!strncmp(tx->name, "*slime", 6))
+			{
+				tx->supercontents = mod_q1bsp_texture_slime.supercontents;
+				tx->surfaceflags = mod_q1bsp_texture_slime.surfaceflags;
+			}
+			else
+			{
+				tx->supercontents = mod_q1bsp_texture_water.supercontents;
+				tx->surfaceflags = mod_q1bsp_texture_water.surfaceflags;
+			}
+		}
+		else if (!strncmp(tx->name, "sky", 3))
+		{
+			tx->supercontents = mod_q1bsp_texture_sky.supercontents;
+			tx->surfaceflags = mod_q1bsp_texture_sky.surfaceflags;
+		}
+		else
+		{
+			tx->supercontents = mod_q1bsp_texture_solid.supercontents;
+			tx->surfaceflags = mod_q1bsp_texture_solid.surfaceflags;
+		}
+
 		if (cls.state != ca_dedicated)
 		{
 			// LordHavoc: HL sky textures are entirely different than quake
@@ -1477,51 +1512,28 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 				if (skinframe)
 					tx->skinframes[0] = skinframe;
 			}
-		}
 
-		tx->basematerialflags = 0;
-		if (tx->name[0] == '*')
-		{
-			// LordHavoc: some turbulent textures should not be affected by wateralpha
-			if (strncmp(tx->name,"*lava",5)
-			 && strncmp(tx->name,"*teleport",9)
-			 && strncmp(tx->name,"*rift",5)) // Scourge of Armagon texture
-				tx->basematerialflags |= MATERIALFLAG_WATERALPHA | MATERIALFLAG_NOSHADOW;
-			if (!strncmp(tx->name, "*lava", 5))
+			tx->basematerialflags = 0;
+			if (tx->name[0] == '*')
 			{
-				tx->supercontents = mod_q1bsp_texture_lava.supercontents;
-				tx->surfaceflags = mod_q1bsp_texture_lava.surfaceflags;
+				// LordHavoc: some turbulent textures should not be affected by wateralpha
+				if (strncmp(tx->name,"*lava",5)
+				 && strncmp(tx->name,"*teleport",9)
+				 && strncmp(tx->name,"*rift",5)) // Scourge of Armagon texture
+					tx->basematerialflags |= MATERIALFLAG_WATERALPHA | MATERIALFLAG_NOSHADOW;
+				tx->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_NOSHADOW;
 			}
-			else if (!strncmp(tx->name, "*slime", 6))
-			{
-				tx->supercontents = mod_q1bsp_texture_slime.supercontents;
-				tx->surfaceflags = mod_q1bsp_texture_slime.surfaceflags;
-			}
+			else if (!strncmp(tx->name, "sky", 3))
+				tx->basematerialflags |= MATERIALFLAG_SKY | MATERIALFLAG_NOSHADOW;
 			else
-			{
-				tx->supercontents = mod_q1bsp_texture_water.supercontents;
-				tx->surfaceflags = mod_q1bsp_texture_water.surfaceflags;
-			}
-			tx->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_NOSHADOW;
-		}
-		else if (tx->name[0] == 's' && tx->name[1] == 'k' && tx->name[2] == 'y')
-		{
-			tx->supercontents = mod_q1bsp_texture_sky.supercontents;
-			tx->surfaceflags = mod_q1bsp_texture_sky.surfaceflags;
-			tx->basematerialflags |= MATERIALFLAG_SKY | MATERIALFLAG_NOSHADOW;
-		}
-		else
-		{
-			tx->supercontents = mod_q1bsp_texture_solid.supercontents;
-			tx->surfaceflags = mod_q1bsp_texture_solid.surfaceflags;
-			tx->basematerialflags |= MATERIALFLAG_WALL;
-		}
-		if (tx->skinframes[0]->fog)
-			tx->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
+				tx->basematerialflags |= MATERIALFLAG_WALL;
+			if (tx->skinframes[0] && tx->skinframes[0]->fog)
+				tx->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
 
-		// start out with no animation
-		tx->currentframe = tx;
-		tx->currentskinframe = tx->skinframes[0];
+			// start out with no animation
+			tx->currentframe = tx;
+			tx->currentskinframe = tx->skinframes[0];
+		}
 	}
 
 	// sequence the animations
@@ -4456,6 +4468,16 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 	loadmodel->data_textures = out;
 	loadmodel->num_textures = count;
 
+	for (i = 0;i < count;i++, in++, out++)
+	{
+		strlcpy (out[i].name, in->name, sizeof (out->name));
+		out[i].surfaceflags = LittleLong(in[i].surfaceflags);
+		out[i].supercontents = Mod_Q3BSP_SuperContentsFromNativeContents(loadmodel, LittleLong(in[i].contents));
+	}
+
+	if (cls.state == ca_dedicated)
+		return;
+
 	// parse the Q3 shader files
 	Mod_Q3BSP_LoadShaders();
 
@@ -4463,9 +4485,6 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 	for (i = 0;i < count;i++, in++, out++)
 	{
 		q3shaderinfo_t *shader;
-		strlcpy (out->name, in->name, sizeof (out->name));
-		out->surfaceflags = LittleLong(in->surfaceflags);
-		out->supercontents = Mod_Q3BSP_SuperContentsFromNativeContents(loadmodel, LittleLong(in->contents));
 		shader = Mod_Q3BSP_LookupShader(out->name);
 		if (shader)
 		{
@@ -4538,7 +4557,7 @@ Q3 shader blendfuncs actually used in the game (* = supported by DP)
 			}
 			if (!shader->lighting)
 				out->basematerialflags |= MATERIALFLAG_FULLBRIGHT;
-			if (shader->primarylayer && cls.state != ca_dedicated)
+			if (shader->primarylayer)
 			{
 				int j;
 				out->numskinframes = shader->primarylayer->numframes;
@@ -4547,7 +4566,7 @@ Q3 shader blendfuncs actually used in the game (* = supported by DP)
 					if (!(out->skinframes[j] = R_SkinFrame_LoadExternal(shader->primarylayer->texturename[j], ((shader->surfaceparms & Q3SURFACEPARM_NOMIPMAPS) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | (shader->textureflags & Q3TEXTUREFLAG_NOPICMIP ? 0 : TEXF_PICMIP) | (shader->primarylayer->clampmap ? TEXF_CLAMP : 0))))
 						Con_DPrintf("%s: could not load texture \"%s\" (frame %i) for shader \"%s\"\n", loadmodel->name, shader->primarylayer->texturename[j], j, out->name);
 			}
-			if (shader->backgroundlayer && cls.state != ca_dedicated)
+			if (shader->backgroundlayer)
 			{
 				int j;
 				out->backgroundnumskinframes = shader->backgroundlayer->numframes;
@@ -4584,9 +4603,8 @@ Q3 shader blendfuncs actually used in the game (* = supported by DP)
 			//if (R_TextureHasAlpha(out->skinframes[0].base))
 			//	out->surfaceparms |= Q3SURFACEPARM_TRANS;
 			out->numskinframes = 1;
-			if (cls.state != ca_dedicated)
-				if (!(out->skinframes[0] = R_SkinFrame_LoadExternal(out->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP)))
-					Con_DPrintf("%s: could not load texture for missing shader \"%s\"\n", loadmodel->name, out->name);
+			if (!(out->skinframes[0] = R_SkinFrame_LoadExternal(out->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP)))
+				Con_DPrintf("%s: could not load texture for missing shader \"%s\"\n", loadmodel->name, out->name);
 		}
 		// init the animation variables
 		out->currentframe = out;

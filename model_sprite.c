@@ -395,10 +395,14 @@ void Mod_IDS2_Load(model_t *mod, void *buffer, void *bufferend)
 		y = (int)max(sprframe->up * sprframe->up, sprframe->down * sprframe->down);
 		if (modelradius < x + y)
 			modelradius = x + y;
+	}
 
-		if (width > 0 && height > 0 && cls.state != ca_dedicated)
+	if (cls.state != ca_dedicated)
+	{
+		for (i = 0;i < loadmodel->numframes;i++)
 		{
-			skinframe = NULL;
+			const dsprite2frame_t *pinframe;
+			pinframe = &pinqsprite->frames[i];
 			if (!(skinframe = R_SkinFrame_LoadExternal(pinframe->name, texflags)))
 			{
 				Con_Printf("Mod_IDS2_Load: failed to load %s", pinframe->name);
