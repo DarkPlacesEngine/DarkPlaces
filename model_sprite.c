@@ -39,18 +39,20 @@ void Mod_SpriteInit (void)
 	Cvar_RegisterVariable(&r_picmipsprites);
 }
 
-static void Mod_SpriteSetupTexture(mspriteframe_t *frame, qboolean fullbright, qboolean additive)
+static void Mod_SpriteSetupTexture(texture_t *texture, skinframe_t *skinframe, qboolean fullbright, qboolean additive)
 {
-	texture_t *texture = &frame->texture;
+	if (!skinframe)
+		skinframe = R_SkinFrame_LoadMissing();
 	texture->basematerialflags = MATERIALFLAG_WALL;
 	if (fullbright)
 		texture->basematerialflags |= MATERIALFLAG_FULLBRIGHT;
 	if (additive)
 		texture->basematerialflags |= MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
-	else if (texture->skinframes[0]->fog)
+	else if (skinframe->fog)
 		texture->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
 	texture->currentmaterialflags = texture->basematerialflags;
-	texture->currentskinframe = texture->skinframes[0];
+	texture->numskinframes = 1;
+	texture->currentskinframe = texture->skinframes[0] = skinframe;
 }
 
 static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version, const unsigned int *palette, const unsigned int *alphapalette, qboolean additive)
@@ -60,6 +62,7 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 	dspriteframe_t		*pinframe;
 	dspritegroup_t		*pingroup;
 	dspriteinterval_t	*pinintervals;
+	skinframe_t			*skinframe;
 	float				modelradius, interval;
 	char				name[MAX_QPATH], fogname[MAX_QPATH];
 	const void			*startframes;
@@ -110,6 +113,8 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 
 	loadmodel->animscenes = (animscene_t *)Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numframes);
 	loadmodel->sprite.sprdata_frames = (mspriteframe_t *)Mem_Alloc(loadmodel->mempool, sizeof(mspriteframe_t) * realframes);
+	loadmodel->num_textures = realframes;
+	loadmodel->data_textures = (texture_t *)Mem_Alloc(loadmodel->mempool, sizeof(texture_t) * loadmodel->num_textures);
 
 	datapointer = (unsigned char *)startframes;
 	realframes = 0;
@@ -164,26 +169,26 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 			if (modelradius < x + y)
 				modelradius = x + y;
 
+			skinframe = NULL;
 			if (width > 0 && height > 0 && cls.state != ca_dedicated)
 			{
 				if (groupframes > 1)
 					sprintf (name, "%s_%i_%i", loadmodel->name, i, j);
 				else
 					sprintf (name, "%s_%i", loadmodel->name, i);
-				if (!(loadmodel->sprite.sprdata_frames[realframes].texture.skinframes[0] = R_SkinFrame_LoadExternal(name, texflags)))
+				if (!(skinframe = R_SkinFrame_LoadExternal(name, texflags)))
 				{
 					if (groupframes > 1)
 						sprintf (fogname, "%s_%i_%ifog", loadmodel->name, i, j);
 					else
 						sprintf (fogname, "%s_%ifog", loadmodel->name, i);
 					if (version == SPRITE32_VERSION)
-						loadmodel->sprite.sprdata_frames[realframes].texture.skinframes[0] = R_SkinFrame_LoadInternal(name, texflags, false, false, datapointer, width, height, 32, NULL, NULL);
+						skinframe = R_SkinFrame_LoadInternal(name, texflags, false, false, datapointer, width, height, 32, NULL, NULL);
 					else //if (version == SPRITE_VERSION || version == SPRITEHL_VERSION)
-						loadmodel->sprite.sprdata_frames[realframes].texture.skinframes[0] = R_SkinFrame_LoadInternal(name, texflags, false, false, datapointer, width, height, 8, palette, alphapalette);
+						skinframe = R_SkinFrame_LoadInternal(name, texflags, false, false, datapointer, width, height, 8, palette, alphapalette);
 				}
 			}
-
-			Mod_SpriteSetupTexture(&loadmodel->sprite.sprdata_frames[realframes], fullbright, additive);
+			Mod_SpriteSetupTexture(&loadmodel->data_textures[realframes], skinframe, fullbright, additive);
 
 			if (version == SPRITE32_VERSION)
 				datapointer += width * height * 4;
@@ -323,6 +328,7 @@ void Mod_IDS2_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	int i, version, fullbright;
 	const dsprite2_t *pinqsprite;
+	skinframe_t *skinframe;
 	float modelradius;
 	int texflags = (r_mipsprites.integer ? TEXF_MIPMAP : 0) | (r_picmipsprites.integer ? TEXF_PICMIP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE;
 
@@ -354,6 +360,8 @@ void Mod_IDS2_Load(model_t *mod, void *buffer, void *bufferend)
 
 	loadmodel->animscenes = (animscene_t *)Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numframes);
 	loadmodel->sprite.sprdata_frames = (mspriteframe_t *)Mem_Alloc(loadmodel->mempool, sizeof(mspriteframe_t) * loadmodel->numframes);
+	loadmodel->num_textures = loadmodel->numframes;
+	loadmodel->data_textures = (texture_t *)Mem_Alloc(loadmodel->mempool, sizeof(texture_t) * loadmodel->num_textures);
 
 	modelradius = 0;
 	for (i = 0;i < loadmodel->numframes;i++)
@@ -389,16 +397,16 @@ void Mod_IDS2_Load(model_t *mod, void *buffer, void *bufferend)
 		if (modelradius < x + y)
 			modelradius = x + y;
 
+		skinframe = NULL;
 		if (width > 0 && height > 0 && cls.state != ca_dedicated)
 		{
-			if (!(sprframe->texture.skinframes[0] = R_SkinFrame_LoadExternal(pinframe->name, texflags)))
+			if (!(skinframe = R_SkinFrame_LoadExternal(pinframe->name, texflags)))
 			{
 				Con_Printf("Mod_IDS2_Load: failed to load %s", pinframe->name);
-				sprframe->texture.skinframes[0] = R_SkinFrame_LoadMissing();
+				skinframe = R_SkinFrame_LoadMissing();
 			}
 		}
-
-		Mod_SpriteSetupTexture(sprframe, fullbright, false);
+		Mod_SpriteSetupTexture(&loadmodel->data_textures[i], skinframe, fullbright, false);
 	}
 
 	modelradius = sqrt(modelradius);
