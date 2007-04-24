@@ -341,7 +341,7 @@ void Sys_SendKeyEvents( void )
 	while( SDL_PollEvent( &event ) )
 		switch( event.type ) {
 			case SDL_QUIT:
-				Sys_Quit();
+				Sys_Quit(0);
 				break;
 			case SDL_KEYDOWN:
 			case SDL_KEYUP:

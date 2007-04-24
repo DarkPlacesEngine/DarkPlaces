@@ -38,7 +38,7 @@ Host_Quit_f
 
 void Host_Quit_f (void)
 {
-	Sys_Quit ();
+	Sys_Quit (0);
 }
 
 

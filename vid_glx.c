@@ -425,12 +425,12 @@ static void HandleEvents(void)
 			break;
 		case DestroyNotify:
 			// window has been destroyed
-			Sys_Quit();
+			Sys_Quit(0);
 			break;
 		case ClientMessage:
 			// window manager messages
 			if ((event.xclient.format == 32) && ((unsigned int)event.xclient.data.l[0] == wm_delete_window_atom))
-				Sys_Quit();
+				Sys_Quit(0);
 			break;
 		case MapNotify:
 			// window restored
@@ -537,8 +537,7 @@ void signal_handler(int sig)
 {
 	Con_Printf("Received signal %d, exiting...\n", sig);
 	VID_RestoreSystemGamma();
-	Sys_Quit();
-	exit(0);
+	Sys_Quit(1);
 }
 
 void InitSig(void)
