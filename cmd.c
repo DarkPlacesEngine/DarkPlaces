@@ -320,6 +320,25 @@ static void Cmd_Echo_f (void)
 	Con_Print("\n");
 }
 
+// DRESK - 4/24/07
+/*
+===============
+Cmd_ModelIndexList_f
+
+List all models in the model index
+===============
+*/
+static void Cmd_ModelIndexList_f(void)
+{
+	int nModelIndexCnt = 3;
+
+	while(cl.model_precache[nModelIndexCnt])
+	{ // Valid Model
+		Con_Printf("%i : %s\n", nModelIndexCnt, cl.model_precache[nModelIndexCnt]->name);
+		nModelIndexCnt++;
+	}
+}
+
 // DRESK - 5/14/06
 // Support Doom3-style Toggle Console Command
 /*
@@ -691,6 +710,8 @@ void Cmd_Init_Commands (void)
 	// DRESK - 5/14/06
 	// Support Doom3-style Toggle Command
 	Cmd_AddCommand( "toggle", Cmd_Toggle_f, "toggles a console variable's values (use for more info)");
+	// Add Model Index List Command
+	Cmd_AddCommand("modelindexlist", Cmd_ModelIndexList_f, "lists all models in the modelindex");
 }
 
 /*
