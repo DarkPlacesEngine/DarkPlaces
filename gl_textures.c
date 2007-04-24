@@ -69,7 +69,7 @@ typedef struct gltexture_s
 	// pointer to next texture in texturepool chain
 	struct gltexture_s *chain;
 	// name of the texture (this might be removed someday), no duplicates
-	char identifier[32];
+	char identifier[MAX_QPATH + 32];
 	// original data size in *inputtexels
 	int inputwidth, inputheight, inputdepth;
 	// copy of the original texture(s) supplied to the upload function, for
