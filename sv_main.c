@@ -734,6 +734,10 @@ qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, int 
 	if (PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.fullbright)->_float)
 		cs->effects |= EF_FULLBRIGHT;
 
+	val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.modelflags);
+	if (val && val->_float)
+		cs->effects |= ((unsigned int)val->_float & 0xff) << 24;
+
 	if (ent->fields.server->movetype == MOVETYPE_STEP)
 		cs->flags |= RENDER_STEP;
 	if (cs->number != sv_writeentitiestoclient_clentnum && (cs->effects & EF_LOWPRECISION) && cs->origin[0] >= -32768 && cs->origin[1] >= -32768 && cs->origin[2] >= -32768 && cs->origin[0] <= 32767 && cs->origin[1] <= 32767 && cs->origin[2] <= 32767)
@@ -2618,6 +2622,7 @@ prvm_required_field_t reqfields[] =
 	{ev_entity, "nodrawtoclient"},
 	{ev_entity, "tag_entity"},
 	{ev_entity, "viewmodelforclient"},
+	{ev_float, "Version"},
 	{ev_float, "alpha"},
 	{ev_float, "ammo_cells1"},
 	{ev_float, "ammo_lava_nails"},
@@ -2653,8 +2658,8 @@ prvm_required_field_t reqfields[] =
 	{ev_float, "idealpitch"},
 	{ev_float, "items2"},
 	{ev_float, "light_lev"},
+	{ev_float, "modelflags"},
 	{ev_float, "pflags"},
-	{ev_string, "netaddress"},
 	{ev_float, "ping"},
 	{ev_float, "pitch_speed"},
 	{ev_float, "pmodel"},
@@ -2663,8 +2668,13 @@ prvm_required_field_t reqfields[] =
 	{ev_float, "scale"},
 	{ev_float, "style"},
 	{ev_float, "tag_index"},
-	{ev_float, "Version"},
 	{ev_float, "viewzoom"},
+	{ev_function, "SendEntity"},
+	{ev_function, "contentstransition"}, // DRESK - Support for Entity Contents Transition Event
+	{ev_function, "customizeentityforclient"},
+	{ev_string, "netaddress"},
+	{ev_string, "playermodel"},
+	{ev_string, "playerskin"},
 	{ev_vector, "color"},
 	{ev_vector, "colormod"},
 	{ev_vector, "cursor_screen"},
@@ -2672,12 +2682,6 @@ prvm_required_field_t reqfields[] =
 	{ev_vector, "cursor_trace_start"},
 	{ev_vector, "movement"},
 	{ev_vector, "punchvector"},
-	{ev_string, "playermodel"},
-	{ev_string, "playerskin"},
-	{ev_function, "SendEntity"},
-	{ev_function, "customizeentityforclient"},
-	// DRESK - Support for Entity Contents Transition Event
-	{ev_function, "contentstransition"},
 };
 
 void SV_VM_Setup(void)

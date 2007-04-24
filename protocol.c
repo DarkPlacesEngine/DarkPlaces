@@ -35,8 +35,9 @@ entity_state_t defaultstate =
 	0,//unsigned char flags;
 	0,//unsigned char tagindex;
 	{32, 32, 32},//unsigned char colormod[3];
+	0,//unsigned char internaleffects; // INTEF_FLAG1QW and so on
 	// padding to a multiple of 8 bytes (to align the double time)
-	{0,0}//unsigned char unused[2]; // !
+	0//unsigned char unused; // !
 };
 
 // LordHavoc: I own protocol ranges 96, 97, 3500-3599
@@ -1804,9 +1805,9 @@ void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbi
 			bits |= E5_FRAME16;
 		if (bits & E5_EFFECTS)
 		{
-			if (s->effects >= 65536)
+			if (s->effects & 0xFFFF0000)
 				bits |= E5_EFFECTS32;
-			else if (s->effects >= 256)
+			else if (s->effects & 0xFFFFFF00)
 				bits |= E5_EFFECTS16;
 		}
 		if (bits >= 256)
@@ -2428,43 +2429,43 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 }
 
 
-static int QW_TranslateEffects(int qweffects, int number)
+static void QW_TranslateEffects(entity_state_t *s, int qweffects)
 {
-	int effects = 0;
+	s->effects = 0;
+	s->internaleffects = 0;
 	if (qweffects & QW_EF_BRIGHTFIELD)
-		effects |= EF_BRIGHTFIELD;
+		s->effects |= EF_BRIGHTFIELD;
 	if (qweffects & QW_EF_MUZZLEFLASH)
-		effects |= EF_MUZZLEFLASH;
+		s->effects |= EF_MUZZLEFLASH;
 	if (qweffects & QW_EF_FLAG1)
 	{
 		// mimic FTEQW's interpretation of EF_FLAG1 as EF_NODRAW on non-player entities
-		if (number > cl.maxclients)
-			effects |= EF_NODRAW;
+		if (s->number > cl.maxclients)
+			s->effects |= EF_NODRAW;
 		else
-			effects |= EF_FLAG1QW;
+			s->internaleffects |= INTEF_FLAG1QW;
 	}
 	if (qweffects & QW_EF_FLAG2)
 	{
 		// mimic FTEQW's interpretation of EF_FLAG2 as EF_ADDITIVE on non-player entities
-		if (number > cl.maxclients)
-			effects |= EF_ADDITIVE;
+		if (s->number > cl.maxclients)
+			s->effects |= EF_ADDITIVE;
 		else
-			effects |= EF_FLAG2QW;
+			s->internaleffects |= INTEF_FLAG2QW;
 	}
 	if (qweffects & QW_EF_RED)
 	{
 		if (qweffects & QW_EF_BLUE)
-			effects |= EF_RED | EF_BLUE;
+			s->effects |= EF_RED | EF_BLUE;
 		else
-			effects |= EF_RED;
+			s->effects |= EF_RED;
 	}
 	else if (qweffects & QW_EF_BLUE)
-		effects |= EF_BLUE;
+		s->effects |= EF_BLUE;
 	else if (qweffects & QW_EF_BRIGHTLIGHT)
-		effects |= EF_BRIGHTLIGHT;
+		s->effects |= EF_BRIGHTLIGHT;
 	else if (qweffects & QW_EF_DIMLIGHT)
-		effects |= EF_DIMLIGHT;
-	return effects;
+		s->effects |= EF_DIMLIGHT;
 }
 
 void EntityStateQW_ReadPlayerUpdate(void)
@@ -2488,6 +2489,7 @@ void EntityStateQW_ReadPlayerUpdate(void)
 	s = &ent->state_current;
 	*s = defaultstate;
 	s->active = true;
+	s->number = enumber;
 	s->colormap = enumber;
 	playerflags = MSG_ReadShort();
 	MSG_ReadVector(s->origin, cls.protocol);
@@ -2540,7 +2542,7 @@ void EntityStateQW_ReadPlayerUpdate(void)
 	if (playerflags & QW_PF_SKINNUM)
 		s->skin = MSG_ReadByte();
 	if (playerflags & QW_PF_EFFECTS)
-		s->effects = QW_TranslateEffects(MSG_ReadByte(), enumber);
+		QW_TranslateEffects(s, MSG_ReadByte());
 	if (playerflags & QW_PF_WEAPONFRAME)
 		weaponframe = MSG_ReadByte();
 	else
@@ -2592,8 +2594,6 @@ void EntityStateQW_ReadPlayerUpdate(void)
 	cl.entities_active[enumber] = s->active;
 	// set the update time
 	s->time = cl.mtime[0] - msec * 0.001; // qw has no clock
-	// fix the number (it gets wiped occasionally by copying from defaultstate)
-	s->number = enumber;
 	// check if we need to update the lerp stuff
 	if (s->active)
 		CL_MoveLerpEntityStates(&cl.entities[enumber]);
@@ -2619,7 +2619,7 @@ static void EntityStateQW_ReadEntityUpdate(entity_state_t *s, int bits)
 	if (bits & QW_U_SKIN)
 		s->skin = MSG_ReadByte();
 	if (bits & QW_U_EFFECTS)
-		s->effects = QW_TranslateEffects(qweffects = MSG_ReadByte(), s->number);
+		QW_TranslateEffects(s, qweffects = MSG_ReadByte());
 	if (bits & QW_U_ORIGIN1)
 		s->origin[0] = MSG_ReadCoord13i();
 	if (bits & QW_U_ANGLE1)

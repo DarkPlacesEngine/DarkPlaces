@@ -31,14 +31,15 @@ int Protocol_NumberForEnum(protocolversion_t p);
 void Protocol_Names(char *buffer, size_t buffersize);
 
 // model effects
-#define	EF_ROCKET	1			// leave a trail
-#define	EF_GRENADE	2			// leave a trail
-#define	EF_GIB		4			// leave a trail
-#define	EF_ROTATE	8			// rotate (bonus items)
-#define	EF_TRACER	16			// green split trail
-#define	EF_ZOMGIB	32			// small blood trail
-#define	EF_TRACER2	64			// orange split trail + rotate
-#define	EF_TRACER3	128			// purple trail
+#define	MF_ROCKET	1			// leave a trail
+#define	MF_GRENADE	2			// leave a trail
+#define	MF_GIB		4			// leave a trail
+#define	MF_ROTATE	8			// rotate (bonus items)
+#define	MF_TRACER	16			// green split trail
+#define	MF_ZOMGIB	32			// small blood trail
+#define	MF_TRACER2	64			// orange split trail + rotate
+#define	MF_TRACER3	128			// purple trail
+
 // entity effects
 #define	EF_BRIGHTFIELD			1
 #define	EF_MUZZLEFLASH 			2
@@ -48,21 +49,34 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define EF_ADDITIVE				32
 #define EF_BLUE					64
 #define EF_RED					128
-#define EF_DELTA				8388608	// LordHavoc: (obsolete) entity is delta compressed to save network bandwidth  (no longer used)
-#define EF_LOWPRECISION			4194304 // LordHavoc: entity is low precision (integer coordinates) to save network bandwidth
-// effects/model (can be used as model flags or entity effects)
-#define	EF_REFLECTIVE			256		// LordHavoc: shiny metal objects :)  (not currently supported)
-#define EF_FULLBRIGHT			512		// LordHavoc: fullbright
-#define EF_FLAME				1024	// LordHavoc: on fire
-#define EF_STARDUST				2048	// LordHavoc: showering sparks
-#define EF_NOSHADOW				4096	// LordHavoc: does not cast a shadow
-#define EF_NODEPTHTEST			8192	// LordHavoc: shows through walls
-#define EF_SELECTABLE			16384	// LordHavoc: highlights when PRYDON_CLIENTCURSOR mouse is over it
-#define EF_DOUBLESIDED			32768	//[515]: disable cull face for this entity
+#define EF_UNUSED8				256
+#define EF_FULLBRIGHT			512			// LordHavoc: fullbright
+#define EF_FLAME				1024		// LordHavoc: on fire
+#define EF_STARDUST				2048		// LordHavoc: showering sparks
+#define EF_NOSHADOW				4096		// LordHavoc: does not cast a shadow
+#define EF_NODEPTHTEST			8192		// LordHavoc: shows through walls
+#define EF_SELECTABLE			16384		// LordHavoc: highlights when PRYDON_CLIENTCURSOR mouse is over it
+#define EF_DOUBLESIDED			32768		//[515]: disable cull face for this entity
+#define EF_UNUSED16				65536
+#define EF_UNUSED17				131072
+#define EF_UNUSED18				262144
+#define EF_UNUSED19				524288
+#define EF_UNUSED20				1048576
+#define EF_UNUSED21				2197152
+#define EF_LOWPRECISION			4194304		// LordHavoc: entity is low precision (integer coordinates) to save network bandwidth  (serverside only)
+#define EF_UNUSED23				8388608
+#define EF_ROCKET				16777216	// leave a trail
+#define EF_GRENADE				33554432	// leave a trail
+#define EF_GIB					67108864	// leave a trail
+#define EF_ROTATE				134217728	// rotate (bonus items)
+#define EF_TRACER				268435456	// green split trail
+#define EF_ZOMGIB				536870912	// small blood trail
+#define EF_TRACER2				1073741824	// orange split trail + rotate
+#define EF_TRACER3				0x80000000	// purple trail
 
-#define EF_FLAG1QW				16777216 // internal client use only
-#define EF_FLAG2QW				33554432 // internal client use only
-#define EF_STEP					0x80000000 // internal client use only - present on MOVETYPE_STEP entities, not QC accessible (too many bits)
+// internaleffects bits (no overlap with EF_ bits):
+#define INTEF_FLAG1QW				1
+#define INTEF_FLAG2QW				2
 
 // flags for the pflags field of entities
 #define PFLAGS_NOSHADOW			1
@@ -354,8 +368,9 @@ typedef struct entity_state_s
 	unsigned char flags;
 	unsigned char tagindex;
 	unsigned char colormod[3];
+	unsigned char internaleffects; // INTEF_FLAG1QW and so on
 	// padding to a multiple of 8 bytes (to align the double time)
-	unsigned char unused[2];
+	unsigned char unused;
 }
 entity_state_t;
 

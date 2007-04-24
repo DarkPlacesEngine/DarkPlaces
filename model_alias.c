@@ -794,7 +794,9 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 	BOUNDI(loadmodel->numframes,0,65536);
 	loadmodel->synctype = (synctype_t)LittleLong (pinmodel->synctype);
 	BOUNDI(loadmodel->synctype,0,2);
-	loadmodel->flags = LittleLong (pinmodel->flags);
+	// convert model flags to EF flags (MF_ROCKET becomes EF_ROCKET, etc)
+	i = LittleLong (pinmodel->flags);
+	loadmodel->effects = ((i & 255) << 24) | (i & 0x00FFFF00);
 
 	for (i = 0;i < 3;i++)
 	{
@@ -1125,7 +1127,6 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->surfmesh.data_element3i = (int *)data;data += loadmodel->surfmesh.num_triangles * sizeof(int[3]);
 	loadmodel->surfmesh.data_neighbor3i = (int *)data;data += loadmodel->surfmesh.num_triangles * sizeof(int[3]);
 
-	loadmodel->flags = 0; // there are no MD2 flags
 	loadmodel->synctype = ST_RAND;
 
 	// load the skins
@@ -1308,8 +1309,10 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	loadmodel->DrawLight = R_Q1BSP_DrawLight;
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
-	loadmodel->flags = LittleLong(pinmodel->flags);
 	loadmodel->synctype = ST_RAND;
+	// convert model flags to EF flags (MF_ROCKET becomes EF_ROCKET, etc)
+	i = LittleLong (pinmodel->flags);
+	loadmodel->effects = ((i & 255) << 24) | (i & 0x00FFFF00);
 
 	// set up some global info about the model
 	loadmodel->numframes = LittleLong(pinmodel->num_frames);
@@ -1452,7 +1455,6 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		Host_Error ("Mod_ZYMOTICMODEL_Load: only type 1 (skeletal pose) models are currently supported (name = %s)", loadmodel->name);
 
 	loadmodel->type = mod_alias;
-	loadmodel->flags = 0; // there are no flags on zym models
 	loadmodel->synctype = ST_RAND;
 
 	// byteswap header
@@ -1761,7 +1763,6 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		Host_Error ("Mod_DARKPLACESMODEL_Load: only type 2 (hierarchical skeletal pose) models are currently supported (name = %s)", loadmodel->name);
 
 	loadmodel->type = mod_alias;
-	loadmodel->flags = 0; // there are no flags on zym models
 	loadmodel->synctype = ST_RAND;
 
 	// byteswap header
@@ -2065,7 +2066,6 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	loadmodel->DrawLight = R_Q1BSP_DrawLight;
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
-	loadmodel->flags = 0; // there are no flags on zym models
 	loadmodel->synctype = ST_RAND;
 
 	FS_StripExtension(loadmodel->name, animname, sizeof(animname));

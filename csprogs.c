@@ -128,14 +128,14 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 	e->render.colormap = (int)ed->fields.client->colormap;
 	e->render.frame = (int)ed->fields.client->frame;
 	e->render.skinnum = (int)ed->fields.client->skin;
-	e->render.effects |= e->render.model->flags2 & (EF_FULLBRIGHT | EF_ADDITIVE);
+	e->render.effects |= e->render.model->effects;
 	scale = 1;
 	renderflags = 0;
 	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.renderflags)) && val->_float)	renderflags = (int)val->_float;
 	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.alpha)) && val->_float)		e->render.alpha = val->_float;
 	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.scale)) && val->_float)		e->render.scale = scale = val->_float;
 	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.colormod)) && VectorLength2(val->vector))	VectorCopy(val->vector, e->render.colormod);
-	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.effects)) && val->_float)	e->render.effects = (int)val->_float;
+	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.effects)) && val->_float)	e->render.effects |= (int)val->_float;
 	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.tag_entity)) && val->edict)
 	{
 		int tagentity;

@@ -252,6 +252,8 @@ typedef struct entity_render_s
 	vec3_t colormap_shirtcolor;
 	// light, particles, etc
 	int effects;
+	// qw CTF flags and other internal-use-only effect bits
+	int internaleffects;
 	// for Alias models
 	int skinnum;
 	// render flags
