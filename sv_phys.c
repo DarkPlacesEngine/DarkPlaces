@@ -146,9 +146,6 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	int numtouchedicts;
 	prvm_edict_t *touchedicts[MAX_EDICTS];
 
-	// Get Allow Touch with Owner
-	int nAllowTouchWithOwner = PRVM_EDICTFIELDVALUE(passedict, prog->fieldoffsets.allowtouchwithowner)->_int;
-
 	VectorCopy(start, clipstart);
 	VectorCopy(end, clipend);
 	VectorCopy(mins, clipmins);
@@ -235,10 +232,10 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 			if (passedict == touch)
 				continue;
 			// don't clip owned entities against owner
-			if (!nAllowTouchWithOwner && traceowner == touch)
+			if (traceowner == touch)
 				continue;
 			// don't clip owner against owned entities
-			if (!nAllowTouchWithOwner && passedictprog == touch->fields.server->owner)
+			if (passedictprog == touch->fields.server->owner)
 				continue;
 			// don't clip points against points (they can't collide)
 			if (pointtrace && VectorCompare(touch->fields.server->mins, touch->fields.server->maxs) && (type != MOVE_MISSILE || !((int)touch->fields.server->flags & FL_MONSTER)))
