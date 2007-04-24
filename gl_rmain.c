@@ -1055,6 +1055,8 @@ void R_SkinFrame_PrepareForPurge(void)
 
 void R_SkinFrame_MarkUsed(skinframe_t *skinframe)
 {
+	if (!skinframe)
+		return;
 	// mark the skinframe as used for the purging code
 	skinframe->loadsequence = r_skinframe.loadsequence;
 }
