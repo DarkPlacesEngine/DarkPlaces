@@ -1069,7 +1069,7 @@ void CL_UpdateNetworkEntityTrail(entity_t *e)
 	if (e->persistent.muzzleflash > 0)
 		e->persistent.muzzleflash -= bound(0, cl.time - cl.oldtime, 0.1) * 20;
 	// LordHavoc: if the model has no flags, don't check each
-	if (e->render.model && e->render.model->flags && (!e->state_current.tagentity && !(e->render.flags & RENDER_VIEWMODEL)))
+	if (e->render.model && e->render.model->flags && !(e->render.flags & RENDER_VIEWMODEL))
 	{
 		if (e->render.model->flags & EF_GIB)
 			trailtype = EFFECT_TR_BLOOD;
@@ -1318,7 +1318,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 		R_RTLight_Update(&r_refdef.lights[r_refdef.numlights++], false, &tempmatrix, color, -1, NULL, true, 0, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
 	// LordHavoc: if the model has no flags, don't check each
-	if (e->render.model && e->render.model->flags && (!e->state_current.tagentity && !(e->render.flags & RENDER_VIEWMODEL)))
+	if (e->render.model && e->render.model->flags && !(e->render.flags & RENDER_VIEWMODEL))
 	{
 		if (e->render.model->flags & EF_GIB)
 			trailtype = EFFECT_TR_BLOOD;
