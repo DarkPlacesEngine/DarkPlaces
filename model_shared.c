@@ -67,7 +67,27 @@ static void mod_shutdown(void)
 static void mod_newmap(void)
 {
 	msurface_t *surface;
-	int i, surfacenum, ssize, tsize;
+	int i, j, k, numtextures, surfacenum, ssize, tsize;
+
+	R_SkinFrame_PrepareForPurge();
+	for (i = 0;i < mod_numknown;i++)
+	{
+		if (mod_known[i].mempool && mod_known[i].data_textures)
+		{
+			numtextures = mod_known[i].num_textures;
+			// models can have multiple sets of textures
+			if (mod_known[i].numskins > 1)
+				numtextures *= mod_known[i].numskins;
+			for (j = 0;j < numtextures;j++)
+			{
+				for (k = 0;k < mod_known[i].data_textures[j].numskinframes;k++)
+					R_SkinFrame_MarkUsed(mod_known[i].data_textures[j].skinframes[k]);
+				for (k = 0;k < mod_known[i].data_textures[j].backgroundnumskinframes;k++)
+					R_SkinFrame_MarkUsed(mod_known[i].data_textures[j].backgroundskinframes[k]);
+			}
+		}
+	}
+	R_SkinFrame_Purge();
 
 	if (!cl_stainmaps_clearonload.integer)
 		return;
@@ -218,9 +238,6 @@ model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, qboolea
 
 		// all models use memory, so allocate a memory pool
 		mod->mempool = Mem_AllocPool(mod->name, 0, NULL);
-		// all models load textures, so allocate a texture pool
-		if (cls.state != ca_dedicated)
-			mod->texturepool = R_AllocTexturePool();
 
 		num = LittleLong(*((int *)buf));
 		// call the apropriate loader
@@ -1029,192 +1046,6 @@ void Mod_ShadowMesh_Free(shadowmesh_t *mesh)
 		nextmesh = mesh->next;
 		Mem_Free(mesh);
 	}
-}
-
-static rtexture_t *GL_TextureForSkinLayer(const unsigned char *in, int width, int height, const char *name, const unsigned int *palette, int textureflags, qboolean force)
-{
-	int i;
-	if (!force)
-	{
-		for (i = 0;i < width*height;i++)
-			if (((unsigned char *)&palette[in[i]])[3] > 0)
-				break;
-		if (i == width*height)
-			return NULL;
-	}
-	return R_LoadTexture2D (loadmodel->texturepool, name, width, height, in, TEXTYPE_PALETTE, textureflags, palette);
-}
-
-int Mod_LoadSkinFrame(skinframe_t *skinframe, const char *basename, int textureflags, qboolean loadpantsandshirt, qboolean loadglowtexture)
-{
-	// FIXME: it should be possible to disable loading gloss and normalmap using cvars, to prevent wasted loading time and memory usage
-	qboolean loadnormalmap = true;
-	qboolean loadgloss = true;
-	int j;
-	unsigned char *pixels;
-	unsigned char *bumppixels;
-	unsigned char *basepixels;
-	int basepixels_width;
-	int basepixels_height;
-	char name[MAX_QPATH];
-	memset(skinframe, 0, sizeof(*skinframe));
-	Image_StripImageExtension(basename, name, sizeof(name));
-	skinframe->base = r_texture_notexture;
-	if (cls.state == ca_dedicated)
-		return false;
-
-	basepixels = loadimagepixels(name, false, 0, 0);
-	if (basepixels == NULL)
-		return false;
-	basepixels_width = image_width;
-	basepixels_height = image_height;
-	skinframe->base = R_LoadTexture2D (loadmodel->texturepool, basename, basepixels_width, basepixels_height, basepixels, TEXTYPE_RGBA, textureflags, NULL);
-
-	if (textureflags & TEXF_ALPHA)
-	{
-		for (j = 3;j < basepixels_width * basepixels_height * 4;j += 4)
-			if (basepixels[j] < 255)
-				break;
-		if (j < basepixels_width * basepixels_height * 4)
-		{
-			// has transparent pixels
-			pixels = (unsigned char *)Mem_Alloc(loadmodel->mempool, image_width * image_height * 4);
-			for (j = 0;j < image_width * image_height * 4;j += 4)
-			{
-				pixels[j+0] = 255;
-				pixels[j+1] = 255;
-				pixels[j+2] = 255;
-				pixels[j+3] = basepixels[j+3];
-			}
-			skinframe->fog = R_LoadTexture2D (loadmodel->texturepool, va("%s_mask", basename), image_width, image_height, pixels, TEXTYPE_RGBA, textureflags, NULL);
-			Mem_Free(pixels);
-		}
-	}
-
-	// _luma is supported for tenebrae compatibility
-	// (I think it's a very stupid name, but oh well)
-	if (loadglowtexture && ((pixels = loadimagepixels(va("%s_glow", name), false, 0, 0)) != NULL || (pixels = loadimagepixels(va("%s_luma", name), false, 0, 0)) != NULL)) {skinframe->glow = R_LoadTexture2D (loadmodel->texturepool, va("%s_glow", basename), image_width, image_height, pixels, TEXTYPE_RGBA, textureflags, NULL);Mem_Free(pixels);pixels = NULL;}
-	// _norm is the name used by tenebrae and has been adopted as standard
-	if (loadnormalmap)
-	{
-		if ((pixels = loadimagepixels(va("%s_norm", name), false, 0, 0)) != NULL)
-		{
-			skinframe->nmap = R_LoadTexture2D (loadmodel->texturepool, va("%s_nmap", basename), image_width, image_height, pixels, TEXTYPE_RGBA, textureflags, NULL);
-			Mem_Free(pixels);
-			pixels = NULL;
-		}
-		else if (r_shadow_bumpscale_bumpmap.value > 0 && (bumppixels = loadimagepixels(va("%s_bump", name), false, 0, 0)) != NULL)
-		{
-			pixels = (unsigned char *)Mem_Alloc(loadmodel->mempool, image_width * image_height * 4);
-			Image_HeightmapToNormalmap(bumppixels, pixels, image_width, image_height, false, r_shadow_bumpscale_bumpmap.value);
-			skinframe->nmap = R_LoadTexture2D (loadmodel->texturepool, va("%s_nmap", basename), image_width, image_height, pixels, TEXTYPE_RGBA, textureflags, NULL);
-			Mem_Free(pixels);
-			Mem_Free(bumppixels);
-		}
-		else if (r_shadow_bumpscale_basetexture.value > 0)
-		{
-			pixels = (unsigned char *)Mem_Alloc(loadmodel->mempool, basepixels_width * basepixels_height * 4);
-			Image_HeightmapToNormalmap(basepixels, pixels, basepixels_width, basepixels_height, false, r_shadow_bumpscale_basetexture.value);
-			skinframe->nmap = R_LoadTexture2D (loadmodel->texturepool, va("%s_nmap", basename), basepixels_width, basepixels_height, pixels, TEXTYPE_RGBA, textureflags, NULL);
-			Mem_Free(pixels);
-		}
-	}
-	if (loadgloss         && (pixels = loadimagepixels(va("%s_gloss", name), false, 0, 0)) != NULL) {skinframe->gloss = R_LoadTexture2D (loadmodel->texturepool, va("%s_gloss", basename), image_width, image_height, pixels, TEXTYPE_RGBA, textureflags, NULL);Mem_Free(pixels);pixels = NULL;}
-	if (loadpantsandshirt && (pixels = loadimagepixels(va("%s_pants", name), false, 0, 0)) != NULL) {skinframe->pants = R_LoadTexture2D (loadmodel->texturepool, va("%s_pants", basename), image_width, image_height, pixels, TEXTYPE_RGBA, textureflags, NULL);Mem_Free(pixels);pixels = NULL;}
-	if (loadpantsandshirt && (pixels = loadimagepixels(va("%s_shirt", name), false, 0, 0)) != NULL) {skinframe->shirt = R_LoadTexture2D (loadmodel->texturepool, va("%s_shirt", basename), image_width, image_height, pixels, TEXTYPE_RGBA, textureflags, NULL);Mem_Free(pixels);pixels = NULL;}
-
-	if (!skinframe->base)
-		skinframe->base = r_texture_notexture;
-	if (!skinframe->nmap)
-		skinframe->nmap = r_texture_blanknormalmap;
-
-	if (basepixels)
-		Mem_Free(basepixels);
-
-	return true;
-}
-
-int Mod_LoadSkinFrame_Internal(skinframe_t *skinframe, const char *basename, int textureflags, int loadpantsandshirt, int loadglowtexture, const unsigned char *skindata, int width, int height, int bitsperpixel, const unsigned int *palette, const unsigned int *alphapalette)
-{
-	int i;
-	unsigned char *temp1, *temp2;
-	memset(skinframe, 0, sizeof(*skinframe));
-	if (cls.state == ca_dedicated)
-		return false;
-	if (!skindata)
-		return false;
-	if (bitsperpixel == 32)
-	{
-		if (r_shadow_bumpscale_basetexture.value > 0)
-		{
-			temp1 = (unsigned char *)Mem_Alloc(loadmodel->mempool, width * height * 8);
-			temp2 = temp1 + width * height * 4;
-			Image_HeightmapToNormalmap(skindata, temp2, width, height, false, r_shadow_bumpscale_basetexture.value);
-			skinframe->nmap = R_LoadTexture2D(loadmodel->texturepool, va("%s_nmap", basename), width, height, temp2, TEXTYPE_RGBA, textureflags | TEXF_ALPHA, NULL);
-			Mem_Free(temp1);
-		}
-		skinframe->base = skinframe->merged = R_LoadTexture2D(loadmodel->texturepool, basename, width, height, skindata, TEXTYPE_RGBA, textureflags, NULL);
-		if (textureflags & TEXF_ALPHA)
-		{
-			for (i = 3;i < width * height * 4;i += 4)
-				if (skindata[i] < 255)
-					break;
-			if (i < width * height * 4)
-			{
-				unsigned char *fogpixels = (unsigned char *)Mem_Alloc(loadmodel->mempool, width * height * 4);
-				memcpy(fogpixels, skindata, width * height * 4);
-				for (i = 0;i < width * height * 4;i += 4)
-					fogpixels[i] = fogpixels[i+1] = fogpixels[i+2] = 255;
-				skinframe->fog = R_LoadTexture2D(loadmodel->texturepool, va("%s_fog", basename), width, height, fogpixels, TEXTYPE_RGBA, textureflags, NULL);
-				Mem_Free(fogpixels);
-			}
-		}
-	}
-	else if (bitsperpixel == 8)
-	{
-		if (r_shadow_bumpscale_basetexture.value > 0)
-		{
-			temp1 = (unsigned char *)Mem_Alloc(loadmodel->mempool, width * height * 8);
-			temp2 = temp1 + width * height * 4;
-			if (bitsperpixel == 32)
-				Image_HeightmapToNormalmap(skindata, temp2, width, height, false, r_shadow_bumpscale_basetexture.value);
-			else
-			{
-				// use either a custom palette or the quake palette
-				Image_Copy8bitRGBA(skindata, temp1, width * height, palette ? palette : palette_complete);
-				Image_HeightmapToNormalmap(temp1, temp2, width, height, false, r_shadow_bumpscale_basetexture.value);
-			}
-			skinframe->nmap = R_LoadTexture2D(loadmodel->texturepool, va("%s_nmap", basename), width, height, temp2, TEXTYPE_RGBA, textureflags | TEXF_ALPHA, NULL);
-			Mem_Free(temp1);
-		}
-		// use either a custom palette, or the quake palette
-		skinframe->base = skinframe->merged = GL_TextureForSkinLayer(skindata, width, height, va("%s_merged", basename), palette ? palette : (loadglowtexture ? palette_nofullbrights : ((textureflags & TEXF_ALPHA) ? palette_transparent : palette_complete)), textureflags, true); // all
-		if (!palette && loadglowtexture)
-			skinframe->glow = GL_TextureForSkinLayer(skindata, width, height, va("%s_glow", basename), palette_onlyfullbrights, textureflags, false); // glow
-		if (!palette && loadpantsandshirt)
-		{
-			skinframe->pants = GL_TextureForSkinLayer(skindata, width, height, va("%s_pants", basename), palette_pantsaswhite, textureflags, false); // pants
-			skinframe->shirt = GL_TextureForSkinLayer(skindata, width, height, va("%s_shirt", basename), palette_shirtaswhite, textureflags, false); // shirt
-		}
-		if (skinframe->pants || skinframe->shirt)
-			skinframe->base = GL_TextureForSkinLayer(skindata, width, height, va("%s_nospecial", basename),loadglowtexture ? palette_nocolormapnofullbrights : palette_nocolormap, textureflags, false); // no special colors
-		if (textureflags & TEXF_ALPHA)
-		{
-			// if not using a custom alphapalette, use the quake one
-			if (!alphapalette)
-				alphapalette = palette_alpha;
-			for (i = 0;i < width * height;i++)
-				if (((unsigned char *)alphapalette)[skindata[i]*4+3] < 255)
-					break;
-			if (i < width * height)
-				skinframe->fog = GL_TextureForSkinLayer(skindata, width, height, va("%s_fog", basename), alphapalette, textureflags, true); // fog mask
-		}
-	}
-	else
-		return false;
-	if (!skinframe->nmap)
-		skinframe->nmap = r_texture_blanknormalmap;
-	return true;
 }
 
 void Mod_GetTerrainVertex3fTexCoord2fFromRGBA(const unsigned char *imagepixels, int imagewidth, int imageheight, int ix, int iy, float *vertex3f, float *texcoord2f, matrix4x4_t *pixelstepmatrix, matrix4x4_t *pixeltexturestepmatrix)

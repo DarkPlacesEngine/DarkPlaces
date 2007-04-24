@@ -53,6 +53,23 @@ typedef struct skinframe_s
 	rtexture_t *gloss; // glossmap (for dot3)
 	rtexture_t *glow; // glow only (fullbrights)
 	rtexture_t *fog; // alpha of the base texture (if not opaque)
+	// accounting data for hash searches:
+	// the compare variables are used to identify internal skins from certain
+	// model formats
+	// (so that two q1bsp maps with the same texture name for different
+	//  textures do not have any conflicts)
+	struct skinframe_s *next; // next on hash chain
+	char basename[MAX_QPATH]; // name of this
+	int textureflags; // texture flags to use
+	int comparewidth;
+	int compareheight;
+	int comparecrc;
+	// mark and sweep garbage collection, this value is updated to a new value
+	// on each level change for the used skinframes, if some are not used they
+	// are freed
+	int loadsequence;
+	// on 32bit systems this makes the struct 128 bytes long
+	int padding;
 }
 skinframe_t;
 
@@ -218,12 +235,12 @@ typedef struct texture_s
 	skinframe_t *currentskinframe;
 	int numskinframes;
 	float skinframerate;
-	skinframe_t skinframes[TEXTURE_MAXFRAMES];
+	skinframe_t *skinframes[TEXTURE_MAXFRAMES];
 	// background layer (for terrain texture blending)
 	skinframe_t *backgroundcurrentskinframe;
 	int backgroundnumskinframes;
 	float backgroundskinframerate;
-	skinframe_t backgroundskinframes[TEXTURE_MAXFRAMES];
+	skinframe_t *backgroundskinframes[TEXTURE_MAXFRAMES];
 
 	// total frames in sequence and alternate sequence
 	int anim_total[2];
@@ -261,8 +278,6 @@ typedef struct texture_s
 	int supercontents;
 	int surfaceparms;
 	int textureflags;
-
-	//skinframe_t skin;
 }
 texture_t;
 
@@ -676,9 +691,6 @@ shadowmesh_t *Mod_ShadowMesh_Begin(mempool_t *mempool, int maxverts, int maxtria
 shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh, qboolean light, qboolean neighbors, qboolean createvbo);
 void Mod_ShadowMesh_CalcBBox(shadowmesh_t *firstmesh, vec3_t mins, vec3_t maxs, vec3_t center, float *radius);
 void Mod_ShadowMesh_Free(shadowmesh_t *mesh);
-
-int Mod_LoadSkinFrame(skinframe_t *skinframe, const char *basename, int textureflags, qboolean loadpantsandshirt, qboolean loadglowtexture);
-int Mod_LoadSkinFrame_Internal(skinframe_t *skinframe, const char *basename, int textureflags, int loadpantsandshirt, int loadglowtexture, const unsigned char *skindata, int width, int height, int bitsperpixel, const unsigned int *palette, const unsigned int *alphapalette);
 
 extern cvar_t r_mipskins;
 

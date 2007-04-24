@@ -1111,6 +1111,7 @@ void R_ReplaceWorldTexture (void)
 	texture_t	*t;
 	int			i;
 	const char	*r, *newt;
+	skinframe_t *skinframe;
 	m = r_refdef.worldmodel;
 
 	if(Cmd_Argc() < 2)
@@ -1132,15 +1133,15 @@ void R_ReplaceWorldTexture (void)
 	{
 		if(t->width && !strcasecmp(t->name, r))
 		{
-			if(Mod_LoadSkinFrame(&t->skinframes[0], (char*)newt, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false, r_fullbrights.integer))
+			if ((skinframe = R_SkinFrame_LoadExternal((char*)newt, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP)))
 			{
+				t->skinframes[0] = skinframe;
 				Con_Printf("%s replaced with %s\n", r, newt);
 				return;
 			}
 			else
 			{
 				Con_Printf("%s was not found\n", newt);
-				Mod_LoadSkinFrame(&t->skinframes[0], (char*)r, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false, r_fullbrights.integer);//back to default
 				return;
 			}
 		}

@@ -128,6 +128,14 @@ void R_RenderView(void); // must set r_refdef and call R_UpdateVariables first
 
 void R_InitSky (unsigned char *src, int bytesperpixel); // called at level load
 
+void R_SkinFrame_PrepareForPurge(void);
+void R_SkinFrame_MarkUsed(skinframe_t *skinframe);
+void R_SkinFrame_Purge(void);
+skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewidth, int compareheight, int comparecrc, qboolean add);
+skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags);
+skinframe_t *R_SkinFrame_LoadInternal(const char *name, int textureflags, int loadpantsandshirt, int loadglowtexture, const unsigned char *skindata, int width, int height, int bitsperpixel, const unsigned int *palette, const unsigned int *alphapalette);
+skinframe_t *R_SkinFrame_LoadMissing(void);
+
 void R_View_WorldVisibility();
 void R_DrawParticles(void);
 void R_DrawExplosions(void);

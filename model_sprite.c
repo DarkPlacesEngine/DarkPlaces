@@ -47,10 +47,10 @@ static void Mod_SpriteSetupTexture(mspriteframe_t *frame, qboolean fullbright, q
 		texture->basematerialflags |= MATERIALFLAG_FULLBRIGHT;
 	if (additive)
 		texture->basematerialflags |= MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
-	else if (texture->skinframes[0].fog)
+	else if (texture->skinframes[0]->fog)
 		texture->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
 	texture->currentmaterialflags = texture->basematerialflags;
-	texture->currentskinframe = texture->skinframes + 0;
+	texture->currentskinframe = texture->skinframes[0];
 }
 
 static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version, const unsigned int *palette, const unsigned int *alphapalette, qboolean additive)
@@ -170,16 +170,16 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 					sprintf (name, "%s_%i_%i", loadmodel->name, i, j);
 				else
 					sprintf (name, "%s_%i", loadmodel->name, i);
-				if (!Mod_LoadSkinFrame(&loadmodel->sprite.sprdata_frames[realframes].texture.skinframes[0], name, texflags, false, false))
+				if (!(loadmodel->sprite.sprdata_frames[realframes].texture.skinframes[0] = R_SkinFrame_LoadExternal(name, texflags)))
 				{
 					if (groupframes > 1)
 						sprintf (fogname, "%s_%i_%ifog", loadmodel->name, i, j);
 					else
 						sprintf (fogname, "%s_%ifog", loadmodel->name, i);
 					if (version == SPRITE32_VERSION)
-						Mod_LoadSkinFrame_Internal(&loadmodel->sprite.sprdata_frames[realframes].texture.skinframes[0], name, texflags, false, false, datapointer, width, height, 32, NULL, NULL);
+						loadmodel->sprite.sprdata_frames[realframes].texture.skinframes[0] = R_SkinFrame_LoadInternal(name, texflags, false, false, datapointer, width, height, 32, NULL, NULL);
 					else //if (version == SPRITE_VERSION || version == SPRITEHL_VERSION)
-						Mod_LoadSkinFrame_Internal(&loadmodel->sprite.sprdata_frames[realframes].texture.skinframes[0], name, texflags, false, false, datapointer, width, height, 8, palette, alphapalette);
+						loadmodel->sprite.sprdata_frames[realframes].texture.skinframes[0] = R_SkinFrame_LoadInternal(name, texflags, false, false, datapointer, width, height, 8, palette, alphapalette);
 				}
 			}
 
@@ -390,8 +390,13 @@ void Mod_IDS2_Load(model_t *mod, void *buffer, void *bufferend)
 			modelradius = x + y;
 
 		if (width > 0 && height > 0 && cls.state != ca_dedicated)
-			if (!Mod_LoadSkinFrame(&sprframe->texture.skinframes[0], pinframe->name, texflags, false, false))
+		{
+			if (!(sprframe->texture.skinframes[0] = R_SkinFrame_LoadExternal(pinframe->name, texflags)))
+			{
 				Con_Printf("Mod_IDS2_Load: failed to load %s", pinframe->name);
+				sprframe->texture.skinframes[0] = R_SkinFrame_LoadExternal("missing", TEXF_PRECACHE);
+			}
+		}
 
 		Mod_SpriteSetupTexture(sprframe, fullbright, false);
 	}
