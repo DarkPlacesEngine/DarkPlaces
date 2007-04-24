@@ -169,9 +169,9 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 			if (modelradius < x + y)
 				modelradius = x + y;
 
-			skinframe = NULL;
 			if (width > 0 && height > 0 && cls.state != ca_dedicated)
 			{
+				skinframe = NULL;
 				if (groupframes > 1)
 					sprintf (name, "%s_%i_%i", loadmodel->name, i, j);
 				else
@@ -187,8 +187,8 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 					else //if (version == SPRITE_VERSION || version == SPRITEHL_VERSION)
 						skinframe = R_SkinFrame_LoadInternal(name, texflags, false, false, datapointer, width, height, 8, palette, alphapalette);
 				}
+				Mod_SpriteSetupTexture(&loadmodel->data_textures[realframes], skinframe, fullbright, additive);
 			}
-			Mod_SpriteSetupTexture(&loadmodel->data_textures[realframes], skinframe, fullbright, additive);
 
 			if (version == SPRITE32_VERSION)
 				datapointer += width * height * 4;
@@ -396,16 +396,16 @@ void Mod_IDS2_Load(model_t *mod, void *buffer, void *bufferend)
 		if (modelradius < x + y)
 			modelradius = x + y;
 
-		skinframe = NULL;
 		if (width > 0 && height > 0 && cls.state != ca_dedicated)
 		{
+			skinframe = NULL;
 			if (!(skinframe = R_SkinFrame_LoadExternal(pinframe->name, texflags)))
 			{
 				Con_Printf("Mod_IDS2_Load: failed to load %s", pinframe->name);
 				skinframe = R_SkinFrame_LoadMissing();
 			}
+			Mod_SpriteSetupTexture(&loadmodel->data_textures[i], skinframe, fullbright, false);
 		}
-		Mod_SpriteSetupTexture(&loadmodel->data_textures[i], skinframe, fullbright, false);
 	}
 
 	modelradius = sqrt(modelradius);
