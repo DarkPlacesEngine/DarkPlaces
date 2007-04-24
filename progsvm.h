@@ -124,6 +124,7 @@ typedef struct prvm_prog_fieldoffsets_s
 	int SendEntity; // ssqc
 	int Version; // ssqc
 	int alpha; // ssqc / csqc
+	int allowtouchwithowner;
 	int ammo_cells1; // ssqc - Dissolution of Eternity mission pack
 	int ammo_lava_nails; // ssqc - Dissolution of Eternity mission pack
 	int ammo_multi_rockets; // ssqc - Dissolution of Eternity mission pack

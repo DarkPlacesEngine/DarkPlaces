@@ -2618,6 +2618,7 @@ prvm_required_field_t reqfields[] =
 	{ev_entity, "nodrawtoclient"},
 	{ev_entity, "tag_entity"},
 	{ev_entity, "viewmodelforclient"},
+	{ev_float, "allowtouchwithowner"},
 	{ev_float, "alpha"},
 	{ev_float, "ammo_cells1"},
 	{ev_float, "ammo_lava_nails"},
