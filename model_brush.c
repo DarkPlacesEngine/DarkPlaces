@@ -1252,6 +1252,10 @@ void R_Q1BSP_LoadSplitSky (unsigned char *src, int width, int height, int bytesp
 	int i, j;
 	unsigned solidpixels[128*128], alphapixels[128*128];
 
+	// allocate a texture pool if we need it
+	if (loadmodel->texturepool == NULL && cls.state != ca_dedicated)
+		loadmodel->texturepool = R_AllocTexturePool();
+
 	// if sky isn't the right size, just use it as a solid layer
 	if (width != 256 || height != 128)
 	{
@@ -1314,6 +1318,7 @@ void R_Q1BSP_LoadSplitSky (unsigned char *src, int width, int height, int bytesp
 static void Mod_Q1BSP_LoadTextures(lump_t *l)
 {
 	int i, j, k, num, max, altmax, mtwidth, mtheight, *dofs, incomplete;
+	skinframe_t *skinframe;
 	miptex_t *dmiptex;
 	texture_t *tx, *tx2, *anims[10], *altanims[10];
 	dmiptexlump_t *m;
@@ -1339,6 +1344,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 	loadmodel->data_textures = (texture_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_textures * sizeof(texture_t));
 
 	// fill out all slots with notexture
+	skinframe = R_SkinFrame_LoadMissing();
 	for (i = 0, tx = loadmodel->data_textures;i < loadmodel->num_textures;i++, tx++)
 	{
 		strlcpy(tx->name, "NO TEXTURE FOUND", sizeof(tx->name));
@@ -1346,9 +1352,8 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		tx->height = 16;
 		tx->numskinframes = 1;
 		tx->skinframerate = 1;
-		tx->currentskinframe = tx->skinframes;
-		tx->skinframes[0].base = r_texture_notexture;
-		tx->backgroundcurrentskinframe = tx->backgroundskinframes;
+		tx->skinframes[0] = skinframe;
+		tx->currentskinframe = tx->skinframes[0];
 		tx->basematerialflags = 0;
 		if (i == loadmodel->num_textures - 1)
 		{
@@ -1441,8 +1446,10 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			}
 			else
 			{
-				if (!Mod_LoadSkinFrame(&tx->skinframes[0], gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s/%s", mapname, tx->name), TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false, true)
-				 && !Mod_LoadSkinFrame(&tx->skinframes[0], gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s", tx->name), TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false, true))
+				skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s/%s", mapname, tx->name), TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP);
+				if (!skinframe)
+					skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s", tx->name), TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP);
+				if (!skinframe)
 				{
 					// did not find external texture, load it from the bsp or wad3
 					if (loadmodel->brush.ishlbsp)
@@ -1458,21 +1465,17 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 						{
 							tx->width = image_width;
 							tx->height = image_height;
-							Mod_LoadSkinFrame_Internal(&tx->skinframes[0], tx->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false, false, pixels, image_width, image_height, 32, NULL, NULL);
+							skinframe = R_SkinFrame_LoadInternal(tx->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false, false, pixels, image_width, image_height, 32, NULL, NULL);
 						}
 						if (freepixels)
 							Mem_Free(freepixels);
 					}
 					else if (mtdata) // texture included
-						Mod_LoadSkinFrame_Internal(&tx->skinframes[0], tx->name, TEXF_MIPMAP | TEXF_PRECACHE | TEXF_PICMIP, false, r_fullbrights.integer, mtdata, tx->width, tx->height, 8, NULL, NULL);
+						skinframe = R_SkinFrame_LoadInternal(tx->name, TEXF_MIPMAP | TEXF_PRECACHE | TEXF_PICMIP, false, r_fullbrights.integer, mtdata, tx->width, tx->height, 8, NULL, NULL);
 				}
-			}
-			if (tx->skinframes[0].base == NULL)
-			{
-				// no texture found
-				tx->width = 16;
-				tx->height = 16;
-				tx->skinframes[0].base = r_texture_notexture;
+				// if skinframe is still NULL the "missing" texture will be used
+				if (skinframe)
+					tx->skinframes[0] = skinframe;
 			}
 		}
 
@@ -1513,11 +1516,12 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			tx->surfaceflags = mod_q1bsp_texture_solid.surfaceflags;
 			tx->basematerialflags |= MATERIALFLAG_WALL;
 		}
-		if (tx->skinframes[0].fog)
+		if (tx->skinframes[0]->fog)
 			tx->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
 
 		// start out with no animation
 		tx->currentframe = tx;
+		tx->currentskinframe = tx->skinframes[0];
 	}
 
 	// sequence the animations
@@ -2299,6 +2303,9 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 			// find a place for this lightmap
 			if (!lightmaptexture || !Mod_Q1BSP_AllocLightmapBlock(lightmap_lineused, LIGHTMAPSIZE, LIGHTMAPSIZE, ssize, tsize, &lightmapx, &lightmapy))
 			{
+				// allocate a texture pool if we need it
+				if (loadmodel->texturepool == NULL && cls.state != ca_dedicated)
+					loadmodel->texturepool = R_AllocTexturePool();
 				// could not find room, make a new lightmap
 				lightmaptexture = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%i", lightmapnumber), LIGHTMAPSIZE, LIGHTMAPSIZE, NULL, loadmodel->brushq1.lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
 				if (loadmodel->brushq1.nmaplightdata)
@@ -4537,7 +4544,7 @@ Q3 shader blendfuncs actually used in the game (* = supported by DP)
 				out->numskinframes = shader->primarylayer->numframes;
 				out->skinframerate = shader->primarylayer->framerate;
 				for (j = 0;j < shader->primarylayer->numframes;j++)
-					if (!Mod_LoadSkinFrame(&out->skinframes[j], shader->primarylayer->texturename[j], ((shader->surfaceparms & Q3SURFACEPARM_NOMIPMAPS) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | (shader->textureflags & Q3TEXTUREFLAG_NOPICMIP ? 0 : TEXF_PICMIP) | (shader->primarylayer->clampmap ? TEXF_CLAMP : 0), false, true))
+					if (!(out->skinframes[j] = R_SkinFrame_LoadExternal(shader->primarylayer->texturename[j], ((shader->surfaceparms & Q3SURFACEPARM_NOMIPMAPS) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | (shader->textureflags & Q3TEXTUREFLAG_NOPICMIP ? 0 : TEXF_PICMIP) | (shader->primarylayer->clampmap ? TEXF_CLAMP : 0))))
 						Con_DPrintf("%s: could not load texture \"%s\" (frame %i) for shader \"%s\"\n", loadmodel->name, shader->primarylayer->texturename[j], j, out->name);
 			}
 			if (shader->backgroundlayer && cls.state != ca_dedicated)
@@ -4546,8 +4553,13 @@ Q3 shader blendfuncs actually used in the game (* = supported by DP)
 				out->backgroundnumskinframes = shader->backgroundlayer->numframes;
 				out->backgroundskinframerate = shader->backgroundlayer->framerate;
 				for (j = 0;j < shader->backgroundlayer->numframes;j++)
-					if (!Mod_LoadSkinFrame(&out->backgroundskinframes[j], shader->backgroundlayer->texturename[j], ((shader->surfaceparms & Q3SURFACEPARM_NOMIPMAPS) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | (shader->textureflags & Q3TEXTUREFLAG_NOPICMIP ? 0 : TEXF_PICMIP) | (shader->backgroundlayer->clampmap ? TEXF_CLAMP : 0), false, true))
+				{
+					if (!(out->backgroundskinframes[j] = R_SkinFrame_LoadExternal(shader->backgroundlayer->texturename[j], ((shader->surfaceparms & Q3SURFACEPARM_NOMIPMAPS) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | (shader->textureflags & Q3TEXTUREFLAG_NOPICMIP ? 0 : TEXF_PICMIP) | (shader->backgroundlayer->clampmap ? TEXF_CLAMP : 0))))
+					{
 						Con_DPrintf("%s: could not load texture \"%s\" (frame %i) for shader \"%s\"\n", loadmodel->name, shader->backgroundlayer->texturename[j], j, out->name);
+						out->backgroundskinframes[j] = R_SkinFrame_LoadMissing();
+					}
+				}
 			}
 		}
 		else if (!strcmp(out->name, "noshader"))
@@ -4572,13 +4584,15 @@ Q3 shader blendfuncs actually used in the game (* = supported by DP)
 			//if (R_TextureHasAlpha(out->skinframes[0].base))
 			//	out->surfaceparms |= Q3SURFACEPARM_TRANS;
 			if (cls.state != ca_dedicated)
-				if (!Mod_LoadSkinFrame(&out->skinframes[0], out->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false, true))
+				if (!(out->skinframes[0] = R_SkinFrame_LoadExternal(out->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP)))
 					Con_DPrintf("%s: could not load texture for missing shader \"%s\"\n", loadmodel->name, out->name);
 		}
 		// init the animation variables
 		out->currentframe = out;
-		out->currentskinframe = &out->skinframes[0];
-		out->backgroundcurrentskinframe = &out->backgroundskinframes[0];
+		if (!out->skinframes[0])
+			out->skinframes[0] = R_SkinFrame_LoadMissing();
+		out->currentskinframe = out->skinframes[0];
+		out->backgroundcurrentskinframe = out->backgroundskinframes[0];
 	}
 	if (c)
 		Con_DPrintf("%s: %i textures missing shaders\n", loadmodel->name, c);
@@ -4859,6 +4873,10 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 	loadmodel->brushq3.data_lightmaps = (rtexture_t **)Mem_Alloc(loadmodel->mempool, loadmodel->brushq3.num_mergedlightmaps * sizeof(rtexture_t *));
 	if (loadmodel->brushq3.deluxemapping)
 		loadmodel->brushq3.data_deluxemaps = (rtexture_t **)Mem_Alloc(loadmodel->mempool, loadmodel->brushq3.num_mergedlightmaps * sizeof(rtexture_t *));
+
+	// allocate a texture pool if we need it
+	if (loadmodel->texturepool == NULL && cls.state != ca_dedicated)
+		loadmodel->texturepool = R_AllocTexturePool();
 
 	j = 128 << loadmodel->brushq3.num_lightmapmergepower;
 	if (loadmodel->brushq3.data_lightmaps)
