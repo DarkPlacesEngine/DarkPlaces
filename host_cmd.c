@@ -92,7 +92,7 @@ void Host_Status_f (void)
 		}
 		else
 			hours = 0;
-		print ("#%-3u %-16.16s  %3i  %2i:%02i:%02i\n", j+1, client->name, client->frags, hours, minutes, seconds);
+		print ("#%-3u %-16.16s^%i  %3i  %2i:%02i:%02i\n", j+1, client->name, STRING_COLOR_DEFAULT, client->frags, hours, minutes, seconds);
 		print ("   %s\n", client->netconnection ? client->netconnection->address : "botclient");
 	}
 }
