@@ -4468,9 +4468,9 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 	loadmodel->data_textures = out;
 	loadmodel->num_textures = count;
 
-	for (i = 0;i < count;i++, in++, out++)
+	for (i = 0;i < count;i++)
 	{
-		strlcpy (out[i].name, in->name, sizeof (out->name));
+		strlcpy (out[i].name, in[i].name, sizeof (out[i].name));
 		out[i].surfaceflags = LittleLong(in[i].surfaceflags);
 		out[i].supercontents = Mod_Q3BSP_SuperContentsFromNativeContents(loadmodel, LittleLong(in[i].contents));
 	}
