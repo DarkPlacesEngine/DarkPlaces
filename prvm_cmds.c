@@ -1754,53 +1754,12 @@ void VM_strdecolorize(void)
 {
 	char szNewString[VM_STRINGTEMP_LENGTH];
 	const char *szString;
-	size_t nCnt;
-	int nPos;
-	int nFillPos;
-	int bFinished;
-		nPos = 0;
-		nFillPos = 0;
-		nCnt = 0;
-		bFinished = 0;
 
 	// Prepare Strings
 	VM_SAFEPARMCOUNT(1,VM_strdecolorize);
 	szString = PRVM_G_STRING(OFS_PARM0);
 
-	while(!bFinished)
-	{ // Traverse through String
-		if( szString[nPos] == '\n' || szString[nPos] == '\r' || szString[nPos] <= 0)
-		{ // String End Found
-			szNewString[nFillPos++] = szString[nPos];
-			bFinished = 1;
-		}
-		else
-		if( szString[nPos] == STRING_COLOR_TAG)
-		{ // Color Code Located
-			if( szString[nPos + 1] == STRING_COLOR_TAG)
-			{ // Valid Characters to Include
-				szNewString[nFillPos++] = szString[nPos];
-				nPos = nPos + 1;
-				szNewString[nFillPos++] = szString[nPos];
-			}
-			else
-			if( szString[nPos + 1] >= '0' && szString[nPos + 1] <= '9' )
-			{ // Color Code Found; Increment Position
-				nPos = nPos + 1;
-			}
-			else
-			{ // Unknown Color Code; Include
-				szNewString[nFillPos++] = szString[nPos];
-				nPos = nPos + 1;
-			}
-		}
-		else
-			// Include Character
-			szNewString[nFillPos++] = szString[nPos];
-
-			// Increment Position
-			nPos = nPos + 1;
-	}
+	COM_StringDecolorize(szString, szNewString, sizeof(szNewString), TRUE);
 
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(szNewString);
 }
@@ -1818,53 +1777,14 @@ float	strlennocol(string s)
 void VM_strlennocol(void)
 {
 	const char *szString;
-	size_t nCnt;
-	int nPos;
-	int bFinished;
-		nPos = 0;
-		nCnt = 0;
-		bFinished = 0;
+	int nCnt;
 
 	VM_SAFEPARMCOUNT(1,VM_strlennocol);
 
 	szString = PRVM_G_STRING(OFS_PARM0);
 
-	while(!bFinished)
-	{ // Count Characters
-		// SV_BroadcastPrintf("Position '%d'; Character '%c'; Length '%d'\n", nPos, szString[nPos], nCnt);
+	nCnt = COM_StringLengthNoColors(szString, NULL);
 
-		if( szString[nPos] == '\n' || szString[nPos] == '\r' || szString[nPos] <= 0)
-		{ // String End Found
-			// SV_BroadcastPrintf("Found End of String at '%d'\n", nPos);
-			bFinished = 1;
-		}
-		else
-		if( szString[nPos] == STRING_COLOR_TAG)
-		{ // Color Code Located
-			if( szString[nPos + 1] == STRING_COLOR_TAG)
-			{ // Increment Length; Skip Color Code
-				nCnt = nCnt + 1;
-				nPos = nPos + 1;
-			}
-			else
-			if( szString[nPos + 1] >= '0' && szString[nPos + 1] <= '9' )
-			{ // Color Code Found; Increment Position
-				// SV_BroadcastPrintf("Found Color Codes at '%d'\n", nPos);
-				nPos = nPos + 1;
-			}
-			else
-			{ // Unknown Color Code; Increment Length!
-				nPos = nPos + 1;
-				nCnt = nCnt + 1;
-			}
-		}
-		else
-			// Increment String Length
-			nCnt = nCnt + 1;
-
-		// Increment Position
-		nPos = nPos + 1;
-	}
 	PRVM_G_FLOAT(OFS_RETURN) = nCnt;
 }
 
