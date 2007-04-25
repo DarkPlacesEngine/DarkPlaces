@@ -77,11 +77,14 @@ void R_Mesh_Finish(void);
 int R_Mesh_CreateStaticEBO(void *data, size_t size);
 // frees an element array buffer object
 void R_Mesh_DestroyEBO(int bufferobject);
-// allocates a static vertex array buffer object
-// (storing vertex data in video memory)
-int R_Mesh_CreateStaticVBO(void *data, size_t size);
-// frees a vertex array buffer object
-void R_Mesh_DestroyVBO(int bufferobject);
+// allocates a static vertex/element array buffer object
+// (storing vertex or element data in video memory)
+// target is GL_ELEMENT_ARRAY_BUFFER_ARB (triangle elements)
+// or GL_ARRAY_BUFFER_ARB (vertex data)
+int R_Mesh_CreateStaticBufferObject(unsigned int target, void *data, size_t size, const char *name);
+// frees a vertex/element array buffer object
+void R_Mesh_DestroyBufferObject(int bufferobject);
+void GL_Mesh_ListVBOs(qboolean printeach);
 
 // sets up the requested vertex transform matrix
 void R_Mesh_Matrix(const matrix4x4_t *matrix);

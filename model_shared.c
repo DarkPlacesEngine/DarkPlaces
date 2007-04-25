@@ -143,9 +143,9 @@ void Mod_UnloadModel (model_t *mod)
 	isworldmodel = mod->isworldmodel;
 	used = mod->used;
 	if (mod->surfmesh.ebo)
-		R_Mesh_DestroyEBO(mod->surfmesh.ebo);
+		R_Mesh_DestroyBufferObject(mod->surfmesh.ebo);
 	if (mod->surfmesh.vbo)
-		R_Mesh_DestroyVBO(mod->surfmesh.vbo);
+		R_Mesh_DestroyBufferObject(mod->surfmesh.vbo);
 	// free textures/memory attached to the model
 	R_FreeTexturePool(&mod->texturepool);
 	Mem_FreePool(&mod->mempool);
@@ -937,7 +937,7 @@ static void Mod_ShadowMesh_CreateVBOs(shadowmesh_t *mesh)
 
 	// element buffer is easy because it's just one array
 	if (mesh->numtriangles)
-		mesh->ebo = R_Mesh_CreateStaticEBO(mesh->element3i, mesh->numtriangles * sizeof(int[3]));
+		mesh->ebo = R_Mesh_CreateStaticBufferObject(GL_ELEMENT_ARRAY_BUFFER_ARB, mesh->element3i, mesh->numtriangles * sizeof(int[3]), "shadowmesh");
 
 	// vertex buffer is several arrays and we put them in the same buffer
 	//
@@ -960,7 +960,7 @@ static void Mod_ShadowMesh_CreateVBOs(shadowmesh_t *mesh)
 		if (mesh->tvector3f         ) memcpy(mem + mesh->vbooffset_tvector3f         , mesh->tvector3f         , mesh->numverts * sizeof(float[3]));
 		if (mesh->normal3f          ) memcpy(mem + mesh->vbooffset_normal3f          , mesh->normal3f          , mesh->numverts * sizeof(float[3]));
 		if (mesh->texcoord2f        ) memcpy(mem + mesh->vbooffset_texcoord2f        , mesh->texcoord2f        , mesh->numverts * sizeof(float[2]));
-		mesh->vbo = R_Mesh_CreateStaticVBO(mem, size);
+		mesh->vbo = R_Mesh_CreateStaticBufferObject(GL_ARRAY_BUFFER_ARB, mem, size, "shadowmesh");
 		Mem_Free(mem);
 	}
 }
@@ -1040,9 +1040,9 @@ void Mod_ShadowMesh_Free(shadowmesh_t *mesh)
 	for (;mesh;mesh = nextmesh)
 	{
 		if (mesh->ebo)
-			R_Mesh_DestroyEBO(mesh->ebo);
+			R_Mesh_DestroyBufferObject(mesh->ebo);
 		if (mesh->vbo)
-			R_Mesh_DestroyVBO(mesh->vbo);
+			R_Mesh_DestroyBufferObject(mesh->vbo);
 		nextmesh = mesh->next;
 		Mem_Free(mesh);
 	}
@@ -1323,7 +1323,7 @@ static void Mod_BuildVBOs(void)
 
 	// element buffer is easy because it's just one array
 	if (loadmodel->surfmesh.num_triangles)
-		loadmodel->surfmesh.ebo = R_Mesh_CreateStaticEBO(loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles * sizeof(int[3]));
+		loadmodel->surfmesh.ebo = R_Mesh_CreateStaticBufferObject(GL_ELEMENT_ARRAY_BUFFER_ARB, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles * sizeof(int[3]), loadmodel->name);
 
 	// vertex buffer is several arrays and we put them in the same buffer
 	//
@@ -1350,7 +1350,7 @@ static void Mod_BuildVBOs(void)
 		if (loadmodel->surfmesh.data_texcoordtexture2f ) memcpy(mem + loadmodel->surfmesh.vbooffset_texcoordtexture2f , loadmodel->surfmesh.data_texcoordtexture2f , loadmodel->surfmesh.num_vertices * sizeof(float[2]));
 		if (loadmodel->surfmesh.data_texcoordlightmap2f) memcpy(mem + loadmodel->surfmesh.vbooffset_texcoordlightmap2f, loadmodel->surfmesh.data_texcoordlightmap2f, loadmodel->surfmesh.num_vertices * sizeof(float[2]));
 		if (loadmodel->surfmesh.data_lightmapcolor4f   ) memcpy(mem + loadmodel->surfmesh.vbooffset_lightmapcolor4f   , loadmodel->surfmesh.data_lightmapcolor4f   , loadmodel->surfmesh.num_vertices * sizeof(float[4]));
-		loadmodel->surfmesh.vbo = R_Mesh_CreateStaticVBO(mem, size);
+		loadmodel->surfmesh.vbo = R_Mesh_CreateStaticBufferObject(GL_ARRAY_BUFFER_ARB, mem, size, loadmodel->name);
 		Mem_Free(mem);
 	}
 }

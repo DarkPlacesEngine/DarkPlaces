@@ -144,6 +144,22 @@ void GL_Backend_FreeArrays(void)
 {
 }
 
+void GL_VBOStats_f(void)
+{
+	GL_Mesh_ListVBOs(true);
+}
+
+typedef struct gl_bufferobjectinfo_s
+{
+	int target;
+	int object;
+	size_t size;
+	char name[MAX_QPATH];
+}
+gl_bufferobjectinfo_t;
+
+memexpandablearray_t gl_bufferobjectinfoarray;
+
 static void gl_backend_start(void)
 {
 	Con_Print("OpenGL Backend starting...\n");
@@ -180,6 +196,8 @@ static void gl_backend_start(void)
 
 	GL_Backend_AllocArrays();
 
+	Mem_ExpandableArray_NewArray(&gl_bufferobjectinfoarray, r_main_mempool, sizeof(gl_bufferobjectinfo_t), 128);
+
 	Con_Printf("OpenGL backend started.\n");
 
 	CHECKGLERROR
@@ -195,6 +213,8 @@ static void gl_backend_shutdown(void)
 	backendactive = false;
 
 	Con_Print("OpenGL Backend shutting down\n");
+
+	Mem_ExpandableArray_FreeArray(&gl_bufferobjectinfoarray);
 
 	GL_Backend_FreeArrays();
 }
@@ -240,6 +260,8 @@ void gl_backend_init(void)
 	Cvar_RegisterVariable(&gl_mesh_drawrangeelements);
 	Cvar_RegisterVariable(&gl_mesh_testarrayelement);
 	Cvar_RegisterVariable(&gl_mesh_testmanualfeeding);
+
+	Cmd_AddCommand("gl_vbostats", GL_VBOStats_f, "prints a list of all buffer objects (vertex data and triangle elements) and total video memory used by them\n");
 
 	R_RegisterModule("GL_Backend", gl_backend_start, gl_backend_shutdown, gl_backend_newmap);
 }
@@ -1096,36 +1118,74 @@ void R_Mesh_Finish(void)
 	qglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);CHECKGLERROR
 }
 
-int R_Mesh_CreateStaticEBO(void *data, size_t size)
+int R_Mesh_CreateStaticBufferObject(unsigned int target, void *data, size_t size, const char *name)
 {
+	gl_bufferobjectinfo_t *info;
 	GLuint bufferobject;
+
 	if (!gl_vbo.integer)
 		return 0;
+
 	qglGenBuffersARB(1, &bufferobject);
-	GL_BindEBO(bufferobject);
-	qglBufferDataARB(GL_ELEMENT_ARRAY_BUFFER_ARB, size, data, GL_STATIC_DRAW_ARB);
+	switch(target)
+	{
+	case GL_ELEMENT_ARRAY_BUFFER_ARB: GL_BindEBO(bufferobject);break;
+	case GL_ARRAY_BUFFER_ARB: GL_BindVBO(bufferobject);break;
+	default: Sys_Error("R_Mesh_CreateStaticBufferObject: unknown target type %i\n", target);return 0;
+	}
+	qglBufferDataARB(target, size, data, GL_STATIC_DRAW_ARB);
+
+	info = Mem_ExpandableArray_AllocRecord(&gl_bufferobjectinfoarray);
+	memset(info, 0, sizeof(*info));
+	info->target = target;
+	info->object = bufferobject;
+	info->size = size;
+	strlcpy(info->name, name, sizeof(info->name));
+
 	return (int)bufferobject;
 }
 
-void R_Mesh_DestroyEBO(int bufferobject)
+void R_Mesh_DestroyBufferObject(int bufferobject)
 {
+	int i, endindex;
+	gl_bufferobjectinfo_t *info;
+
 	qglDeleteBuffersARB(1, (GLuint *)&bufferobject);
+
+	endindex = Mem_ExpandableArray_IndexRange(&gl_bufferobjectinfoarray);
+	for (i = 0;i < endindex;i++)
+	{
+		info = Mem_ExpandableArray_RecordAtIndex(&gl_bufferobjectinfoarray, i);
+		if (!info)
+			continue;
+		if (info->object == bufferobject)
+		{
+			Mem_ExpandableArray_FreeRecord(&gl_bufferobjectinfoarray, (void *)info);
+			break;
+		}
+	}
 }
 
-int R_Mesh_CreateStaticVBO(void *data, size_t size)
+void GL_Mesh_ListVBOs(qboolean printeach)
 {
-	GLuint bufferobject;
-	if (!gl_vbo.integer)
-		return 0;
-	qglGenBuffersARB(1, &bufferobject);
-	GL_BindVBO(bufferobject);
-	qglBufferDataARB(GL_ARRAY_BUFFER_ARB, size, data, GL_STATIC_DRAW_ARB);
-	return (int)bufferobject;
-}
-
-void R_Mesh_DestroyVBO(int bufferobject)
-{
-	qglDeleteBuffersARB(1, (GLuint *)&bufferobject);
+	int i, endindex;
+	size_t ebocount = 0, ebomemory = 0;
+	size_t vbocount = 0, vbomemory = 0;
+	gl_bufferobjectinfo_t *info;
+	endindex = Mem_ExpandableArray_IndexRange(&gl_bufferobjectinfoarray);
+	for (i = 0;i < endindex;i++)
+	{
+		info = Mem_ExpandableArray_RecordAtIndex(&gl_bufferobjectinfoarray, i);
+		if (!info)
+			continue;
+		switch(info->target)
+		{
+		case GL_ELEMENT_ARRAY_BUFFER_ARB: ebocount++;ebomemory += info->size;if (printeach) Con_Printf("EBO #%i %s = %i bytes\n", info->object, info->name, (int)info->size);break;
+		case GL_ARRAY_BUFFER_ARB: vbocount++;vbomemory += info->size;if (printeach) Con_Printf("VBO #%i %s = %i bytes\n", info->object, info->name, (int)info->size);break;
+		default: Con_Printf("gl_vbostats: unknown target type %i\n", info->target);break;
+		}
+	}
+	Con_Printf("vertex buffers: %i element buffers totalling %i bytes (%.3f MB), %i vertex buffers totalling %i bytes (%.3f MB), combined %i bytes (%.3fMB)\n", (int)ebocount, (int)ebomemory, ebomemory / 1048576.0, (int)vbocount, (int)vbomemory, vbomemory / 1048576.0, (int)(ebomemory + vbomemory), (ebomemory + vbomemory) / 1048576.0);
 }
 
 void R_Mesh_Matrix(const matrix4x4_t *matrix)

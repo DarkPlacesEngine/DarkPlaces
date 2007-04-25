@@ -553,6 +553,7 @@ void MemStats_f(void)
 {
 	Mem_CheckSentinelsGlobal();
 	R_TextureStats_Print(false, false, true);
+	GL_Mesh_ListVBOs(false);
 	Mem_PrintStats();
 }
 
