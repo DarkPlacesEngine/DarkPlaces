@@ -737,6 +737,7 @@ cvar_t cl_name = {CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_name", "player", "intern
 void Host_Name_f (void)
 {
 	int i, j;
+	qboolean valid_colors;
 	char newName[sizeof(host_client->name)];
 
 	if (Cmd_Argc () == 1)
@@ -771,6 +772,27 @@ void Host_Name_f (void)
 
 	// point the string back at updateclient->name to keep it safe
 	strlcpy (host_client->name, newName, sizeof (host_client->name));
+
+	COM_StringLengthNoColors(host_client->name, &valid_colors);
+	if(!valid_colors) // NOTE: this also proves the string is not empty, as "" is a valid colored string
+	{
+		size_t l;
+		l = strlen(host_client->name);
+		if(l < sizeof(host_client->name) - 1)
+		{
+			// duplicate the color tag to escape it
+			host_client->name[i] = STRING_COLOR_TAG;
+			host_client->name[i+1] = 0;
+			//Con_DPrintf("abuse detected, adding another trailing color tag\n");
+		}
+		else
+		{
+			// remove the last character to fix the color code
+			host_client->name[l-1] = 0;
+			//Con_DPrintf("abuse detected, removing a trailing color tag\n");
+		}
+	}
+
 	host_client->edict->fields.server->netname = PRVM_SetEngineString(host_client->name);
 	if (strcmp(host_client->old_name, host_client->name))
 	{
