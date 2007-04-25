@@ -3254,7 +3254,7 @@ void R_UpdateAllTextureInfo(entity_render_t *ent)
 {
 	int i;
 	if (ent->model)
-		for (i = 0;i < ent->model->num_textures;i++)
+		for (i = 0;i < ent->model->num_texturesperskin;i++)
 			R_UpdateTextureInfo(ent, ent->model->data_textures + i);
 }
 

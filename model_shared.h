@@ -611,6 +611,7 @@ typedef struct model_s
 	float			*data_baseboneposeinverse;
 	// textures of this model
 	int				num_textures;
+	int				num_texturesperskin;
 	texture_t		*data_textures;
 	// surfaces of this model
 	int				num_surfaces;

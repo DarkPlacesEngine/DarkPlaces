@@ -67,18 +67,14 @@ static void mod_shutdown(void)
 static void mod_newmap(void)
 {
 	msurface_t *surface;
-	int i, j, k, numtextures, surfacenum, ssize, tsize;
+	int i, j, k, surfacenum, ssize, tsize;
 
 	R_SkinFrame_PrepareForPurge();
 	for (i = 0;i < mod_numknown;i++)
 	{
 		if (mod_known[i].mempool && mod_known[i].data_textures)
 		{
-			numtextures = mod_known[i].num_textures;
-			// models can have multiple sets of textures
-			if (mod_known[i].numskins > 1)
-				numtextures *= mod_known[i].numskins;
-			for (j = 0;j < numtextures;j++)
+			for (j = 0;j < mod_known[i].num_textures;j++)
 			{
 				for (k = 0;k < mod_known[i].data_textures[j].numskinframes;k++)
 					R_SkinFrame_MarkUsed(mod_known[i].data_textures[j].skinframes[k]);
