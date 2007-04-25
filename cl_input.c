@@ -328,7 +328,7 @@ cvar_t cl_pitchspeed = {CVAR_SAVE, "cl_pitchspeed","150","keyboard pitch turning
 cvar_t cl_anglespeedkey = {CVAR_SAVE, "cl_anglespeedkey","1.5","how much +speed multiplies keyboard turning speed"};
 
 cvar_t cl_movement = {CVAR_SAVE, "cl_movement", "0", "enables clientside prediction of your player movement"};
-cvar_t cl_movement_minping = {CVAR_SAVE, "cl_movement_minping", "1", "whether to use prediction when ping is lower than this value in milliseconds"};
+cvar_t cl_movement_minping = {CVAR_SAVE, "cl_movement_minping", "0", "whether to use prediction when ping is lower than this value in milliseconds"};
 cvar_t cl_movement_maxspeed = {0, "cl_movement_maxspeed", "320", "how fast you can move (should match sv_maxspeed)"};
 cvar_t cl_movement_maxairspeed = {0, "cl_movement_maxairspeed", "30", "how fast you can move while in the air (should match sv_maxairspeed)"};
 cvar_t cl_movement_stopspeed = {0, "cl_movement_stopspeed", "100", "speed below which you will be slowed rapidly to a stop rather than sliding endlessly (should match sv_stopspeed)"};
