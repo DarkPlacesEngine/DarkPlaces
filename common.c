@@ -1282,6 +1282,127 @@ int COM_ReadAndTokenizeLine(const char **text, char **argv, int maxargc, char *t
 	return argc;
 }
 
+/*
+============
+COM_StringLengthNoColors
+
+calculates the visible width of a color coded string.
+
+*valid is filled with TRUE if the string is a valid colored string (that is, if
+it does not end with an unfinished color code). If it gets filled with FALSE, a
+fix would be adding a STRING_COLOR_TAG at the end of the string.
+
+valid can be set to NULL if the caller doesn't care.
+============
+*/
+size_t
+COM_StringLengthNoColors(const char *s, qboolean *valid)
+{
+	size_t len = 0;
+	for(;;)
+	{
+		switch(*s)
+		{
+			case 0:
+				if(valid)
+					*valid = TRUE;
+				return len;
+			case STRING_COLOR_TAG:
+				++s;
+				switch(*s)
+				{
+					case 0: // ends with unfinished color code!
+						++len;
+						if(valid)
+							*valid = FALSE;
+						return len;
+					case STRING_COLOR_TAG: // escaped ^
+						++len;
+						break;
+					case '0': case '1': case '2': case '3': case '4':
+					case '5': case '6': case '7': case '8': case '9': // color code
+						break;
+					default: // not a color code
+						++len; // STRING_COLOR_TAG
+						++len; // the character
+						break;
+				}
+				break;
+			default:
+				++len;
+				break;
+		}
+		++s;
+	}
+	// never get here
+}
+
+/*
+============
+COM_StringDecolorize
+
+removes color codes from a string.
+
+If escape_carets is true, the resulting string will be safe for printing. If
+escape_carets is false, the function will just strip color codes (for logging
+for example).
+
+If the output buffer size did not suffice for converting, the function returns
+FALSE. Generally, if escape_carets is false, the output buffer needs
+strlen(str)+1 bytes, and if escape_carets is true, it can need strlen(str)+2
+bytes. In any case, the function makes sure that the resulting string is
+zero terminated.
+============
+*/
+qboolean
+COM_StringDecolorize(const char *in, char *out, size_t size_out, qboolean escape_carets)
+{
+#define APPEND(ch) do { if(--size_out) { *out++ = (ch); } else { *out++ = 0; return FALSE; } } while(0)
+	if(size_out < 1)
+		return FALSE;
+	for(;;)
+	{
+		switch(*in)
+		{
+			case 0:
+				*out++ = 0;
+				return TRUE;
+			case STRING_COLOR_TAG:
+				++in;
+				switch(*in)
+				{
+					case 0: // ends with unfinished color code!
+						APPEND(STRING_COLOR_TAG);
+						// finish the code by appending another caret when escaping
+						if(escape_carets)
+							APPEND(STRING_COLOR_TAG);
+						*out++ = 0;
+						return TRUE;
+					case STRING_COLOR_TAG: // escaped ^
+						APPEND(STRING_COLOR_TAG);
+						// append a ^ twice when escaping
+						if(escape_carets)
+							APPEND(STRING_COLOR_TAG);
+						break;
+					case '0': case '1': case '2': case '3': case '4':
+					case '5': case '6': case '7': case '8': case '9': // color code
+						break;
+					default: // not a color code
+						APPEND(STRING_COLOR_TAG);
+						APPEND(*in);
+						break;
+				}
+				break;
+			default:
+				APPEND(*in);
+				break;
+		}
+		++in;
+	}
+	// never get here
+#undef APPEND
+}
+
 // written by Elric, thanks Elric!
 char *SearchInfostring(const char *infostring, const char *key)
 {
