@@ -1334,11 +1334,13 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		m = (dmiptexlump_t *)(mod_base + l->fileofs);
 		m->nummiptex = LittleLong (m->nummiptex);
 		loadmodel->num_textures = m->nummiptex + 2;
+		loadmodel->num_texturesperskin = loadmodel->num_textures;
 	}
 	else
 	{
 		m = NULL;
 		loadmodel->num_textures = 2;
+		loadmodel->num_texturesperskin = loadmodel->num_textures;
 	}
 
 	loadmodel->data_textures = (texture_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_textures * sizeof(texture_t));
@@ -4467,6 +4469,7 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 
 	loadmodel->data_textures = out;
 	loadmodel->num_textures = count;
+	loadmodel->num_texturesperskin = loadmodel->num_textures;
 
 	for (i = 0;i < count;i++)
 	{

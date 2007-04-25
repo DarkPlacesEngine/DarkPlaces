@@ -114,6 +114,7 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 	loadmodel->animscenes = (animscene_t *)Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numframes);
 	loadmodel->sprite.sprdata_frames = (mspriteframe_t *)Mem_Alloc(loadmodel->mempool, sizeof(mspriteframe_t) * realframes);
 	loadmodel->num_textures = realframes;
+	loadmodel->num_texturesperskin = 1;
 	loadmodel->data_textures = (texture_t *)Mem_Alloc(loadmodel->mempool, sizeof(texture_t) * loadmodel->num_textures);
 
 	datapointer = (unsigned char *)startframes;
@@ -360,6 +361,7 @@ void Mod_IDS2_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->animscenes = (animscene_t *)Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numframes);
 	loadmodel->sprite.sprdata_frames = (mspriteframe_t *)Mem_Alloc(loadmodel->mempool, sizeof(mspriteframe_t) * loadmodel->numframes);
 	loadmodel->num_textures = loadmodel->numframes;
+	loadmodel->num_texturesperskin = 1;
 	loadmodel->data_textures = (texture_t *)Mem_Alloc(loadmodel->mempool, sizeof(texture_t) * loadmodel->num_textures);
 
 	modelradius = 0;

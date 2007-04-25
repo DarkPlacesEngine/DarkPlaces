@@ -936,7 +936,8 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 	// load the skins
 	skinfiles = Mod_LoadSkinFiles();
 	loadmodel->skinscenes = (animscene_t *)Mem_Alloc(loadmodel->mempool, loadmodel->numskins * sizeof(animscene_t));
-	loadmodel->num_textures = loadmodel->num_surfaces;
+	loadmodel->num_textures = loadmodel->num_surfaces * totalskins;
+	loadmodel->num_texturesperskin = loadmodel->num_surfaces;
 	loadmodel->data_textures = (texture_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * totalskins * sizeof(texture_t));
 	if (skinfiles)
 	{
@@ -1134,7 +1135,8 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 	skinfiles = Mod_LoadSkinFiles();
 	if (skinfiles)
 	{
-		loadmodel->num_textures = loadmodel->num_surfaces;
+		loadmodel->num_textures = loadmodel->num_surfaces * loadmodel->numskins;
+		loadmodel->num_texturesperskin = loadmodel->num_surfaces;
 		loadmodel->data_textures = (texture_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t));
 		Mod_BuildAliasSkinsFromSkinFiles(loadmodel->data_textures, skinfiles, "default", "");
 		Mod_FreeSkinFiles(skinfiles);
@@ -1142,7 +1144,8 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 	else if (loadmodel->numskins)
 	{
 		// skins found (most likely not a player model)
-		loadmodel->num_textures = loadmodel->num_surfaces;
+		loadmodel->num_textures = loadmodel->num_surfaces * loadmodel->numskins;
+		loadmodel->num_texturesperskin = loadmodel->num_surfaces;
 		loadmodel->data_textures = (texture_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t));
 		for (i = 0;i < loadmodel->numskins;i++, inskin += MD2_SKINNAME)
 		{
@@ -1156,7 +1159,8 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 	{
 		// no skins (most likely a player model)
 		loadmodel->numskins = 1;
-		loadmodel->num_textures = loadmodel->num_surfaces;
+		loadmodel->num_textures = loadmodel->num_surfaces * loadmodel->numskins;
+		loadmodel->num_texturesperskin = loadmodel->num_surfaces;
 		loadmodel->data_textures = (texture_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t));
 		Mod_BuildAliasSkinFromSkinFrame(loadmodel->data_textures, NULL);
 	}
@@ -1367,7 +1371,8 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 	}
 
 	loadmodel->nummodelsurfaces = loadmodel->num_surfaces;
-	loadmodel->num_textures = loadmodel->num_surfaces;
+	loadmodel->num_textures = loadmodel->num_surfaces * loadmodel->numskins;
+	loadmodel->num_texturesperskin = loadmodel->num_surfaces;
 	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + meshtriangles * sizeof(int[3]) + meshvertices * sizeof(float[2]) + meshvertices * loadmodel->numframes * sizeof(md3vertex_t));
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
 	loadmodel->surfacelist = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
@@ -1598,7 +1603,8 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	meshtriangles = pheader->numtris;
 
 	loadmodel->nummodelsurfaces = loadmodel->num_surfaces;
-	loadmodel->num_textures = loadmodel->num_surfaces;
+	loadmodel->num_textures = loadmodel->num_surfaces * loadmodel->numskins;
+	loadmodel->num_texturesperskin = loadmodel->num_surfaces;
 	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + meshtriangles * sizeof(int[3]) + meshvertices * sizeof(float[14]) + meshvertices * sizeof(int[4]) + meshvertices * sizeof(float[4]) + loadmodel->num_poses * sizeof(float[12]) + loadmodel->num_bones * sizeof(float[12]));
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
 	loadmodel->surfacelist = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
@@ -1835,7 +1841,9 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->numframes = pheader->num_frames;
 	loadmodel->num_bones = pheader->num_bones;
 	loadmodel->num_poses = loadmodel->num_bones * loadmodel->numframes;
-	loadmodel->num_textures = loadmodel->nummodelsurfaces = loadmodel->num_surfaces = pheader->num_meshs;
+	loadmodel->nummodelsurfaces = loadmodel->num_surfaces = pheader->num_meshs;
+	loadmodel->num_textures = loadmodel->num_surfaces * loadmodel->numskins;
+	loadmodel->num_texturesperskin = loadmodel->num_surfaces;
 	// do most allocations as one merged chunk
 	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + meshtriangles * sizeof(int[3]) + meshvertices * (sizeof(float[14]) + sizeof(int[4]) + sizeof(float[4])) + loadmodel->num_poses * sizeof(float[12]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t));
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
@@ -2410,7 +2418,9 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		loadmodel->numskins = 1;
 	loadmodel->num_bones = numbones;
 	loadmodel->num_poses = loadmodel->num_bones * loadmodel->numframes;
-	loadmodel->num_textures = loadmodel->nummodelsurfaces = loadmodel->num_surfaces = nummatts;
+	loadmodel->nummodelsurfaces = loadmodel->num_surfaces = nummatts;
+	loadmodel->num_textures = loadmodel->num_surfaces * loadmodel->numskins;
+	loadmodel->num_texturesperskin = loadmodel->num_surfaces;
 	// do most allocations as one merged chunk
 	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + meshtriangles * sizeof(int[3]) + meshvertices * (sizeof(float[14]) + sizeof(int[4]) + sizeof(float[4])) + loadmodel->num_poses * sizeof(float[12]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t));
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
