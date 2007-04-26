@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "image.h"
 #include "r_shadow.h"
 
-cvar_t r_mipskins = {CVAR_SAVE, "r_mipskins", "0", "mipmaps skins (so they become blurrier in the distance), disabled by default because it tends to blur with strange border colors from the skin"};
+cvar_t r_mipskins = {CVAR_SAVE, "r_mipskins", "0", "mipmaps model skins so they render faster in the distance and do not display noise artifacts, can cause discoloration of skins if they contain undesirable border colors"};
 
 model_t *loadmodel;
 
