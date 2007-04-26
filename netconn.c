@@ -76,7 +76,8 @@ cvar_t hostname = {CVAR_SAVE, "hostname", "UNNAMED", "server message to show in 
 cvar_t developer_networking = {0, "developer_networking", "0", "prints all received and sent packets (recommended only for debugging)"};
 
 cvar_t cl_netlocalping = {0, "cl_netlocalping","0", "lags local loopback connection by this much ping time (useful to play more fairly on your own server with people with higher pings)"};
-static cvar_t cl_netpacketloss = {0, "cl_netpacketloss","0", "drops this percentage of packets (incoming and outgoing), useful for testing network protocol robustness (effects failing to start, sounds failing to play, etc)"};
+static cvar_t cl_netpacketloss_send = {0, "cl_netpacketloss_send","0", "drops this percentage of outgoing packets, useful for testing network protocol robustness (jerky movement, prediction errors, etc)"};
+static cvar_t cl_netpacketloss_receive = {0, "cl_netpacketloss_receive","0", "drops this percentage of incoming packets, useful for testing network protocol robustness (jerky movement, effects failing to start, sounds failing to play, etc)"};
 static cvar_t net_slist_queriespersecond = {0, "net_slist_queriespersecond", "20", "how many server information requests to send per second"};
 static cvar_t net_slist_queriesperframe = {0, "net_slist_queriesperframe", "4", "maximum number of server information requests to send each rendered frame (guards against low framerates causing problems)"};
 static cvar_t net_slist_timeout = {0, "net_slist_timeout", "4", "how long to listen for a server information response before giving up"};
@@ -443,9 +444,9 @@ int NetConn_Read(lhnetsocket_t *mysocket, void *data, int maxlength, lhnetaddres
 	int i;
 	if (length == 0)
 		return 0;
-	if (cl_netpacketloss.integer)
+	if (cl_netpacketloss_receive.integer)
 		for (i = 0;i < cl_numsockets;i++)
-			if (cl_sockets[i] == mysocket && (rand() % 100) < cl_netpacketloss.integer)
+			if (cl_sockets[i] == mysocket && (rand() % 100) < cl_netpacketloss_receive.integer)
 				return 0;
 	if (developer_networking.integer)
 	{
@@ -467,9 +468,9 @@ int NetConn_Write(lhnetsocket_t *mysocket, const void *data, int length, const l
 {
 	int ret;
 	int i;
-	if (cl_netpacketloss.integer)
+	if (cl_netpacketloss_send.integer)
 		for (i = 0;i < cl_numsockets;i++)
-			if (cl_sockets[i] == mysocket && (rand() % 100) < cl_netpacketloss.integer)
+			if (cl_sockets[i] == mysocket && (rand() % 100) < cl_netpacketloss_send.integer)
 				return length;
 	ret = LHNET_Write(mysocket, data, length, peeraddress);
 	if (developer_networking.integer)
@@ -2590,7 +2591,8 @@ void NetConn_Init(void)
 	Cvar_RegisterVariable(&net_connecttimeout);
 	Cvar_RegisterVariable(&net_connectfloodblockingtimeout);
 	Cvar_RegisterVariable(&cl_netlocalping);
-	Cvar_RegisterVariable(&cl_netpacketloss);
+	Cvar_RegisterVariable(&cl_netpacketloss_send);
+	Cvar_RegisterVariable(&cl_netpacketloss_receive);
 	Cvar_RegisterVariable(&hostname);
 	Cvar_RegisterVariable(&developer_networking);
 	Cvar_RegisterVariable(&cl_netport);
