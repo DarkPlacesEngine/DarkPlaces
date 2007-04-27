@@ -106,7 +106,6 @@ void SCR_CenterPrint(char *str)
 void SCR_DrawCenterString (void)
 {
 	char	*start;
-	int		l;
 	int		x, y;
 	int		remaining;
 	int		color;
@@ -132,17 +131,10 @@ void SCR_DrawCenterString (void)
 	do
 	{
 		// scan the number of characters on the line, not counting color codes
-		int chars = 0;
-		for (l=0 ; l<vid_conwidth.integer/8 ; l++)
-		{
-			if (start[l] == '\n' || !start[l])
-				break;
-			// color codes add no visible characters, so don't count them
-			if (start[l] == STRING_COLOR_TAG && (start[l+1] >= '0' && start[l+1] <= '9'))
-				l++;
-			else
-				chars++;
-		}
+		char *newline = strchr(start, '\n');
+		int l = newline ? (newline - start) : (int)strlen(start);
+		int chars = COM_StringLengthNoColors(start, l, NULL);
+
 		x = (vid_conwidth.integer - chars*8)/2;
 		if (l > 0)
 		{
@@ -153,15 +145,11 @@ void SCR_DrawCenterString (void)
 			if (remaining <= 0)
 				return;
 		}
-
 		y += 8;
 
-		while (*start && *start != '\n')
-			start++;
-
-		if (!*start)
+		if (!newline)
 			break;
-		start++;		// skip the \n
+		start = newline + 1; // skip the \n
 	} while (1);
 }
 

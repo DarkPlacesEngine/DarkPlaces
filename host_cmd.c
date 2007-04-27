@@ -773,7 +773,7 @@ void Host_Name_f (void)
 	// point the string back at updateclient->name to keep it safe
 	strlcpy (host_client->name, newName, sizeof (host_client->name));
 
-	COM_StringLengthNoColors(host_client->name, &valid_colors);
+	COM_StringLengthNoColors(host_client->name, 0, &valid_colors);
 	if(!valid_colors) // NOTE: this also proves the string is not empty, as "" is a valid colored string
 	{
 		size_t l;

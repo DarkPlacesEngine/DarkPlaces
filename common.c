@@ -1293,15 +1293,19 @@ it does not end with an unfinished color code). If it gets filled with FALSE, a
 fix would be adding a STRING_COLOR_TAG at the end of the string.
 
 valid can be set to NULL if the caller doesn't care.
+
+For size_s, specify the maximum number of characters from s to use, or 0 to use
+all characters until the zero terminator.
 ============
 */
 size_t
-COM_StringLengthNoColors(const char *s, qboolean *valid)
+COM_StringLengthNoColors(const char *s, size_t size_s, qboolean *valid)
 {
+	const char *end = size_s ? (s + size_s) : NULL;
 	size_t len = 0;
 	for(;;)
 	{
-		switch(*s)
+		switch((s == end) ? 0 : *s)
 		{
 			case 0:
 				if(valid)
@@ -1309,7 +1313,7 @@ COM_StringLengthNoColors(const char *s, qboolean *valid)
 				return len;
 			case STRING_COLOR_TAG:
 				++s;
-				switch(*s)
+				switch((s == end) ? 0 : *s)
 				{
 					case 0: // ends with unfinished color code!
 						++len;
@@ -1352,24 +1356,28 @@ FALSE. Generally, if escape_carets is false, the output buffer needs
 strlen(str)+1 bytes, and if escape_carets is true, it can need strlen(str)+2
 bytes. In any case, the function makes sure that the resulting string is
 zero terminated.
+
+For size_in, specify the maximum number of characters from in to use, or 0 to use
+all characters until the zero terminator.
 ============
 */
 qboolean
-COM_StringDecolorize(const char *in, char *out, size_t size_out, qboolean escape_carets)
+COM_StringDecolorize(const char *in, size_t size_in, char *out, size_t size_out, qboolean escape_carets)
 {
 #define APPEND(ch) do { if(--size_out) { *out++ = (ch); } else { *out++ = 0; return FALSE; } } while(0)
+	const char *end = size_in ? (in + size_in) : NULL;
 	if(size_out < 1)
 		return FALSE;
 	for(;;)
 	{
-		switch(*in)
+		switch((in == end) ? 0 : *in)
 		{
 			case 0:
 				*out++ = 0;
 				return TRUE;
 			case STRING_COLOR_TAG:
 				++in;
-				switch(*in)
+				switch((in == end) ? 0 : *in)
 				{
 					case 0: // ends with unfinished color code!
 						APPEND(STRING_COLOR_TAG);
