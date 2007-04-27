@@ -1759,7 +1759,7 @@ void VM_strdecolorize(void)
 	VM_SAFEPARMCOUNT(1,VM_strdecolorize);
 	szString = PRVM_G_STRING(OFS_PARM0);
 
-	COM_StringDecolorize(szString, szNewString, sizeof(szNewString), TRUE);
+	COM_StringDecolorize(szString, 0, szNewString, sizeof(szNewString), TRUE);
 
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(szNewString);
 }
@@ -1783,7 +1783,7 @@ void VM_strlennocol(void)
 
 	szString = PRVM_G_STRING(OFS_PARM0);
 
-	nCnt = COM_StringLengthNoColors(szString, NULL);
+	nCnt = COM_StringLengthNoColors(szString, 0, NULL);
 
 	PRVM_G_FLOAT(OFS_RETURN) = nCnt;
 }

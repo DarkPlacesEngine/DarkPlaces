@@ -287,8 +287,8 @@ int COM_StringBeginsWith(const char *s, const char *match);
 
 int COM_ReadAndTokenizeLine(const char **text, char **argv, int maxargc, char *tokenbuf, int tokenbufsize, const char *commentprefix);
 
-size_t COM_StringLengthNoColors(const char *s, qboolean *valid);
-qboolean COM_StringDecolorize(const char *in, char *out, size_t size_out, qboolean escape_carets);
+size_t COM_StringLengthNoColors(const char *s, size_t size_s, qboolean *valid);
+qboolean COM_StringDecolorize(const char *in, size_t size_in, char *out, size_t size_out, qboolean escape_carets);
 
 typedef struct stringlist_s
 {
