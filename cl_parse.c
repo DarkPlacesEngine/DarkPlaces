@@ -164,6 +164,7 @@ cvar_t cl_sound_tink1 = {0, "cl_sound_tink1", "weapons/tink1.wav", "sound to pla
 cvar_t cl_sound_ric1 = {0, "cl_sound_ric1", "weapons/ric1.wav", "sound to play with 5% chance during TE_SPIKE/TE_SUPERSPIKE (empty cvar disables sound)"};
 cvar_t cl_sound_ric2 = {0, "cl_sound_ric2", "weapons/ric2.wav", "sound to play with 5% chance during TE_SPIKE/TE_SUPERSPIKE (empty cvar disables sound)"};
 cvar_t cl_sound_ric3 = {0, "cl_sound_ric3", "weapons/ric3.wav", "sound to play with 10% chance during TE_SPIKE/TE_SUPERSPIKE (empty cvar disables sound)"};
+cvar_t cl_sound_ric_gunshot = {0, "cl_sound_ric_gunshot", "0", "specifies if the related cl_sound_ric and cl_sound_tink sounds apply to TE_GUNSHOT/TE_GUNSHOTQUAD"};
 cvar_t cl_sound_r_exp3 = {0, "cl_sound_r_exp3", "weapons/r_exp3.wav", "sound to play during TE_EXPLOSION and related effects (empty cvar disables sound)"};
 cvar_t cl_serverextension_download = {0, "cl_serverextension_download", "0", "indicates whether the server supports the download command"};
 cvar_t cl_joinbeforedownloadsfinish = {CVAR_SAVE, "cl_joinbeforedownloadsfinish", "1", "if non-zero the game will begin after the map is loaded before other downloads finish"};
@@ -2086,6 +2087,21 @@ void CL_ParseTempEntity(void)
 			VectorSet(pos2, pos[0] + radius, pos[1] + radius, pos[2] + radius);
 			VectorSet(pos, pos[0] - radius, pos[1] - radius, pos[2] - radius);
 			CL_ParticleEffect(EFFECT_TE_GUNSHOT, radius, pos, pos2, vec3_origin, vec3_origin, NULL, 0);
+			if(cl_sound_ric_gunshot.integer)
+			{
+				if (rand() % 5)
+					S_StartSound(-1, 0, cl.sfx_tink1, pos, 1, 1);
+				else
+				{
+					rnd = rand() & 3;
+					if (rnd == 1)
+						S_StartSound(-1, 0, cl.sfx_ric1, pos, 1, 1);
+					else if (rnd == 2)
+						S_StartSound(-1, 0, cl.sfx_ric2, pos, 1, 1);
+					else
+						S_StartSound(-1, 0, cl.sfx_ric3, pos, 1, 1);
+				}
+			}
 			break;
 
 		case QW_TE_BLOOD:
@@ -2277,6 +2293,21 @@ void CL_ParseTempEntity(void)
 			MSG_ReadVector(pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
 			CL_ParticleEffect(EFFECT_TE_GUNSHOT, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
+			if(cl_sound_ric_gunshot.integer)
+			{
+				if (rand() % 5)
+					S_StartSound(-1, 0, cl.sfx_tink1, pos, 1, 1);
+				else
+				{
+					rnd = rand() & 3;
+					if (rnd == 1)
+						S_StartSound(-1, 0, cl.sfx_ric1, pos, 1, 1);
+					else if (rnd == 2)
+						S_StartSound(-1, 0, cl.sfx_ric2, pos, 1, 1);
+					else
+						S_StartSound(-1, 0, cl.sfx_ric3, pos, 1, 1);
+				}
+			}
 			break;
 
 		case TE_GUNSHOTQUAD:
@@ -2284,6 +2315,21 @@ void CL_ParseTempEntity(void)
 			MSG_ReadVector(pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
 			CL_ParticleEffect(EFFECT_TE_GUNSHOTQUAD, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
+			if(cl_sound_ric_gunshot.integer)
+			{
+				if (rand() % 5)
+					S_StartSound(-1, 0, cl.sfx_tink1, pos, 1, 1);
+				else
+				{
+					rnd = rand() & 3;
+					if (rnd == 1)
+						S_StartSound(-1, 0, cl.sfx_ric1, pos, 1, 1);
+					else if (rnd == 2)
+						S_StartSound(-1, 0, cl.sfx_ric2, pos, 1, 1);
+					else
+						S_StartSound(-1, 0, cl.sfx_ric3, pos, 1, 1);
+				}
+			}
 			break;
 
 		case TE_EXPLOSION:
@@ -3673,6 +3719,7 @@ void CL_Parse_Init(void)
 	Cvar_RegisterVariable(&cl_sound_ric1);
 	Cvar_RegisterVariable(&cl_sound_ric2);
 	Cvar_RegisterVariable(&cl_sound_ric3);
+	Cvar_RegisterVariable(&cl_sound_ric_gunshot);
 	Cvar_RegisterVariable(&cl_sound_r_exp3);
 
 	Cvar_RegisterVariable(&cl_joinbeforedownloadsfinish);

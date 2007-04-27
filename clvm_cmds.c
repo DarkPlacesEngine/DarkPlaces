@@ -1331,16 +1331,29 @@ static void VM_CL_te_spark (void)
 	CL_ParticleEffect(EFFECT_TE_SPARK, PRVM_G_FLOAT(OFS_PARM2), pos2, pos2, PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM1), NULL, 0);
 }
 
+extern cvar_t cl_sound_ric_gunshot;
 // #412 void(vector org) te_gunshotquad (DP_QUADEFFECTS1)
 static void VM_CL_te_gunshotquad (void)
 {
 	float		*pos;
 	vec3_t		pos2;
+	int			rnd;
 	VM_SAFEPARMCOUNT(1, VM_CL_te_gunshotquad);
 
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	CL_FindNonSolidLocation(pos, pos2, 4);
 	CL_ParticleEffect(EFFECT_TE_GUNSHOTQUAD, 1, pos2, pos2, vec3_origin, vec3_origin, NULL, 0);
+	if(cl_sound_ric_gunshot.integer)
+	{
+		if (rand() % 5)			S_StartSound(-1, 0, cl.sfx_tink1, pos2, 1, 1);
+		else
+		{
+			rnd = rand() & 3;
+			if (rnd == 1)		S_StartSound(-1, 0, cl.sfx_ric1, pos2, 1, 1);
+			else if (rnd == 2)	S_StartSound(-1, 0, cl.sfx_ric2, pos2, 1, 1);
+			else				S_StartSound(-1, 0, cl.sfx_ric3, pos2, 1, 1);
+		}
+	}
 }
 
 // #413 void(vector org) te_spikequad (DP_QUADEFFECTS1)
@@ -1429,11 +1442,23 @@ static void VM_CL_te_gunshot (void)
 {
 	float		*pos;
 	vec3_t		pos2;
+	int			rnd;
 	VM_SAFEPARMCOUNT(1, VM_CL_te_gunshot);
 
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	CL_FindNonSolidLocation(pos, pos2, 4);
 	CL_ParticleEffect(EFFECT_TE_GUNSHOT, 1, pos2, pos2, vec3_origin, vec3_origin, NULL, 0);
+	if(cl_sound_ric_gunshot.integer)
+	{
+		if (rand() % 5)			S_StartSound(-1, 0, cl.sfx_tink1, pos2, 1, 1);
+		else
+		{
+			rnd = rand() & 3;
+			if (rnd == 1)		S_StartSound(-1, 0, cl.sfx_ric1, pos2, 1, 1);
+			else if (rnd == 2)	S_StartSound(-1, 0, cl.sfx_ric2, pos2, 1, 1);
+			else				S_StartSound(-1, 0, cl.sfx_ric3, pos2, 1, 1);
+		}
+	}
 }
 
 // #419 void(vector org) te_spike (DP_TE_STANDARDEFFECTBUILTINS)
