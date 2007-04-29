@@ -580,7 +580,7 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 		packetsSent++;
 		unreliableMessagesSent++;
 
-		totallen += packetLen + 18;
+		totallen += packetLen + 28;
 	}
 	else
 	{
@@ -618,7 +618,7 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 				packetsReSent++;
 			}
 
-			totallen += packetLen + 18;
+			totallen += packetLen + 28;
 		}
 
 		// if we have a new reliable message to send, do so
@@ -669,7 +669,7 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 			packetsSent++;
 			reliableMessagesSent++;
 
-			totallen += packetLen + 18;
+			totallen += packetLen + 28;
 		}
 
 		// if we have an unreliable message to send, do so
@@ -698,7 +698,7 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 			unreliableMessagesSent++;
 
 			if (data->cursize)
-				totallen += packetLen + 18;
+				totallen += packetLen + 28;
 		}
 	}
 
