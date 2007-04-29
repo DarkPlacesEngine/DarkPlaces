@@ -671,7 +671,7 @@ static void DrawQ_GetTextColor(float color[4], int colorindex, float r, float g,
 
 float DrawQ_String(float startx, float starty, const char *text, int maxlen, float w, float h, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor, qboolean ignorecolorcodes)
 {
-	int i, num, shadow, colorindex;
+	int i, num, shadow, colorindex = STRING_COLOR_DEFAULT;
 	float x = startx, y, s, t, u, v;
 	float *av, *at, *ac;
 	float color[4];
@@ -777,6 +777,10 @@ float DrawQ_String(float startx, float starty, const char *text, int maxlen, flo
 			GL_LockArrays(0, 0);
 		}
 	}
+
+	if (outcolor)
+		*outcolor = colorindex;
+
 	// note: this relies on the proper text (not shadow) being drawn last
 	return x;
 }
