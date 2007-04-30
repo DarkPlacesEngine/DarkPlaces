@@ -2819,7 +2819,7 @@ static void CL_NetworkTimeReceived(double newtime)
 	double timehigh;
 	cl.mtime[1] = max(cl.mtime[0], newtime - 0.1);
 	cl.mtime[0] = newtime;
-	if (cls.timedemo || (cl.islocalgame && !sv_fixedframeratesingleplayer.integer) || cl.mtime[0] == newtime || cls.signon < SIGNONS)
+	if (cls.timedemo || (cl.islocalgame && !sv_fixedframeratesingleplayer.integer) || cl.mtime[1] == cl.mtime[0] || cls.signon < SIGNONS)
 		cl.time = cl.mtime[1] = newtime;
 	else if (cls.protocol != PROTOCOL_QUAKEWORLD)
 	{
