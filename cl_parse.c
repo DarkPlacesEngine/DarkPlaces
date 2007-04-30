@@ -169,7 +169,7 @@ cvar_t cl_sound_r_exp3 = {0, "cl_sound_r_exp3", "weapons/r_exp3.wav", "sound to 
 cvar_t cl_serverextension_download = {0, "cl_serverextension_download", "0", "indicates whether the server supports the download command"};
 cvar_t cl_joinbeforedownloadsfinish = {CVAR_SAVE, "cl_joinbeforedownloadsfinish", "1", "if non-zero the game will begin after the map is loaded before other downloads finish"};
 cvar_t cl_nettimesyncfactor = {CVAR_SAVE, "cl_nettimesyncfactor", "0", "rate at which client time adapts to match server time, 1 = instantly, 0.125 = slowly, 0 = not at all (bounding still applies)"};
-cvar_t cl_nettimesyncboundmode = {CVAR_SAVE, "cl_nettimesyncboundmode", "5", "method of restricting client time to valid values, 0 = no correction, 1 = tight bounding (jerky with packet loss), 2 = loose bounding (corrects it if out of bounds), 3 = leniant bounding (ignores temporary errors due to varying framerate), 4 = slow adjustment method from Quake3, 5 = slightly nicer version of Quake3 method"};
+cvar_t cl_nettimesyncboundmode = {CVAR_SAVE, "cl_nettimesyncboundmode", "4", "method of restricting client time to valid values, 0 = no correction, 1 = tight bounding (jerky with packet loss), 2 = loose bounding (corrects it if out of bounds), 3 = leniant bounding (ignores temporary errors due to varying framerate), 4 = slow adjustment method from Quake3"};
 cvar_t cl_nettimesyncboundtolerance = {CVAR_SAVE, "cl_nettimesyncboundtolerance", "0.25", "how much error is tolerated by bounding check, as a fraction of frametime, 0.25 = up to 25% margin of error tolerated, 1 = use only new time, 0 = use only old time (same effect as setting cl_nettimesyncfactor to 1)"};
 cvar_t cl_iplog_name = {CVAR_SAVE, "cl_iplog_name", "darkplaces_iplog.txt", "name of iplog file containing player addresses for iplog_list command and automatic ip logging when parsing status command"};
 
@@ -2817,12 +2817,12 @@ extern cvar_t slowmo;
 static void CL_NetworkTimeReceived(double newtime)
 {
 	double timehigh;
+	cl.mtime[1] = max(cl.mtime[0], newtime - 0.1);
+	cl.mtime[0] = newtime;
 	if (cls.timedemo || (cl.islocalgame && !sv_fixedframeratesingleplayer.integer) || cl.mtime[0] == newtime || cls.signon < SIGNONS)
-		cl.time = cl.mtime[1] = cl.mtime[0] = newtime;
-	else
+		cl.time = cl.mtime[1] = newtime;
+	else if (cls.protocol != PROTOCOL_QUAKEWORLD)
 	{
-		cl.mtime[1] = max(cl.mtime[0], newtime - 0.1);
-		cl.mtime[0] = newtime;
 		if (developer.integer >= 100 && vid_activewindow)
 		{
 			if (cl.time < cl.mtime[1] - (cl.mtime[0] - cl.mtime[1]))
@@ -2854,15 +2854,6 @@ static void CL_NetworkTimeReceived(double newtime)
 				cl.time -= 0.002 * slowmo.value; // fall into the past by 2ms
 			else
 				cl.time += 0.001 * slowmo.value; // creep forward 1ms
-		}
-		else if (cl_nettimesyncboundmode.integer == 5)
-		{
-			if (fabs(cl.time - cl.mtime[1]) > 0.5)
-				cl.time = cl.mtime[1]; // reset
-			else if (fabs(cl.time - cl.mtime[1]) > 0.1)
-				cl.time += 0.5 * (cl.mtime[1] - cl.time); // fast
-			else
-				cl.time = bound(cl.time - 0.002 * slowmo.value, cl.mtime[1], cl.time + 0.001 * slowmo.value); // slow adjust
 		}
 	}
 	// this packet probably contains a player entity update, so we will need
@@ -2943,6 +2934,8 @@ void CL_ParseServerMessage(void)
 
 		// fade weapon view kick
 		cl.qw_weaponkick = min(cl.qw_weaponkick + 10 * bound(0, cl.time - cl.oldtime, 0.1), 0);
+
+		cls.servermovesequence = cls.netcon->qw.incoming_sequence;
 
 		while (1)
 		{
@@ -3260,10 +3253,24 @@ void CL_ParseServerMessage(void)
 			}
 		}
 
-		// fully kill the still slightly dead qw player entities each frame
-		for (i = 1;i < cl.maxclients;i++)
-			if (!cl.entities_active[i])
-				cl.entities[i].state_current.active = false;
+		// fully kill the still slightly dead qw player entities each frame,
+		// but only if a player update was received
+		for (i = 1;i <= cl.maxclients;i++)
+			if (cl.entities_active[i])
+				break;
+		if (i <= cl.maxclients)
+		{
+			// kill all non-updated entities this frame
+			for (i = 1;i <= cl.maxclients;i++)
+				if (!cl.entities_active[i])
+					cl.entities[i].state_current.active = false;
+		}
+		else
+		{
+			// no update this frame, restore the cl.entities_active for good measure
+			for (i = 1;i <= cl.maxclients;i++)
+				cl.entities_active[i] = cl.entities[i].state_current.active;
+		}
 	}
 	else
 	{
