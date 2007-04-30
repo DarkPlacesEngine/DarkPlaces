@@ -1788,6 +1788,51 @@ void VM_strlennocol(void)
 	PRVM_G_FLOAT(OFS_RETURN) = nCnt;
 }
 
+// DRESK - String to Uppercase and Lowercase
+/*
+=========
+VM_strtolower
+
+string	strtolower(string s)
+=========
+*/
+// string (string s) strtolower = #480; // returns passed in string in lowercase form
+void VM_strtolower(void)
+{
+	char szNewString[VM_STRINGTEMP_LENGTH];
+	const char *szString;
+
+	// Prepare Strings
+	VM_SAFEPARMCOUNT(1,VM_strtolower);
+	szString = PRVM_G_STRING(OFS_PARM0);
+
+	COM_ToLowerString(szString, szNewString, sizeof(szNewString) );
+
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(szNewString);
+}
+
+/*
+=========
+VM_strtoupper
+
+string	strtoupper(string s)
+=========
+*/
+// string (string s) strtoupper = #481; // returns passed in string in uppercase form
+void VM_strtoupper(void)
+{
+	char szNewString[VM_STRINGTEMP_LENGTH];
+	const char *szString;
+
+	// Prepare Strings
+	VM_SAFEPARMCOUNT(1,VM_strtoupper);
+	szString = PRVM_G_STRING(OFS_PARM0);
+
+	COM_ToUpperString(szString, szNewString, sizeof(szNewString) );
+
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(szNewString);
+}
+
 /*
 =========
 VM_strcat
