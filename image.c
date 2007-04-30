@@ -865,7 +865,7 @@ unsigned char *loadimagepixels (const char *filename, qboolean complain, int mat
 		firstformat = imageformats_textures;
 	else if (!strcasecmp(name, "gfx"))
 		firstformat = imageformats_gfx;
-	else if (!strchr(name, '/'))
+	else if (!strchr(basename, '/'))
 		firstformat = imageformats_nopath;
 	else
 		firstformat = imageformats_other;
