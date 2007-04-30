@@ -817,6 +817,7 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 	e->render.flags = e->state_current.flags;
 	e->render.effects = e->state_current.effects;
 	VectorScale(e->state_current.colormod, (1.0f / 32.0f), e->render.colormod);
+	e->render.entitynumber = e - cl.entities;
 	if (e->state_current.flags & RENDER_COLORMAPPED)
 	{
 		int cb;

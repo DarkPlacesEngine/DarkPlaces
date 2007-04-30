@@ -149,6 +149,9 @@ r_glsl_permutation_t r_glsl_permutations[SHADERPERMUTATION_MAX];
 // currently selected permutation
 r_glsl_permutation_t *r_glsl_permutation;
 
+char r_qwskincache[MAX_SCOREBOARD][MAX_QPATH];
+skinframe_t *r_qwskincache_skinframe[MAX_SCOREBOARD];
+
 // vertex coordinates for a quad that covers the screen exactly
 const static float r_screenvertex3f[12] =
 {
@@ -1119,7 +1122,7 @@ skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewid
 	return item;
 }
 
-skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags)
+skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboolean complain)
 {
 	// FIXME: it should be possible to disable loading various layers using
 	// cvars, to prevent wasted loading time and memory usage if the user does
@@ -1146,7 +1149,7 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags)
 	if (skinframe && skinframe->base)
 		return skinframe;
 
-	basepixels = loadimagepixels(name, false, 0, 0);
+	basepixels = loadimagepixels(name, complain, 0, 0);
 	if (basepixels == NULL)
 		return NULL;
 
@@ -1375,6 +1378,9 @@ void gl_main_start(void)
 		r_refdef.fogmasktable[x] = bound(0, alpha, 1);
 	}
 
+	memset(r_qwskincache, 0, sizeof(r_qwskincache));
+	memset(r_qwskincache_skinframe, 0, sizeof(r_qwskincache_skinframe));
+
 	// set up r_skinframe loading system for textures
 	memset(&r_skinframe, 0, sizeof(r_skinframe));
 	r_skinframe.loadsequence = 1;
@@ -1396,6 +1402,9 @@ void gl_main_start(void)
 
 void gl_main_shutdown(void)
 {
+	memset(r_qwskincache, 0, sizeof(r_qwskincache));
+	memset(r_qwskincache_skinframe, 0, sizeof(r_qwskincache_skinframe));
+
 	// clear out the r_skinframe state
 	Mem_ExpandableArray_FreeArray(&r_skinframe.array);
 	memset(&r_skinframe, 0, sizeof(r_skinframe));
@@ -3076,6 +3085,7 @@ static void R_Texture_AddLayer(texture_t *t, qboolean depthmask, int blendfunc1,
 
 void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 {
+	int i;
 	model_t *model = ent->model;
 
 	// switch to an alternate material if this is a q1bsp animated material
@@ -3105,8 +3115,20 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 		texture->currentframe = t;
 	}
 
-	// pick a new currentskinframe if the material is animated
-	if (t->numskinframes >= 2)
+	// update currentskinframe to be a qw skin or animation frame
+	if ((i = ent->entitynumber - 1) >= 0 && i < cl.maxclients)
+	{
+		if (strcmp(r_qwskincache[i], cl.scores[i].qw_skin))
+		{
+			strlcpy(r_qwskincache[i], cl.scores[i].qw_skin, sizeof(r_qwskincache[i]));
+			Con_DPrintf("loading skins/%s\n", r_qwskincache[i]);
+			r_qwskincache_skinframe[i] = R_SkinFrame_LoadExternal(va("skins/%s", r_qwskincache[i]), TEXF_PRECACHE | (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_PICMIP, developer.integer > 0);
+		}
+		t->currentskinframe = r_qwskincache_skinframe[i];
+		if (t->currentskinframe == NULL)
+			t->currentskinframe = t->skinframes[(int)(t->skinframerate * (cl.time - ent->frame2time)) % t->numskinframes];
+	}
+	else if (t->numskinframes >= 2)
 		t->currentskinframe = t->skinframes[(int)(t->skinframerate * (cl.time - ent->frame2time)) % t->numskinframes];
 	if (t->backgroundnumskinframes >= 2)
 		t->backgroundcurrentskinframe = t->backgroundskinframes[(int)(t->backgroundskinframerate * (cl.time - ent->frame2time)) % t->backgroundnumskinframes];
