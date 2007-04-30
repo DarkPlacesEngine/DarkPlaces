@@ -1148,6 +1148,7 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 	for (e = 0;e < numcheckentities;e++)
 	{
 		prvm_edict_t *check = checkentities[e];
+		int checkcontents = SV_GenericHitSuperContentsMask(check);
 		if (check->fields.server->movetype == MOVETYPE_NONE
 		 || check->fields.server->movetype == MOVETYPE_PUSH
 		 || check->fields.server->movetype == MOVETYPE_FOLLOW
@@ -1160,7 +1161,7 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 		// final position, move it
 		if (!((int)check->fields.server->flags & FL_ONGROUND) || PRVM_PROG_TO_EDICT(check->fields.server->groundentity) != pusher)
 		{
-			Collision_ClipToGenericEntity(&trace, pushermodel, pusher->fields.server->frame, pusher->fields.server->mins, pusher->fields.server->maxs, SUPERCONTENTS_BODY, &pusherfinalmatrix, &pusherfinalimatrix, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY);
+			Collision_ClipToGenericEntity(&trace, pushermodel, pusher->fields.server->frame, pusher->fields.server->mins, pusher->fields.server->maxs, SUPERCONTENTS_BODY, &pusherfinalmatrix, &pusherfinalimatrix, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, checkcontents);
 			if (!trace.startsolid)
 				continue;
 		}
@@ -1198,7 +1199,7 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 			check->fields.server->flags = (int)check->fields.server->flags & ~FL_ONGROUND;
 
 		// if it is still inside the pusher, block
-		Collision_ClipToGenericEntity(&trace, pushermodel, pusher->fields.server->frame, pusher->fields.server->mins, pusher->fields.server->maxs, SUPERCONTENTS_BODY, &pusherfinalmatrix, &pusherfinalimatrix, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY);
+		Collision_ClipToGenericEntity(&trace, pushermodel, pusher->fields.server->frame, pusher->fields.server->mins, pusher->fields.server->maxs, SUPERCONTENTS_BODY, &pusherfinalmatrix, &pusherfinalimatrix, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, checkcontents);
 		if (trace.startsolid)
 		{
 			// try moving the contacted entity a tiny bit further to account for precision errors
@@ -1209,7 +1210,7 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 			VectorCopy (check->priv.server->moved_fromangles, check->fields.server->angles);
 			SV_PushEntity (check, move2, true);
 			pusher->fields.server->solid = savesolid;
-			Collision_ClipToGenericEntity(&trace, pushermodel, pusher->fields.server->frame, pusher->fields.server->mins, pusher->fields.server->maxs, SUPERCONTENTS_BODY, &pusherfinalmatrix, &pusherfinalimatrix, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY);
+			Collision_ClipToGenericEntity(&trace, pushermodel, pusher->fields.server->frame, pusher->fields.server->mins, pusher->fields.server->maxs, SUPERCONTENTS_BODY, &pusherfinalmatrix, &pusherfinalimatrix, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, checkcontents);
 			if (trace.startsolid)
 			{
 				// try moving the contacted entity a tiny bit less to account for precision errors
@@ -1219,7 +1220,7 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 				VectorCopy (check->priv.server->moved_fromangles, check->fields.server->angles);
 				SV_PushEntity (check, move2, true);
 				pusher->fields.server->solid = savesolid;
-				Collision_ClipToGenericEntity(&trace, pushermodel, pusher->fields.server->frame, pusher->fields.server->mins, pusher->fields.server->maxs, SUPERCONTENTS_BODY, &pusherfinalmatrix, &pusherfinalimatrix, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY);
+				Collision_ClipToGenericEntity(&trace, pushermodel, pusher->fields.server->frame, pusher->fields.server->mins, pusher->fields.server->maxs, SUPERCONTENTS_BODY, &pusherfinalmatrix, &pusherfinalimatrix, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, checkcontents);
 				if (trace.startsolid)
 				{
 					// still inside pusher, so it's really blocked
