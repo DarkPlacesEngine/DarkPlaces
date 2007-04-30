@@ -289,6 +289,8 @@ int COM_ReadAndTokenizeLine(const char **text, char **argv, int maxargc, char *t
 
 size_t COM_StringLengthNoColors(const char *s, size_t size_s, qboolean *valid);
 qboolean COM_StringDecolorize(const char *in, size_t size_in, char *out, size_t size_out, qboolean escape_carets);
+void COM_ToLowerString (const char *in, char *out, size_t size_out);
+void COM_ToUpperString (const char *in, char *out, size_t size_out);
 
 typedef struct stringlist_s
 {

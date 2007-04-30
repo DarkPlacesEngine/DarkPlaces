@@ -291,6 +291,9 @@ void VM_strunzone(void);
 void VM_strlennocol(void);
 // DRESK - Decolorized String
 void VM_strdecolorize(void);
+// DRESK - String Uppercase and Lowercase Support
+void VM_strtolower(void);
+void VM_strtoupper(void);
 
 void VM_clcommand (void);
 

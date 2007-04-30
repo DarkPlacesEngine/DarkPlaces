@@ -9,6 +9,7 @@ char *vm_m_extensions =
 "DP_MENU_EXTRESPONSEPACKET "
 "DP_QC_ASINACOSATANATAN2TAN "
 "DP_QC_STRFTIME "
+"DP_QC_STRING_CASE_FUNCTIONS "
 "DP_QC_STRINGCOLORFUNCTIONS "
 "DP_QC_TOKENIZEBYSEPARATOR "
 "DP_QC_UNLIMITEDTEMPSTRINGS "
@@ -1238,8 +1239,8 @@ VM_strlennocol,				// #476 float(string s) : DRESK - String Length (not counting
 VM_strdecolorize,			// #477 string(string s) : DRESK - Decolorized String (DP_QC_STRINGCOLORFUNCTIONS)
 VM_strftime,				// #478 string(float uselocaltime, string format, ...) (DP_QC_STRFTIME)
 VM_tokenizebyseparator,		// #479 float(string s) tokenizebyseparator (DP_QC_TOKENIZEBYSEPARATOR)
-NULL,						// #480
-NULL,						// #481
+VM_strtolower,				// #480 string(string s) VM_strtolower : DRESK - Return string as lowercase
+VM_strtoupper,				// #481 string(string s) VM_strtoupper : DRESK - Return string as uppercase
 NULL,						// #482
 NULL,						// #483
 NULL,						// #484
