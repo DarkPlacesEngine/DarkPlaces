@@ -1343,7 +1343,7 @@ static void VM_CL_te_gunshotquad (void)
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	CL_FindNonSolidLocation(pos, pos2, 4);
 	CL_ParticleEffect(EFFECT_TE_GUNSHOTQUAD, 1, pos2, pos2, vec3_origin, vec3_origin, NULL, 0);
-	if(cl_sound_ric_gunshot.integer)
+	if(cl_sound_ric_gunshot.integer >= 2)
 	{
 		if (rand() % 5)			S_StartSound(-1, 0, cl.sfx_tink1, pos2, 1, 1);
 		else
@@ -1448,7 +1448,7 @@ static void VM_CL_te_gunshot (void)
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	CL_FindNonSolidLocation(pos, pos2, 4);
 	CL_ParticleEffect(EFFECT_TE_GUNSHOT, 1, pos2, pos2, vec3_origin, vec3_origin, NULL, 0);
-	if(cl_sound_ric_gunshot.integer)
+	if(cl_sound_ric_gunshot.integer == 1 || cl_sound_ric_gunshot.integer == 3)
 	{
 		if (rand() % 5)			S_StartSound(-1, 0, cl.sfx_tink1, pos2, 1, 1);
 		else
