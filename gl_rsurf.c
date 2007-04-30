@@ -1133,7 +1133,7 @@ void R_ReplaceWorldTexture (void)
 	{
 		if(t->width && !strcasecmp(t->name, r))
 		{
-			if ((skinframe = R_SkinFrame_LoadExternal((char*)newt, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP)))
+			if ((skinframe = R_SkinFrame_LoadExternal((char*)newt, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, true)))
 			{
 				t->skinframes[0] = skinframe;
 				Con_Printf("%s replaced with %s\n", r, newt);

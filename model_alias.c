@@ -711,7 +711,7 @@ static void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfi
 				// leave the skin unitialized (nodraw) if the replacement is "common/nodraw" or "textures/common/nodraw"
 				if (!strcmp(skinfileitem->name, meshname) && strcmp(skinfileitem->replacement, "common/nodraw") && strcmp(skinfileitem->replacement, "textures/common/nodraw"))
 				{
-					tempskinframe = R_SkinFrame_LoadExternal(skinfileitem->replacement, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP);
+					tempskinframe = R_SkinFrame_LoadExternal(skinfileitem->replacement, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false);
 					if (!tempskinframe)
 						if (cls.state != ca_dedicated)
 							Con_DPrintf("mesh \"%s\": failed to load skin #%i \"%s\"\n", meshname, i, skinfileitem->replacement);
@@ -723,7 +723,7 @@ static void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfi
 	}
 	else
 	{
-		tempskinframe = R_SkinFrame_LoadExternal(shadername, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP);
+		tempskinframe = R_SkinFrame_LoadExternal(shadername, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false);
 		if (!tempskinframe)
 			if (cls.state != ca_dedicated)
 				Con_Printf("Can't find texture \"%s\" for mesh \"%s\", using grey checkerboard\n", shadername, meshname);
@@ -995,7 +995,7 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 					sprintf (name, "%s_%i_%i", loadmodel->name, i, j);
 				else
 					sprintf (name, "%s_%i", loadmodel->name, i);
-				tempskinframe = R_SkinFrame_LoadExternal(name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PICMIP);
+				tempskinframe = R_SkinFrame_LoadExternal(name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PICMIP, false);
 				if (!tempskinframe)
 					tempskinframe = R_SkinFrame_LoadInternal(name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_PICMIP, true, r_fullbrights.integer, (unsigned char *)datapointer, skinwidth, skinheight, 8, NULL, NULL);
 				Mod_BuildAliasSkinFromSkinFrame(loadmodel->data_textures + totalskins * loadmodel->num_surfaces, tempskinframe);
@@ -1005,7 +1005,7 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 		}
 		// check for skins that don't exist in the model, but do exist as external images
 		// (this was added because yummyluv kept pestering me about support for it)
-		while ((tempskinframe = R_SkinFrame_LoadExternal(va("%s_%i", loadmodel->name, loadmodel->numskins), (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PICMIP)))
+		while ((tempskinframe = R_SkinFrame_LoadExternal(va("%s_%i", loadmodel->name, loadmodel->numskins), (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PICMIP, false)))
 		{
 			// expand the arrays to make room
 			tempskinscenes = loadmodel->skinscenes;
@@ -1149,7 +1149,7 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 		loadmodel->data_textures = (texture_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t));
 		for (i = 0;i < loadmodel->numskins;i++, inskin += MD2_SKINNAME)
 		{
-			tempskinframe = R_SkinFrame_LoadExternal(inskin, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP);
+			tempskinframe = R_SkinFrame_LoadExternal(inskin, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false);
 			if (!tempskinframe)
 				Con_Printf("%s is missing skin \"%s\"\n", loadmodel->name, inskin);
 			Mod_BuildAliasSkinFromSkinFrame(loadmodel->data_textures + i * loadmodel->num_surfaces, tempskinframe);

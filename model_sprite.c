@@ -177,7 +177,7 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 					sprintf (name, "%s_%i_%i", loadmodel->name, i, j);
 				else
 					sprintf (name, "%s_%i", loadmodel->name, i);
-				if (!(skinframe = R_SkinFrame_LoadExternal(name, texflags)))
+				if (!(skinframe = R_SkinFrame_LoadExternal(name, texflags, false)))
 				{
 					if (groupframes > 1)
 						sprintf (fogname, "%s_%i_%ifog", loadmodel->name, i, j);
@@ -405,7 +405,7 @@ void Mod_IDS2_Load(model_t *mod, void *buffer, void *bufferend)
 		{
 			const dsprite2frame_t *pinframe;
 			pinframe = &pinqsprite->frames[i];
-			if (!(skinframe = R_SkinFrame_LoadExternal(pinframe->name, texflags)))
+			if (!(skinframe = R_SkinFrame_LoadExternal(pinframe->name, texflags, false)))
 			{
 				Con_Printf("Mod_IDS2_Load: failed to load %s", pinframe->name);
 				skinframe = R_SkinFrame_LoadMissing();
