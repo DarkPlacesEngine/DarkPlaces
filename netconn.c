@@ -697,8 +697,7 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 			packetsSent++;
 			unreliableMessagesSent++;
 
-			if (data->cursize)
-				totallen += packetLen + 28;
+			totallen += packetLen + 28;
 		}
 	}
 
@@ -918,8 +917,6 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 	int originallength = length;
 	if (length < 8)
 		return 0;
-
-	// TODO: add netgraph stuff rather than just packetloss counting...
 
 	if (protocol == PROTOCOL_QUAKEWORLD)
 	{
