@@ -359,6 +359,7 @@ typedef struct usercmd_s
 	int impulse;
 	int sequence;
 	qboolean applied; // if false we're still accumulating a move
+	qboolean predicted; // if true the sequence should be sent as 0
 } usercmd_t;
 
 typedef struct lightstyle_s
@@ -582,6 +583,7 @@ typedef struct client_movementqueue_s
 	float move[3];
 	qboolean jump;
 	qboolean crouch;
+	qboolean canjump;
 }
 client_movementqueue_t;
 
