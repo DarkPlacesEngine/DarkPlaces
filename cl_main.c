@@ -1094,7 +1094,10 @@ void CL_UpdateNetworkEntityTrail(entity_t *e)
 	// do trails
 	if (e->render.flags & RENDER_GLOWTRAIL)
 		trailtype = EFFECT_TR_GLOWTRAIL;
-	if (trailtype)
+	// be sure to check for changes in e->state_previous.active and
+	// modelindex so that entities which did not exist in the previous
+	// frame don't create a trail from the start location
+	if (trailtype && e->state_previous.active && e->state_previous.modelindex == e->state_current.modelindex)
 	{
 		float len;
 		vec3_t vel;
