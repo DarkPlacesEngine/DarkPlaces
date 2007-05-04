@@ -31,6 +31,7 @@ cvar_t halflifebsp = {0, "halflifebsp", "0", "indicates the current map is hlbsp
 cvar_t mcbsp = {0, "mcbsp", "0", "indicates the current map is mcbsp format (useful to know because of different bounding box sizes)"};
 cvar_t r_novis = {0, "r_novis", "0", "draws whole level, see also sv_cullentities_pvs 0"};
 cvar_t r_lightmaprgba = {0, "r_lightmaprgba", "1", "whether to use RGBA (32bit) or RGB (24bit) lightmaps"};
+cvar_t r_picmipworld = {0, "r_picmipworld", "1", "whether gl_picmip shall apply to world textures too"};
 cvar_t r_nosurftextures = {0, "r_nosurftextures", "0", "pretends there was no texture lump found in the q1bsp/hlbsp loading (useful for debugging this rare case)"};
 cvar_t r_subdivisions_tolerance = {0, "r_subdivisions_tolerance", "4", "maximum error tolerance on curve subdivision for rendering purposes (in other words, the curves will be given as many polygons as necessary to represent curves at this quality)"};
 cvar_t r_subdivisions_mintess = {0, "r_subdivisions_mintess", "1", "minimum number of subdivisions (values above 1 will smooth curves that don't need it)"};
@@ -58,6 +59,7 @@ void Mod_BrushInit(void)
 	Cvar_RegisterVariable(&mcbsp);
 	Cvar_RegisterVariable(&r_novis);
 	Cvar_RegisterVariable(&r_lightmaprgba);
+	Cvar_RegisterVariable(&r_picmipworld);
 	Cvar_RegisterVariable(&r_nosurftextures);
 	Cvar_RegisterVariable(&r_subdivisions_tolerance);
 	Cvar_RegisterVariable(&r_subdivisions_mintess);
@@ -1483,9 +1485,9 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			}
 			else
 			{
-				skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s/%s", mapname, tx->name), TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false);
+				skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s/%s", mapname, tx->name), TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | (r_picmipworld.integer ? TEXF_PICMIP : 0), false);
 				if (!skinframe)
-					skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s", tx->name), TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false);
+					skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s", tx->name), TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | (r_picmipworld.integer ? TEXF_PICMIP : 0), false);
 				if (!skinframe)
 				{
 					// did not find external texture, load it from the bsp or wad3
@@ -1502,13 +1504,13 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 						{
 							tx->width = image_width;
 							tx->height = image_height;
-							skinframe = R_SkinFrame_LoadInternal(tx->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false, false, pixels, image_width, image_height, 32, NULL, NULL);
+							skinframe = R_SkinFrame_LoadInternal(tx->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | (r_picmipworld.integer ? TEXF_PICMIP : 0), false, false, pixels, image_width, image_height, 32, NULL, NULL);
 						}
 						if (freepixels)
 							Mem_Free(freepixels);
 					}
 					else if (mtdata) // texture included
-						skinframe = R_SkinFrame_LoadInternal(tx->name, TEXF_MIPMAP | TEXF_PRECACHE | TEXF_PICMIP, false, r_fullbrights.integer, mtdata, tx->width, tx->height, 8, NULL, NULL);
+						skinframe = R_SkinFrame_LoadInternal(tx->name, TEXF_MIPMAP | TEXF_PRECACHE | (r_picmipworld.integer ? TEXF_PICMIP : 0), false, r_fullbrights.integer, mtdata, tx->width, tx->height, 8, NULL, NULL);
 				}
 				// if skinframe is still NULL the "missing" texture will be used
 				if (skinframe)
@@ -4566,7 +4568,7 @@ Q3 shader blendfuncs actually used in the game (* = supported by DP)
 				out->numskinframes = shader->primarylayer->numframes;
 				out->skinframerate = shader->primarylayer->framerate;
 				for (j = 0;j < shader->primarylayer->numframes;j++)
-					if (!(out->skinframes[j] = R_SkinFrame_LoadExternal(shader->primarylayer->texturename[j], ((shader->surfaceparms & Q3SURFACEPARM_NOMIPMAPS) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | (shader->textureflags & Q3TEXTUREFLAG_NOPICMIP ? 0 : TEXF_PICMIP) | (shader->primarylayer->clampmap ? TEXF_CLAMP : 0), false)))
+					if (!(out->skinframes[j] = R_SkinFrame_LoadExternal(shader->primarylayer->texturename[j], ((shader->surfaceparms & Q3SURFACEPARM_NOMIPMAPS) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | ((!r_picmipworld.integer || (shader->textureflags & Q3TEXTUREFLAG_NOPICMIP)) ? 0 : TEXF_PICMIP) | (shader->primarylayer->clampmap ? TEXF_CLAMP : 0), false)))
 						Con_DPrintf("%s: could not load texture \"%s\" (frame %i) for shader \"%s\"\n", loadmodel->name, shader->primarylayer->texturename[j], j, out->name);
 			}
 			if (shader->backgroundlayer)
@@ -4576,7 +4578,7 @@ Q3 shader blendfuncs actually used in the game (* = supported by DP)
 				out->backgroundskinframerate = shader->backgroundlayer->framerate;
 				for (j = 0;j < shader->backgroundlayer->numframes;j++)
 				{
-					if (!(out->backgroundskinframes[j] = R_SkinFrame_LoadExternal(shader->backgroundlayer->texturename[j], ((shader->surfaceparms & Q3SURFACEPARM_NOMIPMAPS) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | (shader->textureflags & Q3TEXTUREFLAG_NOPICMIP ? 0 : TEXF_PICMIP) | (shader->backgroundlayer->clampmap ? TEXF_CLAMP : 0), false)))
+					if (!(out->backgroundskinframes[j] = R_SkinFrame_LoadExternal(shader->backgroundlayer->texturename[j], ((shader->surfaceparms & Q3SURFACEPARM_NOMIPMAPS) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | ((!r_picmipworld.integer || (shader->textureflags & Q3TEXTUREFLAG_NOPICMIP)) ? 0 : TEXF_PICMIP) | (shader->backgroundlayer->clampmap ? TEXF_CLAMP : 0), false)))
 					{
 						Con_DPrintf("%s: could not load texture \"%s\" (frame %i) for shader \"%s\"\n", loadmodel->name, shader->backgroundlayer->texturename[j], j, out->name);
 						out->backgroundskinframes[j] = R_SkinFrame_LoadMissing();
@@ -4606,7 +4608,7 @@ Q3 shader blendfuncs actually used in the game (* = supported by DP)
 			//if (R_TextureHasAlpha(out->skinframes[0].base))
 			//	out->surfaceparms |= Q3SURFACEPARM_TRANS;
 			out->numskinframes = 1;
-			if (!(out->skinframes[0] = R_SkinFrame_LoadExternal(out->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false)))
+			if (!(out->skinframes[0] = R_SkinFrame_LoadExternal(out->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | (r_picmipworld.integer ? TEXF_PICMIP : 0), false)))
 				Con_DPrintf("%s: could not load texture for missing shader \"%s\"\n", loadmodel->name, out->name);
 		}
 		// init the animation variables
