@@ -300,6 +300,7 @@ typedef struct entity_persistent_s
 
 	// particle trail
 	float trail_time;
+	qboolean trail_allowed; // set to false by teleports, true by update code, prevents bad lerps
 
 	// muzzleflash fading
 	float muzzleflash;
@@ -646,6 +647,7 @@ typedef struct particle_s
 	model_t		*ownermodel; // model the decal is stuck to (used to make sure the entity is still alive)
 	vec3_t		relativeorigin; // decal at this location in entity's coordinate space
 	vec3_t		relativedirection; // decal oriented this way relative to entity's coordinate space
+	float		delayedcollisions; // time that p->bounce becomes active
 }
 particle_t;
 

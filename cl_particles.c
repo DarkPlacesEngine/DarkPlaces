@@ -491,6 +491,7 @@ static particle_t *particle(particletype_t *ptype, int pcolor1, int pcolor2, int
 	part->time2 = 0;
 	part->airfriction = pairfriction;
 	part->liquidfriction = pliquidfriction;
+	part->delayedcollisions = 0;
 	return part;
 }
 
@@ -1062,6 +1063,7 @@ void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins
 		int supercontents;
 		int tex;
 		particleeffectinfo_t *info;
+		particle_t *p;
 		vec3_t center;
 		vec3_t centervelocity;
 		vec3_t traildir;
@@ -1070,6 +1072,7 @@ void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins
 		vec_t traillen;
 		vec_t trailstep;
 		qboolean underwater;
+		trace_t trace;
 		// note this runs multiple effects with the same name, each one spawns only one kind of particle, so some effects need more than one
 		VectorLerp(originmins, 0.5, originmaxs, center);
 		VectorLerp(velocitymins, 0.5, velocitymaxs, centervelocity);
@@ -1165,7 +1168,15 @@ void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins
 							trailpos[2] = lhrandom(originmins[2], originmaxs[2]);
 						}
 						VectorRandom(rvec);
-						particle(particletype + info->particletype, info->color[0], info->color[1], tex, lhrandom(info->size[0], info->size[1]), info->size[2], lhrandom(info->alpha[0], info->alpha[1]), info->alpha[2], info->gravity, info->bounce, trailpos[0] + info->originoffset[0] + info->originjitter[0] * rvec[0], trailpos[1] + info->originoffset[1] + info->originjitter[1] * rvec[1], trailpos[2] + info->originoffset[2] + info->originjitter[2] * rvec[2], lhrandom(velocitymins[0], velocitymaxs[0]) * info->velocitymultiplier + info->velocityoffset[0] + info->velocityjitter[0] * rvec[0], lhrandom(velocitymins[1], velocitymaxs[1]) * info->velocitymultiplier + info->velocityoffset[1] + info->velocityjitter[1] * rvec[1], lhrandom(velocitymins[2], velocitymaxs[2]) * info->velocitymultiplier + info->velocityoffset[2] + info->velocityjitter[2] * rvec[2], info->airfriction, info->liquidfriction, 0, 0);
+						p = particle(particletype + info->particletype, info->color[0], info->color[1], tex, lhrandom(info->size[0], info->size[1]), info->size[2], lhrandom(info->alpha[0], info->alpha[1]), info->alpha[2], info->gravity, info->bounce, trailpos[0] + info->originoffset[0] + info->originjitter[0] * rvec[0], trailpos[1] + info->originoffset[1] + info->originjitter[1] * rvec[1], trailpos[2] + info->originoffset[2] + info->originjitter[2] * rvec[2], lhrandom(velocitymins[0], velocitymaxs[0]) * info->velocitymultiplier + info->velocityoffset[0] + info->velocityjitter[0] * rvec[0], lhrandom(velocitymins[1], velocitymaxs[1]) * info->velocitymultiplier + info->velocityoffset[1] + info->velocityjitter[1] * rvec[1], lhrandom(velocitymins[2], velocitymaxs[2]) * info->velocitymultiplier + info->velocityoffset[2] + info->velocityjitter[2] * rvec[2], info->airfriction, info->liquidfriction, 0, 0);
+						// if it is rain or snow, trace ahead and shut off collisions until an actual collision event needs to occur to improve performance
+						if (info->bounce != 0 && info->gravity == 0)
+						{
+							float lifetime = p->alpha / (p->alphafade ? p->alphafade : 1);
+							VectorMA(p->org, lifetime, p->vel, rvec);
+							trace = CL_Move(p->org, vec3_origin, vec3_origin, rvec, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | ((info->particletype == pt_rain || info->particletype == pt_snow) ? SUPERCONTENTS_LIQUIDSMASK : 0), true, false, NULL, false);
+							p->delayedcollisions = cl.time + lifetime * trace.fraction - 0.1;
+						}
 						if (trailstep)
 							VectorMA(trailpos, trailstep, traildir, trailpos);
 					}
@@ -1586,7 +1597,7 @@ void CL_MoveParticles (void)
 			VectorCopy(p->org, oldorg);
 			VectorMA(p->org, frametime, p->vel, p->org);
 			VectorCopy(p->org, org);
-			if (p->bounce)
+			if (p->bounce && cl.time >= p->delayedcollisions)
 			{
 				trace = CL_Move(oldorg, vec3_origin, vec3_origin, p->org, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | (p->type == particletype + pt_rain ? SUPERCONTENTS_LIQUIDSMASK : 0), true, false, &hitent, false);
 				// if the trace started in or hit something of SUPERCONTENTS_NODROP
