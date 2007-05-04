@@ -1626,6 +1626,7 @@ void CL_MoveLerpEntityStates(entity_t *ent)
 		ent->render.framelerp = 1;
 		// reset various persistent stuff
 		ent->persistent.muzzleflash = 0;
+		ent->persistent.trail_allowed = false;
 	}
 	else if (DotProduct(odelta, odelta) > 1000*1000 || (cl.fixangle[0] && !cl.fixangle[1]))
 	{
@@ -1638,6 +1639,7 @@ void CL_MoveLerpEntityStates(entity_t *ent)
 		VectorCopy(ent->state_current.angles, ent->persistent.oldangles);
 		VectorCopy(ent->state_current.origin, ent->persistent.neworigin);
 		VectorCopy(ent->state_current.angles, ent->persistent.newangles);
+		ent->persistent.trail_allowed = false;
 	}
 	else if (ent->state_current.flags & RENDER_STEP)
 	{

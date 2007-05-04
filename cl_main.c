@@ -1094,10 +1094,8 @@ void CL_UpdateNetworkEntityTrail(entity_t *e)
 	// do trails
 	if (e->render.flags & RENDER_GLOWTRAIL)
 		trailtype = EFFECT_TR_GLOWTRAIL;
-	// be sure to check for changes in e->state_previous.active and
-	// modelindex so that entities which did not exist in the previous
-	// frame don't create a trail from the start location
-	if (trailtype && e->state_previous.active && e->state_previous.modelindex == e->state_current.modelindex)
+	// check if a trail is allowed (it is not after a teleport for example)
+	if (trailtype && e->persistent.trail_allowed)
 	{
 		float len;
 		vec3_t vel;
@@ -1108,6 +1106,9 @@ void CL_UpdateNetworkEntityTrail(entity_t *e)
 		VectorScale(vel, len, vel);
 		CL_ParticleTrail(trailtype, 1, e->persistent.trail_origin, origin, vel, vel, e, e->state_current.glowcolor, false, true);
 	}
+	// now that the entity has survived one trail update it is allowed to
+	// leave a real trail on later frames
+	e->persistent.trail_allowed = true;
 	VectorCopy(origin, e->persistent.trail_origin);
 }
 
@@ -1235,12 +1236,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 	// skip inactive entities and world
 	if (!e->state_current.active || e == cl.entities)
 		return;
-	if (e->render.flags & RENDER_VIEWMODEL && !e->state_current.tagentity)
-	{
-		if (!r_drawviewmodel.integer || chase_active.integer || r_refdef.envmap)
-			return;
-	}
-	else
+	if (e->state_current.tagentity)
 	{
 		// if the tag entity is currently impossible, skip it
 		if (e->state_current.tagentity >= cl.num_entities)
@@ -1384,6 +1380,10 @@ void CL_LinkNetworkEntity(entity_t *e)
 	if (trailtype)
 		CL_ParticleTrail(trailtype, 0, origin, origin, vec3_origin, vec3_origin, NULL, e->state_current.glowcolor, true, false);
 
+	// don't show viewmodels in certain situations
+	if (e->render.flags & RENDER_VIEWMODEL)
+		if (!r_drawviewmodel.integer || chase_active.integer || r_refdef.envmap)
+			return;
 	// don't show entities with no modelindex (note: this still shows
 	// entities which have a modelindex that resolved to a NULL model)
 	if (e->render.model && !(e->render.effects & EF_NODRAW) && r_refdef.numentities < r_refdef.maxentities)
