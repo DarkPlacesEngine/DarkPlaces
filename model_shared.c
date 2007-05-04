@@ -268,7 +268,7 @@ model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, qboolea
 
 void Mod_ClearUsed(void)
 {
-#if 0
+#if 1
 	int i;
 	model_t *mod;
 

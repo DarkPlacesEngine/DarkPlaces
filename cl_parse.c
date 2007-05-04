@@ -479,7 +479,8 @@ static void QW_CL_RequestNextDownload(void)
 
 		// touch all of the precached models that are still loaded so we can free
 		// anything that isn't needed
-		Mod_ClearUsed();
+		if (!sv.active)
+			Mod_ClearUsed();
 		for (i = 1;i < MAX_MODELS && cl.model_name[i][0];i++)
 			Mod_FindName(cl.model_name[i]);
 		// precache any models used by the client (this also marks them used)
@@ -1503,7 +1504,8 @@ void CL_ParseServerInfo (void)
 
 		// touch all of the precached models that are still loaded so we can free
 		// anything that isn't needed
-		Mod_ClearUsed();
+		if (!sv.active)
+			Mod_ClearUsed();
 		for (i = 1;i < nummodels;i++)
 			Mod_FindName(cl.model_name[i]);
 		// precache any models used by the client (this also marks them used)
