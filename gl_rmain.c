@@ -3982,9 +3982,9 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, msurface_t **t
 		return;
 
 	if (rsurface_lightmode == 2)
-		RSurf_PrepareVerticesForBatch(true, r_glsl_permutation->loc_Texture_Normal, texturenumsurfaces, texturesurfacelist);
+		RSurf_PrepareVerticesForBatch(true, r_glsl_permutation->loc_Texture_Normal >= 0, texturenumsurfaces, texturesurfacelist);
 	else
-		RSurf_PrepareVerticesForBatch(r_glsl_permutation->loc_Texture_Normal, r_glsl_permutation->loc_Texture_Normal, texturenumsurfaces, texturesurfacelist);
+		RSurf_PrepareVerticesForBatch(r_glsl_permutation->loc_Texture_Normal >= 0, r_glsl_permutation->loc_Texture_Normal >= 0, texturenumsurfaces, texturesurfacelist);
 	R_Mesh_TexCoordPointer(0, 2, rsurface_model->surfmesh.data_texcoordtexture2f, rsurface_model->surfmesh.vbo, rsurface_model->surfmesh.vbooffset_texcoordtexture2f);
 	R_Mesh_TexCoordPointer(1, 3, rsurface_svector3f, rsurface_svector3f_bufferobject, rsurface_svector3f_bufferoffset);
 	R_Mesh_TexCoordPointer(2, 3, rsurface_tvector3f, rsurface_tvector3f_bufferobject, rsurface_tvector3f_bufferoffset);
