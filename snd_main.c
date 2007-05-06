@@ -1427,11 +1427,14 @@ void S_UpdateAmbientSounds (void)
 static void S_PaintAndSubmit (void)
 {
 	unsigned int newsoundtime, paintedtime, endtime, maxtime, usedframes;
+	qboolean usesoundtimehack;
+	static qboolean soundtimehack = true;
 
 	if (snd_renderbuffer == NULL || nosound.integer)
 		return;
 
 	// Update sound time
+	usesoundtimehack = true;
 	if (cls.timedemo) // SUPER NASTY HACK to mix non-realtime sound for more reliable benchmarking
 		newsoundtime = (unsigned int)((double)cl.mtime[0] * (double)snd_renderbuffer->format.speed);
 	else if (cls.capturevideo.soundrate && !cls.capturevideo.realtime) // SUPER NASTY HACK to record non-realtime sound
@@ -1441,9 +1444,31 @@ static void S_PaintAndSubmit (void)
 	else
 	{
 		newsoundtime = SndSys_GetSoundTime();
-		if (snd_blocked > 0)
-			return;
+		usesoundtimehack = false;
 	}
+	// if the soundtimehack state changes we need to reset the soundtime
+	if (soundtimehack != usesoundtimehack)
+	{
+		snd_renderbuffer->startframe = snd_renderbuffer->endframe = soundtime = newsoundtime;
+
+		// Mute the contents of the submission buffer
+		if (simsound || SndSys_LockRenderBuffer ())
+		{
+			int clear;
+			size_t memsize;
+
+			clear = (snd_renderbuffer->format.width == 1) ? 0x80 : 0;
+			memsize = snd_renderbuffer->maxframes * snd_renderbuffer->format.width * snd_renderbuffer->format.channels;
+			memset(snd_renderbuffer->ring, clear, memsize);
+
+			if (!simsound)
+				SndSys_UnlockRenderBuffer ();
+		}
+	}
+	soundtimehack = usesoundtimehack;
+
+	if (!soundtimehack && snd_blocked > 0)
+		return;
 
 	newsoundtime += extrasoundtime;
 	if (newsoundtime < soundtime)
@@ -1465,7 +1490,7 @@ static void S_PaintAndSubmit (void)
 			Con_DPrintf("S_PaintAndSubmit: new extra sound time = %u\n",
 						extrasoundtime);
 		}
-		else
+		else if (!soundtimehack)
 			Con_Printf("S_PaintAndSubmit: WARNING: newsoundtime < soundtime (%u < %u)\n",
 					   newsoundtime, soundtime);
 	}
