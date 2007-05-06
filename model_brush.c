@@ -3538,6 +3538,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 		// this gets altered below if sky is used
 		mod->DrawSky = NULL;
 		mod->Draw = R_Q1BSP_Draw;
+		mod->DrawDepth = R_Q1BSP_DrawDepth;
 		mod->GetLightInfo = R_Q1BSP_GetLightInfo;
 		mod->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
 		mod->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
@@ -5981,6 +5982,7 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	mod->brush.FindNonSolidLocation = Mod_Q1BSP_FindNonSolidLocation;
 	mod->brush.PointInLeaf = Mod_Q1BSP_PointInLeaf;
 	mod->Draw = R_Q1BSP_Draw;
+	mod->DrawDepth = R_Q1BSP_DrawDepth;
 	mod->GetLightInfo = R_Q1BSP_GetLightInfo;
 	mod->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
 	mod->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
