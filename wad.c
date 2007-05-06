@@ -23,6 +23,23 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "image.h"
 #include "wad.h"
 
+typedef struct mwad_s
+{
+	qfile_t *file;
+	int numlumps;
+	lumpinfo_t *lumps;
+}
+mwad_t;
+
+typedef struct wadstate_s
+{
+	unsigned char *gfx_base;
+	mwad_t gfx;
+	memexpandablearray_t hlwads;
+}
+wadstate_t;
+
+static wadstate_t wad;
 
 /*
 ==================
@@ -55,9 +72,44 @@ static void W_CleanupName (const char *in, char *out)
 		out[i] = 0;
 }
 
-static int wad_numlumps = 0;
-static lumpinfo_t *wad_lumps = NULL;
-static unsigned char *wad_base = NULL;
+static void W_SwapLumps(int numlumps, lumpinfo_t *lumps)
+{
+	int i;
+	for (i = 0;i < numlumps;i++)
+	{
+		lumps[i].filepos = LittleLong(lumps[i].filepos);
+		lumps[i].disksize = LittleLong(lumps[i].disksize);
+		lumps[i].size = LittleLong(lumps[i].size);
+		W_CleanupName(lumps[i].name, lumps[i].name);
+	}
+}
+
+void W_UnloadAll(void)
+{
+	unsigned int i;
+	mwad_t *w;
+	// free gfx.wad if it is loaded
+	if (wad.gfx_base)
+		Mem_Free(wad.gfx_base);
+	wad.gfx_base = NULL;
+	// close all hlwad files and free their lumps data
+	for (i = 0;i < Mem_ExpandableArray_IndexRange(&wad.hlwads);i++)
+	{
+		w = Mem_ExpandableArray_RecordAtIndex(&wad.hlwads, i);
+		if (!w)
+			continue;
+		if (w->file)
+			FS_Close(w->file);
+		w->file = NULL;
+		if (w->lumps)
+			Mem_Free(w->lumps);
+		w->lumps = NULL;
+	}
+	// free the hlwads array
+	Mem_ExpandableArray_FreeArray(&wad.hlwads);
+	// clear all state
+	memset(&wad, 0, sizeof(wad));
+}
 
 unsigned char *W_GetLumpName(const char *name)
 {
@@ -70,63 +122,39 @@ unsigned char *W_GetLumpName(const char *name)
 
 	W_CleanupName (name, clean);
 
-	if (!wad_base)
+	if (!wad.gfx_base)
 	{
-		if ((wad_base = FS_LoadFile ("gfx.wad", cls.permanentmempool, false, &filesize)))
+		if ((wad.gfx_base = FS_LoadFile ("gfx.wad", cls.permanentmempool, false, &filesize)))
 		{
-			if (memcmp(wad_base, "WAD2", 4))
+			if (memcmp(wad.gfx_base, "WAD2", 4))
 			{
 				Con_Print("gfx.wad doesn't have WAD2 id\n");
-				Mem_Free(wad_base);
-				wad_base = NULL;
+				Mem_Free(wad.gfx_base);
+				wad.gfx_base = NULL;
 			}
 			else
 			{
-				header = (wadinfo_t *)wad_base;
-				wad_numlumps = LittleLong(header->numlumps);
+				header = (wadinfo_t *)wad.gfx_base;
+				wad.gfx.numlumps = LittleLong(header->numlumps);
 				infotableofs = LittleLong(header->infotableofs);
-				wad_lumps = (lumpinfo_t *)(wad_base + infotableofs);
+				wad.gfx.lumps = (lumpinfo_t *)(wad.gfx_base + infotableofs);
 
-				for (i=0, lump = wad_lumps ; i<wad_numlumps ; i++,lump++)
-				{
-					lump->filepos = LittleLong(lump->filepos);
-					lump->size = LittleLong(lump->size);
-					W_CleanupName (lump->name, lump->name);
-				}
+				// byteswap the gfx.wad lumps in place
+				W_SwapLumps(wad.gfx.numlumps, wad.gfx.lumps);
 			}
 		}
 	}
 
-	for (lump = wad_lumps, i = 0;i < wad_numlumps;i++, lump++)
+	for (lump = wad.gfx.lumps, i = 0;i < wad.gfx.numlumps;i++, lump++)
 		if (!strcmp(clean, lump->name))
-			return (wad_base + lump->filepos);
+			return (wad.gfx_base + lump->filepos);
 
-	if (wad_base)
+	if (wad.gfx_base)
 		Con_DPrintf("W_GetLumpByName(\"%s\"): couldn't find file in gfx.wad\n", name);
 	else
 		Con_DPrintf("W_GetLumpByName(\"%s\"): couldn't load gfx.wad\n", name);
 	return NULL;
 }
-
-/*
-=============================================================================
-
-automatic byte swapping
-
-=============================================================================
-*/
-
-// LordHavoc: added alternate WAD2/WAD3 system for HalfLife texture wads
-#define TEXWAD_MAXIMAGES 16384
-typedef struct texwadlump_s
-{
-	char name[16];
-	qfile_t *file;
-	int position;
-	int size;
-} texwadlump_t;
-
-static texwadlump_t texwadlump[TEXWAD_MAXIMAGES];
 
 /*
 ====================
@@ -135,12 +163,11 @@ W_LoadTextureWadFile
 */
 void W_LoadTextureWadFile (char *filename, int complain)
 {
-	lumpinfo_t		*lumps, *lump_p;
 	wadinfo_t		header;
-	int				i, j;
 	int				infotableofs;
 	qfile_t			*file;
 	int				numlumps;
+	mwad_t			*w;
 
 	file = FS_Open (filename, "rb", false, false);
 	if (!file)
@@ -151,47 +178,49 @@ void W_LoadTextureWadFile (char *filename, int complain)
 	}
 
 	if (FS_Read(file, &header, sizeof(wadinfo_t)) != sizeof(wadinfo_t))
-	{Con_Print("W_LoadTextureWadFile: unable to read wad header\n");return;}
+	{Con_Print("W_LoadTextureWadFile: unable to read wad header\n");FS_Close(file);file = NULL;return;}
 
 	if(memcmp(header.identification, "WAD3", 4))
-	{Con_Printf("W_LoadTextureWadFile: Wad file %s doesn't have WAD3 id\n",filename);return;}
+	{Con_Printf("W_LoadTextureWadFile: Wad file %s doesn't have WAD3 id\n",filename);FS_Close(file);file = NULL;return;}
 
 	numlumps = LittleLong(header.numlumps);
-	if (numlumps < 1 || numlumps > TEXWAD_MAXIMAGES)
-	{Con_Printf("W_LoadTextureWadFile: invalid number of lumps (%i)\n", numlumps);return;}
+	if (numlumps < 1 || numlumps > 65536)
+	{Con_Printf("W_LoadTextureWadFile: invalid number of lumps (%i)\n", numlumps);FS_Close(file);file = NULL;return;}
 	infotableofs = LittleLong(header.infotableofs);
 	if (FS_Seek (file, infotableofs, SEEK_SET))
-	{Con_Print("W_LoadTextureWadFile: unable to seek to lump table\n");return;}
-	if (!(lumps = (lumpinfo_t *)Mem_Alloc(tempmempool, sizeof(lumpinfo_t)*numlumps)))
-	{Con_Print("W_LoadTextureWadFile: unable to allocate temporary memory for lump table\n");return;}
+	{Con_Print("W_LoadTextureWadFile: unable to seek to lump table\n");FS_Close(file);file = NULL;return;}
 
-	if (FS_Read(file, lumps, sizeof(lumpinfo_t) * numlumps) != (fs_offset_t)sizeof(lumpinfo_t) * numlumps)
-	{Con_Print("W_LoadTextureWadFile: unable to read lump table\n");return;}
+	if (!wad.hlwads.mempool)
+		Mem_ExpandableArray_NewArray(&wad.hlwads, cls.permanentmempool, sizeof(mwad_t), 16);
+	w = Mem_ExpandableArray_AllocRecord(&wad.hlwads);
+	w->file = file;
+	w->numlumps = numlumps;
+	w->lumps = Mem_Alloc(cls.permanentmempool, w->numlumps * sizeof(lumpinfo_t));
 
-	for (i=0, lump_p = lumps ; i<numlumps ; i++,lump_p++)
+	if (!w->lumps)
 	{
-		W_CleanupName (lump_p->name, lump_p->name);
-		for (j = 0;j < TEXWAD_MAXIMAGES;j++)
-		{
-			if (texwadlump[j].name[0]) // occupied slot, check the name
-			{
-				if (!strcmp(lump_p->name, texwadlump[j].name)) // name match, replace old one
-					break;
-			}
-			else // empty slot
-				break;
-		}
-		if (j >= TEXWAD_MAXIMAGES)
-			break; // abort loading
-		W_CleanupName (lump_p->name, texwadlump[j].name);
-		texwadlump[j].file = file;
-		texwadlump[j].position = LittleLong(lump_p->filepos);
-		texwadlump[j].size = LittleLong(lump_p->disksize);
+		Con_Print("W_LoadTextureWadFile: unable to allocate temporary memory for lump table\n");
+		FS_Close(w->file);
+		w->file = NULL;
+		w->numlumps = 0;
+		return;
 	}
-	Mem_Free(lumps);
+
+	if (FS_Read(file, w->lumps, sizeof(lumpinfo_t) * w->numlumps) != (fs_offset_t)sizeof(lumpinfo_t) * numlumps)
+	{
+		Con_Print("W_LoadTextureWadFile: unable to read lump table\n");
+		FS_Close(w->file);
+		w->file = NULL;
+		w->numlumps = 0;
+		Mem_Free(w->lumps);
+		w->lumps = NULL;
+		return;
+	}
+
+	W_SwapLumps(w->numlumps, w->lumps);
+
 	// leaves the file open
 }
-
 
 unsigned char *W_ConvertWAD3Texture(miptex_t *tex)
 {
@@ -226,28 +255,32 @@ unsigned char *W_ConvertWAD3Texture(miptex_t *tex)
 
 unsigned char *W_GetTexture(char *name)
 {
-	char texname[17];
-	int i, j;
-	qfile_t *file;
+	unsigned int i, j, k;
 	miptex_t *tex;
 	unsigned char *data;
+	mwad_t *w;
+	char texname[17];
 
 	texname[16] = 0;
-	W_CleanupName (name, texname);
-	for (i = 0;i < TEXWAD_MAXIMAGES;i++)
+	W_CleanupName(name, texname);
+	if (!wad.hlwads.mempool)
+		Mem_ExpandableArray_NewArray(&wad.hlwads, cls.permanentmempool, sizeof(mwad_t), 16);
+	for (k = 0;k < Mem_ExpandableArray_IndexRange(&wad.hlwads);k++)
 	{
-		if (texwadlump[i].name[0])
+		w = (mwad_t *)Mem_ExpandableArray_RecordAtIndex(&wad.hlwads, k);
+		if (!w)
+			continue;
+		for (i = 0;i < (unsigned int)w->numlumps;i++)
 		{
-			if (!strcmp(texname, texwadlump[i].name)) // found it
+			if (!strcmp(texname, w->lumps[i].name)) // found it
 			{
-				file = texwadlump[i].file;
-				if (FS_Seek(file, texwadlump[i].position, SEEK_SET))
+				if (FS_Seek(w->file, w->lumps[i].filepos, SEEK_SET))
 				{Con_Print("W_GetTexture: corrupt WAD3 file\n");return NULL;}
 
-				tex = (miptex_t *)Mem_Alloc(tempmempool, texwadlump[i].size);
+				tex = (miptex_t *)Mem_Alloc(tempmempool, w->lumps[i].disksize);
 				if (!tex)
 					return NULL;
-				if (FS_Read(file, tex, texwadlump[i].size) < texwadlump[i].size)
+				if (FS_Read(w->file, tex, w->lumps[i].size) < w->lumps[i].disksize)
 				{Con_Print("W_GetTexture: corrupt WAD3 file\n");return NULL;}
 
 				tex->width = LittleLong(tex->width);
@@ -259,8 +292,6 @@ unsigned char *W_GetTexture(char *name)
 				return data;
 			}
 		}
-		else
-			break;
 	}
 	image_width = image_height = 0;
 	return NULL;

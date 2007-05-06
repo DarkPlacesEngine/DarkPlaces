@@ -65,10 +65,10 @@ typedef struct lumpinfo_s
 	char		name[16];				// must be null terminated
 } lumpinfo_t;
 
-unsigned char *W_GetLumpName (const char *name);
+void W_UnloadAll(void);
+unsigned char *W_GetLumpName(const char *name);
 
-
-// LordHavoc: added alternate texture WAD2/WAD3 system for easier loading of HalfLife texture wads
+// halflife texture wads
 void	W_LoadTextureWadFile (char *filename, int complain);
 unsigned char	*W_GetTexture (char *name); // returns tempmempool allocated image data, width and height are in image_width and image_height
 unsigned char	*W_ConvertWAD3Texture(miptex_t *tex); // returns tempmempool allocated image data, width and height are in image_width and image_height
