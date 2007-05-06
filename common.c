@@ -904,6 +904,9 @@ skipwhite:
 				*datapointer = NULL;
 				return false;
 			}
+			// allow escaped " case
+			if (*data == '\\' && data[1] == '\"')
+				data++;
 			com_token[len++] = *data;
 		}
 		com_token[len] = 0;
