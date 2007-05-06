@@ -34,6 +34,7 @@ r_refdef_t r_refdef;
 r_view_t r_view;
 r_viewcache_t r_viewcache;
 
+cvar_t r_depthfirst = {0, "r_depthfirst", "1", "renders a depth-only version of the scene before normal rendering begins to eliminate overdraw, values: 0 = off, 1 = world depth, 2 = world and model depth"};
 cvar_t r_nearclip = {0, "r_nearclip", "1", "distance from camera of nearclip plane" };
 cvar_t r_showbboxes = {0, "r_showbboxes", "0", "shows bounding boxes of server entities, value controls opacity scaling (1 = 10%,  10 = 100%)"};
 cvar_t r_showsurfaces = {0, "r_showsurfaces", "0", "1 shows surfaces as different colors, or a value of 2 shows triangle draw order (for analyzing whether meshes are optimized for vertex cache)"};
@@ -1463,6 +1464,7 @@ void GL_Main_Init(void)
 		Cvar_RegisterVariable (&gl_fogstart);
 		Cvar_RegisterVariable (&gl_fogend);
 	}
+	Cvar_RegisterVariable(&r_depthfirst);
 	Cvar_RegisterVariable(&r_nearclip);
 	Cvar_RegisterVariable(&r_showbboxes);
 	Cvar_RegisterVariable(&r_showsurfaces);
@@ -1784,6 +1786,25 @@ void R_DrawModels(void)
 			ent->model->Draw(ent);
 		else
 			R_DrawNoModel(ent);
+	}
+}
+
+void R_DrawModelsDepth(void)
+{
+	int i;
+	entity_render_t *ent;
+
+	if (!r_drawentities.integer)
+		return;
+
+	for (i = 0;i < r_refdef.numentities;i++)
+	{
+		if (!r_viewcache.entityvisible[i])
+			continue;
+		ent = r_refdef.entities[i];
+		r_refdef.stats.entities++;
+		if (ent->model && ent->model->DrawDepth != NULL)
+			ent->model->DrawDepth(ent);
 	}
 }
 
@@ -2563,13 +2584,26 @@ void R_RenderScene(void)
 
 		if (R_DrawBrushModelsSky() && r_timereport_active)
 			R_TimeReport("bmodelsky");
+	}
 
-		if (r_refdef.worldmodel && r_refdef.worldmodel->Draw)
-		{
-			r_refdef.worldmodel->Draw(r_refdef.worldentity);
-			if (r_timereport_active)
-				R_TimeReport("world");
-		}
+	if (r_depthfirst.integer >= 1 && cl.csqc_vidvars.drawworld && r_refdef.worldmodel && r_refdef.worldmodel->DrawDepth)
+	{
+		r_refdef.worldmodel->DrawDepth(r_refdef.worldentity);
+		if (r_timereport_active)
+			R_TimeReport("worlddepth");
+	}
+	if (r_depthfirst.integer >= 2)
+	{
+		R_DrawModelsDepth();
+		if (r_timereport_active)
+			R_TimeReport("modeldepth");
+	}
+
+	if (cl.csqc_vidvars.drawworld && r_refdef.worldmodel && r_refdef.worldmodel->Draw)
+	{
+		r_refdef.worldmodel->Draw(r_refdef.worldentity);
+		if (r_timereport_active)
+			R_TimeReport("world");
 	}
 
 	// don't let sound skip if going slow
@@ -4278,24 +4312,75 @@ static void R_DrawTextureSurfaceList_GL11(int texturenumsurfaces, msurface_t **t
 	}
 }
 
-static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **texturesurfacelist)
+static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **texturesurfacelist, qboolean writedepth, qboolean depthonly)
 {
 	if (rsurface_texture->currentmaterialflags & MATERIALFLAG_NODRAW)
 		return;
 	r_shadow_rtlight = NULL;
-	r_refdef.stats.entities_surfaces += texturenumsurfaces;
 	CHECKGLERROR
-	if (r_showsurfaces.integer)
+	if (depthonly)
+	{
+		if ((rsurface_texture->currentmaterialflags & (MATERIALFLAG_NODEPTHTEST | MATERIALFLAG_BLENDED | MATERIALFLAG_ALPHATEST)))
+			return;
+		if (rsurface_mode != RSURFMODE_MULTIPASS)
+			rsurface_mode = RSURFMODE_MULTIPASS;
+		if (r_depthfirst.integer == 3)
+		{
+			int i = (int)(texturesurfacelist[0] - rsurface_model->data_surfaces);
+			GL_Color(((i >> 6) & 7) / 7.0f, ((i >> 3) & 7) / 7.0f, (i & 7) / 7.0f,1);
+		}
+		else
+		{
+			GL_ColorMask(0,0,0,0);
+			GL_Color(1,1,1,1);
+		}
+		GL_DepthRange(0, (rsurface_texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE) ? 0.0625 : 1);
+		GL_CullFace((rsurface_texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
+		GL_DepthTest(true);
+		GL_BlendFunc(GL_ONE, GL_ZERO);
+		GL_DepthMask(true);
+		GL_AlphaTest(false);
+		R_Mesh_ColorPointer(NULL, 0, 0);
+		R_Mesh_ResetTextureState();
+		RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
+		RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
+		GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 1);
+		r_refdef.stats.entities_surfaces += texturenumsurfaces;
+	}
+	else if (r_depthfirst.integer == 3)
+		return;
+	else if (r_showsurfaces.integer)
+	{
+		if (rsurface_mode != RSURFMODE_MULTIPASS)
+			rsurface_mode = RSURFMODE_MULTIPASS;
+		GL_DepthRange(0, (rsurface_texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE) ? 0.0625 : 1);
+		GL_DepthTest(true);
+		GL_CullFace((rsurface_texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
+		GL_BlendFunc(GL_ONE, GL_ZERO);
+		GL_DepthMask(writedepth);
+		GL_Color(1,1,1,1);
+		GL_AlphaTest(false);
+		R_Mesh_ColorPointer(NULL, 0, 0);
+		R_Mesh_ResetTextureState();
+		RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
 		R_DrawTextureSurfaceList_ShowSurfaces(texturenumsurfaces, texturesurfacelist);
+		r_refdef.stats.entities_surfaces += texturenumsurfaces;
+	}
 	else if (rsurface_texture->currentmaterialflags & MATERIALFLAG_SKY)
+	{
 		R_DrawTextureSurfaceList_Sky(texturenumsurfaces, texturesurfacelist);
+		r_refdef.stats.entities_surfaces += texturenumsurfaces;
+	}
 	else if (rsurface_texture->currentnumlayers)
 	{
+		// write depth for anything we skipped on the depth-only pass earlier
+		if (!writedepth && (rsurface_texture->currentmaterialflags & (MATERIALFLAG_BLENDED | MATERIALFLAG_ALPHATEST)))
+			writedepth = true;
 		GL_DepthRange(0, (rsurface_texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE) ? 0.0625 : 1);
 		GL_DepthTest(!(rsurface_texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
 		GL_CullFace((rsurface_texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
 		GL_BlendFunc(rsurface_texture->currentlayers[0].blendfunc1, rsurface_texture->currentlayers[0].blendfunc2);
-		GL_DepthMask(!(rsurface_texture->currentmaterialflags & MATERIALFLAG_BLENDED));
+		GL_DepthMask(writedepth && !(rsurface_texture->currentmaterialflags & MATERIALFLAG_BLENDED));
 		GL_Color(rsurface_entity->colormod[0], rsurface_entity->colormod[1], rsurface_entity->colormod[2], rsurface_texture->currentalpha);
 		GL_AlphaTest((rsurface_texture->currentmaterialflags & MATERIALFLAG_ALPHATEST) != 0);
 		// FIXME: identify models using a better check than rsurface_model->brush.shadowmesh
@@ -4306,6 +4391,7 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 			R_DrawTextureSurfaceList_GL13(texturenumsurfaces, texturesurfacelist);
 		else
 			R_DrawTextureSurfaceList_GL11(texturenumsurfaces, texturesurfacelist);
+		r_refdef.stats.entities_surfaces += texturenumsurfaces;
 	}
 	CHECKGLERROR
 	GL_LockArrays(0, 0);
@@ -4350,13 +4436,13 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 			texturesurfacelist[texturenumsurfaces++] = surface;
 		}
 		// render the range of surfaces
-		R_DrawTextureSurfaceList(texturenumsurfaces, texturesurfacelist);
+		R_DrawTextureSurfaceList(texturenumsurfaces, texturesurfacelist, true, false);
 	}
 
 	RSurf_CleanUp();
 }
 
-void R_QueueSurfaceList(int numsurfaces, msurface_t **surfacelist, int flagsmask)
+void R_QueueSurfaceList(int numsurfaces, msurface_t **surfacelist, int flagsmask, qboolean writedepth, qboolean depthonly)
 {
 	int i, j;
 	vec3_t tempcenter, center;
@@ -4384,6 +4470,8 @@ void R_QueueSurfaceList(int numsurfaces, msurface_t **surfacelist, int flagsmask
 		{
 			// transparent surfaces get pushed off into the transparent queue
 			const msurface_t *surface = surfacelist[i];
+			if (depthonly)
+				continue;
 			tempcenter[0] = (surface->mins[0] + surface->maxs[0]) * 0.5f;
 			tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
 			tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
@@ -4396,7 +4484,7 @@ void R_QueueSurfaceList(int numsurfaces, msurface_t **surfacelist, int flagsmask
 			for (;j < numsurfaces && texture == surfacelist[j]->texture && rsurface_lightmaptexture == surfacelist[j]->lightmaptexture;j++)
 				;
 			// render the range of surfaces
-			R_DrawTextureSurfaceList(j - i, surfacelist + i);
+			R_DrawTextureSurfaceList(j - i, surfacelist + i, writedepth, depthonly);
 		}
 	}
 }
@@ -4586,7 +4674,7 @@ void R_DrawTrianglesAndNormals(entity_render_t *ent, qboolean drawtris, qboolean
 }
 
 extern void R_BuildLightMap(const entity_render_t *ent, msurface_t *surface);
-void R_DrawWorldSurfaces(qboolean skysurfaces)
+void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean depthonly)
 {
 	int i, j, endj, f, flagsmask;
 	int counttriangles = 0;
@@ -4602,7 +4690,7 @@ void R_DrawWorldSurfaces(qboolean skysurfaces)
 	RSurf_ActiveWorldEntity();
 
 	// update light styles
-	if (!skysurfaces && model->brushq1.light_styleupdatechains)
+	if (!skysurfaces && !depthonly && model->brushq1.light_styleupdatechains)
 	{
 		for (i = 0;i < model->brushq1.light_styles;i++)
 		{
@@ -4647,25 +4735,25 @@ void R_DrawWorldSurfaces(qboolean skysurfaces)
 				counttriangles += surface->num_triangles;
 				if (numsurfacelist >= maxsurfacelist)
 				{
-					R_QueueSurfaceList(numsurfacelist, surfacelist, flagsmask);
+					R_QueueSurfaceList(numsurfacelist, surfacelist, flagsmask, writedepth, depthonly);
 					numsurfacelist = 0;
 				}
 			}
 		}
 	}
 	if (numsurfacelist)
-		R_QueueSurfaceList(numsurfacelist, surfacelist, flagsmask);
+		R_QueueSurfaceList(numsurfacelist, surfacelist, flagsmask, writedepth, depthonly);
 	r_refdef.stats.entities_triangles += counttriangles;
 	RSurf_CleanUp();
 
-	if (r_showcollisionbrushes.integer && !skysurfaces)
+	if (r_showcollisionbrushes.integer && !skysurfaces && !depthonly)
 		R_DrawCollisionBrushes(r_refdef.worldentity);
 
-	if (r_showtris.integer || r_shownormals.integer)
+	if ((r_showtris.integer || r_shownormals.integer) && !depthonly)
 		R_DrawTrianglesAndNormals(r_refdef.worldentity, r_showtris.integer, r_shownormals.integer, flagsmask);
 }
 
-void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces)
+void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean writedepth, qboolean depthonly)
 {
 	int i, f, flagsmask;
 	int counttriangles = 0;
@@ -4686,10 +4774,10 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces)
 	else if ((ent->effects & EF_FULLBRIGHT) || r_showsurfaces.integer || VectorLength2(ent->modellight_diffuse) < (1.0f / 256.0f))
 		RSurf_ActiveModelEntity(ent, false, false);
 	else
-		RSurf_ActiveModelEntity(ent, true, r_glsl.integer && gl_support_fragment_shader);
+		RSurf_ActiveModelEntity(ent, true, r_glsl.integer && gl_support_fragment_shader && !depthonly);
 
 	// update light styles
-	if (!skysurfaces && model->brushq1.light_styleupdatechains)
+	if (!skysurfaces && !depthonly && model->brushq1.light_styleupdatechains)
 	{
 		for (i = 0;i < model->brushq1.light_styles;i++)
 		{
@@ -4726,19 +4814,19 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces)
 			counttriangles += surface->num_triangles;
 			if (numsurfacelist >= maxsurfacelist)
 			{
-				R_QueueSurfaceList(numsurfacelist, surfacelist, flagsmask);
+				R_QueueSurfaceList(numsurfacelist, surfacelist, flagsmask, writedepth, depthonly);
 				numsurfacelist = 0;
 			}
 		}
 	}
 	if (numsurfacelist)
-		R_QueueSurfaceList(numsurfacelist, surfacelist, flagsmask);
+		R_QueueSurfaceList(numsurfacelist, surfacelist, flagsmask, writedepth, depthonly);
 	r_refdef.stats.entities_triangles += counttriangles;
 	RSurf_CleanUp();
 
-	if (r_showcollisionbrushes.integer && !skysurfaces)
+	if (r_showcollisionbrushes.integer && !skysurfaces && !depthonly)
 		R_DrawCollisionBrushes(ent);
 
-	if (r_showtris.integer || r_shownormals.integer)
+	if ((r_showtris.integer || r_shownormals.integer) && !depthonly)
 		R_DrawTrianglesAndNormals(ent, r_showtris.integer, r_shownormals.integer, flagsmask);
 }
