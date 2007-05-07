@@ -1,8 +1,6 @@
 
 #include "quakedef.h"
 
-#define E5_PROTOCOL_PRIORITYLEVELS 32
-
 // this is 88 bytes (must match entity_state_t in protocol.h)
 entity_state_t defaultstate =
 {
@@ -57,12 +55,6 @@ protocolversioninfo[] =
 	{28, "QUAKEWORLD"},
 	{0, NULL}
 };
-
-static entity_frame_t deltaframe; // FIXME?
-static entity_frame_t framedata; // FIXME?
-
-int entityframe5_prioritychaincounts[E5_PROTOCOL_PRIORITYLEVELS];
-unsigned short entityframe5_prioritychains[E5_PROTOCOL_PRIORITYLEVELS][ENTITYFRAME5_MAXSTATES];
 
 protocolversion_t Protocol_EnumForName(const char *s)
 {
@@ -1070,7 +1062,7 @@ void EntityFrame_AddFrame(entityframe_database_t *d, vec3_t eye, int framenum, i
 void EntityFrame_WriteFrame(sizebuf_t *msg, entityframe_database_t *d, int numstates, const entity_state_t *states, int viewentnum)
 {
 	int i, onum, number;
-	entity_frame_t *o = &deltaframe;
+	entity_frame_t *o = &d->deltaframe;
 	const entity_state_t *ent, *delta;
 	vec3_t eye;
 	prvm_eval_t *val;
@@ -1138,13 +1130,15 @@ void EntityFrame_WriteFrame(sizebuf_t *msg, entityframe_database_t *d, int numst
 void EntityFrame_CL_ReadFrame(void)
 {
 	int i, number, removed;
-	entity_frame_t *f = &framedata, *delta = &deltaframe;
+	entity_frame_t *f, *delta;
 	entity_state_t *e, *old, *oldend;
 	entity_t *ent;
 	entityframe_database_t *d;
 	if (!cl.entitydatabase)
 		cl.entitydatabase = EntityFrame_AllocDatabase(cls.levelmempool);
 	d = cl.entitydatabase;
+	f = &d->framedata;
+	delta = &d->deltaframe;
 
 	EntityFrame_Clear(f, NULL, -1);
 
@@ -1705,7 +1699,7 @@ int EntityState5_Priority(entityframe5_database_t *d, int stateindex)
 	entity_state_t *s;
 	// if it is the player, update urgently
 	if (stateindex == d->viewentnum)
-		return E5_PROTOCOL_PRIORITYLEVELS - 1;
+		return ENTITYFRAME5_PRIORITYLEVELS - 1;
 	// priority increases each frame no matter what happens
 	priority = d->priorities[stateindex] + 1;
 	// players get an extra priority boost
@@ -1715,7 +1709,7 @@ int EntityState5_Priority(entityframe5_database_t *d, int stateindex)
 	if (!d->states[stateindex].active)
 	{
 		priority++;
-		return bound(1, priority, E5_PROTOCOL_PRIORITYLEVELS - 1);
+		return bound(1, priority, ENTITYFRAME5_PRIORITYLEVELS - 1);
 	}
 	// certain changes are more noticable than others
 	if (d->deltabits[stateindex] & (E5_FULLUPDATE | E5_ATTACHMENT | E5_MODEL | E5_FLAGS | E5_COLORMAP))
@@ -1739,7 +1733,7 @@ int EntityState5_Priority(entityframe5_database_t *d, int stateindex)
 	// distance from the player
 	if (VectorDistance(d->states[d->viewentnum].netcenter, s->netcenter) < 1024.0f)
 		priority++;
-	return bound(1, priority, E5_PROTOCOL_PRIORITYLEVELS - 1);
+	return bound(1, priority, ENTITYFRAME5_PRIORITYLEVELS - 1);
 }
 
 void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbits, sizebuf_t *msg)
@@ -2304,7 +2298,7 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 		return;
 
 	// build lists of entities by priority level
-	memset(entityframe5_prioritychaincounts, 0, sizeof(entityframe5_prioritychaincounts));
+	memset(d->prioritychaincounts, 0, sizeof(d->prioritychaincounts));
 	l = 0;
 	for (num = 0;num < d->maxedicts;num++)
 	{
@@ -2312,12 +2306,12 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 		{
 			if (d->deltabits[num])
 			{
-				if (d->priorities[num] < (E5_PROTOCOL_PRIORITYLEVELS - 1))
+				if (d->priorities[num] < (ENTITYFRAME5_PRIORITYLEVELS - 1))
 					d->priorities[num] = EntityState5_Priority(d, num);
 				l = num;
 				priority = d->priorities[num];
-				if (entityframe5_prioritychaincounts[priority] < ENTITYFRAME5_MAXSTATES)
-					entityframe5_prioritychains[priority][entityframe5_prioritychaincounts[priority]++] = num;
+				if (d->prioritychaincounts[priority] < ENTITYFRAME5_MAXSTATES)
+					d->prioritychains[priority][d->prioritychaincounts[priority]++] = num;
 			}
 			else
 				d->priorities[num] = 0;
@@ -2360,11 +2354,11 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 	MSG_WriteLong(msg, framenum);
 	if (sv.protocol != PROTOCOL_QUAKE && sv.protocol != PROTOCOL_QUAKEDP && sv.protocol != PROTOCOL_NEHAHRAMOVIE && sv.protocol != PROTOCOL_DARKPLACES1 && sv.protocol != PROTOCOL_DARKPLACES2 && sv.protocol != PROTOCOL_DARKPLACES3 && sv.protocol != PROTOCOL_DARKPLACES4 && sv.protocol != PROTOCOL_DARKPLACES5 && sv.protocol != PROTOCOL_DARKPLACES6)
 		MSG_WriteLong(msg, movesequence);
-	for (priority = E5_PROTOCOL_PRIORITYLEVELS - 1;priority >= 0 && packetlog->numstates < ENTITYFRAME5_MAXSTATES;priority--)
+	for (priority = ENTITYFRAME5_PRIORITYLEVELS - 1;priority >= 0 && packetlog->numstates < ENTITYFRAME5_MAXSTATES;priority--)
 	{
-		for (i = 0;i < entityframe5_prioritychaincounts[priority] && packetlog->numstates < ENTITYFRAME5_MAXSTATES;i++)
+		for (i = 0;i < d->prioritychaincounts[priority] && packetlog->numstates < ENTITYFRAME5_MAXSTATES;i++)
 		{
-			num = entityframe5_prioritychains[priority][i];
+			num = d->prioritychains[priority][i];
 			n = d->states + num;
 			if (d->deltabits[num] & E5_FULLUPDATE)
 				d->deltabits[num] = E5_FULLUPDATE | EntityState5_DeltaBits(&defaultstate, n);
