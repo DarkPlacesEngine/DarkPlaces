@@ -1053,7 +1053,7 @@ void CL_UpdateMoveVars(void)
 	else if (cl.stats[STAT_MOVEVARS_TICRATE])
 	{
 		cl.movevars_ticrate = cl.statsf[STAT_MOVEVARS_TICRATE];
-		cl.movevars_slowmo = cl.statsf[STAT_MOVEVARS_TIMESCALE];
+		cl.movevars_slowmo = (slowmo.value == 1) ? cl.statsf[STAT_MOVEVARS_TIMESCALE] : slowmo.value;
 		cl.movevars_gravity = cl.statsf[STAT_MOVEVARS_GRAVITY];
 		cl.movevars_stopspeed = cl.statsf[STAT_MOVEVARS_STOPSPEED] ;
 		cl.movevars_maxspeed = cl.statsf[STAT_MOVEVARS_MAXSPEED];
