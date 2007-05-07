@@ -169,7 +169,8 @@ static const int tex_raindrop = 61;
 static const int tex_beam = 60;
 
 cvar_t cl_particles = {CVAR_SAVE, "cl_particles", "1", "enables particle effects"};
-cvar_t cl_particles_quality = {CVAR_SAVE, "cl_particles_quality", "1", "multiplies number of particles and reduces their alpha"};
+cvar_t cl_particles_quality = {CVAR_SAVE, "cl_particles_quality", "1", "multiplies number of particles"};
+cvar_t cl_particles_alpha = {CVAR_SAVE, "cl_particles_alpha", "1", "multiplies opacity of particles"};
 cvar_t cl_particles_size = {CVAR_SAVE, "cl_particles_size", "1", "multiplies particle size"};
 cvar_t cl_particles_quake = {CVAR_SAVE, "cl_particles_quake", "0", "makes particle effects look mostly like the ones in Quake"};
 cvar_t cl_particles_blood = {CVAR_SAVE, "cl_particles_blood", "1", "enables blood effects"};
@@ -417,6 +418,7 @@ void CL_Particles_Init (void)
 
 	Cvar_RegisterVariable (&cl_particles);
 	Cvar_RegisterVariable (&cl_particles_quality);
+	Cvar_RegisterVariable (&cl_particles_alpha);
 	Cvar_RegisterVariable (&cl_particles_size);
 	Cvar_RegisterVariable (&cl_particles_quake);
 	Cvar_RegisterVariable (&cl_particles_blood);
@@ -491,7 +493,47 @@ static particle_t *particle(particletype_t *ptype, int pcolor1, int pcolor2, int
 	part->time2 = 0;
 	part->airfriction = pairfriction;
 	part->liquidfriction = pliquidfriction;
+	part->die = cl.time + part->alpha / (part->alphafade ? part->alphafade : 1);
 	part->delayedcollisions = 0;
+	// if it is rain or snow, trace ahead and shut off collisions until an actual collision event needs to occur to improve performance
+	if (part->type == particletype + pt_rain)
+	{
+		int i;
+		particle_t *part2;
+		float lifetime = part->die - cl.time;
+		vec3_t endvec;
+		trace_t trace;
+		// turn raindrop into simple spark and create delayedspawn splash effect
+		part->type = particletype + pt_spark;
+		part->bounce = 0;
+		VectorMA(part->org, lifetime, part->vel, endvec);
+		trace = CL_Move(part->org, vec3_origin, vec3_origin, endvec, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | ((part->type == particletype + pt_rain || part->type == particletype + pt_snow) ? SUPERCONTENTS_LIQUIDSMASK : 0), true, false, NULL, false);
+		part->die = cl.time + lifetime * trace.fraction;
+		part2 = particle(particletype + pt_raindecal, pcolor1, pcolor2, tex_rainsplash, part->size, part->size * 20, part->alpha, part->alpha / 0.4, 0, 0, trace.endpos[0] + trace.plane.normal[0], trace.endpos[1] + trace.plane.normal[1], trace.endpos[2] + trace.plane.normal[2], trace.plane.normal[0], trace.plane.normal[1], trace.plane.normal[2], 0, 0, 0, 0);
+		if (part2)
+		{
+			part2->delayedspawn = part->die;
+			part2->die += part->die - cl.time;
+			for (i = rand() & 7;i < 10;i++)
+			{
+				part2 = particle(particletype + pt_spark, pcolor1, pcolor2, tex_particle, 0.25f, 0, part->alpha * 2, part->alpha * 4, 1, 0, trace.endpos[0] + trace.plane.normal[0], trace.endpos[1] + trace.plane.normal[1], trace.endpos[2] + trace.plane.normal[2], trace.plane.normal[0] * 16, trace.plane.normal[1] * 16, trace.plane.normal[2] * 16 + cl.movevars_gravity * 0.04, 0, 0, 0, 32);
+				if (part2)
+				{
+					part2->delayedspawn = part->die;
+					part2->die += part->die - cl.time;
+				}
+			}
+		}
+	}
+	else if (part->bounce != 0 && part->gravity == 0)
+	{
+		float lifetime = part->alpha / (part->alphafade ? part->alphafade : 1);
+		vec3_t endvec;
+		trace_t trace;
+		VectorMA(part->org, lifetime, part->vel, endvec);
+		trace = CL_Move(part->org, vec3_origin, vec3_origin, endvec, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | ((part->type == particletype + pt_rain || part->type == particletype + pt_snow) ? SUPERCONTENTS_LIQUIDSMASK : 0), true, false, NULL, false);
+		part->delayedcollisions = cl.time + lifetime * trace.fraction;
+	}
 	return part;
 }
 
@@ -1063,7 +1105,6 @@ void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins
 		int supercontents;
 		int tex;
 		particleeffectinfo_t *info;
-		particle_t *p;
 		vec3_t center;
 		vec3_t centervelocity;
 		vec3_t traildir;
@@ -1072,7 +1113,6 @@ void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins
 		vec_t traillen;
 		vec_t trailstep;
 		qboolean underwater;
-		trace_t trace;
 		// note this runs multiple effects with the same name, each one spawns only one kind of particle, so some effects need more than one
 		VectorLerp(originmins, 0.5, originmaxs, center);
 		VectorLerp(velocitymins, 0.5, velocitymaxs, centervelocity);
@@ -1168,15 +1208,7 @@ void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins
 							trailpos[2] = lhrandom(originmins[2], originmaxs[2]);
 						}
 						VectorRandom(rvec);
-						p = particle(particletype + info->particletype, info->color[0], info->color[1], tex, lhrandom(info->size[0], info->size[1]), info->size[2], lhrandom(info->alpha[0], info->alpha[1]), info->alpha[2], info->gravity, info->bounce, trailpos[0] + info->originoffset[0] + info->originjitter[0] * rvec[0], trailpos[1] + info->originoffset[1] + info->originjitter[1] * rvec[1], trailpos[2] + info->originoffset[2] + info->originjitter[2] * rvec[2], lhrandom(velocitymins[0], velocitymaxs[0]) * info->velocitymultiplier + info->velocityoffset[0] + info->velocityjitter[0] * rvec[0], lhrandom(velocitymins[1], velocitymaxs[1]) * info->velocitymultiplier + info->velocityoffset[1] + info->velocityjitter[1] * rvec[1], lhrandom(velocitymins[2], velocitymaxs[2]) * info->velocitymultiplier + info->velocityoffset[2] + info->velocityjitter[2] * rvec[2], info->airfriction, info->liquidfriction, 0, 0);
-						// if it is rain or snow, trace ahead and shut off collisions until an actual collision event needs to occur to improve performance
-						if (info->bounce != 0 && info->gravity == 0)
-						{
-							float lifetime = p->alpha / (p->alphafade ? p->alphafade : 1);
-							VectorMA(p->org, lifetime, p->vel, rvec);
-							trace = CL_Move(p->org, vec3_origin, vec3_origin, rvec, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | ((info->particletype == pt_rain || info->particletype == pt_snow) ? SUPERCONTENTS_LIQUIDSMASK : 0), true, false, NULL, false);
-							p->delayedcollisions = cl.time + lifetime * trace.fraction - 0.1;
-						}
+						particle(particletype + info->particletype, info->color[0], info->color[1], tex, lhrandom(info->size[0], info->size[1]), info->size[2], lhrandom(info->alpha[0], info->alpha[1]), info->alpha[2], info->gravity, info->bounce, trailpos[0] + info->originoffset[0] + info->originjitter[0] * rvec[0], trailpos[1] + info->originoffset[1] + info->originjitter[1] * rvec[1], trailpos[2] + info->originoffset[2] + info->originjitter[2] * rvec[2], lhrandom(velocitymins[0], velocitymaxs[0]) * info->velocitymultiplier + info->velocityoffset[0] + info->velocityjitter[0] * rvec[0], lhrandom(velocitymins[1], velocitymaxs[1]) * info->velocitymultiplier + info->velocityoffset[1] + info->velocityjitter[1] * rvec[1], lhrandom(velocitymins[2], velocitymaxs[2]) * info->velocitymultiplier + info->velocityoffset[2] + info->velocityjitter[2] * rvec[2], info->airfriction, info->liquidfriction, 0, 0);
 						if (trailstep)
 							VectorMA(trailpos, trailstep, traildir, trailpos);
 					}
@@ -1429,7 +1461,7 @@ static void CL_Sparks(const vec3_t originmins, const vec3_t originmaxs, const ve
 	{
 		sparkcount *= cl_particles_quality.value;
 		while(sparkcount-- > 0)
-			particle(particletype + pt_spark, particlepalette[0x68], particlepalette[0x6f], tex_particle, 0.5f, 0, lhrandom(64, 255), 512, 1, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]) + sv_gravity.value * 0.1f, 0, 0, 0, 64);
+			particle(particletype + pt_spark, particlepalette[0x68], particlepalette[0x6f], tex_particle, 0.5f, 0, lhrandom(64, 255), 512, 1, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]) + cl.movevars_gravity * 0.1f, 0, 0, 0, 64);
 	}
 }
 
@@ -1529,7 +1561,7 @@ void CL_MoveParticles (void)
 	}
 
 	frametime = bound(0, cl.time - cl.oldtime, 0.1);
-	gravity = frametime * sv_gravity.value;
+	gravity = frametime * cl.movevars_gravity;
 	dvel = 1+4*frametime;
 	decalfade = frametime * 255 / cl_decals_fadetime.value;
 	decaltype = particletype + pt_decal;
@@ -1579,12 +1611,19 @@ void CL_MoveParticles (void)
 			continue;
 		}
 
+		if (p->delayedspawn)
+		{
+			if (p->delayedspawn > cl.time)
+				continue;
+			p->delayedspawn = 0;
+		}
+
 		content = 0;
 
 		p->size += p->sizeincrease * frametime;
 		p->alpha -= p->alphafade * frametime;
 
-		if (p->alpha <= 0)
+		if (p->alpha <= 0 || p->die <= cl.time)
 		{
 			p->type = NULL;
 			if (cl.free_particle > i)
@@ -1628,10 +1667,10 @@ void CL_MoveParticles (void)
 						p->liquidfriction = 0;
 						p->gravity = 0;
 						p->size *= 1.0f;
-						p->sizeincrease = p->size * 2;
-						count = rand() & 3;
+						p->sizeincrease = p->size * 20;
+						count = (int)lhrandom(1, 10);
 						while(count--)
-							particle(particletype + pt_spark, 0x000000, 0x707070, tex_particle, 0.25f, 0, lhrandom(64, 255), 512, 1, 0, p->org[0], p->org[1], p->org[2], p->vel[0]*16, p->vel[1]*16, sv_gravity.value * 0.04 + p->vel[2]*16, 0, 0, 0, 32);
+							particle(particletype + pt_spark, 0x000000, 0x707070, tex_particle, 0.25f, 0, lhrandom(64, 255), 512, 1, 0, p->org[0], p->org[1], p->org[2], p->vel[0]*16, p->vel[1]*16, cl.movevars_gravity * 0.04 + p->vel[2]*16, 0, 0, 0, 32);
 					}
 					else if (p->type == bloodtype)
 					{
@@ -2169,7 +2208,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 			cb = min(cb, 1);
 			ca = 1;
 		}
-		ca /= cl_particles_quality.value;
+		ca *= cl_particles_alpha.value;
 		if (p->type->lighting)
 		{
 			float ambient[3], diffuse[3], diffusenormal[3];
@@ -2337,7 +2376,7 @@ void R_DrawParticles (void)
 	// LordHavoc: only render if not too close
 	for (i = 0, p = cl.particles;i < cl.num_particles;i++, p++)
 	{
-		if (p->type)
+		if (p->type && !p->delayedspawn)
 		{
 			r_refdef.stats.particles++;
 			if (DotProduct(p->org, r_view.forward) >= minparticledist || p->type->orientation == PARTICLE_BEAM)

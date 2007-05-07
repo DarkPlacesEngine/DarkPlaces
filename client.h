@@ -648,6 +648,8 @@ typedef struct particle_s
 	vec3_t		relativeorigin; // decal at this location in entity's coordinate space
 	vec3_t		relativedirection; // decal oriented this way relative to entity's coordinate space
 	float		delayedcollisions; // time that p->bounce becomes active
+	float		delayedspawn; // time that particle appears and begins moving
+	float		die; // time when this particle should be removed, regardless of alpha
 }
 particle_t;
 
