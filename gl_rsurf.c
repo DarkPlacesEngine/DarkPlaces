@@ -44,16 +44,30 @@ void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 	int *bl, scale;
 	unsigned char *lightmap, *out, *stain;
 	model_t *model = ent->model;
-	static int intblocklights[MAX_LIGHTMAP_SIZE*MAX_LIGHTMAP_SIZE*3]; // LordHavoc: *3 for colored lighting
-	static unsigned char templight[MAX_LIGHTMAP_SIZE*MAX_LIGHTMAP_SIZE*4];
-
-	// update cached lighting info
-	surface->cached_dlight = 0;
+	int *intblocklights;
+	unsigned char *templight;
 
 	smax = (surface->lightmapinfo->extents[0]>>4)+1;
 	tmax = (surface->lightmapinfo->extents[1]>>4)+1;
 	size = smax*tmax;
 	size3 = size*3;
+
+	if (cl.buildlightmapmemorysize < size*sizeof(int[3]))
+	{
+		cl.buildlightmapmemorysize = size*sizeof(int[3]);
+		if (cl.buildlightmapmemory)
+			Mem_Free(cl.buildlightmapmemory);
+		cl.buildlightmapmemory = Mem_Alloc(cls.levelmempool, cl.buildlightmapmemorysize);
+	}
+
+	// these both point at the same buffer, templight is only used for final
+	// processing and can replace the intblocklights data as it goes
+	intblocklights = (int *)cl.buildlightmapmemory;
+	templight = (unsigned char *)cl.buildlightmapmemory;
+
+	// update cached lighting info
+	surface->cached_dlight = 0;
+
 	lightmap = surface->lightmapinfo->samples;
 
 // set to full bright if no light data
