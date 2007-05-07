@@ -999,6 +999,11 @@ typedef struct client_state_s
 	// this is updated to cl.movement_origin whenever health is < 1
 	// used by %d print in say/say_team messages if cl_locs_enable is on
 	vec3_t lastdeathorigin;
+
+	// processing buffer used by R_BuildLightMap, reallocated as needed,
+	// freed on each level change
+	size_t buildlightmapmemorysize;
+	unsigned char *buildlightmapmemory;
 }
 client_state_t;
 
