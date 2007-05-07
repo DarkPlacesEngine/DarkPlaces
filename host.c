@@ -771,7 +771,7 @@ void Host_Main(void)
 				clframetime = cl.realframetime = 0.1;
 
 			// apply slowmo scaling
-			clframetime *= slowmo.value;
+			clframetime *= cl.movevars_slowmo;
 
 			// host_framerate overrides all else
 			if (host_framerate.value)

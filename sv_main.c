@@ -123,6 +123,9 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_accelerate);
 	Cvar_RegisterVariable (&sv_airaccelerate);
 	Cvar_RegisterVariable (&sv_wateraccelerate);
+	Cvar_RegisterVariable (&sv_jumpvelocity);
+	Cvar_RegisterVariable (&sv_airaccel_qw);
+	Cvar_RegisterVariable (&sv_airaccel_sideways_friction);
 	Cvar_RegisterVariable (&sv_clmovement_enable);
 	Cvar_RegisterVariable (&sv_clmovement_minping);
 	Cvar_RegisterVariable (&sv_clmovement_minping_disabletime);
@@ -1078,6 +1081,8 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 	vec3_t	punchvector;
 	int		viewzoom;
 	const char *s;
+	float	*statsf = (float *)stats;
+extern cvar_t slowmo;
 
 //
 // send a damage message
@@ -1187,6 +1192,25 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 	// zero or they'll be corrected by the engine
 	//stats[STAT_SECRETS] = prog->globals.server->found_secrets;
 	//stats[STAT_MONSTERS] = prog->globals.server->killed_monsters;
+
+	// movement settings for prediction
+	statsf[STAT_MOVEVARS_TICRATE] = sys_ticrate.value;
+	statsf[STAT_MOVEVARS_TIMESCALE] = slowmo.value;
+	statsf[STAT_MOVEVARS_GRAVITY] = sv_gravity.value;
+	statsf[STAT_MOVEVARS_STOPSPEED] = sv_stopspeed.value;
+	statsf[STAT_MOVEVARS_MAXSPEED] = sv_maxspeed.value;
+	statsf[STAT_MOVEVARS_SPECTATORMAXSPEED] = sv_maxspeed.value; // FIXME: QW has a separate cvar for this
+	statsf[STAT_MOVEVARS_ACCELERATE] = sv_accelerate.value;
+	statsf[STAT_MOVEVARS_AIRACCELERATE] = sv_airaccelerate.value >= 0 ? sv_airaccelerate.value : sv_accelerate.value;
+	statsf[STAT_MOVEVARS_WATERACCELERATE] = sv_wateraccelerate.value >= 0 ? sv_wateraccelerate.value : sv_accelerate.value;
+	val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.gravity);
+	statsf[STAT_MOVEVARS_ENTGRAVITY] = val ? val->_float : 1.0f;
+	statsf[STAT_MOVEVARS_JUMPVELOCITY] = sv_jumpvelocity.value;
+	statsf[STAT_MOVEVARS_EDGEFRICTION] = sv_edgefriction.value;
+	statsf[STAT_MOVEVARS_MAXAIRSPEED] = sv_maxairspeed.value;
+	statsf[STAT_MOVEVARS_STEPHEIGHT] = sv_stepheight.value;
+	statsf[STAT_MOVEVARS_AIRACCEL_QW] = sv_airaccel_qw.value;
+	statsf[STAT_MOVEVARS_AIRACCEL_SIDEWAYS_FRICTION] = sv_airaccel_sideways_friction.value;
 
 	if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE || sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5)
 	{
