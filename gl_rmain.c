@@ -1686,7 +1686,14 @@ static void R_UpdateEntityLighting(entity_render_t *ent)
 
 	// move the light direction into modelspace coordinates for lighting code
 	Matrix4x4_Transform3x3(&ent->inversematrix, tempdiffusenormal, ent->modellight_lightdir);
-	VectorNormalize(ent->modellight_lightdir);
+	if(VectorLength2(ent->modellight_lightdir) > 0)
+	{
+		VectorNormalize(ent->modellight_lightdir);
+	}
+	else
+	{
+		VectorSet(ent->modellight_lightdir, 0, 0, 1); // have to set SOME valid vector here
+	}
 
 	// scale ambient and directional light contributions according to rendering variables
 	ent->modellight_ambient[0] *= ent->colormod[0] * r_refdef.lightmapintensity;
