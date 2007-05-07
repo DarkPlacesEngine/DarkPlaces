@@ -25,16 +25,6 @@ static char *cl_required_func[] =
 
 static int cl_numrequiredfunc = sizeof(cl_required_func) / sizeof(char*);
 
-static char				*csqc_printtextbuf = NULL;
-static unsigned short	*csqc_sv2csqcents;	//[515]: server entities numbers on client side. FIXME : make pointers instead of numbers ?
-
-qboolean csqc_loaded = false;
-
-vec3_t csqc_origin, csqc_angles;
-static double csqc_frametime = 0;
-
-static mempool_t *csqc_mempool;
-
 void CL_VM_Error (const char *format, ...) DP_FUNC_PRINTF(1);
 void CL_VM_Error (const char *format, ...)	//[515]: hope it will be never executed =)
 {
@@ -47,8 +37,7 @@ void CL_VM_Error (const char *format, ...)	//[515]: hope it will be never execut
 //	Con_Printf( "CL_VM_Error: %s\n", errorstring );
 
 	PRVM_Crash();
-	csqc_loaded = false;
-	Mem_FreePool(&csqc_mempool);
+	cl.csqc_loaded = false;
 
 	Cvar_SetValueQuick(&csqc_progcrc, -1);
 	Cvar_SetValueQuick(&csqc_progsize, -1);
@@ -64,17 +53,16 @@ static void CSQC_SetGlobals (void)
 
 	CSQC_BEGIN
 		prog->globals.client->time = cl.time;
-		prog->globals.client->frametime = cl.time - csqc_frametime;
-		csqc_frametime = cl.time;
+		prog->globals.client->frametime = max(0, cl.time - cl.oldtime);
 		prog->globals.client->servercommandframe = cls.servermovesequence;
 		prog->globals.client->clientcommandframe = cl.movecmd[0].sequence;
 		VectorCopy(cl.viewangles, prog->globals.client->input_angles);
-		VectorCopy(cl.viewangles, csqc_angles);
+		VectorCopy(cl.viewangles, cl.csqc_angles);
 		prog->globals.client->input_buttons = cl.movecmd[0].buttons;
 		VectorSet(prog->globals.client->input_movevalues, cl.movecmd[0].forwardmove, cl.movecmd[0].sidemove, cl.movecmd[0].upmove);
-		//VectorCopy(cl.movement_origin, csqc_origin);
-		Matrix4x4_OriginFromMatrix(&cl.entities[cl.viewentity].render.matrix, csqc_origin);
-		VectorCopy(csqc_origin, prog->globals.client->pmove_org);
+		//VectorCopy(cl.movement_origin, cl.csqc_origin);
+		Matrix4x4_OriginFromMatrix(&cl.entities[cl.viewentity].render.matrix, cl.csqc_origin);
+		VectorCopy(cl.csqc_origin, prog->globals.client->pmove_org);
 		prog->globals.client->maxclients = cl.maxclients;
 		//VectorCopy(cl.movement_velocity, prog->globals.client->pmove_vel);
 		VectorCopy(cl.velocity, prog->globals.client->pmove_vel);
@@ -210,7 +198,7 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 qboolean CL_VM_InputEvent (qboolean pressed, int key)
 {
 	qboolean r;
-	if(!csqc_loaded)
+	if(!cl.csqc_loaded)
 		return false;
 	CSQC_BEGIN
 		prog->globals.client->time = cl.time;
@@ -225,7 +213,7 @@ qboolean CL_VM_InputEvent (qboolean pressed, int key)
 qboolean CL_VM_UpdateView (void)
 {
 //	vec3_t oldangles;
-	if(!csqc_loaded)
+	if(!cl.csqc_loaded)
 		return false;
 	CSQC_BEGIN
 		//VectorCopy(cl.viewangles, oldangles);
@@ -246,7 +234,7 @@ qboolean CL_VM_ConsoleCommand (const char *cmd)
 {
 	int restorevm_tempstringsbuf_cursize;
 	qboolean r;
-	if(!csqc_loaded)
+	if(!cl.csqc_loaded)
 		return false;
 	CSQC_BEGIN
 		prog->globals.client->time = cl.time;
@@ -263,7 +251,7 @@ qboolean CL_VM_Parse_TempEntity (void)
 {
 	int			t;
 	qboolean	r = false;
-	if(!csqc_loaded)
+	if(!cl.csqc_loaded)
 		return false;
 	CSQC_BEGIN
 	if(prog->funcoffsets.CSQC_Parse_TempEntity)
@@ -302,7 +290,7 @@ void CL_VM_Parse_StuffCmd (const char *msg)
 		csqc_progsize.flags = sizeflags;
 		return;
 	}
-	if(!csqc_loaded)
+	if(!cl.csqc_loaded)
 	{
 		Cbuf_AddText(msg);
 		return;
@@ -334,7 +322,7 @@ static void CL_VM_Parse_Print (const char *msg)
 void CSQC_AddPrintText (const char *msg)
 {
 	size_t i;
-	if(!csqc_loaded)
+	if(!cl.csqc_loaded)
 	{
 		Con_Print(msg);
 		return;
@@ -346,18 +334,18 @@ void CSQC_AddPrintText (const char *msg)
 		i = strlen(msg)-1;
 		if(msg[i] != '\n' && msg[i] != '\r')
 		{
-			if(strlen(csqc_printtextbuf)+i >= MAX_INPUTLINE)
+			if(strlen(cl.csqc_printtextbuf)+i >= MAX_INPUTLINE)
 			{
-				CL_VM_Parse_Print(csqc_printtextbuf);
-				csqc_printtextbuf[0] = 0;
+				CL_VM_Parse_Print(cl.csqc_printtextbuf);
+				cl.csqc_printtextbuf[0] = 0;
 			}
 			else
-				strlcat(csqc_printtextbuf, msg, MAX_INPUTLINE);
+				strlcat(cl.csqc_printtextbuf, msg, MAX_INPUTLINE);
 			return;
 		}
-		strlcat(csqc_printtextbuf, msg, MAX_INPUTLINE);
-		CL_VM_Parse_Print(csqc_printtextbuf);
-		csqc_printtextbuf[0] = 0;
+		strlcat(cl.csqc_printtextbuf, msg, MAX_INPUTLINE);
+		CL_VM_Parse_Print(cl.csqc_printtextbuf);
+		cl.csqc_printtextbuf[0] = 0;
 	}
 	else
 		Con_Print(msg);
@@ -367,7 +355,7 @@ void CSQC_AddPrintText (const char *msg)
 void CL_VM_Parse_CenterPrint (const char *msg)
 {
 	int restorevm_tempstringsbuf_cursize;
-	if(!csqc_loaded)
+	if(!cl.csqc_loaded)
 	{
 		SCR_CenterPrint((char*)msg);
 		return;
@@ -389,7 +377,7 @@ void CL_VM_Parse_CenterPrint (const char *msg)
 float CL_VM_Event (float event)		//[515]: needed ? I'd say "YES", but don't know for what :D
 {
 	float r = 0;
-	if(!csqc_loaded)
+	if(!cl.csqc_loaded)
 		return 0;
 	CSQC_BEGIN
 	if(prog->funcoffsets.CSQC_Event)
@@ -415,13 +403,13 @@ void CSQC_ReadEntities (void)
 			if(!entnum)
 				return;
 			realentnum = entnum & 0x7FFF;
-			prog->globals.client->self = csqc_sv2csqcents[realentnum];
+			prog->globals.client->self = cl.csqc_server2csqcentitynumber[realentnum];
 			if(entnum & 0x8000)
 			{
 				if(prog->globals.client->self)
 				{
 					PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Ent_Remove, "QC function CSQC_Ent_Remove is missing");
-					csqc_sv2csqcents[realentnum] = 0;
+					cl.csqc_server2csqcentitynumber[realentnum] = 0;
 				}
 				else
 					Con_Printf("Smth bad happens in csqc...\n");	//[515]: never happens ?
@@ -433,7 +421,7 @@ void CSQC_ReadEntities (void)
 					prvm_edict_t	*ed;
 					ed = PRVM_ED_Alloc();
 					ed->fields.client->entnum = realentnum;
-					prog->globals.client->self = csqc_sv2csqcents[realentnum] = PRVM_EDICT_TO_PROG(ed);
+					prog->globals.client->self = cl.csqc_server2csqcentitynumber[realentnum] = PRVM_EDICT_TO_PROG(ed);
 					PRVM_G_FLOAT(OFS_PARM0) = 1;
 				}
 				else
@@ -527,7 +515,7 @@ void CL_VM_Init (void)
 	Cvar_SetValueQuick(&csqc_progcrc, -1);
 	Cvar_SetValueQuick(&csqc_progsize, -1);
 
-	csqc_loaded = false;
+	cl.csqc_loaded = false;
 	memset(cl.csqc_model_precache, 0, sizeof(cl.csqc_model_precache));
 	memset(&cl.csqc_vidvars, true, sizeof(csqc_vidvars_t));
 
@@ -575,8 +563,6 @@ void CL_VM_Init (void)
 	PRVM_Begin;
 	PRVM_InitProg(PRVM_CLIENTPROG);
 
-	csqc_mempool = Mem_AllocPool("CSQC", 0, NULL);
-
 	// allocate the mempools
 	prog->progs_mempool = Mem_AllocPool(csqc_progname.string, 0, NULL);
 	prog->headercrc = CL_PROGHEADER_CRC;
@@ -616,13 +602,6 @@ void CL_VM_Init (void)
 	if (prog->fieldoffsets.nextthink >= 0 && prog->fieldoffsets.frame >= 0 && prog->fieldoffsets.think >= 0 && prog->globaloffsets.self >= 0)
 		prog->flag |= PRVM_OP_STATE;
 
-	//[515]: optional fields & funcs
-	if(prog->funcoffsets.CSQC_Parse_Print)
-	{
-		csqc_printtextbuf = (char *)Mem_Alloc(csqc_mempool, MAX_INPUTLINE);
-		csqc_printtextbuf[0] = 0;
-	}
-
 	if (cl.worldmodel)
 	{
 		VectorCopy(cl.worldmodel->normalmins, cl.world.areagrid_mins);
@@ -637,7 +616,6 @@ void CL_VM_Init (void)
 
 	// set time
 	prog->globals.client->time = cl.time;
-	csqc_frametime = 0;
 
 	prog->globals.client->mapname = PRVM_SetEngineString(cl.worldmodel->name);
 	prog->globals.client->player_localentnum = cl.playerentity;
@@ -646,10 +624,7 @@ void CL_VM_Init (void)
 	PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Init, "QC function CSQC_Init is missing");
 
 	PRVM_End;
-	csqc_loaded = true;
-
-	csqc_sv2csqcents = (unsigned short *)Mem_Alloc(csqc_mempool, MAX_EDICTS*sizeof(unsigned short));
-	memset(csqc_sv2csqcents, 0, MAX_EDICTS*sizeof(unsigned short));
+	cl.csqc_loaded = true;
 
 	cl.csqc_vidvars.drawcrosshair = false;
 	cl.csqc_vidvars.drawenginesbar = false;
@@ -660,7 +635,7 @@ void CL_VM_ShutDown (void)
 	Cmd_ClearCsqcFuncs();
 	Cvar_SetValueQuick(&csqc_progcrc, -1);
 	Cvar_SetValueQuick(&csqc_progsize, -1);
-	if(!csqc_loaded)
+	if(!cl.csqc_loaded)
 		return;
 	CSQC_BEGIN
 		prog->globals.client->time = cl.time;
@@ -668,6 +643,5 @@ void CL_VM_ShutDown (void)
 		PRVM_ResetProg();
 	CSQC_END
 	Con_Print("CSQC ^1unloaded\n");
-	csqc_loaded = false;
-	Mem_FreePool(&csqc_mempool);
+	cl.csqc_loaded = false;
 }

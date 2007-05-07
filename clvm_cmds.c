@@ -604,14 +604,11 @@ static void VM_CL_getlight (void)
 //[515]: SCENE MANAGER builtins
 extern qboolean CSQC_AddRenderEdict (prvm_edict_t *ed);//csprogs.c
 
-matrix4x4_t csqc_listenermatrix;
-qboolean csqc_usecsqclistener = false;//[515]: per-frame
-
 static void CSQC_R_RecalcView (void)
 {
 	extern matrix4x4_t viewmodelmatrix;
-	Matrix4x4_CreateFromQuakeEntity(&r_view.matrix, csqc_origin[0], csqc_origin[1], csqc_origin[2], csqc_angles[0], csqc_angles[1], csqc_angles[2], 1);
-	Matrix4x4_CreateFromQuakeEntity(&viewmodelmatrix, csqc_origin[0], csqc_origin[1], csqc_origin[2], csqc_angles[0], csqc_angles[1], csqc_angles[2], cl_viewmodel_scale.value);
+	Matrix4x4_CreateFromQuakeEntity(&r_view.matrix, cl.csqc_origin[0], cl.csqc_origin[1], cl.csqc_origin[2], cl.csqc_angles[0], cl.csqc_angles[1], cl.csqc_angles[2], 1);
+	Matrix4x4_CreateFromQuakeEntity(&viewmodelmatrix, cl.csqc_origin[0], cl.csqc_origin[1], cl.csqc_origin[2], cl.csqc_angles[0], cl.csqc_angles[1], cl.csqc_angles[2], cl_viewmodel_scale.value);
 }
 
 void CL_RelinkLightFlashes(void);
@@ -707,28 +704,28 @@ static void VM_CL_R_SetView (void)
 							break;
 	case VF_FOVY:			//r_refdef.fov_y = k; // FIXME!
 							break;
-	case VF_ORIGIN:			VectorCopy(f, csqc_origin);
+	case VF_ORIGIN:			VectorCopy(f, cl.csqc_origin);
 							CSQC_R_RecalcView();
 							break;
-	case VF_ORIGIN_X:		csqc_origin[0] = k;
+	case VF_ORIGIN_X:		cl.csqc_origin[0] = k;
 							CSQC_R_RecalcView();
 							break;
-	case VF_ORIGIN_Y:		csqc_origin[1] = k;
+	case VF_ORIGIN_Y:		cl.csqc_origin[1] = k;
 							CSQC_R_RecalcView();
 							break;
-	case VF_ORIGIN_Z:		csqc_origin[2] = k;
+	case VF_ORIGIN_Z:		cl.csqc_origin[2] = k;
 							CSQC_R_RecalcView();
 							break;
-	case VF_ANGLES:			VectorCopy(f, csqc_angles);
+	case VF_ANGLES:			VectorCopy(f, cl.csqc_angles);
 							CSQC_R_RecalcView();
 							break;
-	case VF_ANGLES_X:		csqc_angles[0] = k;
+	case VF_ANGLES_X:		cl.csqc_angles[0] = k;
 							CSQC_R_RecalcView();
 							break;
-	case VF_ANGLES_Y:		csqc_angles[1] = k;
+	case VF_ANGLES_Y:		cl.csqc_angles[1] = k;
 							CSQC_R_RecalcView();
 							break;
-	case VF_ANGLES_Z:		csqc_angles[2] = k;
+	case VF_ANGLES_Z:		cl.csqc_angles[2] = k;
 							CSQC_R_RecalcView();
 							break;
 	case VF_DRAWWORLD:		cl.csqc_vidvars.drawworld = k;
@@ -1056,8 +1053,8 @@ static void VM_CL_isdemo (void)
 static void VM_CL_setlistener (void)
 {
 	VM_SAFEPARMCOUNT(4, VM_CL_setlistener);
-	Matrix4x4_FromVectors(&csqc_listenermatrix, PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM2), PRVM_G_VECTOR(OFS_PARM3), PRVM_G_VECTOR(OFS_PARM0));
-	csqc_usecsqclistener = true;	//use csqc listener at this frame
+	Matrix4x4_FromVectors(&cl.csqc_listenermatrix, PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM2), PRVM_G_VECTOR(OFS_PARM3), PRVM_G_VECTOR(OFS_PARM0));
+	cl.csqc_usecsqclistener = true;	//use csqc listener at this frame
 }
 
 //#352 void(string cmdname) registercommand (EXT_CSQC)
@@ -1952,7 +1949,7 @@ int CL_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 		if (val->_float == 0)
 			val->_float = 1;
 
-		Matrix4x4_CreateFromQuakeEntity(&entitymatrix, csqc_origin[0], csqc_origin[1], csqc_origin[2], csqc_angles[0], csqc_angles[1], csqc_angles[2], val->_float);
+		Matrix4x4_CreateFromQuakeEntity(&entitymatrix, cl.csqc_origin[0], cl.csqc_origin[1], cl.csqc_origin[2], cl.csqc_angles[0], cl.csqc_angles[1], cl.csqc_angles[2], val->_float);
 		Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
 
 		/*
@@ -1964,7 +1961,7 @@ int CL_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 			// should be done in QC on the server, but oh well, quake is quake)
 			// LordHavoc: figured out bobup: the time at which the sin is at 180
 			// degrees (which allows lengthening or squishing the peak or valley)
-			cycle = sv.time/cl_bobcycle.value;
+			cycle = cl.time/cl_bobcycle.value;
 			cycle -= (int)cycle;
 			if (cycle < cl_bobup.value)
 				cycle = sin(M_PI * cycle / cl_bobup.value);

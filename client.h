@@ -982,6 +982,14 @@ typedef struct client_state_s
 	int qw_deltasequence[QW_UPDATE_BACKUP];
 
 	// csqc stuff:
+	// server entity number corresponding to a clientside entity
+	unsigned short csqc_server2csqcentitynumber[MAX_EDICTS];
+	qboolean csqc_loaded;
+	vec3_t csqc_origin;
+	vec3_t csqc_angles;
+	qboolean csqc_usecsqclistener;
+	matrix4x4_t csqc_listenermatrix;
+	char csqc_printtextbuf[MAX_INPUTLINE];
 
 	// collision culling data
 	world_t world;

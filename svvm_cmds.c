@@ -1109,7 +1109,6 @@ sizebuf_t *WriteDest (void)
 	int		entnum;
 	int		dest;
 	prvm_edict_t	*ent;
-	extern sizebuf_t *sv2csqcbuf;
 
 	dest = (int)PRVM_G_FLOAT(OFS_PARM0);
 	switch (dest)
@@ -1137,7 +1136,7 @@ sizebuf_t *WriteDest (void)
 		return &sv.signon;
 
 	case MSG_ENTITY:
-		return sv2csqcbuf;
+		return sv.writeentitiestoclient_msg;
 	}
 
 	return NULL;

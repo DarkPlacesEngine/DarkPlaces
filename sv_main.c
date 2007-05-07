@@ -22,12 +22,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "libcurl.h"
 
-void SV_VM_Init();
-void SV_VM_Setup();
+extern void SV_Phys_Init (void);
+static void SV_SaveEntFile_f(void);
+static void SV_StartDownload_f(void);
+static void SV_Download_f(void);
+static void SV_VM_Setup();
 
 void VM_CustomStats_Clear (void);
-void EntityFrameCSQC_ClearVersions (void);
-void EntityFrameCSQC_InitClientVersions (int client, qboolean clear);
 void VM_SV_UpdateCustomStats (client_t *client, prvm_edict_t *ent, sizebuf_t *msg, int *stats);
 void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int numstates, const entity_state_t *states);
 
@@ -69,6 +70,40 @@ cvar_t sv_gameplayfix_droptofloorstartsolid = {0, "sv_gameplayfix_droptofloorsta
 
 cvar_t sv_progs = {0, "sv_progs", "progs.dat", "selects which quakec progs.dat file to run" };
 
+cvar_t pr_checkextension = {CVAR_READONLY, "pr_checkextension", "1", "indicates to QuakeC that the standard quakec extensions system is available (if 0, quakec should not attempt to use extensions)"};
+cvar_t nomonsters = {0, "nomonsters", "0", "unused cvar in quake, can be used by mods"};
+cvar_t gamecfg = {0, "gamecfg", "0", "unused cvar in quake, can be used by mods"};
+cvar_t scratch1 = {0, "scratch1", "0", "unused cvar in quake, can be used by mods"};
+cvar_t scratch2 = {0,"scratch2", "0", "unused cvar in quake, can be used by mods"};
+cvar_t scratch3 = {0, "scratch3", "0", "unused cvar in quake, can be used by mods"};
+cvar_t scratch4 = {0, "scratch4", "0", "unused cvar in quake, can be used by mods"};
+cvar_t savedgamecfg = {CVAR_SAVE, "savedgamecfg", "0", "unused cvar in quake that is saved to config.cfg on exit, can be used by mods"};
+cvar_t saved1 = {CVAR_SAVE, "saved1", "0", "unused cvar in quake that is saved to config.cfg on exit, can be used by mods"};
+cvar_t saved2 = {CVAR_SAVE, "saved2", "0", "unused cvar in quake that is saved to config.cfg on exit, can be used by mods"};
+cvar_t saved3 = {CVAR_SAVE, "saved3", "0", "unused cvar in quake that is saved to config.cfg on exit, can be used by mods"};
+cvar_t saved4 = {CVAR_SAVE, "saved4", "0", "unused cvar in quake that is saved to config.cfg on exit, can be used by mods"};
+cvar_t nehx00 = {0, "nehx00", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx01 = {0, "nehx01", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx02 = {0, "nehx02", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx03 = {0, "nehx03", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx04 = {0, "nehx04", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx05 = {0, "nehx05", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx06 = {0, "nehx06", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx07 = {0, "nehx07", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx08 = {0, "nehx08", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx09 = {0, "nehx09", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx10 = {0, "nehx10", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx11 = {0, "nehx11", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx12 = {0, "nehx12", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx13 = {0, "nehx13", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx14 = {0, "nehx14", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx15 = {0, "nehx15", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx16 = {0, "nehx16", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx17 = {0, "nehx17", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx18 = {0, "nehx18", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx19 = {0, "nehx19", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t cutscene = {0, "cutscene", "1", "enables cutscenes in nehahra, can be used by other mods"};
+
 // TODO: move these cvars here
 extern cvar_t sv_clmovement_enable;
 extern cvar_t sv_clmovement_minping;
@@ -80,12 +115,125 @@ server_static_t svs;
 
 mempool_t *sv_mempool = NULL;
 
-//============================================================================
+extern cvar_t slowmo;
+extern float		scr_centertime_off;
 
-extern void SV_Phys_Init (void);
-static void SV_SaveEntFile_f(void);
-static void SV_StartDownload_f(void);
-static void SV_Download_f(void);
+// MUST match effectnameindex_t in client.h
+static const char *standardeffectnames[EFFECT_TOTAL] =
+{
+	"",
+	"TE_GUNSHOT",
+	"TE_GUNSHOTQUAD",
+	"TE_SPIKE",
+	"TE_SPIKEQUAD",
+	"TE_SUPERSPIKE",
+	"TE_SUPERSPIKEQUAD",
+	"TE_WIZSPIKE",
+	"TE_KNIGHTSPIKE",
+	"TE_EXPLOSION",
+	"TE_EXPLOSIONQUAD",
+	"TE_TAREXPLOSION",
+	"TE_TELEPORT",
+	"TE_LAVASPLASH",
+	"TE_SMALLFLASH",
+	"TE_FLAMEJET",
+	"EF_FLAME",
+	"TE_BLOOD",
+	"TE_SPARK",
+	"TE_PLASMABURN",
+	"TE_TEI_G3",
+	"TE_TEI_SMOKE",
+	"TE_TEI_BIGEXPLOSION",
+	"TE_TEI_PLASMAHIT",
+	"EF_STARDUST",
+	"TR_ROCKET",
+	"TR_GRENADE",
+	"TR_BLOOD",
+	"TR_WIZSPIKE",
+	"TR_SLIGHTBLOOD",
+	"TR_KNIGHTSPIKE",
+	"TR_VORESPIKE",
+	"TR_NEHAHRASMOKE",
+	"TR_NEXUIZPLASMA",
+	"TR_GLOWTRAIL",
+	"SVC_PARTICLE"
+};
+
+#define REQFIELDS (sizeof(reqfields) / sizeof(prvm_required_field_t))
+
+prvm_required_field_t reqfields[] =
+{
+	{ev_entity, "cursor_trace_ent"},
+	{ev_entity, "drawonlytoclient"},
+	{ev_entity, "exteriormodeltoclient"},
+	{ev_entity, "nodrawtoclient"},
+	{ev_entity, "tag_entity"},
+	{ev_entity, "viewmodelforclient"},
+	{ev_float, "Version"},
+	{ev_float, "alpha"},
+	{ev_float, "ammo_cells1"},
+	{ev_float, "ammo_lava_nails"},
+	{ev_float, "ammo_multi_rockets"},
+	{ev_float, "ammo_nails1"},
+	{ev_float, "ammo_plasma"},
+	{ev_float, "ammo_rockets1"},
+	{ev_float, "ammo_shells1"},
+	{ev_float, "button3"},
+	{ev_float, "button4"},
+	{ev_float, "button5"},
+	{ev_float, "button6"},
+	{ev_float, "button7"},
+	{ev_float, "button8"},
+	{ev_float, "button9"},
+	{ev_float, "button10"},
+	{ev_float, "button11"},
+	{ev_float, "button12"},
+	{ev_float, "button13"},
+	{ev_float, "button14"},
+	{ev_float, "button15"},
+	{ev_float, "button16"},
+	{ev_float, "buttonchat"},
+	{ev_float, "buttonuse"},
+	{ev_float, "clientcolors"},
+	{ev_float, "cursor_active"},
+	{ev_float, "disableclientprediction"},
+	{ev_float, "fullbright"},
+	{ev_float, "glow_color"},
+	{ev_float, "glow_size"},
+	{ev_float, "glow_trail"},
+	{ev_float, "gravity"},
+	{ev_float, "idealpitch"},
+	{ev_float, "items2"},
+	{ev_float, "light_lev"},
+	{ev_float, "modelflags"},
+	{ev_float, "pflags"},
+	{ev_float, "ping"},
+	{ev_float, "pitch_speed"},
+	{ev_float, "pmodel"},
+	{ev_float, "renderamt"}, // HalfLife support
+	{ev_float, "rendermode"}, // HalfLife support
+	{ev_float, "scale"},
+	{ev_float, "style"},
+	{ev_float, "tag_index"},
+	{ev_float, "viewzoom"},
+	{ev_function, "SendEntity"},
+	{ev_function, "contentstransition"}, // DRESK - Support for Entity Contents Transition Event
+	{ev_function, "customizeentityforclient"},
+	{ev_string, "netaddress"},
+	{ev_string, "playermodel"},
+	{ev_string, "playerskin"},
+	{ev_vector, "color"},
+	{ev_vector, "colormod"},
+	{ev_vector, "cursor_screen"},
+	{ev_vector, "cursor_trace_endpos"},
+	{ev_vector, "cursor_trace_start"},
+	{ev_vector, "movement"},
+	{ev_vector, "punchvector"},
+};
+
+
+
+//============================================================================
 
 void SV_AreaStats_f(void)
 {
@@ -164,7 +312,44 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_allowdownloads_dlcache);
 	Cvar_RegisterVariable (&sv_progs);
 
-	SV_VM_Init();
+	Cvar_RegisterVariable (&pr_checkextension);
+	Cvar_RegisterVariable (&nomonsters);
+	Cvar_RegisterVariable (&gamecfg);
+	Cvar_RegisterVariable (&scratch1);
+	Cvar_RegisterVariable (&scratch2);
+	Cvar_RegisterVariable (&scratch3);
+	Cvar_RegisterVariable (&scratch4);
+	Cvar_RegisterVariable (&savedgamecfg);
+	Cvar_RegisterVariable (&saved1);
+	Cvar_RegisterVariable (&saved2);
+	Cvar_RegisterVariable (&saved3);
+	Cvar_RegisterVariable (&saved4);
+	// LordHavoc: Nehahra uses these to pass data around cutscene demos
+	if (gamemode == GAME_NEHAHRA)
+	{
+		Cvar_RegisterVariable (&nehx00);
+		Cvar_RegisterVariable (&nehx01);
+		Cvar_RegisterVariable (&nehx02);
+		Cvar_RegisterVariable (&nehx03);
+		Cvar_RegisterVariable (&nehx04);
+		Cvar_RegisterVariable (&nehx05);
+		Cvar_RegisterVariable (&nehx06);
+		Cvar_RegisterVariable (&nehx07);
+		Cvar_RegisterVariable (&nehx08);
+		Cvar_RegisterVariable (&nehx09);
+		Cvar_RegisterVariable (&nehx10);
+		Cvar_RegisterVariable (&nehx11);
+		Cvar_RegisterVariable (&nehx12);
+		Cvar_RegisterVariable (&nehx13);
+		Cvar_RegisterVariable (&nehx14);
+		Cvar_RegisterVariable (&nehx15);
+		Cvar_RegisterVariable (&nehx16);
+		Cvar_RegisterVariable (&nehx17);
+		Cvar_RegisterVariable (&nehx18);
+		Cvar_RegisterVariable (&nehx19);
+	}
+	Cvar_RegisterVariable (&cutscene); // for Nehahra but useful to other mods as well
+
 	SV_Phys_Init();
 
 	sv_mempool = Mem_AllocPool("server", 0, NULL);
@@ -386,6 +571,9 @@ void SV_SendServerinfo (client_t *client)
 			client->entitydatabase5 = EntityFrame5_AllocDatabase(sv_mempool);
 	}
 
+	// reset csqc entity versions
+	memset(client->csqcentityversion, 0, sizeof(client->csqcentityversion));
+
 	SZ_Clear (&client->netconnection->message);
 	MSG_WriteByte (&client->netconnection->message, svc_print);
 	dpsnprintf (message, sizeof (message), "\nServer: %s build %s (progs %i crc)", gamename, buildstring, prog->filecrc);
@@ -486,9 +674,6 @@ void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 
 	client = svs.clients + clientnum;
 
-	if(netconnection)//[515]: bots don't play with csqc =)
-		EntityFrameCSQC_InitClientVersions(clientnum, false);
-
 // set up the client_t
 	if (sv.loadgame)
 		memcpy (spawn_parms, client->spawn_parms, sizeof(spawn_parms));
@@ -557,34 +742,33 @@ crosses a waterline.
 =============================================================================
 */
 
-int sv_writeentitiestoclient_pvsbytes;
-unsigned char sv_writeentitiestoclient_pvs[MAX_MAP_LEAFS/8];
-
-static int numsendentities;
-static entity_state_t sendentities[MAX_EDICTS];
-static entity_state_t *sendentitiesindex[MAX_EDICTS];
-
-static int sententitiesmark = 0;
-static int sententities[MAX_EDICTS];
-static int sententitiesconsideration[MAX_EDICTS];
-static int sv_writeentitiestoclient_culled_pvs;
-static int sv_writeentitiestoclient_culled_trace;
-static int sv_writeentitiestoclient_visibleentities;
-static int sv_writeentitiestoclient_totalentities;
-//static entity_frame_t sv_writeentitiestoclient_entityframe;
-static int sv_writeentitiestoclient_clentnum;
-static vec3_t sv_writeentitiestoclient_testeye;
-static client_t *sv_writeentitiestoclient_client;
-
-qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, int e)
+static qboolean SV_BuildEntityState (entity_state_t *cs, prvm_edict_t *ent, int enumber)
 {
 	int i;
+	unsigned int tagentity;
 	unsigned int modelindex, effects, flags, glowsize, lightstyle, lightpflags, light[4], specialvisibilityradius;
 	unsigned int customizeentityforclient;
 	float f;
-	vec3_t cullmins, cullmaxs;
+	vec3_t cullmins, cullmaxs, netcenter;
 	model_t *model;
 	prvm_eval_t *val;
+
+	// see if the customizeentityforclient extension is used by this entity
+	customizeentityforclient = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.customizeentityforclient)->function;
+	if (customizeentityforclient)
+	{
+		prog->globals.server->self = enumber;
+		prog->globals.server->other = sv.writeentitiestoclient_cliententitynumber;
+		PRVM_ExecuteProgram(customizeentityforclient, "customizeentityforclient: NULL function");
+		// customizeentityforclient can return false to reject the entity
+		if (!PRVM_G_FLOAT(OFS_RETURN))
+			return false;
+	}
+
+	// this 2 billion unit check is actually to detect NAN origins
+	// (we really don't want to send those)
+	if (!(VectorLength2(ent->fields.server->origin) < 2000000000.0*2000000000.0))
+		return false;
 
 	// EF_NODRAW prevents sending for any reason except for your own
 	// client, so we must keep all clients in this superset
@@ -594,13 +778,15 @@ qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, int 
 	// LordHavoc: this could kill tags attached to an invisible entity, I
 	// just hope we never have to support that case
 	i = (int)ent->fields.server->modelindex;
-	modelindex = (i >= 1 && i < MAX_MODELS && *PRVM_GetString(ent->fields.server->model)) ? i : 0;
+	modelindex = (i >= 1 && i < MAX_MODELS && ent->fields.server->model && *PRVM_GetString(ent->fields.server->model)) ? i : 0;
 
 	flags = 0;
 	i = (int)(PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.glow_size)->_float * 0.25f);
 	glowsize = (unsigned char)bound(0, i, 255);
 	if (PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.glow_trail)->_float)
 		flags |= RENDER_GLOWTRAIL;
+	if (PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.viewmodelforclient)->edict)
+		flags |= RENDER_VIEWMODEL;
 
 	f = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.color)->vector[0]*256;
 	light[0] = (unsigned short)bound(0, f, 65535);
@@ -660,23 +846,184 @@ qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, int 
 			specialvisibilityradius = max(specialvisibilityradius, 100);
 	}
 
-	// early culling checks
-	// (final culling is done by SV_MarkWriteEntityStateToClient)
-	customizeentityforclient = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.customizeentityforclient)->function;
-	if (!customizeentityforclient)
+	// don't send uninteresting entities
+	if (enumber != sv.writeentitiestoclient_cliententitynumber)
 	{
-		if (e > svs.maxclients && (!modelindex && !specialvisibilityradius))
+		if (!modelindex && !specialvisibilityradius)
 			return false;
-		// this 2 billion unit check is actually to detect NAN origins
-		// (we really don't want to send those)
-		if (VectorLength2(ent->fields.server->origin) > 2000000000.0*2000000000.0)
+		if (PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.nodrawtoclient)->edict == sv.writeentitiestoclient_cliententitynumber)
+			return false;
+		if (PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.drawonlytoclient)->edict && PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.drawonlytoclient)->edict != sv.writeentitiestoclient_cliententitynumber)
+			return false;
+		if (PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.viewmodelforclient)->edict && PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.viewmodelforclient)->edict != sv.writeentitiestoclient_cliententitynumber)
+			return false;
+		if (flags & RENDER_VIEWMODEL && PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.viewmodelforclient)->edict != sv.writeentitiestoclient_cliententitynumber)
+			return false;
+		if (effects & EF_NODRAW)
 			return false;
 	}
 
+	// don't send child if parent was rejected
+	// FIXME: it would be better to force the parent to send...
+	tagentity = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.tag_entity)->edict;
+	if (tagentity && !SV_BuildEntityState(NULL, PRVM_EDICT_NUM(tagentity), tagentity))
+		return false;
+
+	// calculate the visible box of this entity (don't use the physics box
+	// as that is often smaller than a model, and would not count
+	// specialvisibilityradius)
+	if ((model = sv.models[modelindex]))
+	{
+		float scale = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.glow_color)->_float;
+		if (scale)
+			scale *= (1.0f / 16.0f);
+		else
+			scale = 1;
+		if (ent->fields.server->angles[0] || ent->fields.server->angles[2]) // pitch and roll
+		{
+			VectorMA(ent->fields.server->origin, scale, model->rotatedmins, cullmins);
+			VectorMA(ent->fields.server->origin, scale, model->rotatedmaxs, cullmaxs);
+		}
+		else if (ent->fields.server->angles[1])
+		{
+			VectorMA(ent->fields.server->origin, scale, model->yawmins, cullmins);
+			VectorMA(ent->fields.server->origin, scale, model->yawmaxs, cullmaxs);
+		}
+		else
+		{
+			VectorMA(ent->fields.server->origin, scale, model->normalmins, cullmins);
+			VectorMA(ent->fields.server->origin, scale, model->normalmaxs, cullmaxs);
+		}
+	}
+	else
+	{
+		// if there is no model (or it could not be loaded), use the physics box
+		VectorAdd(ent->fields.server->origin, ent->fields.server->mins, cullmins);
+		VectorAdd(ent->fields.server->origin, ent->fields.server->maxs, cullmaxs);
+	}
+	if (specialvisibilityradius)
+	{
+		cullmins[0] = min(cullmins[0], ent->fields.server->origin[0] - specialvisibilityradius);
+		cullmins[1] = min(cullmins[1], ent->fields.server->origin[1] - specialvisibilityradius);
+		cullmins[2] = min(cullmins[2], ent->fields.server->origin[2] - specialvisibilityradius);
+		cullmaxs[0] = max(cullmaxs[0], ent->fields.server->origin[0] + specialvisibilityradius);
+		cullmaxs[1] = max(cullmaxs[1], ent->fields.server->origin[1] + specialvisibilityradius);
+		cullmaxs[2] = max(cullmaxs[2], ent->fields.server->origin[2] + specialvisibilityradius);
+	}
+
+	// calculate center of bbox for network prioritization purposes
+	VectorMAM(0.5f, cullmins, 0.5f, cullmaxs, netcenter);
+
+	// if culling box has moved, update pvs cluster links
+	if (!VectorCompare(cullmins, ent->priv.server->cullmins) || !VectorCompare(cullmaxs, ent->priv.server->cullmaxs))
+	{
+		VectorCopy(cullmins, ent->priv.server->cullmins);
+		VectorCopy(cullmaxs, ent->priv.server->cullmaxs);
+		// a value of -1 for pvs_numclusters indicates that the links are not
+		// cached, and should be re-tested each time, this is the case if the
+		// culling box touches too many pvs clusters to store, or if the world
+		// model does not support FindBoxClusters
+		ent->priv.server->pvs_numclusters = -1;
+		if (sv.worldmodel && sv.worldmodel->brush.FindBoxClusters)
+		{
+			i = sv.worldmodel->brush.FindBoxClusters(sv.worldmodel, cullmins, cullmaxs, MAX_ENTITYCLUSTERS, ent->priv.server->pvs_clusterlist);
+			if (i <= MAX_ENTITYCLUSTERS)
+				ent->priv.server->pvs_numclusters = i;
+		}
+	}
+
+	if (enumber != sv.writeentitiestoclient_cliententitynumber && !(effects & EF_NODEPTHTEST) && !(flags & RENDER_VIEWMODEL) && !tagentity)
+	{
+		qboolean isbmodel = (model = sv.models[modelindex]) != NULL && model->name[0] == '*';
+		if (!isbmodel || !sv_cullentities_nevercullbmodels.integer)
+		{
+			// cull based on visibility
+
+			// if not touching a visible leaf
+			if (sv_cullentities_pvs.integer && sv.writeentitiestoclient_pvsbytes)
+			{
+				if (ent->priv.server->pvs_numclusters < 0)
+				{
+					// entity too big for clusters list
+					if (sv.worldmodel && sv.worldmodel->brush.BoxTouchingPVS && !sv.worldmodel->brush.BoxTouchingPVS(sv.worldmodel, sv.writeentitiestoclient_pvs, cullmins, cullmaxs))
+					{
+						sv.writeentitiestoclient_stats_culled_pvs++;
+						return false;
+					}
+				}
+				else
+				{
+					int i;
+					// check cached clusters list
+					for (i = 0;i < ent->priv.server->pvs_numclusters;i++)
+						if (CHECKPVSBIT(sv.writeentitiestoclient_pvs, ent->priv.server->pvs_clusterlist[i]))
+							break;
+					if (i == ent->priv.server->pvs_numclusters)
+					{
+						sv.writeentitiestoclient_stats_culled_pvs++;
+						return false;
+					}
+				}
+			}
+
+			// or not seen by random tracelines
+			if (sv_cullentities_trace.integer && !isbmodel)
+			{
+				int samples = specialvisibilityradius ? sv_cullentities_trace_samples_extra.integer : sv_cullentities_trace_samples.integer;
+				float enlarge = sv_cullentities_trace_enlarge.value;
+
+				qboolean visible = true;
+
+				do
+				{
+					if(Mod_CanSeeBox_Trace(samples, enlarge, sv.worldmodel, sv.writeentitiestoclient_testeye, cullmins, cullmaxs))
+						break; // directly visible from the server's view
+
+					if(sv_cullentities_trace_prediction.integer)
+					{
+						vec3_t predeye;
+
+						// get player velocity
+						float predtime = bound(0, host_client->ping, 0.2); // / 2
+							// sorry, no wallhacking by high ping please, and at 200ms
+							// ping a FPS is annoying to play anyway and a player is
+							// likely to have changed his direction
+						VectorMA(sv.writeentitiestoclient_testeye, predtime, host_client->edict->fields.server->velocity, predeye);
+						if(sv.worldmodel->brush.TraceLineOfSight(sv.worldmodel, sv.writeentitiestoclient_testeye, predeye)) // must be able to go there...
+						{
+							if(Mod_CanSeeBox_Trace(samples, enlarge, sv.worldmodel, predeye, cullmins, cullmaxs))
+								break; // directly visible from the predicted view
+						}
+						else
+						{
+							//Con_DPrintf("Trying to walk into solid in a pingtime... not predicting for culling\n");
+						}
+					}
+
+					// when we get here, we can't see the entity
+					visible = false;
+				}
+				while(0);
+
+				if(visible)
+					svs.clients[sv.writeentitiestoclient_clientnumber].visibletime[enumber] = realtime + sv_cullentities_trace_delay.value;
+				else if (realtime > svs.clients[sv.writeentitiestoclient_clientnumber].visibletime[enumber])
+				{
+					sv.writeentitiestoclient_stats_culled_trace++;
+					return false;
+				}
+			}
+		}
+	}
+
+	// if the caller was just checking...  return true
+	if (!cs)
+		return true;
 
 	*cs = defaultstate;
 	cs->active = true;
-	cs->number = e;
+	cs->number = enumber;
+	VectorCopy(netcenter, cs->netcenter);
 	VectorCopy(ent->fields.server->origin, cs->origin);
 	VectorCopy(ent->fields.server->angles, cs->angles);
 	cs->flags = flags;
@@ -685,11 +1032,6 @@ qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, int 
 	cs->modelindex = modelindex;
 	cs->skin = (unsigned)ent->fields.server->skin;
 	cs->frame = (unsigned)ent->fields.server->frame;
-	cs->viewmodelforclient = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.viewmodelforclient)->edict;
-	cs->exteriormodelforclient = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.exteriormodeltoclient)->edict;
-	cs->nodrawtoclient = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.nodrawtoclient)->edict;
-	cs->drawonlytoclient = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.drawonlytoclient)->edict;
-	cs->customizeentityforclient = customizeentityforclient;
 	cs->tagentity = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.tag_entity)->edict;
 	cs->tagindex = (unsigned char)PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.tag_index)->_float;
 	cs->glowsize = glowsize;
@@ -743,12 +1085,12 @@ qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, int 
 
 	if (ent->fields.server->movetype == MOVETYPE_STEP)
 		cs->flags |= RENDER_STEP;
-	if (cs->number != sv_writeentitiestoclient_clentnum && (cs->effects & EF_LOWPRECISION) && cs->origin[0] >= -32768 && cs->origin[1] >= -32768 && cs->origin[2] >= -32768 && cs->origin[0] <= 32767 && cs->origin[1] <= 32767 && cs->origin[2] <= 32767)
+	if (cs->number != sv.writeentitiestoclient_cliententitynumber && (cs->effects & EF_LOWPRECISION) && cs->origin[0] >= -32768 && cs->origin[1] >= -32768 && cs->origin[2] >= -32768 && cs->origin[0] <= 32767 && cs->origin[1] <= 32767 && cs->origin[2] <= 32767)
 		cs->flags |= RENDER_LOWPRECISION;
 	if (ent->fields.server->colormap >= 1024)
 		cs->flags |= RENDER_COLORMAPPED;
-	if (cs->viewmodelforclient)
-		cs->flags |= RENDER_VIEWMODEL; // show relative to the view
+	if (PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.glow_trail)->edict && PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.glow_trail)->edict == sv.writeentitiestoclient_cliententitynumber)
+		cs->flags |= RENDER_EXTERIORMODEL;
 
 	cs->light[0] = light[0];
 	cs->light[1] = light[1];
@@ -757,294 +1099,62 @@ qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, int 
 	cs->lightstyle = lightstyle;
 	cs->lightpflags = lightpflags;
 
-	cs->specialvisibilityradius = specialvisibilityradius;
-
-	// calculate the visible box of this entity (don't use the physics box
-	// as that is often smaller than a model, and would not count
-	// specialvisibilityradius)
-	if ((model = sv.models[modelindex]))
-	{
-		float scale = cs->scale * (1.0f / 16.0f);
-		if (cs->angles[0] || cs->angles[2]) // pitch and roll
-		{
-			VectorMA(cs->origin, scale, model->rotatedmins, cullmins);
-			VectorMA(cs->origin, scale, model->rotatedmaxs, cullmaxs);
-		}
-		else if (cs->angles[1])
-		{
-			VectorMA(cs->origin, scale, model->yawmins, cullmins);
-			VectorMA(cs->origin, scale, model->yawmaxs, cullmaxs);
-		}
-		else
-		{
-			VectorMA(cs->origin, scale, model->normalmins, cullmins);
-			VectorMA(cs->origin, scale, model->normalmaxs, cullmaxs);
-		}
-	}
-	else
-	{
-		// if there is no model (or it could not be loaded), use the physics box
-		VectorAdd(cs->origin, ent->fields.server->mins, cullmins);
-		VectorAdd(cs->origin, ent->fields.server->maxs, cullmaxs);
-	}
-	if (specialvisibilityradius)
-	{
-		cullmins[0] = min(cullmins[0], cs->origin[0] - specialvisibilityradius);
-		cullmins[1] = min(cullmins[1], cs->origin[1] - specialvisibilityradius);
-		cullmins[2] = min(cullmins[2], cs->origin[2] - specialvisibilityradius);
-		cullmaxs[0] = max(cullmaxs[0], cs->origin[0] + specialvisibilityradius);
-		cullmaxs[1] = max(cullmaxs[1], cs->origin[1] + specialvisibilityradius);
-		cullmaxs[2] = max(cullmaxs[2], cs->origin[2] + specialvisibilityradius);
-	}
-	// calculate center of bbox for network prioritization purposes
-	VectorMAM(0.5f, cullmins, 0.5f, cullmaxs, cs->netcenter);
-	// if culling box has moved, update pvs cluster links
-	if (!VectorCompare(cullmins, ent->priv.server->cullmins) || !VectorCompare(cullmaxs, ent->priv.server->cullmaxs))
-	{
-		VectorCopy(cullmins, ent->priv.server->cullmins);
-		VectorCopy(cullmaxs, ent->priv.server->cullmaxs);
-		// a value of -1 for pvs_numclusters indicates that the links are not
-		// cached, and should be re-tested each time, this is the case if the
-		// culling box touches too many pvs clusters to store, or if the world
-		// model does not support FindBoxClusters
-		ent->priv.server->pvs_numclusters = -1;
-		if (sv.worldmodel && sv.worldmodel->brush.FindBoxClusters)
-		{
-			i = sv.worldmodel->brush.FindBoxClusters(sv.worldmodel, cullmins, cullmaxs, MAX_ENTITYCLUSTERS, ent->priv.server->pvs_clusterlist);
-			if (i <= MAX_ENTITYCLUSTERS)
-				ent->priv.server->pvs_numclusters = i;
-		}
-	}
-
 	return true;
 }
 
-void SV_PrepareEntitiesForSending(void)
+static void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *msg)
 {
-	int e;
+	int i;
+	int numsendstates;
 	prvm_edict_t *ent;
-	// send all entities that touch the pvs
-	numsendentities = 0;
-	sendentitiesindex[0] = NULL;
-	memset(sendentitiesindex, 0, prog->num_edicts * sizeof(entity_state_t *));
-	for (e = 1, ent = PRVM_NEXT_EDICT(prog->edicts);e < prog->num_edicts;e++, ent = PRVM_NEXT_EDICT(ent))
-	{
-		if (!ent->priv.server->free && SV_PrepareEntityForSending(ent, sendentities + numsendentities, e))
-		{
-			sendentitiesindex[e] = sendentities + numsendentities;
-			numsendentities++;
-		}
-	}
-}
-
-void SV_MarkWriteEntityStateToClient(entity_state_t *s)
-{
-	int isbmodel;
-	model_t *model;
-	prvm_edict_t *ed;
-	if (sententitiesconsideration[s->number] == sententitiesmark)
-		return;
-	sententitiesconsideration[s->number] = sententitiesmark;
-	sv_writeentitiestoclient_totalentities++;
-
-	if (s->customizeentityforclient)
-	{
-		prog->globals.server->self = s->number;
-		prog->globals.server->other = sv_writeentitiestoclient_clentnum;
-		PRVM_ExecuteProgram(s->customizeentityforclient, "customizeentityforclient: NULL function");
-		if(!PRVM_G_FLOAT(OFS_RETURN) || !SV_PrepareEntityForSending(PRVM_EDICT_NUM(s->number), s, s->number))
-			return;
-	}
-
-	// never reject player
-	if (s->number != sv_writeentitiestoclient_clentnum)
-	{
-		// check various rejection conditions
-		if (s->nodrawtoclient == sv_writeentitiestoclient_clentnum)
-			return;
-		if (s->drawonlytoclient && s->drawonlytoclient != sv_writeentitiestoclient_clentnum)
-			return;
-		if (s->effects & EF_NODRAW)
-			return;
-		// LordHavoc: only send entities with a model or important effects
-		if (!s->modelindex && s->specialvisibilityradius == 0)
-			return;
-
-		isbmodel = (model = sv.models[s->modelindex]) != NULL && model->name[0] == '*';
-		// viewmodels don't have visibility checking
-		if (s->viewmodelforclient)
-		{
-			if (s->viewmodelforclient != sv_writeentitiestoclient_clentnum)
-				return;
-		}
-		else if (s->tagentity)
-		{
-			// tag attached entities simply check their parent
-			if (!sendentitiesindex[s->tagentity])
-				return;
-			SV_MarkWriteEntityStateToClient(sendentitiesindex[s->tagentity]);
-			if (sententities[s->tagentity] != sententitiesmark)
-				return;
-		}
-		// always send world submodels in newer protocols because they don't
-		// generate much traffic (in old protocols they hog bandwidth)
-		// but only if sv_cullentities_alwayssendbmodels is on
-		else if (!(s->effects & EF_NODEPTHTEST) && (!isbmodel || !sv_cullentities_nevercullbmodels.integer || sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE))
-		{
-			// entity has survived every check so far, check if visible
-			ed = PRVM_EDICT_NUM(s->number);
-
-			// if not touching a visible leaf
-			if (sv_cullentities_pvs.integer && sv_writeentitiestoclient_pvsbytes)
-			{
-				if (ed->priv.server->pvs_numclusters < 0)
-				{
-					// entity too big for clusters list
-					if (sv.worldmodel && sv.worldmodel->brush.BoxTouchingPVS && !sv.worldmodel->brush.BoxTouchingPVS(sv.worldmodel, sv_writeentitiestoclient_pvs, ed->priv.server->cullmins, ed->priv.server->cullmaxs))
-					{
-						sv_writeentitiestoclient_culled_pvs++;
-						return;
-					}
-				}
-				else
-				{
-					int i;
-					// check cached clusters list
-					for (i = 0;i < ed->priv.server->pvs_numclusters;i++)
-						if (CHECKPVSBIT(sv_writeentitiestoclient_pvs, ed->priv.server->pvs_clusterlist[i]))
-							break;
-					if (i == ed->priv.server->pvs_numclusters)
-					{
-						sv_writeentitiestoclient_culled_pvs++;
-						return;
-					}
-				}
-			}
-
-			// or not seen by random tracelines
-			if (sv_cullentities_trace.integer && !isbmodel)
-			{
-				int samples = s->specialvisibilityradius ? sv_cullentities_trace_samples_extra.integer : sv_cullentities_trace_samples.integer;
-				float enlarge = sv_cullentities_trace_enlarge.value;
-
-				qboolean visible = TRUE;
-
-				do
-				{
-					if(Mod_CanSeeBox_Trace(samples, enlarge, sv.worldmodel, sv_writeentitiestoclient_testeye, ed->priv.server->cullmins, ed->priv.server->cullmaxs))
-						break; // directly visible from the server's view
-
-					if(sv_cullentities_trace_prediction.integer)
-					{
-						vec3_t predeye;
-
-						// get player velocity
-						float predtime = bound(0, host_client->ping, 0.2); // / 2
-							// sorry, no wallhacking by high ping please, and at 200ms
-							// ping a FPS is annoying to play anyway and a player is
-							// likely to have changed his direction
-						VectorMA(sv_writeentitiestoclient_testeye, predtime, host_client->edict->fields.server->velocity, predeye);
-						if(sv.worldmodel->brush.TraceLineOfSight(sv.worldmodel, sv_writeentitiestoclient_testeye, predeye)) // must be able to go there...
-						{
-							if(Mod_CanSeeBox_Trace(samples, enlarge, sv.worldmodel, predeye, ed->priv.server->cullmins, ed->priv.server->cullmaxs))
-								break; // directly visible from the predicted view
-						}
-						else
-						{
-							//Con_DPrintf("Trying to walk into solid in a pingtime... not predicting for culling\n");
-						}
-					}
-
-					// when we get here, we can't see the entity
-					visible = FALSE;
-				}
-				while(0);
-
-				if(visible)
-					sv_writeentitiestoclient_client->visibletime[s->number] = realtime + sv_cullentities_trace_delay.value;
-
-				if (realtime > sv_writeentitiestoclient_client->visibletime[s->number])
-				{
-					sv_writeentitiestoclient_culled_trace++;
-					return;
-				}
-			}
-		}
-	}
-
-	// this just marks it for sending
-	// FIXME: it would be more efficient to send here, but the entity
-	// compressor isn't that flexible
-	sv_writeentitiestoclient_visibleentities++;
-	sententities[s->number] = sententitiesmark;
-}
-
-entity_state_t sendstates[MAX_EDICTS];
-extern int csqc_clientnum;
-
-void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *msg)
-{
-	int i, numsendstates;
-	entity_state_t *s;
 
 	// if there isn't enough space to accomplish anything, skip it
 	if (msg->cursize + 25 > msg->maxsize)
 		return;
 
-	sv_writeentitiestoclient_client = client;
+	sv.writeentitiestoclient_msg = msg;
+	sv.writeentitiestoclient_clientnumber = client - svs.clients;
 
-	sv_writeentitiestoclient_culled_pvs = 0;
-	sv_writeentitiestoclient_culled_trace = 0;
-	sv_writeentitiestoclient_visibleentities = 0;
-	sv_writeentitiestoclient_totalentities = 0;
+	sv.writeentitiestoclient_stats_culled_pvs = 0;
+	sv.writeentitiestoclient_stats_culled_trace = 0;
+	sv.writeentitiestoclient_stats_visibleentities = 0;
+	sv.writeentitiestoclient_stats_totalentities = 0;
 
 // find the client's PVS
 	// the real place being tested from
-	VectorAdd(clent->fields.server->origin, clent->fields.server->view_ofs, sv_writeentitiestoclient_testeye);
-	sv_writeentitiestoclient_pvsbytes = 0;
+	VectorAdd(clent->fields.server->origin, clent->fields.server->view_ofs, sv.writeentitiestoclient_testeye);
+	sv.writeentitiestoclient_pvsbytes = 0;
 	if (sv.worldmodel && sv.worldmodel->brush.FatPVS)
-		sv_writeentitiestoclient_pvsbytes = sv.worldmodel->brush.FatPVS(sv.worldmodel, sv_writeentitiestoclient_testeye, 8, sv_writeentitiestoclient_pvs, sizeof(sv_writeentitiestoclient_pvs));
+		sv.writeentitiestoclient_pvsbytes = sv.worldmodel->brush.FatPVS(sv.worldmodel, sv.writeentitiestoclient_testeye, 8, sv.writeentitiestoclient_pvs, sizeof(sv.writeentitiestoclient_pvs));
 
-	sv_writeentitiestoclient_clentnum = PRVM_EDICT_TO_PROG(clent); // LordHavoc: for comparison purposes
-	csqc_clientnum = sv_writeentitiestoclient_clentnum - 1;
+	sv.writeentitiestoclient_cliententitynumber = PRVM_EDICT_TO_PROG(clent); // LordHavoc: for comparison purposes
 
-	sententitiesmark++;
-
-	for (i = 0;i < numsendentities;i++)
-		SV_MarkWriteEntityStateToClient(sendentities + i);
-
+	// send all entities that touch the pvs
 	numsendstates = 0;
-	for (i = 0;i < numsendentities;i++)
-	{
-		if (sententities[sendentities[i].number] == sententitiesmark)
-		{
-			s = &sendstates[numsendstates++];
-			*s = sendentities[i];
-			if (s->exteriormodelforclient && s->exteriormodelforclient == sv_writeentitiestoclient_clentnum)
-				s->flags |= RENDER_EXTERIORMODEL;
-		}
-	}
+	for (i = 1, ent = PRVM_NEXT_EDICT(prog->edicts);i < prog->num_edicts;i++, ent = PRVM_NEXT_EDICT(ent))
+		if (!ent->priv.server->free && SV_BuildEntityState(sv.writeentitiestoclient_sendstates + numsendstates, ent, i))
+			numsendstates++;
 
 	if (sv_cullentities_stats.integer)
-		Con_Printf("client \"%s\" entities: %d total, %d visible, %d culled by: %d pvs %d trace\n", client->name, sv_writeentitiestoclient_totalentities, sv_writeentitiestoclient_visibleentities, sv_writeentitiestoclient_culled_pvs + sv_writeentitiestoclient_culled_trace, sv_writeentitiestoclient_culled_pvs, sv_writeentitiestoclient_culled_trace);
+		Con_Printf("client \"%s\" entities: %d total, %d visible, %d culled by: %d pvs %d trace\n", client->name, sv.writeentitiestoclient_stats_totalentities, sv.writeentitiestoclient_stats_visibleentities, sv.writeentitiestoclient_stats_culled_pvs + sv.writeentitiestoclient_stats_culled_trace, sv.writeentitiestoclient_stats_culled_pvs, sv.writeentitiestoclient_stats_culled_trace);
 
-	EntityFrameCSQC_WriteFrame(msg, numsendstates, sendstates);
+	EntityFrameCSQC_WriteFrame(msg, numsendstates, sv.writeentitiestoclient_sendstates);
 
 	if (client->entitydatabase5)
-		EntityFrame5_WriteFrame(msg, client->entitydatabase5, numsendstates, sendstates, client - svs.clients + 1, client->movesequence);
+		EntityFrame5_WriteFrame(msg, client->entitydatabase5, numsendstates, sv.writeentitiestoclient_sendstates, client - svs.clients + 1, client->movesequence);
 	else if (client->entitydatabase4)
 	{
-		EntityFrame4_WriteFrame(msg, client->entitydatabase4, numsendstates, sendstates);
+		EntityFrame4_WriteFrame(msg, client->entitydatabase4, numsendstates, sv.writeentitiestoclient_sendstates);
 		Protocol_WriteStatsReliable();
 	}
 	else if (client->entitydatabase)
 	{
-		EntityFrame_WriteFrame(msg, client->entitydatabase, numsendstates, sendstates, client - svs.clients + 1);
+		EntityFrame_WriteFrame(msg, client->entitydatabase, numsendstates, sv.writeentitiestoclient_sendstates, client - svs.clients + 1);
 		Protocol_WriteStatsReliable();
 	}
 	else
 	{
-		EntityFrameQuake_WriteFrame(msg, numsendstates, sendstates);
+		EntityFrameQuake_WriteFrame(msg, numsendstates, sv.writeentitiestoclient_sendstates);
 		Protocol_WriteStatsReliable();
 	}
 }
@@ -1055,7 +1165,7 @@ SV_CleanupEnts
 
 =============
 */
-void SV_CleanupEnts (void)
+static void SV_CleanupEnts (void)
 {
 	int		e;
 	prvm_edict_t	*ent;
@@ -1082,7 +1192,6 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 	int		viewzoom;
 	const char *s;
 	float	*statsf = (float *)stats;
-extern cvar_t slowmo;
 
 //
 // send a damage message
@@ -1339,7 +1448,7 @@ void SV_FlushBroadcastMessages(void)
 	SZ_Clear(&sv.datagram);
 }
 
-void SV_WriteUnreliableMessages(client_t *client, sizebuf_t *msg)
+static void SV_WriteUnreliableMessages(client_t *client, sizebuf_t *msg)
 {
 	// scan the splitpoints to find out how many we can fit in
 	int numsegments, j, split;
@@ -1382,12 +1491,12 @@ void SV_WriteUnreliableMessages(client_t *client, sizebuf_t *msg)
 SV_SendClientDatagram
 =======================
 */
-static unsigned char sv_sendclientdatagram_buf[NET_MAXMESSAGE]; // FIXME?
-void SV_SendClientDatagram (client_t *client)
+static void SV_SendClientDatagram (client_t *client)
 {
 	int clientrate, maxrate, maxsize, maxsize2, downloadsize;
 	sizebuf_t msg;
 	int stats[MAX_CL_STATS];
+	unsigned char sv_sendclientdatagram_buf[NET_MAXMESSAGE];
 
 	// PROTOCOL_DARKPLACES5 and later support packet size limiting of updates
 	maxrate = max(NET_MINRATE, sv_maxrate.integer);
@@ -1508,7 +1617,7 @@ void SV_SendClientDatagram (client_t *client)
 SV_UpdateToReliableMessages
 =======================
 */
-void SV_UpdateToReliableMessages (void)
+static void SV_UpdateToReliableMessages (void)
 {
 	int i, j;
 	client_t *client;
@@ -1601,7 +1710,7 @@ SV_SendClientMessages
 */
 void SV_SendClientMessages (void)
 {
-	int i, prepared = false;
+	int i;
 
 	if (sv.protocol == PROTOCOL_QUAKEWORLD)
 		Sys_Error("SV_SendClientMessages: no quakeworld support\n");
@@ -1625,12 +1734,6 @@ void SV_SendClientMessages (void)
 			continue;
 		}
 
-		if (!prepared)
-		{
-			prepared = true;
-			// only prepare entities once per frame
-			SV_PrepareEntitiesForSending();
-		}
 		SV_SendClientDatagram (host_client);
 	}
 
@@ -1638,13 +1741,13 @@ void SV_SendClientMessages (void)
 	SV_CleanupEnts();
 }
 
-void SV_StartDownload_f(void)
+static void SV_StartDownload_f(void)
 {
 	if (host_client->download_file)
 		host_client->download_started = true;
 }
 
-void SV_Download_f(void)
+static void SV_Download_f(void)
 {
 	const char *whichpack, *whichpack2, *extension;
 
@@ -1883,47 +1986,6 @@ int SV_SoundIndex(const char *s, int precachemode)
 	return 0;
 }
 
-// MUST match effectnameindex_t in client.h
-static const char *standardeffectnames[EFFECT_TOTAL] =
-{
-	"",
-	"TE_GUNSHOT",
-	"TE_GUNSHOTQUAD",
-	"TE_SPIKE",
-	"TE_SPIKEQUAD",
-	"TE_SUPERSPIKE",
-	"TE_SUPERSPIKEQUAD",
-	"TE_WIZSPIKE",
-	"TE_KNIGHTSPIKE",
-	"TE_EXPLOSION",
-	"TE_EXPLOSIONQUAD",
-	"TE_TAREXPLOSION",
-	"TE_TELEPORT",
-	"TE_LAVASPLASH",
-	"TE_SMALLFLASH",
-	"TE_FLAMEJET",
-	"EF_FLAME",
-	"TE_BLOOD",
-	"TE_SPARK",
-	"TE_PLASMABURN",
-	"TE_TEI_G3",
-	"TE_TEI_SMOKE",
-	"TE_TEI_BIGEXPLOSION",
-	"TE_TEI_PLASMAHIT",
-	"EF_STARDUST",
-	"TR_ROCKET",
-	"TR_GRENADE",
-	"TR_BLOOD",
-	"TR_WIZSPIKE",
-	"TR_SLIGHTBLOOD",
-	"TR_KNIGHTSPIKE",
-	"TR_VORESPIKE",
-	"TR_NEHAHRASMOKE",
-	"TR_NEXUIZPLASMA",
-	"TR_GLOWTRAIL",
-	"SVC_PARTICLE"
-};
-
 /*
 ================
 SV_ParticleEffectIndex
@@ -2009,7 +2071,7 @@ SV_CreateBaseline
 
 ================
 */
-void SV_CreateBaseline (void)
+static void SV_CreateBaseline (void)
 {
 	int i, entnum, large;
 	prvm_edict_t *svent;
@@ -2102,49 +2164,6 @@ void SV_SaveSpawnparms (void)
 			host_client->spawn_parms[j] = (&prog->globals.server->parm1)[j];
 	}
 }
-/*
-void SV_IncreaseEdicts(void)
-{
-	int i;
-	prvm_edict_t *ent;
-	int oldmax_edicts = prog->max_edicts;
-	void *oldedictsengineprivate = prog->edictprivate;
-	void *oldedictsfields = prog->edictsfields;
-	void *oldmoved_edicts = sv.moved_edicts;
-
-	if (prog->max_edicts >= MAX_EDICTS)
-		return;
-
-	// links don't survive the transition, so unlink everything
-	for (i = 0, ent = prog->edicts;i < prog->max_edicts;i++, ent++)
-	{
-		if (!ent->priv.server->free)
-			SV_UnlinkEdict(prog->edicts + i);
-		memset(&ent->priv.server->areagrid, 0, sizeof(ent->priv.server->areagrid));
-	}
-	World_Clear(&sv.world);
-
-	prog->max_edicts   = min(prog->max_edicts + 256, MAX_EDICTS);
-	prog->edictprivate = PR_Alloc(prog->max_edicts * sizeof(edict_engineprivate_t));
-	prog->edictsfields = PR_Alloc(prog->max_edicts * prog->edict_size);
-	sv.moved_edicts = PR_Alloc(prog->max_edicts * sizeof(prvm_edict_t *));
-
-	memcpy(prog->edictprivate, oldedictsengineprivate, oldmax_edicts * sizeof(edict_engineprivate_t));
-	memcpy(prog->edictsfields, oldedictsfields, oldmax_edicts * prog->edict_size);
-
-	for (i = 0, ent = prog->edicts;i < prog->max_edicts;i++, ent++)
-	{
-		ent->priv.vp = (unsigned char*) prog->edictprivate + i * prog->edictprivate_size;
-		ent->fields.server = (void *)((unsigned char *)prog->edictsfields + i * prog->edict_size);
-		// link every entity except world
-		if (!ent->priv.server->free)
-			SV_LinkEdict(ent, false);
-	}
-
-	PR_Free(oldedictsengineprivate);
-	PR_Free(oldedictsfields);
-	PR_Free(oldmoved_edicts);
-}*/
 
 /*
 ================
@@ -2153,7 +2172,6 @@ SV_SpawnServer
 This is called at the start of each level
 ================
 */
-extern float		scr_centertime_off;
 
 void SV_SpawnServer (const char *server)
 {
@@ -2251,30 +2269,6 @@ void SV_SpawnServer (const char *server)
 
 // load progs to get entity field count
 	//PR_LoadProgs ( sv_progs.string );
-
-	// allocate server memory
-	/*// start out with just enough room for clients and a reasonable estimate of entities
-	prog->max_edicts = max(svs.maxclients + 1, 512);
-	prog->max_edicts = min(prog->max_edicts, MAX_EDICTS);
-
-	// prvm_edict_t structures (hidden from progs)
-	prog->edicts = PR_Alloc(MAX_EDICTS * sizeof(prvm_edict_t));
-	// engine private structures (hidden from progs)
-	prog->edictprivate = PR_Alloc(prog->max_edicts * sizeof(edict_engineprivate_t));
-	// progs fields, often accessed by server
-	prog->edictsfields = PR_Alloc(prog->max_edicts * prog->edict_size);*/
-	// used by PushMove to move back pushed entities
-	sv.moved_edicts = (prvm_edict_t **)PRVM_Alloc(prog->max_edicts * sizeof(prvm_edict_t *));
-	/*for (i = 0;i < prog->max_edicts;i++)
-	{
-		ent = prog->edicts + i;
-		ent->priv.vp = (unsigned char*) prog->edictprivate + i * prog->edictprivate_size;
-		ent->fields.server = (void *)((unsigned char *)prog->edictsfields + i * prog->edict_size);
-	}*/
-
-	// reset client csqc entity versions right away.
-	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
-		EntityFrameCSQC_InitClientVersions(i, true);
 
 	sv.datagram.maxsize = sizeof(sv.datagram_buf);
 	sv.datagram.cursize = 0;
@@ -2426,13 +2420,10 @@ void SV_SpawnServer (const char *server)
 /////////////////////////////////////////////////////
 // SV VM stuff
 
-void SV_VM_CB_BeginIncreaseEdicts(void)
+static void SV_VM_CB_BeginIncreaseEdicts(void)
 {
 	int i;
 	prvm_edict_t *ent;
-
-	PRVM_Free( sv.moved_edicts );
-	sv.moved_edicts = (prvm_edict_t **)PRVM_Alloc(prog->max_edicts * sizeof(prvm_edict_t *));
 
 	// links don't survive the transition, so unlink everything
 	for (i = 0, ent = prog->edicts;i < prog->max_edicts;i++, ent++)
@@ -2444,7 +2435,7 @@ void SV_VM_CB_BeginIncreaseEdicts(void)
 	World_Clear(&sv.world);
 }
 
-void SV_VM_CB_EndIncreaseEdicts(void)
+static void SV_VM_CB_EndIncreaseEdicts(void)
 {
 	int i;
 	prvm_edict_t *ent;
@@ -2455,7 +2446,7 @@ void SV_VM_CB_EndIncreaseEdicts(void)
 			SV_LinkEdict(ent, false);
 }
 
-void SV_VM_CB_InitEdict(prvm_edict_t *e)
+static void SV_VM_CB_InitEdict(prvm_edict_t *e)
 {
 	// LordHavoc: for consistency set these here
 	int num = PRVM_NUM_FOR_EDICT(e) - 1;
@@ -2495,7 +2486,7 @@ void SV_VM_CB_InitEdict(prvm_edict_t *e)
 	}
 }
 
-void SV_VM_CB_FreeEdict(prvm_edict_t *ed)
+static void SV_VM_CB_FreeEdict(prvm_edict_t *ed)
 {
 	World_UnlinkEdict(ed);		// unlink from world bsp
 
@@ -2511,7 +2502,7 @@ void SV_VM_CB_FreeEdict(prvm_edict_t *ed)
 	ed->fields.server->solid = 0;
 }
 
-void SV_VM_CB_CountEdicts(void)
+static void SV_VM_CB_CountEdicts(void)
 {
 	int		i;
 	prvm_edict_t	*ent;
@@ -2539,7 +2530,7 @@ void SV_VM_CB_CountEdicts(void)
 	Con_Printf("step      :%3i\n", step);
 }
 
-qboolean SV_VM_CB_LoadEdict(prvm_edict_t *ent)
+static qboolean SV_VM_CB_LoadEdict(prvm_edict_t *ent)
 {
 	// remove things from different skill levels or deathmatch
 	if (gamemode != GAME_TRANSFUSION) //Transfusion does this in QC
@@ -2561,154 +2552,7 @@ qboolean SV_VM_CB_LoadEdict(prvm_edict_t *ent)
 	return true;
 }
 
-cvar_t pr_checkextension = {CVAR_READONLY, "pr_checkextension", "1", "indicates to QuakeC that the standard quakec extensions system is available (if 0, quakec should not attempt to use extensions)"};
-cvar_t nomonsters = {0, "nomonsters", "0", "unused cvar in quake, can be used by mods"};
-cvar_t gamecfg = {0, "gamecfg", "0", "unused cvar in quake, can be used by mods"};
-cvar_t scratch1 = {0, "scratch1", "0", "unused cvar in quake, can be used by mods"};
-cvar_t scratch2 = {0,"scratch2", "0", "unused cvar in quake, can be used by mods"};
-cvar_t scratch3 = {0, "scratch3", "0", "unused cvar in quake, can be used by mods"};
-cvar_t scratch4 = {0, "scratch4", "0", "unused cvar in quake, can be used by mods"};
-cvar_t savedgamecfg = {CVAR_SAVE, "savedgamecfg", "0", "unused cvar in quake that is saved to config.cfg on exit, can be used by mods"};
-cvar_t saved1 = {CVAR_SAVE, "saved1", "0", "unused cvar in quake that is saved to config.cfg on exit, can be used by mods"};
-cvar_t saved2 = {CVAR_SAVE, "saved2", "0", "unused cvar in quake that is saved to config.cfg on exit, can be used by mods"};
-cvar_t saved3 = {CVAR_SAVE, "saved3", "0", "unused cvar in quake that is saved to config.cfg on exit, can be used by mods"};
-cvar_t saved4 = {CVAR_SAVE, "saved4", "0", "unused cvar in quake that is saved to config.cfg on exit, can be used by mods"};
-cvar_t nehx00 = {0, "nehx00", "0", "nehahra data storage cvar (used in singleplayer)"};
-cvar_t nehx01 = {0, "nehx01", "0", "nehahra data storage cvar (used in singleplayer)"};
-cvar_t nehx02 = {0, "nehx02", "0", "nehahra data storage cvar (used in singleplayer)"};
-cvar_t nehx03 = {0, "nehx03", "0", "nehahra data storage cvar (used in singleplayer)"};
-cvar_t nehx04 = {0, "nehx04", "0", "nehahra data storage cvar (used in singleplayer)"};
-cvar_t nehx05 = {0, "nehx05", "0", "nehahra data storage cvar (used in singleplayer)"};
-cvar_t nehx06 = {0, "nehx06", "0", "nehahra data storage cvar (used in singleplayer)"};
-cvar_t nehx07 = {0, "nehx07", "0", "nehahra data storage cvar (used in singleplayer)"};
-cvar_t nehx08 = {0, "nehx08", "0", "nehahra data storage cvar (used in singleplayer)"};
-cvar_t nehx09 = {0, "nehx09", "0", "nehahra data storage cvar (used in singleplayer)"};
-cvar_t nehx10 = {0, "nehx10", "0", "nehahra data storage cvar (used in singleplayer)"};
-cvar_t nehx11 = {0, "nehx11", "0", "nehahra data storage cvar (used in singleplayer)"};
-cvar_t nehx12 = {0, "nehx12", "0", "nehahra data storage cvar (used in singleplayer)"};
-cvar_t nehx13 = {0, "nehx13", "0", "nehahra data storage cvar (used in singleplayer)"};
-cvar_t nehx14 = {0, "nehx14", "0", "nehahra data storage cvar (used in singleplayer)"};
-cvar_t nehx15 = {0, "nehx15", "0", "nehahra data storage cvar (used in singleplayer)"};
-cvar_t nehx16 = {0, "nehx16", "0", "nehahra data storage cvar (used in singleplayer)"};
-cvar_t nehx17 = {0, "nehx17", "0", "nehahra data storage cvar (used in singleplayer)"};
-cvar_t nehx18 = {0, "nehx18", "0", "nehahra data storage cvar (used in singleplayer)"};
-cvar_t nehx19 = {0, "nehx19", "0", "nehahra data storage cvar (used in singleplayer)"};
-cvar_t cutscene = {0, "cutscene", "1", "enables cutscenes in nehahra, can be used by other mods"};
-
-void SV_VM_Init(void)
-{
-	Cvar_RegisterVariable (&pr_checkextension);
-	Cvar_RegisterVariable (&nomonsters);
-	Cvar_RegisterVariable (&gamecfg);
-	Cvar_RegisterVariable (&scratch1);
-	Cvar_RegisterVariable (&scratch2);
-	Cvar_RegisterVariable (&scratch3);
-	Cvar_RegisterVariable (&scratch4);
-	Cvar_RegisterVariable (&savedgamecfg);
-	Cvar_RegisterVariable (&saved1);
-	Cvar_RegisterVariable (&saved2);
-	Cvar_RegisterVariable (&saved3);
-	Cvar_RegisterVariable (&saved4);
-	// LordHavoc: Nehahra uses these to pass data around cutscene demos
-	if (gamemode == GAME_NEHAHRA)
-	{
-		Cvar_RegisterVariable (&nehx00);
-		Cvar_RegisterVariable (&nehx01);
-		Cvar_RegisterVariable (&nehx02);
-		Cvar_RegisterVariable (&nehx03);
-		Cvar_RegisterVariable (&nehx04);
-		Cvar_RegisterVariable (&nehx05);
-		Cvar_RegisterVariable (&nehx06);
-		Cvar_RegisterVariable (&nehx07);
-		Cvar_RegisterVariable (&nehx08);
-		Cvar_RegisterVariable (&nehx09);
-		Cvar_RegisterVariable (&nehx10);
-		Cvar_RegisterVariable (&nehx11);
-		Cvar_RegisterVariable (&nehx12);
-		Cvar_RegisterVariable (&nehx13);
-		Cvar_RegisterVariable (&nehx14);
-		Cvar_RegisterVariable (&nehx15);
-		Cvar_RegisterVariable (&nehx16);
-		Cvar_RegisterVariable (&nehx17);
-		Cvar_RegisterVariable (&nehx18);
-		Cvar_RegisterVariable (&nehx19);
-	}
-	Cvar_RegisterVariable (&cutscene); // for Nehahra but useful to other mods as well
-}
-
-#define REQFIELDS (sizeof(reqfields) / sizeof(prvm_required_field_t))
-
-prvm_required_field_t reqfields[] =
-{
-	{ev_entity, "cursor_trace_ent"},
-	{ev_entity, "drawonlytoclient"},
-	{ev_entity, "exteriormodeltoclient"},
-	{ev_entity, "nodrawtoclient"},
-	{ev_entity, "tag_entity"},
-	{ev_entity, "viewmodelforclient"},
-	{ev_float, "Version"},
-	{ev_float, "alpha"},
-	{ev_float, "ammo_cells1"},
-	{ev_float, "ammo_lava_nails"},
-	{ev_float, "ammo_multi_rockets"},
-	{ev_float, "ammo_nails1"},
-	{ev_float, "ammo_plasma"},
-	{ev_float, "ammo_rockets1"},
-	{ev_float, "ammo_shells1"},
-	{ev_float, "button3"},
-	{ev_float, "button4"},
-	{ev_float, "button5"},
-	{ev_float, "button6"},
-	{ev_float, "button7"},
-	{ev_float, "button8"},
-	{ev_float, "button9"},
-	{ev_float, "button10"},
-	{ev_float, "button11"},
-	{ev_float, "button12"},
-	{ev_float, "button13"},
-	{ev_float, "button14"},
-	{ev_float, "button15"},
-	{ev_float, "button16"},
-	{ev_float, "buttonchat"},
-	{ev_float, "buttonuse"},
-	{ev_float, "clientcolors"},
-	{ev_float, "cursor_active"},
-	{ev_float, "disableclientprediction"},
-	{ev_float, "fullbright"},
-	{ev_float, "glow_color"},
-	{ev_float, "glow_size"},
-	{ev_float, "glow_trail"},
-	{ev_float, "gravity"},
-	{ev_float, "idealpitch"},
-	{ev_float, "items2"},
-	{ev_float, "light_lev"},
-	{ev_float, "modelflags"},
-	{ev_float, "pflags"},
-	{ev_float, "ping"},
-	{ev_float, "pitch_speed"},
-	{ev_float, "pmodel"},
-	{ev_float, "renderamt"}, // HalfLife support
-	{ev_float, "rendermode"}, // HalfLife support
-	{ev_float, "scale"},
-	{ev_float, "style"},
-	{ev_float, "tag_index"},
-	{ev_float, "viewzoom"},
-	{ev_function, "SendEntity"},
-	{ev_function, "contentstransition"}, // DRESK - Support for Entity Contents Transition Event
-	{ev_function, "customizeentityforclient"},
-	{ev_string, "netaddress"},
-	{ev_string, "playermodel"},
-	{ev_string, "playerskin"},
-	{ev_vector, "color"},
-	{ev_vector, "colormod"},
-	{ev_vector, "cursor_screen"},
-	{ev_vector, "cursor_trace_endpos"},
-	{ev_vector, "cursor_trace_start"},
-	{ev_vector, "movement"},
-	{ev_vector, "punchvector"},
-};
-
-void SV_VM_Setup(void)
+static void SV_VM_Setup(void)
 {
 	extern cvar_t csqc_progname;	//[515]: csqc crc check and right csprogs name according to progs.dat
 	extern cvar_t csqc_progcrc;
@@ -2774,7 +2618,6 @@ void SV_VM_Setup(void)
 	prog->flag |= PRVM_OP_STATE;
 
 	VM_CustomStats_Clear();//[515]: csqc
-	EntityFrameCSQC_ClearVersions();//[515]: csqc
 
 	PRVM_End;
 
