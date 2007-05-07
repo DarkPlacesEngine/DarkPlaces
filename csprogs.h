@@ -48,12 +48,8 @@
 								// Note that to use this properly, you'll NEED to use the predraw function to set the globals.
 //#define RF_DOUBLESIDED		32
 
-extern qboolean csqc_loaded;
-extern vec3_t csqc_origin, csqc_angles;
 extern cvar_t csqc_progname;	//[515]: csqc crc check and right csprogs name according to progs.dat
 extern cvar_t csqc_progcrc;
 extern cvar_t csqc_progsize;
-extern qboolean csqc_usecsqclistener;
-extern matrix4x4_t csqc_listenermatrix;
 
 #endif

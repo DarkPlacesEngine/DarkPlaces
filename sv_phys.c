@@ -303,7 +303,7 @@ void SV_LinkEdict_TouchAreaGrid(prvm_edict_t *ent)
 	prvm_edict_t *touch, *touchedicts[MAX_EDICTS];
 
 	// build a list of edicts to touch, because the link loop can be corrupted
-	// by SV_IncreaseEdicts called during touch functions
+	// by IncreaseEdicts called during touch functions
 	numtouchedicts = World_EntitiesInBox(&sv.world, ent->priv.server->areamins, ent->priv.server->areamaxs, MAX_EDICTS, touchedicts);
 	if (numtouchedicts > MAX_EDICTS)
 	{
@@ -1029,6 +1029,7 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 	model_t *pushermodel;
 	trace_t trace;
 	matrix4x4_t pusherfinalmatrix, pusherfinalimatrix;
+	unsigned short moved_edicts[MAX_EDICTS];
 
 	if (!pusher->fields.server->velocity[0] && !pusher->fields.server->velocity[1] && !pusher->fields.server->velocity[2] && !pusher->fields.server->avelocity[0] && !pusher->fields.server->avelocity[1] && !pusher->fields.server->avelocity[2])
 	{
@@ -1182,7 +1183,7 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 
 		VectorCopy (check->fields.server->origin, check->priv.server->moved_from);
 		VectorCopy (check->fields.server->angles, check->priv.server->moved_fromangles);
-		sv.moved_edicts[num_moved++] = check;
+		moved_edicts[num_moved++] = PRVM_NUM_FOR_EDICT(check);
 
 		// try moving the contacted entity
 		pusher->fields.server->solid = SOLID_NOT;
@@ -1244,7 +1245,7 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 					// move back any entities we already moved
 					for (i = 0;i < num_moved;i++)
 					{
-						prvm_edict_t *ed = sv.moved_edicts[i];
+						prvm_edict_t *ed = PRVM_EDICT_NUM(moved_edicts[i]);
 						VectorCopy (ed->priv.server->moved_from, ed->fields.server->origin);
 						VectorCopy (ed->priv.server->moved_fromangles, ed->fields.server->angles);
 						SV_LinkEdict (ed, false);

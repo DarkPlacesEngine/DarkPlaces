@@ -13,15 +13,9 @@ entity_state_t defaultstate =
 	{0,0,0},//float angles[3];
 	0,//int number; // entity number this state is for
 	0,//int effects;
-	0,//unsigned int customizeentityforclient; // !
 	0,//unsigned short modelindex;
 	0,//unsigned short frame;
 	0,//unsigned short tagentity;
-	0,//unsigned short specialvisibilityradius; // ! larger if it has effects/light
-	0,//unsigned short viewmodelforclient; // !
-	0,//unsigned short exteriormodelforclient; // ! not shown if first person viewing from this entity, shown in all other cases
-	0,//unsigned short nodrawtoclient; // !
-	0,//unsigned short drawonlytoclient; // !
 	{0,0,0,0},//unsigned short light[4]; // color*256 (0.00 to 255.996), and radius*1
 	0,//unsigned char active; // true if a valid state
 	0,//unsigned char lightstyle;
@@ -33,9 +27,9 @@ entity_state_t defaultstate =
 	0,//unsigned char glowsize;
 	254,//unsigned char glowcolor;
 	0,//unsigned char flags;
+	0,//unsigned char internaleffects; // INTEF_FLAG1QW and so on
 	0,//unsigned char tagindex;
 	{32, 32, 32},//unsigned char colormod[3];
-	0,//unsigned char internaleffects; // INTEF_FLAG1QW and so on
 	// padding to a multiple of 8 bytes (to align the double time)
 	0//unsigned char unused; // !
 };
@@ -63,11 +57,6 @@ protocolversioninfo[] =
 	{28, "QUAKEWORLD"},
 	{0, NULL}
 };
-
-static mempool_t *sv2csqc = NULL;
-int csqc_clientnum = 0;
-sizebuf_t *sv2csqcbuf = NULL;
-static unsigned char *sv2csqcents_version[MAX_SCOREBOARD];
 
 static entity_frame_t deltaframe; // FIXME?
 static entity_frame_t framedata; // FIXME?
@@ -251,29 +240,6 @@ void EntityFrameQuake_ISeeDeadEntities(void)
 	}
 }
 
-void EntityFrameCSQC_ClearVersions (void)
-{
-	if(sv2csqc)
-	{
-		Mem_FreePool(&sv2csqc);
-		sv2csqc = NULL;
-	}
-	memset(sv2csqcents_version, 0, MAX_SCOREBOARD*sizeof(unsigned char *));
-}
-
-void EntityFrameCSQC_InitClientVersions (int client, qboolean clear)
-{
-	if(!sv2csqc)
-		sv2csqc = Mem_AllocPool("SV2CSQC", 0, NULL);
-	if(sv2csqcents_version[client])
-	{
-		Mem_Free(sv2csqcents_version[client]);
-		sv2csqcents_version[client] = NULL;
-	}
-	sv2csqcents_version[client] = (unsigned char *)Mem_Alloc(sv2csqc, MAX_EDICTS);
-	memset(sv2csqcents_version[client], 0, MAX_EDICTS);
-}
-
 // FIXME FIXME FIXME: at this time the CSQC entity writing does not store
 // packet logs and thus if an update is lost it is never repeated, this makes
 // csqc entities useless at the moment.
@@ -290,17 +256,16 @@ void EntityFrameCSQC_WriteState (sizebuf_t *msg, int number, qboolean doupdate, 
 		val2 = PRVM_EDICTFIELDVALUE((&prog->edicts[number]), prog->fieldoffsets.Version);
 		version = (int)val2->_float;
 		// LordHavoc: do some validity checks on self.Version
-		// if Version reaches 8388608, it has already exhausted half of the
-		// reliable integer space in a 32bit float, and should be reset to 1
-		// FIXME: we should set all client versions of this entity to -1
-		// so that it will not be skipped accidentally in some cases after
-		// the reset
+		// if self.Version reaches 255, it will soon exceed the byte used to
+		// store an entity version in the client struct, so we need to reset
+		// all the version to 1 and force all the existing clients' version of
+		// it to 255 (which we're not allowing to actually occur)
 		if (version < 0)
 			val2->_float = 0;
-		if (version >= 8388608)
+		if (version >= 255)
 		{
 			int i;
-			val2->_float = 1;
+			val2->_float = version = 1;
 			// since we just reset the Version field to 1, it may accidentally
 			// end up being equal to an existing client version now or in the
 			// future, so to fix this situation we have to loop over all
@@ -308,13 +273,13 @@ void EntityFrameCSQC_WriteState (sizebuf_t *msg, int number, qboolean doupdate, 
 			// which never matches, thus causing them to receive the update
 			// soon, as they should
 			for (i = 0;i < svs.maxclients;i++)
-				if (sv2csqcents_version[i] && sv2csqcents_version[i][number])
-					sv2csqcents_version[i][number] = -1;
+				if (svs.clients[sv.writeentitiestoclient_clientnumber].csqcentityversion[number])
+					svs.clients[sv.writeentitiestoclient_clientnumber].csqcentityversion[number] = 255;
 		}
 	}
 	// if the version already matches, we don't need to do anything as the
 	// latest version has already been sent.
-	if (sv2csqcents_version[csqc_clientnum][number] == version)
+	if (svs.clients[sv.writeentitiestoclient_clientnumber].csqcentityversion[number] == version)
 		return;
 	if (version)
 	{
@@ -328,7 +293,7 @@ void EntityFrameCSQC_WriteState (sizebuf_t *msg, int number, qboolean doupdate, 
 			if(!*sectionstarted)
 				MSG_WriteByte(msg, svc_csqcentities);
 			MSG_WriteShort(msg, number);
-			((int *)prog->globals.generic)[OFS_PARM0] = csqc_clientnum+1;
+			((int *)prog->globals.generic)[OFS_PARM0] = sv.writeentitiestoclient_cliententitynumber;
 			prog->globals.server->self = number;
 			PRVM_ExecuteProgram(val->function, "Null SendEntity\n");
 			if(prog->globals.generic[OFS_RETURN])
@@ -343,7 +308,7 @@ void EntityFrameCSQC_WriteState (sizebuf_t *msg, int number, qboolean doupdate, 
 					return;
 				}
 				// an update has been successfully written, update the version
-				sv2csqcents_version[csqc_clientnum][number] = version;
+				svs.clients[sv.writeentitiestoclient_clientnumber].csqcentityversion[number] = version;
 				// and take note that we have begun the svc_csqcentities
 				// section of the packet
 				*sectionstarted = 1;
@@ -361,7 +326,7 @@ void EntityFrameCSQC_WriteState (sizebuf_t *msg, int number, qboolean doupdate, 
 	}
 	// write a remove message if needed
 	// if already removed, do nothing
-	if (!sv2csqcents_version[csqc_clientnum][number])
+	if (!svs.clients[sv.writeentitiestoclient_clientnumber].csqcentityversion[number])
 		return;
 	// if there isn't enough room to write the remove message, just return, as
 	// it will be handled in a later packet
@@ -375,7 +340,7 @@ void EntityFrameCSQC_WriteState (sizebuf_t *msg, int number, qboolean doupdate, 
 	}
 	// write the remove message
 	MSG_WriteShort(msg, (unsigned short)number | 0x8000);
-	sv2csqcents_version[csqc_clientnum][number] = 0;
+	svs.clients[sv.writeentitiestoclient_clientnumber].csqcentityversion[number] = 0;
 }
 
 //[515]: we use only one array per-client for SendEntity feature
@@ -392,16 +357,13 @@ void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int numstates, const entity_sta
 	// the terminator (0x0000) and at least one entity update
 	if (msg->cursize + 32 >= msg->maxsize)
 		return;
-	if(!sv2csqcents_version[csqc_clientnum])
-		EntityFrameCSQC_InitClientVersions(csqc_clientnum, false);
 
-	sv2csqcbuf = msg;
 	num = 1;
 	for (i = 0, n = states;i < numstates;i++, n++)
 	{
 		// all entities between the previous entity state and this one are dead
 		for (;num < n->number;num++)
-			if(sv2csqcents_version[csqc_clientnum][num])
+			if(svs.clients[sv.writeentitiestoclient_clientnumber].csqcentityversion[num])
 				EntityFrameCSQC_WriteState(msg, num, false, &sectionstarted);
 		// update this entity
 		EntityFrameCSQC_WriteState(msg, num, true, &sectionstarted);
@@ -410,14 +372,13 @@ void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int numstates, const entity_sta
 	}
 	// all remaining entities are dead
 	for (;num < prog->num_edicts;num++)
-		if(sv2csqcents_version[csqc_clientnum][num])
+		if(svs.clients[sv.writeentitiestoclient_clientnumber].csqcentityversion[num])
 			EntityFrameCSQC_WriteState(msg, num, false, &sectionstarted);
 	if (sectionstarted)
 	{
 		// write index 0 to end the update (0 is never used by real entities)
 		MSG_WriteShort(msg, 0);
 	}
-	sv2csqcbuf = NULL;
 }
 
 void Protocol_UpdateClientStats(const int *stats)

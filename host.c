@@ -815,10 +815,10 @@ void Host_Main(void)
 				time2 = Sys_DoubleTime();
 
 			// update audio
-			if(csqc_usecsqclistener)
+			if(cl.csqc_usecsqclistener)
 			{
-				S_Update(&csqc_listenermatrix);
-				csqc_usecsqclistener = false;
+				S_Update(&cl.csqc_listenermatrix);
+				cl.csqc_usecsqclistener = false;
 			}
 			else
 				S_Update(&r_view.matrix);

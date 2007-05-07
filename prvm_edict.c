@@ -953,8 +953,7 @@ qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s)
 			Con_Printf("PRVM_ED_ParseEpair: ev_entity reference too large (edict %u >= MAX_EDICTS %u) on %s\n", (unsigned int)i, (unsigned int)MAX_EDICTS, PRVM_NAME);
 		while (i >= prog->max_edicts)
 			PRVM_MEM_IncreaseEdicts();
-			//SV_IncreaseEdicts();
-		// if SV_IncreaseEdicts was called the base pointer needs to be updated
+		// if IncreaseEdicts was called the base pointer needs to be updated
 		if (ent)
 			val = (prvm_eval_t *)((int *)ent->fields.vp + key->ofs);
 		val->edict = PRVM_EDICT_TO_PROG(PRVM_EDICT_NUM((int)i));

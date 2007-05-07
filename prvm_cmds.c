@@ -724,10 +724,6 @@ void VM_remove (void)
 	}
 	else
 		PRVM_ED_Free (ed);
-//	if (ed == prog->edicts)
-//		PRVM_ERROR ("remove: tried to remove world");
-//	if (PRVM_NUM_FOR_EDICT(ed) <= sv.maxclients)
-//		Host_Error("remove: tried to remove a client");
 }
 
 /*

@@ -91,9 +91,6 @@ typedef struct server_s
 	// updated by SV_SoundIndex
 	char sound_precache[MAX_SOUNDS][MAX_QPATH];
 	char lightstyles[MAX_LIGHTSTYLES][64];
-	// PushMove sometimes has to move entities back from a failed move
-	// (dynamically resized)
-	prvm_edict_t **moved_edicts;
 	// some actions are only valid during load
 	server_state_t state;
 
@@ -116,6 +113,18 @@ typedef struct server_s
 #define SV_MAX_PARTICLEEFFECTNAME 256
 	qboolean particleeffectnamesloaded;
 	char particleeffectname[SV_MAX_PARTICLEEFFECTNAME][MAX_QPATH];
+
+	int writeentitiestoclient_stats_culled_pvs;
+	int writeentitiestoclient_stats_culled_trace;
+	int writeentitiestoclient_stats_visibleentities;
+	int writeentitiestoclient_stats_totalentities;
+	int writeentitiestoclient_cliententitynumber;
+	int writeentitiestoclient_clientnumber;
+	sizebuf_t *writeentitiestoclient_msg;
+	vec3_t writeentitiestoclient_testeye;
+	int writeentitiestoclient_pvsbytes;
+	unsigned char writeentitiestoclient_pvs[MAX_MAP_LEAFS/8];
+	entity_state_t writeentitiestoclient_sendstates[MAX_EDICTS];
 } server_t;
 
 // if defined this does ping smoothing, otherwise it does not
@@ -181,6 +190,9 @@ typedef struct client_s
 
 	// visibility state
 	float visibletime[MAX_EDICTS];
+
+	// version number of csqc-based entity to decide whether to send it
+	unsigned char csqcentityversion[MAX_EDICTS];
 
 	// prevent animated names
 	float nametime;
