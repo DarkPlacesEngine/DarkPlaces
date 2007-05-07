@@ -442,6 +442,22 @@ the Write function performs these steps:
 server updates entities in looping ranges, a frame consists of a range of visible entities (not always all visible entities),
 */
 
+#define MAX_ENTITY_HISTORY 64
+#define MAX_ENTITY_DATABASE (MAX_EDICTS * 2)
+
+// build entity data in this, to pass to entity read/write functions
+typedef struct entity_frame_s
+{
+	double time;
+	int framenum;
+	int numentities;
+	int firstentitynum;
+	int lastentitynum;
+	vec3_t eye;
+	entity_state_t entitydata[MAX_ENTITY_DATABASE];
+}
+entity_frame_t;
+
 typedef struct entity_frameinfo_s
 {
 	double time;
@@ -450,9 +466,6 @@ typedef struct entity_frameinfo_s
 	int endentity; // index into entitydata, firstentity + numentities
 }
 entity_frameinfo_t;
-
-#define MAX_ENTITY_HISTORY 64
-#define MAX_ENTITY_DATABASE (MAX_EDICTS * 2)
 
 typedef struct entityframe_database_s
 {
@@ -475,21 +488,12 @@ typedef struct entityframe_database_s
 	entity_frameinfo_t frames[MAX_ENTITY_HISTORY];
 	// entities
 	entity_state_t entitydata[MAX_ENTITY_DATABASE];
+
+	// structs for building new frames and reading them
+	entity_frame_t deltaframe;
+	entity_frame_t framedata;
 }
 entityframe_database_t;
-
-// build entity data in this, to pass to entity read/write functions
-typedef struct entity_frame_s
-{
-	double time;
-	int framenum;
-	int numentities;
-	int firstentitynum;
-	int lastentitynum;
-	vec3_t eye;
-	entity_state_t entitydata[MAX_ENTITY_DATABASE];
-}
-entity_frame_t;
 
 // LordHavoc: these are in approximately sorted order, according to cost and
 // likelyhood of being used for numerous objects in a frame
@@ -705,6 +709,7 @@ void EntityFrame4_CL_ReadFrame(void);
 
 #define ENTITYFRAME5_MAXPACKETLOGS 64
 #define ENTITYFRAME5_MAXSTATES 1024
+#define ENTITYFRAME5_PRIORITYLEVELS 32
 
 typedef struct entityframe5_changestate_s
 {
@@ -762,6 +767,10 @@ typedef struct entityframe5_database_s
 	// rather than a memmove to remove them from the start.
 	//int numchangestates;
 	//entityframe5_changestate_t changestates[MAX_EDICTS];
+
+	// buffers for building priority info
+	int prioritychaincounts[ENTITYFRAME5_PRIORITYLEVELS];
+	unsigned short prioritychains[ENTITYFRAME5_PRIORITYLEVELS][ENTITYFRAME5_MAXSTATES];
 }
 entityframe5_database_t;
 
