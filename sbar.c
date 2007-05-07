@@ -1186,7 +1186,7 @@ void Sbar_Draw (void)
 				{
 					// The Impossible Combination[tm]
 					// Can only happen in Key Hunt mode...
-					Sbar_DrawPic (10 - sbar_x, -169, sb_items[14]);
+					Sbar_DrawPic (10 - sbar_x, -179, sb_items[14]);
 				}
 				else
 				{
