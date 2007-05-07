@@ -178,8 +178,6 @@ void PR_Profile_f (void);
 void PR_PrintState(void);
 void PR_Crash (void);
 
-void SV_IncreaseEdicts(void);
-
 prvm_edict_t *ED_Alloc (void);
 void ED_Free (prvm_edict_t *ed);
 void ED_ClearEdict (prvm_edict_t *e);
@@ -194,8 +192,7 @@ void ED_ParseGlobals (const char *data);
 void ED_LoadFromFile (const char *data);
 
 prvm_edict_t *EDICT_NUM_ERROR(int n, char *filename, int fileline);
-#define PRVM_EDICT_NUM(n) (((n) >= 0 && (n) < prog->max_edicts) ? prog->edicts + (n) : EDICT_NUM_ERROR(n, __FILE__, __LINE__))
-#define EDICT_NUM_UNSIGNED(n) (((n) < prog->max_edicts) ? prog->edicts + (n) : EDICT_NUM_ERROR(n, __FILE__, __LINE__))
+#define PRVM_EDICT_NUM(n) (((unsigned int)(n) < (unsigned int)prog->max_edicts) ? prog->edicts + (n) : EDICT_NUM_ERROR(n, __FILE__, __LINE__))
 
 //int NUM_FOR_EDICT_ERROR(prvm_edict_t *e);
 #define PRVM_NUM_FOR_EDICT(e) ((int)((prvm_edict_t *)(e) - prog->edicts))
