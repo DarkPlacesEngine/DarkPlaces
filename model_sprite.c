@@ -170,24 +170,30 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 			if (modelradius < x + y)
 				modelradius = x + y;
 
-			if (width > 0 && height > 0 && cls.state != ca_dedicated)
+			if (cls.state != ca_dedicated)
 			{
 				skinframe = NULL;
-				if (groupframes > 1)
-					sprintf (name, "%s_%i_%i", loadmodel->name, i, j);
-				else
-					sprintf (name, "%s_%i", loadmodel->name, i);
-				if (!(skinframe = R_SkinFrame_LoadExternal(name, texflags, false)))
+				// note: Nehahra's null.spr has width == 0 and height == 0
+				if (width > 0 && height > 0)
 				{
 					if (groupframes > 1)
-						sprintf (fogname, "%s_%i_%ifog", loadmodel->name, i, j);
+						sprintf (name, "%s_%i_%i", loadmodel->name, i, j);
 					else
-						sprintf (fogname, "%s_%ifog", loadmodel->name, i);
-					if (version == SPRITE32_VERSION)
-						skinframe = R_SkinFrame_LoadInternal(name, texflags, false, false, datapointer, width, height, 32, NULL, NULL);
-					else //if (version == SPRITE_VERSION || version == SPRITEHL_VERSION)
-						skinframe = R_SkinFrame_LoadInternal(name, texflags, false, false, datapointer, width, height, 8, palette, alphapalette);
+						sprintf (name, "%s_%i", loadmodel->name, i);
+					if (!(skinframe = R_SkinFrame_LoadExternal(name, texflags, false)))
+					{
+						if (groupframes > 1)
+							sprintf (fogname, "%s_%i_%ifog", loadmodel->name, i, j);
+						else
+							sprintf (fogname, "%s_%ifog", loadmodel->name, i);
+						if (version == SPRITE32_VERSION)
+							skinframe = R_SkinFrame_LoadInternal(name, texflags, false, false, datapointer, width, height, 32, NULL, NULL);
+						else //if (version == SPRITE_VERSION || version == SPRITEHL_VERSION)
+							skinframe = R_SkinFrame_LoadInternal(name, texflags, false, false, datapointer, width, height, 8, palette, alphapalette);
+					}
 				}
+				if (skinframe == NULL)
+					skinframe = R_SkinFrame_LoadMissing();
 				Mod_SpriteSetupTexture(&loadmodel->data_textures[realframes], skinframe, fullbright, additive);
 			}
 
