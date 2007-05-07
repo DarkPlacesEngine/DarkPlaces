@@ -1419,16 +1419,24 @@ void CL_ParseServerInfo (void)
 		strlcpy (cl.levelname, str, sizeof(cl.levelname));
 
 		// get the movevars
-		cl.qw_movevars_gravity            = MSG_ReadFloat();
-		cl.qw_movevars_stopspeed          = MSG_ReadFloat();
-		cl.qw_movevars_maxspeed           = MSG_ReadFloat();
-		cl.qw_movevars_spectatormaxspeed  = MSG_ReadFloat();
-		cl.qw_movevars_accelerate         = MSG_ReadFloat();
-		cl.qw_movevars_airaccelerate      = MSG_ReadFloat();
-		cl.qw_movevars_wateraccelerate    = MSG_ReadFloat();
-		cl.qw_movevars_friction           = MSG_ReadFloat();
-		cl.qw_movevars_waterfriction      = MSG_ReadFloat();
-		cl.qw_movevars_entgravity         = MSG_ReadFloat();
+		cl.movevars_gravity            = MSG_ReadFloat();
+		cl.movevars_stopspeed          = MSG_ReadFloat();
+		cl.movevars_maxspeed           = MSG_ReadFloat();
+		cl.movevars_spectatormaxspeed  = MSG_ReadFloat();
+		cl.movevars_accelerate         = MSG_ReadFloat();
+		cl.movevars_airaccelerate      = MSG_ReadFloat();
+		cl.movevars_wateraccelerate    = MSG_ReadFloat();
+		cl.movevars_friction           = MSG_ReadFloat();
+		cl.movevars_waterfriction      = MSG_ReadFloat();
+		cl.movevars_entgravity         = MSG_ReadFloat();
+		// other movevars not in the protocol...
+		cl.movevars_slowmo = 1;
+		cl.movevars_jumpvelocity = 270;
+		cl.movevars_edgefriction = 2;
+		cl.movevars_maxairspeed = 30;
+		cl.movevars_stepheight = 18;
+		cl.movevars_airaccel_qw = 1.0;
+		cl.movevars_airaccel_sideways_friction = 0.0;
 
 		// seperate the printfs so the server message can have a color
 		Con_Printf("\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n\n\2%s\n", str);
@@ -2857,9 +2865,9 @@ static void CL_NetworkTimeReceived(double newtime)
 			else if (fabs(cl.time - cl.mtime[1]) > 0.1)
 				cl.time += 0.5 * (cl.mtime[1] - cl.time); // fast
 			else if (cl.time > cl.mtime[1])
-				cl.time -= 0.002 * slowmo.value; // fall into the past by 2ms
+				cl.time -= 0.002 * cl.movevars_slowmo; // fall into the past by 2ms
 			else
-				cl.time += 0.001 * slowmo.value; // creep forward 1ms
+				cl.time += 0.001 * cl.movevars_slowmo; // creep forward 1ms
 		}
 	}
 	// this packet probably contains a player entity update, so we will need
@@ -2892,6 +2900,7 @@ CL_ParseServerMessage
 =====================
 */
 int parsingerror = false;
+extern void CL_UpdateMoveVars(void);
 void CL_ParseServerMessage(void)
 {
 	int			cmd;
@@ -3241,11 +3250,11 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case qw_svc_maxspeed:
-				cl.qw_movevars_maxspeed = MSG_ReadFloat();
+				cl.movevars_maxspeed = MSG_ReadFloat();
 				break;
 
 			case qw_svc_entgravity:
-				cl.qw_movevars_entgravity = MSG_ReadFloat();
+				cl.movevars_entgravity = MSG_ReadFloat();
 				break;
 
 			case qw_svc_setpause:
@@ -3694,6 +3703,8 @@ void CL_ParseServerMessage(void)
 		CL_UpdateItemsAndWeapon();
 
 	EntityFrameQuake_ISeeDeadEntities();
+
+	CL_UpdateMoveVars();
 
 	parsingerror = false;
 

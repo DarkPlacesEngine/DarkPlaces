@@ -110,6 +110,9 @@ void CL_ClearState(void)
 	// reset the view zoom interpolation
 	cl.mviewzoom[0] = cl.mviewzoom[1] = 1;
 
+	// set up the float version of the stats array for easier access to float stats
+	cl.statsf = (float *)cl.stats;
+
 	cl.num_entities = 0;
 	cl.num_static_entities = 0;
 	cl.num_temp_entities = 0;

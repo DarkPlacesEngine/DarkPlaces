@@ -691,6 +691,7 @@ typedef struct client_state_s
 // information for local display
 	// health, etc
 	int stats[MAX_CL_STATS];
+	float *statsf; // points to stats[] array
 	// last known inventory bit flags, for blinking
 	int olditems;
 	// cl.time of acquiring item, for blinking
@@ -942,16 +943,24 @@ typedef struct client_state_s
 	//qboolean qw_spectator;
 
 	// movement parameters for client prediction
-	float qw_movevars_gravity;
-	float qw_movevars_stopspeed;
-	float qw_movevars_maxspeed; // can change during play
-	float qw_movevars_spectatormaxspeed;
-	float qw_movevars_accelerate;
-	float qw_movevars_airaccelerate;
-	float qw_movevars_wateraccelerate;
-	float qw_movevars_friction;
-	float qw_movevars_waterfriction;
-	float qw_movevars_entgravity; // can change during play
+	float movevars_ticrate;
+	float movevars_slowmo;
+	float movevars_gravity;
+	float movevars_stopspeed;
+	float movevars_maxspeed;
+	float movevars_spectatormaxspeed;
+	float movevars_accelerate;
+	float movevars_airaccelerate;
+	float movevars_wateraccelerate;
+	float movevars_friction;
+	float movevars_waterfriction;
+	float movevars_entgravity;
+	float movevars_jumpvelocity;
+	float movevars_edgefriction;
+	float movevars_maxairspeed;
+	float movevars_stepheight;
+	float movevars_airaccel_qw;
+	float movevars_airaccel_sideways_friction;
 
 	// models used by qw protocol
 	int qw_modelindex_spike;

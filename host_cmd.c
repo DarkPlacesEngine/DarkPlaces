@@ -697,7 +697,6 @@ void Host_Loadgame_f (void)
 				Host_Error("Host_PerformLoadGame: too many edicts in save file (reached MAX_EDICTS %i)", MAX_EDICTS);
 			}
 			while (entnum >= prog->max_edicts)
-				//SV_IncreaseEdicts();
 				PRVM_MEM_IncreaseEdicts();
 			ent = PRVM_EDICT_NUM(entnum);
 			memset (ent->fields.server, 0, prog->progs->entityfields * 4);

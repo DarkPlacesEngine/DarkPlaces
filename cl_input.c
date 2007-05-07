@@ -640,24 +640,6 @@ typedef struct cl_clientmovement_state_s
 	// (this is in seconds and counts down to 0)
 	float waterjumptime;
 
-	// movement parameters for physics code
-	float movevars_gravity;
-	float movevars_stopspeed;
-	float movevars_maxspeed;
-	float movevars_spectatormaxspeed;
-	float movevars_accelerate;
-	float movevars_airaccelerate;
-	float movevars_wateraccelerate;
-	float movevars_friction;
-	float movevars_waterfriction;
-	float movevars_entgravity;
-	float movevars_jumpvelocity;
-	float movevars_edgefriction;
-	float movevars_maxairspeed;
-	float movevars_stepheight;
-	float movevars_airaccel_qw;
-	float movevars_airaccel_sideways_friction;
-
 	// user command
 	client_movementqueue_t q;
 }
@@ -791,8 +773,8 @@ void CL_ClientMovement_Move(cl_clientmovement_state_t *s)
 		{
 			// may be a step or wall, try stepping up
 			// first move forward at a higher level
-			VectorSet(currentorigin2, s->origin[0], s->origin[1], s->origin[2] + s->movevars_stepheight);
-			VectorSet(neworigin2, neworigin[0], neworigin[1], s->origin[2] + s->movevars_stepheight);
+			VectorSet(currentorigin2, s->origin[0], s->origin[1], s->origin[2] + cl.movevars_stepheight);
+			VectorSet(neworigin2, neworigin[0], neworigin[1], s->origin[2] + cl.movevars_stepheight);
 			trace2 = CL_Move(currentorigin2, s->mins, s->maxs, neworigin2, MOVE_NORMAL, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true, true, NULL, false);
 			if (!trace2.startsolid)
 			{
@@ -886,7 +868,7 @@ void CL_ClientMovement_Physics_Swim(cl_clientmovement_state_t *s)
 		VectorScale(wishvel, 1 / wishspeed, wishdir);
 	else
 		VectorSet( wishdir, 0.0, 0.0, 0.0 );
-	wishspeed = min(wishspeed, s->movevars_maxspeed) * 0.7;
+	wishspeed = min(wishspeed, cl.movevars_maxspeed) * 0.7;
 
 	if (s->crouched)
 		wishspeed *= 0.5;
@@ -894,7 +876,7 @@ void CL_ClientMovement_Physics_Swim(cl_clientmovement_state_t *s)
 	if (s->waterjumptime <= 0)
 	{
 		// water friction
-		f = 1 - s->q.frametime * s->movevars_waterfriction * s->waterlevel;
+		f = 1 - s->q.frametime * cl.movevars_waterfriction * s->waterlevel;
 		f = bound(0, f, 1);
 		VectorScale(s->velocity, f, s->velocity);
 
@@ -902,7 +884,7 @@ void CL_ClientMovement_Physics_Swim(cl_clientmovement_state_t *s)
 		f = wishspeed - DotProduct(s->velocity, wishdir);
 		if (f > 0)
 		{
-			f = min(s->movevars_wateraccelerate * s->q.frametime * wishspeed, f);
+			f = min(cl.movevars_wateraccelerate * s->q.frametime * wishspeed, f);
 			VectorMA(s->velocity, f, wishdir, s->velocity);
 		}
 
@@ -947,7 +929,7 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 	{
 		if (s->onground && s->q.canjump)
 		{
-			s->velocity[2] += s->movevars_jumpvelocity;
+			s->velocity[2] += cl.movevars_jumpvelocity;
 			s->onground = false;
 			s->q.canjump = false;
 		}
@@ -966,7 +948,7 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 		VectorScale(wishvel, 1 / wishspeed, wishdir);
 	else
 		VectorSet( wishdir, 0.0, 0.0, 0.0 );
-	wishspeed = min(wishspeed, s->movevars_maxspeed);
+	wishspeed = min(wishspeed, cl.movevars_maxspeed);
 	if (s->crouched)
 		wishspeed *= 0.5;
 
@@ -975,8 +957,8 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 	{
 		// apply edge friction
 		f = sqrt(s->velocity[0] * s->velocity[0] + s->velocity[1] * s->velocity[1]);
-		friction = s->movevars_friction;
-		if (f > 0 && s->movevars_edgefriction != 1)
+		friction = cl.movevars_friction;
+		if (f > 0 && cl.movevars_edgefriction != 1)
 		{
 			vec3_t neworigin2;
 			vec3_t neworigin3;
@@ -990,16 +972,16 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 			else
 				trace = CL_Move(neworigin2, vec3_origin, vec3_origin, neworigin3, MOVE_NORMAL, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true, true, NULL, false);
 			if (trace.fraction == 1 && !trace.startsolid)
-				friction *= s->movevars_edgefriction;
+				friction *= cl.movevars_edgefriction;
 		}
 		// apply ground friction
-		f = 1 - s->q.frametime * friction * ((f < s->movevars_stopspeed) ? (s->movevars_stopspeed / f) : 1);
+		f = 1 - s->q.frametime * friction * ((f < cl.movevars_stopspeed) ? (cl.movevars_stopspeed / f) : 1);
 		f = max(f, 0);
 		VectorScale(s->velocity, f, s->velocity);
 		addspeed = wishspeed - DotProduct(s->velocity, wishdir);
 		if (addspeed > 0)
 		{
-			accelspeed = min(s->movevars_accelerate * s->q.frametime * wishspeed, addspeed);
+			accelspeed = min(cl.movevars_accelerate * s->q.frametime * wishspeed, addspeed);
 			VectorMA(s->velocity, accelspeed, wishdir, s->velocity);
 		}
 		s->velocity[2] -= cl_gravity.value * s->q.frametime;
@@ -1018,13 +1000,13 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 			vec3_t vel_perpend;
 
 			// apply air speed limit
-			wishspeed = min(wishspeed, s->movevars_maxairspeed);
+			wishspeed = min(wishspeed, cl.movevars_maxairspeed);
 
 			/*
 			addspeed = wishspeed - DotProduct(s->velocity, wishdir);
 			if (addspeed > 0)
 			{
-				accelspeed = min(s->movevars_accelerate * s->q.frametime * wishspeed, addspeed);
+				accelspeed = min(cl.movevars_accelerate * s->q.frametime * wishspeed, addspeed);
 				VectorMA(s->velocity, accelspeed, wishdir, s->velocity);
 			}
 			*/
@@ -1036,11 +1018,11 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 
 			f = wishspeed - vel_straight;
 			if(f > 0)
-				vel_straight += min(f, s->movevars_accelerate * s->q.frametime * wishspeed) * s->movevars_airaccel_qw;
+				vel_straight += min(f, cl.movevars_accelerate * s->q.frametime * wishspeed) * cl.movevars_airaccel_qw;
 			if(wishspeed > 0)
-				vel_straight += min(wishspeed, s->movevars_accelerate * s->q.frametime * wishspeed) * (1 - s->movevars_airaccel_qw);
+				vel_straight += min(wishspeed, cl.movevars_accelerate * s->q.frametime * wishspeed) * (1 - cl.movevars_airaccel_qw);
 
-			VectorM(1 - (s->q.frametime * (wishspeed / s->movevars_maxairspeed) * s->movevars_airaccel_sideways_friction), vel_perpend, vel_perpend);
+			VectorM(1 - (s->q.frametime * (wishspeed / cl.movevars_maxairspeed) * cl.movevars_airaccel_sideways_friction), vel_perpend, vel_perpend);
 
 			VectorMA(vel_perpend, vel_straight, wishdir, s->velocity);
 			s->velocity[2] += vel_z;
@@ -1063,6 +1045,53 @@ void CL_ClientMovement_PlayerMove(cl_clientmovement_state_t *s)
 		CL_ClientMovement_Physics_Walk(s);
 }
 
+extern cvar_t slowmo;
+void CL_UpdateMoveVars(void)
+{
+	if (cls.protocol == PROTOCOL_QUAKEWORLD)
+		cl.movevars_ticrate = 1.0 / bound(1, cl_netinputpacketspersecond.value, 100);
+	else if (cl.stats[STAT_MOVEVARS_TICRATE])
+	{
+		cl.movevars_ticrate = cl.statsf[STAT_MOVEVARS_TICRATE];
+		cl.movevars_slowmo = cl.statsf[STAT_MOVEVARS_TIMESCALE];
+		cl.movevars_gravity = cl.statsf[STAT_MOVEVARS_GRAVITY];
+		cl.movevars_stopspeed = cl.statsf[STAT_MOVEVARS_STOPSPEED] ;
+		cl.movevars_maxspeed = cl.statsf[STAT_MOVEVARS_MAXSPEED];
+		cl.movevars_spectatormaxspeed = cl.statsf[STAT_MOVEVARS_SPECTATORMAXSPEED];
+		cl.movevars_accelerate = cl.statsf[STAT_MOVEVARS_ACCELERATE];
+		cl.movevars_airaccelerate = cl.statsf[STAT_MOVEVARS_AIRACCELERATE];
+		cl.movevars_wateraccelerate = cl.statsf[STAT_MOVEVARS_WATERACCELERATE];
+		cl.movevars_entgravity = cl.statsf[STAT_MOVEVARS_ENTGRAVITY];
+		cl.movevars_jumpvelocity = cl.statsf[STAT_MOVEVARS_JUMPVELOCITY];
+		cl.movevars_edgefriction = cl.statsf[STAT_MOVEVARS_EDGEFRICTION];
+		cl.movevars_maxairspeed = cl.statsf[STAT_MOVEVARS_MAXAIRSPEED];
+		cl.movevars_stepheight = cl.statsf[STAT_MOVEVARS_STEPHEIGHT];
+		cl.movevars_airaccel_qw = cl.statsf[STAT_MOVEVARS_AIRACCEL_QW];
+		cl.movevars_airaccel_sideways_friction = cl.statsf[STAT_MOVEVARS_AIRACCEL_SIDEWAYS_FRICTION];
+	}
+	else
+	{
+		cl.movevars_ticrate = 1.0 / bound(1, cl_netinputpacketspersecond.value, 100);
+		cl.movevars_slowmo = slowmo.value;
+		cl.movevars_gravity = sv_gravity.value;
+		cl.movevars_stopspeed = cl_movement_stopspeed.value;
+		cl.movevars_maxspeed = cl_movement_maxspeed.value;
+		cl.movevars_spectatormaxspeed = cl_movement_maxspeed.value;
+		cl.movevars_accelerate = cl_movement_accelerate.value;
+		cl.movevars_airaccelerate = cl_movement_airaccelerate.value < 0 ? cl_movement_accelerate.value : cl_movement_airaccelerate.value;
+		cl.movevars_wateraccelerate = cl_movement_wateraccelerate.value < 0 ? cl_movement_accelerate.value : cl_movement_wateraccelerate.value;
+		cl.movevars_friction = cl_movement_friction.value;
+		cl.movevars_waterfriction = cl_movement_waterfriction.value < 0 ? cl_movement_friction.value : cl_movement_waterfriction.value;
+		cl.movevars_entgravity = 1;
+		cl.movevars_jumpvelocity = cl_movement_jumpvelocity.value;
+		cl.movevars_edgefriction = cl_movement_edgefriction.value;
+		cl.movevars_maxairspeed = cl_movement_maxairspeed.value;
+		cl.movevars_stepheight = cl_movement_stepheight.value;
+		cl.movevars_airaccel_qw = cl_movement_airaccel_qw.value;
+		cl.movevars_airaccel_sideways_friction = cl_movement_airaccel_sideways_friction.value;
+	}
+}
+
 void CL_ClientMovement_Replay(void)
 {
 	int i;
@@ -1078,46 +1107,6 @@ void CL_ClientMovement_Replay(void)
 	VectorCopy(cl.mvelocity[0], s.velocity);
 	s.crouched = true; // will be updated on first move
 	//Con_Printf("movement replay starting org %f %f %f vel %f %f %f\n", s.origin[0], s.origin[1], s.origin[2], s.velocity[0], s.velocity[1], s.velocity[2]);
-
-	// set up movement variables
-	if (cls.protocol == PROTOCOL_QUAKEWORLD)
-	{
-		s.movevars_gravity = cl.qw_movevars_gravity;
-		s.movevars_stopspeed = cl.qw_movevars_stopspeed;
-		s.movevars_maxspeed = cl.qw_movevars_maxspeed;
-		s.movevars_spectatormaxspeed = cl.qw_movevars_spectatormaxspeed;
-		s.movevars_accelerate = cl.qw_movevars_accelerate;
-		s.movevars_airaccelerate = cl.qw_movevars_airaccelerate;
-		s.movevars_wateraccelerate = cl.qw_movevars_wateraccelerate;
-		s.movevars_friction = cl.qw_movevars_friction;
-		s.movevars_waterfriction = cl.qw_movevars_waterfriction;
-		s.movevars_entgravity = cl.qw_movevars_entgravity;
-		s.movevars_jumpvelocity = cl_movement_jumpvelocity.value;
-		s.movevars_edgefriction = cl_movement_edgefriction.value;
-		s.movevars_maxairspeed = cl_movement_maxairspeed.value;
-		s.movevars_stepheight = cl_movement_stepheight.value;
-		s.movevars_airaccel_qw = 1.0;
-		s.movevars_airaccel_sideways_friction = 0.0;
-	}
-	else
-	{
-		s.movevars_gravity = sv_gravity.value;
-		s.movevars_stopspeed = cl_movement_stopspeed.value;
-		s.movevars_maxspeed = cl_movement_maxspeed.value;
-		s.movevars_spectatormaxspeed = cl_movement_maxspeed.value;
-		s.movevars_accelerate = cl_movement_accelerate.value;
-		s.movevars_airaccelerate = cl_movement_airaccelerate.value < 0 ? cl_movement_accelerate.value : cl_movement_airaccelerate.value;
-		s.movevars_wateraccelerate = cl_movement_wateraccelerate.value < 0 ? cl_movement_accelerate.value : cl_movement_wateraccelerate.value;
-		s.movevars_friction = cl_movement_friction.value;
-		s.movevars_waterfriction = cl_movement_waterfriction.value < 0 ? cl_movement_friction.value : cl_movement_waterfriction.value;
-		s.movevars_entgravity = 1;
-		s.movevars_jumpvelocity = cl_movement_jumpvelocity.value;
-		s.movevars_edgefriction = cl_movement_edgefriction.value;
-		s.movevars_maxairspeed = cl_movement_maxairspeed.value;
-		s.movevars_stepheight = cl_movement_stepheight.value;
-		s.movevars_airaccel_qw = cl_movement_airaccel_qw.value;
-		s.movevars_airaccel_sideways_friction = cl_movement_airaccel_sideways_friction.value;
-	}
 
 	totalmovetime = 0;
 	for (i = 0;i < cl.movement_numqueue - 1;i++)
@@ -1268,10 +1257,7 @@ void CL_SendMove(void)
 		return;
 
 	// don't send too often or else network connections can get clogged by a high renderer framerate
-	if (cl_netinputpacketspersecond.value >= 1)
-		packettime = 1.0 / bound(1, cl_netinputpacketspersecond.value, 1000);
-	else
-		packettime = 0;
+	packettime = cl.movevars_ticrate;
 	// quakeworld servers take only frametimes
 	// predicted dp7 servers take current interpolation time
 	// unpredicted servers take an echo of the latest server timestamp
