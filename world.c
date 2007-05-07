@@ -163,7 +163,7 @@ int World_EntitiesInBox(world_t *world, vec3_t mins, vec3_t maxs, int maxlist, p
 		grid = &world->areagrid_outside;
 		for (l = grid->next;l != grid;l = l->next)
 		{
-			ent = PRVM_EDICT_NUM_UNSIGNED(l->entitynumber);
+			ent = PRVM_EDICT_NUM(l->entitynumber);
 			if (ent->priv.server->areagridmarknumber != world->areagrid_marknumber)
 			{
 				ent->priv.server->areagridmarknumber = world->areagrid_marknumber;
@@ -187,7 +187,7 @@ int World_EntitiesInBox(world_t *world, vec3_t mins, vec3_t maxs, int maxlist, p
 			{
 				for (l = grid->next;l != grid;l = l->next)
 				{
-					ent = PRVM_EDICT_NUM_UNSIGNED(l->entitynumber);
+					ent = PRVM_EDICT_NUM(l->entitynumber);
 					if (ent->priv.server->areagridmarknumber != world->areagrid_marknumber)
 					{
 						ent->priv.server->areagridmarknumber = world->areagrid_marknumber;
