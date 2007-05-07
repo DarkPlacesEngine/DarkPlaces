@@ -176,6 +176,7 @@ void sbar_start(void)
 		sb_items[11] = Draw_CachePic ("gfx/sb_flag_red_taken", true);
 		sb_items[12] = Draw_CachePic ("gfx/sb_flag_red_lost", true);
 		sb_items[13] = Draw_CachePic ("gfx/sb_flag_red_carrying", true);
+		sb_items[14] = Draw_CachePic ("gfx/sb_key_carrying", true);
 		sb_items[15] = Draw_CachePic ("gfx/sb_flag_blue_taken", true);
 		sb_items[16] = Draw_CachePic ("gfx/sb_flag_blue_lost", true);
 		sb_items[17] = Draw_CachePic ("gfx/sb_flag_blue_carrying", true);
@@ -1180,11 +1181,20 @@ void Sbar_Draw (void)
 
 				// flag icons
 				redflag = ((cl.stats[STAT_ITEMS]>>15) & 3);
-				if (redflag)
-					Sbar_DrawPic (10 - sbar_x, -85, sb_items[redflag+10]);
 				blueflag = ((cl.stats[STAT_ITEMS]>>17) & 3);
-				if (blueflag)
-					Sbar_DrawPic (10 - sbar_x, -145, sb_items[blueflag+14]);
+				if (redflag == 3 && blueflag == 3)
+				{
+					// The Impossible Combination[tm]
+					// Can only happen in Key Hunt mode...
+					Sbar_DrawPic (10 - sbar_x, -169, sb_items[14]);
+				}
+				else
+				{
+					if (redflag)
+						Sbar_DrawPic (10 - sbar_x, -109, sb_items[redflag+10]);
+					if (blueflag)
+						Sbar_DrawPic (10 - sbar_x, -169, sb_items[blueflag+14]);
+				}
 
 				// armor
 				Sbar_DrawXNum ((340-3*24), 12, cl.stats[STAT_ARMOR], 3, 24, 0.6,0.7,0.8,1,0);
