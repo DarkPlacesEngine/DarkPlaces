@@ -336,7 +336,7 @@ trace_t CL_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 			unsigned int modelindex = (unsigned int)touch->fields.client->modelindex;
 			// if the modelindex is 0, it shouldn't be SOLID_BSP!
 			if (modelindex > 0 && modelindex < MAX_MODELS)
-				model = sv.models[(int)touch->fields.client->modelindex];
+				model = cl.model_precache[(int)touch->fields.client->modelindex];
 		}
 		if (model)
 			Matrix4x4_CreateFromQuakeEntity(&matrix, touch->fields.client->origin[0], touch->fields.client->origin[1], touch->fields.client->origin[2], touch->fields.client->angles[0], touch->fields.client->angles[1], touch->fields.client->angles[2], 1);
