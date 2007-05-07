@@ -30,26 +30,17 @@ cvar_t r_mipskins = {CVAR_SAVE, "r_mipskins", "0", "mipmaps model skins so they 
 
 model_t *loadmodel;
 
-#if 0
-// LordHavoc: was 512
-static int mod_numknown = 0;
-static int mod_maxknown = 0;
-static model_t *mod_known = NULL;
-#else
-// LordHavoc: was 512
-#define MAX_MOD_KNOWN (MAX_MODELS + 256)
-static int mod_numknown = 0;
-static int mod_maxknown = MAX_MOD_KNOWN;
-static model_t mod_known[MAX_MOD_KNOWN];
-#endif
+static mempool_t *mod_mempool;
+static memexpandablearray_t models;
 
 static void mod_start(void)
 {
 	int i;
+	int nummodels = Mem_ExpandableArray_IndexRange(&models);
 	model_t *mod;
 
-	for (i = 0, mod = mod_known;i < mod_numknown;i++, mod++)
-		if (mod->name[0] && mod->name[0] != '*')
+	for (i = 0;i < nummodels;i++)
+		if ((mod = Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0] && mod->name[0] != '*')
 			if (mod->used)
 				Mod_LoadModel(mod, true, false, mod->isworldmodel);
 }
@@ -57,10 +48,11 @@ static void mod_start(void)
 static void mod_shutdown(void)
 {
 	int i;
+	int nummodels = Mem_ExpandableArray_IndexRange(&models);
 	model_t *mod;
 
-	for (i = 0, mod = mod_known;i < mod_numknown;i++, mod++)
-		if (mod->loaded || mod->mempool)
+	for (i = 0;i < nummodels;i++)
+		if ((mod = Mem_ExpandableArray_RecordAtIndex(&models, i)) && (mod->loaded || mod->mempool))
 			Mod_UnloadModel(mod);
 }
 
@@ -68,18 +60,20 @@ static void mod_newmap(void)
 {
 	msurface_t *surface;
 	int i, j, k, surfacenum, ssize, tsize;
+	int nummodels = Mem_ExpandableArray_IndexRange(&models);
+	model_t *mod;
 
 	R_SkinFrame_PrepareForPurge();
-	for (i = 0;i < mod_numknown;i++)
+	for (i = 0;i < nummodels;i++)
 	{
-		if (mod_known[i].mempool && mod_known[i].data_textures)
+		if ((mod = Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->mempool && mod->data_textures)
 		{
-			for (j = 0;j < mod_known[i].num_textures;j++)
+			for (j = 0;j < mod->num_textures;j++)
 			{
-				for (k = 0;k < mod_known[i].data_textures[j].numskinframes;k++)
-					R_SkinFrame_MarkUsed(mod_known[i].data_textures[j].skinframes[k]);
-				for (k = 0;k < mod_known[i].data_textures[j].backgroundnumskinframes;k++)
-					R_SkinFrame_MarkUsed(mod_known[i].data_textures[j].backgroundskinframes[k]);
+				for (k = 0;k < mod->data_textures[j].numskinframes;k++)
+					R_SkinFrame_MarkUsed(mod->data_textures[j].skinframes[k]);
+				for (k = 0;k < mod->data_textures[j].backgroundnumskinframes;k++)
+					R_SkinFrame_MarkUsed(mod->data_textures[j].backgroundskinframes[k]);
 			}
 		}
 	}
@@ -88,11 +82,11 @@ static void mod_newmap(void)
 	if (!cl_stainmaps_clearonload.integer)
 		return;
 
-	for (i = 0;i < mod_numknown;i++)
+	for (i = 0;i < nummodels;i++)
 	{
-		if (mod_known[i].mempool && mod_known[i].data_surfaces)
+		if ((mod = Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->mempool && mod->data_surfaces)
 		{
-			for (surfacenum = 0, surface = mod_known[i].data_surfaces;surfacenum < mod_known[i].num_surfaces;surfacenum++, surface++)
+			for (surfacenum = 0, surface = mod->data_surfaces;surfacenum < mod->num_surfaces;surfacenum++, surface++)
 			{
 				if (surface->lightmapinfo && surface->lightmapinfo->stainsamples)
 				{
@@ -116,6 +110,9 @@ static void Mod_Precache (void);
 static void Mod_BuildVBOs(void);
 void Mod_Init (void)
 {
+	mod_mempool = Mem_AllocPool("modelinfo", 0, NULL);
+	Mem_ExpandableArray_NewArray(&models, mod_mempool, sizeof(model_t), 16);
+
 	Mod_BrushInit();
 	Mod_AliasInit();
 	Mod_SpriteInit();
@@ -268,36 +265,38 @@ model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, qboolea
 
 void Mod_ClearUsed(void)
 {
-#if 1
 	int i;
+	int nummodels = Mem_ExpandableArray_IndexRange(&models);
 	model_t *mod;
-
-	for (i = 0, mod = mod_known;i < mod_numknown;i++, mod++)
-		if (mod->name[0])
+	for (i = 0;i < nummodels;i++)
+		if ((mod = Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0])
 			mod->used = false;
-#endif
 }
 
 void Mod_PurgeUnused(void)
 {
 	int i;
+	int nummodels = Mem_ExpandableArray_IndexRange(&models);
 	model_t *mod;
-
-	for (i = 0, mod = mod_known;i < mod_numknown;i++, mod++)
-		if (mod->name[0])
-			if (!mod->used)
-				Mod_UnloadModel(mod);
+	for (i = 0;i < nummodels;i++)
+	{
+		if ((mod = Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0] && !mod->used)
+		{
+			Mod_UnloadModel(mod);
+			Mem_ExpandableArray_FreeRecord(&models, mod);
+		}
+	}
 }
 
 // only used during loading!
 void Mod_RemoveStaleWorldModels(model_t *skip)
 {
 	int i;
+	int nummodels = Mem_ExpandableArray_IndexRange(&models);
 	model_t *mod;
-
-	for (i = 0, mod = mod_known;i < mod_numknown;i++, mod++)
+	for (i = 0;i < nummodels;i++)
 	{
-		if (mod->isworldmodel && mod->loaded && skip != mod)
+		if ((mod = Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->isworldmodel && mod->loaded && skip != mod)
 		{
 			Mod_UnloadModel(mod);
 			mod->isworldmodel = false;
@@ -315,46 +314,25 @@ Mod_FindName
 model_t *Mod_FindName(const char *name)
 {
 	int i;
+	int nummodels = Mem_ExpandableArray_IndexRange(&models);
 	model_t *mod;
 
 	if (!name[0])
 		Host_Error ("Mod_ForName: NULL name");
 
-// search the currently loaded models
-	for (i = 0, mod = mod_known;i < mod_numknown;i++, mod++)
+	// search the currently loaded models
+	for (i = 0;i < nummodels;i++)
 	{
-		if (mod->name[0] && !strcmp(mod->name, name))
+		if ((mod = Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0] && !strcmp(mod->name, name))
 		{
 			mod->used = true;
 			return mod;
 		}
 	}
 
-	// no match found, find room for a new one
-	for (i = 0;i < mod_numknown;i++)
-		if (!mod_known[i].name[0])
-			break;
-
-	if (mod_maxknown == i)
-	{
-#if 0
-		model_t *old;
-		mod_maxknown += 256;
-		old = mod_known;
-		mod_known = Mem_Alloc(mod_mempool, mod_maxknown * sizeof(model_t));
-		if (old)
-		{
-			memcpy(mod_known, old, mod_numknown * sizeof(model_t));
-			Mem_Free(old);
-		}
-#else
-		Host_Error ("Mod_FindName: ran out of models");
-#endif
-	}
-	if (mod_numknown == i)
-		mod_numknown++;
-	mod = mod_known + i;
-	strlcpy (mod->name, name, sizeof(mod->name));
+	// no match found, create a new one
+	mod = Mem_ExpandableArray_AllocRecord(&models);
+	strlcpy(mod->name, name, sizeof(mod->name));
 	mod->loaded = false;
 	mod->used = true;
 	return mod;
@@ -383,15 +361,14 @@ Mod_Reload
 Reloads all models if they have changed
 ==================
 */
-void Mod_Reload()
+void Mod_Reload(void)
 {
 	int i;
+	int nummodels = Mem_ExpandableArray_IndexRange(&models);
 	model_t *mod;
-
-	for (i = 0, mod = mod_known;i < mod_numknown;i++, mod++)
-		if (mod->name[0] && mod->name[0] != '*')
-			if (mod->used)
-				Mod_LoadModel(mod, true, true, mod->isworldmodel);
+	for (i = 0;i < nummodels;i++)
+		if ((mod = Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0] && mod->name[0] != '*' && mod->used)
+			Mod_LoadModel(mod, true, true, mod->isworldmodel);
 }
 
 unsigned char *mod_base;
@@ -406,12 +383,13 @@ Mod_Print
 */
 static void Mod_Print(void)
 {
-	int		i;
-	model_t	*mod;
+	int i;
+	int nummodels = Mem_ExpandableArray_IndexRange(&models);
+	model_t *mod;
 
 	Con_Print("Loaded models:\n");
-	for (i = 0, mod = mod_known;i < mod_numknown;i++, mod++)
-		if (mod->name[0])
+	for (i = 0;i < nummodels;i++)
+		if ((mod = Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0])
 			Con_Printf("%4iK %s\n", mod->mempool ? (int)((mod->mempool->totalsize + 1023) / 1024) : 0, mod->name);
 }
 
