@@ -1049,11 +1049,17 @@ extern cvar_t slowmo;
 void CL_UpdateMoveVars(void)
 {
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
+	{
+		cl.movevars_slowmo = 1;
 		cl.movevars_ticrate = 1.0 / bound(1, cl_netinputpacketspersecond.value, 100);
+		// scale playback speed of demos by slowmo cvar
+		if (cls.demoplayback)
+			cl.movevars_slowmo *= slowmo.value;
+	}
 	else if (cl.stats[STAT_MOVEVARS_TICRATE])
 	{
 		cl.movevars_ticrate = cl.statsf[STAT_MOVEVARS_TICRATE];
-		cl.movevars_slowmo = (slowmo.value == 1) ? cl.statsf[STAT_MOVEVARS_TIMESCALE] : slowmo.value;
+		cl.movevars_slowmo = cl.statsf[STAT_MOVEVARS_TIMESCALE];
 		cl.movevars_gravity = cl.statsf[STAT_MOVEVARS_GRAVITY];
 		cl.movevars_stopspeed = cl.statsf[STAT_MOVEVARS_STOPSPEED] ;
 		cl.movevars_maxspeed = cl.statsf[STAT_MOVEVARS_MAXSPEED];
@@ -1068,6 +1074,9 @@ void CL_UpdateMoveVars(void)
 		cl.movevars_stepheight = cl.statsf[STAT_MOVEVARS_STEPHEIGHT];
 		cl.movevars_airaccel_qw = cl.statsf[STAT_MOVEVARS_AIRACCEL_QW];
 		cl.movevars_airaccel_sideways_friction = cl.statsf[STAT_MOVEVARS_AIRACCEL_SIDEWAYS_FRICTION];
+		// scale playback speed of demos by slowmo cvar
+		if (cls.demoplayback)
+			cl.movevars_slowmo *= slowmo.value;
 	}
 	else
 	{
