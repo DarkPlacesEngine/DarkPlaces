@@ -566,7 +566,7 @@ static void Cmd_PreprocessString( const char *intext, char *outtext, unsigned ma
 				cvar_t *cvar;
 				const char *tempin = in;
 
-				COM_ParseTokenConsole( &tempin );
+				COM_ParseToken_Console( &tempin );
 				// don't expand rcon_password or similar cvars (CVAR_PRIVATE flag)
 				if ((cvar = Cvar_FindVar(&com_token[0])) && !(cvar->flags & CVAR_PRIVATE)) {
 					const char *cvarcontent = cvar->string;
@@ -776,7 +776,7 @@ static void Cmd_TokenizeString (const char *text)
 		if (cmd_argc == 1)
 			cmd_args = text;
 
-		if (!COM_ParseTokenConsole(&text))
+		if (!COM_ParseToken_Console(&text))
 			return;
 
 		if (cmd_argc < MAX_ARGS)
