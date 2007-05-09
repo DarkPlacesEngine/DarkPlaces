@@ -1007,7 +1007,7 @@ skipwhite:
 		*datapointer = data;
 		return true;
 	}
-	else if (*data == '\n' || *data == ',' || *data == ';')
+	else if (*data == '\n' || *data == '{' || *data == '}' || *data == ')' || *data == '(' || *data == ']' || *data == '[' || *data == ':' || *data == ',' || *data == ';')
 	{
 		// single character
 		com_token[len++] = *data++;
@@ -1018,7 +1018,7 @@ skipwhite:
 	else
 	{
 		// regular word
-		for (;*data > ' ' && *data != ',' && *data != ';';data++)
+		for (;*data > ' ' && *data != ',' && *data != ';' && *data != '{' && *data != '}' && *data != ')' && *data != '(' && *data != ']' && *data != '[' && *data != ':' && *data != ',' && *data != ';';data++)
 		{
 			if (len >= (int)sizeof(com_token) - 1)
 			{
