@@ -1133,7 +1133,7 @@ tag_torso,
 		for(line = 0;;line++)
 		{
 			// parse line
-			if (!COM_ParseToken(&data, true))
+			if (!COM_ParseToken_QuakeC(&data, true))
 				break;
 			if (!strcmp(com_token, "\n"))
 				continue;
@@ -1146,7 +1146,7 @@ tag_torso,
 				else
 					wordsoverflow = true;
 			}
-			while (COM_ParseToken(&data, true) && strcmp(com_token, "\n"));
+			while (COM_ParseToken_QuakeC(&data, true) && strcmp(com_token, "\n"));
 			if (wordsoverflow)
 			{
 				Con_Printf("Mod_LoadSkinFiles: parsing error in file \"%s_%i.skin\" on line #%i: line with too many statements, skipping\n", loadmodel->name, i, line);

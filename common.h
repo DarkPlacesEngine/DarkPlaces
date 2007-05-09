@@ -202,8 +202,10 @@ float MSG_ReadAngle (protocolversion_t protocol);
 
 extern char com_token[MAX_INPUTLINE];
 
-int COM_ParseToken(const char **datapointer, int returnnewline);
-int COM_ParseTokenConsole(const char **datapointer);
+int COM_ParseToken_Simple(const char **datapointer, int returnnewline);
+int COM_ParseToken_QuakeC(const char **datapointer, int returnnewline);
+int COM_ParseToken_VM_Tokenize(const char **datapointer, int returnnewline);
+int COM_ParseToken_Console(const char **datapointer);
 
 extern int com_argc;
 extern const char **com_argv;

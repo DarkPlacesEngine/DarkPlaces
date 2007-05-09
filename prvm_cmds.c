@@ -1980,7 +1980,7 @@ void VM_tokenize (void)
 	p = PRVM_G_STRING(OFS_PARM0);
 
 	num_tokens = 0;
-	while(COM_ParseToken(&p, false))
+	while(COM_ParseToken_VM_Tokenize(&p, false))
 	{
 		if (num_tokens >= (int)(sizeof(tokens)/sizeof(tokens[0])))
 			break;
@@ -2206,15 +2206,15 @@ void VM_parseentitydata(void)
 
 	VM_SAFEPARMCOUNT(2, VM_parseentitydata);
 
-    // get edict and test it
+	// get edict and test it
 	ent = PRVM_G_EDICT(OFS_PARM0);
 	if (ent->priv.required->free)
 		PRVM_ERROR ("VM_parseentitydata: %s: Can only set already spawned entities (entity %i is free)!", PRVM_NAME, PRVM_NUM_FOR_EDICT(ent));
 
 	data = PRVM_G_STRING(OFS_PARM1);
 
-    // parse the opening brace
-	if (!COM_ParseTokenConsole(&data) || com_token[0] != '{' )
+	// parse the opening brace
+	if (!COM_ParseToken_Simple(&data, false) || com_token[0] != '{' )
 		PRVM_ERROR ("VM_parseentitydata: %s: Couldn't parse entity data:\n%s", PRVM_NAME, data );
 
 	PRVM_ED_ParseEdict (data, ent);

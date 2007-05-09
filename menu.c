@@ -893,10 +893,10 @@ static void M_ScanSaves (void)
 		buf[sizeof(buf) - 1] = 0;
 		t = buf;
 		// version
-		COM_ParseTokenConsole(&t);
+		COM_ParseToken_Simple(&t, false);
 		version = atoi(com_token);
 		// description
-		COM_ParseTokenConsole(&t);
+		COM_ParseToken_Simple(&t, false);
 		strlcpy (m_filenames[i], com_token, sizeof (m_filenames[i]));
 
 	// change _ back to space
