@@ -596,7 +596,7 @@ static const char *builtinshaderstring =
 "\n"
 "	// get the surface normal and light normal\n"
 "	myhvec3 surfacenormal = normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5));\n"
-"	myhvec3 diffusenormal = myhvec3(normalize(LightVector));\n"
+"	myhvec3 diffusenormal = myhvec3(LightVector);\n"
 "\n"
 "	// calculate directional shading\n"
 "	color.rgb *= AmbientColor + DiffuseColor * myhalf(max(float(dot(surfacenormal, diffusenormal)), 0.0));\n"
