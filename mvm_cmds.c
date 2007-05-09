@@ -134,7 +134,7 @@ void VM_M_callfunction(void)
 
 	VM_SAFEPARMCOUNTRANGE(1, 8, VM_M_callfunction);
 
-	s = PRVM_G_STRING(OFS_PARM0 + (prog->argc - 1));
+	s = PRVM_G_STRING(OFS_PARM0+(prog->argc - 1)*3);
 
 	VM_CheckEmptyString(s);
 

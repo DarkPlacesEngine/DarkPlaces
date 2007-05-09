@@ -2021,10 +2021,11 @@ void VM_tokenizebyseparator (void)
 	for (j = 1;j < prog->argc;j++)
 	{
 		// skip any blank separator strings
-		if (!PRVM_G_STRING(OFS_PARM0 + j)[0])
+		const char *s = PRVM_G_STRING(OFS_PARM0+j*3);
+		if (!s[0])
 			continue;
-		separators[numseparators] = PRVM_G_STRING(OFS_PARM0 + j);
-		separatorlen[numseparators] = strlen(separators[numseparators]);
+		separators[numseparators] = s;
+		separatorlen[numseparators] = strlen(s);
 		numseparators++;
 	}
 
