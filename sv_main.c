@@ -22,7 +22,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "libcurl.h"
 
-extern void SV_Phys_Init (void);
 static void SV_SaveEntFile_f(void);
 static void SV_StartDownload_f(void);
 static void SV_Download_f(void);
@@ -32,56 +31,98 @@ void VM_CustomStats_Clear (void);
 void VM_SV_UpdateCustomStats (client_t *client, prvm_edict_t *ent, sizebuf_t *msg, int *stats);
 void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int numstates, const entity_state_t *states);
 
+cvar_t coop = {0, "coop","0", "coop mode, 0 = no coop, 1 = coop mode, multiple players playing through the singleplayer game (coop mode also shuts off deathmatch)"};
+cvar_t deathmatch = {0, "deathmatch","0", "deathmatch mode, values depend on mod but typically 0 = no deathmatch, 1 = normal deathmatch with respawning weapons, 2 = weapons stay (players can only pick up new weapons)"};
+cvar_t fraglimit = {CVAR_NOTIFY, "fraglimit","0", "ends level if this many frags is reached by any player"};
+cvar_t gamecfg = {0, "gamecfg", "0", "unused cvar in quake, can be used by mods"};
+cvar_t noexit = {CVAR_NOTIFY, "noexit","0", "kills anyone attempting to use an exit"};
+cvar_t nomonsters = {0, "nomonsters", "0", "unused cvar in quake, can be used by mods"};
+cvar_t pausable = {0, "pausable","1", "allow players to pause or not"};
+cvar_t pr_checkextension = {CVAR_READONLY, "pr_checkextension", "1", "indicates to QuakeC that the standard quakec extensions system is available (if 0, quakec should not attempt to use extensions)"};
+cvar_t samelevel = {CVAR_NOTIFY, "samelevel","0", "repeats same level if level ends (due to timelimit or someone hitting an exit)"};
+cvar_t skill = {0, "skill","1", "difficulty level of game, affects monster layouts in levels, 0 = easy, 1 = normal, 2 = hard, 3 = nightmare (same layout as hard but monsters fire twice)"};
+cvar_t slowmo = {0, "slowmo", "1.0", "controls game speed, 0.5 is half speed, 2 is double speed"};
 
-// select which protocol to host, this is fed to Protocol_EnumForName
-cvar_t sv_protocolname = {0, "sv_protocolname", "DP7", "selects network protocol to host for (values include QUAKE, QUAKEDP, NEHAHRAMOVIE, DP1 and up)"};
-cvar_t sv_ratelimitlocalplayer = {0, "sv_ratelimitlocalplayer", "0", "whether to apply rate limiting to the local player in a listen server (only useful for testing)"};
-cvar_t sv_maxrate = {CVAR_SAVE | CVAR_NOTIFY, "sv_maxrate", "10000", "upper limit on client rate cvar, should reflect your network connection quality"};
+cvar_t sv_accelerate = {0, "sv_accelerate", "10", "rate at which a player accelerates to sv_maxspeed"};
+cvar_t sv_aim = {CVAR_SAVE, "sv_aim", "2", "maximum cosine angle for quake's vertical autoaim, a value above 1 completely disables the autoaim, quake used 0.93"};
+cvar_t sv_airaccel_qw = {0, "sv_airaccel_qw", "1", "ratio of QW-style air control as opposed to simple acceleration"};
+cvar_t sv_airaccel_sideways_friction = {0, "sv_airaccel_sideways_friction", "", "anti-sideways movement stabilization (reduces speed gain when zigzagging)"};
+cvar_t sv_airaccelerate = {0, "sv_airaccelerate", "-1", "rate at which a player accelerates to sv_maxairspeed while in the air, if less than 0 the sv_accelerate variable is used instead"};
 cvar_t sv_allowdownloads = {0, "sv_allowdownloads", "1", "whether to allow clients to download files from the server (does not affect http downloads)"};
-cvar_t sv_allowdownloads_inarchive = {0, "sv_allowdownloads_inarchive", "0", "whether to allow downloads from archives (pak/pk3)"};
 cvar_t sv_allowdownloads_archive = {0, "sv_allowdownloads_archive", "0", "whether to allow downloads of archives (pak/pk3)"};
 cvar_t sv_allowdownloads_config = {0, "sv_allowdownloads_config", "0", "whether to allow downloads of config files (cfg)"};
 cvar_t sv_allowdownloads_dlcache = {0, "sv_allowdownloads_dlcache", "0", "whether to allow downloads of dlcache files (dlcache/)"};
-
-extern cvar_t sv_random_seed;
-
-static cvar_t sv_cullentities_pvs = {0, "sv_cullentities_pvs", "1", "fast but loose culling of hidden entities"}; // fast but loose
-static cvar_t sv_cullentities_trace = {0, "sv_cullentities_trace", "0", "somewhat slow but very tight culling of hidden entities, minimizes network traffic and makes wallhack cheats useless"}; // tends to get false negatives, uses a timeout to keep entities visible a short time after becoming hidden
-static cvar_t sv_cullentities_trace_samples = {0, "sv_cullentities_trace_samples", "1", "number of samples to test for entity culling"};
-static cvar_t sv_cullentities_trace_samples_extra = {0, "sv_cullentities_trace_samples_extra", "2", "number of samples to test for entity culling when the entity affects its surroundings by e.g. dlight"};
-static cvar_t sv_cullentities_trace_enlarge = {0, "sv_cullentities_trace_enlarge", "0", "box enlargement for entity culling"};
-static cvar_t sv_cullentities_trace_delay = {0, "sv_cullentities_trace_delay", "1", "number of seconds until the entity gets actually culled"};
-static cvar_t sv_cullentities_trace_prediction = {0, "sv_cullentities_trace_prediction", "1", "also trace from the predicted player position"};
-static cvar_t sv_cullentities_nevercullbmodels = {0, "sv_cullentities_nevercullbmodels", "0", "if enabled the clients are always notified of moving doors and lifts and other submodels of world (warning: eats a lot of network bandwidth on some levels!)"};
-static cvar_t sv_cullentities_stats = {0, "sv_cullentities_stats", "0", "displays stats on network entities culled by various methods for each client"};
-static cvar_t sv_entpatch = {0, "sv_entpatch", "1", "enables loading of .ent files to override entities in the bsp (for example Threewave CTF server pack contains .ent patch files enabling play of CTF on id1 maps)"};
-
+cvar_t sv_allowdownloads_inarchive = {0, "sv_allowdownloads_inarchive", "0", "whether to allow downloads from archives (pak/pk3)"};
+cvar_t sv_areagrid_mingridsize = {CVAR_NOTIFY, "sv_areagrid_mingridsize", "64", "minimum areagrid cell size, smaller values work better for lots of small objects, higher values for large objects"};
+cvar_t sv_checkforpacketsduringsleep = {0, "sv_checkforpacketsduringsleep", "0", "uses select() function to wait between frames which can be interrupted by packets being received, instead of Sleep()/usleep()/SDL_Sleep() functions which do not check for packets"};
+cvar_t sv_clmovement_enable = {0, "sv_clmovement_enable", "1", "whether to allow clients to use cl_movement prediction, which can cause choppy movement on the server which may annoy other players"};
+cvar_t sv_clmovement_minping = {0, "sv_clmovement_minping", "0", "if client ping is below this time in milliseconds, then their ability to use cl_movement prediction is disabled for a while (as they don't need it)"};
+cvar_t sv_clmovement_minping_disabletime = {0, "sv_clmovement_minping_disabletime", "1000", "when client falls below minping, disable their prediction for this many milliseconds (should be at least 1000 or else their prediction may turn on/off frequently)"};
+cvar_t sv_clmovement_waitforinput = {0, "sv_clmovement_waitforinput", "16", "when a client does not send input for this many frames, force them to move anyway (unlike QuakeWorld)"};
+cvar_t sv_cullentities_nevercullbmodels = {0, "sv_cullentities_nevercullbmodels", "0", "if enabled the clients are always notified of moving doors and lifts and other submodels of world (warning: eats a lot of network bandwidth on some levels!)"};
+cvar_t sv_cullentities_pvs = {0, "sv_cullentities_pvs", "1", "fast but loose culling of hidden entities"};
+cvar_t sv_cullentities_stats = {0, "sv_cullentities_stats", "0", "displays stats on network entities culled by various methods for each client"};
+cvar_t sv_cullentities_trace = {0, "sv_cullentities_trace", "0", "somewhat slow but very tight culling of hidden entities, minimizes network traffic and makes wallhack cheats useless"};
+cvar_t sv_cullentities_trace_delay = {0, "sv_cullentities_trace_delay", "1", "number of seconds until the entity gets actually culled"};
+cvar_t sv_cullentities_trace_enlarge = {0, "sv_cullentities_trace_enlarge", "0", "box enlargement for entity culling"};
+cvar_t sv_cullentities_trace_prediction = {0, "sv_cullentities_trace_prediction", "1", "also trace from the predicted player position"};
+cvar_t sv_cullentities_trace_samples = {0, "sv_cullentities_trace_samples", "1", "number of samples to test for entity culling"};
+cvar_t sv_cullentities_trace_samples_extra = {0, "sv_cullentities_trace_samples_extra", "2", "number of samples to test for entity culling when the entity affects its surroundings by e.g. dlight"};
+cvar_t sv_debugmove = {CVAR_NOTIFY, "sv_debugmove", "0", "disables collision detection optimizations for debugging purposes"};
+cvar_t sv_echobprint = {CVAR_SAVE, "sv_echobprint", "1", "prints gamecode bprint() calls to server console"};
+cvar_t sv_edgefriction = {0, "edgefriction", "2", "how much you slow down when nearing a ledge you might fall off"};
+cvar_t sv_entpatch = {0, "sv_entpatch", "1", "enables loading of .ent files to override entities in the bsp (for example Threewave CTF server pack contains .ent patch files enabling play of CTF on id1 maps)"};
+cvar_t sv_fixedframeratesingleplayer = {0, "sv_fixedframeratesingleplayer", "0", "allows you to use server-style timing system in singleplayer (don't run faster than sys_ticrate)"};
+cvar_t sv_freezenonclients = {CVAR_NOTIFY, "sv_freezenonclients", "0", "freezes time, except for players, allowing you to walk around and take screenshots of explosions"};
+cvar_t sv_friction = {CVAR_NOTIFY, "sv_friction","4", "how fast you slow down"};
+cvar_t sv_gameplayfix_blowupfallenzombies = {0, "sv_gameplayfix_blowupfallenzombies", "1", "causes findradius to detect SOLID_NOT entities such as zombies and corpses on the floor, allowing splash damage to apply to them"};
+cvar_t sv_gameplayfix_droptofloorstartsolid = {0, "sv_gameplayfix_droptofloorstartsolid", "1", "prevents items and monsters that start in a solid area from falling out of the level (makes droptofloor treat trace_startsolid as an acceptable outcome)"};
+cvar_t sv_gameplayfix_findradiusdistancetobox = {0, "sv_gameplayfix_findradiusdistancetobox", "1", "causes findradius to check the distance to the corner of a box rather than the center of the box, makes findradius detect bmodels such as very large doors that would otherwise be unaffected by splash damage"};
 cvar_t sv_gameplayfix_grenadebouncedownslopes = {0, "sv_gameplayfix_grenadebouncedownslopes", "1", "prevents MOVETYPE_BOUNCE (grenades) from getting stuck when fired down a downward sloping surface"};
 cvar_t sv_gameplayfix_noairborncorpse = {0, "sv_gameplayfix_noairborncorpse", "1", "causes entities (corpses) sitting ontop of moving entities (players) to fall when the moving entity (player) is no longer supporting them"};
+cvar_t sv_gameplayfix_qwplayerphysics = {0, "sv_gameplayfix_qwplayerphysics", "1", "changes water jumping to make it easier to get out of water, and prevents friction on landing when bunnyhopping"};
+cvar_t sv_gameplayfix_setmodelrealbox = {0, "sv_gameplayfix_setmodelrealbox", "1", "fixes a bug in Quake that made setmodel always set the entity box to ('-16 -16 -16', '16 16 16') rather than properly checking the model box, breaks some poorly coded mods"};
 cvar_t sv_gameplayfix_stepdown = {0, "sv_gameplayfix_stepdown", "0", "attempts to step down stairs, not just up them (prevents the familiar thud..thud..thud.. when running down stairs and slopes)"};
 cvar_t sv_gameplayfix_stepwhilejumping = {0, "sv_gameplayfix_stepwhilejumping", "1", "applies step-up onto a ledge even while airborn, useful if you would otherwise just-miss the floor when running across small areas with gaps (for instance running across the moving platforms in dm2, or jumping to the megahealth and red armor in dm2 rather than using the bridge)"};
 cvar_t sv_gameplayfix_swiminbmodels = {0, "sv_gameplayfix_swiminbmodels", "1", "causes pointcontents (used to determine if you are in a liquid) to check bmodel entities as well as the world model, so you can swim around in (possibly moving) water bmodel entities"};
-cvar_t sv_gameplayfix_setmodelrealbox = {0, "sv_gameplayfix_setmodelrealbox", "1", "fixes a bug in Quake that made setmodel always set the entity box to ('-16 -16 -16', '16 16 16') rather than properly checking the model box, breaks some poorly coded mods"};
-cvar_t sv_gameplayfix_blowupfallenzombies = {0, "sv_gameplayfix_blowupfallenzombies", "1", "causes findradius to detect SOLID_NOT entities such as zombies and corpses on the floor, allowing splash damage to apply to them"};
-cvar_t sv_gameplayfix_findradiusdistancetobox = {0, "sv_gameplayfix_findradiusdistancetobox", "1", "causes findradius to check the distance to the corner of a box rather than the center of the box, makes findradius detect bmodels such as very large doors that would otherwise be unaffected by splash damage"};
-cvar_t sv_gameplayfix_qwplayerphysics = {0, "sv_gameplayfix_qwplayerphysics", "1", "changes water jumping to make it easier to get out of water, and prevents friction on landing when bunnyhopping"};
 cvar_t sv_gameplayfix_upwardvelocityclearsongroundflag = {0, "sv_gameplayfix_upwardvelocityclearsongroundflag", "1", "prevents monsters, items, and most other objects from being stuck to the floor when pushed around by damage, and other situations in mods"};
-cvar_t sv_gameplayfix_droptofloorstartsolid = {0, "sv_gameplayfix_droptofloorstartsolid", "1", "prevents items and monsters that start in a solid area from falling out of the level (makes droptofloor treat trace_startsolid as an acceptable outcome)"};
-
+cvar_t sv_gravity = {CVAR_NOTIFY, "sv_gravity","800", "how fast you fall (512 = roughly earth gravity)"};
+cvar_t sv_idealpitchscale = {0, "sv_idealpitchscale","0.8", "how much to look up/down slopes and stairs when not using freelook"};
+cvar_t sv_jumpstep = {CVAR_NOTIFY, "sv_jumpstep", "0", "whether you can step up while jumping (sv_gameplayfix_stepwhilejumping must also be 1)"};
+cvar_t sv_jumpvelocity = {0, "sv_jumpvelocity", "270", "cvar that can be used by QuakeC code for jump velocity"};
+cvar_t sv_maxairspeed = {0, "sv_maxairspeed", "30", "maximum speed a player can accelerate to when airborn (note that it is possible to completely stop by moving the opposite direction)"};
+cvar_t sv_maxrate = {CVAR_SAVE | CVAR_NOTIFY, "sv_maxrate", "10000", "upper limit on client rate cvar, should reflect your network connection quality"};
+cvar_t sv_maxspeed = {CVAR_NOTIFY, "sv_maxspeed", "320", "maximum speed a player can accelerate to when on ground (can be exceeded by tricks)"};
+cvar_t sv_maxvelocity = {CVAR_NOTIFY, "sv_maxvelocity","2000", "universal speed limit on all entities"};
+cvar_t sv_newflymove = {CVAR_NOTIFY, "sv_newflymove", "0", "enables simpler/buggier player physics (not recommended)"};
+cvar_t sv_nostep = {CVAR_NOTIFY, "sv_nostep","0", "prevents MOVETYPE_STEP entities (monsters) from moving"};
+cvar_t sv_playerphysicsqc = {CVAR_NOTIFY, "sv_playerphysicsqc", "1", "enables QuakeC function to override player physics"};
 cvar_t sv_progs = {0, "sv_progs", "progs.dat", "selects which quakec progs.dat file to run" };
+cvar_t sv_protocolname = {0, "sv_protocolname", "DP7", "selects network protocol to host for (values include QUAKE, QUAKEDP, NEHAHRAMOVIE, DP1 and up)"};
+cvar_t sv_random_seed = {0, "sv_random_seed", "", "random seed; when set, on every map start this random seed is used to initialize the random number generator. Don't touch it unless for benchmarking or debugging"};
+cvar_t sv_ratelimitlocalplayer = {0, "sv_ratelimitlocalplayer", "0", "whether to apply rate limiting to the local player in a listen server (only useful for testing)"};
+cvar_t sv_sound_land = {0, "sv_sound_land", "demon/dland2.wav", "sound to play when MOVETYPE_STEP entity hits the ground at high speed (empty cvar disables the sound)"};
+cvar_t sv_sound_watersplash = {0, "sv_sound_watersplash", "misc/h2ohit1.wav", "sound to play when MOVETYPE_FLY/TOSS/BOUNCE/STEP entity enters or leaves water (empty cvar disables the sound)"};
+cvar_t sv_stepheight = {CVAR_NOTIFY, "sv_stepheight", "18", "how high you can step up (TW_SV_STEPCONTROL extension)"};
+cvar_t sv_stopspeed = {CVAR_NOTIFY, "sv_stopspeed","100", "how fast you come to a complete stop"};
+cvar_t sv_wallfriction = {CVAR_NOTIFY, "sv_wallfriction", "1", "how much you slow down when sliding along a wall"};
+cvar_t sv_wateraccelerate = {0, "sv_wateraccelerate", "-1", "rate at which a player accelerates to sv_maxspeed while in the air, if less than 0 the sv_accelerate variable is used instead"};
+cvar_t sv_waterfriction = {CVAR_NOTIFY, "sv_waterfriction","-1", "how fast you slow down, if less than 0 the sv_friction variable is used instead"};
+cvar_t sys_ticrate = {CVAR_SAVE, "sys_ticrate","0.05", "how long a server frame is in seconds, 0.05 is 20fps server rate, 0.1 is 10fps (can not be set higher than 0.1), 0 runs as many server frames as possible (makes games against bots a little smoother, overwhelms network players)"};
+cvar_t teamplay = {CVAR_NOTIFY, "teamplay","0", "teamplay mode, values depend on mod but typically 0 = no teams, 1 = no team damage no self damage, 2 = team damage and self damage, some mods support 3 = no team damage but can damage self"};
+cvar_t timelimit = {CVAR_NOTIFY, "timelimit","0", "ends level at this time (in minutes)"};
 
-cvar_t pr_checkextension = {CVAR_READONLY, "pr_checkextension", "1", "indicates to QuakeC that the standard quakec extensions system is available (if 0, quakec should not attempt to use extensions)"};
-cvar_t nomonsters = {0, "nomonsters", "0", "unused cvar in quake, can be used by mods"};
-cvar_t gamecfg = {0, "gamecfg", "0", "unused cvar in quake, can be used by mods"};
-cvar_t scratch1 = {0, "scratch1", "0", "unused cvar in quake, can be used by mods"};
-cvar_t scratch2 = {0,"scratch2", "0", "unused cvar in quake, can be used by mods"};
-cvar_t scratch3 = {0, "scratch3", "0", "unused cvar in quake, can be used by mods"};
-cvar_t scratch4 = {0, "scratch4", "0", "unused cvar in quake, can be used by mods"};
-cvar_t savedgamecfg = {CVAR_SAVE, "savedgamecfg", "0", "unused cvar in quake that is saved to config.cfg on exit, can be used by mods"};
 cvar_t saved1 = {CVAR_SAVE, "saved1", "0", "unused cvar in quake that is saved to config.cfg on exit, can be used by mods"};
 cvar_t saved2 = {CVAR_SAVE, "saved2", "0", "unused cvar in quake that is saved to config.cfg on exit, can be used by mods"};
 cvar_t saved3 = {CVAR_SAVE, "saved3", "0", "unused cvar in quake that is saved to config.cfg on exit, can be used by mods"};
 cvar_t saved4 = {CVAR_SAVE, "saved4", "0", "unused cvar in quake that is saved to config.cfg on exit, can be used by mods"};
+cvar_t savedgamecfg = {CVAR_SAVE, "savedgamecfg", "0", "unused cvar in quake that is saved to config.cfg on exit, can be used by mods"};
+cvar_t scratch1 = {0, "scratch1", "0", "unused cvar in quake, can be used by mods"};
+cvar_t scratch2 = {0,"scratch2", "0", "unused cvar in quake, can be used by mods"};
+cvar_t scratch3 = {0, "scratch3", "0", "unused cvar in quake, can be used by mods"};
+cvar_t scratch4 = {0, "scratch4", "0", "unused cvar in quake, can be used by mods"};
+cvar_t temp1 = {0, "temp1","0", "general cvar for mods to use, in stock id1 this selects which death animation to use on players (0 = random death, other values select specific death scenes)"};
+
 cvar_t nehx00 = {0, "nehx00", "0", "nehahra data storage cvar (used in singleplayer)"};
 cvar_t nehx01 = {0, "nehx01", "0", "nehahra data storage cvar (used in singleplayer)"};
 cvar_t nehx02 = {0, "nehx02", "0", "nehahra data storage cvar (used in singleplayer)"};
@@ -103,12 +144,6 @@ cvar_t nehx17 = {0, "nehx17", "0", "nehahra data storage cvar (used in singlepla
 cvar_t nehx18 = {0, "nehx18", "0", "nehahra data storage cvar (used in singleplayer)"};
 cvar_t nehx19 = {0, "nehx19", "0", "nehahra data storage cvar (used in singleplayer)"};
 cvar_t cutscene = {0, "cutscene", "1", "enables cutscenes in nehahra, can be used by other mods"};
-
-// TODO: move these cvars here
-extern cvar_t sv_clmovement_enable;
-extern cvar_t sv_clmovement_minping;
-extern cvar_t sv_clmovement_minping_disabletime;
-extern cvar_t sv_clmovement_waitforinput;
 
 server_t sv;
 server_static_t svs;
@@ -260,70 +295,98 @@ void SV_Init (void)
 	Cmd_AddCommand("sv_areastats", SV_AreaStats_f, "prints statistics on entity culling during collision traces");
 	Cmd_AddCommand_WithClientCommand("sv_startdownload", NULL, SV_StartDownload_f, "begins sending a file to the client (network protocol use only)");
 	Cmd_AddCommand_WithClientCommand("download", NULL, SV_Download_f, "downloads a specified file from the server");
-	Cvar_RegisterVariable (&sv_maxvelocity);
-	Cvar_RegisterVariable (&sv_gravity);
-	Cvar_RegisterVariable (&sv_friction);
-	Cvar_RegisterVariable (&sv_waterfriction);
-	Cvar_RegisterVariable (&sv_edgefriction);
-	Cvar_RegisterVariable (&sv_stopspeed);
-	Cvar_RegisterVariable (&sv_maxspeed);
-	Cvar_RegisterVariable (&sv_maxairspeed);
+
+	Cvar_RegisterVariable (&coop);
+	Cvar_RegisterVariable (&deathmatch);
+	Cvar_RegisterVariable (&fraglimit);
+	Cvar_RegisterVariable (&gamecfg);
+	Cvar_RegisterVariable (&noexit);
+	Cvar_RegisterVariable (&nomonsters);
+	Cvar_RegisterVariable (&pausable);
+	Cvar_RegisterVariable (&pr_checkextension);
+	Cvar_RegisterVariable (&samelevel);
+	Cvar_RegisterVariable (&skill);
+	Cvar_RegisterVariable (&slowmo);
 	Cvar_RegisterVariable (&sv_accelerate);
-	Cvar_RegisterVariable (&sv_airaccelerate);
-	Cvar_RegisterVariable (&sv_wateraccelerate);
-	Cvar_RegisterVariable (&sv_jumpvelocity);
+	Cvar_RegisterVariable (&sv_aim);
 	Cvar_RegisterVariable (&sv_airaccel_qw);
 	Cvar_RegisterVariable (&sv_airaccel_sideways_friction);
+	Cvar_RegisterVariable (&sv_airaccelerate);
+	Cvar_RegisterVariable (&sv_allowdownloads);
+	Cvar_RegisterVariable (&sv_allowdownloads_archive);
+	Cvar_RegisterVariable (&sv_allowdownloads_config);
+	Cvar_RegisterVariable (&sv_allowdownloads_dlcache);
+	Cvar_RegisterVariable (&sv_allowdownloads_inarchive);
+	Cvar_RegisterVariable (&sv_areagrid_mingridsize);
+	Cvar_RegisterVariable (&sv_checkforpacketsduringsleep);
 	Cvar_RegisterVariable (&sv_clmovement_enable);
 	Cvar_RegisterVariable (&sv_clmovement_minping);
 	Cvar_RegisterVariable (&sv_clmovement_minping_disabletime);
 	Cvar_RegisterVariable (&sv_clmovement_waitforinput);
-	Cvar_RegisterVariable (&sv_idealpitchscale);
-	Cvar_RegisterVariable (&sv_aim);
-	Cvar_RegisterVariable (&sv_nostep);
+	Cvar_RegisterVariable (&sv_cullentities_nevercullbmodels);
 	Cvar_RegisterVariable (&sv_cullentities_pvs);
+	Cvar_RegisterVariable (&sv_cullentities_stats);
 	Cvar_RegisterVariable (&sv_cullentities_trace);
+	Cvar_RegisterVariable (&sv_cullentities_trace_delay);
+	Cvar_RegisterVariable (&sv_cullentities_trace_enlarge);
+	Cvar_RegisterVariable (&sv_cullentities_trace_prediction);
 	Cvar_RegisterVariable (&sv_cullentities_trace_samples);
 	Cvar_RegisterVariable (&sv_cullentities_trace_samples_extra);
-	Cvar_RegisterVariable (&sv_cullentities_trace_enlarge);
-	Cvar_RegisterVariable (&sv_cullentities_trace_delay);
-	Cvar_RegisterVariable (&sv_cullentities_trace_prediction);
-	Cvar_RegisterVariable (&sv_cullentities_nevercullbmodels);
-	Cvar_RegisterVariable (&sv_cullentities_stats);
+	Cvar_RegisterVariable (&sv_debugmove);
+	Cvar_RegisterVariable (&sv_echobprint);
+	Cvar_RegisterVariable (&sv_edgefriction);
 	Cvar_RegisterVariable (&sv_entpatch);
+	Cvar_RegisterVariable (&sv_fixedframeratesingleplayer);
+	Cvar_RegisterVariable (&sv_freezenonclients);
+	Cvar_RegisterVariable (&sv_friction);
+	Cvar_RegisterVariable (&sv_gameplayfix_blowupfallenzombies);
+	Cvar_RegisterVariable (&sv_gameplayfix_droptofloorstartsolid);
+	Cvar_RegisterVariable (&sv_gameplayfix_findradiusdistancetobox);
 	Cvar_RegisterVariable (&sv_gameplayfix_grenadebouncedownslopes);
 	Cvar_RegisterVariable (&sv_gameplayfix_noairborncorpse);
+	Cvar_RegisterVariable (&sv_gameplayfix_qwplayerphysics);
+	Cvar_RegisterVariable (&sv_gameplayfix_setmodelrealbox);
 	Cvar_RegisterVariable (&sv_gameplayfix_stepdown);
 	Cvar_RegisterVariable (&sv_gameplayfix_stepwhilejumping);
 	Cvar_RegisterVariable (&sv_gameplayfix_swiminbmodels);
-	Cvar_RegisterVariable (&sv_gameplayfix_setmodelrealbox);
-	Cvar_RegisterVariable (&sv_gameplayfix_blowupfallenzombies);
-	Cvar_RegisterVariable (&sv_gameplayfix_findradiusdistancetobox);
-	Cvar_RegisterVariable (&sv_gameplayfix_qwplayerphysics);
 	Cvar_RegisterVariable (&sv_gameplayfix_upwardvelocityclearsongroundflag);
-	Cvar_RegisterVariable (&sv_gameplayfix_droptofloorstartsolid);
-	Cvar_RegisterVariable (&sv_protocolname);
-	Cvar_RegisterVariable (&sv_ratelimitlocalplayer);
+	Cvar_RegisterVariable (&sv_gravity);
+	Cvar_RegisterVariable (&sv_idealpitchscale);
+	Cvar_RegisterVariable (&sv_jumpstep);
+	Cvar_RegisterVariable (&sv_jumpvelocity);
+	Cvar_RegisterVariable (&sv_maxairspeed);
 	Cvar_RegisterVariable (&sv_maxrate);
-	Cvar_RegisterVariable (&sv_allowdownloads);
-	Cvar_RegisterVariable (&sv_allowdownloads_inarchive);
-	Cvar_RegisterVariable (&sv_allowdownloads_archive);
-	Cvar_RegisterVariable (&sv_allowdownloads_config);
-	Cvar_RegisterVariable (&sv_allowdownloads_dlcache);
+	Cvar_RegisterVariable (&sv_maxspeed);
+	Cvar_RegisterVariable (&sv_maxvelocity);
+	Cvar_RegisterVariable (&sv_newflymove);
+	Cvar_RegisterVariable (&sv_nostep);
+	Cvar_RegisterVariable (&sv_playerphysicsqc);
 	Cvar_RegisterVariable (&sv_progs);
+	Cvar_RegisterVariable (&sv_protocolname);
+	Cvar_RegisterVariable (&sv_random_seed);
+	Cvar_RegisterVariable (&sv_ratelimitlocalplayer);
+	Cvar_RegisterVariable (&sv_sound_land);
+	Cvar_RegisterVariable (&sv_sound_watersplash);
+	Cvar_RegisterVariable (&sv_stepheight);
+	Cvar_RegisterVariable (&sv_stopspeed);
+	Cvar_RegisterVariable (&sv_wallfriction);
+	Cvar_RegisterVariable (&sv_wateraccelerate);
+	Cvar_RegisterVariable (&sv_waterfriction);
+	Cvar_RegisterVariable (&sys_ticrate);
+	Cvar_RegisterVariable (&teamplay);
+	Cvar_RegisterVariable (&timelimit);
 
-	Cvar_RegisterVariable (&pr_checkextension);
-	Cvar_RegisterVariable (&nomonsters);
-	Cvar_RegisterVariable (&gamecfg);
-	Cvar_RegisterVariable (&scratch1);
-	Cvar_RegisterVariable (&scratch2);
-	Cvar_RegisterVariable (&scratch3);
-	Cvar_RegisterVariable (&scratch4);
-	Cvar_RegisterVariable (&savedgamecfg);
 	Cvar_RegisterVariable (&saved1);
 	Cvar_RegisterVariable (&saved2);
 	Cvar_RegisterVariable (&saved3);
 	Cvar_RegisterVariable (&saved4);
+	Cvar_RegisterVariable (&savedgamecfg);
+	Cvar_RegisterVariable (&scratch1);
+	Cvar_RegisterVariable (&scratch2);
+	Cvar_RegisterVariable (&scratch3);
+	Cvar_RegisterVariable (&scratch4);
+	Cvar_RegisterVariable (&temp1);
+
 	// LordHavoc: Nehahra uses these to pass data around cutscene demos
 	if (gamemode == GAME_NEHAHRA)
 	{
@@ -349,8 +412,6 @@ void SV_Init (void)
 		Cvar_RegisterVariable (&nehx19);
 	}
 	Cvar_RegisterVariable (&cutscene); // for Nehahra but useful to other mods as well
-
-	SV_Phys_Init();
 
 	sv_mempool = Mem_AllocPool("server", 0, NULL);
 }

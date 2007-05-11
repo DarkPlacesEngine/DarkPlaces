@@ -39,38 +39,9 @@ solid_edge items only clip against bsp models.
 
 */
 
-cvar_t sv_gravity = {CVAR_NOTIFY, "sv_gravity","800", "how fast you fall (512 = roughly earth gravity)"};
-cvar_t sv_maxvelocity = {CVAR_NOTIFY, "sv_maxvelocity","2000", "universal speed limit on all entities"};
-cvar_t sv_nostep = {CVAR_NOTIFY, "sv_nostep","0", "prevents MOVETYPE_STEP entities (monsters) from moving"};
-cvar_t sv_jumpstep = {CVAR_NOTIFY, "sv_jumpstep", "0", "whether you can step up while jumping (sv_gameplayfix_stepwhilejumping must also be 1)"};
-cvar_t sv_newflymove = {CVAR_NOTIFY, "sv_newflymove", "0", "enables simpler/buggier player physics (not recommended)"};
-cvar_t sv_freezenonclients = {CVAR_NOTIFY, "sv_freezenonclients", "0", "freezes time, except for players, allowing you to walk around and take screenshots of explosions"};
-cvar_t sv_playerphysicsqc = {CVAR_NOTIFY, "sv_playerphysicsqc", "1", "enables QuakeC function to override player physics"};
-cvar_t sv_debugmove = {CVAR_NOTIFY, "sv_debugmove", "0", "disables collision detection optimizations for debugging purposes"};
-
-cvar_t sv_sound_watersplash = {0, "sv_sound_watersplash", "misc/h2ohit1.wav", "sound to play when MOVETYPE_FLY/TOSS/BOUNCE/STEP entity enters or leaves water (empty cvar disables the sound)"};
-cvar_t sv_sound_land = {0, "sv_sound_land", "demon/dland2.wav", "sound to play when MOVETYPE_STEP entity hits the ground at high speed (empty cvar disables the sound)"};
-
-// TODO: move this extern to server.h
-extern cvar_t sv_clmovement_waitforinput;
-
 #define	MOVE_EPSILON	0.01
 
 void SV_Physics_Toss (prvm_edict_t *ent);
-
-void SV_Phys_Init (void)
-{
-	Cvar_RegisterVariable(&sv_stepheight);
-	Cvar_RegisterVariable(&sv_jumpstep);
-	Cvar_RegisterVariable(&sv_wallfriction);
-	Cvar_RegisterVariable(&sv_newflymove);
-	Cvar_RegisterVariable(&sv_freezenonclients);
-	Cvar_RegisterVariable(&sv_playerphysicsqc);
-	Cvar_RegisterVariable(&sv_debugmove);
-
-	Cvar_RegisterVariable(&sv_sound_watersplash);
-	Cvar_RegisterVariable(&sv_sound_land);
-}
 
 /*
 ===============================================================================

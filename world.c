@@ -29,11 +29,8 @@ line of sight checks trace->inopen and trace->inwater, but bullets don't
 
 */
 
-cvar_t sv_areagrid_mingridsize = {CVAR_NOTIFY, "sv_areagrid_mingridsize", "64", "minimum areagrid cell size, smaller values work better for lots of small objects, higher values for large objects"};
-
 void World_Init(void)
 {
-	Cvar_RegisterVariable(&sv_areagrid_mingridsize);
 	Collision_Init();
 }
 

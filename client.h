@@ -943,8 +943,11 @@ typedef struct client_state_s
 	//qboolean qw_spectator;
 
 	// movement parameters for client prediction
+	float movevars_wallfriction;
+	float movevars_waterfriction;
+	float movevars_friction;
 	float movevars_ticrate;
-	float movevars_slowmo;
+	float movevars_timescale;
 	float movevars_gravity;
 	float movevars_stopspeed;
 	float movevars_maxspeed;
@@ -952,8 +955,6 @@ typedef struct client_state_s
 	float movevars_accelerate;
 	float movevars_airaccelerate;
 	float movevars_wateraccelerate;
-	float movevars_friction;
-	float movevars_waterfriction;
 	float movevars_entgravity;
 	float movevars_jumpvelocity;
 	float movevars_edgefriction;

@@ -340,6 +340,8 @@ extern int serverreplycount;
 
 extern sizebuf_t net_message;
 
+extern cvar_t sv_public;
+
 extern cvar_t cl_netlocalping;
 
 extern cvar_t cl_netport;
