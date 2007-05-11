@@ -1074,6 +1074,8 @@ void CL_UpdateMoveVars(void)
 		cl.movevars_stepheight = cl.statsf[STAT_MOVEVARS_STEPHEIGHT];
 		cl.movevars_airaccel_qw = cl.statsf[STAT_MOVEVARS_AIRACCEL_QW];
 		cl.movevars_airaccel_sideways_friction = cl.statsf[STAT_MOVEVARS_AIRACCEL_SIDEWAYS_FRICTION];
+		cl.movevars_friction = cl.statsf[STAT_MOVEVARS_FRICTION];
+		cl.movevars_waterfriction = cl.statsf[STAT_MOVEVARS_WATERFRICTION];
 		// scale playback speed of demos by slowmo cvar
 		if (cls.demoplayback)
 			cl.movevars_slowmo *= slowmo.value;

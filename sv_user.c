@@ -22,6 +22,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #define DEBUGMOVES 0
 
+cvar_t sv_wallfriction = {CVAR_NOTIFY, "sv_wallfriction", "1", "how much you slow down when sliding along a wall"};
+cvar_t sv_stepheight = {CVAR_NOTIFY, "sv_stepheight", "18", "how high you can step up (TW_SV_STEPCONTROL extension)"};
+cvar_t sv_stopspeed = {CVAR_NOTIFY, "sv_stopspeed","100", "how fast you come to a complete stop"};
+cvar_t sv_friction = {CVAR_NOTIFY, "sv_friction","4", "how fast you slow down"};
+cvar_t sv_waterfriction = {CVAR_NOTIFY, "sv_waterfriction","-1", "how fast you slow down, if less than 0 the sv_friction variable is used instead"};
 cvar_t sv_edgefriction = {0, "edgefriction", "2", "how much you slow down when nearing a ledge you might fall off"};
 cvar_t sv_idealpitchscale = {0, "sv_idealpitchscale","0.8", "how much to look up/down slopes and stairs when not using freelook"};
 cvar_t sv_maxspeed = {CVAR_NOTIFY, "sv_maxspeed", "320", "maximum speed a player can accelerate to when on ground (can be exceeded by tricks)"};
@@ -30,8 +35,8 @@ cvar_t sv_accelerate = {0, "sv_accelerate", "10", "rate at which a player accele
 cvar_t sv_airaccelerate = {0, "sv_airaccelerate", "-1", "rate at which a player accelerates to sv_maxairspeed while in the air, if less than 0 the sv_accelerate variable is used instead"};
 cvar_t sv_wateraccelerate = {0, "sv_wateraccelerate", "-1", "rate at which a player accelerates to sv_maxspeed while in the air, if less than 0 the sv_accelerate variable is used instead"};
 cvar_t sv_jumpvelocity = {0, "sv_jumpvelocity", "270", "cvar that can be used by QuakeC code for jump velocity"};
-cvar_t sv_airaccel_qw = {0, "sv_airaccelerate", "1", "ratio of QW-style air control as opposed to simple acceleration"};
-cvar_t sv_airaccel_sideways_friction = {0, "sv_airaccelerate", "", "anti-sideways movement stabilization (reduces speed gain when zigzagging)"};
+cvar_t sv_airaccel_qw = {0, "sv_airaccel_qw", "1", "ratio of QW-style air control as opposed to simple acceleration"};
+cvar_t sv_airaccel_sideways_friction = {0, "sv_airaccel_sideways_friction", "", "anti-sideways movement stabilization (reduces speed gain when zigzagging)"};
 cvar_t sv_clmovement_enable = {0, "sv_clmovement_enable", "1", "whether to allow clients to use cl_movement prediction, which can cause choppy movement on the server which may annoy other players"};
 cvar_t sv_clmovement_minping = {0, "sv_clmovement_minping", "0", "if client ping is below this time in milliseconds, then their ability to use cl_movement prediction is disabled for a while (as they don't need it)"};
 cvar_t sv_clmovement_minping_disabletime = {0, "sv_clmovement_minping_disabletime", "1000", "when client falls below minping, disable their prediction for this many milliseconds (should be at least 1000 or else their prediction may turn on/off frequently)"};
