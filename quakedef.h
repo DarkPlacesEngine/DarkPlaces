@@ -94,7 +94,8 @@ extern char engineversion[128];
 //#define STAT_TIME			17 // FTE
 //#define STAT_VIEW2		20 // FTE
 #define STAT_VIEWZOOM		21 // DP
-#define STAT_MOVEVARS_FRICTION						228 // DP
+#define STAT_MOVEVARS_WALLFRICTION					237 // DP
+#define STAT_MOVEVARS_FRICTION						238 // DP
 #define STAT_MOVEVARS_WATERFRICTION					239 // DP
 #define STAT_MOVEVARS_TICRATE						240 // DP
 #define STAT_MOVEVARS_TIMESCALE						241 // DP

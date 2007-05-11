@@ -234,7 +234,6 @@ static void VM_CL_tracebox (void)
 	VM_SetTraceGlobals(&trace);
 }
 
-extern cvar_t cl_gravity;
 trace_t CL_Trace_Toss (prvm_edict_t *tossent, prvm_edict_t *ignore)
 {
 	int i;
@@ -257,7 +256,7 @@ trace_t CL_Trace_Toss (prvm_edict_t *tossent, prvm_edict_t *ignore)
 		gravity = val->_float;
 	else
 		gravity = 1.0;
-	gravity *= cl_gravity.value * 0.05;
+	gravity *= cl.movevars_gravity * 0.05;
 
 	for (i = 0;i < 200;i++) // LordHavoc: sanity check; never trace more than 10 seconds
 	{

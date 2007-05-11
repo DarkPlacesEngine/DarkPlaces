@@ -1418,7 +1418,7 @@ void CL_ParseServerInfo (void)
 		str = MSG_ReadString ();
 		strlcpy (cl.levelname, str, sizeof(cl.levelname));
 
-		// get the movevars
+		// get the movevars that are defined in the qw protocol
 		cl.movevars_gravity            = MSG_ReadFloat();
 		cl.movevars_stopspeed          = MSG_ReadFloat();
 		cl.movevars_maxspeed           = MSG_ReadFloat();
@@ -1429,14 +1429,16 @@ void CL_ParseServerInfo (void)
 		cl.movevars_friction           = MSG_ReadFloat();
 		cl.movevars_waterfriction      = MSG_ReadFloat();
 		cl.movevars_entgravity         = MSG_ReadFloat();
+
 		// other movevars not in the protocol...
-		cl.movevars_slowmo = 1;
+		cl.movevars_wallfriction = 0;
+		cl.movevars_timescale = 1;
 		cl.movevars_jumpvelocity = 270;
 		cl.movevars_edgefriction = 2;
 		cl.movevars_maxairspeed = 30;
 		cl.movevars_stepheight = 18;
-		cl.movevars_airaccel_qw = 1.0;
-		cl.movevars_airaccel_sideways_friction = 0.0;
+		cl.movevars_airaccel_qw = 1;
+		cl.movevars_airaccel_sideways_friction = 0;
 
 		// seperate the printfs so the server message can have a color
 		Con_Printf("\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n\n\2%s\n", str);
@@ -2865,9 +2867,9 @@ static void CL_NetworkTimeReceived(double newtime)
 			else if (fabs(cl.time - cl.mtime[1]) > 0.1)
 				cl.time += 0.5 * (cl.mtime[1] - cl.time); // fast
 			else if (cl.time > cl.mtime[1])
-				cl.time -= 0.002 * cl.movevars_slowmo; // fall into the past by 2ms
+				cl.time -= 0.002 * cl.movevars_timescale; // fall into the past by 2ms
 			else
-				cl.time += 0.001 * cl.movevars_slowmo; // creep forward 1ms
+				cl.time += 0.001 * cl.movevars_timescale; // creep forward 1ms
 		}
 	}
 	// this packet probably contains a player entity update, so we will need
@@ -3255,6 +3257,8 @@ void CL_ParseServerMessage(void)
 
 			case qw_svc_entgravity:
 				cl.movevars_entgravity = MSG_ReadFloat();
+				if (!cl.movevars_entgravity)
+					cl.movevars_entgravity = 1.0f;
 				break;
 
 			case qw_svc_setpause:

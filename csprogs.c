@@ -49,8 +49,6 @@ void CL_VM_Error (const char *format, ...)	//[515]: hope it will be never execut
 //[515]: set globals before calling R_UpdateView, WEIRD CRAP
 static void CSQC_SetGlobals (void)
 {
-	//extern cvar_t sv_accelerate, sv_friction, sv_gravity, sv_stopspeed, sv_maxspeed;
-
 	CSQC_BEGIN
 		prog->globals.client->time = cl.time;
 		prog->globals.client->frametime = max(0, cl.time - cl.oldtime);

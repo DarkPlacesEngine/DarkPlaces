@@ -333,7 +333,8 @@ cvar_t cl_movement_maxspeed = {0, "cl_movement_maxspeed", "320", "how fast you c
 cvar_t cl_movement_maxairspeed = {0, "cl_movement_maxairspeed", "30", "how fast you can move while in the air (should match sv_maxairspeed)"};
 cvar_t cl_movement_stopspeed = {0, "cl_movement_stopspeed", "100", "speed below which you will be slowed rapidly to a stop rather than sliding endlessly (should match sv_stopspeed)"};
 cvar_t cl_movement_friction = {0, "cl_movement_friction", "4", "how fast you slow down (should match sv_friction)"};
-cvar_t cl_movement_waterfriction = {0, "cl_movement_waterfriction", "-1", "how fast you slow down (should match sv_friction), if less than 0 the cl_movement_friction variable is used instead"};
+cvar_t cl_movement_wallfriction = {0, "cl_movement_wallfriction", "1", "how fast you slow down while sliding along a wall (should match sv_wallfriction)"};
+cvar_t cl_movement_waterfriction = {0, "cl_movement_waterfriction", "-1", "how fast you slow down (should match sv_waterfriction), if less than 0 the cl_movement_friction variable is used instead"};
 cvar_t cl_movement_edgefriction = {0, "cl_movement_edgefriction", "2", "how much to slow down when you may be about to fall off a ledge (should match edgefriction)"};
 cvar_t cl_movement_stepheight = {0, "cl_movement_stepheight", "18", "how tall a step you can step in one instant (should match sv_stepheight)"};
 cvar_t cl_movement_accelerate = {0, "cl_movement_accelerate", "10", "how fast you accelerate (should match sv_accelerate)"};
@@ -342,8 +343,6 @@ cvar_t cl_movement_wateraccelerate = {0, "cl_movement_wateraccelerate", "-1", "h
 cvar_t cl_movement_jumpvelocity = {0, "cl_movement_jumpvelocity", "270", "how fast you move upward when you begin a jump (should match the quakec code)"};
 cvar_t cl_movement_airaccel_qw = {0, "cl_movement_airaccel_qw", "1", "ratio of QW-style air control as opposed to simple acceleration (should match sv_airaccel_qw)"};
 cvar_t cl_movement_airaccel_sideways_friction = {0, "cl_movement_airaccel_sideways_friction", "0", "anti-sideways movement stabilization (should match sv_airaccel_sideways_friction)"};
-cvar_t cl_gravity = {0, "cl_gravity", "800", "how much gravity to apply in client physics (should match sv_gravity)"};
-cvar_t cl_slowmo = {0, "cl_slowmo", "1", "speed of game time (should match slowmo)"};
 
 cvar_t in_pitch_min = {0, "in_pitch_min", "-90", "how far downward you can aim (quake used -70"};
 cvar_t in_pitch_max = {0, "in_pitch_max", "90", "how far upward you can aim (quake used 80"};
@@ -984,7 +983,7 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 			accelspeed = min(cl.movevars_accelerate * s->q.frametime * wishspeed, addspeed);
 			VectorMA(s->velocity, accelspeed, wishdir, s->velocity);
 		}
-		s->velocity[2] -= cl_gravity.value * s->q.frametime;
+		s->velocity[2] -= cl.movevars_gravity * cl.movevars_entgravity * s->q.frametime;
 		if (cls.protocol == PROTOCOL_QUAKEWORLD)
 			s->velocity[2] = 0;
 		if (VectorLength2(s->velocity))
@@ -1027,7 +1026,7 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 			VectorMA(vel_perpend, vel_straight, wishdir, s->velocity);
 			s->velocity[2] += vel_z;
 		}
-		s->velocity[2] -= cl_gravity.value * s->q.frametime;
+		s->velocity[2] -= cl.movevars_gravity * cl.movevars_entgravity * s->q.frametime;
 		CL_ClientMovement_Move(s);
 	}
 }
@@ -1050,16 +1049,16 @@ void CL_UpdateMoveVars(void)
 {
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
 	{
-		cl.movevars_slowmo = 1;
+		cl.movevars_timescale = 1;
 		cl.movevars_ticrate = 1.0 / bound(1, cl_netinputpacketspersecond.value, 100);
 		// scale playback speed of demos by slowmo cvar
 		if (cls.demoplayback)
-			cl.movevars_slowmo *= slowmo.value;
+			cl.movevars_timescale *= slowmo.value;
 	}
 	else if (cl.stats[STAT_MOVEVARS_TICRATE])
 	{
 		cl.movevars_ticrate = cl.statsf[STAT_MOVEVARS_TICRATE];
-		cl.movevars_slowmo = cl.statsf[STAT_MOVEVARS_TIMESCALE];
+		cl.movevars_timescale = cl.statsf[STAT_MOVEVARS_TIMESCALE];
 		cl.movevars_gravity = cl.statsf[STAT_MOVEVARS_GRAVITY];
 		cl.movevars_stopspeed = cl.statsf[STAT_MOVEVARS_STOPSPEED] ;
 		cl.movevars_maxspeed = cl.statsf[STAT_MOVEVARS_MAXSPEED];
@@ -1075,15 +1074,16 @@ void CL_UpdateMoveVars(void)
 		cl.movevars_airaccel_qw = cl.statsf[STAT_MOVEVARS_AIRACCEL_QW];
 		cl.movevars_airaccel_sideways_friction = cl.statsf[STAT_MOVEVARS_AIRACCEL_SIDEWAYS_FRICTION];
 		cl.movevars_friction = cl.statsf[STAT_MOVEVARS_FRICTION];
+		cl.movevars_wallfriction = cl.statsf[STAT_MOVEVARS_WALLFRICTION];
 		cl.movevars_waterfriction = cl.statsf[STAT_MOVEVARS_WATERFRICTION];
 		// scale playback speed of demos by slowmo cvar
 		if (cls.demoplayback)
-			cl.movevars_slowmo *= slowmo.value;
+			cl.movevars_timescale *= slowmo.value;
 	}
 	else
 	{
 		cl.movevars_ticrate = 1.0 / bound(1, cl_netinputpacketspersecond.value, 100);
-		cl.movevars_slowmo = slowmo.value;
+		cl.movevars_timescale = slowmo.value;
 		cl.movevars_gravity = sv_gravity.value;
 		cl.movevars_stopspeed = cl_movement_stopspeed.value;
 		cl.movevars_maxspeed = cl_movement_maxspeed.value;
@@ -1092,6 +1092,7 @@ void CL_UpdateMoveVars(void)
 		cl.movevars_airaccelerate = cl_movement_airaccelerate.value < 0 ? cl_movement_accelerate.value : cl_movement_airaccelerate.value;
 		cl.movevars_wateraccelerate = cl_movement_wateraccelerate.value < 0 ? cl_movement_accelerate.value : cl_movement_wateraccelerate.value;
 		cl.movevars_friction = cl_movement_friction.value;
+		cl.movevars_wallfriction = cl_movement_wallfriction.value;
 		cl.movevars_waterfriction = cl_movement_waterfriction.value < 0 ? cl_movement_friction.value : cl_movement_waterfriction.value;
 		cl.movevars_entgravity = 1;
 		cl.movevars_jumpvelocity = cl_movement_jumpvelocity.value;
@@ -1657,15 +1658,16 @@ void CL_InitInput (void)
 	Cvar_RegisterVariable(&cl_movement_maxairspeed);
 	Cvar_RegisterVariable(&cl_movement_stopspeed);
 	Cvar_RegisterVariable(&cl_movement_friction);
+	Cvar_RegisterVariable(&cl_movement_wallfriction);
+	Cvar_RegisterVariable(&cl_movement_waterfriction);
 	Cvar_RegisterVariable(&cl_movement_edgefriction);
 	Cvar_RegisterVariable(&cl_movement_stepheight);
-	Cvar_RegisterVariable(&cl_movement_airaccelerate);
 	Cvar_RegisterVariable(&cl_movement_accelerate);
+	Cvar_RegisterVariable(&cl_movement_airaccelerate);
+	Cvar_RegisterVariable(&cl_movement_wateraccelerate);
 	Cvar_RegisterVariable(&cl_movement_jumpvelocity);
 	Cvar_RegisterVariable(&cl_movement_airaccel_qw);
 	Cvar_RegisterVariable(&cl_movement_airaccel_sideways_friction);
-	Cvar_RegisterVariable(&cl_gravity);
-	Cvar_RegisterVariable(&cl_slowmo);
 
 	Cvar_RegisterVariable(&in_pitch_min);
 	Cvar_RegisterVariable(&in_pitch_max);
