@@ -1374,7 +1374,7 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 	statsf[STAT_MOVEVARS_AIRACCELERATE] = sv_airaccelerate.value >= 0 ? sv_airaccelerate.value : sv_accelerate.value;
 	statsf[STAT_MOVEVARS_WATERACCELERATE] = sv_wateraccelerate.value >= 0 ? sv_wateraccelerate.value : sv_accelerate.value;
 	val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.gravity);
-	statsf[STAT_MOVEVARS_ENTGRAVITY] = val ? val->_float : 1.0f;
+	statsf[STAT_MOVEVARS_ENTGRAVITY] = (val && val->_float != 0) ? val->_float : 1.0f;
 	statsf[STAT_MOVEVARS_JUMPVELOCITY] = sv_jumpvelocity.value;
 	statsf[STAT_MOVEVARS_EDGEFRICTION] = sv_edgefriction.value;
 	statsf[STAT_MOVEVARS_MAXAIRSPEED] = sv_maxairspeed.value;
