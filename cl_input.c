@@ -339,7 +339,7 @@ cvar_t cl_movement_edgefriction = {0, "cl_movement_edgefriction", "2", "how much
 cvar_t cl_movement_stepheight = {0, "cl_movement_stepheight", "18", "how tall a step you can step in one instant (should match sv_stepheight)"};
 cvar_t cl_movement_accelerate = {0, "cl_movement_accelerate", "10", "how fast you accelerate (should match sv_accelerate)"};
 cvar_t cl_movement_airaccelerate = {0, "cl_movement_airaccelerate", "-1", "how fast you accelerate while in the air (should match sv_airaccelerate), if less than 0 the cl_movement_accelerate variable is used instead"};
-cvar_t cl_movement_wateraccelerate = {0, "cl_movement_wateraccelerate", "-1", "how fast you accelerate while in the air (should match sv_airaccelerate), if less than 0 the cl_movement_accelerate variable is used instead"};
+cvar_t cl_movement_wateraccelerate = {0, "cl_movement_wateraccelerate", "-1", "how fast you accelerate while in water (should match sv_wateraccelerate), if less than 0 the cl_movement_accelerate variable is used instead"};
 cvar_t cl_movement_jumpvelocity = {0, "cl_movement_jumpvelocity", "270", "how fast you move upward when you begin a jump (should match the quakec code)"};
 cvar_t cl_movement_airaccel_qw = {0, "cl_movement_airaccel_qw", "1", "ratio of QW-style air control as opposed to simple acceleration (should match sv_airaccel_qw)"};
 cvar_t cl_movement_airaccel_sideways_friction = {0, "cl_movement_airaccel_sideways_friction", "0", "anti-sideways movement stabilization (should match sv_airaccel_sideways_friction)"};
@@ -1017,9 +1017,9 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 
 			f = wishspeed - vel_straight;
 			if(f > 0)
-				vel_straight += min(f, cl.movevars_accelerate * s->q.frametime * wishspeed) * cl.movevars_airaccel_qw;
+				vel_straight += min(f, cl.movevars_airaccelerate * s->q.frametime * wishspeed) * cl.movevars_airaccel_qw;
 			if(wishspeed > 0)
-				vel_straight += min(wishspeed, cl.movevars_accelerate * s->q.frametime * wishspeed) * (1 - cl.movevars_airaccel_qw);
+				vel_straight += min(wishspeed, cl.movevars_airaccelerate * s->q.frametime * wishspeed) * (1 - cl.movevars_airaccel_qw);
 
 			VectorM(1 - (s->q.frametime * (wishspeed / cl.movevars_maxairspeed) * cl.movevars_airaccel_sideways_friction), vel_perpend, vel_perpend);
 
