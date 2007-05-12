@@ -2837,7 +2837,7 @@ static void CL_NetworkTimeReceived(double newtime)
 	cl.mtime[0] = newtime;
 	if (cls.timedemo || (cl.islocalgame && !sv_fixedframeratesingleplayer.integer) || cl.mtime[1] == cl.mtime[0] || cls.signon < SIGNONS)
 		cl.time = cl.mtime[1] = newtime;
-	else if (cls.protocol != PROTOCOL_QUAKEWORLD)
+	else if (cls.protocol != PROTOCOL_QUAKEWORLD && !cls.demoplayback)
 	{
 		if (developer.integer >= 100 && vid_activewindow)
 		{
