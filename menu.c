@@ -56,6 +56,7 @@ void M_Menu_Main_f (void);
 void M_Menu_LanConfig_f (void);
 void M_Menu_GameOptions_f (void);
 void M_Menu_ServerList_f (void);
+void M_Menu_ModList_f (void);
 
 static void M_Main_Draw (void);
 	static void M_SinglePlayer_Draw (void);
@@ -78,6 +79,8 @@ static void M_Main_Draw (void);
 static void M_LanConfig_Draw (void);
 static void M_GameOptions_Draw (void);
 static void M_ServerList_Draw (void);
+static void M_ModList_Draw (void);
+
 
 static void M_Main_Key (int key, char ascii);
 	static void M_SinglePlayer_Key (int key, char ascii);
@@ -100,6 +103,7 @@ static void M_Main_Key (int key, char ascii);
 static void M_LanConfig_Key (int key, char ascii);
 static void M_GameOptions_Key (int key, char ascii);
 static void M_ServerList_Key (int key, char ascii);
+static void M_ModList_Key (int key, char ascii);
 
 static qboolean	m_entersound;		// play after drawing a frame, so caching won't disrupt the sound
 
@@ -1555,7 +1559,9 @@ static void M_DrawCheckbox (int x, int y, int on)
 }
 
 
-#define OPTIONS_ITEMS 25
+//#define OPTIONS_ITEMS 25 aule was here
+#define OPTIONS_ITEMS 26
+
 
 static int options_cursor;
 
@@ -1680,6 +1686,7 @@ static void M_Options_Draw (void)
 	M_Options_PrintCommand( "      Lighting: Normal", true);
 	M_Options_PrintCommand( "      Lighting:   High", true);
 	M_Options_PrintCommand( "      Lighting:   Full", true);
+	M_Options_PrintCommand( "           Browse Mods", true);
 }
 
 
@@ -1738,6 +1745,9 @@ static void M_Options_Key (int k, char ascii)
 			break;
 		case 24: // Lighting: Full
 			Cbuf_AddText("r_coronas 1;gl_flashblend 0;r_shadow_gloss 1;r_shadow_realtime_dlight 1;r_shadow_realtime_dlight_shadows 1;r_shadow_realtime_world 1;r_shadow_realtime_world_dlightshadows 1;r_shadow_realtime_world_lightmaps 0;r_shadow_realtime_world_shadows 1;r_bloom 1;r_hdr 0");
+			break;
+		case 25:
+			M_Menu_ModList_f ();
 			break;
 		default:
 			M_Menu_Options_AdjustSliders (1);
@@ -4438,6 +4448,233 @@ static void M_ServerList_Key(int k, char ascii)
 }
 
 //=============================================================================
+/* MODLIST MENU */
+// same limit of mod dirs as in fs.c
+#define MODLIST_MAXDIRS 16
+static int modlist_enabled [MODLIST_MAXDIRS];	//array of indexs to modlist
+static int modlist_numenabled;			//number of enabled (or in process to be..) mods
+
+typedef struct modlist_entry_s
+{
+	qboolean loaded;	// used to determine whether this entry is loaded and running
+	int enabled;		// index to array of modlist_enabled
+
+	// name of the modification, this is (will...be) displayed on the menu entry
+	char name[128];
+	// directory where we will find it
+	char dir[MAX_QPATH];
+} modlist_entry_t;
+
+static int modlist_cursor;
+//static int modlist_viewcount;
+
+#define MODLIST_TOTALSIZE		256
+static int modlist_count = 0;
+static modlist_entry_t modlist[MODLIST_TOTALSIZE];
+
+void ModList_RebuildList(void)
+{
+	int i,j;
+	stringlist_t list;
+
+	stringlistinit(&list);
+	if (fs_basedir[0])
+		listdirectory(&list, fs_basedir);
+	else
+		listdirectory(&list, "./");
+	stringlistsort(&list);
+	modlist_count = 0;
+	modlist_numenabled = fs_numgamedirs;
+	for (i = 0;i < list.numstrings;i++)
+	{
+		if (modlist_count >= MODLIST_TOTALSIZE)	break;
+		// check all dirs to see if they "appear" to be mods
+		// reject any dirs that are part of the base game
+		// (such as "id1" and "hipnotic" when in GAME_HIPNOTIC mode)
+		if (gamedirname1 && !strcasecmp(gamedirname1, list.strings[i])) continue;
+		if (gamedirname2 && !strcasecmp(gamedirname2, list.strings[i])) continue;
+		if (FS_CheckNastyPath (list.strings[i], true)) continue;
+		if (!FS_CheckGameDir(list.strings[i])) continue;
+
+		strlcpy (modlist[modlist_count].dir, list.strings[i], sizeof(modlist[modlist_count].dir));
+		//check currently loaded mods
+		modlist[modlist_count].loaded = false;
+		if (fs_numgamedirs)
+			for (j = 0; j < fs_numgamedirs; j++)
+				if (!strcasecmp(fs_gamedirs[j], modlist[modlist_count].dir))
+				{
+					modlist[modlist_count].loaded = true;
+					modlist[modlist_count].enabled = j;
+					modlist_enabled[j] = modlist_count;
+					break;
+				}
+		modlist_count ++;
+	}
+	stringlistfreecontents(&list);
+}
+
+void ModList_Enable (void)
+{
+	int i;
+	int numgamedirs;
+	char gamedirs[MODLIST_MAXDIRS][MAX_QPATH];
+
+	// copy our mod list into an array for FS_ChangeGameDirs
+	numgamedirs = modlist_numenabled;
+	for (i = 0; i < modlist_numenabled; i++)
+		strlcpy (gamedirs[i], modlist[modlist_enabled[i]].dir,sizeof (gamedirs[i]));
+
+	// this code snippet is from FS_ChangeGameDirs
+	if (fs_numgamedirs == numgamedirs)
+	{
+		for (i = 0;i < numgamedirs;i++)
+			if (strcasecmp(fs_gamedirs[i], gamedirs[i]))
+				break;
+		if (i == numgamedirs)
+			return; // already using this set of gamedirs, do nothing
+	}
+
+	// this part is basically the same as the FS_GameDir_f function
+	if ((cls.state == ca_connected && !cls.demoplayback) || sv.active)
+	{
+		// actually, changing during game would work fine, but would be stupid
+		Con_Printf("Can not change gamedir while client is connected or server is running!\n");
+		return;
+	}
+
+	FS_ChangeGameDirs (modlist_numenabled, gamedirs, true, true);
+}
+
+void M_Menu_ModList_f (void)
+{
+	key_dest = key_menu;
+	m_state = m_modlist;
+	m_entersound = true;
+	modlist_cursor = 0;
+	M_Update_Return_Reason("");
+	ModList_RebuildList();
+}
+
+static void M_Menu_ModList_AdjustSliders (int dir)
+{
+	int i;
+	S_LocalSound ("sound/misc/menu3.wav");
+
+	// stop adding mods, we reach the limit
+	if (!modlist[modlist_cursor].loaded && (modlist_numenabled == MODLIST_MAXDIRS)) return;
+	modlist[modlist_cursor].loaded = !modlist[modlist_cursor].loaded;
+	if (modlist[modlist_cursor].loaded)
+	{
+		modlist[modlist_cursor].enabled = modlist_numenabled;
+		//push the value on the enabled list
+		modlist_enabled[modlist_numenabled++] = modlist_cursor;
+	}
+	else
+	{
+		//eliminate the value from the enabled list
+		for (i = modlist[modlist_cursor].enabled; i < modlist_numenabled; i++)
+		{
+			modlist_enabled[i] = modlist_enabled[i+1];
+			modlist[modlist_enabled[i]].enabled--;
+		}
+		modlist_numenabled--;
+	}
+}
+
+static void M_ModList_Draw (void)
+{
+	int n, y, visible, start, end;
+	cachepic_t *p;
+	const char *s_available = "Available Mods";
+	const char *s_enabled = "Enabled Mods";
+
+	// use as much vertical space as available
+	if (gamemode == GAME_TRANSFUSION)
+		M_Background(640, vid_conheight.integer - 80);
+	else
+		M_Background(640, vid_conheight.integer);
+
+	M_PrintRed(48 + 32, 32, s_available);
+	M_PrintRed(432, 32, s_enabled);
+	// Draw a list box with all enabled mods
+	DrawQ_Pic(menu_x + 432, menu_y + 48, NULL, 172, 8 * modlist_numenabled, 0, 0, 0, 0.5, 0);
+	for (y = 0; y < modlist_numenabled; y++)
+		M_PrintRed(432, 48 + y * 8, modlist[modlist_enabled[y]].dir);
+
+	if (*m_return_reason)
+		M_Print(16, menu_height - 8, m_return_reason);
+	// scroll the list as the cursor moves
+	y = 48;
+	visible = (int)((menu_height - 16 - y) / 8 / 2);
+	start = bound(0, modlist_cursor - (visible >> 1), modlist_count - visible);
+	end = min(start + visible, modlist_count);
+
+	p = Draw_CachePic("gfx/p_option", true);
+	M_DrawPic((640 - p->width) / 2, 4, "gfx/p_option");
+	if (end > start)
+	{
+		for (n = start;n < end;n++)
+		{
+			DrawQ_Pic(menu_x + 40, menu_y + y, NULL, 360, 8, n == modlist_cursor ? (0.5 + 0.2 * sin(realtime * M_PI)) : 0, 0, 0, 0.5, 0);
+			M_ItemPrint(80, y, modlist[n].dir, true);
+			M_DrawCheckbox(48, y, modlist[n].loaded);
+			y +=8;
+		}
+	}
+	else
+	{
+		M_Print(80, y, "No Mods found");
+	}
+}
+
+static void M_ModList_Key(int k, char ascii)
+{
+	switch (k)
+	{
+	case K_ESCAPE:
+		ModList_Enable ();
+		M_Menu_Options_f();
+		break;
+
+	case K_SPACE:
+		S_LocalSound ("sound/misc/menu2.wav");
+		ModList_RebuildList();
+		break;
+
+	case K_UPARROW:
+		S_LocalSound ("sound/misc/menu1.wav");
+		modlist_cursor--;
+		if (modlist_cursor < 0)
+			modlist_cursor = modlist_count - 1;
+		break;
+
+	case K_LEFTARROW:
+		M_Menu_ModList_AdjustSliders (-1);
+		break;
+
+	case K_DOWNARROW:
+		S_LocalSound ("sound/misc/menu1.wav");
+		modlist_cursor++;
+		if (modlist_cursor >= modlist_count)
+			modlist_cursor = 0;
+		break;
+
+	case K_RIGHTARROW:
+		M_Menu_ModList_AdjustSliders (1);
+		break;
+
+	case K_ENTER:
+		S_LocalSound ("sound/misc/menu2.wav");
+		ModList_Enable ();
+		break;
+
+	default:
+		break;
+	}
+
+}
+
+//=============================================================================
 /* Menu Subsystem */
 
 static void M_KeyEvent(int key, char ascii, qboolean downevent);
@@ -4463,6 +4700,7 @@ void M_Init (void)
 	Cmd_AddCommand ("menu_keys", M_Menu_Keys_f, "open the key binding menu");
 	Cmd_AddCommand ("menu_video", M_Menu_Video_f, "open the video options menu");
 	Cmd_AddCommand ("menu_reset", M_Menu_Reset_f, "open the reset to defaults menu");
+	Cmd_AddCommand ("menu_mods", M_Menu_ModList_f, "open the mods browser menu");
 	Cmd_AddCommand ("help", M_Menu_Help_f, "open the help menu");
 	Cmd_AddCommand ("menu_quit", M_Menu_Quit_f, "open the quit menu");
 	Cmd_AddCommand ("menu_transfusion_episode", M_Menu_Transfusion_Episode_f, "open the transfusion episode select menu");
@@ -4628,6 +4866,10 @@ void M_Draw (void)
 	case m_slist:
 		M_ServerList_Draw ();
 		break;
+
+	case m_modlist:
+		M_ModList_Draw ();
+		break;
 	}
 
 	if (gamemode == GAME_TRANSFUSION && !m_missingdata) {
@@ -4741,7 +4983,6 @@ void M_KeyEvent (int key, char ascii, qboolean downevent)
 		M_Reset_Key (key, ascii);
 		return;
 
-
 	case m_video:
 		M_Video_Key (key, ascii);
 		return;
@@ -4769,7 +5010,12 @@ void M_KeyEvent (int key, char ascii, qboolean downevent)
 	case m_slist:
 		M_ServerList_Key (key, ascii);
 		return;
+
+	case m_modlist:
+		M_ModList_Key (key, ascii);
+		return;
 	}
+
 }
 
 void M_Shutdown(void)

@@ -366,7 +366,6 @@
 3 feature darkplaces client: add back r_waterripple (Vermeulen)
 3 feature darkplaces client: add clientside entity prediction similar to qw based on ping, and add cl_prediction and cl_prediction_lockping
 3 feature darkplaces client: add direct xvid recording using the xvid library (Error, Vermeulen)
-3 feature darkplaces client: mod browser (and ability to switch mods), this depends on "gamedir" cvar todo item (mashakos, FrikaC)
 3 feature darkplaces docs: add short and long documentation string to each cvar/command (QorpsE)
 3 feature darkplaces docs: write a documentation string in engine, and a command to dump documentation to a darkplaces.txt file (QorpsE)
 3 feature darkplaces editlights: add a custom light style string to rtlights, if empty it uses a normal server controlled light style (Stribbs)
@@ -456,6 +455,7 @@
 7 feature darkplaces renderer: make it work on Savage4 again (Ender)
 7 feature darkplaces renderer: mirrors
 7 feature darkplaces renderer: shadow volume clipping (romi)
+-d (mashakos, FrikaC) feature darkplaces client: mod browser (and ability to switch mods), this depends on "gamedir" cvar todo item (mashakos, FrikaC)
 d bug darkplaces Mac filesystem: on Mac dlopen is not finding dylib files alongside the executable, do a more thorough search (Zenex)
 d bug darkplaces Mac filesystem: on Mac init the basedir to argv[0] truncated to not include the *.app/ part of the path onward (Zenex)
 d bug darkplaces SDL input: changing video mode causes it to ignore all character events from then on
