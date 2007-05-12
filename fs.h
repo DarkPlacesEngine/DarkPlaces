@@ -44,6 +44,10 @@ typedef long long fs_offset_t;
 extern char fs_gamedir [MAX_OSPATH];
 extern char fs_basedir [MAX_OSPATH];
 
+// list of active game directories (empty if not running a mod)
+#define MAX_GAMEDIRS 16
+extern int fs_numgamedirs;
+extern char fs_gamedirs[MAX_GAMEDIRS][MAX_QPATH];
 
 
 // ------ Main functions ------ //

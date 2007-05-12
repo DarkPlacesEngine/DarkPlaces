@@ -274,7 +274,6 @@ char fs_gamedir[MAX_OSPATH];
 char fs_basedir[MAX_OSPATH];
 
 // list of active game directories (empty if not running a mod)
-#define MAX_GAMEDIRS 16
 int fs_numgamedirs = 0;
 char fs_gamedirs[MAX_GAMEDIRS][MAX_QPATH];
 
@@ -1216,6 +1215,9 @@ qboolean FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qboolean
 		}
 	}
 
+	// halt demo playback to close the file
+	CL_Disconnect();
+
 	Host_SaveConfig_f();
 
 	fs_numgamedirs = numgamedirs;
@@ -1267,11 +1269,7 @@ void FS_GameDir_f (void)
 	for (i = 0;i < numgamedirs;i++)
 		strlcpy(gamedirs[i], Cmd_Argv(i+1), sizeof(gamedirs[i]));
 
-	// allow gamedir change during demo loop
-	if (cls.demoplayback)
-		CL_Disconnect();
-
-	if (cls.state == ca_connected || sv.active)
+	if ((cls.state == ca_connected && !cls.demoplayback) || sv.active)
 	{
 		// actually, changing during game would work fine, but would be stupid
 		Con_Printf("Can not change gamedir while client is connected or server is running!\n");
