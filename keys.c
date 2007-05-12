@@ -189,11 +189,12 @@ static const keyname_t   keynames[] = {
 	{"AUX31", K_AUX31},
 	{"AUX32", K_AUX32},
 
-	{"SEMICOLON", ';'},			// because a raw semicolon seperates commands
+	{"SEMICOLON", ';'},			// because a raw semicolon separates commands
 	{"TILDE", '~'},
 	{"BACKQUOTE", '`'},
 	{"QUOTE", '"'},
 	{"APOSTROPHE", '\''},
+	{"BACKSLASH", '\\'},		// because a raw backslash is used for special characters
 
 	{NULL, 0}
 };
@@ -584,18 +585,24 @@ Key_KeynumToString (int keynum)
 	const keyname_t  *kn;
 	static char tinystr[2];
 
-	if (keynum == -1)
+	// -1 is an invalid code
+	if (keynum < 0)
 		return "<KEY NOT FOUND>";
-	if (keynum > 32 && keynum < 127) {	// printable ascii
+
+	// search overrides first, because some characters are special
+	for (kn = keynames; kn->name; kn++)
+		if (keynum == kn->keynum)
+			return kn->name;
+
+	// if it is printable, output it as a single character
+	if (keynum > 32 && keynum < 256)
+	{
 		tinystr[0] = keynum;
 		tinystr[1] = 0;
 		return tinystr;
 	}
 
-	for (kn = keynames; kn->name; kn++)
-		if (keynum == kn->keynum)
-			return kn->name;
-
+	// if it is not overridden and not printable, we don't know what to do with it
 	return "<UNKNOWN KEYNUM>";
 }
 
@@ -795,15 +802,19 @@ Key_WriteBindings (qfile_t *f)
 {
 	int         i, j;
 
-	for (i = 0; i < (int)(sizeof(keybindings[0])/sizeof(keybindings[0][0])); i++)
-		if (keybindings[0][i])
-			FS_Printf(f, "bind \"%s\" \"%s\"\n",
-					Key_KeynumToString (i), keybindings[0][i]);
-	for (j = 1; j < 8; j++)
+	for (j = 0; j < MAX_BINDMAPS; j++)
+	{
 		for (i = 0; i < (int)(sizeof(keybindings[0])/sizeof(keybindings[0][0])); i++)
+		{
 			if (keybindings[j][i])
-				FS_Printf(f, "in_bind %d \"%s\" \"%s\"\n",
-						j, Key_KeynumToString (i), keybindings[j][i]);
+			{
+				if (j == 0)
+					FS_Printf(f, "bind %s \"%s\"\n", Key_KeynumToString (i), keybindings[j][i]);
+				else
+					FS_Printf(f, "in_bind %d %s \"%s\"\n", j, Key_KeynumToString (i), keybindings[j][i]);
+			}
+		}
+	}
 }
 
 
