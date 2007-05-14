@@ -214,7 +214,7 @@ static ogg_int64_t (*qov_pcm_total) (OggVorbis_File *vf,int i);
 static long (*qov_read) (OggVorbis_File *vf,char *buffer,int length,
 						 int bigendianp,int word,int sgned,int *bitstream);
 
-static dllfunction_t oggvorbisfuncs[] =
+static dllfunction_t vorbisfilefuncs[] =
 {
 	{"ov_clear",				(void **) &qov_clear},
 	{"ov_info",					(void **) &qov_info},
@@ -224,6 +224,12 @@ static dllfunction_t oggvorbisfuncs[] =
 	{"ov_pcm_seek",				(void **) &qov_pcm_seek},
 	{"ov_pcm_total",			(void **) &qov_pcm_total},
 	{"ov_read",					(void **) &qov_read},
+	{NULL, NULL}
+};
+
+static dllfunction_t vorbisfuncs[] =
+{
+	{"vorbis_comment_query",	(void **) &qvorbis_comment_query},
 	{NULL, NULL}
 };
 
@@ -348,8 +354,8 @@ qboolean OGG_OpenLibrary (void)
 	// Load the DLLs
 	// We need to load both by hand because some OSes seem to not load
 	// the vorbis DLL automatically when loading the VorbisFile DLL
-	if (! Sys_LoadLibrary (dllnames_vo, &vo_dll, NULL) ||
-		! Sys_LoadLibrary (dllnames_vf, &vf_dll, oggvorbisfuncs))
+	if (! Sys_LoadLibrary (dllnames_vo, &vo_dll, vorbisfuncs) ||
+		! Sys_LoadLibrary (dllnames_vf, &vf_dll, vorbisfilefuncs))
 	{
 		Sys_UnloadLibrary (&vo_dll);
 		Con_Printf ("Ogg Vorbis support disabled\n");
