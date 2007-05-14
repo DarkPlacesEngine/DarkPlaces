@@ -219,7 +219,6 @@ static dllfunction_t vorbisfilefuncs[] =
 	{"ov_clear",				(void **) &qov_clear},
 	{"ov_info",					(void **) &qov_info},
 	{"ov_comment",				(void **) &qov_comment},
-	{"vorbis_comment_query",	(void **) &qvorbis_comment_query},
 	{"ov_open_callbacks",		(void **) &qov_open_callbacks},
 	{"ov_pcm_seek",				(void **) &qov_pcm_seek},
 	{"ov_pcm_total",			(void **) &qov_pcm_total},
