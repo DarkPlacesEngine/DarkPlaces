@@ -268,7 +268,7 @@ static void S_SoundList_f (void)
 			size = sfx->memsize;
 			format = sfx->fetcher->getfmt(sfx);
 			Con_Printf ("%c%c%c%c(%2db, %6s) %8i : %s\n",
-						(sfx->loopstart >= 0) ? 'L' : ' ',
+						(sfx->loopstart < sfx->total_length) ? 'L' : ' ',
 						(sfx->flags & SFXFLAG_STREAMED) ? 'S' : ' ',
 						(sfx->locks > 0) ? 'K' : ' ',
 						(sfx->flags & SFXFLAG_PERMANENTLOCK) ? 'P' : ' ',
@@ -1075,7 +1075,7 @@ channel_t *SND_PickChannel(int entnum, int entchannel)
 			continue;
 
 		// don't override looped sounds
-		if ((ch->flags & CHANNELFLAG_FORCELOOP) || ch->sfx->loopstart >= 0)
+		if ((ch->flags & CHANNELFLAG_FORCELOOP) || ch->sfx->loopstart < ch->sfx->total_length)
 			continue;
 		life_left = ch->sfx->total_length - ch->pos;
 
@@ -1169,7 +1169,7 @@ void S_PlaySfxOnChannel (sfx_t *sfx, channel_t *target_chan, unsigned int flags,
 	// If it's a static sound
 	if (isstatic)
 	{
-		if (sfx->loopstart == -1)
+		if (sfx->loopstart >= sfx->total_length)
 			Con_DPrintf("Quake compatibility warning: Static sound \"%s\" is not looped\n", sfx->name);
 		target_chan->dist_mult = attenuation / (64.0f * snd_soundradius.value);
 	}

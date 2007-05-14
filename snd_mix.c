@@ -512,7 +512,7 @@ void S_PaintChannels (snd_ringbuffer_t* rb, unsigned int starttime, unsigned int
 		{
 			sfx_t *sfx;
 			unsigned int ltime;
-			int count;
+			unsigned int count;
 
 			sfx = ch->sfx;
 			if (sfx == NULL)
@@ -526,7 +526,7 @@ void S_PaintChannels (snd_ringbuffer_t* rb, unsigned int starttime, unsigned int
 			if (ch->pos < 0)
 			{
 				count = -ch->pos;
-				count = min(count, (int)(partialend - ltime));
+				count = min(count, partialend - ltime);
 				ch->pos += count;
 				ltime += count;
 			}
@@ -535,19 +535,21 @@ void S_PaintChannels (snd_ringbuffer_t* rb, unsigned int starttime, unsigned int
 			{
 				// paint up to end of buffer or of input, whichever is lower
 				count = sfx->total_length - ch->pos;
-				count = bound(0, count, (int)(partialend - ltime));
+				count = bound(0, count, partialend - ltime);
 				if (count)
 				{
-					SND_PaintChannel (ch, (unsigned int)count);
+					SND_PaintChannel (ch, count);
 					ch->pos += count;
 					ltime += count;
 				}
 
 				// if at end of sfx, loop or stop the channel
-				if (ch->pos >= sfx->total_length)
+				if (ch->pos >= (int)sfx->total_length)
 				{
-					if (sfx->loopstart >= 0 || (ch->flags & CHANNELFLAG_FORCELOOP))
-						ch->pos = bound(0, sfx->loopstart, (int)sfx->total_length - 1);
+					if (sfx->loopstart < sfx->total_length)
+						ch->pos = sfx->loopstart;
+					else if (ch->flags & CHANNELFLAG_FORCELOOP)
+						ch->pos = 0;
 					else
 					{
 						S_StopChannel (ch - channels);
