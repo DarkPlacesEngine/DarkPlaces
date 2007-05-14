@@ -4905,7 +4905,7 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 	if (loadmodel->texturepool == NULL && cls.state != ca_dedicated)
 		loadmodel->texturepool = R_AllocTexturePool();
 
-	if (loadmodel->brushq3.num_lightmapmergepower > 0 || true)
+	if (loadmodel->brushq3.num_lightmapmergepower > 0)
 	{
 		power = loadmodel->brushq3.num_lightmapmergepower;
 		power2 = power * 2;
