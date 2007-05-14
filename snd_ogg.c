@@ -160,6 +160,14 @@ typedef struct
 
 typedef struct
 {
+	char **user_comments;
+	int   *comment_lengths;
+	int    comments;
+	char  *vendor;
+} vorbis_comment;
+
+typedef struct
+{
 	void				*datasource;
 	int					seekable;
 	ogg_int64_t			offset;
@@ -171,7 +179,7 @@ typedef struct
 	long				*serialnos;
 	ogg_int64_t			*pcmlengths;
 	vorbis_info			*vi;
-	void				*vc;  // VOIDED POINTER
+	vorbis_comment		*vc;
 	ogg_int64_t			pcm_offset;
 	int					ready_state;
 	long				current_serialno;
@@ -196,6 +204,8 @@ typedef struct
 // Functions exported from the vorbisfile library
 static int (*qov_clear) (OggVorbis_File *vf);
 static vorbis_info* (*qov_info) (OggVorbis_File *vf,int link);
+static vorbis_comment* (*qov_comment) (OggVorbis_File *vf,int link);
+static char * (*qvorbis_comment_query) (vorbis_comment *vc, char *tag, int count);
 static int (*qov_open_callbacks) (void *datasource, OggVorbis_File *vf,
 								  char *initial, long ibytes,
 								  ov_callbacks callbacks);
@@ -206,12 +216,14 @@ static long (*qov_read) (OggVorbis_File *vf,char *buffer,int length,
 
 static dllfunction_t oggvorbisfuncs[] =
 {
-	{"ov_clear",			(void **) &qov_clear},
-	{"ov_info",				(void **) &qov_info},
-	{"ov_open_callbacks",	(void **) &qov_open_callbacks},
-	{"ov_pcm_seek",			(void **) &qov_pcm_seek},
-	{"ov_pcm_total",		(void **) &qov_pcm_total},
-	{"ov_read",				(void **) &qov_read},
+	{"ov_clear",				(void **) &qov_clear},
+	{"ov_info",					(void **) &qov_info},
+	{"ov_comment",				(void **) &qov_comment},
+	{"vorbis_comment_query",	(void **) &qvorbis_comment_query},
+	{"ov_open_callbacks",		(void **) &qov_open_callbacks},
+	{"ov_pcm_seek",				(void **) &qov_pcm_seek},
+	{"ov_pcm_total",			(void **) &qov_pcm_total},
+	{"ov_read",					(void **) &qov_read},
 	{NULL, NULL}
 };
 
@@ -619,10 +631,12 @@ Load an Ogg Vorbis file into memory
 qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *sfx)
 {
 	unsigned char *data;
+	const char *loopcomment;
 	fs_offset_t filesize;
 	ov_decode_t ov_decode;
 	OggVorbis_File vf;
 	vorbis_info *vi;
+	vorbis_comment *vc;
 	ogg_int64_t len, buff_len;
 
 	if (!vf_dll)
@@ -685,6 +699,13 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *sfx)
 		sfx->flags |= SFXFLAG_STREAMED;
 		sfx->total_length = (int)((size_t)len / (per_sfx->format.channels * 2) * ((double)snd_renderbuffer->format.speed / per_sfx->format.speed));
 		sfx->loopstart = sfx->total_length;
+		vc = qov_comment(&vf, -1);
+		if(vc)
+		{
+			loopcomment = qvorbis_comment_query(vc, "LOOP_START", 0);
+			if(loopcomment)
+				sfx->loopstart = bound(0, (unsigned int) (atof(loopcomment) * (double)snd_renderbuffer->format.speed / (double)per_sfx->format.speed), sfx->total_length);
+		}
 	}
 	else
 	{
@@ -730,6 +751,13 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *sfx)
 
 		sfx->loopstart = sfx->total_length;
 		sfx->flags &= ~SFXFLAG_STREAMED;
+		vc = qov_comment(&vf, -1);
+		if(vc)
+		{
+			loopcomment = qvorbis_comment_query(vc, "LOOP_START", 0);
+			if(loopcomment)
+				sfx->loopstart = bound(0, (unsigned int) (atoi(loopcomment) * (double)snd_renderbuffer->format.speed / (double)sb->format.speed), sfx->total_length);
+		}
 
 		qov_clear (&vf);
 		Mem_Free (data);
