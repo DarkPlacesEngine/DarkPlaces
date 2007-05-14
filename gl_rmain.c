@@ -3223,9 +3223,7 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 	t->currentnumlayers = 0;
 	if (!(t->currentmaterialflags & MATERIALFLAG_NODRAW))
 	{
-		if (gl_lightmaps.integer)
-			R_Texture_AddLayer(t, true, GL_ONE, GL_ZERO, TEXTURELAYERTYPE_LITTEXTURE, r_texture_white, &identitymatrix, 1, 1, 1, 1);
-		else if (!(t->currentmaterialflags & MATERIALFLAG_SKY))
+		if (!(t->currentmaterialflags & MATERIALFLAG_SKY))
 		{
 			int blendfunc1, blendfunc2, depthmask;
 			if (t->currentmaterialflags & MATERIALFLAG_ADD)
@@ -4471,6 +4469,34 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 		R_Mesh_ResetTextureState();
 		RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
 		R_DrawTextureSurfaceList_ShowSurfaces(texturenumsurfaces, texturesurfacelist);
+		r_refdef.stats.entities_surfaces += texturenumsurfaces;
+	}
+	else if (gl_lightmaps.integer)
+	{
+		rmeshstate_t m;
+		if (rsurface_mode != RSURFMODE_MULTIPASS)
+			rsurface_mode = RSURFMODE_MULTIPASS;
+		GL_DepthRange(0, (rsurface_texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE) ? 0.0625 : 1);
+		GL_DepthTest(true);
+		GL_CullFace((rsurface_texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
+		GL_BlendFunc(GL_ONE, GL_ZERO);
+		GL_DepthMask(writedepth);
+		GL_Color(1,1,1,1);
+		GL_AlphaTest(false);
+		R_Mesh_ColorPointer(NULL, 0, 0);
+		memset(&m, 0, sizeof(m));
+		m.tex[0] = R_GetTexture(r_texture_white);
+		m.pointer_texcoord[0] = rsurface_model->surfmesh.data_texcoordlightmap2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface_model->surfmesh.vbo;
+		m.pointer_texcoord_bufferoffset[0] = rsurface_model->surfmesh.vbooffset_texcoordlightmap2f;
+		R_Mesh_TextureState(&m);
+		RSurf_PrepareVerticesForBatch(rsurface_lightmode == 2, false, texturenumsurfaces, texturesurfacelist);
+		if (rsurface_lightmode == 2)
+			RSurf_DrawBatch_GL11_VertexShade(texturenumsurfaces, texturesurfacelist, 1, 1, 1, 1, false, false);
+		else if (rsurface_uselightmaptexture)
+			RSurf_DrawBatch_GL11_Lightmap(texturenumsurfaces, texturesurfacelist, 1, 1, 1, 1, false, false);
+		else
+			RSurf_DrawBatch_GL11_VertexColor(texturenumsurfaces, texturesurfacelist, 1, 1, 1, 1, false, false);
 		r_refdef.stats.entities_surfaces += texturenumsurfaces;
 	}
 	else if (rsurface_texture->currentmaterialflags & MATERIALFLAG_SKY)
