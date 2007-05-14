@@ -1043,41 +1043,42 @@ channel_t *SND_PickChannel(int entnum, int entchannel)
 // Check for replacement sound, or find the best one to replace
 	first_to_die = -1;
 	first_life_left = 0x7fffffff;
-	for (ch_idx=NUM_AMBIENTS ; ch_idx < NUM_AMBIENTS + MAX_DYNAMIC_CHANNELS ; ch_idx++)
+
+	// entity channels try to replace the existing sound on the channel
+	if (entchannel != 0)
 	{
-		ch = &channels[ch_idx];
-		if (entchannel != 0)
+		for (ch_idx=NUM_AMBIENTS ; ch_idx < NUM_AMBIENTS + MAX_DYNAMIC_CHANNELS ; ch_idx++)
 		{
-			// try to override an existing channel
+			ch = &channels[ch_idx];
 			if (ch->entnum == entnum && (ch->entchannel == entchannel || entchannel == -1) )
 			{
 				// always override sound from same entity
-				first_to_die = ch_idx;
-				break;
+				S_StopChannel (ch_idx);
+				return &channels[ch_idx];
 			}
 		}
-		else
+	}
+
+	// there was no channel to override, so look for the first empty one
+	for (ch_idx=NUM_AMBIENTS ; ch_idx < NUM_AMBIENTS + MAX_DYNAMIC_CHANNELS ; ch_idx++)
+	{
+		ch = &channels[ch_idx];
+		if (!ch->sfx)
 		{
-			if (!ch->sfx)
-			{
-				// no sound on this channel
-				first_to_die = ch_idx;
-				break;
-			}
+			// no sound on this channel
+			first_to_die = ch_idx;
+			break;
 		}
 
-		if (ch->sfx)
-		{
-			// don't let monster sounds override player sounds
-			if (ch->entnum == cl.viewentity && entnum != cl.viewentity)
-				continue;
+		// don't let monster sounds override player sounds
+		if (ch->entnum == cl.viewentity && entnum != cl.viewentity)
+			continue;
 
-			// don't override looped sounds
-			if ((ch->flags & CHANNELFLAG_FORCELOOP) || ch->sfx->loopstart >= 0)
-				continue;
-		}
+		// don't override looped sounds
+		if ((ch->flags & CHANNELFLAG_FORCELOOP) || ch->sfx->loopstart >= 0)
+			continue;
+		life_left = ch->sfx->total_length - ch->pos;
 
-		life_left = (int)(ch->end - snd_renderbuffer->endframe);
 		if (life_left < first_life_left)
 		{
 			first_life_left = life_left;
@@ -1087,8 +1088,6 @@ channel_t *SND_PickChannel(int entnum, int entchannel)
 
 	if (first_to_die == -1)
 		return NULL;
-
-	S_StopChannel (first_to_die);
 
 	return &channels[first_to_die];
 }
@@ -1164,9 +1163,8 @@ void S_PlaySfxOnChannel (sfx_t *sfx, channel_t *target_chan, unsigned int flags,
 	VectorCopy (origin, target_chan->origin);
 	target_chan->master_vol = (int)(fvol * 255);
 	target_chan->sfx = sfx;
-	target_chan->end = snd_renderbuffer->endframe + sfx->total_length;
-	target_chan->lastptime = snd_renderbuffer->endframe;
 	target_chan->flags = flags;
+	target_chan->pos = 0; // start of the sound
 
 	// If it's a static sound
 	if (isstatic)
@@ -1187,7 +1185,6 @@ int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 {
 	channel_t *target_chan, *check;
 	int		ch_idx;
-	int		skip;
 
 	if (snd_renderbuffer == NULL || sfx == NULL || nosound.integer)
 		return -1;
@@ -1218,13 +1215,8 @@ int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 			continue;
 		if (check->sfx == sfx && !check->pos)
 		{
-			skip = (int)(0.1 * snd_renderbuffer->format.speed);
-			if (skip > (int)sfx->total_length)
-				skip = (int)sfx->total_length;
-			if (skip > 0)
-				skip = rand() % skip;
-			target_chan->pos += skip;
-			target_chan->end -= skip;
+			// use negative pos offset to delay this sound effect
+			target_chan->pos += (int)lhrandom(0, -0.1 * snd_renderbuffer->format.speed);
 			break;
 		}
 	}
@@ -1256,7 +1248,6 @@ void S_StopChannel (unsigned int channel_ind)
 
 		ch->sfx = NULL;
 	}
-	ch->end = 0;
 }
 
 

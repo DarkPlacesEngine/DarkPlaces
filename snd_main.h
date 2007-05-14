@@ -72,7 +72,7 @@ struct sfx_s
 
 	unsigned int		flags;			// cf SFXFLAG_* defines
 	int					loopstart;		// in sample frames. -1 if not looped
-	unsigned int		total_length;	// in sample frames
+	int					total_length;	// in sample frames
 	const snd_fetcher_t	*fetcher;
 	void				*fetcher_data;	// Per-sfx data for the sound fetching functions
 };
@@ -86,9 +86,7 @@ typedef struct channel_s
 	int				master_vol;		// 0-255 master volume
 	sfx_t			*sfx;			// sfx number
 	unsigned int	flags;			// cf CHANNELFLAG_* defines
-	unsigned int	end;			// end time in global paintsamples
-	unsigned int	lastptime;		// last time this channel was painted
-	unsigned int	pos;			// sample position in sfx
+	int				pos;			// sample position in sfx, negative values delay the start of the sound playback
 	int				entnum;			// to allow overriding a specific sound
 	int				entchannel;
 	vec3_t			origin;			// origin of sound effect

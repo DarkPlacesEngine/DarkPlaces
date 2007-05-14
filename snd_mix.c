@@ -234,8 +234,20 @@ static qboolean SND_PaintChannel (channel_t *ch, unsigned int count)
 	else
 		snd_vol = (int)(volume.value * 256);
 
+	// calculate mixing volumes based on channel volumes and volume cvar
+	// also limit the volumes to values that won't clip
 	for (i = 0;i < SND_LISTENERS;i++)
+	{
 		vol[i] = ch->listener_volume[i] * snd_vol;
+		vol[i] = bound(0, vol[i], 65536);
+	}
+
+	// if volumes are all zero, just return
+	for (i = 0;i < SND_LISTENERS;i++)
+		if (vol[i])
+			break;
+	if (i == SND_LISTENERS)
+		return false;
 
 	sb_offset = ch->pos;
 	sb = ch->sfx->fetcher->getsb (ch, &sb_offset, count);
@@ -243,6 +255,7 @@ static qboolean SND_PaintChannel (channel_t *ch, unsigned int count)
 	{
 		Con_DPrintf("SND_PaintChannel: ERROR: can't get sound buffer from sfx \"%s\"\n",
 					ch->sfx->name); // , count); // or add this? FIXME
+		return false;
 	}
 	else
 	{
@@ -470,8 +483,6 @@ static qboolean SND_PaintChannel (channel_t *ch, unsigned int count)
 				return false; // unsupported number of channels in sound
 		}
 	}
-
-	ch->pos += count;
 	return true;
 }
 
@@ -495,105 +506,53 @@ void S_PaintChannels (snd_ringbuffer_t* rb, unsigned int starttime, unsigned int
 		memset (paintbuffer, 0, (partialend - paintedtime) * sizeof (paintbuffer[0]));
 
 		// paint in the channels.
+		// channels with zero volumes still advance in time but don't paint.
 		ch = channels;
 		for (i = 0; i < total_channels ; i++, ch++)
 		{
 			sfx_t *sfx;
-			unsigned int ltime, j;
+			unsigned int ltime;
+			int count;
 
 			sfx = ch->sfx;
 			if (sfx == NULL)
 				continue;
-			for (j = 0;j < SND_LISTENERS;j++)
-				if (ch->listener_volume[j])
-					break;
-			if (j == SND_LISTENERS)
-				continue;
 			if (!S_LoadSound (sfx, true))
 				continue;
-
-			// if the channel is paused
 			if (ch->flags & CHANNELFLAG_PAUSED)
-			{
-				int pausedtime = partialend - paintedtime;
-				ch->lastptime += pausedtime;
-				ch->end += pausedtime;
 				continue;
-			}
-
-			// if the sound hasn't been painted last time, update his position
-			if (ch->lastptime < paintedtime)
-			{
-				ch->pos += paintedtime - ch->lastptime;
-
-				// If the sound should have ended by then
-				if ((unsigned int)ch->pos > sfx->total_length)
-				{
-					int loopstart;
-
-					if (sfx->loopstart >= 0)
-						loopstart = bound(0, sfx->loopstart, (int)sfx->total_length - 1);
-					else
-					{
-						if (ch->flags & CHANNELFLAG_FORCELOOP)
-							loopstart = 0;
-						else
-							loopstart = -1;
-					}
-
-					// If the sound is looped
-					if (loopstart >= 0)
-						ch->pos = (ch->pos - sfx->total_length) % (sfx->total_length - loopstart) + loopstart;
-					else
-						ch->pos = sfx->total_length;
-					ch->end = paintedtime + sfx->total_length - ch->pos;
-				}
-			}
 
 			ltime = paintedtime;
+			if (ch->pos < 0)
+			{
+				count = -ch->pos;
+				count = min(count, (int)(partialend - ltime));
+				ch->pos += count;
+				ltime += count;
+			}
+
 			while (ltime < partialend)
 			{
-				int count;
-				qboolean stop_paint;
-
-				// paint up to end
-				if (ch->end < partialend)
-					count = ch->end - ltime;
-				else
-					count = partialend - ltime;
-
-				if (count > 0)
+				// paint up to end of buffer or of input, whichever is lower
+				count = sfx->total_length - ch->pos;
+				count = bound(0, count, (int)(partialend - ltime));
+				if (count)
 				{
-					for (j = 0; j < SND_LISTENERS; j++)
-						ch->listener_volume[j] = bound(0, ch->listener_volume[j], 255);
-
-					stop_paint = !SND_PaintChannel (ch, (unsigned int)count);
-					if (!stop_paint)
-					{
-						ltime += count;
-						ch->lastptime = ltime;
-					}
+					SND_PaintChannel (ch, (unsigned int)count);
+					ch->pos += count;
+					ltime += count;
 				}
-				else
-					stop_paint = false;
 
-				if (ltime >= ch->end)
+				// if at end of sfx, loop or stop the channel
+				if (ch->pos >= sfx->total_length)
 				{
-					// if at end of loop, restart
-					if ((sfx->loopstart >= 0 || (ch->flags & CHANNELFLAG_FORCELOOP)) && !stop_paint)
-					{
+					if (sfx->loopstart >= 0 || (ch->flags & CHANNELFLAG_FORCELOOP))
 						ch->pos = bound(0, sfx->loopstart, (int)sfx->total_length - 1);
-						ch->end = ltime + sfx->total_length - ch->pos;
-					}
-					// channel just stopped
 					else
-						stop_paint = true;
-				}
-
-				if (stop_paint)
-				{
-					S_StopChannel (ch - channels);
-					break;
+					{
+						S_StopChannel (ch - channels);
+						break;
+					}
 				}
 			}
 		}

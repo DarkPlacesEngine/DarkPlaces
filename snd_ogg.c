@@ -453,7 +453,7 @@ static const snd_buffer_t* OGG_FetchSound (channel_t* ch, unsigned int* start, u
 
 		ch->fetcher_data = per_ch;
 	}
-	
+
 	real_start = *start;
 
 	sb = &per_ch->sb;
@@ -481,8 +481,8 @@ static const snd_buffer_t* OGG_FetchSound (channel_t* ch, unsigned int* start, u
 		unsigned int time_start;
 		ogg_int64_t ogg_start;
 		int err;
-		
-		if (real_start > sfx->total_length)
+
+		if (real_start > (unsigned int)sfx->total_length)
 		{
 			Con_Printf ("OGG_FetchSound: asked for a start position after the end of the sfx! (%u > %u)\n",
 						real_start, sfx->total_length);
