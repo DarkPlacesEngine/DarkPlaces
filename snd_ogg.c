@@ -682,9 +682,9 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *sfx)
 
 		sfx->fetcher_data = per_sfx;
 		sfx->fetcher = &ogg_fetcher;
-		sfx->loopstart = -1;
 		sfx->flags |= SFXFLAG_STREAMED;
 		sfx->total_length = (int)((size_t)len / (per_sfx->format.channels * 2) * ((double)snd_renderbuffer->format.speed / per_sfx->format.speed));
+		sfx->loopstart = sfx->total_length;
 	}
 	else
 	{
@@ -728,7 +728,7 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *sfx)
 		sfx->total_length = sb->nbframes;
 		sfx->memsize += sb->maxframes * sb->format.channels * sb->format.width + sizeof (*sb) - sizeof (sb->samples);
 
-		sfx->loopstart = -1;
+		sfx->loopstart = sfx->total_length;
 		sfx->flags &= ~SFXFLAG_STREAMED;
 
 		qov_clear (&vf);

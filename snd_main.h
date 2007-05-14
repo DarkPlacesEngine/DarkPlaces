@@ -71,8 +71,8 @@ struct sfx_s
 										// freed at level change by S_ServerSounds.
 
 	unsigned int		flags;			// cf SFXFLAG_* defines
-	int					loopstart;		// in sample frames. -1 if not looped
-	int					total_length;	// in sample frames
+	unsigned int		loopstart;		// in sample frames. equals total_length if not looped
+	unsigned int		total_length;	// in sample frames
 	const snd_fetcher_t	*fetcher;
 	void				*fetcher_data;	// Per-sfx data for the sound fetching functions
 };

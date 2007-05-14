@@ -332,9 +332,10 @@ qboolean S_LoadWavFile (const char *filename, sfx_t *sfx)
 	sfx->memsize += sb->maxframes * sb->format.channels * sb->format.width + sizeof (*sb) - sizeof (sb->samples);
 
 	if (info.loopstart < 0)
-		sfx->loopstart = -1;
+		sfx->loopstart = sfx->total_length;
 	else
 		sfx->loopstart = (double)info.loopstart * (double)snd_renderbuffer->format.speed / (double)sb->format.speed;
+	sfx->loopstart = min(sfx->loopstart, sfx->total_length);
 	sfx->flags &= ~SFXFLAG_STREAMED;
 
 	Mem_Free (data);
