@@ -610,14 +610,17 @@ Two entities have touched, so run their touch functions
 ==================
 */
 extern void VM_SetTraceGlobals(const trace_t *trace);
+extern sizebuf_t vm_tempstringsbuf;
 void SV_Impact (prvm_edict_t *e1, trace_t *trace)
 {
+	int restorevm_tempstringsbuf_cursize;
 	int old_self, old_other;
 	prvm_edict_t *e2 = (prvm_edict_t *)trace->ent;
 	prvm_eval_t *val;
 
 	old_self = prog->globals.server->self;
 	old_other = prog->globals.server->other;
+	restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
 
 	VM_SetTraceGlobals(trace);
 
@@ -650,6 +653,7 @@ void SV_Impact (prvm_edict_t *e1, trace_t *trace)
 
 	prog->globals.server->self = old_self;
 	prog->globals.server->other = old_other;
+	vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 }
 
 
