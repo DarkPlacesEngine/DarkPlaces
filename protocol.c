@@ -52,7 +52,7 @@ protocolversioninfo[] =
 	{15, "QUAKEDP"},
 	{250, "NEHAHRAMOVIE"},
 	{15, "QUAKE"},
-	{28, "QUAKEWORLD"},
+	{28, "QW"},
 	{0, NULL}
 };
 
