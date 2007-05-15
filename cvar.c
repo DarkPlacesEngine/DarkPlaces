@@ -672,7 +672,8 @@ void Cvar_Set_f (void)
 		return;
 	}
 
-	Con_DPrint("Set: ");
+	if (developer.integer >= 100)
+		Con_DPrint("Set: ");
 
 	// all looks ok, create/modify the cvar
 	Cvar_Get(Cmd_Argv(1), Cmd_Argv(2), 0);
@@ -697,7 +698,8 @@ void Cvar_SetA_f (void)
 		return;
 	}
 
-	Con_DPrint("SetA: ");
+	if (developer.integer >= 100)
+		Con_DPrint("SetA: ");
 
 	// all looks ok, create/modify the cvar
 	Cvar_Get(Cmd_Argv(1), Cmd_Argv(2), CVAR_SAVE);
