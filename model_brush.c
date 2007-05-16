@@ -5625,12 +5625,12 @@ static void Mod_Q3BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientc
 				s = a + (k * model->brushq3.num_lightgrid_isize[1] + j) * model->brushq3.num_lightgrid_isize[0] + i;
 				VectorMA(ambientcolor, blend * (1.0f / 128.0f), s->ambientrgb, ambientcolor);
 				VectorMA(diffusecolor, blend * (1.0f / 128.0f), s->diffusergb, diffusecolor);
-				pitch = s->diffusepitch * M_PI / 128;
-				yaw = s->diffuseyaw * M_PI / 128;
-				sinpitch = sin(pitch);
-				diffusenormal[0] += blend * (cos(yaw) * sinpitch);
-				diffusenormal[1] += blend * (sin(yaw) * sinpitch);
-				diffusenormal[2] += blend * (cos(pitch));
+				// this uses the mod_md3_sin table because the values are
+				// already in the 0-255 range, the 64+ bias fetches a cosine
+				// instead of a sine value
+				diffusenormal[0] += blend * (mod_md3_sin[64 + s->diffuseyaw] * mod_md3_sin[s->diffusepitch]);
+				diffusenormal[1] += blend * (mod_md3_sin[     s->diffuseyaw] * mod_md3_sin[s->diffusepitch]);
+				diffusenormal[2] += blend * (mod_md3_sin[64 + s->diffusepitch]);
 				//Con_Printf("blend %f: ambient %i %i %i, diffuse %i %i %i, diffusepitch %i diffuseyaw %i (%f %f, normal %f %f %f)\n", blend, s->ambientrgb[0], s->ambientrgb[1], s->ambientrgb[2], s->diffusergb[0], s->diffusergb[1], s->diffusergb[2], s->diffusepitch, s->diffuseyaw, pitch, yaw, (cos(yaw) * cospitch), (sin(yaw) * cospitch), (-sin(pitch)));
 			}
 		}
