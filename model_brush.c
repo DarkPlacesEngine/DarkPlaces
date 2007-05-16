@@ -5579,7 +5579,7 @@ static void Mod_Q3BSP_LoadPVS(lump_t *l)
 static void Mod_Q3BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal)
 {
 	int i, j, k, index[3];
-	float transformed[3], blend1, blend2, blend, yaw, pitch, sinpitch, stylescale;
+	float transformed[3], blend1, blend2, blend, stylescale;
 	q3dlightgrid_t *a, *s;
 
 	// scale lighting by lightstyle[0] so that darkmode in dpmod works properly
