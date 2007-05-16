@@ -152,12 +152,14 @@ void CL_ReadDemoMessage(void)
 				}
 				if (cls.td_lastframe == -1)
 				{
-					// we start counting on the second frame
-					// (after parsing connection stuff)
-					cls.td_startframe = host_framecount + 1;
+					// render a couple frames before we start counting
+					cls.td_startframe = host_framecount + 3;
 				}
 				cls.td_lastframe = host_framecount;
 				cls.td_onesecondframes++;
+				// don't read any new messages during the warm-up period
+				if (host_framecount < cls.td_startframe)
+					return;
 				// if this is the first official frame we can now grab the real
 				// td_starttime so the bogus time on the first frame doesn't
 				// count against the final report
