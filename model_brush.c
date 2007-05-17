@@ -4570,7 +4570,10 @@ Q3 shader blendfuncs actually used in the game (* = supported by DP)
 				out->skinframerate = shader->primarylayer->framerate;
 				for (j = 0;j < shader->primarylayer->numframes;j++)
 					if (!(out->skinframes[j] = R_SkinFrame_LoadExternal(shader->primarylayer->texturename[j], ((shader->surfaceparms & Q3SURFACEPARM_NOMIPMAPS) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | ((!r_picmipworld.integer || (shader->textureflags & Q3TEXTUREFLAG_NOPICMIP)) ? 0 : TEXF_PICMIP) | (shader->primarylayer->clampmap ? TEXF_CLAMP : 0), false)))
+					{
 						Con_DPrintf("%s: could not load texture \"%s\" (frame %i) for shader \"%s\"\n", loadmodel->name, shader->primarylayer->texturename[j], j, out->name);
+						out->skinframes[j] = R_SkinFrame_LoadMissing();
+					}
 			}
 			if (shader->backgroundlayer)
 			{
