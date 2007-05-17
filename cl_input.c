@@ -349,7 +349,8 @@ cvar_t in_pitch_max = {0, "in_pitch_max", "90", "how far upward you can aim (qua
 
 cvar_t m_filter = {CVAR_SAVE, "m_filter","0", "smoothes mouse movement, less responsive but smoother aiming"};
 
-cvar_t cl_netinputpacketspersecond = {CVAR_SAVE, "cl_netinputpacketspersecond","50", "how many input packets to send to server each second"};
+cvar_t cl_netinputpacketsperserverpacket = {CVAR_SAVE, "cl_netinputpacketsperserverpacket", "2", "send this many input packets per server packet received (does not apply on old servers)"};
+cvar_t cl_netinputpacketspersecond = {CVAR_SAVE, "cl_netinputpacketspersecond","40", "how many input packets to send to server each second (does not apply on new servers)"};
 cvar_t cl_netinputpacketlosstolerance = {CVAR_SAVE, "cl_netinputpacketlosstolerance", "1", "how many packets in a row can be lost without movement issues when using cl_movement (technically how many input messages to repeat in each packet that have not yet been acknowledged by the server), only affects DP7 and later servers (Quake uses 0, QuakeWorld uses 2, and just for comparison Quake3 uses 1)"};
 
 cvar_t cl_nodelta = {0, "cl_nodelta", "0", "disables delta compression of non-player entities in QW network protocol"};
@@ -1260,7 +1261,7 @@ void CL_SendMove(void)
 		return;
 
 	// don't send too often or else network connections can get clogged by a high renderer framerate
-	packettime = cl.movevars_ticrate;
+	packettime = cl.movevars_ticrate / (double)bound(1, cl_netinputpacketsperserverpacket.integer, 10);
 	// quakeworld servers take only frametimes
 	// predicted dp7 servers take current interpolation time
 	// unpredicted servers take an echo of the latest server timestamp
@@ -1664,6 +1665,7 @@ void CL_InitInput (void)
 	Cvar_RegisterVariable(&in_pitch_max);
 	Cvar_RegisterVariable(&m_filter);
 
+	Cvar_RegisterVariable(&cl_netinputpacketsperserverpacket);
 	Cvar_RegisterVariable(&cl_netinputpacketspersecond);
 	Cvar_RegisterVariable(&cl_netinputpacketlosstolerance);
 
