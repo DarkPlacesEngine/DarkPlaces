@@ -88,6 +88,7 @@ static qboolean vid_usingmouse = false;
 static qboolean vid_usingvsync = false;
 static qboolean vid_usevsync = false;
 static qboolean vid_x11_hardwaregammasupported = false;
+static qboolean vid_x11_dgasupported = false;
 static int vid_x11_gammarampsize = 0;
 static float	mouse_x, mouse_y;
 static int p_mouse_x, p_mouse_y;
@@ -95,7 +96,6 @@ static int p_mouse_x, p_mouse_y;
 #if !defined(__APPLE__) && !defined(SUNOS)
 // FIXME: vid_dga_mouseaccel is poorly named, it is actually the multiplier for mouse movement, not an acceleration (which would be a power function or something)
 cvar_t vid_dga = {CVAR_SAVE, "vid_dga", "1", "make use of DGA mouse input"};
-cvar_t vid_dga_mouseaccel = {0, "vid_dga_mouseaccel", "1", "speed of mouse when using DGA mouse input"};
 #endif
 
 qboolean vidmode_ext = false;
@@ -266,22 +266,10 @@ static void IN_Activate (qboolean grab)
 			XGrabPointer(vidx11_display, win,  True, 0, GrabModeAsync, GrabModeAsync, win, None, CurrentTime);
 
 #if !defined(__APPLE__) && !defined(SUNOS)
-			if (vid_dga.integer)
+			if (vid_dga.integer && vid_x11_dgasupported)
 			{
-				int MajorVersion, MinorVersion;
-
-				if (!XF86DGAQueryVersion(vidx11_display, &MajorVersion, &MinorVersion))
-				{
-					// unable to query, probably not supported
-					Con_Print( "Failed to detect XF86DGA Mouse\n" );
-					Cvar_SetValueQuick(&vid_dga, 0);
-					XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, vid.width / 2, vid.height / 2);
-				}
-				else
-				{
-					XF86DGADirectVideo(vidx11_display, DefaultScreen(vidx11_display), XF86DGADirectMouse);
-					XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, 0, 0);
-				}
+				XF86DGADirectVideo(vidx11_display, DefaultScreen(vidx11_display), XF86DGADirectMouse);
+				XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, 0, 0);
 			}
 			else
 #endif
@@ -300,7 +288,7 @@ static void IN_Activate (qboolean grab)
 		if (vid_usingmouse)
 		{
 #if !defined(__APPLE__) && !defined(SUNOS)
-			if (vid_dga.integer)
+			if (vid_x11_dgasupported)
 				XF86DGADirectVideo(vidx11_display, DefaultScreen(vidx11_display), 0);
 #endif
 
@@ -372,10 +360,10 @@ static void HandleEvents(void)
 			if (vid_usingmouse)
 			{
 #if !defined(__APPLE__) && !defined(SUNOS)
-				if (vid_dga.integer == 1)
+				if (vid_dga.integer == 1 && vid_x11_dgasupported)
 				{
-					mouse_x += event.xmotion.x_root * vid_dga_mouseaccel.value;
-					mouse_y += event.xmotion.y_root * vid_dga_mouseaccel.value;
+					mouse_x += event.xmotion.x_root;
+					mouse_y += event.xmotion.y_root;
 				}
 				else
 #endif
@@ -604,7 +592,6 @@ void VID_Init(void)
 {
 #if !defined(__APPLE__) && !defined(SUNOS)
 	Cvar_RegisterVariable (&vid_dga);
-	Cvar_RegisterVariable (&vid_dga_mouseaccel);
 #endif
 	InitSig(); // trap evil signals
 // COMMANDLINEOPTION: Input: -nomouse disables mouse support (see also vid_mouse cvar)
@@ -837,6 +824,11 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	vid_hidden = false;
 	vid_activewindow = true;
 	vid_x11_hardwaregammasupported = XF86VidModeGetGammaRampSize(vidx11_display, vidx11_screen, &vid_x11_gammarampsize) != 0;
+#if !defined(__APPLE__) && !defined(SUNOS)
+	vid_x11_dgasupported = XF86DGAQueryVersion(vidx11_display, &MajorVersion, &MinorVersion);
+	if (!vid_x11_dgasupported)
+		Con_Print( "Failed to detect XF86DGA Mouse extension\n" );
+#endif
 	GL_Init();
 	return true;
 }
