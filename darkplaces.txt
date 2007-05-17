@@ -954,8 +954,7 @@ v_psycho                                          0                   easter egg
 vid_bitsperpixel                                  32                  how many bits per pixel to render at (32 or 16, 32 is recommended)
 vid_conheight                                     480                 virtual height of 2D graphics system
 vid_conwidth                                      640                 virtual width of 2D graphics system
-vid_dga                                           1                   make use of DGA mouse input
-vid_dga_mouseaccel                                1                   speed of mouse when using DGA mouse input
+vid_dgamouse                                      1                   make use of DGA mouse input
 vid_fullscreen                                    1                   use fullscreen (1) or windowed (0)
 vid_grabkeyboard                                  1                   whether to grab the keyboard when mouse is active (prevents use of volume control keys, music player keys, etc on some keyboards)
 vid_hardwaregammasupported                        1                   indicates whether hardware gamma is supported (updated by attempts to set hardware gamma ramps)
