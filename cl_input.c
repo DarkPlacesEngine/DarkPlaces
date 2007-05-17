@@ -1261,7 +1261,7 @@ void CL_SendMove(void)
 		return;
 
 	// don't send too often or else network connections can get clogged by a high renderer framerate
-	packettime = cl.movevars_ticrate / (double)bound(1, cl_netinputpacketsperserverpacket.integer, 10);
+	packettime = cl.movevars_ticrate / (double)bound(1, cl_netinputpacketsperserverpacket.value, 10);
 	// quakeworld servers take only frametimes
 	// predicted dp7 servers take current interpolation time
 	// unpredicted servers take an echo of the latest server timestamp
