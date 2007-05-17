@@ -138,16 +138,26 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 
 	Con_Printf("Initializing CoreAudio...\n");
 
-	// We only accept 16-bit samples for the moment
-	if (requested->width != 2)
+	if (suggested != NULL)
+		memcpy (suggested, requested, sizeof (suggested));
+
+	// Get the device status and suggest any appropriate changes to format
+	propertySize = sizeof(streamDesc);
+	status = AudioDeviceGetProperty(outputDeviceID, 0, false, kAudioDevicePropertyStreamFormat, &propertySize, &streamDesc);
+	if (status)
 	{
-		// Suggest a 16-bit format instead
+		Con_Printf("CoreAudio: AudioDeviceGetProperty() returned %d when getting kAudioDevicePropertyStreamFormat\n", status);
+		return false;
+	}
+	// Suggest proper settings if they differ
+	if (requested.channels != streamDesc.mChannelsPerFrame || requested.speed != streamDesc.mSampleRate || requested.width != streamDesc.mBitsPerChannel/8)
+	{
 		if (suggested != NULL)
 		{
-			memcpy (suggested, requested, sizeof (suggested));
-			suggested->width = 2;
+			suggested->channels = streamDesc.mChannelsPerFrame;
+			suggested->speed = streamDesc.mSampleRate;
+			suggested->width = streamDesc.mBitsPerChannel/8;
 		}
-
 		return false;
 	}
 
@@ -200,18 +210,6 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 		Con_Printf("CoreAudio: AudioDeviceGetProperty() returned %d when getting kAudioDevicePropertyStreamFormat\n", status);
 		return false;
 	}
-
-	// Suggest the proper speed if it differs
-	if (requested.speed != streamDesc.mSampleRate)
-	{
-		if (suggested != NULL)
-		{
-			memcpy (suggested, requested, sizeof (suggested));
-			suggested->speed = streamDesc.mSampleRate;
-		}
-		return false;
-	}
-
 	Con_DPrint ("   Hardware format:\n");
 	Con_DPrintf("    %5d mSampleRate\n", (unsigned int)streamDesc.mSampleRate);
 	Con_DPrintf("     %c%c%c%c mFormatID\n",
