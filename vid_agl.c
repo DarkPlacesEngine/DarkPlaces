@@ -26,6 +26,8 @@
 #include <AGL/agl.h>
 #include <OpenGL/OpenGL.h>
 #include <Carbon/Carbon.h>
+#include <IOKit/hidsystem/IOHIDLib.h>
+#include <IOKit/hidsystem/event_status_driver.h>
 #include "vid_agl_mackeys.h" // this is SDL/src/video/maccommon/SDL_mackeys.h
 #include "quakedef.h"
 
@@ -67,10 +69,12 @@ static qboolean sound_active = true;
 static int scr_width, scr_height;
 
 static cvar_t apple_multithreadedgl = {CVAR_SAVE, "apple_multithreadedgl", "1", "makes use of a second thread for the OpenGL driver (if possible) rather than using the engine thread (note: this is done automatically on most other operating systems)"};
+static cvar_t apple_mouse_noaccel = {CVAR_SAVE, "apple_mouse_noaccel", "1", "disables mouse acceleration while DarkPlaces is active"};
 
 static AGLContext context;
 static WindowRef window;
 
+static double originalMouseSpeed = 0.0;
 
 void VID_GetWindowSize (int *x, int *y, int *width, int *height)
 {
@@ -100,6 +104,35 @@ static void IN_Activate( qboolean grab )
 			// Lock the mouse pointer at its current position
 			CGAssociateMouseAndMouseCursorPosition(false);
 
+			// Save the status of mouse acceleration
+			originalMouseSpeed = 0.0; // in case of error
+			if(apple_mouse_noaccel.integer)
+			{
+				NXEventHandle mouseDev = NXOpenEventStatus();
+				if(mouseDev != 0)
+				{
+					if(IOHIDGetMouseAcceleration((io_connect_t) mouseDev, &originalMouseSpeed) == kIOReturnSuccess)
+					{
+						if(IOHIDSetMouseAcceleration((io_connect_t) mouseDev, 0.0) != kIOReturnSuccess)
+						{
+							Con_Print("Could not disable mouse acceleration (failed at IOHIDSetMouseAcceleration).\n");
+							Cvar_SetValueQuick(&apple_mouse_noaccel, 0);
+						}
+					}
+					else
+					{
+						Con_Print("Could not disable mouse acceleration (failed at IOHIDGetMouseAcceleration).\n");
+						Cvar_SetValueQuick(&apple_mouse_noaccel, 0);
+					}
+					NXCloseEventStatus(mouseDev);
+				}
+				else
+				{
+					Con_Print("Could not disable mouse acceleration (failed at NXOpenEventStatus).\n");
+					Cvar_SetValueQuick(&apple_mouse_noaccel, 0);
+				}
+			}
+
 			mouse_x = mouse_y = 0;
 			vid_usingmouse = true;
 		}
@@ -108,6 +141,19 @@ static void IN_Activate( qboolean grab )
 	{
 		if (vid_usingmouse)
 		{
+			if(originalMouseSpeed != 0.0)
+			{
+				NXEventHandle mouseDev = NXOpenEventStatus();
+				if(mouseDev != 0)
+				{
+					if(IOHIDSetMouseAcceleration((io_connect_t) mouseDev, originalMouseSpeed) != kIOReturnSuccess)
+						Con_Print("Could not re-enable mouse acceleration (failed at IOHIDSetMouseAcceleration).\n");
+					NXCloseEventStatus(mouseDev);
+				}
+				else
+					Con_Print("Could not re-enable mouse acceleration (failed at NXOpenEventStatus).\n");
+			}
+
 			CGAssociateMouseAndMouseCursorPosition(true);
 			CGDisplayShowCursor(CGMainDisplayID());
 
@@ -275,6 +321,7 @@ void VID_Init(void)
 {
 	InitSig(); // trap evil signals
 	Cvar_RegisterVariable(&apple_multithreadedgl);
+	Cvar_RegisterVariable(&apple_mouse_noaccel);
 // COMMANDLINEOPTION: Input: -nomouse disables mouse support (see also vid_mouse cvar)
 	if (COM_CheckParm ("-nomouse"))
 		mouse_avail = false;
