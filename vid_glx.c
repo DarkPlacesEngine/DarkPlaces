@@ -94,8 +94,7 @@ static float	mouse_x, mouse_y;
 static int p_mouse_x, p_mouse_y;
 
 #if !defined(__APPLE__) && !defined(SUNOS)
-// FIXME: vid_dga_mouseaccel is poorly named, it is actually the multiplier for mouse movement, not an acceleration (which would be a power function or something)
-cvar_t vid_dga = {CVAR_SAVE, "vid_dga", "1", "make use of DGA mouse input"};
+cvar_t vid_dgamouse = {CVAR_SAVE, "vid_dgamouse", "1", "make use of DGA mouse input"};
 #endif
 
 qboolean vidmode_ext = false;
@@ -266,7 +265,7 @@ static void IN_Activate (qboolean grab)
 			XGrabPointer(vidx11_display, win,  True, 0, GrabModeAsync, GrabModeAsync, win, None, CurrentTime);
 
 #if !defined(__APPLE__) && !defined(SUNOS)
-			if (vid_dga.integer && vid_x11_dgasupported)
+			if (vid_dgamouse.integer && vid_x11_dgasupported)
 			{
 				XF86DGADirectVideo(vidx11_display, DefaultScreen(vidx11_display), XF86DGADirectMouse);
 				XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, 0, 0);
@@ -360,7 +359,7 @@ static void HandleEvents(void)
 			if (vid_usingmouse)
 			{
 #if !defined(__APPLE__) && !defined(SUNOS)
-				if (vid_dga.integer == 1 && vid_x11_dgasupported)
+				if (vid_dgamouse.integer == 1 && vid_x11_dgasupported)
 				{
 					mouse_x += event.xmotion.x_root;
 					mouse_y += event.xmotion.y_root;
@@ -591,7 +590,7 @@ int VID_GetGamma(unsigned short *ramps, int rampsize)
 void VID_Init(void)
 {
 #if !defined(__APPLE__) && !defined(SUNOS)
-	Cvar_RegisterVariable (&vid_dga);
+	Cvar_RegisterVariable (&vid_dgamouse);
 #endif
 	InitSig(); // trap evil signals
 // COMMANDLINEOPTION: Input: -nomouse disables mouse support (see also vid_mouse cvar)
