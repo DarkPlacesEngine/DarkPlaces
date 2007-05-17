@@ -487,7 +487,7 @@ static int GL_OpenLibrary(const char *name)
 {
 	Con_Printf("Loading OpenGL driver %s\n", name);
 	GL_CloseLibrary();
-	if (!(prjobj = dlopen(name, RTLD_LAZY)))
+	if (!(prjobj = dlopen(name, RTLD_LAZY | RTLD_GLOBAL)))
 	{
 		Con_Printf("Unable to open symbol list for %s\n", name);
 		return false;
