@@ -311,12 +311,16 @@ static qboolean CURL_OpenLibrary (void)
 #if defined(WIN64)
 		"libcurl64.dll",
 #elif defined(WIN32)
+		"libcurl-4.dll",
 		"libcurl-3.dll",
 #elif defined(MACOSX)
+		"libcurl.4.dylib", // Mac OS X Notyetreleased
 		"libcurl.3.dylib", // Mac OS X Tiger
 		"libcurl.2.dylib", // Mac OS X Panther
 #else
+		"libcurl.so.4",
 		"libcurl.so.3",
+		"libcurl.so", // FreeBSD
 #endif
 		NULL
 	};
