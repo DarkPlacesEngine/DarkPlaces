@@ -1048,13 +1048,7 @@ extern cvar_t slowmo;
 void CL_UpdateMoveVars(void)
 {
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
-	{
-		cl.movevars_timescale = 1;
 		cl.movevars_ticrate = 1.0 / bound(1, cl_netinputpacketspersecond.value, 100);
-		// scale playback speed of demos by slowmo cvar
-		if (cls.demoplayback)
-			cl.movevars_timescale *= slowmo.value;
-	}
 	else if (cl.stats[STAT_MOVEVARS_TICRATE])
 	{
 		cl.movevars_ticrate = cl.statsf[STAT_MOVEVARS_TICRATE];
@@ -1076,9 +1070,6 @@ void CL_UpdateMoveVars(void)
 		cl.movevars_friction = cl.statsf[STAT_MOVEVARS_FRICTION];
 		cl.movevars_wallfriction = cl.statsf[STAT_MOVEVARS_WALLFRICTION];
 		cl.movevars_waterfriction = cl.statsf[STAT_MOVEVARS_WATERFRICTION];
-		// scale playback speed of demos by slowmo cvar
-		if (cls.demoplayback)
-			cl.movevars_timescale *= slowmo.value;
 	}
 	else
 	{

@@ -723,6 +723,14 @@ void Host_Main(void)
 
 			// apply slowmo scaling
 			clframetime *= cl.movevars_timescale;
+			// scale playback speed of demos by slowmo cvar
+			if (cls.demoplayback)
+			{
+				clframetime *= slowmo.value;
+				// if demo playback is paused, don't advance time at all
+				if (cls.demopaused)
+					clframetime = 0;
+			}
 
 			// host_framerate overrides all else
 			if (host_framerate.value)
