@@ -200,6 +200,18 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 		Con_Printf("CoreAudio: AudioDeviceGetProperty() returned %d when getting kAudioDevicePropertyStreamFormat\n", status);
 		return false;
 	}
+
+	// Suggest the proper speed if it differs
+	if (requested.speed != streamDesc.mSampleRate)
+	{
+		if (suggested != NULL)
+		{
+			memcpy (suggested, requested, sizeof (suggested));
+			suggested->speed = streamDesc.mSampleRate;
+		}
+		return false;
+	}
+
 	Con_DPrint ("   Hardware format:\n");
 	Con_DPrintf("    %5d mSampleRate\n", (unsigned int)streamDesc.mSampleRate);
 	Con_DPrintf("     %c%c%c%c mFormatID\n",
