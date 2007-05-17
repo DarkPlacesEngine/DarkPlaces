@@ -150,7 +150,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 		return false;
 	}
 	// Suggest proper settings if they differ
-	if (requested.channels != streamDesc.mChannelsPerFrame || requested.speed != streamDesc.mSampleRate || requested.width != streamDesc.mBitsPerChannel/8)
+	if (requested->channels != streamDesc.mChannelsPerFrame || requested->speed != streamDesc.mSampleRate || requested->width != streamDesc.mBitsPerChannel/8)
 	{
 		if (suggested != NULL)
 		{
