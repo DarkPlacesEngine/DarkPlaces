@@ -66,7 +66,7 @@ static qboolean sound_active = true;
 
 static int scr_width, scr_height;
 
-static cvar_t apple_multithreadedgl = {CVAR_SAVE, "apple_multithreadedgl", "0", "makes use of a second thread for the OpenGL driver (if possible) rather than using the engine thread (note: this is done automatically on most other operating systems)"};
+static cvar_t apple_multithreadedgl = {CVAR_SAVE, "apple_multithreadedgl", "1", "makes use of a second thread for the OpenGL driver (if possible) rather than using the engine thread (note: this is done automatically on most other operating systems)"};
 
 static AGLContext context;
 static WindowRef window;
