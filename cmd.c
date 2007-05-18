@@ -159,6 +159,8 @@ void Cbuf_Execute (void)
 		{
 			if (text[i] == '"')
 				quotes ^= 1;
+			if (text[i] == '\\' && text[i+1] == '"')
+				i++;
 			if ( !quotes &&  text[i] == ';')
 				break;	// don't break if inside a quoted string
 			if (text[i] == '\r' || text[i] == '\n')
