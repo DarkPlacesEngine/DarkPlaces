@@ -63,7 +63,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 
 		if (suggested != NULL)
 		{
-			memcpy (suggested, requested, sizeof (suggested));
+			memcpy (suggested, requested, sizeof (*suggested));
 
 			if (requested->width < 1)
 				suggested->width = 1;
