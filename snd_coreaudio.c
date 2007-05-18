@@ -138,14 +138,14 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 
 	Con_Printf("Initializing CoreAudio...\n");
 
-	if (suggested != NULL)
-		memcpy (suggested, requested, sizeof (suggested));
-
 	if(requested->width != 2)
 	{
 		// we can only do 16bit per sample for now
 		if(suggested != NULL)
+		{
+			memcpy (suggested, requested, sizeof (suggested));
 			suggested->width = 2;
+		}
 		return false;
 	}
 
@@ -217,6 +217,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 	{
 		if (suggested != NULL)
 		{
+			memcpy (suggested, requested, sizeof (suggested));
 			suggested->channels = streamDesc.mChannelsPerFrame;
 			suggested->speed = streamDesc.mSampleRate;
 		}
