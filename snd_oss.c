@@ -61,7 +61,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 
 		if (suggested != NULL)
 		{
-			memcpy(suggested, requested, sizeof(suggested));
+			memcpy(suggested, requested, sizeof(*suggested));
 
 			if (requested->width < 1)
 				suggested->width = 1;
@@ -116,7 +116,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 	{
 		if (ioctl_param != prev_value && suggested != NULL)
 		{
-			memcpy(suggested, requested, sizeof(suggested));
+			memcpy(suggested, requested, sizeof(*suggested));
 
 			if (ioctl_param == AFMT_S16_NE)
 				suggested->width = 2;
@@ -137,7 +137,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 	{
 		if (ioctl_param != requested->channels && suggested != NULL)
 		{
-			memcpy(suggested, requested, sizeof(suggested));
+			memcpy(suggested, requested, sizeof(*suggested));
 			suggested->channels = ioctl_param;
 		}
 
@@ -154,7 +154,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 	{
 		if ((unsigned int)ioctl_param != requested->speed && suggested != NULL)
 		{
-			memcpy(suggested, requested, sizeof(suggested));
+			memcpy(suggested, requested, sizeof(*suggested));
 			suggested->speed = ioctl_param;
 		}
 
