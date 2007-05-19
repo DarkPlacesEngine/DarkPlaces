@@ -27,6 +27,7 @@
 #include <OpenGL/OpenGL.h>
 #include <Carbon/Carbon.h>
 #include <IOKit/hidsystem/IOHIDLib.h>
+#include <IOKit/hidsystem/IOHIDParameter.h>
 #include <IOKit/hidsystem/event_status_driver.h>
 #include "vid_agl_mackeys.h" // this is SDL/src/video/maccommon/SDL_mackeys.h
 #include "quakedef.h"
@@ -74,7 +75,28 @@ static cvar_t apple_mouse_noaccel = {CVAR_SAVE, "apple_mouse_noaccel", "1", "dis
 static AGLContext context;
 static WindowRef window;
 
-static double originalMouseSpeed = 0.0;
+static double originalMouseSpeed = -1.0;
+
+io_connect_t IN_GetIOHandle()
+{
+	io_connect_t iohandle = MACH_PORT_NULL;
+	kern_return_t status;
+	io_service_t iohidsystem = MACH_PORT_NULL;
+	mach_port_t masterport;
+
+	status = IOMasterPort(MACH_PORT_NULL, &masterport);
+	if(status != KERN_SUCCESS)
+		return 0;
+
+	iohidsystem = IORegistryEntryFromPath(masterport, kIOServicePlane ":/IOResources/IOHIDSystem");
+	if(!iohidsystem)
+		return 0;
+
+	status = IOServiceOpen(iohidsystem, mach_task_self(), kIOHIDParamConnectType, &iohandle);
+	IOObjectRelease(iohidsystem);
+
+	return iohandle;
+}
 
 void VID_GetWindowSize (int *x, int *y, int *width, int *height)
 {
@@ -105,30 +127,31 @@ static void IN_Activate( qboolean grab )
 			CGAssociateMouseAndMouseCursorPosition(false);
 
 			// Save the status of mouse acceleration
-			originalMouseSpeed = 0.0; // in case of error
+			originalMouseSpeed = -1.0; // in case of error
 			if(apple_mouse_noaccel.integer)
 			{
-				NXEventHandle mouseDev = NXOpenEventStatus();
+				io_connect_t mouseDev = IN_GetIOHandle();
 				if(mouseDev != 0)
 				{
-					if(IOHIDGetMouseAcceleration((io_connect_t) mouseDev, &originalMouseSpeed) == kIOReturnSuccess)
+					if(IOHIDGetAccelerationWithKey(mouseDev, CFSTR(kIOHIDMouseAccelerationType), &originalMouseSpeed) == kIOReturnSuccess)
 					{
-						if(IOHIDSetMouseAcceleration((io_connect_t) mouseDev, 0.0) != kIOReturnSuccess)
+						Con_DPrintf("previous mouse acceleration: %f\n", originalMouseSpeed);
+						if(IOHIDSetAccelerationWithKey(mouseDev, CFSTR(kIOHIDMouseAccelerationType), -1.0) != kIOReturnSuccess)
 						{
-							Con_Print("Could not disable mouse acceleration (failed at IOHIDSetMouseAcceleration).\n");
+							Con_Print("Could not disable mouse acceleration (failed at IOHIDSetAccelerationWithKey).\n");
 							Cvar_SetValueQuick(&apple_mouse_noaccel, 0);
 						}
 					}
 					else
 					{
-						Con_Print("Could not disable mouse acceleration (failed at IOHIDGetMouseAcceleration).\n");
+						Con_Print("Could not disable mouse acceleration (failed at IOHIDGetAccelerationWithKey).\n");
 						Cvar_SetValueQuick(&apple_mouse_noaccel, 0);
 					}
-					NXCloseEventStatus(mouseDev);
+					IOServiceClose(mouseDev);
 				}
 				else
 				{
-					Con_Print("Could not disable mouse acceleration (failed at NXOpenEventStatus).\n");
+					Con_Print("Could not disable mouse acceleration (failed at IO_GetIOHandle).\n");
 					Cvar_SetValueQuick(&apple_mouse_noaccel, 0);
 				}
 			}
@@ -141,17 +164,18 @@ static void IN_Activate( qboolean grab )
 	{
 		if (vid_usingmouse)
 		{
-			if(originalMouseSpeed != 0.0)
+			if(originalMouseSpeed != -1.0)
 			{
-				NXEventHandle mouseDev = NXOpenEventStatus();
+				io_connect_t mouseDev = IN_GetIOHandle();
 				if(mouseDev != 0)
 				{
-					if(IOHIDSetMouseAcceleration((io_connect_t) mouseDev, originalMouseSpeed) != kIOReturnSuccess)
-						Con_Print("Could not re-enable mouse acceleration (failed at IOHIDSetMouseAcceleration).\n");
-					NXCloseEventStatus(mouseDev);
+					Con_DPrintf("restoring mouse acceleration to: %f\n", originalMouseSpeed);
+					if(IOHIDSetAccelerationWithKey(mouseDev, CFSTR(kIOHIDMouseAccelerationType), originalMouseSpeed) != kIOReturnSuccess)
+						Con_Print("Could not re-enable mouse acceleration (failed at IOHIDSetAccelerationWithKey).\n");
+					IOServiceClose(mouseDev);
 				}
 				else
-					Con_Print("Could not re-enable mouse acceleration (failed at NXOpenEventStatus).\n");
+					Con_Print("Could not re-enable mouse acceleration (failed at IO_GetIOHandle).\n");
 			}
 
 			CGAssociateMouseAndMouseCursorPosition(true);
