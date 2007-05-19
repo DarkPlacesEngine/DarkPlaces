@@ -673,7 +673,7 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 		}
 
 		// if we have an unreliable message to send, do so
-		//if (data->cursize)
+		if (data->cursize)
 		{
 			packetLen = NET_HEADERSIZE + data->cursize;
 
