@@ -1364,6 +1364,7 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 	//stats[STAT_MONSTERS] = prog->globals.server->killed_monsters;
 
 	// movement settings for prediction
+	// note: these are not sent in protocols with lower MAX_CL_STATS limits
 	statsf[STAT_MOVEVARS_TICRATE] = sys_ticrate.value;
 	statsf[STAT_MOVEVARS_TIMESCALE] = slowmo.value;
 	statsf[STAT_MOVEVARS_GRAVITY] = sv_gravity.value;
