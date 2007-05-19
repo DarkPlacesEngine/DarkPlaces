@@ -144,11 +144,7 @@ static HRESULT (WINAPI *pDirectInputCreate)(HINSTANCE hinst, DWORD dwVersion, LP
 static int			mouse_buttons;
 static int			mouse_oldbuttonstate;
 
-static qboolean	restore_spi;
-static int		originalmouseparms[3], newmouseparms[3] = {0, 0, 0};
-
 static unsigned int uiWheelMessage;
-static qboolean	mouseparmsvalid;
 static qboolean	dinput_acquired;
 
 static unsigned int		mstate_di;
@@ -1022,6 +1018,9 @@ void VID_Shutdown (void)
 
 static void IN_Activate (qboolean grab)
 {
+	static qboolean restore_spi;
+	static int originalmouseparms[3];
+
 	if (!mouseinitialized)
 		return;
 
@@ -1043,9 +1042,21 @@ static void IN_Activate (qboolean grab)
 				window_rect.top = window_y;
 				window_rect.right = window_x + vid.width;
 				window_rect.bottom = window_y + vid.height;
-				if (mouseparmsvalid)
+
+				// change mouse settings to turn off acceleration
+// COMMANDLINEOPTION: Windows GDI Input: -noforcemparms disables setting of mouse parameters (not used with -dinput, windows only)
+				if (!COM_CheckParm ("-noforcemparms") && SystemParametersInfo (SPI_GETMOUSE, 0, originalmouseparms, 0))
+				{
+					int newmouseparms[3];
+					newmouseparms[0] = 0; // threshold to double movement (only if accel level is >= 1)
+					newmouseparms[1] = 0; // threshold to quadruple movement (only if accel level is >= 2)
+					newmouseparms[2] = 0; // maximum level of acceleration (0 = off)
 					restore_spi = SystemParametersInfo (SPI_SETMOUSE, 0, newmouseparms, 0);
+				}
+				else
+					restore_spi = false;
 				SetCursorPos ((window_x + vid.width / 2), (window_y + vid.height / 2));
+
 				SetCapture (mainwindow);
 				ClipCursor (&window_rect);
 			}
@@ -1065,8 +1076,10 @@ static void IN_Activate (qboolean grab)
 			}
 			else
 			{
+				// restore system mouseparms if we changed them
 				if (restore_spi)
 					SystemParametersInfo (SPI_SETMOUSE, 0, originalmouseparms, 0);
+				restore_spi = false;
 				ClipCursor (NULL);
 				ReleaseCapture ();
 			}
@@ -1187,30 +1200,6 @@ static void IN_StartupMouse (void)
 		Con_Print("DirectInput initialized\n");
 	else
 		Con_Print("DirectInput not initialized\n");
-
-	mouseparmsvalid = SystemParametersInfo (SPI_GETMOUSE, 0, originalmouseparms, 0);
-
-	if (mouseparmsvalid)
-	{
-// COMMANDLINEOPTION: Windows GDI Input: -noforcemspd disables setting of mouse speed (not used with -dinput, windows only)
-		if ( COM_CheckParm ("-noforcemspd") )
-			newmouseparms[2] = originalmouseparms[2];
-
-// COMMANDLINEOPTION: Windows GDI Input: -noforcemaccel disables setting of mouse acceleration (not used with -dinput, windows only)
-		if ( COM_CheckParm ("-noforcemaccel") )
-		{
-			newmouseparms[0] = originalmouseparms[0];
-			newmouseparms[1] = originalmouseparms[1];
-		}
-
-// COMMANDLINEOPTION: Windows GDI Input: -noforcemparms disables setting of mouse parameters (not used with -dinput, windows only)
-		if ( COM_CheckParm ("-noforcemparms") )
-		{
-			newmouseparms[0] = originalmouseparms[0];
-			newmouseparms[1] = originalmouseparms[1];
-			newmouseparms[2] = originalmouseparms[2];
-		}
-	}
 
 	mouse_buttons = 10;
 }
