@@ -393,7 +393,11 @@ void Protocol_WriteStatsReliable(void)
 	if (!host_client->netconnection)
 		return;
 	// detect changes in stats and write reliable messages
-	for (i = 0;i < MAX_CL_STATS;i++)
+	// this only deals with 32 stats because the older protocols which use
+	// this function can only cope with 32 stats,
+	// they also do not support svc_updatestatubyte which was introduced in
+	// DP6 protocol (except for QW)
+	for (i = 0;i < 32;i++)
 	{
 		// quickly skip zero bytes
 		if (!host_client->statsdeltabits[i >> 3])
@@ -406,14 +410,25 @@ void Protocol_WriteStatsReliable(void)
 		{
 			host_client->statsdeltabits[i >> 3] -= (1 << (i & 7));
 			// send the stat as a byte if possible
-			if (host_client->stats[i] >= 0 && host_client->stats[i] < 256)
+			if (sv.protocol == PROTOCOL_QUAKEWORLD)
 			{
-				MSG_WriteByte(&host_client->netconnection->message, svc_updatestatubyte);
-				MSG_WriteByte(&host_client->netconnection->message, i);
-				MSG_WriteByte(&host_client->netconnection->message, host_client->stats[i]);
+				if (host_client->stats[i] >= 0 && host_client->stats[i] < 256)
+				{
+					MSG_WriteByte(&host_client->netconnection->message, qw_svc_updatestat);
+					MSG_WriteByte(&host_client->netconnection->message, i);
+					MSG_WriteByte(&host_client->netconnection->message, host_client->stats[i]);
+				}
+				else
+				{
+					MSG_WriteByte(&host_client->netconnection->message, qw_svc_updatestatlong);
+					MSG_WriteByte(&host_client->netconnection->message, i);
+					MSG_WriteLong(&host_client->netconnection->message, host_client->stats[i]);
+				}
 			}
 			else
 			{
+				// this could make use of svc_updatestatubyte in DP6 and later
+				// protocols but those protocols do not use this function
 				MSG_WriteByte(&host_client->netconnection->message, svc_updatestat);
 				MSG_WriteByte(&host_client->netconnection->message, i);
 				MSG_WriteLong(&host_client->netconnection->message, host_client->stats[i]);
@@ -503,6 +518,8 @@ void EntityFrameQuake_WriteFrame(sizebuf_t *msg, int numstates, const entity_sta
 			bits |= U_GLOWSIZE;
 		if (baseline.glowcolor != s->glowcolor)
 			bits |= U_GLOWCOLOR;
+		if (!VectorCompare(baseline.colormod, s->colormod))
+			bits |= U_COLORMOD;
 
 		// if extensions are disabled, clear the relevant update flags
 		if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_NEHAHRAMOVIE)
