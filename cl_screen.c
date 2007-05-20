@@ -30,6 +30,8 @@ cvar_t scr_screenshot_jpeg_quality = {CVAR_SAVE, "scr_screenshot_jpeg_quality","
 cvar_t scr_screenshot_gammaboost = {CVAR_SAVE, "scr_screenshot_gammaboost","1", "gamma correction on saved screenshots and videos, 1.0 saves unmodified images"};
 // scr_screenshot_name is defined in fs.c
 cvar_t cl_capturevideo = {0, "cl_capturevideo", "0", "enables saving of video to a .avi file using uncompressed I420 colorspace and PCM audio, note that scr_screenshot_gammaboost affects the brightness of the output)"};
+cvar_t cl_capturevideo_width = {0, "cl_capturevideo_width", "0", "scales all frames to this resolution before saving the video"};
+cvar_t cl_capturevideo_height = {0, "cl_capturevideo_height", "0", "scales all frames to this resolution before saving the video"};
 cvar_t cl_capturevideo_realtime = {0, "cl_capturevideo_realtime", "0", "causes video saving to operate in realtime (mostly useful while playing, not while capturing demos), this can produce a much lower quality video due to poor sound/video sync and will abort saving if your machine stalls for over 1 second"};
 cvar_t cl_capturevideo_fps = {0, "cl_capturevideo_fps", "30", "how many frames per second to save (29.97 for NTSC, 30 for typical PC video, 15 can be useful)"};
 cvar_t cl_capturevideo_number = {CVAR_SAVE, "cl_capturevideo_number", "1", "number to append to video filename, incremented each time a capture begins"};
@@ -719,6 +721,12 @@ void SCR_SizeDown_f (void)
 	Cvar_SetValue ("viewsize",scr_viewsize.value-10);
 }
 
+void SCR_CaptureVideo_EndVideo(void);
+void CL_Screen_Shutdown(void)
+{
+	SCR_CaptureVideo_EndVideo();
+}
+
 void CL_Screen_Init(void)
 {
 	Cvar_RegisterVariable (&scr_fov);
@@ -740,6 +748,8 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_screenshot_jpeg_quality);
 	Cvar_RegisterVariable (&scr_screenshot_gammaboost);
 	Cvar_RegisterVariable (&cl_capturevideo);
+	Cvar_RegisterVariable (&cl_capturevideo_width);
+	Cvar_RegisterVariable (&cl_capturevideo_height);
 	Cvar_RegisterVariable (&cl_capturevideo_realtime);
 	Cvar_RegisterVariable (&cl_capturevideo_fps);
 	Cvar_RegisterVariable (&cl_capturevideo_number);
@@ -930,49 +940,110 @@ static void SCR_CaptureVideo_RIFF_IndexEntry(const char *chunkfourcc, int chunks
 	MSG_WriteLong(&cls.capturevideo.riffindexbuffer, chunksize);
 }
 
-static void SCR_CaptureVideo_RIFF_Finish(void)
+static void SCR_CaptureVideo_RIFF_Finish(qboolean final)
 {
 	// close the "movi" list
 	SCR_CaptureVideo_RIFF_Pop();
 	// write the idx1 chunk that we've been building while saving the frames
-	SCR_CaptureVideo_RIFF_Push("idx1", NULL);
-	SCR_CaptureVideo_RIFF_WriteBytes(cls.capturevideo.riffindexbuffer.data, cls.capturevideo.riffindexbuffer.cursize);
-	SCR_CaptureVideo_RIFF_Pop();
+	if(final && cls.capturevideo.videofile_firstchunkframes_offset)
+	// TODO replace index creating by OpenDML ix##/##ix/indx chunk so it works for more than one AVI part too
+	{
+		SCR_CaptureVideo_RIFF_Push("idx1", NULL);
+		SCR_CaptureVideo_RIFF_WriteBytes(cls.capturevideo.riffindexbuffer.data, cls.capturevideo.riffindexbuffer.cursize);
+		SCR_CaptureVideo_RIFF_Pop();
+	}
 	cls.capturevideo.riffindexbuffer.cursize = 0;
 	// pop the RIFF chunk itself
 	while (cls.capturevideo.riffstacklevel > 0)
 		SCR_CaptureVideo_RIFF_Pop();
 	SCR_CaptureVideo_RIFF_Flush();
+	if(cls.capturevideo.videofile_firstchunkframes_offset)
+	{
+		Con_DPrintf("Finishing first chunk (%d frames)\n", cls.capturevideo.frame);
+		FS_Seek(cls.capturevideo.videofile, cls.capturevideo.videofile_firstchunkframes_offset, SEEK_SET);
+		SCR_CaptureVideo_RIFF_Write32(cls.capturevideo.frame);
+		SCR_CaptureVideo_RIFF_Flush();
+		FS_Seek(cls.capturevideo.videofile, 0, SEEK_END);
+		cls.capturevideo.videofile_firstchunkframes_offset = 0;
+	}
+	else
+		Con_DPrintf("Finishing another chunk (%d frames)\n", cls.capturevideo.frame);
 }
 
 static void SCR_CaptureVideo_RIFF_OverflowCheck(int framesize)
 {
-	fs_offset_t cursize;
+	fs_offset_t cursize, curfilesize;
 	if (cls.capturevideo.riffstacklevel != 2)
 		Sys_Error("SCR_CaptureVideo_RIFF_OverflowCheck: chunk stack leakage!\n");
 	// check where we are in the file
 	SCR_CaptureVideo_RIFF_Flush();
 	cursize = SCR_CaptureVideo_RIFF_GetPosition() - cls.capturevideo.riffstackstartoffset[0];
+	curfilesize = SCR_CaptureVideo_RIFF_GetPosition();
+
 	// if this would overflow the windows limit of 1GB per RIFF chunk, we need
 	// to close the current RIFF chunk and open another for future frames
 	if (8 + cursize + framesize + cls.capturevideo.riffindexbuffer.cursize + 8 > 1<<30)
 	{
-		SCR_CaptureVideo_RIFF_Finish();
+		SCR_CaptureVideo_RIFF_Finish(false);
 		// begin a new 1GB extended section of the AVI
 		SCR_CaptureVideo_RIFF_Push("RIFF", "AVIX");
 		SCR_CaptureVideo_RIFF_Push("LIST", "movi");
 	}
 }
 
+static void FindFraction(double val, int *num, int *denom, int denomMax)
+{
+	int i;
+	double bestdiff;
+	// initialize
+	bestdiff = fabs(val);
+	*num = 0;
+	*denom = 1;
+
+	for(i = 1; i <= denomMax; ++i)
+	{
+		int inum = floor(0.5 + val * i);
+		double diff = fabs(val - inum / (double)i);
+		if(diff < bestdiff)
+		{
+			bestdiff = diff;
+			*num = inum;
+			*denom = i;
+		}
+	}
+}
+
 void SCR_CaptureVideo_BeginVideo(void)
 {
-	double gamma, g;
-	int width = vid.width, height = vid.height, x;
+	double gamma, g, aspect;
+	int width = cl_capturevideo_width.integer, height = cl_capturevideo_height.integer;
+	int n, d;
 	unsigned int i;
 	if (cls.capturevideo.active)
 		return;
 	memset(&cls.capturevideo, 0, sizeof(cls.capturevideo));
 	// soundrate is figured out on the first SoundFrame
+
+	if(width == 0 && height != 0)
+		width = (int) (height * (double)vid.width / ((double)vid.height * vid_pixelheight.value)); // keep aspect
+	if(width != 0 && height == 0)
+		height = (int) (width * ((double)vid.height * vid_pixelheight.value) / (double)vid.width); // keep aspect
+
+	if(width < 2 || width > vid.width) // can't scale up
+		width = vid.width;
+	if(height < 2 || height > vid.height) // can't scale up
+		height = vid.height;
+
+	aspect = vid.width / (vid.height * vid_pixelheight.value);
+
+	// ensure it's all even; if not, scale down a little
+	if(width % 1)
+		--width;
+	if(height % 1)
+		--height;
+
+	cls.capturevideo.width = width;
+	cls.capturevideo.height = height;
 	cls.capturevideo.active = true;
 	cls.capturevideo.starttime = realtime;
 	cls.capturevideo.framerate = bound(1, cl_capturevideo_fps.value, 1000);
@@ -980,7 +1051,8 @@ void SCR_CaptureVideo_BeginVideo(void)
 	cls.capturevideo.frame = 0;
 	cls.capturevideo.soundsampleframe = 0;
 	cls.capturevideo.realtime = cl_capturevideo_realtime.integer != 0;
-	cls.capturevideo.buffer = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * (3+3+3) + 18);
+	cls.capturevideo.screenbuffer = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 3);
+	cls.capturevideo.outbuffer = (unsigned char *)Mem_Alloc(tempmempool, width * height * (3+3+3) + 18);
 	gamma = 1.0/scr_screenshot_gammaboost.value;
 	dpsnprintf(cls.capturevideo.basename, sizeof(cls.capturevideo.basename), "video/dpvideo%03i", cl_capturevideo_number.integer);
 	Cvar_SetValueQuick(&cl_capturevideo_number, cl_capturevideo_number.integer + 1);
@@ -1040,7 +1112,7 @@ Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 		SCR_CaptureVideo_RIFF_Write32(0); // max bytes per second
 		SCR_CaptureVideo_RIFF_Write32(0); // padding granularity
 		SCR_CaptureVideo_RIFF_Write32(0x910); // flags (AVIF_HASINDEX | AVIF_ISINTERLEAVED | AVIF_TRUSTCKTYPE)
-		cls.capturevideo.videofile_totalframes_offset1 = SCR_CaptureVideo_RIFF_GetPosition();
+		cls.capturevideo.videofile_firstchunkframes_offset = SCR_CaptureVideo_RIFF_GetPosition();
 		SCR_CaptureVideo_RIFF_Write32(0); // total frames
 		SCR_CaptureVideo_RIFF_Write32(0); // initial frames
 		if (cls.capturevideo.soundrate)
@@ -1064,13 +1136,11 @@ Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 		SCR_CaptureVideo_RIFF_Write16(0); // language
 		SCR_CaptureVideo_RIFF_Write32(0); // initial frames
 		// find an ideal divisor for the framerate
-		for (x = 1;x < 1000;x++)
-			if (cls.capturevideo.framerate * x == floor(cls.capturevideo.framerate * x))
-				break;
-		SCR_CaptureVideo_RIFF_Write32(x); // samples/second divisor
-		SCR_CaptureVideo_RIFF_Write32((int)(cls.capturevideo.framerate * x)); // samples/second multiplied by divisor
+		FindFraction(cls.capturevideo.framerate, &n, &d, 1000);
+		SCR_CaptureVideo_RIFF_Write32(d); // samples/second divisor
+		SCR_CaptureVideo_RIFF_Write32(n); // samples/second multiplied by divisor
 		SCR_CaptureVideo_RIFF_Write32(0); // start
-		cls.capturevideo.videofile_totalframes_offset2 = SCR_CaptureVideo_RIFF_GetPosition();
+		cls.capturevideo.videofile_totalframes_offset1 = SCR_CaptureVideo_RIFF_GetPosition();
 		SCR_CaptureVideo_RIFF_Write32(0); // length
 		SCR_CaptureVideo_RIFF_Write32(width*height+(width/2)*(height/2)*2); // suggested buffer size
 		SCR_CaptureVideo_RIFF_Write32(0); // quality
@@ -1093,6 +1163,27 @@ Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 		SCR_CaptureVideo_RIFF_Write32(0); // y pixels per meter
 		SCR_CaptureVideo_RIFF_Write32(0); // color used
 		SCR_CaptureVideo_RIFF_Write32(0); // color important
+		SCR_CaptureVideo_RIFF_Pop();
+		// extended format (aspect!)
+		SCR_CaptureVideo_RIFF_Push("vprp", NULL);
+		SCR_CaptureVideo_RIFF_Write32(0); // VideoFormatToken
+		SCR_CaptureVideo_RIFF_Write32(0); // VideoStandard
+		SCR_CaptureVideo_RIFF_Write32(cls.capturevideo.framerate); // dwVerticalRefreshRate (bogus)
+		SCR_CaptureVideo_RIFF_Write32(width); // dwHTotalInT
+		SCR_CaptureVideo_RIFF_Write32(height); // dwVTotalInLines
+		FindFraction(aspect, &n, &d, 1000);
+		SCR_CaptureVideo_RIFF_Write32((n << 16) | d); // dwFrameAspectRatio // TODO a word
+		SCR_CaptureVideo_RIFF_Write32(width); // dwFrameWidthInPixels
+		SCR_CaptureVideo_RIFF_Write32(height); // dwFrameHeightInLines
+		SCR_CaptureVideo_RIFF_Write32(1); // nFieldPerFrame
+		SCR_CaptureVideo_RIFF_Write32(width); // CompressedBMWidth
+		SCR_CaptureVideo_RIFF_Write32(height); // CompressedBMHeight
+		SCR_CaptureVideo_RIFF_Write32(width); // ValidBMHeight
+		SCR_CaptureVideo_RIFF_Write32(height); // ValidBMWidth
+		SCR_CaptureVideo_RIFF_Write32(0); // ValidBMXOffset
+		SCR_CaptureVideo_RIFF_Write32(0); // ValidBMYOffset
+		SCR_CaptureVideo_RIFF_Write32(0); // ValidBMXOffsetInT
+		SCR_CaptureVideo_RIFF_Write32(0); // ValidBMYValidStartLine
 		SCR_CaptureVideo_RIFF_Pop();
 		SCR_CaptureVideo_RIFF_Pop();
 		if (cls.capturevideo.soundrate)
@@ -1130,6 +1221,15 @@ Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 			SCR_CaptureVideo_RIFF_Pop();
 			SCR_CaptureVideo_RIFF_Pop();
 		}
+
+		// extended header (for total #frames)
+		SCR_CaptureVideo_RIFF_Push("LIST", "odml");
+		SCR_CaptureVideo_RIFF_Push("dmlh", NULL);
+		cls.capturevideo.videofile_totalframes_offset2 = SCR_CaptureVideo_RIFF_GetPosition();
+		SCR_CaptureVideo_RIFF_Write32(0);
+		SCR_CaptureVideo_RIFF_Pop();
+		SCR_CaptureVideo_RIFF_Pop();
+
 		// close the AVI header list
 		SCR_CaptureVideo_RIFF_Pop();
 		// software that produced this AVI video file
@@ -1179,8 +1279,9 @@ void SCR_CaptureVideo_EndVideo(void)
 		{
 		case CAPTUREVIDEOFORMAT_AVI_I420:
 			// close any open chunks
-			SCR_CaptureVideo_RIFF_Finish();
+			SCR_CaptureVideo_RIFF_Finish(true);
 			// go back and fix the video frames and audio samples fields
+			Con_DPrintf("Finishing capture (%d frames, %d audio frames)\n", cls.capturevideo.frame, cls.capturevideo.soundsampleframe);
 			FS_Seek(cls.capturevideo.videofile, cls.capturevideo.videofile_totalframes_offset1, SEEK_SET);
 			SCR_CaptureVideo_RIFF_Write32(cls.capturevideo.frame);
 			SCR_CaptureVideo_RIFF_Flush();
@@ -1201,10 +1302,16 @@ void SCR_CaptureVideo_EndVideo(void)
 		cls.capturevideo.videofile = NULL;
 	}
 
-	if (cls.capturevideo.buffer)
+	if (cls.capturevideo.screenbuffer)
 	{
-		Mem_Free (cls.capturevideo.buffer);
-		cls.capturevideo.buffer = NULL;
+		Mem_Free (cls.capturevideo.screenbuffer);
+		cls.capturevideo.screenbuffer = NULL;
+	}
+
+	if (cls.capturevideo.outbuffer)
+	{
+		Mem_Free (cls.capturevideo.outbuffer);
+		cls.capturevideo.outbuffer = NULL;
 	}
 
 	if (cls.capturevideo.riffindexbuffer.data)
@@ -1259,9 +1366,55 @@ void SCR_CaptureVideo_ConvertFrame_RGB_to_I420_flip(int width, int height, unsig
 	}
 }
 
+static void SCR_ScaleDown(unsigned char *in, int inw, int inh, unsigned char *out, int outw, int outh)
+{
+	// TODO optimize this function
+
+	int x, y;
+	float area;
+
+	// memcpy is faster than me
+	if(inw == outw && inh == outh)
+	{
+		memcpy(out, in, 3 * inw * inh);
+		return;
+	}
+
+	// otherwise: a box filter
+	area = (float)outw * (float)outh / (float)inw / (float)inh;
+	for(y = 0; y < outh; ++y)
+	{
+		float iny0 =  y    / (float)outh * inh; int iny0_i = floor(iny0);
+		float iny1 = (y+1) / (float)outh * inh; int iny1_i = ceil(iny1);
+		for(x = 0; x < outw; ++x)
+		{
+			float inx0 =  x    / (float)outw * inw; int inx0_i = floor(inx0);
+			float inx1 = (x+1) / (float)outw * inw; int inx1_i = ceil(inx1);
+			float r = 0, g = 0, b = 0;
+			int xx, yy;
+
+			for(yy = iny0_i; yy < iny1_i; ++yy)
+			{
+				float ya = min(yy+1, iny1) - max(iny0, yy);
+				for(xx = inx0_i; xx < inx1_i; ++xx)
+				{
+					float a = ya * (min(xx+1, inx1) - max(inx0, xx));
+					r += a * in[3*(xx + inw * yy)+0];
+					g += a * in[3*(xx + inw * yy)+1];
+					b += a * in[3*(xx + inw * yy)+2];
+				}
+			}
+
+			out[3*(x + outw * y)+0] = r * area;
+			out[3*(x + outw * y)+1] = g * area;
+			out[3*(x + outw * y)+2] = b * area;
+		}
+	}
+}
+
 qboolean SCR_CaptureVideo_VideoFrame(int newframenum)
 {
-	int x = 0, y = 0, width = vid.width, height = vid.height;
+	int x = 0, y = 0, width = cls.capturevideo.width, height = cls.capturevideo.height;
 	unsigned char *in, *out;
 	CHECKGLERROR
 	//return SCR_ScreenShot(filename, cls.capturevideo.buffer, cls.capturevideo.buffer + vid.width * vid.height * 3, cls.capturevideo.buffer + vid.width * vid.height * 6, 0, 0, vid.width, vid.height, false, false, false, jpeg, true);
@@ -1273,9 +1426,10 @@ qboolean SCR_CaptureVideo_VideoFrame(int newframenum)
 		if (!cls.capturevideo.videofile)
 			return false;
 		// FIXME: width/height must be multiple of 2, enforce this?
-		qglReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, cls.capturevideo.buffer);CHECKGLERROR
-		in = cls.capturevideo.buffer;
-		out = cls.capturevideo.buffer + width*height*3;
+		qglReadPixels (x, y, vid.width, vid.height, GL_RGB, GL_UNSIGNED_BYTE, cls.capturevideo.screenbuffer);CHECKGLERROR
+		SCR_ScaleDown (cls.capturevideo.screenbuffer, vid.width, vid.height, cls.capturevideo.outbuffer, width, height);
+		in = cls.capturevideo.outbuffer;
+		out = cls.capturevideo.outbuffer + width*height*3;
 		SCR_CaptureVideo_ConvertFrame_RGB_to_I420_flip(width, height, in, out);
 		x = width*height+(width/2)*(height/2)*2;
 		SCR_CaptureVideo_RIFF_OverflowCheck(8 + x);

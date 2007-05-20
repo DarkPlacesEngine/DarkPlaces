@@ -439,6 +439,7 @@ typedef struct capturevideostate_s
 	double starttime;
 	double framerate;
 	// for AVI saving some values have to be written after capture ends
+	fs_offset_t videofile_firstchunkframes_offset;
 	fs_offset_t videofile_totalframes_offset1;
 	fs_offset_t videofile_totalframes_offset2;
 	fs_offset_t videofile_totalsampleframes_offset;
@@ -450,7 +451,8 @@ typedef struct capturevideostate_s
 	int soundrate;
 	int frame;
 	int soundsampleframe; // for AVI saving
-	unsigned char *buffer;
+	unsigned char *screenbuffer;
+	unsigned char *outbuffer;
 	sizebuf_t riffbuffer;
 	unsigned char riffbufferdata[128];
 	// note: riffindex buffer has an allocated ->data member, not static like most!
@@ -460,6 +462,7 @@ typedef struct capturevideostate_s
 	short rgbtoyuvscaletable[3][3][256];
 	unsigned char yuvnormalizetable[3][256];
 	char basename[64];
+	int width, height;
 }
 capturevideostate_t;
 

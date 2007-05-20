@@ -30,6 +30,8 @@ cvar_t skin = {CVAR_USERINFO | CVAR_SAVE, "skin", "", "QW player skin name (exam
 cvar_t noaim = {CVAR_USERINFO | CVAR_SAVE, "noaim", "1", "QW option to disable vertical autoaim"};
 qboolean allowcheats = false;
 
+extern qboolean host_shuttingdown;
+
 /*
 ==================
 Host_Quit_f
@@ -38,7 +40,10 @@ Host_Quit_f
 
 void Host_Quit_f (void)
 {
-	Sys_Quit (0);
+	if(host_shuttingdown)
+		Con_Printf("shutting down already!\n");
+	else
+		Sys_Quit (0);
 }
 
 
@@ -1910,7 +1915,7 @@ void Host_Startdemos_f (void)
 {
 	int		i, c;
 
-	if (cls.state == ca_dedicated || COM_CheckParm("-listen") || COM_CheckParm("-benchmark") || COM_CheckParm("-demo"))
+	if (cls.state == ca_dedicated || COM_CheckParm("-listen") || COM_CheckParm("-benchmark") || COM_CheckParm("-demo") || COM_CheckParm("-capturedemo"))
 		return;
 
 	c = Cmd_Argc() - 1;

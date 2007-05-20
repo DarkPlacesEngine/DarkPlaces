@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
+extern cvar_t cl_capturevideo;
 int old_vsync = 0;
 
 void CL_FinishTimeDemo (void);
@@ -87,7 +88,7 @@ void CL_StopPlayback (void)
 	if (cls.timedemo)
 		CL_FinishTimeDemo ();
 
-	if (COM_CheckParm("-demo"))
+	if (COM_CheckParm("-demo") || COM_CheckParm("-capturedemo"))
 		Host_Quit_f();
 
 }

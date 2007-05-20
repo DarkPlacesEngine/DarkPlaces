@@ -222,7 +222,7 @@ void Host_SaveConfig_f(void)
 // dedicated servers initialize the host but don't parse and set the
 // config.cfg cvars
 	// LordHavoc: don't save a config if it crashed in startup
-	if (host_framecount >= 3 && cls.state != ca_dedicated && !COM_CheckParm("-benchmark"))
+	if (host_framecount >= 3 && cls.state != ca_dedicated && !COM_CheckParm("-benchmark") && !COM_CheckParm("-capturedemo"))
 	{
 		f = FS_Open ("config.cfg", "wb", false, false);
 		if (!f)
@@ -1005,6 +1005,15 @@ static void Host_Init (void)
 		Cbuf_Execute();
 	}
 
+// COMMANDLINEOPTION: Client: -capturedemo <demoname> captures a playdemo and quits
+	i = COM_CheckParm("-capturedemo");
+	if (i && i + 1 < com_argc)
+	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
+	{
+		Cbuf_AddText(va("playdemo %s\ncl_capturevideo 1\n", com_argv[i + 1]));
+		Cbuf_Execute();
+	}
+
 	if (cls.state == ca_dedicated || COM_CheckParm("-listen"))
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
@@ -1042,6 +1051,11 @@ void Host_Shutdown(void)
 	if (isdown)
 	{
 		Con_Print("recursive shutdown\n");
+		return;
+	}
+	if (setjmp(host_abortframe))
+	{
+		Con_Print("aborted the quitting frame?!?\n");
 		return;
 	}
 	isdown = true;

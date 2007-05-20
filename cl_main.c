@@ -2146,6 +2146,7 @@ CL_Shutdown
 */
 void CL_Shutdown (void)
 {
+	CL_Screen_Shutdown();
 	CL_Particles_Shutdown();
 	CL_Parse_Shutdown();
 
