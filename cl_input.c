@@ -1262,6 +1262,9 @@ void CL_SendMove(void)
 
 	// don't send too often or else network connections can get clogged by a high renderer framerate
 	packettime = cl.movevars_ticrate / (double)bound(1, cl_netinputpacketsperserverpacket.value, 10);
+	// send input every frame in singleplayer
+	if (cl.islocalgame)
+		packettime = 0;
 	// quakeworld servers take only frametimes
 	// predicted dp7 servers take current interpolation time
 	// unpredicted servers take an echo of the latest server timestamp
@@ -1307,7 +1310,7 @@ void CL_SendMove(void)
 	// don't send a new input packet if the connection is still saturated from
 	// the last one (or chat messages, etc)
 	// note: this behavior comes from QW
-	if ((cls.protocol == PROTOCOL_QUAKEWORLD || cls.signon == SIGNONS) && !NetConn_CanSend(cls.netcon))
+	if ((cls.protocol == PROTOCOL_QUAKEWORLD || cls.signon == SIGNONS) && !NetConn_CanSend(cls.netcon) && !cl.islocalgame)
 		return;
 
 	// increase the move counter since we intend to send a move
