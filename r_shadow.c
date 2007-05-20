@@ -228,7 +228,6 @@ cvar_t r_shadow_realtime_dlight_shadows = {CVAR_SAVE, "r_shadow_realtime_dlight_
 cvar_t r_shadow_realtime_dlight_svbspculling = {0, "r_shadow_realtime_dlight_svbspculling", "0", "enables svbsp optimization on dynamic lights (very slow!)"};
 cvar_t r_shadow_realtime_dlight_portalculling = {0, "r_shadow_realtime_dlight_portalculling", "0", "enables portal optimization on dynamic lights (slow!)"};
 cvar_t r_shadow_realtime_world = {CVAR_SAVE, "r_shadow_realtime_world", "0", "enables rendering of full world lighting (whether loaded from the map, or a .rtlights file, or a .ent file, or a .lights file produced by hlight)"};
-cvar_t r_shadow_realtime_world_dlightshadows = {CVAR_SAVE, "r_shadow_realtime_world_dlightshadows", "1", "enables shadows from dynamic lights when using full world lighting"};
 cvar_t r_shadow_realtime_world_lightmaps = {CVAR_SAVE, "r_shadow_realtime_world_lightmaps", "0", "brightness to render lightmaps when using full world lighting, try 0.5 for a tenebrae-like appearance"};
 cvar_t r_shadow_realtime_world_shadows = {CVAR_SAVE, "r_shadow_realtime_world_shadows", "1", "enables rendering of shadows from world lights"};
 cvar_t r_shadow_realtime_world_compile = {0, "r_shadow_realtime_world_compile", "1", "enables compilation of world lights for higher performance rendering"};
@@ -404,7 +403,6 @@ void R_Shadow_Help_f(void)
 "r_shadow_realtime_dlight : use high quality dynamic lights in normal mode\n"
 "r_shadow_realtime_dlight_shadows : cast shadows from dlights\n"
 "r_shadow_realtime_world : use high quality world lighting mode\n"
-"r_shadow_realtime_world_dlightshadows : cast shadows from dlights\n"
 "r_shadow_realtime_world_lightmaps : use lightmaps in addition to lights\n"
 "r_shadow_realtime_world_shadows : cast shadows from world lights\n"
 "r_shadow_realtime_world_compile : compile surface/visibility information\n"
@@ -442,7 +440,6 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_realtime_dlight_svbspculling);
 	Cvar_RegisterVariable(&r_shadow_realtime_dlight_portalculling);
 	Cvar_RegisterVariable(&r_shadow_realtime_world);
-	Cvar_RegisterVariable(&r_shadow_realtime_world_dlightshadows);
 	Cvar_RegisterVariable(&r_shadow_realtime_world_lightmaps);
 	Cvar_RegisterVariable(&r_shadow_realtime_world_shadows);
 	Cvar_RegisterVariable(&r_shadow_realtime_world_compile);
