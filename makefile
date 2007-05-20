@@ -163,7 +163,6 @@ ifeq ($(DP_MAKE_TARGET), mingw)
 	EXE_SDLNEXUIZ=$(EXE_WINSDLNEXUIZ)
 endif
 
-
 ##### Sound configuration #####
 
 ifndef DP_SOUND_API
@@ -216,6 +215,17 @@ else
 	CFLAGS_FS=
 endif
 
+CFLAGS_PRELOAD=
+ifneq ($(DP_MAKE_TARGET), mingw)
+ifdef DP_PRELOAD_DEPENDENCIES
+# DP_PRELOAD_DEPENDENCIES: when set, link against the libraries needed using -l
+# dynamically so they won't get loaded at runtime using dlopen
+	LDFLAGS_CL+=$(LDFLAGS_UNIXCL_PRELOAD)
+	LDFLAGS_SV+=$(LDFLAGS_UNIXSV_PRELOAD)
+	LDFLAGS_SDL+=$(LDFLAGS_UNIXSDL_PRELOAD)
+	CFLAGS_PRELOAD=$(CFLAGS_UNIX_PRELOAD)
+endif
+endif
 
 ##### GNU Make specific definitions #####
 
