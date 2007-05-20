@@ -731,7 +731,6 @@ r_shadow_realtime_world_compile                   1                   enables co
 r_shadow_realtime_world_compileportalculling      1                   enables portal-based culling optimization during compilation
 r_shadow_realtime_world_compileshadow             1                   enables compilation of shadows from world lights for higher performance rendering
 r_shadow_realtime_world_compilesvbsp              1                   enables svbsp optimization during compilation
-r_shadow_realtime_world_dlightshadows             1                   enables shadows from dynamic lights when using full world lighting
 r_shadow_realtime_world_lightmaps                 0                   brightness to render lightmaps when using full world lighting, try 0.5 for a tenebrae-like appearance
 r_shadow_realtime_world_shadows                   1                   enables rendering of shadows from world lights
 r_shadow_scissor                                  1                   use scissor optimization of light rendering (restricts rendering to the portion of the screen affected by the light)

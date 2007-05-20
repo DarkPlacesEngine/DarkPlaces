@@ -21,7 +21,6 @@ extern cvar_t r_shadow_realtime_dlight_shadows;
 extern cvar_t r_shadow_realtime_dlight_svbspculling;
 extern cvar_t r_shadow_realtime_dlight_portalculling;
 extern cvar_t r_shadow_realtime_world;
-extern cvar_t r_shadow_realtime_world_dlightshadows;
 extern cvar_t r_shadow_realtime_world_lightmaps;
 extern cvar_t r_shadow_realtime_world_shadows;
 extern cvar_t r_shadow_realtime_world_compile;
