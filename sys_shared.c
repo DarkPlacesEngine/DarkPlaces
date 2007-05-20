@@ -1,4 +1,3 @@
-
 #include "quakedef.h"
 # include <time.h>
 #ifndef WIN32
@@ -40,6 +39,25 @@ qboolean Sys_LoadLibrary (const char** dllnames, dllhandle_t* handle, const dllf
 
 	if (handle == NULL)
 		return false;
+
+#ifndef WIN32
+#ifdef PREFER_PRELOAD
+	dllhandle = dlopen(NULL, RTLD_LAZY | RTLD_GLOBAL);
+	if(dllhandle)
+	{
+		for (func = fcts; func && func->name != NULL; func++)
+			if (!(*func->funcvariable = (void *) Sys_GetProcAddress (dllhandle, func->name)))
+			{
+				dlclose(dllhandle);
+				goto notfound;
+			}
+		Con_Printf ("All of %s's functions were already linked in! Not loading dynamically...\n", dllnames[0]);
+		*handle = dllhandle;
+		return true;
+	}
+notfound:
+#endif
+#endif
 
 	// Initializations
 	for (func = fcts; func && func->name != NULL; func++)

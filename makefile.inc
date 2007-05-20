@@ -138,7 +138,7 @@ OBJ_SDL= builddate.c sys_sdl.o vid_sdl.o $(OBJ_SND_COMMON) snd_sdl.o cd_sdl.o $(
 
 
 # Compilation
-CFLAGS_COMMON=$(CFLAGS_MAKEDEP) $(CFLAGS_FS) -Wall -Wsign-compare -Wdeclaration-after-statement
+CFLAGS_COMMON=$(CFLAGS_MAKEDEP) $(CFLAGS_PRELOAD) $(CFLAGS_FS) -Wall -Wsign-compare -Wdeclaration-after-statement
 CFLAGS_DEBUG=-ggdb
 CFLAGS_PROFILE=-g -pg -ggdb
 CFLAGS_RELEASE=
@@ -165,6 +165,10 @@ OBJ_GLX= builddate.c sys_linux.o vid_glx.o $(OBJ_SOUND) $(OBJ_CD) $(OBJ_COMMON)
 
 LDFLAGS_UNIXCOMMON=-lm
 LDFLAGS_UNIXCL=-L$(UNIX_X11LIBPATH) -lX11 -lXext -lXxf86dga -lXxf86vm $(LIB_SOUND)
+LDFLAGS_UNIXCL_PRELOAD=-lz -ljpeg -lpng -lvorbis -lvorbisfile -lcurl
+LDFLAGS_UNIXSV_PRELOAD=-lz -lcurl
+LDFLAGS_UNIXSDL_PRELOAD=-lz -ljpeg -lpng -lvorbis -lvorbisfile -lcurl
+CFLAGS_UNIX_PRELOAD=-DPREFER_PRELOAD
 
 LDFLAGS_UNIXSDL=`$(SDL_CONFIG) --libs`
 EXE_UNIXCL=darkplaces-glx
