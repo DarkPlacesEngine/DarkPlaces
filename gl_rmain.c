@@ -2457,8 +2457,8 @@ void R_UpdateVariables(void)
 		Cvar_SetValueQuick(&r_shadow_frontsidecasting, 1);
 	r_refdef.polygonfactor = 0;
 	r_refdef.polygonoffset = 0;
-	r_refdef.shadowpolygonfactor = r_refdef.polygonfactor + r_shadow_shadow_polygonfactor.value * (r_shadow_frontsidecasting.integer ? 1 : -1);
-	r_refdef.shadowpolygonoffset = r_refdef.polygonoffset + r_shadow_shadow_polygonoffset.value * (r_shadow_frontsidecasting.integer ? 1 : -1);
+	r_refdef.shadowpolygonfactor = r_refdef.polygonfactor + r_shadow_polygonfactor.value * (r_shadow_frontsidecasting.integer ? 1 : -1);
+	r_refdef.shadowpolygonoffset = r_refdef.polygonoffset + r_shadow_polygonoffset.value * (r_shadow_frontsidecasting.integer ? 1 : -1);
 
 	r_refdef.rtworld = r_shadow_realtime_world.integer;
 	r_refdef.rtworldshadows = r_shadow_realtime_world_shadows.integer && gl_stencil;

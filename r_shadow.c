@@ -237,8 +237,8 @@ cvar_t r_shadow_realtime_world_compilesvbsp = {0, "r_shadow_realtime_world_compi
 cvar_t r_shadow_realtime_world_compileportalculling = {0, "r_shadow_realtime_world_compileportalculling", "1", "enables portal-based culling optimization during compilation"};
 cvar_t r_shadow_scissor = {0, "r_shadow_scissor", "1", "use scissor optimization of light rendering (restricts rendering to the portion of the screen affected by the light)"};
 cvar_t r_shadow_culltriangles = {0, "r_shadow_culltriangles", "1", "performs more expensive tests to remove unnecessary triangles of lit surfaces"};
-cvar_t r_shadow_shadow_polygonfactor = {0, "r_shadow_shadow_polygonfactor", "0", "how much to enlarge shadow volume polygons when rendering (should be 0!)"};
-cvar_t r_shadow_shadow_polygonoffset = {0, "r_shadow_shadow_polygonoffset", "1", "how much to push shadow volumes into the distance when rendering, to reduce chances of zfighting artifacts (should not be less than 0)"};
+cvar_t r_shadow_polygonfactor = {0, "r_shadow_polygonfactor", "0", "how much to enlarge shadow volume polygons when rendering (should be 0!)"};
+cvar_t r_shadow_polygonoffset = {0, "r_shadow_polygonoffset", "1", "how much to push shadow volumes into the distance when rendering, to reduce chances of zfighting artifacts (should not be less than 0)"};
 cvar_t r_shadow_texture3d = {0, "r_shadow_texture3d", "1", "use 3D voxel textures for spherical attenuation rather than cylindrical (does not affect r_glsl lighting)"};
 cvar_t gl_ext_separatestencil = {0, "gl_ext_separatestencil", "1", "make use of OpenGL 2.0 glStencilOpSeparate or GL_ATI_separate_stencil extension"};
 cvar_t gl_ext_stenciltwoside = {0, "gl_ext_stenciltwoside", "1", "make use of GL_EXT_stenciltwoside extension (NVIDIA only)"};
@@ -410,8 +410,8 @@ void R_Shadow_Help_f(void)
 "r_shadow_realtime_world_compile : compile surface/visibility information\n"
 "r_shadow_realtime_world_compileshadow : compile shadow geometry\n"
 "r_shadow_scissor : use scissor optimization\n"
-"r_shadow_shadow_polygonfactor : nudge shadow volumes closer/further\n"
-"r_shadow_shadow_polygonoffset : nudge shadow volumes closer/further\n"
+"r_shadow_polygonfactor : nudge shadow volumes closer/further\n"
+"r_shadow_polygonoffset : nudge shadow volumes closer/further\n"
 "r_shadow_texture3d : use 3d attenuation texture (if hardware supports)\n"
 "r_showlighting : useful for performance testing; bright = slow!\n"
 "r_showshadowvolumes : useful for performance testing; bright = slow!\n"
@@ -451,8 +451,8 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_realtime_world_compileportalculling);
 	Cvar_RegisterVariable(&r_shadow_scissor);
 	Cvar_RegisterVariable(&r_shadow_culltriangles);
-	Cvar_RegisterVariable(&r_shadow_shadow_polygonfactor);
-	Cvar_RegisterVariable(&r_shadow_shadow_polygonoffset);
+	Cvar_RegisterVariable(&r_shadow_polygonfactor);
+	Cvar_RegisterVariable(&r_shadow_polygonoffset);
 	Cvar_RegisterVariable(&r_shadow_texture3d);
 	Cvar_RegisterVariable(&gl_ext_separatestencil);
 	Cvar_RegisterVariable(&gl_ext_stenciltwoside);
