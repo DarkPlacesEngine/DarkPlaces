@@ -2453,6 +2453,8 @@ void R_UpdateVariables(void)
 		r_refdef.farclip += VectorDistance(r_refdef.worldmodel->normalmins, r_refdef.worldmodel->normalmaxs);
 	r_refdef.nearclip = bound (0.001f, r_nearclip.value, r_refdef.farclip - 1.0f);
 
+	if (r_shadow_frontsidecasting.integer < 0 || r_shadow_frontsidecasting.integer > 1)
+		Cvar_SetValueQuick(&r_shadow_frontsidecasting, 1);
 	r_refdef.polygonfactor = 0;
 	r_refdef.polygonoffset = 0;
 	r_refdef.shadowpolygonfactor = r_refdef.polygonfactor + r_shadow_shadow_polygonfactor.value * (r_shadow_frontsidecasting.integer ? 1 : -1);
