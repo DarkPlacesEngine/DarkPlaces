@@ -2539,6 +2539,15 @@ void CL_ParsePointParticles(void)
 	CL_ParticleEffect(effectindex, count, origin, origin, velocity, velocity, NULL, 0);
 }
 
+void CL_ParsePointParticles1(void)
+{
+	int effectindex;
+	vec3_t origin;
+	effectindex = (unsigned short)MSG_ReadShort();
+	MSG_ReadVector(origin, cls.protocol);
+	CL_ParticleEffect(effectindex, 1, origin, origin, vec3_origin, vec3_origin, NULL, 0);
+}
+
 typedef struct cl_iplog_item_s
 {
 	char *address;
@@ -3713,6 +3722,9 @@ void CL_ParseServerMessage(void)
 				break;
 			case svc_pointparticles:
 				CL_ParsePointParticles();
+				break;
+			case svc_pointparticles1:
+				CL_ParsePointParticles1();
 				break;
 			}
 		}

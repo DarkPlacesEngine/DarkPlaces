@@ -2648,13 +2648,30 @@ static void VM_SV_trailparticles (void)
 //#337 void(float effectnum, vector origin, vector dir, float count) pointparticles (EXT_CSQC)
 static void VM_SV_pointparticles (void)
 {
-	VM_SAFEPARMCOUNT(4, VM_SV_pointparticles);
+	int effectnum, count;
+	vec3_t org, vel;
+	VM_SAFEPARMCOUNTRANGE(4, 8, VM_SV_pointparticles);
+	effectnum = (int)PRVM_G_FLOAT(OFS_PARM0);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), org);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM2), vel);
+	count = bound(0, (int)PRVM_G_FLOAT(OFS_PARM3), 65535);
+	if (count == 1 && !VectorLength2(vel) && (sv.protocol != PROTOCOL_QUAKE && sv.protocol != PROTOCOL_QUAKEDP && sv.protocol != PROTOCOL_NEHAHRAMOVIE && sv.protocol != PROTOCOL_DARKPLACES1 && sv.protocol != DARKPLACES2 && sv.protocol != DARKPLACES3 && sv.protocol != DARKPLACES4 && sv.protocol != DARKPLACES5 && sv.protocol != DARKPLACES6 && sv.protocol != DARKPLACES7))
+	{
+		// 1+2+12=15 bytes
+		MSG_WriteByte(&sv.datagram, svc_pointparticles1);
+		MSG_WriteShort(&sv.datagram, effectnum);
+		MSG_WriteVector(&sv.datagram, org, sv.protocol);
+	}
+	else
+	{
+		// 1+2+12+12+2=29 bytes
+		MSG_WriteByte(&sv.datagram, svc_pointparticles);
+		MSG_WriteShort(&sv.datagram, effectnum);
+		MSG_WriteVector(&sv.datagram, org, sv.protocol);
+		MSG_WriteVector(&sv.datagram, vel, sv.protocol);
+		MSG_WriteShort(&sv.datagram, count);
+	}
 
-	MSG_WriteByte(&sv.datagram, svc_pointparticles);
-	MSG_WriteShort(&sv.datagram, (int)PRVM_G_FLOAT(OFS_PARM0));
-	MSG_WriteVector(&sv.datagram, PRVM_G_VECTOR(OFS_PARM1), sv.protocol);
-	MSG_WriteVector(&sv.datagram, PRVM_G_VECTOR(OFS_PARM2), sv.protocol);
-	MSG_WriteShort(&sv.datagram, bound(0, (int)PRVM_G_FLOAT(OFS_PARM3), 65535));
 	SV_FlushBroadcastMessages();
 }
 
