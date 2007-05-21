@@ -510,7 +510,7 @@ static void
 Key_Message (int key, char ascii)
 {
 
-	if (key == K_ENTER)
+	if (key == K_ENTER || ascii == 10 || ascii == 13)
 	{
 		Cmd_ForwardStringToServer(va("%s %s", chat_team ? "say_team" : "say ", chat_buffer));
 
