@@ -251,7 +251,8 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define svc_csqcentities	58		// [short] entnum [variable length] entitydata ... [short] 0x0000
 #define	svc_spawnstaticsound2	59	// [coord3] [short] samp [byte] vol [byte] aten
 #define svc_trailparticles	60		// [short] entnum [short] effectnum [vector] start [vector] end
-#define svc_pointparticles	61		// [short] effectnum [vector] start [vector] end [short] count
+#define svc_pointparticles	61		// [short] effectnum [vector] start [vector] velocity [short] count
+#define svc_pointparticles1	62		// [short] effectnum [vector] start, same as svc_pointparticles except velocity is zero and count is 1 (PROTOCOL_DARKPLACES8)
 
 //
 // client to server
