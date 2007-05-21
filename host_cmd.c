@@ -1991,9 +1991,9 @@ void Host_SendCvar_f (void)
 		// LordHavoc: if there is no such cvar or if it is private, send a
 		// reply indicating that it has no value
 		if(!c || (c->flags & CVAR_PRIVATE))
-			Cmd_ForwardStringToServer(va("sentcvar %s\n", cvarname));
+			Cmd_ForwardStringToServer(va("sentcvar %s", cvarname));
 		else
-			Cmd_ForwardStringToServer(va("sentcvar %s \"%s\"\n", c->name, c->string));
+			Cmd_ForwardStringToServer(va("sentcvar %s \"%s\"", c->name, c->string));
 		return;
 	}
 	if(!sv.active)// || !prog->funcoffsets.SV_ParseClientCommand)
