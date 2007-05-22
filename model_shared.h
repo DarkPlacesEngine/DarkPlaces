@@ -693,6 +693,40 @@ shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh,
 void Mod_ShadowMesh_CalcBBox(shadowmesh_t *firstmesh, vec3_t mins, vec3_t maxs, vec3_t center, float *radius);
 void Mod_ShadowMesh_Free(shadowmesh_t *mesh);
 
+#define Q3SHADER_MAXLAYERS 8
+
+typedef struct q3shaderinfo_layer_s
+{
+	int alphatest;
+	int clampmap;
+	float framerate;
+	int numframes;
+	char texturename[TEXTURE_MAXFRAMES][Q3PATHLENGTH];
+	int blendfunc[2];
+	qboolean rgbgenvertex;
+	qboolean alphagenvertex;
+}
+q3shaderinfo_layer_t;
+
+typedef struct q3shaderinfo_s
+{
+	char name[Q3PATHLENGTH];
+	int surfaceparms;
+	int textureflags;
+	int numlayers;
+	qboolean lighting;
+	qboolean vertexalpha;
+	qboolean textureblendalpha;
+	q3shaderinfo_layer_t *primarylayer, *backgroundlayer;
+	q3shaderinfo_layer_t layers[Q3SHADER_MAXLAYERS];
+	char skyboxname[Q3PATHLENGTH];
+}
+q3shaderinfo_t;
+
+void Mod_LoadQ3Shaders(void);
+q3shaderinfo_t *Mod_LookupQ3Shader(const char *name);
+qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qboolean q1bsp, qboolean q3bsp, qboolean md3);
+
 extern cvar_t r_mipskins;
 
 typedef struct skinfileitem_s
