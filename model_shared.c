@@ -33,11 +33,19 @@ model_t *loadmodel;
 static mempool_t *mod_mempool;
 static memexpandablearray_t models;
 
+// FIXME: make this a memexpandablearray_t
+#define Q3SHADER_MAXSHADERS 4096
+static int q3shaders_numshaders = 0;
+static q3shaderinfo_t q3shaders_shaders[Q3SHADER_MAXSHADERS];
+
 static void mod_start(void)
 {
 	int i;
 	int nummodels = Mem_ExpandableArray_IndexRange(&models);
 	model_t *mod;
+
+	// parse the Q3 shader files
+	Mod_LoadQ3Shaders();
 
 	for (i = 0;i < nummodels;i++)
 		if ((mod = Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0] && mod->name[0] != '*')
@@ -1083,6 +1091,475 @@ void Mod_ConstructTerrainPatchFromRGBA(const unsigned char *imagepixels, int ima
 	for (y = 0, iy = y1;y < height + 1;y++, iy++)
 		for (x = 0, ix = x1;x < width + 1;x++, ix++, vertex3f += 3, texcoord2f += 2, svector3f += 3, tvector3f += 3, normal3f += 3)
 			Mod_GetTerrainVertexFromRGBA(imagepixels, imagewidth, imageheight, ix, iy, vertex3f, texcoord2f, svector3f, tvector3f, normal3f, pixelstepmatrix, pixeltexturestepmatrix);
+}
+
+void Mod_LoadQ3Shaders(void)
+{
+	int j;
+	int fileindex;
+	fssearch_t *search;
+	char *f;
+	const char *text;
+	q3shaderinfo_t *shader;
+	q3shaderinfo_layer_t *layer;
+	int numparameters;
+	char parameter[TEXTURE_MAXFRAMES + 4][Q3PATHLENGTH];
+	q3shaders_numshaders = 0;
+	search = FS_Search("scripts/*.shader", true, false);
+	if (!search)
+		return;
+	for (fileindex = 0;fileindex < search->numfilenames;fileindex++)
+	{
+		text = f = (char *)FS_LoadFile(search->filenames[fileindex], tempmempool, false, NULL);
+		if (!f)
+			continue;
+		while (COM_ParseToken_QuakeC(&text, false))
+		{
+			if (q3shaders_numshaders >= Q3SHADER_MAXSHADERS)
+			{
+				Con_Printf("Mod_Q3BSP_LoadShaders: too many shaders!\n");
+				break;
+			}
+			shader = q3shaders_shaders + q3shaders_numshaders++;
+			memset(shader, 0, sizeof(*shader));
+			strlcpy(shader->name, com_token, sizeof(shader->name));
+			if (!COM_ParseToken_QuakeC(&text, false) || strcasecmp(com_token, "{"))
+			{
+				Con_Printf("%s parsing error - expected \"{\", found \"%s\"\n", search->filenames[fileindex], com_token);
+				break;
+			}
+			while (COM_ParseToken_QuakeC(&text, false))
+			{
+				if (!strcasecmp(com_token, "}"))
+					break;
+				if (!strcasecmp(com_token, "{"))
+				{
+					if (shader->numlayers < Q3SHADER_MAXLAYERS)
+					{
+						layer = shader->layers + shader->numlayers++;
+						layer->rgbgenvertex = false;
+						layer->alphagenvertex = false;
+						layer->blendfunc[0] = GL_ONE;
+						layer->blendfunc[1] = GL_ZERO;
+					}
+					else
+						layer = NULL;
+					while (COM_ParseToken_QuakeC(&text, false))
+					{
+						if (!strcasecmp(com_token, "}"))
+							break;
+						if (!strcasecmp(com_token, "\n"))
+							continue;
+						if (layer == NULL)
+							continue;
+						numparameters = 0;
+						for (j = 0;strcasecmp(com_token, "\n") && strcasecmp(com_token, "}");j++)
+						{
+							if (j < TEXTURE_MAXFRAMES + 4)
+							{
+								strlcpy(parameter[j], com_token, sizeof(parameter[j]));
+								numparameters = j + 1;
+							}
+							if (!COM_ParseToken_QuakeC(&text, true))
+								break;
+						}
+						if (developer.integer >= 100)
+						{
+							Con_Printf("%s %i: ", shader->name, shader->numlayers - 1);
+							for (j = 0;j < numparameters;j++)
+								Con_Printf(" %s", parameter[j]);
+							Con_Print("\n");
+						}
+						if (numparameters >= 2 && !strcasecmp(parameter[0], "blendfunc"))
+						{
+							if (numparameters == 2)
+							{
+								if (!strcasecmp(parameter[1], "add"))
+								{
+									layer->blendfunc[0] = GL_ONE;
+									layer->blendfunc[1] = GL_ONE;
+								}
+								else if (!strcasecmp(parameter[1], "filter"))
+								{
+									layer->blendfunc[0] = GL_DST_COLOR;
+									layer->blendfunc[1] = GL_ZERO;
+								}
+								else if (!strcasecmp(parameter[1], "blend"))
+								{
+									layer->blendfunc[0] = GL_SRC_ALPHA;
+									layer->blendfunc[1] = GL_ONE_MINUS_SRC_ALPHA;
+								}
+							}
+							else if (numparameters == 3)
+							{
+								int k;
+								for (k = 0;k < 2;k++)
+								{
+									if (!strcasecmp(parameter[k+1], "GL_ONE"))
+										layer->blendfunc[k] = GL_ONE;
+									else if (!strcasecmp(parameter[k+1], "GL_ZERO"))
+										layer->blendfunc[k] = GL_ZERO;
+									else if (!strcasecmp(parameter[k+1], "GL_SRC_COLOR"))
+										layer->blendfunc[k] = GL_SRC_COLOR;
+									else if (!strcasecmp(parameter[k+1], "GL_SRC_ALPHA"))
+										layer->blendfunc[k] = GL_SRC_ALPHA;
+									else if (!strcasecmp(parameter[k+1], "GL_DST_COLOR"))
+										layer->blendfunc[k] = GL_DST_COLOR;
+									else if (!strcasecmp(parameter[k+1], "GL_DST_ALPHA"))
+										layer->blendfunc[k] = GL_ONE_MINUS_DST_ALPHA;
+									else if (!strcasecmp(parameter[k+1], "GL_ONE_MINUS_SRC_COLOR"))
+										layer->blendfunc[k] = GL_ONE_MINUS_SRC_COLOR;
+									else if (!strcasecmp(parameter[k+1], "GL_ONE_MINUS_SRC_ALPHA"))
+										layer->blendfunc[k] = GL_ONE_MINUS_SRC_ALPHA;
+									else if (!strcasecmp(parameter[k+1], "GL_ONE_MINUS_DST_COLOR"))
+										layer->blendfunc[k] = GL_ONE_MINUS_DST_COLOR;
+									else if (!strcasecmp(parameter[k+1], "GL_ONE_MINUS_DST_ALPHA"))
+										layer->blendfunc[k] = GL_ONE_MINUS_DST_ALPHA;
+									else
+										layer->blendfunc[k] = GL_ONE; // default in case of parsing error
+								}
+							}
+						}
+						if (numparameters >= 2 && !strcasecmp(parameter[0], "alphafunc"))
+							layer->alphatest = true;
+						if (numparameters >= 2 && (!strcasecmp(parameter[0], "map") || !strcasecmp(parameter[0], "clampmap")))
+						{
+							if (!strcasecmp(parameter[0], "clampmap"))
+								layer->clampmap = true;
+							layer->numframes = 1;
+							layer->framerate = 1;
+							strlcpy(layer->texturename[0], parameter[1], sizeof(layer->texturename));
+							if (!strcasecmp(parameter[1], "$lightmap"))
+								shader->lighting = true;
+						}
+						else if (numparameters >= 3 && (!strcasecmp(parameter[0], "animmap") || !strcasecmp(parameter[0], "animclampmap")))
+						{
+							int i;
+							layer->numframes = min(numparameters - 2, TEXTURE_MAXFRAMES);
+							layer->framerate = atof(parameter[1]);
+							for (i = 0;i < layer->numframes;i++)
+								strlcpy(layer->texturename[i], parameter[i + 2], sizeof(layer->texturename));
+						}
+						else if (numparameters >= 2 && !strcasecmp(parameter[0], "rgbgen") && !strcasecmp(parameter[1], "vertex"))
+							layer->rgbgenvertex = true;
+						else if (numparameters >= 2 && !strcasecmp(parameter[0], "alphagen") && !strcasecmp(parameter[1], "vertex"))
+							layer->alphagenvertex = true;
+						// break out a level if it was }
+						if (!strcasecmp(com_token, "}"))
+							break;
+					}
+					if (layer->rgbgenvertex)
+						shader->lighting = true;
+					if (layer->alphagenvertex)
+					{
+						if (layer == shader->layers + 0)
+						{
+							// vertex controlled transparency
+							shader->vertexalpha = true;
+						}
+						else
+						{
+							// multilayer terrain shader or similar
+							shader->textureblendalpha = true;
+						}
+					}
+					continue;
+				}
+				numparameters = 0;
+				for (j = 0;strcasecmp(com_token, "\n") && strcasecmp(com_token, "}");j++)
+				{
+					if (j < TEXTURE_MAXFRAMES + 4)
+					{
+						strlcpy(parameter[j], com_token, sizeof(parameter[j]));
+						numparameters = j + 1;
+					}
+					if (!COM_ParseToken_QuakeC(&text, true))
+						break;
+				}
+				if (fileindex == 0 && !strcasecmp(com_token, "}"))
+					break;
+				if (developer.integer >= 100)
+				{
+					Con_Printf("%s: ", shader->name);
+					for (j = 0;j < numparameters;j++)
+						Con_Printf(" %s", parameter[j]);
+					Con_Print("\n");
+				}
+				if (numparameters < 1)
+					continue;
+				if (!strcasecmp(parameter[0], "surfaceparm") && numparameters >= 2)
+				{
+					if (!strcasecmp(parameter[1], "alphashadow"))
+						shader->surfaceparms |= Q3SURFACEPARM_ALPHASHADOW;
+					else if (!strcasecmp(parameter[1], "areaportal"))
+						shader->surfaceparms |= Q3SURFACEPARM_AREAPORTAL;
+					else if (!strcasecmp(parameter[1], "botclip"))
+						shader->surfaceparms |= Q3SURFACEPARM_BOTCLIP;
+					else if (!strcasecmp(parameter[1], "clusterportal"))
+						shader->surfaceparms |= Q3SURFACEPARM_CLUSTERPORTAL;
+					else if (!strcasecmp(parameter[1], "detail"))
+						shader->surfaceparms |= Q3SURFACEPARM_DETAIL;
+					else if (!strcasecmp(parameter[1], "donotenter"))
+						shader->surfaceparms |= Q3SURFACEPARM_DONOTENTER;
+					else if (!strcasecmp(parameter[1], "dust"))
+						shader->surfaceparms |= Q3SURFACEPARM_DUST;
+					else if (!strcasecmp(parameter[1], "hint"))
+						shader->surfaceparms |= Q3SURFACEPARM_HINT;
+					else if (!strcasecmp(parameter[1], "fog"))
+						shader->surfaceparms |= Q3SURFACEPARM_FOG;
+					else if (!strcasecmp(parameter[1], "lava"))
+						shader->surfaceparms |= Q3SURFACEPARM_LAVA;
+					else if (!strcasecmp(parameter[1], "lightfilter"))
+						shader->surfaceparms |= Q3SURFACEPARM_LIGHTFILTER;
+					else if (!strcasecmp(parameter[1], "lightgrid"))
+						shader->surfaceparms |= Q3SURFACEPARM_LIGHTGRID;
+					else if (!strcasecmp(parameter[1], "metalsteps"))
+						shader->surfaceparms |= Q3SURFACEPARM_METALSTEPS;
+					else if (!strcasecmp(parameter[1], "nodamage"))
+						shader->surfaceparms |= Q3SURFACEPARM_NODAMAGE;
+					else if (!strcasecmp(parameter[1], "nodlight"))
+						shader->surfaceparms |= Q3SURFACEPARM_NODLIGHT;
+					else if (!strcasecmp(parameter[1], "nodraw"))
+						shader->surfaceparms |= Q3SURFACEPARM_NODRAW;
+					else if (!strcasecmp(parameter[1], "nodrop"))
+						shader->surfaceparms |= Q3SURFACEPARM_NODROP;
+					else if (!strcasecmp(parameter[1], "noimpact"))
+						shader->surfaceparms |= Q3SURFACEPARM_NOIMPACT;
+					else if (!strcasecmp(parameter[1], "nolightmap"))
+						shader->surfaceparms |= Q3SURFACEPARM_NOLIGHTMAP;
+					else if (!strcasecmp(parameter[1], "nomarks"))
+						shader->surfaceparms |= Q3SURFACEPARM_NOMARKS;
+					else if (!strcasecmp(parameter[1], "nomipmaps"))
+						shader->surfaceparms |= Q3SURFACEPARM_NOMIPMAPS;
+					else if (!strcasecmp(parameter[1], "nonsolid"))
+						shader->surfaceparms |= Q3SURFACEPARM_NONSOLID;
+					else if (!strcasecmp(parameter[1], "origin"))
+						shader->surfaceparms |= Q3SURFACEPARM_ORIGIN;
+					else if (!strcasecmp(parameter[1], "playerclip"))
+						shader->surfaceparms |= Q3SURFACEPARM_PLAYERCLIP;
+					else if (!strcasecmp(parameter[1], "sky"))
+						shader->surfaceparms |= Q3SURFACEPARM_SKY;
+					else if (!strcasecmp(parameter[1], "slick"))
+						shader->surfaceparms |= Q3SURFACEPARM_SLICK;
+					else if (!strcasecmp(parameter[1], "slime"))
+						shader->surfaceparms |= Q3SURFACEPARM_SLIME;
+					else if (!strcasecmp(parameter[1], "structural"))
+						shader->surfaceparms |= Q3SURFACEPARM_STRUCTURAL;
+					else if (!strcasecmp(parameter[1], "trans"))
+						shader->surfaceparms |= Q3SURFACEPARM_TRANS;
+					else if (!strcasecmp(parameter[1], "water"))
+						shader->surfaceparms |= Q3SURFACEPARM_WATER;
+					else if (!strcasecmp(parameter[1], "pointlight"))
+						shader->surfaceparms |= Q3SURFACEPARM_POINTLIGHT;
+					else if (!strcasecmp(parameter[1], "antiportal"))
+						shader->surfaceparms |= Q3SURFACEPARM_ANTIPORTAL;
+					else
+						Con_DPrintf("%s parsing warning: unknown surfaceparm \"%s\"\n", search->filenames[fileindex], parameter[1]);
+				}
+				else if (!strcasecmp(parameter[0], "sky") && numparameters >= 2)
+				{
+					// some q3 skies don't have the sky parm set
+					shader->surfaceparms |= Q3SURFACEPARM_SKY;
+					strlcpy(shader->skyboxname, parameter[1], sizeof(shader->skyboxname));
+				}
+				else if (!strcasecmp(parameter[0], "skyparms") && numparameters >= 2)
+				{
+					// some q3 skies don't have the sky parm set
+					shader->surfaceparms |= Q3SURFACEPARM_SKY;
+					if (!atoi(parameter[1]) && strcasecmp(parameter[1], "-"))
+						strlcpy(shader->skyboxname, parameter[1], sizeof(shader->skyboxname));
+				}
+				else if (!strcasecmp(parameter[0], "cull") && numparameters >= 2)
+				{
+					if (!strcasecmp(parameter[1], "disable") || !strcasecmp(parameter[1], "none") || !strcasecmp(parameter[1], "twosided"))
+						shader->textureflags |= Q3TEXTUREFLAG_TWOSIDED;
+				}
+				else if (!strcasecmp(parameter[0], "nomipmaps"))
+					shader->surfaceparms |= Q3SURFACEPARM_NOMIPMAPS;
+				else if (!strcasecmp(parameter[0], "nopicmip"))
+					shader->textureflags |= Q3TEXTUREFLAG_NOPICMIP;
+				else if (!strcasecmp(parameter[0], "deformvertexes") && numparameters >= 2)
+				{
+					if (!strcasecmp(parameter[1], "autosprite") && numparameters == 2)
+						shader->textureflags |= Q3TEXTUREFLAG_AUTOSPRITE;
+					if (!strcasecmp(parameter[1], "autosprite2") && numparameters == 2)
+						shader->textureflags |= Q3TEXTUREFLAG_AUTOSPRITE2;
+				}
+			}
+			// identify if this is a blended terrain shader or similar
+			if (shader->numlayers)
+			{
+				shader->backgroundlayer = NULL;
+				shader->primarylayer = shader->layers + 0;
+				if ((shader->layers[0].blendfunc[0] == GL_ONE       && shader->layers[0].blendfunc[1] == GL_ZERO                && !shader->layers[0].alphatest)
+				&& ((shader->layers[1].blendfunc[0] == GL_SRC_ALPHA && shader->layers[1].blendfunc[1] == GL_ONE_MINUS_SRC_ALPHA && !shader->layers[0].alphatest)
+				||  (shader->layers[1].blendfunc[0] == GL_ONE       && shader->layers[1].blendfunc[1] == GL_ZERO                &&  shader->layers[1].alphatest)))
+				{
+					// terrain blending or other effects
+					shader->backgroundlayer = shader->layers + 0;
+					shader->primarylayer = shader->layers + 1;
+				}
+				// now see if the lightmap came first, and if so choose the second texture instead
+				if (!strcasecmp(shader->primarylayer->texturename[0], "$lightmap"))
+				{
+					shader->backgroundlayer = NULL;
+					shader->primarylayer = shader->layers + 1;
+				}
+			}
+		}
+		Mem_Free(f);
+	}
+}
+
+q3shaderinfo_t *Mod_LookupQ3Shader(const char *name)
+{
+	int i;
+	for (i = 0;i < Q3SHADER_MAXSHADERS;i++)
+		if (!strcasecmp(q3shaders_shaders[i].name, name))
+			return q3shaders_shaders + i;
+	return NULL;
+}
+
+extern cvar_t r_picmipworld;
+qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qboolean q1bsp, qboolean q3bsp, qboolean md3)
+{
+	int j;
+	int texflags;
+	qboolean success = true;
+	q3shaderinfo_t *shader;
+	strlcpy(texture->name, name, sizeof(texture->name));
+	shader = Mod_LookupQ3Shader(name);
+	if (shader)
+	{
+		texture->surfaceparms = shader->surfaceparms;
+		texture->textureflags = shader->textureflags;
+		texture->basematerialflags = 0;
+		if (shader->surfaceparms & Q3SURFACEPARM_SKY)
+		{
+			texture->basematerialflags |= MATERIALFLAG_SKY | MATERIALFLAG_NOSHADOW;
+			if (shader->skyboxname[0])
+			{
+				// quake3 seems to append a _ to the skybox name, so this must do so as well
+				dpsnprintf(loadmodel->brush.skybox, sizeof(loadmodel->brush.skybox), "%s_", shader->skyboxname);
+			}
+		}
+		else if ((texture->surfaceflags & Q3SURFACEFLAG_NODRAW) || shader->numlayers == 0)
+			texture->basematerialflags |= MATERIALFLAG_NODRAW | MATERIALFLAG_NOSHADOW;
+		else if (shader->surfaceparms & Q3SURFACEPARM_LAVA)
+			texture->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_FULLBRIGHT | MATERIALFLAG_NOSHADOW;
+		else if (shader->surfaceparms & Q3SURFACEPARM_SLIME)
+			texture->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_WATERALPHA | MATERIALFLAG_NOSHADOW;
+		else if (shader->surfaceparms & Q3SURFACEPARM_WATER)
+			texture->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_WATERALPHA | MATERIALFLAG_NOSHADOW;
+		else
+			texture->basematerialflags |= MATERIALFLAG_WALL;
+		if (shader->layers[0].alphatest)
+			texture->basematerialflags |= MATERIALFLAG_ALPHATEST | MATERIALFLAG_NOSHADOW;
+		if (shader->textureflags & Q3TEXTUREFLAG_TWOSIDED)
+			texture->basematerialflags |= MATERIALFLAG_NOSHADOW | MATERIALFLAG_NOCULLFACE;
+		if (shader->textureflags & (Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2))
+			texture->basematerialflags |= MATERIALFLAG_NOSHADOW;
+		texture->customblendfunc[0] = GL_ONE;
+		texture->customblendfunc[1] = GL_ZERO;
+		if (shader->numlayers > 0)
+		{
+			texture->customblendfunc[0] = shader->layers[0].blendfunc[0];
+			texture->customblendfunc[1] = shader->layers[0].blendfunc[1];
+/*
+Q3 shader blendfuncs actually used in the game (* = supported by DP)
+* additive               GL_ONE GL_ONE
+additive weird         GL_ONE GL_SRC_ALPHA
+additive weird 2       GL_ONE GL_ONE_MINUS_SRC_ALPHA
+* alpha                  GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
+alpha inverse          GL_ONE_MINUS_SRC_ALPHA GL_SRC_ALPHA
+brighten               GL_DST_COLOR GL_ONE
+brighten               GL_ONE GL_SRC_COLOR
+brighten weird         GL_DST_COLOR GL_ONE_MINUS_DST_ALPHA
+brighten weird 2       GL_DST_COLOR GL_SRC_ALPHA
+* modulate               GL_DST_COLOR GL_ZERO
+* modulate               GL_ZERO GL_SRC_COLOR
+modulate inverse       GL_ZERO GL_ONE_MINUS_SRC_COLOR
+modulate inverse alpha GL_ZERO GL_SRC_ALPHA
+modulate weird inverse GL_ONE_MINUS_DST_COLOR GL_ZERO
+* modulate x2            GL_DST_COLOR GL_SRC_COLOR
+* no blend               GL_ONE GL_ZERO
+nothing                GL_ZERO GL_ONE
+*/
+			// if not opaque, figure out what blendfunc to use
+			if (shader->layers[0].blendfunc[0] != GL_ONE || shader->layers[0].blendfunc[1] != GL_ZERO)
+			{
+				if (shader->layers[0].blendfunc[0] == GL_ONE && shader->layers[0].blendfunc[1] == GL_ONE)
+					texture->basematerialflags |= MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
+				else if (shader->layers[0].blendfunc[0] == GL_SRC_ALPHA && shader->layers[0].blendfunc[1] == GL_ONE)
+					texture->basematerialflags |= MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
+				else if (shader->layers[0].blendfunc[0] == GL_SRC_ALPHA && shader->layers[0].blendfunc[1] == GL_ONE_MINUS_SRC_ALPHA)
+					texture->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
+				else
+					texture->basematerialflags |= MATERIALFLAG_CUSTOMBLEND | MATERIALFLAG_FULLBRIGHT | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
+			}
+		}
+		if (!shader->lighting)
+			texture->basematerialflags |= MATERIALFLAG_FULLBRIGHT;
+		if (shader->primarylayer)
+		{
+			texture->numskinframes = shader->primarylayer->numframes;
+			texture->skinframerate = shader->primarylayer->framerate;
+			for (j = 0;j < shader->primarylayer->numframes;j++)
+			{
+				texflags = TEXF_ALPHA | TEXF_PRECACHE;
+				if (!(shader->surfaceparms & Q3SURFACEPARM_NOMIPMAPS))
+					texflags |= TEXF_MIPMAP;
+				if (!(shader->textureflags & Q3TEXTUREFLAG_NOPICMIP) && ((!q1bsp && !q3bsp) || r_picmipworld.integer))
+					texflags |= TEXF_PICMIP;
+				if (shader->primarylayer->clampmap)
+					texflags |= TEXF_CLAMP;
+				if (!(texture->skinframes[j] = R_SkinFrame_LoadExternal(shader->primarylayer->texturename[j], texflags, false)))
+				{
+					Con_DPrintf("%s: could not load texture \"%s\" (frame %i) for shader \"%s\"\n", loadmodel->name, shader->primarylayer->texturename[j], j, texture->name);
+					texture->skinframes[j] = R_SkinFrame_LoadMissing();
+				}
+			}
+		}
+		if (shader->backgroundlayer)
+		{
+			texture->backgroundnumskinframes = shader->backgroundlayer->numframes;
+			texture->backgroundskinframerate = shader->backgroundlayer->framerate;
+			for (j = 0;j < shader->backgroundlayer->numframes;j++)
+			{
+				if (!(texture->backgroundskinframes[j] = R_SkinFrame_LoadExternal(shader->backgroundlayer->texturename[j], ((shader->surfaceparms & Q3SURFACEPARM_NOMIPMAPS) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | ((!r_picmipworld.integer || (shader->textureflags & Q3TEXTUREFLAG_NOPICMIP)) ? 0 : TEXF_PICMIP) | (shader->backgroundlayer->clampmap ? TEXF_CLAMP : 0), false)))
+				{
+					Con_DPrintf("%s: could not load texture \"%s\" (frame %i) for shader \"%s\"\n", loadmodel->name, shader->backgroundlayer->texturename[j], j, texture->name);
+					texture->backgroundskinframes[j] = R_SkinFrame_LoadMissing();
+				}
+			}
+		}
+	}
+	else if (!strcmp(texture->name, "noshader"))
+		texture->surfaceparms = 0;
+	else
+	{
+		success = false;
+		Con_DPrintf("%s: No shader found for texture \"%s\"\n", loadmodel->name, texture->name);
+		texture->surfaceparms = 0;
+		if (texture->surfaceflags & Q3SURFACEFLAG_NODRAW)
+			texture->basematerialflags |= MATERIALFLAG_NODRAW | MATERIALFLAG_NOSHADOW;
+		else if (texture->surfaceflags & Q3SURFACEFLAG_SKY)
+			texture->basematerialflags |= MATERIALFLAG_SKY | MATERIALFLAG_NOSHADOW;
+		else
+			texture->basematerialflags |= MATERIALFLAG_WALL;
+		texture->numskinframes = 1;
+		if (!(texture->skinframes[0] = R_SkinFrame_LoadExternal(texture->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | (r_picmipworld.integer ? TEXF_PICMIP : 0), false)))
+			Con_DPrintf("%s: could not load texture for missing shader \"%s\"\n", loadmodel->name, texture->name);
+	}
+	// init the animation variables
+	texture->currentframe = texture;
+	if (texture->numskinframes < 1)
+		texture->numskinframes = 1;
+	if (!texture->skinframes[0])
+		texture->skinframes[0] = R_SkinFrame_LoadMissing();
+	texture->currentskinframe = texture->skinframes[0];
+	texture->backgroundcurrentskinframe = texture->backgroundskinframes[0];
+	return success;
 }
 
 skinfile_t *Mod_LoadSkinFiles(void)
