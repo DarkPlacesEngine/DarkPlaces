@@ -2656,7 +2656,7 @@ static void VM_SV_pointparticles (void)
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), org);
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM2), vel);
 	count = bound(0, (int)PRVM_G_FLOAT(OFS_PARM3), 65535);
-	if (count == 1 && !VectorLength2(vel) && (sv.protocol != PROTOCOL_QUAKE && sv.protocol != PROTOCOL_QUAKEDP && sv.protocol != PROTOCOL_NEHAHRAMOVIE && sv.protocol != PROTOCOL_DARKPLACES1 && sv.protocol != PROTOCOL_DARKPLACES2 && sv.protocol != PROTOCOL_DARKPLACES3 && sv.protocol != PROTOCOL_DARKPLACES4 && sv.protocol != PROTOCOL_DARKPLACES5 && sv.protocol != PROTOCOL_DARKPLACES6 && sv.protocol != PROTOCOL_DARKPLACES7))
+	if (count == 1 && !VectorLength2(vel))
 	{
 		// 1+2+12=15 bytes
 		MSG_WriteByte(&sv.datagram, svc_pointparticles1);
