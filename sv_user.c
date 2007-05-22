@@ -717,7 +717,7 @@ extern sizebuf_t vm_tempstringsbuf;
 void SV_ReadClientMessage(void)
 {
 	int cmd, num, start;
-	char *s;
+	char *s, *p, *q;
 
 	//MSG_BeginReading ();
 	sv_numreadmoves = 0;
@@ -759,6 +759,21 @@ void SV_ReadClientMessage(void)
 
 		case clc_stringcmd:
 			s = MSG_ReadString ();
+			q = NULL;
+			for(p = s; *p; ++p) switch(*p)
+			{
+				case 10:
+				case 13:
+					if(!q)
+						q = p;
+					break;
+				default:
+					if(q)
+						goto clc_stringcmd_invalid; // newline seen, THEN something else -> possible exploit
+					break;
+			}
+			if(q)
+				*q = 0;
 			if (strncasecmp(s, "spawn", 5) == 0
 			 || strncasecmp(s, "begin", 5) == 0
 			 || strncasecmp(s, "prespawn", 8) == 0)
@@ -774,6 +789,12 @@ void SV_ReadClientMessage(void)
 			}
 			else
 				Cmd_ExecuteString (s, src_client);
+			break;
+
+clc_stringcmd_invalid:
+			Con_Printf("Received invalid stringcmd from %s\n", host_client->name);
+			if(developer.integer)
+				Com_HexDumpToConsole((unsigned char *) s, strlen(s));
 			break;
 
 		case clc_disconnect:
