@@ -91,7 +91,7 @@ qboolean S_IsSoundPrecached (const sfx_t *sfx)
 	return false;
 }
 
-void S_Reload_f (void)
+void S_UnloadAllSounds_f (void)
 {
 }
 

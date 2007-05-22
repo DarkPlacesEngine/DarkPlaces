@@ -1200,7 +1200,7 @@ setinfo                                           modifies your userinfo
 sizedown                                          decrease view size (decreases viewsize cvar)
 sizeup                                            increase view size (increases viewsize cvar)
 skins                                             downloads missing qw skins from server
-snd_reload                                        reload all sound files
+snd_unloadallsounds                               unload all sound files
 snd_restart                                       restart sound system
 soundinfo                                         print sound system information (such as channels and speed)
 soundlist                                         list loaded sounds

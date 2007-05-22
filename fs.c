@@ -1230,8 +1230,8 @@ qboolean FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qboolean
 	// exec the new config
 	Host_LoadConfig_f();
 
-	// reinitialize the loaded sounds
-	S_Reload_f();
+	// unload all sounds so they will be reloaded from the new files as needed
+	S_UnloadAllSounds_f();
 
 	// reinitialize renderer (this reloads hud/console background/etc)
 	R_Modules_Restart();
