@@ -724,7 +724,7 @@ void S_Init(void)
 	Cmd_AddCommand("soundlist", S_SoundList_f, "list loaded sounds");
 	Cmd_AddCommand("soundinfo", S_SoundInfo_f, "print sound system information (such as channels and speed)");
 	Cmd_AddCommand("snd_restart", S_Restart_f, "restart sound system");
-	Cmd_AddCommand("snd_reload", S_Reload_f, "reload all sound files");
+	Cmd_AddCommand("snd_unloadallsounds", S_UnloadAllSounds_f, "unload all sound files");
 
 	Cvar_RegisterVariable(&nosound);
 	Cvar_RegisterVariable(&snd_precache);
@@ -773,10 +773,10 @@ void S_Terminate (void)
 
 /*
 ==================
-S_Reload_f
+S_UnloadAllSounds_f
 ==================
 */
-void S_Reload_f (void)
+void S_UnloadAllSounds_f (void)
 {
 	int i;
 
