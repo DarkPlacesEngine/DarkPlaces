@@ -42,6 +42,10 @@
 
 #define SOCKETERRNO WSAGetLastError()
 
+#define IOC_VENDOR 0x18000000
+#define _WSAIOW(x,y) (IOC_IN|(x)|(y))
+#define SIO_UDP_CONNRESET _WSAIOW(IOC_VENDOR,12)
+
 #define SOCKLEN_T int
 #elif defined(__MORPHOS__)
 #define ioctlsocket IoctlSocket
@@ -571,6 +575,7 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 				{
 #ifdef WIN32
 					u_long _true = 1;
+					u_long _false = 0;
 #else
 					char _true = 1;
 #endif
@@ -588,6 +593,10 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 							lhnetsocket->prev = lhnetsocket->next->prev;
 							lhnetsocket->next->prev = lhnetsocket;
 							lhnetsocket->prev->next = lhnetsocket;
+#ifdef WIN32
+							if (ioctlsocket(lhnetsocket->inetsocket, SIO_UDP_CONNRESET, &_false) == -1)
+								Con_DPrintf("LHNET_OpenSocket_Connectionless: ioctlsocket SIO_UDP_CONNRESET returned error: %s\n", LHNETPRIVATE_StrError());
+#endif
 							return lhnetsocket;
 						}
 						else
