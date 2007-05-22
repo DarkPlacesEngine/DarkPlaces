@@ -1079,12 +1079,18 @@ FS_ClearSearchPath
 */
 void FS_ClearSearchPath (void)
 {
+	// unload all packs and directory information, close all pack files
+	// (if a qfile is still reading a pack it won't be harmed because it used
+	//  dup() to get its own handle already)
 	while (fs_searchpaths)
 	{
 		searchpath_t *search = fs_searchpaths;
 		fs_searchpaths = search->next;
 		if (search->pack)
 		{
+			// close the file
+			close(search->pack->handle);
+			// free any memory associated with it
 			if (search->pack->files)
 				Mem_Free(search->pack->files);
 			Mem_Free(search->pack);
