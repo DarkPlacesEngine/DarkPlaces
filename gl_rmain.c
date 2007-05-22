@@ -3514,6 +3514,7 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 	rsurface_normal3f_bufferoffset = rsurface_modelnormal3f_bufferoffset;
 }
 
+static const int quadedges[6][2] = {{0, 1}, {0, 2}, {0, 3}, {1, 2}, {1, 3}, {2, 3}};
 void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generatetangents, int texturenumsurfaces, msurface_t **texturesurfacelist)
 {
 	// if vertices are dynamic (animated models), generate them into the temporary rsurface_array_model* arrays and point rsurface_model* at them instead of the static data from the model itself
@@ -3545,11 +3546,13 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 	if (rsurface_texture->textureflags & (Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2))
 	{
 		int texturesurfaceindex;
-		float center[3], forward[3], right[3], up[3], v[4][3];
-		matrix4x4_t matrix1, imatrix1;
-		Matrix4x4_Transform(&rsurface_entity->inversematrix, r_view.forward, forward);
-		Matrix4x4_Transform(&rsurface_entity->inversematrix, r_view.right, right);
-		Matrix4x4_Transform(&rsurface_entity->inversematrix, r_view.up, up);
+		float center[3], forward[3], right[3], up[3], v[3], newforward[3], newright[3], newup[3];
+		Matrix4x4_Transform3x3(&rsurface_entity->inversematrix, r_view.forward, newforward);
+		Matrix4x4_Transform3x3(&rsurface_entity->inversematrix, r_view.right, newright);
+		Matrix4x4_Transform3x3(&rsurface_entity->inversematrix, r_view.up, newup);
+		VectorNormalize(newforward);
+		VectorNormalize(newright);
+		VectorNormalize(newup);
 		// make deformed versions of only the model vertices used by the specified surfaces
 		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
@@ -3564,22 +3567,80 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 				VectorScale(center, 0.25f, center);
 				if (rsurface_texture->textureflags & Q3TEXTUREFLAG_AUTOSPRITE2)
 				{
-					forward[0] = rsurface_modelorg[0] - center[0];
-					forward[1] = rsurface_modelorg[1] - center[1];
-					forward[2] = 0;
-					VectorNormalize(forward);
-					right[0] = forward[1];
-					right[1] = -forward[0];
-					right[2] = 0;
-					VectorSet(up, 0, 0, 1);
+					const float *v1, *v2;
+					float f, l;
+					struct
+					{
+						float length2;
+						int quadedge;
+					}
+					shortest[2];
+					shortest[0].quadedge = shortest[1].quadedge = 0;
+					shortest[0].length2 = shortest[1].length2 = 0;
+					// find the two shortest edges, then use them to define the
+					// axis vectors for rotating around the central axis
+					for (i = 0;i < 6;i++)
+					{
+						v1 = rsurface_modelvertex3f + 3 * (surface->num_firstvertex + quadedges[i][0]);
+						v2 = rsurface_modelvertex3f + 3 * (surface->num_firstvertex + quadedges[i][1]);
+						l = VectorDistance2(v1, v2);
+						if (shortest[0].length2 > l || i == 0)
+						{
+							shortest[1] = shortest[0];
+							shortest[0].length2 = l;
+							shortest[0].quadedge = i;
+						}
+						else if (shortest[1].length2 > l || i == 1)
+						{
+							shortest[1].length2 = l;
+							shortest[1].quadedge = i;
+						}
+					}
+					// this calculates the midpoints *2 (not bothering to average) of the two shortest edges, and subtracts one from the other to get the up vector
+					for (i = 0;i < 3;i++)
+					{
+						right[i] = rsurface_modelvertex3f[3 * (surface->num_firstvertex + quadedges[shortest[1].quadedge][1]) + i]
+						         + rsurface_modelvertex3f[3 * (surface->num_firstvertex + quadedges[shortest[1].quadedge][0]) + i];
+						up[i] = rsurface_modelvertex3f[3 * (surface->num_firstvertex + quadedges[shortest[1].quadedge][0]) + i]
+						      + rsurface_modelvertex3f[3 * (surface->num_firstvertex + quadedges[shortest[1].quadedge][1]) + i]
+						      - rsurface_modelvertex3f[3 * (surface->num_firstvertex + quadedges[shortest[0].quadedge][0]) + i]
+						      - rsurface_modelvertex3f[3 * (surface->num_firstvertex + quadedges[shortest[0].quadedge][1]) + i];
+					}
+					// calculate a forward vector to use instead of the original plane normal (this is how we get a new right vector)
+					VectorSubtract(rsurface_modelorg, center, forward);
+					CrossProduct(up, forward, newright);
+					// normalize the vectors involved
+					VectorNormalize(right);
+					VectorNormalize(newright);
+					// rotate the quad around the up axis vector, this is made
+					// especially easy by the fact we know the quad is flat,
+					// so we only have to subtract the center position and
+					// measure distance along the right vector, and then
+					// multiply that by the newright vector and add back the
+					// center position
+					// we also need to subtract the old position to undo the
+					// displacement from the center, which we do with a
+					// DotProduct, the subtraction/addition of center is also
+					// optimized into DotProducts here
+					l = DotProduct(newright, center) - DotProduct(right, center);
+					for (i = 0;i < 4;i++)
+					{
+						v1 = rsurface_modelvertex3f + 3 * (surface->num_firstvertex + j + i);
+						f = DotProduct(right, v1) - DotProduct(newright, v1) + l;
+						VectorMA(v1, f, newright, rsurface_array_deformedvertex3f + (surface->num_firstvertex+i+j) * 3);
+					}
 				}
-				// FIXME: calculate vectors from triangle edges instead of using texture vectors as an easy way out?
-				Matrix4x4_FromVectors(&matrix1, (rsurface_modelnormal3f + 3 * surface->num_firstvertex) + j*3, (rsurface_modelsvector3f + 3 * surface->num_firstvertex) + j*3, (rsurface_modeltvector3f + 3 * surface->num_firstvertex) + j*3, center);
-				Matrix4x4_Invert_Simple(&imatrix1, &matrix1);
-				for (i = 0;i < 4;i++)
-					Matrix4x4_Transform(&imatrix1, (rsurface_modelvertex3f + 3 * surface->num_firstvertex) + (j+i)*3, v[i]);
-				for (i = 0;i < 4;i++)
-					VectorMAMAMAM(1, center, v[i][0], forward, v[i][1], right, v[i][2], up, rsurface_array_deformedvertex3f + (surface->num_firstvertex+i+j) * 3);
+				else
+				{
+					VectorCopy((rsurface_modelnormal3f  + 3 * surface->num_firstvertex) + j*3, forward);
+					VectorCopy((rsurface_modelsvector3f + 3 * surface->num_firstvertex) + j*3, right);
+					VectorCopy((rsurface_modeltvector3f + 3 * surface->num_firstvertex) + j*3, up);
+					for (i = 0;i < 4;i++)
+					{
+						VectorSubtract((rsurface_modelvertex3f + 3 * surface->num_firstvertex) + (j+i)*3, center, v);
+						VectorMAMAMAM(1, center, DotProduct(forward, v), newforward, DotProduct(right, v), newright, DotProduct(up, v), newup, rsurface_array_deformedvertex3f + (surface->num_firstvertex+i+j) * 3);
+					}
+				}
 			}
 			Mod_BuildNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface_modelvertex3f, rsurface_model->surfmesh.data_element3i + surface->num_firsttriangle * 3, rsurface_array_deformednormal3f, r_smoothnormals_areaweighting.integer);
 			Mod_BuildTextureVectorsFromNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface_modelvertex3f, rsurface_model->surfmesh.data_texcoordtexture2f, rsurface_array_deformednormal3f, rsurface_model->surfmesh.data_element3i + surface->num_firsttriangle * 3, rsurface_array_deformedsvector3f, rsurface_array_deformedtvector3f, r_smoothnormals_areaweighting.integer);
