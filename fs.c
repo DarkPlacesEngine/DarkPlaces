@@ -1404,6 +1404,10 @@ FS_Shutdown
 */
 void FS_Shutdown (void)
 {
+	// close all pack files and such
+	// (hopefully there aren't any other open files, but they'll be cleaned up
+	//  by the OS anyway)
+	FS_ClearSearchPath();
 	Mem_FreePool (&fs_mempool);
 }
 
