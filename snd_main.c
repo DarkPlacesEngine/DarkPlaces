@@ -173,6 +173,7 @@ cvar_t snd_soundradius = {0, "snd_soundradius", "2000", "radius of weapon sounds
 cvar_t _snd_mixahead = {CVAR_SAVE, "_snd_mixahead", "0.1", "how much sound to mix ahead of time"};
 cvar_t snd_streaming = { CVAR_SAVE, "snd_streaming", "1", "enables keeping compressed ogg sound files compressed, decompressing them only as needed, otherwise they will be decompressed completely at load (may use a lot of memory)"};
 cvar_t snd_swapstereo = {CVAR_SAVE, "snd_swapstereo", "0", "swaps left/right speakers for old ISA soundblaster cards"};
+extern cvar_t v_flipped;
 cvar_t snd_channellayout = {0, "snd_channellayout", "0", "channel layout. Can be 0 (auto - snd_restart needed), 1 (standard layout), or 2 (ALSA layout)"};
 
 // Local cvars
@@ -400,7 +401,7 @@ static void S_SetChannelLayout (void)
 	listeners = snd_speakerlayout.listeners;
 
 	// Swap the left and right channels if snd_swapstereo is set
-	if (snd_swapstereo.integer)
+	if (!!snd_swapstereo.integer ^ !!v_flipped.integer)
 	{
 		switch (snd_speakerlayout.channels)
 		{
@@ -454,7 +455,7 @@ static void S_SetChannelLayout (void)
 				   (layout == SND_CHANNELLAYOUT_ALSA) ? "ALSA" : "standard");
 	}
 
-	current_swapstereo = snd_swapstereo.integer;
+	current_swapstereo = !!snd_swapstereo.integer ^ !!v_flipped.integer;
 	current_channellayout = snd_channellayout.integer;
 	current_channellayout_used = layout;
 }
@@ -1524,7 +1525,7 @@ void S_Update(const matrix4x4_t *listenermatrix)
 		return;
 
 	// If snd_swapstereo or snd_channellayout has changed, recompute the channel layout
-	if (current_swapstereo != snd_swapstereo.integer ||
+	if (current_swapstereo != (!!snd_swapstereo.integer ^ !!v_flipped.integer) ||
 		current_channellayout != snd_channellayout.integer)
 		S_SetChannelLayout();
 
