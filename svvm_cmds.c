@@ -51,6 +51,7 @@ char *vm_sv_extensions =
 "DP_QC_ASINACOSATANATAN2TAN "
 "DP_QC_CHANGEPITCH "
 "DP_QC_COPYENTITY "
+"DP_QC_CVAR_DEFSTRING "
 "DP_QC_CVAR_STRING "
 "DP_QC_ETOS "
 "DP_QC_FINDCHAIN "
@@ -3161,9 +3162,9 @@ VM_strlennocol,					// #476 float(string s) : DRESK - String Length (not countin
 VM_strdecolorize,				// #477 string(string s) : DRESK - Decolorized String (DP_SV_STRINGCOLORFUNCTIONS)
 VM_strftime,					// #478 string(float uselocaltime, string format, ...) (DP_QC_STRFTIME)
 VM_tokenizebyseparator,			// #479 float(string s) tokenizebyseparator (DP_QC_TOKENIZEBYSEPARATOR)
-VM_strtolower,					// #480 string(string s) VM_strtolower : DRESK - Return string as lowercase
-VM_strtoupper,					// #481 string(string s) VM_strtoupper : DRESK - Return string as uppercase
-NULL,							// #482
+VM_strtolower,					// #480 string(string s) VM_strtolower (DP_QC_STRING_CASE_FUNCTIONS)
+VM_strtoupper,					// #481 string(string s) VM_strtoupper (DP_QC_STRING_CASE_FUNCTIONS)
+VM_cvar_defstring,				// #482 string(string s) cvar_defstring (DP_QC_CVAR_DEFSTRING)
 NULL,							// #483
 NULL,							// #484
 NULL,							// #485
