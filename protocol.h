@@ -64,7 +64,7 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define EF_UNUSED20				1048576
 #define EF_UNUSED21				2197152
 #define EF_LOWPRECISION			4194304		// LordHavoc: entity is low precision (integer coordinates) to save network bandwidth  (serverside only)
-#define EF_OVERRIDEMODELFLAGS	8388608		// indicates the model's .effects should be ignored (allows overriding them)
+#define EF_NOMODELFLAGS			8388608		// indicates the model's .effects should be ignored (allows overriding them)
 #define EF_ROCKET				16777216	// leave a trail
 #define EF_GRENADE				33554432	// leave a trail
 #define EF_GIB					67108864	// leave a trail
