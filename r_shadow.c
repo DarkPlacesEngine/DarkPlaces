@@ -2189,7 +2189,7 @@ void R_Shadow_RenderLighting_Light_Vertex_Pass(const model_t *model, int firstve
 static void R_Shadow_RenderLighting_Light_Vertex(int firstvertex, int numvertices, int numtriangles, const int *element3i, int element3i_bufferobject, size_t element3i_bufferoffset, const vec3_t lightcolorbase, const vec3_t lightcolorpants, const vec3_t lightcolorshirt, rtexture_t *basetexture, rtexture_t *pantstexture, rtexture_t *shirttexture, rtexture_t *normalmaptexture, rtexture_t *glosstexture, float ambientscale, float diffusescale, float specularscale, qboolean dopants, qboolean doshirt)
 {
 	// OpenGL 1.1 path (anything)
-	model_t *model = rsurface_entity->model;
+	const model_t *model = rsurface_model;
 	float ambientcolorbase[3], diffusecolorbase[3];
 	float ambientcolorpants[3], diffusecolorpants[3];
 	float ambientcolorshirt[3], diffusecolorshirt[3];
@@ -2246,9 +2246,9 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 	float ambientscale, diffusescale, specularscale;
 	vec3_t lightcolorbase, lightcolorpants, lightcolorshirt;
 	// calculate colors to render this texture with
-	lightcolorbase[0] = r_shadow_rtlight->currentcolor[0] * rsurface_entity->colormod[0] * rsurface_texture->currentalpha;
-	lightcolorbase[1] = r_shadow_rtlight->currentcolor[1] * rsurface_entity->colormod[1] * rsurface_texture->currentalpha;
-	lightcolorbase[2] = r_shadow_rtlight->currentcolor[2] * rsurface_entity->colormod[2] * rsurface_texture->currentalpha;
+	lightcolorbase[0] = r_shadow_rtlight->currentcolor[0] * rsurface_texture->currentlayers[0].color[0] * rsurface_texture->currentlayers[0].color[3];
+	lightcolorbase[1] = r_shadow_rtlight->currentcolor[1] * rsurface_texture->currentlayers[0].color[1] * rsurface_texture->currentlayers[0].color[3];
+	lightcolorbase[2] = r_shadow_rtlight->currentcolor[2] * rsurface_texture->currentlayers[0].color[2] * rsurface_texture->currentlayers[0].color[3];
 	ambientscale = r_shadow_rtlight->ambientscale;
 	diffusescale = r_shadow_rtlight->diffusescale;
 	specularscale = r_shadow_rtlight->specularscale * rsurface_texture->specularscale;
@@ -2265,21 +2265,21 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 	GL_CullFace((rsurface_texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
 	if (rsurface_texture->colormapping)
 	{
-		qboolean dopants = rsurface_texture->currentskinframe->pants != NULL && VectorLength2(rsurface_entity->colormap_pantscolor) >= (1.0f / 1048576.0f);
-		qboolean doshirt = rsurface_texture->currentskinframe->shirt != NULL && VectorLength2(rsurface_entity->colormap_shirtcolor) >= (1.0f / 1048576.0f);
+		qboolean dopants = rsurface_texture->currentskinframe->pants != NULL && VectorLength2(rsurface_colormap_pantscolor) >= (1.0f / 1048576.0f);
+		qboolean doshirt = rsurface_texture->currentskinframe->shirt != NULL && VectorLength2(rsurface_colormap_shirtcolor) >= (1.0f / 1048576.0f);
 		if (dopants)
 		{
-			lightcolorpants[0] = lightcolorbase[0] * rsurface_entity->colormap_pantscolor[0];
-			lightcolorpants[1] = lightcolorbase[1] * rsurface_entity->colormap_pantscolor[1];
-			lightcolorpants[2] = lightcolorbase[2] * rsurface_entity->colormap_pantscolor[2];
+			lightcolorpants[0] = lightcolorbase[0] * rsurface_colormap_pantscolor[0];
+			lightcolorpants[1] = lightcolorbase[1] * rsurface_colormap_pantscolor[1];
+			lightcolorpants[2] = lightcolorbase[2] * rsurface_colormap_pantscolor[2];
 		}
 		else
 			VectorClear(lightcolorpants);
 		if (doshirt)
 		{
-			lightcolorshirt[0] = lightcolorbase[0] * rsurface_entity->colormap_shirtcolor[0];
-			lightcolorshirt[1] = lightcolorbase[1] * rsurface_entity->colormap_shirtcolor[1];
-			lightcolorshirt[2] = lightcolorbase[2] * rsurface_entity->colormap_shirtcolor[2];
+			lightcolorshirt[0] = lightcolorbase[0] * rsurface_colormap_shirtcolor[0];
+			lightcolorshirt[1] = lightcolorbase[1] * rsurface_colormap_shirtcolor[1];
+			lightcolorshirt[2] = lightcolorbase[2] * rsurface_colormap_shirtcolor[2];
 		}
 		else
 			VectorClear(lightcolorshirt);

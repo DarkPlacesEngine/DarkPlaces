@@ -1056,8 +1056,8 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 						tempcenter[0] = (surface->mins[0] + surface->maxs[0]) * 0.5f;
 						tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
 						tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
-						Matrix4x4_Transform(&rsurface_entity->matrix, tempcenter, center);
-						R_MeshQueue_AddTransparent(rsurface_texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_view.origin : center, R_Q1BSP_DrawLight_TransparentCallback, rsurface_entity, surface - rsurface_model->data_surfaces, r_shadow_rtlight);
+						Matrix4x4_Transform(&rsurface_matrix, tempcenter, center);
+						R_MeshQueue_AddTransparent(rsurface_texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_view.origin : center, R_Q1BSP_DrawLight_TransparentCallback, ent, surface - rsurface_model->data_surfaces, r_shadow_rtlight);
 					}
 				}
 				else
