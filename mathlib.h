@@ -60,6 +60,9 @@ extern vec3_t vec3_origin;
 // TOCHECK: what is this function supposed to do?
 #define bit2i(n) log2i((n) << 1)
 
+// boolean XOR (why doesn't C have the ^^ operator for this purpose?)
+#define boolxor(a,b) (!(a) != !(b))
+
 // returns the smallest integer greater than or equal to "value", or 0 if "value" is too big
 unsigned int CeilPowerOf2(unsigned int value);
 
