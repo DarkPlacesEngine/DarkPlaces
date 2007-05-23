@@ -192,18 +192,6 @@ void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, rtexture_
 
 extern mempool_t *r_main_mempool;
 
-extern int rsurface_array_size;
-extern float *rsurface_array_modelvertex3f;
-extern float *rsurface_array_modelsvector3f;
-extern float *rsurface_array_modeltvector3f;
-extern float *rsurface_array_modelnormal3f;
-extern float *rsurface_array_deformedvertex3f;
-extern float *rsurface_array_deformedsvector3f;
-extern float *rsurface_array_deformedtvector3f;
-extern float *rsurface_array_deformednormal3f;
-extern float *rsurface_array_color4f;
-extern float *rsurface_array_texcoord3f;
-
 typedef enum rsurfmode_e
 {
 	RSURFMODE_NONE,
@@ -214,47 +202,102 @@ typedef enum rsurfmode_e
 }
 rsurfmode_t;
 
-extern float *rsurface_modelvertex3f;
-extern int rsurface_modelvertex3f_bufferobject;
-extern size_t rsurface_modelvertex3f_bufferoffset;
-extern float *rsurface_modelsvector3f;
-extern int rsurface_modelsvector3f_bufferobject;
-extern size_t rsurface_modelsvector3f_bufferoffset;
-extern float *rsurface_modeltvector3f;
-extern int rsurface_modeltvector3f_bufferobject;
-extern size_t rsurface_modeltvector3f_bufferoffset;
-extern float *rsurface_modelnormal3f;
-extern int rsurface_modelnormal3f_bufferobject;
-extern size_t rsurface_modelnormal3f_bufferoffset;
-extern float *rsurface_vertex3f;
-extern int rsurface_vertex3f_bufferobject;
-extern size_t rsurface_vertex3f_bufferoffset;
-extern float *rsurface_svector3f;
-extern int rsurface_svector3f_bufferobject;
-extern size_t rsurface_svector3f_bufferoffset;
-extern float *rsurface_tvector3f;
-extern int rsurface_tvector3f_bufferobject;
-extern size_t rsurface_tvector3f_bufferoffset;
-extern float *rsurface_normal3f;
-extern int rsurface_normal3f_bufferobject;
-extern size_t rsurface_normal3f_bufferoffset;
-extern float *rsurface_lightmapcolor4f;
-extern int rsurface_lightmapcolor4f_bufferobject;
-extern size_t rsurface_lightmapcolor4f_bufferoffset;
-extern matrix4x4_t rsurface_matrix;
-extern matrix4x4_t rsurface_inversematrix;
-extern frameblend_t rsurface_frameblend[4];
-extern vec3_t rsurface_modellight_ambient;
-extern vec3_t rsurface_modellight_diffuse;
-extern vec3_t rsurface_modellight_lightdir;
-extern vec3_t rsurface_colormap_pantscolor;
-extern vec3_t rsurface_colormap_shirtcolor;
-extern vec3_t rsurface_modelorg;
-extern qboolean rsurface_generatedvertex;
-extern const model_t *rsurface_model;
-extern texture_t *rsurface_texture;
-extern qboolean rsurface_uselightmaptexture;
-extern rsurfmode_t rsurface_mode;
+typedef struct rsurfacestate_s
+{
+	// processing buffers
+	int array_size;
+	float *array_modelvertex3f;
+	float *array_modelsvector3f;
+	float *array_modeltvector3f;
+	float *array_modelnormal3f;
+	float *array_deformedvertex3f;
+	float *array_deformedsvector3f;
+	float *array_deformedtvector3f;
+	float *array_deformednormal3f;
+	float *array_color4f;
+	float *array_texcoord3f;
+
+	// current model array pointers
+	// these may point to processing buffers if model is animated,
+	// otherwise they point to static data.
+	// these are not directly used for rendering, they are just another level
+	// of processing
+	//
+	// these either point at array_model* buffers (if the model is animated)
+	// or the model->surfmesh.data_* buffers (if the model is not animated)
+	//
+	// these are only set when an entity render begins, they do not change on
+	// a per surface basis.
+	//
+	// this indicates the model* arrays are pointed at array_model* buffers
+	// (in other words, the model has been animated in software)
+	qboolean generatedvertex;
+	float *modelvertex3f;
+	int modelvertex3f_bufferobject;
+	size_t modelvertex3f_bufferoffset;
+	float *modelsvector3f;
+	int modelsvector3f_bufferobject;
+	size_t modelsvector3f_bufferoffset;
+	float *modeltvector3f;
+	int modeltvector3f_bufferobject;
+	size_t modeltvector3f_bufferoffset;
+	float *modelnormal3f;
+	int modelnormal3f_bufferobject;
+	size_t modelnormal3f_bufferoffset;
+	// current rendering array pointers
+	// these may point to any of several different buffers depending on how
+	// much processing was needed to prepare this model for rendering
+	// these usually equal the model* pointers, they only differ if
+	// deformvertexes is used in a q3 shader, and consequently these can
+	// change on a per-surface basis (according to rsurface.texture)
+	//
+	// the exception is the color array which is often generated based on
+	// colormod, alpha fading, and fogging, it may also come from q3bsp vertex
+	// lighting of certain surfaces
+	float *vertex3f;
+	int vertex3f_bufferobject;
+	size_t vertex3f_bufferoffset;
+	float *svector3f;
+	int svector3f_bufferobject;
+	size_t svector3f_bufferoffset;
+	float *tvector3f;
+	int tvector3f_bufferobject;
+	size_t tvector3f_bufferoffset;
+	float *normal3f;
+	int normal3f_bufferobject;
+	size_t normal3f_bufferoffset;
+	float *lightmapcolor4f;
+	int lightmapcolor4f_bufferobject;
+	size_t lightmapcolor4f_bufferoffset;
+	// transform matrices to render this entity and effects on this entity
+	matrix4x4_t matrix;
+	matrix4x4_t inversematrix;
+	// animation blending state from entity
+	frameblend_t frameblend[4];
+	// directional model shading state from entity
+	vec3_t modellight_ambient;
+	vec3_t modellight_diffuse;
+	vec3_t modellight_lightdir;
+	// colormapping state from entity (these are black if colormapping is off)
+	vec3_t colormap_pantscolor;
+	vec3_t colormap_shirtcolor;
+	// view location in model space
+	vec3_t modelorg; // TODO: rename this
+	// model being rendered
+	const model_t *model; // TODO: eliminate this
+	// current texture in batching code
+	texture_t *texture;
+	// whether lightmapping is active on this batch
+	// (otherwise vertex colored)
+	qboolean uselightmaptexture;
+	// one of the RSURFMODE_ values
+	rsurfmode_t mode;
+	// type of vertex lighting being used on this batch
+	int lightmode; // 0 = lightmap or fullbright, 1 = color array from q3bsp, 2 = vertex shaded model
+}
+rsurfacestate_t;
+
+extern rsurfacestate_t rsurface;
 
 void RSurf_ActiveWorldEntity(void);
 void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, qboolean wanttangents);

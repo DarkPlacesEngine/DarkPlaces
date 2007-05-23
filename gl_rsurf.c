@@ -959,13 +959,13 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 		for (modelsurfacelistindex = 0;modelsurfacelistindex < modelnumsurfaces;modelsurfacelistindex++)
 		{
 			surface = model->data_surfaces + modelsurfacelist[modelsurfacelistindex];
-			rsurface_texture = surface->texture->currentframe;
-			if (rsurface_texture->currentmaterialflags & MATERIALFLAG_NOSHADOW)
+			rsurface.texture = surface->texture->currentframe;
+			if (rsurface.texture->currentmaterialflags & MATERIALFLAG_NOSHADOW)
 				continue;
 			RSurf_PrepareVerticesForBatch(false, false, 1, &surface);
-			R_Shadow_MarkVolumeFromBox(surface->num_firsttriangle, surface->num_triangles, rsurface_vertex3f, rsurface_model->surfmesh.data_element3i, relativelightorigin, relativelightdirection, lightmins, lightmaxs, surface->mins, surface->maxs);
+			R_Shadow_MarkVolumeFromBox(surface->num_firsttriangle, surface->num_triangles, rsurface.vertex3f, rsurface.model->surfmesh.data_element3i, relativelightorigin, relativelightdirection, lightmins, lightmaxs, surface->mins, surface->maxs);
 		}
-		R_Shadow_VolumeFromList(model->surfmesh.num_vertices, model->surfmesh.num_triangles, rsurface_vertex3f, model->surfmesh.data_element3i, model->surfmesh.data_neighbor3i, relativelightorigin, relativelightdirection, projectdistance, numshadowmark, shadowmarklist);
+		R_Shadow_VolumeFromList(model->surfmesh.num_vertices, model->surfmesh.num_triangles, rsurface.vertex3f, model->surfmesh.data_element3i, model->surfmesh.data_neighbor3i, relativelightorigin, relativelightdirection, projectdistance, numshadowmark, shadowmarklist);
 	}
 }
 
@@ -984,14 +984,14 @@ static void R_Q1BSP_DrawLight_TransparentCallback(const entity_render_t *ent, co
 	for (i = 0;i < numsurfaces;i = j)
 	{
 		j = i + 1;
-		surface = rsurface_model->data_surfaces + surfacelist[i];
+		surface = rsurface.model->data_surfaces + surfacelist[i];
 		t = surface->texture;
 		R_UpdateTextureInfo(ent, t);
-		rsurface_texture = t->currentframe;
+		rsurface.texture = t->currentframe;
 		endsurface = min(j + BATCHSIZE, numsurfaces);
 		for (j = i;j < endsurface;j++)
 		{
-			surface = rsurface_model->data_surfaces + surfacelist[j];
+			surface = rsurface.model->data_surfaces + surfacelist[j];
 			if (t != surface->texture)
 				break;
 			RSurf_PrepareVerticesForBatch(true, true, 1, &surface);
@@ -1018,7 +1018,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 	R_UpdateAllTextureInfo(ent);
 	CHECKGLERROR
 	culltriangles = r_shadow_culltriangles.integer && !(ent->flags & RENDER_NOSELFSHADOW);
-	element3i = rsurface_model->surfmesh.data_element3i;
+	element3i = rsurface.model->surfmesh.data_element3i;
 	// this is a double loop because non-visible surface skipping has to be
 	// fast, and even if this is not the world model (and hence no visibility
 	// checking) the input surface list and batch buffer are different formats
@@ -1044,10 +1044,10 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 		{
 			surface = batchsurfacelist[k];
 			tex = surface->texture;
-			rsurface_texture = tex->currentframe;
-			if (rsurface_texture->currentmaterialflags & (MATERIALFLAG_WALL | MATERIALFLAG_WATER))
+			rsurface.texture = tex->currentframe;
+			if (rsurface.texture->currentmaterialflags & (MATERIALFLAG_WALL | MATERIALFLAG_WATER))
 			{
-				if (rsurface_texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED)
+				if (rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED)
 				{
 					vec3_t tempcenter, center;
 					for (l = k;l < batchnumsurfaces && tex == batchsurfacelist[l]->texture;l++)
@@ -1056,8 +1056,8 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 						tempcenter[0] = (surface->mins[0] + surface->maxs[0]) * 0.5f;
 						tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
 						tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
-						Matrix4x4_Transform(&rsurface_matrix, tempcenter, center);
-						R_MeshQueue_AddTransparent(rsurface_texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_view.origin : center, R_Q1BSP_DrawLight_TransparentCallback, ent, surface - rsurface_model->data_surfaces, r_shadow_rtlight);
+						Matrix4x4_Transform(&rsurface.matrix, tempcenter, center);
+						R_MeshQueue_AddTransparent(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_view.origin : center, R_Q1BSP_DrawLight_TransparentCallback, ent, surface - rsurface.model->data_surfaces, r_shadow_rtlight);
 					}
 				}
 				else
@@ -1087,7 +1087,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 								}
 								else
 								{
-									if (r_shadow_frontsidecasting.integer && !PointInfrontOfTriangle(r_shadow_entitylightorigin, rsurface_vertex3f + element3i[m*3+0]*3, rsurface_vertex3f + element3i[m*3+1]*3, rsurface_vertex3f + element3i[m*3+2]*3))
+									if (r_shadow_frontsidecasting.integer && !PointInfrontOfTriangle(r_shadow_entitylightorigin, rsurface.vertex3f + element3i[m*3+0]*3, rsurface.vertex3f + element3i[m*3+1]*3, rsurface.vertex3f + element3i[m*3+2]*3))
 									{
 										usebufferobject = false;
 										continue;
