@@ -401,7 +401,7 @@ static void S_SetChannelLayout (void)
 	listeners = snd_speakerlayout.listeners;
 
 	// Swap the left and right channels if snd_swapstereo is set
-	if (!!snd_swapstereo.integer ^ !!v_flipped.integer)
+	if (boolxor(snd_swapstereo.integer, v_flipped.integer))
 	{
 		switch (snd_speakerlayout.channels)
 		{
@@ -455,7 +455,7 @@ static void S_SetChannelLayout (void)
 				   (layout == SND_CHANNELLAYOUT_ALSA) ? "ALSA" : "standard");
 	}
 
-	current_swapstereo = !!snd_swapstereo.integer ^ !!v_flipped.integer;
+	current_swapstereo = boolxor(snd_swapstereo.integer, v_flipped.integer);
 	current_channellayout = snd_channellayout.integer;
 	current_channellayout_used = layout;
 }
@@ -1525,7 +1525,7 @@ void S_Update(const matrix4x4_t *listenermatrix)
 		return;
 
 	// If snd_swapstereo or snd_channellayout has changed, recompute the channel layout
-	if (current_swapstereo != (!!snd_swapstereo.integer ^ !!v_flipped.integer) ||
+	if (current_swapstereo != boolxor(snd_swapstereo.integer, v_flipped.integer) ||
 		current_channellayout != snd_channellayout.integer)
 		S_SetChannelLayout();
 
