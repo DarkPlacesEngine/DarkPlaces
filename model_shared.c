@@ -1240,7 +1240,7 @@ void Mod_LoadQ3Shaders(void)
 							for (i = 0;i < layer->numframes;i++)
 								strlcpy(layer->texturename[i], parameter[i + 2], sizeof(layer->texturename));
 						}
-						else if (numparameters >= 2 && !strcasecmp(parameter[0], "rgbgen") && !strcasecmp(parameter[1], "vertex"))
+						else if (numparameters >= 2 && !strcasecmp(parameter[0], "rgbgen") && (!strcasecmp(parameter[1], "vertex") || !strcasecmp(parameter[1], "lightingdiffuse")))
 							layer->rgbgenvertex = true;
 						else if (numparameters >= 2 && !strcasecmp(parameter[0], "alphagen") && !strcasecmp(parameter[1], "vertex"))
 							layer->alphagenvertex = true;
