@@ -2713,6 +2713,9 @@ qboolean CL_ExaminePrintString(const char *text)
 	if (!strcmp(text, "Client ping times:\n"))
 	{
 		cl.parsingtextmode = CL_PARSETEXTMODE_PING;
+		// hide ping reports in demos
+		if (cls.demoplayback)
+			cl.parsingtextexpectingpingforscores = 1;
 		for(cl.parsingtextplayerindex = 0; cl.parsingtextplayerindex < cl.maxclients && !cl.scores[cl.parsingtextplayerindex].name[0]; cl.parsingtextplayerindex++)
 			;
 		if (cl.parsingtextplayerindex >= cl.maxclients) // should never happen, since the client itself should be in cl.scores
