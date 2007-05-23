@@ -949,7 +949,9 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 	if (e->render.model)
 	{
 		// models can set flags such as EF_ROCKET
-		e->render.effects |= e->render.model->effects;
+		// this 0xFF800000 mask is EF_NOMODELFLAGS plus all the higher EF_ flags such as EF_ROCKET
+		if (!(e->render.effects & 0xFF800000))
+			e->render.effects |= e->render.model->effects;
 		// if model is alias or this is a tenebrae-like dlight, reverse pitch direction
 		if (e->render.model->type == mod_alias)
 			angles[0] = -angles[0];
