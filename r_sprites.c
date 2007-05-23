@@ -2,8 +2,6 @@
 #include "quakedef.h"
 #include "r_shadow.h"
 
-extern cvar_t v_flipped;
-
 void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
 	int i;
@@ -64,12 +62,6 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 		up[1] = mup[0] * r_view.forward[1] + mup[1] * r_view.left[1] + mup[2] * r_view.up[1];
 		up[2] = mup[0] * r_view.forward[2] + mup[1] * r_view.left[2] + mup[2] * r_view.up[2];
 		break;
-	}
-
-	if(v_flipped.integer)
-	{
-		left[0] = -left[0];
-		left[1] = -left[1];
 	}
 
 	R_Mesh_Matrix(&identitymatrix);

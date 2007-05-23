@@ -104,6 +104,8 @@ cvar_t gl_lightmaps = {0, "gl_lightmaps", "0", "draws only lightmaps, no texture
 cvar_t r_test = {0, "r_test", "0", "internal development use only, leave it alone (usually does nothing anyway)"};
 cvar_t r_batchmode = {0, "r_batchmode", "1", "selects method of rendering multiple surfaces with one driver call (values are 0, 1, 2, etc...)"};
 
+extern qboolean v_flipped_state;
+
 typedef struct r_glsl_bloomshader_s
 {
 	int program;
@@ -2952,6 +2954,16 @@ void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, rtexture_
 
 	R_Mesh_Matrix(&identitymatrix);
 	GL_BlendFunc(blendfunc1, blendfunc2);
+
+	if(v_flipped_state)
+	{
+		scalex1 = -scalex1;
+		scalex2 = -scalex2;
+		GL_CullFace(GL_BACK);
+	}
+	else
+		GL_CullFace(GL_FRONT);
+
 	GL_DepthMask(false);
 	GL_DepthRange(0, depthshort ? 0.0625 : 1);
 	GL_DepthTest(!depthdisable);
