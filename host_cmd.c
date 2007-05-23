@@ -230,7 +230,8 @@ void Host_Ping_f (void)
 	}
 
 	// now call the Pings command also, which will send a report that contains packet loss for the scoreboard (as well as a simpler ping report)
-	Host_Pings_f();
+	// actually, don't, it confuses old clients (resulting in "unknown command pingplreport" flooding the console)
+	//Host_Pings_f();
 }
 
 /*
