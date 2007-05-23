@@ -16,7 +16,7 @@ cvar_t gl_lockarrays = {0, "gl_lockarrays", "0", "enables use of glLockArraysEXT
 cvar_t gl_lockarrays_minimumvertices = {0, "gl_lockarrays_minimumvertices", "1", "minimum number of vertices required for use of glLockArraysEXT, setting this too low may reduce performance"};
 cvar_t gl_vbo = {0, "gl_vbo", "1", "make use of GL_ARB_vertex_buffer_object extension to store static geometry in video memory for faster rendering"};
 
-cvar_t v_flipped = {0, "v_flipped", "0", "mirror the screen (poor man's left handed mode"};
+cvar_t v_flipped = {0, "v_flipped", "0", "mirror the screen (poor man's left handed mode)"};
 qboolean v_flipped_state = false;
 
 int gl_maxdrawrangeelementsvertices;
@@ -270,10 +270,12 @@ void gl_backend_init(void)
 	R_RegisterModule("GL_Backend", gl_backend_start, gl_backend_shutdown, gl_backend_newmap);
 }
 
+void GL_SetMirrorState(qboolean state);
+
 void GL_SetupView_Orientation_Identity (void)
 {
 	backend_viewmatrix = identitymatrix;
-	v_flipped_state = false;
+	GL_SetMirrorState(false);
 	memset(&backend_modelmatrix, 0, sizeof(backend_modelmatrix));
 }
 
@@ -285,7 +287,7 @@ void GL_SetupView_Orientation_FromEntity(const matrix4x4_t *matrix)
 	Matrix4x4_ConcatRotate(&basematrix, 90, 0, 0, 1);
 	Matrix4x4_Concat(&backend_viewmatrix, &basematrix, &tempmatrix);
 
-	v_flipped_state = v_flipped.integer;
+	GL_SetMirrorState(v_flipped.integer);
 	if(v_flipped_state)
 	{
 		Matrix4x4_Transpose(&basematrix, &backend_viewmatrix);
@@ -544,7 +546,7 @@ void GL_Backend_ResetState(void)
 	gl_state.color4f[0] = gl_state.color4f[1] = gl_state.color4f[2] = gl_state.color4f[3] = 1;
 	gl_state.lockrange_first = 0;
 	gl_state.lockrange_count = 0;
-	gl_state.cullface = GL_FRONT; // quake is backwards, this culls back faces
+	gl_state.cullface = v_flipped_state ? GL_BACK : GL_FRONT; // quake is backwards, this culls back faces
 	gl_state.cullfaceenable = true;
 
 	CHECKGLERROR
@@ -676,6 +678,19 @@ void GL_DepthRange(float nearfrac, float farfrac)
 		gl_state.depthrange[1] = farfrac;
 		qglDepthRange(nearfrac, farfrac);
 	}
+}
+
+void GL_SetMirrorState(qboolean state)
+{
+	if(!state != !v_flipped_state)
+	{
+		// change cull face mode!
+		if(gl_state.cullface == GL_BACK)
+			qglCullFace((gl_state.cullface = GL_FRONT));
+		else if(gl_state.cullface == GL_FRONT)
+			qglCullFace((gl_state.cullface = GL_BACK));
+	}
+	v_flipped_state = state;
 }
 
 void GL_CullFace(int state)
