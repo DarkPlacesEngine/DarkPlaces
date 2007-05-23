@@ -16,6 +16,9 @@ cvar_t gl_lockarrays = {0, "gl_lockarrays", "0", "enables use of glLockArraysEXT
 cvar_t gl_lockarrays_minimumvertices = {0, "gl_lockarrays_minimumvertices", "1", "minimum number of vertices required for use of glLockArraysEXT, setting this too low may reduce performance"};
 cvar_t gl_vbo = {0, "gl_vbo", "1", "make use of GL_ARB_vertex_buffer_object extension to store static geometry in video memory for faster rendering"};
 
+cvar_t v_flipped = {0, "v_flipped", "0", "mirror the screen (poor man's left handed mode"};
+qboolean v_flipped_state = false;
+
 int gl_maxdrawrangeelementsvertices;
 int gl_maxdrawrangeelementsindices;
 
@@ -247,6 +250,7 @@ void gl_backend_init(void)
 	Cvar_RegisterVariable(&r_render);
 	Cvar_RegisterVariable(&r_waterwarp);
 	Cvar_RegisterVariable(&gl_polyblend);
+	Cvar_RegisterVariable(&v_flipped);
 	Cvar_RegisterVariable(&gl_dither);
 	Cvar_RegisterVariable(&gl_lockarrays);
 	Cvar_RegisterVariable(&gl_lockarrays_minimumvertices);
@@ -269,6 +273,7 @@ void gl_backend_init(void)
 void GL_SetupView_Orientation_Identity (void)
 {
 	backend_viewmatrix = identitymatrix;
+	v_flipped_state = false;
 	memset(&backend_modelmatrix, 0, sizeof(backend_modelmatrix));
 }
 
@@ -279,6 +284,15 @@ void GL_SetupView_Orientation_FromEntity(const matrix4x4_t *matrix)
 	Matrix4x4_CreateRotate(&basematrix, -90, 1, 0, 0);
 	Matrix4x4_ConcatRotate(&basematrix, 90, 0, 0, 1);
 	Matrix4x4_Concat(&backend_viewmatrix, &basematrix, &tempmatrix);
+
+	v_flipped_state = v_flipped.integer;
+	if(v_flipped_state)
+	{
+		Matrix4x4_Transpose(&basematrix, &backend_viewmatrix);
+		Matrix4x4_ConcatScale3(&basematrix, -1, 1, 1);
+		Matrix4x4_Transpose(&backend_viewmatrix, &basematrix);
+	}
+
 	//Matrix4x4_ConcatRotate(&backend_viewmatrix, -angles[2], 1, 0, 0);
 	//Matrix4x4_ConcatRotate(&backend_viewmatrix, -angles[0], 0, 1, 0);
 	//Matrix4x4_ConcatRotate(&backend_viewmatrix, -angles[1], 0, 0, 1);
@@ -667,6 +681,15 @@ void GL_DepthRange(float nearfrac, float farfrac)
 void GL_CullFace(int state)
 {
 	CHECKGLERROR
+
+	if(v_flipped_state)
+	{
+		if(state == GL_FRONT)
+			state = GL_BACK;
+		else if(state == GL_BACK)
+			state = GL_FRONT;
+	}
+
 	if (state != GL_NONE)
 	{
 		if (!gl_state.cullfaceenable)

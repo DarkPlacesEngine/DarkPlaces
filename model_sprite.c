@@ -43,7 +43,7 @@ static void Mod_SpriteSetupTexture(texture_t *texture, skinframe_t *skinframe, q
 {
 	if (!skinframe)
 		skinframe = R_SkinFrame_LoadMissing();
-	texture->basematerialflags = MATERIALFLAG_WALL;
+	texture->basematerialflags = MATERIALFLAG_WALL | MATERIALFLAG_NOCULLFACE;
 	if (fullbright)
 		texture->basematerialflags |= MATERIALFLAG_FULLBRIGHT;
 	if (additive)

@@ -355,6 +355,7 @@ cvar_t cl_netinputpacketlosstolerance = {CVAR_SAVE, "cl_netinputpacketlosstolera
 
 cvar_t cl_nodelta = {0, "cl_nodelta", "0", "disables delta compression of non-player entities in QW network protocol"};
 
+extern cvar_t v_flipped;
 
 /*
 ================
@@ -424,6 +425,9 @@ void CL_Input (void)
 
 	// clamp before the move to prevent starting with bad angles
 	CL_AdjustAngles ();
+
+	if(v_flipped.integer)
+		cl.viewangles[YAW] = -cl.viewangles[YAW];
 
 	// reset some of the command fields
 	cl.cmd.forwardmove = 0;
@@ -520,6 +524,12 @@ void CL_Input (void)
 		}
 	}
 
+	if(v_flipped.integer)
+	{
+		cl.viewangles[YAW] = -cl.viewangles[YAW];
+		cl.cmd.sidemove = -cl.cmd.sidemove;
+	}
+
 	// clamp after the move to prevent rendering with bad angles
 	CL_AdjustAngles ();
 }
@@ -562,7 +572,7 @@ void CL_UpdatePrydonCursor(void)
 	// calculate current view matrix
 	Matrix4x4_OriginFromMatrix(&r_view.matrix, cl.cmd.cursor_start);
 	// calculate direction vector of cursor in viewspace by using frustum slopes
-	VectorSet(temp, cl.cmd.cursor_screen[2] * 1000000, cl.cmd.cursor_screen[0] * -r_view.frustum_x * 1000000, cl.cmd.cursor_screen[1] * -r_view.frustum_y * 1000000);
+	VectorSet(temp, cl.cmd.cursor_screen[2] * 1000000, (v_flipped.integer ? -1 : 1) * cl.cmd.cursor_screen[0] * -r_view.frustum_x * 1000000, cl.cmd.cursor_screen[1] * -r_view.frustum_y * 1000000);
 	Matrix4x4_Transform(&r_view.matrix, temp, cl.cmd.cursor_end);
 	// trace from view origin to the cursor
 	cl.cmd.cursor_fraction = CL_SelectTraceLine(cl.cmd.cursor_start, cl.cmd.cursor_end, cl.cmd.cursor_impact, cl.cmd.cursor_normal, &cl.cmd.cursor_entitynumber, (chase_active.integer || cl.intermission) ? &cl.entities[cl.playerentity].render : NULL);
