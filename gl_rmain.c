@@ -3415,7 +3415,6 @@ void RSurf_ActiveWorldEntity(void)
 	rsurface.modeltexcoordlightmap2f_bufferoffset = model->surfmesh.vbooffset_texcoordlightmap2f;
 	rsurface.modelelement3i = model->surfmesh.data_element3i;
 	rsurface.modelelement3i_bufferobject = model->surfmesh.ebo;
-	rsurface.modelneighbor3i = model->surfmesh.data_neighbor3i;
 	rsurface.modellightmapoffsets = model->surfmesh.data_lightmapoffsets;
 	rsurface.modelnum_vertices = model->surfmesh.num_vertices;
 	rsurface.modelnum_triangles = model->surfmesh.num_triangles;
@@ -3517,7 +3516,6 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 	rsurface.modeltexcoordlightmap2f_bufferoffset = model->surfmesh.vbooffset_texcoordlightmap2f;
 	rsurface.modelelement3i = model->surfmesh.data_element3i;
 	rsurface.modelelement3i_bufferobject = model->surfmesh.ebo;
-	rsurface.modelneighbor3i = model->surfmesh.data_neighbor3i;
 	rsurface.modellightmapoffsets = model->surfmesh.data_lightmapoffsets;
 	rsurface.modelnum_vertices = model->surfmesh.num_vertices;
 	rsurface.modelnum_triangles = model->surfmesh.num_triangles;
