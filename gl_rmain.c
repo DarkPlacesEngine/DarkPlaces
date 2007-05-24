@@ -3242,46 +3242,58 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 	if (t->backgroundnumskinframes && !(t->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED))
 		t->currentmaterialflags |= MATERIALFLAG_VERTEXTEXTUREBLEND;
 
-	switch(t->tcmod)
+	for (i = 0;i < Q3MAXTCMODS && (t->tcmod[i] || i < 1);i++)
 	{
-	case Q3TCMOD_COUNT:
-	case Q3TCMOD_NONE:
-		if (t->currentmaterialflags & MATERIALFLAG_WATER && r_waterscroll.value != 0)
-			t->currenttexmatrix = r_waterscrollmatrix;
+		matrix4x4_t matrix;
+		switch(t->tcmod[i])
+		{
+		case Q3TCMOD_COUNT:
+		case Q3TCMOD_NONE:
+			if (t->currentmaterialflags & MATERIALFLAG_WATER && r_waterscroll.value != 0)
+				matrix = r_waterscrollmatrix;
+			else
+				matrix = identitymatrix;
+			break;
+		case Q3TCMOD_ENTITYTRANSLATE:
+			// this is used in Q3 to allow the gamecode to control texcoord
+			// scrolling on the entity, which is not supported in darkplaces yet.
+			Matrix4x4_CreateTranslate(&matrix, 0, 0, 0);
+			break;
+		case Q3TCMOD_ROTATE:
+			Matrix4x4_CreateTranslate(&matrix, 0.5, 0.5, 0);
+			Matrix4x4_ConcatRotate(&matrix, t->tcmod_parms[i][0] * r_refdef.time, 0, 0, 1);
+			Matrix4x4_ConcatTranslate(&matrix, -0.5, -0.5, 0);
+			break;
+		case Q3TCMOD_SCALE:
+			Matrix4x4_CreateScale3(&matrix, t->tcmod_parms[i][0], t->tcmod_parms[i][1], 1);
+			break;
+		case Q3TCMOD_SCROLL:
+			Matrix4x4_CreateTranslate(&matrix, t->tcmod_parms[i][0] * r_refdef.time, t->tcmod_parms[i][1] * r_refdef.time, 0);
+			break;
+		case Q3TCMOD_STRETCH:
+			f = 1.0f / R_EvaluateQ3WaveFunc(t->tcmod_wavefunc[i], t->tcmod_parms[i]);
+			Matrix4x4_CreateFromQuakeEntity(&matrix, 0.5f * (1 - f), 0.5 * (1 - f), 0, 0, 0, 0, f);
+			break;
+		case Q3TCMOD_TRANSFORM:
+			VectorSet(tcmat +  0, t->tcmod_parms[i][0], t->tcmod_parms[i][1], 0);
+			VectorSet(tcmat +  3, t->tcmod_parms[i][2], t->tcmod_parms[i][3], 0);
+			VectorSet(tcmat +  6, 0                   , 0                , 1);
+			VectorSet(tcmat +  9, t->tcmod_parms[i][4], t->tcmod_parms[i][5], 0);
+			Matrix4x4_FromArray12FloatGL(&matrix, tcmat);
+			break;
+		case Q3TCMOD_TURBULENT:
+			// this is handled in the RSurf_PrepareVertices function
+			matrix = identitymatrix;
+			break;
+		}
+		// either replace or concatenate the transformation
+		if (i < 1)
+			t->currenttexmatrix = matrix;
 		else
-			t->currenttexmatrix = identitymatrix;
-		break;
-	case Q3TCMOD_ENTITYTRANSLATE:
-		// this is used in Q3 to allow the gamecode to control texcoord
-		// scrolling on the entity, which is not supported in darkplaces yet.
-		Matrix4x4_CreateTranslate(&t->currenttexmatrix, 0, 0, 0);
-		break;
-	case Q3TCMOD_ROTATE:
-		Matrix4x4_CreateTranslate(&t->currenttexmatrix, 0.5, 0.5, 0);
-		Matrix4x4_ConcatRotate(&t->currenttexmatrix, t->tcmod_parms[0] * r_refdef.time, 0, 0, 1);
-		Matrix4x4_ConcatTranslate(&t->currenttexmatrix, -0.5, -0.5, 0);
-		break;
-	case Q3TCMOD_SCALE:
-		Matrix4x4_CreateScale3(&t->currenttexmatrix, t->tcmod_parms[0], t->tcmod_parms[1], 1);
-		break;
-	case Q3TCMOD_SCROLL:
-		Matrix4x4_CreateTranslate(&t->currenttexmatrix, t->tcmod_parms[0] * r_refdef.time, t->tcmod_parms[1] * r_refdef.time, 0);
-		break;
-	case Q3TCMOD_STRETCH:
-		f = 1.0f / R_EvaluateQ3WaveFunc(t->tcmod_wavefunc, t->tcmod_parms);
-		Matrix4x4_CreateFromQuakeEntity(&t->currenttexmatrix, 0.5f * (1 - f), 0.5 * (1 - f), 0, 0, 0, 0, f);
-		break;
-	case Q3TCMOD_TRANSFORM:
-		VectorSet(tcmat +  0, t->tcmod_parms[0], t->tcmod_parms[1], 0);
-		VectorSet(tcmat +  3, t->tcmod_parms[2], t->tcmod_parms[3], 0);
-		VectorSet(tcmat +  6, 0                , 0                , 1);
-		VectorSet(tcmat +  9, t->tcmod_parms[4], t->tcmod_parms[5], 0);
-		Matrix4x4_FromArray12FloatGL(&t->currenttexmatrix, tcmat);
-		break;
-	case Q3TCMOD_TURBULENT:
-		// this is handled in the RSurf_PrepareVertices function
-		t->currenttexmatrix = identitymatrix;
-		break;
+		{
+			matrix4x4_t temp = t->currenttexmatrix;
+			Matrix4x4_Concat(&t->currenttexmatrix, &matrix, &temp);
+		}
 	}
 
 	t->colormapping = VectorLength2(ent->colormap_pantscolor) + VectorLength2(ent->colormap_shirtcolor) >= (1.0f / 1048576.0f);
@@ -3827,10 +3839,13 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 	}
 	// the only tcmod that needs software vertex processing is turbulent, so
 	// check for it here and apply the changes if needed
-	if (rsurface.texture->tcmod == Q3TCMOD_TURBULENT)
+	// and we only support that as the first one
+	// (handling a mixture of turbulent and other tcmods would be problematic
+	//  without punting it entirely to a software path)
+	if (rsurface.texture->tcmod[0] == Q3TCMOD_TURBULENT)
 	{
-		amplitude = rsurface.texture->tcmod_parms[1];
-		animpos = rsurface.texture->tcmod_parms[2] + r_refdef.time * rsurface.texture->tcmod_parms[3];
+		amplitude = rsurface.texture->tcmod_parms[0][1];
+		animpos = rsurface.texture->tcmod_parms[0][2] + r_refdef.time * rsurface.texture->tcmod_parms[0][3];
 		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
 			const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
