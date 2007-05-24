@@ -1093,6 +1093,18 @@ void Mod_ConstructTerrainPatchFromRGBA(const unsigned char *imagepixels, int ima
 			Mod_GetTerrainVertexFromRGBA(imagepixels, imagewidth, imageheight, ix, iy, vertex3f, texcoord2f, svector3f, tvector3f, normal3f, pixelstepmatrix, pixeltexturestepmatrix);
 }
 
+q3wavefunc_t Mod_LoadQ3Shaders_EnumerateWaveFunc(const char *s)
+{
+	if (!strcasecmp(s, "sin"))             return Q3WAVEFUNC_SIN;
+	if (!strcasecmp(s, "square"))          return Q3WAVEFUNC_SQUARE;
+	if (!strcasecmp(s, "triangle"))        return Q3WAVEFUNC_TRIANGLE;
+	if (!strcasecmp(s, "sawtooth"))        return Q3WAVEFUNC_SAWTOOTH;
+	if (!strcasecmp(s, "inversesawtooth")) return Q3WAVEFUNC_INVERSESAWTOOTH;
+	if (!strcasecmp(s, "noise"))           return Q3WAVEFUNC_NOISE;
+	Con_DPrintf("Mod_LoadQ3Shaders: unknown wavefunc %s\n", s);
+	return Q3WAVEFUNC_NONE;
+}
+
 void Mod_LoadQ3Shaders(void)
 {
 	int j;
@@ -1137,8 +1149,10 @@ void Mod_LoadQ3Shaders(void)
 					if (shader->numlayers < Q3SHADER_MAXLAYERS)
 					{
 						layer = shader->layers + shader->numlayers++;
-						layer->rgbgenvertex = false;
-						layer->alphagenvertex = false;
+						layer->rgbgen = Q3RGBGEN_IDENTITY;
+						layer->alphagen = Q3ALPHAGEN_IDENTITY;
+						layer->tcgen = Q3TCGEN_TEXTURE;
+						layer->tcmod = Q3TCMOD_NONE;
 						layer->blendfunc[0] = GL_ONE;
 						layer->blendfunc[1] = GL_ZERO;
 					}
@@ -1240,17 +1254,90 @@ void Mod_LoadQ3Shaders(void)
 							for (i = 0;i < layer->numframes;i++)
 								strlcpy(layer->texturename[i], parameter[i + 2], sizeof(layer->texturename));
 						}
-						else if (numparameters >= 2 && !strcasecmp(parameter[0], "rgbgen") && (!strcasecmp(parameter[1], "vertex") || !strcasecmp(parameter[1], "lightingdiffuse")))
-							layer->rgbgenvertex = true;
-						else if (numparameters >= 2 && !strcasecmp(parameter[0], "alphagen") && !strcasecmp(parameter[1], "vertex"))
-							layer->alphagenvertex = true;
+						else if (numparameters >= 2 && !strcasecmp(parameter[0], "rgbgen"))
+						{
+							int i;
+							for (i = 0;i < numparameters - 2 && i < Q3RGBGEN_MAXPARMS;i++)
+								layer->rgbgen_parms[i] = atof(parameter[i+2]);
+							     if (!strcasecmp(parameter[1], "identity"))         layer->rgbgen = Q3RGBGEN_IDENTITY;
+							else if (!strcasecmp(parameter[1], "const"))            layer->rgbgen = Q3RGBGEN_CONST;
+							else if (!strcasecmp(parameter[1], "entity"))           layer->rgbgen = Q3RGBGEN_ENTITY;
+							else if (!strcasecmp(parameter[1], "exactvertex"))      layer->rgbgen = Q3RGBGEN_EXACTVERTEX;
+							else if (!strcasecmp(parameter[1], "identitylighting")) layer->rgbgen = Q3RGBGEN_IDENTITYLIGHTING;
+							else if (!strcasecmp(parameter[1], "lightingdiffuse"))  layer->rgbgen = Q3RGBGEN_LIGHTINGDIFFUSE;
+							else if (!strcasecmp(parameter[1], "oneminusentity"))   layer->rgbgen = Q3RGBGEN_ONEMINUSENTITY;
+							else if (!strcasecmp(parameter[1], "oneminusvertex"))   layer->rgbgen = Q3RGBGEN_ONEMINUSVERTEX;
+							else if (!strcasecmp(parameter[1], "vertex"))           layer->rgbgen = Q3RGBGEN_VERTEX;
+							else if (!strcasecmp(parameter[1], "wave"))             layer->rgbgen = Q3RGBGEN_WAVE;
+							else Con_DPrintf("%s parsing warning: unknown rgbgen %s\n", search->filenames[fileindex], parameter[1]);
+						}
+						else if (numparameters >= 2 && !strcasecmp(parameter[0], "alphagen"))
+						{
+							int i;
+							for (i = 0;i < numparameters - 2 && i < Q3ALPHAGEN_MAXPARMS;i++)
+								layer->alphagen_parms[i] = atof(parameter[i+2]);
+							     if (!strcasecmp(parameter[1], "identity"))         layer->alphagen = Q3ALPHAGEN_IDENTITY;
+							else if (!strcasecmp(parameter[1], "const"))            layer->alphagen = Q3ALPHAGEN_CONST;
+							else if (!strcasecmp(parameter[1], "entity"))           layer->alphagen = Q3ALPHAGEN_ENTITY;
+							else if (!strcasecmp(parameter[1], "lightingspecular")) layer->alphagen = Q3ALPHAGEN_LIGHTINGSPECULAR;
+							else if (!strcasecmp(parameter[1], "oneminusentity"))   layer->alphagen = Q3ALPHAGEN_ONEMINUSENTITY;
+							else if (!strcasecmp(parameter[1], "oneminusvertex"))   layer->alphagen = Q3ALPHAGEN_ONEMINUSVERTEX;
+							else if (!strcasecmp(parameter[1], "portal"))           layer->alphagen = Q3ALPHAGEN_PORTAL;
+							else if (!strcasecmp(parameter[1], "vertex"))           layer->alphagen = Q3ALPHAGEN_VERTEX;
+							else if (!strcasecmp(parameter[1], "wave"))             layer->alphagen = Q3ALPHAGEN_WAVE;
+							else Con_DPrintf("%s parsing warning: unknown alphagen %s\n", search->filenames[fileindex], parameter[1]);
+						}
+						else if (numparameters >= 2 && (!strcasecmp(parameter[0], "texgen") || !strcasecmp(parameter[0], "tcgen")))
+						{
+							int i;
+							// observed values: tcgen environment
+							// no other values have been observed in real shaders
+							for (i = 0;i < numparameters - 2 && i < Q3TCGEN_MAXPARMS;i++)
+								layer->tcgen_parms[i] = atof(parameter[i+2]);
+							     if (!strcasecmp(parameter[1], "base"))        layer->tcgen = Q3TCGEN_TEXTURE;
+							else if (!strcasecmp(parameter[1], "texture"))     layer->tcgen = Q3TCGEN_TEXTURE;
+							else if (!strcasecmp(parameter[1], "environment")) layer->tcgen = Q3TCGEN_ENVIRONMENT;
+							else if (!strcasecmp(parameter[1], "lightmap"))    layer->tcgen = Q3TCGEN_LIGHTMAP;
+							else if (!strcasecmp(parameter[1], "vector"))      layer->tcgen = Q3TCGEN_VECTOR;
+							else Con_DPrintf("%s parsing warning: unknown tcgen mode %s\n", search->filenames[fileindex], parameter[1]);
+						}
+						else if (numparameters == 2 && !strcasecmp(parameter[0], "tcmod"))
+						{
+							int i;
+							// observed values:
+							// tcmod rotate #
+							// tcmod scale # #
+							// tcmod scroll # #
+							// tcmod stretch sin # # # #
+							// tcmod stretch triangle # # # #
+							// tcmod transform # # # # # #
+							// tcmod turb # # # #
+							// tcmod turb sin # # # #  (this is bogus)
+							// no other values have been observed in real shaders
+							for (i = 0;i < numparameters - 2 && i < Q3TCMOD_MAXPARMS;i++)
+								layer->tcmod_parms[i] = atof(parameter[i+2]);
+							     if (!strcasecmp(parameter[1], "entitytranslate")) layer->tcmod = Q3TCMOD_ENTITYTRANSLATE;
+							else if (!strcasecmp(parameter[1], "rotate"))          layer->tcmod = Q3TCMOD_ROTATE;
+							else if (!strcasecmp(parameter[1], "scale"))           layer->tcmod = Q3TCMOD_SCALE;
+							else if (!strcasecmp(parameter[1], "scroll"))          layer->tcmod = Q3TCMOD_SCROLL;
+							else if (!strcasecmp(parameter[1], "stretch"))
+							{
+								layer->tcmod = Q3TCMOD_STRETCH;
+								for (i = 0;i < numparameters - 3 && i < Q3TCMOD_MAXPARMS;i++)
+									layer->tcmod_parms[i] = atof(parameter[i+3]);
+								layer->tcmod_wavefunc = Mod_LoadQ3Shaders_EnumerateWaveFunc(parameter[2]);
+							}
+							else if (!strcasecmp(parameter[1], "transform"))       layer->tcmod = Q3TCMOD_TRANSFORM;
+							else if (!strcasecmp(parameter[1], "turb"))            layer->tcmod = Q3TCMOD_TURB;
+							else Con_DPrintf("%s parsing warning: unknown tcmod mode %s\n", search->filenames[fileindex], parameter[1]);
+						}
 						// break out a level if it was }
 						if (!strcasecmp(com_token, "}"))
 							break;
 					}
-					if (layer->rgbgenvertex)
+					if (layer->rgbgen == Q3RGBGEN_LIGHTINGDIFFUSE || layer->rgbgen == Q3RGBGEN_VERTEX)
 						shader->lighting = true;
-					if (layer->alphagenvertex)
+					if (layer->alphagen == Q3ALPHAGEN_VERTEX)
 					{
 						if (layer == shader->layers + 0)
 						{
