@@ -273,7 +273,9 @@ typedef struct q3shaderinfo_layer_s
 	q3tcgen_t tcgen;
 	q3tcmod_t tcmod[Q3MAXTCMODS];
 	float rgbgen_parms[Q3RGBGEN_MAXPARMS];
+	q3wavefunc_t rgbgen_wavefunc;
 	float alphagen_parms[Q3ALPHAGEN_MAXPARMS];
+	q3wavefunc_t alphagen_wavefunc;
 	float tcgen_parms[Q3TCGEN_MAXPARMS];
 	float tcmod_parms[Q3MAXTCMODS][Q3TCMOD_MAXPARMS];
 	q3wavefunc_t tcmod_wavefunc[Q3MAXTCMODS];
@@ -375,7 +377,9 @@ typedef struct texture_s
 	q3tcgen_t tcgen;
 	q3tcmod_t tcmod[Q3MAXTCMODS];
 	float rgbgen_parms[Q3RGBGEN_MAXPARMS];
+	q3wavefunc_t rgbgen_wavefunc;
 	float alphagen_parms[Q3ALPHAGEN_MAXPARMS];
+	q3wavefunc_t alphagen_wavefunc;
 	float tcgen_parms[Q3TCGEN_MAXPARMS];
 	float tcmod_parms[Q3MAXTCMODS][Q3TCMOD_MAXPARMS];
 	q3wavefunc_t tcmod_wavefunc[Q3MAXTCMODS];
