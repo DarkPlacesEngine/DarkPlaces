@@ -694,6 +694,79 @@ void Mod_ShadowMesh_CalcBBox(shadowmesh_t *firstmesh, vec3_t mins, vec3_t maxs, 
 void Mod_ShadowMesh_Free(shadowmesh_t *mesh);
 
 #define Q3SHADER_MAXLAYERS 8
+#define Q3RGBGEN_MAXPARMS 3
+#define Q3ALPHAGEN_MAXPARMS 1
+#define Q3TCGEN_MAXPARMS 6
+#define Q3TCMOD_MAXPARMS 6
+
+typedef enum q3wavefunc_e
+{
+	Q3WAVEFUNC_NONE,
+	Q3WAVEFUNC_INVERSESAWTOOTH,
+	Q3WAVEFUNC_NOISE,
+	Q3WAVEFUNC_SAWTOOTH,
+	Q3WAVEFUNC_SIN,
+	Q3WAVEFUNC_SQUARE,
+	Q3WAVEFUNC_TRIANGLE,
+	Q3WAVEFUNC_COUNT
+}
+q3wavefunc_t;
+
+typedef enum q3rgbgen_e
+{
+	Q3RGBGEN_IDENTITY,
+	Q3RGBGEN_CONST,
+	Q3RGBGEN_ENTITY,
+	Q3RGBGEN_EXACTVERTEX,
+	Q3RGBGEN_IDENTITYLIGHTING,
+	Q3RGBGEN_LIGHTINGDIFFUSE,
+	Q3RGBGEN_ONEMINUSENTITY,
+	Q3RGBGEN_ONEMINUSVERTEX,
+	Q3RGBGEN_VERTEX,
+	Q3RGBGEN_WAVE,
+	Q3RGBGEN_COUNT
+}
+q3rgbgen_t;
+
+typedef enum q3alphagen_e
+{
+	Q3ALPHAGEN_IDENTITY,
+	Q3ALPHAGEN_CONST,
+	Q3ALPHAGEN_ENTITY,
+	Q3ALPHAGEN_LIGHTINGSPECULAR,
+	Q3ALPHAGEN_ONEMINUSENTITY,
+	Q3ALPHAGEN_ONEMINUSVERTEX,
+	Q3ALPHAGEN_PORTAL,
+	Q3ALPHAGEN_VERTEX,
+	Q3ALPHAGEN_WAVE,
+	Q3ALPHAGEN_COUNT
+}
+q3alphagen_t;
+
+typedef enum q3tcgen_e
+{
+	Q3TCGEN_NONE,
+	Q3TCGEN_TEXTURE, // very common
+	Q3TCGEN_ENVIRONMENT, // common
+	Q3TCGEN_LIGHTMAP,
+	Q3TCGEN_VECTOR,
+	Q3TCGEN_COUNT
+}
+q3tcgen_t;
+
+typedef enum q3tcmod_e
+{
+	Q3TCMOD_NONE,
+	Q3TCMOD_ENTITYTRANSLATE,
+	Q3TCMOD_ROTATE,
+	Q3TCMOD_SCALE,
+	Q3TCMOD_SCROLL,
+	Q3TCMOD_STRETCH,
+	Q3TCMOD_TRANSFORM,
+	Q3TCMOD_TURB,
+	Q3TCMOD_COUNT
+}
+q3tcmod_t;
 
 typedef struct q3shaderinfo_layer_s
 {
@@ -703,8 +776,15 @@ typedef struct q3shaderinfo_layer_s
 	int numframes;
 	char texturename[TEXTURE_MAXFRAMES][Q3PATHLENGTH];
 	int blendfunc[2];
-	qboolean rgbgenvertex;
-	qboolean alphagenvertex;
+	q3rgbgen_t rgbgen;
+	q3alphagen_t alphagen;
+	q3tcgen_t tcgen;
+	q3tcmod_t tcmod;
+	float rgbgen_parms[Q3RGBGEN_MAXPARMS];
+	float alphagen_parms[Q3ALPHAGEN_MAXPARMS];
+	float tcgen_parms[Q3TCGEN_MAXPARMS];
+	float tcmod_parms[Q3TCMOD_MAXPARMS];
+	q3wavefunc_t tcmod_wavefunc;
 }
 q3shaderinfo_layer_t;
 
