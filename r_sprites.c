@@ -87,6 +87,6 @@ void R_Model_Sprite_Draw(entity_render_t *ent)
 		return;
 
 	Matrix4x4_OriginFromMatrix(&ent->matrix, org);
-	R_MeshQueue_AddTransparent(ent->effects & EF_NODEPTHTEST ? r_view.origin : org, R_Model_Sprite_Draw_TransparentCallback, ent, 0, r_shadow_rtlight);
+	R_MeshQueue_AddTransparent(ent->effects & EF_NODEPTHTEST ? r_view.origin : org, R_Model_Sprite_Draw_TransparentCallback, ent, 0, rsurface.rtlight);
 }
 

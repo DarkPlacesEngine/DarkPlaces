@@ -244,6 +244,22 @@ typedef struct rsurfacestate_s
 	float *modelnormal3f;
 	int modelnormal3f_bufferobject;
 	size_t modelnormal3f_bufferoffset;
+	float *modellightmapcolor4f;
+	int modellightmapcolor4f_bufferobject;
+	size_t modellightmapcolor4f_bufferoffset;
+	float *modeltexcoordtexture2f;
+	int modeltexcoordtexture2f_bufferobject;
+	size_t modeltexcoordtexture2f_bufferoffset;
+	float *modeltexcoordlightmap2f;
+	int modeltexcoordlightmap2f_bufferobject;
+	size_t modeltexcoordlightmap2f_bufferoffset;
+	int *modelelement3i;
+	int modelelement3i_bufferobject;
+	int *modelneighbor3i;
+	int *modellightmapoffsets;
+	int modelnum_vertices;
+	int modelnum_triangles;
+	msurface_t *modelsurfaces;
 	// current rendering array pointers
 	// these may point to any of several different buffers depending on how
 	// much processing was needed to prepare this model for rendering
@@ -283,8 +299,6 @@ typedef struct rsurfacestate_s
 	vec3_t colormap_shirtcolor;
 	// view location in model space
 	vec3_t modelorg; // TODO: rename this
-	// model being rendered
-	const model_t *model; // TODO: eliminate this
 	// current texture in batching code
 	texture_t *texture;
 	// whether lightmapping is active on this batch
@@ -294,6 +308,27 @@ typedef struct rsurfacestate_s
 	rsurfmode_t mode;
 	// type of vertex lighting being used on this batch
 	int lightmode; // 0 = lightmap or fullbright, 1 = color array from q3bsp, 2 = vertex shaded model
+
+	// rtlight rendering
+	// light currently being rendered
+	rtlight_t *rtlight;
+	// current light's cull box (copied out of an rtlight or calculated by GetLightInfo)
+	vec3_t rtlight_cullmins;
+	vec3_t rtlight_cullmaxs;
+	// current light's culling planes
+	int rtlight_numfrustumplanes;
+	mplane_t rtlight_frustumplanes[12+6+6]; // see R_Shadow_ComputeShadowCasterCullingPlanes
+
+	// this is the location of the light in entity space
+	vec3_t entitylightorigin;
+	// this transforms entity coordinates to light filter cubemap coordinates
+	// (also often used for other purposes)
+	matrix4x4_t entitytolight;
+	// based on entitytolight this transforms -1 to +1 to 0 to 1 for purposes
+	// of attenuation texturing in full 3D (Z result often ignored)
+	matrix4x4_t entitytoattenuationxyz;
+	// this transforms only the Z to S, and T is always 0.5
+	matrix4x4_t entitytoattenuationz;
 }
 rsurfacestate_t;
 
