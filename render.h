@@ -214,6 +214,7 @@ typedef struct rsurfacestate_s
 	float *array_deformedsvector3f;
 	float *array_deformedtvector3f;
 	float *array_deformednormal3f;
+	float *array_generatedtexcoordtexture2f;
 	float *array_color4f;
 	float *array_texcoord3f;
 
@@ -284,6 +285,12 @@ typedef struct rsurfacestate_s
 	float *lightmapcolor4f;
 	int lightmapcolor4f_bufferobject;
 	size_t lightmapcolor4f_bufferoffset;
+	float *texcoordtexture2f;
+	int texcoordtexture2f_bufferobject;
+	size_t texcoordtexture2f_bufferoffset;
+	float *texcoordlightmap2f;
+	int texcoordlightmap2f_bufferobject;
+	size_t texcoordlightmap2f_bufferoffset;
 	// transform matrices to render this entity and effects on this entity
 	matrix4x4_t matrix;
 	matrix4x4_t inversematrix;
