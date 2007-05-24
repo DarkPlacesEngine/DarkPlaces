@@ -396,7 +396,7 @@ void R_DrawPortals(void)
 						VectorAdd(center, portal->points[i].position, center);
 					f = ixtable[portal->numpoints];
 					VectorScale(center, f, center);
-					R_MeshQueue_AddTransparent(center, R_DrawPortal_Callback, (entity_render_t *)portal, leafnum, r_shadow_rtlight);
+					R_MeshQueue_AddTransparent(center, R_DrawPortal_Callback, (entity_render_t *)portal, leafnum, rsurface.rtlight);
 				}
 			}
 		}
@@ -585,7 +585,7 @@ void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
 		//	return;
 		if (!plane)
 			break;
-		//if (!r_shadow_compilingrtlight && R_CullBoxCustomPlanes(node->mins, node->maxs, r_shadow_rtlight_numfrustumplanes, r_shadow_rtlight_frustumplanes))
+		//if (!r_shadow_compilingrtlight && R_CullBoxCustomPlanes(node->mins, node->maxs, rsurface.rtlight_numfrustumplanes, rsurface.rtlight_frustumplanes))
 		//	return;
 		if (plane->type < 3)
 		{
@@ -627,7 +627,7 @@ void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
 				node = node->children[sides - 1];
 		}
 	}
-	if (!r_shadow_compilingrtlight && R_CullBoxCustomPlanes(node->mins, node->maxs, r_shadow_rtlight_numfrustumplanes, r_shadow_rtlight_frustumplanes))
+	if (!r_shadow_compilingrtlight && R_CullBoxCustomPlanes(node->mins, node->maxs, rsurface.rtlight_numfrustumplanes, rsurface.rtlight_frustumplanes))
 		return;
 	leaf = (mleaf_t *)node;
 	if (info->svbsp_active)
@@ -963,7 +963,7 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 			if (rsurface.texture->currentmaterialflags & MATERIALFLAG_NOSHADOW)
 				continue;
 			RSurf_PrepareVerticesForBatch(false, false, 1, &surface);
-			R_Shadow_MarkVolumeFromBox(surface->num_firsttriangle, surface->num_triangles, rsurface.vertex3f, rsurface.model->surfmesh.data_element3i, relativelightorigin, relativelightdirection, lightmins, lightmaxs, surface->mins, surface->maxs);
+			R_Shadow_MarkVolumeFromBox(surface->num_firsttriangle, surface->num_triangles, rsurface.vertex3f, rsurface.modelelement3i, relativelightorigin, relativelightdirection, lightmins, lightmaxs, surface->mins, surface->maxs);
 		}
 		R_Shadow_VolumeFromList(model->surfmesh.num_vertices, model->surfmesh.num_triangles, rsurface.vertex3f, model->surfmesh.data_element3i, model->surfmesh.data_neighbor3i, relativelightorigin, relativelightdirection, projectdistance, numshadowmark, shadowmarklist);
 	}
@@ -984,14 +984,14 @@ static void R_Q1BSP_DrawLight_TransparentCallback(const entity_render_t *ent, co
 	for (i = 0;i < numsurfaces;i = j)
 	{
 		j = i + 1;
-		surface = rsurface.model->data_surfaces + surfacelist[i];
+		surface = rsurface.modelsurfaces + surfacelist[i];
 		t = surface->texture;
 		R_UpdateTextureInfo(ent, t);
 		rsurface.texture = t->currentframe;
 		endsurface = min(j + BATCHSIZE, numsurfaces);
 		for (j = i;j < endsurface;j++)
 		{
-			surface = rsurface.model->data_surfaces + surfacelist[j];
+			surface = rsurface.modelsurfaces + surfacelist[j];
 			if (t != surface->texture)
 				break;
 			RSurf_PrepareVerticesForBatch(true, true, 1, &surface);
@@ -1018,7 +1018,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 	R_UpdateAllTextureInfo(ent);
 	CHECKGLERROR
 	culltriangles = r_shadow_culltriangles.integer && !(ent->flags & RENDER_NOSELFSHADOW);
-	element3i = rsurface.model->surfmesh.data_element3i;
+	element3i = rsurface.modelelement3i;
 	// this is a double loop because non-visible surface skipping has to be
 	// fast, and even if this is not the world model (and hence no visibility
 	// checking) the input surface list and batch buffer are different formats
@@ -1057,7 +1057,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 						tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
 						tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
 						Matrix4x4_Transform(&rsurface.matrix, tempcenter, center);
-						R_MeshQueue_AddTransparent(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_view.origin : center, R_Q1BSP_DrawLight_TransparentCallback, ent, surface - rsurface.model->data_surfaces, r_shadow_rtlight);
+						R_MeshQueue_AddTransparent(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_view.origin : center, R_Q1BSP_DrawLight_TransparentCallback, ent, surface - rsurface.modelsurfaces, rsurface.rtlight);
 					}
 				}
 				else
@@ -1087,7 +1087,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 								}
 								else
 								{
-									if (r_shadow_frontsidecasting.integer && !PointInfrontOfTriangle(r_shadow_entitylightorigin, rsurface.vertex3f + element3i[m*3+0]*3, rsurface.vertex3f + element3i[m*3+1]*3, rsurface.vertex3f + element3i[m*3+2]*3))
+									if (r_shadow_frontsidecasting.integer && !PointInfrontOfTriangle(rsurface.entitylightorigin, rsurface.vertex3f + element3i[m*3+0]*3, rsurface.vertex3f + element3i[m*3+1]*3, rsurface.vertex3f + element3i[m*3+2]*3))
 									{
 										usebufferobject = false;
 										continue;

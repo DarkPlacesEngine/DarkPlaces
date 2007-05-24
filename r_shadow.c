@@ -190,13 +190,6 @@ unsigned char *r_shadow_buffer_shadowtrispvs;
 int r_shadow_buffer_numlighttrispvsbytes;
 unsigned char *r_shadow_buffer_lighttrispvs;
 
-// current light's cull box (copied out of an rtlight or calculated by GetLightInfo)
-vec3_t r_shadow_rtlight_cullmins;
-vec3_t r_shadow_rtlight_cullmaxs;
-// current light's culling planes
-int r_shadow_rtlight_numfrustumplanes;
-mplane_t r_shadow_rtlight_frustumplanes[12+6+6]; // see R_Shadow_ComputeShadowCasterCullingPlanes
-
 rtexturepool_t *r_shadow_texturepool;
 rtexture_t *r_shadow_attenuationgradienttexture;
 rtexture_t *r_shadow_attenuation2dtexture;
@@ -975,20 +968,6 @@ void R_Shadow_ValidateCvars(void)
 		Cvar_SetValueQuick(&gl_ext_stenciltwoside, 0);
 }
 
-// light currently being rendered
-rtlight_t *r_shadow_rtlight;
-
-// this is the location of the light in entity space
-vec3_t r_shadow_entitylightorigin;
-// this transforms entity coordinates to light filter cubemap coordinates
-// (also often used for other purposes)
-matrix4x4_t r_shadow_entitytolight;
-// based on entitytolight this transforms -1 to +1 to 0 to 1 for purposes
-// of attenuation texturing in full 3D (Z result often ignored)
-matrix4x4_t r_shadow_entitytoattenuationxyz;
-// this transforms only the Z to S, and T is always 0.5
-matrix4x4_t r_shadow_entitytoattenuationz;
-
 void R_Shadow_RenderMode_Begin(void)
 {
 	R_Shadow_ValidateCvars();
@@ -1028,7 +1007,7 @@ void R_Shadow_RenderMode_Begin(void)
 
 void R_Shadow_RenderMode_ActiveLight(rtlight_t *rtlight)
 {
-	r_shadow_rtlight = rtlight;
+	rsurface.rtlight = rtlight;
 }
 
 void R_Shadow_RenderMode_Reset(void)
@@ -1113,14 +1092,14 @@ void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent)
 		R_Mesh_TexBind(0, R_GetTexture(r_texture_blanknormalmap)); // normal
 		R_Mesh_TexBind(1, R_GetTexture(r_texture_white)); // diffuse
 		R_Mesh_TexBind(2, R_GetTexture(r_texture_white)); // gloss
-		R_Mesh_TexBindCubeMap(3, R_GetTexture(r_shadow_rtlight->currentcubemap)); // light filter
+		R_Mesh_TexBindCubeMap(3, R_GetTexture(rsurface.rtlight->currentcubemap)); // light filter
 		R_Mesh_TexBind(4, R_GetTexture(r_texture_fogattenuation)); // fog
 		R_Mesh_TexBind(5, R_GetTexture(r_texture_white)); // pants
 		R_Mesh_TexBind(6, R_GetTexture(r_texture_white)); // shirt
 		R_Mesh_TexBind(7, R_GetTexture(r_texture_white)); // lightmap
 		R_Mesh_TexBind(8, R_GetTexture(r_texture_blanknormalmap)); // deluxemap
 		R_Mesh_TexBind(9, R_GetTexture(r_texture_black)); // glow
-		//R_Mesh_TexMatrix(3, r_shadow_entitytolight); // light filter matrix
+		//R_Mesh_TexMatrix(3, rsurface.entitytolight); // light filter matrix
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 		GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 0);
 		CHECKGLERROR
@@ -1273,8 +1252,8 @@ static void R_Shadow_RenderLighting_Light_Vertex_Shading(int firstvertex, int nu
 		{
 			for (;numverts > 0;numverts--, vertex3f += 3, normal3f += 3, color4f += 4)
 			{
-				Matrix4x4_Transform(&r_shadow_entitytolight, vertex3f, v);
-				Matrix4x4_Transform3x3(&r_shadow_entitytolight, normal3f, n);
+				Matrix4x4_Transform(&rsurface.entitytolight, vertex3f, v);
+				Matrix4x4_Transform3x3(&rsurface.entitytolight, normal3f, n);
 				if ((dot = DotProduct(n, v)) < 0)
 				{
 					shadeintensity = -dot / sqrt(VectorLength2(v) * VectorLength2(n));
@@ -1299,7 +1278,7 @@ static void R_Shadow_RenderLighting_Light_Vertex_Shading(int firstvertex, int nu
 				if (r_refdef.fogenabled)
 				{
 					float f;
-					Matrix4x4_Transform(&r_shadow_entitytolight, vertex3f, v);
+					Matrix4x4_Transform(&rsurface.entitytolight, vertex3f, v);
 					f = FogPoint_Model(vertex3f);
 					VectorScale(color4f, f, color4f);
 				}
@@ -1313,10 +1292,10 @@ static void R_Shadow_RenderLighting_Light_Vertex_Shading(int firstvertex, int nu
 		{
 			for (;numverts > 0;numverts--, vertex3f += 3, normal3f += 3, color4f += 4)
 			{
-				Matrix4x4_Transform(&r_shadow_entitytolight, vertex3f, v);
+				Matrix4x4_Transform(&rsurface.entitytolight, vertex3f, v);
 				if ((dist = fabs(v[2])) < 1 && (distintensity = r_shadow_attentable[(int)(dist * ATTENTABLESIZE)]))
 				{
-					Matrix4x4_Transform3x3(&r_shadow_entitytolight, normal3f, n);
+					Matrix4x4_Transform3x3(&rsurface.entitytolight, normal3f, n);
 					if ((dot = DotProduct(n, v)) < 0)
 					{
 						shadeintensity = -dot / sqrt(VectorLength2(v) * VectorLength2(n));
@@ -1346,7 +1325,7 @@ static void R_Shadow_RenderLighting_Light_Vertex_Shading(int firstvertex, int nu
 		{
 			for (;numverts > 0;numverts--, vertex3f += 3, color4f += 4)
 			{
-				Matrix4x4_Transform(&r_shadow_entitytolight, vertex3f, v);
+				Matrix4x4_Transform(&rsurface.entitytolight, vertex3f, v);
 				if ((dist = fabs(v[2])) < 1 && (distintensity = r_shadow_attentable[(int)(dist * ATTENTABLESIZE)]))
 				{
 					color4f[0] = ambientcolor[0] * distintensity;
@@ -1371,11 +1350,11 @@ static void R_Shadow_RenderLighting_Light_Vertex_Shading(int firstvertex, int nu
 		{
 			for (;numverts > 0;numverts--, vertex3f += 3, normal3f += 3, color4f += 4)
 			{
-				Matrix4x4_Transform(&r_shadow_entitytolight, vertex3f, v);
+				Matrix4x4_Transform(&rsurface.entitytolight, vertex3f, v);
 				if ((dist = VectorLength(v)) < 1 && (distintensity = r_shadow_attentable[(int)(dist * ATTENTABLESIZE)]))
 				{
 					distintensity = (1 - dist) * r_shadow_lightattenuationlinearscale.value / (r_shadow_lightattenuationdividebias.value + dist*dist);
-					Matrix4x4_Transform3x3(&r_shadow_entitytolight, normal3f, n);
+					Matrix4x4_Transform3x3(&rsurface.entitytolight, normal3f, n);
 					if ((dot = DotProduct(n, v)) < 0)
 					{
 						shadeintensity = -dot / sqrt(VectorLength2(v) * VectorLength2(n));
@@ -1405,7 +1384,7 @@ static void R_Shadow_RenderLighting_Light_Vertex_Shading(int firstvertex, int nu
 		{
 			for (;numverts > 0;numverts--, vertex3f += 3, color4f += 4)
 			{
-				Matrix4x4_Transform(&r_shadow_entitytolight, vertex3f, v);
+				Matrix4x4_Transform(&rsurface.entitytolight, vertex3f, v);
 				if ((dist = VectorLength(v)) < 1 && (distintensity = r_shadow_attentable[(int)(dist * ATTENTABLESIZE)]))
 				{
 					distintensity = (1 - dist) * r_shadow_lightattenuationlinearscale.value / (r_shadow_lightattenuationdividebias.value + dist*dist);
@@ -1440,7 +1419,7 @@ static void R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(int firstvertex, int num
 	float lightdir[3];
 	for (i = 0;i < numvertices;i++, vertex3f += 3, svector3f += 3, tvector3f += 3, normal3f += 3, out3f += 3)
 	{
-		VectorSubtract(r_shadow_entitylightorigin, vertex3f, lightdir);
+		VectorSubtract(rsurface.entitylightorigin, vertex3f, lightdir);
 		// the cubemap normalizes this for us
 		out3f[0] = DotProduct(svector3f, lightdir);
 		out3f[1] = DotProduct(tvector3f, lightdir);
@@ -1459,7 +1438,7 @@ static void R_Shadow_GenTexCoords_Specular_NormalCubeMap(int firstvertex, int nu
 	float lightdir[3], eyedir[3], halfdir[3];
 	for (i = 0;i < numvertices;i++, vertex3f += 3, svector3f += 3, tvector3f += 3, normal3f += 3, out3f += 3)
 	{
-		VectorSubtract(r_shadow_entitylightorigin, vertex3f, lightdir);
+		VectorSubtract(rsurface.entitylightorigin, vertex3f, lightdir);
 		VectorNormalize(lightdir);
 		VectorSubtract(rsurface.modelorg, vertex3f, eyedir);
 		VectorNormalize(eyedir);
@@ -1484,7 +1463,7 @@ static void R_Shadow_RenderLighting_Light_GLSL(int firstvertex, int numvertices,
 {
 	// ARB2 GLSL shader path (GFFX5200, Radeon 9500)
 	R_SetupSurfaceShader(lightcolorbase, false, ambientscale, diffusescale, specularscale);
-	R_Mesh_TexCoordPointer(0, 2, rsurface.model->surfmesh.data_texcoordtexture2f, rsurface.model->surfmesh.vbo, rsurface.model->surfmesh.vbooffset_texcoordtexture2f);
+	R_Mesh_TexCoordPointer(0, 2, rsurface.modeltexcoordtexture2f, rsurface.modeltexcoordtexture2f_bufferobject, rsurface.modeltexcoordtexture2f_bufferoffset);
 	R_Mesh_TexCoordPointer(1, 3, rsurface.svector3f, rsurface.svector3f_bufferobject, rsurface.svector3f_bufferoffset);
 	R_Mesh_TexCoordPointer(2, 3, rsurface.tvector3f, rsurface.tvector3f_bufferobject, rsurface.tvector3f_bufferoffset);
 	R_Mesh_TexCoordPointer(3, 3, rsurface.normal3f, rsurface.normal3f_bufferobject, rsurface.normal3f_bufferoffset);
@@ -1522,7 +1501,7 @@ static void R_Shadow_RenderLighting_Light_Dot3_AmbientPass(int firstvertex, int 
 	//
 	// Limit mult to 64 for sanity sake.
 	GL_Color(1,1,1,1);
-	if (r_shadow_texture3d.integer && r_shadow_rtlight->currentcubemap != r_texture_whitecube && r_textureunits.integer >= 4)
+	if (r_shadow_texture3d.integer && rsurface.rtlight->currentcubemap != r_texture_whitecube && r_textureunits.integer >= 4)
 	{
 		// 3 3D combine path (Geforce3, Radeon 8500)
 		memset(&m, 0, sizeof(m));
@@ -1530,20 +1509,20 @@ static void R_Shadow_RenderLighting_Light_Dot3_AmbientPass(int firstvertex, int 
 		m.pointer_texcoord3f[0] = rsurface.vertex3f;
 		m.pointer_texcoord_bufferobject[0] = rsurface.vertex3f_bufferobject;
 		m.pointer_texcoord_bufferoffset[0] = rsurface.vertex3f_bufferoffset;
-		m.texmatrix[0] = r_shadow_entitytoattenuationxyz;
+		m.texmatrix[0] = rsurface.entitytoattenuationxyz;
 		m.tex[1] = R_GetTexture(basetexture);
-		m.pointer_texcoord[1] = rsurface.model->surfmesh.data_texcoordtexture2f;
-		m.pointer_texcoord_bufferobject[1] = rsurface.model->surfmesh.vbo;
-		m.pointer_texcoord_bufferoffset[1] = rsurface.model->surfmesh.vbooffset_texcoordtexture2f;
+		m.pointer_texcoord[1] = rsurface.modeltexcoordtexture2f;
+		m.pointer_texcoord_bufferobject[1] = rsurface.modeltexcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[1] = rsurface.modeltexcoordtexture2f_bufferoffset;
 		m.texmatrix[1] = rsurface.texture->currenttexmatrix;
-		m.texcubemap[2] = R_GetTexture(r_shadow_rtlight->currentcubemap);
+		m.texcubemap[2] = R_GetTexture(rsurface.rtlight->currentcubemap);
 		m.pointer_texcoord3f[2] = rsurface.vertex3f;
 		m.pointer_texcoord_bufferobject[2] = rsurface.vertex3f_bufferobject;
 		m.pointer_texcoord_bufferoffset[2] = rsurface.vertex3f_bufferoffset;
-		m.texmatrix[2] = r_shadow_entitytolight;
+		m.texmatrix[2] = rsurface.entitytolight;
 		GL_BlendFunc(GL_ONE, GL_ONE);
 	}
-	else if (r_shadow_texture3d.integer && r_shadow_rtlight->currentcubemap == r_texture_whitecube && r_textureunits.integer >= 2)
+	else if (r_shadow_texture3d.integer && rsurface.rtlight->currentcubemap == r_texture_whitecube && r_textureunits.integer >= 2)
 	{
 		// 2 3D combine path (Geforce3, original Radeon)
 		memset(&m, 0, sizeof(m));
@@ -1551,15 +1530,15 @@ static void R_Shadow_RenderLighting_Light_Dot3_AmbientPass(int firstvertex, int 
 		m.pointer_texcoord3f[0] = rsurface.vertex3f;
 		m.pointer_texcoord_bufferobject[0] = rsurface.vertex3f_bufferobject;
 		m.pointer_texcoord_bufferoffset[0] = rsurface.vertex3f_bufferoffset;
-		m.texmatrix[0] = r_shadow_entitytoattenuationxyz;
+		m.texmatrix[0] = rsurface.entitytoattenuationxyz;
 		m.tex[1] = R_GetTexture(basetexture);
-		m.pointer_texcoord[1] = rsurface.model->surfmesh.data_texcoordtexture2f;
-		m.pointer_texcoord_bufferobject[1] = rsurface.model->surfmesh.vbo;
-		m.pointer_texcoord_bufferoffset[1] = rsurface.model->surfmesh.vbooffset_texcoordtexture2f;
+		m.pointer_texcoord[1] = rsurface.modeltexcoordtexture2f;
+		m.pointer_texcoord_bufferobject[1] = rsurface.modeltexcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[1] = rsurface.modeltexcoordtexture2f_bufferoffset;
 		m.texmatrix[1] = rsurface.texture->currenttexmatrix;
 		GL_BlendFunc(GL_ONE, GL_ONE);
 	}
-	else if (r_textureunits.integer >= 4 && r_shadow_rtlight->currentcubemap != r_texture_whitecube)
+	else if (r_textureunits.integer >= 4 && rsurface.rtlight->currentcubemap != r_texture_whitecube)
 	{
 		// 4 2D combine path (Geforce3, Radeon 8500)
 		memset(&m, 0, sizeof(m));
@@ -1567,28 +1546,28 @@ static void R_Shadow_RenderLighting_Light_Dot3_AmbientPass(int firstvertex, int 
 		m.pointer_texcoord3f[0] = rsurface.vertex3f;
 		m.pointer_texcoord_bufferobject[0] = rsurface.vertex3f_bufferobject;
 		m.pointer_texcoord_bufferoffset[0] = rsurface.vertex3f_bufferoffset;
-		m.texmatrix[0] = r_shadow_entitytoattenuationxyz;
+		m.texmatrix[0] = rsurface.entitytoattenuationxyz;
 		m.tex[1] = R_GetTexture(r_shadow_attenuation2dtexture);
 		m.pointer_texcoord3f[1] = rsurface.vertex3f;
 		m.pointer_texcoord_bufferobject[1] = rsurface.vertex3f_bufferobject;
 		m.pointer_texcoord_bufferoffset[1] = rsurface.vertex3f_bufferoffset;
-		m.texmatrix[1] = r_shadow_entitytoattenuationz;
+		m.texmatrix[1] = rsurface.entitytoattenuationz;
 		m.tex[2] = R_GetTexture(basetexture);
-		m.pointer_texcoord[2] = rsurface.model->surfmesh.data_texcoordtexture2f;
-		m.pointer_texcoord_bufferobject[2] = rsurface.model->surfmesh.vbo;
-		m.pointer_texcoord_bufferoffset[2] = rsurface.model->surfmesh.vbooffset_texcoordtexture2f;
+		m.pointer_texcoord[2] = rsurface.modeltexcoordtexture2f;
+		m.pointer_texcoord_bufferobject[2] = rsurface.modeltexcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[2] = rsurface.modeltexcoordtexture2f_bufferoffset;
 		m.texmatrix[2] = rsurface.texture->currenttexmatrix;
-		if (r_shadow_rtlight->currentcubemap != r_texture_whitecube)
+		if (rsurface.rtlight->currentcubemap != r_texture_whitecube)
 		{
-			m.texcubemap[3] = R_GetTexture(r_shadow_rtlight->currentcubemap);
+			m.texcubemap[3] = R_GetTexture(rsurface.rtlight->currentcubemap);
 			m.pointer_texcoord3f[3] = rsurface.vertex3f;
 			m.pointer_texcoord_bufferobject[3] = rsurface.vertex3f_bufferobject;
 			m.pointer_texcoord_bufferoffset[3] = rsurface.vertex3f_bufferoffset;
-			m.texmatrix[3] = r_shadow_entitytolight;
+			m.texmatrix[3] = rsurface.entitytolight;
 		}
 		GL_BlendFunc(GL_ONE, GL_ONE);
 	}
-	else if (r_textureunits.integer >= 3 && r_shadow_rtlight->currentcubemap == r_texture_whitecube)
+	else if (r_textureunits.integer >= 3 && rsurface.rtlight->currentcubemap == r_texture_whitecube)
 	{
 		// 3 2D combine path (Geforce3, original Radeon)
 		memset(&m, 0, sizeof(m));
@@ -1596,16 +1575,16 @@ static void R_Shadow_RenderLighting_Light_Dot3_AmbientPass(int firstvertex, int 
 		m.pointer_texcoord3f[0] = rsurface.vertex3f;
 		m.pointer_texcoord_bufferobject[0] = rsurface.vertex3f_bufferobject;
 		m.pointer_texcoord_bufferoffset[0] = rsurface.vertex3f_bufferoffset;
-		m.texmatrix[0] = r_shadow_entitytoattenuationxyz;
+		m.texmatrix[0] = rsurface.entitytoattenuationxyz;
 		m.tex[1] = R_GetTexture(r_shadow_attenuation2dtexture);
 		m.pointer_texcoord3f[1] = rsurface.vertex3f;
 		m.pointer_texcoord_bufferobject[1] = rsurface.vertex3f_bufferobject;
 		m.pointer_texcoord_bufferoffset[1] = rsurface.vertex3f_bufferoffset;
-		m.texmatrix[1] = r_shadow_entitytoattenuationz;
+		m.texmatrix[1] = rsurface.entitytoattenuationz;
 		m.tex[2] = R_GetTexture(basetexture);
-		m.pointer_texcoord[2] = rsurface.model->surfmesh.data_texcoordtexture2f;
-		m.pointer_texcoord_bufferobject[2] = rsurface.model->surfmesh.vbo;
-		m.pointer_texcoord_bufferoffset[2] = rsurface.model->surfmesh.vbooffset_texcoordtexture2f;
+		m.pointer_texcoord[2] = rsurface.modeltexcoordtexture2f;
+		m.pointer_texcoord_bufferobject[2] = rsurface.modeltexcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[2] = rsurface.modeltexcoordtexture2f_bufferoffset;
 		m.texmatrix[2] = rsurface.texture->currenttexmatrix;
 		GL_BlendFunc(GL_ONE, GL_ONE);
 	}
@@ -1617,12 +1596,12 @@ static void R_Shadow_RenderLighting_Light_Dot3_AmbientPass(int firstvertex, int 
 		m.pointer_texcoord3f[0] = rsurface.vertex3f;
 		m.pointer_texcoord_bufferobject[0] = rsurface.vertex3f_bufferobject;
 		m.pointer_texcoord_bufferoffset[0] = rsurface.vertex3f_bufferoffset;
-		m.texmatrix[0] = r_shadow_entitytoattenuationxyz;
+		m.texmatrix[0] = rsurface.entitytoattenuationxyz;
 		m.tex[1] = R_GetTexture(r_shadow_attenuation2dtexture);
 		m.pointer_texcoord3f[1] = rsurface.vertex3f;
 		m.pointer_texcoord_bufferobject[1] = rsurface.vertex3f_bufferobject;
 		m.pointer_texcoord_bufferoffset[1] = rsurface.vertex3f_bufferoffset;
-		m.texmatrix[1] = r_shadow_entitytoattenuationz;
+		m.texmatrix[1] = rsurface.entitytoattenuationz;
 		R_Mesh_TextureState(&m);
 		GL_ColorMask(0,0,0,1);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
@@ -1631,17 +1610,17 @@ static void R_Shadow_RenderLighting_Light_Dot3_AmbientPass(int firstvertex, int 
 		// second pass
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(basetexture);
-		m.pointer_texcoord[0] = rsurface.model->surfmesh.data_texcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.model->surfmesh.vbo;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.model->surfmesh.vbooffset_texcoordtexture2f;
+		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
-		if (r_shadow_rtlight->currentcubemap != r_texture_whitecube)
+		if (rsurface.rtlight->currentcubemap != r_texture_whitecube)
 		{
-			m.texcubemap[1] = R_GetTexture(r_shadow_rtlight->currentcubemap);
+			m.texcubemap[1] = R_GetTexture(rsurface.rtlight->currentcubemap);
 			m.pointer_texcoord3f[1] = rsurface.vertex3f;
 			m.pointer_texcoord_bufferobject[1] = rsurface.vertex3f_bufferobject;
 			m.pointer_texcoord_bufferoffset[1] = rsurface.vertex3f_bufferoffset;
-			m.texmatrix[1] = r_shadow_entitytolight;
+			m.texmatrix[1] = rsurface.entitytolight;
 		}
 		GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 	}
@@ -1669,9 +1648,9 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(normalmaptexture);
 		m.texcombinergb[0] = GL_REPLACE;
-		m.pointer_texcoord[0] = rsurface.model->surfmesh.data_texcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.model->surfmesh.vbo;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.model->surfmesh.vbooffset_texcoordtexture2f;
+		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
 		m.texcubemap[1] = R_GetTexture(r_texture_normalizationcube);
 		m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
@@ -1682,7 +1661,7 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		m.pointer_texcoord3f[2] = rsurface.vertex3f;
 		m.pointer_texcoord_bufferobject[2] = rsurface.vertex3f_bufferobject;
 		m.pointer_texcoord_bufferoffset[2] = rsurface.vertex3f_bufferoffset;
-		m.texmatrix[2] = r_shadow_entitytoattenuationxyz;
+		m.texmatrix[2] = rsurface.entitytoattenuationxyz;
 		R_Mesh_TextureState(&m);
 		GL_ColorMask(0,0,0,1);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
@@ -1691,21 +1670,21 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		// second pass
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(basetexture);
-		m.pointer_texcoord[0] = rsurface.model->surfmesh.data_texcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.model->surfmesh.vbo;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.model->surfmesh.vbooffset_texcoordtexture2f;
+		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
-		if (r_shadow_rtlight->currentcubemap != r_texture_whitecube)
+		if (rsurface.rtlight->currentcubemap != r_texture_whitecube)
 		{
-			m.texcubemap[1] = R_GetTexture(r_shadow_rtlight->currentcubemap);
+			m.texcubemap[1] = R_GetTexture(rsurface.rtlight->currentcubemap);
 			m.pointer_texcoord3f[1] = rsurface.vertex3f;
 			m.pointer_texcoord_bufferobject[1] = rsurface.vertex3f_bufferobject;
 			m.pointer_texcoord_bufferoffset[1] = rsurface.vertex3f_bufferoffset;
-			m.texmatrix[1] = r_shadow_entitytolight;
+			m.texmatrix[1] = rsurface.entitytolight;
 		}
 		GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 	}
-	else if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && r_shadow_rtlight->currentcubemap != r_texture_whitecube)
+	else if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && rsurface.rtlight->currentcubemap != r_texture_whitecube)
 	{
 		// 1/2/2 3D combine path (original Radeon)
 		memset(&m, 0, sizeof(m));
@@ -1713,7 +1692,7 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		m.pointer_texcoord3f[0] = rsurface.vertex3f;
 		m.pointer_texcoord_bufferobject[0] = rsurface.vertex3f_bufferobject;
 		m.pointer_texcoord_bufferoffset[0] = rsurface.vertex3f_bufferoffset;
-		m.texmatrix[0] = r_shadow_entitytoattenuationxyz;
+		m.texmatrix[0] = rsurface.entitytoattenuationxyz;
 		R_Mesh_TextureState(&m);
 		GL_ColorMask(0,0,0,1);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
@@ -1723,9 +1702,9 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(normalmaptexture);
 		m.texcombinergb[0] = GL_REPLACE;
-		m.pointer_texcoord[0] = rsurface.model->surfmesh.data_texcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.model->surfmesh.vbo;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.model->surfmesh.vbooffset_texcoordtexture2f;
+		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
 		m.texcubemap[1] = R_GetTexture(r_texture_normalizationcube);
 		m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
@@ -1739,29 +1718,29 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		// second pass
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(basetexture);
-		m.pointer_texcoord[0] = rsurface.model->surfmesh.data_texcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.model->surfmesh.vbo;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.model->surfmesh.vbooffset_texcoordtexture2f;
+		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
-		if (r_shadow_rtlight->currentcubemap != r_texture_whitecube)
+		if (rsurface.rtlight->currentcubemap != r_texture_whitecube)
 		{
-			m.texcubemap[1] = R_GetTexture(r_shadow_rtlight->currentcubemap);
+			m.texcubemap[1] = R_GetTexture(rsurface.rtlight->currentcubemap);
 			m.pointer_texcoord3f[1] = rsurface.vertex3f;
 			m.pointer_texcoord_bufferobject[1] = rsurface.vertex3f_bufferobject;
 			m.pointer_texcoord_bufferoffset[1] = rsurface.vertex3f_bufferoffset;
-			m.texmatrix[1] = r_shadow_entitytolight;
+			m.texmatrix[1] = rsurface.entitytolight;
 		}
 		GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 	}
-	else if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && r_shadow_rtlight->currentcubemap == r_texture_whitecube)
+	else if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && rsurface.rtlight->currentcubemap == r_texture_whitecube)
 	{
 		// 2/2 3D combine path (original Radeon)
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(normalmaptexture);
 		m.texcombinergb[0] = GL_REPLACE;
-		m.pointer_texcoord[0] = rsurface.model->surfmesh.data_texcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.model->surfmesh.vbo;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.model->surfmesh.vbooffset_texcoordtexture2f;
+		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
 		m.texcubemap[1] = R_GetTexture(r_texture_normalizationcube);
 		m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
@@ -1776,15 +1755,15 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		// second pass
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(basetexture);
-		m.pointer_texcoord[0] = rsurface.model->surfmesh.data_texcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.model->surfmesh.vbo;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.model->surfmesh.vbooffset_texcoordtexture2f;
+		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
 		m.tex3d[1] = R_GetTexture(r_shadow_attenuation3dtexture);
 		m.pointer_texcoord3f[1] = rsurface.vertex3f;
 		m.pointer_texcoord_bufferobject[1] = rsurface.vertex3f_bufferobject;
 		m.pointer_texcoord_bufferoffset[1] = rsurface.vertex3f_bufferoffset;
-		m.texmatrix[1] = r_shadow_entitytoattenuationxyz;
+		m.texmatrix[1] = rsurface.entitytoattenuationxyz;
 		GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 	}
 	else if (r_textureunits.integer >= 4)
@@ -1793,9 +1772,9 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(normalmaptexture);
 		m.texcombinergb[0] = GL_REPLACE;
-		m.pointer_texcoord[0] = rsurface.model->surfmesh.data_texcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.model->surfmesh.vbo;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.model->surfmesh.vbooffset_texcoordtexture2f;
+		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
 		m.texcubemap[1] = R_GetTexture(r_texture_normalizationcube);
 		m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
@@ -1806,12 +1785,12 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		m.pointer_texcoord3f[2] = rsurface.vertex3f;
 		m.pointer_texcoord_bufferobject[2] = rsurface.vertex3f_bufferobject;
 		m.pointer_texcoord_bufferoffset[2] = rsurface.vertex3f_bufferoffset;
-		m.texmatrix[2] = r_shadow_entitytoattenuationxyz;
+		m.texmatrix[2] = rsurface.entitytoattenuationxyz;
 		m.tex[3] = R_GetTexture(r_shadow_attenuation2dtexture);
 		m.pointer_texcoord3f[3] = rsurface.vertex3f;
 		m.pointer_texcoord_bufferobject[3] = rsurface.vertex3f_bufferobject;
 		m.pointer_texcoord_bufferoffset[3] = rsurface.vertex3f_bufferoffset;
-		m.texmatrix[3] = r_shadow_entitytoattenuationz;
+		m.texmatrix[3] = rsurface.entitytoattenuationz;
 		R_Mesh_TextureState(&m);
 		GL_ColorMask(0,0,0,1);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
@@ -1820,17 +1799,17 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		// second pass
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(basetexture);
-		m.pointer_texcoord[0] = rsurface.model->surfmesh.data_texcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.model->surfmesh.vbo;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.model->surfmesh.vbooffset_texcoordtexture2f;
+		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
-		if (r_shadow_rtlight->currentcubemap != r_texture_whitecube)
+		if (rsurface.rtlight->currentcubemap != r_texture_whitecube)
 		{
-			m.texcubemap[1] = R_GetTexture(r_shadow_rtlight->currentcubemap);
+			m.texcubemap[1] = R_GetTexture(rsurface.rtlight->currentcubemap);
 			m.pointer_texcoord3f[1] = rsurface.vertex3f;
 			m.pointer_texcoord_bufferobject[1] = rsurface.vertex3f_bufferobject;
 			m.pointer_texcoord_bufferoffset[1] = rsurface.vertex3f_bufferoffset;
-			m.texmatrix[1] = r_shadow_entitytolight;
+			m.texmatrix[1] = rsurface.entitytolight;
 		}
 		GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 	}
@@ -1842,12 +1821,12 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		m.pointer_texcoord3f[0] = rsurface.vertex3f;
 		m.pointer_texcoord_bufferobject[0] = rsurface.vertex3f_bufferobject;
 		m.pointer_texcoord_bufferoffset[0] = rsurface.vertex3f_bufferoffset;
-		m.texmatrix[0] = r_shadow_entitytoattenuationxyz;
+		m.texmatrix[0] = rsurface.entitytoattenuationxyz;
 		m.tex[1] = R_GetTexture(r_shadow_attenuation2dtexture);
 		m.pointer_texcoord3f[1] = rsurface.vertex3f;
 		m.pointer_texcoord_bufferobject[0] = rsurface.vertex3f_bufferobject;
 		m.pointer_texcoord_bufferoffset[0] = rsurface.vertex3f_bufferoffset;
-		m.texmatrix[1] = r_shadow_entitytoattenuationz;
+		m.texmatrix[1] = rsurface.entitytoattenuationz;
 		R_Mesh_TextureState(&m);
 		GL_ColorMask(0,0,0,1);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
@@ -1857,9 +1836,9 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(normalmaptexture);
 		m.texcombinergb[0] = GL_REPLACE;
-		m.pointer_texcoord[0] = rsurface.model->surfmesh.data_texcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.model->surfmesh.vbo;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.model->surfmesh.vbooffset_texcoordtexture2f;
+		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
 		m.texcubemap[1] = R_GetTexture(r_texture_normalizationcube);
 		m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
@@ -1873,17 +1852,17 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		// second pass
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(basetexture);
-		m.pointer_texcoord[0] = rsurface.model->surfmesh.data_texcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.model->surfmesh.vbo;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.model->surfmesh.vbooffset_texcoordtexture2f;
+		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
-		if (r_shadow_rtlight->currentcubemap != r_texture_whitecube)
+		if (rsurface.rtlight->currentcubemap != r_texture_whitecube)
 		{
-			m.texcubemap[1] = R_GetTexture(r_shadow_rtlight->currentcubemap);
+			m.texcubemap[1] = R_GetTexture(rsurface.rtlight->currentcubemap);
 			m.pointer_texcoord3f[1] = rsurface.vertex3f;
 			m.pointer_texcoord_bufferobject[1] = rsurface.vertex3f_bufferobject;
 			m.pointer_texcoord_bufferoffset[1] = rsurface.vertex3f_bufferoffset;
-			m.texmatrix[1] = r_shadow_entitytolight;
+			m.texmatrix[1] = rsurface.entitytolight;
 		}
 		GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 	}
@@ -1902,14 +1881,14 @@ static void R_Shadow_RenderLighting_Light_Dot3_SpecularPass(int firstvertex, int
 	GL_Color(1,1,1,1);
 	// generate normalization cubemap texcoords
 	R_Shadow_GenTexCoords_Specular_NormalCubeMap(firstvertex, numvertices, numtriangles, element3i);
-	if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && r_shadow_rtlight->currentcubemap != r_texture_whitecube)
+	if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && rsurface.rtlight->currentcubemap != r_texture_whitecube)
 	{
 		// 2/0/0/1/2 3D combine blendsquare path
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(normalmaptexture);
-		m.pointer_texcoord[0] = rsurface.model->surfmesh.data_texcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.model->surfmesh.vbo;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.model->surfmesh.vbooffset_texcoordtexture2f;
+		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
 		m.texcubemap[1] = R_GetTexture(r_texture_normalizationcube);
 		m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
@@ -1935,7 +1914,7 @@ static void R_Shadow_RenderLighting_Light_Dot3_SpecularPass(int firstvertex, int
 		m.pointer_texcoord3f[0] = rsurface.vertex3f;
 		m.pointer_texcoord_bufferobject[0] = rsurface.vertex3f_bufferobject;
 		m.pointer_texcoord_bufferoffset[0] = rsurface.vertex3f_bufferoffset;
-		m.texmatrix[0] = r_shadow_entitytoattenuationxyz;
+		m.texmatrix[0] = rsurface.entitytoattenuationxyz;
 		R_Mesh_TextureState(&m);
 		GL_BlendFunc(GL_DST_ALPHA, GL_ZERO);
 		R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset);
@@ -1943,28 +1922,28 @@ static void R_Shadow_RenderLighting_Light_Dot3_SpecularPass(int firstvertex, int
 		// fifth pass
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(glosstexture);
-		m.pointer_texcoord[0] = rsurface.model->surfmesh.data_texcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.model->surfmesh.vbo;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.model->surfmesh.vbooffset_texcoordtexture2f;
+		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
-		if (r_shadow_rtlight->currentcubemap != r_texture_whitecube)
+		if (rsurface.rtlight->currentcubemap != r_texture_whitecube)
 		{
-			m.texcubemap[1] = R_GetTexture(r_shadow_rtlight->currentcubemap);
+			m.texcubemap[1] = R_GetTexture(rsurface.rtlight->currentcubemap);
 			m.pointer_texcoord3f[1] = rsurface.vertex3f;
 			m.pointer_texcoord_bufferobject[1] = rsurface.vertex3f_bufferobject;
 			m.pointer_texcoord_bufferoffset[1] = rsurface.vertex3f_bufferoffset;
-			m.texmatrix[1] = r_shadow_entitytolight;
+			m.texmatrix[1] = rsurface.entitytolight;
 		}
 		GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 	}
-	else if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && r_shadow_rtlight->currentcubemap == r_texture_whitecube /* && gl_support_blendsquare*/) // FIXME: detect blendsquare!
+	else if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && rsurface.rtlight->currentcubemap == r_texture_whitecube /* && gl_support_blendsquare*/) // FIXME: detect blendsquare!
 	{
 		// 2/0/0/2 3D combine blendsquare path
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(normalmaptexture);
-		m.pointer_texcoord[0] = rsurface.model->surfmesh.data_texcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.model->surfmesh.vbo;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.model->surfmesh.vbooffset_texcoordtexture2f;
+		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
 		m.texcubemap[1] = R_GetTexture(r_texture_normalizationcube);
 		m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
@@ -1987,15 +1966,15 @@ static void R_Shadow_RenderLighting_Light_Dot3_SpecularPass(int firstvertex, int
 		// fourth pass
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(glosstexture);
-		m.pointer_texcoord[0] = rsurface.model->surfmesh.data_texcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.model->surfmesh.vbo;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.model->surfmesh.vbooffset_texcoordtexture2f;
+		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
 		m.tex3d[1] = R_GetTexture(r_shadow_attenuation3dtexture);
 		m.pointer_texcoord3f[1] = rsurface.vertex3f;
 		m.pointer_texcoord_bufferobject[1] = rsurface.vertex3f_bufferobject;
 		m.pointer_texcoord_bufferoffset[1] = rsurface.vertex3f_bufferoffset;
-		m.texmatrix[1] = r_shadow_entitytoattenuationxyz;
+		m.texmatrix[1] = rsurface.entitytoattenuationxyz;
 		GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 	}
 	else
@@ -2003,9 +1982,9 @@ static void R_Shadow_RenderLighting_Light_Dot3_SpecularPass(int firstvertex, int
 		// 2/0/0/2/2 2D combine blendsquare path
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(normalmaptexture);
-		m.pointer_texcoord[0] = rsurface.model->surfmesh.data_texcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.model->surfmesh.vbo;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.model->surfmesh.vbooffset_texcoordtexture2f;
+		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
 		m.texcubemap[1] = R_GetTexture(r_texture_normalizationcube);
 		m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
@@ -2031,12 +2010,12 @@ static void R_Shadow_RenderLighting_Light_Dot3_SpecularPass(int firstvertex, int
 		m.pointer_texcoord3f[0] = rsurface.vertex3f;
 		m.pointer_texcoord_bufferobject[0] = rsurface.vertex3f_bufferobject;
 		m.pointer_texcoord_bufferoffset[0] = rsurface.vertex3f_bufferoffset;
-		m.texmatrix[0] = r_shadow_entitytoattenuationxyz;
+		m.texmatrix[0] = rsurface.entitytoattenuationxyz;
 		m.tex[1] = R_GetTexture(r_shadow_attenuation2dtexture);
 		m.pointer_texcoord3f[1] = rsurface.vertex3f;
 		m.pointer_texcoord_bufferobject[1] = rsurface.vertex3f_bufferobject;
 		m.pointer_texcoord_bufferoffset[1] = rsurface.vertex3f_bufferoffset;
-		m.texmatrix[1] = r_shadow_entitytoattenuationz;
+		m.texmatrix[1] = rsurface.entitytoattenuationz;
 		R_Mesh_TextureState(&m);
 		GL_BlendFunc(GL_DST_ALPHA, GL_ZERO);
 		R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset);
@@ -2044,17 +2023,17 @@ static void R_Shadow_RenderLighting_Light_Dot3_SpecularPass(int firstvertex, int
 		// fifth pass
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(glosstexture);
-		m.pointer_texcoord[0] = rsurface.model->surfmesh.data_texcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.model->surfmesh.vbo;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.model->surfmesh.vbooffset_texcoordtexture2f;
+		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
-		if (r_shadow_rtlight->currentcubemap != r_texture_whitecube)
+		if (rsurface.rtlight->currentcubemap != r_texture_whitecube)
 		{
-			m.texcubemap[1] = R_GetTexture(r_shadow_rtlight->currentcubemap);
+			m.texcubemap[1] = R_GetTexture(rsurface.rtlight->currentcubemap);
 			m.pointer_texcoord3f[1] = rsurface.vertex3f;
 			m.pointer_texcoord_bufferobject[1] = rsurface.vertex3f_bufferobject;
 			m.pointer_texcoord_bufferoffset[1] = rsurface.vertex3f_bufferoffset;
-			m.texmatrix[1] = r_shadow_entitytolight;
+			m.texmatrix[1] = rsurface.entitytolight;
 		}
 		GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 	}
@@ -2094,7 +2073,7 @@ static void R_Shadow_RenderLighting_Light_Dot3(int firstvertex, int numvertices,
 		R_Shadow_RenderLighting_Light_Dot3_SpecularPass(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, lightcolorbase, glosstexture, normalmaptexture, specularscale * r_view.colorscale);
 }
 
-void R_Shadow_RenderLighting_Light_Vertex_Pass(const model_t *model, int firstvertex, int numvertices, int numtriangles, const int *element3i, int element3i_bufferobject, size_t element3i_bufferoffset, vec3_t diffusecolor2, vec3_t ambientcolor2)
+void R_Shadow_RenderLighting_Light_Vertex_Pass(int firstvertex, int numvertices, int numtriangles, const int *element3i, int element3i_bufferobject, size_t element3i_bufferoffset, vec3_t diffusecolor2, vec3_t ambientcolor2)
 {
 	int renders;
 	int i;
@@ -2189,7 +2168,6 @@ void R_Shadow_RenderLighting_Light_Vertex_Pass(const model_t *model, int firstve
 static void R_Shadow_RenderLighting_Light_Vertex(int firstvertex, int numvertices, int numtriangles, const int *element3i, int element3i_bufferobject, size_t element3i_bufferoffset, const vec3_t lightcolorbase, const vec3_t lightcolorpants, const vec3_t lightcolorshirt, rtexture_t *basetexture, rtexture_t *pantstexture, rtexture_t *shirttexture, rtexture_t *normalmaptexture, rtexture_t *glosstexture, float ambientscale, float diffusescale, float specularscale, qboolean dopants, qboolean doshirt)
 {
 	// OpenGL 1.1 path (anything)
-	const model_t *model = rsurface.model;
 	float ambientcolorbase[3], diffusecolorbase[3];
 	float ambientcolorpants[3], diffusecolorpants[3];
 	float ambientcolorshirt[3], diffusecolorshirt[3];
@@ -2205,14 +2183,14 @@ static void R_Shadow_RenderLighting_Light_Vertex(int firstvertex, int numvertice
 	memset(&m, 0, sizeof(m));
 	m.tex[0] = R_GetTexture(basetexture);
 	m.texmatrix[0] = rsurface.texture->currenttexmatrix;
-	m.pointer_texcoord[0] = rsurface.model->surfmesh.data_texcoordtexture2f;
-	m.pointer_texcoord_bufferobject[0] = rsurface.model->surfmesh.vbo;
-	m.pointer_texcoord_bufferoffset[0] = rsurface.model->surfmesh.vbooffset_texcoordtexture2f;
+	m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
+	m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
+	m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
 	if (r_textureunits.integer >= 2)
 	{
 		// voodoo2 or TNT
 		m.tex[1] = R_GetTexture(r_shadow_attenuation2dtexture);
-		m.texmatrix[1] = r_shadow_entitytoattenuationxyz;
+		m.texmatrix[1] = rsurface.entitytoattenuationxyz;
 		m.pointer_texcoord3f[1] = rsurface.vertex3f;
 		m.pointer_texcoord_bufferobject[1] = rsurface.vertex3f_bufferobject;
 		m.pointer_texcoord_bufferoffset[1] = rsurface.vertex3f_bufferoffset;
@@ -2220,7 +2198,7 @@ static void R_Shadow_RenderLighting_Light_Vertex(int firstvertex, int numvertice
 		{
 			// Voodoo4 or Kyro (or Geforce3/Radeon with gl_combine off)
 			m.tex[2] = R_GetTexture(r_shadow_attenuation2dtexture);
-			m.texmatrix[2] = r_shadow_entitytoattenuationz;
+			m.texmatrix[2] = rsurface.entitytoattenuationz;
 			m.pointer_texcoord3f[2] = rsurface.vertex3f;
 			m.pointer_texcoord_bufferobject[2] = rsurface.vertex3f_bufferobject;
 			m.pointer_texcoord_bufferoffset[2] = rsurface.vertex3f_bufferoffset;
@@ -2228,16 +2206,16 @@ static void R_Shadow_RenderLighting_Light_Vertex(int firstvertex, int numvertice
 	}
 	R_Mesh_TextureState(&m);
 	//R_Mesh_TexBind(0, R_GetTexture(basetexture));
-	R_Shadow_RenderLighting_Light_Vertex_Pass(model, firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, diffusecolorbase, ambientcolorbase);
+	R_Shadow_RenderLighting_Light_Vertex_Pass(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, diffusecolorbase, ambientcolorbase);
 	if (dopants)
 	{
 		R_Mesh_TexBind(0, R_GetTexture(pantstexture));
-		R_Shadow_RenderLighting_Light_Vertex_Pass(model, firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, diffusecolorpants, ambientcolorpants);
+		R_Shadow_RenderLighting_Light_Vertex_Pass(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, diffusecolorpants, ambientcolorpants);
 	}
 	if (doshirt)
 	{
 		R_Mesh_TexBind(0, R_GetTexture(shirttexture));
-		R_Shadow_RenderLighting_Light_Vertex_Pass(model, firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, diffusecolorshirt, ambientcolorshirt);
+		R_Shadow_RenderLighting_Light_Vertex_Pass(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, diffusecolorshirt, ambientcolorshirt);
 	}
 }
 
@@ -2246,12 +2224,12 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 	float ambientscale, diffusescale, specularscale;
 	vec3_t lightcolorbase, lightcolorpants, lightcolorshirt;
 	// calculate colors to render this texture with
-	lightcolorbase[0] = r_shadow_rtlight->currentcolor[0] * rsurface.texture->currentlayers[0].color[0] * rsurface.texture->currentlayers[0].color[3];
-	lightcolorbase[1] = r_shadow_rtlight->currentcolor[1] * rsurface.texture->currentlayers[0].color[1] * rsurface.texture->currentlayers[0].color[3];
-	lightcolorbase[2] = r_shadow_rtlight->currentcolor[2] * rsurface.texture->currentlayers[0].color[2] * rsurface.texture->currentlayers[0].color[3];
-	ambientscale = r_shadow_rtlight->ambientscale;
-	diffusescale = r_shadow_rtlight->diffusescale;
-	specularscale = r_shadow_rtlight->specularscale * rsurface.texture->specularscale;
+	lightcolorbase[0] = rsurface.rtlight->currentcolor[0] * rsurface.texture->currentlayers[0].color[0] * rsurface.texture->currentlayers[0].color[3];
+	lightcolorbase[1] = rsurface.rtlight->currentcolor[1] * rsurface.texture->currentlayers[0].color[1] * rsurface.texture->currentlayers[0].color[3];
+	lightcolorbase[2] = rsurface.rtlight->currentcolor[2] * rsurface.texture->currentlayers[0].color[2] * rsurface.texture->currentlayers[0].color[3];
+	ambientscale = rsurface.rtlight->ambientscale;
+	diffusescale = rsurface.rtlight->diffusescale;
+	specularscale = rsurface.rtlight->specularscale * rsurface.texture->specularscale;
 	if (!r_shadow_usenormalmap.integer)
 	{
 		ambientscale += 1.0f * diffusescale;
@@ -2499,9 +2477,9 @@ void R_Shadow_ComputeShadowCasterCullingPlanes(rtlight_t *rtlight)
 	int i, j;
 	mplane_t plane;
 	// reset the count of frustum planes
-	// see r_shadow_rtlight_frustumplanes definition for how much this array
+	// see rsurface.rtlight_frustumplanes definition for how much this array
 	// can hold
-	r_shadow_rtlight_numfrustumplanes = 0;
+	rsurface.rtlight_numfrustumplanes = 0;
 
 #if 1
 	// generate a deformed frustum that includes the light origin, this is
@@ -2521,11 +2499,11 @@ void R_Shadow_ComputeShadowCasterCullingPlanes(rtlight_t *rtlight)
 		if (PlaneDiff(rtlight->shadoworigin, &r_view.frustum[i]) < -0.03125)
 			continue;
 		// copy the plane
-		r_shadow_rtlight_frustumplanes[r_shadow_rtlight_numfrustumplanes++] = r_view.frustum[i];
+		rsurface.rtlight_frustumplanes[rsurface.rtlight_numfrustumplanes++] = r_view.frustum[i];
 	}
 	// if all the standard frustum planes were accepted, the light is onscreen
 	// otherwise we need to generate some more planes below...
-	if (r_shadow_rtlight_numfrustumplanes < 4)
+	if (rsurface.rtlight_numfrustumplanes < 4)
 	{
 		// at least one of the stock frustum planes failed, so we need to
 		// create one or two custom planes to enclose the light origin
@@ -2556,12 +2534,12 @@ void R_Shadow_ComputeShadowCasterCullingPlanes(rtlight_t *rtlight)
 			// we have created a valid plane, compute extra info
 			PlaneClassify(&plane);
 			// copy the plane
-			r_shadow_rtlight_frustumplanes[r_shadow_rtlight_numfrustumplanes++] = plane;
+			rsurface.rtlight_frustumplanes[rsurface.rtlight_numfrustumplanes++] = plane;
 #if 1
 			// if we've found 5 frustum planes then we have constructed a
 			// proper split-side case and do not need to keep searching for
 			// planes to enclose the light origin
-			if (r_shadow_rtlight_numfrustumplanes == 5)
+			if (rsurface.rtlight_numfrustumplanes == 5)
 				break;
 #endif
 		}
@@ -2569,9 +2547,9 @@ void R_Shadow_ComputeShadowCasterCullingPlanes(rtlight_t *rtlight)
 #endif
 
 #if 0
-	for (i = 0;i < r_shadow_rtlight_numfrustumplanes;i++)
+	for (i = 0;i < rsurface.rtlight_numfrustumplanes;i++)
 	{
-		plane = r_shadow_rtlight_frustumplanes[i];
+		plane = rsurface.rtlight_frustumplanes[i];
 		Con_Printf("light %p plane #%i %f %f %f : %f (%f %f %f %f %f)\n", rtlight, i, plane.normal[0], plane.normal[1], plane.normal[2], plane.dist, PlaneDiff(r_view.frustumcorner[0], &plane), PlaneDiff(r_view.frustumcorner[1], &plane), PlaneDiff(r_view.frustumcorner[2], &plane), PlaneDiff(r_view.frustumcorner[3], &plane), PlaneDiff(rtlight->shadoworigin, &plane));
 	}
 #endif
@@ -2591,7 +2569,7 @@ void R_Shadow_ComputeShadowCasterCullingPlanes(rtlight_t *rtlight)
 			VectorSubtract(plane.normal, rtlight->shadoworigin, plane.normal);
 			plane.dist = VectorNormalizeLength(plane.normal);
 			plane.dist += DotProduct(plane.normal, rtlight->shadoworigin);
-			r_shadow_rtlight_frustumplanes[r_shadow_rtlight_numfrustumplanes++] = plane;
+			rsurface.rtlight_frustumplanes[rsurface.rtlight_numfrustumplanes++] = plane;
 		}
 	}
 #endif
@@ -2602,8 +2580,8 @@ void R_Shadow_ComputeShadowCasterCullingPlanes(rtlight_t *rtlight)
 	{
 		VectorClear(plane.normal);
 		plane.normal[i >> 1] = (i & 1) ? -1 : 1;
-		plane.dist = (i & 1) ? -r_shadow_rtlight_cullmaxs[i >> 1] : r_shadow_rtlight_cullmins[i >> 1];
-		r_shadow_rtlight_frustumplanes[r_shadow_rtlight_numfrustumplanes++] = plane;
+		plane.dist = (i & 1) ? -rsurface.rtlight_cullmaxs[i >> 1] : rsurface.rtlight_cullmins[i >> 1];
+		rsurface.rtlight_frustumplanes[rsurface.rtlight_numfrustumplanes++] = plane;
 	}
 #endif
 
@@ -2614,33 +2592,33 @@ void R_Shadow_ComputeShadowCasterCullingPlanes(rtlight_t *rtlight)
 	vec_t bestdist;
 	// reduce all plane distances to tightly fit the rtlight cull box, which
 	// is in worldspace
-	VectorSet(points[0], r_shadow_rtlight_cullmins[0], r_shadow_rtlight_cullmins[1], r_shadow_rtlight_cullmins[2]);
-	VectorSet(points[1], r_shadow_rtlight_cullmaxs[0], r_shadow_rtlight_cullmins[1], r_shadow_rtlight_cullmins[2]);
-	VectorSet(points[2], r_shadow_rtlight_cullmins[0], r_shadow_rtlight_cullmaxs[1], r_shadow_rtlight_cullmins[2]);
-	VectorSet(points[3], r_shadow_rtlight_cullmaxs[0], r_shadow_rtlight_cullmaxs[1], r_shadow_rtlight_cullmins[2]);
-	VectorSet(points[4], r_shadow_rtlight_cullmins[0], r_shadow_rtlight_cullmins[1], r_shadow_rtlight_cullmaxs[2]);
-	VectorSet(points[5], r_shadow_rtlight_cullmaxs[0], r_shadow_rtlight_cullmins[1], r_shadow_rtlight_cullmaxs[2]);
-	VectorSet(points[6], r_shadow_rtlight_cullmins[0], r_shadow_rtlight_cullmaxs[1], r_shadow_rtlight_cullmaxs[2]);
-	VectorSet(points[7], r_shadow_rtlight_cullmaxs[0], r_shadow_rtlight_cullmaxs[1], r_shadow_rtlight_cullmaxs[2]);
-	oldnum = r_shadow_rtlight_numfrustumplanes;
-	r_shadow_rtlight_numfrustumplanes = 0;
+	VectorSet(points[0], rsurface.rtlight_cullmins[0], rsurface.rtlight_cullmins[1], rsurface.rtlight_cullmins[2]);
+	VectorSet(points[1], rsurface.rtlight_cullmaxs[0], rsurface.rtlight_cullmins[1], rsurface.rtlight_cullmins[2]);
+	VectorSet(points[2], rsurface.rtlight_cullmins[0], rsurface.rtlight_cullmaxs[1], rsurface.rtlight_cullmins[2]);
+	VectorSet(points[3], rsurface.rtlight_cullmaxs[0], rsurface.rtlight_cullmaxs[1], rsurface.rtlight_cullmins[2]);
+	VectorSet(points[4], rsurface.rtlight_cullmins[0], rsurface.rtlight_cullmins[1], rsurface.rtlight_cullmaxs[2]);
+	VectorSet(points[5], rsurface.rtlight_cullmaxs[0], rsurface.rtlight_cullmins[1], rsurface.rtlight_cullmaxs[2]);
+	VectorSet(points[6], rsurface.rtlight_cullmins[0], rsurface.rtlight_cullmaxs[1], rsurface.rtlight_cullmaxs[2]);
+	VectorSet(points[7], rsurface.rtlight_cullmaxs[0], rsurface.rtlight_cullmaxs[1], rsurface.rtlight_cullmaxs[2]);
+	oldnum = rsurface.rtlight_numfrustumplanes;
+	rsurface.rtlight_numfrustumplanes = 0;
 	for (j = 0;j < oldnum;j++)
 	{
 		// find the nearest point on the box to this plane
-		bestdist = DotProduct(r_shadow_rtlight_frustumplanes[j].normal, points[0]);
+		bestdist = DotProduct(rsurface.rtlight_frustumplanes[j].normal, points[0]);
 		for (i = 1;i < 8;i++)
 		{
-			dist = DotProduct(r_shadow_rtlight_frustumplanes[j].normal, points[i]);
+			dist = DotProduct(rsurface.rtlight_frustumplanes[j].normal, points[i]);
 			if (bestdist > dist)
 				bestdist = dist;
 		}
-		Con_Printf("light %p %splane #%i %f %f %f : %f < %f\n", rtlight, r_shadow_rtlight_frustumplanes[j].dist < bestdist + 0.03125 ? "^2" : "^1", j, r_shadow_rtlight_frustumplanes[j].normal[0], r_shadow_rtlight_frustumplanes[j].normal[1], r_shadow_rtlight_frustumplanes[j].normal[2], r_shadow_rtlight_frustumplanes[j].dist, bestdist);
+		Con_Printf("light %p %splane #%i %f %f %f : %f < %f\n", rtlight, rsurface.rtlight_frustumplanes[j].dist < bestdist + 0.03125 ? "^2" : "^1", j, rsurface.rtlight_frustumplanes[j].normal[0], rsurface.rtlight_frustumplanes[j].normal[1], rsurface.rtlight_frustumplanes[j].normal[2], rsurface.rtlight_frustumplanes[j].dist, bestdist);
 		// if the nearest point is near or behind the plane, we want this
 		// plane, otherwise the plane is useless as it won't cull anything
-		if (r_shadow_rtlight_frustumplanes[j].dist < bestdist + 0.03125)
+		if (rsurface.rtlight_frustumplanes[j].dist < bestdist + 0.03125)
 		{
-			PlaneClassify(&r_shadow_rtlight_frustumplanes[j]);
-			r_shadow_rtlight_frustumplanes[r_shadow_rtlight_numfrustumplanes++] = r_shadow_rtlight_frustumplanes[j];
+			PlaneClassify(&rsurface.rtlight_frustumplanes[j]);
+			rsurface.rtlight_frustumplanes[rsurface.rtlight_numfrustumplanes++] = rsurface.rtlight_frustumplanes[j];
 		}
 	}
 	}
@@ -2650,11 +2628,11 @@ void R_Shadow_ComputeShadowCasterCullingPlanes(rtlight_t *rtlight)
 void R_Shadow_DrawWorldShadow(int numsurfaces, int *surfacelist, const unsigned char *trispvs)
 {
 	RSurf_ActiveWorldEntity();
-	if (r_shadow_rtlight->compiled && r_shadow_realtime_world_compile.integer && r_shadow_realtime_world_compileshadow.integer)
+	if (rsurface.rtlight->compiled && r_shadow_realtime_world_compile.integer && r_shadow_realtime_world_compileshadow.integer)
 	{
 		shadowmesh_t *mesh;
 		CHECKGLERROR
-		for (mesh = r_shadow_rtlight->static_meshchain_shadow;mesh;mesh = mesh->next)
+		for (mesh = rsurface.rtlight->static_meshchain_shadow;mesh;mesh = mesh->next)
 		{
 			r_refdef.stats.lights_shadowtriangles += mesh->numtriangles;
 			R_Mesh_VertexPointer(mesh->vertex3f, mesh->vbo, mesh->vbooffset_vertex3f);
@@ -2687,10 +2665,10 @@ void R_Shadow_DrawWorldShadow(int numsurfaces, int *surfacelist, const unsigned 
 				if (CHECKPVSBIT(trispvs, t))
 					shadowmarklist[numshadowmark++] = t;
 		}
-		R_Shadow_VolumeFromList(r_refdef.worldmodel->brush.shadowmesh->numverts, r_refdef.worldmodel->brush.shadowmesh->numtriangles, r_refdef.worldmodel->brush.shadowmesh->vertex3f, r_refdef.worldmodel->brush.shadowmesh->element3i, r_refdef.worldmodel->brush.shadowmesh->neighbor3i, r_shadow_rtlight->shadoworigin, NULL, r_shadow_rtlight->radius + r_refdef.worldmodel->radius*2 + r_shadow_projectdistance.value, numshadowmark, shadowmarklist);
+		R_Shadow_VolumeFromList(r_refdef.worldmodel->brush.shadowmesh->numverts, r_refdef.worldmodel->brush.shadowmesh->numtriangles, r_refdef.worldmodel->brush.shadowmesh->vertex3f, r_refdef.worldmodel->brush.shadowmesh->element3i, r_refdef.worldmodel->brush.shadowmesh->neighbor3i, rsurface.rtlight->shadoworigin, NULL, rsurface.rtlight->radius + r_refdef.worldmodel->radius*2 + r_shadow_projectdistance.value, numshadowmark, shadowmarklist);
 	}
 	else if (numsurfaces)
-		r_refdef.worldmodel->DrawShadowVolume(r_refdef.worldentity, r_shadow_rtlight->shadoworigin, NULL, r_shadow_rtlight->radius, numsurfaces, surfacelist, r_shadow_rtlight_cullmins, r_shadow_rtlight_cullmaxs);
+		r_refdef.worldmodel->DrawShadowVolume(r_refdef.worldentity, rsurface.rtlight->shadoworigin, NULL, rsurface.rtlight->radius, numsurfaces, surfacelist, rsurface.rtlight_cullmins, rsurface.rtlight_cullmaxs);
 }
 
 void R_Shadow_DrawEntityShadow(entity_render_t *ent)
@@ -2698,8 +2676,8 @@ void R_Shadow_DrawEntityShadow(entity_render_t *ent)
 	vec3_t relativeshadoworigin, relativeshadowmins, relativeshadowmaxs;
 	vec_t relativeshadowradius;
 	RSurf_ActiveModelEntity(ent, false, false);
-	Matrix4x4_Transform(&ent->inversematrix, r_shadow_rtlight->shadoworigin, relativeshadoworigin);
-	relativeshadowradius = r_shadow_rtlight->radius / ent->scale;
+	Matrix4x4_Transform(&ent->inversematrix, rsurface.rtlight->shadoworigin, relativeshadoworigin);
+	relativeshadowradius = rsurface.rtlight->radius / ent->scale;
 	relativeshadowmins[0] = relativeshadoworigin[0] - relativeshadowradius;
 	relativeshadowmins[1] = relativeshadoworigin[1] - relativeshadowradius;
 	relativeshadowmins[2] = relativeshadoworigin[2] - relativeshadowradius;
@@ -2713,12 +2691,12 @@ void R_Shadow_SetupEntityLight(const entity_render_t *ent)
 {
 	// set up properties for rendering light onto this entity
 	RSurf_ActiveModelEntity(ent, true, true);
-	Matrix4x4_Concat(&r_shadow_entitytolight, &r_shadow_rtlight->matrix_worldtolight, &ent->matrix);
-	Matrix4x4_Concat(&r_shadow_entitytoattenuationxyz, &matrix_attenuationxyz, &r_shadow_entitytolight);
-	Matrix4x4_Concat(&r_shadow_entitytoattenuationz, &matrix_attenuationz, &r_shadow_entitytolight);
-	Matrix4x4_Transform(&ent->inversematrix, r_shadow_rtlight->shadoworigin, r_shadow_entitylightorigin);
+	Matrix4x4_Concat(&rsurface.entitytolight, &rsurface.rtlight->matrix_worldtolight, &ent->matrix);
+	Matrix4x4_Concat(&rsurface.entitytoattenuationxyz, &matrix_attenuationxyz, &rsurface.entitytolight);
+	Matrix4x4_Concat(&rsurface.entitytoattenuationz, &matrix_attenuationz, &rsurface.entitytolight);
+	Matrix4x4_Transform(&ent->inversematrix, rsurface.rtlight->shadoworigin, rsurface.entitylightorigin);
 	if (r_shadow_lightingrendermode == R_SHADOW_RENDERMODE_LIGHT_GLSL)
-		R_Mesh_TexMatrix(3, &r_shadow_entitytolight);
+		R_Mesh_TexMatrix(3, &rsurface.entitytolight);
 }
 
 void R_Shadow_DrawWorldLight(int numsurfaces, int *surfacelist, const unsigned char *trispvs)
@@ -2728,12 +2706,12 @@ void R_Shadow_DrawWorldLight(int numsurfaces, int *surfacelist, const unsigned c
 
 	// set up properties for rendering light onto this entity
 	RSurf_ActiveWorldEntity();
-	r_shadow_entitytolight = r_shadow_rtlight->matrix_worldtolight;
-	Matrix4x4_Concat(&r_shadow_entitytoattenuationxyz, &matrix_attenuationxyz, &r_shadow_entitytolight);
-	Matrix4x4_Concat(&r_shadow_entitytoattenuationz, &matrix_attenuationz, &r_shadow_entitytolight);
-	VectorCopy(r_shadow_rtlight->shadoworigin, r_shadow_entitylightorigin);
+	rsurface.entitytolight = rsurface.rtlight->matrix_worldtolight;
+	Matrix4x4_Concat(&rsurface.entitytoattenuationxyz, &matrix_attenuationxyz, &rsurface.entitytolight);
+	Matrix4x4_Concat(&rsurface.entitytoattenuationz, &matrix_attenuationz, &rsurface.entitytolight);
+	VectorCopy(rsurface.rtlight->shadoworigin, rsurface.entitylightorigin);
 	if (r_shadow_lightingrendermode == R_SHADOW_RENDERMODE_LIGHT_GLSL)
-		R_Mesh_TexMatrix(3, &r_shadow_entitytolight);
+		R_Mesh_TexMatrix(3, &rsurface.entitytolight);
 
 	r_refdef.worldmodel->DrawLight(r_refdef.worldentity, numsurfaces, surfacelist, trispvs);
 }
@@ -2798,8 +2776,8 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	if (R_CullBox(rtlight->cullmins, rtlight->cullmaxs))
 		return;
 
-	VectorCopy(rtlight->cullmins, r_shadow_rtlight_cullmins);
-	VectorCopy(rtlight->cullmaxs, r_shadow_rtlight_cullmaxs);
+	VectorCopy(rtlight->cullmins, rsurface.rtlight_cullmins);
+	VectorCopy(rtlight->cullmaxs, rsurface.rtlight_cullmaxs);
 
 	if (rtlight->compiled && r_shadow_realtime_world_compile.integer)
 	{
@@ -2818,14 +2796,14 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 		// dynamic light, world available and can receive realtime lighting
 		// calculate lit surfaces and leafs
 		R_Shadow_EnlargeLeafSurfaceTrisBuffer(r_refdef.worldmodel->brush.num_leafs, r_refdef.worldmodel->num_surfaces, r_refdef.worldmodel->brush.shadowmesh ? r_refdef.worldmodel->brush.shadowmesh->numtriangles : r_refdef.worldmodel->surfmesh.num_triangles, r_refdef.worldmodel->surfmesh.num_triangles);
-		r_refdef.worldmodel->GetLightInfo(r_refdef.worldentity, rtlight->shadoworigin, rtlight->radius, r_shadow_rtlight_cullmins, r_shadow_rtlight_cullmaxs, r_shadow_buffer_leaflist, r_shadow_buffer_leafpvs, &numleafs, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces, r_shadow_buffer_shadowtrispvs, r_shadow_buffer_lighttrispvs);
+		r_refdef.worldmodel->GetLightInfo(r_refdef.worldentity, rtlight->shadoworigin, rtlight->radius, rsurface.rtlight_cullmins, rsurface.rtlight_cullmaxs, r_shadow_buffer_leaflist, r_shadow_buffer_leafpvs, &numleafs, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces, r_shadow_buffer_shadowtrispvs, r_shadow_buffer_lighttrispvs);
 		leaflist = r_shadow_buffer_leaflist;
 		leafpvs = r_shadow_buffer_leafpvs;
 		surfacelist = r_shadow_buffer_surfacelist;
 		shadowtrispvs = r_shadow_buffer_shadowtrispvs;
 		lighttrispvs = r_shadow_buffer_lighttrispvs;
 		// if the reduced leaf bounds are offscreen, skip it
-		if (R_CullBox(r_shadow_rtlight_cullmins, r_shadow_rtlight_cullmaxs))
+		if (R_CullBox(rsurface.rtlight_cullmins, rsurface.rtlight_cullmaxs))
 			return;
 	}
 	else
@@ -2849,7 +2827,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 			return;
 	}
 	// set up a scissor rectangle for this light
-	if (R_Shadow_ScissorForBBox(r_shadow_rtlight_cullmins, r_shadow_rtlight_cullmaxs))
+	if (R_Shadow_ScissorForBBox(rsurface.rtlight_cullmins, rsurface.rtlight_cullmaxs))
 		return;
 
 	R_Shadow_ComputeShadowCasterCullingPlanes(rtlight);
@@ -2867,11 +2845,11 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 			model_t *model;
 			entity_render_t *ent = r_refdef.entities[i];
 			vec3_t org;
-			if (!BoxesOverlap(ent->mins, ent->maxs, r_shadow_rtlight_cullmins, r_shadow_rtlight_cullmaxs))
+			if (!BoxesOverlap(ent->mins, ent->maxs, rsurface.rtlight_cullmins, rsurface.rtlight_cullmaxs))
 				continue;
 			// skip the object entirely if it is not within the valid
 			// shadow-casting region (which includes the lit region)
-			if (R_CullBoxCustomPlanes(ent->mins, ent->maxs, r_shadow_rtlight_numfrustumplanes, r_shadow_rtlight_frustumplanes))
+			if (R_CullBoxCustomPlanes(ent->mins, ent->maxs, rsurface.rtlight_numfrustumplanes, rsurface.rtlight_frustumplanes))
 				continue;
 			if (!(model = ent->model))
 				continue;
