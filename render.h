@@ -255,7 +255,6 @@ typedef struct rsurfacestate_s
 	size_t modeltexcoordlightmap2f_bufferoffset;
 	int *modelelement3i;
 	int modelelement3i_bufferobject;
-	int *modelneighbor3i;
 	int *modellightmapoffsets;
 	int modelnum_vertices;
 	int modelnum_triangles;
