@@ -1463,7 +1463,7 @@ static void R_Shadow_RenderLighting_Light_GLSL(int firstvertex, int numvertices,
 {
 	// ARB2 GLSL shader path (GFFX5200, Radeon 9500)
 	R_SetupSurfaceShader(lightcolorbase, false, ambientscale, diffusescale, specularscale);
-	R_Mesh_TexCoordPointer(0, 2, rsurface.modeltexcoordtexture2f, rsurface.modeltexcoordtexture2f_bufferobject, rsurface.modeltexcoordtexture2f_bufferoffset);
+	R_Mesh_TexCoordPointer(0, 2, rsurface.texcoordtexture2f, rsurface.texcoordtexture2f_bufferobject, rsurface.texcoordtexture2f_bufferoffset);
 	R_Mesh_TexCoordPointer(1, 3, rsurface.svector3f, rsurface.svector3f_bufferobject, rsurface.svector3f_bufferoffset);
 	R_Mesh_TexCoordPointer(2, 3, rsurface.tvector3f, rsurface.tvector3f_bufferobject, rsurface.tvector3f_bufferoffset);
 	R_Mesh_TexCoordPointer(3, 3, rsurface.normal3f, rsurface.normal3f_bufferobject, rsurface.normal3f_bufferoffset);
@@ -1511,9 +1511,9 @@ static void R_Shadow_RenderLighting_Light_Dot3_AmbientPass(int firstvertex, int 
 		m.pointer_texcoord_bufferoffset[0] = rsurface.vertex3f_bufferoffset;
 		m.texmatrix[0] = rsurface.entitytoattenuationxyz;
 		m.tex[1] = R_GetTexture(basetexture);
-		m.pointer_texcoord[1] = rsurface.modeltexcoordtexture2f;
-		m.pointer_texcoord_bufferobject[1] = rsurface.modeltexcoordtexture2f_bufferobject;
-		m.pointer_texcoord_bufferoffset[1] = rsurface.modeltexcoordtexture2f_bufferoffset;
+		m.pointer_texcoord[1] = rsurface.texcoordtexture2f;
+		m.pointer_texcoord_bufferobject[1] = rsurface.texcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[1] = rsurface.texcoordtexture2f_bufferoffset;
 		m.texmatrix[1] = rsurface.texture->currenttexmatrix;
 		m.texcubemap[2] = R_GetTexture(rsurface.rtlight->currentcubemap);
 		m.pointer_texcoord3f[2] = rsurface.vertex3f;
@@ -1532,9 +1532,9 @@ static void R_Shadow_RenderLighting_Light_Dot3_AmbientPass(int firstvertex, int 
 		m.pointer_texcoord_bufferoffset[0] = rsurface.vertex3f_bufferoffset;
 		m.texmatrix[0] = rsurface.entitytoattenuationxyz;
 		m.tex[1] = R_GetTexture(basetexture);
-		m.pointer_texcoord[1] = rsurface.modeltexcoordtexture2f;
-		m.pointer_texcoord_bufferobject[1] = rsurface.modeltexcoordtexture2f_bufferobject;
-		m.pointer_texcoord_bufferoffset[1] = rsurface.modeltexcoordtexture2f_bufferoffset;
+		m.pointer_texcoord[1] = rsurface.texcoordtexture2f;
+		m.pointer_texcoord_bufferobject[1] = rsurface.texcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[1] = rsurface.texcoordtexture2f_bufferoffset;
 		m.texmatrix[1] = rsurface.texture->currenttexmatrix;
 		GL_BlendFunc(GL_ONE, GL_ONE);
 	}
@@ -1553,9 +1553,9 @@ static void R_Shadow_RenderLighting_Light_Dot3_AmbientPass(int firstvertex, int 
 		m.pointer_texcoord_bufferoffset[1] = rsurface.vertex3f_bufferoffset;
 		m.texmatrix[1] = rsurface.entitytoattenuationz;
 		m.tex[2] = R_GetTexture(basetexture);
-		m.pointer_texcoord[2] = rsurface.modeltexcoordtexture2f;
-		m.pointer_texcoord_bufferobject[2] = rsurface.modeltexcoordtexture2f_bufferobject;
-		m.pointer_texcoord_bufferoffset[2] = rsurface.modeltexcoordtexture2f_bufferoffset;
+		m.pointer_texcoord[2] = rsurface.texcoordtexture2f;
+		m.pointer_texcoord_bufferobject[2] = rsurface.texcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[2] = rsurface.texcoordtexture2f_bufferoffset;
 		m.texmatrix[2] = rsurface.texture->currenttexmatrix;
 		if (rsurface.rtlight->currentcubemap != r_texture_whitecube)
 		{
@@ -1582,9 +1582,9 @@ static void R_Shadow_RenderLighting_Light_Dot3_AmbientPass(int firstvertex, int 
 		m.pointer_texcoord_bufferoffset[1] = rsurface.vertex3f_bufferoffset;
 		m.texmatrix[1] = rsurface.entitytoattenuationz;
 		m.tex[2] = R_GetTexture(basetexture);
-		m.pointer_texcoord[2] = rsurface.modeltexcoordtexture2f;
-		m.pointer_texcoord_bufferobject[2] = rsurface.modeltexcoordtexture2f_bufferobject;
-		m.pointer_texcoord_bufferoffset[2] = rsurface.modeltexcoordtexture2f_bufferoffset;
+		m.pointer_texcoord[2] = rsurface.texcoordtexture2f;
+		m.pointer_texcoord_bufferobject[2] = rsurface.texcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[2] = rsurface.texcoordtexture2f_bufferoffset;
 		m.texmatrix[2] = rsurface.texture->currenttexmatrix;
 		GL_BlendFunc(GL_ONE, GL_ONE);
 	}
@@ -1610,9 +1610,9 @@ static void R_Shadow_RenderLighting_Light_Dot3_AmbientPass(int firstvertex, int 
 		// second pass
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(basetexture);
-		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
+		m.pointer_texcoord[0] = rsurface.texcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.texcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.texcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
 		if (rsurface.rtlight->currentcubemap != r_texture_whitecube)
 		{
@@ -1648,9 +1648,9 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(normalmaptexture);
 		m.texcombinergb[0] = GL_REPLACE;
-		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
+		m.pointer_texcoord[0] = rsurface.texcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.texcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.texcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
 		m.texcubemap[1] = R_GetTexture(r_texture_normalizationcube);
 		m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
@@ -1670,9 +1670,9 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		// second pass
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(basetexture);
-		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
+		m.pointer_texcoord[0] = rsurface.texcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.texcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.texcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
 		if (rsurface.rtlight->currentcubemap != r_texture_whitecube)
 		{
@@ -1702,9 +1702,9 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(normalmaptexture);
 		m.texcombinergb[0] = GL_REPLACE;
-		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
+		m.pointer_texcoord[0] = rsurface.texcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.texcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.texcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
 		m.texcubemap[1] = R_GetTexture(r_texture_normalizationcube);
 		m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
@@ -1718,9 +1718,9 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		// second pass
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(basetexture);
-		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
+		m.pointer_texcoord[0] = rsurface.texcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.texcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.texcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
 		if (rsurface.rtlight->currentcubemap != r_texture_whitecube)
 		{
@@ -1738,9 +1738,9 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(normalmaptexture);
 		m.texcombinergb[0] = GL_REPLACE;
-		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
+		m.pointer_texcoord[0] = rsurface.texcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.texcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.texcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
 		m.texcubemap[1] = R_GetTexture(r_texture_normalizationcube);
 		m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
@@ -1755,9 +1755,9 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		// second pass
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(basetexture);
-		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
+		m.pointer_texcoord[0] = rsurface.texcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.texcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.texcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
 		m.tex3d[1] = R_GetTexture(r_shadow_attenuation3dtexture);
 		m.pointer_texcoord3f[1] = rsurface.vertex3f;
@@ -1772,9 +1772,9 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(normalmaptexture);
 		m.texcombinergb[0] = GL_REPLACE;
-		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
+		m.pointer_texcoord[0] = rsurface.texcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.texcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.texcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
 		m.texcubemap[1] = R_GetTexture(r_texture_normalizationcube);
 		m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
@@ -1799,9 +1799,9 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		// second pass
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(basetexture);
-		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
+		m.pointer_texcoord[0] = rsurface.texcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.texcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.texcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
 		if (rsurface.rtlight->currentcubemap != r_texture_whitecube)
 		{
@@ -1836,9 +1836,9 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(normalmaptexture);
 		m.texcombinergb[0] = GL_REPLACE;
-		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
+		m.pointer_texcoord[0] = rsurface.texcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.texcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.texcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
 		m.texcubemap[1] = R_GetTexture(r_texture_normalizationcube);
 		m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
@@ -1852,9 +1852,9 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		// second pass
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(basetexture);
-		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
+		m.pointer_texcoord[0] = rsurface.texcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.texcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.texcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
 		if (rsurface.rtlight->currentcubemap != r_texture_whitecube)
 		{
@@ -1886,9 +1886,9 @@ static void R_Shadow_RenderLighting_Light_Dot3_SpecularPass(int firstvertex, int
 		// 2/0/0/1/2 3D combine blendsquare path
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(normalmaptexture);
-		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
+		m.pointer_texcoord[0] = rsurface.texcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.texcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.texcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
 		m.texcubemap[1] = R_GetTexture(r_texture_normalizationcube);
 		m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
@@ -1922,9 +1922,9 @@ static void R_Shadow_RenderLighting_Light_Dot3_SpecularPass(int firstvertex, int
 		// fifth pass
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(glosstexture);
-		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
+		m.pointer_texcoord[0] = rsurface.texcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.texcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.texcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
 		if (rsurface.rtlight->currentcubemap != r_texture_whitecube)
 		{
@@ -1941,9 +1941,9 @@ static void R_Shadow_RenderLighting_Light_Dot3_SpecularPass(int firstvertex, int
 		// 2/0/0/2 3D combine blendsquare path
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(normalmaptexture);
-		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
+		m.pointer_texcoord[0] = rsurface.texcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.texcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.texcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
 		m.texcubemap[1] = R_GetTexture(r_texture_normalizationcube);
 		m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
@@ -1966,9 +1966,9 @@ static void R_Shadow_RenderLighting_Light_Dot3_SpecularPass(int firstvertex, int
 		// fourth pass
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(glosstexture);
-		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
+		m.pointer_texcoord[0] = rsurface.texcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.texcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.texcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
 		m.tex3d[1] = R_GetTexture(r_shadow_attenuation3dtexture);
 		m.pointer_texcoord3f[1] = rsurface.vertex3f;
@@ -1982,9 +1982,9 @@ static void R_Shadow_RenderLighting_Light_Dot3_SpecularPass(int firstvertex, int
 		// 2/0/0/2/2 2D combine blendsquare path
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(normalmaptexture);
-		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
+		m.pointer_texcoord[0] = rsurface.texcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.texcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.texcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
 		m.texcubemap[1] = R_GetTexture(r_texture_normalizationcube);
 		m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
@@ -2023,9 +2023,9 @@ static void R_Shadow_RenderLighting_Light_Dot3_SpecularPass(int firstvertex, int
 		// fifth pass
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(glosstexture);
-		m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
+		m.pointer_texcoord[0] = rsurface.texcoordtexture2f;
+		m.pointer_texcoord_bufferobject[0] = rsurface.texcoordtexture2f_bufferobject;
+		m.pointer_texcoord_bufferoffset[0] = rsurface.texcoordtexture2f_bufferoffset;
 		m.texmatrix[0] = rsurface.texture->currenttexmatrix;
 		if (rsurface.rtlight->currentcubemap != r_texture_whitecube)
 		{
@@ -2183,9 +2183,9 @@ static void R_Shadow_RenderLighting_Light_Vertex(int firstvertex, int numvertice
 	memset(&m, 0, sizeof(m));
 	m.tex[0] = R_GetTexture(basetexture);
 	m.texmatrix[0] = rsurface.texture->currenttexmatrix;
-	m.pointer_texcoord[0] = rsurface.modeltexcoordtexture2f;
-	m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordtexture2f_bufferobject;
-	m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordtexture2f_bufferoffset;
+	m.pointer_texcoord[0] = rsurface.texcoordtexture2f;
+	m.pointer_texcoord_bufferobject[0] = rsurface.texcoordtexture2f_bufferobject;
+	m.pointer_texcoord_bufferoffset[0] = rsurface.texcoordtexture2f_bufferoffset;
 	if (r_textureunits.integer >= 2)
 	{
 		// voodoo2 or TNT

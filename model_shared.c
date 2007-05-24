@@ -1301,7 +1301,7 @@ void Mod_LoadQ3Shaders(void)
 							else if (!strcasecmp(parameter[1], "vector"))      layer->tcgen = Q3TCGEN_VECTOR;
 							else Con_DPrintf("%s parsing warning: unknown tcgen mode %s\n", search->filenames[fileindex], parameter[1]);
 						}
-						else if (numparameters == 2 && !strcasecmp(parameter[0], "tcmod"))
+						else if (numparameters >= 2 && !strcasecmp(parameter[0], "tcmod"))
 						{
 							int i;
 							// observed values:
@@ -1328,7 +1328,7 @@ void Mod_LoadQ3Shaders(void)
 								layer->tcmod_wavefunc = Mod_LoadQ3Shaders_EnumerateWaveFunc(parameter[2]);
 							}
 							else if (!strcasecmp(parameter[1], "transform"))       layer->tcmod = Q3TCMOD_TRANSFORM;
-							else if (!strcasecmp(parameter[1], "turb"))            layer->tcmod = Q3TCMOD_TURB;
+							else if (!strcasecmp(parameter[1], "turb"))            layer->tcmod = Q3TCMOD_TURBULENT;
 							else Con_DPrintf("%s parsing warning: unknown tcmod mode %s\n", search->filenames[fileindex], parameter[1]);
 						}
 						// break out a level if it was }
@@ -1589,6 +1589,17 @@ nothing                GL_ZERO GL_ONE
 			texture->basematerialflags |= MATERIALFLAG_FULLBRIGHT;
 		if (shader->primarylayer)
 		{
+			// copy over many shader->primarylayer parameters
+			texture->rgbgen   = shader->primarylayer->rgbgen;
+			texture->alphagen = shader->primarylayer->alphagen;
+			texture->tcgen    = shader->primarylayer->tcgen;
+			texture->tcmod    = shader->primarylayer->tcmod;
+			memcpy(texture->rgbgen_parms  , shader->primarylayer->rgbgen_parms  , sizeof(texture->rgbgen_parms));
+			memcpy(texture->alphagen_parms, shader->primarylayer->alphagen_parms, sizeof(texture->alphagen_parms));
+			memcpy(texture->tcgen_parms   , shader->primarylayer->tcgen_parms   , sizeof(texture->tcgen_parms));
+			memcpy(texture->tcmod_parms   , shader->primarylayer->tcmod_parms   , sizeof(texture->tcmod_parms));
+			texture->tcmod_wavefunc = shader->primarylayer->tcmod_wavefunc;
+			// load the textures
 			texture->numskinframes = shader->primarylayer->numframes;
 			texture->skinframerate = shader->primarylayer->framerate;
 			for (j = 0;j < shader->primarylayer->numframes;j++)
