@@ -1152,7 +1152,6 @@ void Mod_LoadQ3Shaders(void)
 						layer->rgbgen = Q3RGBGEN_IDENTITY;
 						layer->alphagen = Q3ALPHAGEN_IDENTITY;
 						layer->tcgen = Q3TCGEN_TEXTURE;
-						layer->tcmod = Q3TCMOD_NONE;
 						layer->blendfunc[0] = GL_ONE;
 						layer->blendfunc[1] = GL_ZERO;
 					}
@@ -1303,7 +1302,7 @@ void Mod_LoadQ3Shaders(void)
 						}
 						else if (numparameters >= 2 && !strcasecmp(parameter[0], "tcmod"))
 						{
-							int i;
+							int i, tcmodindex;
 							// observed values:
 							// tcmod rotate #
 							// tcmod scale # #
@@ -1314,22 +1313,30 @@ void Mod_LoadQ3Shaders(void)
 							// tcmod turb # # # #
 							// tcmod turb sin # # # #  (this is bogus)
 							// no other values have been observed in real shaders
-							for (i = 0;i < numparameters - 2 && i < Q3TCMOD_MAXPARMS;i++)
-								layer->tcmod_parms[i] = atof(parameter[i+2]);
-							     if (!strcasecmp(parameter[1], "entitytranslate")) layer->tcmod = Q3TCMOD_ENTITYTRANSLATE;
-							else if (!strcasecmp(parameter[1], "rotate"))          layer->tcmod = Q3TCMOD_ROTATE;
-							else if (!strcasecmp(parameter[1], "scale"))           layer->tcmod = Q3TCMOD_SCALE;
-							else if (!strcasecmp(parameter[1], "scroll"))          layer->tcmod = Q3TCMOD_SCROLL;
-							else if (!strcasecmp(parameter[1], "stretch"))
+							for (tcmodindex = 0;tcmodindex < Q3MAXTCMODS;tcmodindex++)
+								if (!layer->tcmod[tcmodindex])
+									break;
+							if (tcmodindex < Q3MAXTCMODS)
 							{
-								layer->tcmod = Q3TCMOD_STRETCH;
-								for (i = 0;i < numparameters - 3 && i < Q3TCMOD_MAXPARMS;i++)
-									layer->tcmod_parms[i] = atof(parameter[i+3]);
-								layer->tcmod_wavefunc = Mod_LoadQ3Shaders_EnumerateWaveFunc(parameter[2]);
+								for (i = 0;i < numparameters - 2 && i < Q3TCMOD_MAXPARMS;i++)
+									layer->tcmod_parms[tcmodindex][i] = atof(parameter[i+2]);
+									 if (!strcasecmp(parameter[1], "entitytranslate")) layer->tcmod[tcmodindex] = Q3TCMOD_ENTITYTRANSLATE;
+								else if (!strcasecmp(parameter[1], "rotate"))          layer->tcmod[tcmodindex] = Q3TCMOD_ROTATE;
+								else if (!strcasecmp(parameter[1], "scale"))           layer->tcmod[tcmodindex] = Q3TCMOD_SCALE;
+								else if (!strcasecmp(parameter[1], "scroll"))          layer->tcmod[tcmodindex] = Q3TCMOD_SCROLL;
+								else if (!strcasecmp(parameter[1], "stretch"))
+								{
+									layer->tcmod[tcmodindex] = Q3TCMOD_STRETCH;
+									for (i = 0;i < numparameters - 3 && i < Q3TCMOD_MAXPARMS;i++)
+										layer->tcmod_parms[tcmodindex][i] = atof(parameter[i+3]);
+									layer->tcmod_wavefunc[tcmodindex] = Mod_LoadQ3Shaders_EnumerateWaveFunc(parameter[2]);
+								}
+								else if (!strcasecmp(parameter[1], "transform"))       layer->tcmod[tcmodindex] = Q3TCMOD_TRANSFORM;
+								else if (!strcasecmp(parameter[1], "turb"))            layer->tcmod[tcmodindex] = Q3TCMOD_TURBULENT;
+								else Con_DPrintf("%s parsing warning: unknown tcmod mode %s\n", search->filenames[fileindex], parameter[1]);
 							}
-							else if (!strcasecmp(parameter[1], "transform"))       layer->tcmod = Q3TCMOD_TRANSFORM;
-							else if (!strcasecmp(parameter[1], "turb"))            layer->tcmod = Q3TCMOD_TURBULENT;
-							else Con_DPrintf("%s parsing warning: unknown tcmod mode %s\n", search->filenames[fileindex], parameter[1]);
+							else
+								Con_DPrintf("%s parsing warning: too many tcmods on one layer\n", search->filenames[fileindex]);
 						}
 						// break out a level if it was }
 						if (!strcasecmp(com_token, "}"))
@@ -1593,12 +1600,12 @@ nothing                GL_ZERO GL_ONE
 			texture->rgbgen   = shader->primarylayer->rgbgen;
 			texture->alphagen = shader->primarylayer->alphagen;
 			texture->tcgen    = shader->primarylayer->tcgen;
-			texture->tcmod    = shader->primarylayer->tcmod;
+			memcpy(texture->tcmod         , shader->primarylayer->tcmod         , sizeof(texture->tcmod));
 			memcpy(texture->rgbgen_parms  , shader->primarylayer->rgbgen_parms  , sizeof(texture->rgbgen_parms));
 			memcpy(texture->alphagen_parms, shader->primarylayer->alphagen_parms, sizeof(texture->alphagen_parms));
 			memcpy(texture->tcgen_parms   , shader->primarylayer->tcgen_parms   , sizeof(texture->tcgen_parms));
 			memcpy(texture->tcmod_parms   , shader->primarylayer->tcmod_parms   , sizeof(texture->tcmod_parms));
-			texture->tcmod_wavefunc = shader->primarylayer->tcmod_wavefunc;
+			memcpy(texture->tcmod_wavefunc, shader->primarylayer->tcmod_wavefunc, sizeof(texture->tcmod_wavefunc));
 			// load the textures
 			texture->numskinframes = shader->primarylayer->numframes;
 			texture->skinframerate = shader->primarylayer->framerate;

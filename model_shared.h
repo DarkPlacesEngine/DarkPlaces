@@ -189,6 +189,7 @@ shadowmesh_t;
 #define Q3ALPHAGEN_MAXPARMS 1
 #define Q3TCGEN_MAXPARMS 6
 #define Q3TCMOD_MAXPARMS 6
+#define Q3MAXTCMODS 4
 
 typedef enum q3wavefunc_e
 {
@@ -270,12 +271,12 @@ typedef struct q3shaderinfo_layer_s
 	q3rgbgen_t rgbgen;
 	q3alphagen_t alphagen;
 	q3tcgen_t tcgen;
-	q3tcmod_t tcmod;
+	q3tcmod_t tcmod[Q3MAXTCMODS];
 	float rgbgen_parms[Q3RGBGEN_MAXPARMS];
 	float alphagen_parms[Q3ALPHAGEN_MAXPARMS];
 	float tcgen_parms[Q3TCGEN_MAXPARMS];
-	float tcmod_parms[Q3TCMOD_MAXPARMS];
-	q3wavefunc_t tcmod_wavefunc;
+	float tcmod_parms[Q3MAXTCMODS][Q3TCMOD_MAXPARMS];
+	q3wavefunc_t tcmod_wavefunc[Q3MAXTCMODS];
 }
 q3shaderinfo_layer_t;
 
@@ -372,12 +373,12 @@ typedef struct texture_s
 	q3rgbgen_t rgbgen;
 	q3alphagen_t alphagen;
 	q3tcgen_t tcgen;
-	q3tcmod_t tcmod;
+	q3tcmod_t tcmod[Q3MAXTCMODS];
 	float rgbgen_parms[Q3RGBGEN_MAXPARMS];
 	float alphagen_parms[Q3ALPHAGEN_MAXPARMS];
 	float tcgen_parms[Q3TCGEN_MAXPARMS];
-	float tcmod_parms[Q3TCMOD_MAXPARMS];
-	q3wavefunc_t tcmod_wavefunc;
+	float tcmod_parms[Q3MAXTCMODS][Q3TCMOD_MAXPARMS];
+	q3wavefunc_t tcmod_wavefunc[Q3MAXTCMODS];
 
 	qboolean colormapping;
 	rtexture_t *basetexture;
