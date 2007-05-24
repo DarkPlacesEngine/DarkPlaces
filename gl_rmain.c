@@ -3613,6 +3613,12 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 static const int quadedges[6][2] = {{0, 1}, {0, 2}, {0, 3}, {1, 2}, {1, 3}, {2, 3}};
 void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generatetangents, int texturenumsurfaces, msurface_t **texturesurfacelist)
 {
+	int texturesurfaceindex;
+	int i, j;
+	float amplitude;
+	float animpos;
+	const float *v1, *in_tc;
+	float *out_tc;
 	// if vertices are dynamic (animated models), generate them into the temporary rsurface.array_model* arrays and point rsurface.model* at them instead of the static data from the model itself
 	if (rsurface.generatedvertex)
 	{
@@ -3652,7 +3658,6 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 		// make deformed versions of only the model vertices used by the specified surfaces
 		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
-			int i, j;
 			const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 			// a single autosprite surface can contain multiple sprites...
 			for (j = 0;j < surface->num_vertices - 3;j += 4)
@@ -3769,19 +3774,67 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 		rsurface.normal3f_bufferobject = rsurface.modelnormal3f_bufferobject;
 		rsurface.normal3f_bufferoffset = rsurface.modelnormal3f_bufferoffset;
 	}
-	if (rsurface.texture->tcmod == Q3TCMOD_TURBULENT)
+	// generate texcoords based on the chosen texcoord source
+	switch(rsurface.texture->tcgen)
 	{
-		// make turbulent versions of only the texcoords used by the specified surfaces
-		int texturesurfaceindex;
-		float amplitude = rsurface.texture->tcmod_parms[1];
-		float animpos = rsurface.texture->tcmod_parms[2] + r_refdef.time * rsurface.texture->tcmod_parms[3];
+	default:
+	case Q3TCGEN_TEXTURE:
+		rsurface.texcoordtexture2f               = rsurface.modeltexcoordtexture2f;
+		rsurface.texcoordtexture2f_bufferobject  = rsurface.modeltexcoordtexture2f_bufferobject;
+		rsurface.texcoordtexture2f_bufferoffset  = rsurface.modeltexcoordtexture2f_bufferoffset;
+		break;
+	case Q3TCGEN_LIGHTMAP:
+		rsurface.texcoordtexture2f               = rsurface.modeltexcoordlightmap2f;
+		rsurface.texcoordtexture2f_bufferobject  = rsurface.modeltexcoordlightmap2f_bufferobject;
+		rsurface.texcoordtexture2f_bufferoffset  = rsurface.modeltexcoordlightmap2f_bufferoffset;
+		break;
+	case Q3TCGEN_VECTOR:
 		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
-			int j;
-			const float *v1, *in_tc;
-			float *out_tc;
 			const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
-			for (j = 0, v1 = rsurface.modelvertex3f + 3 * surface->num_firstvertex, in_tc = rsurface.modeltexcoordtexture2f + 2 * surface->num_firstvertex, out_tc = rsurface.array_generatedtexcoordtexture2f + 2 * surface->num_firstvertex;j < surface->num_vertices;j++, v1 += 3, in_tc += 2, out_tc += 2)
+			for (j = 0, v1 = rsurface.modelvertex3f + 3 * surface->num_firstvertex, out_tc = rsurface.array_generatedtexcoordtexture2f + 2 * surface->num_firstvertex;j < surface->num_vertices;j++, v1 += 3, out_tc += 2)
+			{
+				out_tc[0] = DotProduct(v1, rsurface.texture->tcgen_parms);
+				out_tc[1] = DotProduct(v1, rsurface.texture->tcgen_parms + 3);
+			}
+		}
+		rsurface.texcoordtexture2f               = rsurface.array_generatedtexcoordtexture2f;
+		rsurface.texcoordtexture2f_bufferobject  = 0;
+		rsurface.texcoordtexture2f_bufferoffset  = 0;
+		break;
+	case Q3TCGEN_ENVIRONMENT:
+		// make environment reflections using a spheremap
+		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+		{
+			const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+			const float *vertex = rsurface.modelvertex3f + 3 * surface->num_firstvertex;
+			const float *normal = rsurface.modelnormal3f + 3 * surface->num_firstvertex;
+			float *out_tc = rsurface.array_generatedtexcoordtexture2f + 2 * surface->num_firstvertex;
+			for (j = 0;j < surface->num_vertices;j++, vertex += 3, normal += 3, out_tc += 2)
+			{
+				float l, d, eyedir[3];
+				VectorSubtract(rsurface.modelorg, vertex, eyedir);
+				l = 0.5f / VectorLength(eyedir);
+				d = DotProduct(normal, eyedir)*2;
+				out_tc[0] = 0.5f + (normal[1]*d - eyedir[1])*l;
+				out_tc[1] = 0.5f - (normal[2]*d - eyedir[2])*l;
+			}
+		}
+		rsurface.texcoordtexture2f               = rsurface.array_generatedtexcoordtexture2f;
+		rsurface.texcoordtexture2f_bufferobject  = 0;
+		rsurface.texcoordtexture2f_bufferoffset  = 0;
+		break;
+	}
+	// the only tcmod that needs software vertex processing is turbulent, so
+	// check for it here and apply the changes if needed
+	if (rsurface.texture->tcmod == Q3TCMOD_TURBULENT)
+	{
+		amplitude = rsurface.texture->tcmod_parms[1];
+		animpos = rsurface.texture->tcmod_parms[2] + r_refdef.time * rsurface.texture->tcmod_parms[3];
+		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+		{
+			const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+			for (j = 0, v1 = rsurface.modelvertex3f + 3 * surface->num_firstvertex, in_tc = rsurface.texcoordtexture2f + 2 * surface->num_firstvertex, out_tc = rsurface.array_generatedtexcoordtexture2f + 2 * surface->num_firstvertex;j < surface->num_vertices;j++, v1 += 3, in_tc += 2, out_tc += 2)
 			{
 				out_tc[0] = in_tc[0] + amplitude * sin(((v1[0] + v1[2]) * 1.0 / 1024.0f + animpos) * M_PI * 2);
 				out_tc[1] = in_tc[1] + amplitude * sin(((v1[1]        ) * 1.0 / 1024.0f + animpos) * M_PI * 2);
@@ -3790,12 +3843,6 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 		rsurface.texcoordtexture2f               = rsurface.array_generatedtexcoordtexture2f;
 		rsurface.texcoordtexture2f_bufferobject  = 0;
 		rsurface.texcoordtexture2f_bufferoffset  = 0;
-	}
-	else
-	{
-		rsurface.texcoordtexture2f               = rsurface.modeltexcoordtexture2f;
-		rsurface.texcoordtexture2f_bufferobject  = rsurface.modeltexcoordtexture2f_bufferobject;
-		rsurface.texcoordtexture2f_bufferoffset  = rsurface.modeltexcoordtexture2f_bufferoffset;
 	}
 	rsurface.texcoordlightmap2f              = rsurface.modeltexcoordlightmap2f;
 	rsurface.texcoordlightmap2f_bufferobject = rsurface.modeltexcoordlightmap2f_bufferobject;
