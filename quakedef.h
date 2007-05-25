@@ -285,6 +285,7 @@ void Chase_Update (void);
 
 void fractalnoise(unsigned char *noise, int size, int startgrid);
 void fractalnoisequick(unsigned char *noise, int size, int startgrid);
+float noise4f(float x, float y, float z, float w);
 
 void Sys_Shared_Init(void);
 
