@@ -1176,6 +1176,8 @@ void Mod_LoadQ3Shaders(void)
 							if (!COM_ParseToken_QuakeC(&text, true))
 								break;
 						}
+						for (j = numparameters;j < TEXTURE_MAXFRAMES + 4;j++)
+							parameter[j][0] = 0;
 						if (developer.integer >= 100)
 						{
 							Con_Printf("%s %i: ", shader->name, shader->numlayers - 1);
@@ -1271,8 +1273,8 @@ void Mod_LoadQ3Shaders(void)
 							{
 								layer->rgbgen = Q3RGBGEN_WAVE;
 								layer->rgbgen_wavefunc = Mod_LoadQ3Shaders_EnumerateWaveFunc(parameter[2]);
-								for (i = 0;i < numparameters - 3 && i < Q3RGBGEN_MAXPARMS;i++)
-									layer->rgbgen_parms[i] = atof(parameter[i+3]);
+								for (i = 0;i < numparameters - 3 && i < Q3WAVEPARMS;i++)
+									layer->rgbgen_waveparms[i] = atof(parameter[i+3]);
 							}
 							else Con_DPrintf("%s parsing warning: unknown rgbgen %s\n", search->filenames[fileindex], parameter[1]);
 						}
@@ -1293,8 +1295,8 @@ void Mod_LoadQ3Shaders(void)
 							{
 								layer->alphagen = Q3RGBGEN_WAVE;
 								layer->alphagen_wavefunc = Mod_LoadQ3Shaders_EnumerateWaveFunc(parameter[2]);
-								for (i = 0;i < numparameters - 3 && i < Q3ALPHAGEN_MAXPARMS;i++)
-									layer->alphagen_parms[i] = atof(parameter[i+3]);
+								for (i = 0;i < numparameters - 3 && i < Q3WAVEPARMS;i++)
+									layer->alphagen_waveparms[i] = atof(parameter[i+3]);
 							}
 							else Con_DPrintf("%s parsing warning: unknown alphagen %s\n", search->filenames[fileindex], parameter[1]);
 						}
@@ -1340,8 +1342,8 @@ void Mod_LoadQ3Shaders(void)
 								{
 									layer->tcmod[tcmodindex] = Q3TCMOD_STRETCH;
 									layer->tcmod_wavefunc[tcmodindex] = Mod_LoadQ3Shaders_EnumerateWaveFunc(parameter[2]);
-									for (i = 0;i < numparameters - 3 && i < Q3TCMOD_MAXPARMS;i++)
-										layer->tcmod_parms[tcmodindex][i] = atof(parameter[i+3]);
+									for (i = 0;i < numparameters - 3 && i < Q3WAVEPARMS;i++)
+										layer->tcmod_waveparms[tcmodindex][i] = atof(parameter[i+3]);
 								}
 								else if (!strcasecmp(parameter[1], "transform"))       layer->tcmod[tcmodindex] = Q3TCMOD_TRANSFORM;
 								else if (!strcasecmp(parameter[1], "turb"))            layer->tcmod[tcmodindex] = Q3TCMOD_TURBULENT;
@@ -1382,6 +1384,8 @@ void Mod_LoadQ3Shaders(void)
 					if (!COM_ParseToken_QuakeC(&text, true))
 						break;
 				}
+				for (j = numparameters;j < TEXTURE_MAXFRAMES + 4;j++)
+					parameter[j][0] = 0;
 				if (fileindex == 0 && !strcasecmp(com_token, "}"))
 					break;
 				if (developer.integer >= 100)
@@ -1486,10 +1490,42 @@ void Mod_LoadQ3Shaders(void)
 					shader->textureflags |= Q3TEXTUREFLAG_NOPICMIP;
 				else if (!strcasecmp(parameter[0], "deformvertexes") && numparameters >= 2)
 				{
-					if (!strcasecmp(parameter[1], "autosprite") && numparameters == 2)
-						shader->textureflags |= Q3TEXTUREFLAG_AUTOSPRITE;
-					if (!strcasecmp(parameter[1], "autosprite2") && numparameters == 2)
-						shader->textureflags |= Q3TEXTUREFLAG_AUTOSPRITE2;
+					int i, deformindex;
+					for (deformindex = 0;deformindex < Q3MAXDEFORMS;deformindex++)
+						if (!shader->deforms[deformindex].deform)
+							break;
+					if (deformindex < Q3MAXDEFORMS)
+					{
+						for (i = 0;i < numparameters - 2 && i < Q3DEFORM_MAXPARMS;i++)
+							shader->deforms[deformindex].deform_parms[i] = atof(parameter[i+2]);
+						     if (!strcasecmp(parameter[1], "projectionshadow")) shader->deforms[deformindex].deform = Q3DEFORM_PROJECTIONSHADOW;
+						else if (!strcasecmp(parameter[1], "autosprite"      )) shader->deforms[deformindex].deform = Q3DEFORM_AUTOSPRITE;
+						else if (!strcasecmp(parameter[1], "autosprite2"     )) shader->deforms[deformindex].deform = Q3DEFORM_AUTOSPRITE2;
+						else if (!strcasecmp(parameter[1], "text0"           )) shader->deforms[deformindex].deform = Q3DEFORM_TEXT0;
+						else if (!strcasecmp(parameter[1], "text1"           )) shader->deforms[deformindex].deform = Q3DEFORM_TEXT1;
+						else if (!strcasecmp(parameter[1], "text2"           )) shader->deforms[deformindex].deform = Q3DEFORM_TEXT2;
+						else if (!strcasecmp(parameter[1], "text3"           )) shader->deforms[deformindex].deform = Q3DEFORM_TEXT3;
+						else if (!strcasecmp(parameter[1], "text4"           )) shader->deforms[deformindex].deform = Q3DEFORM_TEXT4;
+						else if (!strcasecmp(parameter[1], "text5"           )) shader->deforms[deformindex].deform = Q3DEFORM_TEXT5;
+						else if (!strcasecmp(parameter[1], "text6"           )) shader->deforms[deformindex].deform = Q3DEFORM_TEXT6;
+						else if (!strcasecmp(parameter[1], "text7"           )) shader->deforms[deformindex].deform = Q3DEFORM_TEXT7;
+						else if (!strcasecmp(parameter[1], "bulge"           )) shader->deforms[deformindex].deform = Q3DEFORM_BULGE;
+						else if (!strcasecmp(parameter[1], "normal"          )) shader->deforms[deformindex].deform = Q3DEFORM_NORMAL;
+						else if (!strcasecmp(parameter[1], "wave"            ))
+						{
+							shader->deforms[deformindex].deform = Q3DEFORM_WAVE;
+							shader->deforms[deformindex].deform_wavefunc = Mod_LoadQ3Shaders_EnumerateWaveFunc(parameter[3]);
+							for (i = 0;i < numparameters - 4 && i < Q3WAVEPARMS;i++)
+								shader->deforms[deformindex].deform_waveparms[i] = atof(parameter[i+4]);
+						}
+						else if (!strcasecmp(parameter[1], "move"            ))
+						{
+							shader->deforms[deformindex].deform = Q3DEFORM_MOVE;
+							shader->deforms[deformindex].deform_wavefunc = Mod_LoadQ3Shaders_EnumerateWaveFunc(parameter[5]);
+							for (i = 0;i < numparameters - 6 && i < Q3WAVEPARMS;i++)
+								shader->deforms[deformindex].deform_waveparms[i] = atof(parameter[i+6]);
+						}
+					}
 				}
 			}
 			// identify if this is a blended terrain shader or similar
@@ -1563,8 +1599,6 @@ qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qbool
 			texture->basematerialflags |= MATERIALFLAG_ALPHATEST | MATERIALFLAG_NOSHADOW;
 		if (shader->textureflags & Q3TEXTUREFLAG_TWOSIDED)
 			texture->basematerialflags |= MATERIALFLAG_NOSHADOW | MATERIALFLAG_NOCULLFACE;
-		if (shader->textureflags & (Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2))
-			texture->basematerialflags |= MATERIALFLAG_NOSHADOW;
 		texture->customblendfunc[0] = GL_ONE;
 		texture->customblendfunc[1] = GL_ZERO;
 		if (shader->numlayers > 0)
@@ -1610,16 +1644,19 @@ nothing                GL_ZERO GL_ONE
 		{
 			// copy over many shader->primarylayer parameters
 			texture->rgbgen   = shader->primarylayer->rgbgen;
+			memcpy(texture->rgbgen_parms      , shader->primarylayer->rgbgen_parms      , sizeof(texture->rgbgen_parms));
 			texture->rgbgen_wavefunc = shader->primarylayer->rgbgen_wavefunc;
+			memcpy(texture->rgbgen_waveparms  , shader->primarylayer->rgbgen_waveparms  , sizeof(texture->rgbgen_waveparms));
 			texture->alphagen = shader->primarylayer->alphagen;
+			memcpy(texture->alphagen_parms    , shader->primarylayer->alphagen_parms    , sizeof(texture->alphagen_parms));
 			texture->alphagen_wavefunc = shader->primarylayer->alphagen_wavefunc;
+			memcpy(texture->alphagen_waveparms, shader->primarylayer->alphagen_waveparms, sizeof(texture->alphagen_waveparms));
 			texture->tcgen    = shader->primarylayer->tcgen;
-			memcpy(texture->tcmod         , shader->primarylayer->tcmod         , sizeof(texture->tcmod));
-			memcpy(texture->rgbgen_parms  , shader->primarylayer->rgbgen_parms  , sizeof(texture->rgbgen_parms));
-			memcpy(texture->alphagen_parms, shader->primarylayer->alphagen_parms, sizeof(texture->alphagen_parms));
-			memcpy(texture->tcgen_parms   , shader->primarylayer->tcgen_parms   , sizeof(texture->tcgen_parms));
-			memcpy(texture->tcmod_parms   , shader->primarylayer->tcmod_parms   , sizeof(texture->tcmod_parms));
-			memcpy(texture->tcmod_wavefunc, shader->primarylayer->tcmod_wavefunc, sizeof(texture->tcmod_wavefunc));
+			memcpy(texture->tcgen_parms       , shader->primarylayer->tcgen_parms       , sizeof(texture->tcgen_parms));
+			memcpy(texture->tcmod             , shader->primarylayer->tcmod             , sizeof(texture->tcmod));
+			memcpy(texture->tcmod_parms       , shader->primarylayer->tcmod_parms       , sizeof(texture->tcmod_parms));
+			memcpy(texture->tcmod_wavefunc    , shader->primarylayer->tcmod_wavefunc    , sizeof(texture->tcmod_wavefunc));
+			memcpy(texture->tcmod_waveparms   , shader->primarylayer->tcmod_waveparms   , sizeof(texture->tcmod_waveparms));
 			// load the textures
 			texture->numskinframes = shader->primarylayer->numframes;
 			texture->skinframerate = shader->primarylayer->framerate;
@@ -1652,6 +1689,7 @@ nothing                GL_ZERO GL_ONE
 				}
 			}
 		}
+		memcpy(texture->deforms, shader->deforms, sizeof(texture->deforms));
 	}
 	else if (!strcmp(texture->name, "noshader"))
 		texture->surfaceparms = 0;

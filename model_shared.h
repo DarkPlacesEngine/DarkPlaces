@@ -182,14 +182,22 @@ typedef struct shadowmesh_s
 }
 shadowmesh_t;
 
+// various flags from shaders, used for special effects not otherwise classified
+// TODO: support these features more directly
+#define Q3TEXTUREFLAG_TWOSIDED 1
+#define Q3TEXTUREFLAG_NOPICMIP 16
+
 #define Q3PATHLENGTH 64
 #define TEXTURE_MAXFRAMES 64
+#define Q3WAVEPARMS 4
+#define Q3DEFORM_MAXPARMS 3
 #define Q3SHADER_MAXLAYERS 8
 #define Q3RGBGEN_MAXPARMS 3
 #define Q3ALPHAGEN_MAXPARMS 1
 #define Q3TCGEN_MAXPARMS 6
 #define Q3TCMOD_MAXPARMS 6
 #define Q3MAXTCMODS 4
+#define Q3MAXDEFORMS 4
 
 typedef enum q3wavefunc_e
 {
@@ -203,6 +211,28 @@ typedef enum q3wavefunc_e
 	Q3WAVEFUNC_COUNT
 }
 q3wavefunc_t;
+
+typedef enum q3deform_e
+{
+	Q3DEFORM_NONE,
+	Q3DEFORM_PROJECTIONSHADOW,
+	Q3DEFORM_AUTOSPRITE,
+	Q3DEFORM_AUTOSPRITE2,
+	Q3DEFORM_TEXT0,
+	Q3DEFORM_TEXT1,
+	Q3DEFORM_TEXT2,
+	Q3DEFORM_TEXT3,
+	Q3DEFORM_TEXT4,
+	Q3DEFORM_TEXT5,
+	Q3DEFORM_TEXT6,
+	Q3DEFORM_TEXT7,
+	Q3DEFORM_BULGE,
+	Q3DEFORM_WAVE,
+	Q3DEFORM_NORMAL,
+	Q3DEFORM_MOVE,
+	Q3DEFORM_COUNT
+}
+q3deform_t;
 
 typedef enum q3rgbgen_e
 {
@@ -269,18 +299,30 @@ typedef struct q3shaderinfo_layer_s
 	char texturename[TEXTURE_MAXFRAMES][Q3PATHLENGTH];
 	int blendfunc[2];
 	q3rgbgen_t rgbgen;
-	q3alphagen_t alphagen;
-	q3tcgen_t tcgen;
-	q3tcmod_t tcmod[Q3MAXTCMODS];
 	float rgbgen_parms[Q3RGBGEN_MAXPARMS];
 	q3wavefunc_t rgbgen_wavefunc;
+	float rgbgen_waveparms[Q3WAVEPARMS];
+	q3alphagen_t alphagen;
 	float alphagen_parms[Q3ALPHAGEN_MAXPARMS];
 	q3wavefunc_t alphagen_wavefunc;
+	float alphagen_waveparms[Q3WAVEPARMS];
+	q3tcgen_t tcgen;
 	float tcgen_parms[Q3TCGEN_MAXPARMS];
+	q3tcmod_t tcmod[Q3MAXTCMODS];
 	float tcmod_parms[Q3MAXTCMODS][Q3TCMOD_MAXPARMS];
 	q3wavefunc_t tcmod_wavefunc[Q3MAXTCMODS];
+	float tcmod_waveparms[Q3MAXTCMODS][Q3WAVEPARMS];
 }
 q3shaderinfo_layer_t;
+
+typedef struct q3shaderinfo_deform_s
+{
+	q3deform_t deform;
+	float deform_parms[Q3DEFORM_MAXPARMS];
+	q3wavefunc_t deform_wavefunc;
+	float deform_waveparms[Q3WAVEPARMS];
+}
+q3shaderinfo_deform_t;
 
 typedef struct q3shaderinfo_s
 {
@@ -294,6 +336,7 @@ typedef struct q3shaderinfo_s
 	q3shaderinfo_layer_t *primarylayer, *backgroundlayer;
 	q3shaderinfo_layer_t layers[Q3SHADER_MAXLAYERS];
 	char skyboxname[Q3PATHLENGTH];
+	q3shaderinfo_deform_t deforms[Q3MAXDEFORMS];
 }
 q3shaderinfo_t;
 
@@ -372,17 +415,25 @@ typedef struct texture_s
 	matrix4x4_t currenttexmatrix;
 
 	// various q3 shader features
+	q3shaderinfo_deform_t deforms[Q3MAXDEFORMS];
+	q3deform_t deform;
+	float deform_parms[Q3DEFORM_MAXPARMS];
+	q3wavefunc_t deform_wavefunc;
+	float deform_waveparms[Q3WAVEPARMS];
 	q3rgbgen_t rgbgen;
-	q3alphagen_t alphagen;
-	q3tcgen_t tcgen;
-	q3tcmod_t tcmod[Q3MAXTCMODS];
 	float rgbgen_parms[Q3RGBGEN_MAXPARMS];
 	q3wavefunc_t rgbgen_wavefunc;
+	float rgbgen_waveparms[Q3WAVEPARMS];
+	q3alphagen_t alphagen;
 	float alphagen_parms[Q3ALPHAGEN_MAXPARMS];
 	q3wavefunc_t alphagen_wavefunc;
+	float alphagen_waveparms[Q3WAVEPARMS];
+	q3tcgen_t tcgen;
 	float tcgen_parms[Q3TCGEN_MAXPARMS];
+	q3tcmod_t tcmod[Q3MAXTCMODS];
 	float tcmod_parms[Q3MAXTCMODS][Q3TCMOD_MAXPARMS];
 	q3wavefunc_t tcmod_wavefunc[Q3MAXTCMODS];
+	float tcmod_waveparms[Q3MAXTCMODS][Q3WAVEPARMS];
 
 	qboolean colormapping;
 	rtexture_t *basetexture;

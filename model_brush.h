@@ -648,12 +648,6 @@ q3dpvs_t;
 #define Q3SURFACEPARM_LIGHTGRID 1073741824
 #define Q3SURFACEPARM_ANTIPORTAL 2147483648u
 
-// various flags from shaders, used for special effects not otherwise classified
-#define Q3TEXTUREFLAG_TWOSIDED 1
-#define Q3TEXTUREFLAG_AUTOSPRITE 2
-#define Q3TEXTUREFLAG_AUTOSPRITE2 4
-#define Q3TEXTUREFLAG_NOPICMIP 16
-
 typedef struct q3mbrush_s
 {
 	struct colbrushf_s *colbrushf;

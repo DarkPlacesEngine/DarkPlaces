@@ -3625,19 +3625,32 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 static const int quadedges[6][2] = {{0, 1}, {0, 2}, {0, 3}, {1, 2}, {1, 3}, {2, 3}};
 void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generatetangents, int texturenumsurfaces, msurface_t **texturesurfacelist)
 {
+	int deformindex;
 	int texturesurfaceindex;
 	int i, j;
 	float amplitude;
 	float animpos;
+	float scale;
 	const float *v1, *in_tc;
 	float *out_tc;
+	float center[3], forward[3], right[3], up[3], v[3], newforward[3], newright[3], newup[3];
+	float waveparms[4];
+	q3shaderinfo_deform_t *deform;
 	// if vertices are dynamic (animated models), generate them into the temporary rsurface.array_model* arrays and point rsurface.model* at them instead of the static data from the model itself
 	if (rsurface.generatedvertex)
 	{
-		if (rsurface.texture->textureflags & (Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2))
-			generatetangents = true;
-		if (generatetangents || rsurface.texture->tcgen == Q3TCGEN_ENVIRONMENT)
+		if (rsurface.texture->tcgen == Q3TCGEN_ENVIRONMENT)
 			generatenormals = true;
+		for (i = 0;i < Q3MAXDEFORMS;i++)
+		{
+			if (rsurface.texture->deforms[i].deform == Q3DEFORM_AUTOSPRITE)
+			{
+				generatetangents = true;
+				generatenormals = true;
+			}
+			if (rsurface.texture->deforms[i].deform != Q3DEFORM_NONE)
+				generatenormals = true;
+		}
 		if (generatenormals && !rsurface.modelnormal3f)
 		{
 			rsurface.normal3f = rsurface.modelnormal3f = rsurface.array_modelnormal3f;
@@ -3656,46 +3669,116 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 			Mod_BuildTextureVectorsFromNormals(0, rsurface.modelnum_vertices, rsurface.modelnum_triangles, rsurface.modelvertex3f, rsurface.modeltexcoordtexture2f, rsurface.modelnormal3f, rsurface.modelelement3i, rsurface.array_modelsvector3f, rsurface.array_modeltvector3f, r_smoothnormals_areaweighting.integer);
 		}
 	}
-	// if vertices are deformed (sprite flares and things in maps, possibly water waves, bulges and other deformations), generate them into rsurface.deform* arrays from whatever the rsurface.model* array pointers point to (may be static model data or generated data for an animated model)
-	if (rsurface.texture->textureflags & (Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2))
+	rsurface.vertex3f  = rsurface.modelvertex3f;
+	rsurface.vertex3f_bufferobject = rsurface.modelvertex3f_bufferobject;
+	rsurface.vertex3f_bufferoffset = rsurface.modelvertex3f_bufferoffset;
+	rsurface.svector3f = rsurface.modelsvector3f;
+	rsurface.svector3f_bufferobject = rsurface.modelsvector3f_bufferobject;
+	rsurface.svector3f_bufferoffset = rsurface.modelsvector3f_bufferoffset;
+	rsurface.tvector3f = rsurface.modeltvector3f;
+	rsurface.tvector3f_bufferobject = rsurface.modeltvector3f_bufferobject;
+	rsurface.tvector3f_bufferoffset = rsurface.modeltvector3f_bufferoffset;
+	rsurface.normal3f  = rsurface.modelnormal3f;
+	rsurface.normal3f_bufferobject = rsurface.modelnormal3f_bufferobject;
+	rsurface.normal3f_bufferoffset = rsurface.modelnormal3f_bufferoffset;
+	// if vertices are deformed (sprite flares and things in maps, possibly
+	// water waves, bulges and other deformations), generate them into
+	// rsurface.deform* arrays from whatever the rsurface.* arrays point to
+	// (may be static model data or generated data for an animated model, or
+	//  the previous deform pass)
+	for (deformindex = 0, deform = rsurface.texture->deforms;deformindex < Q3MAXDEFORMS && deform->deform;deformindex++, deform++)
 	{
-		int texturesurfaceindex;
-		float center[3], forward[3], right[3], up[3], v[3], newforward[3], newright[3], newup[3];
-		Matrix4x4_Transform3x3(&rsurface.inversematrix, r_view.forward, newforward);
-		Matrix4x4_Transform3x3(&rsurface.inversematrix, r_view.right, newright);
-		Matrix4x4_Transform3x3(&rsurface.inversematrix, r_view.up, newup);
-		VectorNormalize(newforward);
-		VectorNormalize(newright);
-		VectorNormalize(newup);
-		// make deformed versions of only the model vertices used by the specified surfaces
-		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+		switch (deform->deform)
 		{
-			const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
-			// a single autosprite surface can contain multiple sprites...
-			for (j = 0;j < surface->num_vertices - 3;j += 4)
+		default:
+		case Q3DEFORM_PROJECTIONSHADOW:
+		case Q3DEFORM_TEXT0:
+		case Q3DEFORM_TEXT1:
+		case Q3DEFORM_TEXT2:
+		case Q3DEFORM_TEXT3:
+		case Q3DEFORM_TEXT4:
+		case Q3DEFORM_TEXT5:
+		case Q3DEFORM_TEXT6:
+		case Q3DEFORM_TEXT7:
+		case Q3DEFORM_NONE:
+			break;
+		case Q3DEFORM_AUTOSPRITE:
+			Matrix4x4_Transform3x3(&rsurface.inversematrix, r_view.forward, newforward);
+			Matrix4x4_Transform3x3(&rsurface.inversematrix, r_view.right, newright);
+			Matrix4x4_Transform3x3(&rsurface.inversematrix, r_view.up, newup);
+			VectorNormalize(newforward);
+			VectorNormalize(newright);
+			VectorNormalize(newup);
+			// make deformed versions of only the model vertices used by the specified surfaces
+			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 			{
-				VectorClear(center);
-				for (i = 0;i < 4;i++)
-					VectorAdd(center, (rsurface.modelvertex3f + 3 * surface->num_firstvertex) + (j+i) * 3, center);
-				VectorScale(center, 0.25f, center);
-				if (rsurface.texture->textureflags & Q3TEXTUREFLAG_AUTOSPRITE2)
+				const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+				// a single autosprite surface can contain multiple sprites...
+				for (j = 0;j < surface->num_vertices - 3;j += 4)
 				{
-					const float *v1, *v2;
-					float f, l;
-					struct
+					VectorClear(center);
+					for (i = 0;i < 4;i++)
+						VectorAdd(center, (rsurface.vertex3f + 3 * surface->num_firstvertex) + (j+i) * 3, center);
+					VectorScale(center, 0.25f, center);
+					VectorCopy((rsurface.normal3f  + 3 * surface->num_firstvertex) + j*3, forward);
+					VectorCopy((rsurface.svector3f + 3 * surface->num_firstvertex) + j*3, right);
+					VectorCopy((rsurface.tvector3f + 3 * surface->num_firstvertex) + j*3, up);
+					for (i = 0;i < 4;i++)
 					{
-						float length2;
-						int quadedge;
+						VectorSubtract((rsurface.vertex3f + 3 * surface->num_firstvertex) + (j+i)*3, center, v);
+						VectorMAMAMAM(1, center, DotProduct(forward, v), newforward, DotProduct(right, v), newright, DotProduct(up, v), newup, rsurface.array_deformedvertex3f + (surface->num_firstvertex+i+j) * 3);
 					}
-					shortest[2];
+				}
+				Mod_BuildNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface.vertex3f, rsurface.modelelement3i + surface->num_firsttriangle * 3, rsurface.array_deformednormal3f, r_smoothnormals_areaweighting.integer);
+				Mod_BuildTextureVectorsFromNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface.vertex3f, rsurface.modeltexcoordtexture2f, rsurface.array_deformednormal3f, rsurface.modelelement3i + surface->num_firsttriangle * 3, rsurface.array_deformedsvector3f, rsurface.array_deformedtvector3f, r_smoothnormals_areaweighting.integer);
+			}
+			rsurface.vertex3f = rsurface.array_deformedvertex3f;
+			rsurface.vertex3f_bufferobject = 0;
+			rsurface.vertex3f_bufferoffset = 0;
+			rsurface.svector3f = rsurface.array_deformedsvector3f;
+			rsurface.svector3f_bufferobject = 0;
+			rsurface.svector3f_bufferoffset = 0;
+			rsurface.tvector3f = rsurface.array_deformedtvector3f;
+			rsurface.tvector3f_bufferobject = 0;
+			rsurface.tvector3f_bufferoffset = 0;
+			rsurface.normal3f = rsurface.array_deformednormal3f;
+			rsurface.normal3f_bufferobject = 0;
+			rsurface.normal3f_bufferoffset = 0;
+			break;
+		case Q3DEFORM_AUTOSPRITE2:
+			Matrix4x4_Transform3x3(&rsurface.inversematrix, r_view.forward, newforward);
+			Matrix4x4_Transform3x3(&rsurface.inversematrix, r_view.right, newright);
+			Matrix4x4_Transform3x3(&rsurface.inversematrix, r_view.up, newup);
+			VectorNormalize(newforward);
+			VectorNormalize(newright);
+			VectorNormalize(newup);
+			// make deformed versions of only the model vertices used by the specified surfaces
+			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+			{
+				const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+				const float *v1, *v2;
+				float f, l;
+				struct
+				{
+					float length2;
+					int quadedge;
+				}
+				shortest[2];
+				// a single autosprite surface can contain multiple sprites...
+				for (j = 0;j < surface->num_vertices - 3;j += 4)
+				{
+					VectorClear(center);
+					for (i = 0;i < 4;i++)
+						VectorAdd(center, (rsurface.vertex3f + 3 * surface->num_firstvertex) + (j+i) * 3, center);
+					VectorScale(center, 0.25f, center);
 					shortest[0].quadedge = shortest[1].quadedge = 0;
 					shortest[0].length2 = shortest[1].length2 = 0;
 					// find the two shortest edges, then use them to define the
 					// axis vectors for rotating around the central axis
 					for (i = 0;i < 6;i++)
 					{
-						v1 = rsurface.modelvertex3f + 3 * (surface->num_firstvertex + quadedges[i][0]);
-						v2 = rsurface.modelvertex3f + 3 * (surface->num_firstvertex + quadedges[i][1]);
+						v1 = rsurface.vertex3f + 3 * (surface->num_firstvertex + quadedges[i][0]);
+						v2 = rsurface.vertex3f + 3 * (surface->num_firstvertex + quadedges[i][1]);
 						l = VectorDistance2(v1, v2);
 						if (shortest[0].length2 > l || i == 0)
 						{
@@ -3712,12 +3795,12 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 					// this calculates the midpoints *2 (not bothering to average) of the two shortest edges, and subtracts one from the other to get the up vector
 					for (i = 0;i < 3;i++)
 					{
-						right[i] = rsurface.modelvertex3f[3 * (surface->num_firstvertex + quadedges[shortest[1].quadedge][1]) + i]
-						         + rsurface.modelvertex3f[3 * (surface->num_firstvertex + quadedges[shortest[1].quadedge][0]) + i];
-						up[i] = rsurface.modelvertex3f[3 * (surface->num_firstvertex + quadedges[shortest[1].quadedge][0]) + i]
-						      + rsurface.modelvertex3f[3 * (surface->num_firstvertex + quadedges[shortest[1].quadedge][1]) + i]
-						      - rsurface.modelvertex3f[3 * (surface->num_firstvertex + quadedges[shortest[0].quadedge][0]) + i]
-						      - rsurface.modelvertex3f[3 * (surface->num_firstvertex + quadedges[shortest[0].quadedge][1]) + i];
+						right[i] = rsurface.vertex3f[3 * (surface->num_firstvertex + quadedges[shortest[1].quadedge][1]) + i]
+								 + rsurface.vertex3f[3 * (surface->num_firstvertex + quadedges[shortest[1].quadedge][0]) + i];
+						up[i] = rsurface.vertex3f[3 * (surface->num_firstvertex + quadedges[shortest[1].quadedge][0]) + i]
+							  + rsurface.vertex3f[3 * (surface->num_firstvertex + quadedges[shortest[1].quadedge][1]) + i]
+							  - rsurface.vertex3f[3 * (surface->num_firstvertex + quadedges[shortest[0].quadedge][0]) + i]
+							  - rsurface.vertex3f[3 * (surface->num_firstvertex + quadedges[shortest[0].quadedge][1]) + i];
 					}
 					// calculate a forward vector to use instead of the original plane normal (this is how we get a new right vector)
 					VectorSubtract(rsurface.modelorg, center, forward);
@@ -3738,53 +3821,114 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 					l = DotProduct(newright, center) - DotProduct(right, center);
 					for (i = 0;i < 4;i++)
 					{
-						v1 = rsurface.modelvertex3f + 3 * (surface->num_firstvertex + j + i);
+						v1 = rsurface.vertex3f + 3 * (surface->num_firstvertex + j + i);
 						f = DotProduct(right, v1) - DotProduct(newright, v1) + l;
 						VectorMA(v1, f, newright, rsurface.array_deformedvertex3f + (surface->num_firstvertex+i+j) * 3);
 					}
 				}
-				else
+				Mod_BuildNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface.vertex3f, rsurface.modelelement3i + surface->num_firsttriangle * 3, rsurface.array_deformednormal3f, r_smoothnormals_areaweighting.integer);
+				Mod_BuildTextureVectorsFromNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface.vertex3f, rsurface.modeltexcoordtexture2f, rsurface.array_deformednormal3f, rsurface.modelelement3i + surface->num_firsttriangle * 3, rsurface.array_deformedsvector3f, rsurface.array_deformedtvector3f, r_smoothnormals_areaweighting.integer);
+			}
+			rsurface.vertex3f = rsurface.array_deformedvertex3f;
+			rsurface.vertex3f_bufferobject = 0;
+			rsurface.vertex3f_bufferoffset = 0;
+			rsurface.svector3f = rsurface.array_deformedsvector3f;
+			rsurface.svector3f_bufferobject = 0;
+			rsurface.svector3f_bufferoffset = 0;
+			rsurface.tvector3f = rsurface.array_deformedtvector3f;
+			rsurface.tvector3f_bufferobject = 0;
+			rsurface.tvector3f_bufferoffset = 0;
+			rsurface.normal3f = rsurface.array_deformednormal3f;
+			rsurface.normal3f_bufferobject = 0;
+			rsurface.normal3f_bufferoffset = 0;
+			break;
+		case Q3DEFORM_NORMAL:
+			// deform the normals to make reflections wavey
+			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+			{
+				const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+				for (j = 0;j < surface->num_vertices;j++)
 				{
-					VectorCopy((rsurface.modelnormal3f  + 3 * surface->num_firstvertex) + j*3, forward);
-					VectorCopy((rsurface.modelsvector3f + 3 * surface->num_firstvertex) + j*3, right);
-					VectorCopy((rsurface.modeltvector3f + 3 * surface->num_firstvertex) + j*3, up);
-					for (i = 0;i < 4;i++)
+					float vertex[3];
+					float *normal = (rsurface.array_deformednormal3f  + 3 * surface->num_firstvertex) + j*3;
+					VectorScale((rsurface.vertex3f  + 3 * surface->num_firstvertex) + j*3, 0.98f, vertex);
+					VectorCopy((rsurface.normal3f  + 3 * surface->num_firstvertex) + j*3, normal);
+					normal[0] += deform->deform_parms[0] * noise4f(      vertex[0], vertex[1], vertex[2], r_refdef.time * deform->deform_parms[1]);
+					normal[1] += deform->deform_parms[0] * noise4f( 98 + vertex[0], vertex[1], vertex[2], r_refdef.time * deform->deform_parms[1]);
+					normal[2] += deform->deform_parms[0] * noise4f(196 + vertex[0], vertex[1], vertex[2], r_refdef.time * deform->deform_parms[1]);
+					VectorNormalize(normal);
+				}
+				Mod_BuildTextureVectorsFromNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface.vertex3f, rsurface.modeltexcoordtexture2f, rsurface.array_deformednormal3f, rsurface.modelelement3i + surface->num_firsttriangle * 3, rsurface.array_deformedsvector3f, rsurface.array_deformedtvector3f, r_smoothnormals_areaweighting.integer);
+			}
+			rsurface.svector3f = rsurface.array_deformedsvector3f;
+			rsurface.svector3f_bufferobject = 0;
+			rsurface.svector3f_bufferoffset = 0;
+			rsurface.tvector3f = rsurface.array_deformedtvector3f;
+			rsurface.tvector3f_bufferobject = 0;
+			rsurface.tvector3f_bufferoffset = 0;
+			rsurface.normal3f = rsurface.array_deformednormal3f;
+			rsurface.normal3f_bufferobject = 0;
+			rsurface.normal3f_bufferoffset = 0;
+			break;
+		case Q3DEFORM_WAVE:
+			// deform vertex array to make wavey water and flags and such
+			waveparms[0] = deform->deform_waveparms[0];
+			waveparms[1] = deform->deform_waveparms[1];
+			waveparms[2] = deform->deform_waveparms[2];
+			waveparms[3] = deform->deform_waveparms[3];
+			// this is how a divisor of vertex influence on deformation
+			animpos = deform->deform_parms[0] ? 1.0f / deform->deform_parms[0] : 100.0f;
+			scale = R_EvaluateQ3WaveFunc(deform->deform_wavefunc, waveparms);
+			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+			{
+				const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+				for (j = 0;j < surface->num_vertices;j++)
+				{
+					float *vertex = (rsurface.array_deformedvertex3f  + 3 * surface->num_firstvertex) + j*3;
+					VectorCopy((rsurface.vertex3f  + 3 * surface->num_firstvertex) + j*3, vertex);
+					// if the wavefunc depends on time, evaluate it per-vertex
+					if (waveparms[3])
 					{
-						VectorSubtract((rsurface.modelvertex3f + 3 * surface->num_firstvertex) + (j+i)*3, center, v);
-						VectorMAMAMAM(1, center, DotProduct(forward, v), newforward, DotProduct(right, v), newright, DotProduct(up, v), newup, rsurface.array_deformedvertex3f + (surface->num_firstvertex+i+j) * 3);
+						waveparms[2] = deform->deform_waveparms[2] + (vertex[0] + vertex[1] + vertex[2]) * animpos;
+						scale = R_EvaluateQ3WaveFunc(deform->deform_wavefunc, waveparms);
 					}
+					VectorMA(vertex, scale, (rsurface.normal3f  + 3 * surface->num_firstvertex) + j*3, vertex);
 				}
 			}
-			Mod_BuildNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface.modelvertex3f, rsurface.modelelement3i + surface->num_firsttriangle * 3, rsurface.array_deformednormal3f, r_smoothnormals_areaweighting.integer);
-			Mod_BuildTextureVectorsFromNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface.modelvertex3f, rsurface.modeltexcoordtexture2f, rsurface.array_deformednormal3f, rsurface.modelelement3i + surface->num_firsttriangle * 3, rsurface.array_deformedsvector3f, rsurface.array_deformedtvector3f, r_smoothnormals_areaweighting.integer);
+			rsurface.vertex3f = rsurface.array_deformedvertex3f;
+			rsurface.vertex3f_bufferobject = 0;
+			rsurface.vertex3f_bufferoffset = 0;
+			break;
+		case Q3DEFORM_BULGE:
+			// deform vertex array to make the surface have moving bulges
+			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+			{
+				const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+				for (j = 0;j < surface->num_vertices;j++)
+				{
+					scale = sin((rsurface.modeltexcoordtexture2f[2 * (surface->num_firstvertex + j)] * deform->deform_parms[0] + r_refdef.time * deform->deform_parms[2])) * deform->deform_parms[1];
+					VectorMA(rsurface.vertex3f + 3 * (surface->num_firstvertex + j), scale, rsurface.normal3f + 3 * (surface->num_firstvertex + j), rsurface.array_deformedvertex3f + 3 * (surface->num_firstvertex + j));
+				}
+			}
+			rsurface.vertex3f = rsurface.array_deformedvertex3f;
+			rsurface.vertex3f_bufferobject = 0;
+			rsurface.vertex3f_bufferoffset = 0;
+			break;
+		case Q3DEFORM_MOVE:
+			// deform vertex array
+			scale = R_EvaluateQ3WaveFunc(deform->deform_wavefunc, deform->deform_waveparms);
+			VectorScale(deform->deform_parms, scale, waveparms);
+			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+			{
+				const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+				for (j = 0;j < surface->num_vertices;j++)
+					VectorAdd(rsurface.vertex3f + 3 * (surface->num_firstvertex + j), waveparms, rsurface.array_deformedvertex3f + 3 * (surface->num_firstvertex + j));
+			}
+			rsurface.vertex3f = rsurface.array_deformedvertex3f;
+			rsurface.vertex3f_bufferobject = 0;
+			rsurface.vertex3f_bufferoffset = 0;
+			break;
 		}
-		rsurface.vertex3f = rsurface.array_deformedvertex3f;
-		rsurface.vertex3f_bufferobject = 0;
-		rsurface.vertex3f_bufferoffset = 0;
-		rsurface.svector3f = rsurface.array_deformedsvector3f;
-		rsurface.svector3f_bufferobject = 0;
-		rsurface.svector3f_bufferoffset = 0;
-		rsurface.tvector3f = rsurface.array_deformedtvector3f;
-		rsurface.tvector3f_bufferobject = 0;
-		rsurface.tvector3f_bufferoffset = 0;
-		rsurface.normal3f = rsurface.array_deformednormal3f;
-		rsurface.normal3f_bufferobject = 0;
-		rsurface.normal3f_bufferoffset = 0;
-	}
-	else
-	{
-		rsurface.vertex3f  = rsurface.modelvertex3f;
-		rsurface.vertex3f_bufferobject = rsurface.modelvertex3f_bufferobject;
-		rsurface.vertex3f_bufferoffset = rsurface.modelvertex3f_bufferoffset;
-		rsurface.svector3f = rsurface.modelsvector3f;
-		rsurface.svector3f_bufferobject = rsurface.modelsvector3f_bufferobject;
-		rsurface.svector3f_bufferoffset = rsurface.modelsvector3f_bufferoffset;
-		rsurface.tvector3f = rsurface.modeltvector3f;
-		rsurface.tvector3f_bufferobject = rsurface.modeltvector3f_bufferobject;
-		rsurface.tvector3f_bufferoffset = rsurface.modeltvector3f_bufferoffset;
-		rsurface.normal3f  = rsurface.modelnormal3f;
-		rsurface.normal3f_bufferobject = rsurface.modelnormal3f_bufferobject;
-		rsurface.normal3f_bufferoffset = rsurface.modelnormal3f_bufferoffset;
 	}
 	// generate texcoords based on the chosen texcoord source
 	switch(rsurface.texture->tcgen)
