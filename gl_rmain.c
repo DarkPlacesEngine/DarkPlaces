@@ -3636,7 +3636,7 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 	{
 		if (rsurface.texture->textureflags & (Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2))
 			generatetangents = true;
-		if (generatetangents)
+		if (generatetangents || rsurface.texture->tcgen == Q3TCGEN_ENVIRONMENT)
 			generatenormals = true;
 		if (generatenormals && !rsurface.modelnormal3f)
 		{
