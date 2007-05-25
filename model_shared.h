@@ -290,6 +290,40 @@ typedef enum q3tcmod_e
 }
 q3tcmod_t;
 
+typedef struct q3shaderinfo_layer_rgbgen_s
+{
+	q3rgbgen_t rgbgen;
+	float parms[Q3RGBGEN_MAXPARMS];
+	q3wavefunc_t wavefunc;
+	float waveparms[Q3WAVEPARMS];
+}
+q3shaderinfo_layer_rgbgen_t;
+
+typedef struct q3shaderinfo_layer_alphagen_s
+{
+	q3alphagen_t alphagen;
+	float parms[Q3ALPHAGEN_MAXPARMS];
+	q3wavefunc_t wavefunc;
+	float waveparms[Q3WAVEPARMS];
+}
+q3shaderinfo_layer_alphagen_t;
+
+typedef struct q3shaderinfo_layer_tcgen_s
+{
+	q3tcgen_t tcgen;
+	float parms[Q3TCGEN_MAXPARMS];
+}
+q3shaderinfo_layer_tcgen_t;
+
+typedef struct q3shaderinfo_layer_tcmod_s
+{
+	q3tcmod_t tcmod;
+	float parms[Q3TCMOD_MAXPARMS];
+	q3wavefunc_t wavefunc;
+	float waveparms[Q3WAVEPARMS];
+}
+q3shaderinfo_layer_tcmod_t;
+
 typedef struct q3shaderinfo_layer_s
 {
 	int alphatest;
@@ -298,29 +332,19 @@ typedef struct q3shaderinfo_layer_s
 	int numframes;
 	char texturename[TEXTURE_MAXFRAMES][Q3PATHLENGTH];
 	int blendfunc[2];
-	q3rgbgen_t rgbgen;
-	float rgbgen_parms[Q3RGBGEN_MAXPARMS];
-	q3wavefunc_t rgbgen_wavefunc;
-	float rgbgen_waveparms[Q3WAVEPARMS];
-	q3alphagen_t alphagen;
-	float alphagen_parms[Q3ALPHAGEN_MAXPARMS];
-	q3wavefunc_t alphagen_wavefunc;
-	float alphagen_waveparms[Q3WAVEPARMS];
-	q3tcgen_t tcgen;
-	float tcgen_parms[Q3TCGEN_MAXPARMS];
-	q3tcmod_t tcmod[Q3MAXTCMODS];
-	float tcmod_parms[Q3MAXTCMODS][Q3TCMOD_MAXPARMS];
-	q3wavefunc_t tcmod_wavefunc[Q3MAXTCMODS];
-	float tcmod_waveparms[Q3MAXTCMODS][Q3WAVEPARMS];
+	q3shaderinfo_layer_rgbgen_t rgbgen;
+	q3shaderinfo_layer_alphagen_t alphagen;
+	q3shaderinfo_layer_tcgen_t tcgen;
+	q3shaderinfo_layer_tcmod_t tcmods[Q3MAXTCMODS];
 }
 q3shaderinfo_layer_t;
 
 typedef struct q3shaderinfo_deform_s
 {
 	q3deform_t deform;
-	float deform_parms[Q3DEFORM_MAXPARMS];
-	q3wavefunc_t deform_wavefunc;
-	float deform_waveparms[Q3WAVEPARMS];
+	float parms[Q3DEFORM_MAXPARMS];
+	q3wavefunc_t wavefunc;
+	float waveparms[Q3WAVEPARMS];
 }
 q3shaderinfo_deform_t;
 
@@ -415,25 +439,11 @@ typedef struct texture_s
 	matrix4x4_t currenttexmatrix;
 
 	// various q3 shader features
+	q3shaderinfo_layer_rgbgen_t rgbgen;
+	q3shaderinfo_layer_alphagen_t alphagen;
+	q3shaderinfo_layer_tcgen_t tcgen;
+	q3shaderinfo_layer_tcmod_t tcmods[Q3MAXTCMODS];
 	q3shaderinfo_deform_t deforms[Q3MAXDEFORMS];
-	q3deform_t deform;
-	float deform_parms[Q3DEFORM_MAXPARMS];
-	q3wavefunc_t deform_wavefunc;
-	float deform_waveparms[Q3WAVEPARMS];
-	q3rgbgen_t rgbgen;
-	float rgbgen_parms[Q3RGBGEN_MAXPARMS];
-	q3wavefunc_t rgbgen_wavefunc;
-	float rgbgen_waveparms[Q3WAVEPARMS];
-	q3alphagen_t alphagen;
-	float alphagen_parms[Q3ALPHAGEN_MAXPARMS];
-	q3wavefunc_t alphagen_wavefunc;
-	float alphagen_waveparms[Q3WAVEPARMS];
-	q3tcgen_t tcgen;
-	float tcgen_parms[Q3TCGEN_MAXPARMS];
-	q3tcmod_t tcmod[Q3MAXTCMODS];
-	float tcmod_parms[Q3MAXTCMODS][Q3TCMOD_MAXPARMS];
-	q3wavefunc_t tcmod_wavefunc[Q3MAXTCMODS];
-	float tcmod_waveparms[Q3MAXTCMODS][Q3WAVEPARMS];
 
 	qboolean colormapping;
 	rtexture_t *basetexture;

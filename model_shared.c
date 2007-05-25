@@ -1149,9 +1149,9 @@ void Mod_LoadQ3Shaders(void)
 					if (shader->numlayers < Q3SHADER_MAXLAYERS)
 					{
 						layer = shader->layers + shader->numlayers++;
-						layer->rgbgen = Q3RGBGEN_IDENTITY;
-						layer->alphagen = Q3ALPHAGEN_IDENTITY;
-						layer->tcgen = Q3TCGEN_TEXTURE;
+						layer->rgbgen.rgbgen = Q3RGBGEN_IDENTITY;
+						layer->alphagen.alphagen = Q3ALPHAGEN_IDENTITY;
+						layer->tcgen.tcgen = Q3TCGEN_TEXTURE;
 						layer->blendfunc[0] = GL_ONE;
 						layer->blendfunc[1] = GL_ZERO;
 					}
@@ -1259,22 +1259,22 @@ void Mod_LoadQ3Shaders(void)
 						{
 							int i;
 							for (i = 0;i < numparameters - 2 && i < Q3RGBGEN_MAXPARMS;i++)
-								layer->rgbgen_parms[i] = atof(parameter[i+2]);
-							     if (!strcasecmp(parameter[1], "identity"))         layer->rgbgen = Q3RGBGEN_IDENTITY;
-							else if (!strcasecmp(parameter[1], "const"))            layer->rgbgen = Q3RGBGEN_CONST;
-							else if (!strcasecmp(parameter[1], "entity"))           layer->rgbgen = Q3RGBGEN_ENTITY;
-							else if (!strcasecmp(parameter[1], "exactvertex"))      layer->rgbgen = Q3RGBGEN_EXACTVERTEX;
-							else if (!strcasecmp(parameter[1], "identitylighting")) layer->rgbgen = Q3RGBGEN_IDENTITYLIGHTING;
-							else if (!strcasecmp(parameter[1], "lightingdiffuse"))  layer->rgbgen = Q3RGBGEN_LIGHTINGDIFFUSE;
-							else if (!strcasecmp(parameter[1], "oneminusentity"))   layer->rgbgen = Q3RGBGEN_ONEMINUSENTITY;
-							else if (!strcasecmp(parameter[1], "oneminusvertex"))   layer->rgbgen = Q3RGBGEN_ONEMINUSVERTEX;
-							else if (!strcasecmp(parameter[1], "vertex"))           layer->rgbgen = Q3RGBGEN_VERTEX;
+								layer->rgbgen.parms[i] = atof(parameter[i+2]);
+							     if (!strcasecmp(parameter[1], "identity"))         layer->rgbgen.rgbgen = Q3RGBGEN_IDENTITY;
+							else if (!strcasecmp(parameter[1], "const"))            layer->rgbgen.rgbgen = Q3RGBGEN_CONST;
+							else if (!strcasecmp(parameter[1], "entity"))           layer->rgbgen.rgbgen = Q3RGBGEN_ENTITY;
+							else if (!strcasecmp(parameter[1], "exactvertex"))      layer->rgbgen.rgbgen = Q3RGBGEN_EXACTVERTEX;
+							else if (!strcasecmp(parameter[1], "identitylighting")) layer->rgbgen.rgbgen = Q3RGBGEN_IDENTITYLIGHTING;
+							else if (!strcasecmp(parameter[1], "lightingdiffuse"))  layer->rgbgen.rgbgen = Q3RGBGEN_LIGHTINGDIFFUSE;
+							else if (!strcasecmp(parameter[1], "oneminusentity"))   layer->rgbgen.rgbgen = Q3RGBGEN_ONEMINUSENTITY;
+							else if (!strcasecmp(parameter[1], "oneminusvertex"))   layer->rgbgen.rgbgen = Q3RGBGEN_ONEMINUSVERTEX;
+							else if (!strcasecmp(parameter[1], "vertex"))           layer->rgbgen.rgbgen = Q3RGBGEN_VERTEX;
 							else if (!strcasecmp(parameter[1], "wave"))
 							{
-								layer->rgbgen = Q3RGBGEN_WAVE;
-								layer->rgbgen_wavefunc = Mod_LoadQ3Shaders_EnumerateWaveFunc(parameter[2]);
+								layer->rgbgen.rgbgen = Q3RGBGEN_WAVE;
+								layer->rgbgen.wavefunc = Mod_LoadQ3Shaders_EnumerateWaveFunc(parameter[2]);
 								for (i = 0;i < numparameters - 3 && i < Q3WAVEPARMS;i++)
-									layer->rgbgen_waveparms[i] = atof(parameter[i+3]);
+									layer->rgbgen.waveparms[i] = atof(parameter[i+3]);
 							}
 							else Con_DPrintf("%s parsing warning: unknown rgbgen %s\n", search->filenames[fileindex], parameter[1]);
 						}
@@ -1282,21 +1282,21 @@ void Mod_LoadQ3Shaders(void)
 						{
 							int i;
 							for (i = 0;i < numparameters - 2 && i < Q3ALPHAGEN_MAXPARMS;i++)
-								layer->alphagen_parms[i] = atof(parameter[i+2]);
-							     if (!strcasecmp(parameter[1], "identity"))         layer->alphagen = Q3ALPHAGEN_IDENTITY;
-							else if (!strcasecmp(parameter[1], "const"))            layer->alphagen = Q3ALPHAGEN_CONST;
-							else if (!strcasecmp(parameter[1], "entity"))           layer->alphagen = Q3ALPHAGEN_ENTITY;
-							else if (!strcasecmp(parameter[1], "lightingspecular")) layer->alphagen = Q3ALPHAGEN_LIGHTINGSPECULAR;
-							else if (!strcasecmp(parameter[1], "oneminusentity"))   layer->alphagen = Q3ALPHAGEN_ONEMINUSENTITY;
-							else if (!strcasecmp(parameter[1], "oneminusvertex"))   layer->alphagen = Q3ALPHAGEN_ONEMINUSVERTEX;
-							else if (!strcasecmp(parameter[1], "portal"))           layer->alphagen = Q3ALPHAGEN_PORTAL;
-							else if (!strcasecmp(parameter[1], "vertex"))           layer->alphagen = Q3ALPHAGEN_VERTEX;
+								layer->alphagen.parms[i] = atof(parameter[i+2]);
+							     if (!strcasecmp(parameter[1], "identity"))         layer->alphagen.alphagen = Q3ALPHAGEN_IDENTITY;
+							else if (!strcasecmp(parameter[1], "const"))            layer->alphagen.alphagen = Q3ALPHAGEN_CONST;
+							else if (!strcasecmp(parameter[1], "entity"))           layer->alphagen.alphagen = Q3ALPHAGEN_ENTITY;
+							else if (!strcasecmp(parameter[1], "lightingspecular")) layer->alphagen.alphagen = Q3ALPHAGEN_LIGHTINGSPECULAR;
+							else if (!strcasecmp(parameter[1], "oneminusentity"))   layer->alphagen.alphagen = Q3ALPHAGEN_ONEMINUSENTITY;
+							else if (!strcasecmp(parameter[1], "oneminusvertex"))   layer->alphagen.alphagen = Q3ALPHAGEN_ONEMINUSVERTEX;
+							else if (!strcasecmp(parameter[1], "portal"))           layer->alphagen.alphagen = Q3ALPHAGEN_PORTAL;
+							else if (!strcasecmp(parameter[1], "vertex"))           layer->alphagen.alphagen = Q3ALPHAGEN_VERTEX;
 							else if (!strcasecmp(parameter[1], "wave"))
 							{
-								layer->alphagen = Q3RGBGEN_WAVE;
-								layer->alphagen_wavefunc = Mod_LoadQ3Shaders_EnumerateWaveFunc(parameter[2]);
+								layer->alphagen.alphagen = Q3RGBGEN_WAVE;
+								layer->alphagen.wavefunc = Mod_LoadQ3Shaders_EnumerateWaveFunc(parameter[2]);
 								for (i = 0;i < numparameters - 3 && i < Q3WAVEPARMS;i++)
-									layer->alphagen_waveparms[i] = atof(parameter[i+3]);
+									layer->alphagen.waveparms[i] = atof(parameter[i+3]);
 							}
 							else Con_DPrintf("%s parsing warning: unknown alphagen %s\n", search->filenames[fileindex], parameter[1]);
 						}
@@ -1306,12 +1306,12 @@ void Mod_LoadQ3Shaders(void)
 							// observed values: tcgen environment
 							// no other values have been observed in real shaders
 							for (i = 0;i < numparameters - 2 && i < Q3TCGEN_MAXPARMS;i++)
-								layer->tcgen_parms[i] = atof(parameter[i+2]);
-							     if (!strcasecmp(parameter[1], "base"))        layer->tcgen = Q3TCGEN_TEXTURE;
-							else if (!strcasecmp(parameter[1], "texture"))     layer->tcgen = Q3TCGEN_TEXTURE;
-							else if (!strcasecmp(parameter[1], "environment")) layer->tcgen = Q3TCGEN_ENVIRONMENT;
-							else if (!strcasecmp(parameter[1], "lightmap"))    layer->tcgen = Q3TCGEN_LIGHTMAP;
-							else if (!strcasecmp(parameter[1], "vector"))      layer->tcgen = Q3TCGEN_VECTOR;
+								layer->tcgen.parms[i] = atof(parameter[i+2]);
+							     if (!strcasecmp(parameter[1], "base"))        layer->tcgen.tcgen = Q3TCGEN_TEXTURE;
+							else if (!strcasecmp(parameter[1], "texture"))     layer->tcgen.tcgen = Q3TCGEN_TEXTURE;
+							else if (!strcasecmp(parameter[1], "environment")) layer->tcgen.tcgen = Q3TCGEN_ENVIRONMENT;
+							else if (!strcasecmp(parameter[1], "lightmap"))    layer->tcgen.tcgen = Q3TCGEN_LIGHTMAP;
+							else if (!strcasecmp(parameter[1], "vector"))      layer->tcgen.tcgen = Q3TCGEN_VECTOR;
 							else Con_DPrintf("%s parsing warning: unknown tcgen mode %s\n", search->filenames[fileindex], parameter[1]);
 						}
 						else if (numparameters >= 2 && !strcasecmp(parameter[0], "tcmod"))
@@ -1328,25 +1328,25 @@ void Mod_LoadQ3Shaders(void)
 							// tcmod turb sin # # # #  (this is bogus)
 							// no other values have been observed in real shaders
 							for (tcmodindex = 0;tcmodindex < Q3MAXTCMODS;tcmodindex++)
-								if (!layer->tcmod[tcmodindex])
+								if (!layer->tcmods[tcmodindex].tcmod)
 									break;
 							if (tcmodindex < Q3MAXTCMODS)
 							{
 								for (i = 0;i < numparameters - 2 && i < Q3TCMOD_MAXPARMS;i++)
-									layer->tcmod_parms[tcmodindex][i] = atof(parameter[i+2]);
-									 if (!strcasecmp(parameter[1], "entitytranslate")) layer->tcmod[tcmodindex] = Q3TCMOD_ENTITYTRANSLATE;
-								else if (!strcasecmp(parameter[1], "rotate"))          layer->tcmod[tcmodindex] = Q3TCMOD_ROTATE;
-								else if (!strcasecmp(parameter[1], "scale"))           layer->tcmod[tcmodindex] = Q3TCMOD_SCALE;
-								else if (!strcasecmp(parameter[1], "scroll"))          layer->tcmod[tcmodindex] = Q3TCMOD_SCROLL;
+									layer->tcmods[tcmodindex].parms[i] = atof(parameter[i+2]);
+									 if (!strcasecmp(parameter[1], "entitytranslate")) layer->tcmods[tcmodindex].tcmod = Q3TCMOD_ENTITYTRANSLATE;
+								else if (!strcasecmp(parameter[1], "rotate"))          layer->tcmods[tcmodindex].tcmod = Q3TCMOD_ROTATE;
+								else if (!strcasecmp(parameter[1], "scale"))           layer->tcmods[tcmodindex].tcmod = Q3TCMOD_SCALE;
+								else if (!strcasecmp(parameter[1], "scroll"))          layer->tcmods[tcmodindex].tcmod = Q3TCMOD_SCROLL;
 								else if (!strcasecmp(parameter[1], "stretch"))
 								{
-									layer->tcmod[tcmodindex] = Q3TCMOD_STRETCH;
-									layer->tcmod_wavefunc[tcmodindex] = Mod_LoadQ3Shaders_EnumerateWaveFunc(parameter[2]);
+									layer->tcmods[tcmodindex].tcmod = Q3TCMOD_STRETCH;
+									layer->tcmods[tcmodindex].wavefunc = Mod_LoadQ3Shaders_EnumerateWaveFunc(parameter[2]);
 									for (i = 0;i < numparameters - 3 && i < Q3WAVEPARMS;i++)
-										layer->tcmod_waveparms[tcmodindex][i] = atof(parameter[i+3]);
+										layer->tcmods[tcmodindex].waveparms[i] = atof(parameter[i+3]);
 								}
-								else if (!strcasecmp(parameter[1], "transform"))       layer->tcmod[tcmodindex] = Q3TCMOD_TRANSFORM;
-								else if (!strcasecmp(parameter[1], "turb"))            layer->tcmod[tcmodindex] = Q3TCMOD_TURBULENT;
+								else if (!strcasecmp(parameter[1], "transform"))       layer->tcmods[tcmodindex].tcmod = Q3TCMOD_TRANSFORM;
+								else if (!strcasecmp(parameter[1], "turb"))            layer->tcmods[tcmodindex].tcmod = Q3TCMOD_TURBULENT;
 								else Con_DPrintf("%s parsing warning: unknown tcmod mode %s\n", search->filenames[fileindex], parameter[1]);
 							}
 							else
@@ -1356,9 +1356,9 @@ void Mod_LoadQ3Shaders(void)
 						if (!strcasecmp(com_token, "}"))
 							break;
 					}
-					if (layer->rgbgen == Q3RGBGEN_LIGHTINGDIFFUSE || layer->rgbgen == Q3RGBGEN_VERTEX)
+					if (layer->rgbgen.rgbgen == Q3RGBGEN_LIGHTINGDIFFUSE || layer->rgbgen.rgbgen == Q3RGBGEN_VERTEX)
 						shader->lighting = true;
-					if (layer->alphagen == Q3ALPHAGEN_VERTEX)
+					if (layer->alphagen.alphagen == Q3ALPHAGEN_VERTEX)
 					{
 						if (layer == shader->layers + 0)
 						{
@@ -1497,7 +1497,7 @@ void Mod_LoadQ3Shaders(void)
 					if (deformindex < Q3MAXDEFORMS)
 					{
 						for (i = 0;i < numparameters - 2 && i < Q3DEFORM_MAXPARMS;i++)
-							shader->deforms[deformindex].deform_parms[i] = atof(parameter[i+2]);
+							shader->deforms[deformindex].parms[i] = atof(parameter[i+2]);
 						     if (!strcasecmp(parameter[1], "projectionshadow")) shader->deforms[deformindex].deform = Q3DEFORM_PROJECTIONSHADOW;
 						else if (!strcasecmp(parameter[1], "autosprite"      )) shader->deforms[deformindex].deform = Q3DEFORM_AUTOSPRITE;
 						else if (!strcasecmp(parameter[1], "autosprite2"     )) shader->deforms[deformindex].deform = Q3DEFORM_AUTOSPRITE2;
@@ -1514,16 +1514,16 @@ void Mod_LoadQ3Shaders(void)
 						else if (!strcasecmp(parameter[1], "wave"            ))
 						{
 							shader->deforms[deformindex].deform = Q3DEFORM_WAVE;
-							shader->deforms[deformindex].deform_wavefunc = Mod_LoadQ3Shaders_EnumerateWaveFunc(parameter[3]);
+							shader->deforms[deformindex].wavefunc = Mod_LoadQ3Shaders_EnumerateWaveFunc(parameter[3]);
 							for (i = 0;i < numparameters - 4 && i < Q3WAVEPARMS;i++)
-								shader->deforms[deformindex].deform_waveparms[i] = atof(parameter[i+4]);
+								shader->deforms[deformindex].waveparms[i] = atof(parameter[i+4]);
 						}
 						else if (!strcasecmp(parameter[1], "move"            ))
 						{
 							shader->deforms[deformindex].deform = Q3DEFORM_MOVE;
-							shader->deforms[deformindex].deform_wavefunc = Mod_LoadQ3Shaders_EnumerateWaveFunc(parameter[5]);
+							shader->deforms[deformindex].wavefunc = Mod_LoadQ3Shaders_EnumerateWaveFunc(parameter[5]);
 							for (i = 0;i < numparameters - 6 && i < Q3WAVEPARMS;i++)
-								shader->deforms[deformindex].deform_waveparms[i] = atof(parameter[i+6]);
+								shader->deforms[deformindex].waveparms[i] = atof(parameter[i+6]);
 						}
 					}
 				}
@@ -1643,20 +1643,10 @@ nothing                GL_ZERO GL_ONE
 		if (shader->primarylayer)
 		{
 			// copy over many shader->primarylayer parameters
-			texture->rgbgen   = shader->primarylayer->rgbgen;
-			memcpy(texture->rgbgen_parms      , shader->primarylayer->rgbgen_parms      , sizeof(texture->rgbgen_parms));
-			texture->rgbgen_wavefunc = shader->primarylayer->rgbgen_wavefunc;
-			memcpy(texture->rgbgen_waveparms  , shader->primarylayer->rgbgen_waveparms  , sizeof(texture->rgbgen_waveparms));
+			texture->rgbgen = shader->primarylayer->rgbgen;
 			texture->alphagen = shader->primarylayer->alphagen;
-			memcpy(texture->alphagen_parms    , shader->primarylayer->alphagen_parms    , sizeof(texture->alphagen_parms));
-			texture->alphagen_wavefunc = shader->primarylayer->alphagen_wavefunc;
-			memcpy(texture->alphagen_waveparms, shader->primarylayer->alphagen_waveparms, sizeof(texture->alphagen_waveparms));
-			texture->tcgen    = shader->primarylayer->tcgen;
-			memcpy(texture->tcgen_parms       , shader->primarylayer->tcgen_parms       , sizeof(texture->tcgen_parms));
-			memcpy(texture->tcmod             , shader->primarylayer->tcmod             , sizeof(texture->tcmod));
-			memcpy(texture->tcmod_parms       , shader->primarylayer->tcmod_parms       , sizeof(texture->tcmod_parms));
-			memcpy(texture->tcmod_wavefunc    , shader->primarylayer->tcmod_wavefunc    , sizeof(texture->tcmod_wavefunc));
-			memcpy(texture->tcmod_waveparms   , shader->primarylayer->tcmod_waveparms   , sizeof(texture->tcmod_waveparms));
+			texture->tcgen = shader->primarylayer->tcgen;
+			memcpy(texture->tcmods, shader->primarylayer->tcmods, sizeof(texture->tcmods));
 			// load the textures
 			texture->numskinframes = shader->primarylayer->numframes;
 			texture->skinframerate = shader->primarylayer->framerate;
