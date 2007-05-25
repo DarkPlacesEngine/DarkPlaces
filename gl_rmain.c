@@ -3177,6 +3177,7 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 	model_t *model = ent->model;
 	float f;
 	float tcmat[12];
+	q3shaderinfo_layer_tcmod_t *tcmod;
 
 	// switch to an alternate material if this is a q1bsp animated material
 	{
@@ -3242,10 +3243,10 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 	if (t->backgroundnumskinframes && !(t->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED))
 		t->currentmaterialflags |= MATERIALFLAG_VERTEXTEXTUREBLEND;
 
-	for (i = 0;i < Q3MAXTCMODS && (t->tcmod[i] || i < 1);i++)
+	for (i = 0, tcmod = t->tcmods;i < Q3MAXTCMODS && (tcmod->tcmod || i < 1);i++, tcmod++)
 	{
 		matrix4x4_t matrix;
-		switch(t->tcmod[i])
+		switch(tcmod->tcmod)
 		{
 		case Q3TCMOD_COUNT:
 		case Q3TCMOD_NONE:
@@ -3261,24 +3262,24 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 			break;
 		case Q3TCMOD_ROTATE:
 			Matrix4x4_CreateTranslate(&matrix, 0.5, 0.5, 0);
-			Matrix4x4_ConcatRotate(&matrix, t->tcmod_parms[i][0] * r_refdef.time, 0, 0, 1);
+			Matrix4x4_ConcatRotate(&matrix, tcmod->parms[0] * r_refdef.time, 0, 0, 1);
 			Matrix4x4_ConcatTranslate(&matrix, -0.5, -0.5, 0);
 			break;
 		case Q3TCMOD_SCALE:
-			Matrix4x4_CreateScale3(&matrix, t->tcmod_parms[i][0], t->tcmod_parms[i][1], 1);
+			Matrix4x4_CreateScale3(&matrix, tcmod->parms[0], tcmod->parms[1], 1);
 			break;
 		case Q3TCMOD_SCROLL:
-			Matrix4x4_CreateTranslate(&matrix, t->tcmod_parms[i][0] * r_refdef.time, t->tcmod_parms[i][1] * r_refdef.time, 0);
+			Matrix4x4_CreateTranslate(&matrix, tcmod->parms[0] * r_refdef.time, tcmod->parms[1] * r_refdef.time, 0);
 			break;
 		case Q3TCMOD_STRETCH:
-			f = 1.0f / R_EvaluateQ3WaveFunc(t->tcmod_wavefunc[i], t->tcmod_parms[i]);
+			f = 1.0f / R_EvaluateQ3WaveFunc(tcmod->wavefunc, tcmod->waveparms);
 			Matrix4x4_CreateFromQuakeEntity(&matrix, 0.5f * (1 - f), 0.5 * (1 - f), 0, 0, 0, 0, f);
 			break;
 		case Q3TCMOD_TRANSFORM:
-			VectorSet(tcmat +  0, t->tcmod_parms[i][0], t->tcmod_parms[i][1], 0);
-			VectorSet(tcmat +  3, t->tcmod_parms[i][2], t->tcmod_parms[i][3], 0);
+			VectorSet(tcmat +  0, tcmod->parms[0], tcmod->parms[1], 0);
+			VectorSet(tcmat +  3, tcmod->parms[2], tcmod->parms[3], 0);
 			VectorSet(tcmat +  6, 0                   , 0                , 1);
-			VectorSet(tcmat +  9, t->tcmod_parms[i][4], t->tcmod_parms[i][5], 0);
+			VectorSet(tcmat +  9, tcmod->parms[4], tcmod->parms[5], 0);
 			Matrix4x4_FromArray12FloatGL(&matrix, tcmat);
 			break;
 		case Q3TCMOD_TURBULENT:
@@ -3639,7 +3640,7 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 	// if vertices are dynamic (animated models), generate them into the temporary rsurface.array_model* arrays and point rsurface.model* at them instead of the static data from the model itself
 	if (rsurface.generatedvertex)
 	{
-		if (rsurface.texture->tcgen == Q3TCGEN_ENVIRONMENT)
+		if (rsurface.texture->tcgen.tcgen == Q3TCGEN_ENVIRONMENT)
 			generatenormals = true;
 		for (i = 0;i < Q3MAXDEFORMS;i++)
 		{
@@ -3853,9 +3854,9 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 					float *normal = (rsurface.array_deformednormal3f  + 3 * surface->num_firstvertex) + j*3;
 					VectorScale((rsurface.vertex3f  + 3 * surface->num_firstvertex) + j*3, 0.98f, vertex);
 					VectorCopy((rsurface.normal3f  + 3 * surface->num_firstvertex) + j*3, normal);
-					normal[0] += deform->deform_parms[0] * noise4f(      vertex[0], vertex[1], vertex[2], r_refdef.time * deform->deform_parms[1]);
-					normal[1] += deform->deform_parms[0] * noise4f( 98 + vertex[0], vertex[1], vertex[2], r_refdef.time * deform->deform_parms[1]);
-					normal[2] += deform->deform_parms[0] * noise4f(196 + vertex[0], vertex[1], vertex[2], r_refdef.time * deform->deform_parms[1]);
+					normal[0] += deform->parms[0] * noise4f(      vertex[0], vertex[1], vertex[2], r_refdef.time * deform->parms[1]);
+					normal[1] += deform->parms[0] * noise4f( 98 + vertex[0], vertex[1], vertex[2], r_refdef.time * deform->parms[1]);
+					normal[2] += deform->parms[0] * noise4f(196 + vertex[0], vertex[1], vertex[2], r_refdef.time * deform->parms[1]);
 					VectorNormalize(normal);
 				}
 				Mod_BuildTextureVectorsFromNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface.vertex3f, rsurface.modeltexcoordtexture2f, rsurface.array_deformednormal3f, rsurface.modelelement3i + surface->num_firsttriangle * 3, rsurface.array_deformedsvector3f, rsurface.array_deformedtvector3f, r_smoothnormals_areaweighting.integer);
@@ -3872,13 +3873,13 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 			break;
 		case Q3DEFORM_WAVE:
 			// deform vertex array to make wavey water and flags and such
-			waveparms[0] = deform->deform_waveparms[0];
-			waveparms[1] = deform->deform_waveparms[1];
-			waveparms[2] = deform->deform_waveparms[2];
-			waveparms[3] = deform->deform_waveparms[3];
+			waveparms[0] = deform->waveparms[0];
+			waveparms[1] = deform->waveparms[1];
+			waveparms[2] = deform->waveparms[2];
+			waveparms[3] = deform->waveparms[3];
 			// this is how a divisor of vertex influence on deformation
-			animpos = deform->deform_parms[0] ? 1.0f / deform->deform_parms[0] : 100.0f;
-			scale = R_EvaluateQ3WaveFunc(deform->deform_wavefunc, waveparms);
+			animpos = deform->parms[0] ? 1.0f / deform->parms[0] : 100.0f;
+			scale = R_EvaluateQ3WaveFunc(deform->wavefunc, waveparms);
 			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 			{
 				const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
@@ -3889,8 +3890,8 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 					// if the wavefunc depends on time, evaluate it per-vertex
 					if (waveparms[3])
 					{
-						waveparms[2] = deform->deform_waveparms[2] + (vertex[0] + vertex[1] + vertex[2]) * animpos;
-						scale = R_EvaluateQ3WaveFunc(deform->deform_wavefunc, waveparms);
+						waveparms[2] = deform->waveparms[2] + (vertex[0] + vertex[1] + vertex[2]) * animpos;
+						scale = R_EvaluateQ3WaveFunc(deform->wavefunc, waveparms);
 					}
 					VectorMA(vertex, scale, (rsurface.normal3f  + 3 * surface->num_firstvertex) + j*3, vertex);
 				}
@@ -3906,7 +3907,7 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 				const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 				for (j = 0;j < surface->num_vertices;j++)
 				{
-					scale = sin((rsurface.modeltexcoordtexture2f[2 * (surface->num_firstvertex + j)] * deform->deform_parms[0] + r_refdef.time * deform->deform_parms[2])) * deform->deform_parms[1];
+					scale = sin((rsurface.modeltexcoordtexture2f[2 * (surface->num_firstvertex + j)] * deform->parms[0] + r_refdef.time * deform->parms[2])) * deform->parms[1];
 					VectorMA(rsurface.vertex3f + 3 * (surface->num_firstvertex + j), scale, rsurface.normal3f + 3 * (surface->num_firstvertex + j), rsurface.array_deformedvertex3f + 3 * (surface->num_firstvertex + j));
 				}
 			}
@@ -3916,8 +3917,8 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 			break;
 		case Q3DEFORM_MOVE:
 			// deform vertex array
-			scale = R_EvaluateQ3WaveFunc(deform->deform_wavefunc, deform->deform_waveparms);
-			VectorScale(deform->deform_parms, scale, waveparms);
+			scale = R_EvaluateQ3WaveFunc(deform->wavefunc, deform->waveparms);
+			VectorScale(deform->parms, scale, waveparms);
 			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 			{
 				const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
@@ -3931,7 +3932,7 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 		}
 	}
 	// generate texcoords based on the chosen texcoord source
-	switch(rsurface.texture->tcgen)
+	switch(rsurface.texture->tcgen.tcgen)
 	{
 	default:
 	case Q3TCGEN_TEXTURE:
@@ -3950,8 +3951,8 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 			const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 			for (j = 0, v1 = rsurface.modelvertex3f + 3 * surface->num_firstvertex, out_tc = rsurface.array_generatedtexcoordtexture2f + 2 * surface->num_firstvertex;j < surface->num_vertices;j++, v1 += 3, out_tc += 2)
 			{
-				out_tc[0] = DotProduct(v1, rsurface.texture->tcgen_parms);
-				out_tc[1] = DotProduct(v1, rsurface.texture->tcgen_parms + 3);
+				out_tc[0] = DotProduct(v1, rsurface.texture->tcgen.parms);
+				out_tc[1] = DotProduct(v1, rsurface.texture->tcgen.parms + 3);
 			}
 		}
 		rsurface.texcoordtexture2f               = rsurface.array_generatedtexcoordtexture2f;
@@ -3986,10 +3987,10 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 	// and we only support that as the first one
 	// (handling a mixture of turbulent and other tcmods would be problematic
 	//  without punting it entirely to a software path)
-	if (rsurface.texture->tcmod[0] == Q3TCMOD_TURBULENT)
+	if (rsurface.texture->tcmods[0].tcmod == Q3TCMOD_TURBULENT)
 	{
-		amplitude = rsurface.texture->tcmod_parms[0][1];
-		animpos = rsurface.texture->tcmod_parms[0][2] + r_refdef.time * rsurface.texture->tcmod_parms[0][3];
+		amplitude = rsurface.texture->tcmods[0].parms[1];
+		animpos = rsurface.texture->tcmods[0].parms[2] + r_refdef.time * rsurface.texture->tcmods[0].parms[3];
 		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
 			const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
