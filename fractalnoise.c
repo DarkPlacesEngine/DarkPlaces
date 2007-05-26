@@ -154,12 +154,13 @@ float noise4f(float x, float y, float z, float w)
 			noisetable[i] = (rand() / (double)RAND_MAX) * 2 - 1;
 		// r is a remapping table to make each dimension of the index have different indexing behavior
 		for (i = 0;i < NOISE_SIZE;i++)
-			r[i] = (int)(rand() * (double)NOISE_MASK / (double)RAND_MAX);
+			r[i] = (int)(rand() * (double)NOISE_SIZE / ((double)RAND_MAX + 1)) & NOISE_MASK;
+			// that & is only needed if RAND_MAX is > the range of double, which isn't the case on most platforms
 	}
-	frac[1][0] = x - floor(x);index[0][0] = (int)floor(x);
-	frac[1][1] = y - floor(y);index[1][0] = (int)floor(y);
-	frac[1][2] = z - floor(z);index[2][0] = (int)floor(z);
-	frac[1][3] = w - floor(w);index[3][0] = (int)floor(w);
+	frac[1][0] = x - floor(x);index[0][0] = ((int)floor(x)) & NOISE_MASK;
+	frac[1][1] = y - floor(y);index[1][0] = ((int)floor(y)) & NOISE_MASK;
+	frac[1][2] = z - floor(z);index[2][0] = ((int)floor(z)) & NOISE_MASK;
+	frac[1][3] = w - floor(w);index[3][0] = ((int)floor(w)) & NOISE_MASK;
 	for (i = 0;i < 4;i++)
 		frac[i][0] = 1 - frac[i][1];
 	for (i = 0;i < 4;i++)
