@@ -112,6 +112,11 @@ void SCR_DrawCenterString (void)
 	int		remaining;
 	int		color;
 
+	if(gamemode == GAME_NEXUIZ)
+		if(cl.intermission == 2) // in Nexuiz finale (voting screen),
+			if(sb_showscores) // make TAB hide vote messages
+				return;
+
 // the finale prints the characters one at a time, except if printspeed is an absurdly high value
 	if (cl.intermission && scr_printspeed.value > 0 && scr_printspeed.value < 1000000)
 		remaining = (int)(scr_printspeed.value * (cl.time - scr_centertime_start));
