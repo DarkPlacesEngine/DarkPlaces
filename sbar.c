@@ -627,9 +627,11 @@ void Sbar_SoloScoreboard (void)
 	char	str[80], timestr[40];
 	int		i, max;
 	int		minutes, seconds;
+	double	t;
 
-	minutes = (int)(cl.time / 60);
-	seconds = (int)(cl.time - 60*floor(cl.time/60));
+	t = (cl.intermission ? cl.completed_time : cl.time);
+	minutes = (int)(t / 60);
+	seconds = (int)(t - 60*floor(t/60));
 
 	// monsters and secrets are now both on the top row
 	if (gamemode != GAME_NEXUIZ)
@@ -1090,11 +1092,22 @@ void Sbar_Draw (void)
 	{
 		if (cl.intermission == 1)
 		{
+			if(gamemode == GAME_NEXUIZ) // display full scoreboard (that is, show scores + map name)
+			{
+				Sbar_DrawScoreboard();
+				return;
+			}
 			Sbar_IntermissionOverlay();
 			return;
 		}
 		else if (cl.intermission == 2)
 		{
+			if(gamemode == GAME_NEXUIZ) // Nexuiz allows TAB to override the voting screens to recall the scores
+				if(sb_showscores)
+				{
+					Sbar_DrawScoreboard();
+					return;
+				}
 			Sbar_FinaleOverlay();
 			return;
 		}

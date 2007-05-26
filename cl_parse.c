@@ -3198,16 +3198,18 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case qw_svc_intermission:
+				if(!cl.intermission)
+					cl.completed_time = cl.time;
 				cl.intermission = 1;
-				cl.completed_time = cl.time;
 				MSG_ReadVector(cl.qw_intermission_origin, cls.protocol);
 				for (i = 0;i < 3;i++)
 					cl.qw_intermission_angles[i] = MSG_ReadAngle(cls.protocol);
 				break;
 
 			case qw_svc_finale:
+				if(!cl.intermission)
+					cl.completed_time = cl.time;
 				cl.intermission = 2;
-				cl.completed_time = cl.time;
 				SCR_CenterPrint(MSG_ReadString ());
 				break;
 
@@ -3654,19 +3656,22 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case svc_intermission:
+				if(!cl.intermission)
+					cl.completed_time = cl.time;
 				cl.intermission = 1;
-				cl.completed_time = cl.time;
 				break;
 
 			case svc_finale:
+				if(!cl.intermission)
+					cl.completed_time = cl.time;
 				cl.intermission = 2;
-				cl.completed_time = cl.time;
 				SCR_CenterPrint(MSG_ReadString ());
 				break;
 
 			case svc_cutscene:
+				if(!cl.intermission)
+					cl.completed_time = cl.time;
 				cl.intermission = 3;
-				cl.completed_time = cl.time;
 				SCR_CenterPrint(MSG_ReadString ());
 				break;
 
