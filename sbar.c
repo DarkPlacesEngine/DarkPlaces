@@ -412,7 +412,7 @@ Sbar_DrawString
 */
 void Sbar_DrawString (int x, int y, char *str)
 {
-	DrawQ_String (sbar_x + x, sbar_y + y, str, 0, 8, 8, 1, 1, 1, sbar_alpha_fg.value, 0, NULL, true);
+	DrawQ_String (sbar_x + x, sbar_y + y, str, 0, 8, 8, 1, 1, 1, sbar_alpha_fg.value, 0, NULL, false);
 }
 
 /*
@@ -625,7 +625,7 @@ void Sbar_SoloScoreboard (void)
 {
 #if 1
 	char	str[80], timestr[40];
-	int		i, max;
+	int		max, timelen;
 	int		minutes, seconds;
 	double	t;
 
@@ -634,8 +634,10 @@ void Sbar_SoloScoreboard (void)
 	seconds = (int)(t - 60*floor(t/60));
 
 	// monsters and secrets are now both on the top row
-	if (gamemode != GAME_NEXUIZ)
-		Sbar_DrawString(8, 4, va("Monsters:%3i /%3i    Secrets :%3i /%3i", cl.stats[STAT_MONSTERS], cl.stats[STAT_TOTALMONSTERS], cl.stats[STAT_SECRETS], cl.stats[STAT_TOTALSECRETS]));
+	if (cl.stats[STAT_TOTALMONSTERS])
+		Sbar_DrawString(8, 4, va("Monsters:%3i /%3i", cl.stats[STAT_MONSTERS], cl.stats[STAT_TOTALMONSTERS]));
+	if (cl.stats[STAT_TOTALSECRETS])
+		Sbar_DrawString(8+22*8, 4, va("Secrets:%3i /%3i", cl.stats[STAT_SECRETS], cl.stats[STAT_TOTALSECRETS]));
 
 	// figure out the map's filename without path or extension
 	strlcpy(str, FS_FileWithoutPath(cl.worldmodel ? cl.worldmodel->name : ""), sizeof(str));
@@ -646,22 +648,23 @@ void Sbar_SoloScoreboard (void)
 	strlcat(str, ":", sizeof(str));
 	strlcat(str, cl.levelname, sizeof(str));
 
-	// make the time string
-	max = 38 - sprintf(timestr, " %i:%02i", minutes, seconds);
-
 	// if there's a newline character, terminate the string there
 	if (strchr(str, '\n'))
 		*(strchr(str, '\n')) = 0;
 
-	// pad with spaces to fill the allotted space and append the time
-	i = bound(0, (int)strlen(str), max);
-	while (i < max)
-		str[i++] = ' ';
-	str[i] = 0;
-	strlcat(str, timestr, sizeof(str));
+	// make the time string
+	timelen = sprintf(timestr, " %i:%02i", minutes, seconds);
 
-	// print the line of text
+	// truncate the level name if necessary to make room for time
+	max = 38 - timelen;
+	if ((int)strlen(str) > max)
+		str[max] = 0;
+
+	// print the filename and message
 	Sbar_DrawString(8, 12, str);
+
+	// print the time
+	Sbar_DrawString(8 + max*8, 12, timestr);
 
 #else
 	char	str[80];
@@ -1090,7 +1093,9 @@ void Sbar_Draw (void)
 
 	if(cl.csqc_vidvars.drawenginesbar)	//[515]: csqc drawsbar
 	{
-		if (cl.intermission == 1)
+		if (sb_showscores)
+			Sbar_DrawScoreboard ();
+		else if (cl.intermission == 1)
 		{
 			if(gamemode == GAME_NEXUIZ) // display full scoreboard (that is, show scores + map name)
 			{
@@ -1098,21 +1103,10 @@ void Sbar_Draw (void)
 				return;
 			}
 			Sbar_IntermissionOverlay();
-			return;
 		}
 		else if (cl.intermission == 2)
-		{
-			if(gamemode == GAME_NEXUIZ) // Nexuiz allows TAB to override the voting screens to recall the scores
-				if(sb_showscores)
-				{
-					Sbar_DrawScoreboard();
-					return;
-				}
 			Sbar_FinaleOverlay();
-			return;
-		}
-
-		if (gamemode == GAME_NETHERWORLD)
+		else if (gamemode == GAME_NETHERWORLD)
 		{
 		}
 		else if (gamemode == GAME_SOM)
