@@ -413,6 +413,13 @@ void SV_Init (void)
 	}
 	Cvar_RegisterVariable (&cutscene); // for Nehahra but useful to other mods as well
 
+	// any special defaults for gamemodes go here
+	if (gamemode == GAME_HIPNOTIC)
+	{
+		// hipnotic mission pack has issues in their 'friendly monster' ai, which seem to attempt to attack themselves for some reason when findradius() returns non-solid entities.
+		Cvar_SetValueQuick (&sv_gameplayfix_blowupfallenzombies, 0);
+	}
+
 	sv_mempool = Mem_AllocPool("server", 0, NULL);
 }
 
