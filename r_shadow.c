@@ -983,6 +983,7 @@ void R_Shadow_RenderMode_Begin(void)
 	R_Mesh_ResetTextureState();
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthRange(0, 1);
+	GL_PolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);
 	GL_DepthTest(true);
 	GL_DepthMask(false);
 	GL_Color(0, 0, 0, 1);
@@ -1027,7 +1028,7 @@ void R_Shadow_RenderMode_Reset(void)
 	GL_DepthTest(true);
 	GL_DepthMask(false);
 	qglDepthFunc(GL_LEQUAL);CHECKGLERROR
-	qglPolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);CHECKGLERROR
+	GL_PolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);CHECKGLERROR
 	qglDisable(GL_STENCIL_TEST);CHECKGLERROR
 	qglStencilMask(~0);CHECKGLERROR
 	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);CHECKGLERROR
@@ -1043,7 +1044,7 @@ void R_Shadow_RenderMode_StencilShadowVolumes(qboolean clearstencil)
 	CHECKGLERROR
 	R_Shadow_RenderMode_Reset();
 	GL_ColorMask(0, 0, 0, 0);
-	qglPolygonOffset(r_refdef.shadowpolygonfactor, r_refdef.shadowpolygonoffset);CHECKGLERROR
+	GL_PolygonOffset(r_refdef.shadowpolygonfactor, r_refdef.shadowpolygonoffset);CHECKGLERROR
 	qglDepthFunc(GL_LESS);CHECKGLERROR
 	qglEnable(GL_STENCIL_TEST);CHECKGLERROR
 	r_shadow_rendermode = r_shadow_shadowingrendermode;
@@ -1114,7 +1115,7 @@ void R_Shadow_RenderMode_VisibleShadowVolumes(void)
 	GL_DepthRange(0, 1);
 	GL_DepthTest(r_showshadowvolumes.integer < 2);
 	GL_Color(0.0, 0.0125 * r_view.colorscale, 0.1 * r_view.colorscale, 1);
-	qglPolygonOffset(r_refdef.shadowpolygonfactor, r_refdef.shadowpolygonoffset);CHECKGLERROR
+	GL_PolygonOffset(r_refdef.shadowpolygonfactor, r_refdef.shadowpolygonoffset);CHECKGLERROR
 	GL_CullFace(GL_NONE);
 	r_shadow_rendermode = R_SHADOW_RENDERMODE_VISIBLEVOLUMES;
 }
@@ -2239,6 +2240,7 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 	if ((ambientscale + diffusescale) * VectorLength2(lightcolorbase) + specularscale * VectorLength2(lightcolorbase) < (1.0f / 1048576.0f))
 		return;
 	GL_DepthRange(0, (rsurface.texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE) ? 0.0625 : 1);
+	GL_PolygonOffset(rsurface.texture->currentpolygonfactor, rsurface.texture->currentpolygonoffset);
 	GL_DepthTest(!(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
 	GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
 	if (rsurface.texture->colormapping)
@@ -3110,7 +3112,7 @@ void R_DrawModelShadows(void)
 	GL_DepthRange(0, 1);
 	GL_DepthTest(false);
 	GL_DepthMask(false);
-	qglPolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);CHECKGLERROR
+	GL_PolygonOffset(0, 0);CHECKGLERROR
 	GL_Color(0, 0, 0, 0.5);
 	GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 1);
 	qglDepthFunc(GL_ALWAYS);CHECKGLERROR

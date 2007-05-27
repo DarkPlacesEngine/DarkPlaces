@@ -1928,6 +1928,7 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 	GL_Color(1,1,1,1);
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	GL_DepthRange(0, 1);
+	GL_PolygonOffset(0, 0);
 	GL_DepthTest(false);
 	R_Mesh_VertexPointer(vertex3f, 0, 0);
 	R_Mesh_ColorPointer(NULL, 0, 0);

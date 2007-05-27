@@ -240,6 +240,7 @@ void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, const r
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 	GL_DepthMask(false);
 	GL_DepthRange(0, 1);
+	GL_PolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);
 	GL_DepthTest(true);
 	if (r_lightningbeam_qmbtexture.integer && r_lightningbeamqmbtexture == NULL)
 		r_lightningbeams_setupqmbtexture();

@@ -352,6 +352,7 @@ static void R_DrawPortal_Callback(const entity_render_t *ent, const rtlight_t *r
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	GL_DepthMask(false);
 	GL_DepthRange(0, 1);
+	GL_PolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);
 	GL_DepthTest(true);
 	GL_CullFace(GL_NONE);
 	R_Mesh_Matrix(&identitymatrix);

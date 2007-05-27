@@ -19,6 +19,7 @@ void GL_BlendFunc(int blendfunc1, int blendfunc2);
 void GL_DepthMask(int state);
 void GL_DepthTest(int state);
 void GL_DepthRange(float nearfrac, float farfrac);
+void GL_PolygonOffset(float planeoffset, float depthoffset);
 void GL_CullFace(int state);
 void GL_AlphaTest(int state);
 void GL_ColorMask(int r, int g, int b, int a);

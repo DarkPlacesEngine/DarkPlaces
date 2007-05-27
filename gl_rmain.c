@@ -61,6 +61,8 @@ cvar_t r_fullbrights = {CVAR_SAVE, "r_fullbrights", "1", "enables glowing pixels
 cvar_t r_shadows = {CVAR_SAVE, "r_shadows", "0", "casts fake stencil shadows from models onto the world (rtlights are unaffected by this)"};
 cvar_t r_shadows_throwdistance = {CVAR_SAVE, "r_shadows_throwdistance", "500", "how far to cast shadows from models"};
 cvar_t r_q1bsp_skymasking = {0, "r_q1bsp_skymasking", "1", "allows sky polygons in quake1 maps to obscure other geometry"};
+cvar_t r_polygonoffset_submodel_factor = {0, "r_polygonoffset_submodel_factor", "0", "biases depth values of world submodels such as doors, to prevent z-fighting artifacts in Quake maps"};
+cvar_t r_polygonoffset_submodel_offset = {0, "r_polygonoffset_submodel_offset", "2", "biases depth values of world submodels such as doors, to prevent z-fighting artifacts in Quake maps"};
 
 cvar_t gl_fogenable = {0, "gl_fogenable", "0", "nehahra fog enable (for Nehahra compatibility only)"};
 cvar_t gl_fogdensity = {0, "gl_fogdensity", "0.25", "nehahra fog density (recommend values below 0.1) (for Nehahra compatibility only)"};
@@ -1493,6 +1495,8 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_shadows);
 	Cvar_RegisterVariable(&r_shadows_throwdistance);
 	Cvar_RegisterVariable(&r_q1bsp_skymasking);
+	Cvar_RegisterVariable(&r_polygonoffset_submodel_factor);
+	Cvar_RegisterVariable(&r_polygonoffset_submodel_offset);
 	Cvar_RegisterVariable(&r_textureunits);
 	Cvar_RegisterVariable(&r_glsl);
 	Cvar_RegisterVariable(&r_glsl_offsetmapping);
@@ -1987,7 +1991,7 @@ void R_ResetViewRendering2D(void)
 	GL_DepthTest(false);
 	R_Mesh_Matrix(&identitymatrix);
 	R_Mesh_ResetTextureState();
-	qglPolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);CHECKGLERROR
+	GL_PolygonOffset(0, 0);
 	qglEnable(GL_POLYGON_OFFSET_FILL);CHECKGLERROR
 	qglDepthFunc(GL_LEQUAL);CHECKGLERROR
 	qglDisable(GL_STENCIL_TEST);CHECKGLERROR
@@ -2020,7 +2024,7 @@ void R_ResetViewRendering3D(void)
 	GL_DepthTest(true);
 	R_Mesh_Matrix(&identitymatrix);
 	R_Mesh_ResetTextureState();
-	qglPolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);CHECKGLERROR
+	GL_PolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);
 	qglEnable(GL_POLYGON_OFFSET_FILL);CHECKGLERROR
 	qglDepthFunc(GL_LEQUAL);CHECKGLERROR
 	qglDisable(GL_STENCIL_TEST);CHECKGLERROR
@@ -2734,6 +2738,7 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	GL_DepthMask(false);
 	GL_DepthRange(0, 1);
+	GL_PolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);
 	R_Mesh_Matrix(&identitymatrix);
 	R_Mesh_ResetTextureState();
 
@@ -2870,6 +2875,7 @@ void R_DrawNoModel_TransparentCallback(const entity_render_t *ent, const rtlight
 		GL_DepthMask(true);
 	}
 	GL_DepthRange(0, (ent->flags & RENDER_VIEWMODEL) ? 0.0625 : 1);
+	GL_PolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);
 	GL_DepthTest(!(ent->effects & EF_NODEPTHTEST));
 	GL_CullFace((ent->effects & EF_DOUBLESIDED) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
 	R_Mesh_VertexPointer(nomodelvertex3f, 0, 0);
@@ -2966,6 +2972,7 @@ void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, rtexture_
 
 	GL_DepthMask(false);
 	GL_DepthRange(0, depthshort ? 0.0625 : 1);
+	GL_PolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);
 	GL_DepthTest(!depthdisable);
 
 	vertex3f[ 0] = origin[0] + left[0] * scalex2 + up[0] * scaley1;
@@ -3318,6 +3325,17 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 		}
 		else if (r_shadow_gloss.integer >= 2 && r_shadow_gloss2intensity.value > 0)
 			t->specularscale = r_shadow_gloss2intensity.value;
+	}
+
+	t->currentpolygonfactor = r_refdef.polygonfactor;
+	t->currentpolygonoffset = r_refdef.polygonoffset;
+	// submodels are biased to avoid z-fighting with world surfaces that they
+	// may be exactly overlapping (avoids z-fighting artifacts on certain
+	// doors and things in Quake maps)
+	if (ent->model->brush.submodel)
+	{
+		t->currentpolygonfactor = r_refdef.polygonfactor + r_polygonoffset_submodel_factor.value;
+		t->currentpolygonoffset = r_refdef.polygonoffset + r_polygonoffset_submodel_offset.value;
 	}
 
 	VectorClear(t->dlightcolor);
@@ -4442,6 +4460,7 @@ static void RSurf_DrawBatch_GL11_VertexShade(int texturenumsurfaces, msurface_t 
 static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, msurface_t **texturesurfacelist)
 {
 	GL_DepthRange(0, (rsurface.texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE) ? 0.0625 : 1);
+	GL_PolygonOffset(rsurface.texture->currentpolygonfactor, rsurface.texture->currentpolygonoffset);
 	GL_DepthTest(!(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
 	GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
 	if (rsurface.mode != RSURFMODE_SHOWSURFACES)
@@ -4477,6 +4496,7 @@ static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, msurface_t **te
 		R_Mesh_Matrix(&rsurface.matrix);
 	}
 	GL_DepthRange(0, (rsurface.texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE) ? 0.0625 : 1);
+	GL_PolygonOffset(rsurface.texture->currentpolygonfactor, rsurface.texture->currentpolygonoffset);
 	GL_DepthTest(!(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
 	GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
 	GL_DepthMask(true);
@@ -4841,6 +4861,7 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 			GL_Color(1,1,1,1);
 		}
 		GL_DepthRange(0, (rsurface.texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE) ? 0.0625 : 1);
+		GL_PolygonOffset(rsurface.texture->currentpolygonfactor, rsurface.texture->currentpolygonoffset);
 		GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
 		GL_DepthTest(true);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
@@ -4860,6 +4881,7 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 		if (rsurface.mode != RSURFMODE_MULTIPASS)
 			rsurface.mode = RSURFMODE_MULTIPASS;
 		GL_DepthRange(0, (rsurface.texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE) ? 0.0625 : 1);
+		GL_PolygonOffset(rsurface.texture->currentpolygonfactor, rsurface.texture->currentpolygonoffset);
 		GL_DepthTest(true);
 		GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
 		GL_BlendFunc(GL_ONE, GL_ZERO);
@@ -4911,6 +4933,7 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 		if (!writedepth && (rsurface.texture->currentmaterialflags & (MATERIALFLAG_BLENDED | MATERIALFLAG_ALPHATEST)))
 			writedepth = true;
 		GL_DepthRange(0, (rsurface.texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE) ? 0.0625 : 1);
+		GL_PolygonOffset(rsurface.texture->currentpolygonfactor, rsurface.texture->currentpolygonoffset);
 		GL_DepthTest(!(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
 		GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
 		GL_BlendFunc(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
@@ -5050,6 +5073,7 @@ void R_DrawLoc_Callback(const entity_render_t *ent, const rtlight_t *rtlight, in
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	GL_DepthMask(false);
 	GL_DepthRange(0, 1);
+	GL_PolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);
 	GL_DepthTest(true);
 	GL_CullFace(GL_NONE);
 	R_Mesh_Matrix(&identitymatrix);
@@ -5110,14 +5134,14 @@ void R_DrawCollisionBrushes(entity_render_t *ent)
 	GL_DepthMask(false);
 	GL_DepthRange(0, 1);
 	GL_DepthTest(!r_showdisabledepthtest.integer);
-	qglPolygonOffset(r_refdef.polygonfactor + r_showcollisionbrushes_polygonfactor.value, r_refdef.polygonoffset + r_showcollisionbrushes_polygonoffset.value);CHECKGLERROR
+	GL_PolygonOffset(r_refdef.polygonfactor + r_showcollisionbrushes_polygonfactor.value, r_refdef.polygonoffset + r_showcollisionbrushes_polygonoffset.value);
 	for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)
 		if (brush->colbrushf && brush->colbrushf->numtriangles)
 			R_DrawCollisionBrush(brush->colbrushf);
 	for (i = 0, surface = model->data_surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surface++)
 		if (surface->num_collisiontriangles)
 			R_DrawCollisionSurface(ent, surface);
-	qglPolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);CHECKGLERROR
+	GL_PolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);
 }
 
 void R_DrawTrianglesAndNormals(entity_render_t *ent, qboolean drawtris, qboolean drawnormals, int flagsmask)
@@ -5130,6 +5154,7 @@ void R_DrawTrianglesAndNormals(entity_render_t *ent, qboolean drawtris, qboolean
 	CHECKGLERROR
 	GL_DepthRange(0, 1);
 	GL_DepthTest(!r_showdisabledepthtest.integer);
+	GL_PolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);
 	GL_DepthMask(true);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	R_Mesh_ColorPointer(NULL, 0, 0);

@@ -273,6 +273,7 @@ static void R_SkyBox(void)
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(false);
 	GL_DepthRange(0, 1);
+	GL_PolygonOffset(0, 0);
 	GL_DepthTest(false); // don't modify or read zbuffer
 	R_Mesh_VertexPointer(skyboxvertex3f, 0, 0);
 	R_Mesh_ColorPointer(NULL, 0, 0);
@@ -372,6 +373,7 @@ static void R_SkySphere(void)
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(true);
 	GL_DepthRange(0, 1);
+	GL_PolygonOffset(0, 0);
 	GL_DepthTest(false); // don't modify or read zbuffer
 	R_Mesh_VertexPointer(skysphere_vertex3f, 0, 0);
 	R_Mesh_ColorPointer(NULL, 0, 0);
