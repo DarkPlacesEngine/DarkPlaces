@@ -396,6 +396,7 @@ static struct gl_state_s
 	int colormask; // stored as bottom 4 bits: r g b a (3 2 1 0 order)
 	int depthtest;
 	float depthrange[2];
+	float polygonoffset[2];
 	int alphatest;
 	int scissortest;
 	unsigned int unit;
@@ -548,6 +549,8 @@ void GL_Backend_ResetState(void)
 	gl_state.lockrange_count = 0;
 	gl_state.cullface = v_flipped_state ? GL_BACK : GL_FRONT; // quake is backwards, this culls back faces
 	gl_state.cullfaceenable = true;
+	gl_state.polygonoffset[0] = 0;
+	gl_state.polygonoffset[1] = 0;
 
 	CHECKGLERROR
 
@@ -561,6 +564,7 @@ void GL_Backend_ResetState(void)
 	qglDepthFunc(GL_LEQUAL);CHECKGLERROR
 	qglEnable(GL_DEPTH_TEST);CHECKGLERROR
 	qglDepthMask(gl_state.depthmask);CHECKGLERROR
+	qglPolygonOffset(gl_state.polygonoffset[0], gl_state.polygonoffset[1]);
 
 	if (gl_support_arb_vertex_buffer_object)
 	{
@@ -677,6 +681,16 @@ void GL_DepthRange(float nearfrac, float farfrac)
 		gl_state.depthrange[0] = nearfrac;
 		gl_state.depthrange[1] = farfrac;
 		qglDepthRange(nearfrac, farfrac);
+	}
+}
+
+void GL_PolygonOffset(float planeoffset, float depthoffset)
+{
+	if (gl_state.polygonoffset[0] != planeoffset || gl_state.polygonoffset[1] != depthoffset)
+	{
+		gl_state.polygonoffset[0] = planeoffset;
+		gl_state.polygonoffset[1] = depthoffset;
+		qglPolygonOffset(planeoffset, depthoffset);
 	}
 }
 

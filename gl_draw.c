@@ -550,6 +550,7 @@ static void _DrawQ_Setup(void)
 
 	GL_DepthMask(true);
 	GL_DepthRange(0, 1);
+	GL_PolygonOffset(0, 0);
 	GL_DepthTest(false);
 	GL_Color(1,1,1,1);
 	GL_AlphaTest(false);
@@ -945,6 +946,7 @@ void R_DrawGamma(void)
 		R_Mesh_ResetTextureState();
 		GL_DepthMask(true);
 		GL_DepthRange(0, 1);
+		GL_PolygonOffset(0, 0);
 		GL_DepthTest(false);
 		if (v_color_enable.integer)
 		{

@@ -411,6 +411,10 @@ typedef struct texture_s
 	// current material flags (updated each bmodel render)
 	int currentmaterialflags;
 
+	// current PolygonOffset values for rendering this material
+	float currentpolygonfactor;
+	float currentpolygonoffset;
+
 	// textures to use when rendering this material
 	skinframe_t *currentskinframe;
 	int numskinframes;
