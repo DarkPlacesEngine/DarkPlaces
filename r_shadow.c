@@ -2224,9 +2224,9 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 	float ambientscale, diffusescale, specularscale;
 	vec3_t lightcolorbase, lightcolorpants, lightcolorshirt;
 	// calculate colors to render this texture with
-	lightcolorbase[0] = rsurface.rtlight->currentcolor[0] * rsurface.texture->currentlayers[0].color[0] * rsurface.texture->currentlayers[0].color[3];
-	lightcolorbase[1] = rsurface.rtlight->currentcolor[1] * rsurface.texture->currentlayers[0].color[1] * rsurface.texture->currentlayers[0].color[3];
-	lightcolorbase[2] = rsurface.rtlight->currentcolor[2] * rsurface.texture->currentlayers[0].color[2] * rsurface.texture->currentlayers[0].color[3];
+	lightcolorbase[0] = rsurface.rtlight->currentcolor[0] * rsurface.texture->dlightcolor[0];
+	lightcolorbase[1] = rsurface.rtlight->currentcolor[1] * rsurface.texture->dlightcolor[1];
+	lightcolorbase[2] = rsurface.rtlight->currentcolor[2] * rsurface.texture->dlightcolor[2];
 	ambientscale = rsurface.rtlight->ambientscale;
 	diffusescale = rsurface.rtlight->diffusescale;
 	specularscale = rsurface.rtlight->specularscale * rsurface.texture->specularscale;
