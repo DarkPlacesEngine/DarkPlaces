@@ -452,6 +452,8 @@ typedef struct texture_s
 	rtexture_t *backgroundglosstexture;
 	float specularscale;
 	float specularpower;
+	// color tint (colormod * currentalpha) used for rtlighting this material
+	float dlightcolor[3];
 
 	// from q3 shaders
 	int customblendfunc[2];

@@ -3320,6 +3320,7 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 			t->specularscale = r_shadow_gloss2intensity.value;
 	}
 
+	VectorClear(t->dlightcolor);
 	t->currentnumlayers = 0;
 	if (!(t->currentmaterialflags & MATERIALFLAG_NODRAW))
 	{
@@ -3366,6 +3367,8 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 				else
 				{
 					float colorscale;
+					// set the color tint used for lights affecting this surface
+					VectorSet(t->dlightcolor, ent->colormod[0] * t->currentalpha, ent->colormod[1] * t->currentalpha, ent->colormod[2] * t->currentalpha);
 					colorscale = 2;
 					// q3bsp has no lightmap updates, so the lightstylevalue that
 					// would normally be baked into the lightmap must be
