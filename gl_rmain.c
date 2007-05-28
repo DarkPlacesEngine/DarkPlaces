@@ -855,7 +855,7 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 			if (r_glsl_offsetmapping_reliefmapping.integer)
 				permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
 		}
-		if(r_glsl_contrastboost.value != 1 && r_glsl_contrastboost.value != 0)
+		if(r_glsl_contrastboost.value > 1 || r_glsl_contrastboost.value < 0)
 			permutation |= SHADERPERMUTATION_CONTRASTBOOST;
 	}
 	else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
@@ -875,7 +875,7 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 			if (r_glsl_offsetmapping_reliefmapping.integer)
 				permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
 		}
-		if(r_glsl_contrastboost.value != 1 && r_glsl_contrastboost.value != 0)
+		if(r_glsl_contrastboost.value > 1 || r_glsl_contrastboost.value < 0)
 			permutation |= SHADERPERMUTATION_CONTRASTBOOST;
 	}
 	else if (modellighting)
@@ -898,7 +898,7 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 			if (r_glsl_offsetmapping_reliefmapping.integer)
 				permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
 		}
-		if(r_glsl_contrastboost.value != 1 && r_glsl_contrastboost.value != 0)
+		if(r_glsl_contrastboost.value > 1 || r_glsl_contrastboost.value < 0)
 			permutation |= SHADERPERMUTATION_CONTRASTBOOST;
 	}
 	else
@@ -940,7 +940,7 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 			if (r_glsl_offsetmapping_reliefmapping.integer)
 				permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
 		}
-		if(r_glsl_contrastboost.value != 1 && r_glsl_contrastboost.value != 0)
+		if(r_glsl_contrastboost.value > 1 || r_glsl_contrastboost.value < 0)
 			permutation |= SHADERPERMUTATION_CONTRASTBOOST;
 	}
 	if (!r_glsl_permutations[permutation & SHADERPERMUTATION_MASK].program)
