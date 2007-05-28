@@ -79,6 +79,7 @@ cvar_t r_glsl_offsetmapping = {CVAR_SAVE, "r_glsl_offsetmapping", "0", "offset m
 cvar_t r_glsl_offsetmapping_reliefmapping = {CVAR_SAVE, "r_glsl_offsetmapping_reliefmapping", "0", "relief mapping effect (higher quality)"};
 cvar_t r_glsl_offsetmapping_scale = {CVAR_SAVE, "r_glsl_offsetmapping_scale", "0.04", "how deep the offset mapping effect is"};
 cvar_t r_glsl_deluxemapping = {CVAR_SAVE, "r_glsl_deluxemapping", "1", "use per pixel lighting on deluxemap-compiled q3bsp maps (or a value of 2 forces deluxemap shading even without deluxemaps)"};
+cvar_t r_glsl_contrastboost = {CVAR_SAVE, "r_glsl_contrastboost", "1", "by how much to multiply the contrast in dark areas (1 is no change)"};
 
 cvar_t r_lerpsprites = {CVAR_SAVE, "r_lerpsprites", "1", "enables animation smoothing on sprites (requires r_lerpmodels 1)"};
 cvar_t r_lerpmodels = {CVAR_SAVE, "r_lerpmodels", "1", "enables animation smoothing on models"};
@@ -487,6 +488,9 @@ static const char *builtinshaderstring =
 "\n"
 "uniform myhalf GlowScale;\n"
 "uniform myhalf SceneBrightness;\n"
+"#ifdef USECONTRASTBOOST\n"
+"uniform myhalf ContrastBoostCoeff;\n"
+"#endif\n"
 "\n"
 "uniform float OffsetMapping_Scale;\n"
 "uniform float OffsetMapping_Bias;\n"
@@ -651,7 +655,11 @@ static const char *builtinshaderstring =
 "	color.rgb = mix(FogColor, color.rgb, myhalf(texture2D(Texture_FogMask, myhvec2(length(EyeVectorModelSpace)*FogRangeRecip, 0.0))));\n"
 "#endif\n"
 "\n"
+"#ifdef USECONTRASTBOOST\n"
+"	color.rgb = SceneBrightness / (ContrastBoostCoeff + 1 / color.rgb);\n"
+"#else\n"
 "	color.rgb *= SceneBrightness;\n"
+"#endif\n"
 "\n"
 "	gl_FragColor = vec4(color);\n"
 "}\n"
@@ -670,6 +678,7 @@ const char *permutationinfo[][2] =
 	{"#define USEFOG\n", " fog"},
 	{"#define USECOLORMAPPING\n", " colormapping"},
 	{"#define USEDIFFUSE\n", " diffuse"},
+	{"#define USECONTRASTBOOST\n", " contrastboost"},
 	{"#define USESPECULAR\n", " specular"},
 	{"#define USECUBEFILTER\n", " cubefilter"},
 	{"#define USEOFFSETMAPPING\n", " offsetmapping"},
@@ -781,6 +790,7 @@ void R_GLSL_CompilePermutation(const char *filename, int permutation)
 		p->loc_DiffuseColor        = qglGetUniformLocationARB(p->program, "DiffuseColor");
 		p->loc_SpecularColor       = qglGetUniformLocationARB(p->program, "SpecularColor");
 		p->loc_LightDir            = qglGetUniformLocationARB(p->program, "LightDir");
+		p->loc_ContrastBoostCoeff  = qglGetUniformLocationARB(p->program, "ContrastBoostCoeff");
 		// initialize the samplers to refer to the texture units we use
 		if (p->loc_Texture_Normal >= 0)    qglUniform1iARB(p->loc_Texture_Normal, 0);
 		if (p->loc_Texture_Color >= 0)     qglUniform1iARB(p->loc_Texture_Color, 1);
@@ -845,6 +855,8 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 			if (r_glsl_offsetmapping_reliefmapping.integer)
 				permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
 		}
+		if(r_glsl_contrastboost.value != 1 && r_glsl_contrastboost.value != 0)
+			permutation |= SHADERPERMUTATION_CONTRASTBOOST;
 	}
 	else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
 	{
@@ -863,6 +875,8 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 			if (r_glsl_offsetmapping_reliefmapping.integer)
 				permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
 		}
+		if(r_glsl_contrastboost.value != 1 && r_glsl_contrastboost.value != 0)
+			permutation |= SHADERPERMUTATION_CONTRASTBOOST;
 	}
 	else if (modellighting)
 	{
@@ -884,6 +898,8 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 			if (r_glsl_offsetmapping_reliefmapping.integer)
 				permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
 		}
+		if(r_glsl_contrastboost.value != 1 && r_glsl_contrastboost.value != 0)
+			permutation |= SHADERPERMUTATION_CONTRASTBOOST;
 	}
 	else
 	{
@@ -924,6 +940,8 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 			if (r_glsl_offsetmapping_reliefmapping.integer)
 				permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
 		}
+		if(r_glsl_contrastboost.value != 1 && r_glsl_contrastboost.value != 0)
+			permutation |= SHADERPERMUTATION_CONTRASTBOOST;
 	}
 	if (!r_glsl_permutations[permutation & SHADERPERMUTATION_MASK].program)
 	{
@@ -1001,7 +1019,22 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 	//if (r_glsl_permutation->loc_Texture_Deluxemap >= 0) R_Mesh_TexBind(8, R_GetTexture(r_texture_blanknormalmap));
 	if (r_glsl_permutation->loc_Texture_Glow >= 0) R_Mesh_TexBind(9, R_GetTexture(rsurface.texture->currentskinframe->glow));
 	if (r_glsl_permutation->loc_GlowScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_GlowScale, r_hdr_glowintensity.value);
-	if (r_glsl_permutation->loc_SceneBrightness >= 0) qglUniform1fARB(r_glsl_permutation->loc_SceneBrightness, r_view.colorscale);
+	if (r_glsl_permutation->loc_ContrastBoostCoeff >= 0)
+	{
+		// The formula used is actually:
+		//   color.rgb *= SceneBrightness;
+		//   color.rgb *= ContrastBoost / ((ContrastBoost - 1) * color.rgb + 1);
+		// I simplify that to
+		//   color.rgb *= [[SceneBrightness * ContrastBoost]];
+		//   color.rgb /= [[(ContrastBoost - 1) / ContrastBoost]] * color.rgb + 1;
+		// and Black:
+		//   color.rgb = [[SceneBrightness * ContrastBoost]] / ([[(ContrastBoost - 1) * SceneBrightness]] + 1 / color.rgb);
+		// and do [[calculations]] here in the engine
+		qglUniform1fARB(r_glsl_permutation->loc_ContrastBoostCoeff, (r_glsl_contrastboost.value - 1) * r_view.colorscale);
+		if (r_glsl_permutation->loc_SceneBrightness >= 0) qglUniform1fARB(r_glsl_permutation->loc_SceneBrightness, r_view.colorscale * r_glsl_contrastboost.value);
+	}
+	else
+		if (r_glsl_permutation->loc_SceneBrightness >= 0) qglUniform1fARB(r_glsl_permutation->loc_SceneBrightness, r_view.colorscale);
 	if (r_glsl_permutation->loc_FogColor >= 0)
 	{
 		// additive passes are only darkened by fog, not tinted
@@ -1515,6 +1548,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_bloom_colorsubtract);
 	Cvar_RegisterVariable(&r_hdr);
 	Cvar_RegisterVariable(&r_hdr_scenebrightness);
+	Cvar_RegisterVariable(&r_glsl_contrastboost);
 	Cvar_RegisterVariable(&r_hdr_glowintensity);
 	Cvar_RegisterVariable(&r_hdr_range);
 	Cvar_RegisterVariable(&r_smoothnormals_areaweighting);

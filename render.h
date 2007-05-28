@@ -366,12 +366,13 @@ void RSurf_DrawBatch_Simple(int texturenumsurfaces, msurface_t **texturesurfacel
 #define SHADERPERMUTATION_FOG (1<<5) // tint the color by fog color or black if using additive blend mode
 #define SHADERPERMUTATION_COLORMAPPING (1<<6) // indicates this is a colormapped skin
 #define SHADERPERMUTATION_DIFFUSE (1<<7) // (lightsource) whether to use directional shading
-#define SHADERPERMUTATION_SPECULAR (1<<8) // (lightsource or deluxemapping) render specular effects
-#define SHADERPERMUTATION_CUBEFILTER (1<<9) // (lightsource) use cubemap light filter
-#define SHADERPERMUTATION_OFFSETMAPPING (1<<10) // adjust texcoords to roughly simulate a displacement mapped surface
-#define SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING (1<<11) // adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
+#define SHADERPERMUTATION_CONTRASTBOOST (1<<8) // r_glsl_contrastboost boosts the contrast at low color levels (similar to gamma)
+#define SHADERPERMUTATION_SPECULAR (1<<9) // (lightsource or deluxemapping) render specular effects
+#define SHADERPERMUTATION_CUBEFILTER (1<<10) // (lightsource) use cubemap light filter
+#define SHADERPERMUTATION_OFFSETMAPPING (1<<11) // adjust texcoords to roughly simulate a displacement mapped surface
+#define SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING (1<<12) // adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
 
-#define SHADERPERMUTATION_MAX (1<<12) // how many permutations are possible
+#define SHADERPERMUTATION_MAX (1<<13) // how many permutations are possible
 #define SHADERPERMUTATION_MASK (SHADERPERMUTATION_MAX - 1) // mask of valid indexing bits for r_glsl_permutations[] array
 
 // these are additional flags used only by R_GLSL_CompilePermutation
@@ -408,12 +409,13 @@ typedef struct r_glsl_permutation_s
 	int loc_SpecularScale;
 	int loc_SpecularPower;
 	int loc_GlowScale;
-	int loc_SceneBrightness;
+	int loc_SceneBrightness; // or: Scenebrightness * ContrastBoost
 	int loc_OffsetMapping_Scale;
 	int loc_AmbientColor;
 	int loc_DiffuseColor;
 	int loc_SpecularColor;
 	int loc_LightDir;
+	int loc_ContrastBoostCoeff; // 1 - 1/ContrastBoost
 }
 r_glsl_permutation_t;
 
