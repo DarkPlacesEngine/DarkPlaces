@@ -954,14 +954,14 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 		{
 			// remove features until we find a valid permutation
 			unsigned int i;
-			for (i = SHADERPERMUTATION_MASK;;i>>=1)
+			for (i = (SHADERPERMUTATION_MAX >> 1);;i>>=1)
 			{
 				if (!i)
-					return 0; // utterly failed
+					return 0; // no bit left to clear
 				// reduce i more quickly whenever it would not remove any bits
-				if (permutation < i)
+				if (!(permutation & i))
 					continue;
-				permutation &= i;
+				permutation &= ~i;
 				if (!r_glsl_permutations[permutation & SHADERPERMUTATION_MASK].compiled)
 					R_GLSL_CompilePermutation(shaderfilename, permutation);
 				if (r_glsl_permutations[permutation & SHADERPERMUTATION_MASK].program)
