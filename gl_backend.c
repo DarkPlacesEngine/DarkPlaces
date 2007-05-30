@@ -14,7 +14,7 @@ cvar_t gl_polyblend = {CVAR_SAVE, "gl_polyblend", "1", "tints view while underwa
 cvar_t gl_dither = {CVAR_SAVE, "gl_dither", "1", "enables OpenGL dithering (16bit looks bad with this off)"};
 cvar_t gl_lockarrays = {0, "gl_lockarrays", "0", "enables use of glLockArraysEXT, may cause glitches with some broken drivers, and may be slower than normal"};
 cvar_t gl_lockarrays_minimumvertices = {0, "gl_lockarrays_minimumvertices", "1", "minimum number of vertices required for use of glLockArraysEXT, setting this too low may reduce performance"};
-cvar_t gl_vbo = {0, "gl_vbo", "1", "make use of GL_ARB_vertex_buffer_object extension to store static geometry in video memory for faster rendering"};
+cvar_t gl_vbo = {CVAR_SAVE, "gl_vbo", "1", "make use of GL_ARB_vertex_buffer_object extension to store static geometry in video memory for faster rendering"};
 
 cvar_t v_flipped = {0, "v_flipped", "0", "mirror the screen (poor man's left handed mode)"};
 qboolean v_flipped_state = false;
