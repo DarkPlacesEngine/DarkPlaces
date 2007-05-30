@@ -907,7 +907,7 @@ static void Handle_Key(unsigned char charcode, UInt32 mackeycode, qboolean keypr
 						ascii = charcode;
 					}
 					else
-						Con_Printf(">> UNKNOWN char/keycode: %d/%u <<\n", charcode, (unsigned) mackeycode);
+						Con_DPrintf(">> UNKNOWN char/keycode: %d/%u <<\n", charcode, (unsigned) mackeycode);
 			}
 	}
 
