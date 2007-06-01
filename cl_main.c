@@ -900,7 +900,10 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 	else if (e->render.flags & RENDER_VIEWMODEL)
 	{
 		// view-relative entity (guns and such)
-		matrix = &viewmodelmatrix;
+		if (e->render.effects & EF_NOGUNBOB)
+			matrix = &r_view.matrix; // really attached to view
+		else
+			matrix = &viewmodelmatrix; // attached to gun bob matrix
 	}
 	else
 	{
@@ -1218,7 +1221,7 @@ void CL_UpdateViewModel(void)
 			ent->state_current.modelindex = 0;
 	}
 	ent->state_current.alpha = cl.entities[cl.viewentity].state_current.alpha;
-	ent->state_current.effects = EF_NOSHADOW | (cl.entities[cl.viewentity].state_current.effects & (EF_ADDITIVE | EF_FULLBRIGHT | EF_NODEPTHTEST));
+	ent->state_current.effects = EF_NOSHADOW | (cl.entities[cl.viewentity].state_current.effects & (EF_ADDITIVE | EF_FULLBRIGHT | EF_NODEPTHTEST | EF_NOGUNBOB));
 
 	// reset animation interpolation on weaponmodel if model changed
 	if (ent->state_previous.modelindex != ent->state_current.modelindex)

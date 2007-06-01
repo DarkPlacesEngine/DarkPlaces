@@ -49,7 +49,7 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define EF_ADDITIVE				32
 #define EF_BLUE					64
 #define EF_RED					128
-#define EF_UNUSED8				256
+#define EF_NOGUNBOB				256			// LordHavoc: when used with .viewmodelforclient this makes the entity attach to the view without gun bobbing and such effects, it also works on the player entity to disable gun bobbing of the engine-managed .viewmodel (without affecting any .viewmodelforclient entities attached to the player)
 #define EF_FULLBRIGHT			512			// LordHavoc: fullbright
 #define EF_FLAME				1024		// LordHavoc: on fire
 #define EF_STARDUST				2048		// LordHavoc: showering sparks

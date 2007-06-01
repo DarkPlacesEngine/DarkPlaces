@@ -23,6 +23,7 @@ char *vm_sv_extensions =
 "DP_EF_NODEPTHTEST "
 "DP_EF_NODRAW "
 "DP_EF_NOSHADOW "
+"DP_EF_NOGUNBOB "
 "DP_EF_RED "
 "DP_EF_STARDUST "
 "DP_ENT_ALPHA "
