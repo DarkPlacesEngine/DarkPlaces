@@ -43,6 +43,7 @@ cachepic_t *sb_items[32];
 // 0-4 are based on health (in 20 increments)
 // 0 is static, 1 is temporary animation
 cachepic_t *sb_faces[5][2];
+cachepic_t *sb_health; // GAME_NEXUIZ
 
 cachepic_t *sb_face_invis;
 cachepic_t *sb_face_quad;
@@ -93,6 +94,7 @@ cvar_t showdate = {CVAR_SAVE, "showdate", "0", "shows current date (useful on sc
 cvar_t showdate_format = {CVAR_SAVE, "showdate_format", "%Y-%m-%d", "format string for date"};
 cvar_t sbar_alpha_bg = {CVAR_SAVE, "sbar_alpha_bg", "0.4", "opacity value of the statusbar background image"};
 cvar_t sbar_alpha_fg = {CVAR_SAVE, "sbar_alpha_fg", "1", "opacity value of the statusbar weapon/item icons and numbers"};
+cvar_t sbar_hudselector = {CVAR_SAVE, "sbar_hudselector", "0", "selects which of the builtin hud layouts to use (meaning is somewhat dependent on gamemode, so nexuiz has a very different set of hud layouts than quake for example)"};
 
 cvar_t cl_deathscoreboard = {0, "cl_deathscoreboard", "1", "shows scoreboard (+showscores) while dead"};
 
@@ -167,6 +169,12 @@ void sbar_start(void)
 		sb_ammo[1] = Draw_CachePic ("gfx/sb_bullets", true);
 		sb_ammo[2] = Draw_CachePic ("gfx/sb_rocket", true);
 		sb_ammo[3] = Draw_CachePic ("gfx/sb_cells", true);
+
+		sb_armor[0] = Draw_CachePic ("gfx/sb_armor", true);
+		sb_armor[1] = NULL;
+		sb_armor[2] = NULL;
+
+		sb_health = Draw_CachePic ("gfx/sb_health", true);
 
 		sb_items[2] = Draw_CachePic ("gfx/sb_slowmo", true);
 		sb_items[3] = Draw_CachePic ("gfx/sb_invinc", true);
@@ -360,6 +368,7 @@ void Sbar_Init (void)
 	Cvar_RegisterVariable(&showdate_format);
 	Cvar_RegisterVariable(&sbar_alpha_bg);
 	Cvar_RegisterVariable(&sbar_alpha_fg);
+	Cvar_RegisterVariable(&sbar_hudselector);
 	Cvar_RegisterVariable(&cl_deathscoreboard);
 
 	Cvar_RegisterVariable(&crosshair_color_red);
@@ -383,6 +392,11 @@ int sbar_x, sbar_y;
 Sbar_DrawPic
 =============
 */
+void Sbar_DrawStretchPic (int x, int y, cachepic_t *pic, float alpha, float overridewidth, float overrideheight)
+{
+	DrawQ_Pic (sbar_x + x, sbar_y + y, pic, overridewidth, overrideheight, 1, 1, 1, alpha, 0);
+}
+
 void Sbar_DrawPic (int x, int y, cachepic_t *pic)
 {
 	DrawQ_Pic (sbar_x + x, sbar_y + y, pic, 0, 0, 1, 1, 1, sbar_alpha_fg.value, 0);
@@ -717,12 +731,23 @@ void Sbar_DrawScoreboard (void)
 // AK to make DrawInventory smaller
 static void Sbar_DrawWeapon(int nr, float fade, int active)
 {
-	// width = 300, height = 100
-	const int w_width = 300, w_height = 100, w_space = 10;
-	const float w_scale = 0.4;
+	if (sbar_hudselector.integer == 1)
+	{
+		// width = 300, height = 100
+		const int w_width = 32, w_height = 12, w_space = 2, font_size = 8;
 
-	DrawQ_Pic(vid_conwidth.integer - (w_width + w_space) * w_scale, (w_height + w_space) * w_scale * nr + w_space, sb_weapons[0][nr], w_width * w_scale, w_height * w_scale, (active) ? 1 : 0.6, active ? 1 : 0.6, active ? 1 : 1, fade * sbar_alpha_fg.value, DRAWFLAG_NORMAL);
-	//DrawQ_String(vid_conwidth.integer - (w_space + font_size ), (w_height + w_space) * w_scale * nr + w_space, va("%i",nr+1), 0, font_size, font_size, 1, 0, 0, fade, 0, NULL, true);
+		DrawQ_Pic((vid_conwidth.integer - w_width * 9) * 0.5 + w_width * nr, vid_conheight.integer - w_height, sb_weapons[0][nr], w_width, w_height, (active) ? 1 : 0.6, active ? 1 : 0.6, active ? 1 : 0.6, (active ? 1 : 0.6) * fade * sbar_alpha_fg.value, DRAWFLAG_NORMAL);
+		DrawQ_String((vid_conwidth.integer - w_width * 9) * 0.5 + w_width * nr + w_space, vid_conheight.integer - w_height + w_space, va("%i",nr+1), 0, font_size, font_size, 1, 1, 0, sbar_alpha_fg.value, 0, NULL, true);
+	}
+	else
+	{
+		// width = 300, height = 100
+		const int w_width = 300, w_height = 100, w_space = 10;
+		const float w_scale = 0.4;
+
+		DrawQ_Pic(vid_conwidth.integer - (w_width + w_space) * w_scale, (w_height + w_space) * w_scale * nr + w_space, sb_weapons[0][nr], w_width * w_scale, w_height * w_scale, (active) ? 1 : 0.6, active ? 1 : 0.6, active ? 1 : 1, fade * sbar_alpha_fg.value, DRAWFLAG_NORMAL);
+		//DrawQ_String(vid_conwidth.integer - (w_space + font_size ), (w_height + w_space) * w_scale * nr + w_space, va("%i",nr+1), 0, font_size, font_size, 1, 0, 0, fade, 0, NULL, true);
+	}
 }
 
 /*
@@ -1151,19 +1176,100 @@ void Sbar_Draw (void)
 		}
 		else if (gamemode == GAME_NEXUIZ)
 		{
-			sbar_y = vid_conheight.integer - 47;
-			sbar_x = (vid_conwidth.integer - 640)/2;
-
 			if (sb_showscores || (cl.stats[STAT_HEALTH] <= 0 && cl_deathscoreboard.integer))
 			{
+				sbar_x = (vid_conwidth.integer - 640)/2;
+				sbar_y = vid_conheight.integer - 47;
 				Sbar_DrawAlphaPic (0, 0, sb_scorebar, sbar_alpha_bg.value);
 				Sbar_DrawScoreboard ();
+			}
+			else if (sb_lines && sbar_hudselector.integer == 1)
+			{
+				int i;
+				float fade;
+				int redflag, blueflag;
+
+				sbar_x = (vid_conwidth.integer - 320)/2;
+				sbar_y = vid_conheight.integer - 24 - 16;
+
+				// calculate intensity to draw weapons bar at
+				fade = 3.2 - 2 * (cl.time - cl.weapontime);
+				fade = bound(0.7, fade, 1);
+				for (i = 0; i < 8;i++)
+					if (cl.stats[STAT_ITEMS] & (1 << i))
+						Sbar_DrawWeapon(i + 1, fade, (i + 2 == cl.stats[STAT_ACTIVEWEAPON]));
+				if((cl.stats[STAT_ITEMS] & (1<<12)))
+					Sbar_DrawWeapon(0, fade, (cl.stats[STAT_ACTIVEWEAPON] == 1));
+
+				// flag icons
+				redflag = ((cl.stats[STAT_ITEMS]>>15) & 3);
+				blueflag = ((cl.stats[STAT_ITEMS]>>17) & 3);
+				if (redflag == 3 && blueflag == 3)
+				{
+					// The Impossible Combination[tm]
+					// Can only happen in Key Hunt mode...
+					Sbar_DrawPic (10 - sbar_x, -179, sb_items[14]);
+				}
+				else
+				{
+					if (redflag)
+						Sbar_DrawPic (10 - sbar_x, -109, sb_items[redflag+10]);
+					if (blueflag)
+						Sbar_DrawPic (10 - sbar_x, -169, sb_items[blueflag+14]);
+				}
+
+				// armor
+				if (cl.stats[STAT_ARMOR] > 0)
+				{
+					Sbar_DrawStretchPic (0, 0, sb_armor[0], sbar_alpha_fg.value, 24, 24);
+					if(cl.stats[STAT_ARMOR] > 100)
+						Sbar_DrawXNum(24,0,cl.stats[STAT_ARMOR],3,24,1,1,0,1,0);
+					else if(cl.stats[STAT_ARMOR] > 25)
+						Sbar_DrawXNum(24,0,cl.stats[STAT_ARMOR],3,24,0.6,0.7,0.8,1,0);
+					else
+						Sbar_DrawXNum(24,0,cl.stats[STAT_ARMOR],3,24,0.7,0,0,1,0);
+				}
+
+				// health
+				if (cl.stats[STAT_HEALTH] != 0)
+				{
+					Sbar_DrawStretchPic (112, 0, sb_health, sbar_alpha_fg.value, 24, 24);
+					if(cl.stats[STAT_HEALTH] > 100)
+						Sbar_DrawXNum(136,0,cl.stats[STAT_HEALTH],3,24,1,1,0,1,0);
+					else if(cl.stats[STAT_HEALTH] > 25)
+						Sbar_DrawXNum(136,0,cl.stats[STAT_HEALTH],3,24,0.6,0.7,0.8,1,0);
+					else
+						Sbar_DrawXNum(136,0,cl.stats[STAT_HEALTH],3,24,0.7,0,0,1,0);
+				}
+
+				// ammo
+				if ((cl.stats[STAT_ITEMS] & (NEX_IT_SHELLS | NEX_IT_BULLETS | NEX_IT_ROCKETS | NEX_IT_CELLS)) || cl.stats[STAT_AMMO] != 0)
+				{
+					if (cl.stats[STAT_ITEMS] & NEX_IT_SHELLS)
+						Sbar_DrawStretchPic (224, 0, sb_ammo[0], sbar_alpha_fg.value, 24, 24);
+					else if (cl.stats[STAT_ITEMS] & NEX_IT_BULLETS)
+						Sbar_DrawStretchPic (224, 0, sb_ammo[1], sbar_alpha_fg.value, 24, 24);
+					else if (cl.stats[STAT_ITEMS] & NEX_IT_ROCKETS)
+						Sbar_DrawStretchPic (224, 0, sb_ammo[2], sbar_alpha_fg.value, 24, 24);
+					else if (cl.stats[STAT_ITEMS] & NEX_IT_CELLS)
+						Sbar_DrawStretchPic (224, 0, sb_ammo[3], sbar_alpha_fg.value, 24, 24);
+					if(cl.stats[STAT_AMMO] > 10)
+						Sbar_DrawXNum(248, 0, cl.stats[STAT_AMMO], 3, 24, 0.6,0.7,0.8,1,0);
+					else
+						Sbar_DrawXNum(248, 0, cl.stats[STAT_AMMO], 3, 24, 0.7,0,0,1,0);
+				}
+
+				if (sbar_x + 320 + 160 <= vid_conwidth.integer)
+					Sbar_MiniDeathmatchOverlay (sbar_x + 320, sbar_y);
 			}
 			else if (sb_lines)
 			{
 				int i;
 				float fade;
 				int redflag, blueflag;
+
+				sbar_x = (vid_conwidth.integer - 640)/2;
+				sbar_y = vid_conheight.integer - 47;
 
 				// calculate intensity to draw weapons bar at
 				fade = 3 - 2 * (cl.time - cl.weapontime);
@@ -1235,10 +1341,10 @@ void Sbar_Draw (void)
 
 				if (sb_lines > 24)
 					DrawQ_Pic(sbar_x,sbar_y,sb_sbar_overlay,0,0,1,1,1,1,DRAWFLAG_MODULATE);
-			}
 
-			//if (vid_conwidth.integer > 320 && cl.gametype == GAME_DEATHMATCH)
-			//	Sbar_MiniDeathmatchOverlay (0, 17);
+				if (sbar_x + 600 + 160 <= vid_conwidth.integer)
+					Sbar_MiniDeathmatchOverlay (sbar_x + 600, sbar_y);
+			}
 		}
 		else if (gamemode == GAME_ZYMOTIC)
 		{
