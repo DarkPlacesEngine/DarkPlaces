@@ -1552,16 +1552,24 @@ Sbar_DeathmatchOverlay
 float Sbar_PrintScoreboardItem(scoreboard_t *s, float x, float y)
 {
 	int minutes;
+	qboolean myself = false;
 	unsigned char *c;
 	minutes = (int)((cl.intermission ? cl.completed_time - s->qw_entertime : cl.time - s->qw_entertime) / 60.0);
+
+	if((s - cl.scores) == cl.playerentity - 1)
+		myself = true;
+	if((s - teams) >= 0 && (s - teams) < MAX_SCOREBOARD)
+		if((s->colors & 15) == (cl.scores[cl.playerentity - 1].colors & 15))
+			myself = true;
+
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
 	{
 		if (s->qw_spectator)
 		{
 			if (s->qw_ping || s->qw_packetloss)
-				DrawQ_String(x, y, va("%4i %3i %4i spectator  %c%s", bound(0, s->qw_ping, 9999), bound(0, s->qw_packetloss, 99), minutes, (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL, false );
+				DrawQ_String(x, y, va("%4i %3i %4i spectator  %c%s", bound(0, s->qw_ping, 9999), bound(0, s->qw_packetloss, 99), minutes, myself ? 13 : ' ', s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL, false );
 			else
-				DrawQ_String(x, y, va("         %4i spectator  %c%s", minutes, (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL, false );
+				DrawQ_String(x, y, va("         %4i spectator  %c%s", minutes, myself ? 13 : ' ', s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL, false );
 		}
 		else
 		{
@@ -1571,11 +1579,11 @@ float Sbar_PrintScoreboardItem(scoreboard_t *s, float x, float y)
 			c = (unsigned char *)&palette_complete[((s->colors & 15)<<4) + 8];
 			DrawQ_Fill(x + 14*8, y+4, 40, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
 			// print the text
-			//DrawQ_String(x, y, va("%c%4i %s", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL, true);
+			//DrawQ_String(x, y, va("%c%4i %s", myself ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL, true);
 			if (s->qw_ping || s->qw_packetloss)
-				DrawQ_String(x, y, va("%4i %3i %4i %5i %-4s %c%s", bound(0, s->qw_ping, 9999), bound(0, s->qw_packetloss, 99), minutes,(int) s->frags, cl.qw_teamplay ? s->qw_team : "", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL, false );
+				DrawQ_String(x, y, va("%4i %3i %4i %5i %-4s %c%s", bound(0, s->qw_ping, 9999), bound(0, s->qw_packetloss, 99), minutes,(int) s->frags, cl.qw_teamplay ? s->qw_team : "", myself ? 13 : ' ', s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL, false );
 			else
-				DrawQ_String(x, y, va("         %4i %5i %-4s %c%s", minutes,(int) s->frags, cl.qw_teamplay ? s->qw_team : "", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL, false );
+				DrawQ_String(x, y, va("         %4i %5i %-4s %c%s", minutes,(int) s->frags, cl.qw_teamplay ? s->qw_team : "", myself ? 13 : ' ', s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL, false );
 		}
 	}
 	else
@@ -1583,9 +1591,9 @@ float Sbar_PrintScoreboardItem(scoreboard_t *s, float x, float y)
 		if (s->qw_spectator)
 		{
 			if (s->qw_ping || s->qw_packetloss)
-				DrawQ_String(x, y, va("%4i %3i spect %c%s", bound(0, s->qw_ping, 9999), bound(0, s->qw_packetloss, 99), (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL, false );
+				DrawQ_String(x, y, va("%4i %3i spect %c%s", bound(0, s->qw_ping, 9999), bound(0, s->qw_packetloss, 99), myself ? 13 : ' ', s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL, false );
 			else
-				DrawQ_String(x, y, va("         spect %c%s", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL, false );
+				DrawQ_String(x, y, va("         spect %c%s", myself ? 13 : ' ', s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL, false );
 		}
 		else
 		{
@@ -1595,11 +1603,11 @@ float Sbar_PrintScoreboardItem(scoreboard_t *s, float x, float y)
 			c = (unsigned char *)&palette_complete[((s->colors & 15)<<4) + 8];
 			DrawQ_Fill(x + 9*8, y+4, 40, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
 			// print the text
-			//DrawQ_String(x, y, va("%c%4i %s", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL, true);
+			//DrawQ_String(x, y, va("%c%4i %s", myself ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL, true);
 			if (s->qw_ping || s->qw_packetloss)
-				DrawQ_String(x, y, va("%4i %3i %5i %c%s", bound(0, s->qw_ping, 9999), bound(0, s->qw_packetloss, 99), (int) s->frags, (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL, false );
+				DrawQ_String(x, y, va("%4i %3i %5i %c%s", bound(0, s->qw_ping, 9999), bound(0, s->qw_packetloss, 99), (int) s->frags, myself ? 13 : ' ', s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL, false );
 			else
-				DrawQ_String(x, y, va("         %5i %c%s", (int) s->frags, (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL, false );
+				DrawQ_String(x, y, va("         %5i %c%s", (int) s->frags, myself ? 13 : ' ', s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL, false );
 		}
 	}
 	return 8;
@@ -1682,7 +1690,10 @@ Sbar_DeathmatchOverlay
 */
 void Sbar_MiniDeathmatchOverlay (int x, int y)
 {
-	int i, numlines;
+	int i, j, numlines, range_begin, range_end, myteam;
+
+	// scores
+	Sbar_SortFrags ();
 
 	// decide where to print
 	if (gamemode == GAME_TRANSFUSION)
@@ -1694,27 +1705,50 @@ void Sbar_MiniDeathmatchOverlay (int x, int y)
 	if (x >= vid_conwidth.integer || y >= vid_conheight.integer || numlines < 1)
 		return;
 
-	// scores
-	Sbar_SortFrags ();
-
 	//find us
 	for (i = 0; i < scoreboardlines; i++)
 		if (fragsort[i] == cl.playerentity - 1)
 			break;
 
+	range_begin = 0;
+	range_end = scoreboardlines;
+
+	if (gamemode != GAME_TRANSFUSION)
+		if (Sbar_IsTeammatch ())
+		{
+			// reserve space for the team scores
+			numlines -= teamlines;
+
+			// find first and last player of my team (only draw the team totals and my own team)
+			range_begin = range_end = i;
+			myteam = cl.scores[fragsort[i]].colors & 15;
+			while(range_begin > 0 && (cl.scores[fragsort[range_begin-1]].colors & 15) == myteam)
+				--range_begin;
+			while(range_end < scoreboardlines && (cl.scores[fragsort[range_end]].colors & 15) == myteam)
+				++range_end;
+		}
+
 	// figure out start
 	i -= numlines/2;
-	i = min(i, scoreboardlines - numlines);
-	i = max(i, 0);
+	i = min(i, range_end - numlines);
+	i = max(i, range_begin);
 
 	if (gamemode == GAME_TRANSFUSION)
 	{
-		for (;i < scoreboardlines && x < vid_conwidth.integer;i++)
+		for (;i < range_end && x < vid_conwidth.integer;i++)
 			x += 128 + (int)Sbar_PrintScoreboardItem(cl.scores + fragsort[i], x, y);
 	}
 	else
 	{
-		for (;i < scoreboardlines && y < vid_conheight.integer;i++)
+		if (Sbar_IsTeammatch ())
+		{
+			// show team scores first
+			y -= 5;
+			for (j = 0;j < teamlines && y < vid_conheight.integer;j++)
+				y += (int)Sbar_PrintScoreboardItem((teams + teamsort[j]), x, y);
+			y += 5;
+		}
+		for (;i < range_end && y < vid_conheight.integer;i++)
 			y += (int)Sbar_PrintScoreboardItem(cl.scores + fragsort[i], x, y);
 	}
 }
