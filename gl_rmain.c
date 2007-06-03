@@ -3813,13 +3813,16 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 			{
 				const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 				const float *v1, *v2;
+				vec3_t start, end;
 				float f, l;
 				struct
 				{
 					float length2;
-					int quadedge;
+					const float *v1;
+					const float *v2;
 				}
 				shortest[2];
+				memset(shortest, 0, sizeof(shortest));
 				// a single autosprite surface can contain multiple sprites...
 				for (j = 0;j < surface->num_vertices - 3;j += 4)
 				{
@@ -3827,43 +3830,74 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 					for (i = 0;i < 4;i++)
 						VectorAdd(center, (rsurface.vertex3f + 3 * surface->num_firstvertex) + (j+i) * 3, center);
 					VectorScale(center, 0.25f, center);
-					shortest[0].quadedge = shortest[1].quadedge = 0;
-					shortest[0].length2 = shortest[1].length2 = 0;
 					// find the two shortest edges, then use them to define the
 					// axis vectors for rotating around the central axis
 					for (i = 0;i < 6;i++)
 					{
 						v1 = rsurface.vertex3f + 3 * (surface->num_firstvertex + quadedges[i][0]);
 						v2 = rsurface.vertex3f + 3 * (surface->num_firstvertex + quadedges[i][1]);
+#if 0
+						Debug_PolygonBegin(NULL, 0, false, 0);
+						Debug_PolygonVertex(v1[0], v1[1], v1[2], 0, 0, 1, 0, 0, 1);
+						Debug_PolygonVertex((v1[0] + v2[0]) * 0.5f + rsurface.normal3f[3 * (surface->num_firstvertex + j)+0] * 4, (v1[1] + v2[1]) * 0.5f + rsurface.normal3f[3 * (surface->num_firstvertex + j)+1], (v1[2] + v2[2]) * 0.5f + rsurface.normal3f[3 * (surface->num_firstvertex + j)+2], 0, 0, 1, 1, 0, 1);
+						Debug_PolygonVertex(v2[0], v2[1], v2[2], 0, 0, 1, 0, 0, 1);
+						Debug_PolygonEnd();
+#endif
 						l = VectorDistance2(v1, v2);
+						// this length bias tries to make sense of square polygons, assuming they are meant to be upright
+						if (v1[2] != v2[2])
+							l += (1.0f / 1024.0f);
 						if (shortest[0].length2 > l || i == 0)
 						{
 							shortest[1] = shortest[0];
 							shortest[0].length2 = l;
-							shortest[0].quadedge = i;
+							shortest[0].v1 = v1;
+							shortest[0].v2 = v2;
 						}
 						else if (shortest[1].length2 > l || i == 1)
 						{
 							shortest[1].length2 = l;
-							shortest[1].quadedge = i;
+							shortest[1].v1 = v1;
+							shortest[1].v2 = v2;
 						}
 					}
-					// this calculates the midpoints *2 (not bothering to average) of the two shortest edges, and subtracts one from the other to get the up vector
-					for (i = 0;i < 3;i++)
-					{
-						right[i] = rsurface.vertex3f[3 * (surface->num_firstvertex + quadedges[shortest[1].quadedge][1]) + i]
-								 + rsurface.vertex3f[3 * (surface->num_firstvertex + quadedges[shortest[1].quadedge][0]) + i];
-						up[i] = rsurface.vertex3f[3 * (surface->num_firstvertex + quadedges[shortest[1].quadedge][0]) + i]
-							  + rsurface.vertex3f[3 * (surface->num_firstvertex + quadedges[shortest[1].quadedge][1]) + i]
-							  - rsurface.vertex3f[3 * (surface->num_firstvertex + quadedges[shortest[0].quadedge][0]) + i]
-							  - rsurface.vertex3f[3 * (surface->num_firstvertex + quadedges[shortest[0].quadedge][1]) + i];
-					}
-					// calculate a forward vector to use instead of the original plane normal (this is how we get a new right vector)
-					VectorSubtract(rsurface.modelorg, center, forward);
-					CrossProduct(up, forward, newright);
-					// normalize the vectors involved
+					VectorLerp(shortest[0].v1, 0.5f, shortest[0].v2, start);
+					VectorLerp(shortest[1].v1, 0.5f, shortest[1].v2, end);
+#if 0
+					Debug_PolygonBegin(NULL, 0, false, 0);
+					Debug_PolygonVertex(start[0], start[1], start[2], 0, 0, 1, 1, 0, 1);
+					Debug_PolygonVertex(center[0] + rsurface.normal3f[3 * (surface->num_firstvertex + j)+0] * 4, center[1] + rsurface.normal3f[3 * (surface->num_firstvertex + j)+1] * 4, center[2] + rsurface.normal3f[3 * (surface->num_firstvertex + j)+2] * 4, 0, 0, 0, 1, 0, 1);
+					Debug_PolygonVertex(end[0], end[1], end[2], 0, 0, 0, 1, 1, 1);
+					Debug_PolygonEnd();
+#endif
+					// this calculates the right vector from the shortest edge
+					// and the up vector from the edge midpoints
+					VectorSubtract(shortest[0].v1, shortest[0].v2, right);
 					VectorNormalize(right);
+					VectorSubtract(end, start, up);
+					VectorNormalize(up);
+					// calculate a forward vector to use instead of the original plane normal (this is how we get a new right vector)
+					//VectorSubtract(rsurface.modelorg, center, forward);
+					Matrix4x4_Transform3x3(&rsurface.inversematrix, r_view.forward, forward);
+					VectorNegate(forward, forward);
+					VectorReflect(forward, 0, up, forward);
+					VectorNormalize(forward);
+					CrossProduct(up, forward, newright);
 					VectorNormalize(newright);
+#if 0
+					Debug_PolygonBegin(NULL, 0, false, 0);
+					Debug_PolygonVertex(center[0] + rsurface.normal3f[3 * (surface->num_firstvertex + j)+0] * 8, center[1] + rsurface.normal3f[3 * (surface->num_firstvertex + j)+1] * 8, center[2] + rsurface.normal3f[3 * (surface->num_firstvertex + j)+2] * 8, 0, 0, 1, 0, 0, 1);
+					Debug_PolygonVertex(center[0] + right[0] * 8, center[1] + right[1] * 8, center[2] + right[2] * 8, 0, 0, 0, 1, 0, 1);
+					Debug_PolygonVertex(center[0] + up   [0] * 8, center[1] + up   [1] * 8, center[2] + up   [2] * 8, 0, 0, 0, 0, 1, 1);
+					Debug_PolygonEnd();
+#endif
+#if 0
+					Debug_PolygonBegin(NULL, 0, false, 0);
+					Debug_PolygonVertex(center[0] + forward [0] * 8, center[1] + forward [1] * 8, center[2] + forward [2] * 8, 0, 0, 1, 0, 0, 1);
+					Debug_PolygonVertex(center[0] + newright[0] * 8, center[1] + newright[1] * 8, center[2] + newright[2] * 8, 0, 0, 0, 1, 0, 1);
+					Debug_PolygonVertex(center[0] + up      [0] * 8, center[1] + up      [1] * 8, center[2] + up      [2] * 8, 0, 0, 0, 0, 1, 1);
+					Debug_PolygonEnd();
+#endif
 					// rotate the quad around the up axis vector, this is made
 					// especially easy by the fact we know the quad is flat,
 					// so we only have to subtract the center position and
@@ -3874,12 +3908,12 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 					// displacement from the center, which we do with a
 					// DotProduct, the subtraction/addition of center is also
 					// optimized into DotProducts here
-					l = DotProduct(newright, center) - DotProduct(right, center);
+					l = DotProduct(right, center);
 					for (i = 0;i < 4;i++)
 					{
 						v1 = rsurface.vertex3f + 3 * (surface->num_firstvertex + j + i);
-						f = DotProduct(right, v1) - DotProduct(newright, v1) + l;
-						VectorMA(v1, f, newright, rsurface.array_deformedvertex3f + (surface->num_firstvertex+i+j) * 3);
+						f = DotProduct(right, v1) - l;
+						VectorMAMAM(1, v1, -f, right, f, newright, rsurface.array_deformedvertex3f + (surface->num_firstvertex+i+j) * 3);
 					}
 				}
 				Mod_BuildNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface.vertex3f, rsurface.modelelement3i + surface->num_firsttriangle * 3, rsurface.array_deformednormal3f, r_smoothnormals_areaweighting.integer);
