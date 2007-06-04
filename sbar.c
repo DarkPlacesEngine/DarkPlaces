@@ -1748,13 +1748,12 @@ void Sbar_MiniDeathmatchOverlay (int x, int y)
 	}
 	else
 	{
-		if (Sbar_IsTeammatch ())
-		{
-			// show team scores first
-			for (j = 0;j < teamlines && y < vid_conheight.integer;j++)
-				y += (int)Sbar_PrintScoreboardItem((teams + teamsort[j]), x, y);
-			y += teamsep;
-		}
+		if(range_end - i < numlines) // won't draw to bottom?
+			y += 8 * (numlines - (range_end - i)); // bottom align
+		// show team scores first
+		for (j = 0;j < teamlines && y < vid_conheight.integer;j++)
+			y += (int)Sbar_PrintScoreboardItem((teams + teamsort[j]), x, y);
+		y += teamsep;
 		for (;i < range_end && y < vid_conheight.integer;i++)
 			y += (int)Sbar_PrintScoreboardItem(cl.scores + fragsort[i], x, y);
 	}
