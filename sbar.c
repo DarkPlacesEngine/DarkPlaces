@@ -1690,7 +1690,7 @@ Sbar_DeathmatchOverlay
 */
 void Sbar_MiniDeathmatchOverlay (int x, int y)
 {
-	int i, j, numlines, range_begin, range_end, myteam;
+	int i, j, numlines, range_begin, range_end, myteam, teamsep;
 
 	// scores
 	Sbar_SortFrags ();
@@ -1712,6 +1712,7 @@ void Sbar_MiniDeathmatchOverlay (int x, int y)
 
 	range_begin = 0;
 	range_end = scoreboardlines;
+	teamsep = 0;
 
 	if (gamemode != GAME_TRANSFUSION)
 		if (Sbar_IsTeammatch ())
@@ -1726,6 +1727,13 @@ void Sbar_MiniDeathmatchOverlay (int x, int y)
 				--range_begin;
 			while(range_end < scoreboardlines && (cl.scores[fragsort[range_end]].colors & 15) == myteam)
 				++range_end;
+
+			// looks better than two players
+			if(numlines == 2)
+			{
+				teamsep = 8;
+				numlines = 1;
+			}
 		}
 
 	// figure out start
@@ -1743,10 +1751,9 @@ void Sbar_MiniDeathmatchOverlay (int x, int y)
 		if (Sbar_IsTeammatch ())
 		{
 			// show team scores first
-			y -= 5;
 			for (j = 0;j < teamlines && y < vid_conheight.integer;j++)
 				y += (int)Sbar_PrintScoreboardItem((teams + teamsort[j]), x, y);
-			y += 5;
+			y += teamsep;
 		}
 		for (;i < range_end && y < vid_conheight.integer;i++)
 			y += (int)Sbar_PrintScoreboardItem(cl.scores + fragsort[i], x, y);
