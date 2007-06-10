@@ -534,6 +534,11 @@ static void QW_CL_RequestNextDownload(void)
 
 		// done loading
 		cl.loadfinished = true;
+		if (cl.loadcsqc)
+		{
+			cl.loadcsqc = false;
+			CL_VM_Init();
+		}
 		break;
 	case dl_sound:
 		if (cls.qw_downloadnumber == 0)
@@ -941,7 +946,16 @@ void CL_BeginDownloads(qboolean aborteddownload)
 		 && cl_serverextension_download.integer
 		 && (FS_CRCFile(csqc_progname.string, &progsize) != csqc_progcrc.integer || ((int)progsize != csqc_progsize.integer && csqc_progsize.integer != -1))
 		 && !FS_FileExists(va("dlcache/%s.%i.%i", csqc_progname.string, csqc_progsize.integer, csqc_progcrc.integer)))
+		{
 			Cmd_ForwardStringToServer(va("download %s", csqc_progname.string));
+			return;
+		}
+	}
+
+	if (cl.loadcsqc)
+	{
+		cl.loadcsqc = false;
+		CL_VM_Init();
 	}
 
 	if (cl.loadmodel_current < cl.loadmodel_total)
@@ -3081,7 +3095,6 @@ void CL_ParseServerMessage(void)
 			case qw_svc_serverdata:
 				//Cbuf_Execute(); // make sure any stuffed commands are done
 				CL_ParseServerInfo();
-				CL_VM_Init();	//[515]: init csqc
 				break;
 
 			case qw_svc_setangle:
@@ -3451,7 +3464,6 @@ void CL_ParseServerMessage(void)
 
 			case svc_serverinfo:
 				CL_ParseServerInfo ();
-				CL_VM_Init();	//[515]: init csqc
 				break;
 
 			case svc_setangle:

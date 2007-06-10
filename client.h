@@ -924,6 +924,7 @@ typedef struct client_state_s
 	int downloadsound_current;
 	int loadsound_total;
 	qboolean downloadcsqc;
+	qboolean loadcsqc;
 	qboolean loadbegun;
 	qboolean loadfinished;
 
