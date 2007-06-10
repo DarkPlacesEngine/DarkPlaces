@@ -160,7 +160,7 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 	// self.frame2 is the interpolation start (previous frame)
 	// self.frame2time is the animation base time for the interpolation start
 	e->render.frame1 = e->render.frame = ed->fields.client->frame;
-	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame2))) e->render.frame1 = val->_float;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame2))) e->render.frame = val->_float;
 	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame1time))) e->render.frame2time = val->_float;
 	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame2time))) e->render.frame1time = val->_float;
 	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.lerpfrac))) e->render.framelerp = val->_float;
