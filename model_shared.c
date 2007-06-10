@@ -34,7 +34,7 @@ static mempool_t *mod_mempool;
 static memexpandablearray_t models;
 
 // FIXME: make this a memexpandablearray_t
-#define Q3SHADER_MAXSHADERS 4096
+#define Q3SHADER_MAXSHADERS 16384
 static int q3shaders_numshaders = 0;
 static q3shaderinfo_t q3shaders_shaders[Q3SHADER_MAXSHADERS];
 
@@ -1129,7 +1129,7 @@ void Mod_LoadQ3Shaders(void)
 		{
 			if (q3shaders_numshaders >= Q3SHADER_MAXSHADERS)
 			{
-				Con_Printf("Mod_Q3BSP_LoadShaders: too many shaders!\n");
+				Con_Printf("Mod_LoadQ3Shaders: too many shaders!\n");
 				break;
 			}
 			shader = q3shaders_shaders + q3shaders_numshaders++;
