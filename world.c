@@ -215,23 +215,23 @@ void World_LinkEdict_AreaGrid(world_t *world, prvm_edict_t *ent)
 		return;
 	}
 
-	igridmins[0] = (int) floor((ent->priv.server->areamins[0] + sv.world.areagrid_bias[0]) * sv.world.areagrid_scale[0]);
-	igridmins[1] = (int) floor((ent->priv.server->areamins[1] + sv.world.areagrid_bias[1]) * sv.world.areagrid_scale[1]);
-	//igridmins[2] = (int) floor((ent->priv.server->areamins[2] + sv.world.areagrid_bias[2]) * sv.world.areagrid_scale[2]);
-	igridmaxs[0] = (int) floor((ent->priv.server->areamaxs[0] + sv.world.areagrid_bias[0]) * sv.world.areagrid_scale[0]) + 1;
-	igridmaxs[1] = (int) floor((ent->priv.server->areamaxs[1] + sv.world.areagrid_bias[1]) * sv.world.areagrid_scale[1]) + 1;
-	//igridmaxs[2] = (int) floor((ent->priv.server->areamaxs[2] + sv.world.areagrid_bias[2]) * sv.world.areagrid_scale[2]) + 1;
+	igridmins[0] = (int) floor((ent->priv.server->areamins[0] + world->areagrid_bias[0]) * world->areagrid_scale[0]);
+	igridmins[1] = (int) floor((ent->priv.server->areamins[1] + world->areagrid_bias[1]) * world->areagrid_scale[1]);
+	//igridmins[2] = (int) floor((ent->priv.server->areamins[2] + world->areagrid_bias[2]) * world->areagrid_scale[2]);
+	igridmaxs[0] = (int) floor((ent->priv.server->areamaxs[0] + world->areagrid_bias[0]) * world->areagrid_scale[0]) + 1;
+	igridmaxs[1] = (int) floor((ent->priv.server->areamaxs[1] + world->areagrid_bias[1]) * world->areagrid_scale[1]) + 1;
+	//igridmaxs[2] = (int) floor((ent->priv.server->areamaxs[2] + world->areagrid_bias[2]) * world->areagrid_scale[2]) + 1;
 	if (igridmins[0] < 0 || igridmaxs[0] > AREA_GRID || igridmins[1] < 0 || igridmaxs[1] > AREA_GRID || ((igridmaxs[0] - igridmins[0]) * (igridmaxs[1] - igridmins[1])) > ENTITYGRIDAREAS)
 	{
 		// wow, something outside the grid, store it as such
-		World_InsertLinkBefore (&ent->priv.server->areagrid[0], &sv.world.areagrid_outside, entitynumber);
+		World_InsertLinkBefore (&ent->priv.server->areagrid[0], &world->areagrid_outside, entitynumber);
 		return;
 	}
 
 	gridnum = 0;
 	for (igrid[1] = igridmins[1];igrid[1] < igridmaxs[1];igrid[1]++)
 	{
-		grid = sv.world.areagrid + igrid[1] * AREA_GRID + igridmins[0];
+		grid = world->areagrid + igrid[1] * AREA_GRID + igridmins[0];
 		for (igrid[0] = igridmins[0];igrid[0] < igridmaxs[0];igrid[0]++, grid++, gridnum++)
 			World_InsertLinkBefore (&ent->priv.server->areagrid[gridnum], grid, entitynumber);
 	}
