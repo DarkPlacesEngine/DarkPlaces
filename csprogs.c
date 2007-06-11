@@ -398,7 +398,7 @@ void CSQC_ReadEntities (void)
 		while(1)
 		{
 			entnum = MSG_ReadShort();
-			if(!entnum)
+			if(!entnum || msg_badread)
 				return;
 			realentnum = entnum & 0x7FFF;
 			prog->globals.client->self = cl.csqc_server2csqcentitynumber[realentnum];
