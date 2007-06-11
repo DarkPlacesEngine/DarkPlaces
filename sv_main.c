@@ -760,8 +760,8 @@ void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 	// prepare the unreliable message buffer
 	client->unreliablemsg.data = client->unreliablemsg_data;
 	client->unreliablemsg.maxsize = sizeof(client->unreliablemsg_data);
-	// updated by receiving "rate" command from client
-	client->rate = NET_MINRATE;
+	// updated by receiving "rate" command from client, this is also the default if not using a DP client
+	client->rate = 1000000000;
 	// no limits for local player
 	if (client->netconnection && LHNETADDRESS_GetAddressType(&client->netconnection->peeraddress) == LHNETADDRESSTYPE_LOOP)
 		client->rate = 1000000000;
