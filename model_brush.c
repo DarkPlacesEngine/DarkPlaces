@@ -1381,7 +1381,10 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 	}
 
 	if (!m)
+	{
+		Con_Printf("%s: no miptex lump to load textures from\n", loadmodel->name);
 		return;
+	}
 
 	s = loadmodel->name;
 	if (!strncasecmp(s, "maps/", 5))
@@ -1394,8 +1397,13 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 	for (i = 0;i < m->nummiptex;i++)
 	{
 		dofs[i] = LittleLong(dofs[i]);
-		if (dofs[i] == -1 || r_nosurftextures.integer)
+		if (r_nosurftextures.integer)
 			continue;
+		if (dofs[i] == -1)
+		{
+			Con_DPrintf("%s: miptex #%i missing\n", loadmodel->name, i);
+			continue;
+		}
 		dmiptex = (miptex_t *)((unsigned char *)m + dofs[i]);
 
 		// copy name, but only up to 16 characters
@@ -1404,6 +1412,12 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		for (j = 0;dmiptex->name[j] && j < 16;j++)
 			name[j] = dmiptex->name[j];
 		name[j] = 0;
+
+		if (!name[0])
+		{
+			sprintf(name, "unnamed%i", i);
+			Con_Printf("warning: unnamed texture in %s, renaming to %s\n", loadmodel->name, name);
+		}
 
 		mtwidth = LittleLong(dmiptex->width);
 		mtheight = LittleLong(dmiptex->height);
@@ -1428,19 +1442,13 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			if (name[j] >= 'A' && name[j] <= 'Z')
 				name[j] += 'a' - 'A';
 
-		if (Mod_LoadTextureFromQ3Shader(loadmodel->data_textures + i, name, true, false, false))
+		if (dmiptex->name[0] && Mod_LoadTextureFromQ3Shader(loadmodel->data_textures + i, name, true, false, false))
 			continue;
 
 		tx = loadmodel->data_textures + i;
 		strlcpy(tx->name, name, sizeof(tx->name));
 		tx->width = mtwidth;
 		tx->height = mtheight;
-
-		if (!tx->name[0])
-		{
-			sprintf(tx->name, "unnamed%i", i);
-			Con_Printf("warning: unnamed texture in %s, renaming to %s\n", loadmodel->name, tx->name);
-		}
 
 		if (tx->name[0] == '*')
 		{
