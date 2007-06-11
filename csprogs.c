@@ -513,10 +513,6 @@ void CL_VM_Init (void)
 	Cvar_SetValueQuick(&csqc_progcrc, -1);
 	Cvar_SetValueQuick(&csqc_progsize, -1);
 
-	cl.csqc_loaded = false;
-	memset(cl.csqc_model_precache, 0, sizeof(cl.csqc_model_precache));
-	memset(&cl.csqc_vidvars, true, sizeof(csqc_vidvars_t));
-
 	// if the server is not requesting a csprogs, then we're done here
 	if (requiredcrc < 0)
 		return;
@@ -599,18 +595,6 @@ void CL_VM_Init (void)
 	// check if OP_STATE animation is possible in this dat file
 	if (prog->fieldoffsets.nextthink >= 0 && prog->fieldoffsets.frame >= 0 && prog->fieldoffsets.think >= 0 && prog->globaloffsets.self >= 0)
 		prog->flag |= PRVM_OP_STATE;
-
-	if (cl.worldmodel)
-	{
-		VectorCopy(cl.worldmodel->normalmins, cl.world.areagrid_mins);
-		VectorCopy(cl.worldmodel->normalmaxs, cl.world.areagrid_maxs);
-	}
-	else
-	{
-		VectorSet(cl.world.areagrid_mins, -4096, -4096, -4096);
-		VectorSet(cl.world.areagrid_maxs, 4096, 4096, 4096);
-	}
-	World_Clear(&cl.world);
 
 	// set time
 	prog->globals.client->time = cl.time;
