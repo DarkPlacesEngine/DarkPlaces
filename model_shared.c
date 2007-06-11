@@ -1570,9 +1570,11 @@ qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qbool
 	qboolean success = true;
 	q3shaderinfo_t *shader;
 	strlcpy(texture->name, name, sizeof(texture->name));
-	shader = Mod_LookupQ3Shader(name);
+	shader = name[0] ? Mod_LookupQ3Shader(name) : NULL;
 	if (shader)
 	{
+		if (developer.integer >= 100)
+			Con_DPrintf("%s: loaded shader for %s\n", loadmodel->name, name);
 		texture->surfaceparms = shader->surfaceparms;
 		texture->textureflags = shader->textureflags;
 		texture->basematerialflags = 0;
@@ -1682,11 +1684,16 @@ nothing                GL_ZERO GL_ONE
 		memcpy(texture->deforms, shader->deforms, sizeof(texture->deforms));
 	}
 	else if (!strcmp(texture->name, "noshader"))
+	{
+		if (developer.integer >= 100)
+			Con_DPrintf("%s: using default handler for %s\n", loadmodel->name, name);
 		texture->surfaceparms = 0;
+	}
 	else
 	{
 		success = false;
-		Con_DPrintf("%s: No shader found for texture \"%s\"\n", loadmodel->name, texture->name);
+		if (developer.integer >= 100 || loadmodel->type == mod_brushq3)
+			Con_DPrintf("%s: No shader found for texture \"%s\"\n", loadmodel->name, texture->name);
 		texture->surfaceparms = 0;
 		if (texture->surfaceflags & Q3SURFACEFLAG_NODRAW)
 			texture->basematerialflags |= MATERIALFLAG_NODRAW | MATERIALFLAG_NOSHADOW;
