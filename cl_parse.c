@@ -415,6 +415,7 @@ static qboolean QW_CL_CheckOrDownloadFile(const char *filename)
 
 extern void CL_Locs_Reload_f(void);
 static void QW_CL_ProcessUserInfo(int slot);
+extern void CL_VM_Init (void);
 static void QW_CL_RequestNextDownload(void)
 {
 	int i;
@@ -2940,7 +2941,6 @@ static void CL_NetworkTimeReceived(double newtime)
 #define SHOWNET(x) if(cl_shownet.integer==2)Con_Printf("%3i:%s\n", msg_readcount-1, x);
 
 //[515]: csqc
-void CL_VM_Init (void);
 qboolean CL_VM_Parse_TempEntity (void);
 void CL_VM_Parse_StuffCmd (const char *msg);
 void CL_VM_Parse_CenterPrint (const char *msg);
