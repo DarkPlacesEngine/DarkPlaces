@@ -370,6 +370,47 @@ void CL_ParseEntityLump(char *entdata)
 	}
 }
 
+extern void CL_Locs_Reload_f(void);
+extern void CL_VM_Init (void);
+static void CL_SetupWorldModel(void)
+{
+	// update the world model
+	cl.entities[0].render.model = cl.worldmodel = cl.model_precache[1];
+	CL_UpdateRenderEntity(&cl.entities[0].render);
+
+	// set up csqc world for collision culling
+	if (cl.worldmodel)
+	{
+		VectorCopy(cl.worldmodel->normalmins, cl.world.areagrid_mins);
+		VectorCopy(cl.worldmodel->normalmaxs, cl.world.areagrid_maxs);
+	}
+	else
+	{
+		VectorSet(cl.world.areagrid_mins, -4096, -4096, -4096);
+		VectorSet(cl.world.areagrid_maxs, 4096, 4096, 4096);
+	}
+	World_Clear(&cl.world);
+
+	// load or reload .loc file for team chat messages
+	CL_Locs_Reload_f();
+
+	// reset particles and other per-level things
+	R_Modules_NewMap();
+
+	// load the team chat beep if possible
+	cl.foundtalk2wav = FS_FileExists("sound/misc/talk2.wav");
+
+	// check memory integrity
+	Mem_CheckSentinelsGlobal();
+
+	// load the csqc now
+	if (cl.loadcsqc)
+	{
+		cl.loadcsqc = false;
+		CL_VM_Init();
+	}
+}
+
 static qboolean QW_CL_CheckOrDownloadFile(const char *filename)
 {
 	qfile_t *file;
@@ -413,9 +454,7 @@ static qboolean QW_CL_CheckOrDownloadFile(const char *filename)
 	return false;
 }
 
-extern void CL_Locs_Reload_f(void);
 static void QW_CL_ProcessUserInfo(int slot);
-extern void CL_VM_Init (void);
 static void QW_CL_RequestNextDownload(void)
 {
 	int i;
@@ -514,13 +553,7 @@ static void QW_CL_RequestNextDownload(void)
 
 		// now that we have a world model, set up the world entity, renderer
 		// modules and csqc
-		cl.entities[0].render.model = cl.worldmodel = cl.model_precache[1];
-		CL_UpdateRenderEntity(&cl.entities[0].render);
-
-		CL_Locs_Reload_f();
-		R_Modules_NewMap();
-
-		cl.foundtalk2wav = FS_FileExists("sound/misc/talk2.wav");
+		CL_SetupWorldModel();
 
 		// add pmodel/emodel CRCs to userinfo
 		CL_SetInfo("pmodel", va("%i", FS_CRCFile("progs/player.mdl", NULL)), true, true, true, true);
@@ -538,11 +571,6 @@ static void QW_CL_RequestNextDownload(void)
 
 		// done loading
 		cl.loadfinished = true;
-		if (cl.loadcsqc)
-		{
-			cl.loadcsqc = false;
-			CL_VM_Init();
-		}
 		break;
 	case dl_sound:
 		if (cls.qw_downloadnumber == 0)
@@ -956,12 +984,6 @@ void CL_BeginDownloads(qboolean aborteddownload)
 		}
 	}
 
-	if (cl.loadcsqc)
-	{
-		cl.loadcsqc = false;
-		CL_VM_Init();
-	}
-
 	if (cl.loadmodel_current < cl.loadmodel_total)
 	{
 		// loading models
@@ -980,13 +1002,7 @@ void CL_BeginDownloads(qboolean aborteddownload)
 			if (cl.model_precache[cl.loadmodel_current] && cl.model_precache[cl.loadmodel_current]->Draw && cl.loadmodel_current == 1)
 			{
 				// we now have the worldmodel so we can set up the game world
-				cl.entities[0].render.model = cl.worldmodel = cl.model_precache[1];
-				CL_UpdateRenderEntity(&cl.entities[0].render);
-				CL_Locs_Reload_f();
-				R_Modules_NewMap();
-				cl.foundtalk2wav = FS_FileExists("sound/misc/talk2.wav");
-				// check memory integrity
-				Mem_CheckSentinelsGlobal();
+				CL_SetupWorldModel();
 				if (!cl.loadfinished && cl_joinbeforedownloadsfinish.integer)
 				{
 					cl.loadfinished = true;
@@ -1031,13 +1047,7 @@ void CL_BeginDownloads(qboolean aborteddownload)
 				if (cl.downloadmodel_current == 1)
 				{
 					// the worldmodel failed, but we need to set up anyway
-					cl.entities[0].render.model = cl.worldmodel = cl.model_precache[1];
-					CL_UpdateRenderEntity(&cl.entities[0].render);
-					CL_Locs_Reload_f();
-					R_Modules_NewMap();
-					cl.foundtalk2wav = FS_FileExists("sound/misc/talk2.wav");
-					// check memory integrity
-					Mem_CheckSentinelsGlobal();
+					CL_SetupWorldModel();
 					if (!cl.loadfinished && cl_joinbeforedownloadsfinish.integer)
 					{
 						cl.loadfinished = true;
@@ -1071,13 +1081,7 @@ void CL_BeginDownloads(qboolean aborteddownload)
 			if (cl.downloadmodel_current == 1)
 			{
 				// we now have the worldmodel so we can set up the game world
-				cl.entities[0].render.model = cl.worldmodel = cl.model_precache[1];
-				CL_UpdateRenderEntity(&cl.entities[0].render);
-				CL_Locs_Reload_f();
-				R_Modules_NewMap();
-				cl.foundtalk2wav = FS_FileExists("sound/misc/talk2.wav");
-				// check memory integrity
-				Mem_CheckSentinelsGlobal();
+				CL_SetupWorldModel();
 				if (!cl.loadfinished && cl_joinbeforedownloadsfinish.integer)
 				{
 					cl.loadfinished = true;

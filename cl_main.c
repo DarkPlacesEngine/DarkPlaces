@@ -110,6 +110,11 @@ void CL_ClearState(void)
 	// reset the view zoom interpolation
 	cl.mviewzoom[0] = cl.mviewzoom[1] = 1;
 
+	// enable rendering of the world and such
+	cl.csqc_vidvars.drawworld = true;
+	cl.csqc_vidvars.drawenginesbar = true;
+	cl.csqc_vidvars.drawcrosshair = true;
+
 	// set up the float version of the stats array for easier access to float stats
 	cl.statsf = (float *)cl.stats;
 
