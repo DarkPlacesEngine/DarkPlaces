@@ -1416,7 +1416,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		if (!name[0])
 		{
 			sprintf(name, "unnamed%i", i);
-			Con_Printf("warning: unnamed texture in %s, renaming to %s\n", loadmodel->name, name);
+			Con_DPrintf("%s: warning: renaming unnamed texture to %s\n", loadmodel->name, name);
 		}
 
 		mtwidth = LittleLong(dmiptex->width);
@@ -1428,14 +1428,14 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			// texture included
 			if (j < 40 || j + mtwidth * mtheight > l->filelen)
 			{
-				Con_Printf("Texture \"%s\" in \"%s\"is corrupt or incomplete\n", dmiptex->name, loadmodel->name);
+				Con_Printf("%s: Texture \"%s\" is corrupt or incomplete\n", loadmodel->name, dmiptex->name);
 				continue;
 			}
 			mtdata = (unsigned char *)dmiptex + j;
 		}
 
 		if ((mtwidth & 15) || (mtheight & 15))
-			Con_Printf("warning: texture \"%s\" in \"%s\" is not 16 aligned\n", dmiptex->name, loadmodel->name);
+			Con_DPrintf("%s: warning: texture \"%s\" in \"%s\" is not 16 aligned\n", loadmodel->name, dmiptex->name);
 
 		// LordHavoc: force all names to lowercase
 		for (j = 0;name[j];j++)
