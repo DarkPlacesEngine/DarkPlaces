@@ -1589,6 +1589,7 @@ static void SV_SendClientDatagram (client_t *client)
 		// no packet size limit support on older protocols because DP1-4 kick
 		// the client off if they overflow, and quake protocol shows less than
 		// the full entity set if rate limited
+		clientrate = 1000000000;
 		maxsize = 1400;
 		maxsize2 = 1400;
 	}
