@@ -1248,7 +1248,7 @@ void Host_BottomColor_f(void)
 	Host_Color(-1, atoi(Cmd_Argv(1)));
 }
 
-cvar_t cl_rate = {CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_rate", "10000", "internal storage cvar for current rate (changed by rate command)"};
+cvar_t cl_rate = {CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_rate", "20000", "internal storage cvar for current rate (changed by rate command)"};
 void Host_Rate_f(void)
 {
 	int rate;
