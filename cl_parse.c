@@ -262,6 +262,9 @@ void CL_ParseStartSoundPacket(int largesoundindex)
 		return;
 	}
 
+	if (ent >= cl.max_entities)
+		CL_ExpandEntities(ent);
+
 	S_StartSound (ent, channel, cl.sound_precache[sound_num], pos, volume/255.0f, attenuation);
 }
 
