@@ -471,7 +471,13 @@ void Sbar_DrawXNum (int x, int y, int num, int digits, int lettersize, float r, 
 	char str[32], *ptr;
 	int l, frame;
 
-	l = sprintf(str, "%i", num);
+	if (digits < 0)
+	{
+		digits = -digits;
+		l = sprintf(str, "%0*i", digits, num);
+	}
+	else
+		l = sprintf(str, "%i", num);
 	ptr = str;
 	if (l > digits)
 		ptr += (l-digits);
@@ -1112,6 +1118,7 @@ Sbar_Draw
 */
 extern float v_dmg_time, v_dmg_roll, v_dmg_pitch;
 extern cvar_t v_kicktime;
+void Sbar_Score (void);
 void Sbar_Draw (void)
 {
 	cachepic_t *pic;
@@ -1261,6 +1268,8 @@ void Sbar_Draw (void)
 
 				if (sbar_x + 320 + 160 <= vid_conwidth.integer)
 					Sbar_MiniDeathmatchOverlay (sbar_x + 320, sbar_y);
+				if (sbar_x > 0)
+					Sbar_Score();
 			}
 			else if (sb_lines)
 			{
@@ -1344,6 +1353,9 @@ void Sbar_Draw (void)
 
 				if (sbar_x + 600 + 160 <= vid_conwidth.integer)
 					Sbar_MiniDeathmatchOverlay (sbar_x + 600, sbar_y);
+
+				if (sbar_x > 0)
+					Sbar_Score();
 			}
 		}
 		else if (gamemode == GAME_ZYMOTIC)
@@ -1528,6 +1540,8 @@ void Sbar_Draw (void)
 					Sbar_MiniDeathmatchOverlay (0, 0);
 				else
 					Sbar_MiniDeathmatchOverlay (324, vid_conheight.integer - sb_lines);
+				if (sbar_x > 0)
+					Sbar_Score();
 			}
 		}
 	}
@@ -1684,7 +1698,7 @@ void Sbar_DeathmatchOverlay (void)
 
 /*
 ==================
-Sbar_DeathmatchOverlay
+Sbar_MiniDeathmatchOverlay
 
 ==================
 */
@@ -1756,6 +1770,90 @@ void Sbar_MiniDeathmatchOverlay (int x, int y)
 		y += teamsep;
 		for (;i < range_end && y < vid_conheight.integer;i++)
 			y += (int)Sbar_PrintScoreboardItem(cl.scores + fragsort[i], x, y);
+	}
+}
+
+void Sbar_Score (void)
+{
+	int i, me, score, otherleader, place, distribution, minutes, seconds;
+	double timeleft;
+
+	sbar_y = vid_conheight.value - (32+12);
+	me = cl.playerentity - 1;
+	if (me >= 0 && me < cl.maxclients)
+	{
+		// find leading score other than ourselves, to calculate distribution
+		// find our place in the scoreboard
+		score = cl.scores[me].frags;
+		for (i = 0, otherleader = -1, place = 1;i < cl.maxclients;i++)
+		{
+			if (cl.scores[i].name[0] && i != me)
+			{
+				if (otherleader == -1 || cl.scores[i].frags > cl.scores[otherleader].frags)
+					otherleader = i;
+				if (score < cl.scores[i].frags || (score == cl.scores[i].frags && i < me))
+					place++;
+			}
+		}
+		distribution = otherleader >= 0 ? score - cl.scores[otherleader].frags : 0;
+		if (place == 1)
+			Sbar_DrawXNum(-3*12-24, -12, place, 3, 12, 0, 1, 1, 1, 0);
+		else if (place == 2)
+			Sbar_DrawXNum(-3*12-24, -12, place, 3, 12, 1, 1, 1, 1, 0);
+		else if (place == 3)
+			Sbar_DrawXNum(-3*12-24, -12, place, 3, 12, 1, 1, 0, 1, 0);
+		else
+			Sbar_DrawXNum(-3*12-24, -12, place, 3, 12, 1, 0, 0, 1, 0);
+		if (otherleader < 0)
+			Sbar_DrawXNum(-32*4-24,   0, score, 4, 32, 1, 1, 1, 1, 0);
+		else if (distribution >= 5)
+		{
+			Sbar_DrawXNum(-7*12-24, -12, distribution, 4, 12, 0, 1, 1, 1, 0);
+			Sbar_DrawXNum(-32*4-24,   0, score, 4, 32, 0, 1, 1, 1, 0);
+		}
+		else if (distribution >= 0)
+		{
+			Sbar_DrawXNum(-7*12-24, -12, distribution, 4, 12, 1, 1, 1, 1, 0);
+			Sbar_DrawXNum(-32*4-24,   0, score, 4, 32, 1, 1, 1, 1, 0);
+		}
+		else if (distribution >= -5)
+		{
+			Sbar_DrawXNum(-7*12-24, -12, distribution, 4, 12, 1, 1, 0, 1, 0);
+			Sbar_DrawXNum(-32*4-24,   0, score, 4, 32, 1, 1, 0, 1, 0);
+		}
+		else
+		{
+			Sbar_DrawXNum(-7*12-24, -12, distribution, 4, 12, 1, 0, 0, 1, 0);
+			Sbar_DrawXNum(-32*4-24,   0, score, 4, 32, 1, 0, 0, 1, 0);
+		}
+	}
+
+	if (cl.statsf[STAT_TIMELIMIT])
+	{
+		timeleft = max(0, cl.statsf[STAT_TIMELIMIT] * 60 - cl.time);
+		minutes = (int)floor(timeleft / 60);
+		seconds = (int)(floor(timeleft) - minutes * 60);
+		if (minutes >= 5)
+		{
+			Sbar_DrawXNum(-12*6-24, 32, minutes,  3, 12, 1, 1, 1, 1, 0);
+			Sbar_DrawXNum(-12*2-24, 32, seconds, -2, 12, 1, 1, 1, 1, 0);
+		}
+		else if (minutes >= 1)
+		{
+			Sbar_DrawXNum(-12*6-24, 32, minutes,  3, 12, 1, 1, 0, 1, 0);
+			Sbar_DrawXNum(-12*2-24, 32, seconds, -2, 12, 1, 1, 0, 1, 0);
+		}
+		else if ((int)(timeleft * 4) & 1)
+			Sbar_DrawXNum(-12*2-24, 32, seconds, -2, 12, 1, 1, 1, 1, 0);
+		else
+			Sbar_DrawXNum(-12*2-24, 32, seconds, -2, 12, 1, 0, 0, 1, 0);
+	}
+	else
+	{
+		minutes = (int)floor(cl.time / 60);
+		seconds = (int)(floor(cl.time) - minutes * 60);
+		Sbar_DrawXNum(-12*6-24, 32, minutes,  3, 12, 0, 1, 1, 1, 0);
+		Sbar_DrawXNum(-12*2-24, 32, seconds, -2, 12, 0, 1, 1, 1, 0);
 	}
 }
 
