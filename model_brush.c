@@ -1435,7 +1435,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		}
 
 		if ((mtwidth & 15) || (mtheight & 15))
-			Con_DPrintf("%s: warning: texture \"%s\" in \"%s\" is not 16 aligned\n", loadmodel->name, dmiptex->name);
+			Con_DPrintf("%s: warning: texture \"%s\" is not 16 aligned\n", loadmodel->name, dmiptex->name);
 
 		// LordHavoc: force all names to lowercase
 		for (j = 0;name[j];j++)
