@@ -97,7 +97,7 @@ void Host_Status_f (void)
 		}
 		else
 			hours = 0;
-		print ("#%-3u %-16.16s^%i  %3i  %2i:%02i:%02i\n", j+1, client->name, STRING_COLOR_DEFAULT, client->frags, hours, minutes, seconds);
+		print ("#%-3u %-16.16s  %3i  %2i:%02i:%02i\n", j+1, client->name, client->frags, hours, minutes, seconds);
 		print ("   %s\n", client->netconnection ? client->netconnection->address : "botclient");
 	}
 }
@@ -796,11 +796,36 @@ void Host_Name_f (void)
 		}
 	}
 
+	// find the last color tag offset and decide if we need to add a reset tag
+	for (i = 0, j = -1;host_client->name[i];i++)
+	{
+		if (host_client->name[i] == STRING_COLOR_TAG)
+		{
+			if (host_client->name[i+1] >= '0' && host_client->name[i+1] <= '9')
+			{
+				j = i;
+				// if this happens to be a reset  tag then we don't need one
+				if (host_client->name[i+1] == '0' + STRING_COLOR_DEFAULT)
+					j = -1;
+				i++;
+				continue;
+			}
+			if (host_client->name[i+1] == STRING_COLOR_TAG)
+			{
+				i++;
+				continue;
+			}
+		}
+	}
+	// does not end in the default color string, so add it
+	if (j >= 0 && strlen(host_client->name) < sizeof(host_client->name) - 2)
+		memcpy(host_client->name + strlen(host_client->name), STRING_COLOR_DEFAULT_STR, strlen(STRING_COLOR_DEFAULT_STR) + 1);
+
 	host_client->edict->fields.server->netname = PRVM_SetEngineString(host_client->name);
 	if (strcmp(host_client->old_name, host_client->name))
 	{
 		if (host_client->spawned)
-			SV_BroadcastPrintf("%s^%i changed name to %s\n", host_client->old_name, STRING_COLOR_DEFAULT, host_client->name);
+			SV_BroadcastPrintf("%s changed name to %s\n", host_client->old_name, host_client->name);
 		strlcpy(host_client->old_name, host_client->name, sizeof(host_client->old_name));
 		// send notification to all clients
 		MSG_WriteByte (&sv.reliable_datagram, svc_updatename);
@@ -970,13 +995,13 @@ void Host_Say(qboolean teamonly)
 	}
 	// note this uses the chat prefix \001
 	if (!fromServer && !teamonly)
-		dpsnprintf (text, sizeof(text), "\001%s" STRING_COLOR_DEFAULT_STR ": %s", host_client->name, p1);
+		dpsnprintf (text, sizeof(text), "\001%s: %s", host_client->name, p1);
 	else if (!fromServer && teamonly)
-		dpsnprintf (text, sizeof(text), "\001(%s" STRING_COLOR_DEFAULT_STR "): %s", host_client->name, p1);
+		dpsnprintf (text, sizeof(text), "\001(%s): %s", host_client->name, p1);
 	else if(*(sv_adminnick.string))
-		dpsnprintf (text, sizeof(text), "\001<%s" STRING_COLOR_DEFAULT_STR "> %s", sv_adminnick.string, p1);
+		dpsnprintf (text, sizeof(text), "\001<%s> %s", sv_adminnick.string, p1);
 	else
-		dpsnprintf (text, sizeof(text), "\001<%s" STRING_COLOR_DEFAULT_STR "> %s", hostname.string, p1);
+		dpsnprintf (text, sizeof(text), "\001<%s> %s", hostname.string, p1);
 	p2 = text + strlen(text);
 	while ((const char *)p2 > (const char *)text && (p2[-1] == '\r' || p2[-1] == '\n' || (p2[-1] == '\"' && quoted)))
 	{
@@ -1427,7 +1452,7 @@ void Host_Spawn_f (void)
 		PRVM_ExecuteProgram (prog->globals.server->ClientConnect, "QC function ClientConnect is missing");
 
 		if (svs.maxclients > 1 || cls.state == ca_dedicated)
-			Con_Printf("%s^%i entered the game\n", host_client->name, STRING_COLOR_DEFAULT);
+			Con_Printf("%s entered the game\n", host_client->name);
 
 		PRVM_ExecuteProgram (prog->globals.server->PutClientInServer, "QC function PutClientInServer is missing");
 	}
