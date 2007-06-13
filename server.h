@@ -140,6 +140,8 @@ typedef struct client_s
 	qboolean clientconnectcalled;
 	// false = don't send datagrams
 	qboolean spawned;
+	// false = don't send reliable messages until svc_signonnum 2 (before spawned is set)
+	qboolean sendsignon;
 
 	// requested rate in bytes per second
 	int rate;

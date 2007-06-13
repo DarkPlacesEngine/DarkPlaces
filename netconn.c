@@ -505,7 +505,7 @@ qboolean NetConn_CanSend(netconn_t *conn)
 	}
 }
 
-int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolversion_t protocol, int rate)
+int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolversion_t protocol, int rate, qboolean quakesignon_suppressreliables)
 {
 	int totallen = 0;
 
@@ -622,7 +622,7 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 		}
 
 		// if we have a new reliable message to send, do so
-		if (!conn->sendMessageLength && conn->message.cursize)
+		if (!conn->sendMessageLength && conn->message.cursize && !quakesignon_suppressreliables)
 		{
 			if (conn->message.cursize > (int)sizeof(conn->sendMessage))
 			{
@@ -1179,7 +1179,7 @@ void NetConn_ConnectionEstablished(lhnetsocket_t *mysocket, lhnetaddress_t *peer
 		msg.data = buf;
 		msg.maxsize = sizeof(buf);
 		MSG_WriteChar(&msg, clc_nop);
-		NetConn_SendUnreliableMessage(cls.netcon, &msg, cls.protocol, 10000);
+		NetConn_SendUnreliableMessage(cls.netcon, &msg, cls.protocol, 10000, false);
 	}
 }
 
