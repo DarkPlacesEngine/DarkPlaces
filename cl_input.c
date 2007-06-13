@@ -1569,7 +1569,7 @@ void CL_SendMove(void)
 
 	// send the reliable message (forwarded commands) if there is one
 	if (buf.cursize || cls.netcon->message.cursize)
-		NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol, max(20*(buf.cursize+40), cl_rate.integer));
+		NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol, max(20*(buf.cursize+40), cl_rate.integer), false);
 
 	if (cls.netcon->message.overflowed)
 	{

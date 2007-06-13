@@ -287,7 +287,7 @@ void CL_KeepaliveMessage (qboolean readmessages)
 	sizebuf_t old;
 
 	// no need if server is local and definitely not if this is a demo
-	if (sv.active || !cls.netcon || cls.protocol == PROTOCOL_QUAKEWORLD)
+	if (!cls.netcon || cls.protocol == PROTOCOL_QUAKEWORLD)
 		return;
 
 	if (readmessages)
@@ -318,7 +318,7 @@ void CL_KeepaliveMessage (qboolean readmessages)
 		msg.data = buf;
 		msg.maxsize = sizeof(buf);
 		MSG_WriteChar(&msg, clc_nop);
-		NetConn_SendUnreliableMessage(cls.netcon, &msg, cls.protocol, 10000);
+		NetConn_SendUnreliableMessage(cls.netcon, &msg, cls.protocol, 10000, false);
 	}
 }
 
