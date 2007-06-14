@@ -819,6 +819,11 @@ typedef struct client_state_s
 	int viewentity;
 	// the real player entity (normally same as viewentity,
 	// different than viewentity if mod uses chasecam or other tricks)
+	int realplayerentity;
+	// this is updated to match cl.viewentity whenever it is in the clients
+	// range, basically this is used in preference to cl.realplayerentity for
+	// most purposes because when spectating another player it should show
+	// their information rather than yours
 	int playerentity;
 	// max players that can be in this game
 	int maxclients;
@@ -943,7 +948,7 @@ typedef struct client_state_s
 	int qw_teamplay;
 
 	// unused: indicates whether the player is spectating
-	// use cl.scores[cl.playerentity].qw_spectator instead
+	// use cl.scores[cl.playerentity-1].qw_spectator instead
 	//qboolean qw_spectator;
 
 	// movement parameters for client prediction

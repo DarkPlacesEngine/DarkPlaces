@@ -1440,7 +1440,7 @@ void CL_ParseServerInfo (void)
 		i = MSG_ReadByte();
 		// cl.qw_spectator is an unneeded flag, cl.scores[cl.playerentity].qw_spectator works better (it can be updated by the server during the game)
 		//cl.qw_spectator = (i & 128) != 0;
-		cl.playerentity = cl.viewentity = (i & 127) + 1;
+		cl.realplayerentity = cl.playerentity = cl.viewentity = (i & 127) + 1;
 		cl.scores = (scoreboard_t *)Mem_Alloc(cls.levelmempool, cl.maxclients*sizeof(*cl.scores));
 
 		// get the full level name
@@ -3493,7 +3493,10 @@ void CL_ParseServerMessage(void)
 				if (cl.viewentity >= cl.max_entities)
 					CL_ExpandEntities(cl.viewentity);
 				// LordHavoc: assume first setview recieved is the real player entity
-				if (!cl.playerentity)
+				if (!cl.realplayerentity)
+					cl.realplayerentity = cl.viewentity;
+				// update cl.playerentity to this one if it is a valid player
+				if (cl.viewentity >= 1 && cl.viewentity <= cl.maxclients)
 					cl.playerentity = cl.viewentity;
 				break;
 
