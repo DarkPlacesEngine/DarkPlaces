@@ -1927,17 +1927,31 @@ static void R_View_SetFrustum(void)
 
 
 
-	slopex = 1.0 / r_view.frustum_x;
-	slopey = 1.0 / r_view.frustum_y;
-	VectorMA(r_view.forward, -slopex, r_view.left, r_view.frustum[0].normal);
-	VectorMA(r_view.forward,  slopex, r_view.left, r_view.frustum[1].normal);
-	VectorMA(r_view.forward, -slopey, r_view.up  , r_view.frustum[2].normal);
-	VectorMA(r_view.forward,  slopey, r_view.up  , r_view.frustum[3].normal);
-	VectorCopy(r_view.forward, r_view.frustum[4].normal);
-	VectorNormalize(r_view.frustum[0].normal);
-	VectorNormalize(r_view.frustum[1].normal);
-	VectorNormalize(r_view.frustum[2].normal);
-	VectorNormalize(r_view.frustum[3].normal);
+	if (r_view.useperspective)
+	{
+		slopex = 1.0 / r_view.frustum_x;
+		slopey = 1.0 / r_view.frustum_y;
+		VectorMA(r_view.forward, -slopex, r_view.left, r_view.frustum[0].normal);
+		VectorMA(r_view.forward,  slopex, r_view.left, r_view.frustum[1].normal);
+		VectorMA(r_view.forward, -slopey, r_view.up  , r_view.frustum[2].normal);
+		VectorMA(r_view.forward,  slopey, r_view.up  , r_view.frustum[3].normal);
+		VectorCopy(r_view.forward, r_view.frustum[4].normal);
+
+		// calculate frustum corners, which are used to calculate deformed frustum planes for shadow caster culling
+		VectorMAMAMAM(1, r_view.origin, 1024, r_view.forward, -1024 * slopex, r_view.left, -1024 * slopey, r_view.up, r_view.frustumcorner[0]);
+		VectorMAMAMAM(1, r_view.origin, 1024, r_view.forward,  1024 * slopex, r_view.left, -1024 * slopey, r_view.up, r_view.frustumcorner[1]);
+		VectorMAMAMAM(1, r_view.origin, 1024, r_view.forward, -1024 * slopex, r_view.left,  1024 * slopey, r_view.up, r_view.frustumcorner[2]);
+		VectorMAMAMAM(1, r_view.origin, 1024, r_view.forward,  1024 * slopex, r_view.left,  1024 * slopey, r_view.up, r_view.frustumcorner[3]);
+	}
+	else
+	{
+		VectorScale(r_view.left, -r_view.x - r_view.width, r_view.frustum[0].normal);
+		VectorScale(r_view.left,  r_view.x               , r_view.frustum[1].normal);
+		VectorScale(r_view.up, -r_view.y - r_view.height , r_view.frustum[2].normal);
+		VectorScale(r_view.up,  r_view.y                 , r_view.frustum[3].normal);
+		VectorCopy(r_view.forward, r_view.frustum[4].normal);
+	}
+
 	r_view.frustum[0].dist = DotProduct (r_view.origin, r_view.frustum[0].normal);
 	r_view.frustum[1].dist = DotProduct (r_view.origin, r_view.frustum[1].normal);
 	r_view.frustum[2].dist = DotProduct (r_view.origin, r_view.frustum[2].normal);
@@ -1948,12 +1962,6 @@ static void R_View_SetFrustum(void)
 	PlaneClassify(&r_view.frustum[2]);
 	PlaneClassify(&r_view.frustum[3]);
 	PlaneClassify(&r_view.frustum[4]);
-
-	// calculate frustum corners, which are used to calculate deformed frustum planes for shadow caster culling
-	VectorMAMAMAM(1, r_view.origin, 1024, r_view.forward, -1024 * slopex, r_view.left, -1024 * slopey, r_view.up, r_view.frustumcorner[0]);
-	VectorMAMAMAM(1, r_view.origin, 1024, r_view.forward,  1024 * slopex, r_view.left, -1024 * slopey, r_view.up, r_view.frustumcorner[1]);
-	VectorMAMAMAM(1, r_view.origin, 1024, r_view.forward, -1024 * slopex, r_view.left,  1024 * slopey, r_view.up, r_view.frustumcorner[2]);
-	VectorMAMAMAM(1, r_view.origin, 1024, r_view.forward,  1024 * slopex, r_view.left,  1024 * slopey, r_view.up, r_view.frustumcorner[3]);
 
 	// LordHavoc: note to all quake engine coders, Quake had a special case
 	// for 90 degrees which assumed a square view (wrong), so I removed it,

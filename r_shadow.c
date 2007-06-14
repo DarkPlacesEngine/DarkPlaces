@@ -2483,6 +2483,19 @@ void R_Shadow_ComputeShadowCasterCullingPlanes(rtlight_t *rtlight)
 	// can hold
 	rsurface.rtlight_numfrustumplanes = 0;
 
+	// haven't implemented a culling path for ortho rendering
+	if (!r_view.useperspective)
+	{
+		// check if the light is on screen and copy the 4 planes if it is
+		for (i = 0;i < 4;i++)
+			if (PlaneDiff(rtlight->shadoworigin, &r_view.frustum[i]) < -0.03125)
+				break;
+		if (i == 4)
+			for (i = 0;i < 4;i++)
+				rsurface.rtlight_frustumplanes[rsurface.rtlight_numfrustumplanes++] = r_view.frustum[i];
+		return;
+	}
+
 #if 1
 	// generate a deformed frustum that includes the light origin, this is
 	// used to cull shadow casting surfaces that can not possibly cast a
