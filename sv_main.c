@@ -1950,6 +1950,7 @@ static void SV_Download_f(void)
 
 	host_client->download_expectedposition = 0;
 	host_client->download_started = false;
+	host_client->sendsignon = true; // make sure this message is sent
 
 	// the rest of the download process is handled in SV_SendClientDatagram
 	// and other code dealing with svc_downloaddata and clc_ackdownloaddata
