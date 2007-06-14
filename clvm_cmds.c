@@ -618,6 +618,18 @@ static void VM_CL_R_ClearScene (void)
 	// clear renderable entity and light lists
 	r_refdef.numentities = 0;
 	r_refdef.numlights = 0;
+	// FIXME: restore these to the values from VM_CL_UpdateView
+	r_view.x = 0;
+	r_view.y = 0;
+	r_view.z = 0;
+	r_view.width = vid.width;
+	r_view.height = vid.height;
+	r_view.depth = 1;
+	// FIXME: restore cl.csqc_origin
+	// FIXME: restore cl.csqc_angles
+	cl.csqc_vidvars.drawworld = true;
+	cl.csqc_vidvars.drawenginesbar = true;
+	cl.csqc_vidvars.drawcrosshair = true;
 }
 
 //#301 void(float mask) addentities (EXT_CSQC)
