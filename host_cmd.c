@@ -1389,7 +1389,7 @@ void Host_PreSpawn_f (void)
 		SZ_Write (&host_client->netconnection->message, sv.signon.data, sv.signon.cursize);
 		MSG_WriteByte (&host_client->netconnection->message, svc_signonnum);
 		MSG_WriteByte (&host_client->netconnection->message, 2);
-		host_client->sendsignon = true;		// send this message, this will be cleared later
+		host_client->sendsignon = 0;		// enable unlimited sends again
 	}
 
 	// reset the name change timer because the client will send name soon
@@ -1533,7 +1533,6 @@ void Host_Spawn_f (void)
 
 	MSG_WriteByte (&host_client->netconnection->message, svc_signonnum);
 	MSG_WriteByte (&host_client->netconnection->message, 3);
-	host_client->sendsignon = true;		// send this message, this will be cleared later
 }
 
 /*

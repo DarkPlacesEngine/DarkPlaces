@@ -714,7 +714,7 @@ void SV_SendServerinfo (client_t *client)
 	MSG_WriteByte (&client->netconnection->message, 1);
 
 	client->spawned = false;		// need prespawn, spawn, etc
-	client->sendsignon = true;		// send this message, this will be cleared later
+	client->sendsignon = 1;			// send this message, and increment to 2, 2 will be set to 0 by the prespawn command
 
 	// clear movement info until client enters the new level properly
 	memset(&client->cmd, 0, sizeof(client->cmd));
@@ -1684,9 +1684,9 @@ static void SV_SendClientDatagram (client_t *client)
 	}
 
 // send the datagram
-	NetConn_SendUnreliableMessage (client->netconnection, &msg, sv.protocol, clientrate, !client->spawned && !client->sendsignon);
-	if (!client->netconnection->message.cursize)
-		client->sendsignon = false;
+	NetConn_SendUnreliableMessage (client->netconnection, &msg, sv.protocol, clientrate, client->sendsignon == 2);
+	if (client->sendsignon == 1 && !client->netconnection->message.cursize)
+		client->sendsignon = 2; // prevent reliable until client sends prespawn (this is the keepalive phase)
 }
 
 /*
