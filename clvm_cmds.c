@@ -685,35 +685,32 @@ static void VM_CL_R_SetView (void)
 
 	switch(c)
 	{
-	case VF_MIN:			r_view.x = (int)f[0];
-							r_view.y = (int)f[1];
+	case VF_MIN:			r_view.x = (int)(f[0] * vid.width / vid_conwidth.value);
+							r_view.y = (int)(f[1] * vid.height / vid_conheight.value);
 							break;
-	case VF_MIN_X:			r_view.x = (int)k;
+	case VF_MIN_X:			r_view.x = (int)(k * vid.width / vid_conwidth.value);
 							break;
-	case VF_MIN_Y:			r_view.y = (int)k;
+	case VF_MIN_Y:			r_view.y = (int)(k * vid.height / vid_conheight.value);
 							break;
-	case VF_SIZE:			r_view.width = (int)f[0];
-							r_view.height = (int)f[1];
+	case VF_SIZE:			r_view.width = (int)(f[0] * vid.width / vid_conwidth.value);
+							r_view.height = (int)(f[1] * vid.height / vid_conheight.value);
 							break;
-	case VF_SIZE_Y:			r_view.width = (int)k;
+	case VF_SIZE_Y:			r_view.width = (int)(k * vid.width / vid_conwidth.value);
 							break;
-	case VF_SIZE_X:			r_view.height = (int)k;
+	case VF_SIZE_X:			r_view.height = (int)(k * vid.height / vid_conheight.value);
 							break;
-	case VF_VIEWPORT:		r_view.x = (int)f[0];
-							r_view.y = (int)f[1];
-							r_view.z = 0;
-							// TODO: make sure that view_z and view_depth are set properly even if csqc does not set them!
+	case VF_VIEWPORT:		r_view.x = (int)(f[0] * vid.width / vid_conwidth.value);
+							r_view.y = (int)(f[1] * vid.height / vid_conheight.value);
 							f = PRVM_G_VECTOR(OFS_PARM2);
-							r_view.width = (int)f[0];
-							r_view.height = (int)f[1];
-							r_view.depth = 1;
+							r_view.width = (int)(f[0] * vid.width / vid_conwidth.value);
+							r_view.height = (int)(f[1] * vid.height / vid_conheight.value);
 							break;
-	case VF_FOV:			//r_refdef.fov_x = f[0]; // FIXME!
-							//r_refdef.fov_y = f[1]; // FIXME!
+	case VF_FOV:			r_view.frustum_x = tan(f[0] * M_PI / 360.0);
+							r_view.frustum_y = tan(f[1] * M_PI / 360.0);
 							break;
-	case VF_FOVX:			//r_refdef.fov_x = k; // FIXME!
+	case VF_FOVX:			r_view.frustum_x = tan(k * M_PI / 360.0);
 							break;
-	case VF_FOVY:			//r_refdef.fov_y = k; // FIXME!
+	case VF_FOVY:			r_view.frustum_y = tan(k * M_PI / 360.0);
 							break;
 	case VF_ORIGIN:			VectorCopy(f, cl.csqc_origin);
 							CSQC_R_RecalcView();
@@ -753,6 +750,9 @@ static void VM_CL_R_SetView (void)
 	case VF_CL_VIEWANGLES_Y:cl.viewangles[1] = k;
 							break;
 	case VF_CL_VIEWANGLES_Z:cl.viewangles[2] = k;
+							break;
+
+	case VF_PERSPECTIVE:	r_view.useperspective = k != 0;
 							break;
 
 	default:				PRVM_G_FLOAT(OFS_RETURN) = 0;

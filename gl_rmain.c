@@ -1994,7 +1994,9 @@ void R_View_Update(void)
 
 void R_SetupView(const matrix4x4_t *matrix)
 {
-	if (r_refdef.rtworldshadows || r_refdef.rtdlightshadows)
+	if (!r_view.useperspective)
+		GL_SetupView_Mode_Ortho(r_view.x, r_view.y, r_view.x + r_view.width, r_view.y + r_view.height, -r_refdef.farclip, r_refdef.farclip);
+	else if (r_refdef.rtworldshadows || r_refdef.rtdlightshadows)
 		GL_SetupView_Mode_PerspectiveInfiniteFarClip(r_view.frustum_x, r_view.frustum_y, r_refdef.nearclip);
 	else
 		GL_SetupView_Mode_Perspective(r_view.frustum_x, r_view.frustum_y, r_refdef.nearclip, r_refdef.farclip);

@@ -38,7 +38,7 @@
 #define VF_CL_VIEWANGLES_Y	35	//(float)
 #define VF_CL_VIEWANGLES_Z	36	//(float)
 
-//#define VF_PERSPECTIVE		200
+#define VF_PERSPECTIVE		200 //(float)
 
 #define RF_VIEWMODEL		1	// The entity is never drawn in mirrors. In engines with realtime lighting, it casts no shadows.
 #define RF_EXTERNALMODEL	2	// The entity is appears in mirrors but not in the normal view. It does still cast shadows in engines with realtime lighting.

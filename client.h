@@ -1408,6 +1408,8 @@ typedef struct r_view_s
 	mplane_t frustum[5];
 	float frustum_x, frustum_y;
 	vec3_t frustumcorner[4];
+	// if turned off it renders an ortho view
+	int useperspective;
 
 	// screen area to render in
 	int x;
