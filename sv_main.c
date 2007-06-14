@@ -1490,12 +1490,12 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 		if (gamemode == GAME_HIPNOTIC || gamemode == GAME_ROGUE || gamemode == GAME_NEXUIZ)
 		{
 			for (i = 0;i < 32;i++)
-				if (stats[STAT_WEAPON] & (1<<i))
+				if (stats[STAT_ACTIVEWEAPON] & (1<<i))
 					break;
 			MSG_WriteByte (msg, i);
 		}
 		else
-			MSG_WriteByte (msg, stats[STAT_WEAPON]);
+			MSG_WriteByte (msg, stats[STAT_ACTIVEWEAPON]);
 		if (bits & SU_VIEWZOOM)
 		{
 			if (sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4)
