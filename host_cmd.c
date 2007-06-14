@@ -754,11 +754,6 @@ void Host_Name_f (void)
 	else
 		strlcpy (newName, Cmd_Args(), sizeof (newName));
 
-	for (i = 0, j = 0;newName[i];i++)
-		if (newName[i] != '\r' && newName[i] != '\n')
-			newName[j++] = newName[i];
-	newName[j] = 0;
-
 	if (cmd_source == src_command)
 	{
 		Cvar_Set ("_cl_name", newName);
@@ -775,6 +770,11 @@ void Host_Name_f (void)
 
 	// point the string back at updateclient->name to keep it safe
 	strlcpy (host_client->name, newName, sizeof (host_client->name));
+
+	for (i = 0, j = 0;host_client->name[i];i++)
+		if (host_client->name[i] != '\r' && host_client->name[i] != '\n')
+			host_client->name[j++] = host_client->name[i];
+	host_client->name[j] = 0;
 
 	COM_StringLengthNoColors(host_client->name, 0, &valid_colors);
 	if(!valid_colors) // NOTE: this also proves the string is not empty, as "" is a valid colored string
