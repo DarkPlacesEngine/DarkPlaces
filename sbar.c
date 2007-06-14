@@ -1424,13 +1424,10 @@ void Sbar_Draw (void)
 		}
 		else // Quake and others
 		{
+			sbar_x = (vid_conwidth.integer - 320)/2;
 			sbar_y = vid_conheight.integer - SBAR_HEIGHT;
 			// LordHavoc: changed to draw the deathmatch overlays in any multiplayer mode
 			//if (cl.gametype == GAME_DEATHMATCH && gamemode != GAME_TRANSFUSION)
-			if (!cl.islocalgame && gamemode != GAME_TRANSFUSION)
-				sbar_x = 0;
-			else
-				sbar_x = (vid_conwidth.integer - 320)/2;
 
 			if (sb_lines > 24)
 			{
@@ -1533,15 +1530,13 @@ void Sbar_Draw (void)
 			}
 
 			// LordHavoc: changed to draw the deathmatch overlays in any multiplayer mode
-			//if (vid_conwidth.integer > 320 && cl.gametype == GAME_DEATHMATCH)
-			if (!cl.islocalgame && vid_conwidth.integer > 320)
+			if ((!cl.islocalgame || cl.gametype != GAME_COOP))
 			{
 				if (gamemode == GAME_TRANSFUSION)
 					Sbar_MiniDeathmatchOverlay (0, 0);
 				else
-					Sbar_MiniDeathmatchOverlay (324, vid_conheight.integer - sb_lines);
-				if (sbar_x > 0)
-					Sbar_Score();
+					Sbar_MiniDeathmatchOverlay (sbar_x + 324, vid_conheight.integer - 8*8);
+				Sbar_Score();
 			}
 		}
 	}
@@ -1797,21 +1792,14 @@ void Sbar_Score (void)
 		}
 		distribution = otherleader >= 0 ? score - cl.scores[otherleader].frags : 0;
 		if (place == 1)
-			Sbar_DrawXNum(-3*12-24, -12, place, 3, 12, 0, 1, 1, 1, 0);
-		else if (place == 2)
 			Sbar_DrawXNum(-3*12-24, -12, place, 3, 12, 1, 1, 1, 1, 0);
-		else if (place == 3)
+		else if (place == 2)
 			Sbar_DrawXNum(-3*12-24, -12, place, 3, 12, 1, 1, 0, 1, 0);
 		else
 			Sbar_DrawXNum(-3*12-24, -12, place, 3, 12, 1, 0, 0, 1, 0);
 		if (otherleader < 0)
 			Sbar_DrawXNum(-32*4-24,   0, score, 4, 32, 1, 1, 1, 1, 0);
-		else if (distribution >= 5)
-		{
-			Sbar_DrawXNum(-7*12-24, -12, distribution, 4, 12, 0, 1, 1, 1, 0);
-			Sbar_DrawXNum(-32*4-24,   0, score, 4, 32, 0, 1, 1, 1, 0);
-		}
-		else if (distribution >= 0)
+		if (distribution >= 0)
 		{
 			Sbar_DrawXNum(-7*12-24, -12, distribution, 4, 12, 1, 1, 1, 1, 0);
 			Sbar_DrawXNum(-32*4-24,   0, score, 4, 32, 1, 1, 1, 1, 0);
@@ -1852,8 +1840,8 @@ void Sbar_Score (void)
 	{
 		minutes = (int)floor(cl.time / 60);
 		seconds = (int)(floor(cl.time) - minutes * 60);
-		Sbar_DrawXNum(-12*6-24, 32, minutes,  3, 12, 0, 1, 1, 1, 0);
-		Sbar_DrawXNum(-12*2-24, 32, seconds, -2, 12, 0, 1, 1, 1, 0);
+		Sbar_DrawXNum(-12*6-24, 32, minutes,  3, 12, 1, 1, 1, 1, 0);
+		Sbar_DrawXNum(-12*2-24, 32, seconds, -2, 12, 1, 1, 1, 1, 0);
 	}
 }
 
