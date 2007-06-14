@@ -634,8 +634,8 @@ static void VM_CL_R_ClearScene (void)
 	// FIXME: restore cl.csqc_origin
 	// FIXME: restore cl.csqc_angles
 	cl.csqc_vidvars.drawworld = true;
-	cl.csqc_vidvars.drawenginesbar = true;
-	cl.csqc_vidvars.drawcrosshair = true;
+	cl.csqc_vidvars.drawenginesbar = false;
+	cl.csqc_vidvars.drawcrosshair = false;
 }
 
 //#301 void(float mask) addentities (EXT_CSQC)
