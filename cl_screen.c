@@ -1580,6 +1580,7 @@ static void R_Envmap_f (void)
 	r_view.width = size;
 	r_view.height = size;
 	r_view.depth = 1;
+	r_view.useperspective = true;
 
 	r_view.frustum_x = tan(90 * M_PI / 360.0);
 	r_view.frustum_y = tan(90 * M_PI / 360.0);
@@ -1814,6 +1815,7 @@ void SCR_DrawScreen (void)
 		// this it simply assumes the requested fov is the vertical fov
 		// for a 4x3 display, if the ratio is not 4x3 this makes the fov
 		// higher/lower according to the ratio
+		r_view.useperspective = true;
 		r_view.frustum_y = tan(scr_fov.value * M_PI / 360.0) * (3.0/4.0) * cl.viewzoom;
 		r_view.frustum_x = r_view.frustum_y * (float)r_view.width / (float)r_view.height / vid_pixelheight.value;
 
@@ -1834,6 +1836,7 @@ void SCR_DrawScreen (void)
 			r_view.y = 0;
 			r_view.z = 0;
 
+			r_view.useperspective = true;
 			r_view.frustum_y = tan(scr_zoomwindow_fov.value * M_PI / 360.0) * (3.0/4.0) * cl.viewzoom;
 			r_view.frustum_x = r_view.frustum_y * vid_pixelheight.value * (float)r_view.width / (float)r_view.height;
 
@@ -1853,6 +1856,7 @@ void SCR_DrawScreen (void)
 		r_view.x = 0;
 		r_view.y = 0;
 		r_view.z = 0;
+		r_view.useperspective = false;
 	}
 
 	// draw 2D stuff

@@ -625,6 +625,12 @@ static void VM_CL_R_ClearScene (void)
 	r_view.width = vid.width;
 	r_view.height = vid.height;
 	r_view.depth = 1;
+	// FIXME: restore frustum_x/frustum_y
+	r_view.useperspective = true;
+	r_view.frustum_y = tan(scr_fov.value * M_PI / 360.0) * (3.0/4.0) * cl.viewzoom;
+	r_view.frustum_x = r_view.frustum_y * (float)r_view.width / (float)r_view.height / vid_pixelheight.value;
+	r_view.frustum_x *= r_refdef.frustumscale_x;
+	r_view.frustum_y *= r_refdef.frustumscale_y;
 	// FIXME: restore cl.csqc_origin
 	// FIXME: restore cl.csqc_angles
 	cl.csqc_vidvars.drawworld = true;
