@@ -539,8 +539,11 @@ void EntityFrameQuake_WriteFrame(sizebuf_t *msg, int numstates, const entity_sta
 
 		MSG_WriteByte (&buf, bits);
 		if (bits & U_MOREBITS)		MSG_WriteByte(&buf, bits>>8);
-		if (bits & U_EXTEND1)		MSG_WriteByte(&buf, bits>>16);
-		if (bits & U_EXTEND2)		MSG_WriteByte(&buf, bits>>24);
+		if (sv.protocol != PROTOCOL_NEHAHRAMOVIE)
+		{
+			if (bits & U_EXTEND1)	MSG_WriteByte(&buf, bits>>16);
+			if (bits & U_EXTEND2)	MSG_WriteByte(&buf, bits>>24);
+		}
 		if (bits & U_LONGENTITY)	MSG_WriteShort(&buf, s->number);
 		else						MSG_WriteByte(&buf, s->number);
 
