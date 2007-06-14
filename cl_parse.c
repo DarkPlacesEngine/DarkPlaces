@@ -1154,7 +1154,7 @@ void CL_BeginDownloads_f(void)
 
 void CL_StopDownload(int size, int crc)
 {
-	if (cls.qw_downloadmemory && cls.qw_downloadmemorycursize == size && CRC_Block(cls.qw_downloadmemory, size) == crc)
+	if (cls.qw_downloadmemory && cls.qw_downloadmemorycursize == size && CRC_Block(cls.qw_downloadmemory, cls.qw_downloadmemorycursize) == crc)
 	{
 		int existingcrc;
 		size_t existingsize;
@@ -1191,6 +1191,11 @@ void CL_StopDownload(int size, int crc)
 			if (!strcasecmp(extension, "pak") || !strcasecmp(extension, "pk3"))
 				FS_Rescan();
 		}
+	}
+	else if (cls.qw_downloadmemory && size)
+	{
+		Con_Printf("Download \"%s\" is corrupt (%i bytes, %i CRC, should be %i bytes, %i CRC), discarding\n", cls.qw_downloadname, size, crc, (int)cls.qw_downloadmemorycursize, (int)CRC_Block(cls.qw_downloadmemory, cls.qw_downloadmemorycursize));
+		CL_BeginDownloads(true);
 	}
 
 	if (cls.qw_downloadmemory)
