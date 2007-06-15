@@ -2646,7 +2646,14 @@ static void SV_VM_Setup(void)
 	prog->numbuiltins = vm_sv_numbuiltins;
 	prog->headercrc = PROGHEADER_CRC;
 	prog->max_edicts = 512;
-	prog->limit_edicts = MAX_EDICTS;
+	if (sv.protocol == PROTOCOL_QUAKE)
+		prog->limit_edicts = 640; // before quake mission pack 1 this was 512
+	else if (sv.protocol == PROTOCOL_QUAKEDP)
+		prog->limit_edicts = 2048; // guessing
+	else if (sv.protocol == PROTOCOL_NEHAHRAMOVIE)
+		prog->limit_edicts = 2048; // guessing!
+	else
+		prog->limit_edicts = MAX_EDICTS;
 	prog->reserved_edicts = svs.maxclients;
 	prog->edictprivate_size = sizeof(edict_engineprivate_t);
 	prog->name = "server";
