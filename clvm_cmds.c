@@ -631,6 +631,8 @@ static void VM_CL_R_ClearScene (void)
 	r_view.frustum_x = r_view.frustum_y * (float)r_view.width / (float)r_view.height / vid_pixelheight.value;
 	r_view.frustum_x *= r_refdef.frustumscale_x;
 	r_view.frustum_y *= r_refdef.frustumscale_y;
+	r_view.ortho_x = scr_fov.value * (3.0 / 4.0) * (float)r_view.width / (float)r_view.height / vid_pixelheight.value;
+	r_view.ortho_y = scr_fov.value * (3.0 / 4.0);
 	// FIXME: restore cl.csqc_origin
 	// FIXME: restore cl.csqc_angles
 	cl.csqc_vidvars.drawworld = true;
@@ -711,12 +713,12 @@ static void VM_CL_R_SetView (void)
 							r_view.width = (int)(f[0] * vid.width / vid_conwidth.value);
 							r_view.height = (int)(f[1] * vid.height / vid_conheight.value);
 							break;
-	case VF_FOV:			r_view.frustum_x = tan(f[0] * M_PI / 360.0);
-							r_view.frustum_y = tan(f[1] * M_PI / 360.0);
+	case VF_FOV:			r_view.frustum_x = tan(f[0] * M_PI / 360.0);r_view.ortho_x = f[0];
+							r_view.frustum_y = tan(f[1] * M_PI / 360.0);r_view.ortho_y = f[1];
 							break;
-	case VF_FOVX:			r_view.frustum_x = tan(k * M_PI / 360.0);
+	case VF_FOVX:			r_view.frustum_x = tan(k * M_PI / 360.0);r_view.ortho_x = k;
 							break;
-	case VF_FOVY:			r_view.frustum_y = tan(k * M_PI / 360.0);
+	case VF_FOVY:			r_view.frustum_y = tan(k * M_PI / 360.0);r_view.ortho_y = k;
 							break;
 	case VF_ORIGIN:			VectorCopy(f, cl.csqc_origin);
 							CSQC_R_RecalcView();
