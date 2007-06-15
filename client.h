@@ -1410,6 +1410,7 @@ typedef struct r_view_s
 	vec3_t frustumcorner[4];
 	// if turned off it renders an ortho view
 	int useperspective;
+	float ortho_x, ortho_y;
 
 	// screen area to render in
 	int x;
