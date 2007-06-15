@@ -942,7 +942,8 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 	if (!BoxesOverlap(model->normalmins, model->normalmaxs, lightmins, lightmaxs))
 		return;
 	R_UpdateAllTextureInfo(ent);
-	GL_PolygonOffset(r_refdef.shadowpolygonfactor + r_polygonoffset_submodel_factor.value, r_refdef.shadowpolygonoffset + r_polygonoffset_submodel_offset.value);CHECKGLERROR
+	if (ent->model->brush.submodel)
+		GL_PolygonOffset(r_refdef.shadowpolygonfactor + r_polygonoffset_submodel_factor.value, r_refdef.shadowpolygonoffset + r_polygonoffset_submodel_offset.value);
 	if (model->brush.shadowmesh)
 	{
 		R_Shadow_PrepareShadowMark(model->brush.shadowmesh->numtriangles);
@@ -971,7 +972,8 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 		}
 		R_Shadow_VolumeFromList(model->surfmesh.num_vertices, model->surfmesh.num_triangles, rsurface.vertex3f, model->surfmesh.data_element3i, model->surfmesh.data_neighbor3i, relativelightorigin, relativelightdirection, projectdistance, numshadowmark, shadowmarklist);
 	}
-	GL_PolygonOffset(r_refdef.shadowpolygonfactor, r_refdef.shadowpolygonoffset);CHECKGLERROR
+	if (ent->model->brush.submodel)
+		GL_PolygonOffset(r_refdef.shadowpolygonfactor, r_refdef.shadowpolygonoffset);
 }
 
 #define BATCHSIZE 1024
