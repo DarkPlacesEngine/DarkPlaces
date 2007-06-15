@@ -1942,21 +1942,27 @@ static void R_View_SetFrustum(void)
 		VectorMAMAMAM(1, r_view.origin, 1024, r_view.forward,  1024 * slopex, r_view.left, -1024 * slopey, r_view.up, r_view.frustumcorner[1]);
 		VectorMAMAMAM(1, r_view.origin, 1024, r_view.forward, -1024 * slopex, r_view.left,  1024 * slopey, r_view.up, r_view.frustumcorner[2]);
 		VectorMAMAMAM(1, r_view.origin, 1024, r_view.forward,  1024 * slopex, r_view.left,  1024 * slopey, r_view.up, r_view.frustumcorner[3]);
+
+		r_view.frustum[0].dist = DotProduct (r_view.origin, r_view.frustum[0].normal);
+		r_view.frustum[1].dist = DotProduct (r_view.origin, r_view.frustum[1].normal);
+		r_view.frustum[2].dist = DotProduct (r_view.origin, r_view.frustum[2].normal);
+		r_view.frustum[3].dist = DotProduct (r_view.origin, r_view.frustum[3].normal);
+		r_view.frustum[4].dist = DotProduct (r_view.origin, r_view.frustum[4].normal) + r_refdef.nearclip;
 	}
 	else
 	{
-		VectorScale(r_view.left, -r_view.x - r_view.width, r_view.frustum[0].normal);
-		VectorScale(r_view.left,  r_view.x               , r_view.frustum[1].normal);
-		VectorScale(r_view.up, -r_view.y - r_view.height , r_view.frustum[2].normal);
-		VectorScale(r_view.up,  r_view.y                 , r_view.frustum[3].normal);
+		VectorScale(r_view.left, -r_view.ortho_x, r_view.frustum[0].normal);
+		VectorScale(r_view.left,  r_view.ortho_x, r_view.frustum[1].normal);
+		VectorScale(r_view.up, -r_view.ortho_y, r_view.frustum[2].normal);
+		VectorScale(r_view.up,  r_view.ortho_y, r_view.frustum[3].normal);
 		VectorCopy(r_view.forward, r_view.frustum[4].normal);
+		r_view.frustum[0].dist = DotProduct (r_view.origin, r_view.frustum[0].normal) + r_view.ortho_x;
+		r_view.frustum[1].dist = DotProduct (r_view.origin, r_view.frustum[1].normal) + r_view.ortho_x;
+		r_view.frustum[2].dist = DotProduct (r_view.origin, r_view.frustum[2].normal) + r_view.ortho_y;
+		r_view.frustum[3].dist = DotProduct (r_view.origin, r_view.frustum[3].normal) + r_view.ortho_y;
+		r_view.frustum[4].dist = DotProduct (r_view.origin, r_view.frustum[4].normal) + r_refdef.nearclip;
 	}
 
-	r_view.frustum[0].dist = DotProduct (r_view.origin, r_view.frustum[0].normal);
-	r_view.frustum[1].dist = DotProduct (r_view.origin, r_view.frustum[1].normal);
-	r_view.frustum[2].dist = DotProduct (r_view.origin, r_view.frustum[2].normal);
-	r_view.frustum[3].dist = DotProduct (r_view.origin, r_view.frustum[3].normal);
-	r_view.frustum[4].dist = DotProduct (r_view.origin, r_view.frustum[4].normal) + r_refdef.nearclip;
 	PlaneClassify(&r_view.frustum[0]);
 	PlaneClassify(&r_view.frustum[1]);
 	PlaneClassify(&r_view.frustum[2]);
@@ -2003,7 +2009,7 @@ void R_View_Update(void)
 void R_SetupView(const matrix4x4_t *matrix)
 {
 	if (!r_view.useperspective)
-		GL_SetupView_Mode_Ortho(r_view.x, r_view.y, r_view.x + r_view.width, r_view.y + r_view.height, -r_refdef.farclip, r_refdef.farclip);
+		GL_SetupView_Mode_Ortho(-r_view.ortho_x, -r_view.ortho_y, r_view.ortho_x, r_view.ortho_y, -r_refdef.farclip, r_refdef.farclip);
 	else if (r_refdef.rtworldshadows || r_refdef.rtdlightshadows)
 		GL_SetupView_Mode_PerspectiveInfiniteFarClip(r_view.frustum_x, r_view.frustum_y, r_refdef.nearclip);
 	else
