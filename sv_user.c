@@ -758,6 +758,9 @@ void SV_ReadClientMessage(void)
 			break;
 
 		case clc_stringcmd:
+			// allow reliable messages now as the client is done with initial loading
+			if (host_client->sendsignon == 2)
+				host_client->sendsignon = 0;
 			s = MSG_ReadString ();
 			q = NULL;
 			for(p = s; *p; ++p) switch(*p)
