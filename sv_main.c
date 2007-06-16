@@ -1593,8 +1593,8 @@ static void SV_SendClientDatagram (client_t *client)
 		// the client off if they overflow, and quake protocol shows less than
 		// the full entity set if rate limited
 		clientrate = max(NET_MINRATE, client->rate);
-		maxsize = 1400;
-		maxsize2 = 1400;
+		maxsize = 1024;
+		maxsize2 = 1024;
 	}
 	else
 	{
