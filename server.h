@@ -345,6 +345,7 @@ extern cvar_t sv_gameplayfix_blowupfallenzombies;
 extern cvar_t sv_gameplayfix_droptofloorstartsolid;
 extern cvar_t sv_gameplayfix_findradiusdistancetobox;
 extern cvar_t sv_gameplayfix_grenadebouncedownslopes;
+extern cvar_t sv_gameplayfix_multiplethinksperframe;
 extern cvar_t sv_gameplayfix_noairborncorpse;
 extern cvar_t sv_gameplayfix_qwplayerphysics;
 extern cvar_t sv_gameplayfix_setmodelrealbox;
