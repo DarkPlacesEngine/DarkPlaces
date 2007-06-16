@@ -583,22 +583,27 @@ Returns false if the entity removed itself.
 */
 qboolean SV_RunThink (prvm_edict_t *ent)
 {
-	float thinktime;
-
-	thinktime = ent->fields.server->nextthink;
-	if (thinktime <= 0 || thinktime > sv.time + sv.frametime)
-		return true;
+	int iterations;
 
 	// don't let things stay in the past.
 	// it is possible to start that way by a trigger with a local time.
-	if (thinktime < sv.time)
-		thinktime = sv.time;
+	if (ent->fields.server->nextthink <= 0 || ent->fields.server->nextthink > sv.time + sv.frametime)
+		return true;
 
-	ent->fields.server->nextthink = 0;
-	prog->globals.server->time = thinktime;
-	prog->globals.server->self = PRVM_EDICT_TO_PROG(ent);
-	prog->globals.server->other = PRVM_EDICT_TO_PROG(prog->edicts);
-	PRVM_ExecuteProgram (ent->fields.server->think, "QC function self.think is missing");
+	for (iterations = 0;iterations < 128  && !ent->priv.server->free;iterations++)
+	{
+		prog->globals.server->time = max(sv.time, ent->fields.server->nextthink);
+		ent->fields.server->nextthink = 0;
+		prog->globals.server->self = PRVM_EDICT_TO_PROG(ent);
+		prog->globals.server->other = PRVM_EDICT_TO_PROG(prog->edicts);
+		PRVM_ExecuteProgram (ent->fields.server->think, "QC function self.think is missing");
+		// mods often set nextthink to time to cause a think every frame,
+		// we don't want to loop in that case, so exit if the new nextthink is
+		// <= the time the qc was told, also exit if it is past the end of the
+		// frame
+		if (ent->fields.server->nextthink <= prog->globals.server->time || ent->fields.server->nextthink > sv.time + sv.frametime || !sv_gameplayfix_multiplethinksperframe.integer)
+			break;
+	}
 	return !ent->priv.server->free;
 }
 
