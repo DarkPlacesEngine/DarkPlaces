@@ -805,7 +805,7 @@ static void VM_SV_findradius (void)
 			eorg[2] -= bound(ent->fields.server->mins[2], eorg[2], ent->fields.server->maxs[2]);
 		}
 		else
-			VectorMAMAM(1, eorg, 0.5f, ent->fields.server->mins, 0.5f, ent->fields.server->maxs, eorg);
+			VectorMAMAM(1, eorg, -0.5f, ent->fields.server->mins, -0.5f, ent->fields.server->maxs, eorg);
 		if (DotProduct(eorg, eorg) < radius2)
 		{
 			ent->fields.server->chain = PRVM_EDICT_TO_PROG(chain);
