@@ -1666,7 +1666,7 @@ void CL_MoveLerpEntityStates(entity_t *ent)
 		VectorCopy(ent->state_current.origin, ent->persistent.neworigin);
 		VectorCopy(ent->state_current.angles, ent->persistent.newangles);
 		// reset animation interpolation as well
-		ent->render.frame = ent->render.frame1 = ent->render.frame2 = ent->state_current.frame;
+		ent->render.frame1 = ent->render.frame2 = ent->state_current.frame;
 		ent->render.frame1time = ent->render.frame2time = cl.time;
 		ent->render.framelerp = 1;
 		// reset various persistent stuff
@@ -1895,7 +1895,7 @@ void CL_ParseStatic (int large)
 
 // copy it to the current state
 	ent->render.model = cl.model_precache[ent->state_baseline.modelindex];
-	ent->render.frame = ent->render.frame1 = ent->render.frame2 = ent->state_baseline.frame;
+	ent->render.frame1 = ent->render.frame2 = ent->state_baseline.frame;
 	ent->render.framelerp = 0;
 	// make torchs play out of sync
 	ent->render.frame1time = ent->render.frame2time = lhrandom(-10, -1);

@@ -112,7 +112,6 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 
 	e->render.model = model;
 	e->render.colormap = (int)ed->fields.client->colormap;
-	e->render.frame = (int)ed->fields.client->frame;
 	e->render.skinnum = (int)ed->fields.client->skin;
 	e->render.effects |= e->render.model->effects;
 	scale = 1;
@@ -159,8 +158,8 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 	// self.frame1time is the animation base time for the interpolation target
 	// self.frame2 is the interpolation start (previous frame)
 	// self.frame2time is the animation base time for the interpolation start
-	e->render.frame1 = e->render.frame = ed->fields.client->frame;
-	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame2))) e->render.frame = val->_float;
+	e->render.frame1 = e->render.frame2 = ed->fields.client->frame;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame2))) e->render.frame2 = val->_float;
 	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame1time))) e->render.frame2time = val->_float;
 	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame2time))) e->render.frame1time = val->_float;
 	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.lerpfrac))) e->render.framelerp = val->_float;

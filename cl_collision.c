@@ -254,7 +254,7 @@ trace_t CL_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 			entity_render_t *ent = &cl.entities[cl.brushmodel_entities[i]].render;
 			if (!BoxesOverlap(clipboxmins, clipboxmaxs, ent->mins, ent->maxs))
 				continue;
-			Collision_ClipToGenericEntity(&trace, ent->model, ent->frame, vec3_origin, vec3_origin, 0, &ent->matrix, &ent->inversematrix, start, mins, maxs, end, hitsupercontentsmask);
+			Collision_ClipToGenericEntity(&trace, ent->model, ent->frame2, vec3_origin, vec3_origin, 0, &ent->matrix, &ent->inversematrix, start, mins, maxs, end, hitsupercontentsmask);
 			if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
 				*hitnetworkentity = cl.brushmodel_entities[i];
 			Collision_CombineTraces(&cliptrace, &trace, NULL, true);

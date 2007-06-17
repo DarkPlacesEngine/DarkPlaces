@@ -243,8 +243,6 @@ typedef struct entity_render_s
 
 	// NULL = no model
 	model_t *model;
-	// current uninterpolated animation frame (for things which do not use interpolation)
-	int frame;
 	// number of the entity represents, or 0 for non-network entities
 	int entitynumber;
 	// entity shirt and pants colors (-1 if not colormapped)
