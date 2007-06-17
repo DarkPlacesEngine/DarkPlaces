@@ -1583,6 +1583,7 @@ void CL_ParseServerInfo (void)
 		cl.downloadcsqc = true;
 		cl.loadbegun = false;
 		cl.loadfinished = false;
+		cl.loadcsqc = true;
 	}
 
 	// check memory integrity
