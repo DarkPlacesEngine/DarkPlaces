@@ -257,15 +257,18 @@ qboolean CL_VM_ConsoleCommand (const char *cmd)
 {
 	int restorevm_tempstringsbuf_cursize;
 	qboolean r;
-	if(!cl.csqc_loaded || !prog->funcoffsets.CSQC_ConsoleCommand)
+	if(!cl.csqc_loaded)
 		return false;
 	CSQC_BEGIN
+	if (prog->funcoffsets.CSQC_ConsoleCommand)
+	{
 		prog->globals.client->time = cl.time;
 		restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
 		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(cmd);
 		PRVM_ExecuteProgram(prog->funcoffsets.CSQC_ConsoleCommand, "QC function CSQC_ConsoleCommand is missing");
 		vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 		r = CSQC_RETURNVAL;
+	}
 	CSQC_END
 	return r;
 }
