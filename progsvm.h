@@ -221,6 +221,7 @@ typedef struct prvm_prog_globaloffsets_s
 	int v_forward; // ssqc / csqc
 	int v_right; // ssqc / csqc
 	int v_up; // ssqc / csqc
+	int view_angles; // csqc
 	int trace_allsolid; // ssqc / csqc
 	int trace_startsolid; // ssqc / csqc
 	int trace_fraction; // ssqc / csqc
