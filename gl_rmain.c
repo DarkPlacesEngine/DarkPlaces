@@ -3255,7 +3255,7 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 		{
 			// use an alternate animation if the entity's frame is not 0,
 			// and only if the texture has an alternate animation
-			if (ent->frame != 0 && t->anim_total[1])
+			if (ent->frame2 != 0 && t->anim_total[1])
 				t = t->anim_frames[1][(t->anim_total[1] >= 2) ? ((int)(r_refdef.time * 5.0f) % t->anim_total[1]) : 0];
 			else
 				t = t->anim_frames[0][(t->anim_total[0] >= 2) ? ((int)(r_refdef.time * 5.0f) % t->anim_total[0]) : 0];

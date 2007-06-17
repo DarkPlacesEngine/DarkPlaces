@@ -440,7 +440,7 @@ static void CL_PrintEntities_f(void)
 			modelname = ent->render.model->name;
 		else
 			modelname = "--no model--";
-		Con_Printf("%3i: %-25s:%4i (%5i %5i %5i) [%3i %3i %3i] %4.2f %5.3f\n", i, modelname, ent->render.frame, (int) ent->state_current.origin[0], (int) ent->state_current.origin[1], (int) ent->state_current.origin[2], (int) ent->state_current.angles[0] % 360, (int) ent->state_current.angles[1] % 360, (int) ent->state_current.angles[2] % 360, ent->render.scale, ent->render.alpha);
+		Con_Printf("%3i: %-25s:%4i (%5i %5i %5i) [%3i %3i %3i] %4.2f %5.3f\n", i, modelname, ent->render.frame2, (int) ent->state_current.origin[0], (int) ent->state_current.origin[1], (int) ent->state_current.origin[2], (int) ent->state_current.angles[0] % 360, (int) ent->state_current.angles[1] % 360, (int) ent->state_current.angles[2] % 360, ent->render.scale, ent->render.alpha);
 	}
 }
 
@@ -996,7 +996,7 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 		// begin a new frame lerp
 		e->render.frame1 = e->render.frame2;
 		e->render.frame1time = e->render.frame2time;
-		e->render.frame = e->render.frame2 = e->state_current.frame;
+		e->render.frame2 = e->state_current.frame;
 		e->render.frame2time = cl.time;
 		e->render.framelerp = 0;
 	}
@@ -1231,7 +1231,7 @@ void CL_UpdateViewModel(void)
 	// reset animation interpolation on weaponmodel if model changed
 	if (ent->state_previous.modelindex != ent->state_current.modelindex)
 	{
-		ent->render.frame = ent->render.frame1 = ent->render.frame2 = ent->state_current.frame;
+		ent->render.frame1 = ent->render.frame2 = ent->state_current.frame;
 		ent->render.frame1time = ent->render.frame2time = cl.time;
 		ent->render.framelerp = 1;
 	}
@@ -1512,7 +1512,6 @@ static void CL_RelinkEffects(void)
 					ent->render.model = cl.model_precache[e->modelindex];
 				else
 					ent->render.model = cl.csqc_model_precache[-(e->modelindex+1)];
-				ent->render.frame = ent->render.frame2;
 				ent->render.colormap = -1; // no special coloring
 				ent->render.alpha = 1;
 				VectorSet(ent->render.colormod, 1, 1, 1);

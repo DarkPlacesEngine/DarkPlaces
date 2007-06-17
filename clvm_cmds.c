@@ -1179,7 +1179,7 @@ static void VM_CL_makestatic (void)
 
 		// copy it to the current state
 		staticent->render.model = CL_GetModelByIndex((int)ent->fields.client->modelindex);
-		staticent->render.frame = staticent->render.frame1 = staticent->render.frame2 = (int)ent->fields.client->frame;
+		staticent->render.frame1 = staticent->render.frame2 = (int)ent->fields.client->frame;
 		staticent->render.framelerp = 0;
 		// make torchs play out of sync
 		staticent->render.frame1time = staticent->render.frame2time = lhrandom(-10, -1);
