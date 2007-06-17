@@ -177,6 +177,28 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 		if(renderflags & RF_ADDITIVE)		e->render.effects |= EF_ADDITIVE;
 	}
 
+	if ((e->render.colormap > 0 && e->render.colormap <= cl.maxclients) || e->render.colormap >= 1024)
+	{
+		int cb;
+		unsigned char *cbcolor;
+		int palcol;
+		if (e->render.colormap >= 1024)
+			palcol = (unsigned char)(e->render.colormap-1024);
+		else
+			palcol = cl.scores[e->render.colormap-1].colors;
+
+		cb = (palcol & 0xF) << 4;cb += (cb >= 128 && cb < 224) ? 4 : 12;
+		cbcolor = (unsigned char *) (&palette_complete[cb]);
+		e->render.colormap_pantscolor[0] = cbcolor[0] * (1.0f / 255.0f);
+		e->render.colormap_pantscolor[1] = cbcolor[1] * (1.0f / 255.0f);
+		e->render.colormap_pantscolor[2] = cbcolor[2] * (1.0f / 255.0f);
+		cb = (palcol & 0xF0);cb += (cb >= 128 && cb < 224) ? 4 : 12;
+		cbcolor = (unsigned char *) (&palette_complete[cb]);
+		e->render.colormap_shirtcolor[0] = cbcolor[0] * (1.0f / 255.0f);
+		e->render.colormap_shirtcolor[1] = cbcolor[1] * (1.0f / 255.0f);
+		e->render.colormap_shirtcolor[2] = cbcolor[2] * (1.0f / 255.0f);
+	}
+
 	// either fullbright or lit
 	if (!(e->render.effects & EF_FULLBRIGHT) && !r_fullbright.integer)
 		e->render.flags |= RENDER_LIGHT;
