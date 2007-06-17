@@ -1406,6 +1406,7 @@ void PRVM_FindOffsets(void)
 	prog->globaloffsets.v_forward                     = PRVM_ED_FindGlobalOffset("v_forward");
 	prog->globaloffsets.v_right                       = PRVM_ED_FindGlobalOffset("v_right");
 	prog->globaloffsets.v_up                          = PRVM_ED_FindGlobalOffset("v_up");
+	prog->globaloffsets.view_angles                   = PRVM_ED_FindGlobalOffset("view_angles");
 	prog->globaloffsets.trace_allsolid                = PRVM_ED_FindGlobalOffset("trace_allsolid");
 	prog->globaloffsets.trace_startsolid              = PRVM_ED_FindGlobalOffset("trace_startsolid");
 	prog->globaloffsets.trace_fraction                = PRVM_ED_FindGlobalOffset("trace_fraction");

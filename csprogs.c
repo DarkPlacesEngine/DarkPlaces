@@ -20,7 +20,6 @@ static char *cl_required_func[] =
 	"CSQC_InputEvent",
 	"CSQC_UpdateView",
 	"CSQC_ConsoleCommand",
-	"CSQC_Shutdown"
 };
 
 static int cl_numrequiredfunc = sizeof(cl_required_func) / sizeof(char*);
@@ -49,6 +48,7 @@ void CL_VM_Error (const char *format, ...)	//[515]: hope it will be never execut
 //[515]: set globals before calling R_UpdateView, WEIRD CRAP
 static void CSQC_SetGlobals (void)
 {
+	prvm_eval_t *val;
 	CSQC_BEGIN
 		prog->globals.client->time = cl.time;
 		prog->globals.client->frametime = max(0, cl.time - cl.oldtime);
@@ -60,10 +60,9 @@ static void CSQC_SetGlobals (void)
 		VectorSet(prog->globals.client->input_movevalues, cl.movecmd[0].forwardmove, cl.movecmd[0].sidemove, cl.movecmd[0].upmove);
 		//VectorCopy(cl.movement_origin, cl.csqc_origin);
 		Matrix4x4_OriginFromMatrix(&cl.entities[cl.viewentity].render.matrix, cl.csqc_origin);
-		VectorCopy(cl.csqc_origin, prog->globals.client->pmove_org);
+		if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.view_angles)))
+			VectorCopy(cl.viewangles, val->vector);
 		prog->globals.client->maxclients = cl.maxclients;
-		//VectorCopy(cl.movement_velocity, prog->globals.client->pmove_vel);
-		VectorCopy(cl.velocity, prog->globals.client->pmove_vel);
 	CSQC_END
 }
 
@@ -220,11 +219,16 @@ qboolean CL_VM_InputEvent (qboolean pressed, int key)
 	if(!cl.csqc_loaded)
 		return false;
 	CSQC_BEGIN
-		prog->globals.client->time = cl.time;
-		PRVM_G_FLOAT(OFS_PARM0) = pressed;
-		PRVM_G_FLOAT(OFS_PARM1) = key;
-		PRVM_ExecuteProgram(prog->funcoffsets.CSQC_InputEvent, "QC function CSQC_InputEvent is missing");
-		r = CSQC_RETURNVAL;
+		if (!prog->funcoffsets.CSQC_InputEvent)
+			r = false;
+		else
+		{
+			prog->globals.client->time = cl.time;
+			PRVM_G_FLOAT(OFS_PARM0) = pressed;
+			PRVM_G_FLOAT(OFS_PARM1) = key;
+			PRVM_ExecuteProgram(prog->funcoffsets.CSQC_InputEvent, "QC function CSQC_InputEvent is missing");
+			r = CSQC_RETURNVAL;
+		}
 	CSQC_END
 	return r;
 }
@@ -253,7 +257,7 @@ qboolean CL_VM_ConsoleCommand (const char *cmd)
 {
 	int restorevm_tempstringsbuf_cursize;
 	qboolean r;
-	if(!cl.csqc_loaded)
+	if(!cl.csqc_loaded || !prog->funcoffsets.CSQC_ConsoleCommand)
 		return false;
 	CSQC_BEGIN
 		prog->globals.client->time = cl.time;
@@ -413,6 +417,12 @@ float CL_VM_Event (float event)		//[515]: needed ? I'd say "YES", but don't know
 void CSQC_ReadEntities (void)
 {
 	unsigned short entnum, oldself, realentnum;
+	if(!cl.csqc_loaded)
+	{
+		Host_Error ("CSQC_ReadEntities: CSQC is not loaded");
+		return;
+	}
+
 	CSQC_BEGIN
 		prog->globals.client->time = cl.time;
 		oldself = prog->globals.client->self;
@@ -642,7 +652,8 @@ void CL_VM_ShutDown (void)
 		return;
 	CSQC_BEGIN
 		prog->globals.client->time = cl.time;
-		PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Shutdown, "QC function CSQC_Shutdown is missing");
+		if (prog->funcoffsets.CSQC_Shutdown)
+			PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Shutdown, "QC function CSQC_Shutdown is missing");
 		PRVM_ResetProg();
 	CSQC_END
 	Con_Print("CSQC ^1unloaded\n");
