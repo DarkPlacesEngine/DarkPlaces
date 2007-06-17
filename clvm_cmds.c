@@ -850,8 +850,24 @@ static void VM_CL_getstatf (void)
 static void VM_CL_getstati (void)
 {
 	int i, index;
-	VM_SAFEPARMCOUNT(1, VM_CL_getstati);
+	int firstbit, bitcount;
+
+	VM_SAFEPARMCOUNTRANGE(1, 3, VM_CL_getstati);
+
 	index = (int)PRVM_G_FLOAT(OFS_PARM0);
+	if (prog->argc > 1)
+	{
+		firstbit = (int)PRVM_G_FLOAT(OFS_PARM1);
+		if (prog->argc > 2)
+			bitcount = (int)PRVM_G_FLOAT(OFS_PARM2);
+		else
+			bitcount = 1;
+	}
+	else
+	{
+		firstbit = 0;
+		bitcount = 32;
+	}
 
 	if(index < 0 || index >= MAX_CL_STATS)
 	{
@@ -859,6 +875,8 @@ static void VM_CL_getstati (void)
 		return;
 	}
 	i = cl.stats[index];
+	if (bitcount != 32)	//32 causes the mask to overflow, so there's nothing to subtract from.
+		i = (((unsigned int)i)&(((1<<bitcount)-1)<<firstbit))>>firstbit;
 	PRVM_G_FLOAT(OFS_RETURN) = i;
 }
 
