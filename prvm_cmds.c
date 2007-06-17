@@ -3799,7 +3799,7 @@ void VM_chr2str (void)
 void VM_strncmp (void)
 {
 	const char *s1, *s2;
-	VM_SAFEPARMCOUNT(1, VM_strncmp);
+	VM_SAFEPARMCOUNT(3, VM_strncmp);
 	s1 = PRVM_G_STRING(OFS_PARM0);
 	s2 = PRVM_G_STRING(OFS_PARM1);
 	PRVM_G_FLOAT(OFS_RETURN) = strncmp(s1, s2, (size_t)PRVM_G_FLOAT(OFS_PARM2));
