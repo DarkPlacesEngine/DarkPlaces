@@ -256,7 +256,7 @@ extern sizebuf_t vm_tempstringsbuf;
 qboolean CL_VM_ConsoleCommand (const char *cmd)
 {
 	int restorevm_tempstringsbuf_cursize;
-	qboolean r;
+	qboolean r = false;
 	if(!cl.csqc_loaded)
 		return false;
 	CSQC_BEGIN
