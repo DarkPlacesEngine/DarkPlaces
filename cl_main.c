@@ -1084,7 +1084,7 @@ void CL_UpdateNetworkEntityTrail(entity_t *e)
 	if (e->persistent.muzzleflash > 0)
 		e->persistent.muzzleflash -= bound(0, cl.time - cl.oldtime, 0.1) * 20;
 	// LordHavoc: if the entity has no effects, don't check each
-	if (e->render.model && e->render.effects && !(e->render.flags & RENDER_VIEWMODEL))
+	if (e->render.effects && !(e->render.flags & RENDER_VIEWMODEL))
 	{
 		if (e->render.effects & EF_GIB)
 			trailtype = EFFECT_TR_BLOOD;
