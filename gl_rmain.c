@@ -5014,7 +5014,7 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 	else if (rsurface.texture->currentnumlayers)
 	{
 		// write depth for anything we skipped on the depth-only pass earlier
-		if (!writedepth && (rsurface.texture->currentmaterialflags & (MATERIALFLAG_BLENDED | MATERIALFLAG_ALPHATEST)))
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
 			writedepth = true;
 		GL_DepthRange(0, (rsurface.texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE) ? 0.0625 : 1);
 		GL_PolygonOffset(rsurface.texture->currentpolygonfactor, rsurface.texture->currentpolygonoffset);
