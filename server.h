@@ -34,6 +34,20 @@ typedef struct server_static_s
 	qboolean changelevel_issued;
 	// server infostring
 	char serverinfo[MAX_SERVERINFO_STRING];
+	// performance data
+	float perf_cpuload;
+	float perf_lost;
+	float perf_offset_avg;
+	float perf_offset_max;
+	float perf_offset_sdev;
+	// temporary performance data accumulators
+	float perf_acc_realtime;
+	float perf_acc_sleeptime;
+	float perf_acc_lost;
+	float perf_acc_offset;
+	float perf_acc_offset_squared;
+	float perf_acc_offset_max;
+	int perf_acc_offset_samples;
 } server_static_t;
 
 //=============================================================================
@@ -459,6 +473,8 @@ void SV_SetupVM(void);
 
 void SV_VM_Begin(void);
 void SV_VM_End(void);
+
+const char *Host_TimingReport(); // for output in Host_Status_f
 
 #endif
 
