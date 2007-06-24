@@ -446,28 +446,27 @@ float cvar (string)
 */
 void VM_cvar (void)
 {
-	VM_SAFEPARMCOUNT(1,VM_cvar);
-
-	PRVM_G_FLOAT(OFS_RETURN) = Cvar_VariableValue(PRVM_G_STRING(OFS_PARM0));
+	char string[VM_STRINGTEMP_LENGTH];
+	VM_SAFEPARMCOUNTRANGE(1,8,VM_cvar);
+	VM_VarString(0, string, sizeof(string));
+	VM_CheckEmptyString(string);
+	PRVM_G_FLOAT(OFS_RETURN) = Cvar_VariableValue(string);
 }
 
 /*
 =================
 VM_cvar_string
 
-const string	VM_cvar_string (string)
+const string	VM_cvar_string (string, ...)
 =================
 */
 void VM_cvar_string(void)
 {
-	const char *name;
-	VM_SAFEPARMCOUNT(1,VM_cvar_string);
-
-	name = PRVM_G_STRING(OFS_PARM0);
-
-	VM_CheckEmptyString(name);
-
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(Cvar_VariableString(name));
+	char string[VM_STRINGTEMP_LENGTH];
+	VM_SAFEPARMCOUNTRANGE(1,8,VM_cvar_string);
+	VM_VarString(0, string, sizeof(string));
+	VM_CheckEmptyString(string);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(Cvar_VariableString(string));
 }
 
 
@@ -475,32 +474,33 @@ void VM_cvar_string(void)
 ========================
 VM_cvar_defstring
 
-const string	VM_cvar_defstring (string)
+const string	VM_cvar_defstring (string, ...)
 ========================
 */
 void VM_cvar_defstring (void)
 {
-	const char *name;
-	VM_SAFEPARMCOUNT(1,VM_cvar_string);
-
-	name = PRVM_G_STRING(OFS_PARM0);
-
-	VM_CheckEmptyString(name);
-
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(Cvar_VariableDefString(name));
+	char string[VM_STRINGTEMP_LENGTH];
+	VM_SAFEPARMCOUNTRANGE(1,8,VM_cvar_defstring);
+	VM_VarString(0, string, sizeof(string));
+	VM_CheckEmptyString(string);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(Cvar_VariableDefString(string));
 }
 /*
 =================
 VM_cvar_set
 
-void cvar_set (string,string)
+void cvar_set (string,string, ...)
 =================
 */
 void VM_cvar_set (void)
 {
-	VM_SAFEPARMCOUNT(2,VM_cvar_set);
-
-	Cvar_Set(PRVM_G_STRING(OFS_PARM0), PRVM_G_STRING(OFS_PARM1));
+	const char *name;
+	char string[VM_STRINGTEMP_LENGTH];
+	VM_SAFEPARMCOUNTRANGE(2,8,VM_cvar_set);
+	VM_VarString(1, string, sizeof(string));
+	name = PRVM_G_STRING(OFS_PARM0);
+	VM_CheckEmptyString(name);
+	Cvar_Set(name, string);
 }
 
 /*
