@@ -712,7 +712,7 @@ void Host_Main(void)
 
 			if(advancetime > 0)
 			{
-				offset = sv_timer;
+				offset = sv_timer + (Sys_DoubleTime() - realtime);
 				++svs.perf_acc_offset_samples;
 				svs.perf_acc_offset += offset;
 				svs.perf_acc_offset_squared += offset * offset;
