@@ -46,7 +46,6 @@ void Host_Quit_f (void)
 		Sys_Quit (0);
 }
 
-
 /*
 ==================
 Host_Status_f
@@ -81,6 +80,7 @@ void Host_Status_f (void)
 	print ("version:  %s build %s\n", gamename, buildstring);
 	print ("protocol: %i (%s)\n", Protocol_NumberForEnum(sv.protocol), Protocol_NameForEnum(sv.protocol));
 	print ("map:      %s\n", sv.name);
+	print ("timing:   %s\n", Host_TimingReport());
 	print ("players:  %i active (%i max)\n\n", players, svs.maxclients);
 	for (j = 0, client = svs.clients;j < svs.maxclients;j++, client++)
 	{

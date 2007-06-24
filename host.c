@@ -520,6 +520,18 @@ void Host_GetConsoleCommands (void)
 
 /*
 ==================
+Host_TimeReport
+
+Returns a time report string, for example for 
+==================
+*/
+const char *Host_TimingReport()
+{
+	return va("%.1f%% CPU, %.2f%% lost, offset avg %.1fms, max %.1fms, sdev %.1fms", svs.perf_cpuload * 100, svs.perf_lost * 100, svs.perf_offset_avg * 1000, svs.perf_offset_max * 1000, svs.perf_offset_sdev * 1000);
+}
+
+/*
+==================
 Host_Frame
 
 Runs all active servers
@@ -534,7 +546,7 @@ void Host_Main(void)
 	double cl_timer, sv_timer;
 	double clframetime, deltarealtime, oldrealtime;
 	double wait;
-	int pass1, pass2, pass3;
+	int pass1, pass2, pass3, i;
 
 	Host_Init();
 
@@ -553,6 +565,34 @@ void Host_Main(void)
 		deltarealtime = realtime - oldrealtime;
 		cl_timer += deltarealtime;
 		sv_timer += deltarealtime;
+
+		svs.perf_acc_realtime += deltarealtime;
+
+		// Look for clients who have spawned
+		for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
+			if(host_client->spawned)
+				if(host_client->netconnection)
+					break;
+		if(i == svs.maxclients)
+		{
+			// Nobody is looking? Then we won't do timing...
+			// Instead, reset it to zero
+			svs.perf_acc_realtime = svs.perf_acc_sleeptime = svs.perf_acc_lost = svs.perf_acc_offset = svs.perf_acc_offset_squared = svs.perf_acc_offset_max = svs.perf_acc_offset_samples = 0;
+		}
+		else if(svs.perf_acc_realtime > 5)
+		{
+			svs.perf_cpuload = 1 - svs.perf_acc_sleeptime / svs.perf_acc_realtime;
+			svs.perf_lost = svs.perf_acc_lost / svs.perf_acc_realtime;
+			if(svs.perf_acc_offset_samples > 0)
+			{
+				svs.perf_offset_max = svs.perf_acc_offset_max;
+				svs.perf_offset_avg = svs.perf_acc_offset / svs.perf_acc_offset_samples;
+				svs.perf_offset_sdev = sqrt(svs.perf_acc_offset_squared / svs.perf_acc_offset_samples - svs.perf_offset_avg * svs.perf_offset_avg);
+			}
+			if(svs.perf_lost > 0)
+				Con_DPrintf("Server can't keep up: %s\n", Host_TimingReport());
+			svs.perf_acc_realtime = svs.perf_acc_sleeptime = svs.perf_acc_lost = svs.perf_acc_offset = svs.perf_acc_offset_squared = svs.perf_acc_offset_max = svs.perf_acc_offset_samples = 0;
+		}
 
 		if (slowmo.value < 0)
 			Cvar_SetValue("slowmo", 0);
@@ -602,8 +642,10 @@ void Host_Main(void)
 			wait = max(cl_timer, sv_timer) * -1000000.0;
 		if (wait > 100000)
 			wait = 100000;
+
 		if (!cls.timedemo && wait > 0)
 		{
+			double time0 = Sys_DoubleTime();
 			if (sv_checkforpacketsduringsleep.integer)
 			{
 				if (wait >= 1)
@@ -614,6 +656,7 @@ void Host_Main(void)
 				if (wait >= 1000)
 					Sys_Sleep((int)wait / 1000);
 			}
+			svs.perf_acc_sleeptime += Sys_DoubleTime() - time0;
 			continue;
 		}
 
@@ -627,7 +670,10 @@ void Host_Main(void)
 		if (cl_timer > 0.1)
 			cl_timer = 0.1;
 		if (sv_timer > 0.1)
+		{
+			svs.perf_acc_lost += (sv_timer - 0.1);
 			sv_timer = 0.1;
+		}
 
 		if (sv.active && sv_timer > 0)
 		{
@@ -637,6 +683,7 @@ void Host_Main(void)
 			// slow down if the server is taking too long.
 			int framecount, framelimit = 1;
 			double advancetime, aborttime = 0;
+			float offset;
 
 			// run the world state
 			// don't allow simulation to run too fast or too slow or logic glitches can occur
@@ -662,6 +709,16 @@ void Host_Main(void)
 				}
 			}
 			advancetime = min(advancetime, 0.1);
+
+			if(advancetime > 0)
+			{
+				offset = sv_timer;
+				++svs.perf_acc_offset_samples;
+				svs.perf_acc_offset += offset;
+				svs.perf_acc_offset_squared += offset * offset;
+				if(svs.perf_acc_offset_max < offset)
+					svs.perf_acc_offset_max = offset;
+			}
 
 			// only advance time if not paused
 			// the game also pauses in singleplayer when menu or console is used
@@ -799,7 +856,10 @@ void Host_Main(void)
 		if (cl_timer >= 0)
 			cl_timer = 0;
 		if (sv_timer >= 0)
+		{
+			svs.perf_acc_lost += sv_timer;
 			sv_timer = 0;
+		}
 
 		host_framecount++;
 	}
