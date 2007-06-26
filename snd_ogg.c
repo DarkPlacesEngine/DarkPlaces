@@ -546,7 +546,7 @@ static const snd_buffer_t* OGG_FetchSound (channel_t* ch, unsigned int* start, u
 		return NULL;
 	}
 	newlength = per_sfx->format.speed * factor;  // -> 1 sec of sound before resampling
-	if(newlength > sizeof(resampling_buffer))
+	if(newlength > (int)sizeof(resampling_buffer))
 		newlength = sizeof(resampling_buffer);
 
 	// Decompress in the resampling_buffer
