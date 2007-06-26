@@ -164,6 +164,7 @@ void sbar_start(void)
 		for (i = 0;i < 10;i++)
 			sb_nums[0][i] = Draw_CachePic (va("gfx/num_%i",i), true);
 		sb_nums[0][10] = Draw_CachePic ("gfx/num_minus", true);
+		sb_colon = Draw_CachePic ("gfx/num_colon", true);
 
 		sb_ammo[0] = Draw_CachePic ("gfx/sb_shells", true);
 		sb_ammo[1] = Draw_CachePic ("gfx/sb_bullets", true);
@@ -1901,11 +1902,15 @@ void Sbar_Score (void)
 		if (minutes >= 5)
 		{
 			Sbar_DrawXNum(-12*6-24, 32, minutes,  3, 12, 1, 1, 1, 1, 0);
+			if(sb_colon && sb_colon->tex != r_texture_notexture)
+				DrawQ_Pic(sbar_x-24 + -12*3, sbar_y + 32, sb_colon, 12, 12, 1, 1, 1, sbar_alpha_fg.value, 0);
 			Sbar_DrawXNum(-12*2-24, 32, seconds, -2, 12, 1, 1, 1, 1, 0);
 		}
 		else if (minutes >= 1)
 		{
 			Sbar_DrawXNum(-12*6-24, 32, minutes,  3, 12, 1, 1, 0, 1, 0);
+			if(sb_colon && sb_colon->tex != r_texture_notexture)
+				DrawQ_Pic(sbar_x-24 + -12*3, sbar_y + 32, sb_colon, 12, 12, 1, 1, 0, sbar_alpha_fg.value, 0);
 			Sbar_DrawXNum(-12*2-24, 32, seconds, -2, 12, 1, 1, 0, 1, 0);
 		}
 		else if ((int)(timeleft * 4) & 1)
@@ -1918,6 +1923,8 @@ void Sbar_Score (void)
 		minutes = (int)floor(cl.time / 60);
 		seconds = (int)(floor(cl.time) - minutes * 60);
 		Sbar_DrawXNum(-12*6-24, 32, minutes,  3, 12, 1, 1, 1, 1, 0);
+		if(sb_colon && sb_colon->tex != r_texture_notexture)
+			DrawQ_Pic(sbar_x-24 + -12*3, sbar_y + 32, sb_colon, 12, 12, 1, 1, 1, sbar_alpha_fg.value, 0);
 		Sbar_DrawXNum(-12*2-24, 32, seconds, -2, 12, 1, 1, 1, 1, 0);
 	}
 }
@@ -1951,8 +1958,7 @@ void Sbar_IntermissionOverlay (void)
 	dig = (int)cl.completed_time / 60;
 	Sbar_DrawNum (160, 64, dig, 3, 0);
 	num = (int)cl.completed_time - dig*60;
-	if (gamemode != GAME_NEXUIZ)
-		Sbar_DrawPic (234,64,sb_colon);
+	Sbar_DrawPic (234,64,sb_colon);
 	Sbar_DrawPic (246,64,sb_nums[0][num/10]);
 	Sbar_DrawPic (266,64,sb_nums[0][num%10]);
 
