@@ -1768,6 +1768,34 @@ void Sbar_MiniDeathmatchOverlay (int x, int y)
 	}
 }
 
+int Sbar_TeamColorCompare(const void *t1_, const void *t2_)
+{
+	static int const sortorder[16] =
+	{
+		1001,
+		1002,
+		1003,
+		1004,
+		1, // red
+		1005,
+		1006,
+		1007,
+		1008,
+		4, // pink
+		1009,
+		1010,
+		3, // yellow
+		2, // blue
+		1011,
+		1012
+	};
+	const scoreboard_t *t1 = *(scoreboard_t **) t1_;
+	const scoreboard_t *t2 = *(scoreboard_t **) t2_;
+	int tc1 = sortorder[t1->colors & 15];
+	int tc2 = sortorder[t2->colors & 15];
+	return tc1 - tc2;
+}
+
 void Sbar_Score (void)
 {
 	int i, me, score, otherleader, place, distribution, minutes, seconds;
@@ -1777,42 +1805,91 @@ void Sbar_Score (void)
 	me = cl.playerentity - 1;
 	if (me >= 0 && me < cl.maxclients)
 	{
-		// find leading score other than ourselves, to calculate distribution
-		// find our place in the scoreboard
-		score = cl.scores[me].frags;
-		for (i = 0, otherleader = -1, place = 1;i < cl.maxclients;i++)
+		if(Sbar_IsTeammatch())
 		{
-			if (cl.scores[i].name[0] && i != me)
+			// Layout:
+			//
+			//   team1 team3 team4
+			//
+			//         TEAM2
+
+			scoreboard_t *teamcolorsort[16];
+
+			Sbar_SortFrags();
+			for(i = 0; i < teamlines; ++i)
+				teamcolorsort[i] = &(teams[i]);
+
+			// Now sort them by color
+			qsort(teamcolorsort, teamlines, sizeof(*teamcolorsort), Sbar_TeamColorCompare);
+
+			// -24: margin
+			// -12*4: four digits space
+			place = -24 + (teamlines - 1) * (-12 * 4);
+
+			for(i = 0; i < teamlines; ++i)
 			{
-				if (otherleader == -1 || cl.scores[i].frags > cl.scores[otherleader].frags)
-					otherleader = i;
-				if (score < cl.scores[i].frags || (score == cl.scores[i].frags && i < me))
-					place++;
+				int cindex = teamcolorsort[i]->colors & 15;
+				unsigned char *c = (unsigned char *)&palette_complete[(cindex << 4) + 8];
+				float cm = max(max(c[0], c[1]), c[2]);
+				float cr = c[0] / cm;
+				float cg = c[1] / cm;
+				float cb = c[2] / cm;
+				if(cindex == (cl.scores[cl.playerentity - 1].colors & 15)) // my team
+				{
+					Sbar_DrawXNum(-32*4-24, 0, teamcolorsort[i]->frags, 4, 32, cr, cg, cb, 1, 0);
+				}
+				else // other team
+				{
+					Sbar_DrawXNum(place, -12, teamcolorsort[i]->frags, 4, 12, cr, cg, cb, 1, 0);
+					place += 4 * 12;
+				}
 			}
 		}
-		distribution = otherleader >= 0 ? score - cl.scores[otherleader].frags : 0;
-		if (place == 1)
-			Sbar_DrawXNum(-3*12-24, -12, place, 3, 12, 1, 1, 1, 1, 0);
-		else if (place == 2)
-			Sbar_DrawXNum(-3*12-24, -12, place, 3, 12, 1, 1, 0, 1, 0);
-		else
-			Sbar_DrawXNum(-3*12-24, -12, place, 3, 12, 1, 0, 0, 1, 0);
-		if (otherleader < 0)
-			Sbar_DrawXNum(-32*4-24,   0, score, 4, 32, 1, 1, 1, 1, 0);
-		if (distribution >= 0)
-		{
-			Sbar_DrawXNum(-7*12-24, -12, distribution, 4, 12, 1, 1, 1, 1, 0);
-			Sbar_DrawXNum(-32*4-24,   0, score, 4, 32, 1, 1, 1, 1, 0);
-		}
-		else if (distribution >= -5)
-		{
-			Sbar_DrawXNum(-7*12-24, -12, distribution, 4, 12, 1, 1, 0, 1, 0);
-			Sbar_DrawXNum(-32*4-24,   0, score, 4, 32, 1, 1, 0, 1, 0);
-		}
 		else
 		{
-			Sbar_DrawXNum(-7*12-24, -12, distribution, 4, 12, 1, 0, 0, 1, 0);
-			Sbar_DrawXNum(-32*4-24,   0, score, 4, 32, 1, 0, 0, 1, 0);
+			// Layout:
+			//
+			//   leading  place
+			//
+			//        FRAGS
+			//
+			// find leading score other than ourselves, to calculate distribution
+			// find our place in the scoreboard
+			score = cl.scores[me].frags;
+			for (i = 0, otherleader = -1, place = 1;i < cl.maxclients;i++)
+			{
+				if (cl.scores[i].name[0] && i != me)
+				{
+					if (otherleader == -1 || cl.scores[i].frags > cl.scores[otherleader].frags)
+						otherleader = i;
+					if (score < cl.scores[i].frags || (score == cl.scores[i].frags && i < me))
+						place++;
+				}
+			}
+			distribution = otherleader >= 0 ? score - cl.scores[otherleader].frags : 0;
+			if (place == 1)
+				Sbar_DrawXNum(-3*12-24, -12, place, 3, 12, 1, 1, 1, 1, 0);
+			else if (place == 2)
+				Sbar_DrawXNum(-3*12-24, -12, place, 3, 12, 1, 1, 0, 1, 0);
+			else
+				Sbar_DrawXNum(-3*12-24, -12, place, 3, 12, 1, 0, 0, 1, 0);
+			if (otherleader < 0)
+				Sbar_DrawXNum(-32*4-24,   0, score, 4, 32, 1, 1, 1, 1, 0);
+			if (distribution >= 0)
+			{
+				Sbar_DrawXNum(-7*12-24, -12, distribution, 4, 12, 1, 1, 1, 1, 0);
+				Sbar_DrawXNum(-32*4-24,   0, score, 4, 32, 1, 1, 1, 1, 0);
+			}
+			else if (distribution >= -5)
+			{
+				Sbar_DrawXNum(-7*12-24, -12, distribution, 4, 12, 1, 1, 0, 1, 0);
+				Sbar_DrawXNum(-32*4-24,   0, score, 4, 32, 1, 1, 0, 1, 0);
+			}
+			else
+			{
+				Sbar_DrawXNum(-7*12-24, -12, distribution, 4, 12, 1, 0, 0, 1, 0);
+				Sbar_DrawXNum(-32*4-24,   0, score, 4, 32, 1, 0, 0, 1, 0);
+			}
 		}
 	}
 
