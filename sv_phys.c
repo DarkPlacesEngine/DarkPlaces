@@ -523,6 +523,8 @@ int SV_CheckContentsTransition(prvm_edict_t *ent, const int nContents)
 				PRVM_G_FLOAT(OFS_PARM0) = ent->fields.server->watertype;
 				// New Contents
 				PRVM_G_FLOAT(OFS_PARM1) = nContents;
+				// Assign Self
+				prog->globals.server->self = PRVM_EDICT_TO_PROG(ent);
 			// Execute VM Function
 			PRVM_ExecuteProgram(contentstransition->function, "contentstransition: NULL function");
 		}
