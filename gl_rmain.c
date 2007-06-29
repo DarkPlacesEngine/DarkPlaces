@@ -832,14 +832,15 @@ void R_GLSL_DumpShader_f(void)
 		return;
 	}
 
-	FS_Print(file, "// #define VERTEX_SHADER GEOMETRY_SHADER FRAGMENT_SHADER\n");
+	FS_Print(file, "// The engine may define the following macros:\n");
+	FS_Print(file, "// #define VERTEX_SHADER\n// #define GEOMETRY_SHADER\n// #define FRAGMENT_SHADER\n");
 	for (i = 0;permutationinfo[i][0];i++)
 		FS_Printf(file, "// %s", permutationinfo[i][0]);
 	FS_Print(file, "\n");
 	FS_Print(file, builtinshaderstring);
 	FS_Close(file);
 
-	Con_Printf("data/default.glsl written");
+	Con_Printf("data/default.glsl written\n");
 }
 
 extern rtexture_t *r_shadow_attenuationgradienttexture;
