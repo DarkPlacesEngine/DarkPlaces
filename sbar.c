@@ -1223,9 +1223,9 @@ void Sbar_Draw (void)
 				else
 				{
 					if (redflag)
-						Sbar_DrawPic (10 - sbar_x, -109, sb_items[redflag+10]);
+						Sbar_DrawPic (10 - sbar_x, -117, sb_items[redflag+10]);
 					if (blueflag)
-						Sbar_DrawPic (10 - sbar_x, -169, sb_items[blueflag+14]);
+						Sbar_DrawPic (10 - sbar_x, -177, sb_items[blueflag+14]);
 				}
 
 				// armor
@@ -1318,9 +1318,9 @@ void Sbar_Draw (void)
 				else
 				{
 					if (redflag)
-						Sbar_DrawPic (10 - sbar_x, -109, sb_items[redflag+10]);
+						Sbar_DrawPic (10 - sbar_x, -117, sb_items[redflag+10]);
 					if (blueflag)
-						Sbar_DrawPic (10 - sbar_x, -169, sb_items[blueflag+14]);
+						Sbar_DrawPic (10 - sbar_x, -177, sb_items[blueflag+14]);
 				}
 
 				// armor
