@@ -95,6 +95,7 @@ cvar_t showdate_format = {CVAR_SAVE, "showdate_format", "%Y-%m-%d", "format stri
 cvar_t sbar_alpha_bg = {CVAR_SAVE, "sbar_alpha_bg", "0.4", "opacity value of the statusbar background image"};
 cvar_t sbar_alpha_fg = {CVAR_SAVE, "sbar_alpha_fg", "1", "opacity value of the statusbar weapon/item icons and numbers"};
 cvar_t sbar_hudselector = {CVAR_SAVE, "sbar_hudselector", "0", "selects which of the builtin hud layouts to use (meaning is somewhat dependent on gamemode, so nexuiz has a very different set of hud layouts than quake for example)"};
+cvar_t sbar_miniscoreboard_size = {CVAR_SAVE, "sbar_miniscoreboard_size", "-1", "sets the size of the mini deathmatch overlay in items, or disables it when set to 0, or sets it to a sane default when set to -1"};
 
 cvar_t cl_deathscoreboard = {0, "cl_deathscoreboard", "1", "shows scoreboard (+showscores) while dead"};
 
@@ -370,6 +371,7 @@ void Sbar_Init (void)
 	Cvar_RegisterVariable(&sbar_alpha_bg);
 	Cvar_RegisterVariable(&sbar_alpha_fg);
 	Cvar_RegisterVariable(&sbar_hudselector);
+	Cvar_RegisterVariable(&sbar_miniscoreboard_size);
 	Cvar_RegisterVariable(&cl_deathscoreboard);
 
 	Cvar_RegisterVariable(&crosshair_color_red);
@@ -1119,7 +1121,7 @@ Sbar_Draw
 */
 extern float v_dmg_time, v_dmg_roll, v_dmg_pitch;
 extern cvar_t v_kicktime;
-void Sbar_Score (void);
+void Sbar_Score (int margin);
 void Sbar_Draw (void)
 {
 	cachepic_t *pic;
@@ -1270,7 +1272,9 @@ void Sbar_Draw (void)
 				if (sbar_x + 320 + 160 <= vid_conwidth.integer)
 					Sbar_MiniDeathmatchOverlay (sbar_x + 320, sbar_y);
 				if (sbar_x > 0)
-					Sbar_Score();
+					Sbar_Score(16);
+					// The margin can be at most 8 to support 640x480 console size:
+					//   320 + 2 * (144 + 16) = 640
 			}
 			else if (sb_lines)
 			{
@@ -1356,7 +1360,17 @@ void Sbar_Draw (void)
 					Sbar_MiniDeathmatchOverlay (sbar_x + 600, sbar_y);
 
 				if (sbar_x > 0)
-					Sbar_Score();
+					Sbar_Score(-16);
+					// Because:
+					//   Mini scoreboard uses 12*4 per other team, that is, 144
+					//   pixels when there are four teams...
+					//   Nexuiz by default sets vid_conwidth to 800... makes
+					//   sbar_x == 80...
+					//   so we need to shift it by 64 pixels to the right to fit
+					//   BUT: then it overlaps with the image that gets drawn
+					//   for viewsize 100! Therefore, just account for 3 teams,
+					//   that is, 96 pixels mini scoreboard size, needing 16 pixels
+					//   to the right!
 			}
 		}
 		else if (gamemode == GAME_ZYMOTIC)
@@ -1537,7 +1551,7 @@ void Sbar_Draw (void)
 					Sbar_MiniDeathmatchOverlay (0, 0);
 				else
 					Sbar_MiniDeathmatchOverlay (sbar_x + 324, vid_conheight.integer - 8*8);
-				Sbar_Score();
+				Sbar_Score(24);
 			}
 		}
 	}
@@ -1702,6 +1716,13 @@ void Sbar_MiniDeathmatchOverlay (int x, int y)
 {
 	int i, j, numlines, range_begin, range_end, myteam, teamsep;
 
+	// do not draw this if sbar_miniscoreboard_size is zero
+	if(sbar_miniscoreboard_size.value == 0)
+		return;
+	// adjust the given y if sbar_miniscoreboard_size doesn't indicate default (< 0)
+	if(sbar_miniscoreboard_size.value > 0)
+		y = vid_conheight.integer - sbar_miniscoreboard_size.value * 8;
+
 	// scores
 	Sbar_SortFrags ();
 
@@ -1797,12 +1818,16 @@ int Sbar_TeamColorCompare(const void *t1_, const void *t2_)
 	return tc1 - tc2;
 }
 
-void Sbar_Score (void)
+void Sbar_Score (int margin)
 {
 	int i, me, score, otherleader, place, distribution, minutes, seconds;
 	double timeleft;
+	int sbar_x_save = sbar_x;
+	int sbar_y_save = sbar_y;
 
 	sbar_y = vid_conheight.value - (32+12);
+	sbar_x -= margin;
+
 	me = cl.playerentity - 1;
 	if (me >= 0 && me < cl.maxclients)
 	{
@@ -1823,9 +1848,9 @@ void Sbar_Score (void)
 			// Now sort them by color
 			qsort(teamcolorsort, teamlines, sizeof(*teamcolorsort), Sbar_TeamColorCompare);
 
-			// -24: margin
+			// : margin
 			// -12*4: four digits space
-			place = -24 + (teamlines - 1) * (-12 * 4);
+			place = (teamlines - 1) * (-12 * 4);
 
 			for(i = 0; i < teamlines; ++i)
 			{
@@ -1837,7 +1862,7 @@ void Sbar_Score (void)
 				float cb = c[2] / cm;
 				if(cindex == (cl.scores[cl.playerentity - 1].colors & 15)) // my team
 				{
-					Sbar_DrawXNum(-32*4-24, 0, teamcolorsort[i]->frags, 4, 32, cr, cg, cb, 1, 0);
+					Sbar_DrawXNum(-32*4, 0, teamcolorsort[i]->frags, 4, 32, cr, cg, cb, 1, 0);
 				}
 				else // other team
 				{
@@ -1869,27 +1894,27 @@ void Sbar_Score (void)
 			}
 			distribution = otherleader >= 0 ? score - cl.scores[otherleader].frags : 0;
 			if (place == 1)
-				Sbar_DrawXNum(-3*12-24, -12, place, 3, 12, 1, 1, 1, 1, 0);
+				Sbar_DrawXNum(-3*12, -12, place, 3, 12, 1, 1, 1, 1, 0);
 			else if (place == 2)
-				Sbar_DrawXNum(-3*12-24, -12, place, 3, 12, 1, 1, 0, 1, 0);
+				Sbar_DrawXNum(-3*12, -12, place, 3, 12, 1, 1, 0, 1, 0);
 			else
-				Sbar_DrawXNum(-3*12-24, -12, place, 3, 12, 1, 0, 0, 1, 0);
+				Sbar_DrawXNum(-3*12, -12, place, 3, 12, 1, 0, 0, 1, 0);
 			if (otherleader < 0)
-				Sbar_DrawXNum(-32*4-24,   0, score, 4, 32, 1, 1, 1, 1, 0);
+				Sbar_DrawXNum(-32*4,   0, score, 4, 32, 1, 1, 1, 1, 0);
 			if (distribution >= 0)
 			{
-				Sbar_DrawXNum(-7*12-24, -12, distribution, 4, 12, 1, 1, 1, 1, 0);
-				Sbar_DrawXNum(-32*4-24,   0, score, 4, 32, 1, 1, 1, 1, 0);
+				Sbar_DrawXNum(-7*12, -12, distribution, 4, 12, 1, 1, 1, 1, 0);
+				Sbar_DrawXNum(-32*4,   0, score, 4, 32, 1, 1, 1, 1, 0);
 			}
 			else if (distribution >= -5)
 			{
-				Sbar_DrawXNum(-7*12-24, -12, distribution, 4, 12, 1, 1, 0, 1, 0);
-				Sbar_DrawXNum(-32*4-24,   0, score, 4, 32, 1, 1, 0, 1, 0);
+				Sbar_DrawXNum(-7*12, -12, distribution, 4, 12, 1, 1, 0, 1, 0);
+				Sbar_DrawXNum(-32*4,   0, score, 4, 32, 1, 1, 0, 1, 0);
 			}
 			else
 			{
-				Sbar_DrawXNum(-7*12-24, -12, distribution, 4, 12, 1, 0, 0, 1, 0);
-				Sbar_DrawXNum(-32*4-24,   0, score, 4, 32, 1, 0, 0, 1, 0);
+				Sbar_DrawXNum(-7*12, -12, distribution, 4, 12, 1, 0, 0, 1, 0);
+				Sbar_DrawXNum(-32*4,   0, score, 4, 32, 1, 0, 0, 1, 0);
 			}
 		}
 	}
@@ -1901,32 +1926,35 @@ void Sbar_Score (void)
 		seconds = (int)(floor(timeleft) - minutes * 60);
 		if (minutes >= 5)
 		{
-			Sbar_DrawXNum(-12*6-24, 32, minutes,  3, 12, 1, 1, 1, 1, 0);
+			Sbar_DrawXNum(-12*6, 32, minutes,  3, 12, 1, 1, 1, 1, 0);
 			if(sb_colon && sb_colon->tex != r_texture_notexture)
-				DrawQ_Pic(sbar_x-24 + -12*3, sbar_y + 32, sb_colon, 12, 12, 1, 1, 1, sbar_alpha_fg.value, 0);
-			Sbar_DrawXNum(-12*2-24, 32, seconds, -2, 12, 1, 1, 1, 1, 0);
+				DrawQ_Pic(sbar_x + -12*3, sbar_y + 32, sb_colon, 12, 12, 1, 1, 1, sbar_alpha_fg.value, 0);
+			Sbar_DrawXNum(-12*2, 32, seconds, -2, 12, 1, 1, 1, 1, 0);
 		}
 		else if (minutes >= 1)
 		{
-			Sbar_DrawXNum(-12*6-24, 32, minutes,  3, 12, 1, 1, 0, 1, 0);
+			Sbar_DrawXNum(-12*6, 32, minutes,  3, 12, 1, 1, 0, 1, 0);
 			if(sb_colon && sb_colon->tex != r_texture_notexture)
-				DrawQ_Pic(sbar_x-24 + -12*3, sbar_y + 32, sb_colon, 12, 12, 1, 1, 0, sbar_alpha_fg.value, 0);
-			Sbar_DrawXNum(-12*2-24, 32, seconds, -2, 12, 1, 1, 0, 1, 0);
+				DrawQ_Pic(sbar_x + -12*3, sbar_y + 32, sb_colon, 12, 12, 1, 1, 0, sbar_alpha_fg.value, 0);
+			Sbar_DrawXNum(-12*2, 32, seconds, -2, 12, 1, 1, 0, 1, 0);
 		}
 		else if ((int)(timeleft * 4) & 1)
-			Sbar_DrawXNum(-12*2-24, 32, seconds, -2, 12, 1, 1, 1, 1, 0);
+			Sbar_DrawXNum(-12*2, 32, seconds, -2, 12, 1, 1, 1, 1, 0);
 		else
-			Sbar_DrawXNum(-12*2-24, 32, seconds, -2, 12, 1, 0, 0, 1, 0);
+			Sbar_DrawXNum(-12*2, 32, seconds, -2, 12, 1, 0, 0, 1, 0);
 	}
 	else
 	{
 		minutes = (int)floor(cl.time / 60);
 		seconds = (int)(floor(cl.time) - minutes * 60);
-		Sbar_DrawXNum(-12*6-24, 32, minutes,  3, 12, 1, 1, 1, 1, 0);
+		Sbar_DrawXNum(-12*6, 32, minutes,  3, 12, 1, 1, 1, 1, 0);
 		if(sb_colon && sb_colon->tex != r_texture_notexture)
-			DrawQ_Pic(sbar_x-24 + -12*3, sbar_y + 32, sb_colon, 12, 12, 1, 1, 1, sbar_alpha_fg.value, 0);
-		Sbar_DrawXNum(-12*2-24, 32, seconds, -2, 12, 1, 1, 1, 1, 0);
+			DrawQ_Pic(sbar_x + -12*3, sbar_y + 32, sb_colon, 12, 12, 1, 1, 1, sbar_alpha_fg.value, 0);
+		Sbar_DrawXNum(-12*2, 32, seconds, -2, 12, 1, 1, 1, 1, 0);
 	}
+
+	sbar_x = sbar_x_save;
+	sbar_y = sbar_y_save;
 }
 
 /*
