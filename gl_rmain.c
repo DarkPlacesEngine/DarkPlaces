@@ -807,7 +807,7 @@ void R_GLSL_CompilePermutation(const char *filename, int permutation)
 		qglUseProgramObjectARB(0);CHECKGLERROR
 	}
 	else
-		Con_Printf("permutation%s failed for shader %s, some features may not work properly!\n", permutationname, "glsl/default.glsl");
+		Con_Printf("permutation%s failed for shader %s, some features may not work properly!\n", permutationname, filename);
 	if (shaderstring)
 		Mem_Free(shaderstring);
 }
@@ -819,6 +819,27 @@ void R_GLSL_Restart_f(void)
 		if (r_glsl_permutations[i].program)
 			GL_Backend_FreeProgram(r_glsl_permutations[i].program);
 	memset(r_glsl_permutations, 0, sizeof(r_glsl_permutations));
+}
+
+void R_GLSL_DumpShader_f(void)
+{
+	int i;
+
+	qfile_t *file = FS_Open("glsl/default.glsl", "w", false, false);
+	if(!file)
+	{
+		Con_Printf("failed to write to glsl/default.glsl\n");
+		return;
+	}
+
+	FS_Print(file, "// #define VERTEX_SHADER GEOMETRY_SHADER FRAGMENT_SHADER\n");
+	for (i = 0;permutationinfo[i][0];i++)
+		FS_Printf(file, "// %s", permutationinfo[i][0]);
+	FS_Print(file, "\n");
+	FS_Print(file, builtinshaderstring);
+	FS_Close(file);
+
+	Con_Printf("data/default.glsl written");
 }
 
 extern rtexture_t *r_shadow_attenuationgradienttexture;
@@ -1490,6 +1511,7 @@ void GL_Main_Init(void)
 	r_main_mempool = Mem_AllocPool("Renderer", 0, NULL);
 
 	Cmd_AddCommand("r_glsl_restart", R_GLSL_Restart_f, "unloads GLSL shaders, they will then be reloaded as needed");
+	Cmd_AddCommand("r_glsl_dumpshader", R_GLSL_DumpShader_f, "dumps the engine internal default.glsl shader into glsl/default.glsl");
 	// FIXME: the client should set up r_refdef.fog stuff including the fogmasktable
 	if (gamemode == GAME_NEHAHRA)
 	{
