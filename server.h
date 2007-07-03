@@ -356,6 +356,7 @@ extern cvar_t sv_fixedframeratesingleplayer;
 extern cvar_t sv_freezenonclients;
 extern cvar_t sv_friction;
 extern cvar_t sv_gameplayfix_blowupfallenzombies;
+extern cvar_t sv_gameplayfix_delayprojectiles;
 extern cvar_t sv_gameplayfix_droptofloorstartsolid;
 extern cvar_t sv_gameplayfix_findradiusdistancetobox;
 extern cvar_t sv_gameplayfix_grenadebouncedownslopes;

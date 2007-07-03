@@ -115,6 +115,7 @@
 0 feature darkplaces readme: add log_file and log_sync documentation (Edward Holness)
 0 feature darkplaces readme: document the ctrl-escape hotkey for toggleconsole (LordHavoc)
 0 feature darkplaces renderer: add a rtlight flag to disable vis culling, for ambient area lights and such (Kaz)
+0 feature darkplaces renderer: add a water caustics lightstyle for use on rtlights and to someday be supported on multi-pass lightmapped rendering (skite2001)
 0 feature darkplaces renderer: add cubemap support to low quality rtlighting path for cards that support >= 2 TMUs and cubemap
 0 feature darkplaces renderer: add optional filename parameter to screenshot command (Chris)
 0 feature darkplaces renderer: add per-entity PolygonOffset to renderer, to allow zfighting bmodel/world glitches to be fixed, this has to affect all rendering involving the entity, including light/shadow (Tomaz)
@@ -170,6 +171,7 @@
 0 feature dpmod: make spawning use viewzoom to start zoomed out 2.0 and then zoom in to 1.0 (Urre)
 0 feature dpmod: make teleport leave an EF_ADDITIVE clone of the player which fades out
 0 feature dpmod: merge alieninfestation speedmod into dpmod, especially the map
+0 feature dpmod: replacement flame models using md3 and q3 shaders with animmap (skite2001)
 0 feature dpmod: try making ball lightning mortar shamblers (scar3crow)
 0 feature dpmod: try not adding gravity when onground to see if it gets rid of ramp sliding (Midgar)
 0 feature dpmod: update stats to count monster kills in dm 7 and such
@@ -455,7 +457,6 @@
 7 feature darkplaces renderer: make it work on Savage4 again (Ender)
 7 feature darkplaces renderer: mirrors
 7 feature darkplaces renderer: shadow volume clipping (romi)
--d (mashakos, FrikaC) feature darkplaces client: mod browser (and ability to switch mods), this depends on "gamedir" cvar todo item (mashakos, FrikaC)
 d bug darkplaces Mac filesystem: on Mac dlopen is not finding dylib files alongside the executable, do a more thorough search (Zenex)
 d bug darkplaces Mac filesystem: on Mac init the basedir to argv[0] truncated to not include the *.app/ part of the path onward (Zenex)
 d bug darkplaces SDL input: changing video mode causes it to ignore all character events from then on
@@ -1211,6 +1212,7 @@ d feature darkplaces client: add a sv_fixedframeratesingleplayer cvar (default o
 d feature darkplaces client: add showbrand cvar which would show gfx/brand.tga in the left/right top/bottom corner (depending on value of scr_showbrand) all the time, this would be useful for screenshots (Spirit_of_85)
 d feature darkplaces client: cl_capture_video avi support would be nice, the Intel(r) 4:2:0 codec seems to be standard on Windows XP so this should be easy
 d feature darkplaces client: make tab completion able to complete map names when using a map or changelevel command (Zenex, Eksess)
+d feature darkplaces client: mod browser (and ability to switch mods), this depends on "gamedir" cvar todo item (mashakos, FrikaC)
 d feature darkplaces client: play sound/misc/talk2.wav instead of sound/misc/talk.wav for team chat messages, and indicate team chat messages with () around the playre name, which is compatible with other engines (Yellow No. 5)
 d feature darkplaces client: query qw masters for server browser
 d feature darkplaces client: v_deathtilt cvar (Sajt, MauveBib)

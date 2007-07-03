@@ -1990,7 +1990,7 @@ static void SV_Physics_Entity (prvm_edict_t *ent)
 	case MOVETYPE_FLYMISSILE:
 	case MOVETYPE_FLY:
 		// regular thinking
-		if (SV_RunThink (ent) && runmove)
+		if (SV_RunThink (ent) && (runmove || !sv_gameplayfix_delayprojectiles.integer))
 			SV_Physics_Toss (ent);
 		break;
 	default:
