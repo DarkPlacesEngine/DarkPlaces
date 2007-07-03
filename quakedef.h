@@ -75,7 +75,7 @@ extern char engineversion[128];
 //
 #define	MAX_CL_STATS		256
 #define	STAT_HEALTH			0
-#define	STAT_FRAGS			1
+//#define	STAT_FRAGS			1
 #define	STAT_WEAPON			2
 #define	STAT_AMMO			3
 #define	STAT_ARMOR			4
