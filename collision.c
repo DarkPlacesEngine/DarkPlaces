@@ -1002,7 +1002,9 @@ void Collision_TraceBrushPolygonTransformFloat(trace_t *trace, const colbrushf_t
 
 
 #define MAX_BRUSHFORBOX 16
-static int brushforbox_index = 0;
+static unsigned int brushforbox_index = 0;
+// note: this relies on integer overflow to be consistent with modulo
+// MAX_BRUSHFORBOX, or in other words, MAX_BRUSHFORBOX must be a power of two!
 static colpointf_t brushforbox_point[MAX_BRUSHFORBOX*8];
 static colplanef_t brushforbox_plane[MAX_BRUSHFORBOX*6];
 static colbrushf_t brushforbox_brush[MAX_BRUSHFORBOX];
