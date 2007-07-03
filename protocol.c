@@ -387,9 +387,28 @@ void Protocol_UpdateClientStats(const int *stats)
 	}
 }
 
+// only a few stats are within the 32 stat limit of Quake, and most of them
+// are sent every frame in svc_clientdata messages, so we only send the
+// remaining ones here
+static const int sendquakestats[] =
+{
+// quake did not send these secrets/monsters stats in this way, but doing so
+// allows a mod to increase STAT_TOTALMONSTERS during the game, and ensures
+// that STAT_SECRETS and STAT_MONSTERS are always correct (even if a client
+// didn't receive an svc_foundsecret or svc_killedmonster), which may be most
+// valuable if randomly seeking around in a demo
+STAT_TOTALSECRETS, // never changes during game
+STAT_TOTALMONSTERS, // changes in some mods
+STAT_SECRETS, // this makes svc_foundsecret unnecessary
+STAT_MONSTERS, // this makes svc_killedmonster unnecessary
+STAT_VIEWHEIGHT, // sent just for FTEQW clients
+STAT_VIEWZOOM, // this rarely changes
+-1,
+};
+
 void Protocol_WriteStatsReliable(void)
 {
-	int i;
+	int i, j;
 	if (!host_client->netconnection)
 		return;
 	// detect changes in stats and write reliable messages
@@ -397,14 +416,9 @@ void Protocol_WriteStatsReliable(void)
 	// this function can only cope with 32 stats,
 	// they also do not support svc_updatestatubyte which was introduced in
 	// DP6 protocol (except for QW)
-	for (i = 0;i < 32;i++)
+	for (j = 0;sendquakestats[j] >= 0;j++)
 	{
-		// quickly skip zero bytes
-		if (!host_client->statsdeltabits[i >> 3])
-		{
-			i |= 7;
-			continue;
-		}
+		i = sendquakestats[j];
 		// check if this bit is set
 		if (host_client->statsdeltabits[i >> 3] & (1 << (i & 7)))
 		{
