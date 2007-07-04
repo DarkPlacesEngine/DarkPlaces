@@ -511,7 +511,6 @@ Preprocesses strings and replaces $*, $param#, $cvar accordingly
 static void Cmd_PreprocessString( const char *intext, char *outtext, unsigned maxoutlen, cmdalias_t *alias ) {
 	const char *in;
 	unsigned outlen;
-	int inquote;
 
 	// don't crash if there's no room in the outtext buffer
 	if( maxoutlen == 0 ) {
@@ -521,10 +520,9 @@ static void Cmd_PreprocessString( const char *intext, char *outtext, unsigned ma
 
 	in = intext;
 	outlen = 0;
-	inquote = 0;
 
 	while( *in && outlen < maxoutlen ) {
-		if( *in == '$' && !inquote ) {
+		if( *in == '$' ) {
 			// this is some kind of expansion, see what comes after the $
 			in++;
 			// replacements that can always be used:
@@ -586,9 +584,6 @@ static void Cmd_PreprocessString( const char *intext, char *outtext, unsigned ma
 				}
 			}
 		} else {
-			if( *in == '"' ) {
-				inquote ^= 1;
-			}
 			outtext[outlen++] = *in++;
 		}
 	}
