@@ -144,6 +144,7 @@ void Cbuf_Execute (void)
 	char *text;
 	char line[MAX_INPUTLINE];
 	char preprocessed[MAX_INPUTLINE];
+	char *firstchar;
 	int quotes;
 
 	// LordHavoc: making sure the tokenizebuffer doesn't get filled up by repeated crashes
@@ -159,7 +160,7 @@ void Cbuf_Execute (void)
 		{
 			if (text[i] == '"')
 				quotes ^= 1;
-			if (text[i] == '\\' && text[i+1] == '"')
+			if (text[i] == '\\' && (text[i+1] == '"' || text[i+1] == '\\'))
 				i++;
 			if ( !quotes &&  text[i] == ';')
 				break;	// don't break if inside a quoted string
@@ -184,8 +185,16 @@ void Cbuf_Execute (void)
 		}
 
 // execute the command line
-		Cmd_PreprocessString( line, preprocessed, sizeof(preprocessed), NULL );
-		Cmd_ExecuteString (preprocessed, src_command);
+		firstchar = line + strspn(line, " \t");
+		if(strncmp(firstchar, "alias", 5) || (firstchar[5] != ' ' && firstchar[5] != '\t'))
+		{
+			Cmd_PreprocessString( line, preprocessed, sizeof(preprocessed), NULL );
+			Cmd_ExecuteString (preprocessed, src_command);
+		}
+		else
+		{
+			Cmd_ExecuteString (line, src_command);
+		}
 
 		if (cmd_wait)
 		{	// skip out while text still remains in buffer, leaving it
@@ -503,6 +512,127 @@ cmd_source_t cmd_source;
 
 static cmd_function_t *cmd_functions;		// possible commands to execute
 
+static const char *Cmd_GetDirectCvarValue(const char *varname, cmdalias_t *alias)
+{
+	cvar_t *cvar;
+	long argno;
+	char *endptr;
+
+	if(!varname || !*varname)
+		return NULL;
+
+	if(alias)
+	{
+		if(!strcmp(varname, "*"))
+			return Cmd_Args();
+		else
+		{
+			argno = strtol(varname, &endptr, 10);
+			if(*endptr == 0)
+			{
+				// whole string is a number
+				// NOTE: we already made sure we don't have an empty cvar name!
+				if(argno >= 0 && argno < Cmd_Argc())
+					return Cmd_Argv(argno);
+			}
+		}
+	}
+
+	if((cvar = Cvar_FindVar(varname)) && !(cvar->flags & CVAR_PRIVATE))
+		return cvar->string;
+
+	return NULL;
+}
+
+static const char *Cmd_GetCvarValue(const char *var, size_t varlen, cmdalias_t *alias)
+{
+	static char varname[MAX_INPUTLINE];
+	static char varval[MAX_INPUTLINE];
+	char *p;
+	const char *varstr;
+	char *varfunc;
+
+	if(varlen >= MAX_INPUTLINE)
+		varlen = MAX_INPUTLINE - 1;
+	memcpy(varname, var, varlen);
+	varname[varlen] = 0;
+	varfunc = strchr(varname, ' ');
+
+	if(varfunc)
+	{
+		*varfunc = 0;
+		++varfunc;
+	}
+
+	if(*var == 0)
+	{
+		// empty cvar name?
+		return NULL;
+	}
+
+	varstr = NULL;
+
+	// Exception: $* doesn't use the quoted form by default
+	if(!strcmp(varname, "*"))
+		varfunc = "asis";
+
+	if(varname[0] == '$')
+		varstr = Cmd_GetDirectCvarValue(Cmd_GetDirectCvarValue(varname + 1, alias), alias);
+	else
+		varstr = Cmd_GetDirectCvarValue(varname, alias);
+
+	if(!varstr)
+	{
+		if(alias)
+			Con_Printf("Warning: Could not expand $%s in alias %s\n", varname, alias->name);
+		else
+			Con_Printf("Warning: Could not expand $%s\n", varname);
+		return NULL;
+	}
+
+	if(!varfunc || !strcmp(varfunc, "q")) // note: quoted form is default, use "asis" to override!
+	{
+		// quote it so it can be used inside double quotes
+		// we just need to replace " by \"
+		p = varval;
+		while(*varstr)
+		{
+			if(*varstr == '"')
+			{
+				if(p - varval >= (ssize_t)(sizeof(varval) - 2))
+					break;
+				*p++ = '\\';
+				*p++ = '"';
+			}
+			else if(*varstr == '\\')
+			{
+				if(p - varval >= (ssize_t)(sizeof(varval) - 2))
+					break;
+				*p++ = '\\';
+				*p++ = '\\';
+			}
+			else
+			{
+				if(p - varval >= (ssize_t)(sizeof(varval) - 1))
+					break;
+				*p++ = *varstr;
+			}
+			++varstr;
+		}
+		*p++ = 0;
+		//Con_Printf("quoted form: %s\n", varval);
+		return varval;
+	}
+	else if(!strcmp(varfunc, "asis"))
+	{
+		return varstr;
+	}
+	else
+		Con_Printf("Unknown variable function %s\n", varfunc);
+
+	return varstr;
+}
+
 /*
 Cmd_PreprocessString
 
@@ -510,7 +640,9 @@ Preprocesses strings and replaces $*, $param#, $cvar accordingly
 */
 static void Cmd_PreprocessString( const char *intext, char *outtext, unsigned maxoutlen, cmdalias_t *alias ) {
 	const char *in;
+	size_t eat, varlen;
 	unsigned outlen;
+	const char *val;
 
 	// don't crash if there's no room in the outtext buffer
 	if( maxoutlen == 0 ) {
@@ -525,62 +657,89 @@ static void Cmd_PreprocessString( const char *intext, char *outtext, unsigned ma
 		if( *in == '$' ) {
 			// this is some kind of expansion, see what comes after the $
 			in++;
-			// replacements that can always be used:
-			// $$ is replaced with $, to allow escaping $
-			// $<cvarname> is replaced with the contents of the cvar
+
+			// The console does the following preprocessing:
 			//
-			// the following can be used in aliases only:
-			// $* is replaced with all formal parameters (including name of the alias - this probably is not desirable)
-			// $0 is replaced with the name of this alias
-			// $<number> is replaced with an argument to this alias (or copied as-is if no such parameter exists), can be multiple digits
+			// - $$ is transformed to a single dollar sign.
+			// - $var or ${var} are expanded to the contents of the named cvar,
+			//   with quotation marks and backslashes quoted so it can safely
+			//   be used inside quotation marks (and it should always be used
+			//   that way)
+			// - ${var asis} inserts the cvar value as is, without doing this
+			//   quoting
+			// - prefix the cvar name with a dollar sign to do indirection;
+			//   for example, if $x has the value timelimit, ${$x} will return
+			//   the value of $timelimit
+			// - when expanding an alias, the special variable name $* refers
+			//   to all alias parameters, and a number refers to that numbered
+			//   alias parameter, where the name of the alias is $0, the first
+			//   parameter is $1 and so on; as a special case, $* inserts all
+			//   parameters, without extra quoting, so one can use $* to just
+			//   pass all parameters around
+			//
+			// Note: when expanding an alias, cvar expansion is done in the SAME step
+			// as alias expansion so that alias parameters or cvar values containing
+			// dollar signs have no unwanted bad side effects. However, this needs to
+			// be accounted for when writing complex aliases. For example,
+			//   alias foo "set x NEW; echo $x"
+			// actually expands to
+			//   "set x NEW; echo OLD"
+			// and will print OLD! To work around this, use a second alias:
+			//   alias foo "set x NEW; foo2"
+			//   alias foo2 "echo $x"
+			//
+			// Also note: lines starting with alias are exempt from cvar expansion.
+			// If you want cvar expansion, write "alias" instead:
+			//
+			//   set x 1
+			//   alias foo "echo $x"
+			//   "alias" bar "echo $x"
+			//   set x 2
+			//
+			// foo will print 2, because the variable $x will be expanded when the alias
+			// gets expanded. bar will print 1, because the variable $x was expanded
+			// at definition time. foo can be equivalently defined as
+			//
+			//   "alias" foo "echo $$x"
+			//
+			// because at definition time, $$ will get replaced to a single $.
+
 			if( *in == '$' ) {
-				outtext[outlen++] = *in++;
-			} else if( *in == '*' && alias ) {
-				const char *linein = Cmd_Args();
-
-				// include all parameters
-				if (linein) {
-					while( *linein && outlen < maxoutlen ) {
-						outtext[outlen++] = *linein++;
-					}
+				val = "$";
+				eat = 1;
+			} else if(*in == '{') {
+				varlen = strcspn(in + 1, "}");
+				if(in[varlen + 1] == '}')
+				{
+					val = Cmd_GetCvarValue(in + 1, varlen, alias);
+					eat = varlen + 2;
 				}
-
-				in++;
-			} else if( '0' <= *in && *in <= '9' && alias ) {
-				char *nexttoken;
-				int argnum;
-
-				argnum = strtol( in, &nexttoken, 10 );
-
-				if( 0 <= argnum && argnum < Cmd_Argc() ) {
-					const char *param = Cmd_Argv( argnum );
-					while( *param && outlen < maxoutlen ) {
-						outtext[outlen++] = *param++;
-					}
-					in = nexttoken;
-				} else if( argnum >= Cmd_Argc() ) {
-					Con_Printf( "Warning: Not enough parameters passed to alias '%s', at least %i expected:\n    %s\n", alias->name, argnum, alias->value );
-					outtext[outlen++] = '$';
+				else
+				{
+					// ran out of data?
+					val = NULL;
+					eat = varlen + 1;
 				}
 			} else {
-				cvar_t *cvar;
-				const char *tempin = in;
-
-				COM_ParseToken_Console( &tempin );
-				// don't expand rcon_password or similar cvars (CVAR_PRIVATE flag)
-				if ((cvar = Cvar_FindVar(&com_token[0])) && !(cvar->flags & CVAR_PRIVATE)) {
-					const char *cvarcontent = cvar->string;
-					while( *cvarcontent && outlen < maxoutlen ) {
-						outtext[outlen++] = *cvarcontent++;
-					}
-					in = tempin;
-				} else {
-					if( alias ) {
-						Con_Printf( "Warning: could not find cvar %s when expanding alias %s\n    %s\n", com_token, alias->name, alias->value );
-					} else {
-						Con_Printf( "Warning: could not find cvar %s\n", com_token );
-					}
-					outtext[outlen++] = '$';
+				varlen = strspn(in, "*0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_");
+				val = Cmd_GetCvarValue(in, varlen, alias);
+				eat = varlen;
+			}
+			if(val)
+			{
+				// insert the cvar value
+				while(*val && outlen < maxoutlen)
+					outtext[outlen++] = *val++;
+				in += eat;
+			}
+			else
+			{
+				// copy the unexpanded text
+				outtext[outlen++] = '$';
+				while(eat && outlen < maxoutlen)
+				{
+					outtext[outlen++] = *in++;
+					--eat;
 				}
 			}
 		} else {
@@ -600,10 +759,25 @@ Called for aliases and fills in the alias into the cbuffer
 static void Cmd_ExecuteAlias (cmdalias_t *alias)
 {
 	static char buffer[ MAX_INPUTLINE + 2 ];
+	static char buffer2[ MAX_INPUTLINE * 2 + 2 ];
+	char *q;
+	const char *p;
 	Cmd_PreprocessString( alias->value, buffer, sizeof(buffer) - 2, alias );
 	// insert at start of command buffer, so that aliases execute in order
 	// (fixes bug introduced by Black on 20050705)
-	Cbuf_InsertText( buffer );
+	
+	// Note: Cbuf_PreprocessString will be called on this string AGAIN! So we
+	// have to make sure that no second variable expansion takes place, otherwise
+	// alias parameters containing dollar signs can have bad effects.
+	for(p = buffer, q = buffer2; *p; )
+	{
+		if(*p == '$')
+			*q++ = '$';
+		*q++ = *p++;
+	}
+	*q++ = 0;
+
+	Cbuf_InsertText( buffer2 );
 }
 
 /*
