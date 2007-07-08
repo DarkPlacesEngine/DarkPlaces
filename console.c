@@ -672,6 +672,31 @@ static char qfont_table[256] = {
 
 /*
 ================
+Con_Rcon_AddChar
+
+Adds a character to the rcon buffer
+================
+*/
+inline void Con_Rcon_AddChar(char c)
+{
+	// if this print is in response to an rcon command, add the character
+	// to the rcon redirect buffer
+	if (rcon_redirect && rcon_redirect_bufferpos < (int)sizeof(rcon_redirect_buffer) - 1)
+		rcon_redirect_buffer[rcon_redirect_bufferpos++] = c;
+	else if(*log_dest_udp.string) // don't duplicate rcon command responses here, these are sent another way
+	{
+		if(log_dest_buffer_pos == 0)
+			Log_DestBuffer_Init();
+		log_dest_buffer[log_dest_buffer_pos++] = c;
+		if(log_dest_buffer_pos >= sizeof(log_dest_buffer) - 1) // minus one, to allow for terminating zero
+			Log_DestBuffer_Flush();
+	}
+	else
+		log_dest_buffer_pos = 0;
+}
+
+/*
+================
 Con_Print
 
 Prints to all appropriate console targets, and adds timestamps
@@ -682,27 +707,13 @@ extern cvar_t timeformat;
 extern qboolean sys_nostdout;
 void Con_Print(const char *msg)
 {
-	int mask = 0;
+	static int mask = 0;
 	static int index = 0;
 	static char line[MAX_INPUTLINE];
 
 	for (;*msg;msg++)
 	{
-		// if this print is in response to an rcon command, add the character
-		// to the rcon redirect buffer
-		if (rcon_redirect && rcon_redirect_bufferpos < (int)sizeof(rcon_redirect_buffer) - 1)
-			rcon_redirect_buffer[rcon_redirect_bufferpos++] = *msg;
-		else if(*log_dest_udp.string) // don't duplicate rcon command responses here, these are sent another way
-		{
-			if(log_dest_buffer_pos == 0)
-				Log_DestBuffer_Init();
-			log_dest_buffer[log_dest_buffer_pos++] = *msg;
-			if(log_dest_buffer_pos >= sizeof(log_dest_buffer) - 1) // minus one, to allow for terminating zero
-				Log_DestBuffer_Flush();
-		}
-		else
-			log_dest_buffer_pos = 0;
-
+		Con_Rcon_AddChar(*msg);
 		// if this is the beginning of a new line, print timestamp
 		if (index == 0)
 		{
@@ -727,6 +738,7 @@ void Con_Print(const char *msg)
 				line[index++] = STRING_COLOR_TAG;
 				line[index++] = '3';
 				msg++;
+				Con_Rcon_AddChar(*msg);
 			}
 			// store timestamp
 			for (;*timestamp;index++, timestamp++)
