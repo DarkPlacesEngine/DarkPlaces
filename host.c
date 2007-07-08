@@ -612,6 +612,8 @@ void Host_Main(void)
 
 		NetConn_UpdateSockets();
 
+		Log_DestBuffer_Flush();
+
 		// receive packets on each main loop iteration, as the main loop may
 		// be undersleeping due to select() detecting a new packet
 		if (sv.active)

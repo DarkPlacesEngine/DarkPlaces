@@ -351,6 +351,8 @@ extern cvar_t net_address;
 
 qboolean NetConn_CanSend(netconn_t *conn);
 int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolversion_t protocol, int rate, qboolean quakesignon_suppressreliables);
+qboolean NetConn_HaveClientPorts(void);
+qboolean NetConn_HaveServerPorts(void);
 void NetConn_CloseClientPorts(void);
 void NetConn_OpenClientPorts(void);
 void NetConn_CloseServerPorts(void);

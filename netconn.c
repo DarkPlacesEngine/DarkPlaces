@@ -711,6 +711,16 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 	return 0;
 }
 
+qboolean NetConn_HaveClientPorts(void)
+{
+	return !!cl_numsockets;
+}
+
+qboolean NetConn_HaveServerPorts(void)
+{
+	return !!sv_numsockets;
+}
+
 void NetConn_CloseClientPorts(void)
 {
 	for (;cl_numsockets > 0;cl_numsockets--)

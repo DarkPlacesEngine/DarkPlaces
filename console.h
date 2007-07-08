@@ -64,6 +64,7 @@ void Con_DisplayList(const char **list);
 void Log_Init (void);
 void Log_Close (void);
 void Log_Start (void);
+void Log_DestBuffer_Flush (void); // call this once per frame to send out replies to rcon streaming clients
 
 void Log_Printf(const char *logfilename, const char *fmt, ...) DP_FUNC_PRINTF(2);
 
