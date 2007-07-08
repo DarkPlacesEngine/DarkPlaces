@@ -574,7 +574,7 @@ For debugging
 */
 // LordHavoc: optimized this to print out much more quickly (tempstring)
 // LordHavoc: changed to print out every 4096 characters (incase there are a lot of fields to print)
-void PRVM_ED_Print(prvm_edict_t *ed)
+void PRVM_ED_Print(prvm_edict_t *ed, const char *wildcard_fieldname)
 {
 	size_t	l;
 	ddef_t	*d;
@@ -598,6 +598,12 @@ void PRVM_ED_Print(prvm_edict_t *ed)
 		name = PRVM_GetString(d->s_name);
 		if (name[strlen(name)-2] == '_')
 			continue;	// skip _x, _y, _z vars
+
+		// Check Field Name Wildcard
+		if(wildcard_fieldname)
+			if( !matchpattern(name, wildcard_fieldname, 1) )
+				// Didn't match; skip
+				continue;
 
 		v = (int *)((char *)ed->fields.vp + d->ofs*4);
 
@@ -689,9 +695,9 @@ void PRVM_ED_Write (qfile_t *f, prvm_edict_t *ed)
 	FS_Print(f, "}\n");
 }
 
-void PRVM_ED_PrintNum (int ent)
+void PRVM_ED_PrintNum (int ent, const char *wildcard_fieldname)
 {
-	PRVM_ED_Print(PRVM_EDICT_NUM(ent));
+	PRVM_ED_Print(PRVM_EDICT_NUM(ent), wildcard_fieldname);
 }
 
 /*
@@ -704,10 +710,11 @@ For debugging, prints all the entities in the current server
 void PRVM_ED_PrintEdicts_f (void)
 {
 	int		i;
+	const char *wildcard_fieldname;
 
-	if(Cmd_Argc() != 2)
+	if(Cmd_Argc() < 2 || Cmd_Argc() > 3)
 	{
-		Con_Print("prvm_edicts <program name>\n");
+		Con_Print("prvm_edicts <program name> <optional field name wildcard>\n");
 		return;
 	}
 
@@ -715,9 +722,14 @@ void PRVM_ED_PrintEdicts_f (void)
 	if(!PRVM_SetProgFromString(Cmd_Argv(1)))
 		return;
 
+	if( Cmd_Argc() == 3)
+		wildcard_fieldname = Cmd_Argv(2);
+	else
+		wildcard_fieldname = NULL;
+
 	Con_Printf("%s: %i entities\n", PRVM_NAME, prog->num_edicts);
 	for (i=0 ; i<prog->num_edicts ; i++)
-		PRVM_ED_PrintNum (i);
+		PRVM_ED_PrintNum (i, wildcard_fieldname);
 
 	PRVM_End;
 }
@@ -732,10 +744,11 @@ For debugging, prints a single edict
 void PRVM_ED_PrintEdict_f (void)
 {
 	int		i;
+	const char	*wildcard_fieldname;
 
-	if(Cmd_Argc() != 3)
+	if(Cmd_Argc() < 3 || Cmd_Argc() > 4)
 	{
-		Con_Print("prvm_edict <program name> <edict number>\n");
+		Con_Print("prvm_edict <program name> <edict number> <optional field name wildcard>\n");
 		return;
 	}
 
@@ -750,7 +763,13 @@ void PRVM_ED_PrintEdict_f (void)
 		PRVM_End;
 		return;
 	}
-	PRVM_ED_PrintNum (i);
+	if( Cmd_Argc() == 4)
+		// Optional Wildcard Provided
+		wildcard_fieldname = Cmd_Argv(3);
+	else
+		// Use All
+		wildcard_fieldname = NULL;
+	PRVM_ED_PrintNum (i, wildcard_fieldname);
 
 	PRVM_End;
 }
@@ -1255,7 +1274,7 @@ void PRVM_ED_LoadFromFile (const char *data)
 			if (!handle)
 			{
 				Con_Print("No classname for:\n");
-				PRVM_ED_Print(ent);
+				PRVM_ED_Print(ent, NULL);
 				PRVM_ED_Free (ent);
 				continue;
 			}
@@ -1268,7 +1287,7 @@ void PRVM_ED_LoadFromFile (const char *data)
 				if (developer.integer) // don't confuse non-developers with errors
 				{
 					Con_Print("No spawn function for:\n");
-					PRVM_ED_Print(ent);
+					PRVM_ED_Print(ent, NULL);
 				}
 				PRVM_ED_Free (ent);
 				continue;
@@ -1888,15 +1907,18 @@ void PRVM_Fields_f (void)
 void PRVM_Globals_f (void)
 {
 	int i;
+	const char *wildcard;
+	int numculled;
+		numculled = 0;
 	// TODO
 	/*if (!sv.active)
 	{
 		Con_Print("no progs loaded\n");
 		return;
 	}*/
-	if(Cmd_Argc () != 2)
+	if(Cmd_Argc () < 2 || Cmd_Argc() > 3)
 	{
-		Con_Print("prvm_globals <program name>\n");
+		Con_Print("prvm_globals <program name> <optional name wildcard>\n");
 		return;
 	}
 
@@ -1904,11 +1926,24 @@ void PRVM_Globals_f (void)
 	if(!PRVM_SetProgFromString (Cmd_Argv (1)))
 		return;
 
+	if( Cmd_Argc() == 3)
+		wildcard = Cmd_Argv(2);
+	else
+		wildcard = NULL;
+
 	Con_Printf("%s :", PRVM_NAME);
 
 	for (i = 0;i < prog->progs->numglobaldefs;i++)
+	{
+		if(wildcard)
+			if( !matchpattern( PRVM_GetString(prog->globaldefs[i].s_name), wildcard, 1) )
+			{
+				numculled++;
+				continue;
+			}
 		Con_Printf("%s\n", PRVM_GetString(prog->globaldefs[i].s_name));
-	Con_Printf("%i global variables, totalling %i bytes\n", prog->progs->numglobals, prog->progs->numglobals * 4);
+	}
+	Con_Printf("%i global variables, %i culled, totalling %i bytes\n", prog->progs->numglobals, numculled, prog->progs->numglobals * 4);
 
 	PRVM_End;
 }

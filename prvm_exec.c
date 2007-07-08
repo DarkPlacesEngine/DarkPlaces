@@ -501,7 +501,7 @@ void PRVM_ExecuteProgram (func_t fnum, const char *errormessage)
 	if (!fnum || fnum >= (unsigned int)prog->progs->numfunctions)
 	{
 		if (prog->globaloffsets.self >= 0 && PRVM_GLOBALFIELDVALUE(prog->globaloffsets.self)->edict)
-			PRVM_ED_Print(PRVM_PROG_TO_EDICT(PRVM_GLOBALFIELDVALUE(prog->globaloffsets.self)->edict));
+			PRVM_ED_Print(PRVM_PROG_TO_EDICT(PRVM_GLOBALFIELDVALUE(prog->globaloffsets.self)->edict), NULL);
 		PRVM_ERROR ("PRVM_ExecuteProgram: %s", errormessage);
 	}
 
