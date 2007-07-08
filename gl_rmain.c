@@ -854,6 +854,7 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 	// fragment shader on features that are not being used
 	const char *shaderfilename = NULL;
 	unsigned int permutation = 0;
+	rtexture_t *nmap;
 	r_glsl_permutation = NULL;
 	// TODO: implement geometry-shader based shadow volumes someday
 	if (rsurface.rtlight)
@@ -1029,7 +1030,10 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 		if (r_glsl_permutation->loc_DiffuseScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_DiffuseScale, r_refdef.lightmapintensity * 2.0f);
 		if (r_glsl_permutation->loc_SpecularScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularScale, r_refdef.lightmapintensity * specularscale * 2.0f);
 	}
-	if (r_glsl_permutation->loc_Texture_Normal >= 0) R_Mesh_TexBind(0, R_GetTexture(rsurface.texture->currentskinframe->nmap));
+	nmap = rsurface.texture->currentskinframe->nmap;
+	if (gl_lightmaps.integer)
+		nmap = r_texture_blanknormalmap;
+	if (r_glsl_permutation->loc_Texture_Normal >= 0) R_Mesh_TexBind(0, R_GetTexture(nmap));
 	if (r_glsl_permutation->loc_Texture_Color >= 0) R_Mesh_TexBind(1, R_GetTexture(rsurface.texture->basetexture));
 	if (r_glsl_permutation->loc_Texture_Gloss >= 0) R_Mesh_TexBind(2, R_GetTexture(rsurface.texture->glosstexture));
 	//if (r_glsl_permutation->loc_Texture_Cube >= 0 && permutation & SHADERPERMUTATION_MODE_LIGHTSOURCE) R_Mesh_TexBindCubeMap(3, R_GetTexture(rsurface.rtlight->currentcubemap));
@@ -3400,6 +3404,15 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 			t->specularscale = r_shadow_gloss2intensity.value;
 	}
 
+	// lightmaps mode looks bad with dlights using actual texturing, so turn
+	// off the colormap and glossmap, but leave the normalmap on as it still
+	// accurately represents the shading involved
+	if (gl_lightmaps.integer && !(t->currentmaterialflags & MATERIALFLAG_BLENDED))
+	{
+		t->basetexture = r_texture_white;
+		t->specularscale = 0;
+	}
+
 	t->currentpolygonfactor = r_refdef.polygonfactor;
 	t->currentpolygonoffset = r_refdef.polygonoffset;
 	// submodels are biased to avoid z-fighting with world surfaces that they
@@ -5013,6 +5026,8 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 		GL_DepthMask(writedepth);
 		GL_Color(1,1,1,1);
 		GL_AlphaTest(false);
+		// use lightmode 0 (fullbright or lightmap) or 2 (model lighting)
+		rsurface.lightmode = ((rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT) || rsurface.modeltexcoordlightmap2f != NULL) ? 0 : 2;
 		R_Mesh_ColorPointer(NULL, 0, 0);
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(r_texture_white);

@@ -2220,10 +2220,12 @@ static void R_Shadow_RenderLighting_Light_Vertex(int firstvertex, int numvertice
 	}
 }
 
+extern cvar_t gl_lightmaps;
 void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles, const int *element3i, int element3i_bufferobject, size_t element3i_bufferoffset)
 {
 	float ambientscale, diffusescale, specularscale;
 	vec3_t lightcolorbase, lightcolorpants, lightcolorshirt;
+	rtexture_t *nmap;
 	// calculate colors to render this texture with
 	lightcolorbase[0] = rsurface.rtlight->currentcolor[0] * rsurface.texture->dlightcolor[0];
 	lightcolorbase[1] = rsurface.rtlight->currentcolor[1] * rsurface.texture->dlightcolor[1];
@@ -2243,7 +2245,10 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 	GL_PolygonOffset(rsurface.texture->currentpolygonfactor, rsurface.texture->currentpolygonoffset);
 	GL_DepthTest(!(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
 	GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
-	if (rsurface.texture->colormapping)
+	nmap = rsurface.texture->currentskinframe->nmap;
+	if (gl_lightmaps.integer)
+		nmap = r_texture_blanknormalmap;
+	if (rsurface.texture->colormapping && !gl_lightmaps.integer)
 	{
 		qboolean dopants = rsurface.texture->currentskinframe->pants != NULL && VectorLength2(rsurface.colormap_pantscolor) >= (1.0f / 1048576.0f);
 		qboolean doshirt = rsurface.texture->currentskinframe->shirt != NULL && VectorLength2(rsurface.colormap_shirtcolor) >= (1.0f / 1048576.0f);
@@ -2267,16 +2272,16 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 		{
 		case R_SHADOW_RENDERMODE_VISIBLELIGHTING:
 			GL_DepthTest(!(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST) && !r_showdisabledepthtest.integer);
-			R_Shadow_RenderLighting_VisibleLighting(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, lightcolorbase, lightcolorpants, lightcolorshirt, rsurface.texture->basetexture, rsurface.texture->currentskinframe->pants, rsurface.texture->currentskinframe->shirt, rsurface.texture->currentskinframe->nmap, rsurface.texture->glosstexture, ambientscale, diffusescale, specularscale, dopants, doshirt);
+			R_Shadow_RenderLighting_VisibleLighting(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, lightcolorbase, lightcolorpants, lightcolorshirt, rsurface.texture->basetexture, rsurface.texture->currentskinframe->pants, rsurface.texture->currentskinframe->shirt, nmap, rsurface.texture->glosstexture, ambientscale, diffusescale, specularscale, dopants, doshirt);
 			break;
 		case R_SHADOW_RENDERMODE_LIGHT_GLSL:
-			R_Shadow_RenderLighting_Light_GLSL(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, lightcolorbase, lightcolorpants, lightcolorshirt, rsurface.texture->basetexture, rsurface.texture->currentskinframe->pants, rsurface.texture->currentskinframe->shirt, rsurface.texture->currentskinframe->nmap, rsurface.texture->glosstexture, ambientscale, diffusescale, specularscale, dopants, doshirt);
+			R_Shadow_RenderLighting_Light_GLSL(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, lightcolorbase, lightcolorpants, lightcolorshirt, rsurface.texture->basetexture, rsurface.texture->currentskinframe->pants, rsurface.texture->currentskinframe->shirt, nmap, rsurface.texture->glosstexture, ambientscale, diffusescale, specularscale, dopants, doshirt);
 			break;
 		case R_SHADOW_RENDERMODE_LIGHT_DOT3:
-			R_Shadow_RenderLighting_Light_Dot3(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, lightcolorbase, lightcolorpants, lightcolorshirt, rsurface.texture->basetexture, rsurface.texture->currentskinframe->pants, rsurface.texture->currentskinframe->shirt, rsurface.texture->currentskinframe->nmap, rsurface.texture->glosstexture, ambientscale, diffusescale, specularscale, dopants, doshirt);
+			R_Shadow_RenderLighting_Light_Dot3(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, lightcolorbase, lightcolorpants, lightcolorshirt, rsurface.texture->basetexture, rsurface.texture->currentskinframe->pants, rsurface.texture->currentskinframe->shirt, nmap, rsurface.texture->glosstexture, ambientscale, diffusescale, specularscale, dopants, doshirt);
 			break;
 		case R_SHADOW_RENDERMODE_LIGHT_VERTEX:
-			R_Shadow_RenderLighting_Light_Vertex(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, lightcolorbase, lightcolorpants, lightcolorshirt, rsurface.texture->basetexture, rsurface.texture->currentskinframe->pants, rsurface.texture->currentskinframe->shirt, rsurface.texture->currentskinframe->nmap, rsurface.texture->glosstexture, ambientscale, diffusescale, specularscale, dopants, doshirt);
+			R_Shadow_RenderLighting_Light_Vertex(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, lightcolorbase, lightcolorpants, lightcolorshirt, rsurface.texture->basetexture, rsurface.texture->currentskinframe->pants, rsurface.texture->currentskinframe->shirt, nmap, rsurface.texture->glosstexture, ambientscale, diffusescale, specularscale, dopants, doshirt);
 			break;
 		default:
 			Con_Printf("R_Shadow_RenderLighting: unknown r_shadow_rendermode %i\n", r_shadow_rendermode);
@@ -2289,16 +2294,16 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 		{
 		case R_SHADOW_RENDERMODE_VISIBLELIGHTING:
 			GL_DepthTest(!(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST) && !r_showdisabledepthtest.integer);
-			R_Shadow_RenderLighting_VisibleLighting(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, lightcolorbase, vec3_origin, vec3_origin, rsurface.texture->basetexture, r_texture_black, r_texture_black, rsurface.texture->currentskinframe->nmap, rsurface.texture->glosstexture, ambientscale, diffusescale, specularscale, false, false);
+			R_Shadow_RenderLighting_VisibleLighting(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, lightcolorbase, vec3_origin, vec3_origin, rsurface.texture->basetexture, r_texture_black, r_texture_black, nmap, rsurface.texture->glosstexture, ambientscale, diffusescale, specularscale, false, false);
 			break;
 		case R_SHADOW_RENDERMODE_LIGHT_GLSL:
-			R_Shadow_RenderLighting_Light_GLSL(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, lightcolorbase, vec3_origin, vec3_origin, rsurface.texture->basetexture, r_texture_black, r_texture_black, rsurface.texture->currentskinframe->nmap, rsurface.texture->glosstexture, ambientscale, diffusescale, specularscale, false, false);
+			R_Shadow_RenderLighting_Light_GLSL(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, lightcolorbase, vec3_origin, vec3_origin, rsurface.texture->basetexture, r_texture_black, r_texture_black, nmap, rsurface.texture->glosstexture, ambientscale, diffusescale, specularscale, false, false);
 			break;
 		case R_SHADOW_RENDERMODE_LIGHT_DOT3:
-			R_Shadow_RenderLighting_Light_Dot3(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, lightcolorbase, vec3_origin, vec3_origin, rsurface.texture->basetexture, r_texture_black, r_texture_black, rsurface.texture->currentskinframe->nmap, rsurface.texture->glosstexture, ambientscale, diffusescale, specularscale, false, false);
+			R_Shadow_RenderLighting_Light_Dot3(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, lightcolorbase, vec3_origin, vec3_origin, rsurface.texture->basetexture, r_texture_black, r_texture_black, nmap, rsurface.texture->glosstexture, ambientscale, diffusescale, specularscale, false, false);
 			break;
 		case R_SHADOW_RENDERMODE_LIGHT_VERTEX:
-			R_Shadow_RenderLighting_Light_Vertex(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, lightcolorbase, vec3_origin, vec3_origin, rsurface.texture->basetexture, r_texture_black, r_texture_black, rsurface.texture->currentskinframe->nmap, rsurface.texture->glosstexture, ambientscale, diffusescale, specularscale, false, false);
+			R_Shadow_RenderLighting_Light_Vertex(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, lightcolorbase, vec3_origin, vec3_origin, rsurface.texture->basetexture, r_texture_black, r_texture_black, nmap, rsurface.texture->glosstexture, ambientscale, diffusescale, specularscale, false, false);
 			break;
 		default:
 			Con_Printf("R_Shadow_RenderLighting: unknown r_shadow_rendermode %i\n", r_shadow_rendermode);
