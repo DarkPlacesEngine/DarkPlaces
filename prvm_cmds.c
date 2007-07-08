@@ -115,7 +115,7 @@ void VM_error (void)
 	if (prog->globaloffsets.self >= 0)
 	{
 		ed = PRVM_PROG_TO_EDICT(PRVM_GLOBALFIELDVALUE(prog->globaloffsets.self)->edict);
-		PRVM_ED_Print(ed);
+		PRVM_ED_Print(ed, NULL);
 	}
 
 	PRVM_ERROR ("%s: Program error in function %s:\n%s\nTip: read above for entity information\n", PRVM_NAME, PRVM_GetString(prog->xfunction->s_name), string);
@@ -141,7 +141,7 @@ void VM_objerror (void)
 	if (prog->globaloffsets.self >= 0)
 	{
 		ed = PRVM_PROG_TO_EDICT(PRVM_GLOBALFIELDVALUE(prog->globaloffsets.self)->edict);
-		PRVM_ED_Print(ed);
+		PRVM_ED_Print(ed, NULL);
 
 		PRVM_ED_Free (ed);
 	}
@@ -1108,7 +1108,7 @@ void VM_eprint (void)
 {
 	VM_SAFEPARMCOUNT(1,VM_eprint);
 
-	PRVM_ED_PrintNum (PRVM_G_EDICTNUM(OFS_PARM0));
+	PRVM_ED_PrintNum (PRVM_G_EDICTNUM(OFS_PARM0), NULL);
 }
 
 /*

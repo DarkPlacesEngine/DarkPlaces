@@ -476,7 +476,7 @@ void PRVM_ED_Free (prvm_edict_t *ed);
 void PRVM_ED_ClearEdict (prvm_edict_t *e);
 
 void PRVM_PrintFunctionStatements (const char *name);
-void PRVM_ED_Print(prvm_edict_t *ed);
+void PRVM_ED_Print(prvm_edict_t *ed, const char *wildcard_fieldname);
 void PRVM_ED_Write (qfile_t *f, prvm_edict_t *ed);
 const char *PRVM_ED_ParseEdict (const char *data, prvm_edict_t *ent);
 
@@ -521,7 +521,7 @@ extern	int		prvm_type_size[8]; // for consistency : I think a goal of this sub-p
 void PRVM_Init_Exec(void);
 
 void PRVM_ED_PrintEdicts_f (void);
-void PRVM_ED_PrintNum (int ent);
+void PRVM_ED_PrintNum (int ent, const char *wildcard_fieldname);
 
 const char *PRVM_GetString(int num);
 int PRVM_SetEngineString(const char *s);
