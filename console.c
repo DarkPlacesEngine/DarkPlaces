@@ -76,6 +76,9 @@ LOGGING
 */
 
 cvar_t log_file = {0, "log_file","", "filename to log messages to"};
+cvar_t log_dest_udp = {0, "log_dest_udp","", "UDP address to log messages to (in QW rcon compatible format); multiple destinations can be separated by spaces; DO NOT SPECIFY DNS NAMES HERE"};
+char log_dest_buffer[1500]; // UDP packet
+size_t log_dest_buffer_pos;
 char crt_log_file [MAX_OSPATH] = "";
 qfile_t* logfile = NULL;
 
@@ -84,6 +87,54 @@ size_t logq_ind = 0;
 size_t logq_size = 0;
 
 void Log_ConPrint (const char *msg);
+
+/*
+====================
+Log_DestBuffer_Init
+====================
+*/
+static void Log_DestBuffer_Init()
+{
+	memcpy(log_dest_buffer, "\377\377\377\377n", 5); // QW rcon print
+	log_dest_buffer_pos = 5;
+}
+
+/*
+====================
+Log_DestBuffer_Flush
+====================
+*/
+void Log_DestBuffer_Flush()
+{
+	lhnetaddress_t log_dest_addr;
+	lhnetsocket_t *log_dest_socket;
+	const char *s = log_dest_udp.string;
+	qboolean have_opened_temp_sockets = false;
+	if(s) if(log_dest_buffer_pos > 5)
+	{
+		log_dest_buffer[log_dest_buffer_pos++] = 0;
+
+		if(!NetConn_HaveServerPorts() && !NetConn_HaveClientPorts()) // then temporarily open one
+		{
+			have_opened_temp_sockets = true;
+			NetConn_OpenServerPorts(true);
+		}
+
+		while(COM_ParseToken_Console(&s))
+			if(LHNETADDRESS_FromString(&log_dest_addr, com_token, 26000))
+			{
+				log_dest_socket = NetConn_ChooseClientSocketForAddress(&log_dest_addr);
+				if(!log_dest_socket)
+					log_dest_socket = NetConn_ChooseServerSocketForAddress(&log_dest_addr);
+				if(log_dest_socket)
+					NetConn_WriteString(log_dest_socket, log_dest_buffer, &log_dest_addr);
+			}
+
+		if(have_opened_temp_sockets)
+			NetConn_CloseServerPorts();
+	}
+	log_dest_buffer_pos = 0;
+}
 
 /*
 ====================
@@ -156,6 +207,8 @@ Log_Start
 */
 void Log_Start (void)
 {
+	size_t pos;
+	size_t n;
 	Log_Open ();
 
 	// Dump the contents of the log queue into the log file and free it
@@ -163,8 +216,24 @@ void Log_Start (void)
 	{
 		unsigned char *temp = logqueue;
 		logqueue = NULL;
-		if (logfile != NULL && logq_ind != 0)
-			FS_Write (logfile, temp, logq_ind);
+		if(logq_ind != 0)
+		{
+			if (logfile != NULL)
+				FS_Write (logfile, temp, logq_ind);
+			if(*log_dest_udp.string)
+			{
+				for(pos = 0; pos < logq_ind; )
+				{
+					if(log_dest_buffer_pos == 0)
+						Log_DestBuffer_Init();
+					n = min(sizeof(log_dest_buffer) - log_dest_buffer_pos - 1, logq_ind - pos);
+					memcpy(log_dest_buffer + log_dest_buffer_pos, temp + pos, n);
+					log_dest_buffer_pos += n;
+					Log_DestBuffer_Flush();
+					pos += n;
+				}
+			}
+		}
 		Mem_Free (temp);
 		logq_ind = 0;
 		logq_size = 0;
@@ -223,6 +292,7 @@ void Log_ConPrint (const char *msg)
 	// If a log file is available
 	if (logfile != NULL)
 		FS_Print (logfile, msg);
+
 	inprogress = false;
 }
 
@@ -451,6 +521,7 @@ void Con_Init (void)
 	Cvar_RegisterVariable (&sys_specialcharactertranslation);
 
 	Cvar_RegisterVariable (&log_file);
+	Cvar_RegisterVariable (&log_dest_udp);
 
 	// support for the classic Quake option
 // COMMANDLINEOPTION: Console: -condebug logs console messages to qconsole.log, see also log_file
@@ -621,6 +692,17 @@ void Con_Print(const char *msg)
 		// to the rcon redirect buffer
 		if (rcon_redirect && rcon_redirect_bufferpos < (int)sizeof(rcon_redirect_buffer) - 1)
 			rcon_redirect_buffer[rcon_redirect_bufferpos++] = *msg;
+		else if(*log_dest_udp.string) // don't duplicate rcon command responses here, these are sent another way
+		{
+			if(log_dest_buffer_pos == 0)
+				Log_DestBuffer_Init();
+			log_dest_buffer[log_dest_buffer_pos++] = *msg;
+			if(log_dest_buffer_pos >= sizeof(log_dest_buffer) - 1) // minus one, to allow for terminating zero
+				Log_DestBuffer_Flush();
+		}
+		else
+			log_dest_buffer_pos = 0;
+
 		// if this is the beginning of a new line, print timestamp
 		if (index == 0)
 		{
