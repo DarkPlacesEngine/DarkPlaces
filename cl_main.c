@@ -26,6 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "csprogs.h"
 #include "r_shadow.h"
 #include "libcurl.h"
+#include "snd_main.h"
 
 // we need to declare some mouse variables here, because the menu system
 // references them even when on a unix system.
@@ -459,6 +460,24 @@ static void CL_ModelIndexList_f(void)
 	{ // Valid Model
 		Con_Printf("%i : %s\n", nModelIndexCnt, cl.model_precache[nModelIndexCnt]->name);
 		nModelIndexCnt++;
+	}
+}
+
+/*
+===============
+CL_SoundIndexList_f
+
+List all sounds in the client soundindex
+===============
+*/
+static void CL_SoundIndexList_f(void)
+{
+	int nSoundIndexCnt = 1;
+
+	while(cl.sound_precache[nSoundIndexCnt] && nSoundIndexCnt != MAX_SOUNDS)
+	{ // Valid Sound
+		Con_Printf("%i : %s\n", nSoundIndexCnt, cl.sound_precache[nSoundIndexCnt]->name);
+		nSoundIndexCnt++;
 	}
 }
 
@@ -2215,6 +2234,8 @@ void CL_Init (void)
 
 	// Support Client-side Model Index List
 	Cmd_AddCommand ("cl_modelindexlist", CL_ModelIndexList_f, "list all models in the client modelindex");
+	// Support Client-side Sound Index List
+	Cmd_AddCommand ("cl_soundindexlist", CL_SoundIndexList_f, "list all sounds in the client soundindex");
 
 	Cvar_RegisterVariable (&cl_autodemo);
 	Cvar_RegisterVariable (&cl_autodemo_nameformat);
