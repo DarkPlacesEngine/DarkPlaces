@@ -1733,7 +1733,7 @@ void NetConn_ClientFrame(void)
 		while (cl_sockets[i] && (length = NetConn_Read(cl_sockets[i], readbuffer, sizeof(readbuffer), &peeraddress)) > 0)
 			NetConn_ClientParsePacket(cl_sockets[i], readbuffer, length, &peeraddress);
 	NetConn_QueryQueueFrame();
-	if (cls.netcon && realtime > cls.netcon->timeout)
+	if (cls.netcon && realtime > cls.netcon->timeout && !sv.active)
 	{
 		Con_Print("Connection timed out\n");
 		CL_Disconnect();
