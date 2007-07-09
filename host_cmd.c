@@ -430,33 +430,6 @@ LOAD / SAVE GAME
 
 /*
 ===============
-Host_SavegameComment
-
-Writes a SAVEGAME_COMMENT_LENGTH character comment describing the current
-===============
-*/
-void Host_SavegameComment (char *text)
-{
-	int		i;
-	char	kills[20];
-
-	for (i=0 ; i<SAVEGAME_COMMENT_LENGTH ; i++)
-		text[i] = ' ';
-	// LordHavoc: added min() to prevent overflow
-	memcpy (text, cl.levelname, min(strlen(cl.levelname), SAVEGAME_COMMENT_LENGTH));
-	sprintf (kills,"kills:%3i/%3i", cl.stats[STAT_MONSTERS], cl.stats[STAT_TOTALMONSTERS]);
-	memcpy (text+22, kills, strlen(kills));
-	// convert space to _ to make stdio happy
-	// LordHavoc: convert control characters to _ as well
-	for (i=0 ; i<SAVEGAME_COMMENT_LENGTH ; i++)
-		if (text[i] <= ' ')
-			text[i] = '_';
-	text[SAVEGAME_COMMENT_LENGTH] = '\0';
-}
-
-
-/*
-===============
 Host_Savegame_f
 ===============
 */
@@ -467,34 +440,29 @@ void Host_Savegame_f (void)
 	int		i;
 	char	comment[SAVEGAME_COMMENT_LENGTH+1];
 
-	if (cls.state != ca_connected || !sv.active)
+	if (!sv.active)
 	{
-		Con_Print("Not playing a local game.\n");
+		Con_Print("Can't save - no server running.\n");
 		return;
 	}
 
-	if (cl.intermission)
+	if (cl.islocalgame)
 	{
-		Con_Print("Can't save in intermission.\n");
-		return;
-	}
-
-	for (i = 0;i < svs.maxclients;i++)
-	{
-		if (svs.clients[i].active)
+		// singleplayer checks
+		if (cl.intermission)
 		{
-			if (i > 0)
-			{
-				Con_Print("Can't save multiplayer games.\n");
-				return;
-			}
-			if (svs.clients[i].edict->fields.server->deadflag)
-			{
-				Con_Print("Can't savegame with a dead player\n");
-				return;
-			}
+			Con_Print("Can't save in intermission.\n");
+			return;
+		}
+
+		if (svs.clients[0].active && svs.clients[0].edict->fields.server->deadflag)
+		{
+			Con_Print("Can't savegame with a dead player\n");
+			return;
 		}
 	}
+	else
+		Con_Print("Warning: saving a multiplayer game may have strange results when restored (to properly resume, all players must join in the same player slots and then the game can be reloaded).\n");
 
 	if (Cmd_Argc() != 2)
 	{
@@ -519,8 +487,19 @@ void Host_Savegame_f (void)
 		return;
 	}
 
+	SV_VM_Begin();
+
 	FS_Printf(f, "%i\n", SAVEGAME_VERSION);
-	Host_SavegameComment (comment);
+
+	memset(comment, 0, sizeof(comment));
+	sprintf(comment, "%-21s kills:%3i/%3i", PRVM_GetString(prog->edicts->fields.server->message), (int)prog->globals.server->killed_monsters, (int)prog->globals.server->total_monsters);
+	// convert space to _ to make stdio happy
+	// LordHavoc: convert control characters to _ as well
+	for (i=0 ; i<SAVEGAME_COMMENT_LENGTH ; i++)
+		if (comment[i] <= ' ')
+			comment[i] = '_';
+	comment[SAVEGAME_COMMENT_LENGTH] = '\0';
+
 	FS_Printf(f, "%s\n", comment);
 	for (i=0 ; i<NUM_SPAWN_PARMS ; i++)
 		FS_Printf(f, "%f\n", svs.clients[0].spawn_parms[i]);
@@ -536,8 +515,6 @@ void Host_Savegame_f (void)
 		else
 			FS_Print(f,"m\n");
 	}
-
-	SV_VM_Begin();
 
 	PRVM_ED_WriteGlobals (f);
 	for (i=0 ; i<prog->num_edicts ; i++)
@@ -725,7 +702,7 @@ void Host_Loadgame_f (void)
 	SV_VM_End();
 
 	// make sure we're connected to loopback
-	if (cls.state == ca_disconnected || !(cls.state == ca_connected && cls.netcon != NULL && LHNETADDRESS_GetAddressType(&cls.netcon->peeraddress) == LHNETADDRESSTYPE_LOOP))
+	if (sv.active && cls.state == ca_disconnected)
 		CL_EstablishConnection("local:1");
 }
 

@@ -59,6 +59,7 @@
 0 change darkplaces menu: move all options into a submenu so that people won't keep ignoring the other submenus
 0 change darkplaces networking: make darkplaces detect its *public* client port from master server and send that in nq connect messages (wallace)
 0 change darkplaces protocol: PRYDON_CLIENTCURSOR should use a stat and .prydoncursor field instead of the cl_prydoncursor cvar, because stuffcmd is a bit icky (FrikaC)
+0 change darkplaces protocol: in dp8 protocol change clc_move to include a separate want-prediction flag rather than sending 0 movesequence for unpredicted moves, this will allow the client to know its own ping regardless of whether prediction is used.
 0 change darkplaces protocol: increase maxplayers limit to 65535, send maxplayers as an int in the serverinfo packet, send colormap indices as a short, send svc_update* using short player indices (discoloda)
 0 change darkplaces protocol: make svc_cdtrack use strings rather than a numbers in next DP protocol, so that named tracks can be used by maps
 0 change darkplaces protocol: send origin and angle updates as individual components in entities like Quake did, rather than combined ORIGIN/ANGLE bits like DP5/6/7 do
