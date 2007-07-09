@@ -813,6 +813,8 @@ typedef struct model_s
 	msurface_lightmapinfo_t *data_surfaces_lightmapinfo;
 	// all surfaces belong to this mesh
 	surfmesh_t		surfmesh;
+	// data type of model
+	const char		*modeldatatypestring;
 	// draw the model's sky polygons (only used by brush models)
 	void(*DrawSky)(struct entity_render_s *ent);
 	// draw the model using lightmap/dlight shading

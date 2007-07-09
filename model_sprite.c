@@ -223,6 +223,8 @@ void Mod_IDSP_Load(model_t *mod, void *buffer, void *bufferend)
 
 	datapointer = (unsigned char *)buffer;
 
+	loadmodel->modeldatatypestring = "SPR1";
+
 	loadmodel->type = mod_sprite;
 
 	loadmodel->DrawSky = NULL;
@@ -338,6 +340,8 @@ void Mod_IDS2_Load(model_t *mod, void *buffer, void *bufferend)
 	skinframe_t *skinframe;
 	float modelradius;
 	int texflags = (r_mipsprites.integer ? TEXF_MIPMAP : 0) | (r_picmipsprites.integer ? TEXF_PICMIP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE;
+
+	loadmodel->modeldatatypestring = "SPR2";
 
 	loadmodel->type = mod_sprite;
 
