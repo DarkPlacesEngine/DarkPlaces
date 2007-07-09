@@ -77,7 +77,7 @@ LOGGING
 
 cvar_t log_file = {0, "log_file","", "filename to log messages to"};
 cvar_t log_dest_udp = {0, "log_dest_udp","", "UDP address to log messages to (in QW rcon compatible format); multiple destinations can be separated by spaces; DO NOT SPECIFY DNS NAMES HERE"};
-char log_dest_buffer[1500]; // UDP packet
+char log_dest_buffer[1400]; // UDP packet
 size_t log_dest_buffer_pos;
 char crt_log_file [MAX_OSPATH] = "";
 qfile_t* logfile = NULL;
