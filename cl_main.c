@@ -449,17 +449,23 @@ static void CL_PrintEntities_f(void)
 ===============
 CL_ModelIndexList_f
 
-List all models in the client modelindex
+List information on all models in the client modelindex
 ===============
 */
 static void CL_ModelIndexList_f(void)
 {
-	int nModelIndexCnt = 1;
+	int i = 1;
 
-	while(cl.model_precache[nModelIndexCnt] && nModelIndexCnt != MAX_MODELS)
+	// Print Header
+	Con_Printf("%3s: %-30s %-8s %-8s\n", "ID", "Name", "Type", "Triangles");
+
+	while(cl.model_precache[i] && i != MAX_MODELS)
 	{ // Valid Model
-		Con_Printf("%i : %s\n", nModelIndexCnt, cl.model_precache[nModelIndexCnt]->name);
-		nModelIndexCnt++;
+		if(cl.model_precache[i]->loaded || cl.model_precache[i]->isworldmodel)
+			Con_Printf("%3i: %-30s %-8s %-10i\n", i, cl.model_precache[i]->name, cl.model_precache[i]->modeldatatypestring, cl.model_precache[i]->surfmesh.num_triangles);
+		else
+			Con_Printf("%3i: %-30s %-30s\n", i, cl.model_precache[i]->name, "--no local model found--");
+		i++;
 	}
 }
 
@@ -472,12 +478,12 @@ List all sounds in the client soundindex
 */
 static void CL_SoundIndexList_f(void)
 {
-	int nSoundIndexCnt = 1;
+	int i = 1;
 
-	while(cl.sound_precache[nSoundIndexCnt] && nSoundIndexCnt != MAX_SOUNDS)
+	while(cl.sound_precache[i] && i != MAX_SOUNDS)
 	{ // Valid Sound
-		Con_Printf("%i : %s\n", nSoundIndexCnt, cl.sound_precache[nSoundIndexCnt]->name);
-		nSoundIndexCnt++;
+		Con_Printf("%i : %s\n", i, cl.sound_precache[i]->name);
+		i++;
 	}
 }
 
@@ -2233,7 +2239,7 @@ void CL_Init (void)
 	Cmd_AddCommand ("timedemo", CL_TimeDemo_f, "play back a demo as fast as possible and save statistics to benchmark.log");
 
 	// Support Client-side Model Index List
-	Cmd_AddCommand ("cl_modelindexlist", CL_ModelIndexList_f, "list all models in the client modelindex");
+	Cmd_AddCommand ("cl_modelindexlist", CL_ModelIndexList_f, "list information on all models in the client modelindex");
 	// Support Client-side Sound Index List
 	Cmd_AddCommand ("cl_soundindexlist", CL_SoundIndexList_f, "list all sounds in the client soundindex");
 

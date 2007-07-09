@@ -3305,6 +3305,8 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	dheader_t _header;
 	hullinfo_t hullinfo;
 
+	mod->modeldatatypestring = "Q1BSP";
+
 	mod->type = mod_brushq1;
 
 	if (!memcmp (buffer, "MCBSPpad", 8))
@@ -3362,6 +3364,8 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 		VectorClear (hullinfo.hullsizes[0][1]);
 		if (mod->brush.ishlbsp)
 		{
+			mod->modeldatatypestring = "HLBSP";
+
 			hullinfo.numhulls = 4;
 			hullinfo.filehulls = 4;
 			VectorSet (hullinfo.hullsizes[1][0], -16, -16, -36);
@@ -4008,6 +4012,8 @@ void static Mod_Q2BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	q2dheader_t *header;
 
 	Host_Error("Mod_Q2BSP_Load: not yet implemented");
+
+	mod->modeldatatypestring = "Q2BSP";
 
 	mod->type = mod_brushq2;
 
@@ -5500,6 +5506,8 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	q3dheader_t *header;
 	float corner[3], yawradius, modelradius;
 	msurface_t *surface;
+
+	mod->modeldatatypestring = "Q3BSP";
 
 	mod->type = mod_brushq3;
 	mod->numframes = 2; // although alternate textures are not supported it is annoying to complain about no such frame 1

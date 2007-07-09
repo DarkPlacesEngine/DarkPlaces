@@ -783,6 +783,8 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 		Host_Error ("%s has wrong version number (%i should be %i)",
 				 loadmodel->name, version, ALIAS_VERSION);
 
+	loadmodel->modeldatatypestring = "MDL";
+
 	loadmodel->type = mod_alias;
 	loadmodel->DrawSky = NULL;
 	loadmodel->Draw = R_Q1BSP_Draw;
@@ -1100,6 +1102,8 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 		Host_Error ("%s has wrong version number (%i should be %i)",
 			loadmodel->name, version, MD2ALIAS_VERSION);
 
+	loadmodel->modeldatatypestring = "MD2";
+	
 	loadmodel->type = mod_alias;
 	loadmodel->DrawSky = NULL;
 	loadmodel->Draw = R_Q1BSP_Draw;
@@ -1333,6 +1337,8 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 	if (loadmodel->numskins < 1)
 		loadmodel->numskins = 1;
 
+	loadmodel->modeldatatypestring = "MD3";
+
 	loadmodel->type = mod_alias;
 	loadmodel->DrawSky = NULL;
 	loadmodel->Draw = R_Q1BSP_Draw;
@@ -1486,6 +1492,8 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		Host_Error ("Mod_ZYMOTICMODEL_Load: %s is not a zymotic model", loadmodel->name);
 	if (BigLong(pinmodel->type) != 1)
 		Host_Error ("Mod_ZYMOTICMODEL_Load: only type 1 (skeletal pose) models are currently supported (name = %s)", loadmodel->name);
+
+	loadmodel->modeldatatypestring = "ZYM";
 
 	loadmodel->type = mod_alias;
 	loadmodel->synctype = ST_RAND;
@@ -1797,6 +1805,8 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	if (BigLong(pheader->type) != 2)
 		Host_Error ("Mod_DARKPLACESMODEL_Load: only type 2 (hierarchical skeletal pose) models are currently supported (name = %s)", loadmodel->name);
 
+	loadmodel->modeldatatypestring = "DPM";
+	
 	loadmodel->type = mod_alias;
 	loadmodel->synctype = ST_RAND;
 
@@ -2097,6 +2107,8 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	if (strcmp(pchunk->id, "ACTRHEAD"))
 		Host_Error ("Mod_PSKMODEL_Load: %s is not an Unreal Engine ActorX (.psk + .psa) model", loadmodel->name);
 
+	loadmodel->modeldatatypestring = "PSK";
+	
 	loadmodel->type = mod_alias;
 	loadmodel->DrawSky = NULL;
 	loadmodel->Draw = R_Q1BSP_Draw;
