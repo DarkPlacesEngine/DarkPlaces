@@ -677,7 +677,7 @@ Con_Rcon_AddChar
 Adds a character to the rcon buffer
 ================
 */
-inline void Con_Rcon_AddChar(char c)
+void Con_Rcon_AddChar(char c)
 {
 	// if this print is in response to an rcon command, add the character
 	// to the rcon redirect buffer
