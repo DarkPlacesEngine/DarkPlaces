@@ -2096,18 +2096,22 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			for (i = 0;*s > ' ';s++)
 				if (i < (int)sizeof(password) - 1)
 					password[i++] = *s;
+			if(*s <= ' ' && s != endpos) // skip leading ugly space
+				++s;
 			password[i] = 0;
 			if (password[0] > ' ' && !strcmp(rcon_password.string, password))
 			{
 				// looks like a legitimate rcon command with the correct password
 				char *s_ptr = s;
+				Con_Printf("server received rcon command from %s:\n", host_client ? host_client->name : addressstring2);
 				while(s_ptr != endpos)
 				{
 					size_t l = strlen(s_ptr);
 					if(l)
-						Con_Printf("server received rcon command from %s:\n%s\n", host_client ? host_client->name : addressstring2, s_ptr);
+						Con_Printf(" %s;", s_ptr);
 					s_ptr += l + 1;
 				}
+				Con_Printf("\n");
 				rcon_redirect = true;
 				rcon_redirect_bufferpos = 0;
 				while(s != endpos)
