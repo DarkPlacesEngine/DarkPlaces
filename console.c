@@ -79,6 +79,7 @@ cvar_t log_file = {0, "log_file","", "filename to log messages to"};
 cvar_t log_dest_udp = {0, "log_dest_udp","", "UDP address to log messages to (in QW rcon compatible format); multiple destinations can be separated by spaces; DO NOT SPECIFY DNS NAMES HERE"};
 char log_dest_buffer[1400]; // UDP packet
 size_t log_dest_buffer_pos;
+qboolean log_dest_buffer_appending;
 char crt_log_file [MAX_OSPATH] = "";
 qfile_t* logfile = NULL;
 
@@ -112,10 +113,11 @@ void Log_DestBuffer_Flush()
 	qboolean have_opened_temp_sockets = false;
 	if(s) if(log_dest_buffer_pos > 5)
 	{
+		++log_dest_buffer_appending;
 		log_dest_buffer[log_dest_buffer_pos++] = 0;
 
 		if(!NetConn_HaveServerPorts() && !NetConn_HaveClientPorts()) // then temporarily open one
-		{
+ 		{
 			have_opened_temp_sockets = true;
 			NetConn_OpenServerPorts(true);
 		}
@@ -132,6 +134,7 @@ void Log_DestBuffer_Flush()
 
 		if(have_opened_temp_sockets)
 			NetConn_CloseServerPorts();
+		--log_dest_buffer_appending;
 	}
 	log_dest_buffer_pos = 0;
 }
@@ -679,8 +682,13 @@ Adds a character to the rcon buffer
 */
 void Con_Rcon_AddChar(char c)
 {
+	if(log_dest_buffer_appending)
+		return;
+	++log_dest_buffer_appending;
+
 	// if this print is in response to an rcon command, add the character
 	// to the rcon redirect buffer
+
 	if (rcon_redirect && rcon_redirect_bufferpos < (int)sizeof(rcon_redirect_buffer) - 1)
 		rcon_redirect_buffer[rcon_redirect_bufferpos++] = c;
 	else if(*log_dest_udp.string) // don't duplicate rcon command responses here, these are sent another way
@@ -693,6 +701,8 @@ void Con_Rcon_AddChar(char c)
 	}
 	else
 		log_dest_buffer_pos = 0;
+
+	--log_dest_buffer_appending;
 }
 
 /*
