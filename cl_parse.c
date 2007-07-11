@@ -2885,7 +2885,15 @@ static void CL_NetworkTimeReceived(double newtime)
 	cl.mtime[0] = newtime;
 	if (cls.timedemo || (cl.islocalgame && !sv_fixedframeratesingleplayer.integer) || cl.mtime[1] == cl.mtime[0] || cls.signon < SIGNONS)
 		cl.time = cl.mtime[1] = newtime;
-	else if (cls.protocol != PROTOCOL_QUAKEWORLD && !cls.demoplayback)
+	else if (cls.demoplayback)
+	{	
+		// when time falls behind during demo playback it means the cl.mtime[1] was altered
+		// due to a large time gap, so treat it as an instant change in time
+		// (this can also happen during heavy packet loss in the demo)
+		if (cl.time < newtime - 0.1)
+			cl.mtime[1] = cl.time = newtime;
+	}
+	else if (cls.protocol != PROTOCOL_QUAKEWORLD)
 	{
 		cl.mtime[1] = max(cl.mtime[1], cl.mtime[0] - 0.1);
 		if (developer.integer >= 100 && vid_activewindow)
