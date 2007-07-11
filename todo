@@ -496,6 +496,8 @@ d bug darkplaces client: seta commands create cvars that are not saved to config
 d bug darkplaces client: svc_effect should post a warning and do nothing if given a framerate below 1 (Willis)
 d bug darkplaces client: te_customflash isn't working? (Wazat)
 d bug darkplaces client: userinfo strings are not being updated by name/color commands
+d bug darkplaces client: when playing back a demo in slow motion it is very noticable that the camera rotates into position on the first frame (Stribbs)
+d bug darkplaces client: when playing back nehahra demos they often contain large time skips at scene cuts which are interpolating slowly over several seconds (Stribbs)
 d bug darkplaces collision: check Urre's sltest.bsp and slopestuck.dem and fix the sticking bug, which only happens with sv_newflymove 1 (Urre)
 d bug darkplaces collision: frikbots are falling through the map (Sajt)
 d bug darkplaces commands: say command is not posting to server console (Vermeulen)
