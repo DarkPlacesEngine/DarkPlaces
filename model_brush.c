@@ -613,6 +613,7 @@ RecursiveHullCheckTraceInfo_t;
 
 // 1/32 epsilon to keep floating point happy
 #define DIST_EPSILON (0.03125)
+#define DIST_EPSILON2 (0)
 
 #define HULLCHECKSTATE_EMPTY 0
 #define HULLCHECKSTATE_SOLID 1
@@ -695,9 +696,41 @@ loc0:
 		t2 = DotProduct (plane->normal, p2) - plane->dist;
 	}
 
-	if (t1 < 0)
+	// this has some tolerances so that it never intersects with a plane if
+	// one of the endpoints lies exactly on it
+	// the objective of this code is to allow points that are exactly on a
+	// plane to still give sane results (improving physics stability)
+	if (t2 < t1)
 	{
-		if (t2 < 0)
+		if (t2 >= -DIST_EPSILON2)
+		{
+#if COLLISIONPARANOID >= 3
+			Con_Print(">");
+#endif
+			num = node->children[0];
+			goto loc0;
+		}
+		if (t1 <= DIST_EPSILON2)
+		{
+#if COLLISIONPARANOID >= 3
+			Con_Print("<");
+#endif
+			num = node->children[1];
+			goto loc0;
+		}
+		side = 0;
+	}
+	else
+	{
+		if (t1 >= -DIST_EPSILON2)
+		{
+#if COLLISIONPARANOID >= 3
+			Con_Print(">");
+#endif
+			num = node->children[0];
+			goto loc0;
+		}
+		if (t2 <= DIST_EPSILON2)
 		{
 #if COLLISIONPARANOID >= 3
 			Con_Print("<");
@@ -706,18 +739,6 @@ loc0:
 			goto loc0;
 		}
 		side = 1;
-	}
-	else
-	{
-		if (t2 >= 0)
-		{
-#if COLLISIONPARANOID >= 3
-			Con_Print(">");
-#endif
-			num = node->children[0];
-			goto loc0;
-		}
-		side = 0;
 	}
 
 	// the line intersects, find intersection point
