@@ -149,5 +149,12 @@ void Cmd_Print(const char *text);
 // used by command functions to send output to either the graphics console or
 // passed as a print message to the client
 
+qboolean Cmd_QuoteString(char *out, size_t outlen, const char *in, const char *quoteset);
+// quotes a string so that it can be used as a command argument again;
+// quoteset is a string that contains one or more of ", \, $ and specifies
+// the characters to be quoted (you usually want to either pass "\"\\" or
+// "\"\\$"). Returns true on success, and false on overrun (in which case out
+// will contain a part of the quoted string).
+
 #endif
 

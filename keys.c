@@ -801,17 +801,21 @@ void
 Key_WriteBindings (qfile_t *f)
 {
 	int         i, j;
+	char bindbuf[MAX_INPUTLINE];
+	const char *p;
 
 	for (j = 0; j < MAX_BINDMAPS; j++)
 	{
 		for (i = 0; i < (int)(sizeof(keybindings[0])/sizeof(keybindings[0][0])); i++)
 		{
-			if (keybindings[j][i])
+			p = keybindings[j][i];
+			if (p)
 			{
+				Cmd_QuoteString(bindbuf, sizeof(bindbuf), p, "\"\\");
 				if (j == 0)
-					FS_Printf(f, "bind %s \"%s\"\n", Key_KeynumToString (i), keybindings[j][i]);
+					FS_Printf(f, "bind %s \"%s\"\n", Key_KeynumToString (i), bindbuf);
 				else
-					FS_Printf(f, "in_bind %d %s \"%s\"\n", j, Key_KeynumToString (i), keybindings[j][i]);
+					FS_Printf(f, "in_bind %d %s \"%s\"\n", j, Key_KeynumToString (i), bindbuf);
 			}
 		}
 	}
