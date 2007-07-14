@@ -550,11 +550,63 @@ static const char *Cmd_GetDirectCvarValue(const char *varname, cmdalias_t *alias
 	return NULL;
 }
 
+qboolean Cmd_QuoteString(char *out, size_t outlen, const char *in, const char *quoteset)
+{
+	qboolean quote_quot = !!strchr(quoteset, '"');
+	qboolean quote_backslash = !!strchr(quoteset, '\\');
+	qboolean quote_dollar = !!strchr(quoteset, '$');
+
+	while(*in)
+	{
+		if(*in == '"' && quote_quot)
+		{
+			if(outlen <= 2)
+			{
+				*out++ = 0;
+				return false;
+			}
+			*out++ = '\\'; --outlen;
+			*out++ = '"'; --outlen;
+		}
+		else if(*in == '\\' && quote_backslash)
+		{
+			if(outlen <= 2)
+			{
+				*out++ = 0;
+				return false;
+			}
+			*out++ = '\\'; --outlen;
+			*out++ = '\\'; --outlen;
+		}
+		else if(*in == '\\' && quote_dollar)
+		{
+			if(outlen <= 2)
+			{
+				*out++ = 0;
+				return false;
+			}
+			*out++ = '$'; --outlen;
+			*out++ = '$'; --outlen;
+		}
+		else
+		{
+			if(outlen <= 1)
+			{
+				*out++ = 0;
+				return false;
+			}
+			*out++ = *in; --outlen;
+		}
+		++in;
+	}
+	*out++ = 0;
+	return true;
+}
+
 static const char *Cmd_GetCvarValue(const char *var, size_t varlen, cmdalias_t *alias)
 {
 	static char varname[MAX_INPUTLINE];
 	static char varval[MAX_INPUTLINE];
-	char *p;
 	const char *varstr;
 	char *varfunc;
 
@@ -599,34 +651,8 @@ static const char *Cmd_GetCvarValue(const char *var, size_t varlen, cmdalias_t *
 	if(!varfunc || !strcmp(varfunc, "q")) // note: quoted form is default, use "asis" to override!
 	{
 		// quote it so it can be used inside double quotes
-		// we just need to replace " by \"
-		p = varval;
-		while(*varstr)
-		{
-			if(*varstr == '"')
-			{
-				if(p - varval >= (ssize_t)(sizeof(varval) - 2))
-					break;
-				*p++ = '\\';
-				*p++ = '"';
-			}
-			else if(*varstr == '\\')
-			{
-				if(p - varval >= (ssize_t)(sizeof(varval) - 2))
-					break;
-				*p++ = '\\';
-				*p++ = '\\';
-			}
-			else
-			{
-				if(p - varval >= (ssize_t)(sizeof(varval) - 1))
-					break;
-				*p++ = *varstr;
-			}
-			++varstr;
-		}
-		*p++ = 0;
-		//Con_Printf("quoted form: %s\n", varval);
+		// we just need to replace " by \", and of course, double backslashes
+		Cmd_QuoteString(varval, sizeof(varval), varstr, "\"\\");
 		return varval;
 	}
 	else if(!strcmp(varfunc, "asis"))
@@ -766,8 +792,6 @@ static void Cmd_ExecuteAlias (cmdalias_t *alias)
 {
 	static char buffer[ MAX_INPUTLINE + 2 ];
 	static char buffer2[ MAX_INPUTLINE * 2 + 2 ];
-	char *q;
-	const char *p;
 	Cmd_PreprocessString( alias->value, buffer, sizeof(buffer) - 2, alias );
 	// insert at start of command buffer, so that aliases execute in order
 	// (fixes bug introduced by Black on 20050705)
@@ -775,14 +799,7 @@ static void Cmd_ExecuteAlias (cmdalias_t *alias)
 	// Note: Cbuf_PreprocessString will be called on this string AGAIN! So we
 	// have to make sure that no second variable expansion takes place, otherwise
 	// alias parameters containing dollar signs can have bad effects.
-	for(p = buffer, q = buffer2; *p; )
-	{
-		if(*p == '$')
-			*q++ = '$';
-		*q++ = *p++;
-	}
-	*q++ = 0;
-
+	Cmd_QuoteString(buffer2, sizeof(buffer2), buffer, "$");
 	Cbuf_InsertText( buffer2 );
 }
 
