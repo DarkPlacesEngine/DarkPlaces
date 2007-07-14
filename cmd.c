@@ -186,7 +186,13 @@ void Cbuf_Execute (void)
 
 // execute the command line
 		firstchar = line + strspn(line, " \t");
-		if(strncmp(firstchar, "alias", 5) || (firstchar[5] != ' ' && firstchar[5] != '\t'))
+		if(
+			(strncmp(firstchar, "alias", 5) || (firstchar[5] != ' ' && firstchar[5] != '\t'))
+			&&
+			(strncmp(firstchar, "bind", 4) || (firstchar[4] != ' ' && firstchar[4] != '\t'))
+			&&
+			(strncmp(firstchar, "in_bind", 7) || (firstchar[7] != ' ' && firstchar[7] != '\t'))
+		)
 		{
 			Cmd_PreprocessString( line, preprocessed, sizeof(preprocessed), NULL );
 			Cmd_ExecuteString (preprocessed, src_command);
