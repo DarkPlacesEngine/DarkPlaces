@@ -214,39 +214,6 @@ static JOYINFOEX	ji;
 
 static HINSTANCE hInstDI;
 
-//static qboolean	dinput;
-
-typedef struct MYDATA {
-	LONG  lX;                   // X axis goes here
-	LONG  lY;                   // Y axis goes here
-	LONG  lZ;                   // Z axis goes here
-	BYTE  bButtonA;             // One button goes here
-	BYTE  bButtonB;             // Another button goes here
-	BYTE  bButtonC;             // Another button goes here
-	BYTE  bButtonD;             // Another button goes here
-} MYDATA;
-
-static DIOBJECTDATAFORMAT rgodf[] = {
-  { &GUID_XAxis,    FIELD_OFFSET(MYDATA, lX),       DIDFT_AXIS | DIDFT_ANYINSTANCE,   0,},
-  { &GUID_YAxis,    FIELD_OFFSET(MYDATA, lY),       DIDFT_AXIS | DIDFT_ANYINSTANCE,   0,},
-  { &GUID_ZAxis,    FIELD_OFFSET(MYDATA, lZ),       0x80000000 | DIDFT_AXIS | DIDFT_ANYINSTANCE,   0,},
-  { 0,              FIELD_OFFSET(MYDATA, bButtonA), DIDFT_BUTTON | DIDFT_ANYINSTANCE, 0,},
-  { 0,              FIELD_OFFSET(MYDATA, bButtonB), DIDFT_BUTTON | DIDFT_ANYINSTANCE, 0,},
-  { 0,              FIELD_OFFSET(MYDATA, bButtonC), 0x80000000 | DIDFT_BUTTON | DIDFT_ANYINSTANCE, 0,},
-  { 0,              FIELD_OFFSET(MYDATA, bButtonD), 0x80000000 | DIDFT_BUTTON | DIDFT_ANYINSTANCE, 0,},
-};
-
-#define NUM_OBJECTS (sizeof(rgodf) / sizeof(rgodf[0]))
-
-static DIDATAFORMAT	df = {
-	sizeof(DIDATAFORMAT),       // this structure
-	sizeof(DIOBJECTDATAFORMAT), // size of object data format
-	DIDF_RELAXIS,               // absolute axis coordinates
-	sizeof(MYDATA),             // device data size
-	NUM_OBJECTS,                // number of objects
-	rgodf,                      // and here they are
-};
-
 // forward-referenced functions
 static void IN_StartupJoystick (void);
 static void Joy_AdvancedUpdate_f (void);
@@ -1147,7 +1114,7 @@ static qboolean IN_InitDInput (void)
 	}
 
 // set the data format to "mouse format".
-	hr = IDirectInputDevice_SetDataFormat(g_pMouse, &df);
+	hr = IDirectInputDevice_SetDataFormat(g_pMouse, &c_dfDIMouse);
 
 	if (FAILED(hr))
 	{
@@ -1252,11 +1219,24 @@ static void IN_MouseMove (void)
 			switch (od.dwOfs)
 			{
 				case DIMOFS_X:
-					mx += od.dwData;
+					mx += (LONG) od.dwData;
 					break;
 
 				case DIMOFS_Y:
-					my += od.dwData;
+					my += (LONG) od.dwData;
+					break;
+
+				case DIMOFS_Z:
+					if((LONG) od.dwData < 0)
+					{
+						Key_Event (K_MWHEELDOWN, 0, true);
+						Key_Event (K_MWHEELDOWN, 0, false);
+					}
+					else if((LONG) od.dwData > 0)
+					{
+						Key_Event (K_MWHEELUP, 0, true);
+						Key_Event (K_MWHEELUP, 0, false);
+					}
 					break;
 
 				case DIMOFS_BUTTON0:
@@ -1278,6 +1258,13 @@ static void IN_MouseMove (void)
 						mstate_di |= (1<<2);
 					else
 						mstate_di &= ~(1<<2);
+					break;
+
+				case DIMOFS_BUTTON3:
+					if (od.dwData & 0x80)
+						mstate_di |= (1<<3);
+					else
+						mstate_di &= ~(1<<3);
 					break;
 			}
 		}
