@@ -840,7 +840,7 @@ void R_GLSL_DumpShader_f(void)
 	FS_Print(file, builtinshaderstring);
 	FS_Close(file);
 
-	Con_Printf("data/default.glsl written\n");
+	Con_Printf("glsl/default.glsl written\n");
 }
 
 extern rtexture_t *r_shadow_attenuationgradienttexture;
