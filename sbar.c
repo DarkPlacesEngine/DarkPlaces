@@ -1542,16 +1542,15 @@ void Sbar_Draw (void)
 
 				Sbar_DrawNum (248, 0, cl.stats[STAT_AMMO], 3, cl.stats[STAT_AMMO] <= 10);
 
-			}
-
-			// LordHavoc: changed to draw the deathmatch overlays in any multiplayer mode
-			if ((!cl.islocalgame || cl.gametype != GAME_COOP))
-			{
-				if (gamemode == GAME_TRANSFUSION)
-					Sbar_MiniDeathmatchOverlay (0, 0);
-				else
-					Sbar_MiniDeathmatchOverlay (sbar_x + 324, vid_conheight.integer - 8*8);
-				Sbar_Score(24);
+				// LordHavoc: changed to draw the deathmatch overlays in any multiplayer mode
+				if ((!cl.islocalgame || cl.gametype != GAME_COOP))
+				{
+					if (gamemode == GAME_TRANSFUSION)
+						Sbar_MiniDeathmatchOverlay (0, 0);
+					else
+						Sbar_MiniDeathmatchOverlay (sbar_x + 324, vid_conheight.integer - 8*8);
+					Sbar_Score(24);
+				}
 			}
 		}
 	}
