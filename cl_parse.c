@@ -1396,7 +1396,10 @@ void CL_ParseServerInfo (void)
 
 	// if server is active, we already began a loading plaque
 	if (!sv.active)
+	{
 		SCR_BeginLoadingPlaque();
+		S_StopAllSounds();
+	}
 
 	// check memory integrity
 	Mem_CheckSentinelsGlobal();

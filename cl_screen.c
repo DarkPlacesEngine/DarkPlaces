@@ -600,7 +600,6 @@ void SCR_BeginLoadingPlaque (void)
 	Log_Start();
 
 	Host_StartVideo();
-	S_StopAllSounds();
 	SCR_UpdateLoadingScreen(false);
 }
 
