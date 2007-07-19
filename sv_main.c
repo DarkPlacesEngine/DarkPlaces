@@ -423,6 +423,11 @@ void SV_Init (void)
 		// hipnotic mission pack has issues in their 'friendly monster' ai, which seem to attempt to attack themselves for some reason when findradius() returns non-solid entities.
 		Cvar_SetValueQuick (&sv_gameplayfix_blowupfallenzombies, 0);
 	}
+	if (gamemode == GAME_ROGUE)
+	{
+		// rogue mission pack has a guardian boss that does not wake up if findradius returns one of the entities around its spawn area
+		Cvar_SetValueQuick (&sv_gameplayfix_findradiusdistancetobox, 0);
+	}
 
 	sv_mempool = Mem_AllocPool("server", 0, NULL);
 }
