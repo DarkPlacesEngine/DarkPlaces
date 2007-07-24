@@ -343,7 +343,7 @@ void SV_LinkEdict (prvm_edict_t *ent, qboolean touch_triggers)
 		model = sv.models[modelindex];
 		if (model != NULL)
 		{
-			if (!model->TraceBox)
+			if (!model->TraceBox && developer.integer >= 1)
 				Con_Printf("edict %i: SOLID_BSP with non-collidable model\n", PRVM_NUM_FOR_EDICT(ent));
 
 			if (ent->fields.server->angles[0] || ent->fields.server->angles[2] || ent->fields.server->avelocity[0] || ent->fields.server->avelocity[2])
