@@ -400,6 +400,16 @@ void CL_VM_Parse_CenterPrint (const char *msg)
 	CSQC_END
 }
 
+void CL_VM_UpdateIntermissionState (int intermission)
+{
+	if(cl.csqc_loaded)
+	{
+		CSQC_BEGIN
+		prog->globals.client->intermission = intermission; // Dresk : This global is required and part of the CRC verification, so no check is required for it.
+		CSQC_END
+	}
+}
+
 float CL_VM_Event (float event)		//[515]: needed ? I'd say "YES", but don't know for what :D
 {
 	float r = 0;

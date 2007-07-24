@@ -3699,12 +3699,14 @@ void CL_ParseServerMessage(void)
 				if(!cl.intermission)
 					cl.completed_time = cl.time;
 				cl.intermission = 1;
+				CL_VM_UpdateIntermissionState(cl.intermission);
 				break;
 
 			case svc_finale:
 				if(!cl.intermission)
 					cl.completed_time = cl.time;
 				cl.intermission = 2;
+				CL_VM_UpdateIntermissionState(cl.intermission);
 				SCR_CenterPrint(MSG_ReadString ());
 				break;
 
@@ -3712,6 +3714,7 @@ void CL_ParseServerMessage(void)
 				if(!cl.intermission)
 					cl.completed_time = cl.time;
 				cl.intermission = 3;
+				CL_VM_UpdateIntermissionState(cl.intermission);
 				SCR_CenterPrint(MSG_ReadString ());
 				break;
 
