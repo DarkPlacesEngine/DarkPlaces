@@ -17,6 +17,7 @@ typedef struct cl_globalvars_s
 	float		maxclients;
 	float		clientcommandframe;
 	float		servercommandframe;
+	float		intermission;
 	string_t	mapname;
 	vec3_t		v_forward;
 	vec3_t		v_up;
@@ -91,6 +92,6 @@ typedef struct cl_entvars_s
 	int			owner;
 } cl_entvars_t;
 
-#define CL_PROGHEADER_CRC 52195
+#define CL_PROGHEADER_CRC 49165
 
 #endif
