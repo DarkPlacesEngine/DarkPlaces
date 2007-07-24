@@ -185,6 +185,7 @@ typedef struct prvm_prog_fieldoffsets_s
 	int items2; // ssqc
 	int lerpfrac; // csqc
 	int light_lev; // ssqc
+	int message; // csqc
 	int modelflags; // ssqc
 	int movement; // ssqc
 	int nextthink; // common - used by OP_STATE

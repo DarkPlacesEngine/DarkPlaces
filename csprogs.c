@@ -539,6 +539,7 @@ void CL_VM_Init (void)
 	fs_offset_t csprogsdatasize;
 	int csprogsdatacrc, requiredcrc;
 	int requiredsize;
+	prvm_eval_t *val;
 
 	// reset csqc_progcrc after reading it, so that changing servers doesn't
 	// expect csqc on the next server
@@ -635,6 +636,11 @@ void CL_VM_Init (void)
 
 	prog->globals.client->mapname = PRVM_SetEngineString(cl.worldmodel->name);
 	prog->globals.client->player_localentnum = cl.playerentity;
+
+	// set map description (use world entity 0)
+	val = PRVM_EDICTFIELDVALUE(prog->edicts, prog->fieldoffsets.message);
+	if(val)
+		val->string = PRVM_SetEngineString(cl.levelname);
 
 	// call the prog init
 	PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Init, "QC function CSQC_Init is missing");
