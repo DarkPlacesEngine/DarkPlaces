@@ -402,10 +402,13 @@ void CL_VM_Parse_CenterPrint (const char *msg)
 
 void CL_VM_UpdateIntermissionState (int intermission)
 {
+	prvm_eval_t *val;
 	if(cl.csqc_loaded)
 	{
 		CSQC_BEGIN
-		prog->globals.client->intermission = intermission; // Dresk : This global is required and part of the CRC verification, so no check is required for it.
+		val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.intermission);
+		if(val)
+			val->_float = intermission;
 		CSQC_END
 	}
 }

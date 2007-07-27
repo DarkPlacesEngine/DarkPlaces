@@ -1440,6 +1440,7 @@ void PRVM_FindOffsets(void)
 	prog->globaloffsets.trace_dphitq3surfaceflags     = PRVM_ED_FindGlobalOffset("trace_dphitq3surfaceflags");
 	prog->globaloffsets.trace_dphittexturename        = PRVM_ED_FindGlobalOffset("trace_dphittexturename");
 	prog->globaloffsets.trace_dpstartcontents         = PRVM_ED_FindGlobalOffset("trace_dpstartcontents");
+	prog->globaloffsets.intermission                  = PRVM_ED_FindGlobalOffset("intermission");
 
 	// menu qc only uses some functions, nothing else
 	prog->funcoffsets.m_display                       = PRVM_ED_FindFunctionOffset("m_display");

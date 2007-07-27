@@ -182,6 +182,7 @@ static void QW_CL_NextUpload(void);
 void QW_CL_StartUpload(unsigned char *data, int size);
 //static qboolean QW_CL_IsUploading(void);
 static void QW_CL_StopUpload(void);
+void CL_VM_UpdateIntermissionState(int intermission);
 
 /*
 ==================
