@@ -366,9 +366,17 @@ void VM_changeyaw (void);
 void VM_changepitch (void);
 
 void VM_uncolorstring (void);
+
+void VM_strstrofs (void);
 void VM_str2chr (void);
 void VM_chr2str (void);
+void VM_strconv (void);
+void VM_strpad (void);
+void VM_infoadd (void);
+void VM_infoget (void);
 void VM_strncmp (void);
+void VM_strncmp (void);
+void VM_strncasecmp (void);
 void VM_registercvar (void);
 void VM_wasfreed (void);
 
