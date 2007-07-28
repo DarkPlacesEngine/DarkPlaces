@@ -3953,42 +3953,14 @@ void VM_strpad (void)
 {
 	char src[VM_STRINGTEMP_LENGTH];
 	char destbuf[VM_STRINGTEMP_LENGTH];
-	char *dest = destbuf;
 	int pad;
 	VM_SAFEPARMCOUNTRANGE(1, 8, VM_strpad);
 	pad = PRVM_G_FLOAT(OFS_PARM0);
 	VM_VarString(1, src, sizeof(src));
 
-	if (pad < 0)
-	{	//pad left
-		pad = -pad - strlen(src);
-		if (pad>=VM_STRINGTEMP_LENGTH)
-			pad = VM_STRINGTEMP_LENGTH-1;
-		if (pad < 0)
-			pad = 0;
-
-		strlcpy(dest+pad, src, VM_STRINGTEMP_LENGTH-pad);
-		while(pad--)
-		{
-			pad--;
-			dest[pad] = ' ';
-		}
-	}
-	else
-	{	//pad right
-		if (pad>=VM_STRINGTEMP_LENGTH)
-			pad = VM_STRINGTEMP_LENGTH-1;
-		pad -= strlen(src);
-		if (pad < 0)
-			pad = 0;
-
-		strlcpy(dest, src, VM_STRINGTEMP_LENGTH);
-		dest+=strlen(dest);
-
-		while(pad-->0)
-			*dest++ = ' ';
-		*dest = '\0';
-	}
+	// note: < 0 = left padding, > 0 = right padding,
+	// this is reverse logic of printf!
+	dpsnprintf(destbuf, sizeof(destbuf), "%*s", -pad, src);
 
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(destbuf);
 }
