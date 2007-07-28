@@ -3802,9 +3802,10 @@ void VM_str2chr (void)
 	const char *s;
 	VM_SAFEPARMCOUNT(2, VM_str2chr);
 	s = PRVM_G_STRING(OFS_PARM0);
-	if((unsigned)PRVM_G_FLOAT(OFS_PARM1) > strlen(s))
-		return;
-	PRVM_G_FLOAT(OFS_RETURN) = (unsigned char)s[(int)PRVM_G_FLOAT(OFS_PARM1)];
+	if((unsigned)PRVM_G_FLOAT(OFS_PARM1) < strlen(s))
+		PRVM_G_FLOAT(OFS_RETURN) = (unsigned char)s[(unsigned)PRVM_G_FLOAT(OFS_PARM1)];
+	else
+		PRVM_G_FLOAT(OFS_RETURN) = 0;
 }
 
 //#223 string(float c, ...) chr2str (FTE_STRINGS)
