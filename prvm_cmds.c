@@ -3772,6 +3772,30 @@ void VM_uncolorstring (void)
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(out);
 }
 
+// #221 float(string str, string sub[, float startpos]) strstrofs (FTE_STRINGS)
+//strstr, without generating a new string. Use in conjunction with FRIK_FILE's substring for more similar strstr.
+void VM_strstrofs (void)
+{
+	const char *instr, *match;
+	int firstofs;
+	VM_SAFEPARMCOUNTRANGE(2, 3, VM_strstrofs);
+	instr = PRVM_G_STRING(OFS_PARM0);
+	match = PRVM_G_STRING(OFS_PARM1);
+	firstofs = (prog->argc > 2)?PRVM_G_FLOAT(OFS_PARM2):0;
+
+	if (firstofs && (firstofs < 0 || firstofs > (int)strlen(instr)))
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -1;
+		return;
+	}
+
+	match = strstr(instr+firstofs, match);
+	if (!match)
+		PRVM_G_FLOAT(OFS_RETURN) = -1;
+	else
+		PRVM_G_FLOAT(OFS_RETURN) = match - instr;
+}
+
 //#222 string(string s, float index) str2chr (FTE_STRINGS)
 void VM_str2chr (void)
 {
@@ -3795,14 +3819,250 @@ void VM_chr2str (void)
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(t);
 }
 
+static int chrconv_number(int i, int base, int conv)
+{
+	i -= base;
+	switch (conv)
+	{
+	default:
+	case 5:
+	case 6:
+	case 0:
+		break;
+	case 1:
+		base = '0';
+		break;
+	case 2:
+		base = '0'+128;
+		break;
+	case 3:
+		base = '0'-30;
+		break;
+	case 4:
+		base = '0'+128-30;
+		break;
+	}
+	return i + base;
+}
+static int chrconv_punct(int i, int base, int conv)
+{
+	i -= base;
+	switch (conv)
+	{
+	default:
+	case 0:
+		break;
+	case 1:
+		base = 0;
+		break;
+	case 2:
+		base = 128;
+		break;
+	}
+	return i + base;
+}
+
+static int chrchar_alpha(int i, int basec, int baset, int convc, int convt, int charnum)
+{
+	//convert case and colour seperatly...
+
+	i -= baset + basec;
+	switch (convt)
+	{
+	default:
+	case 0:
+		break;
+	case 1:
+		baset = 0;
+		break;
+	case 2:
+		baset = 128;
+		break;
+
+	case 5:
+	case 6:
+		baset = 128*((charnum&1) == (convt-5));
+		break;
+	}
+
+	switch (convc)
+	{
+	default:
+	case 0:
+		break;
+	case 1:
+		basec = 'a';
+		break;
+	case 2:
+		basec = 'A';
+		break;
+	}
+	return i + basec + baset;
+}
+// #224 string(float ccase, float calpha, float cnum, string s, ...) strconv (FTE_STRINGS)
+//bulk convert a string. change case or colouring.
+void VM_strconv (void)
+{
+	int ccase, redalpha, rednum, len, i;
+	unsigned char resbuf[VM_STRINGTEMP_LENGTH];
+	unsigned char *result = resbuf;
+
+	VM_SAFEPARMCOUNTRANGE(3, 8, VM_strconv);
+
+	ccase = PRVM_G_FLOAT(OFS_PARM0);	//0 same, 1 lower, 2 upper
+	redalpha = PRVM_G_FLOAT(OFS_PARM1);	//0 same, 1 white, 2 red,  5 alternate, 6 alternate-alternate
+	rednum = PRVM_G_FLOAT(OFS_PARM2);	//0 same, 1 white, 2 red, 3 redspecial, 4 whitespecial, 5 alternate, 6 alternate-alternate
+	VM_VarString(3, (char *) resbuf, sizeof(resbuf));
+	len = strlen((char *) resbuf);
+
+	for (i = 0; i < len; i++, result++)	//should this be done backwards?
+	{
+		if (*result >= '0' && *result <= '9')	//normal numbers...
+			*result = chrconv_number(*result, '0', rednum);
+		else if (*result >= '0'+128 && *result <= '9'+128)
+			*result = chrconv_number(*result, '0'+128, rednum);
+		else if (*result >= '0'+128-30 && *result <= '9'+128-30)
+			*result = chrconv_number(*result, '0'+128-30, rednum);
+		else if (*result >= '0'-30 && *result <= '9'-30)
+			*result = chrconv_number(*result, '0'-30, rednum);
+
+		else if (*result >= 'a' && *result <= 'z')	//normal numbers...
+			*result = chrchar_alpha(*result, 'a', 0, ccase, redalpha, i);
+		else if (*result >= 'A' && *result <= 'Z')	//normal numbers...
+			*result = chrchar_alpha(*result, 'A', 0, ccase, redalpha, i);
+		else if (*result >= 'a'+128 && *result <= 'z'+128)	//normal numbers...
+			*result = chrchar_alpha(*result, 'a', 128, ccase, redalpha, i);
+		else if (*result >= 'A'+128 && *result <= 'Z'+128)	//normal numbers...
+			*result = chrchar_alpha(*result, 'A', 128, ccase, redalpha, i);
+
+		else if ((*result & 127) < 16 || !redalpha)	//special chars..
+			*result = *result;
+		else if (*result < 128)
+			*result = chrconv_punct(*result, 0, redalpha);
+		else
+			*result = chrconv_punct(*result, 128, redalpha);
+	}
+	*result = '\0';
+
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString((char *) resbuf);
+}
+
+// #225 string(float chars, string s, ...) strpad (FTE_STRINGS)
+void VM_strpad (void)
+{
+	char src[VM_STRINGTEMP_LENGTH];
+	char destbuf[VM_STRINGTEMP_LENGTH];
+	char *dest = destbuf;
+	int pad;
+	VM_SAFEPARMCOUNTRANGE(1, 8, VM_strpad);
+	pad = PRVM_G_FLOAT(OFS_PARM0);
+	VM_VarString(1, src, sizeof(src));
+
+	if (pad < 0)
+	{	//pad left
+		pad = -pad - strlen(src);
+		if (pad>=VM_STRINGTEMP_LENGTH)
+			pad = VM_STRINGTEMP_LENGTH-1;
+		if (pad < 0)
+			pad = 0;
+
+		strlcpy(dest+pad, src, VM_STRINGTEMP_LENGTH-pad);
+		while(pad--)
+		{
+			pad--;
+			dest[pad] = ' ';
+		}
+	}
+	else
+	{	//pad right
+		if (pad>=VM_STRINGTEMP_LENGTH)
+			pad = VM_STRINGTEMP_LENGTH-1;
+		pad -= strlen(src);
+		if (pad < 0)
+			pad = 0;
+
+		strlcpy(dest, src, VM_STRINGTEMP_LENGTH);
+		dest+=strlen(dest);
+
+		while(pad-->0)
+			*dest++ = ' ';
+		*dest = '\0';
+	}
+
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(destbuf);
+}
+
+// #226 string(string info, string key, string value, ...) infoadd (FTE_STRINGS)
+//uses qw style \key\value strings
+void VM_infoadd (void)
+{
+	const char *info, *key;
+	char value[VM_STRINGTEMP_LENGTH];
+	char temp[VM_STRINGTEMP_LENGTH];
+
+	VM_SAFEPARMCOUNTRANGE(2, 8, VM_infoadd);
+	info = PRVM_G_STRING(OFS_PARM0);
+	key = PRVM_G_STRING(OFS_PARM1);
+	VM_VarString(2, value, sizeof(value));
+
+	strlcpy(temp, info, VM_STRINGTEMP_LENGTH);
+
+	InfoString_SetValue(temp, VM_STRINGTEMP_LENGTH, key, value);
+
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(temp);
+}
+
+// #227 string(string info, string key) infoget (FTE_STRINGS)
+//uses qw style \key\value strings
+void VM_infoget (void)
+{
+	const char *info;
+	const char *key;
+	char value[VM_STRINGTEMP_LENGTH];
+
+	VM_SAFEPARMCOUNT(2, VM_infoget);
+	info = PRVM_G_STRING(OFS_PARM0);
+	key = PRVM_G_STRING(OFS_PARM1);
+
+	InfoString_GetValue(info, key, value, VM_STRINGTEMP_LENGTH);
+
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(value);
+}
+
 //#228 float(string s1, string s2, float len) strncmp (FTE_STRINGS)
+// also float(string s1, string s2) strcmp (FRIK_FILE)
 void VM_strncmp (void)
 {
 	const char *s1, *s2;
-	VM_SAFEPARMCOUNT(3, VM_strncmp);
+	VM_SAFEPARMCOUNTRANGE(2, 3, VM_strncmp);
 	s1 = PRVM_G_STRING(OFS_PARM0);
 	s2 = PRVM_G_STRING(OFS_PARM1);
-	PRVM_G_FLOAT(OFS_RETURN) = strncmp(s1, s2, (size_t)PRVM_G_FLOAT(OFS_PARM2));
+	if (prog->argc > 2)
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = strncmp(s1, s2, (size_t)PRVM_G_FLOAT(OFS_PARM2));
+	}
+	else
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = strcmp(s1, s2);
+	}
+}
+
+// #229 float(string s1, string s2) strcasecmp (FTE_STRINGS)
+// #230 float(string s1, string s2, float len) strncasecmp (FTE_STRINGS)
+void VM_strncasecmp (void)
+{
+	const char *s1, *s2;
+	VM_SAFEPARMCOUNTRANGE(2, 3, VM_strncasecmp);
+	s1 = PRVM_G_STRING(OFS_PARM0);
+	s2 = PRVM_G_STRING(OFS_PARM1);
+	if (prog->argc > 2)
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = strncasecmp(s1, s2, (size_t)PRVM_G_FLOAT(OFS_PARM2));
+	}
+	else
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = strcasecmp(s1, s2);
+	}
 }
 
 void VM_wasfreed (void)
