@@ -611,21 +611,6 @@ typedef struct RecursiveHullCheckTraceInfo_s
 }
 RecursiveHullCheckTraceInfo_t;
 
-typedef struct RecursiveHullCheckTraceInfo_s
-{
-	// the hull we're tracing through
-	const hull_t *hull;
-
-	// the trace structure to fill in
-	trace_t *trace;
-
-	// start, end, and end - start (in model space)
-	double start[3];
-	double end[3];
-	double dist[3];
-}
-RecursiveHullCheckTraceInfo_t;
-
 // 1/32 epsilon to keep floating point happy
 #define DIST_EPSILON (0.03125)
 
