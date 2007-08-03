@@ -2214,7 +2214,7 @@ void EntityFrame5_LostFrame(entityframe5_database_t *d, int framenum)
 				{
 					d->deltabits[s->number] |= bits;
 					// if it was a very important update, set priority higher
-					if (bits & (E5_FULLUPDATE | E5_ATTACHMENT | E5_MODEL || E5_COLORMAP))
+					if (bits & (E5_FULLUPDATE | E5_ATTACHMENT | E5_MODEL | E5_COLORMAP))
 						d->priorities[s->number] = max(d->priorities[s->number], 4);
 					else
 						d->priorities[s->number] = max(d->priorities[s->number], 1);
