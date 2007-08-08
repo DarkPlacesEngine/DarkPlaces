@@ -246,7 +246,8 @@ OBJ_WINCD=cd_win.o
 OBJ_WGL= builddate.c sys_win.o vid_wgl.o conproc.o $(OBJ_SND_WIN) $(OBJ_WINCD) $(OBJ_COMMON)
 
 # Link
-LDFLAGS_WINCOMMON=-lwinmm -lwsock32
+# Note that Windows Vista users may need --large-address-aware because Vista seems to map over 500MB of application address space for its own purposes, which is a significant chunk taken out of the default 2GB address space, this option raises the limit to 4GB (or 3GB on Vista 32 and older versions of Windows).
+LDFLAGS_WINCOMMON=-lwinmm -lwsock32 -Wl,--large-address-aware
 LDFLAGS_WINCL=$(LDFLAGS_WINCOMMON) -mwindows -luser32 -lgdi32 -ldxguid -ldinput -lcomctl32
 LDFLAGS_WINSV=$(LDFLAGS_WINCOMMON) -mconsole
 LDFLAGS_WINSDL=$(LDFLAGS_WINCOMMON) `$(SDL_CONFIG) --libs`
