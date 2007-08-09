@@ -1144,6 +1144,11 @@ void R_ReplaceWorldTexture (void)
 	int			i;
 	const char	*r, *newt;
 	skinframe_t *skinframe;
+	if (!r_refdef.worldmodel)
+	{
+		Con_Printf("There is no worldmodel\n");
+		return;
+	}
 	m = r_refdef.worldmodel;
 
 	if(Cmd_Argc() < 2)
@@ -1186,6 +1191,11 @@ void R_ListWorldTextures (void)
 	model_t		*m;
 	texture_t	*t;
 	int			i;
+	if (!r_refdef.worldmodel)
+	{
+		Con_Printf("There is no worldmodel\n");
+		return;
+	}
 	m = r_refdef.worldmodel;
 
 	Con_Print("Worldmodel textures :\n");
