@@ -863,12 +863,14 @@ void Sbar_DrawInventory (void)
 	// ammo counts
 	for (i=0 ; i<4 ; i++)
 	{
-		sprintf (num, "%3i",cl.stats[STAT_SHELLS+i] );
+		sprintf (num, "%4i",cl.stats[STAT_SHELLS+i] );
 		if (num[0] != ' ')
-			Sbar_DrawCharacter ( (6*i+1)*8 - 2, -24, 18 + num[0] - '0');
+			Sbar_DrawCharacter ( (6*i+0)*8 - 2, -24, 18 + num[0] - '0');
 		if (num[1] != ' ')
-			Sbar_DrawCharacter ( (6*i+2)*8 - 2, -24, 18 + num[1] - '0');
+			Sbar_DrawCharacter ( (6*i+1)*8 - 2, -24, 18 + num[1] - '0');
 		if (num[2] != ' ')
+			Sbar_DrawCharacter ( (6*i+2)*8 - 2, -24, 18 + num[2] - '0');
+		if (num[3] != ' ')
 			Sbar_DrawCharacter ( (6*i+3)*8 - 2, -24, 18 + num[2] - '0');
 	}
 
