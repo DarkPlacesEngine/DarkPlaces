@@ -1635,30 +1635,25 @@ void CL_ValidateState(entity_state_t *s)
 	if (s->modelindex >= MAX_MODELS)
 		Host_Error("CL_ValidateState: modelindex (%i) >= MAX_MODELS (%i)\n", s->modelindex, MAX_MODELS);
 
+	// these warnings are only warnings, no corrections are made to the state
+	// because states are often copied for decoding, which otherwise would
+	// propogate some of the corrections accidentally
+	// (this used to happen, sometimes affecting skin and frame)
+
 	// colormap is client index + 1
 	if ((!s->flags & RENDER_COLORMAPPED) && s->colormap > cl.maxclients)
-	{
 		Con_DPrintf("CL_ValidateState: colormap (%i) > cl.maxclients (%i)\n", s->colormap, cl.maxclients);
-		s->colormap = 0;
-	}
 
 	model = cl.model_precache[s->modelindex];
 	if (model && model->type && s->frame >= model->numframes)
-	{
 		Con_DPrintf("CL_ValidateState: no such frame %i in \"%s\" (which has %i frames)\n", s->frame, model->name, model->numframes);
-		s->frame = 0;
-	}
 	if (model && model->type && s->skin > 0 && s->skin >= model->numskins && !(s->lightpflags & PFLAGS_FULLDYNAMIC))
-	{
 		Con_DPrintf("CL_ValidateState: no such skin %i in \"%s\" (which has %i skins)\n", s->skin, model->name, model->numskins);
-		s->skin = 0;
-	}
 }
 
 void CL_MoveLerpEntityStates(entity_t *ent)
 {
 	float odelta[3], adelta[3];
-	CL_ValidateState(&ent->state_current);
 	VectorSubtract(ent->state_current.origin, ent->persistent.neworigin, odelta);
 	VectorSubtract(ent->state_current.angles, ent->persistent.newangles, adelta);
 	if (!ent->state_previous.active || ent->state_previous.modelindex != ent->state_current.modelindex)

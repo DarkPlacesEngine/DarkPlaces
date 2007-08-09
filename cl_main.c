@@ -834,7 +834,7 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 {
 	const matrix4x4_t *matrix;
 	matrix4x4_t blendmatrix, tempmatrix, matrix2;
-	int j, k, l;
+	int j, k, l, frame;
 	float origin[3], angles[3], delta[3], lerp, d;
 	entity_t *t;
 	model_t *model;
@@ -867,7 +867,7 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 		e->render.colormap_shirtcolor[1] = cbcolor[1] * (1.0f / 255.0f);
 		e->render.colormap_shirtcolor[2] = cbcolor[2] * (1.0f / 255.0f);
 	}
-	else if (e->state_current.colormap && cl.scores != NULL)
+	else if (e->state_current.colormap && cl.scores != NULL && e->state_current.colormap <= cl.maxclients)
 	{
 		int cb;
 		unsigned char *cbcolor;
@@ -977,10 +977,17 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 	}
 
 	// model setup and some modelflags
-	if(e->state_current.modelindex < MAX_MODELS)
+	frame = e->state_current.frame;
+	if (e->state_current.modelindex < MAX_MODELS)
 		e->render.model = cl.model_precache[e->state_current.modelindex];
+	else
+		e->render.model = NULL;
 	if (e->render.model)
 	{
+		if (e->render.skinnum >= e->render.model->numskins)
+			e->render.skinnum = 0;
+		if (frame >= e->render.model->numframes)
+			frame = 0;
 		// models can set flags such as EF_ROCKET
 		// this 0xFF800000 mask is EF_NOMODELFLAGS plus all the higher EF_ flags such as EF_ROCKET
 		if (!(e->render.effects & 0xFF800000))
@@ -1003,7 +1010,7 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 	}
 
 	// animation lerp
-	if (e->render.frame2 == e->state_current.frame)
+	if (e->render.frame2 == frame)
 	{
 		// update frame lerp fraction
 		e->render.framelerp = 1;
@@ -1021,7 +1028,7 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 		// begin a new frame lerp
 		e->render.frame1 = e->render.frame2;
 		e->render.frame1time = e->render.frame2time;
-		e->render.frame2 = e->state_current.frame;
+		e->render.frame2 = frame;
 		e->render.frame2time = cl.time;
 		e->render.framelerp = 0;
 	}
