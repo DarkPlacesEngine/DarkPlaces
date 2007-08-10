@@ -527,7 +527,7 @@ void V_CalcViewBlend(void)
 	r_refdef.viewblend[3] = 0;
 	r_refdef.frustumscale_x = 1;
 	r_refdef.frustumscale_y = 1;
-	if (cls.state == ca_connected && cls.signon == SIGNONS && gl_polyblend.value > 0)
+	if (cls.state == ca_connected && cls.signon == SIGNONS)
 	{
 		// set contents color
 		int supercontents;
