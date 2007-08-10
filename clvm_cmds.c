@@ -1060,6 +1060,9 @@ static void VM_CL_getplayerkey (void)
 		if(!strcasecmp(c, "ping"))
 			sprintf(t, "%i", cl.scores[i].qw_ping);
 	else
+		if(!strcasecmp(c, "pl"))
+			sprintf(t, "%i", cl.scores[i].qw_packetloss);
+	else
 		if(!strcasecmp(c, "entertime"))
 			sprintf(t, "%f", cl.scores[i].qw_entertime);
 	else
