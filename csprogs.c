@@ -409,6 +409,43 @@ void CL_VM_UpdateIntermissionState (int intermission)
 		CSQC_END
 	}
 }
+void CL_VM_UpdateCoopDeathmatchGlobals (int gametype)
+{
+	// Avoid global names for clean(er) coding
+	int localcoop;
+	int localdeathmatch;
+
+	prvm_eval_t *val;
+	if(cl.csqc_loaded)
+	{
+		if(gametype == GAME_COOP)
+		{
+			localcoop = 1;
+			localdeathmatch = 0;
+		}
+		else
+		if(gametype == GAME_DEATHMATCH)
+		{
+			localcoop = 0;
+			localdeathmatch = 1;
+		}
+		else
+		{
+			// How did the ServerInfo send an unknown gametype?
+			// Better just assign the globals as 0...
+			localcoop = 0;
+			localdeathmatch = 0;
+		}
+		CSQC_BEGIN
+		val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.coop);
+		if(val)
+			val->_float = localcoop;
+		val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.deathmatch);
+		if(val)
+			val->_float = localdeathmatch;
+		CSQC_END
+	}
+}
 
 float CL_VM_Event (float event)		//[515]: needed ? I'd say "YES", but don't know for what :D
 {
@@ -660,6 +697,9 @@ void CL_VM_Init (void)
 
 	cl.csqc_vidvars.drawcrosshair = false;
 	cl.csqc_vidvars.drawenginesbar = false;
+
+	// Update Coop and Deathmatch Globals (at this point the client knows them from ServerInfo)
+	CL_VM_UpdateCoopDeathmatchGlobals(cl.gametype);
 }
 
 void CL_VM_ShutDown (void)
