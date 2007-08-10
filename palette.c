@@ -1,6 +1,8 @@
 
 #include "quakedef.h"
 
+cvar_t r_colormap_palette = {0, "r_colormap_palette", "gfx/colormap_palette.lmp", "name of a palette lmp file to override the shirt/pants colors of player models. It consists of 16 shirt colors, 16 scoreboard shirt colors, 16 pants colors and 16 scoreboard pants colors"};
+
 unsigned int palette_complete[256];
 unsigned int palette_font[256];
 unsigned int palette_alpha[256];
@@ -11,6 +13,10 @@ unsigned int palette_onlyfullbrights[256];
 unsigned int palette_pantsaswhite[256];
 unsigned int palette_shirtaswhite[256];
 unsigned int palette_transparent[256];
+unsigned int palette_pantscolormap[16];
+unsigned int palette_shirtcolormap[16];
+unsigned int palette_pantsscoreboard[16];
+unsigned int palette_shirtscoreboard[16];
 
 // John Carmack said the quake palette.lmp can be considered public domain because it is not an important asset to id, so I include it here as a fallback if no external palette file is found.
 unsigned char host_quakepal[768] =
@@ -180,7 +186,15 @@ void BuildGammaTable16(float prescale, float gamma, float scale, float base, uns
 	}
 }
 
-void Palette_Init(void)
+void Palette_Shutdown(void)
+{
+}
+
+void Palette_NewMap(void)
+{
+}
+
+void Palette_Load(void)
 {
 	int i;
 	float gamma, scale, base;
@@ -228,6 +242,79 @@ void Palette_Init(void)
 	if (palfile)
 		Mem_Free(palfile);
 
+if(*r_colormap_palette.string)
+	palfile = (unsigned char *)FS_LoadFile (r_colormap_palette.string, tempmempool, false, &filesize);
+else
+	palfile = NULL;
+
+in = palfile;
+if (palfile && filesize >= 48)
+{
+	out = (unsigned char *) palette_shirtcolormap;
+	for (i = 0;i < 16;i++)
+	{
+		*out++ = texturegammaramp[*in++];
+		*out++ = texturegammaramp[*in++];
+		*out++ = texturegammaramp[*in++];
+		*out++ = 255;
+	}
+}
+else
+	for(i = 0; i < 16; ++i)
+		palette_shirtcolormap[i] = palette_complete[(i << 4) | ((i >= 8 && i <= 13) ? 0x04 : 0x0C)];
+
+if(palfile && filesize >= 48 + 48)
+{
+	out = (unsigned char *) palette_shirtscoreboard;
+	for (i = 0;i < 16;i++)
+	{
+		*out++ = texturegammaramp[*in++];
+		*out++ = texturegammaramp[*in++];
+		*out++ = texturegammaramp[*in++];
+		*out++ = 255;
+	}
+}
+else
+	for(i = 0; i < 16; ++i)
+		palette_shirtscoreboard[i] = palette_complete[(i << 4) | 0x08];
+
+if (palfile && filesize >= 48 + 48 + 48)
+{
+	out = (unsigned char *) palette_pantscolormap;
+	for (i = 0;i < 16;i++)
+	{
+		*out++ = texturegammaramp[*in++];
+		*out++ = texturegammaramp[*in++];
+		*out++ = texturegammaramp[*in++];
+		*out++ = 255;
+	}
+}
+else
+	memcpy(palette_pantscolormap, palette_shirtcolormap, sizeof(palette_pantscolormap));
+
+if (palfile && filesize >= 48 + 48 + 48 + 48)
+{
+	out = (unsigned char *) palette_pantsscoreboard;
+	for (i = 0;i < 16;i++)
+	{
+		*out++ = texturegammaramp[*in++];
+		*out++ = texturegammaramp[*in++];
+		*out++ = texturegammaramp[*in++];
+		*out++ = 255;
+	}
+}
+else
+	memcpy(palette_pantsscoreboard, palette_shirtscoreboard, sizeof(palette_pantsscoreboard));
+
+if(palfile)
+	Mem_Free(palfile);
+
 	Palette_SetupSpecialPalettes();
 }
 
+void Palette_Init(void)
+{
+	R_RegisterModule("Palette", Palette_Load, Palette_Shutdown, Palette_NewMap);
+	Cvar_RegisterVariable(&r_colormap_palette);
+	Palette_Load();
+}

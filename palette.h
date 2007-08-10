@@ -12,6 +12,10 @@ extern unsigned int palette_onlyfullbrights[256];
 extern unsigned int palette_pantsaswhite[256];
 extern unsigned int palette_shirtaswhite[256];
 extern unsigned int palette_transparent[256];
+extern unsigned int palette_pantscolormap[16];
+extern unsigned int palette_shirtcolormap[16];
+extern unsigned int palette_pantsscoreboard[16];
+extern unsigned int palette_shirtscoreboard[16];
 
 // used by hardware gamma functions in vid_* files
 void BuildGammaTable8(float prescale, float gamma, float scale, float base, unsigned char *out, int rampsize);

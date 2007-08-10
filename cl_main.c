@@ -853,32 +853,26 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 	e->render.entitynumber = e - cl.entities;
 	if (e->state_current.flags & RENDER_COLORMAPPED)
 	{
-		int cb;
 		unsigned char *cbcolor;
 		e->render.colormap = e->state_current.colormap;
-		cb = (e->render.colormap & 0xF) << 4;cb += (cb >= 128 && cb < 224) ? 4 : 12;
-		cbcolor = (unsigned char *) (&palette_complete[cb]);
+		cbcolor = (unsigned char *) (&palette_pantscolormap[e->render.colormap & 0xF]);
 		e->render.colormap_pantscolor[0] = cbcolor[0] * (1.0f / 255.0f);
 		e->render.colormap_pantscolor[1] = cbcolor[1] * (1.0f / 255.0f);
 		e->render.colormap_pantscolor[2] = cbcolor[2] * (1.0f / 255.0f);
-		cb = (e->render.colormap & 0xF0);cb += (cb >= 128 && cb < 224) ? 4 : 12;
-		cbcolor = (unsigned char *) (&palette_complete[cb]);
+		cbcolor = (unsigned char *) (&palette_shirtcolormap[(e->render.colormap & 0xF0) >> 4]);
 		e->render.colormap_shirtcolor[0] = cbcolor[0] * (1.0f / 255.0f);
 		e->render.colormap_shirtcolor[1] = cbcolor[1] * (1.0f / 255.0f);
 		e->render.colormap_shirtcolor[2] = cbcolor[2] * (1.0f / 255.0f);
 	}
 	else if (e->state_current.colormap && cl.scores != NULL && e->state_current.colormap <= cl.maxclients)
 	{
-		int cb;
 		unsigned char *cbcolor;
 		e->render.colormap = cl.scores[e->state_current.colormap - 1].colors; // color it
-		cb = (e->render.colormap & 0xF) << 4;cb += (cb >= 128 && cb < 224) ? 4 : 12;
-		cbcolor = (unsigned char *) (&palette_complete[cb]);
+		cbcolor = (unsigned char *) (&palette_pantscolormap[e->render.colormap & 0xF]);
 		e->render.colormap_pantscolor[0] = cbcolor[0] * (1.0f / 255.0f);
 		e->render.colormap_pantscolor[1] = cbcolor[1] * (1.0f / 255.0f);
 		e->render.colormap_pantscolor[2] = cbcolor[2] * (1.0f / 255.0f);
-		cb = (e->render.colormap & 0xF0);cb += (cb >= 128 && cb < 224) ? 4 : 12;
-		cbcolor = (unsigned char *) (&palette_complete[cb]);
+		cbcolor = (unsigned char *) (&palette_shirtcolormap[(e->render.colormap & 0xF0) >> 4]);
 		e->render.colormap_shirtcolor[0] = cbcolor[0] * (1.0f / 255.0f);
 		e->render.colormap_shirtcolor[1] = cbcolor[1] * (1.0f / 255.0f);
 		e->render.colormap_shirtcolor[2] = cbcolor[2] * (1.0f / 255.0f);
