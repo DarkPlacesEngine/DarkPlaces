@@ -237,6 +237,8 @@ typedef struct prvm_prog_globaloffsets_s
 	int trace_dphittexturename; // ssqc / csqc
 	int trace_dpstartcontents; // ssqc / csqc
 	int intermission; // csqc
+	int coop; // csqc
+	int deathmatch; // csqc
 }
 prvm_prog_globaloffsets_t;
 
