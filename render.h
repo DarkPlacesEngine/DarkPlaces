@@ -175,6 +175,7 @@ extern cvar_t r_test;
 
 extern rtexture_t *r_texture_blanknormalmap;
 extern rtexture_t *r_texture_white;
+extern rtexture_t *r_texture_grey128;
 extern rtexture_t *r_texture_black;
 extern rtexture_t *r_texture_notexture;
 extern rtexture_t *r_texture_whitecube;
