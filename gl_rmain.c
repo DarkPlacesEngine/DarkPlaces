@@ -3484,6 +3484,7 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 					// q3bsp has no lightmap updates, so the lightstylevalue that
 					// would normally be baked into the lightmap must be
 					// applied to the color
+					// FIXME: r_glsl 1 rendering doesn't support overbright lightstyles with this (the default light style is not overbright)
 					if (ent->model->type == mod_brushq3)
 						colorscale *= r_refdef.lightstylevalue[0] * (1.0f / 256.0f);
 					colorscale *= r_refdef.lightmapintensity;
