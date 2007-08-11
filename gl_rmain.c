@@ -143,6 +143,7 @@ svbsp_t r_svbsp;
 
 rtexture_t *r_texture_blanknormalmap;
 rtexture_t *r_texture_white;
+rtexture_t *r_texture_grey128;
 rtexture_t *r_texture_black;
 rtexture_t *r_texture_notexture;
 rtexture_t *r_texture_whitecube;
@@ -235,6 +236,11 @@ static void R_BuildBlankTextures(void)
 	data[2] = 255;
 	data[3] = 255;
 	r_texture_white = R_LoadTexture2D(r_main_texturepool, "blankwhite", 1, 1, data, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
+	data[0] = 128;
+	data[1] = 128;
+	data[2] = 128;
+	data[3] = 255;
+	r_texture_grey128 = R_LoadTexture2D(r_main_texturepool, "blankgrey128", 1, 1, data, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
 	data[0] = 0;
 	data[1] = 0;
 	data[2] = 0;
@@ -1479,6 +1485,7 @@ void gl_main_shutdown(void)
 	R_FreeTexturePool(&r_main_texturepool);
 	r_texture_blanknormalmap = NULL;
 	r_texture_white = NULL;
+	r_texture_grey128 = NULL;
 	r_texture_black = NULL;
 	r_texture_whitecube = NULL;
 	r_texture_normalizationcube = NULL;
@@ -4676,7 +4683,7 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, msurface_t **t
 	GL_Color(rsurface.texture->currentlayers[0].color[0], rsurface.texture->currentlayers[0].color[1], rsurface.texture->currentlayers[0].color[2], rsurface.texture->currentlayers[0].color[3]);
 	if (rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
 	{
-		R_Mesh_TexBind(7, R_GetTexture(r_texture_white));
+		R_Mesh_TexBind(7, R_GetTexture(r_texture_grey128));
 		if (r_glsl_permutation->loc_Texture_Deluxemap >= 0)
 			R_Mesh_TexBind(8, R_GetTexture(r_texture_blanknormalmap));
 		R_Mesh_ColorPointer(NULL, 0, 0);
