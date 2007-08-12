@@ -130,7 +130,7 @@ static void VM_CL_sound (void)
 	const char			*sample;
 	int					channel;
 	prvm_edict_t		*entity;
-	int 				volume;
+	float 				volume;
 	float				attenuation;
 
 	VM_SAFEPARMCOUNT(5, VM_CL_sound);
@@ -138,10 +138,10 @@ static void VM_CL_sound (void)
 	entity = PRVM_G_EDICT(OFS_PARM0);
 	channel = (int)PRVM_G_FLOAT(OFS_PARM1);
 	sample = PRVM_G_STRING(OFS_PARM2);
-	volume = (int)(PRVM_G_FLOAT(OFS_PARM3)*255.0f);
+	volume = PRVM_G_FLOAT(OFS_PARM3);
 	attenuation = PRVM_G_FLOAT(OFS_PARM4);
 
-	if (volume < 0 || volume > 255)
+	if (volume < 0 || volume > 1)
 	{
 		VM_Warning("VM_CL_sound: volume must be in range 0-1\n");
 		return;
