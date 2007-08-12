@@ -1100,6 +1100,7 @@ SND_Spatialize
 Spatializes a channel
 =================
 */
+extern cvar_t cl_gameplayfix_soundsmovewithentities;
 void SND_Spatialize(channel_t *ch, qboolean isstatic)
 {
 	int i;
@@ -1107,7 +1108,7 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 	vec3_t source_vec;
 
 	// update sound origin if we know about the entity
-	if (ch->entnum > 0 && cls.state == ca_connected)
+	if (ch->entnum > 0 && cls.state == ca_connected && cl_gameplayfix_soundsmovewithentities.integer)
 	{
 		if (ch->entnum >= 32768)
 		{
