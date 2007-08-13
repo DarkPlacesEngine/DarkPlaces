@@ -22,6 +22,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "cl_collision.h"
 
+void CL_VM_UpdateDmgGlobals (int dmg_take, int dmg_save, vec3_t dmg_origin);
+
 /*
 
 The view is allowed to move slightly from it's true position for bobbing,
@@ -225,6 +227,9 @@ void V_ParseDamage (void)
 	armor = MSG_ReadByte ();
 	blood = MSG_ReadByte ();
 	MSG_ReadVector(from, cls.protocol);
+
+	// Send the Dmg Globals to CSQC
+	CL_VM_UpdateDmgGlobals(blood, armor, from);
 
 	count = blood*0.5 + armor*0.5;
 	if (count < 10)

@@ -44,7 +44,28 @@ void CL_VM_Error (const char *format, ...)	//[515]: hope it will be never execut
 //	Host_AbortCurrentFrame();	//[515]: hmmm... if server says it needs csqc then client MUST disconnect
 	Host_Error(va("CL_VM_Error: %s", errorstring));
 }
-
+void CL_VM_UpdateDmgGlobals (int dmg_take, int dmg_save, vec3_t dmg_origin)
+{
+	prvm_eval_t *val;
+	if(cl.csqc_loaded)
+	{
+		CSQC_BEGIN
+		val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.dmg_take);
+		if(val)
+			val->_float = dmg_take;
+		val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.dmg_save);
+		if(val)
+			val->_float = dmg_save;
+		val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.dmg_origin);
+		if(val)
+		{
+			val->vector[0] = dmg_origin[0];
+			val->vector[1] = dmg_origin[1];
+			val->vector[2] = dmg_origin[2];
+		}
+		CSQC_END
+	}
+}
 //[515]: set globals before calling R_UpdateView, WEIRD CRAP
 static void CSQC_SetGlobals (void)
 {
@@ -232,6 +253,10 @@ qboolean CL_VM_InputEvent (qboolean pressed, int key)
 
 qboolean CL_VM_UpdateView (void)
 {
+	vec3_t emptyvector;
+	emptyvector[0] = 0;
+	emptyvector[1] = 0;
+	emptyvector[2] = 0;
 //	vec3_t oldangles;
 	if(!cl.csqc_loaded)
 		return false;
@@ -245,6 +270,8 @@ qboolean CL_VM_UpdateView (void)
 		r_refdef.numlights = 0;
 		PRVM_ExecuteProgram(prog->funcoffsets.CSQC_UpdateView, "QC function CSQC_UpdateView is missing");
 		//VectorCopy(oldangles, cl.viewangles);
+		// Dresk : Reset Dmg Globals Here
+		CL_VM_UpdateDmgGlobals(0, 0, emptyvector);
 	CSQC_END
 	return true;
 }
@@ -446,7 +473,6 @@ void CL_VM_UpdateCoopDeathmatchGlobals (int gametype)
 		CSQC_END
 	}
 }
-
 float CL_VM_Event (float event)		//[515]: needed ? I'd say "YES", but don't know for what :D
 {
 	float r = 0;

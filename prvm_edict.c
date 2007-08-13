@@ -1443,6 +1443,9 @@ void PRVM_FindOffsets(void)
 	prog->globaloffsets.intermission                  = PRVM_ED_FindGlobalOffset("intermission");
 	prog->globaloffsets.coop                          = PRVM_ED_FindGlobalOffset("coop");
 	prog->globaloffsets.deathmatch                    = PRVM_ED_FindGlobalOffset("deathmatch");
+	prog->globaloffsets.dmg_take                      = PRVM_ED_FindGlobalOffset("dmg_take");
+	prog->globaloffsets.dmg_save                      = PRVM_ED_FindGlobalOffset("dmg_save");
+	prog->globaloffsets.dmg_origin                    = PRVM_ED_FindGlobalOffset("dmg_origin");
 
 	// menu qc only uses some functions, nothing else
 	prog->funcoffsets.m_display                       = PRVM_ED_FindFunctionOffset("m_display");
