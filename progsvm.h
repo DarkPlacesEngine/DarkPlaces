@@ -239,6 +239,10 @@ typedef struct prvm_prog_globaloffsets_s
 	int intermission; // csqc
 	int coop; // csqc
 	int deathmatch; // csqc
+	int dmg_take; // csqc
+	int dmg_save; // csqc
+	int dmg_origin; // csqc
+	
 }
 prvm_prog_globaloffsets_t;
 
