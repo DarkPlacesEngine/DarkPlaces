@@ -1284,18 +1284,30 @@ void PRVM_ED_LoadFromFile (const char *data)
 
 			if (!func)
 			{
-				if (developer.integer) // don't confuse non-developers with errors
+				// check for OnEntityNoSpawnFunction
+				if (prog->funcoffsets.SV_OnEntityNoSpawnFunction)
 				{
-					Con_Print("No spawn function for:\n");
-					PRVM_ED_Print(ent, NULL);
+					// self = ent
+					PRVM_GLOBALFIELDVALUE(prog->globaloffsets.self)->edict = PRVM_EDICT_TO_PROG(ent);
+					PRVM_ExecuteProgram (prog->funcoffsets.SV_OnEntityNoSpawnFunction, "QC function SV_OnEntityNoSpawnFunction is missing");
 				}
-				PRVM_ED_Free (ent);
-				continue;
+				else
+				{
+					if (developer.integer) // don't confuse non-developers with errors
+					{
+						Con_Print("No spawn function for:\n");
+						PRVM_ED_Print(ent, NULL);
+					}
+					PRVM_ED_Free (ent);
+					continue;
+				}
 			}
-
-			// self = ent
-			PRVM_GLOBALFIELDVALUE(prog->globaloffsets.self)->edict = PRVM_EDICT_TO_PROG(ent);
-			PRVM_ExecuteProgram (func - prog->functions, "");
+			else
+			{
+				// self = ent
+				PRVM_GLOBALFIELDVALUE(prog->globaloffsets.self)->edict = PRVM_EDICT_TO_PROG(ent);
+				PRVM_ExecuteProgram (func - prog->functions, "");
+			}
 		}
 
 		spawned++;
@@ -1419,6 +1431,7 @@ void PRVM_FindOffsets(void)
 	prog->funcoffsets.SV_ChangeTeam                   = PRVM_ED_FindFunctionOffset("SV_ChangeTeam");
 	prog->funcoffsets.SV_ParseClientCommand           = PRVM_ED_FindFunctionOffset("SV_ParseClientCommand");
 	prog->funcoffsets.SV_PlayerPhysics                = PRVM_ED_FindFunctionOffset("SV_PlayerPhysics");
+	prog->funcoffsets.SV_OnEntityNoSpawnFunction      = PRVM_ED_FindFunctionOffset("SV_OnEntityNoSpawnFunction");
 	prog->funcoffsets.GameCommand                     = PRVM_ED_FindFunctionOffset("GameCommand");
 	prog->globaloffsets.SV_InitCmd                    = PRVM_ED_FindGlobalOffset("SV_InitCmd");
 	prog->globaloffsets.self                          = PRVM_ED_FindGlobalOffset("self");
