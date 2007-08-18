@@ -1226,6 +1226,7 @@ d feature darkplaces console: add condump command to output recent console histo
 d feature darkplaces console: change commandline history to clear the commandline when cursoring below the most recent history, and not allow cursoring back more than the oldest history (up2nogood)
 d feature darkplaces console: expand parameters such as $cvar to use the value of the cvar, DP_CON_EXPANDCVAR (up2nogood)
 d feature darkplaces console: make aliases given parameters insert the parameters in place of $1, $2, $* macros in the alias string, add this as DP_CON_ALIASPARAMETERS (up2nogood)
+d feature darkplaces csqc: add "pl" support in getplayerkey function (Dresk)
 d feature darkplaces csqc: add clientside quakec (KrimZon, FrikaC)
 d feature darkplaces cvars: sort cvars and commands by name so that when saved to config they are sorted (might also be able to remove sorting from cvar/command listing)
 d feature darkplaces editlights: add coronasize setting to rtlights (romi)
