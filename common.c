@@ -727,14 +727,8 @@ skipwhite:
 	else if (*data == '\"')
 	{
 		// quoted string
-		for (data++;*data != '\"';data++)
+		for (data++;*data && *data != '\"';data++)
 		{
-			if (!*data || len >= (int)sizeof(com_token) - 1)
-			{
-				com_token[0] = 0;
-				*datapointer = NULL;
-				return false;
-			}
 			c = *data;
 			if (*data == '\\')
 			{
@@ -745,10 +739,13 @@ skipwhite:
 				else if (c == 't')
 					c = '\t';
 			}
-			com_token[len++] = c;
+			if (len < (int)sizeof(com_token) - 1)
+				com_token[len++] = c;
 		}
 		com_token[len] = 0;
-		*datapointer = data+1;
+		if (*data == '\"')
+			data++;
+		*datapointer = data;
 		return true;
 	}
 	else if (*data == '\r')
@@ -771,15 +768,8 @@ skipwhite:
 	{
 		// regular word
 		for (;*data > ' ';data++)
-		{
-			if (len >= (int)sizeof(com_token) - 1)
-			{
-				com_token[0] = 0;
-				*datapointer = NULL;
-				return false;
-			}
-			com_token[len++] = *data;
-		}
+			if (len < (int)sizeof(com_token) - 1)
+				com_token[len++] = *data;
 		com_token[len] = 0;
 		*datapointer = data;
 		return true;
@@ -851,14 +841,8 @@ skipwhite:
 	{
 		// quoted string
 		char quote = *data;
-		for (data++;*data != quote;data++)
+		for (data++;*data && *data != quote;data++)
 		{
-			if (!*data || len >= (int)sizeof(com_token) - 1)
-			{
-				com_token[0] = 0;
-				*datapointer = NULL;
-				return false;
-			}
 			c = *data;
 			if (*data == '\\')
 			{
@@ -869,10 +853,13 @@ skipwhite:
 				else if (c == 't')
 					c = '\t';
 			}
-			com_token[len++] = c;
+			if (len < (int)sizeof(com_token) - 1)
+				com_token[len++] = c;
 		}
 		com_token[len] = 0;
-		*datapointer = data+1;
+		if (*data == quote)
+			data++;
+		*datapointer = data;
 		return true;
 	}
 	else if (*data == '\r')
@@ -895,15 +882,8 @@ skipwhite:
 	{
 		// regular word
 		for (;*data > ' ' && *data != '{' && *data != '}' && *data != ')' && *data != '(' && *data != ']' && *data != '[' && *data != ':' && *data != ',' && *data != ';';data++)
-		{
-			if (len >= (int)sizeof(com_token) - 1)
-			{
-				com_token[0] = 0;
-				*datapointer = NULL;
-				return false;
-			}
-			com_token[len++] = *data;
-		}
+			if (len < (int)sizeof(com_token) - 1)
+				com_token[len++] = *data;
 		com_token[len] = 0;
 		*datapointer = data;
 		return true;
@@ -975,14 +955,8 @@ skipwhite:
 	{
 		char quote = *data;
 		// quoted string
-		for (data++;*data != quote;data++)
+		for (data++;*data && *data != quote;data++)
 		{
-			if (!*data || len >= (int)sizeof(com_token) - 1)
-			{
-				com_token[0] = 0;
-				*datapointer = NULL;
-				return false;
-			}
 			c = *data;
 			if (*data == '\\')
 			{
@@ -993,10 +967,13 @@ skipwhite:
 				else if (c == 't')
 					c = '\t';
 			}
-			com_token[len++] = c;
+			if (len < (int)sizeof(com_token) - 1)
+				com_token[len++] = c;
 		}
 		com_token[len] = 0;
-		*datapointer = data+1;
+		if (*data == quote)
+			data++;
+		*datapointer = data;
 		return true;
 	}
 	else if (*data == '\r')
@@ -1019,15 +996,8 @@ skipwhite:
 	{
 		// regular word
 		for (;*data > ' ' && *data != ',' && *data != ';' && *data != '{' && *data != '}' && *data != ')' && *data != '(' && *data != ']' && *data != '[' && *data != ':' && *data != ',' && *data != ';';data++)
-		{
-			if (len >= (int)sizeof(com_token) - 1)
-			{
-				com_token[0] = 0;
-				*datapointer = NULL;
-				return false;
-			}
-			com_token[len++] = *data;
-		}
+			if (len < (int)sizeof(com_token) - 1)
+				com_token[len++] = *data;
 		com_token[len] = 0;
 		*datapointer = data;
 		return true;
@@ -1077,35 +1047,25 @@ skipwhite:
 	else if (*data == '\"')
 	{
 		// quoted string
-		for (data++;*data != '\"';data++)
+		for (data++;*data && *data != '\"';data++)
 		{
-			if (!*data || len >= (int)sizeof(com_token) - 1)
-			{
-				com_token[0] = 0;
-				*datapointer = NULL;
-				return false;
-			}
 			// allow escaped " and \ case
 			if (*data == '\\' && (data[1] == '\"' || data[1] == '\\'))
 				data++;
-			com_token[len++] = *data;
+			if (len < (int)sizeof(com_token) - 1)
+				com_token[len++] = *data;
 		}
 		com_token[len] = 0;
-		*datapointer = data+1;
+		if (*data == '\"')
+			data++;
+		*datapointer = data;
 	}
 	else
 	{
 		// regular word
 		for (;*data > ' ';data++)
-		{
-			if (len >= (int)sizeof(com_token) - 1)
-			{
-				com_token[0] = 0;
-				*datapointer = NULL;
-				return false;
-			}
-			com_token[len++] = *data;
-		}
+			if (len < (int)sizeof(com_token) - 1)
+				com_token[len++] = *data;
 		com_token[len] = 0;
 		*datapointer = data;
 	}
