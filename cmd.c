@@ -518,11 +518,14 @@ cmd_source_t cmd_source;
 
 static cmd_function_t *cmd_functions;		// possible commands to execute
 
-static const char *Cmd_GetDirectCvarValue(const char *varname, cmdalias_t *alias)
+static const char *Cmd_GetDirectCvarValue(const char *varname, cmdalias_t *alias, qboolean *is_multiple)
 {
 	cvar_t *cvar;
 	long argno;
 	char *endptr;
+
+	if(is_multiple)
+		*is_multiple = false;
 
 	if(!varname || !*varname)
 		return NULL;
@@ -530,7 +533,34 @@ static const char *Cmd_GetDirectCvarValue(const char *varname, cmdalias_t *alias
 	if(alias)
 	{
 		if(!strcmp(varname, "*"))
+		{
+			if(is_multiple)
+				*is_multiple = true;
 			return Cmd_Args();
+		}
+		else if(varname[strlen(varname) - 1] == '-')
+		{
+			argno = strtol(varname, &endptr, 10);
+			if(endptr == varname + strlen(varname) - 1)
+			{
+				// whole string is a number, apart from the -
+				const char *p = Cmd_Args();
+				for(; argno > 1; --argno)
+					if(!COM_ParseToken_Console(&p))
+						break;
+				if(p)
+				{
+					if(is_multiple)
+						*is_multiple = true;
+
+					// kill pre-argument whitespace
+					for (;*p && *p <= ' ';p++)
+						;
+
+					return p;
+				}
+			}
+		}
 		else
 		{
 			argno = strtol(varname, &endptr, 10);
@@ -578,7 +608,7 @@ qboolean Cmd_QuoteString(char *out, size_t outlen, const char *in, const char *q
 			*out++ = '\\'; --outlen;
 			*out++ = '\\'; --outlen;
 		}
-		else if(*in == '\\' && quote_dollar)
+		else if(*in == '$' && quote_dollar)
 		{
 			if(outlen <= 2)
 			{
@@ -630,14 +660,16 @@ static const char *Cmd_GetCvarValue(const char *var, size_t varlen, cmdalias_t *
 
 	varstr = NULL;
 
-	// Exception: $* doesn't use the quoted form by default
-	if(!strcmp(varname, "*"))
-		varfunc = "asis";
-
 	if(varname[0] == '$')
-		varstr = Cmd_GetDirectCvarValue(Cmd_GetDirectCvarValue(varname + 1, alias), alias);
+		varstr = Cmd_GetDirectCvarValue(Cmd_GetDirectCvarValue(varname + 1, alias, NULL), alias, NULL);
 	else
-		varstr = Cmd_GetDirectCvarValue(varname, alias);
+	{
+		qboolean is_multiple = false;
+		// Exception: $* and $n- don't use the quoted form by default
+		varstr = Cmd_GetDirectCvarValue(varname, alias, &is_multiple);
+		if(is_multiple)
+			varfunc = "asis";
+	}
 
 	if(!varstr)
 	{
@@ -707,7 +739,8 @@ static void Cmd_PreprocessString( const char *intext, char *outtext, unsigned ma
 			//   alias parameter, where the name of the alias is $0, the first
 			//   parameter is $1 and so on; as a special case, $* inserts all
 			//   parameters, without extra quoting, so one can use $* to just
-			//   pass all parameters around
+			//   pass all parameters around. All parameters starting from $n
+			//   can be referred to as $n- (so $* is equivalent to $1-).
 			//
 			// Note: when expanding an alias, cvar expansion is done in the SAME step
 			// as alias expansion so that alias parameters or cvar values containing
@@ -753,7 +786,7 @@ static void Cmd_PreprocessString( const char *intext, char *outtext, unsigned ma
 					eat = varlen + 1;
 				}
 			} else {
-				varlen = strspn(in, "*0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_");
+				varlen = strspn(in, "*0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-");
 				val = Cmd_GetCvarValue(in, varlen, alias);
 				eat = varlen;
 			}
