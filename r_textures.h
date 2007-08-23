@@ -18,8 +18,10 @@
 #define TEXF_FORCELINEAR 0x00000080
 // indicates texture should be affected by gl_picmip and gl_max_size cvar
 #define TEXF_PICMIP 0x00000100
+// indicates texture should be compressed if possible
+#define TEXF_COMPRESS 0x00000200
 // used for checking if textures mismatch
-#define TEXF_IMPORTANTBITS (TEXF_ALPHA | TEXF_MIPMAP | TEXF_CLAMP | TEXF_FORCENEAREST | TEXF_FORCELINEAR | TEXF_PICMIP)
+#define TEXF_IMPORTANTBITS (TEXF_ALPHA | TEXF_MIPMAP | TEXF_CLAMP | TEXF_FORCENEAREST | TEXF_FORCELINEAR | TEXF_PICMIP | TEXF_COMPRESS)
 
 // 8bit paletted
 #define TEXTYPE_PALETTE 1
@@ -47,6 +49,18 @@ rtexturepool_t;
 rtexturepool_t *R_AllocTexturePool(void);
 // free a texture pool (textures can not be freed individually)
 void R_FreeTexturePool(rtexturepool_t **rtexturepool);
+
+// the color/normal/etc cvars should be checked by callers of R_LoadTexture* functions to decide whether to add TEXF_COMPRESS to the flags
+extern cvar_t gl_texturecompression;
+extern cvar_t gl_texturecompression_color;
+extern cvar_t gl_texturecompression_normal;
+extern cvar_t gl_texturecompression_gloss;
+extern cvar_t gl_texturecompression_glow;
+extern cvar_t gl_texturecompression_2d;
+extern cvar_t gl_texturecompression_q3bsplightmaps;
+extern cvar_t gl_texturecompression_q3bspdeluxemaps;
+extern cvar_t gl_texturecompression_sky;
+extern cvar_t gl_texturecompression_lightcubemaps;
 
 // add a texture to a pool and optionally precache (upload) it
 // (note: data == NULL is perfectly acceptable)

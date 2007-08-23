@@ -3234,7 +3234,7 @@ rtexture_t *R_Shadow_LoadCubemap(const char *basename)
 	{
 		if (!r_shadow_filters_texturepool)
 			r_shadow_filters_texturepool = R_AllocTexturePool();
-		cubemaptexture = R_LoadTextureCubeMap(r_shadow_filters_texturepool, basename, cubemapsize, cubemappixels, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
+		cubemaptexture = R_LoadTextureCubeMap(r_shadow_filters_texturepool, basename, cubemapsize, cubemappixels, TEXTYPE_RGBA, TEXF_PRECACHE | (gl_texturecompression_lightcubemaps.integer ? TEXF_COMPRESS : 0), NULL);
 		Mem_Free(cubemappixels);
 	}
 	else

@@ -66,7 +66,7 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 	float				modelradius, interval;
 	char				name[MAX_QPATH], fogname[MAX_QPATH];
 	const void			*startframes;
-	int                 texflags = (r_mipsprites.integer ? TEXF_MIPMAP : 0) | (r_picmipsprites.integer ? TEXF_PICMIP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE;
+	int                 texflags = (r_mipsprites.integer ? TEXF_MIPMAP : 0) | (r_picmipsprites.integer ? TEXF_PICMIP : 0) | TEXF_COMPRESS | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE;
 	modelradius = 0;
 
 	if (loadmodel->numframes < 1)
@@ -339,7 +339,7 @@ void Mod_IDS2_Load(model_t *mod, void *buffer, void *bufferend)
 	const dsprite2_t *pinqsprite;
 	skinframe_t *skinframe;
 	float modelradius;
-	int texflags = (r_mipsprites.integer ? TEXF_MIPMAP : 0) | (r_picmipsprites.integer ? TEXF_PICMIP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE;
+	int texflags = (r_mipsprites.integer ? TEXF_MIPMAP : 0) | (r_picmipsprites.integer ? TEXF_PICMIP : 0) | TEXF_COMPRESS | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE;
 
 	loadmodel->modeldatatypestring = "SPR2";
 

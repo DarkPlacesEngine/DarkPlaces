@@ -233,7 +233,7 @@ unsigned char *PNG_LoadImage (const unsigned char *raw, int filesize, int matchw
 {
 	unsigned int	y;
 	void *png, *pnginfo;
-	unsigned char *imagedata;
+	unsigned char *imagedata = NULL;
 	unsigned char ioBuffer[8192];
 
 	// FIXME: register an error handler so that abort() won't be called on error
@@ -248,6 +248,10 @@ unsigned char *PNG_LoadImage (const unsigned char *raw, int filesize, int matchw
 	if(!png)
 		return NULL;
 
+	// this must be memset before the setjmp error handler, because it relies
+	// on the fields in this struct for cleanup
+	memset(&my_png, 0, sizeof(my_png));
+
 	// NOTE: this relies on jmp_buf being the first thing in the png structure
 	// created by libpng! (this is correct for libpng 1.2.x)
 #ifdef __cplusplus
@@ -260,6 +264,12 @@ unsigned char *PNG_LoadImage (const unsigned char *raw, int filesize, int matchw
 	if (setjmp(png))
 #endif
 	{
+		if (my_png.Data)
+			Mem_Free(my_png.Data);
+		my_png.Data = NULL;
+		if (my_png.FRowPtrs)
+			Mem_Free(my_png.FRowPtrs);
+		my_png.FRowPtrs = NULL;
 		qpng_destroy_read_struct(&png, &pnginfo, 0);
 		return NULL;
 	}
@@ -273,7 +283,6 @@ unsigned char *PNG_LoadImage (const unsigned char *raw, int filesize, int matchw
 	}
 	qpng_set_sig_bytes(png, 0);
 
-	memset(&my_png, 0, sizeof(my_png));
 	my_png.tmpBuf = raw;
 	my_png.tmpBuflength = filesize;
 	my_png.tmpi = 0;
@@ -302,7 +311,7 @@ unsigned char *PNG_LoadImage (const unsigned char *raw, int filesize, int matchw
 	}
 #endif
 
-if ((matchwidth && my_png.Width != (unsigned long)matchwidth) || (matchheight && my_png.Height != (unsigned long)matchheight))
+	if ((matchwidth && my_png.Width != (unsigned long)matchwidth) || (matchheight && my_png.Height != (unsigned long)matchheight))
 	{
 		qpng_destroy_read_struct(&png, &pnginfo, 0);
 		return NULL;
@@ -333,9 +342,10 @@ if ((matchwidth && my_png.Width != (unsigned long)matchwidth) || (matchheight &&
 	my_png.FRowPtrs = (unsigned char **)Mem_Alloc(tempmempool, my_png.Height * sizeof(*my_png.FRowPtrs));
 	if (my_png.FRowPtrs)
 	{
-		my_png.Data = (unsigned char *)Mem_Alloc(tempmempool, my_png.Height * my_png.FRowBytes);
-		if(my_png.Data)
+		imagedata = (unsigned char *)Mem_Alloc(tempmempool, my_png.Height * my_png.FRowBytes);
+		if(imagedata)
 		{
+			my_png.Data = imagedata;
 			for(y = 0;y < my_png.Height;y++)
 				my_png.FRowPtrs[y] = my_png.Data + y * my_png.FRowBytes;
 			qpng_read_image(png, my_png.FRowPtrs);
@@ -343,6 +353,7 @@ if ((matchwidth && my_png.Width != (unsigned long)matchwidth) || (matchheight &&
 		else
 			Con_DPrintf("PNG_LoadImage : not enough memory\n");
 		Mem_Free(my_png.FRowPtrs);
+		my_png.FRowPtrs = NULL;
 	}
 	else
 		Con_DPrintf("PNG_LoadImage : not enough memory\n");
@@ -352,7 +363,6 @@ if ((matchwidth && my_png.Width != (unsigned long)matchwidth) || (matchheight &&
 
 	image_width = (int)my_png.Width;
 	image_height = (int)my_png.Height;
-	imagedata = my_png.Data;
 
 	if (my_png.BitDepth != 8)
 	{

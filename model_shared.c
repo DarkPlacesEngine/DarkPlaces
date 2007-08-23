@@ -1658,7 +1658,7 @@ nothing                GL_ZERO GL_ONE
 				if (!(shader->surfaceparms & Q3SURFACEPARM_NOMIPMAPS))
 					texflags |= TEXF_MIPMAP;
 				if (!(shader->textureflags & Q3TEXTUREFLAG_NOPICMIP) && ((!q1bsp && !q3bsp) || r_picmipworld.integer))
-					texflags |= TEXF_PICMIP;
+					texflags |= TEXF_PICMIP | TEXF_COMPRESS;
 				if (shader->primarylayer->clampmap)
 					texflags |= TEXF_CLAMP;
 				if (!(texture->skinframes[j] = R_SkinFrame_LoadExternal(shader->primarylayer->texturename[j], texflags, false)))
@@ -1674,7 +1674,7 @@ nothing                GL_ZERO GL_ONE
 			texture->backgroundskinframerate = shader->backgroundlayer->framerate;
 			for (j = 0;j < shader->backgroundlayer->numframes;j++)
 			{
-				if (!(texture->backgroundskinframes[j] = R_SkinFrame_LoadExternal(shader->backgroundlayer->texturename[j], ((shader->surfaceparms & Q3SURFACEPARM_NOMIPMAPS) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | ((!r_picmipworld.integer || (shader->textureflags & Q3TEXTUREFLAG_NOPICMIP)) ? 0 : TEXF_PICMIP) | (shader->backgroundlayer->clampmap ? TEXF_CLAMP : 0), false)))
+				if (!(texture->backgroundskinframes[j] = R_SkinFrame_LoadExternal(shader->backgroundlayer->texturename[j], ((shader->surfaceparms & Q3SURFACEPARM_NOMIPMAPS) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | ((!r_picmipworld.integer || (shader->textureflags & Q3TEXTUREFLAG_NOPICMIP)) ? 0 : (TEXF_PICMIP | TEXF_COMPRESS)) | (shader->backgroundlayer->clampmap ? TEXF_CLAMP : 0), false)))
 				{
 					Con_DPrintf("%s: could not load texture \"%s\" (frame %i) for shader \"%s\"\n", loadmodel->name, shader->backgroundlayer->texturename[j], j, texture->name);
 					texture->backgroundskinframes[j] = R_SkinFrame_LoadMissing();
@@ -1702,7 +1702,7 @@ nothing                GL_ZERO GL_ONE
 		else
 			texture->basematerialflags |= MATERIALFLAG_WALL;
 		texture->numskinframes = 1;
-		if (!(texture->skinframes[0] = R_SkinFrame_LoadExternal(texture->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | (r_picmipworld.integer ? TEXF_PICMIP : 0), false)))
+		if (!(texture->skinframes[0] = R_SkinFrame_LoadExternal(texture->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | (r_picmipworld.integer ? TEXF_PICMIP : 0) | TEXF_COMPRESS, false)))
 			Con_DPrintf("%s: could not load texture for missing shader \"%s\"\n", loadmodel->name, texture->name);
 	}
 	// init the animation variables
