@@ -39,17 +39,22 @@ typedef struct textypeinfo_s
 	int textype;
 	int inputbytesperpixel;
 	int internalbytesperpixel;
+	int glinternalbytesperpixel;
 	int glformat;
 	int glinternalformat;
-	int glcompressedinternalformat;
 }
 textypeinfo_t;
 
-static textypeinfo_t textype_palette       = {TEXTYPE_PALETTE, 1, 4, GL_RGBA   , 3, GL_COMPRESSED_RGB_ARB};
-static textypeinfo_t textype_rgb           = {TEXTYPE_RGB    , 3, 3, GL_RGB    , 3, GL_COMPRESSED_RGB_ARB};
-static textypeinfo_t textype_rgba          = {TEXTYPE_RGBA   , 4, 4, GL_RGBA   , 3, GL_COMPRESSED_RGB_ARB};
-static textypeinfo_t textype_palette_alpha = {TEXTYPE_PALETTE, 1, 4, GL_RGBA   , 4, GL_COMPRESSED_RGBA_ARB};
-static textypeinfo_t textype_rgba_alpha    = {TEXTYPE_RGBA   , 4, 4, GL_RGBA   , 4, GL_COMPRESSED_RGBA_ARB};
+static textypeinfo_t textype_palette                = {TEXTYPE_PALETTE, 1, 4, 4, GL_RGBA   , 3};
+static textypeinfo_t textype_rgb                    = {TEXTYPE_RGB    , 3, 3, 4, GL_RGB    , 3};
+static textypeinfo_t textype_rgba                   = {TEXTYPE_RGBA   , 4, 4, 4, GL_RGBA   , 3};
+static textypeinfo_t textype_palette_alpha          = {TEXTYPE_PALETTE, 1, 4, 4, GL_RGBA   , 4};
+static textypeinfo_t textype_rgba_alpha             = {TEXTYPE_RGBA   , 4, 4, 4, GL_RGBA   , 4};
+static textypeinfo_t textype_palette_compress       = {TEXTYPE_PALETTE, 1, 4, 1, GL_RGBA   , GL_COMPRESSED_RGB_ARB};
+static textypeinfo_t textype_rgb_compress           = {TEXTYPE_RGB    , 3, 3, 1, GL_RGB    , GL_COMPRESSED_RGB_ARB};
+static textypeinfo_t textype_rgba_compress          = {TEXTYPE_RGBA   , 4, 4, 1, GL_RGBA   , GL_COMPRESSED_RGB_ARB};
+static textypeinfo_t textype_palette_alpha_compress = {TEXTYPE_PALETTE, 1, 4, 1, GL_RGBA   , GL_COMPRESSED_RGBA_ARB};
+static textypeinfo_t textype_rgba_alpha_compress    = {TEXTYPE_RGBA   , 4, 4, 1, GL_RGBA   , GL_COMPRESSED_RGBA_ARB};
 
 #define GLTEXTURETYPE_1D 0
 #define GLTEXTURETYPE_2D 1
@@ -130,35 +135,72 @@ static int texturebuffersize = 0;
 
 static textypeinfo_t *R_GetTexTypeInfo(int textype, int flags)
 {
-	if (flags & TEXF_ALPHA)
+	if ((flags & TEXF_COMPRESS) && gl_texturecompression.integer >= 1 && gl_support_texture_compression)
 	{
-		switch(textype)
+		if (flags & TEXF_ALPHA)
 		{
-		case TEXTYPE_PALETTE:
-			return &textype_palette_alpha;
-		case TEXTYPE_RGB:
-			Host_Error("R_GetTexTypeInfo: RGB format has no alpha, TEXF_ALPHA not allowed");
-			return NULL;
-		case TEXTYPE_RGBA:
-			return &textype_rgba_alpha;
-		default:
-			Host_Error("R_GetTexTypeInfo: unknown texture format");
-			return NULL;
+			switch(textype)
+			{
+			case TEXTYPE_PALETTE:
+				return &textype_palette_alpha_compress;
+			case TEXTYPE_RGB:
+				Host_Error("R_GetTexTypeInfo: RGB format has no alpha, TEXF_ALPHA not allowed");
+				return NULL;
+			case TEXTYPE_RGBA:
+				return &textype_rgba_alpha_compress;
+			default:
+				Host_Error("R_GetTexTypeInfo: unknown texture format");
+				return NULL;
+			}
+		}
+		else
+		{
+			switch(textype)
+			{
+			case TEXTYPE_PALETTE:
+				return &textype_palette_compress;
+			case TEXTYPE_RGB:
+				return &textype_rgb_compress;
+			case TEXTYPE_RGBA:
+				return &textype_rgba_compress;
+			default:
+				Host_Error("R_GetTexTypeInfo: unknown texture format");
+				return NULL;
+			}
 		}
 	}
 	else
 	{
-		switch(textype)
+		if (flags & TEXF_ALPHA)
 		{
-		case TEXTYPE_PALETTE:
-			return &textype_palette;
-		case TEXTYPE_RGB:
-			return &textype_rgb;
-		case TEXTYPE_RGBA:
-			return &textype_rgba;
-		default:
-			Host_Error("R_GetTexTypeInfo: unknown texture format");
-			return NULL;
+			switch(textype)
+			{
+			case TEXTYPE_PALETTE:
+				return &textype_palette_alpha;
+			case TEXTYPE_RGB:
+				Host_Error("R_GetTexTypeInfo: RGB format has no alpha, TEXF_ALPHA not allowed");
+				return NULL;
+			case TEXTYPE_RGBA:
+				return &textype_rgba_alpha;
+			default:
+				Host_Error("R_GetTexTypeInfo: unknown texture format");
+				return NULL;
+			}
+		}
+		else
+		{
+			switch(textype)
+			{
+			case TEXTYPE_PALETTE:
+				return &textype_palette;
+			case TEXTYPE_RGB:
+				return &textype_rgb;
+			case TEXTYPE_RGBA:
+				return &textype_rgba;
+			default:
+				Host_Error("R_GetTexTypeInfo: unknown texture format");
+				return NULL;
+			}
 		}
 	}
 }
@@ -419,7 +461,7 @@ static int R_CalcTexelDataSize (gltexture_t *glt)
 		}
 	}
 
-	return size * glt->textype->internalbytesperpixel * glt->sides;
+	return size * glt->textype->glinternalbytesperpixel * glt->sides;
 }
 
 void R_TextureStats_Print(qboolean printeach, qboolean printpool, qboolean printtotal)
@@ -948,7 +990,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	glt->texturetype = texturetype;
 	glt->inputdatasize = size;
 	glt->palette = palette;
-	glt->glinternalformat = ((flags & TEXF_COMPRESS) && gl_texturecompression.integer >= 1 && gl_support_texture_compression) ? texinfo->glcompressedinternalformat : texinfo->glinternalformat;
+	glt->glinternalformat = texinfo->glinternalformat;
 	glt->glformat = texinfo->glformat;
 	glt->bytesperpixel = texinfo->internalbytesperpixel;
 	glt->sides = glt->texturetype == GLTEXTURETYPE_CUBEMAP ? 6 : 1;
