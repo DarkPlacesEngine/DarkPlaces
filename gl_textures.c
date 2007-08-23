@@ -9,6 +9,16 @@ cvar_t gl_picmip = {CVAR_SAVE, "gl_picmip", "0", "reduces resolution of textures
 cvar_t r_lerpimages = {CVAR_SAVE, "r_lerpimages", "1", "bilinear filters images when scaling them up to power of 2 size (mode 1), looks better than glquake (mode 0)"};
 cvar_t r_precachetextures = {CVAR_SAVE, "r_precachetextures", "1", "0 = never upload textures until used, 1 = upload most textures before use (exceptions: rarely used skin colormap layers), 2 = upload all textures before use (can increase texture memory usage significantly)"};
 cvar_t gl_texture_anisotropy = {CVAR_SAVE, "gl_texture_anisotropy", "1", "anisotropic filtering quality (if supported by hardware), 1 sample (no anisotropy) and 8 sample (8 tap anisotropy) are recommended values"};
+cvar_t gl_texturecompression = {CVAR_SAVE, "gl_texturecompression", "0", "whether to compress textures, a value of 0 disables compression (even if the individual cvars are 1), 1 enables fast (low quality) compression at startup, 2 enables slow (high quality) compression at startup"};
+cvar_t gl_texturecompression_color = {CVAR_SAVE, "gl_texturecompression_color", "1", "whether to compress colormap (diffuse) textures"};
+cvar_t gl_texturecompression_normal = {CVAR_SAVE, "gl_texturecompression_normal", "1", "whether to compress normalmap (normalmap) textures"};
+cvar_t gl_texturecompression_gloss = {CVAR_SAVE, "gl_texturecompression_gloss", "1", "whether to compress glossmap (specular) textures"};
+cvar_t gl_texturecompression_glow = {CVAR_SAVE, "gl_texturecompression_glow", "1", "whether to compress glowmap (luma) textures"};
+cvar_t gl_texturecompression_2d = {CVAR_SAVE, "gl_texturecompression_2d", "1", "whether to compress 2d (hud/menu) textures other than the font"};
+cvar_t gl_texturecompression_q3bsplightmaps = {CVAR_SAVE, "gl_texturecompression_q3bsplightmaps", "1", "whether to compress lightmaps in q3bsp format levels"};
+cvar_t gl_texturecompression_q3bspdeluxemaps = {CVAR_SAVE, "gl_texturecompression_q3bspdeluxemaps", "1", "whether to compress deluxemaps in q3bsp format levels (only levels compiled with q3map2 -deluxe have these)"};
+cvar_t gl_texturecompression_sky = {CVAR_SAVE, "gl_texturecompression_sky", "0", "whether to compress sky textures"};
+cvar_t gl_texturecompression_lightcubemaps = {CVAR_SAVE, "gl_texturecompression_lightcubemaps", "1", "whether to compress light cubemaps (spotlights and other light projection images)"};
 
 int		gl_filter_min = GL_LINEAR_MIPMAP_LINEAR;
 int		gl_filter_mag = GL_LINEAR;
@@ -31,14 +41,15 @@ typedef struct textypeinfo_s
 	int internalbytesperpixel;
 	int glformat;
 	int glinternalformat;
+	int glcompressedinternalformat;
 }
 textypeinfo_t;
 
-static textypeinfo_t textype_palette       = {TEXTYPE_PALETTE, 1, 4, GL_RGBA   , 3};
-static textypeinfo_t textype_rgb           = {TEXTYPE_RGB    , 3, 3, GL_RGB    , 3};
-static textypeinfo_t textype_rgba          = {TEXTYPE_RGBA   , 4, 4, GL_RGBA   , 3};
-static textypeinfo_t textype_palette_alpha = {TEXTYPE_PALETTE, 1, 4, GL_RGBA   , 4};
-static textypeinfo_t textype_rgba_alpha    = {TEXTYPE_RGBA   , 4, 4, GL_RGBA   , 4};
+static textypeinfo_t textype_palette       = {TEXTYPE_PALETTE, 1, 4, GL_RGBA   , 3, GL_COMPRESSED_RGB_ARB};
+static textypeinfo_t textype_rgb           = {TEXTYPE_RGB    , 3, 3, GL_RGB    , 3, GL_COMPRESSED_RGB_ARB};
+static textypeinfo_t textype_rgba          = {TEXTYPE_RGBA   , 4, 4, GL_RGBA   , 3, GL_COMPRESSED_RGB_ARB};
+static textypeinfo_t textype_palette_alpha = {TEXTYPE_PALETTE, 1, 4, GL_RGBA   , 4, GL_COMPRESSED_RGBA_ARB};
+static textypeinfo_t textype_rgba_alpha    = {TEXTYPE_RGBA   , 4, 4, GL_RGBA   , 4, GL_COMPRESSED_RGBA_ARB};
 
 #define GLTEXTURETYPE_1D 0
 #define GLTEXTURETYPE_2D 1
@@ -512,6 +523,16 @@ void R_Textures_Init (void)
 	Cvar_RegisterVariable (&r_lerpimages);
 	Cvar_RegisterVariable (&r_precachetextures);
 	Cvar_RegisterVariable (&gl_texture_anisotropy);
+	Cvar_RegisterVariable (&gl_texturecompression);
+	Cvar_RegisterVariable (&gl_texturecompression_color);
+	Cvar_RegisterVariable (&gl_texturecompression_normal);
+	Cvar_RegisterVariable (&gl_texturecompression_gloss);
+	Cvar_RegisterVariable (&gl_texturecompression_glow);
+	Cvar_RegisterVariable (&gl_texturecompression_2d);
+	Cvar_RegisterVariable (&gl_texturecompression_q3bsplightmaps);
+	Cvar_RegisterVariable (&gl_texturecompression_q3bspdeluxemaps);
+	Cvar_RegisterVariable (&gl_texturecompression_sky);
+	Cvar_RegisterVariable (&gl_texturecompression_lightcubemaps);
 
 	R_RegisterModule("R_Textures", r_textures_start, r_textures_shutdown, r_textures_newmap);
 }
@@ -737,6 +758,14 @@ static void R_Upload(gltexture_t *glt, unsigned char *data, int fragx, int fragy
 			}
 		}
 		mip = 0;
+		if (gl_support_texture_compression)
+		{
+			if (gl_texturecompression.integer >= 2)
+				qglHint(GL_TEXTURE_COMPRESSION_HINT_ARB, GL_NICEST);
+			else
+				qglHint(GL_TEXTURE_COMPRESSION_HINT_ARB, GL_FASTEST);
+			CHECKGLERROR
+		}
 		switch(glt->texturetype)
 		{
 		case GLTEXTURETYPE_1D:
@@ -919,7 +948,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	glt->texturetype = texturetype;
 	glt->inputdatasize = size;
 	glt->palette = palette;
-	glt->glinternalformat = texinfo->glinternalformat;
+	glt->glinternalformat = ((flags & TEXF_COMPRESS) && gl_texturecompression.integer >= 1 && gl_support_texture_compression) ? texinfo->glcompressedinternalformat : texinfo->glinternalformat;
 	glt->glformat = texinfo->glformat;
 	glt->bytesperpixel = texinfo->internalbytesperpixel;
 	glt->sides = glt->texturetype == GLTEXTURETYPE_CUBEMAP ? 6 : 1;

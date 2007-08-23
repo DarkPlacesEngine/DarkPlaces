@@ -115,7 +115,7 @@ int R_LoadSkyBox(void)
 			}
 			temp = (unsigned char *)Mem_Alloc(tempmempool, image_width*image_height*4);
 			Image_CopyMux (temp, image_rgba, image_width, image_height, suffix[j][i].flipx, suffix[j][i].flipy, suffix[j][i].flipdiagonal, 4, 4, indices);
-			skyboxside[i] = R_LoadTexture2D(skytexturepool, va("skyboxside%d", i), image_width, image_height, temp, TEXTYPE_RGBA, TEXF_CLAMP | TEXF_PRECACHE, NULL);
+			skyboxside[i] = R_LoadTexture2D(skytexturepool, va("skyboxside%d", i), image_width, image_height, temp, TEXTYPE_RGBA, TEXF_CLAMP | TEXF_PRECACHE | (gl_texturecompression_sky.integer ? TEXF_COMPRESS : 0), NULL);
 			Mem_Free(image_rgba);
 			Mem_Free(temp);
 			success++;

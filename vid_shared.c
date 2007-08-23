@@ -59,7 +59,9 @@ int gl_support_vertex_shader = false;
 // GL_ARB_fragment_shader
 int gl_support_fragment_shader = false;
 //GL_ARB_vertex_buffer_object
-int gl_support_arb_vertex_buffer_object;
+int gl_support_arb_vertex_buffer_object = false;
+//GL_ARB_texture_compression
+int gl_support_texture_compression = false;
 
 // LordHavoc: if window is hidden, don't update screen
 qboolean vid_hidden = true;
@@ -219,6 +221,7 @@ void (GLAPIENTRY *qglTexEnvi)(GLenum target, GLenum pname, GLint param);
 void (GLAPIENTRY *qglTexParameterf)(GLenum target, GLenum pname, GLfloat param);
 void (GLAPIENTRY *qglTexParameterfv)(GLenum target, GLenum pname, GLfloat *params);
 void (GLAPIENTRY *qglTexParameteri)(GLenum target, GLenum pname, GLint param);
+void (GLAPIENTRY *qglHint)(GLenum target, GLenum mode);
 
 void (GLAPIENTRY *qglGenTextures)(GLsizei n, GLuint *textures);
 void (GLAPIENTRY *qglDeleteTextures)(GLsizei n, const GLuint *textures);
@@ -360,6 +363,14 @@ GLboolean (GLAPIENTRY *qglUnmapBufferARB) (GLenum target);
 void (GLAPIENTRY *qglBufferDataARB) (GLenum target, GLsizeiptrARB size, const GLvoid *data, GLenum usage);
 void (GLAPIENTRY *qglBufferSubDataARB) (GLenum target, GLintptrARB offset, GLsizeiptrARB size, const GLvoid *data);
 
+void (GLAPIENTRY *qglCompressedTexImage3DARB)(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLsizei imageSize, const void *data);
+void (GLAPIENTRY *qglCompressedTexImage2DARB)(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border,  GLsizei imageSize, const void *data);
+void (GLAPIENTRY *qglCompressedTexImage1DARB)(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLint border, GLsizei imageSize, const void *data);
+void (GLAPIENTRY *qglCompressedTexSubImage3DARB)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLsizei imageSize, const void *data);
+void (GLAPIENTRY *qglCompressedTexSubImage2DARB)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLsizei imageSize, const void *data);
+void (GLAPIENTRY *qglCompressedTexSubImage1DARB)(GLenum target, GLint level, GLint xoffset, GLsizei width, GLenum format, GLsizei imageSize, const void *data);
+void (GLAPIENTRY *qglGetCompressedTexImageARB)(GLenum target, GLint lod, void *img);
+
 int GL_CheckExtension(const char *name, const dllfunction_t *funcs, const char *disableparm, int silent)
 {
 	int failed = false;
@@ -475,6 +486,7 @@ static dllfunction_t opengl110funcs[] =
 	{"glTexParameterf", (void **) &qglTexParameterf},
 	{"glTexParameterfv", (void **) &qglTexParameterfv},
 	{"glTexParameteri", (void **) &qglTexParameteri},
+	{"glHint", (void **) &qglHint},
 	{"glPixelStoref", (void **) &qglPixelStoref},
 	{"glPixelStorei", (void **) &qglPixelStorei},
 	{"glGenTextures", (void **) &qglGenTextures},
@@ -670,6 +682,18 @@ static dllfunction_t vbofuncs[] =
 	{NULL, NULL}
 };
 
+static dllfunction_t texturecompressionfuncs[] =
+{
+	{"glCompressedTexImage3DARB",    (void **) &qglCompressedTexImage3DARB},
+	{"glCompressedTexImage2DARB",    (void **) &qglCompressedTexImage2DARB},
+	{"glCompressedTexImage1DARB",    (void **) &qglCompressedTexImage1DARB},
+	{"glCompressedTexSubImage3DARB", (void **) &qglCompressedTexSubImage3DARB},
+	{"glCompressedTexSubImage2DARB", (void **) &qglCompressedTexSubImage2DARB},
+	{"glCompressedTexSubImage1DARB", (void **) &qglCompressedTexSubImage1DARB},
+	{"glGetCompressedTexImageARB",   (void **) &qglGetCompressedTexImageARB},
+	{NULL, NULL}
+};
+
 void VID_CheckExtensions(void)
 {
 	gl_stencil = vid_bitsperpixel.integer == 32;
@@ -698,6 +722,7 @@ void VID_CheckExtensions(void)
 	gl_support_vertex_shader = false;
 	gl_support_fragment_shader = false;
 	gl_support_arb_vertex_buffer_object = false;
+	gl_support_texture_compression = false;
 
 	if (!GL_CheckExtension("OpenGL 1.1.0", opengl110funcs, NULL, false))
 		Sys_Error("OpenGL 1.1.0 functions not found");
@@ -741,7 +766,10 @@ void VID_CheckExtensions(void)
 // COMMANDLINEOPTION: GL: -nocubemap disables GL_ARB_texture_cube_map (required for bumpmapping)
 	if ((gl_texturecubemap = GL_CheckExtension("GL_ARB_texture_cube_map", NULL, "-nocubemap", false)))
 		qglGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE_ARB, &gl_max_cube_map_texture_size);
+// COMMANDLINEOPTION: GL: -notexturenonpoweroftwo disables GL_ARB_texture_non_power_of_two (which saves video memory if it is supported, but crashes on some buggy drivers)
 	gl_support_arb_texture_non_power_of_two = GL_CheckExtension("GL_ARB_texture_non_power_of_two", NULL, "-notexturenonpoweroftwo", false);
+// COMMANDLINEOPTION: GL: -notexturecompression disables GL_ARB_texture_compression (which saves video memory if it is supported, but can also degrade image quality, see gl_texturecompression cvar documentation for more information)
+	gl_support_texture_compression = GL_CheckExtension("GL_ARB_texture_compression", texturecompressionfuncs, "-notexturecompression", false);
 // COMMANDLINEOPTION: GL: -nocva disables GL_EXT_compiled_vertex_array (renders faster)
 	gl_supportslockarrays = GL_CheckExtension("GL_EXT_compiled_vertex_array", compiledvertexarrayfuncs, "-nocva", false);
 // COMMANDLINEOPTION: GL: -noedgeclamp disables GL_EXT_texture_edge_clamp or GL_SGIS_texture_edge_clamp (recommended, some cards do not support the other texture clamp method)

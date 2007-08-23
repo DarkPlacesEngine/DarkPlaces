@@ -81,6 +81,10 @@ typedef size_t GLsizeiptrARB;
 #define GL_PROJECTION_MATRIX			0x0BA7
 #define GL_TEXTURE_MATRIX			0x0BA8
 
+#define GL_DONT_CARE				0x1100
+#define GL_FASTEST					0x1101
+#define GL_NICEST					0x1102
+
 #define GL_DEPTH_TEST				0x0B71
 
 #define GL_CULL_FACE				0x0B44
@@ -562,6 +566,7 @@ extern void (GLAPIENTRY *qglTexEnvi)(GLenum target, GLenum pname, GLint param);
 extern void (GLAPIENTRY *qglTexParameterf)(GLenum target, GLenum pname, GLfloat param);
 extern void (GLAPIENTRY *qglTexParameterfv)(GLenum target, GLenum pname, GLfloat *params);
 extern void (GLAPIENTRY *qglTexParameteri)(GLenum target, GLenum pname, GLint param);
+extern void (GLAPIENTRY *qglHint)(GLenum target, GLenum mode);
 
 extern void (GLAPIENTRY *qglGenTextures)(GLsizei n, GLuint *textures);
 extern void (GLAPIENTRY *qglDeleteTextures)(GLsizei n, const GLuint *textures);
@@ -768,6 +773,29 @@ extern int gl_support_shading_language_100;
 #define GL_SHADING_LANGUAGE_VERSION_ARB				0x8B8C
 #endif
 
+// GL_ARB_texture_compression
+extern int gl_support_texture_compression;
+extern void (GLAPIENTRY *qglCompressedTexImage3DARB)(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLsizei imageSize, const void *data);
+extern void (GLAPIENTRY *qglCompressedTexImage2DARB)(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border,  GLsizei imageSize, const void *data);
+extern void (GLAPIENTRY *qglCompressedTexImage1DARB)(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLint border, GLsizei imageSize, const void *data);
+extern void (GLAPIENTRY *qglCompressedTexSubImage3DARB)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLsizei imageSize, const void *data);
+extern void (GLAPIENTRY *qglCompressedTexSubImage2DARB)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLsizei imageSize, const void *data);
+extern void (GLAPIENTRY *qglCompressedTexSubImage1DARB)(GLenum target, GLint level, GLint xoffset, GLsizei width, GLenum format, GLsizei imageSize, const void *data);
+extern void (GLAPIENTRY *qglGetCompressedTexImageARB)(GLenum target, GLint lod, void *img);
+#ifndef GL_COMPRESSED_RGB_ARB
+#define GL_COMPRESSED_ALPHA_ARB						0x84E9
+#define GL_COMPRESSED_LUMINANCE_ARB					0x84EA
+#define GL_COMPRESSED_LUMINANCE_ALPHA_ARB			0x84EB
+#define GL_COMPRESSED_INTENSITY_ARB					0x84EC
+#define GL_COMPRESSED_RGB_ARB						0x84ED
+#define GL_COMPRESSED_RGBA_ARB						0x84EE
+#define GL_TEXTURE_COMPRESSION_HINT_ARB				0x84EF
+#define GL_TEXTURE_COMPRESSED_IMAGE_SIZE_ARB		0x86A0
+#define GL_TEXTURE_COMPRESSED_ARB					0x86A1
+#define GL_NUM_COMPRESSED_TEXTURE_FORMATS_ARB		0x86A2
+#define GL_COMPRESSED_TEXTURE_FORMATS_ARB			0x86A3
+#endif
+ 
 // GL_EXT_bgr
 #define GL_BGR					0x80E0
 

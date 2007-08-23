@@ -719,7 +719,7 @@ static void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfi
 				{
 					if (!Mod_LoadTextureFromQ3Shader(skin, skinfileitem->replacement, false, false, true))
 					{
-						tempskinframe = R_SkinFrame_LoadExternal(skinfileitem->replacement, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false);
+						tempskinframe = R_SkinFrame_LoadExternal(skinfileitem->replacement, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP | TEXF_COMPRESS, false);
 						if (!tempskinframe)
 							if (cls.state != ca_dedicated)
 								Con_DPrintf("mesh \"%s\": failed to load skin #%i \"%s\"\n", meshname, i, skinfileitem->replacement);
@@ -740,7 +740,7 @@ static void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfi
 	{
 		if (!Mod_LoadTextureFromQ3Shader(skin, shadername, false, false, true))
 		{
-			tempskinframe = R_SkinFrame_LoadExternal(shadername, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false);
+			tempskinframe = R_SkinFrame_LoadExternal(shadername, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP | TEXF_COMPRESS, false);
 			if (!tempskinframe)
 				if (cls.state != ca_dedicated)
 					Con_Printf("Can't find texture \"%s\" for mesh \"%s\", using grey checkerboard\n", shadername, meshname);
@@ -1018,9 +1018,9 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 					sprintf (name, "%s_%i", loadmodel->name, i);
 				if (!Mod_LoadTextureFromQ3Shader(loadmodel->data_textures + totalskins * loadmodel->num_surfaces, name, false, false, true))
 				{
-					tempskinframe = R_SkinFrame_LoadExternal(name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PICMIP, false);
+					tempskinframe = R_SkinFrame_LoadExternal(name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PICMIP | TEXF_COMPRESS, false);
 					if (!tempskinframe)
-						tempskinframe = R_SkinFrame_LoadInternal(name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_PICMIP, true, r_fullbrights.integer, (unsigned char *)datapointer, skinwidth, skinheight, 8, NULL, NULL);
+						tempskinframe = R_SkinFrame_LoadInternal(name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_PICMIP | TEXF_COMPRESS, true, r_fullbrights.integer, (unsigned char *)datapointer, skinwidth, skinheight, 8, NULL, NULL);
 					Mod_BuildAliasSkinFromSkinFrame(loadmodel->data_textures + totalskins * loadmodel->num_surfaces, tempskinframe);
 				}
 				datapointer += skinwidth * skinheight;
@@ -1030,7 +1030,7 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 		// check for skins that don't exist in the model, but do exist as external images
 		// (this was added because yummyluv kept pestering me about support for it)
 		// TODO: support shaders here?
-		while ((tempskinframe = R_SkinFrame_LoadExternal(va("%s_%i", loadmodel->name, loadmodel->numskins), (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PICMIP, false)))
+		while ((tempskinframe = R_SkinFrame_LoadExternal(va("%s_%i", loadmodel->name, loadmodel->numskins), (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PICMIP | TEXF_COMPRESS, false)))
 		{
 			// expand the arrays to make room
 			tempskinscenes = loadmodel->skinscenes;
@@ -1179,7 +1179,7 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 		{
 			if (!Mod_LoadTextureFromQ3Shader(loadmodel->data_textures + i * loadmodel->num_surfaces, inskin, false, false, true))
 			{
-				tempskinframe = R_SkinFrame_LoadExternal(inskin, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false);
+				tempskinframe = R_SkinFrame_LoadExternal(inskin, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP | TEXF_COMPRESS, false);
 				if (!tempskinframe)
 					Con_Printf("%s is missing skin \"%s\"\n", loadmodel->name, inskin);
 				Mod_BuildAliasSkinFromSkinFrame(loadmodel->data_textures + i * loadmodel->num_surfaces, tempskinframe);
