@@ -339,15 +339,13 @@ cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 		flags |= TEXF_PRECACHE;
 	if (!strcmp(path, "gfx/colorcontrol/ditherpattern"))
 		flags |= TEXF_CLAMP;
-	if (gl_texturecompression_2d.integer)
-		flags |= TEXF_COMPRESS;
 
 	// load a high quality image from disk if possible
-	pic->tex = loadtextureimage(drawtexturepool, path, 0, 0, false, flags);
+	pic->tex = loadtextureimage(drawtexturepool, path, 0, 0, false, flags | (gl_texturecompression_2d.integer ? TEXF_COMPRESS : 0));
 	if (pic->tex == NULL && !strncmp(path, "gfx/", 4))
 	{
 		// compatibility with older versions which did not require gfx/ prefix
-		pic->tex = loadtextureimage(drawtexturepool, path + 4, 0, 0, false, flags);
+		pic->tex = loadtextureimage(drawtexturepool, path + 4, 0, 0, false, flags | (gl_texturecompression_2d.integer ? TEXF_COMPRESS : 0));
 	}
 	// if a high quality image was loaded, set the pic's size to match it, just
 	// in case there's no low quality version to get the size from

@@ -79,11 +79,11 @@ static void r_explosion_start(void)
 			data[y][x][3] = bound(0, a, 255);
 		}
 	}
-	explosiontexture = R_LoadTexture2D(explosiontexturepool, "explosiontexture", 128, 128, &data[0][0][0], TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_COMPRESS, NULL);
+	explosiontexture = R_LoadTexture2D(explosiontexturepool, "explosiontexture", 128, 128, &data[0][0][0], TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE, NULL);
 	for (y = 0;y < 128;y++)
 		for (x = 0;x < 128;x++)
 			data[y][x][0] = data[y][x][1] = data[y][x][2] = 255;
-	explosiontexturefog = R_LoadTexture2D(explosiontexturepool, "explosiontexturefog", 128, 128, &data[0][0][0], TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_COMPRESS, NULL);
+	explosiontexturefog = R_LoadTexture2D(explosiontexturepool, "explosiontexturefog", 128, 128, &data[0][0][0], TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE, NULL);
 	// note that explosions survive the restart
 }
 

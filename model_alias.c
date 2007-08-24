@@ -1020,7 +1020,7 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 				{
 					tempskinframe = R_SkinFrame_LoadExternal(name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PICMIP | TEXF_COMPRESS, false);
 					if (!tempskinframe)
-						tempskinframe = R_SkinFrame_LoadInternal(name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_PICMIP | TEXF_COMPRESS, true, r_fullbrights.integer, (unsigned char *)datapointer, skinwidth, skinheight, 8, NULL, NULL);
+						tempskinframe = R_SkinFrame_LoadInternal(name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_PICMIP, true, r_fullbrights.integer, (unsigned char *)datapointer, skinwidth, skinheight, 8, NULL, NULL);
 					Mod_BuildAliasSkinFromSkinFrame(loadmodel->data_textures + totalskins * loadmodel->num_surfaces, tempskinframe);
 				}
 				datapointer += skinwidth * skinheight;
