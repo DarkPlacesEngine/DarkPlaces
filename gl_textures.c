@@ -39,22 +39,22 @@ typedef struct textypeinfo_s
 	int textype;
 	int inputbytesperpixel;
 	int internalbytesperpixel;
-	int glinternalbytesperpixel;
+	float glinternalbytesperpixel;
 	int glformat;
 	int glinternalformat;
 }
 textypeinfo_t;
 
-static textypeinfo_t textype_palette                = {TEXTYPE_PALETTE, 1, 4, 4, GL_RGBA   , 3};
-static textypeinfo_t textype_rgb                    = {TEXTYPE_RGB    , 3, 3, 4, GL_RGB    , 3};
-static textypeinfo_t textype_rgba                   = {TEXTYPE_RGBA   , 4, 4, 4, GL_RGBA   , 3};
-static textypeinfo_t textype_palette_alpha          = {TEXTYPE_PALETTE, 1, 4, 4, GL_RGBA   , 4};
-static textypeinfo_t textype_rgba_alpha             = {TEXTYPE_RGBA   , 4, 4, 4, GL_RGBA   , 4};
-static textypeinfo_t textype_palette_compress       = {TEXTYPE_PALETTE, 1, 4, 1, GL_RGBA   , GL_COMPRESSED_RGB_ARB};
-static textypeinfo_t textype_rgb_compress           = {TEXTYPE_RGB    , 3, 3, 1, GL_RGB    , GL_COMPRESSED_RGB_ARB};
-static textypeinfo_t textype_rgba_compress          = {TEXTYPE_RGBA   , 4, 4, 1, GL_RGBA   , GL_COMPRESSED_RGB_ARB};
-static textypeinfo_t textype_palette_alpha_compress = {TEXTYPE_PALETTE, 1, 4, 1, GL_RGBA   , GL_COMPRESSED_RGBA_ARB};
-static textypeinfo_t textype_rgba_alpha_compress    = {TEXTYPE_RGBA   , 4, 4, 1, GL_RGBA   , GL_COMPRESSED_RGBA_ARB};
+static textypeinfo_t textype_palette                = {TEXTYPE_PALETTE, 1, 4, 4.0f, GL_RGBA   , 3};
+static textypeinfo_t textype_rgb                    = {TEXTYPE_RGB    , 3, 3, 4.0f, GL_RGB    , 3};
+static textypeinfo_t textype_rgba                   = {TEXTYPE_RGBA   , 4, 4, 4.0f, GL_RGBA   , 3};
+static textypeinfo_t textype_palette_alpha          = {TEXTYPE_PALETTE, 1, 4, 4.0f, GL_RGBA   , 4};
+static textypeinfo_t textype_rgba_alpha             = {TEXTYPE_RGBA   , 4, 4, 4.0f, GL_RGBA   , 4};
+static textypeinfo_t textype_palette_compress       = {TEXTYPE_PALETTE, 1, 4, 0.5f, GL_RGBA   , GL_COMPRESSED_RGB_ARB};
+static textypeinfo_t textype_rgb_compress           = {TEXTYPE_RGB    , 3, 3, 0.5f, GL_RGB    , GL_COMPRESSED_RGB_ARB};
+static textypeinfo_t textype_rgba_compress          = {TEXTYPE_RGBA   , 4, 4, 0.5f, GL_RGBA   , GL_COMPRESSED_RGB_ARB};
+static textypeinfo_t textype_palette_alpha_compress = {TEXTYPE_PALETTE, 1, 4, 1.0f, GL_RGBA   , GL_COMPRESSED_RGBA_ARB};
+static textypeinfo_t textype_rgba_alpha_compress    = {TEXTYPE_RGBA   , 4, 4, 1.0f, GL_RGBA   , GL_COMPRESSED_RGBA_ARB};
 
 #define GLTEXTURETYPE_1D 0
 #define GLTEXTURETYPE_2D 1
@@ -461,7 +461,7 @@ static int R_CalcTexelDataSize (gltexture_t *glt)
 		}
 	}
 
-	return size * glt->textype->glinternalbytesperpixel * glt->sides;
+	return (int)(size * glt->textype->glinternalbytesperpixel) * glt->sides;
 }
 
 void R_TextureStats_Print(qboolean printeach, qboolean printpool, qboolean printtotal)
