@@ -2821,9 +2821,9 @@ video_resolution_t video_resolutions[] =
 #define VID_DEFAULT 3
 #define VID_RES_COUNT ((int)(sizeof(video_resolutions) / sizeof(video_resolutions[0])) - 1)
 
-#define VIDEO_ITEMS 9
+#define VIDEO_ITEMS 10
 static int video_cursor = 0;
-static int video_cursor_table[] = {56, 68, 88, 100, 112, 132, 162, 174, 186};
+static int video_cursor_table[] = {56, 68, 88, 100, 112, 132, 162, 170, 178, 186};
 static int video_resolution;
 
 void M_Menu_Video_f (void)
@@ -2915,6 +2915,9 @@ static void M_Video_Draw (void)
 	M_ItemPrint(16, video_cursor_table[8], "       Texture Quality", true);
 	M_DrawSlider(220, video_cursor_table[8], gl_picmip.value, 3, 0);
 
+	M_ItemPrint(16, video_cursor_table[9], "   Texture Compression", gl_support_texture_compression);
+	M_DrawCheckbox(220, video_cursor_table[9], gl_texturecompression.integer);
+
 	// Cursor
 	M_DrawCharacter(200, video_cursor_table[video_cursor], 12+((int)(realtime*4)&1));
 }
@@ -2963,6 +2966,9 @@ static void M_Menu_Video_AdjustSliders (int dir)
 			break;
 		case 8:
 			Cvar_SetValueQuick (&gl_picmip, bound(0, gl_picmip.value - dir, 3));
+			break;
+		case 9:
+			Cvar_SetValueQuick (&gl_texturecompression, !gl_texturecompression.integer);
 			break;
 	}
 }
