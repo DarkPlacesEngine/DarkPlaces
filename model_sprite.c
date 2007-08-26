@@ -27,6 +27,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 cvar_t r_mipsprites = {CVAR_SAVE, "r_mipsprites", "1", "mipmaps sprites so they render faster in the distance and do not display noise artifacts"};
 cvar_t r_picmipsprites = {CVAR_SAVE, "r_picmipsprites", "1", "make gl_picmip affect sprites too (saves some graphics memory in sprite heavy games)"};
+cvar_t r_labelsprites_scale = {CVAR_SAVE, "r_labelsprites_scale", "1", "global scale to apply to label sprites before conversion to HUD coordinates"};
+cvar_t r_labelsprites_roundtopixels = {CVAR_SAVE, "r_labelsprites_roundtopixels", "1", "try to make label sprites sharper by rounding their size to 0.5x or 1x and by rounding their position to whole pixels if possible"};
 
 /*
 ===============
@@ -37,6 +39,8 @@ void Mod_SpriteInit (void)
 {
 	Cvar_RegisterVariable(&r_mipsprites);
 	Cvar_RegisterVariable(&r_picmipsprites);
+	Cvar_RegisterVariable(&r_labelsprites_scale);
+	Cvar_RegisterVariable(&r_labelsprites_roundtopixels);
 }
 
 static void Mod_SpriteSetupTexture(texture_t *texture, skinframe_t *skinframe, qboolean fullbright, qboolean additive)
