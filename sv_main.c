@@ -596,6 +596,69 @@ void SV_StartSound (prvm_edict_t *entity, int channel, const char *sample, int v
 }
 
 /*
+==================
+SV_StartPointSound
+
+Nearly the same logic as SV_StartSound, except an origin
+instead of an entity is provided and channel is omitted.
+
+The entity sent to the client is 0 (world) and the channel
+is 0 (CHAN_AUTO).  SND_LARGEENTITY will never occur in this
+function, therefore the check for it is omitted.
+
+==================
+*/
+void SV_StartPointSound (vec3_t origin, const char *sample, int volume, float attenuation)
+{
+	int sound_num, field_mask, i;
+
+	if (volume < 0 || volume > 255)
+	{
+		Con_Printf ("SV_StartPointSound: volume = %i\n", volume);
+		return;
+	}
+
+	if (attenuation < 0 || attenuation > 4)
+	{
+		Con_Printf ("SV_StartPointSound: attenuation = %f\n", attenuation);
+		return;
+	}
+
+	if (sv.datagram.cursize > MAX_PACKETFRAGMENT-21)
+		return;
+
+	// find precache number for sound
+	sound_num = SV_SoundIndex(sample, 1);
+	if (!sound_num)
+		return;
+
+	field_mask = 0;
+	if (volume != DEFAULT_SOUND_PACKET_VOLUME)
+		field_mask |= SND_VOLUME;
+	if (attenuation != DEFAULT_SOUND_PACKET_ATTENUATION)
+		field_mask |= SND_ATTENUATION;
+	if (sound_num >= 256)
+		field_mask |= SND_LARGESOUND;
+
+// directed messages go only to the entity they are targeted on
+	MSG_WriteByte (&sv.datagram, svc_sound);
+	MSG_WriteByte (&sv.datagram, field_mask);
+	if (field_mask & SND_VOLUME)
+		MSG_WriteByte (&sv.datagram, volume);
+	if (field_mask & SND_ATTENUATION)
+		MSG_WriteByte (&sv.datagram, (int)(attenuation*64));
+	// Always write entnum 0 for the world entity
+	MSG_WriteShort (&sv.datagram, (0<<3) | 0);
+	if (field_mask & SND_LARGESOUND)
+		MSG_WriteShort (&sv.datagram, sound_num);
+	else
+		MSG_WriteByte (&sv.datagram, sound_num);
+	for (i = 0;i < 3;i++)
+		MSG_WriteCoord (&sv.datagram, origin[i], sv.protocol);
+	SV_FlushBroadcastMessages();
+}
+
+/*
 ==============================================================================
 
 CLIENT SPAWNING

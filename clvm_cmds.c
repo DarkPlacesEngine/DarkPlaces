@@ -162,6 +162,37 @@ static void VM_CL_sound (void)
 	S_StartSound(32768 + PRVM_NUM_FOR_EDICT(entity), channel, S_FindName(sample), entity->fields.client->origin, volume, attenuation);
 }
 
+// #483 void(vector origin, string sample, float volume, float attenuation) pointsound
+static void VM_CL_pointsound(void)
+{
+	const char			*sample;
+	float 				volume;
+	float				attenuation;
+	vec3_t				org;
+
+	VM_SAFEPARMCOUNT(4, VM_CL_pointsound);
+
+	VectorCopy( PRVM_G_VECTOR(OFS_PARM0), org);
+	sample = PRVM_G_STRING(OFS_PARM1);
+	volume = PRVM_G_FLOAT(OFS_PARM2);
+	attenuation = PRVM_G_FLOAT(OFS_PARM3);
+
+	if (volume < 0 || volume > 1)
+	{
+		VM_Warning("VM_CL_pointsound: volume must be in range 0-1\n");
+		return;
+	}
+
+	if (attenuation < 0 || attenuation > 4)
+	{
+		VM_Warning("VM_CL_pointsound: attenuation must be in range 0-4\n");
+		return;
+	}
+
+	// Send World Entity as Entity to Play Sound (for CSQC, that is 32768)
+	S_StartSound(32768, 0, S_FindName(sample), org, volume, attenuation);
+}
+
 // #14 entity() spawn
 static void VM_CL_spawn (void)
 {
@@ -3202,7 +3233,7 @@ VM_tokenizebyseparator,			// #479 float(string s) tokenizebyseparator (DP_QC_TOK
 VM_strtolower,					// #480 string(string s) VM_strtolower (DP_QC_STRING_CASE_FUNCTIONS)
 VM_strtoupper,					// #481 string(string s) VM_strtoupper (DP_QC_STRING_CASE_FUNCTIONS)
 VM_cvar_defstring,				// #482 string(string s) cvar_defstring (DP_QC_CVAR_DEFSTRING)
-NULL,							// #483
+VM_CL_pointsound,				// #483 void(vector origin, string sample, float volume, float attenuation) (DP_SV_POINTSOUND)
 NULL,							// #484
 NULL,							// #485
 NULL,							// #486
