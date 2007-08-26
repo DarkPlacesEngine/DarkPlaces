@@ -105,6 +105,7 @@ char *vm_sv_extensions =
 "DP_SV_PING "
 "DP_SV_PLAYERPHYSICS "
 "DP_SV_POINTPARTICLES "
+"DP_SV_POINTSOUND "
 "DP_SV_PRECACHEANYTIME "
 "DP_SV_PRINT "
 "DP_SV_PUNCHVECTOR "
@@ -472,6 +473,45 @@ static void VM_SV_sound (void)
 	}
 
 	SV_StartSound (entity, channel, sample, volume, attenuation);
+}
+
+/*
+=================
+VM_SV_pointsound
+
+Follows the same logic as VM_SV_sound, except instead of
+an entity, an origin for the sound is provided, and channel
+is omitted (since no entity is being tracked).
+
+=================
+*/
+static void VM_SV_pointsound(void)
+{
+	const char	*sample;
+	int 		volume;
+	float		attenuation;
+	vec3_t		org;
+
+	VM_SAFEPARMCOUNT(4, VM_SV_pointsound);
+
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), org);
+	sample = PRVM_G_STRING(OFS_PARM1);
+	volume = (int)(PRVM_G_FLOAT(OFS_PARM2) * 255);
+	attenuation = PRVM_G_FLOAT(OFS_PARM3);
+
+	if (volume < 0 || volume > 255)
+	{
+		VM_Warning("SV_StartPointSound: volume must be in range 0-1\n");
+		return;
+	}
+
+	if (attenuation < 0 || attenuation > 4)
+	{
+		VM_Warning("SV_StartPointSound: attenuation must be in range 0-4\n");
+		return;
+	}
+
+	SV_StartPointSound (org, sample, volume, attenuation);
 }
 
 /*
@@ -3168,7 +3208,7 @@ VM_tokenizebyseparator,			// #479 float(string s) tokenizebyseparator (DP_QC_TOK
 VM_strtolower,					// #480 string(string s) VM_strtolower (DP_QC_STRING_CASE_FUNCTIONS)
 VM_strtoupper,					// #481 string(string s) VM_strtoupper (DP_QC_STRING_CASE_FUNCTIONS)
 VM_cvar_defstring,				// #482 string(string s) cvar_defstring (DP_QC_CVAR_DEFSTRING)
-NULL,							// #483
+VM_SV_pointsound,				// #483 void(vector origin, string sample, float volume, float attenuation) (DP_SV_POINTSOUND)
 NULL,							// #484
 NULL,							// #485
 NULL,							// #486

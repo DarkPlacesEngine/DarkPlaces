@@ -411,6 +411,7 @@ void SV_Init (void);
 void SV_StartParticle (vec3_t org, vec3_t dir, int color, int count);
 void SV_StartEffect (vec3_t org, int modelindex, int startframe, int framecount, int framerate);
 void SV_StartSound (prvm_edict_t *entity, int channel, const char *sample, int volume, float attenuation);
+void SV_StartPointSound (vec3_t origin, const char *sample, int volume, float attenuation);
 
 void SV_ConnectClient (int clientnum, netconn_t *netconnection);
 void SV_DropClient (qboolean crash);
