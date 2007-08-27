@@ -3420,15 +3420,15 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 		t->specularscale = 0;
 	}
 
-	t->currentpolygonfactor = r_refdef.polygonfactor;
-	t->currentpolygonoffset = r_refdef.polygonoffset;
+	t->currentpolygonfactor = r_refdef.polygonfactor + t->basepolygonfactor;
+	t->currentpolygonoffset = r_refdef.polygonoffset + t->basepolygonoffset;
 	// submodels are biased to avoid z-fighting with world surfaces that they
 	// may be exactly overlapping (avoids z-fighting artifacts on certain
 	// doors and things in Quake maps)
 	if (ent->model->brush.submodel)
 	{
-		t->currentpolygonfactor = r_refdef.polygonfactor + r_polygonoffset_submodel_factor.value;
-		t->currentpolygonoffset = r_refdef.polygonoffset + r_polygonoffset_submodel_offset.value;
+		t->currentpolygonfactor += r_polygonoffset_submodel_factor.value;
+		t->currentpolygonoffset += r_polygonoffset_submodel_offset.value;
 	}
 
 	VectorClear(t->dlightcolor);
