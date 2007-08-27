@@ -880,6 +880,9 @@ Key_Event (int key, char ascii, qboolean down)
 	if (!bind)
 		bind = keybindings[key_bmap2][key];
 
+	if (developer.integer >= 1000)
+		Con_Printf("Key_Event(%i, '%c', %s) keydown %i bind \"%s\"\n", key, ascii, down ? "down" : "up", keydown[key], bind ? bind : "");
+
 	if(key_dest == key_game)
 	{
 		q = CL_VM_InputEvent(!down, key);
