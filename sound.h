@@ -49,6 +49,7 @@ extern cvar_t bgmvolume;
 extern cvar_t volume;
 extern cvar_t snd_initialized;
 extern cvar_t snd_staticvolume;
+extern cvar_t snd_mutewhenidle;
 
 
 // ====================================================================

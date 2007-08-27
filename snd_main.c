@@ -175,6 +175,7 @@ cvar_t snd_streaming = { CVAR_SAVE, "snd_streaming", "1", "enables keeping compr
 cvar_t snd_swapstereo = {CVAR_SAVE, "snd_swapstereo", "0", "swaps left/right speakers for old ISA soundblaster cards"};
 extern cvar_t v_flipped;
 cvar_t snd_channellayout = {0, "snd_channellayout", "0", "channel layout. Can be 0 (auto - snd_restart needed), 1 (standard layout), or 2 (ALSA layout)"};
+cvar_t snd_mutewhenidle = {CVAR_SAVE, "snd_mutewhenidle", "1", "whether to disable sound output when game window is inactive"};
 
 // Local cvars
 static cvar_t nosound = {0, "nosound", "0", "disables sound"};
@@ -707,6 +708,7 @@ void S_Init(void)
 	Cvar_RegisterVariable(&snd_speed);
 	Cvar_RegisterVariable(&snd_width);
 	Cvar_RegisterVariable(&snd_channels);
+	Cvar_RegisterVariable(&snd_mutewhenidle);
 
 // COMMANDLINEOPTION: Sound: -nosound disables sound (including CD audio)
 	if (COM_CheckParm("-nosound"))

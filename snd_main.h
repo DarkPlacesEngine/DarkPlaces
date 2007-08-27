@@ -129,7 +129,6 @@ extern cvar_t snd_streaming;
 #define SND_CHANNELLAYOUT_ALSA		2
 extern cvar_t snd_channellayout;
 
-
 extern int snd_blocked;		// counter. When > 0, we stop submitting sound to the audio device
 
 extern mempool_t *snd_mempool;
