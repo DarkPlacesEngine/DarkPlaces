@@ -1,4 +1,14 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
+-d (Amish, Fuh) feature darkplaces client: add qw protocol support (making darkplaces work as a qwcl client) (Amish, Fuh)
+0 bug darkplaces client qw: add .mvd demo support
+0 bug darkplaces client qw: add .qwd demo support
+0 bug darkplaces client qw: inactive player entities are showing up at 0 0 0 (Plague Monkey Rat)
+0 bug darkplaces client qw: qw skins should only be active on progs/player.mdl (Plague Monkey Rat)
+0 bug darkplaces client qw: qw/skins/*.pcx need to be cropped to 296x194 and loaded as internal textures so they are split into multiple layers (Plague Monkey Rat)
+0 bug darkplaces client qw: restrict wateralpha and such cvars according to what is permitted in qw serverinfo?
+0 bug darkplaces client qw: cl_netinputpacketspersecond 20 is too low for QW physics to behave properly, add a separate cl_netinputpacketspersecond_qw cvar which defaults to 72 (Plague Monkey Rat)
+0 bug darkplaces client qw: add spectator cvar (Plague Monkey Rat)
+0 bug darkplaces client qw: add spectator prediction
 0 bug darkplaces client: can't move mouse around in nexuiz menu if vid_mouse is 0
 0 bug darkplaces client: if you press 1 during the demo loop when quake starts, escape doesn't do anything until you hit some other key (daemon)
 0 bug darkplaces loader: crash when a mdl model has more replacement skins than the model contains (Lardarse)
@@ -49,7 +59,6 @@
 0 change darkplaces client: implement inversion of non-uniform scaling in Matrix4x4_Invert_Simple or replace it with a full featured matrix inverter
 0 change darkplaces client: modify cl_particles_quake to make all the engine dlights be white and look as much like quake as possible (Jago)
 0 change darkplaces client: particles shouldn't be using contents checks to decide whether to die, they should use movement traces
-0 change darkplaces client: restrict wateralpha and such cvars according to what is permitted in qw serverinfo?
 0 change darkplaces client: turn off coronas on dlights (Jago)
 0 change darkplaces extensions: edit FRIK_FILE documentation to mention that fgets uses its own separate buffer, so only one fgets can be done at a time without uzing strzone, but that this is not true with DP_QC_UNLIMITEDTEMPSTRINGS (FrikaC)
 0 change darkplaces extensions: edit FRIK_FILE documentation to mention that strcat uses its own separate buffer, and that a = strcat(a, b);a = strcat(a, c); works correctly despite this, but that strcat is far more flexible with DP_QC_UNLIMITEDTEMPSTRINGS (FrikaC)
@@ -77,8 +86,6 @@
 0 change hmap2: qbsp should do tjunc fixing on leaky maps
 0 change revelation: change the wabbit kill message to " was hunting wabbit but shot " " instead"
 0 change zmodel: include the example script in the build zips, not just in the files directory
-0 feature darkplaces client: add .mvd demo support
-0 feature darkplaces client: add .qwd demo support
 0 feature darkplaces client: add DP_GFX_EFFECTINFO_TXT to extensions and document it, the feature has been in for a long time, also update wiki.quakesrc.org accordingly
 0 feature darkplaces client: add a cl_showspeed cvar to display a hud overlay of your current velocity, speed as length of velocity, and speed along forward vector (Spike)
 0 feature darkplaces client: add a cvar to make the renderer use a different entity for pvs than for viewing, this might be useful for a third person camera that should only see what the player sees (Urre)
@@ -317,7 +324,6 @@
 2 feature darkplaces client: http download and parse http://www.gameaholic.com/servers/qspy-quake for nq servers (Spike)
 2 feature darkplaces client: interpolate scale and alpha changes (Cheapy)
 2 feature darkplaces client: make CL_Video use TEXF_FRAGMENT again by adding general, transparent support for it in all drawqueue functions (so you dont need to call FragmentLocation) (Black)
-2 feature darkplaces client: qw skin loading/rendering
 2 feature darkplaces image: add scaling capabilities to Image_CopyMux
 2 feature darkplaces loader: add support for fuhquake naming of map textures (textures/start/quake.tga style)
 2 feature darkplaces loader: implement vertex cache optimization of models during loading, see this paper: http://home.comcast.net/~tom_forsyth/papers/fast_vert_cache_opt.html (Dresk)
@@ -368,7 +374,6 @@
 3 feature darkplaces client: .loc support and other team messaging capabilities (sublim3)
 3 feature darkplaces client: add an httpdownload command which can download pk3 archives (Paul Gagnon)
 3 feature darkplaces client: add back r_waterripple (Vermeulen)
-3 feature darkplaces client: add clientside entity prediction similar to qw based on ping, and add cl_prediction and cl_prediction_lockping
 3 feature darkplaces client: add direct xvid recording using the xvid library (Error, Vermeulen)
 3 feature darkplaces docs: add short and long documentation string to each cvar/command (QorpsE)
 3 feature darkplaces docs: write a documentation string in engine, and a command to dump documentation to a darkplaces.txt file (QorpsE)
@@ -423,11 +428,9 @@
 4 bug darkplaces physics: rotating MOVETYPE_PUSH code calls blocked when it's just a touch, it isn't even trying to push
 4 cleanup darkplaces memory: use the memory pool nesting feature ! (Black[,Vicious])
 4 feature darkplaces client: add decals on models (Urre)
-4 feature darkplaces client: add qw protocol support (making darkplaces work as a qwcl client) (Amish, Fuh)
 4 feature darkplaces client: proquake secure protocol support for playing on proquake servers (sublim3)
 4 feature darkplaces console: add setlock command which marks a cvar as locked, and sends it over network to connected clients as a setlock command, the clients will not allow the user to modify the cvars while locked (and will only accept setlock commands over the network), and cvars are unlocked when level ends - the server will send the locks again on next level (VorteX)
 4 feature darkplaces csqc: add builtin to clientside qc for reading triangles of model meshes (useful to orient a ui along a triangle of a model mesh)
-4 feature darkplaces csqc: add builtins to clientside qc for gl calls
 4 feature darkplaces demo: ability to record demos while already connected (green)
 4 feature darkplaces loader: add SKM model support (Vermeulen, Vic)
 4 feature darkplaces loader: load .map file if present to get collision brushes for q1bsp (Transfusion)
@@ -1227,6 +1230,7 @@ d feature darkplaces console: change commandline history to clear the commandlin
 d feature darkplaces console: expand parameters such as $cvar to use the value of the cvar, DP_CON_EXPANDCVAR (up2nogood)
 d feature darkplaces console: make aliases given parameters insert the parameters in place of $1, $2, $* macros in the alias string, add this as DP_CON_ALIASPARAMETERS (up2nogood)
 d feature darkplaces csqc: add "pl" support in getplayerkey function (Dresk)
+d feature darkplaces csqc: add builtins to clientside qc for rendering arbitrary polygon meshes
 d feature darkplaces csqc: add clientside quakec (KrimZon, FrikaC)
 d feature darkplaces cvars: sort cvars and commands by name so that when saved to config they are sorted (might also be able to remove sorting from cvar/command listing)
 d feature darkplaces editlights: add coronasize setting to rtlights (romi)
