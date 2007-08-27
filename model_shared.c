@@ -1488,6 +1488,8 @@ void Mod_LoadQ3Shaders(void)
 					shader->surfaceparms |= Q3SURFACEPARM_NOMIPMAPS;
 				else if (!strcasecmp(parameter[0], "nopicmip"))
 					shader->textureflags |= Q3TEXTUREFLAG_NOPICMIP;
+				else if (!strcasecmp(parameter[0], "polygonoffset"))
+					shader->textureflags |= Q3TEXTUREFLAG_POLYGONOFFSET;
 				else if (!strcasecmp(parameter[0], "deformvertexes") && numparameters >= 2)
 				{
 					int i, deformindex;
@@ -1601,6 +1603,8 @@ qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qbool
 			texture->basematerialflags |= MATERIALFLAG_ALPHATEST | MATERIALFLAG_NOSHADOW;
 		if (shader->textureflags & Q3TEXTUREFLAG_TWOSIDED)
 			texture->basematerialflags |= MATERIALFLAG_NOSHADOW | MATERIALFLAG_NOCULLFACE;
+		if (shader->textureflags & Q3TEXTUREFLAG_POLYGONOFFSET)
+			texture->basepolygonoffset -= 2;
 		texture->customblendfunc[0] = GL_ONE;
 		texture->customblendfunc[1] = GL_ZERO;
 		if (shader->numlayers > 0)

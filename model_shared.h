@@ -186,6 +186,7 @@ shadowmesh_t;
 // TODO: support these features more directly
 #define Q3TEXTUREFLAG_TWOSIDED 1
 #define Q3TEXTUREFLAG_NOPICMIP 16
+#define Q3TEXTUREFLAG_POLYGONOFFSET 32
 
 #define Q3PATHLENGTH 64
 #define TEXTURE_MAXFRAMES 64
@@ -414,6 +415,8 @@ typedef struct texture_s
 	// current PolygonOffset values for rendering this material
 	float currentpolygonfactor;
 	float currentpolygonoffset;
+	float basepolygonfactor;
+	float basepolygonoffset;
 
 	// textures to use when rendering this material
 	skinframe_t *currentskinframe;
