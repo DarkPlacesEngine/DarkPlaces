@@ -58,6 +58,7 @@ cvar_t host_framerate = {0, "host_framerate","0", "locks frame timing to this va
 cvar_t host_speeds = {0, "host_speeds","0", "reports how much time is used in server/graphics/sound"};
 // LordHavoc: framerate upper cap
 cvar_t cl_maxfps = {CVAR_SAVE, "cl_maxfps", "1000", "maximum fps cap, if game is running faster than this it will wait before running another frame (useful to make cpu time available to other programs)"};
+cvar_t cl_maxidlefps = {CVAR_SAVE, "cl_maxidlefps", "10", "maximum fps cap when the game is not the active window (makes cpu time available to other programs"};
 
 cvar_t developer = {0, "developer","0", "prints additional debugging messages and information (recommended for modders and level designers)"};
 cvar_t developer_entityparsing = {0, "developer_entityparsing", "0", "prints detailed network entities information each time a packet is received"};
@@ -199,6 +200,7 @@ static void Host_InitLocal (void)
 	Cvar_RegisterVariable (&host_framerate);
 	Cvar_RegisterVariable (&host_speeds);
 	Cvar_RegisterVariable (&cl_maxfps);
+	Cvar_RegisterVariable (&cl_maxidlefps);
 
 	Cvar_RegisterVariable (&developer);
 	Cvar_RegisterVariable (&developer_entityparsing);
@@ -778,7 +780,7 @@ void Host_Main(void)
 			else if (vid_activewindow)
 				clframetime = cl.realframetime = max(cl_timer, 1.0 / cl_maxfps.value);
 			else
-				clframetime = cl.realframetime = 0.1;
+				clframetime = cl.realframetime = max(cl_timer, 1.0 / cl_maxidlefps.value);
 
 			// apply slowmo scaling
 			clframetime *= cl.movevars_timescale;
