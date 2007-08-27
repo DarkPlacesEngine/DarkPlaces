@@ -2981,6 +2981,7 @@ void CL_ParseServerMessage(void)
 	unsigned char		cmdlog[32];
 	char		*cmdlogname[32], *temp;
 	int			cmdindex, cmdcount = 0;
+	qboolean	qwplayerupdatereceived;
 
 	// LordHavoc: moved demo message writing from before the packet parse to
 	// after the packet parse so that CL_Stop_f can be called by cl_autodemo
@@ -3012,10 +3013,6 @@ void CL_ParseServerMessage(void)
 	{
 		CL_NetworkTimeReceived(realtime); // qw has no clock
 
-		// slightly kill qw player entities each frame
-		for (i = 1;i < cl.maxclients;i++)
-			cl.entities_active[i] = false;
-
 		// kill all qw nails
 		cl.qw_num_nails = 0;
 
@@ -3023,6 +3020,8 @@ void CL_ParseServerMessage(void)
 		cl.qw_weaponkick = min(cl.qw_weaponkick + 10 * bound(0, cl.time - cl.oldtime, 0.1), 0);
 
 		cls.servermovesequence = cls.netcon->qw.incoming_sequence;
+
+		qwplayerupdatereceived = false;
 
 		while (1)
 		{
@@ -3286,6 +3285,14 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case qw_svc_playerinfo:
+				// slightly kill qw player entities now that we know there is
+				// an update of player entities this frame...
+				if (!qwplayerupdatereceived)
+				{
+					qwplayerupdatereceived = true;
+					for (i = 1;i < cl.maxclients;i++)
+						cl.entities_active[i] = false;
+				}
 				EntityStateQW_ReadPlayerUpdate();
 				break;
 
@@ -3343,23 +3350,12 @@ void CL_ParseServerMessage(void)
 			}
 		}
 
-		// fully kill the still slightly dead qw player entities each frame,
-		// but only if a player update was received
-		for (i = 1;i <= cl.maxclients;i++)
-			if (cl.entities_active[i])
-				break;
-		if (i <= cl.maxclients)
+		if (qwplayerupdatereceived)
 		{
-			// kill all non-updated entities this frame
+			// fully kill any player entities that were not updated this frame
 			for (i = 1;i <= cl.maxclients;i++)
 				if (!cl.entities_active[i])
 					cl.entities[i].state_current.active = false;
-		}
-		else
-		{
-			// no update this frame, restore the cl.entities_active for good measure
-			for (i = 1;i <= cl.maxclients;i++)
-				cl.entities_active[i] = cl.entities[i].state_current.active;
 		}
 	}
 	else

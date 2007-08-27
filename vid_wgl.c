@@ -380,16 +380,22 @@ void AppActivate(BOOL fActive, BOOL minimize)
 	vid_activewindow = fActive;
 	vid_hidden = minimize;
 
-// enable/disable sound on focus gain/loss
-	if (!vid_activewindow && sound_active)
+	// enable/disable sound on focus gain/loss
+	if (!vid_hidden && (vid_activewindow || !snd_mutewhenidle.integer))
 	{
-		S_BlockSound ();
-		sound_active = false;
+		if (!sound_active)
+		{
+			S_UnblockSound ();
+			sound_active = true;
+		}
 	}
-	else if (vid_activewindow && !sound_active)
+	else
 	{
-		S_UnblockSound ();
-		sound_active = true;
+		if (sound_active)
+		{
+			S_BlockSound ();
+			sound_active = false;
+		}
 	}
 
 	if (fActive)
