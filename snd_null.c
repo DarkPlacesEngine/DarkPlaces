@@ -26,6 +26,7 @@ cvar_t bgmvolume = {CVAR_SAVE, "bgmvolume", "1", "volume of background music (su
 cvar_t volume = {CVAR_SAVE, "volume", "0.7", "volume of sound effects"};
 cvar_t snd_staticvolume = {CVAR_SAVE, "snd_staticvolume", "1", "volume of ambient sound effects (such as swampy sounds at the start of e1m2)"};
 cvar_t snd_initialized = { CVAR_READONLY, "snd_initialized", "0", "indicates the sound subsystem is active"};
+cvar_t snd_mutewhenidle = {CVAR_SAVE, "snd_mutewhenidle", "1", "whether to disable sound output when game window is inactive"};
 
 void S_Init (void)
 {
@@ -33,6 +34,7 @@ void S_Init (void)
 	Cvar_RegisterVariable(&volume);
 	Cvar_RegisterVariable(&snd_staticvolume);
 	Cvar_RegisterVariable(&snd_initialized);
+	Cvar_RegisterVariable(&snd_mutewhenidle);
 }
 
 void S_Terminate (void)
