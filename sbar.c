@@ -1974,9 +1974,7 @@ void Sbar_IntermissionOverlay (void)
 	int		dig;
 	int		num;
 
-	// LordHavoc: changed to draw the deathmatch overlays in any multiplayer mode
-	//if (cl.gametype == GAME_DEATHMATCH)
-	if (!cl.islocalgame)
+	if (cl.gametype == GAME_DEATHMATCH)
 	{
 		Sbar_DeathmatchOverlay ();
 		return;
