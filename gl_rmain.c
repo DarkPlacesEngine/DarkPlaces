@@ -983,7 +983,11 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 			for (i = (SHADERPERMUTATION_MAX >> 1);;i>>=1)
 			{
 				if (!i)
+				{
+					Con_Printf("OpenGL 2.0 shaders disabled - unable to find a working shader permutation fallback on this driver (set r_glsl 1 if you want to try again)\n");
+					Cvar_SetValueQuick(&r_glsl, 0);
 					return 0; // no bit left to clear
+				}
 				// reduce i more quickly whenever it would not remove any bits
 				if (!(permutation & i))
 					continue;
