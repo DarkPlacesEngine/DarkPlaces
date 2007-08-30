@@ -97,7 +97,7 @@ typedef struct channel_s
 // Sound fetching functions
 // "start" is both an input and output parameter: it returns the actual start time of the sound buffer
 typedef const snd_buffer_t* (*snd_fetcher_getsb_t) (void *sfxfetcher, void **chfetcherpointer, unsigned int *start, unsigned int nbsampleframes);
-typedef void (*snd_fetcher_endsb_t) (channel_t* ch);
+typedef void (*snd_fetcher_endsb_t) (void **chfetcherpointer);
 typedef void (*snd_fetcher_free_t) (sfx_t* sfx);
 typedef const snd_format_t* (*snd_fetcher_getfmt_t) (sfx_t* sfx);
 struct snd_fetcher_s

@@ -1248,7 +1248,7 @@ void S_StopChannel (unsigned int channel_ind)
 		{
 			snd_fetcher_endsb_t fetcher_endsb = sfx->fetcher->endsb;
 			if (fetcher_endsb != NULL)
-				fetcher_endsb (ch);
+				fetcher_endsb (&ch->fetcher_data);
 		}
 
 		// Remove the lock it holds
