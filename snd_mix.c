@@ -250,7 +250,7 @@ static qboolean SND_PaintChannel (channel_t *ch, unsigned int count)
 		return false;
 
 	sb_offset = ch->pos;
-	sb = ch->sfx->fetcher->getsb (ch, &sb_offset, count);
+	sb = ch->sfx->fetcher->getsb (ch->sfx->fetcher_data, &ch->fetcher_data, &sb_offset, count);
 	if (sb == NULL)
 	{
 		Con_DPrintf("SND_PaintChannel: ERROR: can't get sound buffer from sfx \"%s\"\n",

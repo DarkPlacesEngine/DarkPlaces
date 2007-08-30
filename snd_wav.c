@@ -223,10 +223,10 @@ static wavinfo_t GetWavinfo (char *name, unsigned char *wav, int wavlength)
 WAV_FetchSound
 ====================
 */
-static const snd_buffer_t* WAV_FetchSound (channel_t* ch, unsigned int *start, unsigned int nbsampleframes)
+static const snd_buffer_t* WAV_FetchSound (void *sfxfetcher, void **chfetcherpointer, unsigned int *start, unsigned int nbsampleframes)
 {
 	*start = 0;
-	return (snd_buffer_t *)ch->sfx->fetcher_data;
+	return (snd_buffer_t *)sfxfetcher;
 }
 
 /*
