@@ -567,9 +567,9 @@ static const snd_buffer_t* OGG_FetchSound (void *sfxfetcher, void **chfetcherpoi
 OGG_FetchEnd
 ====================
 */
-static void OGG_FetchEnd (void **chfetcherpointer)
+static void OGG_FetchEnd (void *chfetcherdata)
 {
-	ogg_stream_perchannel_t* per_ch = (ogg_stream_perchannel_t *)*chfetcherpointer;
+	ogg_stream_perchannel_t* per_ch = (ogg_stream_perchannel_t *)chfetcherdata;
 
 	if (per_ch != NULL)
 	{
@@ -578,7 +578,6 @@ static void OGG_FetchEnd (void **chfetcherpointer)
 
 		Mem_Free (per_ch);
 	}
-	*chfetcherpointer = NULL;
 }
 
 
@@ -587,20 +586,15 @@ static void OGG_FetchEnd (void **chfetcherpointer)
 OGG_FreeSfx
 ====================
 */
-static void OGG_FreeSfx (sfx_t* sfx)
+static void OGG_FreeSfx (void *sfxfetcherdata)
 {
-	ogg_stream_persfx_t* per_sfx = (ogg_stream_persfx_t *)sfx->fetcher_data;
+	ogg_stream_persfx_t* per_sfx = (ogg_stream_persfx_t *)sfxfetcherdata;
 
 	// Free the Ogg Vorbis file
 	Mem_Free(per_sfx->file);
-	sfx->memsize -= per_sfx->filesize;
 
 	// Free the stream structure
 	Mem_Free(per_sfx);
-	sfx->memsize -= sizeof (*per_sfx);
-
-	sfx->fetcher_data = NULL;
-	sfx->fetcher = NULL;
 }
 
 
