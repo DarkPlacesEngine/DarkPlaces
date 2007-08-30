@@ -567,24 +567,18 @@ static const snd_buffer_t* OGG_FetchSound (void *sfxfetcher, void **chfetcherpoi
 OGG_FetchEnd
 ====================
 */
-static void OGG_FetchEnd (channel_t* ch)
+static void OGG_FetchEnd (void **chfetcherpointer)
 {
-	ogg_stream_perchannel_t* per_ch;
+	ogg_stream_perchannel_t* per_ch = (ogg_stream_perchannel_t *)*chfetcherpointer;
 
-	per_ch = (ogg_stream_perchannel_t *)ch->fetcher_data;
 	if (per_ch != NULL)
 	{
-		size_t buff_len;
-
 		// Free the ogg vorbis decoder
 		qov_clear (&per_ch->vf);
 
-		buff_len = per_ch->sb.maxframes * per_ch->sb.format.channels * per_ch->sb.format.width;
-		ch->sfx->memsize -= sizeof (*per_ch) - sizeof (per_ch->sb.samples) + buff_len;
-
 		Mem_Free (per_ch);
-		ch->fetcher_data = NULL;
 	}
+	*chfetcherpointer = NULL;
 }
 
 
