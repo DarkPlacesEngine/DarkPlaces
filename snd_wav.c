@@ -234,16 +234,11 @@ static const snd_buffer_t* WAV_FetchSound (void *sfxfetcher, void **chfetcherpoi
 WAV_FreeSfx
 ====================
 */
-static void WAV_FreeSfx (sfx_t* sfx)
+static void WAV_FreeSfx (void *sfxfetcherdata)
 {
-	snd_buffer_t* sb = (snd_buffer_t *)sfx->fetcher_data;
-
+	snd_buffer_t* sb = (snd_buffer_t *)sfxfetcherdata;
 	// Free the sound buffer
-	sfx->memsize -= (sb->maxframes * sb->format.channels * sb->format.width) + sizeof (*sb) - sizeof (sb->samples);
 	Mem_Free(sb);
-
-	sfx->fetcher_data = NULL;
-	sfx->fetcher = NULL;
 }
 
 /*
