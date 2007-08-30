@@ -961,24 +961,54 @@ void Image_WriteTGARGBA (const char *filename, int width, int height, const unsi
 	buffer[13] = (width >> 8) & 0xFF;
 	buffer[14] = (height >> 0) & 0xFF;
 	buffer[15] = (height >> 8) & 0xFF;
-	buffer[16] = 32;	// pixel size
-	buffer[17] = 8; // 8 bits of alpha
 
-	// swap rgba to bgra and flip upside down
-	out = buffer + 18;
-	for (y = height - 1;y >= 0;y--)
+	for (y = 3;y < width*height*4;y += 4)
+		if (data[y] < 255)
+			break;
+
+	if (y < width*height*4)
 	{
-		in = data + y * width * 4;
-		end = in + width * 4;
-		for (;in < end;in += 4)
+		// save the alpha channel
+		buffer[16] = 32;	// pixel size
+		buffer[17] = 8; // 8 bits of alpha
+
+		// swap rgba to bgra and flip upside down
+		out = buffer + 18;
+		for (y = height - 1;y >= 0;y--)
 		{
-			*out++ = in[2];
-			*out++ = in[1];
-			*out++ = in[0];
-			*out++ = in[3];
+			in = data + y * width * 4;
+			end = in + width * 4;
+			for (;in < end;in += 4)
+			{
+				*out++ = in[2];
+				*out++ = in[1];
+				*out++ = in[0];
+				*out++ = in[3];
+			}
 		}
+		FS_WriteFile (filename, buffer, width*height*4 + 18 );
 	}
-	FS_WriteFile (filename, buffer, width*height*4 + 18 );
+	else
+	{
+		// save only the color channels
+		buffer[16] = 24;	// pixel size
+		buffer[17] = 0; // 8 bits of alpha
+
+		// swap rgba to bgr and flip upside down
+		out = buffer + 18;
+		for (y = height - 1;y >= 0;y--)
+		{
+			in = data + y * width * 4;
+			end = in + width * 4;
+			for (;in < end;in += 4)
+			{
+				*out++ = in[2];
+				*out++ = in[1];
+				*out++ = in[0];
+			}
+		}
+		FS_WriteFile (filename, buffer, width*height*3 + 18 );
+	}
 
 	Mem_Free(buffer);
 }
