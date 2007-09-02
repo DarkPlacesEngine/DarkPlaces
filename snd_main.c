@@ -1172,7 +1172,6 @@ void S_PlaySfxOnChannel (sfx_t *sfx, channel_t *target_chan, unsigned int flags,
 	// Initialize the channel
 	memset (target_chan, 0, sizeof (*target_chan));
 	VectorCopy (origin, target_chan->origin);
-	target_chan->master_vol = (int)(fvol * 255);
 	target_chan->sfx = sfx;
 	target_chan->flags = flags;
 	target_chan->pos = 0; // start of the sound
@@ -1189,6 +1188,9 @@ void S_PlaySfxOnChannel (sfx_t *sfx, channel_t *target_chan, unsigned int flags,
 
 	// Lock the SFX during play
 	S_LockSfx (sfx);
+
+	// and finally, apply the volume
+	S_SetChannelVolume(target_chan - channels, fvol);
 }
 
 
@@ -1339,6 +1341,16 @@ void S_PauseGameSounds (qboolean toggle)
 
 void S_SetChannelVolume (unsigned int ch_ind, float fvol)
 {
+	sfx_t *sfx = channels[ch_ind].sfx;
+	if(sfx->volume_peak > 0)
+	{
+		// Replaygain support
+		// Con_DPrintf("Setting volume on ReplayGain-enabled track... %f -> ", fvol);
+		fvol *= sfx->volume_mult;
+		if(fvol * sfx->volume_peak > 1)
+			fvol = 1 / sfx->volume_peak;
+		// Con_DPrintf("%f\n", fvol);
+	}
 	channels[ch_ind].master_vol = (int)(fvol * 255.0f);
 }
 

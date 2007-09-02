@@ -75,6 +75,9 @@ struct sfx_s
 	unsigned int		total_length;	// in sample frames
 	const snd_fetcher_t	*fetcher;
 	void				*fetcher_data;	// Per-sfx data for the sound fetching functions
+
+	float				volume_mult;    // for replay gain (multiplier to apply)
+	float				volume_peak;    // for replay gain (highest peak); if set to 0, ReplayGain isn't supported
 };
 
 // maximum supported speakers constant
