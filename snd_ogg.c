@@ -622,13 +622,16 @@ Load an Ogg Vorbis file into memory
 qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *sfx)
 {
 	unsigned char *data;
-	const char *loopcomment;
+	const char *thiscomment;
 	fs_offset_t filesize;
 	ov_decode_t ov_decode;
 	OggVorbis_File vf;
 	vorbis_info *vi;
 	vorbis_comment *vc;
 	ogg_int64_t len, buff_len;
+	double peak = 0.0;
+	double gaindb = 0.0;
+	double gain;
 
 	if (!vf_dll)
 		return false;
@@ -694,9 +697,15 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *sfx)
 		vc = qov_comment(&vf, -1);
 		if(vc)
 		{
-			loopcomment = qvorbis_comment_query(vc, "LOOP_START", 0);
-			if(loopcomment)
-				sfx->loopstart = bound(0, (unsigned int) (atof(loopcomment) * (double)snd_renderbuffer->format.speed / (double)per_sfx->format.speed), sfx->total_length);
+			thiscomment = qvorbis_comment_query(vc, "LOOP_START", 0);
+			if(thiscomment)
+				sfx->loopstart = bound(0, (unsigned int) (atof(thiscomment) * (double)snd_renderbuffer->format.speed / (double)per_sfx->format.speed), sfx->total_length);
+			thiscomment = qvorbis_comment_query(vc, "REPLAYGAIN_TRACK_PEAK", 0);
+			if(thiscomment)
+				peak = atof(thiscomment);
+			thiscomment = qvorbis_comment_query(vc, "REPLAYGAIN_TRACK_GAIN", 0);
+			if(thiscomment)
+				gaindb = atof(thiscomment);
 		}
 	}
 	else
@@ -746,14 +755,27 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *sfx)
 		vc = qov_comment(&vf, -1);
 		if(vc)
 		{
-			loopcomment = qvorbis_comment_query(vc, "LOOP_START", 0);
-			if(loopcomment)
-				sfx->loopstart = bound(0, (unsigned int) (atoi(loopcomment) * (double)snd_renderbuffer->format.speed / (double)sb->format.speed), sfx->total_length);
+			thiscomment = qvorbis_comment_query(vc, "LOOP_START", 0);
+			if(thiscomment)
+				sfx->loopstart = bound(0, (unsigned int) (atoi(thiscomment) * (double)snd_renderbuffer->format.speed / (double)sb->format.speed), sfx->total_length);
+			thiscomment = qvorbis_comment_query(vc, "REPLAYGAIN_TRACK_PEAK", 0);
+			if(thiscomment)
+				peak = atof(thiscomment);
+			thiscomment = qvorbis_comment_query(vc, "REPLAYGAIN_TRACK_GAIN", 0);
+			if(thiscomment)
+				gaindb = atof(thiscomment);
 		}
 
 		qov_clear (&vf);
 		Mem_Free (data);
 		Mem_Free (buff);
+	}
+
+	if(peak)
+	{
+		sfx->volume_mult = min(1 / peak, exp(gaindb * 0.05 * log(10)));
+		sfx->volume_peak = peak;
+		Con_DPrintf ("\"%s\" uses ReplayGain (gain %f, peak %f)\n", filename, sfx->volume_mult, sfx->volume_peak);
 	}
 
 	return true;

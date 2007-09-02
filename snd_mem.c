@@ -319,6 +319,9 @@ qboolean S_LoadSound (sfx_t *sfx, qboolean complain)
 	if (snd_renderbuffer == NULL)
 		return false;
 
+	// Initialize volume peak to 0; if ReplayGain is supported, the loader will change this away
+	sfx->volume_peak = 0.0;
+
 	// LordHavoc: if the sound filename does not begin with sound/, try adding it
 	if (strncasecmp(sfx->name, "sound/", 6))
 	{
