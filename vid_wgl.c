@@ -131,6 +131,8 @@ static HRESULT (WINAPI *pDirectInputCreate)(HINSTANCE hinst, DWORD dwVersion, LP
 #ifndef MK_XBUTTON1
    #define MK_XBUTTON1         0x0020
    #define MK_XBUTTON2         0x0040
+#endif
+#ifndef MK_XBUTTON3
 // LordHavoc: lets hope this allows more buttons in the future...
    #define MK_XBUTTON3         0x0080
    #define MK_XBUTTON4         0x0100
