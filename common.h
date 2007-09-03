@@ -27,8 +27,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // MSVC has a different name for several standard functions
 #ifdef WIN32
-# define strcasecmp stricmp
-# define strncasecmp strnicmp
+# define strcasecmp _stricmp
+# define strncasecmp _strnicmp
 #endif
 
 // Create our own define for Mac OS X
