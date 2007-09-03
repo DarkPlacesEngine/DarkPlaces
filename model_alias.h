@@ -231,7 +231,7 @@ aliasbone_t;
 #include "model_psk.h"
 
 // for decoding md3 model latlong vertex normals
-float mod_md3_sin[320];
+extern float mod_md3_sin[320];
 
 #endif
 
