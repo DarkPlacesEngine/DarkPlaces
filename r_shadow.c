@@ -2936,7 +2936,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	// count this light in the r_speeds
 	r_refdef.stats.lights++;
 
-	if (r_showshadowvolumes.integer && numsurfaces + numshadowentities + numshadowentities_noselfshadow && rtlight->shadow && (rtlight->isstatic ? r_refdef.rtworldshadows : r_refdef.rtdlightshadows))
+	if (r_showshadowvolumes.integer && r_view.showdebug && numsurfaces + numshadowentities + numshadowentities_noselfshadow && rtlight->shadow && (rtlight->isstatic ? r_refdef.rtworldshadows : r_refdef.rtdlightshadows))
 	{
 		// optionally draw visible shape of the shadow volumes
 		// for performance analysis by level designers
@@ -2967,7 +2967,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 
 			// optionally draw the illuminated areas
 			// for performance analysis by level designers
-			if (r_showlighting.integer)
+			if (r_showlighting.integer && r_view.showdebug)
 			{
 				R_Shadow_RenderMode_VisibleLighting(!r_showdisabledepthtest.integer, false);
 				for (i = 0;i < numlightentities_noselfshadow;i++)
@@ -2990,7 +2990,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 
 			// optionally draw the illuminated areas
 			// for performance analysis by level designers
-			if (r_showlighting.integer)
+			if (r_showlighting.integer && r_view.showdebug)
 			{
 				R_Shadow_RenderMode_VisibleLighting(!r_showdisabledepthtest.integer, false);
 				if (numsurfaces)
@@ -3015,7 +3015,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 
 			// optionally draw the illuminated areas
 			// for performance analysis by level designers
-			if (r_showlighting.integer)
+			if (r_showlighting.integer && r_view.showdebug)
 			{
 				R_Shadow_RenderMode_VisibleLighting(false, false);
 				if (numsurfaces)

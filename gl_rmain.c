@@ -5450,10 +5450,10 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 	r_refdef.stats.entities_triangles += counttriangles;
 	RSurf_CleanUp();
 
-	if (r_showcollisionbrushes.integer && !skysurfaces && !depthonly)
+	if (r_showcollisionbrushes.integer && r_view.showdebug && !skysurfaces && !depthonly)
 		R_DrawCollisionBrushes(r_refdef.worldentity);
 
-	if ((r_showtris.integer || r_shownormals.integer) && !depthonly)
+	if ((r_showtris.integer || r_shownormals.integer) && r_view.showdebug && !depthonly)
 		R_DrawTrianglesAndNormals(r_refdef.worldentity, r_showtris.integer, r_shownormals.integer, flagsmask);
 }
 
