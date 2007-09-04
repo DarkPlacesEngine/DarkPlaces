@@ -631,7 +631,6 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *sfx)
 	ogg_int64_t len, buff_len;
 	double peak = 0.0;
 	double gaindb = 0.0;
-	double gain;
 
 	if (!vf_dll)
 		return false;
