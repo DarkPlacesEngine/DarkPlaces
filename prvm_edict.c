@@ -1584,14 +1584,11 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 	//prog->functions = (dfunction_t *)((unsigned char *)progs + progs->ofs_functions);
 	dfunctions = (dfunction_t *)((unsigned char *)prog->progs + prog->progs->ofs_functions);
 
+	if (prog->progs->ofs_strings + prog->progs->numstrings >= (int)filesize)
+		PRVM_ERROR ("%s: %s strings go past end of file", PRVM_NAME, filename);
 	prog->strings = (char *)prog->progs + prog->progs->ofs_strings;
-	prog->stringssize = 0;
-	for (i = 0;i < prog->progs->numstrings;i++)
-	{
-		if (prog->progs->ofs_strings + prog->stringssize >= (int)filesize)
-			PRVM_ERROR ("%s: %s strings go past end of file", PRVM_NAME, filename);
-		prog->stringssize += (int)strlen (prog->strings + prog->stringssize) + 1;
-	}
+	prog->stringssize = prog->progs->numstrings;
+
 	prog->numknownstrings = 0;
 	prog->maxknownstrings = 0;
 	prog->knownstrings = NULL;
