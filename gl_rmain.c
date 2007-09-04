@@ -2448,10 +2448,12 @@ void R_HDR_RenderBloomTexture(void)
 	// TODO: add exposure compensation features
 	// TODO: add fp16 framebuffer support
 
+	r_view.showdebug = false;
 	r_view.colorscale = r_bloom_colorscale.value * r_hdr_scenebrightness.value;
 	if (r_hdr.integer)
 		r_view.colorscale /= r_hdr_range.value;
 	R_RenderScene();
+	r_view.showdebug = true;
 
 	R_ResetViewRendering2D();
 
@@ -2636,6 +2638,8 @@ void R_RenderView(void)
 
 	R_Bloom_StartFrame();
 
+	r_view.showdebug = true;
+
 	// this produces a bloom texture to be used in R_BlendView() later
 	if (r_hdr.integer)
 		R_HDR_RenderBloomTexture();
@@ -2761,25 +2765,28 @@ void R_RenderScene(void)
 	}
 	VM_CL_AddPolygonsToMeshQueue();
 
-	if (cl_locs_show.integer)
+	if (r_view.showdebug)
 	{
-		R_DrawLocs();
-		if (r_timereport_active)
-			R_TimeReport("showlocs");
-	}
-
-	if (r_drawportals.integer)
-	{
-		R_DrawPortals();
-		if (r_timereport_active)
-			R_TimeReport("portals");
-	}
-
-	if (r_showbboxes.value > 0)
-	{
-		R_DrawEntityBBoxes();
-		if (r_timereport_active)
-			R_TimeReport("bboxes");
+		if (cl_locs_show.integer)
+		{
+			R_DrawLocs();
+			if (r_timereport_active)
+				R_TimeReport("showlocs");
+		}
+	
+		if (r_drawportals.integer)
+		{
+			R_DrawPortals();
+			if (r_timereport_active)
+				R_TimeReport("portals");
+		}
+	
+		if (r_showbboxes.value > 0)
+		{
+			R_DrawEntityBBoxes();
+			if (r_timereport_active)
+				R_TimeReport("bboxes");
+		}
 	}
 
 	if (gl_support_fragment_shader)
@@ -4985,7 +4992,10 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 		if (r_depthfirst.integer == 3)
 		{
 			int i = (int)(texturesurfacelist[0] - rsurface.modelsurfaces);
-			GL_Color(((i >> 6) & 7) / 7.0f, ((i >> 3) & 7) / 7.0f, (i & 7) / 7.0f,1);
+			if (!r_view.showdebug)
+				GL_Color(0, 0, 0, 1);
+			else
+				GL_Color(((i >> 6) & 7) / 7.0f, ((i >> 3) & 7) / 7.0f, (i & 7) / 7.0f,1);
 		}
 		else
 		{
@@ -5008,6 +5018,11 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 	}
 	else if (r_depthfirst.integer == 3)
 		return;
+	else if (!r_view.showdebug && (r_showsurfaces.integer || gl_lightmaps.integer))
+	{
+		GL_Color(0, 0, 0, 1);
+		RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
+	}
 	else if (r_showsurfaces.integer)
 	{
 		if (rsurface.mode != RSURFMODE_MULTIPASS)
@@ -5512,9 +5527,12 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 	r_refdef.stats.entities_triangles += counttriangles;
 	RSurf_CleanUp();
 
-	if (r_showcollisionbrushes.integer && !skysurfaces && !depthonly)
-		R_DrawCollisionBrushes(ent);
+	if (r_view.showdebug)
+	{
+		if (r_showcollisionbrushes.integer && !skysurfaces && !depthonly)
+			R_DrawCollisionBrushes(ent);
 
-	if ((r_showtris.integer || r_shownormals.integer) && !depthonly)
-		R_DrawTrianglesAndNormals(ent, r_showtris.integer, r_shownormals.integer, flagsmask);
+		if ((r_showtris.integer || r_shownormals.integer) && !depthonly)
+			R_DrawTrianglesAndNormals(ent, r_showtris.integer, r_shownormals.integer, flagsmask);
+	}
 }
