@@ -323,6 +323,7 @@ void VM_precache_pic(void);
 void VM_freepic(void);
 void VM_drawcharacter(void);
 void VM_drawstring(void);
+void VM_drawcolorcodedstring(void);
 void VM_drawpic(void);
 void VM_drawfill(void);
 void VM_drawsetcliparea(void);

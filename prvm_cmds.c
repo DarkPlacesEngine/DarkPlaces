@@ -2586,6 +2586,47 @@ void VM_drawstring(void)
 	DrawQ_String (pos[0], pos[1], string, 0, scale[0], scale[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag, NULL, true);
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
+
+/*
+=========
+VM_drawcolorcodedstring
+
+float	drawcolorcodedstring(vector position, string text, vector scale, float alpha, float flag)
+=========
+*/
+void VM_drawcolorcodedstring(void)
+{
+	float *pos,*scale;
+	const char  *string;
+	int flag,color;
+	VM_SAFEPARMCOUNT(5,VM_drawstring);
+
+	string = PRVM_G_STRING(OFS_PARM1);
+	pos = PRVM_G_VECTOR(OFS_PARM0);
+	scale = PRVM_G_VECTOR(OFS_PARM2);
+	flag = (int)PRVM_G_FLOAT(OFS_PARM5);
+
+	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -2;
+		VM_Warning("VM_drawcolorcodedstring: %s: wrong DRAWFLAG %i !\n",PRVM_NAME,flag);
+		return;
+	}
+
+	if(!scale[0] || !scale[1])
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -3;
+		VM_Warning("VM_drawcolorcodedstring: scale %s is null !\n", (scale[0] == 0) ? ((scale[1] == 0) ? "x and y" : "x") : "y");
+		return;
+	}
+
+	if(pos[2] || scale[2])
+		Con_Printf("VM_drawcolorcodedstring: z value%s from %s discarded\n",(pos[2] && scale[2]) ? "s" : " ",((pos[2] && scale[2]) ? "pos and scale" : (pos[2] ? "pos" : "scale")));
+
+	color = -1;
+	DrawQ_String (pos[0], pos[1], string, 0, scale[0], scale[1], 1, 1, 1, PRVM_G_FLOAT(OFS_PARM3), flag, NULL, false);
+	PRVM_G_FLOAT(OFS_RETURN) = 1;
+}
 /*
 =========
 VM_drawpic
