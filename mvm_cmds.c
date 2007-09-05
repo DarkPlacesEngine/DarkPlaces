@@ -1226,7 +1226,7 @@ VM_cin_setstate,			// #463
 VM_cin_getstate,			// #464
 VM_cin_restart, 			// #465
 VM_drawline,				// #466
-NULL,						// #467
+VM_drawcolorcodedstring,	// #467
 NULL,						// #468
 NULL,						// #469
 NULL,						// #470

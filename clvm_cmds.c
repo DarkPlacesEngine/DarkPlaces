@@ -3075,7 +3075,7 @@ VM_drawpic,						// #322 float(vector position, string pic, vector size, vector 
 VM_drawfill,					// #323 float(vector position, vector size, vector rgb, float alpha, float flag) drawfill (EXT_CSQC)
 VM_drawsetcliparea,				// #324 void(float x, float y, float width, float height) drawsetcliparea
 VM_drawresetcliparea,			// #325 void(void) drawresetcliparea
-NULL,							// #326
+VM_drawcolorcodedstring,		// #326 float drawcolorcodedstring(vector position, string text, vector scale, vector rgb, float alpha, float flag) (EXT_CSQC)
 NULL,							// #327
 NULL,							// #328
 NULL,							// #329
