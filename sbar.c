@@ -110,6 +110,8 @@ void Sbar_DeathmatchOverlay (void);
 void Sbar_IntermissionOverlay (void);
 void Sbar_FinaleOverlay (void);
 
+void CL_VM_UpdateShowingScoresState (int showingscores);
+
 
 /*
 ===============
@@ -123,6 +125,7 @@ void Sbar_ShowScores (void)
 	if (sb_showscores)
 		return;
 	sb_showscores = true;
+	CL_VM_UpdateShowingScoresState(sb_showscores);
 }
 
 /*
@@ -135,6 +138,7 @@ Tab key up
 void Sbar_DontShowScores (void)
 {
 	sb_showscores = false;
+	CL_VM_UpdateShowingScoresState(sb_showscores);
 }
 
 void sbar_start(void)

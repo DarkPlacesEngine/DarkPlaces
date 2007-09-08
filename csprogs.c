@@ -436,6 +436,18 @@ void CL_VM_UpdateIntermissionState (int intermission)
 		CSQC_END
 	}
 }
+void CL_VM_UpdateShowingScoresState (int showingscores)
+{
+	prvm_eval_t *val;
+	if(cl.csqc_loaded)
+	{
+		CSQC_BEGIN
+		val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.sb_showscores);
+		if(val)
+			val->_float = showingscores;
+		CSQC_END
+	}
+}
 void CL_VM_UpdateCoopDeathmatchGlobals (int gametype)
 {
 	// Avoid global names for clean(er) coding
