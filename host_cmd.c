@@ -19,6 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "quakedef.h"
+#include "sv_demo.h"
 
 int current_skill;
 cvar_t sv_cheats = {0, "sv_cheats", "0", "enables cheat commands in any game, and cheat impulses in dpmod"};
@@ -808,6 +809,7 @@ void Host_Name_f (void)
 		MSG_WriteByte (&sv.reliable_datagram, svc_updatename);
 		MSG_WriteByte (&sv.reliable_datagram, host_client - svs.clients);
 		MSG_WriteString (&sv.reliable_datagram, host_client->name);
+		SV_WriteNetnameIntoDemo(host_client);
 	}
 }
 
