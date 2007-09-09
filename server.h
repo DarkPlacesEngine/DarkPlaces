@@ -242,6 +242,9 @@ typedef struct client_s
 	// fixangle data
 	qboolean fixangle_angles_set;
 	vec3_t fixangle_angles;
+
+	// demo recording
+	qfile_t *sv_demo_file;
 } client_t;
 
 

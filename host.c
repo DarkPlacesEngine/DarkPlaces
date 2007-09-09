@@ -26,6 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "cl_video.h"
 #include "progsvm.h"
 #include "csprogs.h"
+#include "sv_demo.h"
 
 /*
 
@@ -372,6 +373,8 @@ void SV_DropClient(qboolean crash)
 {
 	int i;
 	Con_Printf("Client \"%s\" dropped\n", host_client->name);
+
+	SV_StopDemoRecording(host_client);
 
 	// make sure edict is not corrupt (from a level change for example)
 	host_client->edict = PRVM_EDICT_NUM(host_client - svs.clients + 1);

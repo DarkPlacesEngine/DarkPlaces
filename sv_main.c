@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // sv_main.c -- server main program
 
 #include "quakedef.h"
+#include "sv_demo.h"
 #include "libcurl.h"
 
 static void SV_SaveEntFile_f(void);
@@ -146,6 +147,10 @@ cvar_t nehx17 = {0, "nehx17", "0", "nehahra data storage cvar (used in singlepla
 cvar_t nehx18 = {0, "nehx18", "0", "nehahra data storage cvar (used in singleplayer)"};
 cvar_t nehx19 = {0, "nehx19", "0", "nehahra data storage cvar (used in singleplayer)"};
 cvar_t cutscene = {0, "cutscene", "1", "enables cutscenes in nehahra, can be used by other mods"};
+
+cvar_t sv_autodemo_perclient = {CVAR_SAVE, "sv_autodemo_perclient", "0", "set to 1 to enable autorecorded per-client demos (they'll start to record at the beginning of a match)"};
+cvar_t sv_autodemo_perclient_nameformat = {CVAR_SAVE, "sv_autodemo_perclient_nameformat", "sv_autodemos/%Y-%m-%d_%H-%M", "The format of the sv_autodemo_perclient filename, followed by the map name, the IP address + port number, and the client number, separated by underscores" };
+
 
 server_t sv;
 server_static_t svs;
@@ -416,6 +421,9 @@ void SV_Init (void)
 		Cvar_RegisterVariable (&nehx19);
 	}
 	Cvar_RegisterVariable (&cutscene); // for Nehahra but useful to other mods as well
+
+	Cvar_RegisterVariable (&sv_autodemo_perclient);
+	Cvar_RegisterVariable (&sv_autodemo_perclient_nameformat);
 
 	// any special defaults for gamemodes go here
 	if (gamemode == GAME_HIPNOTIC)
@@ -797,6 +805,28 @@ void SV_SendServerinfo (client_t *client)
 	client->num_pings = 0;
 #endif
 	client->ping = 0;
+
+	SV_StopDemoRecording(client); // to split up demos into different files
+	if(sv_autodemo_perclient.integer && client->netconnection)
+	{
+		char demofile[MAX_OSPATH];
+		char levelname[MAX_QPATH];
+		char ipaddress[MAX_QPATH];
+		size_t i;
+
+		// start a new demo file
+		strlcpy(levelname, FS_FileWithoutPath(sv.worldmodel->name), sizeof(levelname));
+		if (strrchr(levelname, '.'))
+			*(strrchr(levelname, '.')) = 0;
+
+		LHNETADDRESS_ToString(&(client->netconnection->peeraddress), ipaddress, sizeof(ipaddress), true);
+		for(i = 0; ipaddress[i]; ++i)
+			if(!isalnum(ipaddress[i]))
+				ipaddress[i] = '-';
+		dpsnprintf (demofile, sizeof(demofile), "%s_%s_%s_%d.dem", Sys_TimeString (sv_autodemo_perclient_nameformat.string), levelname, ipaddress, PRVM_NUM_FOR_EDICT(client->edict));
+
+		SV_StartDemoRecording(client, demofile, -1);
+	}
 }
 
 /*
@@ -1755,6 +1785,12 @@ static void SV_SendClientDatagram (client_t *client)
 			SZ_Write (&msg, data, downloadsize);
 	}
 
+	// reliable only if none is in progress
+	if(client->sendsignon != 2 && !client->netconnection->sendMessageLength)
+		SV_WriteDemoMessage(client, &(client->netconnection->message));
+	// unreliable
+	SV_WriteDemoMessage(client, &msg);
+
 // send the datagram
 	NetConn_SendUnreliableMessage (client->netconnection, &msg, sv.protocol, clientrate, client->sendsignon == 2);
 	if (client->sendsignon == 1 && !client->netconnection->message.cursize)
@@ -1797,6 +1833,7 @@ static void SV_UpdateToReliableMessages (void)
 			MSG_WriteByte (&sv.reliable_datagram, svc_updatename);
 			MSG_WriteByte (&sv.reliable_datagram, i);
 			MSG_WriteString (&sv.reliable_datagram, host_client->name);
+			SV_WriteNetnameIntoDemo(host_client);
 		}
 
 		// DP_SV_CLIENTCOLORS
