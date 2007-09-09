@@ -688,6 +688,14 @@ void S_Shutdown(void)
 
 void S_Restart_f(void)
 {
+	// NOTE: we can't free all sounds if we are running a map (this frees sfx_t that are still referenced by precaches)
+	// So, refuse to do this if we are connected.
+	if(cls.state == ca_connected)
+	{
+		Con_Printf("snd_restart would wreak havoc if you do that while connected!\n");
+		return;
+	}
+
 	S_Shutdown();
 	S_Startup();
 }
@@ -782,6 +790,14 @@ S_UnloadAllSounds_f
 void S_UnloadAllSounds_f (void)
 {
 	int i;
+
+	// NOTE: we can't free all sounds if we are running a map (this frees sfx_t that are still referenced by precaches)
+	// So, refuse to do this if we are connected.
+	if(cls.state == ca_connected)
+	{
+		Con_Printf("snd_unloadallsounds would wreak havoc if you do that while connected!\n");
+		return;
+	}
 
 	// stop any active sounds
 	S_StopAllSounds();
