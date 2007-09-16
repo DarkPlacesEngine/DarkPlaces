@@ -184,6 +184,7 @@ void QW_CL_StartUpload(unsigned char *data, int size);
 //static qboolean QW_CL_IsUploading(void);
 static void QW_CL_StopUpload(void);
 void CL_VM_UpdateIntermissionState(int intermission);
+qboolean CL_VM_Event_Sound(int sound_num, int volume, int channel, float attenuation, int ent, vec3_t pos);
 
 /*
 ==================
@@ -267,7 +268,8 @@ void CL_ParseStartSoundPacket(int largesoundindex)
 	if (ent >= cl.max_entities)
 		CL_ExpandEntities(ent);
 
-	S_StartSound (ent, channel, cl.sound_precache[sound_num], pos, volume/255.0f, attenuation);
+	if( !CL_VM_Event_Sound(sound_num, volume / 255.0f, channel, attenuation, ent, pos) )
+		S_StartSound (ent, channel, cl.sound_precache[sound_num], pos, volume/255.0f, attenuation);
 }
 
 /*
