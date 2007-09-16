@@ -3,6 +3,7 @@
 #include "clprogdefs.h"
 #include "csprogs.h"
 #include "cl_collision.h"
+#include "snd_main.h"
 
 //============================================================================
 // Client prog handling
@@ -447,6 +448,29 @@ void CL_VM_UpdateShowingScoresState (int showingscores)
 			val->_float = showingscores;
 		CSQC_END
 	}
+}
+qboolean CL_VM_Event_Sound(int sound_num, int volume, int channel, float attenuation, int ent, vec3_t pos)
+{
+	qboolean r = false;
+	if(cl.csqc_loaded)
+	{
+		CSQC_BEGIN
+		if(prog->funcoffsets.CSQC_Event_Sound)
+		{
+			prog->globals.client->time = cl.time;
+			PRVM_G_FLOAT(OFS_PARM0) = ent;
+			PRVM_G_FLOAT(OFS_PARM1) = channel;
+			PRVM_G_INT(OFS_PARM2) = PRVM_SetTempString(cl.sound_name[sound_num] );
+			PRVM_G_FLOAT(OFS_PARM3) = volume;
+			PRVM_G_FLOAT(OFS_PARM4) = attenuation;
+			VectorCopy(pos, PRVM_G_VECTOR(OFS_PARM5) );
+			PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Event_Sound, "QC function CSQC_Event_Sound is missing");
+			r = CSQC_RETURNVAL;
+		}
+		CSQC_END
+	}
+
+	return r;
 }
 void CL_VM_UpdateCoopDeathmatchGlobals (int gametype)
 {

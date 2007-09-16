@@ -255,6 +255,7 @@ typedef struct prvm_prog_funcoffsets_s
 	func_t CSQC_Ent_Remove; // csqc
 	func_t CSQC_Ent_Update; // csqc
 	func_t CSQC_Event; // csqc [515]: engine call this for its own needs so csqc can do some things according to what engine it's running on.  example: to say about edicts increase, whatever...
+	func_t CSQC_Event_Sound; // csqc : called by engine when an incoming sound packet arrives so CSQC can act on it
 	func_t CSQC_Init; // csqc
 	func_t CSQC_InputEvent; // csqc
 	func_t CSQC_Parse_CenterPrint; // csqc

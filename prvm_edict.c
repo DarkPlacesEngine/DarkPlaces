@@ -1418,6 +1418,7 @@ void PRVM_FindOffsets(void)
 	prog->funcoffsets.CSQC_Ent_Remove                 = PRVM_ED_FindFunctionOffset("CSQC_Ent_Remove");
 	prog->funcoffsets.CSQC_Ent_Update                 = PRVM_ED_FindFunctionOffset("CSQC_Ent_Update");
 	prog->funcoffsets.CSQC_Event                      = PRVM_ED_FindFunctionOffset("CSQC_Event");
+	prog->funcoffsets.CSQC_Event_Sound                = PRVM_ED_FindFunctionOffset("CSQC_Event_Sound");
 	prog->funcoffsets.CSQC_Init                       = PRVM_ED_FindFunctionOffset("CSQC_Init");
 	prog->funcoffsets.CSQC_InputEvent                 = PRVM_ED_FindFunctionOffset("CSQC_InputEvent");
 	prog->funcoffsets.CSQC_Parse_CenterPrint          = PRVM_ED_FindFunctionOffset("CSQC_Parse_CenterPrint");
