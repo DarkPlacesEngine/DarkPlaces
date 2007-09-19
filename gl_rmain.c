@@ -2342,7 +2342,7 @@ void R_Bloom_MakeTexture(void)
 	CHECKGLERROR
 	qglViewport(r_view.x, vid.height - (r_view.y + r_bloomstate.bloomheight), r_bloomstate.bloomwidth, r_bloomstate.bloomheight);CHECKGLERROR
 
-	for (x = 1;x < r_bloom_colorexponent.value;)
+	for (x = 1;x < min(r_bloom_colorexponent.value, 32);)
 	{
 		x *= 2;
 		r = bound(0, r_bloom_colorexponent.value / x, 1);
