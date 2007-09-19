@@ -117,6 +117,7 @@ OBJ_COMMON= \
 	r_sky.o \
 	r_sprites.o \
 	sbar.o \
+	sv_demo.o \
 	sv_main.o \
 	sv_move.o \
 	sv_phys.o \
@@ -128,8 +129,7 @@ OBJ_COMMON= \
 	view.o \
 	wad.o \
 	world.o \
-	zone.o \
-	sv_demo.c
+	zone.o
 
 # note that builddate.c is very intentionally not compiled to a .o before
 # being linked, because it should be recompiled every time an executable is
