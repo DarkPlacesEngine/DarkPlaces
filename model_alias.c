@@ -787,6 +787,7 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 
 	loadmodel->type = mod_alias;
 	loadmodel->DrawSky = NULL;
+	loadmodel->DrawAddWaterPlanes = NULL;
 	loadmodel->Draw = R_Q1BSP_Draw;
 	loadmodel->DrawDepth = R_Q1BSP_DrawDepth;
 	loadmodel->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
@@ -1106,6 +1107,7 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 	
 	loadmodel->type = mod_alias;
 	loadmodel->DrawSky = NULL;
+	loadmodel->DrawAddWaterPlanes = NULL;
 	loadmodel->Draw = R_Q1BSP_Draw;
 	loadmodel->DrawDepth = R_Q1BSP_DrawDepth;
 	loadmodel->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
@@ -1341,6 +1343,7 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 
 	loadmodel->type = mod_alias;
 	loadmodel->DrawSky = NULL;
+	loadmodel->DrawAddWaterPlanes = NULL;
 	loadmodel->Draw = R_Q1BSP_Draw;
 	loadmodel->DrawDepth = R_Q1BSP_DrawDepth;
 	loadmodel->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
@@ -1545,6 +1548,7 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	}
 
 	loadmodel->DrawSky = NULL;
+	loadmodel->DrawAddWaterPlanes = NULL;
 	loadmodel->Draw = R_Q1BSP_Draw;
 	loadmodel->DrawDepth = R_Q1BSP_DrawDepth;
 	loadmodel->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
@@ -1840,6 +1844,7 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	}
 
 	loadmodel->DrawSky = NULL;
+	loadmodel->DrawAddWaterPlanes = NULL;
 	loadmodel->Draw = R_Q1BSP_Draw;
 	loadmodel->DrawDepth = R_Q1BSP_DrawDepth;
 	loadmodel->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
@@ -2111,6 +2116,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	
 	loadmodel->type = mod_alias;
 	loadmodel->DrawSky = NULL;
+	loadmodel->DrawAddWaterPlanes = NULL;
 	loadmodel->Draw = R_Q1BSP_Draw;
 	loadmodel->DrawDepth = R_Q1BSP_DrawDepth;
 	loadmodel->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;

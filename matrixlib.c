@@ -365,6 +365,35 @@ void Matrix4x4_Normalize (matrix4x4_t *out, matrix4x4_t *in1)
 	Matrix4x4_Scale(out, scale, 1);
 }
 
+void Matrix4x4_Reflect (matrix4x4_t *out, double normalx, double normaly, double normalz, double dist, double axisscale)
+{
+	int i;
+	double d;
+	double p[4], p2[4];
+	p[0] = normalx;
+	p[1] = normaly;
+	p[2] = normalz;
+	p[3] = -dist;
+	p2[0] = p[0] * axisscale;
+	p2[1] = p[1] * axisscale;
+	p2[2] = p[2] * axisscale;
+	p2[3] = 0;
+	for (i = 0;i < 4;i++)
+	{
+#ifdef MATRIX4x4_OPENGLORIENTATION
+		d = out->m[i][0] * p[0] + out->m[i][1] * p[1] + out->m[i][2] * p[2] + out->m[i][3] * p[3];
+		out->m[i][0] += p2[0] * d;
+		out->m[i][1] += p2[1] * d;
+		out->m[i][2] += p2[2] * d;
+#else
+		d = out->m[0][i] * p[0] + out->m[1][i] * p[1] + out->m[2][i] * p[2] + out->m[3][i] * p[3];
+		out->m[0][i] += p2[0] * d;
+		out->m[1][i] += p2[1] * d;
+		out->m[2][i] += p2[2] * d;
+#endif
+	}
+}
+
 void Matrix4x4_CreateIdentity (matrix4x4_t *out)
 {
 	out->m[0][0]=1.0f;

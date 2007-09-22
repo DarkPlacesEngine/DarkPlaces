@@ -2182,7 +2182,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 	GL_DepthRange(0, 1);
 	GL_PolygonOffset(0, 0);
 	GL_DepthTest(true);
-	GL_CullFace(GL_FRONT); // quake is backwards, this culls back faces
+	GL_CullFace(GL_NONE);
 
 	// first generate all the vertices at once
 	for (surfacelistindex = 0, v3f = particle_vertex3f, t2f = particle_texcoord2f, c4f = particle_color4f;surfacelistindex < numsurfaces;surfacelistindex++, v3f += 3*4, t2f += 2*4, c4f += 4*4)
@@ -2263,14 +2263,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 		}
 		else if (p->type->orientation == PARTICLE_ORIENTED_DOUBLESIDED)
 		{
-			// double-sided
-			if (DotProduct(p->vel, r_view.origin) > DotProduct(p->vel, org))
-			{
-				VectorNegate(p->vel, v);
-				VectorVectors(v, right, up);
-			}
-			else
-				VectorVectors(p->vel, right, up);
+			VectorVectors(p->vel, right, up);
 			VectorScale(right, size, right);
 			VectorScale(up, size, up);
 			v3f[ 0] = org[0] - right[0] - up[0];

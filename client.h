@@ -1403,7 +1403,10 @@ typedef struct r_view_s
 	vec3_t left;
 	vec3_t right;
 	vec3_t up;
-	mplane_t frustum[5];
+	int numfrustumplanes;
+	mplane_t frustum[6];
+	qboolean useclipplane;
+	mplane_t clipplane;
 	float frustum_x, frustum_y;
 	vec3_t frustumcorner[4];
 	// if turned off it renders an ortho view
@@ -1428,6 +1431,10 @@ typedef struct r_view_s
 	// view render, all secondary renders (HDR, mirrors, portals, cameras,
 	// distortion effects, etc) omit such debugging information
 	qboolean showdebug;
+
+	// these define which values to use in GL_CullFace calls to request frontface or backface culling
+	int cullface_front;
+	int cullface_back;
 }
 r_view_t;
 

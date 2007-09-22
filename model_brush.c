@@ -3595,8 +3595,9 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 		for (j = 0;j < mod->nummodelsurfaces;j++)
 			mod->surfacelist[j] = mod->firstmodelsurface + j;
 
-		// this gets altered below if sky is used
+		// this gets altered below if sky or water is used
 		mod->DrawSky = NULL;
+		mod->DrawAddWaterPlanes = NULL;
 		mod->Draw = R_Q1BSP_Draw;
 		mod->DrawDepth = R_Q1BSP_DrawDepth;
 		mod->GetLightInfo = R_Q1BSP_GetLightInfo;
@@ -3628,6 +3629,8 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 				// we only need to have a drawsky function if it is used(usually only on world model)
 				if (surface->texture->basematerialflags & MATERIALFLAG_SKY)
 					mod->DrawSky = R_Q1BSP_DrawSky;
+				if (surface->texture->basematerialflags & MATERIALFLAG_WATERALPHA)
+					mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
 				// calculate bounding shapes
 				for (k = 0, vec = (loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex);k < surface->num_vertices;k++, vec += 3)
 				{
@@ -5589,6 +5592,7 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	mod->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
 	mod->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	mod->DrawLight = R_Q1BSP_DrawLight;
+	mod->DrawAddWaterPlanes = NULL;
 
 	mod_base = (unsigned char *)header;
 
@@ -5720,12 +5724,20 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer, void *bufferend)
 		mod->radius2 = modelradius * modelradius;
 
 		for (j = 0;j < mod->nummodelsurfaces;j++)
-			if (mod->data_surfaces[j + mod->firstmodelsurface].texture->surfaceflags & Q3SURFACEFLAG_SKY)
+			if (mod->data_surfaces[j + mod->firstmodelsurface].texture->basematerialflags & MATERIALFLAG_SKY)
 				break;
 		if (j < mod->nummodelsurfaces)
 			mod->DrawSky = R_Q1BSP_DrawSky;
 		else
 			mod->DrawSky = NULL;
+
+		for (j = 0;j < mod->nummodelsurfaces;j++)
+			if (mod->data_surfaces[j + mod->firstmodelsurface].texture->basematerialflags & MATERIALFLAG_WATERALPHA)
+				break;
+		if (j < mod->nummodelsurfaces)
+			mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
+		else
+			mod->DrawAddWaterPlanes = NULL;
 	}
 }
 

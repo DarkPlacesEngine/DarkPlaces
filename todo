@@ -1,14 +1,15 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
 -d (Amish, Fuh) feature darkplaces client: add qw protocol support (making darkplaces work as a qwcl client) (Amish, Fuh)
+-d (Stribbs, Jimmy Freestone) feature darkplaces renderer: add HalfLife2 style water rendering (Mitchell, Stribbs, Jimmy Freestone)
 0 bug darkplaces client qw: add .mvd demo support
 0 bug darkplaces client qw: add .qwd demo support
+0 bug darkplaces client qw: add spectator cvar (Plague Monkey Rat)
+0 bug darkplaces client qw: add spectator prediction
+0 bug darkplaces client qw: cl_netinputpacketspersecond 20 is too low for QW physics to behave properly, add a separate cl_netinputpacketspersecond_qw cvar which defaults to 72 (Plague Monkey Rat)
 0 bug darkplaces client qw: inactive player entities are showing up at 0 0 0 (Plague Monkey Rat)
 0 bug darkplaces client qw: qw skins should only be active on progs/player.mdl (Plague Monkey Rat)
 0 bug darkplaces client qw: qw/skins/*.pcx need to be cropped to 296x194 and loaded as internal textures so they are split into multiple layers (Plague Monkey Rat)
 0 bug darkplaces client qw: restrict wateralpha and such cvars according to what is permitted in qw serverinfo?
-0 bug darkplaces client qw: cl_netinputpacketspersecond 20 is too low for QW physics to behave properly, add a separate cl_netinputpacketspersecond_qw cvar which defaults to 72 (Plague Monkey Rat)
-0 bug darkplaces client qw: add spectator cvar (Plague Monkey Rat)
-0 bug darkplaces client qw: add spectator prediction
 0 bug darkplaces client: can't move mouse around in nexuiz menu if vid_mouse is 0
 0 bug darkplaces client: if you press 1 during the demo loop when quake starts, escape doesn't do anything until you hit some other key (daemon)
 0 bug darkplaces loader: crash when a mdl model has more replacement skins than the model contains (Lardarse)
@@ -18,6 +19,7 @@
 0 bug darkplaces memory: memstats doesn't account for memory used by VBO/EBO buffers in models
 0 bug darkplaces qc FRIK_FILE: when opening a file for writing that already has the data/ prefix in its path, it should not add another data/ prefix (daemon)
 0 bug darkplaces readme: it would be a very good idea to add documentation of sv_gameplayfix_* cvars in the readme as a means to run broken mods (xaGe)
+0 bug darkplaces readme: readme says that q3 shaders are not supported, this is not true, describe the working features in detail (qqshka)
 0 bug darkplaces renderer: GL13 path has broken handling of unlit surfaces in Nexuiz toxic.bsp - the small red light surfaces are black in GL13 path (m0rfar)
 0 bug darkplaces renderer: if an animated model has transparent surfaces, each one calls RSurf_ActiveModelEntity, recomputing all vertices
 0 bug darkplaces renderer: if an animated model is entirely transparent, the RSurf_ActiveModelEntity call updating vertices is completely wasted
@@ -207,7 +209,6 @@
 0 optimization darkplaces loader: remove the loop unrolling in Image_Resample32LerpLine and Image_Resample24LerpLine and related functions, as the loop is really too long to get much benefit, and it might even not fit in the L1 instruction cache on Pentium1 (fuh)
 0 optimization darkplaces particles: make pt_rain spawning do a single downward trace and set a timer for the impact, to reduce collision load (LordHavoc)
 0 optimization darkplaces renderer: add r_null.c so that dedicated server doesn't need renderer
-0 optimization darkplaces renderer: change water distortion textures from multiple 2D textures to one 3D texture for smoother animation (Tomaz)
 0 optimization darkplaces renderer: store p->past->clusterindex into p->clusterindex to speed up R_WorldVisibility, also store p->past - data_leafs index into p->leafindex, and move the CullBox check to last (Vic)
 0 optimization darkplaces renderer: support GL_ATI_separate_stencil since ATI does not support GL_EXT_stencil_two_side and GL_ATI_separate_stencil was integrated in OpenGL2.0 (romi)
 0 optimization darkplaces server: implement first unused/last used entity range optimization on entity spawn/remove similar to the client particles (LordHavoc)
@@ -455,8 +456,6 @@
 5 feature dpzoo.map: make some things that make the player bigger/smaller to demonstrate scaling and better viewheight handling and brush collisions (depends on brush collisions)
 5 feature hmap2: fix tjunctions on leaky maps
 6 feature darkplaces client: add a "edit" command that can edit text files (I.E. .qc and progs.src) using a dialog window (allow multiple), and then add a "frikqcc" command to run it on the current mod (if it's in the command path at least)
-6 feature darkplaces renderer: add HalfLife2 style water rendering (Mitchell, Stribbs, Jimmy Freestone)
-6 feature darkplaces renderer: add cubemap reflections like UT2003 somehow (perhaps entities would define the reflection maps for rooms, and a water entity would take care of the rest?) (TEU, Nexuiz)
 6 feature darkplaces renderer: figure out an LOD scheme for really large outdoor environments (Uffe)
 7 feature darkplaces protocol,renderer: add DP_EF_REFRACT which turns an entity into a refraction effect similar to doom3 shockwave/heathaze (Supajoe)
 7 feature darkplaces renderer: make it work on Savage4 again (Ender)
@@ -1368,8 +1367,10 @@ f darkplaces: should add quake3 shader support even though the language is utter
 f dpmod: figure out why the dbsg isn't selectable in deathmatch 7 mode
 f dpmod: make tarbabies have a self.resist_explosive = 3; like zombies (Sajt)
 f feature darkplaces client: add back cl_particles_lighting cvar and add back the particle lighting (romi)
+f feature darkplaces renderer: add cubemap reflections like UT2003 somehow (perhaps entities would define the reflection maps for rooms, and a water entity would take care of the rest?)
 f feature darkplaces server: add an extension to check if a file exists outside the data directory, FRIK_FILE can do this but only inside data directory (Error)
 f feature dpmod: include .lit and .dlit files for all id1 maps - this idea was rejected due to download size
 f feature dpmod: include .vis files for all id1 maps - this idea rejected due to lack of .vis support and download size
 f hqbsp: CreateBrushFaces should use RadiusFromBounds for its rotation box code, but hmap is obsolete (Vic)
+f optimization darkplaces renderer: change water distortion textures from multiple 2D textures to one 3D texture for smoother animation (Tomaz)
 f optimization darkplaces visibility: R_Q3BSP_RecursiveWorldNode should take clipflags parameter and do not cull a node against a plane if the parent node is totally on one side of the plane (Vic)

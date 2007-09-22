@@ -895,11 +895,11 @@ void R_Shadow_RenderVolume(int numvertices, int numtriangles, const float *verte
 	if (r_shadow_rendermode == R_SHADOW_RENDERMODE_STENCIL)
 	{
 		// decrement stencil if backface is behind depthbuffer
-		GL_CullFace(GL_BACK); // quake is backwards, this culls front faces
+		GL_CullFace(r_view.cullface_front);
 		qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);CHECKGLERROR
 		R_Mesh_Draw(0, numvertices, numtriangles, element3i, 0, 0);
 		// increment stencil if frontface is behind depthbuffer
-		GL_CullFace(GL_FRONT); // quake is backwards, this culls back faces
+		GL_CullFace(r_view.cullface_back);
 		qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);CHECKGLERROR
 	}
 	R_Mesh_Draw(0, numvertices, numtriangles, element3i, 0, 0);
@@ -1033,7 +1033,7 @@ void R_Shadow_RenderMode_Reset(void)
 	qglStencilMask(~0);CHECKGLERROR
 	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);CHECKGLERROR
 	qglStencilFunc(GL_ALWAYS, 128, ~0);CHECKGLERROR
-	GL_CullFace(GL_FRONT); // quake is backwards, this culls back faces
+	GL_CullFace(r_view.cullface_back);
 	GL_Color(1, 1, 1, 1);
 	GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 1);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
@@ -1051,17 +1051,17 @@ void R_Shadow_RenderMode_StencilShadowVolumes(qboolean clearstencil)
 	if (r_shadow_rendermode == R_SHADOW_RENDERMODE_SEPARATESTENCIL)
 	{
 		GL_CullFace(GL_NONE);
-		qglStencilOpSeparate(GL_BACK, GL_KEEP, GL_INCR, GL_KEEP);CHECKGLERROR // quake is backwards, this is front faces
-		qglStencilOpSeparate(GL_FRONT, GL_KEEP, GL_DECR, GL_KEEP);CHECKGLERROR // quake is backwards, this is back faces
+		qglStencilOpSeparate(r_view.cullface_front, GL_KEEP, GL_INCR, GL_KEEP);CHECKGLERROR
+		qglStencilOpSeparate(r_view.cullface_back, GL_KEEP, GL_DECR, GL_KEEP);CHECKGLERROR
 	}
 	else if (r_shadow_rendermode == R_SHADOW_RENDERMODE_STENCILTWOSIDE)
 	{
 		GL_CullFace(GL_NONE);
 		qglEnable(GL_STENCIL_TEST_TWO_SIDE_EXT);CHECKGLERROR
-		qglActiveStencilFaceEXT(GL_BACK);CHECKGLERROR // quake is backwards, this is front faces
+		qglActiveStencilFaceEXT(r_view.cullface_front);CHECKGLERROR
 		qglStencilMask(~0);CHECKGLERROR
 		qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);CHECKGLERROR
-		qglActiveStencilFaceEXT(GL_FRONT);CHECKGLERROR // quake is backwards, this is back faces
+		qglActiveStencilFaceEXT(r_view.cullface_back);CHECKGLERROR
 		qglStencilMask(~0);CHECKGLERROR
 		qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);CHECKGLERROR
 	}
@@ -2244,7 +2244,7 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 	GL_DepthRange(0, (rsurface.texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE) ? 0.0625 : 1);
 	GL_PolygonOffset(rsurface.texture->currentpolygonfactor, rsurface.texture->currentpolygonoffset);
 	GL_DepthTest(!(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
-	GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
+	GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : r_view.cullface_back);
 	nmap = rsurface.texture->currentskinframe->nmap;
 	if (gl_lightmaps.integer)
 		nmap = r_texture_blanknormalmap;
@@ -2660,11 +2660,11 @@ void R_Shadow_DrawWorldShadow(int numsurfaces, int *surfacelist, const unsigned 
 			if (r_shadow_rendermode == R_SHADOW_RENDERMODE_STENCIL)
 			{
 				// decrement stencil if backface is behind depthbuffer
-				GL_CullFace(GL_BACK); // quake is backwards, this culls front faces
+				GL_CullFace(r_view.cullface_front);
 				qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);CHECKGLERROR
 				R_Mesh_Draw(0, mesh->numverts, mesh->numtriangles, mesh->element3i, mesh->ebo, 0);
 				// increment stencil if frontface is behind depthbuffer
-				GL_CullFace(GL_FRONT); // quake is backwards, this culls back faces
+				GL_CullFace(r_view.cullface_back);
 				qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);CHECKGLERROR
 			}
 			R_Mesh_Draw(0, mesh->numverts, mesh->numtriangles, mesh->element3i, mesh->ebo, 0);
@@ -3061,7 +3061,7 @@ void R_ShadowVolumeLighting(qboolean visible)
 	R_Shadow_RenderMode_End();
 }
 
-extern void R_SetupView(const matrix4x4_t *matrix);
+extern void R_SetupView(void);
 extern cvar_t r_shadows_throwdistance;
 void R_DrawModelShadows(void)
 {
@@ -3143,7 +3143,7 @@ void R_DrawModelShadows(void)
 	R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
 
 	// restoring the perspective view is done by R_RenderScene
-	//R_SetupView(&r_view.matrix);
+	//R_SetupView();
 
 	// restore other state to normal
 	R_Shadow_RenderMode_End();
