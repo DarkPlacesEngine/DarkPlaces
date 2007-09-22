@@ -98,6 +98,8 @@ mplane_t;
 #define MATERIALFLAG_NOCULLFACE 65536
 // render with a very short depth range (like 10% of normal), this causes entities to appear infront of most of the scene
 #define MATERIALFLAG_SHORTDEPTHRANGE 131072
+// render refraction and reflection (note: this is always opaque, the shader does the alpha effect)
+#define MATERIALFLAG_WATERSHADER 262144
 // combined mask of all attributes that require depth sorted rendering
 #define MATERIALFLAGMASK_DEPTHSORTED (MATERIALFLAG_BLENDED | MATERIALFLAG_NODEPTHTEST)
 

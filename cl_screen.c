@@ -1780,6 +1780,10 @@ void SCR_DrawScreen (void)
 
 	R_UpdateVariables();
 
+	// Quake uses clockwise winding, so these are swapped
+	r_view.cullface_front = GL_BACK;
+	r_view.cullface_back = GL_FRONT;
+
 	if (cls.signon == SIGNONS)
 	{
 		float size;

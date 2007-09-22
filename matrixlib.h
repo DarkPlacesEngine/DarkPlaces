@@ -42,6 +42,9 @@ void Matrix4x4_Invert_Simple (matrix4x4_t *out, const matrix4x4_t *in1);
 // creates a matrix that does the same rotation and translation as the matrix
 // provided, but no uniform scaling, does not support scale3 matrices
 void Matrix4x4_Normalize (matrix4x4_t *out, matrix4x4_t *in1);
+// modifies a matrix to have all vectors and origin reflected across the plane
+// to the opposite side (at least if axisscale is -2)
+void Matrix4x4_Reflect (matrix4x4_t *out, double normalx, double normaly, double normalz, double dist, double axisscale);
 
 // creates an identity matrix
 // (a matrix which does nothing)

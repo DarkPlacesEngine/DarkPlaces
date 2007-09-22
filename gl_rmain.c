@@ -78,6 +78,17 @@ cvar_t r_glsl = {CVAR_SAVE, "r_glsl", "1", "enables use of OpenGL 2.0 pixel shad
 cvar_t r_glsl_offsetmapping = {CVAR_SAVE, "r_glsl_offsetmapping", "0", "offset mapping effect (also known as parallax mapping or virtual displacement mapping)"};
 cvar_t r_glsl_offsetmapping_reliefmapping = {CVAR_SAVE, "r_glsl_offsetmapping_reliefmapping", "0", "relief mapping effect (higher quality)"};
 cvar_t r_glsl_offsetmapping_scale = {CVAR_SAVE, "r_glsl_offsetmapping_scale", "0.04", "how deep the offset mapping effect is"};
+cvar_t r_glsl_water = {CVAR_SAVE, "r_glsl_water", "0", "whether to use reflections and refraction on water surfaces (note: r_wateralpha must be set below 1)"};
+cvar_t r_glsl_water_clippingplanebias = {CVAR_SAVE, "r_glsl_water_clippingplanebias", "1", "a rather technical setting which avoids black pixels around water edges"};
+cvar_t r_glsl_water_resolutionmultiplier = {CVAR_SAVE, "r_glsl_water_resolutionmultiplier", "0.5", "multiplier for screen resolution when rendering refracted/reflected scenes, 1 is full quality, lower values are faster"};
+cvar_t r_glsl_water_refractcolor_r = {CVAR_SAVE, "r_glsl_water_refractcolor_r", "1", "water color tint for refraction"};
+cvar_t r_glsl_water_refractcolor_g = {CVAR_SAVE, "r_glsl_water_refractcolor_g", "1", "water color tint for refraction"};
+cvar_t r_glsl_water_refractcolor_b = {CVAR_SAVE, "r_glsl_water_refractcolor_b", "1", "water color tint for refraction"};
+cvar_t r_glsl_water_reflectcolor_r = {CVAR_SAVE, "r_glsl_water_reflectcolor_r", "1", "water color tint for reflection"};
+cvar_t r_glsl_water_reflectcolor_g = {CVAR_SAVE, "r_glsl_water_reflectcolor_g", "1", "water color tint for reflection"};
+cvar_t r_glsl_water_reflectcolor_b = {CVAR_SAVE, "r_glsl_water_reflectcolor_b", "1", "water color tint for reflection"};
+cvar_t r_glsl_water_refractdistort = {CVAR_SAVE, "r_glsl_water_refractdistort", "0.01", "how much water refractions shimmer"};
+cvar_t r_glsl_water_reflectdistort = {CVAR_SAVE, "r_glsl_water_reflectdistort", "0.01", "how much water reflections shimmer"};
 cvar_t r_glsl_deluxemapping = {CVAR_SAVE, "r_glsl_deluxemapping", "1", "use per pixel lighting on deluxemap-compiled q3bsp maps (or a value of 2 forces deluxemap shading even without deluxemaps)"};
 cvar_t r_glsl_contrastboost = {CVAR_SAVE, "r_glsl_contrastboost", "1", "by how much to multiply the contrast in dark areas (1 is no change)"};
 
@@ -137,6 +148,34 @@ static struct r_bloomstate_s
 	float offsettexcoord2f[8];
 }
 r_bloomstate;
+
+typedef struct r_waterstate_waterplane_s
+{
+	rtexture_t *texture_refraction;
+	rtexture_t *texture_reflection;
+	mplane_t plane;
+}
+r_waterstate_waterplane_t;
+
+#define MAX_WATERPLANES 16
+
+static struct r_waterstate_s
+{
+	qboolean enabled;
+
+	qboolean renderingscene; // true while rendering a refraction or reflection texture, disables water surfaces
+
+	int waterwidth, waterheight;
+	int texturewidth, textureheight;
+
+	int maxwaterplanes; // same as MAX_WATERPLANES
+	int numwaterplanes;
+	r_waterstate_waterplane_t waterplanes[MAX_WATERPLANES];
+
+	float screenscale[2];
+	float screencenter[2];
+}
+r_waterstate;
 
 // shadow volume bsp struct with automatically growing nodes buffer
 svbsp_t r_svbsp;
@@ -402,6 +441,12 @@ static const char *builtinshaderstring =
 "varying vec3 VectorT; // direction of T texcoord (sometimes crudely called binormal)\n"
 "varying vec3 VectorR; // direction of R texcoord (surface normal)\n"
 "\n"
+"#ifdef USEWATER\n"
+"varying vec4 ModelViewProjectionPosition;\n"
+"//varying vec4 ModelViewProjectionPosition_svector;\n"
+"//varying vec4 ModelViewProjectionPosition_tvector;\n"
+"#endif\n"
+"\n"
 "\n"
 "\n"
 "\n"
@@ -458,9 +503,18 @@ static const char *builtinshaderstring =
 "	VectorR = gl_MultiTexCoord3.xyz;\n"
 "#endif\n"
 "\n"
-"	// transform vertex to camera space, using ftransform to match non-VS\n"
+"//#ifdef USEWATER\n"
+"//	ModelViewProjectionPosition = gl_Vertex * gl_ModelViewProjectionMatrix;\n"
+"//	//ModelViewProjectionPosition_svector = (gl_Vertex + vec4(gl_MultiTexCoord1.xyz, 0)) * gl_ModelViewProjectionMatrix - ModelViewProjectionPosition;\n"
+"//	//ModelViewProjectionPosition_tvector = (gl_Vertex + vec4(gl_MultiTexCoord2.xyz, 0)) * gl_ModelViewProjectionMatrix - ModelViewProjectionPosition;\n"
+"//#endif\n"
+"\n"
+"// transform vertex to camera space, using ftransform to match non-VS\n"
 "	// rendering\n"
 "	gl_Position = ftransform();\n"
+"#ifdef USEWATER\n"
+"	ModelViewProjectionPosition = gl_Position;\n"
+"#endif\n"
 "}\n"
 "\n"
 "#endif // VERTEX_SHADER\n"
@@ -483,6 +537,8 @@ static const char *builtinshaderstring =
 "uniform sampler2D Texture_Lightmap;\n"
 "uniform sampler2D Texture_Deluxemap;\n"
 "uniform sampler2D Texture_Glow;\n"
+"uniform sampler2D Texture_Reflection;\n"
+"uniform sampler2D Texture_Refraction;\n"
 "\n"
 "uniform myhvec3 LightColor;\n"
 "uniform myhvec3 AmbientColor;\n"
@@ -491,6 +547,14 @@ static const char *builtinshaderstring =
 "uniform myhvec3 Color_Pants;\n"
 "uniform myhvec3 Color_Shirt;\n"
 "uniform myhvec3 FogColor;\n"
+"\n"
+"#ifdef USEWATER\n"
+"uniform vec4 DistortScaleRefractReflect;\n"
+"uniform vec4 ScreenScaleRefractReflect;\n"
+"uniform vec4 ScreenCenterRefractReflect;\n"
+"uniform myhvec3 RefractColor;\n"
+"uniform myhvec3 ReflectColor;\n"
+"#endif\n"
 "\n"
 "uniform myhalf GlowScale;\n"
 "uniform myhalf SceneBrightness;\n"
@@ -661,6 +725,23 @@ static const char *builtinshaderstring =
 "	color.rgb = mix(FogColor, color.rgb, myhalf(texture2D(Texture_FogMask, myhvec2(length(EyeVectorModelSpace)*FogRangeRecip, 0.0))));\n"
 "#endif\n"
 "\n"
+"#ifdef USEWATER\n"
+"#ifdef MODE_LIGHTSOURCE\n"
+"	color.rgb *= color.a;\n"
+"#else\n"
+"	myhalf Fresnel = myhalf(max(pow(min(1, 1.0 - normalize(EyeVector).z), 5), 0.1));\n"
+"	vec4 ScreenScaleRefractReflectIW = ScreenScaleRefractReflect * (1.0 / ModelViewProjectionPosition.w);\n"
+"	//vec4 ScreenTexCoord = (ModelViewProjectionPosition.xyxy + normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5)).xyxy * DistortScaleRefractReflect * 100) * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect;\n"
+"	vec4 ScreenTexCoord = ModelViewProjectionPosition.xyxy * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect + normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5)).xyxy * DistortScaleRefractReflect;\n"
+"	color.rgb = mix(mix(myhvec3(texture2D(Texture_Refraction, ScreenTexCoord.xy)) * RefractColor, myhvec3(texture2D(Texture_Reflection, ScreenTexCoord.zw)) * ReflectColor, Fresnel), color.rgb, color.a);\n"
+"	//color.rgb = myhvec3(texture2D(Texture_Refraction, ScreenTexCoord.xy)); // testing only\n"
+"	//color.rgb = myhvec3(texture2D(Texture_Reflection, ScreenTexCoord.zw)); // testing only\n"
+"	//vec4 RefractionPosition = ModelViewProjectionPosition + ModelViewProjectionPosition_svector * distort.x + ModelViewProjectionPosition_tvector * distort.y;\n"
+"	//vec4 ReflectionPosition = ModelViewProjectionPosition + ModelViewProjectionPosition_svector * distort.w + ModelViewProjectionPosition_tvector * distort.z;\n"
+"	//color.rgb += mix(myhvec3(texture2DProj(Texture_Refraction, RefractionPosition)) * RefractColor, myhvec3(texture2DProj(Texture_Reflection, ReflectionPosition)) * ReflectColor, Fresnel);\n"
+"#endif\n"
+"#endif\n"
+"\n"
 "#ifdef USECONTRASTBOOST\n"
 "	color.rgb = color.rgb * SceneBrightness / (ContrastBoostCoeff * color.rgb + myhvec3(1, 1, 1));\n"
 "#else\n"
@@ -680,6 +761,7 @@ const char *permutationinfo[][2] =
 	{"#define MODE_LIGHTDIRECTIONMAP_MODELSPACE\n", " lightdirectionmap_modelspace"},
 	{"#define MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n", " lightdirectionmap_tangentspace"},
 	{"#define MODE_LIGHTDIRECTION\n", " lightdirection"},
+	{"#define USEWATER\n", " water"},
 	{"#define USEGLOW\n", " glow"},
 	{"#define USEFOG\n", " fog"},
 	{"#define USECOLORMAPPING\n", " colormapping"},
@@ -778,6 +860,8 @@ void R_GLSL_CompilePermutation(const char *filename, int permutation)
 		p->loc_Texture_Lightmap    = qglGetUniformLocationARB(p->program, "Texture_Lightmap");
 		p->loc_Texture_Deluxemap   = qglGetUniformLocationARB(p->program, "Texture_Deluxemap");
 		p->loc_Texture_Glow        = qglGetUniformLocationARB(p->program, "Texture_Glow");
+		p->loc_Texture_Refraction  = qglGetUniformLocationARB(p->program, "Texture_Refraction");
+		p->loc_Texture_Reflection  = qglGetUniformLocationARB(p->program, "Texture_Reflection");
 		p->loc_FogColor            = qglGetUniformLocationARB(p->program, "FogColor");
 		p->loc_LightPosition       = qglGetUniformLocationARB(p->program, "LightPosition");
 		p->loc_EyePosition         = qglGetUniformLocationARB(p->program, "EyePosition");
@@ -797,6 +881,11 @@ void R_GLSL_CompilePermutation(const char *filename, int permutation)
 		p->loc_SpecularColor       = qglGetUniformLocationARB(p->program, "SpecularColor");
 		p->loc_LightDir            = qglGetUniformLocationARB(p->program, "LightDir");
 		p->loc_ContrastBoostCoeff  = qglGetUniformLocationARB(p->program, "ContrastBoostCoeff");
+		p->loc_DistortScaleRefractReflect = qglGetUniformLocationARB(p->program, "DistortScaleRefractReflect");
+		p->loc_ScreenScaleRefractReflect = qglGetUniformLocationARB(p->program, "ScreenScaleRefractReflect");
+		p->loc_ScreenCenterRefractReflect = qglGetUniformLocationARB(p->program, "ScreenCenterRefractReflect");
+		p->loc_RefractColor        = qglGetUniformLocationARB(p->program, "RefractColor");
+		p->loc_ReflectColor        = qglGetUniformLocationARB(p->program, "ReflectColor");
 		// initialize the samplers to refer to the texture units we use
 		if (p->loc_Texture_Normal >= 0)    qglUniform1iARB(p->loc_Texture_Normal, 0);
 		if (p->loc_Texture_Color >= 0)     qglUniform1iARB(p->loc_Texture_Color, 1);
@@ -809,6 +898,8 @@ void R_GLSL_CompilePermutation(const char *filename, int permutation)
 		if (p->loc_Texture_Deluxemap >= 0) qglUniform1iARB(p->loc_Texture_Deluxemap, 8);
 		if (p->loc_Texture_Glow >= 0)      qglUniform1iARB(p->loc_Texture_Glow, 9);
 		if (p->loc_Texture_Attenuation >= 0) qglUniform1iARB(p->loc_Texture_Attenuation, 10);
+		if (p->loc_Texture_Refraction >= 0) qglUniform1iARB(p->loc_Texture_Refraction, 11);
+		if (p->loc_Texture_Reflection >= 0) qglUniform1iARB(p->loc_Texture_Reflection, 12);
 		CHECKGLERROR
 		qglUseProgramObjectARB(0);CHECKGLERROR
 	}
@@ -886,6 +977,8 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 		}
 		if(r_glsl_contrastboost.value > 1 || r_glsl_contrastboost.value < 0)
 			permutation |= SHADERPERMUTATION_CONTRASTBOOST;
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_WATERSHADER)
+			permutation |= SHADERPERMUTATION_USEWATER;
 	}
 	else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
 	{
@@ -906,6 +999,8 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 		}
 		if(r_glsl_contrastboost.value > 1 || r_glsl_contrastboost.value < 0)
 			permutation |= SHADERPERMUTATION_CONTRASTBOOST;
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_WATERSHADER)
+			permutation |= SHADERPERMUTATION_USEWATER;
 	}
 	else if (modellighting)
 	{
@@ -929,6 +1024,8 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 		}
 		if(r_glsl_contrastboost.value > 1 || r_glsl_contrastboost.value < 0)
 			permutation |= SHADERPERMUTATION_CONTRASTBOOST;
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_WATERSHADER)
+			permutation |= SHADERPERMUTATION_USEWATER;
 	}
 	else
 	{
@@ -971,6 +1068,8 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 		}
 		if(r_glsl_contrastboost.value > 1 || r_glsl_contrastboost.value < 0)
 			permutation |= SHADERPERMUTATION_CONTRASTBOOST;
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_WATERSHADER)
+			permutation |= SHADERPERMUTATION_USEWATER;
 	}
 	if (!r_glsl_permutations[permutation & SHADERPERMUTATION_MASK].program)
 	{
@@ -1054,6 +1153,8 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 	//if (r_glsl_permutation->loc_Texture_Lightmap >= 0) R_Mesh_TexBind(7, R_GetTexture(r_texture_white));
 	//if (r_glsl_permutation->loc_Texture_Deluxemap >= 0) R_Mesh_TexBind(8, R_GetTexture(r_texture_blanknormalmap));
 	if (r_glsl_permutation->loc_Texture_Glow >= 0) R_Mesh_TexBind(9, R_GetTexture(rsurface.texture->currentskinframe->glow));
+	if (r_glsl_permutation->loc_Texture_Refraction >= 0) R_Mesh_TexBind(11, R_GetTexture(r_texture_white)); // changed per surface
+	if (r_glsl_permutation->loc_Texture_Reflection >= 0) R_Mesh_TexBind(12, R_GetTexture(r_texture_white)); // changed per surface
 	if (r_glsl_permutation->loc_GlowScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_GlowScale, r_hdr_glowintensity.value);
 	if (r_glsl_permutation->loc_ContrastBoostCoeff >= 0)
 	{
@@ -1097,6 +1198,11 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 	if (r_glsl_permutation->loc_FogRangeRecip >= 0) qglUniform1fARB(r_glsl_permutation->loc_FogRangeRecip, r_refdef.fograngerecip);
 	if (r_glsl_permutation->loc_SpecularPower >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularPower, rsurface.texture->specularpower);
 	if (r_glsl_permutation->loc_OffsetMapping_Scale >= 0) qglUniform1fARB(r_glsl_permutation->loc_OffsetMapping_Scale, r_glsl_offsetmapping_scale.value);
+	if (r_glsl_permutation->loc_DistortScaleRefractReflect >= 0) qglUniform4fARB(r_glsl_permutation->loc_DistortScaleRefractReflect, r_glsl_water_refractdistort.value, r_glsl_water_refractdistort.value, r_glsl_water_reflectdistort.value, r_glsl_water_reflectdistort.value);
+	if (r_glsl_permutation->loc_ScreenScaleRefractReflect >= 0) qglUniform4fARB(r_glsl_permutation->loc_ScreenScaleRefractReflect, r_waterstate.screenscale[0], r_waterstate.screenscale[1], r_waterstate.screenscale[0], r_waterstate.screenscale[1]);
+	if (r_glsl_permutation->loc_ScreenCenterRefractReflect >= 0) qglUniform4fARB(r_glsl_permutation->loc_ScreenCenterRefractReflect, r_waterstate.screencenter[0], r_waterstate.screencenter[1], r_waterstate.screencenter[0], r_waterstate.screencenter[1]);
+	if (r_glsl_permutation->loc_RefractColor >= 0) qglUniform3fARB(r_glsl_permutation->loc_RefractColor, r_glsl_water_refractcolor_r.value, r_glsl_water_refractcolor_g.value, r_glsl_water_refractcolor_b.value);
+	if (r_glsl_permutation->loc_ReflectColor >= 0) qglUniform3fARB(r_glsl_permutation->loc_ReflectColor, r_glsl_water_reflectcolor_r.value, r_glsl_water_reflectcolor_g.value, r_glsl_water_reflectcolor_b.value);
 	CHECKGLERROR
 	return permutation;
 }
@@ -1470,6 +1576,7 @@ void gl_main_start(void)
 	}
 	R_BuildFogTexture();
 	memset(&r_bloomstate, 0, sizeof(r_bloomstate));
+	memset(&r_waterstate, 0, sizeof(r_waterstate));
 	memset(r_glsl_permutations, 0, sizeof(r_glsl_permutations));
 	memset(&r_svbsp, 0, sizeof (r_svbsp));
 }
@@ -1494,6 +1601,7 @@ void gl_main_shutdown(void)
 	r_texture_whitecube = NULL;
 	r_texture_normalizationcube = NULL;
 	memset(&r_bloomstate, 0, sizeof(r_bloomstate));
+	memset(&r_waterstate, 0, sizeof(r_waterstate));
 	R_GLSL_Restart_f();
 }
 
@@ -1573,6 +1681,17 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_glsl_offsetmapping);
 	Cvar_RegisterVariable(&r_glsl_offsetmapping_reliefmapping);
 	Cvar_RegisterVariable(&r_glsl_offsetmapping_scale);
+	Cvar_RegisterVariable(&r_glsl_water);
+	Cvar_RegisterVariable(&r_glsl_water_resolutionmultiplier);
+	Cvar_RegisterVariable(&r_glsl_water_clippingplanebias);
+	Cvar_RegisterVariable(&r_glsl_water_refractcolor_r);
+	Cvar_RegisterVariable(&r_glsl_water_refractcolor_g);
+	Cvar_RegisterVariable(&r_glsl_water_refractcolor_b);
+	Cvar_RegisterVariable(&r_glsl_water_reflectcolor_r);
+	Cvar_RegisterVariable(&r_glsl_water_reflectcolor_g);
+	Cvar_RegisterVariable(&r_glsl_water_reflectcolor_b);
+	Cvar_RegisterVariable(&r_glsl_water_refractdistort);
+	Cvar_RegisterVariable(&r_glsl_water_reflectdistort);
 	Cvar_RegisterVariable(&r_glsl_deluxemapping);
 	Cvar_RegisterVariable(&r_lerpsprites);
 	Cvar_RegisterVariable(&r_lerpmodels);
@@ -1653,7 +1772,7 @@ int R_CullBox(const vec3_t mins, const vec3_t maxs)
 {
 	int i;
 	mplane_t *p;
-	for (i = 0;i < 4;i++)
+	for (i = 0;i < r_view.numfrustumplanes;i++)
 	{
 		p = r_view.frustum + i;
 		switch(p->signbits)
@@ -1790,7 +1909,7 @@ static void R_View_UpdateEntityVisible (void)
 	if (!r_drawentities.integer)
 		return;
 
-	renderimask = r_refdef.envmap ? (RENDER_EXTERIORMODEL | RENDER_VIEWMODEL) : (chase_active.integer ? 0 : RENDER_EXTERIORMODEL);
+	renderimask = r_refdef.envmap ? (RENDER_EXTERIORMODEL | RENDER_VIEWMODEL) : ((chase_active.integer || r_waterstate.renderingscene) ? RENDER_VIEWMODEL : RENDER_EXTERIORMODEL);
 	if (r_refdef.worldmodel && r_refdef.worldmodel->brush.BoxTouchingVisibleLeafs)
 	{
 		// worldmodel can check visibility
@@ -1852,8 +1971,8 @@ int R_DrawBrushModelsSky (void)
 	return sky;
 }
 
-void R_DrawNoModel(entity_render_t *ent);
-void R_DrawModels(void)
+static void R_DrawNoModel(entity_render_t *ent);
+static void R_DrawModels(void)
 {
 	int i;
 	entity_render_t *ent;
@@ -1874,7 +1993,7 @@ void R_DrawModels(void)
 	}
 }
 
-void R_DrawModelsDepth(void)
+static void R_DrawModelsDepth(void)
 {
 	int i;
 	entity_render_t *ent;
@@ -1893,8 +2012,28 @@ void R_DrawModelsDepth(void)
 	}
 }
 
+static void R_DrawModelsAddWaterPlanes(void)
+{
+	int i;
+	entity_render_t *ent;
+
+	if (!r_drawentities.integer)
+		return;
+
+	for (i = 0;i < r_refdef.numentities;i++)
+	{
+		if (!r_viewcache.entityvisible[i])
+			continue;
+		ent = r_refdef.entities[i];
+		r_refdef.stats.entities++;
+		if (ent->model && ent->model->DrawAddWaterPlanes != NULL)
+			ent->model->DrawAddWaterPlanes(ent);
+	}
+}
+
 static void R_View_SetFrustum(void)
 {
+	int i;
 	double slopex, slopey;
 
 	// break apart the view matrix into vectors for various purposes
@@ -2000,12 +2139,16 @@ static void R_View_SetFrustum(void)
 		r_view.frustum[3].dist = DotProduct (r_view.origin, r_view.frustum[3].normal) + r_view.ortho_y;
 		r_view.frustum[4].dist = DotProduct (r_view.origin, r_view.frustum[4].normal) + r_refdef.nearclip;
 	}
+	r_view.numfrustumplanes = 5;
 
-	PlaneClassify(&r_view.frustum[0]);
-	PlaneClassify(&r_view.frustum[1]);
-	PlaneClassify(&r_view.frustum[2]);
-	PlaneClassify(&r_view.frustum[3]);
-	PlaneClassify(&r_view.frustum[4]);
+	if (r_view.useclipplane)
+	{
+		r_view.numfrustumplanes = 6;
+		r_view.frustum[5] = r_view.clipplane;
+	}
+
+	for (i = 0;i < r_view.numfrustumplanes;i++)
+		PlaneClassify(r_view.frustum + i);
 
 	// LordHavoc: note to all quake engine coders, Quake had a special case
 	// for 90 degrees which assumed a square view (wrong), so I removed it,
@@ -2040,11 +2183,11 @@ static void R_View_SetFrustum(void)
 void R_View_Update(void)
 {
 	R_View_SetFrustum();
-	R_View_WorldVisibility();
+	R_View_WorldVisibility(r_view.useclipplane);
 	R_View_UpdateEntityVisible();
 }
 
-void R_SetupView(const matrix4x4_t *matrix)
+void R_SetupView(void)
 {
 	if (!r_view.useperspective)
 		GL_SetupView_Mode_Ortho(-r_view.ortho_x, -r_view.ortho_y, r_view.ortho_x, r_view.ortho_y, -r_refdef.farclip, r_refdef.farclip);
@@ -2053,7 +2196,17 @@ void R_SetupView(const matrix4x4_t *matrix)
 	else
 		GL_SetupView_Mode_Perspective(r_view.frustum_x, r_view.frustum_y, r_refdef.nearclip, r_refdef.farclip);
 
-	GL_SetupView_Orientation_FromEntity(matrix);
+	GL_SetupView_Orientation_FromEntity(&r_view.matrix);
+
+	if (r_view.useclipplane)
+	{
+		// LordHavoc: couldn't figure out how to make this approach the
+		vec_t dist = r_view.clipplane.dist - r_glsl_water_clippingplanebias.value;
+		vec_t viewdist = DotProduct(r_view.origin, r_view.clipplane.normal);
+		if (viewdist < r_view.clipplane.dist + r_glsl_water_clippingplanebias.value)
+			dist = r_view.clipplane.dist;
+		GL_SetupView_ApplyCustomNearClipPlane(r_view.clipplane.normal[0], r_view.clipplane.normal[1], r_view.clipplane.normal[2], dist);
+	}
 }
 
 void R_ResetViewRendering2D(void)
@@ -2100,7 +2253,7 @@ void R_ResetViewRendering3D(void)
 
 	// GL is weird because it's bottom to top, r_view.y is top to bottom
 	qglViewport(r_view.x, vid.height - (r_view.y + r_view.height), r_view.width, r_view.height);CHECKGLERROR
-	R_SetupView(&r_view.matrix);
+	R_SetupView();
 	GL_Scissor(r_view.x, r_view.y, r_view.width, r_view.height);
 	GL_Color(1, 1, 1, 1);
 	GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 1);
@@ -2119,7 +2272,7 @@ void R_ResetViewRendering3D(void)
 	qglStencilMask(~0);CHECKGLERROR
 	qglStencilFunc(GL_ALWAYS, 128, ~0);CHECKGLERROR
 	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);CHECKGLERROR
-	GL_CullFace(GL_FRONT); // quake is backwards, this culls back faces
+	GL_CullFace(r_view.cullface_back);
 }
 
 /*
@@ -2183,7 +2336,170 @@ void R_ResetViewRendering3D(void)
 "#endif // FRAGMENT_SHADER\n"
 */
 
-void R_RenderScene(void);
+void R_RenderScene(qboolean addwaterplanes);
+
+static void R_Water_StartFrame(void)
+{
+	int i;
+	int texturewidth, textureheight;
+	r_waterstate_waterplane_t *p;
+
+	r_waterstate.maxwaterplanes = 0;
+
+	// set waterwidth and waterheight to the water resolution that will be
+	// used (often less than the screen resolution for faster rendering)
+	r_waterstate.waterwidth = (int)bound(1, r_view.width * r_glsl_water_resolutionmultiplier.value, r_view.width);
+	r_waterstate.waterheight = (int)bound(1, r_view.height * r_glsl_water_resolutionmultiplier.value, r_view.height);
+
+	// calculate desired texture sizes
+	if (gl_support_arb_texture_non_power_of_two)
+	{
+		texturewidth = r_waterstate.waterwidth;
+		textureheight = r_waterstate.waterheight;
+	}
+	else
+	{
+		for (texturewidth   = 1;texturewidth   < r_waterstate.waterwidth ;texturewidth   *= 2);
+		for (textureheight  = 1;textureheight  < r_waterstate.waterheight;textureheight  *= 2);
+	}
+
+	if (!r_glsl_water.integer)
+		texturewidth = textureheight = 0;
+
+	// allocate textures as needed
+	if (r_waterstate.texturewidth != texturewidth || r_waterstate.textureheight != textureheight)
+	{
+		for (i = 0, p = r_waterstate.waterplanes;i < r_waterstate.maxwaterplanes;i++, p++)
+		{
+			if (p->texture_refraction)
+				R_FreeTexture(p->texture_refraction);
+			p->texture_refraction = NULL;
+			if (p->texture_reflection)
+				R_FreeTexture(p->texture_reflection);
+			p->texture_reflection = NULL;
+		}
+		r_waterstate.texturewidth = texturewidth;
+		r_waterstate.textureheight = textureheight;
+	}
+
+	if ((!texturewidth && !textureheight) || texturewidth > gl_max_texture_size || textureheight > gl_max_texture_size)
+	{
+		// can't use water if the parameters are too weird
+		// can't use water if the card does not support the texture size
+		memset(&r_waterstate, 0, sizeof(r_waterstate));
+		return;
+	}
+
+	r_waterstate.enabled = true;
+
+	r_waterstate.maxwaterplanes = MAX_WATERPLANES;
+
+	// set up variables that will be used in shader setup
+	r_waterstate.screenscale[0] = 0.5f * (float)r_waterstate.waterwidth / (float)r_waterstate.texturewidth;
+	r_waterstate.screenscale[1] = 0.5f * (float)r_waterstate.waterheight / (float)r_waterstate.textureheight;
+	r_waterstate.screencenter[0] = 0.5f * (float)r_waterstate.waterwidth / (float)r_waterstate.texturewidth;
+	r_waterstate.screencenter[1] = 0.5f * (float)r_waterstate.waterheight / (float)r_waterstate.textureheight;
+}
+
+static void R_Water_AddWaterPlane(msurface_t *surface)
+{
+	int triangleindex, planeindex;
+	const int *e;
+	vec3_t vert[3];
+	vec3_t normal;
+	r_waterstate_waterplane_t *p;
+	// just use the first triangle with a valid normal for any decisions
+	VectorClear(normal);
+	for (triangleindex = 0, e = rsurface.modelelement3i + surface->num_firsttriangle * 3;triangleindex < surface->num_triangles;triangleindex++, e += 3)
+	{
+		Matrix4x4_Transform(&rsurface.matrix, rsurface.modelvertex3f + e[0]*3, vert[0]);
+		Matrix4x4_Transform(&rsurface.matrix, rsurface.modelvertex3f + e[1]*3, vert[1]);
+		Matrix4x4_Transform(&rsurface.matrix, rsurface.modelvertex3f + e[2]*3, vert[2]);
+		TriangleNormal(vert[0], vert[1], vert[2], normal);
+		if (VectorLength2(normal) >= 0.001)
+			break;
+	}
+	for (planeindex = 0, p = r_waterstate.waterplanes;planeindex < r_waterstate.numwaterplanes;planeindex++, p++)
+		if (fabs(PlaneDiff(vert[0], &p->plane)) < 1 && fabs(PlaneDiff(vert[1], &p->plane)) < 1 && fabs(PlaneDiff(vert[2], &p->plane)) < 1)
+			break;
+	// if this triangle does not fit any known plane rendered this frame, render textures for it
+	if (planeindex >= r_waterstate.numwaterplanes && planeindex < r_waterstate.maxwaterplanes)
+	{
+		// store the new plane
+		r_waterstate.numwaterplanes++;
+		VectorCopy(normal, p->plane.normal);
+		VectorNormalize(p->plane.normal);
+		p->plane.dist = DotProduct(vert[0], p->plane.normal);
+		PlaneClassify(&p->plane);
+		// flip the plane if it does not face the viewer
+		if (PlaneDiff(r_view.origin, &p->plane) < 0)
+		{
+			VectorNegate(p->plane.normal, p->plane.normal);
+			p->plane.dist *= -1;
+			PlaneClassify(&p->plane);
+		}
+	}
+}
+
+static void R_Water_ProcessPlanes(void)
+{
+	r_view_t originalview;
+	int planeindex;
+	r_waterstate_waterplane_t *p;
+
+	for (planeindex = 0, p = r_waterstate.waterplanes;planeindex < r_waterstate.numwaterplanes;planeindex++, p++)
+	{
+		if (!p->texture_refraction)
+		{
+			p->texture_refraction = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_refraction", planeindex), r_waterstate.texturewidth, r_waterstate.textureheight, NULL, TEXTYPE_RGBA, TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_ALWAYSPRECACHE, NULL);
+			p->texture_reflection = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_reflection", planeindex), r_waterstate.texturewidth, r_waterstate.textureheight, NULL, TEXTYPE_RGBA, TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_ALWAYSPRECACHE, NULL);
+		}
+
+		originalview = r_view;
+		r_view.showdebug = false;
+		r_view.width = r_waterstate.waterwidth;
+		r_view.height = r_waterstate.waterheight;
+		r_view.useclipplane = true;
+
+		r_view.clipplane = p->plane;
+		VectorNegate(r_view.clipplane.normal, r_view.clipplane.normal);
+		r_view.clipplane.dist = -r_view.clipplane.dist;
+		PlaneClassify(&r_view.clipplane);
+		r_waterstate.renderingscene = true;
+		// render the normal view scene and copy into texture
+		// (except that a clipping plane should be used to hide everything on one side of the water, and the viewer's weapon model should be omitted)
+		R_RenderScene(false);
+
+		// copy view into the screen texture
+		R_Mesh_TexBind(0, R_GetTexture(p->texture_refraction));
+		GL_ActiveTexture(0);
+		CHECKGLERROR
+		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view.x, vid.height - (r_view.y + r_view.height), r_view.width, r_view.height);CHECKGLERROR
+
+		// render reflected scene and copy into texture
+		Matrix4x4_Reflect(&r_view.matrix, p->plane.normal[0], p->plane.normal[1], p->plane.normal[2], p->plane.dist, -2);
+		r_view.clipplane = p->plane;
+		// reverse the cullface settings for this render
+		r_view.cullface_front = GL_FRONT;
+		r_view.cullface_back = GL_BACK;
+
+		R_ResetViewRendering3D();
+		R_ClearScreen();
+
+		R_RenderScene(false);
+
+		R_Mesh_TexBind(0, R_GetTexture(p->texture_reflection));
+		GL_ActiveTexture(0);
+		CHECKGLERROR
+		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view.x, vid.height - (r_view.y + r_view.height), r_view.width, r_view.height);CHECKGLERROR
+
+		R_ResetViewRendering3D();
+		R_ClearScreen();
+
+		r_view = originalview;
+		r_waterstate.renderingscene = false;
+	}
+}
 
 void R_Bloom_StartFrame(void)
 {
@@ -2452,7 +2768,8 @@ void R_HDR_RenderBloomTexture(void)
 	r_view.colorscale = r_bloom_colorscale.value * r_hdr_scenebrightness.value;
 	if (r_hdr.integer)
 		r_view.colorscale /= r_hdr_range.value;
-	R_RenderScene();
+	r_waterstate.numwaterplanes = 0;
+	R_RenderScene(r_waterstate.enabled);
 	r_view.showdebug = true;
 
 	R_ResetViewRendering2D();
@@ -2536,7 +2853,7 @@ static void R_BlendView(void)
 	}
 }
 
-void R_RenderScene(void);
+void R_RenderScene(qboolean addwaterplanes);
 
 matrix4x4_t r_waterscrollmatrix;
 
@@ -2622,21 +2939,18 @@ void R_RenderView(void)
 
 	R_Shadow_UpdateWorldLightSelection();
 
+	R_Bloom_StartFrame();
+	R_Water_StartFrame();
+
 	CHECKGLERROR
 	if (r_timereport_active)
 		R_TimeReport("setup");
-
-	R_View_Update();
-	if (r_timereport_active)
-		R_TimeReport("visibility");
 
 	R_ResetViewRendering3D();
 
 	R_ClearScreen();
 	if (r_timereport_active)
 		R_TimeReport("clear");
-
-	R_Bloom_StartFrame();
 
 	r_view.showdebug = true;
 
@@ -2645,7 +2959,8 @@ void R_RenderView(void)
 		R_HDR_RenderBloomTexture();
 
 	r_view.colorscale = r_hdr_scenebrightness.value;
-	R_RenderScene();
+	r_waterstate.numwaterplanes = 0;
+	R_RenderScene(r_waterstate.enabled);
 
 	R_BlendView();
 	if (r_timereport_active)
@@ -2662,17 +2977,49 @@ extern void R_DrawPortals (void);
 extern cvar_t cl_locs_show;
 static void R_DrawLocs(void);
 static void R_DrawEntityBBoxes(void);
-void R_RenderScene(void)
+void R_RenderScene(qboolean addwaterplanes)
 {
+	if (addwaterplanes)
+	{
+		R_ResetViewRendering3D();
+
+		R_View_Update();
+		if (r_timereport_active)
+			R_TimeReport("watervisibility");
+
+		if (cl.csqc_vidvars.drawworld && r_refdef.worldmodel && r_refdef.worldmodel->Draw)
+		{
+			r_refdef.worldmodel->DrawAddWaterPlanes(r_refdef.worldentity);
+			if (r_timereport_active)
+				R_TimeReport("waterworld");
+		}
+
+		// don't let sound skip if going slow
+		if (r_refdef.extraupdate)
+			S_ExtraUpdate ();
+
+		R_DrawModelsAddWaterPlanes();
+		if (r_timereport_active)
+			R_TimeReport("watermodels");
+
+		R_Water_ProcessPlanes();
+		if (r_timereport_active)
+			R_TimeReport("waterscenes");
+	}
+
+	R_ResetViewRendering3D();
+
 	// don't let sound skip if going slow
 	if (r_refdef.extraupdate)
 		S_ExtraUpdate ();
 
-	R_ResetViewRendering3D();
-
 	R_MeshQueue_BeginScene();
 
 	R_SkyStartFrame();
+
+	R_View_Update();
+	if (r_timereport_active)
+		R_TimeReport("visibility");
 
 	Matrix4x4_CreateTranslate(&r_waterscrollmatrix, sin(r_refdef.time) * 0.025 * r_waterscroll.value, sin(r_refdef.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
 
@@ -2773,14 +3120,14 @@ void R_RenderScene(void)
 			if (r_timereport_active)
 				R_TimeReport("showlocs");
 		}
-	
+
 		if (r_drawportals.integer)
 		{
 			R_DrawPortals();
 			if (r_timereport_active)
 				R_TimeReport("portals");
 		}
-	
+
 		if (r_showbboxes.value > 0)
 		{
 			R_DrawEntityBBoxes();
@@ -2887,7 +3234,7 @@ static void R_DrawEntityBBoxes_Callback(const entity_render_t *ent, const rtligh
 		color[3] *= r_showbboxes.value;
 		color[3] = bound(0, color[3], 1);
 		GL_DepthTest(!r_showdisabledepthtest.integer);
-		GL_CullFace(GL_BACK);
+		GL_CullFace(r_view.cullface_front);
 		R_DrawBBoxMesh(edict->priv.server->areamins, edict->priv.server->areamaxs, color[0], color[1], color[2], color[3]);
 	}
 	SV_VM_End();
@@ -2972,7 +3319,7 @@ void R_DrawNoModel_TransparentCallback(const entity_render_t *ent, const rtlight
 	GL_DepthRange(0, (ent->flags & RENDER_VIEWMODEL) ? 0.0625 : 1);
 	GL_PolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);
 	GL_DepthTest(!(ent->effects & EF_NODEPTHTEST));
-	GL_CullFace((ent->effects & EF_DOUBLESIDED) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
+	GL_CullFace((ent->effects & EF_DOUBLESIDED) ? GL_NONE : r_view.cullface_back);
 	R_Mesh_VertexPointer(nomodelvertex3f, 0, 0);
 	if (r_refdef.fogenabled)
 	{
@@ -3060,10 +3407,10 @@ void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, rtexture_
 	{
 		scalex1 = -scalex1;
 		scalex2 = -scalex2;
-		GL_CullFace(GL_BACK);
+		GL_CullFace(r_view.cullface_front);
 	}
 	else
-		GL_CullFace(GL_FRONT);
+		GL_CullFace(r_view.cullface_back);
 
 	GL_DepthMask(false);
 	GL_DepthRange(0, depthshort ? 0.0625 : 1);
@@ -3329,7 +3676,12 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 	t->currentmaterialflags = t->basematerialflags;
 	t->currentalpha = ent->alpha;
 	if (t->basematerialflags & MATERIALFLAG_WATERALPHA && (model->brush.supportwateralpha || r_novis.integer))
+	{
 		t->currentalpha *= r_wateralpha.value;
+		// if rendering refraction/reflection, disable transparency
+		if (r_waterstate.enabled && (t->currentalpha < 1 || (t->currentmaterialflags & MATERIALFLAG_ALPHA)))
+			t->currentmaterialflags |= MATERIALFLAG_WATERSHADER;
+	}
 	if (!(ent->flags & RENDER_LIGHT))
 		t->currentmaterialflags |= MATERIALFLAG_FULLBRIGHT;
 	if (ent->effects & EF_ADDITIVE)
@@ -3344,6 +3696,8 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 		t->currentmaterialflags |= MATERIALFLAG_SHORTDEPTHRANGE;
 	if (t->backgroundnumskinframes && !(t->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED))
 		t->currentmaterialflags |= MATERIALFLAG_VERTEXTEXTUREBLEND;
+	if (t->currentmaterialflags & MATERIALFLAG_WATERSHADER)
+		t->currentmaterialflags &= ~(MATERIALFLAG_ADD | MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_CUSTOMBLEND);
 
 	for (i = 0, tcmod = t->tcmods;i < Q3MAXTCMODS && (tcmod->tcmod || i < 1);i++, tcmod++)
 	{
@@ -3413,8 +3767,8 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 		{
 			if (r_shadow_glossintensity.value > 0)
 			{
-				t->glosstexture = t->currentskinframe->gloss ? t->currentskinframe->gloss : r_texture_black;
-				t->backgroundglosstexture = (t->backgroundcurrentskinframe && t->backgroundcurrentskinframe->gloss) ? t->backgroundcurrentskinframe->gloss : r_texture_black;
+				t->glosstexture = t->currentskinframe->gloss ? t->currentskinframe->gloss : r_texture_white;
+				t->backgroundglosstexture = (t->backgroundcurrentskinframe && t->backgroundcurrentskinframe->gloss) ? t->backgroundcurrentskinframe->gloss : r_texture_white;
 				t->specularscale = r_shadow_glossintensity.value;
 			}
 		}
@@ -4244,6 +4598,59 @@ void RSurf_DrawBatch_Simple(int texturenumsurfaces, msurface_t **texturesurfacel
 	}
 }
 
+static void RSurf_DrawBatch_WithLightmapSwitching_WithWaterTextureSwitching(int texturenumsurfaces, msurface_t **texturesurfacelist, int lightmaptexunit, int deluxemaptexunit, int refractiontexunit, int reflectiontexunit)
+{
+	int i, planeindex, vertexindex;
+	float d, bestd;
+	vec3_t vert;
+	const float *v;
+	r_waterstate_waterplane_t *p, *bestp;
+	msurface_t *surface;
+	if (r_waterstate.renderingscene)
+		return;
+	for (i = 0;i < texturenumsurfaces;i++)
+	{
+		surface = texturesurfacelist[i];
+		if (lightmaptexunit >= 0)
+			R_Mesh_TexBind(lightmaptexunit, R_GetTexture(surface->lightmaptexture));
+		if (deluxemaptexunit >= 0)
+			R_Mesh_TexBind(deluxemaptexunit, R_GetTexture(surface->deluxemaptexture));
+		// pick the closest matching water plane
+		bestd = 0;
+		bestp = NULL;
+		for (planeindex = 0, p = r_waterstate.waterplanes;planeindex < r_waterstate.numwaterplanes;planeindex++, p++)
+		{
+			d = 0;
+			for (vertexindex = 0, v = rsurface.modelvertex3f + surface->num_firstvertex * 3;vertexindex < surface->num_vertices;vertexindex++, v += 3)
+			{
+				Matrix4x4_Transform(&rsurface.matrix, v, vert);
+				d += fabs(PlaneDiff(vert, &p->plane));
+			}
+			if (bestd > d || !bestp)
+			{
+				bestd = d;
+				bestp = p;
+			}
+		}
+		if (bestp)
+		{
+			if (refractiontexunit >= 0)
+				R_Mesh_TexBind(refractiontexunit, R_GetTexture(bestp->texture_refraction));
+			if (reflectiontexunit >= 0)
+				R_Mesh_TexBind(reflectiontexunit, R_GetTexture(bestp->texture_reflection));
+		}
+		else
+		{
+			if (refractiontexunit >= 0)
+				R_Mesh_TexBind(refractiontexunit, R_GetTexture(r_texture_black));
+			if (reflectiontexunit >= 0)
+				R_Mesh_TexBind(reflectiontexunit, R_GetTexture(r_texture_black));
+		}
+		GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
+		R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (rsurface.modelelement3i + 3 * surface->num_firsttriangle), rsurface.modelelement3i_bufferobject, (sizeof(int[3]) * surface->num_firsttriangle));
+	}
+}
+
 static void RSurf_DrawBatch_WithLightmapSwitching(int texturenumsurfaces, msurface_t **texturesurfacelist, int lightmaptexunit, int deluxemaptexunit)
 {
 	int i;
@@ -4601,7 +5008,7 @@ static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, msurfa
 	GL_DepthRange(0, (rsurface.texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE) ? 0.0625 : 1);
 	GL_PolygonOffset(rsurface.texture->currentpolygonfactor, rsurface.texture->currentpolygonoffset);
 	GL_DepthTest(!(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
-	GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
+	GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : r_view.cullface_back);
 	if (rsurface.mode != RSURFMODE_SHOWSURFACES)
 	{
 		rsurface.mode = RSURFMODE_SHOWSURFACES;
@@ -4637,7 +5044,7 @@ static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, msurface_t **te
 	GL_DepthRange(0, (rsurface.texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE) ? 0.0625 : 1);
 	GL_PolygonOffset(rsurface.texture->currentpolygonfactor, rsurface.texture->currentpolygonoffset);
 	GL_DepthTest(!(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
-	GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
+	GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : r_view.cullface_back);
 	GL_DepthMask(true);
 	// LordHavoc: HalfLife maps have freaky skypolys so don't use
 	// skymasking on them, and Quake3 never did sky masking (unlike
@@ -4716,9 +5123,19 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, msurface_t **t
 	}
 
 	if (rsurface.uselightmaptexture && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
-		RSurf_DrawBatch_WithLightmapSwitching(texturenumsurfaces, texturesurfacelist, 7, r_glsl_permutation->loc_Texture_Deluxemap >= 0 ? 8 : -1);
+	{
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_WATERSHADER)
+			RSurf_DrawBatch_WithLightmapSwitching_WithWaterTextureSwitching(texturenumsurfaces, texturesurfacelist, 7, r_glsl_permutation->loc_Texture_Deluxemap >= 0 ? 8 : -1, r_glsl_permutation->loc_Texture_Refraction >= 0 ? 11 : -1, r_glsl_permutation->loc_Texture_Reflection >= 0 ? 12 : -1);
+		else
+			RSurf_DrawBatch_WithLightmapSwitching(texturenumsurfaces, texturesurfacelist, 7, r_glsl_permutation->loc_Texture_Deluxemap >= 0 ? 8 : -1);
+	}
 	else
-		RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
+	{
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_WATERSHADER)
+			RSurf_DrawBatch_WithLightmapSwitching_WithWaterTextureSwitching(texturenumsurfaces, texturesurfacelist, -1, -1, r_glsl_permutation->loc_Texture_Refraction >= 0 ? 11 : -1, r_glsl_permutation->loc_Texture_Reflection >= 0 ? 12 : -1);
+		else
+			RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
+	}
 	if (rsurface.texture->backgroundnumskinframes && !(rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED))
 	{
 	}
@@ -4987,6 +5404,8 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 	{
 		if ((rsurface.texture->currentmaterialflags & (MATERIALFLAG_NODEPTHTEST | MATERIALFLAG_BLENDED | MATERIALFLAG_ALPHATEST)))
 			return;
+		if (r_waterstate.renderingscene && (rsurface.texture->currentmaterialflags & MATERIALFLAG_WATERSHADER))
+			return;
 		if (rsurface.mode != RSURFMODE_MULTIPASS)
 			rsurface.mode = RSURFMODE_MULTIPASS;
 		if (r_depthfirst.integer == 3)
@@ -5004,7 +5423,7 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 		}
 		GL_DepthRange(0, (rsurface.texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE) ? 0.0625 : 1);
 		GL_PolygonOffset(rsurface.texture->currentpolygonfactor, rsurface.texture->currentpolygonoffset);
-		GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
+		GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : r_view.cullface_back);
 		GL_DepthTest(true);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		GL_DepthMask(true);
@@ -5030,7 +5449,7 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 		GL_DepthRange(0, (rsurface.texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE) ? 0.0625 : 1);
 		GL_PolygonOffset(rsurface.texture->currentpolygonfactor, rsurface.texture->currentpolygonoffset);
 		GL_DepthTest(true);
-		GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
+		GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : r_view.cullface_back);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		GL_DepthMask(writedepth);
 		GL_Color(1,1,1,1);
@@ -5048,7 +5467,7 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 			rsurface.mode = RSURFMODE_MULTIPASS;
 		GL_DepthRange(0, (rsurface.texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE) ? 0.0625 : 1);
 		GL_DepthTest(true);
-		GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
+		GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : r_view.cullface_back);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		GL_DepthMask(writedepth);
 		GL_Color(1,1,1,1);
@@ -5084,7 +5503,7 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 		GL_DepthRange(0, (rsurface.texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE) ? 0.0625 : 1);
 		GL_PolygonOffset(rsurface.texture->currentpolygonfactor, rsurface.texture->currentpolygonoffset);
 		GL_DepthTest(!(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
-		GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : GL_FRONT); // quake is backwards, this culls back faces
+		GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : r_view.cullface_back);
 		GL_BlendFunc(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
 		GL_DepthMask(writedepth && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_BLENDED));
 		GL_AlphaTest((rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST) != 0);
@@ -5146,11 +5565,19 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 	RSurf_CleanUp();
 }
 
-void R_QueueSurfaceList(entity_render_t *ent, int numsurfaces, msurface_t **surfacelist, int flagsmask, qboolean writedepth, qboolean depthonly)
+void R_QueueSurfaceList(entity_render_t *ent, int numsurfaces, msurface_t **surfacelist, int flagsmask, qboolean writedepth, qboolean depthonly, qboolean addwaterplanes)
 {
 	int i, j;
 	vec3_t tempcenter, center;
 	texture_t *texture;
+	// if we're rendering water textures (extra scene renders), use a separate loop to avoid burdening the main one
+	if (addwaterplanes)
+	{
+		for (i = 0;i < numsurfaces;i++)
+			if (surfacelist[i]->texture->currentframe->currentmaterialflags & MATERIALFLAG_WATERSHADER)
+				R_Water_AddWaterPlane(surfacelist[i]);
+		return;
+	}
 	// break the surface list down into batches by texture and use of lightmapping
 	for (i = 0;i < numsurfaces;i = j)
 	{
@@ -5379,7 +5806,7 @@ void R_DrawTrianglesAndNormals(entity_render_t *ent, qboolean drawtris, qboolean
 }
 
 extern void R_BuildLightMap(const entity_render_t *ent, msurface_t *surface);
-void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean depthonly)
+void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean addwaterplanes)
 {
 	int i, j, endj, f, flagsmask;
 	int counttriangles = 0;
@@ -5395,7 +5822,7 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 	RSurf_ActiveWorldEntity();
 
 	// update light styles
-	if (!skysurfaces && !depthonly && model->brushq1.light_styleupdatechains)
+	if (!skysurfaces && !depthonly && !addwaterplanes && model->brushq1.light_styleupdatechains)
 	{
 		for (i = 0;i < model->brushq1.light_styles;i++)
 		{
@@ -5410,7 +5837,7 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 	}
 
 	R_UpdateAllTextureInfo(r_refdef.worldentity);
-	flagsmask = skysurfaces ? MATERIALFLAG_SKY : (MATERIALFLAG_WATER | MATERIALFLAG_WALL);
+	flagsmask = addwaterplanes ? MATERIALFLAG_WATERSHADER : (skysurfaces ? MATERIALFLAG_SKY : (MATERIALFLAG_WATER | MATERIALFLAG_WALL));
 	f = 0;
 	t = NULL;
 	rsurface.uselightmaptexture = false;
@@ -5439,25 +5866,28 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 				counttriangles += surface->num_triangles;
 				if (numsurfacelist >= maxsurfacelist)
 				{
-					R_QueueSurfaceList(r_refdef.worldentity, numsurfacelist, surfacelist, flagsmask, writedepth, depthonly);
+					R_QueueSurfaceList(r_refdef.worldentity, numsurfacelist, surfacelist, flagsmask, writedepth, depthonly, addwaterplanes);
 					numsurfacelist = 0;
 				}
 			}
 		}
 	}
 	if (numsurfacelist)
-		R_QueueSurfaceList(r_refdef.worldentity, numsurfacelist, surfacelist, flagsmask, writedepth, depthonly);
+		R_QueueSurfaceList(r_refdef.worldentity, numsurfacelist, surfacelist, flagsmask, writedepth, depthonly, addwaterplanes);
 	r_refdef.stats.entities_triangles += counttriangles;
 	RSurf_CleanUp();
 
-	if (r_showcollisionbrushes.integer && r_view.showdebug && !skysurfaces && !depthonly)
-		R_DrawCollisionBrushes(r_refdef.worldentity);
+	if (r_view.showdebug)
+	{
+		if (r_showcollisionbrushes.integer && !skysurfaces && !addwaterplanes && !depthonly)
+			R_DrawCollisionBrushes(r_refdef.worldentity);
 
-	if ((r_showtris.integer || r_shownormals.integer) && r_view.showdebug && !depthonly)
-		R_DrawTrianglesAndNormals(r_refdef.worldentity, r_showtris.integer, r_shownormals.integer, flagsmask);
+		if ((r_showtris.integer || r_shownormals.integer) && !addwaterplanes && !depthonly)
+			R_DrawTrianglesAndNormals(r_refdef.worldentity, r_showtris.integer, r_shownormals.integer, flagsmask);
+	}
 }
 
-void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean writedepth, qboolean depthonly)
+void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean addwaterplanes)
 {
 	int i, f, flagsmask;
 	int counttriangles = 0;
@@ -5481,7 +5911,7 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 		RSurf_ActiveModelEntity(ent, true, r_glsl.integer && gl_support_fragment_shader && !depthonly);
 
 	// update light styles
-	if (!skysurfaces && !depthonly && model->brushq1.light_styleupdatechains)
+	if (!skysurfaces && !depthonly && !addwaterplanes && model->brushq1.light_styleupdatechains)
 	{
 		for (i = 0;i < model->brushq1.light_styles;i++)
 		{
@@ -5496,7 +5926,7 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 	}
 
 	R_UpdateAllTextureInfo(ent);
-	flagsmask = skysurfaces ? MATERIALFLAG_SKY : (MATERIALFLAG_WATER | MATERIALFLAG_WALL);
+	flagsmask = addwaterplanes ? MATERIALFLAG_WATERSHADER : (skysurfaces ? MATERIALFLAG_SKY : (MATERIALFLAG_WATER | MATERIALFLAG_WALL));
 	f = 0;
 	t = NULL;
 	rsurface.uselightmaptexture = false;
@@ -5517,22 +5947,22 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 			counttriangles += surface->num_triangles;
 			if (numsurfacelist >= maxsurfacelist)
 			{
-				R_QueueSurfaceList(ent, numsurfacelist, surfacelist, flagsmask, writedepth, depthonly);
+				R_QueueSurfaceList(ent, numsurfacelist, surfacelist, flagsmask, writedepth, depthonly, addwaterplanes);
 				numsurfacelist = 0;
 			}
 		}
 	}
 	if (numsurfacelist)
-		R_QueueSurfaceList(ent, numsurfacelist, surfacelist, flagsmask, writedepth, depthonly);
+		R_QueueSurfaceList(ent, numsurfacelist, surfacelist, flagsmask, writedepth, depthonly, addwaterplanes);
 	r_refdef.stats.entities_triangles += counttriangles;
 	RSurf_CleanUp();
 
 	if (r_view.showdebug)
 	{
-		if (r_showcollisionbrushes.integer && !skysurfaces && !depthonly)
+		if (r_showcollisionbrushes.integer && !skysurfaces && !addwaterplanes && !depthonly)
 			R_DrawCollisionBrushes(ent);
 
-		if ((r_showtris.integer || r_shownormals.integer) && !depthonly)
+		if ((r_showtris.integer || r_shownormals.integer) && !addwaterplanes && !depthonly)
 			R_DrawTrianglesAndNormals(ent, r_showtris.integer, r_shownormals.integer, flagsmask);
 	}
 }

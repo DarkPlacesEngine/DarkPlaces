@@ -15,6 +15,7 @@ void GL_SetupView_Orientation_FromEntity(const matrix4x4_t *matrix);
 void GL_SetupView_Mode_Perspective(double frustumx, double frustumy, double zNear, double zFar);
 void GL_SetupView_Mode_PerspectiveInfiniteFarClip(double frustumx, double frustumy, double zNear);
 void GL_SetupView_Mode_Ortho(double x1, double y1, double x2, double y2, double zNear, double zFar);
+void GL_SetupView_ApplyCustomNearClipPlane(double normalx, double normaly, double normalz, double dist);
 void GL_BlendFunc(int blendfunc1, int blendfunc2);
 void GL_DepthMask(int state);
 void GL_DepthTest(int state);

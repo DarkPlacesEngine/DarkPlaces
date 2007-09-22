@@ -136,7 +136,7 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 skinframe_t *R_SkinFrame_LoadInternal(const char *name, int textureflags, int loadpantsandshirt, int loadglowtexture, const unsigned char *skindata, int width, int height, int bitsperpixel, const unsigned int *palette, const unsigned int *alphapalette);
 skinframe_t *R_SkinFrame_LoadMissing(void);
 
-void R_View_WorldVisibility();
+void R_View_WorldVisibility(qboolean forcenovis);
 void R_DrawParticles(void);
 void R_DrawExplosions(void);
 
@@ -353,8 +353,8 @@ struct msurface_s;
 void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t);
 void R_UpdateAllTextureInfo(entity_render_t *ent);
 void R_QueueTextureSurfaceList(int texturenumsurfaces, msurface_t **texturesurfacelist);
-void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean depthonly);
-void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean writedepth, qboolean depthonly);
+void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean addwaterplanes);
+void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean addwaterplanes);
 
 void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generatetangents, int texturenumsurfaces, msurface_t **texturesurfacelist);
 void RSurf_DrawBatch_Simple(int texturenumsurfaces, msurface_t **texturesurfacelist);
@@ -363,17 +363,18 @@ void RSurf_DrawBatch_Simple(int texturenumsurfaces, msurface_t **texturesurfacel
 #define SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP_MODELSPACE (1<<1) // (lightmap) use directional pixel shading from texture containing modelspace light directions (deluxemap)
 #define SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP_TANGENTSPACE (1<<2) // (lightmap) use directional pixel shading from texture containing tangentspace light directions (deluxemap)
 #define SHADERPERMUTATION_MODE_LIGHTDIRECTION (1<<3) // (lightmap) use directional pixel shading from fixed light direction (q3bsp)
-#define SHADERPERMUTATION_GLOW (1<<4) // (lightmap) blend in an additive glow texture
-#define SHADERPERMUTATION_FOG (1<<5) // tint the color by fog color or black if using additive blend mode
-#define SHADERPERMUTATION_COLORMAPPING (1<<6) // indicates this is a colormapped skin
-#define SHADERPERMUTATION_DIFFUSE (1<<7) // (lightsource) whether to use directional shading
-#define SHADERPERMUTATION_CONTRASTBOOST (1<<8) // r_glsl_contrastboost boosts the contrast at low color levels (similar to gamma)
-#define SHADERPERMUTATION_SPECULAR (1<<9) // (lightsource or deluxemapping) render specular effects
-#define SHADERPERMUTATION_CUBEFILTER (1<<10) // (lightsource) use cubemap light filter
-#define SHADERPERMUTATION_OFFSETMAPPING (1<<11) // adjust texcoords to roughly simulate a displacement mapped surface
-#define SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING (1<<12) // adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
+#define SHADERPERMUTATION_USEWATER (1<<4) // add a blend of screen-space reflection and refraction textures to the fragment color (with perturbed texture fetches)
+#define SHADERPERMUTATION_GLOW (1<<5) // (lightmap) blend in an additive glow texture
+#define SHADERPERMUTATION_FOG (1<<6) // tint the color by fog color or black if using additive blend mode
+#define SHADERPERMUTATION_COLORMAPPING (1<<7) // indicates this is a colormapped skin
+#define SHADERPERMUTATION_DIFFUSE (1<<8) // (lightsource) whether to use directional shading
+#define SHADERPERMUTATION_CONTRASTBOOST (1<<9) // r_glsl_contrastboost boosts the contrast at low color levels (similar to gamma)
+#define SHADERPERMUTATION_SPECULAR (1<<10) // (lightsource or deluxemapping) render specular effects
+#define SHADERPERMUTATION_CUBEFILTER (1<<11) // (lightsource) use cubemap light filter
+#define SHADERPERMUTATION_OFFSETMAPPING (1<<12) // adjust texcoords to roughly simulate a displacement mapped surface
+#define SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING (1<<13) // adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
 
-#define SHADERPERMUTATION_MAX (1<<13) // how many permutations are possible
+#define SHADERPERMUTATION_MAX (1<<14) // how many permutations are possible
 #define SHADERPERMUTATION_MASK (SHADERPERMUTATION_MAX - 1) // mask of valid indexing bits for r_glsl_permutations[] array
 
 // these are additional flags used only by R_GLSL_CompilePermutation
@@ -398,6 +399,8 @@ typedef struct r_glsl_permutation_s
 	int loc_Texture_Lightmap;
 	int loc_Texture_Deluxemap;
 	int loc_Texture_Glow;
+	int loc_Texture_Refraction;
+	int loc_Texture_Reflection;
 	int loc_FogColor;
 	int loc_LightPosition;
 	int loc_EyePosition;
@@ -417,6 +420,11 @@ typedef struct r_glsl_permutation_s
 	int loc_SpecularColor;
 	int loc_LightDir;
 	int loc_ContrastBoostCoeff; // 1 - 1/ContrastBoost
+	int loc_DistortScaleRefractReflect;
+	int loc_ScreenScaleRefractReflect;
+	int loc_ScreenCenterRefractReflect;
+	int loc_RefractColor;
+	int loc_ReflectColor;
 }
 r_glsl_permutation_t;
 

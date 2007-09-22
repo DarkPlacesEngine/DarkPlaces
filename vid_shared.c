@@ -256,6 +256,9 @@ void (GLAPIENTRY *qglPolygonOffset)(GLfloat factor, GLfloat units);
 void (GLAPIENTRY *qglPolygonMode)(GLenum face, GLenum mode);
 void (GLAPIENTRY *qglPolygonStipple)(const GLubyte *mask);
 
+void (GLAPIENTRY *qglClipPlane)(GLenum plane, const GLdouble *equation);
+void (GLAPIENTRY *qglGetClipPlane)(GLenum plane, GLdouble *equation);
+
 //[515]: added on 29.07.2005
 void (GLAPIENTRY *qglLineWidth)(GLfloat width);
 void (GLAPIENTRY *qglPointSize)(GLfloat size);
@@ -507,6 +510,8 @@ static dllfunction_t opengl110funcs[] =
 	{"glPolygonOffset", (void **) &qglPolygonOffset},
 	{"glPolygonMode", (void **) &qglPolygonMode},
 	{"glPolygonStipple", (void **) &qglPolygonStipple},
+	{"glClipPlane", (void **) &qglClipPlane},
+	{"glGetClipPlane", (void **) &qglGetClipPlane},
 	{NULL, NULL}
 };
 

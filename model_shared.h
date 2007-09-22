@@ -820,6 +820,8 @@ typedef struct model_s
 	const char		*modeldatatypestring;
 	// draw the model's sky polygons (only used by brush models)
 	void(*DrawSky)(struct entity_render_s *ent);
+	// draw refraction/reflection textures for the model's water polygons (only used by brush models)
+	void(*DrawAddWaterPlanes)(struct entity_render_s *ent);
 	// draw the model using lightmap/dlight shading
 	void(*Draw)(struct entity_render_s *ent);
 	// draw the model to the depth buffer (no color rendering at all)
@@ -928,6 +930,7 @@ int Mod_Q1BSP_SuperContentsFromNativeContents(struct model_s *model, int nativec
 
 // a lot of model formats use the Q1BSP code, so here are the prototypes...
 struct entity_render_s;
+void R_Q1BSP_DrawAddWaterPlanes(struct entity_render_s *ent);
 void R_Q1BSP_DrawSky(struct entity_render_s *ent);
 void R_Q1BSP_Draw(struct entity_render_s *ent);
 void R_Q1BSP_DrawDepth(struct entity_render_s *ent);

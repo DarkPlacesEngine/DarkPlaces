@@ -282,7 +282,7 @@ void GL_SetupView_Orientation_Identity (void)
 void GL_SetupView_Orientation_FromEntity(const matrix4x4_t *matrix)
 {
 	matrix4x4_t tempmatrix, basematrix;
-	Matrix4x4_Invert_Simple(&tempmatrix, matrix);
+	Matrix4x4_Invert_Full(&tempmatrix, matrix);
 	Matrix4x4_CreateRotate(&basematrix, -90, 1, 0, 0);
 	Matrix4x4_ConcatRotate(&basematrix, 90, 0, 0, 1);
 	Matrix4x4_Concat(&backend_viewmatrix, &basematrix, &tempmatrix);
@@ -366,6 +366,65 @@ void GL_SetupView_Mode_Ortho (double x1, double y1, double x2, double y2, double
 	qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
 	GL_SetupView_Orientation_Identity();
 	CHECKGLERROR
+}
+
+void GL_SetupView_ApplyCustomNearClipPlane(double normalx, double normaly, double normalz, double dist)
+{
+	double matrix[16];
+	double q[4];
+	double d;
+	float clipPlane[4], v3[3], v4[3];
+	float normal[3];
+
+	// This is Olique Depth Projection from http://www.terathon.com/code/oblique.php
+	// modified to fit in this codebase.
+
+	VectorSet(normal, normalx, normaly, normalz);
+	Matrix4x4_Transform3x3(&backend_viewmatrix, normal, clipPlane);
+	VectorScale(normal, dist, v3);
+	Matrix4x4_Transform(&backend_viewmatrix, v3, v4);
+	// FIXME: LordHavoc: I think this can be done more efficiently somehow but I can't remember the technique
+	clipPlane[3] = -DotProduct(v4, clipPlane);
+
+#if 0
+{
+	// testing code for comparing results
+	float clipPlane2[4];
+	VectorCopy4(clipPlane, clipPlane2);
+	R_Mesh_Matrix(&identitymatrix);
+	VectorSet(q, normal[0], normal[1], normal[2], -dist);
+	qglClipPlane(GL_CLIP_PLANE0, q);
+	qglGetClipPlane(GL_CLIP_PLANE0, q);
+	VectorCopy4(q, clipPlane);
+}
+#endif
+
+	// Calculate the clip-space corner point opposite the clipping plane
+	// as (sgn(clipPlane.x), sgn(clipPlane.y), 1, 1) and
+	// transform it into camera space by multiplying it
+	// by the inverse of the projection matrix
+	Matrix4x4_ToArrayDoubleGL(&backend_projectmatrix, matrix);
+
+	q[0] = ((clipPlane[0] < 0.0f ? -1.0f : clipPlane[0] > 0.0f ? 1.0f : 0.0f) + matrix[8]) / matrix[0];
+	q[1] = ((clipPlane[1] < 0.0f ? -1.0f : clipPlane[1] > 0.0f ? 1.0f : 0.0f) + matrix[9]) / matrix[5];
+	q[2] = -1.0f;
+	q[3] = (1.0f + matrix[10]) / matrix[14];
+
+	// Calculate the scaled plane vector
+	d = 2.0f / DotProduct4(clipPlane, q);
+
+	// Replace the third row of the projection matrix
+	matrix[2] = clipPlane[0] * d;
+	matrix[6] = clipPlane[1] * d;
+	matrix[10] = clipPlane[2] * d + 1.0f;
+	matrix[14] = clipPlane[3] * d;
+
+	// Load it back into OpenGL
+	qglMatrixMode(GL_PROJECTION);CHECKGLERROR
+	qglLoadMatrixd(matrix);CHECKGLERROR
+	qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
+	CHECKGLERROR
+	Matrix4x4_FromArrayDoubleGL(&backend_projectmatrix, matrix);
 }
 
 typedef struct gltextureunit_s
