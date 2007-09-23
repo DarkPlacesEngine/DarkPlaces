@@ -2474,8 +2474,8 @@ static void M_AddBindToCategory(bindcategory_t *c, char *command, char *descript
 	*b = Z_Alloc(sizeof(binditem_t) + strlen(command) + 1 + strlen(description) + 1);
 	*b->command = (char *)((*b) + 1);
 	*b->description = *b->command + strlen(command) + 1;
-	strcpy(*b->command, command);
-	strcpy(*b->description, description);
+	strlcpy(*b->command, command, strlen(command) + 1);
+	strlcpy(*b->description, description, strlen(description) + 1);
 }
 
 static void M_AddBind (char *category, char *command, char *description)
