@@ -174,10 +174,6 @@ SOURCE=.\cvar.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\darkplaces.rc
-# End Source File
-# Begin Source File
-
 SOURCE=.\dpvsimpledecode.c
 # End Source File
 # Begin Source File
@@ -755,6 +751,14 @@ SOURCE=.\zone.h
 # Begin Source File
 
 SOURCE=.\darkplaces.ico
+# End Source File
+# Begin Source File
+
+SOURCE=.\darkplaces.rc
+# End Source File
+# Begin Source File
+
+SOURCE=.\resource.h
 # End Source File
 # End Group
 # End Target

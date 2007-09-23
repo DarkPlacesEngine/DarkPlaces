@@ -1,10 +1,10 @@
-# Microsoft Developer Studio Project File - Name="sdl" - Package Owner=<4>
+# Microsoft Developer Studio Project File - Name="darkplaces-sdl" - Package Owner=<4>
 # Microsoft Developer Studio Generated Build File, Format Version 6.00
 # ** DO NOT EDIT **
 
 # TARGTYPE "Win32 (x86) Application" 0x0101
 
-CFG=sdl - Win32 Debug
+CFG=darkplaces-sdl - Win32 Debug
 !MESSAGE This is not a valid makefile. To build this project using NMAKE,
 !MESSAGE use the Export Makefile command and run
 !MESSAGE 
@@ -13,12 +13,12 @@ CFG=sdl - Win32 Debug
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
 !MESSAGE 
-!MESSAGE NMAKE /f "darkplaces-sdl.mak" CFG="sdl - Win32 Debug"
+!MESSAGE NMAKE /f "darkplaces-sdl.mak" CFG="darkplaces-sdl - Win32 Debug"
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
-!MESSAGE "sdl - Win32 Release" (based on "Win32 (x86) Application")
-!MESSAGE "sdl - Win32 Debug" (based on "Win32 (x86) Application")
+!MESSAGE "darkplaces-sdl - Win32 Release" (based on "Win32 (x86) Application")
+!MESSAGE "darkplaces-sdl - Win32 Debug" (based on "Win32 (x86) Application")
 !MESSAGE 
 
 # Begin Project
@@ -29,7 +29,7 @@ CPP=cl.exe
 MTL=midl.exe
 RSC=rc.exe
 
-!IF  "$(CFG)" == "sdl - Win32 Release"
+!IF  "$(CFG)" == "darkplaces-sdl - Win32 Release"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 0
@@ -56,7 +56,7 @@ LINK32=link.exe
 # ADD LINK32 user32.lib gdi32.lib opengl32.lib wsock32.lib winmm.lib comctl32.lib dxguid.lib sdl.lib sdlmain.lib /nologo /subsystem:console /LARGEADDRESSAWARE /machine:I386 /libpath:"SDL/lib"
 # SUBTRACT LINK32 /pdb:none
 
-!ELSEIF  "$(CFG)" == "sdl - Win32 Debug"
+!ELSEIF  "$(CFG)" == "darkplaces-sdl - Win32 Debug"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 1
@@ -87,8 +87,8 @@ LINK32=link.exe
 
 # Begin Target
 
-# Name "sdl - Win32 Release"
-# Name "sdl - Win32 Debug"
+# Name "darkplaces-sdl - Win32 Release"
+# Name "darkplaces-sdl - Win32 Debug"
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
@@ -167,10 +167,6 @@ SOURCE=.\curves.c
 # Begin Source File
 
 SOURCE=.\cvar.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\darkplaces.rc
 # End Source File
 # Begin Source File
 
@@ -486,6 +482,10 @@ SOURCE=.\console.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\csprogs.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\curves.h
 # End Source File
 # Begin Source File
@@ -515,6 +515,10 @@ SOURCE=.\glquake.h
 # Begin Source File
 
 SOURCE=.\image.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\image_png.h
 # End Source File
 # Begin Source File
 
@@ -678,10 +682,6 @@ SOURCE=.\render.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\resource.h
-# End Source File
-# Begin Source File
-
 SOURCE=.\sbar.h
 # End Source File
 # Begin Source File
@@ -747,6 +747,14 @@ SOURCE=.\zone.h
 # Begin Source File
 
 SOURCE=.\darkplaces.ico
+# End Source File
+# Begin Source File
+
+SOURCE=.\darkplaces.rc
+# End Source File
+# Begin Source File
+
+SOURCE=.\resource.h
 # End Source File
 # End Group
 # End Target

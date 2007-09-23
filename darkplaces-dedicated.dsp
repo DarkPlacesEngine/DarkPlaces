@@ -1,10 +1,10 @@
-# Microsoft Developer Studio Project File - Name="dedicated" - Package Owner=<4>
+# Microsoft Developer Studio Project File - Name="darkplaces-dedicated" - Package Owner=<4>
 # Microsoft Developer Studio Generated Build File, Format Version 6.00
 # ** DO NOT EDIT **
 
 # TARGTYPE "Win32 (x86) Application" 0x0101
 
-CFG=dedicated - Win32 Debug
+CFG=darkplaces-dedicated - Win32 Debug
 !MESSAGE This is not a valid makefile. To build this project using NMAKE,
 !MESSAGE use the Export Makefile command and run
 !MESSAGE 
@@ -13,12 +13,12 @@ CFG=dedicated - Win32 Debug
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
 !MESSAGE 
-!MESSAGE NMAKE /f "darkplaces-dedicated.mak" CFG="dedicated - Win32 Debug"
+!MESSAGE NMAKE /f "darkplaces-dedicated.mak" CFG="darkplaces-dedicated - Win32 Debug"
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
-!MESSAGE "dedicated - Win32 Release" (based on "Win32 (x86) Application")
-!MESSAGE "dedicated - Win32 Debug" (based on "Win32 (x86) Application")
+!MESSAGE "darkplaces-dedicated - Win32 Release" (based on "Win32 (x86) Application")
+!MESSAGE "darkplaces-dedicated - Win32 Debug" (based on "Win32 (x86) Application")
 !MESSAGE 
 
 # Begin Project
@@ -29,7 +29,7 @@ CPP=cl.exe
 MTL=midl.exe
 RSC=rc.exe
 
-!IF  "$(CFG)" == "dedicated - Win32 Release"
+!IF  "$(CFG)" == "darkplaces-dedicated - Win32 Release"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 0
@@ -56,7 +56,7 @@ LINK32=link.exe
 # ADD LINK32 user32.lib gdi32.lib opengl32.lib wsock32.lib winmm.lib comctl32.lib dxguid.lib /nologo /subsystem:console /LARGEADDRESSAWARE /machine:I386
 # SUBTRACT LINK32 /pdb:none
 
-!ELSEIF  "$(CFG)" == "dedicated - Win32 Debug"
+!ELSEIF  "$(CFG)" == "darkplaces-dedicated - Win32 Debug"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 1
@@ -87,8 +87,8 @@ LINK32=link.exe
 
 # Begin Target
 
-# Name "dedicated - Win32 Release"
-# Name "dedicated - Win32 Debug"
+# Name "darkplaces-dedicated - Win32 Release"
+# Name "darkplaces-dedicated - Win32 Debug"
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
@@ -719,6 +719,14 @@ SOURCE=.\zone.h
 # Begin Source File
 
 SOURCE=.\darkplaces.ico
+# End Source File
+# Begin Source File
+
+SOURCE=.\darkplaces.rc
+# End Source File
+# Begin Source File
+
+SOURCE=.\resource.h
 # End Source File
 # End Group
 # End Target
