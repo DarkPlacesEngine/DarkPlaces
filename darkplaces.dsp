@@ -378,6 +378,10 @@ SOURCE=.\snd_win.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\sv_demo.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\sv_main.c
 # End Source File
 # Begin Source File
@@ -715,6 +719,10 @@ SOURCE=.\sound.h
 # Begin Source File
 
 SOURCE=.\spritegn.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\sv_demo.h
 # End Source File
 # Begin Source File
 
