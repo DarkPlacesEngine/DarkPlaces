@@ -154,6 +154,7 @@ typedef struct r_waterstate_waterplane_s
 	rtexture_t *texture_refraction;
 	rtexture_t *texture_reflection;
 	mplane_t plane;
+	int materialflags; // combined flags of all water surfaces on this plane
 }
 r_waterstate_waterplane_t;
 
@@ -416,36 +417,49 @@ static const char *builtinshaderstring =
 "// common definitions between vertex shader and fragment shader:\n"
 "\n"
 "#ifdef __GLSL_CG_DATA_TYPES\n"
-"#define myhalf half\n"
-"#define myhvec2 hvec2\n"
-"#define myhvec3 hvec3\n"
-"#define myhvec4 hvec4\n"
+"# define myhalf half\n"
+"# define myhvec2 hvec2\n"
+"# define myhvec3 hvec3\n"
+"# define myhvec4 hvec4\n"
 "#else\n"
-"#define myhalf float\n"
-"#define myhvec2 vec2\n"
-"#define myhvec3 vec3\n"
-"#define myhvec4 vec4\n"
+"# define myhalf float\n"
+"# define myhvec2 vec2\n"
+"# define myhvec3 vec3\n"
+"# define myhvec4 vec4\n"
 "#endif\n"
 "\n"
 "varying vec2 TexCoord;\n"
 "varying vec2 TexCoordLightmap;\n"
 "\n"
+"//#ifdef MODE_LIGHTSOURCE\n"
 "varying vec3 CubeVector;\n"
+"//#endif\n"
+"\n"
+"//#ifdef MODE_LIGHTSOURCE\n"
 "varying vec3 LightVector;\n"
+"//#else\n"
+"//# ifdef MODE_LIGHTDIRECTION\n"
+"//varying vec3 LightVector;\n"
+"//# endif\n"
+"//#endif\n"
+"\n"
 "varying vec3 EyeVector;\n"
-"#ifdef USEFOG\n"
+"//#ifdef USEFOG\n"
 "varying vec3 EyeVectorModelSpace;\n"
-"#endif\n"
+"//#endif\n"
 "\n"
 "varying vec3 VectorS; // direction of S texcoord (sometimes crudely called tangent)\n"
 "varying vec3 VectorT; // direction of T texcoord (sometimes crudely called binormal)\n"
 "varying vec3 VectorR; // direction of R texcoord (surface normal)\n"
 "\n"
-"#ifdef USEWATER\n"
+"//#ifdef USEWATER\n"
 "varying vec4 ModelViewProjectionPosition;\n"
-"//varying vec4 ModelViewProjectionPosition_svector;\n"
-"//varying vec4 ModelViewProjectionPosition_tvector;\n"
-"#endif\n"
+"//#else\n"
+"//# ifdef USEREFLECTION\n"
+"//varying vec4 ModelViewProjectionPosition;\n"
+"//# endif\n"
+"//#endif\n"
+"\n"
 "\n"
 "\n"
 "\n"
@@ -464,8 +478,10 @@ static const char *builtinshaderstring =
 "	gl_FrontColor = gl_Color;\n"
 "	// copy the surface texcoord\n"
 "	TexCoord = vec2(gl_TextureMatrix[0] * gl_MultiTexCoord0);\n"
-"#if !defined(MODE_LIGHTSOURCE) && !defined(MODE_LIGHTDIRECTION)\n"
+"#ifndef MODE_LIGHTSOURCE\n"
+"# ifndef MODE_LIGHTDIRECTION\n"
 "	TexCoordLightmap = vec2(gl_MultiTexCoord4);\n"
+"# endif\n"
 "#endif\n"
 "\n"
 "#ifdef MODE_LIGHTSOURCE\n"
@@ -503,7 +519,7 @@ static const char *builtinshaderstring =
 "	VectorR = gl_MultiTexCoord3.xyz;\n"
 "#endif\n"
 "\n"
-"//#ifdef USEWATER\n"
+"//#if defined(USEWATER) || defined(USEREFLECTION)\n"
 "//	ModelViewProjectionPosition = gl_Vertex * gl_ModelViewProjectionMatrix;\n"
 "//	//ModelViewProjectionPosition_svector = (gl_Vertex + vec4(gl_MultiTexCoord1.xyz, 0)) * gl_ModelViewProjectionMatrix - ModelViewProjectionPosition;\n"
 "//	//ModelViewProjectionPosition_tvector = (gl_Vertex + vec4(gl_MultiTexCoord2.xyz, 0)) * gl_ModelViewProjectionMatrix - ModelViewProjectionPosition;\n"
@@ -512,8 +528,13 @@ static const char *builtinshaderstring =
 "// transform vertex to camera space, using ftransform to match non-VS\n"
 "	// rendering\n"
 "	gl_Position = ftransform();\n"
+"\n"
 "#ifdef USEWATER\n"
 "	ModelViewProjectionPosition = gl_Position;\n"
+"#else\n"
+"# ifdef USEREFLECTION\n"
+"	ModelViewProjectionPosition = gl_Position;\n"
+"# endif\n"
 "#endif\n"
 "}\n"
 "\n"
@@ -525,7 +546,7 @@ static const char *builtinshaderstring =
 "// fragment shader specific:\n"
 "#ifdef FRAGMENT_SHADER\n"
 "\n"
-"// 11 textures, we can only use up to 16 on DX9-class hardware\n"
+"// 13 textures, we can only use up to 16 on DX9-class hardware\n"
 "uniform sampler2D Texture_Normal;\n"
 "uniform sampler2D Texture_Color;\n"
 "uniform sampler2D Texture_Gloss;\n"
@@ -548,13 +569,20 @@ static const char *builtinshaderstring =
 "uniform myhvec3 Color_Shirt;\n"
 "uniform myhvec3 FogColor;\n"
 "\n"
-"#ifdef USEWATER\n"
+"//#ifdef USEWATER\n"
 "uniform vec4 DistortScaleRefractReflect;\n"
 "uniform vec4 ScreenScaleRefractReflect;\n"
 "uniform vec4 ScreenCenterRefractReflect;\n"
 "uniform myhvec3 RefractColor;\n"
 "uniform myhvec3 ReflectColor;\n"
-"#endif\n"
+"//#else\n"
+"//# ifdef USEREFLECTION\n"
+"//uniform vec4 DistortScaleRefractReflect;\n"
+"//uniform vec4 ScreenScaleRefractReflect;\n"
+"//uniform vec4 ScreenCenterRefractReflect;\n"
+"//uniform myhvec3 ReflectColor;\n"
+"//# endif\n"
+"//#endif\n"
 "\n"
 "uniform myhalf GlowScale;\n"
 "uniform myhalf SceneBrightness;\n"
@@ -640,36 +668,38 @@ static const char *builtinshaderstring =
 "	// compute color intensity for the two textures (colormap and glossmap)\n"
 "	// scale by light color and attenuation as efficiently as possible\n"
 "	// (do as much scalar math as possible rather than vector math)\n"
-"#ifdef USESPECULAR\n"
+"# ifdef USESPECULAR\n"
 "	myhvec3 surfacenormal = normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5));\n"
 "	myhvec3 diffusenormal = myhvec3(normalize(LightVector));\n"
 "	myhvec3 specularnormal = normalize(diffusenormal + myhvec3(normalize(EyeVector)));\n"
 "\n"
 "	// calculate directional shading\n"
 "	color.rgb = LightColor * myhalf(texture2D(Texture_Attenuation, vec2(length(CubeVector), 0.0))) * (color.rgb * (AmbientScale + DiffuseScale * myhalf(max(float(dot(surfacenormal, diffusenormal)), 0.0))) + (SpecularScale * pow(myhalf(max(float(dot(surfacenormal, specularnormal)), 0.0)), SpecularPower)) * myhvec3(texture2D(Texture_Gloss, TexCoord)));\n"
-"#else\n"
-"#ifdef USEDIFFUSE\n"
+"# else\n"
+"#  ifdef USEDIFFUSE\n"
 "	myhvec3 surfacenormal = normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5));\n"
 "	myhvec3 diffusenormal = myhvec3(normalize(LightVector));\n"
 "\n"
 "	// calculate directional shading\n"
 "	color.rgb = color.rgb * LightColor * (myhalf(texture2D(Texture_Attenuation, vec2(length(CubeVector), 0.0))) * (AmbientScale + DiffuseScale * myhalf(max(float(dot(surfacenormal, diffusenormal)), 0.0))));\n"
-"#else\n"
+"#  else\n"
 "	// calculate directionless shading\n"
 "	color.rgb = color.rgb * LightColor * myhalf(texture2D(Texture_Attenuation, vec2(length(CubeVector), 0.0)));\n"
-"#endif\n"
-"#endif\n"
+"#  endif\n"
+"# endif\n"
 "\n"
-"#ifdef USECUBEFILTER\n"
+"# ifdef USECUBEFILTER\n"
 "	// apply light cubemap filter\n"
 "	//color.rgb *= normalize(CubeVector) * 0.5 + 0.5;//vec3(textureCube(Texture_Cube, CubeVector));\n"
 "	color.rgb *= myhvec3(textureCube(Texture_Cube, CubeVector));\n"
-"#endif\n"
+"# endif\n"
+"	color *= myhvec4(gl_Color);\n"
+"#endif // MODE_LIGHTSOURCE\n"
 "\n"
 "\n"
 "\n"
 "\n"
-"#elif defined(MODE_LIGHTDIRECTION)\n"
+"#ifdef MODE_LIGHTDIRECTION\n"
 "	// directional model lighting\n"
 "\n"
 "	// get the surface normal and light normal\n"
@@ -678,43 +708,91 @@ static const char *builtinshaderstring =
 "\n"
 "	// calculate directional shading\n"
 "	color.rgb *= AmbientColor + DiffuseColor * myhalf(max(float(dot(surfacenormal, diffusenormal)), 0.0));\n"
-"#ifdef USESPECULAR\n"
+"# ifdef USESPECULAR\n"
 "	myhvec3 specularnormal = normalize(diffusenormal + myhvec3(normalize(EyeVector)));\n"
 "	color.rgb += myhvec3(texture2D(Texture_Gloss, TexCoord)) * SpecularColor * pow(myhalf(max(float(dot(surfacenormal, specularnormal)), 0.0)), SpecularPower);\n"
-"#endif\n"
+"# endif\n"
+"	color *= myhalf(gl_Color);\n"
+"#endif // MODE_LIGHTDIRECTION\n"
 "\n"
 "\n"
 "\n"
 "\n"
-"#elif defined(MODE_LIGHTDIRECTIONMAP_MODELSPACE) || defined(MODE_LIGHTDIRECTIONMAP_TANGENTSPACE)\n"
+"#ifdef MODE_LIGHTDIRECTIONMAP_MODELSPACE\n"
 "	// deluxemap lightmapping using light vectors in modelspace (evil q3map2)\n"
 "\n"
 "	// get the surface normal and light normal\n"
 "	myhvec3 surfacenormal = normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5));\n"
 "\n"
-"#ifdef MODE_LIGHTDIRECTIONMAP_MODELSPACE\n"
 "	myhvec3 diffusenormal_modelspace = myhvec3(texture2D(Texture_Deluxemap, TexCoordLightmap)) - myhvec3(0.5);\n"
 "	myhvec3 diffusenormal = normalize(myhvec3(dot(diffusenormal_modelspace, myhvec3(VectorS)), dot(diffusenormal_modelspace, myhvec3(VectorT)), dot(diffusenormal_modelspace, myhvec3(VectorR))));\n"
-"#else\n"
-"	myhvec3 diffusenormal = normalize(myhvec3(texture2D(Texture_Deluxemap, TexCoordLightmap)) - myhvec3(0.5));\n"
-"#endif\n"
 "	// calculate directional shading\n"
 "	myhvec3 tempcolor = color.rgb * (DiffuseScale * myhalf(max(float(dot(surfacenormal, diffusenormal)), 0.0)));\n"
-"#ifdef USESPECULAR\n"
+"# ifdef USESPECULAR\n"
 "	myhvec3 specularnormal = myhvec3(normalize(diffusenormal + myhvec3(normalize(EyeVector))));\n"
 "	tempcolor += myhvec3(texture2D(Texture_Gloss, TexCoord)) * SpecularScale * pow(myhalf(max(float(dot(surfacenormal, specularnormal)), 0.0)), SpecularPower);\n"
+"# endif\n"
+"\n"
+"	// apply lightmap color\n"
+"	color.rgb = myhvec4(tempcolor,1) * myhvec4(texture2D(Texture_Lightmap, TexCoordLightmap)) * myhvec4(gl_Color) + myhvec4(color.rgb * AmbientScale, 0);\n"
+"#endif // MODE_LIGHTDIRECTIONMAP_MODELSPACE\n"
+"\n"
+"\n"
+"\n"
+"\n"
+"#ifdef MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n"
+"	// deluxemap lightmapping using light vectors in tangentspace (hmap2 -light)\n"
+"\n"
+"	// get the surface normal and light normal\n"
+"	myhvec3 surfacenormal = normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5));\n"
+"\n"
+"	myhvec3 diffusenormal = normalize(myhvec3(texture2D(Texture_Deluxemap, TexCoordLightmap)) - myhvec3(0.5));\n"
+"	// calculate directional shading\n"
+"	myhvec3 tempcolor = color.rgb * (DiffuseScale * myhalf(max(float(dot(surfacenormal, diffusenormal)), 0.0)));\n"
+"# ifdef USESPECULAR\n"
+"	myhvec3 specularnormal = myhvec3(normalize(diffusenormal + myhvec3(normalize(EyeVector))));\n"
+"	tempcolor += myhvec3(texture2D(Texture_Gloss, TexCoord)) * SpecularScale * pow(myhalf(max(float(dot(surfacenormal, specularnormal)), 0.0)), SpecularPower);\n"
+"# endif\n"
+"\n"
+"	// apply lightmap color\n"
+"	color = myhvec4(tempcolor, 1) * myhvec4(texture2D(Texture_Lightmap, TexCoordLightmap)) * myhvec4(gl_Color) + myhvec4(color.rgb * AmbientScale, 0);\n"
+"#endif // MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n"
+"\n"
+"\n"
+"\n"
+"\n"
+"#ifdef MODE_LIGHTMAP\n"
+"	// apply lightmap color\n"
+"	color *= myhvec4(texture2D(Texture_Lightmap, TexCoordLightmap)) * myhvec4(gl_Color) * myhvec4(myhvec3(DiffuseScale), 1) + myhvec4(myhvec3(AmbientScale), 0);\n"
+"#endif // MODE_LIGHTMAP\n"
+"\n"
+"\n"
+"\n"
+"\n"
+"\n"
+"\n"
+"\n"
+"\n"
+"#ifdef MODE_LIGHTSOURCE\n"
+"# ifdef USEWATER\n"
+"	color.rgb *= color.a;\n"
+"# endif\n"
+"#else\n"
+"# ifdef USEWATER\n"
+"	vec4 ScreenScaleRefractReflectIW = ScreenScaleRefractReflect * (1.0 / ModelViewProjectionPosition.w);\n"
+"	//vec4 ScreenTexCoord = (ModelViewProjectionPosition.xyxy + normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5)).xyxy * DistortScaleRefractReflect * 100) * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect;\n"
+"	vec4 ScreenTexCoord = ModelViewProjectionPosition.xyxy * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect + normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5)).xyxy * DistortScaleRefractReflect;\n"
+"	myhalf Fresnel = myhalf(pow(min(1.0, 1.0 - float(normalize(EyeVector).z)), 2.0));\n"
+"	color.rgb = mix(mix(myhvec3(texture2D(Texture_Refraction, ScreenTexCoord.xy)) * RefractColor, myhvec3(texture2D(Texture_Reflection, ScreenTexCoord.zw)) * ReflectColor, Fresnel), color.rgb, color.a);\n"
+"# else\n"
+"#  ifdef USEREFLECTION\n"
+"	vec4 ScreenScaleRefractReflectIW = ScreenScaleRefractReflect * (1.0 / ModelViewProjectionPosition.w);\n"
+"	//vec4 ScreenTexCoord = (ModelViewProjectionPosition.xyxy + normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5)).xyxy * DistortScaleRefractReflect * 100) * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect;\n"
+"	vec4 ScreenTexCoord = ModelViewProjectionPosition.xyxy * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect + normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5)).xyxy * DistortScaleRefractReflect;\n"
+"	color.rgb += myhvec3(texture2D(Texture_Gloss, TexCoord)) * myhvec3(texture2D(Texture_Reflection, ScreenTexCoord.zw));\n"
+"#  endif\n"
+"# endif\n"
 "#endif\n"
-"\n"
-"	// apply lightmap color\n"
-"	color.rgb = tempcolor * myhvec3(texture2D(Texture_Lightmap, TexCoordLightmap)) + color.rgb * AmbientScale;\n"
-"\n"
-"\n"
-"#else // MODE none (lightmap)\n"
-"	// apply lightmap color\n"
-"	color.rgb *= myhvec3(texture2D(Texture_Lightmap, TexCoordLightmap)) * DiffuseScale + myhvec3(AmbientScale);\n"
-"#endif // MODE\n"
-"\n"
-"	color *= myhvec4(gl_Color);\n"
 "\n"
 "#ifdef USEGLOW\n"
 "	color.rgb += myhvec3(texture2D(Texture_Glow, TexCoord)) * GlowScale;\n"
@@ -723,23 +801,6 @@ static const char *builtinshaderstring =
 "#ifdef USEFOG\n"
 "	// apply fog\n"
 "	color.rgb = mix(FogColor, color.rgb, myhalf(texture2D(Texture_FogMask, myhvec2(length(EyeVectorModelSpace)*FogRangeRecip, 0.0))));\n"
-"#endif\n"
-"\n"
-"#ifdef USEWATER\n"
-"#ifdef MODE_LIGHTSOURCE\n"
-"	color.rgb *= color.a;\n"
-"#else\n"
-"	myhalf Fresnel = myhalf(max(pow(min(1, 1.0 - normalize(EyeVector).z), 5), 0.1));\n"
-"	vec4 ScreenScaleRefractReflectIW = ScreenScaleRefractReflect * (1.0 / ModelViewProjectionPosition.w);\n"
-"	//vec4 ScreenTexCoord = (ModelViewProjectionPosition.xyxy + normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5)).xyxy * DistortScaleRefractReflect * 100) * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect;\n"
-"	vec4 ScreenTexCoord = ModelViewProjectionPosition.xyxy * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect + normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5)).xyxy * DistortScaleRefractReflect;\n"
-"	color.rgb = mix(mix(myhvec3(texture2D(Texture_Refraction, ScreenTexCoord.xy)) * RefractColor, myhvec3(texture2D(Texture_Reflection, ScreenTexCoord.zw)) * ReflectColor, Fresnel), color.rgb, color.a);\n"
-"	//color.rgb = myhvec3(texture2D(Texture_Refraction, ScreenTexCoord.xy)); // testing only\n"
-"	//color.rgb = myhvec3(texture2D(Texture_Reflection, ScreenTexCoord.zw)); // testing only\n"
-"	//vec4 RefractionPosition = ModelViewProjectionPosition + ModelViewProjectionPosition_svector * distort.x + ModelViewProjectionPosition_tvector * distort.y;\n"
-"	//vec4 ReflectionPosition = ModelViewProjectionPosition + ModelViewProjectionPosition_svector * distort.w + ModelViewProjectionPosition_tvector * distort.z;\n"
-"	//color.rgb += mix(myhvec3(texture2DProj(Texture_Refraction, RefractionPosition)) * RefractColor, myhvec3(texture2DProj(Texture_Reflection, ReflectionPosition)) * ReflectColor, Fresnel);\n"
-"#endif\n"
 "#endif\n"
 "\n"
 "#ifdef USECONTRASTBOOST\n"
@@ -757,11 +818,13 @@ static const char *builtinshaderstring =
 // NOTE: MUST MATCH ORDER OF SHADERPERMUTATION_* DEFINES!
 const char *permutationinfo[][2] =
 {
-	{"#define MODE_LIGHTSOURCE\n", " lightsource"},
+	{"#define MODE_LIGHTMAP\n", " lightmap"},
 	{"#define MODE_LIGHTDIRECTIONMAP_MODELSPACE\n", " lightdirectionmap_modelspace"},
 	{"#define MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n", " lightdirectionmap_tangentspace"},
 	{"#define MODE_LIGHTDIRECTION\n", " lightdirection"},
+	{"#define MODE_LIGHTSOURCE\n", " lightsource"},
 	{"#define USEWATER\n", " water"},
+	{"#define USEREFLECTION\n", " reflection"},
 	{"#define USEGLOW\n", " glow"},
 	{"#define USEFOG\n", " fog"},
 	{"#define USECOLORMAPPING\n", " colormapping"},
@@ -978,13 +1041,16 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 		if(r_glsl_contrastboost.value > 1 || r_glsl_contrastboost.value < 0)
 			permutation |= SHADERPERMUTATION_CONTRASTBOOST;
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_WATERSHADER)
-			permutation |= SHADERPERMUTATION_USEWATER;
+			permutation |= SHADERPERMUTATION_WATER;
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
+			permutation |= SHADERPERMUTATION_REFLECTION;
 	}
 	else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
 	{
 		// bright unshaded geometry
 		shaderfilename = "glsl/default.glsl";
 		permutation = SHADERPERMUTATION_USES_VERTEXSHADER | SHADERPERMUTATION_USES_FRAGMENTSHADER;
+		permutation |= SHADERPERMUTATION_MODE_LIGHTMAP;
 		if (rsurface.texture->currentskinframe->glow)
 			permutation |= SHADERPERMUTATION_GLOW;
 		if (r_refdef.fogenabled)
@@ -1000,7 +1066,9 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 		if(r_glsl_contrastboost.value > 1 || r_glsl_contrastboost.value < 0)
 			permutation |= SHADERPERMUTATION_CONTRASTBOOST;
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_WATERSHADER)
-			permutation |= SHADERPERMUTATION_USEWATER;
+			permutation |= SHADERPERMUTATION_WATER;
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
+			permutation |= SHADERPERMUTATION_REFLECTION;
 	}
 	else if (modellighting)
 	{
@@ -1025,7 +1093,9 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 		if(r_glsl_contrastboost.value > 1 || r_glsl_contrastboost.value < 0)
 			permutation |= SHADERPERMUTATION_CONTRASTBOOST;
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_WATERSHADER)
-			permutation |= SHADERPERMUTATION_USEWATER;
+			permutation |= SHADERPERMUTATION_WATER;
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
+			permutation |= SHADERPERMUTATION_REFLECTION;
 	}
 	else
 	{
@@ -1052,7 +1122,7 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 		else
 		{
 			// ordinary lightmapping
-			permutation |= 0;
+			permutation |= SHADERPERMUTATION_MODE_LIGHTMAP;
 		}
 		if (rsurface.texture->currentskinframe->glow)
 			permutation |= SHADERPERMUTATION_GLOW;
@@ -1069,7 +1139,9 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 		if(r_glsl_contrastboost.value > 1 || r_glsl_contrastboost.value < 0)
 			permutation |= SHADERPERMUTATION_CONTRASTBOOST;
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_WATERSHADER)
-			permutation |= SHADERPERMUTATION_USEWATER;
+			permutation |= SHADERPERMUTATION_WATER;
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
+			permutation |= SHADERPERMUTATION_REFLECTION;
 	}
 	if (!r_glsl_permutations[permutation & SHADERPERMUTATION_MASK].program)
 	{
@@ -2420,8 +2492,13 @@ static void R_Water_AddWaterPlane(msurface_t *surface)
 			break;
 	}
 	for (planeindex = 0, p = r_waterstate.waterplanes;planeindex < r_waterstate.numwaterplanes;planeindex++, p++)
+	{
 		if (fabs(PlaneDiff(vert[0], &p->plane)) < 1 && fabs(PlaneDiff(vert[1], &p->plane)) < 1 && fabs(PlaneDiff(vert[2], &p->plane)) < 1)
+		{
+			p->materialflags |= surface->texture->currentframe->currentmaterialflags;
 			break;
+		}
+	}
 	// if this triangle does not fit any known plane rendered this frame, render textures for it
 	if (planeindex >= r_waterstate.numwaterplanes && planeindex < r_waterstate.maxwaterplanes)
 	{
@@ -2438,6 +2515,7 @@ static void R_Water_AddWaterPlane(msurface_t *surface)
 			p->plane.dist *= -1;
 			PlaneClassify(&p->plane);
 		}
+		p->materialflags = surface->texture->currentframe->currentmaterialflags;
 	}
 }
 
@@ -2449,11 +2527,10 @@ static void R_Water_ProcessPlanes(void)
 
 	for (planeindex = 0, p = r_waterstate.waterplanes;planeindex < r_waterstate.numwaterplanes;planeindex++, p++)
 	{
-		if (!p->texture_refraction)
-		{
+		if (!p->texture_refraction && (p->materialflags & MATERIALFLAG_WATERSHADER))
 			p->texture_refraction = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_refraction", planeindex), r_waterstate.texturewidth, r_waterstate.textureheight, NULL, TEXTYPE_RGBA, TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_ALWAYSPRECACHE, NULL);
+		if (!p->texture_reflection && (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFLECTION)))
 			p->texture_reflection = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_reflection", planeindex), r_waterstate.texturewidth, r_waterstate.textureheight, NULL, TEXTYPE_RGBA, TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_ALWAYSPRECACHE, NULL);
-		}
 
 		originalview = r_view;
 		r_view.showdebug = false;
@@ -2468,13 +2545,16 @@ static void R_Water_ProcessPlanes(void)
 		r_waterstate.renderingscene = true;
 		// render the normal view scene and copy into texture
 		// (except that a clipping plane should be used to hide everything on one side of the water, and the viewer's weapon model should be omitted)
-		R_RenderScene(false);
+		if (p->materialflags & MATERIALFLAG_WATERSHADER)
+		{
+			R_RenderScene(false);
 
-		// copy view into the screen texture
-		R_Mesh_TexBind(0, R_GetTexture(p->texture_refraction));
-		GL_ActiveTexture(0);
-		CHECKGLERROR
-		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view.x, vid.height - (r_view.y + r_view.height), r_view.width, r_view.height);CHECKGLERROR
+			// copy view into the screen texture
+			R_Mesh_TexBind(0, R_GetTexture(p->texture_refraction));
+			GL_ActiveTexture(0);
+			CHECKGLERROR
+			qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view.x, vid.height - (r_view.y + r_view.height), r_view.width, r_view.height);CHECKGLERROR
+		}
 
 		// render reflected scene and copy into texture
 		Matrix4x4_Reflect(&r_view.matrix, p->plane.normal[0], p->plane.normal[1], p->plane.normal[2], p->plane.dist, -2);
@@ -5125,14 +5205,18 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, msurface_t **t
 	if (rsurface.uselightmaptexture && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
 	{
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_WATERSHADER)
-			RSurf_DrawBatch_WithLightmapSwitching_WithWaterTextureSwitching(texturenumsurfaces, texturesurfacelist, 7, r_glsl_permutation->loc_Texture_Deluxemap >= 0 ? 8 : -1, r_glsl_permutation->loc_Texture_Refraction >= 0 ? 11 : -1, r_glsl_permutation->loc_Texture_Reflection >= 0 ? 12 : -1);
+			RSurf_DrawBatch_WithLightmapSwitching_WithWaterTextureSwitching(texturenumsurfaces, texturesurfacelist, 7, r_glsl_permutation->loc_Texture_Deluxemap >= 0 ? 8 : -1, 11, 12);
+		else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
+			RSurf_DrawBatch_WithLightmapSwitching_WithWaterTextureSwitching(texturenumsurfaces, texturesurfacelist, 7, r_glsl_permutation->loc_Texture_Deluxemap >= 0 ? 8 : -1, -1, 12);
 		else
 			RSurf_DrawBatch_WithLightmapSwitching(texturenumsurfaces, texturesurfacelist, 7, r_glsl_permutation->loc_Texture_Deluxemap >= 0 ? 8 : -1);
 	}
 	else
 	{
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_WATERSHADER)
-			RSurf_DrawBatch_WithLightmapSwitching_WithWaterTextureSwitching(texturenumsurfaces, texturesurfacelist, -1, -1, r_glsl_permutation->loc_Texture_Refraction >= 0 ? 11 : -1, r_glsl_permutation->loc_Texture_Reflection >= 0 ? 12 : -1);
+			RSurf_DrawBatch_WithLightmapSwitching_WithWaterTextureSwitching(texturenumsurfaces, texturesurfacelist, -1, -1, 11, 12);
+		else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
+			RSurf_DrawBatch_WithLightmapSwitching_WithWaterTextureSwitching(texturenumsurfaces, texturesurfacelist, -1, -1, -1, 12);
 		else
 			RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
 	}
@@ -5404,7 +5488,7 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 	{
 		if ((rsurface.texture->currentmaterialflags & (MATERIALFLAG_NODEPTHTEST | MATERIALFLAG_BLENDED | MATERIALFLAG_ALPHATEST)))
 			return;
-		if (r_waterstate.renderingscene && (rsurface.texture->currentmaterialflags & MATERIALFLAG_WATERSHADER))
+		if (r_waterstate.renderingscene && (rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFLECTION)))
 			return;
 		if (rsurface.mode != RSURFMODE_MULTIPASS)
 			rsurface.mode = RSURFMODE_MULTIPASS;
@@ -5574,7 +5658,7 @@ void R_QueueSurfaceList(entity_render_t *ent, int numsurfaces, msurface_t **surf
 	if (addwaterplanes)
 	{
 		for (i = 0;i < numsurfaces;i++)
-			if (surfacelist[i]->texture->currentframe->currentmaterialflags & MATERIALFLAG_WATERSHADER)
+			if (surfacelist[i]->texture->currentframe->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFLECTION))
 				R_Water_AddWaterPlane(surfacelist[i]);
 		return;
 	}
@@ -5837,7 +5921,7 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 	}
 
 	R_UpdateAllTextureInfo(r_refdef.worldentity);
-	flagsmask = addwaterplanes ? MATERIALFLAG_WATERSHADER : (skysurfaces ? MATERIALFLAG_SKY : (MATERIALFLAG_WATER | MATERIALFLAG_WALL));
+	flagsmask = addwaterplanes ? (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFLECTION) : (skysurfaces ? MATERIALFLAG_SKY : (MATERIALFLAG_WATER | MATERIALFLAG_WALL));
 	f = 0;
 	t = NULL;
 	rsurface.uselightmaptexture = false;
@@ -5926,7 +6010,7 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 	}
 
 	R_UpdateAllTextureInfo(ent);
-	flagsmask = addwaterplanes ? MATERIALFLAG_WATERSHADER : (skysurfaces ? MATERIALFLAG_SKY : (MATERIALFLAG_WATER | MATERIALFLAG_WALL));
+	flagsmask = addwaterplanes ? (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFLECTION) : (skysurfaces ? MATERIALFLAG_SKY : (MATERIALFLAG_WATER | MATERIALFLAG_WALL));
 	f = 0;
 	t = NULL;
 	rsurface.uselightmaptexture = false;

@@ -100,6 +100,8 @@ mplane_t;
 #define MATERIALFLAG_SHORTDEPTHRANGE 131072
 // render refraction and reflection (note: this is always opaque, the shader does the alpha effect)
 #define MATERIALFLAG_WATERSHADER 262144
+// render reflection only
+#define MATERIALFLAG_REFLECTION 524288
 // combined mask of all attributes that require depth sorted rendering
 #define MATERIALFLAGMASK_DEPTHSORTED (MATERIALFLAG_BLENDED | MATERIALFLAG_NODEPTHTEST)
 
