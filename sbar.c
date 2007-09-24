@@ -1238,10 +1238,14 @@ void Sbar_Draw (void)
 				if (cl.stats[STAT_ARMOR] > 0)
 				{
 					Sbar_DrawStretchPic (0, 0, sb_armor[0], sbar_alpha_fg.value, 24, 24);
-					if(cl.stats[STAT_ARMOR] > 100)
-						Sbar_DrawXNum(24,0,cl.stats[STAT_ARMOR],3,24,1,1,0,1,0);
-					else if(cl.stats[STAT_ARMOR] > 25)
+					if(cl.stats[STAT_ARMOR] > 200)
+						Sbar_DrawXNum(24,0,cl.stats[STAT_ARMOR],3,24,0,1,0,1,0);
+					else if(cl.stats[STAT_ARMOR] > 100)
+						Sbar_DrawXNum(24,0,cl.stats[STAT_ARMOR],3,24,0.2,1,0.2,1,0);
+					else if(cl.stats[STAT_ARMOR] > 50)
 						Sbar_DrawXNum(24,0,cl.stats[STAT_ARMOR],3,24,0.6,0.7,0.8,1,0);
+					else if(cl.stats[STAT_ARMOR] > 25)
+						Sbar_DrawXNum(24,0,cl.stats[STAT_ARMOR],3,24,1,1,0.2,1,0);
 					else
 						Sbar_DrawXNum(24,0,cl.stats[STAT_ARMOR],3,24,0.7,0,0,1,0);
 				}
@@ -1250,10 +1254,14 @@ void Sbar_Draw (void)
 				if (cl.stats[STAT_HEALTH] != 0)
 				{
 					Sbar_DrawStretchPic (112, 0, sb_health, sbar_alpha_fg.value, 24, 24);
-					if(cl.stats[STAT_HEALTH] > 100)
-						Sbar_DrawXNum(136,0,cl.stats[STAT_HEALTH],3,24,1,1,0,1,0);
-					else if(cl.stats[STAT_HEALTH] > 25)
+					if(cl.stats[STAT_HEALTH] > 200)
+						Sbar_DrawXNum(136,0,cl.stats[STAT_HEALTH],3,24,0,1,0,1,0);
+					else if(cl.stats[STAT_HEALTH] > 100)
+						Sbar_DrawXNum(136,0,cl.stats[STAT_HEALTH],3,24,0.2,1,0.2,1,0);
+					else if(cl.stats[STAT_HEALTH] > 50)
 						Sbar_DrawXNum(136,0,cl.stats[STAT_HEALTH],3,24,0.6,0.7,0.8,1,0);
+					else if(cl.stats[STAT_HEALTH] > 25)
+						Sbar_DrawXNum(136,0,cl.stats[STAT_HEALTH],3,24,1,1,0.2,1,0);
 					else
 						Sbar_DrawXNum(136,0,cl.stats[STAT_HEALTH],3,24,0.7,0,0,1,0);
 				}
