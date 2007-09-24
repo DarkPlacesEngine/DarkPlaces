@@ -3067,7 +3067,7 @@ void R_RenderScene(qboolean addwaterplanes)
 		if (r_timereport_active)
 			R_TimeReport("watervisibility");
 
-		if (cl.csqc_vidvars.drawworld && r_refdef.worldmodel && r_refdef.worldmodel->Draw)
+		if (cl.csqc_vidvars.drawworld && r_refdef.worldmodel && r_refdef.worldmodel->DrawAddWaterPlanes)
 		{
 			r_refdef.worldmodel->DrawAddWaterPlanes(r_refdef.worldentity);
 			if (r_timereport_active)
