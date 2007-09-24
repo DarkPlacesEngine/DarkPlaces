@@ -209,7 +209,7 @@ void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend)
 			argv[arrayindex][0] = 0;
 		for (;;)
 		{
-			if (!COM_ParseToken_Simple(&text, true))
+			if (!COM_ParseToken_Simple(&text, true, false))
 				return;
 			if (!strcmp(com_token, "\n"))
 				break;

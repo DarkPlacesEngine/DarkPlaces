@@ -1276,7 +1276,7 @@ void Curl_ClearRequirements()
 	}
 	p = sv_curl_serverpackages.string;
 	Con_DPrintf("Require all of: %s\n", p);
-	while(COM_ParseToken_Simple(&p, false))
+	while(COM_ParseToken_Simple(&p, false, false))
 	{
 		Con_DPrintf("Require: %s\n", com_token);
 		Curl_RequireFile(com_token);

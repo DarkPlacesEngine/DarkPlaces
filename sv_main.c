@@ -2203,7 +2203,7 @@ int SV_ParticleEffectIndex(const char *name)
 				argc = 0;
 				for (;;)
 				{
-					if (!COM_ParseToken_Simple(&text, true) || !strcmp(com_token, "\n"))
+					if (!COM_ParseToken_Simple(&text, true, false) || !strcmp(com_token, "\n"))
 						break;
 					if (argc < 16)
 					{
