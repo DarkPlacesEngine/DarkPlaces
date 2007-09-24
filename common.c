@@ -670,7 +670,7 @@ COM_ParseToken_Simple
 Parse a token out of a string
 ==============
 */
-int COM_ParseToken_Simple(const char **datapointer, int returnnewline)
+int COM_ParseToken_Simple(const char **datapointer, qboolean returnnewline, qboolean parsebackslash)
 {
 	int len;
 	int c;
@@ -730,7 +730,7 @@ skipwhite:
 		for (data++;*data && *data != '\"';data++)
 		{
 			c = *data;
-			if (*data == '\\')
+			if (*data == '\\' && parsebackslash)
 			{
 				data++;
 				c = *data;
@@ -783,7 +783,7 @@ COM_ParseToken_QuakeC
 Parse a token out of a string
 ==============
 */
-int COM_ParseToken_QuakeC(const char **datapointer, int returnnewline)
+int COM_ParseToken_QuakeC(const char **datapointer, qboolean returnnewline)
 {
 	int len;
 	int c;
@@ -897,7 +897,7 @@ COM_ParseToken_VM_Tokenize
 Parse a token out of a string
 ==============
 */
-int COM_ParseToken_VM_Tokenize(const char **datapointer, int returnnewline)
+int COM_ParseToken_VM_Tokenize(const char **datapointer, qboolean returnnewline)
 {
 	int len;
 	int c;
