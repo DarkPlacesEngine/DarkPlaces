@@ -271,6 +271,7 @@ static void R_SkyBox(void)
 	// FIXME: fixed function path can't properly handle r_view.colorscale > 1
 	GL_Color(1 * r_view.colorscale, 1 * r_view.colorscale, 1 * r_view.colorscale, 1);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
+	GL_CullFace(GL_NONE);
 	GL_DepthMask(false);
 	GL_DepthRange(0, 1);
 	GL_PolygonOffset(0, 0);
@@ -371,6 +372,7 @@ static void R_SkySphere(void)
 	// FIXME: fixed function path can't properly handle r_view.colorscale > 1
 	GL_Color(1 * r_view.colorscale, 1 * r_view.colorscale, 1 * r_view.colorscale, 1);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
+	GL_CullFace(GL_NONE);
 	GL_DepthMask(true);
 	GL_DepthRange(0, 1);
 	GL_PolygonOffset(0, 0);
