@@ -3835,9 +3835,9 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 
 	t->colormapping = VectorLength2(ent->colormap_pantscolor) + VectorLength2(ent->colormap_shirtcolor) >= (1.0f / 1048576.0f);
 	t->basetexture = (!t->colormapping && t->currentskinframe->merged) ? t->currentskinframe->merged : t->currentskinframe->base;
-	t->glosstexture = r_texture_white;
+	t->glosstexture = r_texture_black;
 	t->backgroundbasetexture = t->backgroundnumskinframes ? ((!t->colormapping && t->backgroundcurrentskinframe->merged) ? t->backgroundcurrentskinframe->merged : t->backgroundcurrentskinframe->base) : r_texture_white;
-	t->backgroundglosstexture = r_texture_white;
+	t->backgroundglosstexture = r_texture_black;
 	t->specularpower = r_shadow_glossexponent.value;
 	// TODO: store reference values for these in the texture?
 	t->specularscale = 0;
@@ -3853,7 +3853,11 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 			}
 		}
 		else if (r_shadow_gloss.integer >= 2 && r_shadow_gloss2intensity.value > 0)
+		{
+			t->glosstexture = r_texture_white;
+			t->backgroundglosstexture = r_texture_white;
 			t->specularscale = r_shadow_gloss2intensity.value;
+		}
 	}
 
 	// lightmaps mode looks bad with dlights using actual texturing, so turn
