@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 
 #define SND_MIN_SPEED 8000
-#define SND_MAX_SPEED 48000
+#define SND_MAX_SPEED 96000
 #define SND_MIN_WIDTH 1
 #define SND_MAX_WIDTH 2
 #define SND_MIN_CHANNELS 1
@@ -319,6 +319,7 @@ static qboolean S_ChooseCheaperFormat (snd_format_t* format, qboolean fixed_spee
 		{ 22050,			2,				2 },
 		{ 44100,			2,				2 },
 		{ 48000,			2,				6 },
+		{ 96000,			2,				6 },
 		{ SND_MAX_SPEED,	SND_MAX_WIDTH,	SND_MAX_CHANNELS },
 	};
 	const unsigned int nb_thresholds = sizeof(thresholds) / sizeof(thresholds[0]);
