@@ -70,6 +70,7 @@ cvar_t cl_stairsmoothspeed = {CVAR_SAVE, "cl_stairsmoothspeed", "160", "how fast
 cvar_t chase_back = {CVAR_SAVE, "chase_back", "48", "chase cam distance from the player"};
 cvar_t chase_up = {CVAR_SAVE, "chase_up", "24", "chase cam distance from the player"};
 cvar_t chase_active = {CVAR_SAVE, "chase_active", "0", "enables chase cam"};
+cvar_t chase_overhead = {CVAR_SAVE, "chase_overhead", "0", "chase cam looks straight down if this is not zero"};
 // GAME_GOODVSBAD2
 cvar_t chase_stevie = {0, "chase_stevie", "0", "chase cam view from above (used only by GoodVsBad2)"};
 
@@ -324,6 +325,10 @@ V_CalcRefdef
 
 ==================
 */
+#if 0
+static vec3_t eyeboxmins = {-16, -16, -24};
+static vec3_t eyeboxmaxs = { 16,  16,  32};
+#endif
 void V_CalcRefdef (void)
 {
 	entity_t *ent;
@@ -383,31 +388,72 @@ void V_CalcRefdef (void)
 				// observing entity from third person
 				vec_t camback, camup, dist, forward[3], chase_dest[3];
 
-				camback = bound(0, chase_back.value, 128);
-				if (chase_back.value != camback)
-					Cvar_SetValueQuick(&chase_back, camback);
-				camup = bound(-48, chase_up.value, 96);
-				if (chase_up.value != camup)
-					Cvar_SetValueQuick(&chase_up, camup);
+				camback = chase_back.value;
+				camup = chase_up.value;
 
 				// this + 22 is to match view_ofs for compatibility with older versions
 				camup += 22;
 
-				if (gamemode == GAME_GOODVSBAD2 && chase_stevie.integer)
-				{
-					// look straight down from high above
-					viewangles[0] = 90;
-					camback = 2048;
-				}
 				AngleVectors(viewangles, forward, NULL, NULL);
 
-				// trace a little further so it hits a surface more consistently (to avoid 'snapping' on the edge of the range)
-				dist = -camback - 8;
-				chase_dest[0] = vieworg[0] + forward[0] * dist;
-				chase_dest[1] = vieworg[1] + forward[1] * dist;
-				chase_dest[2] = vieworg[2] + forward[2] * dist + camup;
-				trace = CL_Move(vieworg, vec3_origin, vec3_origin, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
-				VectorMAMAM(1, trace.endpos, 8, forward, 4, trace.plane.normal, vieworg);
+				if (chase_overhead.integer)
+				{
+#if 1
+					vec3_t offset;
+					vec3_t bestvieworg;
+#endif
+					vec3_t up;
+					viewangles[PITCH] = 0;
+					AngleVectors(viewangles, forward, NULL, up);
+					// trace a little further so it hits a surface more consistently (to avoid 'snapping' on the edge of the range)
+					chase_dest[0] = vieworg[0] - forward[0] * camback + up[0] * camup;
+					chase_dest[1] = vieworg[1] - forward[1] * camback + up[1] * camup;
+					chase_dest[2] = vieworg[2] - forward[2] * camback + up[2] * camup;
+#if 0
+					//trace = CL_Move(vieworg, eyeboxmins, eyeboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
+					trace = CL_Move(vieworg, vec3_origin, vec3_origin, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
+					VectorCopy(trace.endpos, vieworg);
+					vieworg[2] -= 8;
+#else
+					trace = CL_Move(vieworg, vec3_origin, vec3_origin, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
+					VectorCopy(trace.endpos, bestvieworg);
+					offset[2] = 0;
+					for (offset[0] = -16;offset[0] <= 16;offset[0] += 8)
+					{
+						for (offset[1] = -16;offset[1] <= 16;offset[1] += 8)
+						{
+							AngleVectors(viewangles, NULL, NULL, up);
+							chase_dest[0] = vieworg[0] - forward[0] * camback + up[0] * camup + offset[0];
+							chase_dest[1] = vieworg[1] - forward[1] * camback + up[1] * camup + offset[1];
+							chase_dest[2] = vieworg[2] - forward[2] * camback + up[2] * camup + offset[2];
+							trace = CL_Move(vieworg, vec3_origin, vec3_origin, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
+							if (bestvieworg[2] > trace.endpos[2])
+								bestvieworg[2] = trace.endpos[2];
+						}
+					}
+					bestvieworg[2] -= 8;
+					VectorCopy(bestvieworg, vieworg);
+#endif
+					viewangles[PITCH] = 90;
+				}
+				else
+				{
+					if (gamemode == GAME_GOODVSBAD2 && chase_stevie.integer)
+					{
+						// look straight down from high above
+						viewangles[PITCH] = 90;
+						camback = 2048;
+						VectorSet(forward, 0, 0, -1);
+					}
+
+					// trace a little further so it hits a surface more consistently (to avoid 'snapping' on the edge of the range)
+					dist = -camback - 8;
+					chase_dest[0] = vieworg[0] + forward[0] * dist;
+					chase_dest[1] = vieworg[1] + forward[1] * dist;
+					chase_dest[2] = vieworg[2] + forward[2] * dist + camup;
+					trace = CL_Move(vieworg, vec3_origin, vec3_origin, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
+					VectorMAMAM(1, trace.endpos, 8, forward, 4, trace.plane.normal, vieworg);
+				}
 			}
 			else
 			{
@@ -681,6 +727,7 @@ void V_Init (void)
 	Cvar_RegisterVariable (&chase_back);
 	Cvar_RegisterVariable (&chase_up);
 	Cvar_RegisterVariable (&chase_active);
+	Cvar_RegisterVariable (&chase_overhead);
 	if (gamemode == GAME_GOODVSBAD2)
 		Cvar_RegisterVariable (&chase_stevie);
 
