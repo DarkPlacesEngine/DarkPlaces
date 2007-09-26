@@ -621,6 +621,8 @@ Key_SetBinding (int keynum, int bindmap, const char *binding)
 		Z_Free (keybindings[bindmap][keynum]);
 		keybindings[bindmap][keynum] = NULL;
 	}
+	if(!binding[0]) // make "" binds be removed --blub
+		return;
 // allocate memory for new binding
 	l = strlen (binding);
 	newbinding = (char *)Z_Malloc (l + 1);
