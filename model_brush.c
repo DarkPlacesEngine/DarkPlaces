@@ -2191,7 +2191,7 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 	totaltris = 0;
 	for (surfacenum = 0, in = (dface_t *)(mod_base + l->fileofs);surfacenum < count;surfacenum++, in++)
 	{
-		numedges = LittleShort(in->numedges);
+		numedges = (unsigned short)LittleShort(in->numedges);
 		totalverts += numedges;
 		totaltris += numedges - 2;
 	}
@@ -2212,16 +2212,16 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 
 		// FIXME: validate edges, texinfo, etc?
 		firstedge = LittleLong(in->firstedge);
-		numedges = LittleShort(in->numedges);
+		numedges = (unsigned short)LittleShort(in->numedges);
 		if ((unsigned int) firstedge > (unsigned int) loadmodel->brushq1.numsurfedges || (unsigned int) numedges > (unsigned int) loadmodel->brushq1.numsurfedges || (unsigned int) firstedge + (unsigned int) numedges > (unsigned int) loadmodel->brushq1.numsurfedges)
 			Host_Error("Mod_Q1BSP_LoadFaces: invalid edge range (firstedge %i, numedges %i, model edges %i)", firstedge, numedges, loadmodel->brushq1.numsurfedges);
-		i = LittleShort(in->texinfo);
+		i = (unsigned short)LittleShort(in->texinfo);
 		if ((unsigned int) i >= (unsigned int) loadmodel->brushq1.numtexinfo)
 			Host_Error("Mod_Q1BSP_LoadFaces: invalid texinfo index %i(model has %i texinfos)", i, loadmodel->brushq1.numtexinfo);
 		surface->lightmapinfo->texinfo = loadmodel->brushq1.texinfo + i;
 		surface->texture = surface->lightmapinfo->texinfo->texture;
 
-		planenum = LittleShort(in->planenum);
+		planenum = (unsigned short)LittleShort(in->planenum);
 		if ((unsigned int) planenum >= (unsigned int) loadmodel->brush.num_planes)
 			Host_Error("Mod_Q1BSP_LoadFaces: invalid plane index %i (model has %i planes)", planenum, loadmodel->brush.num_planes);
 
@@ -2475,16 +2475,45 @@ static void Mod_Q1BSP_LoadNodes(lump_t *l)
 		p = LittleLong(in->planenum);
 		out->plane = loadmodel->brush.data_planes + p;
 
-		out->firstsurface = LittleShort(in->firstface);
-		out->numsurfaces = LittleShort(in->numfaces);
+		out->firstsurface = (unsigned short)LittleShort(in->firstface);
+		out->numsurfaces = (unsigned short)LittleShort(in->numfaces);
 
 		for (j=0 ; j<2 ; j++)
 		{
-			p = LittleShort(in->children[j]);
-			if (p >= 0)
-				out->children[j] = loadmodel->brush.data_nodes + p;
+			// LordHavoc: this code supports more than 32768 nodes or leafs,
+			// by simply assuming that there are no more than 65536 combined,
+			// this makes it compatible with the broken arguire qbsp utility
+			// which can produce more than 32768 nodes (breaking the format)
+			// note that arguire light and vis utilities still crash on this
+			//
+			// I do not encourage support for this weirdness, this code was
+			// reworked simply to allow flying around leaky maps that exceed
+			// the limits, with the assumption that a final compile will be
+			// valid after the leak is fixed.
+			p = (unsigned short)LittleShort(in->children[j]);
+			if (p < 65536 - loadmodel->brush.num_leafs)
+			{
+				if (p < loadmodel->brush.num_nodes)
+					out->children[j] = loadmodel->brush.data_nodes + p;
+				else
+				{
+					Con_Printf("Mod_Q1BSP_LoadNodes: invalid node index %i (file has only %i nodes)\n", p, loadmodel->brush.num_nodes);
+					// map it to the solid leaf
+					out->children[j] = (mnode_t *)loadmodel->brush.data_leafs;
+				}
+			}
 			else
-				out->children[j] = (mnode_t *)(loadmodel->brush.data_leafs + (-1 - p));
+			{
+				p = 65535 - p;
+				if (p < loadmodel->brush.num_leafs)
+					out->children[j] = (mnode_t *)(loadmodel->brush.data_leafs + p);
+				else
+				{
+					Con_Printf("Mod_Q1BSP_LoadNodes: invalid leaf index %i (file has only %i leafs)\n", p, loadmodel->brush.num_leafs);
+					// map it to the solid leaf
+					out->children[j] = (mnode_t *)loadmodel->brush.data_leafs;
+				}
+			}
 		}
 	}
 
@@ -2523,9 +2552,9 @@ static void Mod_Q1BSP_LoadLeafs(lump_t *l)
 
 		out->contents = LittleLong(in->contents);
 
-		out->firstleafsurface = loadmodel->brush.data_leafsurfaces + LittleShort(in->firstmarksurface);
-		out->numleafsurfaces = LittleShort(in->nummarksurfaces);
-		if (out->firstleafsurface < 0 || LittleShort(in->firstmarksurface) + out->numleafsurfaces > loadmodel->brush.num_leafsurfaces)
+		out->firstleafsurface = loadmodel->brush.data_leafsurfaces + (unsigned short)LittleShort(in->firstmarksurface);
+		out->numleafsurfaces = (unsigned short)LittleShort(in->nummarksurfaces);
+		if (out->firstleafsurface < 0 || (unsigned short)LittleShort(in->firstmarksurface) + out->numleafsurfaces > loadmodel->brush.num_leafsurfaces)
 		{
 			Con_Printf("Mod_Q1BSP_LoadLeafs: invalid leafsurface range %i:%i outside range %i:%i\n", (int)(out->firstleafsurface - loadmodel->brush.data_leafsurfaces), (int)(out->firstleafsurface + out->numleafsurfaces - loadmodel->brush.data_leafsurfaces), 0, loadmodel->brush.num_leafsurfaces);
 			out->firstleafsurface = NULL;
@@ -2655,7 +2684,7 @@ static void Mod_Q1BSP_LoadLeaffaces(lump_t *l)
 
 	for (i = 0;i < loadmodel->brush.num_leafsurfaces;i++)
 	{
-		j = (unsigned) LittleShort(in[i]);
+		j = (unsigned short) LittleShort(in[i]);
 		if (j >= loadmodel->num_surfaces)
 			Host_Error("Mod_Q1BSP_LoadLeaffaces: bad surface number");
 		loadmodel->brush.data_leafsurfaces[i] = j;
