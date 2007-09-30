@@ -1846,6 +1846,9 @@ int R_CullBox(const vec3_t mins, const vec3_t maxs)
 	mplane_t *p;
 	for (i = 0;i < r_view.numfrustumplanes;i++)
 	{
+		// skip nearclip plane, it often culls portals when you are very close, and is almost never useful
+		if (i == 4)
+			continue;
 		p = r_view.frustum + i;
 		switch(p->signbits)
 		{
