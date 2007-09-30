@@ -239,6 +239,7 @@ LDFLAGS_BSDSDL=$(LDFLAGS_UNIXCOMMON) $(LDFLAGS_UNIXSDL)
 
 ##### Win32 specific variables #####
 
+WINDRES ?= windres
 #if you want CD sound in Win32
 OBJ_WINCD=cd_win.o
 #if you want no CD audio
@@ -404,10 +405,10 @@ cd_sdl.o: cd_sdl.c
 	$(DO_CC) $(CFLAGS_SDL)
 
 darkplaces.o: %.o : %.rc
-	windres -o $@ $<
+	$(WINDRES) -o $@ $<
 
 nexuiz.o: %.o : %.rc
-	windres -o $@ $<
+	$(WINDRES) -o $@ $<
 
 .c.o:
 	$(DO_CC)
