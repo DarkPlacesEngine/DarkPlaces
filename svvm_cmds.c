@@ -696,7 +696,7 @@ static int VM_SV_newcheckclient (int check)
 	VectorAdd(ent->fields.server->origin, ent->fields.server->view_ofs, org);
 	checkpvsbytes = 0;
 	if (sv.worldmodel && sv.worldmodel->brush.FatPVS)
-		checkpvsbytes = sv.worldmodel->brush.FatPVS(sv.worldmodel, org, 0, checkpvs, sizeof(checkpvs));
+		checkpvsbytes = sv.worldmodel->brush.FatPVS(sv.worldmodel, org, 0, checkpvs, sizeof(checkpvs), false);
 
 	return i;
 }
