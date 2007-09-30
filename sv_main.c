@@ -1296,7 +1296,7 @@ static void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, size
 	VectorAdd(clent->fields.server->origin, clent->fields.server->view_ofs, sv.writeentitiestoclient_testeye);
 	sv.writeentitiestoclient_pvsbytes = 0;
 	if (sv.worldmodel && sv.worldmodel->brush.FatPVS)
-		sv.writeentitiestoclient_pvsbytes = sv.worldmodel->brush.FatPVS(sv.worldmodel, sv.writeentitiestoclient_testeye, 8, sv.writeentitiestoclient_pvs, sizeof(sv.writeentitiestoclient_pvs));
+		sv.writeentitiestoclient_pvsbytes = sv.worldmodel->brush.FatPVS(sv.worldmodel, sv.writeentitiestoclient_testeye, 8, sv.writeentitiestoclient_pvs, sizeof(sv.writeentitiestoclient_pvs), false);
 
 	sv.writeentitiestoclient_cliententitynumber = PRVM_EDICT_TO_PROG(clent); // LordHavoc: for comparison purposes
 
