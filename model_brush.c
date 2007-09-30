@@ -3309,7 +3309,7 @@ static void Mod_Q1BSP_FatPVS_RecursiveBSPNode(model_t *model, const vec3_t org, 
 
 //Calculates a PVS that is the inclusive or of all leafs within radius pixels
 //of the given point.
-static int Mod_Q1BSP_FatPVS(model_t *model, const vec3_t org, vec_t radius, unsigned char *pvsbuffer, int pvsbufferlength)
+static int Mod_Q1BSP_FatPVS(model_t *model, const vec3_t org, vec_t radius, unsigned char *pvsbuffer, int pvsbufferlength, qboolean merge)
 {
 	int bytes = model->brush.num_pvsclusterbytes;
 	bytes = min(bytes, pvsbufferlength);
@@ -3318,7 +3318,8 @@ static int Mod_Q1BSP_FatPVS(model_t *model, const vec3_t org, vec_t radius, unsi
 		memset(pvsbuffer, 0xFF, bytes);
 		return bytes;
 	}
-	memset(pvsbuffer, 0, bytes);
+	if (!merge)
+		memset(pvsbuffer, 0, bytes);
 	Mod_Q1BSP_FatPVS_RecursiveBSPNode(model, org, radius, pvsbuffer, bytes, model->brush.data_nodes);
 	return bytes;
 }

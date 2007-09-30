@@ -414,11 +414,34 @@ void R_View_WorldVisibility(qboolean forcenovis)
 	if (!model)
 		return;
 
+	if (r_view.usecustompvs)
+	{
+		// clear the visible surface and leaf flags arrays
+		memset(r_viewcache.world_surfacevisible, 0, model->num_surfaces);
+		memset(r_viewcache.world_leafvisible, 0, model->brush.num_leafs);
+		r_viewcache.world_novis = false;
+
+		// simply cull each marked leaf to the frustum (view pyramid)
+		for (j = 0, leaf = model->brush.data_leafs;j < model->brush.num_leafs;j++, leaf++)
+		{
+			// if leaf is in current pvs and on the screen, mark its surfaces
+			if (CHECKPVSBIT(r_viewcache.world_pvsbits, leaf->clusterindex) && !R_CullBox(leaf->mins, leaf->maxs))
+			{
+				r_refdef.stats.world_leafs++;
+				r_viewcache.world_leafvisible[j] = true;
+				if (leaf->numleafsurfaces)
+					for (i = 0, mark = leaf->firstleafsurface;i < leaf->numleafsurfaces;i++, mark++)
+						r_viewcache.world_surfacevisible[*mark] = true;
+			}
+		}
+		return;
+	}
+
 	// if possible find the leaf the view origin is in
 	viewleaf = model->brush.PointInLeaf ? model->brush.PointInLeaf(model, r_view.origin) : NULL;
 	// if possible fetch the visible cluster bits
 	if (!r_lockpvs.integer && model->brush.FatPVS)
-		model->brush.FatPVS(model, r_view.origin, 2, r_viewcache.world_pvsbits, sizeof(r_viewcache.world_pvsbits));
+		model->brush.FatPVS(model, r_view.origin, 2, r_viewcache.world_pvsbits, sizeof(r_viewcache.world_pvsbits), false);
 
 	if (!r_lockvisibility.integer)
 	{
