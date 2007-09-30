@@ -1406,6 +1406,7 @@ typedef struct r_view_s
 	int numfrustumplanes;
 	mplane_t frustum[6];
 	qboolean useclipplane;
+	qboolean usecustompvs; // uses r_viewcache.pvsbits as-is rather than computing it
 	mplane_t clipplane;
 	float frustum_x, frustum_y;
 	vec3_t frustumcorner[4];
@@ -1448,11 +1449,11 @@ typedef struct r_viewcache_s
 	// flag arrays used for visibility checking on world model
 	// (all other entities have no per-surface/per-leaf visibility checks)
 	// TODO: dynamic resize according to r_refdef.worldmodel->brush.num_clusters
-	unsigned char world_pvsbits[(32768+7)>>3];
+	unsigned char world_pvsbits[(32768+7)>>3]; // FIXME: buffer overflow on huge maps
 	// TODO: dynamic resize according to r_refdef.worldmodel->brush.num_leafs
-	unsigned char world_leafvisible[32768];
+	unsigned char world_leafvisible[32768]; // FIXME: buffer overflow on huge maps
 	// TODO: dynamic resize according to r_refdef.worldmodel->num_surfaces
-	unsigned char world_surfacevisible[262144];
+	unsigned char world_surfacevisible[262144]; // FIXME: buffer overflow on huge maps
 	// if true, the view is currently in a leaf without pvs data
 	qboolean world_novis;
 }

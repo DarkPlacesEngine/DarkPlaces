@@ -155,6 +155,8 @@ typedef struct r_waterstate_waterplane_s
 	rtexture_t *texture_reflection;
 	mplane_t plane;
 	int materialflags; // combined flags of all water surfaces on this plane
+	unsigned char pvsbits[(32768+7)>>3]; // FIXME: buffer overflow on huge maps
+	qboolean pvsvalid;
 }
 r_waterstate_waterplane_t;
 
@@ -2480,8 +2482,10 @@ static void R_Water_AddWaterPlane(msurface_t *surface)
 {
 	int triangleindex, planeindex;
 	const int *e;
+	vec_t f;
 	vec3_t vert[3];
 	vec3_t normal;
+	vec3_t center;
 	r_waterstate_waterplane_t *p;
 	// just use the first triangle with a valid normal for any decisions
 	VectorClear(normal);
@@ -2494,16 +2498,24 @@ static void R_Water_AddWaterPlane(msurface_t *surface)
 		if (VectorLength2(normal) >= 0.001)
 			break;
 	}
-	for (planeindex = 0, p = r_waterstate.waterplanes;planeindex < r_waterstate.numwaterplanes;planeindex++, p++)
+	// now find the center of this surface
+	for (triangleindex = 0, e = rsurface.modelelement3i + surface->num_firsttriangle * 3;triangleindex < surface->num_triangles*3;triangleindex++, e++)
 	{
-		if (fabs(PlaneDiff(vert[0], &p->plane)) < 1 && fabs(PlaneDiff(vert[1], &p->plane)) < 1 && fabs(PlaneDiff(vert[2], &p->plane)) < 1)
-		{
-			p->materialflags |= surface->texture->currentframe->currentmaterialflags;
-			break;
-		}
+		Matrix4x4_Transform(&rsurface.matrix, rsurface.modelvertex3f + e[0]*3, vert[0]);
+		VectorAdd(center, vert[0], center);
 	}
-	// if this triangle does not fit any known plane rendered this frame, render textures for it
-	if (planeindex >= r_waterstate.numwaterplanes && planeindex < r_waterstate.maxwaterplanes)
+	f = 1.0 / surface->num_triangles*3;
+	VectorScale(center, f, center);
+
+	// find a matching plane if there is one
+	for (planeindex = 0, p = r_waterstate.waterplanes;planeindex < r_waterstate.numwaterplanes;planeindex++, p++)
+		if (fabs(PlaneDiff(vert[0], &p->plane)) < 1 && fabs(PlaneDiff(vert[1], &p->plane)) < 1 && fabs(PlaneDiff(vert[2], &p->plane)) < 1)
+			break;
+	if (planeindex >= r_waterstate.maxwaterplanes)
+		return; // nothing we can do, out of planes
+
+	// if this triangle does not fit any known plane rendered this frame, add one
+	if (planeindex >= r_waterstate.numwaterplanes)
 	{
 		// store the new plane
 		r_waterstate.numwaterplanes++;
@@ -2518,7 +2530,17 @@ static void R_Water_AddWaterPlane(msurface_t *surface)
 			p->plane.dist *= -1;
 			PlaneClassify(&p->plane);
 		}
-		p->materialflags = surface->texture->currentframe->currentmaterialflags;
+		// clear materialflags and pvs
+		p->materialflags = 0;
+		p->pvsvalid = false;
+	}
+	// merge this surface's materialflags into the waterplane
+	p->materialflags |= surface->texture->currentframe->currentmaterialflags;
+	// merge this surface's PVS into the waterplane
+	if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFLECTION) && r_refdef.worldmodel && r_refdef.worldmodel->brush.FatPVS)
+	{
+		r_refdef.worldmodel->brush.FatPVS(r_refdef.worldmodel, r_view.origin, 2, p->pvsbits, sizeof(p->pvsbits), p->pvsvalid);
+		p->pvsvalid = true;
 	}
 }
 
@@ -2528,28 +2550,45 @@ static void R_Water_ProcessPlanes(void)
 	int planeindex;
 	r_waterstate_waterplane_t *p;
 
+	// make sure enough textures are allocated
 	for (planeindex = 0, p = r_waterstate.waterplanes;planeindex < r_waterstate.numwaterplanes;planeindex++, p++)
 	{
-		if (!p->texture_refraction && (p->materialflags & MATERIALFLAG_WATERSHADER))
-			p->texture_refraction = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_refraction", planeindex), r_waterstate.texturewidth, r_waterstate.textureheight, NULL, TEXTYPE_RGBA, TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_ALWAYSPRECACHE, NULL);
-		if (!p->texture_reflection && (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFLECTION)))
-			p->texture_reflection = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_reflection", planeindex), r_waterstate.texturewidth, r_waterstate.textureheight, NULL, TEXTYPE_RGBA, TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_ALWAYSPRECACHE, NULL);
+		if (p->materialflags & MATERIALFLAG_WATERSHADER)
+		{
+			if (!p->texture_refraction)
+				p->texture_refraction = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_refraction", planeindex), r_waterstate.texturewidth, r_waterstate.textureheight, NULL, TEXTYPE_RGBA, TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_ALWAYSPRECACHE, NULL);
+			if (!p->texture_refraction)
+				goto error;
+		}
 
+		if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFLECTION))
+		{
+			if (!p->texture_reflection)
+				p->texture_reflection = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_reflection", planeindex), r_waterstate.texturewidth, r_waterstate.textureheight, NULL, TEXTYPE_RGBA, TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_ALWAYSPRECACHE, NULL);
+			if (!p->texture_reflection)
+				goto error;
+		}
+	}
+
+	// render views
+	for (planeindex = 0, p = r_waterstate.waterplanes;planeindex < r_waterstate.numwaterplanes;planeindex++, p++)
+	{
 		originalview = r_view;
 		r_view.showdebug = false;
 		r_view.width = r_waterstate.waterwidth;
 		r_view.height = r_waterstate.waterheight;
 		r_view.useclipplane = true;
-
-		r_view.clipplane = p->plane;
-		VectorNegate(r_view.clipplane.normal, r_view.clipplane.normal);
-		r_view.clipplane.dist = -r_view.clipplane.dist;
-		PlaneClassify(&r_view.clipplane);
 		r_waterstate.renderingscene = true;
+
 		// render the normal view scene and copy into texture
 		// (except that a clipping plane should be used to hide everything on one side of the water, and the viewer's weapon model should be omitted)
 		if (p->materialflags & MATERIALFLAG_WATERSHADER)
 		{
+			r_view.clipplane = p->plane;
+			VectorNegate(r_view.clipplane.normal, r_view.clipplane.normal);
+			r_view.clipplane.dist = -r_view.clipplane.dist;
+			PlaneClassify(&r_view.clipplane);
+
 			R_RenderScene(false);
 
 			// copy view into the screen texture
@@ -2559,29 +2598,47 @@ static void R_Water_ProcessPlanes(void)
 			qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view.x, vid.height - (r_view.y + r_view.height), r_view.width, r_view.height);CHECKGLERROR
 		}
 
-		// render reflected scene and copy into texture
-		Matrix4x4_Reflect(&r_view.matrix, p->plane.normal[0], p->plane.normal[1], p->plane.normal[2], p->plane.dist, -2);
-		r_view.clipplane = p->plane;
-		// reverse the cullface settings for this render
-		r_view.cullface_front = GL_FRONT;
-		r_view.cullface_back = GL_BACK;
+		if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFLECTION))
+		{
+			// render reflected scene and copy into texture
+			Matrix4x4_Reflect(&r_view.matrix, p->plane.normal[0], p->plane.normal[1], p->plane.normal[2], p->plane.dist, -2);
+			r_view.clipplane = p->plane;
+			// reverse the cullface settings for this render
+			r_view.cullface_front = GL_FRONT;
+			r_view.cullface_back = GL_BACK;
+			if (r_refdef.worldmodel && r_refdef.worldmodel->brush.num_pvsclusterbytes)
+			{
+				r_view.usecustompvs = true;
+				if (p->pvsvalid)
+					memcpy(r_viewcache.world_pvsbits, p->pvsbits, r_refdef.worldmodel->brush.num_pvsclusterbytes);
+				else
+					memset(r_viewcache.world_pvsbits, 0xFF, r_refdef.worldmodel->brush.num_pvsclusterbytes);
+			}
 
-		R_ResetViewRendering3D();
-		R_ClearScreen();
+			R_ResetViewRendering3D();
+			R_ClearScreen();
 
-		R_RenderScene(false);
+			R_RenderScene(false);
 
-		R_Mesh_TexBind(0, R_GetTexture(p->texture_reflection));
-		GL_ActiveTexture(0);
-		CHECKGLERROR
-		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view.x, vid.height - (r_view.y + r_view.height), r_view.width, r_view.height);CHECKGLERROR
+			R_Mesh_TexBind(0, R_GetTexture(p->texture_reflection));
+			GL_ActiveTexture(0);
+			CHECKGLERROR
+			qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view.x, vid.height - (r_view.y + r_view.height), r_view.width, r_view.height);CHECKGLERROR
 
-		R_ResetViewRendering3D();
-		R_ClearScreen();
+			R_ResetViewRendering3D();
+			R_ClearScreen();
+		}
 
 		r_view = originalview;
 		r_waterstate.renderingscene = false;
 	}
+	return;
+error:
+	r_view = originalview;
+	r_waterstate.renderingscene = false;
+	Cvar_SetValueQuick(&r_glsl_water, 0);
+	Con_Printf("R_Water_ProcessPlanes: Error: texture creation failed!  Turned off r_glsl_water.\n");
+	return;
 }
 
 void R_Bloom_StartFrame(void)
