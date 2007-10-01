@@ -629,7 +629,7 @@ static int Mod_Q1BSP_RecursiveHullCheck(RecursiveHullCheckTraceInfo_t *t, int nu
 	double t1, t2;
 
 	// variables that need to be stored on the stack when recursing
-	dclipnode_t *node;
+	mclipnode_t *node;
 	int side;
 	double midf, mid[3];
 
@@ -925,7 +925,7 @@ void Collision_ClipTrace_Box(trace_t *trace, const vec3_t cmins, const vec3_t cm
 #else
 	RecursiveHullCheckTraceInfo_t rhc;
 	static hull_t box_hull;
-	static dclipnode_t box_clipnodes[6];
+	static mclipnode_t box_clipnodes[6];
 	static mplane_t box_planes[6];
 	// fill in a default trace
 	memset(&rhc, 0, sizeof(rhc));
@@ -2480,18 +2480,12 @@ static void Mod_Q1BSP_LoadNodes(lump_t *l)
 
 		for (j=0 ; j<2 ; j++)
 		{
-			// LordHavoc: this code supports more than 32768 nodes or leafs,
-			// by simply assuming that there are no more than 65536 combined,
-			// this makes it compatible with the broken arguire qbsp utility
-			// which can produce more than 32768 nodes (breaking the format)
-			// note that arguire light and vis utilities still crash on this
-			//
-			// I do not encourage support for this weirdness, this code was
-			// reworked simply to allow flying around leaky maps that exceed
-			// the limits, with the assumption that a final compile will be
-			// valid after the leak is fixed.
+			// LordHavoc: this code supports broken bsp files produced by
+			// arguire qbsp which can produce more than 32768 nodes, any value
+			// below count is assumed to be a node number, any other value is
+			// assumed to be a leaf number
 			p = (unsigned short)LittleShort(in->children[j]);
-			if (p < 65536 - loadmodel->brush.num_leafs)
+			if (p < count)
 			{
 				if (p < loadmodel->brush.num_nodes)
 					out->children[j] = loadmodel->brush.data_nodes + p;
@@ -2504,6 +2498,7 @@ static void Mod_Q1BSP_LoadNodes(lump_t *l)
 			}
 			else
 			{
+				// note this uses 65535 intentionally, -1 is leaf 0
 				p = 65535 - p;
 				if (p < loadmodel->brush.num_leafs)
 					out->children[j] = (mnode_t *)(loadmodel->brush.data_leafs + p);
@@ -2604,7 +2599,8 @@ qboolean Mod_Q1BSP_CheckWaterAlphaSupport(void)
 
 static void Mod_Q1BSP_LoadClipnodes(lump_t *l, hullinfo_t *hullinfo)
 {
-	dclipnode_t *in, *out;
+	dclipnode_t *in;
+	mclipnode_t *out;
 	int			i, count;
 	hull_t		*hull;
 
@@ -2612,7 +2608,7 @@ static void Mod_Q1BSP_LoadClipnodes(lump_t *l, hullinfo_t *hullinfo)
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q1BSP_LoadClipnodes: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = (dclipnode_t *)Mem_Alloc(loadmodel->mempool, count*sizeof(*out));
+	out = (mclipnode_t *)Mem_Alloc(loadmodel->mempool, count*sizeof(*out));
 
 	loadmodel->brushq1.clipnodes = out;
 	loadmodel->brushq1.numclipnodes = count;
@@ -2636,12 +2632,15 @@ static void Mod_Q1BSP_LoadClipnodes(lump_t *l, hullinfo_t *hullinfo)
 	for (i=0 ; i<count ; i++, out++, in++)
 	{
 		out->planenum = LittleLong(in->planenum);
-		out->children[0] = LittleShort(in->children[0]);
-		out->children[1] = LittleShort(in->children[1]);
+		// LordHavoc: this code supports arguire qbsp's broken clipnodes indices (more than 32768 clipnodes), values above count are assumed to be contents values
+		out->children[0] = (unsigned short)LittleShort(in->children[0]);
+		out->children[1] = (unsigned short)LittleShort(in->children[1]);
+		if (out->children[0] >= count)
+			out->children[0] -= 65536;
+		if (out->children[1] >= count)
+			out->children[1] -= 65536;
 		if (out->planenum < 0 || out->planenum >= loadmodel->brush.num_planes)
 			Host_Error("Corrupt clipping hull(out of range planenum)");
-		if (out->children[0] >= count || out->children[1] >= count)
-			Host_Error("Corrupt clipping hull(out of range child)");
 	}
 }
 
@@ -2649,14 +2648,14 @@ static void Mod_Q1BSP_LoadClipnodes(lump_t *l, hullinfo_t *hullinfo)
 static void Mod_Q1BSP_MakeHull0(void)
 {
 	mnode_t		*in;
-	dclipnode_t *out;
+	mclipnode_t *out;
 	int			i;
 	hull_t		*hull;
 
 	hull = &loadmodel->brushq1.hulls[0];
 
 	in = loadmodel->brush.data_nodes;
-	out = (dclipnode_t *)Mem_Alloc(loadmodel->mempool, loadmodel->brush.num_nodes * sizeof(dclipnode_t));
+	out = (mclipnode_t *)Mem_Alloc(loadmodel->mempool, loadmodel->brush.num_nodes * sizeof(*out));
 
 	hull->clipnodes = out;
 	hull->firstclipnode = 0;

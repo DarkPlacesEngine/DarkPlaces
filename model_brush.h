@@ -163,9 +163,15 @@ typedef struct mleaf_s
 }
 mleaf_t;
 
+typedef struct mclipnode_s
+{
+	int			planenum;
+	int			children[2];	// negative numbers are contents
+} mclipnode_t;
+
 typedef struct hull_s
 {
-	dclipnode_t *clipnodes;
+	mclipnode_t *clipnodes;
 	mplane_t *planes;
 	int firstclipnode;
 	int lastclipnode;

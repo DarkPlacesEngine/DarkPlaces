@@ -1,6 +1,4 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
--d (Amish, Fuh) feature darkplaces client: add qw protocol support (making darkplaces work as a qwcl client) (Amish, Fuh)
--d (Stribbs, Jimmy Freestone) feature darkplaces renderer: add HalfLife2 style water rendering (Mitchell, Stribbs, Jimmy Freestone)
 0 bug darkplaces client qw: add .mvd demo support
 0 bug darkplaces client qw: add .qwd demo support
 0 bug darkplaces client qw: add spectator cvar (Plague Monkey Rat)
@@ -1215,6 +1213,7 @@ d feature darkplaces client: add .loc file support and say macros
 d feature darkplaces client: add BX_WAL_SUPPORT to extensions and document it, the feature has been in for a long time, also update wiki.quakesrc.org accordingly
 d feature darkplaces client: add a dot crosshair texture (HellToupee)
 d feature darkplaces client: add a sv_fixedframeratesingleplayer cvar (default off), to allow fixed framerate singleplayer mods, mainly useful for physics (Urre)
+d feature darkplaces client: add qw protocol support (making darkplaces work as a qwcl client) (Amish, Fuh)
 d feature darkplaces client: add showbrand cvar which would show gfx/brand.tga in the left/right top/bottom corner (depending on value of scr_showbrand) all the time, this would be useful for screenshots (Spirit_of_85)
 d feature darkplaces client: cl_capture_video avi support would be nice, the Intel(r) 4:2:0 codec seems to be standard on Windows XP so this should be easy
 d feature darkplaces client: make tab completion able to complete map names when using a map or changelevel command (Zenex, Eksess)
@@ -1252,6 +1251,7 @@ d feature darkplaces protocol: add PRYDON_CLIENTCURSOR extension - clientside mo
 d feature darkplaces protocol: add back colormod extension (FrikaC, Uffe, Gilgamesh, Wazat)
 d feature darkplaces protocol: add buttons 9-16 (yummyluv)
 d feature darkplaces protocol: allow sending of additional precaches during game, this needs to send a reliable message to all connected clients stating the new filename to load, and also to be sent to new connections (VorteX, Vermeulen)
+d feature darkplaces renderer: add HalfLife2 style water rendering (Mitchell, Stribbs, Jimmy Freestone)
 d feature darkplaces renderer: add a nearclip cvar (Tomaz)
 d feature darkplaces renderer: add q3bsp water rendering, both scrolling and watershader (Zombie)
 d feature darkplaces renderer: add r_shadow_visiblelighting cvar which draws redish orange polygons similar to visiblevolumes for measuring number of light passes per pixel (Harbish)
