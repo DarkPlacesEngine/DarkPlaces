@@ -1428,7 +1428,7 @@ void CL_SendMove(void)
 	}
 	else if (cls.signon == SIGNONS)
 	{
-		if (cls.protocol == PROTOCOL_QUAKE || cls.protocol == PROTOCOL_QUAKEDP || cls.protocol == PROTOCOL_NEHAHRAMOVIE)
+		if (cls.protocol == PROTOCOL_QUAKE || cls.protocol == PROTOCOL_QUAKEDP || cls.protocol == PROTOCOL_NEHAHRAMOVIE || cls.protocol == PROTOCOL_NEHAHRABJP || cls.protocol == PROTOCOL_NEHAHRABJP2 || cls.protocol == PROTOCOL_NEHAHRABJP3)
 		{
 			// 5 bytes
 			MSG_WriteByte (&buf, clc_move);

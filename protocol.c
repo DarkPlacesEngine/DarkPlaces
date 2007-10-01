@@ -53,6 +53,9 @@ protocolversioninfo[] =
 	{250, "NEHAHRAMOVIE"},
 	{15, "QUAKE"},
 	{28, "QW"},
+	{10000, "NEHAHRABJP"},
+	{10001, "NEHAHRABJP2"},
+	{10002, "NEHAHRABJP3"},
 	{0, NULL}
 };
 
@@ -149,7 +152,13 @@ void EntityFrameQuake_ReadEntity(int bits)
 	s.number = num;
 	s.time = cl.mtime[0];
 	s.flags = 0;
-	if (bits & U_MODEL)		s.modelindex = (s.modelindex & 0xFF00) | MSG_ReadByte();
+	if (bits & U_MODEL)
+	{
+		if (cls.protocol == PROTOCOL_NEHAHRABJP || cls.protocol == PROTOCOL_NEHAHRABJP2 || cls.protocol == PROTOCOL_NEHAHRABJP3)
+							s.modelindex = (unsigned short) MSG_ReadShort();
+		else
+							s.modelindex = (s.modelindex & 0xFF00) | MSG_ReadByte();
+	}
 	if (bits & U_FRAME)		s.frame = (s.frame & 0xFF00) | MSG_ReadByte();
 	if (bits & U_COLORMAP)	s.colormap = MSG_ReadByte();
 	if (bits & U_SKIN)		s.skin = MSG_ReadByte();
@@ -521,7 +530,7 @@ void EntityFrameQuake_WriteFrame(sizebuf_t *msg, int numstates, const entity_sta
 		if (baseline.modelindex != s->modelindex)
 		{
 			bits |= U_MODEL;
-			if (s->modelindex & 0xFF00)
+			if ((s->modelindex & 0xFF00) && sv.protocol != PROTOCOL_NEHAHRABJP && sv.protocol != PROTOCOL_NEHAHRABJP2 && sv.protocol != PROTOCOL_NEHAHRABJP3)
 				bits |= U_MODEL2;
 		}
 		if (baseline.alpha != s->alpha)
@@ -561,7 +570,13 @@ void EntityFrameQuake_WriteFrame(sizebuf_t *msg, int numstates, const entity_sta
 		if (bits & U_LONGENTITY)	MSG_WriteShort(&buf, s->number);
 		else						MSG_WriteByte(&buf, s->number);
 
-		if (bits & U_MODEL)			MSG_WriteByte(&buf, s->modelindex);
+		if (bits & U_MODEL)
+		{
+			if (sv.protocol == PROTOCOL_NEHAHRABJP || sv.protocol == PROTOCOL_NEHAHRABJP2 || sv.protocol == PROTOCOL_NEHAHRABJP3)
+				MSG_WriteShort(&buf, s->modelindex);
+			else
+				MSG_WriteByte(&buf, s->modelindex);
+		}
 		if (bits & U_FRAME)			MSG_WriteByte(&buf, s->frame);
 		if (bits & U_COLORMAP)		MSG_WriteByte(&buf, s->colormap);
 		if (bits & U_SKIN)			MSG_WriteByte(&buf, s->skin);
@@ -2357,7 +2372,7 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 	packetlog->packetnumber = framenum;
 	packetlog->numstates = 0;
 	// write stat updates
-	if (sv.protocol != PROTOCOL_QUAKE && sv.protocol != PROTOCOL_QUAKEDP && sv.protocol != PROTOCOL_NEHAHRAMOVIE && sv.protocol != PROTOCOL_DARKPLACES1 && sv.protocol != PROTOCOL_DARKPLACES2 && sv.protocol != PROTOCOL_DARKPLACES3 && sv.protocol != PROTOCOL_DARKPLACES4 && sv.protocol != PROTOCOL_DARKPLACES5)
+	if (sv.protocol != PROTOCOL_QUAKE && sv.protocol != PROTOCOL_QUAKEDP && sv.protocol != PROTOCOL_NEHAHRAMOVIE && sv.protocol != PROTOCOL_NEHAHRABJP && sv.protocol != PROTOCOL_NEHAHRABJP2 && sv.protocol != PROTOCOL_NEHAHRABJP3 && sv.protocol != PROTOCOL_DARKPLACES1 && sv.protocol != PROTOCOL_DARKPLACES2 && sv.protocol != PROTOCOL_DARKPLACES3 && sv.protocol != PROTOCOL_DARKPLACES4 && sv.protocol != PROTOCOL_DARKPLACES5)
 	{
 		for (i = 0;i < MAX_CL_STATS && msg->cursize + 6 + 11 <= msg->maxsize;i++)
 		{
