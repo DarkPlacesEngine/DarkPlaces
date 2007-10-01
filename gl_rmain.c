@@ -2447,7 +2447,7 @@ static void R_Water_StartFrame(void)
 
 	// calculate desired texture sizes
 	// can't use water if the card does not support the texture size
-	if (!r_glsl_water.integer || texturewidth > gl_max_texture_size || textureheight > gl_max_texture_size)
+	if (!r_glsl_water.integer || waterwidth > gl_max_texture_size || waterheight > gl_max_texture_size)
 		texturewidth = textureheight = waterwidth = waterheight = 0;
 	else if (gl_support_arb_texture_non_power_of_two)
 	{
