@@ -408,7 +408,7 @@ static void VM_SV_ambientsound (void)
 
 	MSG_WriteVector(&sv.signon, pos, sv.protocol);
 
-	if (large)
+	if (large || sv.protocol == PROTOCOL_NEHAHRABJP || sv.protocol == PROTOCOL_NEHAHRABJP2 || sv.protocol == PROTOCOL_NEHAHRABJP3)
 		MSG_WriteShort (&sv.signon, soundnum);
 	else
 		MSG_WriteByte (&sv.signon, soundnum);
@@ -1281,6 +1281,12 @@ static void VM_SV_makestatic (void)
 		MSG_WriteByte (&sv.signon,svc_spawnstatic2);
 		MSG_WriteShort (&sv.signon, (int)ent->fields.server->modelindex);
 		MSG_WriteShort (&sv.signon, (int)ent->fields.server->frame);
+	}
+	else if (sv.protocol == PROTOCOL_NEHAHRABJP || sv.protocol == PROTOCOL_NEHAHRABJP2 || sv.protocol == PROTOCOL_NEHAHRABJP3)
+	{
+		MSG_WriteByte (&sv.signon,svc_spawnstatic);
+		MSG_WriteShort (&sv.signon, (int)ent->fields.server->modelindex);
+		MSG_WriteByte (&sv.signon, (int)ent->fields.server->frame);
 	}
 	else
 	{
