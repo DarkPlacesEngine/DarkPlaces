@@ -666,7 +666,7 @@ typedef struct model_brushq1_s
 	int				*surfedges;
 
 	int				numclipnodes;
-	dclipnode_t		*clipnodes;
+	mclipnode_t		*clipnodes;
 
 	hull_t			hulls[MAX_MAP_HULLS];
 
