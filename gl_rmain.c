@@ -2437,34 +2437,33 @@ void R_RenderScene(qboolean addwaterplanes);
 static void R_Water_StartFrame(void)
 {
 	int i;
-	int texturewidth, textureheight;
+	int waterwidth, waterheight, texturewidth, textureheight;
 	r_waterstate_waterplane_t *p;
-
-	r_waterstate.maxwaterplanes = 0;
 
 	// set waterwidth and waterheight to the water resolution that will be
 	// used (often less than the screen resolution for faster rendering)
-	r_waterstate.waterwidth = (int)bound(1, r_view.width * r_glsl_water_resolutionmultiplier.value, r_view.width);
-	r_waterstate.waterheight = (int)bound(1, r_view.height * r_glsl_water_resolutionmultiplier.value, r_view.height);
+	waterwidth = (int)bound(1, r_view.width * r_glsl_water_resolutionmultiplier.value, r_view.width);
+	waterheight = (int)bound(1, r_view.height * r_glsl_water_resolutionmultiplier.value, r_view.height);
 
 	// calculate desired texture sizes
-	if (gl_support_arb_texture_non_power_of_two)
+	// can't use water if the card does not support the texture size
+	if (!r_glsl_water.integer || texturewidth > gl_max_texture_size || textureheight > gl_max_texture_size)
+		texturewidth = textureheight = waterwidth = waterheight = 0;
+	else if (gl_support_arb_texture_non_power_of_two)
 	{
-		texturewidth = r_waterstate.waterwidth;
-		textureheight = r_waterstate.waterheight;
+		texturewidth = waterwidth;
+		textureheight = waterheight;
 	}
 	else
 	{
-		for (texturewidth   = 1;texturewidth   < r_waterstate.waterwidth ;texturewidth   *= 2);
-		for (textureheight  = 1;textureheight  < r_waterstate.waterheight;textureheight  *= 2);
+		for (texturewidth   = 1;texturewidth   < waterwidth ;texturewidth   *= 2);
+		for (textureheight  = 1;textureheight  < waterheight;textureheight  *= 2);
 	}
 
-	if (!r_glsl_water.integer)
-		texturewidth = textureheight = 0;
-
 	// allocate textures as needed
-	if (r_waterstate.texturewidth != texturewidth || r_waterstate.textureheight != textureheight)
+	if (r_waterstate.waterwidth != waterwidth || r_waterstate.waterheight != waterheight || r_waterstate.texturewidth != texturewidth || r_waterstate.textureheight != textureheight)
 	{
+		r_waterstate.maxwaterplanes = MAX_WATERPLANES;
 		for (i = 0, p = r_waterstate.waterplanes;i < r_waterstate.maxwaterplanes;i++, p++)
 		{
 			if (p->texture_refraction)
@@ -2474,27 +2473,26 @@ static void R_Water_StartFrame(void)
 				R_FreeTexture(p->texture_reflection);
 			p->texture_reflection = NULL;
 		}
+		memset(&r_waterstate, 0, sizeof(r_waterstate));
+		r_waterstate.waterwidth = waterwidth;
+		r_waterstate.waterheight = waterheight;
 		r_waterstate.texturewidth = texturewidth;
 		r_waterstate.textureheight = textureheight;
 	}
 
-	if ((!texturewidth && !textureheight) || texturewidth > gl_max_texture_size || textureheight > gl_max_texture_size)
+	if (r_waterstate.waterwidth)
 	{
-		// can't use water if the parameters are too weird
-		// can't use water if the card does not support the texture size
-		memset(&r_waterstate, 0, sizeof(r_waterstate));
-		return;
+		r_waterstate.enabled = true;
+
+		// set up variables that will be used in shader setup
+		r_waterstate.screenscale[0] = 0.5f * (float)waterwidth / (float)texturewidth;
+		r_waterstate.screenscale[1] = 0.5f * (float)waterheight / (float)textureheight;
+		r_waterstate.screencenter[0] = 0.5f * (float)waterwidth / (float)texturewidth;
+		r_waterstate.screencenter[1] = 0.5f * (float)waterheight / (float)textureheight;
 	}
 
-	r_waterstate.enabled = true;
-
 	r_waterstate.maxwaterplanes = MAX_WATERPLANES;
-
-	// set up variables that will be used in shader setup
-	r_waterstate.screenscale[0] = 0.5f * (float)r_waterstate.waterwidth / (float)r_waterstate.texturewidth;
-	r_waterstate.screenscale[1] = 0.5f * (float)r_waterstate.waterheight / (float)r_waterstate.textureheight;
-	r_waterstate.screencenter[0] = 0.5f * (float)r_waterstate.waterwidth / (float)r_waterstate.texturewidth;
-	r_waterstate.screencenter[1] = 0.5f * (float)r_waterstate.waterheight / (float)r_waterstate.textureheight;
+	r_waterstate.numwaterplanes = 0;
 }
 
 static void R_Water_AddWaterPlane(msurface_t *surface)
