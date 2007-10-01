@@ -547,9 +547,9 @@ void R_Q1BSP_DrawSky(entity_render_t *ent)
 	if (ent->model == NULL)
 		return;
 	if (ent == r_refdef.worldentity)
-		R_DrawWorldSurfaces(true, true, false, false);
+		R_DrawWorldSurfaces(true, true, false, false, false);
 	else
-		R_DrawModelSurfaces(ent, true, true, false, false);
+		R_DrawModelSurfaces(ent, true, true, false, false, false);
 }
 
 void R_Q1BSP_DrawAddWaterPlanes(entity_render_t *ent)
@@ -558,9 +558,9 @@ void R_Q1BSP_DrawAddWaterPlanes(entity_render_t *ent)
 	if (model == NULL)
 		return;
 	if (ent == r_refdef.worldentity)
-		R_DrawWorldSurfaces(false, false, false, true);
+		R_DrawWorldSurfaces(false, false, false, true, false);
 	else
-		R_DrawModelSurfaces(ent, false, false, false, true);
+		R_DrawModelSurfaces(ent, false, false, false, true, false);
 }
 
 void R_Q1BSP_Draw(entity_render_t *ent)
@@ -569,9 +569,9 @@ void R_Q1BSP_Draw(entity_render_t *ent)
 	if (model == NULL)
 		return;
 	if (ent == r_refdef.worldentity)
-		R_DrawWorldSurfaces(false, true, false, false);
+		R_DrawWorldSurfaces(false, true, false, false, false);
 	else
-		R_DrawModelSurfaces(ent, false, true, false, false);
+		R_DrawModelSurfaces(ent, false, true, false, false, false);
 }
 
 void R_Q1BSP_DrawDepth(entity_render_t *ent)
@@ -580,9 +580,19 @@ void R_Q1BSP_DrawDepth(entity_render_t *ent)
 	if (model == NULL)
 		return;
 	if (ent == r_refdef.worldentity)
-		R_DrawWorldSurfaces(false, false, true, false);
+		R_DrawWorldSurfaces(false, false, true, false, false);
 	else
-		R_DrawModelSurfaces(ent, false, false, true, false);
+		R_DrawModelSurfaces(ent, false, false, true, false, false);
+}
+
+void R_Q1BSP_DrawDebug(entity_render_t *ent)
+{
+	if (ent->model == NULL)
+		return;
+	if (ent == r_refdef.worldentity)
+		R_DrawWorldSurfaces(false, false, false, false, true);
+	else
+		R_DrawModelSurfaces(ent, false, false, false, false, true);
 }
 
 typedef struct r_q1bsp_getlightinfo_s
