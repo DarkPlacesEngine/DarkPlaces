@@ -1537,7 +1537,13 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 				if (strncmp(tx->name,"*lava",5)
 				 && strncmp(tx->name,"*teleport",9)
 				 && strncmp(tx->name,"*rift",5)) // Scourge of Armagon texture
-					tx->basematerialflags |= MATERIALFLAG_WATERALPHA | MATERIALFLAG_NOSHADOW;
+				 {
+					tx->basematerialflags |= MATERIALFLAG_WATERALPHA | MATERIALFLAG_NOSHADOW | MATERIALFLAG_WATERSHADER;
+					VectorSet(tx->reflectcolor, 1, 1, 1);
+					VectorSet(tx->refractcolor, 1, 1, 1);
+					tx->reflectfactor = 1;
+					tx->refractfactor = 1;
+				}
 				tx->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_NOSHADOW;
 			}
 			else if (!strncmp(tx->name, "sky", 3))

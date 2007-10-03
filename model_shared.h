@@ -187,6 +187,8 @@ shadowmesh_t;
 #define Q3TEXTUREFLAG_TWOSIDED 1
 #define Q3TEXTUREFLAG_NOPICMIP 16
 #define Q3TEXTUREFLAG_POLYGONOFFSET 32
+#define Q3TEXTUREFLAG_REFLECTION 256
+#define Q3TEXTUREFLAG_WATERSHADER 512
 
 #define Q3PATHLENGTH 64
 #define TEXTURE_MAXFRAMES 64
@@ -362,6 +364,10 @@ typedef struct q3shaderinfo_s
 	q3shaderinfo_layer_t layers[Q3SHADER_MAXLAYERS];
 	char skyboxname[Q3PATHLENGTH];
 	q3shaderinfo_deform_t deforms[Q3MAXDEFORMS];
+
+	vec3_t reflectcolor, refractcolor;
+	float reflectfactor; // amount of reflection (1.0 = full, can't be larger)
+	float refractfactor; // amount of refraction distort (1.0 = like the cvar specifies; note that reflection distort is not configurable because that's what the bumpmap should do)
 }
 q3shaderinfo_t;
 
@@ -474,6 +480,11 @@ typedef struct texture_s
 	int supercontents;
 	int surfaceparms;
 	int textureflags;
+
+	// reflection
+	vec3_t reflectcolor, refractcolor;
+	float reflectfactor; // amount of reflection (1.0 = full, can't be larger)
+	float refractfactor; // amount of refraction distort (1.0 = like the cvar specifies; note that reflection distort is not configurable because that's what the bumpmap should do)
 }
 texture_t;
 
