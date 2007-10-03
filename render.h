@@ -427,6 +427,7 @@ typedef struct r_glsl_permutation_s
 	int loc_ScreenCenterRefractReflect;
 	int loc_RefractColor;
 	int loc_ReflectColor;
+	int loc_ReflectFactor;
 }
 r_glsl_permutation_t;
 

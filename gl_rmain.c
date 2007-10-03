@@ -81,12 +81,6 @@ cvar_t r_glsl_offsetmapping_scale = {CVAR_SAVE, "r_glsl_offsetmapping_scale", "0
 cvar_t r_glsl_water = {CVAR_SAVE, "r_glsl_water", "0", "whether to use reflections and refraction on water surfaces (note: r_wateralpha must be set below 1)"};
 cvar_t r_glsl_water_clippingplanebias = {CVAR_SAVE, "r_glsl_water_clippingplanebias", "1", "a rather technical setting which avoids black pixels around water edges"};
 cvar_t r_glsl_water_resolutionmultiplier = {CVAR_SAVE, "r_glsl_water_resolutionmultiplier", "0.5", "multiplier for screen resolution when rendering refracted/reflected scenes, 1 is full quality, lower values are faster"};
-cvar_t r_glsl_water_refractcolor_r = {CVAR_SAVE, "r_glsl_water_refractcolor_r", "1", "water color tint for refraction"};
-cvar_t r_glsl_water_refractcolor_g = {CVAR_SAVE, "r_glsl_water_refractcolor_g", "1", "water color tint for refraction"};
-cvar_t r_glsl_water_refractcolor_b = {CVAR_SAVE, "r_glsl_water_refractcolor_b", "1", "water color tint for refraction"};
-cvar_t r_glsl_water_reflectcolor_r = {CVAR_SAVE, "r_glsl_water_reflectcolor_r", "1", "water color tint for reflection"};
-cvar_t r_glsl_water_reflectcolor_g = {CVAR_SAVE, "r_glsl_water_reflectcolor_g", "1", "water color tint for reflection"};
-cvar_t r_glsl_water_reflectcolor_b = {CVAR_SAVE, "r_glsl_water_reflectcolor_b", "1", "water color tint for reflection"};
 cvar_t r_glsl_water_refractdistort = {CVAR_SAVE, "r_glsl_water_refractdistort", "0.01", "how much water refractions shimmer"};
 cvar_t r_glsl_water_reflectdistort = {CVAR_SAVE, "r_glsl_water_reflectdistort", "0.01", "how much water reflections shimmer"};
 cvar_t r_glsl_deluxemapping = {CVAR_SAVE, "r_glsl_deluxemapping", "1", "use per pixel lighting on deluxemap-compiled q3bsp maps (or a value of 2 forces deluxemap shading even without deluxemaps)"};
@@ -577,6 +571,7 @@ static const char *builtinshaderstring =
 "uniform vec4 ScreenCenterRefractReflect;\n"
 "uniform myhvec3 RefractColor;\n"
 "uniform myhvec3 ReflectColor;\n"
+"uniform myhalf ReflectFactor;\n"
 "//#else\n"
 "//# ifdef USEREFLECTION\n"
 "//uniform vec4 DistortScaleRefractReflect;\n"
@@ -784,14 +779,14 @@ static const char *builtinshaderstring =
 "	vec4 ScreenScaleRefractReflectIW = ScreenScaleRefractReflect * (1.0 / ModelViewProjectionPosition.w);\n"
 "	//vec4 ScreenTexCoord = (ModelViewProjectionPosition.xyxy + normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5)).xyxy * DistortScaleRefractReflect * 100) * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect;\n"
 "	vec4 ScreenTexCoord = ModelViewProjectionPosition.xyxy * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect + vec3(normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5))).xyxy * DistortScaleRefractReflect;\n"
-"	myhalf Fresnel = myhalf(pow(min(1.0, 1.0 - float(normalize(EyeVector).z)), 2.0));\n"
+"	myhalf Fresnel = myhalf(pow(min(1.0, 1.0 - float(normalize(EyeVector).z)), 2.0)) * ReflectFactor;\n"
 "	color.rgb = mix(mix(myhvec3(texture2D(Texture_Refraction, ScreenTexCoord.xy)) * RefractColor, myhvec3(texture2D(Texture_Reflection, ScreenTexCoord.zw)) * ReflectColor, Fresnel), color.rgb, color.a);\n"
 "# else\n"
 "#  ifdef USEREFLECTION\n"
 "	vec4 ScreenScaleRefractReflectIW = ScreenScaleRefractReflect * (1.0 / ModelViewProjectionPosition.w);\n"
 "	//vec4 ScreenTexCoord = (ModelViewProjectionPosition.xyxy + normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5)).xyxy * DistortScaleRefractReflect * 100) * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect;\n"
 "	vec4 ScreenTexCoord = ModelViewProjectionPosition.xyxy * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect + vec3(normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5))).xyxy * DistortScaleRefractReflect;\n"
-"	color.rgb += myhvec3(texture2D(Texture_Gloss, TexCoord)) * myhvec3(texture2D(Texture_Reflection, ScreenTexCoord.zw));\n"
+"	color.rgb = mix(color.rgb, myhvec3(texture2D(Texture_Reflection, ScreenTexCoord.zw)), ReflectFactor);\n"
 "#  endif\n"
 "# endif\n"
 "#endif\n"
@@ -951,6 +946,7 @@ void R_GLSL_CompilePermutation(const char *filename, int permutation)
 		p->loc_ScreenCenterRefractReflect = qglGetUniformLocationARB(p->program, "ScreenCenterRefractReflect");
 		p->loc_RefractColor        = qglGetUniformLocationARB(p->program, "RefractColor");
 		p->loc_ReflectColor        = qglGetUniformLocationARB(p->program, "ReflectColor");
+		p->loc_ReflectFactor       = qglGetUniformLocationARB(p->program, "ReflectFactor");
 		// initialize the samplers to refer to the texture units we use
 		if (p->loc_Texture_Normal >= 0)    qglUniform1iARB(p->loc_Texture_Normal, 0);
 		if (p->loc_Texture_Color >= 0)     qglUniform1iARB(p->loc_Texture_Color, 1);
@@ -1272,11 +1268,12 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 	if (r_glsl_permutation->loc_FogRangeRecip >= 0) qglUniform1fARB(r_glsl_permutation->loc_FogRangeRecip, r_refdef.fograngerecip);
 	if (r_glsl_permutation->loc_SpecularPower >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularPower, rsurface.texture->specularpower);
 	if (r_glsl_permutation->loc_OffsetMapping_Scale >= 0) qglUniform1fARB(r_glsl_permutation->loc_OffsetMapping_Scale, r_glsl_offsetmapping_scale.value);
-	if (r_glsl_permutation->loc_DistortScaleRefractReflect >= 0) qglUniform4fARB(r_glsl_permutation->loc_DistortScaleRefractReflect, r_glsl_water_refractdistort.value, r_glsl_water_refractdistort.value, r_glsl_water_reflectdistort.value, r_glsl_water_reflectdistort.value);
+	if (r_glsl_permutation->loc_DistortScaleRefractReflect >= 0) qglUniform4fARB(r_glsl_permutation->loc_DistortScaleRefractReflect, r_glsl_water_refractdistort.value * rsurface.texture->refractfactor, r_glsl_water_refractdistort.value * rsurface.texture->refractfactor, r_glsl_water_reflectdistort.value, r_glsl_water_reflectdistort.value);
 	if (r_glsl_permutation->loc_ScreenScaleRefractReflect >= 0) qglUniform4fARB(r_glsl_permutation->loc_ScreenScaleRefractReflect, r_waterstate.screenscale[0], r_waterstate.screenscale[1], r_waterstate.screenscale[0], r_waterstate.screenscale[1]);
 	if (r_glsl_permutation->loc_ScreenCenterRefractReflect >= 0) qglUniform4fARB(r_glsl_permutation->loc_ScreenCenterRefractReflect, r_waterstate.screencenter[0], r_waterstate.screencenter[1], r_waterstate.screencenter[0], r_waterstate.screencenter[1]);
-	if (r_glsl_permutation->loc_RefractColor >= 0) qglUniform3fARB(r_glsl_permutation->loc_RefractColor, r_glsl_water_refractcolor_r.value, r_glsl_water_refractcolor_g.value, r_glsl_water_refractcolor_b.value);
-	if (r_glsl_permutation->loc_ReflectColor >= 0) qglUniform3fARB(r_glsl_permutation->loc_ReflectColor, r_glsl_water_reflectcolor_r.value, r_glsl_water_reflectcolor_g.value, r_glsl_water_reflectcolor_b.value);
+	if (r_glsl_permutation->loc_RefractColor >= 0) qglUniform3fvARB(r_glsl_permutation->loc_RefractColor, 1, rsurface.texture->refractcolor);
+	if (r_glsl_permutation->loc_ReflectColor >= 0) qglUniform3fvARB(r_glsl_permutation->loc_ReflectColor, 1, rsurface.texture->reflectcolor);
+	if (r_glsl_permutation->loc_ReflectFactor >= 0) qglUniform1fARB(r_glsl_permutation->loc_ReflectFactor, rsurface.texture->reflectfactor);
 	CHECKGLERROR
 	return permutation;
 }
@@ -1758,12 +1755,6 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_glsl_water);
 	Cvar_RegisterVariable(&r_glsl_water_resolutionmultiplier);
 	Cvar_RegisterVariable(&r_glsl_water_clippingplanebias);
-	Cvar_RegisterVariable(&r_glsl_water_refractcolor_r);
-	Cvar_RegisterVariable(&r_glsl_water_refractcolor_g);
-	Cvar_RegisterVariable(&r_glsl_water_refractcolor_b);
-	Cvar_RegisterVariable(&r_glsl_water_reflectcolor_r);
-	Cvar_RegisterVariable(&r_glsl_water_reflectcolor_g);
-	Cvar_RegisterVariable(&r_glsl_water_reflectcolor_b);
 	Cvar_RegisterVariable(&r_glsl_water_refractdistort);
 	Cvar_RegisterVariable(&r_glsl_water_reflectdistort);
 	Cvar_RegisterVariable(&r_glsl_deluxemapping);
@@ -3826,9 +3817,17 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 	if (t->basematerialflags & MATERIALFLAG_WATERALPHA && (model->brush.supportwateralpha || r_novis.integer))
 	{
 		t->currentalpha *= r_wateralpha.value;
+		/*
+		 * FIXME what is this supposed to do?
 		// if rendering refraction/reflection, disable transparency
 		if (r_waterstate.enabled && (t->currentalpha < 1 || (t->currentmaterialflags & MATERIALFLAG_ALPHA)))
 			t->currentmaterialflags |= MATERIALFLAG_WATERSHADER;
+		*/
+	}
+	if(!r_waterstate.enabled)
+	{
+		t->currentmaterialflags &= ~MATERIALFLAG_WATERSHADER;
+		t->currentmaterialflags &= ~MATERIALFLAG_REFLECTION;
 	}
 	if (!(ent->flags & RENDER_LIGHT))
 		t->currentmaterialflags |= MATERIALFLAG_FULLBRIGHT;
