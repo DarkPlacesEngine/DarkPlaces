@@ -201,6 +201,9 @@ void CL_ClearState(void)
 	// mark all frames invalid for delta
 	memset(cl.qw_deltasequence, -1, sizeof(cl.qw_deltasequence));
 
+	// set bestweapon data back to Quake data
+	IN_BestWeapon_ResetData();
+
 	CL_Screen_NewMap();
 }
 

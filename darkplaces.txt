@@ -1038,7 +1038,7 @@ Full console command list as of 2007-03-11:
 -use                                              stop using something
 alias                                             create a script function (parameters are passed in as $1 through $9, and $* for all parameters)
 begin                                             signon 3 (client asks server to start sending entities, and will go to signon 4 (playing) when the first entity update is received)
-bestweapon                                        send an impulse number to server to select the first usable weapon out of several (example: 87654321)
+bestweapon                                        send an impulse number to server to select the first usable weapon out of several (example: 8 7 6 5 4 3 2 1)
 bf                                                briefly flashes a bright color tint on view (used when items are picked up)
 bind                                              binds a command to the specified key in bindmap 0
 bottomcolor                                       QW command to set bottom color without changing top color
@@ -1047,6 +1047,7 @@ cddrive                                           select an SDL-detected CD driv
 centerview                                        gradually recenter view (stop looking up/down)
 changelevel                                       change to another level, bringing along all connected clients
 changing                                          sent by qw servers to tell client to wait for level change
+cycleweapon                                       send an impulse number to server to select the next usable weapon out of several, or the first if you are not holding any (example: 8 7 3)
 cl_areastats                                      prints statistics on entity culling during collision traces
 cl_begindownloads                                 used internally by darkplaces client while connecting (causes loading of models and sounds or triggers downloads for missing ones)
 cl_downloadbegin                                  (networking) informs client of download file information, client replies with sv_startsoundload to begin the transfer

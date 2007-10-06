@@ -33,5 +33,20 @@ extern float in_mouse_x, in_mouse_y;
 void IN_Move (void);
 // add additional movement on top of the keyboard move cmd
 
+#define IN_BESTWEAPON_MAX 32
+typedef struct
+{
+	char name[32];
+	int impulse;
+	int activeweaponcode;
+	int weaponbit;
+	int ammostat;
+	int ammomin;
+	// TODO add a parameter for the picture to be used by the sbar, and use it there
+}
+in_bestweapon_info_t;
+extern in_bestweapon_info_t in_bestweapon_info[IN_BESTWEAPON_MAX];
+void IN_BestWeapon_ResetData(void); // call before each map so QC can start from a clean state
+
 #endif
 
