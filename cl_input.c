@@ -197,31 +197,76 @@ void IN_JumpUp (void) {KeyUp(&in_jump);}
 
 void IN_Impulse (void) {in_impulse=atoi(Cmd_Argv(1));}
 
-struct
+in_bestweapon_info_t in_bestweapon_info[IN_BESTWEAPON_MAX];
+
+void IN_BestWeapon_Register(const char *name, int impulse, int weaponbit, int activeweaponcode, int ammostat, int ammomin)
 {
-	const char *name;
-	int impulse;
-	int weaponbit;
-	int ammostat;
-	int ammomin;
+	int i;
+	for(i = 0; i < IN_BESTWEAPON_MAX && in_bestweapon_info[i].impulse; ++i)
+		if(in_bestweapon_info[i].impulse == impulse)
+			break;
+	if(i >= IN_BESTWEAPON_MAX)
+	{
+		Con_Printf("no slot left for weapon definition; increase IN_BESTWEAPON_MAX\n");
+		return; // sorry
+	}
+	strlcpy(in_bestweapon_info[i].name, name, sizeof(in_bestweapon_info[i].name));
+	in_bestweapon_info[i].impulse = impulse;
+	if(weaponbit != -1)
+		in_bestweapon_info[i].weaponbit = weaponbit;
+	if(activeweaponcode != -1)
+		in_bestweapon_info[i].activeweaponcode = activeweaponcode;
+	if(ammostat != -1)
+		in_bestweapon_info[i].ammostat = ammostat;
+	if(ammomin != -1)
+		in_bestweapon_info[i].ammomin = ammomin;
 }
-in_bestweapon_info[] =
+
+void IN_BestWeapon_ResetData (void)
 {
-	{"1", 1, IT_AXE, STAT_SHELLS, 0},
-	{"2", 2, IT_SHOTGUN, STAT_SHELLS, 1},
-	{"3", 3, IT_SUPER_SHOTGUN, STAT_SHELLS, 1},
-	{"4", 4, IT_NAILGUN, STAT_NAILS, 1},
-	{"5", 5, IT_SUPER_NAILGUN, STAT_NAILS, 1},
-	{"6", 6, IT_GRENADE_LAUNCHER, STAT_ROCKETS, 1},
-	{"7", 7, IT_ROCKET_LAUNCHER, STAT_ROCKETS, 1},
-	{"8", 8, IT_LIGHTNING, STAT_CELLS, 1},
-	{"9", 9, 128, STAT_CELLS, 1}, // generic energy weapon for mods
-	{"p", 209, 128, STAT_CELLS, 1}, // dpmod plasma gun
-	{"w", 210, 8388608, STAT_CELLS, 1}, // dpmod plasma wave cannon
-	{"l", 225, HIT_LASER_CANNON, STAT_CELLS, 1}, // hipnotic laser cannon
-	{"h", 226, HIT_MJOLNIR, STAT_CELLS, 0}, // hipnotic mjolnir hammer
-	{NULL, 0, 0, 0, 0}
-};
+	memset(in_bestweapon_info, 0, sizeof(in_bestweapon_info));
+	IN_BestWeapon_Register("1", 1, IT_AXE, IT_AXE, STAT_SHELLS, 0);
+	IN_BestWeapon_Register("2", 2, IT_SHOTGUN, IT_SHOTGUN, STAT_SHELLS, 1);
+	IN_BestWeapon_Register("3", 3, IT_SUPER_SHOTGUN, IT_SUPER_SHOTGUN, STAT_SHELLS, 1);
+	IN_BestWeapon_Register("4", 4, IT_NAILGUN, IT_NAILGUN, STAT_NAILS, 1);
+	IN_BestWeapon_Register("5", 5, IT_SUPER_NAILGUN, IT_SUPER_NAILGUN, STAT_NAILS, 1);
+	IN_BestWeapon_Register("6", 6, IT_GRENADE_LAUNCHER, IT_GRENADE_LAUNCHER, STAT_ROCKETS, 1);
+	IN_BestWeapon_Register("7", 7, IT_ROCKET_LAUNCHER, IT_ROCKET_LAUNCHER, STAT_ROCKETS, 1);
+	IN_BestWeapon_Register("8", 8, IT_LIGHTNING, IT_LIGHTNING, STAT_CELLS, 1);
+	IN_BestWeapon_Register("9", 9, 128, 128, STAT_CELLS, 1); // generic energy weapon for mods
+	IN_BestWeapon_Register("p", 209, 128, 128, STAT_CELLS, 1); // dpmod plasma gun
+	IN_BestWeapon_Register("w", 210, 8388608, 8388608, STAT_CELLS, 1); // dpmod plasma wave cannon
+	IN_BestWeapon_Register("l", 225, HIT_LASER_CANNON, HIT_LASER_CANNON, STAT_CELLS, 1); // hipnotic laser cannon
+	IN_BestWeapon_Register("h", 226, HIT_MJOLNIR, HIT_MJOLNIR, STAT_CELLS, 0); // hipnotic mjolnir hammer
+}
+
+void IN_BestWeapon_Register_f (void)
+{
+	if(Cmd_Argc() == 7)
+	{
+		IN_BestWeapon_Register(
+			Cmd_Argv(1),
+			atoi(Cmd_Argv(2)),
+			atoi(Cmd_Argv(3)),
+			atoi(Cmd_Argv(4)),
+			atoi(Cmd_Argv(5)),
+			atoi(Cmd_Argv(6))
+		);
+	}
+	else if(Cmd_Argc() == 2 && !strcmp(Cmd_Argv(1), "clear"))
+	{
+		memset(in_bestweapon_info, 0, sizeof(in_bestweapon_info));
+	}
+	else if(Cmd_Argc() == 2 && !strcmp(Cmd_Argv(1), "quake"))
+	{
+		IN_BestWeapon_ResetData();
+	}
+	else
+	{
+		Con_Printf("Usage: %s weaponshortname impulse itemcode activeweaponcode ammostat ammomin; %s clear; %s quake\n", Cmd_Argv(0), Cmd_Argv(0), Cmd_Argv(0));
+	}
+}
+
 void IN_BestWeapon (void)
 {
 	int i, n;
@@ -235,7 +280,7 @@ void IN_BestWeapon (void)
 	{
 		t = Cmd_Argv(i);
 		// figure out which weapon this character refers to
-		for (n = 0;in_bestweapon_info[n].name;n++)
+		for (n = 0;n < IN_BESTWEAPON_MAX && in_bestweapon_info[n].impulse;n++)
 		{
 			if (!strcmp(in_bestweapon_info[n].name, t))
 			{
@@ -252,6 +297,53 @@ void IN_BestWeapon (void)
 			}
 		}
 		// if we couldn't identify the weapon we just ignore it and continue checking for other weapons
+	}
+	// if we couldn't find any of the weapons, there's nothing more we can do...
+}
+
+void IN_CycleWeapon (void)
+{
+	int i, n;
+	int first = -1;
+	qboolean found = false;
+	const char *t;
+	if (Cmd_Argc() < 2)
+	{
+		Con_Printf("bestweapon requires 1 or more parameters\n");
+		return;
+	}
+	for (i = 1;i < Cmd_Argc();i++)
+	{
+		t = Cmd_Argv(i);
+		// figure out which weapon this character refers to
+		for (n = 0;n < IN_BESTWEAPON_MAX && in_bestweapon_info[n].impulse;n++)
+		{
+			if (!strcmp(in_bestweapon_info[n].name, t))
+			{
+				// we found out what weapon this character refers to
+				// check if the inventory contains the weapon and enough ammo
+				if ((cl.stats[STAT_ITEMS] & in_bestweapon_info[n].weaponbit) && (cl.stats[in_bestweapon_info[n].ammostat] >= in_bestweapon_info[n].ammomin))
+				{
+					// we found one of the weapons the player wanted
+					if(first == -1)
+						first = n;
+					if(found)
+					{
+						in_impulse = in_bestweapon_info[n].impulse;
+						return;
+					}
+					if(cl.stats[STAT_ACTIVEWEAPON] == in_bestweapon_info[n].activeweaponcode)
+						found = true;
+				}
+				break;
+			}
+		}
+		// if we couldn't identify the weapon we just ignore it and continue checking for other weapons
+	}
+	if(first != -1)
+	{
+		in_impulse = in_bestweapon_info[first].impulse;
+		return;
 	}
 	// if we couldn't find any of the weapons, there's nothing more we can do...
 }
@@ -1649,6 +1741,8 @@ void CL_InitInput (void)
 
 	// LordHavoc: added bestweapon command
 	Cmd_AddCommand ("bestweapon", IN_BestWeapon, "send an impulse number to server to select the first usable weapon out of several (example: 8 7 6 5 4 3 2 1)");
+	Cmd_AddCommand ("cycleweapon", IN_CycleWeapon, "send an impulse number to server to select the next usable weapon out of several (example: 9 4 8) if you are holding one of these, and choose the first one if you are holding none of these");
+	Cmd_AddCommand ("register_bestweapon", IN_BestWeapon_Register_f, "(for QC usage only) change weapon parameters to be used by bestweapon; stuffcmd this in ClientConnect");
 
 	Cvar_RegisterVariable(&cl_movement);
 	Cvar_RegisterVariable(&cl_movement_minping);

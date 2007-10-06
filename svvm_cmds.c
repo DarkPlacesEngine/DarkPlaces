@@ -142,6 +142,7 @@ char *vm_sv_extensions =
 "DP_SV_CMD "
 "DP_QC_CMD "
 "FTE_STRINGS "
+"DP_CON_BESTWEAPON "
 ;
 
 /*
