@@ -572,6 +572,7 @@ static const char *builtinshaderstring =
 "uniform myhvec3 RefractColor;\n"
 "uniform myhvec3 ReflectColor;\n"
 "uniform myhalf ReflectFactor;\n"
+"uniform myhalf ReflectOffset;\n"
 "//#else\n"
 "//# ifdef USEREFLECTION\n"
 "//uniform vec4 DistortScaleRefractReflect;\n"
@@ -779,14 +780,14 @@ static const char *builtinshaderstring =
 "	vec4 ScreenScaleRefractReflectIW = ScreenScaleRefractReflect * (1.0 / ModelViewProjectionPosition.w);\n"
 "	//vec4 ScreenTexCoord = (ModelViewProjectionPosition.xyxy + normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5)).xyxy * DistortScaleRefractReflect * 100) * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect;\n"
 "	vec4 ScreenTexCoord = ModelViewProjectionPosition.xyxy * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect + vec3(normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5))).xyxy * DistortScaleRefractReflect;\n"
-"	myhalf Fresnel = myhalf(pow(min(1.0, 1.0 - float(normalize(EyeVector).z)), 2.0)) * ReflectFactor;\n"
+"	myhalf Fresnel = myhalf(pow(min(1.0, 1.0 - float(normalize(EyeVector).z)), 2.0)) * ReflectFactor + ReflectOffset;\n"
 "	color.rgb = mix(mix(myhvec3(texture2D(Texture_Refraction, ScreenTexCoord.xy)) * RefractColor, myhvec3(texture2D(Texture_Reflection, ScreenTexCoord.zw)) * ReflectColor, Fresnel), color.rgb, color.a);\n"
 "# else\n"
 "#  ifdef USEREFLECTION\n"
 "	vec4 ScreenScaleRefractReflectIW = ScreenScaleRefractReflect * (1.0 / ModelViewProjectionPosition.w);\n"
 "	//vec4 ScreenTexCoord = (ModelViewProjectionPosition.xyxy + normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5)).xyxy * DistortScaleRefractReflect * 100) * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect;\n"
 "	vec4 ScreenTexCoord = ModelViewProjectionPosition.xyxy * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect + vec3(normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5))).xyxy * DistortScaleRefractReflect;\n"
-"	color.rgb = mix(color.rgb, myhvec3(texture2D(Texture_Reflection, ScreenTexCoord.zw)), ReflectFactor);\n"
+"	color.rgb += myhvec3(texture2D(Texture_Reflection, ScreenTexCoord.zw)) * ReflectColor;\n"
 "#  endif\n"
 "# endif\n"
 "#endif\n"
@@ -947,6 +948,7 @@ void R_GLSL_CompilePermutation(const char *filename, int permutation)
 		p->loc_RefractColor        = qglGetUniformLocationARB(p->program, "RefractColor");
 		p->loc_ReflectColor        = qglGetUniformLocationARB(p->program, "ReflectColor");
 		p->loc_ReflectFactor       = qglGetUniformLocationARB(p->program, "ReflectFactor");
+		p->loc_ReflectOffset       = qglGetUniformLocationARB(p->program, "ReflectOffset");
 		// initialize the samplers to refer to the texture units we use
 		if (p->loc_Texture_Normal >= 0)    qglUniform1iARB(p->loc_Texture_Normal, 0);
 		if (p->loc_Texture_Color >= 0)     qglUniform1iARB(p->loc_Texture_Color, 1);
@@ -1273,7 +1275,8 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 	if (r_glsl_permutation->loc_ScreenCenterRefractReflect >= 0) qglUniform4fARB(r_glsl_permutation->loc_ScreenCenterRefractReflect, r_waterstate.screencenter[0], r_waterstate.screencenter[1], r_waterstate.screencenter[0], r_waterstate.screencenter[1]);
 	if (r_glsl_permutation->loc_RefractColor >= 0) qglUniform3fvARB(r_glsl_permutation->loc_RefractColor, 1, rsurface.texture->refractcolor);
 	if (r_glsl_permutation->loc_ReflectColor >= 0) qglUniform3fvARB(r_glsl_permutation->loc_ReflectColor, 1, rsurface.texture->reflectcolor);
-	if (r_glsl_permutation->loc_ReflectFactor >= 0) qglUniform1fARB(r_glsl_permutation->loc_ReflectFactor, rsurface.texture->reflectfactor);
+	if (r_glsl_permutation->loc_ReflectFactor >= 0) qglUniform1fARB(r_glsl_permutation->loc_ReflectFactor, rsurface.texture->reflectmax - rsurface.texture->reflectmin);
+	if (r_glsl_permutation->loc_ReflectOffset >= 0) qglUniform1fARB(r_glsl_permutation->loc_ReflectOffset, rsurface.texture->reflectmin);
 	CHECKGLERROR
 	return permutation;
 }
