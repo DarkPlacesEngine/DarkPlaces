@@ -1541,8 +1541,8 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 					tx->basematerialflags |= MATERIALFLAG_WATERALPHA | MATERIALFLAG_NOSHADOW | MATERIALFLAG_WATERSHADER;
 					VectorSet(tx->reflectcolor, 1, 1, 1);
 					VectorSet(tx->refractcolor, 1, 1, 1);
-					tx->reflectmin = 0;
-					tx->reflectmax = 1;
+					tx->refractmin = 0;
+					tx->refractmax = 1;
 					tx->refractfactor = 1;
 				}
 				tx->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_NOSHADOW;

@@ -1137,8 +1137,8 @@ void Mod_LoadQ3Shaders(void)
 			memset(shader, 0, sizeof(*shader));
 			VectorSet(shader->reflectcolor, 1, 1, 1);
 			VectorSet(shader->refractcolor, 1, 1, 1);
-			shader->reflectmin = 0;
-			shader->reflectmax = 1;
+			shader->refractmin = 0;
+			shader->refractmax = 1;
 			shader->refractfactor = 1;
 
 			strlcpy(shader->name, com_token, sizeof(shader->name));
@@ -1509,9 +1509,9 @@ void Mod_LoadQ3Shaders(void)
 				{
 					shader->textureflags |= Q3TEXTUREFLAG_WATERSHADER;
 					if(numparameters >= 2)
-						shader->reflectmin = atof(parameter[1]);
+						shader->refractmin = atof(parameter[1]);
 					if(numparameters >= 3)
-						shader->reflectmax = atof(parameter[2]);
+						shader->refractmax = atof(parameter[2]);
 					if(numparameters >= 4)
 						shader->refractfactor = atof(parameter[3]);
 					if(numparameters >= 5)
@@ -1722,8 +1722,8 @@ nothing                GL_ZERO GL_ONE
 			}
 		}
 		memcpy(texture->deforms, shader->deforms, sizeof(texture->deforms));
-		texture->reflectmin = shader->reflectmin;
-		texture->reflectmax = shader->reflectmax;
+		texture->refractmin = shader->refractmin;
+		texture->refractmax = shader->refractmax;
 		texture->refractfactor = shader->refractfactor;
 		VectorCopy(shader->reflectcolor, texture->reflectcolor);
 		VectorCopy(shader->refractcolor, texture->refractcolor);

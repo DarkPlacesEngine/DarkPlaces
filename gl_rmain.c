@@ -1275,8 +1275,8 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 	if (r_glsl_permutation->loc_ScreenCenterRefractReflect >= 0) qglUniform4fARB(r_glsl_permutation->loc_ScreenCenterRefractReflect, r_waterstate.screencenter[0], r_waterstate.screencenter[1], r_waterstate.screencenter[0], r_waterstate.screencenter[1]);
 	if (r_glsl_permutation->loc_RefractColor >= 0) qglUniform3fvARB(r_glsl_permutation->loc_RefractColor, 1, rsurface.texture->refractcolor);
 	if (r_glsl_permutation->loc_ReflectColor >= 0) qglUniform3fvARB(r_glsl_permutation->loc_ReflectColor, 1, rsurface.texture->reflectcolor);
-	if (r_glsl_permutation->loc_ReflectFactor >= 0) qglUniform1fARB(r_glsl_permutation->loc_ReflectFactor, rsurface.texture->reflectmax - rsurface.texture->reflectmin);
-	if (r_glsl_permutation->loc_ReflectOffset >= 0) qglUniform1fARB(r_glsl_permutation->loc_ReflectOffset, rsurface.texture->reflectmin);
+	if (r_glsl_permutation->loc_ReflectFactor >= 0) qglUniform1fARB(r_glsl_permutation->loc_ReflectFactor, rsurface.texture->refractmax - rsurface.texture->refractmin);
+	if (r_glsl_permutation->loc_ReflectOffset >= 0) qglUniform1fARB(r_glsl_permutation->loc_ReflectOffset, 1 - rsurface.texture->refractmax);
 	CHECKGLERROR
 	return permutation;
 }
