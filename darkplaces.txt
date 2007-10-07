@@ -1317,11 +1317,11 @@ Shader parameters for DP's own features:
   additive. When the color isn't specified, it defaults to white (full
   reflection). If only one color component is specified, it counts as a grey
   value.
-- dp_refract <reflectmin> <reflectmax> <distort> <r> <g> <b>
+- dp_refract <refractmin> <refractmax> <distort> <r> <g> <b>
   Marks a surface as "water" for r_glsl_water, that is, add a refraction
-  component too. The reflection amount (see dp_reflect) is at least reflectmin
-  (when looking straight into it) and at most reflectmax (when looking parallel
-  to thhe surface). The default distort is multiplied by distort. The color
-  modulates the refraction component. reflectmin defaults to 0 when unspecified,
+  component too. The refraction amount (see dp_reflect) is at most refractmax
+  (when looking straight into it) and at least refractmin (when looking parallel
+  to the surface). The default distort is multiplied by distort. The color
+  modulates the refraction component. refractmin defaults to 0 when unspecified,
   all others default to 1. If only one color component is specified, it counts
   as a grey value.

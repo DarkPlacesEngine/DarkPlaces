@@ -366,8 +366,8 @@ typedef struct q3shaderinfo_s
 	q3shaderinfo_deform_t deforms[Q3MAXDEFORMS];
 
 	vec3_t reflectcolor, refractcolor;
-	float reflectmin; // when refraction is used, minimum amount of reflection (when looking straight down)
-	float reflectmax; // when refraction is used, maximum amount of reflection (when looking parallel to water)
+	float refractmin; // when refraction is used, minimum amount of reflection (when looking straight down)
+	float refractmax; // when refraction is used, maximum amount of reflection (when looking parallel to water)
 	float refractfactor; // amount of refraction distort (1.0 = like the cvar specifies; note that reflection distort is not configurable because that's what the bumpmap should do)
 }
 q3shaderinfo_t;
@@ -484,8 +484,8 @@ typedef struct texture_s
 
 	// reflection
 	vec3_t reflectcolor, refractcolor;
-	float reflectmin; // when refraction is used, minimum amount of reflection (when looking straight down)
-	float reflectmax; // when refraction is used, maximum amount of reflection (when looking parallel to water)
+	float refractmin; // when refraction is used, minimum amount of reflection (when looking straight down)
+	float refractmax; // when refraction is used, maximum amount of reflection (when looking parallel to water)
 	float refractfactor; // amount of refraction distort (1.0 = like the cvar specifies; note that reflection distort is not configurable because that's what the bumpmap should do)
 }
 texture_t;
