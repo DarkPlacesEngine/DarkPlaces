@@ -1137,7 +1137,8 @@ void Mod_LoadQ3Shaders(void)
 			memset(shader, 0, sizeof(*shader));
 			VectorSet(shader->reflectcolor, 1, 1, 1);
 			VectorSet(shader->refractcolor, 1, 1, 1);
-			shader->reflectfactor = 1;
+			shader->reflectmin = 0;
+			shader->reflectmax = 1;
 			shader->refractfactor = 1;
 
 			strlcpy(shader->name, com_token, sizeof(shader->name));
@@ -1500,17 +1501,23 @@ void Mod_LoadQ3Shaders(void)
 				{
 					shader->textureflags |= Q3TEXTUREFLAG_REFLECTION;
 					if(numparameters >= 2)
-						shader->reflectfactor = atof(parameter[1]);
-					if(numparameters >= 5)
-						VectorSet(shader->reflectcolor, atof(parameter[2]), atof(parameter[3]), atof(parameter[4]));
+						VectorSet(shader->reflectcolor, atof(parameter[1]), atof(parameter[1]), atof(parameter[1])); // grey
+					if(numparameters >= 4)
+						VectorSet(shader->reflectcolor, atof(parameter[1]), atof(parameter[2]), atof(parameter[3]));
 				}
 				else if (!strcasecmp(parameter[0], "dp_refract"))
 				{
 					shader->textureflags |= Q3TEXTUREFLAG_WATERSHADER;
 					if(numparameters >= 2)
-						shader->refractfactor = atof(parameter[1]);
+						shader->reflectmin = atof(parameter[1]);
+					if(numparameters >= 3)
+						shader->reflectmax = atof(parameter[2]);
+					if(numparameters >= 4)
+						shader->refractfactor = atof(parameter[3]);
 					if(numparameters >= 5)
-						VectorSet(shader->refractcolor, atof(parameter[2]), atof(parameter[3]), atof(parameter[4]));
+						VectorSet(shader->refractcolor, atof(parameter[4]), atof(parameter[4]), atof(parameter[4])); // grey
+					if(numparameters >= 7)
+						VectorSet(shader->refractcolor, atof(parameter[4]), atof(parameter[5]), atof(parameter[6]));
 				}
 				else if (!strcasecmp(parameter[0], "deformvertexes") && numparameters >= 2)
 				{
@@ -1715,7 +1722,8 @@ nothing                GL_ZERO GL_ONE
 			}
 		}
 		memcpy(texture->deforms, shader->deforms, sizeof(texture->deforms));
-		texture->reflectfactor = shader->reflectfactor;
+		texture->reflectmin = shader->reflectmin;
+		texture->reflectmax = shader->reflectmax;
 		texture->refractfactor = shader->refractfactor;
 		VectorCopy(shader->reflectcolor, texture->reflectcolor);
 		VectorCopy(shader->refractcolor, texture->refractcolor);

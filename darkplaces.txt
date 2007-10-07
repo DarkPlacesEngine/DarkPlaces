@@ -1312,12 +1312,16 @@ Ludwig Nussel for the ~/.games/darkplaces/ user directory support on non-Windows
 
 
 Shader parameters for DP's own features:
-- dp_reflect <factor> <r> <g> <b>
-  Makes surfaces of this shader reflective with r_glsl_water. Factor is a
-  reflectiveness factor from 0 to 1, the rest is the color of the reflection.
-  Unspecified values get set to 1 (that is, standard water parameters).
-- dp_refract <factor> <r> <g> <b>
+- dp_reflect <r> <g> <b>
+  Makes surfaces of this shader reflective with r_glsl_water. The reflection is
+  additive. When the color isn't specified, it defaults to white (full
+  reflection). If only one color component is specified, it counts as a grey
+  value.
+- dp_refract <reflectmin> <reflectmax> <distort> <r> <g> <b>
   Marks a surface as "water" for r_glsl_water, that is, add a refraction
-  component too. The factor defines how strong the distorts by the refraction
-  are (default: 1.0). Unspecified values get set to 1 (that is, standard water
-  parameters).
+  component too. The reflection amount (see dp_reflect) is at least reflectmin
+  (when looking straight into it) and at most reflectmax (when looking parallel
+  to thhe surface). The default distort is multiplied by distort. The color
+  modulates the refraction component. reflectmin defaults to 0 when unspecified,
+  all others default to 1. If only one color component is specified, it counts
+  as a grey value.
