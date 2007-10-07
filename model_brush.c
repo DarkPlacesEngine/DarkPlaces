@@ -3666,7 +3666,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 				// we only need to have a drawsky function if it is used(usually only on world model)
 				if (surface->texture->basematerialflags & MATERIALFLAG_SKY)
 					mod->DrawSky = R_Q1BSP_DrawSky;
-				if (surface->texture->basematerialflags & MATERIALFLAG_WATERALPHA)
+				if (surface->texture->basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFLECTION))
 					mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
 				// calculate bounding shapes
 				for (k = 0, vec = (loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex);k < surface->num_vertices;k++, vec += 3)
@@ -5770,7 +5770,7 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer, void *bufferend)
 			mod->DrawSky = NULL;
 
 		for (j = 0;j < mod->nummodelsurfaces;j++)
-			if (mod->data_surfaces[j + mod->firstmodelsurface].texture->basematerialflags & MATERIALFLAG_WATERALPHA)
+			if (mod->data_surfaces[j + mod->firstmodelsurface].texture->basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFLECTION))
 				break;
 		if (j < mod->nummodelsurfaces)
 			mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
