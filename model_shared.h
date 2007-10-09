@@ -681,6 +681,7 @@ typedef struct model_brushq1_s
 	int				numclipnodes;
 	mclipnode_t		*clipnodes;
 
+	int				numhulls;	// this variable is only used by MCBSP, other formats know it intuitively
 	hull_t			hulls[MAX_MAP_HULLS];
 
 	int				num_compressedpvs;
