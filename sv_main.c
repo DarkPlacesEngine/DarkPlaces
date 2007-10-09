@@ -699,6 +699,9 @@ void SV_SendServerinfo (client_t *client)
 	// LordHavoc: clear entityframe tracking
 	client->latestframenum = 0;
 
+	// initialize the movetime, so a speedhack can't make use of the time before this client joined
+	client->cmd.time = sv.time;
+
 	if (client->entitydatabase)
 		EntityFrame_FreeDatabase(client->entitydatabase);
 	if (client->entitydatabase4)
