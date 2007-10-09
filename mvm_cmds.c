@@ -14,6 +14,7 @@ char *vm_m_extensions =
 "DP_QC_TOKENIZEBYSEPARATOR "
 "DP_QC_UNLIMITEDTEMPSTRINGS "
 "DP_QC_CMD "
+"DP_QC_STRREPLACE "
 ;
 
 /*
@@ -1243,8 +1244,8 @@ VM_strtolower,				// #480 string(string s) VM_strtolower : DRESK - Return string
 VM_strtoupper,				// #481 string(string s) VM_strtoupper : DRESK - Return string as uppercase
 NULL,						// #482
 NULL,						// #483
-NULL,						// #484
-NULL,						// #485
+VM_strreplace,				// #484 string(string search, string replace, string subject) strreplace (DP_QC_STRREPLACE)
+VM_strireplace,				// #485 string(string search, string replace, string subject) strireplace (DP_QC_STRREPLACE)
 NULL,						// #486
 NULL,						// #487
 NULL,						// #488

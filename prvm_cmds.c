@@ -1877,6 +1877,104 @@ void VM_substring(void)
 
 /*
 =========
+VM_strreplace
+
+string(string search, string replace, string subject) strreplace = #484;
+=========
+*/
+// replaces all occurrences of search with replace in the string subject, and returns the result
+void VM_strreplace(void)
+{
+	int i, j, si;
+	const char *search, *replace, *subject;
+	char string[VM_STRINGTEMP_LENGTH];
+	int search_len, replace_len, subject_len;
+
+	VM_SAFEPARMCOUNT(3,VM_strreplace);
+
+	search = PRVM_G_STRING(OFS_PARM0);
+	replace = PRVM_G_STRING(OFS_PARM1);
+	subject = PRVM_G_STRING(OFS_PARM2);
+
+	search_len = (int)strlen(search);
+	replace_len = (int)strlen(replace);
+	subject_len = (int)strlen(subject);
+
+	for (i = 0; i < subject_len; i++)
+	{
+		for (j = 0; j < search_len && i+j < subject_len; j++)
+			if (subject[i+j] != search[j])
+				break;
+		if (j == search_len)
+		{
+		// found it at offset 'i'
+			for (j = 0; j < replace_len && si < (int)sizeof(string) - 1; j++)
+				string[si++] = replace[j];
+			i += search_len - 1;
+		}
+		else
+		{
+		// not found
+			if (si < (int)sizeof(string) - 1)
+				string[si++] = subject[i];
+		}
+	}
+	string[si] = '\0';
+
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(string);
+}
+
+/*
+=========
+VM_strireplace
+
+string(string search, string replace, string subject) strireplace = #485;
+=========
+*/
+// case-insensitive version of strreplace
+void VM_strireplace(void)
+{
+	int i, j, si;
+	const char *search, *replace, *subject;
+	char string[VM_STRINGTEMP_LENGTH];
+	int search_len, replace_len, subject_len;
+
+	VM_SAFEPARMCOUNT(3,VM_strreplace);
+
+	search = PRVM_G_STRING(OFS_PARM0);
+	replace = PRVM_G_STRING(OFS_PARM1);
+	subject = PRVM_G_STRING(OFS_PARM2);
+
+	search_len = (int)strlen(search);
+	replace_len = (int)strlen(replace);
+	subject_len = (int)strlen(subject);
+
+	for (i = 0; i < subject_len; i++)
+	{
+		for (j = 0; j < search_len && i+j < subject_len; j++)
+			if (tolower(subject[i+j]) != tolower(search[j]))
+				break;
+		if (j == search_len)
+		{
+		// found it at offset 'i'
+			for (j = 0; j < replace_len && si < (int)sizeof(string) - 1; j++)
+				string[si++] = replace[j];
+			i += search_len - 1;
+		}
+		else
+		{
+		// not found
+			if (si < (int)sizeof(string) - 1)
+				string[si++] = subject[i];
+		}
+	}
+	string[si] = '\0';
+
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(string);
+}
+
+/*
+=========
 VM_stov
 
 vector	stov(string s)
