@@ -824,10 +824,24 @@ static void Mod_Q1BSP_TraceBox(struct model_s *model, int frame, trace_t *trace,
 		rhc.hull = &model->brushq1.hulls[0]; // 0x0x0
 	else if (model->brush.ismcbsp)
 	{
-		if (boxsize[2] < 48) // pick the nearest of 40 or 56
-			rhc.hull = &model->brushq1.hulls[2]; // 16x16x40
-		else
-			rhc.hull = &model->brushq1.hulls[1]; // 16x16x56
+		int i;
+		float vdist, dist;
+		int vdisti = 0;
+
+	// find the closest hull size (this algorithm probably sucks, a qc field to override it might be in order...)
+		for (i = 1; i < model->brushq1.numhulls; i++)
+		{
+			dist = fabs(model->brushq1.hulls[i].clip_size[0] - boxsize[0]) +
+					fabs(model->brushq1.hulls[i].clip_size[1] - boxsize[1]) +
+					fabs(model->brushq1.hulls[i].clip_size[2] - boxsize[2]) * 0.25;
+
+			if (!vdisti || dist < vdist)
+			{
+				vdisti = i;
+				vdist = dist;
+			}
+		}
+		rhc.hull = &model->brushq1.hulls[vdisti];
 	}
 	else if (model->brush.ishlbsp)
 	{
@@ -3404,8 +3418,10 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 			Host_Error("Mod_Q1BSP_Load: %s has wrong version number(%i should be %i)", mod->name, i, MCBSPVERSION);
 
 	// read hull info
-		hullinfo.numhulls = LittleLong(*(int*)index); index += 4;
+		hullinfo.numhulls = SB_ReadInt (&index);
 		hullinfo.filehulls = hullinfo.numhulls;
+		mod->brushq1.numhulls = hullinfo.numhulls;
+
 		VectorClear (hullinfo.hullsizes[0][0]);
 		VectorClear (hullinfo.hullsizes[0][1]);
 		for (i = 1; i < hullinfo.numhulls; i++)
@@ -3447,6 +3463,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 
 			hullinfo.numhulls = 4;
 			hullinfo.filehulls = 4;
+			mod->brushq1.numhulls = 4;
 			VectorSet (hullinfo.hullsizes[1][0], -16, -16, -36);
 			VectorSet (hullinfo.hullsizes[1][1], 16, 16, 36);
 			VectorSet (hullinfo.hullsizes[2][0], -32, -32, -32);
@@ -3458,6 +3475,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 		{
 			hullinfo.numhulls = 3;
 			hullinfo.filehulls = 4;
+			mod->brushq1.numhulls = 3;
 			VectorSet (hullinfo.hullsizes[1][0], -16, -16, -24);
 			VectorSet (hullinfo.hullsizes[1][1], 16, 16, 32);
 			VectorSet (hullinfo.hullsizes[2][0], -32, -32, -24);
