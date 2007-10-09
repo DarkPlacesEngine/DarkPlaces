@@ -1905,7 +1905,7 @@ void VM_strreplace(void)
 		for (j = 0; j < search_len && i+j < subject_len; j++)
 			if (subject[i+j] != search[j])
 				break;
-		if (j == search_len)
+		if (j == search_len || i+j == subject_len)
 		{
 		// found it at offset 'i'
 			for (j = 0; j < replace_len && si < (int)sizeof(string) - 1; j++)
@@ -1954,7 +1954,7 @@ void VM_strireplace(void)
 		for (j = 0; j < search_len && i+j < subject_len; j++)
 			if (tolower(subject[i+j]) != tolower(search[j]))
 				break;
-		if (j == search_len)
+		if (j == search_len || i+j == subject_len)
 		{
 		// found it at offset 'i'
 			for (j = 0; j < replace_len && si < (int)sizeof(string) - 1; j++)
