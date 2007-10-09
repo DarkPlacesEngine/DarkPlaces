@@ -828,6 +828,8 @@ static void Mod_Q1BSP_TraceBox(struct model_s *model, int frame, trace_t *trace,
 		float vdist, dist;
 		int vdisti = 0;
 
+		vdist = 0;	// shut up compiler warning
+
 	// find the closest hull size (this algorithm probably sucks, a qc field to override it might be in order...)
 		for (i = 1; i < model->brushq1.numhulls; i++)
 		{
