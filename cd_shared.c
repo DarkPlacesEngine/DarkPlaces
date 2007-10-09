@@ -143,9 +143,9 @@ void CDAudio_Play_byName (const char *trackname, qboolean looping)
 				S_SetChannelFlag (faketrack, CHANNELFLAG_FORCELOOP, true);
 			S_SetChannelFlag (faketrack, CHANNELFLAG_FULLVOLUME, true);
 			if(track >= 1)
-				Con_Printf ("Fake CD track %u playing...\n", track);
+				Con_DPrintf ("Fake CD track %u playing...\n", track);
 			else
-				Con_Printf ("BGM track %s playing...\n", trackname);
+				Con_DPrintf ("BGM track %s playing...\n", trackname);
 		}
 	}
 
