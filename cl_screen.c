@@ -1171,7 +1171,7 @@ Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 		SCR_CaptureVideo_RIFF_Push("vprp", NULL);
 		SCR_CaptureVideo_RIFF_Write32(0); // VideoFormatToken
 		SCR_CaptureVideo_RIFF_Write32(0); // VideoStandard
-		SCR_CaptureVideo_RIFF_Write32(cls.capturevideo.framerate); // dwVerticalRefreshRate (bogus)
+		SCR_CaptureVideo_RIFF_Write32((int)cls.capturevideo.framerate); // dwVerticalRefreshRate (bogus)
 		SCR_CaptureVideo_RIFF_Write32(width); // dwHTotalInT
 		SCR_CaptureVideo_RIFF_Write32(height); // dwVTotalInLines
 		FindFraction(aspect, &n, &d, 1000);
