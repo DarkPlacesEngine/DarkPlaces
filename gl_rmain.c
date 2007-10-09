@@ -2500,7 +2500,7 @@ static void R_Water_AddWaterPlane(msurface_t *surface)
 	r_waterstate_waterplane_t *p;
 	// just use the first triangle with a valid normal for any decisions
 	VectorClear(normal);
-	Vectorclear(center);
+	VectorClear(center);
 	for (triangleindex = 0, e = rsurface.modelelement3i + surface->num_firsttriangle * 3;triangleindex < surface->num_triangles;triangleindex++, e += 3)
 	{
 		Matrix4x4_Transform(&rsurface.matrix, rsurface.modelvertex3f + e[0]*3, vert[0]);
