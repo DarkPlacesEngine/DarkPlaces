@@ -2500,6 +2500,7 @@ static void R_Water_AddWaterPlane(msurface_t *surface)
 	r_waterstate_waterplane_t *p;
 	// just use the first triangle with a valid normal for any decisions
 	VectorClear(normal);
+	Vectorclear(center);
 	for (triangleindex = 0, e = rsurface.modelelement3i + surface->num_firsttriangle * 3;triangleindex < surface->num_triangles;triangleindex++, e += 3)
 	{
 		Matrix4x4_Transform(&rsurface.matrix, rsurface.modelvertex3f + e[0]*3, vert[0]);
@@ -2561,6 +2562,8 @@ static void R_Water_ProcessPlanes(void)
 	int planeindex;
 	r_waterstate_waterplane_t *p;
 
+	originalview = r_view;
+
 	// make sure enough textures are allocated
 	for (planeindex = 0, p = r_waterstate.waterplanes;planeindex < r_waterstate.numwaterplanes;planeindex++, p++)
 	{
@@ -2584,7 +2587,6 @@ static void R_Water_ProcessPlanes(void)
 	// render views
 	for (planeindex = 0, p = r_waterstate.waterplanes;planeindex < r_waterstate.numwaterplanes;planeindex++, p++)
 	{
-		originalview = r_view;
 		r_view.showdebug = false;
 		r_view.width = r_waterstate.waterwidth;
 		r_view.height = r_waterstate.waterheight;
