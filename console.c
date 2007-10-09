@@ -350,7 +350,7 @@ Con_Clear_f
 */
 void Con_Clear_f (void)
 {
-	if (con_text)
+	//if (con_text)
 		memset (con_text, ' ', CON_TEXTSIZE);
 }
 
