@@ -3234,8 +3234,8 @@ VM_strtolower,					// #480 string(string s) VM_strtolower (DP_QC_STRING_CASE_FUN
 VM_strtoupper,					// #481 string(string s) VM_strtoupper (DP_QC_STRING_CASE_FUNCTIONS)
 VM_cvar_defstring,				// #482 string(string s) cvar_defstring (DP_QC_CVAR_DEFSTRING)
 VM_CL_pointsound,				// #483 void(vector origin, string sample, float volume, float attenuation) (DP_SV_POINTSOUND)
-NULL,							// #484
-NULL,							// #485
+VM_strreplace,					// #484 string(string search, string replace, string subject) strreplace (DP_QC_STRREPLACE)
+VM_strireplace,					// #485 string(string search, string replace, string subject) strireplace (DP_QC_STRREPLACE)
 NULL,							// #486
 NULL,							// #487
 NULL,							// #488

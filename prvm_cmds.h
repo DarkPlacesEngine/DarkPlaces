@@ -381,6 +381,9 @@ void VM_strncasecmp (void);
 void VM_registercvar (void);
 void VM_wasfreed (void);
 
+void VM_strreplace (void);
+void VM_strireplace (void);
+
 void VM_SetTraceGlobals(const trace_t *trace);
 
 void VM_Cmd_Init(void);
