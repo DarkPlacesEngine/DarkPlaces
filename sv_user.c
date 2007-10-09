@@ -371,6 +371,8 @@ void SV_ClientThink (void)
 {
 	vec3_t v_angle;
 
+	//Con_Printf("clientthink for %ims\n", (int) (sv.frametime * 1000));
+
 	SV_ApplyClientMove();
 	// make sure the velocity is sane (not a NaN)
 	SV_CheckVelocity(host_client->edict);
@@ -628,6 +630,12 @@ void SV_ExecuteClientMoves(void)
 		}
 		// now copy the new move
 		host_client->cmd = sv_readmoves[sv_numreadmoves-1];
+		host_client->cmd.time = max(host_client->cmd.time, sv.time);
+			// physics will run up to sv.time, so allow no predicted moves
+			// before that otherwise, there is a speedhack by turning
+			// prediction on and off repeatedly on client side because the
+			// engine would run BOTH client and server physics for the same
+			// time
 		host_client->movesequence = 0;
 		// make sure that normal physics takes over immediately
 		host_client->clmovement_skipphysicsframes = 0;
