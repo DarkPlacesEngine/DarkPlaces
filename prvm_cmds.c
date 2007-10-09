@@ -1900,6 +1900,7 @@ void VM_strreplace(void)
 	replace_len = (int)strlen(replace);
 	subject_len = (int)strlen(subject);
 
+	si = 0;
 	for (i = 0; i < subject_len; i++)
 	{
 		for (j = 0; j < search_len && i+j < subject_len; j++)
@@ -1949,6 +1950,7 @@ void VM_strireplace(void)
 	replace_len = (int)strlen(replace);
 	subject_len = (int)strlen(subject);
 
+	si = 0;
 	for (i = 0; i < subject_len; i++)
 	{
 		for (j = 0; j < search_len && i+j < subject_len; j++)
