@@ -443,7 +443,7 @@ cvar_t m_filter = {CVAR_SAVE, "m_filter","0", "smoothes mouse movement, less res
 
 cvar_t cl_netinputpacketsperserverpacket = {CVAR_SAVE, "cl_netinputpacketsperserverpacket", "1.0", "send this many input packets per server packet received"};
 cvar_t cl_netinputpacketspersecond = {CVAR_SAVE, "cl_netinputpacketspersecond","20", "how many input packets to send to server each second (only used on old servers, and note this is multiplied by cl_netinputpacketsperserverpacket)"};
-cvar_t cl_netinputpacketspersecond_qw = {CVAR_SAVE, "cl_netinputpacketspersecond","72", "how many input packets to send to a qw server each second (only used on qw servers)"};
+cvar_t cl_netinputpacketspersecond_qw = {CVAR_SAVE, "cl_netinputpacketspersecond_qw","72", "how many input packets to send to a qw server each second (only used on qw servers)"};
 cvar_t cl_netinputpacketlosstolerance = {CVAR_SAVE, "cl_netinputpacketlosstolerance", "1", "how many packets in a row can be lost without movement issues when using cl_movement (technically how many input messages to repeat in each packet that have not yet been acknowledged by the server), only affects DP7 and later servers (Quake uses 0, QuakeWorld uses 2, and just for comparison Quake3 uses 1)"};
 
 cvar_t cl_nodelta = {0, "cl_nodelta", "0", "disables delta compression of non-player entities in QW network protocol"};
