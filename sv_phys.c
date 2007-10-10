@@ -2115,6 +2115,7 @@ void SV_Physics_ClientEntity(prvm_edict_t *ent)
 				SV_AddGravity (ent);
 			SV_CheckStuck (ent);
 			SV_WalkMove (ent);
+			host_client->cmd.time = max(host_client->cmd.time, sv.time); // ignore client movement data for anything before NOW
 		}
 		break;
 	case MOVETYPE_TOSS:

@@ -629,13 +629,8 @@ void SV_ExecuteClientMoves(void)
 			}
 		}
 		// now copy the new move
+		sv_readmoves[sv_numreadmoves-1].time = max(sv_readmoves[sv_numreadmoves-1].time, host_client->cmd.time); // prevent backstepping of time
 		host_client->cmd = sv_readmoves[sv_numreadmoves-1];
-		host_client->cmd.time = max(host_client->cmd.time, sv.time);
-			// physics will run up to sv.time, so allow no predicted moves
-			// before that otherwise, there is a speedhack by turning
-			// prediction on and off repeatedly on client side because the
-			// engine would run BOTH client and server physics for the same
-			// time
 		host_client->movesequence = 0;
 		// make sure that normal physics takes over immediately
 		host_client->clmovement_skipphysicsframes = 0;
