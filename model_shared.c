@@ -1748,7 +1748,8 @@ nothing                GL_ZERO GL_ONE
 			texture->basematerialflags |= MATERIALFLAG_WALL;
 		texture->numskinframes = 1;
 		if (!(texture->skinframes[0] = R_SkinFrame_LoadExternal(texture->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | (r_picmipworld.integer ? TEXF_PICMIP : 0) | TEXF_COMPRESS, false)))
-			Con_Printf("^4%s:^7 could not load texture for missing shader ^3\"%s\"\n", loadmodel->name, texture->name);
+			if(developer.integer || loadmodel->type == mod_brushq3)
+				Con_Printf("^4%s:^7 could not load texture for missing shader ^3\"%s\"\n", loadmodel->name, texture->name);
 	}
 	// init the animation variables
 	texture->currentframe = texture;
