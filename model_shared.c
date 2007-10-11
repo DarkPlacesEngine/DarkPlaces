@@ -1703,7 +1703,7 @@ nothing                GL_ZERO GL_ONE
 					texflags |= TEXF_CLAMP;
 				if (!(texture->skinframes[j] = R_SkinFrame_LoadExternal(shader->primarylayer->texturename[j], texflags, false)))
 				{
-					Con_Printf("^4%s:^7 could not load texture ^3\"%s\"^7 (frame %i) for shader ^2\"%s\"\n", loadmodel->name, shader->primarylayer->texturename[j], j, texture->name);
+					Con_Printf("^1%s:^7 could not load texture ^3\"%s\"^7 (frame %i) for shader ^2\"%s\"\n", loadmodel->name, shader->primarylayer->texturename[j], j, texture->name);
 					texture->skinframes[j] = R_SkinFrame_LoadMissing();
 				}
 			}
@@ -1716,7 +1716,7 @@ nothing                GL_ZERO GL_ONE
 			{
 				if (!(texture->backgroundskinframes[j] = R_SkinFrame_LoadExternal(shader->backgroundlayer->texturename[j], ((shader->surfaceparms & Q3SURFACEPARM_NOMIPMAPS) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | ((!r_picmipworld.integer || (shader->textureflags & Q3TEXTUREFLAG_NOPICMIP)) ? 0 : (TEXF_PICMIP | TEXF_COMPRESS)) | (shader->backgroundlayer->clampmap ? TEXF_CLAMP : 0), false)))
 				{
-					Con_Printf("^4%s:^7 could not load texture ^3\"%s\"^7 (frame %i) for shader ^2\"%s\"\n", loadmodel->name, shader->backgroundlayer->texturename[j], j, texture->name);
+					Con_Printf("^1%s:^7 could not load texture ^3\"%s\"^7 (frame %i) for shader ^2\"%s\"\n", loadmodel->name, shader->backgroundlayer->texturename[j], j, texture->name);
 					texture->backgroundskinframes[j] = R_SkinFrame_LoadMissing();
 				}
 			}
@@ -1749,7 +1749,7 @@ nothing                GL_ZERO GL_ONE
 		texture->numskinframes = 1;
 		if (!(texture->skinframes[0] = R_SkinFrame_LoadExternal(texture->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | (r_picmipworld.integer ? TEXF_PICMIP : 0) | TEXF_COMPRESS, false)))
 			if(developer.integer || loadmodel->type == mod_brushq3)
-				Con_Printf("^4%s:^7 could not load texture for missing shader ^3\"%s\"\n", loadmodel->name, texture->name);
+				Con_Printf("^1%s:^7 could not load texture for missing shader ^3\"%s\"\n", loadmodel->name, texture->name);
 	}
 	// init the animation variables
 	texture->currentframe = texture;
