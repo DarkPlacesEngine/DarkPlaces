@@ -1153,24 +1153,27 @@ void Mod_LoadQ3Shaders(void)
 					break;
 				if (!strcasecmp(com_token, "{"))
 				{
+					static q3shaderinfo_layer_t dummy;
 					if (shader->numlayers < Q3SHADER_MAXLAYERS)
 					{
 						layer = shader->layers + shader->numlayers++;
-						layer->rgbgen.rgbgen = Q3RGBGEN_IDENTITY;
-						layer->alphagen.alphagen = Q3ALPHAGEN_IDENTITY;
-						layer->tcgen.tcgen = Q3TCGEN_TEXTURE;
-						layer->blendfunc[0] = GL_ONE;
-						layer->blendfunc[1] = GL_ZERO;
 					}
 					else
-						layer = NULL;
+					{
+						// parse and process it anyway, just don't store it (so a map $lightmap or such stuff still is found)
+						memset(&dummy, 0, sizeof(dummy));
+						layer = &dummy;
+					}
+					layer->rgbgen.rgbgen = Q3RGBGEN_IDENTITY;
+					layer->alphagen.alphagen = Q3ALPHAGEN_IDENTITY;
+					layer->tcgen.tcgen = Q3TCGEN_TEXTURE;
+					layer->blendfunc[0] = GL_ONE;
+					layer->blendfunc[1] = GL_ZERO;
 					while (COM_ParseToken_QuakeC(&text, false))
 					{
 						if (!strcasecmp(com_token, "}"))
 							break;
 						if (!strcasecmp(com_token, "\n"))
-							continue;
-						if (layer == NULL)
 							continue;
 						numparameters = 0;
 						for (j = 0;strcasecmp(com_token, "\n") && strcasecmp(com_token, "}");j++)
@@ -1359,7 +1362,7 @@ void Mod_LoadQ3Shaders(void)
 							else
 								Con_DPrintf("%s parsing warning: too many tcmods on one layer\n", search->filenames[fileindex]);
 						}
-						// break out a level if it was }
+						// break out a level if it was a closing brace (not using the character here to not confuse vim)
 						if (!strcasecmp(com_token, "}"))
 							break;
 					}
@@ -1590,7 +1593,7 @@ void Mod_LoadQ3Shaders(void)
 q3shaderinfo_t *Mod_LookupQ3Shader(const char *name)
 {
 	int i;
-	for (i = 0;i < Q3SHADER_MAXSHADERS;i++)
+	for (i = 0;i < q3shaders_numshaders;i++)
 		if (!strcasecmp(q3shaders_shaders[i].name, name))
 			return q3shaders_shaders + i;
 	return NULL;
