@@ -4246,7 +4246,7 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 
 	c = 0;
 	for (i = 0;i < count;i++, in++, out++)
-		if (Mod_LoadTextureFromQ3Shader(out, out->name, false, true, false))
+		if (!Mod_LoadTextureFromQ3Shader(out, out->name, false, true, false))
 			c++;
 	if (c)
 		Con_DPrintf("%s: %i textures missing shaders\n", loadmodel->name, c);

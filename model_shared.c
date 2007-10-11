@@ -1748,7 +1748,7 @@ nothing                GL_ZERO GL_ONE
 			texture->basematerialflags |= MATERIALFLAG_WALL;
 		texture->numskinframes = 1;
 		if (!(texture->skinframes[0] = R_SkinFrame_LoadExternal(texture->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | (r_picmipworld.integer ? TEXF_PICMIP : 0) | TEXF_COMPRESS, false)))
-			if(developer.integer || loadmodel->type == mod_brushq3)
+			if(developer.integer || q3bsp) // only the Q3BSP path provides no alternative (like loading image directly, or internal texture)
 				Con_Printf("^1%s:^7 could not load texture for missing shader ^3\"%s\"\n", loadmodel->name, texture->name);
 	}
 	// init the animation variables
