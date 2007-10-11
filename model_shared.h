@@ -194,12 +194,12 @@ shadowmesh_t;
 #define TEXTURE_MAXFRAMES 64
 #define Q3WAVEPARMS 4
 #define Q3DEFORM_MAXPARMS 3
-#define Q3SHADER_MAXLAYERS 8
+#define Q3SHADER_MAXLAYERS 2 // FIXME support more than that (currently only two are used, so why keep more in RAM?)
 #define Q3RGBGEN_MAXPARMS 3
 #define Q3ALPHAGEN_MAXPARMS 1
 #define Q3TCGEN_MAXPARMS 6
 #define Q3TCMOD_MAXPARMS 6
-#define Q3MAXTCMODS 4
+#define Q3MAXTCMODS 8
 #define Q3MAXDEFORMS 4
 
 typedef enum q3wavefunc_e
