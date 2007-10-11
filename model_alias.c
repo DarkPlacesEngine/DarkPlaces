@@ -722,7 +722,7 @@ static void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfi
 						tempskinframe = R_SkinFrame_LoadExternal(skinfileitem->replacement, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP | TEXF_COMPRESS, false);
 						if (!tempskinframe)
 							if (cls.state != ca_dedicated)
-								Con_DPrintf("mesh \"%s\": failed to load skin #%i \"%s\"\n", meshname, i, skinfileitem->replacement);
+								Con_Printf("mesh \"%s\": failed to load skin #%i \"%s\"\n", meshname, i, skinfileitem->replacement);
 						Mod_BuildAliasSkinFromSkinFrame(skin, tempskinframe);
 					}
 					break;
