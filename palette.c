@@ -109,28 +109,28 @@ void Palette_SetupSpecialPalettes(void)
 		palette_nofullbrights[i] = palette_complete[0];
 
 	for (i = 0;i < 256;i++)
-		palette_onlyfullbrights[i] = palette_complete[0];
+		palette_onlyfullbrights[i] = 0;
 	for (i = fullbright_start;i < fullbright_end;i++)
 		palette_onlyfullbrights[i] = palette_complete[i];
 
 	for (i = 0;i < 256;i++)
 		palette_nocolormapnofullbrights[i] = palette_complete[i];
 	for (i = pants_start;i < pants_end;i++)
-		palette_nocolormapnofullbrights[i] = palette_complete[0];
+		palette_nocolormapnofullbrights[i] = 0;
 	for (i = shirt_start;i < shirt_end;i++)
-		palette_nocolormapnofullbrights[i] = palette_complete[0];
+		palette_nocolormapnofullbrights[i] = 0;
 	for (i = fullbright_start;i < fullbright_end;i++)
-		palette_nocolormapnofullbrights[i] = palette_complete[0];
+		palette_nocolormapnofullbrights[i] = 0;
 
 	for (i = 0;i < 256;i++)
 		palette_nocolormap[i] = palette_complete[i];
 	for (i = pants_start;i < pants_end;i++)
-		palette_nocolormap[i] = palette_complete[0];
+		palette_nocolormap[i] = 0;
 	for (i = shirt_start;i < shirt_end;i++)
-		palette_nocolormap[i] = palette_complete[0];
+		palette_nocolormap[i] = 0;
 
 	for (i = 0;i < 256;i++)
-		palette_pantsaswhite[i] = palette_complete[0];
+		palette_pantsaswhite[i] = 0;
 	for (i = pants_start;i < pants_end;i++)
 	{
 		if (i >= reversed_start && i < reversed_end)
@@ -140,7 +140,7 @@ void Palette_SetupSpecialPalettes(void)
 	}
 
 	for (i = 0;i < 256;i++)
-		palette_shirtaswhite[i] = palette_complete[0];
+		palette_shirtaswhite[i] = 0;
 	for (i = shirt_start;i < shirt_end;i++)
 	{
 		if (i >= reversed_start && i < reversed_end)
