@@ -187,8 +187,9 @@ shadowmesh_t;
 #define Q3TEXTUREFLAG_TWOSIDED 1
 #define Q3TEXTUREFLAG_NOPICMIP 16
 #define Q3TEXTUREFLAG_POLYGONOFFSET 32
-#define Q3TEXTUREFLAG_REFLECTION 256
-#define Q3TEXTUREFLAG_WATERSHADER 512
+#define Q3TEXTUREFLAG_REFRACTION 256
+#define Q3TEXTUREFLAG_REFLECTION 512
+#define Q3TEXTUREFLAG_WATERSHADER 1024
 
 #define Q3PATHLENGTH 64
 #define TEXTURE_MAXFRAMES 64
@@ -365,10 +366,12 @@ typedef struct q3shaderinfo_s
 	char skyboxname[Q3PATHLENGTH];
 	q3shaderinfo_deform_t deforms[Q3MAXDEFORMS];
 
-	vec3_t reflectcolor, refractcolor;
-	float refractmin; // when refraction is used, minimum amount of reflection (when looking straight down)
-	float refractmax; // when refraction is used, maximum amount of reflection (when looking parallel to water)
-	float refractfactor; // amount of refraction distort (1.0 = like the cvar specifies; note that reflection distort is not configurable because that's what the bumpmap should do)
+	float reflectmin; // when refraction is used, minimum amount of reflection (when looking straight down)
+	float reflectmax; // when refraction is used, maximum amount of reflection (when looking parallel to water)
+	float refractfactor; // amount of refraction distort (1.0 = like the cvar specifies)
+	vec4_t refractcolor4f; // color tint of refraction (including alpha factor)
+	float reflectfactor; // amount of reflection distort (1.0 = like the cvar specifies)
+	vec4_t reflectcolor4f; // color tint of reflection (including alpha factor)
 }
 q3shaderinfo_t;
 
@@ -483,10 +486,12 @@ typedef struct texture_s
 	int textureflags;
 
 	// reflection
-	vec3_t reflectcolor, refractcolor;
-	float refractmin; // when refraction is used, minimum amount of reflection (when looking straight down)
-	float refractmax; // when refraction is used, maximum amount of reflection (when looking parallel to water)
-	float refractfactor; // amount of refraction distort (1.0 = like the cvar specifies; note that reflection distort is not configurable because that's what the bumpmap should do)
+	float reflectmin; // when refraction is used, minimum amount of reflection (when looking straight down)
+	float reflectmax; // when refraction is used, maximum amount of reflection (when looking parallel to water)
+	float refractfactor; // amount of refraction distort (1.0 = like the cvar specifies)
+	vec4_t refractcolor4f; // color tint of refraction (including alpha factor)
+	float reflectfactor; // amount of reflection distort (1.0 = like the cvar specifies)
+	vec4_t reflectcolor4f; // color tint of reflection (including alpha factor)
 }
 texture_t;
 
