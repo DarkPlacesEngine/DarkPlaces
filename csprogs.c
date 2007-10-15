@@ -82,6 +82,13 @@ static void CSQC_SetGlobals (void)
 		VectorSet(prog->globals.client->input_movevalues, cl.movecmd[0].forwardmove, cl.movecmd[0].sidemove, cl.movecmd[0].upmove);
 		//VectorCopy(cl.movement_origin, cl.csqc_origin);
 		Matrix4x4_OriginFromMatrix(&cl.entities[cl.viewentity].render.matrix, cl.csqc_origin);
+
+		// LordHavoc: Spike says not to do this, but without pmove_org the
+		// CSQC is useless as it can't alter the view origin without
+		// completely replacing it
+		VectorCopy(cl.csqc_origin, prog->globals.client->pmove_org);
+		VectorCopy(cl.velocity, prog->globals.client->pmove_vel);
+
 		if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.view_angles)))
 			VectorCopy(cl.viewangles, val->vector);
 		prog->globals.client->maxclients = cl.maxclients;
