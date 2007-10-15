@@ -78,13 +78,14 @@ cvar_t r_glsl = {CVAR_SAVE, "r_glsl", "1", "enables use of OpenGL 2.0 pixel shad
 cvar_t r_glsl_offsetmapping = {CVAR_SAVE, "r_glsl_offsetmapping", "0", "offset mapping effect (also known as parallax mapping or virtual displacement mapping)"};
 cvar_t r_glsl_offsetmapping_reliefmapping = {CVAR_SAVE, "r_glsl_offsetmapping_reliefmapping", "0", "relief mapping effect (higher quality)"};
 cvar_t r_glsl_offsetmapping_scale = {CVAR_SAVE, "r_glsl_offsetmapping_scale", "0.04", "how deep the offset mapping effect is"};
-cvar_t r_glsl_water = {CVAR_SAVE, "r_glsl_water", "0", "whether to use reflections and refraction on water surfaces (note: r_wateralpha must be set below 1)"};
-cvar_t r_glsl_water_clippingplanebias = {CVAR_SAVE, "r_glsl_water_clippingplanebias", "1", "a rather technical setting which avoids black pixels around water edges"};
-cvar_t r_glsl_water_resolutionmultiplier = {CVAR_SAVE, "r_glsl_water_resolutionmultiplier", "0.5", "multiplier for screen resolution when rendering refracted/reflected scenes, 1 is full quality, lower values are faster"};
-cvar_t r_glsl_water_refractdistort = {CVAR_SAVE, "r_glsl_water_refractdistort", "0.01", "how much water refractions shimmer"};
-cvar_t r_glsl_water_reflectdistort = {CVAR_SAVE, "r_glsl_water_reflectdistort", "0.01", "how much water reflections shimmer"};
 cvar_t r_glsl_deluxemapping = {CVAR_SAVE, "r_glsl_deluxemapping", "1", "use per pixel lighting on deluxemap-compiled q3bsp maps (or a value of 2 forces deluxemap shading even without deluxemaps)"};
 cvar_t r_glsl_contrastboost = {CVAR_SAVE, "r_glsl_contrastboost", "1", "by how much to multiply the contrast in dark areas (1 is no change)"};
+
+cvar_t r_water = {CVAR_SAVE, "r_water", "0", "whether to use reflections and refraction on water surfaces (note: r_wateralpha must be set below 1)"};
+cvar_t r_water_clippingplanebias = {CVAR_SAVE, "r_water_clippingplanebias", "1", "a rather technical setting which avoids black pixels around water edges"};
+cvar_t r_water_resolutionmultiplier = {CVAR_SAVE, "r_water_resolutionmultiplier", "0.5", "multiplier for screen resolution when rendering refracted/reflected scenes, 1 is full quality, lower values are faster"};
+cvar_t r_water_refractdistort = {CVAR_SAVE, "r_water_refractdistort", "0.01", "how much water refractions shimmer"};
+cvar_t r_water_reflectdistort = {CVAR_SAVE, "r_water_reflectdistort", "0.01", "how much water reflections shimmer"};
 
 cvar_t r_lerpsprites = {CVAR_SAVE, "r_lerpsprites", "1", "enables animation smoothing on sprites (requires r_lerpmodels 1)"};
 cvar_t r_lerpmodels = {CVAR_SAVE, "r_lerpmodels", "1", "enables animation smoothing on models"};
@@ -1270,7 +1271,7 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 	if (r_glsl_permutation->loc_FogRangeRecip >= 0) qglUniform1fARB(r_glsl_permutation->loc_FogRangeRecip, r_refdef.fograngerecip);
 	if (r_glsl_permutation->loc_SpecularPower >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularPower, rsurface.texture->specularpower);
 	if (r_glsl_permutation->loc_OffsetMapping_Scale >= 0) qglUniform1fARB(r_glsl_permutation->loc_OffsetMapping_Scale, r_glsl_offsetmapping_scale.value);
-	if (r_glsl_permutation->loc_DistortScaleRefractReflect >= 0) qglUniform4fARB(r_glsl_permutation->loc_DistortScaleRefractReflect, r_glsl_water_refractdistort.value * rsurface.texture->refractfactor, r_glsl_water_refractdistort.value * rsurface.texture->refractfactor, r_glsl_water_reflectdistort.value, r_glsl_water_reflectdistort.value);
+	if (r_glsl_permutation->loc_DistortScaleRefractReflect >= 0) qglUniform4fARB(r_glsl_permutation->loc_DistortScaleRefractReflect, r_water_refractdistort.value * rsurface.texture->refractfactor, r_water_refractdistort.value * rsurface.texture->refractfactor, r_water_reflectdistort.value, r_water_reflectdistort.value);
 	if (r_glsl_permutation->loc_ScreenScaleRefractReflect >= 0) qglUniform4fARB(r_glsl_permutation->loc_ScreenScaleRefractReflect, r_waterstate.screenscale[0], r_waterstate.screenscale[1], r_waterstate.screenscale[0], r_waterstate.screenscale[1]);
 	if (r_glsl_permutation->loc_ScreenCenterRefractReflect >= 0) qglUniform4fARB(r_glsl_permutation->loc_ScreenCenterRefractReflect, r_waterstate.screencenter[0], r_waterstate.screencenter[1], r_waterstate.screencenter[0], r_waterstate.screencenter[1]);
 	if (r_glsl_permutation->loc_RefractColor >= 0) qglUniform3fvARB(r_glsl_permutation->loc_RefractColor, 1, rsurface.texture->refractcolor);
@@ -1755,12 +1756,12 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_glsl_offsetmapping);
 	Cvar_RegisterVariable(&r_glsl_offsetmapping_reliefmapping);
 	Cvar_RegisterVariable(&r_glsl_offsetmapping_scale);
-	Cvar_RegisterVariable(&r_glsl_water);
-	Cvar_RegisterVariable(&r_glsl_water_resolutionmultiplier);
-	Cvar_RegisterVariable(&r_glsl_water_clippingplanebias);
-	Cvar_RegisterVariable(&r_glsl_water_refractdistort);
-	Cvar_RegisterVariable(&r_glsl_water_reflectdistort);
 	Cvar_RegisterVariable(&r_glsl_deluxemapping);
+	Cvar_RegisterVariable(&r_water);
+	Cvar_RegisterVariable(&r_water_resolutionmultiplier);
+	Cvar_RegisterVariable(&r_water_clippingplanebias);
+	Cvar_RegisterVariable(&r_water_refractdistort);
+	Cvar_RegisterVariable(&r_water_reflectdistort);
 	Cvar_RegisterVariable(&r_lerpsprites);
 	Cvar_RegisterVariable(&r_lerpmodels);
 	Cvar_RegisterVariable(&r_waterscroll);
@@ -2291,9 +2292,9 @@ void R_SetupView(void)
 	if (r_view.useclipplane)
 	{
 		// LordHavoc: couldn't figure out how to make this approach the
-		vec_t dist = r_view.clipplane.dist - r_glsl_water_clippingplanebias.value;
+		vec_t dist = r_view.clipplane.dist - r_water_clippingplanebias.value;
 		vec_t viewdist = DotProduct(r_view.origin, r_view.clipplane.normal);
-		if (viewdist < r_view.clipplane.dist + r_glsl_water_clippingplanebias.value)
+		if (viewdist < r_view.clipplane.dist + r_water_clippingplanebias.value)
 			dist = r_view.clipplane.dist;
 		GL_SetupView_ApplyCustomNearClipPlane(r_view.clipplane.normal[0], r_view.clipplane.normal[1], r_view.clipplane.normal[2], dist);
 	}
@@ -2436,12 +2437,12 @@ static void R_Water_StartFrame(void)
 
 	// set waterwidth and waterheight to the water resolution that will be
 	// used (often less than the screen resolution for faster rendering)
-	waterwidth = (int)bound(1, r_view.width * r_glsl_water_resolutionmultiplier.value, r_view.width);
-	waterheight = (int)bound(1, r_view.height * r_glsl_water_resolutionmultiplier.value, r_view.height);
+	waterwidth = (int)bound(1, r_view.width * r_water_resolutionmultiplier.value, r_view.width);
+	waterheight = (int)bound(1, r_view.height * r_water_resolutionmultiplier.value, r_view.height);
 
 	// calculate desired texture sizes
 	// can't use water if the card does not support the texture size
-	if (!r_glsl_water.integer || waterwidth > gl_max_texture_size || waterheight > gl_max_texture_size)
+	if (!r_water.integer || waterwidth > gl_max_texture_size || waterheight > gl_max_texture_size)
 		texturewidth = textureheight = waterwidth = waterheight = 0;
 	else if (gl_support_arb_texture_non_power_of_two)
 	{
@@ -2649,8 +2650,8 @@ static void R_Water_ProcessPlanes(void)
 error:
 	r_view = originalview;
 	r_waterstate.renderingscene = false;
-	Cvar_SetValueQuick(&r_glsl_water, 0);
-	Con_Printf("R_Water_ProcessPlanes: Error: texture creation failed!  Turned off r_glsl_water.\n");
+	Cvar_SetValueQuick(&r_water, 0);
+	Con_Printf("R_Water_ProcessPlanes: Error: texture creation failed!  Turned off r_water.\n");
 	return;
 }
 
