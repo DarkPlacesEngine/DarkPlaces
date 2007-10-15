@@ -1135,11 +1135,12 @@ void Mod_LoadQ3Shaders(void)
 			shader = q3shaders_shaders + q3shaders_numshaders++;
 
 			memset(shader, 0, sizeof(*shader));
-			VectorSet(shader->reflectcolor, 1, 1, 1);
-			VectorSet(shader->refractcolor, 1, 1, 1);
-			shader->refractmin = 0;
-			shader->refractmax = 1;
+			shader->reflectmin = 0;
+			shader->reflectmax = 1;
 			shader->refractfactor = 1;
+			Vector4Set(shader->refractcolor4f, 1, 1, 1, 1);
+			shader->reflectfactor = 1;
+			Vector4Set(shader->reflectcolor4f, 1, 1, 1, 1);
 
 			strlcpy(shader->name, com_token, sizeof(shader->name));
 			if (!COM_ParseToken_QuakeC(&text, false) || strcasecmp(com_token, "{"))
@@ -1500,27 +1501,27 @@ void Mod_LoadQ3Shaders(void)
 					shader->textureflags |= Q3TEXTUREFLAG_NOPICMIP;
 				else if (!strcasecmp(parameter[0], "polygonoffset"))
 					shader->textureflags |= Q3TEXTUREFLAG_POLYGONOFFSET;
-				else if (!strcasecmp(parameter[0], "dp_reflect"))
+				else if (!strcasecmp(parameter[0], "dp_refract") && numparameters >= 5)
+				{
+					shader->textureflags |= Q3TEXTUREFLAG_REFRACTION;
+					shader->refractfactor = atof(parameter[1]);
+					Vector4Set(shader->refractcolor4f, atof(parameter[2]), atof(parameter[3]), atof(parameter[4]), 1);
+				}
+				else if (!strcasecmp(parameter[0], "dp_reflect") && numparameters >= 6)
 				{
 					shader->textureflags |= Q3TEXTUREFLAG_REFLECTION;
-					if(numparameters >= 2)
-						VectorSet(shader->reflectcolor, atof(parameter[1]), atof(parameter[1]), atof(parameter[1])); // grey
-					if(numparameters >= 4)
-						VectorSet(shader->reflectcolor, atof(parameter[1]), atof(parameter[2]), atof(parameter[3]));
+					shader->reflectfactor = atof(parameter[1]);
+					Vector4Set(shader->reflectcolor4f, atof(parameter[2]), atof(parameter[3]), atof(parameter[4]), atof(parameter[5]));
 				}
-				else if (!strcasecmp(parameter[0], "dp_refract"))
+				else if (!strcasecmp(parameter[0], "dp_water") && numparameters >= 11)
 				{
 					shader->textureflags |= Q3TEXTUREFLAG_WATERSHADER;
-					if(numparameters >= 2)
-						shader->refractmin = atof(parameter[1]);
-					if(numparameters >= 3)
-						shader->refractmax = atof(parameter[2]);
-					if(numparameters >= 4)
-						shader->refractfactor = atof(parameter[3]);
-					if(numparameters >= 5)
-						VectorSet(shader->refractcolor, atof(parameter[4]), atof(parameter[4]), atof(parameter[4])); // grey
-					if(numparameters >= 7)
-						VectorSet(shader->refractcolor, atof(parameter[4]), atof(parameter[5]), atof(parameter[6]));
+					shader->reflectmin = atof(parameter[1]);
+					shader->reflectmax = atof(parameter[2]);
+					shader->refractfactor = atof(parameter[3]);
+					shader->reflectfactor = atof(parameter[4]);
+					Vector4Set(shader->refractcolor4f, atof(parameter[5]), atof(parameter[6]), atof(parameter[7]), 1);
+					Vector4Set(shader->reflectcolor4f, atof(parameter[8]), atof(parameter[9]), atof(parameter[10]), 1);
 				}
 				else if (!strcasecmp(parameter[0], "deformvertexes") && numparameters >= 2)
 				{
@@ -1584,7 +1585,7 @@ void Mod_LoadQ3Shaders(void)
 			}
 			// fix up multiple reflection types
 			if(shader->textureflags & Q3TEXTUREFLAG_WATERSHADER)
-				shader->textureflags &= ~Q3TEXTUREFLAG_REFLECTION;
+				shader->textureflags &= ~(Q3TEXTUREFLAG_REFRACTION | Q3TEXTUREFLAG_REFLECTION);
 		}
 		Mem_Free(f);
 	}
@@ -1640,6 +1641,8 @@ qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qbool
 			texture->basematerialflags |= MATERIALFLAG_NOSHADOW | MATERIALFLAG_NOCULLFACE;
 		if (shader->textureflags & Q3TEXTUREFLAG_POLYGONOFFSET)
 			texture->basepolygonoffset -= 2;
+		if (shader->textureflags & Q3TEXTUREFLAG_REFRACTION)
+			texture->basematerialflags |= MATERIALFLAG_REFRACTION;
 		if (shader->textureflags & Q3TEXTUREFLAG_REFLECTION)
 			texture->basematerialflags |= MATERIALFLAG_REFLECTION;
 		if (shader->textureflags & Q3TEXTUREFLAG_WATERSHADER)
@@ -1725,11 +1728,12 @@ nothing                GL_ZERO GL_ONE
 			}
 		}
 		memcpy(texture->deforms, shader->deforms, sizeof(texture->deforms));
-		texture->refractmin = shader->refractmin;
-		texture->refractmax = shader->refractmax;
+		texture->reflectmin = shader->reflectmin;
+		texture->reflectmax = shader->reflectmax;
 		texture->refractfactor = shader->refractfactor;
-		VectorCopy(shader->reflectcolor, texture->reflectcolor);
-		VectorCopy(shader->refractcolor, texture->refractcolor);
+		Vector4Copy(shader->refractcolor4f, texture->refractcolor4f);
+		texture->reflectfactor = shader->reflectfactor;
+		Vector4Copy(shader->reflectcolor4f, texture->reflectcolor4f);
 	}
 	else if (!strcmp(texture->name, "noshader"))
 	{

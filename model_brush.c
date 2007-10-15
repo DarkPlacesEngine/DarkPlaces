@@ -1394,6 +1394,14 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			tx->surfaceflags = mod_q1bsp_texture_solid.surfaceflags;
 		}
 		tx->currentframe = tx;
+
+		// clear water settings
+		tx->reflectmin = 0;
+		tx->reflectmax = 1;
+		tx->refractfactor = 1;
+		Vector4Set(tx->refractcolor4f, 1, 1, 1, 1);
+		tx->reflectfactor = 1;
+		Vector4Set(tx->reflectcolor4f, 1, 1, 1, 1);
 	}
 
 	if (!m)
@@ -1553,14 +1561,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 				if (strncmp(tx->name,"*lava",5)
 				 && strncmp(tx->name,"*teleport",9)
 				 && strncmp(tx->name,"*rift",5)) // Scourge of Armagon texture
-				 {
 					tx->basematerialflags |= MATERIALFLAG_WATERALPHA | MATERIALFLAG_NOSHADOW | MATERIALFLAG_WATERSHADER;
-					VectorSet(tx->reflectcolor, 1, 1, 1);
-					VectorSet(tx->refractcolor, 1, 1, 1);
-					tx->refractmin = 0;
-					tx->refractmax = 1;
-					tx->refractfactor = 1;
-				}
 				tx->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_NOSHADOW;
 			}
 			else if (!strncmp(tx->name, "sky", 3))
@@ -3686,7 +3687,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 				// we only need to have a drawsky function if it is used(usually only on world model)
 				if (surface->texture->basematerialflags & MATERIALFLAG_SKY)
 					mod->DrawSky = R_Q1BSP_DrawSky;
-				if (surface->texture->basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFLECTION))
+				if (surface->texture->basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION))
 					mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
 				// calculate bounding shapes
 				for (k = 0, vec = (loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex);k < surface->num_vertices;k++, vec += 3)
@@ -5790,7 +5791,7 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer, void *bufferend)
 			mod->DrawSky = NULL;
 
 		for (j = 0;j < mod->nummodelsurfaces;j++)
-			if (mod->data_surfaces[j + mod->firstmodelsurface].texture->basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFLECTION))
+			if (mod->data_surfaces[j + mod->firstmodelsurface].texture->basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION))
 				break;
 		if (j < mod->nummodelsurfaces)
 			mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;

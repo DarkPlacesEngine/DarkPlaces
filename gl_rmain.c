@@ -188,11 +188,6 @@ rtexture_t *r_texture_normalizationcube;
 rtexture_t *r_texture_fogattenuation;
 //rtexture_t *r_texture_fogintensity;
 
-// information about each possible shader permutation
-r_glsl_permutation_t r_glsl_permutations[SHADERPERMUTATION_MAX];
-// currently selected permutation
-r_glsl_permutation_t *r_glsl_permutation;
-
 char r_qwskincache[MAX_SCOREBOARD][MAX_QPATH];
 skinframe_t *r_qwskincache_skinframe[MAX_SCOREBOARD];
 
@@ -452,8 +447,12 @@ static const char *builtinshaderstring =
 "//#ifdef USEWATER\n"
 "varying vec4 ModelViewProjectionPosition;\n"
 "//#else\n"
-"//# ifdef USEREFLECTION\n"
+"//# ifdef USEREFRACTION\n"
 "//varying vec4 ModelViewProjectionPosition;\n"
+"//# else\n"
+"//#  ifdef USEREFLECTION\n"
+"//varying vec4 ModelViewProjectionPosition;\n"
+"//#  endif\n"
 "//# endif\n"
 "//#endif\n"
 "\n"
@@ -529,8 +528,12 @@ static const char *builtinshaderstring =
 "#ifdef USEWATER\n"
 "	ModelViewProjectionPosition = gl_Position;\n"
 "#else\n"
-"# ifdef USEREFLECTION\n"
+"# ifdef USEWATER\n"
 "	ModelViewProjectionPosition = gl_Position;\n"
+"# else\n"
+"#  ifdef USEREFLECTION\n"
+"	ModelViewProjectionPosition = gl_Position;\n"
+"#  endif\n"
 "# endif\n"
 "#endif\n"
 "}\n"
@@ -570,8 +573,8 @@ static const char *builtinshaderstring =
 "uniform vec4 DistortScaleRefractReflect;\n"
 "uniform vec4 ScreenScaleRefractReflect;\n"
 "uniform vec4 ScreenCenterRefractReflect;\n"
-"uniform myhvec3 RefractColor;\n"
-"uniform myhvec3 ReflectColor;\n"
+"uniform myhvec4 RefractColor;\n"
+"uniform myhvec4 ReflectColor;\n"
 "uniform myhalf ReflectFactor;\n"
 "uniform myhalf ReflectOffset;\n"
 "//#else\n"
@@ -776,20 +779,28 @@ static const char *builtinshaderstring =
 "# ifdef USEWATER\n"
 "	color.rgb *= color.a;\n"
 "# endif\n"
+"# ifdef USEREFRACTION\n"
+"	color.rgb *= color.a;\n"
+"# endif\n"
 "#else\n"
 "# ifdef USEWATER\n"
 "	vec4 ScreenScaleRefractReflectIW = ScreenScaleRefractReflect * (1.0 / ModelViewProjectionPosition.w);\n"
 "	//vec4 ScreenTexCoord = (ModelViewProjectionPosition.xyxy + normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5)).xyxy * DistortScaleRefractReflect * 100) * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect;\n"
 "	vec4 ScreenTexCoord = ModelViewProjectionPosition.xyxy * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect + vec3(normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5))).xyxy * DistortScaleRefractReflect;\n"
 "	myhalf Fresnel = myhalf(pow(min(1.0, 1.0 - float(normalize(EyeVector).z)), 2.0)) * ReflectFactor + ReflectOffset;\n"
-"	color.rgb = mix(mix(myhvec3(texture2D(Texture_Refraction, ScreenTexCoord.xy)) * RefractColor, myhvec3(texture2D(Texture_Reflection, ScreenTexCoord.zw)) * ReflectColor, Fresnel), color.rgb, color.a);\n"
-"# else\n"
-"#  ifdef USEREFLECTION\n"
+"	color.rgb = mix(mix(myhvec3(texture2D(Texture_Refraction, ScreenTexCoord.xy)) * RefractColor.rgb, myhvec3(texture2D(Texture_Reflection, ScreenTexCoord.zw)) * ReflectColor.rgb, Fresnel), color.rgb, color.a);\n"
+"# endif\n"
+"# ifdef USEREFRACTION\n"
 "	vec4 ScreenScaleRefractReflectIW = ScreenScaleRefractReflect * (1.0 / ModelViewProjectionPosition.w);\n"
 "	//vec4 ScreenTexCoord = (ModelViewProjectionPosition.xyxy + normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5)).xyxy * DistortScaleRefractReflect * 100) * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect;\n"
 "	vec4 ScreenTexCoord = ModelViewProjectionPosition.xyxy * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect + vec3(normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5))).xyxy * DistortScaleRefractReflect;\n"
-"	color.rgb += myhvec3(texture2D(Texture_Reflection, ScreenTexCoord.zw)) * ReflectColor;\n"
-"#  endif\n"
+"	color.rgb = mix(myhvec3(texture2D(Texture_Refraction, ScreenTexCoord.xy)) * RefractColor.rgb, color.rgb, color.a);\n"
+"# endif\n"
+"# ifdef USEREFLECTION\n"
+"	vec4 ScreenScaleRefractReflectIW = ScreenScaleRefractReflect * (1.0 / ModelViewProjectionPosition.w);\n"
+"	//vec4 ScreenTexCoord = (ModelViewProjectionPosition.xyxy + normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5)).xyxy * DistortScaleRefractReflect * 100) * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect;\n"
+"	vec4 ScreenTexCoord = ModelViewProjectionPosition.xyxy * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect + vec3(normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5))).xyxy * DistortScaleRefractReflect;\n"
+"	color.rgb = mix(color.rgb, myhvec3(texture2D(Texture_Reflection, ScreenTexCoord.zw)) * ReflectColor.rgb, ReflectColor.a);\n"
 "# endif\n"
 "#endif\n"
 "\n"
@@ -814,6 +825,27 @@ static const char *builtinshaderstring =
 "#endif // FRAGMENT_SHADER\n"
 ;
 
+#define SHADERPERMUTATION_MODE_LIGHTMAP (1<<0) // (lightmap) use directional pixel shading from fixed light direction (q3bsp)
+#define SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP_MODELSPACE (1<<1) // (lightmap) use directional pixel shading from texture containing modelspace light directions (deluxemap)
+#define SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP_TANGENTSPACE (1<<2) // (lightmap) use directional pixel shading from texture containing tangentspace light directions (deluxemap)
+#define SHADERPERMUTATION_MODE_LIGHTDIRECTION (1<<3) // (lightmap) use directional pixel shading from fixed light direction (q3bsp)
+#define SHADERPERMUTATION_MODE_LIGHTSOURCE (1<<4) // (lightsource) use directional pixel shading from light source (rtlight)
+#define SHADERPERMUTATION_WATER (1<<5) // normalmap-perturbed refraction of the background, performed behind the surface (the texture or material must be transparent to see it)
+#define SHADERPERMUTATION_REFRACTION (1<<6) // normalmap-perturbed reflection of the scene infront of the surface, preformed as an overlay on the surface
+#define SHADERPERMUTATION_REFLECTION (1<<7) // normalmap-perturbed reflection of the scene infront of the surface, preformed as an overlay on the surface
+#define SHADERPERMUTATION_GLOW (1<<8) // (lightmap) blend in an additive glow texture
+#define SHADERPERMUTATION_FOG (1<<9) // tint the color by fog color or black if using additive blend mode
+#define SHADERPERMUTATION_COLORMAPPING (1<<10) // indicates this is a colormapped skin
+#define SHADERPERMUTATION_DIFFUSE (1<<11) // (lightsource) whether to use directional shading
+#define SHADERPERMUTATION_CONTRASTBOOST (1<<12) // r_glsl_contrastboost boosts the contrast at low color levels (similar to gamma)
+#define SHADERPERMUTATION_SPECULAR (1<<13) // (lightsource or deluxemapping) render specular effects
+#define SHADERPERMUTATION_CUBEFILTER (1<<14) // (lightsource) use cubemap light filter
+#define SHADERPERMUTATION_OFFSETMAPPING (1<<15) // adjust texcoords to roughly simulate a displacement mapped surface
+#define SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING (1<<16) // adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
+
+#define SHADERPERMUTATION_INDICES (1<<17) // how many permutations are possible
+#define SHADERPERMUTATION_MASK (SHADERPERMUTATION_INDICES - 1) // mask of valid indexing bits for r_glsl_permutations[] array
+
 // NOTE: MUST MATCH ORDER OF SHADERPERMUTATION_* DEFINES!
 const char *permutationinfo[][2] =
 {
@@ -823,6 +855,7 @@ const char *permutationinfo[][2] =
 	{"#define MODE_LIGHTDIRECTION\n", " lightdirection"},
 	{"#define MODE_LIGHTSOURCE\n", " lightsource"},
 	{"#define USEWATER\n", " water"},
+	{"#define USEREFRACTION\n", " refraction"},
 	{"#define USEREFLECTION\n", " reflection"},
 	{"#define USEGLOW\n", " glow"},
 	{"#define USEFOG\n", " fog"},
@@ -836,11 +869,70 @@ const char *permutationinfo[][2] =
 	{NULL, NULL}
 };
 
-void R_GLSL_CompilePermutation(const char *filename, int permutation)
+typedef struct r_glsl_permutation_s
+{
+	// indicates if we have tried compiling this permutation already
+	qboolean compiled;
+	// 0 if compilation failed
+	int program;
+	// locations of detected uniforms in program object, or -1 if not found
+	int loc_Texture_Normal;
+	int loc_Texture_Color;
+	int loc_Texture_Gloss;
+	int loc_Texture_Cube;
+	int loc_Texture_Attenuation;
+	int loc_Texture_FogMask;
+	int loc_Texture_Pants;
+	int loc_Texture_Shirt;
+	int loc_Texture_Lightmap;
+	int loc_Texture_Deluxemap;
+	int loc_Texture_Glow;
+	int loc_Texture_Refraction;
+	int loc_Texture_Reflection;
+	int loc_FogColor;
+	int loc_LightPosition;
+	int loc_EyePosition;
+	int loc_LightColor;
+	int loc_Color_Pants;
+	int loc_Color_Shirt;
+	int loc_FogRangeRecip;
+	int loc_AmbientScale;
+	int loc_DiffuseScale;
+	int loc_SpecularScale;
+	int loc_SpecularPower;
+	int loc_GlowScale;
+	int loc_SceneBrightness; // or: Scenebrightness * ContrastBoost
+	int loc_OffsetMapping_Scale;
+	int loc_AmbientColor;
+	int loc_DiffuseColor;
+	int loc_SpecularColor;
+	int loc_LightDir;
+	int loc_ContrastBoostCoeff; // 1 - 1/ContrastBoost
+	int loc_DistortScaleRefractReflect;
+	int loc_ScreenScaleRefractReflect;
+	int loc_ScreenCenterRefractReflect;
+	int loc_RefractColor;
+	int loc_ReflectColor;
+	int loc_ReflectFactor;
+	int loc_ReflectOffset;
+}
+r_glsl_permutation_t;
+
+// information about each possible shader permutation
+r_glsl_permutation_t r_glsl_permutations[SHADERPERMUTATION_INDICES];
+// currently selected permutation
+r_glsl_permutation_t *r_glsl_permutation;
+
+// these are additional flags used only by R_GLSL_CompilePermutation
+#define SHADERTYPE_USES_VERTEXSHADER (1<<0)
+#define SHADERTYPE_USES_GEOMETRYSHADER (1<<1)
+#define SHADERTYPE_USES_FRAGMENTSHADER (1<<2)
+
+static void R_GLSL_CompilePermutation(const char *filename, int permutation, int shadertype)
 {
 	int i;
 	qboolean shaderfound;
-	r_glsl_permutation_t *p = r_glsl_permutations + (permutation & SHADERPERMUTATION_MASK);
+	r_glsl_permutation_t *p = r_glsl_permutations + permutation;
 	int vertstrings_count;
 	int geomstrings_count;
 	int fragstrings_count;
@@ -881,7 +973,7 @@ void R_GLSL_CompilePermutation(const char *filename, int permutation)
 	shaderfound = false;
 	if (shaderstring)
 	{
-		Con_DPrintf("GLSL shader text for \"%s\" loaded from disk\n", filename);
+		Con_DPrint("from disk... ");
 		vertstrings_list[vertstrings_count++] = shaderstring;
 		geomstrings_list[geomstrings_count++] = shaderstring;
 		fragstrings_list[fragstrings_count++] = shaderstring;
@@ -889,18 +981,17 @@ void R_GLSL_CompilePermutation(const char *filename, int permutation)
 	}
 	else if (!strcmp(filename, "glsl/default.glsl"))
 	{
-		Con_DPrintf("GLSL shader text for \"%s\" loaded from engine\n", filename);
 		vertstrings_list[vertstrings_count++] = builtinshaderstring;
 		geomstrings_list[geomstrings_count++] = builtinshaderstring;
 		fragstrings_list[fragstrings_count++] = builtinshaderstring;
 		shaderfound = true;
 	}
 	// clear any lists that are not needed by this shader
-	if (!(permutation & SHADERPERMUTATION_USES_VERTEXSHADER))
+	if (!(shadertype & SHADERTYPE_USES_VERTEXSHADER))
 		vertstrings_count = 0;
-	if (!(permutation & SHADERPERMUTATION_USES_GEOMETRYSHADER))
+	if (!(shadertype & SHADERTYPE_USES_GEOMETRYSHADER))
 		geomstrings_count = 0;
-	if (!(permutation & SHADERPERMUTATION_USES_FRAGMENTSHADER))
+	if (!(shadertype & SHADERTYPE_USES_FRAGMENTSHADER))
 		fragstrings_count = 0;
 	// compile the shader program
 	if (shaderfound && vertstrings_count + geomstrings_count + fragstrings_count)
@@ -966,9 +1057,16 @@ void R_GLSL_CompilePermutation(const char *filename, int permutation)
 		if (p->loc_Texture_Reflection >= 0) qglUniform1iARB(p->loc_Texture_Reflection, 12);
 		CHECKGLERROR
 		qglUseProgramObjectARB(0);CHECKGLERROR
+		if (developer.integer)
+			Con_Printf("GLSL shader %s :%s compiled.\n", filename, permutationname);
 	}
 	else
-		Con_Printf("permutation%s failed for shader %s, some features may not work properly!\n", permutationname, filename);
+	{
+		if (developer.integer)
+			Con_Printf("GLSL shader %s :%s failed!  source code line offset for above errors is %i.\n", permutationname, filename, -(vertstrings_count - 1));
+		else
+			Con_Printf("GLSL shader %s :%s failed!  some features may not work properly.\n", permutationname, filename);
+	}
 	if (shaderstring)
 		Mem_Free(shaderstring);
 }
@@ -976,7 +1074,7 @@ void R_GLSL_CompilePermutation(const char *filename, int permutation)
 void R_GLSL_Restart_f(void)
 {
 	int i;
-	for (i = 0;i < SHADERPERMUTATION_MAX;i++)
+	for (i = 0;i < SHADERPERMUTATION_INDICES;i++)
 		if (r_glsl_permutations[i].program)
 			GL_Backend_FreeProgram(r_glsl_permutations[i].program);
 	memset(r_glsl_permutations, 0, sizeof(r_glsl_permutations));
@@ -1015,14 +1113,16 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 	// fragment shader on features that are not being used
 	const char *shaderfilename = NULL;
 	unsigned int permutation = 0;
+	unsigned int shadertype = 0;
 	rtexture_t *nmap;
 	r_glsl_permutation = NULL;
+	shaderfilename = "glsl/default.glsl";
+	shadertype = SHADERTYPE_USES_VERTEXSHADER | SHADERTYPE_USES_FRAGMENTSHADER;
 	// TODO: implement geometry-shader based shadow volumes someday
 	if (rsurface.rtlight)
 	{
 		// light source
-		shaderfilename = "glsl/default.glsl";
-		permutation = SHADERPERMUTATION_MODE_LIGHTSOURCE | SHADERPERMUTATION_USES_VERTEXSHADER | SHADERPERMUTATION_USES_FRAGMENTSHADER;
+		permutation = SHADERPERMUTATION_MODE_LIGHTSOURCE;
 		if (rsurface.rtlight->currentcubemap != r_texture_whitecube)
 			permutation |= SHADERPERMUTATION_CUBEFILTER;
 		if (diffusescale > 0)
@@ -1049,8 +1149,6 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 	else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
 	{
 		// bright unshaded geometry
-		shaderfilename = "glsl/default.glsl";
-		permutation = SHADERPERMUTATION_USES_VERTEXSHADER | SHADERPERMUTATION_USES_FRAGMENTSHADER;
 		permutation |= SHADERPERMUTATION_MODE_LIGHTMAP;
 		if (rsurface.texture->currentskinframe->glow)
 			permutation |= SHADERPERMUTATION_GLOW;
@@ -1074,8 +1172,6 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 	else if (modellighting)
 	{
 		// directional model lighting
-		shaderfilename = "glsl/default.glsl";
-		permutation = SHADERPERMUTATION_USES_VERTEXSHADER | SHADERPERMUTATION_USES_FRAGMENTSHADER;
 		permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTION;
 		if (rsurface.texture->currentskinframe->glow)
 			permutation |= SHADERPERMUTATION_GLOW;
@@ -1101,8 +1197,6 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 	else
 	{
 		// lightmapped wall
-		shaderfilename = "glsl/default.glsl";
-		permutation = SHADERPERMUTATION_USES_VERTEXSHADER | SHADERPERMUTATION_USES_FRAGMENTSHADER;
 		if (r_glsl_deluxemapping.integer >= 1 && rsurface.uselightmaptexture && r_refdef.worldmodel && r_refdef.worldmodel->brushq3.deluxemapping)
 		{
 			// deluxemapping (light direction texture)
@@ -1144,15 +1238,15 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
 			permutation |= SHADERPERMUTATION_REFLECTION;
 	}
-	if (!r_glsl_permutations[permutation & SHADERPERMUTATION_MASK].program)
+	if (!r_glsl_permutations[permutation].program)
 	{
-		if (!r_glsl_permutations[permutation & SHADERPERMUTATION_MASK].compiled)
-			R_GLSL_CompilePermutation(shaderfilename, permutation);
-		if (!r_glsl_permutations[permutation & SHADERPERMUTATION_MASK].program)
+		if (!r_glsl_permutations[permutation].compiled)
+			R_GLSL_CompilePermutation(shaderfilename, permutation, shadertype);
+		if (!r_glsl_permutations[permutation].program)
 		{
 			// remove features until we find a valid permutation
 			unsigned int i;
-			for (i = (SHADERPERMUTATION_MAX >> 1);;i>>=1)
+			for (i = (SHADERPERMUTATION_INDICES >> 1);;i>>=1)
 			{
 				if (!i)
 				{
@@ -1164,14 +1258,14 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 				if (!(permutation & i))
 					continue;
 				permutation &= ~i;
-				if (!r_glsl_permutations[permutation & SHADERPERMUTATION_MASK].compiled)
-					R_GLSL_CompilePermutation(shaderfilename, permutation);
-				if (r_glsl_permutations[permutation & SHADERPERMUTATION_MASK].program)
+				if (!r_glsl_permutations[permutation].compiled)
+					R_GLSL_CompilePermutation(shaderfilename, permutation, shadertype);
+				if (r_glsl_permutations[permutation].program)
 					break;
 			}
 		}
 	}
-	r_glsl_permutation = r_glsl_permutations + (permutation & SHADERPERMUTATION_MASK);
+	r_glsl_permutation = r_glsl_permutations + permutation;
 	CHECKGLERROR
 	qglUseProgramObjectARB(r_glsl_permutation->program);CHECKGLERROR
 	R_Mesh_TexMatrix(0, &rsurface.texture->currenttexmatrix);
@@ -1218,7 +1312,7 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 	if (r_glsl_permutation->loc_Texture_Normal >= 0) R_Mesh_TexBind(0, R_GetTexture(nmap));
 	if (r_glsl_permutation->loc_Texture_Color >= 0) R_Mesh_TexBind(1, R_GetTexture(rsurface.texture->basetexture));
 	if (r_glsl_permutation->loc_Texture_Gloss >= 0) R_Mesh_TexBind(2, R_GetTexture(rsurface.texture->glosstexture));
-	//if (r_glsl_permutation->loc_Texture_Cube >= 0 && permutation & SHADERPERMUTATION_MODE_LIGHTSOURCE) R_Mesh_TexBindCubeMap(3, R_GetTexture(rsurface.rtlight->currentcubemap));
+	//if (r_glsl_permutation->loc_Texture_Cube >= 0 && rsurface.rtlight) R_Mesh_TexBindCubeMap(3, R_GetTexture(rsurface.rtlight->currentcubemap));
 	if (r_glsl_permutation->loc_Texture_Attenuation >= 0) R_Mesh_TexBind(10, R_GetTexture(r_shadow_attenuationgradienttexture));
 	if (r_glsl_permutation->loc_Texture_FogMask >= 0) R_Mesh_TexBind(4, R_GetTexture(r_texture_fogattenuation));
 	if (r_glsl_permutation->loc_Texture_Pants >= 0) R_Mesh_TexBind(5, R_GetTexture(rsurface.texture->currentskinframe->pants));
@@ -1271,26 +1365,15 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 	if (r_glsl_permutation->loc_FogRangeRecip >= 0) qglUniform1fARB(r_glsl_permutation->loc_FogRangeRecip, r_refdef.fograngerecip);
 	if (r_glsl_permutation->loc_SpecularPower >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularPower, rsurface.texture->specularpower);
 	if (r_glsl_permutation->loc_OffsetMapping_Scale >= 0) qglUniform1fARB(r_glsl_permutation->loc_OffsetMapping_Scale, r_glsl_offsetmapping_scale.value);
-	if (r_glsl_permutation->loc_DistortScaleRefractReflect >= 0) qglUniform4fARB(r_glsl_permutation->loc_DistortScaleRefractReflect, r_water_refractdistort.value * rsurface.texture->refractfactor, r_water_refractdistort.value * rsurface.texture->refractfactor, r_water_reflectdistort.value, r_water_reflectdistort.value);
+	if (r_glsl_permutation->loc_DistortScaleRefractReflect >= 0) qglUniform4fARB(r_glsl_permutation->loc_DistortScaleRefractReflect, r_water_refractdistort.value * rsurface.texture->refractfactor, r_water_refractdistort.value * rsurface.texture->refractfactor, r_water_reflectdistort.value * rsurface.texture->reflectfactor, r_water_reflectdistort.value * rsurface.texture->reflectfactor);
 	if (r_glsl_permutation->loc_ScreenScaleRefractReflect >= 0) qglUniform4fARB(r_glsl_permutation->loc_ScreenScaleRefractReflect, r_waterstate.screenscale[0], r_waterstate.screenscale[1], r_waterstate.screenscale[0], r_waterstate.screenscale[1]);
 	if (r_glsl_permutation->loc_ScreenCenterRefractReflect >= 0) qglUniform4fARB(r_glsl_permutation->loc_ScreenCenterRefractReflect, r_waterstate.screencenter[0], r_waterstate.screencenter[1], r_waterstate.screencenter[0], r_waterstate.screencenter[1]);
-	if (r_glsl_permutation->loc_RefractColor >= 0) qglUniform3fvARB(r_glsl_permutation->loc_RefractColor, 1, rsurface.texture->refractcolor);
-	if (r_glsl_permutation->loc_ReflectColor >= 0) qglUniform3fvARB(r_glsl_permutation->loc_ReflectColor, 1, rsurface.texture->reflectcolor);
-	if (r_glsl_permutation->loc_ReflectFactor >= 0) qglUniform1fARB(r_glsl_permutation->loc_ReflectFactor, rsurface.texture->refractmax - rsurface.texture->refractmin);
-	if (r_glsl_permutation->loc_ReflectOffset >= 0) qglUniform1fARB(r_glsl_permutation->loc_ReflectOffset, 1 - rsurface.texture->refractmax);
+	if (r_glsl_permutation->loc_RefractColor >= 0) qglUniform4fvARB(r_glsl_permutation->loc_RefractColor, 1, rsurface.texture->refractcolor4f);
+	if (r_glsl_permutation->loc_ReflectColor >= 0) qglUniform4fvARB(r_glsl_permutation->loc_ReflectColor, 1, rsurface.texture->reflectcolor4f);
+	if (r_glsl_permutation->loc_ReflectFactor >= 0) qglUniform1fARB(r_glsl_permutation->loc_ReflectFactor, rsurface.texture->reflectmax - rsurface.texture->reflectmin);
+	if (r_glsl_permutation->loc_ReflectOffset >= 0) qglUniform1fARB(r_glsl_permutation->loc_ReflectOffset, rsurface.texture->reflectmin);
 	CHECKGLERROR
 	return permutation;
-}
-
-void R_SwitchSurfaceShader(int permutation)
-{
-	if (r_glsl_permutation != r_glsl_permutations + (permutation & SHADERPERMUTATION_MASK))
-	{
-		r_glsl_permutation = r_glsl_permutations + (permutation & SHADERPERMUTATION_MASK);
-		CHECKGLERROR
-		qglUseProgramObjectARB(r_glsl_permutation->program);
-		CHECKGLERROR
-	}
 }
 
 #define SKINFRAME_HASH 1024
@@ -2550,7 +2633,7 @@ static void R_Water_AddWaterPlane(msurface_t *surface)
 	// merge this surface's materialflags into the waterplane
 	p->materialflags |= surface->texture->currentframe->currentmaterialflags;
 	// merge this surface's PVS into the waterplane
-	if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFLECTION) && r_refdef.worldmodel && r_refdef.worldmodel->brush.FatPVS)
+	if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION) && r_refdef.worldmodel && r_refdef.worldmodel->brush.FatPVS)
 	{
 		r_refdef.worldmodel->brush.FatPVS(r_refdef.worldmodel, r_view.origin, 2, p->pvsbits, sizeof(p->pvsbits), p->pvsvalid);
 		p->pvsvalid = true;
@@ -2568,7 +2651,7 @@ static void R_Water_ProcessPlanes(void)
 	// make sure enough textures are allocated
 	for (planeindex = 0, p = r_waterstate.waterplanes;planeindex < r_waterstate.numwaterplanes;planeindex++, p++)
 	{
-		if (p->materialflags & MATERIALFLAG_WATERSHADER)
+		if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION))
 		{
 			if (!p->texture_refraction)
 				p->texture_refraction = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_refraction", planeindex), r_waterstate.texturewidth, r_waterstate.textureheight, NULL, TEXTYPE_RGBA, TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_ALWAYSPRECACHE, NULL);
@@ -2596,7 +2679,7 @@ static void R_Water_ProcessPlanes(void)
 
 		// render the normal view scene and copy into texture
 		// (except that a clipping plane should be used to hide everything on one side of the water, and the viewer's weapon model should be omitted)
-		if (p->materialflags & MATERIALFLAG_WATERSHADER)
+		if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION))
 		{
 			r_view.clipplane = p->plane;
 			VectorNegate(r_view.clipplane.normal, r_view.clipplane.normal);
@@ -3831,10 +3914,7 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 		*/
 	}
 	if(!r_waterstate.enabled)
-	{
-		t->currentmaterialflags &= ~MATERIALFLAG_WATERSHADER;
-		t->currentmaterialflags &= ~MATERIALFLAG_REFLECTION;
-	}
+		t->currentmaterialflags &= ~(MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION);
 	if (!(ent->flags & RENDER_LIGHT))
 		t->currentmaterialflags |= MATERIALFLAG_FULLBRIGHT;
 	if (ent->effects & EF_ADDITIVE)
@@ -5735,7 +5815,7 @@ void R_QueueSurfaceList(entity_render_t *ent, int numsurfaces, msurface_t **surf
 	if (addwaterplanes)
 	{
 		for (i = 0;i < numsurfaces;i++)
-			if (surfacelist[i]->texture->currentframe->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFLECTION))
+			if (surfacelist[i]->texture->currentframe->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION))
 				R_Water_AddWaterPlane(surfacelist[i]);
 		return;
 	}
@@ -6014,7 +6094,7 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 	}
 
 	R_UpdateAllTextureInfo(r_refdef.worldentity);
-	flagsmask = addwaterplanes ? (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFLECTION) : (skysurfaces ? MATERIALFLAG_SKY : (MATERIALFLAG_WATER | MATERIALFLAG_WALL));
+	flagsmask = addwaterplanes ? (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION) : (skysurfaces ? MATERIALFLAG_SKY : (MATERIALFLAG_WATER | MATERIALFLAG_WALL));
 
 	if (debug)
 	{
@@ -6101,7 +6181,7 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 	}
 
 	R_UpdateAllTextureInfo(ent);
-	flagsmask = addwaterplanes ? (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFLECTION) : (skysurfaces ? MATERIALFLAG_SKY : (MATERIALFLAG_WATER | MATERIALFLAG_WALL));
+	flagsmask = addwaterplanes ? (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION) : (skysurfaces ? MATERIALFLAG_SKY : (MATERIALFLAG_WATER | MATERIALFLAG_WALL));
 
 	if (debug)
 	{
