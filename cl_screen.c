@@ -957,6 +957,9 @@ static void SCR_CaptureVideo_RIFF_MakeIxChunk(const char *fcc, const char *dwChu
 	fs_offset_t ix = SCR_CaptureVideo_RIFF_GetPosition();
 	fs_offset_t pos;
 
+	if(*masteridx_count >= AVI_MASTER_INDEX_SIZE)
+		return;
+
 	nMatching = 0; // go through index and enumerate them
 	for(i = 0; i < cls.capturevideo.riffindexbuffer.cursize; i += 16)
 		if(!memcmp(cls.capturevideo.riffindexbuffer.data + i, dwChunkId, 4))
@@ -968,7 +971,7 @@ static void SCR_CaptureVideo_RIFF_MakeIxChunk(const char *fcc, const char *dwChu
 	SCR_CaptureVideo_RIFF_Write32(nMatching); // nEntriesInUse
 	SCR_CaptureVideo_RIFF_WriteFourCC(dwChunkId); // dwChunkId
 	SCR_CaptureVideo_RIFF_Write32(cls.capturevideo.videofile_ix_movistart & (fs_offset_t) 0xFFFFFFFFu);
-	SCR_CaptureVideo_RIFF_Write32((cls.capturevideo.videofile_ix_movistart >> 16) >> 16);
+	SCR_CaptureVideo_RIFF_Write32(((long long) cls.capturevideo.videofile_ix_movistart) >> 32);
 	SCR_CaptureVideo_RIFF_Write32(0); // dwReserved
 
 	for(i = 0; i < cls.capturevideo.riffindexbuffer.cursize; i += 16)
@@ -991,7 +994,7 @@ static void SCR_CaptureVideo_RIFF_MakeIxChunk(const char *fcc, const char *dwChu
 
 	FS_Seek(cls.capturevideo.videofile, masteridx_start + 16 * *masteridx_count, SEEK_SET);
 	SCR_CaptureVideo_RIFF_Write32(ix & (fs_offset_t) 0xFFFFFFFFu);
-	SCR_CaptureVideo_RIFF_Write32((ix >> 16) >> 16);
+	SCR_CaptureVideo_RIFF_Write32(((long long) ix) >> 32);
 	SCR_CaptureVideo_RIFF_Write32(pos - ix);
 	SCR_CaptureVideo_RIFF_Write32(nMatching);
 	SCR_CaptureVideo_RIFF_Flush();
