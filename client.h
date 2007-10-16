@@ -441,6 +441,13 @@ typedef struct capturevideostate_s
 	fs_offset_t videofile_totalframes_offset1;
 	fs_offset_t videofile_totalframes_offset2;
 	fs_offset_t videofile_totalsampleframes_offset;
+	int videofile_ix_master_audio_inuse;
+	fs_offset_t videofile_ix_master_audio_inuse_offset;
+	fs_offset_t videofile_ix_master_audio_start_offset;
+	int videofile_ix_master_video_inuse;
+	fs_offset_t videofile_ix_master_video_inuse_offset;
+	fs_offset_t videofile_ix_master_video_start_offset;
+	fs_offset_t videofile_ix_movistart;
 	qfile_t *videofile;
 	qboolean active;
 	qboolean realtime;
