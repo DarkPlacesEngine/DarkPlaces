@@ -50,6 +50,7 @@ cvar_t scr_stipple = {0, "scr_stipple", "0", "interlacing-like stippling of the 
 cvar_t scr_refresh = {0, "scr_refresh", "1", "allows you to completely shut off rendering for benchmarking purposes"};
 cvar_t shownetgraph = {CVAR_SAVE, "shownetgraph", "0", "shows a graph of packet sizes and other information, 0 = off, 1 = show client netgraph, 2 = show client and server netgraphs (when hosting a server)"};
 
+#define AVI_MASTER_INDEX_SIZE 640 // GB ought to be enough for anyone
 
 int jpeg_supported = false;
 
@@ -920,34 +921,97 @@ static void SCR_CaptureVideo_RIFF_Pop(void)
 	}
 }
 
+static void GrowBuf(sizebuf_t *buf, int extralen)
+{
+	if(buf->cursize + extralen > buf->maxsize)
+	{
+		int oldsize = buf->maxsize;
+		unsigned char *olddata;
+		olddata = buf->data;
+		buf->maxsize = max(buf->maxsize * 2, 4096);
+		buf->data = Mem_Alloc(tempmempool, buf->maxsize);
+		if(olddata)
+		{
+			memcpy(buf->data, olddata, oldsize);
+			Mem_Free(olddata);
+		}
+	}
+}
+
 static void SCR_CaptureVideo_RIFF_IndexEntry(const char *chunkfourcc, int chunksize, int flags)
 {
 	if (cls.capturevideo.riffstacklevel != 2)
 		Sys_Error("SCR_Capturevideo_RIFF_IndexEntry: RIFF stack level is %i (should be 2)\n", cls.capturevideo.riffstacklevel);
-	if (cls.capturevideo.riffindexbuffer.cursize + 16 > cls.capturevideo.riffindexbuffer.maxsize)
-	{
-		int oldsize = cls.capturevideo.riffindexbuffer.maxsize;
-		unsigned char *olddata;
-		olddata = cls.capturevideo.riffindexbuffer.data;
-		cls.capturevideo.riffindexbuffer.maxsize = max(cls.capturevideo.riffindexbuffer.maxsize * 2, 4096);
-		cls.capturevideo.riffindexbuffer.data = Mem_Alloc(tempmempool, cls.capturevideo.riffindexbuffer.maxsize);
-		if (olddata)
-		{
-			memcpy(cls.capturevideo.riffindexbuffer.data, olddata, oldsize);
-			Mem_Free(olddata);
-		}
-	}
+	GrowBuf(&cls.capturevideo.riffindexbuffer, 16);
+	SCR_CaptureVideo_RIFF_Flush();
 	MSG_WriteUnterminatedString(&cls.capturevideo.riffindexbuffer, chunkfourcc);
 	MSG_WriteLong(&cls.capturevideo.riffindexbuffer, flags);
 	MSG_WriteLong(&cls.capturevideo.riffindexbuffer, (int)FS_Tell(cls.capturevideo.videofile) - cls.capturevideo.riffstackstartoffset[1]);
 	MSG_WriteLong(&cls.capturevideo.riffindexbuffer, chunksize);
 }
 
+static void SCR_CaptureVideo_RIFF_MakeIxChunk(const char *fcc, const char *dwChunkId, fs_offset_t masteridx_counter, int *masteridx_count, fs_offset_t masteridx_start)
+{
+	int nMatching;
+	int i;
+	fs_offset_t ix = SCR_CaptureVideo_RIFF_GetPosition();
+	fs_offset_t pos;
+
+	nMatching = 0; // go through index and enumerate them
+	for(i = 0; i < cls.capturevideo.riffindexbuffer.cursize; i += 16)
+		if(!memcmp(cls.capturevideo.riffindexbuffer.data + i, dwChunkId, 4))
+			++nMatching;
+
+	SCR_CaptureVideo_RIFF_Push(fcc, NULL);
+	SCR_CaptureVideo_RIFF_Write16(2); // wLongsPerEntry
+	SCR_CaptureVideo_RIFF_Write16(0x0100); // bIndexType=1, bIndexSubType=0
+	SCR_CaptureVideo_RIFF_Write32(nMatching); // nEntriesInUse
+	SCR_CaptureVideo_RIFF_WriteFourCC(dwChunkId); // dwChunkId
+	SCR_CaptureVideo_RIFF_Write32(cls.capturevideo.videofile_ix_movistart & (fs_offset_t) 0xFFFFFFFFu);
+	SCR_CaptureVideo_RIFF_Write32(cls.capturevideo.videofile_ix_movistart >> 32);
+	SCR_CaptureVideo_RIFF_Write32(0); // dwReserved
+
+	for(i = 0; i < cls.capturevideo.riffindexbuffer.cursize; i += 16)
+		if(!memcmp(cls.capturevideo.riffindexbuffer.data + i, dwChunkId, 4))
+		{
+			unsigned int *p = (unsigned int *) (cls.capturevideo.riffindexbuffer.data + i);
+			unsigned int flags = p[1];
+			unsigned int rpos = p[2];
+			unsigned int size = p[3];
+			size &= ~0x80000000;
+			if(!(flags & 0x10)) // no keyframe?
+				size |= 0x80000000;
+			SCR_CaptureVideo_RIFF_Write32(rpos + 8);
+			SCR_CaptureVideo_RIFF_Write32(size);
+		}
+
+	SCR_CaptureVideo_RIFF_Pop();
+	pos = SCR_CaptureVideo_RIFF_GetPosition();
+	SCR_CaptureVideo_RIFF_Flush();
+
+	FS_Seek(cls.capturevideo.videofile, masteridx_start + 16 * *masteridx_count, SEEK_SET);
+	SCR_CaptureVideo_RIFF_Write32(ix & (fs_offset_t) 0xFFFFFFFFu);
+	SCR_CaptureVideo_RIFF_Write32(ix >> 32);
+	SCR_CaptureVideo_RIFF_Write32(pos - ix);
+	SCR_CaptureVideo_RIFF_Write32(nMatching);
+	SCR_CaptureVideo_RIFF_Flush();
+
+	FS_Seek(cls.capturevideo.videofile, masteridx_counter, SEEK_SET);
+	SCR_CaptureVideo_RIFF_Write32(++*masteridx_count);
+	SCR_CaptureVideo_RIFF_Flush();
+
+	FS_Seek(cls.capturevideo.videofile, 0, SEEK_END);
+}
+
 static void SCR_CaptureVideo_RIFF_Finish(qboolean final)
 {
 	// close the "movi" list
 	SCR_CaptureVideo_RIFF_Pop();
-	// write the idx1 chunk that we've been building while saving the frames
+	if(cls.capturevideo.videofile_ix_master_video_inuse_offset)
+		SCR_CaptureVideo_RIFF_MakeIxChunk("ix00", "00dc", cls.capturevideo.videofile_ix_master_video_inuse_offset, &cls.capturevideo.videofile_ix_master_video_inuse, cls.capturevideo.videofile_ix_master_video_start_offset);
+	if(cls.capturevideo.videofile_ix_master_audio_inuse_offset)
+		SCR_CaptureVideo_RIFF_MakeIxChunk("ix01", "01wb", cls.capturevideo.videofile_ix_master_audio_inuse_offset, &cls.capturevideo.videofile_ix_master_audio_inuse, cls.capturevideo.videofile_ix_master_audio_start_offset);
+	// write the idx1 chunk that we've been building while saving the frames (for old style players)
 	if(final && cls.capturevideo.videofile_firstchunkframes_offset)
 	// TODO replace index creating by OpenDML ix##/##ix/indx chunk so it works for more than one AVI part too
 	{
@@ -985,12 +1049,13 @@ static void SCR_CaptureVideo_RIFF_OverflowCheck(int framesize)
 
 	// if this would overflow the windows limit of 1GB per RIFF chunk, we need
 	// to close the current RIFF chunk and open another for future frames
-	if (8 + cursize + framesize + cls.capturevideo.riffindexbuffer.cursize + 8 > 1<<30)
+	if (8 + cursize + framesize + cls.capturevideo.riffindexbuffer.cursize + 8 + cls.capturevideo.riffindexbuffer.cursize + 64 > 1<<30) // note that the Ix buffer takes less space... I just don't dare to / 2 here now... sorry, maybe later
 	{
 		SCR_CaptureVideo_RIFF_Finish(false);
 		// begin a new 1GB extended section of the AVI
 		SCR_CaptureVideo_RIFF_Push("RIFF", "AVIX");
 		SCR_CaptureVideo_RIFF_Push("LIST", "movi");
+		cls.capturevideo.videofile_ix_movistart = cls.capturevideo.riffstackstartoffset[1];
 	}
 }
 
@@ -1167,6 +1232,20 @@ Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 		SCR_CaptureVideo_RIFF_Write32(0); // color used
 		SCR_CaptureVideo_RIFF_Write32(0); // color important
 		SCR_CaptureVideo_RIFF_Pop();
+		// master index
+		SCR_CaptureVideo_RIFF_Push("indx", NULL);
+		SCR_CaptureVideo_RIFF_Write16(4); // wLongsPerEntry
+		SCR_CaptureVideo_RIFF_Write16(0); // bIndexSubType=0, bIndexType=0
+		cls.capturevideo.videofile_ix_master_video_inuse_offset = SCR_CaptureVideo_RIFF_GetPosition();
+		SCR_CaptureVideo_RIFF_Write32(0); // nEntriesInUse
+		SCR_CaptureVideo_RIFF_WriteFourCC("00dc"); // dwChunkId
+		SCR_CaptureVideo_RIFF_Write32(0); // dwReserved1
+		SCR_CaptureVideo_RIFF_Write32(0); // dwReserved2
+		SCR_CaptureVideo_RIFF_Write32(0); // dwReserved3
+		cls.capturevideo.videofile_ix_master_video_start_offset = SCR_CaptureVideo_RIFF_GetPosition();
+		for(i = 0; i < AVI_MASTER_INDEX_SIZE * 4; ++i)
+			SCR_CaptureVideo_RIFF_Write32(0); // fill up later
+		SCR_CaptureVideo_RIFF_Pop();
 		// extended format (aspect!)
 		SCR_CaptureVideo_RIFF_Push("vprp", NULL);
 		SCR_CaptureVideo_RIFF_Write32(0); // VideoFormatToken
@@ -1223,7 +1302,23 @@ Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 			SCR_CaptureVideo_RIFF_Write16(0); // size
 			SCR_CaptureVideo_RIFF_Pop();
 			SCR_CaptureVideo_RIFF_Pop();
+			// master index
+			SCR_CaptureVideo_RIFF_Push("indx", NULL);
+			SCR_CaptureVideo_RIFF_Write16(4); // wLongsPerEntry
+			SCR_CaptureVideo_RIFF_Write16(0); // bIndexSubType=0, bIndexType=0
+			cls.capturevideo.videofile_ix_master_audio_inuse_offset = SCR_CaptureVideo_RIFF_GetPosition();
+			SCR_CaptureVideo_RIFF_Write32(0); // nEntriesInUse
+			SCR_CaptureVideo_RIFF_WriteFourCC("01wb"); // dwChunkId
+			SCR_CaptureVideo_RIFF_Write32(0); // dwReserved1
+			SCR_CaptureVideo_RIFF_Write32(0); // dwReserved2
+			SCR_CaptureVideo_RIFF_Write32(0); // dwReserved3
+			cls.capturevideo.videofile_ix_master_audio_start_offset = SCR_CaptureVideo_RIFF_GetPosition();
+			for(i = 0; i < AVI_MASTER_INDEX_SIZE * 4; ++i)
+				SCR_CaptureVideo_RIFF_Write32(0); // fill up later
+			SCR_CaptureVideo_RIFF_Pop();
 		}
+
+		cls.capturevideo.videofile_ix_master_audio_inuse = cls.capturevideo.videofile_ix_master_video_inuse = 0;
 
 		// extended header (for total #frames)
 		SCR_CaptureVideo_RIFF_Push("LIST", "odml");
@@ -1256,6 +1351,7 @@ Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 		SCR_CaptureVideo_RIFF_Pop();
 		// begin the actual video section now
 		SCR_CaptureVideo_RIFF_Push("LIST", "movi");
+		cls.capturevideo.videofile_ix_movistart = cls.capturevideo.riffstackstartoffset[1];
 		// we're done with the headers now...
 		SCR_CaptureVideo_RIFF_Flush();
 		if (cls.capturevideo.riffstacklevel != 2)
