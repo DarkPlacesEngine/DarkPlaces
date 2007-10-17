@@ -444,10 +444,10 @@ static const char *builtinshaderstring =
 "varying vec3 VectorT; // direction of T texcoord (sometimes crudely called binormal)\n"
 "varying vec3 VectorR; // direction of R texcoord (surface normal)\n"
 "\n"
-"//#ifdef USEWATER\n"
+"//#ifdef MODE_WATER\n"
 "varying vec4 ModelViewProjectionPosition;\n"
 "//#else\n"
-"//# ifdef USEREFRACTION\n"
+"//# ifdef MODE_REFRACTION\n"
 "//varying vec4 ModelViewProjectionPosition;\n"
 "//# else\n"
 "//#  ifdef USEREFLECTION\n"
@@ -515,7 +515,7 @@ static const char *builtinshaderstring =
 "	VectorR = gl_MultiTexCoord3.xyz;\n"
 "#endif\n"
 "\n"
-"//#if defined(USEWATER) || defined(USEREFRACTION) || defined(USEREFLECTION)\n"
+"//#if defined(MODE_WATER) || defined(MODE_REFRACTION) || defined(USEREFLECTION)\n"
 "//	ModelViewProjectionPosition = gl_Vertex * gl_ModelViewProjectionMatrix;\n"
 "//	//ModelViewProjectionPosition_svector = (gl_Vertex + vec4(gl_MultiTexCoord1.xyz, 0)) * gl_ModelViewProjectionMatrix - ModelViewProjectionPosition;\n"
 "//	//ModelViewProjectionPosition_tvector = (gl_Vertex + vec4(gl_MultiTexCoord2.xyz, 0)) * gl_ModelViewProjectionMatrix - ModelViewProjectionPosition;\n"
@@ -529,12 +529,6 @@ static const char *builtinshaderstring =
 "	ModelViewProjectionPosition = gl_Position;\n"
 "#endif\n"
 "#ifdef MODE_REFRACTION\n"
-"	ModelViewProjectionPosition = gl_Position;\n"
-"#endif\n"
-"#ifdef USEWATER\n"
-"	ModelViewProjectionPosition = gl_Position;\n"
-"#endif\n"
-"#ifdef USEREFRACTION\n"
 "	ModelViewProjectionPosition = gl_Position;\n"
 "#endif\n"
 "#ifdef USEREFLECTION\n"
@@ -573,7 +567,7 @@ static const char *builtinshaderstring =
 "uniform myhvec3 Color_Shirt;\n"
 "uniform myhvec3 FogColor;\n"
 "\n"
-"//#ifdef USEWATER\n"
+"//#ifdef MODE_WATER\n"
 "uniform vec4 DistortScaleRefractReflect;\n"
 "uniform vec4 ScreenScaleRefractReflect;\n"
 "uniform vec4 ScreenCenterRefractReflect;\n"
@@ -582,11 +576,14 @@ static const char *builtinshaderstring =
 "uniform myhalf ReflectFactor;\n"
 "uniform myhalf ReflectOffset;\n"
 "//#else\n"
-"//# ifdef USEREFRACTION\n"
+"//# ifdef MODE_REFRACTION\n"
 "//uniform vec4 DistortScaleRefractReflect;\n"
 "//uniform vec4 ScreenScaleRefractReflect;\n"
 "//uniform vec4 ScreenCenterRefractReflect;\n"
 "//uniform myhvec4 RefractColor;\n"
+"//#  ifdef USEREFLECTION\n"
+"//uniform myhvec4 ReflectColor;\n"
+"//#  endif\n"
 "//# else\n"
 "//#  ifdef USEREFLECTION\n"
 "//uniform vec4 DistortScaleRefractReflect;\n"
@@ -827,27 +824,7 @@ static const char *builtinshaderstring =
 "	color.rgb += myhvec3(texture2D(Texture_Glow, TexCoord)) * GlowScale;\n"
 "#endif\n"
 "\n"
-"#ifdef MODE_LIGHTSOURCE\n"
-"# ifdef USEWATER\n"
-"	color.rgb *= color.a;\n"
-"# endif\n"
-"# ifdef USEREFRACTION\n"
-"	color.rgb *= color.a;\n"
-"# endif\n"
-"#else\n"
-"# ifdef USEWATER\n"
-"	vec4 ScreenScaleRefractReflectIW = ScreenScaleRefractReflect * (1.0 / ModelViewProjectionPosition.w);\n"
-"	//vec4 ScreenTexCoord = (ModelViewProjectionPosition.xyxy + normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5)).xyxy * DistortScaleRefractReflect * 100) * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect;\n"
-"	vec4 ScreenTexCoord = ModelViewProjectionPosition.xyxy * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect + vec3(normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5))).xyxy * DistortScaleRefractReflect;\n"
-"	myhalf Fresnel = myhalf(pow(min(1.0, 1.0 - float(normalize(EyeVector).z)), 5.0)) * ReflectFactor + ReflectOffset;\n"
-"	color.rgb = mix(mix(myhvec3(texture2D(Texture_Refraction, ScreenTexCoord.xy)) * RefractColor.rgb, myhvec3(texture2D(Texture_Reflection, ScreenTexCoord.zw)) * ReflectColor.rgb, Fresnel), color.rgb, color.a);\n"
-"# endif\n"
-"# ifdef USEREFRACTION\n"
-"	vec4 ScreenScaleRefractReflectIW = ScreenScaleRefractReflect * (1.0 / ModelViewProjectionPosition.w);\n"
-"	//vec4 ScreenTexCoord = (ModelViewProjectionPosition.xyxy + normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5)).xyxy * DistortScaleRefractReflect * 100) * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect;\n"
-"	vec4 ScreenTexCoord = ModelViewProjectionPosition.xyxy * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect + vec3(normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5))).xyxy * DistortScaleRefractReflect;\n"
-"	color.rgb = mix(myhvec3(texture2D(Texture_Refraction, ScreenTexCoord.xy)) * RefractColor.rgb, color.rgb, color.a);\n"
-"# endif\n"
+"#ifndef MODE_LIGHTSOURCE\n"
 "# ifdef USEREFLECTION\n"
 "	vec4 ScreenScaleRefractReflectIW = ScreenScaleRefractReflect * (1.0 / ModelViewProjectionPosition.w);\n"
 "	//vec4 ScreenTexCoord = (ModelViewProjectionPosition.xyxy + normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5)).xyxy * DistortScaleRefractReflect * 100) * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect;\n"
@@ -885,9 +862,7 @@ static const char *builtinshaderstring =
 #define SHADERPERMUTATION_REFLECTION (1<<7) // normalmap-perturbed reflection of the scene infront of the surface, preformed as an overlay on the surface
 #define SHADERPERMUTATION_OFFSETMAPPING (1<<8) // adjust texcoords to roughly simulate a displacement mapped surface
 #define SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING (1<<9) // adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
-#define SHADERPERMUTATION_WATER (1<<10) // normalmap-perturbed refraction of the background, performed behind the surface (the texture or material must be transparent to see it)
-#define SHADERPERMUTATION_REFRACTION (1<<11) // normalmap-perturbed reflection of the scene infront of the surface, preformed as an overlay on the surface
-#define SHADERPERMUTATION_MODEBASE (1<<12) // multiplier for the SHADERMODE_ values to get a valid index
+#define SHADERPERMUTATION_MODEBASE (1<<10) // multiplier for the SHADERMODE_ values to get a valid index
 
 // NOTE: MUST MATCH ORDER OF SHADERPERMUTATION_* DEFINES!
 const char *shaderpermutationinfo[][2] =
@@ -902,8 +877,6 @@ const char *shaderpermutationinfo[][2] =
 	{"#define USEREFLECTION\n", " reflection"},
 	{"#define USEOFFSETMAPPING\n", " offsetmapping"},
 	{"#define USEOFFSETMAPPING_RELIEFMAPPING\n", " reliefmapping"},
-	{"#define USEWATER\n", " water"},
-	{"#define USEREFRACTION\n", " refraction"},
 	{NULL, NULL}
 };
 
@@ -1223,10 +1196,6 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 			permutation |= SHADERPERMUTATION_COLORMAPPING;
 		if(r_glsl_contrastboost.value > 1 || r_glsl_contrastboost.value < 0)
 			permutation |= SHADERPERMUTATION_CONTRASTBOOST;
-		//if (rsurface.texture->currentmaterialflags & MATERIALFLAG_WATERSHADER)
-		//	permutation |= SHADERPERMUTATION_WATER;
-		//if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFRACTION)
-		//	permutation |= SHADERPERMUTATION_REFRACTION;
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
 			permutation |= SHADERPERMUTATION_REFLECTION;
 	}
@@ -1248,10 +1217,6 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 		}
 		if(r_glsl_contrastboost.value > 1 || r_glsl_contrastboost.value < 0)
 			permutation |= SHADERPERMUTATION_CONTRASTBOOST;
-		//if (rsurface.texture->currentmaterialflags & MATERIALFLAG_WATERSHADER)
-		//	permutation |= SHADERPERMUTATION_WATER;
-		//if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFRACTION)
-		//	permutation |= SHADERPERMUTATION_REFRACTION;
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
 			permutation |= SHADERPERMUTATION_REFLECTION;
 	}
@@ -1269,10 +1234,6 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 			permutation |= SHADERPERMUTATION_COLORMAPPING;
 		if(r_glsl_contrastboost.value > 1 || r_glsl_contrastboost.value < 0)
 			permutation |= SHADERPERMUTATION_CONTRASTBOOST;
-		//if (rsurface.texture->currentmaterialflags & MATERIALFLAG_WATERSHADER)
-		//	permutation |= SHADERPERMUTATION_WATER;
-		//if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFRACTION)
-		//	permutation |= SHADERPERMUTATION_REFRACTION;
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
 			permutation |= SHADERPERMUTATION_REFLECTION;
 	}
@@ -1309,10 +1270,6 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 			permutation |= SHADERPERMUTATION_COLORMAPPING;
 		if(r_glsl_contrastboost.value > 1 || r_glsl_contrastboost.value < 0)
 			permutation |= SHADERPERMUTATION_CONTRASTBOOST;
-		//if (rsurface.texture->currentmaterialflags & MATERIALFLAG_WATERSHADER)
-		//	permutation |= SHADERPERMUTATION_WATER;
-		//if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFRACTION)
-		//	permutation |= SHADERPERMUTATION_REFRACTION;
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
 			permutation |= SHADERPERMUTATION_REFLECTION;
 	}
@@ -5299,105 +5256,6 @@ static void RSurf_DrawBatch_GL11_VertexShade(int texturenumsurfaces, msurface_t 
 	RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
 }
 
-#if 0
-static void RSurf_GL11_WaterTexCoords(int texturenumsurfaces, msurface_t **texturesurfacelist)
-{
-	int texturesurfaceindex;
-	const msurface_t *surface;
-	// compute texcoords for vertices (yes, these swim around the screen a bit unintentionally)
-	// compute vertex alpha to fade between reflection and refraction if this is water
-	for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
-	{
-		surface = texturesurfacelist[texturesurfaceindex];
-		GL_TransformToScreenTexCoords(surface->num_vertices, rsurface.vertex3f + 3 * surface->num_firstvertex, rsurface.array_generatedtexcoordtexture2f + 2 * surface->num_firstvertex, r_waterstate.screenscale[0], r_waterstate.screenscale[1], r_waterstate.screencenter[0], r_waterstate.screencenter[1]);
-	}
-}
-
-static void RSurf_GL11_WaterFresnelAlpha(int texturenumsurfaces, msurface_t **texturesurfacelist)
-{
-	int texturesurfaceindex;
-	int i;
-	const msurface_t *surface;
-	int numverts;
-	const float *v;
-	const float *n;
-	float *c2;
-	vec3_t dir;
-	float Fresnel;
-	// compute texcoords for vertices (yes, these swim around the screen a bit unintentionally)
-	// compute vertex alpha to fade between reflection and refraction if this is water
-	for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
-	{
-		surface = texturesurfacelist[texturesurfaceindex];
-		numverts = surface->num_vertices;
-		v = rsurface.vertex3f + 3 * surface->num_firstvertex;
-		n = rsurface.normal3f + 3 * surface->num_firstvertex;
-		c2 = rsurface.array_color4f + 4 * surface->num_firstvertex;
-		for (i = 0;i < numverts;i++, v += 3, n += 3, c2 += 4)
-		{
-			VectorSubtract(rsurface.modelorg, v, dir);
-			VectorNormalize(dir);
-			Fresnel = pow(min(1.0f, 1.0f - DotProduct(dir, n)), 2.0f) * (rsurface.texture->reflectmax - rsurface.texture->reflectmin) + rsurface.texture->reflectmin;
-			Vector4Set(c2, 1, 1, 1, Fresnel);
-		}
-	}
-}
-
-static void R_DrawTextureSurfaceList_GL11_Water(int texturenumsurfaces, msurface_t **texturesurfacelist)
-{
-	// OpenGL 1.1 path - crusty old voodoo path
-	rmeshstate_t m;
-	qboolean water;
-	if (rsurface.mode != RSURFMODE_MULTIPASS)
-		rsurface.mode = RSURFMODE_MULTIPASS;
-	RSurf_PrepareVerticesForBatch(true, false, texturenumsurfaces, texturesurfacelist);
-	R_Mesh_ColorPointer(NULL, 0, 0);
-	water = (rsurface.texture->currentmaterialflags & MATERIALFLAG_WATERSHADER) != 0;
-	RSurf_GL11_WaterTexCoords(texturenumsurfaces, texturesurfacelist);
-	if (water)
-		RSurf_GL11_WaterFresnelAlpha(texturenumsurfaces, texturesurfacelist);
-	// now draw the surfaces as refraction texture
-	memset(&m, 0, sizeof(m));
-	m.tex[0] = R_GetTexture(r_texture_white);
-	m.pointer_texcoord[0] = rsurface.array_generatedtexcoordtexture2f;
-	R_Mesh_TextureState(&m);
-	RSurf_DrawBatch_WithLightmapSwitching_WithWaterTextureSwitching(texturenumsurfaces, texturesurfacelist, -1, -1, 0, -1);
-	if (water)
-	{
-		// water also reflects before the normal render occurs, and uses a
-		// vertex-controlled alpha blend between refraction and reflection
-		GL_LockArrays(0, 0);
-		R_Mesh_ColorPointer(rsurface.array_color4f, 0, 0);
-		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		GL_DepthMask(false);
-		RSurf_DrawBatch_WithLightmapSwitching_WithWaterTextureSwitching(texturenumsurfaces, texturesurfacelist, -1, -1, -1, 0);
-	}
-	GL_LockArrays(0, 0);
-	CHECKGLERROR
-}
-
-static void R_DrawTextureSurfaceList_GL11_Reflection(int texturenumsurfaces, msurface_t **texturesurfacelist)
-{
-	// OpenGL 1.1 path - crusty old voodoo path
-	rmeshstate_t m;
-	qboolean water;
-	if (rsurface.mode != RSURFMODE_MULTIPASS)
-		rsurface.mode = RSURFMODE_MULTIPASS;
-	RSurf_PrepareVerticesForBatch(true, false, texturenumsurfaces, texturesurfacelist);
-	R_Mesh_ColorPointer(NULL, 0, 0);
-	water = (rsurface.texture->currentmaterialflags & MATERIALFLAG_WATERSHADER) != 0;
-	RSurf_GL11_WaterTexCoords(texturenumsurfaces, texturesurfacelist);
-	// now draw the surfaces as refraction texture
-	memset(&m, 0, sizeof(m));
-	m.tex[0] = R_GetTexture(r_texture_white);
-	m.pointer_texcoord[0] = rsurface.array_generatedtexcoordtexture2f;
-	R_Mesh_TextureState(&m);
-	RSurf_DrawBatch_WithLightmapSwitching_WithWaterTextureSwitching(texturenumsurfaces, texturesurfacelist, -1, -1, -1, 0);
-	GL_LockArrays(0, 0);
-	CHECKGLERROR
-}
-#endif
-
 static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, msurface_t **texturesurfacelist)
 {
 	GL_DepthRange(0, (rsurface.texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE) ? 0.0625 : 1);
@@ -5613,17 +5471,6 @@ static void R_DrawTextureSurfaceList_GL13(int texturenumsurfaces, msurface_t **t
 		rsurface.mode = RSURFMODE_MULTIPASS;
 	RSurf_PrepareVerticesForBatch(true, false, texturenumsurfaces, texturesurfacelist);
 
-#if 0
-	if (rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION))
-	{
-		// render background
-		GL_BlendFunc(GL_ONE, GL_ZERO);
-		GL_DepthMask(true);
-		GL_AlphaTest(false);
-		R_DrawTextureSurfaceList_GL11_Water(texturenumsurfaces, texturesurfacelist);
-	}
-#endif
-
 	for (layerindex = 0, layer = rsurface.texture->currentlayers;layerindex < rsurface.texture->currentnumlayers;layerindex++, layer++)
 	{
 		vec4_t layercolor;
@@ -5733,15 +5580,6 @@ static void R_DrawTextureSurfaceList_GL13(int texturenumsurfaces, msurface_t **t
 		qglDepthFunc(GL_LEQUAL);CHECKGLERROR
 		GL_AlphaTest(false);
 	}
-
-#if 0
-	if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
-	{
-		GL_BlendFunc(GL_ONE, GL_ONE);
-		GL_DepthMask(false);
-		R_DrawTextureSurfaceList_GL11_Reflection(texturenumsurfaces, texturesurfacelist);
-	}
-#endif
 }
 
 static void R_DrawTextureSurfaceList_GL11(int texturenumsurfaces, msurface_t **texturesurfacelist)
@@ -5755,17 +5593,6 @@ static void R_DrawTextureSurfaceList_GL11(int texturenumsurfaces, msurface_t **t
 	if (rsurface.mode != RSURFMODE_MULTIPASS)
 		rsurface.mode = RSURFMODE_MULTIPASS;
 	RSurf_PrepareVerticesForBatch(true, false, texturenumsurfaces, texturesurfacelist);
-
-#if 0
-	if (rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION))
-	{
-		// render background
-		GL_BlendFunc(GL_ONE, GL_ZERO);
-		GL_DepthMask(true);
-		GL_AlphaTest(false);
-		R_DrawTextureSurfaceList_GL11_Water(texturenumsurfaces, texturesurfacelist);
-	}
-#endif
 
 	for (layerindex = 0, layer = rsurface.texture->currentlayers;layerindex < rsurface.texture->currentnumlayers;layerindex++, layer++)
 	{
@@ -5884,15 +5711,6 @@ static void R_DrawTextureSurfaceList_GL11(int texturenumsurfaces, msurface_t **t
 		qglDepthFunc(GL_LEQUAL);CHECKGLERROR
 		GL_AlphaTest(false);
 	}
-
-#if 0
-	if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
-	{
-		GL_BlendFunc(GL_ONE, GL_ONE);
-		GL_DepthMask(false);
-		R_DrawTextureSurfaceList_GL11_Reflection(texturenumsurfaces, texturesurfacelist);
-	}
-#endif
 }
 
 static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **texturesurfacelist, qboolean writedepth, qboolean depthonly)

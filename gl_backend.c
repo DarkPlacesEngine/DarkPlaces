@@ -908,26 +908,6 @@ void GL_TransformToScreen(const vec4_t in, vec4_t out)
 	out[2] = r_view.z + (out[2] * iw + 1.0f) * r_view.depth * 0.5f;
 }
 
-/*
-void GL_TransformToScreenTexCoords(int numverts, const float *in3f, float *out2f, float scalex, float scaley, float basex, float basey)
-{
-	int i;
-	vec4_t in, temp;
-	float iw;
-	matrix4x4_t mat;
-	in[3] = 1;
-	Matrix4x4_Concat(&mat, &backend_projectmatrix, &backend_viewmatrix);
-	for (i = 0;i < numverts;i++)
-	{
-		VectorCopy(in3f + i * 3, in);
-		Matrix4x4_Transform4 (&mat, in, temp);
-		iw = 1.0f / temp[3];
-		out2f[i*2+0] = (temp[0] * iw) * scalex + basex;
-		out2f[i*2+1] = (temp[1] * iw) * scaley + basey;
-	}
-}
-*/
-
 // called at beginning of frame
 void R_Mesh_Start(void)
 {
