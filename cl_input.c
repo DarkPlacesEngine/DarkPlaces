@@ -1522,6 +1522,8 @@ void CL_SendMove(void)
 	{
 		if (cls.protocol == PROTOCOL_QUAKE || cls.protocol == PROTOCOL_QUAKEDP || cls.protocol == PROTOCOL_NEHAHRAMOVIE || cls.protocol == PROTOCOL_NEHAHRABJP || cls.protocol == PROTOCOL_NEHAHRABJP2 || cls.protocol == PROTOCOL_NEHAHRABJP3)
 		{
+			CL_ClientMovement_Input((cl.movecmd[0].buttons & 2) != 0, false);
+
 			// 5 bytes
 			MSG_WriteByte (&buf, clc_move);
 			MSG_WriteFloat (&buf, cl.movecmd[0].time); // last server packet time
@@ -1538,6 +1540,8 @@ void CL_SendMove(void)
 		}
 		else if (cls.protocol == PROTOCOL_DARKPLACES2 || cls.protocol == PROTOCOL_DARKPLACES3)
 		{
+			CL_ClientMovement_Input((cl.movecmd[0].buttons & 2) != 0, false);
+
 			// 5 bytes
 			MSG_WriteByte (&buf, clc_move);
 			MSG_WriteFloat (&buf, cl.movecmd[0].time); // last server packet time
@@ -1554,6 +1558,8 @@ void CL_SendMove(void)
 		}
 		else if (cls.protocol == PROTOCOL_DARKPLACES1 || cls.protocol == PROTOCOL_DARKPLACES4 || cls.protocol == PROTOCOL_DARKPLACES5)
 		{
+			CL_ClientMovement_Input((cl.movecmd[0].buttons & 2) != 0, false);
+
 			// 5 bytes
 			MSG_WriteByte (&buf, clc_move);
 			MSG_WriteFloat (&buf, cl.movecmd[0].time); // last server packet time
