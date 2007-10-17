@@ -1304,7 +1304,6 @@ Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 			SCR_CaptureVideo_RIFF_Write16(16); // bits per sample
 			SCR_CaptureVideo_RIFF_Write16(0); // size
 			SCR_CaptureVideo_RIFF_Pop();
-			SCR_CaptureVideo_RIFF_Pop();
 			// master index
 			SCR_CaptureVideo_RIFF_Push("indx", NULL);
 			SCR_CaptureVideo_RIFF_Write16(4); // wLongsPerEntry
@@ -1318,6 +1317,7 @@ Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 			cls.capturevideo.videofile_ix_master_audio_start_offset = SCR_CaptureVideo_RIFF_GetPosition();
 			for(i = 0; i < AVI_MASTER_INDEX_SIZE * 4; ++i)
 				SCR_CaptureVideo_RIFF_Write32(0); // fill up later
+			SCR_CaptureVideo_RIFF_Pop();
 			SCR_CaptureVideo_RIFF_Pop();
 		}
 
