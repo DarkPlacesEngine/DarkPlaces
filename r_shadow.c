@@ -1463,7 +1463,16 @@ static void R_Shadow_RenderLighting_VisibleLighting(int firstvertex, int numvert
 static void R_Shadow_RenderLighting_Light_GLSL(int firstvertex, int numvertices, int numtriangles, const int *element3i, int element3i_bufferobject, size_t element3i_bufferoffset, const vec3_t lightcolorbase, const vec3_t lightcolorpants, const vec3_t lightcolorshirt, rtexture_t *basetexture, rtexture_t *pantstexture, rtexture_t *shirttexture, rtexture_t *normalmaptexture, rtexture_t *glosstexture, float ambientscale, float diffusescale, float specularscale, qboolean dopants, qboolean doshirt)
 {
 	// ARB2 GLSL shader path (GFFX5200, Radeon 9500)
-	R_SetupSurfaceShader(lightcolorbase, false, ambientscale, diffusescale, specularscale);
+	R_SetupSurfaceShader(lightcolorbase, false, ambientscale, diffusescale, specularscale, RSURFPASS_RTLIGHT);
+	R_Mesh_TexMatrix(0, &rsurface.texture->currenttexmatrix);
+	R_Mesh_TexBind(0, R_GetTexture(rsurface.texture->currentskinframe->nmap));
+	R_Mesh_TexBind(1, R_GetTexture(rsurface.texture->basetexture));
+	R_Mesh_TexBind(2, R_GetTexture(rsurface.texture->glosstexture));
+	R_Mesh_TexBindCubeMap(3, R_GetTexture(rsurface.rtlight->currentcubemap));
+	R_Mesh_TexBind(4, R_GetTexture(r_texture_fogattenuation));
+	R_Mesh_TexBind(5, R_GetTexture(rsurface.texture->currentskinframe->pants));
+	R_Mesh_TexBind(6, R_GetTexture(rsurface.texture->currentskinframe->shirt));
+	R_Mesh_TexBind(10, R_GetTexture(r_shadow_attenuationgradienttexture));
 	R_Mesh_TexCoordPointer(0, 2, rsurface.texcoordtexture2f, rsurface.texcoordtexture2f_bufferobject, rsurface.texcoordtexture2f_bufferoffset);
 	R_Mesh_TexCoordPointer(1, 3, rsurface.svector3f, rsurface.svector3f_bufferobject, rsurface.svector3f_bufferoffset);
 	R_Mesh_TexCoordPointer(2, 3, rsurface.tvector3f, rsurface.tvector3f_bufferobject, rsurface.tvector3f_bufferoffset);

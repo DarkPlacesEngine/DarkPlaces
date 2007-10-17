@@ -359,7 +359,15 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generatetangents, int texturenumsurfaces, msurface_t **texturesurfacelist);
 void RSurf_DrawBatch_Simple(int texturenumsurfaces, msurface_t **texturesurfacelist);
 
-int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, float ambientscale, float diffusescale, float specularscale);
+typedef enum rsurfacepass_e
+{
+	RSURFPASS_BASE,
+	RSURFPASS_BACKGROUND,
+	RSURFPASS_RTLIGHT
+}
+rsurfacepass_t;
+
+int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, float ambientscale, float diffusescale, float specularscale, rsurfacepass_t pass);
 
 #endif
 
