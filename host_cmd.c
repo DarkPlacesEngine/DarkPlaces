@@ -1405,9 +1405,6 @@ void Host_Spawn_f (void)
 	if (sv.loadgame)
 	{
 		// loaded games are fully initialized already
-		// if this is the last client to be connected, unpause
-		sv.paused = false;
-
 		if (prog->funcoffsets.RestoreGame)
 		{
 			Con_DPrint("Calling RestoreGame\n");
@@ -1430,8 +1427,8 @@ void Host_Spawn_f (void)
 		prog->globals.server->self = PRVM_EDICT_TO_PROG(host_client->edict);
 		PRVM_ExecuteProgram (prog->globals.server->ClientConnect, "QC function ClientConnect is missing");
 
-		if (svs.maxclients > 1 || cls.state == ca_dedicated)
-			Con_Printf("%s entered the game\n", host_client->name);
+		if (cls.state == ca_dedicated)
+			Con_Printf("%s connected\n", host_client->name);
 
 		PRVM_ExecuteProgram (prog->globals.server->PutClientInServer, "QC function PutClientInServer is missing");
 	}
@@ -1498,7 +1495,6 @@ void Host_Spawn_f (void)
 		MSG_WriteAngle (&host_client->netconnection->message, host_client->edict->fields.server->v_angle[0], sv.protocol);
 		MSG_WriteAngle (&host_client->netconnection->message, host_client->edict->fields.server->v_angle[1], sv.protocol);
 		MSG_WriteAngle (&host_client->netconnection->message, 0, sv.protocol);
-		sv.loadgame = false; // we're basically done with loading now
 	}
 	else
 	{
@@ -1522,6 +1518,20 @@ Host_Begin_f
 void Host_Begin_f (void)
 {
 	host_client->spawned = true;
+
+	// LordHavoc: note: this code also exists in SV_DropClient
+	if (sv.loadgame)
+	{
+		int i;
+		for (i = 0;i < svs.maxclients;i++)
+			if (svs.clients[i].active && !svs.clients[i].spawned)
+				break;
+		if (i == svs.maxclients)
+		{
+			Con_Printf("Loaded game, everyone rejoined - unpausing\n");
+			sv.paused = sv.loadgame = false; // we're basically done with loading now
+		}
+	}
 }
 
 //===========================================================================
