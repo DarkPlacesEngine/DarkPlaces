@@ -462,6 +462,18 @@ void SV_DropClient(qboolean crash)
 	// update server listing on the master because player count changed
 	// (which the master uses for filtering empty/full servers)
 	NetConn_Heartbeat(1);
+
+	if (sv.loadgame)
+	{
+		for (i = 0;i < svs.maxclients;i++)
+			if (svs.clients[i].active && !svs.clients[i].spawned)
+				break;
+		if (i == svs.maxclients)
+		{
+			Con_Printf("Loaded game, everyone rejoined - unpausing\n");
+			sv.paused = sv.loadgame = false; // we're basically done with loading now
+		}
+	}
 }
 
 /*
@@ -527,7 +539,7 @@ void Host_GetConsoleCommands (void)
 ==================
 Host_TimeReport
 
-Returns a time report string, for example for 
+Returns a time report string, for example for
 ==================
 */
 const char *Host_TimingReport()
