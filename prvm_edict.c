@@ -1500,6 +1500,7 @@ void PRVM_ResetProg()
 	PRVM_GCALL(reset_cmd)();
 	Mem_FreePool(&prog->progs_mempool);
 	memset(prog,0,sizeof(prvm_prog_t));
+	prog->starttime = Sys_DoubleTime();
 }
 
 /*
@@ -2028,6 +2029,7 @@ void PRVM_Init (void)
 	Cmd_AddCommand ("prvm_edicts", PRVM_ED_PrintEdicts_f, "prints all data about all entities in the selected VM (server, client, menu)");
 	Cmd_AddCommand ("prvm_edictcount", PRVM_ED_Count_f, "prints number of active entities in the selected VM (server, client, menu)");
 	Cmd_AddCommand ("prvm_profile", PRVM_Profile_f, "prints execution statistics about the most used QuakeC functions in the selected VM (server, client, menu)");
+	Cmd_AddCommand ("prvm_callprofile", PRVM_CallProfile_f, "prints execution statistics about the most time consuming QuakeC calls from the engine in the selected VM (server, client, menu)");
 	Cmd_AddCommand ("prvm_fields", PRVM_Fields_f, "prints usage statistics on properties (how many entities have non-zero values) in the selected VM (server, client, menu)");
 	Cmd_AddCommand ("prvm_globals", PRVM_Globals_f, "prints all global variables in the selected VM (server, client, menu)");
 	Cmd_AddCommand ("prvm_global", PRVM_Global_f, "prints value of a specified global variable in the selected VM (server, client, menu)");
@@ -2061,6 +2063,7 @@ void PRVM_InitProg(int prognr)
 		PRVM_ResetProg();
 
 	memset(prog, 0, sizeof(prvm_prog_t));
+	prog->starttime = Sys_DoubleTime();
 
 	prog->error_cmd = Host_Error;
 }

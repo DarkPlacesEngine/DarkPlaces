@@ -288,6 +288,7 @@ prvm_prog_funcoffsets_t;
 // NOTE: external code has to create and free the mempools but everything else is done by prvm !
 typedef struct prvm_prog_s
 {
+	double              starttime;
 	dprograms_t			*progs;
 	mfunction_t			*functions;
 	char				*strings;
@@ -464,6 +465,7 @@ void _PRVM_FreeAll (const char *filename, int fileline);
 
 void PRVM_Profile (int maxfunctions, int mininstructions);
 void PRVM_Profile_f (void);
+void PRVM_CallProfile_f (void);
 void PRVM_PrintFunction_f (void);
 
 void PRVM_PrintState(void);
