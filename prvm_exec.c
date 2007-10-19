@@ -266,6 +266,43 @@ void PRVM_StackTrace (void)
 }
 
 
+void PRVM_CallProfile ()
+{
+	mfunction_t *f, *best;
+	int i;
+	double max;
+	double sum;
+
+	Con_Printf( "%s Call Profile:\n", PRVM_NAME );
+
+	sum = 0;
+	do
+	{
+		max = 0;
+		best = NULL;
+		for (i=0 ; i<prog->progs->numfunctions ; i++)
+		{
+			f = &prog->functions[i];
+			if (max < f->totaltime)
+			{
+				max = f->totaltime;
+				best = f;
+			}
+		}
+		if (best)
+		{
+			sum += best->totaltime;
+			Con_Printf("%9.4f %s\n", best->totaltime, PRVM_GetString(best->s_name));
+			best->totaltime = 0;
+		}
+	} while (best);
+
+	Con_Printf("Total time since last profile reset: %9.4f\n", Sys_DoubleTime() - prog->starttime);
+	Con_Printf("       - used by QC code of this VM: %9.4f\n", sum);
+
+	prog->starttime = Sys_DoubleTime();
+}
+
 void PRVM_Profile (int maxfunctions, int mininstructions)
 {
 	mfunction_t *f, *best;
@@ -303,6 +340,29 @@ void PRVM_Profile (int maxfunctions, int mininstructions)
 			best->callcount = 0;
 		}
 	} while (best);
+}
+
+/*
+============
+PRVM_CallProfile_f
+
+============
+*/
+void PRVM_CallProfile_f (void)
+{
+	if (Cmd_Argc() != 2)
+	{
+		Con_Print("prvm_callprofile <program name>\n");
+		return;
+	}
+
+	PRVM_Begin;
+	if(!PRVM_SetProgFromString(Cmd_Argv(1)))
+		return;
+
+	PRVM_CallProfile();
+
+	PRVM_End;
 }
 
 /*
@@ -497,6 +557,9 @@ void PRVM_ExecuteProgram (func_t fnum, const char *errormessage)
 	prvm_eval_t	*ptr;
 	int		jumpcount, cachedpr_trace, exitdepth;
 	int		restorevm_tempstringsbuf_cursize;
+	double  calltime;
+
+	calltime = Sys_DoubleTime();
 
 	if (!fnum || fnum >= (unsigned int)prog->progs->numfunctions)
 	{
@@ -598,6 +661,8 @@ cleanup:
 		Con_Printf("PRVM_ExecuteProgram: %s used %i bytes of tempstrings\n", PRVM_GetString(prog->functions[fnum].s_name), vm_tempstringsbuf.cursize - restorevm_tempstringsbuf_cursize);
 	// delete tempstrings created by this function
 	vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
+
+	prog->functions[fnum].totaltime += (Sys_DoubleTime() - calltime);
 
 	SV_FlushBroadcastMessages();
 }
