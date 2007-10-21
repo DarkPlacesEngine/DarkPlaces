@@ -9,11 +9,17 @@ entity_state_t defaultstate =
 	{0,0,0},//float netcenter[3]; // ! for network prioritization, this is the center of the bounding box (which may differ from the origin)
 	{0,0,0},//float origin[3];
 	{0,0,0},//float angles[3];
-	0,//int number; // entity number this state is for
 	0,//int effects;
+	0,//unsigned int customizeentityforclient; // !
+	0,//unsigned short number; // entity number this state is for
 	0,//unsigned short modelindex;
 	0,//unsigned short frame;
 	0,//unsigned short tagentity;
+	0,//unsigned short specialvisibilityradius; // ! larger if it has effects/light
+	0,//unsigned short viewmodelforclient; // !
+	0,//unsigned short exteriormodelforclient; // ! not shown if first person viewing from this entity, shown in all other cases
+	0,//unsigned short nodrawtoclient; // !
+	0,//unsigned short drawonlytoclient; // !
 	{0,0,0,0},//unsigned short light[4]; // color*256 (0.00 to 255.996), and radius*1
 	0,//unsigned char active; // true if a valid state
 	0,//unsigned char lightstyle;
@@ -29,7 +35,7 @@ entity_state_t defaultstate =
 	0,//unsigned char tagindex;
 	{32, 32, 32},//unsigned char colormod[3];
 	// padding to a multiple of 8 bytes (to align the double time)
-	0//unsigned char unused; // !
+	{0,0,0,0,0}//unsigned char unused[5]; // !
 };
 
 // LordHavoc: I own protocol ranges 96, 97, 3500-3599

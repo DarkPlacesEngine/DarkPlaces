@@ -139,6 +139,14 @@ typedef struct server_s
 	int writeentitiestoclient_pvsbytes;
 	unsigned char writeentitiestoclient_pvs[MAX_MAP_LEAFS/8];
 	entity_state_t writeentitiestoclient_sendstates[MAX_EDICTS];
+
+	int numsendentities;
+	entity_state_t sendentities[MAX_EDICTS];
+	entity_state_t *sendentitiesindex[MAX_EDICTS];
+
+	int sententitiesmark;
+	int sententities[MAX_EDICTS];
+	int sententitiesconsideration[MAX_EDICTS];
 } server_t;
 
 // if defined this does ping smoothing, otherwise it does not
