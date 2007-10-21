@@ -337,7 +337,7 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define RENDER_NOSELFSHADOW 262144 // render lighting on this entity before its own shadow is added to the scene
 // (note: all RENDER_NOSELFSHADOW entities are grouped together and rendered in a batch before their shadows are rendered, so they can not shadow eachother either)
 
-// this is 80 bytes
+// this is 96 bytes
 typedef struct entity_state_s
 {
 	// ! means this is not sent to client
@@ -346,10 +346,16 @@ typedef struct entity_state_s
 	float origin[3];
 	float angles[3];
 	int effects;
+	unsigned int customizeentityforclient; // !
 	unsigned short number; // entity number this state is for
 	unsigned short modelindex;
 	unsigned short frame;
 	unsigned short tagentity;
+	unsigned short specialvisibilityradius; // ! larger if it has effects/light
+	unsigned short viewmodelforclient; // !
+	unsigned short exteriormodelforclient; // ! not shown if first person viewing from this entity, shown in all other cases
+	unsigned short nodrawtoclient; // !
+	unsigned short drawonlytoclient; // !
 	unsigned short light[4]; // color*256 (0.00 to 255.996), and radius*1
 	unsigned char active; // true if a valid state
 	unsigned char lightstyle;
@@ -365,7 +371,7 @@ typedef struct entity_state_s
 	unsigned char tagindex;
 	unsigned char colormod[3];
 	// padding to a multiple of 8 bytes (to align the double time)
-	unsigned char unused;
+	unsigned char unused[5];
 }
 entity_state_t;
 

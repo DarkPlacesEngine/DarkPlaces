@@ -916,28 +916,15 @@ crosses a waterline.
 =============================================================================
 */
 
-static qboolean SV_BuildEntityState (entity_state_t *cs, prvm_edict_t *ent, int enumber)
+static qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, int enumber)
 {
 	int i;
-	unsigned int tagentity;
 	unsigned int modelindex, effects, flags, glowsize, lightstyle, lightpflags, light[4], specialvisibilityradius;
 	unsigned int customizeentityforclient;
 	float f;
-	vec3_t cullmins, cullmaxs, netcenter;
+	vec3_t cullmins, cullmaxs;
 	model_t *model;
 	prvm_eval_t *val;
-
-	// see if the customizeentityforclient extension is used by this entity
-	customizeentityforclient = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.customizeentityforclient)->function;
-	if (customizeentityforclient)
-	{
-		prog->globals.server->self = enumber;
-		prog->globals.server->other = sv.writeentitiestoclient_cliententitynumber;
-		PRVM_ExecuteProgram(customizeentityforclient, "customizeentityforclient: NULL function");
-		// customizeentityforclient can return false to reject the entity
-		if (!PRVM_G_FLOAT(OFS_RETURN))
-			return false;
-	}
 
 	// this 2 billion unit check is actually to detect NAN origins
 	// (we really don't want to send those)
@@ -1020,184 +1007,15 @@ static qboolean SV_BuildEntityState (entity_state_t *cs, prvm_edict_t *ent, int 
 			specialvisibilityradius = max(specialvisibilityradius, 100);
 	}
 
-	// don't send uninteresting entities
-	if (enumber != sv.writeentitiestoclient_cliententitynumber)
-	{
-		if (!modelindex && !specialvisibilityradius)
-			return false;
-		if (PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.nodrawtoclient)->edict == sv.writeentitiestoclient_cliententitynumber)
-			return false;
-		if (PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.drawonlytoclient)->edict && PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.drawonlytoclient)->edict != sv.writeentitiestoclient_cliententitynumber)
-			return false;
-		if (PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.viewmodelforclient)->edict && PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.viewmodelforclient)->edict != sv.writeentitiestoclient_cliententitynumber)
-			return false;
-		if (flags & RENDER_VIEWMODEL && PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.viewmodelforclient)->edict != sv.writeentitiestoclient_cliententitynumber)
-			return false;
-		if (effects & EF_NODRAW)
-			return false;
-	}
-
-	// don't send child if parent was rejected
-	// FIXME: it would be better to force the parent to send...
-	tagentity = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.tag_entity)->edict;
-	if (tagentity && !SV_BuildEntityState(NULL, PRVM_EDICT_NUM(tagentity), tagentity))
+	// early culling checks
+	// (final culling is done by SV_MarkWriteEntityStateToClient)
+	customizeentityforclient = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.customizeentityforclient)->function;
+	if (!customizeentityforclient && enumber > svs.maxclients && (!modelindex && !specialvisibilityradius))
 		return false;
-
-	// calculate the visible box of this entity (don't use the physics box
-	// as that is often smaller than a model, and would not count
-	// specialvisibilityradius)
-	if ((model = sv.models[modelindex]))
-	{
-		float scale = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.glow_color)->_float;
-		if (scale)
-			scale *= (1.0f / 16.0f);
-		else
-			scale = 1;
-		if (ent->fields.server->angles[0] || ent->fields.server->angles[2]) // pitch and roll
-		{
-			VectorMA(ent->fields.server->origin, scale, model->rotatedmins, cullmins);
-			VectorMA(ent->fields.server->origin, scale, model->rotatedmaxs, cullmaxs);
-		}
-		else if (ent->fields.server->angles[1])
-		{
-			VectorMA(ent->fields.server->origin, scale, model->yawmins, cullmins);
-			VectorMA(ent->fields.server->origin, scale, model->yawmaxs, cullmaxs);
-		}
-		else
-		{
-			VectorMA(ent->fields.server->origin, scale, model->normalmins, cullmins);
-			VectorMA(ent->fields.server->origin, scale, model->normalmaxs, cullmaxs);
-		}
-	}
-	else
-	{
-		// if there is no model (or it could not be loaded), use the physics box
-		VectorAdd(ent->fields.server->origin, ent->fields.server->mins, cullmins);
-		VectorAdd(ent->fields.server->origin, ent->fields.server->maxs, cullmaxs);
-	}
-	if (specialvisibilityradius)
-	{
-		cullmins[0] = min(cullmins[0], ent->fields.server->origin[0] - specialvisibilityradius);
-		cullmins[1] = min(cullmins[1], ent->fields.server->origin[1] - specialvisibilityradius);
-		cullmins[2] = min(cullmins[2], ent->fields.server->origin[2] - specialvisibilityradius);
-		cullmaxs[0] = max(cullmaxs[0], ent->fields.server->origin[0] + specialvisibilityradius);
-		cullmaxs[1] = max(cullmaxs[1], ent->fields.server->origin[1] + specialvisibilityradius);
-		cullmaxs[2] = max(cullmaxs[2], ent->fields.server->origin[2] + specialvisibilityradius);
-	}
-
-	// calculate center of bbox for network prioritization purposes
-	VectorMAM(0.5f, cullmins, 0.5f, cullmaxs, netcenter);
-
-	// if culling box has moved, update pvs cluster links
-	if (!VectorCompare(cullmins, ent->priv.server->cullmins) || !VectorCompare(cullmaxs, ent->priv.server->cullmaxs))
-	{
-		VectorCopy(cullmins, ent->priv.server->cullmins);
-		VectorCopy(cullmaxs, ent->priv.server->cullmaxs);
-		// a value of -1 for pvs_numclusters indicates that the links are not
-		// cached, and should be re-tested each time, this is the case if the
-		// culling box touches too many pvs clusters to store, or if the world
-		// model does not support FindBoxClusters
-		ent->priv.server->pvs_numclusters = -1;
-		if (sv.worldmodel && sv.worldmodel->brush.FindBoxClusters)
-		{
-			i = sv.worldmodel->brush.FindBoxClusters(sv.worldmodel, cullmins, cullmaxs, MAX_ENTITYCLUSTERS, ent->priv.server->pvs_clusterlist);
-			if (i <= MAX_ENTITYCLUSTERS)
-				ent->priv.server->pvs_numclusters = i;
-		}
-	}
-
-	if (enumber != sv.writeentitiestoclient_cliententitynumber && !(effects & EF_NODEPTHTEST) && !(flags & RENDER_VIEWMODEL) && !tagentity)
-	{
-		qboolean isbmodel = (model = sv.models[modelindex]) != NULL && model->name[0] == '*';
-		if (!isbmodel || !sv_cullentities_nevercullbmodels.integer)
-		{
-			// cull based on visibility
-
-			// if not touching a visible leaf
-			if (sv_cullentities_pvs.integer && sv.writeentitiestoclient_pvsbytes)
-			{
-				if (ent->priv.server->pvs_numclusters < 0)
-				{
-					// entity too big for clusters list
-					if (sv.worldmodel && sv.worldmodel->brush.BoxTouchingPVS && !sv.worldmodel->brush.BoxTouchingPVS(sv.worldmodel, sv.writeentitiestoclient_pvs, cullmins, cullmaxs))
-					{
-						sv.writeentitiestoclient_stats_culled_pvs++;
-						return false;
-					}
-				}
-				else
-				{
-					int i;
-					// check cached clusters list
-					for (i = 0;i < ent->priv.server->pvs_numclusters;i++)
-						if (CHECKPVSBIT(sv.writeentitiestoclient_pvs, ent->priv.server->pvs_clusterlist[i]))
-							break;
-					if (i == ent->priv.server->pvs_numclusters)
-					{
-						sv.writeentitiestoclient_stats_culled_pvs++;
-						return false;
-					}
-				}
-			}
-
-			// or not seen by random tracelines
-			if (sv_cullentities_trace.integer && !isbmodel)
-			{
-				int samples = specialvisibilityradius ? sv_cullentities_trace_samples_extra.integer : sv_cullentities_trace_samples.integer;
-				float enlarge = sv_cullentities_trace_enlarge.value;
-
-				qboolean visible = true;
-
-				do
-				{
-					if(Mod_CanSeeBox_Trace(samples, enlarge, sv.worldmodel, sv.writeentitiestoclient_testeye, cullmins, cullmaxs))
-						break; // directly visible from the server's view
-
-					if(sv_cullentities_trace_prediction.integer)
-					{
-						vec3_t predeye;
-
-						// get player velocity
-						float predtime = bound(0, host_client->ping, 0.2); // / 2
-							// sorry, no wallhacking by high ping please, and at 200ms
-							// ping a FPS is annoying to play anyway and a player is
-							// likely to have changed his direction
-						VectorMA(sv.writeentitiestoclient_testeye, predtime, host_client->edict->fields.server->velocity, predeye);
-						if(sv.worldmodel->brush.TraceLineOfSight(sv.worldmodel, sv.writeentitiestoclient_testeye, predeye)) // must be able to go there...
-						{
-							if(Mod_CanSeeBox_Trace(samples, enlarge, sv.worldmodel, predeye, cullmins, cullmaxs))
-								break; // directly visible from the predicted view
-						}
-						else
-						{
-							//Con_DPrintf("Trying to walk into solid in a pingtime... not predicting for culling\n");
-						}
-					}
-
-					// when we get here, we can't see the entity
-					visible = false;
-				}
-				while(0);
-
-				if(visible)
-					svs.clients[sv.writeentitiestoclient_clientnumber].visibletime[enumber] = realtime + sv_cullentities_trace_delay.value;
-				else if (realtime > svs.clients[sv.writeentitiestoclient_clientnumber].visibletime[enumber])
-				{
-					sv.writeentitiestoclient_stats_culled_trace++;
-					return false;
-				}
-			}
-		}
-	}
-
-	// if the caller was just checking...  return true
-	if (!cs)
-		return true;
 
 	*cs = defaultstate;
 	cs->active = true;
 	cs->number = enumber;
-	VectorCopy(netcenter, cs->netcenter);
 	VectorCopy(ent->fields.server->origin, cs->origin);
 	VectorCopy(ent->fields.server->angles, cs->angles);
 	cs->flags = flags;
@@ -1206,6 +1024,11 @@ static qboolean SV_BuildEntityState (entity_state_t *cs, prvm_edict_t *ent, int 
 	cs->modelindex = modelindex;
 	cs->skin = (unsigned)ent->fields.server->skin;
 	cs->frame = (unsigned)ent->fields.server->frame;
+	cs->viewmodelforclient = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.viewmodelforclient)->edict;
+	cs->exteriormodelforclient = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.exteriormodeltoclient)->edict;
+	cs->nodrawtoclient = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.nodrawtoclient)->edict;
+	cs->drawonlytoclient = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.drawonlytoclient)->edict;
+	cs->customizeentityforclient = customizeentityforclient;
 	cs->tagentity = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.tag_entity)->edict;
 	cs->tagindex = (unsigned char)PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.tag_index)->_float;
 	cs->glowsize = glowsize;
@@ -1263,8 +1086,8 @@ static qboolean SV_BuildEntityState (entity_state_t *cs, prvm_edict_t *ent, int 
 		cs->flags |= RENDER_LOWPRECISION;
 	if (ent->fields.server->colormap >= 1024)
 		cs->flags |= RENDER_COLORMAPPED;
-	if (PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.glow_trail)->edict && PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.glow_trail)->edict == sv.writeentitiestoclient_cliententitynumber)
-		cs->flags |= RENDER_EXTERIORMODEL;
+	if (cs->viewmodelforclient)
+		cs->flags |= RENDER_VIEWMODEL; // show relative to the view
 
 	cs->light[0] = light[0];
 	cs->light[1] = light[1];
@@ -1273,14 +1096,233 @@ static qboolean SV_BuildEntityState (entity_state_t *cs, prvm_edict_t *ent, int 
 	cs->lightstyle = lightstyle;
 	cs->lightpflags = lightpflags;
 
+	cs->specialvisibilityradius = specialvisibilityradius;
+
+	// calculate the visible box of this entity (don't use the physics box
+	// as that is often smaller than a model, and would not count
+	// specialvisibilityradius)
+	if ((model = sv.models[modelindex]))
+	{
+		float scale = cs->scale * (1.0f / 16.0f);
+		if (cs->angles[0] || cs->angles[2]) // pitch and roll
+		{
+			VectorMA(cs->origin, scale, model->rotatedmins, cullmins);
+			VectorMA(cs->origin, scale, model->rotatedmaxs, cullmaxs);
+		}
+		else if (cs->angles[1])
+		{
+			VectorMA(cs->origin, scale, model->yawmins, cullmins);
+			VectorMA(cs->origin, scale, model->yawmaxs, cullmaxs);
+		}
+		else
+		{
+			VectorMA(cs->origin, scale, model->normalmins, cullmins);
+			VectorMA(cs->origin, scale, model->normalmaxs, cullmaxs);
+		}
+	}
+	else
+	{
+		// if there is no model (or it could not be loaded), use the physics box
+		VectorAdd(cs->origin, ent->fields.server->mins, cullmins);
+		VectorAdd(cs->origin, ent->fields.server->maxs, cullmaxs);
+	}
+	if (specialvisibilityradius)
+	{
+		cullmins[0] = min(cullmins[0], cs->origin[0] - specialvisibilityradius);
+		cullmins[1] = min(cullmins[1], cs->origin[1] - specialvisibilityradius);
+		cullmins[2] = min(cullmins[2], cs->origin[2] - specialvisibilityradius);
+		cullmaxs[0] = max(cullmaxs[0], cs->origin[0] + specialvisibilityradius);
+		cullmaxs[1] = max(cullmaxs[1], cs->origin[1] + specialvisibilityradius);
+		cullmaxs[2] = max(cullmaxs[2], cs->origin[2] + specialvisibilityradius);
+	}
+
+	// calculate center of bbox for network prioritization purposes
+	VectorMAM(0.5f, cullmins, 0.5f, cullmaxs, cs->netcenter);
+
+	// if culling box has moved, update pvs cluster links
+	if (!VectorCompare(cullmins, ent->priv.server->cullmins) || !VectorCompare(cullmaxs, ent->priv.server->cullmaxs))
+	{
+		VectorCopy(cullmins, ent->priv.server->cullmins);
+		VectorCopy(cullmaxs, ent->priv.server->cullmaxs);
+		// a value of -1 for pvs_numclusters indicates that the links are not
+		// cached, and should be re-tested each time, this is the case if the
+		// culling box touches too many pvs clusters to store, or if the world
+		// model does not support FindBoxClusters
+		ent->priv.server->pvs_numclusters = -1;
+		if (sv.worldmodel && sv.worldmodel->brush.FindBoxClusters)
+		{
+			i = sv.worldmodel->brush.FindBoxClusters(sv.worldmodel, cullmins, cullmaxs, MAX_ENTITYCLUSTERS, ent->priv.server->pvs_clusterlist);
+			if (i <= MAX_ENTITYCLUSTERS)
+				ent->priv.server->pvs_numclusters = i;
+		}
+	}
+
 	return true;
 }
 
-static void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *msg)
+void SV_PrepareEntitiesForSending(void)
 {
-	int i;
-	int numsendstates;
+	int e;
 	prvm_edict_t *ent;
+	// send all entities that touch the pvs
+	sv.numsendentities = 0;
+	sv.sendentitiesindex[0] = NULL;
+	memset(sv.sendentitiesindex, 0, prog->num_edicts * sizeof(*sv.sendentitiesindex));
+	for (e = 1, ent = PRVM_NEXT_EDICT(prog->edicts);e < prog->num_edicts;e++, ent = PRVM_NEXT_EDICT(ent))
+	{
+		if (!ent->priv.server->free && SV_PrepareEntityForSending(ent, sv.sendentities + sv.numsendentities, e))
+		{
+			sv.sendentitiesindex[e] = sv.sendentities + sv.numsendentities;
+			sv.numsendentities++;
+		}
+	}
+}
+
+void SV_MarkWriteEntityStateToClient(entity_state_t *s)
+{
+	int isbmodel;
+	model_t *model;
+	prvm_edict_t *ed;
+	if (sv.sententitiesconsideration[s->number] == sv.sententitiesmark)
+		return;
+	sv.sententitiesconsideration[s->number] = sv.sententitiesmark;
+	sv.writeentitiestoclient_stats_totalentities++;
+
+	if (s->customizeentityforclient)
+	{
+		prog->globals.server->self = s->number;
+		prog->globals.server->other = sv.writeentitiestoclient_cliententitynumber;
+		PRVM_ExecuteProgram(s->customizeentityforclient, "customizeentityforclient: NULL function");
+		if(!PRVM_G_FLOAT(OFS_RETURN) || !SV_PrepareEntityForSending(PRVM_EDICT_NUM(s->number), s, s->number))
+			return;
+	}
+
+	// never reject player
+	if (s->number != sv.writeentitiestoclient_cliententitynumber)
+	{
+		// check various rejection conditions
+		if (s->nodrawtoclient == sv.writeentitiestoclient_cliententitynumber)
+			return;
+		if (s->drawonlytoclient && s->drawonlytoclient != sv.writeentitiestoclient_cliententitynumber)
+			return;
+		if (s->effects & EF_NODRAW)
+			return;
+		// LordHavoc: only send entities with a model or important effects
+		if (!s->modelindex && s->specialvisibilityradius == 0)
+			return;
+
+		isbmodel = (model = sv.models[s->modelindex]) != NULL && model->name[0] == '*';
+		// viewmodels don't have visibility checking
+		if (s->viewmodelforclient)
+		{
+			if (s->viewmodelforclient != sv.writeentitiestoclient_cliententitynumber)
+				return;
+		}
+		else if (s->tagentity)
+		{
+			// tag attached entities simply check their parent
+			if (!sv.sendentitiesindex[s->tagentity])
+				return;
+			SV_MarkWriteEntityStateToClient(sv.sendentitiesindex[s->tagentity]);
+			if (sv.sententities[s->tagentity] != sv.sententitiesmark)
+				return;
+		}
+		// always send world submodels in newer protocols because they don't
+		// generate much traffic (in old protocols they hog bandwidth)
+		// but only if sv_cullentities_nevercullbmodels is off
+		else if (!(s->effects & EF_NODEPTHTEST) && (!isbmodel || !sv_cullentities_nevercullbmodels.integer || sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE))
+		{
+			// entity has survived every check so far, check if visible
+			ed = PRVM_EDICT_NUM(s->number);
+
+			// if not touching a visible leaf
+			if (sv_cullentities_pvs.integer && sv.writeentitiestoclient_pvsbytes)
+			{
+				if (ed->priv.server->pvs_numclusters < 0)
+				{
+					// entity too big for clusters list
+					if (sv.worldmodel && sv.worldmodel->brush.BoxTouchingPVS && !sv.worldmodel->brush.BoxTouchingPVS(sv.worldmodel, sv.writeentitiestoclient_pvs, ed->priv.server->cullmins, ed->priv.server->cullmaxs))
+					{
+						sv.writeentitiestoclient_stats_culled_pvs++;
+						return;
+					}
+				}
+				else
+				{
+					int i;
+					// check cached clusters list
+					for (i = 0;i < ed->priv.server->pvs_numclusters;i++)
+						if (CHECKPVSBIT(sv.writeentitiestoclient_pvs, ed->priv.server->pvs_clusterlist[i]))
+							break;
+					if (i == ed->priv.server->pvs_numclusters)
+					{
+						sv.writeentitiestoclient_stats_culled_pvs++;
+						return;
+					}
+				}
+			}
+
+			// or not seen by random tracelines
+			if (sv_cullentities_trace.integer && !isbmodel)
+			{
+				int samples = s->specialvisibilityradius ? sv_cullentities_trace_samples_extra.integer : sv_cullentities_trace_samples.integer;
+				float enlarge = sv_cullentities_trace_enlarge.value;
+
+				qboolean visible = TRUE;
+
+				do
+				{
+					if(Mod_CanSeeBox_Trace(samples, enlarge, sv.worldmodel, sv.writeentitiestoclient_testeye, ed->priv.server->cullmins, ed->priv.server->cullmaxs))
+						break; // directly visible from the server's view
+
+					if(sv_cullentities_trace_prediction.integer)
+					{
+						vec3_t predeye;
+
+						// get player velocity
+						float predtime = bound(0, host_client->ping, 0.2); // / 2
+							// sorry, no wallhacking by high ping please, and at 200ms
+							// ping a FPS is annoying to play anyway and a player is
+							// likely to have changed his direction
+						VectorMA(sv.writeentitiestoclient_testeye, predtime, host_client->edict->fields.server->velocity, predeye);
+						if(sv.worldmodel->brush.TraceLineOfSight(sv.worldmodel, sv.writeentitiestoclient_testeye, predeye)) // must be able to go there...
+						{
+							if(Mod_CanSeeBox_Trace(samples, enlarge, sv.worldmodel, predeye, ed->priv.server->cullmins, ed->priv.server->cullmaxs))
+								break; // directly visible from the predicted view
+						}
+						else
+						{
+							//Con_DPrintf("Trying to walk into solid in a pingtime... not predicting for culling\n");
+						}
+					}
+
+					// when we get here, we can't see the entity
+					visible = false;
+				}
+				while(0);
+
+				if(visible)
+					svs.clients[sv.writeentitiestoclient_clientnumber].visibletime[s->number] = realtime + sv_cullentities_trace_delay.value;
+				else if (realtime > svs.clients[sv.writeentitiestoclient_clientnumber].visibletime[s->number])
+				{
+					sv.writeentitiestoclient_stats_culled_trace++;
+					return;
+				}
+			}
+		}
+	}
+
+	// this just marks it for sending
+	// FIXME: it would be more efficient to send here, but the entity
+	// compressor isn't that flexible
+	sv.writeentitiestoclient_stats_visibleentities++;
+	sv.sententities[s->number] = sv.sententitiesmark;
+}
+
+void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *msg)
+{
+	int i, numsendstates;
+	entity_state_t *s;
 
 	// if there isn't enough space to accomplish anything, skip it
 	if (msg->cursize + 25 > msg->maxsize)
@@ -1303,11 +1345,22 @@ static void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, size
 
 	sv.writeentitiestoclient_cliententitynumber = PRVM_EDICT_TO_PROG(clent); // LordHavoc: for comparison purposes
 
-	// send all entities that touch the pvs
+	sv.sententitiesmark++;
+
+	for (i = 0;i < sv.numsendentities;i++)
+		SV_MarkWriteEntityStateToClient(sv.sendentities + i);
+
 	numsendstates = 0;
-	for (i = 1, ent = PRVM_NEXT_EDICT(prog->edicts);i < prog->num_edicts;i++, ent = PRVM_NEXT_EDICT(ent))
-		if (!ent->priv.server->free && SV_BuildEntityState(sv.writeentitiestoclient_sendstates + numsendstates, ent, i))
-			numsendstates++;
+	for (i = 0;i < sv.numsendentities;i++)
+	{
+		if (sv.sententities[sv.sendentities[i].number] == sv.sententitiesmark)
+		{
+			s = &sv.writeentitiestoclient_sendstates[numsendstates++];
+			*s = sv.sendentities[i];
+			if (s->exteriormodelforclient && s->exteriormodelforclient == sv.writeentitiestoclient_cliententitynumber)
+				s->flags |= RENDER_EXTERIORMODEL;
+		}
+	}
 
 	if (sv_cullentities_stats.integer)
 		Con_Printf("client \"%s\" entities: %d total, %d visible, %d culled by: %d pvs %d trace\n", client->name, sv.writeentitiestoclient_stats_totalentities, sv.writeentitiestoclient_stats_visibleentities, sv.writeentitiestoclient_stats_culled_pvs + sv.writeentitiestoclient_stats_culled_trace, sv.writeentitiestoclient_stats_culled_pvs, sv.writeentitiestoclient_stats_culled_trace);
@@ -1904,7 +1957,7 @@ SV_SendClientMessages
 */
 void SV_SendClientMessages (void)
 {
-	int i;
+	int i, prepared = false;
 
 	if (sv.protocol == PROTOCOL_QUAKEWORLD)
 		Sys_Error("SV_SendClientMessages: no quakeworld support\n");
@@ -1928,6 +1981,12 @@ void SV_SendClientMessages (void)
 			continue;
 		}
 
+		if (!prepared)
+		{
+			prepared = true;
+			// only prepare entities once per frame
+			SV_PrepareEntitiesForSending();
+		}
 		SV_SendClientDatagram (host_client);
 	}
 
