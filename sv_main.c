@@ -753,7 +753,7 @@ void SV_SendServerinfo (client_t *client)
 	if (sv_allowdownloads.integer)
 	{
 		MSG_WriteByte (&client->netconnection->message, svc_stufftext);
-		MSG_WriteString (&client->netconnection->message, "cl_serverextension_download 1");
+		MSG_WriteString (&client->netconnection->message, "cl_serverextension_download 1\n");
 	}
 
 	// send at this time so it's guaranteed to get executed at the right time
