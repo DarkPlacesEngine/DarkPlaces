@@ -25,6 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "cl_video.h"
 
 cvar_t r_textshadow = {CVAR_SAVE, "r_textshadow", "0", "draws a shadow on all text to improve readability (note: value controls offset, 1 = 1 pixel, 1.5 = 1.5 pixels, etc)"};
+cvar_t r_textbrightness = {CVAR_SAVE, "r_textbrightness", "0", "additional brightness for text color codes (0 keeps colors as is, 1 makes them all white)"};
 
 static rtexture_t *char_texture;
 cachepic_t *r_crosshairs[NUMCROSSHAIRS+1];
@@ -531,6 +532,7 @@ static void gl_draw_newmap(void)
 void GL_Draw_Init (void)
 {
 	Cvar_RegisterVariable(&r_textshadow);
+	Cvar_RegisterVariable(&r_textbrightness);
 	R_RegisterModule("GL_Draw", gl_draw_start, gl_draw_shutdown, gl_draw_newmap);
 }
 
@@ -661,8 +663,9 @@ static vec4_t string_colors[] =
 
 static void DrawQ_GetTextColor(float color[4], int colorindex, float r, float g, float b, float a, qboolean shadow)
 {
+	float v = r_textbrightness.value;
 	Vector4Copy(string_colors[colorindex], color);
-	Vector4Set(color, color[0] * r, color[1] * g, color[2] * b, color[3] * a);
+	Vector4Set(color, (color[0] * (1-v) + v) * r, (color[1] * (1-v) + v) * g, (color[2] * (1-v) + v) * b, color[3] * a);
 	if (shadow)
 	{
 		float shadowalpha = color[0]+color[1]+color[2] * 0.8;
