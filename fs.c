@@ -1894,12 +1894,12 @@ fs_offset_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 	if (file->buff_ind < file->buff_len)
 	{
 		count = file->buff_len - file->buff_ind;
+		count = ((fs_offset_t)buffersize > count) ? count : (fs_offset_t)buffersize;
+		done += count;
+		memcpy (buffer, &file->buff[file->buff_ind], count);
+		file->buff_ind += count;
 
-		done += ((fs_offset_t)buffersize > count) ? count : (fs_offset_t)buffersize;
-		memcpy (buffer, &file->buff[file->buff_ind], done);
-		file->buff_ind += done;
-
-		buffersize -= done;
+		buffersize -= count;
 		if (buffersize == 0)
 			return done;
 	}
@@ -2111,7 +2111,7 @@ Get the next character of a file
 */
 int FS_Getc (qfile_t* file)
 {
-	char c;
+	unsigned char c;
 
 	if (FS_Read (file, &c, 1) != 1)
 		return EOF;
