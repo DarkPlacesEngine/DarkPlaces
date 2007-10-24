@@ -596,10 +596,17 @@ void DrawQ_Pic(float x, float y, cachepic_t *pic, float width, float height, flo
 			height = pic->height;
 		R_Mesh_TexBind(0, R_GetTexture(pic->tex));
 		R_Mesh_TexCoordPointer(0, 2, floats + 12, 0, 0);
-		floats[12] = 0;floats[13] = 0;
-		floats[14] = 1;floats[15] = 0;
-		floats[16] = 1;floats[17] = 1;
-		floats[18] = 0;floats[19] = 1;
+
+      // AK07: lets be texel correct on the corners
+      {
+         float horz_offset = 0.5f / width;
+         float vert_offset = 0.5f / height;
+
+		   floats[12] = 0.0f + horz_offset;floats[13] = 0.0f + vert_offset;
+		   floats[14] = 1.0f - horz_offset;floats[15] = 0.0f + vert_offset;
+		   floats[16] = 1.0f - horz_offset;floats[17] = 1.0f - vert_offset;
+		   floats[18] = 0.0f + horz_offset;floats[19] = 1.0f - vert_offset;
+      }
 	}
 
 	floats[2] = floats[5] = floats[8] = floats[11] = 0;
@@ -845,10 +852,17 @@ void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height
 			height = pic->height;
 		R_Mesh_TexBind(0, R_GetTexture(pic->tex));
 		R_Mesh_TexCoordPointer(0, 2, floats + 12, 0, 0);
-		floats[12] = s1;floats[13] = t1;
-		floats[14] = s2;floats[15] = t2;
-		floats[16] = s4;floats[17] = t4;
-		floats[18] = s3;floats[19] = t3;
+
+      // AK07: lets be texel correct on the corners
+      {
+         float horz_offset = 0.5f / width;
+         float vert_offset = 0.5f / height;
+
+         floats[12] = s1 + horz_offset;floats[13] = t1 + vert_offset;
+         floats[14] = s2 - horz_offset;floats[15] = t2 + vert_offset;
+         floats[16] = s4 - horz_offset;floats[17] = t4 - vert_offset;
+         floats[18] = s3 + horz_offset;floats[19] = t3 - vert_offset;
+      }
 	}
 
 	floats[2] = floats[5] = floats[8] = floats[11] = 0;
