@@ -599,8 +599,8 @@ void DrawQ_Pic(float x, float y, cachepic_t *pic, float width, float height, flo
 
       // AK07: lets be texel correct on the corners
       {
-         float horz_offset = 0.5f / width;
-         float vert_offset = 0.5f / height;
+         float horz_offset = 0.5f / pic->width;
+         float vert_offset = 0.5f / pic->height;
 
 		   floats[12] = 0.0f + horz_offset;floats[13] = 0.0f + vert_offset;
 		   floats[14] = 1.0f - horz_offset;floats[15] = 0.0f + vert_offset;
@@ -855,8 +855,8 @@ void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height
 
       // AK07: lets be texel correct on the corners
       {
-         float horz_offset = 0.5f / width;
-         float vert_offset = 0.5f / height;
+         float horz_offset = 0.5f / pic->width;
+         float vert_offset = 0.5f / pic->height;
 
          floats[12] = s1 + horz_offset;floats[13] = t1 + vert_offset;
          floats[14] = s2 - horz_offset;floats[15] = t2 + vert_offset;
