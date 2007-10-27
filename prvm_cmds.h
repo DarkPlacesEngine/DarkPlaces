@@ -134,6 +134,8 @@ string	precache_pic(string pic)
 		freepic(string s)
 float	drawcharacter(vector position, float character, vector scale, vector rgb, float alpha, float flag)
 float	drawstring(vector position, string text, vector scale, vector rgb, float alpha, float flag)
+float	drawcolorcodedstring(vector position, string text, vector scale, float alpha, float flag)
+float	stringwidth(string text, float handleColors)
 float	drawpic(vector position, string pic, vector size, vector rgb, float alpha, float flag)
 float	drawfill(vector position, vector size, vector rgb, float alpha, float flag)
 		drawsetcliparea(float x, float y, float width, float height)
@@ -324,6 +326,7 @@ void VM_freepic(void);
 void VM_drawcharacter(void);
 void VM_drawstring(void);
 void VM_drawcolorcodedstring(void);
+void VM_stringwidth(void);
 void VM_drawpic(void);
 void VM_drawfill(void);
 void VM_drawsetcliparea(void);

@@ -2729,6 +2729,24 @@ void VM_drawcolorcodedstring(void)
 }
 /*
 =========
+VM_stringwidth
+
+float	stringwidth(string text, float allowColorCodes)
+=========
+*/
+void VM_stringwidth(void)
+{
+	const char  *string;
+	int colors;
+	VM_SAFEPARMCOUNT(2,VM_drawstring);
+
+	string = PRVM_G_STRING(OFS_PARM0);
+	colors = (int)PRVM_G_FLOAT(OFS_PARM1);
+
+	PRVM_G_FLOAT(OFS_RETURN) = DrawQ_String(0, 0, string, 0, 1, 1, 0, 0, 0, 0, 0, NULL, !colors); // 1x1 characters, don't actually draw
+}
+/*
+=========
 VM_drawpic
 
 float	drawpic(vector position, string pic, vector size, vector rgb, float alpha, float flag)
