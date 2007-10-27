@@ -852,17 +852,10 @@ void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height
 			height = pic->height;
 		R_Mesh_TexBind(0, R_GetTexture(pic->tex));
 		R_Mesh_TexCoordPointer(0, 2, floats + 12, 0, 0);
-
-      // AK07: lets be texel correct on the corners
-      {
-         float horz_offset = 0.5f / pic->width;
-         float vert_offset = 0.5f / pic->height;
-
-         floats[12] = s1 + horz_offset;floats[13] = t1 + vert_offset;
-         floats[14] = s2 - horz_offset;floats[15] = t2 + vert_offset;
-         floats[16] = s4 - horz_offset;floats[17] = t4 - vert_offset;
-         floats[18] = s3 + horz_offset;floats[19] = t3 - vert_offset;
-      }
+		floats[12] = s1;floats[13] = t1;
+		floats[14] = s2;floats[15] = t2;
+		floats[16] = s4;floats[17] = t4;
+		floats[18] = s3;floats[19] = t3;
 	}
 
 	floats[2] = floats[5] = floats[8] = floats[11] = 0;

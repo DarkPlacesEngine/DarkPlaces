@@ -137,6 +137,7 @@ float	drawstring(vector position, string text, vector scale, vector rgb, float a
 float	drawcolorcodedstring(vector position, string text, vector scale, float alpha, float flag)
 float	stringwidth(string text, float handleColors)
 float	drawpic(vector position, string pic, vector size, vector rgb, float alpha, float flag)
+float	drawsubpic(vector position, vector size, string pic, vector srcPos, vector srcSize, vector rgb, float alpha, float flag)
 float	drawfill(vector position, vector size, vector rgb, float alpha, float flag)
 		drawsetcliparea(float x, float y, float width, float height)
 		drawresetcliparea()
@@ -328,6 +329,7 @@ void VM_drawstring(void);
 void VM_drawcolorcodedstring(void);
 void VM_stringwidth(void);
 void VM_drawpic(void);
+void VM_drawsubpic(void);
 void VM_drawfill(void);
 void VM_drawsetcliparea(void);
 void VM_drawresetcliparea(void);
