@@ -2789,6 +2789,60 @@ void VM_drawpic(void)
 	DrawQ_Pic(pos[0], pos[1], Draw_CachePic(picname, true), size[0], size[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag);
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
+/*
+=========
+VM_drawsubpic
+
+float	drawsubpic(vector position, vector size, string pic, vector srcPos, vector srcSize, vector rgb, float alpha, float flag)
+
+=========
+*/
+void VM_drawsubpic(void)
+{
+	const char *picname;
+	float *size, *pos, *rgb, *srcPos, *srcSize, alpha;
+	int flag;
+
+	VM_SAFEPARMCOUNT(8,VM_drawsubpic);
+
+	picname = PRVM_G_STRING(OFS_PARM2);
+	VM_CheckEmptyString (picname);
+
+	// is pic cached ? no function yet for that
+	if(!1)
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -4;
+		VM_Warning("VM_drawsubpic: %s: %s not cached !\n", PRVM_NAME, picname);
+		return;
+	}
+
+	pos = PRVM_G_VECTOR(OFS_PARM0);
+	size = PRVM_G_VECTOR(OFS_PARM1);
+	srcPos = PRVM_G_VECTOR(OFS_PARM3);
+	srcSize = PRVM_G_VECTOR(OFS_PARM4);
+	rgb = PRVM_G_VECTOR(OFS_PARM5);
+	alpha = PRVM_G_FLOAT(OFS_PARM6);
+	flag = (int) PRVM_G_FLOAT(OFS_PARM7);
+
+	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -2;
+		VM_Warning("VM_drawsubpic: %s: wrong DRAWFLAG %i !\n",PRVM_NAME,flag);
+		return;
+	}
+
+	if(pos[2] || size[2])
+		Con_Printf("VM_drawsubpic: z value%s from %s discarded\n",(pos[2] && size[2]) ? "s" : " ",((pos[2] && size[2]) ? "pos and size" : (pos[2] ? "pos" : "size")));
+
+	DrawQ_SuperPic(pos[0], pos[1], Draw_CachePic(picname, true),
+		size[0], size[1],
+		srcPos[0],              srcPos[1],              rgb[0], rgb[1], rgb[2], alpha,
+		srcPos[0] + srcSize[0], srcPos[1],              rgb[0], rgb[1], rgb[2], alpha,
+		srcPos[0],              srcPos[1] + srcSize[1], rgb[0], rgb[1], rgb[2], alpha,
+		srcPos[0] + srcSize[0], srcPos[1] + srcSize[1], rgb[0], rgb[1], rgb[2], alpha,
+		flag);
+	PRVM_G_FLOAT(OFS_RETURN) = 1;
+}
 
 /*
 =========

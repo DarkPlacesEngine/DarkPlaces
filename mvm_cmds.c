@@ -1229,7 +1229,7 @@ VM_cin_restart, 			// #465
 VM_drawline,				// #466
 VM_drawcolorcodedstring,	// #467
 VM_stringwidth,				// #468
-NULL,						// #469
+VM_drawsubpic,			// #469
 NULL,						// #470
 VM_asin,					// #471 float(float s) VM_asin (DP_QC_ASINACOSATANATAN2TAN)
 VM_acos,					// #472 float(float c) VM_acos (DP_QC_ASINACOSATANATAN2TAN)
