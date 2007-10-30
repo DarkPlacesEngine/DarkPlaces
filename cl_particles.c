@@ -495,6 +495,8 @@ static particle_t *particle(particletype_t *ptype, int pcolor1, int pcolor2, int
 	part->liquidfriction = pliquidfriction;
 	part->die = cl.time + part->alpha / (part->alphafade ? part->alphafade : 1);
 	part->delayedcollisions = 0;
+	if (part->type == particletype + pt_blood)
+		part->gravity += 1; // FIXME: this is a legacy hack, effectinfo.txt doesn't have gravity on blood (nor do the particle calls in the engine)
 	// if it is rain or snow, trace ahead and shut off collisions until an actual collision event needs to occur to improve performance
 	if (part->type == particletype + pt_rain)
 	{
@@ -532,7 +534,7 @@ static particle_t *particle(particletype_t *ptype, int pcolor1, int pcolor2, int
 		trace_t trace;
 		VectorMA(part->org, lifetime, part->vel, endvec);
 		trace = CL_Move(part->org, vec3_origin, vec3_origin, endvec, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | ((part->type == particletype + pt_rain || part->type == particletype + pt_snow) ? SUPERCONTENTS_LIQUIDSMASK : 0), true, false, NULL, false);
-		part->delayedcollisions = cl.time + lifetime * trace.fraction;
+		part->delayedcollisions = cl.time + lifetime * trace.fraction - 0.1;
 	}
 	return part;
 }
@@ -1548,7 +1550,7 @@ void CL_MoveParticles (void)
 {
 	particle_t *p;
 	int i, maxparticle, j, a, content;
-	float gravity, dvel, decalfade, frametime, f, dist, org[3], oldorg[3];
+	float gravity, dvel, decalfade, frametime, f, dist, oldorg[3];
 	particletype_t *decaltype, *bloodtype;
 	int hitent;
 	trace_t trace;
@@ -1631,22 +1633,41 @@ void CL_MoveParticles (void)
 			continue;
 		}
 
-		if (p->type->orientation != PARTICLE_BEAM)
+		if (p->type->orientation != PARTICLE_BEAM && frametime > 0)
 		{
+			if (p->liquidfriction && (CL_PointSuperContents(p->org) & SUPERCONTENTS_LIQUIDSMASK))
+			{
+				if (p->type == bloodtype)
+					p->size += frametime * 8;
+				else
+					p->vel[2] -= p->gravity * gravity;
+				f = 1.0f - min(p->liquidfriction * frametime, 1);
+				VectorScale(p->vel, f, p->vel);
+			}
+			else
+			{
+				p->vel[2] -= p->gravity * gravity;
+				if (p->airfriction)
+				{
+					f = 1.0f - min(p->airfriction * frametime, 1);
+					VectorScale(p->vel, f, p->vel);
+				}
+			}
+
 			VectorCopy(p->org, oldorg);
 			VectorMA(p->org, frametime, p->vel, p->org);
-			VectorCopy(p->org, org);
 			if (p->bounce && cl.time >= p->delayedcollisions)
 			{
 				trace = CL_Move(oldorg, vec3_origin, vec3_origin, p->org, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | (p->type == particletype + pt_rain ? SUPERCONTENTS_LIQUIDSMASK : 0), true, false, &hitent, false);
 				// if the trace started in or hit something of SUPERCONTENTS_NODROP
 				// or if the trace hit something flagged as NOIMPACT
 				// then remove the particle
-				if (trace.hitq3surfaceflags & Q3SURFACEFLAG_NOIMPACT || ((trace.startsupercontents | trace.hitsupercontents) & SUPERCONTENTS_NODROP))
+				if (trace.hitq3surfaceflags & Q3SURFACEFLAG_NOIMPACT || ((trace.startsupercontents | trace.hitsupercontents) & SUPERCONTENTS_NODROP) || (trace.startsupercontents & SUPERCONTENTS_SOLID))
 				{
 					p->type = NULL;
 					continue;
 				}
+				VectorCopy(trace.endpos, p->org);
 				// react if the particle hit something
 				if (trace.fraction < 1)
 				{
@@ -1671,6 +1692,7 @@ void CL_MoveParticles (void)
 						count = (int)lhrandom(1, 10);
 						while(count--)
 							particle(particletype + pt_spark, 0x000000, 0x707070, tex_particle, 0.25f, 0, lhrandom(64, 255), 512, 1, 0, p->org[0], p->org[1], p->org[2], p->vel[0]*16, p->vel[1]*16, cl.movevars_gravity * 0.04 + p->vel[2]*16, 0, 0, 0, 32);
+						continue;
 					}
 					else if (p->type == bloodtype)
 					{
@@ -1705,6 +1727,7 @@ void CL_MoveParticles (void)
 						p->liquidfriction = 0;
 						p->gravity = 0;
 						p->size *= 2.0f;
+						continue;
 					}
 					else if (p->bounce < 0)
 					{
@@ -1722,18 +1745,6 @@ void CL_MoveParticles (void)
 					}
 				}
 			}
-			p->vel[2] -= p->gravity * gravity;
-
-			if (p->liquidfriction && CL_PointSuperContents(p->org) & SUPERCONTENTS_LIQUIDSMASK)
-			{
-				f = 1.0f - min(p->liquidfriction * frametime, 1);
-				VectorScale(p->vel, f, p->vel);
-			}
-			else if (p->airfriction)
-			{
-				f = 1.0f - min(p->airfriction * frametime, 1);
-				VectorScale(p->vel, f, p->vel);
-			}
 		}
 
 		if (p->type != particletype + pt_static)
@@ -1749,23 +1760,13 @@ void CL_MoveParticles (void)
 				break;
 			case pt_blood:
 				a = CL_PointSuperContents(p->org);
-				if (a & (SUPERCONTENTS_WATER | SUPERCONTENTS_SLIME))
-				{
-					p->size += frametime * 8;
-					//p->alpha -= bloodwaterfade;
-				}
-				else
-					p->vel[2] -= gravity;
 				if (a & (SUPERCONTENTS_SOLID | SUPERCONTENTS_LAVA | SUPERCONTENTS_NODROP))
 					p->type = NULL;
 				break;
 			case pt_bubble:
 				a = CL_PointSuperContents(p->org);
 				if (!(a & (SUPERCONTENTS_WATER | SUPERCONTENTS_SLIME)))
-				{
 					p->type = NULL;
-					break;
-				}
 				break;
 			case pt_rain:
 				a = CL_PointSuperContents(p->org);
