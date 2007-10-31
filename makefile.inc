@@ -17,6 +17,7 @@ CC=gcc
 CPUOPTIMIZATIONS=
 
 SDL_CONFIG?=sdl-config
+STRIP?=strip
 
 
 ###### Sound and audio CD #####
@@ -387,7 +388,7 @@ bin-release :
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
 		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_EXTRA) $(CFLAGS_RELEASE) $(OPTIM_RELEASE)"\
 		LDFLAGS="$(LDFLAGS_RELEASE) $(LDFLAGS_COMMON)"
-	strip $(EXE)
+	$(STRIP) $(EXE)
 
 vid_glx.o: vid_glx.c
 	$(DO_CC) -I/usr/X11R6/include
