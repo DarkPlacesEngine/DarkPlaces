@@ -17,6 +17,12 @@ CC=gcc
 CPUOPTIMIZATIONS=
 
 SDL_CONFIG?=sdl-config
+SDLCONFIG_UNIXCFLAGS?=`$(SDL_CONFIG) --cflags`
+SDLCONFIG_UNIXLIBS?=`$(SDL_CONFIG) --libs`
+SDLCONFIG_UNIXSTATICLIBS?=`$(SDL_CONFIG) --static-libs`
+SDLCONFIG_MACOSXCFLAGS=
+SDLCONFIG_MACOSXLIBS=-framework SDL -framework Cocoa SDLMain.m
+SDLCONFIG_MACOSXSTATICLIBS=-framework SDL -framework Cocoa SDLMain.m
 STRIP?=strip
 
 
@@ -144,7 +150,7 @@ CFLAGS_COMMON=$(CFLAGS_MAKEDEP) $(CFLAGS_PRELOAD) $(CFLAGS_FS) -Wall -Wsign-comp
 CFLAGS_DEBUG=-ggdb
 CFLAGS_PROFILE=-g -pg -ggdb
 CFLAGS_RELEASE=
-CFLAGS_SDL=`$(SDL_CONFIG) --cflags`
+CFLAGS_SDL=$(SDLCONFIG_CFLAGS)
 
 OPTIM_DEBUG=$(CPUOPTIMIZATIONS)
 #OPTIM_RELEASE=-O2 -fno-strict-aliasing -ffast-math -funroll-loops $(CPUOPTIMIZATIONS)
@@ -172,7 +178,7 @@ LDFLAGS_UNIXSV_PRELOAD=-lz -lcurl
 LDFLAGS_UNIXSDL_PRELOAD=-lz -ljpeg -lpng -lvorbis -lvorbisfile -lcurl
 CFLAGS_UNIX_PRELOAD=-DPREFER_PRELOAD
 
-LDFLAGS_UNIXSDL=`$(SDL_CONFIG) --libs`
+LDFLAGS_UNIXSDL=$(SDLCONFIG_LIBS)
 EXE_UNIXCL=darkplaces-glx
 EXE_UNIXSV=darkplaces-dedicated
 EXE_UNIXSDL=darkplaces-sdl
@@ -204,7 +210,7 @@ OBJ_MACOSXCD=$(OBJ_NOCD)
 # Link
 LDFLAGS_MACOSXCL=$(LDFLAGS_UNIXCOMMON) -ldl -framework IOKit -framework Carbon $(LIB_SOUND)
 LDFLAGS_MACOSXSV=$(LDFLAGS_UNIXCOMMON) -ldl
-LDFLAGS_MACOSXSDL=$(LDFLAGS_UNIXCOMMON) -ldl `$(SDL_CONFIG) --static-libs`
+LDFLAGS_MACOSXSDL=$(LDFLAGS_UNIXCOMMON) -ldl $(SDLCONFIG_STATICLIBS)
 
 OBJ_AGL= builddate.c sys_linux.o vid_agl.o $(OBJ_SOUND) $(OBJ_CD) $(OBJ_COMMON)
 
@@ -253,7 +259,7 @@ OBJ_WGL= builddate.c sys_win.o vid_wgl.o conproc.o $(OBJ_SND_WIN) $(OBJ_WINCD) $
 LDFLAGS_WINCOMMON=-lws2_32 -Wl,--large-address-aware
 LDFLAGS_WINCL=$(LDFLAGS_WINCOMMON) -mwindows -lwinmm -luser32 -lgdi32 -ldxguid -ldinput -lcomctl32
 LDFLAGS_WINSV=$(LDFLAGS_WINCOMMON) -mconsole -lwinmm
-LDFLAGS_WINSDL=$(LDFLAGS_WINCOMMON) `$(SDL_CONFIG) --libs`
+LDFLAGS_WINSDL=$(LDFLAGS_WINCOMMON) $(SDLCONFIG_LIBS)
 EXE_WINCL=darkplaces.exe
 EXE_WINSV=darkplaces-dedicated.exe
 EXE_WINSDL=darkplaces-sdl.exe
