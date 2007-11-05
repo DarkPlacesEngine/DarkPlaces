@@ -191,6 +191,9 @@ static qboolean _ServerList_Entry_Compare( serverlist_entry_t *A, serverlist_ent
 		case SLIF_NUMHUMANS:
 			result = A->info.numhumans - B->info.numhumans;
 			break;
+		case SLIF_FREESLOTS:
+			result = A->info.freeslots - B->info.freeslots;
+			break;
 		case SLIF_PROTOCOL:
 			result = A->info.protocol - B->info.protocol;
 			break;
@@ -295,6 +298,8 @@ static qboolean _ServerList_Entry_Mask( serverlist_mask_t *mask, serverlist_info
 	if( !_ServerList_CompareInt( info->numbots, mask->tests[SLIF_NUMBOTS], mask->info.numbots ) )
 		return false;
 	if( !_ServerList_CompareInt( info->numhumans, mask->tests[SLIF_NUMHUMANS], mask->info.numhumans ) )
+		return false;
+	if( !_ServerList_CompareInt( info->freeslots, mask->tests[SLIF_FREESLOTS], mask->info.freeslots ) )
 		return false;
 	if( !_ServerList_CompareInt( info->protocol, mask->tests[SLIF_PROTOCOL], mask->info.protocol ))
 		return false;
@@ -1347,6 +1352,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			if ((s = SearchInfostring(string, "sv_maxclients")) != NULL) info->maxplayers = atoi(s);
 			if ((s = SearchInfostring(string, "gameversion"  )) != NULL) info->gameversion = atoi(s);
 			info->numhumans = info->numplayers - max(0, info->numbots);
+			info->freeslots = info->maxplayers - info->numplayers;
 
 			NetConn_ClientParsePacket_ServerList_UpdateCache(n);
 

@@ -252,6 +252,8 @@ typedef struct serverlist_info_s
 	int numbots;
 	// number of currently connected players that are not bots
 	int numhumans;
+	// number of free slots
+	int freeslots;
 	// protocol version
 	int protocol;
 	// game data version
@@ -273,7 +275,8 @@ typedef enum
 	SLIF_PROTOCOL,
 	SLIF_NUMBOTS,
 	SLIF_NUMHUMANS,
-	SLIF_COUNT
+	SLIF_COUNT,
+	SLIF_FREESLOTS
 } serverlist_infofield_t;
 
 typedef enum

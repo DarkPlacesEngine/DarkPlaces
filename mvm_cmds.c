@@ -421,6 +421,9 @@ void VM_M_setserverlistmasknumber( void )
 		case SLIF_PROTOCOL:
 			mask->info.protocol = number;
 			break;
+		case SLIF_FREESLOTS:
+			mask->info.freeslots = number;
+			break;
 		default:
 			VM_Warning( "VM_M_setserverlistmasknumber: Bad field number %i passed!\n", field );
 			return;
@@ -533,6 +536,9 @@ void VM_M_getserverlistnumber(void)
 		case SLIF_NUMHUMANS:
 			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.numhumans;
 			break;
+		case SLIF_FREESLOTS:
+			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.freeslots;
+			break;
 		case SLIF_PING:
 			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.ping;
 			break;
@@ -607,6 +613,8 @@ void VM_M_getserverlistindexforkey( void )
 		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_NUMBOTS;
 	else if( !strcmp( key, "numhumans" ) )
 		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_NUMHUMANS;
+	else if( !strcmp( key, "freeslots" ) )
+		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_FREESLOTS;
 	else if( !strcmp( key, "protocol" ) )
 		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_PROTOCOL;
 	else
