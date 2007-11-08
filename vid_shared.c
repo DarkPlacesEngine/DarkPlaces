@@ -788,7 +788,7 @@ void VID_CheckExtensions(void)
 	gl_support_ext_blend_subtract = GL_CheckExtension("GL_EXT_blend_subtract", blendequationfuncs, "-noblendsubtract", false);
 
 // COMMANDLINEOPTION: GL: -noseparatestencil disables use of OpenGL2.0 glStencilOpSeparate and GL_ATI_separate_stencil extensions (which accelerate shadow rendering)
-	if (!(gl_support_separatestencil = GL_CheckExtension("glStencilOpSeparate", gl2separatestencilfuncs, "-noseparatestencil", false)))
+	if (!(gl_support_separatestencil = GL_CheckExtension("glStencilOpSeparate", gl2separatestencilfuncs, "-noseparatestencil", true)))
 		gl_support_separatestencil = GL_CheckExtension("GL_ATI_separate_stencil", atiseparatestencilfuncs, "-noseparatestencil", false);
 // COMMANDLINEOPTION: GL: -nostenciltwoside disables GL_EXT_stencil_two_side (which accelerate shadow rendering)
 	gl_support_stenciltwoside = GL_CheckExtension("GL_EXT_stencil_two_side", stenciltwosidefuncs, "-nostenciltwoside", false);
