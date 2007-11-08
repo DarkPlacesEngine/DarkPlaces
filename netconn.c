@@ -391,9 +391,12 @@ void ServerList_RebuildViewList(void)
 	int i;
 
 	serverlist_viewcount = 0;
-	for( i = 0 ; i < serverlist_cachecount ; i++ )
-		if( serverlist_cache[i].query == SQS_QUERIED )
-			ServerList_ViewList_Insert( &serverlist_cache[i] );
+	for( i = 0 ; i < serverlist_cachecount ; i++ ) {
+		serverlist_entry_t *entry = &serverlist_cache[i];
+		// also display entries that are currently being refreshed [11/8/2007 Black]
+		if( entry->query == SQS_QUERIED || entry->query == SQS_REFRESHING )
+			ServerList_ViewList_Insert( entry );
+	}
 }
 
 void ServerList_ResetMasks(void)
@@ -440,8 +443,7 @@ void ServerList_QueryList(qboolean resetcache, qboolean querydp, qboolean queryq
 		int n;
 		for( n = 0 ; n < serverlist_cachecount ; n++ ) {
 			serverlist_entry_t *entry = &serverlist_cache[ n ];
-			entry->refresh = true;
-			entry->query = SQS_QUERYING;
+			entry->query = SQS_REFRESHING;
 		}
 	}
 	serverlist_consoleoutput = consoleoutput;
@@ -1250,13 +1252,14 @@ static int NetConn_ClientParsePacket_ServerList_ProcessReply(const char *address
 	// if this is the first reply from this server, count it as having replied
 	pingtime = (int)((realtime - entry->querytime) * 1000.0 + 0.5);
 	pingtime = bound(0, pingtime, 9999);
-	if (!entry->refresh) {
-		// update the ping
+	if (entry->query == SQS_REFRESHING) {
+		entry->info.ping = pingtime;
+		entry->query = SQS_QUERIED;
+	} else {
+		// convert to unsigned to catch the -1
+		// I still dont like this but its better than the old 10000 magic ping number - as in easier to type and read :( [11/8/2007 Black]
 		entry->info.ping = min((unsigned) entry->info.ping, pingtime);
 		serverreplycount++;
-	} else {
-		entry->info.ping = pingtime;
-		entry->refresh = false;
 	}
 	
 	// other server info is updated by the caller
@@ -1270,10 +1273,10 @@ static void NetConn_ClientParsePacket_ServerList_UpdateCache(int n)
 	// update description strings for engine menu and console output
 	dpsnprintf(entry->line1, sizeof(serverlist_cache[n].line1), "^%c%5d^7 ^%c%3u^7/%3u %-65.65s", info->ping >= 300 ? '1' : (info->ping >= 200 ? '3' : '7'), (int)info->ping, ((info->numhumans > 0 && info->numhumans < info->maxplayers) ? (info->numhumans >= 4 ? '7' : '3') : '1'), info->numplayers, info->maxplayers, info->name);
 	dpsnprintf(entry->line2, sizeof(serverlist_cache[n].line2), "^4%-21.21s %-19.19s ^%c%-17.17s^4 %-20.20s", info->cname, info->game, (info->gameversion != gameversion.integer) ? '1' : '4', info->mod, info->map);
-	//if (entry->query == SQS_QUERIED)
+	if (entry->query == SQS_QUERIED)
 		ServerList_ViewList_Remove(entry);
 	// if not in the slist menu we should print the server to console (if wanted)
-	/*else*/ if( serverlist_consoleoutput )
+	else if( serverlist_consoleoutput )
 		Con_Printf("%s\n%s\n", serverlist_cache[n].line1, serverlist_cache[n].line2);
 	// and finally, update the view set
 	ServerList_ViewList_Insert( entry );
@@ -1684,7 +1687,7 @@ void NetConn_QueryQueueFrame(void)
 	for( index = 0, queries	= 0 ;	index	< serverlist_cachecount	&&	queries < maxqueries	; index++ )
 	{
 		serverlist_entry_t *entry = &serverlist_cache[ index ];
-		if( entry->query != SQS_QUERYING	)
+		if( entry->query != SQS_QUERYING && entry->query != SQS_REFRESHING )
 		{
 			continue;
 		}
@@ -1724,8 +1727,8 @@ void NetConn_QueryQueueFrame(void)
 		}
 		else
 		{
-			// has this server already been queried once
-			if( entry->refresh ) {
+			// have we tried to refresh this server?
+			if( entry->query == SQS_REFRESHING ) {
 				// yes, so update the reply count (since its not responding anymore)
 				serverreplycount--;
 			}

@@ -284,7 +284,8 @@ typedef enum
 	SQS_NONE = 0,
 	SQS_QUERYING,
 	SQS_QUERIED,
-	SQS_TIMEDOUT
+	SQS_TIMEDOUT,
+	SQS_REFRESHING
 } serverlist_query_state;
 
 typedef struct serverlist_entry_s
@@ -295,8 +296,6 @@ typedef struct serverlist_entry_s
 	unsigned querycounter;
 	// used to calculate ping when update comes in
 	double querytime;
-	// flag whether the item is only being refreshed
-	qboolean refresh;
    // query protocol to use on this server
 	int protocol; // may be PROTOCOL_QUAKEWORLD or PROTOCOL_DARKPLACES7
 
