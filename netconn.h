@@ -295,7 +295,9 @@ typedef struct serverlist_entry_s
 	unsigned querycounter;
 	// used to calculate ping when update comes in
 	double querytime;
-	// query protocol to use on this server
+	// flag whether the item is only being refreshed
+	qboolean refresh;
+   // query protocol to use on this server
 	int protocol; // may be PROTOCOL_QUAKEWORLD or PROTOCOL_DARKPLACES7
 
 	serverlist_info_t info;
@@ -381,12 +383,13 @@ void NetConn_QueryQueueFrame(void);
 void Net_Stats_f(void);
 void Net_Slist_f(void);
 void Net_SlistQW_f(void);
+void Net_Refresh_f(void);
 
 // ServerList interface (public)
 // manually refresh the view set, do this after having changed the mask or any other flag
 void ServerList_RebuildViewList(void);
 void ServerList_ResetMasks(void);
-void ServerList_QueryList(qboolean querydp, qboolean queryqw);
+void ServerList_QueryList(qboolean resetcache, qboolean querydp, qboolean queryqw, qboolean consoleoutput);
 
 #endif
 
