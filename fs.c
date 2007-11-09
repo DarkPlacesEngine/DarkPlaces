@@ -52,6 +52,10 @@
 # define O_NONBLOCK 0
 #endif
 
+// largefile support for Win32
+#ifdef WIN32
+# define lseek _lseeki64
+#endif
 
 /*
 
