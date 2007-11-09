@@ -421,6 +421,7 @@ cvar_t cl_anglespeedkey = {CVAR_SAVE, "cl_anglespeedkey","1.5","how much +speed 
 
 cvar_t cl_movement = {CVAR_SAVE, "cl_movement", "0", "enables clientside prediction of your player movement"};
 cvar_t cl_movement_minping = {CVAR_SAVE, "cl_movement_minping", "0", "whether to use prediction when ping is lower than this value in milliseconds"};
+cvar_t cl_movement_track_canjump = {CVAR_SAVE, "cl_movement_track_canjump", "1", "track if the player released the jump key between two jumps to decide if he is able to jump or not; when off, this causes some \"sliding\" slightly above the floor when the jump key is held too long; if the mod allows repeated jumping by holding space all the time, this has to be set to zero too"};
 cvar_t cl_movement_maxspeed = {0, "cl_movement_maxspeed", "320", "how fast you can move (should match sv_maxspeed)"};
 cvar_t cl_movement_maxairspeed = {0, "cl_movement_maxairspeed", "30", "how fast you can move while in the air (should match sv_maxairspeed)"};
 cvar_t cl_movement_stopspeed = {0, "cl_movement_stopspeed", "100", "speed below which you will be slowed rapidly to a stop rather than sliding endlessly (should match sv_stopspeed)"};
@@ -1030,7 +1031,7 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 	// released at least once since the last jump
 	if (s->q.jump)
 	{
-		if (s->onground && s->q.canjump)
+		if (s->onground && (s->q.canjump || !cl_movement_track_canjump.integer)) // FIXME remove this cvar again when canjump logic actually works, or maybe keep it for mods that allow "pogo-ing"
 		{
 			s->velocity[2] += cl.movevars_jumpvelocity;
 			s->onground = false;
@@ -1752,6 +1753,7 @@ void CL_InitInput (void)
 
 	Cvar_RegisterVariable(&cl_movement);
 	Cvar_RegisterVariable(&cl_movement_minping);
+	Cvar_RegisterVariable(&cl_movement_track_canjump);
 	Cvar_RegisterVariable(&cl_movement_maxspeed);
 	Cvar_RegisterVariable(&cl_movement_maxairspeed);
 	Cvar_RegisterVariable(&cl_movement_stopspeed);
