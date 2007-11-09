@@ -444,6 +444,7 @@ void ServerList_QueryList(qboolean resetcache, qboolean querydp, qboolean queryq
 		for( n = 0 ; n < serverlist_cachecount ; n++ ) {
 			serverlist_entry_t *entry = &serverlist_cache[ n ];
 			entry->query = SQS_REFRESHING;
+			entry->querycounter = 0;
 		}
 	}
 	serverlist_consoleoutput = consoleoutput;
