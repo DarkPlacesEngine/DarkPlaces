@@ -112,6 +112,10 @@ cvar_t gl_lightmaps = {0, "gl_lightmaps", "0", "draws only lightmaps, no texture
 
 cvar_t r_test = {0, "r_test", "0", "internal development use only, leave it alone (usually does nothing anyway)"};
 cvar_t r_batchmode = {0, "r_batchmode", "1", "selects method of rendering multiple surfaces with one driver call (values are 0, 1, 2, etc...)"};
+cvar_t r_track_sprites = {CVAR_SAVE, "r_track_sprites", "1", "track SPR_LABEL* sprites by putting them as indicator at the screen border to rotate to"};
+cvar_t r_track_sprites_flags = {CVAR_SAVE, "r_track_sprites_flags", "1", "1: Rotate sprites accodringly, 2: Make it a continuous rotation"};
+cvar_t r_track_sprites_scalew = {CVAR_SAVE, "r_track_sprites_scalew", "1", "width scaling of tracked sprites"};
+cvar_t r_track_sprites_scaleh = {CVAR_SAVE, "r_track_sprites_scaleh", "1", "height scaling of tracked sprites"};
 
 extern qboolean v_flipped_state;
 
@@ -1901,6 +1905,11 @@ void GL_Main_Init(void)
 	if (gamemode == GAME_NEHAHRA || gamemode == GAME_TENEBRAE)
 		Cvar_SetValue("r_fullbrights", 0);
 	R_RegisterModule("GL_Main", gl_main_start, gl_main_shutdown, gl_main_newmap);
+
+	Cvar_RegisterVariable(&r_track_sprites);
+	Cvar_RegisterVariable(&r_track_sprites_flags);
+	Cvar_RegisterVariable(&r_track_sprites_scalew);
+	Cvar_RegisterVariable(&r_track_sprites_scaleh);
 }
 
 extern void R_Textures_Init(void);
@@ -2104,7 +2113,8 @@ static void R_View_UpdateEntityVisible (void)
 		for (i = 0;i < r_refdef.numentities;i++)
 		{
 			ent = r_refdef.entities[i];
-			r_viewcache.entityvisible[i] = !(ent->flags & renderimask) && !R_CullBox(ent->mins, ent->maxs) && ((ent->effects & EF_NODEPTHTEST) || (ent->flags & RENDER_VIEWMODEL) || r_refdef.worldmodel->brush.BoxTouchingVisibleLeafs(r_refdef.worldmodel, r_viewcache.world_leafvisible, ent->mins, ent->maxs));
+			r_viewcache.entityvisible[i] = !(ent->flags & renderimask) && ((ent->model->type == mod_sprite && (ent->model->sprite.sprnum_type == SPR_LABEL || ent->model->sprite.sprnum_type == SPR_LABEL_SCALE)) || !R_CullBox(ent->mins, ent->maxs)) && ((ent->effects & EF_NODEPTHTEST) || (ent->flags & RENDER_VIEWMODEL) || r_refdef.worldmodel->brush.BoxTouchingVisibleLeafs(r_refdef.worldmodel, r_viewcache.world_leafvisible, ent->mins, ent->maxs));
+
 		}
 		if(r_cullentities_trace.integer)
 		{
@@ -2127,7 +2137,7 @@ static void R_View_UpdateEntityVisible (void)
 		for (i = 0;i < r_refdef.numentities;i++)
 		{
 			ent = r_refdef.entities[i];
-			r_viewcache.entityvisible[i] = !(ent->flags & renderimask) && !R_CullBox(ent->mins, ent->maxs);
+			r_viewcache.entityvisible[i] = !(ent->flags & renderimask) && ((ent->model->type == mod_sprite && (ent->model->sprite.sprnum_type == SPR_LABEL || ent->model->sprite.sprnum_type == SPR_LABEL_SCALE)) || !R_CullBox(ent->mins, ent->maxs));
 		}
 	}
 
@@ -2309,8 +2319,6 @@ static void R_View_SetFrustum(void)
 	r_view.frustum[5].dist = m[15] + m[14];
 #endif
 
-
-
 	if (r_view.useperspective)
 	{
 		slopex = 1.0 / r_view.frustum_x;
@@ -2320,6 +2328,14 @@ static void R_View_SetFrustum(void)
 		VectorMA(r_view.forward, -slopey, r_view.up  , r_view.frustum[2].normal);
 		VectorMA(r_view.forward,  slopey, r_view.up  , r_view.frustum[3].normal);
 		VectorCopy(r_view.forward, r_view.frustum[4].normal);
+		
+		// Leaving those out was a mistake, those were in the old code, and they
+		// fix a reproducable bug in this one: frustum culling got fucked up when viewmatrix was an identity matrix
+		// I couldn't reproduce it after adding those normalizations. --blub
+		VectorNormalize(r_view.frustum[0].normal);
+		VectorNormalize(r_view.frustum[1].normal);
+		VectorNormalize(r_view.frustum[2].normal);
+		VectorNormalize(r_view.frustum[3].normal);
 
 		// calculate frustum corners, which are used to calculate deformed frustum planes for shadow caster culling
 		VectorMAMAMAM(1, r_view.origin, 1024, r_view.forward, -1024 * slopex, r_view.left, -1024 * slopey, r_view.up, r_view.frustumcorner[0]);
