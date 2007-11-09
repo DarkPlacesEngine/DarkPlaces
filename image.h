@@ -45,5 +45,8 @@ unsigned char *LoadLMP (const unsigned char *f, int filesize, int matchwidth, in
 
 void Image_HeightmapToNormalmap(const unsigned char *inpixels, unsigned char *outpixels, int width, int height, int clamp, float bumpscale);
 
+// console command to fix the colors of transparent pixels (to prevent weird borders)
+void Image_FixTransparentPixels_f(void);
+
 #endif
 

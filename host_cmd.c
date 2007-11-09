@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 #include "sv_demo.h"
+#include "image.h"
 
 int current_skill;
 cvar_t sv_cheats = {0, "sv_cheats", "0", "enables cheat commands in any game, and cheat impulses in dpmod"};
@@ -2495,6 +2496,8 @@ void Host_InitCommands (void)
 
 	Cmd_AddCommand_WithClientCommand ("pings", NULL, Host_Pings_f, "command sent by clients to request updated ping and packetloss of players on scoreboard (originally from QW, but also used on NQ servers)");
 	Cmd_AddCommand ("pingplreport", Host_PingPLReport_f, "command sent by server containing client ping and packet loss values for scoreboard, triggered by pings command from client (not used by QW servers)");
+
+	Cmd_AddCommand ("fixtrans", Image_FixTransparentPixels_f, "change alpha-zero pixels in an image file to sensible values, and write out a new TGA (warning: SLOW)");
 
 	Cvar_RegisterVariable (&team);
 	Cvar_RegisterVariable (&skin);
