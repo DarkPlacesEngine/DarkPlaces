@@ -1404,7 +1404,7 @@ typedef struct r_view_s
 	// (as long as R_View_Update is called)
 
 	// eye position information
-	matrix4x4_t matrix;
+	matrix4x4_t matrix, inverse_matrix;
 	vec3_t origin;
 	vec3_t forward;
 	vec3_t left;
