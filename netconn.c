@@ -1733,6 +1733,7 @@ void NetConn_QueryQueueFrame(void)
 			if( entry->query == SQS_REFRESHING ) {
 				// yes, so update the reply count (since its not responding anymore)
 				serverreplycount--;
+				ServerList_ViewList_Remove(entry);
 			}
 			entry->query = SQS_TIMEDOUT;
 		}
