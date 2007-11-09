@@ -96,6 +96,7 @@ cvar_t sbar_alpha_bg = {CVAR_SAVE, "sbar_alpha_bg", "0.4", "opacity value of the
 cvar_t sbar_alpha_fg = {CVAR_SAVE, "sbar_alpha_fg", "1", "opacity value of the statusbar weapon/item icons and numbers"};
 cvar_t sbar_hudselector = {CVAR_SAVE, "sbar_hudselector", "0", "selects which of the builtin hud layouts to use (meaning is somewhat dependent on gamemode, so nexuiz has a very different set of hud layouts than quake for example)"};
 cvar_t sbar_miniscoreboard_size = {CVAR_SAVE, "sbar_miniscoreboard_size", "-1", "sets the size of the mini deathmatch overlay in items, or disables it when set to 0, or sets it to a sane default when set to -1"};
+cvar_t sbar_flagstatus_right = {CVAR_SAVE, "sbar_flagstatus_right", "0", "moves Nexuiz flag status icons to the right"};
 
 cvar_t cl_deathscoreboard = {0, "cl_deathscoreboard", "1", "shows scoreboard (+showscores) while dead"};
 
@@ -383,6 +384,9 @@ void Sbar_Init (void)
 	Cvar_RegisterVariable(&crosshair_color_blue);
 	Cvar_RegisterVariable(&crosshair_color_alpha);
 	Cvar_RegisterVariable(&crosshair_size);
+
+	if(gamemode == GAME_NEXUIZ)
+		Cvar_RegisterVariable(&sbar_flagstatus_right); // this cvar makes no sense in other games
 
 	R_RegisterModule("sbar", sbar_start, sbar_shutdown, sbar_newmap);
 }
@@ -1204,6 +1208,7 @@ void Sbar_Draw (void)
 				int i;
 				float fade;
 				int redflag, blueflag;
+				float x;
 
 				sbar_x = (vid_conwidth.integer - 320)/2;
 				sbar_y = vid_conheight.integer - 24 - 16;
@@ -1220,18 +1225,19 @@ void Sbar_Draw (void)
 				// flag icons
 				redflag = ((cl.stats[STAT_ITEMS]>>15) & 3);
 				blueflag = ((cl.stats[STAT_ITEMS]>>17) & 3);
+				x = sbar_flagstatus_right.integer ? vid_conwidth.integer - 10 - sbar_x - 64 : 10 - sbar_x;
 				if (redflag == 3 && blueflag == 3)
 				{
 					// The Impossible Combination[tm]
 					// Can only happen in Key Hunt mode...
-					Sbar_DrawPic (10 - sbar_x, -179, sb_items[14]);
+					Sbar_DrawPic (x, -179, sb_items[14]);
 				}
 				else
 				{
 					if (redflag)
-						Sbar_DrawPic (10 - sbar_x, -117, sb_items[redflag+10]);
+						Sbar_DrawPic (x, -117, sb_items[redflag+10]);
 					if (blueflag)
-						Sbar_DrawPic (10 - sbar_x, -177, sb_items[blueflag+14]);
+						Sbar_DrawPic (x, -177, sb_items[blueflag+14]);
 				}
 
 				// armor
@@ -1295,6 +1301,7 @@ void Sbar_Draw (void)
 				int i;
 				float fade;
 				int redflag, blueflag;
+				float x;
 
 				sbar_x = (vid_conwidth.integer - 640)/2;
 				sbar_y = vid_conheight.integer - 47;
@@ -1323,18 +1330,19 @@ void Sbar_Draw (void)
 				// flag icons
 				redflag = ((cl.stats[STAT_ITEMS]>>15) & 3);
 				blueflag = ((cl.stats[STAT_ITEMS]>>17) & 3);
+				x = sbar_flagstatus_right.integer ? vid_conwidth.integer - 10 - sbar_x - 64 : 10 - sbar_x;
 				if (redflag == 3 && blueflag == 3)
 				{
 					// The Impossible Combination[tm]
 					// Can only happen in Key Hunt mode...
-					Sbar_DrawPic (10 - sbar_x, -179, sb_items[14]);
+					Sbar_DrawPic (x, -179, sb_items[14]);
 				}
 				else
 				{
 					if (redflag)
-						Sbar_DrawPic (10 - sbar_x, -117, sb_items[redflag+10]);
+						Sbar_DrawPic (x, -117, sb_items[redflag+10]);
 					if (blueflag)
-						Sbar_DrawPic (10 - sbar_x, -177, sb_items[blueflag+14]);
+						Sbar_DrawPic (x, -177, sb_items[blueflag+14]);
 				}
 
 				// armor
