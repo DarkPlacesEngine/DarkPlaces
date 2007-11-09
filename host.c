@@ -611,12 +611,10 @@ void Host_Main(void)
 			svs.perf_acc_realtime = svs.perf_acc_sleeptime = svs.perf_acc_lost = svs.perf_acc_offset = svs.perf_acc_offset_squared = svs.perf_acc_offset_max = svs.perf_acc_offset_samples = 0;
 		}
 
-		if (slowmo.value < 0)
+		if (slowmo.value < 0.00001 && slowmo.value != 0)
 			Cvar_SetValue("slowmo", 0);
 		if (host_framerate.value < 0.00001 && host_framerate.value != 0)
 			Cvar_SetValue("host_framerate", 0);
-		if (cl_maxfps.value < 1)
-			Cvar_SetValue("cl_maxfps", 1);
 
 		// keep the random time dependent, but not when playing demos/benchmarking
 		if(!*sv_random_seed.string && !cls.demoplayback)
@@ -793,9 +791,9 @@ void Host_Main(void)
 				}
 			}
 			else if (vid_activewindow)
-				clframetime = cl.realframetime = max(cl_timer, 1.0 / cl_maxfps.value);
+				clframetime = cl.realframetime = max(cl_timer, 1.0 / max(5.0f, cl_maxfps.value));
 			else
-				clframetime = cl.realframetime = max(cl_timer, 1.0 / cl_maxidlefps.value);
+				clframetime = cl.realframetime = max(cl_timer, 1.0 / max(5.0f, cl_maxidlefps.value));
 
 			// apply slowmo scaling
 			clframetime *= cl.movevars_timescale;
