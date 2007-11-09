@@ -54,6 +54,8 @@ extern cvar_t vid_refreshrate;
 extern cvar_t vid_vsync;
 extern cvar_t vid_mouse;
 extern cvar_t vid_grabkeyboard;
+extern cvar_t vid_stick_mouse;
+extern cvar_t vid_resizable;
 extern cvar_t vid_minwidth;
 extern cvar_t vid_minheight;
 

@@ -49,7 +49,6 @@ cvar_t joy_sensitivitypitch = {0, "joy_sensitivitypitch", "1", "movement multipl
 cvar_t joy_sensitivityyaw = {0, "joy_sensitivityyaw", "-1", "movement multiplier"};
 cvar_t joy_sensitivityroll = {0, "joy_sensitivityroll", "1", "movement multiplier"};
 
-
 static qboolean vid_usingmouse;
 static qboolean vid_isfullscreen;
 static int vid_numjoysticks = 0;
@@ -58,8 +57,7 @@ static SDL_Joystick *vid_joysticks[MAX_JOYSTICKS];
 
 static int win_half_width = 50;
 static int win_half_height = 50;
-static int stick_mouse = 0;
-static int grab_input = 1;
+static int video_bpp, video_flags;
 
 static SDL_Surface *screen;
 
@@ -244,7 +242,7 @@ static void IN_Activate( qboolean grab )
 		{
 			vid_usingmouse = true;
 			cl_ignoremousemove = true;
-			if(grab_input) {
+			if(vid_grabkeyboard.integer) {
 				SDL_WM_GrabInput( SDL_GRAB_ON );
 			}
 			SDL_ShowCursor( SDL_DISABLE );
@@ -256,7 +254,7 @@ static void IN_Activate( qboolean grab )
 		{
 			vid_usingmouse = false;
 			cl_ignoremousemove = true;
-			if(grab_input) {
+			if(vid_grabkeyboard.integer) {
 				SDL_WM_GrabInput( SDL_GRAB_OFF );
 			}
 			SDL_ShowCursor( SDL_ENABLE );
@@ -284,7 +282,7 @@ void IN_Move( void )
 	int x, y;
 	if( vid_usingmouse )
 	{
-		if(stick_mouse)
+		if(vid_stick_mouse.integer)
 		{
 			// have the mouse stuck in the middle, example use: prevent expose effect of beryl during the game when not using
 			// window grabbing. --blub
@@ -404,6 +402,14 @@ void Sys_SendKeyEvents( void )
 				if (event.jbutton.button < 48)
 					Key_Event( event.jbutton.button + (event.jbutton.button < 16 ? K_JOY1 : K_AUX1 - 16), 0, (event.jbutton.state == SDL_PRESSED) );
 				break;
+			case SDL_VIDEORESIZE:
+				if(vid_resizable.integer < 2)
+				{
+					vid.width = event.resize.w;
+					vid.height = event.resize.h;
+					SDL_SetVideoMode(vid.width, vid.height, video_bpp, video_flags);
+				}
+				break;
 		}
 
 	// enable/disable sound on focus gain/loss
@@ -522,6 +528,9 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	win_half_width = width>>1;
 	win_half_height = height>>1;
 
+	if(vid_resizable.integer)
+		flags |= SDL_RESIZABLE;
+
 	VID_OutputVersion();
 
 	/*
@@ -544,18 +553,6 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	{
 		Con_Printf("Unable to load GL driver \"%s\": %s\n", drivername, SDL_GetError());
 		return false;
-	}
-
-	
-	if(COM_CheckParm("-resizable")) {
-		flags |= SDL_RESIZABLE;
-	}
-	   
-	stick_mouse = COM_CheckParm("-stick_mouse");
-	if(COM_CheckParm("-no_input_grabbing")) {
-		grab_input = 0;
-	} else {
-		grab_input = 1;
 	}
 	
 	if ((qglGetString = (const GLubyte* (GLAPIENTRY *)(GLenum name))GL_GetProcAddress("glGetString")) == NULL)
@@ -594,6 +591,8 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	if (stereobuffer)
 		SDL_GL_SetAttribute (SDL_GL_STEREO, 1);
 
+	video_bpp = bpp;
+	video_flags = flags;
 	screen = SDL_SetVideoMode(width, height, bpp, flags);
 	
 	if (screen == NULL)
@@ -645,7 +644,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	vid_activewindow = false;
 	vid_usingmouse = false;
 
-	if(!grab_input)
+	if(!vid_grabkeyboard.integer)
 		SDL_WM_GrabInput(SDL_GRAB_OFF);
 	return true;
 }
