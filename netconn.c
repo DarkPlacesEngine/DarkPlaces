@@ -1239,7 +1239,9 @@ static int NetConn_ClientParsePacket_ServerList_ProcessReply(const char *address
 		if (serverlist_cachecount == SERVERLIST_TOTALSIZE)
 			return -1;
 
-		memset(&entry, 0, sizeof(*entry));
+		entry = &serverlist_cache[n];
+
+		memset(entry, 0, sizeof(*entry));
 		// store the data the engine cares about (address and ping)
 		strlcpy(entry->info.cname, addressstring, sizeof(entry->info.cname));
 		entry->info.ping = 100000;
