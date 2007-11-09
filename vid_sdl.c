@@ -56,6 +56,11 @@ static int vid_numjoysticks = 0;
 #define MAX_JOYSTICKS 8
 static SDL_Joystick *vid_joysticks[MAX_JOYSTICKS];
 
+static int win_half_width = 50;
+static int win_half_height = 50;
+static int stick_mouse = 0;
+static int grab_input = 1;
+
 static SDL_Surface *screen;
 
 /////////////////////////
@@ -231,15 +236,19 @@ static int MapKey( unsigned int sdlkey )
 
 static void IN_Activate( qboolean grab )
 {
+	//SDL_WM_GrabInput( SDL_GRAB_OFF );
+	//Con_Printf("< Turning off input-grabbing. --blub\n");
 	if (grab)
 	{
 		if (!vid_usingmouse)
 		{
 			vid_usingmouse = true;
 			cl_ignoremousemove = true;
-			SDL_WM_GrabInput( SDL_GRAB_ON );
+			if(grab_input) {
+				SDL_WM_GrabInput( SDL_GRAB_ON );
+			}
 			SDL_ShowCursor( SDL_DISABLE );
-		}
+		}		
 	}
 	else
 	{
@@ -247,7 +256,9 @@ static void IN_Activate( qboolean grab )
 		{
 			vid_usingmouse = false;
 			cl_ignoremousemove = true;
-			SDL_WM_GrabInput( SDL_GRAB_OFF );
+			if(grab_input) {
+				SDL_WM_GrabInput( SDL_GRAB_OFF );
+			}
 			SDL_ShowCursor( SDL_ENABLE );
 		}
 	}
@@ -268,12 +279,37 @@ static double IN_JoystickGetAxis(SDL_Joystick *joy, int axis, double sensitivity
 void IN_Move( void )
 {
 	int j;
+	static int old_x = 0, old_y = 0;
+	static int stuck = 0;
 	int x, y;
 	if( vid_usingmouse )
 	{
-		SDL_GetRelativeMouseState( &x, &y );
-		in_mouse_x = x;
-		in_mouse_y = y;
+		if(stick_mouse)
+		{
+			// have the mouse stuck in the middle, example use: prevent expose effect of beryl during the game when not using
+			// window grabbing. --blub
+			
+			// we need 2 frames to initialize the center position
+			if(!stuck)
+			{
+				SDL_WarpMouse(win_half_width, win_half_height);
+				SDL_GetMouseState(&x, &y);
+				SDL_GetRelativeMouseState(&x, &y);
+				++stuck;
+			} else {
+				SDL_GetRelativeMouseState(&x, &y);
+				in_mouse_x = x + old_x;
+				in_mouse_y = y + old_y;
+				SDL_GetMouseState(&x, &y);
+				old_x = x - win_half_width;
+				old_y = y - win_half_height;
+				SDL_WarpMouse(win_half_width, win_half_height);
+			}
+		} else {
+			SDL_GetRelativeMouseState( &x, &y );
+			in_mouse_x = x;
+			in_mouse_y = y;
+		}
 	}
 	if (vid_numjoysticks && joy_enable.integer && joy_index.integer >= 0 && joy_index.integer < vid_numjoysticks)
 	{
@@ -483,6 +519,9 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	int flags = SDL_OPENGL;
 	const char *drivername;
 
+	win_half_width = width>>1;
+	win_half_height = height>>1;
+
 	VID_OutputVersion();
 
 	/*
@@ -507,6 +546,18 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 		return false;
 	}
 
+	
+	if(COM_CheckParm("-resizable")) {
+		flags |= SDL_RESIZABLE;
+	}
+	   
+	stick_mouse = COM_CheckParm("-stick_mouse");
+	if(COM_CheckParm("-no_input_grabbing")) {
+		grab_input = 0;
+	} else {
+		grab_input = 1;
+	}
+	
 	if ((qglGetString = (const GLubyte* (GLAPIENTRY *)(GLenum name))GL_GetProcAddress("glGetString")) == NULL)
 	{
 		VID_Shutdown();
@@ -521,6 +572,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 		flags |= SDL_FULLSCREEN;
 		vid_isfullscreen = true;
 	}
+	//flags |= SDL_HWSURFACE;
 
 	SDL_GL_SetAttribute (SDL_GL_DOUBLEBUFFER, 1);
 	if (bpp >= 32)
@@ -543,6 +595,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 		SDL_GL_SetAttribute (SDL_GL_STEREO, 1);
 
 	screen = SDL_SetVideoMode(width, height, bpp, flags);
+	
 	if (screen == NULL)
 	{
 		Con_Printf("Failed to set video mode to %ix%i: %s\n", width, height, SDL_GetError());
@@ -591,6 +644,9 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	vid_hidden = false;
 	vid_activewindow = false;
 	vid_usingmouse = false;
+
+	if(!grab_input)
+		SDL_WM_GrabInput(SDL_GRAB_OFF);
 	return true;
 }
 
