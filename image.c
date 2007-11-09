@@ -918,6 +918,147 @@ rtexture_t *loadtextureimage (rtexturepool_t *pool, const char *filename, int ma
 	return rt;
 }
 
+void fixtransparentpixels(unsigned char *data, int w, int h)
+{
+	int const FIXTRANS_NEEDED = 1;
+	int const FIXTRANS_HAS_L = 2;
+	int const FIXTRANS_HAS_R = 4;
+	int const FIXTRANS_HAS_U = 8;
+	int const FIXTRANS_HAS_D = 16;
+	int const FIXTRANS_FIXED = 32;
+	unsigned char *fixMask = Mem_Alloc(tempmempool, w * h);
+	int fixPixels = 0;
+	int changedPixels = 0;
+	int x, y;
+
+#define FIXTRANS_PIXEL (y*w+x)
+#define FIXTRANS_PIXEL_U (((y+h-1)%h)*w+x)
+#define FIXTRANS_PIXEL_D (((y+1)%h)*w+x)
+#define FIXTRANS_PIXEL_L (y*w+((x+w-1)%w))
+#define FIXTRANS_PIXEL_R (y*w+((x+1)%w))
+
+	memset(fixMask, 0, w * h);
+	for(y = 0; y < h; ++y)
+		for(x = 0; x < w; ++x)
+		{
+			if(data[FIXTRANS_PIXEL * 4 + 3] == 0)
+			{
+				fixMask[FIXTRANS_PIXEL] |= FIXTRANS_NEEDED;
+				++fixPixels;
+			}
+			else
+			{
+				fixMask[FIXTRANS_PIXEL_D] |= FIXTRANS_HAS_U;
+				fixMask[FIXTRANS_PIXEL_U] |= FIXTRANS_HAS_D;
+				fixMask[FIXTRANS_PIXEL_R] |= FIXTRANS_HAS_L;
+				fixMask[FIXTRANS_PIXEL_L] |= FIXTRANS_HAS_R;
+			}
+		}
+	if(fixPixels == w * h)
+		return; // sorry, can't do anything about this
+	while(fixPixels)
+	{
+		Con_Printf("  %d pixels left to fix...\n", fixPixels);
+		for(y = 0; y < h; ++y)
+			for(x = 0; x < w; ++x)
+				if(fixMask[FIXTRANS_PIXEL] & FIXTRANS_NEEDED)
+				{
+					unsigned int sumR = 0, sumG = 0, sumB = 0, sumA = 0, sumRA = 0, sumGA = 0, sumBA = 0, cnt = 0;
+					unsigned char r, g, b, a, r0, g0, b0;
+					if(fixMask[FIXTRANS_PIXEL] & FIXTRANS_HAS_U)
+					{
+						r = data[FIXTRANS_PIXEL_U * 4 + 0];
+						g = data[FIXTRANS_PIXEL_U * 4 + 1];
+						b = data[FIXTRANS_PIXEL_U * 4 + 2];
+						a = data[FIXTRANS_PIXEL_U * 4 + 3];
+						sumR += r; sumG += g; sumB += b; sumA += a; sumRA += r*a; sumGA += g*a; sumBA += b*a; ++cnt;
+					}
+					if(fixMask[FIXTRANS_PIXEL] & FIXTRANS_HAS_D)
+					{
+						r = data[FIXTRANS_PIXEL_D * 4 + 0];
+						g = data[FIXTRANS_PIXEL_D * 4 + 1];
+						b = data[FIXTRANS_PIXEL_D * 4 + 2];
+						a = data[FIXTRANS_PIXEL_D * 4 + 3];
+						sumR += r; sumG += g; sumB += b; sumA += a; sumRA += r*a; sumGA += g*a; sumBA += b*a; ++cnt;
+					}
+					if(fixMask[FIXTRANS_PIXEL] & FIXTRANS_HAS_L)
+					{
+						r = data[FIXTRANS_PIXEL_L * 4 + 0];
+						g = data[FIXTRANS_PIXEL_L * 4 + 1];
+						b = data[FIXTRANS_PIXEL_L * 4 + 2];
+						a = data[FIXTRANS_PIXEL_L * 4 + 3];
+						sumR += r; sumG += g; sumB += b; sumA += a; sumRA += r*a; sumGA += g*a; sumBA += b*a; ++cnt;
+					}
+					if(fixMask[FIXTRANS_PIXEL] & FIXTRANS_HAS_R)
+					{
+						r = data[FIXTRANS_PIXEL_R * 4 + 0];
+						g = data[FIXTRANS_PIXEL_R * 4 + 1];
+						b = data[FIXTRANS_PIXEL_R * 4 + 2];
+						a = data[FIXTRANS_PIXEL_R * 4 + 3];
+						sumR += r; sumG += g; sumB += b; sumA += a; sumRA += r*a; sumGA += g*a; sumBA += b*a; ++cnt;
+					}
+					if(!cnt)
+						continue;
+					r0 = data[FIXTRANS_PIXEL * 4 + 0];
+					g0 = data[FIXTRANS_PIXEL * 4 + 1];
+					b0 = data[FIXTRANS_PIXEL * 4 + 2];
+					if(sumA)
+					{
+						// there is a surrounding non-alpha pixel
+						r = (sumRA + sumA / 2) / sumA;
+						g = (sumGA + sumA / 2) / sumA;
+						b = (sumBA + sumA / 2) / sumA;
+					}
+					else
+					{
+						// need to use a "regular" average
+						r = (sumR + cnt / 2) / cnt;
+						g = (sumG + cnt / 2) / cnt;
+						b = (sumB + cnt / 2) / cnt;
+					}
+					if(r != r0 || g != g0 || b != b0)
+						++changedPixels;
+					data[FIXTRANS_PIXEL * 4 + 0] = r;
+					data[FIXTRANS_PIXEL * 4 + 1] = g;
+					data[FIXTRANS_PIXEL * 4 + 2] = b;
+					fixMask[FIXTRANS_PIXEL] |= FIXTRANS_FIXED;
+				}
+		for(y = 0; y < h; ++y)
+			for(x = 0; x < w; ++x)
+				if(fixMask[FIXTRANS_PIXEL] & FIXTRANS_FIXED)
+				{
+					fixMask[FIXTRANS_PIXEL] &= ~(FIXTRANS_NEEDED | FIXTRANS_FIXED);
+					fixMask[FIXTRANS_PIXEL_D] |= FIXTRANS_HAS_U;
+					fixMask[FIXTRANS_PIXEL_U] |= FIXTRANS_HAS_D;
+					fixMask[FIXTRANS_PIXEL_R] |= FIXTRANS_HAS_L;
+					fixMask[FIXTRANS_PIXEL_L] |= FIXTRANS_HAS_R;
+					--fixPixels;
+				}
+	}
+	Con_Printf("  %d pixels actually changed.\n", changedPixels);
+}
+
+void Image_FixTransparentPixels_f(void)
+{
+	const char *filename;
+	char outfilename[MAX_QPATH], buf[MAX_QPATH];
+	unsigned char *data;
+	if(Cmd_Argc() != 2)
+	{
+		Con_Printf("Usage: %s imagefile\n", Cmd_Argv(0));
+		return;
+	}
+	filename = Cmd_Argv(1);
+	Image_StripImageExtension(filename, buf, sizeof(buf));
+	dpsnprintf(outfilename, sizeof(outfilename), "fixtrans/%s.tga", buf);
+	if(!(data = loadimagepixels(filename, true, 0, 0)))
+		return;
+	fixtransparentpixels(data, image_width, image_height);
+	Image_WriteTGARGBA(outfilename, image_width, image_height, data);
+	Mem_Free(data);
+	Con_Printf("%s written.\n", outfilename);
+}
+
 qboolean Image_WriteTGARGB_preflipped (const char *filename, int width, int height, const unsigned char *data, unsigned char *buffer)
 {
 	qboolean ret;
