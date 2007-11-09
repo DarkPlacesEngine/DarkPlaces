@@ -1260,7 +1260,7 @@ static int NetConn_ClientParsePacket_ServerList_ProcessReply(const char *address
 	} else {
 		// convert to unsigned to catch the -1
 		// I still dont like this but its better than the old 10000 magic ping number - as in easier to type and read :( [11/8/2007 Black]
-		entry->info.ping = min((unsigned) entry->info.ping, pingtime);
+		entry->info.ping = min((unsigned) entry->info.ping, (unsigned) pingtime);
 		serverreplycount++;
 	}
 	
@@ -1289,7 +1289,6 @@ static void NetConn_ClientParsePacket_ServerList_UpdateCache(int n)
 // returns true, if it's sensible to continue the processing
 static qboolean NetConn_ClientParsePacket_ServerList_PrepareQuery( int protocol, const char *ipstring ) {
 	int n;
-	qboolean refreshing = false;
 	serverlist_entry_t *entry;
 
 	//	ignore the rest of the message if the serverlist is full
