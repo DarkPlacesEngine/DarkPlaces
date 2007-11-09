@@ -918,7 +918,7 @@ rtexture_t *loadtextureimage (rtexturepool_t *pool, const char *filename, int ma
 	return rt;
 }
 
-void fixtransparentpixels(unsigned char *data, int w, int h)
+int fixtransparentpixels(unsigned char *data, int w, int h)
 {
 	int const FIXTRANS_NEEDED = 1;
 	int const FIXTRANS_HAS_L = 2;
@@ -955,10 +955,9 @@ void fixtransparentpixels(unsigned char *data, int w, int h)
 			}
 		}
 	if(fixPixels == w * h)
-		return; // sorry, can't do anything about this
+		return 0; // sorry, can't do anything about this
 	while(fixPixels)
 	{
-		Con_Printf("  %d pixels left to fix...\n", fixPixels);
 		for(y = 0; y < h; ++y)
 			for(x = 0; x < w; ++x)
 				if(fixMask[FIXTRANS_PIXEL] & FIXTRANS_NEEDED)
@@ -1035,12 +1034,14 @@ void fixtransparentpixels(unsigned char *data, int w, int h)
 					--fixPixels;
 				}
 	}
-	Con_Printf("  %d pixels actually changed.\n", changedPixels);
+	return changedPixels;
 }
 
 void Image_FixTransparentPixels_f(void)
 {
-	const char *filename;
+	const char *filename, *filename_pattern;
+	fssearch_t *search;
+	int i, n;
 	char outfilename[MAX_QPATH], buf[MAX_QPATH];
 	unsigned char *data;
 	if(Cmd_Argc() != 2)
@@ -1048,15 +1049,27 @@ void Image_FixTransparentPixels_f(void)
 		Con_Printf("Usage: %s imagefile\n", Cmd_Argv(0));
 		return;
 	}
-	filename = Cmd_Argv(1);
-	Image_StripImageExtension(filename, buf, sizeof(buf));
-	dpsnprintf(outfilename, sizeof(outfilename), "fixtrans/%s.tga", buf);
-	if(!(data = loadimagepixels(filename, true, 0, 0)))
+	filename_pattern = Cmd_Argv(1);
+	search = FS_Search(filename_pattern, true, true);
+	if(!search)
 		return;
-	fixtransparentpixels(data, image_width, image_height);
-	Image_WriteTGARGBA(outfilename, image_width, image_height, data);
-	Mem_Free(data);
-	Con_Printf("%s written.\n", outfilename);
+	for(i = 0; i < search->numfilenames; ++i)
+	{
+		filename = search->filenames[i];
+		Con_Printf("Processing %s... ", filename);
+		Image_StripImageExtension(filename, buf, sizeof(buf));
+		dpsnprintf(outfilename, sizeof(outfilename), "fixtrans/%s.tga", buf);
+		if(!(data = loadimagepixels(filename, true, 0, 0)))
+			return;
+		if((n = fixtransparentpixels(data, image_width, image_height)))
+		{
+			Image_WriteTGARGBA(outfilename, image_width, image_height, data);
+			Con_Printf("%s written (%d pixels changed).\n", outfilename, n);
+		}
+		else
+			Con_Printf("unchanged.\n");
+		Mem_Free(data);
+	}
 }
 
 qboolean Image_WriteTGARGB_preflipped (const char *filename, int width, int height, const unsigned char *data, unsigned char *buffer)
