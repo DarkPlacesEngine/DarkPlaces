@@ -172,7 +172,7 @@ LDFLAGS_RELEASE=$(OPTIM_RELEASE)
 OBJ_GLX= builddate.c sys_linux.o vid_glx.o $(OBJ_SOUND) $(OBJ_CD) $(OBJ_COMMON)
 
 LDFLAGS_UNIXCOMMON=-lm
-LDFLAGS_UNIXCL=-L$(UNIX_X11LIBPATH) -lX11 -lXext -lXxf86dga -lXxf86vm $(LIB_SOUND)
+LDFLAGS_UNIXCL=-L$(UNIX_X11LIBPATH) -lX11 -lXpm -lXext -lXxf86dga -lXxf86vm $(LIB_SOUND)
 LDFLAGS_UNIXCL_PRELOAD=-lz -ljpeg -lpng -lvorbis -lvorbisfile -lcurl
 LDFLAGS_UNIXSV_PRELOAD=-lz -lcurl
 LDFLAGS_UNIXSDL_PRELOAD=-lz -ljpeg -lpng -lvorbis -lvorbisfile -lcurl
@@ -226,7 +226,7 @@ OBJ_SUNOSCD=$(OBJ_NOCD)
 CFLAGS_SUNOS=-I/usr/lib/oss/include -DBSD_COMP -DSUNOS
 
 # Link
-LDFLAGS_SUNOSCL=$(LDFLAGS_UNIXCOMMON) -ldl -lsocket -lnsl -R$(UNIX_X11LIBPATH) -L$(UNIX_X11LIBPATH) -lX11 -lXext -lXxf86vm $(LIB_SOUND)
+LDFLAGS_SUNOSCL=$(LDFLAGS_UNIXCOMMON) -ldl -lsocket -lnsl -R$(UNIX_X11LIBPATH) -L$(UNIX_X11LIBPATH) -lX11 -lXpm -lXext -lXxf86vm $(LIB_SOUND)
 LDFLAGS_SUNOSSV=$(LDFLAGS_UNIXCOMMON) -ldl -lsocket -lnsl
 LDFLAGS_SUNOSSDL=$(LDFLAGS_UNIXCOMMON) -ldl -lsocket -lnsl $(LDFLAGS_UNIXSDL)
 
