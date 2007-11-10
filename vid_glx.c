@@ -413,6 +413,11 @@ static void HandleEvents(void)
 			// window changed size/location
 			win_x = event.xconfigure.x;
 			win_y = event.xconfigure.y;
+			if(vid_resizable.integer < 2)
+			{
+				vid.width = event.xconfigure.width;
+				vid.height = event.xconfigure.height;
+			}
 			break;
 		case DestroyNotify:
 			// window has been destroyed
@@ -627,7 +632,8 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	int attrib[32];
 	XSetWindowAttributes attr;
 	XClassHint *clshints;
-	XWMHints wmhints;
+	XWMHints *wmhints;
+	XSizeHints *szhints;
 	unsigned long mask;
 	Window root;
 	XVisualInfo *visinfo;
@@ -766,17 +772,28 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 
 	win = XCreateWindow(vidx11_display, root, 0, 0, width, height, 0, visinfo->depth, InputOutput, visinfo->visual, mask, &attr);
 
-	wmhints.flags = 0;
+	wmhints = XAllocWMHints();
 	if(XpmCreatePixmapFromData(vidx11_display, win,
 		(gamemode == GAME_NEXUIZ) ? nexuiz_xpm : darkplaces_xpm,
-		&wmhints.icon_pixmap, &wmhints.icon_mask, NULL) == XpmSuccess)
-		wmhints.flags |= IconPixmapHint | IconMaskHint;
+		&wmhints->icon_pixmap, &wmhints->icon_mask, NULL) == XpmSuccess)
+		wmhints->flags |= IconPixmapHint | IconMaskHint;
 
 	clshints = XAllocClassHint();
 	clshints->res_name = strdup(gamename);
 	clshints->res_class = strdup("DarkPlaces");
 
-	XmbSetWMProperties(vidx11_display, win, gamename, gamename, (char **) com_argv, com_argc, NULL, &wmhints, clshints);
+	szhints = XAllocSizeHints();
+	if(vid_resizable.integer == 0)
+	{
+		szhints->min_width = szhints->max_width = width;
+		szhints->min_height = szhints->max_height = height;
+		szhints->flags |= PMinSize | PMaxSize;
+	}
+
+	XmbSetWMProperties(vidx11_display, win, gamename, gamename, (char **) com_argv, com_argc, szhints, wmhints, clshints);
+	XFree(clshints);
+	XFree(wmhints);
+	XFree(szhints);
 	//XStoreName(vidx11_display, win, gamename);
 	XMapWindow(vidx11_display, win);
 
