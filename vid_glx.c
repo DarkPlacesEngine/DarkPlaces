@@ -27,6 +27,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <X11/keysym.h>
 #include <X11/cursorfont.h>
+#include <X11/xpm.h>
 
 #include <X11/extensions/XShm.h>
 #if !defined(__APPLE__) && !defined(__MACH__) && !defined(SUNOS)
@@ -35,6 +36,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <X11/extensions/xf86vmode.h>
 
 #include "quakedef.h"
+
+#include "nexuiz.xpm"
+#include "darkplaces.xpm"
 
 // Tell startup code that we have a client
 int cl_available = true;
@@ -622,6 +626,8 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	int i;
 	int attrib[32];
 	XSetWindowAttributes attr;
+	XClassHint *clshints;
+	XWMHints wmhints;
 	unsigned long mask;
 	Window root;
 	XVisualInfo *visinfo;
@@ -759,7 +765,19 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 		mask = CWBackPixel | CWBorderPixel | CWColormap | CWEventMask;
 
 	win = XCreateWindow(vidx11_display, root, 0, 0, width, height, 0, visinfo->depth, InputOutput, visinfo->visual, mask, &attr);
-	XStoreName(vidx11_display, win, gamename);
+
+	wmhints.flags = 0;
+	if(XpmCreatePixmapFromData(vidx11_display, win,
+		(gamemode == GAME_NEXUIZ) ? nexuiz_xpm : darkplaces_xpm,
+		&wmhints.icon_pixmap, &wmhints.icon_mask, NULL) == XpmSuccess)
+		wmhints.flags |= IconPixmapHint | IconMaskHint;
+
+	clshints = XAllocClassHint();
+	clshints->res_name = strdup(gamename);
+	clshints->res_class = strdup("DarkPlaces");
+
+	XmbSetWMProperties(vidx11_display, win, gamename, gamename, (char **) com_argv, com_argc, NULL, &wmhints, clshints);
+	//XStoreName(vidx11_display, win, gamename);
 	XMapWindow(vidx11_display, win);
 
 	// LordHavoc: making the close button on a window do the right thing
