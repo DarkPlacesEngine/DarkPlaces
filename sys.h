@@ -70,6 +70,12 @@ void Sys_PrintToTerminal(const char *text);
 void Sys_Shutdown (void); //INFO: This is only called by Host_Shutdown so we dont need testing for recursion
 void Sys_Quit (int returnvalue);
 
+// on some build/platform combinations (such as Linux gcc with the -pg
+// profiling option) this can turn on/off profiling, used primarily to limit
+// profiling to certain areas of the code, such as ingame performance without
+// regard for loading/shutdown performance (-profilegameonly on commandline)
+void Sys_AllowProfiling (qboolean enable);
+
 double Sys_DoubleTime (void);
 
 char *Sys_ConsoleInput (void);
