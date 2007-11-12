@@ -275,8 +275,8 @@ typedef enum
 	SLIF_PROTOCOL,
 	SLIF_NUMBOTS,
 	SLIF_NUMHUMANS,
-	SLIF_COUNT,
-	SLIF_FREESLOTS
+	SLIF_FREESLOTS,
+	SLIF_COUNT
 } serverlist_infofield_t;
 
 typedef enum
