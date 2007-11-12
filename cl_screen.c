@@ -2139,7 +2139,8 @@ void CL_UpdateScreen(void)
 	qglDepthMask(1);CHECKGLERROR
 	qglColorMask(1,1,1,1);CHECKGLERROR
 	qglClearColor(0,0,0,0);CHECKGLERROR
-	qglClear(GL_COLOR_BUFFER_BIT);CHECKGLERROR
+	R_ClearScreen();
+	r_view.clear = false;
 
 	if(scr_stipple.integer)
 	{
@@ -2164,7 +2165,7 @@ void CL_UpdateScreen(void)
 		qglDisable(GL_POLYGON_STIPPLE);
 
 	if (r_timereport_active)
-		R_TimeReport("clearscreeb");
+		R_TimeReport("screenclear");
 
 	qglDrawBuffer(GL_BACK);
 

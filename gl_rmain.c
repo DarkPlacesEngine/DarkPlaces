@@ -2763,6 +2763,8 @@ static void R_Water_ProcessPlanes(void)
 
 			R_ResetViewRendering3D();
 			R_ClearScreen();
+			if (r_timereport_active)
+				R_TimeReport("viewclear");
 
 			R_RenderScene(false);
 
@@ -2773,9 +2775,12 @@ static void R_Water_ProcessPlanes(void)
 
 			R_ResetViewRendering3D();
 			R_ClearScreen();
+			if (r_timereport_active)
+				R_TimeReport("viewclear");
 		}
 
 		r_view = originalview;
+		r_view.clear = true;
 		r_waterstate.renderingscene = false;
 	}
 	return;
@@ -3067,8 +3072,7 @@ void R_HDR_RenderBloomTexture(void)
 
 	R_ClearScreen();
 	if (r_timereport_active)
-		R_TimeReport("hdrclear");
-
+		R_TimeReport("viewclear");
 
 	// restore the view settings
 	r_view.width = oldwidth;
@@ -3234,9 +3238,13 @@ void R_RenderView(void)
 
 	R_ResetViewRendering3D();
 
-	R_ClearScreen();
-	if (r_timereport_active)
-		R_TimeReport("viewclear");
+	if (r_view.clear)
+	{
+		R_ClearScreen();
+		if (r_timereport_active)
+			R_TimeReport("viewclear");
+	}
+	r_view.clear = true;
 
 	r_view.showdebug = true;
 
