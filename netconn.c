@@ -1222,7 +1222,7 @@ static int NetConn_ClientParsePacket_ServerList_ProcessReply(const char *address
 {
 	int n;
 	int pingtime;
-	serverlist_entry_t *entry;
+	serverlist_entry_t *entry = NULL;
 
 	// search the cache for this server and update it
 	for (n = 0;n < serverlist_cachecount;n++) {
