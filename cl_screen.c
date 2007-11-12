@@ -1707,36 +1707,22 @@ static void R_Envmap_f (void)
 
 //=============================================================================
 
-// LordHavoc: SHOWLMP stuff
-#define SHOWLMP_MAXLABELS 256
-typedef struct showlmp_s
-{
-	qboolean	isactive;
-	float		x;
-	float		y;
-	char		label[32];
-	char		pic[128];
-}
-showlmp_t;
-
-showlmp_t showlmp[SHOWLMP_MAXLABELS];
-
 void SHOWLMP_decodehide(void)
 {
 	int i;
 	char *lmplabel;
 	lmplabel = MSG_ReadString();
-	for (i = 0;i < SHOWLMP_MAXLABELS;i++)
-		if (showlmp[i].isactive && strcmp(showlmp[i].label, lmplabel) == 0)
+	for (i = 0;i < cl.num_showlmps;i++)
+		if (cl.showlmps[i].isactive && strcmp(cl.showlmps[i].label, lmplabel) == 0)
 		{
-			showlmp[i].isactive = false;
+			cl.showlmps[i].isactive = false;
 			return;
 		}
 }
 
 void SHOWLMP_decodeshow(void)
 {
-	int i, k;
+	int k;
 	char lmplabel[256], picname[256];
 	float x, y;
 	strlcpy (lmplabel,MSG_ReadString(), sizeof (lmplabel));
@@ -1751,41 +1737,37 @@ void SHOWLMP_decodeshow(void)
 		x = MSG_ReadShort();
 		y = MSG_ReadShort();
 	}
-	k = -1;
-	for (i = 0;i < SHOWLMP_MAXLABELS;i++)
-		if (showlmp[i].isactive)
-		{
-			if (strcmp(showlmp[i].label, lmplabel) == 0)
-			{
-				k = i;
-				break; // drop out to replace it
-			}
-		}
-		else if (k < 0) // find first empty one to replace
-			k = i;
-	if (k < 0)
-		return; // none found to replace
-	// change existing one
-	showlmp[k].isactive = true;
-	strlcpy (showlmp[k].label, lmplabel, sizeof (showlmp[k].label));
-	strlcpy (showlmp[k].pic, picname, sizeof (showlmp[k].pic));
-	showlmp[k].x = x;
-	showlmp[k].y = y;
+	if (!cl.showlmps || cl.num_showlmps >= cl.max_showlmps)
+	{
+		showlmp_t *oldshowlmps = cl.showlmps;
+		cl.max_showlmps += 16;
+		cl.showlmps = Mem_Alloc(cls.levelmempool, cl.max_showlmps * sizeof(showlmp_t));
+		if (cl.num_showlmps)
+			memcpy(cl.showlmps, oldshowlmps, cl.num_showlmps * sizeof(showlmp_t));
+		if (oldshowlmps)
+			Mem_Free(oldshowlmps);
+	}
+	for (k = 0;k < cl.max_showlmps;k++)
+		if (cl.showlmps[k].isactive && !strcmp(cl.showlmps[k].label, lmplabel))
+			break;
+	if (k == cl.max_showlmps)
+		for (k = 0;k < cl.max_showlmps;k++)
+			if (!cl.showlmps[k].isactive)
+				break;
+	cl.showlmps[k].isactive = true;
+	strlcpy (cl.showlmps[k].label, lmplabel, sizeof (cl.showlmps[k].label));
+	strlcpy (cl.showlmps[k].pic, picname, sizeof (cl.showlmps[k].pic));
+	cl.showlmps[k].x = x;
+	cl.showlmps[k].y = y;
+	cl.num_showlmps = max(cl.num_showlmps, k + 1);
 }
 
 void SHOWLMP_drawall(void)
 {
 	int i;
-	for (i = 0;i < SHOWLMP_MAXLABELS;i++)
-		if (showlmp[i].isactive)
-			DrawQ_Pic(showlmp[i].x, showlmp[i].y, Draw_CachePic(showlmp[i].pic, true), 0, 0, 1, 1, 1, 1, 0);
-}
-
-void SHOWLMP_clear(void)
-{
-	int i;
-	for (i = 0;i < SHOWLMP_MAXLABELS;i++)
-		showlmp[i].isactive = false;
+	for (i = 0;i < cl.num_showlmps;i++)
+		if (cl.showlmps[i].isactive)
+			DrawQ_Pic(cl.showlmps[i].x, cl.showlmps[i].y, Draw_CachePic(cl.showlmps[i].pic, true), 0, 0, 1, 1, 1, 1, 0);
 }
 
 /*
@@ -2223,5 +2205,4 @@ void CL_UpdateScreen(void)
 
 void CL_Screen_NewMap(void)
 {
-	SHOWLMP_clear();
 }

@@ -134,6 +134,7 @@ void CL_ClearState(void)
 	cl.max_lightstyle = MAX_LIGHTSTYLES;
 	cl.max_brushmodel_entities = MAX_EDICTS;
 	cl.max_particles = MAX_PARTICLES;
+	cl.max_showlmps = 0;
 
 // COMMANDLINEOPTION: Client: -particles <number> changes maximum number of particles at once, default 32768
 	i = COM_CheckParm ("-particles");
@@ -158,6 +159,7 @@ void CL_ClearState(void)
 	cl.lightstyle = (lightstyle_t *)Mem_Alloc(cls.levelmempool, cl.max_lightstyle * sizeof(lightstyle_t));
 	cl.brushmodel_entities = (int *)Mem_Alloc(cls.levelmempool, cl.max_brushmodel_entities * sizeof(int));
 	cl.particles = (particle_t *) Mem_Alloc(cls.levelmempool, cl.max_particles * sizeof(particle_t));
+	cl.showlmps = NULL;
 
 	// LordHavoc: have to set up the baseline info for alpha and other stuff
 	for (i = 0;i < cl.max_entities;i++)

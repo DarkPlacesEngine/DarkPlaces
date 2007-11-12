@@ -15,6 +15,7 @@
 0 bug darkplaces loader: mcbsp hull selection is ignoring the custom hulls supported by mcbsp (div0)
 0 bug darkplaces loader: q1bsp loader computes wrong submodel size for submodels with no surfaces, such as a func_wall comprised entirely of SKIP or CAULK brushes (neg|ke)
 0 bug darkplaces memory: memstats doesn't account for memory used by VBO/EBO buffers in models
+0 bug darkplaces menu: load/save game menus show files that are not in the highest priority gamedir, such as id1 saves showing up when playing dpmod (Dooomer)
 0 bug darkplaces qc FRIK_FILE: when opening a file for writing that already has the data/ prefix in its path, it should not add another data/ prefix (daemon)
 0 bug darkplaces readme: it would be a very good idea to add documentation of sv_gameplayfix_* cvars in the readme as a means to run broken mods (xaGe)
 0 bug darkplaces readme: readme says that q3 shaders are not supported, this is not true, describe the working features in detail (qqshka)
