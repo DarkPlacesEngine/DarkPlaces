@@ -1435,6 +1435,9 @@ typedef struct r_view_s
 	// global RGB color multiplier for rendering, this is required by HDR
 	float colorscale;
 
+	// whether to call R_ClearScreen before rendering stuff
+	qboolean clear;
+
 	// whether to draw r_showtris and such, this is only true for the main
 	// view render, all secondary renders (HDR, mirrors, portals, cameras,
 	// distortion effects, etc) omit such debugging information
