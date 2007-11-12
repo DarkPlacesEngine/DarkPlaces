@@ -3215,7 +3215,7 @@ rtexture_t *R_Shadow_LoadCubemap(const char *basename)
 			// generate an image name based on the base and and suffix
 			dpsnprintf(name, sizeof(name), "%s%s", basename, suffix[j][i].suffix);
 			// load it
-			if ((image_rgba = loadimagepixels(name, false, cubemapsize, cubemapsize)))
+			if ((image_rgba = loadimagepixels(name, false, cubemapsize, cubemapsize, false)))
 			{
 				// an image loaded, make sure width and height are equal
 				if (image_width == image_height)

@@ -25,7 +25,7 @@ void r_lightningbeams_start(void)
 
 void r_lightningbeams_setupqmbtexture(void)
 {
-	r_lightningbeamqmbtexture = loadtextureimage(r_lightningbeamtexturepool, "textures/particles/lightning.pcx", 0, 0, false, TEXF_ALPHA | TEXF_PRECACHE);
+	r_lightningbeamqmbtexture = loadtextureimage(r_lightningbeamtexturepool, "textures/particles/lightning.pcx", 0, 0, false, TEXF_ALPHA | TEXF_PRECACHE, false);
 	if (r_lightningbeamqmbtexture == NULL)
 		Cvar_SetValueQuick(&r_lightningbeam_qmbtexture, false);
 }
