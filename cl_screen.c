@@ -1875,7 +1875,7 @@ void SCR_DrawScreen (void)
 	R_Mesh_Start();
 
 	if (r_timereport_active)
-		R_TimeReport("setup");
+		R_TimeReport("screensetup");
 
 	R_UpdateVariables();
 
@@ -2164,7 +2164,7 @@ void CL_UpdateScreen(void)
 		qglDisable(GL_POLYGON_STIPPLE);
 
 	if (r_timereport_active)
-		R_TimeReport("clear");
+		R_TimeReport("clearscreeb");
 
 	qglDrawBuffer(GL_BACK);
 

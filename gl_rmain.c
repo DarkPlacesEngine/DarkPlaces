@@ -3067,7 +3067,7 @@ void R_HDR_RenderBloomTexture(void)
 
 	R_ClearScreen();
 	if (r_timereport_active)
-		R_TimeReport("clear");
+		R_TimeReport("hdrclear");
 
 
 	// restore the view settings
@@ -3230,13 +3230,13 @@ void R_RenderView(void)
 
 	CHECKGLERROR
 	if (r_timereport_active)
-		R_TimeReport("setup");
+		R_TimeReport("viewsetup");
 
 	R_ResetViewRendering3D();
 
 	R_ClearScreen();
 	if (r_timereport_active)
-		R_TimeReport("clear");
+		R_TimeReport("viewclear");
 
 	r_view.showdebug = true;
 
