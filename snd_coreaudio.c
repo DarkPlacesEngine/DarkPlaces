@@ -20,12 +20,13 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 
+#include "quakedef.h"
+
 #include <limits.h>
 #include <pthread.h>
 
 #include <CoreAudio/AudioHardware.h>
 
-#include "quakedef.h"
 #include "snd_main.h"
 
 

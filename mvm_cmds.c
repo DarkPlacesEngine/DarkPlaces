@@ -1,4 +1,7 @@
+#include "quakedef.h"
+
 #include "prvm_cmds.h"
+#include "menu.h"
 
 //============================================================================
 // Menu
@@ -195,7 +198,6 @@ VM_M_getresolution
 vector	getresolution(float number)
 =========
 */
-extern unsigned short video_resolutions[][2];
 void VM_M_getresolution(void)
 {
 	int nr;
@@ -203,9 +205,9 @@ void VM_M_getresolution(void)
 
 	nr = (int)PRVM_G_FLOAT(OFS_PARM0);
 
-
-	PRVM_G_VECTOR(OFS_RETURN)[0] = video_resolutions[nr][0];
-	PRVM_G_VECTOR(OFS_RETURN)[1] = video_resolutions[nr][1];
+	// FIXME bounds check
+	PRVM_G_VECTOR(OFS_RETURN)[0] = video_resolutions[nr].width;
+	PRVM_G_VECTOR(OFS_RETURN)[1] = video_resolutions[nr].height;
 	PRVM_G_VECTOR(OFS_RETURN)[2] = 0;
 }
 

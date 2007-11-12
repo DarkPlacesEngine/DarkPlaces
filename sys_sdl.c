@@ -1,3 +1,4 @@
+#include "quakedef.h"
 
 #ifdef WIN32
 #include <io.h>
@@ -9,8 +10,6 @@
 #endif
 
 #include <signal.h>
-
-#include "quakedef.h"
 
 #include <SDL.h>
 

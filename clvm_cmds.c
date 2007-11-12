@@ -1,3 +1,5 @@
+#include "quakedef.h"
+
 #include "prvm_cmds.h"
 #include "csprogs.h"
 #include "cl_collision.h"
@@ -22,7 +24,7 @@ void Sbar_SortFrags (void);
 void CL_FindNonSolidLocation(const vec3_t in, vec3_t out, vec_t radius);
 void CSQC_RelinkAllEntities (int drawmask);
 void CSQC_RelinkCSQCEntities (void);
-char *Key_GetBind (int key);
+const char *Key_GetBind (int key);
 
 
 

@@ -4,6 +4,8 @@
 // cause large (I think they will) parts are from pr_cmds the same copyright like in pr_cmds
 // also applies here
 
+#include "quakedef.h"
+
 #include "prvm_cmds.h"
 #include <time.h>
 

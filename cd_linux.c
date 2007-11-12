@@ -21,7 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // rights reserved.
 
 // suggested by Zero_Dogg to fix a compile problem on Mandriva Linux
-#define __KERNEL_STRICT_NAMES
+#include "quakedef.h"
 
 #include <linux/cdrom.h>
 #include <sys/ioctl.h>
@@ -31,7 +31,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <time.h>
 #include <unistd.h>
 
-#include "quakedef.h"
 #include "cdaudio.h"
 
 

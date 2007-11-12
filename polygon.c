@@ -3,6 +3,8 @@
 Polygon clipping routines written by Forest Hale and placed into public domain.
 */
 
+#include "quakedef.h"
+
 #include <math.h>
 #include "polygon.h"
 

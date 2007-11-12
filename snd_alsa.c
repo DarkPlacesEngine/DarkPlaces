@@ -23,10 +23,10 @@
 
 // ALSA module, used by Linux
 
+#include "quakedef.h"
 
 #include <alsa/asoundlib.h>
 
-#include "quakedef.h"
 #include "snd_main.h"
 
 
