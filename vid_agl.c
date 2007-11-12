@@ -21,8 +21,6 @@
 */
 
 
-#include "quakedef.h"
-
 #include <dlfcn.h>
 #include <signal.h>
 #include <AGL/agl.h>
@@ -31,6 +29,7 @@
 #include <IOKit/hidsystem/IOHIDLib.h>
 #include <IOKit/hidsystem/IOHIDParameter.h>
 #include <IOKit/hidsystem/event_status_driver.h>
+#include "quakedef.h"
 #include "vid_agl_mackeys.h" // this is SDL/src/video/maccommon/SDL_mackeys.h
 
 #ifndef kCGLCEMPEngine
