@@ -19,13 +19,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // common.c -- misc functions used in client and server
 
+#include "quakedef.h"
+
 #include <stdlib.h>
 #include <fcntl.h>
 #ifndef WIN32
 #include <unistd.h>
 #endif
-
-#include "quakedef.h"
 
 cvar_t registered = {0, "registered","0", "indicates if this is running registered quake (whether gfx/pop.lmp was found)"};
 cvar_t cmdline = {0, "cmdline","0", "contains commandline the engine was launched with"};

@@ -1,6 +1,10 @@
 
 // Written by Forest Hale 2003-06-15 and placed into public domain.
 
+#ifndef STANDALONETEST
+#include "quakedef.h"
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
@@ -23,7 +27,6 @@
 
 // for Z_Malloc/Z_Free in quake
 #ifndef STANDALONETEST
-#include "quakedef.h"
 #include "zone.h"
 #include "sys.h"
 #include "netconn.h"

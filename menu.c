@@ -2764,14 +2764,6 @@ static void M_Reset_Draw (void)
 /* VIDEO MENU */
 
 // note: if modes are added to the beginning of this list, update VID_DEFAULT
-typedef struct video_resolution_s
-{
-	const char *type;
-	int width, height;
-	int conwidth, conheight;
-	double pixelheight; // pixel aspect
-}
-video_resolution_t;
 video_resolution_t video_resolutions[] =
 {
 {"Standard 4x3"              ,  320, 240, 320, 240, 1     },

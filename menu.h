@@ -83,5 +83,15 @@ extern void (*MR_KeyEvent) (int key, char ascii, qboolean downevent);
 extern void (*MR_Draw) (void);
 extern void (*MR_ToggleMenu_f) (void);
 extern void (*MR_Shutdown) (void);
+
+typedef struct video_resolution_s
+{
+	const char *type;
+	int width, height;
+	int conwidth, conheight;
+	double pixelheight; // pixel aspect
+}
+video_resolution_t;
+video_resolution_t video_resolutions[];
 #endif
 

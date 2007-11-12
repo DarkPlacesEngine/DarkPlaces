@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // OSS module, used by Linux and FreeBSD
 
+#include "quakedef.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -27,7 +28,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <sys/soundcard.h>
 #include <unistd.h>
 
-#include "quakedef.h"
 #include "snd_main.h"
 
 

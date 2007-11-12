@@ -506,7 +506,7 @@ qboolean	chat_team;
 char		chat_buffer[MAX_INPUTLINE];
 unsigned int	chat_bufferlen = 0;
 
-extern unsigned int Nicks_CompleteChatLine(char *buffer, size_t size, int pos);
+extern int Nicks_CompleteChatLine(char *buffer, size_t size, unsigned int pos);
 
 static void
 Key_Message (int key, char ascii)

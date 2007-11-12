@@ -17,6 +17,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
+#include "quakedef.h"
 
 #include <sys/param.h>
 #include <sys/audioio.h>
@@ -31,7 +32,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #endif
 #include <unistd.h>
 
-#include "quakedef.h"
 #include "snd_main.h"
 
 
