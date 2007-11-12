@@ -1510,7 +1510,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			{
 				if (loadmodel->isworldmodel)
 				{
-					data = loadimagepixels(tx->name, false, 0, 0);
+					data = loadimagepixels(tx->name, false, 0, 0, false);
 					if (data)
 					{
 						R_Q1BSP_LoadSplitSky(data, image_width, image_height, 4);

@@ -23,10 +23,10 @@ void Image_StripImageExtension (const char *in, char *out, size_t size_out);
 unsigned char *LoadTGA (const unsigned char *f, int filesize, int matchwidth, int matchheight);
 
 // loads a texture, as pixel data
-unsigned char *loadimagepixels (const char *filename, qboolean complain, int matchwidth, int matchheight);
+unsigned char *loadimagepixels (const char *filename, qboolean complain, int matchwidth, int matchheight, qboolean allowFixtrans);
 
 // loads a texture, as a texture
-rtexture_t *loadtextureimage (rtexturepool_t *pool, const char *filename, int matchwidth, int matchheight, qboolean complain, int flags);
+rtexture_t *loadtextureimage (rtexturepool_t *pool, const char *filename, int matchwidth, int matchheight, qboolean complain, int flags, qboolean allowFixtrans);
 
 // writes a RGB TGA that is already upside down (which TGA wants)
 qboolean Image_WriteTGARGB_preflipped (const char *filename, int width, int height, const unsigned char *data, unsigned char *buffer);
@@ -47,6 +47,7 @@ void Image_HeightmapToNormalmap(const unsigned char *inpixels, unsigned char *ou
 
 // console command to fix the colors of transparent pixels (to prevent weird borders)
 void Image_FixTransparentPixels_f(void);
+extern cvar_t r_fixtrans_auto;
 
 #endif
 

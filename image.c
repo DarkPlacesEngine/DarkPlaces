@@ -836,7 +836,8 @@ imageformat_t imageformats_other[] =
 	{NULL, NULL}
 };
 
-unsigned char *loadimagepixels (const char *filename, qboolean complain, int matchwidth, int matchheight)
+int fixtransparentpixels(unsigned char *data, int w, int h);
+unsigned char *loadimagepixels (const char *filename, qboolean complain, int matchwidth, int matchheight, qboolean allowFixtrans)
 {
 	fs_offset_t filesize;
 	imageformat_t *firstformat, *format;
@@ -884,6 +885,22 @@ unsigned char *loadimagepixels (const char *filename, qboolean complain, int mat
 					Con_Printf("loaded image %s (%dx%d)\n", name, image_width, image_height);
 				if (developer_memorydebug.integer)
 					Mem_CheckSentinelsGlobal();
+				if(allowFixtrans && r_fixtrans_auto.integer)
+				{
+					int n = fixtransparentpixels(data, image_width, image_height);
+					if(n)
+					{
+						Con_Printf("- had to fix %s (%d pixels changed)\n", name, n);
+						if(r_fixtrans_auto.integer >= 2)
+						{
+							char outfilename[MAX_QPATH], buf[MAX_QPATH];
+							Image_StripImageExtension(name, buf, sizeof(buf));
+							dpsnprintf(outfilename, sizeof(outfilename), "fixtrans/%s.tga", buf);
+							Image_WriteTGARGBA(outfilename, image_width, image_height, data);
+							Con_Printf("- %s written.\n", outfilename);
+						}
+					}
+				}
 				return data;
 			}
 			else
@@ -907,11 +924,11 @@ unsigned char *loadimagepixels (const char *filename, qboolean complain, int mat
 	return NULL;
 }
 
-rtexture_t *loadtextureimage (rtexturepool_t *pool, const char *filename, int matchwidth, int matchheight, qboolean complain, int flags)
+rtexture_t *loadtextureimage (rtexturepool_t *pool, const char *filename, int matchwidth, int matchheight, qboolean complain, int flags, qboolean allowFixtrans)
 {
 	unsigned char *data;
 	rtexture_t *rt;
-	if (!(data = loadimagepixels (filename, complain, matchwidth, matchheight)))
+	if (!(data = loadimagepixels (filename, complain, matchwidth, matchheight, allowFixtrans)))
 		return 0;
 	rt = R_LoadTexture2D(pool, filename, image_width, image_height, data, TEXTYPE_RGBA, flags, NULL);
 	Mem_Free(data);
@@ -1059,7 +1076,7 @@ void Image_FixTransparentPixels_f(void)
 		Con_Printf("Processing %s... ", filename);
 		Image_StripImageExtension(filename, buf, sizeof(buf));
 		dpsnprintf(outfilename, sizeof(outfilename), "fixtrans/%s.tga", buf);
-		if(!(data = loadimagepixels(filename, true, 0, 0)))
+		if(!(data = loadimagepixels(filename, true, 0, 0, false)))
 			return;
 		if((n = fixtransparentpixels(data, image_width, image_height)))
 		{
