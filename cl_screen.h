@@ -5,7 +5,6 @@
 void SHOWLMP_decodehide(void);
 void SHOWLMP_decodeshow(void);
 void SHOWLMP_drawall(void);
-void SHOWLMP_clear(void);
 
 extern cvar_t vid_conwidth;
 extern cvar_t vid_conheight;

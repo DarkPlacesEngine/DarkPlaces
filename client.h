@@ -679,6 +679,16 @@ typedef struct cl_locnode_s
 }
 cl_locnode_t;
 
+typedef struct showlmp_s
+{
+	qboolean	isactive;
+	float		x;
+	float		y;
+	char		label[32];
+	char		pic[128];
+}
+showlmp_t;
+
 //
 // the client_state_t structure is wiped completely at every
 // server signon
@@ -903,6 +913,7 @@ typedef struct client_state_s
 	int max_lightstyle;
 	int max_brushmodel_entities;
 	int max_particles;
+	int max_showlmps;
 
 	entity_t *entities;
 	unsigned char *entities_active;
@@ -914,6 +925,7 @@ typedef struct client_state_s
 	lightstyle_t *lightstyle;
 	int *brushmodel_entities;
 	particle_t *particles;
+	showlmp_t *showlmps;
 
 	int num_entities;
 	int num_static_entities;
@@ -923,6 +935,7 @@ typedef struct client_state_s
 	int num_beams;
 	int num_dlights;
 	int num_particles;
+	int num_showlmps;
 
 	int free_particle;
 

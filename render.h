@@ -43,7 +43,6 @@ extern void R_ResetSkyBox(void);
 extern void SHOWLMP_decodehide(void);
 extern void SHOWLMP_decodeshow(void);
 extern void SHOWLMP_drawall(void);
-extern void SHOWLMP_clear(void);
 
 // render profiling stuff
 extern char r_speeds_string[1024];
