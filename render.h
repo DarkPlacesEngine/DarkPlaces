@@ -313,8 +313,6 @@ typedef struct rsurfacestate_s
 	qboolean uselightmaptexture;
 	// one of the RSURFMODE_ values
 	rsurfmode_t mode;
-	// type of vertex lighting being used on this batch
-	int lightmode; // 0 = lightmap or fullbright, 1 = color array from q3bsp, 2 = vertex shaded model
 
 	// rtlight rendering
 	// light currently being rendered

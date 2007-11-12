@@ -106,6 +106,10 @@ mplane_t;
 #define MATERIALFLAG_REFLECTION 1048576
 // render water, comprising refraction and reflection (note: this is always opaque, the shader does the alpha effect)
 #define MATERIALFLAG_SORTTRANSPARENT 2097152
+// use model lighting on this material (q1bsp lightmap sampling or q3bsp lightgrid, implies FULLBRIGHT is false)
+#define MATERIALFLAG_MODELLIGHT 4194304
+// add directional model lighting to this material (q3bsp lightgrid only)
+#define MATERIALFLAG_MODELLIGHT_DIRECTIONAL 8388608
 // combined mask of all attributes that require depth sorted rendering
 #define MATERIALFLAGMASK_DEPTHSORTED (MATERIALFLAG_SORTTRANSPARENT | MATERIALFLAG_BLENDED | MATERIALFLAG_NODEPTHTEST)
 
