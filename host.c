@@ -918,6 +918,9 @@ static void Host_Init (void)
 	int i;
 	const char* os;
 
+	if (COM_CheckParm("-profilegameonly"))
+		Sys_AllowProfiling(false);
+
 	// LordHavoc: quake never seeded the random number generator before... heh
 	if (COM_CheckParm("-benchmark"))
 		srand(0); // predictable random sequence for -benchmark

@@ -18,10 +18,21 @@ char *Sys_TimeString(const char *timeformat)
 extern qboolean host_shuttingdown;
 void Sys_Quit (int returnvalue)
 {
+	if (COM_CheckParm("-profilegameonly"))
+		Sys_AllowProfiling(false);
 	host_shuttingdown = true;
 	Host_Shutdown();
 	exit(returnvalue);
 }
+
+void Sys_AllowProfiling(qboolean enable)
+{
+#if defined(__linux__) || defined(__FreeBSD__)
+int moncontrol(int);
+	moncontrol(enable);
+#endif
+}
+
 
 /*
 ===============================================================================
