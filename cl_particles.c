@@ -178,7 +178,6 @@ cvar_t cl_particles_blood = {CVAR_SAVE, "cl_particles_blood", "1", "enables bloo
 cvar_t cl_particles_blood_alpha = {CVAR_SAVE, "cl_particles_blood_alpha", "1", "opacity of blood"};
 cvar_t cl_particles_blood_bloodhack = {CVAR_SAVE, "cl_particles_blood_bloodhack", "1", "make certain quake particle() calls create blood effects instead"};
 cvar_t cl_particles_bulletimpacts = {CVAR_SAVE, "cl_particles_bulletimpacts", "1", "enables bulletimpact effects"};
-cvar_t cl_particles_explosions_smoke = {CVAR_SAVE, "cl_particles_explosions_smokes", "0", "enables smoke from explosions"};
 cvar_t cl_particles_explosions_sparks = {CVAR_SAVE, "cl_particles_explosions_sparks", "1", "enables sparks from explosions"};
 cvar_t cl_particles_explosions_shell = {CVAR_SAVE, "cl_particles_explosions_shell", "0", "enables polygonal shell from explosions"};
 cvar_t cl_particles_rain = {CVAR_SAVE, "cl_particles_rain", "1", "enables rain effects"};
@@ -425,7 +424,6 @@ void CL_Particles_Init (void)
 	Cvar_RegisterVariable (&cl_particles_blood);
 	Cvar_RegisterVariable (&cl_particles_blood_alpha);
 	Cvar_RegisterVariable (&cl_particles_blood_bloodhack);
-	Cvar_RegisterVariable (&cl_particles_explosions_smoke);
 	Cvar_RegisterVariable (&cl_particles_explosions_sparks);
 	Cvar_RegisterVariable (&cl_particles_explosions_shell);
 	Cvar_RegisterVariable (&cl_particles_bulletimpacts);
@@ -1407,29 +1405,6 @@ void CL_ParticleExplosion (const vec3_t org)
 		}
 		else
 		{
-			// LordHavoc: smoke effect similar to UT2003, chews fillrate too badly up close
-			// smoke puff
-			if (cl_particles.integer && cl_particles_smoke.integer && cl_particles_explosions_smoke.integer)
-			{
-				for (i = 0;i < 32;i++)
-				{
-					int k;
-					vec3_t v, v2;
-					for (k = 0;k < 16;k++)
-					{
-						v[0] = org[0] + lhrandom(-48, 48);
-						v[1] = org[1] + lhrandom(-48, 48);
-						v[2] = org[2] + lhrandom(-48, 48);
-						trace = CL_Move(org, vec3_origin, vec3_origin, v, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false);
-						if (trace.fraction >= 0.1)
-							break;
-					}
-					VectorSubtract(trace.endpos, org, v2);
-					VectorScale(v2, 2.0f, v2);
-					CL_NewParticle(pt_smoke, 0x202020, 0x404040, tex_smoke[rand()&7], 12, 0, 32, 64, 0, 0, org[0], org[1], org[2], v2[0], v2[1], v2[2], 0, 0, 0, 0);
-				}
-			}
-
 			if (cl_particles.integer && cl_particles_sparks.integer && cl_particles_explosions_sparks.integer)
 			{
 				for (i = 0;i < 512 * cl_particles_quality.value;i++)
