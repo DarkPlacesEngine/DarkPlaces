@@ -631,33 +631,46 @@ particletype_t;
 
 typedef enum
 {
-	pt_alphastatic, pt_static, pt_spark, pt_beam, pt_rain, pt_raindecal, pt_snow, pt_bubble, pt_blood, pt_smoke, pt_decal, pt_entityparticle, pt_total
+	pt_dead, pt_alphastatic, pt_static, pt_spark, pt_beam, pt_rain, pt_raindecal, pt_snow, pt_bubble, pt_blood, pt_smoke, pt_decal, pt_entityparticle, pt_total
 }
 ptype_t;
 
+typedef struct decal_s
+{
+	unsigned short	typeindex;
+	unsigned short	texnum;
+	vec3_t			org;
+	vec3_t			normal;
+	float			size;
+	float			alpha; // 0-255
+	float			time2; // used for snow fluttering and decal fade
+	unsigned char	color[4];
+	unsigned int	owner; // decal stuck to this entity
+	model_t			*ownermodel; // model the decal is stuck to (used to make sure the entity is still alive)
+	vec3_t			relativeorigin; // decal at this location in entity's coordinate space
+	vec3_t			relativenormal; // decal oriented this way relative to entity's coordinate space
+}
+decal_t;
+
 typedef struct particle_s
 {
-	particletype_t *type;
-	int			texnum;
-	vec3_t		org;
-	vec3_t		vel; // velocity of particle, or orientation of decal, or end point of beam
-	float		size;
-	float		sizeincrease; // rate of size change per second
-	float		alpha; // 0-255
-	float		alphafade; // how much alpha reduces per second
-	float		time2; // used for snow fluttering and decal fade
-	float		bounce; // how much bounce-back from a surface the particle hits (0 = no physics, 1 = stop and slide, 2 = keep bouncing forever, 1.5 is typical)
-	float		gravity; // how much gravity affects this particle (1.0 = normal gravity, 0.0 = none)
-	float		airfriction; // how much air friction affects this object (objects with a low mass/size ratio tend to get more air friction)
-	float		liquidfriction; // how much liquid friction affects this object (objects with a low mass/size ratio tend to get more liquid friction)
-	unsigned char		color[4];
-	unsigned int		owner; // decal stuck to this entity
-	model_t		*ownermodel; // model the decal is stuck to (used to make sure the entity is still alive)
-	vec3_t		relativeorigin; // decal at this location in entity's coordinate space
-	vec3_t		relativedirection; // decal oriented this way relative to entity's coordinate space
-	float		delayedcollisions; // time that p->bounce becomes active
-	float		delayedspawn; // time that particle appears and begins moving
-	float		die; // time when this particle should be removed, regardless of alpha
+	unsigned short	typeindex;
+	unsigned short	texnum;
+	vec3_t			org;
+	vec3_t			vel; // velocity of particle, or orientation of decal, or end point of beam
+	float			size;
+	float			sizeincrease; // rate of size change per second
+	float			alpha; // 0-255
+	float			alphafade; // how much alpha reduces per second
+	float			time2; // used for snow fluttering and decal fade
+	float			bounce; // how much bounce-back from a surface the particle hits (0 = no physics, 1 = stop and slide, 2 = keep bouncing forever, 1.5 is typical)
+	float			gravity; // how much gravity affects this particle (1.0 = normal gravity, 0.0 = none)
+	float			airfriction; // how much air friction affects this object (objects with a low mass/size ratio tend to get more air friction)
+	float			liquidfriction; // how much liquid friction affects this object (objects with a low mass/size ratio tend to get more liquid friction)
+	unsigned char	color[4];
+	float			delayedcollisions; // time that p->bounce becomes active
+	float			delayedspawn; // time that particle appears and begins moving
+	float			die; // time when this particle should be removed, regardless of alpha
 }
 particle_t;
 
@@ -913,6 +926,7 @@ typedef struct client_state_s
 	int max_lightstyle;
 	int max_brushmodel_entities;
 	int max_particles;
+	int max_decals;
 	int max_showlmps;
 
 	entity_t *entities;
@@ -925,6 +939,7 @@ typedef struct client_state_s
 	lightstyle_t *lightstyle;
 	int *brushmodel_entities;
 	particle_t *particles;
+	decal_t *decals;
 	showlmp_t *showlmps;
 
 	int num_entities;
@@ -935,9 +950,11 @@ typedef struct client_state_s
 	int num_beams;
 	int num_dlights;
 	int num_particles;
+	int num_decals;
 	int num_showlmps;
 
 	int free_particle;
+	int free_decal;
 
 	// cl_serverextension_download feature
 	int loadmodel_current;
@@ -1284,6 +1301,7 @@ void CL_ParticleRain (const vec3_t mins, const vec3_t maxs, const vec3_t dir, in
 void CL_EntityParticles (const entity_t *ent);
 void CL_ParticleExplosion (const vec3_t org);
 void CL_ParticleExplosion2 (const vec3_t org, int colorStart, int colorLength);
+void CL_MoveDecals(void);
 void CL_MoveParticles(void);
 void R_MoveExplosions(void);
 void R_NewExplosion(const vec3_t org);
@@ -1309,7 +1327,10 @@ typedef struct r_refdef_stats_s
 	int entities_triangles;
 	int world_leafs;
 	int world_portals;
+	int world_surfaces;
+	int world_triangles;
 	int particles;
+	int decals;
 	int meshes;
 	int meshes_elements;
 	int lights;

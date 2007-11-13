@@ -136,6 +136,7 @@ skinframe_t *R_SkinFrame_LoadInternal(const char *name, int textureflags, int lo
 skinframe_t *R_SkinFrame_LoadMissing(void);
 
 void R_View_WorldVisibility(qboolean forcenovis);
+void R_DrawDecals(void);
 void R_DrawParticles(void);
 void R_DrawExplosions(void);
 

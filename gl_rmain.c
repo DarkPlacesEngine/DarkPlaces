@@ -2231,7 +2231,6 @@ static void R_DrawModelsDepth(void)
 		if (!r_viewcache.entityvisible[i])
 			continue;
 		ent = r_refdef.entities[i];
-		r_refdef.stats.entities++;
 		if (ent->model && ent->model->DrawDepth != NULL)
 			ent->model->DrawDepth(ent);
 	}
@@ -2250,7 +2249,6 @@ static void R_DrawModelsDebug(void)
 		if (!r_viewcache.entityvisible[i])
 			continue;
 		ent = r_refdef.entities[i];
-		r_refdef.stats.entities++;
 		if (ent->model && ent->model->DrawDebug != NULL)
 			ent->model->DrawDebug(ent);
 	}
@@ -2269,7 +2267,6 @@ static void R_DrawModelsAddWaterPlanes(void)
 		if (!r_viewcache.entityvisible[i])
 			continue;
 		ent = r_refdef.entities[i];
-		r_refdef.stats.entities++;
 		if (ent->model && ent->model->DrawAddWaterPlanes != NULL)
 			ent->model->DrawAddWaterPlanes(ent);
 	}
@@ -3417,6 +3414,10 @@ void R_RenderScene(qboolean addwaterplanes)
 		R_DrawLightningBeams();
 		if (r_timereport_active)
 			R_TimeReport("lightning");
+
+		R_DrawDecals();
+		if (r_timereport_active)
+			R_TimeReport("decals");
 
 		R_DrawParticles();
 		if (r_timereport_active)
@@ -5823,7 +5824,6 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 		RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
 		RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
 		GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 1);
-		r_refdef.stats.entities_surfaces += texturenumsurfaces;
 	}
 	else if (r_depthfirst.integer == 3)
 		return;
@@ -5848,7 +5848,6 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 		R_Mesh_ResetTextureState();
 		RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
 		R_DrawTextureSurfaceList_ShowSurfaces(texturenumsurfaces, texturesurfacelist);
-		r_refdef.stats.entities_surfaces += texturenumsurfaces;
 	}
 	else if (gl_lightmaps.integer)
 	{
@@ -5876,13 +5875,9 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 			RSurf_DrawBatch_GL11_Lightmap(texturenumsurfaces, texturesurfacelist, 1, 1, 1, 1, false, false);
 		else
 			RSurf_DrawBatch_GL11_VertexColor(texturenumsurfaces, texturesurfacelist, 1, 1, 1, 1, false, false);
-		r_refdef.stats.entities_surfaces += texturenumsurfaces;
 	}
 	else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_SKY)
-	{
 		R_DrawTextureSurfaceList_Sky(texturenumsurfaces, texturesurfacelist);
-		r_refdef.stats.entities_surfaces += texturenumsurfaces;
-	}
 	else if (rsurface.texture->currentnumlayers)
 	{
 		// write depth for anything we skipped on the depth-only pass earlier
@@ -5901,7 +5896,6 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 			R_DrawTextureSurfaceList_GL13(texturenumsurfaces, texturesurfacelist);
 		else
 			R_DrawTextureSurfaceList_GL11(texturenumsurfaces, texturesurfacelist);
-		r_refdef.stats.entities_surfaces += texturenumsurfaces;
 	}
 	CHECKGLERROR
 	GL_LockArrays(0, 0);
@@ -6211,7 +6205,6 @@ extern void R_BuildLightMap(const entity_render_t *ent, msurface_t *surface);
 void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean addwaterplanes, qboolean debug)
 {
 	int i, j, endj, f, flagsmask;
-	int counttriangles = 0;
 	msurface_t *surface, **surfacechain;
 	texture_t *t;
 	model_t *model = r_refdef.worldmodel;
@@ -6272,25 +6265,25 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 					R_BuildLightMap(r_refdef.worldentity, surface);
 				// add face to draw list
 				surfacelist[numsurfacelist++] = surface;
-				counttriangles += surface->num_triangles;
+				r_refdef.stats.world_triangles += surface->num_triangles;
 				if (numsurfacelist >= maxsurfacelist)
 				{
+					r_refdef.stats.world_surfaces += numsurfacelist;
 					R_QueueSurfaceList(r_refdef.worldentity, numsurfacelist, surfacelist, flagsmask, writedepth, depthonly, addwaterplanes);
 					numsurfacelist = 0;
 				}
 			}
 		}
 	}
+	r_refdef.stats.world_surfaces += numsurfacelist;
 	if (numsurfacelist)
 		R_QueueSurfaceList(r_refdef.worldentity, numsurfacelist, surfacelist, flagsmask, writedepth, depthonly, addwaterplanes);
-	r_refdef.stats.entities_triangles += counttriangles;
 	RSurf_CleanUp();
 }
 
 void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean addwaterplanes, qboolean debug)
 {
 	int i, f, flagsmask;
-	int counttriangles = 0;
 	msurface_t *surface, *endsurface, **surfacechain;
 	texture_t *t;
 	model_t *model = ent->model;
@@ -6351,16 +6344,17 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 				R_BuildLightMap(ent, surface);
 			// add face to draw list
 			surfacelist[numsurfacelist++] = surface;
-			counttriangles += surface->num_triangles;
+			r_refdef.stats.entities_triangles += surface->num_triangles;
 			if (numsurfacelist >= maxsurfacelist)
 			{
+				r_refdef.stats.entities_surfaces += numsurfacelist;
 				R_QueueSurfaceList(ent, numsurfacelist, surfacelist, flagsmask, writedepth, depthonly, addwaterplanes);
 				numsurfacelist = 0;
 			}
 		}
 	}
+	r_refdef.stats.entities_surfaces += numsurfacelist;
 	if (numsurfacelist)
 		R_QueueSurfaceList(ent, numsurfacelist, surfacelist, flagsmask, writedepth, depthonly, addwaterplanes);
-	r_refdef.stats.entities_triangles += counttriangles;
 	RSurf_CleanUp();
 }
