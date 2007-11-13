@@ -89,6 +89,7 @@ client_static_t	cls;
 client_state_t	cl;
 
 #define MAX_PARTICLES			32768	// default max # of particles at one time
+#define MAX_DECALS				32768	// default max # of decals at one time
 #define ABSOLUTE_MIN_PARTICLES	512		// no fewer than this no matter what's on the command line
 
 /*
@@ -134,6 +135,7 @@ void CL_ClearState(void)
 	cl.max_lightstyle = MAX_LIGHTSTYLES;
 	cl.max_brushmodel_entities = MAX_EDICTS;
 	cl.max_particles = MAX_PARTICLES;
+	cl.max_decals = MAX_DECALS;
 	cl.max_showlmps = 0;
 
 // COMMANDLINEOPTION: Client: -particles <number> changes maximum number of particles at once, default 32768
@@ -159,6 +161,7 @@ void CL_ClearState(void)
 	cl.lightstyle = (lightstyle_t *)Mem_Alloc(cls.levelmempool, cl.max_lightstyle * sizeof(lightstyle_t));
 	cl.brushmodel_entities = (int *)Mem_Alloc(cls.levelmempool, cl.max_brushmodel_entities * sizeof(int));
 	cl.particles = (particle_t *) Mem_Alloc(cls.levelmempool, cl.max_particles * sizeof(particle_t));
+	cl.decals = (decal_t *) Mem_Alloc(cls.levelmempool, cl.max_decals * sizeof(decal_t));
 	cl.showlmps = NULL;
 
 	// LordHavoc: have to set up the baseline info for alpha and other stuff
@@ -1794,7 +1797,8 @@ void CL_UpdateWorld(void)
 		CL_RelinkLightFlashes();
 		CSQC_RelinkAllEntities(ENTMASK_ENGINE | ENTMASK_ENGINEVIEWMODELS);
 
-		// move particles
+		// move decals, particles, and any other effects
+		CL_MoveDecals();
 		CL_MoveParticles();
 		R_MoveExplosions();
 	}
