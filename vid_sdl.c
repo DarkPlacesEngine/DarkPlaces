@@ -502,6 +502,112 @@ static void VID_SetCaption()
 	SetClassLongPtr( info.window, GCLP_HICON, (LONG_PTR)icon );
 }
 #else
+// Adding the OS independent XPM version --blub
+#include "darkplaces.xpm"
+#include "nexuiz.xpm"
+static SDL_Surface *icon = NULL;
+static void VID_SetIcon()
+{
+	/*
+	 * Somewhat restricted XPM reader. Only supports XPMs saved by GIMP 2.4 at
+	 * default settings with less than 91 colors and transparency.
+	 */
+		
+	int width, height, colors, isize, i, j;
+	int thenone = -1;
+	static SDL_Color palette[256];
+	unsigned short palenc[256]; // store color id by char
+		
+	char **idata = ENGINE_ICON;
+	char *data = idata[0];
+
+	if(sscanf(data, "%i %i %i %i", &width, &height, &colors, &isize) != 4)
+	{
+		// NOTE: Only 1-char colornames are supported
+		Con_Printf("Sorry, but this does not even look similar to an XPM.\n");
+		return;
+	}
+
+	if(isize != 1)
+	{
+		// NOTE: Only 1-char colornames are supported
+		Con_Printf("This XPM's palette is either huge or idiotically unoptimized. It's key size is %i\n", isize);
+		return;
+	}
+		
+	for(i = 0; i < colors; ++i)
+	{
+		int r, g, b;
+		char idx;
+
+		if(sscanf(idata[i+1], "%c c #%02x%02x%02x", &idx, &r, &g, &b) != 4)
+		{
+			char foo[2];
+			if(sscanf(idata[i+1], "%c c Non%1[e]", &idx, foo) != 2) // I take the DailyWTF credit for this. --div0
+			{
+				Con_Printf("This XPM's palette looks odd. Can't continue.\n");
+				return;
+			}
+			else
+			{
+				palette[i].r = 255; // color key
+				palette[i].g = 0;
+				palette[i].b = 255;
+				thenone = i; // weeeee
+			}
+		}
+		else
+		{
+			palette[i].r = r - (r == 255 && g == 0 && b == 255); // change 255/0/255 pink to 254/0/255 for color key
+			palette[i].g = g;
+			palette[i].b = b;
+		}
+
+		palenc[(unsigned char) idx] = i;
+	}
+
+	// allocate the image data
+	data = (char*) malloc(width*height);
+
+	for(j = 0; j < height; ++j)
+	{
+		for(i = 0; i < width; ++i)
+		{
+			// casting to the safest possible datatypes ^^
+			data[j * width + i] = palenc[((unsigned char*)idata[colors+j+1])[i]];
+		}
+	}
+		
+	if(icon != NULL)
+	{
+		// SDL_FreeSurface should free the data too
+		// but for completeness' sake...
+		if(icon->flags & SDL_PREALLOC)
+		{
+			free(icon->pixels);
+			icon->pixels = NULL; // safety
+		}
+		SDL_FreeSurface(icon);
+	}
+
+	icon = SDL_CreateRGBSurface(SDL_SRCCOLORKEY, width, height, 8, 0,0,0,0);// rmask, gmask, bmask, amask); no mask needed
+	// 8 bit surfaces get an empty palette allocated according to the docs
+	// so it's a palette image for sure :) no endian check necessary for the mask
+
+	if(icon == NULL) {
+		Con_Printf(	"Failed to create surface for the window Icon!\n"
+				"%s\n", SDL_GetError());
+		free(data);
+		return;
+	}
+	icon->pixels = data;
+	SDL_SetPalette(icon, SDL_PHYSPAL|SDL_LOGPAL, palette, 0, colors);
+	SDL_SetColorKey(icon, SDL_SRCCOLORKEY, thenone);
+		
+	SDL_WM_SetIcon(icon, NULL);
+}
+
+
 static void VID_SetCaption()
 {
 	SDL_WM_SetCaption( gamename, NULL );
@@ -593,6 +699,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 
 	video_bpp = bpp;
 	video_flags = flags;
+	VID_SetIcon();
 	screen = SDL_SetVideoMode(width, height, bpp, flags);
 	
 	if (screen == NULL)
