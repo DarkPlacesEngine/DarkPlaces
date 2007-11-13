@@ -1091,7 +1091,7 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 							unsigned int *header;
 
 							conn->sendMessageLength -= MAX_PACKETFRAGMENT;
-							memcpy(conn->sendMessage, conn->sendMessage+MAX_PACKETFRAGMENT, conn->sendMessageLength);
+							memmove(conn->sendMessage, conn->sendMessage+MAX_PACKETFRAGMENT, conn->sendMessageLength);
 
 							if (conn->sendMessageLength <= MAX_PACKETFRAGMENT)
 							{
