@@ -188,9 +188,9 @@ cvar_t cl_particles_smoke_alpha = {CVAR_SAVE, "cl_particles_smoke_alpha", "0.5",
 cvar_t cl_particles_smoke_alphafade = {CVAR_SAVE, "cl_particles_smoke_alphafade", "0.55", "brightness fade per second"};
 cvar_t cl_particles_sparks = {CVAR_SAVE, "cl_particles_sparks", "1", "enables sparks (used by multiple effects)"};
 cvar_t cl_particles_bubbles = {CVAR_SAVE, "cl_particles_bubbles", "1", "enables bubbles (used by multiple effects)"};
-cvar_t cl_decals = {CVAR_SAVE, "cl_decals", "0", "enables decals (bullet holes, blood, etc)"};
-cvar_t cl_decals_time = {CVAR_SAVE, "cl_decals_time", "0", "how long before decals start to fade away"};
-cvar_t cl_decals_fadetime = {CVAR_SAVE, "cl_decals_fadetime", "20", "how long decals take to fade away"};
+cvar_t cl_decals = {CVAR_SAVE, "cl_decals", "1", "enables decals (bullet holes, blood, etc)"};
+cvar_t cl_decals_time = {CVAR_SAVE, "cl_decals_time", "20", "how long before decals start to fade away"};
+cvar_t cl_decals_fadetime = {CVAR_SAVE, "cl_decals_fadetime", "1", "how long decals take to fade away"};
 
 
 void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend)

@@ -63,7 +63,7 @@ cvar_t cl_explosions_size_start = {CVAR_SAVE, "cl_explosions_size_start", "16","
 cvar_t cl_explosions_size_end = {CVAR_SAVE, "cl_explosions_size_end", "128","ending alpha of an explosion shell (just before it disappears)"};
 cvar_t cl_explosions_lifetime = {CVAR_SAVE, "cl_explosions_lifetime", "0.5","how long an explosion shell lasts"};
 
-cvar_t cl_stainmaps = {CVAR_SAVE, "cl_stainmaps", "1","stains lightmaps, much faster than decals but blurred"};
+cvar_t cl_stainmaps = {CVAR_SAVE, "cl_stainmaps", "0","stains lightmaps, much faster than decals but blurred"};
 cvar_t cl_stainmaps_clearonload = {CVAR_SAVE, "cl_stainmaps_clearonload", "1","clear stainmaps on map restart"};
 
 cvar_t cl_beams_polygons = {CVAR_SAVE, "cl_beams_polygons", "1","use beam polygons instead of models"};
