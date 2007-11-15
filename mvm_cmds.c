@@ -998,9 +998,9 @@ NULL,						// #224
 NULL,						// #225
 NULL,						// #226
 NULL,						// #227
-NULL,						// #228
-NULL,						// #229
-NULL,						// #230
+VM_strncmp,					// #228 float(string s1, string s2, float len) strncmp (FTE_STRINGS)
+VM_strncasecmp,				// #229 float(string s1, string s2) strcasecmp (FTE_STRINGS)
+VM_strncasecmp,				// #230 float(string s1, string s2, float len) strncasecmp (FTE_STRINGS)
 NULL,						// #231
 NULL,						// #232
 NULL,						// #233
