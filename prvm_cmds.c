@@ -2076,10 +2076,12 @@ int tokens[256];
 void VM_tokenize (void)
 {
 	const char *p;
+	static char string[VM_STRINGTEMP_LENGTH]; // static, because it's big
 
 	VM_SAFEPARMCOUNT(1,VM_tokenize);
 
-	p = PRVM_G_STRING(OFS_PARM0);
+	strlcpy(string, PRVM_G_STRING(OFS_PARM0), sizeof(string));
+	p = string;
 
 	num_tokens = 0;
 	while(COM_ParseToken_VM_Tokenize(&p, false))
@@ -2115,10 +2117,12 @@ void VM_tokenizebyseparator (void)
 	const char *p;
 	const char *token;
 	char tokentext[MAX_INPUTLINE];
+	static char string[VM_STRINGTEMP_LENGTH]; // static, because it's big
 
 	VM_SAFEPARMCOUNTRANGE(2, 8,VM_tokenizebyseparator);
 
-	p = PRVM_G_STRING(OFS_PARM0);
+	strlcpy(string, PRVM_G_STRING(OFS_PARM0), sizeof(string));
+	p = string;
 
 	numseparators = 0;;
 	for (j = 1;j < prog->argc;j++)
