@@ -991,7 +991,7 @@ NULL,						// #217
 NULL,						// #218
 NULL,						// #219
 NULL,						// #220
-NULL,						// #221
+VM_strstrofs,				// #221 float(string str, string sub[, float startpos]) strstrofs (FTE_STRINGS)
 NULL,						// #222
 NULL,						// #223
 NULL,						// #224
