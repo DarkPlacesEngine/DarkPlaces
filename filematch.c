@@ -108,7 +108,7 @@ void stringlistsort(stringlist_t *list)
 	{
 		for (j = i + 1;j < list->numstrings;j++)
 		{
-			if (strcmp(list->strings[i], list->strings[j]) > 0)
+			if (strcasecmp(list->strings[i], list->strings[j]) > 0)
 			{
 				temp = list->strings[i];
 				list->strings[i] = list->strings[j];
