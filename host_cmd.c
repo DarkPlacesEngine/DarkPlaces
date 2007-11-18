@@ -561,6 +561,13 @@ void Host_Loadgame_f (void)
 
 	Con_Printf("Loading game from %s...\n", filename);
 
+	// stop playing demos
+	if (cls.demoplayback)
+		CL_Disconnect ();
+
+	// remove menu
+	key_dest = key_game;
+
 	cls.demonum = -1;		// stop demo loop in case this fails
 
 	t = text = (char *)FS_LoadFile (filename, tempmempool, false, NULL);
