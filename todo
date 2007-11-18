@@ -1,4 +1,8 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
+0 bug darkplaces client csqc: engine prediction function is not implemented - could just return the engine's current cl.movement_origin (Spike)
+0 bug darkplaces client csqc: entities not being drawn with VF_PERSPECTIVE 0? (daemon)
+0 bug darkplaces client csqc: input queue functions needed for csqc prediction aren't implemented (Spike)
+0 bug darkplaces client csqc: precaches on client don't work, have to precache on server - what's going wrong here? (daemon, Urre)
 0 bug darkplaces client qw: add .mvd demo support
 0 bug darkplaces client qw: add .qwd demo support
 0 bug darkplaces client qw: add spectator cvar (Plague Monkey Rat)
@@ -485,6 +489,7 @@ d bug darkplaces client: finale text during episode-end intermissions shows brie
 d bug darkplaces client: fix cl_bobmodel bug which momentarily jolts the gun when you pass through a trigger, pick up an item, etc, Sajt thinks this is related to console prints as well as centerprint (Sajt)
 d bug darkplaces client: fix gl_flashblend, it's still drawing rtdlights even when gl_flashblend is on (Toddd)
 d bug darkplaces client: hipnotic: health is one character to the right on the sbar, covering up the key icons (M`Shacron)
+d bug darkplaces client: loading savegames while a demo is playing does not stop the demo, causing a broken state and ultimately a disconnect before the client enters the loaded game (Bill Pickett)
 d bug darkplaces client: make "wait" command wait fornext network frame somehow when connected, to make frikbot .way files load properly (Transfusion, FrikaC)
 d bug darkplaces client: make envmap command work with the corrected layout
 d bug darkplaces client: make server queries use a queue to avoid flooding out queries too fast (Willis)
