@@ -501,6 +501,9 @@ static void VID_SetCaption()
 #endif
 	SetClassLongPtr( info.window, GCLP_HICON, (LONG_PTR)icon );
 }
+static void VID_SetIcon()
+{
+}
 #else
 // Adding the OS independent XPM version --blub
 #include "darkplaces.xpm"
