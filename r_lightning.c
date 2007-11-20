@@ -253,7 +253,6 @@ void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, const r
 	{
 		// per vertex colors if fog is used
 		R_Mesh_ColorPointer(color4f, 0, 0);
-		R_FogLightningBeam_Vertex3f_Color4f(vertex3f, color4f, 12, r_lightningbeam_color_red.value * r_view.colorscale, r_lightningbeam_color_green.value * r_view.colorscale, r_lightningbeam_color_blue.value * r_view.colorscale, 1);
 	}
 	else
 	{
