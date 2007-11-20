@@ -249,13 +249,13 @@ void FOG_clear(void)
 
 float FogPoint_World(const vec3_t p)
 {
-	int fogmasktableindex = (int)(VectorDistance((p), r_view.origin) * r_refdef.fogmasktabledistmultiplier);
+	unsigned int fogmasktableindex = (unsigned int)(VectorDistance((p), r_view.origin) * r_refdef.fogmasktabledistmultiplier);
 	return r_refdef.fogmasktable[min(fogmasktableindex, FOGMASKTABLEWIDTH - 1)];
 }
 
 float FogPoint_Model(const vec3_t p)
 {
-	int fogmasktableindex = (int)(VectorDistance((p), rsurface.modelorg) * r_refdef.fogmasktabledistmultiplier);
+	unsigned int fogmasktableindex = (unsigned int)(VectorDistance((p), rsurface.modelorg) * r_refdef.fogmasktabledistmultiplier);
 	return r_refdef.fogmasktable[min(fogmasktableindex, FOGMASKTABLEWIDTH - 1)];
 }
 
