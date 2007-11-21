@@ -203,6 +203,7 @@ static textypeinfo_t *R_GetTexTypeInfo(int textype, int flags)
 			}
 		}
 	}
+	return NULL; // this line only to hush compiler warnings
 }
 
 static void R_UploadTexture(gltexture_t *t);

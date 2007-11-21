@@ -516,7 +516,7 @@ void LHNET_SleepUntilPacket_Microseconds(int microseconds)
 		{
 			if (lastfd < s->inetsocket)
 				lastfd = s->inetsocket;
-			FD_SET(s->inetsocket, &fdreadset);
+			FD_SET((unsigned int)s->inetsocket, &fdreadset);
 		}
 	}
 	tv.tv_sec = microseconds / 1000000;
