@@ -67,7 +67,7 @@ int LHNETADDRESS_Compare(const lhnetaddress_t *address1, const lhnetaddress_t *a
 typedef struct lhnetsocket_s
 {
 	lhnetaddress_t address;
-	unsigned int inetsocket;
+	int inetsocket;
 	struct lhnetsocket_s *next, *prev;
 }
 lhnetsocket_t;
