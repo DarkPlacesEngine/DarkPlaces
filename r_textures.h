@@ -45,6 +45,8 @@ typedef struct rtexturepool_s
 }
 rtexturepool_t;
 
+typedef void (*updatecallback_t)(rtexture_t *rt, void *data);
+
 // allocate a texture pool, to be used with R_LoadTexture
 rtexturepool_t *R_AllocTexturePool(void);
 // free a texture pool (textures can not be freed individually)
@@ -93,6 +95,10 @@ int R_TextureHeight(rtexture_t *rt);
 
 // frees processing buffers each frame, and may someday animate procedural textures
 void R_Textures_Frame(void);
+
+// maybe rename this - sounds awful? [11/21/2007 Black]
+void R_MarkDirtyTexture(rtexture_t *rt);
+void R_MakeTextureDynamic(rtexture_t *rt, updatecallback_t updatecallback, void *data); 
 
 #endif
 

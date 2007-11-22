@@ -28,11 +28,13 @@ static mempool_t *texturemempool;
 
 // note: this must not conflict with TEXF_ flags in r_textures.h
 // cleared when a texture is uploaded
-#define GLTEXF_UPLOAD 0x00010000
+#define GLTEXF_UPLOAD		0x00010000
 // bitmask for mismatch checking
 #define GLTEXF_IMPORTANTBITS (0)
 // set when image is uploaded and freed
-#define GLTEXF_DESTROYED 0x00040000
+#define GLTEXF_DESTROYED	0x00040000
+// dynamic texture (treat texnum == 0 differently)
+#define GLTEXF_DYNAMIC		0x00080000
 
 typedef struct textypeinfo_s
 {
@@ -79,6 +81,13 @@ typedef struct gltexture_s
 	// this field is exposed to the R_GetTexture macro, for speed reasons
 	// (must be identical in rtexture_t)
 	int texnum; // GL texture slot number
+
+	// dynamic texture stuff [11/22/2007 Black]
+	// used to hold the texture number of dirty textures   
+	int dirtytexnum;
+	updatecallback_t updatecallback;
+	void *updatacallback_data;
+	// --- [11/22/2007 Black]
 
 	// pointer to texturepool (check this to see if the texture is allocated)
 	struct gltexturepool_s *pool;
@@ -206,6 +215,34 @@ static textypeinfo_t *R_GetTexTypeInfo(int textype, int flags)
 	return NULL; // this line only to hush compiler warnings
 }
 
+// dynamic texture code [11/22/2007 Black]
+void R_MarkDirtyTexture(rtexture_t *rt) {
+	gltexture_t *glt = (gltexture_t*) rt;
+	// dont do anything if the texture is already dirty (and make sure this *is* a dynamic texture after all!)
+	if( !glt->dirtytexnum && glt->flags & GLTEXF_DYNAMIC ) {
+		glt->dirtytexnum = glt->texnum;
+		// mark it as dirty, so R_RealGetTexture gets called
+		glt->texnum = 0;
+	}
+}
+
+void R_MakeTextureDynamic(rtexture_t *rt, updatecallback_t updatecallback, void *data) {
+	gltexture_t *glt = (gltexture_t*) rt;
+	glt->flags |= GLTEXF_DYNAMIC;
+	glt->updatecallback = updatecallback;
+	glt->updatacallback_data = data;
+}
+
+static void R_UpdateDynamicTexture(gltexture_t *glt) {
+	glt->texnum = glt->dirtytexnum;
+	// reset dirtytexnum again (not dirty anymore)
+	glt->dirtytexnum = 0;
+	// TODO: now assert that t->texnum != 0 ?
+	if( glt->updatecallback ) {
+		glt->updatecallback( (rtexture_t*) glt, glt->updatacallback_data );
+	}
+}
+
 static void R_UploadTexture(gltexture_t *t);
 
 static void R_PrecacheTexture(gltexture_t *glt)
@@ -232,6 +269,9 @@ int R_RealGetTexture(rtexture_t *rt)
 		glt = (gltexture_t *)rt;
 		if (glt->flags & GLTEXF_UPLOAD)
 			R_UploadTexture(glt);
+		if (glt->flags & GLTEXF_DYNAMIC)
+			R_UpdateDynamicTexture(glt);
+
 		return glt->texnum;
 	}
 	else
@@ -996,6 +1036,10 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	glt->bytesperpixel = texinfo->internalbytesperpixel;
 	glt->sides = glt->texturetype == GLTEXTURETYPE_CUBEMAP ? 6 : 1;
 	glt->texnum = -1;
+	// init the dynamic texture attributes, too [11/22/2007 Black]
+	glt->dirtytexnum = 0;
+	glt->updatecallback = NULL;
+	glt->updatacallback_data = NULL;
 
 	if (data)
 	{
