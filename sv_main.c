@@ -1933,7 +1933,7 @@ static void SV_UpdateToReliableMessages (void)
 		// frags
 		host_client->frags = (int)host_client->edict->fields.server->frags;
 		if(gamemode == GAME_NEXUIZ)
-			if(!host_client->spawned)
+			if(!host_client->spawned && host_client->netconnection)
 				host_client->frags = -666;
 		if (host_client->old_frags != host_client->frags)
 		{
