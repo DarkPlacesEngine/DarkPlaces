@@ -426,6 +426,9 @@ int CDAudio_Init (void)
 
 int CDAudio_Startup (void)
 {
+	if (COM_CheckParm("-nocdaudio"))
+		return -1;
+
 	CDAudio_SysStartup ();
 
 	if (CDAudio_GetAudioDiskInfo())
