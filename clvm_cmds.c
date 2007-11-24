@@ -346,7 +346,7 @@ static void VM_CL_precache_model (void)
 	VM_SAFEPARMCOUNT(1, VM_CL_precache_model);
 
 	name = PRVM_G_STRING(OFS_PARM0);
-	for (i = 1;i < MAX_MODELS && cl.csqc_model_precache[i];i++)
+	for (i = 0;i < MAX_MODELS && cl.csqc_model_precache[i];i++)
 	{
 		if(!strcmp(cl.csqc_model_precache[i]->name, name))
 		{
@@ -358,7 +358,7 @@ static void VM_CL_precache_model (void)
 	m = Mod_ForName(name, false, false, false);
 	if(m && m->loaded)
 	{
-		for (i = 1;i < MAX_MODELS;i++)
+		for (i = 0;i < MAX_MODELS;i++)
 		{
 			if (!cl.csqc_model_precache[i])
 			{
