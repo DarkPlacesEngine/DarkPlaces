@@ -49,12 +49,16 @@ textypeinfo_t;
 
 static textypeinfo_t textype_palette                = {TEXTYPE_PALETTE, 1, 4, 4.0f, GL_RGBA   , 3};
 static textypeinfo_t textype_rgba                   = {TEXTYPE_RGBA   , 4, 4, 4.0f, GL_RGBA   , 3};
+static textypeinfo_t textype_bgra                   = {TEXTYPE_BGRA   , 4, 4, 4.0f, GL_BGRA   , 3};
 static textypeinfo_t textype_palette_alpha          = {TEXTYPE_PALETTE, 1, 4, 4.0f, GL_RGBA   , 4};
 static textypeinfo_t textype_rgba_alpha             = {TEXTYPE_RGBA   , 4, 4, 4.0f, GL_RGBA   , 4};
+static textypeinfo_t textype_bgra_alpha             = {TEXTYPE_BGRA   , 4, 4, 4.0f, GL_BGRA   , 4};
 static textypeinfo_t textype_palette_compress       = {TEXTYPE_PALETTE, 1, 4, 0.5f, GL_RGBA   , GL_COMPRESSED_RGB_ARB};
 static textypeinfo_t textype_rgba_compress          = {TEXTYPE_RGBA   , 4, 4, 0.5f, GL_RGBA   , GL_COMPRESSED_RGB_ARB};
+static textypeinfo_t textype_bgra_compress          = {TEXTYPE_BGRA   , 4, 4, 0.5f, GL_BGRA   , GL_COMPRESSED_RGB_ARB};
 static textypeinfo_t textype_palette_alpha_compress = {TEXTYPE_PALETTE, 1, 4, 1.0f, GL_RGBA   , GL_COMPRESSED_RGBA_ARB};
 static textypeinfo_t textype_rgba_alpha_compress    = {TEXTYPE_RGBA   , 4, 4, 1.0f, GL_RGBA   , GL_COMPRESSED_RGBA_ARB};
+static textypeinfo_t textype_bgra_alpha_compress    = {TEXTYPE_BGRA   , 4, 4, 1.0f, GL_BGRA   , GL_COMPRESSED_RGBA_ARB};
 
 #define GLTEXTURETYPE_1D 0
 #define GLTEXTURETYPE_2D 1
@@ -152,6 +156,8 @@ static textypeinfo_t *R_GetTexTypeInfo(int textype, int flags)
 				return &textype_palette_alpha_compress;
 			case TEXTYPE_RGBA:
 				return &textype_rgba_alpha_compress;
+			case TEXTYPE_BGRA:
+				return &textype_bgra_alpha_compress;
 			default:
 				Host_Error("R_GetTexTypeInfo: unknown texture format");
 				return NULL;
@@ -165,6 +171,8 @@ static textypeinfo_t *R_GetTexTypeInfo(int textype, int flags)
 				return &textype_palette_compress;
 			case TEXTYPE_RGBA:
 				return &textype_rgba_compress;
+			case TEXTYPE_BGRA:
+				return &textype_bgra_compress;
 			default:
 				Host_Error("R_GetTexTypeInfo: unknown texture format");
 				return NULL;
@@ -181,6 +189,8 @@ static textypeinfo_t *R_GetTexTypeInfo(int textype, int flags)
 				return &textype_palette_alpha;
 			case TEXTYPE_RGBA:
 				return &textype_rgba_alpha;
+			case TEXTYPE_BGRA:
+				return &textype_bgra_alpha;
 			default:
 				Host_Error("R_GetTexTypeInfo: unknown texture format");
 				return NULL;
@@ -194,6 +204,8 @@ static textypeinfo_t *R_GetTexTypeInfo(int textype, int flags)
 				return &textype_palette;
 			case TEXTYPE_RGBA:
 				return &textype_rgba;
+			case TEXTYPE_BGRA:
+				return &textype_bgra;
 			default:
 				Host_Error("R_GetTexTypeInfo: unknown texture format");
 				return NULL;
@@ -981,6 +993,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 		}
 		break;
 	case TEXTYPE_RGBA:
+	case TEXTYPE_BGRA:
 		if (flags & TEXF_ALPHA)
 		{
 			flags &= ~TEXF_ALPHA;
