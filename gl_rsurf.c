@@ -96,24 +96,12 @@ void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 	// scaling, and remaps the 0-65536 (2x overbright) to 0-256, it will
 	// be doubled during rendering to achieve 2x overbright
 	// (0 = 0.0, 128 = 1.0, 256 = 2.0)
-	if (model->brushq1.lightmaprgba)
+	for (i = 0;i < size;i++)
 	{
-		for (i = 0;i < size;i++)
-		{
-			l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
-			l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
-			l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
-			*out++ = 255;
-		}
-	}
-	else
-	{
-		for (i = 0;i < size;i++)
-		{
-			l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
-			l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
-			l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
-		}
+		l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
+		l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
+		l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
+		*out++ = 255;
 	}
 
 	R_UpdateTexture(surface->lightmaptexture, templight, surface->lightmapinfo->lightmaporigin[0], surface->lightmapinfo->lightmaporigin[1], smax, tmax);
@@ -145,28 +133,14 @@ void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 		bl = intblocklights;
 		out = templight;
 		// we simply renormalize the weighted normals to get a valid deluxemap
-		if (model->brushq1.lightmaprgba)
+		for (i = 0;i < size;i++, bl += 3)
 		{
-			for (i = 0;i < size;i++, bl += 3)
-			{
-				VectorCopy(bl, n);
-				VectorNormalize(n);
-				l = (int)(n[0] * 128 + 128);*out++ = bound(0, l, 255);
-				l = (int)(n[1] * 128 + 128);*out++ = bound(0, l, 255);
-				l = (int)(n[2] * 128 + 128);*out++ = bound(0, l, 255);
-				*out++ = 255;
-			}
-		}
-		else
-		{
-			for (i = 0;i < size;i++, bl += 3)
-			{
-				VectorCopy(bl, n);
-				VectorNormalize(n);
-				l = (int)(n[0] * 128 + 128);*out++ = bound(0, l, 255);
-				l = (int)(n[1] * 128 + 128);*out++ = bound(0, l, 255);
-				l = (int)(n[2] * 128 + 128);*out++ = bound(0, l, 255);
-			}
+			VectorCopy(bl, n);
+			VectorNormalize(n);
+			l = (int)(n[0] * 128 + 128);*out++ = bound(0, l, 255);
+			l = (int)(n[1] * 128 + 128);*out++ = bound(0, l, 255);
+			l = (int)(n[2] * 128 + 128);*out++ = bound(0, l, 255);
+			*out++ = 255;
 		}
 		R_UpdateTexture(surface->deluxemaptexture, templight, surface->lightmapinfo->lightmaporigin[0], surface->lightmapinfo->lightmaporigin[1], smax, tmax);
 	}

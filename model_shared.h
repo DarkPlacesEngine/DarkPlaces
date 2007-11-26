@@ -666,9 +666,6 @@ model_brush_t;
 
 typedef struct model_brushq1_s
 {
-	// lightmap format, set to r_lightmaprgba when model is loaded
-	int				lightmaprgba;
-
 	dmodel_t		*submodels;
 
 	int				numvertexes;

@@ -48,12 +48,10 @@ typedef struct textypeinfo_s
 textypeinfo_t;
 
 static textypeinfo_t textype_palette                = {TEXTYPE_PALETTE, 1, 4, 4.0f, GL_RGBA   , 3};
-static textypeinfo_t textype_rgb                    = {TEXTYPE_RGB    , 3, 3, 4.0f, GL_RGB    , 3};
 static textypeinfo_t textype_rgba                   = {TEXTYPE_RGBA   , 4, 4, 4.0f, GL_RGBA   , 3};
 static textypeinfo_t textype_palette_alpha          = {TEXTYPE_PALETTE, 1, 4, 4.0f, GL_RGBA   , 4};
 static textypeinfo_t textype_rgba_alpha             = {TEXTYPE_RGBA   , 4, 4, 4.0f, GL_RGBA   , 4};
 static textypeinfo_t textype_palette_compress       = {TEXTYPE_PALETTE, 1, 4, 0.5f, GL_RGBA   , GL_COMPRESSED_RGB_ARB};
-static textypeinfo_t textype_rgb_compress           = {TEXTYPE_RGB    , 3, 3, 0.5f, GL_RGB    , GL_COMPRESSED_RGB_ARB};
 static textypeinfo_t textype_rgba_compress          = {TEXTYPE_RGBA   , 4, 4, 0.5f, GL_RGBA   , GL_COMPRESSED_RGB_ARB};
 static textypeinfo_t textype_palette_alpha_compress = {TEXTYPE_PALETTE, 1, 4, 1.0f, GL_RGBA   , GL_COMPRESSED_RGBA_ARB};
 static textypeinfo_t textype_rgba_alpha_compress    = {TEXTYPE_RGBA   , 4, 4, 1.0f, GL_RGBA   , GL_COMPRESSED_RGBA_ARB};
@@ -152,9 +150,6 @@ static textypeinfo_t *R_GetTexTypeInfo(int textype, int flags)
 			{
 			case TEXTYPE_PALETTE:
 				return &textype_palette_alpha_compress;
-			case TEXTYPE_RGB:
-				Host_Error("R_GetTexTypeInfo: RGB format has no alpha, TEXF_ALPHA not allowed");
-				return NULL;
 			case TEXTYPE_RGBA:
 				return &textype_rgba_alpha_compress;
 			default:
@@ -168,8 +163,6 @@ static textypeinfo_t *R_GetTexTypeInfo(int textype, int flags)
 			{
 			case TEXTYPE_PALETTE:
 				return &textype_palette_compress;
-			case TEXTYPE_RGB:
-				return &textype_rgb_compress;
 			case TEXTYPE_RGBA:
 				return &textype_rgba_compress;
 			default:
@@ -186,9 +179,6 @@ static textypeinfo_t *R_GetTexTypeInfo(int textype, int flags)
 			{
 			case TEXTYPE_PALETTE:
 				return &textype_palette_alpha;
-			case TEXTYPE_RGB:
-				Host_Error("R_GetTexTypeInfo: RGB format has no alpha, TEXF_ALPHA not allowed");
-				return NULL;
 			case TEXTYPE_RGBA:
 				return &textype_rgba_alpha;
 			default:
@@ -202,8 +192,6 @@ static textypeinfo_t *R_GetTexTypeInfo(int textype, int flags)
 			{
 			case TEXTYPE_PALETTE:
 				return &textype_palette;
-			case TEXTYPE_RGB:
-				return &textype_rgb;
 			case TEXTYPE_RGBA:
 				return &textype_rgba;
 			default:
@@ -830,13 +818,13 @@ static void R_Upload(gltexture_t *glt, unsigned char *data, int fragx, int fragy
 		{
 			if (glt->inputwidth != width || glt->inputheight != height || glt->inputdepth != depth)
 			{
-				Image_Resample(prevbuffer, glt->inputwidth, glt->inputheight, glt->inputdepth, resizebuffer, width, height, depth, glt->bytesperpixel, r_lerpimages.integer);
+				Image_Resample32(prevbuffer, glt->inputwidth, glt->inputheight, glt->inputdepth, resizebuffer, width, height, depth, r_lerpimages.integer);
 				prevbuffer = resizebuffer;
 			}
 			// picmip/max_size
 			while (width > glt->tilewidth || height > glt->tileheight || depth > glt->tiledepth)
 			{
-				Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, glt->tilewidth, glt->tileheight, glt->tiledepth, glt->bytesperpixel);
+				Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, glt->tilewidth, glt->tileheight, glt->tiledepth);
 				prevbuffer = resizebuffer;
 			}
 		}
@@ -857,7 +845,7 @@ static void R_Upload(gltexture_t *glt, unsigned char *data, int fragx, int fragy
 			{
 				while (width > 1 || height > 1 || depth > 1)
 				{
-					Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1, glt->bytesperpixel);
+					Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
 					prevbuffer = resizebuffer;
 					qglTexImage1D(GL_TEXTURE_1D, mip++, glt->glinternalformat, width, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
 				}
@@ -869,7 +857,7 @@ static void R_Upload(gltexture_t *glt, unsigned char *data, int fragx, int fragy
 			{
 				while (width > 1 || height > 1 || depth > 1)
 				{
-					Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1, glt->bytesperpixel);
+					Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
 					prevbuffer = resizebuffer;
 					qglTexImage2D(GL_TEXTURE_2D, mip++, glt->glinternalformat, width, height, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
 				}
@@ -881,7 +869,7 @@ static void R_Upload(gltexture_t *glt, unsigned char *data, int fragx, int fragy
 			{
 				while (width > 1 || height > 1 || depth > 1)
 				{
-					Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1, glt->bytesperpixel);
+					Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
 					prevbuffer = resizebuffer;
 					qglTexImage3D(GL_TEXTURE_3D, mip++, glt->glinternalformat, width, height, depth, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
 				}
@@ -897,13 +885,13 @@ static void R_Upload(gltexture_t *glt, unsigned char *data, int fragx, int fragy
 				texturebuffer += glt->inputwidth * glt->inputheight * glt->inputdepth * glt->textype->inputbytesperpixel;
 				if (glt->inputwidth != width || glt->inputheight != height || glt->inputdepth != depth)
 				{
-					Image_Resample(prevbuffer, glt->inputwidth, glt->inputheight, glt->inputdepth, resizebuffer, width, height, depth, glt->bytesperpixel, r_lerpimages.integer);
+					Image_Resample32(prevbuffer, glt->inputwidth, glt->inputheight, glt->inputdepth, resizebuffer, width, height, depth, r_lerpimages.integer);
 					prevbuffer = resizebuffer;
 				}
 				// picmip/max_size
 				while (width > glt->tilewidth || height > glt->tileheight || depth > glt->tiledepth)
 				{
-					Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, glt->tilewidth, glt->tileheight, glt->tiledepth, glt->bytesperpixel);
+					Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, glt->tilewidth, glt->tileheight, glt->tiledepth);
 					prevbuffer = resizebuffer;
 				}
 				mip = 0;
@@ -912,7 +900,7 @@ static void R_Upload(gltexture_t *glt, unsigned char *data, int fragx, int fragy
 				{
 					while (width > 1 || height > 1 || depth > 1)
 					{
-						Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1, glt->bytesperpixel);
+						Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
 						prevbuffer = resizebuffer;
 						qglTexImage2D(cubemapside[i], mip++, glt->glinternalformat, width, height, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
 					}
@@ -991,10 +979,6 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 				}
 			}
 		}
-		break;
-	case TEXTYPE_RGB:
-		if (flags & TEXF_ALPHA)
-			Host_Error("R_LoadTexture: RGB has no alpha, don't specify TEXF_ALPHA");
 		break;
 	case TEXTYPE_RGBA:
 		if (flags & TEXF_ALPHA)

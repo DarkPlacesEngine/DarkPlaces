@@ -62,7 +62,7 @@ void r_light_newmap(void)
 {
 	int i;
 	for (i = 0;i < MAX_LIGHTSTYLES;i++)
-		r_refdef.lightstylevalue[i] = 264;		// normal light value
+		r_refdef.lightstylevalue[i] = 256;		// normal light value
 }
 
 void R_Light_Init(void)

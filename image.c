@@ -1215,35 +1215,6 @@ static void Image_Resample32LerpLine (const unsigned char *in, unsigned char *ou
 	}
 }
 
-static void Image_Resample24LerpLine (const unsigned char *in, unsigned char *out, int inwidth, int outwidth)
-{
-	int		j, xi, oldx = 0, f, fstep, endx, lerp;
-	fstep = (int) (inwidth*65536.0f/outwidth);
-	endx = (inwidth-1);
-	for (j = 0,f = 0;j < outwidth;j++, f += fstep)
-	{
-		xi = f >> 16;
-		if (xi != oldx)
-		{
-			in += (xi - oldx) * 3;
-			oldx = xi;
-		}
-		if (xi < endx)
-		{
-			lerp = f & 0xFFFF;
-			*out++ = (unsigned char) ((((in[3] - in[0]) * lerp) >> 16) + in[0]);
-			*out++ = (unsigned char) ((((in[4] - in[1]) * lerp) >> 16) + in[1]);
-			*out++ = (unsigned char) ((((in[5] - in[2]) * lerp) >> 16) + in[2]);
-		}
-		else // last pixel of the line has no pixel to lerp to
-		{
-			*out++ = in[0];
-			*out++ = in[1];
-			*out++ = in[2];
-		}
-	}
-}
-
 #define LERPBYTE(i) r = resamplerow1[i];out[i] = (unsigned char) ((((resamplerow2[i] - r) * lerp) >> 16) + r)
 void Image_Resample32Lerp(const void *indata, int inwidth, int inheight, void *outdata, int outwidth, int outheight)
 {
@@ -1386,169 +1357,26 @@ void Image_Resample32Nolerp(const void *indata, int inwidth, int inheight, void 
 	}
 }
 
-void Image_Resample24Lerp(const void *indata, int inwidth, int inheight, void *outdata, int outwidth, int outheight)
-{
-	int i, j, r, yi, oldy, f, fstep, lerp, endy = (inheight-1), inwidth3 = inwidth * 3, outwidth3 = outwidth * 3;
-	unsigned char *out;
-	const unsigned char *inrow;
-	unsigned char *resamplerow1;
-	unsigned char *resamplerow2;
-	out = (unsigned char *)outdata;
-	fstep = (int) (inheight*65536.0f/outheight);
-
-	resamplerow1 = (unsigned char *)Mem_Alloc(tempmempool, outwidth*3*2);
-	resamplerow2 = resamplerow1 + outwidth*3;
-
-	inrow = (const unsigned char *)indata;
-	oldy = 0;
-	Image_Resample24LerpLine (inrow, resamplerow1, inwidth, outwidth);
-	Image_Resample24LerpLine (inrow + inwidth3, resamplerow2, inwidth, outwidth);
-	for (i = 0, f = 0;i < outheight;i++,f += fstep)
-	{
-		yi = f >> 16;
-		if (yi < endy)
-		{
-			lerp = f & 0xFFFF;
-			if (yi != oldy)
-			{
-				inrow = (unsigned char *)indata + inwidth3*yi;
-				if (yi == oldy+1)
-					memcpy(resamplerow1, resamplerow2, outwidth3);
-				else
-					Image_Resample24LerpLine (inrow, resamplerow1, inwidth, outwidth);
-				Image_Resample24LerpLine (inrow + inwidth3, resamplerow2, inwidth, outwidth);
-				oldy = yi;
-			}
-			j = outwidth - 4;
-			while(j >= 0)
-			{
-				LERPBYTE( 0);
-				LERPBYTE( 1);
-				LERPBYTE( 2);
-				LERPBYTE( 3);
-				LERPBYTE( 4);
-				LERPBYTE( 5);
-				LERPBYTE( 6);
-				LERPBYTE( 7);
-				LERPBYTE( 8);
-				LERPBYTE( 9);
-				LERPBYTE(10);
-				LERPBYTE(11);
-				out += 12;
-				resamplerow1 += 12;
-				resamplerow2 += 12;
-				j -= 4;
-			}
-			if (j & 2)
-			{
-				LERPBYTE( 0);
-				LERPBYTE( 1);
-				LERPBYTE( 2);
-				LERPBYTE( 3);
-				LERPBYTE( 4);
-				LERPBYTE( 5);
-				out += 6;
-				resamplerow1 += 6;
-				resamplerow2 += 6;
-			}
-			if (j & 1)
-			{
-				LERPBYTE( 0);
-				LERPBYTE( 1);
-				LERPBYTE( 2);
-				out += 3;
-				resamplerow1 += 3;
-				resamplerow2 += 3;
-			}
-			resamplerow1 -= outwidth3;
-			resamplerow2 -= outwidth3;
-		}
-		else
-		{
-			if (yi != oldy)
-			{
-				inrow = (unsigned char *)indata + inwidth3*yi;
-				if (yi == oldy+1)
-					memcpy(resamplerow1, resamplerow2, outwidth3);
-				else
-					Image_Resample24LerpLine (inrow, resamplerow1, inwidth, outwidth);
-				oldy = yi;
-			}
-			memcpy(out, resamplerow1, outwidth3);
-		}
-	}
-	Mem_Free(resamplerow1);
-	resamplerow1 = NULL;
-	resamplerow2 = NULL;
-}
-
-void Image_Resample24Nolerp(const void *indata, int inwidth, int inheight, void *outdata, int outwidth, int outheight)
-{
-	int i, j, f, inwidth3 = inwidth * 3;
-	unsigned frac, fracstep;
-	unsigned char *inrow, *out;
-	out = (unsigned char *)outdata;
-
-	fracstep = inwidth*0x10000/outwidth;
-	for (i = 0;i < outheight;i++)
-	{
-		inrow = (unsigned char *)indata + inwidth3*(i*inheight/outheight);
-		frac = fracstep >> 1;
-		j = outwidth - 4;
-		while (j >= 0)
-		{
-			f = (frac >> 16)*3;*out++ = inrow[f+0];*out++ = inrow[f+1];*out++ = inrow[f+2];frac += fracstep;
-			f = (frac >> 16)*3;*out++ = inrow[f+0];*out++ = inrow[f+1];*out++ = inrow[f+2];frac += fracstep;
-			f = (frac >> 16)*3;*out++ = inrow[f+0];*out++ = inrow[f+1];*out++ = inrow[f+2];frac += fracstep;
-			f = (frac >> 16)*3;*out++ = inrow[f+0];*out++ = inrow[f+1];*out++ = inrow[f+2];frac += fracstep;
-			j -= 4;
-		}
-		if (j & 2)
-		{
-			f = (frac >> 16)*3;*out++ = inrow[f+0];*out++ = inrow[f+1];*out++ = inrow[f+2];frac += fracstep;
-			f = (frac >> 16)*3;*out++ = inrow[f+0];*out++ = inrow[f+1];*out++ = inrow[f+2];frac += fracstep;
-			out += 2;
-		}
-		if (j & 1)
-		{
-			f = (frac >> 16)*3;*out++ = inrow[f+0];*out++ = inrow[f+1];*out++ = inrow[f+2];frac += fracstep;
-			out += 1;
-		}
-	}
-}
-
 /*
 ================
 Image_Resample
 ================
 */
-void Image_Resample (const void *indata, int inwidth, int inheight, int indepth, void *outdata, int outwidth, int outheight, int outdepth, int bytesperpixel, int quality)
+void Image_Resample32(const void *indata, int inwidth, int inheight, int indepth, void *outdata, int outwidth, int outheight, int outdepth, int quality)
 {
 	if (indepth != 1 || outdepth != 1)
 	{
 		Con_Printf ("Image_Resample: 3D resampling not supported\n");
 		return;
 	}
-	if (bytesperpixel == 4)
-	{
-		if (quality)
-			Image_Resample32Lerp(indata, inwidth, inheight, outdata, outwidth, outheight);
-		else
-			Image_Resample32Nolerp(indata, inwidth, inheight, outdata, outwidth, outheight);
-	}
-	else if (bytesperpixel == 3)
-	{
-		if (quality)
-			Image_Resample24Lerp(indata, inwidth, inheight, outdata, outwidth, outheight);
-		else
-			Image_Resample24Nolerp(indata, inwidth, inheight, outdata, outwidth, outheight);
-	}
+	if (quality)
+		Image_Resample32Lerp(indata, inwidth, inheight, outdata, outwidth, outheight);
 	else
-		Con_Printf ("Image_Resample: unsupported bytesperpixel %i\n", bytesperpixel);
+		Image_Resample32Nolerp(indata, inwidth, inheight, outdata, outwidth, outheight);
 }
 
 // in can be the same as out
-void Image_MipReduce(const unsigned char *in, unsigned char *out, int *width, int *height, int *depth, int destwidth, int destheight, int destdepth, int bytesperpixel)
+void Image_MipReduce32(const unsigned char *in, unsigned char *out, int *width, int *height, int *depth, int destwidth, int destheight, int destdepth)
 {
 	const unsigned char *inrow;
 	int x, y, nextrow;
@@ -1566,7 +1394,7 @@ void Image_MipReduce(const unsigned char *in, unsigned char *out, int *width, in
 	// note: if given odd width/height this discards the last row/column of
 	// pixels, rather than doing a proper box-filter scale down
 	inrow = in;
-	nextrow = *width * bytesperpixel;
+	nextrow = *width * 4;
 	if (*width > destwidth)
 	{
 		*width >>= 1;
@@ -1574,72 +1402,34 @@ void Image_MipReduce(const unsigned char *in, unsigned char *out, int *width, in
 		{
 			// reduce both
 			*height >>= 1;
-			if (bytesperpixel == 4)
+			for (y = 0;y < *height;y++, inrow += nextrow * 2)
 			{
-				for (y = 0;y < *height;y++, inrow += nextrow * 2)
+				for (in = inrow, x = 0;x < *width;x++)
 				{
-					for (in = inrow, x = 0;x < *width;x++)
-					{
-						out[0] = (unsigned char) ((in[0] + in[4] + in[nextrow  ] + in[nextrow+4]) >> 2);
-						out[1] = (unsigned char) ((in[1] + in[5] + in[nextrow+1] + in[nextrow+5]) >> 2);
-						out[2] = (unsigned char) ((in[2] + in[6] + in[nextrow+2] + in[nextrow+6]) >> 2);
-						out[3] = (unsigned char) ((in[3] + in[7] + in[nextrow+3] + in[nextrow+7]) >> 2);
-						out += 4;
-						in += 8;
-					}
+					out[0] = (unsigned char) ((in[0] + in[4] + in[nextrow  ] + in[nextrow+4]) >> 2);
+					out[1] = (unsigned char) ((in[1] + in[5] + in[nextrow+1] + in[nextrow+5]) >> 2);
+					out[2] = (unsigned char) ((in[2] + in[6] + in[nextrow+2] + in[nextrow+6]) >> 2);
+					out[3] = (unsigned char) ((in[3] + in[7] + in[nextrow+3] + in[nextrow+7]) >> 2);
+					out += 4;
+					in += 8;
 				}
 			}
-			else if (bytesperpixel == 3)
-			{
-				for (y = 0;y < *height;y++, inrow += nextrow * 2)
-				{
-					for (in = inrow, x = 0;x < *width;x++)
-					{
-						out[0] = (unsigned char) ((in[0] + in[3] + in[nextrow  ] + in[nextrow+3]) >> 2);
-						out[1] = (unsigned char) ((in[1] + in[4] + in[nextrow+1] + in[nextrow+4]) >> 2);
-						out[2] = (unsigned char) ((in[2] + in[5] + in[nextrow+2] + in[nextrow+5]) >> 2);
-						out += 3;
-						in += 6;
-					}
-				}
-			}
-			else
-				Con_Printf ("Image_MipReduce: unsupported bytesperpixel %i\n", bytesperpixel);
 		}
 		else
 		{
 			// reduce width
-			if (bytesperpixel == 4)
+			for (y = 0;y < *height;y++, inrow += nextrow)
 			{
-				for (y = 0;y < *height;y++, inrow += nextrow)
+				for (in = inrow, x = 0;x < *width;x++)
 				{
-					for (in = inrow, x = 0;x < *width;x++)
-					{
-						out[0] = (unsigned char) ((in[0] + in[4]) >> 1);
-						out[1] = (unsigned char) ((in[1] + in[5]) >> 1);
-						out[2] = (unsigned char) ((in[2] + in[6]) >> 1);
-						out[3] = (unsigned char) ((in[3] + in[7]) >> 1);
-						out += 4;
-						in += 8;
-					}
+					out[0] = (unsigned char) ((in[0] + in[4]) >> 1);
+					out[1] = (unsigned char) ((in[1] + in[5]) >> 1);
+					out[2] = (unsigned char) ((in[2] + in[6]) >> 1);
+					out[3] = (unsigned char) ((in[3] + in[7]) >> 1);
+					out += 4;
+					in += 8;
 				}
 			}
-			else if (bytesperpixel == 3)
-			{
-				for (y = 0;y < *height;y++, inrow += nextrow)
-				{
-					for (in = inrow, x = 0;x < *width;x++)
-					{
-						out[0] = (unsigned char) ((in[0] + in[3]) >> 1);
-						out[1] = (unsigned char) ((in[1] + in[4]) >> 1);
-						out[2] = (unsigned char) ((in[2] + in[5]) >> 1);
-						out += 3;
-						in += 6;
-					}
-				}
-			}
-			else
-				Con_Printf ("Image_MipReduce: unsupported bytesperpixel %i\n", bytesperpixel);
 		}
 	}
 	else
@@ -1648,37 +1438,18 @@ void Image_MipReduce(const unsigned char *in, unsigned char *out, int *width, in
 		{
 			// reduce height
 			*height >>= 1;
-			if (bytesperpixel == 4)
+			for (y = 0;y < *height;y++, inrow += nextrow * 2)
 			{
-				for (y = 0;y < *height;y++, inrow += nextrow * 2)
+				for (in = inrow, x = 0;x < *width;x++)
 				{
-					for (in = inrow, x = 0;x < *width;x++)
-					{
-						out[0] = (unsigned char) ((in[0] + in[nextrow  ]) >> 1);
-						out[1] = (unsigned char) ((in[1] + in[nextrow+1]) >> 1);
-						out[2] = (unsigned char) ((in[2] + in[nextrow+2]) >> 1);
-						out[3] = (unsigned char) ((in[3] + in[nextrow+3]) >> 1);
-						out += 4;
-						in += 4;
-					}
+					out[0] = (unsigned char) ((in[0] + in[nextrow  ]) >> 1);
+					out[1] = (unsigned char) ((in[1] + in[nextrow+1]) >> 1);
+					out[2] = (unsigned char) ((in[2] + in[nextrow+2]) >> 1);
+					out[3] = (unsigned char) ((in[3] + in[nextrow+3]) >> 1);
+					out += 4;
+					in += 4;
 				}
 			}
-			else if (bytesperpixel == 3)
-			{
-				for (y = 0;y < *height;y++, inrow += nextrow * 2)
-				{
-					for (in = inrow, x = 0;x < *width;x++)
-					{
-						out[0] = (unsigned char) ((in[0] + in[nextrow  ]) >> 1);
-						out[1] = (unsigned char) ((in[1] + in[nextrow+1]) >> 1);
-						out[2] = (unsigned char) ((in[2] + in[nextrow+2]) >> 1);
-						out += 3;
-						in += 3;
-					}
-				}
-			}
-			else
-				Con_Printf ("Image_MipReduce: unsupported bytesperpixel %i\n", bytesperpixel);
 		}
 		else
 			Con_Printf ("Image_MipReduce: desired size already achieved\n");
