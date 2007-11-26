@@ -30,7 +30,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 cvar_t halflifebsp = {0, "halflifebsp", "0", "indicates the current map is hlbsp format (useful to know because of different bounding box sizes)"};
 cvar_t mcbsp = {0, "mcbsp", "0", "indicates the current map is mcbsp format (useful to know because of different bounding box sizes)"};
 cvar_t r_novis = {0, "r_novis", "0", "draws whole level, see also sv_cullentities_pvs 0"};
-cvar_t r_lightmaprgba = {0, "r_lightmaprgba", "1", "whether to use RGBA (32bit) or RGB (24bit) lightmaps"};
 cvar_t r_picmipworld = {CVAR_SAVE, "r_picmipworld", "1", "whether gl_picmip shall apply to world textures too"};
 cvar_t r_nosurftextures = {0, "r_nosurftextures", "0", "pretends there was no texture lump found in the q1bsp/hlbsp loading (useful for debugging this rare case)"};
 cvar_t r_subdivisions_tolerance = {0, "r_subdivisions_tolerance", "4", "maximum error tolerance on curve subdivision for rendering purposes (in other words, the curves will be given as many polygons as necessary to represent curves at this quality)"};
@@ -58,7 +57,6 @@ void Mod_BrushInit(void)
 	Cvar_RegisterVariable(&halflifebsp);
 	Cvar_RegisterVariable(&mcbsp);
 	Cvar_RegisterVariable(&r_novis);
-	Cvar_RegisterVariable(&r_lightmaprgba);
 	Cvar_RegisterVariable(&r_picmipworld);
 	Cvar_RegisterVariable(&r_nosurftextures);
 	Cvar_RegisterVariable(&r_subdivisions_tolerance);
@@ -2402,9 +2400,9 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 					if (loadmodel->texturepool == NULL)
 						loadmodel->texturepool = R_AllocTexturePool();
 					// could not find room, make a new lightmap
-					lightmaptexture = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%i", lightmapnumber), lightmapsize, lightmapsize, NULL, loadmodel->brushq1.lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
+					lightmaptexture = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%i", lightmapnumber), lightmapsize, lightmapsize, NULL, TEXTYPE_RGBA, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
 					if (loadmodel->brushq1.nmaplightdata)
-						deluxemaptexture = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%i", lightmapnumber), lightmapsize, lightmapsize, NULL, loadmodel->brushq1.lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
+						deluxemaptexture = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%i", lightmapnumber), lightmapsize, lightmapsize, NULL, TEXTYPE_RGBA, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
 					lightmapnumber++;
 					memset(lightmap_lineused, 0, sizeof(lightmap_lineused));
 					Mod_Q1BSP_AllocLightmapBlock(lightmap_lineused, lightmapsize, lightmapsize, ssize, tsize, &lightmapx, &lightmapy);
@@ -3519,9 +3517,6 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 
 // load into heap
 
-	// store which lightmap format to use
-	mod->brushq1.lightmaprgba = r_lightmaprgba.integer;
-
 	mod->brush.qw_md4sum = 0;
 	mod->brush.qw_md4sum2 = 0;
 	for (i = 0;i < HEADER_LUMPS;i++)
@@ -4140,9 +4135,6 @@ void static Mod_Q2BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	for (i = 0;i < (int) sizeof(*header) / 4;i++)
 		((int *)header)[i] = LittleLong(((int *)header)[i]);
 
-	// store which lightmap format to use
-	mod->brushq1.lightmaprgba = r_lightmaprgba.integer;
-
 	mod->brush.qw_md4sum = 0;
 	mod->brush.qw_md4sum2 = 0;
 	for (i = 0;i < Q2HEADER_LUMPS;i++)
@@ -4453,8 +4445,9 @@ static void Mod_Q3BSP_LoadTriangles(lump_t *l)
 static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 {
 	q3dlightmap_t *in;
-	int i, j, count, power, power2, mask, endlightmap, mergewidth, mergeheight;
+	int i, j, k, count, power, power2, mask, endlightmap, mergewidth, mergeheight;
 	unsigned char *c;
+	unsigned char convertedpixels[128*128*4];
 
 	if (!l->filelen)
 		return;
@@ -4533,15 +4526,22 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 	if (loadmodel->texturepool == NULL && cls.state != ca_dedicated)
 		loadmodel->texturepool = R_AllocTexturePool();
 
-	if (loadmodel->brushq3.num_lightmapmergepower > 0)
+	power = loadmodel->brushq3.num_lightmapmergepower;
+	power2 = power * 2;
+	mask = (1 << power) - 1;
+	for (i = 0;i < count;i++)
 	{
-		power = loadmodel->brushq3.num_lightmapmergepower;
-		power2 = power * 2;
-		mask = (1 << power) - 1;
-		for (i = 0;i < count;i++)
+		// figure out which merged lightmap texture this fits into
+		int lightmapindex = i >> (loadmodel->brushq3.deluxemapping + power2);
+		for (k = 0;k < 128*128;k++)
 		{
-			// figure out which merged lightmap texture this fits into
-			int lightmapindex = i >> (loadmodel->brushq3.deluxemapping + power2);
+			convertedpixels[k*4+0] = in[i].rgb[k*3+0];
+			convertedpixels[k*4+1] = in[i].rgb[k*3+1];
+			convertedpixels[k*4+2] = in[i].rgb[k*3+2];
+			convertedpixels[k*4+3] = 255;
+		}
+		if (loadmodel->brushq3.num_lightmapmergepower > 0)
+		{
 			// if the lightmap has not been allocated yet, create it
 			if (!loadmodel->brushq3.data_lightmaps[lightmapindex])
 			{
@@ -4557,29 +4557,25 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 				for (mergeheight = 1;mergewidth*mergeheight < j && mergeheight < (1 << power);mergeheight *= 2)
 					;
 				Con_DPrintf("lightmap merge texture #%i is %ix%i (%i of %i used)\n", lightmapindex, mergewidth*128, mergeheight*128, min(j, mergewidth*mergeheight), mergewidth*mergeheight);
-				loadmodel->brushq3.data_lightmaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", lightmapindex), mergewidth * 128, mergeheight * 128, NULL, TEXTYPE_RGB, TEXF_FORCELINEAR | TEXF_PRECACHE | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : 0), NULL);
+				loadmodel->brushq3.data_lightmaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", lightmapindex), mergewidth * 128, mergeheight * 128, NULL, TEXTYPE_RGBA, TEXF_FORCELINEAR | TEXF_PRECACHE | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : 0), NULL);
 				if (loadmodel->brushq3.data_deluxemaps)
-					loadmodel->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%04i", lightmapindex), mergewidth * 128, mergeheight * 128, NULL, TEXTYPE_RGB, TEXF_FORCELINEAR | TEXF_PRECACHE | (gl_texturecompression_q3bspdeluxemaps.integer ? TEXF_COMPRESS : 0), NULL);
+					loadmodel->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%04i", lightmapindex), mergewidth * 128, mergeheight * 128, NULL, TEXTYPE_RGBA, TEXF_FORCELINEAR | TEXF_PRECACHE | (gl_texturecompression_q3bspdeluxemaps.integer ? TEXF_COMPRESS : 0), NULL);
 			}
 			mergewidth = R_TextureWidth(loadmodel->brushq3.data_lightmaps[lightmapindex]) / 128;
 			mergeheight = R_TextureHeight(loadmodel->brushq3.data_lightmaps[lightmapindex]) / 128;
 			j = (i >> loadmodel->brushq3.deluxemapping) & ((1 << power2) - 1);
 			if (loadmodel->brushq3.deluxemapping && (i & 1))
-				R_UpdateTexture(loadmodel->brushq3.data_deluxemaps[lightmapindex], in[i].rgb, (j % mergewidth) * 128, (j / mergewidth) * 128, 128, 128);
+				R_UpdateTexture(loadmodel->brushq3.data_deluxemaps[lightmapindex], convertedpixels, (j % mergewidth) * 128, (j / mergewidth) * 128, 128, 128);
 			else
-				R_UpdateTexture(loadmodel->brushq3.data_lightmaps     [lightmapindex], in[i].rgb, (j % mergewidth) * 128, (j / mergewidth) * 128, 128, 128);
+				R_UpdateTexture(loadmodel->brushq3.data_lightmaps [lightmapindex], convertedpixels, (j % mergewidth) * 128, (j / mergewidth) * 128, 128, 128);
 		}
-	}
-	else
-	{
-		for (i = 0;i < count;i++)
+		else
 		{
 			// figure out which merged lightmap texture this fits into
-			int lightmapindex = i >> loadmodel->brushq3.deluxemapping;
 			if (loadmodel->brushq3.deluxemapping && (i & 1))
-				loadmodel->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%04i", lightmapindex), 128, 128, in[i].rgb, TEXTYPE_RGB, TEXF_FORCELINEAR | TEXF_PRECACHE | (gl_texturecompression_q3bspdeluxemaps.integer ? TEXF_COMPRESS : 0), NULL);
+				loadmodel->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%04i", lightmapindex), 128, 128, convertedpixels, TEXTYPE_RGBA, TEXF_FORCELINEAR | TEXF_PRECACHE | (gl_texturecompression_q3bspdeluxemaps.integer ? TEXF_COMPRESS : 0), NULL);
 			else
-				loadmodel->brushq3.data_lightmaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", lightmapindex), 128, 128, in[i].rgb, TEXTYPE_RGB, TEXF_FORCELINEAR | TEXF_PRECACHE | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : 0), NULL);
+				loadmodel->brushq3.data_lightmaps [lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", lightmapindex), 128, 128, convertedpixels, TEXTYPE_RGBA, TEXF_FORCELINEAR | TEXF_PRECACHE | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : 0), NULL);
 		}
 	}
 }
@@ -5211,7 +5207,7 @@ static void Mod_Q3BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientc
 	q3dlightgrid_t *a, *s;
 
 	// scale lighting by lightstyle[0] so that darkmode in dpmod works properly
-	stylescale = r_refdef.lightstylevalue[0] * (1.0f / 264.0f);
+	stylescale = r_refdef.lightstylevalue[0] * (1.0f / 256.0f);
 
 	if (!model->brushq3.num_lightgrid)
 	{

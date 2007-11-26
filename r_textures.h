@@ -25,8 +25,6 @@
 
 // 8bit paletted
 #define TEXTYPE_PALETTE 1
-// 24bit RGB
-#define TEXTYPE_RGB 2
 // 32bit RGBA
 #define TEXTYPE_RGBA 3
 

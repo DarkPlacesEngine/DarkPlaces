@@ -35,10 +35,10 @@ qboolean Image_WriteTGARGB_preflipped (const char *filename, int width, int heig
 void Image_WriteTGARGBA (const char *filename, int width, int height, const unsigned char *data);
 
 // resizes the image (in can not be the same as out)
-void Image_Resample (const void *indata, int inwidth, int inheight, int indepth, void *outdata, int outwidth, int outheight, int outdepth, int bytesperpixel, int quality);
+void Image_Resample32(const void *indata, int inwidth, int inheight, int indepth, void *outdata, int outwidth, int outheight, int outdepth, int quality);
 
 // scales the image down by a power of 2 (in can be the same as out)
-void Image_MipReduce(const unsigned char *in, unsigned char *out, int *width, int *height, int *depth, int destwidth, int destheight, int destdepth, int bytesperpixel);
+void Image_MipReduce32(const unsigned char *in, unsigned char *out, int *width, int *height, int *depth, int destwidth, int destheight, int destdepth);
 
 // only used by menuplyr coloring
 unsigned char *LoadLMP (const unsigned char *f, int filesize, int matchwidth, int matchheight, qboolean loadAs8Bit);
