@@ -114,6 +114,14 @@ SOURCE=.\cl_demo.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\cl_dyntexture.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\cl_gecko.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\cl_input.c
 # End Source File
 # Begin Source File
@@ -447,6 +455,14 @@ SOURCE=.\cdaudio.h
 # Begin Source File
 
 SOURCE=.\cl_collision.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\cl_dyntexture.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\cl_gecko.h
 # End Source File
 # Begin Source File
 
