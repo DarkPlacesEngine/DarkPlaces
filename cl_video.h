@@ -3,7 +3,8 @@
 #define CL_VIDEO_H
 
 #define MAXCLVIDEOS		64 + 1 // 1 video is reserved for the cinematic mode
-#define CLVIDEOPREFIX	"_video/"
+// yields DYNAMIC_TEXTURE_PATH_PREFIX CLVIDEOPREFIX video name for a path
+#define CLVIDEOPREFIX	CLDYNTEXTUREPREFIX "video/"
 #define CLTHRESHOLD		2.0
 
 #define MENUOWNER		1
@@ -53,7 +54,7 @@ void		CL_RestartVideo( clvideo_t *video );
 void		CL_CloseVideo( clvideo_t * video );
 void		CL_PurgeOwner( int owner );
 
-void		CL_VideoFrame( void ); // update all videos
+void		CL_Video_Frame( void ); // update all videos
 void		CL_Video_Init( void );
 void		CL_Video_Shutdown( void );
 

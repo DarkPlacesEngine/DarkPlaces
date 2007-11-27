@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 #include "cl_collision.h"
+#include "cl_gecko.h"
 #include "cl_video.h"
 #include "image.h"
 #include "csprogs.h"
@@ -2302,6 +2303,9 @@ void CL_Init (void)
 	CL_Screen_Init();
 
 	CL_Video_Init();
+#ifdef SUPPORT_GECKO
+	CL_Gecko_Init();
+#endif
 }
 
 

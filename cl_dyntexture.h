@@ -2,11 +2,13 @@
 #ifndef CL_DYNTEXTURE_H
 #define CL_DYNTEXTURE_H
 
-#define DYNAMIC_TEXTURE_PATH_PREFIX			"_dynamic/"
+#define CLDYNTEXTUREPREFIX			"_dynamic/"
 #define MAX_DYNAMIC_TEXTURE_COUNT			64
 
+// always path fully specified names to the dynamic texture functions! (ie. with the _dynamic/ prefix, etc.!)
+
 // return a valid texture handle for a dynamic texture (might be filler texture if it hasnt been initialized yet)
-// textureflags will be ignored though for now [11/22/2007 Black]
+// or NULL if its not a valid dynamic texture name
 rtexture_t * CL_GetDynTexture( const char *name );
 
 // link a texture handle as dynamic texture and update texture handles in the renderer and draw_* accordingly
