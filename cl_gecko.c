@@ -196,7 +196,7 @@ static void cl_gecko_navigate_f( void ) {
 
 	if (Cmd_Argc() != 3)
 	{
-		Con_Print("usage: gecko_destroy <name> <URI>\nnavigates to a certain URI (full texture path " CLGECKOPREFIX "<name>)\n");
+		Con_Print("usage: gecko_navigate <name> <URI>\nnavigates to a certain URI (full texture path " CLGECKOPREFIX "<name>)\n");
 		return;
 	}
 
