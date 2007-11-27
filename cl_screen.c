@@ -972,7 +972,7 @@ static void SCR_CaptureVideo_RIFF_MakeIxChunk(const char *fcc, const char *dwChu
 	SCR_CaptureVideo_RIFF_Write32(nMatching); // nEntriesInUse
 	SCR_CaptureVideo_RIFF_WriteFourCC(dwChunkId); // dwChunkId
 	SCR_CaptureVideo_RIFF_Write32(cls.capturevideo.videofile_ix_movistart & (fs_offset_t) 0xFFFFFFFFu);
-	SCR_CaptureVideo_RIFF_Write32(((long long) cls.capturevideo.videofile_ix_movistart) >> 32);
+	SCR_CaptureVideo_RIFF_Write32(((fs_offset_t) cls.capturevideo.videofile_ix_movistart) >> 32);
 	SCR_CaptureVideo_RIFF_Write32(0); // dwReserved
 
 	for(i = 0; i < cls.capturevideo.riffindexbuffer.cursize; i += 16)
@@ -995,7 +995,7 @@ static void SCR_CaptureVideo_RIFF_MakeIxChunk(const char *fcc, const char *dwChu
 
 	FS_Seek(cls.capturevideo.videofile, masteridx_start + 16 * *masteridx_count, SEEK_SET);
 	SCR_CaptureVideo_RIFF_Write32(ix & (fs_offset_t) 0xFFFFFFFFu);
-	SCR_CaptureVideo_RIFF_Write32(((long long) ix) >> 32);
+	SCR_CaptureVideo_RIFF_Write32(((fs_offset_t) ix) >> 32);
 	SCR_CaptureVideo_RIFF_Write32(pos - ix);
 	SCR_CaptureVideo_RIFF_Write32(nMatching);
 	SCR_CaptureVideo_RIFF_Flush();
