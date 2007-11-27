@@ -226,7 +226,7 @@ void R_MarkDirtyTexture(rtexture_t *rt) {
 	if( !glt->dirtytexnum && glt->flags & GLTEXF_DYNAMIC ) {
 		glt->dirtytexnum = glt->texnum;
 		// mark it as dirty, so R_RealGetTexture gets called
-		glt->texnum = 0;
+		glt->texnum = -1;
 	}
 }
 
@@ -239,6 +239,7 @@ void R_MakeTextureDynamic(rtexture_t *rt, updatecallback_t updatecallback, void 
 	glt->flags |= GLTEXF_DYNAMIC;
 	glt->updatecallback = updatecallback;
 	glt->updatacallback_data = data;
+	glt->dirtytexnum = 0;
 }
 
 static void R_UpdateDynamicTexture(gltexture_t *glt) {
