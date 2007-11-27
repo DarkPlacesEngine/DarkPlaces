@@ -24,6 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <time.h>
 #include "libcurl.h"
 #include "cdaudio.h"
+#include "cl_gecko.h"
 #include "cl_video.h"
 #include "progsvm.h"
 #include "csprogs.h"
@@ -841,7 +842,10 @@ void Host_Main(void)
 
 			//ui_update();
 
-			CL_VideoFrame();
+			CL_Video_Frame();
+#ifdef SUPPORT_GECKO
+			CL_Gecko_Frame();
+#endif
 
 			CL_UpdateScreen();
 
@@ -1157,6 +1161,9 @@ void Host_Shutdown(void)
 	// AK shutdown PRVM
 	// AK hmm, no PRVM_Shutdown(); yet
 
+#ifdef SUPPORT_GECKO
+	CL_Gecko_Shutdown();
+#endif
 	CL_Video_Shutdown();
 
 	Host_SaveConfig_f();

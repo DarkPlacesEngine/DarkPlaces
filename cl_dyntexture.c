@@ -15,11 +15,16 @@ static unsigned dyntexturecount;
 
 #define DEFAULT_DYNTEXTURE r_texture_grey128
 
-static dyntexture_t * _CL_FindDynTexture( const char *name ) {
+static dyntexture_t * cl_finddyntexture( const char *name ) {
 	unsigned i;
 	dyntexture_t *dyntexture = NULL;
-	// some sanity checks - and make sure its actually a dynamic texture path
-	if( !name || strncmp( name, DYNAMIC_TEXTURE_PATH_PREFIX, sizeof( DYNAMIC_TEXTURE_PATH_PREFIX ) - 1 ) != 0 ) {
+
+	// sanity checks - make sure its actually a dynamic texture path
+	if( !name || !*name || strncmp( name, CLDYNTEXTUREPREFIX, sizeof( CLDYNTEXTUREPREFIX ) - 1 ) != 0 ) {
+		// TODO: print a warning or something
+		if( developer.integer > 0 ) {
+			Con_Printf( "cl_finddyntexture: Bad dynamic texture name '%s'\n", name );
+		}
 		return NULL;
 	}
 
@@ -41,7 +46,7 @@ static dyntexture_t * _CL_FindDynTexture( const char *name ) {
 }
 
 rtexture_t * CL_GetDynTexture( const char *name ) {
-	dyntexture_t *dyntexture = _CL_FindDynTexture( name );
+	dyntexture_t *dyntexture = cl_finddyntexture( name );
 	if( dyntexture ) {
 		return dyntexture->texture;
 	} else {
@@ -54,26 +59,28 @@ void CL_LinkDynTexture( const char *name, rtexture_t *texture ) {
 	cachepic_t *cachepic;
 	skinframe_t *skinframe;
 
-	dyntexture = _CL_FindDynTexture( name );
+	dyntexture = cl_finddyntexture( name );
 	// TODO: assert dyntexture != NULL!
 	if( dyntexture->texture != texture ) {
-		cachepic = Draw_CachePic( name, false );
-		skinframe = R_SkinFrame_Find( name, 0, 0, 0, 0, false );
-		// this is kind of hacky
-		// TODO: assert cachepic and skinframe should be valid pointers...
+		dyntexture->texture = texture;
 
+		cachepic = Draw_CachePic( name, false );
+		// TODO: assert cachepic and skinframe should be valid pointers...
 		// TODO: assert cachepic->tex = dyntexture->texture
 		cachepic->tex = texture;
 		// update cachepic's size, too
 		cachepic->width = R_TextureWidth( texture );
 		cachepic->height = R_TextureHeight( texture );
-		// TODO: assert skinframe->base = dyntexture->texture
-		skinframe->base = texture;
-		// simply reset the compare* attributes of skinframe
-		skinframe->comparecrc = 0;
-		skinframe->comparewidth = skinframe->compareheight = 0;
 
-		dyntexture->texture = texture;
+		// update skinframes
+		skinframe = NULL;
+		while( (skinframe = R_SkinFrame_FindNextByName( skinframe, name )) != NULL ) {
+			skinframe->base = texture;
+			// simply reset the compare* attributes of skinframe
+			skinframe->comparecrc = 0;
+			skinframe->comparewidth = skinframe->compareheight = 0;
+			// this is kind of hacky
+		}
 	}
 }
 

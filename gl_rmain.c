@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // r_main.c
 
 #include "quakedef.h"
+#include "cl_dyntexture.h"
 #include "r_shadow.h"
 #include "polygon.h"
 #include "image.h"
@@ -1494,6 +1495,29 @@ void R_SkinFrame_Purge(void)
 	}
 }
 
+skinframe_t *R_SkinFrame_FindNextByName( skinframe_t *last, const char *name ) {
+	skinframe_t *item;
+	char basename[MAX_QPATH];
+
+	Image_StripImageExtension(name, basename, sizeof(basename));
+
+	if( last == NULL ) {
+		int hashindex;
+		hashindex = CRC_Block((unsigned char *)basename, strlen(basename)) & (SKINFRAME_HASH - 1);
+		item = r_skinframe.hash[hashindex];
+	} else {
+		item = last->next;
+	}
+
+	// linearly search through the hash bucket
+	for( ; item ; item = item->next ) {
+		if( !strcmp( item->basename, basename ) ) {
+			return item;
+		}
+	}
+	return NULL;
+}
+
 skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewidth, int compareheight, int comparecrc, qboolean add)
 {
 	skinframe_t *item;
@@ -1508,16 +1532,20 @@ skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewid
 			break;
 	if (!item)
 	{
-		if (!add)
+		rtexture_t *dyntexture;
+		// check whether its a dynamic texture
+		dyntexture = CL_GetDynTexture( basename );
+		if (!add && !dyntexture)
 			return NULL;
 		item = (skinframe_t *)Mem_ExpandableArray_AllocRecord(&r_skinframe.array);
 		memset(item, 0, sizeof(*item));
 		strlcpy(item->basename, basename, sizeof(item->basename));
 		item->textureflags = textureflags;
+		item->base = dyntexture;
 		item->comparewidth = comparewidth;
 		item->compareheight = compareheight;
 		item->comparecrc = comparecrc;
-		item->next = r_skinframe.hash[hashindex];
+		item->next = r_skinframe.hash[hashindex];	
 		r_skinframe.hash[hashindex] = item;
 	}
 	R_SkinFrame_MarkUsed(item);

@@ -1,5 +1,6 @@
 
 #include "quakedef.h"
+#include "cl_dyntexture.h"
 #include "cl_video.h"
 #include "dpvsimpledecode.h"
 
@@ -34,15 +35,31 @@ static qboolean OpenStream( clvideo_t * video )
 	return true;
 }
 
+static void VideoUpdateCallback(rtexture_t *rt, clvideo_t *video) {
+	R_UpdateTexture( video->cpif.tex, (unsigned char *)video->imagedata, 0, 0, video->cpif.width, video->cpif.height );
+}
+
+static void LinkVideoTexture( clvideo_t *video ) {
+	video->cpif.tex = R_LoadTexture2D( cl_videotexturepool, video->cpif.name,
+		video->cpif.width, video->cpif.height, NULL, TEXTYPE_RGBA, TEXF_ALWAYSPRECACHE, NULL );
+	R_MakeTextureDynamic( video->cpif.tex, VideoUpdateCallback, video );
+	CL_LinkDynTexture( video->cpif.name, video->cpif.tex );
+}
+
+static void UnlinkVideoTexture( clvideo_t *video ) {
+	CL_UnlinkDynTexture( video->cpif.name );
+	// free the texture
+	R_FreeTexture( video->cpif.tex );
+	// free the image data
+	Mem_Free( video->imagedata );
+}
+
 static void SuspendVideo( clvideo_t * video )
 {
 	if( video->suspended )
 		return;
 	video->suspended = true;
-	// free the texture
-	R_FreeTexture( video->cpif.tex );
-	// free the image data
-	Mem_Free( video->imagedata );
+	UnlinkVideoTexture( video );
 	// if we are in firstframe mode, also close the stream
 	if( video->state == CLVIDEO_FIRSTFRAME )
 		dpvsimpledecode_close( video->stream );
@@ -61,8 +78,7 @@ static qboolean WakeVideo( clvideo_t * video )
 		}
 
 	video->imagedata = Mem_Alloc( cls.permanentmempool, video->cpif.width * video->cpif.height * cl_videobytesperpixel );
-	video->cpif.tex = R_LoadTexture2D( cl_videotexturepool, video->cpif.name,
-		video->cpif.width, video->cpif.height, NULL, TEXTYPE_RGBA, TEXF_ALWAYSPRECACHE, NULL );
+	LinkVideoTexture( video );
 
 	// update starttime
 	video->starttime += realtime - video->lasttime;
@@ -88,10 +104,8 @@ static clvideo_t* OpenVideo( clvideo_t *video, const char *filename, const char 
 
 	video->cpif.width = dpvsimpledecode_getwidth( video->stream );
 	video->cpif.height = dpvsimpledecode_getheight( video->stream );
-	video->cpif.tex = R_LoadTexture2D( cl_videotexturepool, video->cpif.name,
-		video->cpif.width, video->cpif.height, NULL, TEXTYPE_RGBA, TEXF_ALWAYSPRECACHE, NULL );
-
-    video->imagedata = Mem_Alloc( cls.permanentmempool, video->cpif.width * video->cpif.height * cl_videobytesperpixel );
+	video->imagedata = Mem_Alloc( cls.permanentmempool, video->cpif.width * video->cpif.height * cl_videobytesperpixel );
+	LinkVideoTexture( video );
 
 	return video;
 }
@@ -99,16 +113,24 @@ static clvideo_t* OpenVideo( clvideo_t *video, const char *filename, const char 
 clvideo_t* CL_OpenVideo( const char *filename, const char *name, int owner )
 {
 	clvideo_t *video;
+	// sanity check
+	if( !name || !*name || strncmp( name, CLVIDEOPREFIX, sizeof( CLVIDEOPREFIX ) - 1 ) != 0 ) {
+		if( developer.integer > 0 ) {
+			Con_Printf( "CL_OpenVideo: Bad video texture name '%s'!\n", name );
+		}
+		return NULL;
+	}
 
 	video = FindUnusedVid();
 	if( !video ) {
-		Con_Printf( "unable to open video \"%s\" - video limit reached\n", filename );
+		Con_Printf( "CL_OpenVideo: unable to open video \"%s\" - video limit reached\n", filename );
 		return NULL;
 	}
 	video = OpenVideo( video, filename, name, owner );
 	// expand the active range to include the new entry
-	if (video)
+	if (video) {
 		cl_num_videos = max(cl_num_videos, (int)(video - cl_videos) + 1);
+	}
 	return video;
 }
 
@@ -175,8 +197,7 @@ void CL_CloseVideo( clvideo_t * video )
 	if( !video->suspended || video->state != CLVIDEO_FIRSTFRAME )
 		dpvsimpledecode_close( video->stream );
 	if( !video->suspended ) {
-		Mem_Free( video->imagedata );
-		R_FreeTexture( video->cpif.tex );
+		UnlinkVideoTexture( video );
 	}
 
 	video->state = CLVIDEO_UNUSED;
@@ -205,11 +226,11 @@ static void VideoFrame( clvideo_t *video )
 				return;
 			}
 		} while( video->framenum < destframe );
-		R_UpdateTexture( video->cpif.tex, (unsigned char *)video->imagedata, 0, 0, video->cpif.width, video->cpif.height );
+		R_MarkDirtyTexture( video->cpif.tex );
 	}
 }
 
-void CL_VideoFrame( void ) // update all videos
+void CL_Video_Frame( void ) // update all videos
 {
 	int i;
 	clvideo_t *video;
@@ -265,7 +286,8 @@ void CL_VideoStart(char *filename)
 
 	if( cl_videos->state != CLVIDEO_UNUSED )
 		CL_CloseVideo( cl_videos );
-	if( !OpenVideo( cl_videos, filename, va( CLVIDEOPREFIX "%s", filename ), 0 ) )
+	// already contains video/
+	if( !OpenVideo( cl_videos, filename, va( CLDYNTEXTUREPREFIX "%s", filename ), 0 ) )
 		return;
 	// expand the active range to include the new entry
 	cl_num_videos = max(cl_num_videos, 1);
@@ -323,12 +345,12 @@ static void cl_video_start( void )
 
 	for( video = cl_videos, i = 0 ; i < cl_num_videos ; i++, video++ )
 		if( video->state != CLVIDEO_UNUSED && !video->suspended )
-			video->cpif.tex = R_LoadTexture2D( cl_videotexturepool, video->cpif.name,
-				video->cpif.width, video->cpif.height, NULL, TEXTYPE_RGBA, TEXF_ALWAYSPRECACHE, NULL );
+			LinkVideoTexture( video );
 }
 
 static void cl_video_shutdown( void )
 {
+	// TODO: unlink video textures?
 	R_FreeTexturePool( &cl_videotexturepool );
 }
 

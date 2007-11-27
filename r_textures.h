@@ -77,7 +77,7 @@ void R_FreeTexture(rtexture_t *rt);
 
 // update a portion of the image data of a texture, used by lightmap updates
 // and procedural textures such as video playback.
-void R_UpdateTexture(rtexture_t *rt, unsigned char *data, int x, int y, int width, int height);
+void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, int width, int height);
 
 // returns the renderer dependent texture slot number (call this before each
 // use, as a texture might not have been precached)

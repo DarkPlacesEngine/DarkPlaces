@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "wad.h"
 
 #include "cl_video.h"
+#include "cl_dyntexture.h"
 
 cvar_t r_textshadow = {CVAR_SAVE, "r_textshadow", "0", "draws a shadow on all text to improve readability (note: value controls offset, 1 = 1 pixel, 1.5 = 1.5 pixels, etc)"};
 cvar_t r_textbrightness = {CVAR_SAVE, "r_textbrightness", "0", "additional brightness for text color codes (0 keeps colors as is, 1 makes them all white)"};
@@ -308,15 +309,7 @@ cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 	unsigned char *lmpdata;
 	char lmpname[MAX_QPATH];
 
-	if (!strncmp(CLVIDEOPREFIX, path, sizeof(CLVIDEOPREFIX) - 1))
-	{
-		clvideo_t *video;
-
-		video = CL_GetVideoByName(path);
-		if( video )
-			return &video->cpif;
-	}
-
+	// check whether the picture has already been cached
 	crc = CRC_Block((unsigned char *)path, strlen(path));
 	hashkey = ((crc >> 8) ^ crc) % CACHEPICHASHSIZE;
 	for (pic = cachepichash[hashkey];pic;pic = pic->chain)
@@ -334,6 +327,16 @@ cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 	// link into list
 	pic->chain = cachepichash[hashkey];
 	cachepichash[hashkey] = pic;
+
+	// check whether it is an dynamic texture (if so, we can directly use its texture handler)
+	pic->tex = CL_GetDynTexture( path );
+	// if so, set the width/height, too
+	if( pic->tex ) {
+		pic->width = R_TextureWidth(pic->tex);
+		pic->height = R_TextureHeight(pic->tex);
+		// we're done now (early-out)
+		return pic;
+	}
 
 	flags = TEXF_ALPHA;
 	if (persistent)

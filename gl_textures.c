@@ -218,6 +218,10 @@ static textypeinfo_t *R_GetTexTypeInfo(int textype, int flags)
 // dynamic texture code [11/22/2007 Black]
 void R_MarkDirtyTexture(rtexture_t *rt) {
 	gltexture_t *glt = (gltexture_t*) rt;
+	if( !glt ) {
+		return;
+	}
+
 	// dont do anything if the texture is already dirty (and make sure this *is* a dynamic texture after all!)
 	if( !glt->dirtytexnum && glt->flags & GLTEXF_DYNAMIC ) {
 		glt->dirtytexnum = glt->texnum;
@@ -228,6 +232,10 @@ void R_MarkDirtyTexture(rtexture_t *rt) {
 
 void R_MakeTextureDynamic(rtexture_t *rt, updatecallback_t updatecallback, void *data) {
 	gltexture_t *glt = (gltexture_t*) rt;
+	if( !glt ) {
+		return;
+	}
+
 	glt->flags |= GLTEXF_DYNAMIC;
 	glt->updatecallback = updatecallback;
 	glt->updatacallback_data = data;
@@ -267,10 +275,10 @@ int R_RealGetTexture(rtexture_t *rt)
 	{
 		gltexture_t *glt;
 		glt = (gltexture_t *)rt;
-		if (glt->flags & GLTEXF_UPLOAD)
-			R_UploadTexture(glt);
 		if (glt->flags & GLTEXF_DYNAMIC)
 			R_UpdateDynamicTexture(glt);
+		if (glt->flags & GLTEXF_UPLOAD)
+			R_UploadTexture(glt);
 
 		return glt->texnum;
 	}
@@ -755,11 +763,11 @@ static void GL_SetupTextureParameters(int flags, int texturetype)
 	CHECKGLERROR
 }
 
-static void R_Upload(gltexture_t *glt, unsigned char *data, int fragx, int fragy, int fragz, int fragwidth, int fragheight, int fragdepth)
+static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int fragy, int fragz, int fragwidth, int fragheight, int fragdepth)
 {
 	int i, mip, width, height, depth;
 	GLint oldbindtexnum;
-	unsigned char *prevbuffer;
+	const unsigned char *prevbuffer;
 	prevbuffer = data;
 
 	CHECKGLERROR
@@ -1087,7 +1095,7 @@ int R_TextureHeight(rtexture_t *rt)
 	return rt ? ((gltexture_t *)rt)->inputheight : 0;
 }
 
-void R_UpdateTexture(rtexture_t *rt, unsigned char *data, int x, int y, int width, int height)
+void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, int width, int height)
 {
 	gltexture_t *glt;
 	if (rt == NULL)
