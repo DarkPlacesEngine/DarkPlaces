@@ -3,20 +3,22 @@
 
 cvar_t r_colormap_palette = {0, "r_colormap_palette", "gfx/colormap_palette.lmp", "name of a palette lmp file to override the shirt/pants colors of player models. It consists of 16 shirt colors, 16 scoreboard shirt colors, 16 pants colors and 16 scoreboard pants colors"};
 
-unsigned int palette_complete[256];
-unsigned int palette_font[256];
-unsigned int palette_alpha[256];
-unsigned int palette_nocolormap[256];
-unsigned int palette_nocolormapnofullbrights[256];
-unsigned int palette_nofullbrights[256];
-unsigned int palette_onlyfullbrights[256];
-unsigned int palette_pantsaswhite[256];
-unsigned int palette_shirtaswhite[256];
-unsigned int palette_transparent[256];
-unsigned int palette_pantscolormap[16];
-unsigned int palette_shirtcolormap[16];
-unsigned int palette_pantsscoreboard[16];
-unsigned int palette_shirtscoreboard[16];
+unsigned char palette_rgb[256][3];
+unsigned char palette_rgb_pantscolormap[16][3];
+unsigned char palette_rgb_shirtcolormap[16][3];
+unsigned char palette_rgb_pantsscoreboard[16][3];
+unsigned char palette_rgb_shirtscoreboard[16][3];
+
+unsigned int palette_bgra_complete[256];
+unsigned int palette_bgra_font[256];
+unsigned int palette_bgra_alpha[256];
+unsigned int palette_bgra_nocolormap[256];
+unsigned int palette_bgra_nocolormapnofullbrights[256];
+unsigned int palette_bgra_nofullbrights[256];
+unsigned int palette_bgra_onlyfullbrights[256];
+unsigned int palette_bgra_pantsaswhite[256];
+unsigned int palette_bgra_shirtaswhite[256];
+unsigned int palette_bgra_transparent[256];
 
 // John Carmack said the quake palette.lmp can be considered public domain because it is not an important asset to id, so I include it here as a fallback if no external palette file is found.
 unsigned char host_quakepal[768] =
@@ -100,62 +102,62 @@ void Palette_SetupSpecialPalettes(void)
 	transparentcolor = 255;
 
 	for (i = 0;i < 256;i++)
-		palette_transparent[i] = palette_complete[i];
-	palette_transparent[transparentcolor] = 0;
+		palette_bgra_transparent[i] = palette_bgra_complete[i];
+	palette_bgra_transparent[transparentcolor] = 0;
 
 	for (i = 0;i < fullbright_start;i++)
-		palette_nofullbrights[i] = palette_complete[i];
+		palette_bgra_nofullbrights[i] = palette_bgra_complete[i];
 	for (i = fullbright_start;i < fullbright_end;i++)
-		palette_nofullbrights[i] = palette_complete[0];
+		palette_bgra_nofullbrights[i] = palette_bgra_complete[0];
 
 	for (i = 0;i < 256;i++)
-		palette_onlyfullbrights[i] = 0;
+		palette_bgra_onlyfullbrights[i] = 0;
 	for (i = fullbright_start;i < fullbright_end;i++)
-		palette_onlyfullbrights[i] = palette_complete[i];
+		palette_bgra_onlyfullbrights[i] = palette_bgra_complete[i];
 
 	for (i = 0;i < 256;i++)
-		palette_nocolormapnofullbrights[i] = palette_complete[i];
+		palette_bgra_nocolormapnofullbrights[i] = palette_bgra_complete[i];
 	for (i = pants_start;i < pants_end;i++)
-		palette_nocolormapnofullbrights[i] = 0;
+		palette_bgra_nocolormapnofullbrights[i] = 0;
 	for (i = shirt_start;i < shirt_end;i++)
-		palette_nocolormapnofullbrights[i] = 0;
+		palette_bgra_nocolormapnofullbrights[i] = 0;
 	for (i = fullbright_start;i < fullbright_end;i++)
-		palette_nocolormapnofullbrights[i] = 0;
+		palette_bgra_nocolormapnofullbrights[i] = 0;
 
 	for (i = 0;i < 256;i++)
-		palette_nocolormap[i] = palette_complete[i];
+		palette_bgra_nocolormap[i] = palette_bgra_complete[i];
 	for (i = pants_start;i < pants_end;i++)
-		palette_nocolormap[i] = 0;
+		palette_bgra_nocolormap[i] = 0;
 	for (i = shirt_start;i < shirt_end;i++)
-		palette_nocolormap[i] = 0;
+		palette_bgra_nocolormap[i] = 0;
 
 	for (i = 0;i < 256;i++)
-		palette_pantsaswhite[i] = 0;
+		palette_bgra_pantsaswhite[i] = 0;
 	for (i = pants_start;i < pants_end;i++)
 	{
 		if (i >= reversed_start && i < reversed_end)
-			palette_pantsaswhite[i] = palette_complete[15 - (i - pants_start)];
+			palette_bgra_pantsaswhite[i] = palette_bgra_complete[15 - (i - pants_start)];
 		else
-			palette_pantsaswhite[i] = palette_complete[i - pants_start];
+			palette_bgra_pantsaswhite[i] = palette_bgra_complete[i - pants_start];
 	}
 
 	for (i = 0;i < 256;i++)
-		palette_shirtaswhite[i] = 0;
+		palette_bgra_shirtaswhite[i] = 0;
 	for (i = shirt_start;i < shirt_end;i++)
 	{
 		if (i >= reversed_start && i < reversed_end)
-			palette_shirtaswhite[i] = palette_complete[15 - (i - shirt_start)];
+			palette_bgra_shirtaswhite[i] = palette_bgra_complete[15 - (i - shirt_start)];
 		else
-			palette_shirtaswhite[i] = palette_complete[i - shirt_start];
+			palette_bgra_shirtaswhite[i] = palette_bgra_complete[i - shirt_start];
 	}
 
 	for (i = 0;i < 256;i++)
-		palette_alpha[i] = 0xFFFFFFFF;
-	palette_alpha[transparentcolor] = 0;
+		palette_bgra_alpha[i] = 0xFFFFFFFF;
+	palette_bgra_alpha[transparentcolor] = 0;
 
 	for (i = 0;i < 256;i++)
-		palette_font[i] = palette_complete[i];
-	palette_font[0] = 0;
+		palette_bgra_font[i] = palette_bgra_complete[i];
+	palette_bgra_font[0] = 0;
 }
 
 void BuildGammaTable8(float prescale, float gamma, float scale, float base, unsigned char *out, int rampsize)
@@ -197,9 +199,10 @@ void Palette_NewMap(void)
 void Palette_Load(void)
 {
 	int i;
+	unsigned char *out;
 	float gamma, scale, base;
 	fs_offset_t filesize;
-	unsigned char *in, *out, *palfile;
+	unsigned char *palfile;
 	unsigned char texturegammaramp[256];
 
 	gamma = 1;
@@ -225,89 +228,56 @@ void Palette_Load(void)
 
 	palfile = (unsigned char *)FS_LoadFile ("gfx/palette.lmp", tempmempool, false, &filesize);
 	if (palfile && filesize >= 768)
-		in = palfile;
+		memcpy(palette_rgb, palfile, 768);
 	else
 	{
 		Con_DPrint("Couldn't load gfx/palette.lmp, falling back on internal palette\n");
-		in = host_quakepal;
-	}
-	out = (unsigned char *) palette_complete; // palette is accessed as 32bit for speed reasons, but is created as 8bit bytes
-	for (i = 0;i < 256;i++)
-	{
-		*out++ = texturegammaramp[*in++];
-		*out++ = texturegammaramp[*in++];
-		*out++ = texturegammaramp[*in++];
-		*out++ = 255;
+		memcpy(palette_rgb, host_quakepal, 768);
 	}
 	if (palfile)
 		Mem_Free(palfile);
 
-if(*r_colormap_palette.string)
-	palfile = (unsigned char *)FS_LoadFile (r_colormap_palette.string, tempmempool, false, &filesize);
-else
-	palfile = NULL;
-
-in = palfile;
-if (palfile && filesize >= 48)
-{
-	out = (unsigned char *) palette_shirtcolormap;
-	for (i = 0;i < 16;i++)
+	out = (unsigned char *) palette_bgra_complete; // palette is accessed as 32bit for speed reasons, but is created as 8bit bytes
+	for (i = 0;i < 256;i++)
 	{
-		*out++ = texturegammaramp[*in++];
-		*out++ = texturegammaramp[*in++];
-		*out++ = texturegammaramp[*in++];
-		*out++ = 255;
+		out[i*4+2] = texturegammaramp[palette_rgb[i][0]];
+		out[i*4+1] = texturegammaramp[palette_rgb[i][1]];
+		out[i*4+0] = texturegammaramp[palette_rgb[i][2]];
+		out[i*4+3] = 255;
 	}
-}
-else
-	for(i = 0; i < 16; ++i)
-		palette_shirtcolormap[i] = palette_complete[(i << 4) | ((i >= 8 && i <= 13) ? 0x04 : 0x0C)];
 
-if(palfile && filesize >= 48 + 48)
-{
-	out = (unsigned char *) palette_shirtscoreboard;
-	for (i = 0;i < 16;i++)
+	if(*r_colormap_palette.string)
+		palfile = (unsigned char *)FS_LoadFile (r_colormap_palette.string, tempmempool, false, &filesize);
+	else
+		palfile = NULL;
+
+	if (palfile && filesize >= 48*2)
 	{
-		*out++ = texturegammaramp[*in++];
-		*out++ = texturegammaramp[*in++];
-		*out++ = texturegammaramp[*in++];
-		*out++ = 255;
+		memcpy(palette_rgb_shirtcolormap[0], palfile, 48);
+		memcpy(palette_rgb_shirtscoreboard[0], palfile + 48, 48);
 	}
-}
-else
-	for(i = 0; i < 16; ++i)
-		palette_shirtscoreboard[i] = palette_complete[(i << 4) | 0x08];
-
-if (palfile && filesize >= 48 + 48 + 48)
-{
-	out = (unsigned char *) palette_pantscolormap;
-	for (i = 0;i < 16;i++)
+	else
 	{
-		*out++ = texturegammaramp[*in++];
-		*out++ = texturegammaramp[*in++];
-		*out++ = texturegammaramp[*in++];
-		*out++ = 255;
+		for(i = 0;i < 16;i++)
+		{
+			VectorCopy(palette_rgb[(i << 4) | ((i >= 8 && i <= 13) ? 0x04 : 0x0C)], palette_rgb_shirtcolormap[i]);
+			VectorCopy(palette_rgb[(i << 4) | 0x08], palette_rgb_shirtscoreboard[i]);
+		}
 	}
-}
-else
-	memcpy(palette_pantscolormap, palette_shirtcolormap, sizeof(palette_pantscolormap));
 
-if (palfile && filesize >= 48 + 48 + 48 + 48)
-{
-	out = (unsigned char *) palette_pantsscoreboard;
-	for (i = 0;i < 16;i++)
+	if (palfile && filesize >= 48*4)
 	{
-		*out++ = texturegammaramp[*in++];
-		*out++ = texturegammaramp[*in++];
-		*out++ = texturegammaramp[*in++];
-		*out++ = 255;
+		memcpy(palette_rgb_pantscolormap[0], palfile + 48*2, 48);
+		memcpy(palette_rgb_pantsscoreboard[0], palfile + 48*3, 48);
 	}
-}
-else
-	memcpy(palette_pantsscoreboard, palette_shirtscoreboard, sizeof(palette_pantsscoreboard));
+	else
+	{
+		memcpy(palette_rgb_pantscolormap, palette_rgb_shirtcolormap, sizeof(palette_rgb_pantscolormap));
+		memcpy(palette_rgb_pantsscoreboard, palette_rgb_shirtscoreboard, sizeof(palette_rgb_pantsscoreboard));
+	}
 
-if(palfile)
-	Mem_Free(palfile);
+	if(palfile)
+		Mem_Free(palfile);
 
 	Palette_SetupSpecialPalettes();
 }

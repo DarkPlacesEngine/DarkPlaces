@@ -15,24 +15,25 @@ void Image_CopyMux(unsigned char *outpixels, const unsigned char *inpixels, int 
 // applies gamma correction to RGB pixels, in can be the same as out
 void Image_GammaRemapRGB(const unsigned char *in, unsigned char *out, int pixels, const unsigned char *gammar, const unsigned char *gammag, const unsigned char *gammab);
 
-// converts 8bit image data to RGBA, in can not be the same as out
-void Image_Copy8bitRGBA(const unsigned char *in, unsigned char *out, int pixels, const unsigned int *pal);
+// converts 8bit image data to BGRA, in can not be the same as out
+void Image_Copy8bitBGRA(const unsigned char *in, unsigned char *out, int pixels, const unsigned int *pal);
 
 void Image_StripImageExtension (const char *in, char *out, size_t size_out);
 
-unsigned char *LoadTGA (const unsigned char *f, int filesize, int matchwidth, int matchheight);
+// called by conchars.tga loader in gl_draw.c, otherwise private
+unsigned char *LoadTGA_BGRA (const unsigned char *f, int filesize);
 
 // loads a texture, as pixel data
-unsigned char *loadimagepixels (const char *filename, qboolean complain, int matchwidth, int matchheight, qboolean allowFixtrans);
+unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qboolean allowFixtrans);
 
 // loads a texture, as a texture
-rtexture_t *loadtextureimage (rtexturepool_t *pool, const char *filename, int matchwidth, int matchheight, qboolean complain, int flags, qboolean allowFixtrans);
+rtexture_t *loadtextureimage (rtexturepool_t *pool, const char *filename, qboolean complain, int flags, qboolean allowFixtrans);
 
-// writes a RGB TGA that is already upside down (which TGA wants)
-qboolean Image_WriteTGARGB_preflipped (const char *filename, int width, int height, const unsigned char *data, unsigned char *buffer);
+// writes an upside down BGR image into a TGA
+qboolean Image_WriteTGABGR_preflipped (const char *filename, int width, int height, const unsigned char *data, unsigned char *buffer);
 
-// writes a RGBA TGA
-void Image_WriteTGARGBA (const char *filename, int width, int height, const unsigned char *data);
+// writes a BGRA image into a TGA file
+void Image_WriteTGABGRA (const char *filename, int width, int height, const unsigned char *data);
 
 // resizes the image (in can not be the same as out)
 void Image_Resample32(const void *indata, int inwidth, int inheight, int indepth, void *outdata, int outwidth, int outheight, int outdepth, int quality);
@@ -40,10 +41,7 @@ void Image_Resample32(const void *indata, int inwidth, int inheight, int indepth
 // scales the image down by a power of 2 (in can be the same as out)
 void Image_MipReduce32(const unsigned char *in, unsigned char *out, int *width, int *height, int *depth, int destwidth, int destheight, int destdepth);
 
-// only used by menuplyr coloring
-unsigned char *LoadLMP (const unsigned char *f, int filesize, int matchwidth, int matchheight, qboolean loadAs8Bit);
-
-void Image_HeightmapToNormalmap(const unsigned char *inpixels, unsigned char *outpixels, int width, int height, int clamp, float bumpscale);
+void Image_HeightmapToNormalmap_BGRA(const unsigned char *inpixels, unsigned char *outpixels, int width, int height, int clamp, float bumpscale);
 
 // console command to fix the colors of transparent pixels (to prevent weird borders)
 void Image_FixTransparentPixels_f(void);

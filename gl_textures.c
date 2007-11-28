@@ -38,7 +38,7 @@ static mempool_t *texturemempool;
 
 typedef struct textypeinfo_s
 {
-	int textype;
+	textype_t textype;
 	int inputbytesperpixel;
 	int internalbytesperpixel;
 	float glinternalbytesperpixel;
@@ -47,17 +47,17 @@ typedef struct textypeinfo_s
 }
 textypeinfo_t;
 
-static textypeinfo_t textype_palette                = {TEXTYPE_PALETTE, 1, 4, 4.0f, GL_RGBA   , 3};
+static textypeinfo_t textype_palette                = {TEXTYPE_PALETTE, 1, 4, 4.0f, GL_BGRA   , 3};
+static textypeinfo_t textype_palette_alpha          = {TEXTYPE_PALETTE, 1, 4, 4.0f, GL_BGRA   , 4};
+static textypeinfo_t textype_palette_compress       = {TEXTYPE_PALETTE, 1, 4, 0.5f, GL_BGRA   , GL_COMPRESSED_RGB_ARB};
+static textypeinfo_t textype_palette_alpha_compress = {TEXTYPE_PALETTE, 1, 4, 1.0f, GL_BGRA   , GL_COMPRESSED_RGBA_ARB};
 static textypeinfo_t textype_rgba                   = {TEXTYPE_RGBA   , 4, 4, 4.0f, GL_RGBA   , 3};
-static textypeinfo_t textype_bgra                   = {TEXTYPE_BGRA   , 4, 4, 4.0f, GL_BGRA   , 3};
-static textypeinfo_t textype_palette_alpha          = {TEXTYPE_PALETTE, 1, 4, 4.0f, GL_RGBA   , 4};
 static textypeinfo_t textype_rgba_alpha             = {TEXTYPE_RGBA   , 4, 4, 4.0f, GL_RGBA   , 4};
-static textypeinfo_t textype_bgra_alpha             = {TEXTYPE_BGRA   , 4, 4, 4.0f, GL_BGRA   , 4};
-static textypeinfo_t textype_palette_compress       = {TEXTYPE_PALETTE, 1, 4, 0.5f, GL_RGBA   , GL_COMPRESSED_RGB_ARB};
 static textypeinfo_t textype_rgba_compress          = {TEXTYPE_RGBA   , 4, 4, 0.5f, GL_RGBA   , GL_COMPRESSED_RGB_ARB};
-static textypeinfo_t textype_bgra_compress          = {TEXTYPE_BGRA   , 4, 4, 0.5f, GL_BGRA   , GL_COMPRESSED_RGB_ARB};
-static textypeinfo_t textype_palette_alpha_compress = {TEXTYPE_PALETTE, 1, 4, 1.0f, GL_RGBA   , GL_COMPRESSED_RGBA_ARB};
 static textypeinfo_t textype_rgba_alpha_compress    = {TEXTYPE_RGBA   , 4, 4, 1.0f, GL_RGBA   , GL_COMPRESSED_RGBA_ARB};
+static textypeinfo_t textype_bgra                   = {TEXTYPE_BGRA   , 4, 4, 4.0f, GL_BGRA   , 3};
+static textypeinfo_t textype_bgra_alpha             = {TEXTYPE_BGRA   , 4, 4, 4.0f, GL_BGRA   , 4};
+static textypeinfo_t textype_bgra_compress          = {TEXTYPE_BGRA   , 4, 4, 0.5f, GL_BGRA   , GL_COMPRESSED_RGB_ARB};
 static textypeinfo_t textype_bgra_alpha_compress    = {TEXTYPE_BGRA   , 4, 4, 1.0f, GL_BGRA   , GL_COMPRESSED_RGBA_ARB};
 
 #define GLTEXTURETYPE_1D 0
@@ -144,7 +144,7 @@ static int resizebuffersize = 0;
 static unsigned char *texturebuffer;
 static int texturebuffersize = 0;
 
-static textypeinfo_t *R_GetTexTypeInfo(int textype, int flags)
+static textypeinfo_t *R_GetTexTypeInfo(textype_t textype, int flags)
 {
 	if ((flags & TEXF_COMPRESS) && gl_texturecompression.integer >= 1 && gl_support_texture_compression)
 	{
@@ -801,9 +801,8 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 	}
 	else if (glt->textype->textype == TEXTYPE_PALETTE)
 	{
-		// promote paletted to RGBA, so we only have to worry about RGB and
-		// RGBA in the rest of this code
-		Image_Copy8bitRGBA(prevbuffer, colorconvertbuffer, fragwidth * fragheight * fragdepth * glt->sides, glt->palette);
+		// promote paletted to BGRA, so we only have to worry about BGRA in the rest of this code
+		Image_Copy8bitBGRA(prevbuffer, colorconvertbuffer, fragwidth * fragheight * fragdepth * glt->sides, glt->palette);
 		prevbuffer = colorconvertbuffer;
 	}
 
@@ -952,7 +951,7 @@ static void R_UploadTexture (gltexture_t *glt)
 		Con_Printf("R_UploadTexture: Texture %s already uploaded and destroyed.  Can not upload original image again.  Uploaded blank texture.\n", glt->identifier);
 }
 
-static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int depth, int sides, int flags, int textype, int texturetype, const unsigned char *data, const unsigned int *palette)
+static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int depth, int sides, int flags, textype_t textype, int texturetype, const unsigned char *data, const unsigned int *palette)
 {
 	int i, size;
 	gltexture_t *glt;
@@ -1061,22 +1060,22 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	return (rtexture_t *)glt;
 }
 
-rtexture_t *R_LoadTexture1D(rtexturepool_t *rtexturepool, const char *identifier, int width, const unsigned char *data, int textype, int flags, const unsigned int *palette)
+rtexture_t *R_LoadTexture1D(rtexturepool_t *rtexturepool, const char *identifier, int width, const unsigned char *data, textype_t textype, int flags, const unsigned int *palette)
 {
 	return R_SetupTexture(rtexturepool, identifier, width, 1, 1, 1, flags, textype, GLTEXTURETYPE_1D, data, palette);
 }
 
-rtexture_t *R_LoadTexture2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, const unsigned char *data, int textype, int flags, const unsigned int *palette)
+rtexture_t *R_LoadTexture2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, const unsigned char *data, textype_t textype, int flags, const unsigned int *palette)
 {
 	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, flags, textype, GLTEXTURETYPE_2D, data, palette);
 }
 
-rtexture_t *R_LoadTexture3D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int depth, const unsigned char *data, int textype, int flags, const unsigned int *palette)
+rtexture_t *R_LoadTexture3D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int depth, const unsigned char *data, textype_t textype, int flags, const unsigned int *palette)
 {
 	return R_SetupTexture(rtexturepool, identifier, width, height, depth, 1, flags, textype, GLTEXTURETYPE_3D, data, palette);
 }
 
-rtexture_t *R_LoadTextureCubeMap(rtexturepool_t *rtexturepool, const char *identifier, int width, const unsigned char *data, int textype, int flags, const unsigned int *palette)
+rtexture_t *R_LoadTextureCubeMap(rtexturepool_t *rtexturepool, const char *identifier, int width, const unsigned char *data, textype_t textype, int flags, const unsigned int *palette)
 {
 	return R_SetupTexture(rtexturepool, identifier, width, width, 1, 6, flags, textype, GLTEXTURETYPE_CUBEMAP, data, palette);
 }

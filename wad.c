@@ -222,7 +222,7 @@ void W_LoadTextureWadFile (char *filename, int complain)
 	// leaves the file open
 }
 
-unsigned char *W_ConvertWAD3Texture(miptex_t *tex)
+unsigned char *W_ConvertWAD3TextureBGRA(miptex_t *tex)
 {
 	unsigned char *in, *data, *out, *pal;
 	int d, p;
@@ -243,9 +243,9 @@ unsigned char *W_ConvertWAD3Texture(miptex_t *tex)
 		else
 		{
 			p *= 3;
-			out[0] = pal[p];
+			out[2] = pal[p];
 			out[1] = pal[p+1];
-			out[2] = pal[p+2];
+			out[0] = pal[p+2];
 			out[3] = 255;
 		}
 		out += 4;
@@ -253,7 +253,7 @@ unsigned char *W_ConvertWAD3Texture(miptex_t *tex)
 	return data;
 }
 
-unsigned char *W_GetTexture(char *name)
+unsigned char *W_GetTextureBGRA(char *name)
 {
 	unsigned int i, j, k;
 	miptex_t *tex;
@@ -287,7 +287,7 @@ unsigned char *W_GetTexture(char *name)
 				tex->height = LittleLong(tex->height);
 				for (j = 0;j < MIPLEVELS;j++)
 					tex->offsets[j] = LittleLong(tex->offsets[j]);
-				data = W_ConvertWAD3Texture(tex);
+				data = W_ConvertWAD3TextureBGRA(tex);
 				Mem_Free(tex);
 				return data;
 			}

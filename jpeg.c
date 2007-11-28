@@ -495,14 +495,14 @@ static void JPEG_ErrorExit (j_common_ptr cinfo)
 ====================
 JPEG_LoadImage
 
-Load a JPEG image into a RGBA buffer
+Load a JPEG image into a BGRA buffer
 ====================
 */
-unsigned char* JPEG_LoadImage (const unsigned char *f, int filesize, int matchwidth, int matchheight)
+unsigned char* JPEG_LoadImage_BGRA (const unsigned char *f, int filesize)
 {
 	struct jpeg_decompress_struct cinfo;
 	struct jpeg_error_mgr jerr;
-	unsigned char *image_rgba, *scanline;
+	unsigned char *image_buffer, *scanline;
 	unsigned int line;
 
 	// No DLL = no JPEGs
@@ -518,24 +518,18 @@ unsigned char* JPEG_LoadImage (const unsigned char *f, int filesize, int matchwi
 	image_width = cinfo.image_width;
 	image_height = cinfo.image_height;
 
-	if ((matchwidth && image_width != matchwidth) || (matchheight && image_height != matchheight))
-	{
-		qjpeg_finish_decompress (&cinfo);
-		qjpeg_destroy_decompress (&cinfo);
-		return NULL;
-	}
 	if (image_width > 4096 || image_height > 4096 || image_width <= 0 || image_height <= 0)
 	{
 		Con_Printf("JPEG_LoadImage: invalid image size %ix%i\n", image_width, image_height);
 		return NULL;
 	}
 
-	image_rgba = (unsigned char *)Mem_Alloc(tempmempool, image_width * image_height * 4);
+	image_buffer = (unsigned char *)Mem_Alloc(tempmempool, image_width * image_height * 4);
 	scanline = (unsigned char *)Mem_Alloc(tempmempool, image_width * cinfo.output_components);
-	if (!image_rgba || !scanline)
+	if (!image_buffer || !scanline)
 	{
-		if (image_rgba)
-			Mem_Free (image_rgba);
+		if (image_buffer)
+			Mem_Free (image_buffer);
 		if (scanline)
 			Mem_Free (scanline);
 
@@ -554,17 +548,17 @@ unsigned char* JPEG_LoadImage (const unsigned char *f, int filesize, int matchwi
 
 		qjpeg_read_scanlines (&cinfo, &scanline, 1);
 
-		// Convert the image to RGBA
+		// Convert the image to BGRA
 		switch (cinfo.output_components)
 		{
 			// RGB images
 			case 3:
-				buffer_ptr = &image_rgba[image_width * line * 4];
+				buffer_ptr = &image_buffer[image_width * line * 4];
 				for (ind = 0; ind < image_width * 3; ind += 3, buffer_ptr += 4)
 				{
-					buffer_ptr[0] = scanline[ind];
+					buffer_ptr[2] = scanline[ind];
 					buffer_ptr[1] = scanline[ind + 1];
-					buffer_ptr[2] = scanline[ind + 2];
+					buffer_ptr[0] = scanline[ind + 2];
 					buffer_ptr[3] = 255;
 				}
 				break;
@@ -572,7 +566,7 @@ unsigned char* JPEG_LoadImage (const unsigned char *f, int filesize, int matchwi
 			// Greyscale images (default to it, just in case)
 			case 1:
 			default:
-				buffer_ptr = &image_rgba[image_width * line * 4];
+				buffer_ptr = &image_buffer[image_width * line * 4];
 				for (ind = 0; ind < image_width; ind++, buffer_ptr += 4)
 				{
 					buffer_ptr[0] = scanline[ind];
@@ -589,7 +583,7 @@ unsigned char* JPEG_LoadImage (const unsigned char *f, int filesize, int matchwi
 	qjpeg_finish_decompress (&cinfo);
 	qjpeg_destroy_decompress (&cinfo);
 
-	return image_rgba;
+	return image_buffer;
 }
 
 

@@ -26,7 +26,7 @@
 
 qboolean PNG_OpenLibrary (void);
 void PNG_CloseLibrary (void);
-unsigned char* PNG_LoadImage (const unsigned char *f, int filesize, int matchwidth, int matchheight);
+unsigned char* PNG_LoadImage_BGRA (const unsigned char *f, int filesize);
 
 #endif
 

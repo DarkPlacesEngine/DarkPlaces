@@ -89,7 +89,7 @@ int R_LoadSkyBox(void)
 	int i, j, success;
 	int indices[4] = {0,1,2,3};
 	char name[MAX_INPUTLINE];
-	unsigned char *image_rgba;
+	unsigned char *image_buffer;
 	unsigned char *temp;
 
 	R_UnloadSkyBox();
@@ -102,21 +102,21 @@ int R_LoadSkyBox(void)
 		success = 0;
 		for (i=0; i<6; i++)
 		{
-			if (dpsnprintf(name, sizeof(name), "%s_%s", skyname, suffix[j][i].suffix) < 0 || !(image_rgba = loadimagepixels(name, false, 0, 0, false)))
+			if (dpsnprintf(name, sizeof(name), "%s_%s", skyname, suffix[j][i].suffix) < 0 || !(image_buffer = loadimagepixelsbgra(name, false, false)))
 			{
-				if (dpsnprintf(name, sizeof(name), "%s%s", skyname, suffix[j][i].suffix) < 0 || !(image_rgba = loadimagepixels(name, false, 0, 0, false)))
+				if (dpsnprintf(name, sizeof(name), "%s%s", skyname, suffix[j][i].suffix) < 0 || !(image_buffer = loadimagepixelsbgra(name, false, false)))
 				{
-					if (dpsnprintf(name, sizeof(name), "env/%s%s", skyname, suffix[j][i].suffix) < 0 || !(image_rgba = loadimagepixels(name, false, 0, 0, false)))
+					if (dpsnprintf(name, sizeof(name), "env/%s%s", skyname, suffix[j][i].suffix) < 0 || !(image_buffer = loadimagepixelsbgra(name, false, false)))
 					{
-						if (dpsnprintf(name, sizeof(name), "gfx/env/%s%s", skyname, suffix[j][i].suffix) < 0 || !(image_rgba = loadimagepixels(name, false, 0, 0, false)))
+						if (dpsnprintf(name, sizeof(name), "gfx/env/%s%s", skyname, suffix[j][i].suffix) < 0 || !(image_buffer = loadimagepixelsbgra(name, false, false)))
 							continue;
 					}
 				}
 			}
 			temp = (unsigned char *)Mem_Alloc(tempmempool, image_width*image_height*4);
-			Image_CopyMux (temp, image_rgba, image_width, image_height, suffix[j][i].flipx, suffix[j][i].flipy, suffix[j][i].flipdiagonal, 4, 4, indices);
-			skyboxside[i] = R_LoadTexture2D(skytexturepool, va("skyboxside%d", i), image_width, image_height, temp, TEXTYPE_RGBA, TEXF_CLAMP | TEXF_PRECACHE | (gl_texturecompression_sky.integer ? TEXF_COMPRESS : 0), NULL);
-			Mem_Free(image_rgba);
+			Image_CopyMux (temp, image_buffer, image_width, image_height, suffix[j][i].flipx, suffix[j][i].flipy, suffix[j][i].flipdiagonal, 4, 4, indices);
+			skyboxside[i] = R_LoadTexture2D(skytexturepool, va("skyboxside%d", i), image_width, image_height, temp, TEXTYPE_BGRA, TEXF_CLAMP | TEXF_PRECACHE | (gl_texturecompression_sky.integer ? TEXF_COMPRESS : 0), NULL);
+			Mem_Free(image_buffer);
 			Mem_Free(temp);
 			success++;
 		}

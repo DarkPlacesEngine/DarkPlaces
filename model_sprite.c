@@ -59,7 +59,7 @@ static void Mod_SpriteSetupTexture(texture_t *texture, skinframe_t *skinframe, q
 	texture->currentskinframe = texture->skinframes[0] = skinframe;
 }
 
-static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version, const unsigned int *palette, const unsigned int *alphapalette, qboolean additive)
+static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version, const unsigned int *palette, qboolean additive)
 {
 	int					i, j, groupframes, realframes, x, y, origin[2], width, height, fullbright;
 	dspriteframetype_t	*pinframetype;
@@ -181,19 +181,32 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 				if (width > 0 && height > 0)
 				{
 					if (groupframes > 1)
+					{
 						sprintf (name, "%s_%i_%i", loadmodel->name, i, j);
+						sprintf (fogname, "%s_%i_%ifog", loadmodel->name, i, j);
+					}
 					else
+					{
 						sprintf (name, "%s_%i", loadmodel->name, i);
+						sprintf (fogname, "%s_%ifog", loadmodel->name, i);
+					}
 					if (!(skinframe = R_SkinFrame_LoadExternal(name, texflags | TEXF_COMPRESS, false)))
 					{
-						if (groupframes > 1)
-							sprintf (fogname, "%s_%i_%ifog", loadmodel->name, i, j);
-						else
-							sprintf (fogname, "%s_%ifog", loadmodel->name, i);
+						unsigned char *pixels = Mem_Alloc(loadmodel->mempool, width*height*4);
 						if (version == SPRITE32_VERSION)
-							skinframe = R_SkinFrame_LoadInternal(name, texflags, false, false, datapointer, width, height, 32, NULL, NULL);
-						else //if (version == SPRITE_VERSION || version == SPRITEHL_VERSION)
-							skinframe = R_SkinFrame_LoadInternal(name, texflags, false, false, datapointer, width, height, 8, palette, alphapalette);
+						{
+							for (x = 0;x < width*height;x++)
+							{
+								pixels[i*4+2] = datapointer[i*4+0];
+								pixels[i*4+1] = datapointer[i*4+1];
+								pixels[i*4+0] = datapointer[i*4+2];
+								pixels[i*4+3] = datapointer[i*4+3];
+							}
+						}
+						else //if (version == SPRITEHL_VERSION || version == SPRITE_VERSION)
+							Image_Copy8bitBGRA(datapointer, pixels, width*height, palette ? palette : palette_bgra_transparent);
+						skinframe = R_SkinFrame_LoadInternalBGRA(name, texflags, pixels, width, height);
+						Mem_Free(pixels);
 					}
 				}
 				if (skinframe == NULL)
@@ -251,12 +264,12 @@ void Mod_IDSP_Load(model_t *mod, void *buffer, void *bufferend)
 		loadmodel->sprite.sprnum_type = LittleLong (pinqsprite->type);
 		loadmodel->synctype = (synctype_t)LittleLong (pinqsprite->synctype);
 
-		Mod_Sprite_SharedSetup(datapointer, LittleLong (pinqsprite->version), NULL, NULL, false);
+		Mod_Sprite_SharedSetup(datapointer, LittleLong (pinqsprite->version), NULL, false);
 	}
 	else if (version == SPRITEHL_VERSION)
 	{
 		int i, rendermode;
-		unsigned char palette[256][4], alphapalette[256][4];
+		unsigned char palette[256][4];
 		const unsigned char *in;
 		dspritehl_t *pinhlsprite;
 
@@ -280,18 +293,18 @@ void Mod_IDSP_Load(model_t *mod, void *buffer, void *bufferend)
 		case SPRHL_OPAQUE:
 			for (i = 0;i < 256;i++)
 			{
-				palette[i][0] = *in++;
-				palette[i][1] = *in++;
-				palette[i][2] = *in++;
+				palette[i][2] = in[i*3+0];
+				palette[i][1] = in[i*3+1];
+				palette[i][0] = in[i*3+2];
 				palette[i][3] = 255;
 			}
 			break;
 		case SPRHL_ADDITIVE:
 			for (i = 0;i < 256;i++)
 			{
-				palette[i][0] = *in++;
-				palette[i][1] = *in++;
-				palette[i][2] = *in++;
+				palette[i][2] = in[i*3+0];
+				palette[i][1] = in[i*3+1];
+				palette[i][0] = in[i*3+2];
 				palette[i][3] = 255;
 			}
 			// also passes additive == true to Mod_Sprite_SharedSetup
@@ -299,9 +312,9 @@ void Mod_IDSP_Load(model_t *mod, void *buffer, void *bufferend)
 		case SPRHL_INDEXALPHA:
 			for (i = 0;i < 256;i++)
 			{
-				palette[i][0] = in[765];
+				palette[i][2] = in[765];
 				palette[i][1] = in[766];
-				palette[i][2] = in[767];
+				palette[i][0] = in[767];
 				palette[i][3] = i;
 				in += 3;
 			}
@@ -309,9 +322,9 @@ void Mod_IDSP_Load(model_t *mod, void *buffer, void *bufferend)
 		case SPRHL_ALPHATEST:
 			for (i = 0;i < 256;i++)
 			{
-				palette[i][0] = *in++;
-				palette[i][1] = *in++;
-				palette[i][2] = *in++;
+				palette[i][2] = in[i*3+0];
+				palette[i][1] = in[i*3+1];
+				palette[i][0] = in[i*3+2];
 				palette[i][3] = 255;
 			}
 			palette[255][0] = palette[255][1] = palette[255][2] = palette[255][3] = 0;
@@ -322,15 +335,7 @@ void Mod_IDSP_Load(model_t *mod, void *buffer, void *bufferend)
 			return;
 		}
 
-		for (i = 0;i < 256;i++)
-		{
-			alphapalette[i][0] = 255;
-			alphapalette[i][1] = 255;
-			alphapalette[i][2] = 255;
-			alphapalette[i][3] = palette[i][3];
-		}
-
-		Mod_Sprite_SharedSetup(datapointer, LittleLong (pinhlsprite->version), (unsigned int *)(&palette[0][0]), (unsigned int *)(&alphapalette[0][0]), rendermode == SPRHL_ADDITIVE);
+		Mod_Sprite_SharedSetup(datapointer, LittleLong (pinhlsprite->version), (unsigned int *)(&palette[0][0]), rendermode == SPRHL_ADDITIVE);
 	}
 	else
 		Host_Error("Mod_IDSP_Load: %s has wrong version number (%i). Only %i (quake), %i (HalfLife), and %i (sprite32) supported",

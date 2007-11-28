@@ -23,12 +23,16 @@
 // used for checking if textures mismatch
 #define TEXF_IMPORTANTBITS (TEXF_ALPHA | TEXF_MIPMAP | TEXF_CLAMP | TEXF_FORCENEAREST | TEXF_FORCELINEAR | TEXF_PICMIP | TEXF_COMPRESS)
 
-// 8bit paletted
-#define TEXTYPE_PALETTE 1
-// 32bit RGBA
-#define TEXTYPE_RGBA 3
-// 32bit BGRA (preferred format due to faster uploads on most hardware)
-#define TEXTYPE_BGRA 4
+typedef enum textype_e
+{
+	// 8bit paletted
+	TEXTYPE_PALETTE,
+	// 32bit RGBA
+	TEXTYPE_RGBA,
+	// 32bit BGRA (preferred format due to faster uploads on most hardware)
+	TEXTYPE_BGRA,
+}
+textype_t;
 
 // contents of this structure are mostly private to gl_textures.c
 typedef struct rtexture_s
@@ -67,10 +71,10 @@ extern cvar_t gl_texturecompression_lightcubemaps;
 // add a texture to a pool and optionally precache (upload) it
 // (note: data == NULL is perfectly acceptable)
 // (note: palette must not be NULL if using TEXTYPE_PALETTE)
-rtexture_t *R_LoadTexture1D(rtexturepool_t *rtexturepool, const char *identifier, int width, const unsigned char *data, int textype, int flags, const unsigned int *palette);
-rtexture_t *R_LoadTexture2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, const unsigned char *data, int textype, int flags, const unsigned int *palette);
-rtexture_t *R_LoadTexture3D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int depth, const unsigned char *data, int textype, int flags, const unsigned int *palette);
-rtexture_t *R_LoadTextureCubeMap(rtexturepool_t *rtexturepool, const char *identifier, int width, const unsigned char *data, int textype, int flags, const unsigned int *palette);
+rtexture_t *R_LoadTexture1D(rtexturepool_t *rtexturepool, const char *identifier, int width, const unsigned char *data, textype_t textype, int flags, const unsigned int *palette);
+rtexture_t *R_LoadTexture2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, const unsigned char *data, textype_t textype, int flags, const unsigned int *palette);
+rtexture_t *R_LoadTexture3D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int depth, const unsigned char *data, textype_t textype, int flags, const unsigned int *palette);
+rtexture_t *R_LoadTextureCubeMap(rtexturepool_t *rtexturepool, const char *identifier, int width, const unsigned char *data, textype_t textype, int flags, const unsigned int *palette);
 
 // free a texture
 void R_FreeTexture(rtexture_t *rt);

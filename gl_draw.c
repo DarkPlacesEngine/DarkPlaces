@@ -54,50 +54,50 @@ static rtexture_t *draw_generateconchars(void)
 	unsigned char buffer[65536][4], *data = NULL;
 	double random;
 
-	data = LoadTGA (concharimage, FONT_FILESIZE, 256, 256);
+	data = LoadTGA_BGRA (concharimage, FONT_FILESIZE);
 // Gold numbers
 	for (i = 0;i < 8192;i++)
 	{
 		random = lhrandom (0.0,1.0);
-		buffer[i][0] = 83 + (unsigned char)(random * 64);
+		buffer[i][2] = 83 + (unsigned char)(random * 64);
 		buffer[i][1] = 71 + (unsigned char)(random * 32);
-		buffer[i][2] = 23 + (unsigned char)(random * 16);
+		buffer[i][0] = 23 + (unsigned char)(random * 16);
 		buffer[i][3] = data[i*4+0];
 	}
 // White chars
 	for (i = 8192;i < 32768;i++)
 	{
 		random = lhrandom (0.0,1.0);
-		buffer[i][0] = 95 + (unsigned char)(random * 64);
-		buffer[i][1] = 95 + (unsigned char)(random * 64);
 		buffer[i][2] = 95 + (unsigned char)(random * 64);
+		buffer[i][1] = 95 + (unsigned char)(random * 64);
+		buffer[i][0] = 95 + (unsigned char)(random * 64);
 		buffer[i][3] = data[i*4+0];
 	}
 // Gold numbers
 	for (i = 32768;i < 40960;i++)
 	{
 		random = lhrandom (0.0,1.0);
-		buffer[i][0] = 83 + (unsigned char)(random * 64);
+		buffer[i][2] = 83 + (unsigned char)(random * 64);
 		buffer[i][1] = 71 + (unsigned char)(random * 32);
-		buffer[i][2] = 23 + (unsigned char)(random * 16);
+		buffer[i][0] = 23 + (unsigned char)(random * 16);
 		buffer[i][3] = data[i*4+0];
 	}
 // Red chars
 	for (i = 40960;i < 65536;i++)
 	{
 		random = lhrandom (0.0,1.0);
-		buffer[i][0] = 96 + (unsigned char)(random * 64);
+		buffer[i][2] = 96 + (unsigned char)(random * 64);
 		buffer[i][1] = 43 + (unsigned char)(random * 32);
-		buffer[i][2] = 27 + (unsigned char)(random * 32);
+		buffer[i][0] = 27 + (unsigned char)(random * 32);
 		buffer[i][3] = data[i*4+0];
 	}
 
 #if 0
-	Image_WriteTGARGBA ("gfx/generated_conchars.tga", 256, 256, &buffer[0][0]);
+	Image_WriteTGABGRA ("gfx/generated_conchars.tga", 256, 256, &buffer[0][0]);
 #endif
 
 	Mem_Free(data);
-	return R_LoadTexture2D(drawtexturepool, "conchars", 256, 256, &buffer[0][0], TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
+	return R_LoadTexture2D(drawtexturepool, "conchars", 256, 256, &buffer[0][0], TEXTYPE_BGRA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
 }
 
 static char *pointerimage =
@@ -140,7 +140,7 @@ static rtexture_t *draw_generatemousepointer(void)
 			buffer[i][3] = 255;
 		}
 	}
-	return R_LoadTexture2D(drawtexturepool, "mousepointer", 16, 16, &buffer[0][0], TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
+	return R_LoadTexture2D(drawtexturepool, "mousepointer", 16, 16, &buffer[0][0], TEXTYPE_BGRA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
 }
 
 static char *crosshairtexdata[NUMCROSSHAIRS] =
@@ -269,7 +269,7 @@ static rtexture_t *draw_generatecrosshair(int num)
 			data[i][3] = 255;
 		}
 	}
-	return R_LoadTexture2D(drawtexturepool, va("crosshair%i", num+1), 16, 16, &data[0][0], TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
+	return R_LoadTexture2D(drawtexturepool, va("crosshair%i", num+1), 16, 16, &data[0][0], TEXTYPE_BGRA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
 }
 
 static rtexture_t *draw_generateditherpattern(void)
@@ -285,12 +285,12 @@ static rtexture_t *draw_generateditherpattern(void)
 			data[(y*8+x)*4+3] = 255;
 		}
 	}
-	return R_LoadTexture2D(drawtexturepool, "ditherpattern", 8, 8, data, TEXTYPE_RGBA, TEXF_FORCENEAREST | TEXF_PRECACHE, NULL);
+	return R_LoadTexture2D(drawtexturepool, "ditherpattern", 8, 8, data, TEXTYPE_BGRA, TEXF_FORCENEAREST | TEXF_PRECACHE, NULL);
 #else
 	unsigned char data[16];
 	memset(data, 255, sizeof(data));
 	data[0] = data[1] = data[2] = data[12] = data[13] = data[14] = 0;
-	return R_LoadTexture2D(drawtexturepool, "ditherpattern", 2, 2, data, TEXTYPE_RGBA, TEXF_FORCENEAREST | TEXF_PRECACHE, NULL);
+	return R_LoadTexture2D(drawtexturepool, "ditherpattern", 2, 2, data, TEXTYPE_BGRA, TEXF_FORCENEAREST | TEXF_PRECACHE, NULL);
 #endif
 }
 
@@ -345,11 +345,11 @@ cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 		flags |= TEXF_CLAMP;
 
 	// load a high quality image from disk if possible
-	pic->tex = loadtextureimage(drawtexturepool, path, 0, 0, false, flags | (gl_texturecompression_2d.integer ? TEXF_COMPRESS : 0), true);
+	pic->tex = loadtextureimage(drawtexturepool, path, false, flags | (gl_texturecompression_2d.integer ? TEXF_COMPRESS : 0), true);
 	if (pic->tex == NULL && !strncmp(path, "gfx/", 4))
 	{
 		// compatibility with older versions which did not require gfx/ prefix
-		pic->tex = loadtextureimage(drawtexturepool, path + 4, 0, 0, false, flags | (gl_texturecompression_2d.integer ? TEXF_COMPRESS : 0), true);
+		pic->tex = loadtextureimage(drawtexturepool, path + 4, false, flags | (gl_texturecompression_2d.integer ? TEXF_COMPRESS : 0), true);
 	}
 	// if a high quality image was loaded, set the pic's size to match it, just
 	// in case there's no low quality version to get the size from
@@ -372,7 +372,7 @@ cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 			pic->height = lmpdata[4] + lmpdata[5] * 256 + lmpdata[6] * 65536 + lmpdata[7] * 16777216;
 			// if no high quality replacement image was found, upload the original low quality texture
 			if (!pic->tex)
-				pic->tex = R_LoadTexture2D(drawtexturepool, path, pic->width, pic->height, lmpdata + 8, TEXTYPE_PALETTE, flags, palette_transparent);
+				pic->tex = R_LoadTexture2D(drawtexturepool, path, pic->width, pic->height, lmpdata + 8, TEXTYPE_PALETTE, flags, palette_bgra_transparent);
 		}
 		Mem_Free(lmpdata);
 	}
@@ -385,7 +385,7 @@ cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 			pic->height = 128;
 			// if no high quality replacement image was found, upload the original low quality texture
 			if (!pic->tex)
-				pic->tex = R_LoadTexture2D(drawtexturepool, path, 128, 128, lmpdata, TEXTYPE_PALETTE, flags, palette_font);
+				pic->tex = R_LoadTexture2D(drawtexturepool, path, 128, 128, lmpdata, TEXTYPE_PALETTE, flags, palette_bgra_font);
 		}
 		else
 		{
@@ -393,7 +393,7 @@ cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 			pic->height = lmpdata[4] + lmpdata[5] * 256 + lmpdata[6] * 65536 + lmpdata[7] * 16777216;
 			// if no high quality replacement image was found, upload the original low quality texture
 			if (!pic->tex)
-				pic->tex = R_LoadTexture2D(drawtexturepool, path, pic->width, pic->height, lmpdata + 8, TEXTYPE_PALETTE, flags, palette_transparent);
+				pic->tex = R_LoadTexture2D(drawtexturepool, path, pic->width, pic->height, lmpdata + 8, TEXTYPE_PALETTE, flags, palette_bgra_transparent);
 		}
 	}
 
@@ -434,7 +434,7 @@ cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 	return pic;
 }
 
-cachepic_t *Draw_NewPic(const char *picname, int width, int height, int alpha, unsigned char *pixels)
+cachepic_t *Draw_NewPic(const char *picname, int width, int height, int alpha, unsigned char *pixels_bgra)
 {
 	int crc, hashkey;
 	cachepic_t *pic;
@@ -449,7 +449,7 @@ cachepic_t *Draw_NewPic(const char *picname, int width, int height, int alpha, u
 	{
 		if (pic->tex && pic->width == width && pic->height == height)
 		{
-			R_UpdateTexture(pic->tex, pixels, 0, 0, width, height);
+			R_UpdateTexture(pic->tex, pixels_bgra, 0, 0, width, height);
 			return pic;
 		}
 	}
@@ -475,7 +475,7 @@ cachepic_t *Draw_NewPic(const char *picname, int width, int height, int alpha, u
 	pic->height = height;
 	if (pic->tex)
 		R_FreeTexture(pic->tex);
-	pic->tex = R_LoadTexture2D(drawtexturepool, picname, width, height, pixels, TEXTYPE_RGBA, alpha ? TEXF_ALPHA : 0, NULL);
+	pic->tex = R_LoadTexture2D(drawtexturepool, picname, width, height, pixels_bgra, TEXTYPE_BGRA, alpha ? TEXF_ALPHA : 0, NULL);
 	return pic;
 }
 

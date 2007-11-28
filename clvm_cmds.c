@@ -1654,7 +1654,7 @@ static void VM_CL_te_explosion2 (void)
 	colorLength = (int)PRVM_G_FLOAT(OFS_PARM2);
 	CL_FindNonSolidLocation(pos, pos2, 10);
 	CL_ParticleExplosion2(pos2, colorStart, colorLength);
-	tempcolor = (unsigned char *)&palette_complete[(rand()%colorLength) + colorStart];
+	tempcolor = palette_rgb[(rand()%colorLength) + colorStart];
 	color[0] = tempcolor[0] * (2.0f / 255.0f);
 	color[1] = tempcolor[1] * (2.0f / 255.0f);
 	color[2] = tempcolor[2] * (2.0f / 255.0f);
