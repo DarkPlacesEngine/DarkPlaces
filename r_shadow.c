@@ -281,6 +281,15 @@ void R_Shadow_EditLights_Reload_f(void);
 void R_Shadow_ValidateCvars(void);
 static void R_Shadow_MakeTextures(void);
 
+// VorteX: custom editor light sprites
+#define EDLIGHTSPRSIZE			8
+#define EDLIGHTSELECTSPRSIZE	12
+cachepic_t *r_editlights_sprcursor;
+cachepic_t *r_editlights_sprlight;
+cachepic_t *r_editlights_sprnoshadowlight;
+cachepic_t *r_editlights_sprcubemap;
+cachepic_t *r_editlights_sprselection;
+
 void r_shadow_start(void)
 {
 	// allocate vertex processing arrays
@@ -953,6 +962,13 @@ static void R_Shadow_MakeTextures(void)
 	else
 		r_shadow_attenuation3dtexture = NULL;
 	Mem_Free(data);
+
+	// Editor light sprites
+	r_editlights_sprcursor = Draw_CachePic("gfx/editlights/cursor", true);
+	r_editlights_sprlight = Draw_CachePic("gfx/editlights/light", true);
+	r_editlights_sprnoshadowlight = Draw_CachePic("gfx/editlights/noshadow", true);
+	r_editlights_sprcubemap = Draw_CachePic("gfx/editlights/cubemap", true);
+	r_editlights_sprselection = Draw_CachePic("gfx/editlights/selection", true);
 }
 
 void R_Shadow_ValidateCvars(void)
@@ -3352,22 +3368,42 @@ void R_Shadow_SelectLight(dlight_t *light)
 void R_Shadow_DrawCursor_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
 	// this is never batched (there can be only one)
-	float scale = r_editlights_cursorgrid.value * 0.5f;
-	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, r_crosshairs[1]->tex, NULL, false, false, r_editlights_cursorlocation, r_view.right, r_view.up, scale, -scale, -scale, scale, 1, 1, 1, 0.5f);
+	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, r_editlights_sprcursor->tex, NULL, false, false, r_editlights_cursorlocation, r_view.right, r_view.up, EDLIGHTSPRSIZE, -EDLIGHTSPRSIZE, -EDLIGHTSPRSIZE, EDLIGHTSPRSIZE, 1, 1, 1, 0.5f);
 }
 
 void R_Shadow_DrawLightSprite_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
+	float intensity;
+	float scaling;
+	vec3_t spritecolor;
+
 	// this is never batched (due to the ent parameter changing every time)
 	// so numsurfaces == 1 and surfacelist[0] == lightnumber
-	float intensity;
 	const dlight_t *light = (dlight_t *)ent;
-	intensity = 0.5;
+	intensity = 1;
+	scaling = 1;
 	if (light->selected)
-		intensity = 0.75 + 0.25 * sin(realtime * M_PI * 4.0);
+		scaling = 1.25 + 0.25*sin(realtime * M_PI * 1.5);
+	// vortex: get sprites color (solve 0 0 0 colored light being invisible here)
+	spritecolor[0] = max(0.1, light->color[0]);
+	spritecolor[1] = max(0.1, light->color[1]);
+	spritecolor[2] = max(0.1, light->color[2]);
+
+	// draw light sprite
 	if (!light->shadow)
+	{
 		intensity *= 0.5f;
-	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, r_crosshairs[surfacelist[0]]->tex, NULL, false, false, light->origin, r_view.right, r_view.up, 8, -8, -8, 8, intensity, intensity, intensity, 0.5f);
+		R_DrawSprite(GL_SRC_ALPHA, GL_ONE, r_editlights_sprnoshadowlight->tex, NULL, false, false, light->origin, r_view.right, r_view.up, EDLIGHTSPRSIZE*scaling, -EDLIGHTSPRSIZE*scaling, -EDLIGHTSPRSIZE*scaling, EDLIGHTSPRSIZE*scaling, spritecolor[0]*intensity, spritecolor[1]*intensity, spritecolor[2]*intensity, 1);
+	}
+	else
+		R_DrawSprite(GL_SRC_ALPHA, GL_ONE, r_editlights_sprlight->tex, NULL, false, false, light->origin, r_view.right, r_view.up, EDLIGHTSELECTSPRSIZE*scaling, -EDLIGHTSELECTSPRSIZE*scaling, -EDLIGHTSELECTSPRSIZE*scaling, EDLIGHTSELECTSPRSIZE*scaling, spritecolor[0]*intensity, spritecolor[1]*intensity, spritecolor[2]*intensity, 1);
+	// draw cubemap sprite over light
+	if (light->cubemapname[0])
+		R_DrawSprite(GL_SRC_ALPHA, GL_ONE, r_editlights_sprcubemap->tex, NULL, false, false, light->origin, r_view.right, r_view.up, EDLIGHTSPRSIZE*scaling, -EDLIGHTSPRSIZE*scaling, -EDLIGHTSPRSIZE*scaling, EDLIGHTSPRSIZE*scaling, spritecolor[0]*intensity, spritecolor[1]*intensity, spritecolor[2]*intensity, 1);
+	// draw selection sprite if light is selected
+	if (light->selected)
+		R_DrawSprite(GL_SRC_ALPHA, GL_ONE, r_editlights_sprselection->tex, NULL, false, false, light->origin, r_view.right, r_view.up, EDLIGHTSPRSIZE*scaling, -EDLIGHTSPRSIZE*scaling, -EDLIGHTSPRSIZE*scaling, EDLIGHTSPRSIZE*scaling, spritecolor[0]*intensity, spritecolor[1]*intensity, spritecolor[2]*intensity, 1);
+	// VorteX todo: add normalmode/realtime mode light overlay sprites?
 }
 
 void R_Shadow_DrawLightSprites(void)
@@ -4249,29 +4285,32 @@ void R_Shadow_EditLights_DrawSelectedLightProperties(void)
 	char temp[256];
 	if (!r_editlights.integer)
 		return;
-	x = 0;
-	y = con_vislines;
+	x = vid_conwidth.value - 240;
+	y = 5;
+	DrawQ_Pic(x-5, y-5, NULL, 250, 155, 0, 0, 0, 0.75, 0);
 	lightnumber = -1;
 	lightcount = 0;
 	for (lightcount = 0, light = r_shadow_worldlightchain;light;lightcount++, light = light->next)
 		if (light == r_shadow_selectedlight)
 			lightnumber = lightcount;
-	sprintf(temp, "Cursor  %f %f %f  Total Lights %i", r_editlights_cursorlocation[0], r_editlights_cursorlocation[1], r_editlights_cursorlocation[2], lightcount);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, true);y += 8;
+	sprintf(temp, "Cursor origin: %.0f %.0f %.0f", r_editlights_cursorlocation[0], r_editlights_cursorlocation[1], r_editlights_cursorlocation[2]); DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, false);y += 8;
+	sprintf(temp, "Total lights : %i", lightcount); DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, false);y += 8;
+	y += 8;
 	if (r_shadow_selectedlight == NULL)
 		return;
-	sprintf(temp, "Light #%i properties", lightnumber);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, true);y += 8;
-	sprintf(temp, "Origin       : %f %f %f\n", r_shadow_selectedlight->origin[0], r_shadow_selectedlight->origin[1], r_shadow_selectedlight->origin[2]);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, true);y += 8;
-	sprintf(temp, "Angles       : %f %f %f\n", r_shadow_selectedlight->angles[0], r_shadow_selectedlight->angles[1], r_shadow_selectedlight->angles[2]);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, true);y += 8;
-	sprintf(temp, "Color        : %f %f %f\n", r_shadow_selectedlight->color[0], r_shadow_selectedlight->color[1], r_shadow_selectedlight->color[2]);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, true);y += 8;
-	sprintf(temp, "Radius       : %f\n", r_shadow_selectedlight->radius);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, true);y += 8;
-	sprintf(temp, "Corona       : %f\n", r_shadow_selectedlight->corona);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, true);y += 8;
+	sprintf(temp, "Light #%i properties:", lightnumber);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, true);y += 8;
+	sprintf(temp, "Origin       : %.0f %.0f %.0f\n", r_shadow_selectedlight->origin[0], r_shadow_selectedlight->origin[1], r_shadow_selectedlight->origin[2]);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, true);y += 8;
+	sprintf(temp, "Angles       : %.0f %.0f %.0f\n", r_shadow_selectedlight->angles[0], r_shadow_selectedlight->angles[1], r_shadow_selectedlight->angles[2]);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, true);y += 8;
+	sprintf(temp, "Color        : %.2f %.2f %.2f\n", r_shadow_selectedlight->color[0], r_shadow_selectedlight->color[1], r_shadow_selectedlight->color[2]);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, true);y += 8;
+	sprintf(temp, "Radius       : %.0f\n", r_shadow_selectedlight->radius);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, true);y += 8;
+	sprintf(temp, "Corona       : %.0f\n", r_shadow_selectedlight->corona);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, true);y += 8;
 	sprintf(temp, "Style        : %i\n", r_shadow_selectedlight->style);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, true);y += 8;
 	sprintf(temp, "Shadows      : %s\n", r_shadow_selectedlight->shadow ? "yes" : "no");DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, true);y += 8;
 	sprintf(temp, "Cubemap      : %s\n", r_shadow_selectedlight->cubemapname);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, true);y += 8;
-	sprintf(temp, "CoronaSize   : %f\n", r_shadow_selectedlight->coronasizescale);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, true);y += 8;
-	sprintf(temp, "Ambient      : %f\n", r_shadow_selectedlight->ambientscale);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, true);y += 8;
-	sprintf(temp, "Diffuse      : %f\n", r_shadow_selectedlight->diffusescale);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, true);y += 8;
-	sprintf(temp, "Specular     : %f\n", r_shadow_selectedlight->specularscale);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, true);y += 8;
+	sprintf(temp, "CoronaSize   : %.2f\n", r_shadow_selectedlight->coronasizescale);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, true);y += 8;
+	sprintf(temp, "Ambient      : %.2f\n", r_shadow_selectedlight->ambientscale);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, true);y += 8;
+	sprintf(temp, "Diffuse      : %.2f\n", r_shadow_selectedlight->diffusescale);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, true);y += 8;
+	sprintf(temp, "Specular     : %.2f\n", r_shadow_selectedlight->specularscale);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, true);y += 8;
 	sprintf(temp, "NormalMode   : %s\n", (r_shadow_selectedlight->flags & LIGHTFLAG_NORMALMODE) ? "yes" : "no");DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, true);y += 8;
 	sprintf(temp, "RealTimeMode : %s\n", (r_shadow_selectedlight->flags & LIGHTFLAG_REALTIMEMODE) ? "yes" : "no");DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, true);y += 8;
 }
