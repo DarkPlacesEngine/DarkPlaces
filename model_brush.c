@@ -1272,14 +1272,6 @@ void R_Q1BSP_LoadSplitSky (unsigned char *src, int width, int height, int bytesp
 	if (loadmodel->texturepool == NULL && cls.state != ca_dedicated)
 		loadmodel->texturepool = R_AllocTexturePool();
 
-	// if sky isn't the right size, just use it as a solid layer
-	if (width != 256 || height != 128)
-	{
-		loadmodel->brush.solidskytexture = R_LoadTexture2D(loadmodel->texturepool, "sky_solidtexture", width, height, src, bytesperpixel == 4 ? TEXTYPE_RGBA : TEXTYPE_PALETTE, TEXF_PRECACHE, bytesperpixel == 1 ? palette_complete : NULL);
-		loadmodel->brush.alphaskytexture = NULL;
-		return;
-	}
-
 	if (bytesperpixel == 4)
 	{
 		for (i = 0;i < 128;i++)
@@ -1301,34 +1293,35 @@ void R_Q1BSP_LoadSplitSky (unsigned char *src, int width, int height, int bytesp
 			unsigned int i;
 			unsigned char b[4];
 		}
-		rgba;
+		bgra;
 		r = g = b = 0;
 		for (i = 0;i < 128;i++)
 		{
 			for (j = 0;j < 128;j++)
 			{
-				rgba.i = palette_complete[src[i*256 + j + 128]];
-				r += rgba.b[0];
-				g += rgba.b[1];
-				b += rgba.b[2];
+				p = src[i*256 + j + 128];
+				r += palette_rgb[p][0];
+				g += palette_rgb[p][1];
+				b += palette_rgb[p][2];
 			}
 		}
-		rgba.b[0] = r/(128*128);
-		rgba.b[1] = g/(128*128);
-		rgba.b[2] = b/(128*128);
-		rgba.b[3] = 0;
+		bgra.b[2] = r/(128*128);
+		bgra.b[1] = g/(128*128);
+		bgra.b[0] = b/(128*128);
+		bgra.b[3] = 0;
 		for (i = 0;i < 128;i++)
 		{
 			for (j = 0;j < 128;j++)
 			{
-				solidpixels[(i*128) + j] = palette_complete[src[i*256 + j + 128]];
-				alphapixels[(i*128) + j] = (p = src[i*256 + j]) ? palette_complete[p] : rgba.i;
+				solidpixels[(i*128) + j] = palette_bgra_complete[src[i*256 + j + 128]];
+				p = src[i*256 + j];
+				alphapixels[(i*128) + j] = p ? palette_bgra_complete[p] : bgra.i;
 			}
 		}
 	}
 
-	loadmodel->brush.solidskytexture = R_LoadTexture2D(loadmodel->texturepool, "sky_solidtexture", 128, 128, (unsigned char *) solidpixels, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
-	loadmodel->brush.alphaskytexture = R_LoadTexture2D(loadmodel->texturepool, "sky_alphatexture", 128, 128, (unsigned char *) alphapixels, TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
+	loadmodel->brush.solidskytexture = R_LoadTexture2D(loadmodel->texturepool, "sky_solidtexture", 128, 128, (unsigned char *) solidpixels, TEXTYPE_BGRA, TEXF_PRECACHE, NULL);
+	loadmodel->brush.alphaskytexture = R_LoadTexture2D(loadmodel->texturepool, "sky_alphatexture", 128, 128, (unsigned char *) alphapixels, TEXTYPE_BGRA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
 }
 
 static void Mod_Q1BSP_LoadTextures(lump_t *l)
@@ -1508,8 +1501,8 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			{
 				if (loadmodel->isworldmodel)
 				{
-					data = loadimagepixels(tx->name, false, 0, 0, false);
-					if (data)
+					data = loadimagepixelsbgra(tx->name, false, false);
+					if (data && image_width == 256 && image_height == 128)
 					{
 						R_Q1BSP_LoadSplitSky(data, image_width, image_height, 4);
 						Mem_Free(data);
@@ -1532,20 +1525,20 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 						unsigned char *pixels, *freepixels;
 						pixels = freepixels = NULL;
 						if (mtdata)
-							pixels = W_ConvertWAD3Texture(dmiptex);
+							pixels = W_ConvertWAD3TextureBGRA(dmiptex);
 						if (pixels == NULL)
-							pixels = freepixels = W_GetTexture(tx->name);
+							pixels = freepixels = W_GetTextureBGRA(tx->name);
 						if (pixels != NULL)
 						{
 							tx->width = image_width;
 							tx->height = image_height;
-							skinframe = R_SkinFrame_LoadInternal(tx->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | (r_picmipworld.integer ? TEXF_PICMIP : 0), false, false, pixels, image_width, image_height, 32, NULL, NULL);
+							skinframe = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | (r_picmipworld.integer ? TEXF_PICMIP : 0), pixels, image_width, image_height);
 						}
 						if (freepixels)
 							Mem_Free(freepixels);
 					}
 					else if (mtdata) // texture included
-						skinframe = R_SkinFrame_LoadInternal(tx->name, TEXF_MIPMAP | TEXF_PRECACHE | (r_picmipworld.integer ? TEXF_PICMIP : 0), false, r_fullbrights.integer, mtdata, tx->width, tx->height, 8, NULL, NULL);
+						skinframe = R_SkinFrame_LoadInternalQuake(tx->name, TEXF_MIPMAP | TEXF_PRECACHE | (r_picmipworld.integer ? TEXF_PICMIP : 0), false, r_fullbrights.integer, mtdata, tx->width, tx->height);
 				}
 				// if skinframe is still NULL the "missing" texture will be used
 				if (skinframe)
@@ -2400,9 +2393,9 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 					if (loadmodel->texturepool == NULL)
 						loadmodel->texturepool = R_AllocTexturePool();
 					// could not find room, make a new lightmap
-					lightmaptexture = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%i", lightmapnumber), lightmapsize, lightmapsize, NULL, TEXTYPE_RGBA, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
+					lightmaptexture = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%i", lightmapnumber), lightmapsize, lightmapsize, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
 					if (loadmodel->brushq1.nmaplightdata)
-						deluxemaptexture = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%i", lightmapnumber), lightmapsize, lightmapsize, NULL, TEXTYPE_RGBA, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
+						deluxemaptexture = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%i", lightmapnumber), lightmapsize, lightmapsize, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
 					lightmapnumber++;
 					memset(lightmap_lineused, 0, sizeof(lightmap_lineused));
 					Mod_Q1BSP_AllocLightmapBlock(lightmap_lineused, lightmapsize, lightmapsize, ssize, tsize, &lightmapx, &lightmapy);
@@ -4535,9 +4528,9 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 		int lightmapindex = i >> (loadmodel->brushq3.deluxemapping + power2);
 		for (k = 0;k < 128*128;k++)
 		{
-			convertedpixels[k*4+0] = in[i].rgb[k*3+0];
+			convertedpixels[k*4+2] = in[i].rgb[k*3+0];
 			convertedpixels[k*4+1] = in[i].rgb[k*3+1];
-			convertedpixels[k*4+2] = in[i].rgb[k*3+2];
+			convertedpixels[k*4+0] = in[i].rgb[k*3+2];
 			convertedpixels[k*4+3] = 255;
 		}
 		if (loadmodel->brushq3.num_lightmapmergepower > 0)
@@ -4557,9 +4550,9 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 				for (mergeheight = 1;mergewidth*mergeheight < j && mergeheight < (1 << power);mergeheight *= 2)
 					;
 				Con_DPrintf("lightmap merge texture #%i is %ix%i (%i of %i used)\n", lightmapindex, mergewidth*128, mergeheight*128, min(j, mergewidth*mergeheight), mergewidth*mergeheight);
-				loadmodel->brushq3.data_lightmaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", lightmapindex), mergewidth * 128, mergeheight * 128, NULL, TEXTYPE_RGBA, TEXF_FORCELINEAR | TEXF_PRECACHE | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : 0), NULL);
+				loadmodel->brushq3.data_lightmaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", lightmapindex), mergewidth * 128, mergeheight * 128, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : 0), NULL);
 				if (loadmodel->brushq3.data_deluxemaps)
-					loadmodel->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%04i", lightmapindex), mergewidth * 128, mergeheight * 128, NULL, TEXTYPE_RGBA, TEXF_FORCELINEAR | TEXF_PRECACHE | (gl_texturecompression_q3bspdeluxemaps.integer ? TEXF_COMPRESS : 0), NULL);
+					loadmodel->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%04i", lightmapindex), mergewidth * 128, mergeheight * 128, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE | (gl_texturecompression_q3bspdeluxemaps.integer ? TEXF_COMPRESS : 0), NULL);
 			}
 			mergewidth = R_TextureWidth(loadmodel->brushq3.data_lightmaps[lightmapindex]) / 128;
 			mergeheight = R_TextureHeight(loadmodel->brushq3.data_lightmaps[lightmapindex]) / 128;
@@ -4573,9 +4566,9 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 		{
 			// figure out which merged lightmap texture this fits into
 			if (loadmodel->brushq3.deluxemapping && (i & 1))
-				loadmodel->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%04i", lightmapindex), 128, 128, convertedpixels, TEXTYPE_RGBA, TEXF_FORCELINEAR | TEXF_PRECACHE | (gl_texturecompression_q3bspdeluxemaps.integer ? TEXF_COMPRESS : 0), NULL);
+				loadmodel->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%04i", lightmapindex), 128, 128, convertedpixels, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE | (gl_texturecompression_q3bspdeluxemaps.integer ? TEXF_COMPRESS : 0), NULL);
 			else
-				loadmodel->brushq3.data_lightmaps [lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", lightmapindex), 128, 128, convertedpixels, TEXTYPE_RGBA, TEXF_FORCELINEAR | TEXF_PRECACHE | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : 0), NULL);
+				loadmodel->brushq3.data_lightmaps [lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", lightmapindex), 128, 128, convertedpixels, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : 0), NULL);
 		}
 	}
 }

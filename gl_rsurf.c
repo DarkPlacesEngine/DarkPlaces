@@ -96,12 +96,12 @@ void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 	// scaling, and remaps the 0-65536 (2x overbright) to 0-256, it will
 	// be doubled during rendering to achieve 2x overbright
 	// (0 = 0.0, 128 = 1.0, 256 = 2.0)
-	for (i = 0;i < size;i++)
+	for (i = 0;i < size;i++, bl += 3, stain += 3, out += 4)
 	{
-		l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
-		l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
-		l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
-		*out++ = 255;
+		l = (bl[0] * stain[0]) >> 16;out[2] = min(l, 255);
+		l = (bl[1] * stain[1]) >> 16;out[1] = min(l, 255);
+		l = (bl[2] * stain[2]) >> 16;out[0] = min(l, 255);
+		out[3] = 255;
 	}
 
 	R_UpdateTexture(surface->lightmaptexture, templight, surface->lightmapinfo->lightmaporigin[0], surface->lightmapinfo->lightmaporigin[1], smax, tmax);
@@ -133,14 +133,14 @@ void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 		bl = intblocklights;
 		out = templight;
 		// we simply renormalize the weighted normals to get a valid deluxemap
-		for (i = 0;i < size;i++, bl += 3)
+		for (i = 0;i < size;i++, bl += 3, out += 4)
 		{
 			VectorCopy(bl, n);
 			VectorNormalize(n);
-			l = (int)(n[0] * 128 + 128);*out++ = bound(0, l, 255);
-			l = (int)(n[1] * 128 + 128);*out++ = bound(0, l, 255);
-			l = (int)(n[2] * 128 + 128);*out++ = bound(0, l, 255);
-			*out++ = 255;
+			l = (int)(n[0] * 128 + 128);out[2] = bound(0, l, 255);
+			l = (int)(n[1] * 128 + 128);out[1] = bound(0, l, 255);
+			l = (int)(n[2] * 128 + 128);out[0] = bound(0, l, 255);
+			out[3] = 255;
 		}
 		R_UpdateTexture(surface->deluxemaptexture, templight, surface->lightmapinfo->lightmaporigin[0], surface->lightmapinfo->lightmaporigin[1], smax, tmax);
 	}
@@ -1191,6 +1191,7 @@ void R_ReplaceWorldTexture (void)
 			if ((skinframe = R_SkinFrame_LoadExternal(newt, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, true)))
 			{
 //				t->skinframes[0] = skinframe;
+				t->currentskinframe = skinframe;
 				t->currentskinframe = skinframe;
 				Con_Printf("%s replaced with %s\n", r, newt);
 			}

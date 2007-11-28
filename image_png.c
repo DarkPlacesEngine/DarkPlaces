@@ -229,7 +229,7 @@ void PNG_warning_fn(void *png, const char *message)
 extern int	image_width;
 extern int	image_height;
 
-unsigned char *PNG_LoadImage (const unsigned char *raw, int filesize, int matchwidth, int matchheight)
+unsigned char *PNG_LoadImage_BGRA (const unsigned char *raw, int filesize)
 {
 	unsigned int	y;
 	void *png, *pnginfo;
@@ -311,11 +311,6 @@ unsigned char *PNG_LoadImage (const unsigned char *raw, int filesize, int matchw
 	}
 #endif
 
-	if ((matchwidth && my_png.Width != (unsigned long)matchwidth) || (matchheight && my_png.Height != (unsigned long)matchheight))
-	{
-		qpng_destroy_read_struct(&png, &pnginfo, 0);
-		return NULL;
-	}
 	if (my_png.ColorType == PNG_COLOR_TYPE_PALETTE)
 		qpng_set_palette_to_rgb(png);
 	if (my_png.ColorType == PNG_COLOR_TYPE_GRAY || my_png.ColorType == PNG_COLOR_TYPE_GRAY_ALPHA)

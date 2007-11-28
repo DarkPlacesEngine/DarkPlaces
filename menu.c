@@ -218,35 +218,6 @@ static void M_DrawPic(float cx, float cy, const char *picname)
 	DrawQ_Pic(menu_x + cx, menu_y + cy, Draw_CachePic(picname, true), 0, 0, 1, 1, 1, 1, 0);
 }
 
-static unsigned char identityTable[256];
-static unsigned char translationTable[256];
-
-static void M_BuildTranslationTable(int top, int bottom)
-{
-	int j;
-	unsigned char *dest, *source;
-
-	for (j = 0; j < 256; j++)
-		identityTable[j] = j;
-	dest = translationTable;
-	source = identityTable;
-	memcpy (dest, source, 256);
-
-	// LordHavoc: corrected skin color ranges
-	if (top < 128 || (top >= 224 && top < 240))	// the artists made some backwards ranges.  sigh.
-		memcpy (dest + TOP_RANGE, source + top, 16);
-	else
-		for (j=0 ; j<16 ; j++)
-			dest[TOP_RANGE+j] = source[top+15-j];
-
-	// LordHavoc: corrected skin color ranges
-	if (bottom < 128 || (bottom >= 224 && bottom < 240))
-		memcpy (dest + BOTTOM_RANGE, source + bottom, 16);
-	else
-		for (j=0 ; j<16 ; j++)
-			dest[BOTTOM_RANGE+j] = source[bottom+15-j];
-}
-
 static void M_DrawTextBox(float x, float y, float width, float height)
 {
 	int n;
@@ -1350,7 +1321,7 @@ static int setup_rateindex(int rate)
 
 static void M_Setup_Draw (void)
 {
-	int i;
+	int i, j;
 	cachepic_t	*p;
 
 	M_Background(320, 200);
@@ -1378,22 +1349,28 @@ static void M_Setup_Draw (void)
 	// LordHavoc: rewrote this code greatly
 	if (menuplyr_load)
 	{
-		unsigned char *data, *f;
+		unsigned char *f;
 		fs_offset_t filesize;
 		menuplyr_load = false;
 		menuplyr_top = -1;
 		menuplyr_bottom = -1;
-		if ((f = FS_LoadFile("gfx/menuplyr.lmp", tempmempool, true, &filesize)))
+		f = FS_LoadFile("gfx/menuplyr.lmp", tempmempool, true, &filesize);
+		if (f && filesize >= 9)
 		{
-			data = LoadLMP (f, filesize, 0, 0, true);
-			menuplyr_width = image_width;
-			menuplyr_height = image_height;
-			Mem_Free(f);
-			menuplyr_pixels = (unsigned char *)Mem_Alloc(cls.permanentmempool, menuplyr_width * menuplyr_height);
-			menuplyr_translated = (unsigned int *)Mem_Alloc(cls.permanentmempool, menuplyr_width * menuplyr_height * 4);
-			memcpy(menuplyr_pixels, data, menuplyr_width * menuplyr_height);
-			Mem_Free(data);
+			int width, height;
+			width = f[0] + f[1] * 256 + f[2] * 65536 + f[3] * 16777216;
+			height = f[4] + f[5] * 256 + f[6] * 65536 + f[7] * 16777216;
+			if (filesize >= 8 + width * height)
+			{
+				menuplyr_width = width;
+				menuplyr_height = height;
+				menuplyr_pixels = (unsigned char *)Mem_Alloc(cls.permanentmempool, width * height);
+				menuplyr_translated = (unsigned int *)Mem_Alloc(cls.permanentmempool, width * height * 4);
+				memcpy(menuplyr_pixels, f + 8, width * height);
+			}
 		}
+		if (f)
+			Mem_Free(f);
 	}
 
 	if (menuplyr_pixels)
@@ -1402,9 +1379,26 @@ static void M_Setup_Draw (void)
 		{
 			menuplyr_top = setup_top;
 			menuplyr_bottom = setup_bottom;
-			M_BuildTranslationTable(menuplyr_top*16, menuplyr_bottom*16);
+
 			for (i = 0;i < menuplyr_width * menuplyr_height;i++)
-				menuplyr_translated[i] = palette_transparent[translationTable[menuplyr_pixels[i]]];
+			{
+				j = menuplyr_pixels[i];
+				if (j >= TOP_RANGE && j < TOP_RANGE + 16)
+				{
+					if (menuplyr_top < 8 || menuplyr_top == 14)
+						j = menuplyr_top * 16 + (j - TOP_RANGE);
+					else
+						j = menuplyr_top * 16 + 15-(j - TOP_RANGE);
+				}
+				else if (j >= BOTTOM_RANGE && j < BOTTOM_RANGE + 16)
+				{
+					if (menuplyr_bottom < 8 || menuplyr_bottom == 14)
+						j = menuplyr_bottom * 16 + (j - BOTTOM_RANGE);
+					else
+						j = menuplyr_bottom * 16 + 15-(j - BOTTOM_RANGE);
+				}
+				menuplyr_translated[i] = palette_bgra_transparent[j];
+			}
 			Draw_NewPic("gfx/menuplyr", menuplyr_width, menuplyr_height, true, (unsigned char *)menuplyr_translated);
 		}
 		M_DrawPic(160, 48, "gfx/bigbox");

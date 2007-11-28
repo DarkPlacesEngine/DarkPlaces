@@ -1123,8 +1123,8 @@ void SCR_CaptureVideo_BeginVideo(void)
 	cls.capturevideo.frame = 0;
 	cls.capturevideo.soundsampleframe = 0;
 	cls.capturevideo.realtime = cl_capturevideo_realtime.integer != 0;
-	cls.capturevideo.screenbuffer = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 3);
-	cls.capturevideo.outbuffer = (unsigned char *)Mem_Alloc(tempmempool, width * height * (3+3+3) + 18);
+	cls.capturevideo.screenbuffer = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 4);
+	cls.capturevideo.outbuffer = (unsigned char *)Mem_Alloc(tempmempool, width * height * (4+4) + 18);
 	gamma = 1.0/scr_screenshot_gammaboost.value;
 	dpsnprintf(cls.capturevideo.basename, sizeof(cls.capturevideo.basename), "video/dpvideo%03i", cl_capturevideo_number.integer);
 	Cvar_SetValueQuick(&cl_capturevideo_number, cl_capturevideo_number.integer + 1);
@@ -1426,50 +1426,43 @@ void SCR_CaptureVideo_EndVideo(void)
 	memset(&cls.capturevideo, 0, sizeof(cls.capturevideo));
 }
 
-// converts from RGB24 to I420 colorspace (identical to YV12 except chroma plane order is reversed), this colorspace is handled by the Intel(r) 4:2:0 codec on Windows
-void SCR_CaptureVideo_ConvertFrame_RGB_to_I420_flip(int width, int height, unsigned char *instart, unsigned char *outstart)
+// converts from BGRA32 to I420 colorspace (identical to YV12 except chroma plane order is reversed), this colorspace is handled by the Intel(r) 4:2:0 codec on Windows
+void SCR_CaptureVideo_ConvertFrame_BGRA_to_I420_flip(int width, int height, unsigned char *instart, unsigned char *outstart)
 {
 	int x, y;
+	int blockr, blockg, blockb;
 	int outoffset = (width/2)*(height/2);
 	unsigned char *b, *out;
 	// process one line at a time, and CbCr every other line at 2 pixel intervals
 	for (y = 0;y < height;y++)
 	{
 		// 1x1 Y
-		for (b = instart + (height-1-y)*width*3, out = outstart + y*width, x = 0;x < width;x++, b += 3, out++)
-			*out = cls.capturevideo.yuvnormalizetable[0][cls.capturevideo.rgbtoyuvscaletable[0][0][b[0]] + cls.capturevideo.rgbtoyuvscaletable[0][1][b[1]] + cls.capturevideo.rgbtoyuvscaletable[0][2][b[2]]];
+		for (b = instart + (height-1-y)*width*4, out = outstart + y*width, x = 0;x < width;x++, b += 4, out++)
+		{
+			blockr = b[2];
+			blockg = b[1];
+			blockb = b[0];
+			*out = cls.capturevideo.yuvnormalizetable[0][cls.capturevideo.rgbtoyuvscaletable[0][0][blockr] + cls.capturevideo.rgbtoyuvscaletable[0][1][blockg] + cls.capturevideo.rgbtoyuvscaletable[0][2][blockb]];
+		}
 		if ((y & 1) == 0)
 		{
 			// 2x2 Cr and Cb planes
-#if 0
-			// low quality, no averaging
-			for (b = instart + (height-2-y)*width*3, out = outstart + width*height + (y/2)*(width/2), x = 0;x < width/2;x++, b += 6, out++)
+			int inpitch = width*4;
+			for (b = instart + (height-2-y)*width*4, out = outstart + width*height + (y/2)*(width/2), x = 0;x < width/2;x++, b += 8, out++)
 			{
-				// Cr
-				out[0        ] = cls.capturevideo.yuvnormalizetable[1][cls.capturevideo.rgbtoyuvscaletable[1][0][b[0]] + cls.capturevideo.rgbtoyuvscaletable[1][1][b[1]] + cls.capturevideo.rgbtoyuvscaletable[1][2][b[2]] + 128];
-				// Cb
-				out[outoffset] = cls.capturevideo.yuvnormalizetable[2][cls.capturevideo.rgbtoyuvscaletable[2][0][b[0]] + cls.capturevideo.rgbtoyuvscaletable[2][1][b[1]] + cls.capturevideo.rgbtoyuvscaletable[2][2][b[2]] + 128];
-			}
-#else
-			// high quality, averaging
-			int inpitch = width*3;
-			for (b = instart + (height-2-y)*width*3, out = outstart + width*height + (y/2)*(width/2), x = 0;x < width/2;x++, b += 6, out++)
-			{
-				int blockr, blockg, blockb;
-				blockr = (b[0] + b[3] + b[inpitch+0] + b[inpitch+3]) >> 2;
-				blockg = (b[1] + b[4] + b[inpitch+1] + b[inpitch+4]) >> 2;
-				blockb = (b[2] + b[5] + b[inpitch+2] + b[inpitch+5]) >> 2;
+				blockr = (b[2] + b[6] + b[inpitch+2] + b[inpitch+6]) >> 2;
+				blockg = (b[1] + b[5] + b[inpitch+1] + b[inpitch+5]) >> 2;
+				blockb = (b[0] + b[4] + b[inpitch+0] + b[inpitch+4]) >> 2;
 				// Cr
 				out[0        ] = cls.capturevideo.yuvnormalizetable[1][cls.capturevideo.rgbtoyuvscaletable[1][0][blockr] + cls.capturevideo.rgbtoyuvscaletable[1][1][blockg] + cls.capturevideo.rgbtoyuvscaletable[1][2][blockb] + 128];
 				// Cb
 				out[outoffset] = cls.capturevideo.yuvnormalizetable[2][cls.capturevideo.rgbtoyuvscaletable[2][0][blockr] + cls.capturevideo.rgbtoyuvscaletable[2][1][blockg] + cls.capturevideo.rgbtoyuvscaletable[2][2][blockb] + 128];
 			}
-#endif
 		}
 	}
 }
 
-static void SCR_ScaleDown(unsigned char *in, int inw, int inh, unsigned char *out, int outw, int outh)
+static void SCR_ScaleDownBGRA(unsigned char *in, int inw, int inh, unsigned char *out, int outw, int outh)
 {
 	// TODO optimize this function
 
@@ -1479,7 +1472,7 @@ static void SCR_ScaleDown(unsigned char *in, int inw, int inh, unsigned char *ou
 	// memcpy is faster than me
 	if(inw == outw && inh == outh)
 	{
-		memcpy(out, in, 3 * inw * inh);
+		memcpy(out, in, 4 * inw * inh);
 		return;
 	}
 
@@ -1493,7 +1486,7 @@ static void SCR_ScaleDown(unsigned char *in, int inw, int inh, unsigned char *ou
 		{
 			float inx0 =  x    / (float)outw * inw; int inx0_i = floor(inx0);
 			float inx1 = (x+1) / (float)outw * inw; int inx1_i = ceil(inx1);
-			float r = 0, g = 0, b = 0;
+			float r = 0, g = 0, b = 0, alpha = 0;
 			int xx, yy;
 
 			for(yy = iny0_i; yy < iny1_i; ++yy)
@@ -1502,15 +1495,17 @@ static void SCR_ScaleDown(unsigned char *in, int inw, int inh, unsigned char *ou
 				for(xx = inx0_i; xx < inx1_i; ++xx)
 				{
 					float a = ya * (min(xx+1, inx1) - max(inx0, xx));
-					r += a * in[3*(xx + inw * yy)+0];
-					g += a * in[3*(xx + inw * yy)+1];
-					b += a * in[3*(xx + inw * yy)+2];
+					r += a * in[4*(xx + inw * yy)+0];
+					g += a * in[4*(xx + inw * yy)+1];
+					b += a * in[4*(xx + inw * yy)+2];
+					alpha += a * in[4*(xx + inw * yy)+3];
 				}
 			}
 
-			out[3*(x + outw * y)+0] = r * area;
-			out[3*(x + outw * y)+1] = g * area;
-			out[3*(x + outw * y)+2] = b * area;
+			out[4*(x + outw * y)+0] = r * area;
+			out[4*(x + outw * y)+1] = g * area;
+			out[4*(x + outw * y)+2] = b * area;
+			out[4*(x + outw * y)+3] = alpha * area;
 		}
 	}
 }
@@ -1529,11 +1524,11 @@ qboolean SCR_CaptureVideo_VideoFrame(int newframenum)
 		if (!cls.capturevideo.videofile)
 			return false;
 		// FIXME: width/height must be multiple of 2, enforce this?
-		qglReadPixels (x, y, vid.width, vid.height, GL_RGB, GL_UNSIGNED_BYTE, cls.capturevideo.screenbuffer);CHECKGLERROR
-		SCR_ScaleDown (cls.capturevideo.screenbuffer, vid.width, vid.height, cls.capturevideo.outbuffer, width, height);
+		qglReadPixels (x, y, vid.width, vid.height, GL_BGRA, GL_UNSIGNED_BYTE, cls.capturevideo.screenbuffer);CHECKGLERROR
+		SCR_ScaleDownBGRA (cls.capturevideo.screenbuffer, vid.width, vid.height, cls.capturevideo.outbuffer, width, height);
 		in = cls.capturevideo.outbuffer;
-		out = cls.capturevideo.outbuffer + width*height*3;
-		SCR_CaptureVideo_ConvertFrame_RGB_to_I420_flip(width, height, in, out);
+		out = cls.capturevideo.outbuffer + width*height*4;
+		SCR_CaptureVideo_ConvertFrame_BGRA_to_I420_flip(width, height, in, out);
 		x = width*height+(width/2)*(height/2)*2;
 		SCR_CaptureVideo_RIFF_OverflowCheck(8 + x);
 		for (;cls.capturevideo.frame < newframenum;cls.capturevideo.frame++)
@@ -1788,7 +1783,7 @@ qboolean SCR_ScreenShot(char *filename, unsigned char *buffer1, unsigned char *b
 		return false;
 
 	CHECKGLERROR
-	qglReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, buffer1);CHECKGLERROR
+	qglReadPixels (x, y, width, height, jpeg ? GL_RGB : GL_BGR, GL_UNSIGNED_BYTE, buffer1);CHECKGLERROR
 
 	if (scr_screenshot_gammaboost.value != 1 && gammacorrect)
 	{
@@ -1806,7 +1801,7 @@ qboolean SCR_ScreenShot(char *filename, unsigned char *buffer1, unsigned char *b
 	if (jpeg)
 		ret = JPEG_SaveImage_preflipped (filename, width, height, buffer2);
 	else
-		ret = Image_WriteTGARGB_preflipped (filename, width, height, buffer2, buffer3);
+		ret = Image_WriteTGABGR_preflipped (filename, width, height, buffer2, buffer3);
 
 	return ret;
 }

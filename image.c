@@ -115,7 +115,7 @@ void Image_GammaRemapRGB(const unsigned char *in, unsigned char *out, int pixels
 }
 
 // note: pal must be 32bit color
-void Image_Copy8bitRGBA(const unsigned char *in, unsigned char *out, int pixels, const unsigned int *pal)
+void Image_Copy8bitBGRA(const unsigned char *in, unsigned char *out, int pixels, const unsigned int *pal)
 {
 	int *iout = (int *)out;
 	while (pixels >= 8)
@@ -181,10 +181,10 @@ typedef struct pcx_s
 LoadPCX
 ============
 */
-unsigned char* LoadPCX (const unsigned char *f, int filesize, int matchwidth, int matchheight)
+unsigned char* LoadPCX_BGRA (const unsigned char *f, int filesize)
 {
 	pcx_t pcx;
-	unsigned char *a, *b, *image_rgba, *pbuf;
+	unsigned char *a, *b, *image_buffer, *pbuf;
 	const unsigned char *palette, *fin, *enddata;
 	int x, y, x2, dataByte;
 
@@ -216,18 +216,16 @@ unsigned char* LoadPCX (const unsigned char *f, int filesize, int matchwidth, in
 		Con_Print("Bad pcx file\n");
 		return NULL;
 	}
-	if ((matchwidth && image_width != matchwidth) || (matchheight && image_height != matchheight))
-		return NULL;
 
 	palette = f + filesize - 768;
 
-	image_rgba = (unsigned char *)Mem_Alloc(tempmempool, image_width*image_height*4);
-	if (!image_rgba)
+	image_buffer = (unsigned char *)Mem_Alloc(tempmempool, image_width*image_height*4);
+	if (!image_buffer)
 	{
 		Con_Printf("LoadPCX: not enough memory for %i by %i image\n", image_width, image_height);
 		return NULL;
 	}
-	pbuf = image_rgba + image_width*image_height*3;
+	pbuf = image_buffer + image_width*image_height*3;
 	enddata = palette;
 
 	for (y = 0;y < image_height && fin < enddata;y++)
@@ -255,19 +253,19 @@ unsigned char* LoadPCX (const unsigned char *f, int filesize, int matchwidth, in
 			a[x++] = 0;
 	}
 
-	a = image_rgba;
+	a = image_buffer;
 	b = pbuf;
 
 	for(x = 0;x < image_width*image_height;x++)
 	{
 		y = *b++ * 3;
-		*a++ = palette[y];
-		*a++ = palette[y+1];
 		*a++ = palette[y+2];
+		*a++ = palette[y+1];
+		*a++ = palette[y];
 		*a++ = 255;
 	}
 
-	return image_rgba;
+	return image_buffer;
 }
 
 /*
@@ -298,14 +296,20 @@ void PrintTargaHeader(TargaHeader *t)
 LoadTGA
 =============
 */
-unsigned char *LoadTGA (const unsigned char *f, int filesize, int matchwidth, int matchheight)
+unsigned char *LoadTGA_BGRA (const unsigned char *f, int filesize)
 {
-	int x, y, pix_inc, row_inc, red, green, blue, alpha, runlen, alphabits;
-	unsigned char *pixbuf, *image_rgba;
+	int x, y, pix_inc, row_inci, runlen, alphabits;
+	unsigned char *image_buffer;
+	unsigned int *pixbufi;
 	const unsigned char *fin, *enddata;
-	unsigned char *p;
 	TargaHeader targa_header;
-	unsigned char palette[256*4];
+	unsigned int palettei[256];
+	union
+	{
+		unsigned int i;
+		unsigned char b[4];
+	}
+	bgra;
 
 	if (filesize < 19)
 		return NULL;
@@ -329,8 +333,6 @@ unsigned char *LoadTGA (const unsigned char *f, int filesize, int matchwidth, in
 		PrintTargaHeader(&targa_header);
 		return NULL;
 	}
-	if ((matchwidth && image_width != matchwidth) || (matchheight && image_height != matchheight))
-		return NULL;
 	targa_header.pixel_size = f[16];
 	targa_header.attributes = f[17];
 
@@ -361,21 +363,17 @@ unsigned char *LoadTGA (const unsigned char *f, int filesize, int matchwidth, in
 		{
 			for (x = 0;x < targa_header.colormap_length;x++)
 			{
-				palette[x*4+2] = *fin++;
-				palette[x*4+1] = *fin++;
-				palette[x*4+0] = *fin++;
-				palette[x*4+3] = 255;
+				bgra.b[0] = *fin++;
+				bgra.b[1] = *fin++;
+				bgra.b[2] = *fin++;
+				bgra.b[3] = 255;
+				palettei[x] = bgra.i;
 			}
 		}
 		else if (targa_header.colormap_size == 32)
 		{
-			for (x = 0;x < targa_header.colormap_length;x++)
-			{
-				palette[x*4+2] = *fin++;
-				palette[x*4+1] = *fin++;
-				palette[x*4+0] = *fin++;
-				palette[x*4+3] = *fin++;
-			}
+			memcpy(palettei, fin, targa_header.colormap_length*4);
+			fin += targa_header.colormap_length * 4;
 		}
 		else
 		{
@@ -400,10 +398,9 @@ unsigned char *LoadTGA (const unsigned char *f, int filesize, int matchwidth, in
 		// set up a palette to make the loader easier
 		for (x = 0;x < 256;x++)
 		{
-			palette[x*4+2] = x;
-			palette[x*4+1] = x;
-			palette[x*4+0] = x;
-			palette[x*4+3] = 255;
+			bgra.b[0] = bgra.b[1] = bgra.b[2] = x;
+			bgra.b[3] = 255;
+			palettei[x] = bgra.i;
 		}
 		// fall through to colormap case
 	case 1:
@@ -434,8 +431,8 @@ unsigned char *LoadTGA (const unsigned char *f, int filesize, int matchwidth, in
 		return NULL;
 	}
 
-	image_rgba = (unsigned char *)Mem_Alloc(tempmempool, image_width * image_height * 4);
-	if (!image_rgba)
+	image_buffer = (unsigned char *)Mem_Alloc(tempmempool, image_width * image_height * 4);
+	if (!image_buffer)
 	{
 		Con_Printf("LoadTGA: not enough memory for %i by %i image\n", image_width, image_height);
 		return NULL;
@@ -444,38 +441,29 @@ unsigned char *LoadTGA (const unsigned char *f, int filesize, int matchwidth, in
 	// If bit 5 of attributes isn't set, the image has been stored from bottom to top
 	if ((targa_header.attributes & 0x20) == 0)
 	{
-		pixbuf = image_rgba + (image_height - 1)*image_width*4;
-		row_inc = -image_width*4*2;
+		pixbufi = (unsigned int*)image_buffer + (image_height - 1)*image_width;
+		row_inci = -image_width*2;
 	}
 	else
 	{
-		pixbuf = image_rgba;
-		row_inc = 0;
+		pixbufi = (unsigned int*)image_buffer;
+		row_inci = 0;
 	}
 
 	x = 0;
 	y = 0;
-	red = green = blue = alpha = 255;
 	pix_inc = 1;
 	if ((targa_header.image_type & ~8) == 2)
-		pix_inc = targa_header.pixel_size / 8;
+		pix_inc = (targa_header.pixel_size + 7) / 8;
 	switch (targa_header.image_type)
 	{
 	case 1: // colormapped, uncompressed
 	case 3: // greyscale, uncompressed
 		if (fin + image_width * image_height * pix_inc > enddata)
 			break;
-		for (y = 0;y < image_height;y++, pixbuf += row_inc)
-		{
+		for (y = 0;y < image_height;y++, pixbufi += row_inci)
 			for (x = 0;x < image_width;x++)
-			{
-				p = palette + *fin++ * 4;
-				*pixbuf++ = p[0];
-				*pixbuf++ = p[1];
-				*pixbuf++ = p[2];
-				*pixbuf++ = p[3];
-			}
-		}
+				*pixbufi++ = palettei[*fin++];
 		break;
 	case 2:
 		// BGR or BGRA, uncompressed
@@ -483,34 +471,27 @@ unsigned char *LoadTGA (const unsigned char *f, int filesize, int matchwidth, in
 			break;
 		if (targa_header.pixel_size == 32 && alphabits)
 		{
-			for (y = 0;y < image_height;y++, pixbuf += row_inc)
-			{
-				for (x = 0;x < image_width;x++, fin += pix_inc)
-				{
-					*pixbuf++ = fin[2];
-					*pixbuf++ = fin[1];
-					*pixbuf++ = fin[0];
-					*pixbuf++ = fin[3];
-				}
-			}
+			for (y = 0;y < image_height;y++)
+				memcpy(pixbufi + y * (image_width + row_inci), fin + y * image_width * pix_inc, image_width*4);
 		}
 		else
 		{
-			for (y = 0;y < image_height;y++, pixbuf += row_inc)
+			for (y = 0;y < image_height;y++, pixbufi += row_inci)
 			{
 				for (x = 0;x < image_width;x++, fin += pix_inc)
 				{
-					*pixbuf++ = fin[2];
-					*pixbuf++ = fin[1];
-					*pixbuf++ = fin[0];
-					*pixbuf++ = 255;
+					bgra.b[0] = fin[0];
+					bgra.b[1] = fin[1];
+					bgra.b[2] = fin[2];
+					bgra.b[3] = 255;
+					*pixbufi++ = bgra.i;
 				}
 			}
 		}
 		break;
 	case 9: // colormapped, RLE
 	case 11: // greyscale, RLE
-		for (y = 0;y < image_height;y++, pixbuf += row_inc)
+		for (y = 0;y < image_height;y++, pixbufi += row_inci)
 		{
 			for (x = 0;x < image_width;)
 			{
@@ -525,18 +506,9 @@ unsigned char *LoadTGA (const unsigned char *f, int filesize, int matchwidth, in
 						break; // error - truncated file
 					if (x + runlen > image_width)
 						break; // error - line exceeds width
-					p = palette + *fin++ * 4;
-					red = p[0];
-					green = p[1];
-					blue = p[2];
-					alpha = p[3];
+					bgra.i = palettei[*fin++];
 					for (;runlen--;x++)
-					{
-						*pixbuf++ = red;
-						*pixbuf++ = green;
-						*pixbuf++ = blue;
-						*pixbuf++ = alpha;
-					}
+						*pixbufi++ = bgra.i;
 				}
 				else
 				{
@@ -547,13 +519,7 @@ unsigned char *LoadTGA (const unsigned char *f, int filesize, int matchwidth, in
 					if (x + runlen > image_width)
 						break; // error - line exceeds width
 					for (;runlen--;x++)
-					{
-						p = palette + *fin++ * 4;
-						*pixbuf++ = p[0];
-						*pixbuf++ = p[1];
-						*pixbuf++ = p[2];
-						*pixbuf++ = p[3];
-					}
+						*pixbufi++ = palettei[*fin++];
 				}
 			}
 		}
@@ -562,7 +528,7 @@ unsigned char *LoadTGA (const unsigned char *f, int filesize, int matchwidth, in
 		// BGR or BGRA, RLE
 		if (targa_header.pixel_size == 32 && alphabits)
 		{
-			for (y = 0;y < image_height;y++, pixbuf += row_inc)
+			for (y = 0;y < image_height;y++, pixbufi += row_inci)
 			{
 				for (x = 0;x < image_width;)
 				{
@@ -577,18 +543,13 @@ unsigned char *LoadTGA (const unsigned char *f, int filesize, int matchwidth, in
 							break; // error - truncated file
 						if (x + runlen > image_width)
 							break; // error - line exceeds width
-						red = fin[2];
-						green = fin[1];
-						blue = fin[0];
-						alpha = fin[3];
+						bgra.b[0] = fin[0];
+						bgra.b[1] = fin[1];
+						bgra.b[2] = fin[2];
+						bgra.b[3] = fin[3];
 						fin += pix_inc;
 						for (;runlen--;x++)
-						{
-							*pixbuf++ = red;
-							*pixbuf++ = green;
-							*pixbuf++ = blue;
-							*pixbuf++ = alpha;
-						}
+							*pixbufi++ = bgra.i;
 					}
 					else
 					{
@@ -598,12 +559,14 @@ unsigned char *LoadTGA (const unsigned char *f, int filesize, int matchwidth, in
 							break; // error - truncated file
 						if (x + runlen > image_width)
 							break; // error - line exceeds width
-						for (;runlen--;x++, fin += pix_inc)
+						for (;runlen--;x++)
 						{
-							*pixbuf++ = fin[2];
-							*pixbuf++ = fin[1];
-							*pixbuf++ = fin[0];
-							*pixbuf++ = fin[3];
+							bgra.b[0] = fin[0];
+							bgra.b[1] = fin[1];
+							bgra.b[2] = fin[2];
+							bgra.b[3] = fin[3];
+							fin += pix_inc;
+							*pixbufi++ = bgra.i;
 						}
 					}
 				}
@@ -611,7 +574,7 @@ unsigned char *LoadTGA (const unsigned char *f, int filesize, int matchwidth, in
 		}
 		else
 		{
-			for (y = 0;y < image_height;y++, pixbuf += row_inc)
+			for (y = 0;y < image_height;y++, pixbufi += row_inci)
 			{
 				for (x = 0;x < image_width;)
 				{
@@ -626,18 +589,13 @@ unsigned char *LoadTGA (const unsigned char *f, int filesize, int matchwidth, in
 							break; // error - truncated file
 						if (x + runlen > image_width)
 							break; // error - line exceeds width
-						red = fin[2];
-						green = fin[1];
-						blue = fin[0];
-						alpha = 255;
+						bgra.b[0] = fin[0];
+						bgra.b[1] = fin[1];
+						bgra.b[2] = fin[2];
+						bgra.b[3] = 255;
 						fin += pix_inc;
 						for (;runlen--;x++)
-						{
-							*pixbuf++ = red;
-							*pixbuf++ = green;
-							*pixbuf++ = blue;
-							*pixbuf++ = alpha;
-						}
+							*pixbufi++ = bgra.i;
 					}
 					else
 					{
@@ -647,12 +605,14 @@ unsigned char *LoadTGA (const unsigned char *f, int filesize, int matchwidth, in
 							break; // error - truncated file
 						if (x + runlen > image_width)
 							break; // error - line exceeds width
-						for (;runlen--;x++, fin += pix_inc)
+						for (;runlen--;x++)
 						{
-							*pixbuf++ = fin[2];
-							*pixbuf++ = fin[1];
-							*pixbuf++ = fin[0];
-							*pixbuf++ = 255;
+							bgra.b[0] = fin[0];
+							bgra.b[1] = fin[1];
+							bgra.b[2] = fin[2];
+							bgra.b[3] = 255;
+							fin += pix_inc;
+							*pixbufi++ = bgra.i;
 						}
 					}
 				}
@@ -664,54 +624,8 @@ unsigned char *LoadTGA (const unsigned char *f, int filesize, int matchwidth, in
 		break;
 	}
 
-	return image_rgba;
-}
-
-/*
-============
-LoadLMP
-============
-*/
-unsigned char *LoadLMP (const unsigned char *f, int filesize, int matchwidth, int matchheight, qboolean loadAs8Bit)
-{
-	unsigned char *image_buffer;
-
-	if (filesize < 9)
-	{
-		Con_Print("LoadLMP: invalid LMP file\n");
-		return NULL;
-	}
-
-	// parse the very complicated header *chuckle*
-	image_width = BuffLittleLong(f);
-	image_height = BuffLittleLong(f + 4);
-	if (image_width > 4096 || image_height > 4096 || image_width <= 0 || image_height <= 0)
-	{
-		Con_Printf("LoadLMP: invalid size %ix%i\n", image_width, image_height);
-		return NULL;
-	}
-	if ((matchwidth && image_width != matchwidth) || (matchheight && image_height != matchheight))
-		return NULL;
-
-	if (filesize < (8 + image_width * image_height))
-	{
-		Con_Print("LoadLMP: invalid LMP file\n");
-		return NULL;
-	}
-
-	if (loadAs8Bit)
-	{
-		image_buffer = (unsigned char *)Mem_Alloc(tempmempool, image_width * image_height);
-		memcpy(image_buffer, f + 8, image_width * image_height);
-	}
-	else
-	{
-		image_buffer = (unsigned char *)Mem_Alloc(tempmempool, image_width * image_height * 4);
-		Image_Copy8bitRGBA(f + 8, image_buffer, image_width * image_height, palette_transparent);
-	}
 	return image_buffer;
 }
-
 
 typedef struct q2wal_s
 {
@@ -724,9 +638,9 @@ typedef struct q2wal_s
 	int			value;
 } q2wal_t;
 
-unsigned char *LoadWAL (const unsigned char *f, int filesize, int matchwidth, int matchheight)
+unsigned char *LoadWAL_BGRA (const unsigned char *f, int filesize)
 {
-	unsigned char *image_rgba;
+	unsigned char *image_buffer;
 	const q2wal_t *inwal = (const q2wal_t *)f;
 
 	if (filesize < (int) sizeof(q2wal_t))
@@ -742,8 +656,6 @@ unsigned char *LoadWAL (const unsigned char *f, int filesize, int matchwidth, in
 		Con_Printf("LoadWAL: invalid size %ix%i\n", image_width, image_height);
 		return NULL;
 	}
-	if ((matchwidth && image_width != matchwidth) || (matchheight && image_height != matchheight))
-		return NULL;
 
 	if (filesize < (int) sizeof(q2wal_t) + (int) LittleLong(inwal->offsets[0]) + image_width * image_height)
 	{
@@ -751,14 +663,14 @@ unsigned char *LoadWAL (const unsigned char *f, int filesize, int matchwidth, in
 		return NULL;
 	}
 
-	image_rgba = (unsigned char *)Mem_Alloc(tempmempool, image_width * image_height * 4);
-	if (!image_rgba)
+	image_buffer = (unsigned char *)Mem_Alloc(tempmempool, image_width * image_height * 4);
+	if (!image_buffer)
 	{
-		Con_Printf("LoadLMP: not enough memory for %i by %i image\n", image_width, image_height);
+		Con_Printf("LoadWAL: not enough memory for %i by %i image\n", image_width, image_height);
 		return NULL;
 	}
-	Image_Copy8bitRGBA(f + LittleLong(inwal->offsets[0]), image_rgba, image_width * image_height, palette_complete);
-	return image_rgba;
+	Image_Copy8bitBGRA(f + LittleLong(inwal->offsets[0]), image_buffer, image_width * image_height, palette_bgra_complete);
+	return image_buffer;
 }
 
 
@@ -779,65 +691,65 @@ void Image_StripImageExtension (const char *in, char *out, size_t size_out)
 typedef struct imageformat_s
 {
 	const char *formatstring;
-	unsigned char *(*loadfunc)(const unsigned char *f, int filesize, int matchwidth, int matchheight);
+	unsigned char *(*loadfunc)(const unsigned char *f, int filesize);
 }
 imageformat_t;
 
 // GAME_TENEBRAE only
 imageformat_t imageformats_tenebrae[] =
 {
-	{"override/%s.tga", LoadTGA},
-	{"override/%s.png", PNG_LoadImage},
-	{"override/%s.jpg", JPEG_LoadImage},
-	{"override/%s.pcx", LoadPCX},
+	{"override/%s.tga", LoadTGA_BGRA},
+	{"override/%s.png", PNG_LoadImage_BGRA},
+	{"override/%s.jpg", JPEG_LoadImage_BGRA},
+	{"override/%s.pcx", LoadPCX_BGRA},
 	{NULL, NULL}
 };
 
 imageformat_t imageformats_nopath[] =
 {
-	{"override/%s.tga", LoadTGA},
-	{"override/%s.png", PNG_LoadImage},
-	{"override/%s.jpg", JPEG_LoadImage},
-	{"textures/%s.tga", LoadTGA},
-	{"textures/%s.png", PNG_LoadImage},
-	{"textures/%s.jpg", JPEG_LoadImage},
-	{"%s.tga", LoadTGA},
-	{"%s.png", PNG_LoadImage},
-	{"%s.jpg", JPEG_LoadImage},
-	{"%s.pcx", LoadPCX},
+	{"override/%s.tga", LoadTGA_BGRA},
+	{"override/%s.png", PNG_LoadImage_BGRA},
+	{"override/%s.jpg", JPEG_LoadImage_BGRA},
+	{"textures/%s.tga", LoadTGA_BGRA},
+	{"textures/%s.png", PNG_LoadImage_BGRA},
+	{"textures/%s.jpg", JPEG_LoadImage_BGRA},
+	{"%s.tga", LoadTGA_BGRA},
+	{"%s.png", PNG_LoadImage_BGRA},
+	{"%s.jpg", JPEG_LoadImage_BGRA},
+	{"%s.pcx", LoadPCX_BGRA},
 	{NULL, NULL}
 };
 
 imageformat_t imageformats_textures[] =
 {
-	{"%s.tga", LoadTGA},
-	{"%s.png", PNG_LoadImage},
-	{"%s.jpg", JPEG_LoadImage},
-	{"%s.pcx", LoadPCX},
-	{"%s.wal", LoadWAL},
+	{"%s.tga", LoadTGA_BGRA},
+	{"%s.png", PNG_LoadImage_BGRA},
+	{"%s.jpg", JPEG_LoadImage_BGRA},
+	{"%s.pcx", LoadPCX_BGRA},
+	{"%s.wal", LoadWAL_BGRA},
 	{NULL, NULL}
 };
 
 imageformat_t imageformats_gfx[] =
 {
-	{"%s.tga", LoadTGA},
-	{"%s.png", PNG_LoadImage},
-	{"%s.jpg", JPEG_LoadImage},
-	{"%s.pcx", LoadPCX},
+	{"%s.tga", LoadTGA_BGRA},
+	{"%s.png", PNG_LoadImage_BGRA},
+	{"%s.jpg", JPEG_LoadImage_BGRA},
+	{"%s.pcx", LoadPCX_BGRA},
 	{NULL, NULL}
 };
 
 imageformat_t imageformats_other[] =
 {
-	{"%s.tga", LoadTGA},
-	{"%s.png", PNG_LoadImage},
-	{"%s.jpg", JPEG_LoadImage},
-	{"%s.pcx", LoadPCX},
+	{"%s.tga", LoadTGA_BGRA},
+	{"%s.png", PNG_LoadImage_BGRA},
+	{"%s.jpg", JPEG_LoadImage_BGRA},
+	{"%s.pcx", LoadPCX_BGRA},
 	{NULL, NULL}
 };
 
 int fixtransparentpixels(unsigned char *data, int w, int h);
-unsigned char *loadimagepixels (const char *filename, qboolean complain, int matchwidth, int matchheight, qboolean allowFixtrans)
+unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qboolean allowFixtrans)
 {
 	fs_offset_t filesize;
 	imageformat_t *firstformat, *format;
@@ -877,7 +789,7 @@ unsigned char *loadimagepixels (const char *filename, qboolean complain, int mat
 		f = FS_LoadFile(name, tempmempool, true, &filesize);
 		if (f)
 		{
-			data = format->loadfunc(f, filesize, matchwidth, matchheight);
+			data = format->loadfunc(f, filesize);
 			Mem_Free(f);
 			if (data)
 			{
@@ -896,7 +808,7 @@ unsigned char *loadimagepixels (const char *filename, qboolean complain, int mat
 							char outfilename[MAX_QPATH], buf[MAX_QPATH];
 							Image_StripImageExtension(name, buf, sizeof(buf));
 							dpsnprintf(outfilename, sizeof(outfilename), "fixtrans/%s.tga", buf);
-							Image_WriteTGARGBA(outfilename, image_width, image_height, data);
+							Image_WriteTGABGRA(outfilename, image_width, image_height, data);
 							Con_Printf("- %s written.\n", outfilename);
 						}
 					}
@@ -924,13 +836,13 @@ unsigned char *loadimagepixels (const char *filename, qboolean complain, int mat
 	return NULL;
 }
 
-rtexture_t *loadtextureimage (rtexturepool_t *pool, const char *filename, int matchwidth, int matchheight, qboolean complain, int flags, qboolean allowFixtrans)
+rtexture_t *loadtextureimage (rtexturepool_t *pool, const char *filename, qboolean complain, int flags, qboolean allowFixtrans)
 {
 	unsigned char *data;
 	rtexture_t *rt;
-	if (!(data = loadimagepixels (filename, complain, matchwidth, matchheight, allowFixtrans)))
+	if (!(data = loadimagepixelsbgra (filename, complain, allowFixtrans)))
 		return 0;
-	rt = R_LoadTexture2D(pool, filename, image_width, image_height, data, TEXTYPE_RGBA, flags, NULL);
+	rt = R_LoadTexture2D(pool, filename, image_width, image_height, data, TEXTYPE_BGRA, flags, NULL);
 	Mem_Free(data);
 	return rt;
 }
@@ -983,41 +895,41 @@ int fixtransparentpixels(unsigned char *data, int w, int h)
 					unsigned char r, g, b, a, r0, g0, b0;
 					if(fixMask[FIXTRANS_PIXEL] & FIXTRANS_HAS_U)
 					{
-						r = data[FIXTRANS_PIXEL_U * 4 + 0];
+						r = data[FIXTRANS_PIXEL_U * 4 + 2];
 						g = data[FIXTRANS_PIXEL_U * 4 + 1];
-						b = data[FIXTRANS_PIXEL_U * 4 + 2];
+						b = data[FIXTRANS_PIXEL_U * 4 + 0];
 						a = data[FIXTRANS_PIXEL_U * 4 + 3];
 						sumR += r; sumG += g; sumB += b; sumA += a; sumRA += r*a; sumGA += g*a; sumBA += b*a; ++cnt;
 					}
 					if(fixMask[FIXTRANS_PIXEL] & FIXTRANS_HAS_D)
 					{
-						r = data[FIXTRANS_PIXEL_D * 4 + 0];
+						r = data[FIXTRANS_PIXEL_D * 4 + 2];
 						g = data[FIXTRANS_PIXEL_D * 4 + 1];
-						b = data[FIXTRANS_PIXEL_D * 4 + 2];
+						b = data[FIXTRANS_PIXEL_D * 4 + 0];
 						a = data[FIXTRANS_PIXEL_D * 4 + 3];
 						sumR += r; sumG += g; sumB += b; sumA += a; sumRA += r*a; sumGA += g*a; sumBA += b*a; ++cnt;
 					}
 					if(fixMask[FIXTRANS_PIXEL] & FIXTRANS_HAS_L)
 					{
-						r = data[FIXTRANS_PIXEL_L * 4 + 0];
+						r = data[FIXTRANS_PIXEL_L * 4 + 2];
 						g = data[FIXTRANS_PIXEL_L * 4 + 1];
-						b = data[FIXTRANS_PIXEL_L * 4 + 2];
+						b = data[FIXTRANS_PIXEL_L * 4 + 0];
 						a = data[FIXTRANS_PIXEL_L * 4 + 3];
 						sumR += r; sumG += g; sumB += b; sumA += a; sumRA += r*a; sumGA += g*a; sumBA += b*a; ++cnt;
 					}
 					if(fixMask[FIXTRANS_PIXEL] & FIXTRANS_HAS_R)
 					{
-						r = data[FIXTRANS_PIXEL_R * 4 + 0];
+						r = data[FIXTRANS_PIXEL_R * 4 + 2];
 						g = data[FIXTRANS_PIXEL_R * 4 + 1];
-						b = data[FIXTRANS_PIXEL_R * 4 + 2];
+						b = data[FIXTRANS_PIXEL_R * 4 + 0];
 						a = data[FIXTRANS_PIXEL_R * 4 + 3];
 						sumR += r; sumG += g; sumB += b; sumA += a; sumRA += r*a; sumGA += g*a; sumBA += b*a; ++cnt;
 					}
 					if(!cnt)
 						continue;
-					r0 = data[FIXTRANS_PIXEL * 4 + 0];
+					r0 = data[FIXTRANS_PIXEL * 4 + 2];
 					g0 = data[FIXTRANS_PIXEL * 4 + 1];
-					b0 = data[FIXTRANS_PIXEL * 4 + 2];
+					b0 = data[FIXTRANS_PIXEL * 4 + 0];
 					if(sumA)
 					{
 						// there is a surrounding non-alpha pixel
@@ -1034,9 +946,9 @@ int fixtransparentpixels(unsigned char *data, int w, int h)
 					}
 					if(r != r0 || g != g0 || b != b0)
 						++changedPixels;
-					data[FIXTRANS_PIXEL * 4 + 0] = r;
+					data[FIXTRANS_PIXEL * 4 + 2] = r;
 					data[FIXTRANS_PIXEL * 4 + 1] = g;
-					data[FIXTRANS_PIXEL * 4 + 2] = b;
+					data[FIXTRANS_PIXEL * 4 + 0] = b;
 					fixMask[FIXTRANS_PIXEL] |= FIXTRANS_FIXED;
 				}
 		for(y = 0; y < h; ++y)
@@ -1076,11 +988,11 @@ void Image_FixTransparentPixels_f(void)
 		Con_Printf("Processing %s... ", filename);
 		Image_StripImageExtension(filename, buf, sizeof(buf));
 		dpsnprintf(outfilename, sizeof(outfilename), "fixtrans/%s.tga", buf);
-		if(!(data = loadimagepixels(filename, true, 0, 0, false)))
+		if(!(data = loadimagepixelsbgra(filename, true, false)))
 			return;
 		if((n = fixtransparentpixels(data, image_width, image_height)))
 		{
-			Image_WriteTGARGBA(outfilename, image_width, image_height, data);
+			Image_WriteTGABGRA(outfilename, image_width, image_height, data);
 			Con_Printf("%s written (%d pixels changed).\n", outfilename, n);
 		}
 		else
@@ -1089,11 +1001,9 @@ void Image_FixTransparentPixels_f(void)
 	}
 }
 
-qboolean Image_WriteTGARGB_preflipped (const char *filename, int width, int height, const unsigned char *data, unsigned char *buffer)
+qboolean Image_WriteTGABGR_preflipped (const char *filename, int width, int height, const unsigned char *data, unsigned char *buffer)
 {
 	qboolean ret;
-	unsigned char *out;
-	const unsigned char *in, *end;
 
 	memset (buffer, 0, 18);
 	buffer[2] = 2;		// uncompressed type
@@ -1104,21 +1014,13 @@ qboolean Image_WriteTGARGB_preflipped (const char *filename, int width, int heig
 	buffer[16] = 24;	// pixel size
 
 	// swap rgb to bgr
-	in = data;
-	out = buffer + 18;
-	end = in + width*height*3;
-	for (;in < end;in += 3)
-	{
-		*out++ = in[2];
-		*out++ = in[1];
-		*out++ = in[0];
-	}
+	memcpy(buffer + 18, data, width*height*3);
 	ret = FS_WriteFile (filename, buffer, width*height*3 + 18 );
 
 	return ret;
 }
 
-void Image_WriteTGARGBA (const char *filename, int width, int height, const unsigned char *data)
+void Image_WriteTGABGRA (const char *filename, int width, int height, const unsigned char *data)
 {
 	int y;
 	unsigned char *buffer, *out;
@@ -1143,21 +1045,13 @@ void Image_WriteTGARGBA (const char *filename, int width, int height, const unsi
 		buffer[16] = 32;	// pixel size
 		buffer[17] = 8; // 8 bits of alpha
 
-		// swap rgba to bgra and flip upside down
+		// flip upside down
 		out = buffer + 18;
 		for (y = height - 1;y >= 0;y--)
 		{
-			in = data + y * width * 4;
-			end = in + width * 4;
-			for (;in < end;in += 4)
-			{
-				*out++ = in[2];
-				*out++ = in[1];
-				*out++ = in[0];
-				*out++ = in[3];
-			}
+			memcpy(out, data + y * width * 4, width * 4);
+			out += width*4;
 		}
-		FS_WriteFile (filename, buffer, width*height*4 + 18 );
 	}
 	else
 	{
@@ -1165,7 +1059,7 @@ void Image_WriteTGARGBA (const char *filename, int width, int height, const unsi
 		buffer[16] = 24;	// pixel size
 		buffer[17] = 0; // 8 bits of alpha
 
-		// swap rgba to bgr and flip upside down
+		// truncate bgra to bgr and flip upside down
 		out = buffer + 18;
 		for (y = height - 1;y >= 0;y--)
 		{
@@ -1173,13 +1067,13 @@ void Image_WriteTGARGBA (const char *filename, int width, int height, const unsi
 			end = in + width * 4;
 			for (;in < end;in += 4)
 			{
-				*out++ = in[2];
-				*out++ = in[1];
 				*out++ = in[0];
+				*out++ = in[1];
+				*out++ = in[2];
 			}
 		}
-		FS_WriteFile (filename, buffer, width*height*3 + 18 );
 	}
+	FS_WriteFile (filename, buffer, out - buffer);
 
 	Mem_Free(buffer);
 }
@@ -1456,7 +1350,7 @@ void Image_MipReduce32(const unsigned char *in, unsigned char *out, int *width, 
 	}
 }
 
-void Image_HeightmapToNormalmap(const unsigned char *inpixels, unsigned char *outpixels, int width, int height, int clamp, float bumpscale)
+void Image_HeightmapToNormalmap_BGRA(const unsigned char *inpixels, unsigned char *outpixels, int width, int height, int clamp, float bumpscale)
 {
 	int x, y, x1, x2, y1, y2;
 	const unsigned char *b, *row[3];
@@ -1490,9 +1384,9 @@ void Image_HeightmapToNormalmap(const unsigned char *inpixels, unsigned char *ou
 			n[2] = ibumpscale;
 			VectorNormalize(n);
 			// turn it into a dot3 rgb vector texture
-			out[0] = (int)(128.0f + n[0] * 127.0f);
+			out[2] = (int)(128.0f + n[0] * 127.0f);
 			out[1] = (int)(128.0f + n[1] * 127.0f);
-			out[2] = (int)(128.0f + n[2] * 127.0f);
+			out[0] = (int)(128.0f + n[2] * 127.0f);
 			out[3] = (p[4]) / 3;
 			out += 4;
 		}

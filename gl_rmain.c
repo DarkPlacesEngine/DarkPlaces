@@ -263,26 +263,26 @@ float FogPoint_Model(const vec3_t p)
 static void R_BuildBlankTextures(void)
 {
 	unsigned char data[4];
-	data[0] = 128; // normal X
+	data[2] = 128; // normal X
 	data[1] = 128; // normal Y
-	data[2] = 255; // normal Z
+	data[0] = 255; // normal Z
 	data[3] = 128; // height
-	r_texture_blanknormalmap = R_LoadTexture2D(r_main_texturepool, "blankbump", 1, 1, data, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
+	r_texture_blanknormalmap = R_LoadTexture2D(r_main_texturepool, "blankbump", 1, 1, data, TEXTYPE_BGRA, TEXF_PRECACHE, NULL);
 	data[0] = 255;
 	data[1] = 255;
 	data[2] = 255;
 	data[3] = 255;
-	r_texture_white = R_LoadTexture2D(r_main_texturepool, "blankwhite", 1, 1, data, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
+	r_texture_white = R_LoadTexture2D(r_main_texturepool, "blankwhite", 1, 1, data, TEXTYPE_BGRA, TEXF_PRECACHE, NULL);
 	data[0] = 128;
 	data[1] = 128;
 	data[2] = 128;
 	data[3] = 255;
-	r_texture_grey128 = R_LoadTexture2D(r_main_texturepool, "blankgrey128", 1, 1, data, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
+	r_texture_grey128 = R_LoadTexture2D(r_main_texturepool, "blankgrey128", 1, 1, data, TEXTYPE_BGRA, TEXF_PRECACHE, NULL);
 	data[0] = 0;
 	data[1] = 0;
 	data[2] = 0;
 	data[3] = 255;
-	r_texture_black = R_LoadTexture2D(r_main_texturepool, "blankblack", 1, 1, data, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
+	r_texture_black = R_LoadTexture2D(r_main_texturepool, "blankblack", 1, 1, data, TEXTYPE_BGRA, TEXF_PRECACHE, NULL);
 }
 
 static void R_BuildNoTexture(void)
@@ -310,19 +310,14 @@ static void R_BuildNoTexture(void)
 			}
 		}
 	}
-	r_texture_notexture = R_LoadTexture2D(r_main_texturepool, "notexture", 16, 16, &pix[0][0][0], TEXTYPE_RGBA, TEXF_MIPMAP, NULL);
+	r_texture_notexture = R_LoadTexture2D(r_main_texturepool, "notexture", 16, 16, &pix[0][0][0], TEXTYPE_BGRA, TEXF_MIPMAP, NULL);
 }
 
 static void R_BuildWhiteCube(void)
 {
 	unsigned char data[6*1*1*4];
-	data[ 0] = 255;data[ 1] = 255;data[ 2] = 255;data[ 3] = 255;
-	data[ 4] = 255;data[ 5] = 255;data[ 6] = 255;data[ 7] = 255;
-	data[ 8] = 255;data[ 9] = 255;data[10] = 255;data[11] = 255;
-	data[12] = 255;data[13] = 255;data[14] = 255;data[15] = 255;
-	data[16] = 255;data[17] = 255;data[18] = 255;data[19] = 255;
-	data[20] = 255;data[21] = 255;data[22] = 255;data[23] = 255;
-	r_texture_whitecube = R_LoadTextureCubeMap(r_main_texturepool, "whitecube", 1, data, TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_CLAMP, NULL);
+	memset(data, 255, sizeof(data));
+	r_texture_whitecube = R_LoadTextureCubeMap(r_main_texturepool, "whitecube", 1, data, TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_CLAMP, NULL);
 }
 
 static void R_BuildNormalizationCube(void)
@@ -375,14 +370,14 @@ static void R_BuildNormalizationCube(void)
 					break;
 				}
 				intensity = 127.0f / sqrt(DotProduct(v, v));
-				data[side][y][x][0] = (unsigned char)(128.0f + intensity * v[0]);
+				data[side][y][x][2] = (unsigned char)(128.0f + intensity * v[0]);
 				data[side][y][x][1] = (unsigned char)(128.0f + intensity * v[1]);
-				data[side][y][x][2] = (unsigned char)(128.0f + intensity * v[2]);
+				data[side][y][x][0] = (unsigned char)(128.0f + intensity * v[2]);
 				data[side][y][x][3] = 255;
 			}
 		}
 	}
-	r_texture_normalizationcube = R_LoadTextureCubeMap(r_main_texturepool, "normalcube", NORMSIZE, &data[0][0][0][0], TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_CLAMP, NULL);
+	r_texture_normalizationcube = R_LoadTextureCubeMap(r_main_texturepool, "normalcube", NORMSIZE, &data[0][0][0][0], TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_CLAMP, NULL);
 }
 
 static void R_BuildFogTexture(void)
@@ -403,8 +398,8 @@ static void R_BuildFogTexture(void)
 		//data2[x][2] = 255 - b;
 		//data2[x][3] = 255;
 	}
-	r_texture_fogattenuation = R_LoadTexture2D(r_main_texturepool, "fogattenuation", FOGWIDTH, 1, &data1[0][0], TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP, NULL);
-	//r_texture_fogintensity = R_LoadTexture2D(r_main_texturepool, "fogintensity", FOGWIDTH, 1, &data2[0][0], TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP, NULL);
+	r_texture_fogattenuation = R_LoadTexture2D(r_main_texturepool, "fogattenuation", FOGWIDTH, 1, &data1[0][0], TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP, NULL);
+	//r_texture_fogintensity = R_LoadTexture2D(r_main_texturepool, "fogintensity", FOGWIDTH, 1, &data2[0][0], TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP, NULL);
 }
 
 static const char *builtinshaderstring =
@@ -1579,7 +1574,7 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 	if (skinframe && skinframe->base)
 		return skinframe;
 
-	basepixels = loadimagepixels(name, complain, 0, 0, true);
+	basepixels = loadimagepixelsbgra(name, complain, true);
 	if (basepixels == NULL)
 		return NULL;
 
@@ -1598,7 +1593,7 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 
 	basepixels_width = image_width;
 	basepixels_height = image_height;
-	skinframe->base = R_LoadTexture2D (r_main_texturepool, skinframe->basename, basepixels_width, basepixels_height, basepixels, TEXTYPE_RGBA, skinframe->textureflags & (gl_texturecompression_color.integer ? ~0 : ~TEXF_COMPRESS), NULL);
+	skinframe->base = R_LoadTexture2D (r_main_texturepool, skinframe->basename, basepixels_width, basepixels_height, basepixels, TEXTYPE_BGRA, skinframe->textureflags & (gl_texturecompression_color.integer ? ~0 : ~TEXF_COMPRESS), NULL);
 
 	if (textureflags & TEXF_ALPHA)
 	{
@@ -1616,7 +1611,7 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 				pixels[j+2] = 255;
 				pixels[j+3] = basepixels[j+3];
 			}
-			skinframe->fog = R_LoadTexture2D (r_main_texturepool, va("%s_mask", skinframe->basename), image_width, image_height, pixels, TEXTYPE_RGBA, skinframe->textureflags & (gl_texturecompression_color.integer ? ~0 : ~TEXF_COMPRESS), NULL);
+			skinframe->fog = R_LoadTexture2D (r_main_texturepool, va("%s_mask", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, skinframe->textureflags & (gl_texturecompression_color.integer ? ~0 : ~TEXF_COMPRESS), NULL);
 			Mem_Free(pixels);
 		}
 	}
@@ -1624,35 +1619,35 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 	// _norm is the name used by tenebrae and has been adopted as standard
 	if (loadnormalmap)
 	{
-		if ((pixels = loadimagepixels(va("%s_norm", skinframe->basename), false, 0, 0, false)) != NULL)
+		if ((pixels = loadimagepixelsbgra(va("%s_norm", skinframe->basename), false, false)) != NULL)
 		{
-			skinframe->nmap = R_LoadTexture2D (r_main_texturepool, va("%s_nmap", skinframe->basename), image_width, image_height, pixels, TEXTYPE_RGBA, skinframe->textureflags & (gl_texturecompression_normal.integer ? ~0 : ~TEXF_COMPRESS), NULL);
+			skinframe->nmap = R_LoadTexture2D (r_main_texturepool, va("%s_nmap", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, skinframe->textureflags & (gl_texturecompression_normal.integer ? ~0 : ~TEXF_COMPRESS), NULL);
 			Mem_Free(pixels);
 			pixels = NULL;
 		}
-		else if (r_shadow_bumpscale_bumpmap.value > 0 && (bumppixels = loadimagepixels(va("%s_bump", skinframe->basename), false, 0, 0, false)) != NULL)
+		else if (r_shadow_bumpscale_bumpmap.value > 0 && (bumppixels = loadimagepixelsbgra(va("%s_bump", skinframe->basename), false, false)) != NULL)
 		{
 			pixels = (unsigned char *)Mem_Alloc(tempmempool, image_width * image_height * 4);
-			Image_HeightmapToNormalmap(bumppixels, pixels, image_width, image_height, false, r_shadow_bumpscale_bumpmap.value);
-			skinframe->nmap = R_LoadTexture2D (r_main_texturepool, va("%s_nmap", skinframe->basename), image_width, image_height, pixels, TEXTYPE_RGBA, skinframe->textureflags & (gl_texturecompression_normal.integer ? ~0 : ~TEXF_COMPRESS), NULL);
+			Image_HeightmapToNormalmap_BGRA(bumppixels, pixels, image_width, image_height, false, r_shadow_bumpscale_bumpmap.value);
+			skinframe->nmap = R_LoadTexture2D (r_main_texturepool, va("%s_nmap", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, skinframe->textureflags & (gl_texturecompression_normal.integer ? ~0 : ~TEXF_COMPRESS), NULL);
 			Mem_Free(pixels);
 			Mem_Free(bumppixels);
 		}
 		else if (r_shadow_bumpscale_basetexture.value > 0)
 		{
 			pixels = (unsigned char *)Mem_Alloc(tempmempool, basepixels_width * basepixels_height * 4);
-			Image_HeightmapToNormalmap(basepixels, pixels, basepixels_width, basepixels_height, false, r_shadow_bumpscale_basetexture.value);
-			skinframe->nmap = R_LoadTexture2D (r_main_texturepool, va("%s_nmap", skinframe->basename), basepixels_width, basepixels_height, pixels, TEXTYPE_RGBA, skinframe->textureflags & (gl_texturecompression_normal.integer ? ~0 : ~TEXF_COMPRESS), NULL);
+			Image_HeightmapToNormalmap_BGRA(basepixels, pixels, basepixels_width, basepixels_height, false, r_shadow_bumpscale_basetexture.value);
+			skinframe->nmap = R_LoadTexture2D (r_main_texturepool, va("%s_nmap", skinframe->basename), basepixels_width, basepixels_height, pixels, TEXTYPE_BGRA, skinframe->textureflags & (gl_texturecompression_normal.integer ? ~0 : ~TEXF_COMPRESS), NULL);
 			Mem_Free(pixels);
 		}
 	}
 	// _luma is supported for tenebrae compatibility
 	// (I think it's a very stupid name, but oh well)
 	// _glow is the preferred name
-	if (loadglow          && ((pixels = loadimagepixels(va("%s_glow", skinframe->basename), false, 0, 0, false)) != NULL || (pixels = loadimagepixels(va("%s_luma", skinframe->basename), false, 0, 0, false)) != NULL)) {skinframe->glow = R_LoadTexture2D (r_main_texturepool, va("%s_glow", skinframe->basename), image_width, image_height, pixels, TEXTYPE_RGBA, skinframe->textureflags & (gl_texturecompression_glow.integer ? ~0 : ~TEXF_COMPRESS), NULL);Mem_Free(pixels);pixels = NULL;}
-	if (loadgloss         && (pixels = loadimagepixels(va("%s_gloss", skinframe->basename), false, 0, 0, false)) != NULL) {skinframe->gloss = R_LoadTexture2D (r_main_texturepool, va("%s_gloss", skinframe->basename), image_width, image_height, pixels, TEXTYPE_RGBA, skinframe->textureflags & (gl_texturecompression_gloss.integer ? ~0 : ~TEXF_COMPRESS), NULL);Mem_Free(pixels);pixels = NULL;}
-	if (loadpantsandshirt && (pixels = loadimagepixels(va("%s_pants", skinframe->basename), false, 0, 0, false)) != NULL) {skinframe->pants = R_LoadTexture2D (r_main_texturepool, va("%s_pants", skinframe->basename), image_width, image_height, pixels, TEXTYPE_RGBA, skinframe->textureflags & (gl_texturecompression_color.integer ? ~0 : ~TEXF_COMPRESS), NULL);Mem_Free(pixels);pixels = NULL;}
-	if (loadpantsandshirt && (pixels = loadimagepixels(va("%s_shirt", skinframe->basename), false, 0, 0, false)) != NULL) {skinframe->shirt = R_LoadTexture2D (r_main_texturepool, va("%s_shirt", skinframe->basename), image_width, image_height, pixels, TEXTYPE_RGBA, skinframe->textureflags & (gl_texturecompression_color.integer ? ~0 : ~TEXF_COMPRESS), NULL);Mem_Free(pixels);pixels = NULL;}
+	if (loadglow          && ((pixels = loadimagepixelsbgra(va("%s_glow", skinframe->basename), false, false)) != NULL || (pixels = loadimagepixelsbgra(va("%s_luma", skinframe->basename), false, false)) != NULL)) {skinframe->glow = R_LoadTexture2D (r_main_texturepool, va("%s_glow", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, skinframe->textureflags & (gl_texturecompression_glow.integer ? ~0 : ~TEXF_COMPRESS), NULL);Mem_Free(pixels);pixels = NULL;}
+	if (loadgloss         && (pixels = loadimagepixelsbgra(va("%s_gloss", skinframe->basename), false, false)) != NULL) {skinframe->gloss = R_LoadTexture2D (r_main_texturepool, va("%s_gloss", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, skinframe->textureflags & (gl_texturecompression_gloss.integer ? ~0 : ~TEXF_COMPRESS), NULL);Mem_Free(pixels);pixels = NULL;}
+	if (loadpantsandshirt && (pixels = loadimagepixelsbgra(va("%s_pants", skinframe->basename), false, false)) != NULL) {skinframe->pants = R_LoadTexture2D (r_main_texturepool, va("%s_pants", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, skinframe->textureflags & (gl_texturecompression_color.integer ? ~0 : ~TEXF_COMPRESS), NULL);Mem_Free(pixels);pixels = NULL;}
+	if (loadpantsandshirt && (pixels = loadimagepixelsbgra(va("%s_shirt", skinframe->basename), false, false)) != NULL) {skinframe->shirt = R_LoadTexture2D (r_main_texturepool, va("%s_shirt", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, skinframe->textureflags & (gl_texturecompression_color.integer ? ~0 : ~TEXF_COMPRESS), NULL);Mem_Free(pixels);pixels = NULL;}
 
 	if (basepixels)
 		Mem_Free(basepixels);
@@ -1674,7 +1669,8 @@ static rtexture_t *R_SkinFrame_TextureForSkinLayer(const unsigned char *in, int 
 	return R_LoadTexture2D (r_main_texturepool, name, width, height, in, TEXTYPE_PALETTE, textureflags, palette);
 }
 
-skinframe_t *R_SkinFrame_LoadInternal(const char *name, int textureflags, int loadpantsandshirt, int loadglowtexture, const unsigned char *skindata, int width, int height, int bitsperpixel, const unsigned int *palette, const unsigned int *alphapalette)
+// this is only used by .spr32 sprites, HL .spr files, HL .bsp files
+skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, const unsigned char *skindata, int width, int height)
 {
 	int i;
 	unsigned char *temp1, *temp2;
@@ -1684,7 +1680,7 @@ skinframe_t *R_SkinFrame_LoadInternal(const char *name, int textureflags, int lo
 		return NULL;
 
 	// if already loaded just return it, otherwise make a new skinframe
-	skinframe = R_SkinFrame_Find(name, textureflags, width, height, skindata ? CRC_Block(skindata, width*height*bitsperpixel/8) : 0, true);
+	skinframe = R_SkinFrame_Find(name, textureflags, width, height, skindata ? CRC_Block(skindata, width*height*4) : 0, true);
 	if (skinframe && skinframe->base)
 		return skinframe;
 
@@ -1702,72 +1698,90 @@ skinframe_t *R_SkinFrame_LoadInternal(const char *name, int textureflags, int lo
 	if (!skindata)
 		return NULL;
 
-	if (bitsperpixel == 32)
+	if (r_shadow_bumpscale_basetexture.value > 0)
 	{
-		if (r_shadow_bumpscale_basetexture.value > 0)
+		temp1 = (unsigned char *)Mem_Alloc(tempmempool, width * height * 8);
+		temp2 = temp1 + width * height * 4;
+		Image_HeightmapToNormalmap_BGRA(skindata, temp2, width, height, false, r_shadow_bumpscale_basetexture.value);
+		skinframe->nmap = R_LoadTexture2D(r_main_texturepool, va("%s_nmap", skinframe->basename), width, height, temp2, TEXTYPE_BGRA, skinframe->textureflags | TEXF_ALPHA, NULL);
+		Mem_Free(temp1);
+	}
+	skinframe->base = skinframe->merged = R_LoadTexture2D(r_main_texturepool, skinframe->basename, width, height, skindata, TEXTYPE_BGRA, skinframe->textureflags, NULL);
+	if (textureflags & TEXF_ALPHA)
+	{
+		for (i = 3;i < width * height * 4;i += 4)
+			if (skindata[i] < 255)
+				break;
+		if (i < width * height * 4)
 		{
-			temp1 = (unsigned char *)Mem_Alloc(tempmempool, width * height * 8);
-			temp2 = temp1 + width * height * 4;
-			Image_HeightmapToNormalmap(skindata, temp2, width, height, false, r_shadow_bumpscale_basetexture.value);
-			skinframe->nmap = R_LoadTexture2D(r_main_texturepool, va("%s_nmap", skinframe->basename), width, height, temp2, TEXTYPE_RGBA, skinframe->textureflags | TEXF_ALPHA, NULL);
-			Mem_Free(temp1);
-		}
-		skinframe->base = skinframe->merged = R_LoadTexture2D(r_main_texturepool, skinframe->basename, width, height, skindata, TEXTYPE_RGBA, skinframe->textureflags, NULL);
-		if (textureflags & TEXF_ALPHA)
-		{
-			for (i = 3;i < width * height * 4;i += 4)
-				if (skindata[i] < 255)
-					break;
-			if (i < width * height * 4)
-			{
-				unsigned char *fogpixels = (unsigned char *)Mem_Alloc(tempmempool, width * height * 4);
-				memcpy(fogpixels, skindata, width * height * 4);
-				for (i = 0;i < width * height * 4;i += 4)
-					fogpixels[i] = fogpixels[i+1] = fogpixels[i+2] = 255;
-				skinframe->fog = R_LoadTexture2D(r_main_texturepool, va("%s_fog", skinframe->basename), width, height, fogpixels, TEXTYPE_RGBA, skinframe->textureflags, NULL);
-				Mem_Free(fogpixels);
-			}
+			unsigned char *fogpixels = (unsigned char *)Mem_Alloc(tempmempool, width * height * 4);
+			memcpy(fogpixels, skindata, width * height * 4);
+			for (i = 0;i < width * height * 4;i += 4)
+				fogpixels[i] = fogpixels[i+1] = fogpixels[i+2] = 255;
+			skinframe->fog = R_LoadTexture2D(r_main_texturepool, va("%s_fog", skinframe->basename), width, height, fogpixels, TEXTYPE_BGRA, skinframe->textureflags, NULL);
+			Mem_Free(fogpixels);
 		}
 	}
-	else if (bitsperpixel == 8)
+
+	return skinframe;
+}
+
+skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, int loadpantsandshirt, int loadglowtexture, const unsigned char *skindata, int width, int height)
+{
+	int i;
+	unsigned char *temp1, *temp2;
+	skinframe_t *skinframe;
+
+	if (cls.state == ca_dedicated)
+		return NULL;
+
+	// if already loaded just return it, otherwise make a new skinframe
+	skinframe = R_SkinFrame_Find(name, textureflags, width, height, skindata ? CRC_Block(skindata, width*height) : 0, true);
+	if (skinframe && skinframe->base)
+		return skinframe;
+
+	skinframe->stain = NULL;
+	skinframe->merged = NULL;
+	skinframe->base = r_texture_notexture;
+	skinframe->pants = NULL;
+	skinframe->shirt = NULL;
+	skinframe->nmap = r_texture_blanknormalmap;
+	skinframe->gloss = NULL;
+	skinframe->glow = NULL;
+	skinframe->fog = NULL;
+
+	// if no data was provided, then clearly the caller wanted to get a blank skinframe
+	if (!skindata)
+		return NULL;
+
+	if (r_shadow_bumpscale_basetexture.value > 0)
 	{
-		if (r_shadow_bumpscale_basetexture.value > 0)
-		{
-			temp1 = (unsigned char *)Mem_Alloc(tempmempool, width * height * 8);
-			temp2 = temp1 + width * height * 4;
-			if (bitsperpixel == 32)
-				Image_HeightmapToNormalmap(skindata, temp2, width, height, false, r_shadow_bumpscale_basetexture.value);
-			else
-			{
-				// use either a custom palette or the quake palette
-				Image_Copy8bitRGBA(skindata, temp1, width * height, palette ? palette : palette_complete);
-				Image_HeightmapToNormalmap(temp1, temp2, width, height, false, r_shadow_bumpscale_basetexture.value);
-			}
-			skinframe->nmap = R_LoadTexture2D(r_main_texturepool, va("%s_nmap", skinframe->basename), width, height, temp2, TEXTYPE_RGBA, skinframe->textureflags | TEXF_ALPHA, NULL);
-			Mem_Free(temp1);
-		}
-		// use either a custom palette, or the quake palette
-		skinframe->base = skinframe->merged = R_SkinFrame_TextureForSkinLayer(skindata, width, height, va("%s_merged", skinframe->basename), palette ? palette : (loadglowtexture ? palette_nofullbrights : ((skinframe->textureflags & TEXF_ALPHA) ? palette_transparent : palette_complete)), skinframe->textureflags, true); // all
-		if (!palette && loadglowtexture)
-			skinframe->glow = R_SkinFrame_TextureForSkinLayer(skindata, width, height, va("%s_glow", skinframe->basename), palette_onlyfullbrights, skinframe->textureflags, false); // glow
-		if (!palette && loadpantsandshirt)
-		{
-			skinframe->pants = R_SkinFrame_TextureForSkinLayer(skindata, width, height, va("%s_pants", skinframe->basename), palette_pantsaswhite, skinframe->textureflags, false); // pants
-			skinframe->shirt = R_SkinFrame_TextureForSkinLayer(skindata, width, height, va("%s_shirt", skinframe->basename), palette_shirtaswhite, skinframe->textureflags, false); // shirt
-		}
-		if (skinframe->pants || skinframe->shirt)
-			skinframe->base = R_SkinFrame_TextureForSkinLayer(skindata, width, height, va("%s_nospecial", skinframe->basename),loadglowtexture ? palette_nocolormapnofullbrights : palette_nocolormap, skinframe->textureflags, false); // no special colors
-		if (textureflags & TEXF_ALPHA)
-		{
-			// if not using a custom alphapalette, use the quake one
-			if (!alphapalette)
-				alphapalette = palette_alpha;
-			for (i = 0;i < width * height;i++)
-				if (((unsigned char *)alphapalette)[skindata[i]*4+3] < 255)
-					break;
-			if (i < width * height)
-				skinframe->fog = R_SkinFrame_TextureForSkinLayer(skindata, width, height, va("%s_fog", skinframe->basename), alphapalette, skinframe->textureflags, true); // fog mask
-		}
+		temp1 = (unsigned char *)Mem_Alloc(tempmempool, width * height * 8);
+		temp2 = temp1 + width * height * 4;
+		// use either a custom palette or the quake palette
+		Image_Copy8bitBGRA(skindata, temp1, width * height, palette_bgra_complete);
+		Image_HeightmapToNormalmap_BGRA(temp1, temp2, width, height, false, r_shadow_bumpscale_basetexture.value);
+		skinframe->nmap = R_LoadTexture2D(r_main_texturepool, va("%s_nmap", skinframe->basename), width, height, temp2, TEXTYPE_BGRA, skinframe->textureflags | TEXF_ALPHA, NULL);
+		Mem_Free(temp1);
+	}
+	// use either a custom palette, or the quake palette
+	skinframe->base = skinframe->merged = R_SkinFrame_TextureForSkinLayer(skindata, width, height, va("%s_merged", skinframe->basename), (loadglowtexture ? palette_bgra_nofullbrights : ((skinframe->textureflags & TEXF_ALPHA) ? palette_bgra_transparent : palette_bgra_complete)), skinframe->textureflags, true); // all
+	if (loadglowtexture)
+		skinframe->glow = R_SkinFrame_TextureForSkinLayer(skindata, width, height, va("%s_glow", skinframe->basename), palette_bgra_onlyfullbrights, skinframe->textureflags, false); // glow
+	if (loadpantsandshirt)
+	{
+		skinframe->pants = R_SkinFrame_TextureForSkinLayer(skindata, width, height, va("%s_pants", skinframe->basename), palette_bgra_pantsaswhite, skinframe->textureflags, false); // pants
+		skinframe->shirt = R_SkinFrame_TextureForSkinLayer(skindata, width, height, va("%s_shirt", skinframe->basename), palette_bgra_shirtaswhite, skinframe->textureflags, false); // shirt
+	}
+	if (skinframe->pants || skinframe->shirt)
+		skinframe->base = R_SkinFrame_TextureForSkinLayer(skindata, width, height, va("%s_nospecial", skinframe->basename), loadglowtexture ? palette_bgra_nocolormapnofullbrights : palette_bgra_nocolormap, skinframe->textureflags, false); // no special colors
+	if (textureflags & TEXF_ALPHA)
+	{
+		for (i = 0;i < width * height;i++)
+			if (((unsigned char *)palette_bgra_alpha)[skindata[i]*4+3] < 255)
+				break;
+		if (i < width * height)
+			skinframe->fog = R_SkinFrame_TextureForSkinLayer(skindata, width, height, va("%s_fog", skinframe->basename), palette_bgra_alpha, skinframe->textureflags, true); // fog mask
 	}
 
 	return skinframe;
@@ -2755,7 +2769,7 @@ static void R_Water_ProcessPlanes(void)
 		if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION))
 		{
 			if (!p->texture_refraction)
-				p->texture_refraction = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_refraction", planeindex), r_waterstate.texturewidth, r_waterstate.textureheight, NULL, TEXTYPE_RGBA, TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_ALWAYSPRECACHE, NULL);
+				p->texture_refraction = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_refraction", planeindex), r_waterstate.texturewidth, r_waterstate.textureheight, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_ALWAYSPRECACHE, NULL);
 			if (!p->texture_refraction)
 				goto error;
 		}
@@ -2763,7 +2777,7 @@ static void R_Water_ProcessPlanes(void)
 		if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFLECTION))
 		{
 			if (!p->texture_reflection)
-				p->texture_reflection = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_reflection", planeindex), r_waterstate.texturewidth, r_waterstate.textureheight, NULL, TEXTYPE_RGBA, TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_ALWAYSPRECACHE, NULL);
+				p->texture_reflection = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_reflection", planeindex), r_waterstate.texturewidth, r_waterstate.textureheight, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_ALWAYSPRECACHE, NULL);
 			if (!p->texture_reflection)
 				goto error;
 		}
@@ -2907,7 +2921,7 @@ void R_Bloom_StartFrame(void)
 		r_bloomstate.screentexturewidth = screentexturewidth;
 		r_bloomstate.screentextureheight = screentextureheight;
 		if (r_bloomstate.screentexturewidth && r_bloomstate.screentextureheight)
-			r_bloomstate.texture_screen = R_LoadTexture2D(r_main_texturepool, "screen", r_bloomstate.screentexturewidth, r_bloomstate.screentextureheight, NULL, TEXTYPE_RGBA, TEXF_FORCENEAREST | TEXF_CLAMP | TEXF_ALWAYSPRECACHE, NULL);
+			r_bloomstate.texture_screen = R_LoadTexture2D(r_main_texturepool, "screen", r_bloomstate.screentexturewidth, r_bloomstate.screentextureheight, NULL, TEXTYPE_BGRA, TEXF_FORCENEAREST | TEXF_CLAMP | TEXF_ALWAYSPRECACHE, NULL);
 	}
 	if (r_bloomstate.bloomtexturewidth != bloomtexturewidth || r_bloomstate.bloomtextureheight != bloomtextureheight)
 	{
@@ -2917,7 +2931,7 @@ void R_Bloom_StartFrame(void)
 		r_bloomstate.bloomtexturewidth = bloomtexturewidth;
 		r_bloomstate.bloomtextureheight = bloomtextureheight;
 		if (r_bloomstate.bloomtexturewidth && r_bloomstate.bloomtextureheight)
-			r_bloomstate.texture_bloom = R_LoadTexture2D(r_main_texturepool, "bloom", r_bloomstate.bloomtexturewidth, r_bloomstate.bloomtextureheight, NULL, TEXTYPE_RGBA, TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_ALWAYSPRECACHE, NULL);
+			r_bloomstate.texture_bloom = R_LoadTexture2D(r_main_texturepool, "bloom", r_bloomstate.bloomtexturewidth, r_bloomstate.bloomtextureheight, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_ALWAYSPRECACHE, NULL);
 	}
 
 	// set up a texcoord array for the full resolution screen image

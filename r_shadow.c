@@ -907,27 +907,24 @@ void R_Shadow_RenderVolume(int numvertices, int numtriangles, const float *verte
 	CHECKGLERROR
 }
 
-static unsigned char R_Shadow_MakeTextures_SamplePoint(float x, float y, float z)
+static unsigned int R_Shadow_MakeTextures_SamplePoint(float x, float y, float z)
 {
 	float dist = sqrt(x*x+y*y+z*z);
 	float intensity = dist < 1 ? ((1.0f - dist) * r_shadow_lightattenuationlinearscale.value / (r_shadow_lightattenuationdividebias.value + dist*dist)) : 0;
-	return (unsigned char)bound(0, intensity * 256.0f, 255);
+	// note this code could suffer byte order issues except that it is multiplying by an integer that reads the same both ways
+	return (unsigned char)bound(0, intensity * 256.0f, 255) * 0x01010101;
 }
 
 static void R_Shadow_MakeTextures(void)
 {
 	int x, y, z;
 	float intensity, dist;
-	unsigned char *data;
-	unsigned int palette[256];
+	unsigned int *data;
 	R_FreeTexturePool(&r_shadow_texturepool);
 	r_shadow_texturepool = R_AllocTexturePool();
 	r_shadow_attenlinearscale = r_shadow_lightattenuationlinearscale.value;
 	r_shadow_attendividebias = r_shadow_lightattenuationdividebias.value;
-	// note this code could suffer byte order issues except that it is multiplying by an integer that reads the same both ways
-	for (x = 0;x < 256;x++)
-		palette[x] = x * 0x01010101;
-	data = (unsigned char *)Mem_Alloc(tempmempool, max(max(ATTEN3DSIZE*ATTEN3DSIZE*ATTEN3DSIZE, ATTEN2DSIZE*ATTEN2DSIZE), ATTEN1DSIZE));
+	data = (unsigned int *)Mem_Alloc(tempmempool, max(max(ATTEN3DSIZE*ATTEN3DSIZE*ATTEN3DSIZE, ATTEN2DSIZE*ATTEN2DSIZE), ATTEN1DSIZE) * 4);
 	// the table includes one additional value to avoid the need to clamp indexing due to minor math errors
 	for (x = 0;x <= ATTENTABLESIZE;x++)
 	{
@@ -938,12 +935,12 @@ static void R_Shadow_MakeTextures(void)
 	// 1D gradient texture
 	for (x = 0;x < ATTEN1DSIZE;x++)
 		data[x] = R_Shadow_MakeTextures_SamplePoint((x + 0.5f) * (1.0f / ATTEN1DSIZE) * (1.0f / 0.9375), 0, 0);
-	r_shadow_attenuationgradienttexture = R_LoadTexture2D(r_shadow_texturepool, "attenuation1d", ATTEN1DSIZE, 1, data, TEXTYPE_PALETTE, TEXF_PRECACHE | TEXF_CLAMP | TEXF_ALPHA, palette);
+	r_shadow_attenuationgradienttexture = R_LoadTexture2D(r_shadow_texturepool, "attenuation1d", ATTEN1DSIZE, 1, (unsigned char *)data, TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_CLAMP | TEXF_ALPHA, NULL);
 	// 2D circle texture
 	for (y = 0;y < ATTEN2DSIZE;y++)
 		for (x = 0;x < ATTEN2DSIZE;x++)
 			data[y*ATTEN2DSIZE+x] = R_Shadow_MakeTextures_SamplePoint(((x + 0.5f) * (2.0f / ATTEN2DSIZE) - 1.0f) * (1.0f / 0.9375), ((y + 0.5f) * (2.0f / ATTEN2DSIZE) - 1.0f) * (1.0f / 0.9375), 0);
-	r_shadow_attenuation2dtexture = R_LoadTexture2D(r_shadow_texturepool, "attenuation2d", ATTEN2DSIZE, ATTEN2DSIZE, data, TEXTYPE_PALETTE, TEXF_PRECACHE | TEXF_CLAMP | TEXF_ALPHA, palette);
+	r_shadow_attenuation2dtexture = R_LoadTexture2D(r_shadow_texturepool, "attenuation2d", ATTEN2DSIZE, ATTEN2DSIZE, (unsigned char *)data, TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_CLAMP | TEXF_ALPHA, NULL);
 	// 3D sphere texture
 	if (r_shadow_texture3d.integer && gl_texture3d)
 	{
@@ -951,7 +948,7 @@ static void R_Shadow_MakeTextures(void)
 			for (y = 0;y < ATTEN3DSIZE;y++)
 				for (x = 0;x < ATTEN3DSIZE;x++)
 					data[(z*ATTEN3DSIZE+y)*ATTEN3DSIZE+x] = R_Shadow_MakeTextures_SamplePoint(((x + 0.5f) * (2.0f / ATTEN3DSIZE) - 1.0f) * (1.0f / 0.9375), ((y + 0.5f) * (2.0f / ATTEN3DSIZE) - 1.0f) * (1.0f / 0.9375), ((z + 0.5f) * (2.0f / ATTEN3DSIZE) - 1.0f) * (1.0f / 0.9375));
-		r_shadow_attenuation3dtexture = R_LoadTexture3D(r_shadow_texturepool, "attenuation3d", ATTEN3DSIZE, ATTEN3DSIZE, ATTEN3DSIZE, data, TEXTYPE_PALETTE, TEXF_PRECACHE | TEXF_CLAMP | TEXF_ALPHA, palette);
+		r_shadow_attenuation3dtexture = R_LoadTexture3D(r_shadow_texturepool, "attenuation3d", ATTEN3DSIZE, ATTEN3DSIZE, ATTEN3DSIZE, (unsigned char *)data, TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_CLAMP | TEXF_ALPHA, NULL);
 	}
 	else
 		r_shadow_attenuation3dtexture = NULL;
@@ -3199,7 +3196,7 @@ static int componentorder[4] = {0, 1, 2, 3};
 rtexture_t *R_Shadow_LoadCubemap(const char *basename)
 {
 	int i, j, cubemapsize;
-	unsigned char *cubemappixels, *image_rgba;
+	unsigned char *cubemappixels, *image_buffer;
 	rtexture_t *cubemaptexture;
 	char name[256];
 	// must start 0 so the first loadimagepixels has no requested width/height
@@ -3215,10 +3212,10 @@ rtexture_t *R_Shadow_LoadCubemap(const char *basename)
 			// generate an image name based on the base and and suffix
 			dpsnprintf(name, sizeof(name), "%s%s", basename, suffix[j][i].suffix);
 			// load it
-			if ((image_rgba = loadimagepixels(name, false, cubemapsize, cubemapsize, false)))
+			if ((image_buffer = loadimagepixelsbgra(name, false, false)))
 			{
 				// an image loaded, make sure width and height are equal
-				if (image_width == image_height)
+				if (image_width == image_height && (!cubemappixels || image_width == cubemapsize))
 				{
 					// if this is the first image to load successfully, allocate the cubemap memory
 					if (!cubemappixels && image_width >= 1)
@@ -3229,12 +3226,12 @@ rtexture_t *R_Shadow_LoadCubemap(const char *basename)
 					}
 					// copy the image with any flipping needed by the suffix (px and posx types don't need flipping)
 					if (cubemappixels)
-						Image_CopyMux(cubemappixels+i*cubemapsize*cubemapsize*4, image_rgba, cubemapsize, cubemapsize, suffix[j][i].flipx, suffix[j][i].flipy, suffix[j][i].flipdiagonal, 4, 4, componentorder);
+						Image_CopyMux(cubemappixels+i*cubemapsize*cubemapsize*4, image_buffer, cubemapsize, cubemapsize, suffix[j][i].flipx, suffix[j][i].flipy, suffix[j][i].flipdiagonal, 4, 4, componentorder);
 				}
 				else
 					Con_Printf("Cubemap image \"%s\" (%ix%i) is not square, OpenGL requires square cubemaps.\n", name, image_width, image_height);
 				// free the image
-				Mem_Free(image_rgba);
+				Mem_Free(image_buffer);
 			}
 		}
 	}
@@ -3243,7 +3240,7 @@ rtexture_t *R_Shadow_LoadCubemap(const char *basename)
 	{
 		if (!r_shadow_filters_texturepool)
 			r_shadow_filters_texturepool = R_AllocTexturePool();
-		cubemaptexture = R_LoadTextureCubeMap(r_shadow_filters_texturepool, basename, cubemapsize, cubemappixels, TEXTYPE_RGBA, TEXF_PRECACHE | (gl_texturecompression_lightcubemaps.integer ? TEXF_COMPRESS : 0), NULL);
+		cubemaptexture = R_LoadTextureCubeMap(r_shadow_filters_texturepool, basename, cubemapsize, cubemappixels, TEXTYPE_BGRA, TEXF_PRECACHE | (gl_texturecompression_lightcubemaps.integer ? TEXF_COMPRESS : 0), NULL);
 		Mem_Free(cubemappixels);
 	}
 	else

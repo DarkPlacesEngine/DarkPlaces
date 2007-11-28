@@ -1904,9 +1904,9 @@ void particletextureblotch(unsigned char *data, float radius, float red, float g
 				if (f > 1)
 					f = 1;
 				d = data + (y * PARTICLETEXTURESIZE + x) * 4;
-				d[0] += (int)(f * (red   - d[0]));
+				d[0] += (int)(f * (blue  - d[0]));
 				d[1] += (int)(f * (green - d[1]));
-				d[2] += (int)(f * (blue  - d[2]));
+				d[2] += (int)(f * (red   - d[2]));
 			}
 		}
 	}
@@ -1917,9 +1917,9 @@ void particletextureclamp(unsigned char *data, int minr, int ming, int minb, int
 	int i;
 	for (i = 0;i < PARTICLETEXTURESIZE*PARTICLETEXTURESIZE;i++, data += 4)
 	{
-		data[0] = bound(minr, data[0], maxr);
+		data[0] = bound(minb, data[0], maxb);
 		data[1] = bound(ming, data[1], maxg);
-		data[2] = bound(minb, data[2], maxb);
+		data[2] = bound(minr, data[2], maxr);
 	}
 }
 
@@ -1985,7 +1985,7 @@ static void R_InitParticleTexture (void)
 	// we invert it again during the blendfunc to make it work...
 
 #ifndef DUMPPARTICLEFONT
-	particlefonttexture = loadtextureimage(particletexturepool, "particles/particlefont.tga", 0, 0, false, TEXF_ALPHA | TEXF_PRECACHE, true);
+	particlefonttexture = loadtextureimage(particletexturepool, "particles/particlefont.tga", false, TEXF_ALPHA | TEXF_PRECACHE, true);
 	if (!particlefonttexture)
 #endif
 	{
@@ -2109,10 +2109,10 @@ static void R_InitParticleTexture (void)
 		}
 
 #ifdef DUMPPARTICLEFONT
-		Image_WriteTGARGBA ("particles/particlefont.tga", PARTICLEFONTSIZE, PARTICLEFONTSIZE, particletexturedata);
+		Image_WriteTGABGRA ("particles/particlefont.tga", PARTICLEFONTSIZE, PARTICLEFONTSIZE, particletexturedata);
 #endif
 
-		particlefonttexture = R_LoadTexture2D(particletexturepool, "particlefont", PARTICLEFONTSIZE, PARTICLEFONTSIZE, particletexturedata, TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
+		particlefonttexture = R_LoadTexture2D(particletexturepool, "particlefont", PARTICLEFONTSIZE, PARTICLEFONTSIZE, particletexturedata, TEXTYPE_BGRA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
 
 		Mem_Free(particletexturedata);
 	}
@@ -2128,7 +2128,7 @@ static void R_InitParticleTexture (void)
 	}
 
 #ifndef DUMPPARTICLEFONT
-	particletexture[tex_beam].texture = loadtextureimage(particletexturepool, "particles/nexbeam.tga", 0, 0, false, TEXF_ALPHA | TEXF_PRECACHE, true);
+	particletexture[tex_beam].texture = loadtextureimage(particletexturepool, "particles/nexbeam.tga", false, TEXF_ALPHA | TEXF_PRECACHE, true);
 	if (!particletexture[tex_beam].texture)
 #endif
 	{
@@ -2149,9 +2149,9 @@ static void R_InitParticleTexture (void)
 		}
 
 #ifdef DUMPPARTICLEFONT
-		Image_WriteTGARGBA ("particles/nexbeam.tga", 64, 64, &data2[0][0][0]);
+		Image_WriteTGABGRA ("particles/nexbeam.tga", 64, 64, &data2[0][0][0]);
 #endif
-		particletexture[tex_beam].texture = R_LoadTexture2D(particletexturepool, "nexbeam", 16, 64, &data2[0][0][0], TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
+		particletexture[tex_beam].texture = R_LoadTexture2D(particletexturepool, "nexbeam", 16, 64, &data2[0][0][0], TEXTYPE_BGRA, TEXF_PRECACHE, NULL);
 	}
 	particletexture[tex_beam].s1 = 0;
 	particletexture[tex_beam].t1 = 0;

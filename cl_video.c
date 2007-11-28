@@ -42,7 +42,7 @@ static void VideoUpdateCallback(rtexture_t *rt, void *data) {
 
 static void LinkVideoTexture( clvideo_t *video ) {
 	video->cpif.tex = R_LoadTexture2D( cl_videotexturepool, video->cpif.name,
-		video->cpif.width, video->cpif.height, NULL, TEXTYPE_RGBA, TEXF_ALWAYSPRECACHE, NULL );
+		video->cpif.width, video->cpif.height, NULL, TEXTYPE_BGRA, TEXF_ALWAYSPRECACHE, NULL );
 	R_MakeTextureDynamic( video->cpif.tex, VideoUpdateCallback, video );
 	CL_LinkDynTexture( video->cpif.name, video->cpif.tex );
 }
@@ -361,11 +361,20 @@ static void cl_video_newmap( void )
 
 void CL_Video_Init( void )
 {
+	union
+	{
+		unsigned char b[4];
+		unsigned int i;
+	}
+	bgra;
+
 	cl_num_videos = 0;
 	cl_videobytesperpixel = 4;
-	cl_videormask = BigLong(0xFF000000);
-	cl_videogmask = BigLong(0x00FF0000);
-	cl_videobmask = BigLong(0x0000FF00);
+
+	// set masks in an endian-independent way (as they really represent bytes)
+	bgra.i = 0;bgra.b[0] = 0xFF;cl_videobmask = bgra.i;
+	bgra.i = 0;bgra.b[1] = 0xFF;cl_videogmask = bgra.i;
+	bgra.i = 0;bgra.b[2] = 0xFF;cl_videormask = bgra.i;
 
 	Cmd_AddCommand( "playvideo", CL_PlayVideo_f, "play a .dpv video file" );
 	Cmd_AddCommand( "stopvideo", CL_StopVideo_f, "stop playing a .dpv video file" );

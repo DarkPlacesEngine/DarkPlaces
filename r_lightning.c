@@ -25,7 +25,7 @@ void r_lightningbeams_start(void)
 
 void r_lightningbeams_setupqmbtexture(void)
 {
-	r_lightningbeamqmbtexture = loadtextureimage(r_lightningbeamtexturepool, "textures/particles/lightning.pcx", 0, 0, false, TEXF_ALPHA | TEXF_PRECACHE, false);
+	r_lightningbeamqmbtexture = loadtextureimage(r_lightningbeamtexturepool, "textures/particles/lightning.pcx", false, TEXF_ALPHA | TEXF_PRECACHE, false);
 	if (r_lightningbeamqmbtexture == NULL)
 		Cvar_SetValueQuick(&r_lightningbeam_qmbtexture, false);
 }
@@ -51,63 +51,63 @@ void r_lightningbeams_setuptexture(void)
 
 	for (imagenumber = 0, maxpathstrength = 0.0339476;maxpathstrength < 0.5;imagenumber++, maxpathstrength += 0.01)
 	{
-	for (i = 0;i < PATHPOINTS;i++)
-	{
-		path[i].x = lhrandom(0, 1);
-		path[i].y = lhrandom(0.2, 0.8);
-		path[i].strength = lhrandom(0, 1);
-	}
-	for (i = 0;i < PATHPOINTS;i++)
-	{
-		for (j = i + 1;j < PATHPOINTS;j++)
+		for (i = 0;i < PATHPOINTS;i++)
 		{
-			if (path[j].x < path[i].x)
+			path[i].x = lhrandom(0, 1);
+			path[i].y = lhrandom(0.2, 0.8);
+			path[i].strength = lhrandom(0, 1);
+		}
+		for (i = 0;i < PATHPOINTS;i++)
+		{
+			for (j = i + 1;j < PATHPOINTS;j++)
 			{
-				temppath = path[j];
-				path[j] = path[i];
-				path[i] = temppath;
+				if (path[j].x < path[i].x)
+				{
+					temppath = path[j];
+					path[j] = path[i];
+					path[i] = temppath;
+				}
 			}
 		}
-	}
-	particlex = path[0].x;
-	particley = path[0].y;
-	particlexv = lhrandom(0, 0.02);
-	particlexv = lhrandom(-0.02, 0.02);
-	memset(image, 0, BEAMWIDTH * BEAMHEIGHT * sizeof(int));
-	for (i = 0;i < 65536;i++)
-	{
-		for (nearestpathindex = 0;nearestpathindex < PATHPOINTS;nearestpathindex++)
-			if (path[nearestpathindex].x > particlex)
-				break;
-		nearestpathindex %= PATHPOINTS;
-		dx = path[nearestpathindex].x + lhrandom(-0.01, 0.01);dx = bound(0, dx, 1) - particlex;if (dx < 0) dx += 1;
-		dy = path[nearestpathindex].y + lhrandom(-0.01, 0.01);dy = bound(0, dy, 1) - particley;
-		s = path[nearestpathindex].strength / sqrt(dx*dx+dy*dy);
-		particlexv = particlexv /* (1 - lhrandom(0.08, 0.12))*/ + dx * s;
-		particleyv = particleyv /* (1 - lhrandom(0.08, 0.12))*/ + dy * s;
-		particlex += particlexv * maxpathstrength;particlex -= (int) particlex;
-		particley += particleyv * maxpathstrength;particley = bound(0, particley, 1);
-		px = particlex * BEAMWIDTH;
-		py = particley * BEAMHEIGHT;
-		if (px >= 0 && py >= 0 && px < BEAMWIDTH && py < BEAMHEIGHT)
-			image[py*BEAMWIDTH+px] += 16;
-	}
-
-	for (py = 0;py < BEAMHEIGHT;py++)
-	{
-		for (px = 0;px < BEAMWIDTH;px++)
+		particlex = path[0].x;
+		particley = path[0].y;
+		particlexv = lhrandom(0, 0.02);
+		particlexv = lhrandom(-0.02, 0.02);
+		memset(image, 0, BEAMWIDTH * BEAMHEIGHT * sizeof(int));
+		for (i = 0;i < 65536;i++)
 		{
-			pixels[(py*BEAMWIDTH+px)*4+0] = bound(0, image[py*BEAMWIDTH+px] * 1.0f, 255.0f);
-			pixels[(py*BEAMWIDTH+px)*4+1] = bound(0, image[py*BEAMWIDTH+px] * 1.0f, 255.0f);
-			pixels[(py*BEAMWIDTH+px)*4+2] = bound(0, image[py*BEAMWIDTH+px] * 1.0f, 255.0f);
-			pixels[(py*BEAMWIDTH+px)*4+3] = 255;
+			for (nearestpathindex = 0;nearestpathindex < PATHPOINTS;nearestpathindex++)
+				if (path[nearestpathindex].x > particlex)
+					break;
+			nearestpathindex %= PATHPOINTS;
+			dx = path[nearestpathindex].x + lhrandom(-0.01, 0.01);dx = bound(0, dx, 1) - particlex;if (dx < 0) dx += 1;
+			dy = path[nearestpathindex].y + lhrandom(-0.01, 0.01);dy = bound(0, dy, 1) - particley;
+			s = path[nearestpathindex].strength / sqrt(dx*dx+dy*dy);
+			particlexv = particlexv /* (1 - lhrandom(0.08, 0.12))*/ + dx * s;
+			particleyv = particleyv /* (1 - lhrandom(0.08, 0.12))*/ + dy * s;
+			particlex += particlexv * maxpathstrength;particlex -= (int) particlex;
+			particley += particleyv * maxpathstrength;particley = bound(0, particley, 1);
+			px = particlex * BEAMWIDTH;
+			py = particley * BEAMHEIGHT;
+			if (px >= 0 && py >= 0 && px < BEAMWIDTH && py < BEAMHEIGHT)
+				image[py*BEAMWIDTH+px] += 16;
 		}
+	
+		for (py = 0;py < BEAMHEIGHT;py++)
+		{
+			for (px = 0;px < BEAMWIDTH;px++)
+			{
+				pixels[(py*BEAMWIDTH+px)*4+2] = bound(0, image[py*BEAMWIDTH+px] * 1.0f, 255.0f);
+				pixels[(py*BEAMWIDTH+px)*4+1] = bound(0, image[py*BEAMWIDTH+px] * 1.0f, 255.0f);
+				pixels[(py*BEAMWIDTH+px)*4+0] = bound(0, image[py*BEAMWIDTH+px] * 1.0f, 255.0f);
+				pixels[(py*BEAMWIDTH+px)*4+3] = 255;
+			}
+		}
+	
+		Image_WriteTGABGRA(va("lightningbeam%i.tga", imagenumber), BEAMWIDTH, BEAMHEIGHT, pixels);
 	}
 
-	Image_WriteTGARGBA(va("lightningbeam%i.tga", imagenumber), BEAMWIDTH, BEAMHEIGHT, pixels);
-	}
-
-	r_lightningbeamtexture = R_LoadTexture2D(r_lightningbeamtexturepool, "lightningbeam", BEAMWIDTH, BEAMHEIGHT, pixels, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
+	r_lightningbeamtexture = R_LoadTexture2D(r_lightningbeamtexturepool, "lightningbeam", BEAMWIDTH, BEAMHEIGHT, pixels, TEXTYPE_BGRA, TEXF_PRECACHE, NULL);
 
 	Mem_Free(pixels);
 	Mem_Free(image);
@@ -138,14 +138,14 @@ void r_lightningbeams_setuptexture(void)
 			r = intensity * 1.0f;
 			g = intensity * 1.0f;
 			b = intensity * 1.0f;
-			data[(y * BEAMWIDTH + x) * 4 + 0] = (unsigned char)(bound(0, r, 1) * 255.0f);
+			data[(y * BEAMWIDTH + x) * 4 + 2] = (unsigned char)(bound(0, r, 1) * 255.0f);
 			data[(y * BEAMWIDTH + x) * 4 + 1] = (unsigned char)(bound(0, g, 1) * 255.0f);
-			data[(y * BEAMWIDTH + x) * 4 + 2] = (unsigned char)(bound(0, b, 1) * 255.0f);
+			data[(y * BEAMWIDTH + x) * 4 + 0] = (unsigned char)(bound(0, b, 1) * 255.0f);
 			data[(y * BEAMWIDTH + x) * 4 + 3] = (unsigned char)255;
 		}
 	}
 
-	r_lightningbeamtexture = R_LoadTexture2D(r_lightningbeamtexturepool, "lightningbeam", BEAMWIDTH, BEAMHEIGHT, data, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
+	r_lightningbeamtexture = R_LoadTexture2D(r_lightningbeamtexturepool, "lightningbeam", BEAMWIDTH, BEAMHEIGHT, data, TEXTYPE_BGRA, TEXF_PRECACHE, NULL);
 	Mem_Free(noise1);
 	Mem_Free(noise2);
 	Mem_Free(data);

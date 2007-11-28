@@ -2515,7 +2515,7 @@ void CL_ParseTempEntity(void)
 			colorStart = MSG_ReadByte();
 			colorLength = MSG_ReadByte();
 			CL_ParticleExplosion2(pos, colorStart, colorLength);
-			tempcolor = (unsigned char *)&palette_complete[(rand()%colorLength) + colorStart];
+			tempcolor = palette_rgb[(rand()%colorLength) + colorStart];
 			color[0] = tempcolor[0] * (2.0f / 255.0f);
 			color[1] = tempcolor[1] * (2.0f / 255.0f);
 			color[2] = tempcolor[2] * (2.0f / 255.0f);

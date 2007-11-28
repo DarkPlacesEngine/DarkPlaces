@@ -49,7 +49,7 @@ void r_light_start(void)
 			pixels[y][x][3] = 255;
 		}
 	}
-	lightcorona = R_LoadTexture2D(lighttexturepool, "lightcorona", 32, 32, &pixels[0][0][0], TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
+	lightcorona = R_LoadTexture2D(lighttexturepool, "lightcorona", 32, 32, &pixels[0][0][0], TEXTYPE_BGRA, TEXF_PRECACHE, NULL);
 }
 
 void r_light_shutdown(void)

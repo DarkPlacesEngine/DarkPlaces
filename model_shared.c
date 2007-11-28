@@ -1030,7 +1030,7 @@ void Mod_ShadowMesh_Free(shadowmesh_t *mesh)
 	}
 }
 
-void Mod_GetTerrainVertex3fTexCoord2fFromRGBA(const unsigned char *imagepixels, int imagewidth, int imageheight, int ix, int iy, float *vertex3f, float *texcoord2f, matrix4x4_t *pixelstepmatrix, matrix4x4_t *pixeltexturestepmatrix)
+void Mod_GetTerrainVertex3fTexCoord2fFromBGRA(const unsigned char *imagepixels, int imagewidth, int imageheight, int ix, int iy, float *vertex3f, float *texcoord2f, matrix4x4_t *pixelstepmatrix, matrix4x4_t *pixeltexturestepmatrix)
 {
 	float v[3], tc[3];
 	v[0] = ix;
@@ -1045,16 +1045,16 @@ void Mod_GetTerrainVertex3fTexCoord2fFromRGBA(const unsigned char *imagepixels, 
 	texcoord2f[1] = tc[1];
 }
 
-void Mod_GetTerrainVertexFromRGBA(const unsigned char *imagepixels, int imagewidth, int imageheight, int ix, int iy, float *vertex3f, float *svector3f, float *tvector3f, float *normal3f, float *texcoord2f, matrix4x4_t *pixelstepmatrix, matrix4x4_t *pixeltexturestepmatrix)
+void Mod_GetTerrainVertexFromBGRA(const unsigned char *imagepixels, int imagewidth, int imageheight, int ix, int iy, float *vertex3f, float *svector3f, float *tvector3f, float *normal3f, float *texcoord2f, matrix4x4_t *pixelstepmatrix, matrix4x4_t *pixeltexturestepmatrix)
 {
 	float vup[3], vdown[3], vleft[3], vright[3];
 	float tcup[3], tcdown[3], tcleft[3], tcright[3];
 	float sv[3], tv[3], nl[3];
-	Mod_GetTerrainVertex3fTexCoord2fFromRGBA(imagepixels, imagewidth, imageheight, ix, iy, vertex3f, texcoord2f, pixelstepmatrix, pixeltexturestepmatrix);
-	Mod_GetTerrainVertex3fTexCoord2fFromRGBA(imagepixels, imagewidth, imageheight, ix, iy - 1, vup, tcup, pixelstepmatrix, pixeltexturestepmatrix);
-	Mod_GetTerrainVertex3fTexCoord2fFromRGBA(imagepixels, imagewidth, imageheight, ix, iy + 1, vdown, tcdown, pixelstepmatrix, pixeltexturestepmatrix);
-	Mod_GetTerrainVertex3fTexCoord2fFromRGBA(imagepixels, imagewidth, imageheight, ix - 1, iy, vleft, tcleft, pixelstepmatrix, pixeltexturestepmatrix);
-	Mod_GetTerrainVertex3fTexCoord2fFromRGBA(imagepixels, imagewidth, imageheight, ix + 1, iy, vright, tcright, pixelstepmatrix, pixeltexturestepmatrix);
+	Mod_GetTerrainVertex3fTexCoord2fFromBGRA(imagepixels, imagewidth, imageheight, ix, iy, vertex3f, texcoord2f, pixelstepmatrix, pixeltexturestepmatrix);
+	Mod_GetTerrainVertex3fTexCoord2fFromBGRA(imagepixels, imagewidth, imageheight, ix, iy - 1, vup, tcup, pixelstepmatrix, pixeltexturestepmatrix);
+	Mod_GetTerrainVertex3fTexCoord2fFromBGRA(imagepixels, imagewidth, imageheight, ix, iy + 1, vdown, tcdown, pixelstepmatrix, pixeltexturestepmatrix);
+	Mod_GetTerrainVertex3fTexCoord2fFromBGRA(imagepixels, imagewidth, imageheight, ix - 1, iy, vleft, tcleft, pixelstepmatrix, pixeltexturestepmatrix);
+	Mod_GetTerrainVertex3fTexCoord2fFromBGRA(imagepixels, imagewidth, imageheight, ix + 1, iy, vright, tcright, pixelstepmatrix, pixeltexturestepmatrix);
 	Mod_BuildBumpVectors(vertex3f, vup, vright, texcoord2f, tcup, tcright, svector3f, tvector3f, normal3f);
 	Mod_BuildBumpVectors(vertex3f, vright, vdown, texcoord2f, tcright, tcdown, sv, tv, nl);
 	VectorAdd(svector3f, sv, svector3f);
@@ -1070,7 +1070,7 @@ void Mod_GetTerrainVertexFromRGBA(const unsigned char *imagepixels, int imagewid
 	VectorAdd(normal3f, nl, normal3f);
 }
 
-void Mod_ConstructTerrainPatchFromRGBA(const unsigned char *imagepixels, int imagewidth, int imageheight, int x1, int y1, int width, int height, int *element3i, int *neighbor3i, float *vertex3f, float *svector3f, float *tvector3f, float *normal3f, float *texcoord2f, matrix4x4_t *pixelstepmatrix, matrix4x4_t *pixeltexturestepmatrix)
+void Mod_ConstructTerrainPatchFromBGRA(const unsigned char *imagepixels, int imagewidth, int imageheight, int x1, int y1, int width, int height, int *element3i, int *neighbor3i, float *vertex3f, float *svector3f, float *tvector3f, float *normal3f, float *texcoord2f, matrix4x4_t *pixelstepmatrix, matrix4x4_t *pixeltexturestepmatrix)
 {
 	int x, y, ix, iy, *e;
 	e = element3i;
@@ -1090,7 +1090,7 @@ void Mod_ConstructTerrainPatchFromRGBA(const unsigned char *imagepixels, int ima
 	Mod_BuildTriangleNeighbors(neighbor3i, element3i, width*height*2);
 	for (y = 0, iy = y1;y < height + 1;y++, iy++)
 		for (x = 0, ix = x1;x < width + 1;x++, ix++, vertex3f += 3, texcoord2f += 2, svector3f += 3, tvector3f += 3, normal3f += 3)
-			Mod_GetTerrainVertexFromRGBA(imagepixels, imagewidth, imageheight, ix, iy, vertex3f, texcoord2f, svector3f, tvector3f, normal3f, pixelstepmatrix, pixeltexturestepmatrix);
+			Mod_GetTerrainVertexFromBGRA(imagepixels, imagewidth, imageheight, ix, iy, vertex3f, texcoord2f, svector3f, tvector3f, normal3f, pixelstepmatrix, pixeltexturestepmatrix);
 }
 
 q3wavefunc_t Mod_LoadQ3Shaders_EnumerateWaveFunc(const char *s)

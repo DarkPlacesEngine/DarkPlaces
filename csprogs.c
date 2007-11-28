@@ -214,11 +214,11 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 		else
 			palcol = cl.scores[e->render.colormap-1].colors;
 
-		cbcolor = (unsigned char *) (&palette_pantscolormap[palcol & 0xF]);
+		cbcolor = palette_rgb_pantscolormap[palcol & 0xF];
 		e->render.colormap_pantscolor[0] = cbcolor[0] * (1.0f / 255.0f);
 		e->render.colormap_pantscolor[1] = cbcolor[1] * (1.0f / 255.0f);
 		e->render.colormap_pantscolor[2] = cbcolor[2] * (1.0f / 255.0f);
-		cbcolor = (unsigned char *) (&palette_shirtcolormap[(palcol & 0xF0) >> 4]);
+		cbcolor = palette_rgb_shirtcolormap[(palcol & 0xF0) >> 4];
 		e->render.colormap_shirtcolor[0] = cbcolor[0] * (1.0f / 255.0f);
 		e->render.colormap_shirtcolor[1] = cbcolor[1] * (1.0f / 255.0f);
 		e->render.colormap_shirtcolor[2] = cbcolor[2] * (1.0f / 255.0f);

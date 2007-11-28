@@ -864,11 +864,11 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 	{
 		unsigned char *cbcolor;
 		e->render.colormap = e->state_current.colormap;
-		cbcolor = (unsigned char *) (&palette_pantscolormap[e->render.colormap & 0xF]);
+		cbcolor = palette_rgb_pantscolormap[e->render.colormap & 0xF];
 		e->render.colormap_pantscolor[0] = cbcolor[0] * (1.0f / 255.0f);
 		e->render.colormap_pantscolor[1] = cbcolor[1] * (1.0f / 255.0f);
 		e->render.colormap_pantscolor[2] = cbcolor[2] * (1.0f / 255.0f);
-		cbcolor = (unsigned char *) (&palette_shirtcolormap[(e->render.colormap & 0xF0) >> 4]);
+		cbcolor = palette_rgb_shirtcolormap[(e->render.colormap & 0xF0) >> 4];
 		e->render.colormap_shirtcolor[0] = cbcolor[0] * (1.0f / 255.0f);
 		e->render.colormap_shirtcolor[1] = cbcolor[1] * (1.0f / 255.0f);
 		e->render.colormap_shirtcolor[2] = cbcolor[2] * (1.0f / 255.0f);
@@ -877,11 +877,11 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 	{
 		unsigned char *cbcolor;
 		e->render.colormap = cl.scores[e->state_current.colormap - 1].colors; // color it
-		cbcolor = (unsigned char *) (&palette_pantscolormap[e->render.colormap & 0xF]);
+		cbcolor = palette_rgb_pantscolormap[e->render.colormap & 0xF];
 		e->render.colormap_pantscolor[0] = cbcolor[0] * (1.0f / 255.0f);
 		e->render.colormap_pantscolor[1] = cbcolor[1] * (1.0f / 255.0f);
 		e->render.colormap_pantscolor[2] = cbcolor[2] * (1.0f / 255.0f);
-		cbcolor = (unsigned char *) (&palette_shirtcolormap[(e->render.colormap & 0xF0) >> 4]);
+		cbcolor = palette_rgb_shirtcolormap[(e->render.colormap & 0xF0) >> 4];
 		e->render.colormap_shirtcolor[0] = cbcolor[0] * (1.0f / 255.0f);
 		e->render.colormap_shirtcolor[1] = cbcolor[1] * (1.0f / 255.0f);
 		e->render.colormap_shirtcolor[2] = cbcolor[2] * (1.0f / 255.0f);
@@ -1393,7 +1393,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 		// * 4 for the expansion from 0-255 to 0-1023 range,
 		// / 255 to scale down byte colors
 		dlightradius = max(dlightradius, e->state_current.glowsize * 4);
-		VectorMA(dlightcolor, (1.0f / 255.0f), (unsigned char *)&palette_complete[e->state_current.glowcolor], dlightcolor);
+		VectorMA(dlightcolor, (1.0f / 255.0f), palette_rgb[e->state_current.glowcolor], dlightcolor);
 	}
 	// make the glow dlight
 	if (dlightradius > 0 && (dlightcolor[0] || dlightcolor[1] || dlightcolor[2]) && !(e->render.flags & RENDER_VIEWMODEL) && r_refdef.numlights < MAX_DLIGHTS)
