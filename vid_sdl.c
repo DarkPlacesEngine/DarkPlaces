@@ -242,9 +242,7 @@ static void IN_Activate( qboolean grab )
 		{
 			vid_usingmouse = true;
 			cl_ignoremousemove = true;
-			if(vid_grabkeyboard.integer) {
-				SDL_WM_GrabInput( SDL_GRAB_ON );
-			}
+			SDL_WM_GrabInput( SDL_GRAB_ON );
 			SDL_ShowCursor( SDL_DISABLE );
 		}		
 	}
@@ -254,9 +252,7 @@ static void IN_Activate( qboolean grab )
 		{
 			vid_usingmouse = false;
 			cl_ignoremousemove = true;
-			if(vid_grabkeyboard.integer) {
-				SDL_WM_GrabInput( SDL_GRAB_OFF );
-			}
+			SDL_WM_GrabInput( SDL_GRAB_OFF );
 			SDL_ShowCursor( SDL_ENABLE );
 		}
 	}
@@ -754,8 +750,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	vid_activewindow = false;
 	vid_usingmouse = false;
 
-	if(!vid_grabkeyboard.integer)
-		SDL_WM_GrabInput(SDL_GRAB_OFF);
+	SDL_WM_GrabInput(SDL_GRAB_OFF);
 	return true;
 }
 
