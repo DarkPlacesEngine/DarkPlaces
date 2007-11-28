@@ -146,7 +146,7 @@ void sbar_start(void)
 {
 	int i;
 
-	if (gamemode == GAME_NETHERWORLD)
+	if (gamemode == GAME_DELUXEQUAKE)
 	{
 	}
 	else if (gamemode == GAME_SOM)
@@ -1151,7 +1151,7 @@ void Sbar_Draw (void)
 		}
 		else if (cl.intermission == 2)
 			Sbar_FinaleOverlay();
-		else if (gamemode == GAME_NETHERWORLD)
+		else if (gamemode == GAME_DELUXEQUAKE)
 		{
 		}
 		else if (gamemode == GAME_SOM)
