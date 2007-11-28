@@ -420,6 +420,18 @@ cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 			pic->tex = draw_generatecrosshair(5);
 		if (pic->tex == NULL && !strcmp(path, "gfx/colorcontrol/ditherpattern"))
 			pic->tex = draw_generateditherpattern();
+		// default textures for light sprites
+		// todo: improve them
+		if (pic->tex == NULL && !strcmp(path, "gfx/editlights/cursor"))
+			pic->tex = draw_generatecrosshair(0);
+		if (pic->tex == NULL && !strcmp(path, "gfx/editlights/light"))
+			pic->tex = draw_generatecrosshair(0);
+		if (pic->tex == NULL && !strcmp(path, "gfx/editlights/noshadow"))
+			pic->tex = draw_generatecrosshair(0);
+		if (pic->tex == NULL && !strcmp(path, "gfx/editlights/cubemap"))
+			pic->tex = draw_generatecrosshair(0);
+		if (pic->tex == NULL && !strcmp(path, "gfx/editlights/selection"))
+			pic->tex = draw_generatecrosshair(0);
 		if (pic->tex == NULL)
 		{
 			// don't complain about missing gfx/crosshair images
