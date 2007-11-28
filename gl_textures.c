@@ -899,7 +899,7 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 		case GLTEXTURETYPE_CUBEMAP:
 			// convert and upload each side in turn,
 			// from a continuous block of input texels
-			texturebuffer = prevbuffer;
+			texturebuffer = (unsigned char *)prevbuffer;
 			for (i = 0;i < 6;i++)
 			{
 				prevbuffer = texturebuffer;

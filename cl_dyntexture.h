@@ -18,3 +18,4 @@ void CL_LinkDynTexture( const char *name, rtexture_t *texture );
 void CL_UnlinkDynTexture( const char *name );
 
 #endif
+
