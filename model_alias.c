@@ -276,11 +276,28 @@ void Mod_Alias_GetMesh_Vertices(const model_t *model, const frameblend_t *frameb
 					}
 				}
 			}
-		}
-		// md3 model vertices do not include tangents, so we have to generate them (extremely slow)
-		if (normal3f)
 			if (svector3f)
-				Mod_BuildTextureVectorsFromNormals(0, model->surfmesh.num_vertices, model->surfmesh.num_triangles, vertex3f, model->surfmesh.data_texcoordtexture2f, normal3f, model->surfmesh.data_element3i, svector3f, tvector3f, r_smoothnormals_areaweighting.integer);
+			{
+				const texvecvertex_t *texvecvert = model->surfmesh.data_morphtexvecvertex + numverts * frameblend[blendnum].frame;
+				float f = frameblend[blendnum].lerp * (1.0f / 127.0f);
+				if (blendnum == 0)
+				{
+					for (i = 0;i < numverts;i++, texvecvert++)
+					{
+						VectorScale(texvecvert->svec, f, svector3f + i*3);
+						VectorScale(texvecvert->tvec, f, tvector3f + i*3);
+					}
+				}
+				else
+				{
+					for (i = 0;i < numverts;i++, texvecvert++)
+					{
+						VectorMA(svector3f + i*3, f, texvecvert->svec, svector3f + i*3);
+						VectorMA(tvector3f + i*3, f, texvecvert->tvec, tvector3f + i*3);
+					}
+				}
+			}
+		}
 	}
 	else if (model->surfmesh.data_morphmdlvertex)
 	{
@@ -352,10 +369,28 @@ void Mod_Alias_GetMesh_Vertices(const model_t *model, const frameblend_t *frameb
 					}
 				}
 			}
-		}
-		if (normal3f)
 			if (svector3f)
-				Mod_BuildTextureVectorsFromNormals(0, model->surfmesh.num_vertices, model->surfmesh.num_triangles, vertex3f, model->surfmesh.data_texcoordtexture2f, normal3f, model->surfmesh.data_element3i, svector3f, tvector3f, r_smoothnormals_areaweighting.integer);
+			{
+				const texvecvertex_t *texvecvert = model->surfmesh.data_morphtexvecvertex + numverts * frameblend[blendnum].frame;
+				float f = frameblend[blendnum].lerp * (1.0f / 127.0f);
+				if (blendnum == 0)
+				{
+					for (i = 0;i < numverts;i++, texvecvert++)
+					{
+						VectorScale(texvecvert->svec, f, svector3f + i*3);
+						VectorScale(texvecvert->tvec, f, tvector3f + i*3);
+					}
+				}
+				else
+				{
+					for (i = 0;i < numverts;i++, texvecvert++)
+					{
+						VectorMA(svector3f + i*3, f, texvecvert->svec, svector3f + i*3);
+						VectorMA(tvector3f + i*3, f, texvecvert->tvec, tvector3f + i*3);
+					}
+				}
+			}
+		}
 	}
 	else
 		Host_Error("model %s has no skeletal or vertex morph animation data", model->name);
@@ -515,14 +550,30 @@ static void Mod_Alias_CalculateBoundingBox(void)
 	loadmodel->radius2 = radius * radius;
 }
 
-static void Mod_Alias_Mesh_CompileFrameZero(void)
+static void Mod_Alias_MorphMesh_CompileFrames(void)
 {
+	int i, j;
 	frameblend_t frameblend[4] = {{0, 1}, {0, 0}, {0, 0}, {0, 0}};
-	loadmodel->surfmesh.data_vertex3f = (float *)Mem_Alloc(loadmodel->mempool, loadmodel->surfmesh.num_vertices * sizeof(float[3][4]));
-	loadmodel->surfmesh.data_svector3f = loadmodel->surfmesh.data_vertex3f + loadmodel->surfmesh.num_vertices * 3;
-	loadmodel->surfmesh.data_tvector3f = loadmodel->surfmesh.data_vertex3f + loadmodel->surfmesh.num_vertices * 6;
-	loadmodel->surfmesh.data_normal3f = loadmodel->surfmesh.data_vertex3f + loadmodel->surfmesh.num_vertices * 9;
-	Mod_Alias_GetMesh_Vertices(loadmodel, frameblend, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_normal3f, loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f);
+	unsigned char *datapointer;
+	datapointer = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->surfmesh.num_vertices * (sizeof(float[3]) * 4 + loadmodel->surfmesh.num_morphframes * sizeof(texvecvertex_t)));
+	loadmodel->surfmesh.data_vertex3f = (float *)datapointer;datapointer += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
+	loadmodel->surfmesh.data_svector3f = (float *)datapointer;datapointer += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
+	loadmodel->surfmesh.data_tvector3f = (float *)datapointer;datapointer += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
+	loadmodel->surfmesh.data_normal3f = (float *)datapointer;datapointer += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
+	loadmodel->surfmesh.data_morphtexvecvertex = (texvecvertex_t *)datapointer;datapointer += loadmodel->surfmesh.num_morphframes * loadmodel->surfmesh.num_vertices * sizeof(texvecvertex_t);
+	// this counts down from the last frame to the first so that the final data in surfmesh is for frame zero (which is what the renderer expects to be there)
+	for (i = loadmodel->surfmesh.num_morphframes-1;i >= 0;i--)
+	{
+		frameblend[0].frame = i;
+		Mod_Alias_GetMesh_Vertices(loadmodel, frameblend, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_normal3f, NULL, NULL);
+		Mod_BuildTextureVectorsFromNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, r_smoothnormals_areaweighting.integer);
+		// encode the svector and tvector in 3 byte format for permanent storage
+		for (j = 0;j < loadmodel->surfmesh.num_vertices;j++)
+		{
+			VectorScale(loadmodel->surfmesh.data_svector3f + j * 3, 127.0f, loadmodel->surfmesh.data_morphtexvecvertex[i*loadmodel->surfmesh.num_vertices+j].svec);
+			VectorScale(loadmodel->surfmesh.data_tvector3f + j * 3, 127.0f, loadmodel->surfmesh.data_morphtexvecvertex[i*loadmodel->surfmesh.num_vertices+j].tvec);
+		}
+	}
 }
 
 static void Mod_MDLMD2MD3_TraceBox(model_t *model, int frame, trace_t *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask)
@@ -951,7 +1002,7 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 	Mod_MDL_LoadFrames (startframes, numverts, vertremap);
 	Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
 	Mod_Alias_CalculateBoundingBox();
-	Mod_Alias_Mesh_CompileFrameZero();
+	Mod_Alias_MorphMesh_CompileFrames();
 
 	Mem_Free(vertst);
 	Mem_Free(vertremap);
@@ -1305,7 +1356,7 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 
 	Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
 	Mod_Alias_CalculateBoundingBox();
-	Mod_Alias_Mesh_CompileFrameZero();
+	Mod_Alias_MorphMesh_CompileFrames();
 
 	surface = loadmodel->data_surfaces;
 	surface->texture = loadmodel->data_textures;
@@ -1471,7 +1522,7 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 		Mod_ValidateElements(loadmodel->surfmesh.data_element3i + surface->num_firsttriangle * 3, surface->num_triangles, surface->num_firstvertex, surface->num_vertices, __FILE__, __LINE__);
 	}
 	Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
-	Mod_Alias_Mesh_CompileFrameZero();
+	Mod_Alias_MorphMesh_CompileFrames();
 	Mod_Alias_CalculateBoundingBox();
 	Mod_FreeSkinFiles(skinfiles);
 

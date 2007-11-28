@@ -90,7 +90,13 @@ typedef struct overridetagnameset_s
 overridetagnameset_t;
 
 struct md3vertex_s;
-struct trivertex_s;
+struct trivertx_s;
+typedef struct texvecvertex_s
+{
+	signed char svec[3];
+	signed char tvec[3];
+}
+texvecvertex_t;
 
 // used for mesh lists in q1bsp/q3bsp map models
 // (the surfaces reference portions of these meshes)
@@ -125,6 +131,7 @@ typedef struct surfmesh_s
 	int num_morphframes;
 	struct md3vertex_s *data_morphmd3vertex;
 	struct trivertx_s *data_morphmdlvertex;
+	struct texvecvertex_s *data_morphtexvecvertex;
 	float *data_morphmd2framesize6f;
 	float num_morphmdlframescale[3];
 	float num_morphmdlframetranslate[3];
