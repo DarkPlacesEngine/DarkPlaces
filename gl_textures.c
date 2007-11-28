@@ -141,7 +141,7 @@ static gltexturepool_t *gltexturepoolchain = NULL;
 
 static unsigned char *resizebuffer = NULL, *colorconvertbuffer;
 static int resizebuffersize = 0;
-static unsigned char *texturebuffer;
+static const unsigned char *texturebuffer;
 static int texturebuffersize = 0;
 
 static textypeinfo_t *R_GetTexTypeInfo(textype_t textype, int flags)
