@@ -727,10 +727,10 @@ imageformat_t imageformats_nopath[] =
 // so i just use additional folder to store this textures
 imageformat_t imageformats_dq[] =
 {
-	{"%s.tga", LoadTGA},
-	{"%s.jpg", JPEG_LoadImage},
-	{"texturemaps/%s.tga", LoadTGA},
-	{"texturemaps/%s.jpg", JPEG_LoadImage},
+	{"%s.tga", LoadTGA_BGRA},
+	{"%s.jpg", JPEG_LoadImage_BGRA},
+	{"texturemaps/%s.tga", LoadTGA_BGRA},
+	{"texturemaps/%s.jpg", JPEG_LoadImage_BGRA},
 	{NULL, NULL}
 };
 
