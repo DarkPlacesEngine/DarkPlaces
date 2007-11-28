@@ -4065,7 +4065,7 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 	if (t->backgroundnumskinframes && !(t->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED))
 		t->currentmaterialflags |= MATERIALFLAG_VERTEXTEXTUREBLEND;
 
-	for (i = 0, tcmod = t->tcmods;i < Q3MAXTCMODS && (tcmod->tcmod || i < 1);i++, tcmod++)
+	for (i = 0, tcmod = t->tcmods;i < Q3MAXTCMODS && tcmod->tcmod;i++, tcmod++)
 	{
 		matrix4x4_t matrix;
 		switch(tcmod->tcmod)
