@@ -66,6 +66,7 @@ OBJ_COMMON= \
 	cd_shared.o \
 	cl_collision.o \
 	cl_demo.o \
+	cl_dyntexture.o \
 	cl_input.o \
 	cl_main.o \
 	cl_parse.o \
