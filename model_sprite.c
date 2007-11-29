@@ -197,10 +197,10 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 						{
 							for (x = 0;x < width*height;x++)
 							{
-								pixels[i*4+2] = datapointer[i*4+0];
-								pixels[i*4+1] = datapointer[i*4+1];
-								pixels[i*4+0] = datapointer[i*4+2];
-								pixels[i*4+3] = datapointer[i*4+3];
+								pixels[x*4+2] = datapointer[x*4+0];
+								pixels[x*4+1] = datapointer[x*4+1];
+								pixels[x*4+0] = datapointer[x*4+2];
+								pixels[x*4+3] = datapointer[x*4+3];
 							}
 						}
 						else //if (version == SPRITEHL_VERSION || version == SPRITE_VERSION)
