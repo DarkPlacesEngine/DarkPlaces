@@ -944,9 +944,9 @@ void Sbar_DrawFrags (void)
 
 		// draw background
 		c = palette_rgb_pantsscoreboard[(s->colors & 0xf0) >> 4];
-		DrawQ_Fill (sbar_x + x + 10, sbar_y     - 23, 28, 4, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
+		DrawQ_Fill (sbar_x + x + 10, sbar_y     - 23, 28, 4, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), sbar_alpha_fg.value, 0);
 		c = palette_rgb_shirtscoreboard[s->colors & 0xf];
-		DrawQ_Fill (sbar_x + x + 10, sbar_y + 4 - 23, 28, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
+		DrawQ_Fill (sbar_x + x + 10, sbar_y + 4 - 23, 28, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), sbar_alpha_fg.value, 0);
 
 		// draw number
 		f = s->frags;
@@ -988,9 +988,9 @@ void Sbar_DrawFace (void)
 		// draw background
 		Sbar_DrawPic (112, 0, rsb_teambord);
 		c = palette_rgb_pantsscoreboard[(s->colors & 0xf0) >> 4];
-		DrawQ_Fill (sbar_x + 113, vid_conheight.integer-SBAR_HEIGHT+3, 22, 9, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
+		DrawQ_Fill (sbar_x + 113, vid_conheight.integer-SBAR_HEIGHT+3, 22, 9, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), sbar_alpha_fg.value, 0);
 		c = palette_rgb_shirtscoreboard[s->colors & 0xf];
-		DrawQ_Fill (sbar_x + 113, vid_conheight.integer-SBAR_HEIGHT+12, 22, 9, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
+		DrawQ_Fill (sbar_x + 113, vid_conheight.integer-SBAR_HEIGHT+12, 22, 9, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), sbar_alpha_fg.value, 0);
 
 		// draw number
 		f = s->frags;
@@ -1625,9 +1625,9 @@ float Sbar_PrintScoreboardItem(scoreboard_t *s, float x, float y)
 			//
 			//
 			c = palette_rgb_pantsscoreboard[(s->colors & 0xf0) >> 4];
-			DrawQ_Fill(x + 14*8, y+1, 40, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
+			DrawQ_Fill(x + 14*8, y+1, 40, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), sbar_alpha_fg.value, 0);
 			c = palette_rgb_shirtscoreboard[s->colors & 0xf];
-			DrawQ_Fill(x + 14*8, y+4, 40, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
+			DrawQ_Fill(x + 14*8, y+4, 40, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), sbar_alpha_fg.value, 0);
 			// print the text
 			//DrawQ_String(x, y, va("%c%4i %s", myself ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL, true);
 			if (s->qw_ping || s->qw_packetloss)
@@ -1649,9 +1649,9 @@ float Sbar_PrintScoreboardItem(scoreboard_t *s, float x, float y)
 		{
 			// draw colors behind score
 			c = palette_rgb_pantsscoreboard[(s->colors & 0xf0) >> 4];
-			DrawQ_Fill(x + 9*8, y+1, 40, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
+			DrawQ_Fill(x + 9*8, y+1, 40, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), sbar_alpha_fg.value, 0);
 			c = palette_rgb_shirtscoreboard[s->colors & 0xf];
-			DrawQ_Fill(x + 9*8, y+4, 40, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
+			DrawQ_Fill(x + 9*8, y+4, 40, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), sbar_alpha_fg.value, 0);
 			// print the text
 			//DrawQ_String(x, y, va("%c%4i %s", myself ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL, true);
 			if (s->qw_ping || s->qw_packetloss)
