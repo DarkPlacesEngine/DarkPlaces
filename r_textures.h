@@ -20,6 +20,8 @@
 #define TEXF_PICMIP 0x00000100
 // indicates texture should be compressed if possible
 #define TEXF_COMPRESS 0x00000200
+// use this flag to block R_PurgeTexture from freeing a texture
+#define TEXF_PERSISTENT 0x00000400
 // used for checking if textures mismatch
 #define TEXF_IMPORTANTBITS (TEXF_ALPHA | TEXF_MIPMAP | TEXF_CLAMP | TEXF_FORCENEAREST | TEXF_FORCELINEAR | TEXF_PICMIP | TEXF_COMPRESS)
 
@@ -97,12 +99,16 @@ int R_TextureWidth(rtexture_t *rt);
 // returns height of texture, as was specified when it was uploaded
 int R_TextureHeight(rtexture_t *rt);
 
+// only frees the texture if TEXF_PERSISTENT is not set
+// also resets the variable
+void R_PurgeTexture(rtexture_t *prt);
+
 // frees processing buffers each frame, and may someday animate procedural textures
 void R_Textures_Frame(void);
 
 // maybe rename this - sounds awful? [11/21/2007 Black]
 void R_MarkDirtyTexture(rtexture_t *rt);
-void R_MakeTextureDynamic(rtexture_t *rt, updatecallback_t updatecallback, void *data); 
+void R_MakeTextureDynamic(rtexture_t *rt, updatecallback_t updatecallback, void *data);
 
 #endif
 

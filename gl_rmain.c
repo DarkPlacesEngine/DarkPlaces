@@ -267,22 +267,22 @@ static void R_BuildBlankTextures(void)
 	data[1] = 128; // normal Y
 	data[0] = 255; // normal Z
 	data[3] = 128; // height
-	r_texture_blanknormalmap = R_LoadTexture2D(r_main_texturepool, "blankbump", 1, 1, data, TEXTYPE_BGRA, TEXF_PRECACHE, NULL);
+	r_texture_blanknormalmap = R_LoadTexture2D(r_main_texturepool, "blankbump", 1, 1, data, TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_PERSISTENT, NULL);
 	data[0] = 255;
 	data[1] = 255;
 	data[2] = 255;
 	data[3] = 255;
-	r_texture_white = R_LoadTexture2D(r_main_texturepool, "blankwhite", 1, 1, data, TEXTYPE_BGRA, TEXF_PRECACHE, NULL);
+	r_texture_white = R_LoadTexture2D(r_main_texturepool, "blankwhite", 1, 1, data, TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_PERSISTENT, NULL);
 	data[0] = 128;
 	data[1] = 128;
 	data[2] = 128;
 	data[3] = 255;
-	r_texture_grey128 = R_LoadTexture2D(r_main_texturepool, "blankgrey128", 1, 1, data, TEXTYPE_BGRA, TEXF_PRECACHE, NULL);
+	r_texture_grey128 = R_LoadTexture2D(r_main_texturepool, "blankgrey128", 1, 1, data, TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_PERSISTENT, NULL);
 	data[0] = 0;
 	data[1] = 0;
 	data[2] = 0;
 	data[3] = 255;
-	r_texture_black = R_LoadTexture2D(r_main_texturepool, "blankblack", 1, 1, data, TEXTYPE_BGRA, TEXF_PRECACHE, NULL);
+	r_texture_black = R_LoadTexture2D(r_main_texturepool, "blankblack", 1, 1, data, TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_PERSISTENT, NULL);
 }
 
 static void R_BuildNoTexture(void)
@@ -310,14 +310,14 @@ static void R_BuildNoTexture(void)
 			}
 		}
 	}
-	r_texture_notexture = R_LoadTexture2D(r_main_texturepool, "notexture", 16, 16, &pix[0][0][0], TEXTYPE_BGRA, TEXF_MIPMAP, NULL);
+	r_texture_notexture = R_LoadTexture2D(r_main_texturepool, "notexture", 16, 16, &pix[0][0][0], TEXTYPE_BGRA, TEXF_MIPMAP | TEXF_PERSISTENT, NULL);
 }
 
 static void R_BuildWhiteCube(void)
 {
 	unsigned char data[6*1*1*4];
 	memset(data, 255, sizeof(data));
-	r_texture_whitecube = R_LoadTextureCubeMap(r_main_texturepool, "whitecube", 1, data, TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_CLAMP, NULL);
+	r_texture_whitecube = R_LoadTextureCubeMap(r_main_texturepool, "whitecube", 1, data, TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_CLAMP | TEXF_PERSISTENT, NULL);
 }
 
 static void R_BuildNormalizationCube(void)
@@ -377,7 +377,7 @@ static void R_BuildNormalizationCube(void)
 			}
 		}
 	}
-	r_texture_normalizationcube = R_LoadTextureCubeMap(r_main_texturepool, "normalcube", NORMSIZE, &data[0][0][0][0], TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_CLAMP, NULL);
+	r_texture_normalizationcube = R_LoadTextureCubeMap(r_main_texturepool, "normalcube", NORMSIZE, &data[0][0][0][0], TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_CLAMP | TEXF_PERSISTENT, NULL);
 }
 
 static void R_BuildFogTexture(void)
@@ -398,7 +398,7 @@ static void R_BuildFogTexture(void)
 		//data2[x][2] = 255 - b;
 		//data2[x][3] = 255;
 	}
-	r_texture_fogattenuation = R_LoadTexture2D(r_main_texturepool, "fogattenuation", FOGWIDTH, 1, &data1[0][0], TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP, NULL);
+	r_texture_fogattenuation = R_LoadTexture2D(r_main_texturepool, "fogattenuation", FOGWIDTH, 1, &data1[0][0], TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_PERSISTENT, NULL);
 	//r_texture_fogintensity = R_LoadTexture2D(r_main_texturepool, "fogintensity", FOGWIDTH, 1, &data2[0][0], TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP, NULL);
 }
 
@@ -1472,18 +1472,18 @@ void R_SkinFrame_Purge(void)
 		{
 			if (s->loadsequence && s->loadsequence != r_skinframe.loadsequence)
 			{
-				if (s->base == r_texture_notexture)     s->base   = NULL;
-				if (s->nmap == r_texture_blanknormalmap)s->nmap   = NULL;
-				if (s->merged == s->base)               s->merged = NULL;
-				if (s->stain ) R_FreeTexture(s->stain );s->stain  = NULL;
-				if (s->merged) R_FreeTexture(s->merged);s->merged = NULL;
-				if (s->base  ) R_FreeTexture(s->base  );s->base   = NULL;
-				if (s->pants ) R_FreeTexture(s->pants );s->pants  = NULL;
-				if (s->shirt ) R_FreeTexture(s->shirt );s->shirt  = NULL;
-				if (s->nmap  ) R_FreeTexture(s->nmap  );s->nmap   = NULL;
-				if (s->gloss ) R_FreeTexture(s->gloss );s->gloss  = NULL;
-				if (s->glow  ) R_FreeTexture(s->glow  );s->glow   = NULL;
-				if (s->fog   ) R_FreeTexture(s->fog   );s->fog    = NULL;
+				if (s->merged == s->base)
+					s->merged = NULL;
+				// FIXME: maybe pass a pointer to the pointer to R_PurgeTexture and reset it to NULL inside? [11/29/2007 Black]
+				R_PurgeTexture(s->stain );s->stain  = NULL;
+				R_PurgeTexture(s->merged);s->merged = NULL;
+				R_PurgeTexture(s->base  );s->base   = NULL;
+				R_PurgeTexture(s->pants );s->pants  = NULL;
+				R_PurgeTexture(s->shirt );s->shirt  = NULL;
+				R_PurgeTexture(s->nmap  );s->nmap   = NULL;
+				R_PurgeTexture(s->gloss );s->gloss  = NULL;
+				R_PurgeTexture(s->glow  );s->glow   = NULL;
+				R_PurgeTexture(s->fog   );s->fog    = NULL;
 				s->loadsequence = 0;
 			}
 		}
@@ -1518,15 +1518,15 @@ skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewid
 	skinframe_t *item;
 	int hashindex;
 	char basename[MAX_QPATH];
-
+	
 	Image_StripImageExtension(name, basename, sizeof(basename));
 
 	hashindex = CRC_Block((unsigned char *)basename, strlen(basename)) & (SKINFRAME_HASH - 1);
 	for (item = r_skinframe.hash[hashindex];item;item = item->next)
 		if (!strcmp(item->basename, basename) && item->textureflags == textureflags && item->comparewidth == comparewidth && item->compareheight == compareheight && item->comparecrc == comparecrc)
 			break;
-	if (!item)
-	{
+
+	if (!item) {
 		rtexture_t *dyntexture;
 		// check whether its a dynamic texture
 		dyntexture = CL_GetDynTexture( basename );
@@ -1535,14 +1535,23 @@ skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewid
 		item = (skinframe_t *)Mem_ExpandableArray_AllocRecord(&r_skinframe.array);
 		memset(item, 0, sizeof(*item));
 		strlcpy(item->basename, basename, sizeof(item->basename));
+		item->base = dyntexture; // either NULL or dyntexture handle
 		item->textureflags = textureflags;
-		item->base = dyntexture;
 		item->comparewidth = comparewidth;
 		item->compareheight = compareheight;
 		item->comparecrc = comparecrc;
 		item->next = r_skinframe.hash[hashindex];	
 		r_skinframe.hash[hashindex] = item;
 	}
+	else if( item->base == NULL )
+	{
+		rtexture_t *dyntexture;
+		// check whether its a dynamic texture
+		// this only needs to be done because Purge doesnt delete skinframes - only sets the texture pointers to NULL and we need to restore it before returing.. [11/29/2007 Black]
+		dyntexture = CL_GetDynTexture( basename );
+		item->base = dyntexture; // either NULL or dyntexture handle
+	}
+
 	R_SkinFrame_MarkUsed(item);
 	return item;
 }
