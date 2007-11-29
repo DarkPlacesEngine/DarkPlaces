@@ -231,6 +231,7 @@ extern int	image_height;
 
 unsigned char *PNG_LoadImage_BGRA (const unsigned char *raw, int filesize)
 {
+	unsigned int c;
 	unsigned int	y;
 	void *png, *pnginfo;
 	unsigned char *imagedata = NULL;
@@ -364,6 +365,14 @@ unsigned char *PNG_LoadImage_BGRA (const unsigned char *raw, int filesize)
 		Con_Printf ("PNG_LoadImage : bad color depth\n");
 		Mem_Free(imagedata);
 		imagedata = NULL;
+	}
+
+	// swizzle RGBA to BGRA
+	for (y = 0;y < (unsigned int)(image_width*image_height*4);y += 4)
+	{
+		c = imagedata[y+0];
+		imagedata[y+0] = imagedata[y+2];
+		imagedata[y+2] = c;
 	}
 
 	return imagedata;
