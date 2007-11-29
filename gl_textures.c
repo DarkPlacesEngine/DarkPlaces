@@ -287,6 +287,13 @@ int R_RealGetTexture(rtexture_t *rt)
 		return 0;
 }
 
+void R_PurgeTexture(rtexture_t *rt)
+{
+	if(rt && !(((gltexture_t*) rt)->flags & TEXF_PERSISTENT)) {
+		R_FreeTexture(rt);
+	}
+}
+
 void R_FreeTexture(rtexture_t *rt)
 {
 	gltexture_t *glt, **gltpointer;

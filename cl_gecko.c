@@ -68,7 +68,7 @@ static void cl_gecko_updatecallback( rtexture_t *texture, clgecko_t *instance ) 
 
 static void cl_gecko_linktexture( clgecko_t *instance ) {
 	// TODO: assert that instance->texture == NULL
-	instance->texture = R_LoadTexture2D( cl_geckotexturepool, instance->name, DEFAULT_GECKO_WIDTH, DEFAULT_GECKO_HEIGHT, NULL, TEXTYPE_BGRA, TEXF_ALPHA, NULL );
+	instance->texture = R_LoadTexture2D( cl_geckotexturepool, instance->name, DEFAULT_GECKO_WIDTH, DEFAULT_GECKO_HEIGHT, NULL, TEXTYPE_BGRA, TEXF_ALPHA | TEXF_PERSISTENT, NULL );
 	R_MakeTextureDynamic( instance->texture, cl_gecko_updatecallback, instance );
 	CL_LinkDynTexture( instance->name, instance->texture );
 }
