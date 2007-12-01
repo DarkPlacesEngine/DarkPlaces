@@ -488,7 +488,14 @@ collision_leavenudge                              0                   how much t
 collision_prefernudgedfraction                    1                   whether to sort collision events by nudged fraction (1) or real fraction (0)
 collision_startnudge                              0                   how much to bias collision trace start
 con_closeontoggleconsole                          1                   allows toggleconsole binds to close the console as well
+con_chat                                          0                   how many chat lines to show in a dedicated chat area
+con_chatpos                                       0                   where to put chat (negative: lines from bottom of screen, positive: lines below notify, 0: at top)
+con_chatsize                                      8                   chat text size in virtual 2D pixels
+con_chattime                                      30                  how long chat lines last, in seconds
+con_chatwidth                                     1.0                 relative chat window width
 con_notify                                        4                   how many notify lines to show (0-32)
+con_notifyalign                                   3                   how to align notify lines: 0 = left, 0.5 = center, 1 = right, empty string = game default)
+con_notifysize                                    8                   notify text size in virtual 2D pixels
 con_notifytime                                    3                   how long notify lines last, in seconds
 con_textsize                                      8                   console text size in virtual 2D pixels
 coop                                              0                   coop mode, 0 = no coop, 1 = coop mode, multiple players playing through the singleplayer game (coop mode also shuts off deathmatch)

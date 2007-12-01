@@ -203,6 +203,10 @@ float MSG_ReadAngle (protocolversion_t protocol);
 
 //============================================================================
 
+typedef float (*COM_WordWidthFunc_t) (void *passthrough, const char *w, size_t *length, float maxWidth); // length is updated to the longest fitting string into maxWidth; if maxWidth < 0, all characters are used and length is used as is
+typedef int (*COM_LineProcessorFunc) (void *passthrough, const char *line, size_t length, float width, qboolean isContination);
+int COM_Wordwrap(const char *string, size_t length, float continuationSize, float maxWidth, COM_WordWidthFunc_t wordWidth, void *passthroughCW, COM_LineProcessorFunc processLine, void *passthroughPL);
+
 extern char com_token[MAX_INPUTLINE];
 
 int COM_ParseToken_Simple(const char **datapointer, qboolean returnnewline, qboolean parsebackslash);

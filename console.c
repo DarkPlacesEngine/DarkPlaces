@@ -26,25 +26,52 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #endif
 #include <time.h>
 
-int con_linewidth;
-
 float con_cursorspeed = 4;
 
 #define		CON_TEXTSIZE	131072
+#define		CON_MAXLINES	  4096
 
-// total lines in console scrollback
-int con_totallines;
 // lines up from bottom to display
 int con_backscroll;
-// where next message will be printed
-int con_current;
-// offset in current line for next print
-int con_x;
+
+// console buffer
 char con_text[CON_TEXTSIZE];
 
+#define CON_MASK_HIDENOTIFY 128
+#define CON_MASK_CHAT 1
+
+typedef struct
+{
+	char *start;
+	int len;
+
+	double addtime;
+	int mask;
+
+	int height; // recalculated line height when needed (-1 to unset)
+}
+con_lineinfo;
+con_lineinfo con_lines[CON_MAXLINES];
+
+int con_lines_first; // cyclic buffer
+int con_lines_count;
+#define CON_LINES_IDX(i) ((con_lines_first + (i)) % CON_MAXLINES)
+#define CON_LINES_LAST CON_LINES_IDX(con_lines_count - 1)
+#define CON_LINES(i) con_lines[CON_LINES_IDX(i)]
+#define CON_LINES_PRED(i) (((i) + CON_MAXLINES - 1) % CON_MAXLINES)
+#define CON_LINES_SUCC(i) (((i) + 1) % CON_MAXLINES)
+
 cvar_t con_notifytime = {CVAR_SAVE, "con_notifytime","3", "how long notify lines last, in seconds"};
-cvar_t con_notify = {CVAR_SAVE, "con_notify","4", "how many notify lines to show (0-32)"};
+cvar_t con_notify = {CVAR_SAVE, "con_notify","4", "how many notify lines to show"};
+cvar_t con_notifyalign = {CVAR_SAVE, "con_notifyalign", "", "how to align notify lines: 0 = left, 0.5 = center, 1 = right, empty string = game default)"};
+
+cvar_t con_chattime = {CVAR_SAVE, "con_chattime","30", "how long chat lines last, in seconds"};
+cvar_t con_chat = {CVAR_SAVE, "con_chat","0", "how many chat lines to show in a dedicated chat area"};
+cvar_t con_chatpos = {CVAR_SAVE, "con_chatpos","0", "where to put chat (negative: lines from bottom of screen, positive: lines below notify, 0: at top)"};
+cvar_t con_chatwidth = {CVAR_SAVE, "con_chatwidth","1.0", "relative chat window width"};
 cvar_t con_textsize = {CVAR_SAVE, "con_textsize","8", "console text size in virtual 2D pixels"};
+cvar_t con_notifysize = {CVAR_SAVE, "con_notifysize","8", "notify text size in virtual 2D pixels"};
+cvar_t con_chatsize = {CVAR_SAVE, "con_chatsize","8", "chat text size in virtual 2D pixels (if con_chat is enabled)"};
 
 
 cvar_t sys_specialcharactertranslation = {0, "sys_specialcharactertranslation", "1", "terminal console conchars to ASCII translation (set to 0 if your conchars.tga is for an 8bit character set or if you want raw output)"};
@@ -69,10 +96,7 @@ cvar_t con_nickcompletion_flags = {CVAR_SAVE, "con_nickcompletion_flags", "11", 
 #define NICKS_ALPHANUMERICS_ONLY 8
 #define NICKS_NO_SPACES 16
 
-#define MAX_NOTIFYLINES 32
-// cl.time time the line was generated for transparent notify lines
-float con_times[MAX_NOTIFYLINES];
-
+int con_linewidth;
 int con_vislines;
 
 qboolean con_initialized;
@@ -356,7 +380,7 @@ void Con_ToggleConsole_f (void)
 {
 	// toggle the 'user wants console' bit
 	key_consoleactive ^= KEY_CONSOLEACTIVE_USER;
-	memset (con_times, 0, sizeof(con_times));
+	Con_ClearNotify();
 }
 
 /*
@@ -366,22 +390,22 @@ Con_Clear_f
 */
 void Con_Clear_f (void)
 {
-	//if (con_text)
-		memset (con_text, ' ', CON_TEXTSIZE);
+	con_lines_count = 0;
 }
 
 
 /*
 ================
 Con_ClearNotify
+
+Clear all notify lines.
 ================
 */
 void Con_ClearNotify (void)
 {
 	int i;
-
-	for (i=0 ; i<MAX_NOTIFYLINES ; i++)
-		con_times[i] = 0;
+	for(i = 0; i < con_lines_count; ++i)
+		CON_LINES(i).mask |= CON_MASK_HIDENOTIFY;
 }
 
 
@@ -418,9 +442,8 @@ If the line width has changed, reformat the buffer.
 */
 void Con_CheckResize (void)
 {
-	int i, j, width, oldwidth, oldtotallines, numlines, numchars;
+	int i, width;
 	float f;
-	char tbuf[CON_TEXTSIZE];
 
 	f = bound(1, con_textsize.value, 128);
 	if(f != con_textsize.value)
@@ -431,37 +454,13 @@ void Con_CheckResize (void)
 	if (width == con_linewidth)
 		return;
 
-	oldwidth = con_linewidth;
 	con_linewidth = width;
-	oldtotallines = con_totallines;
-	con_totallines = CON_TEXTSIZE / con_linewidth;
-	numlines = oldtotallines;
 
-	if (con_totallines < numlines)
-		numlines = con_totallines;
+	for(i = 0; i < con_lines_count; ++i)
+		CON_LINES(i).height = -1; // recalculate when next needed
 
-	numchars = oldwidth;
-
-	if (con_linewidth < numchars)
-		numchars = con_linewidth;
-
-	memcpy (tbuf, con_text, CON_TEXTSIZE);
-	memset (con_text, ' ', CON_TEXTSIZE);
-
-	for (i=0 ; i<numlines ; i++)
-	{
-		for (j=0 ; j<numchars ; j++)
-		{
-			con_text[(con_totallines - 1 - i) * con_linewidth + j] =
-					tbuf[((con_current - i + oldtotallines) %
-						  oldtotallines) * oldwidth + j];
-		}
-	}
-
-	Con_ClearNotify ();
-
+	Con_ClearNotify();
 	con_backscroll = 0;
-	con_current = con_totallines - 1;
 }
 
 //[515]: the simplest command ever
@@ -481,11 +480,8 @@ static void Con_Maps_f (void)
 
 void Con_ConDump_f (void)
 {
-	int i, l;
-	qboolean allblankssofar;
-	const char *text;
+	int i;
 	qfile_t *file;
-	char temp[MAX_INPUTLINE+2];
 	if (Cmd_Argc() != 2)
 	{
 		Con_Printf("usage: condump <filename>\n");
@@ -497,25 +493,10 @@ void Con_ConDump_f (void)
 		Con_Printf("condump: unable to write file \"%s\"\n", Cmd_Argv(1));
 		return;
 	}
-	// iterate over the entire console history buffer line by line
-	allblankssofar = true;
-	for (i = 0;i < con_totallines;i++)
+	for(i = 0; i < con_lines_count; ++i)
 	{
-		text = con_text + ((con_current + 1 + i) % con_totallines)*con_linewidth;
-		// count the used characters on this line
-		for (l = min(con_linewidth, (int)sizeof(temp));l > 0 && text[l-1] == ' ';l--);
-		// if not a blank line, begin output
-		if (l)
-			allblankssofar = false;
-		// output the current line to the file
-		if (!allblankssofar)
-		{
-			if (l)
-				memcpy(temp, text, l);
-			temp[l] = '\n';
-			temp[l+1] = 0;
-			FS_Print(file, temp);
-		}
+		FS_Write(file, CON_LINES(i).start, CON_LINES(i).len);
+		FS_Write(file, "\n", 1);
 	}
 	FS_Close(file);
 }
@@ -527,9 +508,9 @@ Con_Init
 */
 void Con_Init (void)
 {
-	memset (con_text, ' ', CON_TEXTSIZE);
 	con_linewidth = 80;
-	con_totallines = CON_TEXTSIZE / con_linewidth;
+	con_lines_first = 0;
+	con_lines_count = 0;
 
 	// Allocate a log queue, this will be freed after configs are parsed
 	logq_size = MAX_INPUTLINE;
@@ -548,8 +529,15 @@ void Con_Init (void)
 		Cvar_SetQuick (&log_file, "qconsole.log");
 
 	// register our cvars
-	Cvar_RegisterVariable (&con_notifytime);
+	Cvar_RegisterVariable (&con_chat);
+	Cvar_RegisterVariable (&con_chatpos);
+	Cvar_RegisterVariable (&con_chatsize);
+	Cvar_RegisterVariable (&con_chattime);
+	Cvar_RegisterVariable (&con_chatwidth);
 	Cvar_RegisterVariable (&con_notify);
+	Cvar_RegisterVariable (&con_notifyalign);
+	Cvar_RegisterVariable (&con_notifysize);
+	Cvar_RegisterVariable (&con_notifytime);
 	Cvar_RegisterVariable (&con_textsize);
 
 	// --blub
@@ -570,18 +558,132 @@ void Con_Init (void)
 
 
 /*
-===============
-Con_Linefeed
-===============
-*/
-void Con_Linefeed (void)
-{
-	if (con_backscroll)
-		con_backscroll++;
+================
+Con_DeleteLine
 
-	con_x = 0;
-	con_current++;
-	memset (&con_text[(con_current%con_totallines)*con_linewidth], ' ', con_linewidth);
+Deletes the first line from the console history.
+================
+*/
+void Con_DeleteLine()
+{
+	if(con_lines_count == 0)
+		return;
+	--con_lines_count;
+	con_lines_first = CON_LINES_IDX(1);
+}
+
+/*
+================
+Con_DeleteLastLine
+
+Deletes the last line from the console history.
+================
+*/
+void Con_DeleteLastLine()
+{
+	if(con_lines_count == 0)
+		return;
+	--con_lines_count;
+}
+
+/*
+================
+Con_BytesLeft
+
+Checks if there is space for a line of the given length, and if yes, returns a
+pointer to the start of such a space, and NULL otherwise.
+================
+*/
+char *Con_BytesLeft(int len)
+{
+	if(len > CON_TEXTSIZE)
+		return NULL;
+	if(con_lines_count == 0)
+		return con_text;
+	else
+	{
+		char *firstline_start = con_lines[con_lines_first].start;
+		char *lastline_onepastend = con_lines[CON_LINES_LAST].start + con_lines[CON_LINES_LAST].len;
+		// the buffer is cyclic, so we first have two cases...
+		if(firstline_start < lastline_onepastend) // buffer is contiguous
+		{
+			// put at end?
+			if(len <= con_text + CON_TEXTSIZE - lastline_onepastend)
+				return lastline_onepastend;
+			// put at beginning?
+			else if(len <= firstline_start - con_text)
+				return con_text;
+			else
+				return NULL;
+		}
+		else // buffer has a contiguous hole
+		{
+			if(len <= firstline_start - lastline_onepastend)
+				return lastline_onepastend;
+			else
+				return NULL;
+		}
+	}
+}
+
+/*
+================
+Con_FixTimes
+
+Notifies the console code about the current time
+(and shifts back times of other entries when the time
+went backwards)
+================
+*/
+void Con_FixTimes()
+{
+	int i;
+	if(con_lines_count >= 1)
+	{
+		double diff = cl.time - (con_lines + CON_LINES_LAST)->addtime;
+		if(diff < 0)
+		{
+			for(i = 0; i < con_lines_count; ++i)
+				CON_LINES(i).addtime += diff;
+		}
+	}
+}
+
+/*
+================
+Con_AddLine
+
+Appends a given string as a new line to the console.
+================
+*/
+void Con_AddLine(const char *line, int len, int mask)
+{
+	char *putpos;
+	con_lineinfo *p;
+
+	Con_FixTimes();
+
+	if(len >= CON_TEXTSIZE)
+	{
+		// line too large?
+		// only display end of line.
+		line += len - CON_TEXTSIZE + 1;
+		len = CON_TEXTSIZE - 1;
+	}
+	while(!(putpos = Con_BytesLeft(len + 1)) || con_lines_count >= CON_MAXLINES)
+		Con_DeleteLine();
+	memcpy(putpos, line, len);
+	putpos[len] = 0;
+	++con_lines_count;
+
+	//fprintf(stderr, "Now have %d lines (%d -> %d).\n", con_lines_count, con_lines_first, CON_LINES_LAST);
+
+	p = con_lines + CON_LINES_LAST;
+	p->start = putpos;
+	p->len = len;
+	p->addtime = cl.time;
+	p->mask = mask;
+	p->height = -1; // calculate when needed
 }
 
 /*
@@ -595,64 +697,43 @@ If no console is visible, the notify window will pop up.
 */
 void Con_PrintToHistory(const char *txt, int mask)
 {
-	int y, c, l;
-	static int cr;
+	// process:
+	//   \n goes to next line
+	//   \r deletes current line and makes a new one
 
-	while ( (c = *txt) )
+	static int cr_pending = 0;
+	static char buf[CON_TEXTSIZE];
+	static int bufpos = 0;
+
+	for(; *txt; ++txt)
 	{
-	// count word length
-		for (l=0 ; l< con_linewidth ; l++)
-			if ( txt[l] <= ' ')
+		if(cr_pending)
+		{
+			Con_DeleteLastLine();
+			cr_pending = 0;
+		}
+		switch(*txt)
+		{
+			case 0:
 				break;
-
-	// word wrap
-		if (l != con_linewidth && (con_x + l > con_linewidth) )
-			con_x = 0;
-
-		txt++;
-
-		if (cr)
-		{
-			con_current--;
-			cr = false;
+			case '\r':
+				Con_AddLine(buf, bufpos, mask);
+				bufpos = 0;
+				cr_pending = 1;
+				break;
+			case '\n':
+				Con_AddLine(buf, bufpos, mask);
+				bufpos = 0;
+				break;
+			default:
+				buf[bufpos++] = *txt;
+				if(bufpos >= CON_TEXTSIZE - 1)
+				{
+					Con_AddLine(buf, bufpos, mask);
+					bufpos = 0;
+				}
+				break;
 		}
-
-
-		if (!con_x)
-		{
-			Con_Linefeed ();
-		// mark time for transparent overlay
-			if (con_current >= 0)
-			{
-				if (con_notify.integer < 0)
-					Cvar_SetValueQuick(&con_notify, 0);
-				if (con_notify.integer > MAX_NOTIFYLINES)
-					Cvar_SetValueQuick(&con_notify, MAX_NOTIFYLINES);
-				if (con_notify.integer > 0)
-					con_times[con_current % con_notify.integer] = cl.time;
-			}
-		}
-
-		switch (c)
-		{
-		case '\n':
-			con_x = 0;
-			break;
-
-		case '\r':
-			con_x = 0;
-			cr = 1;
-			break;
-
-		default:	// display character and advance
-			y = con_current % con_totallines;
-			con_text[y*con_linewidth+con_x] = c | mask;
-			con_x++;
-			if (con_x >= con_linewidth)
-				con_x = 0;
-			break;
-		}
-
 	}
 }
 
@@ -760,10 +841,21 @@ void Con_Print(const char *msg)
 				// play talk wav
 				if (*msg == 1)
 				{
-					if (msg[1] == '(' && cl.foundtalk2wav)
-						S_LocalSound ("sound/misc/talk2.wav");
+					if(gamemode == GAME_NEXUIZ)
+					{
+						if(msg[1] == '\r' && cl.foundtalk2wav)
+							S_LocalSound ("sound/misc/talk2.wav");
+						else
+							S_LocalSound ("sound/misc/talk.wav");
+					}
 					else
-						S_LocalSound ("sound/misc/talk.wav");
+					{
+						if (msg[1] == '(' && cl.foundtalk2wav)
+							S_LocalSound ("sound/misc/talk2.wav");
+						else
+							S_LocalSound ("sound/misc/talk.wav");
+					}
+					mask = CON_MASK_CHAT;
 				}
 				line[index++] = STRING_COLOR_TAG;
 				line[index++] = '3';
@@ -786,7 +878,10 @@ void Con_Print(const char *msg)
 			Log_ConPrint(line);
 			// send to scrollable buffer
 			if (con_initialized && cls.state != ca_dedicated)
+			{
 				Con_PrintToHistory(line, mask);
+				mask = 0;
+			}
 			// send to terminal or dedicated server window
 			if (!sys_nostdout)
 			{
@@ -1025,6 +1120,7 @@ void Con_DrawInput (void)
 	int		y;
 	int		i;
 	char editlinecopy[MAX_INPUTLINE+1], *text;
+	float x;
 
 	if (!key_consoleactive)
 		return;		// don't draw anything
@@ -1049,17 +1145,150 @@ void Con_DrawInput (void)
 
 //	text[key_linepos + 1] = 0;
 
-	// prestep if horizontally scrolling
-	if (key_linepos >= con_linewidth)
-		text += 1 + key_linepos - con_linewidth;
+	x = vid_conwidth.value * 0.95 - DrawQ_TextWidth_Font(text, key_linepos, con_textsize.value, con_textsize.value, false, FONT_CONSOLE);
+	if(x >= 0)
+		x = 0;
 
 	// draw it
-	DrawQ_String(0, con_vislines - con_textsize.value*2, text, con_linewidth, con_textsize.value, con_textsize.value, 1.0, 1.0, 1.0, 1.0, 0, NULL, false );
+	DrawQ_String_Font(x, con_vislines - con_textsize.value*2, text, 0, con_textsize.value, con_textsize.value, 1.0, 1.0, 1.0, 1.0, 0, NULL, false, FONT_CONSOLE );
 
 	// remove cursor
 //	key_lines[edit_line][key_linepos] = 0;
 }
 
+typedef struct
+{
+	dp_font_t *font;
+	float alignment; // 0 = left, 0.5 = center, 1 = right
+	float fontsize;
+	float x;
+	float y;
+	float width;
+	float ymin, ymax;
+	const char *continuationString;
+
+	// PRIVATE:
+	int colorindex; // init to -1
+}
+con_text_info_t;
+
+float Con_WordWidthFunc(void *passthrough, const char *w, size_t *length, float maxWidth)
+{
+	con_text_info_t *ti = (con_text_info_t *) passthrough;
+	if(w == NULL)
+	{
+		ti->colorindex = -1;
+		return ti->fontsize * ti->font->width_of[0];
+	}
+	return DrawQ_TextWidth_Font_UntilWidth(w, length, ti->fontsize, ti->fontsize, false, ti->font, maxWidth);
+}
+
+int Con_CountLineFunc(void *passthrough, const char *line, size_t length, float width, qboolean isContinuation)
+{
+	(void) passthrough;
+	(void) line;
+	(void) length;
+	(void) width;
+	(void) isContinuation;
+	return 1;
+}
+
+int Con_DisplayLineFunc(void *passthrough, const char *line, size_t length, float width, qboolean isContinuation)
+{
+	con_text_info_t *ti = (con_text_info_t *) passthrough;
+
+	if(ti->y < ti->ymin - 0.001)
+		(void) 0;
+	else if(ti->y > ti->ymax - ti->fontsize + 0.001)
+		(void) 0;
+	else
+	{
+		int x = ti->x + (ti->width - width) * ti->alignment;
+		if(isContinuation && *ti->continuationString)
+			x += DrawQ_String_Font(x, ti->y, ti->continuationString, strlen(ti->continuationString), ti->fontsize, ti->fontsize, 1.0, 1.0, 1.0, 1.0, 0, NULL, false, ti->font);
+		if(length > 0)
+			DrawQ_String_Font(x, ti->y, line, length, ti->fontsize, ti->fontsize, 1.0, 1.0, 1.0, 1.0, 0, &(ti->colorindex), false, ti->font);
+	}
+
+	ti->y += ti->fontsize;
+	return 1;
+}
+
+
+int Con_DrawNotifyRect(int mask_must, int mask_mustnot, float maxage, float x, float y, float width, float height, float fontsize, float alignment_x, float alignment_y, const char *continuationString)
+{
+	int i;
+	int lines = 0;
+	int maxlines = (int) floor(height / fontsize + 0.01f);
+	int startidx;
+	int nskip = 0;
+	int continuationWidth = 0;
+	size_t l;
+	double t = cl.time; // saved so it won't change
+	con_text_info_t ti;
+
+	ti.font = (mask_must & CON_MASK_CHAT) ? FONT_CHAT : FONT_NOTIFY;
+	ti.fontsize = fontsize;
+	ti.alignment = alignment_x;
+	ti.width = width;
+	ti.ymin = y;
+	ti.ymax = y + height;
+	ti.continuationString = continuationString;
+
+	l = 0;
+	Con_WordWidthFunc(&ti, NULL, &l, -1);
+	l = strlen(continuationString);
+	continuationWidth = Con_WordWidthFunc(&ti, continuationString, &l, -1);
+
+	// first find the first line to draw by backwards iterating and word wrapping to find their length...
+	startidx = con_lines_count;
+	for(i = con_lines_count - 1; i >= 0; --i)
+	{
+		con_lineinfo *l = &CON_LINES(i);
+		int mylines;
+
+		if((l->mask & mask_must) != mask_must)
+			continue;
+		if(l->mask & mask_mustnot)
+			continue;
+		if(maxage && (l->addtime < t - maxage))
+			continue;
+
+		// WE FOUND ONE!
+		// Calculate its actual height...
+		mylines = COM_Wordwrap(l->start, l->len, continuationWidth, width, Con_WordWidthFunc, &ti, Con_CountLineFunc, &ti);
+		if(lines + mylines >= maxlines)
+		{
+			nskip = lines + mylines - maxlines;
+			lines = maxlines;
+			startidx = i;
+			break;
+		}
+		lines += mylines;
+		startidx = i;
+	}
+
+	// then center according to the calculated amount of lines...
+	ti.x = x;
+	ti.y = y + alignment_y * (height - lines * fontsize) - nskip * fontsize;
+
+	// then actually draw
+	for(i = startidx; i < con_lines_count; ++i)
+	{
+		con_lineinfo *l = &CON_LINES(i);
+
+		if((l->mask & mask_must) != mask_must)
+			continue;
+		if(l->mask & mask_mustnot)
+			continue;
+		if(maxage && (l->addtime < t - maxage))
+			continue;
+
+		COM_Wordwrap(l->start, l->len, continuationWidth, width, Con_WordWidthFunc, &ti, Con_DisplayLineFunc, &ti);
+	}
+
+	return lines;
+}
 
 /*
 ================
@@ -1071,87 +1300,185 @@ Draws the last few lines of output transparently over the game top
 void Con_DrawNotify (void)
 {
 	float	x, v;
-	char	*text;
-	int		i, stop;
-	float	time;
+	float chatstart, notifystart, inputsize;
+	float align;
 	char	temptext[MAX_INPUTLINE];
-	int colorindex = -1; //-1 for default
+	int numChatlines;
+	int chatpos;
+
+	Con_FixTimes();
+
+	numChatlines = con_chat.integer;
+	chatpos = con_chatpos.integer;
 
 	if (con_notify.integer < 0)
 		Cvar_SetValueQuick(&con_notify, 0);
-	if (con_notify.integer > MAX_NOTIFYLINES)
-		Cvar_SetValueQuick(&con_notify, MAX_NOTIFYLINES);
 	if (gamemode == GAME_TRANSFUSION)
-		v = 8;
+		v = 8; // vertical offset
 	else
 		v = 0;
-	// make a copy of con_current here so that we can't get in a runaway loop printing new messages while drawing the notify text
-	stop = con_current;
-	for (i= stop-con_notify.integer+1 ; i<=stop ; i++)
+
+	// GAME_NEXUIZ: center, otherwise left justify
+	align = con_notifyalign.value;
+	if(!*con_notifyalign.string) // empty string, evaluated to 0 above
 	{
-
-		if (i < 0)
-			continue;
-		time = con_times[i % con_notify.integer];
-		if (time == 0)
-			continue;
-		time = cl.time - time;
-		if (time > con_notifytime.value)
-			continue;
-		text = con_text + (i % con_totallines)*con_linewidth;
-
-		if (gamemode == GAME_NEXUIZ) {
-			int chars = 0;
-			int finalchars = 0;
-			int j;
-
-			// count up to the last non-whitespace, and ignore color codes
-			for (j = 0;j < con_linewidth && text[j];j++)
-			{
-				if (text[j] == STRING_COLOR_TAG && (text[j+1] >= '0' && text[j+1] <= '9'))
-				{
-					j++;
-					continue;
-				}
-				chars++;
-				if (text[j] == ' ')
-					continue;
-				finalchars = chars;
-			}
-			// center the line using the calculated width
-			x = (vid_conwidth.integer - finalchars * con_textsize.value) * 0.5;
-		} else
-			x = 0;
-
-		DrawQ_String( x, v, text, con_linewidth, con_textsize.value, con_textsize.value, 1.0, 1.0, 1.0, 1.0, 0, &colorindex, false );
-
-		v += con_textsize.value;
+		if(gamemode == GAME_NEXUIZ)
+			align = 0.5;
 	}
 
+	if(numChatlines)
+	{
+		if(chatpos == 0)
+		{
+			// first chat, input line, then notify
+			chatstart = v;
+			notifystart = v + (numChatlines + 1) * con_chatsize.value;
+		}
+		else if(chatpos > 0)
+		{
+			// first notify, then (chatpos-1) empty lines, then chat, then input
+			notifystart = v;
+			chatstart = v + (con_notify.value + (chatpos - 1)) * con_notifysize.value;
+		}
+		else // if(chatpos < 0)
+		{
+			// first notify, then much space, then chat, then input, then -chatpos-1 empty lines
+			notifystart = v;
+			chatstart = vid_conheight.value - (-chatpos-1 + numChatlines + 1) * con_chatsize.value;
+		}
+	}
+	else
+	{
+		// just notify and input
+		notifystart = v;
+		chatstart = 0; // shut off gcc warning
+	}
+
+	v = notifystart + con_notifysize.value * Con_DrawNotifyRect(0, CON_MASK_HIDENOTIFY | (numChatlines ? CON_MASK_CHAT : 0), con_notifytime.value, 0, notifystart, vid_conwidth.value, con_notify.value * con_notifysize.value, con_notifysize.value, align, 0.0, "");
+
+	// chat?
+	if(numChatlines)
+	{
+		v = chatstart + numChatlines * con_chatsize.value;
+		Con_DrawNotifyRect(CON_MASK_CHAT, 0, con_chattime.value, 0, chatstart, vid_conwidth.value * con_chatwidth.value, v - chatstart, con_chatsize.value, 0.0, 1.0, "^3\014\014\014 "); // 015 is ·> character in conchars.tga
+	}
 
 	if (key_dest == key_message)
 	{
 		int colorindex = -1;
-
-		x = 0;
 
 		// LordHavoc: speedup, and other improvements
 		if (chat_team)
 			sprintf(temptext, "say_team:%s%c", chat_buffer, (int) 10+((int)(realtime*con_cursorspeed)&1));
 		else
 			sprintf(temptext, "say:%s%c", chat_buffer, (int) 10+((int)(realtime*con_cursorspeed)&1));
-		while ((int)strlen(temptext) >= con_linewidth)
-		{
-			DrawQ_String( 0, v, temptext, con_linewidth, con_textsize.value, con_textsize.value, 1.0, 1.0, 1.0, 1.0, 0, &colorindex, false );
-			strlcpy(temptext, &temptext[con_linewidth], sizeof(temptext));
-			v += con_textsize.value;
-		}
-		if (strlen(temptext) > 0)
-		{
-			DrawQ_String( 0, v, temptext, 0, con_textsize.value, con_textsize.value, 1.0, 1.0, 1.0, 1.0, 0, &colorindex, false );
-			v += con_textsize.value;
-		}
+
+		// FIXME word wrap
+		inputsize = (numChatlines ? con_chatsize : con_notifysize).value;
+		x = vid_conwidth.value - DrawQ_TextWidth_Font(temptext, 0, inputsize, inputsize, false, FONT_CHAT);
+		if(x > 0)
+			x = 0;
+		DrawQ_String_Font(x, v, temptext, 0, inputsize, inputsize, 1.0, 1.0, 1.0, 1.0, 0, &colorindex, false, FONT_CHAT);
 	}
+}
+
+/*
+================
+Con_MeasureConsoleLine
+
+Counts the number of lines for a line on the console.
+================
+*/
+int Con_MeasureConsoleLine(int lineno)
+{
+	float width = vid_conwidth.value;
+	con_text_info_t ti;
+	ti.fontsize = con_textsize.value;
+	ti.font = FONT_CONSOLE;
+
+	return COM_Wordwrap(con_lines[lineno].start, con_lines[lineno].len, 0, width, Con_WordWidthFunc, &ti, Con_CountLineFunc, NULL);
+}
+
+/*
+================
+Con_LineHeight
+
+Returns the height of a given console line; calculates it if necessary.
+================
+*/
+int Con_LineHeight(int i)
+{
+	int h = con_lines[i].height;
+	if(h != -1)
+		return h;
+	return con_lines[i].height = Con_MeasureConsoleLine(i);
+}
+
+/*
+================
+Con_DrawConsoleLine
+
+Draws a line of the console; returns its height in lines.
+If alpha is 0, the line is not drawn, but still wrapped and its height
+returned.
+================
+*/
+int Con_DrawConsoleLine(float y, int lineno, float ymin, float ymax)
+{
+	float width = vid_conwidth.value;
+
+	con_text_info_t ti;
+	ti.continuationString = "";
+	ti.alignment = 0;
+	ti.fontsize = con_textsize.value;
+	ti.font = FONT_CONSOLE;
+	ti.x = 0;
+	ti.y = y - (Con_LineHeight(lineno) - 1) * ti.fontsize;
+	ti.ymin = ymin;
+	ti.ymax = ymax;
+	ti.width = width;
+
+	return COM_Wordwrap(con_lines[lineno].start, con_lines[lineno].len, 0, width, Con_WordWidthFunc, &ti, Con_DisplayLineFunc, &ti);
+}
+
+/*
+================
+Con_LastVisibleLine
+
+Calculates the last visible line index and how much to show of it based on
+con_backscroll.
+================
+*/
+void Con_LastVisibleLine(int *last, int *limitlast)
+{
+	int lines_seen = 0;
+	int ic;
+
+	if(con_backscroll < 0)
+		con_backscroll = 0;
+
+	// now count until we saw con_backscroll actual lines
+	for(ic = 0; ic < con_lines_count; ++ic)
+	{
+		int i = CON_LINES_IDX(con_lines_count - 1 - ic);
+		int h = Con_LineHeight(i);
+
+		// line is the last visible line?
+		if(lines_seen + h > con_backscroll && lines_seen <= con_backscroll)
+		{
+			*last = i;
+			*limitlast = lines_seen + h - con_backscroll;
+			return;
+		}
+
+		lines_seen += h;
+	}
+
+	// if we get here, no line was on screen - scroll so that one line is
+	// visible then.
+	con_backscroll = lines_seen - 1;
+	*last = con_lines_first;
+	*limitlast = 1;
 }
 
 /*
@@ -1164,32 +1491,39 @@ The typing input line at the bottom should only be drawn if typing is allowed
 */
 void Con_DrawConsole (int lines)
 {
-	int i, rows, j, stop;
+	int i, last, limitlast;
 	float y;
-	char *text;
-	int colorindex = -1;
 
 	if (lines <= 0)
 		return;
 
-// draw the background
-	DrawQ_Pic(0, lines - vid_conheight.integer, scr_conbrightness.value >= 0.01f ? Draw_CachePic("gfx/conback", true) : NULL, vid_conwidth.integer, vid_conheight.integer, scr_conbrightness.value, scr_conbrightness.value, scr_conbrightness.value, scr_conalpha.value, 0);
-	DrawQ_String(vid_conwidth.integer - strlen(engineversion) * con_textsize.value - con_textsize.value, lines - con_textsize.value, engineversion, 0, con_textsize.value, con_textsize.value, 1, 0, 0, 1, 0, NULL, true);
-
-// draw the text
 	con_vislines = lines;
 
-	rows = (int)ceil((lines/con_textsize.value)-2);		// rows of text to draw
-	y = lines - (rows+2)*con_textsize.value;	// may start slightly negative
+// draw the background
+	DrawQ_Pic(0, lines - vid_conheight.integer, scr_conbrightness.value >= 0.01f ? Draw_CachePic("gfx/conback", true) : NULL, vid_conwidth.integer, vid_conheight.integer, scr_conbrightness.value, scr_conbrightness.value, scr_conbrightness.value, cls.signon == SIGNONS ? scr_conalpha.value : 1.0, 0); // always full alpha when not in game
+	DrawQ_String_Font(vid_conwidth.integer - DrawQ_TextWidth_Font(engineversion, 0, con_textsize.value, con_textsize.value, false, FONT_CONSOLE), lines - con_textsize.value, engineversion, 0, con_textsize.value, con_textsize.value, 1, 0, 0, 1, 0, NULL, true, FONT_CONSOLE);
 
-	// make a copy of con_current here so that we can't get in a runaway loop printing new messages while drawing the notify text
-	stop = con_current;
-	for (i = stop - rows + 1;i <= stop;i++, y += con_textsize.value)
+// draw the text
+	if(con_lines_count > 0)
 	{
-		j = max(i - con_backscroll, 0);
-		text = con_text + (j % con_totallines)*con_linewidth;
+		float ymax = con_vislines - 2 * con_textsize.value;
+		Con_LastVisibleLine(&last, &limitlast);
+		y = ymax - con_textsize.value;
 
-		DrawQ_String( 0, y, text, con_linewidth, con_textsize.value, con_textsize.value, 1.0, 1.0, 1.0, 1.0, 0, &colorindex, false );
+		if(limitlast)
+			y += (con_lines[last].height - limitlast) * con_textsize.value;
+		i = last;
+
+		for(;;)
+		{
+			y -= Con_DrawConsoleLine(y, i, 0, ymax) * con_textsize.value;
+			if(i == con_lines_first)
+				break; // top of console buffer
+			if(y < 0)
+				break; // top of console window
+			limitlast = 0;
+			i = CON_LINES_PRED(i);
+		}
 	}
 
 // draw the input prompt, user text, and cursor if desired

@@ -1461,6 +1461,7 @@ void PRVM_FindOffsets(void)
 	prog->globaloffsets.dmg_save                      = PRVM_ED_FindGlobalOffset("dmg_save");
 	prog->globaloffsets.dmg_origin                    = PRVM_ED_FindGlobalOffset("dmg_origin");
 	prog->globaloffsets.sb_showscores                 = PRVM_ED_FindGlobalOffset("sb_showscores");
+	prog->globaloffsets.drawfont                      = PRVM_ED_FindGlobalOffset("drawfont");
 
 	// menu qc only uses some functions, nothing else
 	prog->funcoffsets.m_display                       = PRVM_ED_FindFunctionOffset("m_display");
