@@ -2604,6 +2604,19 @@ void VM_freepic(void)
 	Draw_FreePic(s);
 }
 
+dp_font_t *getdrawfont()
+{
+	if(prog->globaloffsets.drawfont >= 0)
+	{
+		int f = PRVM_G_FLOAT(prog->globaloffsets.drawfont);
+		if(f < 0 || f >= MAX_FONTS)
+			return FONT_DEFAULT;
+		return &dp_fonts[f];
+	}
+	else
+		return FONT_DEFAULT;
+}
+
 /*
 =========
 VM_drawcharacter
@@ -2648,7 +2661,7 @@ void VM_drawcharacter(void)
 		return;
 	}
 
-	DrawQ_String (pos[0], pos[1], &character, 1, scale[0], scale[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag, NULL, true);
+	DrawQ_String_Font(pos[0], pos[1], &character, 1, scale[0], scale[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag, NULL, true, getdrawfont());
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
 
@@ -2689,7 +2702,7 @@ void VM_drawstring(void)
 	if(pos[2] || scale[2])
 		Con_Printf("VM_drawstring: z value%s from %s discarded\n",(pos[2] && scale[2]) ? "s" : " ",((pos[2] && scale[2]) ? "pos and scale" : (pos[2] ? "pos" : "scale")));
 
-	DrawQ_String (pos[0], pos[1], string, 0, scale[0], scale[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag, NULL, true);
+	DrawQ_String_Font(pos[0], pos[1], string, 0, scale[0], scale[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag, NULL, true, getdrawfont());
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
 
@@ -2730,7 +2743,7 @@ void VM_drawcolorcodedstring(void)
 		Con_Printf("VM_drawcolorcodedstring: z value%s from %s discarded\n",(pos[2] && scale[2]) ? "s" : " ",((pos[2] && scale[2]) ? "pos and scale" : (pos[2] ? "pos" : "scale")));
 
 	color = -1;
-	DrawQ_String (pos[0], pos[1], string, 0, scale[0], scale[1], 1, 1, 1, PRVM_G_FLOAT(OFS_PARM3), flag, NULL, false);
+	DrawQ_String_Font(pos[0], pos[1], string, 0, scale[0], scale[1], 1, 1, 1, PRVM_G_FLOAT(OFS_PARM3), flag, NULL, false, getdrawfont());
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
 /*
@@ -2749,7 +2762,7 @@ void VM_stringwidth(void)
 	string = PRVM_G_STRING(OFS_PARM0);
 	colors = (int)PRVM_G_FLOAT(OFS_PARM1);
 
-	PRVM_G_FLOAT(OFS_RETURN) = DrawQ_String(0, 0, string, 0, 1, 1, 0, 0, 0, 0, 0, NULL, !colors); // 1x1 characters, don't actually draw
+	PRVM_G_FLOAT(OFS_RETURN) = DrawQ_String_Font(0, 0, string, 0, 1, 1, 0, 0, 0, 0, 0, NULL, !colors, getdrawfont()); // 1x1 characters, don't actually draw
 }
 /*
 =========

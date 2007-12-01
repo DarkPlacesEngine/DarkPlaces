@@ -243,7 +243,7 @@ typedef struct prvm_prog_globaloffsets_s
 	int dmg_save; // csqc
 	int dmg_origin; // csqc
 	int sb_showscores; // csqc
-	
+	int drawfont; // csqc / menu
 }
 prvm_prog_globaloffsets_t;
 

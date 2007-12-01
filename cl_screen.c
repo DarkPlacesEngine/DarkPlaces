@@ -57,6 +57,7 @@ int jpeg_supported = false;
 qboolean	scr_initialized;		// ready to draw
 
 float		scr_con_current;
+int			scr_con_margin_bottom;
 
 extern int	con_vislines;
 
@@ -140,14 +141,14 @@ void SCR_DrawCenterString (void)
 		// scan the number of characters on the line, not counting color codes
 		char *newline = strchr(start, '\n');
 		int l = newline ? (newline - start) : (int)strlen(start);
-		int chars = COM_StringLengthNoColors(start, l, NULL);
+		float width = DrawQ_TextWidth_Font(start, l, 8, 8, false, FONT_CENTERPRINT);
 
-		x = (vid_conwidth.integer - chars*8)/2;
+		x = (vid_conwidth.integer - width)/2;
 		if (l > 0)
 		{
 			if (remaining < l)
 				l = remaining;
-			DrawQ_String(x, y, start, l, 8, 8, 1, 1, 1, 1, 0, &color, false);
+			DrawQ_String_Font(x, y, start, l, 8, 8, 1, 1, 1, 1, 0, &color, false, FONT_CENTERPRINT);
 			remaining -= l;
 			if (remaining <= 0)
 				return;
@@ -438,10 +439,12 @@ SCR_DrawQWDownload
 */
 static int SCR_DrawQWDownload(int offset)
 {
+	// sync with SCR_DownloadHeight
 	int len;
 	float x, y;
 	float size = 8;
 	char temp[256];
+
 	if (!cls.qw_downloadname[0])
 	{
 		cls.qw_downloadspeedrate = 0;
@@ -460,10 +463,10 @@ static int SCR_DrawQWDownload(int offset)
 	else
 		dpsnprintf(temp, sizeof(temp), "Downloading %s %3i%% (%i/%i) at %i bytes/s\n", cls.qw_downloadname, cls.qw_downloadpercent, cls.qw_downloadmemorycursize, cls.qw_downloadmemorymaxsize, cls.qw_downloadspeedrate);
 	len = (int)strlen(temp);
-	x = (vid_conwidth.integer - len*size) / 2;
+	x = (vid_conwidth.integer - DrawQ_TextWidth_Font(temp, len, size, size, 0, FONT_INFOBAR)) / 2;
 	y = vid_conheight.integer - size - offset;
-	DrawQ_Fill(0, y, vid_conwidth.integer, size, 0, 0, 0, 0.5, 0);
-	DrawQ_String(x, y, temp, len, size, size, 1, 1, 1, 1, 0, NULL, true);
+	DrawQ_Fill(0, y, vid_conwidth.integer, size, 0, 0, 0, cls.signon == SIGNONS ? 0.5 : 1, 0);
+	DrawQ_String_Font(x, y, temp, len, size, size, 1, 1, 1, 1, 0, NULL, true, FONT_INFOBAR);
 	return 8;
 }
 
@@ -474,6 +477,7 @@ SCR_DrawCurlDownload
 */
 static int SCR_DrawCurlDownload(int offset)
 {
+	// sync with SCR_DownloadHeight
 	int len;
 	int nDownloads;
 	int i;
@@ -492,9 +496,9 @@ static int SCR_DrawCurlDownload(int offset)
 	if(addinfo)
 	{
 		len = (int)strlen(addinfo);
-		x = (vid_conwidth.integer - len*size) / 2;
-		DrawQ_Fill(0, y - size, vid_conwidth.integer, size, 1, 1, 1, 0.8, 0);
-		DrawQ_String(x, y - size, addinfo, len, size, size, 0, 0, 0, 1, 0, NULL, true);
+		x = (vid_conwidth.integer - DrawQ_TextWidth_Font(addinfo, len, size, size, false, FONT_INFOBAR)) / 2;
+		DrawQ_Fill(0, y - size, vid_conwidth.integer, size, 1, 1, 1, cls.signon == SIGNONS ? 0.8 : 1, 0);
+		DrawQ_String_Font(x, y - size, addinfo, len, size, size, 0, 0, 0, 1, 0, NULL, true, FONT_INFOBAR);
 	}
 
 	for(i = 0; i != nDownloads; ++i)
@@ -506,9 +510,9 @@ static int SCR_DrawCurlDownload(int offset)
 		else
 			dpsnprintf(temp, sizeof(temp), "Downloading %s ...  %5.1f%% @ %.1f KiB/s\n", downinfo[i].filename, 100.0 * downinfo[i].progress, downinfo[i].speed / 1024.0);
 		len = (int)strlen(temp);
-		x = (vid_conwidth.integer - len*size) / 2;
-		DrawQ_Fill(0, y + i * size, vid_conwidth.integer, size, 0, 0, 0, 0.8, 0);
-		DrawQ_String(x, y + i * size, temp, len, size, size, 1, 1, 1, 1, 0, NULL, true);
+		x = (vid_conwidth.integer - DrawQ_TextWidth_Font(temp, len, size, size, false, FONT_INFOBAR)) / 2;
+		DrawQ_Fill(0, y + i * size, vid_conwidth.integer, size, 0, 0, 0, cls.signon == SIGNONS ? 0.5 : 1, 0);
+		DrawQ_String_Font(x, y + i * size, temp, len, size, size, 1, 1, 1, 1, 0, NULL, true, FONT_INFOBAR);
 	}
 
 	Z_Free(downinfo);
@@ -526,6 +530,28 @@ static void SCR_DrawDownload()
 	int offset = 0;
 	offset += SCR_DrawQWDownload(offset);
 	offset += SCR_DrawCurlDownload(offset);
+	if(offset != scr_con_margin_bottom)
+		Con_DPrintf("broken console margin calculation: %d != %d\n", offset, scr_con_margin_bottom);
+}
+
+static int SCR_DownloadHeight()
+{
+	int offset = 0;
+	Curl_downloadinfo_t *downinfo;
+	const char *addinfo;
+	int nDownloads;
+
+	if(cls.qw_downloadname[0])
+		offset += 0;
+
+	downinfo = Curl_GetDownloadInfo(&nDownloads, &addinfo);
+	if(downinfo)
+	{
+		offset += 8 * (nDownloads + (addinfo ? 1 : 0));
+		Z_Free(downinfo);
+	}
+
+	return offset;
 }
 
 //=============================================================================
@@ -574,19 +600,16 @@ SCR_DrawConsole
 */
 void SCR_DrawConsole (void)
 {
+	scr_con_margin_bottom = SCR_DownloadHeight();
 	if (key_consoleactive & KEY_CONSOLEACTIVE_FORCED)
 	{
 		// full screen
-		Con_DrawConsole (vid_conheight.integer);
+		Con_DrawConsole (vid_conheight.integer - scr_con_margin_bottom);
 	}
 	else if (scr_con_current)
-		Con_DrawConsole ((int)scr_con_current);
+		Con_DrawConsole (min((int)scr_con_current, vid_conheight.integer - scr_con_margin_bottom));
 	else
-	{
 		con_vislines = 0;
-		if ((key_dest == key_game || key_dest == key_message) && !r_letterbox.value)
-			Con_DrawNotify ();	// only draw notify in game
-	}
 }
 
 /*
@@ -1940,6 +1963,9 @@ void SCR_DrawScreen (void)
 	}
 
 	// draw 2D stuff
+	if(!scr_con_current && !(key_consoleactive & KEY_CONSOLEACTIVE_FORCED))
+		if ((key_dest == key_game || key_dest == key_message) && !r_letterbox.value)
+			Con_DrawNotify ();	// only draw notify in game
 
 	if (cls.signon == SIGNONS)
 	{

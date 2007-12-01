@@ -662,6 +662,303 @@ void SZ_HexDumpToConsole(const sizebuf_t *buf)
 
 //============================================================================
 
+/*
+==============
+COM_Wordwrap
+
+Word wraps a string. The wordWidth function is guaranteed to be called exactly
+once for each word in the string, so it may be stateful, no idea what that
+would be good for any more. At the beginning of the string, it will be called
+for the char 0 to initialize a clean state, and then once with the string " "
+(a space) so the routine knows how long a space is.
+
+Wrapped lines get the isContinuation flag set and are continuationWidth less wide.
+
+The sum of the return values of the processLine function will be returned.
+==============
+*/
+int COM_Wordwrap(const char *string, size_t length, float continuationWidth, float maxWidth, COM_WordWidthFunc_t wordWidth, void *passthroughCW, COM_LineProcessorFunc processLine, void *passthroughPL)
+{
+	// Logic is as follows:
+	//
+	// For each word or whitespace:
+	//   Newline found? Output current line, advance to next line. This is not a continuation. Continue.
+	//   Space found? Always add it to the current line, no matter if it fits.
+	//   Word found? Check if current line + current word fits.
+	//     If it fits, append it. Continue.
+	//     If it doesn't fit, output current line, advance to next line. Append the word. This is a continuation. Continue.
+
+	qboolean isContinuation = false;
+	float spaceWidth;
+	const char *startOfLine = string;
+	const char *cursor = string;
+	const char *end = string + length;
+	float spaceUsedInLine = 0;
+	float spaceUsedForWord;
+	int result = 0;
+	size_t wordLen;
+	size_t dummy;
+
+	dummy = 0;
+	wordWidth(passthroughCW, NULL, &dummy, -1);
+	dummy = 1;
+	spaceWidth = wordWidth(passthroughCW, " ", &dummy, -1);
+
+	for(;;)
+	{
+		char ch = (cursor < end) ? *cursor : 0;
+		switch(ch)
+		{
+			case 0: // end of string
+				result += processLine(passthroughPL, startOfLine, cursor - startOfLine, spaceUsedInLine, isContinuation);
+				isContinuation = false;
+				goto out;
+				break;
+			case '\n': // end of line
+				result += processLine(passthroughPL, startOfLine, cursor - startOfLine, spaceUsedInLine, isContinuation);
+				isContinuation = false;
+				++cursor;
+				startOfLine = cursor;
+				break;
+			case ' ': // space
+				++cursor;
+				spaceUsedInLine += spaceWidth;
+				break;
+			default: // word
+				wordLen = 1;
+				while(cursor + wordLen < end)
+				{
+					switch(cursor[wordLen])
+					{
+						case 0:
+						case '\n':
+						case ' ':
+							goto out_inner;
+						default:
+							++wordLen;
+							break;
+					}
+				}
+				out_inner:
+				spaceUsedForWord = wordWidth(passthroughCW, cursor, &wordLen, maxWidth - continuationWidth); // this may have reduced wordLen when it won't fit - but this is GOOD. TODO fix words that do fit in a non-continuation line
+				if(wordLen < 1)
+				{
+					wordLen = 1;
+					spaceUsedForWord = maxWidth + 1; // too high, forces it in a line of itself
+				}
+				if(spaceUsedInLine + spaceUsedForWord <= maxWidth || cursor == startOfLine)
+				{
+					// we can simply append it
+					cursor += wordLen;
+					spaceUsedInLine += spaceUsedForWord;
+				}
+				else
+				{
+					// output current line
+					result += processLine(passthroughPL, startOfLine, cursor - startOfLine, spaceUsedInLine, isContinuation);
+					isContinuation = true;
+					startOfLine = cursor;
+					cursor += wordLen;
+					spaceUsedInLine = continuationWidth + spaceUsedForWord;
+				}
+		}
+	}
+	out:
+
+	return result;
+
+/*
+	qboolean isContinuation = false;
+	float currentWordSpace = 0;
+	const char *currentWord = 0;
+	float minReserve = 0;
+
+	float spaceUsedInLine = 0;
+	const char *currentLine = 0;
+	const char *currentLineEnd = 0;
+	float currentLineFinalWhitespace = 0;
+	const char *p;
+
+	int result = 0;
+	minReserve = charWidth(passthroughCW, 0);
+	minReserve += charWidth(passthroughCW, ' ');
+
+	if(maxWidth < continuationWidth + minReserve)
+		maxWidth = continuationWidth + minReserve;
+
+	charWidth(passthroughCW, 0);
+
+	for(p = string; p < string + length; ++p)
+	{
+		char c = *p;
+		float w = charWidth(passthroughCW, c);
+
+		if(!currentWord)
+		{
+			currentWord = p;
+			currentWordSpace = 0;
+		}
+
+		if(!currentLine)
+		{
+			currentLine = p;
+			spaceUsedInLine = isContinuation ? continuationWidth : 0;
+			currentLineEnd = 0;
+		}
+
+		if(c == ' ')
+		{
+			// 1. I can add the word AND a space - then just append it.
+			if(spaceUsedInLine + currentWordSpace + w <= maxWidth)
+			{
+				currentLineEnd = p; // note: space not included here
+				currentLineFinalWhitespace = w;
+				spaceUsedInLine += currentWordSpace + w;
+			}
+			// 2. I can just add the word - then append it, output current line and go to next one.
+			else if(spaceUsedInLine + currentWordSpace <= maxWidth)
+			{
+				result += processLine(passthroughPL, currentLine, p - currentLine, spaceUsedInLine + currentWordSpace, isContinuation);
+				currentLine = 0;
+				isContinuation = true;
+			}
+			// 3. Otherwise, output current line and go to next one, where I can add the word.
+			else if(continuationWidth + currentWordSpace + w <= maxWidth)
+			{
+				if(currentLineEnd)
+					result += processLine(passthroughPL, currentLine, currentLineEnd - currentLine, spaceUsedInLine - currentLineFinalWhitespace, isContinuation);
+				currentLine = currentWord;
+				spaceUsedInLine = continuationWidth + currentWordSpace + w;
+				currentLineEnd = p;
+				currentLineFinalWhitespace = w;
+				isContinuation = true;
+			}
+			// 4. We can't even do that? Then output both current and next word as new lines.
+			else
+			{
+				if(currentLineEnd)
+				{
+					result += processLine(passthroughPL, currentLine, currentLineEnd - currentLine, spaceUsedInLine - currentLineFinalWhitespace, isContinuation);
+					isContinuation = true;
+				}
+				result += processLine(passthroughPL, currentWord, p - currentWord, currentWordSpace, isContinuation);
+				currentLine = 0;
+				isContinuation = true;
+			}
+			currentWord = 0;
+		}
+		else if(c == '\n')
+		{
+			// 1. I can add the word - then do it.
+			if(spaceUsedInLine + currentWordSpace <= maxWidth)
+			{
+				result += processLine(passthroughPL, currentLine, p - currentLine, spaceUsedInLine + currentWordSpace, isContinuation);
+			}
+			// 2. Otherwise, output current line, next one and make tabula rasa.
+			else
+			{
+				if(currentLineEnd)
+				{
+					processLine(passthroughPL, currentLine, currentLineEnd - currentLine, spaceUsedInLine - currentLineFinalWhitespace, isContinuation);
+					isContinuation = true;
+				}
+				result += processLine(passthroughPL, currentWord, p - currentWord, currentWordSpace, isContinuation);
+			}
+			currentWord = 0;
+			currentLine = 0;
+			isContinuation = false;
+		}
+		else
+		{
+			currentWordSpace += w;
+			if(
+				spaceUsedInLine + currentWordSpace > maxWidth // can't join this line...
+				&&
+				continuationWidth + currentWordSpace > maxWidth // can't join any other line...
+			)
+			{
+				// this word cannot join ANY line...
+				// so output the current line...
+				if(currentLineEnd)
+				{
+					result += processLine(passthroughPL, currentLine, currentLineEnd - currentLine, spaceUsedInLine - currentLineFinalWhitespace, isContinuation);
+					isContinuation = true;
+				}
+
+				// then this word's beginning...
+				if(isContinuation)
+				{
+					// it may not fit, but we know we have to split it into maxWidth - continuationWidth pieces
+					float pieceWidth = maxWidth - continuationWidth;
+					const char *pos = currentWord;
+					currentWordSpace = 0;
+
+					// reset the char width function to a state where no kerning occurs (start of word)
+					charWidth(passthroughCW, ' ');
+					while(pos <= p)
+					{
+						float w = charWidth(passthroughCW, *pos);
+						if(currentWordSpace + w > pieceWidth) // this piece won't fit any more
+						{
+							// print everything until it
+							result += processLine(passthroughPL, currentWord, pos - currentWord, currentWordSpace, true);
+							// go to here
+							currentWord = pos;
+							currentWordSpace = 0;
+						}
+						currentWordSpace += w;
+						++pos;
+					}
+					// now we have a currentWord that fits... set up its next line
+					// currentWordSpace has been set
+					// currentWord has been set
+					spaceUsedInLine = continuationWidth;
+					currentLine = currentWord;
+					currentLineEnd = 0;
+					isContinuation = true;
+				}
+				else
+				{
+					// we have a guarantee that it will fix (see if clause)
+					result += processLine(passthroughPL, currentWord, p - currentWord, currentWordSpace - w, isContinuation);
+
+					// and use the rest of this word as new start of a line
+					currentWordSpace = w;
+					currentWord = p;
+					spaceUsedInLine = continuationWidth;
+					currentLine = p;
+					currentLineEnd = 0;
+					isContinuation = true;
+				}
+			}
+		}
+	}
+
+	if(!currentWord)
+	{
+		currentWord = p;
+		currentWordSpace = 0;
+	}
+
+	if(currentLine) // Same procedure as \n
+	{
+		// Can I append the current word?
+		if(spaceUsedInLine + currentWordSpace <= maxWidth)
+			result += processLine(passthroughPL, currentLine, p - currentLine, spaceUsedInLine + currentWordSpace, isContinuation);
+		else
+		{
+			if(currentLineEnd)
+			{
+				result += processLine(passthroughPL, currentLine, currentLineEnd - currentLine, spaceUsedInLine - currentLineFinalWhitespace, isContinuation);
+				isContinuation = true;
+			}
+			result += processLine(passthroughPL, currentWord, p - currentWord, currentWordSpace, isContinuation);
+		}
+	}
+
+	return result;
+*/
+}
 
 /*
 ==============

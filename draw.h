@@ -69,6 +69,28 @@ DRAWFLAG_2XMODULATE,
 DRAWFLAG_NUMFLAGS
 };
 
+typedef struct dp_font_s
+{
+	rtexture_t *tex;
+	float width_of[256]; // width_of[0] == max width of any char; 1.0f is base width (1/16 of texture width); therefore, all widths have to be <= 1
+	char texpath[MAX_QPATH];
+	char title[MAX_QPATH];
+}
+dp_font_t;
+
+#define MAX_FONTS 16
+extern dp_font_t dp_fonts[MAX_FONTS];
+#define FONT_DEFAULT     (&dp_fonts[0]) // should be fixed width
+#define FONT_CONSOLE     (&dp_fonts[1]) // REALLY should be fixed width (ls!)
+#define FONT_SBAR        (&dp_fonts[2]) // must be fixed width
+#define FONT_NOTIFY      (&dp_fonts[3]) // free
+#define FONT_CHAT        (&dp_fonts[4]) // free
+#define FONT_CENTERPRINT (&dp_fonts[5]) // free
+#define FONT_INFOBAR     (&dp_fonts[6]) // free
+#define FONT_MENU        (&dp_fonts[7]) // should be fixed width
+#define FONT_USER        (&dp_fonts[8]) // userdefined fonts
+#define MAX_USERFONTS (MAX_FONTS - (FONT_USER - dp_fonts))
+
 // shared color tag printing constants
 #define STRING_COLOR_TAG			'^'
 #define STRING_COLOR_DEFAULT		7
@@ -86,7 +108,10 @@ void DrawQ_Fill(float x, float y, float width, float height, float red, float gr
 // if outcolor is provided the initial color is read from it, and it is updated at the end with the new value at the end of the text (not at the end of the clipped part)
 // the color is tinted by the provided base color
 // if r_textshadow is not zero, an additional instance of the text is drawn first at an offset with an inverted shade of gray (black text produces a white shadow, brightly colored text produces a black shadow)
-float DrawQ_String(float x, float y, const char *text, int maxlen, float scalex, float scaley, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor, qboolean ignorecolorcodes);
+float DrawQ_String(float x, float y, const char *text, size_t maxlen, float scalex, float scaley, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor, qboolean ignorecolorcodes);
+float DrawQ_String_Font(float x, float y, const char *text, size_t maxlen, float scalex, float scaley, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt);
+float DrawQ_TextWidth_Font(const char *text, size_t maxlen, float scalex, float scaley, qboolean ignorecolorcodes, const dp_font_t *fnt);
+float DrawQ_TextWidth_Font_UntilWidth(const char *text, size_t *maxlen, float scalex, float scaley, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxWidth);
 // draw a very fancy pic (per corner texcoord/color control), the order is tl, tr, bl, br
 void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height, float s1, float t1, float r1, float g1, float b1, float a1, float s2, float t2, float r2, float g2, float b2, float a2, float s3, float t3, float r3, float g3, float b3, float a3, float s4, float t4, float r4, float g4, float b4, float a4, int flags);
 // draw a triangle mesh
