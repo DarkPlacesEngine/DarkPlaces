@@ -107,6 +107,7 @@ typedef enum keynum_e
 	// mouse buttons generate virtual keys
 
 	K_MOUSE1 = 512,
+	K_OTHERDEVICESBEGIN = K_MOUSE1,
 	K_MOUSE2,
 	K_MOUSE3,
 	K_MWHEELUP,
