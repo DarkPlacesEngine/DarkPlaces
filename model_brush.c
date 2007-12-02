@@ -3228,59 +3228,6 @@ static void Mod_Q1BSP_MakePortals(void)
 	Mod_Q1BSP_FinalizePortals();
 }
 
-static void Mod_Q1BSP_BuildLightmapUpdateChains(mempool_t *mempool, model_t *model)
-{
-	int i, j, stylecounts[256], totalcount, remapstyles[256];
-	msurface_t *surface;
-	memset(stylecounts, 0, sizeof(stylecounts));
-	for (i = 0;i < model->nummodelsurfaces;i++)
-	{
-		surface = model->data_surfaces + model->firstmodelsurface + i;
-		for (j = 0;j < MAXLIGHTMAPS;j++)
-			stylecounts[surface->lightmapinfo->styles[j]]++;
-	}
-	totalcount = 0;
-	model->brushq1.light_styles = 0;
-	for (i = 0;i < 255;i++)
-	{
-		if (stylecounts[i])
-		{
-			remapstyles[i] = model->brushq1.light_styles++;
-			totalcount += stylecounts[i] + 1;
-		}
-	}
-	if (!totalcount)
-		return;
-	model->brushq1.light_style = (unsigned char *)Mem_Alloc(mempool, model->brushq1.light_styles * sizeof(unsigned char));
-	model->brushq1.light_stylevalue = (int *)Mem_Alloc(mempool, model->brushq1.light_styles * sizeof(int));
-	model->brushq1.light_styleupdatechains = (msurface_t ***)Mem_Alloc(mempool, model->brushq1.light_styles * sizeof(msurface_t **));
-	model->brushq1.light_styleupdatechainsbuffer = (msurface_t **)Mem_Alloc(mempool, totalcount * sizeof(msurface_t *));
-	model->brushq1.light_styles = 0;
-	for (i = 0;i < 255;i++)
-		if (stylecounts[i])
-			model->brushq1.light_style[model->brushq1.light_styles++] = i;
-	j = 0;
-	for (i = 0;i < model->brushq1.light_styles;i++)
-	{
-		model->brushq1.light_styleupdatechains[i] = model->brushq1.light_styleupdatechainsbuffer + j;
-		j += stylecounts[model->brushq1.light_style[i]] + 1;
-	}
-	for (i = 0;i < model->nummodelsurfaces;i++)
-	{
-		surface = model->data_surfaces + model->firstmodelsurface + i;
-		for (j = 0;j < MAXLIGHTMAPS;j++)
-			if (surface->lightmapinfo->styles[j] != 255)
-				*model->brushq1.light_styleupdatechains[remapstyles[surface->lightmapinfo->styles[j]]]++ = surface;
-	}
-	j = 0;
-	for (i = 0;i < model->brushq1.light_styles;i++)
-	{
-		*model->brushq1.light_styleupdatechains[i] = NULL;
-		model->brushq1.light_styleupdatechains[i] = model->brushq1.light_styleupdatechainsbuffer + j;
-		j += stylecounts[model->brushq1.light_style[i]] + 1;
-	}
-}
-
 //Returns PVS data for a given point
 //(note: can return NULL)
 static unsigned char *Mod_Q1BSP_GetPVS(model_t *model, const vec3_t p)
@@ -3391,6 +3338,9 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	int numshadowmeshtriangles;
 	dheader_t _header;
 	hullinfo_t hullinfo;
+	int totalstylesurfaces, totalstyles, stylecounts[256], remapstyles[256];
+	model_brush_lightstyleinfo_t styleinfo[256];
+	unsigned char *datapointer;
 
 	mod->modeldatatypestring = "Q1BSP";
 
@@ -3593,6 +3543,25 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	// LordHavoc: now the explanation of my sane way (which works identically):
 	// set up the world model, then on each submodel copy from the world model
 	// and set up the submodel with the respective model info.
+	totalstylesurfaces = 0;
+	totalstyles = 0;
+	for (i = 0;i < mod->brush.numsubmodels;i++)
+	{
+		memset(stylecounts, 0, sizeof(stylecounts));
+		for (k = 0;k < mod->brushq1.submodels[i].numfaces;k++)
+		{
+			surface = mod->data_surfaces + mod->brushq1.submodels[i].firstface + k;
+			for (j = 0;j < MAXLIGHTMAPS;j++)
+				stylecounts[surface->lightmapinfo->styles[j]]++;
+		}
+		for (k = 0;k < 255;k++)
+		{
+			totalstyles++;
+			if (stylecounts[k])
+				totalstylesurfaces += stylecounts[k];
+		}
+	}
+	datapointer = (unsigned char *)Mem_Alloc(mod->mempool, mod->num_surfaces * sizeof(int) + totalstyles * sizeof(model_brush_lightstyleinfo_t) + totalstylesurfaces * sizeof(int *));
 	for (i = 0;i < mod->brush.numsubmodels;i++)
 	{
 		// LordHavoc: this code was originally at the end of this loop, but
@@ -3636,7 +3605,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 		mod->nummodelsurfaces = bm->numfaces;
 
 		// make the model surface list (used by shadowing/lighting)
-		mod->surfacelist = (int *)Mem_Alloc(loadmodel->mempool, mod->nummodelsurfaces * sizeof(*mod->surfacelist));
+		mod->surfacelist = (int *)datapointer;datapointer += mod->nummodelsurfaces * sizeof(int);
 		for (j = 0;j < mod->nummodelsurfaces;j++)
 			mod->surfacelist[j] = mod->firstmodelsurface + j;
 
@@ -3662,7 +3631,6 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 			mod->brush.LightPoint = NULL;
 			mod->brush.AmbientSoundLevelsForPoint = NULL;
 		}
-		Mod_Q1BSP_BuildLightmapUpdateChains(loadmodel->mempool, mod);
 		if (mod->nummodelsurfaces)
 		{
 			// LordHavoc: calculate bmodel bounding box rather than trusting what it says
@@ -3703,6 +3671,44 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 			mod->rotatedmaxs[0] = mod->rotatedmaxs[1] = mod->rotatedmaxs[2] = modelradius;
 			mod->radius = modelradius;
 			mod->radius2 = modelradius * modelradius;
+
+			// build lightstyle update chains
+			// (used to rapidly mark surface->cached_dlight on many surfaces
+			// when d_lightstylevalue changes)
+			memset(stylecounts, 0, sizeof(stylecounts));
+			for (k = 0;k < mod->nummodelsurfaces;k++)
+			{
+				surface = mod->data_surfaces + mod->firstmodelsurface + k;
+				for (j = 0;j < MAXLIGHTMAPS;j++)
+					stylecounts[surface->lightmapinfo->styles[j]]++;
+			}
+			mod->brushq1.num_lightstyles = 0;
+			for (k = 0;k < 255;k++)
+			{
+				if (stylecounts[k])
+				{
+					styleinfo[mod->brushq1.num_lightstyles].style = k;
+					styleinfo[mod->brushq1.num_lightstyles].value = 0;
+					styleinfo[mod->brushq1.num_lightstyles].numsurfaces = 0;
+					styleinfo[mod->brushq1.num_lightstyles].surfacelist = (int *)datapointer;datapointer += stylecounts[k] * sizeof(int);
+					remapstyles[k] = mod->brushq1.num_lightstyles;
+					mod->brushq1.num_lightstyles++;
+				}
+			}
+			for (k = 0;k < mod->nummodelsurfaces;k++)
+			{
+				surface = mod->data_surfaces + mod->firstmodelsurface + k;
+				for (j = 0;j < MAXLIGHTMAPS;j++)
+				{
+					if (surface->lightmapinfo->styles[j] != 255)
+					{
+						int r = remapstyles[surface->lightmapinfo->styles[j]];
+						styleinfo[r].surfacelist[styleinfo[r].numsurfaces++] = mod->firstmodelsurface + k;
+					}
+				}
+			}
+			mod->brushq1.data_lightstyleinfo = (model_brush_lightstyleinfo_t *)datapointer;datapointer += mod->brushq1.num_lightstyles * sizeof(model_brush_lightstyleinfo_t);
+			memcpy(mod->brushq1.data_lightstyleinfo, styleinfo, mod->brushq1.num_lightstyles * sizeof(model_brush_lightstyleinfo_t));
 		}
 		else
 		{

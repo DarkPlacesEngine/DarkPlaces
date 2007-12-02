@@ -580,6 +580,15 @@ model_sprite_t;
 
 struct trace_s;
 
+typedef struct model_brush_lightstyleinfo_s
+{
+	int style;
+	int value;
+	int numsurfaces;
+	int *surfacelist;
+}
+model_brush_lightstyleinfo_t;
+
 typedef struct model_brush_s
 {
 	// true if this model is a HalfLife .bsp file
@@ -701,11 +710,8 @@ typedef struct model_brushq1_s
 	unsigned char			*nmaplightdata; // deluxemap file
 
 	// lightmap update chains for light styles
-	int				light_styles;
-	unsigned char			*light_style;
-	int				*light_stylevalue;
-	msurface_t		***light_styleupdatechains;
-	msurface_t		**light_styleupdatechainsbuffer;
+	int				num_lightstyles;
+	model_brush_lightstyleinfo_t *data_lightstyleinfo;
 }
 model_brushq1_t;
 
