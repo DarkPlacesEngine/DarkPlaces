@@ -761,6 +761,8 @@ void CL_RelinkLightFlashes(void)
 	f = cl.time * 10;
 	i = (int)floor(f);
 	frac = f - i;
+	if (!r_lerplightstyles.integer)
+		frac = 1;
 	for (j = 0;j < cl.max_lightstyle;j++)
 	{
 		if (!cl.lightstyle || !cl.lightstyle[j].length)
