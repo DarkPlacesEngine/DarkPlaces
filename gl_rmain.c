@@ -6256,7 +6256,7 @@ extern void R_BuildLightMap(const entity_render_t *ent, msurface_t *surface);
 void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean addwaterplanes, qboolean debug)
 {
 	int i, j, endj, f, flagsmask;
-	msurface_t *surface, **surfacechain;
+	msurface_t *surface;
 	texture_t *t;
 	model_t *model = r_refdef.worldmodel;
 	const int maxsurfacelist = 1024;
@@ -6267,17 +6267,19 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 
 	RSurf_ActiveWorldEntity();
 
-	// update light styles
-	if (!skysurfaces && !depthonly && !addwaterplanes && model->brushq1.light_styleupdatechains)
+	// update light styles on this submodel
+	if (!skysurfaces && !depthonly && !addwaterplanes && model->brushq1.num_lightstyles)
 	{
-		for (i = 0;i < model->brushq1.light_styles;i++)
+		model_brush_lightstyleinfo_t *style;
+		for (i = 0, style = model->brushq1.data_lightstyleinfo;i < model->brushq1.num_lightstyles;i++, style++)
 		{
-			if (model->brushq1.light_stylevalue[i] != r_refdef.lightstylevalue[model->brushq1.light_style[i]])
+			if (style->value != r_refdef.lightstylevalue[style->style])
 			{
-				model->brushq1.light_stylevalue[i] = r_refdef.lightstylevalue[model->brushq1.light_style[i]];
-				if ((surfacechain = model->brushq1.light_styleupdatechains[i]))
-					for (;(surface = *surfacechain);surfacechain++)
-						surface->cached_dlight = true;
+				msurface_t *surfaces = model->data_surfaces;
+				int *list = style->surfacelist;
+				style->value = r_refdef.lightstylevalue[style->style];
+				for (j = 0;j < style->numsurfaces;j++)
+					surfaces[list[j]].cached_dlight = true;
 			}
 		}
 	}
@@ -6334,8 +6336,8 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 
 void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean addwaterplanes, qboolean debug)
 {
-	int i, f, flagsmask;
-	msurface_t *surface, *endsurface, **surfacechain;
+	int i, j, f, flagsmask;
+	msurface_t *surface, *endsurface;
 	texture_t *t;
 	model_t *model = ent->model;
 	const int maxsurfacelist = 1024;
@@ -6355,16 +6357,18 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 		RSurf_ActiveModelEntity(ent, true, r_glsl.integer && gl_support_fragment_shader && !depthonly);
 
 	// update light styles
-	if (!skysurfaces && !depthonly && !addwaterplanes && model->brushq1.light_styleupdatechains)
+	if (!skysurfaces && !depthonly && !addwaterplanes && model->brushq1.num_lightstyles)
 	{
-		for (i = 0;i < model->brushq1.light_styles;i++)
+		model_brush_lightstyleinfo_t *style;
+		for (i = 0, style = model->brushq1.data_lightstyleinfo;i < model->brushq1.num_lightstyles;i++, style++)
 		{
-			if (model->brushq1.light_stylevalue[i] != r_refdef.lightstylevalue[model->brushq1.light_style[i]])
+			if (style->value != r_refdef.lightstylevalue[style->style])
 			{
-				model->brushq1.light_stylevalue[i] = r_refdef.lightstylevalue[model->brushq1.light_style[i]];
-				if ((surfacechain = model->brushq1.light_styleupdatechains[i]))
-					for (;(surface = *surfacechain);surfacechain++)
-						surface->cached_dlight = true;
+				msurface_t *surfaces = model->data_surfaces;
+				int *list = style->surfacelist;
+				style->value = r_refdef.lightstylevalue[style->style];
+				for (j = 0;j < style->numsurfaces;j++)
+					surfaces[list[j]].cached_dlight = true;
 			}
 		}
 	}
