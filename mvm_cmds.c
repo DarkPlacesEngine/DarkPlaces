@@ -18,6 +18,7 @@ char *vm_m_extensions =
 "DP_QC_UNLIMITEDTEMPSTRINGS "
 "DP_QC_CMD "
 "DP_QC_STRREPLACE "
+"DP_FONT_VARIABLEWIDTH "
 ;
 
 /*
