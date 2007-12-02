@@ -643,7 +643,9 @@ void R_TimeReport(char *desc)
 		return;
 
 	CHECKGLERROR
-	qglFinish();CHECKGLERROR
+	if (r_speeds.integer == 2)
+		qglFinish();
+	CHECKGLERROR
 	r_timereport_temp = r_timereport_current;
 	r_timereport_current = Sys_DoubleTime();
 	t = (int) ((r_timereport_current - r_timereport_temp) * 1000000.0 + 0.5);
