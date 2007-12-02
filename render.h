@@ -57,6 +57,7 @@ extern cvar_t r_novis;
 
 extern cvar_t r_lerpsprites;
 extern cvar_t r_lerpmodels;
+extern cvar_t r_lerplightstyles;
 extern cvar_t r_waterscroll;
 
 extern cvar_t developer_texturelogging;
