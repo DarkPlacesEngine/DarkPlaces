@@ -921,7 +921,7 @@ int SV_FlyMove (prvm_edict_t *ent, float time, float *stepnormal, int hitsuperco
 	*/
 
 	// LordHavoc: this came from QW and allows you to get out of water more easily
-	if (sv_gameplayfix_qwplayerphysics.integer && ((int)ent->fields.server->flags & FL_WATERJUMP))
+	if (sv_gameplayfix_easierwaterjump.integer && ((int)ent->fields.server->flags & FL_WATERJUMP))
 		VectorCopy(primal_velocity, ent->fields.server->velocity);
 	return blocked;
 }
