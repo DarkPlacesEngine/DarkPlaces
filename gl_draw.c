@@ -589,7 +589,7 @@ static dp_font_t *FindFont(const char *title)
 	return NULL;
 }
 
-static void LoadFont_f()
+static void LoadFont_f(void)
 {
 	dp_font_t *f;
 	int i;
