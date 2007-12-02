@@ -4332,7 +4332,7 @@ void M_Menu_ServerList_f (void)
 
 static void M_ServerList_Draw (void)
 {
-	int n, y, visible, start, end;
+	int n, y, visible, start, end, numplayers, maxplayers;
 	cachepic_t *p;
 	const char *s;
 
@@ -4342,7 +4342,8 @@ static void M_ServerList_Draw (void)
 	else
 		M_Background(640, vid_conheight.integer);
 	// scroll the list as the cursor moves
-	s = va("%i/%i masters %i/%i servers", masterreplycount, masterquerycount, serverreplycount, serverquerycount);
+	ServerList_GetPlayerStatistics(&numplayers, &maxplayers);
+	s = va("%i/%i masters %i/%i servers %i/%i players", masterreplycount, masterquerycount, serverreplycount, serverquerycount, numplayers, maxplayers);
 	M_PrintRed((640 - strlen(s) * 8) / 2, 32, s);
 	if (*m_return_reason)
 		M_Print(16, menu_height - 8, m_return_reason);

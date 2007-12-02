@@ -326,6 +326,8 @@ extern int serverlist_cachecount;
 
 extern qboolean serverlist_consoleoutput;
 
+void ServerList_GetPlayerStatistics(int *numplayerspointer, int *maxplayerspointer);
+
 //============================================================================
 //
 // public network functions
