@@ -4076,6 +4076,11 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 	if (t->backgroundnumskinframes && !(t->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED))
 		t->currentmaterialflags |= MATERIALFLAG_VERTEXTEXTUREBLEND;
 
+	// make sure that the waterscroll matrix is used on water surfaces when
+	// there is no tcmod
+	if (t->currentmaterialflags & MATERIALFLAG_WATER && r_waterscroll.value != 0)
+		t->currenttexmatrix = r_waterscrollmatrix;
+
 	for (i = 0, tcmod = t->tcmods;i < Q3MAXTCMODS && tcmod->tcmod;i++, tcmod++)
 	{
 		matrix4x4_t matrix;
