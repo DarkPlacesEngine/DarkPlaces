@@ -347,7 +347,7 @@ void SV_AirMove (void)
 		// noclip
 		VectorCopy (wishvel, host_client->edict->fields.server->velocity);
 	}
-	else if (onground && (!sv_gameplayfix_qwplayerphysics.integer || !host_client->edict->fields.server->button2 || !((int)host_client->edict->fields.server->flags & FL_JUMPRELEASED)))
+	else if (onground)
 	{
 		SV_UserFriction ();
 		SV_Accelerate ();
