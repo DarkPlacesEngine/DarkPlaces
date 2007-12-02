@@ -30,6 +30,7 @@ clgecko_t * CL_Gecko_FindBrowser( const char *name );
 void CL_Gecko_DestroyBrowser( clgecko_t *instance );
 
 void CL_Gecko_NavigateToURI( clgecko_t *instance, const char *URI );
+// x and y between 0.0 and 1.0 (0.0 is top-left?)
 void CL_Gecko_Event_CursorMove( clgecko_t *instance, float x, float y );
 
 // returns whether the key/button event was handled or not

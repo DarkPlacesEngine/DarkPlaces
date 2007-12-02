@@ -181,7 +181,7 @@ static void cl_gecko_destroy_f( void ) {
 
 	if (Cmd_Argc() != 2)
 	{
-		Con_Print("usage: gecko_destroy <name>\ndestroys a browser (full texture path " CLGECKOPREFIX "<name>)\n");
+		Con_Print("usage: gecko_destroy <name>\ndestroys a browser\n");
 		return;
 	}
 
@@ -196,7 +196,7 @@ static void cl_gecko_navigate_f( void ) {
 
 	if (Cmd_Argc() != 3)
 	{
-		Con_Print("usage: gecko_navigate <name> <URI>\nnavigates to a certain URI (full texture path " CLGECKOPREFIX "<name>)\n");
+		Con_Print("usage: gecko_navigate <name> <URI>\nnavigates to a certain URI\n");
 		return;
 	}
 
@@ -206,11 +206,57 @@ static void cl_gecko_navigate_f( void ) {
 	CL_Gecko_NavigateToURI( CL_Gecko_FindBrowser( name ), URI );
 }
 
+static void cl_gecko_injecttext_f( void ) {
+	char name[MAX_QPATH];
+	const char *text;
+	clgecko_t *instance;
+	const char *p;
+
+	if (Cmd_Argc() < 3)
+	{
+		Con_Print("usage: gecko_injecttext <name> <text>\ninjects a certain text into the browser\n");
+		return;
+	}
+
+	// TODO: use snprintf instead
+	sprintf(name, CLGECKOPREFIX "%s", Cmd_Argv(1));
+	instance = CL_Gecko_FindBrowser( name );
+	if( !instance ) {
+		Con_Printf( "cl_gecko_injecttext_f: gecko instance '%s' couldn't be found!\n", name );
+		return;
+	}
+
+	text = Cmd_Argv( 2 );
+
+	for( p = text ; *p ; p++ ) {
+		unsigned key = *p;
+		switch( key ) {
+			case ' ':
+				key = K_SPACE;
+				break;
+			case '\\':
+				key = *++p;
+				switch( key ) {
+				case 'n':
+					key = K_ENTER;
+					break;
+				case '\0':
+					--p;
+					key = '\\';
+					break;
+				}
+				break;
+		}
+
+		CL_Gecko_Event_Key( instance, key, CLG_BET_PRESS );
+	}
+}
+
 void CL_Gecko_Init( void )
 {
 	OSGK_EmbeddingOptions *options = osgk_embedding_options_create();
 	osgk_embedding_options_add_search_path( options, "./xulrunner/" );
-   cl_geckoembedding = osgk_embedding_create_with_options( options, NULL );
+	cl_geckoembedding = osgk_embedding_create_with_options( options, NULL );
 	osgk_release( options );
 	
 	if( cl_geckoembedding == NULL ) {
@@ -219,7 +265,8 @@ void CL_Gecko_Init( void )
 	
 	Cmd_AddCommand( "gecko_create", cl_gecko_create_f, "Create a gecko browser instance" );
 	Cmd_AddCommand( "gecko_destroy", cl_gecko_destroy_f, "Destroy a gecko browser instance" );
-	Cmd_AddCommand( "gecko_navigate", cl_gecko_navigate_f, "Navigate a gecko browser to an URI" );
+	Cmd_AddCommand( "gecko_navigate", cl_gecko_navigate_f, "Navigate a gecko browser to a URI" );
+	Cmd_AddCommand( "gecko_injecttext", cl_gecko_injecttext_f, "Injects text into a browser" );
 
 	R_RegisterModule( "CL_Gecko", cl_gecko_start, cl_gecko_shutdown, cl_gecko_newmap );
 }
@@ -230,8 +277,124 @@ void CL_Gecko_NavigateToURI( clgecko_t *instance, const char *URI ) {
 	}
 }
 
-// TODO: write this function
-void CL_Gecko_Event_CursorMove( clgecko_t *instance, float x, float y );
-qboolean CL_Gecko_Event_Key( clgecko_t *instance, int key, clgecko_buttoneventtype_t eventtype );
+void CL_Gecko_Event_CursorMove( clgecko_t *instance, float x, float y ) {
+	// TODO: assert x, y \in [0.0, 1.0]
+	int mappedx, mappedy;
+
+	if( !instance || !instance->browser ) {
+		return;
+	}
+
+	mappedx = x * DEFAULT_GECKO_WIDTH;
+	mappedy = y * DEFAULT_GECKO_HEIGHT;
+	osgk_browser_event_mouse_move( instance->browser, mappedx, mappedy );
+}
+
+typedef struct geckokeymapping_s {
+	keynum_t keycode;
+	unsigned int geckokeycode;
+} geckokeymapping_t;
+
+static geckokeymapping_t geckokeymappingtable[] = {
+	{ K_BACKSPACE, OSGKKey_Backspace },
+	{ K_TAB, OSGKKey_Tab },
+	{ K_ENTER, OSGKKey_Return },
+	{ K_SHIFT, OSGKKey_Shift },
+	{ K_CTRL, OSGKKey_Control },
+	{ K_ALT, OSGKKey_Alt },
+	{ K_CAPSLOCK, OSGKKey_CapsLock },
+	{ K_ESCAPE, OSGKKey_Escape },
+	{ K_SPACE, OSGKKey_Space },
+	{ K_PGUP, OSGKKey_PageUp },
+	{ K_PGDN, OSGKKey_PageDown },
+	{ K_END, OSGKKey_End },
+	{ K_HOME, OSGKKey_Home },
+	{ K_LEFTARROW, OSGKKey_Left },
+	{ K_UPARROW, OSGKKey_Up },
+	{ K_RIGHTARROW, OSGKKey_Right },
+	{ K_DOWNARROW, OSGKKey_Down },
+	{ K_INS, OSGKKey_Insert },
+	{ K_DEL, OSGKKey_Delete },
+	{ K_F1, OSGKKey_F1 },
+	{ K_F2, OSGKKey_F2 },
+	{ K_F3, OSGKKey_F3 },
+	{ K_F4, OSGKKey_F4 },
+	{ K_F5, OSGKKey_F5 },
+	{ K_F6, OSGKKey_F6 },
+	{ K_F7, OSGKKey_F7 },
+	{ K_F8, OSGKKey_F8 },
+	{ K_F9, OSGKKey_F9 },
+	{ K_F10, OSGKKey_F10 },
+	{ K_F11, OSGKKey_F11 },
+	{ K_F12, OSGKKey_F12 },
+	{ K_NUMLOCK, OSGKKey_NumLock },
+	{ K_SCROLLOCK, OSGKKey_ScrollLock }
+};
+
+qboolean CL_Gecko_Event_Key( clgecko_t *instance, int key, clgecko_buttoneventtype_t eventtype ) {
+	if( !instance || !instance->browser ) {
+		return false;
+	}
+
+	// determine whether its a keyboard event
+	if( key < K_OTHERDEVICESBEGIN ) {
+
+		OSGK_KeyboardEventType mappedtype;
+		unsigned int mappedkey = key;
+		
+
+		int i;
+		// yes! then convert it if necessary!
+		for( i = 0 ; i < sizeof( geckokeymappingtable ) / sizeof( *geckokeymappingtable ) ; i++ ) {
+			const geckokeymapping_t * const mapping = &geckokeymappingtable[ i ];
+			if( key == mapping->keycode ) {
+				mappedkey = mapping->geckokeycode;
+				break;
+			}
+		}
+
+		// convert the eventtype
+		// map the type
+		switch( eventtype ) {
+		case CLG_BET_DOWN:
+			mappedtype = keDown;
+			break;
+		case CLG_BET_UP:
+			mappedtype = keUp;
+			break;
+		case CLG_BET_DOUBLECLICK:
+			// TODO: error message
+			break;
+		case CLG_BET_PRESS:
+			mappedtype = kePress;
+		}
+
+		return osgk_browser_event_key( instance->browser, mappedkey, mappedtype ) != 0;
+	} else if( K_MOUSE1 <= key && key <= K_MOUSE3 ) {
+		OSGK_MouseButtonEventType mappedtype;
+		OSGK_MouseButton mappedbutton;
+
+		mappedbutton = (OSGK_MouseButton) (mbLeft + (key - K_MOUSE1));
+
+		switch( eventtype ) {
+		case CLG_BET_DOWN:
+			mappedtype = meDown;
+			break;
+		case CLG_BET_UP:
+			mappedtype = meUp;
+			break;
+		case CLG_BET_DOUBLECLICK:
+			mappedtype = meDoubleClick;
+			break;
+		case CLG_BET_PRESS:
+			// TODO: error message
+			break;
+		}
+
+		return true;
+	}
+	// TODO: error?
+	return false;
+}
 
 #endif
