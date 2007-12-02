@@ -709,7 +709,8 @@ void R_TimeReport_Frame(void)
 			sprintf(r_speeds_string + strlen(r_speeds_string), "Location: %s\n", loc->name);
 		sprintf(r_speeds_string + strlen(r_speeds_string), "org:'%+8.2f %+8.2f %+8.2f' dir:'%+2.3f %+2.3f %+2.3f'\n", r_view.origin[0], r_view.origin[1], r_view.origin[2], r_view.forward[0], r_view.forward[1], r_view.forward[2]);
 		sprintf(r_speeds_string + strlen(r_speeds_string), "%7i surfaces%7i triangles %5i entities (%7i surfaces%7i triangles)\n", r_refdef.stats.world_surfaces, r_refdef.stats.world_triangles, r_refdef.stats.entities, r_refdef.stats.entities_surfaces, r_refdef.stats.entities_triangles);
-		sprintf(r_speeds_string + strlen(r_speeds_string), "%5ileafs%5i portals%6i particles%6i decals\n", r_refdef.stats.world_leafs, r_refdef.stats.world_portals, r_refdef.stats.particles, r_refdef.stats.decals);
+		sprintf(r_speeds_string + strlen(r_speeds_string), "%5i leafs%5i portals%6i particles%6i decals\n", r_refdef.stats.world_leafs, r_refdef.stats.world_portals, r_refdef.stats.particles, r_refdef.stats.decals);
+		sprintf(r_speeds_string + strlen(r_speeds_string), "%7i lightmap updates (%7i pixels)\n", r_refdef.stats.lightmapupdates, r_refdef.stats.lightmapupdatepixels);
 		sprintf(r_speeds_string + strlen(r_speeds_string), "%4i lights%4i clears%4i scissored%7i light%7i shadow%7i dynamic\n", r_refdef.stats.lights, r_refdef.stats.lights_clears, r_refdef.stats.lights_scissored, r_refdef.stats.lights_lighttriangles, r_refdef.stats.lights_shadowtriangles, r_refdef.stats.lights_dynamicshadowtriangles);
 		if (r_refdef.stats.bloom)
 			sprintf(r_speeds_string + strlen(r_speeds_string), "rendered%6i meshes%8i triangles bloompixels%8i copied%8i drawn\n", r_refdef.stats.meshes, r_refdef.stats.meshes_elements / 3, r_refdef.stats.bloom_copypixels, r_refdef.stats.bloom_drawpixels);

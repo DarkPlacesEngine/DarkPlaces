@@ -52,6 +52,9 @@ void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 	size = smax*tmax;
 	size3 = size*3;
 
+	r_refdef.stats.lightmapupdatepixels += size;
+	r_refdef.stats.lightmapupdates++;
+
 	if (cl.buildlightmapmemorysize < size*sizeof(int[3]))
 	{
 		cl.buildlightmapmemorysize = size*sizeof(int[3]);
