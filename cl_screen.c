@@ -629,9 +629,10 @@ void SCR_BeginLoadingPlaque (void)
 
 //=============================================================================
 
-char r_speeds_string[1024];
+char r_speeds_timestring[1024];
 int speedstringcount, r_timereport_active;
 double r_timereport_temp = 0, r_timereport_current = 0, r_timereport_start = 0;
+int r_speeds_longestitem = 0;
 
 void R_TimeReport(char *desc)
 {
@@ -650,79 +651,96 @@ void R_TimeReport(char *desc)
 	r_timereport_current = Sys_DoubleTime();
 	t = (int) ((r_timereport_current - r_timereport_temp) * 1000000.0 + 0.5);
 
-	dpsnprintf(tempbuf, sizeof(tempbuf), "%8i %-11s", t, desc);
-	length = (int)strlen(tempbuf);
+	length = dpsnprintf(tempbuf, sizeof(tempbuf), "%8i %s", t, desc);
+	length = min(length, (int)sizeof(tempbuf) - 1);
+	if (r_speeds_longestitem < length)
+		r_speeds_longestitem = length;
+	for (;length < r_speeds_longestitem;length++)
+		tempbuf[length] = ' ';
+	tempbuf[length] = 0;
+
 	if (speedstringcount + length > (vid_conwidth.integer / 8))
 	{
-		strlcat(r_speeds_string, "\n", sizeof(r_speeds_string));
+		strlcat(r_speeds_timestring, "\n", sizeof(r_speeds_timestring));
 		speedstringcount = 0;
 	}
-	strlcat(r_speeds_string, tempbuf, sizeof(r_speeds_string));
+	strlcat(r_speeds_timestring, tempbuf, sizeof(r_speeds_timestring));
 	speedstringcount += length;
 }
 
-void R_TimeReport_Frame(void)
+void R_TimeReport_BeginFrame(void)
+{
+	speedstringcount = 0;
+	r_speeds_timestring[0] = 0;
+	r_timereport_active = false;
+	memset(&r_refdef.stats, 0, sizeof(r_refdef.stats));
+
+	if (r_speeds.integer >= 2 && cls.signon == SIGNONS && cls.state == ca_connected)
+	{
+		r_timereport_active = true;
+		r_timereport_start = r_timereport_current = Sys_DoubleTime();
+	}
+}
+
+void R_TimeReport_EndFrame(void)
 {
 	int i, j, lines, y;
 	cl_locnode_t *loc;
+	char string[2048];
 
-	if (r_speeds_string[0])
-	{
-		if (r_timereport_active)
-		{
-			r_timereport_current = r_timereport_start;
-			R_TimeReport("total");
-		}
-
-		if (r_speeds_string[strlen(r_speeds_string)-1] == '\n')
-			r_speeds_string[strlen(r_speeds_string)-1] = 0;
-		lines = 1;
-		for (i = 0;r_speeds_string[i];i++)
-			if (r_speeds_string[i] == '\n')
-				lines++;
-		y = vid_conheight.integer - sb_lines - lines * 8;
-		i = j = 0;
-		DrawQ_Fill(0, y, vid_conwidth.integer, lines * 8, 0, 0, 0, 0.5, 0);
-		while (r_speeds_string[i])
-		{
-			j = i;
-			while (r_speeds_string[i] && r_speeds_string[i] != '\n')
-				i++;
-			if (i - j > 0)
-				DrawQ_String(0, y, r_speeds_string + j, i - j, 8, 8, 1, 1, 1, 1, 0, NULL, true);
-			if (r_speeds_string[i] == '\n')
-				i++;
-			y += 8;
-		}
-		r_speeds_string[0] = 0;
-		r_timereport_active = false;
-	}
+	string[0] = 0;
 	if (r_speeds.integer && cls.signon == SIGNONS && cls.state == ca_connected)
 	{
-		speedstringcount = 0;
-		r_speeds_string[0] = 0;
-		r_timereport_active = false;
 		// put the location name in the r_speeds display as it greatly helps
 		// when creating loc files
 		loc = CL_Locs_FindNearest(cl.movement_origin);
 		if (loc)
-			sprintf(r_speeds_string + strlen(r_speeds_string), "Location: %s\n", loc->name);
-		sprintf(r_speeds_string + strlen(r_speeds_string), "org:'%+8.2f %+8.2f %+8.2f' dir:'%+2.3f %+2.3f %+2.3f'\n", r_view.origin[0], r_view.origin[1], r_view.origin[2], r_view.forward[0], r_view.forward[1], r_view.forward[2]);
-		sprintf(r_speeds_string + strlen(r_speeds_string), "%7i surfaces%7i triangles %5i entities (%7i surfaces%7i triangles)\n", r_refdef.stats.world_surfaces, r_refdef.stats.world_triangles, r_refdef.stats.entities, r_refdef.stats.entities_surfaces, r_refdef.stats.entities_triangles);
-		sprintf(r_speeds_string + strlen(r_speeds_string), "%5i leafs%5i portals%6i particles%6i decals\n", r_refdef.stats.world_leafs, r_refdef.stats.world_portals, r_refdef.stats.particles, r_refdef.stats.decals);
-		sprintf(r_speeds_string + strlen(r_speeds_string), "%7i lightmap updates (%7i pixels)\n", r_refdef.stats.lightmapupdates, r_refdef.stats.lightmapupdatepixels);
-		sprintf(r_speeds_string + strlen(r_speeds_string), "%4i lights%4i clears%4i scissored%7i light%7i shadow%7i dynamic\n", r_refdef.stats.lights, r_refdef.stats.lights_clears, r_refdef.stats.lights_scissored, r_refdef.stats.lights_lighttriangles, r_refdef.stats.lights_shadowtriangles, r_refdef.stats.lights_dynamicshadowtriangles);
+			sprintf(string + strlen(string), "Location: %s\n", loc->name);
+		sprintf(string + strlen(string), "org:'%+8.2f %+8.2f %+8.2f' dir:'%+2.3f %+2.3f %+2.3f'\n", r_view.origin[0], r_view.origin[1], r_view.origin[2], r_view.forward[0], r_view.forward[1], r_view.forward[2]);
+		sprintf(string + strlen(string), "%7i surfaces%7i triangles %5i entities (%7i surfaces%7i triangles)\n", r_refdef.stats.world_surfaces, r_refdef.stats.world_triangles, r_refdef.stats.entities, r_refdef.stats.entities_surfaces, r_refdef.stats.entities_triangles);
+		sprintf(string + strlen(string), "%5i leafs%5i portals%6i particles%6i decals\n", r_refdef.stats.world_leafs, r_refdef.stats.world_portals, r_refdef.stats.particles, r_refdef.stats.decals);
+		sprintf(string + strlen(string), "%7i lightmap updates (%7i pixels)\n", r_refdef.stats.lightmapupdates, r_refdef.stats.lightmapupdatepixels);
+		sprintf(string + strlen(string), "%4i lights%4i clears%4i scissored%7i light%7i shadow%7i dynamic\n", r_refdef.stats.lights, r_refdef.stats.lights_clears, r_refdef.stats.lights_scissored, r_refdef.stats.lights_lighttriangles, r_refdef.stats.lights_shadowtriangles, r_refdef.stats.lights_dynamicshadowtriangles);
 		if (r_refdef.stats.bloom)
-			sprintf(r_speeds_string + strlen(r_speeds_string), "rendered%6i meshes%8i triangles bloompixels%8i copied%8i drawn\n", r_refdef.stats.meshes, r_refdef.stats.meshes_elements / 3, r_refdef.stats.bloom_copypixels, r_refdef.stats.bloom_drawpixels);
+			sprintf(string + strlen(string), "rendered%6i meshes%8i triangles bloompixels%8i copied%8i drawn\n", r_refdef.stats.meshes, r_refdef.stats.meshes_elements / 3, r_refdef.stats.bloom_copypixels, r_refdef.stats.bloom_drawpixels);
 		else
-			sprintf(r_speeds_string + strlen(r_speeds_string), "rendered%6i meshes%8i triangles\n", r_refdef.stats.meshes, r_refdef.stats.meshes_elements / 3);
+			sprintf(string + strlen(string), "rendered%6i meshes%8i triangles\n", r_refdef.stats.meshes, r_refdef.stats.meshes_elements / 3);
+		strlcat(string, r_speeds_timestring, sizeof(string));
 
 		memset(&r_refdef.stats, 0, sizeof(r_refdef.stats));
+
+		speedstringcount = 0;
+		r_speeds_timestring[0] = 0;
+		r_timereport_active = false;
 
 		if (r_speeds.integer >= 2)
 		{
 			r_timereport_active = true;
 			r_timereport_start = r_timereport_current = Sys_DoubleTime();
+		}
+	}
+
+	if (string[0])
+	{
+		if (string[strlen(string)-1] == '\n')
+			string[strlen(string)-1] = 0;
+		lines = 1;
+		for (i = 0;string[i];i++)
+			if (string[i] == '\n')
+				lines++;
+		y = vid_conheight.integer - sb_lines - lines * 8;
+		i = j = 0;
+		DrawQ_Fill(0, y, vid_conwidth.integer, lines * 8, 0, 0, 0, 0.5, 0);
+		while (string[i])
+		{
+			j = i;
+			while (string[i] && string[i] != '\n')
+				i++;
+			if (i - j > 0)
+				DrawQ_String(0, y, string + j, i - j, 8, 8, 1, 1, 1, 1, 0, NULL, true);
+			if (string[i] == '\n')
+				i++;
+			y += 8;
 		}
 	}
 }
@@ -1878,8 +1896,7 @@ void SCR_DrawScreen (void)
 {
 	R_Mesh_Start();
 
-	if (r_timereport_active)
-		R_TimeReport("screensetup");
+	R_TimeReport_BeginFrame();
 
 	R_UpdateVariables();
 
@@ -1995,16 +2012,13 @@ void SCR_DrawScreen (void)
 		R_TimeReport("2d");
 
 	if (cls.signon == SIGNONS)
-		R_TimeReport_Frame();
+		R_TimeReport_EndFrame();
 
 	DrawQ_Finish();
 
 	R_DrawGamma();
 
 	R_Mesh_Finish();
-
-	if (r_timereport_active)
-		R_TimeReport("meshfinish");
 }
 
 void SCR_UpdateLoadingScreen (qboolean clear)
@@ -2132,15 +2146,10 @@ void CL_UpdateScreen(void)
 	r_view.colormask[1] = 1;
 	r_view.colormask[2] = 1;
 
-	if (r_timereport_active)
-		R_TimeReport("other");
-
 	SCR_SetUpToDrawConsole();
 
-	if (r_timereport_active)
-		R_TimeReport("start");
-
 	CHECKGLERROR
+	qglDrawBuffer(GL_BACK);CHECKGLERROR
 	qglViewport(0, 0, vid.width, vid.height);CHECKGLERROR
 	qglDisable(GL_SCISSOR_TEST);CHECKGLERROR
 	qglDepthMask(1);CHECKGLERROR
@@ -2170,11 +2179,6 @@ void CL_UpdateScreen(void)
 	}
 	else
 		qglDisable(GL_POLYGON_STIPPLE);
-
-	if (r_timereport_active)
-		R_TimeReport("screenclear");
-
-	qglDrawBuffer(GL_BACK);
 
 	if (vid.stereobuffer || r_stereo_redblue.integer || r_stereo_redgreen.integer || r_stereo_redcyan.integer || r_stereo_sidebyside.integer)
 	{
@@ -2224,8 +2228,6 @@ void CL_UpdateScreen(void)
 	SCR_CaptureVideo();
 
 	VID_Finish(true);
-	if (r_timereport_active)
-		R_TimeReport("finish");
 }
 
 void CL_Screen_NewMap(void)
