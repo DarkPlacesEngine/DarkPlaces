@@ -1328,6 +1328,8 @@ typedef struct r_refdef_stats_s
 	int world_portals;
 	int world_surfaces;
 	int world_triangles;
+	int lightmapupdates;
+	int lightmapupdatepixels;
 	int particles;
 	int decals;
 	int meshes;
