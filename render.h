@@ -45,7 +45,6 @@ extern void SHOWLMP_decodeshow(void);
 extern void SHOWLMP_drawall(void);
 
 // render profiling stuff
-extern char r_speeds_string[1024];
 extern int r_timereport_active;
 
 // lighting stuff
