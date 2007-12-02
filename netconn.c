@@ -48,19 +48,11 @@ static cvar_t sv_qwmasters [] =
 	{CVAR_SAVE, "sv_qwmaster2", "", "user-chosen qwmaster server 2"},
 	{CVAR_SAVE, "sv_qwmaster3", "", "user-chosen qwmaster server 3"},
 	{CVAR_SAVE, "sv_qwmaster4", "", "user-chosen qwmaster server 4"},
-	{0, "sv_qwmasterextra1", "192.246.40.37:27000", "id Limbo (admin: id Software)"},
-	{0, "sv_qwmasterextra2", "192.246.40.37:27002", "id CTF (admin: id Software)"},
-	{0, "sv_qwmasterextra3", "192.246.40.37:27003", "id TeamFortress (admin: id Software)"},
-	{0, "sv_qwmasterextra4", "192.246.40.37:27004", "id Miscilaneous (admin: id Software)"},
-	{0, "sv_qwmasterextra5", "192.246.40.37:27006", "id Deathmatch Only (admin: id Software)"},
-	{0, "sv_qwmasterextra6", "150.254.66.120:27000", "Poland's master server. (admin: unknown)"},
-	{0, "sv_qwmasterextra7", "62.112.145.129:27000", "Ocrana master server. (admin: unknown)"},
-	{0, "sv_qwmasterextra8", "master.edome.net", "edome master server. (admin: unknown)"},
-	{0, "sv_qwmasterextra9", "qwmaster.barrysworld.com", "barrysworld master server. (admin: unknown)"},
-	{0, "sv_qwmasterextra10", "qwmaster.ocrana.de:27000", "Ocrana2 master server. (admin: unknown)"},
-	{0, "sv_qwmasterextra11", "213.221.174.165:27000", "unknown1 master server. (admin: unknown)"},
-	{0, "sv_qwmasterextra12", "195.74.0.8", "unknown2 master server. (admin: unknown)"},
-	{0, "sv_qwmasterextra13", "204.182.161.2", "unknown3 master server. (admin: unknown)"},
+	{0, "sv_qwmasterextra1", "master.quakeservers.net:27000", "Global master server. (admin: unknown)"},
+	{0, "sv_qwmasterextra2", "asgaard.morphos-team.net:27000", "Global master server. (admin: unknown)"},
+	{0, "sv_qwmasterextra3", "qwmaster.ocrana.de:27000", "German master server. (admin: unknown)"},
+	{0, "sv_qwmasterextra4", "masterserver.exhale.de:27000", "German master server. (admin: unknown)"},
+	{0, "sv_qwmasterextra5", "kubus.rulez.pl:27000", "Poland master server. (admin: unknown)"},
 	{0, NULL, NULL, NULL}
 };
 
@@ -410,6 +402,22 @@ void ServerList_ResetMasks(void)
 		serverlist_andmasks[i].info.numbots = -1;
 	for(i = 0; i < SERVERLIST_ORMASKCOUNT; ++i)
 		serverlist_ormasks[i].info.numbots = -1;
+}
+
+void ServerList_GetPlayerStatistics(int *numplayerspointer, int *maxplayerspointer)
+{
+	int i;
+	int numplayers = 0, maxplayers = 0;
+	for (i = 0;i < serverlist_cachecount;i++)
+	{
+		if (serverlist_cache[i].query == SQS_QUERIED)
+		{
+			numplayers += serverlist_cache[i].info.numhumans;
+			maxplayers += serverlist_cache[i].info.maxplayers;
+		}
+	}
+	*numplayerspointer = numplayers;
+	*maxplayerspointer = maxplayers;
 }
 
 #if 0
@@ -1535,6 +1543,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			if ((s = SearchInfostring(string, "hostname"     )) != NULL) strlcpy(info->name, s, sizeof (info->name));else info->name[0] = 0;
 			info->protocol = 0;
 			info->numplayers = 0; // updated below
+			info->numhumans = 0; // updated below
 			if ((s = SearchInfostring(string, "maxclients"   )) != NULL) info->maxplayers = atoi(s);else info->maxplayers  = 0;
 			if ((s = SearchInfostring(string, "gameversion"  )) != NULL) info->gameversion = atoi(s);else info->gameversion = 0;
 
@@ -1551,6 +1560,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 					if (s >= string + length)
 						break;
 					info->numplayers++;
+					info->numhumans++;
 					s++;
 				}
 			}
