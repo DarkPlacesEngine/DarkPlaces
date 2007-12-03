@@ -59,8 +59,6 @@ extern matrix4x4_t matrix_attenuationz;
 
 rtexture_t *R_Shadow_Cubemap(const char *basename);
 
-extern dlight_t *r_shadow_worldlightchain;
-
 void R_Shadow_UpdateWorldLightSelection(void);
 
 extern rtlight_t *r_shadow_compilingrtlight;
@@ -70,6 +68,7 @@ void R_RTLight_Compile(rtlight_t *rtlight);
 void R_RTLight_Uncompile(rtlight_t *rtlight);
 
 void R_ShadowVolumeLighting(qboolean visible);
+void R_DrawCoronas(void);
 
 int *R_Shadow_ResizeShadowElements(int numtris);
 
@@ -79,5 +78,7 @@ extern int *shadowmark;
 extern int *shadowmarklist;
 extern int shadowmarkcount;
 void R_Shadow_PrepareShadowMark(int numtris);
+
+void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal, const vec3_t p, int dynamic);
 
 #endif

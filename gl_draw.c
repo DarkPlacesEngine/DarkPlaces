@@ -30,8 +30,6 @@ dp_font_t dp_fonts[MAX_FONTS] = {{0}};
 cvar_t r_textshadow = {CVAR_SAVE, "r_textshadow", "0", "draws a shadow on all text to improve readability (note: value controls offset, 1 = 1 pixel, 1.5 = 1.5 pixels, etc)"};
 cvar_t r_textbrightness = {CVAR_SAVE, "r_textbrightness", "0", "additional brightness for text color codes (0 keeps colors as is, 1 makes them all white)"};
 
-cachepic_t *r_crosshairs[NUMCROSSHAIRS+1];
-
 //=============================================================================
 /* Support Routines */
 
@@ -101,51 +99,67 @@ static rtexture_t *draw_generateconchars(void)
 	return R_LoadTexture2D(drawtexturepool, "conchars", 256, 256, &buffer[0][0], TEXTYPE_BGRA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
 }
 
-static char *pointerimage =
-	"333333332......."
-	"26777761........"
-	"2655541........."
-	"265541.........."
-	"2654561........."
-	"26414561........"
-	"251.14561......."
-	"21...14561......"
-	"1.....141......."
-	".......1........"
-	"................"
-	"................"
-	"................"
-	"................"
-	"................"
-	"................"
-;
-
-static rtexture_t *draw_generatemousepointer(void)
+static rtexture_t *draw_generateditherpattern(void)
 {
-	int i;
-	unsigned char buffer[256][4];
-	for (i = 0;i < 256;i++)
-	{
-		if (pointerimage[i] == '.')
-		{
-			buffer[i][0] = 0;
-			buffer[i][1] = 0;
-			buffer[i][2] = 0;
-			buffer[i][3] = 0;
-		}
-		else
-		{
-			buffer[i][0] = (pointerimage[i] - '0') * 16;
-			buffer[i][1] = (pointerimage[i] - '0') * 16;
-			buffer[i][2] = (pointerimage[i] - '0') * 16;
-			buffer[i][3] = 255;
-		}
-	}
-	return R_LoadTexture2D(drawtexturepool, "mousepointer", 16, 16, &buffer[0][0], TEXTYPE_BGRA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
+	int x, y;
+	unsigned char pixels[8][8];
+	for (y = 0;y < 8;y++)
+		for (x = 0;x < 8;x++)
+			pixels[y][x] = ((x^y) & 4) ? 254 : 0;
+	return R_LoadTexture2D(drawtexturepool, "ditherpattern", 8, 8, pixels[0], TEXTYPE_PALETTE, TEXF_FORCENEAREST | TEXF_PRECACHE, NULL);
 }
 
-static char *crosshairtexdata[NUMCROSSHAIRS] =
+typedef struct embeddedpic_s
 {
+	const char *name;
+	int width;
+	int height;
+	const char *pixels;
+}
+embeddedpic_t;
+
+static embeddedpic_t embeddedpics[] =
+{
+	{
+	"gfx/prydoncursor001", 16, 16,
+	"477777774......."
+	"77.....6........"
+	"7.....6........."
+	"7....6.........."
+	"7.....6........."
+	"7..6...6........"
+	"7.6.6...6......."
+	"76...6...6......"
+	"4.....6.6......."
+	".......6........"
+	"................"
+	"................"
+	"................"
+	"................"
+	"................"
+	"................"
+	},
+	{
+	"ui/mousepointer", 16, 16,
+	"477777774......."
+	"77.....6........"
+	"7.....6........."
+	"7....6.........."
+	"7.....6........."
+	"7..6...6........"
+	"7.6.6...6......."
+	"76...6...6......"
+	"4.....6.6......."
+	".......6........"
+	"................"
+	"................"
+	"................"
+	"................"
+	"................"
+	"................"
+	},
+	{
+	"gfx/crosshair1", 16, 16,
 	"................"
 	"................"
 	"................"
@@ -162,7 +176,9 @@ static char *crosshairtexdata[NUMCROSSHAIRS] =
 	"................"
 	"................"
 	"................"
-	,
+	},
+	{
+	"gfx/crosshair2", 16, 16,
 	"................"
 	"................"
 	"................"
@@ -179,7 +195,9 @@ static char *crosshairtexdata[NUMCROSSHAIRS] =
 	"................"
 	"................"
 	"................"
-	,
+	},
+	{
+	"gfx/crosshair3", 16, 16,
 	"................"
 	".......77......."
 	".......77......."
@@ -196,7 +214,9 @@ static char *crosshairtexdata[NUMCROSSHAIRS] =
 	".......77......."
 	".......77......."
 	"................"
-	,
+	},
+	{
+	"gfx/crosshair4", 16, 16,
 	"................"
 	"................"
 	"................"
@@ -213,87 +233,173 @@ static char *crosshairtexdata[NUMCROSSHAIRS] =
 	"........7......."
 	"........7......."
 	"................"
-	,
+	},
+	{
+	"gfx/crosshair5", 8, 8,
+	"........"
+	"........"
+	"....7..."
+	"........"
+	"..7.7.7."
+	"........"
+	"....7..."
+	"........"
+	},
+	{
+	"gfx/crosshair6", 2, 2,
+	"77"
+	"77"
+	},
+	{
+	"gfx/crosshair7", 16, 16,
+	"................"
+	".3............3."
+	"..5...2332...5.."
+	"...7.3....3.7..."
+	"....7......7...."
+	"...3.7....7.3..."
+	"..2...7..7...2.."
+	"..3..........3.."
+	"..3..........3.."
+	"..2...7..7...2.."
+	"...3.7....7.3..."
+	"....7......7...."
+	"...7.3....3.7..."
+	"..5...2332...5.."
+	".3............3."
+	"................"
+	},
+	{
+	"gfx/editlights/cursor", 16, 16,
+	"................"
+	".3............3."
+	"..5...2332...5.."
+	"...7.3....3.7..."
+	"....7......7...."
+	"...3.7....7.3..."
+	"..2...7..7...2.."
+	"..3..........3.."
+	"..3..........3.."
+	"..2...7..7...2.."
+	"...3.7....7.3..."
+	"....7......7...."
+	"...7.3....3.7..."
+	"..5...2332...5.."
+	".3............3."
+	"................"
+	},
+	{
+	"gfx/editlights/light", 16, 16,
 	"................"
 	"................"
+	"......1111......"
+	"....11233211...."
+	"...1234554321..."
+	"...1356776531..."
+	"..124677776421.."
+	"..135777777531.."
+	"..135777777531.."
+	"..124677776421.."
+	"...1356776531..."
+	"...1234554321..."
+	"....11233211...."
+	"......1111......"
 	"................"
 	"................"
-	"................"
-	"........7......."
-	"................"
-	"........4......."
-	".....7.4.4.7...."
-	"........4......."
-	"................"
-	"........7......."
+	},
+	{
+	"gfx/editlights/noshadow", 16, 16,
 	"................"
 	"................"
+	"......1111......"
+	"....11233211...."
+	"...1234554321..."
+	"...1356226531..."
+	"..12462..26421.."
+	"..1352....2531.."
+	"..1352....2531.."
+	"..12462..26421.."
+	"...1356226531..."
+	"...1234554321..."
+	"....11233211...."
+	"......1111......"
 	"................"
 	"................"
-	,
+	},
+	{
+	"gfx/editlights/selection", 16, 16,
+	"................"
+	".777752..257777."
+	".742........247."
+	".72..........27."
+	".7............7."
+	".5............5."
+	".2............2."
 	"................"
 	"................"
+	".2............2."
+	".5............5."
+	".7............7."
+	".72..........27."
+	".742........247."
+	".777752..257777."
+	"................"
+	},
+	{
+	"gfx/editlights/cubemaplight", 16, 16,
 	"................"
 	"................"
+	"......2772......"
+	"....27755772...."
+	"..277533335772.."
+	"..753333333357.."
+	"..777533335777.."
+	"..735775577537.."
+	"..733357753337.."
+	"..733337733337.."
+	"..753337733357.."
+	"..277537735772.."
+	"....27777772...."
+	"......2772......"
 	"................"
 	"................"
-	"................"
-	".......55......."
-	".......55......."
-	"................"
-	"................"
+	},
+	{
+	"gfx/editlights/cubemapnoshadowlight", 16, 16,
 	"................"
 	"................"
+	"......2772......"
+	"....27722772...."
+	"..2772....2772.."
+	"..72........27.."
+	"..7772....2777.."
+	"..7.27722772.7.."
+	"..7...2772...7.."
+	"..7....77....7.."
+	"..72...77...27.."
+	"..2772.77.2772.."
+	"....27777772...."
+	"......2772......"
 	"................"
 	"................"
-	"................"
+	},
+	{NULL, 0, 0, NULL}
 };
 
-static rtexture_t *draw_generatecrosshair(int num)
+static rtexture_t *draw_generatepic(const char *name)
 {
-	int i;
-	char *in;
-	unsigned char data[16*16][4];
-	in = crosshairtexdata[num];
-	for (i = 0;i < 16*16;i++)
-	{
-		if (in[i] == '.')
-		{
-			data[i][0] = 255;
-			data[i][1] = 255;
-			data[i][2] = 255;
-			data[i][3] = 0;
-		}
-		else
-		{
-			data[i][0] = data[i][1] = data[i][2] = (unsigned char) ((int) (in[i] - '0') * 127 / 7 + 128);
-			data[i][3] = 255;
-		}
-	}
-	return R_LoadTexture2D(drawtexturepool, va("crosshair%i", num+1), 16, 16, &data[0][0], TEXTYPE_BGRA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
+	embeddedpic_t *p;
+	for (p = embeddedpics;p->name;p++)
+		if (!strcmp(name, p->name))
+			return R_LoadTexture2D(drawtexturepool, p->name, p->width, p->height, (const unsigned char *)p->pixels, TEXTYPE_PALETTE, TEXF_ALPHA | TEXF_PRECACHE, palette_bgra_embeddedpic);
+	if (!strcmp(name, "gfx/conchars"))
+		return draw_generateconchars();
+	if (!strcmp(name, "gfx/colorcontrol/ditherpattern"))
+		return draw_generateditherpattern();
+	Con_Printf("Draw_CachePic: failed to load %s\n", name);
+	return r_texture_notexture;
 }
 
-static rtexture_t *draw_generateditherpattern(void)
-{
-#if 1
-	int x, y;
-	unsigned char data[8*8*4];
-	for (y = 0;y < 8;y++)
-	{
-		for (x = 0;x < 8;x++)
-		{
-			data[(y*8+x)*4+0] = data[(y*8+x)*4+1] = data[(y*8+x)*4+2] = ((x^y) & 4) ? 255 : 0;
-			data[(y*8+x)*4+3] = 255;
-		}
-	}
-	return R_LoadTexture2D(drawtexturepool, "ditherpattern", 8, 8, data, TEXTYPE_BGRA, TEXF_FORCENEAREST | TEXF_PRECACHE, NULL);
-#else
-	unsigned char data[16];
-	memset(data, 255, sizeof(data));
-	data[0] = data[1] = data[2] = data[12] = data[13] = data[14] = 0;
-	return R_LoadTexture2D(drawtexturepool, "ditherpattern", 2, 2, data, TEXTYPE_BGRA, TEXF_FORCENEAREST | TEXF_PRECACHE, NULL);
-#endif
-}
 
 /*
 ================
@@ -342,7 +448,7 @@ static cachepic_t	*Draw_CachePic_Compression (const char *path, qboolean persist
 	flags = TEXF_ALPHA;
 	if (persistent)
 		flags |= TEXF_PRECACHE;
-	if (!strcmp(path, "gfx/colorcontrol/ditherpattern"))
+	if (strcmp(path, "gfx/colorcontrol/ditherpattern"))
 		flags |= TEXF_CLAMP;
 	if(allow_compression && gl_texturecompression_2d.integer)
 		flags |= TEXF_COMPRESS;
@@ -400,48 +506,10 @@ static cachepic_t	*Draw_CachePic_Compression (const char *path, qboolean persist
 		}
 	}
 
-	// if it's not found on disk, check if it's one of the builtin images
+	// if it's not found on disk, generate an image
 	if (pic->tex == NULL)
 	{
-		if (pic->tex == NULL && !strcmp(path, "gfx/conchars"))
-			pic->tex = draw_generateconchars();
-		if (pic->tex == NULL && !strcmp(path, "ui/mousepointer"))
-			pic->tex = draw_generatemousepointer();
-		if (pic->tex == NULL && !strcmp(path, "gfx/prydoncursor001"))
-			pic->tex = draw_generatemousepointer();
-		if (pic->tex == NULL && !strcmp(path, "gfx/crosshair1"))
-			pic->tex = draw_generatecrosshair(0);
-		if (pic->tex == NULL && !strcmp(path, "gfx/crosshair2"))
-			pic->tex = draw_generatecrosshair(1);
-		if (pic->tex == NULL && !strcmp(path, "gfx/crosshair3"))
-			pic->tex = draw_generatecrosshair(2);
-		if (pic->tex == NULL && !strcmp(path, "gfx/crosshair4"))
-			pic->tex = draw_generatecrosshair(3);
-		if (pic->tex == NULL && !strcmp(path, "gfx/crosshair5"))
-			pic->tex = draw_generatecrosshair(4);
-		if (pic->tex == NULL && !strcmp(path, "gfx/crosshair6"))
-			pic->tex = draw_generatecrosshair(5);
-		if (pic->tex == NULL && !strcmp(path, "gfx/colorcontrol/ditherpattern"))
-			pic->tex = draw_generateditherpattern();
-		// default textures for light sprites
-		// todo: improve them
-		if (pic->tex == NULL && !strcmp(path, "gfx/editlights/cursor"))
-			pic->tex = draw_generatecrosshair(0);
-		if (pic->tex == NULL && !strcmp(path, "gfx/editlights/light"))
-			pic->tex = draw_generatecrosshair(0);
-		if (pic->tex == NULL && !strcmp(path, "gfx/editlights/noshadow"))
-			pic->tex = draw_generatecrosshair(0);
-		if (pic->tex == NULL && !strcmp(path, "gfx/editlights/cubemap"))
-			pic->tex = draw_generatecrosshair(0);
-		if (pic->tex == NULL && !strcmp(path, "gfx/editlights/selection"))
-			pic->tex = draw_generatecrosshair(0);
-		if (pic->tex == NULL)
-		{
-			// don't complain about missing gfx/crosshair images
-			if (strncmp(path, "gfx/crosshair", 13))
-				Con_Printf("Draw_CachePic: failed to load %s\n", path);
-			pic->tex = r_texture_notexture;
-		}
+		pic->tex = draw_generatepic(path);
 		pic->width = R_TextureWidth(pic->tex);
 		pic->height = R_TextureHeight(pic->tex);
 	}
@@ -624,9 +692,6 @@ static void gl_draw_start(void)
 
 	for(i = 0; i < MAX_FONTS; ++i)
 		LoadFont(false, va("gfx/font_%s", dp_fonts[i].title), &dp_fonts[i]);
-
-	for (i = 1;i <= NUMCROSSHAIRS;i++)
-		r_crosshairs[i] = Draw_CachePic(va("gfx/crosshair%i", i), true);
 
 	// draw the loading screen so people have something to see in the newly opened window
 	SCR_UpdateLoadingScreen(true);

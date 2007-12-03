@@ -1998,7 +1998,6 @@ extern void GL_Main_Init(void);
 extern void R_Shadow_Init(void);
 extern void R_Sky_Init(void);
 extern void GL_Surf_Init(void);
-extern void R_Light_Init(void);
 extern void R_Particles_Init(void);
 extern void R_Explosion_Init(void);
 extern void gl_backend_init(void);
@@ -2016,7 +2015,6 @@ void Render_Init(void)
 	R_Sky_Init();
 	GL_Surf_Init();
 	Sbar_Init();
-	R_Light_Init();
 	R_Particles_Init();
 	R_Explosion_Init();
 	R_LightningBeams_Init();

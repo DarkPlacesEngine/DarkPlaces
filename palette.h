@@ -18,6 +18,7 @@ extern unsigned int palette_bgra_onlyfullbrights[256];
 extern unsigned int palette_bgra_pantsaswhite[256];
 extern unsigned int palette_bgra_shirtaswhite[256];
 extern unsigned int palette_bgra_transparent[256];
+extern unsigned int palette_bgra_embeddedpic[256];
 
 // used by hardware gamma functions in vid_* files
 void BuildGammaTable8(float prescale, float gamma, float scale, float base, unsigned char *out, int rampsize);
