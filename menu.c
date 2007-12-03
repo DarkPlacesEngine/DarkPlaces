@@ -5015,10 +5015,6 @@ static char *m_required_func[] = {
 "m_shutdown",
 };
 
-#ifdef NG_MENU
-static qboolean m_displayed;
-#endif
-
 static int m_numrequiredfunc = sizeof(m_required_func) / sizeof(char*);
 
 void MR_SetRouting (qboolean forceold);
@@ -5087,15 +5083,7 @@ void MP_ToggleMenu_f (void)
 	PRVM_Begin;
 	PRVM_SetProg(PRVM_MENUPROG);
 
-#ifdef NG_MENU
-	m_displayed = !m_displayed;
-	if( m_displayed )
-		PRVM_ExecuteProgram(prog->funcoffsets.m_display,"m_display() required");
-	else
-		PRVM_ExecuteProgram(prog->funcoffsets.m_hide,"m_hide() required");
-#else
 	PRVM_ExecuteProgram(prog->funcoffsets.m_toggle,"m_toggle() required");
-#endif
 
 	PRVM_End;
 }
@@ -5150,10 +5138,6 @@ void MP_Init (void)
 
 	// note: OP_STATE is not supported by menu qc, we don't even try to detect
 	// it here
-
-#ifdef NG_MENU
-	m_displayed = false;
-#endif
 
 	// call the prog init
 	PRVM_ExecuteProgram(prog->funcoffsets.m_init,"m_init() required");

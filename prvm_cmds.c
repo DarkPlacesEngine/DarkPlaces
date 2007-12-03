@@ -3100,6 +3100,156 @@ void VM_cin_restart( void )
 		CL_RestartVideo( video );
 }
 
+#ifdef SUPPORT_GECKO
+static const char *vm_gecko_getfullname( const char *name ) {
+	// FIXME: assert that PRVM_NAME is not empty.. [12/3/2007 Black]
+	return va( "%s/%s", PRVM_NAME, name );
+}
+
+/*
+========================
+VM_gecko_create
+
+float[bool] gecko_create( string name )
+========================
+*/
+void VM_gecko_create( void ) {
+	const char *name;
+	
+	VM_SAFEPARMCOUNT( 1, VM_gecko_create );
+
+	name = PRVM_G_STRING( OFS_PARM0 );
+	VM_CheckEmptyString( name );
+
+	if( !CL_Gecko_CreateBrowser( vm_gecko_getfullname( name ) ) ) {
+		// TODO: error handling [12/3/2007 Black]
+		PRVM_G_FLOAT( OFS_RETURN ) = 0;
+		return;
+	}
+	PRVM_G_FLOAT( OFS_RETURN ) = 1;
+}
+
+/*
+========================
+VM_gecko_destroy
+
+void gecko_destroy( string name )
+========================
+*/
+void VM_gecko_destroy( void ) {
+	const char *name;
+	clgecko_t *instance;
+
+	VM_SAFEPARMCOUNT( 1, VM_gecko_destroy );
+
+	name = PRVM_G_STRING( OFS_PARM0 );
+	VM_CheckEmptyString( name );
+	instance = CL_Gecko_FindBrowser( vm_gecko_getfullname( name ) );
+	if( !instance ) {
+		return;
+	}
+	CL_Gecko_DestroyBrowser( instance );
+}
+
+/*
+========================
+VM_gecko_navigate
+
+void gecko_navigate( string name, string URI )
+========================
+*/
+void VM_gecko_navigate( void ) {
+	const char *name;
+	const char *URI;
+	clgecko_t *instance;
+
+	VM_SAFEPARMCOUNT( 2, VM_gecko_navigate );
+
+	name = PRVM_G_STRING( OFS_PARM0 );
+	URI = PRVM_G_STRING( OFS_PARM1 );
+	VM_CheckEmptyString( name );
+	VM_CheckEmptyString( URI );
+
+   instance = CL_Gecko_FindBrowser( vm_gecko_getfullname( name ) );
+	if( !instance ) {
+		return;
+	}
+	CL_Gecko_NavigateToURI( instance, URI );
+}
+
+/*
+========================
+VM_gecko_keyevent
+
+float[bool] gecko_keyevent( string name, float key, float eventtype ) 
+========================
+*/
+void VM_gecko_keyevent( void ) {
+	const char *name;
+	unsigned int key;
+	clgecko_buttoneventtype_t eventtype;
+	clgecko_t *instance;
+
+	VM_SAFEPARMCOUNT( 3, VM_gecko_keyevent );
+
+	name = PRVM_G_STRING( OFS_PARM0 );
+	VM_CheckEmptyString( name );
+	key = (unsigned int) PRVM_G_FLOAT( OFS_PARM1 );
+	switch( (unsigned int) PRVM_G_FLOAT( OFS_PARM3 ) ) {
+	case 0:
+		eventtype = CLG_BET_DOWN;
+		break;
+	case 1:
+		eventtype = CLG_BET_UP;
+		break;
+	case 2:
+		eventtype = CLG_BET_PRESS;
+		break;
+	case 3:
+		eventtype = CLG_BET_DOUBLECLICK;
+		break;
+	default:
+		// TODO: console printf? [12/3/2007 Black]
+		PRVM_G_FLOAT( OFS_RETURN ) = 0;
+		return;
+	}
+
+	instance = CL_Gecko_FindBrowser( vm_gecko_getfullname( name ) );
+	if( !instance ) {
+		PRVM_G_FLOAT( OFS_RETURN ) = 0;
+		return;
+	}
+
+	PRVM_G_FLOAT( OFS_RETURN ) = (CL_Gecko_Event_Key( instance, key, eventtype ) == true);
+}
+
+/*
+========================
+VM_gecko_movemouse
+
+void gecko_mousemove( string name, float x, float y )
+========================
+*/
+void VM_gecko_movemouse( void ) {
+	const char *name;
+	float x, y;
+	clgecko_t *instance;
+
+	VM_SAFEPARMCOUNT( 3, VM_gecko_movemouse );
+
+	name = PRVM_G_STRING( OFS_PARM0 );
+	VM_CheckEmptyString( name );
+	x = PRVM_G_FLOAT( OFS_PARM1 );
+	y = PRVM_G_FLOAT( OFS_PARM2 );
+	
+	instance = CL_Gecko_FindBrowser( vm_gecko_getfullname( name ) );
+	if( !instance ) {
+		return;
+	}
+	CL_Gecko_Event_CursorMove( instance, x, y );
+}
+#endif
+
 /*
 ==============
 VM_makevectors
@@ -3169,10 +3319,6 @@ void VM_drawline (void)
 	flags	= (int)PRVM_G_FLOAT(OFS_PARM5);
 	DrawQ_Line(width, c1[0], c1[1], c2[0], c2[1], rgb[0], rgb[1], rgb[2], alpha, flags);
 }
-
-
-
-
 
 // float(float number, float quantity) bitshift (EXT_BITSHIFT)
 void VM_bitshift (void)
@@ -3590,9 +3736,9 @@ void VM_buf_copy (void)
 /*
 ========================
 VM_buf_sort
-sort buffer by beginnings of strings (sortpower defaults it's lenght)
+sort buffer by beginnings of strings (cmplength defaults it's length)
 "backward == TRUE" means that sorting goes upside-down
-void buf_sort(float bufhandle, float sortpower, float backward) = #464;
+void buf_sort(float bufhandle, float cmplength, float backward) = #464;
 ========================
 */
 void VM_buf_sort (void)
@@ -3612,6 +3758,7 @@ void VM_buf_sort (void)
 		VM_Warning("VM_buf_sort: tried to sort empty buffer %i in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
 		return;
 	}
+	// TODO: please someone rename this to buf_cmplength [12/3/2007 Black]
 	buf_sortpower = (int)PRVM_G_FLOAT(OFS_PARM1);
 	if(buf_sortpower <= 0)
 		buf_sortpower = 99999999;
@@ -3958,7 +4105,7 @@ void VM_changepitch (void)
 	PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.angles)->vector[0] = ANGLEMOD (current + move);
 }
 
-
+// TODO: adapt all static function names to use a single naming convention... [12/3/2007 Black]
 static int Is_Text_Color (char c, char t)
 {
 	int a = 0;

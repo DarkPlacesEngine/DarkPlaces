@@ -1464,9 +1464,7 @@ void PRVM_FindOffsets(void)
 	prog->globaloffsets.drawfont                      = PRVM_ED_FindGlobalOffset("drawfont");
 
 	// menu qc only uses some functions, nothing else
-	prog->funcoffsets.m_display                       = PRVM_ED_FindFunctionOffset("m_display");
 	prog->funcoffsets.m_draw                          = PRVM_ED_FindFunctionOffset("m_draw");
-	prog->funcoffsets.m_hide                          = PRVM_ED_FindFunctionOffset("m_hide");
 	prog->funcoffsets.m_init                          = PRVM_ED_FindFunctionOffset("m_init");
 	prog->funcoffsets.m_keydown                       = PRVM_ED_FindFunctionOffset("m_keydown");
 	prog->funcoffsets.m_keyup                         = PRVM_ED_FindFunctionOffset("m_keyup");
