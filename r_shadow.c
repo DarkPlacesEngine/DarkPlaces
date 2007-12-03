@@ -2836,7 +2836,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	rtlight->currentcubemap = rtlight->cubemapname[0] ? R_Shadow_Cubemap(rtlight->cubemapname) : r_texture_whitecube;
 
 	// look up the light style value at this time
-	f = (rtlight->style >= 0 ? r_refdef.lightstylevalue[rtlight->style] : 128) * (1.0f / 256.0f) * r_shadow_lightintensityscale.value;
+	f = (rtlight->style >= 0 ? r_refdef.rtlightstylevalue[rtlight->style] : 1) * r_shadow_lightintensityscale.value;
 	VectorScale(rtlight->color, f, rtlight->currentcolor);
 	/*
 	if (rtlight->selected)
