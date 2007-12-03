@@ -1383,9 +1383,11 @@ typedef struct r_refdef_s
 	rtlight_t lights[MAX_DLIGHTS];
 	int numlights;
 
+	// intensities for light styles right now, controls rtlights
+	float rtlightstylevalue[256];	// float fraction of base light value
 	// 8.8bit fixed point intensities for light styles
-	// controls intensity of dynamic lights and lightmap layers
-	unsigned short	lightstylevalue[256];	// 8.8 fraction of base light value
+	// controls intensity lightmap layers
+	unsigned short lightstylevalue[256];	// 8.8 fraction of base light value
 
 	vec3_t fogcolor;
 	vec_t fogrange;

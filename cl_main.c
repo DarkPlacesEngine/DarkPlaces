@@ -761,12 +761,11 @@ void CL_RelinkLightFlashes(void)
 	f = cl.time * 10;
 	i = (int)floor(f);
 	frac = f - i;
-	if (!r_lerplightstyles.integer)
-		frac = 1;
 	for (j = 0;j < cl.max_lightstyle;j++)
 	{
 		if (!cl.lightstyle || !cl.lightstyle[j].length)
 		{
+			r_refdef.rtlightstylevalue[j] = 1;
 			r_refdef.lightstylevalue[j] = 256;
 			continue;
 		}
@@ -774,7 +773,13 @@ void CL_RelinkLightFlashes(void)
 		l = (i-1) % cl.lightstyle[j].length;
 		k = cl.lightstyle[j].map[k] - 'a';
 		l = cl.lightstyle[j].map[l] - 'a';
-		r_refdef.lightstylevalue[j] = (unsigned short)(((k*frac)+(l*(1-frac)))*22);
+		// rtlightstylevalue is always interpolated because it has no bad
+		// consequences for performance
+		// lightstylevalue is subject to a cvar for performance reasons;
+		// skipping lightmap updates on most rendered frames substantially
+		// improves framerates (but makes light fades look bad)
+		r_refdef.rtlightstylevalue[j] = ((k*frac)+(l*(1-frac)))*(22/256.0f);
+		r_refdef.lightstylevalue[j] = r_lerplightstyles.integer ? (unsigned short)(((k*frac)+(l*(1-frac)))*22) : k*22;
 	}
 }
 

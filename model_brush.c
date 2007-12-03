@@ -1125,8 +1125,14 @@ loc0:
 		// check for impact on this node
 		if (node->numsurfaces)
 		{
-			int i, ds, dt;
+			int i, dsi, dti, lmwidth, lmheight;
+			float ds, dt;
 			msurface_t *surface;
+			unsigned char *lightmap;
+			int maps, line3, size3;
+			float dsfrac;
+			float dtfrac;
+			float scale, w, w00, w01, w10, w11;
 
 			surface = model->data_surfaces + node->firstsurface;
 			for (i = 0;i < node->numsurfaces;i++, surface++)
@@ -1134,66 +1140,46 @@ loc0:
 				if (!(surface->texture->basematerialflags & MATERIALFLAG_WALL) || !surface->lightmapinfo->samples)
 					continue;	// no lightmaps
 
-				ds = (int) (x * surface->lightmapinfo->texinfo->vecs[0][0] + y * surface->lightmapinfo->texinfo->vecs[0][1] + mid * surface->lightmapinfo->texinfo->vecs[0][2] + surface->lightmapinfo->texinfo->vecs[0][3]) - surface->lightmapinfo->texturemins[0];
-				dt = (int) (x * surface->lightmapinfo->texinfo->vecs[1][0] + y * surface->lightmapinfo->texinfo->vecs[1][1] + mid * surface->lightmapinfo->texinfo->vecs[1][2] + surface->lightmapinfo->texinfo->vecs[1][3]) - surface->lightmapinfo->texturemins[1];
+				// location we want to sample in the lightmap
+				ds = ((x * surface->lightmapinfo->texinfo->vecs[0][0] + y * surface->lightmapinfo->texinfo->vecs[0][1] + mid * surface->lightmapinfo->texinfo->vecs[0][2] + surface->lightmapinfo->texinfo->vecs[0][3]) - surface->lightmapinfo->texturemins[0]) * 0.0625f;
+				dt = ((x * surface->lightmapinfo->texinfo->vecs[1][0] + y * surface->lightmapinfo->texinfo->vecs[1][1] + mid * surface->lightmapinfo->texinfo->vecs[1][2] + surface->lightmapinfo->texinfo->vecs[1][3]) - surface->lightmapinfo->texturemins[1]) * 0.0625f;
 
-				if (ds >= 0 && ds < surface->lightmapinfo->extents[0] && dt >= 0 && dt < surface->lightmapinfo->extents[1])
+				// check the bounds
+				dsi = (int)ds;
+				dti = (int)dt;
+				lmwidth = ((surface->lightmapinfo->extents[0]>>4)+1);
+				lmheight = ((surface->lightmapinfo->extents[1]>>4)+1);
+
+				// is it in bounds?
+				if (dsi >= 0 && dsi < lmwidth-1 && dti >= 0 && dti < lmheight-1)
 				{
-					unsigned char *lightmap;
-					int lmwidth, lmheight, maps, line3, size3, dsfrac = ds & 15, dtfrac = dt & 15, scale = 0, r00 = 0, g00 = 0, b00 = 0, r01 = 0, g01 = 0, b01 = 0, r10 = 0, g10 = 0, b10 = 0, r11 = 0, g11 = 0, b11 = 0;
-					lmwidth = ((surface->lightmapinfo->extents[0]>>4)+1);
-					lmheight = ((surface->lightmapinfo->extents[1]>>4)+1);
+					// calculate bilinear interpolation factors
+					// and also multiply by fixedpoint conversion factors
+					dsfrac = ds - dsi;
+					dtfrac = dt - dti;
+					w00 = (1 - dsfrac) * (1 - dtfrac) * (1.0f / 32768.0f);
+					w01 = (    dsfrac) * (1 - dtfrac) * (1.0f / 32768.0f);
+					w10 = (1 - dsfrac) * (    dtfrac) * (1.0f / 32768.0f);
+					w11 = (    dsfrac) * (    dtfrac) * (1.0f / 32768.0f);
+
+					// values for pointer math
 					line3 = lmwidth * 3; // LordHavoc: *3 for colored lighting
 					size3 = lmwidth * lmheight * 3; // LordHavoc: *3 for colored lighting
 
-					lightmap = surface->lightmapinfo->samples + ((dt>>4) * lmwidth + (ds>>4))*3; // LordHavoc: *3 for colored lighting
+					// look up the pixel
+					lightmap = surface->lightmapinfo->samples + dti * line3 + dsi*3; // LordHavoc: *3 for colored lighting
 
+					// bilinear filter each lightmap style, and sum them
 					for (maps = 0;maps < MAXLIGHTMAPS && surface->lightmapinfo->styles[maps] != 255;maps++)
 					{
 						scale = r_refdef.lightstylevalue[surface->lightmapinfo->styles[maps]];
-						r00 += lightmap[      0] * scale;g00 += lightmap[      1] * scale;b00 += lightmap[      2] * scale;
-						r01 += lightmap[      3] * scale;g01 += lightmap[      4] * scale;b01 += lightmap[      5] * scale;
-						r10 += lightmap[line3+0] * scale;g10 += lightmap[line3+1] * scale;b10 += lightmap[line3+2] * scale;
-						r11 += lightmap[line3+3] * scale;g11 += lightmap[line3+4] * scale;b11 += lightmap[line3+5] * scale;
+						w = w00 * scale;VectorMA(ambientcolor, w, lightmap            , ambientcolor);
+						w = w01 * scale;VectorMA(ambientcolor, w, lightmap + 3        , ambientcolor);
+						w = w10 * scale;VectorMA(ambientcolor, w, lightmap + line3    , ambientcolor);
+						w = w11 * scale;VectorMA(ambientcolor, w, lightmap + line3 + 3, ambientcolor);
 						lightmap += size3;
 					}
 
-/*
-LordHavoc: here's the readable version of the interpolation
-code, not quite as easy for the compiler to optimize...
-
-dsfrac is the X position in the lightmap pixel, * 16
-dtfrac is the Y position in the lightmap pixel, * 16
-r00 is top left corner, r01 is top right corner
-r10 is bottom left corner, r11 is bottom right corner
-g and b are the same layout.
-r0 and r1 are the top and bottom intermediate results
-
-first we interpolate the top two points, to get the top
-edge sample
-
-	r0 = (((r01-r00) * dsfrac) >> 4) + r00;
-	g0 = (((g01-g00) * dsfrac) >> 4) + g00;
-	b0 = (((b01-b00) * dsfrac) >> 4) + b00;
-
-then we interpolate the bottom two points, to get the
-bottom edge sample
-
-	r1 = (((r11-r10) * dsfrac) >> 4) + r10;
-	g1 = (((g11-g10) * dsfrac) >> 4) + g10;
-	b1 = (((b11-b10) * dsfrac) >> 4) + b10;
-
-then we interpolate the top and bottom samples to get the
-middle sample (the one which was requested)
-
-	r = (((r1-r0) * dtfrac) >> 4) + r0;
-	g = (((g1-g0) * dtfrac) >> 4) + g0;
-	b = (((b1-b0) * dtfrac) >> 4) + b0;
-*/
-
-					ambientcolor[0] += (float) ((((((((r11-r10) * dsfrac) >> 4) + r10)-((((r01-r00) * dsfrac) >> 4) + r00)) * dtfrac) >> 4) + ((((r01-r00) * dsfrac) >> 4) + r00)) * (1.0f / 32768.0f);
-					ambientcolor[1] += (float) ((((((((g11-g10) * dsfrac) >> 4) + g10)-((((g01-g00) * dsfrac) >> 4) + g00)) * dtfrac) >> 4) + ((((g01-g00) * dsfrac) >> 4) + g00)) * (1.0f / 32768.0f);
-					ambientcolor[2] += (float) ((((((((b11-b10) * dsfrac) >> 4) + b10)-((((b01-b00) * dsfrac) >> 4) + b00)) * dtfrac) >> 4) + ((((b01-b00) * dsfrac) >> 4) + b00)) * (1.0f / 32768.0f);
 					return true; // success
 				}
 			}
@@ -5206,7 +5192,7 @@ static void Mod_Q3BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientc
 	q3dlightgrid_t *a, *s;
 
 	// scale lighting by lightstyle[0] so that darkmode in dpmod works properly
-	stylescale = r_refdef.lightstylevalue[0] * (1.0f / 256.0f);
+	stylescale = r_refdef.rtlightstylevalue[0];
 
 	if (!model->brushq3.num_lightgrid)
 	{

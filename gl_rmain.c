@@ -4227,7 +4227,7 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 					// applied to the color
 					// FIXME: r_glsl 1 rendering doesn't support overbright lightstyles with this (the default light style is not overbright)
 					if (ent->model->type == mod_brushq3)
-						colorscale *= r_refdef.lightstylevalue[0] * (1.0f / 256.0f);
+						colorscale *= r_refdef.rtlightstylevalue[0];
 					colorscale *= r_refdef.lightmapintensity;
 					R_Texture_AddLayer(t, depthmask, blendfunc1, blendfunc2, TEXTURELAYERTYPE_LITTEXTURE, currentbasetexture, &t->currenttexmatrix, ent->colormod[0] * colorscale, ent->colormod[1] * colorscale, ent->colormod[2] * colorscale, t->currentalpha);
 					if (r_ambient.value >= (1.0f/64.0f))
@@ -6265,7 +6265,7 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 	RSurf_ActiveWorldEntity();
 
 	// update light styles on this submodel
-	if (!skysurfaces && !depthonly && !addwaterplanes && model->brushq1.num_lightstyles)
+	if (!skysurfaces && !depthonly && !addwaterplanes && model->brushq1.num_lightstyles && r_refdef.lightmapintensity > 0)
 	{
 		model_brush_lightstyleinfo_t *style;
 		for (i = 0, style = model->brushq1.data_lightstyleinfo;i < model->brushq1.num_lightstyles;i++, style++)
@@ -6354,7 +6354,7 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 		RSurf_ActiveModelEntity(ent, true, r_glsl.integer && gl_support_fragment_shader && !depthonly);
 
 	// update light styles
-	if (!skysurfaces && !depthonly && !addwaterplanes && model->brushq1.num_lightstyles)
+	if (!skysurfaces && !depthonly && !addwaterplanes && model->brushq1.num_lightstyles && r_refdef.lightmapintensity > 0)
 	{
 		model_brush_lightstyleinfo_t *style;
 		for (i = 0, style = model->brushq1.data_lightstyleinfo;i < model->brushq1.num_lightstyles;i++, style++)
