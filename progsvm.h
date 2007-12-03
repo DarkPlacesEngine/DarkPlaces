@@ -273,9 +273,7 @@ typedef struct prvm_prog_funcoffsets_s
 	func_t GameCommand; // any
 
 	// menu qc only uses some functions, nothing else
-	func_t m_display; // mqc
 	func_t m_draw; // mqc
-	func_t m_hide; // mqc
 	func_t m_init; // mqc
 	func_t m_keydown; // mqc
 	func_t m_keyup; // mqc
@@ -315,7 +313,7 @@ typedef struct prvm_prog_s
 	// (simple optimization of the free string search)
 	int					firstfreeknownstring;
 	const char			**knownstrings;
-	unsigned char				*knownstrings_freeable;
+	unsigned char		*knownstrings_freeable;
 	const char			***stringshash;
 
 	// all memory allocations related to this vm_prog (code, edicts, strings)
@@ -359,8 +357,8 @@ typedef struct prvm_prog_s
 	int					reserved_edicts; // [INIT]
 
 	prvm_edict_t		*edicts;
-	void				*edictsfields;
-	void				*edictprivate;
+	void					*edictsfields;
+	void					*edictprivate;
 
 	// size of the engine private struct
 	int					edictprivate_size; // [INIT]
@@ -377,7 +375,7 @@ typedef struct prvm_prog_s
 	char				*name; // [INIT]
 
 	// flag - used to store general flags like PRVM_GE_SELF, etc.
-	int					flag;
+	int				flag;
 
 	char				*extensionstring; // [INIT]
 
