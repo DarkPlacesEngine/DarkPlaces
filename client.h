@@ -1313,9 +1313,6 @@ void Debug_PolygonEnd(void);
 
 extern qboolean sb_showscores;
 
-#define NUMCROSSHAIRS 32
-extern cachepic_t *r_crosshairs[NUMCROSSHAIRS+1];
-
 float FogPoint_World(const vec3_t p);
 float FogPoint_Model(const vec3_t p);
 

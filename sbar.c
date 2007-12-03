@@ -1580,8 +1580,11 @@ void Sbar_Draw (void)
 
 	Sbar_ShowFPS();
 
-	if (cl.csqc_vidvars.drawcrosshair && crosshair.integer >= 1 && crosshair.integer <= NUMCROSSHAIRS && !cl.intermission && !r_letterbox.value && (pic = r_crosshairs[crosshair.integer]))
+	if (cl.csqc_vidvars.drawcrosshair && crosshair.integer >= 1 && !cl.intermission && !r_letterbox.value)
+	{
+		pic = Draw_CachePic(va("gfx/crosshair%i", crosshair.integer), true);
 		DrawQ_Pic((vid_conwidth.integer - pic->width * crosshair_size.value) * 0.5f, (vid_conheight.integer - pic->height * crosshair_size.value) * 0.5f, pic, pic->width * crosshair_size.value, pic->height * crosshair_size.value, crosshair_color_red.value, crosshair_color_green.value, crosshair_color_blue.value, crosshair_color_alpha.value, 0);
+	}
 
 	if (cl_prydoncursor.integer)
 		DrawQ_Pic((cl.cmd.cursor_screen[0] + 1) * 0.5 * vid_conwidth.integer, (cl.cmd.cursor_screen[1] + 1) * 0.5 * vid_conheight.integer, Draw_CachePic(va("gfx/prydoncursor%03i", cl_prydoncursor.integer), true), 0, 0, 1, 1, 1, 1, 0);

@@ -194,6 +194,7 @@ rtexturepool_t *r_shadow_texturepool;
 rtexture_t *r_shadow_attenuationgradienttexture;
 rtexture_t *r_shadow_attenuation2dtexture;
 rtexture_t *r_shadow_attenuation3dtexture;
+rtexture_t *r_shadow_lightcorona;
 
 // lights are reloaded when this changes
 char r_shadow_mapname[MAX_QPATH];
@@ -232,6 +233,8 @@ cvar_t r_shadow_culltriangles = {0, "r_shadow_culltriangles", "1", "performs mor
 cvar_t r_shadow_polygonfactor = {0, "r_shadow_polygonfactor", "0", "how much to enlarge shadow volume polygons when rendering (should be 0!)"};
 cvar_t r_shadow_polygonoffset = {0, "r_shadow_polygonoffset", "1", "how much to push shadow volumes into the distance when rendering, to reduce chances of zfighting artifacts (should not be less than 0)"};
 cvar_t r_shadow_texture3d = {0, "r_shadow_texture3d", "1", "use 3D voxel textures for spherical attenuation rather than cylindrical (does not affect r_glsl lighting)"};
+cvar_t r_coronas = {CVAR_SAVE, "r_coronas", "1", "brightness of corona flare effects around certain lights, 0 disables corona effects"};
+cvar_t gl_flashblend = {CVAR_SAVE, "gl_flashblend", "0", "render bright coronas for dynamic lights instead of actual lighting, fast but ugly"};
 cvar_t gl_ext_separatestencil = {0, "gl_ext_separatestencil", "1", "make use of OpenGL 2.0 glStencilOpSeparate or GL_ATI_separate_stencil extension"};
 cvar_t gl_ext_stenciltwoside = {0, "gl_ext_stenciltwoside", "1", "make use of GL_EXT_stenciltwoside extension (NVIDIA only)"};
 cvar_t r_editlights = {0, "r_editlights", "0", "enables .rtlights file editing mode"};
@@ -253,7 +256,7 @@ static float r_shadow_attenlinearscale; // r_shadow_lightattenuationlinearscale
 static float r_shadow_attentable[ATTENTABLESIZE+1];
 
 rtlight_t *r_shadow_compilingrtlight;
-dlight_t *r_shadow_worldlightchain;
+static memexpandablearray_t r_shadow_worldlightsarray;
 dlight_t *r_shadow_selectedlight;
 dlight_t r_shadow_bufferlight;
 vec3_t r_editlights_cursorlocation;
@@ -283,11 +286,11 @@ static void R_Shadow_MakeTextures(void);
 
 // VorteX: custom editor light sprites
 #define EDLIGHTSPRSIZE			8
-#define EDLIGHTSELECTSPRSIZE	12
 cachepic_t *r_editlights_sprcursor;
 cachepic_t *r_editlights_sprlight;
 cachepic_t *r_editlights_sprnoshadowlight;
-cachepic_t *r_editlights_sprcubemap;
+cachepic_t *r_editlights_sprcubemaplight;
+cachepic_t *r_editlights_sprcubemapnoshadowlight;
 cachepic_t *r_editlights_sprselection;
 
 void r_shadow_start(void)
@@ -453,6 +456,8 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_polygonfactor);
 	Cvar_RegisterVariable(&r_shadow_polygonoffset);
 	Cvar_RegisterVariable(&r_shadow_texture3d);
+	Cvar_RegisterVariable(&r_coronas);
+	Cvar_RegisterVariable(&gl_flashblend);
 	Cvar_RegisterVariable(&gl_ext_separatestencil);
 	Cvar_RegisterVariable(&gl_ext_stenciltwoside);
 	if (gamemode == GAME_TENEBRAE)
@@ -462,7 +467,7 @@ void R_Shadow_Init(void)
 	}
 	Cmd_AddCommand("r_shadow_help", R_Shadow_Help_f, "prints documentation on console commands and variables used by realtime lighting and shadowing system");
 	R_Shadow_EditLights_Init();
-	r_shadow_worldlightchain = NULL;
+	Mem_ExpandableArray_NewArray(&r_shadow_worldlightsarray, r_main_mempool, sizeof(dlight_t), 128);
 	maxshadowtriangles = 0;
 	shadowelements = NULL;
 	maxshadowvertices = 0;
@@ -916,6 +921,28 @@ void R_Shadow_RenderVolume(int numvertices, int numtriangles, const float *verte
 	CHECKGLERROR
 }
 
+static void R_Shadow_MakeTextures_MakeCorona(void)
+{
+	float dx, dy;
+	int x, y, a;
+	unsigned char pixels[32][32][4];
+	for (y = 0;y < 32;y++)
+	{
+		dy = (y - 15.5f) * (1.0f / 16.0f);
+		for (x = 0;x < 32;x++)
+		{
+			dx = (x - 15.5f) * (1.0f / 16.0f);
+			a = (int)(((1.0f / (dx * dx + dy * dy + 0.2f)) - (1.0f / (1.0f + 0.2))) * 32.0f / (1.0f / (1.0f + 0.2)));
+			a = bound(0, a, 255);
+			pixels[y][x][0] = a;
+			pixels[y][x][1] = a;
+			pixels[y][x][2] = a;
+			pixels[y][x][3] = 255;
+		}
+	}
+	r_shadow_lightcorona = R_LoadTexture2D(r_shadow_texturepool, "lightcorona", 32, 32, &pixels[0][0][0], TEXTYPE_BGRA, TEXF_PRECACHE, NULL);
+}
+
 static unsigned int R_Shadow_MakeTextures_SamplePoint(float x, float y, float z)
 {
 	float dist = sqrt(x*x+y*y+z*z);
@@ -963,11 +990,14 @@ static void R_Shadow_MakeTextures(void)
 		r_shadow_attenuation3dtexture = NULL;
 	Mem_Free(data);
 
+	R_Shadow_MakeTextures_MakeCorona();
+
 	// Editor light sprites
 	r_editlights_sprcursor = Draw_CachePic("gfx/editlights/cursor", true);
 	r_editlights_sprlight = Draw_CachePic("gfx/editlights/light", true);
 	r_editlights_sprnoshadowlight = Draw_CachePic("gfx/editlights/noshadow", true);
-	r_editlights_sprcubemap = Draw_CachePic("gfx/editlights/cubemap", true);
+	r_editlights_sprcubemaplight = Draw_CachePic("gfx/editlights/cubemaplight", true);
+	r_editlights_sprcubemapnoshadowlight = Draw_CachePic("gfx/editlights/cubemapnoshadowlight", true);
 	r_editlights_sprselection = Draw_CachePic("gfx/editlights/selection", true);
 }
 
@@ -2496,9 +2526,15 @@ void R_RTLight_Uncompile(rtlight_t *rtlight)
 
 void R_Shadow_UncompileWorldLights(void)
 {
+	size_t lightindex;
 	dlight_t *light;
-	for (light = r_shadow_worldlightchain;light;light = light->next)
+	for (lightindex = 0;lightindex < Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray);lightindex++)
+	{
+		light = Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+		if (!light)
+			continue;
 		R_RTLight_Uncompile(&light->rtlight);
+	}
 }
 
 void R_Shadow_ComputeShadowCasterCullingPlanes(rtlight_t *rtlight)
@@ -3054,7 +3090,9 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 void R_Shadow_DrawLightSprites(void);
 void R_ShadowVolumeLighting(qboolean visible)
 {
-	int lnum, flag;
+	int flag;
+	int lnum;
+	size_t lightindex;
 	dlight_t *light;
 
 	if (r_refdef.worldmodel && strncmp(r_refdef.worldmodel->name, r_shadow_mapname, sizeof(r_shadow_mapname)))
@@ -3068,14 +3106,20 @@ void R_ShadowVolumeLighting(qboolean visible)
 	flag = r_refdef.rtworld ? LIGHTFLAG_REALTIMEMODE : LIGHTFLAG_NORMALMODE;
 	if (r_shadow_debuglight.integer >= 0)
 	{
-		for (lnum = 0, light = r_shadow_worldlightchain;light;lnum++, light = light->next)
-			if (lnum == r_shadow_debuglight.integer && (light->flags & flag))
-				R_DrawRTLight(&light->rtlight, visible);
+		lightindex = r_shadow_debuglight.integer;
+		light = Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+		if (light && (light->flags & flag))
+			R_DrawRTLight(&light->rtlight, visible);
 	}
 	else
-		for (lnum = 0, light = r_shadow_worldlightchain;light;lnum++, light = light->next)
-			if (light->flags & flag)
+	{
+		for (lightindex = 0;lightindex < Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray);lightindex++)
+		{
+			light = Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+			if (light && (light->flags & flag))
 				R_DrawRTLight(&light->rtlight, visible);
+		}
+	}
 	if (r_refdef.rtdlight)
 		for (lnum = 0;lnum < r_refdef.numlights;lnum++)
 			R_DrawRTLight(&r_refdef.lights[lnum], visible);
@@ -3170,6 +3214,66 @@ void R_DrawModelShadows(void)
 	// restore other state to normal
 	R_Shadow_RenderMode_End();
 }
+
+void R_DrawCoronas(void)
+{
+	int i, flag;
+	float cscale, scale;
+	size_t lightindex;
+	dlight_t *light;
+	rtlight_t *rtlight;
+	if (r_coronas.value < (1.0f / 256.0f) && !gl_flashblend.integer)
+		return;
+	R_Mesh_Matrix(&identitymatrix);
+	flag = r_refdef.rtworld ? LIGHTFLAG_REALTIMEMODE : LIGHTFLAG_NORMALMODE;
+	// FIXME: these traces should scan all render entities instead of cl.world
+	for (lightindex = 0;lightindex < Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray);lightindex++)
+	{
+		light = Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+		if (!light)
+			continue;
+		rtlight = &light->rtlight;
+		if (!(rtlight->flags & flag))
+			continue;
+		if (rtlight->corona * r_coronas.value <= 0)
+			continue;
+		if (r_shadow_debuglight.integer >= 0 && r_shadow_debuglight.integer != (int)lightindex)
+			continue;
+		cscale = rtlight->corona * r_coronas.value* 0.25f;
+		scale = rtlight->radius * rtlight->coronasizescale;
+		if (VectorDistance2(rtlight->shadoworigin, r_view.origin) < 16.0f * 16.0f)
+			continue;
+		if (CL_Move(r_view.origin, vec3_origin, vec3_origin, rtlight->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction < 1)
+			continue;
+		R_DrawSprite(GL_ONE, GL_ONE, r_shadow_lightcorona, NULL, true, false, rtlight->shadoworigin, r_view.right, r_view.up, scale, -scale, -scale, scale, rtlight->color[0] * cscale, rtlight->color[1] * cscale, rtlight->color[2] * cscale, 1);
+	}
+	for (i = 0;i < r_refdef.numlights;i++)
+	{
+		rtlight = &r_refdef.lights[i];
+		if (!(rtlight->flags & flag))
+			continue;
+		if (rtlight->corona <= 0)
+			continue;
+		if (VectorDistance2(rtlight->shadoworigin, r_view.origin) < 32.0f * 32.0f)
+			continue;
+		if (gl_flashblend.integer)
+		{
+			cscale = rtlight->corona * 1.0f;
+			scale = rtlight->radius * rtlight->coronasizescale * 2.0f;
+		}
+		else
+		{
+			cscale = rtlight->corona * r_coronas.value* 0.25f;
+			scale = rtlight->radius * rtlight->coronasizescale;
+		}
+		if (VectorLength(rtlight->color) * cscale < (1.0f / 256.0f))
+			continue;
+		if (CL_Move(r_view.origin, vec3_origin, vec3_origin, rtlight->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction < 1)
+			continue;
+		R_DrawSprite(GL_ONE, GL_ONE, r_shadow_lightcorona, NULL, true, false, rtlight->shadoworigin, r_view.right, r_view.up, scale, -scale, -scale, scale, rtlight->color[0] * cscale, rtlight->color[1] * cscale, rtlight->color[2] * cscale, 1);
+	}
+}
+
 
 
 //static char *suffix[6] = {"ft", "bk", "rt", "lf", "up", "dn"};
@@ -3294,11 +3398,7 @@ void R_Shadow_FreeCubemaps(void)
 
 dlight_t *R_Shadow_NewWorldLight(void)
 {
-	dlight_t *light;
-	light = (dlight_t *)Mem_Alloc(r_main_mempool, sizeof(dlight_t));
-	light->next = r_shadow_worldlightchain;
-	r_shadow_worldlightchain = light;
-	return light;
+	return (dlight_t *)Mem_ExpandableArray_AllocRecord(&r_shadow_worldlightsarray);
 }
 
 void R_Shadow_UpdateWorldLight(dlight_t *light, vec3_t origin, vec3_t angles, vec3_t color, vec_t radius, vec_t corona, int style, int shadowenable, const char *cubemapname, vec_t coronasizescale, vec_t ambientscale, vec_t diffusescale, vec_t specularscale, int flags)
@@ -3339,19 +3439,22 @@ void R_Shadow_UpdateWorldLight(dlight_t *light, vec3_t origin, vec3_t angles, ve
 
 void R_Shadow_FreeWorldLight(dlight_t *light)
 {
-	dlight_t **lightpointer;
+	if (r_shadow_selectedlight == light)
+		r_shadow_selectedlight = NULL;
 	R_RTLight_Uncompile(&light->rtlight);
-	for (lightpointer = &r_shadow_worldlightchain;*lightpointer && *lightpointer != light;lightpointer = &(*lightpointer)->next);
-	if (*lightpointer != light)
-		Sys_Error("R_Shadow_FreeWorldLight: light not linked into chain");
-	*lightpointer = light->next;
-	Mem_Free(light);
+	Mem_ExpandableArray_FreeRecord(&r_shadow_worldlightsarray, light);
 }
 
 void R_Shadow_ClearWorldLights(void)
 {
-	while (r_shadow_worldlightchain)
-		R_Shadow_FreeWorldLight(r_shadow_worldlightchain);
+	size_t lightindex;
+	dlight_t *light;
+	for (lightindex = 0;lightindex < Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray);lightindex++)
+	{
+		light = Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+		if (light)
+			R_Shadow_FreeWorldLight(light);
+	}
 	r_shadow_selectedlight = NULL;
 	R_Shadow_FreeCubemaps();
 }
@@ -3368,62 +3471,69 @@ void R_Shadow_SelectLight(dlight_t *light)
 void R_Shadow_DrawCursor_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
 	// this is never batched (there can be only one)
-	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, r_editlights_sprcursor->tex, NULL, false, false, r_editlights_cursorlocation, r_view.right, r_view.up, EDLIGHTSPRSIZE, -EDLIGHTSPRSIZE, -EDLIGHTSPRSIZE, EDLIGHTSPRSIZE, 1, 1, 1, 0.5f);
+	R_DrawSprite(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, r_editlights_sprcursor->tex, r_editlights_sprcursor->tex, false, false, r_editlights_cursorlocation, r_view.right, r_view.up, EDLIGHTSPRSIZE, -EDLIGHTSPRSIZE, -EDLIGHTSPRSIZE, EDLIGHTSPRSIZE, 1, 1, 1, 1);
 }
 
 void R_Shadow_DrawLightSprite_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
 	float intensity;
-	float scaling;
+	float s;
 	vec3_t spritecolor;
+	cachepic_t *pic;
 
 	// this is never batched (due to the ent parameter changing every time)
 	// so numsurfaces == 1 and surfacelist[0] == lightnumber
 	const dlight_t *light = (dlight_t *)ent;
-	intensity = 1;
-	scaling = 1;
-	if (light->selected)
-		scaling = 1.25 + 0.25*sin(realtime * M_PI * 1.5);
-	// vortex: get sprites color (solve 0 0 0 colored light being invisible here)
-	spritecolor[0] = max(0.1, light->color[0]);
-	spritecolor[1] = max(0.1, light->color[1]);
-	spritecolor[2] = max(0.1, light->color[2]);
+	s = EDLIGHTSPRSIZE;
+	intensity = 0.5f;
+	VectorScale(light->color, intensity, spritecolor);
+	if (VectorLength(spritecolor) < 0.1732f)
+		VectorSet(spritecolor, 0.1f, 0.1f, 0.1f);
+	if (VectorLength(spritecolor) > 1.0f)
+		VectorNormalize(spritecolor);
 
 	// draw light sprite
-	if (!light->shadow)
-	{
-		intensity *= 0.5f;
-		R_DrawSprite(GL_SRC_ALPHA, GL_ONE, r_editlights_sprnoshadowlight->tex, NULL, false, false, light->origin, r_view.right, r_view.up, EDLIGHTSPRSIZE*scaling, -EDLIGHTSPRSIZE*scaling, -EDLIGHTSPRSIZE*scaling, EDLIGHTSPRSIZE*scaling, spritecolor[0]*intensity, spritecolor[1]*intensity, spritecolor[2]*intensity, 1);
-	}
+	if (light->cubemapname[0] && !light->shadow)
+		pic = r_editlights_sprcubemapnoshadowlight;
+	else if (light->cubemapname[0])
+		pic = r_editlights_sprcubemaplight;
+	else if (!light->shadow)
+		pic = r_editlights_sprnoshadowlight;
 	else
-		R_DrawSprite(GL_SRC_ALPHA, GL_ONE, r_editlights_sprlight->tex, NULL, false, false, light->origin, r_view.right, r_view.up, EDLIGHTSELECTSPRSIZE*scaling, -EDLIGHTSELECTSPRSIZE*scaling, -EDLIGHTSELECTSPRSIZE*scaling, EDLIGHTSELECTSPRSIZE*scaling, spritecolor[0]*intensity, spritecolor[1]*intensity, spritecolor[2]*intensity, 1);
-	// draw cubemap sprite over light
-	if (light->cubemapname[0])
-		R_DrawSprite(GL_SRC_ALPHA, GL_ONE, r_editlights_sprcubemap->tex, NULL, false, false, light->origin, r_view.right, r_view.up, EDLIGHTSPRSIZE*scaling, -EDLIGHTSPRSIZE*scaling, -EDLIGHTSPRSIZE*scaling, EDLIGHTSPRSIZE*scaling, spritecolor[0]*intensity, spritecolor[1]*intensity, spritecolor[2]*intensity, 1);
+		pic = r_editlights_sprlight;
+	R_DrawSprite(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, pic->tex, pic->tex, false, false, light->origin, r_view.right, r_view.up, s, -s, -s, s, spritecolor[0], spritecolor[1], spritecolor[2], 1);
 	// draw selection sprite if light is selected
 	if (light->selected)
-		R_DrawSprite(GL_SRC_ALPHA, GL_ONE, r_editlights_sprselection->tex, NULL, false, false, light->origin, r_view.right, r_view.up, EDLIGHTSPRSIZE*scaling, -EDLIGHTSPRSIZE*scaling, -EDLIGHTSPRSIZE*scaling, EDLIGHTSPRSIZE*scaling, spritecolor[0]*intensity, spritecolor[1]*intensity, spritecolor[2]*intensity, 1);
+		R_DrawSprite(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, r_editlights_sprselection->tex, r_editlights_sprselection->tex, false, false, light->origin, r_view.right, r_view.up, s, -s, -s, s, 1, 1, 1, 1);
 	// VorteX todo: add normalmode/realtime mode light overlay sprites?
 }
 
 void R_Shadow_DrawLightSprites(void)
 {
-	int i;
+	size_t lightindex;
 	dlight_t *light;
-
-	for (i = 0, light = r_shadow_worldlightchain;light;i++, light = light->next)
-		R_MeshQueue_AddTransparent(light->origin, R_Shadow_DrawLightSprite_TransparentCallback, (entity_render_t *)light, 1+(i % 5), &light->rtlight);
+	for (lightindex = 0;lightindex < Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray);lightindex++)
+	{
+		light = Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+		if (light)
+			R_MeshQueue_AddTransparent(light->origin, R_Shadow_DrawLightSprite_TransparentCallback, (entity_render_t *)light, 5, &light->rtlight);
+	}
 	R_MeshQueue_AddTransparent(r_editlights_cursorlocation, R_Shadow_DrawCursor_TransparentCallback, NULL, 0, NULL);
 }
 
 void R_Shadow_SelectLightInView(void)
 {
 	float bestrating, rating, temp[3];
-	dlight_t *best, *light;
+	dlight_t *best;
+	size_t lightindex;
+	dlight_t *light;
 	best = NULL;
 	bestrating = 0;
-	for (light = r_shadow_worldlightchain;light;light = light->next)
+	for (lightindex = 0;lightindex < Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray);lightindex++)
 	{
+		light = Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+		if (!light)
+			continue;
 		VectorSubtract(light->origin, r_view.origin, temp);
 		rating = (DotProduct(temp, r_view.forward) / sqrt(DotProduct(temp, temp)));
 		if (rating >= 0.95)
@@ -3534,12 +3644,13 @@ void R_Shadow_LoadWorldLights(void)
 
 void R_Shadow_SaveWorldLights(void)
 {
+	size_t lightindex;
 	dlight_t *light;
 	size_t bufchars, bufmaxchars;
 	char *buf, *oldbuf;
 	char name[MAX_QPATH];
 	char line[MAX_INPUTLINE];
-	if (!r_shadow_worldlightchain)
+	if (!Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray))
 		return;
 	if (r_refdef.worldmodel == NULL)
 	{
@@ -3550,8 +3661,11 @@ void R_Shadow_SaveWorldLights(void)
 	strlcat (name, ".rtlights", sizeof (name));
 	bufchars = bufmaxchars = 0;
 	buf = NULL;
-	for (light = r_shadow_worldlightchain;light;light = light->next)
+	for (lightindex = 0;lightindex < Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray);lightindex++)
 	{
+		light = Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+		if (!light)
+			continue;
 		if (light->coronasizescale != 0.25f || light->ambientscale != 0 || light->diffusescale != 1 || light->specularscale != 1 || light->flags != LIGHTFLAG_REALTIMEMODE)
 			sprintf(line, "%s%f %f %f %f %f %f %f %d \"%s\" %f %f %f %f %f %f %f %f %i\n", light->shadow ? "" : "!", light->origin[0], light->origin[1], light->origin[2], light->radius, light->color[0], light->color[1], light->color[2], light->style, light->cubemapname, light->corona, light->angles[0], light->angles[1], light->angles[2], light->coronasizescale, light->ambientscale, light->diffusescale, light->specularscale, light->flags);
 		else if (light->cubemapname[0] || light->corona || light->angles[0] || light->angles[1] || light->angles[2])
@@ -3901,10 +4015,10 @@ void R_Shadow_EditLights_Reload_f(void)
 	strlcpy(r_shadow_mapname, r_refdef.worldmodel->name, sizeof(r_shadow_mapname));
 	R_Shadow_ClearWorldLights();
 	R_Shadow_LoadWorldLights();
-	if (r_shadow_worldlightchain == NULL)
+	if (!Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray))
 	{
 		R_Shadow_LoadLightsFile();
-		if (r_shadow_worldlightchain == NULL)
+		if (!Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray))
 			R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite();
 	}
 }
@@ -4262,6 +4376,7 @@ void R_Shadow_EditLights_Edit_f(void)
 
 void R_Shadow_EditLights_EditAll_f(void)
 {
+	size_t lightindex;
 	dlight_t *light;
 
 	if (!r_editlights.integer)
@@ -4270,8 +4385,11 @@ void R_Shadow_EditLights_EditAll_f(void)
 		return;
 	}
 
-	for (light = r_shadow_worldlightchain;light;light = light->next)
+	for (lightindex = 0;lightindex < Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray);lightindex++)
 	{
+		light = Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+		if (!light)
+			continue;
 		R_Shadow_SelectLight(light);
 		R_Shadow_EditLights_Edit_f();
 	}
@@ -4280,6 +4398,7 @@ void R_Shadow_EditLights_EditAll_f(void)
 void R_Shadow_EditLights_DrawSelectedLightProperties(void)
 {
 	int lightnumber, lightcount;
+	size_t lightindex;
 	dlight_t *light;
 	float x, y;
 	char temp[256];
@@ -4290,11 +4409,17 @@ void R_Shadow_EditLights_DrawSelectedLightProperties(void)
 	DrawQ_Pic(x-5, y-5, NULL, 250, 155, 0, 0, 0, 0.75, 0);
 	lightnumber = -1;
 	lightcount = 0;
-	for (lightcount = 0, light = r_shadow_worldlightchain;light;lightcount++, light = light->next)
+	for (lightindex = 0;lightindex < Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray);lightindex++)
+	{
+		light = Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+		if (!light)
+			continue;
 		if (light == r_shadow_selectedlight)
-			lightnumber = lightcount;
+			lightnumber = lightindex;
+		lightcount++;
+	}
 	sprintf(temp, "Cursor origin: %.0f %.0f %.0f", r_editlights_cursorlocation[0], r_editlights_cursorlocation[1], r_editlights_cursorlocation[2]); DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, false);y += 8;
-	sprintf(temp, "Total lights : %i", lightcount); DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, false);y += 8;
+	sprintf(temp, "Total lights : %i active (%i total)", lightcount, (int)Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray)); DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, false);y += 8;
 	y += 8;
 	if (r_shadow_selectedlight == NULL)
 		return;
@@ -4484,3 +4609,41 @@ void R_Shadow_EditLights_Init(void)
 	Cmd_AddCommand("r_editlights_pasteinfo", R_Shadow_EditLights_PasteInfo_f, "apply the stored properties onto the selected light (making it exactly identical except for origin)");
 }
 
+
+
+/*
+=============================================================================
+
+LIGHT SAMPLING
+
+=============================================================================
+*/
+
+void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal, const vec3_t p, int dynamic)
+{
+	VectorClear(diffusecolor);
+	VectorClear(diffusenormal);
+
+	if (!r_fullbright.integer && r_refdef.worldmodel && r_refdef.worldmodel->brush.LightPoint)
+	{
+		ambientcolor[0] = ambientcolor[1] = ambientcolor[2] = r_ambient.value * (2.0f / 128.0f);
+		r_refdef.worldmodel->brush.LightPoint(r_refdef.worldmodel, p, ambientcolor, diffusecolor, diffusenormal);
+	}
+	else
+		VectorSet(ambientcolor, 1, 1, 1);
+
+	if (dynamic)
+	{
+		int i;
+		float f, v[3];
+		rtlight_t *light;
+		for (i = 0;i < r_refdef.numlights;i++)
+		{
+			light = &r_refdef.lights[i];
+			Matrix4x4_Transform(&light->matrix_worldtolight, p, v);
+			f = 1 - VectorLength2(v);
+			if (f > 0 && CL_Move(p, vec3_origin, vec3_origin, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction == 1)
+				VectorMA(ambientcolor, f, light->currentcolor, ambientcolor);
+		}
+	}
+}

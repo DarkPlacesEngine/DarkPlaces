@@ -318,10 +318,6 @@ SOURCE=.\r_lerpanim.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\r_light.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\r_lightning.c
 # End Source File
 # Begin Source File
@@ -659,10 +655,6 @@ SOURCE=.\quakedef.h
 # Begin Source File
 
 SOURCE=.\r_lerpanim.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\r_light.h
 # End Source File
 # Begin Source File
 

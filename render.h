@@ -174,8 +174,6 @@ extern cvar_t r_test;
 
 #include "gl_backend.h"
 
-#include "r_light.h"
-
 extern rtexture_t *r_texture_blanknormalmap;
 extern rtexture_t *r_texture_white;
 extern rtexture_t *r_texture_grey128;

@@ -19,6 +19,7 @@ unsigned int palette_bgra_onlyfullbrights[256];
 unsigned int palette_bgra_pantsaswhite[256];
 unsigned int palette_bgra_shirtaswhite[256];
 unsigned int palette_bgra_transparent[256];
+unsigned int palette_bgra_embeddedpic[256];
 
 // John Carmack said the quake palette.lmp can be considered public domain because it is not an important asset to id, so I include it here as a fallback if no external palette file is found.
 unsigned char host_quakepal[768] =
@@ -204,6 +205,12 @@ void Palette_Load(void)
 	fs_offset_t filesize;
 	unsigned char *palfile;
 	unsigned char texturegammaramp[256];
+	union
+	{
+		unsigned char b[4];
+		unsigned int i;
+	}
+	bgra;
 
 	gamma = 1;
 	scale = 1;
@@ -278,6 +285,13 @@ void Palette_Load(void)
 
 	if(palfile)
 		Mem_Free(palfile);
+
+	memset(palette_bgra_embeddedpic, 0, sizeof(palette_bgra_embeddedpic));
+	for (i = '1';i <= '7';i++)
+	{
+		Vector4Set(bgra.b, 255, 255, 255, (i - '0') * 255 / 7);
+		palette_bgra_embeddedpic[i] = bgra.i;
+	}
 
 	Palette_SetupSpecialPalettes();
 }
