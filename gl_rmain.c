@@ -2703,14 +2703,12 @@ static void R_Water_AddWaterPlane(msurface_t *surface)
 {
 	int triangleindex, planeindex;
 	const int *e;
-	vec_t f;
 	vec3_t vert[3];
 	vec3_t normal;
 	vec3_t center;
 	r_waterstate_waterplane_t *p;
 	// just use the first triangle with a valid normal for any decisions
 	VectorClear(normal);
-	VectorClear(center);
 	for (triangleindex = 0, e = rsurface.modelelement3i + surface->num_firsttriangle * 3;triangleindex < surface->num_triangles;triangleindex++, e += 3)
 	{
 		Matrix4x4_Transform(&rsurface.matrix, rsurface.modelvertex3f + e[0]*3, vert[0]);
@@ -2720,14 +2718,6 @@ static void R_Water_AddWaterPlane(msurface_t *surface)
 		if (VectorLength2(normal) >= 0.001)
 			break;
 	}
-	// now find the center of this surface
-	for (triangleindex = 0, e = rsurface.modelelement3i + surface->num_firsttriangle * 3;triangleindex < surface->num_triangles*3;triangleindex++, e++)
-	{
-		Matrix4x4_Transform(&rsurface.matrix, rsurface.modelvertex3f + e[0]*3, vert[0]);
-		VectorAdd(center, vert[0], center);
-	}
-	f = 1.0 / surface->num_triangles*3;
-	VectorScale(center, f, center);
 
 	// find a matching plane if there is one
 	for (planeindex = 0, p = r_waterstate.waterplanes;planeindex < r_waterstate.numwaterplanes;planeindex++, p++)
@@ -2759,9 +2749,11 @@ static void R_Water_AddWaterPlane(msurface_t *surface)
 	// merge this surface's materialflags into the waterplane
 	p->materialflags |= surface->texture->currentframe->currentmaterialflags;
 	// merge this surface's PVS into the waterplane
-	if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION) && r_refdef.worldmodel && r_refdef.worldmodel->brush.FatPVS)
+	VectorMAM(0.5f, surface->mins, 0.5f, surface->maxs, center);
+	if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION) && r_refdef.worldmodel && r_refdef.worldmodel->brush.FatPVS
+	 && r_refdef.worldmodel->brush.PointInLeaf && r_refdef.worldmodel->brush.PointInLeaf(r_refdef.worldmodel, center)->clusterindex >= 0)
 	{
-		r_refdef.worldmodel->brush.FatPVS(r_refdef.worldmodel, r_view.origin, 2, p->pvsbits, sizeof(p->pvsbits), p->pvsvalid);
+		r_refdef.worldmodel->brush.FatPVS(r_refdef.worldmodel, center, 2, p->pvsbits, sizeof(p->pvsbits), p->pvsvalid);
 		p->pvsvalid = true;
 	}
 }
