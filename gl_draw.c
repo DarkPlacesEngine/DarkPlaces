@@ -792,6 +792,12 @@ void DrawQ_Pic(float x, float y, cachepic_t *pic, float width, float height, flo
 		R_Mesh_TexBind(0, R_GetTexture(pic->tex));
 		R_Mesh_TexCoordPointer(0, 2, floats + 12, 0, 0);
 
+#if 1
+		floats[12] = 0.0f;floats[13] = 0.0f;
+		floats[14] = 1.0f;floats[15] = 0.0f;
+		floats[16] = 1.0f;floats[17] = 1.0f;
+		floats[18] = 0.0f;floats[19] = 1.0f;
+#else
       // AK07: lets be texel correct on the corners
       {
          float horz_offset = 0.5f / pic->width;
@@ -802,6 +808,7 @@ void DrawQ_Pic(float x, float y, cachepic_t *pic, float width, float height, flo
 		   floats[16] = 1.0f - horz_offset;floats[17] = 1.0f - vert_offset;
 		   floats[18] = 0.0f + horz_offset;floats[19] = 1.0f - vert_offset;
       }
+#endif
 	}
 
 	floats[2] = floats[5] = floats[8] = floats[11] = 0;
