@@ -10,6 +10,7 @@
 #include "quakedef.h"
 #include "cl_dyntexture.h"
 #include "cl_gecko.h"
+#include "timing.h"
 
 static rtexturepool_t *cl_geckotexturepool;
 static OSGK_Embedding *cl_geckoembedding;
@@ -58,9 +59,9 @@ clgecko_t * CL_Gecko_FindBrowser( const char *name ) {
 
 static void cl_gecko_updatecallback( rtexture_t *texture, clgecko_t *instance ) {
 	const unsigned char *data;
-	if( instance->browser ) {
+	if( instance->browser && osgk_browser_query_dirty (instance->browser) ) {
 		// TODO: OSGK only supports BGRA right now
-		data = osgk_browser_lock_data( instance->browser, NULL );
+		TIMING_TIMESTATEMENT(data = osgk_browser_lock_data( instance->browser, NULL ));
 		R_UpdateTexture( texture, data, 0, 0, DEFAULT_GECKO_WIDTH, DEFAULT_GECKO_HEIGHT );
 		osgk_browser_unlock_data( instance->browser, data );
 	}
@@ -86,6 +87,18 @@ clgecko_t * CL_Gecko_CreateBrowser( const char *name ) {
 	clgecko_t *instance = cl_gecko_findunusedinstance();
 	// TODO: assert != NULL
 	
+	if( cl_geckoembedding == NULL ) {
+		OSGK_EmbeddingOptions *options = osgk_embedding_options_create();
+		osgk_embedding_options_add_search_path( options, "./xulrunner/" );
+		cl_geckoembedding = osgk_embedding_create_with_options( options, NULL );
+		osgk_release( options );
+        	
+		if( cl_geckoembedding == NULL ) {
+			Con_Printf( "CL_Gecko_Init: Couldn't retrieve gecko embedding object!\n" );
+			return NULL;
+		}
+	}
+
 	instance->active = true;
 	strlcpy( instance->name, name, sizeof( instance->name ) );
 	instance->browser = osgk_browser_create( cl_geckoembedding, DEFAULT_GECKO_WIDTH, DEFAULT_GECKO_HEIGHT );
@@ -159,7 +172,12 @@ void CL_Gecko_Shutdown( void ) {
 			cl_gecko_unlinktexture( instance );
 		}		
 	}
-	osgk_release( cl_geckoembedding );
+
+	if (cl_geckoembedding != NULL)
+	{
+	    osgk_release( cl_geckoembedding );
+	    cl_geckoembedding = NULL;
+	}
 }
 
 static void cl_gecko_create_f( void ) {
@@ -254,15 +272,6 @@ static void cl_gecko_injecttext_f( void ) {
 
 void CL_Gecko_Init( void )
 {
-	OSGK_EmbeddingOptions *options = osgk_embedding_options_create();
-	osgk_embedding_options_add_search_path( options, "./xulrunner/" );
-	cl_geckoembedding = osgk_embedding_create_with_options( options, NULL );
-	osgk_release( options );
-	
-	if( cl_geckoembedding == NULL ) {
-		Con_Printf( "CL_Gecko_Init: Couldn't retrieve gecko embedding object!\n" );
-	}
-	
 	Cmd_AddCommand( "gecko_create", cl_gecko_create_f, "Create a gecko browser instance" );
 	Cmd_AddCommand( "gecko_destroy", cl_gecko_destroy_f, "Destroy a gecko browser instance" );
 	Cmd_AddCommand( "gecko_navigate", cl_gecko_navigate_f, "Navigate a gecko browser to a URI" );
