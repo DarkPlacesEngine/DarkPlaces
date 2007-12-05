@@ -106,7 +106,8 @@ void Sys_PrintToTerminal(const char *text)
 {
 	DWORD dummy;
 	extern HANDLE houtput;
-	if (cls.state == ca_dedicated)
+
+	if ((houtput != 0) && (houtput != INVALID_HANDLE_VALUE))
 		WriteFile(houtput, text, (DWORD) strlen(text), &dummy, NULL);
 }
 
@@ -307,15 +308,21 @@ void Sys_InitConsole (void)
 	if (!tevent)
 		Sys_Error ("Couldn't create event");
 
+	houtput = GetStdHandle (STD_OUTPUT_HANDLE);
+	if ((houtput == 0) || (houtput == INVALID_HANDLE_VALUE))
+	{
+	    AllocConsole ();
+	    houtput = GetStdHandle (STD_OUTPUT_HANDLE);
+	}
+	hinput = GetStdHandle (STD_INPUT_HANDLE);
+
 	// LordHavoc: can't check cls.state because it hasn't been initialized yet
 	// if (cls.state == ca_dedicated)
 	if (COM_CheckParm("-dedicated"))
 	{
-		if (!AllocConsole ())
+		if ((houtput == 0) || (houtput == INVALID_HANDLE_VALUE))
 			Sys_Error ("Couldn't create dedicated server console");
 
-		hinput = GetStdHandle (STD_INPUT_HANDLE);
-		houtput = GetStdHandle (STD_OUTPUT_HANDLE);
 
 #ifdef _WIN64
 #define atoi _atoi64
@@ -426,5 +433,25 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	Host_Main();
 
 	/* return success of application */
+	return true;
+}
+
+int main (int argc, const char* argv[])
+{
+	MEMORYSTATUS lpBuffer;
+
+	global_hInstance = GetModuleHandle (0);
+
+	lpBuffer.dwLength = sizeof(MEMORYSTATUS);
+	GlobalMemoryStatus (&lpBuffer);
+
+	program_name[sizeof(program_name)-1] = 0;
+	GetModuleFileNameA(NULL, program_name, sizeof(program_name) - 1);
+
+	com_argc = argc;
+	com_argv = argv;
+
+	Host_Main();
+
 	return true;
 }
