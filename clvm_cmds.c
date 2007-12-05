@@ -3239,11 +3239,19 @@ VM_CL_pointsound,				// #483 void(vector origin, string sample, float volume, fl
 VM_strreplace,					// #484 string(string search, string replace, string subject) strreplace (DP_QC_STRREPLACE)
 VM_strireplace,					// #485 string(string search, string replace, string subject) strireplace (DP_QC_STRREPLACE)
 NULL,							// #486
-NULL,							// #487
-NULL,							// #488
-NULL,							// #489
-NULL,							// #490
-NULL,							// #491
+#ifdef SUPPORT_GECKO
+VM_gecko_create,					// #487
+VM_gecko_destroy,					// #488
+VM_gecko_navigate,				// #489
+VM_gecko_keyevent,				// #490
+VM_gecko_movemouse,				// #491
+#else
+NULL,									// #487
+NULL,									// #488
+NULL,									// #489
+NULL,									// #490
+NULL,									// #491
+#endif
 NULL,							// #492
 NULL,							// #493
 NULL,							// #494
