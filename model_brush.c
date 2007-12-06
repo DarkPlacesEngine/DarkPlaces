@@ -2137,35 +2137,69 @@ static void Mod_Q1BSP_GenerateWarpMesh(msurface_t *surface)
 }
 #endif
 
-static qboolean Mod_Q1BSP_AllocLightmapBlock(int *lineused, int totalwidth, int totalheight, int blockwidth, int blockheight, int *outx, int *outy)
+struct alloc_lm_state
 {
-	int y, x2, y2;
-	int bestx = totalwidth, besty = 0;
-	// find the left-most space we can find
-	for (y = 0;y <= totalheight - blockheight;y++)
+	int currentY;
+	int currentX;
+	int currentHeight;
+};
+
+static qboolean Mod_Q1BSP_AllocLightmapBlock(struct alloc_lm_state* state, int totalwidth, int totalheight, int blockwidth, int blockheight, int *outx, int *outy)
+{
+  if (state->currentX + blockwidth <= totalwidth)
 	{
-		x2 = 0;
-		for (y2 = 0;y2 < blockheight;y2++)
-			x2 = max(x2, lineused[y+y2]);
-		if (bestx > x2)
+		*outx = state->currentX;
+		*outy = state->currentY;
+		if (state->currentX == 0)
+			/* Note: any following block has a height smaller or equal to
+			   the current block's height due sorting. */
+			state->currentHeight = blockheight;
+		state->currentX += blockwidth;
+	}
+	else
+	{
+		state->currentX = 0;
+		state->currentY += state->currentHeight;
+		if (state->currentY + blockheight <= totalheight)
 		{
-			bestx = x2;
-			besty = y;
+			*outx = state->currentX;
+			*outy = state->currentY;
+			/* Note: any following block has a height smaller or equal to
+			   the current block's height due sorting. */
+			state->currentHeight = blockheight;
+			state->currentX = blockwidth;
+		}
+		else
+		{
+			return false;
 		}
 	}
-	// if the best was not good enough, return failure
-	if (bestx > totalwidth - blockwidth)
-		return false;
-	// we found a good spot
-	if (outx)
-		*outx = bestx;
-	if (outy)
-		*outy = besty;
-	// now mark the space used
-	for (y2 = 0;y2 < blockheight;y2++)
-		lineused[besty+y2] = bestx + blockwidth;
-	// return success
 	return true;
+}
+
+struct lm_to_distribute
+{
+  int height;
+  int width;
+  msurface_t *surface;
+};
+
+static int lms_sort (const void* a, const void* b)
+{
+	const struct lm_to_distribute* lm1 = (struct lm_to_distribute*)a;
+	const struct lm_to_distribute* lm2 = (struct lm_to_distribute*)b;
+
+	if (lm1->height < lm2->height)
+		return 1;
+	else if (lm1->height > lm2->height)
+		return -1;
+
+	if (lm1->width < lm2->width)
+		return 1;
+	else if (lm1->width > lm2->width)
+		return -1;
+
+	return 0;
 }
 
 extern cvar_t gl_max_size;
@@ -2175,9 +2209,7 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 	msurface_t *surface;
 	int i, j, count, surfacenum, planenum, smax, tmax, ssize, tsize, firstedge, numedges, totalverts, totaltris, lightmapnumber, lightmapsize, totallightmapsamples;
 	float texmins[2], texmaxs[2], val;
-#define LIGHTMAPSIZE 1024
 	rtexture_t *lightmaptexture, *deluxemaptexture;
-	int lightmap_lineused[LIGHTMAPSIZE];
 
 	in = (dface_t *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -2202,7 +2234,7 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 	lightmaptexture = NULL;
 	deluxemaptexture = r_texture_blanknormalmap;
 	lightmapnumber = 1;
-	lightmapsize = bound(256, gl_max_size.integer, LIGHTMAPSIZE);
+	lightmapsize = max(256, gl_max_size.integer);
 	totallightmapsamples = 0;
 
 	totalverts = 0;
@@ -2346,70 +2378,86 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 	// store
 	// additionally, never choose a lightmapsize that is smaller than the
 	// largest surface encountered (as it would fail)
-	// and finally, limit it to the size of our lineused array
 	i = lightmapsize;
-	for (lightmapsize = 64;lightmapsize < LIGHTMAPSIZE && (lightmapsize < i || (lightmapsize < gl_max_size.integer && totallightmapsamples*2 > lightmapsize*lightmapsize));lightmapsize*=2)
+	for (lightmapsize = 64; (lightmapsize < i) && (lightmapsize < gl_max_size.integer) && (totallightmapsamples > lightmapsize*lightmapsize); lightmapsize*=2)
 		;
 
 	// now that we've decided the lightmap texture size, we can do the rest
 	if (cls.state != ca_dedicated)
 	{
+		struct lm_to_distribute* lms = 
+		  (struct lm_to_distribute*)Mem_Alloc(loadmodel->mempool, count * sizeof (struct lm_to_distribute));
+		int numLMs = 0;
+		struct alloc_lm_state allocState;
+		int l;
+
 		for (surfacenum = 0, surface = loadmodel->data_surfaces;surfacenum < count;surfacenum++, surface++)
 		{
-			// check if we should apply a lightmap to this
 			if (surface->cached_dlight)
 			{
-				int i, iu, iv, lightmapx, lightmapy;
-				float u, v, ubase, vbase, uscale, vscale;
-
-				smax = surface->lightmapinfo->extents[0] >> 4;
-				tmax = surface->lightmapinfo->extents[1] >> 4;
 				ssize = (surface->lightmapinfo->extents[0] >> 4) + 1;
 				tsize = (surface->lightmapinfo->extents[1] >> 4) + 1;
-
-				// stainmap for permanent marks on walls
-				surface->lightmapinfo->stainsamples = (unsigned char *)Mem_Alloc(loadmodel->mempool, ssize * tsize * 3);
-				// clear to white
-				memset(surface->lightmapinfo->stainsamples, 255, ssize * tsize * 3);
-
-				// find a place for this lightmap
-				if (!lightmaptexture || !Mod_Q1BSP_AllocLightmapBlock(lightmap_lineused, lightmapsize, lightmapsize, ssize, tsize, &lightmapx, &lightmapy))
-				{
-					// allocate a texture pool if we need it
-					if (loadmodel->texturepool == NULL)
-						loadmodel->texturepool = R_AllocTexturePool();
-					// could not find room, make a new lightmap
-					lightmaptexture = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%i", lightmapnumber), lightmapsize, lightmapsize, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
-					if (loadmodel->brushq1.nmaplightdata)
-						deluxemaptexture = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%i", lightmapnumber), lightmapsize, lightmapsize, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
-					lightmapnumber++;
-					memset(lightmap_lineused, 0, sizeof(lightmap_lineused));
-					Mod_Q1BSP_AllocLightmapBlock(lightmap_lineused, lightmapsize, lightmapsize, ssize, tsize, &lightmapx, &lightmapy);
-				}
-
-				surface->lightmaptexture = lightmaptexture;
-				surface->deluxemaptexture = deluxemaptexture;
-				surface->lightmapinfo->lightmaporigin[0] = lightmapx;
-				surface->lightmapinfo->lightmaporigin[1] = lightmapy;
-
-				uscale = 1.0f / (float)lightmapsize;
-				vscale = 1.0f / (float)lightmapsize;
-				ubase = lightmapx * uscale;
-				vbase = lightmapy * vscale;
-
-				for (i = 0;i < surface->num_vertices;i++)
-				{
-					u = ((DotProduct(((loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + i * 3), surface->lightmapinfo->texinfo->vecs[0]) + surface->lightmapinfo->texinfo->vecs[0][3]) + 8 - surface->lightmapinfo->texturemins[0]) * (1.0 / 16.0);
-					v = ((DotProduct(((loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + i * 3), surface->lightmapinfo->texinfo->vecs[1]) + surface->lightmapinfo->texinfo->vecs[1][3]) + 8 - surface->lightmapinfo->texturemins[1]) * (1.0 / 16.0);
-					(loadmodel->surfmesh.data_texcoordlightmap2f + 2 * surface->num_firstvertex)[i * 2 + 0] = u * uscale + ubase;
-					(loadmodel->surfmesh.data_texcoordlightmap2f + 2 * surface->num_firstvertex)[i * 2 + 1] = v * vscale + vbase;
-					// LordHavoc: calc lightmap data offset for vertex lighting to use
-					iu = (int) u;
-					iv = (int) v;
-					(loadmodel->surfmesh.data_lightmapoffsets + surface->num_firstvertex)[i] = (bound(0, iv, tmax) * ssize + bound(0, iu, smax)) * 3;
-				}
+				lms[numLMs].width = ssize;
+				lms[numLMs].height = tsize;
+				lms[numLMs].surface = surface;
+				numLMs++;
 			}
 		}
+		qsort (lms, numLMs, sizeof (struct lm_to_distribute), &lms_sort);
+		for (l = 0; l < numLMs; l++)
+		{
+			int i, iu, iv, lightmapx, lightmapy;
+			float u, v, ubase, vbase, uscale, vscale;
+			
+			surface = lms[l].surface;
+
+			smax = surface->lightmapinfo->extents[0] >> 4;
+			tmax = surface->lightmapinfo->extents[1] >> 4;
+			ssize = lms[l].width;
+			tsize = lms[l].height;
+			
+			// stainmap for permanent marks on walls
+			surface->lightmapinfo->stainsamples = (unsigned char *)Mem_Alloc(loadmodel->mempool, ssize * tsize * 3);
+			// clear to white
+			memset(surface->lightmapinfo->stainsamples, 255, ssize * tsize * 3);
+
+			if (!lightmaptexture || !Mod_Q1BSP_AllocLightmapBlock(&allocState, lightmapsize, lightmapsize, ssize, tsize, &lightmapx, &lightmapy))
+			{
+				// allocate a texture pool if we need it
+				if (loadmodel->texturepool == NULL)
+					loadmodel->texturepool = R_AllocTexturePool();
+				// could not find room, make a new lightmap
+				lightmaptexture = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%i", lightmapnumber), lightmapsize, lightmapsize, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
+				if (loadmodel->brushq1.nmaplightdata)
+					deluxemaptexture = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%i", lightmapnumber), lightmapsize, lightmapsize, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
+				lightmapnumber++;
+				memset (&allocState, 0, sizeof (allocState));
+				Mod_Q1BSP_AllocLightmapBlock(&allocState, lightmapsize, lightmapsize, ssize, tsize, &lightmapx, &lightmapy);
+			}
+			surface->lightmaptexture = lightmaptexture;
+			surface->deluxemaptexture = deluxemaptexture;
+			surface->lightmapinfo->lightmaporigin[0] = lightmapx;
+			surface->lightmapinfo->lightmaporigin[1] = lightmapy;
+
+			uscale = 1.0f / (float)lightmapsize;
+			vscale = 1.0f / (float)lightmapsize;
+			ubase = lightmapx * uscale;
+			vbase = lightmapy * vscale;
+
+			for (i = 0;i < surface->num_vertices;i++)
+			{
+				u = ((DotProduct(((loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + i * 3), surface->lightmapinfo->texinfo->vecs[0]) + surface->lightmapinfo->texinfo->vecs[0][3]) + 8 - surface->lightmapinfo->texturemins[0]) * (1.0 / 16.0);
+				v = ((DotProduct(((loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + i * 3), surface->lightmapinfo->texinfo->vecs[1]) + surface->lightmapinfo->texinfo->vecs[1][3]) + 8 - surface->lightmapinfo->texturemins[1]) * (1.0 / 16.0);
+				(loadmodel->surfmesh.data_texcoordlightmap2f + 2 * surface->num_firstvertex)[i * 2 + 0] = u * uscale + ubase;
+				(loadmodel->surfmesh.data_texcoordlightmap2f + 2 * surface->num_firstvertex)[i * 2 + 1] = v * vscale + vbase;
+				// LordHavoc: calc lightmap data offset for vertex lighting to use
+				iu = (int) u;
+				iv = (int) v;
+				(loadmodel->surfmesh.data_lightmapoffsets + surface->num_firstvertex)[i] = (bound(0, iv, tmax) * ssize + bound(0, iu, smax)) * 3;
+			}
+		}
+
+		Mem_Free (lms);
 	}
 }
 
