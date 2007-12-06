@@ -351,7 +351,6 @@ qboolean CL_Gecko_Event_Key( clgecko_t *instance, int key, clgecko_buttoneventty
 		OSGK_KeyboardEventType mappedtype;
 		unsigned int mappedkey = key;
 		
-
 		int i;
 		// yes! then convert it if necessary!
 		for( i = 0 ; i < sizeof( geckokeymappingtable ) / sizeof( *geckokeymappingtable ) ; i++ ) {
@@ -396,11 +395,13 @@ qboolean CL_Gecko_Event_Key( clgecko_t *instance, int key, clgecko_buttoneventty
 			mappedtype = meDoubleClick;
 			break;
 		case CLG_BET_PRESS:
-			// TODO: error message
+			// hihi, hacky hacky
+			osgk_browser_event_key( instance->browser, mappedkey, meDown );
+			mappedtype = meUp;
 			break;
 		}
 
-		return true;
+		return osgk_browser_event_key( instance->browser, mappedkey, mappedtype ) != 0;
 	}
 	// TODO: error?
 	return false;
