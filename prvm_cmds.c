@@ -3231,7 +3231,7 @@ void VM_gecko_keyevent( void ) {
 	name = PRVM_G_STRING( OFS_PARM0 );
 	VM_CheckEmptyString( name );
 	key = (unsigned int) PRVM_G_FLOAT( OFS_PARM1 );
-	switch( (unsigned int) PRVM_G_FLOAT( OFS_PARM3 ) ) {
+	switch( (unsigned int) PRVM_G_FLOAT( OFS_PARM2 ) ) {
 	case 0:
 		eventtype = CLG_BET_DOWN;
 		break;
