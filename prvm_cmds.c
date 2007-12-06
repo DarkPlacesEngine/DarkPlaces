@@ -320,50 +320,14 @@ void VM_vectoyaw (void)
 =================
 VM_vectoangles
 
-vector vectoangles(vector)
+vector vectoangles(vector[, vector])
 =================
 */
 void VM_vectoangles (void)
 {
-	float	*value1;
-	float	forward;
-	float	yaw, pitch;
+	VM_SAFEPARMCOUNTRANGE(1, 2,VM_vectoangles);
 
-	VM_SAFEPARMCOUNT(1,VM_vectoangles);
-
-	value1 = PRVM_G_VECTOR(OFS_PARM0);
-
-	if (value1[1] == 0 && value1[0] == 0)
-	{
-		yaw = 0;
-		if (value1[2] > 0)
-			pitch = 90;
-		else
-			pitch = 270;
-	}
-	else
-	{
-		// LordHavoc: optimized a bit
-		if (value1[0])
-		{
-			yaw = (atan2(value1[1], value1[0]) * 180 / M_PI);
-			if (yaw < 0)
-				yaw += 360;
-		}
-		else if (value1[1] > 0)
-			yaw = 90;
-		else
-			yaw = 270;
-
-		forward = sqrt(value1[0]*value1[0] + value1[1]*value1[1]);
-		pitch = (atan2(value1[2], forward) * 180 / M_PI);
-		if (pitch < 0)
-			pitch += 360;
-	}
-
-	PRVM_G_FLOAT(OFS_RETURN+0) = pitch;
-	PRVM_G_FLOAT(OFS_RETURN+1) = yaw;
-	PRVM_G_FLOAT(OFS_RETURN+2) = 0;
+	AnglesFromVectors(PRVM_G_VECTOR(OFS_RETURN), PRVM_G_VECTOR(OFS_PARM0), prog->argc >= 2 ? PRVM_G_VECTOR(OFS_PARM1) : NULL, true);
 }
 
 /*

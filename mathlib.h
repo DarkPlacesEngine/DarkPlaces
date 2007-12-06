@@ -215,6 +215,8 @@ void AngleVectors (const vec3_t angles, vec3_t forward, vec3_t right, vec3_t up)
 void AngleVectorsFLU (const vec3_t angles, vec3_t forward, vec3_t left, vec3_t up);
 // LordHavoc: builds a [3][4] matrix
 void AngleMatrix (const vec3_t angles, const vec3_t translate, vec_t matrix[][4]);
+// LordHavoc: calculates pitch/yaw/roll angles from forward and up vectors
+void AnglesFromVectors (vec3_t angles, const vec3_t forward, const vec3_t up, qboolean flippitch);
 
 // LordHavoc: like AngleVectors, but taking a forward vector instead of angles, useful!
 void VectorVectors(const vec3_t forward, vec3_t right, vec3_t up);

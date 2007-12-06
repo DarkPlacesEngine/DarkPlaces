@@ -518,6 +518,74 @@ void AngleVectorsFLU (const vec3_t angles, vec3_t forward, vec3_t left, vec3_t u
 	}
 }
 
+// LordHavoc: calculates pitch/yaw/roll angles from forward and up vectors
+void AnglesFromVectors (vec3_t angles, const vec3_t forward, const vec3_t up, qboolean flippitch)
+{
+	if (forward[0] == 0 && forward[1] == 0)
+	{
+		angles[PITCH] = forward[2] > 0 ? -M_PI * 0.5 : M_PI * 0.5;
+		angles[YAW] = up ? atan2(-up[1], -up[0]) : 0;
+		angles[ROLL] = 0;
+	}
+	else
+	{
+		angles[YAW] = atan2(forward[1], forward[0]);
+		angles[PITCH] = -atan2(forward[2], sqrt(forward[0]*forward[0] + forward[1]*forward[1]));
+		if (up)
+		{
+			vec_t cp = cos(angles[PITCH]), sp = sin(angles[PITCH]);
+			vec_t cy = cos(angles[YAW]), sy = sin(angles[YAW]);
+			vec3_t tleft, tup;
+			tleft[0] = -sy;
+			tleft[1] = cy;
+			tleft[2] = 0;
+			tup[0] = sp*cy;
+			tup[1] = sp*sy;
+			tup[2] = cp;
+			angles[ROLL] = -atan2(DotProduct(up, tleft), DotProduct(up, tup));
+		}
+		else
+			angles[ROLL] = 0;
+	}
+
+	// now convert radians to degrees, and make all values positive
+	VectorScale(angles, 180.0 / M_PI, angles);
+	if (flippitch)
+		angles[PITCH] *= -1;
+	if (angles[PITCH] < 0) angles[PITCH] += 360;
+	if (angles[YAW] < 0) angles[YAW] += 360;
+	if (angles[ROLL] < 0) angles[ROLL] += 360;
+
+#if 0
+{
+	// debugging code
+	vec3_t tforward, tleft, tup, nforward, nup;
+	VectorCopy(forward, nforward);
+	VectorNormalize(nforward);
+	if (up)
+	{
+		VectorCopy(up, nup);
+		VectorNormalize(nup);
+		AngleVectors(angles, tforward, tleft, tup);
+		if (VectorDistance(tforward, nforward) > 0.01 || VectorDistance(tup, nup) > 0.01)
+		{
+			Con_Printf("vectoangles('%f %f %f', '%f %f %f') = %f %f %f\n", nforward[0], nforward[1], nforward[2], nup[0], nup[1], nup[2], angles[0], angles[1], angles[2]);
+			Con_Printf("^3But that is '%f %f %f', '%f %f %f'\n", tforward[0], tforward[1], tforward[2], tup[0], tup[1], tup[2]);
+		}
+	}
+	else
+	{
+		AngleVectors(angles, tforward, tleft, tup);
+		if (VectorDistance(tforward, nforward) > 0.01)
+		{
+			Con_Printf("vectoangles('%f %f %f') = %f %f %f\n", nforward[0], nforward[1], nforward[2], angles[0], angles[1], angles[2]);
+			Con_Printf("^3But that is '%f %f %f'\n", tforward[0], tforward[1], tforward[2]);
+		}
+	}
+}
+#endif
+}
+
 #if 0
 void AngleMatrix (const vec3_t angles, const vec3_t translate, vec_t matrix[][4])
 {
