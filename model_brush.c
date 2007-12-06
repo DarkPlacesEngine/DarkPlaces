@@ -2137,69 +2137,68 @@ static void Mod_Q1BSP_GenerateWarpMesh(msurface_t *surface)
 }
 #endif
 
+/* Maximum size of a single LM */
+#define MAX_SINGLE_LM_SIZE    256
+
+struct alloc_lm_row
+{
+	int rowY;
+	int currentX;
+};
+
 struct alloc_lm_state
 {
 	int currentY;
-	int currentX;
-	int currentHeight;
+	struct alloc_lm_row rows[MAX_SINGLE_LM_SIZE];
 };
+
+static void init_alloc_lm_state (struct alloc_lm_state* state)
+{
+	int r;
+	
+	state->currentY = 0;
+	for (r = 0; r < MAX_SINGLE_LM_SIZE; r++)
+	{
+	  state->rows[r].currentX = 0;
+	  state->rows[r].rowY = -1;
+	}
+}
 
 static qboolean Mod_Q1BSP_AllocLightmapBlock(struct alloc_lm_state* state, int totalwidth, int totalheight, int blockwidth, int blockheight, int *outx, int *outy)
 {
-  if (state->currentX + blockwidth <= totalwidth)
+	struct alloc_lm_row* row;
+	int r;
+
+	row = &(state->rows[blockheight]);
+	if ((row->rowY < 0) || (row->currentX + blockwidth > totalwidth))
 	{
-		*outx = state->currentX;
-		*outy = state->currentY;
-		if (state->currentX == 0)
-			/* Note: any following block has a height smaller or equal to
-			   the current block's height due sorting. */
-			state->currentHeight = blockheight;
-		state->currentX += blockwidth;
-	}
-	else
-	{
-		state->currentX = 0;
-		state->currentY += state->currentHeight;
 		if (state->currentY + blockheight <= totalheight)
 		{
-			*outx = state->currentX;
-			*outy = state->currentY;
-			/* Note: any following block has a height smaller or equal to
-			   the current block's height due sorting. */
-			state->currentHeight = blockheight;
-			state->currentX = blockwidth;
+			row->rowY = state->currentY;
+			row->currentX = 0;
+			state->currentY += blockheight;
 		}
 		else
 		{
-			return false;
+			/* See if we can stuff the block into a higher row */
+			row = NULL;
+			for (r = blockheight; r < MAX_SINGLE_LM_SIZE; r++)
+			{
+				if ((state->rows[r].rowY >= 0)
+				  && (state->rows[r].currentX + blockwidth <= totalwidth))
+				{
+					row = &(state->rows[r]);
+					break;
+				}
+			}
+			if (row == NULL) return false;
 		}
 	}
+	*outy = row->rowY;
+	*outx = row->currentX;
+	row->currentX += blockwidth;
+
 	return true;
-}
-
-struct lm_to_distribute
-{
-  int height;
-  int width;
-  msurface_t *surface;
-};
-
-static int lms_sort (const void* a, const void* b)
-{
-	const struct lm_to_distribute* lm1 = (struct lm_to_distribute*)a;
-	const struct lm_to_distribute* lm2 = (struct lm_to_distribute*)b;
-
-	if (lm1->height < lm2->height)
-		return 1;
-	else if (lm1->height > lm2->height)
-		return -1;
-
-	if (lm1->width < lm2->width)
-		return 1;
-	else if (lm1->width > lm2->width)
-		return -1;
-
-	return 0;
 }
 
 extern cvar_t gl_max_size;
@@ -2385,36 +2384,17 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 	// now that we've decided the lightmap texture size, we can do the rest
 	if (cls.state != ca_dedicated)
 	{
-		struct lm_to_distribute* lms = 
-		  (struct lm_to_distribute*)Mem_Alloc(loadmodel->mempool, count * sizeof (struct lm_to_distribute));
-		int numLMs = 0;
 		struct alloc_lm_state allocState;
-		int l;
 
 		for (surfacenum = 0, surface = loadmodel->data_surfaces;surfacenum < count;surfacenum++, surface++)
-		{
-			if (surface->cached_dlight)
-			{
-				ssize = (surface->lightmapinfo->extents[0] >> 4) + 1;
-				tsize = (surface->lightmapinfo->extents[1] >> 4) + 1;
-				lms[numLMs].width = ssize;
-				lms[numLMs].height = tsize;
-				lms[numLMs].surface = surface;
-				numLMs++;
-			}
-		}
-		qsort (lms, numLMs, sizeof (struct lm_to_distribute), &lms_sort);
-		for (l = 0; l < numLMs; l++)
 		{
 			int i, iu, iv, lightmapx, lightmapy;
 			float u, v, ubase, vbase, uscale, vscale;
 			
-			surface = lms[l].surface;
-
 			smax = surface->lightmapinfo->extents[0] >> 4;
 			tmax = surface->lightmapinfo->extents[1] >> 4;
-			ssize = lms[l].width;
-			tsize = lms[l].height;
+			ssize = (surface->lightmapinfo->extents[0] >> 4) + 1;
+			tsize = (surface->lightmapinfo->extents[1] >> 4) + 1;
 			
 			// stainmap for permanent marks on walls
 			surface->lightmapinfo->stainsamples = (unsigned char *)Mem_Alloc(loadmodel->mempool, ssize * tsize * 3);
@@ -2431,7 +2411,7 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 				if (loadmodel->brushq1.nmaplightdata)
 					deluxemaptexture = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%i", lightmapnumber), lightmapsize, lightmapsize, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
 				lightmapnumber++;
-				memset (&allocState, 0, sizeof (allocState));
+				init_alloc_lm_state (&allocState);
 				Mod_Q1BSP_AllocLightmapBlock(&allocState, lightmapsize, lightmapsize, ssize, tsize, &lightmapx, &lightmapy);
 			}
 			surface->lightmaptexture = lightmaptexture;
@@ -2455,9 +2435,8 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 				iv = (int) v;
 				(loadmodel->surfmesh.data_lightmapoffsets + surface->num_firstvertex)[i] = (bound(0, iv, tmax) * ssize + bound(0, iu, smax)) * 3;
 			}
-		}
 
-		Mem_Free (lms);
+		}
 	}
 }
 
