@@ -60,6 +60,10 @@ void CL_LinkDynTexture( const char *name, rtexture_t *texture ) {
 	skinframe_t *skinframe;
 
 	dyntexture = cl_finddyntexture( name );
+	if( !dyntexture ) {
+		Con_Printf( "CL_LinkDynTexture: internal error in cl_finddyntexture!\n" );
+		return;
+	}
 	// TODO: assert dyntexture != NULL!
 	if( dyntexture->texture != texture ) {
 		dyntexture->texture = texture;

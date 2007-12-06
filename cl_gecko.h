@@ -5,6 +5,8 @@
 #ifndef CL_GECKO_H
 #define CL_GECKO_H
 
+#include "cl_dyntexture.h"
+
 #define DEFAULT_GECKO_WIDTH	512
 #define DEFAULT_GECKO_HEIGHT	DEFAULT_GECKO_WIDTH
 

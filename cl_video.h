@@ -2,6 +2,8 @@
 #ifndef CL_VIDEO_H
 #define CL_VIDEO_H
 
+#include "cl_dyntexture.h"
+
 #define MAXCLVIDEOS		64 + 1 // 1 video is reserved for the cinematic mode
 // yields DYNAMIC_TEXTURE_PATH_PREFIX CLVIDEOPREFIX video name for a path
 #define CLVIDEOPREFIX	CLDYNTEXTUREPREFIX "video/"
