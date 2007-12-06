@@ -3101,9 +3101,30 @@ void VM_cin_restart( void )
 }
 
 #ifdef SUPPORT_GECKO
-static const char *vm_gecko_getfullname( const char *name ) {
-	// FIXME: assert that PRVM_NAME is not empty.. [12/3/2007 Black]
-	return va( "%s/%s", PRVM_NAME, name );
+/*
+========================
+VM_Gecko_Init
+========================
+*/
+void VM_Gecko_Init( void ) {
+	// the prog struct is memset to 0 by Initprog? [12/6/2007 Black]
+	// FIXME: remove the other _Init functions then, too? [12/6/2007 Black]
+}
+
+/*
+========================
+VM_Gecko_Destroy
+========================
+*/
+void VM_Gecko_Destroy( void ) {
+	int i;
+	for( i = 0 ; i < PRVM_MAX_GECKOINSTANCES ; i++ ) {
+		clgecko_t **instance = &prog->opengeckoinstances[ i ];
+		if( *instance ) {
+			CL_Gecko_DestroyBrowser( *instance );
+		}
+		*instance = NULL;
+	}
 }
 
 /*
@@ -3115,13 +3136,28 @@ float[bool] gecko_create( string name )
 */
 void VM_gecko_create( void ) {
 	const char *name;
-	
+	int i;
+	clgecko_t *instance;
+   	
 	VM_SAFEPARMCOUNT( 1, VM_gecko_create );
 
 	name = PRVM_G_STRING( OFS_PARM0 );
 	VM_CheckEmptyString( name );
 
-	if( !CL_Gecko_CreateBrowser( vm_gecko_getfullname( name ) ) ) {
+	// find an empty slot for this gecko browser..
+	for( i = 0 ; i < PRVM_MAX_GECKOINSTANCES ; i++ ) {
+		if( prog->opengeckoinstances[ i ] == NULL ) {
+			break;
+		}
+	}
+	if( i == PRVM_MAX_GECKOINSTANCES ) {
+			VM_Warning("VM_gecko_create: %s ran out of gecko handles (%i)\n", PRVM_NAME, PRVM_MAX_GECKOINSTANCES);
+			PRVM_G_FLOAT( OFS_RETURN ) = 0;
+			return;
+	}
+
+	instance = prog->opengeckoinstances[ i ] = CL_Gecko_CreateBrowser( name );
+   if( !instance ) {
 		// TODO: error handling [12/3/2007 Black]
 		PRVM_G_FLOAT( OFS_RETURN ) = 0;
 		return;
@@ -3144,7 +3180,7 @@ void VM_gecko_destroy( void ) {
 
 	name = PRVM_G_STRING( OFS_PARM0 );
 	VM_CheckEmptyString( name );
-	instance = CL_Gecko_FindBrowser( vm_gecko_getfullname( name ) );
+	instance = CL_Gecko_FindBrowser( name );
 	if( !instance ) {
 		return;
 	}
@@ -3170,7 +3206,7 @@ void VM_gecko_navigate( void ) {
 	VM_CheckEmptyString( name );
 	VM_CheckEmptyString( URI );
 
-   instance = CL_Gecko_FindBrowser( vm_gecko_getfullname( name ) );
+   instance = CL_Gecko_FindBrowser( name );
 	if( !instance ) {
 		return;
 	}
@@ -3214,7 +3250,7 @@ void VM_gecko_keyevent( void ) {
 		return;
 	}
 
-	instance = CL_Gecko_FindBrowser( vm_gecko_getfullname( name ) );
+	instance = CL_Gecko_FindBrowser( name );
 	if( !instance ) {
 		PRVM_G_FLOAT( OFS_RETURN ) = 0;
 		return;
@@ -3242,7 +3278,7 @@ void VM_gecko_movemouse( void ) {
 	x = PRVM_G_FLOAT( OFS_PARM1 );
 	y = PRVM_G_FLOAT( OFS_PARM2 );
 	
-	instance = CL_Gecko_FindBrowser( vm_gecko_getfullname( name ) );
+	instance = CL_Gecko_FindBrowser( name );
 	if( !instance ) {
 		return;
 	}
@@ -4461,6 +4497,9 @@ void VM_Cmd_Init(void)
 	// only init the stuff for the current prog
 	VM_Files_Init();
 	VM_Search_Init();
+#ifdef SUPPORT_GECKO
+	VM_Gecko_Init();
+#endif
 //	VM_BufStr_Init();
 }
 
@@ -4469,6 +4508,9 @@ void VM_Cmd_Reset(void)
 	CL_PurgeOwner( MENUOWNER );
 	VM_Search_Reset();
 	VM_Files_CloseAll();
+#ifdef SUPPORT_GECKO
+	VM_Gecko_Destroy();
+#endif
 //	VM_BufStr_ShutDown();
 }
 

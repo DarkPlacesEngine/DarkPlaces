@@ -718,6 +718,7 @@ void CL_VM_Init (void)
 	prog->limit_edicts = CL_MAX_EDICTS;
 	prog->reserved_edicts = 0;
 	prog->edictprivate_size = sizeof(edict_engineprivate_t);
+	// TODO: add a shared extension string #define and add real support for csqc extension strings [12/5/2007 Black]
 	prog->extensionstring = vm_sv_extensions;
 	prog->builtins = vm_cl_builtins;
 	prog->numbuiltins = vm_cl_numbuiltins;

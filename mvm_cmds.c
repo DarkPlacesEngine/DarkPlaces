@@ -19,6 +19,10 @@ char *vm_m_extensions =
 "DP_QC_CMD "
 "DP_QC_STRREPLACE "
 "DP_FONT_VARIABLEWIDTH "
+// FIXME: rename this extension maybe? [12/5/2007 Black]
+#ifdef SUPPORT_GECKO
+"DP_GECKO_SUPPORT "
+#endif
 ;
 
 /*

@@ -94,7 +94,7 @@ clgecko_t * CL_Gecko_CreateBrowser( const char *name ) {
 		osgk_release( options );
         	
 		if( cl_geckoembedding == NULL ) {
-			Con_Printf( "CL_Gecko_Init: Couldn't retrieve gecko embedding object!\n" );
+			Con_Printf( "CL_Gecko_CreateBrowser: Couldn't retrieve gecko embedding object!\n" );
 			return NULL;
 		}
 	}

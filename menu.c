@@ -5104,16 +5104,6 @@ void MP_Shutdown (void)
 	PRVM_End;
 }
 
-void MP_Fallback (void)
-{
-	MP_Shutdown();
-
-	key_dest = key_game;
-
-	// init the normal menu now -> this will also correct the menu router pointers
-	MR_SetRouting (TRUE);
-}
-
 void MP_Init (void)
 {
 	PRVM_Begin;
