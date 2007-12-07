@@ -309,17 +309,18 @@ void Sys_InitConsole (void)
 		Sys_Error ("Couldn't create event");
 
 	houtput = GetStdHandle (STD_OUTPUT_HANDLE);
-	if ((houtput == 0) || (houtput == INVALID_HANDLE_VALUE))
-	{
-	    AllocConsole ();
-	    houtput = GetStdHandle (STD_OUTPUT_HANDLE);
-	}
 	hinput = GetStdHandle (STD_INPUT_HANDLE);
 
 	// LordHavoc: can't check cls.state because it hasn't been initialized yet
 	// if (cls.state == ca_dedicated)
 	if (COM_CheckParm("-dedicated"))
 	{
+		if ((houtput == 0) || (houtput == INVALID_HANDLE_VALUE))
+		{
+		    AllocConsole ();
+		    houtput = GetStdHandle (STD_OUTPUT_HANDLE);
+		    hinput = GetStdHandle (STD_INPUT_HANDLE);
+		}
 		if ((houtput == 0) || (houtput == INVALID_HANDLE_VALUE))
 			Sys_Error ("Couldn't create dedicated server console");
 
