@@ -384,7 +384,7 @@ static void R_BuildNormalizationCube(void)
 static void R_BuildFogTexture(void)
 {
 	int x, b;
-#define FOGWIDTH 64
+#define FOGWIDTH 256
 	unsigned char data1[FOGWIDTH][4];
 	//unsigned char data2[FOGWIDTH][4];
 	for (x = 0;x < FOGWIDTH;x++)
@@ -1825,10 +1825,10 @@ void gl_main_start(void)
 	int x;
 	double r, alpha;
 
-	r = (-1.0/256.0) * (FOGMASKTABLEWIDTH * FOGMASKTABLEWIDTH);
+	r = -16.0 / (1.0 * FOGMASKTABLEWIDTH * FOGMASKTABLEWIDTH);
 	for (x = 0;x < FOGMASKTABLEWIDTH;x++)
 	{
-		alpha = 1 - exp(r / ((double)x*(double)x));
+		alpha = exp(r * ((double)x*(double)x));
 		if (x == FOGMASKTABLEWIDTH - 1)
 			alpha = 0;
 		r_refdef.fogmasktable[x] = bound(0, alpha, 1);
@@ -3277,7 +3277,7 @@ void R_UpdateVariables(void)
 		// this is the point where the fog reaches 0.9986 alpha, which we
 		// consider a good enough cutoff point for the texture
 		// (0.9986 * 256 == 255.6)
-		r_refdef.fogrange = 400 / r_refdef.fog_density;
+		r_refdef.fogrange = 16 / (r_refdef.fog_density * r_refdef.fog_density);
 		r_refdef.fograngerecip = 1.0f / r_refdef.fogrange;
 		r_refdef.fogmasktabledistmultiplier = FOGMASKTABLEWIDTH * r_refdef.fograngerecip;
 		// fog color was already set
