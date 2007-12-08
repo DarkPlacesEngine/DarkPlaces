@@ -847,16 +847,16 @@ static const char *builtinshaderstring =
 "# endif\n"
 "#endif\n"
 "\n"
-"#ifdef USEFOG\n"
-"	// apply fog\n"
-"	color.rgb = mix(FogColor, color.rgb, myhalf(texture2D(Texture_FogMask, myhvec2(length(EyeVectorModelSpace)*FogRangeRecip, 0.0))));\n"
-"#endif\n"
-"\n"
 "#ifdef USECONTRASTBOOST\n"
 "	color.rgb = color.rgb / (ContrastBoostCoeff * color.rgb + myhvec3(1, 1, 1));\n"
 "#endif\n"
 "\n"
 "	color.rgb *= SceneBrightness;\n"
+"\n"
+"#ifdef USEFOG\n"
+"	// apply fog\n"
+"	color.rgb = mix(FogColor, color.rgb, myhalf(texture2D(Texture_FogMask, myhvec2(length(EyeVectorModelSpace)*FogRangeRecip, 0.0))));\n"
+"#endif\n"
 "\n"
 "	gl_FragColor = vec4(color);\n"
 "}\n"
@@ -1393,21 +1393,6 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 		if (rsurface.rtlight || (rsurface.texture->currentmaterialflags & MATERIALFLAG_ADD))
 			qglUniform3fARB(r_glsl_permutation->loc_FogColor, 0, 0, 0);
 		else
-		/*
-		{
-			vec3_t fogvec;
-			//   color.rgb *= SceneBrightness;
-			VectorScale(r_refdef.fogcolor, r_view.colorscale, fogvec);
-			if(r_glsl_permutation->loc_ContrastBoostCoeff >= 0) // need to support contrast boost
-			{
-				//   color.rgb *= ContrastBoost / ((ContrastBoost - 1) * color.rgb + 1);
-				fogvec[0] *= r_glsl_contrastboost.value / ((r_glsl_contrastboost.value - 1) * fogvec[0] + 1);
-				fogvec[1] *= r_glsl_contrastboost.value / ((r_glsl_contrastboost.value - 1) * fogvec[1] + 1);
-				fogvec[2] *= r_glsl_contrastboost.value / ((r_glsl_contrastboost.value - 1) * fogvec[2] + 1);
-			}
-			qglUniform3fARB(r_glsl_permutation->loc_FogColor, fogvec[0], fogvec[1], fogvec[2]);
-		}
-		*/
 			qglUniform3fARB(r_glsl_permutation->loc_FogColor, r_refdef.fogcolor[0], r_refdef.fogcolor[1], r_refdef.fogcolor[2]);
 	}
 	if (r_glsl_permutation->loc_EyePosition >= 0) qglUniform3fARB(r_glsl_permutation->loc_EyePosition, rsurface.modelorg[0], rsurface.modelorg[1], rsurface.modelorg[2]);
@@ -3267,10 +3252,27 @@ void R_UpdateVariables(void)
 	}
 	if (r_refdef.fog_density)
 	{
-		r_refdef.fogcolor[0] = bound(0.0f, r_refdef.fog_red  , 1.0f);
-		r_refdef.fogcolor[1] = bound(0.0f, r_refdef.fog_green, 1.0f);
-		r_refdef.fogcolor[2] = bound(0.0f, r_refdef.fog_blue , 1.0f);
+		r_refdef.fogcolor[0] = r_refdef.fog_red;
+		r_refdef.fogcolor[1] = r_refdef.fog_green;
+		r_refdef.fogcolor[2] = r_refdef.fog_blue;
+
+		{
+			vec3_t fogvec;
+			//   color.rgb *= SceneBrightness;
+			VectorScale(r_refdef.fogcolor, r_view.colorscale, fogvec);
+			if(r_glsl.integer && (r_glsl_contrastboost.value > 1 || r_glsl_contrastboost.value < 0)) // need to support contrast boost
+			{
+				//   color.rgb *= ContrastBoost / ((ContrastBoost - 1) * color.rgb + 1);
+				fogvec[0] *= r_glsl_contrastboost.value / ((r_glsl_contrastboost.value - 1) * fogvec[0] + 1);
+				fogvec[1] *= r_glsl_contrastboost.value / ((r_glsl_contrastboost.value - 1) * fogvec[1] + 1);
+				fogvec[2] *= r_glsl_contrastboost.value / ((r_glsl_contrastboost.value - 1) * fogvec[2] + 1);
+			}
+			r_refdef.fogcolor[0] = bound(0.0f, fogvec[0], 1.0f);
+			r_refdef.fogcolor[1] = bound(0.0f, fogvec[1], 1.0f);
+			r_refdef.fogcolor[2] = bound(0.0f, fogvec[2], 1.0f);
+		}
 	}
+
 	if (r_refdef.fog_density)
 	{
 		r_refdef.fogenabled = true;
