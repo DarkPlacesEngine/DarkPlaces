@@ -6211,35 +6211,38 @@ void R_DrawDebugModel(entity_render_t *ent)
 				}
 				if (r_shownormals.value > 0)
 				{
-					GL_Color(r_view.colorscale, 0, 0, 1);
 					qglBegin(GL_LINES);
 					for (k = 0, l = surface->num_firstvertex;k < surface->num_vertices;k++, l++)
 					{
 						VectorCopy(rsurface.vertex3f + l * 3, v);
+						GL_Color(r_view.colorscale, 0, 0, 1);
 						qglVertex3f(v[0], v[1], v[2]);
 						VectorMA(v, r_shownormals.value, rsurface.svector3f + l * 3, v);
+						GL_Color(r_view.colorscale, 1, 1, 1);
 						qglVertex3f(v[0], v[1], v[2]);
 					}
 					qglEnd();
 					CHECKGLERROR
-					GL_Color(0, 0, r_view.colorscale, r_shownormals.value);
 					qglBegin(GL_LINES);
 					for (k = 0, l = surface->num_firstvertex;k < surface->num_vertices;k++, l++)
 					{
 						VectorCopy(rsurface.vertex3f + l * 3, v);
+						GL_Color(0, r_view.colorscale, 0, 1);
 						qglVertex3f(v[0], v[1], v[2]);
 						VectorMA(v, r_shownormals.value, rsurface.tvector3f + l * 3, v);
+						GL_Color(r_view.colorscale, 1, 1, 1);
 						qglVertex3f(v[0], v[1], v[2]);
 					}
 					qglEnd();
 					CHECKGLERROR
-					GL_Color(0, r_view.colorscale, 0, r_shownormals.value);
 					qglBegin(GL_LINES);
 					for (k = 0, l = surface->num_firstvertex;k < surface->num_vertices;k++, l++)
 					{
 						VectorCopy(rsurface.vertex3f + l * 3, v);
+						GL_Color(0, 0, r_view.colorscale, 1);
 						qglVertex3f(v[0], v[1], v[2]);
 						VectorMA(v, r_shownormals.value, rsurface.normal3f + l * 3, v);
+						GL_Color(r_view.colorscale, 1, 1, 1);
 						qglVertex3f(v[0], v[1], v[2]);
 					}
 					qglEnd();
