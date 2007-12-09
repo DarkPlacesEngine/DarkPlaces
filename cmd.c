@@ -24,7 +24,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define	MAX_ALIAS_NAME	32
 // this is the largest script file that can be executed in one step
 // LordHavoc: inreased this from 8192 to 32768
-#define CMDBUFSIZE 32768
+// div0: increased this from 32k to 128k
+#define CMDBUFSIZE 131072
 // maximum number of parameters to a command
 #define	MAX_ARGS 80
 // maximum tokenizable commandline length (counting NUL terminations)
