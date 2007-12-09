@@ -56,7 +56,7 @@ void R_SkyStartFrame(void)
 	skyrendersphere = false;
 	skyrenderbox = false;
 	skyrendermasked = false;
-	if (r_sky.integer && !r_refdef.fogenabled)
+	if (r_sky.integer && !(r_refdef.fogenabled && r_refdef.fog_end >= 1000000000))
 	{
 		if (skyboxside[0] || skyboxside[1] || skyboxside[2] || skyboxside[3] || skyboxside[4] || skyboxside[5])
 			skyrenderbox = true;
@@ -286,6 +286,18 @@ static void R_SkyBox(void)
 		R_Mesh_TexBind(0, R_GetTexture(skyboxside[i]));
 		R_Mesh_Draw(0, 6*4, 2, skyboxelements + i * 6, 0, 0);
 	}
+
+	if(r_refdef.fogenabled)
+	{
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		GL_Color(r_refdef.fogcolor[0] * r_view.colorscale, r_refdef.fogcolor[1] * r_view.colorscale, r_refdef.fogcolor[2] * r_view.colorscale, 1 - FogForDistance(r_refdef.fog_end));
+		for (i = 0;i < 6;i++)
+		{
+			R_Mesh_TexBind(0, 0);
+			R_Mesh_Draw(0, 6*4, 2, skyboxelements + i * 6, 0, 0);
+		}
+	}
+
 	GL_LockArrays(0, 0);
 }
 
@@ -393,6 +405,7 @@ static void R_SkySphere(void)
 		GL_LockArrays(0, skysphere_numverts);
 		R_Mesh_Draw(0, skysphere_numverts, skysphere_numtriangles, skysphere_element3i, 0, 0);
 		GL_LockArrays(0, 0);
+		R_Mesh_TexBind(1, 0);
 	}
 	else
 	{
@@ -403,6 +416,16 @@ static void R_SkySphere(void)
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		R_Mesh_TexBind(0, R_GetTexture(r_refdef.worldmodel->brush.alphaskytexture));
 		R_Mesh_TexMatrix(0, &scroll2matrix);
+		GL_LockArrays(0, skysphere_numverts);
+		R_Mesh_Draw(0, skysphere_numverts, skysphere_numtriangles, skysphere_element3i, 0, 0);
+		GL_LockArrays(0, 0);
+	}
+
+	if(r_refdef.fogenabled)
+	{
+		R_Mesh_TexBind(0, 0);
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		GL_Color(r_refdef.fogcolor[0] * r_view.colorscale, r_refdef.fogcolor[1] * r_view.colorscale, r_refdef.fogcolor[2] * r_view.colorscale, 1 - FogForDistance(r_refdef.fog_end));
 		GL_LockArrays(0, skysphere_numverts);
 		R_Mesh_Draw(0, skysphere_numverts, skysphere_numtriangles, skysphere_element3i, 0, 0);
 		GL_LockArrays(0, 0);
