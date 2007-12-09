@@ -1081,7 +1081,7 @@ entities                                          print information on network e
 envmap                                            render a cubemap (skybox) of the current scene
 exec                                              execute a script file
 fly                                               fly mode (flight)
-fog                                               set global fog parameters (density red green blue)
+fog                                               set global fog parameters (density red green blue mindist maxdist)
 force_centerview                                  recenters view (stops looking up/down)
 fs_rescan                                         rescans filesystem for new pack archives and any other changes
 fullinfo                                          allows client to modify their userinfo

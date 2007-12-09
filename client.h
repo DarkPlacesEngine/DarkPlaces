@@ -1315,6 +1315,7 @@ extern qboolean sb_showscores;
 
 float FogPoint_World(const vec3_t p);
 float FogPoint_Model(const vec3_t p);
+float FogForDistance(vec_t dist);
 
 typedef struct r_refdef_stats_s
 {
@@ -1399,6 +1400,7 @@ typedef struct r_refdef_s
 	float fog_red;
 	float fog_green;
 	float fog_blue;
+	float fog_start, fog_end;
 	qboolean fogenabled;
 	qboolean oldgl_fogenable;
 

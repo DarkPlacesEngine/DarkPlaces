@@ -247,18 +247,24 @@ void FOG_clear(void)
 		Cvar_Set("gl_fogblue", "0.3");
 	}
 	r_refdef.fog_density = r_refdef.fog_red = r_refdef.fog_green = r_refdef.fog_blue = 0.0f;
+	r_refdef.fog_start = 0;
+	r_refdef.fog_end = 1000000000;
+}
+
+float FogForDistance(vec_t dist)
+{
+	unsigned int fogmasktableindex = (unsigned int)(bound(0, dist - r_refdef.fog_start, r_refdef.fog_end - r_refdef.fog_start) * r_refdef.fogmasktabledistmultiplier);
+	return r_refdef.fogmasktable[min(fogmasktableindex, FOGMASKTABLEWIDTH - 1)];
 }
 
 float FogPoint_World(const vec3_t p)
 {
-	unsigned int fogmasktableindex = (unsigned int)(VectorDistance((p), r_view.origin) * r_refdef.fogmasktabledistmultiplier);
-	return r_refdef.fogmasktable[min(fogmasktableindex, FOGMASKTABLEWIDTH - 1)];
+	return FogForDistance(VectorDistance((p), r_view.origin));
 }
 
 float FogPoint_Model(const vec3_t p)
 {
-	unsigned int fogmasktableindex = (unsigned int)(VectorDistance((p), rsurface.modelorg) * r_refdef.fogmasktabledistmultiplier);
-	return r_refdef.fogmasktable[min(fogmasktableindex, FOGMASKTABLEWIDTH - 1)];
+	return FogForDistance(VectorDistance((p), rsurface.modelorg));
 }
 
 static void R_BuildBlankTextures(void)
@@ -604,6 +610,8 @@ static const char *builtinshaderstring =
 "uniform float OffsetMapping_Scale;\n"
 "uniform float OffsetMapping_Bias;\n"
 "uniform float FogRangeRecip;\n"
+"uniform float FogStart;\n"
+"uniform float FogLength;\n"
 "\n"
 "uniform myhalf AmbientScale;\n"
 "uniform myhalf DiffuseScale;\n"
@@ -855,7 +863,8 @@ static const char *builtinshaderstring =
 "\n"
 "#ifdef USEFOG\n"
 "	// apply fog\n"
-"	color.rgb = mix(FogColor, color.rgb, myhalf(texture2D(Texture_FogMask, myhvec2(length(EyeVectorModelSpace)*FogRangeRecip, 0.0))));\n"
+"	color.rgb = mix(FogColor, color.rgb, myhalf(texture2D(Texture_FogMask, myhvec2(max(0.0, min(length(EyeVectorModelSpace) - FogStart, FogLength))*FogRangeRecip, 0.0))));\n"
+//"      color.rgb = mix(FogColor, color.rgb, myhalf(texture2D(Texture_FogMask, myhvec2(length(EyeVectorModelSpace)*FogRangeRecip, 0.0))));\n"
 "#endif\n"
 "\n"
 "	gl_FragColor = vec4(color);\n"
@@ -950,6 +959,8 @@ typedef struct r_glsl_permutation_s
 	int loc_Color_Pants;
 	int loc_Color_Shirt;
 	int loc_FogRangeRecip;
+	int loc_FogStart;
+	int loc_FogLength;
 	int loc_AmbientScale;
 	int loc_DiffuseScale;
 	int loc_SpecularScale;
@@ -1081,6 +1092,8 @@ static void R_GLSL_CompilePermutation(const char *filename, int permutation, int
 		p->loc_Color_Pants         = qglGetUniformLocationARB(p->program, "Color_Pants");
 		p->loc_Color_Shirt         = qglGetUniformLocationARB(p->program, "Color_Shirt");
 		p->loc_FogRangeRecip       = qglGetUniformLocationARB(p->program, "FogRangeRecip");
+		p->loc_FogStart            = qglGetUniformLocationARB(p->program, "FogStart");
+		p->loc_FogLength           = qglGetUniformLocationARB(p->program, "FogLength");
 		p->loc_AmbientScale        = qglGetUniformLocationARB(p->program, "AmbientScale");
 		p->loc_DiffuseScale        = qglGetUniformLocationARB(p->program, "DiffuseScale");
 		p->loc_SpecularPower       = qglGetUniformLocationARB(p->program, "SpecularPower");
@@ -1411,6 +1424,8 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 			qglUniform3fARB(r_glsl_permutation->loc_Color_Shirt, 0, 0, 0);
 	}
 	if (r_glsl_permutation->loc_FogRangeRecip >= 0) qglUniform1fARB(r_glsl_permutation->loc_FogRangeRecip, r_refdef.fograngerecip);
+	if (r_glsl_permutation->loc_FogStart >= 0) qglUniform1fARB(r_glsl_permutation->loc_FogStart, r_refdef.fog_start);
+	if (r_glsl_permutation->loc_FogLength >= 0) qglUniform1fARB(r_glsl_permutation->loc_FogLength, r_refdef.fog_end - r_refdef.fog_start);
 	if (r_glsl_permutation->loc_SpecularPower >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularPower, rsurface.texture->specularpower);
 	if (r_glsl_permutation->loc_OffsetMapping_Scale >= 0) qglUniform1fARB(r_glsl_permutation->loc_OffsetMapping_Scale, r_glsl_offsetmapping_scale.value);
 	if (r_glsl_permutation->loc_DistortScaleRefractReflect >= 0) qglUniform4fARB(r_glsl_permutation->loc_DistortScaleRefractReflect, r_water_refractdistort.value * rsurface.texture->refractfactor, r_water_refractdistort.value * rsurface.texture->refractfactor, r_water_reflectdistort.value * rsurface.texture->reflectfactor, r_water_reflectdistort.value * rsurface.texture->reflectfactor);
@@ -3271,6 +3286,13 @@ void R_UpdateVariables(void)
 			r_refdef.fogcolor[1] = bound(0.0f, fogvec[1], 1.0f);
 			r_refdef.fogcolor[2] = bound(0.0f, fogvec[2], 1.0f);
 		}
+	}
+
+	if (r_refdef.fog_start >= r_refdef.fog_end || r_refdef.fog_start < 0)
+	{
+		r_refdef.fog_start = 0;
+		r_refdef.fog_end = 1000000000;
+		// TODO update fog cvars here too
 	}
 
 	if (r_refdef.fog_density)

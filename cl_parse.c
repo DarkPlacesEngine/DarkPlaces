@@ -362,7 +362,11 @@ void CL_ParseEntityLump(char *entdata)
 		else if (!strcmp("qlsky", key)) // non-standard, introduced by QuakeLives (EEK)
 			R_SetSkyBox(value);
 		else if (!strcmp("fog", key))
-			sscanf(value, "%f %f %f %f", &r_refdef.fog_density, &r_refdef.fog_red, &r_refdef.fog_green, &r_refdef.fog_blue);
+		{
+			r_refdef.fog_start = 0;
+			r_refdef.fog_end = 1000000000;
+			sscanf(value, "%f %f %f %f %f %f", &r_refdef.fog_density, &r_refdef.fog_red, &r_refdef.fog_green, &r_refdef.fog_blue, &r_refdef.fog_start, &r_refdef.fog_end);
+		}
 		else if (!strcmp("fog_density", key))
 			r_refdef.fog_density = atof(value);
 		else if (!strcmp("fog_red", key))
