@@ -396,12 +396,13 @@ qboolean CL_Gecko_Event_Key( clgecko_t *instance, int key, clgecko_buttoneventty
 			break;
 		case CLG_BET_PRESS:
 			// hihi, hacky hacky
-			osgk_browser_event_key( instance->browser, mappedkey, meDown );
+			osgk_browser_event_mouse_button( instance->browser, mappedbutton, meDown );
 			mappedtype = meUp;
 			break;
 		}
 
-		return osgk_browser_event_key( instance->browser, mappedkey, mappedtype ) != 0;
+		osgk_browser_event_mouse_button( instance->browser, mappedbutton, mappedtype );
+		return true;
 	}
 	// TODO: error?
 	return false;
