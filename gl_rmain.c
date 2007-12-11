@@ -3111,6 +3111,8 @@ void R_Bloom_MakeTexture(void)
 	}
 }
 
+static void R_UpdateFogColor(void); // needs to be called before HDR subrender too, as that changes colorscale!
+
 void R_HDR_RenderBloomTexture(void)
 {
 	int oldwidth, oldheight;
@@ -3128,6 +3130,9 @@ void R_HDR_RenderBloomTexture(void)
 	r_view.colorscale = r_bloom_colorscale.value * r_hdr_scenebrightness.value;
 	if (r_hdr.integer)
 		r_view.colorscale /= r_hdr_range.value;
+
+	R_UpdateFogColor();
+
 	r_waterstate.numwaterplanes = 0;
 	R_RenderScene(r_waterstate.enabled);
 	r_view.showdebug = true;
@@ -3216,6 +3221,32 @@ void R_RenderScene(qboolean addwaterplanes);
 
 matrix4x4_t r_waterscrollmatrix;
 
+static void R_UpdateFogColor(void) // needs to be called before HDR subrender too, as that changes colorscale!
+{
+	if (r_refdef.fog_density)
+	{
+		r_refdef.fogcolor[0] = r_refdef.fog_red;
+		r_refdef.fogcolor[1] = r_refdef.fog_green;
+		r_refdef.fogcolor[2] = r_refdef.fog_blue;
+
+		{
+			vec3_t fogvec;
+			//   color.rgb *= SceneBrightness;
+			VectorScale(r_refdef.fogcolor, r_view.colorscale, fogvec);
+			if(r_glsl.integer && (r_glsl_contrastboost.value > 1 || r_glsl_contrastboost.value < 0)) // need to support contrast boost
+			{
+				//   color.rgb *= ContrastBoost / ((ContrastBoost - 1) * color.rgb + 1);
+				fogvec[0] *= r_glsl_contrastboost.value / ((r_glsl_contrastboost.value - 1) * fogvec[0] + 1);
+				fogvec[1] *= r_glsl_contrastboost.value / ((r_glsl_contrastboost.value - 1) * fogvec[1] + 1);
+				fogvec[2] *= r_glsl_contrastboost.value / ((r_glsl_contrastboost.value - 1) * fogvec[2] + 1);
+			}
+			r_refdef.fogcolor[0] = bound(0.0f, fogvec[0], 1.0f);
+			r_refdef.fogcolor[1] = bound(0.0f, fogvec[1], 1.0f);
+			r_refdef.fogcolor[2] = bound(0.0f, fogvec[2], 1.0f);
+		}
+	}
+}
+
 void R_UpdateVariables(void)
 {
 	R_Textures_Frame();
@@ -3265,28 +3296,6 @@ void R_UpdateVariables(void)
 			r_refdef.fog_blue = 0;
 		}
 	}
-	if (r_refdef.fog_density)
-	{
-		r_refdef.fogcolor[0] = r_refdef.fog_red;
-		r_refdef.fogcolor[1] = r_refdef.fog_green;
-		r_refdef.fogcolor[2] = r_refdef.fog_blue;
-
-		{
-			vec3_t fogvec;
-			//   color.rgb *= SceneBrightness;
-			VectorScale(r_refdef.fogcolor, r_view.colorscale, fogvec);
-			if(r_glsl.integer && (r_glsl_contrastboost.value > 1 || r_glsl_contrastboost.value < 0)) // need to support contrast boost
-			{
-				//   color.rgb *= ContrastBoost / ((ContrastBoost - 1) * color.rgb + 1);
-				fogvec[0] *= r_glsl_contrastboost.value / ((r_glsl_contrastboost.value - 1) * fogvec[0] + 1);
-				fogvec[1] *= r_glsl_contrastboost.value / ((r_glsl_contrastboost.value - 1) * fogvec[1] + 1);
-				fogvec[2] *= r_glsl_contrastboost.value / ((r_glsl_contrastboost.value - 1) * fogvec[2] + 1);
-			}
-			r_refdef.fogcolor[0] = bound(0.0f, fogvec[0], 1.0f);
-			r_refdef.fogcolor[1] = bound(0.0f, fogvec[1], 1.0f);
-			r_refdef.fogcolor[2] = bound(0.0f, fogvec[2], 1.0f);
-		}
-	}
 
 	if (r_refdef.fog_start >= r_refdef.fog_end || r_refdef.fog_start < 0)
 	{
@@ -3294,6 +3303,8 @@ void R_UpdateVariables(void)
 		r_refdef.fog_end = 1000000000;
 		// TODO update fog cvars here too
 	}
+
+	R_UpdateFogColor();
 
 	if (r_refdef.fog_density)
 	{
