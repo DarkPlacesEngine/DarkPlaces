@@ -3850,7 +3850,7 @@ void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, rtexture_
 		R_Mesh_TexBind(0, R_GetTexture(fogtexture));
 		GL_BlendFunc(blendfunc1, GL_ONE);
 		fog = 1 - fog;
-		GL_Color(r_refdef.fogcolor[0] * fog * r_view.colorscale, r_refdef.fogcolor[1] * fog * r_view.colorscale, r_refdef.fogcolor[2] * fog * r_view.colorscale, ca);
+		GL_Color(r_refdef.fogcolor[0] * fog, r_refdef.fogcolor[1] * fog, r_refdef.fogcolor[2] * fog, ca);
 		R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
 	}
 }
