@@ -290,7 +290,7 @@ static void R_SkyBox(void)
 	if(r_refdef.fogenabled)
 	{
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		GL_Color(r_refdef.fogcolor[0] * r_view.colorscale, r_refdef.fogcolor[1] * r_view.colorscale, r_refdef.fogcolor[2] * r_view.colorscale, 1 - FogForDistance(r_refdef.fog_end));
+		GL_Color(r_refdef.fogcolor[0], r_refdef.fogcolor[1], r_refdef.fogcolor[2], 1 - FogForDistance(r_refdef.fog_end));
 		for (i = 0;i < 6;i++)
 		{
 			R_Mesh_TexBind(0, 0);
@@ -425,7 +425,7 @@ static void R_SkySphere(void)
 	{
 		R_Mesh_TexBind(0, 0);
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		GL_Color(r_refdef.fogcolor[0] * r_view.colorscale, r_refdef.fogcolor[1] * r_view.colorscale, r_refdef.fogcolor[2] * r_view.colorscale, 1 - FogForDistance(r_refdef.fog_end));
+		GL_Color(r_refdef.fogcolor[0], r_refdef.fogcolor[1], r_refdef.fogcolor[2], 1 - FogForDistance(r_refdef.fog_end));
 		GL_LockArrays(0, skysphere_numverts);
 		R_Mesh_Draw(0, skysphere_numverts, skysphere_numtriangles, skysphere_element3i, 0, 0);
 		GL_LockArrays(0, 0);

@@ -2253,9 +2253,9 @@ void R_DrawDecal_TransparentCallback(const entity_render_t *ent, const rtlight_t
 			//if (blendmode == PBLEND_ALPHA)
 			//{
 			//	fog = 1 - fog;
-			//	cr += r_refdef.fogcolor[0] * fog * r_view.colorscale;
-			//	cg += r_refdef.fogcolor[1] * fog * r_view.colorscale;
-			//	cb += r_refdef.fogcolor[2] * fog * r_view.colorscale;
+			//	cr += r_refdef.fogcolor[0] * fog;
+			//	cg += r_refdef.fogcolor[1] * fog;
+			//	cb += r_refdef.fogcolor[2] * fog;
 			//}
 		}
 		c4f[0] = c4f[4] = c4f[8] = c4f[12] = cr;
@@ -2396,9 +2396,9 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 			if (blendmode == PBLEND_ALPHA)
 			{
 				fog = 1 - fog;
-				cr += r_refdef.fogcolor[0] * fog * r_view.colorscale;
-				cg += r_refdef.fogcolor[1] * fog * r_view.colorscale;
-				cb += r_refdef.fogcolor[2] * fog * r_view.colorscale;
+				cr += r_refdef.fogcolor[0] * fog;
+				cg += r_refdef.fogcolor[1] * fog;
+				cb += r_refdef.fogcolor[2] * fog;
 			}
 		}
 		c4f[0] = c4f[4] = c4f[8] = c4f[12] = cr;
