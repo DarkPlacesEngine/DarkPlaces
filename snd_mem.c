@@ -24,6 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "snd_main.h"
 #include "snd_ogg.h"
 #include "snd_wav.h"
+#include "snd_modplug.h"
 
 
 /*
@@ -336,7 +337,10 @@ qboolean S_LoadSound (sfx_t *sfx, qboolean complain)
 			return true;
 		if (len >= 4 && !strcasecmp (namebuffer + len - 4, ".wav"))
 			memcpy (namebuffer + len - 3, "ogg", 4);
-		if (OGG_LoadVorbisFile (namebuffer, sfx))
+		if (len >= 4 && !strcasecmp (namebuffer + len - 4, ".ogg"))
+			if (OGG_LoadVorbisFile (namebuffer, sfx))
+				return true;
+		if (ModPlug_LoadModPlugFile (namebuffer, sfx))
 			return true;
 	}
 
@@ -352,7 +356,10 @@ qboolean S_LoadSound (sfx_t *sfx, qboolean complain)
 		return true;
 	if (len >= 4 && !strcasecmp (namebuffer + len - 4, ".wav"))
 		memcpy (namebuffer + len - 3, "ogg", 4);
-	if (OGG_LoadVorbisFile (namebuffer, sfx))
+	if (len >= 4 && !strcasecmp (namebuffer + len - 4, ".ogg"))
+		if (OGG_LoadVorbisFile (namebuffer, sfx))
+			return true;
+	if (ModPlug_LoadModPlugFile (namebuffer, sfx))
 		return true;
 
 	// Can't load the sound!

@@ -133,6 +133,8 @@ void CDAudio_Play_byName (const char *trackname, qboolean looping)
 	else
 	{
 		sfx = S_PrecacheSound (va("cdtracks/%s.wav", trackname), false, false);
+		if (sfx == NULL || !S_IsSoundPrecached (sfx))
+			sfx = S_PrecacheSound (va("cdtracks/%s", trackname), false, false);
 	}
 	if (sfx != NULL)
 	{
