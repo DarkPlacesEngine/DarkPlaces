@@ -110,5 +110,8 @@ void R_Textures_Frame(void);
 void R_MarkDirtyTexture(rtexture_t *rt);
 void R_MakeTextureDynamic(rtexture_t *rt, updatecallback_t updatecallback, void *data);
 
+// Clear the texture's contents
+void R_ClearTexture (rtexture_t *rt);
+
 #endif
 

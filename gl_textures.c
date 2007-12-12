@@ -1131,3 +1131,9 @@ void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, in
 	R_Upload(glt, data, x, y, 0, width, height, 1);
 }
 
+void R_ClearTexture (rtexture_t *rt)
+{
+	gltexture_t *glt = (gltexture_t *)rt;
+
+	R_Upload( glt, NULL, 0, 0, 0, glt->tilewidth, glt->tileheight, glt->tiledepth );
+}

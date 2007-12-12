@@ -3248,6 +3248,63 @@ void VM_gecko_movemouse( void ) {
 	}
 	CL_Gecko_Event_CursorMove( instance, x, y );
 }
+
+
+/*
+========================
+VM_gecko_resize
+
+void gecko_resize( string name, float w, float h )
+========================
+*/
+void VM_gecko_resize( void ) {
+	const char *name;
+	float w, h;
+	clgecko_t *instance;
+
+	VM_SAFEPARMCOUNT( 3, VM_gecko_movemouse );
+
+	name = PRVM_G_STRING( OFS_PARM0 );
+	VM_CheckEmptyString( name );
+	w = PRVM_G_FLOAT( OFS_PARM1 );
+	h = PRVM_G_FLOAT( OFS_PARM2 );
+	
+	instance = CL_Gecko_FindBrowser( name );
+	if( !instance ) {
+		return;
+	}
+	CL_Gecko_Resize( instance, w, h );
+}
+
+
+/*
+========================
+VM_gecko_get_texture_extent
+
+vector gecko_get_texture_extent( string name )
+========================
+*/
+void VM_gecko_get_texture_extent( void ) {
+	const char *name;
+	clgecko_t *instance;
+
+	VM_SAFEPARMCOUNT( 1, VM_gecko_movemouse );
+
+	name = PRVM_G_STRING( OFS_PARM0 );
+	VM_CheckEmptyString( name );
+	
+	PRVM_G_VECTOR(OFS_RETURN)[2] = 0;
+	instance = CL_Gecko_FindBrowser( name );
+	if( !instance ) {
+		PRVM_G_VECTOR(OFS_RETURN)[0] = 0;
+		PRVM_G_VECTOR(OFS_RETURN)[1] = 0;
+		return;
+	}
+	CL_Gecko_GetTextureExtent( instance, 
+		PRVM_G_VECTOR(OFS_RETURN), PRVM_G_VECTOR(OFS_RETURN)+1 );
+}
+
+
 #endif
 
 /*
