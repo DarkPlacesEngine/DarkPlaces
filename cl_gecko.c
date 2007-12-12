@@ -412,6 +412,11 @@ qboolean CL_Gecko_Event_Key( clgecko_t *instance, int key, clgecko_buttoneventty
 
 		osgk_browser_event_mouse_button( instance->browser, mappedbutton, mappedtype );
 		return true;
+	} else if( K_MWHEELUP <= key && key <= K_MWHEELDOWN ) {
+		if( eventtype == CLG_BET_DOWN )
+			osgk_browser_event_mouse_wheel( instance->browser, 
+				waVertical, (key == K_MWHEELUP) ? wdNegative : wdPositive );
+		return true;
 	}
 	// TODO: error?
 	return false;
