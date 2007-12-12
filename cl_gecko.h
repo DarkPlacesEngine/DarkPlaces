@@ -7,9 +7,6 @@
 
 #include "cl_dyntexture.h"
 
-#define DEFAULT_GECKO_WIDTH	512
-#define DEFAULT_GECKO_HEIGHT	DEFAULT_GECKO_WIDTH
-
 #define CLGECKOPREFIX			CLDYNTEXTUREPREFIX "gecko/"
 #define MAX_GECKO_INSTANCES	16
 
@@ -38,6 +35,8 @@ void CL_Gecko_Event_CursorMove( clgecko_t *instance, float x, float y );
 // returns whether the key/button event was handled or not
 qboolean CL_Gecko_Event_Key( clgecko_t *instance, int key, clgecko_buttoneventtype_t eventtype );
 
+void CL_Gecko_Resize( clgecko_t *instance, int w, int h );
+void CL_Gecko_GetTextureExtent( clgecko_t *instance, float* u, float* v );
 #endif
 
 #endif

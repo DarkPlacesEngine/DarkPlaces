@@ -1268,15 +1268,17 @@ VM_gecko_destroy,					// #488
 VM_gecko_navigate,				// #489
 VM_gecko_keyevent,				// #490
 VM_gecko_movemouse,				// #491
+VM_gecko_resize,									// #492
+VM_gecko_get_texture_extent,									// #493
 #else
 NULL,									// #487
 NULL,									// #488
 NULL,									// #489
 NULL,									// #490
 NULL,									// #491
-#endif
 NULL,									// #492
 NULL,									// #493
+#endif
 NULL,									// #494
 NULL,									// #495
 NULL,									// #496

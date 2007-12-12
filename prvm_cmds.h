@@ -364,6 +364,8 @@ void VM_gecko_destroy( void );
 void VM_gecko_navigate( void );
 void VM_gecko_keyevent( void );
 void VM_gecko_movemouse( void );
+void VM_gecko_resize( void );
+void VM_gecko_get_texture_extent( void );
 #endif
 
 void VM_drawline (void);
