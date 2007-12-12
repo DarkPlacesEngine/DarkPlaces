@@ -759,6 +759,7 @@ void S_Init(void)
 	memset(channels, 0, MAX_CHANNELS * sizeof(channel_t));
 
 	OGG_OpenLibrary ();
+	ModPlug_OpenLibrary ();
 }
 
 
@@ -772,6 +773,7 @@ Shutdown and free all resources
 void S_Terminate (void)
 {
 	S_Shutdown ();
+	ModPlug_CloseLibrary ();
 	OGG_CloseLibrary ();
 
 	// Free all SFXs

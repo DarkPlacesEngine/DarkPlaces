@@ -28,7 +28,7 @@ STRIP?=strip
 
 ###### Sound and audio CD #####
 
-OBJ_SND_COMMON=snd_main.o snd_mem.o snd_mix.o snd_ogg.o snd_wav.o
+OBJ_SND_COMMON=snd_main.o snd_mem.o snd_mix.o snd_ogg.o snd_wav.o snd_modplug.o
 
 # No sound
 OBJ_SND_NULL=snd_null.o
