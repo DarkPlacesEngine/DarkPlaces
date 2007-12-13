@@ -333,15 +333,22 @@ qboolean S_LoadSound (sfx_t *sfx, qboolean complain)
 			Con_DPrintf("S_LoadSound: name \"%s\" is too long\n", sfx->name);
 			return false;
 		}
-		if (S_LoadWavFile (namebuffer, sfx))
-			return true;
 		if (len >= 4 && !strcasecmp (namebuffer + len - 4, ".wav"))
+		{
+			if (S_LoadWavFile (namebuffer, sfx))
+				return true;
 			memcpy (namebuffer + len - 3, "ogg", 4);
+		}
 		if (len >= 4 && !strcasecmp (namebuffer + len - 4, ".ogg"))
+		{
 			if (OGG_LoadVorbisFile (namebuffer, sfx))
 				return true;
-		if (ModPlug_LoadModPlugFile (namebuffer, sfx))
-			return true;
+		}
+		else
+		{
+			if (ModPlug_LoadModPlugFile (namebuffer, sfx))
+				return true;
+		}
 	}
 
 	// LordHavoc: then try without the added sound/ as wav and ogg
@@ -352,15 +359,25 @@ qboolean S_LoadSound (sfx_t *sfx, qboolean complain)
 		Con_DPrintf("S_LoadSound: name \"%s\" is too long\n", sfx->name);
 		return false;
 	}
-	if (S_LoadWavFile (namebuffer, sfx))
-		return true;
+	// request foo.wav: tries foo.wav, then foo.ogg
+	// request foo.ogg: tries foo.ogg only
+	// request foo.mod: tries foo.mod only
 	if (len >= 4 && !strcasecmp (namebuffer + len - 4, ".wav"))
+	{
+		if (S_LoadWavFile (namebuffer, sfx))
+			return true;
 		memcpy (namebuffer + len - 3, "ogg", 4);
+	}
 	if (len >= 4 && !strcasecmp (namebuffer + len - 4, ".ogg"))
+	{
 		if (OGG_LoadVorbisFile (namebuffer, sfx))
 			return true;
-	if (ModPlug_LoadModPlugFile (namebuffer, sfx))
-		return true;
+	}
+	else
+	{
+		if (ModPlug_LoadModPlugFile (namebuffer, sfx))
+			return true;
+	}
 
 	// Can't load the sound!
 	sfx->flags |= SFXFLAG_FILEMISSING;
