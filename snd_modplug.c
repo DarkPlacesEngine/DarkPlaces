@@ -26,6 +26,19 @@
 #include "snd_main.h"
 #include "snd_modplug.h"
 
+#ifdef SND_MODPLUG_STATIC
+
+#include "libmodplug/modplug.h"
+qboolean ModPlug_OpenLibrary (void)
+{
+	return true; // statically linked
+}
+void ModPlug_CloseLibrary (void)
+{
+}
+#define modplug_dll 1
+
+#else
 // BEGIN SECTION FROM modplug.h
 
 	/*
@@ -165,6 +178,7 @@ void ModPlug_CloseLibrary (void)
 {
 	Sys_UnloadLibrary (&modplug_dll);
 }
+#endif
 
 
 /*
@@ -213,7 +227,7 @@ static const snd_buffer_t* ModPlug_FetchSound (void *sfxfetcher, void **chfetche
 	modplug_stream_perchannel_t* per_ch = (modplug_stream_perchannel_t *)*chfetcherpointer;
 	modplug_stream_persfx_t* per_sfx = (modplug_stream_persfx_t *)sfxfetcher;
 	snd_buffer_t* sb;
-	int newlength, done, ret, bigendian;
+	int newlength, done, ret;
 	unsigned int real_start;
 	unsigned int factor;
 
@@ -327,11 +341,6 @@ static const snd_buffer_t* ModPlug_FetchSound (void *sfxfetcher, void **chfetche
 		newlength = sizeof(resampling_buffer);
 
 	// Decompress in the resampling_buffer
-#if BYTE_ORDER == BIG_ENDIAN
-	bigendian = 1;
-#else
-	bigendian = 0;
-#endif
 	done = 0;
 	while ((ret = ModPlug_Read (per_ch->mf, (char *)&resampling_buffer[done], (int)(newlength - done))) > 0)
 		done += ret;
