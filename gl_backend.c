@@ -1021,7 +1021,7 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int numtriangles, const int *
 		Con_Printf("R_Mesh_Draw(%d, %d, %d, %8p, %i, %p);\n", firstvertex, numvertices, numtriangles, elements, bufferobject, (void *)bufferoffset);
 		return;
 	}
-	if (!gl_vbo.integer)
+	if (gl_vbo.integer != 1)
 		bufferobject = 0;
 	CHECKGLERROR
 	r_refdef.stats.meshes++;
