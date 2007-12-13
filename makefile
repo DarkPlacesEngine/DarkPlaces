@@ -199,18 +199,12 @@ endif
 ifeq ($(DP_SOUND_API), OSS)
 	OBJ_SOUND=$(OBJ_SND_OSS)
 	LIB_SOUND=$(LIB_SND_OSS)
-	ifneq ($(shell [ -e /usr/lib64/libmodplug.a ] || [ -e /usr/lib/libmodplug.a ]), false)
-		LIB_SOUND+=-lmodplug -lstdc++
-	endif
 endif
 
 # ALSA: Advanced Linux Sound Architecture
 ifeq ($(DP_SOUND_API), ALSA)
 	OBJ_SOUND=$(OBJ_SND_ALSA)
 	LIB_SOUND=$(LIB_SND_ALSA)
-	ifneq ($(shell [ -e /usr/lib64/libmodplug.a ] || [ -e /usr/lib/libmodplug.a ]), false)
-		LIB_SOUND+=-lmodplug -lstdc++
-	endif
 endif
 
 # COREAUDIO: Core Audio

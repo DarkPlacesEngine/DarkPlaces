@@ -30,29 +30,33 @@ STRIP?=strip
 
 OBJ_SND_COMMON=snd_main.o snd_mem.o snd_mix.o snd_ogg.o snd_wav.o snd_modplug.o
 
+# Additional stuff for libmodplug
+LIB_SND_MODPLUG=`if [ -n "$(DP_MODPLUG_STATIC_PREFIX)" ]; then echo " $(DP_MODPLUG_STATIC_PREFIX)/lib/libmodplug.a -lstdc++"; fi`
+CFLAGS_SND_MODPLUG=`if [ -n "$(DP_MODPLUG_STATIC_PREFIX)" ]; then echo " -I$(DP_MODPLUG_STATIC_PREFIX)/include -DSND_MODPLUG_STATIC"; fi`
+
 # No sound
 OBJ_SND_NULL=snd_null.o
 LIB_SND_NULL=
 
 # Open Sound System (Linux, FreeBSD and Solaris)
 OBJ_SND_OSS=$(OBJ_SND_COMMON) snd_oss.o
-LIB_SND_OSS=
+LIB_SND_OSS=$(LIB_SND_MODPLUG)
 
 # Advanced Linux Sound Architecture (Linux)
 OBJ_SND_ALSA=$(OBJ_SND_COMMON) snd_alsa.o
-LIB_SND_ALSA=-lasound
+LIB_SND_ALSA=-lasound $(LIB_SND_MODPLUG)
 
 # Core Audio (Mac OS X)
 OBJ_SND_COREAUDIO=$(OBJ_SND_COMMON) snd_coreaudio.c
-LIB_SND_COREAUDIO=-framework CoreAudio
+LIB_SND_COREAUDIO=-framework CoreAudio $(LIB_SND_MODPLUG)
 
 # BSD / Sun audio API (NetBSD and OpenBSD)
 OBJ_SND_BSD=$(OBJ_SND_COMMON) snd_bsd.o
-LIB_SND_BSD=
+LIB_SND_BSD=$(LIB_SND_MODPLUG)
 
 # DirectX and Win32 WAVE output (Win32)
 OBJ_SND_WIN=$(OBJ_SND_COMMON) snd_win.o
-LIB_SND_WIN=
+LIB_SND_WIN=$(LIB_SND_MODPLUG)
 
 
 # CD objects
@@ -178,7 +182,7 @@ LDFLAGS_UNIXSV_PRELOAD=-lz -lcurl
 LDFLAGS_UNIXSDL_PRELOAD=-lz -ljpeg -lpng -lvorbis -lvorbisfile -lcurl -lmodplug
 CFLAGS_UNIX_PRELOAD=-DPREFER_PRELOAD
 
-LDFLAGS_UNIXSDL=$(SDLCONFIG_LIBS)
+LDFLAGS_UNIXSDL=$(SDLCONFIG_LIBS) $(LIB_SND_MODPLUG)
 EXE_UNIXCL=darkplaces-glx
 EXE_UNIXSV=darkplaces-dedicated
 EXE_UNIXSDL=darkplaces-sdl
@@ -259,7 +263,7 @@ OBJ_WGL= builddate.c sys_win.o vid_wgl.o conproc.o $(OBJ_SND_WIN) $(OBJ_WINCD) $
 LDFLAGS_WINCOMMON=-lws2_32 -Wl,--large-address-aware
 LDFLAGS_WINCL=$(LDFLAGS_WINCOMMON) -mwindows -lwinmm -luser32 -lgdi32 -ldxguid -ldinput -lcomctl32
 LDFLAGS_WINSV=$(LDFLAGS_WINCOMMON) -mconsole -lwinmm
-LDFLAGS_WINSDL=$(LDFLAGS_WINCOMMON) $(SDLCONFIG_LIBS)
+LDFLAGS_WINSDL=$(LDFLAGS_WINCOMMON) $(SDLCONFIG_LIBS) $(LIB_SND_MODPLUG)
 EXE_WINCL=darkplaces.exe
 EXE_WINSV=darkplaces-dedicated.exe
 EXE_WINSDL=darkplaces-sdl.exe
@@ -397,7 +401,7 @@ bin-release :
 	$(STRIP) $(EXE)
 
 snd_modplug.o: snd_modplug.c
-	if [ -e /usr/lib64/libmodplug.a ] || [ -e /usr/lib/libmodplug.a ] ; then $(DO_CC) -DSND_MODPLUG_STATIC ; else $(DO_CC) ; fi
+	$(DO_CC) $(CFLAGS_SND_MODPLUG)
 
 vid_glx.o: vid_glx.c
 	$(DO_CC) -I/usr/X11R6/include
