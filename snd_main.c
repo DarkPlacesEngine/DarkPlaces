@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "snd_main.h"
 #include "snd_ogg.h"
+#include "snd_modplug.h"
 
 
 #define SND_MIN_SPEED 8000
