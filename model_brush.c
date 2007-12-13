@@ -4501,14 +4501,15 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 			}
 		}
 	}
-	if (endlightmap < 2)
-		loadmodel->brushq3.deluxemapping = false;
 
 	// q3map2 sometimes (or always?) makes a second blank lightmap for no
 	// reason when only one lightmap is used, which can throw off the
 	// deluxemapping detection method, so check 2-lightmap bsp's specifically
 	// to see if the second lightmap is blank, if so it is not deluxemapped.
-	if (endlightmap == 1 && count == 2)
+	//
+	// further research has shown q3map2 sometimes creates a deluxemap and two
+	// blank lightmaps, which must be handled properly as well
+	if (endlightmap == 1 && count > 1)
 	{
 		c = in[1].rgb;
 		for (i = 0;i < 128*128*3;i++)
