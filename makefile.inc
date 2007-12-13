@@ -396,6 +396,9 @@ bin-release :
 		LDFLAGS="$(LDFLAGS_RELEASE) $(LDFLAGS_COMMON)"
 	$(STRIP) $(EXE)
 
+snd_modplug.o: snd_modplug.c
+	if [ -e /usr/lib64/libmodplug.a ] || [ -e /usr/lib/libmodplug.a ] ; then $(DO_CC) -DSND_MODPLUG_STATIC ; else $(DO_CC) ; fi
+
 vid_glx.o: vid_glx.c
 	$(DO_CC) -I/usr/X11R6/include
 
