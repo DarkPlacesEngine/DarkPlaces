@@ -28,7 +28,7 @@
 
 #ifdef SND_MODPLUG_STATIC
 
-#include "libmodplug/modplug.h"
+#include <libmodplug/modplug.h>
 qboolean ModPlug_OpenLibrary (void)
 {
 	return true; // statically linked
