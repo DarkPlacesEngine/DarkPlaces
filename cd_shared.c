@@ -201,7 +201,7 @@ void CDAudio_Play (unsigned char track, qboolean looping)
 
 void CDAudio_Stop (void)
 {
-	if (!enabled || !cdPlaying)
+	if (!enabled)
 		return;
 
 	if (faketrack != -1)
