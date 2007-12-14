@@ -12,7 +12,7 @@
 #include "cl_gecko.h"
 #include "timing.h"
 
-#define DEFAULT_SIZE	  512
+#define DEFAULT_GECKO_SIZE	  512
 
 static rtexturepool_t *cl_geckotexturepool;
 static OSGK_Embedding *cl_geckoembedding;
@@ -22,8 +22,8 @@ struct clgecko_s {
 	char name[ MAX_QPATH + 32 ];
 
 	OSGK_Browser *browser;
-	int w, h;
-	int texW, texH;
+	int width, height;
+	int texWidth, texHeight;
 	
 	rtexture_t *texture;
 };
@@ -66,7 +66,7 @@ static void cl_gecko_updatecallback( rtexture_t *texture, clgecko_t *instance ) 
 	if( instance->browser ) {
 		// TODO: OSGK only supports BGRA right now
 		TIMING_TIMESTATEMENT(data = osgk_browser_lock_data( instance->browser, NULL ));
-		R_UpdateTexture( texture, data, 0, 0, instance->w, instance->h);
+		R_UpdateTexture( texture, data, 0, 0, instance->width, instance->height );
 		osgk_browser_unlock_data( instance->browser, data );
 	}
 }
@@ -74,7 +74,7 @@ static void cl_gecko_updatecallback( rtexture_t *texture, clgecko_t *instance ) 
 static void cl_gecko_linktexture( clgecko_t *instance ) {
 	// TODO: assert that instance->texture == NULL
 	instance->texture = R_LoadTexture2D( cl_geckotexturepool, instance->name, 
-		instance->texW, instance->texH, NULL, TEXTYPE_BGRA, TEXF_ALPHA | TEXF_PERSISTENT, NULL );
+		instance->texWidth, instance->texHeight, NULL, TEXTYPE_BGRA, TEXF_ALPHA | TEXF_PERSISTENT, NULL );
 	R_MakeTextureDynamic( instance->texture, cl_gecko_updatecallback, instance );
 	CL_LinkDynTexture( instance->name, instance->texture );
 }
@@ -86,6 +86,46 @@ static void cl_gecko_unlinktexture( clgecko_t *instance ) {
 		instance->texture = NULL;
 	}
 }
+
+void CL_Gecko_Resize( clgecko_t *instance, int width, int height ) {
+	int newWidth, newHeight;
+
+	// early out if bad parameters are passed (no resize to a texture size bigger than the original texture size)
+	if( !instance || !instance->browser) {
+		return;
+	}
+
+	newWidth = CeilPowerOf2( width );
+	newHeight = CeilPowerOf2( height );
+	if ((newWidth != instance->texWidth) || (newHeight != instance->texHeight))
+	{
+		cl_gecko_unlinktexture( instance );
+		instance->texWidth = newWidth;
+		instance->texHeight = newHeight;
+		cl_gecko_linktexture( instance );
+	}
+	else
+	{
+		/* The gecko area will only cover a part of the texture; to avoid
+		'old' pixels bleeding in at the border clear the texture. */
+		R_ClearTexture( instance->texture );
+	}
+
+	osgk_browser_resize( instance->browser, width, height);
+	instance->width = width;
+	instance->height = height;
+}
+
+void CL_Gecko_GetTextureExtent( clgecko_t *instance, float* pwidth, float* pheight )
+{
+	if( !instance || !instance->browser ) {
+		return;
+	}
+
+	*pwidth = (float)instance->width / instance->texWidth;
+	*pheight = (float)instance->height / instance->texHeight;
+}
+
 
 clgecko_t * CL_Gecko_CreateBrowser( const char *name ) {
 	// TODO: verify that we dont use a name twice
@@ -106,13 +146,11 @@ clgecko_t * CL_Gecko_CreateBrowser( const char *name ) {
 
 	instance->active = true;
 	strlcpy( instance->name, name, sizeof( instance->name ) );
-	instance->browser = osgk_browser_create( cl_geckoembedding, DEFAULT_SIZE, DEFAULT_SIZE );
+	instance->browser = osgk_browser_create( cl_geckoembedding, DEFAULT_GECKO_SIZE, DEFAULT_GECKO_SIZE );
 	// TODO: assert != NULL
 
-	instance->texW = DEFAULT_SIZE;
-	instance->texH = DEFAULT_SIZE;
-	instance->w = DEFAULT_SIZE;
-	instance->h = DEFAULT_SIZE;
+	instance->width = instance->texWidth = DEFAULT_GECKO_SIZE;
+	instance->height = instance->texHeight = DEFAULT_GECKO_SIZE;
 	cl_gecko_linktexture( instance );
 
 	return instance;
@@ -279,12 +317,31 @@ static void cl_gecko_injecttext_f( void ) {
 	}
 }
 
+static void gl_gecko_movecursor_f( void ) {
+	char name[MAX_QPATH];
+	float x, y;
+
+	if (Cmd_Argc() != 4)
+	{
+		Con_Print("usage: gecko_movecursor <name> <x> <y>\nmove the cursor to a certain position\n");
+		return;
+	}
+
+	// TODO: use snprintf instead
+	sprintf(name, CLGECKOPREFIX "%s", Cmd_Argv(1));
+	x = atof( Cmd_Argv( 2 ) );
+	y = atof( Cmd_Argv( 3 ) );
+
+	CL_Gecko_Event_CursorMove( CL_Gecko_FindBrowser( name ), x, y );
+}
+
 void CL_Gecko_Init( void )
 {
 	Cmd_AddCommand( "gecko_create", cl_gecko_create_f, "Create a gecko browser instance" );
 	Cmd_AddCommand( "gecko_destroy", cl_gecko_destroy_f, "Destroy a gecko browser instance" );
 	Cmd_AddCommand( "gecko_navigate", cl_gecko_navigate_f, "Navigate a gecko browser to a URI" );
 	Cmd_AddCommand( "gecko_injecttext", cl_gecko_injecttext_f, "Injects text into a browser" );
+	Cmd_AddCommand( "gecko_movecursor", gl_gecko_movecursor_f, "Move the cursor to a certain position" );
 
 	R_RegisterModule( "CL_Gecko", cl_gecko_start, cl_gecko_shutdown, cl_gecko_newmap );
 }
@@ -303,8 +360,8 @@ void CL_Gecko_Event_CursorMove( clgecko_t *instance, float x, float y ) {
 		return;
 	}
 
-	mappedx = x * instance->w;
-	mappedy = y * instance->h;
+	mappedx = x * instance->width;
+	mappedy = y * instance->height;
 	osgk_browser_event_mouse_move( instance->browser, mappedx, mappedy );
 }
 
@@ -420,44 +477,6 @@ qboolean CL_Gecko_Event_Key( clgecko_t *instance, int key, clgecko_buttoneventty
 	}
 	// TODO: error?
 	return false;
-}
-
-void CL_Gecko_Resize( clgecko_t *instance, int w, int h ) {
-	int newW, newH;
-
-	if( !instance || !instance->browser ) {
-		return;
-	}
-
-	newW = 1; while( newW < w ) newW *= 2;
-	newH = 1; while( newH < h ) newH *= 2;
-	if ((newW != instance->texW) || (newH != instance->texH))
-	{
-	  cl_gecko_unlinktexture( instance );
-	  instance->texW = newW;
-	  instance->texH = newH;
-	  cl_gecko_linktexture( instance );
-	}
-	else
-	{
-	  /* The gecko area will only cover a part of the texture; to avoid
-	     'old' pixels bleeding in at the border clear the texture. */
-	  R_ClearTexture( instance->texture );
-	}
-
-	osgk_browser_resize( instance->browser, w, h);
-	instance->w = w;
-	instance->h = h;
-}
-
-void CL_Gecko_GetTextureExtent( clgecko_t *instance, float* u, float* v )
-{
-	if( !instance || !instance->browser ) {
-		return;
-	}
-
-	*u = (float)instance->w / instance->texW;
-	*v = (float)instance->h / instance->texH;
 }
 
 #endif
