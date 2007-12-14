@@ -48,7 +48,8 @@ static qboolean wasPlaying = false;
 static qboolean initialized = false;
 static qboolean enabled = false;
 static float cdvolume;
-static unsigned char remap[MAXTRACKS];
+typedef char filename_t[MAX_QPATH];
+static filename_t remap[MAXTRACKS];
 static unsigned char maxTrack;
 static int faketrack = -1;
 
@@ -98,7 +99,7 @@ static int CDAudio_GetAudioDiskInfo (void)
 
 void CDAudio_Play_byName (const char *trackname, qboolean looping)
 {
-	unsigned char track;
+	unsigned int track;
 	sfx_t* sfx;
 
 	Host_StartVideo();
@@ -109,7 +110,14 @@ void CDAudio_Play_byName (const char *trackname, qboolean looping)
 	if(strspn(trackname, "0123456789") == strlen(trackname))
 	{
 		track = (unsigned char) atoi(trackname);
-		track = remap[track];
+		if(track > 0 && track < MAXTRACKS)
+				if(*remap[track])
+					trackname = remap[track];
+	}
+
+	if(strspn(trackname, "0123456789") == strlen(trackname))
+	{
+		track = (unsigned char) atoi(trackname);
 		if (track < 1)
 		{
 			Con_Printf("CDAudio: Bad track number %u.\n", track);
@@ -276,7 +284,7 @@ static void CD_f (void)
 		if (cdPlaying)
 			CDAudio_Stop();
 		for (n = 0; n < MAXTRACKS; n++)
-			remap[n] = n;
+			*remap[n] = 0; // empty string, that is, unremapped
 		CDAudio_GetAudioDiskInfo();
 		return;
 	}
@@ -287,12 +295,12 @@ static void CD_f (void)
 		if (ret <= 0)
 		{
 			for (n = 1; n < MAXTRACKS; n++)
-				if (remap[n] != n)
-					Con_Printf("  %u -> %u\n", n, remap[n]);
+				if (*remap[n])
+					Con_Printf("  %u -> %s\n", n, remap[n]);
 			return;
 		}
 		for (n = 1; n <= ret; n++)
-			remap[n] = atoi(Cmd_Argv (n+1));
+			strlcpy(remap[n], Cmd_Argv (n+1), sizeof(*remap));
 		return;
 	}
 
@@ -419,7 +427,7 @@ int CDAudio_Init (void)
 	CDAudio_SysInit();
 
 	for (i = 0; i < MAXTRACKS; i++)
-		remap[i] = i;
+		*remap[i] = 0;
 
 	Cvar_RegisterVariable(&cdaudioinitialized);
 	Cvar_SetValueQuick(&cdaudioinitialized, true);
