@@ -31,8 +31,8 @@ STRIP?=strip
 OBJ_SND_COMMON=snd_main.o snd_mem.o snd_mix.o snd_ogg.o snd_wav.o snd_modplug.o
 
 # Additional stuff for libmodplug
-LIB_SND_MODPLUG=`if [ -n "$(DP_MODPLUG_STATIC_PREFIX)" ]; then echo " $(DP_MODPLUG_STATIC_PREFIX)/lib/libmodplug.a -lstdc++"; fi`
-CFLAGS_SND_MODPLUG=`if [ -n "$(DP_MODPLUG_STATIC_PREFIX)" ]; then echo " -I$(DP_MODPLUG_STATIC_PREFIX)/include -DSND_MODPLUG_STATIC"; fi`
+LIB_SND_MODPLUG=`if [ -n "$(DP_MODPLUG_STATIC_LIBDIR)" ]; then echo " $(DP_MODPLUG_STATIC_LIBDIR)/libmodplug.a -lstdc++"; fi`
+CFLAGS_SND_MODPLUG=`if [ -n "$(DP_MODPLUG_STATIC_LIBDIR)" ]; then echo " -I$(DP_MODPLUG_STATIC_LIBDIR)/../include -DSND_MODPLUG_STATIC"; fi`
 
 # No sound
 OBJ_SND_NULL=snd_null.o
