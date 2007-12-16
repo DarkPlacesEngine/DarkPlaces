@@ -1766,7 +1766,81 @@ static void VM_CL_getsurfacepoint(void)
 	// FIXME: implement rotation/scaling
 	VectorAdd(&(model->surfmesh.data_vertex3f + 3 * surface->num_firstvertex)[pointnum * 3], ed->fields.client->origin, PRVM_G_VECTOR(OFS_RETURN));
 }
+//PF_getsurfacepointattribute,     // #486 vector(entity e, float s, float n, float a) getsurfacepointattribute = #486;
+// float SPA_POSITION = 0;
+// float SPA_S_AXIS = 1;
+// float SPA_R_AXIS = 2;
+// float SPA_T_AXIS = 3; // same as SPA_NORMAL
+// float SPA_TEXCOORDS0 = 4;
+// float SPA_LIGHTMAP0_TEXCOORDS = 5;
+// float SPA_LIGHTMAP0_COLOR = 6;
+// TODO: add some wrapper code and merge VM_CL/SV_getsurface* [12/16/2007 Black]
+static void VM_CL_getsurfacepointattribute(void)
+{
+	prvm_edict_t *ed;
+	model_t *model;
+	msurface_t *surface;
+	int pointnum;
+	int attributetype;
 
+	VM_SAFEPARMCOUNT(3, VM_CL_getsurfacenumpoints);
+	VectorClear(PRVM_G_VECTOR(OFS_RETURN));
+	ed = PRVM_G_EDICT(OFS_PARM0);
+	if (!(model = CL_GetModelFromEdict(ed)) || !(surface = cl_getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
+		return;
+	// note: this (incorrectly) assumes it is a simple polygon
+	pointnum = (int)PRVM_G_FLOAT(OFS_PARM2);
+	if (pointnum < 0 || pointnum >= surface->num_vertices)
+		return;
+
+	// FIXME: implement rotation/scaling
+	attributetype = (int) PRVM_G_FLOAT(OFS_PARM3);
+
+	switch( attributetype ) {
+		// float SPA_POSITION = 0;
+		case 0:
+			VectorAdd(&(model->surfmesh.data_vertex3f + 3 * surface->num_firstvertex)[pointnum * 3], ed->fields.server->origin, PRVM_G_VECTOR(OFS_RETURN));
+			break;
+		// float SPA_S_AXIS = 1;
+		case 1:
+			VectorCopy(&(model->surfmesh.data_svector3f + 3 * surface->num_firstvertex)[pointnum * 3], PRVM_G_VECTOR(OFS_RETURN));
+			break;
+		// float SPA_R_AXIS = 2;
+		case 2:
+			VectorCopy(&(model->surfmesh.data_tvector3f + 3 * surface->num_firstvertex)[pointnum * 3], PRVM_G_VECTOR(OFS_RETURN));
+			break;
+		// float SPA_T_AXIS = 3; // same as SPA_NORMAL
+		case 3:
+			VectorCopy(&(model->surfmesh.data_normal3f + 3 * surface->num_firstvertex)[pointnum * 3], PRVM_G_VECTOR(OFS_RETURN));
+			break;
+		// float SPA_TEXCOORDS0 = 4;
+		case 4: {
+			float *ret = PRVM_G_VECTOR(OFS_RETURN);
+			float *texcoord = &(model->surfmesh.data_texcoordtexture2f + 2 * surface->num_firstvertex)[pointnum * 2];
+			ret[0] = texcoord[0];
+			ret[1] = texcoord[1];
+			ret[2] = 0.0f;
+			break;
+		}
+		// float SPA_LIGHTMAP0_TEXCOORDS = 5;
+		case 5: {
+			float *ret = PRVM_G_VECTOR(OFS_RETURN);
+			float *texcoord = &(model->surfmesh.data_texcoordlightmap2f + 2 * surface->num_firstvertex)[pointnum * 2];
+			ret[0] = texcoord[0];
+			ret[1] = texcoord[1];
+			ret[2] = 0.0f;
+			break;
+		}
+		// float SPA_LIGHTMAP0_COLOR = 6;
+		case 6:
+			// ignore alpha for now..
+			VectorCopy( &(model->surfmesh.data_normal3f + 4 * surface->num_firstvertex)[pointnum * 4], PRVM_G_VECTOR(OFS_RETURN));
+			break;
+		default:
+			VectorSet( PRVM_G_VECTOR(OFS_RETURN), 0.0f, 0.0f, 0.0f );
+			break;
+	}
+}
 // #436 vector(entity e, float s) getsurfacenormal
 static void VM_CL_getsurfacenormal(void)
 {
@@ -3238,7 +3312,7 @@ VM_cvar_defstring,				// #482 string(string s) cvar_defstring (DP_QC_CVAR_DEFSTR
 VM_CL_pointsound,				// #483 void(vector origin, string sample, float volume, float attenuation) (DP_SV_POINTSOUND)
 VM_strreplace,					// #484 string(string search, string replace, string subject) strreplace (DP_QC_STRREPLACE)
 VM_strireplace,					// #485 string(string search, string replace, string subject) strireplace (DP_QC_STRREPLACE)
-NULL,							// #486
+VM_CL_getsurfacepointattribute,// #486 vector(entity e, float s, float n, float a) getsurfacepointattribute = #486;
 #ifdef SUPPORT_GECKO
 VM_gecko_create,					// #487
 VM_gecko_destroy,					// #488
