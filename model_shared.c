@@ -44,6 +44,7 @@ typedef struct q3shader_data_s
 {
   memexpandablearray_t hash_entries;
   q3shader_hash_entry_t hash[Q3SHADER_HASH_SIZE];
+  memexpandablearray_t char_ptrs;
 } q3shader_data_t;
 static q3shader_data_t* q3shader_data;
 
@@ -1126,6 +1127,8 @@ static void Q3Shaders_Clear()
 		sizeof (q3shader_data_t));
 	Mem_ExpandableArray_NewArray (&q3shader_data->hash_entries, 
 		q3shaders_mem, sizeof (q3shader_hash_entry_t), 256);
+	Mem_ExpandableArray_NewArray (&q3shader_data->char_ptrs,
+		q3shaders_mem, sizeof (char**), 256);
 }
 
 static void Q3Shader_AddToHash (q3shaderinfo_t* shader)
@@ -1306,7 +1309,9 @@ void Mod_LoadQ3Shaders(void)
 								layer->clampmap = true;
 							layer->numframes = 1;
 							layer->framerate = 1;
-							strlcpy(layer->texturename[0], parameter[1], sizeof(layer->texturename));
+							layer->texturename = (char**)Mem_ExpandableArray_AllocRecord (
+								&q3shader_data->char_ptrs);
+							layer->texturename[0] = Mem_strdup (q3shaders_mem, parameter[1]);
 							if (!strcasecmp(parameter[1], "$lightmap"))
 								shader.lighting = true;
 						}
@@ -1315,8 +1320,9 @@ void Mod_LoadQ3Shaders(void)
 							int i;
 							layer->numframes = min(numparameters - 2, TEXTURE_MAXFRAMES);
 							layer->framerate = atof(parameter[1]);
+							layer->texturename = Mem_Alloc (q3shaders_mem, sizeof (char*) * layer->numframes);
 							for (i = 0;i < layer->numframes;i++)
-								strlcpy(layer->texturename[i], parameter[i + 2], sizeof(layer->texturename));
+								layer->texturename[i] = Mem_strdup (q3shaders_mem, parameter[i + 2]);
 						}
 						else if (numparameters >= 2 && !strcasecmp(parameter[0], "rgbgen"))
 						{
@@ -1629,7 +1635,8 @@ void Mod_LoadQ3Shaders(void)
 					shader.primarylayer = 1;
 				}
 				// now see if the lightmap came first, and if so choose the second texture instead
-				if (!strcasecmp(shader.layers[shader.primarylayer].texturename[0], "$lightmap"))
+				if ((shader.layers[shader.primarylayer].texturename != NULL)
+				  && !strcasecmp(shader.layers[shader.primarylayer].texturename[0], "$lightmap"))
 				{
 					shader.backgroundlayer = -1;
 					shader.primarylayer = 1;
