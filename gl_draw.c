@@ -726,7 +726,7 @@ void GL_Draw_Init (void)
 	strlcpy(FONT_CENTERPRINT->title, "centerprint", sizeof(FONT_CENTERPRINT->title));
 	strlcpy(FONT_INFOBAR->title, "infobar", sizeof(FONT_INFOBAR->title));
 	strlcpy(FONT_MENU->title, "menu", sizeof(FONT_MENU->title));
-	for(i = 0, j = 0; i < MAX_FONTS; ++i)
+	for(i = 0, j = 0; i < MAX_USERFONTS; ++i)
 		if(!FONT_USER[i].title[0])
 			dpsnprintf(FONT_USER[i].title, sizeof(FONT_USER[i].title), "user%d", j++);
 }
