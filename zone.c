@@ -558,6 +558,15 @@ void MemStats_f(void)
 }
 
 
+char* Mem_strdup (mempool_t *pool, const char* s)
+{
+	char* p;
+	if (s == NULL) return NULL;
+	p = (char*)Mem_Alloc (pool, strlen (s) + 1);
+	strcpy (p, s);
+	return p;
+}
+
 /*
 ========================
 Memory_Init

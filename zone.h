@@ -135,14 +135,7 @@ void _Mem_CheckSentinelsGlobal(const char *filename, int fileline);
 // if pool is NULL this searches ALL pools for the allocation
 qboolean Mem_IsAllocated(mempool_t *pool, void *data);
 
-static char* Mem_strdup (mempool_t *pool, const char* s)
-{
-	char* p;
-	if (s == NULL) return NULL;
-	p = (char*)Mem_Alloc (pool, strlen (s) + 1);
-	strcpy (p, s);
-	return p;
-}
+char* Mem_strdup (mempool_t *pool, const char* s);
 
 typedef struct memexpandablearray_array_s
 {
