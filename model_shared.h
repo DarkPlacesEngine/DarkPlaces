@@ -341,7 +341,7 @@ typedef struct q3shaderinfo_layer_s
 	int clampmap;
 	float framerate;
 	int numframes;
-	char texturename[TEXTURE_MAXFRAMES][Q3PATHLENGTH];
+	char** texturename;
 	int blendfunc[2];
 	q3shaderinfo_layer_rgbgen_t rgbgen;
 	q3shaderinfo_layer_alphagen_t alphagen;
