@@ -1080,7 +1080,7 @@ void Sbar_ShowFPS(void)
 		fps_y = vid_conheight.integer - fps_height;
 		if (fpsstring[0])
 		{
-			fps_x = vid_conwidth.integer - DrawQ_TextWidth_Font(fpsstring, 0, fps_scalex, fps_scaley, true, FONT_INFOBAR);
+			fps_x = vid_conwidth.integer - DrawQ_TextWidth_Font(fpsstring, 0, true, FONT_INFOBAR) * fps_scalex;
 			DrawQ_Fill(fps_x, fps_y, vid_conwidth.integer - fps_x, fps_scaley, 0, 0, 0, 0.5, 0);
 			if (red)
 				DrawQ_String_Font(fps_x, fps_y, fpsstring, 0, fps_scalex, fps_scaley, 1, 0, 0, 1, 0, NULL, true, FONT_INFOBAR);
@@ -1090,14 +1090,14 @@ void Sbar_ShowFPS(void)
 		}
 		if (timestring[0])
 		{
-			fps_x = vid_conwidth.integer - DrawQ_TextWidth_Font(timestring, 0, fps_scalex, fps_scaley, true, FONT_INFOBAR);
+			fps_x = vid_conwidth.integer - DrawQ_TextWidth_Font(timestring, 0, true, FONT_INFOBAR) * fps_scalex;
 			DrawQ_Fill(fps_x, fps_y, vid_conwidth.integer - fps_x, fps_scaley, 0, 0, 0, 0.5, 0);
 			DrawQ_String_Font(fps_x, fps_y, timestring, 0, fps_scalex, fps_scaley, 1, 1, 1, 1, 0, NULL, true, FONT_INFOBAR);
 			fps_y += fps_scaley;
 		}
 		if (datestring[0])
 		{
-			fps_x = vid_conwidth.integer - DrawQ_TextWidth_Font(datestring, 0, fps_scalex, fps_scaley, true, FONT_INFOBAR);
+			fps_x = vid_conwidth.integer - DrawQ_TextWidth_Font(datestring, 0, true, FONT_INFOBAR) * fps_scalex;
 			DrawQ_Fill(fps_x, fps_y, vid_conwidth.integer - fps_x, fps_scaley, 0, 0, 0, 0.5, 0);
 			DrawQ_String_Font(fps_x, fps_y, datestring, 0, fps_scalex, fps_scaley, 1, 1, 1, 1, 0, NULL, true, FONT_INFOBAR);
 			fps_y += fps_scaley;

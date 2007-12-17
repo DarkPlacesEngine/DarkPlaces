@@ -1145,7 +1145,7 @@ void Con_DrawInput (void)
 
 //	text[key_linepos + 1] = 0;
 
-	x = vid_conwidth.value * 0.95 - DrawQ_TextWidth_Font(text, key_linepos, con_textsize.value, con_textsize.value, false, FONT_CONSOLE);
+	x = vid_conwidth.value * 0.95 - DrawQ_TextWidth_Font(text, key_linepos, false, FONT_CONSOLE) * con_textsize.value;
 	if(x >= 0)
 		x = 0;
 
@@ -1180,7 +1180,7 @@ float Con_WordWidthFunc(void *passthrough, const char *w, size_t *length, float 
 		ti->colorindex = -1;
 		return ti->fontsize * ti->font->width_of[0];
 	}
-	return DrawQ_TextWidth_Font_UntilWidth(w, length, ti->fontsize, ti->fontsize, false, ti->font, maxWidth);
+	return DrawQ_TextWidth_Font_UntilWidth(w, length, false, ti->font, maxWidth) * ti->fontsize;
 }
 
 int Con_CountLineFunc(void *passthrough, const char *line, size_t length, float width, qboolean isContinuation)
@@ -1375,7 +1375,7 @@ void Con_DrawNotify (void)
 
 		// FIXME word wrap
 		inputsize = (numChatlines ? con_chatsize : con_notifysize).value;
-		x = vid_conwidth.value - DrawQ_TextWidth_Font(temptext, 0, inputsize, inputsize, false, FONT_CHAT);
+		x = vid_conwidth.value - DrawQ_TextWidth_Font(temptext, 0, false, FONT_CHAT) * inputsize;
 		if(x > 0)
 			x = 0;
 		DrawQ_String_Font(x, v, temptext, 0, inputsize, inputsize, 1.0, 1.0, 1.0, 1.0, 0, &colorindex, false, FONT_CHAT);
@@ -1501,7 +1501,7 @@ void Con_DrawConsole (int lines)
 
 // draw the background
 	DrawQ_Pic(0, lines - vid_conheight.integer, scr_conbrightness.value >= 0.01f ? Draw_CachePic("gfx/conback", true) : NULL, vid_conwidth.integer, vid_conheight.integer, scr_conbrightness.value, scr_conbrightness.value, scr_conbrightness.value, cls.signon == SIGNONS ? scr_conalpha.value : 1.0, 0); // always full alpha when not in game
-	DrawQ_String_Font(vid_conwidth.integer - DrawQ_TextWidth_Font(engineversion, 0, con_textsize.value, con_textsize.value, false, FONT_CONSOLE), lines - con_textsize.value, engineversion, 0, con_textsize.value, con_textsize.value, 1, 0, 0, 1, 0, NULL, true, FONT_CONSOLE);
+	DrawQ_String_Font(vid_conwidth.integer - DrawQ_TextWidth_Font(engineversion, 0, false, FONT_CONSOLE) * con_textsize.value, lines - con_textsize.value, engineversion, 0, con_textsize.value, con_textsize.value, 1, 0, 0, 1, 0, NULL, true, FONT_CONSOLE);
 
 // draw the text
 	if(con_lines_count > 0)

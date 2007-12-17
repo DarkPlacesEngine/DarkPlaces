@@ -882,7 +882,57 @@ static void DrawQ_GetTextColor(float color[4], int colorindex, float r, float g,
 	}
 }
 
-static float DrawQ_String_Font_UntilX(float startx, float starty, const char *text, size_t *maxlen, float w, float h, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxx)
+float DrawQ_TextWidth_Font_UntilWidth_TrackColors(const char *text, size_t *maxlen, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxwidth)
+{
+	int num, colorindex = STRING_COLOR_DEFAULT;
+	size_t i;
+	float x = 0;
+
+	if (*maxlen < 1)
+		*maxlen = 1<<30;
+
+	if (!outcolor || *outcolor == -1)
+		colorindex = STRING_COLOR_DEFAULT;
+	else
+		colorindex = *outcolor;
+
+	for (i = 0;i < *maxlen && text[i];i++)
+	{
+		if (text[i] == ' ')
+		{
+			if(x + fnt->width_of[' '] > maxwidth)
+				break; // oops, can't draw this
+			x += fnt->width_of[' '];
+			continue;
+		}
+		if (text[i] == STRING_COLOR_TAG && !ignorecolorcodes && i + 1 < *maxlen)
+		{
+			if (text[i+1] == STRING_COLOR_TAG)
+			{
+				i++;
+			}
+			else if (text[i+1] >= '0' && text[i+1] <= '9')
+			{
+				colorindex = text[i+1] - '0';
+				i++;
+				continue;
+			}
+		}
+		num = (unsigned char) text[i];
+		if(x + fnt->width_of[num] > maxwidth)
+			break; // oops, can't draw this
+		x += fnt->width_of[num];
+	}
+
+	*maxlen = i;
+
+	if (outcolor)
+		*outcolor = colorindex;
+
+	return x;
+}
+
+float DrawQ_String_Font(float startx, float starty, const char *text, size_t maxlen, float w, float h, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt)
 {
 	int num, shadow, colorindex = STRING_COLOR_DEFAULT;
 	size_t i;
@@ -893,10 +943,9 @@ static float DrawQ_String_Font_UntilX(float startx, float starty, const char *te
 	float vertex3f[QUADELEMENTS_MAXQUADS*4*3];
 	float texcoord2f[QUADELEMENTS_MAXQUADS*4*2];
 	float color4f[QUADELEMENTS_MAXQUADS*4*4];
-	qboolean checkwidth;
 
-	if (*maxlen < 1)
-		*maxlen = 1<<30;
+	if (maxlen < 1)
+		maxlen = 1<<30;
 
 	// when basealpha == 0, skip as much as possible (just return width)
 	if(basealpha > 0)
@@ -914,7 +963,6 @@ static float DrawQ_String_Font_UntilX(float startx, float starty, const char *te
 	at = texcoord2f;
 	av = vertex3f;
 	batchcount = 0;
-	checkwidth = (maxx >= startx);
 
 	for (shadow = r_textshadow.value != 0 && basealpha > 0;shadow >= 0;shadow--)
 	{
@@ -932,17 +980,14 @@ static float DrawQ_String_Font_UntilX(float startx, float starty, const char *te
 			x += r_textshadow.value;
 			y += r_textshadow.value;
 		}
-		for (i = 0;i < *maxlen && text[i];i++)
+		for (i = 0;i < maxlen && text[i];i++)
 		{
 			if (text[i] == ' ')
 			{
-				if(checkwidth)
-					if(x + fnt->width_of[' '] * w > maxx)
-						break; // oops, can't draw this
 				x += fnt->width_of[' '] * w;
 				continue;
 			}
-			if (text[i] == STRING_COLOR_TAG && !ignorecolorcodes && i + 1 < *maxlen)
+			if (text[i] == STRING_COLOR_TAG && !ignorecolorcodes && i + 1 < maxlen)
 			{
 				if (text[i+1] == STRING_COLOR_TAG)
 				{
@@ -957,9 +1002,6 @@ static float DrawQ_String_Font_UntilX(float startx, float starty, const char *te
 				}
 			}
 			num = (unsigned char) text[i];
-			if(checkwidth)
-				if(x + fnt->width_of[num] * w > maxx)
-					break; // oops, can't draw this
 			if(basealpha > 0)
 			{
 				// FIXME make these smaller to just include the occupied part of the character for slightly faster rendering
@@ -999,9 +1041,6 @@ static float DrawQ_String_Font_UntilX(float startx, float starty, const char *te
 			}
 			x += fnt->width_of[num] * w;
 		}
-		if(checkwidth)
-			*maxlen = i;
-		checkwidth = 0; // we've done all we had to
 	}
 	if (basealpha > 0)
 	{
@@ -1020,24 +1059,19 @@ static float DrawQ_String_Font_UntilX(float startx, float starty, const char *te
 	return x;
 }
 
-float DrawQ_String_Font(float startx, float starty, const char *text, size_t maxlen, float w, float h, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt)
-{
-	return DrawQ_String_Font_UntilX(startx, starty, text, &maxlen, w, h, basered, basegreen, baseblue, basealpha, flags, outcolor, ignorecolorcodes, fnt, startx-1);
-}
-
 float DrawQ_String(float startx, float starty, const char *text, size_t maxlen, float w, float h, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor, qboolean ignorecolorcodes)
 {
 	return DrawQ_String_Font(startx, starty, text, maxlen, w, h, basered, basegreen, baseblue, basealpha, flags, outcolor, ignorecolorcodes, &dp_fonts[0]);
 }
 
-float DrawQ_TextWidth_Font_UntilWidth(const char *text, size_t *maxlen, float scalex, float scaley, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxWidth)
+float DrawQ_TextWidth_Font_UntilWidth(const char *text, size_t *maxlen, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxWidth)
 {
-	return DrawQ_String_Font_UntilX(0, 0, text, maxlen, scalex, scaley, 1, 1, 1, 0, 0, NULL, ignorecolorcodes, fnt, maxWidth);
+	return DrawQ_TextWidth_Font_UntilWidth_TrackColors(text, maxlen, NULL, ignorecolorcodes, fnt, maxWidth);
 }
 
-float DrawQ_TextWidth_Font(const char *text, size_t maxlen, float scalex, float scaley, qboolean ignorecolorcodes, const dp_font_t *fnt)
+float DrawQ_TextWidth_Font(const char *text, size_t maxlen, qboolean ignorecolorcodes, const dp_font_t *fnt)
 {
-	return DrawQ_TextWidth_Font_UntilWidth(text, &maxlen, scalex, scaley, ignorecolorcodes, fnt, -1);
+	return DrawQ_TextWidth_Font_UntilWidth(text, &maxlen, ignorecolorcodes, fnt, 1000000000);
 }
 
 #if 0

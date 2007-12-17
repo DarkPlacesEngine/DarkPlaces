@@ -141,7 +141,7 @@ void SCR_DrawCenterString (void)
 		// scan the number of characters on the line, not counting color codes
 		char *newline = strchr(start, '\n');
 		int l = newline ? (newline - start) : (int)strlen(start);
-		float width = DrawQ_TextWidth_Font(start, l, 8, 8, false, FONT_CENTERPRINT);
+		float width = DrawQ_TextWidth_Font(start, l, false, FONT_CENTERPRINT) * 8;
 
 		x = (vid_conwidth.integer - width)/2;
 		if (l > 0)
@@ -463,7 +463,7 @@ static int SCR_DrawQWDownload(int offset)
 	else
 		dpsnprintf(temp, sizeof(temp), "Downloading %s %3i%% (%i/%i) at %i bytes/s\n", cls.qw_downloadname, cls.qw_downloadpercent, cls.qw_downloadmemorycursize, cls.qw_downloadmemorymaxsize, cls.qw_downloadspeedrate);
 	len = (int)strlen(temp);
-	x = (vid_conwidth.integer - DrawQ_TextWidth_Font(temp, len, size, size, 0, FONT_INFOBAR)) / 2;
+	x = (vid_conwidth.integer - DrawQ_TextWidth_Font(temp, len, 0, FONT_INFOBAR) * size) / 2;
 	y = vid_conheight.integer - size - offset;
 	DrawQ_Fill(0, y, vid_conwidth.integer, size, 0, 0, 0, cls.signon == SIGNONS ? 0.5 : 1, 0);
 	DrawQ_String_Font(x, y, temp, len, size, size, 1, 1, 1, 1, 0, NULL, true, FONT_INFOBAR);
@@ -496,7 +496,7 @@ static int SCR_DrawCurlDownload(int offset)
 	if(addinfo)
 	{
 		len = (int)strlen(addinfo);
-		x = (vid_conwidth.integer - DrawQ_TextWidth_Font(addinfo, len, size, size, false, FONT_INFOBAR)) / 2;
+		x = (vid_conwidth.integer - DrawQ_TextWidth_Font(addinfo, len, false, FONT_INFOBAR) * size) / 2;
 		DrawQ_Fill(0, y - size, vid_conwidth.integer, size, 1, 1, 1, cls.signon == SIGNONS ? 0.8 : 1, 0);
 		DrawQ_String_Font(x, y - size, addinfo, len, size, size, 0, 0, 0, 1, 0, NULL, true, FONT_INFOBAR);
 	}
@@ -510,7 +510,7 @@ static int SCR_DrawCurlDownload(int offset)
 		else
 			dpsnprintf(temp, sizeof(temp), "Downloading %s ...  %5.1f%% @ %.1f KiB/s\n", downinfo[i].filename, 100.0 * downinfo[i].progress, downinfo[i].speed / 1024.0);
 		len = (int)strlen(temp);
-		x = (vid_conwidth.integer - DrawQ_TextWidth_Font(temp, len, size, size, false, FONT_INFOBAR)) / 2;
+		x = (vid_conwidth.integer - DrawQ_TextWidth_Font(temp, len, false, FONT_INFOBAR) * size) / 2;
 		DrawQ_Fill(0, y + i * size, vid_conwidth.integer, size, 0, 0, 0, cls.signon == SIGNONS ? 0.5 : 1, 0);
 		DrawQ_String_Font(x, y + i * size, temp, len, size, size, 1, 1, 1, 1, 0, NULL, true, FONT_INFOBAR);
 	}
