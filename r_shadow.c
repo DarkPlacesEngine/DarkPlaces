@@ -1193,14 +1193,41 @@ void R_Shadow_RenderMode_End(void)
 	r_shadow_rendermode = R_SHADOW_RENDERMODE_NONE;
 }
 
+int bboxedges[12][2] =
+{
+	// top
+	{0, 1}, // +X
+	{0, 2}, // +Y
+	{1, 3}, // Y, +X
+	{2, 3}, // X, +Y
+	// bottom
+	{4, 5}, // +X
+	{4, 6}, // +Y
+	{5, 7}, // Y, +X
+	{6, 7}, // X, +Y
+	// verticals
+	{0, 4}, // +Z
+	{1, 5}, // X, +Z
+	{2, 6}, // Y, +Z
+	{3, 7}, // XY, +Z
+};
+
 qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 {
 	int i, ix1, iy1, ix2, iy2;
 	float x1, y1, x2, y2;
 	vec4_t v, v2;
-	rmesh_t mesh;
-	mplane_t planes[11];
-	float vertex3f[256*3];
+	float vertex[20][3];
+	int j, k;
+	vec4_t plane4f;
+	int numvertices;
+	float corner[8][4];
+	float dist[8];
+	int sign[8];
+	float f;
+
+	if (!r_shadow_scissor.integer)
+		return false;
 
 	// if view is inside the light box, just say yes it's visible
 	if (BoxesOverlap(r_view.origin, r_view.origin, mins, maxs))
@@ -1209,40 +1236,52 @@ qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 		return false;
 	}
 
-	// create a temporary brush describing the area the light can affect in worldspace
-	VectorNegate(r_view.frustum[0].normal, planes[ 0].normal);planes[ 0].dist = -r_view.frustum[0].dist;
-	VectorNegate(r_view.frustum[1].normal, planes[ 1].normal);planes[ 1].dist = -r_view.frustum[1].dist;
-	VectorNegate(r_view.frustum[2].normal, planes[ 2].normal);planes[ 2].dist = -r_view.frustum[2].dist;
-	VectorNegate(r_view.frustum[3].normal, planes[ 3].normal);planes[ 3].dist = -r_view.frustum[3].dist;
-	VectorNegate(r_view.frustum[4].normal, planes[ 4].normal);planes[ 4].dist = -r_view.frustum[4].dist;
-	VectorSet   (planes[ 5].normal,  1, 0, 0);         planes[ 5].dist =  maxs[0];
-	VectorSet   (planes[ 6].normal, -1, 0, 0);         planes[ 6].dist = -mins[0];
-	VectorSet   (planes[ 7].normal, 0,  1, 0);         planes[ 7].dist =  maxs[1];
-	VectorSet   (planes[ 8].normal, 0, -1, 0);         planes[ 8].dist = -mins[1];
-	VectorSet   (planes[ 9].normal, 0, 0,  1);         planes[ 9].dist =  maxs[2];
-	VectorSet   (planes[10].normal, 0, 0, -1);         planes[10].dist = -mins[2];
+	x1 = y1 = x2 = y2 = 0;
 
-	// turn the brush into a mesh
-	memset(&mesh, 0, sizeof(rmesh_t));
-	mesh.maxvertices = 256;
-	mesh.vertex3f = vertex3f;
-	mesh.epsilon2 = (1.0f / (32.0f * 32.0f));
-	R_Mesh_AddBrushMeshFromPlanes(&mesh, 11, planes);
+	// transform all corners that are infront of the nearclip plane
+	VectorNegate(r_view.frustum[4].normal, plane4f);
+	plane4f[3] = r_view.frustum[4].dist;
+	numvertices = 0;
+	for (i = 0;i < 8;i++)
+	{
+		Vector4Set(corner[i], (i & 1) ? maxs[0] : mins[0], (i & 2) ? maxs[1] : mins[1], (i & 4) ? maxs[2] : mins[2], 1);
+		dist[i] = DotProduct4(corner[i], plane4f);
+		sign[i] = dist[i] > 0;
+		if (!sign[i])
+		{
+			VectorCopy(corner[i], vertex[numvertices]);
+			numvertices++;
+		}
+	}
+	// if some points are behind the nearclip, add clipped edge points to make
+	// sure that the scissor boundary is complete
+	if (numvertices > 0 && numvertices < 8)
+	{
+		// add clipped edge points
+		for (i = 0;i < 12;i++)
+		{
+			j = bboxedges[i][0];
+			k = bboxedges[i][1];
+			if (sign[j] != sign[k])
+			{
+				f = dist[j] / (dist[j] - dist[k]);
+				VectorLerp(corner[j], f, corner[k], vertex[numvertices]);
+				numvertices++;
+			}
+		}
+	}
 
-	// if that mesh is empty, the light is not visible at all
-	if (!mesh.numvertices)
+	// if we have no points to check, the light is behind the view plane
+	if (!numvertices)
 		return true;
 
-	if (!r_shadow_scissor.integer)
-		return false;
-
-	// if that mesh is not empty, check what area of the screen it covers
+	// if we have some points to transform, check what screen area is covered
 	x1 = y1 = x2 = y2 = 0;
 	v[3] = 1.0f;
-	//Con_Printf("%i vertices to transform...\n", mesh.numvertices);
-	for (i = 0;i < mesh.numvertices;i++)
+	//Con_Printf("%i vertices to transform...\n", numvertices);
+	for (i = 0;i < numvertices;i++)
 	{
-		VectorCopy(mesh.vertex3f + i * 3, v);
+		VectorCopy(vertex[i], v);
 		GL_TransformToScreen(v, v2);
 		//Con_Printf("%.3f %.3f %.3f %.3f transformed to %.3f %.3f %.3f %.3f\n", v[0], v[1], v[2], v[3], v2[0], v2[1], v2[2], v2[3]);
 		if (i)
