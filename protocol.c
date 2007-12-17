@@ -300,10 +300,10 @@ void EntityFrameCSQC_WriteState (sizebuf_t *msg, int number, qboolean doupdate, 
 			if(!*sectionstarted)
 				MSG_WriteByte(msg, svc_csqcentities);
 			MSG_WriteShort(msg, number);
-			((int *)prog->globals.generic)[OFS_PARM0] = sv.writeentitiestoclient_cliententitynumber;
+			PRVM_G_INT(OFS_PARM0) = sv.writeentitiestoclient_cliententitynumber;
 			prog->globals.server->self = number;
 			PRVM_ExecuteProgram(val->function, "Null SendEntity\n");
-			if(prog->globals.generic[OFS_RETURN])
+			if(PRVM_G_FLOAT(OFS_RETURN))
 			{
 				if (msg->cursize + 2 > msg->maxsize)
 				{

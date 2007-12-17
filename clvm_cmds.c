@@ -200,6 +200,7 @@ static void VM_CL_spawn (void)
 {
 	prvm_edict_t *ed;
 	ed = PRVM_ED_Alloc();
+	// FIXME: WTF.. this should be removed imo.. entnum points to the server.. [12/17/2007 Black]
 	ed->fields.client->entnum = PRVM_NUM_FOR_EDICT(ed);	//[515]: not needed any more ?
 	VM_RETURN_EDICT(ed);
 }
@@ -212,7 +213,7 @@ static void VM_CL_traceline (void)
 	int		move;
 	prvm_edict_t	*ent;
 
-	VM_SAFEPARMCOUNTRANGE(4, 8, VM_CL_traceline); // allow more parameters for future expansion
+	VM_SAFEPARMCOUNTRANGE(4, 4, VM_CL_traceline);
 
 	prog->xfunction->builtinsprofile += 30;
 
@@ -726,79 +727,103 @@ static void VM_CL_R_SetView (void)
 
 	switch(c)
 	{
-	case VF_MIN:			r_view.x = (int)(f[0] * vid.width / vid_conwidth.value);
-							r_view.y = (int)(f[1] * vid.height / vid_conheight.value);
-							break;
-	case VF_MIN_X:			r_view.x = (int)(k * vid.width / vid_conwidth.value);
-							break;
-	case VF_MIN_Y:			r_view.y = (int)(k * vid.height / vid_conheight.value);
-							break;
-	case VF_SIZE:			r_view.width = (int)(f[0] * vid.width / vid_conwidth.value);
-							r_view.height = (int)(f[1] * vid.height / vid_conheight.value);
-							break;
-	case VF_SIZE_Y:			r_view.width = (int)(k * vid.width / vid_conwidth.value);
-							break;
-	case VF_SIZE_X:			r_view.height = (int)(k * vid.height / vid_conheight.value);
-							break;
-	case VF_VIEWPORT:		r_view.x = (int)(f[0] * vid.width / vid_conwidth.value);
-							r_view.y = (int)(f[1] * vid.height / vid_conheight.value);
-							f = PRVM_G_VECTOR(OFS_PARM2);
-							r_view.width = (int)(f[0] * vid.width / vid_conwidth.value);
-							r_view.height = (int)(f[1] * vid.height / vid_conheight.value);
-							break;
-	case VF_FOV:			r_view.frustum_x = tan(f[0] * M_PI / 360.0);r_view.ortho_x = f[0];
-							r_view.frustum_y = tan(f[1] * M_PI / 360.0);r_view.ortho_y = f[1];
-							break;
-	case VF_FOVX:			r_view.frustum_x = tan(k * M_PI / 360.0);r_view.ortho_x = k;
-							break;
-	case VF_FOVY:			r_view.frustum_y = tan(k * M_PI / 360.0);r_view.ortho_y = k;
-							break;
-	case VF_ORIGIN:			VectorCopy(f, cl.csqc_origin);
-							CSQC_R_RecalcView();
-							break;
-	case VF_ORIGIN_X:		cl.csqc_origin[0] = k;
-							CSQC_R_RecalcView();
-							break;
-	case VF_ORIGIN_Y:		cl.csqc_origin[1] = k;
-							CSQC_R_RecalcView();
-							break;
-	case VF_ORIGIN_Z:		cl.csqc_origin[2] = k;
-							CSQC_R_RecalcView();
-							break;
-	case VF_ANGLES:			VectorCopy(f, cl.csqc_angles);
-							CSQC_R_RecalcView();
-							break;
-	case VF_ANGLES_X:		cl.csqc_angles[0] = k;
-							CSQC_R_RecalcView();
-							break;
-	case VF_ANGLES_Y:		cl.csqc_angles[1] = k;
-							CSQC_R_RecalcView();
-							break;
-	case VF_ANGLES_Z:		cl.csqc_angles[2] = k;
-							CSQC_R_RecalcView();
-							break;
-	case VF_DRAWWORLD:		cl.csqc_vidvars.drawworld = k;
-							break;
-	case VF_DRAWENGINESBAR:	cl.csqc_vidvars.drawenginesbar = k;
-							break;
-	case VF_DRAWCROSSHAIR:	cl.csqc_vidvars.drawcrosshair = k;
-							break;
-
-	case VF_CL_VIEWANGLES:	VectorCopy(f, cl.viewangles);
-							break;
-	case VF_CL_VIEWANGLES_X:cl.viewangles[0] = k;
-							break;
-	case VF_CL_VIEWANGLES_Y:cl.viewangles[1] = k;
-							break;
-	case VF_CL_VIEWANGLES_Z:cl.viewangles[2] = k;
-							break;
-
-	case VF_PERSPECTIVE:	r_view.useperspective = k != 0;
-							break;
-
-	default:				PRVM_G_FLOAT(OFS_RETURN) = 0;
-							VM_Warning("VM_CL_R_SetView : unknown parm %i\n", c);
-							return;
+	case VF_MIN:
+		r_view.x = (int)(f[0] * vid.width / vid_conwidth.value);
+		r_view.y = (int)(f[1] * vid.height / vid_conheight.value);
+		break;
+	case VF_MIN_X:
+		r_view.x = (int)(k * vid.width / vid_conwidth.value);
+		break;
+	case VF_MIN_Y:
+		r_view.y = (int)(k * vid.height / vid_conheight.value);
+		break;
+	case VF_SIZE:
+		r_view.width = (int)(f[0] * vid.width / vid_conwidth.value);
+		r_view.height = (int)(f[1] * vid.height / vid_conheight.value);
+		break;
+	case VF_SIZE_Y:
+		r_view.width = (int)(k * vid.width / vid_conwidth.value);
+		break;
+	case VF_SIZE_X:
+		r_view.height = (int)(k * vid.height / vid_conheight.value);
+		break;
+	case VF_VIEWPORT:
+		r_view.x = (int)(f[0] * vid.width / vid_conwidth.value);
+		r_view.y = (int)(f[1] * vid.height / vid_conheight.value);
+		f = PRVM_G_VECTOR(OFS_PARM2);
+		r_view.width = (int)(f[0] * vid.width / vid_conwidth.value);
+		r_view.height = (int)(f[1] * vid.height / vid_conheight.value);
+		break;
+	case VF_FOV:
+		r_view.frustum_x = tan(f[0] * M_PI / 360.0);r_view.ortho_x = f[0];
+		r_view.frustum_y = tan(f[1] * M_PI / 360.0);r_view.ortho_y = f[1];
+		break;
+	case VF_FOVX:
+		r_view.frustum_x = tan(k * M_PI / 360.0);r_view.ortho_x = k;
+		break;
+	case VF_FOVY:
+		r_view.frustum_y = tan(k * M_PI / 360.0);r_view.ortho_y = k;
+		break;
+	case VF_ORIGIN:
+		VectorCopy(f, cl.csqc_origin);
+		CSQC_R_RecalcView();
+		break;
+	case VF_ORIGIN_X:
+		cl.csqc_origin[0] = k;
+		CSQC_R_RecalcView();
+		break;
+	case VF_ORIGIN_Y:
+		cl.csqc_origin[1] = k;
+		CSQC_R_RecalcView();
+		break;
+	case VF_ORIGIN_Z:
+		cl.csqc_origin[2] = k;
+		CSQC_R_RecalcView();
+		break;
+	case VF_ANGLES:
+		VectorCopy(f, cl.csqc_angles);
+		CSQC_R_RecalcView();
+		break;
+	case VF_ANGLES_X:
+		cl.csqc_angles[0] = k;
+		CSQC_R_RecalcView();
+		break;
+	case VF_ANGLES_Y:
+		cl.csqc_angles[1] = k;
+		CSQC_R_RecalcView();
+		break;
+	case VF_ANGLES_Z:
+		cl.csqc_angles[2] = k;
+		CSQC_R_RecalcView();
+		break;
+	case VF_DRAWWORLD:
+		cl.csqc_vidvars.drawworld = k;
+		break;
+	case VF_DRAWENGINESBAR:
+		cl.csqc_vidvars.drawenginesbar = k;
+		break;
+	case VF_DRAWCROSSHAIR:
+		cl.csqc_vidvars.drawcrosshair = k;
+		break;
+	case VF_CL_VIEWANGLES:
+		VectorCopy(f, cl.viewangles);
+		break;
+	case VF_CL_VIEWANGLES_X:
+		cl.viewangles[0] = k;
+		break;
+	case VF_CL_VIEWANGLES_Y:
+		cl.viewangles[1] = k;
+		break;
+	case VF_CL_VIEWANGLES_Z:
+		cl.viewangles[2] = k;
+		break;
+	case VF_PERSPECTIVE:
+		r_view.useperspective = k != 0;
+		break;
+	default:
+		PRVM_G_FLOAT(OFS_RETURN) = 0;
+		VM_Warning("VM_CL_R_SetView : unknown parm %i\n", c);
+		return;
 	}
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
@@ -819,7 +844,7 @@ static void VM_CL_R_AddDynamicLight (void)
 {
 	float		*pos, *col;
 	matrix4x4_t	matrix;
-	VM_SAFEPARMCOUNTRANGE(3, 8, VM_CL_R_AddDynamicLight); // allow more than 3 because we may extend this in the future
+	VM_SAFEPARMCOUNTRANGE(3, 3, VM_CL_R_AddDynamicLight);
 
 	// if we've run out of dlights, just return
 	if (r_refdef.numlights >= MAX_DLIGHTS)
@@ -3340,6 +3365,7 @@ const int vm_cl_numbuiltins = sizeof(vm_cl_builtins) / sizeof(prvm_builtin_t);
 
 void VM_CL_Cmd_Init(void)
 {
+	VM_Cmd_Init();
 	// TODO: replace vm_polygons stuff with a more general debugging polygon system, and make vm_polygons functions use that system
 	if(vm_polygons_initialized)
 	{
@@ -3350,6 +3376,7 @@ void VM_CL_Cmd_Init(void)
 
 void VM_CL_Cmd_Reset(void)
 {
+	VM_Cmd_Reset();
 	if(vm_polygons_initialized)
 	{
 		Mem_FreePool(&vm_polygons_pool);

@@ -112,6 +112,7 @@ void CL_ClearState(void)
 
 	// reset the view zoom interpolation
 	cl.mviewzoom[0] = cl.mviewzoom[1] = 1;
+	cl.sensitivityscale = 1.0f;
 
 	// enable rendering of the world and such
 	cl.csqc_vidvars.drawworld = true;

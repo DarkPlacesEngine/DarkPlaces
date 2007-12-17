@@ -583,38 +583,39 @@ void CL_Input (void)
 	// if not in menu, apply mouse move to viewangles/movement
 	if (!cl.csqc_wantsmousemove && in_client_mouse)
 	{
+		float modulatedsensitivity = sensitivity.value * cl.sensitivityscale;
 		if (cl_prydoncursor.integer)
 		{
 			// mouse interacting with the scene, mostly stationary view
 			V_StopPitchDrift();
-			cl.cmd.cursor_screen[0] += in_mouse_x * sensitivity.value / vid.width;
-			cl.cmd.cursor_screen[1] += in_mouse_y * sensitivity.value / vid.height;
+			cl.cmd.cursor_screen[0] += in_mouse_x * modulatedsensitivity / vid.width;
+			cl.cmd.cursor_screen[1] += in_mouse_y * modulatedsensitivity / vid.height;
 		}
 		else if (in_strafe.state & 1)
 		{
 			// strafing mode, all looking is movement
 			V_StopPitchDrift();
-			cl.cmd.sidemove += m_side.value * in_mouse_x * sensitivity.value;
+			cl.cmd.sidemove += m_side.value * in_mouse_x * modulatedsensitivity;
 			if (noclip_anglehack)
-				cl.cmd.upmove -= m_forward.value * in_mouse_y * sensitivity.value;
+				cl.cmd.upmove -= m_forward.value * in_mouse_y * modulatedsensitivity;
 			else
-				cl.cmd.forwardmove -= m_forward.value * in_mouse_y * sensitivity.value;
+				cl.cmd.forwardmove -= m_forward.value * in_mouse_y * modulatedsensitivity;
 		}
 		else if ((in_mlook.state & 1) || freelook.integer)
 		{
 			// mouselook, lookstrafe causes turning to become strafing
 			V_StopPitchDrift();
 			if (lookstrafe.integer)
-				cl.cmd.sidemove += m_side.value * in_mouse_x * sensitivity.value;
+				cl.cmd.sidemove += m_side.value * in_mouse_x * modulatedsensitivity;
 			else
-				cl.viewangles[YAW] -= m_yaw.value * in_mouse_x * sensitivity.value * cl.viewzoom;
-			cl.viewangles[PITCH] += m_pitch.value * in_mouse_y * sensitivity.value * cl.viewzoom;
+				cl.viewangles[YAW] -= m_yaw.value * in_mouse_x * modulatedsensitivity * cl.viewzoom;
+			cl.viewangles[PITCH] += m_pitch.value * in_mouse_y * modulatedsensitivity * cl.viewzoom;
 		}
 		else
 		{
 			// non-mouselook, yaw turning and forward/back movement
-			cl.viewangles[YAW] -= m_yaw.value * in_mouse_x * sensitivity.value * cl.viewzoom;
-			cl.cmd.forwardmove -= m_forward.value * in_mouse_y * sensitivity.value;
+			cl.viewangles[YAW] -= m_yaw.value * in_mouse_x * modulatedsensitivity * cl.viewzoom;
+			cl.cmd.forwardmove -= m_forward.value * in_mouse_y * modulatedsensitivity;
 		}
 	}
 
