@@ -947,17 +947,13 @@ float DrawQ_String_Font(float startx, float starty, const char *text, size_t max
 	if (maxlen < 1)
 		maxlen = 1<<30;
 
-	// when basealpha == 0, skip as much as possible (just return width)
-	if(basealpha > 0)
-	{
-		_DrawQ_ProcessDrawFlag(flags);
+	_DrawQ_ProcessDrawFlag(flags);
 
-		R_Mesh_ColorPointer(color4f, 0, 0);
-		R_Mesh_ResetTextureState();
-		R_Mesh_TexBind(0, R_GetTexture(fnt->tex));
-		R_Mesh_TexCoordPointer(0, 2, texcoord2f, 0, 0);
-		R_Mesh_VertexPointer(vertex3f, 0, 0);
-	}
+	R_Mesh_ColorPointer(color4f, 0, 0);
+	R_Mesh_ResetTextureState();
+	R_Mesh_TexBind(0, R_GetTexture(fnt->tex));
+	R_Mesh_TexCoordPointer(0, 2, texcoord2f, 0, 0);
+	R_Mesh_VertexPointer(vertex3f, 0, 0);
 
 	ac = color4f;
 	at = texcoord2f;
@@ -970,8 +966,7 @@ float DrawQ_String_Font(float startx, float starty, const char *text, size_t max
 			colorindex = STRING_COLOR_DEFAULT;
 		else
 			colorindex = *outcolor;
-		if(basealpha > 0)
-			DrawQ_GetTextColor(color, colorindex, basered, basegreen, baseblue, basealpha, shadow);
+		DrawQ_GetTextColor(color, colorindex, basered, basegreen, baseblue, basealpha, shadow);
 
 		x = startx;
 		y = starty;
@@ -1002,54 +997,45 @@ float DrawQ_String_Font(float startx, float starty, const char *text, size_t max
 				}
 			}
 			num = (unsigned char) text[i];
-			if(basealpha > 0)
+			// FIXME make these smaller to just include the occupied part of the character for slightly faster rendering
+			s = (num & 15)*0.0625f + (0.5f / 256.0f);
+			t = (num >> 4)*0.0625f + (0.5f / 256.0f);
+			u = 0.0625f - (1.0f / 256.0f);
+			v = 0.0625f - (1.0f / 256.0f);
+			ac[ 0] = color[0];ac[ 1] = color[1];ac[ 2] = color[2];ac[ 3] = color[3];
+			ac[ 4] = color[0];ac[ 5] = color[1];ac[ 6] = color[2];ac[ 7] = color[3];
+			ac[ 8] = color[0];ac[ 9] = color[1];ac[10] = color[2];ac[11] = color[3];
+			ac[12] = color[0];ac[13] = color[1];ac[14] = color[2];ac[15] = color[3];
+			at[ 0] = s  ;at[ 1] = t  ;
+			at[ 2] = s+u;at[ 3] = t  ;
+			at[ 4] = s+u;at[ 5] = t+v;
+			at[ 6] = s  ;at[ 7] = t+v;
+			av[ 0] = x  ;av[ 1] = y  ;av[ 2] = 10;
+			av[ 3] = x+w;av[ 4] = y  ;av[ 5] = 10;
+			av[ 6] = x+w;av[ 7] = y+h;av[ 8] = 10;
+			av[ 9] = x  ;av[10] = y+h;av[11] = 10;
+			ac += 16;
+			at += 8;
+			av += 12;
+			batchcount++;
+			if (batchcount >= QUADELEMENTS_MAXQUADS)
 			{
-				// FIXME make these smaller to just include the occupied part of the character for slightly faster rendering
-				s = (num & 15)*0.0625f + (0.5f / 256.0f);
-				t = (num >> 4)*0.0625f + (0.5f / 256.0f);
-				u = 0.0625f - (1.0f / 256.0f);
-				v = 0.0625f - (1.0f / 256.0f);
-				ac[ 0] = color[0];ac[ 1] = color[1];ac[ 2] = color[2];ac[ 3] = color[3];
-				ac[ 4] = color[0];ac[ 5] = color[1];ac[ 6] = color[2];ac[ 7] = color[3];
-				ac[ 8] = color[0];ac[ 9] = color[1];ac[10] = color[2];ac[11] = color[3];
-				ac[12] = color[0];ac[13] = color[1];ac[14] = color[2];ac[15] = color[3];
-				at[ 0] = s  ;at[ 1] = t  ;
-				at[ 2] = s+u;at[ 3] = t  ;
-				at[ 4] = s+u;at[ 5] = t+v;
-				at[ 6] = s  ;at[ 7] = t+v;
-				av[ 0] = x  ;av[ 1] = y  ;av[ 2] = 10;
-				av[ 3] = x+w;av[ 4] = y  ;av[ 5] = 10;
-				av[ 6] = x+w;av[ 7] = y+h;av[ 8] = 10;
-				av[ 9] = x  ;av[10] = y+h;av[11] = 10;
-				ac += 16;
-				at += 8;
-				av += 12;
-				batchcount++;
-				if (batchcount >= QUADELEMENTS_MAXQUADS)
-				{
-					if (basealpha >= (1.0f / 255.0f))
-					{
-						GL_LockArrays(0, batchcount * 4);
-						R_Mesh_Draw(0, batchcount * 4, batchcount * 2, quadelements, 0, 0);
-						GL_LockArrays(0, 0);
-					}
-					batchcount = 0;
-					ac = color4f;
-					at = texcoord2f;
-					av = vertex3f;
-				}
+				GL_LockArrays(0, batchcount * 4);
+				R_Mesh_Draw(0, batchcount * 4, batchcount * 2, quadelements, 0, 0);
+				GL_LockArrays(0, 0);
+				batchcount = 0;
+				ac = color4f;
+				at = texcoord2f;
+				av = vertex3f;
 			}
 			x += fnt->width_of[num] * w;
 		}
 	}
-	if (basealpha > 0)
+	if (batchcount > 0)
 	{
-		if (batchcount > 0)
-		{
-			GL_LockArrays(0, batchcount * 4);
-			R_Mesh_Draw(0, batchcount * 4, batchcount * 2, quadelements, 0, 0);
-			GL_LockArrays(0, 0);
-		}
+		GL_LockArrays(0, batchcount * 4);
+		R_Mesh_Draw(0, batchcount * 4, batchcount * 2, quadelements, 0, 0);
+		GL_LockArrays(0, 0);
 	}
 
 	if (outcolor)
