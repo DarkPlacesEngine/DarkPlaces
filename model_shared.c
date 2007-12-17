@@ -1151,7 +1151,7 @@ static void Q3Shader_AddToHash (q3shaderinfo_t* shader)
 			q3shader_hash_entry_t* newEntry = (q3shader_hash_entry_t*)
 			  Mem_ExpandableArray_AllocRecord (&q3shader_data->hash_entries);
         		
-			while (entry->chain != NULL) entry = entry->chain;
+			while (lastEntry->chain != NULL) lastEntry = lastEntry->chain;
 			lastEntry->chain = newEntry;
 			newEntry->chain = NULL;
 			lastEntry = newEntry;
