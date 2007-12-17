@@ -78,6 +78,7 @@ static void CSQC_SetGlobals (void)
 		prog->globals.client->clientcommandframe = cl.movecmd[0].sequence;
 		VectorCopy(cl.viewangles, prog->globals.client->input_angles);
 		VectorCopy(cl.viewangles, cl.csqc_angles);
+		// // FIXME: this actually belongs into getinputstate().. [12/17/2007 Black]
 		prog->globals.client->input_buttons = cl.movecmd[0].buttons;
 		VectorSet(prog->globals.client->input_movevalues, cl.movecmd[0].forwardmove, cl.movecmd[0].sidemove, cl.movecmd[0].upmove);
 		//VectorCopy(cl.movement_origin, cl.csqc_origin);
@@ -239,7 +240,7 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 	return true;
 }
 
-qboolean CL_VM_InputEvent (qboolean pressed, int key)
+qboolean CL_VM_InputEvent (qboolean down, int key)
 {
 	qboolean r;
 	if(!cl.csqc_loaded)
@@ -250,7 +251,7 @@ qboolean CL_VM_InputEvent (qboolean pressed, int key)
 		else
 		{
 			prog->globals.client->time = cl.time;
-			PRVM_G_FLOAT(OFS_PARM0) = pressed;
+			PRVM_G_FLOAT(OFS_PARM0) = !down; // 0 is down, 1 is up
 			PRVM_G_FLOAT(OFS_PARM1) = key;
 			PRVM_ExecuteProgram(prog->funcoffsets.CSQC_InputEvent, "QC function CSQC_InputEvent is missing");
 			r = CSQC_RETURNVAL;

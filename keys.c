@@ -863,7 +863,7 @@ const char *Key_GetBind (int key)
 	return bind;
 }
 
-qboolean CL_VM_InputEvent (qboolean pressed, int key);
+qboolean CL_VM_InputEvent (qboolean down, int key);
 
 /*
 ===================
@@ -888,9 +888,10 @@ Key_Event (int key, char ascii, qboolean down)
 	if (developer.integer >= 1000)
 		Con_Printf("Key_Event(%i, '%c', %s) keydown %i bind \"%s\"\n", key, ascii, down ? "down" : "up", keydown[key], bind ? bind : "");
 
+#if 0
 	if(key_dest == key_game)
 	{
-		q = CL_VM_InputEvent(!down, key);
+		q = CL_VM_InputEvent(down, key);
 		if(q)
 		{
 			if (down)
@@ -900,6 +901,7 @@ Key_Event (int key, char ascii, qboolean down)
 			return;
 		}
 	}
+#endif
 
 	if (down)
 	{
@@ -911,13 +913,6 @@ Key_Event (int key, char ascii, qboolean down)
 	{
 		// clear repeat count now that the key is released
 		keydown[key] = 0;
-		// key up events only generate commands if the game key binding is a button
-		// command (leading + sign).  These will occur even in console mode, to
-		// keep the character from continuing an action started before a console
-		// switch.  Button commands include the kenum as a parameter, so multiple
-		// downs can be matched with ups
-		if (bind && bind[0] == '+')
-			Cbuf_AddText(va("-%s %i\n", bind + 1, key));
 	}
 
 	// key_consoleactive is a flag not a key_dest because the console is a
@@ -957,7 +952,9 @@ Key_Event (int key, char ascii, qboolean down)
 				MR_KeyEvent (key, ascii, down);
 				break;
 			case key_game:
-				if (down)
+				// csqc has priority over toggle menu if it wants to (e.g. handling escape for UI stuff in-game.. :sick:)
+				q = CL_VM_InputEvent(down, key);
+				if (!q && down)
 					MR_ToggleMenu_f ();
 				break;
 			default:
@@ -999,6 +996,17 @@ Key_Event (int key, char ascii, qboolean down)
 		return;
 	}
 
+
+	// FIXME: actually the up-bind should only be called if the button was actually pressed while key_dest == key_game [12/17/2007 Black]
+	//			 especially CL_VM_InputEvent should be able to prevent it from being called (to intercept the binds)
+	// key up events only generate commands if the game key binding is a button
+	// command (leading + sign).  These will occur even in console mode, to
+	// keep the character from continuing an action started before a console
+	// switch.  Button commands include the kenum as a parameter, so multiple
+	// downs can be matched with ups
+	if (!down && bind && bind[0] == '+')
+		Cbuf_AddText(va("-%s %i\n", bind + 1, key));
+
 	// ignore binds while a video is played, let the video system handle the key event
 	if (cl_videoplaying)
 	{
@@ -1017,8 +1025,9 @@ Key_Event (int key, char ascii, qboolean down)
 			MR_KeyEvent (key, ascii, down);
 			break;
 		case key_game:
-			// ignore key repeats on binds
-			if (bind && keydown[key] == 1 && down)
+			q = CL_VM_InputEvent(down, key);
+			// ignore key repeats on binds and only send the bind if the event hasnt been already processed by csqc
+			if (!q && bind && keydown[key] == 1 && down)
 			{
 				// button commands add keynum as a parm
 				if (bind[0] == '+')
