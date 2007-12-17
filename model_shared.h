@@ -368,7 +368,7 @@ typedef struct q3shaderinfo_s
 	qboolean lighting;
 	qboolean vertexalpha;
 	qboolean textureblendalpha;
-	q3shaderinfo_layer_t *primarylayer, *backgroundlayer;
+	int primarylayer, backgroundlayer;
 	q3shaderinfo_layer_t layers[Q3SHADER_MAXLAYERS];
 	char skyboxname[Q3PATHLENGTH];
 	q3shaderinfo_deform_t deforms[Q3MAXDEFORMS];
