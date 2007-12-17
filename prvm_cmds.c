@@ -2726,7 +2726,7 @@ void VM_stringwidth(void)
 	string = PRVM_G_STRING(OFS_PARM0);
 	colors = (int)PRVM_G_FLOAT(OFS_PARM1);
 
-	PRVM_G_FLOAT(OFS_RETURN) = DrawQ_String_Font(0, 0, string, 0, 1, 1, 0, 0, 0, 0, 0, NULL, !colors, getdrawfont()); // 1x1 characters, don't actually draw
+	PRVM_G_FLOAT(OFS_RETURN) = DrawQ_TextWidth_Font(string, 0, !colors, getdrawfont()); // 1x1 characters, don't actually draw
 }
 /*
 =========
