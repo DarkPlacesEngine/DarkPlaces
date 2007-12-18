@@ -245,6 +245,12 @@ model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, qboolea
 	VectorSet(mod->rotatedmins, -mod->radius, -mod->radius, -mod->radius);
 	VectorSet(mod->rotatedmaxs, mod->radius, mod->radius, mod->radius);
 
+	// if we're loading a worldmodel, then this is a level change, and we
+	// should reload all q3 shaders to make sure they are current (which will
+	// also be used by any other models loaded after this world model)
+	if (mod->isworldmodel)
+		Mod_LoadQ3Shaders();
+
 	if (buf)
 	{
 		char *bufend = (char *)buf + filesize;
