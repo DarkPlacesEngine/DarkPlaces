@@ -1369,11 +1369,11 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 	else if (mode == SHADERMODE_LIGHTDIRECTION)
 	{
 		if (r_glsl_permutation->loc_AmbientColor >= 0)
-			qglUniform3fARB(r_glsl_permutation->loc_AmbientColor, rsurface.modellight_ambient[0] * ambientscale, rsurface.modellight_ambient[1] * ambientscale, rsurface.modellight_ambient[2] * ambientscale);
+			qglUniform3fARB(r_glsl_permutation->loc_AmbientColor, rsurface.modellight_ambient[0] * ambientscale * r_refdef.lightmapintensity, rsurface.modellight_ambient[1] * ambientscale * r_refdef.lightmapintensity, rsurface.modellight_ambient[2] * ambientscale * r_refdef.lightmapintensity);
 		if (r_glsl_permutation->loc_DiffuseColor >= 0)
-			qglUniform3fARB(r_glsl_permutation->loc_DiffuseColor, rsurface.modellight_diffuse[0] * diffusescale, rsurface.modellight_diffuse[1] * diffusescale, rsurface.modellight_diffuse[2] * diffusescale);
+			qglUniform3fARB(r_glsl_permutation->loc_DiffuseColor, rsurface.modellight_diffuse[0] * diffusescale * r_refdef.lightmapintensity, rsurface.modellight_diffuse[1] * diffusescale * r_refdef.lightmapintensity, rsurface.modellight_diffuse[2] * diffusescale * r_refdef.lightmapintensity);
 		if (r_glsl_permutation->loc_SpecularColor >= 0)
-			qglUniform3fARB(r_glsl_permutation->loc_SpecularColor, rsurface.modellight_diffuse[0] * specularscale, rsurface.modellight_diffuse[1] * specularscale, rsurface.modellight_diffuse[2] * specularscale);
+			qglUniform3fARB(r_glsl_permutation->loc_SpecularColor, rsurface.modellight_diffuse[0] * specularscale * r_refdef.lightmapintensity, rsurface.modellight_diffuse[1] * specularscale * r_refdef.lightmapintensity, rsurface.modellight_diffuse[2] * specularscale * r_refdef.lightmapintensity);
 		if (r_glsl_permutation->loc_LightDir >= 0)
 			qglUniform3fARB(r_glsl_permutation->loc_LightDir, rsurface.modellight_lightdir[0], rsurface.modellight_lightdir[1], rsurface.modellight_lightdir[2]);
 	}
@@ -2141,43 +2141,6 @@ int R_CullBoxCustomPlanes(const vec3_t mins, const vec3_t maxs, int numplanes, c
 
 //==================================================================================
 
-static void R_UpdateEntityLighting(entity_render_t *ent)
-{
-	vec3_t tempdiffusenormal;
-
-	// fetch the lighting from the worldmodel data
-	VectorSet(ent->modellight_ambient, r_ambient.value * (2.0f / 128.0f), r_ambient.value * (2.0f / 128.0f), r_ambient.value * (2.0f / 128.0f));
-	VectorClear(ent->modellight_diffuse);
-	VectorClear(tempdiffusenormal);
-	if ((ent->flags & RENDER_LIGHT) && r_refdef.worldmodel && r_refdef.worldmodel->brush.LightPoint)
-	{
-		vec3_t org;
-		Matrix4x4_OriginFromMatrix(&ent->matrix, org);
-		r_refdef.worldmodel->brush.LightPoint(r_refdef.worldmodel, org, ent->modellight_ambient, ent->modellight_diffuse, tempdiffusenormal);
-	}
-	else // highly rare
-		VectorSet(ent->modellight_ambient, 1, 1, 1);
-
-	// move the light direction into modelspace coordinates for lighting code
-	Matrix4x4_Transform3x3(&ent->inversematrix, tempdiffusenormal, ent->modellight_lightdir);
-	if(VectorLength2(ent->modellight_lightdir) > 0)
-	{
-		VectorNormalize(ent->modellight_lightdir);
-	}
-	else
-	{
-		VectorSet(ent->modellight_lightdir, 0, 0, 1); // have to set SOME valid vector here
-	}
-
-	// scale ambient and directional light contributions according to rendering variables
-	ent->modellight_ambient[0] *= ent->colormod[0] * r_refdef.lightmapintensity;
-	ent->modellight_ambient[1] *= ent->colormod[1] * r_refdef.lightmapintensity;
-	ent->modellight_ambient[2] *= ent->colormod[2] * r_refdef.lightmapintensity;
-	ent->modellight_diffuse[0] *= ent->colormod[0] * r_refdef.lightmapintensity;
-	ent->modellight_diffuse[1] *= ent->colormod[1] * r_refdef.lightmapintensity;
-	ent->modellight_diffuse[2] *= ent->colormod[2] * r_refdef.lightmapintensity;
-}
-
 static void R_View_UpdateEntityVisible (void)
 {
 	int i, renderimask;
@@ -2220,10 +2183,6 @@ static void R_View_UpdateEntityVisible (void)
 			r_viewcache.entityvisible[i] = !(ent->flags & renderimask) && ((ent->model && ent->model->type == mod_sprite && (ent->model->sprite.sprnum_type == SPR_LABEL || ent->model->sprite.sprnum_type == SPR_LABEL_SCALE)) || !R_CullBox(ent->mins, ent->maxs));
 		}
 	}
-
-	// update entity lighting (even on hidden entities for r_shadows)
-	for (i = 0;i < r_refdef.numentities;i++)
-		R_UpdateEntityLighting(r_refdef.entities[i]);
 }
 
 // only used if skyrendermasked, and normally returns false
@@ -5365,12 +5324,13 @@ static void RSurf_DrawBatch_GL11_VertexShade(int texturenumsurfaces, msurface_t 
 	// TODO: optimize
 	// model lighting
 	VectorCopy(rsurface.modellight_lightdir, lightdir);
-	ambientcolor[0] = rsurface.modellight_ambient[0] * r * 0.5f;
-	ambientcolor[1] = rsurface.modellight_ambient[1] * g * 0.5f;
-	ambientcolor[2] = rsurface.modellight_ambient[2] * b * 0.5f;
-	diffusecolor[0] = rsurface.modellight_diffuse[0] * r * 0.5f;
-	diffusecolor[1] = rsurface.modellight_diffuse[1] * g * 0.5f;
-	diffusecolor[2] = rsurface.modellight_diffuse[2] * b * 0.5f;
+	f = 0.5f * r_refdef.lightmapintensity;
+	ambientcolor[0] = rsurface.modellight_ambient[0] * r * f;
+	ambientcolor[1] = rsurface.modellight_ambient[1] * g * f;
+	ambientcolor[2] = rsurface.modellight_ambient[2] * b * f;
+	diffusecolor[0] = rsurface.modellight_diffuse[0] * r * f;
+	diffusecolor[1] = rsurface.modellight_diffuse[1] * g * f;
+	diffusecolor[2] = rsurface.modellight_diffuse[2] * b * f;
 	if (VectorLength2(diffusecolor) > 0)
 	{
 		// generate color arrays for the surfaces in this list

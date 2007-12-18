@@ -1909,7 +1909,6 @@ void CL_ParseStatic (int large)
 	ent->render.framelerp = 0;
 	// make torchs play out of sync
 	ent->render.frame1time = ent->render.frame2time = lhrandom(-10, -1);
-	ent->render.colormap = -1; // no special coloring
 	ent->render.skinnum = ent->state_baseline.skin;
 	ent->render.effects = ent->state_baseline.effects;
 	ent->render.alpha = 1;

@@ -3534,14 +3534,6 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	if (loadmodel->brush.numsubmodels)
 		loadmodel->brush.submodels = (model_t **)Mem_Alloc(loadmodel->mempool, loadmodel->brush.numsubmodels * sizeof(model_t *));
 
-	if (loadmodel->isworldmodel)
-	{
-		// clear out any stale submodels or worldmodels lying around
-		// if we did this clear before now, an error might abort loading and
-		// leave things in a bad state
-		Mod_RemoveStaleWorldModels(loadmodel);
-	}
-
 	// LordHavoc: to clear the fog around the original quake submodel code, I
 	// will explain:
 	// first of all, some background info on the submodels:
@@ -5726,14 +5718,6 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer, void *bufferend)
 
 	loadmodel->brush.num_leafs = 0;
 	Mod_Q3BSP_RecursiveFindNumLeafs(loadmodel->brush.data_nodes);
-
-	if (loadmodel->isworldmodel)
-	{
-		// clear out any stale submodels or worldmodels lying around
-		// if we did this clear before now, an error might abort loading and
-		// leave things in a bad state
-		Mod_RemoveStaleWorldModels(loadmodel);
-	}
 
 	mod = loadmodel;
 	for (i = 0;i < loadmodel->brush.numsubmodels;i++)

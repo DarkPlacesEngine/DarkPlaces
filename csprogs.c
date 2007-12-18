@@ -125,6 +125,7 @@ extern cvar_t cl_noplayershadow;
 qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 {
 	int renderflags;
+	int c;
 	float scale;
 	prvm_eval_t *val;
 	entity_t *e;
@@ -140,7 +141,6 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 		return false;
 
 	e->render.model = model;
-	e->render.colormap = (int)ed->fields.client->colormap;
 	e->render.skinnum = (int)ed->fields.client->skin;
 	e->render.effects |= e->render.model->effects;
 	scale = 1;
@@ -195,8 +195,6 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 
 	// concat the matrices to make the entity relative to its tag
 	Matrix4x4_Concat(&e->render.matrix, &tagmatrix, &matrix2);
-	// make the other useful stuff
-	CL_UpdateRenderEntity(&e->render);
 
 	if(renderflags)
 	{
@@ -206,24 +204,13 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 		if(renderflags & RF_ADDITIVE)		e->render.effects |= EF_ADDITIVE;
 	}
 
-	if ((e->render.colormap > 0 && e->render.colormap <= cl.maxclients) || e->render.colormap >= 1024)
-	{
-		unsigned char *cbcolor;
-		int palcol;
-		if (e->render.colormap >= 1024)
-			palcol = (unsigned char)(e->render.colormap-1024);
-		else
-			palcol = cl.scores[e->render.colormap-1].colors;
-
-		cbcolor = palette_rgb_pantscolormap[palcol & 0xF];
-		e->render.colormap_pantscolor[0] = cbcolor[0] * (1.0f / 255.0f);
-		e->render.colormap_pantscolor[1] = cbcolor[1] * (1.0f / 255.0f);
-		e->render.colormap_pantscolor[2] = cbcolor[2] * (1.0f / 255.0f);
-		cbcolor = palette_rgb_shirtcolormap[(palcol & 0xF0) >> 4];
-		e->render.colormap_shirtcolor[0] = cbcolor[0] * (1.0f / 255.0f);
-		e->render.colormap_shirtcolor[1] = cbcolor[1] * (1.0f / 255.0f);
-		e->render.colormap_shirtcolor[2] = cbcolor[2] * (1.0f / 255.0f);
-	}
+	c = (int)ed->fields.client->colormap;
+	if (c <= 0)
+		CL_SetEntityColormapColors(&e->render, -1);
+	else if (c <= cl.maxclients && cl.scores != NULL)
+		CL_SetEntityColormapColors(&e->render, cl.scores[c-1].colors);
+	else
+		CL_SetEntityColormapColors(&e->render, c);
 
 	// either fullbright or lit
 	if (!(e->render.effects & EF_FULLBRIGHT) && !r_fullbright.integer)
@@ -236,6 +223,9 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 		e->render.flags |= RENDER_SHADOW;
 	if (e->render.flags & RENDER_VIEWMODEL)
 		e->render.flags |= RENDER_NOSELFSHADOW;
+
+	// make the other useful stuff
+	CL_UpdateRenderEntity(&e->render);
 
 	return true;
 }

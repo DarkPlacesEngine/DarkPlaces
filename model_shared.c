@@ -245,11 +245,17 @@ model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, qboolea
 	VectorSet(mod->rotatedmins, -mod->radius, -mod->radius, -mod->radius);
 	VectorSet(mod->rotatedmaxs, mod->radius, mod->radius, mod->radius);
 
-	// if we're loading a worldmodel, then this is a level change, and we
-	// should reload all q3 shaders to make sure they are current (which will
-	// also be used by any other models loaded after this world model)
+	// if we're loading a worldmodel, then this is a level change
 	if (mod->isworldmodel)
+	{
+		// clear out any stale submodels or worldmodels lying around
+		// if we did this clear before now, an error might abort loading and
+		// leave things in a bad state
+		Mod_RemoveStaleWorldModels(mod);
+		// reload q3 shaders, to make sure they are ready to go for this level
+		// (including any models loaded for this level)
 		Mod_LoadQ3Shaders();
+	}
 
 	if (buf)
 	{
