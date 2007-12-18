@@ -42,7 +42,7 @@ static int numcachepics;
 
 static rtexturepool_t *drawtexturepool;
 
-static unsigned char concharimage[FONT_FILESIZE] =
+static const unsigned char concharimage[FONT_FILESIZE] =
 {
 #include "lhfont.h"
 };
@@ -118,7 +118,7 @@ typedef struct embeddedpic_s
 }
 embeddedpic_t;
 
-static embeddedpic_t embeddedpics[] =
+static const embeddedpic_t embeddedpics[] =
 {
 	{
 	"gfx/prydoncursor001", 16, 16,
@@ -388,7 +388,7 @@ static embeddedpic_t embeddedpics[] =
 
 static rtexture_t *draw_generatepic(const char *name)
 {
-	embeddedpic_t *p;
+	const embeddedpic_t *p;
 	for (p = embeddedpics;p->name;p++)
 		if (!strcmp(name, p->name))
 			return R_LoadTexture2D(drawtexturepool, p->name, p->width, p->height, (const unsigned char *)p->pixels, TEXTYPE_PALETTE, TEXF_ALPHA | TEXF_PRECACHE, palette_bgra_embeddedpic);
@@ -841,7 +841,7 @@ void DrawQ_Fill(float x, float y, float width, float height, float red, float gr
 }
 
 // color tag printing
-static vec4_t string_colors[] =
+static const vec4_t string_colors[] =
 {
 	// Quake3 colors
 	// LordHavoc: why on earth is cyan before magenta in Quake3?
