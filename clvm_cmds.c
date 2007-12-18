@@ -1257,12 +1257,12 @@ static void VM_CL_makestatic (void)
 		entity_t *staticent = &cl.static_entities[cl.num_static_entities++];
 
 		// copy it to the current state
+		memset(staticent, 0, sizeof(*staticent));
 		staticent->render.model = CL_GetModelByIndex((int)ent->fields.client->modelindex);
 		staticent->render.frame1 = staticent->render.frame2 = (int)ent->fields.client->frame;
 		staticent->render.framelerp = 0;
 		// make torchs play out of sync
 		staticent->render.frame1time = staticent->render.frame2time = lhrandom(-10, -1);
-		staticent->render.colormap = (int)ent->fields.client->colormap; // no special coloring
 		staticent->render.skinnum = (int)ent->fields.client->skin;
 		staticent->render.effects = (int)ent->fields.client->effects;
 		staticent->render.alpha = 1;
@@ -1282,7 +1282,6 @@ static void VM_CL_makestatic (void)
 		}
 		else
 			Matrix4x4_CreateFromQuakeEntity(&staticent->render.matrix, ent->fields.client->origin[0], ent->fields.client->origin[1], ent->fields.client->origin[2], ent->fields.client->angles[0], ent->fields.client->angles[1], ent->fields.client->angles[2], staticent->render.scale);
-		CL_UpdateRenderEntity(&staticent->render);
 
 		// either fullbright or lit
 		if (!(staticent->render.effects & EF_FULLBRIGHT) && !r_fullbright.integer)
@@ -1290,6 +1289,8 @@ static void VM_CL_makestatic (void)
 		// turn off shadows from transparent objects
 		if (!(staticent->render.effects & (EF_NOSHADOW | EF_ADDITIVE | EF_NODEPTHTEST)) && (staticent->render.alpha >= 1))
 			staticent->render.flags |= RENDER_SHADOW;
+
+		CL_UpdateRenderEntity(&staticent->render);
 	}
 	else
 		Con_Printf("Too many static entities");

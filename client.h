@@ -226,6 +226,12 @@ frameblend_t;
 
 // LordHavoc: this struct is intended for the renderer but some fields are
 // used by the client.
+//
+// The renderer should not rely on any changes to this struct to be persistent
+// across multiple frames because temp entities are wiped every frame, but it
+// is acceptable to cache things in this struct that are not critical.
+//
+// For example the r_cullentities_trace code does such caching.
 typedef struct entity_render_s
 {
 	// location
@@ -245,9 +251,7 @@ typedef struct entity_render_s
 	model_t *model;
 	// number of the entity represents, or 0 for non-network entities
 	int entitynumber;
-	// entity shirt and pants colors (-1 if not colormapped)
-	int colormap;
-	// literal colors for renderer
+	// literal colormap colors for renderer, if both are 0 0 0 it is not colormapped
 	vec3_t colormap_pantscolor;
 	vec3_t colormap_shirtcolor;
 	// light, particles, etc
@@ -282,11 +286,12 @@ typedef struct entity_render_s
 	// 4 frame numbers (-1 if not used) and their blending scalers (0-1), if interpolation is not desired, use frame instead
 	frameblend_t frameblend[4];
 
-	// current lighting from map
+	// current lighting from map (updated ONLY by client code, not renderer)
 	vec3_t modellight_ambient;
 	vec3_t modellight_diffuse; // q3bsp
 	vec3_t modellight_lightdir; // q3bsp
 
+	// FIELDS UPDATED BY RENDERER:
 	// last time visible during trace culling
 	double last_trace_visibility;
 }
@@ -1136,6 +1141,7 @@ void CL_Disconnect (void);
 void CL_Disconnect_f (void);
 
 void CL_UpdateRenderEntity(entity_render_t *ent);
+void CL_SetEntityColormapColors(entity_render_t *ent, int colormap);
 void CL_UpdateViewEntities(void);
 
 //

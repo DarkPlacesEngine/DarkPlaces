@@ -197,7 +197,6 @@ void CL_ClearState(void)
 	ent->state_current.active = true;
 	ent->render.model = cl.worldmodel = NULL; // no world model yet
 	ent->render.alpha = 1;
-	ent->render.colormap = -1; // no special coloring
 	ent->render.flags = RENDER_SHADOW | RENDER_LIGHT;
 	Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, 0, 0, 0, 0, 0, 0, 1);
 	CL_UpdateRenderEntity(&ent->render);
@@ -497,6 +496,30 @@ static void CL_SoundIndexList_f(void)
 	}
 }
 
+static void CL_UpdateRenderEntity_Lighting(entity_render_t *ent)
+{
+	vec3_t tempdiffusenormal;
+
+	// fetch the lighting from the worldmodel data
+	VectorSet(ent->modellight_ambient, r_ambient.value * (2.0f / 128.0f), r_ambient.value * (2.0f / 128.0f), r_ambient.value * (2.0f / 128.0f));
+	VectorClear(ent->modellight_diffuse);
+	VectorClear(tempdiffusenormal);
+	if ((ent->flags & RENDER_LIGHT) && cl.worldmodel && cl.worldmodel->brush.LightPoint)
+	{
+		vec3_t org;
+		Matrix4x4_OriginFromMatrix(&ent->matrix, org);
+		cl.worldmodel->brush.LightPoint(cl.worldmodel, org, ent->modellight_ambient, ent->modellight_diffuse, tempdiffusenormal);
+	}
+	else // highly rare
+		VectorSet(ent->modellight_ambient, 1, 1, 1);
+
+	// move the light direction into modelspace coordinates for lighting code
+	Matrix4x4_Transform3x3(&ent->inversematrix, tempdiffusenormal, ent->modellight_lightdir);
+	if(VectorLength2(ent->modellight_lightdir) <= 0)
+		VectorSet(ent->modellight_lightdir, 0, 0, 1); // have to set SOME valid vector here
+	VectorNormalize(ent->modellight_lightdir);
+}
+
 //static const vec3_t nomodelmins = {-16, -16, -16};
 //static const vec3_t nomodelmaxs = {16, 16, 16};
 void CL_UpdateRenderEntity(entity_render_t *ent)
@@ -550,6 +573,7 @@ void CL_UpdateRenderEntity(entity_render_t *ent)
 		ent->maxs[1] = org[1] + 16;
 		ent->maxs[2] = org[2] + 16;
 	}
+	CL_UpdateRenderEntity_Lighting(ent);
 }
 
 /*
@@ -595,7 +619,6 @@ entity_t *CL_NewTempEntity(void)
 	memset (ent, 0, sizeof(*ent));
 	r_refdef.entities[r_refdef.numentities++] = &ent->render;
 
-	ent->render.colormap = -1; // no special coloring
 	ent->render.alpha = 1;
 	VectorSet(ent->render.colormod, 1, 1, 1);
 	return ent;
@@ -828,7 +851,6 @@ void CL_AddQWCTFFlagModel(entity_t *player, int skin)
 
 	flag->render.model = cl.model_precache[cl.qw_modelindex_flag];
 	flag->render.skinnum = skin;
-	flag->render.colormap = -1; // no special coloring
 	flag->render.alpha = 1;
 	VectorSet(flag->render.colormod, 1, 1, 1);
 	// attach the flag to the player matrix
@@ -845,6 +867,23 @@ extern void V_DriftPitch(void);
 extern void V_FadeViewFlashs(void);
 extern void V_CalcViewBlend(void);
 extern void V_CalcRefdef(void);
+
+void CL_SetEntityColormapColors(entity_render_t *ent, int colormap)
+{
+	const unsigned char *cbcolor;
+	if (colormap >= 0)
+	{
+		cbcolor = palette_rgb_pantscolormap[colormap & 0xF];
+		VectorScale(cbcolor, (1.0f / 255.0f), ent->colormap_pantscolor);
+		cbcolor = palette_rgb_shirtcolormap[(colormap & 0xF0) >> 4];
+		VectorScale(cbcolor, (1.0f / 255.0f), ent->colormap_shirtcolor);
+	}
+	else
+	{
+		VectorClear(ent->colormap_pantscolor);
+		VectorClear(ent->colormap_shirtcolor);
+	}
+}
 
 // note this is a recursive function, recursionlimit should be 32 or so on the initial call
 void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolate)
@@ -869,37 +908,11 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 	VectorScale(e->state_current.colormod, (1.0f / 32.0f), e->render.colormod);
 	e->render.entitynumber = e - cl.entities;
 	if (e->state_current.flags & RENDER_COLORMAPPED)
-	{
-		unsigned char *cbcolor;
-		e->render.colormap = e->state_current.colormap;
-		cbcolor = palette_rgb_pantscolormap[e->render.colormap & 0xF];
-		e->render.colormap_pantscolor[0] = cbcolor[0] * (1.0f / 255.0f);
-		e->render.colormap_pantscolor[1] = cbcolor[1] * (1.0f / 255.0f);
-		e->render.colormap_pantscolor[2] = cbcolor[2] * (1.0f / 255.0f);
-		cbcolor = palette_rgb_shirtcolormap[(e->render.colormap & 0xF0) >> 4];
-		e->render.colormap_shirtcolor[0] = cbcolor[0] * (1.0f / 255.0f);
-		e->render.colormap_shirtcolor[1] = cbcolor[1] * (1.0f / 255.0f);
-		e->render.colormap_shirtcolor[2] = cbcolor[2] * (1.0f / 255.0f);
-	}
-	else if (e->state_current.colormap && cl.scores != NULL && e->state_current.colormap <= cl.maxclients)
-	{
-		unsigned char *cbcolor;
-		e->render.colormap = cl.scores[e->state_current.colormap - 1].colors; // color it
-		cbcolor = palette_rgb_pantscolormap[e->render.colormap & 0xF];
-		e->render.colormap_pantscolor[0] = cbcolor[0] * (1.0f / 255.0f);
-		e->render.colormap_pantscolor[1] = cbcolor[1] * (1.0f / 255.0f);
-		e->render.colormap_pantscolor[2] = cbcolor[2] * (1.0f / 255.0f);
-		cbcolor = palette_rgb_shirtcolormap[(e->render.colormap & 0xF0) >> 4];
-		e->render.colormap_shirtcolor[0] = cbcolor[0] * (1.0f / 255.0f);
-		e->render.colormap_shirtcolor[1] = cbcolor[1] * (1.0f / 255.0f);
-		e->render.colormap_shirtcolor[2] = cbcolor[2] * (1.0f / 255.0f);
-	}
+		CL_SetEntityColormapColors(&e->render, e->state_current.colormap);
+	else if (e->state_current.colormap > 0 && e->state_current.colormap <= cl.maxclients && cl.scores != NULL)
+		CL_SetEntityColormapColors(&e->render, cl.scores[e->state_current.colormap-1].colors);
 	else
-	{
-		e->render.colormap = -1; // no special coloring
-		VectorClear(e->render.colormap_pantscolor);
-		VectorClear(e->render.colormap_shirtcolor);
-	}
+		CL_SetEntityColormapColors(&e->render, -1);
 	e->render.skinnum = e->state_current.skin;
 	if (e->state_current.tagentity)
 	{
@@ -1061,9 +1074,6 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 		Matrix4x4_CreateFromQuakeEntity(&e->render.matrix, origin[0], origin[1], origin[2], angles[0], angles[1], angles[2], e->render.scale);
 	}
 
-	// make the other useful stuff
-	CL_UpdateRenderEntity(&e->render);
-
 	// tenebrae's sprites are all additive mode (weird)
 	if (gamemode == GAME_TENEBRAE && e->render.model && e->render.model->type == mod_sprite)
 		e->render.effects |= EF_ADDITIVE;
@@ -1081,6 +1091,9 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 		e->render.flags |= RENDER_SHADOW;
 	if (e->render.flags & RENDER_VIEWMODEL)
 		e->render.flags |= RENDER_NOSELFSHADOW;
+
+	// make the other useful stuff
+	CL_UpdateRenderEntity(&e->render);
 }
 
 // creates light and trails from an entity
@@ -1453,11 +1466,11 @@ void CL_RelinkWorld(void)
 	entity_t *ent = &cl.entities[0];
 	// FIXME: this should be done at load
 	ent->render.matrix = identitymatrix;
-	CL_UpdateRenderEntity(&ent->render);
 	ent->render.flags = RENDER_SHADOW;
 	if (!r_fullbright.integer)
 		ent->render.flags |= RENDER_LIGHT;
 	VectorSet(ent->render.colormod, 1, 1, 1);
+	CL_UpdateRenderEntity(&ent->render);
 	r_refdef.worldentity = &ent->render;
 	r_refdef.worldmodel = cl.worldmodel;
 }
@@ -1472,7 +1485,6 @@ static void CL_RelinkStaticEntities(void)
 		// if the model was not loaded when the static entity was created we
 		// need to re-fetch the model pointer
 		e->render.model = cl.model_precache[e->state_baseline.modelindex];
-		CL_UpdateRenderEntity(&e->render);
 		// either fullbright or lit
 		if (!(e->render.effects & EF_FULLBRIGHT) && !r_fullbright.integer)
 			e->render.flags |= RENDER_LIGHT;
@@ -1481,6 +1493,7 @@ static void CL_RelinkStaticEntities(void)
 			e->render.flags |= RENDER_SHADOW;
 		VectorSet(e->render.colormod, 1, 1, 1);
 		R_LerpAnimation(&e->render);
+		CL_UpdateRenderEntity(&e->render);
 		r_refdef.entities[r_refdef.numentities++] = &e->render;
 	}
 }
@@ -1555,7 +1568,6 @@ static void CL_RelinkEffects(void)
 					ent->render.model = cl.model_precache[e->modelindex];
 				else
 					ent->render.model = cl.csqc_model_precache[-(e->modelindex+1)];
-				ent->render.colormap = -1; // no special coloring
 				ent->render.alpha = 1;
 				VectorSet(ent->render.colormod, 1, 1, 1);
 
@@ -1701,7 +1713,6 @@ static void CL_RelinkQWNails(void)
 
 		// normal stuff
 		ent->render.model = cl.model_precache[cl.qw_modelindex_spike];
-		ent->render.colormap = -1; // no special coloring
 		ent->render.alpha = 1;
 		VectorSet(ent->render.colormod, 1, 1, 1);
 
