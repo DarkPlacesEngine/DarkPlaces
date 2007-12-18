@@ -16,11 +16,11 @@ static char skyname[MAX_QPATH];
 
 typedef struct suffixinfo_s
 {
-	char *suffix;
+	const char *suffix;
 	qboolean flipx, flipy, flipdiagonal;
 }
 suffixinfo_t;
-static suffixinfo_t suffix[3][6] =
+static const suffixinfo_t suffix[3][6] =
 {
 	{
 		{"px",   false, false, false},
@@ -175,7 +175,7 @@ void LoadSky_f (void)
 	}
 }
 
-float skyboxvertex3f[6*4*3] =
+static const float skyboxvertex3f[6*4*3] =
 {
 	// skyside[0]
 	 16, -16,  16,
@@ -209,7 +209,7 @@ float skyboxvertex3f[6*4*3] =
 	 16,  16, -16
 };
 
-float skyboxtexcoord2f[6*4*2] =
+static const float skyboxtexcoord2f[6*4*2] =
 {
 	// skyside[0]
 	0, 1,
@@ -243,7 +243,7 @@ float skyboxtexcoord2f[6*4*2] =
 	0, 0
 };
 
-int skyboxelements[6*2*3] =
+static const int skyboxelements[6*2*3] =
 {
 	// skyside[3]
 	 0,  1,  2,
