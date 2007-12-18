@@ -1145,7 +1145,7 @@ static void Q3Shaders_Clear()
 
 static void Q3Shader_AddToHash (q3shaderinfo_t* shader)
 {
-	unsigned short hash = CRC_Block ((const unsigned char *)shader->name, strlen (shader->name));
+	unsigned short hash = CRC_Block_CaseInsensitive ((const unsigned char *)shader->name, strlen (shader->name));
 	q3shader_hash_entry_t* entry = q3shader_data->hash + (hash % Q3SHADER_HASH_SIZE);
 	q3shader_hash_entry_t* lastEntry = NULL;
 	while (entry != NULL)
@@ -1666,7 +1666,7 @@ void Mod_LoadQ3Shaders(void)
 
 q3shaderinfo_t *Mod_LookupQ3Shader(const char *name)
 {
-	unsigned short hash = CRC_Block ((const unsigned char *)name, strlen (name));
+	unsigned short hash = CRC_Block_CaseInsensitive ((const unsigned char *)name, strlen (name));
 	q3shader_hash_entry_t* entry = q3shader_data->hash + (hash % Q3SHADER_HASH_SIZE);
 	while (entry != NULL)
 	{

@@ -173,6 +173,14 @@ unsigned short CRC_Block(const unsigned char *data, size_t size)
 	return crc ^ CRC_XOR_VALUE;
 }
 
+unsigned short CRC_Block_CaseInsensitive(const unsigned char *data, size_t size)
+{
+	unsigned short crc = CRC_INIT_VALUE;
+	while (size--)
+		crc = (crc << 8) ^ crctable[(crc >> 8) ^ (tolower(*data++))];
+	return crc ^ CRC_XOR_VALUE;
+}
+
 // QuakeWorld
 static unsigned char chktbl[1024 + 4] =
 {
