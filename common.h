@@ -60,6 +60,7 @@ void SZ_HexDumpToConsole(const sizebuf_t *buf);
 void Com_HexDumpToConsole(const unsigned char *data, int size);
 
 unsigned short CRC_Block(const unsigned char *data, size_t size);
+unsigned short CRC_Block_CaseInsensitive(const unsigned char *data, size_t size); // for hash lookup functions that use strcasecmp for comparison
 
 unsigned char COM_BlockSequenceCRCByteQW(unsigned char *base, int length, int sequence);
 
