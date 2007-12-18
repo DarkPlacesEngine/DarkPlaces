@@ -133,8 +133,12 @@ clgecko_t * CL_Gecko_CreateBrowser( const char *name ) {
 	// TODO: assert != NULL
 	
 	if( cl_geckoembedding == NULL ) {
+		char profile_path [MAX_OSPATH];
+
 		OSGK_EmbeddingOptions *options = osgk_embedding_options_create();
 		osgk_embedding_options_add_search_path( options, "./xulrunner/" );
+		dpsnprintf (profile_path, sizeof (profile_path), "%s/xulrunner_profile/", fs_gamedir);
+		osgk_embedding_options_set_profile_dir( options, profile_path, 0 );
 		cl_geckoembedding = osgk_embedding_create_with_options( options, NULL );
 		osgk_release( options );
         	
