@@ -528,9 +528,6 @@ static void QW_CL_RequestNextDownload(void)
 
 		cls.qw_downloadtype = dl_none;
 
-		// parse the Q3 shader files
-		Mod_LoadQ3Shaders();
-
 		// touch all of the precached models that are still loaded so we can free
 		// anything that isn't needed
 		if (!sv.active)
@@ -996,10 +993,6 @@ void CL_BeginDownloads(qboolean aborteddownload)
 	if (cl.loadmodel_current < cl.loadmodel_total)
 	{
 		// loading models
-
-		// parse the Q3 shader files
-		if (cl.loadmodel_current < 2)
-			Mod_LoadQ3Shaders();
 
 		for (;cl.loadmodel_current < cl.loadmodel_total;cl.loadmodel_current++)
 		{
