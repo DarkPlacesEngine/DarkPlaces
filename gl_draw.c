@@ -106,7 +106,7 @@ static rtexture_t *draw_generateditherpattern(void)
 	for (y = 0;y < 8;y++)
 		for (x = 0;x < 8;x++)
 			pixels[y][x] = ((x^y) & 4) ? 254 : 0;
-	return R_LoadTexture2D(drawtexturepool, "ditherpattern", 8, 8, pixels[0], TEXTYPE_PALETTE, TEXF_FORCENEAREST | TEXF_PRECACHE, NULL);
+	return R_LoadTexture2D(drawtexturepool, "ditherpattern", 8, 8, pixels[0], TEXTYPE_PALETTE, TEXF_FORCENEAREST | TEXF_PRECACHE, palette_bgra_transparent);
 }
 
 typedef struct embeddedpic_s
