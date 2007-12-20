@@ -138,7 +138,7 @@ void CL_ReadDemoMessage(void)
 	if (cls.demopaused)
 		return;
 
-	while (1)
+	for (;;)
 	{
 		// decide if it is time to grab the next message
 		// always grab until fully connected
@@ -146,25 +146,12 @@ void CL_ReadDemoMessage(void)
 		{
 			if (cls.timedemo)
 			{
-				if (host_framecount == cls.td_lastframe)
-				{
-					// already read this frame's message
-					return;
-				}
-				if (cls.td_lastframe == -1)
-				{
-					// render a couple frames before we start counting
-					cls.td_startframe = host_framecount + 3;
-				}
-				cls.td_lastframe = host_framecount;
+				cls.td_frames++;
 				cls.td_onesecondframes++;
-				// don't read any new messages during the warm-up period
-				if (host_framecount < cls.td_startframe)
-					return;
 				// if this is the first official frame we can now grab the real
 				// td_starttime so the bogus time on the first frame doesn't
 				// count against the final report
-				if (host_framecount == cls.td_startframe)
+				if (cls.td_frames == 0)
 				{
 					cls.td_starttime = realtime;
 					cls.td_onesecondnexttime = realtime + 1;
@@ -215,6 +202,9 @@ void CL_ReadDemoMessage(void)
 
 			// In case the demo contains a "svc_disconnect" message
 			if (!cls.demoplayback)
+				return;
+
+			if (cls.timedemo)
 				return;
 		}
 		else
@@ -395,8 +385,7 @@ void CL_FinishTimeDemo (void)
 
 	cls.timedemo = false;
 
-// the first frame didn't count
-	frames = (host_framecount - cls.td_startframe) - 1;
+	frames = cls.td_frames;
 	time = realtime - cls.td_starttime;
 	totalfpsavg = time > 0 ? frames / time : 0;
 	fpsmin = cls.td_onesecondminframes;
@@ -437,8 +426,8 @@ void CL_TimeDemo_f (void)
 	scr_con_current = 0;
 
 	cls.timedemo = true;
-	// get first message this frame
-	cls.td_lastframe = -1;
+	cls.td_frames = -2;		// skip the first frame
+	cls.demonum = -1;		// stop demo loop
 	cls.demonum = -1;		// stop demo loop
 }
 
