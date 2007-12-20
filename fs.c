@@ -2169,7 +2169,7 @@ int FS_Seek (qfile_t* file, fs_offset_t offset, int whence)
 		default:
 			return -1;
 	}
-	if (offset < 0 || offset > (long) file->real_length)
+	if (offset < 0 || offset > file->real_length)
 		return -1;
 
 	// If we have the data in our read buffer, we don't need to actually seek
