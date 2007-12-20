@@ -2201,8 +2201,10 @@ void Con_CompleteCommandLine (void)
 	char *s;
 	const char **list[4] = {0, 0, 0, 0};
 	char s2[512];
+	char command[512];
 	int c, v, a, i, cmd_len, pos, k;
 	int n; // nicks --blub
+	const char *space;
 	
 	//find what we want to complete
 	pos = key_linepos;
@@ -2218,33 +2220,124 @@ void Con_CompleteCommandLine (void)
 	strlcpy(s2, key_lines[edit_line] + key_linepos, sizeof(s2));	//save chars after cursor
 	key_lines[edit_line][key_linepos] = 0;					//hide them
 
-	//maps search
-	for(k=pos-1;k>2;k--)
-		if(key_lines[edit_line][k] != ' ')
+	space = strchr(key_lines[edit_line] + 1, ' ');
+	if(space && pos == (space - key_lines[edit_line]) + 1)
+	{
+		strlcpy(command, key_lines[edit_line] + 1, min(sizeof(command), (unsigned int)(space - key_lines[edit_line])));
+		if(!strcmp(command, "map") || !strcmp(command, "changelevel"))
 		{
-			if(key_lines[edit_line][k] == '\"' || key_lines[edit_line][k] == ';' || key_lines[edit_line][k] == '\'')
-				break;
-			if	((pos+k > 2 && !strncmp(key_lines[edit_line]+k-2, "map", 3))
-				|| (pos+k > 10 && !strncmp(key_lines[edit_line]+k-10, "changelevel", 11)))
+			//maps search
+			char t[MAX_QPATH];
+			if (GetMapList(s, t, sizeof(t)))
 			{
-				char t[MAX_QPATH];
-				if (GetMapList(s, t, sizeof(t)))
-				{
-					// first move the cursor
-					key_linepos += (int)strlen(t) - (int)strlen(s);
+				// first move the cursor
+				key_linepos += (int)strlen(t) - (int)strlen(s);
 
-					// and now do the actual work
-					*s = 0;
-					strlcat(key_lines[edit_line], t, MAX_INPUTLINE);
-					strlcat(key_lines[edit_line], s2, MAX_INPUTLINE); //add back chars after cursor
+				// and now do the actual work
+				*s = 0;
+				strlcat(key_lines[edit_line], t, MAX_INPUTLINE);
+				strlcat(key_lines[edit_line], s2, MAX_INPUTLINE); //add back chars after cursor
 
-					// and fix the cursor
-					if(key_linepos > (int) strlen(key_lines[edit_line]))
-						key_linepos = (int) strlen(key_lines[edit_line]);
-				}
-				return;
+				// and fix the cursor
+				if(key_linepos > (int) strlen(key_lines[edit_line]))
+					key_linepos = (int) strlen(key_lines[edit_line]);
 			}
+			return;
 		}
+		else
+		{
+			const char *patterns = Cvar_VariableString(va("con_completion_%s", command)); // TODO maybe use a better place for this?
+			char t[MAX_QPATH];
+			stringlist_t resultbuf;
+
+			// Usage:
+			//   // store completion patterns (space separated) for command foo in con_completion_foo
+			//   set con_completion_foo "foodata/*.foodefault *.foo"
+			//   foo <TAB>
+			//
+			// Note: patterns with slash are always treated as absolute
+			// patterns; patterns without slash search in the innermost
+			// directory the user specified. There is no way to "complete into"
+			// a directory as of now, as directories seem to be unknown to the
+			// FS subsystem.
+			//
+			// Examples:
+			//   set con_completion_playermodel "models/player/*.zym models/player/*.md3 models/player/*.psk models/player/*.dpm"
+			//   set con_completion_playdemo "*.dem"
+			//   set con_completion_play "*.wav *.ogg"
+			//
+			// TODO somehow add support for directories; these shall complete
+			// to their name + an appended slash.
+
+			stringlistinit(&resultbuf);
+			while(COM_ParseToken_Simple(&patterns, false, false))
+			{
+				fssearch_t *search;
+				if(strchr(com_token, '/'))
+				{
+					search = FS_Search(com_token, true, true);
+				}
+				else
+				{
+					const char *slash = strrchr(s, '/');
+					if(slash)
+					{
+						strlcpy(t, s, min(sizeof(t), (unsigned int)(slash - s + 2))); // + 2, because I want to include the slash
+						strlcat(t, com_token, sizeof(t));
+						search = FS_Search(t, true, true);
+					}
+					else
+						search = FS_Search(com_token, true, true);
+				}
+				if(search)
+				{
+					for(i = 0; i < search->numfilenames; ++i)
+						if(!strncmp(search->filenames[i], s, strlen(s)))
+							stringlistappend(&resultbuf, search->filenames[i]);
+					FS_FreeSearch(search);
+				}
+			}
+			
+			if(resultbuf.numstrings > 0)
+			{
+				const char *p, *q;
+				if(resultbuf.numstrings == 1)
+				{
+					dpsnprintf(t, sizeof(t), "%s ", resultbuf.strings[0]);
+				}
+				else
+				{
+					stringlistsort(&resultbuf);
+					Con_Printf("\n%i possible filenames\n", resultbuf.numstrings);
+					for(i = 0; i < resultbuf.numstrings; ++i)
+					{
+						Con_Printf("%s\n", resultbuf.strings[i]);
+					}
+					p = resultbuf.strings[0];
+					q = resultbuf.strings[resultbuf.numstrings - 1];
+					for(; *p && *p == *q; ++p, ++q);
+					// now p points to the first non-equal character, or to the end
+					// of resultbuf.strings[0]. We want to append the characters
+					// from resultbuf.strings[0] to (not including) p as these are
+					// the unique prefix
+					strlcpy(t, resultbuf.strings[0], min((unsigned int)(p - resultbuf.strings[0] + 1), sizeof(t)));
+				}
+
+				// first move the cursor
+				key_linepos += (int)strlen(t) - (int)strlen(s);
+
+				// and now do the actual work
+				*s = 0;
+				strlcat(key_lines[edit_line], t, MAX_INPUTLINE);
+				strlcat(key_lines[edit_line], s2, MAX_INPUTLINE); //add back chars after cursor
+
+				// and fix the cursor
+				if(key_linepos > (int) strlen(key_lines[edit_line]))
+					key_linepos = (int) strlen(key_lines[edit_line]);
+			}
+			stringlistfreecontents(&resultbuf);
+		}
+	}
 
 	// Count number of possible matches and print them
 	c = Cmd_CompleteCountPossible(s);
