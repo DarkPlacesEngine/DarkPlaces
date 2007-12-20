@@ -307,6 +307,9 @@ typedef struct rsurfacestate_s
 	vec3_t colormap_shirtcolor;
 	// view location in model space
 	vec3_t modelorg; // TODO: rename this
+	// polygon offset data for submodels
+	float basepolygonfactor;
+	float basepolygonoffset;
 	// current texture in batching code
 	texture_t *texture;
 	// whether lightmapping is active on this batch
@@ -343,6 +346,7 @@ extern rsurfacestate_t rsurface;
 void RSurf_ActiveWorldEntity(void);
 void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, qboolean wanttangents);
 void RSurf_CleanUp(void);
+void RSurf_SetupDepthAndCulling(void);
 
 void R_Mesh_ResizeArrays(int newvertices);
 

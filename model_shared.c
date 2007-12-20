@@ -1717,7 +1717,7 @@ qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qbool
 		if (shader->textureflags & Q3TEXTUREFLAG_TWOSIDED)
 			texture->basematerialflags |= MATERIALFLAG_NOSHADOW | MATERIALFLAG_NOCULLFACE;
 		if (shader->textureflags & Q3TEXTUREFLAG_POLYGONOFFSET)
-			texture->basepolygonoffset -= 2;
+			texture->biaspolygonoffset -= 2;
 		if (shader->textureflags & Q3TEXTUREFLAG_REFRACTION)
 			texture->basematerialflags |= MATERIALFLAG_REFRACTION;
 		if (shader->textureflags & Q3TEXTUREFLAG_REFLECTION)
