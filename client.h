@@ -512,12 +512,9 @@ typedef struct client_static_s
 	// -1 = use normal cd track
 	int forcetrack;
 	qfile_t *demofile;
-	// to meter out one message a frame
-	int td_lastframe;
-	// host_framecount at start
-	int td_startframe;
 	// realtime at second frame of timedemo (LordHavoc: changed to double)
 	double td_starttime;
+	int td_frames; // total frames parsed
 	double td_onesecondnexttime;
 	double td_onesecondframes;
 	double td_onesecondminframes;
