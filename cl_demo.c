@@ -439,5 +439,6 @@ void CL_TimeDemo_f (void)
 	cls.timedemo = true;
 	// get first message this frame
 	cls.td_lastframe = -1;
+	cls.demonum = -1;		// stop demo loop
 }
 
