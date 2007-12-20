@@ -2332,10 +2332,7 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 	}
 	if ((ambientscale + diffusescale) * VectorLength2(lightcolorbase) + specularscale * VectorLength2(lightcolorbase) < (1.0f / 1048576.0f))
 		return;
-	GL_DepthRange(0, (rsurface.texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE) ? 0.0625 : 1);
-	GL_PolygonOffset(rsurface.texture->currentpolygonfactor, rsurface.texture->currentpolygonoffset);
-	GL_DepthTest(!(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
-	GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : r_view.cullface_back);
+	RSurf_SetupDepthAndCulling();
 	nmap = rsurface.texture->currentskinframe->nmap;
 	if (gl_lightmaps.integer)
 		nmap = r_texture_blanknormalmap;
@@ -2833,13 +2830,14 @@ void R_Shadow_DrawWorldLight(int numsurfaces, int *surfacelist, const unsigned c
 	r_refdef.worldmodel->DrawLight(r_refdef.worldentity, numsurfaces, surfacelist, trispvs);
 }
 
-void R_Shadow_DrawEntityLight(entity_render_t *ent, int numsurfaces, int *surfacelist)
+void R_Shadow_DrawEntityLight(entity_render_t *ent)
 {
 	model_t *model = ent->model;
 	if (!model->DrawLight)
 		return;
 
 	R_Shadow_SetupEntityLight(ent);
+	R_UpdateAllTextureInfo(ent);
 
 	model->DrawLight(ent, model->nummodelsurfaces, model->surfacelist, NULL);
 }
@@ -3060,7 +3058,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 			// draw lighting in the unmasked areas
 			R_Shadow_RenderMode_Lighting(true, false);
 			for (i = 0;i < numlightentities_noselfshadow;i++)
-				R_Shadow_DrawEntityLight(lightentities_noselfshadow[i], numsurfaces, surfacelist);
+				R_Shadow_DrawEntityLight(lightentities_noselfshadow[i]);
 
 			// optionally draw the illuminated areas
 			// for performance analysis by level designers
@@ -3068,7 +3066,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 			{
 				R_Shadow_RenderMode_VisibleLighting(!r_showdisabledepthtest.integer, false);
 				for (i = 0;i < numlightentities_noselfshadow;i++)
-					R_Shadow_DrawEntityLight(lightentities_noselfshadow[i], numsurfaces, surfacelist);
+					R_Shadow_DrawEntityLight(lightentities_noselfshadow[i]);
 			}
 
 			R_Shadow_RenderMode_StencilShadowVolumes(false);
@@ -3083,7 +3081,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 			if (numsurfaces)
 				R_Shadow_DrawWorldLight(numsurfaces, surfacelist, lighttrispvs);
 			for (i = 0;i < numlightentities;i++)
-				R_Shadow_DrawEntityLight(lightentities[i], numsurfaces, surfacelist);
+				R_Shadow_DrawEntityLight(lightentities[i]);
 
 			// optionally draw the illuminated areas
 			// for performance analysis by level designers
@@ -3093,7 +3091,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 				if (numsurfaces)
 					R_Shadow_DrawWorldLight(numsurfaces, surfacelist, lighttrispvs);
 				for (i = 0;i < numlightentities;i++)
-					R_Shadow_DrawEntityLight(lightentities[i], numsurfaces, surfacelist);
+					R_Shadow_DrawEntityLight(lightentities[i]);
 			}
 		}
 	}
@@ -3106,9 +3104,9 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 			if (numsurfaces)
 				R_Shadow_DrawWorldLight(numsurfaces, surfacelist, lighttrispvs);
 			for (i = 0;i < numlightentities;i++)
-				R_Shadow_DrawEntityLight(lightentities[i], numsurfaces, surfacelist);
+				R_Shadow_DrawEntityLight(lightentities[i]);
 			for (i = 0;i < numlightentities_noselfshadow;i++)
-				R_Shadow_DrawEntityLight(lightentities_noselfshadow[i], numsurfaces, surfacelist);
+				R_Shadow_DrawEntityLight(lightentities_noselfshadow[i]);
 
 			// optionally draw the illuminated areas
 			// for performance analysis by level designers
@@ -3118,9 +3116,9 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 				if (numsurfaces)
 					R_Shadow_DrawWorldLight(numsurfaces, surfacelist, lighttrispvs);
 				for (i = 0;i < numlightentities;i++)
-					R_Shadow_DrawEntityLight(lightentities[i], numsurfaces, surfacelist);
+					R_Shadow_DrawEntityLight(lightentities[i]);
 				for (i = 0;i < numlightentities_noselfshadow;i++)
-					R_Shadow_DrawEntityLight(lightentities_noselfshadow[i], numsurfaces, surfacelist);
+					R_Shadow_DrawEntityLight(lightentities_noselfshadow[i]);
 			}
 		}
 	}

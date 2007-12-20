@@ -4157,17 +4157,6 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 		t->specularscale = 0;
 	}
 
-	t->currentpolygonfactor = r_refdef.polygonfactor + t->basepolygonfactor;
-	t->currentpolygonoffset = r_refdef.polygonoffset + t->basepolygonoffset;
-	// submodels are biased to avoid z-fighting with world surfaces that they
-	// may be exactly overlapping (avoids z-fighting artifacts on certain
-	// doors and things in Quake maps)
-	if (ent->model->brush.submodel)
-	{
-		t->currentpolygonfactor += r_polygonoffset_submodel_factor.value;
-		t->currentpolygonoffset += r_polygonoffset_submodel_offset.value;
-	}
-
 	VectorClear(t->dlightcolor);
 	t->currentnumlayers = 0;
 	if (!(t->currentmaterialflags & MATERIALFLAG_NODRAW))
@@ -4393,6 +4382,13 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 	rsurface.frameblend[1] = ent->frameblend[1];
 	rsurface.frameblend[2] = ent->frameblend[2];
 	rsurface.frameblend[3] = ent->frameblend[3];
+	rsurface.basepolygonfactor = r_refdef.polygonfactor;
+	rsurface.basepolygonoffset = r_refdef.polygonoffset;
+	if (ent->model->brush.submodel)
+	{
+		rsurface.basepolygonfactor += r_polygonoffset_submodel_factor.value;
+		rsurface.basepolygonoffset += r_polygonoffset_submodel_offset.value;
+	}
 	if (model->surfmesh.isanimated && (rsurface.frameblend[0].lerp != 1 || rsurface.frameblend[0].frame != 0))
 	{
 		if (wanttangents)
@@ -5376,12 +5372,20 @@ static void RSurf_DrawBatch_GL11_VertexShade(int texturenumsurfaces, msurface_t 
 	RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
 }
 
-static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, msurface_t **texturesurfacelist)
+void RSurf_SetupDepthAndCulling(void)
 {
+	// submodels are biased to avoid z-fighting with world surfaces that they
+	// may be exactly overlapping (avoids z-fighting artifacts on certain
+	// doors and things in Quake maps)
 	GL_DepthRange(0, (rsurface.texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE) ? 0.0625 : 1);
-	GL_PolygonOffset(rsurface.texture->currentpolygonfactor, rsurface.texture->currentpolygonoffset);
+	GL_PolygonOffset(rsurface.basepolygonfactor + rsurface.texture->biaspolygonfactor, rsurface.basepolygonoffset + rsurface.texture->biaspolygonoffset);
 	GL_DepthTest(!(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
 	GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : r_view.cullface_back);
+}
+
+static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, msurface_t **texturesurfacelist)
+{
+	RSurf_SetupDepthAndCulling();
 	if (rsurface.mode != RSURFMODE_SHOWSURFACES)
 	{
 		rsurface.mode = RSURFMODE_SHOWSURFACES;
@@ -5414,10 +5418,7 @@ static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, msurface_t **te
 		// restore entity matrix
 		R_Mesh_Matrix(&rsurface.matrix);
 	}
-	GL_DepthRange(0, (rsurface.texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE) ? 0.0625 : 1);
-	GL_PolygonOffset(rsurface.texture->currentpolygonfactor, rsurface.texture->currentpolygonoffset);
-	GL_DepthTest(!(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
-	GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : r_view.cullface_back);
+	RSurf_SetupDepthAndCulling();
 	GL_DepthMask(true);
 	// LordHavoc: HalfLife maps have freaky skypolys so don't use
 	// skymasking on them, and Quake3 never did sky masking (unlike
@@ -5857,9 +5858,7 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 			GL_ColorMask(0,0,0,0);
 			GL_Color(1,1,1,1);
 		}
-		GL_DepthRange(0, (rsurface.texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE) ? 0.0625 : 1);
-		GL_PolygonOffset(rsurface.texture->currentpolygonfactor, rsurface.texture->currentpolygonoffset);
-		GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : r_view.cullface_back);
+		RSurf_SetupDepthAndCulling();
 		GL_DepthTest(true);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		GL_DepthMask(true);
@@ -5881,10 +5880,8 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 	{
 		if (rsurface.mode != RSURFMODE_MULTIPASS)
 			rsurface.mode = RSURFMODE_MULTIPASS;
-		GL_DepthRange(0, (rsurface.texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE) ? 0.0625 : 1);
-		GL_PolygonOffset(rsurface.texture->currentpolygonfactor, rsurface.texture->currentpolygonoffset);
+		RSurf_SetupDepthAndCulling();
 		GL_DepthTest(true);
-		GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : r_view.cullface_back);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		GL_DepthMask(writedepth);
 		GL_Color(1,1,1,1);
@@ -5928,10 +5925,7 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 		// write depth for anything we skipped on the depth-only pass earlier
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
 			writedepth = true;
-		GL_DepthRange(0, (rsurface.texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE) ? 0.0625 : 1);
-		GL_PolygonOffset(rsurface.texture->currentpolygonfactor, rsurface.texture->currentpolygonoffset);
-		GL_DepthTest(!(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
-		GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : r_view.cullface_back);
+		RSurf_SetupDepthAndCulling();
 		GL_BlendFunc(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
 		GL_DepthMask(writedepth && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_BLENDED));
 		GL_AlphaTest((rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST) != 0);

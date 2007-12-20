@@ -899,8 +899,7 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 		info.pvs = info.model->brush.GetPVS(info.model, info.relativelightorigin);
 	else
 		info.pvs = NULL;
-	if (ent != r_refdef.worldentity)
-		R_UpdateAllTextureInfo(ent);
+	R_UpdateAllTextureInfo(ent);
 
 	if (r_shadow_frontsidecasting.integer && r_shadow_compilingrtlight && r_shadow_realtime_world_compileportalculling.integer)
 	{
@@ -963,8 +962,7 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 	// check the box in modelspace, it was already checked in worldspace
 	if (!BoxesOverlap(model->normalmins, model->normalmaxs, lightmins, lightmaxs))
 		return;
-	if (ent != r_refdef.worldentity)
-		R_UpdateAllTextureInfo(ent);
+	R_UpdateAllTextureInfo(ent);
 	if (ent->model->brush.submodel)
 		GL_PolygonOffset(r_refdef.shadowpolygonfactor + r_polygonoffset_submodel_factor.value, r_refdef.shadowpolygonoffset + r_polygonoffset_submodel_offset.value);
 	if (model->brush.shadowmesh)
@@ -1031,7 +1029,7 @@ static void R_Q1BSP_DrawLight_TransparentCallback(const entity_render_t *ent, co
 	R_Shadow_RenderMode_End();
 }
 
-#define RSURF_MAX_BATCHSURFACES 1024
+#define RSURF_MAX_BATCHSURFACES 8192
 
 void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surfacelist, const unsigned char *trispvs)
 {
@@ -1043,14 +1041,6 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 	msurface_t *batchsurfacelist[RSURF_MAX_BATCHSURFACES];
 	int batchelements[BATCHSIZE*3];
 	texture_t *tex;
-	CHECKGLERROR
-	if (ent == r_refdef.worldentity)
-		RSurf_ActiveWorldEntity();
-	else
-	{
-		RSurf_ActiveModelEntity(ent, true, true);
-		R_UpdateAllTextureInfo(ent);
-	}
 	CHECKGLERROR
 	culltriangles = r_shadow_culltriangles.integer && !(ent->flags & RENDER_NOSELFSHADOW);
 	element3i = rsurface.modelelement3i;
