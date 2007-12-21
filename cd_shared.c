@@ -217,7 +217,7 @@ void CDAudio_Stop (void)
 		S_StopChannel (faketrack);
 		faketrack = -1;
 	}
-	else if (CDAudio_SysStop() == -1)
+	else if (cdPlaying && (CDAudio_SysStop() == -1))
 		return;
 
 	wasPlaying = false;
