@@ -4320,6 +4320,8 @@ void RSurf_ActiveWorldEntity(void)
 	rsurface.frameblend[2].lerp = 0;
 	rsurface.frameblend[3].frame = 0;
 	rsurface.frameblend[3].lerp = 0;
+	rsurface.basepolygonfactor = r_refdef.polygonfactor;
+	rsurface.basepolygonoffset = r_refdef.polygonoffset;
 	rsurface.modelvertex3f  = model->surfmesh.data_vertex3f;
 	rsurface.modelvertex3f_bufferobject = model->surfmesh.vbo;
 	rsurface.modelvertex3f_bufferoffset = model->surfmesh.vbooffset_vertex3f;
@@ -5548,6 +5550,7 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, msurface_t **t
 	R_Mesh_TexCoordPointer(2, 3, rsurface.tvector3f, rsurface.tvector3f_bufferobject, rsurface.tvector3f_bufferoffset);
 	R_Mesh_TexCoordPointer(3, 3, rsurface.normal3f, rsurface.normal3f_bufferobject, rsurface.normal3f_bufferoffset);
 	R_Mesh_TexCoordPointer(4, 2, rsurface.modeltexcoordlightmap2f, rsurface.modeltexcoordlightmap2f_bufferobject, rsurface.modeltexcoordlightmap2f_bufferoffset);
+	// FIXME MOVE THIS TO A UNIFORM
 	GL_Color(rsurface.texture->currentlayers[0].color[0], rsurface.texture->currentlayers[0].color[1], rsurface.texture->currentlayers[0].color[2], rsurface.texture->currentlayers[0].color[3]);
 
 	if (r_glsl_permutation->loc_Texture_Refraction >= 0)
