@@ -866,8 +866,7 @@ static void VM_SV_findradius (void)
 static void VM_SV_precache_sound (void)
 {
 	VM_SAFEPARMCOUNT(1, VM_SV_precache_sound);
-	SV_SoundIndex(PRVM_G_STRING(OFS_PARM0), 2);
-	PRVM_G_INT(OFS_RETURN) = PRVM_G_INT(OFS_PARM0);
+	PRVM_G_FLOAT(OFS_RETURN) = SV_SoundIndex(PRVM_G_STRING(OFS_PARM0), 2);
 }
 
 static void VM_SV_precache_model (void)
