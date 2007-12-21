@@ -2837,7 +2837,6 @@ void R_Shadow_DrawEntityLight(entity_render_t *ent)
 		return;
 
 	R_Shadow_SetupEntityLight(ent);
-	R_UpdateAllTextureInfo(ent);
 
 	model->DrawLight(ent, model->nummodelsurfaces, model->surfacelist, NULL);
 }

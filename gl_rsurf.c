@@ -1042,6 +1042,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 	int batchelements[BATCHSIZE*3];
 	texture_t *tex;
 	CHECKGLERROR
+	R_UpdateAllTextureInfo(ent);
 	culltriangles = r_shadow_culltriangles.integer && !(ent->flags & RENDER_NOSELFSHADOW);
 	element3i = rsurface.modelelement3i;
 	// this is a double loop because non-visible surface skipping has to be
