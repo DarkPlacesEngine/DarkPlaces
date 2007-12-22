@@ -393,6 +393,28 @@ static void R_BuildFogTexture(void)
 #define FOGWIDTH 256
 	unsigned char data1[FOGWIDTH][4];
 	//unsigned char data2[FOGWIDTH][4];
+	double d, s, alpha;
+
+	r_refdef.fogmasktable_start = r_refdef.fog_start;
+	r_refdef.fogmasktable_alpha = r_refdef.fog_alpha;
+
+	s = r_refdef.fogmasktable_start / r_refdef.fogrange;
+	s = bound(0, s, 0.999);
+	for (x = 0;x < FOGMASKTABLEWIDTH;x++)
+	{
+		d = ((double)x / FOGMASKTABLEWIDTH);
+		Con_Printf("%f ", d);
+		d = (d - s) / (1 - s);
+		Con_Printf("%f ", d);
+		d = bound(0, d, 1);
+		Con_Printf(" = %f ", d);
+		alpha = exp(-16 * d*d);
+		Con_Printf(" : %f ", alpha);
+		alpha = 1 - (1 - alpha) * r_refdef.fogmasktable_alpha;
+		Con_Printf(" = %f\n", alpha);
+		r_refdef.fogmasktable[x] = bound(0, alpha, 1);
+	}
+
 	for (x = 0;x < FOGWIDTH;x++)
 	{
 		b = (int)(r_refdef.fogmasktable[x * (FOGMASKTABLEWIDTH - 1) / (FOGWIDTH - 1)] * 255);
@@ -405,8 +427,16 @@ static void R_BuildFogTexture(void)
 		//data2[x][2] = 255 - b;
 		//data2[x][3] = 255;
 	}
-	r_texture_fogattenuation = R_LoadTexture2D(r_main_texturepool, "fogattenuation", FOGWIDTH, 1, &data1[0][0], TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_PERSISTENT, NULL);
-	//r_texture_fogintensity = R_LoadTexture2D(r_main_texturepool, "fogintensity", FOGWIDTH, 1, &data2[0][0], TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP, NULL);
+	if (r_texture_fogattenuation)
+	{
+		R_UpdateTexture(r_texture_fogattenuation, &data1[0][0], 0, 0, FOGWIDTH, 1);
+		//R_UpdateTexture(r_texture_fogattenuation, &data2[0][0], 0, 0, FOGWIDTH, 1);
+	}
+	else
+	{
+		r_texture_fogattenuation = R_LoadTexture2D(r_main_texturepool, "fogattenuation", FOGWIDTH, 1, &data1[0][0], TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_PERSISTENT, NULL);
+		//r_texture_fogintensity = R_LoadTexture2D(r_main_texturepool, "fogintensity", FOGWIDTH, 1, &data2[0][0], TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP, NULL);
+	}
 }
 
 static const char *builtinshaderstring =
@@ -1813,18 +1843,6 @@ skinframe_t *R_SkinFrame_LoadMissing(void)
 
 void gl_main_start(void)
 {
-	int x;
-	double r, alpha;
-
-	r = -16.0 / (1.0 * FOGMASKTABLEWIDTH * FOGMASKTABLEWIDTH);
-	for (x = 0;x < FOGMASKTABLEWIDTH;x++)
-	{
-		alpha = exp(r * ((double)x*(double)x));
-		if (x == FOGMASKTABLEWIDTH - 1)
-			alpha = 0;
-		r_refdef.fogmasktable[x] = bound(0, alpha, 1);
-	}
-
 	memset(r_qwskincache, 0, sizeof(r_qwskincache));
 	memset(r_qwskincache_skinframe, 0, sizeof(r_qwskincache_skinframe));
 
@@ -1841,6 +1859,8 @@ void gl_main_start(void)
 		R_BuildWhiteCube();
 		R_BuildNormalizationCube();
 	}
+	r_texture_fogattenuation = NULL;
+	//r_texture_fogintensity = NULL;
 	R_BuildFogTexture();
 	memset(&r_bloomstate, 0, sizeof(r_bloomstate));
 	memset(&r_waterstate, 0, sizeof(r_waterstate));
@@ -1867,6 +1887,8 @@ void gl_main_shutdown(void)
 	r_texture_black = NULL;
 	r_texture_whitecube = NULL;
 	r_texture_normalizationcube = NULL;
+	r_texture_fogattenuation = NULL;
+	//r_texture_fogintensity = NULL;
 	memset(&r_bloomstate, 0, sizeof(r_bloomstate));
 	memset(&r_waterstate, 0, sizeof(r_waterstate));
 	R_GLSL_Restart_f();
@@ -3247,7 +3269,7 @@ void R_UpdateVariables(void)
 		}
 	}
 
-	r_refdef.fog_alpha = min(1, r_refdef.fog_alpha);
+	r_refdef.fog_alpha = bound(0, r_refdef.fog_alpha, 1);
 	r_refdef.fog_start = max(0, r_refdef.fog_start);
 
 	R_UpdateFogColor();
@@ -3262,6 +3284,9 @@ void R_UpdateVariables(void)
 		r_refdef.fograngerecip = 1.0f / r_refdef.fogrange;
 		r_refdef.fogmasktabledistmultiplier = FOGMASKTABLEWIDTH * r_refdef.fograngerecip;
 		// fog color was already set
+		// update the fog texture
+		if (r_refdef.fogmasktable_start != r_refdef.fog_start || r_refdef.fogmasktable_alpha != r_refdef.fog_alpha)
+			R_BuildFogTexture();
 	}
 	else
 		r_refdef.fogenabled = false;
