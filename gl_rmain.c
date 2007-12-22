@@ -3281,7 +3281,7 @@ void R_UpdateVariables(void)
 		// this is the point where the fog reaches 0.9986 alpha, which we
 		// consider a good enough cutoff point for the texture
 		// (0.9986 * 256 == 255.6)
-		r_refdef.fogrange = 16 / (r_refdef.fog_density * r_refdef.fog_density);
+		r_refdef.fogrange = 16 / (r_refdef.fog_density * r_refdef.fog_density) + r_refdef.fog_start;
 		r_refdef.fograngerecip = 1.0f / r_refdef.fogrange;
 		r_refdef.fogmasktabledistmultiplier = FOGMASKTABLEWIDTH * r_refdef.fograngerecip;
 		// fog color was already set
