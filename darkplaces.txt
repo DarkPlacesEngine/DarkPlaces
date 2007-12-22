@@ -825,6 +825,7 @@ showdate_format                                   %Y-%m-%d            format str
 showfps                                           0                   shows your rendered fps (frames per second)
 showpause                                         1                   show pause icon when game is paused
 showram                                           1                   show ram icon if low on surface cache memory (not used)
+showspeed                                         0                   shows your current speed (qu per second); number selects unit: 1 = qups, 2 = m/s, 3 = km/h, 4 = mph, 5 = knots
 showtime                                          0                   shows current time of day (useful on screenshots)
 showtime_format                                   %H:%M:%S            format string for time of day
 showturtle                                        0                   show turtle icon when framerate is too low (not used)
