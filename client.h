@@ -1399,7 +1399,7 @@ typedef struct r_refdef_s
 	vec_t fogmasktabledistmultiplier;
 #define FOGMASKTABLEWIDTH 1024
 	float fogmasktable[FOGMASKTABLEWIDTH];
-	float fogmasktable_start, fogmasktable_alpha;
+	float fogmasktable_start, fogmasktable_alpha, fogmasktable_range;
 	float fog_density;
 	float fog_red;
 	float fog_green;
