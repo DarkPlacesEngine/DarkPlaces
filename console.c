@@ -1180,7 +1180,16 @@ float Con_WordWidthFunc(void *passthrough, const char *w, size_t *length, float 
 		ti->colorindex = -1;
 		return ti->fontsize * ti->font->width_of[0];
 	}
-	return DrawQ_TextWidth_Font_UntilWidth(w, length, false, ti->font, maxWidth) * ti->fontsize;
+	if(maxWidth >= 0)
+		return DrawQ_TextWidth_Font_UntilWidth(w, length, false, ti->font, maxWidth / ti->fontsize) * ti->fontsize;
+	else if(maxWidth == -1)
+		return DrawQ_TextWidth_Font(w, *length, false, ti->font) * ti->fontsize;
+	else
+	{
+		printf("Con_WordWidthFunc: can't get here (maxWidth should never be %f)\n", maxWidth);
+		// Note: this is NOT a Con_Printf, as it could print recursively
+		return 0;
+	}
 }
 
 int Con_CountLineFunc(void *passthrough, const char *line, size_t length, float width, qboolean isContinuation)
