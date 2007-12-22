@@ -56,7 +56,7 @@ void R_SkyStartFrame(void)
 	skyrendersphere = false;
 	skyrenderbox = false;
 	skyrendermasked = false;
-	if (r_sky.integer && !(r_refdef.fogenabled && r_refdef.fog_alpha < 1))
+	if (r_sky.integer && !(r_refdef.fogenabled && r_refdef.fog_alpha >= 1))
 	{
 		if (skyboxside[0] || skyboxside[1] || skyboxside[2] || skyboxside[3] || skyboxside[4] || skyboxside[5])
 			skyrenderbox = true;
