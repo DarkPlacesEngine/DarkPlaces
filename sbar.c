@@ -88,7 +88,7 @@ cachepic_t *sb_inter;
 cachepic_t *sb_finale;
 
 cvar_t showfps = {CVAR_SAVE, "showfps", "0", "shows your rendered fps (frames per second)"};
-cvar_t showspeed = {CVAR_SAVE, "showspeed", "0", "shows your current speed (qu per second); number selects unit: 1 = qups, 2 = m/s, 3 = km/h, 4 = mph, 5 = knots"};
+cvar_t showspeed = {CVAR_SAVE, "showspeed", "0", "shows your current speed (qu per second); number selects unit: 1 = qu/s, 2 = m/s, 3 = km/h, 4 = mph, 5 = knots"};
 cvar_t showtime = {CVAR_SAVE, "showtime", "0", "shows current time of day (useful on screenshots)"};
 cvar_t showtime_format = {CVAR_SAVE, "showtime_format", "%H:%M:%S", "format string for time of day"};
 cvar_t showdate = {CVAR_SAVE, "showdate", "0", "shows current date (useful on screenshots)"};
@@ -1084,7 +1084,10 @@ void Sbar_ShowFPS(void)
 		{
 			default:
 			case 1:
-				unit = "qups";
+				if(gamemode == GAME_NEXUIZ)
+					unit = "in/s";
+				else
+					unit = "qu/s";
 				f = 1.0;
 				break;
 			case 2:
