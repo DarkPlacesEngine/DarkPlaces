@@ -499,7 +499,7 @@ void Host_Savegame_f (void)
 	FS_Printf(f, "%i\n", SAVEGAME_VERSION);
 
 	memset(comment, 0, sizeof(comment));
-	sprintf(comment, "%-21s kills:%3i/%3i", PRVM_GetString(prog->edicts->fields.server->message), (int)prog->globals.server->killed_monsters, (int)prog->globals.server->total_monsters);
+	sprintf(comment, "%-21.21s kills:%3i/%3i", PRVM_GetString(prog->edicts->fields.server->message), (int)prog->globals.server->killed_monsters, (int)prog->globals.server->total_monsters);
 	// convert space to _ to make stdio happy
 	// LordHavoc: convert control characters to _ as well
 	for (i=0 ; i<SAVEGAME_COMMENT_LENGTH ; i++)
