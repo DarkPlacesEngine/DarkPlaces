@@ -397,6 +397,7 @@ static void R_BuildFogTexture(void)
 
 	r_refdef.fogmasktable_start = r_refdef.fog_start;
 	r_refdef.fogmasktable_alpha = r_refdef.fog_alpha;
+	r_refdef.fogmasktable_range = r_refdef.fogrange;
 
 	s = r_refdef.fogmasktable_start / r_refdef.fogrange;
 	s = bound(0, s, 0.999);
@@ -3285,7 +3286,7 @@ void R_UpdateVariables(void)
 		r_refdef.fogmasktabledistmultiplier = FOGMASKTABLEWIDTH * r_refdef.fograngerecip;
 		// fog color was already set
 		// update the fog texture
-		if (r_refdef.fogmasktable_start != r_refdef.fog_start || r_refdef.fogmasktable_alpha != r_refdef.fog_alpha)
+		if (r_refdef.fogmasktable_start != r_refdef.fog_start || r_refdef.fogmasktable_alpha != r_refdef.fog_alpha || r_refdef.fogmasktable_range != r_refdef.fogrange)
 			R_BuildFogTexture();
 	}
 	else
