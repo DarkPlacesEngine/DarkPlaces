@@ -1845,11 +1845,11 @@ static void CL_Fog_f (void)
 {
 	if (Cmd_Argc () == 1)
 	{
-		Con_Printf("\"fog\" is \"%f %f %f %f %f %f\"\n", r_refdef.fog_density, r_refdef.fog_red, r_refdef.fog_green, r_refdef.fog_blue, r_refdef.fog_start, r_refdef.fog_end);
+		Con_Printf("\"fog\" is \"%f %f %f %f %f %f\"\n", r_refdef.fog_density, r_refdef.fog_red, r_refdef.fog_green, r_refdef.fog_blue, r_refdef.fog_start, r_refdef.fog_alpha);
 		return;
 	}
 	r_refdef.fog_start = 0;
-	r_refdef.fog_end = 1000000000;
+	r_refdef.fog_alpha = 1;
 	if(Cmd_Argc() > 1)
 		r_refdef.fog_density = atof(Cmd_Argv(1));
 	if(Cmd_Argc() > 2)
@@ -1861,7 +1861,7 @@ static void CL_Fog_f (void)
 	if(Cmd_Argc() > 5)
 		r_refdef.fog_start = atof(Cmd_Argv(5));
 	if(Cmd_Argc() > 6)
-		r_refdef.fog_end = atof(Cmd_Argv(6));
+		r_refdef.fog_alpha = atof(Cmd_Argv(6));
 }
 
 /*
@@ -2286,7 +2286,7 @@ void CL_Init (void)
 	Cvar_RegisterVariable (&cl_autodemo);
 	Cvar_RegisterVariable (&cl_autodemo_nameformat);
 
-	Cmd_AddCommand ("fog", CL_Fog_f, "set global fog parameters (density red green blue)");
+	Cmd_AddCommand ("fog", CL_Fog_f, "set global fog parameters (density red green blue mindist alpha)");
 
 	// LordHavoc: added pausedemo
 	Cmd_AddCommand ("pausedemo", CL_PauseDemo_f, "pause demo playback (can also safely pause demo recording if using QUAKE, QUAKEDP or NEHAHRAMOVIE protocol, useful for making movies)");

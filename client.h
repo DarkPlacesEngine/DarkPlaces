@@ -1403,7 +1403,7 @@ typedef struct r_refdef_s
 	float fog_red;
 	float fog_green;
 	float fog_blue;
-	float fog_start, fog_end;
+	float fog_start, fog_alpha;
 	qboolean fogenabled;
 	qboolean oldgl_fogenable;
 
