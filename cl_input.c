@@ -1269,6 +1269,8 @@ void CL_ClientMovement_Replay(void)
 		VectorCopy(s.origin, cl.movement_origin);
 		VectorCopy(s.velocity, cl.movement_velocity);
 	}
+	else if(cls.demoplayback) // for bob, speedometer
+		VectorCopy(cl.mvelocity[0], cl.movement_velocity);
 
 	// update the onground flag if appropriate
 	if (cl.movement_predicted)
