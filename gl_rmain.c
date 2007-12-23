@@ -64,6 +64,7 @@ cvar_t r_shadows_throwdistance = {CVAR_SAVE, "r_shadows_throwdistance", "500", "
 cvar_t r_q1bsp_skymasking = {0, "r_q1bsp_skymasking", "1", "allows sky polygons in quake1 maps to obscure other geometry"};
 cvar_t r_polygonoffset_submodel_factor = {0, "r_polygonoffset_submodel_factor", "0", "biases depth values of world submodels such as doors, to prevent z-fighting artifacts in Quake maps"};
 cvar_t r_polygonoffset_submodel_offset = {0, "r_polygonoffset_submodel_offset", "2", "biases depth values of world submodels such as doors, to prevent z-fighting artifacts in Quake maps"};
+cvar_t r_fog_exp2 = {0, "r_fog_exp2", "0", "uses GL_EXP2 fog (as in Nehahra) rather than realistic GL_EXP fog"};
 
 cvar_t gl_fogenable = {0, "gl_fogenable", "0", "nehahra fog enable (for Nehahra compatibility only)"};
 cvar_t gl_fogdensity = {0, "gl_fogdensity", "0.25", "nehahra fog density (recommend values below 0.1) (for Nehahra compatibility only)"};
@@ -72,6 +73,7 @@ cvar_t gl_foggreen = {0, "gl_foggreen","0.3", "nehahra fog color green value (fo
 cvar_t gl_fogblue = {0, "gl_fogblue","0.3", "nehahra fog color blue value (for Nehahra compatibility only)"};
 cvar_t gl_fogstart = {0, "gl_fogstart", "0", "nehahra fog start distance (for Nehahra compatibility only)"};
 cvar_t gl_fogend = {0, "gl_fogend","0", "nehahra fog end distance (for Nehahra compatibility only)"};
+cvar_t gl_skyclip = {0, "gl_skyclip", "4608", "nehahra farclip distance - the real fog end (for Nehahra compatibility only)"};
 
 cvar_t r_textureunits = {0, "r_textureunits", "32", "number of hardware texture units reported by driver (note: setting this to 1 turns off gl_combine)"};
 
@@ -246,9 +248,13 @@ void FOG_clear(void)
 		Cvar_Set("gl_foggreen", "0.3");
 		Cvar_Set("gl_fogblue", "0.3");
 	}
-	r_refdef.fog_density = r_refdef.fog_red = r_refdef.fog_green = r_refdef.fog_blue = 0.0f;
-	r_refdef.fog_start = 0;
+	r_refdef.fog_density = 0;
+	r_refdef.fog_red = 0;
+	r_refdef.fog_green = 0;
+	r_refdef.fog_blue = 0;
 	r_refdef.fog_alpha = 1;
+	r_refdef.fog_start = 0;
+	r_refdef.fog_end = 0;
 }
 
 float FogForDistance(vec_t dist)
@@ -393,23 +399,23 @@ static void R_BuildFogTexture(void)
 #define FOGWIDTH 256
 	unsigned char data1[FOGWIDTH][4];
 	//unsigned char data2[FOGWIDTH][4];
-	double d, s, alpha;
+	double d, r, alpha;
 
 	r_refdef.fogmasktable_start = r_refdef.fog_start;
 	r_refdef.fogmasktable_alpha = r_refdef.fog_alpha;
 	r_refdef.fogmasktable_range = r_refdef.fogrange;
+	r_refdef.fogmasktable_density = r_refdef.fog_density;
 
-	s = r_refdef.fogmasktable_start / r_refdef.fogrange;
-	s = bound(0, s, 0.999);
+	r = r_refdef.fogmasktable_range / FOGMASKTABLEWIDTH;
 	for (x = 0;x < FOGMASKTABLEWIDTH;x++)
 	{
-		d = ((double)x / FOGMASKTABLEWIDTH);
+		d = (x * r - r_refdef.fogmasktable_start);
 		Con_Printf("%f ", d);
-		d = (d - s) / (1 - s);
-		Con_Printf("%f ", d);
-		d = bound(0, d, 1);
-		Con_Printf(" = %f ", d);
-		alpha = exp(-16 * d*d);
+		d = max(0, d);
+		if (r_fog_exp2.integer)
+			alpha = exp(-r_refdef.fogmasktable_density * r_refdef.fogmasktable_density * 0.0001 * d * d);
+		else
+			alpha = exp(-r_refdef.fogmasktable_density * 0.004 * d);
 		Con_Printf(" : %f ", alpha);
 		alpha = 1 - (1 - alpha) * r_refdef.fogmasktable_alpha;
 		Con_Printf(" = %f\n", alpha);
@@ -605,6 +611,9 @@ static const char *builtinshaderstring =
 "uniform myhvec3 Color_Shirt;\n"
 "uniform myhvec3 FogColor;\n"
 "\n"
+"uniform myhvec4 TintColor;\n"
+"\n"
+"\n"
 "//#ifdef MODE_WATER\n"
 "uniform vec4 DistortScaleRefractReflect;\n"
 "uniform vec4 ScreenScaleRefractReflect;\n"
@@ -778,7 +787,6 @@ static const char *builtinshaderstring =
 "	//color.rgb *= normalize(CubeVector) * 0.5 + 0.5;//vec3(textureCube(Texture_Cube, CubeVector));\n"
 "	color.rgb *= myhvec3(textureCube(Texture_Cube, CubeVector));\n"
 "# endif\n"
-"	color *= myhvec4(gl_Color);\n"
 "#endif // MODE_LIGHTSOURCE\n"
 "\n"
 "\n"
@@ -808,7 +816,7 @@ static const char *builtinshaderstring =
 "#  endif\n"
 "# endif\n"
 "\n"
-"	color *= myhvec4(gl_Color);\n"
+"	color.a *= TintColor.a;\n"
 "#endif // MODE_LIGHTDIRECTION\n"
 "\n"
 "\n"
@@ -830,8 +838,9 @@ static const char *builtinshaderstring =
 "# endif\n"
 "\n"
 "	// apply lightmap color\n"
-"	color.rgb = color.rgb * AmbientScale + tempcolor * myhvec3(texture2D(Texture_Lightmap, TexCoordLightmap)) * myhvec3(gl_Color);\n"
-"	color.a *= myhalf(gl_Color.a);\n"
+"	color.rgb = color.rgb * AmbientScale + tempcolor * myhvec3(texture2D(Texture_Lightmap, TexCoordLightmap));\n"
+"\n"
+"	color *= TintColor;\n"
 "#endif // MODE_LIGHTDIRECTIONMAP_MODELSPACE\n"
 "\n"
 "\n"
@@ -852,8 +861,9 @@ static const char *builtinshaderstring =
 "# endif\n"
 "\n"
 "	// apply lightmap color\n"
-"	color.rgb = color.rgb * AmbientScale + tempcolor * myhvec3(texture2D(Texture_Lightmap, TexCoordLightmap)) * myhvec3(gl_Color);\n"
-"	color.a *= myhalf(gl_Color.a);\n"
+"	color.rgb = color.rgb * AmbientScale + tempcolor * myhvec3(texture2D(Texture_Lightmap, TexCoordLightmap));\n"
+"\n"
+"	color *= TintColor;\n"
 "#endif // MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n"
 "\n"
 "\n"
@@ -861,8 +871,27 @@ static const char *builtinshaderstring =
 "\n"
 "#ifdef MODE_LIGHTMAP\n"
 "	// apply lightmap color\n"
-"	color *= myhvec4(texture2D(Texture_Lightmap, TexCoordLightmap)) * myhvec4(gl_Color) * myhvec4(myhvec3(DiffuseScale), 1) + myhvec4(myhvec3(AmbientScale), 0);\n"
+"	color.rgb = color.rgb * myhvec3(texture2D(Texture_Lightmap, TexCoordLightmap)) * DiffuseScale + color.rgb * AmbientScale;\n"
+"\n"
+"	color *= TintColor;\n"
 "#endif // MODE_LIGHTMAP\n"
+"\n"
+"\n"
+"\n"
+"\n"
+"#ifdef MODE_VERTEXCOLOR\n"
+"	// apply lightmap color\n"
+"	color.rgb = color.rgb * myhvec3(gl_Color.rgb) * DiffuseScale + color.rgb * AmbientScale;\n"
+"\n"
+"	color *= TintColor;\n"
+"#endif // MODE_VERTEXCOLOR\n"
+"\n"
+"\n"
+"\n"
+"\n"
+"#ifdef MODE_FLATCOLOR\n"
+"	color *= TintColor;\n"
+"#endif // MODE_FLATCOLOR\n"
 "\n"
 "\n"
 "\n"
@@ -875,24 +904,23 @@ static const char *builtinshaderstring =
 "	color.rgb += myhvec3(texture2D(Texture_Glow, TexCoord)) * GlowScale;\n"
 "#endif\n"
 "\n"
-"#ifndef MODE_LIGHTSOURCE\n"
-"# ifdef USEREFLECTION\n"
-"	vec4 ScreenScaleRefractReflectIW = ScreenScaleRefractReflect * (1.0 / ModelViewProjectionPosition.w);\n"
-"	//vec4 ScreenTexCoord = (ModelViewProjectionPosition.xyxy + normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5)).xyxy * DistortScaleRefractReflect * 100) * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect;\n"
-"	vec4 ScreenTexCoord = ModelViewProjectionPosition.xyxy * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect + vec3(normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5))).xyxy * DistortScaleRefractReflect;\n"
-"	color.rgb = mix(color.rgb, myhvec3(texture2D(Texture_Reflection, ScreenTexCoord.zw)) * ReflectColor.rgb, ReflectColor.a);\n"
-"# endif\n"
-"#endif\n"
-"\n"
 "#ifdef USECONTRASTBOOST\n"
 "	color.rgb = color.rgb / (ContrastBoostCoeff * color.rgb + myhvec3(1, 1, 1));\n"
 "#endif\n"
 "\n"
 "	color.rgb *= SceneBrightness;\n"
 "\n"
+"	// apply fog after Contrastboost/SceneBrightness because its color is already modified appropriately\n"
 "#ifdef USEFOG\n"
-"	// apply fog\n"
-"      color.rgb = mix(FogColor, color.rgb, myhalf(texture2D(Texture_FogMask, myhvec2(length(EyeVectorModelSpace)*FogRangeRecip, 0.0))));\n"
+"	color.rgb = mix(FogColor, color.rgb, myhalf(texture2D(Texture_FogMask, myhvec2(length(EyeVectorModelSpace)*FogRangeRecip, 0.0))));\n"
+"#endif\n"
+"\n"
+"	// reflection must come last because it already contains exactly the correct fog (the reflection render preserves camera distance from the plane, it only flips the side) and ContrastBoost/SceneBrightness\n"
+"#ifdef USEREFLECTION\n"
+"	vec4 ScreenScaleRefractReflectIW = ScreenScaleRefractReflect * (1.0 / ModelViewProjectionPosition.w);\n"
+"	//vec4 ScreenTexCoord = (ModelViewProjectionPosition.xyxy + normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5)).xyxy * DistortScaleRefractReflect * 100) * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect;\n"
+"	vec4 ScreenTexCoord = ModelViewProjectionPosition.xyxy * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect + vec3(normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - myhvec3(0.5))).xyxy * DistortScaleRefractReflect;\n"
+"	color.rgb = mix(color.rgb, myhvec3(texture2D(Texture_Reflection, ScreenTexCoord.zw)) * ReflectColor.rgb, ReflectColor.a);\n"
 "#endif\n"
 "\n"
 "	gl_FragColor = vec4(color);\n"
@@ -934,9 +962,11 @@ const char *shaderpermutationinfo[][2] =
 // this enum is multiplied by SHADERPERMUTATION_MODEBASE
 typedef enum shadermode_e
 {
-	SHADERMODE_LIGHTMAP, // (lightmap) use directional pixel shading from fixed light direction (q3bsp)
-	SHADERMODE_LIGHTDIRECTIONMAP_MODELSPACE, // (lightmap) use directional pixel shading from texture containing modelspace light directions (deluxemap)
-	SHADERMODE_LIGHTDIRECTIONMAP_TANGENTSPACE, // (lightmap) use directional pixel shading from texture containing tangentspace light directions (deluxemap)
+	SHADERMODE_FLATCOLOR, // (lightmap) modulate texture by uniform color (q1bsp, q3bsp)
+	SHADERMODE_VERTEXCOLOR, // (lightmap) modulate texture by vertex colors (q3bsp)
+	SHADERMODE_LIGHTMAP, // (lightmap) modulate texture by lightmap texture (q1bsp, q3bsp)
+	SHADERMODE_LIGHTDIRECTIONMAP_MODELSPACE, // (lightmap) use directional pixel shading from texture containing modelspace light directions (q3bsp deluxemap)
+	SHADERMODE_LIGHTDIRECTIONMAP_TANGENTSPACE, // (lightmap) use directional pixel shading from texture containing tangentspace light directions (q1bsp deluxemap)
 	SHADERMODE_LIGHTDIRECTION, // (lightmap) use directional pixel shading from fixed light direction (q3bsp)
 	SHADERMODE_LIGHTSOURCE, // (lightsource) use directional pixel shading from light source (rtlight)
 	SHADERMODE_REFRACTION, // refract background (the material is rendered normally after this pass)
@@ -948,6 +978,8 @@ shadermode_t;
 // NOTE: MUST MATCH ORDER OF SHADERMODE_* ENUMS!
 const char *shadermodeinfo[][2] =
 {
+	{"#define MODE_FLATCOLOR\n", " flatcolor"},
+	{"#define MODE_VERTEXCOLOR\n", " vertexcolor"},
 	{"#define MODE_LIGHTMAP\n", " lightmap"},
 	{"#define MODE_LIGHTDIRECTIONMAP_MODELSPACE\n", " lightdirectionmap_modelspace"},
 	{"#define MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n", " lightdirectionmap_tangentspace"},
@@ -994,6 +1026,7 @@ typedef struct r_glsl_permutation_s
 	int loc_GlowScale;
 	int loc_SceneBrightness; // or: Scenebrightness * ContrastBoost
 	int loc_OffsetMapping_Scale;
+	int loc_TintColor;
 	int loc_AmbientColor;
 	int loc_DiffuseColor;
 	int loc_SpecularColor;
@@ -1125,6 +1158,7 @@ static void R_GLSL_CompilePermutation(const char *filename, int permutation, int
 		p->loc_GlowScale           = qglGetUniformLocationARB(p->program, "GlowScale");
 		p->loc_SceneBrightness     = qglGetUniformLocationARB(p->program, "SceneBrightness");
 		p->loc_OffsetMapping_Scale = qglGetUniformLocationARB(p->program, "OffsetMapping_Scale");
+		p->loc_TintColor       = qglGetUniformLocationARB(p->program, "TintColor");
 		p->loc_AmbientColor        = qglGetUniformLocationARB(p->program, "AmbientColor");
 		p->loc_DiffuseColor        = qglGetUniformLocationARB(p->program, "DiffuseColor");
 		p->loc_SpecularColor       = qglGetUniformLocationARB(p->program, "SpecularColor");
@@ -1247,13 +1281,11 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 			permutation |= SHADERPERMUTATION_COLORMAPPING;
 		if(r_glsl_contrastboost.value > 1 || r_glsl_contrastboost.value < 0)
 			permutation |= SHADERPERMUTATION_CONTRASTBOOST;
-		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
-			permutation |= SHADERPERMUTATION_REFLECTION;
 	}
 	else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
 	{
 		// unshaded geometry (fullbright or ambient model lighting)
-		mode = SHADERMODE_LIGHTMAP;
+		mode = SHADERMODE_FLATCOLOR;
 		if (rsurface.texture->currentskinframe->glow)
 			permutation |= SHADERPERMUTATION_GLOW;
 		if (r_refdef.fogenabled)
@@ -1324,10 +1356,15 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 			if (specularscale > 0)
 				permutation |= SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_DIFFUSE;
 		}
+		else if (rsurface.uselightmaptexture)
+		{
+			// ordinary lightmapping (q1bsp, q3bsp)
+			mode = SHADERMODE_LIGHTMAP;
+		}
 		else
 		{
-			// ordinary lightmapping
-			mode = SHADERMODE_LIGHTMAP;
+			// ordinary vertex coloring (q3bsp)
+			mode = SHADERMODE_VERTEXCOLOR;
 		}
 		if (rsurface.texture->currentskinframe->glow)
 			permutation |= SHADERPERMUTATION_GLOW;
@@ -1393,20 +1430,21 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 	else if (mode == SHADERMODE_LIGHTDIRECTION)
 	{
 		if (r_glsl_permutation->loc_AmbientColor >= 0)
-			qglUniform3fARB(r_glsl_permutation->loc_AmbientColor, rsurface.modellight_ambient[0] * ambientscale * r_refdef.lightmapintensity, rsurface.modellight_ambient[1] * ambientscale * r_refdef.lightmapintensity, rsurface.modellight_ambient[2] * ambientscale * r_refdef.lightmapintensity);
+			qglUniform3fARB(r_glsl_permutation->loc_AmbientColor , rsurface.modellight_ambient[0] * ambientscale  * rsurface.texture->lightmapcolor[0] * 0.5f, rsurface.modellight_ambient[1] * ambientscale  * rsurface.texture->lightmapcolor[1] * 0.5f, rsurface.modellight_ambient[2] * ambientscale  * rsurface.texture->lightmapcolor[2] * 0.5f);
 		if (r_glsl_permutation->loc_DiffuseColor >= 0)
-			qglUniform3fARB(r_glsl_permutation->loc_DiffuseColor, rsurface.modellight_diffuse[0] * diffusescale * r_refdef.lightmapintensity, rsurface.modellight_diffuse[1] * diffusescale * r_refdef.lightmapintensity, rsurface.modellight_diffuse[2] * diffusescale * r_refdef.lightmapintensity);
+			qglUniform3fARB(r_glsl_permutation->loc_DiffuseColor , rsurface.modellight_diffuse[0] * diffusescale  * rsurface.texture->lightmapcolor[0] * 0.5f, rsurface.modellight_diffuse[1] * diffusescale  * rsurface.texture->lightmapcolor[1] * 0.5f, rsurface.modellight_diffuse[2] * diffusescale  * rsurface.texture->lightmapcolor[2] * 0.5f);
 		if (r_glsl_permutation->loc_SpecularColor >= 0)
-			qglUniform3fARB(r_glsl_permutation->loc_SpecularColor, rsurface.modellight_diffuse[0] * specularscale * r_refdef.lightmapintensity, rsurface.modellight_diffuse[1] * specularscale * r_refdef.lightmapintensity, rsurface.modellight_diffuse[2] * specularscale * r_refdef.lightmapintensity);
+			qglUniform3fARB(r_glsl_permutation->loc_SpecularColor, rsurface.modellight_diffuse[0] * specularscale * rsurface.texture->lightmapcolor[0] * 0.5f, rsurface.modellight_diffuse[1] * specularscale * rsurface.texture->lightmapcolor[1] * 0.5f, rsurface.modellight_diffuse[2] * specularscale * rsurface.texture->lightmapcolor[2] * 0.5f);
 		if (r_glsl_permutation->loc_LightDir >= 0)
 			qglUniform3fARB(r_glsl_permutation->loc_LightDir, rsurface.modellight_lightdir[0], rsurface.modellight_lightdir[1], rsurface.modellight_lightdir[2]);
 	}
 	else
 	{
-		if (r_glsl_permutation->loc_AmbientScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_AmbientScale, r_ambient.value * 2.0f / 128.0f);
-		if (r_glsl_permutation->loc_DiffuseScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_DiffuseScale, r_refdef.lightmapintensity * 2.0f);
-		if (r_glsl_permutation->loc_SpecularScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularScale, r_refdef.lightmapintensity * specularscale * 2.0f);
+		if (r_glsl_permutation->loc_AmbientScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_AmbientScale, r_ambient.value * 1.0f / 128.0f);
+		if (r_glsl_permutation->loc_DiffuseScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_DiffuseScale, r_refdef.lightmapintensity);
+		if (r_glsl_permutation->loc_SpecularScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularScale, r_refdef.lightmapintensity * specularscale);
 	}
+	if (r_glsl_permutation->loc_TintColor >= 0) qglUniform4fARB(r_glsl_permutation->loc_TintColor, rsurface.texture->lightmapcolor[0], rsurface.texture->lightmapcolor[1], rsurface.texture->lightmapcolor[2], rsurface.texture->lightmapcolor[3]);
 	if (r_glsl_permutation->loc_GlowScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_GlowScale, r_hdr_glowintensity.value);
 	if (r_glsl_permutation->loc_ContrastBoostCoeff >= 0)
 	{
@@ -1543,7 +1581,7 @@ skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewid
 	skinframe_t *item;
 	int hashindex;
 	char basename[MAX_QPATH];
-	
+
 	Image_StripImageExtension(name, basename, sizeof(basename));
 
 	hashindex = CRC_Block((unsigned char *)basename, strlen(basename)) & (SKINFRAME_HASH - 1);
@@ -1565,7 +1603,7 @@ skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewid
 		item->comparewidth = comparewidth;
 		item->compareheight = compareheight;
 		item->comparecrc = comparecrc;
-		item->next = r_skinframe.hash[hashindex];	
+		item->next = r_skinframe.hash[hashindex];
 		r_skinframe.hash[hashindex] = item;
 	}
 	else if( item->base == NULL )
@@ -1862,7 +1900,6 @@ void gl_main_start(void)
 	}
 	r_texture_fogattenuation = NULL;
 	//r_texture_fogintensity = NULL;
-	R_BuildFogTexture();
 	memset(&r_bloomstate, 0, sizeof(r_bloomstate));
 	memset(&r_waterstate, 0, sizeof(r_waterstate));
 	memset(r_glsl_permutations, 0, sizeof(r_glsl_permutations));
@@ -1936,6 +1973,7 @@ void GL_Main_Init(void)
 		Cvar_RegisterVariable (&gl_fogblue);
 		Cvar_RegisterVariable (&gl_fogstart);
 		Cvar_RegisterVariable (&gl_fogend);
+		Cvar_RegisterVariable (&gl_skyclip);
 	}
 	Cvar_RegisterVariable(&r_depthfirst);
 	Cvar_RegisterVariable(&r_nearclip);
@@ -1966,6 +2004,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_q1bsp_skymasking);
 	Cvar_RegisterVariable(&r_polygonoffset_submodel_factor);
 	Cvar_RegisterVariable(&r_polygonoffset_submodel_offset);
+	Cvar_RegisterVariable(&r_fog_exp2);
 	Cvar_RegisterVariable(&r_textureunits);
 	Cvar_RegisterVariable(&r_glsl);
 	Cvar_RegisterVariable(&r_glsl_offsetmapping);
@@ -2378,7 +2417,7 @@ static void R_View_SetFrustum(void)
 		VectorMA(r_view.forward, -slopey, r_view.up  , r_view.frustum[2].normal);
 		VectorMA(r_view.forward,  slopey, r_view.up  , r_view.frustum[3].normal);
 		VectorCopy(r_view.forward, r_view.frustum[4].normal);
-		
+
 		// Leaving those out was a mistake, those were in the old code, and they
 		// fix a reproducable bug in this one: frustum culling got fucked up when viewmatrix was an identity matrix
 		// I couldn't reproduce it after adding those normalizations. --blub
@@ -2804,7 +2843,7 @@ static void R_Water_ProcessPlanes(void)
 			}
 
 			R_ResetViewRendering3D();
-			R_ClearScreen();
+			R_ClearScreen(r_refdef.fogenabled);
 			if (r_timereport_active)
 				R_TimeReport("viewclear");
 
@@ -2816,7 +2855,7 @@ static void R_Water_ProcessPlanes(void)
 			qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view.x, vid.height - (r_view.y + r_view.height), r_view.width, r_view.height);CHECKGLERROR
 
 			R_ResetViewRendering3D();
-			R_ClearScreen();
+			R_ClearScreen(r_refdef.fogenabled);
 			if (r_timereport_active)
 				R_TimeReport("viewclear");
 		}
@@ -3084,12 +3123,12 @@ void R_Bloom_MakeTexture(void)
 	}
 }
 
-static void R_UpdateFogColor(void); // needs to be called before HDR subrender too, as that changes colorscale!
-
 void R_HDR_RenderBloomTexture(void)
 {
 	int oldwidth, oldheight;
+	float oldcolorscale;
 
+	oldcolorscale = r_view.colorscale;
 	oldwidth = r_view.width;
 	oldheight = r_view.height;
 	r_view.width = r_bloomstate.bloomwidth;
@@ -3100,11 +3139,11 @@ void R_HDR_RenderBloomTexture(void)
 	// TODO: add fp16 framebuffer support
 
 	r_view.showdebug = false;
-	r_view.colorscale = r_bloom_colorscale.value * r_hdr_scenebrightness.value;
-	if (r_hdr.integer)
-		r_view.colorscale /= r_hdr_range.value;
+	r_view.colorscale *= r_bloom_colorscale.value / bound(1, r_hdr_range.value, 16);
 
-	R_UpdateFogColor();
+	R_ClearScreen(r_refdef.fogenabled);
+	if (r_timereport_active)
+		R_TimeReport("HDRclear");
 
 	r_waterstate.numwaterplanes = 0;
 	R_RenderScene(r_waterstate.enabled);
@@ -3115,15 +3154,16 @@ void R_HDR_RenderBloomTexture(void)
 	R_Bloom_CopyHDRTexture();
 	R_Bloom_MakeTexture();
 
-	R_ResetViewRendering3D();
-
-	R_ClearScreen();
-	if (r_timereport_active)
-		R_TimeReport("viewclear");
-
 	// restore the view settings
 	r_view.width = oldwidth;
 	r_view.height = oldheight;
+	r_view.colorscale = oldcolorscale;
+
+	R_ResetViewRendering3D();
+
+	R_ClearScreen(r_refdef.fogenabled);
+	if (r_timereport_active)
+		R_TimeReport("viewclear");
 }
 
 static void R_BlendView(void)
@@ -3194,7 +3234,7 @@ void R_RenderScene(qboolean addwaterplanes);
 
 matrix4x4_t r_waterscrollmatrix;
 
-static void R_UpdateFogColor(void) // needs to be called before HDR subrender too, as that changes colorscale!
+void R_UpdateFogColor(void) // needs to be called before HDR subrender too, as that changes colorscale!
 {
 	if (r_refdef.fog_density)
 	{
@@ -3204,8 +3244,8 @@ static void R_UpdateFogColor(void) // needs to be called before HDR subrender to
 
 		{
 			vec3_t fogvec;
+			VectorCopy(r_refdef.fogcolor, fogvec);
 			//   color.rgb *= SceneBrightness;
-			VectorScale(r_refdef.fogcolor, r_view.colorscale, fogvec);
 			if(r_glsl.integer && (r_glsl_contrastboost.value > 1 || r_glsl_contrastboost.value < 0)) // need to support contrast boost
 			{
 				//   color.rgb *= ContrastBoost / ((ContrastBoost - 1) * color.rgb + 1);
@@ -3213,6 +3253,7 @@ static void R_UpdateFogColor(void) // needs to be called before HDR subrender to
 				fogvec[1] *= r_glsl_contrastboost.value / ((r_glsl_contrastboost.value - 1) * fogvec[1] + 1);
 				fogvec[2] *= r_glsl_contrastboost.value / ((r_glsl_contrastboost.value - 1) * fogvec[2] + 1);
 			}
+			VectorScale(fogvec, r_view.colorscale, fogvec);
 			r_refdef.fogcolor[0] = bound(0.0f, fogvec[0], 1.0f);
 			r_refdef.fogcolor[1] = bound(0.0f, fogvec[1], 1.0f);
 			r_refdef.fogcolor[2] = bound(0.0f, fogvec[2], 1.0f);
@@ -3259,6 +3300,9 @@ void R_UpdateVariables(void)
 			r_refdef.fog_red = gl_fogred.value;
 			r_refdef.fog_green = gl_foggreen.value;
 			r_refdef.fog_blue = gl_fogblue.value;
+			r_refdef.fog_alpha = 1;
+			r_refdef.fog_start = 0;
+			r_refdef.fog_end = gl_skyclip.value;
 		}
 		else if (r_refdef.oldgl_fogenable)
 		{
@@ -3267,11 +3311,15 @@ void R_UpdateVariables(void)
 			r_refdef.fog_red = 0;
 			r_refdef.fog_green = 0;
 			r_refdef.fog_blue = 0;
+			r_refdef.fog_alpha = 0;
+			r_refdef.fog_start = 0;
+			r_refdef.fog_end = 0;
 		}
 	}
 
 	r_refdef.fog_alpha = bound(0, r_refdef.fog_alpha, 1);
 	r_refdef.fog_start = max(0, r_refdef.fog_start);
+	r_refdef.fog_end = max(r_refdef.fog_start + 0.01, r_refdef.fog_end);
 
 	R_UpdateFogColor();
 
@@ -3281,12 +3329,16 @@ void R_UpdateVariables(void)
 		// this is the point where the fog reaches 0.9986 alpha, which we
 		// consider a good enough cutoff point for the texture
 		// (0.9986 * 256 == 255.6)
-		r_refdef.fogrange = 16 / (r_refdef.fog_density * r_refdef.fog_density) + r_refdef.fog_start;
+		if (r_fog_exp2.integer)
+			r_refdef.fogrange = 32 / (r_refdef.fog_density * r_refdef.fog_density) + r_refdef.fog_start;
+		else
+			r_refdef.fogrange = 2048 / r_refdef.fog_density + r_refdef.fog_start;
+		r_refdef.fogrange = bound(r_refdef.fog_start, r_refdef.fogrange, r_refdef.fog_end);
 		r_refdef.fograngerecip = 1.0f / r_refdef.fogrange;
 		r_refdef.fogmasktabledistmultiplier = FOGMASKTABLEWIDTH * r_refdef.fograngerecip;
 		// fog color was already set
 		// update the fog texture
-		if (r_refdef.fogmasktable_start != r_refdef.fog_start || r_refdef.fogmasktable_alpha != r_refdef.fog_alpha || r_refdef.fogmasktable_range != r_refdef.fogrange)
+		if (r_refdef.fogmasktable_start != r_refdef.fog_start || r_refdef.fogmasktable_alpha != r_refdef.fog_alpha || r_refdef.fogmasktable_density != r_refdef.fog_density || r_refdef.fogmasktable_range != r_refdef.fogrange)
 			R_BuildFogTexture();
 	}
 	else
@@ -3303,6 +3355,8 @@ void R_RenderView(void)
 	if (!r_refdef.entities/* || !r_refdef.worldmodel*/)
 		return; //Host_Error ("R_RenderView: NULL worldmodel");
 
+	r_view.colorscale = r_hdr_scenebrightness.value;
+
 	R_Shadow_UpdateWorldLightSelection();
 
 	R_Bloom_StartFrame();
@@ -3314,9 +3368,9 @@ void R_RenderView(void)
 
 	R_ResetViewRendering3D();
 
-	if (r_view.clear)
+	if (r_view.clear || r_refdef.fogenabled)
 	{
-		R_ClearScreen();
+		R_ClearScreen(r_refdef.fogenabled);
 		if (r_timereport_active)
 			R_TimeReport("viewclear");
 	}
@@ -3328,7 +3382,6 @@ void R_RenderView(void)
 	if (r_hdr.integer)
 		R_HDR_RenderBloomTexture();
 
-	r_view.colorscale = r_hdr_scenebrightness.value;
 	r_waterstate.numwaterplanes = 0;
 	R_RenderScene(r_waterstate.enabled);
 
@@ -3349,6 +3402,8 @@ static void R_DrawLocs(void);
 static void R_DrawEntityBBoxes(void);
 void R_RenderScene(qboolean addwaterplanes)
 {
+	R_UpdateFogColor();
+
 	if (addwaterplanes)
 	{
 		R_ResetViewRendering3D();
@@ -4227,6 +4282,7 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 					if (ent->model->type == mod_brushq3)
 						colorscale *= r_refdef.rtlightstylevalue[0];
 					colorscale *= r_refdef.lightmapintensity;
+					Vector4Set(t->lightmapcolor, ent->colormod[0] * colorscale, ent->colormod[1] * colorscale, ent->colormod[2] * colorscale, t->currentalpha);
 					R_Texture_AddLayer(t, depthmask, blendfunc1, blendfunc2, TEXTURELAYERTYPE_LITTEXTURE, currentbasetexture, &t->currenttexmatrix, ent->colormod[0] * colorscale, ent->colormod[1] * colorscale, ent->colormod[2] * colorscale, t->currentalpha);
 					if (r_ambient.value >= (1.0f/64.0f))
 						R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, currentbasetexture, &t->currenttexmatrix, ent->colormod[0] * r_ambient.value * (1.0f / 64.0f), ent->colormod[1] * r_ambient.value * (1.0f / 64.0f), ent->colormod[2] * r_ambient.value * (1.0f / 64.0f), t->currentalpha);
@@ -4388,7 +4444,12 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 	rsurface.inversematrix = ent->inversematrix;
 	R_Mesh_Matrix(&rsurface.matrix);
 	Matrix4x4_Transform(&rsurface.inversematrix, r_view.origin, rsurface.modelorg);
-	VectorCopy(ent->modellight_ambient, rsurface.modellight_ambient);
+	rsurface.modellight_ambient[0] = ent->modellight_ambient[0] * ent->colormod[0];
+	rsurface.modellight_ambient[1] = ent->modellight_ambient[1] * ent->colormod[1];
+	rsurface.modellight_ambient[2] = ent->modellight_ambient[2] * ent->colormod[2];
+	rsurface.modellight_diffuse[0] = ent->modellight_diffuse[0] * ent->colormod[0];
+	rsurface.modellight_diffuse[1] = ent->modellight_diffuse[1] * ent->colormod[1];
+	rsurface.modellight_diffuse[2] = ent->modellight_diffuse[2] * ent->colormod[2];
 	VectorCopy(ent->modellight_diffuse, rsurface.modellight_diffuse);
 	VectorCopy(ent->modellight_lightdir, rsurface.modellight_lightdir);
 	VectorCopy(ent->colormap_pantscolor, rsurface.colormap_pantscolor);
@@ -5443,7 +5504,7 @@ static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, msurface_t **te
 	// level, so don't use it then either.
 	if (r_refdef.worldmodel && r_refdef.worldmodel->type == mod_brushq1 && r_q1bsp_skymasking.integer && !r_viewcache.world_novis)
 	{
-		GL_Color(r_refdef.fogcolor[0] * r_view.colorscale, r_refdef.fogcolor[1] * r_view.colorscale, r_refdef.fogcolor[2] * r_view.colorscale, 1);
+		GL_Color(r_refdef.fogcolor[0], r_refdef.fogcolor[1], r_refdef.fogcolor[2], 1);
 		R_Mesh_ColorPointer(NULL, 0, 0);
 		R_Mesh_ResetTextureState();
 		if (skyrendermasked)
@@ -5475,6 +5536,7 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, msurface_t **t
 	{
 		rsurface.mode = RSURFMODE_GLSL;
 		R_Mesh_ResetTextureState();
+		GL_Color(1, 1, 1, 1);
 	}
 
 	R_Mesh_TexMatrix(0, &rsurface.texture->currenttexmatrix);
@@ -5563,8 +5625,6 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, msurface_t **t
 	R_Mesh_TexCoordPointer(2, 3, rsurface.tvector3f, rsurface.tvector3f_bufferobject, rsurface.tvector3f_bufferoffset);
 	R_Mesh_TexCoordPointer(3, 3, rsurface.normal3f, rsurface.normal3f_bufferobject, rsurface.normal3f_bufferoffset);
 	R_Mesh_TexCoordPointer(4, 2, rsurface.modeltexcoordlightmap2f, rsurface.modeltexcoordlightmap2f_bufferobject, rsurface.modeltexcoordlightmap2f_bufferoffset);
-	// FIXME MOVE THIS TO A UNIFORM
-	GL_Color(rsurface.texture->currentlayers[0].color[0], rsurface.texture->currentlayers[0].color[1], rsurface.texture->currentlayers[0].color[2], rsurface.texture->currentlayers[0].color[3]);
 
 	if (r_glsl_permutation->loc_Texture_Refraction >= 0)
 	{

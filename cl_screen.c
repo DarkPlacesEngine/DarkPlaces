@@ -65,7 +65,7 @@ static void SCR_ScreenShot_f (void);
 static void R_Envmap_f (void);
 
 // backend
-void R_ClearScreen(void);
+void R_ClearScreen(qboolean fogcolor);
 
 /*
 ===============================================================================
@@ -1731,7 +1731,7 @@ static void R_Envmap_f (void)
 	{
 		sprintf(filename, "env/%s%s.tga", basename, envmapinfo[j].name);
 		Matrix4x4_CreateFromQuakeEntity(&r_view.matrix, r_view.origin[0], r_view.origin[1], r_view.origin[2], envmapinfo[j].angles[0], envmapinfo[j].angles[1], envmapinfo[j].angles[2], 1);
-		R_ClearScreen();
+		r_view.clear = true;
 		R_Mesh_Start();
 		R_RenderView();
 		R_Mesh_Finish();
@@ -1852,12 +1852,14 @@ qboolean SCR_ScreenShot(char *filename, unsigned char *buffer1, unsigned char *b
 
 //=============================================================================
 
-void R_ClearScreen(void)
+extern void R_UpdateFogColor(void);
+void R_ClearScreen(qboolean fogcolor)
 {
 	// clear to black
 	CHECKGLERROR
-	if (r_refdef.fogenabled)
+	if (fogcolor)
 	{
+		R_UpdateFogColor();
 		qglClearColor(r_refdef.fogcolor[0],r_refdef.fogcolor[1],r_refdef.fogcolor[2],0);CHECKGLERROR
 	}
 	else
@@ -2155,7 +2157,7 @@ void CL_UpdateScreen(void)
 	qglDepthMask(1);CHECKGLERROR
 	qglColorMask(1,1,1,1);CHECKGLERROR
 	qglClearColor(0,0,0,0);CHECKGLERROR
-	R_ClearScreen();
+	R_ClearScreen(false);
 	r_view.clear = false;
 
 	if(scr_stipple.integer)
