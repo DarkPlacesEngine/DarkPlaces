@@ -56,7 +56,7 @@ void R_SkyStartFrame(void)
 	skyrendersphere = false;
 	skyrenderbox = false;
 	skyrendermasked = false;
-	if (r_sky.integer && !(r_refdef.fogenabled && r_refdef.fog_alpha >= 1))
+	if (r_sky.integer && !(r_refdef.fogenabled && r_refdef.fogmasktable[FOGMASKTABLEWIDTH-1] < (1.0f / 256.0f)))
 	{
 		if (skyboxside[0] || skyboxside[1] || skyboxside[2] || skyboxside[3] || skyboxside[4] || skyboxside[5])
 			skyrenderbox = true;
@@ -290,7 +290,7 @@ static void R_SkyBox(void)
 	if(r_refdef.fogenabled)
 	{
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		GL_Color(r_refdef.fogcolor[0], r_refdef.fogcolor[1], r_refdef.fogcolor[2], r_refdef.fog_alpha);
+		GL_Color(r_refdef.fogcolor[0], r_refdef.fogcolor[1], r_refdef.fogcolor[2], 1 - r_refdef.fogmasktable[FOGMASKTABLEWIDTH-1]);
 		for (i = 0;i < 6;i++)
 		{
 			R_Mesh_TexBind(0, 0);
@@ -425,7 +425,7 @@ static void R_SkySphere(void)
 	{
 		R_Mesh_TexBind(0, 0);
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		GL_Color(r_refdef.fogcolor[0], r_refdef.fogcolor[1], r_refdef.fogcolor[2], r_refdef.fog_alpha);
+		GL_Color(r_refdef.fogcolor[0], r_refdef.fogcolor[1], r_refdef.fogcolor[2], 1 - r_refdef.fogmasktable[FOGMASKTABLEWIDTH-1]);
 		GL_LockArrays(0, skysphere_numverts);
 		R_Mesh_Draw(0, skysphere_numverts, skysphere_numtriangles, skysphere_element3i, 0, 0);
 		GL_LockArrays(0, 0);

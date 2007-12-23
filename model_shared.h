@@ -477,6 +477,10 @@ typedef struct texture_s
 	float specularpower;
 	// color tint (colormod * currentalpha) used for rtlighting this material
 	float dlightcolor[3];
+	// color tint (colormod * 2) used for lightmapped lighting on this material
+	// includes alpha as 4th component
+	// replaces role of gl_Color in GLSL shader
+	float lightmapcolor[4];
 
 	// from q3 shaders
 	int customblendfunc[2];

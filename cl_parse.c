@@ -365,7 +365,7 @@ void CL_ParseEntityLump(char *entdata)
 		{
 			r_refdef.fog_start = 0;
 			r_refdef.fog_alpha = 1;
-			sscanf(value, "%f %f %f %f %f %f", &r_refdef.fog_density, &r_refdef.fog_red, &r_refdef.fog_green, &r_refdef.fog_blue, &r_refdef.fog_start, &r_refdef.fog_alpha);
+			sscanf(value, "%f %f %f %f %f %f %f", &r_refdef.fog_density, &r_refdef.fog_red, &r_refdef.fog_green, &r_refdef.fog_blue, &r_refdef.fog_alpha, &r_refdef.fog_start, &r_refdef.fog_end);
 		}
 		else if (!strcmp("fog_density", key))
 			r_refdef.fog_density = atof(value);
@@ -375,6 +375,12 @@ void CL_ParseEntityLump(char *entdata)
 			r_refdef.fog_green = atof(value);
 		else if (!strcmp("fog_blue", key))
 			r_refdef.fog_blue = atof(value);
+		else if (!strcmp("fog_alpha", key))
+			r_refdef.fog_alpha = atof(value);
+		else if (!strcmp("fog_start", key))
+			r_refdef.fog_start = atof(value);
+		else if (!strcmp("fog_end", key))
+			r_refdef.fog_end = atof(value);
 	}
 }
 
