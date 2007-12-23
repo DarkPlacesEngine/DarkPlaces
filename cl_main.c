@@ -1849,6 +1849,7 @@ static void CL_Fog_f (void)
 		return;
 	}
 	r_refdef.fog_start = 0;
+	r_refdef.fog_end = 16384;
 	r_refdef.fog_alpha = 1;
 	if(Cmd_Argc() > 1)
 		r_refdef.fog_density = atof(Cmd_Argv(1));

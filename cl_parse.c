@@ -365,6 +365,7 @@ void CL_ParseEntityLump(char *entdata)
 		{
 			r_refdef.fog_start = 0;
 			r_refdef.fog_alpha = 1;
+			r_refdef.fog_end = 16384;
 			sscanf(value, "%f %f %f %f %f %f %f", &r_refdef.fog_density, &r_refdef.fog_red, &r_refdef.fog_green, &r_refdef.fog_blue, &r_refdef.fog_alpha, &r_refdef.fog_start, &r_refdef.fog_end);
 		}
 		else if (!strcmp("fog_density", key))
