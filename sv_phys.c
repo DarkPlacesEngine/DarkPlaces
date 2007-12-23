@@ -552,12 +552,12 @@ void SV_CheckVelocity (prvm_edict_t *ent)
 	{
 		if (IS_NAN(ent->fields.server->velocity[i]))
 		{
-			Con_Printf("Got a NaN velocity on %s\n", PRVM_GetString(ent->fields.server->classname));
+			Con_Printf("Got a NaN velocity on entity #%i (%s)\n", PRVM_NUM_FOR_EDICT(ent), PRVM_GetString(ent->fields.server->classname));
 			ent->fields.server->velocity[i] = 0;
 		}
 		if (IS_NAN(ent->fields.server->origin[i]))
 		{
-			Con_Printf("Got a NaN origin on %s\n", PRVM_GetString(ent->fields.server->classname));
+			Con_Printf("Got a NaN origin on entity #%i (%s)\n", PRVM_NUM_FOR_EDICT(ent), PRVM_GetString(ent->fields.server->classname));
 			ent->fields.server->origin[i] = 0;
 		}
 	}
