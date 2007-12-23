@@ -1108,7 +1108,7 @@ void Sbar_ShowFPS(void)
 				break;
 			case 5:
 				unit = "knots";
-				f = 0.0254 * 1.852;
+				f = 0.0254 * 1.943844492; // 1 m/s = 1.943844492 knots, because 1 knot = 1.852 km/h
 				if(gamemode != GAME_NEXUIZ) f *= 1.5;
 				break;
 		}
