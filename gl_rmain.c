@@ -1904,6 +1904,8 @@ void gl_main_start(void)
 	memset(&r_waterstate, 0, sizeof(r_waterstate));
 	memset(r_glsl_permutations, 0, sizeof(r_glsl_permutations));
 	memset(&r_svbsp, 0, sizeof (r_svbsp));
+
+	r_refdef.fogmasktable_density = 0;
 }
 
 void gl_main_shutdown(void)
