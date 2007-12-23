@@ -2289,7 +2289,7 @@ void CL_Init (void)
 	Cvar_RegisterVariable (&cl_autodemo);
 	Cvar_RegisterVariable (&cl_autodemo_nameformat);
 
-	Cmd_AddCommand ("fog", CL_Fog_f, "set global fog parameters (density red green blue mindist alpha)");
+	Cmd_AddCommand ("fog", CL_Fog_f, "set global fog parameters (density red green blue [alpha [mindist maxdist]])");
 
 	// LordHavoc: added pausedemo
 	Cmd_AddCommand ("pausedemo", CL_PauseDemo_f, "pause demo playback (can also safely pause demo recording if using QUAKE, QUAKEDP or NEHAHRAMOVIE protocol, useful for making movies)");
