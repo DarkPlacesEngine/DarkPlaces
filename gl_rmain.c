@@ -1449,15 +1449,12 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 	if (r_glsl_permutation->loc_ContrastBoostCoeff >= 0)
 	{
 		// The formula used is actually:
-		//   color.rgb *= SceneBrightness;
 		//   color.rgb *= ContrastBoost / ((ContrastBoost - 1) * color.rgb + 1);
-		// I simplify that to
-		//   color.rgb *= [[SceneBrightness * ContrastBoost]];
-		//   color.rgb /= [[(ContrastBoost - 1) / ContrastBoost]] * color.rgb + 1;
-		// and Black:
-		//   color.rgb = [[SceneBrightness * ContrastBoost]] * color.rgb / ([[(ContrastBoost - 1) * SceneBrightness]] * color.rgb + 1);
+		//   color.rgb *= SceneBrightness;
+		// simplified:
+		//   color.rgb = [[SceneBrightness * ContrastBoost]] * color.rgb / ([[ContrastBoost - 1]] * color.rgb + 1);
 		// and do [[calculations]] here in the engine
-		qglUniform1fARB(r_glsl_permutation->loc_ContrastBoostCoeff, (r_glsl_contrastboost.value - 1) * r_view.colorscale);
+		qglUniform1fARB(r_glsl_permutation->loc_ContrastBoostCoeff, r_glsl_contrastboost.value - 1);
 		if (r_glsl_permutation->loc_SceneBrightness >= 0) qglUniform1fARB(r_glsl_permutation->loc_SceneBrightness, r_view.colorscale * r_glsl_contrastboost.value);
 	}
 	else
@@ -3247,15 +3244,15 @@ void R_UpdateFogColor(void) // needs to be called before HDR subrender too, as t
 		{
 			vec3_t fogvec;
 			VectorCopy(r_refdef.fogcolor, fogvec);
-			//   color.rgb *= SceneBrightness;
-			VectorScale(fogvec, r_view.colorscale, fogvec);
 			if(r_glsl.integer && (r_glsl_contrastboost.value > 1 || r_glsl_contrastboost.value < 0)) // need to support contrast boost
 			{
-				//   color.rgb *= ContrastBoost / ((ContrastBoost - 1) * color.rgb + 1);
-				fogvec[0] *= r_glsl_contrastboost.value / ((r_glsl_contrastboost.value - 1) * fogvec[0] + 1);
-				fogvec[1] *= r_glsl_contrastboost.value / ((r_glsl_contrastboost.value - 1) * fogvec[1] + 1);
-				fogvec[2] *= r_glsl_contrastboost.value / ((r_glsl_contrastboost.value - 1) * fogvec[2] + 1);
+				//   color.rgb /= ((ContrastBoost - 1) * color.rgb + 1);
+				fogvec[0] /= ((r_glsl_contrastboost.value - 1) * fogvec[0] + 1);
+				fogvec[1] /= ((r_glsl_contrastboost.value - 1) * fogvec[1] + 1);
+				fogvec[2] /= ((r_glsl_contrastboost.value - 1) * fogvec[2] + 1);
 			}
+			//   color.rgb *= ContrastBoost * SceneBrightness;
+			VectorScale(fogvec, r_glsl_contrastboost.value * r_view.colorscale, fogvec);
 			r_refdef.fogcolor[0] = bound(0.0f, fogvec[0], 1.0f);
 			r_refdef.fogcolor[1] = bound(0.0f, fogvec[1], 1.0f);
 			r_refdef.fogcolor[2] = bound(0.0f, fogvec[2], 1.0f);
