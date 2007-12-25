@@ -78,7 +78,7 @@ void World_UnlinkEdict(struct prvm_edict_s *ent);
 void World_LinkEdict(world_t *world, struct prvm_edict_s *ent, const vec3_t mins, const vec3_t maxs);
 
 // returns list of entities touching a box
-int World_EntitiesInBox(world_t *world, vec3_t mins, vec3_t maxs, int maxlist, struct prvm_edict_s **list);
+int World_EntitiesInBox(world_t *world, const vec3_t mins, const vec3_t maxs, int maxlist, struct prvm_edict_s **list);
 
 #endif
 
