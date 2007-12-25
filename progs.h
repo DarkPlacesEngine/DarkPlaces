@@ -55,6 +55,11 @@ typedef struct edict_engineprivate_s
 
 	// LordHavoc: gross hack to make floating items still work
 	int suspendedinairflag;
+
+	// cached position to avoid redundant SV_CheckWaterTransition calls on monsters
+	qboolean waterposition_forceupdate; // force an update on this entity (set by SV_PushMove code for moving water entities)
+	vec3_t waterposition_origin; // updates whenever this changes
+
 	// used by PushMove to keep track of where objects were before they were
 	// moved, in case they need to be moved back
 	vec3_t moved_from;

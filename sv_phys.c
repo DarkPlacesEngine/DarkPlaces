@@ -1191,6 +1191,9 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 		 || check->fields.server->movetype == MOVETYPE_FAKEPUSH)
 			continue;
 
+		// tell any MOVETYPE_STEP entity that it may need to check for water transitions
+		check->priv.server->waterposition_forceupdate = true;
+
 		// if the entity is standing on the pusher, it will definitely be moved
 		// if the entity is not standing on the pusher, but is in the pusher's
 		// final position, move it
@@ -1973,6 +1976,7 @@ void SV_Physics_Step (prvm_edict_t *ent)
 				SV_CheckVelocity(ent);
 				SV_FlyMove(ent, sv.frametime, NULL, SV_GenericHitSuperContentsMask(ent));
 				SV_LinkEdict(ent, true);
+				ent->priv.server->waterposition_forceupdate = true;
 			}
 		}
 		else
@@ -1988,13 +1992,20 @@ void SV_Physics_Step (prvm_edict_t *ent)
 			// just hit ground
 			if (hitsound && (int)ent->fields.server->flags & FL_ONGROUND && sv_sound_land.string)
 				SV_StartSound(ent, 0, sv_sound_land.string, 255, 1);
+			ent->priv.server->waterposition_forceupdate = true;
 		}
 	}
 
 // regular thinking
-	SV_RunThink(ent);
+	if (!SV_RunThink(ent))
+		return;
 
-	SV_CheckWaterTransition(ent);
+	if (ent->priv.server->waterposition_forceupdate || !VectorCompare(ent->fields.server->origin, ent->priv.server->waterposition_origin))
+	{
+		ent->priv.server->waterposition_forceupdate = false;
+		VectorCopy(ent->fields.server->origin, ent->priv.server->waterposition_origin);
+		SV_CheckWaterTransition(ent);
+	}
 }
 
 //============================================================================
