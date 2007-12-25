@@ -870,6 +870,8 @@ typedef struct model_s
 	void(*DrawLight)(struct entity_render_s *ent, int numsurfaces, const int *surfacelist, const unsigned char *trispvs);
 	// trace a box against this model
 	void (*TraceBox)(struct model_s *model, int frame, struct trace_s *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask);
+	// find the supercontents value at a point in this model
+	int (*PointSuperContents)(struct model_s *model, int frame, const vec3_t point);
 	// fields belonging to some types of model
 	model_sprite_t	sprite;
 	model_brush_t	brush;

@@ -846,6 +846,7 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	loadmodel->DrawLight = R_Q1BSP_DrawLight;
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
+	loadmodel->PointSuperContents = NULL;
 
 	loadmodel->num_surfaces = 1;
 	loadmodel->nummodelsurfaces = loadmodel->num_surfaces;
@@ -1167,6 +1168,7 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	loadmodel->DrawLight = R_Q1BSP_DrawLight;
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
+	loadmodel->PointSuperContents = NULL;
 
 	if (LittleLong(pinmodel->num_tris) < 1 || LittleLong(pinmodel->num_tris) > 65536)
 		Host_Error ("%s has invalid number of triangles: %i", loadmodel->name, LittleLong(pinmodel->num_tris));
@@ -1404,6 +1406,7 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	loadmodel->DrawLight = R_Q1BSP_DrawLight;
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
+	loadmodel->PointSuperContents = NULL;
 	loadmodel->synctype = ST_RAND;
 	// convert model flags to EF flags (MF_ROCKET becomes EF_ROCKET, etc)
 	i = LittleLong (pinmodel->flags);
@@ -1610,6 +1613,7 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	loadmodel->DrawLight = R_Q1BSP_DrawLight;
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
+	loadmodel->PointSuperContents = NULL;
 
 	loadmodel->numframes = pheader->numscenes;
 	loadmodel->num_surfaces = pheader->numshaders;
@@ -1907,6 +1911,7 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	loadmodel->DrawLight = R_Q1BSP_DrawLight;
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
+	loadmodel->PointSuperContents = NULL;
 
 	// model bbox
 	for (i = 0;i < 3;i++)
@@ -2180,6 +2185,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	loadmodel->DrawLight = R_Q1BSP_DrawLight;
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
+	loadmodel->PointSuperContents = NULL;
 	loadmodel->synctype = ST_RAND;
 
 	FS_StripExtension(loadmodel->name, animname, sizeof(animname));

@@ -823,14 +823,23 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 	}
 }
 
-void Collision_TracePointBrushFloat(trace_t *trace, const vec3_t point, const colbrushf_t *thatbrush)
+qboolean Collision_PointInsideBrushFloat(const vec3_t point, const colbrushf_t *brush)
 {
 	int nplane;
 	const colplanef_t *plane;
 
-	for (nplane = 0, plane = thatbrush->planes;nplane < thatbrush->numplanes;nplane++, plane++)
+	if (!BoxesOverlap(point, point, brush->mins, brush->maxs))
+		return false;
+	for (nplane = 0, plane = brush->planes;nplane < brush->numplanes;nplane++, plane++)
 		if (DotProduct(plane->normal, point) > plane->dist)
-			return;
+			return false;
+	return true;
+}
+
+void Collision_TracePointBrushFloat(trace_t *trace, const vec3_t point, const colbrushf_t *thatbrush)
+{
+	if (!Collision_PointInsideBrushFloat(point, thatbrush))
+		return;
 
 	trace->startsupercontents |= thatbrush->supercontents;
 	if (trace->hitsupercontentsmask & thatbrush->supercontents)
