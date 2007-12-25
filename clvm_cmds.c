@@ -1048,7 +1048,7 @@ static void VM_CL_setcursormode (void)
 {
 	VM_SAFEPARMCOUNT(1, VM_CL_setcursormode);
 	cl.csqc_wantsmousemove = PRVM_G_FLOAT(OFS_PARM0);
-	cl_ignoremousemove = true;
+	cl_ignoremousemoves = 2;
 }
 
 //#345 float(float framenum) getinputstate (EXT_CSQC)
