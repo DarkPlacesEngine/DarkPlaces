@@ -503,7 +503,7 @@ void CL_AdjustAngles (void)
 	cl.viewangles[ROLL] = bound(-50, cl.viewangles[ROLL], 50);
 }
 
-qboolean cl_ignoremousemove = false;
+int cl_ignoremousemoves = 2;
 
 /*
 ================
@@ -562,9 +562,9 @@ void CL_Input (void)
 	IN_Move ();
 
 	// ignore a mouse move if mouse was activated/deactivated this frame
-	if (cl_ignoremousemove)
+	if (cl_ignoremousemoves)
 	{
-		cl_ignoremousemove = false;
+		cl_ignoremousemoves--;
 		in_mouse_x = 0;
 		in_mouse_y = 0;
 	}

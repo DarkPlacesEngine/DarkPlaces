@@ -1004,7 +1004,7 @@ static void IN_Activate (qboolean grab)
 		if (!vid_usingmouse)
 		{
 			vid_usingmouse = true;
-			cl_ignoremousemove = true;
+			cl_ignoremousemoves = 2;
 			if (dinput && g_pMouse)
 			{
 				IDirectInputDevice_Acquire(g_pMouse);
@@ -1043,7 +1043,7 @@ static void IN_Activate (qboolean grab)
 		if (vid_usingmouse)
 		{
 			vid_usingmouse = false;
-			cl_ignoremousemove = true;
+			cl_ignoremousemoves = 2;
 			if (dinput_acquired)
 			{
 				IDirectInputDevice_Unacquire(g_pMouse);

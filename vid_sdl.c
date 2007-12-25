@@ -241,7 +241,7 @@ static void IN_Activate( qboolean grab )
 		if (!vid_usingmouse)
 		{
 			vid_usingmouse = true;
-			cl_ignoremousemove = true;
+			cl_ignoremousemoves = 2;
 			SDL_WM_GrabInput( SDL_GRAB_ON );
 			SDL_ShowCursor( SDL_DISABLE );
 		}		
@@ -251,7 +251,7 @@ static void IN_Activate( qboolean grab )
 		if (vid_usingmouse)
 		{
 			vid_usingmouse = false;
-			cl_ignoremousemove = true;
+			cl_ignoremousemoves = 2;
 			SDL_WM_GrabInput( SDL_GRAB_OFF );
 			SDL_ShowCursor( SDL_ENABLE );
 		}

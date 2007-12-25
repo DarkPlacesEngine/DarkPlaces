@@ -282,7 +282,7 @@ static void IN_Activate (qboolean grab)
 				XGrabKeyboard(vidx11_display, win, False, GrabModeAsync, GrabModeAsync, CurrentTime);
 
 			mouse_x = mouse_y = 0;
-			cl_ignoremousemove = true;
+			cl_ignoremousemoves = 2;
 			vid_usingmouse = true;
 		}
 	}
@@ -302,7 +302,7 @@ static void IN_Activate (qboolean grab)
 			if (win)
 				XUndefineCursor(vidx11_display, win);
 
-			cl_ignoremousemove = true;
+			cl_ignoremousemoves = 2;
 			vid_usingmouse = false;
 		}
 	}
