@@ -1180,7 +1180,7 @@ void CL_SetInfo(const char *key, const char *value, qboolean send, qboolean allo
 void CL_UpdateWorld (void);
 void CL_WriteToServer (void);
 void CL_Input (void);
-extern qboolean cl_ignoremousemove;
+extern int cl_ignoremousemoves;
 
 
 float CL_KeyState (kbutton_t *key);
