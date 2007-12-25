@@ -255,6 +255,63 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 }
 #endif
 
+int SV_PointSuperContents(const vec3_t point)
+{
+	int supercontents = 0;
+	int i;
+	prvm_edict_t *touch;
+	vec3_t transformed;
+	// matrices to transform into/out of other entity's space
+	matrix4x4_t matrix, imatrix;
+	// model of other entity
+	model_t *model;
+	unsigned int modelindex;
+	int frame;
+	// list of entities to test for collisions
+	int numtouchedicts;
+	prvm_edict_t *touchedicts[MAX_EDICTS];
+
+	// get world supercontents at this point
+	if (sv.worldmodel && sv.worldmodel->PointSuperContents)
+		supercontents = sv.worldmodel->PointSuperContents(sv.worldmodel, 0, point);
+
+	// if sv_gameplayfix_swiminbmodels is off we're done
+	if (!sv_gameplayfix_swiminbmodels.integer)
+		return supercontents;
+
+	// get list of entities at this point
+	numtouchedicts = World_EntitiesInBox(&sv.world, point, point, MAX_EDICTS, touchedicts);
+	if (numtouchedicts > MAX_EDICTS)
+	{
+		// this never happens
+		Con_Printf("SV_EntitiesInBox returned %i edicts, max was %i\n", numtouchedicts, MAX_EDICTS);
+		numtouchedicts = MAX_EDICTS;
+	}
+	for (i = 0;i < numtouchedicts;i++)
+	{
+		touch = touchedicts[i];
+
+		// we only care about SOLID_BSP for pointcontents
+		if (touch->fields.server->solid != SOLID_BSP)
+			continue;
+
+		// might interact, so do an exact clip
+		modelindex = (unsigned int)touch->fields.server->modelindex;
+		if (modelindex >= MAX_MODELS)
+			continue;
+		model = sv.models[(int)touch->fields.server->modelindex];
+		if (!model || !model->PointSuperContents)
+			continue;
+		Matrix4x4_CreateFromQuakeEntity(&matrix, touch->fields.server->origin[0], touch->fields.server->origin[1], touch->fields.server->origin[2], touch->fields.server->angles[0], touch->fields.server->angles[1], touch->fields.server->angles[2], 1);
+		Matrix4x4_Invert_Simple(&imatrix, &matrix);
+		Matrix4x4_Transform(&imatrix, point, transformed);
+		frame = (int)touch->fields.server->frame;
+		supercontents |= model->PointSuperContents(model, bound(0, frame, (model->numframes - 1)), transformed);
+	}
+
+	return supercontents;
+}
+
 /*
 ===============================================================================
 

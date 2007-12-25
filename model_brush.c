@@ -783,8 +783,16 @@ loc0:
 //#if COLLISIONPARANOID < 2
 static int Mod_Q1BSP_RecursiveHullCheckPoint(RecursiveHullCheckTraceInfo_t *t, int num)
 {
+	mplane_t *plane;
+	mclipnode_t *nodes = t->hull->clipnodes;
+	mplane_t *planes = t->hull->planes;
+	vec3_t point;
+	VectorCopy(t->start, point);
 	while (num >= 0)
-		num = t->hull->clipnodes[num].children[(t->hull->planes[t->hull->clipnodes[num].planenum].type < 3 ? t->start[t->hull->planes[t->hull->clipnodes[num].planenum].type] : DotProduct(t->hull->planes[t->hull->clipnodes[num].planenum].normal, t->start)) < t->hull->planes[t->hull->clipnodes[num].planenum].dist];
+	{
+		plane = planes + nodes[num].planenum;
+		num = nodes[num].children[(plane->type < 3 ? point[plane->type] : DotProduct(plane->normal, point)) < plane->dist];
+	}
 	num = Mod_Q1BSP_SuperContentsFromNativeContents(NULL, num);
 	t->trace->startsupercontents |= num;
 	if (num & SUPERCONTENTS_LIQUIDSMASK)
@@ -898,6 +906,20 @@ static void Mod_Q1BSP_TraceBox(struct model_s *model, int frame, trace_t *trace,
 	else
 		Mod_Q1BSP_RecursiveHullCheckPoint(&rhc, rhc.hull->firstclipnode);
 #endif
+}
+
+static int Mod_Q1BSP_PointSuperContents(struct model_s *model, int frame, const vec3_t point)
+{
+	int num = 0;
+	mplane_t *plane;
+	mclipnode_t *nodes = model->brushq1.hulls[0].clipnodes;
+	mplane_t *planes = model->brushq1.hulls[0].planes;
+	while (num >= 0)
+	{
+		plane = planes + nodes[num].planenum;
+		num = nodes[num].children[(plane->type < 3 ? point[plane->type] : DotProduct(plane->normal, point)) < plane->dist];
+	}
+	return Mod_Q1BSP_SuperContentsFromNativeContents(NULL, num);
 }
 
 void Collision_ClipTrace_Box(trace_t *trace, const vec3_t cmins, const vec3_t cmaxs, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask, int boxsupercontents, int boxq3surfaceflags, texture_t *boxtexture)
@@ -3450,6 +3472,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 
 	mod->soundfromcenter = true;
 	mod->TraceBox = Mod_Q1BSP_TraceBox;
+	mod->PointSuperContents = Mod_Q1BSP_PointSuperContents;
 	mod->brush.TraceLineOfSight = Mod_Q1BSP_TraceLineOfSight;
 	mod->brush.SuperContentsFromNativeContents = Mod_Q1BSP_SuperContentsFromNativeContents;
 	mod->brush.NativeContentsFromSuperContents = Mod_Q1BSP_NativeContentsFromSuperContents;
@@ -5277,7 +5300,7 @@ static void Mod_Q3BSP_TracePoint_RecursiveBSPNode(trace_t *trace, model_t *model
 	colbrushf_t *brush;
 	// find which leaf the point is in
 	while (node->plane)
-		node = node->children[DotProduct(point, node->plane->normal) < node->plane->dist];
+		node = node->children[(node->plane->type < 3 ? point[node->plane->type] : DotProduct(point, node->plane->normal)) < node->plane->dist];
 	// point trace the brushes
 	leaf = (mleaf_t *)node;
 	for (i = 0;i < leaf->numleafbrushes;i++)
@@ -5540,6 +5563,38 @@ static void Mod_Q3BSP_TraceBox(model_t *model, int frame, trace_t *trace, const 
 	}
 }
 
+static int Mod_Q3BSP_PointSuperContents(struct model_s *model, int frame, const vec3_t point)
+{
+	int i;
+	int supercontents = 0;
+	q3mbrush_t *brush;
+	// test if the point is inside each brush
+	if (model->brush.submodel)
+	{
+		// submodels are effectively one leaf
+		for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)
+			if (brush->colbrushf && Collision_PointInsideBrushFloat(point, brush->colbrushf))
+				supercontents |= brush->colbrushf->supercontents;
+	}
+	else
+	{
+		mnode_t *node = model->brush.data_nodes;
+		mleaf_t *leaf;
+		// find which leaf the point is in
+		while (node->plane)
+			node = node->children[(node->plane->type < 3 ? point[node->plane->type] : DotProduct(point, node->plane->normal)) < node->plane->dist];
+		leaf = (mleaf_t *)node;
+		// now check the brushes in the leaf
+		for (i = 0;i < leaf->numleafbrushes;i++)
+		{
+			brush = model->brush.data_brushes + leaf->firstleafbrush[i];
+			if (brush->colbrushf && Collision_PointInsideBrushFloat(point, brush->colbrushf))
+				supercontents |= brush->colbrushf->supercontents;
+		}
+	}
+	return supercontents;
+}
+
 static int Mod_Q3BSP_SuperContentsFromNativeContents(model_t *model, int nativecontents)
 {
 	int supercontents = 0;
@@ -5633,6 +5688,7 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer, void *bufferend)
 
 	mod->soundfromcenter = true;
 	mod->TraceBox = Mod_Q3BSP_TraceBox;
+	mod->PointSuperContents = Mod_Q3BSP_PointSuperContents;
 	mod->brush.TraceLineOfSight = Mod_Q1BSP_TraceLineOfSight;
 	mod->brush.SuperContentsFromNativeContents = Mod_Q3BSP_SuperContentsFromNativeContents;
 	mod->brush.NativeContentsFromSuperContents = Mod_Q3BSP_NativeContentsFromSuperContents;

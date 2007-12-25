@@ -469,7 +469,7 @@ int SV_GenericHitSuperContentsMask(const prvm_edict_t *edict);
 // traces a box move against worldmodel and all entities in the specified area
 trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, prvm_edict_t *passedict, int hitsupercontentsmask);
 
-#define SV_PointSuperContents(point) (SV_Move((point), vec3_origin, vec3_origin, (point), sv_gameplayfix_swiminbmodels.integer ? MOVE_NOMONSTERS : MOVE_WORLDONLY, NULL, 0).startsupercontents)
+int SV_PointSuperContents(const vec3_t point);
 
 void SV_FlushBroadcastMessages(void);
 void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t *msg, int *stats);
