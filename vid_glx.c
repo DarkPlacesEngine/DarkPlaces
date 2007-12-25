@@ -278,7 +278,7 @@ static void IN_Activate (qboolean grab)
 #endif
 				XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, vid.width / 2, vid.height / 2);
 
-			if (vid_grabkeyboard.integer || vid_isfullscreen)
+			if (vid_grabkeyboard.integer)
 				XGrabKeyboard(vidx11_display, win, False, GrabModeAsync, GrabModeAsync, CurrentTime);
 
 			mouse_x = mouse_y = 0;
@@ -568,8 +568,6 @@ void VID_Finish (qboolean allowmousegrab)
 		vid_usemouse = true;
 	if (!vid_activewindow)
 		vid_usemouse = false;
-	if (vid_isfullscreen)
-		vid_usemouse = true;
 	IN_Activate(vid_usemouse);
 
 	if (r_render.integer)
