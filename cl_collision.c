@@ -52,6 +52,9 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 			continue;
 		Matrix4x4_Transform(&ent->inversematrix, start, starttransformed);
 		Matrix4x4_Transform(&ent->inversematrix, end, endtransformed);
+		Collision_ClipTrace_Box(&trace, ent->model->normalmins, ent->model->normalmaxs, starttransformed, vec3_origin, vec3_origin, endtransformed, SUPERCONTENTS_SOLID, SUPERCONTENTS_SOLID, 0, NULL);
+		if (maxrealfrac < trace.realfraction)
+			continue;
 
 		//if (ent->model && ent->model->TraceBox)
 			ent->model->TraceBox(ent->model, ent->frameblend[0].frame, &trace, starttransformed, vec3_origin, vec3_origin, endtransformed, SUPERCONTENTS_SOLID);
