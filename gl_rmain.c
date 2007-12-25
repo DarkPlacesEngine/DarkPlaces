@@ -410,15 +410,18 @@ static void R_BuildFogTexture(void)
 	for (x = 0;x < FOGMASKTABLEWIDTH;x++)
 	{
 		d = (x * r - r_refdef.fogmasktable_start);
-		Con_Printf("%f ", d);
+		if(developer.integer >= 100)
+			Con_Printf("%f ", d);
 		d = max(0, d);
 		if (r_fog_exp2.integer)
 			alpha = exp(-r_refdef.fogmasktable_density * r_refdef.fogmasktable_density * 0.0001 * d * d);
 		else
 			alpha = exp(-r_refdef.fogmasktable_density * 0.004 * d);
-		Con_Printf(" : %f ", alpha);
+		if(developer.integer >= 100)
+			Con_Printf(" : %f ", alpha);
 		alpha = 1 - (1 - alpha) * r_refdef.fogmasktable_alpha;
-		Con_Printf(" = %f\n", alpha);
+		if(developer.integer >= 100)
+			Con_Printf(" = %f\n", alpha);
 		r_refdef.fogmasktable[x] = bound(0, alpha, 1);
 	}
 
