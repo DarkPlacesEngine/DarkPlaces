@@ -1805,8 +1805,17 @@ void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbi
 	else
 	{
 		bits = changedbits;
-		if ((bits & E5_ORIGIN) && ((s->flags & RENDER_EXTERIORMODEL) || s->origin[0] < -4096 || s->origin[0] >= 4096 || s->origin[1] < -4096 || s->origin[1] >= 4096 || s->origin[2] < -4096 || s->origin[2] >= 4096))
+		if ((bits & E5_ORIGIN) && ((s->flags & RENDER_EXTERIORMODEL) || s->origin[0] <= -4096.0625 || s->origin[0] >= 4095.9375 || s->origin[1] <= -4096.0625 || s->origin[1] >= 4095.9375 || s->origin[2] <= -4096.0625 || s->origin[2] >= 4095.9375))
 			bits |= E5_ORIGIN32;
+			// possible values:
+			//   negative origin:
+			//     (int)(f * 8 - 0.5) >= -32768
+			//          (f * 8 - 0.5) >  -32769
+			//           f            >  -4096.0625
+			//   positive origin:
+			//     (int)(f * 8 + 0.5) <=  32767
+			//          (f * 8 + 0.5) <   32768
+			//           f * 8 + 0.5) <   4095.9375
 		if ((bits & E5_ANGLES) && !(s->flags & RENDER_LOWPRECISION))
 			bits |= E5_ANGLES16;
 		if ((bits & E5_MODEL) && s->modelindex >= 256)
