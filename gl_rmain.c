@@ -4224,6 +4224,7 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 		t->specularscale = 0;
 	}
 
+	Vector4Set(t->lightmapcolor, ent->colormod[0], ent->colormod[1], ent->colormod[2], t->currentalpha);
 	VectorClear(t->dlightcolor);
 	t->currentnumlayers = 0;
 	if (!(t->currentmaterialflags & MATERIALFLAG_NODRAW))
@@ -4281,7 +4282,7 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 					if (ent->model->type == mod_brushq3)
 						colorscale *= r_refdef.rtlightstylevalue[0];
 					colorscale *= r_refdef.lightmapintensity;
-					Vector4Set(t->lightmapcolor, ent->colormod[0] * colorscale, ent->colormod[1] * colorscale, ent->colormod[2] * colorscale, t->currentalpha);
+					VectorScale(t->lightmapcolor, colorscale, t->lightmapcolor);
 					R_Texture_AddLayer(t, depthmask, blendfunc1, blendfunc2, TEXTURELAYERTYPE_LITTEXTURE, currentbasetexture, &t->currenttexmatrix, ent->colormod[0] * colorscale, ent->colormod[1] * colorscale, ent->colormod[2] * colorscale, t->currentalpha);
 					if (r_ambient.value >= (1.0f/64.0f))
 						R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, currentbasetexture, &t->currenttexmatrix, ent->colormod[0] * r_ambient.value * (1.0f / 64.0f), ent->colormod[1] * r_ambient.value * (1.0f / 64.0f), ent->colormod[2] * r_ambient.value * (1.0f / 64.0f), t->currentalpha);
