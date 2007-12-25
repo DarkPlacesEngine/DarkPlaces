@@ -127,7 +127,7 @@ void World_UnlinkEdict(prvm_edict_t *ent)
 	}
 }
 
-int World_EntitiesInBox(world_t *world, vec3_t mins, vec3_t maxs, int maxlist, prvm_edict_t **list)
+int World_EntitiesInBox(world_t *world, const vec3_t mins, const vec3_t maxs, int maxlist, prvm_edict_t **list)
 {
 	int numlist;
 	link_t *grid;
