@@ -96,6 +96,7 @@ static void VM_CL_setmodel (void)
 
 	e->fields.client->modelindex = 0;
 	e->fields.client->model = 0;
+	VM_Warning ("setmodel: model '%s' not precached\n", m);
 }
 
 // #4 void(entity e, vector min, vector max) setsize
