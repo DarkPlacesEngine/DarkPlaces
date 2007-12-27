@@ -3250,12 +3250,12 @@ void R_UpdateFogColor(void) // needs to be called before HDR subrender too, as t
 			if(r_glsl.integer && (r_glsl_contrastboost.value > 1 || r_glsl_contrastboost.value < 0)) // need to support contrast boost
 			{
 				//   color.rgb /= ((ContrastBoost - 1) * color.rgb + 1);
-				fogvec[0] /= ((r_glsl_contrastboost.value - 1) * fogvec[0] + 1);
-				fogvec[1] /= ((r_glsl_contrastboost.value - 1) * fogvec[1] + 1);
-				fogvec[2] /= ((r_glsl_contrastboost.value - 1) * fogvec[2] + 1);
+				fogvec[0] *= r_glsl_contrastboost.value / ((r_glsl_contrastboost.value - 1) * fogvec[0] + 1);
+				fogvec[1] *= r_glsl_contrastboost.value / ((r_glsl_contrastboost.value - 1) * fogvec[1] + 1);
+				fogvec[2] *= r_glsl_contrastboost.value / ((r_glsl_contrastboost.value - 1) * fogvec[2] + 1);
 			}
 			//   color.rgb *= ContrastBoost * SceneBrightness;
-			VectorScale(fogvec, r_glsl_contrastboost.value * r_view.colorscale, fogvec);
+			VectorScale(fogvec, r_view.colorscale, fogvec);
 			r_refdef.fogcolor[0] = bound(0.0f, fogvec[0], 1.0f);
 			r_refdef.fogcolor[1] = bound(0.0f, fogvec[1], 1.0f);
 			r_refdef.fogcolor[2] = bound(0.0f, fogvec[2], 1.0f);
