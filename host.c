@@ -197,7 +197,7 @@ void Host_SaveConfig_f(void);
 void Host_LoadConfig_f(void);
 static void Host_InitLocal (void)
 {
-	Cmd_AddCommand("saveconfig", Host_SaveConfig_f, "save settings to config.cfg immediately (also automatic when quitting)");
+	Cmd_AddCommand("saveconfig", Host_SaveConfig_f, "save settings to config.cfg (or a specified filename) immediately (also automatic when quitting)");
 	Cmd_AddCommand("loadconfig", Host_LoadConfig_f, "reset everything and reload configs");
 
 	Cvar_RegisterVariable (&host_framerate);
@@ -223,13 +223,19 @@ Writes key bindings and archived cvars to config.cfg
 void Host_SaveConfig_f(void)
 {
 	qfile_t *f;
+	char *file = "config.cfg";
+
+	if(Cmd_Argc() >= 2) {
+		file = Cmd_Argv(1);
+		Con_Printf("Saving to %s\n", file);
+	}
 
 // dedicated servers initialize the host but don't parse and set the
 // config.cfg cvars
 	// LordHavoc: don't save a config if it crashed in startup
 	if (host_framecount >= 3 && cls.state != ca_dedicated && !COM_CheckParm("-benchmark") && !COM_CheckParm("-capturedemo"))
 	{
-		f = FS_Open ("config.cfg", "wb", false, false);
+		f = FS_Open (file, "wb", false, false);
 		if (!f)
 		{
 			Con_Print("Couldn't write config.cfg.\n");
