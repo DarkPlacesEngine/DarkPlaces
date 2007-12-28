@@ -223,7 +223,7 @@ Writes key bindings and archived cvars to config.cfg
 void Host_SaveConfig_f(void)
 {
 	qfile_t *f;
-	char *file = "config.cfg";
+	const char *file = "config.cfg";
 
 	if(Cmd_Argc() >= 2) {
 		file = Cmd_Argv(1);
