@@ -238,7 +238,7 @@ void Host_SaveConfig_f(void)
 		f = FS_Open (file, "wb", false, false);
 		if (!f)
 		{
-			Con_Print("Couldn't write config.cfg.\n");
+			Con_Print("Couldn't write %s.\n", file);
 			return;
 		}
 
