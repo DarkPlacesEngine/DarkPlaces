@@ -3404,6 +3404,7 @@ static void R_DrawLocs(void);
 static void R_DrawEntityBBoxes(void);
 void R_RenderScene(qboolean addwaterplanes)
 {
+	Matrix4x4_Invert_Simple(&r_view.inverse_matrix, &r_view.matrix);
 	R_UpdateFogColor();
 
 	if (addwaterplanes)

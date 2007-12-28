@@ -33,8 +33,15 @@ extern cvar_t r_track_sprites_scaleh;
 
 void R_TrackSprite(const entity_render_t *ent, vec3_t origin, vec3_t left, vec3_t up, int *edge, float *dir_angle)
 {
+	float distance;
 	vec3_t bCoord; // body coordinates of object
 	unsigned int i;
+
+	// temporarily abuse bCoord as the vector player->sprite-origin
+	VectorSubtract(origin, r_view.origin, bCoord);
+	distance = VectorLength(bCoord);
+
+	// Now get the bCoords :)
 	Matrix4x4_Transform(&r_view.inverse_matrix, origin, bCoord);
 
 	*edge = 0; // FIXME::should assume edge == 0, which is correct currently
@@ -73,21 +80,43 @@ void R_TrackSprite(const entity_render_t *ent, vec3_t origin, vec3_t left, vec3_
 			else
 				*edge = SIDE_LEFT;
 		}
-		// should I add || blah == -0.0f? since -0.0f != 0.0f binary speaking, the FPU shouldn't care though?
-		if(ax == 0.0f)
+		
+		// umm... 
+		if(ax < MIN_EPSILON) // this was == 0.0f before --blub
 			ax = MIN_EPSILON;
 		// get the -1 to +1 range
 		x = bCoord[1] / ax;
 		y = bCoord[2] / ax;
+
+		ax = (1.0f / VectorLength(left));
+		ay = (1.0f / VectorLength(up));
+		// Using the placement below the distance of a sprite is
+		// real dist = sqrt(d*d + dfxa*dfxa + dgyb*dgyb)
+		// d is the distance we use
+		// f is frustum X
+		// x is x
+		// a is ax
+		// g is frustum Y
+		// y is y
+		// b is ay
+		
+		// real dist (r) shall be d, so
+		// r*r = d*d + dfxa*dfxa + dgyb*dgyb
+		// r*r = d*d * (1 + fxa*fxa + gyb*gyb)
+		// d*d = r*r / (1 + fxa*fxa + gyb*gyb)
+		// d = sqrt(r*r / (1 + fxa*fxa + gyb*gyb))
+		// thus:
+		distance = sqrt((distance*distance) / (1.0 +
+					r_view.frustum_x*r_view.frustum_x * x*x * ax*ax +
+					r_view.frustum_y*r_view.frustum_y * y*y * ay*ay));
+		// ^ the one we want        ^ the one we have       ^ our factors
 		
 		// Place the sprite a few units ahead of the player
 		VectorCopy(r_view.origin, origin);
-		VectorMA(origin, 50.0f, r_view.forward, origin);
+		VectorMA(origin, distance, r_view.forward, origin);
 		// Move the sprite left / up the screeen height
-		ax = (1.0f / VectorLength(left));
-		ay = (1.0f / VectorLength(up));
-		VectorMA(origin, 50.0f * r_view.frustum_x * x * ax, left, origin);
-		VectorMA(origin, 50.0f * r_view.frustum_y * y * ay, up, origin);
+		VectorMA(origin, distance * r_view.frustum_x * x * ax, left, origin);
+		VectorMA(origin, distance * r_view.frustum_y * y * ay, up, origin);
 
 		if(r_track_sprites_flags.integer & TSF_ROTATE_CONTINOUSLY)
 		{
