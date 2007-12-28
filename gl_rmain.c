@@ -3843,7 +3843,7 @@ void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, rtexture_
 	float fog = 1.0f;
 	float vertex3f[12];
 
-	if (r_refdef.fogenabled)
+	if (r_refdef.fogenabled && !depthdisable) // TODO maybe make the unfog effect a separate flag?
 		fog = FogPoint_World(origin);
 
 	R_Mesh_Matrix(&identitymatrix);
