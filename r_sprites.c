@@ -330,6 +330,12 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 			vec3_t o, l, u;
 #endif
 			R_UpdateTextureInfo(ent, texture);
+
+			// SPR_LABEL should not use depth test AT ALL
+			if(model->sprite.sprnum_type == SPR_LABEL || model->sprite.sprnum_type == SPR_LABEL_SCALE)
+				if(texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE)
+					texture->currentmaterialflags = (texture->currentmaterialflags & ~MATERIALFLAG_SHORTDEPTHRANGE) | MATERIALFLAG_NODEPTHTEST;
+
 			if(edge)
 			{
 				// FIXME:: save vectors/origin and re-rotate? necessary if the hotspot can change per frame
