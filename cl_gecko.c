@@ -134,16 +134,17 @@ clgecko_t * CL_Gecko_CreateBrowser( const char *name ) {
 	
 	if( cl_geckoembedding == NULL ) {
 		char profile_path [MAX_OSPATH];
+		OSGK_GeckoResult grc;
 
 		OSGK_EmbeddingOptions *options = osgk_embedding_options_create();
 		osgk_embedding_options_add_search_path( options, "./xulrunner/" );
 		dpsnprintf (profile_path, sizeof (profile_path), "%s/xulrunner_profile/", fs_gamedir);
 		osgk_embedding_options_set_profile_dir( options, profile_path, 0 );
-		cl_geckoembedding = osgk_embedding_create_with_options( options, NULL );
+		cl_geckoembedding = osgk_embedding_create_with_options( options, &grc );
 		osgk_release( options );
         	
 		if( cl_geckoembedding == NULL ) {
-			Con_Printf( "CL_Gecko_CreateBrowser: Couldn't retrieve gecko embedding object!\n" );
+			Con_Printf( "CL_Gecko_CreateBrowser: Couldn't retrieve gecko embedding object (%.8x)!\n", grc );
 			return NULL;
 		}
 	}
@@ -151,6 +152,9 @@ clgecko_t * CL_Gecko_CreateBrowser( const char *name ) {
 	instance->active = true;
 	strlcpy( instance->name, name, sizeof( instance->name ) );
 	instance->browser = osgk_browser_create( cl_geckoembedding, DEFAULT_GECKO_SIZE, DEFAULT_GECKO_SIZE );
+	if( instance->browser == NULL ) {
+		Con_Printf( "CL_Gecko_CreateBrowser: Browser object creation failed!\n" );
+	}
 	// TODO: assert != NULL
 
 	instance->width = instance->texWidth = DEFAULT_GECKO_SIZE;
@@ -351,7 +355,11 @@ void CL_Gecko_Init( void )
 }
 
 void CL_Gecko_NavigateToURI( clgecko_t *instance, const char *URI ) {
-	if( instance && instance->active ) {
+	if( !instance || !instance->browser ) {
+		return;
+	}
+
+	if( instance->active ) {
 		osgk_browser_navigate( instance->browser, URI );
 	}
 }
