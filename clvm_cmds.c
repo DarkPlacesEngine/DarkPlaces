@@ -1231,14 +1231,6 @@ static void VM_CL_ReadFloat (void)
 	PRVM_G_FLOAT(OFS_RETURN) = MSG_ReadFloat();
 }
 
-static void VM_CL_ReadEntity (void)
-{
-	int ednum;
-	VM_SAFEPARMCOUNT(0, VM_CL_ReadEntity);
-	ednum = MSG_ReadShort();
-	VM_RETURN_EDICT(PRVM_PROG_TO_EDICT(ednum));
-}
-
 //////////////////////////////////////////////////////////
 
 static void VM_CL_makestatic (void)
@@ -3228,7 +3220,7 @@ VM_CL_ReadCoord,				// #364 float() readcoord (EXT_CSQC)
 VM_CL_ReadAngle,				// #365 float() readangle (EXT_CSQC)
 VM_CL_ReadString,				// #366 string() readstring (EXT_CSQC)
 VM_CL_ReadFloat,				// #367 float() readfloat (EXT_CSQC)
-VM_CL_ReadEntity,				// #368 entity() readentity
+NULL,							// #368
 NULL,							// #369
 NULL,							// #370
 NULL,							// #371
