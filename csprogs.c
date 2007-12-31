@@ -642,6 +642,7 @@ void Cmd_ClearCsqcFuncs (void);
 
 void CL_VM_Init (void)
 {
+	const char* csprogsfn;
 	unsigned char *csprogsdata;
 	fs_offset_t csprogsdatasize;
 	int csprogsdatacrc, requiredcrc;
@@ -661,9 +662,13 @@ void CL_VM_Init (void)
 
 	// see if the requested csprogs.dat file matches the requested crc
 	csprogsdatacrc = -1;
-	csprogsdata = FS_LoadFile(va("dlcache/%s.%i.%i", csqc_progname.string, requiredsize, requiredcrc), tempmempool, true, &csprogsdatasize);
+	csprogsfn = va("dlcache/%s.%i.%i", csqc_progname.string, requiredsize, requiredcrc);
+	csprogsdata = FS_LoadFile(csprogsfn, tempmempool, true, &csprogsdatasize);
 	if (!csprogsdata)
-		csprogsdata = FS_LoadFile(csqc_progname.string, tempmempool, true, &csprogsdatasize);
+	{
+		csprogsfn = csqc_progname.string;
+		csprogsdata = FS_LoadFile(csprogsfn, tempmempool, true, &csprogsdatasize);
+	}
 	if (csprogsdata)
 	{
 		csprogsdatacrc = CRC_Block(csprogsdata, csprogsdatasize);
@@ -723,17 +728,17 @@ void CL_VM_Init (void)
 	prog->reset_cmd = VM_CL_Cmd_Reset;
 	prog->error_cmd = CL_VM_Error;
 
-	PRVM_LoadProgs(csqc_progname.string, cl_numrequiredfunc, cl_required_func, 0, NULL, 0, NULL);
+	PRVM_LoadProgs(csprogsfn, cl_numrequiredfunc, cl_required_func, 0, NULL, 0, NULL);
 
 	if (!prog->loaded)
 	{
-		CL_VM_Error("CSQC ^2failed to load\n");
+		CL_VM_Error("CSQC %s ^2failed to load\n", csprogsfn);
 		if(!sv.active)
 			CL_Disconnect();
 		return;
 	}
 
-	Con_Printf("CSQC ^5loaded (crc=%i, size=%i)\n", csprogsdatacrc, (int)csprogsdatasize);
+	Con_Printf("CSQC %s ^5loaded (crc=%i, size=%i)\n", csprogsfn, csprogsdatacrc, (int)csprogsdatasize);
 
 	// check if OP_STATE animation is possible in this dat file
 	if (prog->fieldoffsets.nextthink >= 0 && prog->fieldoffsets.frame >= 0 && prog->fieldoffsets.think >= 0 && prog->globaloffsets.self >= 0)
