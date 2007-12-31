@@ -949,6 +949,7 @@ Key_Event (int key, char ascii, qboolean down)
 					Key_Message (key, ascii);
 				break;
 			case key_menu:
+			case key_menu_grabbed:
 				MR_KeyEvent (key, ascii, down);
 				break;
 			case key_game:
@@ -963,7 +964,8 @@ Key_Event (int key, char ascii, qboolean down)
 		return;
 	}
 
-	// send function keydowns to interpreter no matter what mode is
+	// send function keydowns to interpreter no matter what mode is (unless the menu has specifically grabbed the keyboard, for rebinding keys)
+	if (key_dest != key_menu_grabbed)
 	if (key >= K_F1 && key <= K_F12 && down)
 	{
 		// ignore key repeats on F1-F12 binds
@@ -1022,6 +1024,7 @@ Key_Event (int key, char ascii, qboolean down)
 				Key_Message (key, ascii);
 			break;
 		case key_menu:
+		case key_menu_grabbed:
 			MR_KeyEvent (key, ascii, down);
 			break;
 		case key_game:
