@@ -98,21 +98,23 @@ void PolygonD_QuadForPlane(double *outpoints, double planenormalx, double planen
 	outpoints[11] = planedist * planenormalz - quadsize * quadright[2] - quadsize * quadup[2];
 }
 
-void PolygonF_Divide(int innumpoints, const float *inpoints, float planenormalx, float planenormaly, float planenormalz, float planedist, float epsilon, int outfrontmaxpoints, float *outfrontpoints, int *neededfrontpoints, int outbackmaxpoints, float *outbackpoints, int *neededbackpoints, int *oncountpointer)
+int PolygonF_Clip(int innumpoints, const float *inpoints, float planenormalx, float planenormaly, float planenormalz, float planedist, float epsilon, int outfrontmaxpoints, float *outfrontpoints)
 {
-	int i, frontcount = 0, backcount = 0, oncount = 0;
+	int i, frontcount = 0;
 	const float *n, *p;
-	double frac, pdist, ndist;
-	for (i = 0;i < innumpoints;i++)
+	float frac, pdist, ndist;
+	if (innumpoints < 1)
+		return 0;
+	n = inpoints;
+	ndist = n[0] * planenormalx + n[1] * planenormaly + n[2] * planenormalz - planedist;
+	for(i = 0;i < innumpoints;i++)
 	{
-		p = inpoints + i * 3;
+		p = n;
+		pdist = ndist;
 		n = inpoints + ((i + 1) < innumpoints ? (i + 1) : 0) * 3;
-		pdist = p[0] * planenormalx + p[1] * planenormaly + p[2] * planenormalz - planedist;
 		ndist = n[0] * planenormalx + n[1] * planenormaly + n[2] * planenormalz - planedist;
 		if (pdist >= -epsilon)
 		{
-			if (pdist <= epsilon)
-				oncount++;
 			if (frontcount < outfrontmaxpoints)
 			{
 				*outfrontpoints++ = p[0];
@@ -121,34 +123,117 @@ void PolygonF_Divide(int innumpoints, const float *inpoints, float planenormalx,
 			}
 			frontcount++;
 		}
-		if (pdist <= epsilon)
-		{
-			if (backcount < outbackmaxpoints)
-			{
-				*outbackpoints++ = p[0];
-				*outbackpoints++ = p[1];
-				*outbackpoints++ = p[2];
-			}
-			backcount++;
-		}
 		if ((pdist > epsilon && ndist < -epsilon) || (pdist < -epsilon && ndist > epsilon))
 		{
-			oncount++;
 			frac = pdist / (pdist - ndist);
 			if (frontcount < outfrontmaxpoints)
 			{
-				*outfrontpoints++ = (float)(p[0] + frac * (n[0] - p[0]));
-				*outfrontpoints++ = (float)(p[1] + frac * (n[1] - p[1]));
-				*outfrontpoints++ = (float)(p[2] + frac * (n[2] - p[2]));
+				*outfrontpoints++ = p[0] + frac * (n[0] - p[0]);
+				*outfrontpoints++ = p[1] + frac * (n[1] - p[1]);
+				*outfrontpoints++ = p[2] + frac * (n[2] - p[2]);
 			}
 			frontcount++;
-			if (backcount < outbackmaxpoints)
+		}
+	}
+	return frontcount;
+}
+
+int PolygonD_Clip(int innumpoints, const double *inpoints, double planenormalx, double planenormaly, double planenormalz, double planedist, double epsilon, int outfrontmaxpoints, double *outfrontpoints)
+{
+	int i, frontcount = 0;
+	const double *n, *p;
+	double frac, pdist, ndist;
+	if (innumpoints < 1)
+		return 0;
+	n = inpoints;
+	ndist = n[0] * planenormalx + n[1] * planenormaly + n[2] * planenormalz - planedist;
+	for(i = 0;i < innumpoints;i++)
+	{
+		p = n;
+		pdist = ndist;
+		n = inpoints + ((i + 1) < innumpoints ? (i + 1) : 0) * 3;
+		ndist = n[0] * planenormalx + n[1] * planenormaly + n[2] * planenormalz - planedist;
+		if (pdist >= -epsilon)
+		{
+			if (frontcount < outfrontmaxpoints)
 			{
-				*outbackpoints++ = (float)(p[0] + frac * (n[0] - p[0]));
-				*outbackpoints++ = (float)(p[1] + frac * (n[1] - p[1]));
-				*outbackpoints++ = (float)(p[2] + frac * (n[2] - p[2]));
+				*outfrontpoints++ = p[0];
+				*outfrontpoints++ = p[1];
+				*outfrontpoints++ = p[2];
 			}
-			backcount++;
+			frontcount++;
+		}
+		if ((pdist > epsilon && ndist < -epsilon) || (pdist < -epsilon && ndist > epsilon))
+		{
+			frac = pdist / (pdist - ndist);
+			if (frontcount < outfrontmaxpoints)
+			{
+				*outfrontpoints++ = p[0] + frac * (n[0] - p[0]);
+				*outfrontpoints++ = p[1] + frac * (n[1] - p[1]);
+				*outfrontpoints++ = p[2] + frac * (n[2] - p[2]);
+			}
+			frontcount++;
+		}
+	}
+	return frontcount;
+}
+
+void PolygonF_Divide(int innumpoints, const float *inpoints, float planenormalx, float planenormaly, float planenormalz, float planedist, float epsilon, int outfrontmaxpoints, float *outfrontpoints, int *neededfrontpoints, int outbackmaxpoints, float *outbackpoints, int *neededbackpoints, int *oncountpointer)
+{
+	int i, frontcount = 0, backcount = 0, oncount = 0;
+	const float *n, *p;
+	float frac, pdist, ndist;
+	if (innumpoints)
+	{
+		n = inpoints;
+		ndist = n[0] * planenormalx + n[1] * planenormaly + n[2] * planenormalz - planedist;
+		for(i = 0;i < innumpoints;i++)
+		{
+			p = n;
+			pdist = ndist;
+			n = inpoints + ((i + 1) < innumpoints ? (i + 1) : 0) * 3;
+			ndist = n[0] * planenormalx + n[1] * planenormaly + n[2] * planenormalz - planedist;
+			if (pdist >= -epsilon)
+			{
+				if (pdist <= epsilon)
+					oncount++;
+				if (frontcount < outfrontmaxpoints)
+				{
+					*outfrontpoints++ = p[0];
+					*outfrontpoints++ = p[1];
+					*outfrontpoints++ = p[2];
+				}
+				frontcount++;
+			}
+			if (pdist <= epsilon)
+			{
+				if (backcount < outbackmaxpoints)
+				{
+					*outbackpoints++ = p[0];
+					*outbackpoints++ = p[1];
+					*outbackpoints++ = p[2];
+				}
+				backcount++;
+			}
+			if ((pdist > epsilon && ndist < -epsilon) || (pdist < -epsilon && ndist > epsilon))
+			{
+				oncount++;
+				frac = pdist / (pdist - ndist);
+				if (frontcount < outfrontmaxpoints)
+				{
+					*outfrontpoints++ = p[0] + frac * (n[0] - p[0]);
+					*outfrontpoints++ = p[1] + frac * (n[1] - p[1]);
+					*outfrontpoints++ = p[2] + frac * (n[2] - p[2]);
+				}
+				frontcount++;
+				if (backcount < outbackmaxpoints)
+				{
+					*outbackpoints++ = p[0] + frac * (n[0] - p[0]);
+					*outbackpoints++ = p[1] + frac * (n[1] - p[1]);
+					*outbackpoints++ = p[2] + frac * (n[2] - p[2]);
+				}
+				backcount++;
+			}
 		}
 	}
 	if (neededfrontpoints)
@@ -161,55 +246,60 @@ void PolygonF_Divide(int innumpoints, const float *inpoints, float planenormalx,
 
 void PolygonD_Divide(int innumpoints, const double *inpoints, double planenormalx, double planenormaly, double planenormalz, double planedist, double epsilon, int outfrontmaxpoints, double *outfrontpoints, int *neededfrontpoints, int outbackmaxpoints, double *outbackpoints, int *neededbackpoints, int *oncountpointer)
 {
-	int i, frontcount = 0, backcount = 0, oncount = 0;
+	int i = 0, frontcount = 0, backcount = 0, oncount = 0;
 	const double *n, *p;
 	double frac, pdist, ndist;
-	for (i = 0;i < innumpoints;i++)
+	if (innumpoints)
 	{
-		p = inpoints + i * 3;
-		n = inpoints + ((i + 1) < innumpoints ? (i + 1) : 0) * 3;
-		pdist = p[0] * planenormalx + p[1] * planenormaly + p[2] * planenormalz - planedist;
+		n = inpoints;
 		ndist = n[0] * planenormalx + n[1] * planenormaly + n[2] * planenormalz - planedist;
-		if (pdist >= -epsilon)
+		for(i = 0;i < innumpoints;i++)
 		{
+			p = n;
+			pdist = ndist;
+			n = inpoints + ((i + 1) < innumpoints ? (i + 1) : 0) * 3;
+			ndist = n[0] * planenormalx + n[1] * planenormaly + n[2] * planenormalz - planedist;
+			if (pdist >= -epsilon)
+			{
+				if (pdist <= epsilon)
+					oncount++;
+				if (frontcount < outfrontmaxpoints)
+				{
+					*outfrontpoints++ = p[0];
+					*outfrontpoints++ = p[1];
+					*outfrontpoints++ = p[2];
+				}
+				frontcount++;
+			}
 			if (pdist <= epsilon)
+			{
+				if (backcount < outbackmaxpoints)
+				{
+					*outbackpoints++ = p[0];
+					*outbackpoints++ = p[1];
+					*outbackpoints++ = p[2];
+				}
+				backcount++;
+			}
+			if ((pdist > epsilon && ndist < -epsilon) || (pdist < -epsilon && ndist > epsilon))
+			{
 				oncount++;
-			if (frontcount < outfrontmaxpoints)
-			{
-				*outfrontpoints++ = p[0];
-				*outfrontpoints++ = p[1];
-				*outfrontpoints++ = p[2];
+				frac = pdist / (pdist - ndist);
+				if (frontcount < outfrontmaxpoints)
+				{
+					*outfrontpoints++ = p[0] + frac * (n[0] - p[0]);
+					*outfrontpoints++ = p[1] + frac * (n[1] - p[1]);
+					*outfrontpoints++ = p[2] + frac * (n[2] - p[2]);
+				}
+				frontcount++;
+				if (backcount < outbackmaxpoints)
+				{
+					*outbackpoints++ = p[0] + frac * (n[0] - p[0]);
+					*outbackpoints++ = p[1] + frac * (n[1] - p[1]);
+					*outbackpoints++ = p[2] + frac * (n[2] - p[2]);
+				}
+				backcount++;
 			}
-			frontcount++;
-		}
-		if (pdist <= epsilon)
-		{
-			if (backcount < outbackmaxpoints)
-			{
-				*outbackpoints++ = p[0];
-				*outbackpoints++ = p[1];
-				*outbackpoints++ = p[2];
-			}
-			backcount++;
-		}
-		if ((pdist > epsilon && ndist < -epsilon) || (pdist < -epsilon && ndist > epsilon))
-		{
-			oncount++;
-			frac = pdist / (pdist - ndist);
-			if (frontcount < outfrontmaxpoints)
-			{
-				*outfrontpoints++ = p[0] + frac * (n[0] - p[0]);
-				*outfrontpoints++ = p[1] + frac * (n[1] - p[1]);
-				*outfrontpoints++ = p[2] + frac * (n[2] - p[2]);
-			}
-			frontcount++;
-			if (backcount < outbackmaxpoints)
-			{
-				*outbackpoints++ = p[0] + frac * (n[0] - p[0]);
-				*outbackpoints++ = p[1] + frac * (n[1] - p[1]);
-				*outbackpoints++ = p[2] + frac * (n[2] - p[2]);
-			}
-			backcount++;
 		}
 	}
 	if (neededfrontpoints)
