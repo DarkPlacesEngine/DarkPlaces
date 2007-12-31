@@ -89,6 +89,10 @@ void VM_M_setkeydest(void)
 		// key_menu
 		key_dest = key_menu;
 		break;
+	case 3:
+		// key_menu_grabbed
+		key_dest = key_menu_grabbed;
+		break;
 	case 1:
 		// key_message
 		// key_dest = key_message
@@ -109,7 +113,7 @@ void VM_M_getkeydest(void)
 {
 	VM_SAFEPARMCOUNT(0,VM_M_getkeydest);
 
-	// key_game = 0, key_message = 1, key_menu = 2, unknown = 3
+	// key_game = 0, key_message = 1, key_menu = 2, key_menu_grabbed = 3, unknown = -1
 	switch(key_dest)
 	{
 	case key_game:
@@ -118,12 +122,15 @@ void VM_M_getkeydest(void)
 	case key_menu:
 		PRVM_G_FLOAT(OFS_RETURN) = 2;
 		break;
+	case key_menu_grabbed:
+		PRVM_G_FLOAT(OFS_RETURN) = 3;
+		break;
 	case key_message:
 		// not supported
 		// PRVM_G_FLOAT(OFS_RETURN) = 1;
 		// break;
 	default:
-		PRVM_G_FLOAT(OFS_RETURN) = 3;
+		PRVM_G_FLOAT(OFS_RETURN) = -1;
 	}
 }
 

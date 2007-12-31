@@ -186,7 +186,7 @@ typedef enum keynum_e
 }
 keynum_t;
 
-typedef enum keydest_e { key_game, key_message, key_menu } keydest_t;
+typedef enum keydest_e { key_game, key_message, key_menu, key_menu_grabbed } keydest_t;
 
 #define MAX_INPUTLINES 32
 #define MAX_BINDMAPS 8

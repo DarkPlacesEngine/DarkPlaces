@@ -277,7 +277,7 @@ void M_ToggleMenu_f (void)
 {
 	m_entersound = true;
 
-	if (key_dest != key_menu || m_state != m_main)
+	if ((key_dest != key_menu && key_dest != key_menu_grabbed) || m_state != m_main)
 	{
 		if(Cmd_Argc() == 2 && !strcmp(Cmd_Argv(1), "1"))
 			return;
@@ -3169,7 +3169,7 @@ void M_Menu_Quit_f (void)
 	int n;
 	if (m_state == m_quit)
 		return;
-	wasInMenus = (key_dest == key_menu);
+	wasInMenus = (key_dest == key_menu || key_dest == key_menu_grabbed);
 	key_dest = key_menu;
 	m_quit_prevstate = m_state;
 	m_state = m_quit;
@@ -4744,7 +4744,7 @@ void M_Init (void)
 
 void M_Draw (void)
 {
-	if (key_dest != key_menu)
+	if (key_dest != key_menu && key_dest != key_menu_grabbed)
 		m_state = m_none;
 
 	if (m_state == m_none)
