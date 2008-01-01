@@ -37,6 +37,7 @@ cvar_t prvm_boundscheck = {0, "prvm_boundscheck", "1", "enables detection of out
 cvar_t prvm_traceqc = {0, "prvm_traceqc", "0", "prints every QuakeC statement as it is executed (only for really thorough debugging!)"};
 // LordHavoc: counts usage of each QuakeC statement
 cvar_t prvm_statementprofiling = {0, "prvm_statementprofiling", "0", "counts how many times each QuakeC statement has been executed, these counts are displayed in prvm_printfunction output (if enabled)"};
+cvar_t prvm_backtraceforwarnings = {0, "prvm_backtraceforwarnings", "0", "print a backtrace for warnings too"};
 
 extern sizebuf_t vm_tempstringsbuf;
 
@@ -2042,6 +2043,7 @@ void PRVM_Init (void)
 	Cvar_RegisterVariable (&prvm_boundscheck);
 	Cvar_RegisterVariable (&prvm_traceqc);
 	Cvar_RegisterVariable (&prvm_statementprofiling);
+	Cvar_RegisterVariable (&prvm_backtraceforwarnings);
 
 	//VM_Cmd_Init();
 }
@@ -2156,14 +2158,14 @@ const char *PRVM_GetString(int num)
 				return (char *)vm_tempstringsbuf.data + num;
 			else
 			{
-				VM_Warning("PRVM_GetString: Invalid temp-string offset (%i >= %i vm_tempstringsbuf.cursize)", num, vm_tempstringsbuf.cursize);
+				VM_Warning("PRVM_GetString: Invalid temp-string offset (%i >= %i vm_tempstringsbuf.cursize)\n", num, vm_tempstringsbuf.cursize);
 				return "";
 			}
 		}
 		else
 #endif
 		{
-			VM_Warning("PRVM_GetString: Invalid constant-string offset (%i >= %i prog->stringssize)", num, prog->stringssize);
+			VM_Warning("PRVM_GetString: Invalid constant-string offset (%i >= %i prog->stringssize)\n", num, prog->stringssize);
 			return "";
 		}
 	}
@@ -2179,7 +2181,7 @@ const char *PRVM_GetString(int num)
 				return (char *)vm_tempstringsbuf.data + num;
 			else
 			{
-				VM_Warning("PRVM_GetString: Invalid temp-string offset (%i >= %i vm_tempstringsbuf.cursize)", num, vm_tempstringsbuf.cursize);
+				VM_Warning("PRVM_GetString: Invalid temp-string offset (%i >= %i vm_tempstringsbuf.cursize)\n", num, vm_tempstringsbuf.cursize);
 				return "";
 			}
 		}
@@ -2188,12 +2190,12 @@ const char *PRVM_GetString(int num)
 		if (num < prog->numknownstrings)
 		{
 			if (!prog->knownstrings[num])
-				VM_Warning("PRVM_GetString: Invalid zone-string offset (%i has been freed)", num);
+				VM_Warning("PRVM_GetString: Invalid zone-string offset (%i has been freed)\n", num);
 			return prog->knownstrings[num];
 		}
 		else
 		{
-			VM_Warning("PRVM_GetString: Invalid zone-string offset (%i >= %i)", num, prog->numknownstrings);
+			VM_Warning("PRVM_GetString: Invalid zone-string offset (%i >= %i)\n", num, prog->numknownstrings);
 			return "";
 		}
 	}
