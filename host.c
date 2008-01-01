@@ -1114,10 +1114,7 @@ static void Host_Init (void)
 
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
-		if (gamemode == GAME_NEXUIZ)
-			Cbuf_AddText("togglemenu\nplayvideo logo\ncd loop 1\n");
-		else
-			Cbuf_AddText("togglemenu\n");
+		Cbuf_AddText("togglemenu\n");
 		Cbuf_Execute();
 	}
 
