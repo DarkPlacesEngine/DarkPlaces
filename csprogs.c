@@ -4,6 +4,7 @@
 #include "csprogs.h"
 #include "cl_collision.h"
 #include "snd_main.h"
+#include "clvm_cmds.h"
 
 //============================================================================
 // Client prog handling
@@ -157,8 +158,7 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 		tagentity = val->edict;
 		if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.tag_index)) && val->_float)
 			tagindex = (int)val->_float;
-		// FIXME: calculate tag matrix
-		Matrix4x4_CreateIdentity(&tagmatrix);
+		CL_GetTagMatrix (&tagmatrix, PRVM_PROG_TO_EDICT(tagentity), tagindex);
 	}
 	else
 		Matrix4x4_CreateIdentity(&tagmatrix);
