@@ -1263,7 +1263,7 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 			}
 
 			// or not seen by random tracelines
-			if (sv_cullentities_trace.integer && !isbmodel)
+			if (sv_cullentities_trace.integer && !isbmodel && sv.worldmodel->brush.TraceLineOfSight)
 			{
 				int samples = s->specialvisibilityradius ? sv_cullentities_trace_samples_extra.integer : sv_cullentities_trace_samples.integer;
 				float enlarge = sv_cullentities_trace_enlarge.value;
