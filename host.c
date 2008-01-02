@@ -220,15 +220,9 @@ Host_SaveConfig_f
 Writes key bindings and archived cvars to config.cfg
 ===============
 */
-void Host_SaveConfig_f(void)
+void Host_SaveConfig_to(const char *file)
 {
 	qfile_t *f;
-	const char *file = "config.cfg";
-
-	if(Cmd_Argc() >= 2) {
-		file = Cmd_Argv(1);
-		Con_Printf("Saving to %s\n", file);
-	}
 
 // dedicated servers initialize the host but don't parse and set the
 // config.cfg cvars
@@ -248,7 +242,21 @@ void Host_SaveConfig_f(void)
 		FS_Close (f);
 	}
 }
+void Host_SaveConfig(void)
+{
+	Host_SaveConfig_to("config.cfg");
+}
+void Host_SaveConfig_f(void)
+{
+	const char *file = "config.cfg";
 
+	if(Cmd_Argc() >= 2) {
+		file = Cmd_Argv(1);
+		Con_Printf("Saving to %s\n", file);
+	}
+
+	Host_SaveConfig_to(file);
+}
 
 /*
 ===============
@@ -1169,7 +1177,7 @@ void Host_Shutdown(void)
 #endif
 	CL_Video_Shutdown();
 
-	Host_SaveConfig_f();
+	Host_SaveConfig();
 
 	CDAudio_Shutdown ();
 	S_Terminate ();
