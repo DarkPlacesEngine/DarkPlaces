@@ -2214,7 +2214,7 @@ static void R_View_UpdateEntityVisible (void)
 			r_viewcache.entityvisible[i] = !(ent->flags & renderimask) && ((ent->model && ent->model->type == mod_sprite && (ent->model->sprite.sprnum_type == SPR_LABEL || ent->model->sprite.sprnum_type == SPR_LABEL_SCALE)) || !R_CullBox(ent->mins, ent->maxs)) && ((ent->effects & EF_NODEPTHTEST) || (ent->flags & RENDER_VIEWMODEL) || r_refdef.worldmodel->brush.BoxTouchingVisibleLeafs(r_refdef.worldmodel, r_viewcache.world_leafvisible, ent->mins, ent->maxs));
 
 		}
-		if(r_cullentities_trace.integer)
+		if(r_cullentities_trace.integer && r_refdef.worldmodel->brush.TraceLineOfSight)
 		{
 			for (i = 0;i < r_refdef.numentities;i++)
 			{
