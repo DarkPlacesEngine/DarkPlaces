@@ -2179,10 +2179,8 @@ static void VM_CL_gettagindex (void)
 	}
 
 	modelindex = (int)ent->fields.client->modelindex;
-	if(modelindex < 0)
-		modelindex = -(modelindex+1);
 	tag_index = 0;
-	if (modelindex <= 0 || modelindex >= MAX_MODELS)
+	if (modelindex >= MAX_MODELS || (modelindex <= -MAX_MODELS /* client models */))
 		Con_DPrintf("gettagindex(entity #%i): null or non-precached model\n", PRVM_NUM_FOR_EDICT(ent));
 	else
 	{
