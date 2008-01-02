@@ -1179,7 +1179,7 @@ void FS_Rescan_f(void)
 FS_ChangeGameDirs
 ================
 */
-extern void Host_SaveConfig_f (void);
+extern void Host_SaveConfig (void);
 extern void Host_LoadConfig_f (void);
 qboolean FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qboolean complain, qboolean failmissing)
 {
@@ -1225,7 +1225,7 @@ qboolean FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qboolean
 	// halt demo playback to close the file
 	CL_Disconnect();
 
-	Host_SaveConfig_f();
+	Host_SaveConfig();
 
 	fs_numgamedirs = numgamedirs;
 	for (i = 0;i < fs_numgamedirs;i++)
