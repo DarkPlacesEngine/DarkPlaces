@@ -2044,6 +2044,7 @@ int CL_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 	matrix4x4_t entitymatrix, tagmatrix, attachmatrix;
 	prvm_edict_t *attachent;
 	model_t *model;
+	float scale;
 
 	*out = identitymatrix; // warnings and errors return identical matrix
 
@@ -2088,10 +2089,11 @@ int CL_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 				attachmatrix = identitymatrix;
 
 			// apply transformation by child entity matrix
+			scale = 1;
 			val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.scale);
-			if (val->_float == 0)
-				val->_float = 1;
-			Matrix4x4_CreateFromQuakeEntity(&entitymatrix, ent->fields.client->origin[0], ent->fields.client->origin[1], ent->fields.client->origin[2], -ent->fields.client->angles[0], ent->fields.client->angles[1], ent->fields.client->angles[2], val->_float);
+			if (val && val->_float != 0)
+				scale = val->_float;
+			Matrix4x4_CreateFromQuakeEntity(&entitymatrix, ent->fields.client->origin[0], ent->fields.client->origin[1], ent->fields.client->origin[2], -ent->fields.client->angles[0], ent->fields.client->angles[1], ent->fields.client->angles[2], scale);
 			Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
 			Matrix4x4_Copy(&tagmatrix, out);
 
@@ -2108,22 +2110,24 @@ int CL_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 	}
 
 	// normal or RENDER_VIEWMODEL entity (or main parent entity on attach chain)
+	scale = 1;
 	val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.scale);
-	if (val->_float == 0)
-		val->_float = 1;
+	if (val && val->_float != 0)
+		scale = val->_float;
 	// Alias models have inverse pitch, bmodels can't have tags, so don't check for modeltype...
-	Matrix4x4_CreateFromQuakeEntity(&entitymatrix, ent->fields.client->origin[0], ent->fields.client->origin[1], ent->fields.client->origin[2], -ent->fields.client->angles[0], ent->fields.client->angles[1], ent->fields.client->angles[2], val->_float);
+	Matrix4x4_CreateFromQuakeEntity(&entitymatrix, ent->fields.client->origin[0], ent->fields.client->origin[1], ent->fields.client->origin[2], -ent->fields.client->angles[0], ent->fields.client->angles[1], ent->fields.client->angles[2], scale);
 	Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
 
 	if ((val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.renderflags)) && (RF_VIEWMODEL & (int)val->_float))
 	{// RENDER_VIEWMODEL magic
 		Matrix4x4_Copy(&tagmatrix, out);
 
+		scale = 1;
 		val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.scale);
-		if (val->_float == 0)
-			val->_float = 1;
+		if (val && val->_float != 0)
+			scale = val->_float;
 
-		Matrix4x4_CreateFromQuakeEntity(&entitymatrix, cl.csqc_origin[0], cl.csqc_origin[1], cl.csqc_origin[2], cl.csqc_angles[0], cl.csqc_angles[1], cl.csqc_angles[2], val->_float);
+		Matrix4x4_CreateFromQuakeEntity(&entitymatrix, cl.csqc_origin[0], cl.csqc_origin[1], cl.csqc_origin[2], cl.csqc_angles[0], cl.csqc_angles[1], cl.csqc_angles[2], scale);
 		Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
 
 		/*
@@ -3220,7 +3224,7 @@ VM_CL_ReadCoord,				// #364 float() readcoord (EXT_CSQC)
 VM_CL_ReadAngle,				// #365 float() readangle (EXT_CSQC)
 VM_CL_ReadString,				// #366 string() readstring (EXT_CSQC)
 VM_CL_ReadFloat,				// #367 float() readfloat (EXT_CSQC)
-NULL,							// #368
+NULL,						// #368
 NULL,							// #369
 NULL,							// #370
 NULL,							// #371
