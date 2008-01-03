@@ -230,9 +230,10 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 	return true;
 }
 
-qboolean CL_VM_InputEvent (qboolean down, int key)
+qboolean CL_VM_InputEvent (qboolean down, int key, int ascii)
 {
 	qboolean r;
+	prvm_eval_t* val;
 	if(!cl.csqc_loaded)
 		return false;
 	CSQC_BEGIN
@@ -243,6 +244,8 @@ qboolean CL_VM_InputEvent (qboolean down, int key)
 			prog->globals.client->time = cl.time;
 			PRVM_G_FLOAT(OFS_PARM0) = !down; // 0 is down, 1 is up
 			PRVM_G_FLOAT(OFS_PARM1) = key;
+			if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.input_ascii)))
+				val->_float = ascii;
 			PRVM_ExecuteProgram(prog->funcoffsets.CSQC_InputEvent, "QC function CSQC_InputEvent is missing");
 			r = CSQC_RETURNVAL;
 		}

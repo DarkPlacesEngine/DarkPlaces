@@ -35,7 +35,7 @@ The code uses void pointers instead.
 
 #ifdef SUPPORT_GECKO
 // forward declaration of clgecko_t
-typedef struct clgecko_s clgecko_t;
+struct clgecko_s;
 #endif
 
 typedef struct prvm_stack_s
@@ -252,6 +252,7 @@ typedef struct prvm_prog_globaloffsets_s
 	int dmg_origin; // csqc
 	int sb_showscores; // csqc
 	int drawfont; // csqc / menu
+	int input_ascii; // csqc
 }
 prvm_prog_globaloffsets_t;
 
@@ -354,7 +355,7 @@ typedef struct prvm_prog_s
 	qfile_t				*openfiles[PRVM_MAX_OPENFILES];
 	fssearch_t			*opensearches[PRVM_MAX_OPENSEARCHES];
 #ifdef SUPPORT_GECKO
-	clgecko_t			*opengeckoinstances[PRVM_MAX_GECKOINSTANCES];
+	struct clgecko_s		*opengeckoinstances[PRVM_MAX_GECKOINSTANCES];
 #endif
 
 	// copies of some vars that were former read from sv
