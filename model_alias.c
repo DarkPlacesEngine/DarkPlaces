@@ -1531,7 +1531,8 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 	Mod_Alias_CalculateBoundingBox();
 	Mod_FreeSkinFiles(skinfiles);
 
-	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || loadmodel->animscenes[0].framecount > 1;
+	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 
+	     || (loadmodel->animscenes && loadmodel->animscenes[0].framecount > 1);
 }
 
 void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
