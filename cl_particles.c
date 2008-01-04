@@ -2229,9 +2229,9 @@ void R_DrawDecal_TransparentCallback(const entity_render_t *ent, const rtlight_t
 
 		//blendmode = particletype[d->typeindex].blendmode;
 
-		cr = d->color[0] * (1.0f / 255.0f) * r_view.colorscale;
-		cg = d->color[1] * (1.0f / 255.0f) * r_view.colorscale;
-		cb = d->color[2] * (1.0f / 255.0f) * r_view.colorscale;
+		cr = d->color[0] * (1.0f / 255.0f) * r_refdef.view.colorscale;
+		cg = d->color[1] * (1.0f / 255.0f) * r_refdef.view.colorscale;
+		cb = d->color[2] * (1.0f / 255.0f) * r_refdef.view.colorscale;
 		ca = d->alpha * (1.0f / 255.0f);
 		//if (blendmode == PBLEND_MOD)
 		{
@@ -2364,9 +2364,9 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 
 		blendmode = particletype[p->typeindex].blendmode;
 
-		cr = p->color[0] * (1.0f / 255.0f) * r_view.colorscale;
-		cg = p->color[1] * (1.0f / 255.0f) * r_view.colorscale;
-		cb = p->color[2] * (1.0f / 255.0f) * r_view.colorscale;
+		cr = p->color[0] * (1.0f / 255.0f) * r_refdef.view.colorscale;
+		cg = p->color[1] * (1.0f / 255.0f) * r_refdef.view.colorscale;
+		cb = p->color[2] * (1.0f / 255.0f) * r_refdef.view.colorscale;
 		ca = p->alpha * (1.0f / 255.0f);
 		if (blendmode == PBLEND_MOD)
 		{
@@ -2412,8 +2412,8 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 		switch(particletype[p->typeindex].orientation)
 		{
 		case PARTICLE_BILLBOARD:
-			VectorScale(r_view.left, -size, right);
-			VectorScale(r_view.up, size, up);
+			VectorScale(r_refdef.view.left, -size, right);
+			VectorScale(r_refdef.view.up, size, up);
 			v3f[ 0] = org[0] - right[0] - up[0];
 			v3f[ 1] = org[1] - right[1] - up[1];
 			v3f[ 2] = org[2] - right[2] - up[2];
@@ -2548,10 +2548,10 @@ void R_DrawParticles (void)
 	if ((!cl.num_particles) || (!r_drawparticles.integer))
 		return;
 
-	minparticledist = DotProduct(r_view.origin, r_view.forward) + 4.0f;
+	minparticledist = DotProduct(r_refdef.view.origin, r_refdef.view.forward) + 4.0f;
 
 	// LordHavoc: only render if not too close
 	for (i = 0, p = cl.particles;i < cl.num_particles;i++, p++)
-		if (p->typeindex && !p->delayedspawn && (DotProduct(p->org, r_view.forward) >= minparticledist || particletype[p->typeindex].orientation == PARTICLE_BEAM))
+		if (p->typeindex && !p->delayedspawn && (DotProduct(p->org, r_refdef.view.forward) >= minparticledist || particletype[p->typeindex].orientation == PARTICLE_BEAM))
 			R_MeshQueue_AddTransparent(p->org, R_DrawParticle_TransparentCallback, NULL, i, NULL);
 }

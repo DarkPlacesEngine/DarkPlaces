@@ -909,11 +909,11 @@ void R_Shadow_RenderVolume(int numvertices, int numtriangles, const float *verte
 	if (r_shadow_rendermode == R_SHADOW_RENDERMODE_STENCIL)
 	{
 		// decrement stencil if backface is behind depthbuffer
-		GL_CullFace(r_view.cullface_front);
+		GL_CullFace(r_refdef.view.cullface_front);
 		qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);CHECKGLERROR
 		R_Mesh_Draw(0, numvertices, numtriangles, element3i, 0, 0);
 		// increment stencil if frontface is behind depthbuffer
-		GL_CullFace(r_view.cullface_back);
+		GL_CullFace(r_refdef.view.cullface_back);
 		qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);CHECKGLERROR
 	}
 	R_Mesh_Draw(0, numvertices, numtriangles, element3i, 0, 0);
@@ -1030,7 +1030,7 @@ void R_Shadow_RenderMode_Begin(void)
 	GL_DepthTest(true);
 	GL_DepthMask(false);
 	GL_Color(0, 0, 0, 1);
-	GL_Scissor(r_view.x, r_view.y, r_view.width, r_view.height);
+	GL_Scissor(r_refdef.view.x, r_refdef.view.y, r_refdef.view.width, r_refdef.view.height);
 
 	r_shadow_rendermode = R_SHADOW_RENDERMODE_NONE;
 
@@ -1076,9 +1076,9 @@ void R_Shadow_RenderMode_Reset(void)
 	qglStencilMask(~0);CHECKGLERROR
 	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);CHECKGLERROR
 	qglStencilFunc(GL_ALWAYS, 128, ~0);CHECKGLERROR
-	GL_CullFace(r_view.cullface_back);
+	GL_CullFace(r_refdef.view.cullface_back);
 	GL_Color(1, 1, 1, 1);
-	GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 1);
+	GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 }
 
@@ -1094,17 +1094,17 @@ void R_Shadow_RenderMode_StencilShadowVolumes(qboolean clearstencil)
 	if (r_shadow_rendermode == R_SHADOW_RENDERMODE_SEPARATESTENCIL)
 	{
 		GL_CullFace(GL_NONE);
-		qglStencilOpSeparate(r_view.cullface_front, GL_KEEP, GL_INCR, GL_KEEP);CHECKGLERROR
-		qglStencilOpSeparate(r_view.cullface_back, GL_KEEP, GL_DECR, GL_KEEP);CHECKGLERROR
+		qglStencilOpSeparate(r_refdef.view.cullface_front, GL_KEEP, GL_INCR, GL_KEEP);CHECKGLERROR
+		qglStencilOpSeparate(r_refdef.view.cullface_back, GL_KEEP, GL_DECR, GL_KEEP);CHECKGLERROR
 	}
 	else if (r_shadow_rendermode == R_SHADOW_RENDERMODE_STENCILTWOSIDE)
 	{
 		GL_CullFace(GL_NONE);
 		qglEnable(GL_STENCIL_TEST_TWO_SIDE_EXT);CHECKGLERROR
-		qglActiveStencilFaceEXT(r_view.cullface_front);CHECKGLERROR
+		qglActiveStencilFaceEXT(r_refdef.view.cullface_front);CHECKGLERROR
 		qglStencilMask(~0);CHECKGLERROR
 		qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);CHECKGLERROR
-		qglActiveStencilFaceEXT(r_view.cullface_back);CHECKGLERROR
+		qglActiveStencilFaceEXT(r_refdef.view.cullface_back);CHECKGLERROR
 		qglStencilMask(~0);CHECKGLERROR
 		qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);CHECKGLERROR
 	}
@@ -1145,7 +1145,7 @@ void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent)
 		R_Mesh_TexBind(9, R_GetTexture(r_texture_black)); // glow
 		//R_Mesh_TexMatrix(3, rsurface.entitytolight); // light filter matrix
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-		GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 0);
+		GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 0);
 		CHECKGLERROR
 	}
 }
@@ -1157,7 +1157,7 @@ void R_Shadow_RenderMode_VisibleShadowVolumes(void)
 	GL_BlendFunc(GL_ONE, GL_ONE);
 	GL_DepthRange(0, 1);
 	GL_DepthTest(r_showshadowvolumes.integer < 2);
-	GL_Color(0.0, 0.0125 * r_view.colorscale, 0.1 * r_view.colorscale, 1);
+	GL_Color(0.0, 0.0125 * r_refdef.view.colorscale, 0.1 * r_refdef.view.colorscale, 1);
 	GL_PolygonOffset(r_refdef.shadowpolygonfactor, r_refdef.shadowpolygonoffset);CHECKGLERROR
 	GL_CullFace(GL_NONE);
 	r_shadow_rendermode = R_SHADOW_RENDERMODE_VISIBLEVOLUMES;
@@ -1170,7 +1170,7 @@ void R_Shadow_RenderMode_VisibleLighting(qboolean stenciltest, qboolean transpar
 	GL_BlendFunc(GL_ONE, GL_ONE);
 	GL_DepthRange(0, 1);
 	GL_DepthTest(r_showlighting.integer < 2);
-	GL_Color(0.1 * r_view.colorscale, 0.0125 * r_view.colorscale, 0, 1);
+	GL_Color(0.1 * r_refdef.view.colorscale, 0.0125 * r_refdef.view.colorscale, 0, 1);
 	if (!transparent)
 	{
 		qglDepthFunc(GL_EQUAL);CHECKGLERROR
@@ -1189,7 +1189,7 @@ void R_Shadow_RenderMode_End(void)
 	R_Shadow_RenderMode_Reset();
 	R_Shadow_RenderMode_ActiveLight(NULL);
 	GL_DepthMask(true);
-	GL_Scissor(r_view.x, r_view.y, r_view.width, r_view.height);
+	GL_Scissor(r_refdef.view.x, r_refdef.view.y, r_refdef.view.width, r_refdef.view.height);
 	r_shadow_rendermode = R_SHADOW_RENDERMODE_NONE;
 }
 
@@ -1230,17 +1230,17 @@ qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 		return false;
 
 	// if view is inside the light box, just say yes it's visible
-	if (BoxesOverlap(r_view.origin, r_view.origin, mins, maxs))
+	if (BoxesOverlap(r_refdef.view.origin, r_refdef.view.origin, mins, maxs))
 	{
-		GL_Scissor(r_view.x, r_view.y, r_view.width, r_view.height);
+		GL_Scissor(r_refdef.view.x, r_refdef.view.y, r_refdef.view.width, r_refdef.view.height);
 		return false;
 	}
 
 	x1 = y1 = x2 = y2 = 0;
 
 	// transform all corners that are infront of the nearclip plane
-	VectorNegate(r_view.frustum[4].normal, plane4f);
-	plane4f[3] = r_view.frustum[4].dist;
+	VectorNegate(r_refdef.view.frustum[4].normal, plane4f);
+	plane4f[3] = r_refdef.view.frustum[4].dist;
 	numvertices = 0;
 	for (i = 0;i < 8;i++)
 	{
@@ -1306,10 +1306,10 @@ qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 	//Con_Printf("%f %f %f %f\n", x1, y1, x2, y2);
 
 	// clamp it to the screen
-	if (ix1 < r_view.x) ix1 = r_view.x;
-	if (iy1 < r_view.y) iy1 = r_view.y;
-	if (ix2 > r_view.x + r_view.width) ix2 = r_view.x + r_view.width;
-	if (iy2 > r_view.y + r_view.height) iy2 = r_view.y + r_view.height;
+	if (ix1 < r_refdef.view.x) ix1 = r_refdef.view.x;
+	if (iy1 < r_refdef.view.y) iy1 = r_refdef.view.y;
+	if (ix2 > r_refdef.view.x + r_refdef.view.width) ix2 = r_refdef.view.x + r_refdef.view.width;
+	if (iy2 > r_refdef.view.y + r_refdef.view.height) iy2 = r_refdef.view.y + r_refdef.view.height;
 
 	// if it is inside out, it's not visible
 	if (ix2 <= ix1 || iy2 <= iy1)
@@ -1536,7 +1536,7 @@ static void R_Shadow_GenTexCoords_Specular_NormalCubeMap(int firstvertex, int nu
 static void R_Shadow_RenderLighting_VisibleLighting(int firstvertex, int numvertices, int numtriangles, const int *element3i, int element3i_bufferobject, size_t element3i_bufferoffset, const vec3_t lightcolorbase, const vec3_t lightcolorpants, const vec3_t lightcolorshirt, rtexture_t *basetexture, rtexture_t *pantstexture, rtexture_t *shirttexture, rtexture_t *normalmaptexture, rtexture_t *glosstexture, float ambientscale, float diffusescale, float specularscale, qboolean dopants, qboolean doshirt)
 {
 	// used to display how many times a surface is lit for level design purposes
-	GL_Color(0.1 * r_view.colorscale, 0.025 * r_view.colorscale, 0, 1);
+	GL_Color(0.1 * r_refdef.view.colorscale, 0.025 * r_refdef.view.colorscale, 0, 1);
 	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
 	R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset);
@@ -1574,7 +1574,7 @@ static void R_Shadow_RenderLighting_Light_Dot3_Finalize(int firstvertex, int num
 {
 	// shared final code for all the dot3 layers
 	int renders;
-	GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 0);
+	GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 0);
 	for (renders = 0;renders < 64 && (r > 0 || g > 0 || b > 0);renders++, r--, g--, b--)
 	{
 		GL_Color(bound(0, r, 1), bound(0, g, 1), bound(0, b, 1), 1);
@@ -2144,25 +2144,25 @@ static void R_Shadow_RenderLighting_Light_Dot3(int firstvertex, int numvertices,
 		return;
 	R_Mesh_ColorPointer(NULL, 0, 0);
 	if (doambient)
-		R_Shadow_RenderLighting_Light_Dot3_AmbientPass(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, lightcolorbase, basetexture, ambientscale * r_view.colorscale);
+		R_Shadow_RenderLighting_Light_Dot3_AmbientPass(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, lightcolorbase, basetexture, ambientscale * r_refdef.view.colorscale);
 	if (dodiffuse)
-		R_Shadow_RenderLighting_Light_Dot3_DiffusePass(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, lightcolorbase, basetexture, normalmaptexture, diffusescale * r_view.colorscale);
+		R_Shadow_RenderLighting_Light_Dot3_DiffusePass(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, lightcolorbase, basetexture, normalmaptexture, diffusescale * r_refdef.view.colorscale);
 	if (dopants)
 	{
 		if (doambient)
-			R_Shadow_RenderLighting_Light_Dot3_AmbientPass(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, lightcolorpants, pantstexture, ambientscale * r_view.colorscale);
+			R_Shadow_RenderLighting_Light_Dot3_AmbientPass(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, lightcolorpants, pantstexture, ambientscale * r_refdef.view.colorscale);
 		if (dodiffuse)
-			R_Shadow_RenderLighting_Light_Dot3_DiffusePass(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, lightcolorpants, pantstexture, normalmaptexture, diffusescale * r_view.colorscale);
+			R_Shadow_RenderLighting_Light_Dot3_DiffusePass(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, lightcolorpants, pantstexture, normalmaptexture, diffusescale * r_refdef.view.colorscale);
 	}
 	if (doshirt)
 	{
 		if (doambient)
-			R_Shadow_RenderLighting_Light_Dot3_AmbientPass(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, lightcolorshirt, shirttexture, ambientscale * r_view.colorscale);
+			R_Shadow_RenderLighting_Light_Dot3_AmbientPass(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, lightcolorshirt, shirttexture, ambientscale * r_refdef.view.colorscale);
 		if (dodiffuse)
-			R_Shadow_RenderLighting_Light_Dot3_DiffusePass(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, lightcolorshirt, shirttexture, normalmaptexture, diffusescale * r_view.colorscale);
+			R_Shadow_RenderLighting_Light_Dot3_DiffusePass(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, lightcolorshirt, shirttexture, normalmaptexture, diffusescale * r_refdef.view.colorscale);
 	}
 	if (dospecular)
-		R_Shadow_RenderLighting_Light_Dot3_SpecularPass(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, lightcolorbase, glosstexture, normalmaptexture, specularscale * r_view.colorscale);
+		R_Shadow_RenderLighting_Light_Dot3_SpecularPass(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset, lightcolorbase, glosstexture, normalmaptexture, specularscale * r_refdef.view.colorscale);
 }
 
 void R_Shadow_RenderLighting_Light_Vertex_Pass(int firstvertex, int numvertices, int numtriangles, const int *element3i, int element3i_bufferobject, size_t element3i_bufferoffset, vec3_t diffusecolor2, vec3_t ambientcolor2)
@@ -2264,12 +2264,12 @@ static void R_Shadow_RenderLighting_Light_Vertex(int firstvertex, int numvertice
 	float ambientcolorpants[3], diffusecolorpants[3];
 	float ambientcolorshirt[3], diffusecolorshirt[3];
 	rmeshstate_t m;
-	VectorScale(lightcolorbase, ambientscale * 2 * r_view.colorscale, ambientcolorbase);
-	VectorScale(lightcolorbase, diffusescale * 2 * r_view.colorscale, diffusecolorbase);
-	VectorScale(lightcolorpants, ambientscale * 2 * r_view.colorscale, ambientcolorpants);
-	VectorScale(lightcolorpants, diffusescale * 2 * r_view.colorscale, diffusecolorpants);
-	VectorScale(lightcolorshirt, ambientscale * 2 * r_view.colorscale, ambientcolorshirt);
-	VectorScale(lightcolorshirt, diffusescale * 2 * r_view.colorscale, diffusecolorshirt);
+	VectorScale(lightcolorbase, ambientscale * 2 * r_refdef.view.colorscale, ambientcolorbase);
+	VectorScale(lightcolorbase, diffusescale * 2 * r_refdef.view.colorscale, diffusecolorbase);
+	VectorScale(lightcolorpants, ambientscale * 2 * r_refdef.view.colorscale, ambientcolorpants);
+	VectorScale(lightcolorpants, diffusescale * 2 * r_refdef.view.colorscale, diffusecolorpants);
+	VectorScale(lightcolorshirt, ambientscale * 2 * r_refdef.view.colorscale, ambientcolorshirt);
+	VectorScale(lightcolorshirt, diffusescale * 2 * r_refdef.view.colorscale, diffusecolorshirt);
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 	R_Mesh_ColorPointer(rsurface.array_color4f, 0, 0);
 	memset(&m, 0, sizeof(m));
@@ -2583,15 +2583,15 @@ void R_Shadow_ComputeShadowCasterCullingPlanes(rtlight_t *rtlight)
 	rsurface.rtlight_numfrustumplanes = 0;
 
 	// haven't implemented a culling path for ortho rendering
-	if (!r_view.useperspective)
+	if (!r_refdef.view.useperspective)
 	{
 		// check if the light is on screen and copy the 4 planes if it is
 		for (i = 0;i < 4;i++)
-			if (PlaneDiff(rtlight->shadoworigin, &r_view.frustum[i]) < -0.03125)
+			if (PlaneDiff(rtlight->shadoworigin, &r_refdef.view.frustum[i]) < -0.03125)
 				break;
 		if (i == 4)
 			for (i = 0;i < 4;i++)
-				rsurface.rtlight_frustumplanes[rsurface.rtlight_numfrustumplanes++] = r_view.frustum[i];
+				rsurface.rtlight_frustumplanes[rsurface.rtlight_numfrustumplanes++] = r_refdef.view.frustum[i];
 		return;
 	}
 
@@ -2610,10 +2610,10 @@ void R_Shadow_ComputeShadowCasterCullingPlanes(rtlight_t *rtlight)
 	{
 		// quickly reject standard frustum planes that put the light
 		// origin outside the frustum
-		if (PlaneDiff(rtlight->shadoworigin, &r_view.frustum[i]) < -0.03125)
+		if (PlaneDiff(rtlight->shadoworigin, &r_refdef.view.frustum[i]) < -0.03125)
 			continue;
 		// copy the plane
-		rsurface.rtlight_frustumplanes[rsurface.rtlight_numfrustumplanes++] = r_view.frustum[i];
+		rsurface.rtlight_frustumplanes[rsurface.rtlight_numfrustumplanes++] = r_refdef.view.frustum[i];
 	}
 	// if all the standard frustum planes were accepted, the light is onscreen
 	// otherwise we need to generate some more planes below...
@@ -2625,12 +2625,12 @@ void R_Shadow_ComputeShadowCasterCullingPlanes(rtlight_t *rtlight)
 		{
 			// create a plane using the view origin and light origin, and a
 			// single point from the frustum corner set
-			TriangleNormal(r_view.origin, r_view.frustumcorner[i], rtlight->shadoworigin, plane.normal);
+			TriangleNormal(r_refdef.view.origin, r_refdef.view.frustumcorner[i], rtlight->shadoworigin, plane.normal);
 			VectorNormalize(plane.normal);
-			plane.dist = DotProduct(r_view.origin, plane.normal);
+			plane.dist = DotProduct(r_refdef.view.origin, plane.normal);
 			// see if this plane is backwards and flip it if so
 			for (j = 0;j < 4;j++)
-				if (j != i && DotProduct(r_view.frustumcorner[j], plane.normal) - plane.dist < -0.03125)
+				if (j != i && DotProduct(r_refdef.view.frustumcorner[j], plane.normal) - plane.dist < -0.03125)
 					break;
 			if (j < 4)
 			{
@@ -2638,7 +2638,7 @@ void R_Shadow_ComputeShadowCasterCullingPlanes(rtlight_t *rtlight)
 				plane.dist *= -1;
 				// flipped plane, test again to see if it is now valid
 				for (j = 0;j < 4;j++)
-					if (j != i && DotProduct(r_view.frustumcorner[j], plane.normal) - plane.dist < -0.03125)
+					if (j != i && DotProduct(r_refdef.view.frustumcorner[j], plane.normal) - plane.dist < -0.03125)
 						break;
 				// if the plane is still not valid, then it is dividing the
 				// frustum and has to be rejected
@@ -2664,7 +2664,7 @@ void R_Shadow_ComputeShadowCasterCullingPlanes(rtlight_t *rtlight)
 	for (i = 0;i < rsurface.rtlight_numfrustumplanes;i++)
 	{
 		plane = rsurface.rtlight_frustumplanes[i];
-		Con_Printf("light %p plane #%i %f %f %f : %f (%f %f %f %f %f)\n", rtlight, i, plane.normal[0], plane.normal[1], plane.normal[2], plane.dist, PlaneDiff(r_view.frustumcorner[0], &plane), PlaneDiff(r_view.frustumcorner[1], &plane), PlaneDiff(r_view.frustumcorner[2], &plane), PlaneDiff(r_view.frustumcorner[3], &plane), PlaneDiff(rtlight->shadoworigin, &plane));
+		Con_Printf("light %p plane #%i %f %f %f : %f (%f %f %f %f %f)\n", rtlight, i, plane.normal[0], plane.normal[1], plane.normal[2], plane.dist, PlaneDiff(r_refdef.view.frustumcorner[0], &plane), PlaneDiff(r_refdef.view.frustumcorner[1], &plane), PlaneDiff(r_refdef.view.frustumcorner[2], &plane), PlaneDiff(r_refdef.view.frustumcorner[3], &plane), PlaneDiff(rtlight->shadoworigin, &plane));
 	}
 #endif
 
@@ -2754,11 +2754,11 @@ void R_Shadow_DrawWorldShadow(int numsurfaces, int *surfacelist, const unsigned 
 			if (r_shadow_rendermode == R_SHADOW_RENDERMODE_STENCIL)
 			{
 				// decrement stencil if backface is behind depthbuffer
-				GL_CullFace(r_view.cullface_front);
+				GL_CullFace(r_refdef.view.cullface_front);
 				qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);CHECKGLERROR
 				R_Mesh_Draw(0, mesh->numverts, mesh->numtriangles, mesh->element3i, mesh->ebo, 0);
 				// increment stencil if frontface is behind depthbuffer
-				GL_CullFace(r_view.cullface_back);
+				GL_CullFace(r_refdef.view.cullface_back);
 				qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);CHECKGLERROR
 			}
 			R_Mesh_Draw(0, mesh->numverts, mesh->numtriangles, mesh->element3i, mesh->ebo, 0);
@@ -2935,7 +2935,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	if (numleafs)
 	{
 		for (i = 0;i < numleafs;i++)
-			if (r_viewcache.world_leafvisible[leaflist[i]])
+			if (r_refdef.viewcache.world_leafvisible[leaflist[i]])
 				break;
 		if (i == numleafs)
 			return;
@@ -2967,7 +2967,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 				continue;
 			if (!(model = ent->model))
 				continue;
-			if (r_viewcache.entityvisible[i] && model->DrawLight && (ent->flags & RENDER_LIGHT))
+			if (r_refdef.viewcache.entityvisible[i] && model->DrawLight && (ent->flags & RENDER_LIGHT))
 			{
 				// this entity wants to receive light, is visible, and is
 				// inside the light box
@@ -3030,7 +3030,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	// count this light in the r_speeds
 	r_refdef.stats.lights++;
 
-	if (r_showshadowvolumes.integer && r_view.showdebug && numsurfaces + numshadowentities + numshadowentities_noselfshadow && rtlight->shadow && (rtlight->isstatic ? r_refdef.rtworldshadows : r_refdef.rtdlightshadows))
+	if (r_showshadowvolumes.integer && r_refdef.view.showdebug && numsurfaces + numshadowentities + numshadowentities_noselfshadow && rtlight->shadow && (rtlight->isstatic ? r_refdef.rtworldshadows : r_refdef.rtdlightshadows))
 	{
 		// optionally draw visible shape of the shadow volumes
 		// for performance analysis by level designers
@@ -3061,7 +3061,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 
 			// optionally draw the illuminated areas
 			// for performance analysis by level designers
-			if (r_showlighting.integer && r_view.showdebug)
+			if (r_showlighting.integer && r_refdef.view.showdebug)
 			{
 				R_Shadow_RenderMode_VisibleLighting(!r_showdisabledepthtest.integer, false);
 				for (i = 0;i < numlightentities_noselfshadow;i++)
@@ -3084,7 +3084,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 
 			// optionally draw the illuminated areas
 			// for performance analysis by level designers
-			if (r_showlighting.integer && r_view.showdebug)
+			if (r_showlighting.integer && r_refdef.view.showdebug)
 			{
 				R_Shadow_RenderMode_VisibleLighting(!r_showdisabledepthtest.integer, false);
 				if (numsurfaces)
@@ -3109,7 +3109,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 
 			// optionally draw the illuminated areas
 			// for performance analysis by level designers
-			if (r_showlighting.integer && r_view.showdebug)
+			if (r_showlighting.integer && r_refdef.view.showdebug)
 			{
 				R_Shadow_RenderMode_VisibleLighting(false, false);
 				if (numsurfaces)
@@ -3179,7 +3179,7 @@ void R_DrawModelShadows(void)
 		return;
 
 	CHECKGLERROR
-	GL_Scissor(r_view.x, r_view.y, r_view.width, r_view.height);
+	GL_Scissor(r_refdef.view.x, r_refdef.view.y, r_refdef.view.width, r_refdef.view.height);
 
 	r_shadow_rendermode = R_SHADOW_RENDERMODE_NONE;
 
@@ -3219,8 +3219,8 @@ void R_DrawModelShadows(void)
 
 	// set up ortho view for rendering this pass
 	GL_SetupView_Mode_Ortho(0, 0, 1, 1, -10, 100);
-	GL_Scissor(r_view.x, r_view.y, r_view.width, r_view.height);
-	GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 1);
+	GL_Scissor(r_refdef.view.x, r_refdef.view.y, r_refdef.view.width, r_refdef.view.height);
+	GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
 	GL_ScissorTest(true);
 	R_Mesh_Matrix(&identitymatrix);
 	R_Mesh_ResetTextureState();
@@ -3234,7 +3234,7 @@ void R_DrawModelShadows(void)
 	GL_DepthMask(false);
 	GL_PolygonOffset(0, 0);CHECKGLERROR
 	GL_Color(0, 0, 0, 0.5);
-	GL_ColorMask(r_view.colormask[0], r_view.colormask[1], r_view.colormask[2], 1);
+	GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
 	qglDepthFunc(GL_ALWAYS);CHECKGLERROR
 	qglEnable(GL_STENCIL_TEST);CHECKGLERROR
 	qglStencilMask(~0);CHECKGLERROR
@@ -3277,11 +3277,11 @@ void R_DrawCoronas(void)
 			continue;
 		cscale = rtlight->corona * r_coronas.value* 0.25f;
 		scale = rtlight->radius * rtlight->coronasizescale;
-		if (VectorDistance2(rtlight->shadoworigin, r_view.origin) < 16.0f * 16.0f)
+		if (VectorDistance2(rtlight->shadoworigin, r_refdef.view.origin) < 16.0f * 16.0f)
 			continue;
-		if (CL_Move(r_view.origin, vec3_origin, vec3_origin, rtlight->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction < 1)
+		if (CL_Move(r_refdef.view.origin, vec3_origin, vec3_origin, rtlight->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction < 1)
 			continue;
-		R_DrawSprite(GL_ONE, GL_ONE, r_shadow_lightcorona, NULL, true, false, rtlight->shadoworigin, r_view.right, r_view.up, scale, -scale, -scale, scale, rtlight->color[0] * cscale, rtlight->color[1] * cscale, rtlight->color[2] * cscale, 1);
+		R_DrawSprite(GL_ONE, GL_ONE, r_shadow_lightcorona, NULL, true, false, rtlight->shadoworigin, r_refdef.view.right, r_refdef.view.up, scale, -scale, -scale, scale, rtlight->color[0] * cscale, rtlight->color[1] * cscale, rtlight->color[2] * cscale, 1);
 	}
 	for (i = 0;i < r_refdef.numlights;i++)
 	{
@@ -3290,7 +3290,7 @@ void R_DrawCoronas(void)
 			continue;
 		if (rtlight->corona <= 0)
 			continue;
-		if (VectorDistance2(rtlight->shadoworigin, r_view.origin) < 32.0f * 32.0f)
+		if (VectorDistance2(rtlight->shadoworigin, r_refdef.view.origin) < 32.0f * 32.0f)
 			continue;
 		if (gl_flashblend.integer)
 		{
@@ -3304,9 +3304,9 @@ void R_DrawCoronas(void)
 		}
 		if (VectorLength(rtlight->color) * cscale < (1.0f / 256.0f))
 			continue;
-		if (CL_Move(r_view.origin, vec3_origin, vec3_origin, rtlight->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction < 1)
+		if (CL_Move(r_refdef.view.origin, vec3_origin, vec3_origin, rtlight->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction < 1)
 			continue;
-		R_DrawSprite(GL_ONE, GL_ONE, r_shadow_lightcorona, NULL, true, false, rtlight->shadoworigin, r_view.right, r_view.up, scale, -scale, -scale, scale, rtlight->color[0] * cscale, rtlight->color[1] * cscale, rtlight->color[2] * cscale, 1);
+		R_DrawSprite(GL_ONE, GL_ONE, r_shadow_lightcorona, NULL, true, false, rtlight->shadoworigin, r_refdef.view.right, r_refdef.view.up, scale, -scale, -scale, scale, rtlight->color[0] * cscale, rtlight->color[1] * cscale, rtlight->color[2] * cscale, 1);
 	}
 }
 
@@ -3507,7 +3507,7 @@ void R_Shadow_SelectLight(dlight_t *light)
 void R_Shadow_DrawCursor_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
 	// this is never batched (there can be only one)
-	R_DrawSprite(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, r_editlights_sprcursor->tex, r_editlights_sprcursor->tex, false, false, r_editlights_cursorlocation, r_view.right, r_view.up, EDLIGHTSPRSIZE, -EDLIGHTSPRSIZE, -EDLIGHTSPRSIZE, EDLIGHTSPRSIZE, 1, 1, 1, 1);
+	R_DrawSprite(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, r_editlights_sprcursor->tex, r_editlights_sprcursor->tex, false, false, r_editlights_cursorlocation, r_refdef.view.right, r_refdef.view.up, EDLIGHTSPRSIZE, -EDLIGHTSPRSIZE, -EDLIGHTSPRSIZE, EDLIGHTSPRSIZE, 1, 1, 1, 1);
 }
 
 void R_Shadow_DrawLightSprite_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
@@ -3537,10 +3537,10 @@ void R_Shadow_DrawLightSprite_TransparentCallback(const entity_render_t *ent, co
 		pic = r_editlights_sprnoshadowlight;
 	else
 		pic = r_editlights_sprlight;
-	R_DrawSprite(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, pic->tex, pic->tex, false, false, light->origin, r_view.right, r_view.up, s, -s, -s, s, spritecolor[0], spritecolor[1], spritecolor[2], 1);
+	R_DrawSprite(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, pic->tex, pic->tex, false, false, light->origin, r_refdef.view.right, r_refdef.view.up, s, -s, -s, s, spritecolor[0], spritecolor[1], spritecolor[2], 1);
 	// draw selection sprite if light is selected
 	if (light->selected)
-		R_DrawSprite(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, r_editlights_sprselection->tex, r_editlights_sprselection->tex, false, false, light->origin, r_view.right, r_view.up, s, -s, -s, s, 1, 1, 1, 1);
+		R_DrawSprite(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, r_editlights_sprselection->tex, r_editlights_sprselection->tex, false, false, light->origin, r_refdef.view.right, r_refdef.view.up, s, -s, -s, s, 1, 1, 1, 1);
 	// VorteX todo: add normalmode/realtime mode light overlay sprites?
 }
 
@@ -3570,12 +3570,12 @@ void R_Shadow_SelectLightInView(void)
 		light = Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
 		if (!light)
 			continue;
-		VectorSubtract(light->origin, r_view.origin, temp);
-		rating = (DotProduct(temp, r_view.forward) / sqrt(DotProduct(temp, temp)));
+		VectorSubtract(light->origin, r_refdef.view.origin, temp);
+		rating = (DotProduct(temp, r_refdef.view.forward) / sqrt(DotProduct(temp, temp)));
 		if (rating >= 0.95)
 		{
 			rating /= (1 + 0.0625f * sqrt(DotProduct(temp, temp)));
-			if (bestrating < rating && CL_Move(light->origin, vec3_origin, vec3_origin, r_view.origin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction == 1.0f)
+			if (bestrating < rating && CL_Move(light->origin, vec3_origin, vec3_origin, r_refdef.view.origin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction == 1.0f)
 			{
 				bestrating = rating;
 				best = light;
@@ -4007,8 +4007,8 @@ void R_Shadow_SetCursorLocationForView(void)
 	vec_t dist, push;
 	vec3_t dest, endpos;
 	trace_t trace;
-	VectorMA(r_view.origin, r_editlights_cursordistance.value, r_view.forward, dest);
-	trace = CL_Move(r_view.origin, vec3_origin, vec3_origin, dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false);
+	VectorMA(r_refdef.view.origin, r_editlights_cursordistance.value, r_refdef.view.forward, dest);
+	trace = CL_Move(r_refdef.view.origin, vec3_origin, vec3_origin, dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false);
 	if (trace.fraction < 1)
 	{
 		dist = trace.fraction * r_editlights_cursordistance.value;
@@ -4016,7 +4016,7 @@ void R_Shadow_SetCursorLocationForView(void)
 		if (push > dist)
 			push = dist;
 		push = -push;
-		VectorMA(trace.endpos, push, r_view.forward, endpos);
+		VectorMA(trace.endpos, push, r_refdef.view.forward, endpos);
 		VectorMA(endpos, r_editlights_cursorpushoff.value, trace.plane.normal, endpos);
 	}
 	else

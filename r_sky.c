@@ -268,8 +268,8 @@ static const int skyboxelements[6*2*3] =
 static void R_SkyBox(void)
 {
 	int i;
-	// FIXME: fixed function path can't properly handle r_view.colorscale > 1
-	GL_Color(1 * r_view.colorscale, 1 * r_view.colorscale, 1 * r_view.colorscale, 1);
+	// FIXME: fixed function path can't properly handle r_refdef.view.colorscale > 1
+	GL_Color(1 * r_refdef.view.colorscale, 1 * r_refdef.view.colorscale, 1 * r_refdef.view.colorscale, 1);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_CullFace(GL_NONE);
 	GL_DepthMask(false);
@@ -381,8 +381,8 @@ static void R_SkySphere(void)
 	speedscale -= (int)speedscale;
 	Matrix4x4_CreateTranslate(&scroll2matrix, speedscale, speedscale, 0);
 
-	// FIXME: fixed function path can't properly handle r_view.colorscale > 1
-	GL_Color(1 * r_view.colorscale, 1 * r_view.colorscale, 1 * r_view.colorscale, 1);
+	// FIXME: fixed function path can't properly handle r_refdef.view.colorscale > 1
+	GL_Color(1 * r_refdef.view.colorscale, 1 * r_refdef.view.colorscale, 1 * r_refdef.view.colorscale, 1);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_CullFace(GL_NONE);
 	GL_DepthMask(true);
@@ -395,7 +395,7 @@ static void R_SkySphere(void)
 	R_Mesh_TexBind(0, R_GetTexture(r_refdef.worldmodel->brush.solidskytexture));
 	R_Mesh_TexCoordPointer(0, 2, skysphere_texcoord2f, 0, 0);
 	R_Mesh_TexMatrix(0, &scroll1matrix);
-	if (r_textureunits.integer >= 2 && r_view.colorscale == 1)
+	if (r_textureunits.integer >= 2 && r_refdef.view.colorscale == 1)
 	{
 		// one pass using GL_DECAL or GL_INTERPOLATE_ARB for alpha layer
 		R_Mesh_TexBind(1, R_GetTexture(r_refdef.worldmodel->brush.alphaskytexture));
@@ -437,7 +437,7 @@ void R_Sky(void)
 	matrix4x4_t skymatrix;
 	if (skyrendermasked)
 	{
-		Matrix4x4_CreateTranslate(&skymatrix, r_view.origin[0], r_view.origin[1], r_view.origin[2]);
+		Matrix4x4_CreateTranslate(&skymatrix, r_refdef.view.origin[0], r_refdef.view.origin[1], r_refdef.view.origin[2]);
 		R_Mesh_Matrix(&skymatrix);
 		if (skyrendersphere)
 		{

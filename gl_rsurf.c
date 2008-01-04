@@ -341,9 +341,9 @@ static void R_DrawPortal_Callback(const entity_render_t *ent, const rtlight_t *r
 	R_Mesh_ResetTextureState();
 
 	i = surfacelist[0];
-	GL_Color(((i & 0x0007) >> 0) * (1.0f / 7.0f) * r_view.colorscale,
-			 ((i & 0x0038) >> 3) * (1.0f / 7.0f) * r_view.colorscale,
-			 ((i & 0x01C0) >> 6) * (1.0f / 7.0f) * r_view.colorscale,
+	GL_Color(((i & 0x0007) >> 0) * (1.0f / 7.0f) * r_refdef.view.colorscale,
+			 ((i & 0x0038) >> 3) * (1.0f / 7.0f) * r_refdef.view.colorscale,
+			 ((i & 0x01C0) >> 6) * (1.0f / 7.0f) * r_refdef.view.colorscale,
 			 0.125f);
 	for (i = 0, v = vertex3f;i < numpoints;i++, v += 3)
 		VectorCopy(portal->points[i].position, v);
@@ -361,7 +361,7 @@ void R_DrawPortals(void)
 		return;
 	for (leafnum = 0;leafnum < r_refdef.worldmodel->brush.num_leafs;leafnum++)
 	{
-		if (r_viewcache.world_leafvisible[leafnum])
+		if (r_refdef.viewcache.world_leafvisible[leafnum])
 		{
 			//for (portalnum = 0, portal = model->brush.data_portals;portalnum < model->brush.num_portals;portalnum++, portal++)
 			for (portal = r_refdef.worldmodel->brush.data_leafs[leafnum].portals;portal;portal = portal->next)
@@ -391,42 +391,42 @@ void R_View_WorldVisibility(qboolean forcenovis)
 	if (!model)
 		return;
 
-	if (r_view.usecustompvs)
+	if (r_refdef.view.usecustompvs)
 	{
 		// clear the visible surface and leaf flags arrays
-		memset(r_viewcache.world_surfacevisible, 0, model->num_surfaces);
-		memset(r_viewcache.world_leafvisible, 0, model->brush.num_leafs);
-		r_viewcache.world_novis = false;
+		memset(r_refdef.viewcache.world_surfacevisible, 0, model->num_surfaces);
+		memset(r_refdef.viewcache.world_leafvisible, 0, model->brush.num_leafs);
+		r_refdef.viewcache.world_novis = false;
 
 		// simply cull each marked leaf to the frustum (view pyramid)
 		for (j = 0, leaf = model->brush.data_leafs;j < model->brush.num_leafs;j++, leaf++)
 		{
 			// if leaf is in current pvs and on the screen, mark its surfaces
-			if (CHECKPVSBIT(r_viewcache.world_pvsbits, leaf->clusterindex) && !R_CullBox(leaf->mins, leaf->maxs))
+			if (CHECKPVSBIT(r_refdef.viewcache.world_pvsbits, leaf->clusterindex) && !R_CullBox(leaf->mins, leaf->maxs))
 			{
 				r_refdef.stats.world_leafs++;
-				r_viewcache.world_leafvisible[j] = true;
+				r_refdef.viewcache.world_leafvisible[j] = true;
 				if (leaf->numleafsurfaces)
 					for (i = 0, mark = leaf->firstleafsurface;i < leaf->numleafsurfaces;i++, mark++)
-						r_viewcache.world_surfacevisible[*mark] = true;
+						r_refdef.viewcache.world_surfacevisible[*mark] = true;
 			}
 		}
 		return;
 	}
 
 	// if possible find the leaf the view origin is in
-	viewleaf = model->brush.PointInLeaf ? model->brush.PointInLeaf(model, r_view.origin) : NULL;
+	viewleaf = model->brush.PointInLeaf ? model->brush.PointInLeaf(model, r_refdef.view.origin) : NULL;
 	// if possible fetch the visible cluster bits
 	if (!r_lockpvs.integer && model->brush.FatPVS)
-		model->brush.FatPVS(model, r_view.origin, 2, r_viewcache.world_pvsbits, sizeof(r_viewcache.world_pvsbits), false);
+		model->brush.FatPVS(model, r_refdef.view.origin, 2, r_refdef.viewcache.world_pvsbits, sizeof(r_refdef.viewcache.world_pvsbits), false);
 
 	if (!r_lockvisibility.integer)
 	{
 		// clear the visible surface and leaf flags arrays
-		memset(r_viewcache.world_surfacevisible, 0, model->num_surfaces);
-		memset(r_viewcache.world_leafvisible, 0, model->brush.num_leafs);
+		memset(r_refdef.viewcache.world_surfacevisible, 0, model->num_surfaces);
+		memset(r_refdef.viewcache.world_leafvisible, 0, model->brush.num_leafs);
 
-		r_viewcache.world_novis = false;
+		r_refdef.viewcache.world_novis = false;
 
 		// if floating around in the void (no pvs data available, and no
 		// portals available), simply use all on-screen leafs.
@@ -435,17 +435,17 @@ void R_View_WorldVisibility(qboolean forcenovis)
 			// no visibility method: (used when floating around in the void)
 			// simply cull each leaf to the frustum (view pyramid)
 			// similar to quake's RecursiveWorldNode but without cache misses
-			r_viewcache.world_novis = true;
+			r_refdef.viewcache.world_novis = true;
 			for (j = 0, leaf = model->brush.data_leafs;j < model->brush.num_leafs;j++, leaf++)
 			{
 				// if leaf is in current pvs and on the screen, mark its surfaces
 				if (!R_CullBox(leaf->mins, leaf->maxs))
 				{
 					r_refdef.stats.world_leafs++;
-					r_viewcache.world_leafvisible[j] = true;
+					r_refdef.viewcache.world_leafvisible[j] = true;
 					if (leaf->numleafsurfaces)
 						for (i = 0, mark = leaf->firstleafsurface;i < leaf->numleafsurfaces;i++, mark++)
-							r_viewcache.world_surfacevisible[*mark] = true;
+							r_refdef.viewcache.world_surfacevisible[*mark] = true;
 				}
 			}
 		}
@@ -460,13 +460,13 @@ void R_View_WorldVisibility(qboolean forcenovis)
 			for (j = 0, leaf = model->brush.data_leafs;j < model->brush.num_leafs;j++, leaf++)
 			{
 				// if leaf is in current pvs and on the screen, mark its surfaces
-				if (CHECKPVSBIT(r_viewcache.world_pvsbits, leaf->clusterindex) && !R_CullBox(leaf->mins, leaf->maxs))
+				if (CHECKPVSBIT(r_refdef.viewcache.world_pvsbits, leaf->clusterindex) && !R_CullBox(leaf->mins, leaf->maxs))
 				{
 					r_refdef.stats.world_leafs++;
-					r_viewcache.world_leafvisible[j] = true;
+					r_refdef.viewcache.world_leafvisible[j] = true;
 					if (leaf->numleafsurfaces)
 						for (i = 0, mark = leaf->firstleafsurface;i < leaf->numleafsurfaces;i++, mark++)
-							r_viewcache.world_surfacevisible[*mark] = true;
+							r_refdef.viewcache.world_surfacevisible[*mark] = true;
 				}
 			}
 		}
@@ -489,14 +489,14 @@ void R_View_WorldVisibility(qboolean forcenovis)
 			while (leafstackpos)
 			{
 				leaf = leafstack[--leafstackpos];
-				if (r_viewcache.world_leafvisible[leaf - model->brush.data_leafs])
+				if (r_refdef.viewcache.world_leafvisible[leaf - model->brush.data_leafs])
 					continue;
 				r_refdef.stats.world_leafs++;
-				r_viewcache.world_leafvisible[leaf - model->brush.data_leafs] = true;
+				r_refdef.viewcache.world_leafvisible[leaf - model->brush.data_leafs] = true;
 				// mark any surfaces bounding this leaf
 				if (leaf->numleafsurfaces)
 					for (i = 0, mark = leaf->firstleafsurface;i < leaf->numleafsurfaces;i++, mark++)
-						r_viewcache.world_surfacevisible[*mark] = true;
+						r_refdef.viewcache.world_surfacevisible[*mark] = true;
 				// follow portals into other leafs
 				// the checks are:
 				// if viewer is behind portal (portal faces outward into the scene)
@@ -507,9 +507,9 @@ void R_View_WorldVisibility(qboolean forcenovis)
 				for (p = leaf->portals;p;p = p->next)
 				{
 					r_refdef.stats.world_portals++;
-					if (DotProduct(r_view.origin, p->plane.normal) < (p->plane.dist + 1)
-					 && !r_viewcache.world_leafvisible[p->past - model->brush.data_leafs]
-					 && CHECKPVSBIT(r_viewcache.world_pvsbits, p->past->clusterindex)
+					if (DotProduct(r_refdef.view.origin, p->plane.normal) < (p->plane.dist + 1)
+					 && !r_refdef.viewcache.world_leafvisible[p->past - model->brush.data_leafs]
+					 && CHECKPVSBIT(r_refdef.viewcache.world_pvsbits, p->past->clusterindex)
 					 && !R_CullBox(p->mins, p->maxs)
 					 && leafstackpos < (int)(sizeof(leafstack) / sizeof(leafstack[0])))
 						leafstack[leafstackpos++] = p->past;
@@ -1056,7 +1056,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 		if (ent == r_refdef.worldentity)
 		{
 			for (;i < endsurface;i++)
-				if (r_viewcache.world_surfacevisible[surfacelist[i]])
+				if (r_refdef.viewcache.world_surfacevisible[surfacelist[i]])
 					batchsurfacelist[batchnumsurfaces++] = model->data_surfaces + surfacelist[i];
 		}
 		else
@@ -1087,7 +1087,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 						tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
 						tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
 						Matrix4x4_Transform(&rsurface.matrix, tempcenter, center);
-						R_MeshQueue_AddTransparent(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_view.origin : center, R_Q1BSP_DrawLight_TransparentCallback, ent, surface - rsurface.modelsurfaces, rsurface.rtlight);
+						R_MeshQueue_AddTransparent(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_refdef.view.origin : center, R_Q1BSP_DrawLight_TransparentCallback, ent, surface - rsurface.modelsurfaces, rsurface.rtlight);
 					}
 				}
 				else

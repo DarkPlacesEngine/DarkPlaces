@@ -248,7 +248,7 @@ void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, const r
 		r_lightningbeams_setuptexture();
 
 	R_Mesh_VertexPointer(vertex3f, 0, 0);
-	// FIXME: fixed function path can't properly handle r_view.colorscale > 1
+	// FIXME: fixed function path can't properly handle r_refdef.view.colorscale > 1
 	if (r_refdef.fogenabled)
 	{
 		// per vertex colors if fog is used
@@ -258,7 +258,7 @@ void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, const r
 	{
 		// solid color if fog is not used
 		R_Mesh_ColorPointer(NULL, 0, 0);
-		GL_Color(r_lightningbeam_color_red.value * r_view.colorscale, r_lightningbeam_color_green.value * r_view.colorscale, r_lightningbeam_color_blue.value * r_view.colorscale, 1);
+		GL_Color(r_lightningbeam_color_red.value * r_refdef.view.colorscale, r_lightningbeam_color_green.value * r_refdef.view.colorscale, r_lightningbeam_color_blue.value * r_refdef.view.colorscale, 1);
 	}
 	memset(&m, 0, sizeof(m));
 	if (r_lightningbeam_qmbtexture.integer)
@@ -288,7 +288,7 @@ void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, const r
 
 		// calculate up vector such that it points toward viewer, and rotates around the beamdir
 		// get direction from start of beam to viewer
-		VectorSubtract(r_view.origin, start, up);
+		VectorSubtract(r_refdef.view.origin, start, up);
 		// remove the portion of the vector that moves along the beam
 		// (this leaves only a vector pointing directly away from the beam)
 		t1 = -DotProduct(up, beamdir);
@@ -361,7 +361,7 @@ void R_DrawLightningBeams(void)
 			CL_Beam_CalculatePositions(b, start, end);
 			// calculate the nearest point on the line (beam) for depth sorting
 			VectorSubtract(end, start, dir);
-			dist = (DotProduct(r_view.origin, dir) - DotProduct(start, dir)) / (DotProduct(end, dir) - DotProduct(start, dir));
+			dist = (DotProduct(r_refdef.view.origin, dir) - DotProduct(start, dir)) / (DotProduct(end, dir) - DotProduct(start, dir));
 			dist = bound(0, dist, 1);
 			VectorLerp(start, dist, end, org);
 			// now we have the nearest point on the line, so sort with it

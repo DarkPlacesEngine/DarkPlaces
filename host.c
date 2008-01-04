@@ -873,7 +873,7 @@ void Host_Main(void)
 				cl.csqc_usecsqclistener = false;
 			}
 			else
-				S_Update(&r_view.matrix);
+				S_Update(&r_refdef.view.matrix);
 
 			CDAudio_Update();
 

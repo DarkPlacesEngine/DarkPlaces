@@ -696,7 +696,7 @@ void R_TimeReport_EndFrame(void)
 		loc = CL_Locs_FindNearest(cl.movement_origin);
 		if (loc)
 			sprintf(string + strlen(string), "Location: %s\n", loc->name);
-		sprintf(string + strlen(string), "org:'%+8.2f %+8.2f %+8.2f' dir:'%+2.3f %+2.3f %+2.3f'\n", r_view.origin[0], r_view.origin[1], r_view.origin[2], r_view.forward[0], r_view.forward[1], r_view.forward[2]);
+		sprintf(string + strlen(string), "org:'%+8.2f %+8.2f %+8.2f' dir:'%+2.3f %+2.3f %+2.3f'\n", r_refdef.view.origin[0], r_refdef.view.origin[1], r_refdef.view.origin[2], r_refdef.view.forward[0], r_refdef.view.forward[1], r_refdef.view.forward[2]);
 		sprintf(string + strlen(string), "%7i surfaces%7i triangles %5i entities (%7i surfaces%7i triangles)\n", r_refdef.stats.world_surfaces, r_refdef.stats.world_triangles, r_refdef.stats.entities, r_refdef.stats.entities_surfaces, r_refdef.stats.entities_triangles);
 		sprintf(string + strlen(string), "%5i leafs%5i portals%6i particles%6i decals\n", r_refdef.stats.world_leafs, r_refdef.stats.world_portals, r_refdef.stats.particles, r_refdef.stats.decals);
 		sprintf(string + strlen(string), "%7i lightmap updates (%7i pixels)\n", r_refdef.stats.lightmapupdates, r_refdef.stats.lightmapupdatepixels);
@@ -1712,16 +1712,16 @@ static void R_Envmap_f (void)
 
 	R_UpdateVariables();
 
-	r_view.x = 0;
-	r_view.y = 0;
-	r_view.z = 0;
-	r_view.width = size;
-	r_view.height = size;
-	r_view.depth = 1;
-	r_view.useperspective = true;
+	r_refdef.view.x = 0;
+	r_refdef.view.y = 0;
+	r_refdef.view.z = 0;
+	r_refdef.view.width = size;
+	r_refdef.view.height = size;
+	r_refdef.view.depth = 1;
+	r_refdef.view.useperspective = true;
 
-	r_view.frustum_x = tan(90 * M_PI / 360.0);
-	r_view.frustum_y = tan(90 * M_PI / 360.0);
+	r_refdef.view.frustum_x = tan(90 * M_PI / 360.0);
+	r_refdef.view.frustum_y = tan(90 * M_PI / 360.0);
 
 	buffer1 = (unsigned char *)Mem_Alloc(tempmempool, size * size * 3);
 	buffer2 = (unsigned char *)Mem_Alloc(tempmempool, size * size * 3);
@@ -1730,12 +1730,12 @@ static void R_Envmap_f (void)
 	for (j = 0;j < 12;j++)
 	{
 		sprintf(filename, "env/%s%s.tga", basename, envmapinfo[j].name);
-		Matrix4x4_CreateFromQuakeEntity(&r_view.matrix, r_view.origin[0], r_view.origin[1], r_view.origin[2], envmapinfo[j].angles[0], envmapinfo[j].angles[1], envmapinfo[j].angles[2], 1);
-		r_view.clear = true;
+		Matrix4x4_CreateFromQuakeEntity(&r_refdef.view.matrix, r_refdef.view.origin[0], r_refdef.view.origin[1], r_refdef.view.origin[2], envmapinfo[j].angles[0], envmapinfo[j].angles[1], envmapinfo[j].angles[2], 1);
+		r_refdef.view.clear = true;
 		R_Mesh_Start();
 		R_RenderView();
 		R_Mesh_Finish();
-		SCR_ScreenShot(filename, buffer1, buffer2, buffer3, 0, vid.height - (r_view.y + r_view.height), size, size, envmapinfo[j].flipx, envmapinfo[j].flipy, envmapinfo[j].flipdiagonaly, false, false);
+		SCR_ScreenShot(filename, buffer1, buffer2, buffer3, 0, vid.height - (r_refdef.view.y + r_refdef.view.height), size, size, envmapinfo[j].flipx, envmapinfo[j].flipy, envmapinfo[j].flipdiagonaly, false, false);
 	}
 
 	Mem_Free (buffer1);
@@ -1903,8 +1903,8 @@ void SCR_DrawScreen (void)
 	R_UpdateVariables();
 
 	// Quake uses clockwise winding, so these are swapped
-	r_view.cullface_front = GL_BACK;
-	r_view.cullface_back = GL_FRONT;
+	r_refdef.view.cullface_front = GL_BACK;
+	r_refdef.view.cullface_back = GL_FRONT;
 
 	if (cls.signon == SIGNONS)
 	{
@@ -1915,23 +1915,23 @@ void SCR_DrawScreen (void)
 
 		if (r_stereo_sidebyside.integer)
 		{
-			r_view.width = (int)(vid.width * size / 2.5);
-			r_view.height = (int)(vid.height * size / 2.5 * (1 - bound(0, r_letterbox.value, 100) / 100));
-			r_view.depth = 1;
-			r_view.x = (int)((vid.width - r_view.width * 2.5) * 0.5);
-			r_view.y = (int)((vid.height - r_view.height)/2);
-			r_view.z = 0;
+			r_refdef.view.width = (int)(vid.width * size / 2.5);
+			r_refdef.view.height = (int)(vid.height * size / 2.5 * (1 - bound(0, r_letterbox.value, 100) / 100));
+			r_refdef.view.depth = 1;
+			r_refdef.view.x = (int)((vid.width - r_refdef.view.width * 2.5) * 0.5);
+			r_refdef.view.y = (int)((vid.height - r_refdef.view.height)/2);
+			r_refdef.view.z = 0;
 			if (r_stereo_side)
-				r_view.x += (int)(r_view.width * 1.5);
+				r_refdef.view.x += (int)(r_refdef.view.width * 1.5);
 		}
 		else
 		{
-			r_view.width = (int)(vid.width * size);
-			r_view.height = (int)(vid.height * size * (1 - bound(0, r_letterbox.value, 100) / 100));
-			r_view.depth = 1;
-			r_view.x = (int)((vid.width - r_view.width)/2);
-			r_view.y = (int)((vid.height - r_view.height)/2);
-			r_view.z = 0;
+			r_refdef.view.width = (int)(vid.width * size);
+			r_refdef.view.height = (int)(vid.height * size * (1 - bound(0, r_letterbox.value, 100) / 100));
+			r_refdef.view.depth = 1;
+			r_refdef.view.x = (int)((vid.width - r_refdef.view.width)/2);
+			r_refdef.view.y = (int)((vid.height - r_refdef.view.height)/2);
+			r_refdef.view.z = 0;
 		}
 
 		// LordHavoc: viewzoom (zoom in for sniper rifles, etc)
@@ -1940,12 +1940,12 @@ void SCR_DrawScreen (void)
 		// this it simply assumes the requested fov is the vertical fov
 		// for a 4x3 display, if the ratio is not 4x3 this makes the fov
 		// higher/lower according to the ratio
-		r_view.useperspective = true;
-		r_view.frustum_y = tan(scr_fov.value * M_PI / 360.0) * (3.0/4.0) * cl.viewzoom;
-		r_view.frustum_x = r_view.frustum_y * (float)r_view.width / (float)r_view.height / vid_pixelheight.value;
+		r_refdef.view.useperspective = true;
+		r_refdef.view.frustum_y = tan(scr_fov.value * M_PI / 360.0) * (3.0/4.0) * cl.viewzoom;
+		r_refdef.view.frustum_x = r_refdef.view.frustum_y * (float)r_refdef.view.width / (float)r_refdef.view.height / vid_pixelheight.value;
 
-		r_view.frustum_x *= r_refdef.frustumscale_x;
-		r_view.frustum_y *= r_refdef.frustumscale_y;
+		r_refdef.view.frustum_x *= r_refdef.frustumscale_x;
+		r_refdef.view.frustum_y *= r_refdef.frustumscale_y;
 
 		if(!CL_VM_UpdateView())
 			R_RenderView();
@@ -1954,19 +1954,19 @@ void SCR_DrawScreen (void)
 		{
 			float sizex = bound(10, scr_zoomwindow_viewsizex.value, 100) / 100.0;
 			float sizey = bound(10, scr_zoomwindow_viewsizey.value, 100) / 100.0;
-			r_view.width = (int)(vid.width * sizex);
-			r_view.height = (int)(vid.height * sizey);
-			r_view.depth = 1;
-			r_view.x = (int)((vid.width - r_view.width)/2);
-			r_view.y = 0;
-			r_view.z = 0;
+			r_refdef.view.width = (int)(vid.width * sizex);
+			r_refdef.view.height = (int)(vid.height * sizey);
+			r_refdef.view.depth = 1;
+			r_refdef.view.x = (int)((vid.width - r_refdef.view.width)/2);
+			r_refdef.view.y = 0;
+			r_refdef.view.z = 0;
 
-			r_view.useperspective = true;
-			r_view.frustum_y = tan(scr_zoomwindow_fov.value * M_PI / 360.0) * (3.0/4.0) * cl.viewzoom;
-			r_view.frustum_x = r_view.frustum_y * vid_pixelheight.value * (float)r_view.width / (float)r_view.height;
+			r_refdef.view.useperspective = true;
+			r_refdef.view.frustum_y = tan(scr_zoomwindow_fov.value * M_PI / 360.0) * (3.0/4.0) * cl.viewzoom;
+			r_refdef.view.frustum_x = r_refdef.view.frustum_y * vid_pixelheight.value * (float)r_refdef.view.width / (float)r_refdef.view.height;
 
-			r_view.frustum_x *= r_refdef.frustumscale_x;
-			r_view.frustum_y *= r_refdef.frustumscale_y;
+			r_refdef.view.frustum_x *= r_refdef.frustumscale_x;
+			r_refdef.view.frustum_y *= r_refdef.frustumscale_y;
 
 			if(!CL_VM_UpdateView())
 				R_RenderView();
@@ -1975,13 +1975,13 @@ void SCR_DrawScreen (void)
 
 	if (!r_stereo_sidebyside.integer)
 	{
-		r_view.width = vid.width;
-		r_view.height = vid.height;
-		r_view.depth = 1;
-		r_view.x = 0;
-		r_view.y = 0;
-		r_view.z = 0;
-		r_view.useperspective = false;
+		r_refdef.view.width = vid.width;
+		r_refdef.view.height = vid.height;
+		r_refdef.view.depth = 1;
+		r_refdef.view.x = 0;
+		r_refdef.view.y = 0;
+		r_refdef.view.z = 0;
+		r_refdef.view.useperspective = false;
 	}
 
 	// draw 2D stuff
@@ -2144,9 +2144,9 @@ void CL_UpdateScreen(void)
 			sb_lines = 24+16+8;
 	}
 
-	r_view.colormask[0] = 1;
-	r_view.colormask[1] = 1;
-	r_view.colormask[2] = 1;
+	r_refdef.view.colormask[0] = 1;
+	r_refdef.view.colormask[1] = 1;
+	r_refdef.view.colormask[2] = 1;
 
 	SCR_SetUpToDrawConsole();
 
@@ -2158,7 +2158,7 @@ void CL_UpdateScreen(void)
 	qglColorMask(1,1,1,1);CHECKGLERROR
 	qglClearColor(0,0,0,0);CHECKGLERROR
 	R_ClearScreen(false);
-	r_view.clear = false;
+	r_refdef.view.clear = false;
 
 	if(scr_stipple.integer)
 	{
@@ -2184,19 +2184,19 @@ void CL_UpdateScreen(void)
 
 	if (vid.stereobuffer || r_stereo_redblue.integer || r_stereo_redgreen.integer || r_stereo_redcyan.integer || r_stereo_sidebyside.integer)
 	{
-		matrix4x4_t originalmatrix = r_view.matrix;
+		matrix4x4_t originalmatrix = r_refdef.view.matrix;
 		matrix4x4_t offsetmatrix;
 		Matrix4x4_CreateFromQuakeEntity(&offsetmatrix, 0, r_stereo_separation.value * 0.5f, 0, 0, r_stereo_angle.value * 0.5f, 0, 1);
-		Matrix4x4_Concat(&r_view.matrix, &originalmatrix, &offsetmatrix);
+		Matrix4x4_Concat(&r_refdef.view.matrix, &originalmatrix, &offsetmatrix);
 
 		if (r_stereo_sidebyside.integer)
 			r_stereo_side = 0;
 
 		if (r_stereo_redblue.integer || r_stereo_redgreen.integer || r_stereo_redcyan.integer)
 		{
-			r_view.colormask[0] = 1;
-			r_view.colormask[1] = 0;
-			r_view.colormask[2] = 0;
+			r_refdef.view.colormask[0] = 1;
+			r_refdef.view.colormask[1] = 0;
+			r_refdef.view.colormask[2] = 0;
 		}
 
 		if (vid.stereobuffer)
@@ -2205,16 +2205,16 @@ void CL_UpdateScreen(void)
 		SCR_DrawScreen();
 
 		Matrix4x4_CreateFromQuakeEntity(&offsetmatrix, 0, r_stereo_separation.value * -0.5f, 0, 0, r_stereo_angle.value * -0.5f, 0, 1);
-		Matrix4x4_Concat(&r_view.matrix, &originalmatrix, &offsetmatrix);
+		Matrix4x4_Concat(&r_refdef.view.matrix, &originalmatrix, &offsetmatrix);
 
 		if (r_stereo_sidebyside.integer)
 			r_stereo_side = 1;
 
 		if (r_stereo_redblue.integer || r_stereo_redgreen.integer || r_stereo_redcyan.integer)
 		{
-			r_view.colormask[0] = 0;
-			r_view.colormask[1] = r_stereo_redcyan.integer || r_stereo_redgreen.integer;
-			r_view.colormask[2] = r_stereo_redcyan.integer || r_stereo_redblue.integer;
+			r_refdef.view.colormask[0] = 0;
+			r_refdef.view.colormask[1] = r_stereo_redcyan.integer || r_stereo_redgreen.integer;
+			r_refdef.view.colormask[2] = r_stereo_redcyan.integer || r_stereo_redblue.integer;
 		}
 
 		if (vid.stereobuffer)
@@ -2222,7 +2222,7 @@ void CL_UpdateScreen(void)
 
 		SCR_DrawScreen();
 
-		r_view.matrix = originalmatrix;
+		r_refdef.view.matrix = originalmatrix;
 	}
 	else
 		SCR_DrawScreen();

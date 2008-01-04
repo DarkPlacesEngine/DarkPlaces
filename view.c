@@ -336,7 +336,7 @@ void V_CalcRefdef (void)
 	trace_t trace;
 	VectorClear(gunorg);
 	viewmodelmatrix = identitymatrix;
-	r_view.matrix = identitymatrix;
+	r_refdef.view.matrix = identitymatrix;
 	if (cls.state == ca_connected && cls.signon == SIGNONS)
 	{
 		// ent is the view entity (visible when out of body)
@@ -358,13 +358,13 @@ void V_CalcRefdef (void)
 		{
 			// entity is a fixed camera, just copy the matrix
 			if (cls.protocol == PROTOCOL_QUAKEWORLD)
-				Matrix4x4_CreateFromQuakeEntity(&r_view.matrix, cl.qw_intermission_origin[0], cl.qw_intermission_origin[1], cl.qw_intermission_origin[2], cl.qw_intermission_angles[0], cl.qw_intermission_angles[1], cl.qw_intermission_angles[2], 1);
+				Matrix4x4_CreateFromQuakeEntity(&r_refdef.view.matrix, cl.qw_intermission_origin[0], cl.qw_intermission_origin[1], cl.qw_intermission_origin[2], cl.qw_intermission_angles[0], cl.qw_intermission_angles[1], cl.qw_intermission_angles[2], 1);
 			else
 			{
-				r_view.matrix = ent->render.matrix;
-				Matrix4x4_AdjustOrigin(&r_view.matrix, 0, 0, cl.stats[STAT_VIEWHEIGHT]);
+				r_refdef.view.matrix = ent->render.matrix;
+				Matrix4x4_AdjustOrigin(&r_refdef.view.matrix, 0, 0, cl.stats[STAT_VIEWHEIGHT]);
 			}
-			viewmodelmatrix = r_view.matrix;
+			viewmodelmatrix = r_refdef.view.matrix;
 		}
 		else
 		{
@@ -542,14 +542,14 @@ void V_CalcRefdef (void)
 			}
 			// calculate a view matrix for rendering the scene
 			if (v_idlescale.value)
-				Matrix4x4_CreateFromQuakeEntity(&r_view.matrix, vieworg[0], vieworg[1], vieworg[2], viewangles[0] + v_idlescale.value * sin(cl.time*v_ipitch_cycle.value) * v_ipitch_level.value, viewangles[1] + v_idlescale.value * sin(cl.time*v_iyaw_cycle.value) * v_iyaw_level.value, viewangles[2] + v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value, 1);
+				Matrix4x4_CreateFromQuakeEntity(&r_refdef.view.matrix, vieworg[0], vieworg[1], vieworg[2], viewangles[0] + v_idlescale.value * sin(cl.time*v_ipitch_cycle.value) * v_ipitch_level.value, viewangles[1] + v_idlescale.value * sin(cl.time*v_iyaw_cycle.value) * v_iyaw_level.value, viewangles[2] + v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value, 1);
 			else
-				Matrix4x4_CreateFromQuakeEntity(&r_view.matrix, vieworg[0], vieworg[1], vieworg[2], viewangles[0], viewangles[1], viewangles[2] + v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value, 1);
+				Matrix4x4_CreateFromQuakeEntity(&r_refdef.view.matrix, vieworg[0], vieworg[1], vieworg[2], viewangles[0], viewangles[1], viewangles[2] + v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value, 1);
 			// calculate a viewmodel matrix for use in view-attached entities
 			Matrix4x4_CreateFromQuakeEntity(&viewmodelmatrix, gunorg[0], gunorg[1], gunorg[2], viewangles[0], viewangles[1], viewangles[2], cl_viewmodel_scale.value);
 			VectorCopy(vieworg, cl.csqc_origin);
 			VectorCopy(viewangles, cl.csqc_angles);
-			Matrix4x4_Invert_Simple(&r_view.inverse_matrix, &r_view.matrix);
+			Matrix4x4_Invert_Simple(&r_refdef.view.inverse_matrix, &r_refdef.view.matrix);
 		}
 	}
 }
@@ -584,7 +584,7 @@ void V_CalcViewBlend(void)
 		// set contents color
 		int supercontents;
 		vec3_t vieworigin;
-		Matrix4x4_OriginFromMatrix(&r_view.matrix, vieworigin);
+		Matrix4x4_OriginFromMatrix(&r_refdef.view.matrix, vieworigin);
 		supercontents = CL_PointSuperContents(vieworigin);
 		if (supercontents & SUPERCONTENTS_LIQUIDSMASK)
 		{

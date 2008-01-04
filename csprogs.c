@@ -233,9 +233,10 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 qboolean CL_VM_InputEvent (qboolean down, int key, int ascii)
 {
 	qboolean r;
-	prvm_eval_t* val;
+
 	if(!cl.csqc_loaded)
 		return false;
+
 	CSQC_BEGIN
 		if (!prog->funcoffsets.CSQC_InputEvent)
 			r = false;
