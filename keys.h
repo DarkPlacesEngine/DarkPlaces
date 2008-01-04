@@ -50,6 +50,7 @@ typedef enum keynum_e
 	K_ALT,
 	K_CTRL,
 	K_SHIFT,
+
 	K_F1,
 	K_F2,
 	K_F3,
@@ -62,6 +63,7 @@ typedef enum keynum_e
 	K_F10,
 	K_F11,
 	K_F12,
+
 	K_INS,
 	K_DEL,
 	K_PGDN,
