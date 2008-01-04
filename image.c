@@ -327,14 +327,15 @@ unsigned char *LoadTGA_BGRA (const unsigned char *f, int filesize)
 	targa_header.y_origin = f[10] + f[11] * 256;
 	targa_header.width = image_width = f[12] + f[13] * 256;
 	targa_header.height = image_height = f[14] + f[15] * 256;
+	targa_header.pixel_size = f[16];
+	targa_header.attributes = f[17];
+
 	if (image_width > 4096 || image_height > 4096 || image_width <= 0 || image_height <= 0)
 	{
 		Con_Print("LoadTGA: invalid size\n");
 		PrintTargaHeader(&targa_header);
 		return NULL;
 	}
-	targa_header.pixel_size = f[16];
-	targa_header.attributes = f[17];
 
 	// advance to end of header
 	fin = f + 18;
