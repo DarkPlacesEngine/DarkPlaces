@@ -641,7 +641,7 @@ extern qboolean CSQC_AddRenderEdict (prvm_edict_t *ed);//csprogs.c
 static void CSQC_R_RecalcView (void)
 {
 	extern matrix4x4_t viewmodelmatrix;
-	Matrix4x4_CreateFromQuakeEntity(&r_view.matrix, cl.csqc_origin[0], cl.csqc_origin[1], cl.csqc_origin[2], cl.csqc_angles[0], cl.csqc_angles[1], cl.csqc_angles[2], 1);
+	Matrix4x4_CreateFromQuakeEntity(&r_refdef.view.matrix, cl.csqc_origin[0], cl.csqc_origin[1], cl.csqc_origin[2], cl.csqc_angles[0], cl.csqc_angles[1], cl.csqc_angles[2], 1);
 	Matrix4x4_CreateFromQuakeEntity(&viewmodelmatrix, cl.csqc_origin[0], cl.csqc_origin[1], cl.csqc_origin[2], cl.csqc_angles[0], cl.csqc_angles[1], cl.csqc_angles[2], cl_viewmodel_scale.value);
 }
 
@@ -654,20 +654,20 @@ static void VM_CL_R_ClearScene (void)
 	r_refdef.numentities = 0;
 	r_refdef.numlights = 0;
 	// FIXME: restore these to the values from VM_CL_UpdateView
-	r_view.x = 0;
-	r_view.y = 0;
-	r_view.z = 0;
-	r_view.width = vid.width;
-	r_view.height = vid.height;
-	r_view.depth = 1;
+	r_refdef.view.x = 0;
+	r_refdef.view.y = 0;
+	r_refdef.view.z = 0;
+	r_refdef.view.width = vid.width;
+	r_refdef.view.height = vid.height;
+	r_refdef.view.depth = 1;
 	// FIXME: restore frustum_x/frustum_y
-	r_view.useperspective = true;
-	r_view.frustum_y = tan(scr_fov.value * M_PI / 360.0) * (3.0/4.0) * cl.viewzoom;
-	r_view.frustum_x = r_view.frustum_y * (float)r_view.width / (float)r_view.height / vid_pixelheight.value;
-	r_view.frustum_x *= r_refdef.frustumscale_x;
-	r_view.frustum_y *= r_refdef.frustumscale_y;
-	r_view.ortho_x = scr_fov.value * (3.0 / 4.0) * (float)r_view.width / (float)r_view.height / vid_pixelheight.value;
-	r_view.ortho_y = scr_fov.value * (3.0 / 4.0);
+	r_refdef.view.useperspective = true;
+	r_refdef.view.frustum_y = tan(scr_fov.value * M_PI / 360.0) * (3.0/4.0) * cl.viewzoom;
+	r_refdef.view.frustum_x = r_refdef.view.frustum_y * (float)r_refdef.view.width / (float)r_refdef.view.height / vid_pixelheight.value;
+	r_refdef.view.frustum_x *= r_refdef.frustumscale_x;
+	r_refdef.view.frustum_y *= r_refdef.frustumscale_y;
+	r_refdef.view.ortho_x = scr_fov.value * (3.0 / 4.0) * (float)r_refdef.view.width / (float)r_refdef.view.height / vid_pixelheight.value;
+	r_refdef.view.ortho_y = scr_fov.value * (3.0 / 4.0);
 	// FIXME: restore cl.csqc_origin
 	// FIXME: restore cl.csqc_angles
 	cl.csqc_vidvars.drawworld = true;
@@ -729,41 +729,41 @@ static void VM_CL_R_SetView (void)
 	switch(c)
 	{
 	case VF_MIN:
-		r_view.x = (int)(f[0] * vid.width / vid_conwidth.value);
-		r_view.y = (int)(f[1] * vid.height / vid_conheight.value);
+		r_refdef.view.x = (int)(f[0] * vid.width / vid_conwidth.value);
+		r_refdef.view.y = (int)(f[1] * vid.height / vid_conheight.value);
 		break;
 	case VF_MIN_X:
-		r_view.x = (int)(k * vid.width / vid_conwidth.value);
+		r_refdef.view.x = (int)(k * vid.width / vid_conwidth.value);
 		break;
 	case VF_MIN_Y:
-		r_view.y = (int)(k * vid.height / vid_conheight.value);
+		r_refdef.view.y = (int)(k * vid.height / vid_conheight.value);
 		break;
 	case VF_SIZE:
-		r_view.width = (int)(f[0] * vid.width / vid_conwidth.value);
-		r_view.height = (int)(f[1] * vid.height / vid_conheight.value);
+		r_refdef.view.width = (int)(f[0] * vid.width / vid_conwidth.value);
+		r_refdef.view.height = (int)(f[1] * vid.height / vid_conheight.value);
 		break;
 	case VF_SIZE_Y:
-		r_view.width = (int)(k * vid.width / vid_conwidth.value);
+		r_refdef.view.width = (int)(k * vid.width / vid_conwidth.value);
 		break;
 	case VF_SIZE_X:
-		r_view.height = (int)(k * vid.height / vid_conheight.value);
+		r_refdef.view.height = (int)(k * vid.height / vid_conheight.value);
 		break;
 	case VF_VIEWPORT:
-		r_view.x = (int)(f[0] * vid.width / vid_conwidth.value);
-		r_view.y = (int)(f[1] * vid.height / vid_conheight.value);
+		r_refdef.view.x = (int)(f[0] * vid.width / vid_conwidth.value);
+		r_refdef.view.y = (int)(f[1] * vid.height / vid_conheight.value);
 		f = PRVM_G_VECTOR(OFS_PARM2);
-		r_view.width = (int)(f[0] * vid.width / vid_conwidth.value);
-		r_view.height = (int)(f[1] * vid.height / vid_conheight.value);
+		r_refdef.view.width = (int)(f[0] * vid.width / vid_conwidth.value);
+		r_refdef.view.height = (int)(f[1] * vid.height / vid_conheight.value);
 		break;
 	case VF_FOV:
-		r_view.frustum_x = tan(f[0] * M_PI / 360.0);r_view.ortho_x = f[0];
-		r_view.frustum_y = tan(f[1] * M_PI / 360.0);r_view.ortho_y = f[1];
+		r_refdef.view.frustum_x = tan(f[0] * M_PI / 360.0);r_refdef.view.ortho_x = f[0];
+		r_refdef.view.frustum_y = tan(f[1] * M_PI / 360.0);r_refdef.view.ortho_y = f[1];
 		break;
 	case VF_FOVX:
-		r_view.frustum_x = tan(k * M_PI / 360.0);r_view.ortho_x = k;
+		r_refdef.view.frustum_x = tan(k * M_PI / 360.0);r_refdef.view.ortho_x = k;
 		break;
 	case VF_FOVY:
-		r_view.frustum_y = tan(k * M_PI / 360.0);r_view.ortho_y = k;
+		r_refdef.view.frustum_y = tan(k * M_PI / 360.0);r_refdef.view.ortho_y = k;
 		break;
 	case VF_ORIGIN:
 		VectorCopy(f, cl.csqc_origin);
@@ -819,7 +819,7 @@ static void VM_CL_R_SetView (void)
 		cl.viewangles[2] = k;
 		break;
 	case VF_PERSPECTIVE:
-		r_view.useperspective = k != 0;
+		r_refdef.view.useperspective = k != 0;
 		break;
 	default:
 		PRVM_G_FLOAT(OFS_RETURN) = 0;
@@ -867,8 +867,8 @@ static void VM_CL_unproject (void)
 
 	VM_SAFEPARMCOUNT(1, VM_CL_unproject);
 	f = PRVM_G_VECTOR(OFS_PARM0);
-	VectorSet(temp, f[2], f[0] * f[2] * -r_view.frustum_x * 2.0 / r_view.width, f[1] * f[2] * -r_view.frustum_y * 2.0 / r_view.height);
-	Matrix4x4_Transform(&r_view.matrix, temp, PRVM_G_VECTOR(OFS_RETURN));
+	VectorSet(temp, f[2], f[0] * f[2] * -r_refdef.view.frustum_x * 2.0 / r_refdef.view.width, f[1] * f[2] * -r_refdef.view.frustum_y * 2.0 / r_refdef.view.height);
+	Matrix4x4_Transform(&r_refdef.view.matrix, temp, PRVM_G_VECTOR(OFS_RETURN));
 }
 
 //#311 vector (vector v) cs_project (EXT_CSQC)
@@ -880,9 +880,9 @@ static void VM_CL_project (void)
 
 	VM_SAFEPARMCOUNT(1, VM_CL_project);
 	f = PRVM_G_VECTOR(OFS_PARM0);
-	Matrix4x4_Invert_Simple(&m, &r_view.matrix);
+	Matrix4x4_Invert_Simple(&m, &r_refdef.view.matrix);
 	Matrix4x4_Transform(&m, f, v);
-	VectorSet(PRVM_G_VECTOR(OFS_RETURN), v[1]/v[0]/-r_view.frustum_x*0.5*r_view.width, v[2]/v[0]/-r_view.frustum_y*r_view.height*0.5, v[0]);
+	VectorSet(PRVM_G_VECTOR(OFS_RETURN), v[1]/v[0]/-r_refdef.view.frustum_x*0.5*r_refdef.view.width, v[2]/v[0]/-r_refdef.view.frustum_y*r_refdef.view.height*0.5, v[0]);
 }
 
 //#330 float(float stnum) getstatf (EXT_CSQC)

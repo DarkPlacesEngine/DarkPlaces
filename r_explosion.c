@@ -190,7 +190,7 @@ static void R_DrawExplosion_TransparentCallback(const entity_render_t *ent, cons
 	GL_DepthRange(0, 1);
 	GL_PolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);
 	GL_DepthTest(true);
-	GL_CullFace(r_view.cullface_back);
+	GL_CullFace(r_refdef.view.cullface_back);
 	R_Mesh_Matrix(&identitymatrix);
 
 	R_Mesh_ColorPointer(NULL, 0, 0);
@@ -202,8 +202,8 @@ static void R_DrawExplosion_TransparentCallback(const entity_render_t *ent, cons
 	{
 		const explosion_t *e = explosion + surfacelist[surfacelistindex];
 		R_Mesh_VertexPointer(e->vert[0], 0, 0);
-		// FIXME: fixed function path can't properly handle r_view.colorscale > 1
-		GL_Color(e->alpha * r_view.colorscale, e->alpha * r_view.colorscale, e->alpha * r_view.colorscale, 1);
+		// FIXME: fixed function path can't properly handle r_refdef.view.colorscale > 1
+		GL_Color(e->alpha * r_refdef.view.colorscale, e->alpha * r_refdef.view.colorscale, e->alpha * r_refdef.view.colorscale, 1);
 		GL_LockArrays(0, numverts);
 		R_Mesh_Draw(0, numverts, numtriangles, explosiontris[0], 0, 0);
 		GL_LockArrays(0, 0);

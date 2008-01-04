@@ -665,10 +665,10 @@ void CL_UpdatePrydonCursor(void)
 	cl.cmd.cursor_screen[2] = 1;
 
 	// calculate current view matrix
-	Matrix4x4_OriginFromMatrix(&r_view.matrix, cl.cmd.cursor_start);
+	Matrix4x4_OriginFromMatrix(&r_refdef.view.matrix, cl.cmd.cursor_start);
 	// calculate direction vector of cursor in viewspace by using frustum slopes
-	VectorSet(temp, cl.cmd.cursor_screen[2] * 1000000, (v_flipped.integer ? -1 : 1) * cl.cmd.cursor_screen[0] * -r_view.frustum_x * 1000000, cl.cmd.cursor_screen[1] * -r_view.frustum_y * 1000000);
-	Matrix4x4_Transform(&r_view.matrix, temp, cl.cmd.cursor_end);
+	VectorSet(temp, cl.cmd.cursor_screen[2] * 1000000, (v_flipped.integer ? -1 : 1) * cl.cmd.cursor_screen[0] * -r_refdef.view.frustum_x * 1000000, cl.cmd.cursor_screen[1] * -r_refdef.view.frustum_y * 1000000);
+	Matrix4x4_Transform(&r_refdef.view.matrix, temp, cl.cmd.cursor_end);
 	// trace from view origin to the cursor
 	cl.cmd.cursor_fraction = CL_SelectTraceLine(cl.cmd.cursor_start, cl.cmd.cursor_end, cl.cmd.cursor_impact, cl.cmd.cursor_normal, &cl.cmd.cursor_entitynumber, (chase_active.integer || cl.intermission) ? &cl.entities[cl.playerentity].render : NULL);
 }

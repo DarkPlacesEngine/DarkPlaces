@@ -38,16 +38,16 @@ void R_TrackSprite(const entity_render_t *ent, vec3_t origin, vec3_t left, vec3_
 	unsigned int i;
 
 	// temporarily abuse bCoord as the vector player->sprite-origin
-	VectorSubtract(origin, r_view.origin, bCoord);
+	VectorSubtract(origin, r_refdef.view.origin, bCoord);
 	distance = VectorLength(bCoord);
 
 	// Now get the bCoords :)
-	Matrix4x4_Transform(&r_view.inverse_matrix, origin, bCoord);
+	Matrix4x4_Transform(&r_refdef.view.inverse_matrix, origin, bCoord);
 
 	*edge = 0; // FIXME::should assume edge == 0, which is correct currently
 	for(i = 0; i < 4; ++i)
 	{
-		if(PlaneDiff(origin, &r_view.frustum[i]) < -EPSILON)
+		if(PlaneDiff(origin, &r_refdef.view.frustum[i]) < -EPSILON)
 			break;
 	}
 
@@ -58,8 +58,8 @@ void R_TrackSprite(const entity_render_t *ent, vec3_t origin, vec3_t left, vec3_
 		float ax, ay;  // absolute coords, used for division
 		// I divide x and y by the greater absolute value to get ranges -1.0 to +1.0
 		
-		bCoord[2] *= r_view.frustum_x;
-		bCoord[1] *= r_view.frustum_y;
+		bCoord[2] *= r_refdef.view.frustum_x;
+		bCoord[1] *= r_refdef.view.frustum_y;
 
 		//Con_Printf("%f %f %f\n", bCoord[0], bCoord[1], bCoord[2]);
 		
@@ -107,16 +107,16 @@ void R_TrackSprite(const entity_render_t *ent, vec3_t origin, vec3_t left, vec3_
 		// d = sqrt(r*r / (1 + fxa*fxa + gyb*gyb))
 		// thus:
 		distance = sqrt((distance*distance) / (1.0 +
-					r_view.frustum_x*r_view.frustum_x * x*x * ax*ax +
-					r_view.frustum_y*r_view.frustum_y * y*y * ay*ay));
+					r_refdef.view.frustum_x*r_refdef.view.frustum_x * x*x * ax*ax +
+					r_refdef.view.frustum_y*r_refdef.view.frustum_y * y*y * ay*ay));
 		// ^ the one we want        ^ the one we have       ^ our factors
 		
 		// Place the sprite a few units ahead of the player
-		VectorCopy(r_view.origin, origin);
-		VectorMA(origin, distance, r_view.forward, origin);
+		VectorCopy(r_refdef.view.origin, origin);
+		VectorMA(origin, distance, r_refdef.view.forward, origin);
 		// Move the sprite left / up the screeen height
-		VectorMA(origin, distance * r_view.frustum_x * x * ax, left, origin);
-		VectorMA(origin, distance * r_view.frustum_y * y * ay, up, origin);
+		VectorMA(origin, distance * r_refdef.view.frustum_x * x * ax, left, origin);
+		VectorMA(origin, distance * r_refdef.view.frustum_y * y * ay, up, origin);
 
 		if(r_track_sprites_flags.integer & TSF_ROTATE_CONTINOUSLY)
 		{
@@ -186,7 +186,7 @@ void R_RotateSprite(const mspriteframe_t *frame, vec3_t origin, vec3_t left, vec
 			angle += 180.0f;
 
 		// Rotate around rotation_angle - frame_angle
-		// The axis SHOULD equal r_view.forward, but let's generalize this:
+		// The axis SHOULD equal r_refdef.view.forward, but let's generalize this:
 		CrossProduct(up, left, axis);
 		if(r_track_sprites_flags.integer & TSF_ROTATE_CONTINOUSLY)
 			Matrix4x4_CreateRotate(&rotm, dir_angle - angle, axis[0], axis[1], axis[2]);
@@ -210,15 +210,15 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 
 	// nudge it toward the view to make sure it isn't in a wall
 	Matrix4x4_ToVectors(&ent->matrix, mforward, mleft, mup, org);
-	VectorSubtract(org, r_view.forward, org);
+	VectorSubtract(org, r_refdef.view.forward, org);
 	switch(model->sprite.sprnum_type)
 	{
 	case SPR_VP_PARALLEL_UPRIGHT:
 		// flames and such
 		// vertical beam sprite, faces view plane
-		scale = ent->scale / sqrt(r_view.forward[0]*r_view.forward[0]+r_view.forward[1]*r_view.forward[1]);
-		left[0] = -r_view.forward[1] * scale;
-		left[1] = r_view.forward[0] * scale;
+		scale = ent->scale / sqrt(r_refdef.view.forward[0]*r_refdef.view.forward[0]+r_refdef.view.forward[1]*r_refdef.view.forward[1]);
+		left[0] = -r_refdef.view.forward[1] * scale;
+		left[1] = r_refdef.view.forward[0] * scale;
 		left[2] = 0;
 		up[0] = 0;
 		up[1] = 0;
@@ -227,9 +227,9 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 	case SPR_FACING_UPRIGHT:
 		// flames and such
 		// vertical beam sprite, faces viewer's origin (not the view plane)
-		scale = ent->scale / sqrt((org[0] - r_view.origin[0])*(org[0] - r_view.origin[0])+(org[1] - r_view.origin[1])*(org[1] - r_view.origin[1]));
-		left[0] = (org[1] - r_view.origin[1]) * scale;
-		left[1] = -(org[0] - r_view.origin[0]) * scale;
+		scale = ent->scale / sqrt((org[0] - r_refdef.view.origin[0])*(org[0] - r_refdef.view.origin[0])+(org[1] - r_refdef.view.origin[1])*(org[1] - r_refdef.view.origin[1]));
+		left[0] = (org[1] - r_refdef.view.origin[1]) * scale;
+		left[1] = -(org[0] - r_refdef.view.origin[0]) * scale;
 		left[2] = 0;
 		up[0] = 0;
 		up[1] = 0;
@@ -241,8 +241,8 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 	case SPR_VP_PARALLEL:
 		// normal sprite
 		// faces view plane
-		VectorScale(r_view.left, ent->scale, left);
-		VectorScale(r_view.up, ent->scale, up);
+		VectorScale(r_refdef.view.left, ent->scale, left);
+		VectorScale(r_refdef.view.up, ent->scale, up);
 		break;
 	case SPR_LABEL_SCALE:
 		// normal sprite
@@ -252,15 +252,15 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 		// honors a global label scaling cvar
 
 		// See the R_TrackSprite definition for a reason for this copying
-		VectorCopy(r_view.left, left);
-		VectorCopy(r_view.up, up);
+		VectorCopy(r_refdef.view.left, left);
+		VectorCopy(r_refdef.view.up, up);
 		// It has to be done before the calculations, because it moves the origin.
 		if(r_track_sprites.integer)
 			R_TrackSprite(ent, org, left, up, &edge, &dir_angle);
 		
-		scale = 2 * ent->scale * (DotProduct(r_view.forward, org) - DotProduct(r_view.forward, r_view.origin)) * r_labelsprites_scale.value;
-		VectorScale(left, scale * r_view.frustum_x / vid_conwidth.integer, left); // 1px
-		VectorScale(up, scale * r_view.frustum_y / vid_conheight.integer, up); // 1px
+		scale = 2 * ent->scale * (DotProduct(r_refdef.view.forward, org) - DotProduct(r_refdef.view.forward, r_refdef.view.origin)) * r_labelsprites_scale.value;
+		VectorScale(left, scale * r_refdef.view.frustum_x / vid_conwidth.integer, left); // 1px
+		VectorScale(up, scale * r_refdef.view.frustum_y / vid_conheight.integer, up); // 1px
 		break;
 	case SPR_LABEL:
 		// normal sprite
@@ -272,19 +272,19 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 		// FIXME assumes that 1qu is 1 pixel in the sprite like in SPR32 format. Should not do that, but instead query the source image! This bug only applies to the roundtopixels case, though.
 
 		// See the R_TrackSprite definition for a reason for this copying
-		VectorCopy(r_view.left, left);
-		VectorCopy(r_view.up, up);
+		VectorCopy(r_refdef.view.left, left);
+		VectorCopy(r_refdef.view.up, up);
 		// It has to be done before the calculations, because it moves the origin.
 		if(r_track_sprites.integer)
 			R_TrackSprite(ent, org, left, up, &edge, &dir_angle);
 		
-		scale = 2 * (DotProduct(r_view.forward, org) - DotProduct(r_view.forward, r_view.origin));
+		scale = 2 * (DotProduct(r_refdef.view.forward, org) - DotProduct(r_refdef.view.forward, r_refdef.view.origin));
 
 		if(r_labelsprites_roundtopixels.integer)
 		{
 			hud_vs_screen = max(
-				vid_conwidth.integer / (float) r_view.width,
-				vid_conheight.integer / (float) r_view.height
+				vid_conwidth.integer / (float) r_refdef.view.width,
+				vid_conheight.integer / (float) r_refdef.view.height
 			) / max(0.125, r_labelsprites_scale.value);
 
 			// snap to "good sizes"
@@ -302,29 +302,29 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 			if(hud_vs_screen)
 			{
 				// use screen pixels
-				VectorScale(left, scale * r_view.frustum_x / (r_view.width * hud_vs_screen), left); // 1px
-				VectorScale(up, scale * r_view.frustum_y / (r_view.height * hud_vs_screen), up); // 1px
+				VectorScale(left, scale * r_refdef.view.frustum_x / (r_refdef.view.width * hud_vs_screen), left); // 1px
+				VectorScale(up, scale * r_refdef.view.frustum_y / (r_refdef.view.height * hud_vs_screen), up); // 1px
 			}
 			else
 			{
 				// use HUD pixels
-				VectorScale(left, scale * r_view.frustum_x / vid_conwidth.integer * r_labelsprites_scale.value, left); // 1px
-				VectorScale(up, scale * r_view.frustum_y / vid_conheight.integer * r_labelsprites_scale.value, up); // 1px
+				VectorScale(left, scale * r_refdef.view.frustum_x / vid_conwidth.integer * r_labelsprites_scale.value, left); // 1px
+				VectorScale(up, scale * r_refdef.view.frustum_y / vid_conheight.integer * r_labelsprites_scale.value, up); // 1px
 			}
 
 			if(hud_vs_screen == 1)
 			{
-				VectorMA(r_view.origin, scale, r_view.forward, middle); // center of screen in distance scale
-				dx = 0.5 - fmod(r_view.width * 0.5 + (DotProduct(org, left) - DotProduct(middle, left)) / DotProduct(left, left) + 0.5, 1.0);
-				dy = 0.5 - fmod(r_view.height * 0.5 + (DotProduct(org, up) - DotProduct(middle, up)) / DotProduct(up, up) + 0.5, 1.0);
+				VectorMA(r_refdef.view.origin, scale, r_refdef.view.forward, middle); // center of screen in distance scale
+				dx = 0.5 - fmod(r_refdef.view.width * 0.5 + (DotProduct(org, left) - DotProduct(middle, left)) / DotProduct(left, left) + 0.5, 1.0);
+				dy = 0.5 - fmod(r_refdef.view.height * 0.5 + (DotProduct(org, up) - DotProduct(middle, up)) / DotProduct(up, up) + 0.5, 1.0);
 				VectorMAMAM(1, org, dx, left, dy, up, org);
 			}
 		}
 		else
 		{
 			// use HUD pixels
-			VectorScale(left, scale * r_view.frustum_x / vid_conwidth.integer * r_labelsprites_scale.value, left); // 1px
-			VectorScale(up, scale * r_view.frustum_y / vid_conheight.integer * r_labelsprites_scale.value, up); // 1px
+			VectorScale(left, scale * r_refdef.view.frustum_x / vid_conwidth.integer * r_labelsprites_scale.value, left); // 1px
+			VectorScale(up, scale * r_refdef.view.frustum_y / vid_conheight.integer * r_labelsprites_scale.value, up); // 1px
 		}
 		break;
 	case SPR_ORIENTED:
@@ -337,12 +337,12 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 		// I have no idea what people would use this for...
 		// oriented relative to view space
 		// FIXME: test this and make sure it mimicks software
-		left[0] = mleft[0] * r_view.forward[0] + mleft[1] * r_view.left[0] + mleft[2] * r_view.up[0];
-		left[1] = mleft[0] * r_view.forward[1] + mleft[1] * r_view.left[1] + mleft[2] * r_view.up[1];
-		left[2] = mleft[0] * r_view.forward[2] + mleft[1] * r_view.left[2] + mleft[2] * r_view.up[2];
-		up[0] = mup[0] * r_view.forward[0] + mup[1] * r_view.left[0] + mup[2] * r_view.up[0];
-		up[1] = mup[0] * r_view.forward[1] + mup[1] * r_view.left[1] + mup[2] * r_view.up[1];
-		up[2] = mup[0] * r_view.forward[2] + mup[1] * r_view.left[2] + mup[2] * r_view.up[2];
+		left[0] = mleft[0] * r_refdef.view.forward[0] + mleft[1] * r_refdef.view.left[0] + mleft[2] * r_refdef.view.up[0];
+		left[1] = mleft[0] * r_refdef.view.forward[1] + mleft[1] * r_refdef.view.left[1] + mleft[2] * r_refdef.view.up[1];
+		left[2] = mleft[0] * r_refdef.view.forward[2] + mleft[1] * r_refdef.view.left[2] + mleft[2] * r_refdef.view.up[2];
+		up[0] = mup[0] * r_refdef.view.forward[0] + mup[1] * r_refdef.view.left[0] + mup[2] * r_refdef.view.up[0];
+		up[1] = mup[0] * r_refdef.view.forward[1] + mup[1] * r_refdef.view.left[1] + mup[2] * r_refdef.view.up[1];
+		up[2] = mup[0] * r_refdef.view.forward[2] + mup[1] * r_refdef.view.left[2] + mup[2] * r_refdef.view.up[2];
 		break;
 	}
 
@@ -399,6 +399,6 @@ void R_Model_Sprite_Draw(entity_render_t *ent)
 		return;
 
 	Matrix4x4_OriginFromMatrix(&ent->matrix, org);
-	R_MeshQueue_AddTransparent(ent->effects & EF_NODEPTHTEST ? r_view.origin : org, R_Model_Sprite_Draw_TransparentCallback, ent, 0, rsurface.rtlight);
+	R_MeshQueue_AddTransparent(ent->effects & EF_NODEPTHTEST ? r_refdef.view.origin : org, R_Model_Sprite_Draw_TransparentCallback, ent, 0, rsurface.rtlight);
 }
 

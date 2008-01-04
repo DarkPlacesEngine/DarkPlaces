@@ -22,7 +22,7 @@ int mqt_total;
 void R_MeshQueue_BeginScene(void)
 {
 	mqt_count = 0;
-	mqt_viewplanedist = DotProduct(r_view.origin, r_view.forward);
+	mqt_viewplanedist = DotProduct(r_refdef.view.origin, r_refdef.view.forward);
 	mqt_viewmaxdist = 0;
 }
 
@@ -46,7 +46,7 @@ void R_MeshQueue_AddTransparent(const vec3_t center, void (*callback)(const enti
 	mq->ent = ent;
 	mq->surfacenumber = surfacenumber;
 	mq->rtlight = rtlight;
-	mq->dist = DotProduct(center, r_view.forward) - mqt_viewplanedist;
+	mq->dist = DotProduct(center, r_refdef.view.forward) - mqt_viewplanedist;
 	mq->next = NULL;
 	mqt_viewmaxdist = max(mqt_viewmaxdist, mq->dist);
 }
