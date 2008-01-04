@@ -53,6 +53,9 @@ static const keyname_t   keynames[] = {
 	{"ENTER", K_ENTER},
 	{"ESCAPE", K_ESCAPE},
 	{"SPACE", K_SPACE},
+
+	// spacer so it lines up with keys.h
+
 	{"BACKSPACE", K_BACKSPACE},
 	{"UPARROW", K_UPARROW},
 	{"DOWNARROW", K_DOWNARROW},
@@ -85,12 +88,47 @@ static const keyname_t   keynames[] = {
 
 	{"PAUSE", K_PAUSE},
 
-	{"MWHEELUP", K_MWHEELUP},
-	{"MWHEELDOWN", K_MWHEELDOWN},
+	{"NUMLOCK", K_NUMLOCK},
+	{"CAPSLOCK", K_CAPSLOCK},
+	{"SCROLLOCK", K_SCROLLOCK},
+
+	{"KP_INS",			K_KP_INS },
+	{"KP_0", K_KP_0},
+	{"KP_END",			K_KP_END },
+	{"KP_1", K_KP_1},
+	{"KP_DOWNARROW",	K_KP_DOWNARROW },
+	{"KP_2", K_KP_2},
+	{"KP_PGDN",			K_KP_PGDN },
+	{"KP_3", K_KP_3},
+	{"KP_LEFTARROW",	K_KP_LEFTARROW },
+	{"KP_4", K_KP_4},
+	{"KP_5", K_KP_5},
+	{"KP_RIGHTARROW",	K_KP_RIGHTARROW },
+	{"KP_6", K_KP_6},
+	{"KP_HOME",			K_KP_HOME },
+	{"KP_7", K_KP_7},
+	{"KP_UPARROW",		K_KP_UPARROW },
+	{"KP_8", K_KP_8},
+	{"KP_PGUP",			K_KP_PGUP },
+	{"KP_9", K_KP_9},
+	{"KP_DEL",			K_KP_DEL },
+	{"KP_PERIOD", K_KP_PERIOD},
+	{"KP_SLASH",		K_KP_SLASH },
+	{"KP_DIVIDE", K_KP_DIVIDE},
+	{"KP_MULTIPLY", K_KP_MULTIPLY},
+	{"KP_MINUS", K_KP_MINUS},
+	{"KP_PLUS", K_KP_PLUS},
+	{"KP_ENTER", K_KP_ENTER},
+	{"KP_EQUALS", K_KP_EQUALS},
+
+
 
 	{"MOUSE1", K_MOUSE1},
+
 	{"MOUSE2", K_MOUSE2},
 	{"MOUSE3", K_MOUSE3},
+	{"MWHEELUP", K_MWHEELUP},
+	{"MWHEELDOWN", K_MWHEELDOWN},
 	{"MOUSE4", K_MOUSE4},
 	{"MOUSE5", K_MOUSE5},
 	{"MOUSE6", K_MOUSE6},
@@ -105,39 +143,8 @@ static const keyname_t   keynames[] = {
 	{"MOUSE15", K_MOUSE15},
 	{"MOUSE16", K_MOUSE16},
 
-	{"NUMLOCK", K_NUMLOCK},
-	{"CAPSLOCK", K_CAPSLOCK},
-	{"SCROLLOCK", K_SCROLLOCK},
 
-	{"KP_HOME",			K_KP_HOME },
-	{"KP_UPARROW",		K_KP_UPARROW },
-	{"KP_PGUP",			K_KP_PGUP },
-	{"KP_LEFTARROW",	K_KP_LEFTARROW },
-	{"KP_RIGHTARROW",	K_KP_RIGHTARROW },
-	{"KP_END",			K_KP_END },
-	{"KP_DOWNARROW",	K_KP_DOWNARROW },
-	{"KP_PGDN",			K_KP_PGDN },
-	{"KP_INS",			K_KP_INS },
-	{"KP_DEL",			K_KP_DEL },
-	{"KP_SLASH",		K_KP_SLASH },
 
-	{"KP_0", K_KP_0},
-	{"KP_1", K_KP_1},
-	{"KP_2", K_KP_2},
-	{"KP_3", K_KP_3},
-	{"KP_4", K_KP_4},
-	{"KP_5", K_KP_5},
-	{"KP_6", K_KP_6},
-	{"KP_7", K_KP_7},
-	{"KP_8", K_KP_8},
-	{"KP_9", K_KP_9},
-	{"KP_PERIOD", K_KP_PERIOD},
-	{"KP_DIVIDE", K_KP_DIVIDE},
-	{"KP_MULTIPLY", K_KP_MULTIPLY},
-	{"KP_MINUS", K_KP_MINUS},
-	{"KP_PLUS", K_KP_PLUS},
-	{"KP_ENTER", K_KP_ENTER},
-	{"KP_EQUALS", K_KP_EQUALS},
 
 	{"JOY1",  K_JOY1},
 	{"JOY2",  K_JOY2},
@@ -155,6 +162,11 @@ static const keyname_t   keynames[] = {
 	{"JOY14", K_JOY14},
 	{"JOY15", K_JOY15},
 	{"JOY16", K_JOY16},
+
+
+
+
+
 
 	{"AUX1", K_AUX1},
 	{"AUX2", K_AUX2},
