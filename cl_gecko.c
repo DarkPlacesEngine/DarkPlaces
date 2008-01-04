@@ -38,6 +38,9 @@ static clgecko_t * cl_gecko_findunusedinstance( void ) {
 			return instance;
 		}
 	}
+	if( developer.integer > 0 ) {
+		Con_Printf( "cl_gecko_findunusedinstance: out of geckos\n" );
+	}
 	return NULL;
 }
 
@@ -56,6 +59,10 @@ clgecko_t * CL_Gecko_FindBrowser( const char *name ) {
 		if( instance->active && strcmp( instance->name, name ) == 0 ) {
 			return instance;
 		}
+	}
+
+	if( developer.integer > 0 ) {
+		Con_Printf( "CL_Gecko_FindBrowser: No browser named '%s'!\n", name );
 	}
 
 	return NULL;
@@ -135,8 +142,13 @@ clgecko_t * CL_Gecko_CreateBrowser( const char *name ) {
 	if( cl_geckoembedding == NULL ) {
 		char profile_path [MAX_OSPATH];
 		OSGK_GeckoResult grc;
+		OSGK_EmbeddingOptions *options;
 
-		OSGK_EmbeddingOptions *options = osgk_embedding_options_create();
+		if( developer.integer > 0 ) {
+			Con_Printf( "CL_Gecko_CreateBrowser: setting up gecko embedding\n" );
+		}
+
+		options = osgk_embedding_options_create();
 		osgk_embedding_options_add_search_path( options, "./xulrunner/" );
 		dpsnprintf (profile_path, sizeof (profile_path), "%s/xulrunner_profile/", fs_gamedir);
 		osgk_embedding_options_set_profile_dir( options, profile_path, 0 );
@@ -146,6 +158,8 @@ clgecko_t * CL_Gecko_CreateBrowser( const char *name ) {
 		if( cl_geckoembedding == NULL ) {
 			Con_Printf( "CL_Gecko_CreateBrowser: Couldn't retrieve gecko embedding object (%.8x)!\n", grc );
 			return NULL;
+		} else if( developer.integer > 0 ) {
+			Con_Printf( "CL_Gecko_CreateBrowser: Embedding set up correctly\n" );
 		}
 	}
 
