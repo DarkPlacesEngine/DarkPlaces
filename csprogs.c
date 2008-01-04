@@ -244,8 +244,7 @@ qboolean CL_VM_InputEvent (qboolean down, int key, int ascii)
 			prog->globals.client->time = cl.time;
 			PRVM_G_FLOAT(OFS_PARM0) = !down; // 0 is down, 1 is up
 			PRVM_G_FLOAT(OFS_PARM1) = key;
-			if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.input_ascii)))
-				val->_float = ascii;
+			PRVM_G_FLOAT(OFS_PARM2) = ascii;
 			PRVM_ExecuteProgram(prog->funcoffsets.CSQC_InputEvent, "QC function CSQC_InputEvent is missing");
 			r = CSQC_RETURNVAL;
 		}
