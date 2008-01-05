@@ -129,7 +129,7 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 	int c;
 	float scale;
 	prvm_eval_t *val;
-	entity_t *e;
+	entity_render_t *entrender;
 	model_t *model;
 	matrix4x4_t tagmatrix, matrix2;
 
@@ -137,20 +137,20 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 	if (!model)
 		return false;
 
-	e = CL_NewTempEntity();
-	if (!e)
+	entrender = CL_NewTempEntity();
+	if (!entrender)
 		return false;
 
-	e->render.model = model;
-	e->render.skinnum = (int)ed->fields.client->skin;
-	e->render.effects |= e->render.model->effects;
+	entrender->model = model;
+	entrender->skinnum = (int)ed->fields.client->skin;
+	entrender->effects |= entrender->model->effects;
 	scale = 1;
 	renderflags = 0;
 	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.renderflags)) && val->_float)	renderflags = (int)val->_float;
-	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.alpha)) && val->_float)		e->render.alpha = val->_float;
-	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.scale)) && val->_float)		e->render.scale = scale = val->_float;
-	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.colormod)) && VectorLength2(val->vector))	VectorCopy(val->vector, e->render.colormod);
-	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.effects)) && val->_float)	e->render.effects |= (int)val->_float;
+	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.alpha)) && val->_float)		entrender->alpha = val->_float;
+	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.scale)) && val->_float)		entrender->scale = scale = val->_float;
+	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.colormod)) && VectorLength2(val->vector))	VectorCopy(val->vector, entrender->colormod);
+	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.effects)) && val->_float)	entrender->effects |= (int)val->_float;
 	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.tag_entity)) && val->edict)
 	{
 		int tagentity;
@@ -175,7 +175,7 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 		vec3_t angles;
 		VectorCopy(ed->fields.client->angles, angles);
 		// if model is alias, reverse pitch direction
-		if (e->render.model->type == mod_alias)
+		if (entrender->model->type == mod_alias)
 			angles[0] = -angles[0];
 
 		// set up the render matrix
@@ -187,45 +187,45 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 	// self.frame1time is the animation base time for the interpolation target
 	// self.frame2 is the interpolation start (previous frame)
 	// self.frame2time is the animation base time for the interpolation start
-	e->render.frame1 = e->render.frame2 = ed->fields.client->frame;
-	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame2))) e->render.frame2 = val->_float;
-	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame1time))) e->render.frame2time = val->_float;
-	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame2time))) e->render.frame1time = val->_float;
-	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.lerpfrac))) e->render.framelerp = val->_float;
+	entrender->frame1 = entrender->frame2 = ed->fields.client->frame;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame2))) entrender->frame2 = val->_float;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame1time))) entrender->frame2time = val->_float;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame2time))) entrender->frame1time = val->_float;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.lerpfrac))) entrender->framelerp = val->_float;
 
 	// concat the matrices to make the entity relative to its tag
-	Matrix4x4_Concat(&e->render.matrix, &tagmatrix, &matrix2);
+	Matrix4x4_Concat(&entrender->matrix, &tagmatrix, &matrix2);
 
 	if(renderflags)
 	{
-		if(renderflags & RF_VIEWMODEL)	e->render.flags |= RENDER_VIEWMODEL;
-		if(renderflags & RF_EXTERNALMODEL)e->render.flags |= RENDER_EXTERIORMODEL;
-		if(renderflags & RF_DEPTHHACK)	e->render.effects |= EF_NODEPTHTEST;
-		if(renderflags & RF_ADDITIVE)		e->render.effects |= EF_ADDITIVE;
+		if(renderflags & RF_VIEWMODEL)	entrender->flags |= RENDER_VIEWMODEL;
+		if(renderflags & RF_EXTERNALMODEL)entrender->flags |= RENDER_EXTERIORMODEL;
+		if(renderflags & RF_DEPTHHACK)	entrender->effects |= EF_NODEPTHTEST;
+		if(renderflags & RF_ADDITIVE)		entrender->effects |= EF_ADDITIVE;
 	}
 
 	c = (int)ed->fields.client->colormap;
 	if (c <= 0)
-		CL_SetEntityColormapColors(&e->render, -1);
+		CL_SetEntityColormapColors(entrender, -1);
 	else if (c <= cl.maxclients && cl.scores != NULL)
-		CL_SetEntityColormapColors(&e->render, cl.scores[c-1].colors);
+		CL_SetEntityColormapColors(entrender, cl.scores[c-1].colors);
 	else
-		CL_SetEntityColormapColors(&e->render, c);
+		CL_SetEntityColormapColors(entrender, c);
 
 	// either fullbright or lit
-	if (!(e->render.effects & EF_FULLBRIGHT) && !r_fullbright.integer)
-		e->render.flags |= RENDER_LIGHT;
+	if (!(entrender->effects & EF_FULLBRIGHT) && !r_fullbright.integer)
+		entrender->flags |= RENDER_LIGHT;
 	// hide player shadow during intermission or nehahra movie
-	if (!(e->render.effects & (EF_NOSHADOW | EF_ADDITIVE | EF_NODEPTHTEST))
-	 &&  (e->render.alpha >= 1)
-	 && !(e->render.flags & RENDER_VIEWMODEL)
-	 && (!(e->render.flags & RENDER_EXTERIORMODEL) || (!cl.intermission && cls.protocol != PROTOCOL_NEHAHRAMOVIE && !cl_noplayershadow.integer)))
-		e->render.flags |= RENDER_SHADOW;
-	if (e->render.flags & RENDER_VIEWMODEL)
-		e->render.flags |= RENDER_NOSELFSHADOW;
+	if (!(entrender->effects & (EF_NOSHADOW | EF_ADDITIVE | EF_NODEPTHTEST))
+	 &&  (entrender->alpha >= 1)
+	 && !(entrender->flags & RENDER_VIEWMODEL)
+	 && (!(entrender->flags & RENDER_EXTERIORMODEL) || (!cl.intermission && cls.protocol != PROTOCOL_NEHAHRAMOVIE && !cl_noplayershadow.integer)))
+		entrender->flags |= RENDER_SHADOW;
+	if (entrender->flags & RENDER_VIEWMODEL)
+		entrender->flags |= RENDER_NOSELFSHADOW;
 
 	// make the other useful stuff
-	CL_UpdateRenderEntity(&e->render);
+	CL_UpdateRenderEntity(entrender);
 
 	return true;
 }

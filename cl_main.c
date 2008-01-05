@@ -124,13 +124,11 @@ void CL_ClearState(void)
 
 	cl.num_entities = 0;
 	cl.num_static_entities = 0;
-	cl.num_temp_entities = 0;
 	cl.num_brushmodel_entities = 0;
 
 	// tweak these if the game runs out
 	cl.max_entities = 256;
 	cl.max_static_entities = 256;
-	cl.max_temp_entities = 512;
 	cl.max_effects = 256;
 	cl.max_beams = 256;
 	cl.max_dlights = MAX_DLIGHTS;
@@ -156,7 +154,6 @@ void CL_ClearState(void)
 	cl.entities = (entity_t *)Mem_Alloc(cls.levelmempool, cl.max_entities * sizeof(entity_t));
 	cl.entities_active = (unsigned char *)Mem_Alloc(cls.levelmempool, cl.max_brushmodel_entities * sizeof(unsigned char));
 	cl.static_entities = (entity_t *)Mem_Alloc(cls.levelmempool, cl.max_static_entities * sizeof(entity_t));
-	cl.temp_entities = (entity_t *)Mem_Alloc(cls.levelmempool, cl.max_temp_entities * sizeof(entity_t));
 	cl.effects = (cl_effect_t *)Mem_Alloc(cls.levelmempool, cl.max_effects * sizeof(cl_effect_t));
 	cl.beams = (beam_t *)Mem_Alloc(cls.levelmempool, cl.max_beams * sizeof(beam_t));
 	cl.dlights = (dlight_t *)Mem_Alloc(cls.levelmempool, cl.max_dlights * sizeof(dlight_t));
@@ -607,24 +604,24 @@ static float CL_LerpPoint(void)
 
 void CL_ClearTempEntities (void)
 {
-	cl.num_temp_entities = 0;
+	r_refdef.numtempentities = 0;
 }
 
-entity_t *CL_NewTempEntity(void)
+entity_render_t *CL_NewTempEntity(void)
 {
-	entity_t *ent;
+	entity_render_t *render;
 
 	if (r_refdef.numentities >= r_refdef.maxentities)
 		return NULL;
-	if (cl.num_temp_entities >= cl.max_temp_entities)
+	if (r_refdef.numtempentities >= r_refdef.maxtempentities)
 		return NULL;
-	ent = &cl.temp_entities[cl.num_temp_entities++];
-	memset (ent, 0, sizeof(*ent));
-	r_refdef.entities[r_refdef.numentities++] = &ent->render;
+	render = &r_refdef.tempentities[r_refdef.numtempentities++];
+	memset (render, 0, sizeof(*render));
+	r_refdef.entities[r_refdef.numentities++] = render;
 
-	ent->render.alpha = 1;
-	VectorSet(ent->render.colormod, 1, 1, 1);
-	return ent;
+	render->alpha = 1;
+	VectorSet(render->colormod, 1, 1, 1);
+	return render;
 }
 
 void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float framerate)
@@ -797,7 +794,7 @@ void CL_RelinkLightFlashes(void)
 void CL_AddQWCTFFlagModel(entity_t *player, int skin)
 {
 	float f;
-	entity_t *flag;
+	entity_render_t *flagrender;
 	matrix4x4_t flagmatrix;
 
 	// this code taken from QuakeWorld
@@ -832,18 +829,18 @@ void CL_AddQWCTFFlagModel(entity_t *player, int skin)
 	}
 	// end of code taken from QuakeWorld
 
-	flag = CL_NewTempEntity();
-	if (!flag)
+	flagrender = CL_NewTempEntity();
+	if (!flagrender)
 		return;
 
-	flag->render.model = cl.model_precache[cl.qw_modelindex_flag];
-	flag->render.skinnum = skin;
-	flag->render.alpha = 1;
-	VectorSet(flag->render.colormod, 1, 1, 1);
+	flagrender->model = cl.model_precache[cl.qw_modelindex_flag];
+	flagrender->skinnum = skin;
+	flagrender->alpha = 1;
+	VectorSet(flagrender->colormod, 1, 1, 1);
 	// attach the flag to the player matrix
 	Matrix4x4_CreateFromQuakeEntity(&flagmatrix, -f, -22, 0, 0, 0, -45, 1);
-	Matrix4x4_Concat(&flag->render.matrix, &player->render.matrix, &flagmatrix);
-	CL_UpdateRenderEntity(&flag->render);
+	Matrix4x4_Concat(&flagrender->matrix, &player->render.matrix, &flagmatrix);
+	CL_UpdateRenderEntity(flagrender);
 }
 
 matrix4x4_t viewmodelmatrix;
@@ -1513,7 +1510,7 @@ static void CL_RelinkEffects(void)
 {
 	int i, intframe;
 	cl_effect_t *e;
-	entity_t *ent;
+	entity_render_t *entrender;
 	float frame;
 
 	for (i = 0, e = cl.effects;i < cl.num_effects;i++, e++)
@@ -1539,27 +1536,27 @@ static void CL_RelinkEffects(void)
 
 			// if we're drawing effects, get a new temp entity
 			// (NewTempEntity adds it to the render entities list for us)
-			if (r_draweffects.integer && (ent = CL_NewTempEntity()))
+			if (r_draweffects.integer && (entrender = CL_NewTempEntity()))
 			{
 				// interpolation stuff
-				ent->render.frame1 = intframe;
-				ent->render.frame2 = intframe + 1;
-				if (ent->render.frame2 >= e->endframe)
-					ent->render.frame2 = -1; // disappear
-				ent->render.framelerp = frame - intframe;
-				ent->render.frame1time = e->frame1time;
-				ent->render.frame2time = e->frame2time;
+				entrender->frame1 = intframe;
+				entrender->frame2 = intframe + 1;
+				if (entrender->frame2 >= e->endframe)
+					entrender->frame2 = -1; // disappear
+				entrender->framelerp = frame - intframe;
+				entrender->frame1time = e->frame1time;
+				entrender->frame2time = e->frame2time;
 
 				// normal stuff
 				if(e->modelindex < MAX_MODELS)
-					ent->render.model = cl.model_precache[e->modelindex];
+					entrender->model = cl.model_precache[e->modelindex];
 				else
-					ent->render.model = cl.csqc_model_precache[-(e->modelindex+1)];
-				ent->render.alpha = 1;
-				VectorSet(ent->render.colormod, 1, 1, 1);
+					entrender->model = cl.csqc_model_precache[-(e->modelindex+1)];
+				entrender->alpha = 1;
+				VectorSet(entrender->colormod, 1, 1, 1);
 
-				Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, e->origin[0], e->origin[1], e->origin[2], 0, 0, 0, 1);
-				CL_UpdateRenderEntity(&ent->render);
+				Matrix4x4_CreateFromQuakeEntity(&entrender->matrix, e->origin[0], e->origin[1], e->origin[2], 0, 0, 0, 1);
+				CL_UpdateRenderEntity(entrender);
 			}
 		}
 	}
@@ -1604,7 +1601,7 @@ void CL_RelinkBeams(void)
 	beam_t *b;
 	vec3_t dist, org, start, end;
 	float d;
-	entity_t *ent;
+	entity_render_t *entrender;
 	double yaw, pitch;
 	float forward;
 	matrix4x4_t tempmatrix;
@@ -1663,17 +1660,17 @@ void CL_RelinkBeams(void)
 		d = VectorNormalizeLength(dist);
 		while (d > 0)
 		{
-			ent = CL_NewTempEntity ();
-			if (!ent)
+			entrender = CL_NewTempEntity ();
+			if (!entrender)
 				return;
 			//VectorCopy (org, ent->render.origin);
-			ent->render.model = b->model;
+			entrender->model = b->model;
 			//ent->render.effects = EF_FULLBRIGHT;
 			//ent->render.angles[0] = pitch;
 			//ent->render.angles[1] = yaw;
 			//ent->render.angles[2] = rand()%360;
-			Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, org[0], org[1], org[2], -pitch, yaw, lhrandom(0, 360), 1);
-			CL_UpdateRenderEntity(&ent->render);
+			Matrix4x4_CreateFromQuakeEntity(&entrender->matrix, org[0], org[1], org[2], -pitch, yaw, lhrandom(0, 360), 1);
+			CL_UpdateRenderEntity(entrender);
 			VectorMA(org, 30, dist, org);
 			d -= 30;
 		}
@@ -1687,7 +1684,7 @@ static void CL_RelinkQWNails(void)
 {
 	int i;
 	vec_t *v;
-	entity_t *ent;
+	entity_render_t *entrender;
 
 	for (i = 0;i < cl.qw_num_nails;i++)
 	{
@@ -1695,16 +1692,16 @@ static void CL_RelinkQWNails(void)
 
 		// if we're drawing effects, get a new temp entity
 		// (NewTempEntity adds it to the render entities list for us)
-		if (!(ent = CL_NewTempEntity()))
+		if (!(entrender = CL_NewTempEntity()))
 			continue;
 
 		// normal stuff
-		ent->render.model = cl.model_precache[cl.qw_modelindex_spike];
-		ent->render.alpha = 1;
-		VectorSet(ent->render.colormod, 1, 1, 1);
+		entrender->model = cl.model_precache[cl.qw_modelindex_spike];
+		entrender->alpha = 1;
+		VectorSet(entrender->colormod, 1, 1, 1);
 
-		Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, v[0], v[1], v[2], v[3], v[4], v[5], 1);
-		CL_UpdateRenderEntity(&ent->render);
+		Matrix4x4_CreateFromQuakeEntity(&entrender->matrix, v[0], v[1], v[2], v[3], v[4], v[5], 1);
+		CL_UpdateRenderEntity(entrender);
 	}
 }
 
@@ -2232,6 +2229,9 @@ void CL_Init (void)
 	// max entities sent to renderer per frame
 	r_refdef.maxentities = MAX_EDICTS + 256 + 512;
 	r_refdef.entities = (entity_render_t **)Mem_Alloc(cls.permanentmempool, sizeof(entity_render_t *) * r_refdef.maxentities);
+
+	r_refdef.maxtempentities = 512;
+	r_refdef.tempentities = (entity_render_t *)Mem_Alloc(cls.permanentmempool, sizeof(entity_render_t) * r_refdef.maxtempentities);
 
 	CL_InitInput ();
 

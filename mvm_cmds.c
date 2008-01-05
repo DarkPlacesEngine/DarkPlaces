@@ -1,6 +1,7 @@
 #include "quakedef.h"
 
 #include "prvm_cmds.h"
+#include "clvm_cmds.h"
 #include "menu.h"
 
 //============================================================================
@@ -23,6 +24,7 @@ char *vm_m_extensions =
 #ifdef SUPPORT_GECKO
 "DP_GECKO_SUPPORT "
 #endif
+"DP_QC_RENDER_SCENE"
 ;
 
 /*
@@ -872,9 +874,9 @@ VM_altstr_ins,						//  #86
 VM_findflags,						//  #87
 VM_findchainflags,				//  #88
 VM_cvar_defstring,				//  #89
-NULL,									//  #90
-NULL,									//  #91
-NULL,									//  #92
+VM_CL_setmodel,					// #90 void(entity e, string m) setmodel (QUAKE)
+VM_CL_precache_model,			// #91 void(string s) precache_model (QUAKE)
+VM_CL_setorigin,				// #92 void(entity e, vector o) setorigin (QUAKE)
 NULL,									//  #93
 NULL,									//  #94
 NULL,									//  #95
@@ -1082,16 +1084,17 @@ NULL,									// #296
 NULL,									// #297
 NULL,									// #298
 NULL,									// #299
-NULL,									// #300
-NULL,									// #301
-NULL,									// #302
-NULL,									// #303
-NULL,									// #304
-NULL,									// #305
-NULL,									// #306
-NULL,									// #307
-NULL,									// #308
-NULL,									// #309
+// CSQC range #300-#399
+VM_CL_R_ClearScene,				// #300 void() clearscene (DP_QC_RENDER_SCENE)
+VM_CL_R_AddEntities,			// #301 void(float mask) addentities (DP_QC_RENDER_SCENE)
+VM_CL_R_AddEntity,				// #302 void(entity ent) addentity (DP_QC_RENDER_SCENE)
+VM_CL_R_SetView,				// #303 float(float property, ...) setproperty (DP_QC_RENDER_SCENE)
+VM_CL_R_RenderScene,			// #304 void() renderscene (DP_QC_RENDER_SCENE)
+VM_CL_R_AddDynamicLight,		// #305 void(vector org, float radius, vector lightcolours) adddynamiclight (DP_QC_RENDER_SCENE)
+VM_CL_R_PolygonBegin,			// #306 void(string texturename, float flag[, float is2d, float lines]) R_BeginPolygon
+VM_CL_R_PolygonVertex,			// #307 void(vector org, vector texcoords, vector rgb, float alpha) R_PolygonVertex
+VM_CL_R_PolygonEnd,				// #308 void() R_EndPolygon
+NULL/*VM_CL_R_LoadWorldModel*/,				// #309 void(string modelname) R_LoadWorldModel
 NULL,									// #310
 NULL,									// #311
 NULL,									// #312
@@ -1421,13 +1424,42 @@ VM_M_getextresponse				// #624
 
 const int vm_m_numbuiltins = sizeof(vm_m_builtins) / sizeof(prvm_builtin_t);
 
+r_refdef_t menu_refdef;
+
 void VM_M_Cmd_Init(void)
 {
 	VM_Cmd_Init();
+	VM_Polygons_Reset();
+
+	memset (&menu_refdef, 0, sizeof (r_refdef_t));
+
+	menu_refdef.maxtempentities = 128;
+	menu_refdef.tempentities = (entity_render_t*) Mem_Alloc(prog->progs_mempool, sizeof(entity_render_t) * menu_refdef.maxtempentities);
+	
+	menu_refdef.frustumscale_x = 1;
+	menu_refdef.frustumscale_y = 1;
+	menu_refdef.maxentities = MAX_EDICTS + 256 + 512;
+	menu_refdef.entities = (entity_render_t **)Mem_Alloc(cls.permanentmempool, sizeof(entity_render_t *) * menu_refdef.maxentities);
+	
+	menu_refdef.view.width = vid.width;
+	menu_refdef.view.height = vid.height;
+	menu_refdef.view.depth = 1;
+	menu_refdef.view.x = 0;
+	menu_refdef.view.y = 0;
+	menu_refdef.view.z = 0;
+	menu_refdef.view.colormask[0] = true;
+	menu_refdef.view.colormask[1] = true;
+	menu_refdef.view.colormask[2] = true;
+	menu_refdef.view.colormask[3] = true;
+	
+	menu_refdef.view.useperspective = true;
+	menu_refdef.view.frustum_y = tan(scr_fov.value * M_PI / 360.0) * (3.0/4.0);
+	menu_refdef.view.frustum_x = menu_refdef.view.frustum_y * (float)menu_refdef.view.width / (float)menu_refdef.view.height / vid_pixelheight.value;
 }
 
 void VM_M_Cmd_Reset(void)
 {
 	//VM_Cmd_Init();
 	VM_Cmd_Reset();
+	VM_Polygons_Reset();
 }
