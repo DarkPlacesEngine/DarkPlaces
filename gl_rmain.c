@@ -932,20 +932,43 @@ static const char *builtinshaderstring =
 "#endif // FRAGMENT_SHADER\n"
 ;
 
-#define SHADERPERMUTATION_COLORMAPPING (1<<0) // indicates this is a colormapped skin
-#define SHADERPERMUTATION_CONTRASTBOOST (1<<1) // r_glsl_contrastboost boosts the contrast at low color levels (similar to gamma)
-#define SHADERPERMUTATION_FOG (1<<2) // tint the color by fog color or black if using additive blend mode
-#define SHADERPERMUTATION_CUBEFILTER (1<<3) // (lightsource) use cubemap light filter
-#define SHADERPERMUTATION_GLOW (1<<4) // (lightmap) blend in an additive glow texture
-#define SHADERPERMUTATION_DIFFUSE (1<<5) // (lightsource) whether to use directional shading
-#define SHADERPERMUTATION_SPECULAR (1<<6) // (lightsource or deluxemapping) render specular effects
-#define SHADERPERMUTATION_REFLECTION (1<<7) // normalmap-perturbed reflection of the scene infront of the surface, preformed as an overlay on the surface
-#define SHADERPERMUTATION_OFFSETMAPPING (1<<8) // adjust texcoords to roughly simulate a displacement mapped surface
-#define SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING (1<<9) // adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
-#define SHADERPERMUTATION_MODEBASE (1<<10) // multiplier for the SHADERMODE_ values to get a valid index
+typedef struct shaderpermutationinfo_s
+{
+	const char *pretext;
+	const char *name;
+}
+shaderpermutationinfo_t;
+
+typedef struct shadermodeinfo_s
+{
+	const char *vertexfilename;
+	const char *geometryfilename;
+	const char *fragmentfilename;
+	const char *pretext;
+	const char *name;
+	int allowedpermutations;
+}
+shadermodeinfo_t;
+
+typedef enum shaderpermutation_e
+{
+	SHADERPERMUTATION_COLORMAPPING = 1<<0, // indicates this is a colormapped skin
+	SHADERPERMUTATION_CONTRASTBOOST = 1<<1, // r_glsl_contrastboost boosts the contrast at low color levels (similar to gamma)
+	SHADERPERMUTATION_FOG = 1<<2, // tint the color by fog color or black if using additive blend mode
+	SHADERPERMUTATION_CUBEFILTER = 1<<3, // (lightsource) use cubemap light filter
+	SHADERPERMUTATION_GLOW = 1<<4, // (lightmap) blend in an additive glow texture
+	SHADERPERMUTATION_DIFFUSE = 1<<5, // (lightsource) whether to use directional shading
+	SHADERPERMUTATION_SPECULAR = 1<<6, // (lightsource or deluxemapping) render specular effects
+	SHADERPERMUTATION_REFLECTION = 1<<7, // normalmap-perturbed reflection of the scene infront of the surface, preformed as an overlay on the surface
+	SHADERPERMUTATION_OFFSETMAPPING = 1<<8, // adjust texcoords to roughly simulate a displacement mapped surface
+	SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING = 1<<9, // adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
+	SHADERPERMUTATION_LIMIT = 1<<10, // size of permutations array
+	SHADERPERMUTATION_COUNT = 10 // size of shaderpermutationinfo array
+}
+shaderpermutation_t;
 
 // NOTE: MUST MATCH ORDER OF SHADERPERMUTATION_* DEFINES!
-const char *shaderpermutationinfo[][2] =
+shaderpermutationinfo_t shaderpermutationinfo[SHADERPERMUTATION_COUNT] =
 {
 	{"#define USECOLORMAPPING\n", " colormapping"},
 	{"#define USECONTRASTBOOST\n", " contrastboost"},
@@ -957,7 +980,6 @@ const char *shaderpermutationinfo[][2] =
 	{"#define USEREFLECTION\n", " reflection"},
 	{"#define USEOFFSETMAPPING\n", " offsetmapping"},
 	{"#define USEOFFSETMAPPING_RELIEFMAPPING\n", " reliefmapping"},
-	{NULL, NULL}
 };
 
 // this enum is multiplied by SHADERPERMUTATION_MODEBASE
@@ -977,21 +999,18 @@ typedef enum shadermode_e
 shadermode_t;
 
 // NOTE: MUST MATCH ORDER OF SHADERMODE_* ENUMS!
-const char *shadermodeinfo[][2] =
+shadermodeinfo_t shadermodeinfo[SHADERMODE_COUNT] =
 {
-	{"#define MODE_FLATCOLOR\n", " flatcolor"},
-	{"#define MODE_VERTEXCOLOR\n", " vertexcolor"},
-	{"#define MODE_LIGHTMAP\n", " lightmap"},
-	{"#define MODE_LIGHTDIRECTIONMAP_MODELSPACE\n", " lightdirectionmap_modelspace"},
-	{"#define MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n", " lightdirectionmap_tangentspace"},
-	{"#define MODE_LIGHTDIRECTION\n", " lightdirection"},
-	{"#define MODE_LIGHTSOURCE\n", " lightsource"},
-	{"#define MODE_REFRACTION\n", " refraction"},
-	{"#define MODE_WATER\n", " water"},
-	{NULL, NULL}
+	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_FLATCOLOR\n", " flatcolor", SHADERPERMUTATION_COLORMAPPING | SHADERPERMUTATION_CONTRASTBOOST | SHADERPERMUTATION_FOG | SHADERPERMUTATION_GLOW | SHADERPERMUTATION_DIFFUSE | SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_REFLECTION | SHADERPERMUTATION_OFFSETMAPPING | SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING},
+	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_VERTEXCOLOR\n", " vertexcolor", SHADERPERMUTATION_COLORMAPPING | SHADERPERMUTATION_CONTRASTBOOST | SHADERPERMUTATION_FOG | SHADERPERMUTATION_GLOW | SHADERPERMUTATION_DIFFUSE | SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_REFLECTION | SHADERPERMUTATION_OFFSETMAPPING | SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING},
+	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_LIGHTMAP\n", " lightmap", SHADERPERMUTATION_COLORMAPPING | SHADERPERMUTATION_CONTRASTBOOST | SHADERPERMUTATION_FOG | SHADERPERMUTATION_GLOW | SHADERPERMUTATION_DIFFUSE | SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_REFLECTION | SHADERPERMUTATION_OFFSETMAPPING | SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING},
+	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_LIGHTDIRECTIONMAP_MODELSPACE\n", " lightdirectionmap_modelspace", SHADERPERMUTATION_COLORMAPPING | SHADERPERMUTATION_CONTRASTBOOST | SHADERPERMUTATION_FOG | SHADERPERMUTATION_GLOW | SHADERPERMUTATION_DIFFUSE | SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_REFLECTION | SHADERPERMUTATION_OFFSETMAPPING | SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING},
+	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n", " lightdirectionmap_tangentspace", SHADERPERMUTATION_COLORMAPPING | SHADERPERMUTATION_CONTRASTBOOST | SHADERPERMUTATION_FOG | SHADERPERMUTATION_GLOW | SHADERPERMUTATION_DIFFUSE | SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_REFLECTION | SHADERPERMUTATION_OFFSETMAPPING | SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING},
+	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_LIGHTDIRECTION\n", " lightdirection", SHADERPERMUTATION_COLORMAPPING | SHADERPERMUTATION_CONTRASTBOOST | SHADERPERMUTATION_FOG | SHADERPERMUTATION_GLOW | SHADERPERMUTATION_DIFFUSE | SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_REFLECTION | SHADERPERMUTATION_OFFSETMAPPING | SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING},
+	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_LIGHTSOURCE\n", " lightsource", SHADERPERMUTATION_COLORMAPPING | SHADERPERMUTATION_CONTRASTBOOST | SHADERPERMUTATION_FOG | SHADERPERMUTATION_CUBEFILTER | SHADERPERMUTATION_DIFFUSE | SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_OFFSETMAPPING | SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING},
+	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_REFRACTION\n", " refraction", SHADERPERMUTATION_OFFSETMAPPING | SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING},
+	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_WATER\n", " water", SHADERPERMUTATION_OFFSETMAPPING | SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING},
 };
-
-#define SHADERPERMUTATION_INDICES (SHADERPERMUTATION_MODEBASE * SHADERMODE_COUNT)
 
 typedef struct r_glsl_permutation_s
 {
@@ -1044,52 +1063,77 @@ typedef struct r_glsl_permutation_s
 r_glsl_permutation_t;
 
 // information about each possible shader permutation
-r_glsl_permutation_t r_glsl_permutations[SHADERPERMUTATION_INDICES];
+r_glsl_permutation_t r_glsl_permutations[SHADERMODE_COUNT][SHADERPERMUTATION_LIMIT];
 // currently selected permutation
 r_glsl_permutation_t *r_glsl_permutation;
 
-// these are additional flags used only by R_GLSL_CompilePermutation
-#define SHADERTYPE_USES_VERTEXSHADER (1<<0)
-#define SHADERTYPE_USES_GEOMETRYSHADER (1<<1)
-#define SHADERTYPE_USES_FRAGMENTSHADER (1<<2)
+static char *R_GLSL_GetText(const char *filename, qboolean printfromdisknotice)
+{
+	char *shaderstring;
+	if (!filename || !filename[0])
+		return NULL;
+	shaderstring = (char *)FS_LoadFile(filename, r_main_mempool, false, NULL);
+	if (shaderstring)
+	{
+		if (printfromdisknotice)
+			Con_DPrint("from disk... ");
+		return shaderstring;
+	}
+	else if (!strcmp(filename, "glsl/default.glsl"))
+	{
+		shaderstring = Mem_Alloc(r_main_mempool, strlen(builtinshaderstring) + 1);
+		memcpy(shaderstring, builtinshaderstring, strlen(builtinshaderstring) + 1);
+	}
+	return shaderstring;
+}
 
-static void R_GLSL_CompilePermutation(const char *filename, int permutation, int shadertype)
+static void R_GLSL_CompilePermutation(shadermode_t mode, shaderpermutation_t permutation)
 {
 	int i;
-	qboolean shaderfound;
-	r_glsl_permutation_t *p = r_glsl_permutations + permutation;
-	int vertstrings_count;
-	int geomstrings_count;
-	int fragstrings_count;
-	char *shaderstring;
-	const char *vertstrings_list[32+1];
-	const char *geomstrings_list[32+1];
-	const char *fragstrings_list[32+1];
+	shadermodeinfo_t *modeinfo = shadermodeinfo + mode;
+	r_glsl_permutation_t *p = &r_glsl_permutations[mode][permutation];
+	int vertstrings_count = 0;
+	int geomstrings_count = 0;
+	int fragstrings_count = 0;
+	char *vertexstring, *geometrystring, *fragmentstring;
+	const char *vertstrings_list[32+3];
+	const char *geomstrings_list[32+3];
+	const char *fragstrings_list[32+3];
 	char permutationname[256];
+
 	if (p->compiled)
 		return;
 	p->compiled = true;
 	p->program = 0;
-	vertstrings_list[0] = "#define VERTEX_SHADER\n";
-	geomstrings_list[0] = "#define GEOMETRY_SHADER\n";
-	fragstrings_list[0] = "#define FRAGMENT_SHADER\n";
-	vertstrings_count = 1;
-	geomstrings_count = 1;
-	fragstrings_count = 1;
+
 	permutationname[0] = 0;
-	i = permutation / SHADERPERMUTATION_MODEBASE;
-	vertstrings_list[vertstrings_count++] = shadermodeinfo[i][0];
-	geomstrings_list[geomstrings_count++] = shadermodeinfo[i][0];
-	fragstrings_list[fragstrings_count++] = shadermodeinfo[i][0];
-	strlcat(permutationname, shadermodeinfo[i][1], sizeof(permutationname));
-	for (i = 0;shaderpermutationinfo[i][0];i++)
+	vertexstring   = R_GLSL_GetText(modeinfo->vertexfilename, true);
+	geometrystring = R_GLSL_GetText(modeinfo->geometryfilename, false);
+	fragmentstring = R_GLSL_GetText(modeinfo->fragmentfilename, false);
+
+	strlcat(permutationname, shadermodeinfo[mode].vertexfilename, sizeof(permutationname));
+
+	// the first pretext is which type of shader to compile as
+	// (later these will all be bound together as a program object)
+	vertstrings_list[vertstrings_count++] = "#define VERTEX_SHADER\n";
+	geomstrings_list[geomstrings_count++] = "#define GEOMETRY_SHADER\n";
+	fragstrings_list[fragstrings_count++] = "#define FRAGMENT_SHADER\n";
+
+	// the second pretext is the mode (for example a light source)
+	vertstrings_list[vertstrings_count++] = shadermodeinfo[mode].pretext;
+	geomstrings_list[geomstrings_count++] = shadermodeinfo[mode].pretext;
+	fragstrings_list[fragstrings_count++] = shadermodeinfo[mode].pretext;
+	strlcat(permutationname, modeinfo->name, sizeof(permutationname));
+
+	// now add all the permutation pretexts
+	for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
 	{
 		if (permutation & (1<<i))
 		{
-			vertstrings_list[vertstrings_count++] = shaderpermutationinfo[i][0];
-			geomstrings_list[geomstrings_count++] = shaderpermutationinfo[i][0];
-			fragstrings_list[fragstrings_count++] = shaderpermutationinfo[i][0];
-			strlcat(permutationname, shaderpermutationinfo[i][1], sizeof(permutationname));
+			vertstrings_list[vertstrings_count++] = shaderpermutationinfo[i].pretext;
+			geomstrings_list[geomstrings_count++] = shaderpermutationinfo[i].pretext;
+			fragstrings_list[fragstrings_count++] = shaderpermutationinfo[i].pretext;
+			strlcat(permutationname, shaderpermutationinfo[i].name, sizeof(permutationname));
 		}
 		else
 		{
@@ -1099,32 +1143,22 @@ static void R_GLSL_CompilePermutation(const char *filename, int permutation, int
 			fragstrings_list[fragstrings_count++] = "\n";
 		}
 	}
-	shaderstring = (char *)FS_LoadFile(filename, r_main_mempool, false, NULL);
-	shaderfound = false;
-	if (shaderstring)
-	{
-		Con_DPrint("from disk... ");
-		vertstrings_list[vertstrings_count++] = shaderstring;
-		geomstrings_list[geomstrings_count++] = shaderstring;
-		fragstrings_list[fragstrings_count++] = shaderstring;
-		shaderfound = true;
-	}
-	else if (!strcmp(filename, "glsl/default.glsl"))
-	{
-		vertstrings_list[vertstrings_count++] = builtinshaderstring;
-		geomstrings_list[geomstrings_count++] = builtinshaderstring;
-		fragstrings_list[fragstrings_count++] = builtinshaderstring;
-		shaderfound = true;
-	}
-	// clear any lists that are not needed by this shader
-	if (!(shadertype & SHADERTYPE_USES_VERTEXSHADER))
+
+	// now append the shader text itself
+	vertstrings_list[vertstrings_count++] = vertexstring;
+	geomstrings_list[geomstrings_count++] = geometrystring;
+	fragstrings_list[fragstrings_count++] = fragmentstring;
+
+	// if any sources were NULL, clear the respective list
+	if (!vertexstring)
 		vertstrings_count = 0;
-	if (!(shadertype & SHADERTYPE_USES_GEOMETRYSHADER))
+	if (!geometrystring)
 		geomstrings_count = 0;
-	if (!(shadertype & SHADERTYPE_USES_FRAGMENTSHADER))
+	if (!fragmentstring)
 		fragstrings_count = 0;
+
 	// compile the shader program
-	if (shaderfound && vertstrings_count + geomstrings_count + fragstrings_count)
+	if (vertstrings_count + geomstrings_count + fragstrings_count)
 		p->program = GL_Backend_CompileProgram(vertstrings_count, vertstrings_list, geomstrings_count, geomstrings_list, fragstrings_count, fragstrings_list);
 	if (p->program)
 	{
@@ -1189,25 +1223,28 @@ static void R_GLSL_CompilePermutation(const char *filename, int permutation, int
 		CHECKGLERROR
 		qglUseProgramObjectARB(0);CHECKGLERROR
 		if (developer.integer)
-			Con_Printf("GLSL shader %s :%s compiled.\n", filename, permutationname);
+			Con_Printf("GLSL shader %s compiled.\n", permutationname);
 	}
 	else
-	{
-		if (developer.integer)
-			Con_Printf("GLSL shader %s :%s failed!  source code line offset for above errors is %i.\n", permutationname, filename, -(vertstrings_count - 1));
-		else
-			Con_Printf("GLSL shader %s :%s failed!  some features may not work properly.\n", permutationname, filename);
-	}
-	if (shaderstring)
-		Mem_Free(shaderstring);
+		Con_Printf("GLSL shader %s failed!  some features may not work properly.\n", permutationname);
+
+	// free the strings
+	if (vertexstring)
+		Mem_Free(vertexstring);
+	if (geometrystring)
+		Mem_Free(geometrystring);
+	if (fragmentstring)
+		Mem_Free(fragmentstring);
 }
 
 void R_GLSL_Restart_f(void)
 {
-	int i;
-	for (i = 0;i < SHADERPERMUTATION_INDICES;i++)
-		if (r_glsl_permutations[i].program)
-			GL_Backend_FreeProgram(r_glsl_permutations[i].program);
+	shadermode_t mode;
+	shaderpermutation_t permutation;
+	for (mode = 0;mode < SHADERMODE_COUNT;mode++)
+		for (permutation = 0;permutation < SHADERPERMUTATION_LIMIT;permutation++)
+			if (r_glsl_permutations[mode][permutation].program)
+				GL_Backend_FreeProgram(r_glsl_permutations[mode][permutation].program);
 	memset(r_glsl_permutations, 0, sizeof(r_glsl_permutations));
 }
 
@@ -1224,10 +1261,10 @@ void R_GLSL_DumpShader_f(void)
 
 	FS_Print(file, "// The engine may define the following macros:\n");
 	FS_Print(file, "// #define VERTEX_SHADER\n// #define GEOMETRY_SHADER\n// #define FRAGMENT_SHADER\n");
-	for (i = 0;shadermodeinfo[i][0];i++)
-		FS_Printf(file, "// %s", shadermodeinfo[i][0]);
-	for (i = 0;shaderpermutationinfo[i][0];i++)
-		FS_Printf(file, "// %s", shaderpermutationinfo[i][0]);
+	for (i = 0;i < SHADERMODE_COUNT;i++)
+		FS_Printf(file, "// %s", shadermodeinfo[i].pretext);
+	for (i = 0;i < SHADERPERMUTATION_LIMIT;i++)
+		FS_Printf(file, "// %s", shaderpermutationinfo[i].pretext);
 	FS_Print(file, "\n");
 	FS_Print(file, builtinshaderstring);
 	FS_Close(file);
@@ -1244,13 +1281,9 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 	// combination of texture, entity, light source, and fogging, only use the
 	// minimum features necessary to avoid wasting rendering time in the
 	// fragment shader on features that are not being used
-	const char *shaderfilename = NULL;
 	unsigned int permutation = 0;
-	unsigned int shadertype = 0;
 	shadermode_t mode = 0;
 	r_glsl_permutation = NULL;
-	shaderfilename = "glsl/default.glsl";
-	shadertype = SHADERTYPE_USES_VERTEXSHADER | SHADERTYPE_USES_FRAGMENTSHADER;
 	// TODO: implement geometry-shader based shadow volumes someday
 	if (r_glsl_offsetmapping.integer)
 	{
@@ -1378,35 +1411,36 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
 			permutation |= SHADERPERMUTATION_REFLECTION;
 	}
-	permutation |= mode * SHADERPERMUTATION_MODEBASE;
-	if (!r_glsl_permutations[permutation].program)
+	r_glsl_permutation = &r_glsl_permutations[mode][permutation];
+	if (!r_glsl_permutation->program)
 	{
-		if (!r_glsl_permutations[permutation].compiled)
-			R_GLSL_CompilePermutation(shaderfilename, permutation, shadertype);
-		if (!r_glsl_permutations[permutation].program)
+		if (!r_glsl_permutation->compiled)
+			R_GLSL_CompilePermutation(mode, permutation);
+		if (!r_glsl_permutation->program)
 		{
 			// remove features until we find a valid permutation
-			unsigned int i;
-			for (i = (SHADERPERMUTATION_MODEBASE >> 1);;i>>=1)
+			int i;
+			for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
 			{
-				if (!i)
-				{
-					Con_Printf("OpenGL 2.0 shaders disabled - unable to find a working shader permutation fallback on this driver (set r_glsl 1 if you want to try again)\n");
-					Cvar_SetValueQuick(&r_glsl, 0);
-					return 0; // no bit left to clear
-				}
 				// reduce i more quickly whenever it would not remove any bits
-				if (!(permutation & i))
+				int j = 1<<(SHADERPERMUTATION_COUNT-1-i);
+				if (!(permutation & j))
 					continue;
-				permutation &= ~i;
-				if (!r_glsl_permutations[permutation].compiled)
-					R_GLSL_CompilePermutation(shaderfilename, permutation, shadertype);
-				if (r_glsl_permutations[permutation].program)
+				permutation -= j;
+				r_glsl_permutation = &r_glsl_permutations[mode][permutation];
+				if (!r_glsl_permutation->compiled)
+					R_GLSL_CompilePermutation(mode, permutation);
+				if (r_glsl_permutation->program)
 					break;
+			}
+			if (i >= SHADERPERMUTATION_COUNT)
+			{
+				Con_Printf("OpenGL 2.0 shaders disabled - unable to find a working shader permutation fallback on this driver (set r_glsl 1 if you want to try again)\n");
+				Cvar_SetValueQuick(&r_glsl, 0);
+				return 0; // no bit left to clear
 			}
 		}
 	}
-	r_glsl_permutation = r_glsl_permutations + permutation;
 	CHECKGLERROR
 	qglUseProgramObjectARB(r_glsl_permutation->program);CHECKGLERROR
 	if (mode == SHADERMODE_LIGHTSOURCE)
