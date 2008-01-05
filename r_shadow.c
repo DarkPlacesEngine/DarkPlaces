@@ -386,6 +386,8 @@ void r_shadow_shutdown(void)
 
 void r_shadow_newmap(void)
 {
+	if (r_refdef.worldmodel && strncmp(r_refdef.worldmodel->name, r_shadow_mapname, sizeof(r_shadow_mapname)))
+		R_Shadow_EditLights_Reload_f();
 }
 
 void R_Shadow_Help_f(void)
@@ -3130,9 +3132,6 @@ void R_ShadowVolumeLighting(qboolean visible)
 	int lnum;
 	size_t lightindex;
 	dlight_t *light;
-
-	if (r_refdef.worldmodel && strncmp(r_refdef.worldmodel->name, r_shadow_mapname, sizeof(r_shadow_mapname)))
-		R_Shadow_EditLights_Reload_f();
 
 	if (r_editlights.integer)
 		R_Shadow_DrawLightSprites();
