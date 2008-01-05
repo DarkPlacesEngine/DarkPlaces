@@ -5070,12 +5070,28 @@ void MP_KeyEvent (int key, char ascii, qboolean downevent)
 
 void MP_Draw (void)
 {
+	extern r_refdef_t menu_refdef;
+
+	static r_refdef_t clientrefdef;
+	clientrefdef = r_refdef;
+	r_refdef = menu_refdef;
+
+	// reset the temp entities each frame
+	r_refdef.numtempentities = 0;
+
+	R_UpdateVariables();
+
 	PRVM_Begin;
 	PRVM_SetProg(PRVM_MENUPROG);
 
+	// FIXME: this really shouldnt error out lest we have a very broken refdef state...?
+	// or does it kill the server too?
 	PRVM_ExecuteProgram(prog->funcoffsets.m_draw,"m_draw() required");
 
 	PRVM_End;
+
+	menu_refdef = r_refdef;
+	r_refdef = clientrefdef;
 }
 
 void MP_ToggleMenu_f (void)

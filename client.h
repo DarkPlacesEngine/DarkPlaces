@@ -921,7 +921,6 @@ typedef struct client_state_s
 
 	int max_entities;
 	int max_static_entities;
-	int max_temp_entities;
 	int max_effects;
 	int max_beams;
 	int max_dlights;
@@ -934,7 +933,6 @@ typedef struct client_state_s
 	entity_t *entities;
 	unsigned char *entities_active;
 	entity_t *static_entities;
-	entity_t *temp_entities;
 	cl_effect_t *effects;
 	beam_t *beams;
 	dlight_t *dlights;
@@ -946,7 +944,6 @@ typedef struct client_state_s
 
 	int num_entities;
 	int num_static_entities;
-	int num_temp_entities;
 	int num_brushmodel_entities;
 	int num_effects;
 	int num_beams;
@@ -1168,7 +1165,7 @@ void CL_Beam_CalculatePositions (const beam_t *b, vec3_t start, vec3_t end);
 void CL_ClientMovement_Replay(void);
 
 void CL_ClearTempEntities (void);
-entity_t *CL_NewTempEntity (void);
+entity_render_t *CL_NewTempEntity (void);
 
 void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float framerate);
 
@@ -1463,6 +1460,11 @@ typedef struct r_refdef_s
 	entity_render_t **entities;
 	int numentities;
 	int maxentities;
+
+	// field of temporary entities that is reset each (client) frame
+	entity_render_t *tempentities;
+	int numtempentities;
+	int maxtempentities;
 
 	// renderable dynamic lights
 	rtlight_t lights[MAX_DLIGHTS];

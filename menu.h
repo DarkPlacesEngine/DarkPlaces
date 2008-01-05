@@ -76,6 +76,7 @@ void MP_Shutdown (void);*/
 //
 // menu router
 //
+
 void MR_Init_Commands (void);
 void MR_Init (void);
 void MR_Restart (void);
