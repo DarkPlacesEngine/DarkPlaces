@@ -933,8 +933,15 @@ qboolean GL_Backend_CompileShader(int programobject, GLenum shadertypeenum, cons
 	qglCompileShaderARB(shaderobject);CHECKGLERROR
 	qglGetObjectParameterivARB(shaderobject, GL_OBJECT_COMPILE_STATUS_ARB, &shadercompiled);CHECKGLERROR
 	qglGetInfoLogARB(shaderobject, sizeof(compilelog), NULL, compilelog);CHECKGLERROR
-	if (compilelog[0])
-		Con_DPrintf("%s shader compile log:\n%s\n", shadertype, compilelog);
+	if (compilelog[0] && developer.integer > 0)
+	{
+		int i, j, pretextlines = 0;
+		for (i = 0;i < numstrings - 1;i++)
+			for (j = 0;strings[i][j];j++)
+				if (strings[i][j] == '\n')
+					pretextlines++;
+		Con_DPrintf("%s shader compile log:\n%s\n(line offset for any above warnings/errors: %i)\n", shadertype, compilelog, pretextlines);
+	}
 	if (!shadercompiled)
 	{
 		qglDeleteObjectARB(shaderobject);CHECKGLERROR
