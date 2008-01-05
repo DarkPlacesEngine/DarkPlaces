@@ -1745,31 +1745,45 @@ static void SV_SendClientDatagram (client_t *client)
 
 	if (LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) == LHNETADDRESSTYPE_LOOP && !sv_ratelimitlocalplayer.integer)
 	{
-		// for good singleplayer, send huge packets and never limit frequency
-		clientrate = 1000000000;
+		// for good singleplayer, send huge packets
 		maxsize = sizeof(sv_sendclientdatagram_buf);
 		maxsize2 = sizeof(sv_sendclientdatagram_buf);
+		// never limit frequency in singleplayer
+		clientrate = 1000000000;
 	}
-	else if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE || sv.protocol == PROTOCOL_NEHAHRABJP || sv.protocol == PROTOCOL_NEHAHRABJP2 || sv.protocol == PROTOCOL_NEHAHRABJP3 || sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4)
+	else if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE || sv.protocol == PROTOCOL_NEHAHRABJP || sv.protocol == PROTOCOL_NEHAHRABJP2 || sv.protocol == PROTOCOL_NEHAHRABJP3 || sv.protocol == PROTOCOL_QUAKEWORLD)
 	{
-		// no packet size limit support on older protocols because DP1-4 kick
-		// the client off if they overflow, and quake protocol shows less than
-		// the full entity set if rate limited
-		clientrate = max(NET_MINRATE, client->rate);
+		// no packet size limit support on Quake protocols because it just
+		// causes missing entities/effects
+		// packets are simply sent less often to obey the rate limit
 		maxsize = 1024;
 		maxsize2 = 1024;
+	}
+	else if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4)
+	{
+		// no packet size limit support on DP1-4 protocols because they kick
+		// the client off if they overflow, and miss effects
+		// packets are simply sent less often to obey the rate limit
+		maxsize = sizeof(sv_sendclientdatagram_buf);
+		maxsize2 = sizeof(sv_sendclientdatagram_buf);
 	}
 	else
 	{
 		// DP5 and later protocols support packet size limiting which is a
 		// better method than limiting packet frequency as QW does
 		//
-		// this rate limiting does not understand sys_ticrate 0
-		// (but no one should be running that on a server!)
+		// at very low rates (or very small sys_ticrate) the packet size is
+		// not reduced below 128, but packets may be sent less often
 		maxsize = (int)(clientrate * sys_ticrate.value);
-		maxsize = bound(100, maxsize, 1400);
+		maxsize = bound(128, maxsize, 1400);
 		maxsize2 = 1400;
 	}
+
+	// obey rate limit by limiting packet frequency if the packet size
+	// limiting fails
+	// (usually this is caused by reliable messages)
+	if (!NetConn_CanSend(client->netconnection))
+		return;
 
 	// while downloading, limit entity updates to half the packet
 	// (any leftover space will be used for downloading)
@@ -1780,17 +1794,9 @@ static void SV_SendClientDatagram (client_t *client)
 	msg.maxsize = maxsize;
 	msg.cursize = 0;
 
-	// obey rate limit by limiting packet frequency if the packet size
-	// limiting fails
-	// (usually this is caused by reliable messages)
-	if (!NetConn_CanSend(client->netconnection))
+	if (host_client->spawned)
 	{
-		// send the datagram
-		//NetConn_SendUnreliableMessage (client->netconnection, &msg, sv.protocol, clientrate, true);
-		return;
-	}
-	else if (host_client->spawned)
-	{
+		// the player is in the game
 		MSG_WriteByte (&msg, svc_time);
 		MSG_WriteFloat (&msg, sv.time);
 
@@ -1816,6 +1822,7 @@ static void SV_SendClientDatagram (client_t *client)
 	{
 		// the player isn't totally in the game yet
 		// send small keepalive messages if too much time has passed
+		// (may also be sending downloads)
 		msg.maxsize = maxsize2;
 		client->keepalivetime = realtime + 5;
 		MSG_WriteChar (&msg, svc_nop);
