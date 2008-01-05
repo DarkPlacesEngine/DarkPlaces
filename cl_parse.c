@@ -3334,14 +3334,20 @@ void CL_ParseServerMessage(void)
 				EntityFrameQW_CL_ReadFrame(false);
 				// first update is the final signon stage
 				if (cls.signon == SIGNONS - 1)
+				{
 					cls.signon = SIGNONS;
+					CL_SignonReply ();
+				}
 				break;
 
 			case qw_svc_deltapacketentities:
 				EntityFrameQW_CL_ReadFrame(true);
 				// first update is the final signon stage
 				if (cls.signon == SIGNONS - 1)
+				{
 					cls.signon = SIGNONS;
+					CL_SignonReply ();
+				}
 				break;
 
 			case qw_svc_maxspeed:
