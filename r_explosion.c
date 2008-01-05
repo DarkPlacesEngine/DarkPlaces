@@ -26,6 +26,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define EXPLOSIONVERTS ((EXPLOSIONGRID+1)*(EXPLOSIONGRID+1))
 #define EXPLOSIONTRIS (EXPLOSIONGRID*EXPLOSIONGRID*2)
 
+static int numexplosions = 0;
+
 static float explosiontexcoord2f[EXPLOSIONVERTS][2];
 static int explosiontris[EXPLOSIONTRIS][3];
 static int explosionnoiseindex[EXPLOSIONVERTS];
@@ -94,6 +96,7 @@ static void r_explosion_shutdown(void)
 
 static void r_explosion_newmap(void)
 {
+	numexplosions = 0;
 	memset(explosion, 0, sizeof(explosion));
 }
 
@@ -153,6 +156,7 @@ void R_NewExplosion(const vec3_t org)
 	{
 		if (!e->alpha)
 		{
+			numexplosions = max(numexplosions, i + 1);
 			e->starttime = cl.time;
 			e->endtime = cl.time + cl_explosions_lifetime.value;
 			e->time = e->starttime;
@@ -250,9 +254,11 @@ static void R_MoveExplosion(explosion_t *e)
 void R_MoveExplosions(void)
 {
 	int i;
-	for (i = 0;i < MAX_EXPLOSIONS;i++)
+	for (i = 0;i < numexplosions;i++)
 		if (explosion[i].alpha)
 			R_MoveExplosion(&explosion[i]);
+	while (numexplosions > 0 && explosion[i-1].alpha <= 0)
+		numexplosions--;
 }
 
 void R_DrawExplosions(void)
@@ -261,7 +267,7 @@ void R_DrawExplosions(void)
 
 	if (!r_drawexplosions.integer)
 		return;
-	for (i = 0;i < MAX_EXPLOSIONS;i++)
+	for (i = 0;i < numexplosions;i++)
 		if (explosion[i].alpha)
 			R_MeshQueue_AddTransparent(explosion[i].origin, R_DrawExplosion_TransparentCallback, NULL, i, NULL);
 }
