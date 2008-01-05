@@ -85,6 +85,12 @@ void Palette_SetupSpecialPalettes(void)
 	int transparentcolor;
 	unsigned char *colormap;
 	fs_offset_t filesize;
+	union
+	{
+		int i;
+		unsigned char b[4];
+	}
+	u;
 
 	colormap = FS_LoadFile("gfx/colormap.lmp", tempmempool, true, &filesize);
 	if (colormap && filesize >= 16385)
@@ -154,7 +160,9 @@ void Palette_SetupSpecialPalettes(void)
 
 	for (i = 0;i < 256;i++)
 		palette_bgra_alpha[i] = 0xFFFFFFFF;
-	palette_bgra_alpha[transparentcolor] = 0;
+	u.i = 0xFFFFFFFF;
+	u.b[3] = 0;
+	palette_bgra_alpha[transparentcolor] = u.i;
 
 	for (i = 0;i < 256;i++)
 		palette_bgra_font[i] = palette_bgra_complete[i];
