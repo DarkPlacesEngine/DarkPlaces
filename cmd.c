@@ -29,7 +29,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // maximum number of parameters to a command
 #define	MAX_ARGS 80
 // maximum tokenizable commandline length (counting NUL terminations)
-#define CMD_TOKENIZELENGTH (MAX_INPUTLINE + 80)
+#define CMD_TOKENIZELENGTH (MAX_INPUTLINE + MAX_ARGS)
 
 typedef struct cmdalias_s
 {
