@@ -311,6 +311,9 @@ void CL_Disconnect(void)
 	if (cls.state == ca_dedicated)
 		return;
 
+	if (COM_CheckParm("-profilegameonly"))
+		Sys_AllowProfiling(false);
+
 	Curl_Clear_forthismap();
 
 	Con_DPrintf("CL_Disconnect\n");
@@ -665,35 +668,19 @@ void CL_AllocLightFlash(entity_render_t *ent, matrix4x4_t *matrix, float radius,
 	int i;
 	dlight_t *dl;
 
-	/*
-// first look for an exact key match
-	if (ent)
-	{
-		dl = cl.dlights;
-		for (i = 0;i < cl.num_dlights;i++, dl++)
-			if (dl->ent == ent)
-				goto dlightsetup;
-	}
-	*/
-
 // then look for anything else
 	dl = cl.dlights;
-	for (i = 0;i < cl.num_dlights;i++, dl++)
+	for (i = 0;i < cl.max_dlights;i++, dl++)
 		if (!dl->radius)
-			goto dlightsetup;
-	// if we hit the end of the active dlights and found no gaps, add a new one
-	if (i < MAX_DLIGHTS)
-	{
-		cl.num_dlights = i + 1;
-		goto dlightsetup;
-	}
+			break;
 
 	// unable to find one
-	return;
+	if (i == cl.max_dlights)
+		return;
 
-dlightsetup:
 	//Con_Printf("dlight %i : %f %f %f : %f %f %f\n", i, org[0], org[1], org[2], red * radius, green * radius, blue * radius);
 	memset (dl, 0, sizeof(*dl));
+	cl.num_dlights = max(cl.num_dlights, i + 1);
 	Matrix4x4_Normalize(&dl->matrix, matrix);
 	dl->ent = ent;
 	Matrix4x4_OriginFromMatrix(&dl->matrix, dl->origin);
