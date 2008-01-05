@@ -192,6 +192,7 @@ void CL_Gecko_DestroyBrowser( clgecko_t *instance ) {
 
 void CL_Gecko_Frame( void ) {
 	int i;
+	// FIXME: track cl_numgeckoinstances to avoid scanning the entire array?
 	for( i = 0 ; i < MAX_GECKO_INSTANCES ; i++ ) {
 		clgecko_t *instance = &cl_geckoinstances[ i ];
 		if( instance->active ) {
