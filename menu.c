@@ -5079,7 +5079,9 @@ void MP_Draw (void)
 	// reset the temp entities each frame
 	r_refdef.numtempentities = 0;
 
+	// TODO: fix these evil hacks! [1/6/2008 Black]
 	R_UpdateVariables();
+	R_ResetViewRendering2D();
 
 	PRVM_Begin;
 	PRVM_SetProg(PRVM_MENUPROG);

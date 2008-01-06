@@ -2367,10 +2367,15 @@ static void VM_CL_AddPolygonTo2DScene (vm_polygon_t *p)
 		DrawQ_Mesh (&mesh, (p->flags&0x0f));
 }
 
+// TODO: move this into the client code and clean-up everything else, too! [1/6/2008 Black]
 void VM_CL_AddPolygonsToMeshQueue (void)
 {
 	int i;
 	vmpolygons_t* polys = vmpolygons + PRVM_GetProgNr();
+
+	// only add polygons of the currently active prog to the queue - if there is none, we're done
+	if( !prog )
+		return;
 
 	if(!polys->drawpolygons_num)
 		return;
