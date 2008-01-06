@@ -29,6 +29,7 @@ dp_font_t dp_fonts[MAX_FONTS] = {{0}};
 
 cvar_t r_textshadow = {CVAR_SAVE, "r_textshadow", "0", "draws a shadow on all text to improve readability (note: value controls offset, 1 = 1 pixel, 1.5 = 1.5 pixels, etc)"};
 cvar_t r_textbrightness = {CVAR_SAVE, "r_textbrightness", "0", "additional brightness for text color codes (0 keeps colors as is, 1 makes them all white)"};
+cvar_t r_textcontrast = {CVAR_SAVE, "r_textcontrast", "1", "additional contrast for text color codes (1 keeps colors as is, 1 makes them all black)"};
 
 //=============================================================================
 /* Support Routines */
@@ -714,6 +715,7 @@ void GL_Draw_Init (void)
 	int i, j;
 	Cvar_RegisterVariable(&r_textshadow);
 	Cvar_RegisterVariable(&r_textbrightness);
+	Cvar_RegisterVariable(&r_textcontrast);
 	Cmd_AddCommand ("loadfont",LoadFont_f, "loadfont function tganame loads a font; example: loadfont console gfx/veramono; loadfont without arguments lists the available functions");
 	R_RegisterModule("GL_Draw", gl_draw_start, gl_draw_shutdown, gl_draw_newmap);
 
@@ -731,7 +733,7 @@ void GL_Draw_Init (void)
 			dpsnprintf(FONT_USER[i].title, sizeof(FONT_USER[i].title), "user%d", j++);
 }
 
-static void _DrawQ_Setup(void)
+void _DrawQ_Setup(void)
 {
 	if (r_refdef.draw2dstage)
 		return;
@@ -872,9 +874,10 @@ static const vec4_t string_colors[] =
 
 static void DrawQ_GetTextColor(float color[4], int colorindex, float r, float g, float b, float a, qboolean shadow)
 {
-	float v = r_textbrightness.value;
+	float C = r_textcontrast.value;
+	float B = r_textbrightness.value;
 	Vector4Copy(string_colors[colorindex], color);
-	Vector4Set(color, (color[0] * (1-v) + v) * r, (color[1] * (1-v) + v) * g, (color[2] * (1-v) + v) * b, color[3] * a);
+	Vector4Set(color, (color[0] * C + B) * r, (color[1] * C + B) * g, (color[2] * C + B) * b, color[3] * a);
 	if (shadow)
 	{
 		float shadowalpha = color[0]+color[1]+color[2] * 0.8;
