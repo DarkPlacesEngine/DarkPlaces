@@ -1452,7 +1452,7 @@ void VM_M_Cmd_Init(void)
 	menu_refdef.view.colormask[2] = true;
 	menu_refdef.view.colormask[3] = true;
 	
-	menu_refdef.view.useperspective = true;
+	menu_refdef.view.useperspective = false;
 	menu_refdef.view.frustum_y = tan(scr_fov.value * M_PI / 360.0) * (3.0/4.0);
 	menu_refdef.view.frustum_x = menu_refdef.view.frustum_y * (float)menu_refdef.view.width / (float)menu_refdef.view.height / vid_pixelheight.value;
 }
