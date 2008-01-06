@@ -1972,32 +1972,16 @@ qboolean RCon_Authenticate(const char *password, const char *s, const char *endp
 	if(strcmp(rcon_restricted_password.string, password))
 		return false;
 
+	for(text = s; text != endpos; ++text)
+		if(*text > 0 && *text < ' ' || *text == ';')
+			return false; // block possible exploits against the parser/alias expansion
+
 	while(s != endpos)
 	{
 		size_t l = strlen(s);
 		if(l)
 		{
 			text = s;
-
-			// THIS MUST MATCH Cmd_TokenizeString FOR SECURITY REASONS
-			while (*text && *text <= ' ' && *text != '\r' && *text != '\n')
-				text++;
-
-			// line endings:
-			// UNIX: \n
-			// Mac: \r
-			// Windows: \r\n
-			if (*text == '\n' || *text == '\r')
-			{
-				// a newline separates commands in the buffer
-				if (*text == '\r' && text[1] == '\n')
-					text++;
-				text++;
-				return false;
-			}
-
-			if (!*text)
-				return false;
 
 			if (!COM_ParseToken_Console(&text))
 				return false;
