@@ -76,6 +76,8 @@ static cvar_t net_slist_timeout = {0, "net_slist_timeout", "4", "how long to lis
 static cvar_t net_slist_maxtries = {0, "net_slist_maxtries", "3", "how many times to ask the same server for information (more times gives better ping reports but takes longer)"};
 
 static cvar_t gameversion = {0, "gameversion", "0", "version of game data (mod-specific), when client and server gameversion mismatch in the server browser the server is shown as incompatible"};
+static cvar_t rcon_restricted_password = {CVAR_PRIVATE, "rcon_restricted_password", "", "password to authenticate rcon commands in restricted mode"};
+static cvar_t rcon_restricted_commands = {0, "rcon_restricted_commands", "", "allowed commands for rcon when the restricted mode password was used"};
 
 /* statistic counters */
 static int packetsSent = 0;
@@ -1960,6 +1962,56 @@ void NetConn_ClearConnectFlood(lhnetaddress_t *peeraddress)
 	}
 }
 
+qboolean RCon_Authenticate(const char *password, const char *s, const char *endpos)
+{
+	const char *text;
+
+	if(!strcmp(rcon_password.string, password))
+		return true;
+	
+	if(strcmp(rcon_restricted_password.string, password))
+		return false;
+
+	while(s != endpos)
+	{
+		size_t l = strlen(s);
+		if(l)
+		{
+			text = s;
+
+			// THIS MUST MATCH Cmd_TokenizeString FOR SECURITY REASONS
+			while (*text && *text <= ' ' && *text != '\r' && *text != '\n')
+				text++;
+
+			// line endings:
+			// UNIX: \n
+			// Mac: \r
+			// Windows: \r\n
+			if (*text == '\n' || *text == '\r')
+			{
+				// a newline separates commands in the buffer
+				if (*text == '\r' && text[1] == '\n')
+					text++;
+				text++;
+				return false;
+			}
+
+			if (!*text)
+				return false;
+
+			if (!COM_ParseToken_Console(&text))
+				return false;
+
+			// com_token now contains the command
+			if(!strstr(va(" %s ", rcon_restricted_commands.string), va(" %s ", com_token)))
+				return false;
+		}
+		s += l + 1;
+	}
+
+	return true;
+}
+
 extern void SV_SendServerinfo (client_t *client);
 static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *data, int length, lhnetaddress_t *peeraddress)
 {
@@ -2150,48 +2202,55 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			if(*s <= ' ' && s != endpos) // skip leading ugly space
 				++s;
 			password[i] = 0;
-			if (password[0] > ' ' && !strcmp(rcon_password.string, password))
+			if (password[0] > ' ')
 			{
-				// looks like a legitimate rcon command with the correct password
-				char *s_ptr = s;
-				Con_Printf("server received rcon command from %s:\n", host_client ? host_client->name : addressstring2);
-				while(s_ptr != endpos)
+				if (RCon_Authenticate(password, s, endpos))
 				{
-					size_t l = strlen(s_ptr);
-					if(l)
-						Con_Printf(" %s;", s_ptr);
-					s_ptr += l + 1;
-				}
-				Con_Printf("\n");
-				rcon_redirect = true;
-				rcon_redirect_bufferpos = 0;
-				while(s != endpos)
-				{
-					size_t l = strlen(s);
-					if(l)
-						Cmd_ExecuteString(s, src_command);
-					s += l + 1;
-				}
-				rcon_redirect_buffer[rcon_redirect_bufferpos] = 0;
-				rcon_redirect = false;
-				// print resulting text to client
-				// if client is playing, send a reliable reply instead of
-				// a command packet
-				if (host_client)
-				{
-					// if the netconnection is loop, then this is the
-					// local player on a listen mode server, and it would
-					// result in duplicate printing to the console
-					// (not that the local player should be using rcon
-					//  when they have the console)
-					if (host_client->netconnection && LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) != LHNETADDRESSTYPE_LOOP)
-						SV_ClientPrintf("%s", rcon_redirect_buffer);
+					// looks like a legitimate rcon command with the correct password
+					char *s_ptr = s;
+					Con_Printf("server received rcon command from %s:\n", host_client ? host_client->name : addressstring2);
+					while(s_ptr != endpos)
+					{
+						size_t l = strlen(s_ptr);
+						if(l)
+							Con_Printf(" %s;", s_ptr);
+						s_ptr += l + 1;
+					}
+					Con_Printf("\n");
+					rcon_redirect = true;
+					rcon_redirect_bufferpos = 0;
+					while(s != endpos)
+					{
+						size_t l = strlen(s);
+						if(l)
+							Cmd_ExecuteString(s, src_command);
+						s += l + 1;
+					}
+					rcon_redirect_buffer[rcon_redirect_bufferpos] = 0;
+					rcon_redirect = false;
+					// print resulting text to client
+					// if client is playing, send a reliable reply instead of
+					// a command packet
+					if (host_client)
+					{
+						// if the netconnection is loop, then this is the
+						// local player on a listen mode server, and it would
+						// result in duplicate printing to the console
+						// (not that the local player should be using rcon
+						//  when they have the console)
+						if (host_client->netconnection && LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) != LHNETADDRESSTYPE_LOOP)
+							SV_ClientPrintf("%s", rcon_redirect_buffer);
+					}
+					else
+					{
+						// qw print command
+						dpsnprintf(response, sizeof(response), "\377\377\377\377n%s", rcon_redirect_buffer);
+						NetConn_WriteString(mysocket, response, peeraddress);
+					}
 				}
 				else
 				{
-					// qw print command
-					dpsnprintf(response, sizeof(response), "\377\377\377\377n%s", rcon_redirect_buffer);
-					NetConn_WriteString(mysocket, response, peeraddress);
+					Con_Printf("server denied rcon access to %s\n", host_client ? host_client->name : addressstring2);
 				}
 			}
 			return true;
@@ -2669,6 +2728,8 @@ void NetConn_Init(void)
 	Cmd_AddCommand("net_slistqw", Net_SlistQW_f, "query qw master servers and print all server information");
 	Cmd_AddCommand("net_refresh", Net_Refresh_f, "query dp master servers and refresh all server information");
 	Cmd_AddCommand("heartbeat", Net_Heartbeat_f, "send a heartbeat to the master server (updates your server information)");
+	Cvar_RegisterVariable(&rcon_restricted_password);
+	Cvar_RegisterVariable(&rcon_restricted_commands);
 	Cvar_RegisterVariable(&net_slist_queriespersecond);
 	Cvar_RegisterVariable(&net_slist_queriesperframe);
 	Cvar_RegisterVariable(&net_slist_timeout);
