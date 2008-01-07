@@ -60,7 +60,7 @@ void R_SkyStartFrame(void)
 	{
 		if (skyboxside[0] || skyboxside[1] || skyboxside[2] || skyboxside[3] || skyboxside[4] || skyboxside[5])
 			skyrenderbox = true;
-		else if (r_refdef.worldmodel && r_refdef.worldmodel->brush.solidskytexture)
+		else if (r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.solidskytexture)
 			skyrendersphere = true;
 		// for depth-masked sky, render the sky on the first sky surface encountered
 		skyrendernow = true;
@@ -373,11 +373,11 @@ static void R_SkySphere(void)
 	// wrap the scroll values just to be extra kind to float accuracy
 
 	// scroll speed for upper layer
-	speedscale = r_refdef.time*r_skyscroll1.value*8.0/128.0;
+	speedscale = r_refdef.scene.time*r_skyscroll1.value*8.0/128.0;
 	speedscale -= (int)speedscale;
 	Matrix4x4_CreateTranslate(&scroll1matrix, speedscale, speedscale, 0);
 	// scroll speed for lower layer (transparent layer)
-	speedscale = r_refdef.time*r_skyscroll2.value*8.0/128.0;
+	speedscale = r_refdef.scene.time*r_skyscroll2.value*8.0/128.0;
 	speedscale -= (int)speedscale;
 	Matrix4x4_CreateTranslate(&scroll2matrix, speedscale, speedscale, 0);
 
@@ -392,13 +392,13 @@ static void R_SkySphere(void)
 	R_Mesh_VertexPointer(skysphere_vertex3f, 0, 0);
 	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
-	R_Mesh_TexBind(0, R_GetTexture(r_refdef.worldmodel->brush.solidskytexture));
+	R_Mesh_TexBind(0, R_GetTexture(r_refdef.scene.worldmodel->brush.solidskytexture));
 	R_Mesh_TexCoordPointer(0, 2, skysphere_texcoord2f, 0, 0);
 	R_Mesh_TexMatrix(0, &scroll1matrix);
 	if (r_textureunits.integer >= 2 && r_refdef.view.colorscale == 1)
 	{
 		// one pass using GL_DECAL or GL_INTERPOLATE_ARB for alpha layer
-		R_Mesh_TexBind(1, R_GetTexture(r_refdef.worldmodel->brush.alphaskytexture));
+		R_Mesh_TexBind(1, R_GetTexture(r_refdef.scene.worldmodel->brush.alphaskytexture));
 		R_Mesh_TexCombine(1, gl_combine.integer ? GL_INTERPOLATE_ARB : GL_DECAL, GL_MODULATE, 1, 1);
 		R_Mesh_TexCoordPointer(1, 2, skysphere_texcoord2f, 0, 0);
 		R_Mesh_TexMatrix(1, &scroll2matrix);
@@ -414,7 +414,7 @@ static void R_SkySphere(void)
 		R_Mesh_Draw(0, skysphere_numverts, skysphere_numtriangles, skysphere_element3i, 0, 0);
 
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		R_Mesh_TexBind(0, R_GetTexture(r_refdef.worldmodel->brush.alphaskytexture));
+		R_Mesh_TexBind(0, R_GetTexture(r_refdef.scene.worldmodel->brush.alphaskytexture));
 		R_Mesh_TexMatrix(0, &scroll2matrix);
 		GL_LockArrays(0, skysphere_numverts);
 		R_Mesh_Draw(0, skysphere_numverts, skysphere_numtriangles, skysphere_element3i, 0, 0);

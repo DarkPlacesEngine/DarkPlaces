@@ -300,7 +300,7 @@ void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, const r
 		VectorNormalize(up);
 
 		// calculate T coordinate scrolling (start and end texcoord along the beam)
-		t1 = r_refdef.time * -r_lightningbeam_scroll.value;// + beamrepeatscale * DotProduct(start, beamdir);
+		t1 = r_refdef.scene.time * -r_lightningbeam_scroll.value;// + beamrepeatscale * DotProduct(start, beamdir);
 		t1 = t1 - (int) t1;
 		t2 = t1 + beamrepeatscale * length;
 

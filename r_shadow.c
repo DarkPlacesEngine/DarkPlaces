@@ -386,7 +386,7 @@ void r_shadow_shutdown(void)
 
 void r_shadow_newmap(void)
 {
-	if (r_refdef.worldmodel && strncmp(r_refdef.worldmodel->name, r_shadow_mapname, sizeof(r_shadow_mapname)))
+	if (r_refdef.scene.worldmodel && strncmp(r_refdef.scene.worldmodel->name, r_shadow_mapname, sizeof(r_shadow_mapname)))
 		R_Shadow_EditLights_Reload_f();
 }
 
@@ -2450,8 +2450,8 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 	int i;
 	int numsurfaces, numleafs, numleafpvsbytes, numshadowtrispvsbytes, numlighttrispvsbytes;
 	int lighttris, shadowtris, shadowmeshes, shadowmeshtris;
-	entity_render_t *ent = r_refdef.worldentity;
-	model_t *model = r_refdef.worldmodel;
+	entity_render_t *ent = r_refdef.scene.worldentity;
+	model_t *model = r_refdef.scene.worldmodel;
 	unsigned char *data;
 
 	// compile the light
@@ -2768,23 +2768,23 @@ void R_Shadow_DrawWorldShadow(int numsurfaces, int *surfacelist, const unsigned 
 		}
 		CHECKGLERROR
 	}
-	else if (numsurfaces && r_refdef.worldmodel->brush.shadowmesh && r_shadow_culltriangles.integer)
+	else if (numsurfaces && r_refdef.scene.worldmodel->brush.shadowmesh && r_shadow_culltriangles.integer)
 	{
 		int t, tend;
 		int surfacelistindex;
 		msurface_t *surface;
-		R_Shadow_PrepareShadowMark(r_refdef.worldmodel->brush.shadowmesh->numtriangles);
+		R_Shadow_PrepareShadowMark(r_refdef.scene.worldmodel->brush.shadowmesh->numtriangles);
 		for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 		{
-			surface = r_refdef.worldmodel->data_surfaces + surfacelist[surfacelistindex];
+			surface = r_refdef.scene.worldmodel->data_surfaces + surfacelist[surfacelistindex];
 			for (t = surface->num_firstshadowmeshtriangle, tend = t + surface->num_triangles;t < tend;t++)
 				if (CHECKPVSBIT(trispvs, t))
 					shadowmarklist[numshadowmark++] = t;
 		}
-		R_Shadow_VolumeFromList(r_refdef.worldmodel->brush.shadowmesh->numverts, r_refdef.worldmodel->brush.shadowmesh->numtriangles, r_refdef.worldmodel->brush.shadowmesh->vertex3f, r_refdef.worldmodel->brush.shadowmesh->element3i, r_refdef.worldmodel->brush.shadowmesh->neighbor3i, rsurface.rtlight->shadoworigin, NULL, rsurface.rtlight->radius + r_refdef.worldmodel->radius*2 + r_shadow_projectdistance.value, numshadowmark, shadowmarklist);
+		R_Shadow_VolumeFromList(r_refdef.scene.worldmodel->brush.shadowmesh->numverts, r_refdef.scene.worldmodel->brush.shadowmesh->numtriangles, r_refdef.scene.worldmodel->brush.shadowmesh->vertex3f, r_refdef.scene.worldmodel->brush.shadowmesh->element3i, r_refdef.scene.worldmodel->brush.shadowmesh->neighbor3i, rsurface.rtlight->shadoworigin, NULL, rsurface.rtlight->radius + r_refdef.scene.worldmodel->radius*2 + r_shadow_projectdistance.value, numshadowmark, shadowmarklist);
 	}
 	else if (numsurfaces)
-		r_refdef.worldmodel->DrawShadowVolume(r_refdef.worldentity, rsurface.rtlight->shadoworigin, NULL, rsurface.rtlight->radius, numsurfaces, surfacelist, rsurface.rtlight_cullmins, rsurface.rtlight_cullmaxs);
+		r_refdef.scene.worldmodel->DrawShadowVolume(r_refdef.scene.worldentity, rsurface.rtlight->shadoworigin, NULL, rsurface.rtlight->radius, numsurfaces, surfacelist, rsurface.rtlight_cullmins, rsurface.rtlight_cullmaxs);
 }
 
 void R_Shadow_DrawEntityShadow(entity_render_t *ent)
@@ -2817,7 +2817,7 @@ void R_Shadow_SetupEntityLight(const entity_render_t *ent)
 
 void R_Shadow_DrawWorldLight(int numsurfaces, int *surfacelist, const unsigned char *trispvs)
 {
-	if (!r_refdef.worldmodel->DrawLight)
+	if (!r_refdef.scene.worldmodel->DrawLight)
 		return;
 
 	// set up properties for rendering light onto this entity
@@ -2829,7 +2829,7 @@ void R_Shadow_DrawWorldLight(int numsurfaces, int *surfacelist, const unsigned c
 	if (r_shadow_lightingrendermode == R_SHADOW_RENDERMODE_LIGHT_GLSL)
 		R_Mesh_TexMatrix(3, &rsurface.entitytolight);
 
-	r_refdef.worldmodel->DrawLight(r_refdef.worldentity, numsurfaces, surfacelist, trispvs);
+	r_refdef.scene.worldmodel->DrawLight(r_refdef.scene.worldentity, numsurfaces, surfacelist, trispvs);
 }
 
 void R_Shadow_DrawEntityLight(entity_render_t *ent)
@@ -2874,7 +2874,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	rtlight->currentcubemap = rtlight->cubemapname[0] ? R_Shadow_Cubemap(rtlight->cubemapname) : r_texture_whitecube;
 
 	// look up the light style value at this time
-	f = (rtlight->style >= 0 ? r_refdef.rtlightstylevalue[rtlight->style] : 1) * r_shadow_lightintensityscale.value;
+	f = (rtlight->style >= 0 ? r_refdef.scene.rtlightstylevalue[rtlight->style] : 1) * r_shadow_lightintensityscale.value;
 	VectorScale(rtlight->color, f, rtlight->currentcolor);
 	/*
 	if (rtlight->selected)
@@ -2907,12 +2907,12 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 		shadowtrispvs = rtlight->static_shadowtrispvs;
 		lighttrispvs = rtlight->static_lighttrispvs;
 	}
-	else if (r_refdef.worldmodel && r_refdef.worldmodel->GetLightInfo)
+	else if (r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->GetLightInfo)
 	{
 		// dynamic light, world available and can receive realtime lighting
 		// calculate lit surfaces and leafs
-		R_Shadow_EnlargeLeafSurfaceTrisBuffer(r_refdef.worldmodel->brush.num_leafs, r_refdef.worldmodel->num_surfaces, r_refdef.worldmodel->brush.shadowmesh ? r_refdef.worldmodel->brush.shadowmesh->numtriangles : r_refdef.worldmodel->surfmesh.num_triangles, r_refdef.worldmodel->surfmesh.num_triangles);
-		r_refdef.worldmodel->GetLightInfo(r_refdef.worldentity, rtlight->shadoworigin, rtlight->radius, rsurface.rtlight_cullmins, rsurface.rtlight_cullmaxs, r_shadow_buffer_leaflist, r_shadow_buffer_leafpvs, &numleafs, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces, r_shadow_buffer_shadowtrispvs, r_shadow_buffer_lighttrispvs);
+		R_Shadow_EnlargeLeafSurfaceTrisBuffer(r_refdef.scene.worldmodel->brush.num_leafs, r_refdef.scene.worldmodel->num_surfaces, r_refdef.scene.worldmodel->brush.shadowmesh ? r_refdef.scene.worldmodel->brush.shadowmesh->numtriangles : r_refdef.scene.worldmodel->surfmesh.num_triangles, r_refdef.scene.worldmodel->surfmesh.num_triangles);
+		r_refdef.scene.worldmodel->GetLightInfo(r_refdef.scene.worldentity, rtlight->shadoworigin, rtlight->radius, rsurface.rtlight_cullmins, rsurface.rtlight_cullmaxs, r_shadow_buffer_leaflist, r_shadow_buffer_leafpvs, &numleafs, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces, r_shadow_buffer_shadowtrispvs, r_shadow_buffer_lighttrispvs);
 		leaflist = r_shadow_buffer_leaflist;
 		leafpvs = r_shadow_buffer_leafpvs;
 		surfacelist = r_shadow_buffer_surfacelist;
@@ -2956,10 +2956,10 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	// add dynamic entities that are lit by the light
 	if (r_drawentities.integer)
 	{
-		for (i = 0;i < r_refdef.numentities;i++)
+		for (i = 0;i < r_refdef.scene.numentities;i++)
 		{
 			model_t *model;
-			entity_render_t *ent = r_refdef.entities[i];
+			entity_render_t *ent = r_refdef.scene.entities[i];
 			vec3_t org;
 			if (!BoxesOverlap(ent->mins, ent->maxs, rsurface.rtlight_cullmins, rsurface.rtlight_cullmaxs))
 				continue;
@@ -2975,7 +2975,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 				// inside the light box
 				// TODO: check if the surfaces in the model can receive light
 				// so now check if it's in a leaf seen by the light
-				if (r_refdef.worldmodel && r_refdef.worldmodel->brush.BoxTouchingLeafPVS && !r_refdef.worldmodel->brush.BoxTouchingLeafPVS(r_refdef.worldmodel, leafpvs, ent->mins, ent->maxs))
+				if (r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.BoxTouchingLeafPVS && !r_refdef.scene.worldmodel->brush.BoxTouchingLeafPVS(r_refdef.scene.worldmodel, leafpvs, ent->mins, ent->maxs))
 					continue;
 				if (ent->flags & RENDER_NOSELFSHADOW)
 					lightentities_noselfshadow[numlightentities_noselfshadow++] = ent;
@@ -3004,7 +3004,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 				// cast a shadow...
 				// TODO: check if the surfaces in the model can cast shadow
 				// now check if it is in a leaf seen by the light
-				if (r_refdef.worldmodel && r_refdef.worldmodel->brush.BoxTouchingLeafPVS && !r_refdef.worldmodel->brush.BoxTouchingLeafPVS(r_refdef.worldmodel, leafpvs, ent->mins, ent->maxs))
+				if (r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.BoxTouchingLeafPVS && !r_refdef.scene.worldmodel->brush.BoxTouchingLeafPVS(r_refdef.scene.worldmodel, leafpvs, ent->mins, ent->maxs))
 					continue;
 				// about the VectorDistance2 - light emitting entities should not cast their own shadow
 				Matrix4x4_OriginFromMatrix(&ent->matrix, org);
@@ -3024,7 +3024,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 		return;
 
 	// don't let sound skip if going slow
-	if (r_refdef.extraupdate)
+	if (r_refdef.scene.extraupdate)
 		S_ExtraUpdate ();
 
 	// make this the active rtlight for rendering purposes
@@ -3156,8 +3156,8 @@ void R_ShadowVolumeLighting(qboolean visible)
 		}
 	}
 	if (r_refdef.rtdlight)
-		for (lnum = 0;lnum < r_refdef.numlights;lnum++)
-			R_DrawRTLight(&r_refdef.lights[lnum], visible);
+		for (lnum = 0;lnum < r_refdef.scene.numlights;lnum++)
+			R_DrawRTLight(&r_refdef.scene.lights[lnum], visible);
 
 	R_Shadow_RenderMode_End();
 }
@@ -3191,9 +3191,9 @@ void R_DrawModelShadows(void)
 
 	R_Shadow_RenderMode_StencilShadowVolumes(true);
 
-	for (i = 0;i < r_refdef.numentities;i++)
+	for (i = 0;i < r_refdef.scene.numentities;i++)
 	{
-		ent = r_refdef.entities[i];
+		ent = r_refdef.scene.entities[i];
 		// cast shadows from anything that is not a submodel of the map
 		if (ent->model && ent->model->DrawShadowVolume != NULL && !ent->model->brush.submodel && (ent->flags & RENDER_SHADOW))
 		{
@@ -3282,9 +3282,9 @@ void R_DrawCoronas(void)
 			continue;
 		R_DrawSprite(GL_ONE, GL_ONE, r_shadow_lightcorona, NULL, true, false, rtlight->shadoworigin, r_refdef.view.right, r_refdef.view.up, scale, -scale, -scale, scale, rtlight->color[0] * cscale, rtlight->color[1] * cscale, rtlight->color[2] * cscale, 1);
 	}
-	for (i = 0;i < r_refdef.numlights;i++)
+	for (i = 0;i < r_refdef.scene.numlights;i++)
 	{
-		rtlight = &r_refdef.lights[i];
+		rtlight = &r_refdef.scene.lights[i];
 		if (!(rtlight->flags & flag))
 			continue;
 		if (rtlight->corona <= 0)
@@ -3589,12 +3589,12 @@ void R_Shadow_LoadWorldLights(void)
 	int n, a, style, shadow, flags;
 	char tempchar, *lightsstring, *s, *t, name[MAX_QPATH], cubemapname[MAX_QPATH];
 	float origin[3], radius, color[3], angles[3], corona, coronasizescale, ambientscale, diffusescale, specularscale;
-	if (r_refdef.worldmodel == NULL)
+	if (r_refdef.scene.worldmodel == NULL)
 	{
 		Con_Print("No map loaded.\n");
 		return;
 	}
-	FS_StripExtension (r_refdef.worldmodel->name, name, sizeof (name));
+	FS_StripExtension (r_refdef.scene.worldmodel->name, name, sizeof (name));
 	strlcat (name, ".rtlights", sizeof (name));
 	lightsstring = (char *)FS_LoadFile(name, tempmempool, false, NULL);
 	if (lightsstring)
@@ -3687,12 +3687,12 @@ void R_Shadow_SaveWorldLights(void)
 	char line[MAX_INPUTLINE];
 	if (!Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray))
 		return;
-	if (r_refdef.worldmodel == NULL)
+	if (r_refdef.scene.worldmodel == NULL)
 	{
 		Con_Print("No map loaded.\n");
 		return;
 	}
-	FS_StripExtension (r_refdef.worldmodel->name, name, sizeof (name));
+	FS_StripExtension (r_refdef.scene.worldmodel->name, name, sizeof (name));
 	strlcat (name, ".rtlights", sizeof (name));
 	bufchars = bufmaxchars = 0;
 	buf = NULL;
@@ -3736,12 +3736,12 @@ void R_Shadow_LoadLightsFile(void)
 	int n, a, style;
 	char tempchar, *lightsstring, *s, *t, name[MAX_QPATH];
 	float origin[3], radius, color[3], subtract, spotdir[3], spotcone, falloff, distbias;
-	if (r_refdef.worldmodel == NULL)
+	if (r_refdef.scene.worldmodel == NULL)
 	{
 		Con_Print("No map loaded.\n");
 		return;
 	}
-	FS_StripExtension (r_refdef.worldmodel->name, name, sizeof (name));
+	FS_StripExtension (r_refdef.scene.worldmodel->name, name, sizeof (name));
 	strlcat (name, ".lights", sizeof (name));
 	lightsstring = (char *)FS_LoadFile(name, tempmempool, false, NULL);
 	if (lightsstring)
@@ -3791,18 +3791,18 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 	float origin[3], angles[3], radius, color[3], light[4], fadescale, lightscale, originhack[3], overridecolor[3], vec[4];
 	char key[256], value[MAX_INPUTLINE];
 
-	if (r_refdef.worldmodel == NULL)
+	if (r_refdef.scene.worldmodel == NULL)
 	{
 		Con_Print("No map loaded.\n");
 		return;
 	}
 	// try to load a .ent file first
-	FS_StripExtension (r_refdef.worldmodel->name, key, sizeof (key));
+	FS_StripExtension (r_refdef.scene.worldmodel->name, key, sizeof (key));
 	strlcat (key, ".ent", sizeof (key));
 	data = entfiledata = (char *)FS_LoadFile(key, tempmempool, true, NULL);
 	// and if that is not found, fall back to the bsp file entity string
 	if (!data)
-		data = r_refdef.worldmodel->brush.entities;
+		data = r_refdef.scene.worldmodel->brush.entities;
 	if (!data)
 		return;
 	for (entnum = 0;COM_ParseToken_Simple(&data, false, false) && com_token[0] == '{';entnum++)
@@ -3948,7 +3948,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 				pflags = (int)atof(value);
 			else if (!strcmp("effects", key))
 				effects = (int)atof(value);
-			else if (r_refdef.worldmodel->type == mod_brushq3)
+			else if (r_refdef.scene.worldmodel->type == mod_brushq3)
 			{
 				if (!strcmp("scale", key))
 					lightscale = atof(value);
@@ -4045,9 +4045,9 @@ void R_Shadow_EditLights_Clear_f(void)
 
 void R_Shadow_EditLights_Reload_f(void)
 {
-	if (!r_refdef.worldmodel)
+	if (!r_refdef.scene.worldmodel)
 		return;
-	strlcpy(r_shadow_mapname, r_refdef.worldmodel->name, sizeof(r_shadow_mapname));
+	strlcpy(r_shadow_mapname, r_refdef.scene.worldmodel->name, sizeof(r_shadow_mapname));
 	R_Shadow_ClearWorldLights();
 	R_Shadow_LoadWorldLights();
 	if (!Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray))
@@ -4060,7 +4060,7 @@ void R_Shadow_EditLights_Reload_f(void)
 
 void R_Shadow_EditLights_Save_f(void)
 {
-	if (!r_refdef.worldmodel)
+	if (!r_refdef.scene.worldmodel)
 		return;
 	R_Shadow_SaveWorldLights();
 }
@@ -4659,10 +4659,10 @@ void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffu
 	VectorClear(diffusecolor);
 	VectorClear(diffusenormal);
 
-	if (!r_fullbright.integer && r_refdef.worldmodel && r_refdef.worldmodel->brush.LightPoint)
+	if (!r_fullbright.integer && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.LightPoint)
 	{
 		ambientcolor[0] = ambientcolor[1] = ambientcolor[2] = r_ambient.value * (2.0f / 128.0f);
-		r_refdef.worldmodel->brush.LightPoint(r_refdef.worldmodel, p, ambientcolor, diffusecolor, diffusenormal);
+		r_refdef.scene.worldmodel->brush.LightPoint(r_refdef.scene.worldmodel, p, ambientcolor, diffusecolor, diffusenormal);
 	}
 	else
 		VectorSet(ambientcolor, 1, 1, 1);
@@ -4672,9 +4672,9 @@ void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffu
 		int i;
 		float f, v[3];
 		rtlight_t *light;
-		for (i = 0;i < r_refdef.numlights;i++)
+		for (i = 0;i < r_refdef.scene.numlights;i++)
 		{
-			light = &r_refdef.lights[i];
+			light = &r_refdef.scene.lights[i];
 			Matrix4x4_Transform(&light->matrix_worldtolight, p, v);
 			f = 1 - VectorLength2(v);
 			if (f > 0 && CL_Move(p, vec3_origin, vec3_origin, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction == 1)

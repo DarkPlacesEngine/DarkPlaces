@@ -604,20 +604,20 @@ static float CL_LerpPoint(void)
 
 void CL_ClearTempEntities (void)
 {
-	r_refdef.numtempentities = 0;
+	r_refdef.scene.numtempentities = 0;
 }
 
 entity_render_t *CL_NewTempEntity(void)
 {
 	entity_render_t *render;
 
-	if (r_refdef.numentities >= r_refdef.maxentities)
+	if (r_refdef.scene.numentities >= r_refdef.scene.maxentities)
 		return NULL;
-	if (r_refdef.numtempentities >= r_refdef.maxtempentities)
+	if (r_refdef.scene.numtempentities >= r_refdef.scene.maxtempentities)
 		return NULL;
-	render = &r_refdef.tempentities[r_refdef.numtempentities++];
+	render = &r_refdef.scene.tempentities[r_refdef.scene.numtempentities++];
 	memset (render, 0, sizeof(*render));
-	r_refdef.entities[r_refdef.numentities++] = render;
+	r_refdef.scene.entities[r_refdef.scene.numentities++] = render;
 
 	render->alpha = 1;
 	VectorSet(render->colormod, 1, 1, 1);
@@ -753,13 +753,13 @@ void CL_RelinkLightFlashes(void)
 
 	if (r_dynamic.integer)
 	{
-		for (i = 0, dl = cl.dlights;i < cl.num_dlights && r_refdef.numlights < MAX_DLIGHTS;i++, dl++)
+		for (i = 0, dl = cl.dlights;i < cl.num_dlights && r_refdef.scene.numlights < MAX_DLIGHTS;i++, dl++)
 		{
 			if (dl->radius)
 			{
 				tempmatrix = dl->matrix;
 				Matrix4x4_Scale(&tempmatrix, dl->radius, 1);
-				R_RTLight_Update(&r_refdef.lights[r_refdef.numlights++], false, &tempmatrix, dl->color, dl->style, dl->cubemapname, dl->shadow, dl->corona, dl->coronasizescale, dl->ambientscale, dl->diffusescale, dl->specularscale, dl->flags);
+				R_RTLight_Update(&r_refdef.scene.lights[r_refdef.scene.numlights++], false, &tempmatrix, dl->color, dl->style, dl->cubemapname, dl->shadow, dl->corona, dl->coronasizescale, dl->ambientscale, dl->diffusescale, dl->specularscale, dl->flags);
 			}
 		}
 	}
@@ -773,8 +773,8 @@ void CL_RelinkLightFlashes(void)
 	{
 		if (!cl.lightstyle || !cl.lightstyle[j].length)
 		{
-			r_refdef.rtlightstylevalue[j] = 1;
-			r_refdef.lightstylevalue[j] = 256;
+			r_refdef.scene.rtlightstylevalue[j] = 1;
+			r_refdef.scene.lightstylevalue[j] = 256;
 			continue;
 		}
 		k = i % cl.lightstyle[j].length;
@@ -786,8 +786,8 @@ void CL_RelinkLightFlashes(void)
 		// lightstylevalue is subject to a cvar for performance reasons;
 		// skipping lightmap updates on most rendered frames substantially
 		// improves framerates (but makes light fades look bad)
-		r_refdef.rtlightstylevalue[j] = ((k*frac)+(l*(1-frac)))*(22/256.0f);
-		r_refdef.lightstylevalue[j] = r_lerplightstyles.integer ? (unsigned short)(((k*frac)+(l*(1-frac)))*22) : k*22;
+		r_refdef.scene.rtlightstylevalue[j] = ((k*frac)+(l*(1-frac)))*(22/256.0f);
+		r_refdef.scene.lightstylevalue[j] = r_lerplightstyles.integer ? (unsigned short)(((k*frac)+(l*(1-frac)))*22) : k*22;
 	}
 }
 
@@ -1357,7 +1357,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 			CL_ParticleTrail(EFFECT_EF_STARDUST, 0, origin, origin, vec3_origin, vec3_origin, NULL, 0, true, false);
 	}
 	// muzzleflash fades over time, and is offset a bit
-	if (e->persistent.muzzleflash > 0 && r_refdef.numlights < MAX_DLIGHTS)
+	if (e->persistent.muzzleflash > 0 && r_refdef.scene.numlights < MAX_DLIGHTS)
 	{
 		vec3_t v2;
 		vec3_t color;
@@ -1369,7 +1369,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 		Matrix4x4_SetOrigin(&tempmatrix, trace.endpos[0], trace.endpos[1], trace.endpos[2]);
 		Matrix4x4_Scale(&tempmatrix, 150, 1);
 		VectorSet(color, e->persistent.muzzleflash * 4.0f, e->persistent.muzzleflash * 4.0f, e->persistent.muzzleflash * 4.0f);
-		R_RTLight_Update(&r_refdef.lights[r_refdef.numlights++], false, &tempmatrix, color, -1, NULL, true, 0, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		R_RTLight_Update(&r_refdef.scene.lights[r_refdef.scene.numlights++], false, &tempmatrix, color, -1, NULL, true, 0, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
 	// LordHavoc: if the model has no flags, don't check each
 	if (e->render.model && e->render.effects && !(e->render.flags & RENDER_VIEWMODEL))
@@ -1401,7 +1401,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 		VectorMA(dlightcolor, (1.0f / 255.0f), palette_rgb[e->state_current.glowcolor], dlightcolor);
 	}
 	// make the glow dlight
-	if (dlightradius > 0 && (dlightcolor[0] || dlightcolor[1] || dlightcolor[2]) && !(e->render.flags & RENDER_VIEWMODEL) && r_refdef.numlights < MAX_DLIGHTS)
+	if (dlightradius > 0 && (dlightcolor[0] || dlightcolor[1] || dlightcolor[2]) && !(e->render.flags & RENDER_VIEWMODEL) && r_refdef.scene.numlights < MAX_DLIGHTS)
 	{
 		matrix4x4_t dlightmatrix;
 		Matrix4x4_Normalize(&dlightmatrix, &e->render.matrix);
@@ -1409,10 +1409,10 @@ void CL_LinkNetworkEntity(entity_t *e)
 		//if (e->state_current.number == cl.viewentity/* && !chase_active.integer*/)
 		//	Matrix4x4_AdjustOrigin(&dlightmatrix, 0, 0, 30);
 		Matrix4x4_Scale(&dlightmatrix, dlightradius, 1);
-		R_RTLight_Update(&r_refdef.lights[r_refdef.numlights++], false, &dlightmatrix, dlightcolor, -1, NULL, true, 1, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		R_RTLight_Update(&r_refdef.scene.lights[r_refdef.scene.numlights++], false, &dlightmatrix, dlightcolor, -1, NULL, true, 1, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
 	// custom rtlight
-	if ((e->state_current.lightpflags & PFLAGS_FULLDYNAMIC) && r_refdef.numlights < MAX_DLIGHTS)
+	if ((e->state_current.lightpflags & PFLAGS_FULLDYNAMIC) && r_refdef.scene.numlights < MAX_DLIGHTS)
 	{
 		matrix4x4_t dlightmatrix;
 		float light[4];
@@ -1425,7 +1425,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 		// FIXME: add ambient/diffuse/specular scales as an extension ontop of TENEBRAE_GFX_DLIGHTS?
 		Matrix4x4_Normalize(&dlightmatrix, &e->render.matrix);
 		Matrix4x4_Scale(&dlightmatrix, light[3], 1);
-		R_RTLight_Update(&r_refdef.lights[r_refdef.numlights++], false, &dlightmatrix, light, e->state_current.lightstyle, e->state_current.skin > 0 ? va("cubemaps/%i", e->state_current.skin) : NULL, !(e->state_current.lightpflags & PFLAGS_NOSHADOW), (e->state_current.lightpflags & PFLAGS_CORONA) != 0, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		R_RTLight_Update(&r_refdef.scene.lights[r_refdef.scene.numlights++], false, &dlightmatrix, light, e->state_current.lightstyle, e->state_current.skin > 0 ? va("cubemaps/%i", e->state_current.skin) : NULL, !(e->state_current.lightpflags & PFLAGS_NOSHADOW), (e->state_current.lightpflags & PFLAGS_CORONA) != 0, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
 	// do trail light
 	if (e->render.flags & RENDER_GLOWTRAIL)
@@ -1439,8 +1439,8 @@ void CL_LinkNetworkEntity(entity_t *e)
 			return;
 	// don't show entities with no modelindex (note: this still shows
 	// entities which have a modelindex that resolved to a NULL model)
-	if (e->render.model && !(e->render.effects & EF_NODRAW) && r_refdef.numentities < r_refdef.maxentities)
-		r_refdef.entities[r_refdef.numentities++] = &e->render;
+	if (e->render.model && !(e->render.effects & EF_NODRAW) && r_refdef.scene.numentities < r_refdef.scene.maxentities)
+		r_refdef.scene.entities[r_refdef.scene.numentities++] = &e->render;
 	//if (cl.viewentity && e->state_current.number == cl.viewentity)
 	//	Matrix4x4_Print(&e->render.matrix);
 }
@@ -1455,15 +1455,15 @@ void CL_RelinkWorld(void)
 		ent->render.flags |= RENDER_LIGHT;
 	VectorSet(ent->render.colormod, 1, 1, 1);
 	CL_UpdateRenderEntity(&ent->render);
-	r_refdef.worldentity = &ent->render;
-	r_refdef.worldmodel = cl.worldmodel;
+	r_refdef.scene.worldentity = &ent->render;
+	r_refdef.scene.worldmodel = cl.worldmodel;
 }
 
 static void CL_RelinkStaticEntities(void)
 {
 	int i;
 	entity_t *e;
-	for (i = 0, e = cl.static_entities;i < cl.num_static_entities && r_refdef.numentities < r_refdef.maxentities;i++, e++)
+	for (i = 0, e = cl.static_entities;i < cl.num_static_entities && r_refdef.scene.numentities < r_refdef.scene.maxentities;i++, e++)
 	{
 		e->render.flags = 0;
 		// if the model was not loaded when the static entity was created we
@@ -1478,7 +1478,7 @@ static void CL_RelinkStaticEntities(void)
 		VectorSet(e->render.colormod, 1, 1, 1);
 		R_LerpAnimation(&e->render);
 		CL_UpdateRenderEntity(&e->render);
-		r_refdef.entities[r_refdef.numentities++] = &e->render;
+		r_refdef.scene.entities[r_refdef.scene.numentities++] = &e->render;
 	}
 }
 
@@ -1620,13 +1620,13 @@ void CL_RelinkBeams(void)
 
 		if (b->lightning)
 		{
-			if (cl_beams_lightatend.integer && r_refdef.numlights < MAX_DLIGHTS)
+			if (cl_beams_lightatend.integer && r_refdef.scene.numlights < MAX_DLIGHTS)
 			{
 				// FIXME: create a matrix from the beam start/end orientation
 				vec3_t dlightcolor;
 				VectorSet(dlightcolor, 0.3, 0.7, 1);
 				Matrix4x4_CreateFromQuakeEntity(&tempmatrix, end[0], end[1], end[2], 0, 0, 0, 200);
-				R_RTLight_Update(&r_refdef.lights[r_refdef.numlights++], false, &tempmatrix, dlightcolor, -1, NULL, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+				R_RTLight_Update(&r_refdef.scene.lights[r_refdef.scene.numlights++], false, &tempmatrix, dlightcolor, -1, NULL, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 			}
 			if (cl_beams_polygons.integer)
 				continue;
@@ -1762,9 +1762,9 @@ Update client game world for a new frame
 */
 void CL_UpdateWorld(void)
 {
-	r_refdef.extraupdate = !r_speeds.integer;
-	r_refdef.numentities = 0;
-	r_refdef.numlights = 0;
+	r_refdef.scene.extraupdate = !r_speeds.integer;
+	r_refdef.scene.numentities = 0;
+	r_refdef.scene.numlights = 0;
 	r_refdef.view.matrix = identitymatrix;
 
 	cl.num_brushmodel_entities = 0;
@@ -1807,7 +1807,7 @@ void CL_UpdateWorld(void)
 		R_MoveExplosions();
 	}
 
-	r_refdef.time = cl.time;
+	r_refdef.scene.time = cl.time;
 }
 
 // LordHavoc: pausedemo command
@@ -1863,7 +1863,7 @@ static void CL_TimeRefresh_f (void)
 	int i;
 	float timestart, timedelta;
 
-	r_refdef.extraupdate = false;
+	r_refdef.scene.extraupdate = false;
 
 	timestart = Sys_DoubleTime();
 	for (i = 0;i < 128;i++)
@@ -2227,11 +2227,11 @@ void CL_Init (void)
 
 	memset(&r_refdef, 0, sizeof(r_refdef));
 	// max entities sent to renderer per frame
-	r_refdef.maxentities = MAX_EDICTS + 256 + 512;
-	r_refdef.entities = (entity_render_t **)Mem_Alloc(cls.permanentmempool, sizeof(entity_render_t *) * r_refdef.maxentities);
+	r_refdef.scene.maxentities = MAX_EDICTS + 256 + 512;
+	r_refdef.scene.entities = (entity_render_t **)Mem_Alloc(cls.permanentmempool, sizeof(entity_render_t *) * r_refdef.scene.maxentities);
 
-	r_refdef.maxtempentities = 512;
-	r_refdef.tempentities = (entity_render_t *)Mem_Alloc(cls.permanentmempool, sizeof(entity_render_t) * r_refdef.maxtempentities);
+	r_refdef.scene.maxtempentities = 512;
+	r_refdef.scene.tempentities = (entity_render_t *)Mem_Alloc(cls.permanentmempool, sizeof(entity_render_t) * r_refdef.scene.maxtempentities);
 
 	CL_InitInput ();
 

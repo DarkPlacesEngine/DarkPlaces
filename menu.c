@@ -5070,18 +5070,15 @@ void MP_KeyEvent (int key, char ascii, qboolean downevent)
 
 void MP_Draw (void)
 {
-	extern r_refdef_t menu_refdef;
+	// declarations that are needed right now
+	extern r_refdef_scene_t menu_scene;
 
-	static r_refdef_t clientrefdef;
-	clientrefdef = r_refdef;
-	r_refdef = menu_refdef;
+	static r_refdef_scene_t clientscene;
+	clientscene = r_refdef.scene;
+	r_refdef.scene = menu_scene;
 
 	// reset the temp entities each frame
-	r_refdef.numtempentities = 0;
-
-	// TODO: fix these evil hacks! [1/6/2008 Black]
-	R_UpdateVariables();
-	R_ResetViewRendering2D();
+	r_refdef.scene.numtempentities = 0;
 
 	PRVM_Begin;
 	PRVM_SetProg(PRVM_MENUPROG);
@@ -5092,8 +5089,8 @@ void MP_Draw (void)
 
 	PRVM_End;
 
-	menu_refdef = r_refdef;
-	r_refdef = clientrefdef;
+	menu_scene = r_refdef.scene;
+	r_refdef.scene = clientscene;
 }
 
 void MP_ToggleMenu_f (void)

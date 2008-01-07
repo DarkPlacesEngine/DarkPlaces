@@ -646,8 +646,8 @@ void VM_CL_R_ClearScene (void)
 {
 	VM_SAFEPARMCOUNT(0, VM_CL_R_ClearScene);
 	// clear renderable entity and light lists
-	r_refdef.numentities = 0;
-	r_refdef.numlights = 0;
+	r_refdef.scene.numentities = 0;
+	r_refdef.scene.numlights = 0;
 	// FIXME: restore these to the values from VM_CL_UpdateView
 	r_refdef.view.x = 0;
 	r_refdef.view.y = 0;
@@ -843,13 +843,13 @@ void VM_CL_R_AddDynamicLight (void)
 	VM_SAFEPARMCOUNTRANGE(3, 3, VM_CL_R_AddDynamicLight);
 
 	// if we've run out of dlights, just return
-	if (r_refdef.numlights >= MAX_DLIGHTS)
+	if (r_refdef.scene.numlights >= MAX_DLIGHTS)
 		return;
 
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	col = PRVM_G_VECTOR(OFS_PARM2);
 	Matrix4x4_CreateFromQuakeEntity(&matrix, pos[0], pos[1], pos[2], 0, 0, 0, PRVM_G_FLOAT(OFS_PARM1));
-	R_RTLight_Update(&r_refdef.lights[r_refdef.numlights++], false, &matrix, col, -1, NULL, true, 1, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+	R_RTLight_Update(&r_refdef.scene.lights[r_refdef.scene.numlights++], false, &matrix, col, -1, NULL, true, 1, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 }
 
 //============================================================================
