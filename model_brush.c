@@ -1194,7 +1194,7 @@ loc0:
 					// bilinear filter each lightmap style, and sum them
 					for (maps = 0;maps < MAXLIGHTMAPS && surface->lightmapinfo->styles[maps] != 255;maps++)
 					{
-						scale = r_refdef.lightstylevalue[surface->lightmapinfo->styles[maps]];
+						scale = r_refdef.scene.lightstylevalue[surface->lightmapinfo->styles[maps]];
 						w = w00 * scale;VectorMA(ambientcolor, w, lightmap            , ambientcolor);
 						w = w01 * scale;VectorMA(ambientcolor, w, lightmap + 3        , ambientcolor);
 						w = w10 * scale;VectorMA(ambientcolor, w, lightmap + line3    , ambientcolor);
@@ -5235,7 +5235,7 @@ static void Mod_Q3BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientc
 	q3dlightgrid_t *a, *s;
 
 	// scale lighting by lightstyle[0] so that darkmode in dpmod works properly
-	stylescale = r_refdef.rtlightstylevalue[0];
+	stylescale = r_refdef.scene.rtlightstylevalue[0];
 
 	if (!model->brushq3.num_lightgrid)
 	{

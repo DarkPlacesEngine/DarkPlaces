@@ -902,7 +902,7 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 		float len, dec, qd;
 		int smoke, blood, bubbles, r, color;
 
-		if (spawndlight && r_refdef.numlights < MAX_DLIGHTS)
+		if (spawndlight && r_refdef.scene.numlights < MAX_DLIGHTS)
 		{
 			vec4_t light;
 			Vector4Set(light, 0, 0, 0, 0);
@@ -923,7 +923,7 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 			{
 				matrix4x4_t tempmatrix;
 				Matrix4x4_CreateFromQuakeEntity(&tempmatrix, originmaxs[0], originmaxs[1], originmaxs[2], 0, 0, 0, light[3]);
-				R_RTLight_Update(&r_refdef.lights[r_refdef.numlights++], false, &tempmatrix, light, -1, NULL, true, 1, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+				R_RTLight_Update(&r_refdef.scene.lights[r_refdef.scene.numlights++], false, &tempmatrix, light, -1, NULL, true, 1, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 			}
 		}
 
@@ -1170,7 +1170,7 @@ void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins
 						// glowing entity
 						// called by CL_LinkNetworkEntity
 						Matrix4x4_Scale(&tempmatrix, info->lightradiusstart, 1);
-						R_RTLight_Update(&r_refdef.lights[r_refdef.numlights++], false, &tempmatrix, info->lightcolor, -1, info->lightcubemapnum > 0 ? va("cubemaps/%i", info->lightcubemapnum) : NULL, info->lightshadow, 1, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+						R_RTLight_Update(&r_refdef.scene.lights[r_refdef.scene.numlights++], false, &tempmatrix, info->lightcolor, -1, info->lightcubemapnum > 0 ? va("cubemaps/%i", info->lightcubemapnum) : NULL, info->lightshadow, 1, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 					}
 				}
 

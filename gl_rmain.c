@@ -1373,10 +1373,10 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 	else
 	{
 		// lightmapped wall
-		if (r_glsl_deluxemapping.integer >= 1 && rsurface.uselightmaptexture && r_refdef.worldmodel && r_refdef.worldmodel->brushq3.deluxemapping)
+		if (r_glsl_deluxemapping.integer >= 1 && rsurface.uselightmaptexture && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brushq3.deluxemapping)
 		{
 			// deluxemapping (light direction texture)
-			if (rsurface.uselightmaptexture && r_refdef.worldmodel && r_refdef.worldmodel->brushq3.deluxemapping && r_refdef.worldmodel->brushq3.deluxemapping_modelspace)
+			if (rsurface.uselightmaptexture && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brushq3.deluxemapping && r_refdef.scene.worldmodel->brushq3.deluxemapping_modelspace)
 				mode = SHADERMODE_LIGHTDIRECTIONMAP_MODELSPACE;
 			else
 				mode = SHADERMODE_LIGHTDIRECTIONMAP_TANGENTSPACE;
@@ -2237,23 +2237,23 @@ static void R_View_UpdateEntityVisible (void)
 		return;
 
 	renderimask = r_refdef.envmap ? (RENDER_EXTERIORMODEL | RENDER_VIEWMODEL) : ((chase_active.integer || r_waterstate.renderingscene) ? RENDER_VIEWMODEL : RENDER_EXTERIORMODEL);
-	if (r_refdef.worldmodel && r_refdef.worldmodel->brush.BoxTouchingVisibleLeafs)
+	if (r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.BoxTouchingVisibleLeafs)
 	{
 		// worldmodel can check visibility
-		for (i = 0;i < r_refdef.numentities;i++)
+		for (i = 0;i < r_refdef.scene.numentities;i++)
 		{
-			ent = r_refdef.entities[i];
-			r_refdef.viewcache.entityvisible[i] = !(ent->flags & renderimask) && ((ent->model && ent->model->type == mod_sprite && (ent->model->sprite.sprnum_type == SPR_LABEL || ent->model->sprite.sprnum_type == SPR_LABEL_SCALE)) || !R_CullBox(ent->mins, ent->maxs)) && ((ent->effects & EF_NODEPTHTEST) || (ent->flags & RENDER_VIEWMODEL) || r_refdef.worldmodel->brush.BoxTouchingVisibleLeafs(r_refdef.worldmodel, r_refdef.viewcache.world_leafvisible, ent->mins, ent->maxs));
+			ent = r_refdef.scene.entities[i];
+			r_refdef.viewcache.entityvisible[i] = !(ent->flags & renderimask) && ((ent->model && ent->model->type == mod_sprite && (ent->model->sprite.sprnum_type == SPR_LABEL || ent->model->sprite.sprnum_type == SPR_LABEL_SCALE)) || !R_CullBox(ent->mins, ent->maxs)) && ((ent->effects & EF_NODEPTHTEST) || (ent->flags & RENDER_VIEWMODEL) || r_refdef.scene.worldmodel->brush.BoxTouchingVisibleLeafs(r_refdef.scene.worldmodel, r_refdef.viewcache.world_leafvisible, ent->mins, ent->maxs));
 
 		}
-		if(r_cullentities_trace.integer && r_refdef.worldmodel->brush.TraceLineOfSight)
+		if(r_cullentities_trace.integer && r_refdef.scene.worldmodel->brush.TraceLineOfSight)
 		{
-			for (i = 0;i < r_refdef.numentities;i++)
+			for (i = 0;i < r_refdef.scene.numentities;i++)
 			{
-				ent = r_refdef.entities[i];
+				ent = r_refdef.scene.entities[i];
 				if(r_refdef.viewcache.entityvisible[i] && !(ent->effects & EF_NODEPTHTEST) && !(ent->flags & RENDER_VIEWMODEL) && !(ent->model && (ent->model->name[0] == '*')))
 				{
-					if(Mod_CanSeeBox_Trace(r_cullentities_trace_samples.integer, r_cullentities_trace_enlarge.value, r_refdef.worldmodel, r_refdef.view.origin, ent->mins, ent->maxs))
+					if(Mod_CanSeeBox_Trace(r_cullentities_trace_samples.integer, r_cullentities_trace_enlarge.value, r_refdef.scene.worldmodel, r_refdef.view.origin, ent->mins, ent->maxs))
 						ent->last_trace_visibility = realtime;
 					if(ent->last_trace_visibility < realtime - r_cullentities_trace_delay.value)
 						r_refdef.viewcache.entityvisible[i] = 0;
@@ -2264,9 +2264,9 @@ static void R_View_UpdateEntityVisible (void)
 	else
 	{
 		// no worldmodel or it can't check visibility
-		for (i = 0;i < r_refdef.numentities;i++)
+		for (i = 0;i < r_refdef.scene.numentities;i++)
 		{
-			ent = r_refdef.entities[i];
+			ent = r_refdef.scene.entities[i];
 			r_refdef.viewcache.entityvisible[i] = !(ent->flags & renderimask) && ((ent->model && ent->model->type == mod_sprite && (ent->model->sprite.sprnum_type == SPR_LABEL || ent->model->sprite.sprnum_type == SPR_LABEL_SCALE)) || !R_CullBox(ent->mins, ent->maxs));
 		}
 	}
@@ -2282,11 +2282,11 @@ int R_DrawBrushModelsSky (void)
 		return false;
 
 	sky = false;
-	for (i = 0;i < r_refdef.numentities;i++)
+	for (i = 0;i < r_refdef.scene.numentities;i++)
 	{
 		if (!r_refdef.viewcache.entityvisible[i])
 			continue;
-		ent = r_refdef.entities[i];
+		ent = r_refdef.scene.entities[i];
 		if (!ent->model || !ent->model->DrawSky)
 			continue;
 		ent->model->DrawSky(ent);
@@ -2304,11 +2304,11 @@ static void R_DrawModels(void)
 	if (!r_drawentities.integer)
 		return;
 
-	for (i = 0;i < r_refdef.numentities;i++)
+	for (i = 0;i < r_refdef.scene.numentities;i++)
 	{
 		if (!r_refdef.viewcache.entityvisible[i])
 			continue;
-		ent = r_refdef.entities[i];
+		ent = r_refdef.scene.entities[i];
 		r_refdef.stats.entities++;
 		if (ent->model && ent->model->Draw != NULL)
 			ent->model->Draw(ent);
@@ -2325,11 +2325,11 @@ static void R_DrawModelsDepth(void)
 	if (!r_drawentities.integer)
 		return;
 
-	for (i = 0;i < r_refdef.numentities;i++)
+	for (i = 0;i < r_refdef.scene.numentities;i++)
 	{
 		if (!r_refdef.viewcache.entityvisible[i])
 			continue;
-		ent = r_refdef.entities[i];
+		ent = r_refdef.scene.entities[i];
 		if (ent->model && ent->model->DrawDepth != NULL)
 			ent->model->DrawDepth(ent);
 	}
@@ -2343,11 +2343,11 @@ static void R_DrawModelsDebug(void)
 	if (!r_drawentities.integer)
 		return;
 
-	for (i = 0;i < r_refdef.numentities;i++)
+	for (i = 0;i < r_refdef.scene.numentities;i++)
 	{
 		if (!r_refdef.viewcache.entityvisible[i])
 			continue;
-		ent = r_refdef.entities[i];
+		ent = r_refdef.scene.entities[i];
 		if (ent->model && ent->model->DrawDebug != NULL)
 			ent->model->DrawDebug(ent);
 	}
@@ -2361,11 +2361,11 @@ static void R_DrawModelsAddWaterPlanes(void)
 	if (!r_drawentities.integer)
 		return;
 
-	for (i = 0;i < r_refdef.numentities;i++)
+	for (i = 0;i < r_refdef.scene.numentities;i++)
 	{
 		if (!r_refdef.viewcache.entityvisible[i])
 			continue;
-		ent = r_refdef.entities[i];
+		ent = r_refdef.scene.entities[i];
 		if (ent->model && ent->model->DrawAddWaterPlanes != NULL)
 			ent->model->DrawAddWaterPlanes(ent);
 	}
@@ -2796,10 +2796,10 @@ static void R_Water_AddWaterPlane(msurface_t *surface)
 	p->materialflags |= surface->texture->currentframe->currentmaterialflags;
 	// merge this surface's PVS into the waterplane
 	VectorMAM(0.5f, surface->mins, 0.5f, surface->maxs, center);
-	if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION) && r_refdef.worldmodel && r_refdef.worldmodel->brush.FatPVS
-	 && r_refdef.worldmodel->brush.PointInLeaf && r_refdef.worldmodel->brush.PointInLeaf(r_refdef.worldmodel, center)->clusterindex >= 0)
+	if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION) && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.FatPVS
+	 && r_refdef.scene.worldmodel->brush.PointInLeaf && r_refdef.scene.worldmodel->brush.PointInLeaf(r_refdef.scene.worldmodel, center)->clusterindex >= 0)
 	{
-		r_refdef.worldmodel->brush.FatPVS(r_refdef.worldmodel, center, 2, p->pvsbits, sizeof(p->pvsbits), p->pvsvalid);
+		r_refdef.scene.worldmodel->brush.FatPVS(r_refdef.scene.worldmodel, center, 2, p->pvsbits, sizeof(p->pvsbits), p->pvsvalid);
 		p->pvsvalid = true;
 	}
 }
@@ -2867,13 +2867,13 @@ static void R_Water_ProcessPlanes(void)
 			// reverse the cullface settings for this render
 			r_refdef.view.cullface_front = GL_FRONT;
 			r_refdef.view.cullface_back = GL_BACK;
-			if (r_refdef.worldmodel && r_refdef.worldmodel->brush.num_pvsclusterbytes)
+			if (r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.num_pvsclusterbytes)
 			{
 				r_refdef.view.usecustompvs = true;
 				if (p->pvsvalid)
-					memcpy(r_refdef.viewcache.world_pvsbits, p->pvsbits, r_refdef.worldmodel->brush.num_pvsclusterbytes);
+					memcpy(r_refdef.viewcache.world_pvsbits, p->pvsbits, r_refdef.scene.worldmodel->brush.num_pvsclusterbytes);
 				else
-					memset(r_refdef.viewcache.world_pvsbits, 0xFF, r_refdef.worldmodel->brush.num_pvsclusterbytes);
+					memset(r_refdef.viewcache.world_pvsbits, 0xFF, r_refdef.scene.worldmodel->brush.num_pvsclusterbytes);
 			}
 
 			R_ResetViewRendering3D();
@@ -3300,8 +3300,8 @@ void R_UpdateVariables(void)
 	R_Textures_Frame();
 
 	r_refdef.farclip = 4096;
-	if (r_refdef.worldmodel)
-		r_refdef.farclip += VectorDistance(r_refdef.worldmodel->normalmins, r_refdef.worldmodel->normalmaxs);
+	if (r_refdef.scene.worldmodel)
+		r_refdef.farclip += VectorDistance(r_refdef.scene.worldmodel->normalmins, r_refdef.scene.worldmodel->normalmaxs);
 	r_refdef.nearclip = bound (0.001f, r_nearclip.value, r_refdef.farclip - 1.0f);
 
 	if (r_shadow_frontsidecasting.integer < 0 || r_shadow_frontsidecasting.integer > 1)
@@ -3386,7 +3386,7 @@ R_RenderView
 */
 void R_RenderView(void)
 {
-	if (!r_refdef.entities/* || !r_refdef.worldmodel*/)
+	if (!r_refdef.scene.entities/* || !r_refdef.scene.worldmodel*/)
 		return; //Host_Error ("R_RenderView: NULL worldmodel");
 
 	r_refdef.view.colorscale = r_hdr_scenebrightness.value;
@@ -3447,15 +3447,15 @@ void R_RenderScene(qboolean addwaterplanes)
 		if (r_timereport_active)
 			R_TimeReport("watervis");
 
-		if (cl.csqc_vidvars.drawworld && r_refdef.worldmodel && r_refdef.worldmodel->DrawAddWaterPlanes)
+		if (cl.csqc_vidvars.drawworld && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->DrawAddWaterPlanes)
 		{
-			r_refdef.worldmodel->DrawAddWaterPlanes(r_refdef.worldentity);
+			r_refdef.scene.worldmodel->DrawAddWaterPlanes(r_refdef.scene.worldentity);
 			if (r_timereport_active)
 				R_TimeReport("waterworld");
 		}
 
 		// don't let sound skip if going slow
-		if (r_refdef.extraupdate)
+		if (r_refdef.scene.extraupdate)
 			S_ExtraUpdate ();
 
 		R_DrawModelsAddWaterPlanes();
@@ -3470,7 +3470,7 @@ void R_RenderScene(qboolean addwaterplanes)
 	R_ResetViewRendering3D();
 
 	// don't let sound skip if going slow
-	if (r_refdef.extraupdate)
+	if (r_refdef.scene.extraupdate)
 		S_ExtraUpdate ();
 
 	R_MeshQueue_BeginScene();
@@ -3481,17 +3481,17 @@ void R_RenderScene(qboolean addwaterplanes)
 	if (r_timereport_active)
 		R_TimeReport("visibility");
 
-	Matrix4x4_CreateTranslate(&r_waterscrollmatrix, sin(r_refdef.time) * 0.025 * r_waterscroll.value, sin(r_refdef.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
+	Matrix4x4_CreateTranslate(&r_waterscrollmatrix, sin(r_refdef.scene.time) * 0.025 * r_waterscroll.value, sin(r_refdef.scene.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
 
 	if (cl.csqc_vidvars.drawworld)
 	{
 		// don't let sound skip if going slow
-		if (r_refdef.extraupdate)
+		if (r_refdef.scene.extraupdate)
 			S_ExtraUpdate ();
 
-		if (r_refdef.worldmodel && r_refdef.worldmodel->DrawSky)
+		if (r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->DrawSky)
 		{
-			r_refdef.worldmodel->DrawSky(r_refdef.worldentity);
+			r_refdef.scene.worldmodel->DrawSky(r_refdef.scene.worldentity);
 			if (r_timereport_active)
 				R_TimeReport("worldsky");
 		}
@@ -3500,9 +3500,9 @@ void R_RenderScene(qboolean addwaterplanes)
 			R_TimeReport("bmodelsky");
 	}
 
-	if (r_depthfirst.integer >= 1 && cl.csqc_vidvars.drawworld && r_refdef.worldmodel && r_refdef.worldmodel->DrawDepth)
+	if (r_depthfirst.integer >= 1 && cl.csqc_vidvars.drawworld && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->DrawDepth)
 	{
-		r_refdef.worldmodel->DrawDepth(r_refdef.worldentity);
+		r_refdef.scene.worldmodel->DrawDepth(r_refdef.scene.worldentity);
 		if (r_timereport_active)
 			R_TimeReport("worlddepth");
 	}
@@ -3513,15 +3513,15 @@ void R_RenderScene(qboolean addwaterplanes)
 			R_TimeReport("modeldepth");
 	}
 
-	if (cl.csqc_vidvars.drawworld && r_refdef.worldmodel && r_refdef.worldmodel->Draw)
+	if (cl.csqc_vidvars.drawworld && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->Draw)
 	{
-		r_refdef.worldmodel->Draw(r_refdef.worldentity);
+		r_refdef.scene.worldmodel->Draw(r_refdef.scene.worldentity);
 		if (r_timereport_active)
 			R_TimeReport("world");
 	}
 
 	// don't let sound skip if going slow
-	if (r_refdef.extraupdate)
+	if (r_refdef.scene.extraupdate)
 		S_ExtraUpdate ();
 
 	R_DrawModels();
@@ -3529,7 +3529,7 @@ void R_RenderScene(qboolean addwaterplanes)
 		R_TimeReport("models");
 
 	// don't let sound skip if going slow
-	if (r_refdef.extraupdate)
+	if (r_refdef.scene.extraupdate)
 		S_ExtraUpdate ();
 
 	if (r_shadows.integer > 0 && r_refdef.lightmapintensity > 0)
@@ -3539,7 +3539,7 @@ void R_RenderScene(qboolean addwaterplanes)
 		R_ResetViewRendering3D();
 
 		// don't let sound skip if going slow
-		if (r_refdef.extraupdate)
+		if (r_refdef.scene.extraupdate)
 			S_ExtraUpdate ();
 	}
 
@@ -3548,7 +3548,7 @@ void R_RenderScene(qboolean addwaterplanes)
 		R_TimeReport("rtlights");
 
 	// don't let sound skip if going slow
-	if (r_refdef.extraupdate)
+	if (r_refdef.scene.extraupdate)
 		S_ExtraUpdate ();
 
 	if (cl.csqc_vidvars.drawworld)
@@ -3613,9 +3613,9 @@ void R_RenderScene(qboolean addwaterplanes)
 		qglUseProgramObjectARB(0);CHECKGLERROR
 	}
 
-	if (r_refdef.view.showdebug && r_refdef.worldmodel && r_refdef.worldmodel->DrawDebug && (r_showtris.value > 0 || r_shownormals.value > 0 || r_showcollisionbrushes.value > 0))
+	if (r_refdef.view.showdebug && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->DrawDebug && (r_showtris.value > 0 || r_shownormals.value > 0 || r_showcollisionbrushes.value > 0))
 	{
-		r_refdef.worldmodel->DrawDebug(r_refdef.worldentity);
+		r_refdef.scene.worldmodel->DrawDebug(r_refdef.scene.worldentity);
 		if (r_timereport_active)
 			R_TimeReport("worlddebug");
 		R_DrawModelsDebug();
@@ -3636,7 +3636,7 @@ void R_RenderScene(qboolean addwaterplanes)
 	}
 
 	// don't let sound skip if going slow
-	if (r_refdef.extraupdate)
+	if (r_refdef.scene.extraupdate)
 		S_ExtraUpdate ();
 
 	R_ResetViewRendering2D();
@@ -4045,7 +4045,7 @@ static void R_Texture_AddLayer(texture_t *t, qboolean depthmask, int blendfunc1,
 static float R_EvaluateQ3WaveFunc(q3wavefunc_t func, const float *parms)
 {
 	double index, f;
-	index = parms[2] + r_refdef.time * parms[3];
+	index = parms[2] + r_refdef.scene.time * parms[3];
 	index -= floor(index);
 	switch (func)
 	{
@@ -4092,7 +4092,7 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 		if (model->skinscenes)
 		{
 			if (model->skinscenes[s].framecount > 1)
-				s = model->skinscenes[s].firstframe + (unsigned int) (r_refdef.time * model->skinscenes[s].framerate) % model->skinscenes[s].framecount;
+				s = model->skinscenes[s].firstframe + (unsigned int) (r_refdef.scene.time * model->skinscenes[s].framerate) % model->skinscenes[s].framecount;
 			else
 				s = model->skinscenes[s].firstframe;
 		}
@@ -4103,9 +4103,9 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 			// use an alternate animation if the entity's frame is not 0,
 			// and only if the texture has an alternate animation
 			if (ent->frame2 != 0 && t->anim_total[1])
-				t = t->anim_frames[1][(t->anim_total[1] >= 2) ? ((int)(r_refdef.time * 5.0f) % t->anim_total[1]) : 0];
+				t = t->anim_frames[1][(t->anim_total[1] >= 2) ? ((int)(r_refdef.scene.time * 5.0f) % t->anim_total[1]) : 0];
 			else
-				t = t->anim_frames[0][(t->anim_total[0] >= 2) ? ((int)(r_refdef.time * 5.0f) % t->anim_total[0]) : 0];
+				t = t->anim_frames[0][(t->anim_total[0] >= 2) ? ((int)(r_refdef.scene.time * 5.0f) % t->anim_total[0]) : 0];
 		}
 		texture->currentframe = t;
 	}
@@ -4189,14 +4189,14 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 			break;
 		case Q3TCMOD_ROTATE:
 			Matrix4x4_CreateTranslate(&matrix, 0.5, 0.5, 0);
-			Matrix4x4_ConcatRotate(&matrix, tcmod->parms[0] * r_refdef.time, 0, 0, 1);
+			Matrix4x4_ConcatRotate(&matrix, tcmod->parms[0] * r_refdef.scene.time, 0, 0, 1);
 			Matrix4x4_ConcatTranslate(&matrix, -0.5, -0.5, 0);
 			break;
 		case Q3TCMOD_SCALE:
 			Matrix4x4_CreateScale3(&matrix, tcmod->parms[0], tcmod->parms[1], 1);
 			break;
 		case Q3TCMOD_SCROLL:
-			Matrix4x4_CreateTranslate(&matrix, tcmod->parms[0] * r_refdef.time, tcmod->parms[1] * r_refdef.time, 0);
+			Matrix4x4_CreateTranslate(&matrix, tcmod->parms[0] * r_refdef.scene.time, tcmod->parms[1] * r_refdef.scene.time, 0);
 			break;
 		case Q3TCMOD_STRETCH:
 			f = 1.0f / R_EvaluateQ3WaveFunc(tcmod->wavefunc, tcmod->waveparms);
@@ -4317,7 +4317,7 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 					// applied to the color
 					// FIXME: r_glsl 1 rendering doesn't support overbright lightstyles with this (the default light style is not overbright)
 					if (ent->model->type == mod_brushq3)
-						colorscale *= r_refdef.rtlightstylevalue[0];
+						colorscale *= r_refdef.scene.rtlightstylevalue[0];
 					colorscale *= r_refdef.lightmapintensity;
 					VectorScale(t->lightmapcolor, r_ambient.value * (1.0f / 64.0f), ambientcolor);
 					VectorScale(t->lightmapcolor, colorscale, t->lightmapcolor);
@@ -4407,7 +4407,7 @@ void RSurf_CleanUp(void)
 
 void RSurf_ActiveWorldEntity(void)
 {
-	model_t *model = r_refdef.worldmodel;
+	model_t *model = r_refdef.scene.worldmodel;
 	RSurf_CleanUp();
 	if (rsurface.array_size < model->surfmesh.num_vertices)
 		R_Mesh_ResizeArrays(model->surfmesh.num_vertices);
@@ -4851,9 +4851,9 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 					float *normal = (rsurface.array_deformednormal3f  + 3 * surface->num_firstvertex) + j*3;
 					VectorScale((rsurface.vertex3f  + 3 * surface->num_firstvertex) + j*3, 0.98f, vertex);
 					VectorCopy((rsurface.normal3f  + 3 * surface->num_firstvertex) + j*3, normal);
-					normal[0] += deform->parms[0] * noise4f(      vertex[0], vertex[1], vertex[2], r_refdef.time * deform->parms[1]);
-					normal[1] += deform->parms[0] * noise4f( 98 + vertex[0], vertex[1], vertex[2], r_refdef.time * deform->parms[1]);
-					normal[2] += deform->parms[0] * noise4f(196 + vertex[0], vertex[1], vertex[2], r_refdef.time * deform->parms[1]);
+					normal[0] += deform->parms[0] * noise4f(      vertex[0], vertex[1], vertex[2], r_refdef.scene.time * deform->parms[1]);
+					normal[1] += deform->parms[0] * noise4f( 98 + vertex[0], vertex[1], vertex[2], r_refdef.scene.time * deform->parms[1]);
+					normal[2] += deform->parms[0] * noise4f(196 + vertex[0], vertex[1], vertex[2], r_refdef.scene.time * deform->parms[1]);
 					VectorNormalize(normal);
 				}
 				Mod_BuildTextureVectorsFromNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface.vertex3f, rsurface.modeltexcoordtexture2f, rsurface.array_deformednormal3f, rsurface.modelelement3i + surface->num_firsttriangle * 3, rsurface.array_deformedsvector3f, rsurface.array_deformedtvector3f, r_smoothnormals_areaweighting.integer);
@@ -4904,7 +4904,7 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 				const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 				for (j = 0;j < surface->num_vertices;j++)
 				{
-					scale = sin((rsurface.modeltexcoordtexture2f[2 * (surface->num_firstvertex + j)] * deform->parms[0] + r_refdef.time * deform->parms[2])) * deform->parms[1];
+					scale = sin((rsurface.modeltexcoordtexture2f[2 * (surface->num_firstvertex + j)] * deform->parms[0] + r_refdef.scene.time * deform->parms[2])) * deform->parms[1];
 					VectorMA(rsurface.vertex3f + 3 * (surface->num_firstvertex + j), scale, rsurface.normal3f + 3 * (surface->num_firstvertex + j), rsurface.array_deformedvertex3f + 3 * (surface->num_firstvertex + j));
 				}
 			}
@@ -4987,7 +4987,7 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 	if (rsurface.texture->tcmods[0].tcmod == Q3TCMOD_TURBULENT)
 	{
 		amplitude = rsurface.texture->tcmods[0].parms[1];
-		animpos = rsurface.texture->tcmods[0].parms[2] + r_refdef.time * rsurface.texture->tcmods[0].parms[3];
+		animpos = rsurface.texture->tcmods[0].parms[2] + r_refdef.scene.time * rsurface.texture->tcmods[0].parms[3];
 		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
 			const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
@@ -5379,23 +5379,23 @@ static void RSurf_DrawBatch_GL11_VertexColor(int texturenumsurfaces, msurface_t 
 				if (surface->lightmapinfo->samples)
 				{
 					const unsigned char *lm = surface->lightmapinfo->samples + (rsurface.modellightmapoffsets + surface->num_firstvertex)[i];
-					float scale = r_refdef.lightstylevalue[surface->lightmapinfo->styles[0]] * (1.0f / 32768.0f);
+					float scale = r_refdef.scene.lightstylevalue[surface->lightmapinfo->styles[0]] * (1.0f / 32768.0f);
 					VectorScale(lm, scale, c);
 					if (surface->lightmapinfo->styles[1] != 255)
 					{
 						int size3 = ((surface->lightmapinfo->extents[0]>>4)+1)*((surface->lightmapinfo->extents[1]>>4)+1)*3;
 						lm += size3;
-						scale = r_refdef.lightstylevalue[surface->lightmapinfo->styles[1]] * (1.0f / 32768.0f);
+						scale = r_refdef.scene.lightstylevalue[surface->lightmapinfo->styles[1]] * (1.0f / 32768.0f);
 						VectorMA(c, scale, lm, c);
 						if (surface->lightmapinfo->styles[2] != 255)
 						{
 							lm += size3;
-							scale = r_refdef.lightstylevalue[surface->lightmapinfo->styles[2]] * (1.0f / 32768.0f);
+							scale = r_refdef.scene.lightstylevalue[surface->lightmapinfo->styles[2]] * (1.0f / 32768.0f);
 							VectorMA(c, scale, lm, c);
 							if (surface->lightmapinfo->styles[3] != 255)
 							{
 								lm += size3;
-								scale = r_refdef.lightstylevalue[surface->lightmapinfo->styles[3]] * (1.0f / 32768.0f);
+								scale = r_refdef.scene.lightstylevalue[surface->lightmapinfo->styles[3]] * (1.0f / 32768.0f);
 								VectorMA(c, scale, lm, c);
 							}
 						}
@@ -5541,7 +5541,7 @@ static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, msurface_t **te
 	// in Quake3 maps as it causes problems with q3map2 sky tricks,
 	// and skymasking also looks very bad when noclipping outside the
 	// level, so don't use it then either.
-	if (r_refdef.worldmodel && r_refdef.worldmodel->type == mod_brushq1 && r_q1bsp_skymasking.integer && !r_refdef.viewcache.world_novis)
+	if (r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->type == mod_brushq1 && r_q1bsp_skymasking.integer && !r_refdef.viewcache.world_novis)
 	{
 		GL_Color(r_refdef.fogcolor[0], r_refdef.fogcolor[1], r_refdef.fogcolor[2], 1);
 		R_Mesh_ColorPointer(NULL, 0, 0);
@@ -6066,7 +6066,7 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 	// if the model is static it doesn't matter what value we give for
 	// wantnormals and wanttangents, so this logic uses only rules applicable
 	// to a model, knowing that they are meaningless otherwise
-	if (ent == r_refdef.worldentity)
+	if (ent == r_refdef.scene.worldentity)
 		RSurf_ActiveWorldEntity();
 	else if ((ent->effects & EF_FULLBRIGHT) || r_showsurfaces.integer || VectorLength2(ent->modellight_diffuse) < (1.0f / 256.0f))
 		RSurf_ActiveModelEntity(ent, false, false);
@@ -6286,7 +6286,7 @@ void R_DrawDebugModel(entity_render_t *ent)
 		}
 		for (i = 0, j = model->firstmodelsurface, surface = model->data_surfaces + j;i < model->nummodelsurfaces;i++, j++, surface++)
 		{
-			if (ent == r_refdef.worldentity && !r_refdef.viewcache.world_surfacevisible[j])
+			if (ent == r_refdef.scene.worldentity && !r_refdef.viewcache.world_surfacevisible[j])
 				continue;
 			rsurface.texture = surface->texture->currentframe;
 			if ((rsurface.texture->currentmaterialflags & flagsmask) && surface->num_triangles)
@@ -6296,7 +6296,7 @@ void R_DrawDebugModel(entity_render_t *ent)
 				{
 					if (!rsurface.texture->currentlayers->depthmask)
 						GL_Color(r_refdef.view.colorscale, 0, 0, r_showtris.value);
-					else if (ent == r_refdef.worldentity)
+					else if (ent == r_refdef.scene.worldentity)
 						GL_Color(r_refdef.view.colorscale, r_refdef.view.colorscale, r_refdef.view.colorscale, r_showtris.value);
 					else
 						GL_Color(0, r_refdef.view.colorscale, 0, r_showtris.value);
@@ -6364,7 +6364,7 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 	int i, j, endj, f, flagsmask;
 	msurface_t *surface;
 	texture_t *t;
-	model_t *model = r_refdef.worldmodel;
+	model_t *model = r_refdef.scene.worldmodel;
 	const int maxsurfacelist = 1024;
 	int numsurfacelist = 0;
 	msurface_t *surfacelist[1024];
@@ -6379,23 +6379,23 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 		model_brush_lightstyleinfo_t *style;
 		for (i = 0, style = model->brushq1.data_lightstyleinfo;i < model->brushq1.num_lightstyles;i++, style++)
 		{
-			if (style->value != r_refdef.lightstylevalue[style->style])
+			if (style->value != r_refdef.scene.lightstylevalue[style->style])
 			{
 				msurface_t *surfaces = model->data_surfaces;
 				int *list = style->surfacelist;
-				style->value = r_refdef.lightstylevalue[style->style];
+				style->value = r_refdef.scene.lightstylevalue[style->style];
 				for (j = 0;j < style->numsurfaces;j++)
 					surfaces[list[j]].cached_dlight = true;
 			}
 		}
 	}
 
-	R_UpdateAllTextureInfo(r_refdef.worldentity);
+	R_UpdateAllTextureInfo(r_refdef.scene.worldentity);
 	flagsmask = addwaterplanes ? (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION) : (skysurfaces ? MATERIALFLAG_SKY : (MATERIALFLAG_WATER | MATERIALFLAG_WALL));
 
 	if (debug)
 	{
-		R_DrawDebugModel(r_refdef.worldentity);
+		R_DrawDebugModel(r_refdef.scene.worldentity);
 		return;
 	}
 
@@ -6421,14 +6421,14 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 			{
 				// if lightmap parameters changed, rebuild lightmap texture
 				if (surface->cached_dlight)
-					R_BuildLightMap(r_refdef.worldentity, surface);
+					R_BuildLightMap(r_refdef.scene.worldentity, surface);
 				// add face to draw list
 				surfacelist[numsurfacelist++] = surface;
 				r_refdef.stats.world_triangles += surface->num_triangles;
 				if (numsurfacelist >= maxsurfacelist)
 				{
 					r_refdef.stats.world_surfaces += numsurfacelist;
-					R_QueueSurfaceList(r_refdef.worldentity, numsurfacelist, surfacelist, flagsmask, writedepth, depthonly, addwaterplanes);
+					R_QueueSurfaceList(r_refdef.scene.worldentity, numsurfacelist, surfacelist, flagsmask, writedepth, depthonly, addwaterplanes);
 					numsurfacelist = 0;
 				}
 			}
@@ -6436,7 +6436,7 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 	}
 	r_refdef.stats.world_surfaces += numsurfacelist;
 	if (numsurfacelist)
-		R_QueueSurfaceList(r_refdef.worldentity, numsurfacelist, surfacelist, flagsmask, writedepth, depthonly, addwaterplanes);
+		R_QueueSurfaceList(r_refdef.scene.worldentity, numsurfacelist, surfacelist, flagsmask, writedepth, depthonly, addwaterplanes);
 	RSurf_CleanUp();
 }
 
@@ -6455,7 +6455,7 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 	// if the model is static it doesn't matter what value we give for
 	// wantnormals and wanttangents, so this logic uses only rules applicable
 	// to a model, knowing that they are meaningless otherwise
-	if (ent == r_refdef.worldentity)
+	if (ent == r_refdef.scene.worldentity)
 		RSurf_ActiveWorldEntity();
 	else if ((ent->effects & EF_FULLBRIGHT) || r_showsurfaces.integer || VectorLength2(ent->modellight_diffuse) < (1.0f / 256.0f))
 		RSurf_ActiveModelEntity(ent, false, false);
@@ -6468,11 +6468,11 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 		model_brush_lightstyleinfo_t *style;
 		for (i = 0, style = model->brushq1.data_lightstyleinfo;i < model->brushq1.num_lightstyles;i++, style++)
 		{
-			if (style->value != r_refdef.lightstylevalue[style->style])
+			if (style->value != r_refdef.scene.lightstylevalue[style->style])
 			{
 				msurface_t *surfaces = model->data_surfaces;
 				int *list = style->surfacelist;
-				style->value = r_refdef.lightstylevalue[style->style];
+				style->value = r_refdef.scene.lightstylevalue[style->style];
 				for (j = 0;j < style->numsurfaces;j++)
 					surfaces[list[j]].cached_dlight = true;
 			}

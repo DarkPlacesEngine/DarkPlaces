@@ -268,8 +268,8 @@ qboolean CL_VM_UpdateView (void)
 		CSQC_SetGlobals();
 		// clear renderable entity and light lists to prevent crashes if the
 		// CSQC_UpdateView function does not call R_ClearScene as it should
-		r_refdef.numentities = 0;
-		r_refdef.numlights = 0;
+		r_refdef.scene.numentities = 0;
+		r_refdef.scene.numlights = 0;
 		PRVM_ExecuteProgram(prog->funcoffsets.CSQC_UpdateView, "QC function CSQC_UpdateView is missing");
 		//VectorCopy(oldangles, cl.viewangles);
 		// Dresk : Reset Dmg Globals Here

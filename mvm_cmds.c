@@ -1424,37 +1424,20 @@ VM_M_getextresponse				// #624
 
 const int vm_m_numbuiltins = sizeof(vm_m_builtins) / sizeof(prvm_builtin_t);
 
-r_refdef_t menu_refdef;
+r_refdef_scene_t menu_scene;
 
 void VM_M_Cmd_Init(void)
 {
 	VM_Cmd_Init();
 	VM_Polygons_Reset();
 
-	memset (&menu_refdef, 0, sizeof (r_refdef_t));
+	memset (&menu_scene, 0, sizeof (menu_scene));
 
-	menu_refdef.maxtempentities = 128;
-	menu_refdef.tempentities = (entity_render_t*) Mem_Alloc(prog->progs_mempool, sizeof(entity_render_t) * menu_refdef.maxtempentities);
-	
-	menu_refdef.frustumscale_x = 1;
-	menu_refdef.frustumscale_y = 1;
-	menu_refdef.maxentities = MAX_EDICTS + 256 + 512;
-	menu_refdef.entities = (entity_render_t **)Mem_Alloc(cls.permanentmempool, sizeof(entity_render_t *) * menu_refdef.maxentities);
-	
-	menu_refdef.view.width = vid.width;
-	menu_refdef.view.height = vid.height;
-	menu_refdef.view.depth = 1;
-	menu_refdef.view.x = 0;
-	menu_refdef.view.y = 0;
-	menu_refdef.view.z = 0;
-	menu_refdef.view.colormask[0] = true;
-	menu_refdef.view.colormask[1] = true;
-	menu_refdef.view.colormask[2] = true;
-	menu_refdef.view.colormask[3] = true;
-	
-	menu_refdef.view.useperspective = false;
-	menu_refdef.view.frustum_y = tan(scr_fov.value * M_PI / 360.0) * (3.0/4.0);
-	menu_refdef.view.frustum_x = menu_refdef.view.frustum_y * (float)menu_refdef.view.width / (float)menu_refdef.view.height / vid_pixelheight.value;
+	menu_scene.maxtempentities = 128;
+	menu_scene.tempentities = (entity_render_t*) Mem_Alloc(prog->progs_mempool, sizeof(entity_render_t) * menu_scene.maxtempentities);
+
+	menu_scene.maxentities = MAX_EDICTS + 256 + 512;
+	menu_scene.entities = (entity_render_t **)Mem_Alloc(cls.permanentmempool, sizeof(entity_render_t *) * menu_scene.maxentities);
 }
 
 void VM_M_Cmd_Reset(void)

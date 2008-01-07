@@ -88,7 +88,7 @@ void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 // add all the lightmaps
 		if (lightmap)
 			for (maps = 0;maps < MAXLIGHTMAPS && surface->lightmapinfo->styles[maps] != 255;maps++, lightmap += size3)
-				for (scale = r_refdef.lightstylevalue[surface->lightmapinfo->styles[maps]], i = 0;i < size3;i++)
+				for (scale = r_refdef.scene.lightstylevalue[surface->lightmapinfo->styles[maps]], i = 0;i < size3;i++)
 					bl[i] += lightmap[i] * scale;
 	}
 
@@ -123,7 +123,7 @@ void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 		{
 			for (maps = 0;maps < MAXLIGHTMAPS && surface->lightmapinfo->styles[maps] != 255;maps++, lightmap += size3, normalmap += size3)
 			{
-				for (scale = r_refdef.lightstylevalue[surface->lightmapinfo->styles[maps]], i = 0;i < size;i++)
+				for (scale = r_refdef.scene.lightstylevalue[surface->lightmapinfo->styles[maps]], i = 0;i < size;i++)
 				{
 					// add the normalmap with weighting proportional to the style's lightmap intensity
 					l = (int)(VectorLength(lightmap + i*3) * scale);
@@ -278,7 +278,7 @@ void R_Stain (const vec3_t origin, float radius, int cr1, int cg1, int cb1, int 
 	entity_render_t *ent;
 	model_t *model;
 	vec3_t org;
-	if (r_refdef.worldmodel == NULL || !r_refdef.worldmodel->brush.data_nodes || !r_refdef.worldmodel->brushq1.lightdata)
+	if (r_refdef.scene.worldmodel == NULL || !r_refdef.scene.worldmodel->brush.data_nodes || !r_refdef.scene.worldmodel->brushq1.lightdata)
 		return;
 	fcolor[0] = cr1;
 	fcolor[1] = cg1;
@@ -289,7 +289,7 @@ void R_Stain (const vec3_t origin, float radius, int cr1, int cg1, int cb1, int 
 	fcolor[6] = cb2 - cb1;
 	fcolor[7] = (ca2 - ca1) * (1.0f / 64.0f);
 
-	R_StainNode(r_refdef.worldmodel->brush.data_nodes + r_refdef.worldmodel->brushq1.hulls[0].firstclipnode, r_refdef.worldmodel, origin, radius, fcolor);
+	R_StainNode(r_refdef.scene.worldmodel->brush.data_nodes + r_refdef.scene.worldmodel->brushq1.hulls[0].firstclipnode, r_refdef.scene.worldmodel, origin, radius, fcolor);
 
 	// look for embedded bmodels
 	for (n = 0;n < cl.num_brushmodel_entities;n++)
@@ -356,15 +356,15 @@ void R_DrawPortals(void)
 	int i, leafnum;
 	mportal_t *portal;
 	float center[3], f;
-	model_t *model = r_refdef.worldmodel;
+	model_t *model = r_refdef.scene.worldmodel;
 	if (model == NULL)
 		return;
-	for (leafnum = 0;leafnum < r_refdef.worldmodel->brush.num_leafs;leafnum++)
+	for (leafnum = 0;leafnum < r_refdef.scene.worldmodel->brush.num_leafs;leafnum++)
 	{
 		if (r_refdef.viewcache.world_leafvisible[leafnum])
 		{
 			//for (portalnum = 0, portal = model->brush.data_portals;portalnum < model->brush.num_portals;portalnum++, portal++)
-			for (portal = r_refdef.worldmodel->brush.data_leafs[leafnum].portals;portal;portal = portal->next)
+			for (portal = r_refdef.scene.worldmodel->brush.data_leafs[leafnum].portals;portal;portal = portal->next)
 			{
 				if (portal->numpoints <= POLYGONELEMENTS_MAXPOINTS)
 				if (!R_CullBox(portal->mins, portal->maxs))
@@ -386,7 +386,7 @@ void R_View_WorldVisibility(qboolean forcenovis)
 	int i, j, *mark;
 	mleaf_t *leaf;
 	mleaf_t *viewleaf;
-	model_t *model = r_refdef.worldmodel;
+	model_t *model = r_refdef.scene.worldmodel;
 
 	if (!model)
 		return;
@@ -523,7 +523,7 @@ void R_Q1BSP_DrawSky(entity_render_t *ent)
 {
 	if (ent->model == NULL)
 		return;
-	if (ent == r_refdef.worldentity)
+	if (ent == r_refdef.scene.worldentity)
 		R_DrawWorldSurfaces(true, true, false, false, false);
 	else
 		R_DrawModelSurfaces(ent, true, true, false, false, false);
@@ -534,7 +534,7 @@ void R_Q1BSP_DrawAddWaterPlanes(entity_render_t *ent)
 	model_t *model = ent->model;
 	if (model == NULL)
 		return;
-	if (ent == r_refdef.worldentity)
+	if (ent == r_refdef.scene.worldentity)
 		R_DrawWorldSurfaces(false, false, false, true, false);
 	else
 		R_DrawModelSurfaces(ent, false, false, false, true, false);
@@ -545,7 +545,7 @@ void R_Q1BSP_Draw(entity_render_t *ent)
 	model_t *model = ent->model;
 	if (model == NULL)
 		return;
-	if (ent == r_refdef.worldentity)
+	if (ent == r_refdef.scene.worldentity)
 		R_DrawWorldSurfaces(false, true, false, false, false);
 	else
 		R_DrawModelSurfaces(ent, false, true, false, false, false);
@@ -556,7 +556,7 @@ void R_Q1BSP_DrawDepth(entity_render_t *ent)
 	model_t *model = ent->model;
 	if (model == NULL)
 		return;
-	if (ent == r_refdef.worldentity)
+	if (ent == r_refdef.scene.worldentity)
 		R_DrawWorldSurfaces(false, false, true, false, false);
 	else
 		R_DrawModelSurfaces(ent, false, false, true, false, false);
@@ -566,7 +566,7 @@ void R_Q1BSP_DrawDebug(entity_render_t *ent)
 {
 	if (ent->model == NULL)
 		return;
-	if (ent == r_refdef.worldentity)
+	if (ent == r_refdef.scene.worldentity)
 		R_DrawWorldSurfaces(false, false, false, false, true);
 	else
 		R_DrawModelSurfaces(ent, false, false, false, false, true);
@@ -1053,7 +1053,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 	{
 		batchnumsurfaces = 0;
 		endsurface = min(i + RSURF_MAX_BATCHSURFACES, numsurfaces);
-		if (ent == r_refdef.worldentity)
+		if (ent == r_refdef.scene.worldentity)
 		{
 			for (;i < endsurface;i++)
 				if (r_refdef.viewcache.world_surfacevisible[surfacelist[i]])
@@ -1159,12 +1159,12 @@ void R_ReplaceWorldTexture (void)
 	int			i;
 	const char	*r, *newt;
 	skinframe_t *skinframe;
-	if (!r_refdef.worldmodel)
+	if (!r_refdef.scene.worldmodel)
 	{
 		Con_Printf("There is no worldmodel\n");
 		return;
 	}
-	m = r_refdef.worldmodel;
+	m = r_refdef.scene.worldmodel;
 
 	if(Cmd_Argc() < 2)
 	{
@@ -1207,12 +1207,12 @@ void R_ListWorldTextures (void)
 	model_t		*m;
 	texture_t	*t;
 	int			i;
-	if (!r_refdef.worldmodel)
+	if (!r_refdef.scene.worldmodel)
 	{
 		Con_Printf("There is no worldmodel\n");
 		return;
 	}
-	m = r_refdef.worldmodel;
+	m = r_refdef.scene.worldmodel;
 
 	Con_Print("Worldmodel textures :\n");
 	for(i=0,t=m->data_textures;i<m->num_textures;i++,t++)
