@@ -1273,13 +1273,13 @@ VM_strreplace,						// #484 string(string search, string replace, string subject
 VM_strireplace,					// #485 string(string search, string replace, string subject) strireplace (DP_QC_STRREPLACE)
 NULL,									// #486
 #ifdef SUPPORT_GECKO
-VM_gecko_create,					// #487
-VM_gecko_destroy,					// #488
-VM_gecko_navigate,				// #489
-VM_gecko_keyevent,				// #490
-VM_gecko_movemouse,				// #491
-VM_gecko_resize,									// #492
-VM_gecko_get_texture_extent,									// #493
+VM_gecko_create,					// #487 float gecko_create( string name )
+VM_gecko_destroy,					// #488 void gecko_destroy( string name )
+VM_gecko_navigate,				// #489 void gecko_navigate( string name, string URI )
+VM_gecko_keyevent,				// #490 float gecko_keyevent( string name, float key, float eventtype )
+VM_gecko_movemouse,				// #491 void gecko_mousemove( string name, float x, float y )
+VM_gecko_resize,					// #492 void gecko_resize( string name, float w, float h )
+VM_gecko_get_texture_extent,	// #493 vector gecko_get_texture_extent( string name )
 #else
 NULL,									// #487
 NULL,									// #488
@@ -1396,30 +1396,30 @@ NULL,									// #597
 NULL,									// #598
 NULL,									// #599
 NULL,									// #600
-VM_M_setkeydest,					// #601 menu functions...
-VM_M_getkeydest,					// #602
-VM_M_setmousetarget,				// #603
-VM_M_getmousetarget,				// #604
-VM_M_callfunction,				// #605
-VM_writetofile,					// #606
-VM_M_isfunction,					// #607
-VM_M_getresolution,				// #608
-VM_keynumtostring,				// #609
-VM_M_findkeysforcommand,		// #610
-VM_M_getserverliststat,			// #611
-VM_M_getserverliststring,		// #612
-VM_parseentitydata,				// #613
-VM_stringtokeynum,				// #614
-VM_M_resetserverlistmasks,		// #615
-VM_M_setserverlistmaskstring,	// #616
-VM_M_setserverlistmasknumber,	// #617
-VM_M_resortserverlist,			// #618
-VM_M_setserverlistsort,			// #619
-VM_M_refreshserverlist,			// #620
-VM_M_getserverlistnumber,		// #621
-VM_M_getserverlistindexforkey,// #622
-VM_M_addwantedserverlistkey,	// #623
-VM_M_getextresponse				// #624
+VM_M_setkeydest,					// #601 void setkeydest(float dest)
+VM_M_getkeydest,					// #602 float getkeydest(void)
+VM_M_setmousetarget,				// #603 void setmousetarget(float trg)
+VM_M_getmousetarget,				// #604 float getmousetarget(void)
+VM_M_callfunction,				// #605 void callfunction(...)
+VM_writetofile,					// #606 void writetofile(float fhandle, entity ent)
+VM_M_isfunction,					// #607 float isfunction(string function_name)
+VM_M_getresolution,				// #608 vector getresolution(float number)
+VM_keynumtostring,				// #609 string keynumtostring(float keynum)
+VM_M_findkeysforcommand,		// #610 string findkeysforcommand(string command)
+VM_M_getserverliststat,			// #611 float gethostcachevalue(float type)
+VM_M_getserverliststring,		// #612 string gethostcachestring(float type, float hostnr)
+VM_parseentitydata,				// #613 void parseentitydata(entity ent, string data)
+VM_stringtokeynum,				// #614 float stringtokeynum(string key)
+VM_M_resetserverlistmasks,		// #615 void resethostcachemasks(void)
+VM_M_setserverlistmaskstring,	// #616 void sethostcachemaskstring(float mask, float fld, string str, float op)
+VM_M_setserverlistmasknumber,	// #617 void sethostcachemasknumber(float mask, float fld, float num, float op)
+VM_M_resortserverlist,			// #618 void resorthostcache(void)
+VM_M_setserverlistsort,			// #619 void sethostcachesort(float fld, float descending)
+VM_M_refreshserverlist,			// #620 void refreshhostcache(void)
+VM_M_getserverlistnumber,		// #621 float gethostcachenumber(float fld, float hostnr)
+VM_M_getserverlistindexforkey,// #622 float gethostcacheindexforkey(string key)
+VM_M_addwantedserverlistkey,	// #623 void addwantedhostcachekey(string key)
+VM_M_getextresponse				// #624 string getextresponse(void)
 };
 
 const int vm_m_numbuiltins = sizeof(vm_m_builtins) / sizeof(prvm_builtin_t);
