@@ -2865,6 +2865,13 @@ void VM_CL_serverkey(void)
 
 //============================================================================
 
+// To create a almost working builtin file from this replace:
+// "^NULL,.*" with ""
+// "^{.*//.*}:Wh\(.*)" with ""
+// "\:" with "//"
+// ".*//:Wh{\#:d*}:Wh{.*}" with "\2 = \1;"
+// "\n\n+" with "\n\n"
+
 prvm_builtin_t vm_cl_builtins[] = {
 NULL,							// #0 NULL function (not callable) (QUAKE)
 VM_CL_makevectors,				// #1 void(vector ang) makevectors (QUAKE)
@@ -2882,7 +2889,7 @@ VM_vlen,						// #12 float(vector v) vlen (QUAKE)
 VM_vectoyaw,					// #13 float(vector v) vectoyaw (QUAKE)
 VM_CL_spawn,					// #14 entity() spawn (QUAKE)
 VM_remove,						// #15 void(entity e) remove (QUAKE)
-VM_CL_traceline,				// #16 float(vector v1, vector v2, float tryents) traceline (QUAKE)
+VM_CL_traceline,				// #16 float(vector v1, vector v2, float tryents, entity ignoreentity) traceline (QUAKE)
 NULL,							// #17 entity() checkclient (QUAKE)
 VM_find,						// #18 entity(entity start, .string fld, string match) find (QUAKE)
 VM_precache_sound,				// #19 void(string s) precache_sound (QUAKE)
@@ -2898,7 +2905,7 @@ VM_coredump,					// #28 void() coredump (QUAKE)
 VM_traceon,						// #29 void() traceon (QUAKE)
 VM_traceoff,					// #30 void() traceoff (QUAKE)
 VM_eprint,						// #31 void(entity e) eprint (QUAKE)
-VM_CL_walkmove,					// #32 float(float yaw, float dist) walkmove (QUAKE)
+VM_CL_walkmove,					// #32 float(float yaw, float dist[, float settrace]) walkmove (QUAKE)
 NULL,							// #33 (QUAKE)
 VM_CL_droptofloor,				// #34 float() droptofloor (QUAKE)
 VM_CL_lightstyle,				// #35 void(float style, string value) lightstyle (QUAKE)
@@ -3215,7 +3222,7 @@ VM_CL_getkeybind,				// #342 string(float keynum) getkeybind (EXT_CSQC)
 VM_CL_setcursormode,			// #343 void(float usecursor) setcursormode (EXT_CSQC)
 VM_getmousepos,					// #344 vector() getmousepos (EXT_CSQC)
 VM_CL_getinputstate,			// #345 float(float framenum) getinputstate (EXT_CSQC)
-VM_CL_setsensitivityscale,		// #346 void(float sens) setsensitivityscaler (EXT_CSQC)
+VM_CL_setsensitivityscale,		// #346 void(float sens) setsensitivityscale (EXT_CSQC)
 VM_CL_runplayerphysics,			// #347 void() runstandardplayerphysics (EXT_CSQC)
 VM_CL_getplayerkey,				// #348 string(float playernum, string keyname) getplayerkeyvalue (EXT_CSQC)
 VM_CL_isdemo,					// #349 float() isdemo (EXT_CSQC)
@@ -3327,7 +3334,7 @@ NULL,							// #453 void(entity clent) dropclient (DP_SV_DROPCLIENT)
 NULL,							// #454 entity() spawnclient (DP_SV_BOTCLIENT)
 NULL,							// #455 float(entity clent) clienttype (DP_SV_BOTCLIENT)
 NULL,							// #456 void(float to, string s) WriteUnterminatedString (DP_SV_WRITEUNTERMINATEDSTRING)
-VM_CL_te_flamejet,				// #457 void(vector org, vector vel, float howmany) te_flamejet = #457 (DP_TE_FLAMEJET)
+VM_CL_te_flamejet,				// #457 void(vector org, vector vel, float howmany) te_flamejet (DP_TE_FLAMEJET)
 NULL,							// #458
 VM_ftoe,						// #459 entity(float num) entitybyindex (DP_QC_EDICT_NUM)
 VM_buf_create,					// #460 float() buf_create (DP_QC_STRINGBUFFERS)
@@ -3353,10 +3360,10 @@ VM_tokenizebyseparator,			// #479 float(string s) tokenizebyseparator (DP_QC_TOK
 VM_strtolower,					// #480 string(string s) VM_strtolower (DP_QC_STRING_CASE_FUNCTIONS)
 VM_strtoupper,					// #481 string(string s) VM_strtoupper (DP_QC_STRING_CASE_FUNCTIONS)
 VM_cvar_defstring,				// #482 string(string s) cvar_defstring (DP_QC_CVAR_DEFSTRING)
-VM_CL_pointsound,				// #483 void(vector origin, string sample, float volume, float attenuation) (DP_SV_POINTSOUND)
+VM_CL_pointsound,				// #483 void(vector origin, string sample, float volume, float attenuation) pointsound (DP_SV_POINTSOUND)
 VM_strreplace,					// #484 string(string search, string replace, string subject) strreplace (DP_QC_STRREPLACE)
 VM_strireplace,					// #485 string(string search, string replace, string subject) strireplace (DP_QC_STRREPLACE)
-VM_CL_getsurfacepointattribute,// #486 vector(entity e, float s, float n, float a) getsurfacepointattribute = #486;
+VM_CL_getsurfacepointattribute,// #486 vector(entity e, float s, float n, float a) getsurfacepointattribute
 #ifdef SUPPORT_GECKO
 VM_gecko_create,					// #487 float gecko_create( string name )
 VM_gecko_destroy,					// #488 void gecko_destroy( string name )
