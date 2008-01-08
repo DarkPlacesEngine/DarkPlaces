@@ -1016,7 +1016,7 @@ void FS_AddGameHierarchy (const char *dir)
 	int i;
 	char userdir[MAX_QPATH];
 #ifdef WIN32
-	TCHAR appdata[MAX_PATH + 1];
+	TCHAR mydocsdir[MAX_PATH + 1];
 #else
 	const char *homedir;
 #endif
@@ -1028,8 +1028,9 @@ void FS_AddGameHierarchy (const char *dir)
 
 	// Add the personal game directory
 #ifdef WIN32
-	if(SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, 0, appdata) == S_OK)
-		dpsnprintf(userdir, sizeof(userdir), "%s/%s/", appdata, gameuserdirname);
+	if(SHGetFolderPath(NULL, CSIDL_PERSONAL, NULL, 0, mydocsdir) == S_OK)
+		dpsnprintf(userdir, sizeof(userdir), "%s/My Games/%s/", mydocsdir, gameuserdirname);
+	fprintf(stderr, "userdir = %s\n", userdir);
 #else
 	homedir = getenv ("HOME");
 	if(homedir)
@@ -1037,7 +1038,7 @@ void FS_AddGameHierarchy (const char *dir)
 #endif
 
 #ifdef WIN32
-	if(!COM_CheckParm("-appdata"))
+	if(!COM_CheckParm("-mygames"))
 	{
 		int fd = open (va("%s%s/config.cfg", fs_basedir, dir), O_WRONLY | O_CREAT, 0666); // note: no O_TRUNC here!
 		if(fd >= 0)
