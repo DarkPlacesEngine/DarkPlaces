@@ -1039,7 +1039,7 @@ void FS_AddGameHierarchy (const char *dir)
 #ifdef WIN32
 	if(!COM_CheckParm("-appdata"))
 	{
-		int fd = open (va("%s%s/config.cfg", fs_basedir, dir), O_WRONLY | O_CREAT | O_APPEND, 0666);
+		int fd = open (va("%s%s/config.cfg", fs_basedir, dir), O_WRONLY | O_CREAT, 0666); // note: no O_TRUNC here!
 		if(fd >= 0)
 		{
 			close(fd);
