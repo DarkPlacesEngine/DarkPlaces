@@ -1973,7 +1973,7 @@ qboolean RCon_Authenticate(const char *password, const char *s, const char *endp
 		return false;
 
 	for(text = s; text != endpos; ++text)
-		if(*text > 0 && *text < ' ' || *text == ';')
+		if(*text > 0 && (*text < ' ' || *text == ';'))
 			return false; // block possible exploits against the parser/alias expansion
 
 	while(s != endpos)
