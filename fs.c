@@ -30,6 +30,7 @@
 #ifdef WIN32
 # include <direct.h>
 # include <io.h>
+# include <shlobj.h>
 #else
 # include <pwd.h>
 # include <sys/stat.h>
@@ -1013,8 +1014,12 @@ FS_AddGameHierarchy
 void FS_AddGameHierarchy (const char *dir)
 {
 	int i;
-	const char *homedir;
 	char userdir[MAX_QPATH];
+#ifdef WIN32
+	TCHAR appdata[MAX_PATH + 1];
+#else
+	const char *homedir;
+#endif
 
 	// Add the common game directory
 	FS_AddGameDirectory (va("%s%s/", fs_basedir, dir));
@@ -1023,18 +1028,27 @@ void FS_AddGameHierarchy (const char *dir)
 
 	// Add the personal game directory
 #ifdef WIN32
-	homedir = getenv ("APPDATA");
-	dpsnprintf(userdir, sizeof(userdir), "%s/%s/", homedir, gameuserdirname);
+	if(SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, 0, appdata) == S_OK)
+		dpsnprintf(userdir, sizeof(userdir), "%s/%s/", appdata, gameuserdirname);
 #else
 	homedir = getenv ("HOME");
-	dpsnprintf(userdir, sizeof(userdir), "%s/.%s/", homedir, gameuserdirname);
+	if(homedir)
+		dpsnprintf(userdir, sizeof(userdir), "%s/.%s/", homedir, gameuserdirname);
 #endif
 
 #ifdef WIN32
-	if(!COM_CheckParm("-appdata")) // TODO make this the default when fs_basedir isn't writable
-#else
-	if(COM_CheckParm("-nohome"))
+	if(!COM_CheckParm("-appdata"))
+	{
+		int fd = open (va("%s%s/config.cfg", fs_basedir, dir), O_WRONLY | O_CREAT | O_APPEND, 0666);
+		if(fd >= 0)
+		{
+			close(fd);
+			*userdir = 0; // we have write access to the game dir, so let's use it
+		}
+	}
 #endif
+
+	if(COM_CheckParm("-nohome"))
 		*userdir = 0;
 	
 	if((i = COM_CheckParm("-userdir")) && i < com_argc - 1)
