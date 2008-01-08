@@ -1012,19 +1012,36 @@ FS_AddGameHierarchy
 */
 void FS_AddGameHierarchy (const char *dir)
 {
-#ifndef WIN32
+	int i;
 	const char *homedir;
-#endif
+	char userdir[MAX_QPATH];
 
 	// Add the common game directory
 	FS_AddGameDirectory (va("%s%s/", fs_basedir, dir));
 
-#ifndef WIN32
+	*userdir = 0;
+
 	// Add the personal game directory
+#ifdef WIN32
+	homedir = getenv ("APPDATA");
+	dpsnprintf(userdir, sizeof(userdir), "%s/%s/", homedir, gameuserdirname);
+#else
 	homedir = getenv ("HOME");
-	if (homedir != NULL && homedir[0] != '\0')
-		FS_AddGameDirectory (va("%s/.%s/%s/", homedir, gameuserdirname, dir));
+	dpsnprintf(userdir, sizeof(userdir), "%s/.%s/", homedir, gameuserdirname);
 #endif
+
+#ifdef WIN32
+	if(!COM_CheckParm("-appdata")) // TODO make this the default when fs_basedir isn't writable
+#else
+	if(COM_CheckParm("-nohome"))
+#endif
+		*userdir = 0;
+	
+	if((i = COM_CheckParm("-userdir")) && i < com_argc - 1)
+		dpsnprintf(userdir, sizeof(userdir), "%s/", com_argv[i+1]);
+
+	if (*userdir)
+		FS_AddGameDirectory(va("%s%s/", userdir, dir));
 }
 
 
