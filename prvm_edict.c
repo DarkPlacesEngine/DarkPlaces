@@ -32,7 +32,9 @@ ddef_t *PRVM_ED_FieldAtOfs(int ofs);
 qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s);
 
 // LordHavoc: optional runtime bounds checking (speed drain, but worth it for security, on by default - breaks most QCCX features (used by CRMod and others))
+#ifdef PRVM_BOUNDSCHECK_CVAR
 cvar_t prvm_boundscheck = {0, "prvm_boundscheck", "1", "enables detection of out of bounds memory access in the QuakeC code being run (in other words, prevents really exceedingly bad QuakeC code from doing nasty things to your computer)"};
+#endif
 // LordHavoc: prints every opcode as it executes - warning: this is significant spew
 cvar_t prvm_traceqc = {0, "prvm_traceqc", "0", "prints every QuakeC statement as it is executed (only for really thorough debugging!)"};
 // LordHavoc: counts usage of each QuakeC statement
@@ -2040,7 +2042,9 @@ void PRVM_Init (void)
 	Cmd_AddCommand ("menu_cmd", PRVM_GameCommand_Menu_f, "calls the menu QC function GameCommand with the supplied string as argument");
 	Cmd_AddCommand ("sv_cmd", PRVM_GameCommand_Server_f, "calls the server QC function GameCommand with the supplied string as argument");
 	// LordHavoc: optional runtime bounds checking (speed drain, but worth it for security, on by default - breaks most QCCX features (used by CRMod and others))
+#ifdef PRVM_BOUNDSCHECK_CVAR
 	Cvar_RegisterVariable (&prvm_boundscheck);
+#endif
 	Cvar_RegisterVariable (&prvm_traceqc);
 	Cvar_RegisterVariable (&prvm_statementprofiling);
 	Cvar_RegisterVariable (&prvm_backtraceforwarnings);
