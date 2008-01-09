@@ -545,7 +545,9 @@ PRVM_ExecuteProgram
 #define OPA ((prvm_eval_t *)&prog->globals.generic[(unsigned short) st->a])
 #define OPB ((prvm_eval_t *)&prog->globals.generic[(unsigned short) st->b])
 #define OPC ((prvm_eval_t *)&prog->globals.generic[(unsigned short) st->c])
+#ifdef PRVM_BOUNDSCHECK_CVAR
 extern cvar_t prvm_boundscheck;
+#endif
 extern cvar_t prvm_traceqc;
 extern cvar_t prvm_statementprofiling;
 extern sizebuf_t vm_tempstringsbuf;
@@ -594,7 +596,9 @@ chooseexecprogram:
 	if (prvm_statementprofiling.integer)
 	{
 #define PRVMSTATEMENTPROFILING 1
+#ifdef PRVM_BOUNDSCHECK_CVAR
 		if (prvm_boundscheck.integer)
+#endif
 		{
 #define PRVMBOUNDSCHECK 1
 			if (prog->trace)
@@ -609,6 +613,7 @@ chooseexecprogram:
 			}
 #undef PRVMBOUNDSCHECK
 		}
+#ifdef PRVM_BOUNDSCHECK_CVAR
 		else
 		{
 			if (prog->trace)
@@ -622,11 +627,14 @@ chooseexecprogram:
 #include "prvm_execprogram.h"
 			}
 		}
+#endif
 #undef PRVMSTATEMENTPROFILING
 	}
 	else
 	{
+#ifdef PRVM_BOUNDSCHECK_CVAR
 		if (prvm_boundscheck.integer)
+#endif
 		{
 #define PRVMBOUNDSCHECK 1
 			if (prog->trace)
@@ -641,6 +649,7 @@ chooseexecprogram:
 			}
 #undef PRVMBOUNDSCHECK
 		}
+#ifdef PRVM_BOUNDSCHECK_CVAR
 		else
 		{
 			if (prog->trace)
@@ -654,6 +663,7 @@ chooseexecprogram:
 #include "prvm_execprogram.h"
 			}
 		}
+#endif
 	}
 
 cleanup:
