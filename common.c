@@ -1483,6 +1483,9 @@ static const gamemode_info_t gamemode_info [] =
 // GAME_CONTAGIONTHEORY
 // COMMANDLINEOPTION: Game: -contagiontheory runs the game Contagion Theory
 { "contagiontheory",		"-contagiontheory",	"Contagion Theory",			"ctdata",	NULL, 			"ct",			"contagiontheory" },
+// GAME_EDU2P
+// COMMANDLINEOPTION: Game: -edu2p runs the game Edu2 prototype
+{ "edu2p", "-edu2p", "EDU2 Prototype", "id1", "data", "edu2_p", "edu2prototype" },
 };
 
 void COM_InitGameType (void)
