@@ -593,16 +593,20 @@ static const char *builtinshaderstring =
 "uniform sampler2D Texture_Normal;\n"
 "uniform sampler2D Texture_Color;\n"
 "uniform sampler2D Texture_Gloss;\n"
-"uniform samplerCube Texture_Cube;\n"
-"uniform sampler2D Texture_Attenuation;\n"
-"uniform sampler2D Texture_FogMask;\n"
+"uniform sampler2D Texture_Glow;\n"
+"uniform sampler2D Texture_SecondaryNormal;\n"
+"uniform sampler2D Texture_SecondaryColor;\n"
+"uniform sampler2D Texture_SecondaryGloss;\n"
+"uniform sampler2D Texture_SecondaryGlow;\n"
 "uniform sampler2D Texture_Pants;\n"
 "uniform sampler2D Texture_Shirt;\n"
+"uniform sampler2D Texture_FogMask;\n"
 "uniform sampler2D Texture_Lightmap;\n"
 "uniform sampler2D Texture_Deluxemap;\n"
-"uniform sampler2D Texture_Glow;\n"
-"uniform sampler2D Texture_Reflection;\n"
 "uniform sampler2D Texture_Refraction;\n"
+"uniform sampler2D Texture_Reflection;\n"
+"uniform sampler2D Texture_Attenuation;\n"
+"uniform samplerCube Texture_Cube;\n"
 "\n"
 "uniform myhalf3 LightColor;\n"
 "uniform myhalf3 AmbientColor;\n"
@@ -752,7 +756,28 @@ static const char *builtinshaderstring =
 "#ifdef USECOLORMAPPING\n"
 "	color.rgb += myhalf3(texture2D(Texture_Pants, TexCoord)) * Color_Pants + myhalf3(texture2D(Texture_Shirt, TexCoord)) * Color_Shirt;\n"
 "#endif\n"
+"#ifdef USEVERTEXTEXTUREBLEND\n"
+"	myhalf terrainblend = clamp(myhalf(gl_Color.a) * color.a * 2.0 - 0.5, myhalf(0.0), myhalf(1.0));\n"
+"	//myhalf terrainblend = min(myhalf(gl_Color.a) * color.a * 2.0, myhalf(1.0));\n"
+"	//myhalf terrainblend = myhalf(gl_Color.a) * color.a > 0.5;\n"
+"	color = mix(myhalf4(texture2D(Texture_SecondaryColor, TexCoord)), color, terrainblend);\n"
+"	//color = mix(myhalf4(1, 0, 0, 1), color, terrainblend);\n"
+"#endif\n"
 "\n"
+"#ifdef USEDIFFUSE\n"
+"	// get the surface normal and the gloss color\n"
+"# ifdef USEVERTEXTEXTUREBLEND\n"
+"	myhalf3 surfacenormal = normalize(mix(myhalf3(texture2D(Texture_SecondaryNormal, TexCoord)), myhalf3(texture2D(Texture_Normal, TexCoord)), terrainblend)) - myhalf3(0.5));\n"
+"#  ifdef USESPECULAR\n"
+"	myhalf3 glosscolor = mix(myhalf3(texture2D(Texture_SecondaryGloss, TexCoord), myhalf3(texture2D(Texture_Gloss, TexCoord)), TexCoord), terrainblend);\n"
+"#  endif\n"
+"# else\n"
+"	myhalf3 surfacenormal = normalize(myhalf3(texture2D(Texture_Normal, TexCoord)) - myhalf3(0.5));\n"
+"#  ifdef USESPECULAR\n"
+"	myhalf3 glosscolor = myhalf3(texture2D(Texture_Gloss, TexCoord));\n"
+"#  endif\n"
+"# endif\n"
+"#endif\n"
 "\n"
 "\n"
 "\n"
@@ -763,23 +788,22 @@ static const char *builtinshaderstring =
 "	// compute color intensity for the two textures (colormap and glossmap)\n"
 "	// scale by light color and attenuation as efficiently as possible\n"
 "	// (do as much scalar math as possible rather than vector math)\n"
-"# ifdef USESPECULAR\n"
-"	myhalf3 surfacenormal = normalize(myhalf3(texture2D(Texture_Normal, TexCoord)) - myhalf3(0.5));\n"
+"# ifdef USEDIFFUSE\n"
+"	// get the light normal\n"
 "	myhalf3 diffusenormal = myhalf3(normalize(LightVector));\n"
+"# endif\n"
+"# ifdef USESPECULAR\n"
 "	myhalf3 specularnormal = normalize(diffusenormal + myhalf3(normalize(EyeVector)));\n"
 "\n"
 "	// calculate directional shading\n"
-"	color.rgb = LightColor * myhalf(texture2D(Texture_Attenuation, vec2(length(CubeVector), 0.0))) * (color.rgb * (AmbientScale + DiffuseScale * myhalf(max(float(dot(surfacenormal, diffusenormal)), 0.0))) + (SpecularScale * pow(myhalf(max(float(dot(surfacenormal, specularnormal)), 0.0)), SpecularPower)) * myhalf3(texture2D(Texture_Gloss, TexCoord)));\n"
+"	color.rgb = myhalf(texture2D(Texture_Attenuation, vec2(length(CubeVector), 0.0))) * (color.rgb * (AmbientScale + DiffuseScale * myhalf(max(float(dot(surfacenormal, diffusenormal)), 0.0))) + (SpecularScale * pow(myhalf(max(float(dot(surfacenormal, specularnormal)), 0.0)), SpecularPower)) * glosscolor);\n"
 "# else\n"
 "#  ifdef USEDIFFUSE\n"
-"	myhalf3 surfacenormal = normalize(myhalf3(texture2D(Texture_Normal, TexCoord)) - myhalf3(0.5));\n"
-"	myhalf3 diffusenormal = myhalf3(normalize(LightVector));\n"
-"\n"
 "	// calculate directional shading\n"
-"	color.rgb = color.rgb * LightColor * (myhalf(texture2D(Texture_Attenuation, vec2(length(CubeVector), 0.0))) * (AmbientScale + DiffuseScale * myhalf(max(float(dot(surfacenormal, diffusenormal)), 0.0))));\n"
+"	color.rgb = color.rgb * (myhalf(texture2D(Texture_Attenuation, vec2(length(CubeVector), 0.0))) * (AmbientScale + DiffuseScale * myhalf(max(float(dot(surfacenormal, diffusenormal)), 0.0))));\n"
 "#  else\n"
 "	// calculate directionless shading\n"
-"	color.rgb = color.rgb * LightColor * myhalf(texture2D(Texture_Attenuation, vec2(length(CubeVector), 0.0)));\n"
+"	color.rgb = color.rgb * myhalf(texture2D(Texture_Attenuation, vec2(length(CubeVector), 0.0)));\n"
 "#  endif\n"
 "# endif\n"
 "\n"
@@ -795,20 +819,17 @@ static const char *builtinshaderstring =
 "\n"
 "#ifdef MODE_LIGHTDIRECTION\n"
 "	// directional model lighting\n"
-"# ifdef USESPECULAR\n"
-"	// get the surface normal and light normal\n"
-"	myhalf3 surfacenormal = normalize(myhalf3(texture2D(Texture_Normal, TexCoord)) - myhalf3(0.5));\n"
+"# ifdef USEDIFFUSE\n"
+"	// get the light normal\n"
 "	myhalf3 diffusenormal = myhalf3(LightVector);\n"
-"\n"
+"# endif\n"
+"# ifdef USESPECULAR\n"
 "	// calculate directional shading\n"
 "	color.rgb *= AmbientColor + DiffuseColor * myhalf(max(float(dot(surfacenormal, diffusenormal)), 0.0));\n"
 "	myhalf3 specularnormal = normalize(diffusenormal + myhalf3(normalize(EyeVector)));\n"
 "	color.rgb += myhalf3(texture2D(Texture_Gloss, TexCoord)) * SpecularColor * pow(myhalf(max(float(dot(surfacenormal, specularnormal)), 0.0)), SpecularPower);\n"
 "# else\n"
 "#  ifdef USEDIFFUSE\n"
-"	// get the surface normal and light normal\n"
-"	myhalf3 surfacenormal = normalize(myhalf3(texture2D(Texture_Normal, TexCoord)) - myhalf3(0.5));\n"
-"	myhalf3 diffusenormal = myhalf3(LightVector);\n"
 "\n"
 "	// calculate directional shading\n"
 "	color.rgb *= AmbientColor + DiffuseColor * myhalf(max(float(dot(surfacenormal, diffusenormal)), 0.0));\n"
@@ -816,8 +837,6 @@ static const char *builtinshaderstring =
 "	color.rgb *= AmbientColor;\n"
 "#  endif\n"
 "# endif\n"
-"\n"
-"	color.a *= TintColor.a;\n"
 "#endif // MODE_LIGHTDIRECTION\n"
 "\n"
 "\n"
@@ -826,9 +845,7 @@ static const char *builtinshaderstring =
 "#ifdef MODE_LIGHTDIRECTIONMAP_MODELSPACE\n"
 "	// deluxemap lightmapping using light vectors in modelspace (evil q3map2)\n"
 "\n"
-"	// get the surface normal and light normal\n"
-"	myhalf3 surfacenormal = normalize(myhalf3(texture2D(Texture_Normal, TexCoord)) - myhalf3(0.5));\n"
-"\n"
+"	// get the light normal\n"
 "	myhalf3 diffusenormal_modelspace = myhalf3(texture2D(Texture_Deluxemap, TexCoordLightmap)) - myhalf3(0.5);\n"
 "	myhalf3 diffusenormal = normalize(myhalf3(dot(diffusenormal_modelspace, myhalf3(VectorS)), dot(diffusenormal_modelspace, myhalf3(VectorT)), dot(diffusenormal_modelspace, myhalf3(VectorR))));\n"
 "	// calculate directional shading\n"
@@ -840,8 +857,6 @@ static const char *builtinshaderstring =
 "\n"
 "	// apply lightmap color\n"
 "	color.rgb = color.rgb * AmbientScale + tempcolor * myhalf3(texture2D(Texture_Lightmap, TexCoordLightmap));\n"
-"\n"
-"	color *= TintColor;\n"
 "#endif // MODE_LIGHTDIRECTIONMAP_MODELSPACE\n"
 "\n"
 "\n"
@@ -850,9 +865,7 @@ static const char *builtinshaderstring =
 "#ifdef MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n"
 "	// deluxemap lightmapping using light vectors in tangentspace (hmap2 -light)\n"
 "\n"
-"	// get the surface normal and light normal\n"
-"	myhalf3 surfacenormal = normalize(myhalf3(texture2D(Texture_Normal, TexCoord)) - myhalf3(0.5));\n"
-"\n"
+"	// get the light normal\n"
 "	myhalf3 diffusenormal = normalize(myhalf3(texture2D(Texture_Deluxemap, TexCoordLightmap)) - myhalf3(0.5));\n"
 "	// calculate directional shading\n"
 "	myhalf3 tempcolor = color.rgb * (DiffuseScale * myhalf(max(float(dot(surfacenormal, diffusenormal)), 0.0)));\n"
@@ -863,8 +876,6 @@ static const char *builtinshaderstring =
 "\n"
 "	// apply lightmap color\n"
 "	color.rgb = color.rgb * AmbientScale + tempcolor * myhalf3(texture2D(Texture_Lightmap, TexCoordLightmap));\n"
-"\n"
-"	color *= TintColor;\n"
 "#endif // MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n"
 "\n"
 "\n"
@@ -873,8 +884,6 @@ static const char *builtinshaderstring =
 "#ifdef MODE_LIGHTMAP\n"
 "	// apply lightmap color\n"
 "	color.rgb = color.rgb * myhalf3(texture2D(Texture_Lightmap, TexCoordLightmap)) * DiffuseScale + color.rgb * AmbientScale;\n"
-"\n"
-"	color *= TintColor;\n"
 "#endif // MODE_LIGHTMAP\n"
 "\n"
 "\n"
@@ -883,15 +892,12 @@ static const char *builtinshaderstring =
 "#ifdef MODE_VERTEXCOLOR\n"
 "	// apply lightmap color\n"
 "	color.rgb = color.rgb * myhalf3(gl_Color.rgb) * DiffuseScale + color.rgb * AmbientScale;\n"
-"\n"
-"	color *= TintColor;\n"
 "#endif // MODE_VERTEXCOLOR\n"
 "\n"
 "\n"
 "\n"
 "\n"
 "#ifdef MODE_FLATCOLOR\n"
-"	color *= TintColor;\n"
 "#endif // MODE_FLATCOLOR\n"
 "\n"
 "\n"
@@ -900,6 +906,7 @@ static const char *builtinshaderstring =
 "\n"
 "\n"
 "\n"
+"	color *= TintColor;\n"
 "\n"
 "#ifdef USEGLOW\n"
 "	color.rgb += myhalf3(texture2D(Texture_Glow, TexCoord)) * GlowScale;\n"
@@ -951,24 +958,26 @@ shadermodeinfo_t;
 
 typedef enum shaderpermutation_e
 {
-	SHADERPERMUTATION_COLORMAPPING = 1<<0, // indicates this is a colormapped skin
-	SHADERPERMUTATION_CONTRASTBOOST = 1<<1, // r_glsl_contrastboost boosts the contrast at low color levels (similar to gamma)
-	SHADERPERMUTATION_FOG = 1<<2, // tint the color by fog color or black if using additive blend mode
-	SHADERPERMUTATION_CUBEFILTER = 1<<3, // (lightsource) use cubemap light filter
-	SHADERPERMUTATION_GLOW = 1<<4, // (lightmap) blend in an additive glow texture
-	SHADERPERMUTATION_DIFFUSE = 1<<5, // (lightsource) whether to use directional shading
-	SHADERPERMUTATION_SPECULAR = 1<<6, // (lightsource or deluxemapping) render specular effects
-	SHADERPERMUTATION_REFLECTION = 1<<7, // normalmap-perturbed reflection of the scene infront of the surface, preformed as an overlay on the surface
-	SHADERPERMUTATION_OFFSETMAPPING = 1<<8, // adjust texcoords to roughly simulate a displacement mapped surface
-	SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING = 1<<9, // adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
-	SHADERPERMUTATION_LIMIT = 1<<10, // size of permutations array
-	SHADERPERMUTATION_COUNT = 10 // size of shaderpermutationinfo array
+	SHADERPERMUTATION_VERTEXTEXTUREBLEND = 1<<0, // indicates this is a two-layer material blend based on vertex alpha (q3bsp)
+	SHADERPERMUTATION_COLORMAPPING = 1<<1, // indicates this is a colormapped skin
+	SHADERPERMUTATION_CONTRASTBOOST = 1<<2, // r_glsl_contrastboost boosts the contrast at low color levels (similar to gamma)
+	SHADERPERMUTATION_FOG = 1<<3, // tint the color by fog color or black if using additive blend mode
+	SHADERPERMUTATION_CUBEFILTER = 1<<4, // (lightsource) use cubemap light filter
+	SHADERPERMUTATION_GLOW = 1<<5, // (lightmap) blend in an additive glow texture
+	SHADERPERMUTATION_DIFFUSE = 1<<6, // (lightsource) whether to use directional shading
+	SHADERPERMUTATION_SPECULAR = 1<<7, // (lightsource or deluxemapping) render specular effects
+	SHADERPERMUTATION_REFLECTION = 1<<8, // normalmap-perturbed reflection of the scene infront of the surface, preformed as an overlay on the surface
+	SHADERPERMUTATION_OFFSETMAPPING = 1<<9, // adjust texcoords to roughly simulate a displacement mapped surface
+	SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING = 1<<10, // adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
+	SHADERPERMUTATION_LIMIT = 1<<11, // size of permutations array
+	SHADERPERMUTATION_COUNT = 11 // size of shaderpermutationinfo array
 }
 shaderpermutation_t;
 
 // NOTE: MUST MATCH ORDER OF SHADERPERMUTATION_* DEFINES!
 shaderpermutationinfo_t shaderpermutationinfo[SHADERPERMUTATION_COUNT] =
 {
+	{"#define USEVERTEXTEXTUREBLEND\n", " vertextextureblend"},
 	{"#define USECOLORMAPPING\n", " colormapping"},
 	{"#define USECONTRASTBOOST\n", " contrastboost"},
 	{"#define USEFOG\n", " fog"},
@@ -1022,6 +1031,10 @@ typedef struct r_glsl_permutation_s
 	int loc_Texture_Color;
 	int loc_Texture_Gloss;
 	int loc_Texture_Glow;
+	int loc_Texture_SecondaryNormal;
+	int loc_Texture_SecondaryColor;
+	int loc_Texture_SecondaryGloss;
+	int loc_Texture_SecondaryGlow;
 	int loc_Texture_Pants;
 	int loc_Texture_Shirt;
 	int loc_Texture_FogMask;
@@ -1034,7 +1047,6 @@ typedef struct r_glsl_permutation_s
 	int loc_FogColor;
 	int loc_LightPosition;
 	int loc_EyePosition;
-	int loc_LightColor;
 	int loc_Color_Pants;
 	int loc_Color_Shirt;
 	int loc_FogRangeRecip;
@@ -1169,6 +1181,10 @@ static void R_GLSL_CompilePermutation(shadermode_t mode, shaderpermutation_t per
 		p->loc_Texture_Color              = qglGetUniformLocationARB(p->program, "Texture_Color");
 		p->loc_Texture_Gloss              = qglGetUniformLocationARB(p->program, "Texture_Gloss");
 		p->loc_Texture_Glow               = qglGetUniformLocationARB(p->program, "Texture_Glow");
+		p->loc_Texture_SecondaryNormal    = qglGetUniformLocationARB(p->program, "Texture_SecondaryNormal");
+		p->loc_Texture_SecondaryColor     = qglGetUniformLocationARB(p->program, "Texture_SecondaryColor");
+		p->loc_Texture_SecondaryGloss     = qglGetUniformLocationARB(p->program, "Texture_SecondaryGloss");
+		p->loc_Texture_SecondaryGlow      = qglGetUniformLocationARB(p->program, "Texture_SecondaryGlow");
 		p->loc_Texture_FogMask            = qglGetUniformLocationARB(p->program, "Texture_FogMask");
 		p->loc_Texture_Pants              = qglGetUniformLocationARB(p->program, "Texture_Pants");
 		p->loc_Texture_Shirt              = qglGetUniformLocationARB(p->program, "Texture_Shirt");
@@ -1181,7 +1197,6 @@ static void R_GLSL_CompilePermutation(shadermode_t mode, shaderpermutation_t per
 		p->loc_FogColor                   = qglGetUniformLocationARB(p->program, "FogColor");
 		p->loc_LightPosition              = qglGetUniformLocationARB(p->program, "LightPosition");
 		p->loc_EyePosition                = qglGetUniformLocationARB(p->program, "EyePosition");
-		p->loc_LightColor                 = qglGetUniformLocationARB(p->program, "LightColor");
 		p->loc_Color_Pants                = qglGetUniformLocationARB(p->program, "Color_Pants");
 		p->loc_Color_Shirt                = qglGetUniformLocationARB(p->program, "Color_Shirt");
 		p->loc_FogRangeRecip              = qglGetUniformLocationARB(p->program, "FogRangeRecip");
@@ -1210,6 +1225,10 @@ static void R_GLSL_CompilePermutation(shadermode_t mode, shaderpermutation_t per
 		if (p->loc_Texture_Color           >= 0) qglUniform1iARB(p->loc_Texture_Color          , GL20TU_COLOR);
 		if (p->loc_Texture_Gloss           >= 0) qglUniform1iARB(p->loc_Texture_Gloss          , GL20TU_GLOSS);
 		if (p->loc_Texture_Glow            >= 0) qglUniform1iARB(p->loc_Texture_Glow           , GL20TU_GLOW);
+		if (p->loc_Texture_SecondaryNormal >= 0) qglUniform1iARB(p->loc_Texture_SecondaryNormal, GL20TU_SECONDARY_NORMAL);
+		if (p->loc_Texture_SecondaryColor  >= 0) qglUniform1iARB(p->loc_Texture_SecondaryColor , GL20TU_SECONDARY_COLOR);
+		if (p->loc_Texture_SecondaryGloss  >= 0) qglUniform1iARB(p->loc_Texture_SecondaryGloss , GL20TU_SECONDARY_GLOSS);
+		if (p->loc_Texture_SecondaryGlow   >= 0) qglUniform1iARB(p->loc_Texture_SecondaryGlow  , GL20TU_SECONDARY_GLOW);
 		if (p->loc_Texture_Pants           >= 0) qglUniform1iARB(p->loc_Texture_Pants          , GL20TU_PANTS);
 		if (p->loc_Texture_Shirt           >= 0) qglUniform1iARB(p->loc_Texture_Shirt          , GL20TU_SHIRT);
 		if (p->loc_Texture_FogMask         >= 0) qglUniform1iARB(p->loc_Texture_FogMask        , GL20TU_FOGMASK);
@@ -1302,6 +1321,8 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 	{
 		// light source
 		mode = SHADERMODE_LIGHTSOURCE;
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
+			permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
 		if (rsurface.rtlight->currentcubemap != r_texture_whitecube)
 			permutation |= SHADERPERMUTATION_CUBEFILTER;
 		if (diffusescale > 0)
@@ -1319,6 +1340,8 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 	{
 		// unshaded geometry (fullbright or ambient model lighting)
 		mode = SHADERMODE_FLATCOLOR;
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
+			permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
 		if (rsurface.texture->currentskinframe->glow)
 			permutation |= SHADERPERMUTATION_GLOW;
 		if (r_refdef.fogenabled)
@@ -1340,6 +1363,8 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 	{
 		// directional model lighting
 		mode = SHADERMODE_LIGHTDIRECTION;
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
+			permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
 		if (rsurface.texture->currentskinframe->glow)
 			permutation |= SHADERPERMUTATION_GLOW;
 		permutation |= SHADERPERMUTATION_DIFFUSE;
@@ -1358,6 +1383,8 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 	{
 		// ambient model lighting
 		mode = SHADERMODE_LIGHTDIRECTION;
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
+			permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
 		if (rsurface.texture->currentskinframe->glow)
 			permutation |= SHADERPERMUTATION_GLOW;
 		if (r_refdef.fogenabled)
@@ -1401,6 +1428,8 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 			// ordinary vertex coloring (q3bsp)
 			mode = SHADERMODE_VERTEXCOLOR;
 		}
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
+			permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
 		if (rsurface.texture->currentskinframe->glow)
 			permutation |= SHADERPERMUTATION_GLOW;
 		if (r_refdef.fogenabled)
@@ -1449,7 +1478,7 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 		if (r_glsl_permutation->loc_LightPosition >= 0) qglUniform3fARB(r_glsl_permutation->loc_LightPosition, rsurface.entitylightorigin[0], rsurface.entitylightorigin[1], rsurface.entitylightorigin[2]);
 		if (permutation & SHADERPERMUTATION_DIFFUSE)
 		{
-			if (r_glsl_permutation->loc_LightColor >= 0) qglUniform3fARB(r_glsl_permutation->loc_LightColor, lightcolorbase[0], lightcolorbase[1], lightcolorbase[2]);
+			if (r_glsl_permutation->loc_TintColor >= 0) qglUniform4fARB(r_glsl_permutation->loc_TintColor, lightcolorbase[0], lightcolorbase[1], lightcolorbase[2], rsurface.texture->lightmapcolor[3]);
 			if (r_glsl_permutation->loc_AmbientScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_AmbientScale, ambientscale);
 			if (r_glsl_permutation->loc_DiffuseScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_DiffuseScale, diffusescale);
 			if (r_glsl_permutation->loc_SpecularScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularScale, specularscale);
@@ -1457,31 +1486,48 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 		else
 		{
 			// ambient only is simpler
-			if (r_glsl_permutation->loc_LightColor >= 0) qglUniform3fARB(r_glsl_permutation->loc_LightColor, lightcolorbase[0] * ambientscale, lightcolorbase[1] * ambientscale, lightcolorbase[2] * ambientscale);
+			if (r_glsl_permutation->loc_TintColor >= 0) qglUniform4fARB(r_glsl_permutation->loc_TintColor, lightcolorbase[0] * ambientscale, lightcolorbase[1] * ambientscale, lightcolorbase[2] * ambientscale, rsurface.texture->lightmapcolor[3]);
 			if (r_glsl_permutation->loc_AmbientScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_AmbientScale, 1);
 			if (r_glsl_permutation->loc_DiffuseScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_DiffuseScale, 0);
 			if (r_glsl_permutation->loc_SpecularScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularScale, 0);
 		}
-	}
-	else if (mode == SHADERMODE_LIGHTDIRECTION)
-	{
-		if (r_glsl_permutation->loc_AmbientColor >= 0)
-			qglUniform3fARB(r_glsl_permutation->loc_AmbientColor , rsurface.modellight_ambient[0] * ambientscale  * rsurface.texture->lightmapcolor[0] * 0.5f, rsurface.modellight_ambient[1] * ambientscale  * rsurface.texture->lightmapcolor[1] * 0.5f, rsurface.modellight_ambient[2] * ambientscale  * rsurface.texture->lightmapcolor[2] * 0.5f);
-		if (r_glsl_permutation->loc_DiffuseColor >= 0)
-			qglUniform3fARB(r_glsl_permutation->loc_DiffuseColor , rsurface.modellight_diffuse[0] * diffusescale  * rsurface.texture->lightmapcolor[0] * 0.5f, rsurface.modellight_diffuse[1] * diffusescale  * rsurface.texture->lightmapcolor[1] * 0.5f, rsurface.modellight_diffuse[2] * diffusescale  * rsurface.texture->lightmapcolor[2] * 0.5f);
-		if (r_glsl_permutation->loc_SpecularColor >= 0)
-			qglUniform3fARB(r_glsl_permutation->loc_SpecularColor, rsurface.modellight_diffuse[0] * specularscale * rsurface.texture->lightmapcolor[0] * 0.5f, rsurface.modellight_diffuse[1] * specularscale * rsurface.texture->lightmapcolor[1] * 0.5f, rsurface.modellight_diffuse[2] * specularscale * rsurface.texture->lightmapcolor[2] * 0.5f);
-		if (r_glsl_permutation->loc_LightDir >= 0)
-			qglUniform3fARB(r_glsl_permutation->loc_LightDir, rsurface.modellight_lightdir[0], rsurface.modellight_lightdir[1], rsurface.modellight_lightdir[2]);
+		// additive passes are only darkened by fog, not tinted
+		if (r_glsl_permutation->loc_FogColor >= 0)
+			qglUniform3fARB(r_glsl_permutation->loc_FogColor, 0, 0, 0);
 	}
 	else
 	{
-		if (r_glsl_permutation->loc_AmbientScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_AmbientScale, r_ambient.value * 1.0f / 128.0f);
-		if (r_glsl_permutation->loc_DiffuseScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_DiffuseScale, r_refdef.lightmapintensity);
-		if (r_glsl_permutation->loc_SpecularScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularScale, r_refdef.lightmapintensity * specularscale);
+		if (mode == SHADERMODE_LIGHTDIRECTION)
+		{
+			if (r_glsl_permutation->loc_AmbientColor  >= 0) qglUniform3fARB(r_glsl_permutation->loc_AmbientColor , rsurface.modellight_ambient[0] * ambientscale  * 0.5f, rsurface.modellight_ambient[1] * ambientscale  * 0.5f, rsurface.modellight_ambient[2] * ambientscale  * 0.5f);
+			if (r_glsl_permutation->loc_DiffuseColor  >= 0) qglUniform3fARB(r_glsl_permutation->loc_DiffuseColor , rsurface.modellight_diffuse[0] * diffusescale  * 0.5f, rsurface.modellight_diffuse[1] * diffusescale  * 0.5f, rsurface.modellight_diffuse[2] * diffusescale  * 0.5f);
+			if (r_glsl_permutation->loc_SpecularColor >= 0) qglUniform3fARB(r_glsl_permutation->loc_SpecularColor, rsurface.modellight_diffuse[0] * specularscale * 0.5f, rsurface.modellight_diffuse[1] * specularscale * 0.5f, rsurface.modellight_diffuse[2] * specularscale * 0.5f);
+			if (r_glsl_permutation->loc_LightDir      >= 0) qglUniform3fARB(r_glsl_permutation->loc_LightDir, rsurface.modellight_lightdir[0], rsurface.modellight_lightdir[1], rsurface.modellight_lightdir[2]);
+		}
+		else
+		{
+			if (r_glsl_permutation->loc_AmbientScale  >= 0) qglUniform1fARB(r_glsl_permutation->loc_AmbientScale, r_ambient.value * 1.0f / 128.0f);
+			if (r_glsl_permutation->loc_DiffuseScale  >= 0) qglUniform1fARB(r_glsl_permutation->loc_DiffuseScale, r_refdef.lightmapintensity);
+			if (r_glsl_permutation->loc_SpecularScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularScale, r_refdef.lightmapintensity * specularscale);
+		}
+		if (r_glsl_permutation->loc_TintColor >= 0) qglUniform4fARB(r_glsl_permutation->loc_TintColor, rsurface.texture->lightmapcolor[0], rsurface.texture->lightmapcolor[1], rsurface.texture->lightmapcolor[2], rsurface.texture->lightmapcolor[3]);
+		if (r_glsl_permutation->loc_GlowScale     >= 0) qglUniform1fARB(r_glsl_permutation->loc_GlowScale, r_hdr_glowintensity.value);
+		// additive passes are only darkened by fog, not tinted
+		if (r_glsl_permutation->loc_FogColor >= 0)
+		{
+			if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ADD)
+				qglUniform3fARB(r_glsl_permutation->loc_FogColor, 0, 0, 0);
+			else
+				qglUniform3fARB(r_glsl_permutation->loc_FogColor, r_refdef.fogcolor[0], r_refdef.fogcolor[1], r_refdef.fogcolor[2]);
+		}
+		if (r_glsl_permutation->loc_DistortScaleRefractReflect >= 0) qglUniform4fARB(r_glsl_permutation->loc_DistortScaleRefractReflect, r_water_refractdistort.value * rsurface.texture->refractfactor, r_water_refractdistort.value * rsurface.texture->refractfactor, r_water_reflectdistort.value * rsurface.texture->reflectfactor, r_water_reflectdistort.value * rsurface.texture->reflectfactor);
+		if (r_glsl_permutation->loc_ScreenScaleRefractReflect >= 0) qglUniform4fARB(r_glsl_permutation->loc_ScreenScaleRefractReflect, r_waterstate.screenscale[0], r_waterstate.screenscale[1], r_waterstate.screenscale[0], r_waterstate.screenscale[1]);
+		if (r_glsl_permutation->loc_ScreenCenterRefractReflect >= 0) qglUniform4fARB(r_glsl_permutation->loc_ScreenCenterRefractReflect, r_waterstate.screencenter[0], r_waterstate.screencenter[1], r_waterstate.screencenter[0], r_waterstate.screencenter[1]);
+		if (r_glsl_permutation->loc_RefractColor >= 0) qglUniform4fvARB(r_glsl_permutation->loc_RefractColor, 1, rsurface.texture->refractcolor4f);
+		if (r_glsl_permutation->loc_ReflectColor >= 0) qglUniform4fvARB(r_glsl_permutation->loc_ReflectColor, 1, rsurface.texture->reflectcolor4f);
+		if (r_glsl_permutation->loc_ReflectFactor >= 0) qglUniform1fARB(r_glsl_permutation->loc_ReflectFactor, rsurface.texture->reflectmax - rsurface.texture->reflectmin);
+		if (r_glsl_permutation->loc_ReflectOffset >= 0) qglUniform1fARB(r_glsl_permutation->loc_ReflectOffset, rsurface.texture->reflectmin);
 	}
-	if (r_glsl_permutation->loc_TintColor >= 0) qglUniform4fARB(r_glsl_permutation->loc_TintColor, rsurface.texture->lightmapcolor[0], rsurface.texture->lightmapcolor[1], rsurface.texture->lightmapcolor[2], rsurface.texture->lightmapcolor[3]);
-	if (r_glsl_permutation->loc_GlowScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_GlowScale, r_hdr_glowintensity.value);
 	if (r_glsl_permutation->loc_ContrastBoostCoeff >= 0)
 	{
 		// The formula used is actually:
@@ -1495,14 +1541,6 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 	}
 	else
 		if (r_glsl_permutation->loc_SceneBrightness >= 0) qglUniform1fARB(r_glsl_permutation->loc_SceneBrightness, r_refdef.view.colorscale);
-	if (r_glsl_permutation->loc_FogColor >= 0)
-	{
-		// additive passes are only darkened by fog, not tinted
-		if (rsurface.rtlight || (rsurface.texture->currentmaterialflags & MATERIALFLAG_ADD))
-			qglUniform3fARB(r_glsl_permutation->loc_FogColor, 0, 0, 0);
-		else
-			qglUniform3fARB(r_glsl_permutation->loc_FogColor, r_refdef.fogcolor[0], r_refdef.fogcolor[1], r_refdef.fogcolor[2]);
-	}
 	if (r_glsl_permutation->loc_EyePosition >= 0) qglUniform3fARB(r_glsl_permutation->loc_EyePosition, rsurface.modelorg[0], rsurface.modelorg[1], rsurface.modelorg[2]);
 	if (r_glsl_permutation->loc_Color_Pants >= 0)
 	{
@@ -1521,13 +1559,6 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 	if (r_glsl_permutation->loc_FogRangeRecip >= 0) qglUniform1fARB(r_glsl_permutation->loc_FogRangeRecip, r_refdef.fograngerecip);
 	if (r_glsl_permutation->loc_SpecularPower >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularPower, rsurface.texture->specularpower);
 	if (r_glsl_permutation->loc_OffsetMapping_Scale >= 0) qglUniform1fARB(r_glsl_permutation->loc_OffsetMapping_Scale, r_glsl_offsetmapping_scale.value);
-	if (r_glsl_permutation->loc_DistortScaleRefractReflect >= 0) qglUniform4fARB(r_glsl_permutation->loc_DistortScaleRefractReflect, r_water_refractdistort.value * rsurface.texture->refractfactor, r_water_refractdistort.value * rsurface.texture->refractfactor, r_water_reflectdistort.value * rsurface.texture->reflectfactor, r_water_reflectdistort.value * rsurface.texture->reflectfactor);
-	if (r_glsl_permutation->loc_ScreenScaleRefractReflect >= 0) qglUniform4fARB(r_glsl_permutation->loc_ScreenScaleRefractReflect, r_waterstate.screenscale[0], r_waterstate.screenscale[1], r_waterstate.screenscale[0], r_waterstate.screenscale[1]);
-	if (r_glsl_permutation->loc_ScreenCenterRefractReflect >= 0) qglUniform4fARB(r_glsl_permutation->loc_ScreenCenterRefractReflect, r_waterstate.screencenter[0], r_waterstate.screencenter[1], r_waterstate.screencenter[0], r_waterstate.screencenter[1]);
-	if (r_glsl_permutation->loc_RefractColor >= 0) qglUniform4fvARB(r_glsl_permutation->loc_RefractColor, 1, rsurface.texture->refractcolor4f);
-	if (r_glsl_permutation->loc_ReflectColor >= 0) qglUniform4fvARB(r_glsl_permutation->loc_ReflectColor, 1, rsurface.texture->reflectcolor4f);
-	if (r_glsl_permutation->loc_ReflectFactor >= 0) qglUniform1fARB(r_glsl_permutation->loc_ReflectFactor, rsurface.texture->reflectmax - rsurface.texture->reflectmin);
-	if (r_glsl_permutation->loc_ReflectOffset >= 0) qglUniform1fARB(r_glsl_permutation->loc_ReflectOffset, rsurface.texture->reflectmin);
 	CHECKGLERROR
 	return permutation;
 }
@@ -5588,10 +5619,17 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, msurface_t **t
 	R_Mesh_TexBind(GL20TU_COLOR, R_GetTexture(rsurface.texture->basetexture));
 	R_Mesh_TexBind(GL20TU_GLOSS, R_GetTexture(rsurface.texture->glosstexture));
 	R_Mesh_TexBind(GL20TU_GLOW, R_GetTexture(rsurface.texture->currentskinframe->glow));
+	if (rsurface.texture->backgroundcurrentskinframe)
+	{
+		R_Mesh_TexBind(GL20TU_SECONDARY_NORMAL, R_GetTexture(rsurface.texture->backgroundcurrentskinframe->nmap));
+		R_Mesh_TexBind(GL20TU_SECONDARY_COLOR, R_GetTexture(rsurface.texture->backgroundbasetexture));
+		R_Mesh_TexBind(GL20TU_SECONDARY_GLOSS, R_GetTexture(rsurface.texture->backgroundglosstexture));
+		R_Mesh_TexBind(GL20TU_SECONDARY_GLOW, R_GetTexture(rsurface.texture->backgroundcurrentskinframe->glow));
+	}
 	R_Mesh_TexBind(GL20TU_PANTS, R_GetTexture(rsurface.texture->currentskinframe->pants));
 	R_Mesh_TexBind(GL20TU_SHIRT, R_GetTexture(rsurface.texture->currentskinframe->shirt));
 	R_Mesh_TexBind(GL20TU_FOGMASK, R_GetTexture(r_texture_fogattenuation));
-	if (rsurface.uselightmaptexture || (rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
+	if ((rsurface.uselightmaptexture || (rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)) && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND))
 		R_Mesh_ColorPointer(NULL, 0, 0);
 	else
 		R_Mesh_ColorPointer(rsurface.modellightmapcolor4f, rsurface.modellightmapcolor4f_bufferobject, rsurface.modellightmapcolor4f_bufferoffset);
@@ -5621,7 +5659,7 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, msurface_t **t
 		GL_BlendFunc(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
 		GL_DepthMask(false);
 		GL_AlphaTest((rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST) != 0);
-		if (rsurface.uselightmaptexture || (rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
+		if ((rsurface.uselightmaptexture || (rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)) && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND))
 			R_Mesh_ColorPointer(NULL, 0, 0);
 		else
 			R_Mesh_ColorPointer(rsurface.modellightmapcolor4f, rsurface.modellightmapcolor4f_bufferobject, rsurface.modellightmapcolor4f_bufferoffset);
