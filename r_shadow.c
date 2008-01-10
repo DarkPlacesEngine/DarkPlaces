@@ -386,7 +386,7 @@ void r_shadow_shutdown(void)
 
 void r_shadow_newmap(void)
 {
-	if (r_refdef.scene.worldmodel && strncmp(r_refdef.scene.worldmodel->name, r_shadow_mapname, sizeof(r_shadow_mapname)))
+	if (cl.worldmodel && strncmp(cl.worldmodel->name, r_shadow_mapname, sizeof(r_shadow_mapname)))
 		R_Shadow_EditLights_Reload_f();
 }
 
@@ -3589,12 +3589,12 @@ void R_Shadow_LoadWorldLights(void)
 	int n, a, style, shadow, flags;
 	char tempchar, *lightsstring, *s, *t, name[MAX_QPATH], cubemapname[MAX_QPATH];
 	float origin[3], radius, color[3], angles[3], corona, coronasizescale, ambientscale, diffusescale, specularscale;
-	if (r_refdef.scene.worldmodel == NULL)
+	if (cl.worldmodel == NULL)
 	{
 		Con_Print("No map loaded.\n");
 		return;
 	}
-	FS_StripExtension (r_refdef.scene.worldmodel->name, name, sizeof (name));
+	FS_StripExtension (cl.worldmodel->name, name, sizeof (name));
 	strlcat (name, ".rtlights", sizeof (name));
 	lightsstring = (char *)FS_LoadFile(name, tempmempool, false, NULL);
 	if (lightsstring)
@@ -3687,12 +3687,12 @@ void R_Shadow_SaveWorldLights(void)
 	char line[MAX_INPUTLINE];
 	if (!Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray))
 		return;
-	if (r_refdef.scene.worldmodel == NULL)
+	if (cl.worldmodel == NULL)
 	{
 		Con_Print("No map loaded.\n");
 		return;
 	}
-	FS_StripExtension (r_refdef.scene.worldmodel->name, name, sizeof (name));
+	FS_StripExtension (cl.worldmodel->name, name, sizeof (name));
 	strlcat (name, ".rtlights", sizeof (name));
 	bufchars = bufmaxchars = 0;
 	buf = NULL;
@@ -3736,12 +3736,12 @@ void R_Shadow_LoadLightsFile(void)
 	int n, a, style;
 	char tempchar, *lightsstring, *s, *t, name[MAX_QPATH];
 	float origin[3], radius, color[3], subtract, spotdir[3], spotcone, falloff, distbias;
-	if (r_refdef.scene.worldmodel == NULL)
+	if (cl.worldmodel == NULL)
 	{
 		Con_Print("No map loaded.\n");
 		return;
 	}
-	FS_StripExtension (r_refdef.scene.worldmodel->name, name, sizeof (name));
+	FS_StripExtension (cl.worldmodel->name, name, sizeof (name));
 	strlcat (name, ".lights", sizeof (name));
 	lightsstring = (char *)FS_LoadFile(name, tempmempool, false, NULL);
 	if (lightsstring)
@@ -3791,18 +3791,18 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 	float origin[3], angles[3], radius, color[3], light[4], fadescale, lightscale, originhack[3], overridecolor[3], vec[4];
 	char key[256], value[MAX_INPUTLINE];
 
-	if (r_refdef.scene.worldmodel == NULL)
+	if (cl.worldmodel == NULL)
 	{
 		Con_Print("No map loaded.\n");
 		return;
 	}
 	// try to load a .ent file first
-	FS_StripExtension (r_refdef.scene.worldmodel->name, key, sizeof (key));
+	FS_StripExtension (cl.worldmodel->name, key, sizeof (key));
 	strlcat (key, ".ent", sizeof (key));
 	data = entfiledata = (char *)FS_LoadFile(key, tempmempool, true, NULL);
 	// and if that is not found, fall back to the bsp file entity string
 	if (!data)
-		data = r_refdef.scene.worldmodel->brush.entities;
+		data = cl.worldmodel->brush.entities;
 	if (!data)
 		return;
 	for (entnum = 0;COM_ParseToken_Simple(&data, false, false) && com_token[0] == '{';entnum++)
@@ -3948,7 +3948,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 				pflags = (int)atof(value);
 			else if (!strcmp("effects", key))
 				effects = (int)atof(value);
-			else if (r_refdef.scene.worldmodel->type == mod_brushq3)
+			else if (cl.worldmodel->type == mod_brushq3)
 			{
 				if (!strcmp("scale", key))
 					lightscale = atof(value);
@@ -4045,9 +4045,9 @@ void R_Shadow_EditLights_Clear_f(void)
 
 void R_Shadow_EditLights_Reload_f(void)
 {
-	if (!r_refdef.scene.worldmodel)
+	if (!cl.worldmodel)
 		return;
-	strlcpy(r_shadow_mapname, r_refdef.scene.worldmodel->name, sizeof(r_shadow_mapname));
+	strlcpy(r_shadow_mapname, cl.worldmodel->name, sizeof(r_shadow_mapname));
 	R_Shadow_ClearWorldLights();
 	R_Shadow_LoadWorldLights();
 	if (!Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray))
@@ -4060,7 +4060,7 @@ void R_Shadow_EditLights_Reload_f(void)
 
 void R_Shadow_EditLights_Save_f(void)
 {
-	if (!r_refdef.scene.worldmodel)
+	if (!cl.worldmodel)
 		return;
 	R_Shadow_SaveWorldLights();
 }
