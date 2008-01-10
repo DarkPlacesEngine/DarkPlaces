@@ -181,8 +181,8 @@ static void VM_SV_setorigin (void)
 	SV_LinkEdict (e, false);
 }
 
-
-void SetMinMaxSize (prvm_edict_t *e, float *min, float *max, qboolean rotate)
+// TODO: rotate param isnt used.. could be a bug. please check this and remove it if possible [1/10/2008 Black]
+static void SetMinMaxSize (prvm_edict_t *e, float *min, float *max, qboolean rotate)
 {
 	int		i;
 
