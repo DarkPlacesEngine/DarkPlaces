@@ -1135,17 +1135,7 @@ void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent)
 	// do global setup needed for the chosen lighting mode
 	if (r_shadow_rendermode == R_SHADOW_RENDERMODE_LIGHT_GLSL)
 	{
-		R_Mesh_TexBind(0, R_GetTexture(r_texture_blanknormalmap)); // normal
-		R_Mesh_TexBind(1, R_GetTexture(r_texture_white)); // diffuse
-		R_Mesh_TexBind(2, R_GetTexture(r_texture_white)); // gloss
-		R_Mesh_TexBindCubeMap(3, R_GetTexture(rsurface.rtlight->currentcubemap)); // light filter
-		R_Mesh_TexBind(4, R_GetTexture(r_texture_fogattenuation)); // fog
-		R_Mesh_TexBind(5, R_GetTexture(r_texture_white)); // pants
-		R_Mesh_TexBind(6, R_GetTexture(r_texture_white)); // shirt
-		R_Mesh_TexBind(7, R_GetTexture(r_texture_white)); // lightmap
-		R_Mesh_TexBind(8, R_GetTexture(r_texture_blanknormalmap)); // deluxemap
-		R_Mesh_TexBind(9, R_GetTexture(r_texture_black)); // glow
-		//R_Mesh_TexMatrix(3, rsurface.entitytolight); // light filter matrix
+		R_Mesh_TexBindCubeMap(GL20TU_CUBE, R_GetTexture(rsurface.rtlight->currentcubemap)); // light filter
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 		GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 0);
 		CHECKGLERROR
@@ -1549,14 +1539,14 @@ static void R_Shadow_RenderLighting_Light_GLSL(int firstvertex, int numvertices,
 	// ARB2 GLSL shader path (GFFX5200, Radeon 9500)
 	R_SetupSurfaceShader(lightcolorbase, false, ambientscale, diffusescale, specularscale, RSURFPASS_RTLIGHT);
 	R_Mesh_TexMatrix(0, &rsurface.texture->currenttexmatrix);
-	R_Mesh_TexBind(0, R_GetTexture(rsurface.texture->currentskinframe->nmap));
-	R_Mesh_TexBind(1, R_GetTexture(rsurface.texture->basetexture));
-	R_Mesh_TexBind(2, R_GetTexture(rsurface.texture->glosstexture));
-	R_Mesh_TexBindCubeMap(3, R_GetTexture(rsurface.rtlight->currentcubemap));
-	R_Mesh_TexBind(4, R_GetTexture(r_texture_fogattenuation));
-	R_Mesh_TexBind(5, R_GetTexture(rsurface.texture->currentskinframe->pants));
-	R_Mesh_TexBind(6, R_GetTexture(rsurface.texture->currentskinframe->shirt));
-	R_Mesh_TexBind(10, R_GetTexture(r_shadow_attenuationgradienttexture));
+	R_Mesh_TexBind(GL20TU_NORMAL, R_GetTexture(rsurface.texture->currentskinframe->nmap));
+	R_Mesh_TexBind(GL20TU_COLOR, R_GetTexture(rsurface.texture->basetexture));
+	R_Mesh_TexBind(GL20TU_GLOSS, R_GetTexture(rsurface.texture->glosstexture));
+	//R_Mesh_TexBindCubeMap(GL20TU_CUBE, R_GetTexture(rsurface.rtlight->currentcubemap));
+	R_Mesh_TexBind(GL20TU_FOGMASK, R_GetTexture(r_texture_fogattenuation));
+	R_Mesh_TexBind(GL20TU_PANTS, R_GetTexture(rsurface.texture->currentskinframe->pants));
+	R_Mesh_TexBind(GL20TU_SHIRT, R_GetTexture(rsurface.texture->currentskinframe->shirt));
+	R_Mesh_TexBind(GL20TU_ATTENUATION, R_GetTexture(r_shadow_attenuationgradienttexture));
 	R_Mesh_TexCoordPointer(0, 2, rsurface.texcoordtexture2f, rsurface.texcoordtexture2f_bufferobject, rsurface.texcoordtexture2f_bufferoffset);
 	R_Mesh_TexCoordPointer(1, 3, rsurface.svector3f, rsurface.svector3f_bufferobject, rsurface.svector3f_bufferoffset);
 	R_Mesh_TexCoordPointer(2, 3, rsurface.tvector3f, rsurface.tvector3f_bufferobject, rsurface.tvector3f_bufferoffset);
