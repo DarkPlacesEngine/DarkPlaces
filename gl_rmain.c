@@ -1379,6 +1379,7 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 				mode = SHADERMODE_LIGHTDIRECTIONMAP_MODELSPACE;
 			else
 				mode = SHADERMODE_LIGHTDIRECTIONMAP_TANGENTSPACE;
+			permutation |= SHADERPERMUTATION_DIFFUSE;
 			if (specularscale > 0)
 				permutation |= SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_DIFFUSE;
 		}
@@ -1386,6 +1387,7 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 		{
 			// fake deluxemapping (uniform light direction in tangentspace)
 			mode = SHADERMODE_LIGHTDIRECTIONMAP_TANGENTSPACE;
+			permutation |= SHADERPERMUTATION_DIFFUSE;
 			if (specularscale > 0)
 				permutation |= SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_DIFFUSE;
 		}
@@ -4161,8 +4163,12 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 		t->currentmaterialflags |= MATERIALFLAG_SHORTDEPTHRANGE;
 	if (ent->flags & RENDER_VIEWMODEL)
 		t->currentmaterialflags |= MATERIALFLAG_SHORTDEPTHRANGE;
-	if (t->backgroundnumskinframes && !(t->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED))
+	if (t->backgroundnumskinframes && !(t->currentmaterialflags & MATERIALFLAG_BLENDED))
 		t->currentmaterialflags |= MATERIALFLAG_VERTEXTEXTUREBLEND;
+	if (t->currentmaterialflags & (MATERIALFLAG_BLENDED | MATERIALFLAG_NODEPTHTEST))
+		t->currentmaterialflags |= MATERIALFLAG_SORTTRANSPARENT;
+	if (t->currentmaterialflags & (MATERIALFLAG_REFRACTION | MATERIALFLAG_WATER))
+		t->currentmaterialflags &= ~MATERIALFLAG_SORTTRANSPARENT;
 
 	// make sure that the waterscroll matrix is used on water surfaces when
 	// there is no tcmod
@@ -5515,7 +5521,7 @@ static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, msurfa
 static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, msurface_t **texturesurfacelist)
 {
 	// transparent sky would be ridiculous
-	if ((rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED))
+	if ((rsurface.texture->currentmaterialflags & MATERIALFLAG_SORTTRANSPARENT))
 		return;
 	if (rsurface.mode != RSURFMODE_SKY)
 	{
@@ -5684,9 +5690,6 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, msurface_t **t
 			RSurf_DrawBatch_WithLightmapSwitching_WithWaterTextureSwitching(texturenumsurfaces, texturesurfacelist, -1, -1, r_glsl_permutation->loc_Texture_Refraction >= 0 ? 11 : -1, r_glsl_permutation->loc_Texture_Reflection >= 0 ? 12 : -1);
 		else
 			RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
-	}
-	if (rsurface.texture->backgroundnumskinframes && !(rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED))
-	{
 	}
 }
 
@@ -6129,7 +6132,7 @@ void R_QueueSurfaceList(entity_render_t *ent, int numsurfaces, msurface_t **surf
 				;
 			continue;
 		}
-		if (rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED)
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_SORTTRANSPARENT)
 		{
 			// transparent surfaces get pushed off into the transparent queue
 			const msurface_t *surface = surfacelist[i];

@@ -110,8 +110,6 @@ mplane_t;
 #define MATERIALFLAG_MODELLIGHT 4194304
 // add directional model lighting to this material (q3bsp lightgrid only)
 #define MATERIALFLAG_MODELLIGHT_DIRECTIONAL 8388608
-// combined mask of all attributes that require depth sorted rendering
-#define MATERIALFLAGMASK_DEPTHSORTED (MATERIALFLAG_SORTTRANSPARENT | MATERIALFLAG_BLENDED | MATERIALFLAG_NODEPTHTEST)
 
 typedef struct medge_s
 {
