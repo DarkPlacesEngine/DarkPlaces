@@ -874,6 +874,12 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 						Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
 						prevbuffer = resizebuffer;
 					}
+					else
+					{
+						if (width > 1) width >>= 1;
+						if (height > 1) height >>= 1;
+						if (depth > 1) depth >>= 1;
+					}
 					qglTexImage1D(GL_TEXTURE_1D, mip++, glt->glinternalformat, width, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
 				}
 			}
@@ -889,6 +895,12 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 						Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
 						prevbuffer = resizebuffer;
 					}
+					else
+					{
+						if (width > 1) width >>= 1;
+						if (height > 1) height >>= 1;
+						if (depth > 1) depth >>= 1;
+					}
 					qglTexImage2D(GL_TEXTURE_2D, mip++, glt->glinternalformat, width, height, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
 				}
 			}
@@ -903,6 +915,12 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 					{
 						Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
 						prevbuffer = resizebuffer;
+					}
+					else
+					{
+						if (width > 1) width >>= 1;
+						if (height > 1) height >>= 1;
+						if (depth > 1) depth >>= 1;
 					}
 					qglTexImage3D(GL_TEXTURE_3D, mip++, glt->glinternalformat, width, height, depth, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
 				}
@@ -940,6 +958,12 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 						{
 							Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
 							prevbuffer = resizebuffer;
+						}
+						else
+						{
+							if (width > 1) width >>= 1;
+							if (height > 1) height >>= 1;
+							if (depth > 1) depth >>= 1;
 						}
 						qglTexImage2D(cubemapside[i], mip++, glt->glinternalformat, width, height, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
 					}
