@@ -1077,7 +1077,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 			// now figure out what to do with this particular range of surfaces
 			if (rsurface.texture->currentmaterialflags & (MATERIALFLAG_WALL | MATERIALFLAG_WATER))
 			{
-				if (rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED)
+				if (rsurface.texture->currentmaterialflags & MATERIALFLAG_SORTTRANSPARENT)
 				{
 					vec3_t tempcenter, center;
 					for (l = k;l < kend;l++)
