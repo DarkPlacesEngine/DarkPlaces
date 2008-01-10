@@ -2866,10 +2866,10 @@ void VM_CL_serverkey(void)
 //============================================================================
 
 // To create a almost working builtin file from this replace:
-// "^NULL,.*" with ""
-// "^{.*//.*}:Wh\(.*)" with ""
+// "^NULL.*" with ""
+// "^{.*//.*}:Wh\(.*\)" with "\1"
 // "\:" with "//"
-// ".*//:Wh{\#:d*}:Wh{.*}" with "\2 = \1;"
+// "^.*//:Wh{\#:d*}:Wh{.*}" with "\2 = \1;"
 // "\n\n+" with "\n\n"
 
 prvm_builtin_t vm_cl_builtins[] = {
