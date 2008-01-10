@@ -2154,8 +2154,8 @@ static void VM_SV_getsurfacepoint(void)
 //PF_getsurfacepointattribute,     // #486 vector(entity e, float s, float n, float a) getsurfacepointattribute = #486;
 // float SPA_POSITION = 0;
 // float SPA_S_AXIS = 1;
-// float SPA_R_AXIS = 2;
-// float SPA_T_AXIS = 3; // same as SPA_NORMAL
+// float SPA_T_AXIS = 2;
+// float SPA_R_AXIS = 3; // same as SPA_NORMAL
 // float SPA_TEXCOORDS0 = 4;
 // float SPA_LIGHTMAP0_TEXCOORDS = 5;
 // float SPA_LIGHTMAP0_COLOR = 6;
@@ -2167,7 +2167,7 @@ static void VM_SV_getsurfacepointattribute(void)
 	int pointnum;
 	int attributetype;
 
-	VM_SAFEPARMCOUNT(3, VM_SV_getsurfacepoint);
+	VM_SAFEPARMCOUNT(4, VM_SV_getsurfacepoint);
 	VectorClear(PRVM_G_VECTOR(OFS_RETURN));
 	ed = PRVM_G_EDICT(OFS_PARM0);
 	if (!(model = getmodel(ed)) || !(surface = getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
@@ -2188,11 +2188,11 @@ static void VM_SV_getsurfacepointattribute(void)
 		case 1:
 			VectorCopy(&(model->surfmesh.data_svector3f + 3 * surface->num_firstvertex)[pointnum * 3], PRVM_G_VECTOR(OFS_RETURN));
 			break;
-		// float SPA_R_AXIS = 2;
+		// float SPA_T_AXIS = 2;
 		case 2:
 			VectorCopy(&(model->surfmesh.data_tvector3f + 3 * surface->num_firstvertex)[pointnum * 3], PRVM_G_VECTOR(OFS_RETURN));
 			break;
-		// float SPA_T_AXIS = 3; // same as SPA_NORMAL
+		// float SPA_R_AXIS = 3; // same as SPA_NORMAL
 		case 3:
 			VectorCopy(&(model->surfmesh.data_normal3f + 3 * surface->num_firstvertex)[pointnum * 3], PRVM_G_VECTOR(OFS_RETURN));
 			break;
@@ -2217,7 +2217,7 @@ static void VM_SV_getsurfacepointattribute(void)
 		// float SPA_LIGHTMAP0_COLOR = 6;
 		case 6:
 			// ignore alpha for now..
-			VectorCopy( &(model->surfmesh.data_normal3f + 4 * surface->num_firstvertex)[pointnum * 4], PRVM_G_VECTOR(OFS_RETURN));
+			VectorCopy( &(model->surfmesh.data_lightmapcolor4f + 4 * surface->num_firstvertex)[pointnum * 4], PRVM_G_VECTOR(OFS_RETURN));
 			break;
 		default:
 			VectorSet( PRVM_G_VECTOR(OFS_RETURN), 0.0f, 0.0f, 0.0f );
