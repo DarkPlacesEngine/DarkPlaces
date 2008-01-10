@@ -114,14 +114,62 @@ model_t *CL_GetModelFromEdict(prvm_edict_t *ed)
 
 void CL_LinkEdict(prvm_edict_t *ent)
 {
+	vec3_t mins, maxs;
+
 	if (ent == prog->edicts)
 		return;		// don't add the world
 
 	if (ent->priv.server->free)
 		return;
 
-	VectorAdd(ent->fields.client->origin, ent->fields.client->mins, ent->fields.client->absmin);
-	VectorAdd(ent->fields.client->origin, ent->fields.client->maxs, ent->fields.client->absmax);
+	// set the abs box
+
+	if (ent->fields.client->solid == SOLID_BSP)
+	{
+		model_t *model = CL_GetModelByIndex( (int)ent->fields.client->modelindex );
+		if (model == NULL)
+		{
+			Con_Printf("edict %i: SOLID_BSP with invalid modelindex!\n", PRVM_NUM_FOR_EDICT(ent));
+
+			model = CL_GetModelByIndex( 0 );
+		}
+
+		if( model != NULL )
+		{
+			if (!model->TraceBox && developer.integer >= 1)
+				Con_Printf("edict %i: SOLID_BSP with non-collidable model\n", PRVM_NUM_FOR_EDICT(ent));
+
+			if (ent->fields.client->angles[0] || ent->fields.client->angles[2] || ent->fields.client->avelocity[0] || ent->fields.client->avelocity[2])
+			{
+				VectorAdd(ent->fields.client->origin, model->rotatedmins, mins);
+				VectorAdd(ent->fields.client->origin, model->rotatedmaxs, maxs);
+			}
+			else if (ent->fields.client->angles[1] || ent->fields.client->avelocity[1])
+			{
+				VectorAdd(ent->fields.client->origin, model->yawmins, mins);
+				VectorAdd(ent->fields.client->origin, model->yawmaxs, maxs);
+			}
+			else
+			{
+				VectorAdd(ent->fields.client->origin, model->normalmins, mins);
+				VectorAdd(ent->fields.client->origin, model->normalmaxs, maxs);
+			}
+		}
+		else
+		{
+			// SOLID_BSP with no model is valid, mainly because some QC setup code does so temporarily
+			VectorAdd(ent->fields.client->origin, ent->fields.client->mins, mins);
+			VectorAdd(ent->fields.client->origin, ent->fields.client->maxs, maxs);
+		}
+	}
+	else
+	{
+		VectorAdd(ent->fields.client->origin, ent->fields.client->mins, mins);
+		VectorAdd(ent->fields.client->origin, ent->fields.client->maxs, maxs);
+	}
+
+	VectorCopy(mins, ent->fields.client->absmin);
+	VectorCopy(maxs, ent->fields.client->absmax);
 
 	World_LinkEdict(&cl.world, ent, ent->fields.client->absmin, ent->fields.client->absmax);
 }

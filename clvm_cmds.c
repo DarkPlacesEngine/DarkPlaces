@@ -56,12 +56,28 @@ void VM_CL_setorigin (void)
 	CL_LinkEdict(e);
 }
 
+static void SetMinMaxSize (prvm_edict_t *e, float *min, float *max)
+{
+	int		i;
+
+	for (i=0 ; i<3 ; i++)
+		if (min[i] > max[i])
+			PRVM_ERROR("SetMinMaxSize: backwards mins/maxs");
+
+	// set derived values
+	VectorCopy (min, e->fields.client->mins);
+	VectorCopy (max, e->fields.client->maxs);
+	VectorSubtract (max, min, e->fields.client->size);
+
+	CL_LinkEdict (e);
+}
+
 // #3 void(entity e, string m) setmodel
 void VM_CL_setmodel (void)
 {
 	prvm_edict_t	*e;
 	const char		*m;
-	struct model_s	*mod;
+	model_t *mod;
 	int				i;
 
 	VM_SAFEPARMCOUNT(2, VM_CL_setmodel);
@@ -92,6 +108,14 @@ void VM_CL_setmodel (void)
 	e->fields.client->modelindex = 0;
 	e->fields.client->model = 0;
 	VM_Warning ("setmodel: model '%s' not precached\n", m);
+
+	// TODO: check if this breaks needed consistency and maybe add a cvar for it too?? [1/10/2008 Black]
+	if (mod)
+	{
+		SetMinMaxSize (e, mod->normalmins, mod->normalmaxs);
+	}
+	else
+		SetMinMaxSize (e, vec3_origin, vec3_origin);
 }
 
 // #4 void(entity e, vector min, vector max) setsize
@@ -115,9 +139,7 @@ static void VM_CL_setsize (void)
 	min = PRVM_G_VECTOR(OFS_PARM1);
 	max = PRVM_G_VECTOR(OFS_PARM2);
 
-	VectorCopy (min, e->fields.client->mins);
-	VectorCopy (max, e->fields.client->maxs);
-	VectorSubtract (max, min, e->fields.client->size);
+	SetMinMaxSize( e, min, max );
 
 	CL_LinkEdict(e);
 }
@@ -196,8 +218,6 @@ static void VM_CL_spawn (void)
 {
 	prvm_edict_t *ed;
 	ed = PRVM_ED_Alloc();
-	// FIXME: WTF.. this should be removed imo.. entnum points to the server.. [12/17/2007 Black]
-	ed->fields.client->entnum = PRVM_NUM_FOR_EDICT(ed);	//[515]: not needed any more ?
 	VM_RETURN_EDICT(ed);
 }
 
@@ -978,6 +998,14 @@ static void VM_CL_setmodelindex (void)
 	}
 	t->fields.client->model = PRVM_SetEngineString(model->name);
 	t->fields.client->modelindex = i;
+
+	// TODO: check if this breaks needed consistency and maybe add a cvar for it too?? [1/10/2008 Black]
+	if (model)
+	{
+		SetMinMaxSize (t, model->normalmins, model->normalmaxs);
+	}
+	else
+		SetMinMaxSize (t, vec3_origin, vec3_origin);
 }
 
 //#334 string(float mdlindex) modelnameforindex (EXT_CSQC)
