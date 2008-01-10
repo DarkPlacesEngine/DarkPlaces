@@ -1538,10 +1538,20 @@ static void R_Shadow_RenderLighting_Light_GLSL(int firstvertex, int numvertices,
 {
 	// ARB2 GLSL shader path (GFFX5200, Radeon 9500)
 	R_SetupSurfaceShader(lightcolorbase, false, ambientscale, diffusescale, specularscale, RSURFPASS_RTLIGHT);
+	if ((rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND))
+		R_Mesh_ColorPointer(rsurface.modellightmapcolor4f, rsurface.modellightmapcolor4f_bufferobject, rsurface.modellightmapcolor4f_bufferoffset);
+	else
+		R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_TexMatrix(0, &rsurface.texture->currenttexmatrix);
 	R_Mesh_TexBind(GL20TU_NORMAL, R_GetTexture(rsurface.texture->currentskinframe->nmap));
 	R_Mesh_TexBind(GL20TU_COLOR, R_GetTexture(rsurface.texture->basetexture));
 	R_Mesh_TexBind(GL20TU_GLOSS, R_GetTexture(rsurface.texture->glosstexture));
+	if (rsurface.texture->backgroundcurrentskinframe)
+	{
+		R_Mesh_TexBind(GL20TU_SECONDARY_NORMAL, R_GetTexture(rsurface.texture->backgroundcurrentskinframe->nmap));
+		R_Mesh_TexBind(GL20TU_SECONDARY_COLOR, R_GetTexture(rsurface.texture->backgroundbasetexture));
+		R_Mesh_TexBind(GL20TU_SECONDARY_GLOSS, R_GetTexture(rsurface.texture->backgroundglosstexture));
+	}
 	//R_Mesh_TexBindCubeMap(GL20TU_CUBE, R_GetTexture(rsurface.rtlight->currentcubemap));
 	R_Mesh_TexBind(GL20TU_FOGMASK, R_GetTexture(r_texture_fogattenuation));
 	R_Mesh_TexBind(GL20TU_PANTS, R_GetTexture(rsurface.texture->currentskinframe->pants));
