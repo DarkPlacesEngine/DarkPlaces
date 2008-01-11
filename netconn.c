@@ -73,6 +73,7 @@ static cvar_t cl_netpacketloss_receive = {0, "cl_netpacketloss_receive","0", "dr
 static cvar_t net_slist_queriespersecond = {0, "net_slist_queriespersecond", "20", "how many server information requests to send per second"};
 static cvar_t net_slist_queriesperframe = {0, "net_slist_queriesperframe", "4", "maximum number of server information requests to send each rendered frame (guards against low framerates causing problems)"};
 static cvar_t net_slist_timeout = {0, "net_slist_timeout", "4", "how long to listen for a server information response before giving up"};
+static cvar_t net_slist_pause = {0, "net_slist_pause", "0", "when set to 1, the server list won't update until it is set back to 0"};
 static cvar_t net_slist_maxtries = {0, "net_slist_maxtries", "3", "how many times to ask the same server for information (more times gives better ping reports but takes longer)"};
 
 static cvar_t gameversion = {0, "gameversion", "0", "version of game data (mod-specific), when client and server gameversion mismatch in the server browser the server is shown as incompatible"};
@@ -99,6 +100,7 @@ int serverreplycount = 0;
 
 // this is only false if there are still servers left to query
 static qboolean serverlist_querysleep = true;
+static qboolean serverlist_paused = false;
 // this is pushed a second or two ahead of realtime whenever a master server
 // reply is received, to avoid issuing queries while master replies are still
 // flooding in (which would make a mess of the ping times)
@@ -1287,12 +1289,16 @@ static void NetConn_ClientParsePacket_ServerList_UpdateCache(int n)
 	dpsnprintf(entry->line1, sizeof(serverlist_cache[n].line1), "^%c%5d^7 ^%c%3u^7/%3u %-65.65s", info->ping >= 300 ? '1' : (info->ping >= 200 ? '3' : '7'), (int)info->ping, ((info->numhumans > 0 && info->numhumans < info->maxplayers) ? (info->numhumans >= 4 ? '7' : '3') : '1'), info->numplayers, info->maxplayers, info->name);
 	dpsnprintf(entry->line2, sizeof(serverlist_cache[n].line2), "^4%-21.21s %-19.19s ^%c%-17.17s^4 %-20.20s", info->cname, info->game, (info->gameversion != gameversion.integer) ? '1' : '4', info->mod, info->map);
 	if (entry->query == SQS_QUERIED)
-		ServerList_ViewList_Remove(entry);
+	{
+		if(!serverlist_paused)
+			ServerList_ViewList_Remove(entry);
+	}
 	// if not in the slist menu we should print the server to console (if wanted)
 	else if( serverlist_consoleoutput )
 		Con_Printf("%s\n%s\n", serverlist_cache[n].line1, serverlist_cache[n].line2);
 	// and finally, update the view set
-	ServerList_ViewList_Insert( entry );
+	if(!serverlist_paused)
+		ServerList_ViewList_Insert( entry );
 	//	update the entry's state
 	serverlist_cache[n].query = SQS_QUERIED;
 }
@@ -1676,6 +1682,10 @@ void NetConn_QueryQueueFrame(void)
 	double timeouttime;
 	static double querycounter = 0;
 
+	if(!net_slist_pause.integer && serverlist_paused)
+		ServerList_RebuildViewList();
+	serverlist_paused = net_slist_pause.integer;
+
 	if (serverlist_querysleep)
 		return;
 
@@ -1745,7 +1755,8 @@ void NetConn_QueryQueueFrame(void)
 			if( entry->query == SQS_REFRESHING ) {
 				// yes, so update the reply count (since its not responding anymore)
 				serverreplycount--;
-				ServerList_ViewList_Remove(entry);
+				if(!serverlist_paused)
+					ServerList_ViewList_Remove(entry);
 			}
 			entry->query = SQS_TIMEDOUT;
 		}
@@ -2718,6 +2729,7 @@ void NetConn_Init(void)
 	Cvar_RegisterVariable(&net_slist_queriesperframe);
 	Cvar_RegisterVariable(&net_slist_timeout);
 	Cvar_RegisterVariable(&net_slist_maxtries);
+	Cvar_RegisterVariable(&net_slist_pause);
 	Cvar_RegisterVariable(&net_messagetimeout);
 	Cvar_RegisterVariable(&net_connecttimeout);
 	Cvar_RegisterVariable(&net_connectfloodblockingtimeout);
