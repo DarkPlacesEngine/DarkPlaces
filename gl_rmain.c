@@ -1281,7 +1281,7 @@ void R_GLSL_DumpShader_f(void)
 	FS_Print(file, "// #define VERTEX_SHADER\n// #define GEOMETRY_SHADER\n// #define FRAGMENT_SHADER\n");
 	for (i = 0;i < SHADERMODE_COUNT;i++)
 		FS_Printf(file, "// %s", shadermodeinfo[i].pretext);
-	for (i = 0;i < SHADERPERMUTATION_LIMIT;i++)
+	for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
 		FS_Printf(file, "// %s", shaderpermutationinfo[i].pretext);
 	FS_Print(file, "\n");
 	FS_Print(file, builtinshaderstring);
