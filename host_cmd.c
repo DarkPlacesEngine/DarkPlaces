@@ -2349,6 +2349,8 @@ void Host_Packet_f (void) // credit: taken from QuakeWorld
 	}
 
 	mysocket = NetConn_ChooseClientSocketForAddress(&address);
+	if (!mysocket)
+		mysocket = NetConn_ChooseServerSocketForAddress(&address);
 	if (mysocket)
 		NetConn_Write(mysocket, send, out - send, &address);
 }
