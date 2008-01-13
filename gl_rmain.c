@@ -767,7 +767,7 @@ static const char *builtinshaderstring =
 "#ifdef USEDIFFUSE\n"
 "	// get the surface normal and the gloss color\n"
 "# ifdef USEVERTEXTEXTUREBLEND\n"
-"	myhalf3 surfacenormal = normalize(mix(myhalf3(texture2D(Texture_SecondaryNormal, TexCoord)), myhalf3(texture2D(Texture_Normal, TexCoord)), terrainblend) - myhalf3(0.5));\n"
+"	myhalf3 surfacenormal = normalize(mix(myhalf3(texture2D(Texture_SecondaryNormal, TexCoord)), myhalf3(texture2D(Texture_Normal, TexCoord)), terrainblend) - myhalf3(0.5, 0.5, 0.5));\n"
 "#  ifdef USESPECULAR\n"
 "	myhalf3 glosscolor = mix(myhalf3(texture2D(Texture_SecondaryGloss, TexCoord), myhalf3(texture2D(Texture_Gloss, TexCoord)), TexCoord), terrainblend);\n"
 "#  endif\n"
@@ -958,13 +958,13 @@ shadermodeinfo_t;
 
 typedef enum shaderpermutation_e
 {
-	SHADERPERMUTATION_VERTEXTEXTUREBLEND = 1<<0, // indicates this is a two-layer material blend based on vertex alpha (q3bsp)
-	SHADERPERMUTATION_COLORMAPPING = 1<<1, // indicates this is a colormapped skin
-	SHADERPERMUTATION_CONTRASTBOOST = 1<<2, // r_glsl_contrastboost boosts the contrast at low color levels (similar to gamma)
-	SHADERPERMUTATION_FOG = 1<<3, // tint the color by fog color or black if using additive blend mode
-	SHADERPERMUTATION_CUBEFILTER = 1<<4, // (lightsource) use cubemap light filter
-	SHADERPERMUTATION_GLOW = 1<<5, // (lightmap) blend in an additive glow texture
-	SHADERPERMUTATION_DIFFUSE = 1<<6, // (lightsource) whether to use directional shading
+	SHADERPERMUTATION_DIFFUSE = 1<<0, // (lightsource) whether to use directional shading
+	SHADERPERMUTATION_VERTEXTEXTUREBLEND = 1<<1, // indicates this is a two-layer material blend based on vertex alpha (q3bsp)
+	SHADERPERMUTATION_COLORMAPPING = 1<<2, // indicates this is a colormapped skin
+	SHADERPERMUTATION_CONTRASTBOOST = 1<<3, // r_glsl_contrastboost boosts the contrast at low color levels (similar to gamma)
+	SHADERPERMUTATION_FOG = 1<<4, // tint the color by fog color or black if using additive blend mode
+	SHADERPERMUTATION_CUBEFILTER = 1<<5, // (lightsource) use cubemap light filter
+	SHADERPERMUTATION_GLOW = 1<<6, // (lightmap) blend in an additive glow texture
 	SHADERPERMUTATION_SPECULAR = 1<<7, // (lightsource or deluxemapping) render specular effects
 	SHADERPERMUTATION_REFLECTION = 1<<8, // normalmap-perturbed reflection of the scene infront of the surface, preformed as an overlay on the surface
 	SHADERPERMUTATION_OFFSETMAPPING = 1<<9, // adjust texcoords to roughly simulate a displacement mapped surface
@@ -977,13 +977,13 @@ shaderpermutation_t;
 // NOTE: MUST MATCH ORDER OF SHADERPERMUTATION_* DEFINES!
 shaderpermutationinfo_t shaderpermutationinfo[SHADERPERMUTATION_COUNT] =
 {
+	{"#define USEDIFFUSE\n", " diffuse"},
 	{"#define USEVERTEXTEXTUREBLEND\n", " vertextextureblend"},
 	{"#define USECOLORMAPPING\n", " colormapping"},
 	{"#define USECONTRASTBOOST\n", " contrastboost"},
 	{"#define USEFOG\n", " fog"},
 	{"#define USECUBEFILTER\n", " cubefilter"},
 	{"#define USEGLOW\n", " glow"},
-	{"#define USEDIFFUSE\n", " diffuse"},
 	{"#define USESPECULAR\n", " specular"},
 	{"#define USEREFLECTION\n", " reflection"},
 	{"#define USEOFFSETMAPPING\n", " offsetmapping"},
