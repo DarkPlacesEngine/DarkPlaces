@@ -1227,6 +1227,7 @@ void PRVM_ED_LoadFromFile (const char *data)
 {
 	prvm_edict_t *ent;
 	int parsed, inhibited, spawned, died;
+	const char *funcname;
 	mfunction_t *func;
 
 	parsed = 0;
@@ -1283,7 +1284,10 @@ void PRVM_ED_LoadFromFile (const char *data)
 			}
 
 			// look for the spawn function
-			func = PRVM_ED_FindFunction (PRVM_GetString(handle));
+			funcname = PRVM_GetString(handle);
+			func = PRVM_ED_FindFunction (va("spawnfunc_%s", funcname));
+			if(!func)
+				func = PRVM_ED_FindFunction (funcname);
 
 			if (!func)
 			{
