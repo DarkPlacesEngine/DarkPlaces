@@ -767,7 +767,7 @@ static const char *builtinshaderstring =
 "#ifdef USEDIFFUSE\n"
 "	// get the surface normal and the gloss color\n"
 "# ifdef USEVERTEXTEXTUREBLEND\n"
-"	myhalf3 surfacenormal = normalize(mix(myhalf3(texture2D(Texture_SecondaryNormal, TexCoord)), myhalf3(texture2D(Texture_Normal, TexCoord)), terrainblend)) - myhalf3(0.5));\n"
+"	myhalf3 surfacenormal = normalize(mix(myhalf3(texture2D(Texture_SecondaryNormal, TexCoord)), myhalf3(texture2D(Texture_Normal, TexCoord)), terrainblend) - myhalf3(0.5));\n"
 "#  ifdef USESPECULAR\n"
 "	myhalf3 glosscolor = mix(myhalf3(texture2D(Texture_SecondaryGloss, TexCoord), myhalf3(texture2D(Texture_Gloss, TexCoord)), TexCoord), terrainblend);\n"
 "#  endif\n"
