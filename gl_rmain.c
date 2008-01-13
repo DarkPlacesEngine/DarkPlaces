@@ -4194,12 +4194,17 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 		t->currentmaterialflags |= MATERIALFLAG_SHORTDEPTHRANGE;
 	if (ent->flags & RENDER_VIEWMODEL)
 		t->currentmaterialflags |= MATERIALFLAG_SHORTDEPTHRANGE;
-	if (t->backgroundnumskinframes && !(t->currentmaterialflags & MATERIALFLAG_BLENDED))
-		t->currentmaterialflags |= MATERIALFLAG_VERTEXTEXTUREBLEND;
-	if (t->currentmaterialflags & (MATERIALFLAG_BLENDED | MATERIALFLAG_NODEPTHTEST))
-		t->currentmaterialflags |= MATERIALFLAG_SORTTRANSPARENT;
-	if (t->currentmaterialflags & (MATERIALFLAG_REFRACTION | MATERIALFLAG_WATER))
-		t->currentmaterialflags &= ~MATERIALFLAG_SORTTRANSPARENT;
+	if (t->currentmaterialflags & MATERIALFLAG_BLENDED)
+	{
+		if (t->currentmaterialflags & (MATERIALFLAG_REFRACTION | MATERIALFLAG_WATERSHADER))
+			t->currentmaterialflags &= ~MATERIALFLAG_BLENDED;
+	}
+	else
+	{
+		if (t->backgroundnumskinframes)
+			t->currentmaterialflags |= MATERIALFLAG_VERTEXTEXTUREBLEND;
+		t->currentmaterialflags &= ~(MATERIALFLAG_REFRACTION | MATERIALFLAG_WATERSHADER);
+	}
 
 	// make sure that the waterscroll matrix is used on water surfaces when
 	// there is no tcmod
@@ -5552,7 +5557,7 @@ static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, msurfa
 static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, msurface_t **texturesurfacelist)
 {
 	// transparent sky would be ridiculous
-	if ((rsurface.texture->currentmaterialflags & MATERIALFLAG_SORTTRANSPARENT))
+	if (rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED)
 		return;
 	if (rsurface.mode != RSURFMODE_SKY)
 	{
@@ -6140,7 +6145,7 @@ void R_QueueSurfaceList(entity_render_t *ent, int numsurfaces, msurface_t **surf
 				;
 			continue;
 		}
-		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_SORTTRANSPARENT)
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED)
 		{
 			// transparent surfaces get pushed off into the transparent queue
 			const msurface_t *surface = surfacelist[i];
