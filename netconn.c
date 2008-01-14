@@ -197,16 +197,16 @@ static qboolean _ServerList_Entry_Compare( serverlist_entry_t *A, serverlist_ent
 			result = strcmp( B->info.cname, A->info.cname );
 			break;
 		case SLIF_GAME:
-			result = strcmp( B->info.game, A->info.game );
+			result = strcasecmp( B->info.game, A->info.game );
 			break;
 		case SLIF_MAP:
-			result = strcmp( B->info.map, A->info.map );
+			result = strcasecmp( B->info.map, A->info.map );
 			break;
 		case SLIF_MOD:
-			result = strcmp( B->info.mod, A->info.mod );
+			result = strcasecmp( B->info.mod, A->info.mod );
 			break;
 		case SLIF_NAME:
-			result = strcmp( B->info.name, A->info.name );
+			result = strcasecmp( B->info.name, A->info.name );
 			break;
 		default:
 			Con_DPrint( "_ServerList_Entry_Compare: Bad serverlist_sortbyfield!\n" );
