@@ -788,7 +788,10 @@ void NetConn_OpenClientPorts(void)
 	port = bound(0, cl_netport.integer, 65535);
 	if (cl_netport.integer != port)
 		Cvar_SetValueQuick(&cl_netport, port);
-	Con_Printf("Client using port %i\n", port);
+	if(port == 0)
+		Con_Printf("Client using an automatically assigned port\n");
+	else
+		Con_Printf("Client using port %i\n", port);
 	NetConn_OpenClientPort("local:2", 0);
 	NetConn_OpenClientPort(net_address.string, port);
 	//NetConn_OpenClientPort(net_address_ipv6.string, port);
