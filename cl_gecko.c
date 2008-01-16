@@ -294,7 +294,8 @@ clgecko_t * CL_Gecko_FindBrowser( const char *name ) {
 	return NULL;
 }
 
-static void cl_gecko_updatecallback( rtexture_t *texture, clgecko_t *instance ) {
+static void cl_gecko_updatecallback( rtexture_t *texture, void* callbackData ) {
+	clgecko_t *instance = callbackData;
 	const unsigned char *data;
 	if( instance->browser ) {
 		// TODO: OSGK only supports BGRA right now
@@ -714,7 +715,7 @@ static geckokeymapping_t geckokeymappingtable[] = {
 	{ K_SCROLLOCK, OSGKKey_ScrollLock }
 };
 
-qboolean CL_Gecko_Event_Key( clgecko_t *instance, int key, clgecko_buttoneventtype_t eventtype ) {
+qboolean CL_Gecko_Event_Key( clgecko_t *instance, keynum_t key, clgecko_buttoneventtype_t eventtype ) {
 	if( !instance || !instance->browser ) {
 		return false;
 	}
@@ -725,7 +726,7 @@ qboolean CL_Gecko_Event_Key( clgecko_t *instance, int key, clgecko_buttoneventty
 		OSGK_KeyboardEventType mappedtype;
 		unsigned int mappedkey = key;
 		
-		int i;
+		unsigned int i;
 		// yes! then convert it if necessary!
 		for( i = 0 ; i < sizeof( geckokeymappingtable ) / sizeof( *geckokeymappingtable ) ; i++ ) {
 			const geckokeymapping_t * const mapping = &geckokeymappingtable[ i ];

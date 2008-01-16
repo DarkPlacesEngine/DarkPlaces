@@ -31,7 +31,7 @@ void CL_Gecko_NavigateToURI( clgecko_t *instance, const char *URI );
 void CL_Gecko_Event_CursorMove( clgecko_t *instance, float x, float y );
 
 // returns whether the key/button event was handled or not
-qboolean CL_Gecko_Event_Key( clgecko_t *instance, int key, clgecko_buttoneventtype_t eventtype );
+qboolean CL_Gecko_Event_Key( clgecko_t *instance, keynum_t key, clgecko_buttoneventtype_t eventtype );
 
 void CL_Gecko_Resize( clgecko_t *instance, int width, int height );
 // get the ratio between gecko instance's size in the texture and the actual texture size..
