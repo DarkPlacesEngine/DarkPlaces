@@ -875,7 +875,7 @@ const char *Key_GetBind (int key)
 	return bind;
 }
 
-qboolean CL_VM_InputEvent (qboolean down, int key);
+qboolean CL_VM_InputEvent (qboolean down, int key, int ascii);
 
 /*
 ===================
@@ -966,7 +966,7 @@ Key_Event (int key, char ascii, qboolean down)
 				break;
 			case key_game:
 				// csqc has priority over toggle menu if it wants to (e.g. handling escape for UI stuff in-game.. :sick:)
-				q = CL_VM_InputEvent(down, key);
+				q = CL_VM_InputEvent(down, key, ascii);
 				if (!q && down)
 					MR_ToggleMenu_f ();
 				break;
@@ -1040,7 +1040,7 @@ Key_Event (int key, char ascii, qboolean down)
 			MR_KeyEvent (key, ascii, down);
 			break;
 		case key_game:
-			q = CL_VM_InputEvent(down, key);
+			q = CL_VM_InputEvent(down, key, ascii);
 			// ignore key repeats on binds and only send the bind if the event hasnt been already processed by csqc
 			if (!q && bind && keydown[key] == 1 && down)
 			{
