@@ -1,11 +1,235 @@
-#ifdef SUPPORT_GECKO
+/* --- 8< --- 8< ---   OffscreenGecko headers   --- >8 --- >8 --- */
 
-// includes everything!
-#include <OffscreenGecko/browser.h>
+/* OffscreenGecko/defs.h */
 
-#ifdef _MSC_VER
-#	pragma comment( lib, "OffscreenGecko" )
+#define OSGK_CLASSTYPE_DEF	struct
+#define OSGK_CLASSTYPE_REF	struct
+
+#include <assert.h>
+#define OSGK_ASSERT(x)	assert(x)
+
+typedef unsigned int OSGK_GeckoResult;
+
+#if defined(__cplusplus) || defined(__GNUC__)
+#  define OSGK_INLINE	inline
+#elif defined(_MSC_VER)
+#  define OSGK_INLINE	__inline
+#else
+#  define OSGK_INLINE
 #endif
+
+/* OffscreenGecko/baseobj.h */
+
+struct OSGK_BaseObject_s
+{
+  int reserved;
+};
+typedef struct OSGK_BaseObject_s OSGK_BaseObject;
+
+#define OSGK_DERIVEDTYPE(T)           \
+  typedef struct T ## _s {            \
+    OSGK_BaseObject baseobj;          \
+  } T
+
+static int (*osgk_addref) (OSGK_BaseObject* obj);
+static int (*osgk_release) (OSGK_BaseObject* obj);
+
+static OSGK_INLINE int osgk_addref_real (OSGK_BaseObject* obj)
+{
+  return osgk_addref (obj);
+}
+
+static OSGK_INLINE int osgk_release_real (OSGK_BaseObject* obj)
+{
+  return osgk_release (obj);
+}
+
+#define osgk_addref(obj)    osgk_addref_real (&((obj)->baseobj))
+#define osgk_release(obj)   osgk_release_real (&((obj)->baseobj))
+
+/* OffscreenGecko/embedding.h */
+
+OSGK_DERIVEDTYPE(OSGK_EmbeddingOptions);
+
+static OSGK_EmbeddingOptions* (*osgk_embedding_options_create) (void);
+static void (*osgk_embedding_options_add_search_path) (
+  OSGK_EmbeddingOptions* options, const char* path);
+/*static void (*osgk_embedding_options_add_components_path) (
+  OSGK_EmbeddingOptions* options, const char* path);*/
+static void (*osgk_embedding_options_set_profile_dir) (
+  OSGK_EmbeddingOptions* options, const char* profileDir,
+  const char* localProfileDir);
+
+OSGK_DERIVEDTYPE(OSGK_Embedding);
+
+#define OSGK_API_VERSION    1
+
+static OSGK_Embedding* (*osgk_embedding_create2) (
+  unsigned int apiVer, OSGK_EmbeddingOptions* options, 
+  OSGK_GeckoResult* geckoResult);
+
+static OSGK_INLINE OSGK_Embedding* osgk_embedding_create (
+  OSGK_GeckoResult* geckoResult)
+{
+  return osgk_embedding_create2 (OSGK_API_VERSION, 0, geckoResult);
+}
+
+static OSGK_INLINE OSGK_Embedding* osgk_embedding_create_with_options (
+  OSGK_EmbeddingOptions* options, OSGK_GeckoResult* geckoResult)
+{
+  return osgk_embedding_create2 (OSGK_API_VERSION, options, geckoResult);
+}
+
+/*static OSGK_GeckoMem* (*osgk_embedding_get_gecko_mem) (
+  OSGK_Embedding* embedding);*/
+
+/*static OSGK_ComponentMgr* (*osgk_embedding_get_component_mgr) (
+  OSGK_Embedding* embedding);*/
+
+/*OSGK_CLASSTYPE_DEF nsIComponentManager;
+OSGK_CLASSTYPE_DEF nsIComponentRegistrar;
+OSGK_CLASSTYPE_DEF nsIServiceManager;*/
+
+/*static OSGK_CLASSTYPE_REF nsIComponentManager* 
+(*osgk_embedding_get_gecko_component_manager) (OSGK_Embedding* embedding);*/
+/*static OSGK_CLASSTYPE_REF nsIComponentRegistrar* 
+(*osgk_embedding_get_gecko_component_registrar) (OSGK_Embedding* embedding);*/
+/*static OSGK_CLASSTYPE_REF nsIServiceManager* 
+(*osgk_embedding_get_gecko_service_manager) (OSGK_Embedding* embedding);*/
+
+enum
+{
+  jsgPrivileged = 1
+};
+/*static int (*osgk_embedding_register_js_global) (
+  OSGK_Embedding* embedding, const char* name, const char* contractID,
+  unsigned int flags, OSGK_String** previousContract,
+  OSGK_GeckoResult* geckoResult);*/
+
+/*static void (*osgk_embedding_clear_focus*) (OSGK_Embedding* embedding);*/
+/*void (*osgk_embedding_set_auto_focus) (OSGK_Embedding* embedding, int autoFocus);*/
+/*static int (*osgk_embedding_get_auto_focus) (OSGK_Embedding* embedding);*/
+
+/* OffscreenGecko/browser.h */
+OSGK_DERIVEDTYPE(OSGK_Browser);
+
+static OSGK_Browser* (*osgk_browser_create) (
+  OSGK_Embedding* embedding, int width, int height);
+static void (*osgk_browser_navigate) (OSGK_Browser* browser,
+  const char* uri);
+
+static int (*osgk_browser_query_dirty) (OSGK_Browser* browser);
+static const unsigned char* (*osgk_browser_lock_data) (
+  OSGK_Browser* browser, int* isDirty);
+static void (*osgk_browser_unlock_data) (OSGK_Browser* browser,
+  const unsigned char* data);
+
+typedef enum OSGK_MouseButton
+{
+  mbLeft, 
+  mbRight, 
+  mbMiddle
+} OSGK_MouseButton;
+
+typedef enum OSGK_MouseButtonEventType
+{
+  meDown,
+  meUp,
+  meDoubleClick
+} OSGK_MouseButtonEventType;
+
+static void (*osgk_browser_event_mouse_move) (
+  OSGK_Browser* browser, int x, int y);
+static void (*osgk_browser_event_mouse_button) (
+  OSGK_Browser* browser, OSGK_MouseButton button, 
+  OSGK_MouseButtonEventType eventType);
+
+typedef enum OSGK_WheelAxis
+{
+  waVertical,
+  waHorizontal
+} OSGK_WheelAxis;
+
+typedef enum OSGK_WheelDirection
+{
+  wdPositive,
+  wdNegative,
+  wdPositivePage,
+  wdNegativePage
+} OSGK_WheelDirection;
+
+static void (*osgk_browser_event_mouse_wheel) (
+  OSGK_Browser* browser, OSGK_WheelAxis axis, 
+  OSGK_WheelDirection direction);
+
+typedef enum OSGK_KeyboardEventType
+{
+  keDown,
+  keUp,
+  kePress
+} OSGK_KeyboardEventType;
+
+enum
+{
+  OSGKKey_First = 0x110000,
+
+  OSGKKey_Backspace = OSGKKey_First,
+  OSGKKey_Tab,
+  OSGKKey_Return,
+  OSGKKey_Shift,
+  OSGKKey_Control,
+  OSGKKey_Alt,
+  OSGKKey_CapsLock,
+  OSGKKey_Escape,
+  OSGKKey_Space,
+  OSGKKey_PageUp,
+  OSGKKey_PageDown,
+  OSGKKey_End,
+  OSGKKey_Home,
+  OSGKKey_Left,
+  OSGKKey_Up,
+  OSGKKey_Right,
+  OSGKKey_Down,
+  OSGKKey_Insert,
+  OSGKKey_Delete,
+  OSGKKey_F1,
+  OSGKKey_F2,
+  OSGKKey_F3,
+  OSGKKey_F4,
+  OSGKKey_F5,
+  OSGKKey_F6,
+  OSGKKey_F7,
+  OSGKKey_F8,
+  OSGKKey_F9,
+  OSGKKey_F10,
+  OSGKKey_F11,
+  OSGKKey_F12,
+  OSGKKey_NumLock,
+  OSGKKey_ScrollLock,
+  OSGKKey_Meta
+};
+
+static int (*osgk_browser_event_key) (
+  OSGK_Browser* browser, unsigned int key,
+  OSGK_KeyboardEventType eventType);
+
+typedef enum OSGK_AntiAliasType
+{
+  aaNone,
+  aaGray,
+  aaSubpixel
+} OSGK_AntiAliasType;
+
+/*static void (*osgk_browser_set_antialias) (
+  OSGK_Browser* browser, OSGK_AntiAliasType aaType);*/
+/*static OSGK_AntiAliasType (*osgk_browser_get_antialias) (OSGK_Browser* browser);*/
+
+/*static void (*osgk_browser_focus) (OSGK_Browser* browser);*/
+
+static void (*osgk_browser_resize) (OSGK_Browser* browser,
+  int width, int height);
+
+/* --- >8 --- >8 --- End OffscreenGecko headers --- 8< --- 8< --- */
 
 #include "quakedef.h"
 #include "cl_dyntexture.h"
@@ -29,6 +253,8 @@ struct clgecko_s {
 };
 
 static clgecko_t cl_geckoinstances[ MAX_GECKO_INSTANCES ];
+
+static dllhandle_t osgk_dll = NULL;
 
 static clgecko_t * cl_gecko_findunusedinstance( void ) {
 	int i;
@@ -135,8 +361,12 @@ void CL_Gecko_GetTextureExtent( clgecko_t *instance, float* pwidth, float* pheig
 
 
 clgecko_t * CL_Gecko_CreateBrowser( const char *name ) {
+	clgecko_t *instance;
+
+	if (!osgk_dll) return NULL;
+
 	// TODO: verify that we dont use a name twice
-	clgecko_t *instance = cl_gecko_findunusedinstance();
+	instance = cl_gecko_findunusedinstance();
 	// TODO: assert != NULL
 	
 	if( cl_geckoembedding == NULL ) {
@@ -248,6 +478,11 @@ void CL_Gecko_Shutdown( void ) {
 	    osgk_release( cl_geckoembedding );
 	    cl_geckoembedding = NULL;
 	}
+
+	if (osgk_dll != NULL)
+	{
+	    Sys_UnloadLibrary (&osgk_dll);
+	}
 }
 
 static void cl_gecko_create_f( void ) {
@@ -358,8 +593,54 @@ static void gl_gecko_movecursor_f( void ) {
 	CL_Gecko_Event_CursorMove( CL_Gecko_FindBrowser( name ), x, y );
 }
 
+#undef osgk_addref
+#undef osgk_release
+
+static const dllfunction_t osgkFuncs[] =
+{
+	{"osgk_addref",				    (void **) &osgk_addref},
+	{"osgk_release",			    (void **) &osgk_release},
+	{"osgk_embedding_create2",		    (void **) &osgk_embedding_create2},
+	{"osgk_embedding_options_create",	    (void **) &osgk_embedding_options_create},
+	{"osgk_embedding_options_add_search_path",  (void **) &osgk_embedding_options_add_search_path},
+	{"osgk_embedding_options_set_profile_dir",  (void **) &osgk_embedding_options_set_profile_dir},
+	{"osgk_browser_create",			    (void **) &osgk_browser_create},
+	{"osgk_browser_query_dirty",		    (void **) &osgk_browser_query_dirty},
+	{"osgk_browser_navigate",		    (void **) &osgk_browser_navigate},
+	{"osgk_browser_lock_data",		    (void **) &osgk_browser_lock_data},
+	{"osgk_browser_unlock_data",		    (void **) &osgk_browser_unlock_data},
+	{"osgk_browser_resize",			    (void **) &osgk_browser_resize},
+	{"osgk_browser_event_mouse_move",	    (void **) &osgk_browser_event_mouse_move},
+	{"osgk_browser_event_mouse_button",	    (void **) &osgk_browser_event_mouse_button},
+	{"osgk_browser_event_mouse_wheel",	    (void **) &osgk_browser_event_mouse_wheel},
+	{"osgk_browser_event_key",		    (void **) &osgk_browser_event_key},
+	{NULL, NULL}
+};
+
 void CL_Gecko_Init( void )
 {
+	const char* dllnames [] =
+	{
+	#if defined(WIN64)
+		"OffscreenGecko64.dll",
+	#elif defined(WIN32)
+		"OffscreenGecko.dll",
+	#elif defined(MACOSX)
+		"OffscreenGecko.dylib",
+	#else
+		"OffscreenGecko.so",
+	#endif
+		NULL
+	};
+	
+	if (!osgk_dll)
+	{
+		if (! Sys_LoadLibrary (dllnames, &osgk_dll, osgkFuncs))
+		{
+			Con_Printf ("Could not load OffscreenGecko, Gecko support unavailable\n");
+		}
+	}
+
 	Cmd_AddCommand( "gecko_create", cl_gecko_create_f, "Create a gecko browser instance" );
 	Cmd_AddCommand( "gecko_destroy", cl_gecko_destroy_f, "Destroy a gecko browser instance" );
 	Cmd_AddCommand( "gecko_navigate", cl_gecko_navigate_f, "Navigate a gecko browser to a URI" );
@@ -505,5 +786,3 @@ qboolean CL_Gecko_Event_Key( clgecko_t *instance, int key, clgecko_buttoneventty
 	// TODO: error?
 	return false;
 }
-
-#endif

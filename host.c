@@ -857,9 +857,7 @@ void Host_Main(void)
 			//ui_update();
 
 			CL_Video_Frame();
-#ifdef SUPPORT_GECKO
 			CL_Gecko_Frame();
-#endif
 
 			CL_UpdateScreen();
 
@@ -1172,9 +1170,7 @@ void Host_Shutdown(void)
 	// AK shutdown PRVM
 	// AK hmm, no PRVM_Shutdown(); yet
 
-#ifdef SUPPORT_GECKO
 	CL_Gecko_Shutdown();
-#endif
 	CL_Video_Shutdown();
 
 	Host_SaveConfig();

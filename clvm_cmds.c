@@ -3392,7 +3392,6 @@ VM_CL_pointsound,				// #483 void(vector origin, string sample, float volume, fl
 VM_strreplace,					// #484 string(string search, string replace, string subject) strreplace (DP_QC_STRREPLACE)
 VM_strireplace,					// #485 string(string search, string replace, string subject) strireplace (DP_QC_STRREPLACE)
 VM_CL_getsurfacepointattribute,// #486 vector(entity e, float s, float n, float a) getsurfacepointattribute
-#ifdef SUPPORT_GECKO
 VM_gecko_create,					// #487 float gecko_create( string name )
 VM_gecko_destroy,					// #488 void gecko_destroy( string name )
 VM_gecko_navigate,				// #489 void gecko_navigate( string name, string URI )
@@ -3400,15 +3399,6 @@ VM_gecko_keyevent,				// #490 float gecko_keyevent( string name, float key, floa
 VM_gecko_movemouse,				// #491 void gecko_mousemove( string name, float x, float y )
 VM_gecko_resize,					// #492 void gecko_resize( string name, float w, float h )
 VM_gecko_get_texture_extent,	// #493 vector gecko_get_texture_extent( string name )
-#else
-NULL,									// #487
-NULL,									// #488
-NULL,									// #489
-NULL,									// #490
-NULL,									// #491
-NULL,									// #492
-NULL,									// #493
-#endif
 NULL,							// #494
 NULL,							// #495
 NULL,							// #496

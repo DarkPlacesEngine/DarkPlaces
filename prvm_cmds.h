@@ -149,13 +149,11 @@ void	cin_setstate(string name, float type)
 float	cin_getstate(string name)
 void	cin_restart(string name)
 
-#ifdef SUPPORT_GECKO
 float[bool] gecko_create( string name )
 void gecko_destroy( string name )
 void gecko_navigate( string name, string URI )
 float[bool] gecko_keyevent( string name, float key, float eventtype ) 
 void gecko_mousemove( string name, float x, float y )
-#endif
 
 ==============================================================================
 menu cmd list:
@@ -195,9 +193,7 @@ float	getserverlistindexforkey(string key)
 #include "mprogdefs.h"
 
 #include "cl_video.h"
-#ifdef SUPPORT_GECKO
 #include "cl_gecko.h"
-#endif
 
 //============================================================================
 // nice helper macros
@@ -358,7 +354,6 @@ void VM_cin_setstate( void );
 void VM_cin_getstate( void );
 void VM_cin_restart( void );
 
-#ifdef SUPPORT_GECKO
 void VM_gecko_create( void );
 void VM_gecko_destroy( void );
 void VM_gecko_navigate( void );
@@ -366,7 +361,6 @@ void VM_gecko_keyevent( void );
 void VM_gecko_movemouse( void );
 void VM_gecko_resize( void );
 void VM_gecko_get_texture_extent( void );
-#endif
 
 void VM_drawline (void);
 
