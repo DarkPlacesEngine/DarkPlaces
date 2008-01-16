@@ -2322,9 +2322,7 @@ void CL_Init (void)
 	CL_Screen_Init();
 
 	CL_Video_Init();
-#ifdef SUPPORT_GECKO
 	CL_Gecko_Init();
-#endif
 }
 
 

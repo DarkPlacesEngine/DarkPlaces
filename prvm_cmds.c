@@ -3073,7 +3073,6 @@ void VM_cin_restart( void )
 		CL_RestartVideo( video );
 }
 
-#ifdef SUPPORT_GECKO
 /*
 ========================
 VM_Gecko_Init
@@ -3314,7 +3313,6 @@ void VM_gecko_get_texture_extent( void ) {
 }
 
 
-#endif
 
 /*
 ==============
@@ -4527,9 +4525,7 @@ void VM_Cmd_Init(void)
 	// only init the stuff for the current prog
 	VM_Files_Init();
 	VM_Search_Init();
-#ifdef SUPPORT_GECKO
 	VM_Gecko_Init();
-#endif
 //	VM_BufStr_Init();
 }
 
@@ -4538,9 +4534,7 @@ void VM_Cmd_Reset(void)
 	CL_PurgeOwner( MENUOWNER );
 	VM_Search_Reset();
 	VM_Files_CloseAll();
-#ifdef SUPPORT_GECKO
 	VM_Gecko_Destroy();
-#endif
 //	VM_BufStr_ShutDown();
 }
 
