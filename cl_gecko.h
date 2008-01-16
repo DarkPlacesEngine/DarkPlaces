@@ -1,7 +1,5 @@
 // Andreas Kirsch 07
 
-#ifdef SUPPORT_GECKO
-
 #ifndef CL_GECKO_H
 #define CL_GECKO_H
 
@@ -38,7 +36,5 @@ qboolean CL_Gecko_Event_Key( clgecko_t *instance, int key, clgecko_buttoneventty
 void CL_Gecko_Resize( clgecko_t *instance, int width, int height );
 // get the ratio between gecko instance's size in the texture and the actual texture size..
 void CL_Gecko_GetTextureExtent( clgecko_t *instance, float* pwidth, float* pheight );
-#endif
-
 #endif
 
