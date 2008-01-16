@@ -71,6 +71,7 @@ OBJ_COMMON= \
 	cl_collision.o \
 	cl_demo.o \
 	cl_dyntexture.o \
+	cl_gecko.o \
 	cl_input.o \
 	cl_main.o \
 	cl_parse.o \
