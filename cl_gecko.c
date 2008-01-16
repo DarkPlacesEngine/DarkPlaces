@@ -360,6 +360,13 @@ void CL_Gecko_GetTextureExtent( clgecko_t *instance, float* pwidth, float* pheig
 	*pheight = (float)instance->height / instance->texHeight;
 }
 
+#if defined(WIN64)
+# define XULRUNNER_DIR_SUFFIX	"win64"
+#elif defined(WIN32)
+# define XULRUNNER_DIR_SUFFIX	"win32"
+#elif defined(DP_ARCH) && defined(DP_MACHINE)
+# define XULRUNNER_DIR_SUFFIX	DP_ARCH "-" DP_MACHINE
+#endif
 
 clgecko_t * CL_Gecko_CreateBrowser( const char *name ) {
 	clgecko_t *instance;
@@ -380,6 +387,9 @@ clgecko_t * CL_Gecko_CreateBrowser( const char *name ) {
 		}
 
 		options = osgk_embedding_options_create();
+	#ifdef XULRUNNER_DIR_SUFFIX
+		osgk_embedding_options_add_search_path( options, "./xulrunner-" XULRUNNER_DIR_SUFFIX "/" );
+	#endif
 		osgk_embedding_options_add_search_path( options, "./xulrunner/" );
 		dpsnprintf (profile_path, sizeof (profile_path), "%s/xulrunner_profile/", fs_gamedir);
 		osgk_embedding_options_set_profile_dir( options, profile_path, 0 );
