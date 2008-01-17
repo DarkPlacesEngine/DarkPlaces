@@ -228,6 +228,9 @@ typedef struct client_s
 	char weaponmodel[MAX_QPATH];
 	int weaponmodelindex;
 
+	// clientcamera (entity to use as camera)
+	int clientcamera;
+
 	entityframe_database_t *entitydatabase;
 	entityframe4_database_t *entitydatabase4;
 	entityframe5_database_t *entitydatabase5;
