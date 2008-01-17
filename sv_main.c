@@ -790,9 +790,11 @@ void SV_SendServerinfo (client_t *client)
 	MSG_WriteByte (&client->netconnection->message, (int)prog->edicts->fields.server->sounds);
 
 // set view
+// store this in clientcamera, too
+	client->clientcamera = PRVM_NUM_FOR_EDICT(client->edict);
 	MSG_WriteByte (&client->netconnection->message, svc_setview);
-	MSG_WriteShort (&client->netconnection->message, PRVM_NUM_FOR_EDICT(client->edict));
-
+	MSG_WriteShort (&client->netconnection->message, client->clientcamera);
+	
 	MSG_WriteByte (&client->netconnection->message, svc_signonnum);
 	MSG_WriteByte (&client->netconnection->message, 1);
 
@@ -1323,6 +1325,7 @@ void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *
 {
 	int i, numsendstates;
 	entity_state_t *s;
+	prvm_edict_t *camera;
 
 	// if there isn't enough space to accomplish anything, skip it
 	if (msg->cursize + 25 > msg->maxsize)
@@ -1338,7 +1341,8 @@ void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *
 
 // find the client's PVS
 	// the real place being tested from
-	VectorAdd(clent->fields.server->origin, clent->fields.server->view_ofs, sv.writeentitiestoclient_testeye);
+	camera = PRVM_EDICT_NUM( client->clientcamera );
+	VectorAdd(camera->fields.server->origin, clent->fields.server->view_ofs, sv.writeentitiestoclient_testeye);
 	sv.writeentitiestoclient_pvsbytes = 0;
 	if (sv.worldmodel && sv.worldmodel->brush.FatPVS)
 		sv.writeentitiestoclient_pvsbytes = sv.worldmodel->brush.FatPVS(sv.worldmodel, sv.writeentitiestoclient_testeye, 8, sv.writeentitiestoclient_pvs, sizeof(sv.writeentitiestoclient_pvs), false);
@@ -1935,6 +1939,21 @@ static void SV_UpdateToReliableMessages (void)
 			// always point the string back at host_client->name to keep it safe
 			strlcpy (host_client->playerskin, skin, sizeof (host_client->playerskin));
 			PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.playerskin)->string = PRVM_SetEngineString(host_client->playerskin);
+		}
+
+		// TODO: add an extension name for this [1/17/2008 Black]
+		if ((val = PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.clientcamera)) && val->edict > 0 ) {
+			int oldclientcamera = host_client->clientcamera;
+			if( val->edict >= prog->max_edicts || PRVM_EDICT_NUM( val->edict )->priv.required->free ) {
+				val->edict = host_client->clientcamera = PRVM_NUM_FOR_EDICT( host_client->edict );
+			} else {
+				host_client->clientcamera = val->edict;
+			}
+
+			if( oldclientcamera != host_client->clientcamera ) {
+				MSG_WriteByte (&sv.reliable_datagram, svc_setview );
+				MSG_WriteShort (&host_client->netconnection->message, host_client->clientcamera);
+			}
 		}
 
 		// frags
