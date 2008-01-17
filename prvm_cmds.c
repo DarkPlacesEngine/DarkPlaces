@@ -3603,65 +3603,39 @@ void VM_altstr_ins(void)
 // BufString functions
 ////////////////////////////////////////
 //[515]: string buffers support
-#define MAX_QCSTR_BUFFERS 128
-#define MAX_QCSTR_STRINGS 1024
 
-typedef struct
+static size_t stringbuffers_sortlength;
+
+static void BufStr_Expand(prvm_stringbuffer_t *stringbuffer, int strindex)
 {
-	int		num_strings;
-	char	*strings[MAX_QCSTR_STRINGS];
-}qcstrbuffer_t;
-
-// FIXME: move stringbuffers to prog_t to allow multiple progs!
-static qcstrbuffer_t	*qcstringbuffers[MAX_QCSTR_BUFFERS];
-static int				num_qcstringbuffers;
-static int				buf_sortpower;
-
-#define BUFSTR_BUFFER(a) (a>=MAX_QCSTR_BUFFERS) ? NULL : (qcstringbuffers[a])
-#define BUFSTR_ISFREE(a) (a<MAX_QCSTR_BUFFERS&&qcstringbuffers[a]&&qcstringbuffers[a]->num_strings<=0) ? 1 : 0
-
-static int BufStr_FindFreeBuffer (void)
-{
-	int	i;
-	if(num_qcstringbuffers == MAX_QCSTR_BUFFERS)
-		return -1;
-	for(i=0;i<MAX_QCSTR_BUFFERS;i++)
-		if(!qcstringbuffers[i])
-		{
-			qcstringbuffers[i] = (qcstrbuffer_t *)Z_Malloc(sizeof(qcstrbuffer_t));
-			memset(qcstringbuffers[i], 0, sizeof(qcstrbuffer_t));
-			return i;
-		}
-	return -1;
-}
-
-static void BufStr_ClearBuffer (int index)
-{
-	qcstrbuffer_t	*b = qcstringbuffers[index];
-	int				i;
-
-	if(b)
+	if (stringbuffer->max_strings <= strindex)
 	{
-		if(b->num_strings > 0)
-		{
-			for(i=0;i<b->num_strings;i++)
-				if(b->strings[i])
-					Z_Free(b->strings[i]);
-			num_qcstringbuffers--;
-		}
-		Z_Free(qcstringbuffers[index]);
-		qcstringbuffers[index] = NULL;
+		char **oldstrings = stringbuffer->strings;
+		stringbuffer->max_strings = max(stringbuffer->max_strings * 2, 128);
+		while (stringbuffer->max_strings <= strindex)
+			stringbuffer->max_strings *= 2;
+		stringbuffer->strings = Mem_Alloc(prog->progs_mempool, stringbuffer->max_strings * sizeof(stringbuffer->strings[0]));
+		if (stringbuffer->num_strings > 0)
+			memcpy(stringbuffer->strings, oldstrings, stringbuffer->num_strings * sizeof(stringbuffer->strings[0]));
+		if (oldstrings)
+			Mem_Free(oldstrings);
 	}
 }
 
-static int BufStr_FindFreeString (qcstrbuffer_t *b)
+static void BufStr_Shrink(prvm_stringbuffer_t *stringbuffer)
 {
-	int				i;
-	for(i=0;i<b->num_strings;i++)
-		if(!b->strings[i] || !b->strings[i][0])
-			return i;
-	if(i == MAX_QCSTR_STRINGS)	return -1;
-	else						return i;
+	// reduce num_strings if there are empty string slots at the end
+	while (stringbuffer->num_strings > 0 && stringbuffer->strings[stringbuffer->num_strings - 1] == NULL)
+		stringbuffer->num_strings--;
+
+	// if empty, free the string pointer array
+	if (stringbuffer->num_strings == 0)
+	{
+		stringbuffer->max_strings = 0;
+		if (stringbuffer->strings)
+			Mem_Free(stringbuffer->strings);
+		stringbuffer->strings = NULL;
+	}
 }
 
 static int BufStr_SortStringsUP (const void *in1, const void *in2)
@@ -3671,7 +3645,7 @@ static int BufStr_SortStringsUP (const void *in1, const void *in2)
 	b = *((const char **) in2);
 	if(!a[0])	return 1;
 	if(!b[0])	return -1;
-	return strncmp(a, b, buf_sortpower);
+	return strncmp(a, b, stringbuffers_sortlength);
 }
 
 static int BufStr_SortStringsDOWN (const void *in1, const void *in2)
@@ -3681,7 +3655,7 @@ static int BufStr_SortStringsDOWN (const void *in1, const void *in2)
 	b = *((const char **) in2);
 	if(!a[0])	return 1;
 	if(!b[0])	return -1;
-	return strncmp(b, a, buf_sortpower);
+	return strncmp(b, a, stringbuffers_sortlength);
 }
 
 /*
@@ -3693,13 +3667,11 @@ float buf_create(void) = #460;
 */
 void VM_buf_create (void)
 {
+	prvm_stringbuffer_t *stringbuffer;
 	int i;
 	VM_SAFEPARMCOUNT(0, VM_buf_create);
-	i = BufStr_FindFreeBuffer();
-	if(i >= 0)
-		num_qcstringbuffers++;
-	//else
-		//Con_Printf("VM_buf_create: buffers overflow in %s\n", PRVM_NAME);
+	stringbuffer = Mem_ExpandableArray_AllocRecord(&prog->stringbuffersarray);
+	for (i = 0;stringbuffer != Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, i);i++);
 	PRVM_G_FLOAT(OFS_RETURN) = i;
 }
 
@@ -3712,9 +3684,11 @@ void buf_del(float bufhandle) = #461;
 */
 void VM_buf_del (void)
 {
+	prvm_stringbuffer_t *stringbuffer;
 	VM_SAFEPARMCOUNT(1, VM_buf_del);
-	if(BUFSTR_BUFFER((int)PRVM_G_FLOAT(OFS_PARM0)))
-		BufStr_ClearBuffer((int)PRVM_G_FLOAT(OFS_PARM0));
+	stringbuffer = (prvm_stringbuffer_t *)Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, (int)PRVM_G_FLOAT(OFS_PARM0));
+	if (stringbuffer)
+		Mem_ExpandableArray_FreeRecord(&prog->stringbuffersarray, stringbuffer);
 	else
 	{
 		VM_Warning("VM_buf_del: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
@@ -3731,18 +3705,18 @@ float buf_getsize(float bufhandle) = #462;
 */
 void VM_buf_getsize (void)
 {
-	qcstrbuffer_t	*b;
+	prvm_stringbuffer_t *stringbuffer;
 	VM_SAFEPARMCOUNT(1, VM_buf_getsize);
 
-	b = BUFSTR_BUFFER((int)PRVM_G_FLOAT(OFS_PARM0));
-	if(!b)
+	stringbuffer = (prvm_stringbuffer_t *)Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, (int)PRVM_G_FLOAT(OFS_PARM0));
+	if(!stringbuffer)
 	{
 		PRVM_G_FLOAT(OFS_RETURN) = -1;
 		VM_Warning("VM_buf_getsize: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
 		return;
 	}
 	else
-		PRVM_G_FLOAT(OFS_RETURN) = b->num_strings;
+		PRVM_G_FLOAT(OFS_RETURN) = stringbuffer->num_strings;
 }
 
 /*
@@ -3754,12 +3728,12 @@ void buf_copy(float bufhandle_from, float bufhandle_to) = #463;
 */
 void VM_buf_copy (void)
 {
-	qcstrbuffer_t	*b1, *b2;
-	int				i;
+	prvm_stringbuffer_t *srcstringbuffer, *dststringbuffer;
+	int i;
 	VM_SAFEPARMCOUNT(2, VM_buf_copy);
 
-	b1 = BUFSTR_BUFFER((int)PRVM_G_FLOAT(OFS_PARM0));
-	if(!b1)
+	srcstringbuffer = (prvm_stringbuffer_t *)Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, (int)PRVM_G_FLOAT(OFS_PARM0));
+	if(!srcstringbuffer)
 	{
 		VM_Warning("VM_buf_copy: invalid source buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
 		return;
@@ -3770,31 +3744,32 @@ void VM_buf_copy (void)
 		VM_Warning("VM_buf_copy: source == destination (%i) in %s\n", i, PRVM_NAME);
 		return;
 	}
-	b2 = BUFSTR_BUFFER(i);
-	if(!b2)
+	dststringbuffer = (prvm_stringbuffer_t *)Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, (int)PRVM_G_FLOAT(OFS_PARM0));
+	if(!dststringbuffer)
 	{
 		VM_Warning("VM_buf_copy: invalid destination buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM1), PRVM_NAME);
 		return;
 	}
 
-	BufStr_ClearBuffer(i);
-	qcstringbuffers[i] = (qcstrbuffer_t *)Z_Malloc(sizeof(qcstrbuffer_t));
-	memset(qcstringbuffers[i], 0, sizeof(qcstrbuffer_t));
-	b2->num_strings = b1->num_strings;
+	for (i = 0;i < dststringbuffer->num_strings;i++)
+		if (dststringbuffer->strings[i])
+			Mem_Free(dststringbuffer->strings[i]);
+	if (dststringbuffer->strings)
+		Mem_Free(dststringbuffer->strings);
+	*dststringbuffer = *srcstringbuffer;
+	if (dststringbuffer->max_strings)
+		dststringbuffer->strings = (char **)Mem_Alloc(prog->progs_mempool, sizeof(dststringbuffer->strings[0]) * dststringbuffer->max_strings);
 
-	for(i=0;i<b1->num_strings;i++)
-		if(b1->strings[i] && b1->strings[i][0])
+	for (i = 0;i < dststringbuffer->num_strings;i++)
+	{
+		if (srcstringbuffer->strings[i])
 		{
 			size_t stringlen;
-			stringlen = strlen(b1->strings[i]) + 1;
-			b2->strings[i] = (char *)Z_Malloc(stringlen);
-			if(!b2->strings[i])
-			{
-				VM_Warning("VM_buf_copy: not enough memory for buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM1), PRVM_NAME);
-				break;
-			}
-			memcpy(b2->strings[i], b1->strings[i], stringlen);
+			stringlen = strlen(srcstringbuffer->strings[i]) + 1;
+			dststringbuffer->strings[i] = (char *)Mem_Alloc(prog->progs_mempool, stringlen);
+			memcpy(dststringbuffer->strings[i], srcstringbuffer->strings[i], stringlen);
 		}
+	}
 }
 
 /*
@@ -3807,45 +3782,30 @@ void buf_sort(float bufhandle, float cmplength, float backward) = #464;
 */
 void VM_buf_sort (void)
 {
-	qcstrbuffer_t	*b;
-	int				i;
+	prvm_stringbuffer_t *stringbuffer;
 	VM_SAFEPARMCOUNT(3, VM_buf_sort);
 
-	b = BUFSTR_BUFFER((int)PRVM_G_FLOAT(OFS_PARM0));
-	if(!b)
+	stringbuffer = (prvm_stringbuffer_t *)Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, (int)PRVM_G_FLOAT(OFS_PARM0));
+	if(!stringbuffer)
 	{
 		VM_Warning("VM_buf_sort: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
 		return;
 	}
-	if(b->num_strings <= 0)
+	if(stringbuffer->num_strings <= 0)
 	{
 		VM_Warning("VM_buf_sort: tried to sort empty buffer %i in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
 		return;
 	}
-	// TODO: please someone rename this to buf_cmplength [12/3/2007 Black]
-	buf_sortpower = (int)PRVM_G_FLOAT(OFS_PARM1);
-	if(buf_sortpower <= 0)
-		buf_sortpower = 99999999;
+	stringbuffers_sortlength = (int)PRVM_G_FLOAT(OFS_PARM1);
+	if(stringbuffers_sortlength <= 0)
+		stringbuffers_sortlength = 0x7FFFFFFF;
 
 	if(!PRVM_G_FLOAT(OFS_PARM2))
-		qsort(b->strings, b->num_strings, sizeof(char*), BufStr_SortStringsUP);
+		qsort(stringbuffer->strings, stringbuffer->num_strings, sizeof(char*), BufStr_SortStringsUP);
 	else
-		qsort(b->strings, b->num_strings, sizeof(char*), BufStr_SortStringsDOWN);
+		qsort(stringbuffer->strings, stringbuffer->num_strings, sizeof(char*), BufStr_SortStringsDOWN);
 
-	for(i=b->num_strings-1;i>=0;i--)	//[515]: delete empty lines
-		if(b->strings)
-		{
-			if(b->strings[i][0])
-				break;
-			else
-			{
-				Z_Free(b->strings[i]);
-				--b->num_strings;
-				b->strings[i] = NULL;
-			}
-		}
-		else
-			--b->num_strings;
+	BufStr_Shrink(stringbuffer);
 }
 
 /*
@@ -3857,33 +3817,35 @@ string buf_implode(float bufhandle, string glue) = #465;
 */
 void VM_buf_implode (void)
 {
-	qcstrbuffer_t	*b;
+	prvm_stringbuffer_t *stringbuffer;
 	char			k[VM_STRINGTEMP_LENGTH];
 	const char		*sep;
 	int				i;
 	size_t			l;
 	VM_SAFEPARMCOUNT(2, VM_buf_implode);
 
-	b = BUFSTR_BUFFER((int)PRVM_G_FLOAT(OFS_PARM0));
+	stringbuffer = (prvm_stringbuffer_t *)Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, (int)PRVM_G_FLOAT(OFS_PARM0));
 	PRVM_G_INT(OFS_RETURN) = OFS_NULL;
-	if(!b)
+	if(!stringbuffer)
 	{
 		VM_Warning("VM_buf_implode: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
 		return;
 	}
-	if(!b->num_strings)
+	if(!stringbuffer->num_strings)
 		return;
 	sep = PRVM_G_STRING(OFS_PARM1);
 	k[0] = 0;
-	for(l=i=0;i<b->num_strings;i++)
-		if(b->strings[i])
+	for(l = i = 0;i < stringbuffer->num_strings;i++)
+	{
+		if(stringbuffer->strings[i])
 		{
-			l += (i > 0 ? strlen(sep) : 0) + strlen(b->strings[i]);
+			l += (i > 0 ? strlen(sep) : 0) + strlen(stringbuffer->strings[i]);
 			if (l >= sizeof(k) - 1)
 				break;
 			strlcat(k, sep, sizeof(k));
-			strlcat(k, b->strings[i], sizeof(k));
+			strlcat(k, stringbuffer->strings[i], sizeof(k));
 		}
+	}
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(k);
 }
 
@@ -3896,27 +3858,25 @@ string bufstr_get(float bufhandle, float string_index) = #465;
 */
 void VM_bufstr_get (void)
 {
-	qcstrbuffer_t	*b;
+	prvm_stringbuffer_t *stringbuffer;
 	int				strindex;
 	VM_SAFEPARMCOUNT(2, VM_bufstr_get);
 
 	PRVM_G_INT(OFS_RETURN) = OFS_NULL;
-	b = BUFSTR_BUFFER((int)PRVM_G_FLOAT(OFS_PARM0));
-	if(!b)
+	stringbuffer = (prvm_stringbuffer_t *)Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, (int)PRVM_G_FLOAT(OFS_PARM0));
+	if(!stringbuffer)
 	{
 		VM_Warning("VM_bufstr_get: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
 		return;
 	}
 	strindex = (int)PRVM_G_FLOAT(OFS_PARM1);
-	if(strindex < 0 || strindex > MAX_QCSTR_STRINGS)
+	if (strindex < 0)
 	{
 		VM_Warning("VM_bufstr_get: invalid string index %i used in %s\n", strindex, PRVM_NAME);
 		return;
 	}
-	if(b->num_strings <= strindex)
-		return;
-	if(b->strings[strindex])
-		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(b->strings[strindex]);
+	if (strindex < stringbuffer->num_strings && stringbuffer->strings[strindex])
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(stringbuffer->strings[strindex]);
 }
 
 /*
@@ -3928,88 +3888,87 @@ void bufstr_set(float bufhandle, float string_index, string str) = #466;
 */
 void VM_bufstr_set (void)
 {
-	int				bufindex, strindex;
-	qcstrbuffer_t	*b;
+	int				strindex;
+	prvm_stringbuffer_t *stringbuffer;
 	const char		*news;
-	size_t			alloclen;
 
 	VM_SAFEPARMCOUNT(3, VM_bufstr_set);
 
-	bufindex = (int)PRVM_G_FLOAT(OFS_PARM0);
-	b = BUFSTR_BUFFER(bufindex);
-	if(!b)
+	stringbuffer = (prvm_stringbuffer_t *)Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, (int)PRVM_G_FLOAT(OFS_PARM0));
+	if(!stringbuffer)
 	{
-		VM_Warning("VM_bufstr_set: invalid buffer %i used in %s\n", bufindex, PRVM_NAME);
+		VM_Warning("VM_bufstr_set: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
 		return;
 	}
 	strindex = (int)PRVM_G_FLOAT(OFS_PARM1);
-	if(strindex < 0 || strindex > MAX_QCSTR_STRINGS)
+	if(strindex < 0 || strindex >= 1000000) // huge number of strings
 	{
 		VM_Warning("VM_bufstr_set: invalid string index %i used in %s\n", strindex, PRVM_NAME);
 		return;
 	}
+
+	BufStr_Expand(stringbuffer, strindex);
+
+	if(stringbuffer->strings[strindex])
+		Mem_Free(stringbuffer->strings[strindex]);
+	stringbuffer->strings[strindex] = NULL;
+
 	news = PRVM_G_STRING(OFS_PARM2);
-	if(b->strings[strindex])
-		Z_Free(b->strings[strindex]);
-	alloclen = strlen(news) + 1;
-	b->strings[strindex] = (char *)Z_Malloc(alloclen);
-	memcpy(b->strings[strindex], news, alloclen);
+	if (news && news[0])
+	{
+		size_t alloclen = strlen(news) + 1;
+		stringbuffer->strings[strindex] = (char *)Mem_Alloc(prog->progs_mempool, alloclen);
+		memcpy(stringbuffer->strings[strindex], news, alloclen);
+	}
+
+	BufStr_Shrink(stringbuffer);
 }
 
 /*
 ========================
 VM_bufstr_add
-adds string to buffer in nearest free slot and returns it
+adds string to buffer in first free slot and returns its index
 "order == TRUE" means that string will be added after last "full" slot
 float bufstr_add(float bufhandle, string str, float order) = #467;
 ========================
 */
 void VM_bufstr_add (void)
 {
-	int				bufindex, order, strindex;
-	qcstrbuffer_t	*b;
+	int				order, strindex;
+	prvm_stringbuffer_t *stringbuffer;
 	const char		*string;
 	size_t			alloclen;
 
 	VM_SAFEPARMCOUNT(3, VM_bufstr_add);
 
-	bufindex = (int)PRVM_G_FLOAT(OFS_PARM0);
-	b = BUFSTR_BUFFER(bufindex);
+	stringbuffer = (prvm_stringbuffer_t *)Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, (int)PRVM_G_FLOAT(OFS_PARM0));
 	PRVM_G_FLOAT(OFS_RETURN) = -1;
-	if(!b)
+	if(!stringbuffer)
 	{
-		VM_Warning("VM_bufstr_add: invalid buffer %i used in %s\n", bufindex, PRVM_NAME);
+		VM_Warning("VM_bufstr_add: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
 		return;
 	}
 	string = PRVM_G_STRING(OFS_PARM1);
+	if(!string || !string[0])
+	{
+		VM_Warning("VM_bufstr_add: can not add an empty string to buffer %i in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
+		return;
+	}
 	order = (int)PRVM_G_FLOAT(OFS_PARM2);
 	if(order)
-		strindex = b->num_strings;
+		strindex = stringbuffer->num_strings++;
 	else
-	{
-		strindex = BufStr_FindFreeString(b);
-		if(strindex < 0)
-		{
-			VM_Warning("VM_bufstr_add: buffer %i has no free string slots in %s\n", bufindex, PRVM_NAME);
-			return;
-		}
-	}
+		for (strindex = 0;strindex < stringbuffer->num_strings;strindex++)
+			if (stringbuffer->strings[strindex] == NULL)
+				break;
 
-	while(b->num_strings <= strindex)
-	{
-		if(b->num_strings == MAX_QCSTR_STRINGS)
-		{
-			VM_Warning("VM_bufstr_add: buffer %i has no free string slots in %s\n", bufindex, PRVM_NAME);
-			return;
-		}
-		b->strings[b->num_strings] = NULL;
-		b->num_strings++;
-	}
-	if(b->strings[strindex])
-		Z_Free(b->strings[strindex]);
+	BufStr_Expand(stringbuffer, strindex);
+
+	stringbuffer->num_strings = max(stringbuffer->num_strings, strindex + 1);
 	alloclen = strlen(string) + 1;
-	b->strings[strindex] = (char *)Z_Malloc(alloclen);
-	memcpy(b->strings[strindex], string, alloclen);
+	stringbuffer->strings[strindex] = (char *)Mem_Alloc(prog->progs_mempool, alloclen);
+	memcpy(stringbuffer->strings[strindex], string, alloclen);
+
 	PRVM_G_FLOAT(OFS_RETURN) = strindex;
 }
 
@@ -4023,26 +3982,30 @@ void bufstr_free(float bufhandle, float string_index) = #468;
 void VM_bufstr_free (void)
 {
 	int				i;
-	qcstrbuffer_t	*b;
+	prvm_stringbuffer_t	*stringbuffer;
 	VM_SAFEPARMCOUNT(2, VM_bufstr_free);
 
-	b = BUFSTR_BUFFER((int)PRVM_G_FLOAT(OFS_PARM0));
-	if(!b)
+	stringbuffer = (prvm_stringbuffer_t *)Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, (int)PRVM_G_FLOAT(OFS_PARM0));
+	if(!stringbuffer)
 	{
 		VM_Warning("VM_bufstr_free: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
 		return;
 	}
 	i = (int)PRVM_G_FLOAT(OFS_PARM1);
-	if(i < 0 || i > MAX_QCSTR_STRINGS)
+	if(i < 0)
 	{
 		VM_Warning("VM_bufstr_free: invalid string index %i used in %s\n", i, PRVM_NAME);
 		return;
 	}
-	if(b->strings[i])
-		Z_Free(b->strings[i]);
-	b->strings[i] = NULL;
-	if(i+1 == b->num_strings)
-		--b->num_strings;
+
+	if (i < stringbuffer->num_strings)
+	{
+		if(stringbuffer->strings[i])
+			Mem_Free(stringbuffer->strings[i]);
+		stringbuffer->strings[i] = NULL;
+	}
+
+	BufStr_Shrink(stringbuffer);
 }
 
 //=============
