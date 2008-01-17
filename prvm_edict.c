@@ -1603,6 +1603,8 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 	prog->knownstrings = NULL;
 	prog->knownstrings_freeable = NULL;
 
+	Mem_ExpandableArray_NewArray(&prog->stringbuffersarray, prog->progs_mempool, sizeof(prvm_stringbuffer_t), 64);
+
 	prog->globaldefs = (ddef_t *)((unsigned char *)prog->progs + prog->progs->ofs_globaldefs);
 
 	// we need to expand the fielddefs list to include all the engine fields,

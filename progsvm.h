@@ -286,6 +286,14 @@ typedef struct prvm_prog_funcoffsets_s
 }
 prvm_prog_funcoffsets_t;
 
+typedef struct prvm_stringbuffer_s
+{
+	int max_strings;
+	int num_strings;
+	char **strings;
+}
+prvm_stringbuffer_t;
+
 // [INIT] variables flagged with this token can be initialized by 'you'
 // NOTE: external code has to create and free the mempools but everything else is done by prvm !
 typedef struct prvm_prog_s
@@ -319,6 +327,8 @@ typedef struct prvm_prog_s
 	const char			**knownstrings;
 	unsigned char		*knownstrings_freeable;
 	const char			***stringshash;
+
+	memexpandablearray_t	stringbuffersarray;
 
 	// all memory allocations related to this vm_prog (code, edicts, strings)
 	mempool_t			*progs_mempool; // [INIT]
