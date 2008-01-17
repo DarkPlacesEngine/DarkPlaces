@@ -733,7 +733,7 @@ qboolean CL_Gecko_Event_Key( clgecko_t *instance, keynum_t key, clgecko_buttonev
 	// determine whether its a keyboard event
 	if( key < K_OTHERDEVICESBEGIN ) {
 
-		OSGK_KeyboardEventType mappedtype;
+		OSGK_KeyboardEventType mappedtype = kePress;
 		unsigned int mappedkey = key;
 		
 		unsigned int i;
@@ -764,7 +764,7 @@ qboolean CL_Gecko_Event_Key( clgecko_t *instance, keynum_t key, clgecko_buttonev
 
 		return osgk_browser_event_key( instance->browser, mappedkey, mappedtype ) != 0;
 	} else if( K_MOUSE1 <= key && key <= K_MOUSE3 ) {
-		OSGK_MouseButtonEventType mappedtype;
+		OSGK_MouseButtonEventType mappedtype = meDoubleClick;
 		OSGK_MouseButton mappedbutton;
 
 		mappedbutton = (OSGK_MouseButton) (mbLeft + (key - K_MOUSE1));
