@@ -3688,7 +3688,15 @@ void VM_buf_del (void)
 	VM_SAFEPARMCOUNT(1, VM_buf_del);
 	stringbuffer = (prvm_stringbuffer_t *)Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, (int)PRVM_G_FLOAT(OFS_PARM0));
 	if (stringbuffer)
+	{
+		int i;
+		for (i = 0;i < stringbuffer->num_strings;i++)
+			if (stringbuffer->strings[i])
+				Mem_Free(stringbuffer->strings[i]);
+		if (stringbuffer->strings)
+			Mem_Free(stringbuffer->strings);
 		Mem_ExpandableArray_FreeRecord(&prog->stringbuffersarray, stringbuffer);
+	}
 	else
 	{
 		VM_Warning("VM_buf_del: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
