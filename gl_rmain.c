@@ -720,7 +720,7 @@ static const char *builtinshaderstring =
 "	vec4 ScreenScaleRefractReflectIW = ScreenScaleRefractReflect * (1.0 / ModelViewProjectionPosition.w);\n"
 "	//vec4 ScreenTexCoord = (ModelViewProjectionPosition.xyxy + normalize(myhalf3(texture2D(Texture_Normal, TexCoord)) - myhalf3(0.5)).xyxy * DistortScaleRefractReflect * 100) * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect;\n"
 "	vec4 ScreenTexCoord = ModelViewProjectionPosition.xyxy * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect + vec2(normalize(myhalf3(texture2D(Texture_Normal, TexCoord)) - myhalf3(0.5))).xyxy * DistortScaleRefractReflect;\n"
-"	float Fresnel = pow(min(1.0, 1.0 - float(normalize(EyeVector).z)), 5.0) * ReflectFactor + ReflectOffset;\n"
+"	float Fresnel = pow(min(1.0, 1.0 - float(normalize(EyeVector).z)), 2.0) * ReflectFactor + ReflectOffset;\n"
 "	gl_FragColor = mix(texture2D(Texture_Refraction, ScreenTexCoord.xy) * RefractColor, texture2D(Texture_Reflection, ScreenTexCoord.zw) * ReflectColor, Fresnel);\n"
 "}\n"
 "\n"
