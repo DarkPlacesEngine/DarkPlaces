@@ -992,23 +992,7 @@ static void Host_Init (void)
 	COM_InitGameType();
 
 	// construct a version string for the corner of the console
-#if defined(__linux__)
-	os = "Linux";
-#elif defined(WIN32)
-	os = "Windows";
-#elif defined(__FreeBSD__)
-	os = "FreeBSD";
-#elif defined(__NetBSD__)
-	os = "NetBSD";
-#elif defined(__OpenBSD__)
-	os = "OpenBSD";
-#elif defined(MACOSX)
-	os = "Mac OS X";
-#elif defined(__MORPHOS__)
-	os = "MorphOS";
-#else
-	os = "Unknown";
-#endif
+	os = DP_OS_NAME;
 	dpsnprintf (engineversion, sizeof (engineversion), "%s %s %s", gamename, os, buildstring);
 	Con_Printf("%s\n", engineversion);
 

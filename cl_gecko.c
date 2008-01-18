@@ -364,8 +364,8 @@ void CL_Gecko_GetTextureExtent( clgecko_t *instance, float* pwidth, float* pheig
 # define XULRUNNER_DIR_SUFFIX	"win64"
 #elif defined(WIN32)
 # define XULRUNNER_DIR_SUFFIX	"win32"
-#elif defined(DP_ARCH) && defined(DP_MACHINE)
-# define XULRUNNER_DIR_SUFFIX	DP_ARCH "-" DP_MACHINE
+#elif defined(DP_OS_STR) && defined(DP_ARCH_STR)
+# define XULRUNNER_DIR_SUFFIX	DP_OS_STR "-" DP_ARCH_STR
 #endif
 
 clgecko_t * CL_Gecko_CreateBrowser( const char *name ) {
@@ -639,7 +639,7 @@ void CL_Gecko_Init( void )
 	#elif defined(MACOSX)
 		"OffscreenGecko.dylib",
 	#else
-		"OffscreenGecko.so",
+		"libOffscreenGecko.so",
 	#endif
 		NULL
 	};
