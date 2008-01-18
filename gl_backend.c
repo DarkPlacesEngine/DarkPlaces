@@ -299,7 +299,11 @@ void GL_SetupView_Orientation_FromEntity(const matrix4x4_t *matrix)
 	//Matrix4x4_ConcatRotate(&backend_viewmatrix, -angles[0], 0, 1, 0);
 	//Matrix4x4_ConcatRotate(&backend_viewmatrix, -angles[1], 0, 0, 1);
 	//Matrix4x4_ConcatTranslate(&backend_viewmatrix, -origin[0], -origin[1], -origin[2]);
+
+	// force an update of the model matrix by copying it off, resetting it, and then calling the R_Mesh_Matrix function with it
+	tempmatrix = backend_modelmatrix;
 	memset(&backend_modelmatrix, 0, sizeof(backend_modelmatrix));
+	R_Mesh_Matrix(&tempmatrix);
 }
 
 void GL_SetupView_Mode_Perspective (double frustumx, double frustumy, double zNear, double zFar)
