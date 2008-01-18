@@ -259,8 +259,54 @@ extern char engineversion[128];
 
 extern qboolean noclip_anglehack;
 
-extern char engineversion[128];
 extern cvar_t developer;
+
+/* Preprocessor macros to identify platform
+    DP_OS_NAME 	- "friendly" name of the OS, for humans to read
+    DP_OS_STR	- "identifier" of the OS, more suited for code to use
+    DP_ARCH_STR	- "identifier" of the processor architecture
+ */
+#if defined(__linux__)
+# define DP_OS_NAME		"Linux"
+# define DP_OS_STR		"linux"
+#elif defined(WIN64)
+# define DP_OS_NAME		"Windows64"
+# define DP_OS_STR		"win64"
+#elif defined(WIN32)
+# define DP_OS_NAME		"Windows"
+# define DP_OS_STR		"win32"
+#elif defined(__FreeBSD__)
+# define DP_OS_NAME		"FreeBSD"
+# define DP_OS_STR		"freebsd"
+#elif defined(__NetBSD__)
+# define DP_OS_NAME		"NetBSD"
+# define DP_OS_STR		"netbsd"
+#elif defined(__OpenBSD__)
+# define DP_OS_NAME		"OpenBSD"
+# define DP_OS_STR		"openbsd"
+#elif defined(MACOSX)
+# define DP_OS_NAME		"Mac OS X"
+# define DP_OS_STR		"osx"
+#elif defined(__MORPHOS__)
+# define DP_OS_NAME		"MorphOS"
+# define DP_OS_STR		"morphos"
+#else
+# define DP_OS_NAME		"Unknown"
+#endif
+
+#if defined(__GNUC__)
+# if defined(__i386__)
+#  define DP_ARCH_STR		"686"
+# elif defined(__x86_64__)
+#  define DP_ARCH_STR		"x86_64"
+# elif defined(__powerpc__)
+#  define DP_ARCH_STR		"ppc"
+# endif
+#elif defined(WIN64)
+# define DP_ARCH_STR		"x86_64"
+#elif defined(WIN32)
+# define DP_ARCH_STR		"x86"
+#endif
 
 // incremented every frame, never reset
 extern int host_framecount;
