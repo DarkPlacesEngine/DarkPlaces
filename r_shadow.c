@@ -3162,7 +3162,7 @@ void R_ShadowVolumeLighting(qboolean visible)
 	R_Shadow_RenderMode_End();
 }
 
-extern void R_SetupView(void);
+extern void R_SetupView(qboolean allowwaterclippingplane);
 extern cvar_t r_shadows_throwdistance;
 void R_DrawModelShadows(void)
 {
@@ -3244,7 +3244,7 @@ void R_DrawModelShadows(void)
 	R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
 
 	// restoring the perspective view is done by R_RenderScene
-	//R_SetupView();
+	//R_SetupView(true);
 
 	// restore other state to normal
 	R_Shadow_RenderMode_End();
