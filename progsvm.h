@@ -276,6 +276,7 @@ typedef struct prvm_prog_funcoffsets_s
 	func_t SV_PlayerPhysics; // ssqc
 	func_t SV_OnEntityNoSpawnFunction; // ssqc
 	func_t GameCommand; // any
+	func_t SV_Shutdown; // ssqc
 
 	// menu qc only uses some functions, nothing else
 	func_t m_draw; // mqc
