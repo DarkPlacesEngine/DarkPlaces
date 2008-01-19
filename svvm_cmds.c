@@ -148,6 +148,7 @@ char *vm_sv_extensions =
 "DP_CON_BESTWEAPON "
 "DP_QC_STRREPLACE "
 "DP_QC_CRC16 "
+"DP_SV_SHUTDOWN "
 ;
 
 /*
