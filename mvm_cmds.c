@@ -25,6 +25,7 @@ char *vm_m_extensions =
 "DP_QC_RENDER_SCENE"
 "DP_QC_STRINGBUFFERS "
 "DP_QC_CRC16 "
+"FTE_STRINGS "
 ;
 
 /*
@@ -1006,12 +1007,12 @@ NULL,									// #218
 NULL,									// #219
 NULL,									// #220
 VM_strstrofs,						// #221 float(string str, string sub[, float startpos]) strstrofs (FTE_STRINGS)
-NULL,									// #222
-NULL,									// #223
-NULL,									// #224
-NULL,									// #225
-NULL,									// #226
-NULL,									// #227
+VM_str2chr,						// #222 float(string str, float ofs) str2chr (FTE_STRINGS)
+VM_chr2str,						// #223 string(float c, ...) chr2str (FTE_STRINGS)
+VM_strconv,						// #224 string(float ccase, float calpha, float cnum, string s, ...) strconv (FTE_STRINGS)
+VM_strpad,						// #225 string(float chars, string s, ...) strpad (FTE_STRINGS)
+VM_infoadd,						// #226 string(string info, string key, string value, ...) infoadd (FTE_STRINGS)
+VM_infoget,						// #227 string(string info, string key) infoget (FTE_STRINGS)
 VM_strncmp,							// #228 float(string s1, string s2, float len) strncmp (FTE_STRINGS)
 VM_strncasecmp,					// #229 float(string s1, string s2) strcasecmp (FTE_STRINGS)
 VM_strncasecmp,					// #230 float(string s1, string s2, float len) strncasecmp (FTE_STRINGS)
