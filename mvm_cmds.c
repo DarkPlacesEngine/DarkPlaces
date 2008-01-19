@@ -23,6 +23,8 @@ char *vm_m_extensions =
 // FIXME: rename this extension maybe? [12/5/2007 Black]
 "DP_GECKO_SUPPORT "
 "DP_QC_RENDER_SCENE"
+"DP_QC_STRINGBUFFERS "
+"DP_QC_CRC16 "
 ;
 
 /*
@@ -1223,16 +1225,16 @@ NULL,									// #436
 NULL,									// #437
 NULL,									// #438
 NULL,									// #439
-NULL,									// #440
-NULL,									// #441
-NULL,									// #442
-NULL,									// #443
-NULL,									// #444
-NULL,									// #445
-NULL,									// #446
-NULL,									// #447
-NULL,									// #448
-NULL,									// #449
+VM_buf_create,					// #440 float() buf_create (DP_QC_STRINGBUFFERS)
+VM_buf_del,						// #441 void(float bufhandle) buf_del (DP_QC_STRINGBUFFERS)
+VM_buf_getsize,					// #442 float(float bufhandle) buf_getsize (DP_QC_STRINGBUFFERS)
+VM_buf_copy,					// #443 void(float bufhandle_from, float bufhandle_to) buf_copy (DP_QC_STRINGBUFFERS)
+VM_buf_sort,					// #444 void(float bufhandle, float sortpower, float backward) buf_sort (DP_QC_STRINGBUFFERS)
+VM_buf_implode,					// #445 string(float bufhandle, string glue) buf_implode (DP_QC_STRINGBUFFERS)
+VM_bufstr_get,					// #446 string(float bufhandle, float string_index) bufstr_get (DP_QC_STRINGBUFFERS)
+VM_bufstr_set,					// #447 void(float bufhandle, float string_index, string str) bufstr_set (DP_QC_STRINGBUFFERS)
+VM_bufstr_add,					// #448 float(float bufhandle, string str, float order) bufstr_add (DP_QC_STRINGBUFFERS)
+VM_bufstr_free,					// #449 void(float bufhandle, float string_index) bufstr_free (DP_QC_STRINGBUFFERS)
 NULL,									// #450
 VM_iscachedpic,					// #451 draw functions...
 VM_precache_pic,					// #452
@@ -1277,7 +1279,7 @@ VM_gecko_keyevent,				// #490 float gecko_keyevent( string name, float key, floa
 VM_gecko_movemouse,				// #491 void gecko_mousemove( string name, float x, float y )
 VM_gecko_resize,					// #492 void gecko_resize( string name, float w, float h )
 VM_gecko_get_texture_extent,	// #493 vector gecko_get_texture_extent( string name )
-NULL,									// #494
+VM_crc16,						// #494 float(float caseinsensitive, string s, ...) crc16 = #494 (DP_QC_CRC16)
 NULL,									// #495
 NULL,									// #496
 NULL,									// #497

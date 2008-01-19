@@ -147,6 +147,7 @@ char *vm_sv_extensions =
 "FTE_STRINGS "
 "DP_CON_BESTWEAPON "
 "DP_QC_STRREPLACE "
+"DP_QC_CRC16 "
 ;
 
 /*
@@ -3296,14 +3297,14 @@ VM_SV_pointsound,				// #483 void(vector origin, string sample, float volume, fl
 VM_strreplace,					// #484 string(string search, string replace, string subject) strreplace (DP_QC_STRREPLACE)
 VM_strireplace,					// #485 string(string search, string replace, string subject) strireplace (DP_QC_STRREPLACE)
 VM_SV_getsurfacepointattribute,// #486 vector(entity e, float s, float n, float a) getsurfacepointattribute = #486;
-VM_hash,						// #487 float(float caseinsensitive, string s, ...) hash = #487;
+NULL,							// #487
 NULL,							// #488
 NULL,							// #489
 NULL,							// #490
 NULL,							// #491
 NULL,							// #492
 NULL,							// #493
-NULL,							// #494
+VM_crc16,						// #494 float(float caseinsensitive, string s, ...) crc16 = #494 (DP_QC_CRC16)
 NULL,							// #495
 NULL,							// #496
 NULL,							// #497

@@ -3399,7 +3399,7 @@ VM_gecko_keyevent,				// #490 float gecko_keyevent( string name, float key, floa
 VM_gecko_movemouse,				// #491 void gecko_mousemove( string name, float x, float y )
 VM_gecko_resize,					// #492 void gecko_resize( string name, float w, float h )
 VM_gecko_get_texture_extent,	// #493 vector gecko_get_texture_extent( string name )
-NULL,							// #494
+VM_crc16,						// #494 float(float caseinsensitive, string s, ...) crc16 = #494 (DP_QC_CRC16)
 NULL,							// #495
 NULL,							// #496
 NULL,							// #497
