@@ -404,7 +404,7 @@ void VM_wasfreed (void);
 void VM_strreplace (void);
 void VM_strireplace (void);
 
-void VM_hash(void);
+void VM_crc16(void);
 
 void VM_SetTraceGlobals(const trace_t *trace);
 

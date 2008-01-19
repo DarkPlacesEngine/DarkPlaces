@@ -4453,8 +4453,8 @@ void VM_strncasecmp (void)
 	}
 }
 
-// #487 float(float caseinsensitive, string s, ...) hash
-void VM_hash(void)
+// #494 float(float caseinsensitive, string s, ...) crc16
+void VM_crc16(void)
 {
 	float insensitive;
 	static char s[VM_STRINGTEMP_LENGTH];
