@@ -3916,6 +3916,7 @@ void VM_bufstr_set (void)
 	}
 
 	BufStr_Expand(stringbuffer, strindex);
+	stringbuffer->num_strings = max(stringbuffer->num_strings, strindex + 1);
 
 	if(stringbuffer->strings[strindex])
 		Mem_Free(stringbuffer->strings[strindex]);
@@ -3964,7 +3965,7 @@ void VM_bufstr_add (void)
 	}
 	order = (int)PRVM_G_FLOAT(OFS_PARM2);
 	if(order)
-		strindex = stringbuffer->num_strings++;
+		strindex = stringbuffer->num_strings;
 	else
 		for (strindex = 0;strindex < stringbuffer->num_strings;strindex++)
 			if (stringbuffer->strings[strindex] == NULL)
@@ -4450,6 +4451,17 @@ void VM_strncasecmp (void)
 	{
 		PRVM_G_FLOAT(OFS_RETURN) = strcasecmp(s1, s2);
 	}
+}
+
+// #487 float(float caseinsensitive, string s, ...) hash
+void VM_hash(void)
+{
+	float insensitive;
+	static char s[VM_STRINGTEMP_LENGTH];
+	VM_SAFEPARMCOUNTRANGE(2, 8, VM_hash);
+	insensitive = PRVM_G_FLOAT(OFS_PARM0);
+	VM_VarString(1, s, sizeof(s));
+	PRVM_G_FLOAT(OFS_RETURN) = (unsigned short) ((insensitive ? CRC_Block_CaseInsensitive : CRC_Block) ((unsigned char *) s, strlen(s)));
 }
 
 void VM_wasfreed (void)
