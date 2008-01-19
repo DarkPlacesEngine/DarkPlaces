@@ -3296,7 +3296,7 @@ VM_SV_pointsound,				// #483 void(vector origin, string sample, float volume, fl
 VM_strreplace,					// #484 string(string search, string replace, string subject) strreplace (DP_QC_STRREPLACE)
 VM_strireplace,					// #485 string(string search, string replace, string subject) strireplace (DP_QC_STRREPLACE)
 VM_SV_getsurfacepointattribute,// #486 vector(entity e, float s, float n, float a) getsurfacepointattribute = #486;
-NULL,							// #487
+VM_hash,						// #487 float(float caseinsensitive, string s, ...) hash = #487;
 NULL,							// #488
 NULL,							// #489
 NULL,							// #490
