@@ -1389,8 +1389,28 @@ void CL_SendMove(void)
 	{
 		// movement should be sent immediately whenever a server
 		// packet is received, to minimize ping times
-		if (!cl.movement_needupdate && realtime < lastsendtime + packettime)
-			return;
+		//
+
+		if(cl_netinputpacketsperserverpacket.value > 1)
+		{
+			// FIXME: needupdate causes odd behaviour with movement reply as it
+			// seems, if cl_netinputpacketsperserverpackets is > 1. Don't know
+			// why. No idea if it ever gets fixed, but until it does...
+			if (realtime < lastsendtime + packettime)
+				return;
+		}
+		else if(cl_netinputpacketsperserverpacket.value == 1)
+		{
+			// the way it is meant to be
+			if (!cl.movement_needupdate && realtime < lastsendtime + packettime)
+				return;
+		}
+		else
+		{
+			// only ever send input as replies to server packets or if we REALLY got nothing else (FIXME may be the more sane default)
+			if (!cl.movement_needupdate && realtime < lastsendtime + packettime + 0.1)
+				return;
+		}
 	}
 
 	// don't let it fall behind if CL_SendMove hasn't been called recently
