@@ -265,7 +265,7 @@ void gl_backend_init(void)
 	Cvar_RegisterVariable(&gl_mesh_testarrayelement);
 	Cvar_RegisterVariable(&gl_mesh_testmanualfeeding);
 
-	Cmd_AddCommand("gl_vbostats", GL_VBOStats_f, "prints a list of all buffer objects (vertex data and triangle elements) and total video memory used by them\n");
+	Cmd_AddCommand("gl_vbostats", GL_VBOStats_f, "prints a list of all buffer objects (vertex data and triangle elements) and total video memory used by them");
 
 	R_RegisterModule("GL_Backend", gl_backend_start, gl_backend_shutdown, gl_backend_newmap);
 }
