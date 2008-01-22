@@ -549,7 +549,6 @@ void V_CalcRefdef (void)
 			Matrix4x4_CreateFromQuakeEntity(&viewmodelmatrix, gunorg[0], gunorg[1], gunorg[2], viewangles[0], viewangles[1], viewangles[2], cl_viewmodel_scale.value);
 			VectorCopy(vieworg, cl.csqc_origin);
 			VectorCopy(viewangles, cl.csqc_angles);
-			Matrix4x4_Invert_Simple(&r_refdef.view.inverse_matrix, &r_refdef.view.matrix);
 		}
 	}
 }
