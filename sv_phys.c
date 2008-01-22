@@ -1055,6 +1055,8 @@ SV_PushMove
 void SV_PushMove (prvm_edict_t *pusher, float movetime)
 {
 	int i, e, index;
+	int checkcontents;
+	qboolean rotated;
 	float savesolid, movetime2, pushltime;
 	vec3_t mins, maxs, move, move1, moveangle, pushorig, pushang, a, forward, left, up, org;
 	int num_moved;
@@ -1101,6 +1103,8 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 		return;
 	}
 	pushermodel = sv.models[index];
+
+	rotated = VectorLength2(pusher->fields.server->angles) + VectorLength2(pusher->fields.server->avelocity) > 0;
 
 	movetime2 = movetime;
 	VectorScale(pusher->fields.server->velocity, movetime2, move1);
@@ -1183,7 +1187,6 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 	for (e = 0;e < numcheckentities;e++)
 	{
 		prvm_edict_t *check = checkentities[e];
-		int checkcontents = SV_GenericHitSuperContentsMask(check);
 		if (check->fields.server->movetype == MOVETYPE_NONE
 		 || check->fields.server->movetype == MOVETYPE_PUSH
 		 || check->fields.server->movetype == MOVETYPE_FOLLOW
@@ -1191,8 +1194,12 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 		 || check->fields.server->movetype == MOVETYPE_FAKEPUSH)
 			continue;
 
+		//Con_Printf("%i %s ", PRVM_NUM_FOR_EDICT(check), PRVM_GetString(check->fields.server->classname));
+
 		// tell any MOVETYPE_STEP entity that it may need to check for water transitions
 		check->priv.server->waterposition_forceupdate = true;
+
+		checkcontents = SV_GenericHitSuperContentsMask(check);
 
 		// if the entity is standing on the pusher, it will definitely be moved
 		// if the entity is not standing on the pusher, but is in the pusher's
@@ -1200,12 +1207,15 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 		if (!((int)check->fields.server->flags & FL_ONGROUND) || PRVM_PROG_TO_EDICT(check->fields.server->groundentity) != pusher)
 		{
 			Collision_ClipToGenericEntity(&trace, pushermodel, pusher->fields.server->frame, pusher->fields.server->mins, pusher->fields.server->maxs, SUPERCONTENTS_BODY, &pusherfinalmatrix, &pusherfinalimatrix, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, checkcontents);
+			//trace = SV_Move(check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, MOVE_NOMONSTERS, check, checkcontents);
 			if (!trace.startsolid)
+			{
+				//Con_Printf("- not in solid\n");
 				continue;
+			}
 		}
 
-
-		if (forward[0] != 1 || left[1] != 1) // quick way to check if any rotation is used
+		if (rotated)
 		{
 			vec3_t org2;
 			VectorSubtract (check->fields.server->origin, pusher->fields.server->origin, org);
@@ -1217,6 +1227,8 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 		}
 		else
 			VectorCopy (move1, move);
+
+		//Con_Printf("- pushing %f %f %f\n", move[0], move[1], move[2]);
 
 		VectorCopy (check->fields.server->origin, check->priv.server->moved_from);
 		VectorCopy (check->fields.server->angles, check->priv.server->moved_fromangles);
