@@ -1154,10 +1154,10 @@ extern cvar_t slowmo;
 void CL_UpdateMoveVars(void)
 {
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
-		cl.movevars_ticrate = 1.0 / bound(1, cl_netinputpacketspersecond_qw.value, 100);
+		cl.movevars_packetinterval = 1.0 / bound(1, cl_netinputpacketspersecond_qw.value, 100);
 	else if (cl.stats[STAT_MOVEVARS_TICRATE])
 	{
-		cl.movevars_ticrate = cl.statsf[STAT_MOVEVARS_TICRATE];
+		cl.movevars_packetinterval = cl.statsf[STAT_MOVEVARS_TICRATE] * cl.statsf[STAT_MOVEVARS_TIMESCALE] / bound(1, cl_netinputpacketsperserverpacket.value, 10);
 		cl.movevars_timescale = cl.statsf[STAT_MOVEVARS_TIMESCALE];
 		cl.movevars_gravity = cl.statsf[STAT_MOVEVARS_GRAVITY];
 		cl.movevars_stopspeed = cl.statsf[STAT_MOVEVARS_STOPSPEED] ;
@@ -1179,7 +1179,7 @@ void CL_UpdateMoveVars(void)
 	}
 	else
 	{
-		cl.movevars_ticrate = 1.0 / bound(1, cl_netinputpacketspersecond.value, 100);
+		cl.movevars_packetinterval = slowmo.value / bound(1, cl_netinputpacketspersecond.value, 100);
 		cl.movevars_timescale = slowmo.value;
 		cl.movevars_gravity = sv_gravity.value;
 		cl.movevars_stopspeed = cl_movement_stopspeed.value;
@@ -1357,7 +1357,6 @@ void CL_SendMove(void)
 	int bits;
 	sizebuf_t buf;
 	unsigned char data[1024];
-	static double lastsendtime = 0;
 	double packettime;
 	int msecdelta;
 
@@ -1368,54 +1367,22 @@ void CL_SendMove(void)
 		return;
 
 	// don't send too often or else network connections can get clogged by a high renderer framerate
-	packettime = cl.movevars_ticrate;
-	if (cls.protocol != PROTOCOL_QUAKEWORLD)
-		packettime /= (double)bound(1, cl_netinputpacketsperserverpacket.value, 10);
+	packettime = cl.movevars_packetinterval;
 	// send input every frame in singleplayer
 	if (cl.islocalgame)
 		packettime = 0;
-	// quakeworld servers take only frametimes
-	// predicted dp7 servers take current interpolation time
-	// unpredicted servers take an echo of the latest server timestamp
+	// send the current interpolation time
 	cl.cmd.time = cl.time;
-	cl.cmd.sequence = cls.movesequence;
-	if (cls.protocol == PROTOCOL_QUAKEWORLD)
-	{
-		if (realtime < lastsendtime + packettime)
-			return;
-		cl.cmd.sequence = cls.netcon->qw.outgoing_sequence;
-	}
+	cl.cmd.sequence = cls.netcon->outgoing_unreliable_sequence;
+	if (cl.cmd.time < cl.lastpackettime + packettime && (cl.mtime[0] != cl.mtime[1] || !cl.movement_needupdate))
+		return;
+	// try to round off the lastpackettime to a multiple of the packet interval
+	// (this causes it to emit packets at a steady beat, and takes advantage
+	//  of the time drift compensation in the cl.time code)
+	if (packettime > 0)
+		cl.lastpackettime = floor(cl.cmd.time / packettime) * packettime;
 	else
-	{
-		// movement should be sent immediately whenever a server
-		// packet is received, to minimize ping times
-		//
-
-		if(cl_netinputpacketsperserverpacket.value > 1)
-		{
-			// FIXME: needupdate causes odd behaviour with movement reply as it
-			// seems, if cl_netinputpacketsperserverpackets is > 1. Don't know
-			// why. No idea if it ever gets fixed, but until it does...
-			if (realtime < lastsendtime + packettime)
-				return;
-		}
-		else if(cl_netinputpacketsperserverpacket.value == 1)
-		{
-			// the way it is meant to be
-			if (!cl.movement_needupdate && realtime < lastsendtime + packettime)
-				return;
-		}
-		else
-		{
-			// only ever send input as replies to server packets or if we REALLY got nothing else (FIXME may be the more sane default)
-			if (!cl.movement_needupdate && realtime < lastsendtime + packettime + 0.1)
-				return;
-		}
-	}
-
-	// don't let it fall behind if CL_SendMove hasn't been called recently
-	// (such is the case when framerate is too low for instance)
-	lastsendtime = bound(realtime, lastsendtime + packettime, realtime + packettime);
+		cl.lastpackettime = cl.cmd.time;
 	// set the flag indicating that we sent a packet recently
 	cl.movement_needupdate = false;
 
@@ -1431,9 +1398,6 @@ void CL_SendMove(void)
 	// note: this behavior comes from QW
 	if ((cls.protocol == PROTOCOL_QUAKEWORLD || cls.signon == SIGNONS) && !NetConn_CanSend(cls.netcon) && !cl.islocalgame)
 		return;
-
-	// increase the move counter since we intend to send a move
-	cls.movesequence++;
 
 	// send the movement message
 	// PROTOCOL_QUAKE        clc_move = 16 bytes total
@@ -1528,19 +1492,19 @@ void CL_SendMove(void)
 		QW_MSG_WriteDeltaUsercmd(&buf, &cl.movecmd[2], &cl.movecmd[1]);
 		QW_MSG_WriteDeltaUsercmd(&buf, &cl.movecmd[1], &cl.movecmd[0]);
 		// calculate the checksum
-		buf.data[checksumindex] = COM_BlockSequenceCRCByteQW(buf.data + checksumindex + 1, buf.cursize - checksumindex - 1, cls.netcon->qw.outgoing_sequence);
+		buf.data[checksumindex] = COM_BlockSequenceCRCByteQW(buf.data + checksumindex + 1, buf.cursize - checksumindex - 1, cls.netcon->outgoing_unreliable_sequence);
 		// if delta compression history overflows, request no delta
-		if (cls.netcon->qw.outgoing_sequence - cl.qw_validsequence >= QW_UPDATE_BACKUP-1)
+		if (cls.netcon->outgoing_unreliable_sequence - cl.qw_validsequence >= QW_UPDATE_BACKUP-1)
 			cl.qw_validsequence = 0;
 		// request delta compression if appropriate
 		if (cl.qw_validsequence && !cl_nodelta.integer && cls.state == ca_connected && !cls.demorecording)
 		{
-			cl.qw_deltasequence[cls.netcon->qw.outgoing_sequence & QW_UPDATE_MASK] = cl.qw_validsequence;
+			cl.qw_deltasequence[cls.netcon->outgoing_unreliable_sequence & QW_UPDATE_MASK] = cl.qw_validsequence;
 			MSG_WriteByte(&buf, qw_clc_delta);
 			MSG_WriteByte(&buf, cl.qw_validsequence & 255);
 		}
 		else
-			cl.qw_deltasequence[cls.netcon->qw.outgoing_sequence & QW_UPDATE_MASK] = -1;
+			cl.qw_deltasequence[cls.netcon->outgoing_unreliable_sequence & QW_UPDATE_MASK] = -1;
 	}
 	else if (cls.signon == SIGNONS)
 	{

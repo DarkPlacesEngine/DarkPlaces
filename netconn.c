@@ -567,18 +567,18 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 			sendreliable = true;
 		}
 		// outgoing unreliable packet number, and outgoing reliable packet number (0 or 1)
-		*((int *)(sendbuffer + 0)) = LittleLong((unsigned int)conn->qw.outgoing_sequence | ((unsigned int)sendreliable<<31));
+		*((int *)(sendbuffer + 0)) = LittleLong((unsigned int)conn->outgoing_unreliable_sequence | ((unsigned int)sendreliable<<31));
 		// last received unreliable packet number, and last received reliable packet number (0 or 1)
 		*((int *)(sendbuffer + 4)) = LittleLong((unsigned int)conn->qw.incoming_sequence | ((unsigned int)conn->qw.incoming_reliable_sequence<<31));
 		packetLen = 8;
-		conn->qw.outgoing_sequence++;
+		conn->outgoing_unreliable_sequence++;
 		// client sends qport in every packet
 		if (conn == cls.netcon)
 		{
 			*((short *)(sendbuffer + 8)) = LittleShort(cls.qw_qport);
 			packetLen += 2;
 			// also update cls.qw_outgoing_sequence
-			cls.qw_outgoing_sequence = conn->qw.outgoing_sequence;
+			cls.qw_outgoing_sequence = conn->outgoing_unreliable_sequence;
 		}
 		if (packetLen + (sendreliable ? conn->sendMessageLength : 0) > 1400)
 		{
@@ -594,7 +594,7 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 			conn->outgoing_reliablesize[conn->outgoing_packetcounter] += conn->sendMessageLength;
 			memcpy(sendbuffer + packetLen, conn->sendMessage, conn->sendMessageLength);
 			packetLen += conn->sendMessageLength;
-			conn->qw.last_reliable_sequence = conn->qw.outgoing_sequence;
+			conn->qw.last_reliable_sequence = conn->outgoing_unreliable_sequence;
 		}
 
 		// add the unreliable message if possible
@@ -715,10 +715,10 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 
 			header = (unsigned int *)sendbuffer;
 			header[0] = BigLong(packetLen | NETFLAG_UNRELIABLE);
-			header[1] = BigLong(conn->nq.unreliableSendSequence);
+			header[1] = BigLong(conn->outgoing_unreliable_sequence);
 			memcpy(sendbuffer + NET_HEADERSIZE, data->data, data->cursize);
 
-			conn->nq.unreliableSendSequence++;
+			conn->outgoing_unreliable_sequence++;
 
 			conn->outgoing_unreliablesize[conn->outgoing_packetcounter] += packetLen;
 
@@ -1208,7 +1208,6 @@ void NetConn_ConnectionEstablished(lhnetsocket_t *mysocket, lhnetaddress_t *peer
 	cls.signon = 0;				// need all the signon messages before playing
 	cls.protocol = initialprotocol;
 	// reset move sequence numbering on this new connection
-	cls.movesequence = 1;
 	cls.servermovesequence = 0;
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
 		Cmd_ForwardStringToServer("new");
@@ -2657,7 +2656,7 @@ static void Net_Heartbeat_f(void)
 void PrintStats(netconn_t *conn)
 {
 	if ((cls.state == ca_connected && cls.protocol == PROTOCOL_QUAKEWORLD) || (sv.active && sv.protocol == PROTOCOL_QUAKEWORLD))
-		Con_Printf("address=%21s canSend=%u sendSeq=%6u recvSeq=%6u\n", conn->address, !conn->sendMessageLength, conn->qw.outgoing_sequence, conn->qw.incoming_sequence);
+		Con_Printf("address=%21s canSend=%u sendSeq=%6u recvSeq=%6u\n", conn->address, !conn->sendMessageLength, conn->outgoing_unreliable_sequence, conn->qw.incoming_sequence);
 	else
 		Con_Printf("address=%21s canSend=%u sendSeq=%6u recvSeq=%6u\n", conn->address, !conn->sendMessageLength, conn->nq.sendSequence, conn->nq.receiveSequence);
 }

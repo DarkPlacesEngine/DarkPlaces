@@ -1256,6 +1256,7 @@ void CL_EntityParticles (const entity_t *ent)
 	float pitch, yaw, dist = 64, beamlength = 16, org[3], v[3];
 	static vec3_t avelocities[NUMVERTEXNORMALS];
 	if (!cl_particles.integer) return;
+	if (cl.time <= cl.oldtime) return; // don't spawn new entity particles while paused
 
 	Matrix4x4_OriginFromMatrix(&ent->render.matrix, org);
 
@@ -1531,295 +1532,6 @@ void CL_ParticleRain (const vec3_t mins, const vec3_t maxs, const vec3_t dir, in
 	default:
 		Con_Printf ("CL_ParticleRain: unknown type %i (0 = rain, 1 = snow)\n", type);
 	}
-}
-
-/*
-===============
-CL_MoveDecals
-===============
-*/
-void CL_MoveDecals (void)
-{
-	decal_t *decal;
-	int i;
-	float decalfade;
-
-	// LordHavoc: early out condition
-	if (!cl.num_decals)
-	{
-		cl.free_decal = 0;
-		return;
-	}
-
-	decalfade = bound(0, cl.time - cl.oldtime, 0.1) * 255 / cl_decals_fadetime.value;
-
-	for (i = 0, decal = cl.decals;i < cl.num_decals;i++, decal++)
-	{
-		if (!decal->typeindex)
-			continue;
-
-		// heavily optimized decal case
-		// FIXME: this has fairly wacky handling of alpha
-		if (cl.time > decal->time2 + cl_decals_time.value)
-		{
-			decal->alpha -= decalfade;
-			if (decal->alpha <= 0)
-			{
-				decal->typeindex = 0;
-				if (cl.free_decal > i)
-					cl.free_decal = i;
-				continue;
-			}
-		}
-
-		if (decal->owner)
-		{
-			if (cl.entities[decal->owner].render.model == decal->ownermodel)
-			{
-				Matrix4x4_Transform(&cl.entities[decal->owner].render.matrix, decal->relativeorigin, decal->org);
-				Matrix4x4_Transform3x3(&cl.entities[decal->owner].render.matrix, decal->relativenormal, decal->normal);
-			}
-			else
-			{
-				decal->typeindex = 0;
-				if (cl.free_decal > i)
-					cl.free_decal = i;
-			}
-		}
-	}
-
-	// reduce cl.num_decals if possible
-	while (cl.num_decals > 0 && cl.decals[cl.num_decals - 1].typeindex == 0)
-		cl.num_decals--;
-}
-
-/*
-===============
-CL_MoveParticles
-===============
-*/
-void CL_MoveParticles (void)
-{
-	particle_t *p;
-	int i, j, a, content;
-	float gravity, dvel, decalfade, frametime, f, dist, oldorg[3];
-	int hitent;
-	trace_t trace;
-
-	// LordHavoc: early out condition
-	if (!cl.num_particles)
-	{
-		cl.free_particle = 0;
-		return;
-	}
-
-	frametime = bound(0, cl.time - cl.oldtime, 0.1);
-	gravity = frametime * cl.movevars_gravity;
-	dvel = 1+4*frametime;
-	decalfade = frametime * 255 / cl_decals_fadetime.value;
-
-	j = 0;
-	for (i = 0, p = cl.particles;i < cl.num_particles;i++, p++)
-	{
-		if (!p->typeindex)
-		{
-			if (cl.free_particle > i)
-				cl.free_particle = i;
-			continue;
-		}
-
-		if (p->delayedspawn)
-		{
-			if (p->delayedspawn > cl.time)
-				continue;
-			p->delayedspawn = 0;
-		}
-
-		content = 0;
-
-		p->size += p->sizeincrease * frametime;
-		p->alpha -= p->alphafade * frametime;
-
-		if (p->alpha <= 0 || p->die <= cl.time)
-		{
-			p->typeindex = 0;
-			if (cl.free_particle > i)
-				cl.free_particle = i;
-			continue;
-		}
-
-		if (particletype[p->typeindex].orientation != PARTICLE_BEAM && frametime > 0)
-		{
-			if (p->liquidfriction && (CL_PointSuperContents(p->org) & SUPERCONTENTS_LIQUIDSMASK))
-			{
-				if (p->typeindex == pt_blood)
-					p->size += frametime * 8;
-				else
-					p->vel[2] -= p->gravity * gravity;
-				f = 1.0f - min(p->liquidfriction * frametime, 1);
-				VectorScale(p->vel, f, p->vel);
-			}
-			else
-			{
-				p->vel[2] -= p->gravity * gravity;
-				if (p->airfriction)
-				{
-					f = 1.0f - min(p->airfriction * frametime, 1);
-					VectorScale(p->vel, f, p->vel);
-				}
-			}
-
-			VectorCopy(p->org, oldorg);
-			VectorMA(p->org, frametime, p->vel, p->org);
-			if (p->bounce && cl.time >= p->delayedcollisions)
-			{
-				trace = CL_Move(oldorg, vec3_origin, vec3_origin, p->org, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | ((p->typeindex == pt_rain || p->typeindex == pt_snow) ? SUPERCONTENTS_LIQUIDSMASK : 0), true, false, &hitent, false);
-				// if the trace started in or hit something of SUPERCONTENTS_NODROP
-				// or if the trace hit something flagged as NOIMPACT
-				// then remove the particle
-				if (trace.hitq3surfaceflags & Q3SURFACEFLAG_NOIMPACT || ((trace.startsupercontents | trace.hitsupercontents) & SUPERCONTENTS_NODROP) || (trace.startsupercontents & SUPERCONTENTS_SOLID))
-				{
-					p->typeindex = 0;
-					if (cl.free_particle > i)
-						cl.free_particle = i;
-					continue;
-				}
-				VectorCopy(trace.endpos, p->org);
-				// react if the particle hit something
-				if (trace.fraction < 1)
-				{
-					VectorCopy(trace.endpos, p->org);
-					if (p->typeindex == pt_rain)
-					{
-						// raindrop - splash on solid/water/slime/lava
-						int count;
-						// convert from a raindrop particle to a rainsplash decal
-						VectorCopy(trace.plane.normal, p->vel);
-						VectorAdd(p->org, p->vel, p->org);
-						p->typeindex = pt_raindecal;
-						p->texnum = tex_rainsplash;
-						p->time2 = cl.time;
-						p->alphafade = p->alpha / 0.4;
-						p->bounce = 0;
-						p->airfriction = 0;
-						p->liquidfriction = 0;
-						p->gravity = 0;
-						p->size *= 1.0f;
-						p->sizeincrease = p->size * 20;
-						count = (int)lhrandom(1, 10);
-						while(count--)
-							CL_NewParticle(pt_spark, 0x000000, 0x707070, tex_particle, 0.25f, 0, lhrandom(64, 255), 512, 1, 0, p->org[0], p->org[1], p->org[2], p->vel[0]*16, p->vel[1]*16, cl.movevars_gravity * 0.04 + p->vel[2]*16, 0, 0, 0, 32);
-						continue;
-					}
-					else if (p->typeindex == pt_blood)
-					{
-						// blood - splash on solid
-						if (trace.hitq3surfaceflags & Q3SURFACEFLAG_NOMARKS)
-						{
-							p->typeindex = 0;
-							continue;
-						}
-						if (cl_stainmaps.integer)
-							R_Stain(p->org, 32, 32, 16, 16, (int)(p->alpha * p->size * (1.0f / 40.0f)), 192, 48, 48, (int)(p->alpha * p->size * (1.0f / 40.0f)));
-						if (!cl_decals.integer)
-						{
-							p->typeindex = 0;
-							continue;
-						}
-						// create a decal for the blood splat
-						CL_SpawnDecalParticleForSurface(hitent, p->org, trace.plane.normal, p->color[0] * 65536 + p->color[1] * 256 + p->color[2], p->color[0] * 65536 + p->color[1] * 256 + p->color[2], tex_blooddecal[rand()&7], p->size * 2, p->alpha);
-						p->typeindex = 0;
-						if (cl.free_particle > i)
-							cl.free_particle = i;
-						continue;
-					}
-					else if (p->bounce < 0)
-					{
-						// bounce -1 means remove on impact
-						p->typeindex = 0;
-						if (cl.free_particle > i)
-							cl.free_particle = i;
-						continue;
-					}
-					else
-					{
-						// anything else - bounce off solid
-						dist = DotProduct(p->vel, trace.plane.normal) * -p->bounce;
-						VectorMA(p->vel, dist, trace.plane.normal, p->vel);
-						if (DotProduct(p->vel, p->vel) < 0.03)
-							VectorClear(p->vel);
-					}
-				}
-			}
-		}
-
-		if (p->typeindex != pt_static)
-		{
-			switch (p->typeindex)
-			{
-			case pt_entityparticle:
-				// particle that removes itself after one rendered frame
-				if (p->time2)
-				{
-					p->typeindex = 0;
-					if (cl.free_particle > i)
-						cl.free_particle = i;
-				}
-				else
-					p->time2 = 1;
-				break;
-			case pt_blood:
-				a = CL_PointSuperContents(p->org);
-				if (a & (SUPERCONTENTS_SOLID | SUPERCONTENTS_LAVA | SUPERCONTENTS_NODROP))
-				{
-					p->typeindex = 0;
-					if (cl.free_particle > i)
-						cl.free_particle = i;
-				}
-				break;
-			case pt_bubble:
-				a = CL_PointSuperContents(p->org);
-				if (!(a & (SUPERCONTENTS_WATER | SUPERCONTENTS_SLIME)))
-				{
-					p->typeindex = 0;
-					if (cl.free_particle > i)
-						cl.free_particle = i;
-				}
-				break;
-			case pt_rain:
-				a = CL_PointSuperContents(p->org);
-				if (a & (SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_LIQUIDSMASK))
-				{
-					p->typeindex = 0;
-					if (cl.free_particle > i)
-						cl.free_particle = i;
-				}
-				break;
-			case pt_snow:
-				if (cl.time > p->time2)
-				{
-					// snow flutter
-					p->time2 = cl.time + (rand() & 3) * 0.1;
-					p->vel[0] = p->vel[0] * 0.9f + lhrandom(-32, 32);
-					p->vel[1] = p->vel[0] * 0.9f + lhrandom(-32, 32);
-				}
-				a = CL_PointSuperContents(p->org);
-				if (a & (SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_LIQUIDSMASK))
-				{
-					p->typeindex = 0;
-					if (cl.free_particle > i)
-						cl.free_particle = i;
-				}
-				break;
-			default:
-				break;
-			}
-		}
-	}
-
-	// reduce cl.num_particles if possible
-	while (cl.num_particles > 0 && cl.particles[cl.num_particles - 1].typeindex == 0)
-		cl.num_particles--;
 }
 
 #define MAX_PARTICLETEXTURES 64
@@ -2177,7 +1889,6 @@ static void r_part_newmap(void)
 
 #define BATCHSIZE 256
 int particle_element3i[BATCHSIZE*6];
-float particle_vertex3f[BATCHSIZE*12], particle_texcoord2f[BATCHSIZE*8], particle_color4f[BATCHSIZE*16];
 
 void R_Particles_Init (void)
 {
@@ -2200,11 +1911,12 @@ void R_Particles_Init (void)
 void R_DrawDecal_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
 	int surfacelistindex;
-	int batchstart, batchcount;
 	const decal_t *d;
-	pblend_t blendmode;
-	rtexture_t *texture;
 	float *v3f, *t2f, *c4f;
+	particletexture_t *tex;
+	float right[3], up[3], size, ca;
+	float alphascale = (1.0f / 65536.0f) * cl_particles_alpha.value * r_refdef.view.colorscale;
+	float particle_vertex3f[BATCHSIZE*12], particle_texcoord2f[BATCHSIZE*8], particle_color4f[BATCHSIZE*16];
 
 	r_refdef.stats.decals += numsurfaces;
 	R_Mesh_Matrix(&identitymatrix);
@@ -2218,118 +1930,107 @@ void R_DrawDecal_TransparentCallback(const entity_render_t *ent, const rtlight_t
 	GL_DepthTest(true);
 	GL_CullFace(GL_NONE);
 
-	// first generate all the vertices at once
-	for (surfacelistindex = 0, v3f = particle_vertex3f, t2f = particle_texcoord2f, c4f = particle_color4f;surfacelistindex < numsurfaces;surfacelistindex++, v3f += 3*4, t2f += 2*4, c4f += 4*4)
+	// generate all the vertices at once
+	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 	{
-		particletexture_t *tex;
-		const float *org;
-		float right[3], up[3], fog, cr, cg, cb, ca, size;
-
 		d = cl.decals + surfacelist[surfacelistindex];
 
-		//blendmode = particletype[d->typeindex].blendmode;
-
-		cr = d->color[0] * (1.0f / 255.0f) * r_refdef.view.colorscale;
-		cg = d->color[1] * (1.0f / 255.0f) * r_refdef.view.colorscale;
-		cb = d->color[2] * (1.0f / 255.0f) * r_refdef.view.colorscale;
-		ca = d->alpha * (1.0f / 255.0f);
-		//if (blendmode == PBLEND_MOD)
-		{
-			cr *= ca;
-			cg *= ca;
-			cb *= ca;
-			cr = min(cr, 1);
-			cg = min(cg, 1);
-			cb = min(cb, 1);
-			ca = 1;
-		}
-		ca *= cl_particles_alpha.value;
+		// calculate color
+		c4f = particle_color4f + 16*surfacelistindex;
+		ca = d->alpha * alphascale;
 		if (r_refdef.fogenabled)
-		{
-			fog = FogPoint_World(d->org);
-			cr = cr * fog;
-			cg = cg * fog;
-			cb = cb * fog;
-			//if (blendmode == PBLEND_ALPHA)
-			//{
-			//	fog = 1 - fog;
-			//	cr += r_refdef.fogcolor[0] * fog;
-			//	cg += r_refdef.fogcolor[1] * fog;
-			//	cb += r_refdef.fogcolor[2] * fog;
-			//}
-		}
-		c4f[0] = c4f[4] = c4f[8] = c4f[12] = cr;
-		c4f[1] = c4f[5] = c4f[9] = c4f[13] = cg;
-		c4f[2] = c4f[6] = c4f[10] = c4f[14] = cb;
-		c4f[3] = c4f[7] = c4f[11] = c4f[15] = ca;
+			ca *= FogPoint_World(d->org);
+		Vector4Set(c4f, d->color[0] * ca, d->color[1] * ca, d->color[2] * ca, 1);
+		Vector4Copy(c4f, c4f + 4);
+		Vector4Copy(c4f, c4f + 8);
+		Vector4Copy(c4f, c4f + 12);
 
+		// calculate vertex positions
 		size = d->size * cl_particles_size.value;
-		org = d->org;
-		tex = &particletexture[d->texnum];
-
-		// PARTICLE_ORIENTED_DOUBLESIDED
 		VectorVectors(d->normal, right, up);
 		VectorScale(right, size, right);
 		VectorScale(up, size, up);
-		v3f[ 0] = org[0] - right[0] - up[0];
-		v3f[ 1] = org[1] - right[1] - up[1];
-		v3f[ 2] = org[2] - right[2] - up[2];
-		v3f[ 3] = org[0] - right[0] + up[0];
-		v3f[ 4] = org[1] - right[1] + up[1];
-		v3f[ 5] = org[2] - right[2] + up[2];
-		v3f[ 6] = org[0] + right[0] + up[0];
-		v3f[ 7] = org[1] + right[1] + up[1];
-		v3f[ 8] = org[2] + right[2] + up[2];
-		v3f[ 9] = org[0] + right[0] - up[0];
-		v3f[10] = org[1] + right[1] - up[1];
-		v3f[11] = org[2] + right[2] - up[2];
+		v3f = particle_vertex3f + 12*surfacelistindex;
+		v3f[ 0] = d->org[0] - right[0] - up[0];
+		v3f[ 1] = d->org[1] - right[1] - up[1];
+		v3f[ 2] = d->org[2] - right[2] - up[2];
+		v3f[ 3] = d->org[0] - right[0] + up[0];
+		v3f[ 4] = d->org[1] - right[1] + up[1];
+		v3f[ 5] = d->org[2] - right[2] + up[2];
+		v3f[ 6] = d->org[0] + right[0] + up[0];
+		v3f[ 7] = d->org[1] + right[1] + up[1];
+		v3f[ 8] = d->org[2] + right[2] + up[2];
+		v3f[ 9] = d->org[0] + right[0] - up[0];
+		v3f[10] = d->org[1] + right[1] - up[1];
+		v3f[11] = d->org[2] + right[2] - up[2];
+
+		// calculate texcoords
+		tex = &particletexture[d->texnum];
+		t2f = particle_texcoord2f + 8*surfacelistindex;
 		t2f[0] = tex->s1;t2f[1] = tex->t2;
 		t2f[2] = tex->s1;t2f[3] = tex->t1;
 		t2f[4] = tex->s2;t2f[5] = tex->t1;
 		t2f[6] = tex->s2;t2f[7] = tex->t2;
 	}
 
-	// now render batches of particles based on blendmode and texture
-	blendmode = PBLEND_ADD;
-	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-	texture = particletexture[63].texture;
-	R_Mesh_TexBind(0, R_GetTexture(texture));
+	// now render the decals all at once
+	// (this assumes they all use one particle font texture!)
+	GL_BlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
+	R_Mesh_TexBind(0, R_GetTexture(particletexture[63].texture));
 	GL_LockArrays(0, numsurfaces*4);
-	batchstart = 0;
-	batchcount = 0;
-	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
-	{
-		d = cl.decals + surfacelist[surfacelistindex];
-
-		if (blendmode != particletype[d->typeindex].blendmode)
-		{
-			if (batchcount > 0)
-				R_Mesh_Draw(batchstart * 4, batchcount * 4, batchcount * 2, particle_element3i + batchstart * 6, 0, 0);
-			batchcount = 0;
-			batchstart = surfacelistindex;
-			blendmode = particletype[d->typeindex].blendmode;
-			if (blendmode == PBLEND_ALPHA)
-				GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-			else if (blendmode == PBLEND_ADD)
-				GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-			else //if (blendmode == PBLEND_MOD)
-				GL_BlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
-		}
-		if (texture != particletexture[d->texnum].texture)
-		{
-			if (batchcount > 0)
-				R_Mesh_Draw(batchstart * 4, batchcount * 4, batchcount * 2, particle_element3i + batchstart * 6, 0, 0);
-			batchcount = 0;
-			batchstart = surfacelistindex;
-			texture = particletexture[d->texnum].texture;
-			R_Mesh_TexBind(0, R_GetTexture(texture));
-		}
-
-		batchcount++;
-	}
-	if (batchcount > 0)
-		R_Mesh_Draw(batchstart * 4, batchcount * 4, batchcount * 2, particle_element3i + batchstart * 6, 0, 0);
+	R_Mesh_Draw(0, numsurfaces * 4, numsurfaces * 2, particle_element3i, 0, 0);
 	GL_LockArrays(0, 0);
+}
+
+void R_DrawDecals (void)
+{
+	int i;
+	decal_t *decal;
+	float frametime;
+	float decalfade;
+
+	frametime = bound(0, cl.time - cl.decals_updatetime, 1);
+	cl.decals_updatetime += frametime;
+
+	// LordHavoc: early out conditions
+	if ((!cl.num_decals) || (!r_drawdecals.integer))
+		return;
+
+	decalfade = frametime * 256 / cl_decals_fadetime.value;
+
+	for (i = 0, decal = cl.decals;i < cl.num_decals;i++, decal++)
+	{
+		if (!decal->typeindex)
+			continue;
+
+		if (cl.time > decal->time2 + cl_decals_time.value)
+		{
+			decal->alpha -= decalfade;
+			if (decal->alpha <= 0)
+				goto killdecal;
+		}
+
+		if (decal->owner)
+		{
+			if (cl.entities[decal->owner].render.model == decal->ownermodel)
+			{
+				Matrix4x4_Transform(&cl.entities[decal->owner].render.matrix, decal->relativeorigin, decal->org);
+				Matrix4x4_Transform3x3(&cl.entities[decal->owner].render.matrix, decal->relativenormal, decal->normal);
+			}
+			else
+				goto killdecal;
+		}
+		R_MeshQueue_AddTransparent(decal->org, R_DrawDecal_TransparentCallback, NULL, i, NULL);
+		continue;
+killdecal:
+		decal->typeindex = 0;
+		if (cl.free_decal > i)
+			cl.free_decal = i;
+	}
+
+	// reduce cl.num_decals if possible
+	while (cl.num_decals > 0 && cl.decals[cl.num_decals - 1].typeindex == 0)
+		cl.num_decals--;
 }
 
 void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
@@ -2340,6 +2041,13 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 	pblend_t blendmode;
 	rtexture_t *texture;
 	float *v3f, *t2f, *c4f;
+	particletexture_t *tex;
+	float up2[3], v[3], right[3], up[3], fog, ifog, size;
+	float ambient[3], diffuse[3], diffusenormal[3];
+	vec4_t colormultiplier;
+	float particle_vertex3f[BATCHSIZE*12], particle_texcoord2f[BATCHSIZE*8], particle_color4f[BATCHSIZE*16];
+
+	Vector4Set(colormultiplier, r_refdef.view.colorscale * (1.0 / 256.0f), r_refdef.view.colorscale * (1.0 / 256.0f), r_refdef.view.colorscale * (1.0 / 256.0f), cl_particles_alpha.value * (1.0 / 256.0f));
 
 	r_refdef.stats.particles += numsurfaces;
 	R_Mesh_Matrix(&identitymatrix);
@@ -2356,76 +2064,71 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 	// first generate all the vertices at once
 	for (surfacelistindex = 0, v3f = particle_vertex3f, t2f = particle_texcoord2f, c4f = particle_color4f;surfacelistindex < numsurfaces;surfacelistindex++, v3f += 3*4, t2f += 2*4, c4f += 4*4)
 	{
-		particletexture_t *tex;
-		const float *org;
-		float up2[3], v[3], right[3], up[3], fog, cr, cg, cb, ca, size;
-
 		p = cl.particles + surfacelist[surfacelistindex];
 
 		blendmode = particletype[p->typeindex].blendmode;
 
-		cr = p->color[0] * (1.0f / 255.0f) * r_refdef.view.colorscale;
-		cg = p->color[1] * (1.0f / 255.0f) * r_refdef.view.colorscale;
-		cb = p->color[2] * (1.0f / 255.0f) * r_refdef.view.colorscale;
-		ca = p->alpha * (1.0f / 255.0f);
-		if (blendmode == PBLEND_MOD)
+		c4f[0] = p->color[0] * colormultiplier[0];
+		c4f[1] = p->color[1] * colormultiplier[1];
+		c4f[2] = p->color[2] * colormultiplier[2];
+		c4f[3] = p->alpha * colormultiplier[3];
+		switch (blendmode)
 		{
-			cr *= ca;
-			cg *= ca;
-			cb *= ca;
-			cr = min(cr, 1);
-			cg = min(cg, 1);
-			cb = min(cb, 1);
-			ca = 1;
-		}
-		ca *= cl_particles_alpha.value;
-		if (particletype[p->typeindex].lighting)
-		{
-			float ambient[3], diffuse[3], diffusenormal[3];
-			R_CompleteLightPoint(ambient, diffuse, diffusenormal, p->org, true);
-			cr *= (ambient[0] + 0.5 * diffuse[0]);
-			cg *= (ambient[1] + 0.5 * diffuse[1]);
-			cb *= (ambient[2] + 0.5 * diffuse[2]);
-		}
-		if (r_refdef.fogenabled)
-		{
-			fog = FogPoint_World(p->org);
-			cr = cr * fog;
-			cg = cg * fog;
-			cb = cb * fog;
-			if (blendmode == PBLEND_ALPHA)
+		case PBLEND_MOD:
+		case PBLEND_ADD:
+			// additive and modulate can just fade out in fog (this is correct)
+			if (r_refdef.fogenabled)
+				c4f[3] *= FogPoint_World(p->org);
+			// collapse alpha into color for these blends (so that the particlefont does not need alpha on most textures)
+			c4f[0] *= c4f[3];
+			c4f[1] *= c4f[3];
+			c4f[2] *= c4f[3];
+			c4f[3] = 1;
+			break;
+		case PBLEND_ALPHA:
+			// note: lighting is not cheap!
+			if (particletype[p->typeindex].lighting)
 			{
-				fog = 1 - fog;
-				cr += r_refdef.fogcolor[0] * fog;
-				cg += r_refdef.fogcolor[1] * fog;
-				cb += r_refdef.fogcolor[2] * fog;
+				R_CompleteLightPoint(ambient, diffuse, diffusenormal, p->org, true);
+				c4f[0] *= (ambient[0] + 0.5 * diffuse[0]);
+				c4f[1] *= (ambient[1] + 0.5 * diffuse[1]);
+				c4f[2] *= (ambient[2] + 0.5 * diffuse[2]);
 			}
+			// mix in the fog color
+			if (r_refdef.fogenabled)
+			{
+				fog = FogPoint_World(p->org);
+				ifog = 1 - fog;
+				c4f[0] = c4f[0] * fog + r_refdef.fogcolor[0] * ifog;
+				c4f[1] = c4f[1] * fog + r_refdef.fogcolor[1] * ifog;
+				c4f[2] = c4f[2] * fog + r_refdef.fogcolor[2] * ifog;
+			}
+			break;
 		}
-		c4f[0] = c4f[4] = c4f[8] = c4f[12] = cr;
-		c4f[1] = c4f[5] = c4f[9] = c4f[13] = cg;
-		c4f[2] = c4f[6] = c4f[10] = c4f[14] = cb;
-		c4f[3] = c4f[7] = c4f[11] = c4f[15] = ca;
+		// copy the color into the other three vertices
+		Vector4Copy(c4f, c4f + 4);
+		Vector4Copy(c4f, c4f + 8);
+		Vector4Copy(c4f, c4f + 12);
 
 		size = p->size * cl_particles_size.value;
-		org = p->org;
 		tex = &particletexture[p->texnum];
 		switch(particletype[p->typeindex].orientation)
 		{
 		case PARTICLE_BILLBOARD:
 			VectorScale(r_refdef.view.left, -size, right);
 			VectorScale(r_refdef.view.up, size, up);
-			v3f[ 0] = org[0] - right[0] - up[0];
-			v3f[ 1] = org[1] - right[1] - up[1];
-			v3f[ 2] = org[2] - right[2] - up[2];
-			v3f[ 3] = org[0] - right[0] + up[0];
-			v3f[ 4] = org[1] - right[1] + up[1];
-			v3f[ 5] = org[2] - right[2] + up[2];
-			v3f[ 6] = org[0] + right[0] + up[0];
-			v3f[ 7] = org[1] + right[1] + up[1];
-			v3f[ 8] = org[2] + right[2] + up[2];
-			v3f[ 9] = org[0] + right[0] - up[0];
-			v3f[10] = org[1] + right[1] - up[1];
-			v3f[11] = org[2] + right[2] - up[2];
+			v3f[ 0] = p->org[0] - right[0] - up[0];
+			v3f[ 1] = p->org[1] - right[1] - up[1];
+			v3f[ 2] = p->org[2] - right[2] - up[2];
+			v3f[ 3] = p->org[0] - right[0] + up[0];
+			v3f[ 4] = p->org[1] - right[1] + up[1];
+			v3f[ 5] = p->org[2] - right[2] + up[2];
+			v3f[ 6] = p->org[0] + right[0] + up[0];
+			v3f[ 7] = p->org[1] + right[1] + up[1];
+			v3f[ 8] = p->org[2] + right[2] + up[2];
+			v3f[ 9] = p->org[0] + right[0] - up[0];
+			v3f[10] = p->org[1] + right[1] - up[1];
+			v3f[11] = p->org[2] + right[2] - up[2];
 			t2f[0] = tex->s1;t2f[1] = tex->t2;
 			t2f[2] = tex->s1;t2f[3] = tex->t1;
 			t2f[4] = tex->s2;t2f[5] = tex->t1;
@@ -2435,26 +2138,26 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 			VectorVectors(p->vel, right, up);
 			VectorScale(right, size, right);
 			VectorScale(up, size, up);
-			v3f[ 0] = org[0] - right[0] - up[0];
-			v3f[ 1] = org[1] - right[1] - up[1];
-			v3f[ 2] = org[2] - right[2] - up[2];
-			v3f[ 3] = org[0] - right[0] + up[0];
-			v3f[ 4] = org[1] - right[1] + up[1];
-			v3f[ 5] = org[2] - right[2] + up[2];
-			v3f[ 6] = org[0] + right[0] + up[0];
-			v3f[ 7] = org[1] + right[1] + up[1];
-			v3f[ 8] = org[2] + right[2] + up[2];
-			v3f[ 9] = org[0] + right[0] - up[0];
-			v3f[10] = org[1] + right[1] - up[1];
-			v3f[11] = org[2] + right[2] - up[2];
+			v3f[ 0] = p->org[0] - right[0] - up[0];
+			v3f[ 1] = p->org[1] - right[1] - up[1];
+			v3f[ 2] = p->org[2] - right[2] - up[2];
+			v3f[ 3] = p->org[0] - right[0] + up[0];
+			v3f[ 4] = p->org[1] - right[1] + up[1];
+			v3f[ 5] = p->org[2] - right[2] + up[2];
+			v3f[ 6] = p->org[0] + right[0] + up[0];
+			v3f[ 7] = p->org[1] + right[1] + up[1];
+			v3f[ 8] = p->org[2] + right[2] + up[2];
+			v3f[ 9] = p->org[0] + right[0] - up[0];
+			v3f[10] = p->org[1] + right[1] - up[1];
+			v3f[11] = p->org[2] + right[2] - up[2];
 			t2f[0] = tex->s1;t2f[1] = tex->t2;
 			t2f[2] = tex->s1;t2f[3] = tex->t1;
 			t2f[4] = tex->s2;t2f[5] = tex->t1;
 			t2f[6] = tex->s2;t2f[7] = tex->t2;
 			break;
 		case PARTICLE_SPARK:
-			VectorMA(org, -0.02, p->vel, v);
-			VectorMA(org, 0.02, p->vel, up2);
+			VectorMA(p->org, -0.02, p->vel, v);
+			VectorMA(p->org, 0.02, p->vel, up2);
 			R_CalcBeam_Vertex3f(v3f, v, up2, size);
 			t2f[0] = tex->s1;t2f[1] = tex->t2;
 			t2f[2] = tex->s1;t2f[3] = tex->t1;
@@ -2462,10 +2165,10 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 			t2f[6] = tex->s2;t2f[7] = tex->t2;
 			break;
 		case PARTICLE_BEAM:
-			R_CalcBeam_Vertex3f(v3f, org, p->vel, size);
-			VectorSubtract(p->vel, org, up);
+			R_CalcBeam_Vertex3f(v3f, p->org, p->vel, size);
+			VectorSubtract(p->vel, p->org, up);
 			VectorNormalize(up);
-			v[0] = DotProduct(org, up) * (1.0f / 64.0f);
+			v[0] = DotProduct(p->org, up) * (1.0f / 64.0f);
 			v[1] = DotProduct(p->vel, up) * (1.0f / 64.0f);
 			t2f[0] = 1;t2f[1] = v[0];
 			t2f[2] = 0;t2f[3] = v[0];
@@ -2476,82 +2179,244 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 	}
 
 	// now render batches of particles based on blendmode and texture
-	blendmode = PBLEND_ADD;
-	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-	texture = particletexture[63].texture;
-	R_Mesh_TexBind(0, R_GetTexture(texture));
+	blendmode = -1;
+	texture = NULL;
 	GL_LockArrays(0, numsurfaces*4);
 	batchstart = 0;
 	batchcount = 0;
-	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
+	for (surfacelistindex = 0;surfacelistindex < numsurfaces;)
 	{
 		p = cl.particles + surfacelist[surfacelistindex];
 
 		if (blendmode != particletype[p->typeindex].blendmode)
 		{
-			if (batchcount > 0)
-				R_Mesh_Draw(batchstart * 4, batchcount * 4, batchcount * 2, particle_element3i + batchstart * 6, 0, 0);
-			batchcount = 0;
-			batchstart = surfacelistindex;
 			blendmode = particletype[p->typeindex].blendmode;
-			if (blendmode == PBLEND_ALPHA)
+			switch(blendmode)
+			{
+			case PBLEND_ALPHA:
 				GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-			else if (blendmode == PBLEND_ADD)
+				break;
+			case PBLEND_ADD:
 				GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-			else //if (blendmode == PBLEND_MOD)
+				break;
+			case PBLEND_MOD:
 				GL_BlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
+				break;
+			}
 		}
 		if (texture != particletexture[p->texnum].texture)
 		{
-			if (batchcount > 0)
-				R_Mesh_Draw(batchstart * 4, batchcount * 4, batchcount * 2, particle_element3i + batchstart * 6, 0, 0);
-			batchcount = 0;
-			batchstart = surfacelistindex;
 			texture = particletexture[p->texnum].texture;
 			R_Mesh_TexBind(0, R_GetTexture(texture));
 		}
 
-		batchcount++;
-	}
-	if (batchcount > 0)
-		R_Mesh_Draw(batchstart * 4, batchcount * 4, batchcount * 2, particle_element3i + batchstart * 6, 0, 0);
-	GL_LockArrays(0, 0);
-}
-
-void R_DrawDecals (void)
-{
-	int i;
-	const decal_t *d;
-
-	// LordHavoc: early out conditions
-	if ((!cl.num_decals) || (!r_drawdecals.integer))
-		return;
-
-	// LordHavoc: only render if not too close
-	for (i = 0, d = cl.decals;i < cl.num_decals;i++, d++)
-	{
-		if (d->typeindex)
+		// iterate until we find a change in settings
+		batchstart = surfacelistindex++;
+		for (;surfacelistindex < numsurfaces;surfacelistindex++)
 		{
-			r_refdef.stats.decals++;
-			R_MeshQueue_AddTransparent(d->org, R_DrawDecal_TransparentCallback, NULL, i, NULL);
+			p = cl.particles + surfacelist[surfacelistindex];
+			if (blendmode != particletype[p->typeindex].blendmode || texture != particletexture[p->texnum].texture)
+				break;
 		}
+
+		batchcount = surfacelistindex - batchstart;
+		R_Mesh_Draw(batchstart * 4, batchcount * 4, batchcount * 2, particle_element3i + batchstart * 6, 0, 0);
 	}
+	GL_LockArrays(0, 0);
 }
 
 void R_DrawParticles (void)
 {
-	int i;
+	int i, j, a, content;
 	float minparticledist;
 	particle_t *p;
+	float gravity, dvel, decalfade, frametime, f, dist, oldorg[3];
+	int hitent;
+	trace_t trace;
+	qboolean update;
+
+	frametime = bound(0, cl.time - cl.particles_updatetime, 1);
+	cl.particles_updatetime += frametime;
 
 	// LordHavoc: early out conditions
 	if ((!cl.num_particles) || (!r_drawparticles.integer))
 		return;
 
 	minparticledist = DotProduct(r_refdef.view.origin, r_refdef.view.forward) + 4.0f;
+	gravity = frametime * cl.movevars_gravity;
+	dvel = 1+4*frametime;
+	decalfade = frametime * 255 / cl_decals_fadetime.value;
+	update = frametime > 0;
 
-	// LordHavoc: only render if not too close
+	j = 0;
 	for (i = 0, p = cl.particles;i < cl.num_particles;i++, p++)
-		if (p->typeindex && !p->delayedspawn && (DotProduct(p->org, r_refdef.view.forward) >= minparticledist || particletype[p->typeindex].orientation == PARTICLE_BEAM))
+	{
+		if (!p->typeindex)
+			continue;
+
+		if (update)
+		{
+			if (p->delayedspawn > cl.time)
+				continue;
+			p->delayedspawn = 0;
+
+			content = 0;
+
+			p->size += p->sizeincrease * frametime;
+			p->alpha -= p->alphafade * frametime;
+
+			if (p->alpha <= 0 || p->die <= cl.time)
+				goto killparticle;
+
+			if (particletype[p->typeindex].orientation != PARTICLE_BEAM && frametime > 0)
+			{
+				if (p->liquidfriction && (CL_PointSuperContents(p->org) & SUPERCONTENTS_LIQUIDSMASK))
+				{
+					if (p->typeindex == pt_blood)
+						p->size += frametime * 8;
+					else
+						p->vel[2] -= p->gravity * gravity;
+					f = 1.0f - min(p->liquidfriction * frametime, 1);
+					VectorScale(p->vel, f, p->vel);
+				}
+				else
+				{
+					p->vel[2] -= p->gravity * gravity;
+					if (p->airfriction)
+					{
+						f = 1.0f - min(p->airfriction * frametime, 1);
+						VectorScale(p->vel, f, p->vel);
+					}
+				}
+
+				VectorCopy(p->org, oldorg);
+				VectorMA(p->org, frametime, p->vel, p->org);
+				if (p->bounce && cl.time >= p->delayedcollisions)
+				{
+					trace = CL_Move(oldorg, vec3_origin, vec3_origin, p->org, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | ((p->typeindex == pt_rain || p->typeindex == pt_snow) ? SUPERCONTENTS_LIQUIDSMASK : 0), true, false, &hitent, false);
+					// if the trace started in or hit something of SUPERCONTENTS_NODROP
+					// or if the trace hit something flagged as NOIMPACT
+					// then remove the particle
+					if (trace.hitq3surfaceflags & Q3SURFACEFLAG_NOIMPACT || ((trace.startsupercontents | trace.hitsupercontents) & SUPERCONTENTS_NODROP) || (trace.startsupercontents & SUPERCONTENTS_SOLID))
+						goto killparticle;
+					VectorCopy(trace.endpos, p->org);
+					// react if the particle hit something
+					if (trace.fraction < 1)
+					{
+						VectorCopy(trace.endpos, p->org);
+						if (p->typeindex == pt_rain)
+						{
+							// raindrop - splash on solid/water/slime/lava
+							int count;
+							// convert from a raindrop particle to a rainsplash decal
+							VectorCopy(trace.plane.normal, p->vel);
+							VectorAdd(p->org, p->vel, p->org);
+							p->typeindex = pt_raindecal;
+							p->texnum = tex_rainsplash;
+							p->time2 = cl.time;
+							p->alphafade = p->alpha / 0.4;
+							p->bounce = 0;
+							p->airfriction = 0;
+							p->liquidfriction = 0;
+							p->gravity = 0;
+							p->size *= 1.0f;
+							p->sizeincrease = p->size * 20;
+							count = (int)lhrandom(1, 10);
+							while(count--)
+								CL_NewParticle(pt_spark, 0x000000, 0x707070, tex_particle, 0.25f, 0, lhrandom(64, 255), 512, 1, 0, p->org[0], p->org[1], p->org[2], p->vel[0]*16, p->vel[1]*16, cl.movevars_gravity * 0.04 + p->vel[2]*16, 0, 0, 0, 32);
+							continue;
+						}
+						else if (p->typeindex == pt_blood)
+						{
+							// blood - splash on solid
+							if (trace.hitq3surfaceflags & Q3SURFACEFLAG_NOMARKS)
+								goto killparticle;
+							if (cl_stainmaps.integer)
+								R_Stain(p->org, 32, 32, 16, 16, (int)(p->alpha * p->size * (1.0f / 40.0f)), 192, 48, 48, (int)(p->alpha * p->size * (1.0f / 40.0f)));
+							if (cl_decals.integer)
+							{
+								// create a decal for the blood splat
+								CL_SpawnDecalParticleForSurface(hitent, p->org, trace.plane.normal, p->color[0] * 65536 + p->color[1] * 256 + p->color[2], p->color[0] * 65536 + p->color[1] * 256 + p->color[2], tex_blooddecal[rand()&7], p->size * 2, p->alpha);
+							}
+							goto killparticle;
+						}
+						else if (p->bounce < 0)
+						{
+							// bounce -1 means remove on impact
+							goto killparticle;
+						}
+						else
+						{
+							// anything else - bounce off solid
+							dist = DotProduct(p->vel, trace.plane.normal) * -p->bounce;
+							VectorMA(p->vel, dist, trace.plane.normal, p->vel);
+							if (DotProduct(p->vel, p->vel) < 0.03)
+								VectorClear(p->vel);
+						}
+					}
+				}
+			}
+
+			if (p->typeindex != pt_static)
+			{
+				switch (p->typeindex)
+				{
+				case pt_entityparticle:
+					// particle that removes itself after one rendered frame
+					if (p->time2)
+						goto killparticle;
+					else
+						p->time2 = 1;
+					break;
+				case pt_blood:
+					a = CL_PointSuperContents(p->org);
+					if (a & (SUPERCONTENTS_SOLID | SUPERCONTENTS_LAVA | SUPERCONTENTS_NODROP))
+						goto killparticle;
+					break;
+				case pt_bubble:
+					a = CL_PointSuperContents(p->org);
+					if (!(a & (SUPERCONTENTS_WATER | SUPERCONTENTS_SLIME)))
+						goto killparticle;
+					break;
+				case pt_rain:
+					a = CL_PointSuperContents(p->org);
+					if (a & (SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_LIQUIDSMASK))
+						goto killparticle;
+					break;
+				case pt_snow:
+					if (cl.time > p->time2)
+					{
+						// snow flutter
+						p->time2 = cl.time + (rand() & 3) * 0.1;
+						p->vel[0] = p->vel[0] * 0.9f + lhrandom(-32, 32);
+						p->vel[1] = p->vel[0] * 0.9f + lhrandom(-32, 32);
+					}
+					a = CL_PointSuperContents(p->org);
+					if (a & (SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_LIQUIDSMASK))
+						goto killparticle;
+					break;
+				default:
+					break;
+				}
+			}
+		}
+		else if (p->delayedspawn)
+			continue;
+
+		// don't render particles too close to the view (they chew fillrate)
+		// also don't render particles behind the view (useless)
+		// further checks to cull to the frustum would be too slow here
+		if (DotProduct(p->org, r_refdef.view.forward) >= minparticledist || particletype[p->typeindex].orientation == PARTICLE_BEAM)
 			R_MeshQueue_AddTransparent(p->org, R_DrawParticle_TransparentCallback, NULL, i, NULL);
+
+		continue;
+killparticle:
+		p->typeindex = 0;
+		if (cl.free_particle > i)
+			cl.free_particle = i;
+	}
+
+	// reduce cl.num_particles if possible
+	while (cl.num_particles > 0 && cl.particles[cl.num_particles - 1].typeindex == 0)
+		cl.num_particles--;
 }

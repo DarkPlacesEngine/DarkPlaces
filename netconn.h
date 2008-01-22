@@ -142,11 +142,13 @@ typedef struct netconn_s
 	int receiveMessageLength;
 	unsigned char receiveMessage[NET_MAXMESSAGE];
 
+	// used by both NQ and QW protocols
+	unsigned int outgoing_unreliable_sequence;
+
 	struct netconn_nq_s
 	{
 		unsigned int ackSequence;
 		unsigned int sendSequence;
-		unsigned int unreliableSendSequence;
 
 		unsigned int receiveSequence;
 		unsigned int unreliableReceiveSequence;
@@ -176,7 +178,6 @@ typedef struct netconn_s
 
 		int			incoming_reliable_sequence;		// single bit, maintained local
 
-		int			outgoing_sequence;
 		int			reliable_sequence;			// single bit
 		int			last_reliable_sequence;		// sequence number of last send
 	}
