@@ -231,6 +231,11 @@ typedef enum OSGK_AntiAliasType
 static void (*osgk_browser_resize) (OSGK_Browser* browser,
   int width, int height);
 
+/*static int (*osgk_browser_set_user_data) (OSGK_Browser* browser,
+  unsigned int key, void* data, int overrideData);*/
+/*static int (*osgk_browser_get_user_data) (OSGK_Browser* browser,
+  unsigned int key, void** data);*/
+
 /* OffscreenGecko/string.h */
 OSGK_DERIVEDTYPE(OSGK_String);
 
@@ -325,6 +330,7 @@ typedef enum OSGK_ScriptResult
 typedef struct OSGK_ScriptObjectCreateParams_s
 {
   void* createParam;
+  OSGK_Browser* browser;
 } OSGK_ScriptObjectCreateParams;
 
 typedef OSGK_ScriptResult (*OSGK_CreateObjFunc) (
