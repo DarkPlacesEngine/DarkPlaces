@@ -250,25 +250,23 @@ static void R_MoveExplosion(explosion_t *e)
 	}
 }
 
-
-void R_MoveExplosions(void)
-{
-	int i;
-	for (i = 0;i < numexplosions;i++)
-		if (explosion[i].alpha)
-			R_MoveExplosion(&explosion[i]);
-	while (numexplosions > 0 && explosion[i-1].alpha <= 0)
-		numexplosions--;
-}
-
 void R_DrawExplosions(void)
 {
 	int i;
 
 	if (!r_drawexplosions.integer)
 		return;
+
 	for (i = 0;i < numexplosions;i++)
+	{
 		if (explosion[i].alpha)
-			R_MeshQueue_AddTransparent(explosion[i].origin, R_DrawExplosion_TransparentCallback, NULL, i, NULL);
+		{
+			R_MoveExplosion(&explosion[i]);
+			if (explosion[i].alpha)
+				R_MeshQueue_AddTransparent(explosion[i].origin, R_DrawExplosion_TransparentCallback, NULL, i, NULL);
+		}
+	}
+	while (numexplosions > 0 && explosion[i-1].alpha <= 0)
+		numexplosions--;
 }
 

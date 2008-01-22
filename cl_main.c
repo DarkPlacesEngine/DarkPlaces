@@ -1801,10 +1801,7 @@ void CL_UpdateWorld(void)
 		CL_RelinkLightFlashes();
 		CSQC_RelinkAllEntities(ENTMASK_ENGINE | ENTMASK_ENGINEVIEWMODELS);
 
-		// move decals, particles, and any other effects
-		CL_MoveDecals();
-		CL_MoveParticles();
-		R_MoveExplosions();
+		// decals, particles, and explosions will be updated during rneder
 	}
 
 	r_refdef.scene.time = cl.time;
