@@ -8,6 +8,7 @@
 #define OSGK_CLASSTYPE_REF	struct
 
 #include <assert.h>
+#include <stdlib.h>
 #define OSGK_ASSERT(x)	assert(x)
 
 typedef unsigned int OSGK_GeckoResult;
@@ -299,9 +300,9 @@ static int (*osgk_variant_get_isupports) (OSGK_ScriptVariant* variant,
 /*static OSGK_ScriptVariant* (*osgk_variant_create_int) (
   OSGK_Embedding* embedding, int val);*/
 /*static OSGK_ScriptVariant* (*osgk_variant_create_uint) (
-  OSGK_Embedding* embedding, unsigned int val);
+  OSGK_Embedding* embedding, unsigned int val);*/
 /*static OSGK_ScriptVariant* (*osgk_variant_create_float) (
-  OSGK_Embedding* embedding, float val);
+  OSGK_Embedding* embedding, float val);*/
 /*static OSGK_ScriptVariant* (*osgk_variant_create_double) (
   OSGK_Embedding* embedding, double val);*/
 /*OSGK_ScriptVariant* (*osgk_variant_create_bool) (
