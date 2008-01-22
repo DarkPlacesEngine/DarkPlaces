@@ -2522,3 +2522,6 @@ void Host_InitCommands (void)
 	Cvar_RegisterVariable(&sv_adminnick);
 }
 
+void Host_NoOperation_f(void)
+{
+}

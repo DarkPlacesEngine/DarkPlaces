@@ -322,6 +322,7 @@ void Host_Quit_f(void);
 void Host_ClientCommands(const char *fmt, ...) DP_FUNC_PRINTF(1);
 void Host_ShutdownServer(void);
 void Host_Reconnect_f(void);
+void Host_NoOperation_f(void);
 
 void Host_AbortCurrentFrame(void);
 
