@@ -722,7 +722,12 @@ void S_Init(void)
 
 // COMMANDLINEOPTION: Sound: -nosound disables sound (including CD audio)
 	if (COM_CheckParm("-nosound"))
+	{
+		// dummy out Play and Play2 because mods stuffcmd that
+		Cmd_AddCommand("play", Host_NoOperation_f, "does nothing because -nosound was specified");
+		Cmd_AddCommand("play2", Host_NoOperation_f, "does nothing because -nosound was specified");
 		return;
+	}
 
 	snd_mempool = Mem_AllocPool("sound", 0, NULL);
 
