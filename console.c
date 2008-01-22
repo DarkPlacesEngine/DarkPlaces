@@ -1547,7 +1547,7 @@ Prints not only map filename, but also
 its format (q1/q2/q3/hl) and even its message
 */
 //[515]: here is an ugly hack.. two gotos... oh my... *but it works*
-//LordHavoc: rewrote bsp type detection, added mcbsp support and rewrote message extraction to do proper worldspawn parsing
+//LordHavoc: rewrote bsp type detection, rewrote message extraction to do proper worldspawn parsing
 //LordHavoc: added .ent file loading, and redesigned error handling to still try the .ent file even if the map format is not recognized, this also eliminated one goto
 //LordHavoc: FIXME: man this GetMapList is STILL ugly code even after my cleanups...
 qboolean GetMapList (const char *s, char *completedname, int completednamebufferlength)
@@ -1607,16 +1607,6 @@ qboolean GetMapList (const char *s, char *completedname, int completednamebuffer
 					q2dheader_t *header = (q2dheader_t *)buf;
 					lumpofs = LittleLong(header->lumps[Q2LUMP_ENTITIES].fileofs);
 					lumplen = LittleLong(header->lumps[Q2LUMP_ENTITIES].filelen);
-				}
-			}
-			else if (!memcmp(buf, "MCBSPpad", 8))
-			{
-				p = LittleLong(((int *)buf)[2]);
-				if (p == MCBSPVERSION)
-				{
-					int numhulls = LittleLong(((int *)buf)[3]);
-					lumpofs = LittleLong(((int *)buf)[3 + numhulls + LUMP_ENTITIES*2+0]);
-					lumplen = LittleLong(((int *)buf)[3 + numhulls + LUMP_ENTITIES*2+1]);
 				}
 			}
 			else if((p = LittleLong(((int *)buf)[0])) == BSPVERSION || p == 30)
@@ -1679,7 +1669,6 @@ qboolean GetMapList (const char *s, char *completedname, int completednamebuffer
 		case Q3BSPVERSION:	strlcpy((char *)buf, "Q3", sizeof(buf));break;
 		case Q2BSPVERSION:	strlcpy((char *)buf, "Q2", sizeof(buf));break;
 		case BSPVERSION:	strlcpy((char *)buf, "Q1", sizeof(buf));break;
-		case MCBSPVERSION:	strlcpy((char *)buf, "MC", sizeof(buf));break;
 		case 30:			strlcpy((char *)buf, "HL", sizeof(buf));break;
 		default:			strlcpy((char *)buf, "??", sizeof(buf));break;
 		}
