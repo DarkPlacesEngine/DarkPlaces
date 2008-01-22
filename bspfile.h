@@ -31,7 +31,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 
 #define BSPVERSION	29
-#define MCBSPVERSION 2
 
 typedef struct lump_s
 {
@@ -57,7 +56,6 @@ typedef struct lump_s
 
 typedef struct hullinfo_s
 {
-	int			numhulls;
 	int			filehulls;
 	float		hullsizes[MAX_MAP_HULLS][2][3];
 } hullinfo_t;

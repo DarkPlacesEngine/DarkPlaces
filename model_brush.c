@@ -28,7 +28,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 //cvar_t r_subdivide_size = {CVAR_SAVE, "r_subdivide_size", "128", "how large water polygons should be (smaller values produce more polygons which give better warping effects)"};
 cvar_t halflifebsp = {0, "halflifebsp", "0", "indicates the current map is hlbsp format (useful to know because of different bounding box sizes)"};
-cvar_t mcbsp = {0, "mcbsp", "0", "indicates the current map is mcbsp format (useful to know because of different bounding box sizes)"};
 cvar_t r_novis = {0, "r_novis", "0", "draws whole level, see also sv_cullentities_pvs 0"};
 cvar_t r_picmipworld = {CVAR_SAVE, "r_picmipworld", "1", "whether gl_picmip shall apply to world textures too"};
 cvar_t r_nosurftextures = {0, "r_nosurftextures", "0", "pretends there was no texture lump found in the q1bsp/hlbsp loading (useful for debugging this rare case)"};
@@ -55,7 +54,6 @@ void Mod_BrushInit(void)
 {
 //	Cvar_RegisterVariable(&r_subdivide_size);
 	Cvar_RegisterVariable(&halflifebsp);
-	Cvar_RegisterVariable(&mcbsp);
 	Cvar_RegisterVariable(&r_novis);
 	Cvar_RegisterVariable(&r_picmipworld);
 	Cvar_RegisterVariable(&r_nosurftextures);
@@ -828,29 +826,6 @@ static void Mod_Q1BSP_TraceBox(struct model_s *model, int frame, trace_t *trace,
 	VectorSubtract(boxmaxs, boxmins, boxsize);
 	if (boxsize[0] < 3)
 		rhc.hull = &model->brushq1.hulls[0]; // 0x0x0
-	else if (model->brush.ismcbsp)
-	{
-		int i;
-		float vdist, dist;
-		int vdisti = 0;
-
-		vdist = 0;	// shut up compiler warning
-
-	// find the closest hull size (this algorithm probably sucks, a qc field to override it might be in order...)
-		for (i = 1; i < model->brushq1.numhulls; i++)
-		{
-			dist = fabs(model->brushq1.hulls[i].clip_size[0] - boxsize[0]) +
-					fabs(model->brushq1.hulls[i].clip_size[1] - boxsize[1]) +
-					fabs(model->brushq1.hulls[i].clip_size[2] - boxsize[2]) * 0.25;
-
-			if (!vdisti || dist < vdist)
-			{
-				vdisti = i;
-				vdist = dist;
-			}
-		}
-		rhc.hull = &model->brushq1.hulls[vdisti];
-	}
 	else if (model->brush.ishlbsp)
 	{
 		// LordHavoc: this has to have a minor tolerance (the .1) because of
@@ -1690,11 +1665,6 @@ static void Mod_Q1BSP_LoadLighting(lump_t *l)
 		loadmodel->brushq1.lightdata = (unsigned char *)Mem_Alloc(loadmodel->mempool, l->filelen);
 		for (i=0; i<l->filelen; i++)
 			loadmodel->brushq1.lightdata[i] = mod_base[l->fileofs+i] >>= 1;
-	}
-	else if (loadmodel->brush.ismcbsp)
-	{
-		loadmodel->brushq1.lightdata = (unsigned char *)Mem_Alloc(loadmodel->mempool, l->filelen);
-		memcpy(loadmodel->brushq1.lightdata, mod_base + l->fileofs, l->filelen);
 	}
 	else // LordHavoc: bsp version 29 (normal white lighting)
 	{
@@ -2663,7 +2633,7 @@ static void Mod_Q1BSP_LoadClipnodes(lump_t *l, hullinfo_t *hullinfo)
 	loadmodel->brushq1.clipnodes = out;
 	loadmodel->brushq1.numclipnodes = count;
 
-	for (i = 1; i < hullinfo->numhulls; i++)
+	for (i = 1; i < MAX_MAP_HULLS; i++)
 	{
 		hull = &loadmodel->brushq1.hulls[i];
 		hull->clipnodes = out;
@@ -3326,16 +3296,7 @@ static void Mod_Q1BSP_RoundUpToHullSize(model_t *cmodel, const vec3_t inmins, co
 	const hull_t *hull;
 
 	VectorSubtract(inmaxs, inmins, size);
-	if (cmodel->brush.ismcbsp)
-	{
-		if (size[0] < 3)
-			hull = &cmodel->brushq1.hulls[0]; // 0x0x0
-		else if (size[2] < 48) // pick the nearest of 40 or 56
-			hull = &cmodel->brushq1.hulls[2]; // 16x16x40
-		else
-			hull = &cmodel->brushq1.hulls[1]; // 16x16x56
-	}
-	else if (cmodel->brush.ishlbsp)
+	if (cmodel->brush.ishlbsp)
 	{
 		if (size[0] < 3)
 			hull = &cmodel->brushq1.hulls[0]; // 0x0x0
@@ -3371,7 +3332,6 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	float dist, modelyawradius, modelradius, *vec;
 	msurface_t *surface;
 	int numshadowmeshtriangles;
-	dheader_t _header;
 	hullinfo_t hullinfo;
 	int totalstylesurfaces, totalstyles, stylecounts[256], remapstyles[256];
 	model_brush_lightstyleinfo_t styleinfo[256];
@@ -3381,93 +3341,43 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 
 	mod->type = mod_brushq1;
 
-	if (!memcmp (buffer, "MCBSPpad", 8))
+	header = (dheader_t *)buffer;
+
+	i = LittleLong(header->version);
+	if (i != BSPVERSION && i != 30)
+		Host_Error("Mod_Q1BSP_Load: %s has wrong version number(%i should be %i(Quake) or 30(HalfLife)", mod->name, i, BSPVERSION);
+	mod->brush.ishlbsp = i == 30;
+
+// fill in hull info
+	VectorClear (hullinfo.hullsizes[0][0]);
+	VectorClear (hullinfo.hullsizes[0][1]);
+	if (mod->brush.ishlbsp)
 	{
-		unsigned char	*index;
+		mod->modeldatatypestring = "HLBSP";
 
-		mod->brush.ismcbsp = true;
-		mod->brush.ishlbsp = false;
-
-		mod_base = (unsigned char*)buffer;
-
-		index = mod_base;
-		index += 8;
-		i = SB_ReadInt (&index);
-		if (i != MCBSPVERSION)
-			Host_Error("Mod_Q1BSP_Load: %s has wrong version number(%i should be %i)", mod->name, i, MCBSPVERSION);
-
-	// read hull info
-		hullinfo.numhulls = SB_ReadInt (&index);
-		hullinfo.filehulls = hullinfo.numhulls;
-		mod->brushq1.numhulls = hullinfo.numhulls;
-
-		VectorClear (hullinfo.hullsizes[0][0]);
-		VectorClear (hullinfo.hullsizes[0][1]);
-		for (i = 1; i < hullinfo.numhulls; i++)
-		{
-			hullinfo.hullsizes[i][0][0] = SB_ReadFloat (&index);
-			hullinfo.hullsizes[i][0][1] = SB_ReadFloat (&index);
-			hullinfo.hullsizes[i][0][2] = SB_ReadFloat (&index);
-			hullinfo.hullsizes[i][1][0] = SB_ReadFloat (&index);
-			hullinfo.hullsizes[i][1][1] = SB_ReadFloat (&index);
-			hullinfo.hullsizes[i][1][2] = SB_ReadFloat (&index);
-		}
-
-	// read lumps
-		_header.version = 0;
-		for (i = 0; i < HEADER_LUMPS; i++)
-		{
-			_header.lumps[i].fileofs = SB_ReadInt (&index);
-			_header.lumps[i].filelen = SB_ReadInt (&index);
-		}
-
-		header = &_header;
+		hullinfo.filehulls = 4;
+		VectorSet (hullinfo.hullsizes[1][0], -16, -16, -36);
+		VectorSet (hullinfo.hullsizes[1][1], 16, 16, 36);
+		VectorSet (hullinfo.hullsizes[2][0], -32, -32, -32);
+		VectorSet (hullinfo.hullsizes[2][1], 32, 32, 32);
+		VectorSet (hullinfo.hullsizes[3][0], -16, -16, -18);
+		VectorSet (hullinfo.hullsizes[3][1], 16, 16, 18);
 	}
 	else
 	{
-		header = (dheader_t *)buffer;
+		hullinfo.filehulls = 4;
+		VectorSet (hullinfo.hullsizes[1][0], -16, -16, -24);
+		VectorSet (hullinfo.hullsizes[1][1], 16, 16, 32);
+		VectorSet (hullinfo.hullsizes[2][0], -32, -32, -24);
+		VectorSet (hullinfo.hullsizes[2][1], 32, 32, 64);
+	}
 
-		i = LittleLong(header->version);
-		if (i != BSPVERSION && i != 30)
-			Host_Error("Mod_Q1BSP_Load: %s has wrong version number(%i should be %i(Quake) or 30(HalfLife)", mod->name, i, BSPVERSION);
-		mod->brush.ishlbsp = i == 30;
-		mod->brush.ismcbsp = false;
-
-	// fill in hull info
-		VectorClear (hullinfo.hullsizes[0][0]);
-		VectorClear (hullinfo.hullsizes[0][1]);
-		if (mod->brush.ishlbsp)
-		{
-			mod->modeldatatypestring = "HLBSP";
-
-			hullinfo.numhulls = 4;
-			hullinfo.filehulls = 4;
-			mod->brushq1.numhulls = 4;
-			VectorSet (hullinfo.hullsizes[1][0], -16, -16, -36);
-			VectorSet (hullinfo.hullsizes[1][1], 16, 16, 36);
-			VectorSet (hullinfo.hullsizes[2][0], -32, -32, -32);
-			VectorSet (hullinfo.hullsizes[2][1], 32, 32, 32);
-			VectorSet (hullinfo.hullsizes[3][0], -16, -16, -18);
-			VectorSet (hullinfo.hullsizes[3][1], 16, 16, 18);
-		}
-		else
-		{
-			hullinfo.numhulls = 3;
-			hullinfo.filehulls = 4;
-			mod->brushq1.numhulls = 3;
-			VectorSet (hullinfo.hullsizes[1][0], -16, -16, -24);
-			VectorSet (hullinfo.hullsizes[1][1], 16, 16, 32);
-			VectorSet (hullinfo.hullsizes[2][0], -32, -32, -24);
-			VectorSet (hullinfo.hullsizes[2][1], 32, 32, 64);
-		}
-
-	// read lumps
-		mod_base = (unsigned char*)buffer;
-		for (i = 0; i < HEADER_LUMPS; i++)
-		{
-			header->lumps[i].fileofs = LittleLong(header->lumps[i].fileofs);
-			header->lumps[i].filelen = LittleLong(header->lumps[i].filelen);
-		}
+// read lumps
+	mod_base = (unsigned char*)buffer;
+	for (i = 0; i < HEADER_LUMPS; i++)
+	{
+		header->lumps[i].fileofs = LittleLong(header->lumps[i].fileofs);
+		header->lumps[i].filelen = LittleLong(header->lumps[i].filelen);
 	}
 
 	mod->soundfromcenter = true;
@@ -3489,10 +3399,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	mod->brush.PointInLeaf = Mod_Q1BSP_PointInLeaf;
 
 	if (loadmodel->isworldmodel)
-	{
 		Cvar_SetValue("halflifebsp", mod->brush.ishlbsp);
-		Cvar_SetValue("mcbsp", mod->brush.ismcbsp);
-	}
 
 // load into heap
 
@@ -4149,12 +4056,8 @@ void static Mod_Q2BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	if (i != Q2BSPVERSION)
 		Host_Error("Mod_Q2BSP_Load: %s has wrong version number (%i, should be %i)", mod->name, i, Q2BSPVERSION);
 	mod->brush.ishlbsp = false;
-	mod->brush.ismcbsp = false;
 	if (loadmodel->isworldmodel)
-	{
 		Cvar_SetValue("halflifebsp", mod->brush.ishlbsp);
-		Cvar_SetValue("mcbsp", mod->brush.ismcbsp);
-	}
 
 	mod_base = (unsigned char *)header;
 
@@ -5679,12 +5582,8 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	if (i != Q3BSPVERSION)
 		Host_Error("Mod_Q3BSP_Load: %s has wrong version number (%i, should be %i)", mod->name, i, Q3BSPVERSION);
 	mod->brush.ishlbsp = false;
-	mod->brush.ismcbsp = false;
 	if (loadmodel->isworldmodel)
-	{
 		Cvar_SetValue("halflifebsp", mod->brush.ishlbsp);
-		Cvar_SetValue("mcbsp", mod->brush.ismcbsp);
-	}
 
 	mod->soundfromcenter = true;
 	mod->TraceBox = Mod_Q3BSP_TraceBox;

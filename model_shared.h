@@ -596,8 +596,6 @@ typedef struct model_brush_s
 {
 	// true if this model is a HalfLife .bsp file
 	qboolean ishlbsp;
-	// true if this model is a Martial Concert .bsp file
-	qboolean ismcbsp;
 	// string of entity definitions (.map format)
 	char *entities;
 
@@ -702,7 +700,6 @@ typedef struct model_brushq1_s
 	int				numclipnodes;
 	mclipnode_t		*clipnodes;
 
-	int				numhulls;	// this variable is only used by MCBSP, other formats know it intuitively
 	hull_t			hulls[MAX_MAP_HULLS];
 
 	int				num_compressedpvs;
