@@ -2407,10 +2407,10 @@ static void R_View_SetFrustum(void)
 {
 	int i;
 	double slopex, slopey;
+	vec3_t forward, left, up, origin;
 
-	// break apart the view matrix into vectors for various purposes
-	Matrix4x4_ToVectors(&r_refdef.view.matrix, r_refdef.view.forward, r_refdef.view.left, r_refdef.view.up, r_refdef.view.origin);
-	VectorNegate(r_refdef.view.left, r_refdef.view.right);
+	// we can't trust r_refdef.view.forward and friends in reflected scenes
+	Matrix4x4_ToVectors(&r_refdef.view.matrix, forward, left, up, origin);
 
 #if 0
 	r_refdef.view.frustum[0].normal[0] = 0 - 1.0 / r_refdef.view.frustum_x;
@@ -2478,11 +2478,11 @@ static void R_View_SetFrustum(void)
 	{
 		slopex = 1.0 / r_refdef.view.frustum_x;
 		slopey = 1.0 / r_refdef.view.frustum_y;
-		VectorMA(r_refdef.view.forward, -slopex, r_refdef.view.left, r_refdef.view.frustum[0].normal);
-		VectorMA(r_refdef.view.forward,  slopex, r_refdef.view.left, r_refdef.view.frustum[1].normal);
-		VectorMA(r_refdef.view.forward, -slopey, r_refdef.view.up  , r_refdef.view.frustum[2].normal);
-		VectorMA(r_refdef.view.forward,  slopey, r_refdef.view.up  , r_refdef.view.frustum[3].normal);
-		VectorCopy(r_refdef.view.forward, r_refdef.view.frustum[4].normal);
+		VectorMA(forward, -slopex, left, r_refdef.view.frustum[0].normal);
+		VectorMA(forward,  slopex, left, r_refdef.view.frustum[1].normal);
+		VectorMA(forward, -slopey, up  , r_refdef.view.frustum[2].normal);
+		VectorMA(forward,  slopey, up  , r_refdef.view.frustum[3].normal);
+		VectorCopy(forward, r_refdef.view.frustum[4].normal);
 
 		// Leaving those out was a mistake, those were in the old code, and they
 		// fix a reproducable bug in this one: frustum culling got fucked up when viewmatrix was an identity matrix
@@ -2493,10 +2493,10 @@ static void R_View_SetFrustum(void)
 		VectorNormalize(r_refdef.view.frustum[3].normal);
 
 		// calculate frustum corners, which are used to calculate deformed frustum planes for shadow caster culling
-		VectorMAMAMAM(1, r_refdef.view.origin, 1024, r_refdef.view.forward, -1024 * slopex, r_refdef.view.left, -1024 * slopey, r_refdef.view.up, r_refdef.view.frustumcorner[0]);
-		VectorMAMAMAM(1, r_refdef.view.origin, 1024, r_refdef.view.forward,  1024 * slopex, r_refdef.view.left, -1024 * slopey, r_refdef.view.up, r_refdef.view.frustumcorner[1]);
-		VectorMAMAMAM(1, r_refdef.view.origin, 1024, r_refdef.view.forward, -1024 * slopex, r_refdef.view.left,  1024 * slopey, r_refdef.view.up, r_refdef.view.frustumcorner[2]);
-		VectorMAMAMAM(1, r_refdef.view.origin, 1024, r_refdef.view.forward,  1024 * slopex, r_refdef.view.left,  1024 * slopey, r_refdef.view.up, r_refdef.view.frustumcorner[3]);
+		VectorMAMAMAM(1, r_refdef.view.origin, 1024, forward, -1024 * slopex, left, -1024 * slopey, up, r_refdef.view.frustumcorner[0]);
+		VectorMAMAMAM(1, r_refdef.view.origin, 1024, forward,  1024 * slopex, left, -1024 * slopey, up, r_refdef.view.frustumcorner[1]);
+		VectorMAMAMAM(1, r_refdef.view.origin, 1024, forward, -1024 * slopex, left,  1024 * slopey, up, r_refdef.view.frustumcorner[2]);
+		VectorMAMAMAM(1, r_refdef.view.origin, 1024, forward,  1024 * slopex, left,  1024 * slopey, up, r_refdef.view.frustumcorner[3]);
 
 		r_refdef.view.frustum[0].dist = DotProduct (r_refdef.view.origin, r_refdef.view.frustum[0].normal);
 		r_refdef.view.frustum[1].dist = DotProduct (r_refdef.view.origin, r_refdef.view.frustum[1].normal);
@@ -2506,11 +2506,11 @@ static void R_View_SetFrustum(void)
 	}
 	else
 	{
-		VectorScale(r_refdef.view.left, -r_refdef.view.ortho_x, r_refdef.view.frustum[0].normal);
-		VectorScale(r_refdef.view.left,  r_refdef.view.ortho_x, r_refdef.view.frustum[1].normal);
-		VectorScale(r_refdef.view.up, -r_refdef.view.ortho_y, r_refdef.view.frustum[2].normal);
-		VectorScale(r_refdef.view.up,  r_refdef.view.ortho_y, r_refdef.view.frustum[3].normal);
-		VectorCopy(r_refdef.view.forward, r_refdef.view.frustum[4].normal);
+		VectorScale(left, -r_refdef.view.ortho_x, r_refdef.view.frustum[0].normal);
+		VectorScale(left,  r_refdef.view.ortho_x, r_refdef.view.frustum[1].normal);
+		VectorScale(up, -r_refdef.view.ortho_y, r_refdef.view.frustum[2].normal);
+		VectorScale(up,  r_refdef.view.ortho_y, r_refdef.view.frustum[3].normal);
+		VectorCopy(forward, r_refdef.view.frustum[4].normal);
 		r_refdef.view.frustum[0].dist = DotProduct (r_refdef.view.origin, r_refdef.view.frustum[0].normal) + r_refdef.view.ortho_x;
 		r_refdef.view.frustum[1].dist = DotProduct (r_refdef.view.origin, r_refdef.view.frustum[1].normal) + r_refdef.view.ortho_x;
 		r_refdef.view.frustum[2].dist = DotProduct (r_refdef.view.origin, r_refdef.view.frustum[2].normal) + r_refdef.view.ortho_y;
@@ -2533,27 +2533,27 @@ static void R_View_SetFrustum(void)
 	// Quake2 has it disabled as well.
 
 	// rotate R_VIEWFORWARD right by FOV_X/2 degrees
-	//RotatePointAroundVector( r_refdef.view.frustum[0].normal, r_refdef.view.up, r_refdef.view.forward, -(90 - r_refdef.fov_x / 2));
+	//RotatePointAroundVector( r_refdef.view.frustum[0].normal, up, forward, -(90 - r_refdef.fov_x / 2));
 	//r_refdef.view.frustum[0].dist = DotProduct (r_refdef.view.origin, frustum[0].normal);
 	//PlaneClassify(&frustum[0]);
 
 	// rotate R_VIEWFORWARD left by FOV_X/2 degrees
-	//RotatePointAroundVector( r_refdef.view.frustum[1].normal, r_refdef.view.up, r_refdef.view.forward, (90 - r_refdef.fov_x / 2));
+	//RotatePointAroundVector( r_refdef.view.frustum[1].normal, up, forward, (90 - r_refdef.fov_x / 2));
 	//r_refdef.view.frustum[1].dist = DotProduct (r_refdef.view.origin, frustum[1].normal);
 	//PlaneClassify(&frustum[1]);
 
 	// rotate R_VIEWFORWARD up by FOV_X/2 degrees
-	//RotatePointAroundVector( r_refdef.view.frustum[2].normal, r_refdef.view.left, r_refdef.view.forward, -(90 - r_refdef.fov_y / 2));
+	//RotatePointAroundVector( r_refdef.view.frustum[2].normal, left, forward, -(90 - r_refdef.fov_y / 2));
 	//r_refdef.view.frustum[2].dist = DotProduct (r_refdef.view.origin, frustum[2].normal);
 	//PlaneClassify(&frustum[2]);
 
 	// rotate R_VIEWFORWARD down by FOV_X/2 degrees
-	//RotatePointAroundVector( r_refdef.view.frustum[3].normal, r_refdef.view.left, r_refdef.view.forward, (90 - r_refdef.fov_y / 2));
+	//RotatePointAroundVector( r_refdef.view.frustum[3].normal, left, forward, (90 - r_refdef.fov_y / 2));
 	//r_refdef.view.frustum[3].dist = DotProduct (r_refdef.view.origin, frustum[3].normal);
 	//PlaneClassify(&frustum[3]);
 
 	// nearclip plane
-	//VectorCopy(r_refdef.view.forward, r_refdef.view.frustum[4].normal);
+	//VectorCopy(forward, r_refdef.view.frustum[4].normal);
 	//r_refdef.view.frustum[4].dist = DotProduct (r_refdef.view.origin, frustum[4].normal) + r_nearclip.value;
 	//PlaneClassify(&frustum[4]);
 }
@@ -2895,6 +2895,8 @@ static void R_Water_ProcessPlanes(void)
 		{
 			// render reflected scene and copy into texture
 			Matrix4x4_Reflect(&r_refdef.view.matrix, p->plane.normal[0], p->plane.normal[1], p->plane.normal[2], p->plane.dist, -2);
+			// update the r_refdef.view.origin because otherwise the sky renders at the wrong location (amongst other problems)
+			Matrix4x4_OriginFromMatrix(&r_refdef.view.matrix, r_refdef.view.origin);
 			r_refdef.view.clipplane = p->plane;
 			// reverse the cullface settings for this render
 			r_refdef.view.cullface_front = GL_FRONT;
@@ -3423,6 +3425,14 @@ void R_RenderView(void)
 
 	r_refdef.view.colorscale = r_hdr_scenebrightness.value;
 
+	// break apart the view matrix into vectors for various purposes
+	// it is important that this occurs outside the RenderScene function because that can be called from reflection renders, where the vectors come out wrong
+	// however the r_refdef.view.origin IS updated in RenderScene intentionally - otherwise the sky renders at the wrong origin, etc
+	Matrix4x4_ToVectors(&r_refdef.view.matrix, r_refdef.view.forward, r_refdef.view.left, r_refdef.view.up, r_refdef.view.origin);
+	VectorNegate(r_refdef.view.left, r_refdef.view.right);
+	// make an inverted copy of the view matrix for tracking sprites
+	Matrix4x4_Invert_Simple(&r_refdef.view.inverse_matrix, &r_refdef.view.matrix);
+
 	R_Shadow_UpdateWorldLightSelection();
 
 	R_Bloom_StartFrame();
@@ -3468,7 +3478,6 @@ static void R_DrawLocs(void);
 static void R_DrawEntityBBoxes(void);
 void R_RenderScene(qboolean addwaterplanes)
 {
-	Matrix4x4_Invert_Simple(&r_refdef.view.inverse_matrix, &r_refdef.view.matrix);
 	R_UpdateFogColor();
 
 	if (addwaterplanes)
@@ -3922,6 +3931,7 @@ void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, rtexture_
 	}
 	else
 		GL_CullFace(r_refdef.view.cullface_back);
+	GL_CullFace(GL_NONE);
 
 	GL_DepthMask(false);
 	GL_DepthRange(0, depthshort ? 0.0625 : 1);
@@ -4194,19 +4204,16 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 		t->currentmaterialflags |= MATERIALFLAG_SHORTDEPTHRANGE;
 	if (ent->flags & RENDER_VIEWMODEL)
 		t->currentmaterialflags |= MATERIALFLAG_SHORTDEPTHRANGE;
+	if (t->backgroundnumskinframes)
+		t->currentmaterialflags |= MATERIALFLAG_VERTEXTEXTUREBLEND;
 	if (t->currentmaterialflags & MATERIALFLAG_BLENDED)
 	{
 		if (t->currentmaterialflags & (MATERIALFLAG_REFRACTION | MATERIALFLAG_WATERSHADER))
 			t->currentmaterialflags &= ~MATERIALFLAG_BLENDED;
 	}
 	else
-	{
-		if (t->backgroundnumskinframes)
-			t->currentmaterialflags |= MATERIALFLAG_VERTEXTEXTUREBLEND;
 		t->currentmaterialflags &= ~(MATERIALFLAG_REFRACTION | MATERIALFLAG_WATERSHADER);
-	}
 
-	// make sure that the waterscroll matrix is used on water surfaces when
 	// there is no tcmod
 	if (t->currentmaterialflags & MATERIALFLAG_WATER && r_waterscroll.value != 0)
 		t->currenttexmatrix = r_waterscrollmatrix;
