@@ -232,17 +232,17 @@ typedef enum OSGK_AntiAliasType
 static void (*osgk_browser_resize) (OSGK_Browser* browser,
   int width, int height);
 
-/*static int (*osgk_browser_set_user_data) (OSGK_Browser* browser,
-  unsigned int key, void* data, int overrideData);*/
-/*static int (*osgk_browser_get_user_data) (OSGK_Browser* browser,
-  unsigned int key, void** data);*/
+static int (*osgk_browser_set_user_data) (OSGK_Browser* browser,
+  unsigned int key, void* data, int overrideData);
+static int (*osgk_browser_get_user_data) (OSGK_Browser* browser,
+  unsigned int key, void** data);
 
 /* OffscreenGecko/string.h */
 OSGK_DERIVEDTYPE(OSGK_String);
 
-/*static const char* (*osgk_string_get) (OSGK_String* str);*/
+static const char* (*osgk_string_get) (OSGK_String* str);
 
-/*static OSGK_String* (*osgk_string_create) (const char* str);*/
+static OSGK_String* (*osgk_string_create) (const char* str);
 
 /* OffscreenGecko/scriptvariant.h */
 
@@ -267,8 +267,8 @@ typedef enum OSGK_ScriptVariantType
 
 /*static OSGK_ScriptVariantType (*osgk_variant_get_type) (
   OSGK_ScriptVariant* variant);*/
-/*static OSGK_ScriptVariant* (*osgk_variant_convert) (
-  OSGK_ScriptVariant* variant, OSGK_ScriptVariantType newType);*/
+static OSGK_ScriptVariant* (*osgk_variant_convert) (
+  OSGK_ScriptVariant* variant, OSGK_ScriptVariantType newType);
 
 /*static int (*osgk_variant_get_int) (OSGK_ScriptVariant* variant,
   int* val);*/
@@ -282,9 +282,9 @@ typedef enum OSGK_ScriptVariantType
   int* val);*/
 /*static int (*osgk_variant_get_char) (OSGK_ScriptVariant* variant,
   unsigned int* val);*/
-/*// Does not increase ref count
+// Does not increase ref count
 static int (*osgk_variant_get_string) (OSGK_ScriptVariant* variant,
-  OSGK_String** val);*/
+  OSGK_String** val);
 /*// Does not increase ref count
 static int (*osgk_variant_get_isupports) (OSGK_ScriptVariant* variant,
   OSGK_CLASSTYPE_REF nsISupports** val);*/
@@ -309,8 +309,8 @@ static int (*osgk_variant_get_isupports) (OSGK_ScriptVariant* variant,
   OSGK_Embedding* embedding, int val);*/
 /*static OSGK_ScriptVariant* (*osgk_variant_create_char) (
   OSGK_Embedding* embedding, unsigned int val);*/
-/*static OSGK_ScriptVariant* (*osgk_variant_create_string) (
-  OSGK_Embedding* embedding, OSGK_String* val);*/
+static OSGK_ScriptVariant* (*osgk_variant_create_string) (
+  OSGK_Embedding* embedding, OSGK_String* val);
 /*static OSGK_ScriptVariant* (*osgk_variant_create_isupports) (
   OSGK_Embedding* embedding, OSGK_CLASSTYPE_REF nsISupports* val);*/
 /*static OSGK_ScriptVariant* (*osgk_variant_create_script_object) (
@@ -338,10 +338,10 @@ typedef OSGK_ScriptResult (*OSGK_CreateObjFunc) (
   OSGK_ScriptObjectCreateParams* params, void** objTag);
 typedef void (*OSGK_DestroyObjFunc) (void* objTag);
 
-/*static OSGK_ScriptObjectTemplate* (*osgk_sot_create) (
+static OSGK_ScriptObjectTemplate* (*osgk_sot_create) (
   OSGK_Embedding* embedding,
   OSGK_CreateObjFunc createFunc, OSGK_DestroyObjFunc destroyFunc,
-  void* createParam);*/
+  void* createParam);
 
 typedef OSGK_ScriptVariant* (*OSGK_GetPropertyFunc) (void* objTag,
   void* propTag);
@@ -356,16 +356,16 @@ typedef OSGK_ScriptResult (*OSGK_FunctionCallFunc) (void* objTag,
   void* methTag, size_t numParams, OSGK_ScriptVariant** params,
   OSGK_ScriptVariant** returnVal);
 
-/*static int (*osgk_sot_add_function) (
+static int (*osgk_sot_add_function) (
   OSGK_ScriptObjectTemplate* templ, const char* funcName, void* funcTag,
-  OSGK_FunctionCallFunc callFunc);*/
+  OSGK_FunctionCallFunc callFunc);
 
 /*static OSGK_ScriptVariant* (*osgk_sot_instantiate) (
   OSGK_ScriptObjectTemplate* templ, void** objTag);    */
 
-/*static int (*osgk_sot_register) (
+static int (*osgk_sot_register) (
   OSGK_ScriptObjectTemplate* templ, OSGK_Embedding* embedding, 
-  const char* name, unsigned int flags);*/
+  const char* name, unsigned int flags);
 
 /* --- >8 --- >8 --- End OffscreenGecko headers --- 8< --- 8< --- */
 
@@ -382,6 +382,7 @@ static OSGK_Embedding *cl_geckoembedding;
 struct clgecko_s {
 	qboolean active;
 	char name[ MAX_QPATH + 32 ];
+	int ownerProg;
 
 	OSGK_Browser *browser;
 	int width, height;
@@ -390,9 +391,11 @@ struct clgecko_s {
 	rtexture_t *texture;
 };
 
-static clgecko_t cl_geckoinstances[ MAX_GECKO_INSTANCES ];
+#define USERDATAKEY_CL_GECKO_T	      0
 
 static dllhandle_t osgk_dll = NULL;
+
+static clgecko_t cl_geckoinstances[ MAX_GECKO_INSTANCES ];
 
 static clgecko_t * cl_gecko_findunusedinstance( void ) {
 	int i;
@@ -498,6 +501,55 @@ void CL_Gecko_GetTextureExtent( clgecko_t *instance, float* pwidth, float* pheig
 	*pheight = (float)instance->height / instance->texHeight;
 }
 
+static OSGK_ScriptResult dpGlobal_create (OSGK_ScriptObjectCreateParams* params, 
+					  void** objTag)
+{
+  if (!osgk_browser_get_user_data (params->browser, USERDATAKEY_CL_GECKO_T, objTag))
+    return srFailed;
+  return srSuccess;
+}
+
+static OSGK_ScriptResult dpGlobal_query (void* objTag, void* methTag, 
+					 size_t numParams, 
+					 OSGK_ScriptVariant** params,
+					 OSGK_ScriptVariant** returnVal)
+{
+  clgecko_t *instance = objTag;
+  OSGK_ScriptVariant* strVal;
+  OSGK_ScriptResult result = srFailed;
+  prvm_prog_t * saveProg;
+
+  /* Can happen when created from console */
+  if (instance->ownerProg < 0) return srFailed;
+
+  /* Require exactly one param, for now */
+  if (numParams != 1) return srFailed;
+
+  strVal = osgk_variant_convert (params[0], svtString);
+  if (strVal == 0) return srFailed;
+
+  saveProg = prog;
+  PRVM_SetProg(instance->ownerProg);
+
+  if (prog->funcoffsets.Gecko_Query)
+  {
+    OSGK_String* paramStr, *resultStr;
+
+    if (!osgk_variant_get_string (strVal, &paramStr)) return srFailed;
+    *((string_t*)&prog->globals.generic[OFS_PARM0]) = PRVM_SetTempString (osgk_string_get (paramStr));
+    PRVM_ExecuteProgram(prog->funcoffsets.Gecko_Query,"Gecko_Query() required");
+    resultStr = osgk_string_create (PRVM_G_STRING (OFS_RETURN));
+    *returnVal = osgk_variant_create_string (cl_geckoembedding, resultStr);
+    osgk_release (resultStr);
+    
+    result = srSuccess;
+  }
+
+  prog = saveProg;
+  
+  return result;
+}
+
 #if defined(WIN64)
 # define XULRUNNER_DIR_SUFFIX	"win64"
 #elif defined(WIN32)
@@ -506,41 +558,58 @@ void CL_Gecko_GetTextureExtent( clgecko_t *instance, float* pwidth, float* pheig
 # define XULRUNNER_DIR_SUFFIX	DP_OS_STR "-" DP_ARCH_STR
 #endif
 
-clgecko_t * CL_Gecko_CreateBrowser( const char *name ) {
+static qboolean CL_Gecko_Embedding_Init (void)
+{
+	char profile_path [MAX_OSPATH];
+	OSGK_GeckoResult grc;
+	OSGK_EmbeddingOptions *options;
+	OSGK_ScriptObjectTemplate* dpGlobalTemplate;
+
+	if (!osgk_dll) return false;
+
+	if( cl_geckoembedding != NULL ) return true;
+
+	if( developer.integer > 0 ) {
+		Con_Printf( "CL_Gecko_Embedding_Init: setting up gecko embedding\n" );
+	}
+
+	options = osgk_embedding_options_create();
+#ifdef XULRUNNER_DIR_SUFFIX
+	osgk_embedding_options_add_search_path( options, "./xulrunner-" XULRUNNER_DIR_SUFFIX "/" );
+#endif
+	osgk_embedding_options_add_search_path( options, "./xulrunner/" );
+	dpsnprintf (profile_path, sizeof (profile_path), "%s/xulrunner_profile/", fs_gamedir);
+	osgk_embedding_options_set_profile_dir( options, profile_path, 0 );
+	cl_geckoembedding = osgk_embedding_create_with_options( options, &grc );
+	osgk_release( options );
+        	
+	if( cl_geckoembedding == NULL ) {
+		Con_Printf( "CL_Gecko_Embedding_Init: Couldn't retrieve gecko embedding object (%.8x)!\n", grc );
+		return false;
+	} 
+	
+	if( developer.integer > 0 ) {
+		Con_Printf( "CL_Gecko_Embedding_Init: Embedding set up correctly\n" );
+	}
+
+	dpGlobalTemplate = osgk_sot_create( cl_geckoembedding, dpGlobal_create, NULL, NULL );
+
+	osgk_sot_add_function (dpGlobalTemplate, "query", 0, dpGlobal_query);
+
+	osgk_sot_register (dpGlobalTemplate, cl_geckoembedding, "Darkplaces", 0);
+	osgk_release( dpGlobalTemplate );
+
+	return true;
+}
+
+clgecko_t * CL_Gecko_CreateBrowser( const char *name, int ownerProg ) {
 	clgecko_t *instance;
 
-	if (!osgk_dll) return NULL;
+	if (!CL_Gecko_Embedding_Init ()) return NULL;
 
 	// TODO: verify that we dont use a name twice
 	instance = cl_gecko_findunusedinstance();
 	// TODO: assert != NULL
-	
-	if( cl_geckoembedding == NULL ) {
-		char profile_path [MAX_OSPATH];
-		OSGK_GeckoResult grc;
-		OSGK_EmbeddingOptions *options;
-
-		if( developer.integer > 0 ) {
-			Con_Printf( "CL_Gecko_CreateBrowser: setting up gecko embedding\n" );
-		}
-
-		options = osgk_embedding_options_create();
-	#ifdef XULRUNNER_DIR_SUFFIX
-		osgk_embedding_options_add_search_path( options, "./xulrunner-" XULRUNNER_DIR_SUFFIX "/" );
-	#endif
-		osgk_embedding_options_add_search_path( options, "./xulrunner/" );
-		dpsnprintf (profile_path, sizeof (profile_path), "%s/xulrunner_profile/", fs_gamedir);
-		osgk_embedding_options_set_profile_dir( options, profile_path, 0 );
-		cl_geckoembedding = osgk_embedding_create_with_options( options, &grc );
-		osgk_release( options );
-        	
-		if( cl_geckoembedding == NULL ) {
-			Con_Printf( "CL_Gecko_CreateBrowser: Couldn't retrieve gecko embedding object (%.8x)!\n", grc );
-			return NULL;
-		} else if( developer.integer > 0 ) {
-			Con_Printf( "CL_Gecko_CreateBrowser: Embedding set up correctly\n" );
-		}
-	}
 
 	instance->active = true;
 	strlcpy( instance->name, name, sizeof( instance->name ) );
@@ -549,6 +618,9 @@ clgecko_t * CL_Gecko_CreateBrowser( const char *name ) {
 		Con_Printf( "CL_Gecko_CreateBrowser: Browser object creation failed!\n" );
 	}
 	// TODO: assert != NULL
+	osgk_browser_set_user_data (instance->browser, USERDATAKEY_CL_GECKO_T,
+	  instance, 0);
+	instance->ownerProg = ownerProg;
 
 	instance->width = instance->texWidth = DEFAULT_GECKO_SIZE;
 	instance->height = instance->texHeight = DEFAULT_GECKO_SIZE;
@@ -645,7 +717,7 @@ static void cl_gecko_create_f( void ) {
 
 	// TODO: use snprintf instead
 	sprintf(name, CLGECKOPREFIX "%s", Cmd_Argv(1));
-	CL_Gecko_CreateBrowser( name );
+	CL_Gecko_CreateBrowser( name, -1 );
 }
 
 static void cl_gecko_destroy_f( void ) {
@@ -763,6 +835,16 @@ static const dllfunction_t osgkFuncs[] =
 	{"osgk_browser_event_mouse_button",	    (void **) &osgk_browser_event_mouse_button},
 	{"osgk_browser_event_mouse_wheel",	    (void **) &osgk_browser_event_mouse_wheel},
 	{"osgk_browser_event_key",		    (void **) &osgk_browser_event_key},
+	{"osgk_browser_set_user_data",		    (void **) &osgk_browser_set_user_data},
+	{"osgk_browser_get_user_data",		    (void **) &osgk_browser_get_user_data},
+	{"osgk_sot_create",			    (void **) &osgk_sot_create},
+	{"osgk_sot_register",			    (void **) &osgk_sot_register},
+	{"osgk_sot_add_function",		    (void **) &osgk_sot_add_function},
+	{"osgk_string_get",			    (void **) &osgk_string_get},
+	{"osgk_string_create",			    (void **) &osgk_string_create},
+	{"osgk_variant_convert",		    (void **) &osgk_variant_convert},
+	{"osgk_variant_get_string",		    (void **) &osgk_variant_get_string},
+	{"osgk_variant_create_string",		    (void **) &osgk_variant_create_string},
 	{NULL, NULL}
 };
 

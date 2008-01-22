@@ -269,6 +269,7 @@ typedef struct prvm_prog_funcoffsets_s
 	func_t CSQC_Parse_TempEntity; // csqc [515]: very helpfull when you want to create your own particles/decals/etc for effects that already exist
 	func_t CSQC_Shutdown; // csqc
 	func_t CSQC_UpdateView; // csqc
+	func_t Gecko_Query; // csqc, mqc
 	func_t EndFrame; // ssqc
 	func_t RestoreGame; // ssqc
 	func_t SV_ChangeTeam; // ssqc

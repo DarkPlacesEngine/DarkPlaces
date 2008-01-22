@@ -3128,7 +3128,7 @@ void VM_gecko_create( void ) {
 			return;
 	}
 
-	instance = prog->opengeckoinstances[ i ] = CL_Gecko_CreateBrowser( name );
+	instance = prog->opengeckoinstances[ i ] = CL_Gecko_CreateBrowser( name, PRVM_GetProgNr() );
    if( !instance ) {
 		// TODO: error handling [12/3/2007 Black]
 		PRVM_G_FLOAT( OFS_RETURN ) = 0;
