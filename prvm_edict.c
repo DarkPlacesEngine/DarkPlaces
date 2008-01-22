@@ -1435,6 +1435,7 @@ void PRVM_FindOffsets(void)
 	prog->funcoffsets.CSQC_Parse_TempEntity           = PRVM_ED_FindFunctionOffset("CSQC_Parse_TempEntity");
 	prog->funcoffsets.CSQC_Shutdown                   = PRVM_ED_FindFunctionOffset("CSQC_Shutdown");
 	prog->funcoffsets.CSQC_UpdateView                 = PRVM_ED_FindFunctionOffset("CSQC_UpdateView");
+	prog->funcoffsets.Gecko_Query			  = PRVM_ED_FindFunctionOffset("Gecko_Query");
 	prog->funcoffsets.EndFrame                        = PRVM_ED_FindFunctionOffset("EndFrame");
 	prog->funcoffsets.RestoreGame                     = PRVM_ED_FindFunctionOffset("RestoreGame");
 	prog->funcoffsets.SV_ChangeTeam                   = PRVM_ED_FindFunctionOffset("SV_ChangeTeam");

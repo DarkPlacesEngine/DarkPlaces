@@ -22,7 +22,7 @@ void CL_Gecko_Frame( void );
 void CL_Gecko_Init( void );
 void CL_Gecko_Shutdown( void );
 
-clgecko_t * CL_Gecko_CreateBrowser( const char *name );
+clgecko_t * CL_Gecko_CreateBrowser( const char *name, int ownerProg );
 clgecko_t * CL_Gecko_FindBrowser( const char *name );
 void CL_Gecko_DestroyBrowser( clgecko_t *instance );
 
