@@ -1,4 +1,6 @@
 /* --- 8< --- 8< ---   OffscreenGecko headers   --- >8 --- >8 --- */
+/* NOTE: Documentation comments have been omitted. Documentation is
+   available in the OffscreenGecko SDK download. */
 
 /* OffscreenGecko/defs.h */
 
@@ -228,6 +230,135 @@ typedef enum OSGK_AntiAliasType
 
 static void (*osgk_browser_resize) (OSGK_Browser* browser,
   int width, int height);
+
+/* OffscreenGecko/string.h */
+OSGK_DERIVEDTYPE(OSGK_String);
+
+/*static const char* (*osgk_string_get) (OSGK_String* str);*/
+
+/*static OSGK_String* (*osgk_string_create) (const char* str);*/
+
+/* OffscreenGecko/scriptvariant.h */
+
+OSGK_CLASSTYPE_DEF nsISupports;
+
+OSGK_DERIVEDTYPE(OSGK_ScriptVariant);
+
+typedef enum OSGK_ScriptVariantType
+{
+  svtEmpty,
+  svtInt,
+  svtUint,
+  svtFloat,
+  svtDouble,
+  svtBool,
+  svtChar,
+  svtString,
+  svtISupports,
+  svtScriptObject,
+  svtArray
+} OSGK_ScriptVariantType;
+
+/*static OSGK_ScriptVariantType (*osgk_variant_get_type) (
+  OSGK_ScriptVariant* variant);*/
+/*static OSGK_ScriptVariant* (*osgk_variant_convert) (
+  OSGK_ScriptVariant* variant, OSGK_ScriptVariantType newType);*/
+
+/*static int (*osgk_variant_get_int) (OSGK_ScriptVariant* variant,
+  int* val);*/
+/*static int (*osgk_variant_get_uint) (OSGK_ScriptVariant* variant,
+  unsigned int* val);*/
+/*static int (*osgk_variant_get_float) (OSGK_ScriptVariant* variant,
+  float* val);*/
+/*static int (*osgk_variant_get_double) (OSGK_ScriptVariant* variant,
+  double* val);*/
+/*static int (*osgk_variant_get_bool) (OSGK_ScriptVariant* variant,
+  int* val);*/
+/*static int (*osgk_variant_get_char) (OSGK_ScriptVariant* variant,
+  unsigned int* val);*/
+/*// Does not increase ref count
+static int (*osgk_variant_get_string) (OSGK_ScriptVariant* variant,
+  OSGK_String** val);*/
+/*// Does not increase ref count
+static int (*osgk_variant_get_isupports) (OSGK_ScriptVariant* variant,
+  OSGK_CLASSTYPE_REF nsISupports** val);*/
+/*static int (*osgk_variant_get_script_object) (OSGK_ScriptVariant* variant,
+  void** tag);*/
+/*static int (*osgk_variant_get_array_size) (OSGK_ScriptVariant* variant,
+  size_t* size);*/
+/*static int (*osgk_variant_get_array_item) (OSGK_ScriptVariant* variant,
+  OSGK_ScriptVariant** val);*/
+
+/*static OSGK_ScriptVariant* (*osgk_variant_create_empty) (
+  OSGK_Embedding* embedding);*/
+/*static OSGK_ScriptVariant* (*osgk_variant_create_int) (
+  OSGK_Embedding* embedding, int val);*/
+/*static OSGK_ScriptVariant* (*osgk_variant_create_uint) (
+  OSGK_Embedding* embedding, unsigned int val);
+/*static OSGK_ScriptVariant* (*osgk_variant_create_float) (
+  OSGK_Embedding* embedding, float val);
+/*static OSGK_ScriptVariant* (*osgk_variant_create_double) (
+  OSGK_Embedding* embedding, double val);*/
+/*OSGK_ScriptVariant* (*osgk_variant_create_bool) (
+  OSGK_Embedding* embedding, int val);*/
+/*static OSGK_ScriptVariant* (*osgk_variant_create_char) (
+  OSGK_Embedding* embedding, unsigned int val);*/
+/*static OSGK_ScriptVariant* (*osgk_variant_create_string) (
+  OSGK_Embedding* embedding, OSGK_String* val);*/
+/*static OSGK_ScriptVariant* (*osgk_variant_create_isupports) (
+  OSGK_Embedding* embedding, OSGK_CLASSTYPE_REF nsISupports* val);*/
+/*static OSGK_ScriptVariant* (*osgk_variant_create_script_object) (
+  OSGK_Embedding* embedding, void* tag);*/
+/*static OSGK_ScriptVariant* (*osgk_variant_create_array) (
+  OSGK_Embedding* embedding, size_t numItems, OSGK_ScriptVariant** items);*/
+
+/* OffscreenGecko/scriptobjecttemplate.h */
+
+OSGK_DERIVEDTYPE(OSGK_ScriptObjectTemplate);
+
+typedef enum OSGK_ScriptResult
+{
+  srSuccess = 0,
+  srFailed = 0x80004005L /* actually NS_ERROR_FAILURE */
+} OSGK_ScriptResult;
+
+typedef struct OSGK_ScriptObjectCreateParams_s
+{
+  void* createParam;
+} OSGK_ScriptObjectCreateParams;
+
+typedef OSGK_ScriptResult (*OSGK_CreateObjFunc) (
+  OSGK_ScriptObjectCreateParams* params, void** objTag);
+typedef void (*OSGK_DestroyObjFunc) (void* objTag);
+
+/*static OSGK_ScriptObjectTemplate* (*osgk_sot_create) (
+  OSGK_Embedding* embedding,
+  OSGK_CreateObjFunc createFunc, OSGK_DestroyObjFunc destroyFunc,
+  void* createParam);*/
+
+typedef OSGK_ScriptVariant* (*OSGK_GetPropertyFunc) (void* objTag,
+  void* propTag);
+typedef OSGK_ScriptResult (*OSGK_SetPropertyFunc) (void* objTag,
+  void* propTag, OSGK_ScriptVariant* val);
+  
+/*static int (*osgk_sot_add_property) (
+  OSGK_ScriptObjectTemplate* templ, const char* propName, void* propTag,
+  OSGK_GetPropertyFunc getter, OSGK_SetPropertyFunc setter);*/
+
+typedef OSGK_ScriptResult (*OSGK_FunctionCallFunc) (void* objTag,
+  void* methTag, size_t numParams, OSGK_ScriptVariant** params,
+  OSGK_ScriptVariant** returnVal);
+
+/*static int (*osgk_sot_add_function) (
+  OSGK_ScriptObjectTemplate* templ, const char* funcName, void* funcTag,
+  OSGK_FunctionCallFunc callFunc);*/
+
+/*static OSGK_ScriptVariant* (*osgk_sot_instantiate) (
+  OSGK_ScriptObjectTemplate* templ, void** objTag);    */
+
+/*static int (*osgk_sot_register) (
+  OSGK_ScriptObjectTemplate* templ, OSGK_Embedding* embedding, 
+  const char* name, unsigned int flags);*/
 
 /* --- >8 --- >8 --- End OffscreenGecko headers --- 8< --- 8< --- */
 
