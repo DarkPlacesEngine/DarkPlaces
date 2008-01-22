@@ -19,8 +19,7 @@
 0 bug darkplaces loader: mcbsp hull selection is ignoring the custom hulls supported by mcbsp (div0)
 0 bug darkplaces loader: q1bsp loader computes wrong submodel size for submodels with no surfaces, such as a func_wall comprised entirely of SKIP or CAULK brushes (neg|ke)
 0 bug darkplaces memory: memstats doesn't account for memory used by VBO/EBO buffers in models
-0 bug darkplaces menu: load/save game menus show files that are not in the highest priority gamedir, such as id1 saves showing up when playing dpmod (Dooomer)
-0 bug darkplaces qc FRIK_FILE: when opening a file for writing that already has the data/ prefix in its path, it should not add another data/ prefix (daemon)
+0 bug darkplaces menu: load/save game menus show files that are not in the highest priority gamedir, such as id1 saves showing up when playing dpmod (Dooomer, WodahsEht)
 0 bug darkplaces readme: it would be a very good idea to add documentation of sv_gameplayfix_* cvars in the readme as a means to run broken mods (xaGe)
 0 bug darkplaces readme: readme says that q3 shaders are not supported, this is not true, describe the working features in detail (qqshka)
 0 bug darkplaces renderer: GL13 path has broken handling of unlit surfaces in Nexuiz toxic.bsp - the small red light surfaces are black in GL13 path (m0rfar)
@@ -29,7 +28,6 @@
 0 bug darkplaces server csqc networking: csqc entity sending code does not currently detect packet loss and repeat lost entities (FrikaC, Chris Page, div0)
 0 bug darkplaces server: SV_PushMove is ignoring model type in its angles_x handling, where as the renderer checks only model type to determine angles_x handling (Urre)
 0 bug darkplaces server: SV_PushMove's call to SV_ClipMoveToEntity should do a trace, not just a point test, to support hollow pusher models (Urre)
-0 bug darkplaces server: player entered the game is printed twice, test with +map start
 0 bug darkplaces server: savegames do not save precaches, which means that automatic precaching frequently results in invalid modelindex values when reloading the savegame, and this bug also exists in many quake mods that randomly choose multiple variants of a monster, each with separate precaches, resulting in a different precache order when reloading the savegame
 0 bug darkplaces wgl client: during video mode setup, sometimes another application's window becomes permanently top most, not darkplaces' fullscreen window, why? (tZork)
 0 bug darkplaces windows sound: freezing on exit sometimes when freeing sound buffer during sound shutdown (Black)
@@ -140,7 +138,6 @@
 0 feature darkplaces renderer: gl_picmip -1 and -2 settings based on twilight code (Harout Darmanchyan)
 0 feature darkplaces renderer: make showfps display GL renderer string and CPU - figure out how to detect this from the OS
 0 feature darkplaces renderer: save r_shadow_glsl* cvars (and possibly a few others) to config because they are useful user settings (SavageX)
-0 feature darkplaces renderer: support gl_picmip -1, -2, etc like Twilight does
 0 feature darkplaces renderer: support tcgen in q3 shaders (ob3lisk)
 0 feature darkplaces server: DP_SV_FINDPVS
 0 feature darkplaces server: add .maxspeed field to control player movement speed in engine code, call it QW_SV_MAXSPEED (Carni)
@@ -292,9 +289,8 @@
 1 feature dpmod: make ogres start up their chainsaw when first seeing an enemy (scar3crow)
 1 feature hmap2: add .mip loading support
 1 feature lhfire: add percentage and estimated time reporting to console output (daniel_hansson@telia.com)
-1 feature lhfire: get lhfire_gui build from Tomaz.
-1 feature lhfire: post lhfire_gui build.
-1 feature lhfire: prepare example scripts for release.
+1 feature lhfire: post lhfire_gui build
+1 feature lhfire: prepare example scripts for release
 2 bug darkplaces collision: bmodel bounding boxes need to be calculated to account for clip brushes, which are not in the drawing hull (metlslime)
 2 bug darkplaces collision: modify Collision_ClipTrace_Line_Sphere to have a slight backoff on impact, like all other collision functions (tell TheBurningRed)
 2 bug darkplaces collision: use larger of model box or collision box for linking into areagrid so that bullet tracing can use the model bounding box instead of the collision one?  (Urre)
@@ -331,7 +327,6 @@
 2 feature darkplaces image: add scaling capabilities to Image_CopyMux
 2 feature darkplaces loader: add support for fuhquake naming of map textures (textures/start/quake.tga style)
 2 feature darkplaces loader: implement vertex cache optimization of models during loading, see this paper: http://home.comcast.net/~tom_forsyth/papers/fast_vert_cache_opt.html (Dresk)
-2 feature darkplaces menu: add some basic graphics/effects options profiles so that people can choose profiles like "Classic", "Modern", "Excessive", "Realistic", or any other profiles that make sense, may also need to reorganize the graphics/effects options menus to be a bit less confusing (Tron)
 2 feature darkplaces menu: implement menu_clearkeyconfig and menu_keyconfig and the corresponding menu (diGGer)
 2 feature darkplaces menu: new game custom level/mod menu, which allows you to choose a mod and browse through maps and choose starting skill, by default it would have the current mod selected and start selected (Jago)
 2 feature darkplaces model: add model_exportobj console command to allow exporting a specified model as .obj (Randy)
@@ -363,7 +358,6 @@
 2 optimization darkplaces renderer: move skybox/skysphere render to after sky polygons, so that they can do a depth comparison to draw only on the sky polygons, using DepthRange(1,1) and DepthFunc(GL_GREATER), note though that portal renders will need half depth range (Mercury)
 3 bug darkplaces collision: add edge bevels in collision code, by trying all crossproduct combinations of an edge with planes from the other brush, and choosing only the ones which are valid
 3 bug darkplaces compatibility: quakerally does not work, figure out why (Spike)
-3 bug darkplaces menu: find a way to prevent display of savegames from id1 in mods (WodahsEht)
 3 bug darkplaces renderer: add stainmaps to realtime lighting mode
 3 bug darkplaces renderer: crash when using rtworld mode and reloading a map that has been modified and now has less surfaces, this means the map name is the same, but the surface indices/pointers are no longer valid
 3 bug dpmodel: add support for unnamed bones (Mitchell)
@@ -574,6 +568,7 @@ d bug darkplaces prvm: findchain/findchainfloat are corrupting things when tryin
 d bug darkplaces prvm: findflags/findchainflags are server-specific, these should be moved into the generic progs commands
 d bug darkplaces prvm: the merged remove is causing a Host_Error on already removed entities, which happens in id1 start.bsp (RenegadeC)
 d bug darkplaces prvm: unknown opcode warnings are missing a \n
+d bug darkplaces qc FRIK_FILE: when opening a file for writing that already has the data/ prefix in its path, it should not add another data/ prefix (daemon)
 d bug darkplaces quakec: to stop crashing on 64bit the quakec vm needs a string manager that can allocate/free negative integer indices to the strzone strings, and also automatically add engine strings
 d bug darkplaces readme: commandline options are slightly out of date, update them (Baker)
 d bug darkplaces renderer/server: scaled sprites (or possibly all models) are getting culled as if they were not scaled (KrimZon)
@@ -1246,6 +1241,7 @@ d feature darkplaces loader: support dpm models (Vermeulen)
 d feature darkplaces mac osx: add mac osx builds to build script (inertia, mwh)
 d feature darkplaces menu: add gl_picmip setting to graphics options menu, and an r_restart button (LordHavoc)
 d feature darkplaces menu: add lan searching to the server browser and related code (Vermeulen)
+d feature darkplaces menu: add some basic graphics/effects options profiles so that people can choose profiles like "Classic", "Modern", "Excessive", "Realistic", or any other profiles that make sense, may also need to reorganize the graphics/effects options menus to be a bit less confusing (Tron)
 d feature darkplaces networking: add "packet serverip:port command" command to send out of band packets, and hexdump the replies (Spike)
 d feature darkplaces networking: download individual files on demand from the server (Baker, CanadianSniper, Zop, Dresk, Chris)
 d feature darkplaces particles: reimplement quake effects for a cl_particles_quake mode (Mr Fribbles, metlslime)
@@ -1276,6 +1272,7 @@ d feature darkplaces video: add widescreen mode support, with 3 lists of resolut
 d feature darkplaces: showfps should show spf when below 1fps (Sajt)
 d feature dpmodel: merge in jalisk0's patches for halflife2 smd import: http://www.quakesrc.org/forums/viewtopic.php?t=4731
 d feature hmap2: make water have lightmaps (unless -nowaterlightmaps is specified)
+d feature lhfire: get lhfire_gui build from Tomaz
 d feature modeltools: add a makesp2 tool to make a very simple .sp2 sprite given a base name and frame size, the format is IDS2<version><numframes>{<width><height><handlex><handley><name[64]>} (Morphed)
 d feature zmodel: add "rotate" command to rotate around yaw (Vermeulen)
 d hmap2 -qbsp: degenerate edge error that occurs in mrinsane's newmap.map file, tyrqbsp does not have this problem (mrinsane)
@@ -1324,6 +1321,7 @@ f bug darkplaces renderer: showfps values 2 and 3 are printing bogus numbers lik
 f bug darkplaces renderer: the quake logo shadow is missing in e1m5 rtlights, too much vis optimization... (romi)
 f bug darkplaces server: items still falling through the floor in nexuiz, and they seem to fall through more often at smaller sys_ticrate values such as 0.02 rather than 0.05 (GreEn`mArine)
 f bug darkplaces server: losing runes on episode completion, completing episode 1 then 2 then 3 causes it to forget 1, then 4 causes it to forget 2 and 3, making it impossible to open the boss gate (James D)
+f bug darkplaces server: player entered the game is printed twice, test with +map start
 f bug darkplaces sound: remove looping sounds when their owner entity has been removed by network code, this would mean that Nexuiz could have rocket/electro noise again - thought about this a bit more and can't do this (Qantourisc)
 f bug darkplaces: client's slowmo detection (measuring packet times and comparing to game time changes) may be making the game unpleasant (Wazat)
 f change darkplaces client: hardcode sbar image sizes so they can be replaced with higher quality images
