@@ -154,14 +154,14 @@ void CL_ReadDemoMessage(void)
 				if (cls.td_frames == 0)
 				{
 					cls.td_starttime = realtime;
-					cls.td_onesecondnexttime = realtime + 1;
+					cls.td_onesecondnexttime = cl.time + 1;
 					cls.td_onesecondframes = 0;
 					cls.td_onesecondminframes = 0;
 					cls.td_onesecondmaxframes = 0;
 					cls.td_onesecondavgframes = 0;
 					cls.td_onesecondavgcount = 0;
 				}
-				if (realtime >= cls.td_onesecondnexttime)
+				if (cl.time >= cls.td_onesecondnexttime)
 				{
 					if (cls.td_onesecondavgcount == 0)
 					{
