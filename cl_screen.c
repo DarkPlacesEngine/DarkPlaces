@@ -2094,7 +2094,7 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 }
 
 extern cvar_t cl_minfps;
-extern cvar_t cl_minfps_expbase;
+extern cvar_t cl_minfps_logbase;
 extern cvar_t cl_minfps_fade;
 extern cvar_t cl_minfps_maxqualityreduction;
 static double cl_updatescreen_rendertime = 0;
@@ -2244,7 +2244,7 @@ void CL_UpdateScreen(void)
 	qglFlush();
 	cl_updatescreen_rendertime += ((Sys_DoubleTime() - rendertime1) - cl_updatescreen_rendertime) * bound(0.01, cl_minfps_fade.value, 1);
 	if (cl_minfps.value > 0 && !cls.timedemo && (!cls.capturevideo.active || !cls.capturevideo.realtime))
-		cl_updatescreen_qualityreduction = invpow(cl_minfps_expbase.value, cl_minfps.value * cl_updatescreen_rendertime);
+		cl_updatescreen_qualityreduction = invpow(cl_minfps_logbase.value, cl_minfps.value * cl_updatescreen_rendertime);
 	else
 		cl_updatescreen_qualityreduction = 0;
 	cl_updatescreen_qualityreduction = bound(0, cl_updatescreen_qualityreduction, bound(0, cl_minfps_maxqualityreduction.value, 30));
