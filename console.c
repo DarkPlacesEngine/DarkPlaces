@@ -2308,7 +2308,7 @@ void Con_CompleteCommandLine (void)
 					if(slash)
 					{
 						strlcpy(t, s, min(sizeof(t), (unsigned int)(slash - s + 2))); // + 2, because I want to include the slash
-						strlcat(t, "/*", sizeof(t));
+						strlcat(t, "*", sizeof(t));
 						search = FS_Search(t, true, true);
 					}
 					else
@@ -2384,6 +2384,8 @@ void Con_CompleteCommandLine (void)
 				}
 				stringlistfreecontents(&resultbuf);
 				stringlistfreecontents(&dirbuf);
+
+				return; // bail out, when we complete for a command that wants a file name
 			}
 		}
 	}
