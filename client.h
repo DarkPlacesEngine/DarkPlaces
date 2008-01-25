@@ -646,7 +646,8 @@ typedef struct decal_s
 	vec3_t			normal;
 	float			size;
 	float			alpha; // 0-255
-	unsigned char	color[4];
+	unsigned char	color[3];
+	unsigned char	unused1;
 
 	// fields not used by rendering: (36 bytes in 32bit, 40 bytes in 64bit)
 	float			time2; // used for decal fade
@@ -654,7 +655,6 @@ typedef struct decal_s
 	model_t			*ownermodel; // model the decal is stuck to (used to make sure the entity is still alive)
 	vec3_t			relativeorigin; // decal at this location in entity's coordinate space
 	vec3_t			relativenormal; // decal oriented this way relative to entity's coordinate space
-
 }
 decal_t;
 
@@ -667,7 +667,8 @@ typedef struct particle_s
 	vec3_t			vel; // velocity of particle, or orientation of decal, or end point of beam
 	float			size;
 	float			alpha; // 0-255
-	unsigned char	color[4];
+	unsigned char	color[3];
+	unsigned char	qualityreduction; // enables skipping of this particle according to r_refdef.view.qualityreduction
 
 	// fields not used by rendering:  (40 bytes)
 	float			sizeincrease; // rate of size change per second
@@ -1328,6 +1329,7 @@ float FogForDistance(vec_t dist);
 
 typedef struct r_refdef_stats_s
 {
+	int renders;
 	int entities;
 	int entities_surfaces;
 	int entities_triangles;
@@ -1407,6 +1409,12 @@ typedef struct r_refdef_view_s
 	// these define which values to use in GL_CullFace calls to request frontface or backface culling
 	int cullface_front;
 	int cullface_back;
+
+	// reduces render quality:
+	// 0 = full quality
+	// 1 = skip every other particle and some lights
+	// 2 = skip 75% of particles and some lights
+	int qualityreduction;
 }
 r_refdef_view_t;
 

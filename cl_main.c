@@ -89,10 +89,6 @@ cvar_t cl_locs_show = {0, "locs_show", "0", "shows defined locations for editing
 client_static_t	cls;
 client_state_t	cl;
 
-#define MAX_PARTICLES			32768	// default max # of particles at one time
-#define MAX_DECALS				32768	// default max # of decals at one time
-#define ABSOLUTE_MIN_PARTICLES	512		// no fewer than this no matter what's on the command line
-
 /*
 =====================
 CL_ClearState
@@ -134,18 +130,9 @@ void CL_ClearState(void)
 	cl.max_dlights = MAX_DLIGHTS;
 	cl.max_lightstyle = MAX_LIGHTSTYLES;
 	cl.max_brushmodel_entities = MAX_EDICTS;
-	cl.max_particles = MAX_PARTICLES;
-	cl.max_decals = MAX_DECALS;
+	cl.max_particles = 8192; // grows dynamically
+	cl.max_decals = 2048; // grows dynamically
 	cl.max_showlmps = 0;
-
-// COMMANDLINEOPTION: Client: -particles <number> changes maximum number of particles at once, default 32768
-	i = COM_CheckParm ("-particles");
-	if (i && i < com_argc - 1)
-	{
-		cl.max_particles = (int)(atoi(com_argv[i+1]));
-		if (cl.max_particles < ABSOLUTE_MIN_PARTICLES)
-			cl.max_particles = ABSOLUTE_MIN_PARTICLES;
-	}
 
 	cl.num_dlights = 0;
 	cl.num_effects = 0;
@@ -1766,6 +1753,7 @@ void CL_UpdateWorld(void)
 	r_refdef.scene.numentities = 0;
 	r_refdef.scene.numlights = 0;
 	r_refdef.view.matrix = identitymatrix;
+	r_refdef.view.qualityreduction = 0;
 
 	cl.num_brushmodel_entities = 0;
 
@@ -1866,6 +1854,7 @@ static void CL_TimeRefresh_f (void)
 	for (i = 0;i < 128;i++)
 	{
 		Matrix4x4_CreateFromQuakeEntity(&r_refdef.view.matrix, r_refdef.view.origin[0], r_refdef.view.origin[1], r_refdef.view.origin[2], 0, i / 128.0 * 360.0, 0, 1);
+		r_refdef.view.qualityreduction = 0;
 		CL_UpdateScreen();
 	}
 	timedelta = Sys_DoubleTime() - timestart;

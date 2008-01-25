@@ -59,7 +59,10 @@ jmp_buf host_abortframe;
 cvar_t host_framerate = {0, "host_framerate","0", "locks frame timing to this value in seconds, 0.05 is 20fps for example, note that this can easily run too fast, use cl_maxfps if you want to limit your framerate instead, or sys_ticrate to limit server speed"};
 // shows time used by certain subsystems
 cvar_t host_speeds = {0, "host_speeds","0", "reports how much time is used in server/graphics/sound"};
-// LordHavoc: framerate upper cap
+cvar_t cl_minfps = {CVAR_SAVE, "cl_minfps", "40", "minimum fps target - while the rendering performance is below this, it will drift toward lower quality"};
+cvar_t cl_minfps_expbase = {CVAR_SAVE, "cl_minfps_expbase", "1.2", "base for log() function in calculating quality reduction, should be in the range 1.1 to 2.0"};
+cvar_t cl_minfps_fade = {CVAR_SAVE, "cl_minfps_fade", "0.2", "how fast the quality reduction adapts to varying framerate"};
+cvar_t cl_minfps_maxqualityreduction = {CVAR_SAVE, "cl_minfps_maxqualityreduction", "3", "how much particle quality can be reduced (as a power of 2) when framerate is staying below cl_minfps, 0 = no reduction, 1 = 50% quality, 2 = 25% quality, 3 = 12.5% quality, ..."};
 cvar_t cl_maxfps = {CVAR_SAVE, "cl_maxfps", "1000000", "maximum fps cap, if game is running faster than this it will wait before running another frame (useful to make cpu time available to other programs)"};
 cvar_t cl_maxidlefps = {CVAR_SAVE, "cl_maxidlefps", "20", "maximum fps cap when the game is not the active window (makes cpu time available to other programs"};
 
@@ -202,6 +205,10 @@ static void Host_InitLocal (void)
 
 	Cvar_RegisterVariable (&host_framerate);
 	Cvar_RegisterVariable (&host_speeds);
+	Cvar_RegisterVariable (&cl_minfps);
+	Cvar_RegisterVariable (&cl_minfps_expbase);
+	Cvar_RegisterVariable (&cl_minfps_fade);
+	Cvar_RegisterVariable (&cl_minfps_maxqualityreduction);
 	Cvar_RegisterVariable (&cl_maxfps);
 	Cvar_RegisterVariable (&cl_maxidlefps);
 
