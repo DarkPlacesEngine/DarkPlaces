@@ -100,6 +100,12 @@ qboolean FS_WriteFile (const char *filename, void *data, fs_offset_t len);
 void FS_StripExtension (const char *in, char *out, size_t size_out);
 void FS_DefaultExtension (char *path, const char *extension, size_t size_path);
 
+#define FS_FILETYPE_NONE 0
+#define FS_FILETYPE_FILE 1
+#define FS_FILETYPE_DIRECTORY 2
+int FS_FileType (const char *filename);		// the file can be into a package
+int FS_SysFileType (const char *filename);		// only look for files outside of packages
+
 qboolean FS_FileExists (const char *filename);		// the file can be into a package
 qboolean FS_SysFileExists (const char *filename);	// only look for files outside of packages
 

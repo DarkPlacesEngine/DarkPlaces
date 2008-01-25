@@ -2426,6 +2426,30 @@ void FS_DefaultExtension (char *path, const char *extension, size_t size_path)
 
 /*
 ==================
+FS_FileType
+
+Look for a file in the packages and in the filesystem
+==================
+*/
+int FS_FileType (const char *filename)
+{
+	searchpath_t *search;
+	char fullpath[MAX_QPATH];
+
+	search = FS_FindFile (filename, NULL, true);
+	if(!search)
+		return FS_FILETYPE_NONE;
+
+	if(search->pack)
+		return FS_FILETYPE_FILE; // TODO can't check directories in paks yet, maybe later
+
+	dpsnprintf(fullpath, sizeof(fullpath), "%s%s", search->filename, filename);
+	return FS_SysFileType(fullpath);
+}
+
+
+/*
+==================
 FS_FileExists
 
 Look for a file in the packages and in the filesystem
@@ -2444,26 +2468,34 @@ FS_SysFileExists
 Look for a file in the filesystem only
 ==================
 */
-qboolean FS_SysFileExists (const char *path)
+int FS_SysFileType (const char *path)
 {
 #if WIN32
-	int desc;
+	DWORD result = GetFileAttributes(path);
 
-	// TODO: use another function instead, to avoid opening the file
-	desc = open (path, O_RDONLY | O_BINARY);
-	if (desc < 0)
-		return false;
+	if(result == INVALID_FILE_ATTRIBUTES)
+		return FS_FILETYPE_NONE;
 
-	close (desc);
-	return true;
+	if(result & FILE_ATTRIBUTE_DIRECTORY)
+		return FS_FILETYPE_DIRECTORY;
+
+	return FS_FILETYPE_FILE;
 #else
 	struct stat buf;
 
 	if (stat (path,&buf) == -1)
-		return false;
+		return FS_FILETYPE_NONE;
 
-	return true;
+	if(S_ISDIR(buf.st_mode))
+		return FS_FILETYPE_DIRECTORY;
+
+	return FS_FILETYPE_FILE;
 #endif
+}
+
+qboolean FS_SysFileExists (const char *path)
+{
+	return FS_SysFileType (path) != FS_FILETYPE_NONE;
 }
 
 void FS_mkdir (const char *path)
