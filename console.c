@@ -2354,14 +2354,14 @@ void Con_CompleteCommandLine (void)
 							p = resultbuf.strings[0];
 							q = resultbuf.strings[resultbuf.numstrings - 1];
 							for(; *p && *p == *q; ++p, ++q);
-							matchchars = p - resultbuf.strings[0];
+							matchchars = (unsigned int)(p - resultbuf.strings[0]);
 						}
 						if(dirbuf.numstrings > 0)
 						{
 							p = dirbuf.strings[0];
 							q = dirbuf.strings[dirbuf.numstrings - 1];
 							for(; *p && *p == *q; ++p, ++q);
-							matchchars = min(matchchars, p - dirbuf.strings[0]);
+							matchchars = min(matchchars, (unsigned int)(p - dirbuf.strings[0]));
 						}
 						// now p points to the first non-equal character, or to the end
 						// of resultbuf.strings[0]. We want to append the characters
