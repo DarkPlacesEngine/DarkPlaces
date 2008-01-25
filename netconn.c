@@ -1975,19 +1975,20 @@ void NetConn_ClearConnectFlood(lhnetaddress_t *peeraddress)
 	}
 }
 
-qboolean RCon_Authenticate(const char *password, const char *s, const char *endpos)
+// returns a string describing the user level, or NULL for auth failure
+const char *RCon_Authenticate(const char *password, const char *s, const char *endpos)
 {
 	const char *text;
 
 	if(!strcmp(rcon_password.string, password))
-		return true;
+		return "rcon";
 	
 	if(strcmp(rcon_restricted_password.string, password))
-		return false;
+		return NULL;
 
 	for(text = s; text != endpos; ++text)
 		if(*text > 0 && (*text < ' ' || *text == ';'))
-			return false; // block possible exploits against the parser/alias expansion
+			return NULL; // block possible exploits against the parser/alias expansion
 
 	while(s != endpos)
 	{
@@ -1997,16 +1998,16 @@ qboolean RCon_Authenticate(const char *password, const char *s, const char *endp
 			text = s;
 
 			if (!COM_ParseToken_Console(&text))
-				return false;
+				return NULL;
 
 			// com_token now contains the command
 			if(!strstr(va(" %s ", rcon_restricted_commands.string), va(" %s ", com_token)))
-				return false;
+				return NULL;
 		}
 		s += l + 1;
 	}
 
-	return true;
+	return "restricted rcon";
 }
 
 extern void SV_SendServerinfo (client_t *client);
@@ -2201,11 +2202,12 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			password[i] = 0;
 			if (password[0] > ' ')
 			{
-				if (RCon_Authenticate(password, s, endpos))
+				const char *userlevel = RCon_Authenticate(password, s, endpos);
+				if(userlevel)
 				{
 					// looks like a legitimate rcon command with the correct password
 					char *s_ptr = s;
-					Con_Printf("server received rcon command from %s:\n", host_client ? host_client->name : addressstring2);
+					Con_Printf("server received %s command from %s: ", userlevel, host_client ? host_client->name : addressstring2);
 					while(s_ptr != endpos)
 					{
 						size_t l = strlen(s_ptr);
