@@ -5073,12 +5073,17 @@ void MP_Draw (void)
 	// declarations that are needed right now
 	extern r_refdef_scene_t menu_scene;
 
+	int oldqualityreduction;
 	static r_refdef_scene_t clientscene;
 	clientscene = r_refdef.scene;
 	r_refdef.scene = menu_scene;
 
 	// reset the temp entities each frame
 	r_refdef.scene.numtempentities = 0;
+
+	// menu scenes do not use reduced rendering quality
+	oldqualityreduction = r_refdef.view.qualityreduction;
+	r_refdef.view.qualityreduction = 0;
 
 	PRVM_Begin;
 	PRVM_SetProg(PRVM_MENUPROG);
@@ -5088,6 +5093,8 @@ void MP_Draw (void)
 	PRVM_ExecuteProgram(prog->funcoffsets.m_draw,"m_draw() required");
 
 	PRVM_End;
+
+	r_refdef.view.qualityreduction = oldqualityreduction;
 
 	menu_scene = r_refdef.scene;
 	r_refdef.scene = clientscene;

@@ -32,7 +32,7 @@ cvar_t scr_screenshot_gammaboost = {CVAR_SAVE, "scr_screenshot_gammaboost","1", 
 cvar_t cl_capturevideo = {0, "cl_capturevideo", "0", "enables saving of video to a .avi file using uncompressed I420 colorspace and PCM audio, note that scr_screenshot_gammaboost affects the brightness of the output)"};
 cvar_t cl_capturevideo_width = {0, "cl_capturevideo_width", "0", "scales all frames to this resolution before saving the video"};
 cvar_t cl_capturevideo_height = {0, "cl_capturevideo_height", "0", "scales all frames to this resolution before saving the video"};
-cvar_t cl_capturevideo_realtime = {0, "cl_capturevideo_realtime", "0", "causes video saving to operate in realtime (mostly useful while playing, not while capturing demos), this can produce a much lower quality video due to poor sound/video sync and will abort saving if your machine stalls for over 1 second"};
+cvar_t cl_capturevideo_realtime = {0, "cl_capturevideo_realtime", "0", "causes video saving to operate in realtime (mostly useful while playing, not while capturing demos), this can produce a much lower quality video due to poor sound/video sync and will abort saving if your machine stalls for over a minute"};
 cvar_t cl_capturevideo_fps = {0, "cl_capturevideo_fps", "30", "how many frames per second to save (29.97 for NTSC, 30 for typical PC video, 15 can be useful)"};
 cvar_t cl_capturevideo_number = {CVAR_SAVE, "cl_capturevideo_number", "1", "number to append to video filename, incremented each time a capture begins"};
 cvar_t r_letterbox = {0, "r_letterbox", "0", "reduces vertical height of view to simulate a letterboxed movie effect (can be used by mods for cutscenes)"};
@@ -629,7 +629,7 @@ void SCR_BeginLoadingPlaque (void)
 
 //=============================================================================
 
-char r_speeds_timestring[1024];
+char r_speeds_timestring[4096];
 int speedstringcount, r_timereport_active;
 double r_timereport_temp = 0, r_timereport_current = 0, r_timereport_start = 0;
 int r_speeds_longestitem = 0;
@@ -686,7 +686,7 @@ void R_TimeReport_EndFrame(void)
 {
 	int i, j, lines, y;
 	cl_locnode_t *loc;
-	char string[2048];
+	char string[1024+4096];
 
 	string[0] = 0;
 	if (r_speeds.integer && cls.signon == SIGNONS && cls.state == ca_connected)
@@ -696,9 +696,9 @@ void R_TimeReport_EndFrame(void)
 		loc = CL_Locs_FindNearest(cl.movement_origin);
 		if (loc)
 			sprintf(string + strlen(string), "Location: %s\n", loc->name);
-		sprintf(string + strlen(string), "org:'%+8.2f %+8.2f %+8.2f' dir:'%+2.3f %+2.3f %+2.3f'\n", r_refdef.view.origin[0], r_refdef.view.origin[1], r_refdef.view.origin[2], r_refdef.view.forward[0], r_refdef.view.forward[1], r_refdef.view.forward[2]);
+		sprintf(string + strlen(string), "%3i renders org:'%+8.2f %+8.2f %+8.2f' dir:'%+2.3f %+2.3f %+2.3f'\n", r_refdef.stats.renders, r_refdef.view.origin[0], r_refdef.view.origin[1], r_refdef.view.origin[2], r_refdef.view.forward[0], r_refdef.view.forward[1], r_refdef.view.forward[2]);
 		sprintf(string + strlen(string), "%7i surfaces%7i triangles %5i entities (%7i surfaces%7i triangles)\n", r_refdef.stats.world_surfaces, r_refdef.stats.world_triangles, r_refdef.stats.entities, r_refdef.stats.entities_surfaces, r_refdef.stats.entities_triangles);
-		sprintf(string + strlen(string), "%5i leafs%5i portals%6i particles%6i decals\n", r_refdef.stats.world_leafs, r_refdef.stats.world_portals, r_refdef.stats.particles, r_refdef.stats.decals);
+		sprintf(string + strlen(string), "%5i leafs%5i portals%6i/%6i particles%6i/%6i decals %3i%% quality\n", r_refdef.stats.world_leafs, r_refdef.stats.world_portals, r_refdef.stats.particles, cl.num_particles, r_refdef.stats.decals, cl.num_decals, 100 / (1 << r_refdef.view.qualityreduction));
 		sprintf(string + strlen(string), "%7i lightmap updates (%7i pixels)\n", r_refdef.stats.lightmapupdates, r_refdef.stats.lightmapupdatepixels);
 		sprintf(string + strlen(string), "%4i lights%4i clears%4i scissored%7i light%7i shadow%7i dynamic\n", r_refdef.stats.lights, r_refdef.stats.lights_clears, r_refdef.stats.lights_scissored, r_refdef.stats.lights_lighttriangles, r_refdef.stats.lights_shadowtriangles, r_refdef.stats.lights_dynamicshadowtriangles);
 		if (r_refdef.stats.bloom)
@@ -1631,7 +1631,7 @@ void SCR_CaptureVideo(void)
 		else
 			newframenum = cls.capturevideo.frame + 1;
 		// if falling behind more than one second, stop
-		if (newframenum - cls.capturevideo.frame > (int)ceil(cls.capturevideo.framerate))
+		if (newframenum - cls.capturevideo.frame > 60 * (int)ceil(cls.capturevideo.framerate))
 		{
 			Cvar_SetValueQuick(&cl_capturevideo, 0);
 			Con_Printf("video saving failed on frame %i, your machine is too slow for this capture speed.\n", cls.capturevideo.frame);
@@ -1731,6 +1731,7 @@ static void R_Envmap_f (void)
 	{
 		sprintf(filename, "env/%s%s.tga", basename, envmapinfo[j].name);
 		Matrix4x4_CreateFromQuakeEntity(&r_refdef.view.matrix, r_refdef.view.origin[0], r_refdef.view.origin[1], r_refdef.view.origin[2], envmapinfo[j].angles[0], envmapinfo[j].angles[1], envmapinfo[j].angles[2], 1);
+		r_refdef.view.qualityreduction = 0;
 		r_refdef.view.clear = true;
 		R_Mesh_Start();
 		R_RenderView();
@@ -2092,8 +2093,15 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 	qglFinish();
 }
 
+extern cvar_t cl_minfps;
+extern cvar_t cl_minfps_expbase;
+extern cvar_t cl_minfps_fade;
+extern cvar_t cl_minfps_maxqualityreduction;
+static double cl_updatescreen_rendertime = 0;
+static double cl_updatescreen_qualityreduction = 0;
 void CL_UpdateScreen(void)
 {
+	double rendertime1;
 	float conwidth, conheight;
 
 	if (vid_hidden || !scr_refresh.integer)
@@ -2101,6 +2109,8 @@ void CL_UpdateScreen(void)
 
 	if (!scr_initialized || !con_initialized)
 		return;				// not initialized yet
+
+	rendertime1 = Sys_DoubleTime();
 
 	conwidth = bound(320, vid_conwidth.value, 2048);
 	conheight = bound(200, vid_conheight.value, 1536);
@@ -2159,6 +2169,7 @@ void CL_UpdateScreen(void)
 	qglClearColor(0,0,0,0);CHECKGLERROR
 	R_ClearScreen(false);
 	r_refdef.view.clear = false;
+	r_refdef.view.qualityreduction = (int)floor(cl_updatescreen_qualityreduction + 0.5);
 
 	if(scr_stipple.integer)
 	{
@@ -2228,6 +2239,15 @@ void CL_UpdateScreen(void)
 		SCR_DrawScreen();
 
 	SCR_CaptureVideo();
+
+	// quality adjustment according to render time
+	qglFlush();
+	cl_updatescreen_rendertime += ((Sys_DoubleTime() - rendertime1) - cl_updatescreen_rendertime) * bound(0.01, cl_minfps_fade.value, 1);
+	if (cl_minfps.value > 0 && !cls.timedemo && (!cls.capturevideo.active || !cls.capturevideo.realtime))
+		cl_updatescreen_qualityreduction = invpow(cl_minfps_expbase.value, cl_minfps.value * cl_updatescreen_rendertime);
+	else
+		cl_updatescreen_qualityreduction = 0;
+	cl_updatescreen_qualityreduction = bound(0, cl_updatescreen_qualityreduction, bound(0, cl_minfps_maxqualityreduction.value, 30));
 
 	VID_Finish(true);
 }

@@ -3478,6 +3478,8 @@ static void R_DrawLocs(void);
 static void R_DrawEntityBBoxes(void);
 void R_RenderScene(qboolean addwaterplanes)
 {
+	r_refdef.stats.renders++;
+
 	R_UpdateFogColor();
 
 	if (addwaterplanes)
