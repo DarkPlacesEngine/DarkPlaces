@@ -2001,10 +2001,7 @@ void R_DrawDecals (void)
 	decal_t *decal;
 	float frametime;
 	float decalfade;
-	// used as if (i & qualitymask) to skip some less important particles
-	// according to cl_minfps
-	int qualitymask = (1 << r_refdef.view.qualityreduction) - 1;
-	float drawdist2 = r_drawdecals_drawdistance.value * r_drawdecals_drawdistance.value;
+	float drawdist2;
 
 	frametime = bound(0, cl.time - cl.decals_updatetime, 1);
 	cl.decals_updatetime += frametime;
@@ -2014,6 +2011,8 @@ void R_DrawDecals (void)
 		return;
 
 	decalfade = frametime * 256 / cl_decals_fadetime.value;
+	drawdist2 = r_drawdecals_drawdistance.value * r_refdef.view.quality;
+	drawdist2 = drawdist2*drawdist2;
 
 	for (i = 0, decal = cl.decals;i < cl.num_decals;i++, decal++)
 	{
@@ -2037,10 +2036,6 @@ void R_DrawDecals (void)
 			else
 				goto killdecal;
 		}
-
-		// skip some of the less important decals according to cl_minfps
-		if (i & qualitymask)
-			continue;
 
 		if (DotProduct(r_refdef.view.origin, decal->normal) > DotProduct(decal->org, decal->normal) && VectorDistance2(decal->org, r_refdef.view.origin) < drawdist2 * (decal->size * decal->size))
 			R_MeshQueue_AddTransparent(decal->org, R_DrawDecal_TransparentCallback, NULL, i, NULL);
@@ -2263,13 +2258,10 @@ void R_DrawParticles (void)
 	float minparticledist;
 	particle_t *p;
 	float gravity, dvel, decalfade, frametime, f, dist, oldorg[3];
-	float drawdist2 = r_drawparticles_drawdistance.value * r_drawparticles_drawdistance.value;
+	float drawdist2;
 	int hitent;
 	trace_t trace;
 	qboolean update;
-	// used as if (i & qualitymask) to skip some less important particles
-	// according to cl_minfps
-	int qualitymask = (1 << r_refdef.view.qualityreduction) - 1;
 
 	frametime = bound(0, cl.time - cl.particles_updatetime, 1);
 	cl.particles_updatetime += frametime;
@@ -2283,6 +2275,8 @@ void R_DrawParticles (void)
 	dvel = 1+4*frametime;
 	decalfade = frametime * 255 / cl_decals_fadetime.value;
 	update = frametime > 0;
+	drawdist2 = r_drawparticles_drawdistance.value * r_refdef.view.quality;
+	drawdist2 = drawdist2*drawdist2;
 
 	for (i = 0, p = cl.particles;i < cl.num_particles;i++, p++)
 	{
@@ -2418,10 +2412,6 @@ void R_DrawParticles (void)
 			}
 		}
 		else if (p->delayedspawn)
-			continue;
-
-		// skip some of the less important particles according to cl_minfps
-		if ((i & qualitymask) && p->qualityreduction)
 			continue;
 
 		// don't render particles too close to the view (they chew fillrate)

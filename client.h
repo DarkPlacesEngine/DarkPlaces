@@ -1410,11 +1410,8 @@ typedef struct r_refdef_view_s
 	int cullface_front;
 	int cullface_back;
 
-	// reduces render quality:
-	// 0 = full quality
-	// 1 = skip every other particle and some lights
-	// 2 = skip 75% of particles and some lights
-	int qualityreduction;
+	// render quality (0 to 1) - affects r_drawparticles_drawdistance and others
+	float quality;
 }
 r_refdef_view_t;
 

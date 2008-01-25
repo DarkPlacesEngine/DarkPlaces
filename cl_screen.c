@@ -698,7 +698,7 @@ void R_TimeReport_EndFrame(void)
 			sprintf(string + strlen(string), "Location: %s\n", loc->name);
 		sprintf(string + strlen(string), "%3i renders org:'%+8.2f %+8.2f %+8.2f' dir:'%+2.3f %+2.3f %+2.3f'\n", r_refdef.stats.renders, r_refdef.view.origin[0], r_refdef.view.origin[1], r_refdef.view.origin[2], r_refdef.view.forward[0], r_refdef.view.forward[1], r_refdef.view.forward[2]);
 		sprintf(string + strlen(string), "%7i surfaces%7i triangles %5i entities (%7i surfaces%7i triangles)\n", r_refdef.stats.world_surfaces, r_refdef.stats.world_triangles, r_refdef.stats.entities, r_refdef.stats.entities_surfaces, r_refdef.stats.entities_triangles);
-		sprintf(string + strlen(string), "%5i leafs%5i portals%6i/%6i particles%6i/%6i decals %3i%% quality\n", r_refdef.stats.world_leafs, r_refdef.stats.world_portals, r_refdef.stats.particles, cl.num_particles, r_refdef.stats.decals, cl.num_decals, 100 / (1 << r_refdef.view.qualityreduction));
+		sprintf(string + strlen(string), "%5i leafs%5i portals%6i/%6i particles%6i/%6i decals %3i%% quality\n", r_refdef.stats.world_leafs, r_refdef.stats.world_portals, r_refdef.stats.particles, cl.num_particles, r_refdef.stats.decals, cl.num_decals, (int)(100 * r_refdef.view.quality));
 		sprintf(string + strlen(string), "%7i lightmap updates (%7i pixels)\n", r_refdef.stats.lightmapupdates, r_refdef.stats.lightmapupdatepixels);
 		sprintf(string + strlen(string), "%4i lights%4i clears%4i scissored%7i light%7i shadow%7i dynamic\n", r_refdef.stats.lights, r_refdef.stats.lights_clears, r_refdef.stats.lights_scissored, r_refdef.stats.lights_lighttriangles, r_refdef.stats.lights_shadowtriangles, r_refdef.stats.lights_dynamicshadowtriangles);
 		if (r_refdef.stats.bloom)
@@ -1731,7 +1731,7 @@ static void R_Envmap_f (void)
 	{
 		sprintf(filename, "env/%s%s.tga", basename, envmapinfo[j].name);
 		Matrix4x4_CreateFromQuakeEntity(&r_refdef.view.matrix, r_refdef.view.origin[0], r_refdef.view.origin[1], r_refdef.view.origin[2], envmapinfo[j].angles[0], envmapinfo[j].angles[1], envmapinfo[j].angles[2], 1);
-		r_refdef.view.qualityreduction = 0;
+		r_refdef.view.quality = 1;
 		r_refdef.view.clear = true;
 		R_Mesh_Start();
 		R_RenderView();
@@ -2094,11 +2094,12 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 }
 
 extern cvar_t cl_minfps;
-extern cvar_t cl_minfps_logbase;
 extern cvar_t cl_minfps_fade;
-extern cvar_t cl_minfps_maxqualityreduction;
+extern cvar_t cl_minfps_qualitymax;
+extern cvar_t cl_minfps_qualitymin;
+extern cvar_t cl_minfps_qualityscale;
 static double cl_updatescreen_rendertime = 0;
-static double cl_updatescreen_qualityreduction = 0;
+static double cl_updatescreen_quality = 1;
 void CL_UpdateScreen(void)
 {
 	double rendertime1;
@@ -2169,7 +2170,7 @@ void CL_UpdateScreen(void)
 	qglClearColor(0,0,0,0);CHECKGLERROR
 	R_ClearScreen(false);
 	r_refdef.view.clear = false;
-	r_refdef.view.qualityreduction = (int)floor(cl_updatescreen_qualityreduction + 0.5);
+	r_refdef.view.quality = bound(cl_minfps_qualitymin.value, cl_updatescreen_quality * cl_minfps_qualityscale.value, cl_minfps_qualitymax.value);
 
 	if(scr_stipple.integer)
 	{
@@ -2242,12 +2243,11 @@ void CL_UpdateScreen(void)
 
 	// quality adjustment according to render time
 	qglFlush();
-	cl_updatescreen_rendertime += ((Sys_DoubleTime() - rendertime1) - cl_updatescreen_rendertime) * bound(0.01, cl_minfps_fade.value, 1);
-	if (cl_minfps.value > 0 && !cls.timedemo && (!cls.capturevideo.active || !cls.capturevideo.realtime))
-		cl_updatescreen_qualityreduction = invpow(cl_minfps_logbase.value, cl_minfps.value * cl_updatescreen_rendertime);
+	cl_updatescreen_rendertime += ((Sys_DoubleTime() - rendertime1) - cl_updatescreen_rendertime) * bound(0, cl_minfps_fade.value, 1);
+	if (cl_minfps.value > 0 && cl_updatescreen_rendertime > 0 && !cls.timedemo && (!cls.capturevideo.active || !cls.capturevideo.realtime))
+		cl_updatescreen_quality = 1 / (cl_updatescreen_rendertime * cl_minfps.value);
 	else
-		cl_updatescreen_qualityreduction = 0;
-	cl_updatescreen_qualityreduction = bound(0, cl_updatescreen_qualityreduction, bound(0, cl_minfps_maxqualityreduction.value, 30));
+		cl_updatescreen_quality = 1;
 
 	VID_Finish(true);
 }
