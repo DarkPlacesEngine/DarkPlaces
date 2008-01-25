@@ -1781,6 +1781,10 @@ static void SV_SendClientDatagram (client_t *client)
 		maxsize = (int)(clientrate * sys_ticrate.value);
 		maxsize = bound(128, maxsize, 1400);
 		maxsize2 = 1400;
+		// csqc entities can easily exceed 128 bytes, so disable throttling in
+		// mods that use csqc (they are likely to use less bandwidth anyway)
+		if (sv.csqc_progsize > 0)
+			maxsize = maxsize2;
 	}
 
 	// obey rate limit by limiting packet frequency if the packet size
