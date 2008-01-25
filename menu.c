@@ -5073,7 +5073,7 @@ void MP_Draw (void)
 	// declarations that are needed right now
 	extern r_refdef_scene_t menu_scene;
 
-	int oldqualityreduction;
+	float oldquality;
 	static r_refdef_scene_t clientscene;
 	clientscene = r_refdef.scene;
 	r_refdef.scene = menu_scene;
@@ -5082,8 +5082,8 @@ void MP_Draw (void)
 	r_refdef.scene.numtempentities = 0;
 
 	// menu scenes do not use reduced rendering quality
-	oldqualityreduction = r_refdef.view.qualityreduction;
-	r_refdef.view.qualityreduction = 0;
+	oldquality = r_refdef.view.quality;
+	r_refdef.view.quality = 1;
 
 	PRVM_Begin;
 	PRVM_SetProg(PRVM_MENUPROG);
@@ -5094,7 +5094,7 @@ void MP_Draw (void)
 
 	PRVM_End;
 
-	r_refdef.view.qualityreduction = oldqualityreduction;
+	r_refdef.view.quality = oldquality;
 
 	menu_scene = r_refdef.scene;
 	r_refdef.scene = clientscene;

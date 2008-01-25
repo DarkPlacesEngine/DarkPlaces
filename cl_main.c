@@ -1753,7 +1753,7 @@ void CL_UpdateWorld(void)
 	r_refdef.scene.numentities = 0;
 	r_refdef.scene.numlights = 0;
 	r_refdef.view.matrix = identitymatrix;
-	r_refdef.view.qualityreduction = 0;
+	r_refdef.view.quality = 1;
 
 	cl.num_brushmodel_entities = 0;
 
@@ -1854,7 +1854,7 @@ static void CL_TimeRefresh_f (void)
 	for (i = 0;i < 128;i++)
 	{
 		Matrix4x4_CreateFromQuakeEntity(&r_refdef.view.matrix, r_refdef.view.origin[0], r_refdef.view.origin[1], r_refdef.view.origin[2], 0, i / 128.0 * 360.0, 0, 1);
-		r_refdef.view.qualityreduction = 0;
+		r_refdef.view.quality = 1;
 		CL_UpdateScreen();
 	}
 	timedelta = Sys_DoubleTime() - timestart;
