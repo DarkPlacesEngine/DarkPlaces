@@ -1801,6 +1801,7 @@ static void SV_SendClientDatagram (client_t *client)
 	msg.data = sv_sendclientdatagram_buf;
 	msg.maxsize = maxsize;
 	msg.cursize = 0;
+	msg.allowoverflow = false;
 
 	if (host_client->spawned)
 	{
