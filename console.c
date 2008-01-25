@@ -2245,95 +2245,146 @@ void Con_CompleteCommandLine (void)
 		else
 		{
 			const char *patterns = Cvar_VariableString(va("con_completion_%s", command)); // TODO maybe use a better place for this?
-			char t[MAX_QPATH];
-			stringlist_t resultbuf;
 
-			// Usage:
-			//   // store completion patterns (space separated) for command foo in con_completion_foo
-			//   set con_completion_foo "foodata/*.foodefault *.foo"
-			//   foo <TAB>
-			//
-			// Note: patterns with slash are always treated as absolute
-			// patterns; patterns without slash search in the innermost
-			// directory the user specified. There is no way to "complete into"
-			// a directory as of now, as directories seem to be unknown to the
-			// FS subsystem.
-			//
-			// Examples:
-			//   set con_completion_playermodel "models/player/*.zym models/player/*.md3 models/player/*.psk models/player/*.dpm"
-			//   set con_completion_playdemo "*.dem"
-			//   set con_completion_play "*.wav *.ogg"
-			//
-			// TODO somehow add support for directories; these shall complete
-			// to their name + an appended slash.
-
-			stringlistinit(&resultbuf);
-			while(COM_ParseToken_Simple(&patterns, false, false))
+			if(patterns && *patterns)
 			{
-				fssearch_t *search;
-				if(strchr(com_token, '/'))
+				char t[MAX_QPATH];
+				stringlist_t resultbuf, dirbuf;
+
+				// Usage:
+				//   // store completion patterns (space separated) for command foo in con_completion_foo
+				//   set con_completion_foo "foodata/*.foodefault *.foo"
+				//   foo <TAB>
+				//
+				// Note: patterns with slash are always treated as absolute
+				// patterns; patterns without slash search in the innermost
+				// directory the user specified. There is no way to "complete into"
+				// a directory as of now, as directories seem to be unknown to the
+				// FS subsystem.
+				//
+				// Examples:
+				//   set con_completion_playermodel "models/player/*.zym models/player/*.md3 models/player/*.psk models/player/*.dpm"
+				//   set con_completion_playdemo "*.dem"
+				//   set con_completion_play "*.wav *.ogg"
+				//
+				// TODO somehow add support for directories; these shall complete
+				// to their name + an appended slash.
+
+				stringlistinit(&resultbuf);
+				stringlistinit(&dirbuf);
+				while(COM_ParseToken_Simple(&patterns, false, false))
 				{
-					search = FS_Search(com_token, true, true);
+					fssearch_t *search;
+					if(strchr(com_token, '/'))
+					{
+						search = FS_Search(com_token, true, true);
+					}
+					else
+					{
+						const char *slash = strrchr(s, '/');
+						if(slash)
+						{
+							strlcpy(t, s, min(sizeof(t), (unsigned int)(slash - s + 2))); // + 2, because I want to include the slash
+							strlcat(t, com_token, sizeof(t));
+							search = FS_Search(t, true, true);
+						}
+						else
+							search = FS_Search(com_token, true, true);
+					}
+					if(search)
+					{
+						for(i = 0; i < search->numfilenames; ++i)
+							if(!strncmp(search->filenames[i], s, strlen(s)))
+								if(FS_FileType(search->filenames[i]) == FS_FILETYPE_FILE)
+									stringlistappend(&resultbuf, search->filenames[i]);
+						FS_FreeSearch(search);
+					}
 				}
-				else
+
+				// In any case, add directory names
 				{
+					fssearch_t *search;
 					const char *slash = strrchr(s, '/');
 					if(slash)
 					{
 						strlcpy(t, s, min(sizeof(t), (unsigned int)(slash - s + 2))); // + 2, because I want to include the slash
-						strlcat(t, com_token, sizeof(t));
+						strlcat(t, "/*", sizeof(t));
 						search = FS_Search(t, true, true);
 					}
 					else
-						search = FS_Search(com_token, true, true);
-				}
-				if(search)
-				{
-					for(i = 0; i < search->numfilenames; ++i)
-						if(!strncmp(search->filenames[i], s, strlen(s)))
-							stringlistappend(&resultbuf, search->filenames[i]);
-					FS_FreeSearch(search);
-				}
-			}
-			
-			if(resultbuf.numstrings > 0)
-			{
-				const char *p, *q;
-				if(resultbuf.numstrings == 1)
-				{
-					dpsnprintf(t, sizeof(t), "%s ", resultbuf.strings[0]);
-				}
-				else
-				{
-					stringlistsort(&resultbuf);
-					Con_Printf("\n%i possible filenames\n", resultbuf.numstrings);
-					for(i = 0; i < resultbuf.numstrings; ++i)
+						search = FS_Search("*", true, true);
+					if(search)
 					{
-						Con_Printf("%s\n", resultbuf.strings[i]);
+						for(i = 0; i < search->numfilenames; ++i)
+							if(!strncmp(search->filenames[i], s, strlen(s)))
+								if(FS_FileType(search->filenames[i]) == FS_FILETYPE_DIRECTORY)
+									stringlistappend(&dirbuf, search->filenames[i]);
+						FS_FreeSearch(search);
 					}
-					p = resultbuf.strings[0];
-					q = resultbuf.strings[resultbuf.numstrings - 1];
-					for(; *p && *p == *q; ++p, ++q);
-					// now p points to the first non-equal character, or to the end
-					// of resultbuf.strings[0]. We want to append the characters
-					// from resultbuf.strings[0] to (not including) p as these are
-					// the unique prefix
-					strlcpy(t, resultbuf.strings[0], min((unsigned int)(p - resultbuf.strings[0] + 1), sizeof(t)));
 				}
 
-				// first move the cursor
-				key_linepos += (int)strlen(t) - (int)strlen(s);
+				if(resultbuf.numstrings > 0 || dirbuf.numstrings > 0)
+				{
+					const char *p, *q;
+					unsigned int matchchars;
+					if(resultbuf.numstrings == 0 && dirbuf.numstrings == 1)
+					{
+						dpsnprintf(t, sizeof(t), "%s/", dirbuf.strings[0]);
+					}
+					else
+					if(resultbuf.numstrings == 1 && dirbuf.numstrings == 0)
+					{
+						dpsnprintf(t, sizeof(t), "%s ", resultbuf.strings[0]);
+					}
+					else
+					{
+						stringlistsort(&resultbuf); // dirbuf is already sorted
+						Con_Printf("\n%i possible filenames\n", resultbuf.numstrings + dirbuf.numstrings);
+						for(i = 0; i < dirbuf.numstrings; ++i)
+						{
+							Con_Printf("%s/\n", dirbuf.strings[i]);
+						}
+						for(i = 0; i < resultbuf.numstrings; ++i)
+						{
+							Con_Printf("%s\n", resultbuf.strings[i]);
+						}
+						matchchars = sizeof(t) - 1;
+						if(resultbuf.numstrings > 0)
+						{
+							p = resultbuf.strings[0];
+							q = resultbuf.strings[resultbuf.numstrings - 1];
+							for(; *p && *p == *q; ++p, ++q);
+							matchchars = p - resultbuf.strings[0];
+						}
+						if(dirbuf.numstrings > 0)
+						{
+							p = dirbuf.strings[0];
+							q = dirbuf.strings[dirbuf.numstrings - 1];
+							for(; *p && *p == *q; ++p, ++q);
+							matchchars = min(matchchars, p - dirbuf.strings[0]);
+						}
+						// now p points to the first non-equal character, or to the end
+						// of resultbuf.strings[0]. We want to append the characters
+						// from resultbuf.strings[0] to (not including) p as these are
+						// the unique prefix
+						strlcpy(t, (resultbuf.numstrings > 0 ? resultbuf : dirbuf).strings[0], min(matchchars + 1, sizeof(t)));
+					}
 
-				// and now do the actual work
-				*s = 0;
-				strlcat(key_lines[edit_line], t, MAX_INPUTLINE);
-				strlcat(key_lines[edit_line], s2, MAX_INPUTLINE); //add back chars after cursor
+					// first move the cursor
+					key_linepos += (int)strlen(t) - (int)strlen(s);
 
-				// and fix the cursor
-				if(key_linepos > (int) strlen(key_lines[edit_line]))
-					key_linepos = (int) strlen(key_lines[edit_line]);
+					// and now do the actual work
+					*s = 0;
+					strlcat(key_lines[edit_line], t, MAX_INPUTLINE);
+					strlcat(key_lines[edit_line], s2, MAX_INPUTLINE); //add back chars after cursor
+
+					// and fix the cursor
+					if(key_linepos > (int) strlen(key_lines[edit_line]))
+						key_linepos = (int) strlen(key_lines[edit_line]);
+				}
+				stringlistfreecontents(&resultbuf);
+				stringlistfreecontents(&dirbuf);
 			}
-			stringlistfreecontents(&resultbuf);
 		}
 	}
 
