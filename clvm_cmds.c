@@ -2255,39 +2255,85 @@ static void VM_CL_gettaginfo (void)
 //QC POLYGON functions
 //====================
 
-typedef struct
+#define VMPOLYGONS_MAXPOINTS 64
+
+typedef struct vmpolygons_triangle_s
 {
-	rtexture_t		*tex;
-	float			data[36];	//[515]: enough for polygons
-	unsigned char			flags;	//[515]: + VM_POLYGON_2D and VM_POLYGON_FL4V flags
-}vm_polygon_t;
+	rtexture_t		*texture;
+	int				drawflag;
+	int				element3i[3];
+}vmpolygons_triangle_t;
 
 typedef struct vmpolygons_s
 {
-	//static float			vm_polygon_linewidth = 1;
 	mempool_t		*pool;
-	unsigned char		current_vertices;
 	qboolean		initialized;
-	vm_polygon_t		*polygons;
-	unsigned long	polygons_num, drawpolygons_num;	//[515]: ok long on 64bit ?
-	qboolean		polygonbegin;	//[515]: for "no-crap-on-the-screen" check
-} vmpolygons_t;
-vmpolygons_t vmpolygons[PRVM_MAXPROGS];
-#define VM_DEFPOLYNUM 64	//[515]: enough for default ?
 
-#define VM_POLYGON_FL3V		16	//more than 2 vertices (used only for lines)
-#define VM_POLYGON_FLLINES	32
-#define VM_POLYGON_FL2D		64
-#define VM_POLYGON_FL4V		128	//4 vertices
+	int				max_vertices;
+	int				num_vertices;
+	float			*data_vertex3f;
+	float			*data_color4f;
+	float			*data_texcoord2f;
+
+	int				max_triangles;
+	int				num_triangles;
+	vmpolygons_triangle_t *data_triangles;
+	int				*data_sortedelement3i;
+
+	qboolean		begin_active;
+	rtexture_t		*begin_texture;
+	int				begin_drawflag;
+	int				begin_vertices;
+	float			begin_vertex[VMPOLYGONS_MAXPOINTS][3];
+	float			begin_color[VMPOLYGONS_MAXPOINTS][4];
+	float			begin_texcoord[VMPOLYGONS_MAXPOINTS][2];
+} vmpolygons_t;
+
+// FIXME: make VM_CL_R_Polygon functions use Debug_Polygon functions?
+vmpolygons_t vmpolygons[PRVM_MAXPROGS];
+
+static void VM_ResizePolygons(vmpolygons_t *polys)
+{
+	float *oldvertex3f = polys->data_vertex3f;
+	float *oldcolor4f = polys->data_color4f;
+	float *oldtexcoord2f = polys->data_texcoord2f;
+	vmpolygons_triangle_t *oldtriangles = polys->data_triangles;
+	int *oldsortedelement3i = polys->data_sortedelement3i;
+	polys->max_vertices = polys->max_triangles*3;
+	polys->data_vertex3f = (float *)Mem_Alloc(polys->pool, polys->max_vertices*sizeof(float[3]));
+	polys->data_color4f = (float *)Mem_Alloc(polys->pool, polys->max_vertices*sizeof(float[4]));
+	polys->data_texcoord2f = (float *)Mem_Alloc(polys->pool, polys->max_vertices*sizeof(float[2]));
+	polys->data_triangles = (vmpolygons_triangle_t *)Mem_Alloc(polys->pool, polys->max_triangles*sizeof(vmpolygons_triangle_t));
+	polys->data_sortedelement3i = (int *)Mem_Alloc(polys->pool, polys->max_triangles*sizeof(int[3]));
+	if (polys->num_vertices)
+	{
+		memcpy(polys->data_vertex3f, oldvertex3f, polys->num_vertices*sizeof(float[3]));
+		memcpy(polys->data_color4f, oldcolor4f, polys->num_vertices*sizeof(float[4]));
+		memcpy(polys->data_texcoord2f, oldtexcoord2f, polys->num_vertices*sizeof(float[2]));
+	}
+	if (polys->num_triangles)
+	{
+		memcpy(polys->data_triangles, oldtriangles, polys->num_triangles*sizeof(vmpolygons_triangle_t));
+		memcpy(polys->data_sortedelement3i, oldsortedelement3i, polys->num_triangles*sizeof(int[3]));
+	}
+	if (oldvertex3f)
+		Mem_Free(oldvertex3f);
+	if (oldcolor4f)
+		Mem_Free(oldcolor4f);
+	if (oldtexcoord2f)
+		Mem_Free(oldtexcoord2f);
+	if (oldtriangles)
+		Mem_Free(oldtriangles);
+	if (oldsortedelement3i)
+		Mem_Free(oldsortedelement3i);
+}
 
 static void VM_InitPolygons (vmpolygons_t* polys)
 {
+	memset(polys, 0, sizeof(*polys));
 	polys->pool = Mem_AllocPool("VMPOLY", 0, NULL);
-	polys->polygons = (vm_polygon_t *)Mem_Alloc(polys->pool, VM_DEFPOLYNUM*sizeof(vm_polygon_t));
-	memset(polys->polygons, 0, VM_DEFPOLYNUM*sizeof(vm_polygon_t));
-	polys->polygons_num = VM_DEFPOLYNUM;
-	polys->drawpolygons_num = 0;
-	polys->polygonbegin = false;
+	polys->max_triangles = 1024;
+	VM_ResizePolygons(polys);
 	polys->initialized = true;
 }
 
@@ -2295,216 +2341,154 @@ static void VM_DrawPolygonCallback (const entity_render_t *ent, const rtlight_t 
 {
 	int surfacelistindex;
 	vmpolygons_t* polys = vmpolygons + PRVM_GetProgNr();
-
-	// LordHavoc: FIXME: this is stupid code
-	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
+	R_Mesh_Matrix(&identitymatrix);
+	GL_CullFace(GL_NONE);
+	R_Mesh_VertexPointer(polys->data_vertex3f, 0, 0);
+	R_Mesh_ColorPointer(polys->data_color4f, 0, 0);
+	R_Mesh_TexCoordPointer(0, 2, polys->data_texcoord2f, 0, 0);
+	for (surfacelistindex = 0;surfacelistindex < numsurfaces;)
 	{
-		const vm_polygon_t	*p = &polys->polygons[surfacelist[surfacelistindex]];
-		int					flags = p->flags & 0x0f;
-
-		if(flags == DRAWFLAG_ADDITIVE)
+		int numtriangles = 0;
+		rtexture_t *tex = polys->data_triangles[surfacelist[surfacelistindex]].texture;
+		int drawflag = polys->data_triangles[surfacelist[surfacelistindex]].drawflag;
+		if(drawflag == DRAWFLAG_ADDITIVE)
 			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-		else if(flags == DRAWFLAG_MODULATE)
+		else if(drawflag == DRAWFLAG_MODULATE)
 			GL_BlendFunc(GL_DST_COLOR, GL_ZERO);
-		else if(flags == DRAWFLAG_2XMODULATE)
+		else if(drawflag == DRAWFLAG_2XMODULATE)
 			GL_BlendFunc(GL_DST_COLOR,GL_SRC_COLOR);
 		else
 			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-		R_Mesh_TexBind(0, R_GetTexture(p->tex));
-
-		CHECKGLERROR
-		//[515]: is speed is max ?
-		if(p->flags & VM_POLYGON_FLLINES)	//[515]: lines
+		R_Mesh_TexBind(0, R_GetTexture(tex));
+		numtriangles = 0;
+		for (;surfacelistindex < numsurfaces;surfacelistindex++)
 		{
-			qglLineWidth(p->data[13]);CHECKGLERROR
-			qglBegin(GL_LINE_LOOP);
-				qglTexCoord1f	(p->data[12]);
-				qglColor4f		(p->data[20], p->data[21], p->data[22], p->data[23]);
-				qglVertex3f		(p->data[0] , p->data[1],  p->data[2]);
-
-				qglTexCoord1f	(p->data[14]);
-				qglColor4f		(p->data[24], p->data[25], p->data[26], p->data[27]);
-				qglVertex3f		(p->data[3] , p->data[4],  p->data[5]);
-
-				if(p->flags & VM_POLYGON_FL3V)
-				{
-					qglTexCoord1f	(p->data[16]);
-					qglColor4f		(p->data[28], p->data[29], p->data[30], p->data[31]);
-					qglVertex3f		(p->data[6] , p->data[7],  p->data[8]);
-
-					if(p->flags & VM_POLYGON_FL4V)
-					{
-						qglTexCoord1f	(p->data[18]);
-						qglColor4f		(p->data[32], p->data[33], p->data[34], p->data[35]);
-						qglVertex3f		(p->data[9] , p->data[10],  p->data[11]);
-					}
-				}
-			qglEnd();
-			CHECKGLERROR
+			if (polys->data_triangles[surfacelist[surfacelistindex]].texture != tex || polys->data_triangles[surfacelist[surfacelistindex]].drawflag != drawflag)
+				break;
+			VectorCopy(polys->data_triangles[surfacelist[surfacelistindex]].element3i, polys->data_sortedelement3i + 3*numtriangles);
+			numtriangles++;
 		}
-		else
-		{
-			qglBegin(GL_POLYGON);
-				qglTexCoord2f	(p->data[12], p->data[13]);
-				qglColor4f		(p->data[20], p->data[21], p->data[22], p->data[23]);
-				qglVertex3f		(p->data[0] , p->data[1],  p->data[2]);
-
-				qglTexCoord2f	(p->data[14], p->data[15]);
-				qglColor4f		(p->data[24], p->data[25], p->data[26], p->data[27]);
-				qglVertex3f		(p->data[3] , p->data[4],  p->data[5]);
-
-				qglTexCoord2f	(p->data[16], p->data[17]);
-				qglColor4f		(p->data[28], p->data[29], p->data[30], p->data[31]);
-				qglVertex3f		(p->data[6] , p->data[7],  p->data[8]);
-
-				if(p->flags & VM_POLYGON_FL4V)
-				{
-					qglTexCoord2f	(p->data[18], p->data[19]);
-					qglColor4f		(p->data[32], p->data[33], p->data[34], p->data[35]);
-					qglVertex3f		(p->data[9] , p->data[10],  p->data[11]);
-				}
-			qglEnd();
-			CHECKGLERROR
-		}
+		R_Mesh_Draw(0, polys->num_vertices, numtriangles, polys->data_sortedelement3i, 0, 0);
 	}
 }
 
-static void VM_CL_AddPolygonTo2DScene (vm_polygon_t *p)
+void VMPolygons_Store(vmpolygons_t *polys)
 {
-	drawqueuemesh_t	mesh;
-	static int		picelements[6] = {0, 1, 2, 0, 2, 3};
-	mesh.texture = p->tex;
-	mesh.data_element3i = picelements;
-	mesh.data_vertex3f = p->data;
-	mesh.data_texcoord2f = p->data + 12;
-	mesh.data_color4f = p->data + 20;
-	if(p->flags & VM_POLYGON_FL4V)
+	if (r_refdef.draw2dstage)
 	{
-		mesh.num_vertices = 4;
-		mesh.num_triangles = 2;
+		// draw the polygon as 2D immediately
+		drawqueuemesh_t mesh;
+		mesh.texture = polys->begin_texture;
+		mesh.num_vertices = polys->begin_vertices;
+		mesh.num_triangles = polys->begin_vertices-2;
+		mesh.data_element3i = polygonelements;
+		mesh.data_vertex3f = polys->begin_vertex[0];
+		mesh.data_color4f = polys->begin_color[0];
+		mesh.data_texcoord2f = polys->begin_texcoord[0];
+		DrawQ_Mesh(&mesh, polys->begin_drawflag);
 	}
 	else
 	{
-		mesh.num_vertices = 3;
-		mesh.num_triangles = 1;
+		// queue the polygon as 3D for sorted transparent rendering later
+		int i;
+		if (polys->max_triangles < polys->num_triangles + polys->begin_vertices-2)
+		{
+			polys->max_triangles *= 2;
+			VM_ResizePolygons(polys);
+		}
+		memcpy(polys->data_vertex3f + polys->num_vertices * 3, polys->begin_vertex[0], polys->num_vertices * sizeof(float[3]));
+		memcpy(polys->data_color4f + polys->num_vertices * 4, polys->begin_color[0], polys->num_vertices * sizeof(float[4]));
+		memcpy(polys->data_texcoord2f + polys->num_vertices * 2, polys->begin_texcoord[0], polys->num_vertices * sizeof(float[2]));
+		for (i = 0;i < polys->begin_vertices-2;i++)
+		{
+			polys->data_triangles[polys->num_triangles].texture = polys->begin_texture;
+			polys->data_triangles[polys->num_triangles].drawflag = polys->begin_drawflag;
+			polys->data_triangles[polys->num_triangles].element3i[0] = polys->num_vertices;
+			polys->data_triangles[polys->num_triangles].element3i[1] = polys->num_vertices + i+1;
+			polys->data_triangles[polys->num_triangles].element3i[2] = polys->num_vertices + i+2;
+			polys->num_triangles++;
+		}
+		polys->num_vertices += polys->begin_vertices;
 	}
-	if(p->flags & VM_POLYGON_FLLINES)	//[515]: lines
-		DrawQ_LineLoop (&mesh, (p->flags&0x0f));
-	else
-		DrawQ_Mesh (&mesh, (p->flags&0x0f));
+	polys->begin_active = false;
 }
 
 // TODO: move this into the client code and clean-up everything else, too! [1/6/2008 Black]
+// LordHavoc: agreed, this is a mess
 void VM_CL_AddPolygonsToMeshQueue (void)
 {
 	int i;
 	vmpolygons_t* polys = vmpolygons + PRVM_GetProgNr();
+	vec3_t center;
 
 	// only add polygons of the currently active prog to the queue - if there is none, we're done
 	if( !prog )
 		return;
 
-	if(!polys->drawpolygons_num)
+	if (!polys->num_triangles)
 		return;
-	R_Mesh_Matrix(&identitymatrix);
-	GL_CullFace(GL_NONE);
-	for(i = 0;i < (int)polys->drawpolygons_num;i++)
-		VM_DrawPolygonCallback(NULL, NULL, 1, &i);
-	polys->drawpolygons_num = 0;
+
+	for (i = 0;i < polys->num_triangles;i++)
+	{
+		VectorMAMAM(1.0f / 3.0f, polys->data_vertex3f + 3*polys->data_triangles[i].element3i[0], 1.0f / 3.0f, polys->data_vertex3f + 3*polys->data_triangles[i].element3i[1], 1.0f / 3.0f, polys->data_vertex3f + 3*polys->data_triangles[i].element3i[2], center);
+		R_MeshQueue_AddTransparent(center, VM_DrawPolygonCallback, NULL, i, NULL);
+	}
+
+	polys->num_triangles = 0;
+	polys->num_vertices = 0;
 }
 
-//void(string texturename, float flag[, float 2d[, float lines]]) R_BeginPolygon
+//void(string texturename, float flag) R_BeginPolygon
 void VM_CL_R_PolygonBegin (void)
 {
-	vm_polygon_t	*p;
 	const char		*picname;
 	vmpolygons_t* polys = vmpolygons + PRVM_GetProgNr();
 
-	VM_SAFEPARMCOUNTRANGE(2, 4, VM_CL_R_PolygonBegin);
+	VM_SAFEPARMCOUNT(2, VM_CL_R_PolygonBegin);
 
-	if(!polys->initialized)
+	if (!polys->initialized)
 		VM_InitPolygons(polys);
-	if(polys->polygonbegin)
+	if (polys->begin_active)
 	{
 		VM_Warning("VM_CL_R_PolygonBegin: called twice without VM_CL_R_PolygonEnd after first\n");
 		return;
 	}
-	if(polys->drawpolygons_num >= polys->polygons_num)
-	{
-		p = (vm_polygon_t *)Mem_Alloc(polys->pool, 2 * polys->polygons_num * sizeof(vm_polygon_t));
-		memset(p, 0, 2 * polys->polygons_num * sizeof(vm_polygon_t));
-		memcpy(p, polys->polygons, polys->polygons_num * sizeof(vm_polygon_t));
-		Mem_Free(polys->polygons);
-		polys->polygons = p;
-		polys->polygons_num *= 2;
-	}
-	p = &polys->polygons[polys->drawpolygons_num];
 	picname = PRVM_G_STRING(OFS_PARM0);
-	if(picname[0])
-		p->tex = Draw_CachePic(picname, true)->tex;
-	else
-		p->tex = r_texture_white;
-	p->flags = (unsigned char)PRVM_G_FLOAT(OFS_PARM1);
-	polys->current_vertices = 0;
-	polys->polygonbegin = true;
-	if(prog->argc >= 3)
-	{
-		if(PRVM_G_FLOAT(OFS_PARM2))
-			p->flags |= VM_POLYGON_FL2D;
-		if(prog->argc >= 4 && PRVM_G_FLOAT(OFS_PARM3))
-		{
-			p->data[13] = PRVM_G_FLOAT(OFS_PARM3);	//[515]: linewidth
-			p->flags |= VM_POLYGON_FLLINES;
-		}
-	}
+	polys->begin_texture = picname[0] ? Draw_CachePic(picname, true)->tex : r_texture_white;
+	polys->begin_drawflag = (int)PRVM_G_FLOAT(OFS_PARM1);
+	polys->begin_vertices = 0;
+	polys->begin_active = true;
 }
 
 //void(vector org, vector texcoords, vector rgb, float alpha) R_PolygonVertex
 void VM_CL_R_PolygonVertex (void)
 {
-	float			*coords, *tx, *rgb, alpha;
-	vm_polygon_t	*p;
 	vmpolygons_t* polys = vmpolygons + PRVM_GetProgNr();
 
 	VM_SAFEPARMCOUNT(4, VM_CL_R_PolygonVertex);
 
-	if(!polys->polygonbegin)
+	if (!polys->begin_active)
 	{
 		VM_Warning("VM_CL_R_PolygonVertex: VM_CL_R_PolygonBegin wasn't called\n");
 		return;
 	}
-	coords	= PRVM_G_VECTOR(OFS_PARM0);
-	tx		= PRVM_G_VECTOR(OFS_PARM1);
-	rgb		= PRVM_G_VECTOR(OFS_PARM2);
-	alpha = PRVM_G_FLOAT(OFS_PARM3);
 
-	p = &polys->polygons[polys->drawpolygons_num];
-	if(polys->current_vertices > 4)
+	if (polys->begin_vertices >= VMPOLYGONS_MAXPOINTS)
 	{
-		VM_Warning("VM_CL_R_PolygonVertex: may have 4 vertices max\n");
+		VM_Warning("VM_CL_R_PolygonVertex: may have %i vertices max\n", VMPOLYGONS_MAXPOINTS);
 		return;
 	}
 
-	p->data[polys->current_vertices*3]	= coords[0];
-	p->data[1+polys->current_vertices*3]	= coords[1];
-	p->data[2+polys->current_vertices*3]	= coords[2];
-
-	p->data[12+polys->current_vertices*2]	= tx[0];
-	if(!(p->flags & VM_POLYGON_FLLINES))
-		p->data[13+polys->current_vertices*2]	= tx[1];
-
-	p->data[20+polys->current_vertices*4]	= rgb[0];
-	p->data[21+polys->current_vertices*4]	= rgb[1];
-	p->data[22+polys->current_vertices*4]	= rgb[2];
-	p->data[23+polys->current_vertices*4]	= alpha;
-
-	polys->current_vertices++;
-	if(polys->current_vertices == 4)
-		p->flags |= VM_POLYGON_FL4V;
-	else
-		if(polys->current_vertices == 3)
-			p->flags |= VM_POLYGON_FL3V;
+	polys->begin_vertex[polys->begin_vertices][0] = PRVM_G_VECTOR(OFS_PARM0)[0];
+	polys->begin_vertex[polys->begin_vertices][1] = PRVM_G_VECTOR(OFS_PARM0)[1];
+	polys->begin_vertex[polys->begin_vertices][2] = PRVM_G_VECTOR(OFS_PARM0)[2];
+	polys->begin_texcoord[polys->begin_vertices][0] = PRVM_G_VECTOR(OFS_PARM1)[0];
+	polys->begin_texcoord[polys->begin_vertices][1] = PRVM_G_VECTOR(OFS_PARM1)[1];
+	polys->begin_color[polys->begin_vertices][0] = PRVM_G_VECTOR(OFS_PARM2)[0];
+	polys->begin_color[polys->begin_vertices][1] = PRVM_G_VECTOR(OFS_PARM2)[1];
+	polys->begin_color[polys->begin_vertices][2] = PRVM_G_VECTOR(OFS_PARM2)[2];
+	polys->begin_color[polys->begin_vertices][3] = PRVM_G_FLOAT(OFS_PARM3);
+	polys->begin_vertices++;
 }
 
 //void() R_EndPolygon
@@ -2513,120 +2497,73 @@ void VM_CL_R_PolygonEnd (void)
 	vmpolygons_t* polys = vmpolygons + PRVM_GetProgNr();
 
 	VM_SAFEPARMCOUNT(0, VM_CL_R_PolygonEnd);
-	if(!polys->polygonbegin)
+	if (!polys->begin_active)
 	{
 		VM_Warning("VM_CL_R_PolygonEnd: VM_CL_R_PolygonBegin wasn't called\n");
 		return;
 	}
-	polys->polygonbegin = false;
-	if(polys->current_vertices > 2 || (polys->current_vertices >= 2 && polys->polygons[polys->drawpolygons_num].flags & VM_POLYGON_FLLINES))
-	{
-		if(polys->polygons[polys->drawpolygons_num].flags & VM_POLYGON_FL2D)	//[515]: don't use qcpolygons memory if 2D
-			VM_CL_AddPolygonTo2DScene(&polys->polygons[polys->drawpolygons_num]);
-		else
-			polys->drawpolygons_num++;
-	}
+	polys->begin_active = false;
+	if (polys->begin_vertices >= 3)
+		VMPolygons_Store(polys);
 	else
-		VM_Warning("VM_CL_R_PolygonEnd: %i vertices isn't a good choice\n", polys->current_vertices);
+		VM_Warning("VM_CL_R_PolygonEnd: %i vertices isn't a good choice\n", polys->begin_vertices);
 }
 
 static vmpolygons_t debugPolys;
 
-void Debug_PolygonBegin(const char *picname, int flags, qboolean draw2d, float linewidth)
+void Debug_PolygonBegin(const char *picname, int drawflag)
 {
-	vm_polygon_t	*p;
-
 	if(!debugPolys.initialized)
 		VM_InitPolygons(&debugPolys);
-	if(debugPolys.polygonbegin)
+	if(debugPolys.begin_active)
 	{
 		Con_Printf("Debug_PolygonBegin: called twice without Debug_PolygonEnd after first\n");
 		return;
 	}
-	// limit polygons to a vaguely sane amount, beyond this each one just
-	// replaces the last one
-	debugPolys.drawpolygons_num = min(debugPolys.drawpolygons_num, (1<<20)-1);
-	if(debugPolys.drawpolygons_num >= debugPolys.polygons_num)
-	{
-		p = (vm_polygon_t *)Mem_Alloc(debugPolys.pool, 2 * debugPolys.polygons_num * sizeof(vm_polygon_t));
-		memset(p, 0, 2 * debugPolys.polygons_num * sizeof(vm_polygon_t));
-		memcpy(p, debugPolys.polygons, debugPolys.polygons_num * sizeof(vm_polygon_t));
-		Mem_Free(debugPolys.polygons);
-		debugPolys.polygons = p;
-		debugPolys.polygons_num *= 2;
-	}
-	p = &debugPolys.polygons[debugPolys.drawpolygons_num];
-	if(picname && picname[0])
-		p->tex = Draw_CachePic(picname, true)->tex;
-	else
-		p->tex = r_texture_white;
-	p->flags = flags;
-	debugPolys.current_vertices = 0;
-	debugPolys.polygonbegin = true;
-	if(draw2d)
-		p->flags |= VM_POLYGON_FL2D;
-	if(linewidth)
-	{
-		p->data[13] = linewidth;	//[515]: linewidth
-		p->flags |= VM_POLYGON_FLLINES;
-	}
+	debugPolys.begin_texture = picname[0] ? Draw_CachePic(picname, true)->tex : r_texture_white;
+	debugPolys.begin_drawflag = drawflag;
+	debugPolys.begin_vertices = 0;
+	debugPolys.begin_active = true;
 }
 
 void Debug_PolygonVertex(float x, float y, float z, float s, float t, float r, float g, float b, float a)
 {
-	vm_polygon_t	*p;
-
-	if(!debugPolys.polygonbegin)
+	if(!debugPolys.begin_active)
 	{
 		Con_Printf("Debug_PolygonVertex: Debug_PolygonBegin wasn't called\n");
 		return;
 	}
 
-	p = &debugPolys.polygons[debugPolys.drawpolygons_num];
-	if(debugPolys.current_vertices > 4)
+	if(debugPolys.begin_vertices > VMPOLYGONS_MAXPOINTS)
 	{
-		Con_Printf("Debug_PolygonVertex: may have 4 vertices max\n");
+		Con_Printf("Debug_PolygonVertex: may have %i vertices max\n", VMPOLYGONS_MAXPOINTS);
 		return;
 	}
 
-	p->data[debugPolys.current_vertices*3]		= x;
-	p->data[1+debugPolys.current_vertices*3]	= y;
-	p->data[2+debugPolys.current_vertices*3]	= z;
-
-	p->data[12+debugPolys.current_vertices*2]	= s;
-	if(!(p->flags & VM_POLYGON_FLLINES))
-		p->data[13+debugPolys.current_vertices*2]	= t;
-
-	p->data[20+debugPolys.current_vertices*4]	= r;
-	p->data[21+debugPolys.current_vertices*4]	= g;
-	p->data[22+debugPolys.current_vertices*4]	= b;
-	p->data[23+debugPolys.current_vertices*4]	= a;
-
-	debugPolys.current_vertices++;
-	if(debugPolys.current_vertices == 4)
-		p->flags |= VM_POLYGON_FL4V;
-	else
-		if(debugPolys.current_vertices == 3)
-			p->flags |= VM_POLYGON_FL3V;
+	debugPolys.begin_vertex[debugPolys.begin_vertices][0] = x;
+	debugPolys.begin_vertex[debugPolys.begin_vertices][1] = y;
+	debugPolys.begin_vertex[debugPolys.begin_vertices][2] = z;
+	debugPolys.begin_texcoord[debugPolys.begin_vertices][0] = s;
+	debugPolys.begin_texcoord[debugPolys.begin_vertices][1] = t;
+	debugPolys.begin_color[debugPolys.begin_vertices][0] = r;
+	debugPolys.begin_color[debugPolys.begin_vertices][1] = g;
+	debugPolys.begin_color[debugPolys.begin_vertices][2] = b;
+	debugPolys.begin_color[debugPolys.begin_vertices][3] = a;
+	debugPolys.begin_vertices++;
 }
 
 void Debug_PolygonEnd(void)
 {
-	if(!debugPolys.polygonbegin)
+	if (!debugPolys.begin_active)
 	{
 		Con_Printf("Debug_PolygonEnd: Debug_PolygonBegin wasn't called\n");
 		return;
 	}
-	debugPolys.polygonbegin = false;
-	if(debugPolys.current_vertices > 2 || (debugPolys.current_vertices >= 2 && debugPolys.polygons[debugPolys.drawpolygons_num].flags & VM_POLYGON_FLLINES))
-	{
-		if(debugPolys.polygons[debugPolys.drawpolygons_num].flags & VM_POLYGON_FL2D)	//[515]: don't use qcpolygons memory if 2D
-			VM_CL_AddPolygonTo2DScene(&debugPolys.polygons[debugPolys.drawpolygons_num]);
-		else
-			debugPolys.drawpolygons_num++;
-	}
+	debugPolys.begin_active = false;
+	if (debugPolys.begin_vertices >= 3)
+		VMPolygons_Store(&debugPolys);
 	else
-		Con_Printf("Debug_PolygonEnd: %i vertices isn't a good choice\n", debugPolys.current_vertices);
+		Con_Printf("Debug_PolygonEnd: %i vertices isn't a good choice\n", debugPolys.begin_vertices);
 }
 
 /*

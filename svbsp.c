@@ -264,7 +264,7 @@ static int SVBSP_AddPolygonNode(svbsp_t *b, int *parentnodenumpointer, int paren
 #if 0
 		for (i = 0;i < numpoints-2;i++)
 		{
-			Debug_PolygonBegin(NULL, DRAWFLAG_ADDITIVE, false, 0);
+			Debug_PolygonBegin(NULL, DRAWFLAG_ADDITIVE);
 			Debug_PolygonVertex(points[0], points[1], points[2], 0, 0, 0.25, 0, 0, 1);
 			Debug_PolygonVertex(points[0 + (i + 1) * 3], points[1 + (i + 1) * 3], points[2 + (i + 1) * 3], 0, 0, 0.25, 0, 0, 1);
 			Debug_PolygonVertex(points[0 + (i + 2) * 3], points[1 + (i + 2) * 3], points[2 + (i + 2) * 3], 0, 0, 0.25, 0, 0, 1);
@@ -292,7 +292,7 @@ static int SVBSP_AddPolygonNode(svbsp_t *b, int *parentnodenumpointer, int paren
 #if 0
 		for (i = 0;i < numpoints-2;i++)
 		{
-			Debug_PolygonBegin(NULL, DRAWFLAG_ADDITIVE, false, 0);
+			Debug_PolygonBegin(NULL, DRAWFLAG_ADDITIVE);
 			Debug_PolygonVertex(points[0], points[1], points[2], 0, 0, 0, 0, 0.25, 1);
 			Debug_PolygonVertex(points[0 + (i + 1) * 3], points[1 + (i + 1) * 3], points[2 + (i + 1) * 3], 0, 0, 0, 0, 0.25, 1);
 			Debug_PolygonVertex(points[0 + (i + 2) * 3], points[1 + (i + 2) * 3], points[2 + (i + 2) * 3], 0, 0, 0, 0, 0.25, 1);
@@ -314,7 +314,7 @@ int SVBSP_AddPolygon(svbsp_t *b, int numpoints, const double *points, int insert
 //if (insertoccluder)
 	for (i = 0;i < numpoints-2;i++)
 	{
-		Debug_PolygonBegin(NULL, DRAWFLAG_ADDITIVE, false, 0);
+		Debug_PolygonBegin(NULL, DRAWFLAG_ADDITIVE);
 		Debug_PolygonVertex(points[0], points[1], points[2], 0, 0, 0, 0.25, 0, 1);
 		Debug_PolygonVertex(points[0 + (i + 1) * 3], points[1 + (i + 1) * 3], points[2 + (i + 1) * 3], 0, 0, 0, 0.25, 0, 1);
 		Debug_PolygonVertex(points[0 + (i + 2) * 3], points[1 + (i + 2) * 3], points[2 + (i + 2) * 3], 0, 0, 0, 0.25, 0, 1);

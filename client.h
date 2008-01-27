@@ -1315,7 +1315,7 @@ void CL_ParticleExplosion (const vec3_t org);
 void CL_ParticleExplosion2 (const vec3_t org, int colorStart, int colorLength);
 void R_NewExplosion(const vec3_t org);
 
-void Debug_PolygonBegin(const char *picname, int flags, qboolean draw2d, float linewidth);
+void Debug_PolygonBegin(const char *picname, int flags);
 void Debug_PolygonVertex(float x, float y, float z, float s, float t, float r, float g, float b, float a);
 void Debug_PolygonEnd(void);
 
