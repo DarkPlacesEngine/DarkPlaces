@@ -63,6 +63,7 @@ cvar_t cl_minfps = {CVAR_SAVE, "cl_minfps", "40", "minimum fps target - while th
 cvar_t cl_minfps_fade = {CVAR_SAVE, "cl_minfps_fade", "0.2", "how fast the quality adapts to varying framerate"};
 cvar_t cl_minfps_qualitymax = {CVAR_SAVE, "cl_minfps_qualitymax", "1", "highest allowed drawdistance multiplier"};
 cvar_t cl_minfps_qualitymin = {CVAR_SAVE, "cl_minfps_qualitymin", "0.25", "lowest allowed drawdistance multiplier"};
+cvar_t cl_minfps_qualitypower = {CVAR_SAVE, "cl_minfps_qualitypower", "4", "raises quality value to a power of itself, higher values make quality drop more sharply in relation to framerate"};
 cvar_t cl_minfps_qualityscale = {CVAR_SAVE, "cl_minfps_qualityscale", "0.5", "multiplier for quality"};
 cvar_t cl_maxfps = {CVAR_SAVE, "cl_maxfps", "1000000", "maximum fps cap, if game is running faster than this it will wait before running another frame (useful to make cpu time available to other programs)"};
 cvar_t cl_maxidlefps = {CVAR_SAVE, "cl_maxidlefps", "20", "maximum fps cap when the game is not the active window (makes cpu time available to other programs"};
@@ -210,6 +211,7 @@ static void Host_InitLocal (void)
 	Cvar_RegisterVariable (&cl_minfps_fade);
 	Cvar_RegisterVariable (&cl_minfps_qualitymax);
 	Cvar_RegisterVariable (&cl_minfps_qualitymin);
+	Cvar_RegisterVariable (&cl_minfps_qualitypower);
 	Cvar_RegisterVariable (&cl_minfps_qualityscale);
 	Cvar_RegisterVariable (&cl_maxfps);
 	Cvar_RegisterVariable (&cl_maxidlefps);
