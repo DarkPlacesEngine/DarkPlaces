@@ -536,7 +536,8 @@ static OSGK_ScriptResult dpGlobal_query (void* objTag, void* methTag,
     OSGK_String* paramStr, *resultStr;
 
     if (!osgk_variant_get_string (strVal, &paramStr)) return srFailed;
-    *((string_t*)&prog->globals.generic[OFS_PARM0]) = PRVM_SetTempString (osgk_string_get (paramStr));
+	 PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString (instance->name);
+	 PRVM_G_INT(OFS_PARM1) = PRVM_SetTempString (osgk_string_get (paramStr));
     PRVM_ExecuteProgram(prog->funcoffsets.Gecko_Query,"Gecko_Query() required");
     resultStr = osgk_string_create (PRVM_G_STRING (OFS_RETURN));
     *returnVal = osgk_variant_create_string (cl_geckoembedding, resultStr);
