@@ -3413,6 +3413,38 @@ void R_UpdateVariables(void)
 		r_refdef.fogenabled = false;
 }
 
+static r_refdef_scene_type_t r_currentscenetype = RST_CLIENT;
+static r_refdef_scene_t r_scenes_store[ RST_COUNT ];
+/*
+================
+R_SelectScene
+================
+*/
+void R_SelectScene( r_refdef_scene_type_t scenetype ) {
+	if( scenetype != r_currentscenetype ) {
+		// store the old scenetype
+		r_scenes_store[ r_currentscenetype ] = r_refdef.scene;
+		r_currentscenetype = scenetype;
+		// move in the new scene
+		r_refdef.scene = r_scenes_store[ r_currentscenetype ];
+	}
+}
+
+/*
+================
+R_GetScenePointer
+================
+*/
+r_refdef_scene_t * R_GetScenePointer( r_refdef_scene_type_t scenetype )
+{
+	// of course, we could also add a qboolean that provides a lock state and a ReleaseScenePointer function..
+	if( scenetype == r_currentscenetype ) {
+		return &r_refdef.scene;
+	} else {
+		return &r_scenes_store[ scenetype ];
+	}
+}
+
 /*
 ================
 R_RenderView
