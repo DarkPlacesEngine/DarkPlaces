@@ -5049,6 +5049,9 @@ void MP_Error(const char *format, ...)
 	// init the normal menu now -> this will also correct the menu router pointers
 	MR_SetRouting (TRUE);
 
+	// reset the active scene, too (to be on the safe side ;))
+   R_SelectScene( RST_CLIENT );
+
 	Host_AbortCurrentFrame();
 }
 
@@ -5071,12 +5074,10 @@ void MP_KeyEvent (int key, char ascii, qboolean downevent)
 void MP_Draw (void)
 {
 	// declarations that are needed right now
-	extern r_refdef_scene_t menu_scene;
 
 	float oldquality;
-	static r_refdef_scene_t clientscene;
-	clientscene = r_refdef.scene;
-	r_refdef.scene = menu_scene;
+
+	R_SelectScene( RST_MENU );
 
 	// reset the temp entities each frame
 	r_refdef.scene.numtempentities = 0;
@@ -5094,10 +5095,10 @@ void MP_Draw (void)
 
 	PRVM_End;
 
+	// TODO: imo this should be moved into scene, too [1/27/2008 Andreas]
 	r_refdef.view.quality = oldquality;
 
-	menu_scene = r_refdef.scene;
-	r_refdef.scene = clientscene;
+	R_SelectScene( RST_CLIENT );
 }
 
 void MP_ToggleMenu_f (void)

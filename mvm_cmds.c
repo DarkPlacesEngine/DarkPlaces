@@ -1415,24 +1415,28 @@ VM_M_getextresponse				// #624 string getextresponse(void)
 
 const int vm_m_numbuiltins = sizeof(vm_m_builtins) / sizeof(prvm_builtin_t);
 
-r_refdef_scene_t menu_scene;
-
 void VM_M_Cmd_Init(void)
 {
+	r_refdef_scene_t *scene;
+
 	VM_Cmd_Init();
 	VM_Polygons_Reset();
 
-	memset (&menu_scene, 0, sizeof (menu_scene));
+	scene = R_GetScenePointer( RST_MENU );
 
-	menu_scene.maxtempentities = 128;
-	menu_scene.tempentities = (entity_render_t*) Mem_Alloc(prog->progs_mempool, sizeof(entity_render_t) * menu_scene.maxtempentities);
+	memset (scene, 0, sizeof (*scene));
 
-	menu_scene.maxentities = MAX_EDICTS + 256 + 512;
-	menu_scene.entities = (entity_render_t **)Mem_Alloc(cls.permanentmempool, sizeof(entity_render_t *) * menu_scene.maxentities);
+	scene->maxtempentities = 128;
+	scene->tempentities = (entity_render_t*) Mem_Alloc(prog->progs_mempool, sizeof(entity_render_t) * scene->maxtempentities);
+
+	scene->maxentities = MAX_EDICTS + 256 + 512;
+	scene->entities = (entity_render_t **)Mem_Alloc(prog->progs_mempool, sizeof(entity_render_t *) * scene->maxentities);
 }
 
 void VM_M_Cmd_Reset(void)
 {
+	// note: the menu's render entities are automatically freed when the prog's pool is freed
+
 	//VM_Cmd_Init();
 	VM_Cmd_Reset();
 	VM_Polygons_Reset();

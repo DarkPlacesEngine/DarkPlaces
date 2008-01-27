@@ -124,6 +124,14 @@ void R_Init(void);
 void R_UpdateVariables(void); // must call after setting up most of r_refdef, but before calling R_RenderView
 void R_RenderView(void); // must set r_refdef and call R_UpdateVariables first
 
+typedef enum r_refdef_scene_type_s {
+	RST_CLIENT,
+	RST_MENU,
+	RST_COUNT
+} r_refdef_scene_type_t;
+
+void R_SelectScene( r_refdef_scene_type_t scenetype );
+r_refdef_scene_t * R_GetScenePointer( r_refdef_scene_type_t scenetype );
 
 void R_SkinFrame_PrepareForPurge(void);
 void R_SkinFrame_MarkUsed(skinframe_t *skinframe);
