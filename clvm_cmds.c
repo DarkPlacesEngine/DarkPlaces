@@ -683,6 +683,7 @@ void VM_CL_R_ClearScene (void)
 	r_refdef.view.frustum_y *= r_refdef.frustumscale_y;
 	r_refdef.view.ortho_x = scr_fov.value * (3.0 / 4.0) * (float)r_refdef.view.width / (float)r_refdef.view.height / vid_pixelheight.value;
 	r_refdef.view.ortho_y = scr_fov.value * (3.0 / 4.0);
+	r_refdef.view.clear = true;
 	// FIXME: restore cl.csqc_origin
 	// FIXME: restore cl.csqc_angles
 	cl.csqc_vidvars.drawworld = true;
@@ -835,6 +836,9 @@ void VM_CL_R_SetView (void)
 		break;
 	case VF_PERSPECTIVE:
 		r_refdef.view.useperspective = k != 0;
+		break;
+	case VF_CLEARSCREEN:
+		r_refdef.view.clear = k ? true : false;
 		break;
 	default:
 		PRVM_G_FLOAT(OFS_RETURN) = 0;
