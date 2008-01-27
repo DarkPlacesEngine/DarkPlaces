@@ -1501,7 +1501,7 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 		mode = SHADERMODE_FLATCOLOR;
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
 			permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
-		if (rsurface.texture->currentskinframe->glow)
+		if (rsurface.texture->currentskinframe->glow && r_hdr_glowintensity.value > 0 && !gl_lightmaps.integer)
 			permutation |= SHADERPERMUTATION_GLOW;
 		if (r_refdef.fogenabled)
 			permutation |= SHADERPERMUTATION_FOG;
@@ -1524,7 +1524,7 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 		mode = SHADERMODE_LIGHTDIRECTION;
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
 			permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
-		if (rsurface.texture->currentskinframe->glow)
+		if (rsurface.texture->currentskinframe->glow && r_hdr_glowintensity.value > 0 && !gl_lightmaps.integer)
 			permutation |= SHADERPERMUTATION_GLOW;
 		permutation |= SHADERPERMUTATION_DIFFUSE;
 		if (specularscale > 0)
@@ -1544,7 +1544,7 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 		mode = SHADERMODE_LIGHTDIRECTION;
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
 			permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
-		if (rsurface.texture->currentskinframe->glow)
+		if (rsurface.texture->currentskinframe->glow && r_hdr_glowintensity.value > 0 && !gl_lightmaps.integer)
 			permutation |= SHADERPERMUTATION_GLOW;
 		if (r_refdef.fogenabled)
 			permutation |= SHADERPERMUTATION_FOG;
@@ -1589,7 +1589,7 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 		}
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
 			permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
-		if (rsurface.texture->currentskinframe->glow)
+		if (rsurface.texture->currentskinframe->glow && r_hdr_glowintensity.value > 0 && !gl_lightmaps.integer)
 			permutation |= SHADERPERMUTATION_GLOW;
 		if (r_refdef.fogenabled)
 			permutation |= SHADERPERMUTATION_FOG;
@@ -4453,10 +4453,13 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 	// lightmaps mode looks bad with dlights using actual texturing, so turn
 	// off the colormap and glossmap, but leave the normalmap on as it still
 	// accurately represents the shading involved
-	if (gl_lightmaps.integer && !(t->currentmaterialflags & MATERIALFLAG_BLENDED))
+	if (gl_lightmaps.integer)
 	{
-		t->basetexture = r_texture_white;
+		t->basetexture = r_texture_grey128;
+		t->backgroundbasetexture = NULL;
 		t->specularscale = 0;
+		t->currentmaterialflags &= ~(MATERIALFLAG_ALPHA | MATERIALFLAG_ADD | MATERIALFLAG_WATERALPHA | MATERIALFLAG_WATER | MATERIALFLAG_SKY | MATERIALFLAG_ALPHATEST | MATERIALFLAG_BLENDED | MATERIALFLAG_CUSTOMBLEND | MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION);
+		t->currentmaterialflags |= MATERIALFLAG_WALL;
 	}
 
 	Vector4Set(t->lightmapcolor, ent->colormod[0], ent->colormod[1], ent->colormod[2], t->currentalpha);
@@ -4490,15 +4493,13 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 			depthmask = !(t->currentmaterialflags & MATERIALFLAG_BLENDED);
 			if (t->currentmaterialflags & (MATERIALFLAG_WATER | MATERIALFLAG_WALL))
 			{
-				rtexture_t *currentbasetexture;
 				int layerflags = 0;
 				if (r_refdef.fogenabled && (t->currentmaterialflags & MATERIALFLAG_BLENDED))
 					layerflags |= TEXTURELAYERFLAG_FOGDARKEN;
-				currentbasetexture = (VectorLength2(ent->colormap_pantscolor) + VectorLength2(ent->colormap_shirtcolor) < (1.0f / 1048576.0f) && t->currentskinframe->merged) ? t->currentskinframe->merged : t->currentskinframe->base;
 				if (t->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
 				{
 					// fullbright is not affected by r_refdef.lightmapintensity
-					R_Texture_AddLayer(t, depthmask, blendfunc1, blendfunc2, TEXTURELAYERTYPE_TEXTURE, currentbasetexture, &t->currenttexmatrix, t->lightmapcolor[0], t->lightmapcolor[1], t->lightmapcolor[2], t->lightmapcolor[3]);
+					R_Texture_AddLayer(t, depthmask, blendfunc1, blendfunc2, TEXTURELAYERTYPE_TEXTURE, t->basetexture, &t->currenttexmatrix, t->lightmapcolor[0], t->lightmapcolor[1], t->lightmapcolor[2], t->lightmapcolor[3]);
 					if (VectorLength2(ent->colormap_pantscolor) >= (1.0f / 1048576.0f) && t->currentskinframe->pants)
 						R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, t->currentskinframe->pants, &t->currenttexmatrix, ent->colormap_pantscolor[0] * t->lightmapcolor[0], ent->colormap_pantscolor[1] * t->lightmapcolor[1], ent->colormap_pantscolor[2] * t->lightmapcolor[2], t->lightmapcolor[3]);
 					if (VectorLength2(ent->colormap_shirtcolor) >= (1.0f / 1048576.0f) && t->currentskinframe->shirt)
@@ -4521,7 +4522,7 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 					VectorScale(t->lightmapcolor, r_ambient.value * (1.0f / 64.0f), ambientcolor);
 					VectorScale(t->lightmapcolor, colorscale, t->lightmapcolor);
 					// basic lit geometry
-					R_Texture_AddLayer(t, depthmask, blendfunc1, blendfunc2, TEXTURELAYERTYPE_LITTEXTURE, currentbasetexture, &t->currenttexmatrix, t->lightmapcolor[0], t->lightmapcolor[1], t->lightmapcolor[2], t->lightmapcolor[3]);
+					R_Texture_AddLayer(t, depthmask, blendfunc1, blendfunc2, TEXTURELAYERTYPE_LITTEXTURE, t->basetexture, &t->currenttexmatrix, t->lightmapcolor[0], t->lightmapcolor[1], t->lightmapcolor[2], t->lightmapcolor[3]);
 					// add pants/shirt if needed
 					if (VectorLength2(ent->colormap_pantscolor) >= (1.0f / 1048576.0f) && t->currentskinframe->pants)
 						R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_LITTEXTURE, t->currentskinframe->pants, &t->currenttexmatrix, ent->colormap_pantscolor[0] * t->lightmapcolor[0], ent->colormap_pantscolor[1] * t->lightmapcolor[1], ent->colormap_pantscolor[2]  * t->lightmapcolor[2], t->lightmapcolor[3]);
@@ -4530,14 +4531,14 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 					// now add ambient passes if needed
 					if (VectorLength2(ambientcolor) >= (1.0f/1048576.0f))
 					{
-						R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, currentbasetexture, &t->currenttexmatrix, ambientcolor[0], ambientcolor[1], ambientcolor[2], t->lightmapcolor[3]);
+						R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, t->basetexture, &t->currenttexmatrix, ambientcolor[0], ambientcolor[1], ambientcolor[2], t->lightmapcolor[3]);
 						if (VectorLength2(ent->colormap_pantscolor) >= (1.0f / 1048576.0f) && t->currentskinframe->pants)
 							R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, t->currentskinframe->pants, &t->currenttexmatrix, ent->colormap_pantscolor[0] * ambientcolor[0], ent->colormap_pantscolor[1] * ambientcolor[1], ent->colormap_pantscolor[2] * ambientcolor[2], t->lightmapcolor[3]);
 						if (VectorLength2(ent->colormap_shirtcolor) >= (1.0f / 1048576.0f) && t->currentskinframe->shirt)
 							R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, t->currentskinframe->shirt, &t->currenttexmatrix, ent->colormap_shirtcolor[0] * ambientcolor[0], ent->colormap_shirtcolor[1] * ambientcolor[1], ent->colormap_shirtcolor[2] * ambientcolor[2], t->lightmapcolor[3]);
 					}
 				}
-				if (t->currentskinframe->glow != NULL)
+				if (t->currentskinframe->glow != NULL && !gl_lightmaps.integer)
 					R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, t->currentskinframe->glow, &t->currenttexmatrix, r_hdr_glowintensity.value, r_hdr_glowintensity.value, r_hdr_glowintensity.value, t->lightmapcolor[3]);
 				if (r_refdef.fogenabled && !(t->currentmaterialflags & MATERIALFLAG_ADD))
 				{
@@ -4591,19 +4592,9 @@ void R_Mesh_ResizeArrays(int newvertices)
 	rsurface.array_generatedtexcoordtexture2f = base + rsurface.array_size * 31;
 }
 
-void RSurf_CleanUp(void)
-{
-	CHECKGLERROR
-	GL_AlphaTest(false);
-	rsurface.mode = RSURFMODE_NONE;
-	rsurface.uselightmaptexture = false;
-	rsurface.texture = NULL;
-}
-
 void RSurf_ActiveWorldEntity(void)
 {
 	model_t *model = r_refdef.scene.worldmodel;
-	RSurf_CleanUp();
 	if (rsurface.array_size < model->surfmesh.num_vertices)
 		R_Mesh_ResizeArrays(model->surfmesh.num_vertices);
 	rsurface.matrix = identitymatrix;
@@ -4671,7 +4662,6 @@ void RSurf_ActiveWorldEntity(void)
 void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, qboolean wanttangents)
 {
 	model_t *model = ent->model;
-	RSurf_CleanUp();
 	if (rsurface.array_size < model->surfmesh.num_vertices)
 		R_Mesh_ResizeArrays(model->surfmesh.num_vertices);
 	rsurface.matrix = ent->matrix;
@@ -5693,32 +5683,12 @@ void RSurf_SetupDepthAndCulling(void)
 	GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : r_refdef.view.cullface_back);
 }
 
-static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, msurface_t **texturesurfacelist)
-{
-	RSurf_SetupDepthAndCulling();
-	if (rsurface.mode != RSURFMODE_SHOWSURFACES)
-	{
-		rsurface.mode = RSURFMODE_SHOWSURFACES;
-		GL_DepthMask(true);
-		GL_BlendFunc(GL_ONE, GL_ZERO);
-		R_Mesh_ColorPointer(NULL, 0, 0);
-		R_Mesh_ResetTextureState();
-	}
-	RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
-	RSurf_DrawBatch_ShowSurfaces(texturenumsurfaces, texturesurfacelist);
-}
-
 static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, msurface_t **texturesurfacelist)
 {
 	// transparent sky would be ridiculous
 	if (rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED)
 		return;
-	if (rsurface.mode != RSURFMODE_SKY)
-	{
-		if (rsurface.mode == RSURFMODE_GLSL)
-			R_SetupGenericShader(false);
-		rsurface.mode = RSURFMODE_SKY;
-	}
+	R_SetupGenericShader(false);
 	if (skyrendernow)
 	{
 		skyrendernow = false;
@@ -5762,19 +5732,14 @@ static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, msurface_t **te
 		if (skyrendermasked)
 			GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
 	}
+	R_Mesh_ResetTextureState();
+	GL_Color(1, 1, 1, 1);
 }
 
-static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, msurface_t **texturesurfacelist)
+static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, msurface_t **texturesurfacelist, qboolean writedepth)
 {
 	if (r_waterstate.renderingscene && (rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION)))
 		return;
-
-	if (rsurface.mode != RSURFMODE_GLSL)
-	{
-		rsurface.mode = RSURFMODE_GLSL;
-		R_Mesh_ResetTextureState();
-		GL_Color(1, 1, 1, 1);
-	}
 
 	R_Mesh_TexMatrix(0, &rsurface.texture->currenttexmatrix);
 	R_Mesh_TexBind(GL20TU_NORMAL, R_GetTexture(rsurface.texture->currentskinframe->nmap));
@@ -5817,10 +5782,10 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, msurface_t **t
 			R_Mesh_TexCoordPointer(4, 2, rsurface.modeltexcoordlightmap2f, rsurface.modeltexcoordlightmap2f_bufferobject, rsurface.modeltexcoordlightmap2f_bufferoffset);
 			RSurf_DrawBatch_WithLightmapSwitching_WithWaterTextureSwitching(texturenumsurfaces, texturesurfacelist, -1, -1, r_glsl_permutation->loc_Texture_Refraction >= 0 ? GL20TU_REFRACTION : -1, r_glsl_permutation->loc_Texture_Reflection >= 0 ? GL20TU_REFLECTION : -1);
 		}
+		GL_LockArrays(0, 0);
 
 		GL_BlendFunc(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
 		GL_DepthMask(false);
-		GL_AlphaTest((rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST) != 0);
 		if ((rsurface.uselightmaptexture || (rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)) && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND))
 			R_Mesh_ColorPointer(NULL, 0, 0);
 		else
@@ -5846,6 +5811,12 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, msurface_t **t
 		GL_DepthMask(true);
 		GL_AlphaTest(false);
 	}
+	else
+	{
+		GL_BlendFunc(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
+		GL_DepthMask(writedepth && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_BLENDED));
+		GL_AlphaTest((rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST) != 0);
+	}
 
 	if (rsurface.uselightmaptexture && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
 	{
@@ -5861,9 +5832,10 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, msurface_t **t
 		else
 			RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
 	}
+	GL_LockArrays(0, 0);
 }
 
-static void R_DrawTextureSurfaceList_GL13(int texturenumsurfaces, msurface_t **texturesurfacelist)
+static void R_DrawTextureSurfaceList_GL13(int texturenumsurfaces, msurface_t **texturesurfacelist, qboolean writedepth)
 {
 	// OpenGL 1.3 path - anything not completely ancient
 	int texturesurfaceindex;
@@ -5872,8 +5844,6 @@ static void R_DrawTextureSurfaceList_GL13(int texturenumsurfaces, msurface_t **t
 	rmeshstate_t m;
 	int layerindex;
 	const texturelayer_t *layer;
-	if (rsurface.mode != RSURFMODE_MULTIPASS)
-		rsurface.mode = RSURFMODE_MULTIPASS;
 	RSurf_PrepareVerticesForBatch(true, false, texturenumsurfaces, texturesurfacelist);
 
 	for (layerindex = 0, layer = rsurface.texture->currentlayers;layerindex < rsurface.texture->currentnumlayers;layerindex++, layer++)
@@ -5890,7 +5860,7 @@ static void R_DrawTextureSurfaceList_GL13(int texturenumsurfaces, msurface_t **t
 				qglDepthFunc(GL_EQUAL);CHECKGLERROR
 			}
 		}
-		GL_DepthMask(layer->depthmask);
+		GL_DepthMask(layer->depthmask && writedepth);
 		GL_BlendFunc(layer->blendfunc1, layer->blendfunc2);
 		if (layer->color[0] > 2 || layer->color[1] > 2 || layer->color[2] > 2)
 		{
@@ -5987,7 +5957,7 @@ static void R_DrawTextureSurfaceList_GL13(int texturenumsurfaces, msurface_t **t
 	}
 }
 
-static void R_DrawTextureSurfaceList_GL11(int texturenumsurfaces, msurface_t **texturesurfacelist)
+static void R_DrawTextureSurfaceList_GL11(int texturenumsurfaces, msurface_t **texturesurfacelist, qboolean writedepth)
 {
 	// OpenGL 1.1 - crusty old voodoo path
 	int texturesurfaceindex;
@@ -5995,8 +5965,6 @@ static void R_DrawTextureSurfaceList_GL11(int texturenumsurfaces, msurface_t **t
 	rmeshstate_t m;
 	int layerindex;
 	const texturelayer_t *layer;
-	if (rsurface.mode != RSURFMODE_MULTIPASS)
-		rsurface.mode = RSURFMODE_MULTIPASS;
 	RSurf_PrepareVerticesForBatch(true, false, texturenumsurfaces, texturesurfacelist);
 
 	for (layerindex = 0, layer = rsurface.texture->currentlayers;layerindex < rsurface.texture->currentnumlayers;layerindex++, layer++)
@@ -6011,7 +5979,7 @@ static void R_DrawTextureSurfaceList_GL11(int texturenumsurfaces, msurface_t **t
 				qglDepthFunc(GL_EQUAL);CHECKGLERROR
 			}
 		}
-		GL_DepthMask(layer->depthmask);
+		GL_DepthMask(layer->depthmask && writedepth);
 		GL_BlendFunc(layer->blendfunc1, layer->blendfunc2);
 		R_Mesh_ColorPointer(NULL, 0, 0);
 		applyfog = (layer->flags & TEXTURELAYERFLAG_FOGDARKEN) != 0;
@@ -6118,117 +6086,17 @@ static void R_DrawTextureSurfaceList_GL11(int texturenumsurfaces, msurface_t **t
 	}
 }
 
-static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **texturesurfacelist, qboolean writedepth, qboolean depthonly)
+static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **texturesurfacelist, qboolean writedepth)
 {
-	if (rsurface.texture->currentmaterialflags & MATERIALFLAG_NODRAW)
-		return;
-	rsurface.rtlight = NULL;
 	CHECKGLERROR
-	if (depthonly)
-	{
-		if ((rsurface.texture->currentmaterialflags & (MATERIALFLAG_NODEPTHTEST | MATERIALFLAG_BLENDED | MATERIALFLAG_ALPHATEST)))
-			return;
-		if (r_waterstate.renderingscene && (rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFLECTION)))
-			return;
-		if (rsurface.mode != RSURFMODE_MULTIPASS)
-			rsurface.mode = RSURFMODE_MULTIPASS;
-		if (r_depthfirst.integer == 3)
-		{
-			int i = (int)(texturesurfacelist[0] - rsurface.modelsurfaces);
-			if (!r_refdef.view.showdebug)
-				GL_Color(0, 0, 0, 1);
-			else
-				GL_Color(((i >> 6) & 7) / 7.0f, ((i >> 3) & 7) / 7.0f, (i & 7) / 7.0f,1);
-		}
-		else
-		{
-			GL_ColorMask(0,0,0,0);
-			GL_Color(1,1,1,1);
-		}
-		RSurf_SetupDepthAndCulling();
-		GL_DepthTest(true);
-		GL_BlendFunc(GL_ONE, GL_ZERO);
-		GL_DepthMask(true);
-		GL_AlphaTest(false);
-		R_Mesh_ColorPointer(NULL, 0, 0);
-		R_Mesh_ResetTextureState();
-		RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
-		R_SetupDepthOrShadowShader();
-		RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
-		GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
-	}
-	else if (r_depthfirst.integer == 3)
-		return;
-	else if (!r_refdef.view.showdebug && (r_showsurfaces.integer || gl_lightmaps.integer))
-	{
-		GL_Color(0, 0, 0, 1);
-		R_SetupGenericShader(false);
-		RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
-	}
-	else if (r_showsurfaces.integer)
-	{
-		if (rsurface.mode != RSURFMODE_MULTIPASS)
-			rsurface.mode = RSURFMODE_MULTIPASS;
-		RSurf_SetupDepthAndCulling();
-		GL_DepthTest(true);
-		GL_BlendFunc(GL_ONE, GL_ZERO);
-		GL_DepthMask(writedepth);
-		GL_Color(1,1,1,1);
-		GL_AlphaTest(false);
-		R_Mesh_ColorPointer(NULL, 0, 0);
-		R_Mesh_ResetTextureState();
-		R_SetupGenericShader(false);
-		RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
-		R_DrawTextureSurfaceList_ShowSurfaces(texturenumsurfaces, texturesurfacelist);
-	}
-	else if (gl_lightmaps.integer)
-	{
-		rmeshstate_t m;
-		if (rsurface.mode != RSURFMODE_MULTIPASS)
-			rsurface.mode = RSURFMODE_MULTIPASS;
-		GL_DepthRange(0, (rsurface.texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE) ? 0.0625 : 1);
-		GL_DepthTest(true);
-		GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : r_refdef.view.cullface_back);
-		GL_BlendFunc(GL_ONE, GL_ZERO);
-		GL_DepthMask(writedepth);
-		GL_Color(1,1,1,1);
-		GL_AlphaTest(false);
-		R_Mesh_ColorPointer(NULL, 0, 0);
-		R_SetupGenericShader(true);
-		memset(&m, 0, sizeof(m));
-		m.tex[0] = R_GetTexture(r_texture_white);
-		m.pointer_texcoord[0] = rsurface.modeltexcoordlightmap2f;
-		m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordlightmap2f_bufferobject;
-		m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordlightmap2f_bufferoffset;
-		R_Mesh_TextureState(&m);
-		RSurf_PrepareVerticesForBatch(rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT, false, texturenumsurfaces, texturesurfacelist);
-		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT)
-			RSurf_DrawBatch_GL11_VertexShade(texturenumsurfaces, texturesurfacelist, 1, 1, 1, 1, false, false);
-		else if (rsurface.uselightmaptexture)
-			RSurf_DrawBatch_GL11_Lightmap(texturenumsurfaces, texturesurfacelist, 1, 1, 1, 1, false, false);
-		else
-			RSurf_DrawBatch_GL11_VertexColor(texturenumsurfaces, texturesurfacelist, 1, 1, 1, 1, false, false);
-	}
-	else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_SKY)
-		R_DrawTextureSurfaceList_Sky(texturenumsurfaces, texturesurfacelist);
-	else if (rsurface.texture->currentnumlayers)
-	{
-		// write depth for anything we skipped on the depth-only pass earlier
-		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
-			writedepth = true;
-		RSurf_SetupDepthAndCulling();
-		GL_BlendFunc(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
-		GL_DepthMask(writedepth && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_BLENDED));
-		GL_AlphaTest((rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST) != 0);
-		if (r_glsl.integer && gl_support_fragment_shader)
-			R_DrawTextureSurfaceList_GL20(texturenumsurfaces, texturesurfacelist);
-		else if (gl_combine.integer && r_textureunits.integer >= 2)
-			R_DrawTextureSurfaceList_GL13(texturenumsurfaces, texturesurfacelist);
-		else
-			R_DrawTextureSurfaceList_GL11(texturenumsurfaces, texturesurfacelist);
-	}
+	RSurf_SetupDepthAndCulling();
+	if (r_glsl.integer && gl_support_fragment_shader)
+		R_DrawTextureSurfaceList_GL20(texturenumsurfaces, texturesurfacelist, writedepth);
+	else if (gl_combine.integer && r_textureunits.integer >= 2)
+		R_DrawTextureSurfaceList_GL13(texturenumsurfaces, texturesurfacelist, writedepth);
+	else
+		R_DrawTextureSurfaceList_GL11(texturenumsurfaces, texturesurfacelist, writedepth);
 	CHECKGLERROR
-	GL_LockArrays(0, 0);
 }
 
 static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
@@ -6269,16 +6137,74 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 			texturesurfacelist[texturenumsurfaces++] = surface;
 		}
 		// render the range of surfaces
-		R_DrawTextureSurfaceList(texturenumsurfaces, texturesurfacelist, true, false);
+		R_DrawTextureSurfaceList(texturenumsurfaces, texturesurfacelist, false);
 	}
+	GL_AlphaTest(false);
+}
 
-	RSurf_CleanUp();
+static void R_ProcessTextureSurfaceList(int texturenumsurfaces, msurface_t **texturesurfacelist, qboolean writedepth, qboolean depthonly, const entity_render_t *queueentity)
+{
+	CHECKGLERROR
+	if (depthonly)
+	{
+		if ((rsurface.texture->currentmaterialflags & (MATERIALFLAG_NODEPTHTEST | MATERIALFLAG_BLENDED | MATERIALFLAG_ALPHATEST)))
+			return;
+		if (r_waterstate.renderingscene && (rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFLECTION)))
+			return;
+		RSurf_SetupDepthAndCulling();
+		RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
+		RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
+	}
+	else if (r_showsurfaces.integer)
+	{
+		RSurf_SetupDepthAndCulling();
+		GL_DepthTest(true);
+		GL_BlendFunc(GL_ONE, GL_ZERO);
+		GL_DepthMask(true);
+		GL_AlphaTest(false);
+		R_Mesh_ColorPointer(NULL, 0, 0);
+		R_Mesh_ResetTextureState();
+		R_SetupGenericShader(false);
+		RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
+		if (!r_refdef.view.showdebug)
+		{
+			GL_Color(0, 0, 0, 1);
+			RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
+		}
+		else
+			RSurf_DrawBatch_ShowSurfaces(texturenumsurfaces, texturesurfacelist);
+	}
+	else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_SKY)
+		R_DrawTextureSurfaceList_Sky(texturenumsurfaces, texturesurfacelist);
+	else if (!rsurface.texture->currentnumlayers)
+		return;
+	else if ((rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED) && queueentity)
+	{
+		// transparent surfaces get pushed off into the transparent queue
+		int surfacelistindex;
+		const msurface_t *surface;
+		vec3_t tempcenter, center;
+		for (surfacelistindex = 0;surfacelistindex < texturenumsurfaces;surfacelistindex++)
+		{
+			surface = texturesurfacelist[surfacelistindex];
+			tempcenter[0] = (surface->mins[0] + surface->maxs[0]) * 0.5f;
+			tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
+			tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
+			Matrix4x4_Transform(&rsurface.matrix, tempcenter, center);
+			R_MeshQueue_AddTransparent(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_refdef.view.origin : center, R_DrawSurface_TransparentCallback, queueentity, surface - rsurface.modelsurfaces, rsurface.rtlight);
+		}
+	}
+	else
+	{
+		// the alphatest check is to make sure we write depth for anything we skipped on the depth-only pass earlier
+		R_DrawTextureSurfaceList(texturenumsurfaces, texturesurfacelist, writedepth || (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST));
+	}
+	CHECKGLERROR
 }
 
 void R_QueueSurfaceList(entity_render_t *ent, int numsurfaces, msurface_t **surfacelist, int flagsmask, qboolean writedepth, qboolean depthonly, qboolean addwaterplanes)
 {
 	int i, j;
-	vec3_t tempcenter, center;
 	texture_t *texture;
 	// if we're rendering water textures (extra scene renders), use a separate loop to avoid burdening the main one
 	if (addwaterplanes)
@@ -6299,33 +6225,18 @@ void R_QueueSurfaceList(entity_render_t *ent, int numsurfaces, msurface_t **surf
 		texture = surfacelist[i]->texture;
 		rsurface.texture = texture->currentframe;
 		rsurface.uselightmaptexture = surfacelist[i]->lightmaptexture != NULL;
-		if (!(rsurface.texture->currentmaterialflags & flagsmask))
+		if (!(rsurface.texture->currentmaterialflags & flagsmask) || (rsurface.texture->currentmaterialflags & MATERIALFLAG_NODRAW))
 		{
 			// if this texture is not the kind we want, skip ahead to the next one
 			for (;j < numsurfaces && texture == surfacelist[j]->texture;j++)
 				;
 			continue;
 		}
-		if (rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED)
-		{
-			// transparent surfaces get pushed off into the transparent queue
-			const msurface_t *surface = surfacelist[i];
-			if (depthonly)
-				continue;
-			tempcenter[0] = (surface->mins[0] + surface->maxs[0]) * 0.5f;
-			tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
-			tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
-			Matrix4x4_Transform(&rsurface.matrix, tempcenter, center);
-			R_MeshQueue_AddTransparent(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_refdef.view.origin : center, R_DrawSurface_TransparentCallback, ent, surface - rsurface.modelsurfaces, rsurface.rtlight);
-		}
-		else
-		{
-			// simply scan ahead until we find a different texture or lightmap state
-			for (;j < numsurfaces && texture == surfacelist[j]->texture && rsurface.uselightmaptexture == (surfacelist[j]->lightmaptexture != NULL);j++)
-				;
-			// render the range of surfaces
-			R_DrawTextureSurfaceList(j - i, surfacelist + i, writedepth, depthonly);
-		}
+		// simply scan ahead until we find a different texture or lightmap state
+		for (;j < numsurfaces && texture == surfacelist[j]->texture && rsurface.uselightmaptexture == (surfacelist[j]->lightmaptexture != NULL);j++)
+			;
+		// render the range of surfaces
+		R_ProcessTextureSurfaceList(j - i, surfacelist + i, writedepth, depthonly, ent);
 	}
 }
 
@@ -6581,6 +6492,7 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 	t = NULL;
 	rsurface.uselightmaptexture = false;
 	rsurface.texture = NULL;
+	rsurface.rtlight = NULL;
 	numsurfacelist = 0;
 	j = model->firstmodelsurface;
 	endj = j + model->nummodelsurfaces;
@@ -6615,7 +6527,7 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 	r_refdef.stats.world_surfaces += numsurfacelist;
 	if (numsurfacelist)
 		R_QueueSurfaceList(r_refdef.scene.worldentity, numsurfacelist, surfacelist, flagsmask, writedepth, depthonly, addwaterplanes);
-	RSurf_CleanUp();
+	GL_AlphaTest(false);
 }
 
 void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean addwaterplanes, qboolean debug)
@@ -6670,6 +6582,7 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 	t = NULL;
 	rsurface.uselightmaptexture = false;
 	rsurface.texture = NULL;
+	rsurface.rtlight = NULL;
 	numsurfacelist = 0;
 	surface = model->data_surfaces + model->firstmodelsurface;
 	endsurface = surface + model->nummodelsurfaces;
@@ -6695,5 +6608,5 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 	r_refdef.stats.entities_surfaces += numsurfacelist;
 	if (numsurfacelist)
 		R_QueueSurfaceList(ent, numsurfacelist, surfacelist, flagsmask, writedepth, depthonly, addwaterplanes);
-	RSurf_CleanUp();
+	GL_AlphaTest(false);
 }

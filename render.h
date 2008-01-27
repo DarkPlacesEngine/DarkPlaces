@@ -200,16 +200,6 @@ void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, rtexture_
 
 extern mempool_t *r_main_mempool;
 
-typedef enum rsurfmode_e
-{
-	RSURFMODE_NONE,
-	RSURFMODE_SHOWSURFACES,
-	RSURFMODE_SKY,
-	RSURFMODE_MULTIPASS,
-	RSURFMODE_GLSL
-}
-rsurfmode_t;
-
 typedef struct rsurfacestate_s
 {
 	// processing buffers
@@ -321,8 +311,6 @@ typedef struct rsurfacestate_s
 	// whether lightmapping is active on this batch
 	// (otherwise vertex colored)
 	qboolean uselightmaptexture;
-	// one of the RSURFMODE_ values
-	rsurfmode_t mode;
 
 	// rtlight rendering
 	// light currently being rendered
@@ -351,7 +339,6 @@ extern rsurfacestate_t rsurface;
 
 void RSurf_ActiveWorldEntity(void);
 void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, qboolean wanttangents);
-void RSurf_CleanUp(void);
 void RSurf_SetupDepthAndCulling(void);
 
 void R_Mesh_ResizeArrays(int newvertices);
