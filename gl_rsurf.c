@@ -557,10 +557,21 @@ void R_Q1BSP_DrawDepth(entity_render_t *ent)
 	model_t *model = ent->model;
 	if (model == NULL)
 		return;
+	GL_ColorMask(0,0,0,0);
+	GL_Color(1,1,1,1);
+	RSurf_SetupDepthAndCulling();
+	GL_DepthTest(true);
+	GL_BlendFunc(GL_ONE, GL_ZERO);
+	GL_DepthMask(true);
+	GL_AlphaTest(false);
+	R_Mesh_ColorPointer(NULL, 0, 0);
+	R_Mesh_ResetTextureState();
+	R_SetupDepthOrShadowShader();
 	if (ent == r_refdef.scene.worldentity)
 		R_DrawWorldSurfaces(false, false, true, false, false);
 	else
 		R_DrawModelSurfaces(ent, false, false, true, false, false);
+	GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
 }
 
 void R_Q1BSP_DrawDebug(entity_render_t *ent)
