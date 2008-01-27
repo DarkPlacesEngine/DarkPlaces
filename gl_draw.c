@@ -755,10 +755,7 @@ void _DrawQ_Setup(void)
 	GL_AlphaTest(false);
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	if (gl_support_fragment_shader)
-	{
-		qglUseProgramObjectARB(0);CHECKGLERROR
-	}
+	R_SetupGenericShader(true);
 }
 
 static void _DrawQ_ProcessDrawFlag(int flags)
@@ -785,6 +782,7 @@ void DrawQ_Pic(float x, float y, cachepic_t *pic, float width, float height, flo
 	R_Mesh_VertexPointer(floats, 0, 0);
 	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
+	R_SetupGenericShader(pic != NULL);
 	if (pic)
 	{
 		if (width == 0)
@@ -832,6 +830,7 @@ void DrawQ_Fill(float x, float y, float width, float height, float red, float gr
 	R_Mesh_VertexPointer(floats, 0, 0);
 	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
+	R_SetupGenericShader(false);
 
 	floats[2] = floats[5] = floats[8] = floats[11] = 0;
 	floats[0] = floats[9] = x;
@@ -957,6 +956,7 @@ float DrawQ_String_Font(float startx, float starty, const char *text, size_t max
 	R_Mesh_TexBind(0, R_GetTexture(fnt->tex));
 	R_Mesh_TexCoordPointer(0, 2, texcoord2f, 0, 0);
 	R_Mesh_VertexPointer(vertex3f, 0, 0);
+	R_SetupGenericShader(true);
 
 	ac = color4f;
 	at = texcoord2f;
@@ -1111,6 +1111,7 @@ void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height
 	R_Mesh_VertexPointer(floats, 0, 0);
 	R_Mesh_ColorPointer(floats + 20, 0, 0);
 	R_Mesh_ResetTextureState();
+	R_SetupGenericShader(pic != NULL);
 	if (pic)
 	{
 		if (width == 0)
@@ -1147,6 +1148,7 @@ void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags)
 	R_Mesh_ResetTextureState();
 	R_Mesh_TexBind(0, R_GetTexture(mesh->texture));
 	R_Mesh_TexCoordPointer(0, 2, mesh->data_texcoord2f, 0, 0);
+	R_SetupGenericShader(mesh->texture != NULL);
 
 	GL_LockArrays(0, mesh->num_vertices);
 	R_Mesh_Draw(0, mesh->num_vertices, mesh->num_triangles, mesh->data_element3i, 0, 0);
@@ -1221,6 +1223,7 @@ void R_DrawGamma(void)
 		R_Mesh_VertexPointer(blendvertex3f, 0, 0);
 		R_Mesh_ColorPointer(NULL, 0, 0);
 		R_Mesh_ResetTextureState();
+		R_SetupGenericShader(false);
 		GL_DepthMask(true);
 		GL_DepthRange(0, 1);
 		GL_PolygonOffset(0, 0);

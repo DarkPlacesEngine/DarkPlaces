@@ -197,6 +197,7 @@ static void R_DrawExplosion_TransparentCallback(const entity_render_t *ent, cons
 	GL_CullFace(r_refdef.view.cullface_back);
 	R_Mesh_Matrix(&identitymatrix);
 
+	R_SetupGenericShader(true);
 	R_Mesh_ColorPointer(NULL, 0, 0);
 	memset(&m, 0, sizeof(m));
 	m.tex[0] = R_GetTexture(explosiontexture);

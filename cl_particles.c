@@ -1937,6 +1937,7 @@ void R_DrawDecal_TransparentCallback(const entity_render_t *ent, const rtlight_t
 	R_Mesh_VertexPointer(particle_vertex3f, 0, 0);
 	R_Mesh_TexCoordPointer(0, 2, particle_texcoord2f, 0, 0);
 	R_Mesh_ColorPointer(particle_color4f, 0, 0);
+	R_SetupGenericShader(true);
 	GL_DepthMask(false);
 	GL_DepthRange(0, 1);
 	GL_PolygonOffset(0, 0);
@@ -2082,6 +2083,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 	R_Mesh_VertexPointer(particle_vertex3f, 0, 0);
 	R_Mesh_TexCoordPointer(0, 2, particle_texcoord2f, 0, 0);
 	R_Mesh_ColorPointer(particle_color4f, 0, 0);
+	R_SetupGenericShader(true);
 	GL_DepthMask(false);
 	GL_DepthRange(0, 1);
 	GL_PolygonOffset(0, 0);

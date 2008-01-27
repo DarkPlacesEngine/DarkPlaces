@@ -1059,11 +1059,7 @@ void R_Shadow_RenderMode_ActiveLight(rtlight_t *rtlight)
 void R_Shadow_RenderMode_Reset(void)
 {
 	CHECKGLERROR
-	if (r_shadow_rendermode == R_SHADOW_RENDERMODE_LIGHT_GLSL)
-	{
-		qglUseProgramObjectARB(0);CHECKGLERROR
-	}
-	else if (r_shadow_rendermode == R_SHADOW_RENDERMODE_STENCILTWOSIDE)
+	if (r_shadow_rendermode == R_SHADOW_RENDERMODE_STENCILTWOSIDE)
 	{
 		qglDisable(GL_STENCIL_TEST_TWO_SIDE_EXT);CHECKGLERROR
 	}
@@ -1082,6 +1078,7 @@ void R_Shadow_RenderMode_Reset(void)
 	GL_Color(1, 1, 1, 1);
 	GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
+	R_SetupGenericShader(false);
 }
 
 void R_Shadow_RenderMode_StencilShadowVolumes(qboolean clearstencil)
@@ -1090,6 +1087,7 @@ void R_Shadow_RenderMode_StencilShadowVolumes(qboolean clearstencil)
 	R_Shadow_RenderMode_Reset();
 	GL_ColorMask(0, 0, 0, 0);
 	GL_PolygonOffset(r_refdef.shadowpolygonfactor, r_refdef.shadowpolygonoffset);CHECKGLERROR
+	R_SetupDepthOrShadowShader();
 	qglDepthFunc(GL_LESS);CHECKGLERROR
 	qglEnable(GL_STENCIL_TEST);CHECKGLERROR
 	r_shadow_rendermode = r_shadow_shadowingrendermode;

@@ -81,6 +81,7 @@ cvar_t r_glsl_offsetmapping_reliefmapping = {CVAR_SAVE, "r_glsl_offsetmapping_re
 cvar_t r_glsl_offsetmapping_scale = {CVAR_SAVE, "r_glsl_offsetmapping_scale", "0.04", "how deep the offset mapping effect is"};
 cvar_t r_glsl_deluxemapping = {CVAR_SAVE, "r_glsl_deluxemapping", "1", "use per pixel lighting on deluxemap-compiled q3bsp maps (or a value of 2 forces deluxemap shading even without deluxemaps)"};
 cvar_t r_glsl_contrastboost = {CVAR_SAVE, "r_glsl_contrastboost", "1", "by how much to multiply the contrast in dark areas (1 is no change)"};
+cvar_t r_glsl_usegeneric = {CVAR_SAVE, "r_glsl_usegeneric", "1", "use shaders for rendering simple geometry (rather than conventional fixed-function rendering for this purpose)"};
 
 cvar_t r_water = {CVAR_SAVE, "r_water", "0", "whether to use reflections and refraction on water surfaces (note: r_wateralpha must be set below 1)"};
 cvar_t r_water_clippingplanebias = {CVAR_SAVE, "r_water_clippingplanebias", "1", "a rather technical setting which avoids black pixels around water edges"};
@@ -453,17 +454,75 @@ static const char *builtinshaderstring =
 "\n"
 "// common definitions between vertex shader and fragment shader:\n"
 "\n"
-"#ifdef __GLSL_CG_DATA_TYPES\n"
-"# define myhalf half\n"
-"# define myhalf2 half2\n"
-"# define myhalf3 half3\n"
-"# define myhalf4 half4\n"
-"#else\n"
+"//#ifdef __GLSL_CG_DATA_TYPES\n"
+"//# define myhalf half\n"
+"//# define myhalf2 half2\n"
+"//# define myhalf3 half3\n"
+"//# define myhalf4 half4\n"
+"//#else\n"
 "# define myhalf float\n"
 "# define myhalf2 vec2\n"
 "# define myhalf3 vec3\n"
 "# define myhalf4 vec4\n"
-"#endif\n"
+"//#endif\n"
+"\n"
+"#ifdef MODE_DEPTH_OR_SHADOW\n"
+"\n"
+"# ifdef VERTEX_SHADER\n"
+"void main(void)\n"
+"{\n"
+"	gl_Position = ftransform();\n"
+"}\n"
+"# endif\n"
+"\n"
+"#else\n"
+"#ifdef MODE_GENERIC\n"
+"\n"
+"# ifdef VERTEX_SHADER\n"
+"void main(void)\n"
+"{\n"
+"	gl_FrontColor = gl_Color;\n"
+"#  ifdef USEDIFFUSE\n"
+"	gl_TexCoord[0] = gl_TextureMatrix[0] * gl_MultiTexCoord0;\n"
+"#  endif\n"
+"#  ifdef USESPECULAR\n"
+"	gl_TexCoord[1] = gl_TextureMatrix[1] * gl_MultiTexCoord1;\n"
+"#  endif\n"
+"	gl_Position = ftransform();\n"
+"}\n"
+"# endif\n"
+"# ifdef FRAGMENT_SHADER\n"
+"\n"
+"#  ifdef USEDIFFUSE\n"
+"uniform sampler2D Texture_First;\n"
+"#  endif\n"
+"#  ifdef USESPECULAR\n"
+"uniform sampler2D Texture_Second;\n"
+"#  endif\n"
+"\n"
+"void main(void)\n"
+"{\n"
+"	gl_FragColor = gl_Color;\n"
+"#  ifdef USEDIFFUSE\n"
+"	gl_FragColor *= texture2D(Texture_First, gl_TexCoord[0].xy);\n"
+"#  endif\n"
+"\n"
+"#  ifdef USESPECULAR\n"
+"	vec4 tex2 = texture2D(Texture_Second, gl_TexCoord[1].xy);\n"
+"#  endif\n"
+"#  ifdef USECOLORMAPPING\n"
+"	gl_FragColor *= tex2;\n"
+"#  endif\n"
+"#  ifdef USEGLOW\n"
+"	gl_FragColor += tex2;\n"
+"#  endif\n"
+"#  ifdef USEVERTEXTEXTUREBLEND\n"
+"	gl_FragColor = mix(tex2, gl_FragColor, tex2.a);\n"
+"#  endif\n"
+"}\n"
+"# endif\n"
+"\n"
+"#else // !MODE_GENERIC\n"
 "\n"
 "varying vec2 TexCoord;\n"
 "varying vec2 TexCoordLightmap;\n"
@@ -512,7 +571,7 @@ static const char *builtinshaderstring =
 "uniform vec3 EyePosition;\n"
 "uniform vec3 LightDir;\n"
 "\n"
-"// TODO: get rid of tangentt (texcoord2) and use a crossproduct to regenerate it from tangents (texcoord1) and normal (texcoord3)\n"
+"// TODO: get rid of tangentt (texcoord2) and use a crossproduct to regenerate it from tangents (texcoord1) and normal (texcoord3), this would require sending a 4 component texcoord1 with W as 1 or -1 according to which side the texcoord2 should be on\n"
 "\n"
 "void main(void)\n"
 "{\n"
@@ -724,7 +783,7 @@ static const char *builtinshaderstring =
 "	gl_FragColor = mix(texture2D(Texture_Refraction, ScreenTexCoord.xy) * RefractColor, texture2D(Texture_Reflection, ScreenTexCoord.zw) * ReflectColor, Fresnel);\n"
 "}\n"
 "\n"
-"#else // MODE_WATER\n"
+"#else // !MODE_WATER\n"
 "#ifdef MODE_REFRACTION\n"
 "\n"
 "// refraction pass\n"
@@ -742,7 +801,7 @@ static const char *builtinshaderstring =
 "	gl_FragColor = texture2D(Texture_Refraction, ScreenTexCoord) * RefractColor;\n"
 "}\n"
 "\n"
-"#else // MODE_REFRACTION\n"
+"#else // !MODE_REFRACTION\n"
 "void main(void)\n"
 "{\n"
 "#ifdef USEOFFSETMAPPING\n"
@@ -933,10 +992,13 @@ static const char *builtinshaderstring =
 "\n"
 "	gl_FragColor = vec4(color);\n"
 "}\n"
-"#endif // MODE_REFRACTION\n"
-"#endif // MODE_WATER\n"
+"#endif // !MODE_REFRACTION\n"
+"#endif // !MODE_WATER\n"
 "\n"
 "#endif // FRAGMENT_SHADER\n"
+"\n"
+"#endif // !MODE_GENERIC\n"
+"#endif // !MODE_DEPTH_OR_SHADOW\n"
 ;
 
 typedef struct shaderpermutationinfo_s
@@ -993,6 +1055,8 @@ shaderpermutationinfo_t shaderpermutationinfo[SHADERPERMUTATION_COUNT] =
 // this enum is multiplied by SHADERPERMUTATION_MODEBASE
 typedef enum shadermode_e
 {
+	SHADERMODE_GENERIC, // (particles/HUD/etc) vertex color, optionally multiplied by one texture
+	SHADERMODE_DEPTH_OR_SHADOW, // (depthfirst/shadows) vertex shader only
 	SHADERMODE_FLATCOLOR, // (lightmap) modulate texture by uniform color (q1bsp, q3bsp)
 	SHADERMODE_VERTEXCOLOR, // (lightmap) modulate texture by vertex colors (q3bsp)
 	SHADERMODE_LIGHTMAP, // (lightmap) modulate texture by lightmap texture (q1bsp, q3bsp)
@@ -1009,6 +1073,8 @@ shadermode_t;
 // NOTE: MUST MATCH ORDER OF SHADERMODE_* ENUMS!
 shadermodeinfo_t shadermodeinfo[SHADERMODE_COUNT] =
 {
+	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_GENERIC\n", " generic"},
+	{"glsl/default.glsl", NULL, NULL               , "#define MODE_DEPTH_OR_SHADOW\n", " depth/shadow"},
 	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_FLATCOLOR\n", " flatcolor"},
 	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_VERTEXCOLOR\n", " vertexcolor"},
 	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_LIGHTMAP\n", " lightmap"},
@@ -1027,6 +1093,8 @@ typedef struct r_glsl_permutation_s
 	// 0 if compilation failed
 	int program;
 	// locations of detected uniforms in program object, or -1 if not found
+	int loc_Texture_First;
+	int loc_Texture_Second;
 	int loc_Texture_Normal;
 	int loc_Texture_Color;
 	int loc_Texture_Gloss;
@@ -1177,6 +1245,8 @@ static void R_GLSL_CompilePermutation(shadermode_t mode, shaderpermutation_t per
 		qglUseProgramObjectARB(p->program);CHECKGLERROR
 		// look up all the uniform variable names we care about, so we don't
 		// have to look them up every time we set them
+		p->loc_Texture_First              = qglGetUniformLocationARB(p->program, "Texture_First");
+		p->loc_Texture_Second             = qglGetUniformLocationARB(p->program, "Texture_Second");
 		p->loc_Texture_Normal             = qglGetUniformLocationARB(p->program, "Texture_Normal");
 		p->loc_Texture_Color              = qglGetUniformLocationARB(p->program, "Texture_Color");
 		p->loc_Texture_Gloss              = qglGetUniformLocationARB(p->program, "Texture_Gloss");
@@ -1221,6 +1291,8 @@ static void R_GLSL_CompilePermutation(shadermode_t mode, shaderpermutation_t per
 		p->loc_ReflectFactor              = qglGetUniformLocationARB(p->program, "ReflectFactor");
 		p->loc_ReflectOffset              = qglGetUniformLocationARB(p->program, "ReflectOffset");
 		// initialize the samplers to refer to the texture units we use
+		if (p->loc_Texture_First           >= 0) qglUniform1iARB(p->loc_Texture_First          , GL20TU_FIRST);
+		if (p->loc_Texture_Second          >= 0) qglUniform1iARB(p->loc_Texture_Second         , GL20TU_SECOND);
 		if (p->loc_Texture_Normal          >= 0) qglUniform1iARB(p->loc_Texture_Normal         , GL20TU_NORMAL);
 		if (p->loc_Texture_Color           >= 0) qglUniform1iARB(p->loc_Texture_Color          , GL20TU_COLOR);
 		if (p->loc_Texture_Gloss           >= 0) qglUniform1iARB(p->loc_Texture_Gloss          , GL20TU_GLOSS);
@@ -1239,7 +1311,6 @@ static void R_GLSL_CompilePermutation(shadermode_t mode, shaderpermutation_t per
 		if (p->loc_Texture_Refraction      >= 0) qglUniform1iARB(p->loc_Texture_Refraction     , GL20TU_REFRACTION);
 		if (p->loc_Texture_Reflection      >= 0) qglUniform1iARB(p->loc_Texture_Reflection     , GL20TU_REFLECTION);
 		CHECKGLERROR
-		qglUseProgramObjectARB(0);CHECKGLERROR
 		if (developer.integer)
 			Con_Printf("GLSL shader %s compiled.\n", permutationname);
 	}
@@ -1290,10 +1361,99 @@ void R_GLSL_DumpShader_f(void)
 	Con_Printf("glsl/default.glsl written\n");
 }
 
+void R_SetupShader_SetPermutation(shadermode_t mode, unsigned int permutation)
+{
+	r_glsl_permutation_t *perm = &r_glsl_permutations[mode][permutation];
+	if (r_glsl_permutation != perm)
+	{
+		r_glsl_permutation = perm;
+		if (!r_glsl_permutation->program)
+		{
+			if (!r_glsl_permutation->compiled)
+				R_GLSL_CompilePermutation(mode, permutation);
+			if (!r_glsl_permutation->program)
+			{
+				// remove features until we find a valid permutation
+				int i;
+				for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
+				{
+					// reduce i more quickly whenever it would not remove any bits
+					int j = 1<<(SHADERPERMUTATION_COUNT-1-i);
+					if (!(permutation & j))
+						continue;
+					permutation -= j;
+					r_glsl_permutation = &r_glsl_permutations[mode][permutation];
+					if (!r_glsl_permutation->compiled)
+						R_GLSL_CompilePermutation(mode, permutation);
+					if (r_glsl_permutation->program)
+						break;
+				}
+				if (i >= SHADERPERMUTATION_COUNT)
+				{
+					Con_Printf("OpenGL 2.0 shaders disabled - unable to find a working shader permutation fallback on this driver (set r_glsl 1 if you want to try again)\n");
+					Cvar_SetValueQuick(&r_glsl, 0);
+					R_GLSL_Restart_f(); // unload shaders
+					return; // no bit left to clear
+				}
+			}
+		}
+		CHECKGLERROR
+		qglUseProgramObjectARB(r_glsl_permutation->program);CHECKGLERROR
+	}
+}
+
+void R_SetupGenericShader(qboolean usetexture)
+{
+	if (gl_support_fragment_shader)
+	{
+		if (r_glsl.integer && r_glsl_usegeneric.integer)
+			R_SetupShader_SetPermutation(SHADERMODE_GENERIC, usetexture ? SHADERPERMUTATION_DIFFUSE : 0);
+		else if (r_glsl_permutation)
+		{
+			r_glsl_permutation = NULL;
+			qglUseProgramObjectARB(0);CHECKGLERROR
+		}
+	}
+}
+
+void R_SetupGenericTwoTextureShader(int texturemode)
+{
+	if (gl_support_fragment_shader)
+	{
+		if (r_glsl.integer && r_glsl_usegeneric.integer)
+			R_SetupShader_SetPermutation(SHADERMODE_GENERIC, SHADERPERMUTATION_DIFFUSE | SHADERPERMUTATION_SPECULAR | (texturemode == GL_MODULATE ? SHADERPERMUTATION_COLORMAPPING : (texturemode == GL_ADD ? SHADERPERMUTATION_GLOW : (texturemode == GL_DECAL ? SHADERPERMUTATION_VERTEXTEXTUREBLEND : 0))));
+		else if (r_glsl_permutation)
+		{
+			r_glsl_permutation = NULL;
+			qglUseProgramObjectARB(0);CHECKGLERROR
+		}
+	}
+	if (!r_glsl_permutation)
+	{
+		if (texturemode == GL_DECAL && gl_combine.integer)
+			texturemode = GL_INTERPOLATE_ARB;
+		R_Mesh_TexCombine(1, texturemode, texturemode, 1, 1);
+	}
+}
+
+void R_SetupDepthOrShadowShader(void)
+{
+	if (gl_support_fragment_shader)
+	{
+		if (r_glsl.integer && r_glsl_usegeneric.integer)
+			R_SetupShader_SetPermutation(SHADERMODE_DEPTH_OR_SHADOW, 0);
+		else if (r_glsl_permutation)
+		{
+			r_glsl_permutation = NULL;
+			qglUseProgramObjectARB(0);CHECKGLERROR
+		}
+	}
+}
+
 extern rtexture_t *r_shadow_attenuationgradienttexture;
 extern rtexture_t *r_shadow_attenuation2dtexture;
 extern rtexture_t *r_shadow_attenuation3dtexture;
-int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, float ambientscale, float diffusescale, float specularscale, rsurfacepass_t rsurfacepass)
+void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, float ambientscale, float diffusescale, float specularscale, rsurfacepass_t rsurfacepass)
 {
 	// select a permutation of the lighting shader appropriate to this
 	// combination of texture, entity, light source, and fogging, only use the
@@ -1301,7 +1461,6 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 	// fragment shader on features that are not being used
 	unsigned int permutation = 0;
 	shadermode_t mode = 0;
-	r_glsl_permutation = NULL;
 	// TODO: implement geometry-shader based shadow volumes someday
 	if (r_glsl_offsetmapping.integer)
 	{
@@ -1441,38 +1600,7 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
 			permutation |= SHADERPERMUTATION_REFLECTION;
 	}
-	r_glsl_permutation = &r_glsl_permutations[mode][permutation];
-	if (!r_glsl_permutation->program)
-	{
-		if (!r_glsl_permutation->compiled)
-			R_GLSL_CompilePermutation(mode, permutation);
-		if (!r_glsl_permutation->program)
-		{
-			// remove features until we find a valid permutation
-			int i;
-			for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
-			{
-				// reduce i more quickly whenever it would not remove any bits
-				int j = 1<<(SHADERPERMUTATION_COUNT-1-i);
-				if (!(permutation & j))
-					continue;
-				permutation -= j;
-				r_glsl_permutation = &r_glsl_permutations[mode][permutation];
-				if (!r_glsl_permutation->compiled)
-					R_GLSL_CompilePermutation(mode, permutation);
-				if (r_glsl_permutation->program)
-					break;
-			}
-			if (i >= SHADERPERMUTATION_COUNT)
-			{
-				Con_Printf("OpenGL 2.0 shaders disabled - unable to find a working shader permutation fallback on this driver (set r_glsl 1 if you want to try again)\n");
-				Cvar_SetValueQuick(&r_glsl, 0);
-				return 0; // no bit left to clear
-			}
-		}
-	}
-	CHECKGLERROR
-	qglUseProgramObjectARB(r_glsl_permutation->program);CHECKGLERROR
+	R_SetupShader_SetPermutation(mode, permutation);
 	if (mode == SHADERMODE_LIGHTSOURCE)
 	{
 		if (r_glsl_permutation->loc_LightPosition >= 0) qglUniform3fARB(r_glsl_permutation->loc_LightPosition, rsurface.entitylightorigin[0], rsurface.entitylightorigin[1], rsurface.entitylightorigin[2]);
@@ -1560,7 +1688,6 @@ int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, fl
 	if (r_glsl_permutation->loc_SpecularPower >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularPower, rsurface.texture->specularpower);
 	if (r_glsl_permutation->loc_OffsetMapping_Scale >= 0) qglUniform1fARB(r_glsl_permutation->loc_OffsetMapping_Scale, r_glsl_offsetmapping_scale.value);
 	CHECKGLERROR
-	return permutation;
 }
 
 #define SKINFRAME_HASH 1024
@@ -2077,6 +2204,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_glsl_offsetmapping_reliefmapping);
 	Cvar_RegisterVariable(&r_glsl_offsetmapping_scale);
 	Cvar_RegisterVariable(&r_glsl_deluxemapping);
+	Cvar_RegisterVariable(&r_glsl_usegeneric);
 	Cvar_RegisterVariable(&r_water);
 	Cvar_RegisterVariable(&r_water_resolutionmultiplier);
 	Cvar_RegisterVariable(&r_water_clippingplanebias);
@@ -2589,11 +2717,6 @@ void R_SetupView(qboolean allowwaterclippingplane)
 
 void R_ResetViewRendering2D(void)
 {
-	if (gl_support_fragment_shader)
-	{
-		qglUseProgramObjectARB(0);CHECKGLERROR
-	}
-
 	DrawQ_Finish();
 
 	// GL is weird because it's bottom to top, r_refdef.view.y is top to bottom
@@ -2618,15 +2741,11 @@ void R_ResetViewRendering2D(void)
 	qglStencilFunc(GL_ALWAYS, 128, ~0);CHECKGLERROR
 	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);CHECKGLERROR
 	GL_CullFace(GL_FRONT); // quake is backwards, this culls back faces
+	R_SetupGenericShader(true);
 }
 
 void R_ResetViewRendering3D(void)
 {
-	if (gl_support_fragment_shader)
-	{
-		qglUseProgramObjectARB(0);CHECKGLERROR
-	}
-
 	DrawQ_Finish();
 
 	// GL is weird because it's bottom to top, r_refdef.view.y is top to bottom
@@ -2651,6 +2770,7 @@ void R_ResetViewRendering3D(void)
 	qglStencilFunc(GL_ALWAYS, 128, ~0);CHECKGLERROR
 	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);CHECKGLERROR
 	GL_CullFace(r_refdef.view.cullface_back);
+	R_SetupGenericShader(true);
 }
 
 /*
@@ -3049,6 +3169,7 @@ void R_Bloom_CopyScreenTexture(float colorscale)
 	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_TexCoordPointer(0, 2, r_bloomstate.screentexcoord2f, 0, 0);
 	R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_screen));
+	R_SetupGenericShader(true);
 
 	// copy view into the screen texture
 	GL_ActiveTexture(0);
@@ -3093,6 +3214,7 @@ void R_Bloom_MakeTexture(void)
 	R_ResetViewRendering2D();
 	R_Mesh_VertexPointer(r_screenvertex3f, 0, 0);
 	R_Mesh_ColorPointer(NULL, 0, 0);
+	R_SetupGenericShader(true);
 
 	// we have a bloom image in the framebuffer
 	CHECKGLERROR
@@ -3244,6 +3366,7 @@ static void R_BlendView(void)
 		R_ResetViewRendering2D();
 		R_Mesh_VertexPointer(r_screenvertex3f, 0, 0);
 		R_Mesh_ColorPointer(NULL, 0, 0);
+		R_SetupGenericShader(true);
 		GL_Color(1, 1, 1, 1);
 		GL_BlendFunc(GL_ONE, GL_ONE);
 		R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_bloom));
@@ -3270,12 +3393,13 @@ static void R_BlendView(void)
 		R_Mesh_TexCoordPointer(0, 2, r_bloomstate.bloomtexcoord2f, 0, 0);
 		if (r_textureunits.integer >= 2 && gl_combine.integer)
 		{
-			R_Mesh_TexCombine(1, GL_ADD, GL_ADD, 1, 1);
+			R_SetupGenericTwoTextureShader(GL_ADD);
 			R_Mesh_TexBind(1, R_GetTexture(r_bloomstate.texture_screen));
 			R_Mesh_TexCoordPointer(1, 2, r_bloomstate.screentexcoord2f, 0, 0);
 		}
 		else
 		{
+			R_SetupGenericShader(true);
 			R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
 			r_refdef.stats.bloom_drawpixels += r_refdef.view.width * r_refdef.view.height;
 			// now blend on the bloom texture
@@ -3292,6 +3416,7 @@ static void R_BlendView(void)
 		R_ResetViewRendering2D();
 		R_Mesh_VertexPointer(r_screenvertex3f, 0, 0);
 		R_Mesh_ColorPointer(NULL, 0, 0);
+		R_SetupGenericShader(false);
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		GL_Color(r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
 		R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
@@ -3645,10 +3770,7 @@ void R_RenderScene(qboolean addwaterplanes)
 			R_TimeReport("explosions");
 	}
 
-	if (gl_support_fragment_shader)
-	{
-		qglUseProgramObjectARB(0);CHECKGLERROR
-	}
+	R_SetupGenericShader(true);
 	VM_CL_AddPolygonsToMeshQueue();
 
 	if (r_refdef.view.showdebug)
@@ -3675,18 +3797,12 @@ void R_RenderScene(qboolean addwaterplanes)
 		}
 	}
 
-	if (gl_support_fragment_shader)
-	{
-		qglUseProgramObjectARB(0);CHECKGLERROR
-	}
+	R_SetupGenericShader(true);
 	R_MeshQueue_RenderTransparent();
 	if (r_timereport_active)
 		R_TimeReport("drawtrans");
 
-	if (gl_support_fragment_shader)
-	{
-		qglUseProgramObjectARB(0);CHECKGLERROR
-	}
+	R_SetupGenericShader(true);
 
 	if (r_refdef.view.showdebug && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->DrawDebug && (r_showtris.value > 0 || r_shownormals.value > 0 || r_showcollisionbrushes.value > 0))
 	{
@@ -3698,10 +3814,7 @@ void R_RenderScene(qboolean addwaterplanes)
 			R_TimeReport("modeldebug");
 	}
 
-	if (gl_support_fragment_shader)
-	{
-		qglUseProgramObjectARB(0);CHECKGLERROR
-	}
+	R_SetupGenericShader(true);
 
 	if (cl.csqc_vidvars.drawworld)
 	{
@@ -3761,6 +3874,7 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 	R_Mesh_VertexPointer(vertex3f, 0, 0);
 	R_Mesh_ColorPointer(color4f, 0, 0);
 	R_Mesh_ResetTextureState();
+	R_SetupGenericShader(false);
 	R_Mesh_Draw(0, 8, 12, bboxelements, 0, 0);
 }
 
@@ -3772,6 +3886,7 @@ static void R_DrawEntityBBoxes_Callback(const entity_render_t *ent, const rtligh
 	// this function draws bounding boxes of server entities
 	if (!sv.active)
 		return;
+	R_SetupGenericShader(false);
 	SV_VM_Begin();
 	for (i = 0;i < numsurfaces;i++)
 	{
@@ -3874,6 +3989,7 @@ void R_DrawNoModel_TransparentCallback(const entity_render_t *ent, const rtlight
 	GL_PolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);
 	GL_DepthTest(!(ent->effects & EF_NODEPTHTEST));
 	GL_CullFace((ent->effects & EF_DOUBLESIDED) ? GL_NONE : r_refdef.view.cullface_back);
+	R_SetupGenericShader(false);
 	R_Mesh_VertexPointer(nomodelvertex3f, 0, 0);
 	if (r_refdef.fogenabled)
 	{
@@ -3988,6 +4104,7 @@ void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, rtexture_
 	R_Mesh_VertexPointer(vertex3f, 0, 0);
 	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
+	R_SetupGenericShader(true);
 	R_Mesh_TexBind(0, R_GetTexture(texture));
 	R_Mesh_TexCoordPointer(0, 2, spritetexcoord2f, 0, 0);
 	// FIXME: fixed function path can't properly handle r_refdef.view.colorscale > 1
@@ -4477,10 +4594,6 @@ void R_Mesh_ResizeArrays(int newvertices)
 void RSurf_CleanUp(void)
 {
 	CHECKGLERROR
-	if (rsurface.mode == RSURFMODE_GLSL)
-	{
-		qglUseProgramObjectARB(0);CHECKGLERROR
-	}
 	GL_AlphaTest(false);
 	rsurface.mode = RSURFMODE_NONE;
 	rsurface.uselightmaptexture = false;
@@ -5603,9 +5716,7 @@ static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, msurface_t **te
 	if (rsurface.mode != RSURFMODE_SKY)
 	{
 		if (rsurface.mode == RSURFMODE_GLSL)
-		{
-			qglUseProgramObjectARB(0);CHECKGLERROR
-		}
+			R_SetupGenericShader(false);
 		rsurface.mode = RSURFMODE_SKY;
 	}
 	if (skyrendernow)
@@ -5633,6 +5744,7 @@ static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, msurface_t **te
 		R_Mesh_ResetTextureState();
 		if (skyrendermasked)
 		{
+			R_SetupDepthOrShadowShader();
 			// depth-only (masking)
 			GL_ColorMask(0,0,0,0);
 			// just to make sure that braindead drivers don't draw
@@ -5641,6 +5753,7 @@ static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, msurface_t **te
 		}
 		else
 		{
+			R_SetupGenericShader(false);
 			// fog sky
 			GL_BlendFunc(GL_ONE, GL_ZERO);
 		}
@@ -6040,6 +6153,7 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 		R_Mesh_ColorPointer(NULL, 0, 0);
 		R_Mesh_ResetTextureState();
 		RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
+		R_SetupDepthOrShadowShader();
 		RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
 		GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
 	}
@@ -6048,6 +6162,7 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 	else if (!r_refdef.view.showdebug && (r_showsurfaces.integer || gl_lightmaps.integer))
 	{
 		GL_Color(0, 0, 0, 1);
+		R_SetupGenericShader(false);
 		RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
 	}
 	else if (r_showsurfaces.integer)
@@ -6062,6 +6177,7 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 		GL_AlphaTest(false);
 		R_Mesh_ColorPointer(NULL, 0, 0);
 		R_Mesh_ResetTextureState();
+		R_SetupGenericShader(false);
 		RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
 		R_DrawTextureSurfaceList_ShowSurfaces(texturenumsurfaces, texturesurfacelist);
 	}
@@ -6078,6 +6194,7 @@ static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **textur
 		GL_Color(1,1,1,1);
 		GL_AlphaTest(false);
 		R_Mesh_ColorPointer(NULL, 0, 0);
+		R_SetupGenericShader(true);
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(r_texture_white);
 		m.pointer_texcoord[0] = rsurface.modeltexcoordlightmap2f;
@@ -6250,6 +6367,7 @@ void R_DrawLoc_Callback(const entity_render_t *ent, const rtlight_t *rtlight, in
 	R_Mesh_VertexPointer(vertex3f, 0, 0);
 	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
+	R_SetupGenericShader(false);
 
 	i = surfacelist[0];
 	GL_Color(((i & 0x0007) >> 0) * (1.0f / 7.0f) * r_refdef.view.colorscale,
@@ -6301,6 +6419,7 @@ void R_DrawDebugModel(entity_render_t *ent)
 
 	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
+	R_SetupGenericShader(false);
 	GL_DepthRange(0, 1);
 	GL_DepthTest(!r_showdisabledepthtest.integer);
 	GL_DepthMask(false);
