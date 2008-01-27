@@ -22,6 +22,10 @@ void VM_CL_R_PolygonBegin (void);
 void VM_CL_R_PolygonVertex (void);
 void VM_CL_R_PolygonEnd (void);
 /* VMs exposing the polygon calls must call this on Init/Reset */
-void VM_Polygons_Reset();
+void VM_Polygons_Reset(void);
+
+void VM_CL_setattachment(void);
+void VM_CL_gettagindex(void);
+void VM_CL_gettaginfo(void);
 
 #endif /* __CLVM_CMDS_H__ */

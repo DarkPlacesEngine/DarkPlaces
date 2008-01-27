@@ -1988,7 +1988,7 @@ static void VM_CL_getsurfaceclippedpoint(void)
 }
 
 // #443 void(entity e, entity tagentity, string tagname) setattachment
-static void VM_CL_setattachment (void)
+void VM_CL_setattachment (void)
 {
 	prvm_edict_t *e;
 	prvm_edict_t *tagentity;
@@ -2180,7 +2180,7 @@ int CL_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 }
 
 // #451 float(entity ent, string tagname) gettagindex (DP_QC_GETTAGINFO)
-static void VM_CL_gettagindex (void)
+void VM_CL_gettagindex (void)
 {
 	prvm_edict_t *ent;
 	const char *tag_name;
@@ -2215,7 +2215,7 @@ static void VM_CL_gettagindex (void)
 }
 
 // #452 vector(entity ent, float tagindex) gettaginfo (DP_QC_GETTAGINFO)
-static void VM_CL_gettaginfo (void)
+void VM_CL_gettaginfo (void)
 {
 	prvm_edict_t *e;
 	int tagindex;
@@ -2451,7 +2451,7 @@ void VM_CL_R_PolygonBegin (void)
 		VM_InitPolygons(polys);
 	if (polys->begin_active)
 	{
-		VM_Warning("VM_CL_R_PolygonBegin: called twice without VM_CL_R_PolygonEnd after first\n");
+		VM_Warning("VM_CL_R_PolygonBegin: called twice without VM_CL_R_PolygonBegin after first\n");
 		return;
 	}
 	picname = PRVM_G_STRING(OFS_PARM0);
