@@ -2064,6 +2064,7 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 	R_Mesh_ResetTextureState();
 	R_Mesh_TexBind(0, R_GetTexture(pic->tex));
 	R_Mesh_TexCoordPointer(0, 2, texcoord2f, 0, 0);
+	R_SetupGenericShader(true);
 	vertex3f[2] = vertex3f[5] = vertex3f[8] = vertex3f[11] = 0;
 	vertex3f[0] = vertex3f[9] = x;
 	vertex3f[1] = vertex3f[4] = y;

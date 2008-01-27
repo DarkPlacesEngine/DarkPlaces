@@ -280,6 +280,7 @@ static void R_SkyBox(void)
 	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
 	R_Mesh_TexCoordPointer(0, 2, skyboxtexcoord2f, 0, 0);
+	R_SetupGenericShader(true);
 	GL_LockArrays(0, 6*4);
 	for (i = 0;i < 6;i++)
 	{
@@ -398,8 +399,8 @@ static void R_SkySphere(void)
 	if (r_textureunits.integer >= 2 && r_refdef.view.colorscale == 1)
 	{
 		// one pass using GL_DECAL or GL_INTERPOLATE_ARB for alpha layer
+		R_SetupGenericTwoTextureShader(GL_DECAL);
 		R_Mesh_TexBind(1, R_GetTexture(r_refdef.scene.worldmodel->brush.alphaskytexture));
-		R_Mesh_TexCombine(1, gl_combine.integer ? GL_INTERPOLATE_ARB : GL_DECAL, GL_MODULATE, 1, 1);
 		R_Mesh_TexCoordPointer(1, 2, skysphere_texcoord2f, 0, 0);
 		R_Mesh_TexMatrix(1, &scroll2matrix);
 		GL_LockArrays(0, skysphere_numverts);
@@ -410,6 +411,7 @@ static void R_SkySphere(void)
 	else
 	{
 		// two pass
+		R_SetupGenericShader(true);
 		GL_LockArrays(0, skysphere_numverts);
 		R_Mesh_Draw(0, skysphere_numverts, skysphere_numtriangles, skysphere_element3i, 0, 0);
 
@@ -423,6 +425,7 @@ static void R_SkySphere(void)
 
 	if(r_refdef.fogenabled)
 	{
+		R_SetupGenericShader(false);
 		R_Mesh_TexBind(0, 0);
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		GL_Color(r_refdef.fogcolor[0], r_refdef.fogcolor[1], r_refdef.fogcolor[2], 1 - r_refdef.fogmasktable[FOGMASKTABLEWIDTH-1]);

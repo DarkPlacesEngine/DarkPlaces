@@ -248,6 +248,7 @@ void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, const r
 		r_lightningbeams_setuptexture();
 
 	R_Mesh_VertexPointer(vertex3f, 0, 0);
+	R_SetupGenericShader(true);
 	// FIXME: fixed function path can't properly handle r_refdef.view.colorscale > 1
 	if (r_refdef.fogenabled)
 	{

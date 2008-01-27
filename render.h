@@ -378,6 +378,8 @@ rsurfacepass_t;
 
 typedef enum gl20_texunit_e
 {
+	GL20TU_FIRST = 0,
+	GL20TU_SECOND = 1,
 	GL20TU_NORMAL = 0,
 	GL20TU_COLOR = 1,
 	GL20TU_GLOSS = 2,
@@ -398,7 +400,10 @@ typedef enum gl20_texunit_e
 }
 gl20_texunit;
 
-int R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, float ambientscale, float diffusescale, float specularscale, rsurfacepass_t pass);
+void R_SetupGenericShader(qboolean usetexture);
+void R_SetupGenericTwoTextureShader(int texturemode);
+void R_SetupDepthOrShadowShader(void);
+void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, float ambientscale, float diffusescale, float specularscale, rsurfacepass_t rsurfacepass);
 
 #endif
 

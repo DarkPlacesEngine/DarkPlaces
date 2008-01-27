@@ -339,6 +339,7 @@ static void R_DrawPortal_Callback(const entity_render_t *ent, const rtlight_t *r
 	R_Mesh_VertexPointer(vertex3f, 0, 0);
 	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
+	R_SetupGenericShader(false);
 
 	i = surfacelist[0];
 	GL_Color(((i & 0x0007) >> 0) * (1.0f / 7.0f) * r_refdef.view.colorscale,
