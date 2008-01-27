@@ -559,7 +559,6 @@ void R_Q1BSP_DrawDepth(entity_render_t *ent)
 		return;
 	GL_ColorMask(0,0,0,0);
 	GL_Color(1,1,1,1);
-	RSurf_SetupDepthAndCulling();
 	GL_DepthTest(true);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(true);
