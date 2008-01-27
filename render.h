@@ -125,8 +125,6 @@ void R_UpdateVariables(void); // must call after setting up most of r_refdef, bu
 void R_RenderView(void); // must set r_refdef and call R_UpdateVariables first
 
 
-void R_InitSky (unsigned char *src, int bytesperpixel); // called at level load
-
 void R_SkinFrame_PrepareForPurge(void);
 void R_SkinFrame_MarkUsed(skinframe_t *skinframe);
 void R_SkinFrame_Purge(void);
