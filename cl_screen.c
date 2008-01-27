@@ -2097,6 +2097,7 @@ extern cvar_t cl_minfps;
 extern cvar_t cl_minfps_fade;
 extern cvar_t cl_minfps_qualitymax;
 extern cvar_t cl_minfps_qualitymin;
+extern cvar_t cl_minfps_qualitypower;
 extern cvar_t cl_minfps_qualityscale;
 static double cl_updatescreen_rendertime = 0;
 static double cl_updatescreen_quality = 1;
@@ -2170,7 +2171,7 @@ void CL_UpdateScreen(void)
 	qglClearColor(0,0,0,0);CHECKGLERROR
 	R_ClearScreen(false);
 	r_refdef.view.clear = false;
-	r_refdef.view.quality = bound(cl_minfps_qualitymin.value, cl_updatescreen_quality * cl_minfps_qualityscale.value, cl_minfps_qualitymax.value);
+	r_refdef.view.quality = bound(cl_minfps_qualitymin.value, pow(cl_updatescreen_quality, cl_minfps_qualitypower.value) * cl_minfps_qualityscale.value, cl_minfps_qualitymax.value);
 
 	if(scr_stipple.integer)
 	{
