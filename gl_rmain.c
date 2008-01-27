@@ -4795,7 +4795,7 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 						v1 = rsurface.vertex3f + 3 * (surface->num_firstvertex + quadedges[i][0]);
 						v2 = rsurface.vertex3f + 3 * (surface->num_firstvertex + quadedges[i][1]);
 #if 0
-						Debug_PolygonBegin(NULL, 0, false, 0);
+						Debug_PolygonBegin(NULL, 0);
 						Debug_PolygonVertex(v1[0], v1[1], v1[2], 0, 0, 1, 0, 0, 1);
 						Debug_PolygonVertex((v1[0] + v2[0]) * 0.5f + rsurface.normal3f[3 * (surface->num_firstvertex + j)+0] * 4, (v1[1] + v2[1]) * 0.5f + rsurface.normal3f[3 * (surface->num_firstvertex + j)+1], (v1[2] + v2[2]) * 0.5f + rsurface.normal3f[3 * (surface->num_firstvertex + j)+2], 0, 0, 1, 1, 0, 1);
 						Debug_PolygonVertex(v2[0], v2[1], v2[2], 0, 0, 1, 0, 0, 1);
@@ -4822,7 +4822,7 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 					VectorLerp(shortest[0].v1, 0.5f, shortest[0].v2, start);
 					VectorLerp(shortest[1].v1, 0.5f, shortest[1].v2, end);
 #if 0
-					Debug_PolygonBegin(NULL, 0, false, 0);
+					Debug_PolygonBegin(NULL, 0);
 					Debug_PolygonVertex(start[0], start[1], start[2], 0, 0, 1, 1, 0, 1);
 					Debug_PolygonVertex(center[0] + rsurface.normal3f[3 * (surface->num_firstvertex + j)+0] * 4, center[1] + rsurface.normal3f[3 * (surface->num_firstvertex + j)+1] * 4, center[2] + rsurface.normal3f[3 * (surface->num_firstvertex + j)+2] * 4, 0, 0, 0, 1, 0, 1);
 					Debug_PolygonVertex(end[0], end[1], end[2], 0, 0, 0, 1, 1, 1);
@@ -4843,14 +4843,14 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 					CrossProduct(up, forward, newright);
 					VectorNormalize(newright);
 #if 0
-					Debug_PolygonBegin(NULL, 0, false, 0);
+					Debug_PolygonBegin(NULL, 0);
 					Debug_PolygonVertex(center[0] + rsurface.normal3f[3 * (surface->num_firstvertex + j)+0] * 8, center[1] + rsurface.normal3f[3 * (surface->num_firstvertex + j)+1] * 8, center[2] + rsurface.normal3f[3 * (surface->num_firstvertex + j)+2] * 8, 0, 0, 1, 0, 0, 1);
 					Debug_PolygonVertex(center[0] + right[0] * 8, center[1] + right[1] * 8, center[2] + right[2] * 8, 0, 0, 0, 1, 0, 1);
 					Debug_PolygonVertex(center[0] + up   [0] * 8, center[1] + up   [1] * 8, center[2] + up   [2] * 8, 0, 0, 0, 0, 1, 1);
 					Debug_PolygonEnd();
 #endif
 #if 0
-					Debug_PolygonBegin(NULL, 0, false, 0);
+					Debug_PolygonBegin(NULL, 0);
 					Debug_PolygonVertex(center[0] + forward [0] * 8, center[1] + forward [1] * 8, center[2] + forward [2] * 8, 0, 0, 1, 0, 0, 1);
 					Debug_PolygonVertex(center[0] + newright[0] * 8, center[1] + newright[1] * 8, center[2] + newright[2] * 8, 0, 0, 0, 1, 0, 1);
 					Debug_PolygonVertex(center[0] + up      [0] * 8, center[1] + up      [1] * 8, center[2] + up      [2] * 8, 0, 0, 0, 0, 1, 1);
