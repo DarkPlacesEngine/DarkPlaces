@@ -1134,10 +1134,11 @@ void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent)
 	if (r_shadow_rendermode == R_SHADOW_RENDERMODE_LIGHT_GLSL)
 	{
 		R_Mesh_TexBindCubeMap(GL20TU_CUBE, R_GetTexture(rsurface.rtlight->currentcubemap)); // light filter
-		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 		GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 0);
-		CHECKGLERROR
 	}
+	else if (r_shadow_rendermode == R_SHADOW_RENDERMODE_LIGHT_VERTEX)
+		R_Mesh_ColorPointer(rsurface.array_color4f, 0, 0);
+	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 }
 
 void R_Shadow_RenderMode_VisibleShadowVolumes(void)
@@ -1526,9 +1527,6 @@ static void R_Shadow_GenTexCoords_Specular_NormalCubeMap(int firstvertex, int nu
 static void R_Shadow_RenderLighting_VisibleLighting(int firstvertex, int numvertices, int numtriangles, const int *element3i, int element3i_bufferobject, size_t element3i_bufferoffset, const vec3_t lightcolorbase, const vec3_t lightcolorpants, const vec3_t lightcolorshirt, rtexture_t *basetexture, rtexture_t *pantstexture, rtexture_t *shirttexture, rtexture_t *normalmaptexture, rtexture_t *glosstexture, float ambientscale, float diffusescale, float specularscale, qboolean dopants, qboolean doshirt)
 {
 	// used to display how many times a surface is lit for level design purposes
-	GL_Color(0.1 * r_refdef.view.colorscale, 0.025 * r_refdef.view.colorscale, 0, 1);
-	R_Mesh_ColorPointer(NULL, 0, 0);
-	R_Mesh_ResetTextureState();
 	R_Mesh_Draw(firstvertex, numvertices, numtriangles, element3i, element3i_bufferobject, element3i_bufferoffset);
 }
 
@@ -2270,8 +2268,6 @@ static void R_Shadow_RenderLighting_Light_Vertex(int firstvertex, int numvertice
 	VectorScale(lightcolorpants, diffusescale * 2 * r_refdef.view.colorscale, diffusecolorpants);
 	VectorScale(lightcolorshirt, ambientscale * 2 * r_refdef.view.colorscale, ambientcolorshirt);
 	VectorScale(lightcolorshirt, diffusescale * 2 * r_refdef.view.colorscale, diffusecolorshirt);
-	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-	R_Mesh_ColorPointer(rsurface.array_color4f, 0, 0);
 	memset(&m, 0, sizeof(m));
 	m.tex[0] = R_GetTexture(basetexture);
 	m.texmatrix[0] = rsurface.texture->currenttexmatrix;
