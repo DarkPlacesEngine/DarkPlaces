@@ -23,7 +23,7 @@ void SV_StartDemoRecording(client_t *client, const char *filename, int forcetrac
 	FS_Printf(client->sv_demo_file, "%i\n", forcetrack);
 }
 
-void SV_WriteDemoMessage(client_t *client, sizebuf_t *sendbuffer)
+void SV_WriteDemoMessage(client_t *client, sizebuf_t *sendbuffer, qboolean clienttoserver)
 {
 	int len, i;
 	float f;
@@ -33,7 +33,7 @@ void SV_WriteDemoMessage(client_t *client, sizebuf_t *sendbuffer)
 	if(sendbuffer->cursize == 0)
 		return;
 	
-	len = LittleLong(sendbuffer->cursize);
+	len = LittleLong(sendbuffer->cursize | (clienttoserver ? DEMOMSG_CLIENT_TO_SERVER : 0));
 	FS_Write(client->sv_demo_file, &len, 4);
 	for(i = 0; i < 3; ++i)
 	{
@@ -55,7 +55,7 @@ void SV_StopDemoRecording(client_t *client)
 	buf.maxsize = sizeof(bufdata);
 	SZ_Clear(&buf);
 	MSG_WriteByte(&buf, svc_disconnect);
-	SV_WriteDemoMessage(client, &buf);
+	SV_WriteDemoMessage(client, &buf, false);
 
 	FS_Close(client->sv_demo_file);
 	client->sv_demo_file = NULL;
@@ -78,5 +78,5 @@ void SV_WriteNetnameIntoDemo(client_t *client)
 	MSG_WriteUnterminatedString(&buf, "\n// this demo contains the point of view of: ");
 	MSG_WriteUnterminatedString(&buf, client->name);
 	MSG_WriteString(&buf, "\n");
-	SV_WriteDemoMessage(client, &buf);
+	SV_WriteDemoMessage(client, &buf, false);
 }

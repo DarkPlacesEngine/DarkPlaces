@@ -345,5 +345,10 @@ float noise4f(float x, float y, float z, float w);
 
 void Sys_Shared_Init(void);
 
+// Flag in size field of demos to indicate a client->server packet. Demo
+// playback will ignore this, but it may be useful to make DP sniff packets to
+// debug protocol exploits.
+#define DEMOMSG_CLIENT_TO_SERVER 0x80000000
+
 #endif
 

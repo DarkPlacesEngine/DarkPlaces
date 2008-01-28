@@ -20,9 +20,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // sv_user.c -- server code for moving users
 
 #include "quakedef.h"
+#include "sv_demo.h"
 #define DEBUGMOVES 0
 
 static usercmd_t cmd;
+extern cvar_t sv_autodemo_perclient;
 
 /*
 ===============
@@ -728,6 +730,9 @@ void SV_ReadClientMessage(void)
 {
 	int cmd, num, start;
 	char *s, *p, *q;
+
+	if(sv_autodemo_perclient.integer >= 2)
+		SV_WriteDemoMessage(host_client, &(host_client->netconnection->message), true);
 
 	//MSG_BeginReading ();
 	sv_numreadmoves = 0;

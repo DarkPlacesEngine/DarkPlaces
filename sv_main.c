@@ -148,7 +148,7 @@ cvar_t nehx18 = {0, "nehx18", "0", "nehahra data storage cvar (used in singlepla
 cvar_t nehx19 = {0, "nehx19", "0", "nehahra data storage cvar (used in singleplayer)"};
 cvar_t cutscene = {0, "cutscene", "1", "enables cutscenes in nehahra, can be used by other mods"};
 
-cvar_t sv_autodemo_perclient = {CVAR_SAVE, "sv_autodemo_perclient", "0", "set to 1 to enable autorecorded per-client demos (they'll start to record at the beginning of a match)"};
+cvar_t sv_autodemo_perclient = {CVAR_SAVE, "sv_autodemo_perclient", "0", "set to 1 to enable autorecorded per-client demos (they'll start to record at the beginning of a match); set it to 2 to also record client->server packets (for debugging)"};
 cvar_t sv_autodemo_perclient_nameformat = {CVAR_SAVE, "sv_autodemo_perclient_nameformat", "sv_autodemos/%Y-%m-%d_%H-%M", "The format of the sv_autodemo_perclient filename, followed by the map name, the IP address + port number, and the client number, separated by underscores" };
 
 
@@ -1864,9 +1864,9 @@ static void SV_SendClientDatagram (client_t *client)
 
 	// reliable only if none is in progress
 	if(client->sendsignon != 2 && !client->netconnection->sendMessageLength)
-		SV_WriteDemoMessage(client, &(client->netconnection->message));
+		SV_WriteDemoMessage(client, &(client->netconnection->message), false);
 	// unreliable
-	SV_WriteDemoMessage(client, &msg);
+	SV_WriteDemoMessage(client, &msg, false);
 
 // send the datagram
 	NetConn_SendUnreliableMessage (client->netconnection, &msg, sv.protocol, clientrate, client->sendsignon == 2);
