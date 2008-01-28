@@ -1596,6 +1596,9 @@ void VM_fgets(void)
 
 	VM_SAFEPARMCOUNT(1,VM_fgets);
 
+	// set the return value regardless of any possible errors
+	PRVM_G_INT(OFS_RETURN) = OFS_NULL;
+
 	filenum = (int)PRVM_G_FLOAT(OFS_PARM0);
 	if (filenum < 0 || filenum >= PRVM_MAX_OPENFILES)
 	{
@@ -1628,8 +1631,6 @@ void VM_fgets(void)
 		Con_Printf("fgets: %s: %s\n", PRVM_NAME, string);
 	if (c >= 0 || end)
 		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(string);
-	else
-		PRVM_G_INT(OFS_RETURN) = OFS_NULL;
 }
 
 /*
