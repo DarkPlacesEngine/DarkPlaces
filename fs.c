@@ -1821,14 +1821,12 @@ qfile_t* FS_Open (const char* filepath, const char* mode, qboolean quiet, qboole
 {
 #ifdef FS_FIX_PATHS
 	char fixedFileName[MAX_QPATH];
-	char *d = fixedFileName;
+	char *d;
+	strlcpy( fixedFileName, filepath, MAX_QPATH );
 	// try to fix common mistakes (\ instead of /)
-	for( ; *filepath ; filepath++, d++ )
-		if( *filepath != '\\' )
-			*d = *filepath;
-		else
+	for( d = fixedFileName ; *d ; d++ )
+		if( *d == '\\' )
 			*d = '/';
-	*d = '\0';
 	filepath = fixedFileName;
 #endif
 
