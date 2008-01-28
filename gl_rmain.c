@@ -76,11 +76,13 @@ cvar_t gl_skyclip = {0, "gl_skyclip", "4608", "nehahra farclip distance - the re
 cvar_t r_textureunits = {0, "r_textureunits", "32", "number of hardware texture units reported by driver (note: setting this to 1 turns off gl_combine)"};
 
 cvar_t r_glsl = {CVAR_SAVE, "r_glsl", "1", "enables use of OpenGL 2.0 pixel shaders for lighting"};
+cvar_t r_glsl_contrastboost = {CVAR_SAVE, "r_glsl_contrastboost", "1", "by how much to multiply the contrast in dark areas (1 is no change)"};
+cvar_t r_glsl_deluxemapping = {CVAR_SAVE, "r_glsl_deluxemapping", "1", "use per pixel lighting on deluxemap-compiled q3bsp maps (or a value of 2 forces deluxemap shading even without deluxemaps)"};
 cvar_t r_glsl_offsetmapping = {CVAR_SAVE, "r_glsl_offsetmapping", "0", "offset mapping effect (also known as parallax mapping or virtual displacement mapping)"};
 cvar_t r_glsl_offsetmapping_reliefmapping = {CVAR_SAVE, "r_glsl_offsetmapping_reliefmapping", "0", "relief mapping effect (higher quality)"};
 cvar_t r_glsl_offsetmapping_scale = {CVAR_SAVE, "r_glsl_offsetmapping_scale", "0.04", "how deep the offset mapping effect is"};
-cvar_t r_glsl_deluxemapping = {CVAR_SAVE, "r_glsl_deluxemapping", "1", "use per pixel lighting on deluxemap-compiled q3bsp maps (or a value of 2 forces deluxemap shading even without deluxemaps)"};
-cvar_t r_glsl_contrastboost = {CVAR_SAVE, "r_glsl_contrastboost", "1", "by how much to multiply the contrast in dark areas (1 is no change)"};
+cvar_t r_glsl_postprocess = {CVAR_SAVE, "r_glsl_postprocess", "0", "use a GLSL postprocessing shader"};
+cvar_t r_glsl_postprocess_contrastboost = {CVAR_SAVE, "r_glsl_postprocess_contrastboost", "1", "brightening effect (1 is no change, higher values brighten the view)"};
 cvar_t r_glsl_usegeneric = {CVAR_SAVE, "r_glsl_usegeneric", "1", "use shaders for rendering simple geometry (rather than conventional fixed-function rendering for this purpose)"};
 
 cvar_t r_water = {CVAR_SAVE, "r_water", "0", "whether to use reflections and refraction on water surfaces (note: r_wateralpha must be set below 1)"};
@@ -122,13 +124,6 @@ cvar_t r_track_sprites_scaleh = {CVAR_SAVE, "r_track_sprites_scaleh", "1", "heig
 
 extern qboolean v_flipped_state;
 
-typedef struct r_glsl_bloomshader_s
-{
-	int program;
-	int loc_Texture_Bloom;
-}
-r_glsl_bloomshader_t;
-
 static struct r_bloomstate_s
 {
 	qboolean enabled;
@@ -141,8 +136,6 @@ static struct r_bloomstate_s
 
 	int bloomtexturewidth, bloomtextureheight;
 	rtexture_t *texture_bloom;
-
-	r_glsl_bloomshader_t *shader;
 
 	// arrays for rendering the screen passes
 	float screentexcoord2f[8];
@@ -476,8 +469,54 @@ static const char *builtinshaderstring =
 "# endif\n"
 "\n"
 "#else\n"
-"#ifdef MODE_GENERIC\n"
 "\n"
+"#ifdef MODE_POSTPROCESS\n"
+"# ifdef VERTEX_SHADER\n"
+"void main(void)\n"
+"{\n"
+"	gl_FrontColor = gl_Color;\n"
+"	gl_Position = ftransform();\n"
+"	gl_TexCoord[0] = gl_TextureMatrix[0] * gl_MultiTexCoord0;\n"
+"#ifdef USEGLOW\n"
+"	gl_TexCoord[1] = gl_TextureMatrix[1] * gl_MultiTexCoord1;\n"
+"#endif\n"
+"}\n"
+"# endif\n"
+"# ifdef FRAGMENT_SHADER\n"
+"\n"
+"uniform sampler2D Texture_First;\n"
+"#ifdef USEGLOW\n"
+"uniform sampler2D Texture_Second;\n"
+"#endif\n"
+"#ifdef USEVERTEXTEXTUREBLEND\n"
+"uniform vec4 TintColor;\n"
+"#endif\n"
+"#ifdef USECOLORMOD\n"
+"uniform vec3 Gamma;\n"
+"#endif\n"
+"#ifdef USECONTRASTBOOST\n"
+"uniform float ContrastBoostCoeff;\n"
+"#endif\n"
+"void main(void)\n"
+"{\n"
+"	gl_FragColor = texture2D(Texture_First, gl_TexCoord[0].xy);\n"
+"#ifdef USEGLOW\n"
+"	gl_FragColor += texture2D(Texture_Second, gl_TexCoord[1].xy);\n"
+"#endif\n"
+"#ifdef USECONTRASTBOOST\n"
+"	gl_FragColor.rgb /= (ContrastBoostCoeff * gl_FragColor.rgb + vec3(1.0, 1.0, 1.0));\n"
+"	gl_FragColor.rgb *= (ContrastBoostCoeff + 1.0);\n"
+"#endif\n"
+"#ifdef USEVERTEXTEXTUREBLEND\n"
+"	gl_FragColor = mix(TintColor, gl_FragColor, TintColor.a);\n"
+"#endif\n"
+"\n"
+"}\n"
+"# endif\n"
+"\n"
+"\n"
+"#else\n"
+"#ifdef MODE_GENERIC\n"
 "# ifdef VERTEX_SHADER\n"
 "void main(void)\n"
 "{\n"
@@ -527,38 +566,36 @@ static const char *builtinshaderstring =
 "varying vec2 TexCoord;\n"
 "varying vec2 TexCoordLightmap;\n"
 "\n"
-"//#ifdef MODE_LIGHTSOURCE\n"
+"#ifdef MODE_LIGHTSOURCE\n"
 "varying vec3 CubeVector;\n"
-"//#endif\n"
+"#endif\n"
 "\n"
-"//#ifdef MODE_LIGHTSOURCE\n"
+"#ifdef MODE_LIGHTSOURCE\n"
 "varying vec3 LightVector;\n"
-"//#else\n"
-"//# ifdef MODE_LIGHTDIRECTION\n"
-"//varying vec3 LightVector;\n"
-"//# endif\n"
-"//#endif\n"
+"#endif\n"
+"#ifdef MODE_LIGHTDIRECTION\n"
+"varying vec3 LightVector;\n"
+"#endif\n"
 "\n"
 "varying vec3 EyeVector;\n"
-"//#ifdef USEFOG\n"
+"#ifdef USEFOG\n"
 "varying vec3 EyeVectorModelSpace;\n"
-"//#endif\n"
+"#endif\n"
 "\n"
 "varying vec3 VectorS; // direction of S texcoord (sometimes crudely called tangent)\n"
 "varying vec3 VectorT; // direction of T texcoord (sometimes crudely called binormal)\n"
 "varying vec3 VectorR; // direction of R texcoord (surface normal)\n"
 "\n"
-"//#ifdef MODE_WATER\n"
+"#ifdef MODE_WATER\n"
 "varying vec4 ModelViewProjectionPosition;\n"
-"//#else\n"
-"//# ifdef MODE_REFRACTION\n"
-"//varying vec4 ModelViewProjectionPosition;\n"
-"//# else\n"
-"//#  ifdef USEREFLECTION\n"
-"//varying vec4 ModelViewProjectionPosition;\n"
-"//#  endif\n"
-"//# endif\n"
-"//#endif\n"
+"#ifdef MODE_REFRACTION\n"
+"varying vec4 ModelViewProjectionPosition;\n"
+"#else\n"
+"# ifdef USEREFLECTION\n"
+"varying vec4 ModelViewProjectionPosition;\n"
+"# endif\n"
+"#endif\n"
+"#endif\n"
 "\n"
 "\n"
 "\n"
@@ -998,6 +1035,7 @@ static const char *builtinshaderstring =
 "#endif // FRAGMENT_SHADER\n"
 "\n"
 "#endif // !MODE_GENERIC\n"
+"#endif // !MODE_POSTPROCESS\n"
 "#endif // !MODE_DEPTH_OR_SHADOW\n"
 ;
 
@@ -1056,6 +1094,7 @@ shaderpermutationinfo_t shaderpermutationinfo[SHADERPERMUTATION_COUNT] =
 typedef enum shadermode_e
 {
 	SHADERMODE_GENERIC, // (particles/HUD/etc) vertex color, optionally multiplied by one texture
+	SHADERMODE_POSTPROCESS, // postprocessing shader (r_glsl_postprocess)
 	SHADERMODE_DEPTH_OR_SHADOW, // (depthfirst/shadows) vertex shader only
 	SHADERMODE_FLATCOLOR, // (lightmap) modulate texture by uniform color (q1bsp, q3bsp)
 	SHADERMODE_VERTEXCOLOR, // (lightmap) modulate texture by vertex colors (q3bsp)
@@ -1074,6 +1113,7 @@ shadermode_t;
 shadermodeinfo_t shadermodeinfo[SHADERMODE_COUNT] =
 {
 	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_GENERIC\n", " generic"},
+	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_POSTPROCESS\n", " postprocess"},
 	{"glsl/default.glsl", NULL, NULL               , "#define MODE_DEPTH_OR_SHADOW\n", " depth/shadow"},
 	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_FLATCOLOR\n", " flatcolor"},
 	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_VERTEXCOLOR\n", " vertexcolor"},
@@ -2200,10 +2240,13 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_fog_exp2);
 	Cvar_RegisterVariable(&r_textureunits);
 	Cvar_RegisterVariable(&r_glsl);
+	Cvar_RegisterVariable(&r_glsl_contrastboost);
+	Cvar_RegisterVariable(&r_glsl_deluxemapping);
 	Cvar_RegisterVariable(&r_glsl_offsetmapping);
 	Cvar_RegisterVariable(&r_glsl_offsetmapping_reliefmapping);
 	Cvar_RegisterVariable(&r_glsl_offsetmapping_scale);
-	Cvar_RegisterVariable(&r_glsl_deluxemapping);
+	Cvar_RegisterVariable(&r_glsl_postprocess);
+	Cvar_RegisterVariable(&r_glsl_postprocess_contrastboost);
 	Cvar_RegisterVariable(&r_glsl_usegeneric);
 	Cvar_RegisterVariable(&r_water);
 	Cvar_RegisterVariable(&r_water_resolutionmultiplier);
@@ -2223,7 +2266,6 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_bloom_colorsubtract);
 	Cvar_RegisterVariable(&r_hdr);
 	Cvar_RegisterVariable(&r_hdr_scenebrightness);
-	Cvar_RegisterVariable(&r_glsl_contrastboost);
 	Cvar_RegisterVariable(&r_hdr_glowintensity);
 	Cvar_RegisterVariable(&r_hdr_range);
 	Cvar_RegisterVariable(&r_smoothnormals_areaweighting);
@@ -2773,67 +2815,6 @@ void R_ResetViewRendering3D(void)
 	R_SetupGenericShader(true);
 }
 
-/*
-	R_Bloom_SetupShader(
-"// bloom shader\n"
-"// written by Forest 'LordHavoc' Hale\n"
-"\n"
-"// common definitions between vertex shader and fragment shader:\n"
-"\n"
-"#ifdef __GLSL_CG_DATA_TYPES\n"
-"#define myhalf half\n"
-"#define myhalf2 half2\n"
-"#define myhalf3 half3\n"
-"#define myhalf4 half4\n"
-"#else\n"
-"#define myhalf float\n"
-"#define myhalf2 vec2\n"
-"#define myhalf3 vec3\n"
-"#define myhalf4 vec4\n"
-"#endif\n"
-"\n"
-"varying vec2 ScreenTexCoord;\n"
-"varying vec2 BloomTexCoord;\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"// vertex shader specific:\n"
-"#ifdef VERTEX_SHADER\n"
-"\n"
-"void main(void)\n"
-"{\n"
-"	ScreenTexCoord = vec2(gl_MultiTexCoord0);\n"
-"	BloomTexCoord = vec2(gl_MultiTexCoord1);\n"
-"	// transform vertex to camera space, using ftransform to match non-VS\n"
-"	// rendering\n"
-"	gl_Position = ftransform();\n"
-"}\n"
-"\n"
-"#endif // VERTEX_SHADER\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"// fragment shader specific:\n"
-"#ifdef FRAGMENT_SHADER\n"
-"\n"
-"void main(void)\n"
-"{\n"
-"	int x, y;
-"	myhalf3 color = myhalf3(texture2D(Texture_Screen, ScreenTexCoord));\n"
-"	for (x = -BLUR_X;x <= BLUR_X;x++)
-"	color.rgb += myhalf3(texture2D(Texture_Bloom, BloomTexCoord));\n"
-"	color.rgb += myhalf3(texture2D(Texture_Bloom, BloomTexCoord));\n"
-"	color.rgb += myhalf3(texture2D(Texture_Bloom, BloomTexCoord));\n"
-"	color.rgb += myhalf3(texture2D(Texture_Bloom, BloomTexCoord));\n"
-
-"	gl_FragColor = vec4(color);\n"
-"}\n"
-"\n"
-"#endif // FRAGMENT_SHADER\n"
-*/
-
 void R_RenderScene(qboolean addwaterplanes);
 
 static void R_Water_StartFrame(void)
@@ -3070,6 +3051,8 @@ void R_Bloom_StartFrame(void)
 	r_bloomstate.bloomwidth = bound(1, r_bloom_resolution.integer, r_refdef.view.width);
 	r_bloomstate.bloomheight = r_bloomstate.bloomwidth * r_refdef.view.height / r_refdef.view.width;
 	r_bloomstate.bloomheight = bound(1, r_bloomstate.bloomheight, r_refdef.view.height);
+	r_bloomstate.bloomwidth = min(r_bloomstate.bloomwidth, gl_max_texture_size);
+	r_bloomstate.bloomheight = min(r_bloomstate.bloomheight, gl_max_texture_size);
 
 	// calculate desired texture sizes
 	if (gl_support_arb_texture_non_power_of_two)
@@ -3087,33 +3070,16 @@ void R_Bloom_StartFrame(void)
 		for (bloomtextureheight  = 1;bloomtextureheight  < r_bloomstate.bloomheight;bloomtextureheight  *= 2);
 	}
 
-	if (r_hdr.integer)
+	if ((r_hdr.integer || r_bloom.integer) && ((r_bloom_resolution.integer < 4 || r_bloom_blur.value < 1 || r_bloom_blur.value >= 512) || r_refdef.view.width > gl_max_texture_size || r_refdef.view.height > gl_max_texture_size))
 	{
-		screentexturewidth = screentextureheight = 0;
+		Cvar_SetValueQuick(&r_hdr, 0);
+		Cvar_SetValueQuick(&r_bloom, 0);
 	}
-	else if (r_bloom.integer)
-	{
-	}
-	else
-	{
+
+	if (!(r_glsl.integer && r_glsl_postprocess.integer) && !r_bloom.integer)
 		screentexturewidth = screentextureheight = 0;
+	if (!r_hdr.integer && !r_bloom.integer)
 		bloomtexturewidth = bloomtextureheight = 0;
-	}
-
-	if ((!bloomtexturewidth && !bloomtextureheight) || r_bloom_resolution.integer < 4 || r_bloom_blur.value < 1 || r_bloom_blur.value >= 512 || screentexturewidth > gl_max_texture_size || screentextureheight > gl_max_texture_size || bloomtexturewidth > gl_max_texture_size || bloomtextureheight > gl_max_texture_size)
-	{
-		// can't use bloom if the parameters are too weird
-		// can't use bloom if the card does not support the texture size
-		if (r_bloomstate.texture_screen)
-			R_FreeTexture(r_bloomstate.texture_screen);
-		if (r_bloomstate.texture_bloom)
-			R_FreeTexture(r_bloomstate.texture_bloom);
-		memset(&r_bloomstate, 0, sizeof(r_bloomstate));
-		return;
-	}
-
-	r_bloomstate.enabled = true;
-	r_bloomstate.hdr = r_hdr.integer != 0;
 
 	// allocate textures as needed
 	if (r_bloomstate.screentexturewidth != screentexturewidth || r_bloomstate.screentextureheight != screentextureheight)
@@ -3140,10 +3106,10 @@ void R_Bloom_StartFrame(void)
 	// set up a texcoord array for the full resolution screen image
 	// (we have to keep this around to copy back during final render)
 	r_bloomstate.screentexcoord2f[0] = 0;
-	r_bloomstate.screentexcoord2f[1] = (float)r_refdef.view.height / (float)r_bloomstate.screentextureheight;
-	r_bloomstate.screentexcoord2f[2] = (float)r_refdef.view.width / (float)r_bloomstate.screentexturewidth;
-	r_bloomstate.screentexcoord2f[3] = (float)r_refdef.view.height / (float)r_bloomstate.screentextureheight;
-	r_bloomstate.screentexcoord2f[4] = (float)r_refdef.view.width / (float)r_bloomstate.screentexturewidth;
+	r_bloomstate.screentexcoord2f[1] = (float)r_refdef.view.height    / (float)r_bloomstate.screentextureheight;
+	r_bloomstate.screentexcoord2f[2] = (float)r_refdef.view.width     / (float)r_bloomstate.screentexturewidth;
+	r_bloomstate.screentexcoord2f[3] = (float)r_refdef.view.height    / (float)r_bloomstate.screentextureheight;
+	r_bloomstate.screentexcoord2f[4] = (float)r_refdef.view.width     / (float)r_bloomstate.screentexturewidth;
 	r_bloomstate.screentexcoord2f[5] = 0;
 	r_bloomstate.screentexcoord2f[6] = 0;
 	r_bloomstate.screentexcoord2f[7] = 0;
@@ -3152,37 +3118,33 @@ void R_Bloom_StartFrame(void)
 	// (which will be additive blended over the screen image)
 	r_bloomstate.bloomtexcoord2f[0] = 0;
 	r_bloomstate.bloomtexcoord2f[1] = (float)r_bloomstate.bloomheight / (float)r_bloomstate.bloomtextureheight;
-	r_bloomstate.bloomtexcoord2f[2] = (float)r_bloomstate.bloomwidth / (float)r_bloomstate.bloomtexturewidth;
+	r_bloomstate.bloomtexcoord2f[2] = (float)r_bloomstate.bloomwidth  / (float)r_bloomstate.bloomtexturewidth;
 	r_bloomstate.bloomtexcoord2f[3] = (float)r_bloomstate.bloomheight / (float)r_bloomstate.bloomtextureheight;
-	r_bloomstate.bloomtexcoord2f[4] = (float)r_bloomstate.bloomwidth / (float)r_bloomstate.bloomtexturewidth;
+	r_bloomstate.bloomtexcoord2f[4] = (float)r_bloomstate.bloomwidth  / (float)r_bloomstate.bloomtexturewidth;
 	r_bloomstate.bloomtexcoord2f[5] = 0;
 	r_bloomstate.bloomtexcoord2f[6] = 0;
 	r_bloomstate.bloomtexcoord2f[7] = 0;
+
+	if (r_hdr.integer || r_bloom.integer)
+	{
+		r_bloomstate.enabled = true;
+		r_bloomstate.hdr = r_hdr.integer != 0;
+	}
 }
 
-void R_Bloom_CopyScreenTexture(float colorscale)
+void R_Bloom_CopyBloomTexture(float colorscale)
 {
 	r_refdef.stats.bloom++;
 
-	R_ResetViewRendering2D();
-	R_Mesh_VertexPointer(r_screenvertex3f, 0, 0);
-	R_Mesh_ColorPointer(NULL, 0, 0);
-	R_Mesh_TexCoordPointer(0, 2, r_bloomstate.screentexcoord2f, 0, 0);
-	R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_screen));
-	R_SetupGenericShader(true);
-
-	// copy view into the screen texture
-	GL_ActiveTexture(0);
-	CHECKGLERROR
-	qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_refdef.view.x, vid.height - (r_refdef.view.y + r_refdef.view.height), r_refdef.view.width, r_refdef.view.height);CHECKGLERROR
-	r_refdef.stats.bloom_copypixels += r_refdef.view.width * r_refdef.view.height;
-
-	// now scale it down to the bloom texture size
+	// scale down screen texture to the bloom texture size
 	CHECKGLERROR
 	qglViewport(r_refdef.view.x, vid.height - (r_refdef.view.y + r_bloomstate.bloomheight), r_bloomstate.bloomwidth, r_bloomstate.bloomheight);CHECKGLERROR
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_Color(colorscale, colorscale, colorscale, 1);
 	// TODO: optimize with multitexture or GLSL
+	R_SetupGenericShader(true);
+	R_Mesh_TexCoordPointer(0, 2, r_bloomstate.screentexcoord2f, 0, 0);
+	R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_screen));
 	R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
 	r_refdef.stats.bloom_drawpixels += r_bloomstate.bloomwidth * r_bloomstate.bloomheight;
 
@@ -3358,7 +3320,53 @@ void R_HDR_RenderBloomTexture(void)
 
 static void R_BlendView(void)
 {
-	if (r_bloomstate.enabled && r_bloomstate.hdr)
+	if (r_bloomstate.texture_screen)
+	{
+		// copy view into the screen texture
+		R_ResetViewRendering2D();
+		R_Mesh_VertexPointer(r_screenvertex3f, 0, 0);
+		R_Mesh_ColorPointer(NULL, 0, 0);
+		R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_screen));
+		GL_ActiveTexture(0);CHECKGLERROR
+		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_refdef.view.x, vid.height - (r_refdef.view.y + r_refdef.view.height), r_refdef.view.width, r_refdef.view.height);CHECKGLERROR
+		r_refdef.stats.bloom_copypixels += r_refdef.view.width * r_refdef.view.height;
+	}
+
+	if (r_glsl.integer && gl_support_fragment_shader && (r_bloomstate.texture_screen || r_bloomstate.texture_bloom))
+	{
+		unsigned int permutation = (r_bloomstate.texture_bloom ? SHADERPERMUTATION_GLOW : 0) | (r_refdef.viewblend[3] > 0 ? SHADERPERMUTATION_VERTEXTEXTUREBLEND : 0) | (r_glsl_postprocess_contrastboost.value != 1 ? SHADERPERMUTATION_CONTRASTBOOST : 0);
+
+		if (r_bloomstate.texture_bloom && !r_bloomstate.hdr)
+		{
+			// render simple bloom effect
+			// copy the screen and shrink it and darken it for the bloom process
+			R_Bloom_CopyBloomTexture(r_bloom_colorscale.value);
+			// make the bloom texture
+			R_Bloom_MakeTexture();
+		}
+
+		R_ResetViewRendering2D();
+		R_Mesh_VertexPointer(r_screenvertex3f, 0, 0);
+		R_Mesh_ColorPointer(NULL, 0, 0);
+		GL_Color(1, 1, 1, 1);
+		GL_BlendFunc(GL_ONE, GL_ZERO);
+		R_SetupShader_SetPermutation(SHADERMODE_POSTPROCESS, permutation);
+		R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_screen));
+		R_Mesh_TexCoordPointer(0, 2, r_bloomstate.screentexcoord2f, 0, 0);
+		R_Mesh_TexBind(1, R_GetTexture(r_bloomstate.texture_bloom));
+		R_Mesh_TexCoordPointer(1, 2, r_bloomstate.bloomtexcoord2f, 0, 0);
+		if (r_glsl_permutation->loc_TintColor >= 0)
+			qglUniform4fARB(r_glsl_permutation->loc_TintColor, r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
+		if (r_glsl_permutation->loc_ContrastBoostCoeff >= 0)
+			qglUniform1fARB(r_glsl_permutation->loc_ContrastBoostCoeff, r_glsl_postprocess_contrastboost.value - 1);
+		R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
+		r_refdef.stats.bloom_drawpixels += r_refdef.view.width * r_refdef.view.height;
+		return;
+	}
+
+
+
+	if (r_bloomstate.texture_bloom && r_bloomstate.hdr)
 	{
 		// render high dynamic range bloom effect
 		// the bloom texture was made earlier this render, so we just need to
@@ -3374,11 +3382,11 @@ static void R_BlendView(void)
 		R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
 		r_refdef.stats.bloom_drawpixels += r_refdef.view.width * r_refdef.view.height;
 	}
-	else if (r_bloomstate.enabled)
+	else if (r_bloomstate.texture_bloom)
 	{
 		// render simple bloom effect
 		// copy the screen and shrink it and darken it for the bloom process
-		R_Bloom_CopyScreenTexture(r_bloom_colorscale.value);
+		R_Bloom_CopyBloomTexture(r_bloom_colorscale.value);
 		// make the bloom texture
 		R_Bloom_MakeTexture();
 		// put the original screen image back in place and blend the bloom
