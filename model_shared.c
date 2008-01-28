@@ -1207,6 +1207,7 @@ void Mod_LoadQ3Shaders(void)
 			Vector4Set(shader.refractcolor4f, 1, 1, 1, 1);
 			shader.reflectfactor = 1;
 			Vector4Set(shader.reflectcolor4f, 1, 1, 1, 1);
+			shader.r_water_wateralpha = 1;
 
 			strlcpy(shader.name, com_token, sizeof(shader.name));
 			if (!COM_ParseToken_QuakeC(&text, false) || strcasecmp(com_token, "{"))
@@ -1582,7 +1583,7 @@ void Mod_LoadQ3Shaders(void)
 					shader.reflectfactor = atof(parameter[1]);
 					Vector4Set(shader.reflectcolor4f, atof(parameter[2]), atof(parameter[3]), atof(parameter[4]), atof(parameter[5]));
 				}
-				else if (!strcasecmp(parameter[0], "dp_water") && numparameters >= 11)
+				else if (!strcasecmp(parameter[0], "dp_water") && numparameters >= 12)
 				{
 					shader.textureflags |= Q3TEXTUREFLAG_WATERSHADER;
 					shader.reflectmin = atof(parameter[1]);
@@ -1591,6 +1592,7 @@ void Mod_LoadQ3Shaders(void)
 					shader.reflectfactor = atof(parameter[4]);
 					Vector4Set(shader.refractcolor4f, atof(parameter[5]), atof(parameter[6]), atof(parameter[7]), 1);
 					Vector4Set(shader.reflectcolor4f, atof(parameter[8]), atof(parameter[9]), atof(parameter[10]), 1);
+					shader.r_water_wateralpha = atof(parameter[11]);
 				}
 				else if (!strcasecmp(parameter[0], "deformvertexes") && numparameters >= 2)
 				{
@@ -1812,6 +1814,7 @@ nothing                GL_ZERO GL_ONE
 		Vector4Copy(shader->refractcolor4f, texture->refractcolor4f);
 		texture->reflectfactor = shader->reflectfactor;
 		Vector4Copy(shader->reflectcolor4f, texture->reflectcolor4f);
+		texture->r_water_wateralpha = shader->r_water_wateralpha;
 	}
 	else if (!strcmp(texture->name, "noshader"))
 	{

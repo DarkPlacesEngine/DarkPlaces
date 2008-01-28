@@ -1376,6 +1376,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		Vector4Set(tx->refractcolor4f, 1, 1, 1, 1);
 		tx->reflectfactor = 1;
 		Vector4Set(tx->reflectcolor4f, 1, 1, 1, 1);
+		tx->r_water_wateralpha = 1;
 	}
 
 	if (!m)

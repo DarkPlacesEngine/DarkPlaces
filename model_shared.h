@@ -373,12 +373,14 @@ typedef struct q3shaderinfo_s
 	char skyboxname[Q3PATHLENGTH];
 	q3shaderinfo_deform_t deforms[Q3MAXDEFORMS];
 
+	// reflection
 	float reflectmin; // when refraction is used, minimum amount of reflection (when looking straight down)
 	float reflectmax; // when refraction is used, maximum amount of reflection (when looking parallel to water)
 	float refractfactor; // amount of refraction distort (1.0 = like the cvar specifies)
 	vec4_t refractcolor4f; // color tint of refraction (including alpha factor)
 	float reflectfactor; // amount of reflection distort (1.0 = like the cvar specifies)
 	vec4_t reflectcolor4f; // color tint of reflection (including alpha factor)
+	float r_water_wateralpha; // additional wateralpha to apply when r_water is active
 }
 q3shaderinfo_t;
 
@@ -502,6 +504,7 @@ typedef struct texture_s
 	vec4_t refractcolor4f; // color tint of refraction (including alpha factor)
 	float reflectfactor; // amount of reflection distort (1.0 = like the cvar specifies)
 	vec4_t reflectcolor4f; // color tint of reflection (including alpha factor)
+	float r_water_wateralpha; // additional wateralpha to apply when r_water is active
 }
 texture_t;
 
