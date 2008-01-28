@@ -1329,11 +1329,14 @@ Shader parameters for DP's own features:
   Makes surfaces of this shader refractive with r_water. The refraction
   replaces the transparency of the texture. distort is used in conjunction with
   the normalmap to simulate a nonplanar water surface.
-- dp_water <reflectmin> <reflectmax> <refractdistort> <reflectdistort> <refractr> <refractg> <refractb> <reflectr> <reflectg> <reflectb>
+- dp_water <reflectmin> <reflectmax> <refractdistort> <reflectdistort> <refractr> <refractg> <refractb> <reflectr> <reflectg> <reflectb> <alpha>
   This combines the effects of dp_reflect and dp_refract to simulate a water
   surface. However, the refraction and the reflection are mixed using a Fresnel
   equation that makes the amount of reflection slide from reflectmin when
   looking parallel to the water to reflectmax when looking directly into the
   water. The result of this reflection/refraction mix is then layered BELOW the
   texture of the shader, so basically, it "fills up" the alpha values of the
-  water.
+  water. The alpha value is a multiplicator for the alpha value on the texture
+  - set this to a small value like 0.1 to emphasize the reflection and make
+  the water transparent; but if r_water is 0, alpha isn't used, so the water can
+  be very visible then too.

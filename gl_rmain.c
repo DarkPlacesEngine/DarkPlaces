@@ -4341,6 +4341,8 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 			t->currentmaterialflags |= MATERIALFLAG_WATERSHADER;
 		*/
 	}
+	if(t->basematerialflags & MATERIALFLAG_WATERSHADER && r_waterstate.enabled)
+		t->currentalpha *= t->r_water_wateralpha;
 	if(!r_waterstate.enabled)
 		t->currentmaterialflags &= ~(MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION);
 	if (!(ent->flags & RENDER_LIGHT))
