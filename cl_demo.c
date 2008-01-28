@@ -187,7 +187,11 @@ void CL_ReadDemoMessage(void)
 		FS_Read(cls.demofile, &net_message.cursize, 4);
 		net_message.cursize = LittleLong(net_message.cursize);
 		if(net_message.cursize & DEMOMSG_CLIENT_TO_SERVER) // This is a client->server message! Ignore for now!
+		{
+			// skip over demo packet
+			FS_Seek(cls.demofile, 12 + (net_message.cursize & (~DEMOMSG_CLIENT_TO_SERVER)), SEEK_CUR);
 			continue;
+		}
 		if (net_message.cursize > net_message.maxsize)
 			Host_Error("Demo message (%i) > net_message.maxsize (%i)", net_message.cursize, net_message.maxsize);
 		VectorCopy(cl.mviewangles[0], cl.mviewangles[1]);
