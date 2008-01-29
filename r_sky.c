@@ -290,6 +290,7 @@ static void R_SkyBox(void)
 
 	if(r_refdef.fogenabled)
 	{
+		R_SetupGenericShader(false);
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		GL_Color(r_refdef.fogcolor[0], r_refdef.fogcolor[1], r_refdef.fogcolor[2], 1 - r_refdef.fogmasktable[FOGMASKTABLEWIDTH-1]);
 		for (i = 0;i < 6;i++)

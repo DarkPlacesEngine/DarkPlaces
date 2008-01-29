@@ -83,6 +83,7 @@ cvar_t r_glsl_offsetmapping_reliefmapping = {CVAR_SAVE, "r_glsl_offsetmapping_re
 cvar_t r_glsl_offsetmapping_scale = {CVAR_SAVE, "r_glsl_offsetmapping_scale", "0.04", "how deep the offset mapping effect is"};
 cvar_t r_glsl_postprocess = {CVAR_SAVE, "r_glsl_postprocess", "0", "use a GLSL postprocessing shader"};
 cvar_t r_glsl_postprocess_contrastboost = {CVAR_SAVE, "r_glsl_postprocess_contrastboost", "1", "brightening effect (1 is no change, higher values brighten the view)"};
+cvar_t r_glsl_postprocess_gamma = {CVAR_SAVE, "r_glsl_postprocess_gamma", "1", "inverse gamma correction value, a brightness effect that does not affect white or black, and tends to make the image grey and dull"};
 cvar_t r_glsl_usegeneric = {CVAR_SAVE, "r_glsl_usegeneric", "1", "use shaders for rendering simple geometry (rather than conventional fixed-function rendering for this purpose)"};
 
 cvar_t r_water = {CVAR_SAVE, "r_water", "0", "whether to use reflections and refraction on water surfaces (note: r_wateralpha must be set below 1)"};
@@ -497,6 +498,9 @@ static const char *builtinshaderstring =
 "#ifdef USECONTRASTBOOST\n"
 "uniform float ContrastBoostCoeff;\n"
 "#endif\n"
+"#ifdef USEGAMMA\n"
+"uniform float GammaCoeff;\n"
+"#endif\n"
 "void main(void)\n"
 "{\n"
 "	gl_FragColor = texture2D(Texture_First, gl_TexCoord[0].xy);\n"
@@ -506,6 +510,9 @@ static const char *builtinshaderstring =
 "#ifdef USECONTRASTBOOST\n"
 "	gl_FragColor.rgb /= (ContrastBoostCoeff * gl_FragColor.rgb + vec3(1.0, 1.0, 1.0));\n"
 "	gl_FragColor.rgb *= (ContrastBoostCoeff + 1.0);\n"
+"#endif\n"
+"#ifdef USEGAMMA\n"
+"	gl_FragColor.rgb = pow(gl_FragColor.rgb, GammaCoeff);\n"
 "#endif\n"
 "#ifdef USEVERTEXTEXTUREBLEND\n"
 "	gl_FragColor = mix(TintColor, gl_FragColor, TintColor.a);\n"
@@ -1069,8 +1076,9 @@ typedef enum shaderpermutation_e
 	SHADERPERMUTATION_REFLECTION = 1<<8, // normalmap-perturbed reflection of the scene infront of the surface, preformed as an overlay on the surface
 	SHADERPERMUTATION_OFFSETMAPPING = 1<<9, // adjust texcoords to roughly simulate a displacement mapped surface
 	SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING = 1<<10, // adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
-	SHADERPERMUTATION_LIMIT = 1<<11, // size of permutations array
-	SHADERPERMUTATION_COUNT = 11 // size of shaderpermutationinfo array
+	SHADERPERMUTATION_GAMMA = 1<<11, // gamma (postprocessing only)
+	SHADERPERMUTATION_LIMIT = 1<<12, // size of permutations array
+	SHADERPERMUTATION_COUNT = 12 // size of shaderpermutationinfo array
 }
 shaderpermutation_t;
 
@@ -1088,6 +1096,7 @@ shaderpermutationinfo_t shaderpermutationinfo[SHADERPERMUTATION_COUNT] =
 	{"#define USEREFLECTION\n", " reflection"},
 	{"#define USEOFFSETMAPPING\n", " offsetmapping"},
 	{"#define USEOFFSETMAPPING_RELIEFMAPPING\n", " reliefmapping"},
+	{"#define USEGAMMA\n", " gamma"},
 };
 
 // this enum is multiplied by SHADERPERMUTATION_MODEBASE
@@ -1171,6 +1180,7 @@ typedef struct r_glsl_permutation_s
 	int loc_SpecularColor;
 	int loc_LightDir;
 	int loc_ContrastBoostCoeff; // 1 - 1/ContrastBoost
+	int loc_GammaCoeff; // 1 / gamma
 	int loc_DistortScaleRefractReflect;
 	int loc_ScreenScaleRefractReflect;
 	int loc_ScreenCenterRefractReflect;
@@ -2247,6 +2257,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_glsl_offsetmapping_scale);
 	Cvar_RegisterVariable(&r_glsl_postprocess);
 	Cvar_RegisterVariable(&r_glsl_postprocess_contrastboost);
+	Cvar_RegisterVariable(&r_glsl_postprocess_gamma);
 	Cvar_RegisterVariable(&r_glsl_usegeneric);
 	Cvar_RegisterVariable(&r_water);
 	Cvar_RegisterVariable(&r_water_resolutionmultiplier);
@@ -3334,7 +3345,13 @@ static void R_BlendView(void)
 
 	if (r_glsl.integer && gl_support_fragment_shader && (r_bloomstate.texture_screen || r_bloomstate.texture_bloom))
 	{
-		unsigned int permutation = (r_bloomstate.texture_bloom ? SHADERPERMUTATION_GLOW : 0) | (r_refdef.viewblend[3] > 0 ? SHADERPERMUTATION_VERTEXTEXTUREBLEND : 0) | (r_glsl_postprocess_contrastboost.value != 1 ? SHADERPERMUTATION_CONTRASTBOOST : 0);
+		unsigned int permutation =
+			  (r_bloomstate.texture_bloom ? SHADERPERMUTATION_GLOW : 0)
+			| (r_refdef.viewblend[3] > 0 ? SHADERPERMUTATION_VERTEXTEXTUREBLEND : 0);
+		if(r_glsl_postprocess.value)
+			permutation |=
+				  (r_glsl_postprocess_contrastboost.value != 1 ? SHADERPERMUTATION_CONTRASTBOOST : 0)
+				| (r_glsl_postprocess_gamma.value != 1 ? SHADERPERMUTATION_GAMMA : 0);
 
 		if (r_bloomstate.texture_bloom && !r_bloomstate.hdr)
 		{
@@ -3359,6 +3376,8 @@ static void R_BlendView(void)
 			qglUniform4fARB(r_glsl_permutation->loc_TintColor, r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
 		if (r_glsl_permutation->loc_ContrastBoostCoeff >= 0)
 			qglUniform1fARB(r_glsl_permutation->loc_ContrastBoostCoeff, r_glsl_postprocess_contrastboost.value - 1);
+		if (r_glsl_permutation->loc_GammaCoeff >= 0)
+			qglUniform1fARB(r_glsl_permutation->loc_GammaCoeff, 1 / r_glsl_postprocess_gamma.value);
 		R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
 		r_refdef.stats.bloom_drawpixels += r_refdef.view.width * r_refdef.view.height;
 		return;
