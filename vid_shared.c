@@ -825,7 +825,7 @@ static int gamma_forcenextframe = false;
 static float cachegamma, cachebrightness, cachecontrast, cacheblack[3], cachegrey[3], cachewhite[3], cachecontrastboost;
 static int cachecolorenable, cachehwgamma;
 
-int vid_gammaramps_serial = 0; // so other subsystems can poll if gamma parameters have changed
+unsigned int vid_gammaramps_serial = 0; // so other subsystems can poll if gamma parameters have changed
 void VID_BuildGammaTables(unsigned short *ramps, int rampsize)
 {
 	if (cachecolorenable)
