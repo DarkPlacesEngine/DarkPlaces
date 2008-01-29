@@ -1103,8 +1103,6 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 				}
 				else
 				{
-					// use the bufferobject if all triangles are accepted
-					usebufferobject = true;
 					batchnumtriangles = 0;
 					batchfirsttriangle = surface->num_firsttriangle;
 					for (l = k;l < kend;l++)
@@ -1133,7 +1131,8 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 							{
 								r_refdef.stats.lights_lighttriangles += batchnumtriangles;
 								Mod_VertexRangeFromElements(batchnumtriangles*3, batchelements, &batchfirstvertex, &batchlastvertex);
-								if (usebufferobject && batchnumtriangles >= 100)
+								// use the element buffer if all triangles are consecutive
+								if (m == batchfirsttriangle + batchnumtriangles)
 									R_Shadow_RenderLighting(batchfirstvertex, batchlastvertex + 1 - batchfirstvertex, batchnumtriangles, batchelements, ent->model->surfmesh.ebo, sizeof(int[3]) * batchfirsttriangle);
 								else
 									R_Shadow_RenderLighting(batchfirstvertex, batchlastvertex + 1 - batchfirstvertex, batchnumtriangles, batchelements, 0, 0);
@@ -1151,7 +1150,8 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 					{
 						r_refdef.stats.lights_lighttriangles += batchnumtriangles;
 						Mod_VertexRangeFromElements(batchnumtriangles*3, batchelements, &batchfirstvertex, &batchlastvertex);
-						if (usebufferobject && batchnumtriangles >= 100)
+						// use the element buffer if all triangles are consecutive
+						if (m == batchfirsttriangle + batchnumtriangles)
 							R_Shadow_RenderLighting(batchfirstvertex, batchlastvertex + 1 - batchfirstvertex, batchnumtriangles, batchelements, ent->model->surfmesh.ebo, sizeof(int[3]) * batchfirsttriangle);
 						else
 							R_Shadow_RenderLighting(batchfirstvertex, batchlastvertex + 1 - batchfirstvertex, batchnumtriangles, batchelements, 0, 0);
