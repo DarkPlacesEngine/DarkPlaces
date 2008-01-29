@@ -84,6 +84,10 @@ cvar_t r_glsl_offsetmapping_scale = {CVAR_SAVE, "r_glsl_offsetmapping_scale", "0
 cvar_t r_glsl_postprocess = {CVAR_SAVE, "r_glsl_postprocess", "0", "use a GLSL postprocessing shader"};
 cvar_t r_glsl_postprocess_contrastboost = {CVAR_SAVE, "r_glsl_postprocess_contrastboost", "1", "brightening effect (1 is no change, higher values brighten the view)"};
 cvar_t r_glsl_postprocess_gamma = {CVAR_SAVE, "r_glsl_postprocess_gamma", "1", "inverse gamma correction value, a brightness effect that does not affect white or black, and tends to make the image grey and dull"};
+cvar_t r_glsl_postprocess_uservec1 = {CVAR_SAVE, "r_glsl_postprocess_uservec1", "0 0 0 0", "a 4-component vector to pass as uservec1 to the postprocessing shader (only useful if default.glsl has been customized)"};
+cvar_t r_glsl_postprocess_uservec2 = {CVAR_SAVE, "r_glsl_postprocess_uservec2", "0 0 0 0", "a 4-component vector to pass as uservec2 to the postprocessing shader (only useful if default.glsl has been customized)"};
+cvar_t r_glsl_postprocess_uservec3 = {CVAR_SAVE, "r_glsl_postprocess_uservec3", "0 0 0 0", "a 4-component vector to pass as uservec3 to the postprocessing shader (only useful if default.glsl has been customized)"};
+cvar_t r_glsl_postprocess_uservec4 = {CVAR_SAVE, "r_glsl_postprocess_uservec4", "0 0 0 0", "a 4-component vector to pass as uservec4 to the postprocessing shader (only useful if default.glsl has been customized)"};
 cvar_t r_glsl_usegeneric = {CVAR_SAVE, "r_glsl_usegeneric", "1", "use shaders for rendering simple geometry (rather than conventional fixed-function rendering for this purpose)"};
 
 cvar_t r_water = {CVAR_SAVE, "r_water", "0", "whether to use reflections and refraction on water surfaces (note: r_wateralpha must be set below 1)"};
@@ -501,6 +505,11 @@ static const char *builtinshaderstring =
 "#ifdef USEGAMMA\n"
 "uniform float GammaCoeff;\n"
 "#endif\n"
+"uniform vec4 UserVec1;\n"
+"uniform vec4 UserVec2;\n"
+"uniform vec4 UserVec3;\n"
+"uniform vec4 UserVec4;\n"
+"uniform float ClientTime;\n"
 "void main(void)\n"
 "{\n"
 "	gl_FragColor = texture2D(Texture_First, gl_TexCoord[0].xy);\n"
@@ -1188,6 +1197,11 @@ typedef struct r_glsl_permutation_s
 	int loc_ReflectColor;
 	int loc_ReflectFactor;
 	int loc_ReflectOffset;
+	int loc_UserVec1;
+	int loc_UserVec2;
+	int loc_UserVec3;
+	int loc_UserVec4;
+	int loc_ClientTime;
 }
 r_glsl_permutation_t;
 
@@ -1340,6 +1354,12 @@ static void R_GLSL_CompilePermutation(shadermode_t mode, shaderpermutation_t per
 		p->loc_ReflectColor               = qglGetUniformLocationARB(p->program, "ReflectColor");
 		p->loc_ReflectFactor              = qglGetUniformLocationARB(p->program, "ReflectFactor");
 		p->loc_ReflectOffset              = qglGetUniformLocationARB(p->program, "ReflectOffset");
+		p->loc_GammaCoeff                 = qglGetUniformLocationARB(p->program, "GammaCoeff");
+		p->loc_UserVec1                   = qglGetUniformLocationARB(p->program, "UserVec1");
+		p->loc_UserVec2                   = qglGetUniformLocationARB(p->program, "UserVec2");
+		p->loc_UserVec3                   = qglGetUniformLocationARB(p->program, "UserVec3");
+		p->loc_UserVec4                   = qglGetUniformLocationARB(p->program, "UserVec4");
+		p->loc_ClientTime                 = qglGetUniformLocationARB(p->program, "ClientTime");
 		// initialize the samplers to refer to the texture units we use
 		if (p->loc_Texture_First           >= 0) qglUniform1iARB(p->loc_Texture_First          , GL20TU_FIRST);
 		if (p->loc_Texture_Second          >= 0) qglUniform1iARB(p->loc_Texture_Second         , GL20TU_SECOND);
@@ -2258,6 +2278,10 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_glsl_postprocess);
 	Cvar_RegisterVariable(&r_glsl_postprocess_contrastboost);
 	Cvar_RegisterVariable(&r_glsl_postprocess_gamma);
+	Cvar_RegisterVariable(&r_glsl_postprocess_uservec1);
+	Cvar_RegisterVariable(&r_glsl_postprocess_uservec2);
+	Cvar_RegisterVariable(&r_glsl_postprocess_uservec3);
+	Cvar_RegisterVariable(&r_glsl_postprocess_uservec4);
 	Cvar_RegisterVariable(&r_glsl_usegeneric);
 	Cvar_RegisterVariable(&r_water);
 	Cvar_RegisterVariable(&r_water_resolutionmultiplier);
@@ -3378,6 +3402,32 @@ static void R_BlendView(void)
 			qglUniform1fARB(r_glsl_permutation->loc_ContrastBoostCoeff, r_glsl_postprocess_contrastboost.value - 1);
 		if (r_glsl_permutation->loc_GammaCoeff >= 0)
 			qglUniform1fARB(r_glsl_permutation->loc_GammaCoeff, 1 / r_glsl_postprocess_gamma.value);
+		if (r_glsl_permutation->loc_ClientTime >= 0)
+			qglUniform1fARB(r_glsl_permutation->loc_ClientTime, cl.time);
+		if (r_glsl_permutation->loc_UserVec1 >= 0)
+		{
+			float a=0, b=0, c=0, d=0;
+			sscanf(r_glsl_postprocess_uservec1.string, "%f %f %f %f", &a, &b, &c, &d);
+			qglUniform4fARB(r_glsl_permutation->loc_UserVec1, a, b, c, d);
+		}
+		if (r_glsl_permutation->loc_UserVec2 >= 0)
+		{
+			float a=0, b=0, c=0, d=0;
+			sscanf(r_glsl_postprocess_uservec2.string, "%f %f %f %f", &a, &b, &c, &d);
+			qglUniform4fARB(r_glsl_permutation->loc_UserVec2, a, b, c, d);
+		}
+		if (r_glsl_permutation->loc_UserVec3 >= 0)
+		{
+			float a=0, b=0, c=0, d=0;
+			sscanf(r_glsl_postprocess_uservec3.string, "%f %f %f %f", &a, &b, &c, &d);
+			qglUniform4fARB(r_glsl_permutation->loc_UserVec3, a, b, c, d);
+		}
+		if (r_glsl_permutation->loc_UserVec4 >= 0)
+		{
+			float a=0, b=0, c=0, d=0;
+			sscanf(r_glsl_postprocess_uservec4.string, "%f %f %f %f", &a, &b, &c, &d);
+			qglUniform4fARB(r_glsl_permutation->loc_UserVec4, a, b, c, d);
+		}
 		R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
 		r_refdef.stats.bloom_drawpixels += r_refdef.view.width * r_refdef.view.height;
 		return;
