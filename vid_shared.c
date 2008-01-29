@@ -111,6 +111,7 @@ cvar_t v_color_white_r = {CVAR_SAVE, "v_color_white_r", "1", "desired color of w
 cvar_t v_color_white_g = {CVAR_SAVE, "v_color_white_g", "1", "desired color of white"};
 cvar_t v_color_white_b = {CVAR_SAVE, "v_color_white_b", "1", "desired color of white"};
 cvar_t v_hwgamma = {CVAR_SAVE, "v_hwgamma", "1", "enables use of hardware gamma correction ramps if available (note: does not work very well on Windows2000 and above), values are 0 = off, 1 = attempt to use hardware gamma, 2 = use hardware gamma whether it works or not"};
+cvar_t v_glslgamma = {CVAR_SAVE, "v_glslgamma", "0", "enables use of GLSL to apply gamma correction ramps if available (note: overrides v_hwgamma)"};
 cvar_t v_psycho = {0, "v_psycho", "0", "easter egg (does not work on Windows2000 or above)"};
 
 // brand of graphics chip
@@ -893,7 +894,11 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 	if (cls.state == ca_dedicated)
 		return;
 
-	wantgamma = (vid_activewindow ? v_hwgamma.integer : 0);
+	wantgamma = v_hwgamma.integer;
+	if(r_glsl.integer && v_glslgamma.integer)
+		wantgamma = 0;
+	if(!vid_activewindow)
+		wantgamma = 0;
 #define BOUNDCVAR(cvar, m1, m2) c = &(cvar);f = bound(m1, c->value, m2);if (c->value != f) Cvar_SetValueQuick(c, f);
 	BOUNDCVAR(v_gamma, 0.1, 5);
 	BOUNDCVAR(v_contrast, 1, 5);
@@ -912,6 +917,7 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 
 	// set vid_gammatables_trivial to true if the current settings would generate the identity gamma table
 	vid_gammatables_trivial = false;
+	if(v_psycho.integer == 0)
 	if(v_color_enable.integer)
 	{
 		if(v_contrastboost.value == 1)
@@ -1035,6 +1041,7 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&v_color_white_b);
 
 	Cvar_RegisterVariable(&v_hwgamma);
+	Cvar_RegisterVariable(&v_glslgamma);
 
 	Cvar_RegisterVariable(&v_psycho);
 
