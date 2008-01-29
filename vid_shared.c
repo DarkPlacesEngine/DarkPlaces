@@ -825,7 +825,8 @@ static int gamma_forcenextframe = false;
 static float cachegamma, cachebrightness, cachecontrast, cacheblack[3], cachegrey[3], cachewhite[3], cachecontrastboost;
 static int cachecolorenable, cachehwgamma;
 
-unsigned int vid_gammaramps_serial = 0; // so other subsystems can poll if gamma parameters have changed
+unsigned int vid_gammatables_serial = 0; // so other subsystems can poll if gamma parameters have changed
+qboolean vid_gammatables_trivial = true;
 void VID_BuildGammaTables(unsigned short *ramps, int rampsize)
 {
 	if (cachecolorenable)
@@ -909,6 +910,31 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 	BOUNDCVAR(v_color_white_b, 1, 5);
 #undef BOUNDCVAR
 
+	// set vid_gammatables_trivial to true if the current settings would generate the identity gamma table
+	vid_gammatables_trivial = false;
+	if(v_color_enable.integer)
+	{
+		if(v_contrastboost.value == 1)
+		if(v_color_black_r.value == 0)
+		if(v_color_black_g.value == 0)
+		if(v_color_black_b.value == 0)
+		if(fabs(v_color_grey_r.value - 0.5) < 1e-6)
+		if(fabs(v_color_grey_g.value - 0.5) < 1e-6)
+		if(fabs(v_color_grey_b.value - 0.5) < 1e-6)
+		if(v_color_white_r.value == 1)
+		if(v_color_white_g.value == 1)
+		if(v_color_white_b.value == 1)
+			vid_gammatables_trivial = true;
+	}
+	else
+	{
+		if(v_contrastboost.value == 1)
+		if(v_gamma.value == 1)
+		if(v_contrast.value == 1)
+		if(v_brightness.value == 0)
+			vid_gammatables_trivial = true;
+	}
+
 #define GAMMACHECK(cache, value) if (cache != (value)) gamma_changed = true;cache = (value)
 	if(v_psycho.integer)
 		gamma_changed = true;
@@ -928,7 +954,7 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 	GAMMACHECK(cachewhite[2]   , v_color_white_b.value);
 
 	if(gamma_changed)
-		++vid_gammaramps_serial;
+		++vid_gammatables_serial;
 
 	GAMMACHECK(cachehwgamma    , wantgamma);
 #undef GAMMACHECK
