@@ -918,27 +918,28 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 	// set vid_gammatables_trivial to true if the current settings would generate the identity gamma table
 	vid_gammatables_trivial = false;
 	if(v_psycho.integer == 0)
-	if(v_color_enable.integer)
+	if(v_contrastboost.value == 1)
 	{
-		if(v_contrastboost.value == 1)
-		if(v_color_black_r.value == 0)
-		if(v_color_black_g.value == 0)
-		if(v_color_black_b.value == 0)
-		if(fabs(v_color_grey_r.value - 0.5) < 1e-6)
-		if(fabs(v_color_grey_g.value - 0.5) < 1e-6)
-		if(fabs(v_color_grey_b.value - 0.5) < 1e-6)
-		if(v_color_white_r.value == 1)
-		if(v_color_white_g.value == 1)
-		if(v_color_white_b.value == 1)
-			vid_gammatables_trivial = true;
-	}
-	else
-	{
-		if(v_contrastboost.value == 1)
-		if(v_gamma.value == 1)
-		if(v_contrast.value == 1)
-		if(v_brightness.value == 0)
-			vid_gammatables_trivial = true;
+		if(v_color_enable.integer)
+		{
+			if(v_color_black_r.value == 0)
+			if(v_color_black_g.value == 0)
+			if(v_color_black_b.value == 0)
+			if(fabs(v_color_grey_r.value - 0.5) < 1e-6)
+			if(fabs(v_color_grey_g.value - 0.5) < 1e-6)
+			if(fabs(v_color_grey_b.value - 0.5) < 1e-6)
+			if(v_color_white_r.value == 1)
+			if(v_color_white_g.value == 1)
+			if(v_color_white_b.value == 1)
+				vid_gammatables_trivial = true;
+		}
+		else
+		{
+			if(v_gamma.value == 1)
+			if(v_contrast.value == 1)
+			if(v_brightness.value == 0)
+				vid_gammatables_trivial = true;
+		}
 	}
 
 #define GAMMACHECK(cache, value) if (cache != (value)) gamma_changed = true;cache = (value)
