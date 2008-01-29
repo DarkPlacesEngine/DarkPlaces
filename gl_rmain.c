@@ -528,6 +528,10 @@ static const char *builtinshaderstring =
 "	gl_FragColor = mix(TintColor, gl_FragColor, TintColor.a);\n"
 "#endif\n"
 "\n"
+"#ifdef USEPOSTPROCESSING\n"
+"// add your own postprocessing here or make your own ifdef for it\n"
+"#endif\n"
+"\n"
 "}\n"
 "# endif\n"
 "\n"
@@ -1087,8 +1091,9 @@ typedef enum shaderpermutation_e
 	SHADERPERMUTATION_OFFSETMAPPING = 1<<9, // adjust texcoords to roughly simulate a displacement mapped surface
 	SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING = 1<<10, // adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
 	SHADERPERMUTATION_GAMMA = 1<<11, // gamma (postprocessing only)
-	SHADERPERMUTATION_LIMIT = 1<<12, // size of permutations array
-	SHADERPERMUTATION_COUNT = 12 // size of shaderpermutationinfo array
+	SHADERPERMUTATION_POSTPROCESSING = 1<<12, // gamma (postprocessing only)
+	SHADERPERMUTATION_LIMIT = 1<<13, // size of permutations array
+	SHADERPERMUTATION_COUNT = 13 // size of shaderpermutationinfo array
 }
 shaderpermutation_t;
 
@@ -1107,6 +1112,7 @@ shaderpermutationinfo_t shaderpermutationinfo[SHADERPERMUTATION_COUNT] =
 	{"#define USEOFFSETMAPPING\n", " offsetmapping"},
 	{"#define USEOFFSETMAPPING_RELIEFMAPPING\n", " reliefmapping"},
 	{"#define USEGAMMA\n", " gamma"},
+	{"#define USEPOSTPROCESSING\n", " postprocessing"},
 };
 
 // this enum is multiplied by SHADERPERMUTATION_MODEBASE
@@ -3374,8 +3380,8 @@ static void R_BlendView(void)
 			  (r_bloomstate.texture_bloom ? SHADERPERMUTATION_GLOW : 0)
 			| (r_refdef.viewblend[3] > 0 ? SHADERPERMUTATION_VERTEXTEXTUREBLEND : 0);
 		if(r_glsl_postprocess.value)
-			permutation |=
-				  (r_glsl_postprocess_contrastboost.value != 1 ? SHADERPERMUTATION_CONTRASTBOOST : 0)
+			permutation |= SHADERPERMUTATION_POSTPROCESSING
+			    | (r_glsl_postprocess_contrastboost.value != 1 ? SHADERPERMUTATION_CONTRASTBOOST : 0)
 				| (r_glsl_postprocess_gamma.value != 1 ? SHADERPERMUTATION_GAMMA : 0);
 
 		if (r_bloomstate.texture_bloom && !r_bloomstate.hdr)
