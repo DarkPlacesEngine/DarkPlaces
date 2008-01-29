@@ -169,30 +169,36 @@ void Palette_SetupSpecialPalettes(void)
 	palette_bgra_font[0] = 0;
 }
 
-void BuildGammaTable8(float prescale, float gamma, float scale, float base, unsigned char *out, int rampsize)
+void BuildGammaTable8(float prescale, float gamma, float scale, float base, float contrastboost, unsigned char *out, int rampsize)
 {
 	int i, adjusted;
 	double invgamma;
+	double t;
 
 	invgamma = 1.0 / gamma;
 	prescale /= (double) (rampsize - 1);
 	for (i = 0;i < rampsize;i++)
 	{
-		adjusted = (int) (255.0 * (pow((double) i * prescale, invgamma) * scale + base) + 0.5);
+		t = i * prescale;
+		t = contrastboost * t / ((contrastboost - 1) * t + 1);
+		adjusted = (int) (255.0 * (pow(t, invgamma) * scale + base) + 0.5);
 		out[i] = bound(0, adjusted, 255);
 	}
 }
 
-void BuildGammaTable16(float prescale, float gamma, float scale, float base, unsigned short *out, int rampsize)
+void BuildGammaTable16(float prescale, float gamma, float scale, float base, float contrastboost, unsigned short *out, int rampsize)
 {
 	int i, adjusted;
 	double invgamma;
+	double t;
 
 	invgamma = 1.0 / gamma;
 	prescale /= (double) (rampsize - 1);
 	for (i = 0;i < rampsize;i++)
 	{
-		adjusted = (int) (65535.0 * (pow((double) i * prescale, invgamma) * scale + base) + 0.5);
+		t = i * prescale;
+		t = contrastboost * t / ((contrastboost - 1) * t + 1);
+		adjusted = (int) (65535.0 * (pow(t, invgamma) * scale + base) + 0.5);
 		out[i] = bound(0, adjusted, 65535);
 	}
 }
@@ -239,7 +245,7 @@ void Palette_Load(void)
 	scale = bound(0.01, scale, 10.0);
 	base = bound(0, base, 0.95);
 
-	BuildGammaTable8(1.0f, gamma, scale, base, texturegammaramp, 256);
+	BuildGammaTable8(1.0f, gamma, scale, base, 1, texturegammaramp, 256);
 
 	palfile = (unsigned char *)FS_LoadFile ("gfx/palette.lmp", tempmempool, false, &filesize);
 	if (palfile && filesize >= 768)
