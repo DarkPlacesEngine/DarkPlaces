@@ -496,7 +496,7 @@ static const char *builtinshaderstring =
 "uniform sampler2D Texture_Second;\n"
 "#endif\n"
 "#ifdef USEGAMMARAMPS\n"
-"uniform sampler2D Texture_Attenuation;\n"
+"uniform sampler2D Texture_GammaRamps;\n"
 "#endif\n"
 "#ifdef USEVERTEXTEXTUREBLEND\n"
 "uniform vec4 TintColor;\n"
@@ -517,7 +517,7 @@ static const char *builtinshaderstring =
 "	gl_FragColor += texture2D(Texture_Second, gl_TexCoord[1].xy);\n"
 "#endif\n"
 "#ifdef USEVERTEXTEXTUREBLEND\n"
-"	gl_FragColor = mix(TintColor, gl_FragColor, TintColor.a);\n"
+"	gl_FragColor = mix(gl_FragColor, TintColor, TintColor.a);\n"
 "#endif\n"
 "\n"
 "#ifdef USEPOSTPROCESSING\n"
@@ -525,9 +525,9 @@ static const char *builtinshaderstring =
 "#endif\n"
 "\n"
 "#ifdef USEGAMMARAMPS\n"
-"	gl_FragColor.r = texture2D(Texture_Attenuation, vec2(gl_FragColor.r, 0)).r;\n"
-"	gl_FragColor.g = texture2D(Texture_Attenuation, vec2(gl_FragColor.g, 0)).g;\n"
-"	gl_FragColor.b = texture2D(Texture_Attenuation, vec2(gl_FragColor.b, 0)).b;\n"
+"	gl_FragColor.r = texture2D(Texture_GammaRamps, vec2(gl_FragColor.r, 0)).r;\n"
+"	gl_FragColor.g = texture2D(Texture_GammaRamps, vec2(gl_FragColor.g, 0)).g;\n"
+"	gl_FragColor.b = texture2D(Texture_GammaRamps, vec2(gl_FragColor.b, 0)).b;\n"
 "#endif\n"
 "}\n"
 "# endif\n"
@@ -1157,6 +1157,7 @@ typedef struct r_glsl_permutation_s
 	// locations of detected uniforms in program object, or -1 if not found
 	int loc_Texture_First;
 	int loc_Texture_Second;
+	int loc_Texture_GammaRamps;
 	int loc_Texture_Normal;
 	int loc_Texture_Color;
 	int loc_Texture_Gloss;
@@ -1367,6 +1368,7 @@ static void R_GLSL_CompilePermutation(shadermode_t mode, shaderpermutation_t per
 		// initialize the samplers to refer to the texture units we use
 		if (p->loc_Texture_First           >= 0) qglUniform1iARB(p->loc_Texture_First          , GL20TU_FIRST);
 		if (p->loc_Texture_Second          >= 0) qglUniform1iARB(p->loc_Texture_Second         , GL20TU_SECOND);
+		if (p->loc_Texture_GammaRamps      >= 0) qglUniform1iARB(p->loc_Texture_GammaRamps     , GL20TU_GAMMARAMPS);
 		if (p->loc_Texture_Normal          >= 0) qglUniform1iARB(p->loc_Texture_Normal         , GL20TU_NORMAL);
 		if (p->loc_Texture_Color           >= 0) qglUniform1iARB(p->loc_Texture_Color          , GL20TU_COLOR);
 		if (p->loc_Texture_Gloss           >= 0) qglUniform1iARB(p->loc_Texture_Gloss          , GL20TU_GLOSS);
@@ -3398,8 +3400,8 @@ static void R_BlendView(void)
 		R_Mesh_TexCoordPointer(0, 2, r_bloomstate.screentexcoord2f, 0, 0);
 		R_Mesh_TexBind(1, R_GetTexture(r_bloomstate.texture_bloom));
 		R_Mesh_TexCoordPointer(1, 2, r_bloomstate.bloomtexcoord2f, 0, 0);
-		if (r_glsl_permutation->loc_Texture_Attenuation >= 0)
-			R_Mesh_TexBind(GL20TU_ATTENUATION, R_GetTexture(r_texture_gammaramps));
+		if (r_glsl_permutation->loc_Texture_GammaRamps >= 0)
+			R_Mesh_TexBind(GL20TU_GAMMARAMPS, R_GetTexture(r_texture_gammaramps));
 		if (r_glsl_permutation->loc_TintColor >= 0)
 			qglUniform4fARB(r_glsl_permutation->loc_TintColor, r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
 		if (r_glsl_permutation->loc_ClientTime >= 0)
