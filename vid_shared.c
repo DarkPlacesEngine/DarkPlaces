@@ -99,6 +99,7 @@ cvar_t vid_resizable = {CVAR_SAVE, "vid_resizable", "0", "0: window not resizabl
 cvar_t v_gamma = {CVAR_SAVE, "v_gamma", "1", "inverse gamma correction value, a brightness effect that does not affect white or black, and tends to make the image grey and dull"};
 cvar_t v_contrast = {CVAR_SAVE, "v_contrast", "1", "brightness of white (values above 1 give a brighter image with increased color saturation, unlike v_gamma)"};
 cvar_t v_brightness = {CVAR_SAVE, "v_brightness", "0", "brightness of black, useful for monitors that are too dark"};
+cvar_t v_contrastboost = {CVAR_SAVE, "v_contrastboost", "1", "by how much to multiply the contrast in dark areas (1 is no change)"};
 cvar_t v_color_enable = {CVAR_SAVE, "v_color_enable", "0", "enables black-grey-white color correction curve controls"};
 cvar_t v_color_black_r = {CVAR_SAVE, "v_color_black_r", "0", "desired color of black"};
 cvar_t v_color_black_g = {CVAR_SAVE, "v_color_black_g", "0", "desired color of black"};
@@ -821,7 +822,7 @@ void Force_CenterView_f (void)
 }
 
 static int gamma_forcenextframe = false;
-static float cachegamma, cachebrightness, cachecontrast, cacheblack[3], cachegrey[3], cachewhite[3];
+static float cachegamma, cachebrightness, cachecontrast, cacheblack[3], cachegrey[3], cachewhite[3], cachecontrastboost;
 static int cachecolorenable, cachehwgamma;
 void VID_UpdateGamma(qboolean force, int rampsize)
 {
@@ -838,6 +839,7 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 	BOUNDCVAR(v_gamma, 0.1, 5);
 	BOUNDCVAR(v_contrast, 1, 5);
 	BOUNDCVAR(v_brightness, 0, 0.8);
+	BOUNDCVAR(v_contrastboost, 0.0625, 16);
 	BOUNDCVAR(v_color_black_r, 0, 0.8);
 	BOUNDCVAR(v_color_black_g, 0, 0.8);
 	BOUNDCVAR(v_color_black_b, 0, 0.8);
@@ -856,6 +858,7 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 	GAMMACHECK(cachegamma      , v_gamma.value);
 	GAMMACHECK(cachecontrast   , v_contrast.value);
 	GAMMACHECK(cachebrightness , v_brightness.value);
+	GAMMACHECK(cachecontrastboost, v_contrastboost.value);
 	GAMMACHECK(cachecolorenable, v_color_enable.integer);
 	GAMMACHECK(cacheblack[0]   , v_color_black_r.value);
 	GAMMACHECK(cacheblack[1]   , v_color_black_g.value);
@@ -891,15 +894,15 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 
 		if (cachecolorenable)
 		{
-			BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[0]), cachewhite[0], cacheblack[0], vid_gammaramps, rampsize);
-			BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[1]), cachewhite[1], cacheblack[1], vid_gammaramps + vid_gammarampsize, rampsize);
-			BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[2]), cachewhite[2], cacheblack[2], vid_gammaramps + vid_gammarampsize*2, rampsize);
+			BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[0]), cachewhite[0], cacheblack[0], cachecontrastboost, vid_gammaramps, rampsize);
+			BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[1]), cachewhite[1], cacheblack[1], cachecontrastboost, vid_gammaramps + vid_gammarampsize, rampsize);
+			BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[2]), cachewhite[2], cacheblack[2], cachecontrastboost, vid_gammaramps + vid_gammarampsize*2, rampsize);
 		}
 		else
 		{
-			BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, vid_gammaramps, rampsize);
-			BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, vid_gammaramps + vid_gammarampsize, rampsize);
-			BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, vid_gammaramps + vid_gammarampsize*2, rampsize);
+			BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, cachecontrastboost, vid_gammaramps, rampsize);
+			BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, cachecontrastboost, vid_gammaramps + vid_gammarampsize, rampsize);
+			BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, cachecontrastboost, vid_gammaramps + vid_gammarampsize*2, rampsize);
 		}
 
 		// LordHavoc: this code came from Ben Winslow and Zinx Verituse, I have
@@ -979,6 +982,7 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&vid_hardwaregammasupported);
 	Cvar_RegisterVariable(&v_gamma);
 	Cvar_RegisterVariable(&v_brightness);
+	Cvar_RegisterVariable(&v_contrastboost);
 	Cvar_RegisterVariable(&v_contrast);
 
 	Cvar_RegisterVariable(&v_color_enable);
