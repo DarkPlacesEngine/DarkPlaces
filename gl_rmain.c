@@ -127,6 +127,8 @@ cvar_t r_track_sprites_flags = {CVAR_SAVE, "r_track_sprites_flags", "1", "1: Rot
 cvar_t r_track_sprites_scalew = {CVAR_SAVE, "r_track_sprites_scalew", "1", "width scaling of tracked sprites"};
 cvar_t r_track_sprites_scaleh = {CVAR_SAVE, "r_track_sprites_scaleh", "1", "height scaling of tracked sprites"};
 
+extern cvar_t v_glslgamma;
+
 extern qboolean v_flipped_state;
 
 static struct r_bloomstate_s
@@ -191,6 +193,8 @@ rtexture_t *r_texture_notexture;
 rtexture_t *r_texture_whitecube;
 rtexture_t *r_texture_normalizationcube;
 rtexture_t *r_texture_fogattenuation;
+rtexture_t *r_texture_gammaramps;
+unsigned int r_texture_gammaramps_serial;
 //rtexture_t *r_texture_fogintensity;
 
 char r_qwskincache[MAX_SCOREBOARD][MAX_QPATH];
@@ -493,17 +497,14 @@ static const char *builtinshaderstring =
 "#ifdef USEGLOW\n"
 "uniform sampler2D Texture_Second;\n"
 "#endif\n"
+"#ifdef USEGAMMARAMPS\n"
+"uniform sampler2D Texture_Attenuation;\n"
+"#endif\n"
 "#ifdef USEVERTEXTEXTUREBLEND\n"
 "uniform vec4 TintColor;\n"
 "#endif\n"
 "#ifdef USECOLORMOD\n"
 "uniform vec3 Gamma;\n"
-"#endif\n"
-"#ifdef USECONTRASTBOOST\n"
-"uniform float ContrastBoostCoeff;\n"
-"#endif\n"
-"#ifdef USEGAMMA\n"
-"uniform float GammaCoeff;\n"
 "#endif\n"
 "//uncomment these if you want to use them:\n"
 "// uniform vec4 UserVec1;\n"
@@ -517,13 +518,6 @@ static const char *builtinshaderstring =
 "#ifdef USEGLOW\n"
 "	gl_FragColor += texture2D(Texture_Second, gl_TexCoord[1].xy);\n"
 "#endif\n"
-"#ifdef USECONTRASTBOOST\n"
-"	gl_FragColor.rgb /= (ContrastBoostCoeff * gl_FragColor.rgb + vec3(1.0, 1.0, 1.0));\n"
-"	gl_FragColor.rgb *= (ContrastBoostCoeff + 1.0);\n"
-"#endif\n"
-"#ifdef USEGAMMA\n"
-"	gl_FragColor.rgb = pow(gl_FragColor.rgb, GammaCoeff);\n"
-"#endif\n"
 "#ifdef USEVERTEXTEXTUREBLEND\n"
 "	gl_FragColor = mix(TintColor, gl_FragColor, TintColor.a);\n"
 "#endif\n"
@@ -532,6 +526,11 @@ static const char *builtinshaderstring =
 "// add your own postprocessing here or make your own ifdef for it\n"
 "#endif\n"
 "\n"
+"#ifdef USEGAMMARAMPS\n"
+"	gl_FragColor.r = texture2D(Texture_Attenuation, vec2(gl_FragColor.r, 0)).r;\n"
+"	gl_FragColor.g = texture2D(Texture_Attenuation, vec2(gl_FragColor.g, 0)).g;\n"
+"	gl_FragColor.b = texture2D(Texture_Attenuation, vec2(gl_FragColor.b, 0)).b;\n"
+"#endif\n"
 "}\n"
 "# endif\n"
 "\n"
@@ -1090,8 +1089,8 @@ typedef enum shaderpermutation_e
 	SHADERPERMUTATION_REFLECTION = 1<<8, // normalmap-perturbed reflection of the scene infront of the surface, preformed as an overlay on the surface
 	SHADERPERMUTATION_OFFSETMAPPING = 1<<9, // adjust texcoords to roughly simulate a displacement mapped surface
 	SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING = 1<<10, // adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
-	SHADERPERMUTATION_GAMMA = 1<<11, // gamma (postprocessing only)
-	SHADERPERMUTATION_POSTPROCESSING = 1<<12, // gamma (postprocessing only)
+	SHADERPERMUTATION_GAMMARAMPS = 1<<11, // gamma (postprocessing only)
+	SHADERPERMUTATION_POSTPROCESSING = 1<<12, // user defined postprocessing
 	SHADERPERMUTATION_LIMIT = 1<<13, // size of permutations array
 	SHADERPERMUTATION_COUNT = 13 // size of shaderpermutationinfo array
 }
@@ -1111,7 +1110,7 @@ shaderpermutationinfo_t shaderpermutationinfo[SHADERPERMUTATION_COUNT] =
 	{"#define USEREFLECTION\n", " reflection"},
 	{"#define USEOFFSETMAPPING\n", " offsetmapping"},
 	{"#define USEOFFSETMAPPING_RELIEFMAPPING\n", " reliefmapping"},
-	{"#define USEGAMMA\n", " gamma"},
+	{"#define USEGAMMARAMPS\n", " gammaramps"},
 	{"#define USEPOSTPROCESSING\n", " postprocessing"},
 };
 
@@ -2167,6 +2166,7 @@ void gl_main_start(void)
 		R_BuildNormalizationCube();
 	}
 	r_texture_fogattenuation = NULL;
+	r_texture_gammaramps = NULL;
 	//r_texture_fogintensity = NULL;
 	memset(&r_bloomstate, 0, sizeof(r_bloomstate));
 	memset(&r_waterstate, 0, sizeof(r_waterstate));
@@ -2196,6 +2196,7 @@ void gl_main_shutdown(void)
 	r_texture_whitecube = NULL;
 	r_texture_normalizationcube = NULL;
 	r_texture_fogattenuation = NULL;
+	r_texture_gammaramps = NULL;
 	//r_texture_fogintensity = NULL;
 	memset(&r_bloomstate, 0, sizeof(r_bloomstate));
 	memset(&r_waterstate, 0, sizeof(r_waterstate));
@@ -3118,7 +3119,7 @@ void R_Bloom_StartFrame(void)
 		Cvar_SetValueQuick(&r_bloom, 0);
 	}
 
-	if (!(r_glsl.integer && (r_glsl_postprocess.integer || r_bloom.integer || r_hdr.integer)) && !r_bloom.integer)
+	if (!(r_glsl.integer && (r_glsl_postprocess.integer || (v_glslgamma.integer && !vid_gammatables_trivial) || r_bloom.integer || r_hdr.integer)) && !r_bloom.integer)
 		screentexturewidth = screentextureheight = 0;
 	if (!r_hdr.integer && !r_bloom.integer)
 		bloomtexturewidth = bloomtextureheight = 0;
@@ -3378,11 +3379,9 @@ static void R_BlendView(void)
 	{
 		unsigned int permutation =
 			  (r_bloomstate.texture_bloom ? SHADERPERMUTATION_GLOW : 0)
-			| (r_refdef.viewblend[3] > 0 ? SHADERPERMUTATION_VERTEXTEXTUREBLEND : 0);
-		if(r_glsl_postprocess.value)
-			permutation |= SHADERPERMUTATION_POSTPROCESSING
-			    | (r_glsl_postprocess_contrastboost.value != 1 ? SHADERPERMUTATION_CONTRASTBOOST : 0)
-				| (r_glsl_postprocess_gamma.value != 1 ? SHADERPERMUTATION_GAMMA : 0);
+			| (r_refdef.viewblend[3] > 0 ? SHADERPERMUTATION_VERTEXTEXTUREBLEND : 0)
+			| ((v_glslgamma.value && !vid_gammatables_trivial) ? SHADERPERMUTATION_GAMMARAMPS : 0)
+			| (r_glsl_postprocess.integer ? SHADERPERMUTATION_POSTPROCESSING : 0);
 
 		if (r_bloomstate.texture_bloom && !r_bloomstate.hdr)
 		{
@@ -3403,12 +3402,10 @@ static void R_BlendView(void)
 		R_Mesh_TexCoordPointer(0, 2, r_bloomstate.screentexcoord2f, 0, 0);
 		R_Mesh_TexBind(1, R_GetTexture(r_bloomstate.texture_bloom));
 		R_Mesh_TexCoordPointer(1, 2, r_bloomstate.bloomtexcoord2f, 0, 0);
+		if (r_glsl_permutation->loc_Texture_Attenuation >= 0)
+			R_Mesh_TexBind(GL20TU_ATTENUATION, R_GetTexture(r_texture_gammaramps));
 		if (r_glsl_permutation->loc_TintColor >= 0)
 			qglUniform4fARB(r_glsl_permutation->loc_TintColor, r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
-		if (r_glsl_permutation->loc_ContrastBoostCoeff >= 0)
-			qglUniform1fARB(r_glsl_permutation->loc_ContrastBoostCoeff, r_glsl_postprocess_contrastboost.value - 1);
-		if (r_glsl_permutation->loc_GammaCoeff >= 0)
-			qglUniform1fARB(r_glsl_permutation->loc_GammaCoeff, 1 / r_glsl_postprocess_gamma.value);
 		if (r_glsl_permutation->loc_ClientTime >= 0)
 			qglUniform1fARB(r_glsl_permutation->loc_ClientTime, cl.time);
 		if (r_glsl_permutation->loc_UserVec1 >= 0)
@@ -3620,6 +3617,41 @@ void R_UpdateVariables(void)
 	}
 	else
 		r_refdef.fogenabled = false;
+
+	if(r_glsl.integer && v_glslgamma.integer && !vid_gammatables_trivial)
+	{
+		if(!r_texture_gammaramps || vid_gammatables_serial != r_texture_gammaramps_serial)
+		{
+			// build GLSL gamma texture
+#define RAMPWIDTH 256
+			unsigned short ramp[RAMPWIDTH * 3];
+			unsigned char ramprgb[RAMPWIDTH][4];
+			int i;
+
+			r_texture_gammaramps_serial = vid_gammatables_serial;
+
+			VID_BuildGammaTables(&ramp[0], RAMPWIDTH);
+			for(i = 0; i < RAMPWIDTH; ++i)
+			{
+				ramprgb[i][0] = ramp[i] >> 8;
+				ramprgb[i][1] = ramp[i + RAMPWIDTH] >> 8;
+				ramprgb[i][2] = ramp[i + 2 * RAMPWIDTH] >> 8;
+				ramprgb[i][3] = 0;
+			}
+			if (r_texture_gammaramps)
+			{
+				R_UpdateTexture(r_texture_gammaramps, &ramprgb[0][0], 0, 0, RAMPWIDTH, 1);
+			}
+			else
+			{
+				r_texture_gammaramps = R_LoadTexture2D(r_main_texturepool, "gammaramps", RAMPWIDTH, 1, &ramprgb[0][0], TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_PERSISTENT, NULL);
+			}
+		}
+	}
+	else
+	{
+		// remove GLSL gamma texture
+	}
 }
 
 static r_refdef_scene_type_t r_currentscenetype = RST_CLIENT;
