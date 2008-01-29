@@ -367,6 +367,7 @@ typedef enum gl20_texunit_e
 {
 	GL20TU_FIRST = 0,
 	GL20TU_SECOND = 1,
+	GL20TU_GAMMARAMPS = 2,
 	GL20TU_NORMAL = 0,
 	GL20TU_COLOR = 1,
 	GL20TU_GLOSS = 2,
