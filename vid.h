@@ -148,5 +148,7 @@ void VID_Restart_f(void);
 
 void VID_Start(void);
 
+extern int vid_gammaramps_serial; // so other subsystems can poll if gamma parameters have changed; this starts with 0 and gets increased by 1 each time the gamma parameters get changed and VID_BuildGammaTables should be called again
+void VID_BuildGammaTables(unsigned short *ramps, int rampsize); // builds the current gamma tables into an array (needs 3*rampsize items)
 #endif
 

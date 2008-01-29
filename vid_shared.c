@@ -824,11 +824,69 @@ void Force_CenterView_f (void)
 static int gamma_forcenextframe = false;
 static float cachegamma, cachebrightness, cachecontrast, cacheblack[3], cachegrey[3], cachewhite[3], cachecontrastboost;
 static int cachecolorenable, cachehwgamma;
+
+int vid_gammaramps_serial = 0; // so other subsystems can poll if gamma parameters have changed
+void VID_BuildGammaTables(unsigned short *ramps, int rampsize)
+{
+	if (cachecolorenable)
+	{
+		BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[0]), cachewhite[0], cacheblack[0], cachecontrastboost, ramps, rampsize);
+		BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[1]), cachewhite[1], cacheblack[1], cachecontrastboost, ramps + rampsize, rampsize);
+		BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[2]), cachewhite[2], cacheblack[2], cachecontrastboost, ramps + rampsize*2, rampsize);
+	}
+	else
+	{
+		BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, cachecontrastboost, ramps, rampsize);
+		BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, cachecontrastboost, ramps + rampsize, rampsize);
+		BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, cachecontrastboost, ramps + rampsize*2, rampsize);
+	}
+
+	// LordHavoc: this code came from Ben Winslow and Zinx Verituse, I have
+	// immensely butchered it to work with variable framerates and fit in with
+	// the rest of darkplaces.
+	if (v_psycho.integer)
+	{
+		int x, y;
+		float t;
+		static float n[3], nd[3], nt[3];
+		static int init = true;
+		unsigned short *ramp;
+		gamma_forcenextframe = true;
+		if (init)
+		{
+			init = false;
+			for (x = 0;x < 3;x++)
+			{
+				n[x] = lhrandom(0, 1);
+				nd[x] = (rand()&1)?-0.25:0.25;
+				nt[x] = lhrandom(1, 8.2);
+			}
+		}
+
+		for (x = 0;x < 3;x++)
+		{
+			nt[x] -= cl.realframetime;
+			if (nt[x] < 0)
+			{
+				nd[x] = -nd[x];
+				nt[x] += lhrandom(1, 8.2);
+			}
+			n[x] += nd[x] * cl.realframetime;
+			n[x] -= floor(n[x]);
+		}
+
+		for (x = 0, ramp = ramps;x < 3;x++)
+			for (y = 0, t = n[x] - 0.75f;y < rampsize;y++, t += 0.75f * (2.0f / rampsize))
+				*ramp++ = (unsigned short)(cos(t*(M_PI*2.0)) * 32767.0f + 32767.0f);
+	}
+}
+
 void VID_UpdateGamma(qboolean force, int rampsize)
 {
 	cvar_t *c;
 	float f;
 	int wantgamma;
+	qboolean gamma_changed = false;
 
 	// LordHavoc: don't mess with gamma tables if running dedicated
 	if (cls.state == ca_dedicated)
@@ -851,10 +909,9 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 	BOUNDCVAR(v_color_white_b, 1, 5);
 #undef BOUNDCVAR
 
-	if (force || v_psycho.integer)
-		gamma_forcenextframe = true;
-#define GAMMACHECK(cache, value) if (cache != (value)) gamma_forcenextframe = true;cache = (value)
-	GAMMACHECK(cachehwgamma    , wantgamma);
+#define GAMMACHECK(cache, value) if (cache != (value)) gamma_changed = true;cache = (value)
+	if(v_psycho.integer)
+		gamma_changed = true;
 	GAMMACHECK(cachegamma      , v_gamma.value);
 	GAMMACHECK(cachecontrast   , v_contrast.value);
 	GAMMACHECK(cachebrightness , v_brightness.value);
@@ -869,9 +926,14 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 	GAMMACHECK(cachewhite[0]   , v_color_white_r.value);
 	GAMMACHECK(cachewhite[1]   , v_color_white_g.value);
 	GAMMACHECK(cachewhite[2]   , v_color_white_b.value);
+
+	if(gamma_changed)
+		++vid_gammaramps_serial;
+
+	GAMMACHECK(cachehwgamma    , wantgamma);
 #undef GAMMACHECK
 
-	if (!gamma_forcenextframe)
+	if (!force && !gamma_forcenextframe && !gamma_changed)
 		return;
 
 	gamma_forcenextframe = false;
@@ -892,57 +954,7 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 			VID_GetGamma(vid_systemgammaramps, vid_gammarampsize);
 		}
 
-		if (cachecolorenable)
-		{
-			BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[0]), cachewhite[0], cacheblack[0], cachecontrastboost, vid_gammaramps, rampsize);
-			BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[1]), cachewhite[1], cacheblack[1], cachecontrastboost, vid_gammaramps + vid_gammarampsize, rampsize);
-			BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[2]), cachewhite[2], cacheblack[2], cachecontrastboost, vid_gammaramps + vid_gammarampsize*2, rampsize);
-		}
-		else
-		{
-			BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, cachecontrastboost, vid_gammaramps, rampsize);
-			BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, cachecontrastboost, vid_gammaramps + vid_gammarampsize, rampsize);
-			BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, cachecontrastboost, vid_gammaramps + vid_gammarampsize*2, rampsize);
-		}
-
-		// LordHavoc: this code came from Ben Winslow and Zinx Verituse, I have
-		// immensely butchered it to work with variable framerates and fit in with
-		// the rest of darkplaces.
-		if (v_psycho.integer)
-		{
-			int x, y;
-			float t;
-			static float n[3], nd[3], nt[3];
-			static int init = true;
-			unsigned short *ramp;
-			gamma_forcenextframe = true;
-			if (init)
-			{
-				init = false;
-				for (x = 0;x < 3;x++)
-				{
-					n[x] = lhrandom(0, 1);
-					nd[x] = (rand()&1)?-0.25:0.25;
-					nt[x] = lhrandom(1, 8.2);
-				}
-			}
-
-			for (x = 0;x < 3;x++)
-			{
-				nt[x] -= cl.realframetime;
-				if (nt[x] < 0)
-				{
-					nd[x] = -nd[x];
-					nt[x] += lhrandom(1, 8.2);
-				}
-				n[x] += nd[x] * cl.realframetime;
-				n[x] -= floor(n[x]);
-			}
-
-			for (x = 0, ramp = vid_gammaramps;x < 3;x++)
-				for (y = 0, t = n[x] - 0.75f;y < vid_gammarampsize;y++, t += 0.75f * (2.0f / vid_gammarampsize))
-					*ramp++ = (unsigned short)(cos(t*(M_PI*2.0)) * 32767.0f + 32767.0f);
-		}
+		VID_BuildGammaTables(vid_gammaramps, vid_gammarampsize);
 
 		// set vid_hardwaregammasupported to true if VID_SetGamma succeeds, OR if vid_hwgamma is >= 2 (forced gamma - ignores driver return value)
 		Cvar_SetValueQuick(&vid_hardwaregammasupported, VID_SetGamma(vid_gammaramps, vid_gammarampsize) || cachehwgamma >= 2);
