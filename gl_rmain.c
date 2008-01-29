@@ -1317,6 +1317,7 @@ static void R_GLSL_CompilePermutation(shadermode_t mode, shaderpermutation_t per
 		// have to look them up every time we set them
 		p->loc_Texture_First              = qglGetUniformLocationARB(p->program, "Texture_First");
 		p->loc_Texture_Second             = qglGetUniformLocationARB(p->program, "Texture_Second");
+		p->loc_Texture_GammaRamps         = qglGetUniformLocationARB(p->program, "Texture_GammaRamps");
 		p->loc_Texture_Normal             = qglGetUniformLocationARB(p->program, "Texture_Normal");
 		p->loc_Texture_Color              = qglGetUniformLocationARB(p->program, "Texture_Color");
 		p->loc_Texture_Gloss              = qglGetUniformLocationARB(p->program, "Texture_Gloss");
