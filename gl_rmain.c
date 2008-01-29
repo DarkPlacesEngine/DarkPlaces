@@ -82,8 +82,6 @@ cvar_t r_glsl_offsetmapping = {CVAR_SAVE, "r_glsl_offsetmapping", "0", "offset m
 cvar_t r_glsl_offsetmapping_reliefmapping = {CVAR_SAVE, "r_glsl_offsetmapping_reliefmapping", "0", "relief mapping effect (higher quality)"};
 cvar_t r_glsl_offsetmapping_scale = {CVAR_SAVE, "r_glsl_offsetmapping_scale", "0.04", "how deep the offset mapping effect is"};
 cvar_t r_glsl_postprocess = {CVAR_SAVE, "r_glsl_postprocess", "0", "use a GLSL postprocessing shader"};
-cvar_t r_glsl_postprocess_contrastboost = {CVAR_SAVE, "r_glsl_postprocess_contrastboost", "1", "brightening effect (1 is no change, higher values brighten the view)"};
-cvar_t r_glsl_postprocess_gamma = {CVAR_SAVE, "r_glsl_postprocess_gamma", "1", "inverse gamma correction value, a brightness effect that does not affect white or black, and tends to make the image grey and dull"};
 cvar_t r_glsl_postprocess_uservec1 = {CVAR_SAVE, "r_glsl_postprocess_uservec1", "0 0 0 0", "a 4-component vector to pass as uservec1 to the postprocessing shader (only useful if default.glsl has been customized)"};
 cvar_t r_glsl_postprocess_uservec2 = {CVAR_SAVE, "r_glsl_postprocess_uservec2", "0 0 0 0", "a 4-component vector to pass as uservec2 to the postprocessing shader (only useful if default.glsl has been customized)"};
 cvar_t r_glsl_postprocess_uservec3 = {CVAR_SAVE, "r_glsl_postprocess_uservec3", "0 0 0 0", "a 4-component vector to pass as uservec3 to the postprocessing shader (only useful if default.glsl has been customized)"};
@@ -2284,8 +2282,6 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_glsl_offsetmapping_reliefmapping);
 	Cvar_RegisterVariable(&r_glsl_offsetmapping_scale);
 	Cvar_RegisterVariable(&r_glsl_postprocess);
-	Cvar_RegisterVariable(&r_glsl_postprocess_contrastboost);
-	Cvar_RegisterVariable(&r_glsl_postprocess_gamma);
 	Cvar_RegisterVariable(&r_glsl_postprocess_uservec1);
 	Cvar_RegisterVariable(&r_glsl_postprocess_uservec2);
 	Cvar_RegisterVariable(&r_glsl_postprocess_uservec3);
