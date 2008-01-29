@@ -3076,7 +3076,7 @@ void R_Bloom_StartFrame(void)
 		Cvar_SetValueQuick(&r_bloom, 0);
 	}
 
-	if (!(r_glsl.integer && r_glsl_postprocess.integer) && !r_bloom.integer)
+	if (!(r_glsl.integer && (r_glsl_postprocess.integer || r_bloom.integer || r_hdr.integer)) && !r_bloom.integer)
 		screentexturewidth = screentextureheight = 0;
 	if (!r_hdr.integer && !r_bloom.integer)
 		bloomtexturewidth = bloomtextureheight = 0;
