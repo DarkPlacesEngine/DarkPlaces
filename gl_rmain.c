@@ -2926,6 +2926,7 @@ static void R_Water_AddWaterPlane(msurface_t *surface)
 	vec3_t vert[3];
 	vec3_t normal;
 	vec3_t center;
+	mplane_t plane;
 	r_waterstate_waterplane_t *p;
 	// just use the first triangle with a valid normal for any decisions
 	VectorClear(normal);
@@ -2939,6 +2940,21 @@ static void R_Water_AddWaterPlane(msurface_t *surface)
 			break;
 	}
 
+	VectorCopy(normal, plane.normal);
+	VectorNormalize(plane.normal);
+	plane.dist = DotProduct(vert[0], plane.normal);
+	PlaneClassify(&plane);
+	if (PlaneDiff(r_refdef.view.origin, &plane) < 0)
+	{
+		// skip backfaces (except if nocullface is set)
+		if (!(surface->texture->currentframe->currentmaterialflags & MATERIALFLAG_NOCULLFACE))
+			return;
+		VectorNegate(plane.normal, plane.normal);
+		plane.dist *= -1;
+		PlaneClassify(&plane);
+	}
+
+
 	// find a matching plane if there is one
 	for (planeindex = 0, p = r_waterstate.waterplanes;planeindex < r_waterstate.numwaterplanes;planeindex++, p++)
 		if (fabs(PlaneDiff(vert[0], &p->plane)) < 1 && fabs(PlaneDiff(vert[1], &p->plane)) < 1 && fabs(PlaneDiff(vert[2], &p->plane)) < 1)
@@ -2951,17 +2967,7 @@ static void R_Water_AddWaterPlane(msurface_t *surface)
 	{
 		// store the new plane
 		r_waterstate.numwaterplanes++;
-		VectorCopy(normal, p->plane.normal);
-		VectorNormalize(p->plane.normal);
-		p->plane.dist = DotProduct(vert[0], p->plane.normal);
-		PlaneClassify(&p->plane);
-		// flip the plane if it does not face the viewer
-		if (PlaneDiff(r_refdef.view.origin, &p->plane) < 0)
-		{
-			VectorNegate(p->plane.normal, p->plane.normal);
-			p->plane.dist *= -1;
-			PlaneClassify(&p->plane);
-		}
+		p->plane = plane;
 		// clear materialflags and pvs
 		p->materialflags = 0;
 		p->pvsvalid = false;

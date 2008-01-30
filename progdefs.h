@@ -164,6 +164,7 @@ typedef struct entvars_s
 } entvars_t;
 
 #define PROGHEADER_CRC 5927
+#define PROGHEADER_CRC_TENEBRAE 32401
 
 #endif
 

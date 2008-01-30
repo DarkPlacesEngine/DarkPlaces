@@ -703,6 +703,10 @@ imageformat_t imageformats_tenebrae[] =
 	{"override/%s.png", PNG_LoadImage_BGRA},
 	{"override/%s.jpg", JPEG_LoadImage_BGRA},
 	{"override/%s.pcx", LoadPCX_BGRA},
+	{"%s.tga", LoadTGA_BGRA},
+	{"%s.png", PNG_LoadImage_BGRA},
+	{"%s.jpg", JPEG_LoadImage_BGRA},
+	{"%s.pcx", LoadPCX_BGRA},
 	{NULL, NULL}
 };
 
