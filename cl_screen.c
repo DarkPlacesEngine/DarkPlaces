@@ -118,6 +118,9 @@ void SCR_DrawCenterString (void)
 		if(sb_showscores) // make TAB hide the finale message (sb_showscores overrides finale in sbar.c)
 			return;
 
+	if(scr_centertime.value <= 0 && !cl.intermission)
+		return;
+
 // the finale prints the characters one at a time, except if printspeed is an absurdly high value
 	if (cl.intermission && scr_printspeed.value > 0 && scr_printspeed.value < 1000000)
 		remaining = (int)(scr_printspeed.value * (cl.time - scr_centertime_start));
@@ -2106,6 +2109,16 @@ void CL_UpdateScreen(void)
 {
 	double rendertime1;
 	float conwidth, conheight;
+
+	// play a bit with the palette
+	palette_rgb_pantscolormap[15][0] = 128 + 127 * sin(cl.time / exp(1) + 0*M_PI/3);
+	palette_rgb_pantscolormap[15][1] = 128 + 127 * sin(cl.time / exp(1) + 2*M_PI/3);
+	palette_rgb_pantscolormap[15][2] = 128 + 127 * sin(cl.time / exp(1) + 4*M_PI/3);
+	palette_rgb_shirtcolormap[15][0] = 128 + 127 * sin(cl.time /  M_PI  + 5*M_PI/3);
+	palette_rgb_shirtcolormap[15][1] = 128 + 127 * sin(cl.time /  M_PI  + 3*M_PI/3);
+	palette_rgb_shirtcolormap[15][2] = 128 + 127 * sin(cl.time /  M_PI  + 1*M_PI/3);
+	memcpy(palette_rgb_pantsscoreboard[15], palette_rgb_pantscolormap[15], sizeof(*palette_rgb_pantscolormap));
+	memcpy(palette_rgb_shirtscoreboard[15], palette_rgb_shirtcolormap[15], sizeof(*palette_rgb_shirtcolormap));
 
 	if (vid_hidden || !scr_refresh.integer)
 		return;
