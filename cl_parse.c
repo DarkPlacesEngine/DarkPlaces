@@ -1282,6 +1282,7 @@ void CL_DownloadBegin_f(void)
 
 void CL_StopDownload_f(void)
 {
+	Curl_CancelAll();
 	if (cls.qw_downloadname[0])
 	{
 		Con_Printf("Download of %s aborted\n", cls.qw_downloadname);
