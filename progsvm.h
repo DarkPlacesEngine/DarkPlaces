@@ -354,6 +354,7 @@ typedef struct prvm_prog_s
 	int					localstack_used;
 
 	unsigned short		headercrc; // [INIT]
+	unsigned short		headercrc2; // [INIT] alternate CRC for tenebrae progs.dat
 
 	unsigned short		filecrc;
 

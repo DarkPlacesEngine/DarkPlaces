@@ -2867,6 +2867,7 @@ static void SV_VM_Setup(void)
 	prog->builtins = vm_sv_builtins;
 	prog->numbuiltins = vm_sv_numbuiltins;
 	prog->headercrc = PROGHEADER_CRC;
+	prog->headercrc2 = PROGHEADER_CRC_TENEBRAE;
 	prog->max_edicts = 512;
 	if (sv.protocol == PROTOCOL_QUAKE)
 		prog->limit_edicts = 640; // before quake mission pack 1 this was 512

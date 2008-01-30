@@ -1590,8 +1590,8 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 
 	if (prog->progs->version != PROG_VERSION)
 		PRVM_ERROR ("%s: %s has wrong version number (%i should be %i)", PRVM_NAME, filename, prog->progs->version, PROG_VERSION);
-	if (prog->progs->crc != prog->headercrc)
-		PRVM_ERROR ("%s: %s system vars have been modified, progdefs.h is out of date", PRVM_NAME, filename);
+	if (prog->progs->crc != prog->headercrc && prog->progs->crc != prog->headercrc2)
+		PRVM_ERROR ("%s: %s system vars have been modified (CRC of progs.dat systemvars %i != engine %i), progdefs.h is out of date", PRVM_NAME, filename, prog->progs->crc, prog->headercrc);
 
 	//prog->functions = (dfunction_t *)((unsigned char *)progs + progs->ofs_functions);
 	dfunctions = (dfunction_t *)((unsigned char *)prog->progs + prog->progs->ofs_functions);
