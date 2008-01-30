@@ -2110,16 +2110,6 @@ void CL_UpdateScreen(void)
 	double rendertime1;
 	float conwidth, conheight;
 
-	// play a bit with the palette
-	palette_rgb_pantscolormap[15][0] = 128 + 127 * sin(cl.time / exp(1) + 0*M_PI/3);
-	palette_rgb_pantscolormap[15][1] = 128 + 127 * sin(cl.time / exp(1) + 2*M_PI/3);
-	palette_rgb_pantscolormap[15][2] = 128 + 127 * sin(cl.time / exp(1) + 4*M_PI/3);
-	palette_rgb_shirtcolormap[15][0] = 128 + 127 * sin(cl.time /  M_PI  + 5*M_PI/3);
-	palette_rgb_shirtcolormap[15][1] = 128 + 127 * sin(cl.time /  M_PI  + 3*M_PI/3);
-	palette_rgb_shirtcolormap[15][2] = 128 + 127 * sin(cl.time /  M_PI  + 1*M_PI/3);
-	memcpy(palette_rgb_pantsscoreboard[15], palette_rgb_pantscolormap[15], sizeof(*palette_rgb_pantscolormap));
-	memcpy(palette_rgb_shirtscoreboard[15], palette_rgb_shirtcolormap[15], sizeof(*palette_rgb_shirtcolormap));
-
 	if (vid_hidden || !scr_refresh.integer)
 		return;
 
