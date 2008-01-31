@@ -510,6 +510,7 @@ static const char *builtinshaderstring =
 "// uniform vec4 UserVec3;\n"
 "// uniform vec4 UserVec4;\n"
 "// uniform float ClientTime;\n"
+"// uniform vec2 PixelSize;\n"
 "void main(void)\n"
 "{\n"
 "	gl_FragColor = texture2D(Texture_First, gl_TexCoord[0].xy);\n"
@@ -1206,6 +1207,7 @@ typedef struct r_glsl_permutation_s
 	int loc_UserVec3;
 	int loc_UserVec4;
 	int loc_ClientTime;
+	int loc_PixelSize;
 }
 r_glsl_permutation_t;
 
@@ -1365,6 +1367,7 @@ static void R_GLSL_CompilePermutation(shadermode_t mode, shaderpermutation_t per
 		p->loc_UserVec3                   = qglGetUniformLocationARB(p->program, "UserVec3");
 		p->loc_UserVec4                   = qglGetUniformLocationARB(p->program, "UserVec4");
 		p->loc_ClientTime                 = qglGetUniformLocationARB(p->program, "ClientTime");
+		p->loc_PixelSize                  = qglGetUniformLocationARB(p->program, "PixelSize");
 		// initialize the samplers to refer to the texture units we use
 		if (p->loc_Texture_First           >= 0) qglUniform1iARB(p->loc_Texture_First          , GL20TU_FIRST);
 		if (p->loc_Texture_Second          >= 0) qglUniform1iARB(p->loc_Texture_Second         , GL20TU_SECOND);
@@ -3412,6 +3415,8 @@ static void R_BlendView(void)
 			qglUniform4fARB(r_glsl_permutation->loc_TintColor, r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
 		if (r_glsl_permutation->loc_ClientTime >= 0)
 			qglUniform1fARB(r_glsl_permutation->loc_ClientTime, cl.time);
+		if (r_glsl_permutation->loc_PixelSize >= 0)
+			qglUniform2fARB(r_glsl_permutation->loc_PixelSize, 1/r_bloomstate.screentexturewidth, 1/r_bloomstate.screentextureheight);
 		if (r_glsl_permutation->loc_UserVec1 >= 0)
 		{
 			float a=0, b=0, c=0, d=0;
