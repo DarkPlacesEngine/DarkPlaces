@@ -3416,7 +3416,7 @@ static void R_BlendView(void)
 		if (r_glsl_permutation->loc_ClientTime >= 0)
 			qglUniform1fARB(r_glsl_permutation->loc_ClientTime, cl.time);
 		if (r_glsl_permutation->loc_PixelSize >= 0)
-			qglUniform2fARB(r_glsl_permutation->loc_PixelSize, 1/r_bloomstate.screentexturewidth, 1/r_bloomstate.screentextureheight);
+			qglUniform2fARB(r_glsl_permutation->loc_PixelSize, 1.0/r_bloomstate.screentexturewidth, 1.0/r_bloomstate.screentextureheight);
 		if (r_glsl_permutation->loc_UserVec1 >= 0)
 		{
 			float a=0, b=0, c=0, d=0;
