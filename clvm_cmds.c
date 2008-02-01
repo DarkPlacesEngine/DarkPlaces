@@ -83,39 +83,44 @@ void VM_CL_setmodel (void)
 	VM_SAFEPARMCOUNT(2, VM_CL_setmodel);
 
 	e = PRVM_G_EDICT(OFS_PARM0);
+	e->fields.client->modelindex = 0;
+	e->fields.client->model = 0;
+
 	m = PRVM_G_STRING(OFS_PARM1);
+	mod = NULL;
 	for (i = 0;i < MAX_MODELS && cl.csqc_model_precache[i];i++)
 	{
 		if (!strcmp(cl.csqc_model_precache[i]->name, m))
 		{
-			e->fields.client->model = PRVM_SetEngineString(cl.csqc_model_precache[i]->name);
-			e->fields.client->modelindex = -(i+1);
-			return;
-		}
-	}
-
-	for (i = 0;i < MAX_MODELS;i++)
-	{
-		mod = cl.model_precache[i];
-		if (mod && !strcmp(mod->name, m))
-		{
+			mod = cl.csqc_model_precache[i];
 			e->fields.client->model = PRVM_SetEngineString(mod->name);
-			e->fields.client->modelindex = i;
-			return;
+			e->fields.client->modelindex = -(i+1);
+			break;
 		}
 	}
 
-	e->fields.client->modelindex = 0;
-	e->fields.client->model = 0;
-	VM_Warning ("setmodel: model '%s' not precached\n", m);
-
-	// TODO: check if this breaks needed consistency and maybe add a cvar for it too?? [1/10/2008 Black]
-	if (mod)
-	{
-		SetMinMaxSize (e, mod->normalmins, mod->normalmaxs);
+	if( !mod ) {
+		for (i = 0;i < MAX_MODELS;i++)
+		{
+			mod = cl.model_precache[i];
+			if (mod && !strcmp(mod->name, m))
+			{
+				e->fields.client->model = PRVM_SetEngineString(mod->name);
+				e->fields.client->modelindex = i;
+				break;
+			}
+		}
 	}
+
+	if( mod ) {
+		// TODO: check if this breaks needed consistency and maybe add a cvar for it too?? [1/10/2008 Black]
+		SetMinMaxSize (e, mod->normalmins, mod->normalmaxs);
+	} 
 	else
+	{
 		SetMinMaxSize (e, vec3_origin, vec3_origin);
+		VM_Warning ("setmodel: model '%s' not precached\n", m);
+	}
 }
 
 // #4 void(entity e, vector min, vector max) setsize
