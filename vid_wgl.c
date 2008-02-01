@@ -78,7 +78,7 @@ static dllfunction_t wglswapintervalfuncs[] =
 	{NULL, NULL}
 };
 
-static DEVMODE gdevmode;
+static DEVMODE gdevmode, initialdevmode;
 static qboolean vid_initialized = false;
 static qboolean vid_wassuspended = false;
 static qboolean vid_usingmouse = false;
@@ -201,6 +201,8 @@ static cvar_t joy_pitchsensitivity = {0, "joypitchsensitivity", "1.0", "how fast
 static cvar_t joy_yawsensitivity = {0, "joyyawsensitivity", "-1.0", "how fast the joystick turns left/right"};
 static cvar_t joy_wwhack1 = {0, "joywwhack1", "0.0", "special hack for wingman warrior"};
 static cvar_t joy_wwhack2 = {0, "joywwhack2", "0.0", "special hack for wingman warrior"};
+
+static cvar_t vid_forcerefreshrate = {0, "vid_forcerefreshrate", "0", "try to set the given vid_refreshrate even if Windows doesn't list it as valid video mode"};
 
 static qboolean	joy_avail, joy_advancedinit, joy_haspov;
 static DWORD		joy_oldbuttonstate, joy_oldpovstate;
@@ -696,6 +698,9 @@ void VID_Init(void)
 	if (!RegisterClass (&wc))
 		Con_Printf ("Couldn't register window class\n");
 
+	memset(&initialdevmode, 0, sizeof(initialdevmode));
+	EnumDisplaySettings(NULL, ENUM_CURRENT_SETTINGS, &initialdevmode);
+
 	IN_Init();
 }
 
@@ -731,6 +736,8 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp, int refreshrat
 	int CenterX, CenterY;
 	const char *gldrivername;
 	int depth;
+	DEVMODE thismode;
+	qboolean foundmode, foundgoodmode;
 
 	if (vid_initialized)
 		Sys_Error("VID_InitMode called when video is already initialised");
@@ -766,13 +773,107 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp, int refreshrat
 	vid_isfullscreen = false;
 	if (fullscreen)
 	{
-		gdevmode.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT | DM_DISPLAYFREQUENCY;
-		gdevmode.dmBitsPerPel = bpp;
-		gdevmode.dmPelsWidth = width;
-		gdevmode.dmPelsHeight = height;
-		gdevmode.dmDisplayFrequency = refreshrate;
-		gdevmode.dmSize = sizeof (gdevmode);
-		if (ChangeDisplaySettings (&gdevmode, CDS_FULLSCREEN) != DISP_CHANGE_SUCCESSFUL)
+		if(vid_forcerefreshrate.integer)
+		{
+			foundmode = true;
+			gdevmode.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT;
+			gdevmode.dmBitsPerPel = bpp;
+			gdevmode.dmPelsWidth = width;
+			gdevmode.dmPelsHeight = height;
+			gdevmode.dmSize = sizeof (gdevmode);
+			if(refreshrate)
+			{
+				gdevmode.dmFields |= DM_DISPLAYFREQUENCY;
+				gdevmode.dmDisplayFrequency = refreshrate;
+			}
+		}
+		else
+		{
+			if(refreshrate == 0)
+				refreshrate = initialdevmode.dmDisplayFrequency; // default vid_refreshrate to the rate of the desktop
+
+			foundmode = false;
+			foundgoodmode = false;
+
+			thismode.dmSize = sizeof(thismode);
+			thismode.dmDriverExtra = 0;
+			for(i = 0; EnumDisplaySettings(NULL, i, &thismode); ++i)
+			{
+				if(~thismode.dmFields & (DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT | DM_DISPLAYFREQUENCY))
+				{
+					Con_DPrintf("enumerating modes yielded a bogus item... please debug this\n");
+					continue;
+				}
+				if(developer.integer >= 100)
+					Con_Printf("Found mode %dx%dx%dbpp %dHz... ", (int)thismode.dmPelsWidth, (int)thismode.dmPelsHeight, (int)thismode.dmBitsPerPel, (int)thismode.dmDisplayFrequency);
+				if(thismode.dmBitsPerPel != (DWORD)bpp)
+				{
+					if(developer.integer >= 100)
+						Con_Printf("wrong bpp\n");
+					continue;
+				}
+				if(thismode.dmPelsWidth != (DWORD)width)
+				{
+					if(developer.integer >= 100)
+						Con_Printf("wrong width\n");
+					continue;
+				}
+				if(thismode.dmPelsHeight != (DWORD)height)
+				{
+					if(developer.integer >= 100)
+						Con_Printf("wrong height\n");
+					continue;
+				}
+
+				if(foundgoodmode)
+				{
+					// if we have a good mode, make sure this mode is better than the previous one, and allowed by the refreshrate
+					if(thismode.dmDisplayFrequency > (DWORD)refreshrate)
+					{
+						if(developer.integer >= 100)
+							Con_Printf("too high refresh rate\n");
+						continue;
+					}
+					else if(thismode.dmDisplayFrequency <= gdevmode.dmDisplayFrequency)
+					{
+						if(developer.integer >= 100)
+							Con_Printf("doesn't beat previous best match (too low)\n");
+						continue;
+					}
+				}
+				else if(foundmode)
+				{
+					// we do have one, but it isn't good... make sure it has a lower frequency than the previous one
+					if(thismode.dmDisplayFrequency >= gdevmode.dmDisplayFrequency)
+					{
+						if(developer.integer >= 100)
+							Con_Printf("doesn't beat previous best match (too high)\n");
+						continue;
+					}
+				}
+				// otherwise, take anything
+					
+				memcpy(&gdevmode, &thismode, sizeof(gdevmode));
+				if(thismode.dmDisplayFrequency <= (DWORD)refreshrate)
+					foundgoodmode = true;
+				else
+				{
+					if(developer.integer >= 100)
+						Con_Printf("(out of range)\n");
+				}
+				foundmode = true;
+				if(developer.integer >= 100)
+					Con_Printf("accepted\n");
+			}
+		}
+
+		if (!foundmode)
+		{
+			VID_Shutdown();
+			Con_Printf("Unable to find the requested mode %dx%dx%dbpp\n", width, height, bpp);
+			return false;
+		}
+		else if(ChangeDisplaySettings (&gdevmode, CDS_FULLSCREEN) != DISP_CHANGE_SUCCESSFUL)
 		{
 			VID_Shutdown();
 			Con_Printf("Unable to change to requested mode %dx%dx%dbpp\n", width, height, bpp);
@@ -1774,6 +1875,7 @@ static void IN_Init(void)
 	Cvar_RegisterVariable (&joy_yawsensitivity);
 	Cvar_RegisterVariable (&joy_wwhack1);
 	Cvar_RegisterVariable (&joy_wwhack2);
+	Cvar_RegisterVariable (&vid_forcerefreshrate);
 	Cmd_AddCommand ("joyadvancedupdate", Joy_AdvancedUpdate_f, "applies current joyadv* cvar settings to the joystick driver");
 }
 

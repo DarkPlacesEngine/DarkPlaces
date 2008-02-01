@@ -83,6 +83,7 @@ cvar_t vid_width = {CVAR_SAVE, "vid_width", "640", "resolution"};
 cvar_t vid_height = {CVAR_SAVE, "vid_height", "480", "resolution"};
 cvar_t vid_bitsperpixel = {CVAR_SAVE, "vid_bitsperpixel", "32", "how many bits per pixel to render at (32 or 16, 32 is recommended)"};
 cvar_t vid_refreshrate = {CVAR_SAVE, "vid_refreshrate", "60", "refresh rate to use, in hz (higher values flicker less, if supported by your monitor)"};
+cvar_t vid_userefreshrate = {CVAR_SAVE, "vid_userefreshrate", "0", "set this to 1 to make vid_refreshrate used, or to 0 to let the engine choose a sane default"};
 cvar_t vid_stereobuffer = {CVAR_SAVE, "vid_stereobuffer", "0", "enables 'quad-buffered' stereo rendering for stereo shutterglasses, HMD (head mounted display) devices, or polarized stereo LCDs, if supported by your drivers"};
 
 cvar_t vid_vsync = {CVAR_SAVE, "vid_vsync", "0", "sync to vertical blank, prevents 'tearing' (seeing part of one frame and part of another on the screen at the same time), automatically disabled when doing timedemo benchmarks"};
@@ -1051,6 +1052,7 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&vid_height);
 	Cvar_RegisterVariable(&vid_bitsperpixel);
 	Cvar_RegisterVariable(&vid_refreshrate);
+	Cvar_RegisterVariable(&vid_userefreshrate);
 	Cvar_RegisterVariable(&vid_stereobuffer);
 	Cvar_RegisterVariable(&vid_vsync);
 	Cvar_RegisterVariable(&vid_mouse);
@@ -1071,7 +1073,7 @@ int VID_Mode(int fullscreen, int width, int height, int bpp, int refreshrate, in
 {
 	cl_ignoremousemoves = 2;
 	Con_Printf("Video: %s %dx%dx%dx%dhz%s\n", fullscreen ? "fullscreen" : "window", width, height, bpp, refreshrate, stereobuffer ? " stereo" : "");
-	if (VID_InitMode(fullscreen, width, height, bpp, refreshrate, stereobuffer))
+	if (VID_InitMode(fullscreen, width, height, bpp, vid_userefreshrate.integer ? max(1, refreshrate) : 0, stereobuffer))
 	{
 		vid.fullscreen = fullscreen;
 		vid.width = width;
@@ -1079,11 +1081,13 @@ int VID_Mode(int fullscreen, int width, int height, int bpp, int refreshrate, in
 		vid.bitsperpixel = bpp;
 		vid.refreshrate = refreshrate;
 		vid.stereobuffer = stereobuffer;
+		vid.userefreshrate = vid_userefreshrate.integer;
 		Cvar_SetValueQuick(&vid_fullscreen, fullscreen);
 		Cvar_SetValueQuick(&vid_width, width);
 		Cvar_SetValueQuick(&vid_height, height);
 		Cvar_SetValueQuick(&vid_bitsperpixel, bpp);
-		Cvar_SetValueQuick(&vid_refreshrate, refreshrate);
+		if(vid_userefreshrate.integer)
+			Cvar_SetValueQuick(&vid_refreshrate, refreshrate);
 		Cvar_SetValueQuick(&vid_stereobuffer, stereobuffer);
 		return true;
 	}

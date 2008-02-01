@@ -2795,7 +2795,7 @@ video_resolution_t video_resolutions[] =
 
 #define VIDEO_ITEMS 10
 static int video_cursor = 0;
-static int video_cursor_table[] = {56, 68, 88, 100, 112, 132, 162, 170, 178, 186};
+static int video_cursor_table[] = {56, 68, 88, 100, 108, 116, 136, 166, 174, 182, 190};
 static int video_resolution;
 
 void M_Menu_Video_f (void)
@@ -2852,7 +2852,7 @@ static void M_Video_Draw (void)
 
 	// Current Resolution
 	M_Print(16, video_cursor_table[0], "    Current Resolution");
-	if (vid_supportrefreshrate && vid.fullscreen)
+	if (vid_supportrefreshrate && vid.userefreshrate && vid.fullscreen)
 		M_Print(220, video_cursor_table[0], va("%dx%d %dhz", vid.width, vid.height, vid.refreshrate));
 	else
 		M_Print(220, video_cursor_table[0], va("%dx%d", vid.width, vid.height));
@@ -2867,28 +2867,32 @@ static void M_Video_Draw (void)
 	M_Print(220, video_cursor_table[2], (vid_bitsperpixel.integer == 32) ? "32" : "16");
 
 	// Refresh Rate
-	M_ItemPrint(16, video_cursor_table[3], "          Refresh Rate", vid_supportrefreshrate);
-	M_DrawSlider(220, video_cursor_table[3], vid_refreshrate.integer, 60, 150);
+	M_ItemPrint(16, video_cursor_table[3], "      Use Refresh Rate", vid_supportrefreshrate);
+	M_DrawCheckbox(220, video_cursor_table[3], vid_userefreshrate.integer);
+
+	// Refresh Rate
+	M_ItemPrint(16, video_cursor_table[4], "          Refresh Rate", vid_supportrefreshrate && vid_userefreshrate.integer);
+	M_DrawSlider(220, video_cursor_table[4], vid_refreshrate.integer, 60, 150);
 
 	// Fullscreen
-	M_Print(16, video_cursor_table[4], "            Fullscreen");
-	M_DrawCheckbox(220, video_cursor_table[4], vid_fullscreen.integer);
+	M_Print(16, video_cursor_table[5], "            Fullscreen");
+	M_DrawCheckbox(220, video_cursor_table[5], vid_fullscreen.integer);
 
 	// "Apply" button
-	M_Print(220, video_cursor_table[5], "Apply");
+	M_Print(220, video_cursor_table[6], "Apply");
 
 	// Vertical Sync
-	M_ItemPrint(16, video_cursor_table[6], "         Vertical Sync", gl_videosyncavailable);
-	M_DrawCheckbox(220, video_cursor_table[6], vid_vsync.integer);
+	M_ItemPrint(16, video_cursor_table[7], "         Vertical Sync", gl_videosyncavailable);
+	M_DrawCheckbox(220, video_cursor_table[7], vid_vsync.integer);
 
-	M_ItemPrint(16, video_cursor_table[7], "    Anisotropic Filter", gl_support_anisotropy);
-	M_DrawSlider(220, video_cursor_table[7], gl_texture_anisotropy.integer, 1, gl_max_anisotropy);
+	M_ItemPrint(16, video_cursor_table[8], "    Anisotropic Filter", gl_support_anisotropy);
+	M_DrawSlider(220, video_cursor_table[8], gl_texture_anisotropy.integer, 1, gl_max_anisotropy);
 
-	M_ItemPrint(16, video_cursor_table[8], "       Texture Quality", true);
-	M_DrawSlider(220, video_cursor_table[8], gl_picmip.value, 3, 0);
+	M_ItemPrint(16, video_cursor_table[9], "       Texture Quality", true);
+	M_DrawSlider(220, video_cursor_table[9], gl_picmip.value, 3, 0);
 
-	M_ItemPrint(16, video_cursor_table[9], "   Texture Compression", gl_support_texture_compression);
-	M_DrawCheckbox(220, video_cursor_table[9], gl_texturecompression.integer);
+	M_ItemPrint(16, video_cursor_table[10], "   Texture Compression", gl_support_texture_compression);
+	M_DrawCheckbox(220, video_cursor_table[10], gl_texturecompression.integer);
 
 	// Cursor
 	M_DrawCharacter(200, video_cursor_table[video_cursor], 12+((int)(realtime*4)&1));
@@ -2924,22 +2928,25 @@ static void M_Menu_Video_AdjustSliders (int dir)
 			break;
 		// Refresh Rate
 		case 3:
-			Cvar_SetValueQuick (&vid_refreshrate, vid_refreshrate.integer + dir);
+			Cvar_SetValueQuick (&vid_userefreshrate, !vid_userefreshrate.integer);
 			break;
 		case 4:
+			Cvar_SetValueQuick (&vid_refreshrate, bound(60, vid_refreshrate.integer + dir, 150));
+			break;
+		case 5:
 			Cvar_SetValueQuick (&vid_fullscreen, !vid_fullscreen.integer);
 			break;
 
-		case 6:
+		case 7:
 			Cvar_SetValueQuick (&vid_vsync, !vid_vsync.integer);
 			break;
-		case 7:
+		case 8:
 			Cvar_SetValueQuick (&gl_texture_anisotropy, bound(1, gl_texture_anisotropy.value * (dir < 0 ? 0.5 : 2.0), gl_max_anisotropy));
 			break;
-		case 8:
+		case 9:
 			Cvar_SetValueQuick (&gl_picmip, bound(0, gl_picmip.value - dir, 3));
 			break;
-		case 9:
+		case 10:
 			Cvar_SetValueQuick (&gl_texturecompression, !gl_texturecompression.integer);
 			break;
 	}
@@ -2956,6 +2963,7 @@ static void M_Video_Key (int key, char ascii)
 			Cvar_SetValueQuick(&vid_bitsperpixel, vid.bitsperpixel);
 			if (vid_supportrefreshrate)
 				Cvar_SetValueQuick(&vid_refreshrate, vid.refreshrate);
+			Cvar_SetValueQuick(&vid_userefreshrate, vid.userefreshrate);
 
 			S_LocalSound ("sound/misc/menu1.wav");
 			M_Menu_Options_f ();
