@@ -1086,67 +1086,49 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 			for (kend = k;kend < batchnumsurfaces && tex == batchsurfacelist[kend]->texture;kend++)
 				;
 			// now figure out what to do with this particular range of surfaces
-			if (rsurface.texture->currentmaterialflags & (MATERIALFLAG_WALL | MATERIALFLAG_WATER))
+			if (!(rsurface.texture->currentmaterialflags & MATERIALFLAG_WALL))
+				continue;
+			if (r_waterstate.renderingscene && (rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION)))
+				continue;
+			if (rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED)
 			{
-				if (rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED)
+				vec3_t tempcenter, center;
+				for (l = k;l < kend;l++)
 				{
-					vec3_t tempcenter, center;
-					for (l = k;l < kend;l++)
-					{
-						surface = batchsurfacelist[l];
-						tempcenter[0] = (surface->mins[0] + surface->maxs[0]) * 0.5f;
-						tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
-						tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
-						Matrix4x4_Transform(&rsurface.matrix, tempcenter, center);
-						R_MeshQueue_AddTransparent(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_refdef.view.origin : center, R_Q1BSP_DrawLight_TransparentCallback, ent, surface - rsurface.modelsurfaces, rsurface.rtlight);
-					}
+					surface = batchsurfacelist[l];
+					tempcenter[0] = (surface->mins[0] + surface->maxs[0]) * 0.5f;
+					tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
+					tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
+					Matrix4x4_Transform(&rsurface.matrix, tempcenter, center);
+					R_MeshQueue_AddTransparent(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_refdef.view.origin : center, R_Q1BSP_DrawLight_TransparentCallback, ent, surface - rsurface.modelsurfaces, rsurface.rtlight);
 				}
-				else
+				continue;
+			}
+			batchnumtriangles = 0;
+			batchfirsttriangle = surface->num_firsttriangle;
+			for (l = k;l < kend;l++)
+			{
+				surface = batchsurfacelist[l];
+				RSurf_PrepareVerticesForBatch(true, true, 1, &surface);
+				for (m = surface->num_firsttriangle, mend = m + surface->num_triangles;m < mend;m++)
 				{
-					batchnumtriangles = 0;
-					batchfirsttriangle = surface->num_firsttriangle;
-					for (l = k;l < kend;l++)
+					if (trispvs)
 					{
-						surface = batchsurfacelist[l];
-						RSurf_PrepareVerticesForBatch(true, true, 1, &surface);
-						for (m = surface->num_firsttriangle, mend = m + surface->num_triangles;m < mend;m++)
+						if (!CHECKPVSBIT(trispvs, m))
 						{
-							if (trispvs)
-							{
-								if (!CHECKPVSBIT(trispvs, m))
-								{
-									usebufferobject = false;
-									continue;
-								}
-							}
-							else if (culltriangles)
-							{
-								if (r_shadow_frontsidecasting.integer && !PointInfrontOfTriangle(rsurface.entitylightorigin, rsurface.vertex3f + element3i[m*3+0]*3, rsurface.vertex3f + element3i[m*3+1]*3, rsurface.vertex3f + element3i[m*3+2]*3))
-								{
-									usebufferobject = false;
-									continue;
-								}
-							}
-							if (batchnumtriangles >= BATCHSIZE)
-							{
-								r_refdef.stats.lights_lighttriangles += batchnumtriangles;
-								Mod_VertexRangeFromElements(batchnumtriangles*3, batchelements, &batchfirstvertex, &batchlastvertex);
-								// use the element buffer if all triangles are consecutive
-								if (m == batchfirsttriangle + batchnumtriangles)
-									R_Shadow_RenderLighting(batchfirstvertex, batchlastvertex + 1 - batchfirstvertex, batchnumtriangles, batchelements, ent->model->surfmesh.ebo, sizeof(int[3]) * batchfirsttriangle);
-								else
-									R_Shadow_RenderLighting(batchfirstvertex, batchlastvertex + 1 - batchfirstvertex, batchnumtriangles, batchelements, 0, 0);
-								usebufferobject = true;
-								batchnumtriangles = 0;
-								batchfirsttriangle = m;
-							}
-							batchelements[batchnumtriangles*3+0] = element3i[m*3+0];
-							batchelements[batchnumtriangles*3+1] = element3i[m*3+1];
-							batchelements[batchnumtriangles*3+2] = element3i[m*3+2];
-							batchnumtriangles++;
+							usebufferobject = false;
+							continue;
 						}
 					}
-					if (batchnumtriangles > 0)
+					else if (culltriangles)
+					{
+						if (r_shadow_frontsidecasting.integer && !PointInfrontOfTriangle(rsurface.entitylightorigin, rsurface.vertex3f + element3i[m*3+0]*3, rsurface.vertex3f + element3i[m*3+1]*3, rsurface.vertex3f + element3i[m*3+2]*3))
+						{
+							usebufferobject = false;
+							continue;
+						}
+					}
+					if (batchnumtriangles >= BATCHSIZE)
 					{
 						r_refdef.stats.lights_lighttriangles += batchnumtriangles;
 						Mod_VertexRangeFromElements(batchnumtriangles*3, batchelements, &batchfirstvertex, &batchlastvertex);
@@ -1155,8 +1137,25 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 							R_Shadow_RenderLighting(batchfirstvertex, batchlastvertex + 1 - batchfirstvertex, batchnumtriangles, batchelements, ent->model->surfmesh.ebo, sizeof(int[3]) * batchfirsttriangle);
 						else
 							R_Shadow_RenderLighting(batchfirstvertex, batchlastvertex + 1 - batchfirstvertex, batchnumtriangles, batchelements, 0, 0);
+						usebufferobject = true;
+						batchnumtriangles = 0;
+						batchfirsttriangle = m;
 					}
+					batchelements[batchnumtriangles*3+0] = element3i[m*3+0];
+					batchelements[batchnumtriangles*3+1] = element3i[m*3+1];
+					batchelements[batchnumtriangles*3+2] = element3i[m*3+2];
+					batchnumtriangles++;
 				}
+			}
+			if (batchnumtriangles > 0)
+			{
+				r_refdef.stats.lights_lighttriangles += batchnumtriangles;
+				Mod_VertexRangeFromElements(batchnumtriangles*3, batchelements, &batchfirstvertex, &batchlastvertex);
+				// use the element buffer if all triangles are consecutive
+				if (m == batchfirsttriangle + batchnumtriangles)
+					R_Shadow_RenderLighting(batchfirstvertex, batchlastvertex + 1 - batchfirstvertex, batchnumtriangles, batchelements, ent->model->surfmesh.ebo, sizeof(int[3]) * batchfirsttriangle);
+				else
+					R_Shadow_RenderLighting(batchfirstvertex, batchlastvertex + 1 - batchfirstvertex, batchnumtriangles, batchelements, 0, 0);
 			}
 		}
 	}

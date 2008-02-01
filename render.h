@@ -405,5 +405,38 @@ void R_SetupGenericTwoTextureShader(int texturemode);
 void R_SetupDepthOrShadowShader(void);
 void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, float ambientscale, float diffusescale, float specularscale, rsurfacepass_t rsurfacepass);
 
+typedef struct r_waterstate_waterplane_s
+{
+	rtexture_t *texture_refraction;
+	rtexture_t *texture_reflection;
+	mplane_t plane;
+	int materialflags; // combined flags of all water surfaces on this plane
+	unsigned char pvsbits[(32768+7)>>3]; // FIXME: buffer overflow on huge maps
+	qboolean pvsvalid;
+}
+r_waterstate_waterplane_t;
+
+#define MAX_WATERPLANES 16
+
+typedef struct r_waterstate_s
+{
+	qboolean enabled;
+
+	qboolean renderingscene; // true while rendering a refraction or reflection texture, disables water surfaces
+
+	int waterwidth, waterheight;
+	int texturewidth, textureheight;
+
+	int maxwaterplanes; // same as MAX_WATERPLANES
+	int numwaterplanes;
+	r_waterstate_waterplane_t waterplanes[MAX_WATERPLANES];
+
+	float screenscale[2];
+	float screencenter[2];
+}
+r_waterstate_t;
+
+extern r_waterstate_t r_waterstate;
+
 #endif
 

@@ -1696,7 +1696,7 @@ qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qbool
 		texture->basematerialflags = 0;
 		if (shader->surfaceparms & Q3SURFACEPARM_SKY)
 		{
-			texture->basematerialflags |= MATERIALFLAG_SKY | MATERIALFLAG_NOSHADOW;
+			texture->basematerialflags = MATERIALFLAG_SKY | MATERIALFLAG_NOSHADOW;
 			if (shader->skyboxname[0])
 			{
 				// quake3 seems to append a _ to the skybox name, so this must do so as well
@@ -1704,15 +1704,9 @@ qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qbool
 			}
 		}
 		else if ((texture->surfaceflags & Q3SURFACEFLAG_NODRAW) || shader->numlayers == 0)
-			texture->basematerialflags |= MATERIALFLAG_NODRAW | MATERIALFLAG_NOSHADOW;
-		else if (shader->surfaceparms & Q3SURFACEPARM_LAVA)
-			texture->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_FULLBRIGHT | MATERIALFLAG_NOSHADOW;
-		else if (shader->surfaceparms & Q3SURFACEPARM_SLIME)
-			texture->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_WATERALPHA | MATERIALFLAG_NOSHADOW;
-		else if (shader->surfaceparms & Q3SURFACEPARM_WATER)
-			texture->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_WATERALPHA | MATERIALFLAG_NOSHADOW;
+			texture->basematerialflags = MATERIALFLAG_NODRAW | MATERIALFLAG_NOSHADOW;
 		else
-			texture->basematerialflags |= MATERIALFLAG_WALL;
+			texture->basematerialflags = MATERIALFLAG_WALL;
 		if (shader->layers[0].alphatest)
 			texture->basematerialflags |= MATERIALFLAG_ALPHATEST | MATERIALFLAG_NOSHADOW;
 		if (shader->textureflags & Q3TEXTUREFLAG_TWOSIDED)
