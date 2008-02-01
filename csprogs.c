@@ -554,21 +554,36 @@ void CSQC_ReadEntities (void)
 					cl.csqc_server2csqcentitynumber[realentnum] = 0;
 				}
 				else
-					Con_Printf("Smth bad happens in csqc...\n");	//[515]: never happens ?
+					Con_Printf("Bad csqc_server2csqcentitynumber map\n");	//[515]: never happens ?
 			}
 			else
 			{
 				if(!prog->globals.client->self)
 				{
-					prvm_edict_t	*ed;
-					ed = PRVM_ED_Alloc();
-					ed->fields.client->entnum = realentnum;
-					prog->globals.client->self = cl.csqc_server2csqcentitynumber[realentnum] = PRVM_EDICT_TO_PROG(ed);
-					PRVM_G_FLOAT(OFS_PARM0) = 1;
+					if(!prog->funcoffsets.CSQC_Ent_Spawn)
+					{
+						prvm_edict_t	*ed;
+						ed = PRVM_ED_Alloc();
+						ed->fields.client->entnum = realentnum;
+						prog->globals.client->self = cl.csqc_server2csqcentitynumber[realentnum] = PRVM_EDICT_TO_PROG(ed);
+						PRVM_G_FLOAT(OFS_PARM0) = 1;
+						PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Ent_Update, "QC function CSQC_Ent_Update is missing");
+					}
+					else
+					{
+						// entity( float entnum ) CSQC_Ent_Spawn;
+						// the qc function should set entnum, too (this way it also can return world [2/1/2008 Andreas]
+						PRVM_G_FLOAT(OFS_PARM0) = (float) realentnum;
+						// make sure no one gets wrong ideas
+						prog->globals.client->self = 0;
+						PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Ent_Spawn, "QC function CSQC_Ent_Spawn is missing");
+						cl.csqc_server2csqcentitynumber[realentnum] = PRVM_EDICT( PRVM_G_INT( OFS_RETURN ) );
+					}
 				}
-				else
+				else {
 					PRVM_G_FLOAT(OFS_PARM0) = 0;
-				PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Ent_Update, "QC function CSQC_Ent_Update is missing");
+					PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Ent_Update, "QC function CSQC_Ent_Update is missing");
+				}
 			}
 		}
 		prog->globals.client->self = oldself;

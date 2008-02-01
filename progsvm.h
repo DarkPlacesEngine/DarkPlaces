@@ -258,6 +258,7 @@ typedef struct prvm_prog_funcoffsets_s
 {
 	func_t CSQC_ConsoleCommand; // csqc
 	func_t CSQC_Ent_Remove; // csqc
+	func_t CSQC_Ent_Spawn; // csqc DP_CSQC_ENT_SPAWN extension (BlackHC - TODO: needs to be added to dpextensions.qc)
 	func_t CSQC_Ent_Update; // csqc
 	func_t CSQC_Event; // csqc [515]: engine call this for its own needs so csqc can do some things according to what engine it's running on.  example: to say about edicts increase, whatever...
 	func_t CSQC_Event_Sound; // csqc : called by engine when an incoming sound packet arrives so CSQC can act on it
@@ -515,8 +516,9 @@ void PRVM_ED_ParseGlobals (const char *data);
 
 void PRVM_ED_LoadFromFile (const char *data);
 
-prvm_edict_t *PRVM_EDICT_NUM_ERROR(int n, char *filename, int fileline);
-#define	PRVM_EDICT_NUM(n) (((unsigned)(n) < (unsigned int)prog->max_edicts) ? prog->edicts + (n) : PRVM_EDICT_NUM_ERROR(n, __FILE__, __LINE__))
+unsigned PRVM_EDICT_NUM_ERROR(int n, char *filename, int fileline);
+#define	PRVM_EDICT(n) (((unsigned)(n) < (unsigned int)prog->max_edicts) ? n : PRVM_EDICT_NUM_ERROR(n, __FILE__, __LINE__))
+#define	PRVM_EDICT_NUM(n) (prog->edicts + PRVM_EDICT(n))
 
 //int NUM_FOR_EDICT_ERROR(prvm_edict_t *e);
 #define PRVM_NUM_FOR_EDICT(e) ((int)((prvm_edict_t *)(e) - prog->edicts))

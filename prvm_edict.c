@@ -1425,6 +1425,7 @@ void PRVM_FindOffsets(void)
 	prog->funcoffsets.CSQC_ConsoleCommand             = PRVM_ED_FindFunctionOffset("CSQC_ConsoleCommand");
 	prog->funcoffsets.CSQC_Ent_Remove                 = PRVM_ED_FindFunctionOffset("CSQC_Ent_Remove");
 	prog->funcoffsets.CSQC_Ent_Update                 = PRVM_ED_FindFunctionOffset("CSQC_Ent_Update");
+	prog->funcoffsets.CSQC_Ent_Spawn                  = PRVM_ED_FindFunctionOffset("CSQC_Ent_Spawn");
 	prog->funcoffsets.CSQC_Event                      = PRVM_ED_FindFunctionOffset("CSQC_Event");
 	prog->funcoffsets.CSQC_Event_Sound                = PRVM_ED_FindFunctionOffset("CSQC_Event_Sound");
 	prog->funcoffsets.CSQC_Init                       = PRVM_ED_FindFunctionOffset("CSQC_Init");
@@ -2106,10 +2107,10 @@ void _PRVM_FreeAll(const char *filename, int fileline)
 }
 
 // LordHavoc: turned PRVM_EDICT_NUM into a #define for speed reasons
-prvm_edict_t *PRVM_EDICT_NUM_ERROR(int n, char *filename, int fileline)
+unsigned PRVM_EDICT_NUM_ERROR(int n, char *filename, int fileline)
 {
 	PRVM_ERROR ("PRVM_EDICT_NUM: %s: bad number %i (called at %s:%i)", PRVM_NAME, n, filename, fileline);
-	return NULL;
+	return 0;
 }
 
 /*
