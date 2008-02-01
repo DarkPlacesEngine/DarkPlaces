@@ -1358,15 +1358,15 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			tx->currentskinframe = tx->skinframes[0];
 			tx->basematerialflags = 0;
 		}
+		tx->basematerialflags = MATERIALFLAG_WALL;
 		if (i == loadmodel->num_textures - 1)
 		{
-			tx->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_NOSHADOW;
+			tx->basematerialflags |= MATERIALFLAG_WATERSCROLL | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_NOSHADOW;
 			tx->supercontents = mod_q1bsp_texture_water.supercontents;
 			tx->surfaceflags = mod_q1bsp_texture_water.surfaceflags;
 		}
 		else
 		{
-			tx->basematerialflags |= MATERIALFLAG_WALL;
 			tx->supercontents = mod_q1bsp_texture_solid.supercontents;
 			tx->surfaceflags = mod_q1bsp_texture_solid.surfaceflags;
 		}
@@ -1532,36 +1532,37 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 					tx->skinframes[0] = skinframe;
 			}
 
-			tx->basematerialflags = 0;
+			tx->basematerialflags = MATERIALFLAG_WALL;
 			if (tx->name[0] == '*')
 			{
 				// LordHavoc: some turbulent textures should not be affected by wateralpha
 				if (!strncmp(tx->name, "*glassmirror", 12)) // Tenebrae
 				{
 					// replace the texture with transparent black
-					tx->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_MIPMAP | TEXF_PRECACHE, zero, 1, 1);
-					tx->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_NOSHADOW | MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_REFLECTION;
+					Vector4Set(zero, 128, 128, 128, 128);
+					tx->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_MIPMAP | TEXF_PRECACHE | TEXF_ALPHA, zero, 1, 1);
+					tx->basematerialflags |= MATERIALFLAG_NOSHADOW | MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_REFLECTION;
 				}
 				else if (!strncmp(tx->name,"*lava",5)
 				 || !strncmp(tx->name,"*teleport",9)
 				 || !strncmp(tx->name,"*rift",5)) // Scourge of Armagon texture
-					tx->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_NOSHADOW;
+					tx->basematerialflags |= MATERIALFLAG_WATERSCROLL | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_NOSHADOW;
 				else
-					tx->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_NOSHADOW | MATERIALFLAG_WATERALPHA | MATERIALFLAG_WATERSHADER;
+					tx->basematerialflags |= MATERIALFLAG_WATERSCROLL | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_NOSHADOW | MATERIALFLAG_WATERALPHA | MATERIALFLAG_WATERSHADER;
+				if (tx->skinframes[0] && tx->skinframes[0]->fog)
+					tx->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
 			}
 			else if (!strncmp(tx->name, "mirror", 6)) // Tenebrae
 			{
-				// replace the texture with transparent black
+				// replace the texture with black
 				tx->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_PRECACHE, zero, 1, 1);
-				tx->basematerialflags |= MATERIALFLAG_WALL | MATERIALFLAG_REFLECTION;
+				tx->basematerialflags |= MATERIALFLAG_REFLECTION;
 			}
 			else if (!strncmp(tx->name, "sky", 3))
-				tx->basematerialflags |= MATERIALFLAG_SKY | MATERIALFLAG_NOSHADOW;
+				tx->basematerialflags = MATERIALFLAG_SKY | MATERIALFLAG_NOSHADOW;
 			else if (!strcmp(tx->name, "caulk"))
 				tx->basematerialflags = MATERIALFLAG_NODRAW;
-			else
-				tx->basematerialflags |= MATERIALFLAG_WALL;
-			if (tx->skinframes[0] && tx->skinframes[0]->fog)
+			else if (tx->skinframes[0] && tx->skinframes[0]->fog)
 				tx->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
 
 			// start out with no animation
@@ -1984,7 +1985,7 @@ static void Mod_Q1BSP_LoadTexinfo(lump_t *l)
 		{
 			// if texture chosen is NULL or the shader needs a lightmap,
 			// force to notexture water shader
-			if (out->texture == NULL || out->texture->basematerialflags & MATERIALFLAG_WALL)
+			if (out->texture == NULL)
 				out->texture = loadmodel->data_textures + (loadmodel->num_textures - 1);
 		}
 		else
@@ -2343,7 +2344,7 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 		{
 			surface->lightmapinfo->samples = NULL;
 			// give non-lightmapped water a 1x white lightmap
-			if ((surface->texture->basematerialflags & MATERIALFLAG_WATER) && (surface->lightmapinfo->texinfo->flags & TEX_SPECIAL) && ssize <= 256 && tsize <= 256)
+			if (surface->texture->name[0] == '*' && (surface->lightmapinfo->texinfo->flags & TEX_SPECIAL) && ssize <= 256 && tsize <= 256)
 			{
 				surface->lightmapinfo->samples = (unsigned char *)Mem_Alloc(loadmodel->mempool, ssize * tsize * 3);
 				surface->lightmapinfo->styles[0] = 0;

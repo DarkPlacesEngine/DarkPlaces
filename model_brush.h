@@ -72,13 +72,13 @@ mplane_t;
 #define MATERIALFLAG_WATERALPHA 16
 // draw with no lighting
 #define MATERIALFLAG_FULLBRIGHT 32
-// drawn as a normal lightmapped wall
+// drawn as a normal surface (alternative to SKY)
 #define MATERIALFLAG_WALL 64
-// swirling water effect
-#define MATERIALFLAG_WATER 128
-// this surface shows the sky
+// this surface shows the sky in its place, alternative to WALL
 // skipped if transparent
-#define MATERIALFLAG_SKY 256
+#define MATERIALFLAG_SKY 128
+// swirling water effect (used with MATERIALFLAG_WALL)
+#define MATERIALFLAG_WATERSCROLL 256
 // skips drawing the surface
 #define MATERIALFLAG_NODRAW 512
 // probably used only on q1bsp water
