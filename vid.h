@@ -34,6 +34,7 @@ typedef struct viddef_s
 	int bitsperpixel;
 	int fullscreen;
 	int refreshrate;
+	qboolean userefreshrate;
 	int stereobuffer;
 } viddef_t;
 
@@ -53,6 +54,7 @@ extern cvar_t vid_width;
 extern cvar_t vid_height;
 extern cvar_t vid_bitsperpixel;
 extern cvar_t vid_refreshrate;
+extern cvar_t vid_userefreshrate;
 extern cvar_t vid_vsync;
 extern cvar_t vid_mouse;
 extern cvar_t vid_grabkeyboard;
