@@ -2793,9 +2793,9 @@ video_resolution_t video_resolutions[] =
 #define VID_DEFAULT 3
 #define VID_RES_COUNT ((int)(sizeof(video_resolutions) / sizeof(video_resolutions[0])) - 1)
 
-#define VIDEO_ITEMS 10
+#define VIDEO_ITEMS 11
 static int video_cursor = 0;
-static int video_cursor_table[] = {56, 68, 88, 100, 108, 116, 136, 166, 174, 182, 190};
+static int video_cursor_table[VIDEO_ITEMS] = {56, 68, 88, 100, 108, 116, 136, 166, 174, 182, 190};
 static int video_resolution;
 
 void M_Menu_Video_f (void)
@@ -2973,7 +2973,7 @@ static void M_Video_Key (int key, char ascii)
 			m_entersound = true;
 			switch (video_cursor)
 			{
-				case 5:
+				case 6:
 					Cvar_SetValueQuick (&vid_width, video_resolutions[video_resolution].width);
 					Cvar_SetValueQuick (&vid_height, video_resolutions[video_resolution].height);
 					Cvar_SetValueQuick (&vid_conwidth, video_resolutions[video_resolution].conwidth);
