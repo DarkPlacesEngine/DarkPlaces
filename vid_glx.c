@@ -89,6 +89,7 @@ Atom wm_delete_window_atom;
 
 static qboolean mouse_avail = true;
 static qboolean vid_usingmouse = false;
+static qboolean vid_usingdgamouse = false;
 static qboolean vid_usingvsync = false;
 static qboolean vid_usevsync = false;
 static qboolean vid_x11_hardwaregammasupported = false;
@@ -254,6 +255,10 @@ static void IN_Activate (qboolean grab)
 		return;
 	if (grab)
 	{
+#if !defined(__APPLE__) && !defined(SUNOS)
+		if(vid_usingmouse && (vid_usingdgamouse != !!vid_dgamouse.integer))
+			IN_Activate(false); // ungrab first!
+#endif
 		if (!vid_usingmouse && mouse_avail && win)
 		{
 			XWindowAttributes attribs_1;
@@ -284,6 +289,7 @@ static void IN_Activate (qboolean grab)
 			mouse_x = mouse_y = 0;
 			cl_ignoremousemoves = 2;
 			vid_usingmouse = true;
+			vid_usingdgamouse = !!vid_dgamouse.integer;
 		}
 	}
 	else
