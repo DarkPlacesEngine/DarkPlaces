@@ -60,6 +60,7 @@ CGLContextObj (*qCGLGetCurrentContext) (void);
 static qboolean multithreadedgl;
 static qboolean mouse_avail = true;
 static qboolean vid_usingmouse = false;
+static qboolean vid_usingnoaccel = false;
 static float mouse_x, mouse_y;
 
 static qboolean vid_isfullscreen = false;
@@ -109,6 +110,8 @@ static void IN_Activate( qboolean grab )
 {
 	if (grab)
 	{
+		if(vid_usingmouse && (vid_usingnoaccel != !!apple_mouse_noaccel.integer))
+			IN_Activate(false); // ungrab first!
 		if (!vid_usingmouse && mouse_avail && window)
 		{
 			Rect winBounds;
@@ -158,6 +161,7 @@ static void IN_Activate( qboolean grab )
 
 			mouse_x = mouse_y = 0;
 			vid_usingmouse = true;
+			vid_usingnoaccel = !!apple_mouse_noaccel.integer;
 		}
 	}
 	else
