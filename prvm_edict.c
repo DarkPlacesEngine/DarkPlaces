@@ -2107,10 +2107,10 @@ void _PRVM_FreeAll(const char *filename, int fileline)
 }
 
 // LordHavoc: turned PRVM_EDICT_NUM into a #define for speed reasons
-prvm_edict_t *PRVM_EDICT_NUM_ERROR(unsigned int n, char *filename, int fileline)
+unsigned int PRVM_EDICT_NUM_ERROR(unsigned int n, char *filename, int fileline)
 {
 	PRVM_ERROR ("PRVM_EDICT_NUM: %s: bad number %i (called at %s:%i)", PRVM_NAME, n, filename, fileline);
-	return NULL;
+	return 0;
 }
 
 /*
