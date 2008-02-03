@@ -1417,8 +1417,8 @@ typedef struct gamemode_info_s
 	const char* gameuserdirname;
 } gamemode_info_t;
 
-static const gamemode_info_t gamemode_info [] =
-{// prog_name		cmdline			gamename				gamedirname	gamescreenshotname
+static const gamemode_info_t gamemode_info [GAME_COUNT] =
+{// prog_name		cmdline			gamename				basegame	modgame			screenshotprefix	userdir
 
 // GAME_NORMAL
 // COMMANDLINEOPTION: Game: -quake runs the game Quake (default)
@@ -1486,6 +1486,9 @@ static const gamemode_info_t gamemode_info [] =
 // GAME_EDU2P
 // COMMANDLINEOPTION: Game: -edu2p runs the game Edu2 prototype
 { "edu2p", "-edu2p", "EDU2 Prototype", "id1", "edu2", "edu2_p", "edu2prototype" },
+// GAME_BLADEMASTER
+// COMMANDLINEOPTION: Game: -blademaster runs the game Prophecy: Return of the BladeMaster
+{ "blademaster", "-blademaster", "Prophecy: Return of the BladeMaster", "basebm", NULL, "blademaster", "blademaster" },
 };
 
 void COM_InitGameType (void)
