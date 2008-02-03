@@ -295,7 +295,7 @@ trace_t CL_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	// figure out whether this is a point trace for comparisons
 	pointtrace = VectorCompare(clipmins, clipmaxs);
 	// precalculate passedict's owner edict pointer for comparisons
-	traceowner = passedict ? PRVM_PROG_TO_EDICT(passedict->fields.client->owner) : 0;
+	traceowner = passedict ? PRVM_PROG_TO_EDICT(passedict->fields.client->owner) : NULL;
 
 	// collide against network entities
 	if (hitnetworkbrushmodels)

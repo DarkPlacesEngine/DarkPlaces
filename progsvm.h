@@ -516,9 +516,9 @@ void PRVM_ED_ParseGlobals (const char *data);
 
 void PRVM_ED_LoadFromFile (const char *data);
 
-unsigned PRVM_EDICT_NUM_ERROR(int n, char *filename, int fileline);
-#define	PRVM_EDICT(n) (((unsigned)(n) < (unsigned int)prog->max_edicts) ? n : PRVM_EDICT_NUM_ERROR(n, __FILE__, __LINE__))
-#define	PRVM_EDICT_NUM(n) (prog->edicts + PRVM_EDICT(n))
+prvm_edict_t *PRVM_EDICT_NUM_ERROR(unsigned int n, char *filename, int fileline);
+#define PRVM_CHECKEDICTNUM(n) (((unsigned)(n) < (unsigned int)prog->max_edicts) ? NULL : PRVM_EDICT_NUM_ERROR((n), __FILE__, __LINE__))
+#define PRVM_EDICT_NUM(n) (PRVM_CHECKEDICTNUM(n), prog->edicts + (n))
 
 //int NUM_FOR_EDICT_ERROR(prvm_edict_t *e);
 #define PRVM_NUM_FOR_EDICT(e) ((int)((prvm_edict_t *)(e) - prog->edicts))
