@@ -577,9 +577,7 @@ void CSQC_ReadEntities (void)
 						// make sure no one gets wrong ideas
 						prog->globals.client->self = 0;
 						PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Ent_Spawn, "QC function CSQC_Ent_Spawn is missing");
-						entnum = PRVM_G_INT(OFS_RETURN);
-						PRVM_CHECKEDICTNUM(entnum);
-						cl.csqc_server2csqcentitynumber[realentnum] = entnum;
+						cl.csqc_server2csqcentitynumber[realentnum] = PRVM_EDICT( PRVM_G_INT( OFS_RETURN ) );
 					}
 				}
 				else {
