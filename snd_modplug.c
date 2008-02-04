@@ -155,15 +155,7 @@ qboolean ModPlug_OpenLibrary (void)
 	// Load the DLLs
 	// We need to load both by hand because some OSes seem to not load
 	// the modplug DLL automatically when loading the modplugFile DLL
-	if (! Sys_LoadLibrary (dllnames_modplug, &modplug_dll, modplugfuncs))
-	{
-		Sys_UnloadLibrary (&modplug_dll);
-		Con_Printf ("ModPlug support disabled\n");
-		return false;
-	}
-
-	Con_Printf ("ModPlug support enabled\n");
-	return true;
+	return Sys_LoadLibrary (dllnames_modplug, &modplug_dll, modplugfuncs);
 }
 
 
@@ -440,7 +432,8 @@ qboolean ModPlug_LoadModPlugFile (const char *filename, sfx_t *sfx)
 	if (data == NULL)
 		return false;
 
-	Con_DPrintf ("Loading ModPlug file \"%s\"\n", filename);
+	if (developer_loading.integer >= 2)
+		Con_Printf ("Loading ModPlug file \"%s\"\n", filename);
 
 	ModPlug_GetSettings(&s);
 	s.mFlags = MODPLUG_ENABLE_OVERSAMPLING | MODPLUG_ENABLE_NOISE_REDUCTION | MODPLUG_ENABLE_REVERB;
@@ -459,7 +452,8 @@ qboolean ModPlug_LoadModPlugFile (const char *filename, sfx_t *sfx)
 		return false;
 	}
 
-	Con_DPrintf ("\"%s\" will be streamed\n", filename);
+	if (developer_loading.integer >= 2)
+		Con_Printf ("\"%s\" will be streamed\n", filename);
 	per_sfx = (modplug_stream_persfx_t *)Mem_Alloc (snd_mempool, sizeof (*per_sfx));
 	strlcpy(per_sfx->name, sfx->name, sizeof(per_sfx->name));
 	sfx->memsize += sizeof (*per_sfx);

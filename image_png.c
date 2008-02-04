@@ -121,14 +121,7 @@ qboolean PNG_OpenLibrary (void)
 		return true;
 
 	// Load the DLL
-	if (! Sys_LoadLibrary (dllnames, &png_dll, pngfuncs))
-	{
-		Con_Printf ("PNG support disabled\n");
-		return false;
-	}
-
-	Con_Printf ("PNG support enabled\n");
-	return true;
+	return Sys_LoadLibrary (dllnames, &png_dll, pngfuncs);
 }
 
 

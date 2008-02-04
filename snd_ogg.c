@@ -353,16 +353,7 @@ qboolean OGG_OpenLibrary (void)
 	// Load the DLLs
 	// We need to load both by hand because some OSes seem to not load
 	// the vorbis DLL automatically when loading the VorbisFile DLL
-	if (! Sys_LoadLibrary (dllnames_vo, &vo_dll, vorbisfuncs) ||
-		! Sys_LoadLibrary (dllnames_vf, &vf_dll, vorbisfilefuncs))
-	{
-		Sys_UnloadLibrary (&vo_dll);
-		Con_Printf ("Ogg Vorbis support disabled\n");
-		return false;
-	}
-
-	Con_Printf ("Ogg Vorbis support enabled\n");
-	return true;
+	return Sys_LoadLibrary (dllnames_vo, &vo_dll, vorbisfuncs) && Sys_LoadLibrary (dllnames_vf, &vf_dll, vorbisfilefuncs);
 }
 
 
@@ -644,7 +635,8 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *sfx)
 	if (data == NULL)
 		return false;
 
-	Con_DPrintf ("Loading Ogg Vorbis file \"%s\"\n", filename);
+	if (developer_loading.integer >= 2)
+		Con_Printf ("Loading Ogg Vorbis file \"%s\"\n", filename);
 
 	// Open it with the VorbisFile API
 	ov_decode.buffer = data;
@@ -676,7 +668,8 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *sfx)
 	{
 		ogg_stream_persfx_t* per_sfx;
 
-		Con_DPrintf ("\"%s\" will be streamed\n", filename);
+		if (developer_loading.integer >= 2)
+			Con_Printf ("Ogg sound file \"%s\" will be streamed\n", filename);
 		per_sfx = (ogg_stream_persfx_t *)Mem_Alloc (snd_mempool, sizeof (*per_sfx));
 		strlcpy(per_sfx->name, sfx->name, sizeof(per_sfx->name));
 		sfx->memsize += sizeof (*per_sfx);
@@ -716,7 +709,8 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *sfx)
 		snd_buffer_t *sb;
 		snd_format_t ogg_format;
 
-		Con_DPrintf ("\"%s\" will be cached\n", filename);
+		if (developer_loading.integer >= 2)
+			Con_Printf ("Ogg sound file \"%s\" will be cached\n", filename);
 
 		// Decode it
 		buff = (char *)Mem_Alloc (snd_mempool, (int)len);
@@ -774,7 +768,8 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *sfx)
 	{
 		sfx->volume_mult = min(1 / peak, exp(gaindb * 0.05 * log(10)));
 		sfx->volume_peak = peak;
-		Con_DPrintf ("\"%s\" uses ReplayGain (gain %f, peak %f)\n", filename, sfx->volume_mult, sfx->volume_peak);
+		if (developer_loading.integer >= 2)
+			Con_Printf ("Ogg sound file \"%s\" uses ReplayGain (gain %f, peak %f)\n", filename, sfx->volume_mult, sfx->volume_peak);
 	}
 
 	return true;

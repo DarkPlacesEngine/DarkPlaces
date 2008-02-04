@@ -593,7 +593,7 @@ void S_Startup (void)
 		accepted = false;
 		do
 		{
-			Con_DPrintf("S_Startup: initializing sound output format: %dHz, %d bit, %d channels...\n",
+			Con_Printf("S_Startup: initializing sound output format: %dHz, %d bit, %d channels...\n",
 						chosen_fmt.speed, chosen_fmt.width * 8,
 						chosen_fmt.channels);
 
@@ -602,7 +602,7 @@ void S_Startup (void)
 
 			if (!accepted)
 			{
-				Con_DPrintf("S_Startup: sound output initialization FAILED\n");
+				Con_Printf("S_Startup: sound output initialization FAILED\n");
 
 				// If the module is suggesting another one
 				if (suggest_fmt.speed != 0)
@@ -658,7 +658,7 @@ void S_Startup (void)
 		// some modules write directly to a shared (DMA) buffer
 		extrasoundtime = oldpaintedtime + snd_renderbuffer->maxframes - 1;
 		extrasoundtime -= extrasoundtime % snd_renderbuffer->maxframes;
-		Con_DPrintf("S_Startup: extra sound time = %u\n", extrasoundtime);
+		Con_Printf("S_Startup: extra sound time = %u\n", extrasoundtime);
 
 		soundtime = extrasoundtime;
 	}
@@ -709,8 +709,6 @@ S_Init
 */
 void S_Init(void)
 {
-	Con_DPrint("\nSound Initialization\n");
-
 	Cvar_RegisterVariable(&volume);
 	Cvar_RegisterVariable(&bgmvolume);
 	Cvar_RegisterVariable(&snd_staticvolume);
@@ -870,7 +868,8 @@ void S_FreeSfx (sfx_t *sfx, qboolean force)
 	if (!force && (sfx->locks > 0 || (sfx->flags & SFXFLAG_PERMANENTLOCK)))
 		return;
 
-	Con_DPrintf ("S_FreeSfx: freeing %s\n", sfx->name);
+	if (developer_loading.integer)
+		Con_Printf ("unloading sound %s\n", sfx->name);
 
 	// Remove it from the list of known sfx
 	if (sfx == known_sfx)
@@ -1393,7 +1392,7 @@ void S_StaticSound (sfx_t *sfx, vec3_t origin, float fvol, float attenuation)
 		return;
 	if (!sfx->fetcher)
 	{
-		Con_DPrintf ("S_StaticSound: \"%s\" hasn't been precached\n", sfx->name);
+		Con_Printf ("S_StaticSound: \"%s\" hasn't been precached\n", sfx->name);
 		return;
 	}
 

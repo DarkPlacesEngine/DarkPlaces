@@ -63,7 +63,7 @@ static void Buffer_Callback (void *userdata, Uint8 *stream, int len)
 	snd_renderbuffer->startframe += FrameCount;
 
 	if (FrameCount < RequestedFrames && developer.integer >= 1000 && vid_activewindow)
-		Con_DPrintf("SDL sound: %u sample frames missing\n", RequestedFrames - FrameCount);
+		Con_Printf("SDL sound: %u sample frames missing\n", RequestedFrames - FrameCount);
 
 	sdlaudiotime += RequestedFrames;
 }
@@ -83,7 +83,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 	SDL_AudioSpec wantspec;
 	SDL_AudioSpec obtainspec;
 
-	Con_Print ("SndSys_Init: using the SDL module\n");
+	Con_DSPrint ("SndSys_Init: using the SDL module\n");
 
 	// Init the SDL Audio subsystem
 	if( SDL_InitSubSystem( SDL_INIT_AUDIO ) ) {
@@ -101,7 +101,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 	wantspec.channels = requested->channels;
 	wantspec.samples = CeilPowerOf2(buffersize);  // needs to be a power of 2 on some platforms.
 
-	Con_DPrintf("Wanted audio Specification:\n"
+	Con_Printf("Wanted audio Specification:\n"
 				"\tChannels  : %i\n"
 				"\tFormat    : 0x%X\n"
 				"\tFrequency : %i\n"
@@ -114,7 +114,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 		return false;
 	}
 
-	Con_DPrintf("Obtained audio specification:\n"
+	Con_Printf("Obtained audio specification:\n"
 				"\tChannels  : %i\n"
 				"\tFormat    : 0x%X\n"
 				"\tFrequency : %i\n"

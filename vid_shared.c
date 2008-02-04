@@ -385,14 +385,14 @@ int GL_CheckExtension(const char *name, const dllfunction_t *funcs, const char *
 	int failed = false;
 	const dllfunction_t *func;
 
-	Con_Printf("checking for %s...  ", name);
+	Con_DPrintf("checking for %s...  ", name);
 
 	for (func = funcs;func && func->name;func++)
 		*func->funcvariable = NULL;
 
 	if (disableparm && (COM_CheckParm(disableparm) || COM_CheckParm("-safe")))
 	{
-		Con_Print("disabled by commandline\n");
+		Con_DPrint("disabled by commandline\n");
 		return false;
 	}
 
@@ -404,19 +404,19 @@ int GL_CheckExtension(const char *name, const dllfunction_t *funcs, const char *
 			if (!(*func->funcvariable = (void *) GL_GetProcAddress(func->name)))
 			{
 				if (!silent)
-					Con_Printf("OpenGL extension \"%s\" is missing function \"%s\" - broken driver!\n", name, func->name);
+					Con_DPrintf("OpenGL extension \"%s\" is missing function \"%s\" - broken driver!\n", name, func->name);
 				failed = true;
 			}
 		}
 		// delay the return so it prints all missing functions
 		if (failed)
 			return false;
-		Con_Print("enabled\n");
+		Con_DPrint("enabled\n");
 		return true;
 	}
 	else
 	{
-		Con_Print("not detected\n");
+		Con_DPrint("not detected\n");
 		return false;
 	}
 }
@@ -738,16 +738,10 @@ void VID_CheckExtensions(void)
 	if (!GL_CheckExtension("OpenGL 1.1.0", opengl110funcs, NULL, false))
 		Sys_Error("OpenGL 1.1.0 functions not found");
 
-	Con_Printf("GL_VENDOR: %s\n", gl_vendor);
-	Con_Printf("GL_RENDERER: %s\n", gl_renderer);
-	Con_Printf("GL_VERSION: %s\n", gl_version);
-	Con_Printf("GL_EXTENSIONS: %s\n", gl_extensions);
-	Con_Printf("%s_EXTENSIONS: %s\n", gl_platform, gl_platformextensions);
-
 	CHECKGLERROR
 	qglGetIntegerv(GL_MAX_TEXTURE_SIZE, &gl_max_texture_size);
 
-	Con_Print("Checking OpenGL extensions...\n");
+	Con_DPrint("Checking OpenGL extensions...\n");
 
 // COMMANDLINEOPTION: GL: -nodrawrangeelements disables GL_EXT_draw_range_elements (renders faster)
 	if (!GL_CheckExtension("glDrawRangeElements", drawrangeelementsfuncs, "-nodrawrangeelements", true))
@@ -1072,7 +1066,7 @@ void VID_Shared_Init(void)
 int VID_Mode(int fullscreen, int width, int height, int bpp, int refreshrate, int stereobuffer)
 {
 	cl_ignoremousemoves = 2;
-	Con_Printf("Video: %s %dx%dx%dx%dhz%s\n", fullscreen ? "fullscreen" : "window", width, height, bpp, refreshrate, stereobuffer ? " stereo" : "");
+	Con_Printf("Initialized Video Mode: %s %dx%dx%dx%dhz%s\n", fullscreen ? "fullscreen" : "window", width, height, bpp, refreshrate, stereobuffer ? " stereo" : "");
 	if (VID_InitMode(fullscreen, width, height, bpp, vid_userefreshrate.integer ? max(1, refreshrate) : 0, stereobuffer))
 	{
 		vid.fullscreen = fullscreen;
@@ -1164,7 +1158,6 @@ void VID_Start(void)
 			Cvar_SetQuick(&vid_bitsperpixel, com_argv[i+1]);
 	}
 
-	Con_Print("Starting video system\n");
 	success = VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_refreshrate.integer, vid_stereobuffer.integer);
 	if (!success)
 	{

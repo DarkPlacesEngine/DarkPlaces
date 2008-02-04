@@ -148,11 +148,6 @@ unsigned char *W_GetLumpName(const char *name)
 	for (lump = wad.gfx.lumps, i = 0;i < wad.gfx.numlumps;i++, lump++)
 		if (!strcmp(clean, lump->name))
 			return (wad.gfx_base + lump->filepos);
-
-	if (wad.gfx_base)
-		Con_DPrintf("W_GetLumpByName(\"%s\"): couldn't find file in gfx.wad\n", name);
-	else
-		Con_DPrintf("W_GetLumpByName(\"%s\"): couldn't load gfx.wad\n", name);
 	return NULL;
 }
 

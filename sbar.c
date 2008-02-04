@@ -153,209 +153,209 @@ void sbar_start(void)
 	}
 	else if (gamemode == GAME_SOM)
 	{
-		sb_disc = Draw_CachePic("gfx/disc", true);
+		sb_disc = Draw_CachePic ("gfx/disc");
 
 		for (i = 0;i < 10;i++)
-			sb_nums[0][i] = Draw_CachePic (va("gfx/num_%i",i), true);
+			sb_nums[0][i] = Draw_CachePic (va("gfx/num_%i",i));
 
-		somsb_health = Draw_CachePic("gfx/hud_health", true);
-		somsb_ammo[0] = Draw_CachePic("gfx/sb_shells", true);
-		somsb_ammo[1] = Draw_CachePic("gfx/sb_nails", true);
-		somsb_ammo[2] = Draw_CachePic("gfx/sb_rocket", true);
-		somsb_ammo[3] = Draw_CachePic("gfx/sb_cells", true);
-		somsb_armor[0] = Draw_CachePic("gfx/sb_armor1", true);
-		somsb_armor[1] = Draw_CachePic("gfx/sb_armor2", true);
-		somsb_armor[2] = Draw_CachePic("gfx/sb_armor3", true);
+		somsb_health = Draw_CachePic ("gfx/hud_health");
+		somsb_ammo[0] = Draw_CachePic ("gfx/sb_shells");
+		somsb_ammo[1] = Draw_CachePic ("gfx/sb_nails");
+		somsb_ammo[2] = Draw_CachePic ("gfx/sb_rocket");
+		somsb_ammo[3] = Draw_CachePic ("gfx/sb_cells");
+		somsb_armor[0] = Draw_CachePic ("gfx/sb_armor1");
+		somsb_armor[1] = Draw_CachePic ("gfx/sb_armor2");
+		somsb_armor[2] = Draw_CachePic ("gfx/sb_armor3");
 	}
 	else if (gamemode == GAME_NEXUIZ)
 	{
 		for (i = 0;i < 10;i++)
-			sb_nums[0][i] = Draw_CachePic (va("gfx/num_%i",i), true);
-		sb_nums[0][10] = Draw_CachePic ("gfx/num_minus", true);
-		sb_colon = Draw_CachePic ("gfx/num_colon", true);
+			sb_nums[0][i] = Draw_CachePic (va("gfx/num_%i",i));
+		sb_nums[0][10] = Draw_CachePic ("gfx/num_minus");
+		sb_colon = Draw_CachePic ("gfx/num_colon");
 
-		sb_ammo[0] = Draw_CachePic ("gfx/sb_shells", true);
-		sb_ammo[1] = Draw_CachePic ("gfx/sb_bullets", true);
-		sb_ammo[2] = Draw_CachePic ("gfx/sb_rocket", true);
-		sb_ammo[3] = Draw_CachePic ("gfx/sb_cells", true);
+		sb_ammo[0] = Draw_CachePic ("gfx/sb_shells");
+		sb_ammo[1] = Draw_CachePic ("gfx/sb_bullets");
+		sb_ammo[2] = Draw_CachePic ("gfx/sb_rocket");
+		sb_ammo[3] = Draw_CachePic ("gfx/sb_cells");
 
-		sb_armor[0] = Draw_CachePic ("gfx/sb_armor", true);
+		sb_armor[0] = Draw_CachePic ("gfx/sb_armor");
 		sb_armor[1] = NULL;
 		sb_armor[2] = NULL;
 
-		sb_health = Draw_CachePic ("gfx/sb_health", true);
+		sb_health = Draw_CachePic ("gfx/sb_health");
 
-		sb_items[2] = Draw_CachePic ("gfx/sb_slowmo", true);
-		sb_items[3] = Draw_CachePic ("gfx/sb_invinc", true);
-		sb_items[4] = Draw_CachePic ("gfx/sb_energy", true);
-		sb_items[5] = Draw_CachePic ("gfx/sb_str", true);
+		sb_items[2] = Draw_CachePic ("gfx/sb_slowmo");
+		sb_items[3] = Draw_CachePic ("gfx/sb_invinc");
+		sb_items[4] = Draw_CachePic ("gfx/sb_energy");
+		sb_items[5] = Draw_CachePic ("gfx/sb_str");
 
-		sb_items[11] = Draw_CachePic ("gfx/sb_flag_red_taken", true);
-		sb_items[12] = Draw_CachePic ("gfx/sb_flag_red_lost", true);
-		sb_items[13] = Draw_CachePic ("gfx/sb_flag_red_carrying", true);
-		sb_items[14] = Draw_CachePic ("gfx/sb_key_carrying", true);
-		sb_items[15] = Draw_CachePic ("gfx/sb_flag_blue_taken", true);
-		sb_items[16] = Draw_CachePic ("gfx/sb_flag_blue_lost", true);
-		sb_items[17] = Draw_CachePic ("gfx/sb_flag_blue_carrying", true);
+		sb_items[11] = Draw_CachePic ("gfx/sb_flag_red_taken");
+		sb_items[12] = Draw_CachePic ("gfx/sb_flag_red_lost");
+		sb_items[13] = Draw_CachePic ("gfx/sb_flag_red_carrying");
+		sb_items[14] = Draw_CachePic ("gfx/sb_key_carrying");
+		sb_items[15] = Draw_CachePic ("gfx/sb_flag_blue_taken");
+		sb_items[16] = Draw_CachePic ("gfx/sb_flag_blue_lost");
+		sb_items[17] = Draw_CachePic ("gfx/sb_flag_blue_carrying");
 
-		sb_sbar = Draw_CachePic("gfx/sbar", true);
-		sb_sbar_minimal = Draw_CachePic("gfx/sbar_minimal", true);
-		sb_sbar_overlay = Draw_CachePic("gfx/sbar_overlay", true);
+		sb_sbar = Draw_CachePic ("gfx/sbar");
+		sb_sbar_minimal = Draw_CachePic ("gfx/sbar_minimal");
+		sb_sbar_overlay = Draw_CachePic ("gfx/sbar_overlay");
 
 		for(i = 0; i < 9;i++)
-			sb_weapons[0][i] = Draw_CachePic(va("gfx/inv_weapon%i",i), true);
+			sb_weapons[0][i] = Draw_CachePic (va("gfx/inv_weapon%i",i));
 	}
 	else if (gamemode == GAME_ZYMOTIC)
 	{
-		zymsb_crosshair_center = Draw_CachePic ("gfx/hud/crosshair_center", true);
-		zymsb_crosshair_line = Draw_CachePic ("gfx/hud/crosshair_line", true);
-		zymsb_crosshair_health = Draw_CachePic ("gfx/hud/crosshair_health", true);
-		zymsb_crosshair_clip = Draw_CachePic ("gfx/hud/crosshair_clip", true);
-		zymsb_crosshair_ammo = Draw_CachePic ("gfx/hud/crosshair_ammo", true);
-		zymsb_crosshair_background = Draw_CachePic ("gfx/hud/crosshair_background", true);
-		zymsb_crosshair_left1 = Draw_CachePic ("gfx/hud/crosshair_left1", true);
-		zymsb_crosshair_left2 = Draw_CachePic ("gfx/hud/crosshair_left2", true);
-		zymsb_crosshair_right = Draw_CachePic ("gfx/hud/crosshair_right", true);
+		zymsb_crosshair_center = Draw_CachePic ("gfx/hud/crosshair_center");
+		zymsb_crosshair_line = Draw_CachePic ("gfx/hud/crosshair_line");
+		zymsb_crosshair_health = Draw_CachePic ("gfx/hud/crosshair_health");
+		zymsb_crosshair_clip = Draw_CachePic ("gfx/hud/crosshair_clip");
+		zymsb_crosshair_ammo = Draw_CachePic ("gfx/hud/crosshair_ammo");
+		zymsb_crosshair_background = Draw_CachePic ("gfx/hud/crosshair_background");
+		zymsb_crosshair_left1 = Draw_CachePic ("gfx/hud/crosshair_left1");
+		zymsb_crosshair_left2 = Draw_CachePic ("gfx/hud/crosshair_left2");
+		zymsb_crosshair_right = Draw_CachePic ("gfx/hud/crosshair_right");
 	}
 	else
 	{
-		sb_disc = Draw_CachePic("gfx/disc", true);
+		sb_disc = Draw_CachePic ("gfx/disc");
 
 		for (i = 0;i < 10;i++)
 		{
-			sb_nums[0][i] = Draw_CachePic (va("gfx/num_%i",i), true);
-			sb_nums[1][i] = Draw_CachePic (va("gfx/anum_%i",i), true);
+			sb_nums[0][i] = Draw_CachePic (va("gfx/num_%i",i));
+			sb_nums[1][i] = Draw_CachePic (va("gfx/anum_%i",i));
 		}
 
-		sb_nums[0][10] = Draw_CachePic ("gfx/num_minus", true);
-		sb_nums[1][10] = Draw_CachePic ("gfx/anum_minus", true);
+		sb_nums[0][10] = Draw_CachePic ("gfx/num_minus");
+		sb_nums[1][10] = Draw_CachePic ("gfx/anum_minus");
 
-		sb_colon = Draw_CachePic ("gfx/num_colon", true);
-		sb_slash = Draw_CachePic ("gfx/num_slash", true);
+		sb_colon = Draw_CachePic ("gfx/num_colon");
+		sb_slash = Draw_CachePic ("gfx/num_slash");
 
-		sb_weapons[0][0] = Draw_CachePic ("gfx/inv_shotgun", true);
-		sb_weapons[0][1] = Draw_CachePic ("gfx/inv_sshotgun", true);
-		sb_weapons[0][2] = Draw_CachePic ("gfx/inv_nailgun", true);
-		sb_weapons[0][3] = Draw_CachePic ("gfx/inv_snailgun", true);
-		sb_weapons[0][4] = Draw_CachePic ("gfx/inv_rlaunch", true);
-		sb_weapons[0][5] = Draw_CachePic ("gfx/inv_srlaunch", true);
-		sb_weapons[0][6] = Draw_CachePic ("gfx/inv_lightng", true);
+		sb_weapons[0][0] = Draw_CachePic ("gfx/inv_shotgun");
+		sb_weapons[0][1] = Draw_CachePic ("gfx/inv_sshotgun");
+		sb_weapons[0][2] = Draw_CachePic ("gfx/inv_nailgun");
+		sb_weapons[0][3] = Draw_CachePic ("gfx/inv_snailgun");
+		sb_weapons[0][4] = Draw_CachePic ("gfx/inv_rlaunch");
+		sb_weapons[0][5] = Draw_CachePic ("gfx/inv_srlaunch");
+		sb_weapons[0][6] = Draw_CachePic ("gfx/inv_lightng");
 
-		sb_weapons[1][0] = Draw_CachePic ("gfx/inv2_shotgun", true);
-		sb_weapons[1][1] = Draw_CachePic ("gfx/inv2_sshotgun", true);
-		sb_weapons[1][2] = Draw_CachePic ("gfx/inv2_nailgun", true);
-		sb_weapons[1][3] = Draw_CachePic ("gfx/inv2_snailgun", true);
-		sb_weapons[1][4] = Draw_CachePic ("gfx/inv2_rlaunch", true);
-		sb_weapons[1][5] = Draw_CachePic ("gfx/inv2_srlaunch", true);
-		sb_weapons[1][6] = Draw_CachePic ("gfx/inv2_lightng", true);
+		sb_weapons[1][0] = Draw_CachePic ("gfx/inv2_shotgun");
+		sb_weapons[1][1] = Draw_CachePic ("gfx/inv2_sshotgun");
+		sb_weapons[1][2] = Draw_CachePic ("gfx/inv2_nailgun");
+		sb_weapons[1][3] = Draw_CachePic ("gfx/inv2_snailgun");
+		sb_weapons[1][4] = Draw_CachePic ("gfx/inv2_rlaunch");
+		sb_weapons[1][5] = Draw_CachePic ("gfx/inv2_srlaunch");
+		sb_weapons[1][6] = Draw_CachePic ("gfx/inv2_lightng");
 
 		for (i = 0;i < 5;i++)
 		{
-			sb_weapons[2+i][0] = Draw_CachePic (va("gfx/inva%i_shotgun",i+1), true);
-			sb_weapons[2+i][1] = Draw_CachePic (va("gfx/inva%i_sshotgun",i+1), true);
-			sb_weapons[2+i][2] = Draw_CachePic (va("gfx/inva%i_nailgun",i+1), true);
-			sb_weapons[2+i][3] = Draw_CachePic (va("gfx/inva%i_snailgun",i+1), true);
-			sb_weapons[2+i][4] = Draw_CachePic (va("gfx/inva%i_rlaunch",i+1), true);
-			sb_weapons[2+i][5] = Draw_CachePic (va("gfx/inva%i_srlaunch",i+1), true);
-			sb_weapons[2+i][6] = Draw_CachePic (va("gfx/inva%i_lightng",i+1), true);
+			sb_weapons[2+i][0] = Draw_CachePic (va("gfx/inva%i_shotgun",i+1));
+			sb_weapons[2+i][1] = Draw_CachePic (va("gfx/inva%i_sshotgun",i+1));
+			sb_weapons[2+i][2] = Draw_CachePic (va("gfx/inva%i_nailgun",i+1));
+			sb_weapons[2+i][3] = Draw_CachePic (va("gfx/inva%i_snailgun",i+1));
+			sb_weapons[2+i][4] = Draw_CachePic (va("gfx/inva%i_rlaunch",i+1));
+			sb_weapons[2+i][5] = Draw_CachePic (va("gfx/inva%i_srlaunch",i+1));
+			sb_weapons[2+i][6] = Draw_CachePic (va("gfx/inva%i_lightng",i+1));
 		}
 
-		sb_ammo[0] = Draw_CachePic ("gfx/sb_shells", true);
-		sb_ammo[1] = Draw_CachePic ("gfx/sb_nails", true);
-		sb_ammo[2] = Draw_CachePic ("gfx/sb_rocket", true);
-		sb_ammo[3] = Draw_CachePic ("gfx/sb_cells", true);
+		sb_ammo[0] = Draw_CachePic ("gfx/sb_shells");
+		sb_ammo[1] = Draw_CachePic ("gfx/sb_nails");
+		sb_ammo[2] = Draw_CachePic ("gfx/sb_rocket");
+		sb_ammo[3] = Draw_CachePic ("gfx/sb_cells");
 
-		sb_armor[0] = Draw_CachePic ("gfx/sb_armor1", true);
-		sb_armor[1] = Draw_CachePic ("gfx/sb_armor2", true);
-		sb_armor[2] = Draw_CachePic ("gfx/sb_armor3", true);
+		sb_armor[0] = Draw_CachePic ("gfx/sb_armor1");
+		sb_armor[1] = Draw_CachePic ("gfx/sb_armor2");
+		sb_armor[2] = Draw_CachePic ("gfx/sb_armor3");
 
-		sb_items[0] = Draw_CachePic ("gfx/sb_key1", true);
-		sb_items[1] = Draw_CachePic ("gfx/sb_key2", true);
-		sb_items[2] = Draw_CachePic ("gfx/sb_invis", true);
-		sb_items[3] = Draw_CachePic ("gfx/sb_invuln", true);
-		sb_items[4] = Draw_CachePic ("gfx/sb_suit", true);
-		sb_items[5] = Draw_CachePic ("gfx/sb_quad", true);
+		sb_items[0] = Draw_CachePic ("gfx/sb_key1");
+		sb_items[1] = Draw_CachePic ("gfx/sb_key2");
+		sb_items[2] = Draw_CachePic ("gfx/sb_invis");
+		sb_items[3] = Draw_CachePic ("gfx/sb_invuln");
+		sb_items[4] = Draw_CachePic ("gfx/sb_suit");
+		sb_items[5] = Draw_CachePic ("gfx/sb_quad");
 
-		sb_sigil[0] = Draw_CachePic ("gfx/sb_sigil1", true);
-		sb_sigil[1] = Draw_CachePic ("gfx/sb_sigil2", true);
-		sb_sigil[2] = Draw_CachePic ("gfx/sb_sigil3", true);
-		sb_sigil[3] = Draw_CachePic ("gfx/sb_sigil4", true);
+		sb_sigil[0] = Draw_CachePic ("gfx/sb_sigil1");
+		sb_sigil[1] = Draw_CachePic ("gfx/sb_sigil2");
+		sb_sigil[2] = Draw_CachePic ("gfx/sb_sigil3");
+		sb_sigil[3] = Draw_CachePic ("gfx/sb_sigil4");
 
-		sb_faces[4][0] = Draw_CachePic ("gfx/face1", true);
-		sb_faces[4][1] = Draw_CachePic ("gfx/face_p1", true);
-		sb_faces[3][0] = Draw_CachePic ("gfx/face2", true);
-		sb_faces[3][1] = Draw_CachePic ("gfx/face_p2", true);
-		sb_faces[2][0] = Draw_CachePic ("gfx/face3", true);
-		sb_faces[2][1] = Draw_CachePic ("gfx/face_p3", true);
-		sb_faces[1][0] = Draw_CachePic ("gfx/face4", true);
-		sb_faces[1][1] = Draw_CachePic ("gfx/face_p4", true);
-		sb_faces[0][0] = Draw_CachePic ("gfx/face5", true);
-		sb_faces[0][1] = Draw_CachePic ("gfx/face_p5", true);
+		sb_faces[4][0] = Draw_CachePic ("gfx/face1");
+		sb_faces[4][1] = Draw_CachePic ("gfx/face_p1");
+		sb_faces[3][0] = Draw_CachePic ("gfx/face2");
+		sb_faces[3][1] = Draw_CachePic ("gfx/face_p2");
+		sb_faces[2][0] = Draw_CachePic ("gfx/face3");
+		sb_faces[2][1] = Draw_CachePic ("gfx/face_p3");
+		sb_faces[1][0] = Draw_CachePic ("gfx/face4");
+		sb_faces[1][1] = Draw_CachePic ("gfx/face_p4");
+		sb_faces[0][0] = Draw_CachePic ("gfx/face5");
+		sb_faces[0][1] = Draw_CachePic ("gfx/face_p5");
 
-		sb_face_invis = Draw_CachePic ("gfx/face_invis", true);
-		sb_face_invuln = Draw_CachePic ("gfx/face_invul2", true);
-		sb_face_invis_invuln = Draw_CachePic ("gfx/face_inv2", true);
-		sb_face_quad = Draw_CachePic ("gfx/face_quad", true);
+		sb_face_invis = Draw_CachePic ("gfx/face_invis");
+		sb_face_invuln = Draw_CachePic ("gfx/face_invul2");
+		sb_face_invis_invuln = Draw_CachePic ("gfx/face_inv2");
+		sb_face_quad = Draw_CachePic ("gfx/face_quad");
 
-		sb_sbar = Draw_CachePic ("gfx/sbar", true);
-		sb_ibar = Draw_CachePic ("gfx/ibar", true);
-		sb_scorebar = Draw_CachePic ("gfx/scorebar", true);
+		sb_sbar = Draw_CachePic ("gfx/sbar");
+		sb_ibar = Draw_CachePic ("gfx/ibar");
+		sb_scorebar = Draw_CachePic ("gfx/scorebar");
 
 	//MED 01/04/97 added new hipnotic weapons
 		if (gamemode == GAME_HIPNOTIC)
 		{
-			hsb_weapons[0][0] = Draw_CachePic ("gfx/inv_laser", true);
-			hsb_weapons[0][1] = Draw_CachePic ("gfx/inv_mjolnir", true);
-			hsb_weapons[0][2] = Draw_CachePic ("gfx/inv_gren_prox", true);
-			hsb_weapons[0][3] = Draw_CachePic ("gfx/inv_prox_gren", true);
-			hsb_weapons[0][4] = Draw_CachePic ("gfx/inv_prox", true);
+			hsb_weapons[0][0] = Draw_CachePic ("gfx/inv_laser");
+			hsb_weapons[0][1] = Draw_CachePic ("gfx/inv_mjolnir");
+			hsb_weapons[0][2] = Draw_CachePic ("gfx/inv_gren_prox");
+			hsb_weapons[0][3] = Draw_CachePic ("gfx/inv_prox_gren");
+			hsb_weapons[0][4] = Draw_CachePic ("gfx/inv_prox");
 
-			hsb_weapons[1][0] = Draw_CachePic ("gfx/inv2_laser", true);
-			hsb_weapons[1][1] = Draw_CachePic ("gfx/inv2_mjolnir", true);
-			hsb_weapons[1][2] = Draw_CachePic ("gfx/inv2_gren_prox", true);
-			hsb_weapons[1][3] = Draw_CachePic ("gfx/inv2_prox_gren", true);
-			hsb_weapons[1][4] = Draw_CachePic ("gfx/inv2_prox", true);
+			hsb_weapons[1][0] = Draw_CachePic ("gfx/inv2_laser");
+			hsb_weapons[1][1] = Draw_CachePic ("gfx/inv2_mjolnir");
+			hsb_weapons[1][2] = Draw_CachePic ("gfx/inv2_gren_prox");
+			hsb_weapons[1][3] = Draw_CachePic ("gfx/inv2_prox_gren");
+			hsb_weapons[1][4] = Draw_CachePic ("gfx/inv2_prox");
 
 			for (i = 0;i < 5;i++)
 			{
-				hsb_weapons[2+i][0] = Draw_CachePic (va("gfx/inva%i_laser",i+1), true);
-				hsb_weapons[2+i][1] = Draw_CachePic (va("gfx/inva%i_mjolnir",i+1), true);
-				hsb_weapons[2+i][2] = Draw_CachePic (va("gfx/inva%i_gren_prox",i+1), true);
-				hsb_weapons[2+i][3] = Draw_CachePic (va("gfx/inva%i_prox_gren",i+1), true);
-				hsb_weapons[2+i][4] = Draw_CachePic (va("gfx/inva%i_prox",i+1), true);
+				hsb_weapons[2+i][0] = Draw_CachePic (va("gfx/inva%i_laser",i+1));
+				hsb_weapons[2+i][1] = Draw_CachePic (va("gfx/inva%i_mjolnir",i+1));
+				hsb_weapons[2+i][2] = Draw_CachePic (va("gfx/inva%i_gren_prox",i+1));
+				hsb_weapons[2+i][3] = Draw_CachePic (va("gfx/inva%i_prox_gren",i+1));
+				hsb_weapons[2+i][4] = Draw_CachePic (va("gfx/inva%i_prox",i+1));
 			}
 
-			hsb_items[0] = Draw_CachePic ("gfx/sb_wsuit", true);
-			hsb_items[1] = Draw_CachePic ("gfx/sb_eshld", true);
+			hsb_items[0] = Draw_CachePic ("gfx/sb_wsuit");
+			hsb_items[1] = Draw_CachePic ("gfx/sb_eshld");
 		}
 		else if (gamemode == GAME_ROGUE)
 		{
-			rsb_invbar[0] = Draw_CachePic ("gfx/r_invbar1", true);
-			rsb_invbar[1] = Draw_CachePic ("gfx/r_invbar2", true);
+			rsb_invbar[0] = Draw_CachePic ("gfx/r_invbar1");
+			rsb_invbar[1] = Draw_CachePic ("gfx/r_invbar2");
 
-			rsb_weapons[0] = Draw_CachePic ("gfx/r_lava", true);
-			rsb_weapons[1] = Draw_CachePic ("gfx/r_superlava", true);
-			rsb_weapons[2] = Draw_CachePic ("gfx/r_gren", true);
-			rsb_weapons[3] = Draw_CachePic ("gfx/r_multirock", true);
-			rsb_weapons[4] = Draw_CachePic ("gfx/r_plasma", true);
+			rsb_weapons[0] = Draw_CachePic ("gfx/r_lava");
+			rsb_weapons[1] = Draw_CachePic ("gfx/r_superlava");
+			rsb_weapons[2] = Draw_CachePic ("gfx/r_gren");
+			rsb_weapons[3] = Draw_CachePic ("gfx/r_multirock");
+			rsb_weapons[4] = Draw_CachePic ("gfx/r_plasma");
 
-			rsb_items[0] = Draw_CachePic ("gfx/r_shield1", true);
-			rsb_items[1] = Draw_CachePic ("gfx/r_agrav1", true);
+			rsb_items[0] = Draw_CachePic ("gfx/r_shield1");
+			rsb_items[1] = Draw_CachePic ("gfx/r_agrav1");
 
 	// PGM 01/19/97 - team color border
-			rsb_teambord = Draw_CachePic ("gfx/r_teambord", true);
+			rsb_teambord = Draw_CachePic ("gfx/r_teambord");
 	// PGM 01/19/97 - team color border
 
-			rsb_ammo[0] = Draw_CachePic ("gfx/r_ammolava", true);
-			rsb_ammo[1] = Draw_CachePic ("gfx/r_ammomulti", true);
-			rsb_ammo[2] = Draw_CachePic ("gfx/r_ammoplasma", true);
+			rsb_ammo[0] = Draw_CachePic ("gfx/r_ammolava");
+			rsb_ammo[1] = Draw_CachePic ("gfx/r_ammomulti");
+			rsb_ammo[2] = Draw_CachePic ("gfx/r_ammoplasma");
 		}
 	}
 
-	sb_ranking = Draw_CachePic ("gfx/ranking", true);
-	sb_complete = Draw_CachePic ("gfx/complete", true);
-	sb_inter = Draw_CachePic ("gfx/inter", true);
-	sb_finale = Draw_CachePic ("gfx/finale", true);
+	sb_ranking = Draw_CachePic ("gfx/ranking");
+	sb_complete = Draw_CachePic ("gfx/complete");
+	sb_inter = Draw_CachePic ("gfx/inter");
+	sb_finale = Draw_CachePic ("gfx/finale");
 }
 
 void sbar_shutdown(void)
@@ -1637,12 +1637,12 @@ void Sbar_Draw (void)
 
 	if (cl.csqc_vidvars.drawcrosshair && crosshair.integer >= 1 && !cl.intermission && !r_letterbox.value)
 	{
-		pic = Draw_CachePic(va("gfx/crosshair%i", crosshair.integer), true);
+		pic = Draw_CachePic (va("gfx/crosshair%i", crosshair.integer));
 		DrawQ_Pic((vid_conwidth.integer - pic->width * crosshair_size.value) * 0.5f, (vid_conheight.integer - pic->height * crosshair_size.value) * 0.5f, pic, pic->width * crosshair_size.value, pic->height * crosshair_size.value, crosshair_color_red.value, crosshair_color_green.value, crosshair_color_blue.value, crosshair_color_alpha.value, 0);
 	}
 
 	if (cl_prydoncursor.integer)
-		DrawQ_Pic((cl.cmd.cursor_screen[0] + 1) * 0.5 * vid_conwidth.integer, (cl.cmd.cursor_screen[1] + 1) * 0.5 * vid_conheight.integer, Draw_CachePic(va("gfx/prydoncursor%03i", cl_prydoncursor.integer), true), 0, 0, 1, 1, 1, 1, 0);
+		DrawQ_Pic((cl.cmd.cursor_screen[0] + 1) * 0.5 * vid_conwidth.integer, (cl.cmd.cursor_screen[1] + 1) * 0.5 * vid_conheight.integer, Draw_CachePic (va("gfx/prydoncursor%03i", cl_prydoncursor.integer)), 0, 0, 1, 1, 1, 1, 0);
 }
 
 //=============================================================================

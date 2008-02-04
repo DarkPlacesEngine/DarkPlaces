@@ -337,7 +337,7 @@ void SCR_DrawTurtle (void)
 	if (count < 3)
 		return;
 
-	DrawQ_Pic (0, 0, Draw_CachePic("gfx/turtle", true), 0, 0, 1, 1, 1, 1, 0);
+	DrawQ_Pic (0, 0, Draw_CachePic ("gfx/turtle"), 0, 0, 1, 1, 1, 1, 0);
 }
 
 /*
@@ -354,7 +354,7 @@ void SCR_DrawNet (void)
 	if (cls.demoplayback)
 		return;
 
-	DrawQ_Pic (64, 0, Draw_CachePic("gfx/net", true), 0, 0, 1, 1, 1, 1, 0);
+	DrawQ_Pic (64, 0, Draw_CachePic ("gfx/net"), 0, 0, 1, 1, 1, 1, 0);
 }
 
 /*
@@ -375,7 +375,7 @@ void SCR_DrawPause (void)
 	if (!cl.paused)
 		return;
 
-	pic = Draw_CachePic ("gfx/pause", true);
+	pic = Draw_CachePic ("gfx/pause");
 	DrawQ_Pic ((vid_conwidth.integer - pic->width)/2, (vid_conheight.integer - pic->height)/2, pic, 0, 0, 1, 1, 1, 1, 0);
 }
 
@@ -392,7 +392,7 @@ void SCR_DrawBrand (void)
 	if (!scr_showbrand.value)
 		return;
 
-	pic = Draw_CachePic ("gfx/brand", true);
+	pic = Draw_CachePic ("gfx/brand");
 
 	switch ((int)scr_showbrand.value)
 	{
@@ -1811,7 +1811,7 @@ void SHOWLMP_drawall(void)
 	int i;
 	for (i = 0;i < cl.num_showlmps;i++)
 		if (cl.showlmps[i].isactive)
-			DrawQ_Pic(cl.showlmps[i].x, cl.showlmps[i].y, Draw_CachePic(cl.showlmps[i].pic, true), 0, 0, 1, 1, 1, 1, 0);
+			DrawQ_Pic(cl.showlmps[i].x, cl.showlmps[i].y, Draw_CachePic (cl.showlmps[i].pic), 0, 0, 1, 1, 1, 1, 0);
 }
 
 /*
@@ -2054,7 +2054,7 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 	R_Mesh_Start();
 	R_Mesh_Matrix(&identitymatrix);
 	// draw the loading plaque
-	pic = Draw_CachePic("gfx/loading", true);
+	pic = Draw_CachePic ("gfx/loading");
 	x = (vid_conwidth.integer - pic->width)/2;
 	y = (vid_conheight.integer - pic->height)/2;
 	GL_Color(1,1,1,1);

@@ -553,7 +553,7 @@ void Con_Init (void)
 	Cmd_AddCommand ("condump", Con_ConDump_f, "output console history to a file (see also log_file)");
 
 	con_initialized = true;
-	Con_Print("Console initialized.\n");
+	Con_DPrint("Console initialized.\n");
 }
 
 
@@ -1509,7 +1509,7 @@ void Con_DrawConsole (int lines)
 	con_vislines = lines;
 
 // draw the background
-	DrawQ_Pic(0, lines - vid_conheight.integer, scr_conbrightness.value >= 0.01f ? Draw_CachePic("gfx/conback", true) : NULL, vid_conwidth.integer, vid_conheight.integer, scr_conbrightness.value, scr_conbrightness.value, scr_conbrightness.value, cls.signon == SIGNONS ? scr_conalpha.value : 1.0, 0); // always full alpha when not in game
+	DrawQ_Pic(0, lines - vid_conheight.integer, scr_conbrightness.value >= 0.01f ? Draw_CachePic ("gfx/conback") : NULL, vid_conwidth.integer, vid_conheight.integer, scr_conbrightness.value, scr_conbrightness.value, scr_conbrightness.value, cls.signon == SIGNONS ? scr_conalpha.value : 1.0, 0); // always full alpha when not in game
 	DrawQ_String_Font(vid_conwidth.integer - DrawQ_TextWidth_Font(engineversion, 0, false, FONT_CONSOLE) * con_textsize.value, lines - con_textsize.value, engineversion, 0, con_textsize.value, con_textsize.value, 1, 0, 0, 1, 0, NULL, true, FONT_CONSOLE);
 
 // draw the text

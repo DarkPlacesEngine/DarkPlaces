@@ -189,7 +189,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 		return false;
 	}
 	submissionChunk /= requested->channels;
-	Con_DPrintf("   Chunk size = %d sample frames\n", submissionChunk);
+	Con_Printf("   Chunk size = %d sample frames\n", submissionChunk);
 
 	// Print out the device status
 	propertySize = sizeof(streamDesc);
@@ -200,18 +200,18 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 		return false;
 	}
 
-	Con_DPrint ("   Hardware format:\n");
-	Con_DPrintf("    %5d mSampleRate\n", (unsigned int)streamDesc.mSampleRate);
-	Con_DPrintf("     %c%c%c%c mFormatID\n",
+	Con_Print ("   Hardware format:\n");
+	Con_Printf("    %5d mSampleRate\n", (unsigned int)streamDesc.mSampleRate);
+	Con_Printf("     %c%c%c%c mFormatID\n",
 				(char)(streamDesc.mFormatID >> 24),
 				(char)(streamDesc.mFormatID >> 16),
 				(char)(streamDesc.mFormatID >>  8),
 				(char)(streamDesc.mFormatID >>  0));
-	Con_DPrintf("    %5u mBytesPerPacket\n", (unsigned int)streamDesc.mBytesPerPacket);
-	Con_DPrintf("    %5u mFramesPerPacket\n", (unsigned int)streamDesc.mFramesPerPacket);
-	Con_DPrintf("    %5u mBytesPerFrame\n", (unsigned int)streamDesc.mBytesPerFrame);
-	Con_DPrintf("    %5u mChannelsPerFrame\n", (unsigned int)streamDesc.mChannelsPerFrame);
-	Con_DPrintf("    %5u mBitsPerChannel\n", (unsigned int)streamDesc.mBitsPerChannel);
+	Con_Printf("    %5u mBytesPerPacket\n", (unsigned int)streamDesc.mBytesPerPacket);
+	Con_Printf("    %5u mFramesPerPacket\n", (unsigned int)streamDesc.mFramesPerPacket);
+	Con_Printf("    %5u mBytesPerFrame\n", (unsigned int)streamDesc.mBytesPerFrame);
+	Con_Printf("    %5u mChannelsPerFrame\n", (unsigned int)streamDesc.mChannelsPerFrame);
+	Con_Printf("    %5u mBitsPerChannel\n", (unsigned int)streamDesc.mBitsPerChannel);
 
 	// Suggest proper settings if they differ
 	if (requested->channels != streamDesc.mChannelsPerFrame || requested->speed != streamDesc.mSampleRate)

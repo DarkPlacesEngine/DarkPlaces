@@ -995,12 +995,12 @@ static void R_Shadow_MakeTextures(void)
 	R_Shadow_MakeTextures_MakeCorona();
 
 	// Editor light sprites
-	r_editlights_sprcursor = Draw_CachePic("gfx/editlights/cursor", true);
-	r_editlights_sprlight = Draw_CachePic("gfx/editlights/light", true);
-	r_editlights_sprnoshadowlight = Draw_CachePic("gfx/editlights/noshadow", true);
-	r_editlights_sprcubemaplight = Draw_CachePic("gfx/editlights/cubemaplight", true);
-	r_editlights_sprcubemapnoshadowlight = Draw_CachePic("gfx/editlights/cubemapnoshadowlight", true);
-	r_editlights_sprselection = Draw_CachePic("gfx/editlights/selection", true);
+	r_editlights_sprcursor = Draw_CachePic ("gfx/editlights/cursor");
+	r_editlights_sprlight = Draw_CachePic ("gfx/editlights/light");
+	r_editlights_sprnoshadowlight = Draw_CachePic ("gfx/editlights/noshadow");
+	r_editlights_sprcubemaplight = Draw_CachePic ("gfx/editlights/cubemaplight");
+	r_editlights_sprcubemapnoshadowlight = Draw_CachePic ("gfx/editlights/cubemapnoshadowlight");
+	r_editlights_sprselection = Draw_CachePic ("gfx/editlights/selection");
 }
 
 void R_Shadow_ValidateCvars(void)
@@ -3389,6 +3389,9 @@ rtexture_t *R_Shadow_LoadCubemap(const char *basename)
 	// if a cubemap loaded, upload it
 	if (cubemappixels)
 	{
+		if (developer_loading.integer)
+			Con_Printf("loading cubemap \"%s\"\n", basename);
+
 		if (!r_shadow_filters_texturepool)
 			r_shadow_filters_texturepool = R_AllocTexturePool();
 		cubemaptexture = R_LoadTextureCubeMap(r_shadow_filters_texturepool, basename, cubemapsize, cubemappixels, TEXTYPE_BGRA, TEXF_PRECACHE | (gl_texturecompression_lightcubemaps.integer ? TEXF_COMPRESS : 0), NULL);
@@ -3396,11 +3399,15 @@ rtexture_t *R_Shadow_LoadCubemap(const char *basename)
 	}
 	else
 	{
-		Con_Printf("Failed to load Cubemap \"%s\", tried ", basename);
-		for (j = 0;j < 3;j++)
-			for (i = 0;i < 6;i++)
-				Con_Printf("%s\"%s%s.tga\"", j + i > 0 ? ", " : "", basename, suffix[j][i].suffix);
-		Con_Print(" and was unable to find any of them.\n");
+		Con_DPrintf("failed to load cubemap \"%s\"\n", basename);
+		if (developer_loading.integer)
+		{
+			Con_Printf("(tried tried images ");
+			for (j = 0;j < 3;j++)
+				for (i = 0;i < 6;i++)
+					Con_Printf("%s\"%s%s.tga\"", j + i > 0 ? ", " : "", basename, suffix[j][i].suffix);
+			Con_Print(" and was unable to find any of them).\n");
+		}
 	}
 	return cubemaptexture;
 }
@@ -3423,6 +3430,14 @@ rtexture_t *R_Shadow_Cubemap(const char *basename)
 
 void R_Shadow_FreeCubemaps(void)
 {
+	int i;
+	for (i = 0;i < numcubemaps;i++)
+	{
+		if (developer_loading.integer)
+			Con_Printf("unloading cubemap \"%s\"\n", cubemaps[i].basename);
+		R_FreeTexture(cubemaps[i].texture);
+	}
+
 	numcubemaps = 0;
 	R_FreeTexturePool(&r_shadow_filters_texturepool);
 }

@@ -837,10 +837,7 @@ unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qbo
 				return data;
 			}
 			else
-			{
-				if (developer.integer >= 1)
-					Con_DPrintf("Error loading image %s (file loaded but decode failed)\n", name);
-			}
+				Con_DPrintf("Error loading image %s (file loaded but decode failed)\n", name);
 		}
 	}
 	if (complain)

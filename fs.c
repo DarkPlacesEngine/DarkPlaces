@@ -366,14 +366,7 @@ qboolean PK3_OpenLibrary (void)
 		return true;
 
 	// Load the DLL
-	if (! Sys_LoadLibrary (dllnames, &zlib_dll, zlibfuncs))
-	{
-		Con_Printf ("Compressed files support disabled\n");
-		return false;
-	}
-
-	Con_Printf ("Compressed files support enabled\n");
-	return true;
+	return Sys_LoadLibrary (dllnames, &zlib_dll, zlibfuncs);
 }
 
 
@@ -2340,6 +2333,8 @@ unsigned char *FS_LoadFile (const char *path, mempool_t *pool, qboolean quiet, f
 		buf[filesize] = '\0';
 		FS_Read (file, buf, filesize);
 		FS_Close (file);
+		if (developer_loadfile.integer)
+			Con_Printf("loaded file \"%s\" (%u bytes)\n", path, (unsigned int)filesize);
 	}
 
 	if (filesizepointer)
@@ -2366,7 +2361,7 @@ qboolean FS_WriteFile (const char *filename, void *data, fs_offset_t len)
 		return false;
 	}
 
-	Con_DPrintf("FS_WriteFile: %s\n", filename);
+	Con_DPrintf("FS_WriteFile: %s (%u bytes)\n", filename, (unsigned int)len);
 	FS_Write (file, data, len);
 	FS_Close (file);
 	return true;
@@ -2582,8 +2577,8 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 						if (resultlistindex == resultlist.numstrings)
 						{
 							stringlistappend(&resultlist, temp);
-							if (!quiet)
-								Con_DPrintf("SearchPackFile: %s : %s\n", pak->filename, temp);
+							if (!quiet && developer_loading.integer)
+								Con_Printf("SearchPackFile: %s : %s\n", pak->filename, temp);
 						}
 					}
 					// strip off one path element at a time until empty
@@ -2619,8 +2614,8 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 					if (resultlistindex == resultlist.numstrings)
 					{
 						stringlistappend(&resultlist, temp);
-						if (!quiet)
-							Con_DPrintf("SearchDirFile: %s\n", temp);
+						if (!quiet && developer_loading.integer)
+							Con_Printf("SearchDirFile: %s\n", temp);
 					}
 				}
 			}

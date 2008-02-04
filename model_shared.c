@@ -152,6 +152,10 @@ void Mod_UnloadModel (model_t *mod)
 	char name[MAX_QPATH];
 	qboolean isworldmodel;
 	qboolean used;
+
+	if (developer_loading.integer)
+		Con_Printf("unloading model %s\n", mod->name);
+
 	strlcpy(name, mod->name, sizeof(name));
 	isworldmodel = mod->isworldmodel;
 	used = mod->used;
@@ -224,7 +228,9 @@ model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, qboolea
 		return mod;
 	}
 
-	Con_DPrintf("loading model %s\n", mod->name);
+	if (developer_loading.integer)
+		Con_Printf("loading model %s\n", mod->name);
+
 	// LordHavoc: unload the existing model in this slot (if there is one)
 	if (mod->loaded || mod->mempool)
 		Mod_UnloadModel(mod);
@@ -1176,6 +1182,7 @@ static void Q3Shader_AddToHash (q3shaderinfo_t* shader)
 	memcpy (&entry->shader, shader, sizeof (q3shaderinfo_t));
 }
 
+extern cvar_t r_picmipworld;
 void Mod_LoadQ3Shaders(void)
 {
 	int j;
@@ -1452,6 +1459,13 @@ void Mod_LoadQ3Shaders(void)
 							shader.textureblendalpha = true;
 						}
 					}
+					layer->texflags = TEXF_ALPHA | TEXF_PRECACHE;
+					if (!(shader.surfaceparms & Q3SURFACEPARM_NOMIPMAPS))
+						layer->texflags |= TEXF_MIPMAP;
+					if (!(shader.textureflags & Q3TEXTUREFLAG_NOPICMIP) && (r_picmipworld.integer || strncmp(layer->texturename[0], "textures/", 9)))
+						layer->texflags |= TEXF_PICMIP | TEXF_COMPRESS;
+					if (layer->clampmap)
+						layer->texflags |= TEXF_CLAMP;
 					continue;
 				}
 				numparameters = 0;
@@ -1634,24 +1648,27 @@ void Mod_LoadQ3Shaders(void)
 					}
 				}
 			}
-			// identify if this is a blended terrain shader or similar
+			// pick the primary layer to render with
 			if (shader.numlayers)
 			{
 				shader.backgroundlayer = -1;
 				shader.primarylayer = 0;
-				if ((shader.layers[0].blendfunc[0] == GL_ONE       && shader.layers[0].blendfunc[1] == GL_ZERO                && !shader.layers[0].alphatest)
-				&& ((shader.layers[1].blendfunc[0] == GL_SRC_ALPHA && shader.layers[1].blendfunc[1] == GL_ONE_MINUS_SRC_ALPHA && !shader.layers[0].alphatest)
-				||  (shader.layers[1].blendfunc[0] == GL_ONE       && shader.layers[1].blendfunc[1] == GL_ZERO                &&  shader.layers[1].alphatest)))
-				{
-					// terrain blending or other effects
-					shader.backgroundlayer = 0;
-					shader.primarylayer = 1;
-				}
-				// now see if the lightmap came first, and if so choose the second texture instead
+				// if lightmap comes first this is definitely an ordinary texture
+				// if the first two layers have the correct blendfuncs and use vertex alpha, it is a blended terrain shader
 				if ((shader.layers[shader.primarylayer].texturename != NULL)
 				  && !strcasecmp(shader.layers[shader.primarylayer].texturename[0], "$lightmap"))
 				{
 					shader.backgroundlayer = -1;
+					shader.primarylayer = 1;
+				}
+				else if (shader.numlayers >= 2
+				&&   shader.layers[1].alphagen.alphagen == Q3ALPHAGEN_VERTEX
+				&&  (shader.layers[0].blendfunc[0] == GL_ONE       && shader.layers[0].blendfunc[1] == GL_ZERO                && !shader.layers[0].alphatest)
+				&& ((shader.layers[1].blendfunc[0] == GL_SRC_ALPHA && shader.layers[1].blendfunc[1] == GL_ONE_MINUS_SRC_ALPHA)
+				||  (shader.layers[1].blendfunc[0] == GL_ONE       && shader.layers[1].blendfunc[1] == GL_ZERO                &&  shader.layers[1].alphatest)))
+				{
+					// terrain blending or other effects
+					shader.backgroundlayer = 0;
 					shader.primarylayer = 1;
 				}
 			}
@@ -1678,19 +1695,19 @@ q3shaderinfo_t *Mod_LookupQ3Shader(const char *name)
 	return NULL;
 }
 
-extern cvar_t r_picmipworld;
-qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qboolean q1bsp, qboolean q3bsp, qboolean md3)
+qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qboolean warnmissing, qboolean fallback, int defaulttexflags)
 {
 	int j;
-	int texflags;
 	qboolean success = true;
 	q3shaderinfo_t *shader;
+	if (!name)
+		name = "";
 	strlcpy(texture->name, name, sizeof(texture->name));
 	shader = name[0] ? Mod_LookupQ3Shader(name) : NULL;
 	if (shader)
 	{
-		if (developer.integer >= 100)
-			Con_DPrintf("%s: loaded shader for %s\n", loadmodel->name, name);
+		if (developer_loading.integer)
+			Con_Printf("%s: loaded shader for %s\n", loadmodel->name, name);
 		texture->surfaceparms = shader->surfaceparms;
 		texture->textureflags = shader->textureflags;
 		texture->basematerialflags = 0;
@@ -1773,14 +1790,7 @@ nothing                GL_ZERO GL_ONE
 			texture->skinframerate = primarylayer->framerate;
 			for (j = 0;j < primarylayer->numframes;j++)
 			{
-				texflags = TEXF_ALPHA | TEXF_PRECACHE;
-				if (!(shader->surfaceparms & Q3SURFACEPARM_NOMIPMAPS))
-					texflags |= TEXF_MIPMAP;
-				if (!(shader->textureflags & Q3TEXTUREFLAG_NOPICMIP) && ((!q1bsp && !q3bsp) || r_picmipworld.integer))
-					texflags |= TEXF_PICMIP | TEXF_COMPRESS;
-				if (primarylayer->clampmap)
-					texflags |= TEXF_CLAMP;
-				if (!(texture->skinframes[j] = R_SkinFrame_LoadExternal(primarylayer->texturename[j], texflags, false)))
+				if (!(texture->skinframes[j] = R_SkinFrame_LoadExternal(primarylayer->texturename[j], primarylayer->texflags, false)))
 				{
 					Con_Printf("^1%s:^7 could not load texture ^3\"%s\"^7 (frame %i) for shader ^2\"%s\"\n", loadmodel->name, primarylayer->texturename[j], j, texture->name);
 					texture->skinframes[j] = R_SkinFrame_LoadMissing();
@@ -1794,9 +1804,9 @@ nothing                GL_ZERO GL_ONE
 			texture->backgroundskinframerate = backgroundlayer->framerate;
 			for (j = 0;j < backgroundlayer->numframes;j++)
 			{
-				if (!(texture->backgroundskinframes[j] = R_SkinFrame_LoadExternal(backgroundlayer->texturename[j], ((shader->surfaceparms & Q3SURFACEPARM_NOMIPMAPS) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | ((!r_picmipworld.integer || (shader->textureflags & Q3TEXTUREFLAG_NOPICMIP)) ? 0 : (TEXF_PICMIP | TEXF_COMPRESS)) | (backgroundlayer->clampmap ? TEXF_CLAMP : 0), false)))
+				if (!(texture->backgroundskinframes[j] = R_SkinFrame_LoadExternal(backgroundlayer->texturename[j], backgroundlayer->texflags, false)))
 				{
-					Con_Printf("^1%s:^7 could not load texture ^3\"%s\"^7 (frame %i) for shader ^2\"%s\"\n", loadmodel->name, backgroundlayer->texturename[j], j, texture->name);
+					Con_Printf("^1%s:^7 could not load texture ^3\"%s\"^7 (background frame %i) for shader ^2\"%s\"\n", loadmodel->name, backgroundlayer->texturename[j], j, texture->name);
 					texture->backgroundskinframes[j] = R_SkinFrame_LoadMissing();
 				}
 			}
@@ -1810,17 +1820,23 @@ nothing                GL_ZERO GL_ONE
 		Vector4Copy(shader->reflectcolor4f, texture->reflectcolor4f);
 		texture->r_water_wateralpha = shader->r_water_wateralpha;
 	}
-	else if (!strcmp(texture->name, "noshader"))
+	else if (!strcmp(texture->name, "noshader") || !texture->name[0])
 	{
 		if (developer.integer >= 100)
-			Con_DPrintf("%s: using default handler for %s\n", loadmodel->name, name);
+			Con_Printf("^1%s:^7 using fallback noshader material for ^3\"%s\"\n", loadmodel->name, name);
 		texture->surfaceparms = 0;
+	}
+	else if (!strcmp(texture->name, "common/nodraw") || !strcmp(texture->name, "textures/common/nodraw"))
+	{
+		if (developer.integer >= 100)
+			Con_Printf("^1%s:^7 using fallback nodraw material for ^3\"%s\"\n", loadmodel->name, name);
+		texture->surfaceparms = 0;
+		texture->basematerialflags = MATERIALFLAG_NODRAW | MATERIALFLAG_NOSHADOW;
 	}
 	else
 	{
-		success = false;
-		if (developer.integer >= 100 || loadmodel->type == mod_brushq3)
-			Con_DPrintf("%s: No shader found for texture \"%s\"\n", loadmodel->name, texture->name);
+		if (developer.integer >= 100)
+			Con_Printf("^1%s:^7 No shader found for texture ^3\"%s\"\n", loadmodel->name, texture->name);
 		texture->surfaceparms = 0;
 		if (texture->surfaceflags & Q3SURFACEFLAG_NODRAW)
 			texture->basematerialflags |= MATERIALFLAG_NODRAW | MATERIALFLAG_NOSHADOW;
@@ -1829,9 +1845,15 @@ nothing                GL_ZERO GL_ONE
 		else
 			texture->basematerialflags |= MATERIALFLAG_WALL;
 		texture->numskinframes = 1;
-		if (!(texture->skinframes[0] = R_SkinFrame_LoadExternal(texture->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | (r_picmipworld.integer ? TEXF_PICMIP : 0) | TEXF_COMPRESS, false)))
-			if(developer.integer || q3bsp) // only the Q3BSP path provides no alternative (like loading image directly, or internal texture)
-				Con_Printf("^1%s:^7 could not load texture for missing shader ^3\"%s\"\n", loadmodel->name, texture->name);
+		if (fallback)
+		{
+			if (!(texture->skinframes[0] = R_SkinFrame_LoadExternal(texture->name, defaulttexflags, false)))
+				success = false;
+		}
+		else
+			success = false;
+		if (!success && warnmissing)
+			Con_Printf("^1%s:^7 could not load texture ^3\"%s\"\n", loadmodel->name, texture->name);
 	}
 	// init the animation variables
 	texture->currentframe = texture;
@@ -1916,7 +1938,8 @@ tag_torso,
 			{
 				if (words == 3)
 				{
-					Con_DPrintf("Mod_LoadSkinFiles: parsed mesh \"%s\" shader replacement \"%s\"\n", word[1], word[2]);
+					if (developer_loading.integer)
+						Con_Printf("Mod_LoadSkinFiles: parsed mesh \"%s\" shader replacement \"%s\"\n", word[1], word[2]);
 					skinfileitem = (skinfileitem_t *)Mem_Alloc(loadmodel->mempool, sizeof(skinfileitem_t));
 					skinfileitem->next = skinfile->items;
 					skinfile->items = skinfileitem;
@@ -1929,7 +1952,8 @@ tag_torso,
 			else if (words == 2 && !strcmp(word[1], ","))
 			{
 				// tag name, like "tag_weapon,"
-				Con_DPrintf("Mod_LoadSkinFiles: parsed tag #%i \"%s\"\n", numtags, word[0]);
+				if (developer_loading.integer)
+					Con_Printf("Mod_LoadSkinFiles: parsed tag #%i \"%s\"\n", numtags, word[0]);
 				memset(tags + numtags, 0, sizeof(tags[numtags]));
 				strlcpy (tags[numtags].name, word[0], sizeof (tags[numtags].name));
 				numtags++;
@@ -1937,7 +1961,8 @@ tag_torso,
 			else if (words == 3 && !strcmp(word[1], ","))
 			{
 				// mesh shader name, like "U_RArm,models/players/Legoman/BikerA1.tga"
-				Con_DPrintf("Mod_LoadSkinFiles: parsed mesh \"%s\" shader replacement \"%s\"\n", word[0], word[2]);
+				if (developer_loading.integer)
+					Con_Printf("Mod_LoadSkinFiles: parsed mesh \"%s\" shader replacement \"%s\"\n", word[0], word[2]);
 				skinfileitem = (skinfileitem_t *)Mem_Alloc(loadmodel->mempool, sizeof(skinfileitem_t));
 				skinfileitem->next = skinfile->items;
 				skinfile->items = skinfileitem;

@@ -389,7 +389,7 @@ static const embeddedpic_t embeddedpics[] =
 	{NULL, 0, 0, NULL}
 };
 
-static rtexture_t *draw_generatepic(const char *name)
+static rtexture_t *draw_generatepic(const char *name, qboolean quiet)
 {
 	const embeddedpic_t *p;
 	for (p = embeddedpics;p->name;p++)
@@ -399,7 +399,8 @@ static rtexture_t *draw_generatepic(const char *name)
 		return draw_generateconchars();
 	if (!strcmp(name, "gfx/colorcontrol/ditherpattern"))
 		return draw_generateditherpattern();
-	Con_Printf("Draw_CachePic: failed to load %s\n", name);
+	if (!quiet)
+		Con_Printf("Draw_CachePic: failed to load %s\n", name);
 	return r_texture_notexture;
 }
 
@@ -410,7 +411,7 @@ Draw_CachePic
 ================
 */
 // FIXME: move this to client somehow
-static cachepic_t	*Draw_CachePic_Compression (const char *path, qboolean persistent, qboolean allow_compression)
+cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 {
 	int crc, hashkey;
 	cachepic_t *pic;
@@ -449,11 +450,11 @@ static cachepic_t	*Draw_CachePic_Compression (const char *path, qboolean persist
 	}
 
 	flags = TEXF_ALPHA;
-	if (persistent)
+	if (!(cachepicflags & CACHEPICFLAG_NOTPERSISTENT))
 		flags |= TEXF_PRECACHE;
 	if (strcmp(path, "gfx/colorcontrol/ditherpattern"))
 		flags |= TEXF_CLAMP;
-	if(allow_compression && gl_texturecompression_2d.integer)
+	if (!(cachepicflags & CACHEPICFLAG_NOCOMPRESSION) && gl_texturecompression_2d.integer)
 		flags |= TEXF_COMPRESS;
 
 	// load a high quality image from disk if possible
@@ -478,6 +479,9 @@ static cachepic_t	*Draw_CachePic_Compression (const char *path, qboolean persist
 	dpsnprintf(lmpname, sizeof(lmpname), "%s.lmp", path);
 	if (!strncmp(path, "gfx/", 4) && (lmpdata = FS_LoadFile(lmpname, tempmempool, false, &lmpsize)))
 	{
+		if (developer_loading.integer)
+			Con_Printf("loading lump \"%s\"\n", path);
+
 		if (lmpsize >= 9)
 		{
 			pic->width = lmpdata[0] + lmpdata[1] * 256 + lmpdata[2] * 65536 + lmpdata[3] * 16777216;
@@ -490,6 +494,9 @@ static cachepic_t	*Draw_CachePic_Compression (const char *path, qboolean persist
 	}
 	else if ((lmpdata = W_GetLumpName (path + 4)))
 	{
+		if (developer_loading.integer)
+			Con_Printf("loading gfx.wad lump \"%s\"\n", path + 4);
+
 		if (!strcmp(path, "gfx/conchars"))
 		{
 			// conchars is a raw image and with color 0 as transparent instead of 255
@@ -512,16 +519,17 @@ static cachepic_t	*Draw_CachePic_Compression (const char *path, qboolean persist
 	// if it's not found on disk, generate an image
 	if (pic->tex == NULL)
 	{
-		pic->tex = draw_generatepic(path);
+		pic->tex = draw_generatepic(path, (cachepicflags & CACHEPICFLAG_QUIET) != 0);
 		pic->width = R_TextureWidth(pic->tex);
 		pic->height = R_TextureHeight(pic->tex);
 	}
 
 	return pic;
 }
-cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
+
+cachepic_t *Draw_CachePic (const char *path)
 {
-	return Draw_CachePic_Compression(path, persistent, true);
+	return Draw_CachePic_Flags (path, 0);
 }
 
 cachepic_t *Draw_NewPic(const char *picname, int width, int height, int alpha, unsigned char *pixels_bgra)
@@ -604,10 +612,10 @@ static void LoadFont(qboolean override, const char *name, dp_font_t *fnt)
 	if(drawtexturepool == NULL)
 		return; // before gl_draw_start, so will be loaded later
 
-	fnt->tex = Draw_CachePic_Compression(fnt->texpath, true, false)->tex;
+	fnt->tex = Draw_CachePic_Flags(fnt->texpath, CACHEPICFLAG_QUIET | CACHEPICFLAG_NOCOMPRESSION)->tex;
 	if(fnt->tex == r_texture_notexture)
 	{
-		fnt->tex = Draw_CachePic_Compression("gfx/conchars", true, false)->tex;
+		fnt->tex = Draw_CachePic_Flags("gfx/conchars", CACHEPICFLAG_NOCOMPRESSION)->tex;
 		strlcpy(widthfile, "gfx/conchars.width", sizeof(widthfile));
 	}
 	else

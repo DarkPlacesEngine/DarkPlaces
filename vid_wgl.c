@@ -1025,6 +1025,12 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp, int refreshrat
 	gl_platform = "WGL";
 	gl_platformextensions = "";
 
+	Con_DPrintf("GL_VENDOR: %s\n", gl_vendor);
+	Con_DPrintf("GL_RENDERER: %s\n", gl_renderer);
+	Con_DPrintf("GL_VERSION: %s\n", gl_version);
+	Con_DPrintf("GL_EXTENSIONS: %s\n", gl_extensions);
+	Con_DPrintf("%s_EXTENSIONS: %s\n", gl_platform, gl_platformextensions);
+
 	gl_videosyncavailable = false;
 
 	if (qwglGetExtensionsStringARB)

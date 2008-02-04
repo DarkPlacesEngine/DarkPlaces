@@ -330,14 +330,7 @@ static qboolean CURL_OpenLibrary (void)
 		return true;
 
 	// Load the DLL
-	if (! Sys_LoadLibrary (dllnames, &curl_dll, curlfuncs))
-	{
-		Con_Printf ("cURL support disabled\n");
-		return false;
-	}
-
-	Con_Printf ("cURL support enabled\n");
-	return true;
+	return Sys_LoadLibrary (dllnames, &curl_dll, curlfuncs);
 }
 
 

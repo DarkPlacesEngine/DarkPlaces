@@ -76,12 +76,18 @@ R_SetSkyBox
 void R_UnloadSkyBox(void)
 {
 	int i;
+	int c = 0;
 	for (i = 0;i < 6;i++)
 	{
 		if (skyboxside[i])
+		{
 			R_FreeTexture(skyboxside[i]);
+			c++;
+		}
 		skyboxside[i] = NULL;
 	}
+	if (c && developer_loading.integer)
+		Con_Printf("unloading skybox\n");
 }
 
 int R_LoadSkyBox(void)
@@ -127,6 +133,9 @@ int R_LoadSkyBox(void)
 
 	if (j == 3)
 		return false;
+
+	if (developer_loading.integer)
+		Con_Printf("loading skybox \"%s\"\n", name);
 
 	return true;
 }
