@@ -757,7 +757,6 @@ static void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfi
 {
 	int i;
 	skinfileitem_t *skinfileitem;
-	skinframe_t *tempskinframe;
 	if (skinfile)
 	{
 		// the skin += loadmodel->num_surfaces part of this is because data_textures on alias models is arranged as [numskins][numsurfaces]
@@ -768,16 +767,9 @@ static void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfi
 			for (skinfileitem = skinfile->items;skinfileitem;skinfileitem = skinfileitem->next)
 			{
 				// leave the skin unitialized (nodraw) if the replacement is "common/nodraw" or "textures/common/nodraw"
-				if (!strcmp(skinfileitem->name, meshname) && strcmp(skinfileitem->replacement, "common/nodraw") && strcmp(skinfileitem->replacement, "textures/common/nodraw"))
+				if (!strcmp(skinfileitem->name, meshname))
 				{
-					if (!Mod_LoadTextureFromQ3Shader(skin, skinfileitem->replacement, false, false, true))
-					{
-						tempskinframe = R_SkinFrame_LoadExternal(skinfileitem->replacement, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP | TEXF_COMPRESS, false);
-						if (!tempskinframe)
-							if (cls.state != ca_dedicated)
-								Con_Printf("mesh \"%s\": failed to load skin #%i \"%s\"\n", meshname, i, skinfileitem->replacement);
-						Mod_BuildAliasSkinFromSkinFrame(skin, tempskinframe);
-					}
+					Mod_LoadTextureFromQ3Shader(skin, skinfileitem->replacement, true, true, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP | TEXF_COMPRESS);
 					break;
 				}
 			}
@@ -790,16 +782,7 @@ static void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfi
 		}
 	}
 	else
-	{
-		if (!Mod_LoadTextureFromQ3Shader(skin, shadername, false, false, true))
-		{
-			tempskinframe = R_SkinFrame_LoadExternal(shadername, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP | TEXF_COMPRESS, false);
-			if (!tempskinframe)
-				if (cls.state != ca_dedicated)
-					Con_Printf("Can't find texture \"%s\" for mesh \"%s\", using grey checkerboard\n", shadername, meshname);
-			Mod_BuildAliasSkinFromSkinFrame(skin, tempskinframe);
-		}
-	}
+		Mod_LoadTextureFromQ3Shader(skin, shadername, true, true, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP | TEXF_COMPRESS);
 }
 
 #define BOUNDI(VALUE,MIN,MAX) if (VALUE < MIN || VALUE >= MAX) Host_Error("model %s has an invalid ##VALUE (%d exceeds %d - %d)", loadmodel->name, VALUE, MIN, MAX);
@@ -1072,13 +1055,8 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 					sprintf (name, "%s_%i_%i", loadmodel->name, i, j);
 				else
 					sprintf (name, "%s_%i", loadmodel->name, i);
-				if (!Mod_LoadTextureFromQ3Shader(loadmodel->data_textures + totalskins * loadmodel->num_surfaces, name, false, false, true))
-				{
-					tempskinframe = R_SkinFrame_LoadExternal(name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PICMIP | TEXF_COMPRESS, false);
-					if (!tempskinframe)
-						tempskinframe = R_SkinFrame_LoadInternalQuake(name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_PICMIP, true, r_fullbrights.integer, (unsigned char *)datapointer, skinwidth, skinheight);
-					Mod_BuildAliasSkinFromSkinFrame(loadmodel->data_textures + totalskins * loadmodel->num_surfaces, tempskinframe);
-				}
+				if (!Mod_LoadTextureFromQ3Shader(loadmodel->data_textures + totalskins * loadmodel->num_surfaces, name, false, true, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PICMIP | TEXF_COMPRESS))
+					Mod_BuildAliasSkinFromSkinFrame(loadmodel->data_textures + totalskins * loadmodel->num_surfaces, R_SkinFrame_LoadInternalQuake(name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_PICMIP, true, r_fullbrights.integer, (unsigned char *)datapointer, skinwidth, skinheight));
 				datapointer += skinwidth * skinheight;
 				totalskins++;
 			}
@@ -1147,7 +1125,6 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 		unsigned short st;
 	}
 	*hash, **md2verthash, *md2verthashdata;
-	skinframe_t *tempskinframe;
 	skinfile_t *skinfiles;
 
 	pinmodel = (md2_t *)buffer;
@@ -1235,15 +1212,7 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 		loadmodel->num_texturesperskin = loadmodel->num_surfaces;
 		loadmodel->data_textures = (texture_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t));
 		for (i = 0;i < loadmodel->numskins;i++, inskin += MD2_SKINNAME)
-		{
-			if (!Mod_LoadTextureFromQ3Shader(loadmodel->data_textures + i * loadmodel->num_surfaces, inskin, false, false, true))
-			{
-				tempskinframe = R_SkinFrame_LoadExternal(inskin, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP | TEXF_COMPRESS, false);
-				if (!tempskinframe)
-					Con_Printf("%s is missing skin \"%s\"\n", loadmodel->name, inskin);
-				Mod_BuildAliasSkinFromSkinFrame(loadmodel->data_textures + i * loadmodel->num_surfaces, tempskinframe);
-			}
-		}
+			Mod_LoadTextureFromQ3Shader(loadmodel->data_textures + i * loadmodel->num_surfaces, inskin, true, true, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP | TEXF_COMPRESS);
 	}
 	else
 	{
@@ -1518,11 +1487,7 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 			}
 		}
 
-		if (LittleLong(pinmesh->num_shaders) >= 1)
-			Mod_BuildAliasSkinsFromSkinFiles(loadmodel->data_textures + i, skinfiles, pinmesh->name, ((md3shader_t *)((unsigned char *) pinmesh + LittleLong(pinmesh->lump_shaders)))->name);
-		else
-			for (j = 0;j < loadmodel->numskins;j++)
-				Mod_BuildAliasSkinFromSkinFrame(loadmodel->data_textures + i + j * loadmodel->num_surfaces, NULL);
+		Mod_BuildAliasSkinsFromSkinFiles(loadmodel->data_textures + i, skinfiles, pinmesh->name, LittleLong(pinmesh->num_shaders) >= 1 ? ((md3shader_t *)((unsigned char *) pinmesh + LittleLong(pinmesh->lump_shaders)))->name : "");
 
 		Mod_ValidateElements(loadmodel->surfmesh.data_element3i + surface->num_firsttriangle * 3, surface->num_triangles, surface->num_firstvertex, surface->num_vertices, __FILE__, __LINE__);
 	}
@@ -1832,11 +1797,7 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		// since zym models do not have named sections, reuse their shader
 		// name as the section name
 		shadername = (char *) (pheader->lump_shaders.start + pbase) + i * 32;
-		if (shadername[0])
-			Mod_BuildAliasSkinsFromSkinFiles(loadmodel->data_textures + i, skinfiles, shadername, shadername);
-		else
-			for (j = 0;j < loadmodel->numskins;j++)
-				Mod_BuildAliasSkinFromSkinFrame(loadmodel->data_textures + i + j * loadmodel->num_surfaces, NULL);
+		Mod_BuildAliasSkinsFromSkinFiles(loadmodel->data_textures + i, skinfiles, shadername, shadername);
 	}
 	Mod_FreeSkinFiles(skinfiles);
 	Mem_Free(vertbonecounts);
@@ -2131,11 +2092,7 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		}
 
 		// since dpm models do not have named sections, reuse their shader name as the section name
-		if (dpmmesh->shadername[0])
-			Mod_BuildAliasSkinsFromSkinFiles(loadmodel->data_textures + i, skinfiles, dpmmesh->shadername, dpmmesh->shadername);
-		else
-			for (j = 0;j < loadmodel->numskins;j++)
-				Mod_BuildAliasSkinFromSkinFrame(loadmodel->data_textures + i + j * loadmodel->num_surfaces, NULL);
+		Mod_BuildAliasSkinsFromSkinFiles(loadmodel->data_textures + i, skinfiles, dpmmesh->shadername, dpmmesh->shadername);
 
 		Mod_ValidateElements(loadmodel->surfmesh.data_element3i + surface->num_firsttriangle * 3, surface->num_triangles, surface->num_firstvertex, surface->num_vertices, __FILE__, __LINE__);
 	}
@@ -2570,11 +2527,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	for (index = 0, i = 0;index < nummatts;index++)
 	{
 		// since psk models do not have named sections, reuse their shader name as the section name
-		if (matts[index].name[0])
-			Mod_BuildAliasSkinsFromSkinFiles(loadmodel->data_textures + index, skinfiles, matts[index].name, matts[index].name);
-		else
-			for (j = 0;j < loadmodel->numskins;j++)
-				Mod_BuildAliasSkinFromSkinFrame(loadmodel->data_textures + index + j * loadmodel->num_surfaces, NULL);
+		Mod_BuildAliasSkinsFromSkinFiles(loadmodel->data_textures + index, skinfiles, matts[index].name, matts[index].name);
 		loadmodel->surfacelist[index] = index;
 		loadmodel->data_surfaces[index].texture = loadmodel->data_textures + index;
 		loadmodel->data_surfaces[index].num_firstvertex = 0;

@@ -1444,7 +1444,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			if (name[j] >= 'A' && name[j] <= 'Z')
 				name[j] += 'a' - 'A';
 
-		if (dmiptex->name[0] && Mod_LoadTextureFromQ3Shader(loadmodel->data_textures + i, name, true, false, false))
+		if (dmiptex->name[0] && Mod_LoadTextureFromQ3Shader(loadmodel->data_textures + i, name, false, false, 0))
 			continue;
 
 		tx = loadmodel->data_textures + i;
@@ -1702,7 +1702,8 @@ static void Mod_Q1BSP_LoadLighting(lump_t *l)
 				i = LittleLong(((int *)data)[1]);
 				if (i == 1)
 				{
-					Con_DPrintf("loaded %s\n", litfilename);
+					if (developer_loading.integer)
+						Con_Printf("loaded %s\n", litfilename);
 					loadmodel->brushq1.lightdata = (unsigned char *)Mem_Alloc(loadmodel->mempool, filesize - 8);
 					memcpy(loadmodel->brushq1.lightdata, data + 8, filesize - 8);
 					Mem_Free(data);
@@ -1714,7 +1715,8 @@ static void Mod_Q1BSP_LoadLighting(lump_t *l)
 							i = LittleLong(((int *)data)[1]);
 							if (i == 1)
 							{
-								Con_DPrintf("loaded %s\n", dlitfilename);
+								if (developer_loading.integer)
+									Con_Printf("loaded %s\n", dlitfilename);
 								loadmodel->brushq1.nmaplightdata = (unsigned char *)Mem_Alloc(loadmodel->mempool, filesize - 8);
 								memcpy(loadmodel->brushq1.nmaplightdata, data + 8, filesize - 8);
 								loadmodel->brushq3.deluxemapping_modelspace = false;
@@ -4165,7 +4167,7 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 {
 	q3dtexture_t *in;
 	texture_t *out;
-	int i, count, c;
+	int i, count;
 
 	in = (q3dtexture_t *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -4187,12 +4189,8 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 	if (cls.state == ca_dedicated)
 		return;
 
-	c = 0;
 	for (i = 0;i < count;i++, in++, out++)
-		if (!Mod_LoadTextureFromQ3Shader(out, out->name, false, true, false))
-			c++;
-	if (c)
-		Con_DPrintf("%s: %i textures missing shaders\n", loadmodel->name, c);
+		Mod_LoadTextureFromQ3Shader(out, out->name, true, true, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | (r_picmipworld.integer ? TEXF_PICMIP : 0) | TEXF_COMPRESS);
 }
 
 static void Mod_Q3BSP_LoadPlanes(lump_t *l)
@@ -4507,7 +4505,8 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 					;
 				for (mergeheight = 1;mergewidth*mergeheight < j && mergeheight < (1 << power);mergeheight *= 2)
 					;
-				Con_DPrintf("lightmap merge texture #%i is %ix%i (%i of %i used)\n", lightmapindex, mergewidth*128, mergeheight*128, min(j, mergewidth*mergeheight), mergewidth*mergeheight);
+				if (developer_loading.integer)
+					Con_Printf("lightmap merge texture #%i is %ix%i (%i of %i used)\n", lightmapindex, mergewidth*128, mergeheight*128, min(j, mergewidth*mergeheight), mergewidth*mergeheight);
 				loadmodel->brushq3.data_lightmaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", lightmapindex), mergewidth * 128, mergeheight * 128, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : 0), NULL);
 				if (loadmodel->brushq3.data_deluxemaps)
 					loadmodel->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%04i", lightmapindex), mergewidth * 128, mergeheight * 128, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE | (gl_texturecompression_q3bspdeluxemaps.integer ? TEXF_COMPRESS : 0), NULL);

@@ -260,6 +260,8 @@ extern char engineversion[128];
 extern qboolean noclip_anglehack;
 
 extern cvar_t developer;
+extern cvar_t developer_loadfile;
+extern cvar_t developer_loading;
 
 /* Preprocessor macros to identify platform
     DP_OS_NAME 	- "friendly" name of the OS, for humans to read

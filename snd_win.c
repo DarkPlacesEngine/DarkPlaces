@@ -362,7 +362,7 @@ static sndinitstat SndSys_InitDirectSound (const snd_format_t* requested)
 	// Make sure mixer is active
 	IDirectSoundBuffer_Play(pDSBuf, 0, 0, DSBPLAY_LOOPING);
 
-	Con_DPrintf("   %d channel(s)\n"
+	Con_Printf("   %d channel(s)\n"
 				"   %d bits/sample\n"
 				"   %d samples/sec\n",
 				requested->channels, requested->width * 8, requested->speed);

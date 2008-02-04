@@ -306,7 +306,7 @@ static void Cmd_Exec_f (void)
 		Con_Printf("couldn't exec %s\n",Cmd_Argv(1));
 		return;
 	}
-	Con_DPrintf("execing %s\n",Cmd_Argv(1));
+	Con_Printf("execing %s\n",Cmd_Argv(1));
 
 	// if executing default.cfg for the first time, lock the cvar defaults
 	// it may seem backwards to insert this text BEFORE the default.cfg

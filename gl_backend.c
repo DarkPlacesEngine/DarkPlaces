@@ -165,7 +165,6 @@ memexpandablearray_t gl_bufferobjectinfoarray;
 
 static void gl_backend_start(void)
 {
-	Con_Print("OpenGL Backend starting...\n");
 	CHECKGLERROR
 
 	if (qglDrawRangeElements != NULL)
@@ -175,7 +174,7 @@ static void gl_backend_start(void)
 		CHECKGLERROR
 		qglGetIntegerv(GL_MAX_ELEMENTS_INDICES, &gl_maxdrawrangeelementsindices);
 		CHECKGLERROR
-		Con_Printf("glDrawRangeElements detected (max vertices %i, max indices %i)\n", gl_maxdrawrangeelementsvertices, gl_maxdrawrangeelementsindices);
+		Con_DPrintf("GL_MAX_ELEMENTS_VERTICES = %i\nGL_MAX_ELEMENTS_INDICES = %i\n", gl_maxdrawrangeelementsvertices, gl_maxdrawrangeelementsindices);
 	}
 
 	backendunits = bound(1, gl_textureunits, MAX_TEXTUREUNITS);
@@ -188,20 +187,18 @@ static void gl_backend_start(void)
 		CHECKGLERROR
 		qglGetIntegerv(GL_MAX_TEXTURE_COORDS_ARB, (int *)&backendarrayunits);
 		CHECKGLERROR
-		Con_Printf("GLSL shader support detected: texture units = %i texenv, %i image, %i array\n", backendunits, backendimageunits, backendarrayunits);
+		Con_DPrintf("GLSL shader support detected: texture units = %i texenv, %i image, %i array\n", backendunits, backendimageunits, backendarrayunits);
 		backendimageunits = bound(1, backendimageunits, MAX_TEXTUREUNITS);
 		backendarrayunits = bound(1, backendarrayunits, MAX_TEXTUREUNITS);
 	}
-	else if (backendunits > 1)
-		Con_Printf("multitexture detected: texture units = %i\n", backendunits);
 	else
-		Con_Printf("singletexture\n");
+		Con_DPrintf("GL_MAX_TEXTUREUNITS = %i\n", backendunits);
 
 	GL_Backend_AllocArrays();
 
 	Mem_ExpandableArray_NewArray(&gl_bufferobjectinfoarray, r_main_mempool, sizeof(gl_bufferobjectinfo_t), 128);
 
-	Con_Printf("OpenGL backend started.\n");
+	Con_DPrintf("OpenGL backend started.\n");
 
 	CHECKGLERROR
 
@@ -215,7 +212,7 @@ static void gl_backend_shutdown(void)
 	backendarrayunits = 0;
 	backendactive = false;
 
-	Con_Print("OpenGL Backend shutting down\n");
+	Con_DPrint("OpenGL Backend shutting down\n");
 
 	Mem_ExpandableArray_FreeArray(&gl_bufferobjectinfoarray);
 

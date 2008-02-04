@@ -415,14 +415,7 @@ qboolean JPEG_OpenLibrary (void)
 		return true;
 
 	// Load the DLL
-	if (! Sys_LoadLibrary (dllnames, &jpeg_dll, jpegfuncs))
-	{
-		Con_Printf ("JPEG support disabled\n");
-		return false;
-	}
-
-	Con_Printf ("JPEG support enabled\n");
-	return true;
+	return Sys_LoadLibrary (dllnames, &jpeg_dll, jpegfuncs);
 }
 
 

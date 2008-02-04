@@ -341,6 +341,7 @@ typedef struct q3shaderinfo_layer_s
 	int clampmap;
 	float framerate;
 	int numframes;
+	int texflags;
 	char** texturename;
 	int blendfunc[2];
 	q3shaderinfo_layer_rgbgen_t rgbgen;
@@ -931,7 +932,7 @@ void Mod_ShadowMesh_Free(shadowmesh_t *mesh);
 
 void Mod_LoadQ3Shaders(void);
 q3shaderinfo_t *Mod_LookupQ3Shader(const char *name);
-qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qboolean q1bsp, qboolean q3bsp, qboolean md3);
+qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qboolean warnmissing, qboolean fallback, int defaulttexflags);
 
 extern cvar_t r_mipskins;
 

@@ -1151,7 +1151,7 @@ void CL_BeginDownloads_f(void)
 	// prevent cl_begindownloads from being issued multiple times in one match
 	// to prevent accidentally cancelled downloads
 	if(cl.loadbegun)
-		Con_DPrintf("cl_begindownloads is only valid once per match\n");
+		Con_Printf("cl_begindownloads is only valid once per match\n");
 	else
 		CL_BeginDownloads(false);
 }
@@ -1334,7 +1334,8 @@ An svc_signonnum has been received, perform a client side setup
 */
 static void CL_SignonReply (void)
 {
-	Con_DPrintf("CL_SignonReply: %i\n", cls.signon);
+	if (developer.integer >= 100)
+		Con_Printf("CL_SignonReply: %i\n", cls.signon);
 
 	switch (cls.signon)
 	{

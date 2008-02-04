@@ -849,29 +849,36 @@ static const dllfunction_t osgkFuncs[] =
 	{NULL, NULL}
 };
 
-void CL_Gecko_Init( void )
+qboolean CL_Gecko_OpenLibrary (void)
 {
-	const char* dllnames [] =
+	const char* dllnames_gecko [] =
 	{
-	#if defined(WIN64)
+#if defined(WIN64)
 		"OffscreenGecko64.dll",
-	#elif defined(WIN32)
+#elif defined(WIN32)
 		"OffscreenGecko.dll",
-	#elif defined(MACOSX)
+#elif defined(MACOSX)
 		"OffscreenGecko.dylib",
-	#else
+#else
 		"libOffscreenGecko.so",
-	#endif
+#endif
 		NULL
 	};
-	
-	if (!osgk_dll)
-	{
-		if (! Sys_LoadLibrary (dllnames, &osgk_dll, osgkFuncs))
-		{
-			Con_Printf ("Could not load OffscreenGecko, Gecko support unavailable\n");
-		}
-	}
+
+	// Already loaded?
+	if (osgk_dll)
+		return true;
+
+// COMMANDLINEOPTION: Sound: -nogecko disables gecko support (web browser support for menu and computer terminals)
+	if (COM_CheckParm("-nogecko"))
+		return false;
+
+	return Sys_LoadLibrary (dllnames_gecko, &osgk_dll, osgkFuncs);
+}
+
+void CL_Gecko_Init( void )
+{
+	CL_Gecko_OpenLibrary();
 
 	Cmd_AddCommand( "gecko_create", cl_gecko_create_f, "Create a gecko browser instance" );
 	Cmd_AddCommand( "gecko_destroy", cl_gecko_destroy_f, "Destroy a gecko browser instance" );

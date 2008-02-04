@@ -15,16 +15,15 @@ static unsigned dyntexturecount;
 
 #define DEFAULT_DYNTEXTURE r_texture_grey128
 
-static dyntexture_t * cl_finddyntexture( const char *name ) {
+static dyntexture_t * cl_finddyntexture( const char *name, qboolean warnonfailure ) {
 	unsigned i;
 	dyntexture_t *dyntexture = NULL;
 
 	// sanity checks - make sure its actually a dynamic texture path
 	if( !name || !*name || strncmp( name, CLDYNTEXTUREPREFIX, sizeof( CLDYNTEXTUREPREFIX ) - 1 ) != 0 ) {
 		// TODO: print a warning or something
-		if( developer.integer > 0 ) {
+		if (warnonfailure)
 			Con_Printf( "cl_finddyntexture: Bad dynamic texture name '%s'\n", name );
-		}
 		return NULL;
 	}
 
@@ -46,7 +45,7 @@ static dyntexture_t * cl_finddyntexture( const char *name ) {
 }
 
 rtexture_t * CL_GetDynTexture( const char *name ) {
-	dyntexture_t *dyntexture = cl_finddyntexture( name );
+	dyntexture_t *dyntexture = cl_finddyntexture( name, false );
 	if( dyntexture ) {
 		return dyntexture->texture;
 	} else {
@@ -59,7 +58,7 @@ void CL_LinkDynTexture( const char *name, rtexture_t *texture ) {
 	cachepic_t *cachepic;
 	skinframe_t *skinframe;
 
-	dyntexture = cl_finddyntexture( name );
+	dyntexture = cl_finddyntexture( name, true );
 	if( !dyntexture ) {
 		Con_Printf( "CL_LinkDynTexture: internal error in cl_finddyntexture!\n" );
 		return;
@@ -68,7 +67,7 @@ void CL_LinkDynTexture( const char *name, rtexture_t *texture ) {
 	if( dyntexture->texture != texture ) {
 		dyntexture->texture = texture;
 
-		cachepic = Draw_CachePic( name, false );
+		cachepic = Draw_CachePic_Flags( name, CACHEPICFLAG_NOTPERSISTENT );
 		// TODO: assert cachepic and skinframe should be valid pointers...
 		// TODO: assert cachepic->tex = dyntexture->texture
 		cachepic->tex = texture;

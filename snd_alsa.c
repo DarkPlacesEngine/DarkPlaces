@@ -105,7 +105,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 		pcm_name = com_argv[i + 1];
 
 	// Open the audio device
-	Con_DPrintf ("SndSys_Init: PCM device is \"%s\"\n", pcm_name);
+	Con_Printf ("SndSys_Init: PCM device is \"%s\"\n", pcm_name);
 	err = snd_pcm_open (&pcm_handle, pcm_name, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
 	if (err != 0)
 	{
@@ -259,7 +259,7 @@ static qboolean SndSys_Recover (int err_num)
 	err = snd_pcm_prepare (pcm_handle);
 	if (err != 0)
 	{
-		Con_DPrintf ("SndSys_Recover: unable to recover (%s)\n",
+		Con_Printf ("SndSys_Recover: unable to recover (%s)\n",
 					 snd_strerror (err));
 
 		// TOCHECK: should we stop the playback ?

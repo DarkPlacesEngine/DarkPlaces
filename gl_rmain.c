@@ -1891,6 +1891,9 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 	if (basepixels == NULL)
 		return NULL;
 
+	if (developer_loading.integer)
+		Con_Printf("loading skin \"%s\"\n", name);
+
 	// we've got some pixels to store, so really allocate this new texture now
 	if (!skinframe)
 		skinframe = R_SkinFrame_Find(name, textureflags, 0, 0, 0, true);
@@ -2011,6 +2014,9 @@ skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, co
 	if (!skindata)
 		return NULL;
 
+	if (developer_loading.integer)
+		Con_Printf("loading 32bit skin \"%s\"\n", name);
+
 	if (r_shadow_bumpscale_basetexture.value > 0)
 	{
 		temp1 = (unsigned char *)Mem_Alloc(tempmempool, width * height * 8);
@@ -2066,6 +2072,9 @@ skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, i
 	// if no data was provided, then clearly the caller wanted to get a blank skinframe
 	if (!skindata)
 		return NULL;
+
+	if (developer_loading.integer)
+		Con_Printf("loading quake skin \"%s\"\n", name);
 
 	if (r_shadow_bumpscale_basetexture.value > 0)
 	{
@@ -4411,7 +4420,8 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 		if (strcmp(r_qwskincache[i], cl.scores[i].qw_skin))
 		{
 			strlcpy(r_qwskincache[i], cl.scores[i].qw_skin, sizeof(r_qwskincache[i]));
-			Con_DPrintf("loading skins/%s\n", r_qwskincache[i]);
+			if (developer_loading.integer)
+				Con_Printf("loading skins/%s\n", r_qwskincache[i]);
 			r_qwskincache_skinframe[i] = R_SkinFrame_LoadExternal(va("skins/%s", r_qwskincache[i]), TEXF_PRECACHE | (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_PICMIP | TEXF_COMPRESS, developer.integer > 0);
 		}
 		t->currentskinframe = r_qwskincache_skinframe[i];

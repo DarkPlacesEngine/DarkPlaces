@@ -38,8 +38,17 @@ typedef struct cachepic_s
 }
 cachepic_t;
 
+typedef enum cachepicflags_e
+{
+	CACHEPICFLAG_NOTPERSISTENT = 1,
+	CACHEPICFLAG_QUIET = 2,
+	CACHEPICFLAG_NOCOMPRESSION = 4,
+}
+cachepicflags_t;
+
 void Draw_Init (void);
-cachepic_t *Draw_CachePic (const char *path, qboolean persistent);
+cachepic_t *Draw_CachePic_Flags (const char *path, unsigned int cachepicflags);
+cachepic_t *Draw_CachePic (const char *path); // standard function with no options, used throughout engine
 // create or update a pic's image
 cachepic_t *Draw_NewPic(const char *picname, int width, int height, int alpha, unsigned char *pixels);
 // free the texture memory used by a pic

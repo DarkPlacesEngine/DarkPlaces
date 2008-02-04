@@ -323,16 +323,14 @@ qboolean S_LoadSound (sfx_t *sfx, qboolean complain)
 	// Initialize volume peak to 0; if ReplayGain is supported, the loader will change this away
 	sfx->volume_peak = 0.0;
 
+	if (developer_loading.integer)
+		Con_Printf("loading sound %s\n", sfx->name);
+
 	// LordHavoc: if the sound filename does not begin with sound/, try adding it
 	if (strncasecmp(sfx->name, "sound/", 6))
 	{
-		len = dpsnprintf (namebuffer, sizeof(namebuffer), "sound/%s", sfx->name);
-		if (len < 0)
-		{
-			// name too long
-			Con_DPrintf("S_LoadSound: name \"%s\" is too long\n", sfx->name);
-			return false;
-		}
+		dpsnprintf (namebuffer, sizeof(namebuffer), "sound/%s", sfx->name);
+		len = strlen(namebuffer);
 		if (len >= 4 && !strcasecmp (namebuffer + len - 4, ".wav"))
 		{
 			if (S_LoadWavFile (namebuffer, sfx))
@@ -352,13 +350,8 @@ qboolean S_LoadSound (sfx_t *sfx, qboolean complain)
 	}
 
 	// LordHavoc: then try without the added sound/ as wav and ogg
-	len = dpsnprintf (namebuffer, sizeof(namebuffer), "%s", sfx->name);
-	if (len < 0)
-	{
-		// name too long
-		Con_DPrintf("S_LoadSound: name \"%s\" is too long\n", sfx->name);
-		return false;
-	}
+	dpsnprintf (namebuffer, sizeof(namebuffer), "%s", sfx->name);
+	len = strlen(namebuffer);
 	// request foo.wav: tries foo.wav, then foo.ogg
 	// request foo.ogg: tries foo.ogg only
 	// request foo.mod: tries foo.mod only
@@ -382,6 +375,6 @@ qboolean S_LoadSound (sfx_t *sfx, qboolean complain)
 	// Can't load the sound!
 	sfx->flags |= SFXFLAG_FILEMISSING;
 	if (complain)
-		Con_DPrintf("S_LoadSound: Couldn't load \"%s\"\n", sfx->name);
+		Con_DPrintf("failed to load sound \"%s\"\n", sfx->name);
 	return false;
 }

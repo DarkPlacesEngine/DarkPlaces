@@ -69,6 +69,8 @@ cvar_t cl_maxfps = {CVAR_SAVE, "cl_maxfps", "1000000", "maximum fps cap, if game
 cvar_t cl_maxidlefps = {CVAR_SAVE, "cl_maxidlefps", "20", "maximum fps cap when the game is not the active window (makes cpu time available to other programs"};
 
 cvar_t developer = {0, "developer","0", "prints additional debugging messages and information (recommended for modders and level designers)"};
+cvar_t developer_loadfile = {0, "developer_loadfile","0", "prints name and size of every file loaded via the FS_LoadFile function (which is almost everything)"};
+cvar_t developer_loading = {0, "developer_loading","0", "prints information about files as they are loaded or unloaded successfully"};
 cvar_t developer_entityparsing = {0, "developer_entityparsing", "0", "prints detailed network entities information each time a packet is received"};
 
 cvar_t timestamps = {CVAR_SAVE, "timestamps", "0", "prints timestamps on console messages"};
@@ -217,6 +219,8 @@ static void Host_InitLocal (void)
 	Cvar_RegisterVariable (&cl_maxidlefps);
 
 	Cvar_RegisterVariable (&developer);
+	Cvar_RegisterVariable (&developer_loadfile);
+	Cvar_RegisterVariable (&developer_loading);
 	Cvar_RegisterVariable (&developer_entityparsing);
 
 	Cvar_RegisterVariable (&timestamps);
@@ -966,8 +970,8 @@ static void Host_Init (void)
 // COMMANDLINEOPTION: Console: -developer enables warnings and other notices (RECOMMENDED for mod developers)
 	if (COM_CheckParm("-developer"))
 	{
-		developer.value = developer.integer = 100;
-		developer.string = "100";
+		developer.value = developer.integer = 1;
+		developer.string = "1";
 	}
 
 	if (COM_CheckParm("-developer2"))
@@ -1034,7 +1038,7 @@ static void Host_Init (void)
 
 	if (cls.state != ca_dedicated)
 	{
-		Con_Printf("Initializing client\n");
+		Con_DPrintf("Initializing client\n");
 
 		R_Modules_Init();
 		Palette_Init();
