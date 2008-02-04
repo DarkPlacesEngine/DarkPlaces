@@ -76,11 +76,11 @@ void World_PrintAreaStats(world_t *world, const char *worldname)
 
 /*
 ===============
-World_Clear
+World_SetSize
 
 ===============
 */
-void World_Clear(world_t *world)
+void World_SetSize(world_t *world, const vec3_t mins, const vec3_t maxs)
 {
 	int i;
 	// the areagrid_marknumber is not allowed to be 0
@@ -105,9 +105,28 @@ void World_Clear(world_t *world)
 	World_ClearLink(&world->areagrid_outside);
 	for (i = 0;i < AREA_GRIDNODES;i++)
 		World_ClearLink(&world->areagrid[i]);
-	Con_DPrintf("areagrid settings: divisions %ix%ix1 : box %f %f %f : %f %f %f size %f %f %f grid %f %f %f (mingrid %f)\n", AREA_GRID, AREA_GRID, world->areagrid_mins[0], world->areagrid_mins[1], world->areagrid_mins[2], world->areagrid_maxs[0], world->areagrid_maxs[1], world->areagrid_maxs[2], world->areagrid_size[0], world->areagrid_size[1], world->areagrid_size[2], 1.0f / world->areagrid_scale[0], 1.0f / world->areagrid_scale[1], 1.0f / world->areagrid_scale[2], sv_areagrid_mingridsize.value);
+	if (developer.integer >= 10)
+		Con_Printf("areagrid settings: divisions %ix%ix1 : box %f %f %f : %f %f %f size %f %f %f grid %f %f %f (mingrid %f)\n", AREA_GRID, AREA_GRID, world->areagrid_mins[0], world->areagrid_mins[1], world->areagrid_mins[2], world->areagrid_maxs[0], world->areagrid_maxs[1], world->areagrid_maxs[2], world->areagrid_size[0], world->areagrid_size[1], world->areagrid_size[2], 1.0f / world->areagrid_scale[0], 1.0f / world->areagrid_scale[1], 1.0f / world->areagrid_scale[2], sv_areagrid_mingridsize.value);
 }
 
+/*
+===============
+World_UnlinkAll
+
+===============
+*/
+void World_UnlinkAll(world_t *world)
+{
+	int i;
+	link_t *grid;
+	// unlink all entities one by one
+	grid = &world->areagrid_outside;
+	while (grid->next != grid)
+		World_UnlinkEdict(PRVM_EDICT_NUM(grid->next->entitynumber));
+	for (i = 0, grid = world->areagrid;i < AREA_GRIDNODES;i++, grid++)
+		while (grid->next != grid)
+			World_UnlinkEdict(PRVM_EDICT_NUM(grid->next->entitynumber));
+}
 
 /*
 ===============

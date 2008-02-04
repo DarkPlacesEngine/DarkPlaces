@@ -66,7 +66,9 @@ void World_InsertLinkBefore(link_t *l, link_t *before, int entitynumber);
 void World_Init(void);
 
 // called after the world model has been loaded, before linking any entities
-void World_Clear(world_t *world);
+void World_SetSize(world_t *world, const vec3_t mins, const vec3_t maxs);
+// unlinks all entities (used before reallocation of edicts)
+void World_UnlinkAll(world_t *world);
 
 void World_PrintAreaStats(world_t *world, const char *worldname);
 
