@@ -415,6 +415,7 @@ typedef struct cshift_s
 
 typedef enum cactive_e
 {
+	ca_uninitialized,	// during early startup
 	ca_dedicated, 		// a dedicated server with no ability to start a client
 	ca_disconnected, 	// full screen console with no connection
 	ca_connected		// valid netcon, talking to a server
