@@ -592,17 +592,8 @@ void CSQC_ReadEntities (void)
 
 void CL_VM_CB_BeginIncreaseEdicts(void)
 {
-	int i;
-	prvm_edict_t *ent;
-
 	// links don't survive the transition, so unlink everything
-	for (i = 0, ent = prog->edicts;i < prog->max_edicts;i++, ent++)
-	{
-		if (!ent->priv.server->free)
-			World_UnlinkEdict(prog->edicts + i);
-		memset(&ent->priv.server->areagrid, 0, sizeof(ent->priv.server->areagrid));
-	}
-	World_Clear(&cl.world);
+	World_UnlinkAll(&cl.world);
 }
 
 void CL_VM_CB_EndIncreaseEdicts(void)

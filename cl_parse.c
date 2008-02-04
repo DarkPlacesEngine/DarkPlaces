@@ -387,6 +387,8 @@ void CL_ParseEntityLump(char *entdata)
 
 extern void CL_Locs_Reload_f(void);
 extern void CL_VM_Init (void);
+static const vec3_t defaultmins = {-4096, -4096, -4096};
+static const vec3_t defaultmaxs = {4096, 4096, 4096};
 static void CL_SetupWorldModel(void)
 {
 	// update the world model
@@ -395,16 +397,9 @@ static void CL_SetupWorldModel(void)
 
 	// set up csqc world for collision culling
 	if (cl.worldmodel)
-	{
-		VectorCopy(cl.worldmodel->normalmins, cl.world.areagrid_mins);
-		VectorCopy(cl.worldmodel->normalmaxs, cl.world.areagrid_maxs);
-	}
+		World_SetSize(&cl.world, cl.worldmodel->normalmins, cl.worldmodel->normalmaxs);
 	else
-	{
-		VectorSet(cl.world.areagrid_mins, -4096, -4096, -4096);
-		VectorSet(cl.world.areagrid_maxs, 4096, 4096, 4096);
-	}
-	World_Clear(&cl.world);
+		World_SetSize(&cl.world, defaultmins, defaultmaxs);
 
 	// load or reload .loc file for team chat messages
 	CL_Locs_Reload_f();

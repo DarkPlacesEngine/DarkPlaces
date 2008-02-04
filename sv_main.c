@@ -2606,9 +2606,7 @@ void SV_SpawnServer (const char *server)
 //
 // clear world interaction links
 //
-	VectorCopy(sv.worldmodel->normalmins, sv.world.areagrid_mins);
-	VectorCopy(sv.worldmodel->normalmaxs, sv.world.areagrid_maxs);
-	World_Clear(&sv.world);
+	World_SetSize(&sv.world, sv.worldmodel->normalmins, sv.worldmodel->normalmaxs);
 
 	strlcpy(sv.sound_precache[0], "", sizeof(sv.sound_precache[0]));
 
@@ -2726,17 +2724,8 @@ void SV_SpawnServer (const char *server)
 
 static void SV_VM_CB_BeginIncreaseEdicts(void)
 {
-	int i;
-	prvm_edict_t *ent;
-
 	// links don't survive the transition, so unlink everything
-	for (i = 0, ent = prog->edicts;i < prog->max_edicts;i++, ent++)
-	{
-		if (!ent->priv.server->free)
-			World_UnlinkEdict(prog->edicts + i);
-		memset(&ent->priv.server->areagrid, 0, sizeof(ent->priv.server->areagrid));
-	}
-	World_Clear(&sv.world);
+	World_UnlinkAll(&sv.world);
 }
 
 static void SV_VM_CB_EndIncreaseEdicts(void)
