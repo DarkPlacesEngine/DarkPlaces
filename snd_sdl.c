@@ -83,7 +83,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 	SDL_AudioSpec wantspec;
 	SDL_AudioSpec obtainspec;
 
-	Con_DSPrint ("SndSys_Init: using the SDL module\n");
+	Con_DPrint ("SndSys_Init: using the SDL module\n");
 
 	// Init the SDL Audio subsystem
 	if( SDL_InitSubSystem( SDL_INIT_AUDIO ) ) {
