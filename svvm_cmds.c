@@ -970,18 +970,52 @@ static void VM_SV_droptofloor (void)
 	VectorCopy (ent->fields.server->origin, end);
 	end[2] -= 256;
 
-	trace = SV_Move (ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, end, MOVE_NORMAL, ent, SV_GenericHitSuperContentsMask(ent));
+	if (sv_gameplayfix_droptofloorstartsolid_nudgetocorrect.integer)
+		SV_UnstickEntity(ent);
 
-	if (trace.fraction != 1 || (trace.startsolid && sv_gameplayfix_droptofloorstartsolid.integer))
+	trace = SV_Move (ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, end, MOVE_NORMAL, ent, SV_GenericHitSuperContentsMask(ent));
+	if (trace.startsolid && sv_gameplayfix_droptofloorstartsolid.integer)
 	{
-		if (trace.fraction < 1)
+		vec3_t offset, org;
+		VectorSet(offset, 0.5f * (ent->fields.server->mins[0] + ent->fields.server->maxs[0]), 0.5f * (ent->fields.server->mins[1] + ent->fields.server->maxs[1]), ent->fields.server->mins[2]);
+		VectorAdd(ent->fields.server->origin, offset, org);
+		trace = SV_Move (org, vec3_origin, vec3_origin, end, MOVE_NORMAL, ent, SV_GenericHitSuperContentsMask(ent));
+		VectorSubtract(trace.endpos, offset, trace.endpos);
+		if (trace.startsolid)
+		{
+			Con_DPrintf("droptofloor at %f %f %f - COULD NOT FIX BADLY PLACED ENTITY\n", ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2]);
+			SV_UnstickEntity(ent);
+			SV_LinkEdict (ent, false);
+			ent->fields.server->flags = (int)ent->fields.server->flags | FL_ONGROUND;
+			ent->fields.server->groundentity = 0;
+			PRVM_G_FLOAT(OFS_RETURN) = 1;
+		}
+		else if (trace.fraction < 1)
+		{
+			Con_DPrintf("droptofloor at %f %f %f - FIXED BADLY PLACED ENTITY\n", ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2]);
 			VectorCopy (trace.endpos, ent->fields.server->origin);
-		SV_LinkEdict (ent, false);
-		ent->fields.server->flags = (int)ent->fields.server->flags | FL_ONGROUND;
-		ent->fields.server->groundentity = PRVM_EDICT_TO_PROG(trace.ent);
-		PRVM_G_FLOAT(OFS_RETURN) = 1;
-		// if support is destroyed, keep suspended (gross hack for floating items in various maps)
-		ent->priv.server->suspendedinairflag = true;
+			SV_UnstickEntity(ent);
+			SV_LinkEdict (ent, false);
+			ent->fields.server->flags = (int)ent->fields.server->flags | FL_ONGROUND;
+			ent->fields.server->groundentity = PRVM_EDICT_TO_PROG(trace.ent);
+			PRVM_G_FLOAT(OFS_RETURN) = 1;
+			// if support is destroyed, keep suspended (gross hack for floating items in various maps)
+			ent->priv.server->suspendedinairflag = true;
+		}
+	}
+	else
+	{
+		if (trace.fraction != 1)
+		{
+			if (trace.fraction < 1)
+				VectorCopy (trace.endpos, ent->fields.server->origin);
+			SV_LinkEdict (ent, false);
+			ent->fields.server->flags = (int)ent->fields.server->flags | FL_ONGROUND;
+			ent->fields.server->groundentity = PRVM_EDICT_TO_PROG(trace.ent);
+			PRVM_G_FLOAT(OFS_RETURN) = 1;
+			// if support is destroyed, keep suspended (gross hack for floating items in various maps)
+			ent->priv.server->suspendedinairflag = true;
+		}
 	}
 }
 

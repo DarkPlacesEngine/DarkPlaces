@@ -372,6 +372,7 @@ extern cvar_t sv_friction;
 extern cvar_t sv_gameplayfix_blowupfallenzombies;
 extern cvar_t sv_gameplayfix_delayprojectiles;
 extern cvar_t sv_gameplayfix_droptofloorstartsolid;
+extern cvar_t sv_gameplayfix_droptofloorstartsolid_nudgetocorrect;
 extern cvar_t sv_gameplayfix_easierwaterjump;
 extern cvar_t sv_gameplayfix_findradiusdistancetobox;
 extern cvar_t sv_gameplayfix_grenadebouncedownslopes;
@@ -466,6 +467,10 @@ qboolean SV_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qboolean 
 // sets ent->v.absmin and ent->v.absmax
 // if touchtriggers, calls prog functions for the intersected triggers
 void SV_LinkEdict (prvm_edict_t *ent, qboolean touch_triggers);
+
+// move an entity that is stuck by small amounts in various directions to try to nudge it back into the collision hull
+// returns true if it found a better place
+qboolean SV_UnstickEntity (prvm_edict_t *ent);
 
 // calculates hitsupercontentsmask for a generic qc entity
 int SV_GenericHitSuperContentsMask(const prvm_edict_t *edict);

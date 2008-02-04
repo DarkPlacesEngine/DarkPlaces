@@ -79,6 +79,7 @@ cvar_t sv_friction = {CVAR_NOTIFY, "sv_friction","4", "how fast you slow down"};
 cvar_t sv_gameplayfix_blowupfallenzombies = {0, "sv_gameplayfix_blowupfallenzombies", "1", "causes findradius to detect SOLID_NOT entities such as zombies and corpses on the floor, allowing splash damage to apply to them"};
 cvar_t sv_gameplayfix_delayprojectiles = {0, "sv_gameplayfix_delayprojectiles", "1", "causes entities to not move on the same frame they are spawned, meaning that projectiles wait until the next frame to perform their first move, giving proper interpolation and rocket trails, but making weapons harder to use at low framerates"};
 cvar_t sv_gameplayfix_droptofloorstartsolid = {0, "sv_gameplayfix_droptofloorstartsolid", "1", "prevents items and monsters that start in a solid area from falling out of the level (makes droptofloor treat trace_startsolid as an acceptable outcome)"};
+cvar_t sv_gameplayfix_droptofloorstartsolid_nudgetocorrect = {0, "sv_gameplayfix_droptofloorstartsolid_nudgetocorrect", "1", "tries to nudge stuck items and monsters out of walls before droptofloor is performed"};
 cvar_t sv_gameplayfix_easierwaterjump = {0, "sv_gameplayfix_easierwaterjump", "1", "changes water jumping to make it easier to get out of water (exactly like in QuakeWorld)"};
 cvar_t sv_gameplayfix_findradiusdistancetobox = {0, "sv_gameplayfix_findradiusdistancetobox", "1", "causes findradius to check the distance to the corner of a box rather than the center of the box, makes findradius detect bmodels such as very large doors that would otherwise be unaffected by splash damage"};
 cvar_t sv_gameplayfix_grenadebouncedownslopes = {0, "sv_gameplayfix_grenadebouncedownslopes", "1", "prevents MOVETYPE_BOUNCE (grenades) from getting stuck when fired down a downward sloping surface"};
@@ -349,6 +350,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_gameplayfix_blowupfallenzombies);
 	Cvar_RegisterVariable (&sv_gameplayfix_delayprojectiles);
 	Cvar_RegisterVariable (&sv_gameplayfix_droptofloorstartsolid);
+	Cvar_RegisterVariable (&sv_gameplayfix_droptofloorstartsolid_nudgetocorrect);
 	Cvar_RegisterVariable (&sv_gameplayfix_easierwaterjump);
 	Cvar_RegisterVariable (&sv_gameplayfix_findradiusdistancetobox);
 	Cvar_RegisterVariable (&sv_gameplayfix_grenadebouncedownslopes);
@@ -430,6 +432,8 @@ void SV_Init (void)
 	{
 		// hipnotic mission pack has issues in their 'friendly monster' ai, which seem to attempt to attack themselves for some reason when findradius() returns non-solid entities.
 		Cvar_SetValueQuick (&sv_gameplayfix_blowupfallenzombies, 0);
+		// hipnotic mission pack has issues with bobbing water entities 'jittering' between different heights on alternate frames at the default 0.0138889 ticrate, 0.02 avoids this issue
+		Cvar_SetValueQuick (&sys_ticrate, 0.02);
 	}
 	if (gamemode == GAME_ROGUE)
 	{
