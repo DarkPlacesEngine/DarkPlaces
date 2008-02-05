@@ -2198,7 +2198,22 @@ void VM_clientstate(void)
 {
 	VM_SAFEPARMCOUNT(0,VM_clientstate);
 
-	PRVM_G_FLOAT(OFS_RETURN) = cls.state;
+
+	switch( cls.state ) {
+		case ca_uninitialized:
+		case ca_dedicated:
+			PRVM_G_FLOAT(OFS_RETURN) = 0;
+			break;
+		case ca_disconnected:
+			PRVM_G_FLOAT(OFS_RETURN) = 1;
+			break;
+		case ca_connected:
+			PRVM_G_FLOAT(OFS_RETURN) = 2;
+			break;
+		default:
+			// should never be reached!
+			break;
+	}
 }
 
 /*
