@@ -5093,6 +5093,8 @@ void MP_Draw (void)
 	// menu scenes do not use reduced rendering quality
 	oldquality = r_refdef.view.quality;
 	r_refdef.view.quality = 1;
+	// TODO: this needs to be exposed to R_SetView (or something similar) ASAP [2/5/2008 Andreas]
+	r_refdef.scene.time = realtime;
 
 	PRVM_Begin;
 	PRVM_SetProg(PRVM_MENUPROG);

@@ -114,7 +114,7 @@ void VM_CL_setmodel (void)
 
 	if( mod ) {
 		// TODO: check if this breaks needed consistency and maybe add a cvar for it too?? [1/10/2008 Black]
-		SetMinMaxSize (e, mod->normalmins, mod->normalmaxs);
+		//SetMinMaxSize (e, mod->normalmins, mod->normalmaxs);
 	} 
 	else
 	{
