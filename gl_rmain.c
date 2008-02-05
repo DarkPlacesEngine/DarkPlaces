@@ -3711,6 +3711,10 @@ void R_RenderView(void)
 		R_ClearScreen(r_refdef.fogenabled);
 		if (r_timereport_active)
 			R_TimeReport("viewclear");
+	} else {
+		// TODO: FIXME: move this into its own backend function maybe? [2/5/2008 Andreas]
+		GL_Clear( GL_DEPTH_BUFFER_BIT );
+		R_TimeReport("depthclear");
 	}
 	r_refdef.view.clear = true;
 
