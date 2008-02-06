@@ -88,6 +88,7 @@ float	gettime()
 		parseentitydata(entity ent, string data)
 float	mod(float val, float m)
 const string	cvar_string (string)
+float	cvar_type (string)
 		crash()
 		stackdump()
 
@@ -232,6 +233,7 @@ void VM_break (void);
 void VM_localcmd (void);
 void VM_cvar (void);
 void VM_cvar_string(void);
+void VM_cvar_type (void);
 void VM_cvar_defstring (void);
 void VM_cvar_set (void);
 void VM_dprint (void);

@@ -25,6 +25,7 @@ char *vm_m_extensions =
 "DP_QC_STRINGBUFFERS "
 "DP_QC_CRC16 "
 "FTE_STRINGS "
+"DP_QC_CVAR_TYPE "
 ;
 
 /*
@@ -1281,7 +1282,7 @@ VM_gecko_movemouse,				// #491 void gecko_mousemove( string name, float x, float
 VM_gecko_resize,					// #492 void gecko_resize( string name, float w, float h )
 VM_gecko_get_texture_extent,	// #493 vector gecko_get_texture_extent( string name )
 VM_crc16,						// #494 float(float caseinsensitive, string s, ...) crc16 = #494 (DP_QC_CRC16)
-NULL,									// #495
+VM_cvar_type,					// #495 float(string name) cvar_type = #495; (DP_QC_CVAR_TYPE)
 NULL,									// #496
 NULL,									// #497
 NULL,									// #498

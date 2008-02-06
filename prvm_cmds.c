@@ -430,6 +430,49 @@ void VM_cvar (void)
 
 /*
 =================
+VM_cvar
+
+float cvar_type (string)
+float CVAR_TYPEFLAG_EXISTS = 1;
+float CVAR_TYPEFLAG_SAVED = 2;
+float CVAR_TYPEFLAG_PRIVATE = 4;
+float CVAR_TYPEFLAG_ENGINE = 8;
+float CVAR_TYPEFLAG_HASDESCRIPTION = 16;
+=================
+*/
+void VM_cvar_type (void)
+{
+	char string[VM_STRINGTEMP_LENGTH];
+	cvar_t *cvar;
+	int ret;
+
+	VM_SAFEPARMCOUNTRANGE(1,8,VM_cvar);
+	VM_VarString(0, string, sizeof(string));
+	VM_CheckEmptyString(string);
+	cvar = Cvar_FindVar(string);
+
+
+	if(!cvar)
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = 0;
+		return; // CVAR_TYPE_NONE
+	}
+
+	ret = 1; // CVAR_EXISTS
+	if(cvar->flags & CVAR_SAVE)
+		ret |= 2; // CVAR_TYPE_SAVED
+	if(cvar->flags & CVAR_PRIVATE)
+		ret |= 4; // CVAR_TYPE_PRIVATE
+	if(!(cvar->flags & CVAR_ALLOCATED))
+		ret |= 8; // CVAR_TYPE_ENGINE
+	if(strcmp(cvar->description, "custom cvar")) // has to match Cvar_Get's placeholder string
+		ret |= 16; // CVAR_TYPE_HASDESCRIPTION
+	
+	PRVM_G_FLOAT(OFS_RETURN) = ret;
+}
+
+/*
+=================
 VM_cvar_string
 
 const string	VM_cvar_string (string, ...)

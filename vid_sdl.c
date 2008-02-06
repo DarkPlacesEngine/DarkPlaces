@@ -28,7 +28,7 @@ int cl_available = true;
 qboolean vid_supportrefreshrate = false;
 
 cvar_t joy_detected = {CVAR_READONLY, "joy_detected", "0", "number of joysticks detected by engine"};
-cvar_t joy_enable = {0, "joy_enable", "1", "enables joystick support"};
+cvar_t joy_enable = {CVAR_SAVE, "joy_enable", "0", "enables joystick support"};
 cvar_t joy_index = {0, "joy_index", "0", "selects which joystick to use if you have multiple"};
 cvar_t joy_axisforward = {0, "joy_axisforward", "1", "which joystick axis to query for forward/backward movement"};
 cvar_t joy_axisside = {0, "joy_axisside", "0", "which joystick axis to query for right/left movement"};
