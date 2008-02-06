@@ -55,6 +55,7 @@ char *vm_sv_extensions =
 "DP_QC_CHANGEPITCH "
 "DP_QC_COPYENTITY "
 "DP_QC_CVAR_DEFSTRING "
+"DP_QC_CVAR_TYPE "
 "DP_QC_CVAR_STRING "
 "DP_QC_ETOS "
 "DP_QC_FINDCHAIN "
@@ -3342,7 +3343,7 @@ NULL,							// #491
 NULL,							// #492
 NULL,							// #493
 VM_crc16,						// #494 float(float caseinsensitive, string s, ...) crc16 = #494 (DP_QC_CRC16)
-NULL,							// #495
+VM_cvar_type,					// #495 float(string name) cvar_type = #495; (DP_QC_CVAR_TYPE)
 NULL,							// #496
 NULL,							// #497
 NULL,							// #498

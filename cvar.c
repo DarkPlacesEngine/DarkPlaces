@@ -474,7 +474,7 @@ cvar_t *Cvar_Get (const char *name, const char *value, int flags)
 	memcpy(cvar->defstring, value, alloclen);
 	cvar->value = atof (cvar->string);
 	cvar->integer = (int) cvar->value;
-	cvar->description = "custom cvar";
+	cvar->description = "custom cvar"; // actually checked by VM_cvar_type
 
 // link the variable in
 // alphanumerical order
