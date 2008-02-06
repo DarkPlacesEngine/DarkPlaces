@@ -1462,7 +1462,7 @@ void Mod_LoadQ3Shaders(void)
 					layer->texflags = TEXF_ALPHA | TEXF_PRECACHE;
 					if (!(shader.surfaceparms & Q3SURFACEPARM_NOMIPMAPS))
 						layer->texflags |= TEXF_MIPMAP;
-					if (!(shader.textureflags & Q3TEXTUREFLAG_NOPICMIP) && (r_picmipworld.integer || strncmp(layer->texturename[0], "textures/", 9)))
+					if (!(shader.textureflags & Q3TEXTUREFLAG_NOPICMIP) && (r_picmipworld.integer || (layer->texturename && layer->texturename[0] && strncmp(layer->texturename[0], "textures/", 9))))
 						layer->texflags |= TEXF_PICMIP | TEXF_COMPRESS;
 					if (layer->clampmap)
 						layer->texflags |= TEXF_CLAMP;
