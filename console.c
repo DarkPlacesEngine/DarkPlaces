@@ -2202,7 +2202,7 @@ void Con_CompleteCommandLine (void)
 	char command[512];
 	int c, v, a, i, cmd_len, pos, k;
 	int n; // nicks --blub
-	const char *space;
+	const char *space, *patterns;
 	
 	//find what we want to complete
 	pos = key_linepos;
@@ -2222,7 +2222,12 @@ void Con_CompleteCommandLine (void)
 	if(space && pos == (space - key_lines[edit_line]) + 1)
 	{
 		strlcpy(command, key_lines[edit_line] + 1, min(sizeof(command), (unsigned int)(space - key_lines[edit_line])));
-		if(!strcmp(command, "map") || !strcmp(command, "changelevel"))
+
+		patterns = Cvar_VariableString(va("con_completion_%s", command)); // TODO maybe use a better place for this?
+		if(patterns && !*patterns)
+			patterns = NULL; // get rid of the empty string
+
+		if(!strcmp(command, "map") || !strcmp(command, "changelevel") || (patterns && !strcmp(patterns, "map")))
 		{
 			//maps search
 			char t[MAX_QPATH];
@@ -2244,9 +2249,7 @@ void Con_CompleteCommandLine (void)
 		}
 		else
 		{
-			const char *patterns = Cvar_VariableString(va("con_completion_%s", command)); // TODO maybe use a better place for this?
-
-			if(patterns && *patterns)
+			if(patterns)
 			{
 				char t[MAX_QPATH];
 				stringlist_t resultbuf, dirbuf;
