@@ -948,13 +948,17 @@ float DrawQ_String_Font(float startx, float starty, const char *text, size_t max
 {
 	int num, shadow, colorindex = STRING_COLOR_DEFAULT;
 	size_t i;
-	float x = startx, y, s, t, u, v;
+	float x = startx, y, s, t, u, v, thisw;
 	float *av, *at, *ac;
 	float color[4];
 	int batchcount;
 	float vertex3f[QUADELEMENTS_MAXQUADS*4*3];
 	float texcoord2f[QUADELEMENTS_MAXQUADS*4*2];
 	float color4f[QUADELEMENTS_MAXQUADS*4*4];
+
+	int tw, th;
+	tw = R_TextureWidth(fnt->tex);
+	th = R_TextureHeight(fnt->tex);
 
 	if (maxlen < 1)
 		maxlen = 1<<30;
@@ -1010,11 +1014,12 @@ float DrawQ_String_Font(float startx, float starty, const char *text, size_t max
 				}
 			}
 			num = (unsigned char) text[i];
+			thisw = fnt->width_of[num];
 			// FIXME make these smaller to just include the occupied part of the character for slightly faster rendering
-			s = (num & 15)*0.0625f + (0.5f / 256.0f);
-			t = (num >> 4)*0.0625f + (0.5f / 256.0f);
-			u = 0.0625f - (1.0f / 256.0f);
-			v = 0.0625f - (1.0f / 256.0f);
+			s = (num & 15)*0.0625f + (0.5f / tw);
+			t = (num >> 4)*0.0625f + (0.5f / th);
+			u = 0.0625f * thisw - (1.0f / tw);
+			v = 0.0625f - (1.0f / th);
 			ac[ 0] = color[0];ac[ 1] = color[1];ac[ 2] = color[2];ac[ 3] = color[3];
 			ac[ 4] = color[0];ac[ 5] = color[1];ac[ 6] = color[2];ac[ 7] = color[3];
 			ac[ 8] = color[0];ac[ 9] = color[1];ac[10] = color[2];ac[11] = color[3];
@@ -1024,8 +1029,8 @@ float DrawQ_String_Font(float startx, float starty, const char *text, size_t max
 			at[ 4] = s+u;at[ 5] = t+v;
 			at[ 6] = s  ;at[ 7] = t+v;
 			av[ 0] = x  ;av[ 1] = y  ;av[ 2] = 10;
-			av[ 3] = x+w;av[ 4] = y  ;av[ 5] = 10;
-			av[ 6] = x+w;av[ 7] = y+h;av[ 8] = 10;
+			av[ 3] = x+w*thisw;av[ 4] = y  ;av[ 5] = 10;
+			av[ 6] = x+w*thisw;av[ 7] = y+h;av[ 8] = 10;
 			av[ 9] = x  ;av[10] = y+h;av[11] = 10;
 			ac += 16;
 			at += 8;
@@ -1041,7 +1046,7 @@ float DrawQ_String_Font(float startx, float starty, const char *text, size_t max
 				at = texcoord2f;
 				av = vertex3f;
 			}
-			x += fnt->width_of[num] * w;
+			x += thisw * w;
 		}
 	}
 	if (batchcount > 0)
