@@ -490,17 +490,10 @@ void CL_AdjustAngles (void)
 		V_StopPitchDrift ();
 
 	cl.viewangles[YAW] = ANGLEMOD(cl.viewangles[YAW]);
-	cl.viewangles[PITCH] = ANGLEMOD(cl.viewangles[PITCH]);
-	cl.viewangles[ROLL] = ANGLEMOD(cl.viewangles[ROLL]);
 	if (cl.viewangles[YAW] >= 180)
 		cl.viewangles[YAW] -= 360;
-	if (cl.viewangles[PITCH] >= 180)
-		cl.viewangles[PITCH] -= 360;
-	if (cl.viewangles[ROLL] >= 180)
-		cl.viewangles[ROLL] -= 360;
-
-	cl.viewangles[PITCH] = bound (in_pitch_min.value, cl.viewangles[PITCH], in_pitch_max.value);
-	cl.viewangles[ROLL] = bound(-50, cl.viewangles[ROLL], 50);
+	cl.viewangles[PITCH] = bound(in_pitch_min.value, cl.viewangles[PITCH], in_pitch_max.value);
+	cl.viewangles[ROLL] = bound(-180, cl.viewangles[ROLL], 180);
 }
 
 int cl_ignoremousemoves = 2;
