@@ -613,7 +613,7 @@ void VID_Init(void)
 		mouse_avail = false;
 }
 
-void VID_BuildGLXAttrib(int *attrib, qboolean stencil, qboolean stereobuffer)
+void VID_BuildGLXAttrib(int *attrib, qboolean stencil, qboolean stereobuffer, int samples)
 {
 	*attrib++ = GLX_RGBA;
 	*attrib++ = GLX_RED_SIZE;*attrib++ = 1;
@@ -629,10 +629,17 @@ void VID_BuildGLXAttrib(int *attrib, qboolean stencil, qboolean stereobuffer)
 	}
 	if (stereobuffer)
 		*attrib++ = GLX_STEREO;
+	if (samples)
+	{
+		*attrib++ = GLX_SAMPLE_BUFFERS_ARB;
+		*attrib++ = 1;
+		*attrib++ = GLX_SAMPLES_ARB;
+		*attrib++ = samples;
+	}
 	*attrib++ = None;
 }
 
-int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate, int stereobuffer)
+int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate, int stereobuffer, int samples)
 {
 	int i;
 	int attrib[32];
@@ -693,7 +700,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 		return false;
 	}
 
-	VID_BuildGLXAttrib(attrib, bpp == 32, stereobuffer);
+	VID_BuildGLXAttrib(attrib, bpp == 32, stereobuffer, samples);
 	visinfo = qglXChooseVisual(vidx11_display, vidx11_screen, attrib);
 	if (!visinfo)
 	{

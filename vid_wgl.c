@@ -55,6 +55,8 @@ static PROC (WINAPI *qwglGetProcAddress)(LPCSTR);
 static BOOL (WINAPI *qwglMakeCurrent)(HDC, HGLRC);
 static BOOL (WINAPI *qwglSwapIntervalEXT)(int interval);
 static const char *(WINAPI *qwglGetExtensionsStringARB)(HDC hdc);
+static BOOL (WINAPI *qwglChoosePixelFormatARB)(HDC hdc, const int *piAttribIList, const FLOAT *pfAttribFList, UINT nMaxFormats, int *piFormats, UINT *nNumFormats);
+static BOOL (WINAPI *qwglGetPixelFormatAttribivARB)(HDC hdc, int iPixelFormat, int iLayerPlane, UINT nAttributes, const int *piAttributes, int *piValues);
 
 static dllfunction_t wglfuncs[] =
 {
@@ -75,6 +77,13 @@ static dllfunction_t wglfuncs[] =
 static dllfunction_t wglswapintervalfuncs[] =
 {
 	{"wglSwapIntervalEXT", (void **) &qwglSwapIntervalEXT},
+	{NULL, NULL}
+};
+
+static dllfunction_t wglpixelformatfuncs[] =
+{
+	{"wglChoosePixelFormatARB", (void **) &qwglChoosePixelFormatARB},
+	{"wglGetPixelFormatAttribivARB", (void **) &qwglGetPixelFormatAttribivARB},
 	{NULL, NULL}
 };
 
@@ -521,7 +530,7 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 
 		case WM_SYSCOMMAND:
 			// prevent screensaver from occuring while the active window
-			if (fActive && ((wParam & 0xFFF0) == SC_SCREENSAVE || (wParam & 0xFFF0) == SC_MONITORPOWER))
+			if (vid_activewindow && ((wParam & 0xFFF0) == SC_SCREENSAVE || (wParam & 0xFFF0) == SC_MONITORPOWER))
 				lRet = 0;; // note: password-locked screensavers on Vista still work
 			break;
 
@@ -681,6 +690,64 @@ void *GL_GetProcAddress(const char *name)
 	return p;
 }
 
+#ifndef WGL_ARB_pixel_format
+#define WGL_NUMBER_PIXEL_FORMATS_ARB   0x2000
+#define WGL_DRAW_TO_WINDOW_ARB         0x2001
+#define WGL_DRAW_TO_BITMAP_ARB         0x2002
+#define WGL_ACCELERATION_ARB           0x2003
+#define WGL_NEED_PALETTE_ARB           0x2004
+#define WGL_NEED_SYSTEM_PALETTE_ARB    0x2005
+#define WGL_SWAP_LAYER_BUFFERS_ARB     0x2006
+#define WGL_SWAP_METHOD_ARB            0x2007
+#define WGL_NUMBER_OVERLAYS_ARB        0x2008
+#define WGL_NUMBER_UNDERLAYS_ARB       0x2009
+#define WGL_TRANSPARENT_ARB            0x200A
+#define WGL_TRANSPARENT_RED_VALUE_ARB  0x2037
+#define WGL_TRANSPARENT_GREEN_VALUE_ARB 0x2038
+#define WGL_TRANSPARENT_BLUE_VALUE_ARB 0x2039
+#define WGL_TRANSPARENT_ALPHA_VALUE_ARB 0x203A
+#define WGL_TRANSPARENT_INDEX_VALUE_ARB 0x203B
+#define WGL_SHARE_DEPTH_ARB            0x200C
+#define WGL_SHARE_STENCIL_ARB          0x200D
+#define WGL_SHARE_ACCUM_ARB            0x200E
+#define WGL_SUPPORT_GDI_ARB            0x200F
+#define WGL_SUPPORT_OPENGL_ARB         0x2010
+#define WGL_DOUBLE_BUFFER_ARB          0x2011
+#define WGL_STEREO_ARB                 0x2012
+#define WGL_PIXEL_TYPE_ARB             0x2013
+#define WGL_COLOR_BITS_ARB             0x2014
+#define WGL_RED_BITS_ARB               0x2015
+#define WGL_RED_SHIFT_ARB              0x2016
+#define WGL_GREEN_BITS_ARB             0x2017
+#define WGL_GREEN_SHIFT_ARB            0x2018
+#define WGL_BLUE_BITS_ARB              0x2019
+#define WGL_BLUE_SHIFT_ARB             0x201A
+#define WGL_ALPHA_BITS_ARB             0x201B
+#define WGL_ALPHA_SHIFT_ARB            0x201C
+#define WGL_ACCUM_BITS_ARB             0x201D
+#define WGL_ACCUM_RED_BITS_ARB         0x201E
+#define WGL_ACCUM_GREEN_BITS_ARB       0x201F
+#define WGL_ACCUM_BLUE_BITS_ARB        0x2020
+#define WGL_ACCUM_ALPHA_BITS_ARB       0x2021
+#define WGL_DEPTH_BITS_ARB             0x2022
+#define WGL_STENCIL_BITS_ARB           0x2023
+#define WGL_AUX_BUFFERS_ARB            0x2024
+#define WGL_NO_ACCELERATION_ARB        0x2025
+#define WGL_GENERIC_ACCELERATION_ARB   0x2026
+#define WGL_FULL_ACCELERATION_ARB      0x2027
+#define WGL_SWAP_EXCHANGE_ARB          0x2028
+#define WGL_SWAP_COPY_ARB              0x2029
+#define WGL_SWAP_UNDEFINED_ARB         0x202A
+#define WGL_TYPE_RGBA_ARB              0x202B
+#define WGL_TYPE_COLORINDEX_ARB        0x202C
+#endif
+
+#ifndef WGL_ARB_multisample
+#define WGL_SAMPLE_BUFFERS_ARB         0x2041
+#define WGL_SAMPLES_ARB                0x2042
+#endif
+
+
 static void IN_Init(void);
 void VID_Init(void)
 {
@@ -710,7 +777,7 @@ void VID_Init(void)
 	IN_Init();
 }
 
-int VID_InitMode (int fullscreen, int width, int height, int bpp, int refreshrate, int stereobuffer)
+int VID_InitMode (int fullscreen, int width, int height, int bpp, int refreshrate, int stereobuffer, int samples)
 {
 	int i;
 	HDC hdc;
@@ -737,13 +804,19 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp, int refreshrat
 		0,				// reserved
 		0, 0, 0				// layer masks ignored
 	};
-	int pixelformat;
+	int windowpass;
+	int pixelformat, newpixelformat;
+	int numpixelformats;
 	DWORD WindowStyle, ExWindowStyle;
 	int CenterX, CenterY;
 	const char *gldrivername;
 	int depth;
 	DEVMODE thismode;
 	qboolean foundmode, foundgoodmode;
+	int *a;
+	float *af;
+	int attribs[128];
+	float attribsf[16];
 
 	if (vid_initialized)
 		Sys_Error("VID_InitMode called when video is already initialised");
@@ -762,6 +835,59 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp, int refreshrat
 
 	if (stereobuffer)
 		pfd.dwFlags |= PFD_STEREO;
+
+	a = attribs;
+	af = attribsf;
+	*a++ = WGL_DRAW_TO_WINDOW_ARB;
+	*a++ = GL_TRUE;
+	*a++ = WGL_ACCELERATION_ARB;
+	*a++ = WGL_FULL_ACCELERATION_ARB;
+	*a++ = WGL_DOUBLE_BUFFER_ARB;
+	*a++ = true;
+
+	if (bpp >= 32)
+	{
+		*a++ = WGL_RED_BITS_ARB;
+		*a++ = 8;
+		*a++ = WGL_GREEN_BITS_ARB;
+		*a++ = 8;
+		*a++ = WGL_BLUE_BITS_ARB;
+		*a++ = 8;
+		*a++ = WGL_ALPHA_BITS_ARB;
+		*a++ = 1;
+		*a++ = WGL_DEPTH_BITS_ARB;
+		*a++ = 24;
+		*a++ = WGL_STENCIL_BITS_ARB;
+		*a++ = 8;
+	}
+	else
+	{
+		*a++ = WGL_RED_BITS_ARB;
+		*a++ = 1;
+		*a++ = WGL_GREEN_BITS_ARB;
+		*a++ = 1;
+		*a++ = WGL_BLUE_BITS_ARB;
+		*a++ = 1;
+		*a++ = WGL_DEPTH_BITS_ARB;
+		*a++ = 16;
+	}
+
+	if (stereobuffer)
+	{
+		*a++ = WGL_STEREO_ARB;
+		*a++ = GL_TRUE;
+	}
+
+	if (samples > 1)
+	{
+		*a++ = WGL_SAMPLE_BUFFERS_ARB;
+		*a++ = 1;
+		*a++ = WGL_SAMPLES_ARB;
+		*a++ = samples;
+	}
+
+	*a = 0;
+	*af = 0;
 
 	gldrivername = "opengl32.dll";
 // COMMANDLINEOPTION: Windows WGL: -gl_driver <drivername> selects a GL driver library, default is opengl32.dll, useful only for 3dfxogl.dll or 3dfxvgl.dll, if you don't know what this is for, you don't need it
@@ -940,13 +1066,105 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp, int refreshrat
 	rect.top += CenterY;
 	rect.bottom += CenterY;
 
-	mainwindow = CreateWindowEx (ExWindowStyle, "DarkPlacesWindowClass", gamename, WindowStyle, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, NULL, NULL, global_hInstance, NULL);
-	if (!mainwindow)
+	pixelformat = 0;
+	newpixelformat = 0;
+	for (windowpass = 0;windowpass < 2;windowpass++)
 	{
-		Con_Printf("CreateWindowEx(%d, %s, %s, %d, %d, %d, %d, %d, %p, %p, %d, %p) failed\n", (int)ExWindowStyle, "DarkPlacesWindowClass", gamename, (int)WindowStyle, (int)(rect.left), (int)(rect.top), (int)(rect.right - rect.left), (int)(rect.bottom - rect.top), NULL, NULL, (int)global_hInstance, NULL);
-		VID_Shutdown();
-		return false;
+		mainwindow = CreateWindowEx (ExWindowStyle, "DarkPlacesWindowClass", gamename, WindowStyle, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, NULL, NULL, global_hInstance, NULL);
+		if (!mainwindow)
+		{
+			Con_Printf("CreateWindowEx(%d, %s, %s, %d, %d, %d, %d, %d, %p, %p, %d, %p) failed\n", (int)ExWindowStyle, "DarkPlacesWindowClass", gamename, (int)WindowStyle, (int)(rect.left), (int)(rect.top), (int)(rect.right - rect.left), (int)(rect.bottom - rect.top), NULL, NULL, (int)global_hInstance, NULL);
+			VID_Shutdown();
+			return false;
+		}
+
+		baseDC = GetDC(mainwindow);
+
+		if (!newpixelformat)
+			newpixelformat = ChoosePixelFormat(baseDC, &pfd);
+		pixelformat = newpixelformat;
+		if (!pixelformat)
+		{
+			VID_Shutdown();
+			Con_Printf("ChoosePixelFormat(%d, %p) failed\n", (int)baseDC, &pfd);
+			return false;
+		}
+
+		if (SetPixelFormat(baseDC, pixelformat, &pfd) == false)
+		{
+			VID_Shutdown();
+			Con_Printf("SetPixelFormat(%d, %d, %p) failed\n", (int)baseDC, pixelformat, &pfd);
+			return false;
+		}
+
+		if (!GL_CheckExtension("wgl", wglfuncs, NULL, false))
+		{
+			VID_Shutdown();
+			Con_Print("wgl functions not found\n");
+			return false;
+		}
+
+		baseRC = qwglCreateContext(baseDC);
+		if (!baseRC)
+		{
+			VID_Shutdown();
+			Con_Print("Could not initialize GL (wglCreateContext failed).\n\nMake sure you are in 65536 color mode, and try running -window.\n");
+			return false;
+		}
+		if (!qwglMakeCurrent(baseDC, baseRC))
+		{
+			VID_Shutdown();
+			Con_Printf("wglMakeCurrent(%d, %d) failed\n", (int)baseDC, (int)baseRC);
+			return false;
+		}
+
+		if ((qglGetString = (const GLubyte* (GLAPIENTRY *)(GLenum name))GL_GetProcAddress("glGetString")) == NULL)
+		{
+			VID_Shutdown();
+			Con_Print("glGetString not found\n");
+			return false;
+		}
+		if ((qwglGetExtensionsStringARB = (const char *(WINAPI *)(HDC hdc))GL_GetProcAddress("wglGetExtensionsStringARB")) == NULL)
+			Con_Print("wglGetExtensionsStringARB not found\n");
+
+		gl_renderer = qglGetString(GL_RENDERER);
+		gl_vendor = qglGetString(GL_VENDOR);
+		gl_version = qglGetString(GL_VERSION);
+		gl_extensions = qglGetString(GL_EXTENSIONS);
+		gl_platform = "WGL";
+		gl_platformextensions = "";
+
+		if (qwglGetExtensionsStringARB)
+			gl_platformextensions = qwglGetExtensionsStringARB(baseDC);
+
+		// now some nice Windows pain:
+		// we have created a window, we needed one to find out if there are
+		// any multisample pixel formats available, the problem is that to
+		// actually use one of those multisample formats we now have to
+		// recreate the window (yes Microsoft OpenGL really is that bad)
+
+		if (windowpass == 0)
+		{
+			if (!GL_CheckExtension("WGL_ARB_pixel_format", wglpixelformatfuncs, "-noarbpixelformat", false) || !qwglChoosePixelFormatARB(baseDC, attribs, attribsf, 1, &newpixelformat, &numpixelformats) || !newpixelformat)
+				break;
+			// ok we got one - do it all over again with newpixelformat
+			qwglMakeCurrent(NULL, NULL);
+			qwglDeleteContext(baseRC);baseRC = 0;
+			ReleaseDC(mainwindow, baseDC);baseDC = 0;
+			// eat up any messages waiting for us
+			while (PeekMessage (&msg, NULL, 0, 0, PM_REMOVE))
+			{
+				TranslateMessage (&msg);
+				DispatchMessage (&msg);
+			}
+		}
 	}
+
+	Con_DPrintf("GL_VENDOR: %s\n", gl_vendor);
+	Con_DPrintf("GL_RENDERER: %s\n", gl_renderer);
+	Con_DPrintf("GL_VERSION: %s\n", gl_version);
+	Con_DPrintf("GL_EXTENSIONS: %s\n", gl_extensions);
+	Con_DPrintf("%s_EXTENSIONS: %s\n", gl_platform, gl_platformextensions);
 
 	/*
 	if (!fullscreen)
@@ -979,83 +1197,12 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp, int refreshrat
 	// fix the leftover Alt from any Alt-Tab or the like that switched us away
 	ClearAllStates ();
 
-	baseDC = GetDC(mainwindow);
-
-	if ((pixelformat = ChoosePixelFormat(baseDC, &pfd)) == 0)
-	{
-		VID_Shutdown();
-		Con_Printf("ChoosePixelFormat(%d, %p) failed\n", (int)baseDC, &pfd);
-		return false;
-	}
-
-	if (SetPixelFormat(baseDC, pixelformat, &pfd) == false)
-	{
-		VID_Shutdown();
-		Con_Printf("SetPixelFormat(%d, %d, %p) failed\n", (int)baseDC, pixelformat, &pfd);
-		return false;
-	}
-
-	if (!GL_CheckExtension("wgl", wglfuncs, NULL, false))
-	{
-		VID_Shutdown();
-		Con_Print("wgl functions not found\n");
-		return false;
-	}
-
-	baseRC = qwglCreateContext(baseDC);
-	if (!baseRC)
-	{
-		VID_Shutdown();
-		Con_Print("Could not initialize GL (wglCreateContext failed).\n\nMake sure you are in 65536 color mode, and try running -window.\n");
-		return false;
-	}
-	if (!qwglMakeCurrent(baseDC, baseRC))
-	{
-		VID_Shutdown();
-		Con_Printf("wglMakeCurrent(%d, %d) failed\n", (int)baseDC, (int)baseRC);
-		return false;
-	}
-
-	if ((qglGetString = (const GLubyte* (GLAPIENTRY *)(GLenum name))GL_GetProcAddress("glGetString")) == NULL)
-	{
-		VID_Shutdown();
-		Con_Print("glGetString not found\n");
-		return false;
-	}
-	if ((qwglGetExtensionsStringARB = (const char *(WINAPI *)(HDC hdc))GL_GetProcAddress("wglGetExtensionsStringARB")) == NULL)
-		Con_Print("wglGetExtensionsStringARB not found\n");
-	gl_renderer = qglGetString(GL_RENDERER);
-	gl_vendor = qglGetString(GL_VENDOR);
-	gl_version = qglGetString(GL_VERSION);
-	gl_extensions = qglGetString(GL_EXTENSIONS);
-	gl_platform = "WGL";
-	gl_platformextensions = "";
-
-	Con_DPrintf("GL_VENDOR: %s\n", gl_vendor);
-	Con_DPrintf("GL_RENDERER: %s\n", gl_renderer);
-	Con_DPrintf("GL_VERSION: %s\n", gl_version);
-	Con_DPrintf("GL_EXTENSIONS: %s\n", gl_extensions);
-	Con_DPrintf("%s_EXTENSIONS: %s\n", gl_platform, gl_platformextensions);
-
 	gl_videosyncavailable = false;
-
-	if (qwglGetExtensionsStringARB)
-		gl_platformextensions = qwglGetExtensionsStringARB(baseDC);
 
 // COMMANDLINEOPTION: Windows WGL: -novideosync disables WGL_EXT_swap_control
 	gl_videosyncavailable = GL_CheckExtension("WGL_EXT_swap_control", wglswapintervalfuncs, "-novideosync", false);
-	//ReleaseDC(mainwindow, hdc);
 
 	GL_Init ();
-
-	// LordHavoc: special differences for ATI (broken 8bit color when also using 32bit? weird!)
-	if (strncasecmp(gl_vendor,"ATI",3)==0)
-	{
-		if (strncasecmp(gl_renderer,"Rage Pro",8)==0)
-			isRagePro = true;
-	}
-	if (strncasecmp(gl_renderer,"Matrox G200 Direct3D",20)==0) // a D3D driver for GL? sigh...
-		isG200 = true;
 
 	//vid_menudrawfn = VID_MenuDraw;
 	//vid_menukeyfn = VID_MenuKey;
