@@ -331,14 +331,14 @@ void IN_Move( void )
 static int Sys_EventFilter( SDL_Event *event )
 {
 	//TODO: Add a quit query in linux, too - though linux user are more likely to know what they do
+	if (event->type == SDL_QUIT)
+	{
 #ifdef WIN32
-	if( event->type == SDL_QUIT && MessageBox( NULL, "Are you sure you want to quit?", "Confirm Exit", MB_YESNO | MB_SETFOREGROUND | MB_ICONQUESTION ) == IDNO )
-		return 0;
-	else
-		return 1;
-#else
-	return 1;
+		if (MessageBox( NULL, "Are you sure you want to quit?", "Confirm Exit", MB_YESNO | MB_SETFOREGROUND | MB_ICONQUESTION ) == IDNO)
+			return 0;
 #endif
+	}
+	return 1;
 }
 
 static keynum_t buttonremap[18] =
