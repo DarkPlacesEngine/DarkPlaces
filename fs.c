@@ -2596,6 +2596,7 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 		}
 		else
 		{
+			int searchpathlen = strlen( searchpath->filename );
 			// get a directory listing and look at each name
 			dpsnprintf(netpath, sizeof (netpath), "%s%s", searchpath->filename, basepath);
 			stringlistinit(&dirlist);
@@ -2603,7 +2604,7 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 			for (dirlistindex = 0;dirlistindex < dirlist.numstrings;dirlistindex++)
 			{
 				const char *direntry = dirlist.strings[dirlistindex];
-				if (matchpattern(direntry, (char *)pattern, true))
+				if (matchpattern(direntry + searchpathlen, (char *)pattern, true))
 				{
 					for (resultlistindex = 0;resultlistindex < resultlist.numstrings;resultlistindex++)
 						if (!strcmp(resultlist.strings[resultlistindex], direntry))
