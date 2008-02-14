@@ -216,8 +216,6 @@ char *Sys_ConsoleInput(void)
 void Sys_Sleep(int microseconds)
 {
 #ifdef WIN32
-	if (microseconds < 1000)
-		microseconds = 1000;
 	Sleep(microseconds / 1000);
 #else
 	if (microseconds < 1)

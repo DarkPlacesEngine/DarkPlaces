@@ -67,6 +67,7 @@ cvar_t cl_minfps_qualitypower = {CVAR_SAVE, "cl_minfps_qualitypower", "4", "rais
 cvar_t cl_minfps_qualityscale = {CVAR_SAVE, "cl_minfps_qualityscale", "0.5", "multiplier for quality"};
 cvar_t cl_maxfps = {CVAR_SAVE, "cl_maxfps", "1000000", "maximum fps cap, if game is running faster than this it will wait before running another frame (useful to make cpu time available to other programs)"};
 cvar_t cl_maxidlefps = {CVAR_SAVE, "cl_maxidlefps", "20", "maximum fps cap when the game is not the active window (makes cpu time available to other programs"};
+cvar_t cl_alwayssleep = {CVAR_SAVE, "cl_alwayssleep", "0", "calls operating system Sleep function at the end of each frame with 0 milliseconds, even if not hitting framerate cap - can make gameplay smoother"};
 
 cvar_t developer = {0, "developer","0", "prints additional debugging messages and information (recommended for modders and level designers)"};
 cvar_t developer_loadfile = {0, "developer_loadfile","0", "prints name and size of every file loaded via the FS_LoadFile function (which is almost everything)"};
@@ -217,6 +218,7 @@ static void Host_InitLocal (void)
 	Cvar_RegisterVariable (&cl_minfps_qualityscale);
 	Cvar_RegisterVariable (&cl_maxfps);
 	Cvar_RegisterVariable (&cl_maxidlefps);
+	Cvar_RegisterVariable (&cl_alwayssleep);
 
 	Cvar_RegisterVariable (&developer);
 	Cvar_RegisterVariable (&developer_loadfile);
@@ -695,22 +697,15 @@ void Host_Main(void)
 			wait = cl_timer * -1000000.0;
 		else
 			wait = max(cl_timer, sv_timer) * -1000000.0;
-		if (wait > 100000)
-			wait = 100000;
+		wait = bound(0, wait, 100000);
 
 		if (!cls.timedemo && wait > 0)
 		{
 			double time0 = Sys_DoubleTime();
 			if (sv_checkforpacketsduringsleep.integer)
-			{
-				if (wait >= 1)
-					NetConn_SleepMicroseconds((int)wait);
-			}
+				NetConn_SleepMicroseconds((int)wait);
 			else
-			{
-				if (wait >= 1000)
-					Sys_Sleep((int)wait / 1000);
-			}
+				Sys_Sleep((int)wait);
 			svs.perf_acc_sleeptime += Sys_DoubleTime() - time0;
 			continue;
 		}
@@ -918,6 +913,9 @@ void Host_Main(void)
 		}
 
 		host_framecount++;
+
+		if (cl_alwayssleep.integer)
+			Sys_Sleep(0);
 	}
 }
 

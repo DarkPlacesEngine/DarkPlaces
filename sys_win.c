@@ -268,8 +268,6 @@ char *Sys_ConsoleInput (void)
 
 void Sys_Sleep(int microseconds)
 {
-	if (microseconds < 1000)
-		microseconds = 1000;
 	Sleep(microseconds / 1000);
 }
 
