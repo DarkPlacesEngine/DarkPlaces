@@ -1,4 +1,5 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
+0 bug csqc client: darkplaces lacks prediction support
 0 bug darkplaces client csqc: engine prediction function is not implemented - could just return the engine's current cl.movement_origin (Spike)
 0 bug darkplaces client csqc: entities not being drawn with VF_PERSPECTIVE 0? (daemon)
 0 bug darkplaces client csqc: input queue functions needed for csqc prediction aren't implemented (Spike)
@@ -12,6 +13,8 @@
 0 bug darkplaces client qw: qw skins should only be active on progs/player.mdl (Plague Monkey Rat)
 0 bug darkplaces client qw: qw/skins/*.pcx need to be cropped to 296x194 and loaded as internal textures so they are split into multiple layers (Plague Monkey Rat)
 0 bug darkplaces client qw: restrict wateralpha and such cvars according to what is permitted in qw serverinfo?
+0 bug darkplaces client timedemo: investigate bogus results of one-second min/avg/max, clearly not working properly (Willis)
+0 bug darkplaces client win64: crash in R_DrawRTLight due to stack overflow, change the pointer arrays to indexes into r_refdef.scene.entities, or increase projects to build with 4MB stack instead of 2MB - also clean up these warnings: http://dp.deathmask.net/log/dp_x64_buildlog_r8078.txt (Willis)
 0 bug darkplaces client: can't move mouse around in nexuiz menu if vid_mouse is 0
 0 bug darkplaces client: if you press 1 during the demo loop when quake starts, escape doesn't do anything until you hit some other key (daemon)
 0 bug darkplaces loader: crash when a mdl model has more replacement skins than the model contains (Lardarse)
@@ -20,9 +23,11 @@
 0 bug darkplaces loader: q1bsp loader computes wrong submodel size for submodels with no surfaces, such as a func_wall comprised entirely of SKIP or CAULK brushes (neg|ke)
 0 bug darkplaces memory: memstats doesn't account for memory used by VBO/EBO buffers in models
 0 bug darkplaces menu: load/save game menus show files that are not in the highest priority gamedir, such as id1 saves showing up when playing dpmod (Dooomer, WodahsEht)
+0 bug darkplaces qc: document the wasfreed() builtin from EXT_CSQC and entitybyindex() builtins, the latter is DP_QC_EDICT_NUM (Urre)
 0 bug darkplaces readme: it would be a very good idea to add documentation of sv_gameplayfix_* cvars in the readme as a means to run broken mods (xaGe)
 0 bug darkplaces readme: readme says that q3 shaders are not supported, this is not true, describe the working features in detail (qqshka)
 0 bug darkplaces renderer: GL13 path has broken handling of unlit surfaces in Nexuiz toxic.bsp - the small red light surfaces are black in GL13 path (m0rfar)
+0 bug darkplaces renderer: coronas are not affected by fog (div0)
 0 bug darkplaces renderer: if an animated model has transparent surfaces, each one calls RSurf_ActiveModelEntity, recomputing all vertices
 0 bug darkplaces renderer: if an animated model is entirely transparent, the RSurf_ActiveModelEntity call updating vertices is completely wasted
 0 bug darkplaces server csqc networking: csqc entity sending code does not currently detect packet loss and repeat lost entities (FrikaC, Chris Page, div0)
@@ -58,6 +63,16 @@
 0 bug hmap2: handle \" properly in hmap2 cmdlib.c COM_Parse (sort)
 0 bug hmap2: the plane-distance based projection size for polygons doesn't work in certain wedge cases where two sides of a wedge brush are very near origin but the entirety of the wedge brush is much larger
 0 bug hmap: strip .map extension from filename if present
+0 change csqc client: add float in_mouse_centered which indicates the engine should lock the mouse at the center of the window, only gathering relative motion (in_mouse_window_position stops being modified - it is not set to the center as that would be useless)
+0 change csqc client: add float in_mouse_keep_in_window which indicates whether engine should be currently restricting the mouse pointer to the window (useful in point and click games such as RTS games)
+0 change csqc client: add float in_mouse_show_system_cursor which indicates whether the system mouse pointer should be visible while over the window
+0 change csqc client: add svc_updatestatstring, svc_updatestatfloat, and keep 3 cl.stats arrays, of int, float, and string types respectively, store svc_updatestatstring in the string one, store all others in both int and float formats (KrimZon, Chris, Spike)
+0 change csqc client: add vector in_mouse_motion which indicates mouse movement since previous frame (even if in_mouse_window_position did not change, such as when in_mouse_centered is on)
+0 change csqc client: add vector in_mouse_window_position which indicates cursor position over the game window (real position of mouse in the window) - not updated if in_mouse_centered is true
+0 change csqc client: replace input_buttons with in_button0 and similar (matching server qc fields), auto-detect these at load
+0 change csqc server: change SendEntity to take the client as "other" rather than a parameter
+0 change csqc server: implement packet logging of csqc entities to deal with packet loss
+0 change csqc server: replace AddStat with RegisterStat and RegisterStatString, make them send float or string only, with string taking up only one stat slot and being sent using svc_updatestatstring, make it automatically send integer values as svc_updatestat/svc_updatestatubyte and non-integer values as svc_updatestatfloat (KrimZon, Chris, Spike)
 0 change darkplaces client: disable all possible 'cheat' things unless -developer is given on commandline, this includes r_show*, r_test, gl_lightmaps, r_fullbright, and would require changing -developer to only set developer to 1 rather than 100, as 100 is too annoying
 0 change darkplaces client: modify cl_particles_quake to make all the engine dlights be white and look as much like quake as possible (Jago)
 0 change darkplaces client: particles shouldn't be using contents checks to decide whether to die, they should use movement traces
@@ -142,10 +157,12 @@
 0 feature darkplaces server: add .maxspeed field to control player movement speed in engine code, call it QW_SV_MAXSPEED (Carni)
 0 feature darkplaces server: add DP_QC_STRTOKEN extension with these functions: float strtokens(string s, string separator) = #;string strtoken(string s, string separator, float index) = #; (FrikaC)
 0 feature darkplaces server: add DP_SV_DRAWONLYTOTEAM extension (Supajoe)
+0 feature darkplaces server: add DP_SV_TRAIL_EFFECT extension - .float trail_effect; field which can be networked as an automatic trailparticles() associated with an entity
 0 feature darkplaces server: add PF_tokenizeseparator function and DP_QC_TOKENIZESEPARATOR extension
 0 feature darkplaces server: add a .collision_cancollide QC function call to decide if an entity should collide with another, or pass through it (Uffe)
 0 feature darkplaces server: add a DP_QC_WARNING extension which has a "warning" builtin that does a PF_WARNING just to print the requested message, opcode dump, and stack trace (FrikaC)
 0 feature darkplaces server: add a clipmask thingy to allow QC to mask off collisions as it wishes (Uffe)
+0 feature darkplaces server: add a different progs.dat defs for darkplaces-based games to use instead of the quake defs, which would force use of csqc entity networking and disable legacy stuff like quake physics, and enable use of ODE physics perhaps
 0 feature darkplaces server: add a sv_gameplayfix_slidewhenstandingonmonster cvar to allow the FL_ONGROUND when ontop of a SOLID_BBOX/SOLID_SLIDEBOX to be disabled
 0 feature darkplaces server: add a sv_netticrate cvar which allows less frequent network updates (Urre)
 0 feature darkplaces server: add back edict, edicts and edictset commands (just as stubs that call the prvm_edict/edicts/edictset server commands) for convenience and compatibility with quake modding practices
