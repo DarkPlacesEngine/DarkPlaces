@@ -218,8 +218,6 @@ void Sys_Sleep(int microseconds)
 #ifdef WIN32
 	Sleep(microseconds / 1000);
 #else
-	if (microseconds < 1)
-		microseconds = 1;
 	usleep(microseconds);
 #endif
 }
