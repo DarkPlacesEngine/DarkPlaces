@@ -960,7 +960,6 @@ void FS_AddGameDirectory (const char *dir)
 	int i;
 	stringlist_t list;
 	searchpath_t *search;
-	char pakfile[MAX_OSPATH];
 
 	strlcpy (fs_gamedir, dir, sizeof (fs_gamedir));
 
@@ -973,8 +972,7 @@ void FS_AddGameDirectory (const char *dir)
 	{
 		if (!strcasecmp(FS_FileExtension(list.strings[i]), "pak"))
 		{
-			dpsnprintf (pakfile, sizeof (pakfile), "%s%s", dir, list.strings[i]);
-			FS_AddPack_Fullpath(pakfile, NULL, false);
+			FS_AddPack_Fullpath(list.strings[i], NULL, false);
 		}
 	}
 
@@ -983,8 +981,7 @@ void FS_AddGameDirectory (const char *dir)
 	{
 		if (!strcasecmp(FS_FileExtension(list.strings[i]), "pk3"))
 		{
-			dpsnprintf (pakfile, sizeof (pakfile), "%s%s", dir, list.strings[i]);
-			FS_AddPack_Fullpath(pakfile, NULL, false);
+			FS_AddPack_Fullpath(list.strings[i], NULL, false);
 		}
 	}
 
@@ -2605,17 +2602,17 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 			listdirectory(&dirlist, netpath);
 			for (dirlistindex = 0;dirlistindex < dirlist.numstrings;dirlistindex++)
 			{
-				dpsnprintf(temp, sizeof(temp), "%s%s", basepath, dirlist.strings[dirlistindex]);
-				if (matchpattern(temp, (char *)pattern, true))
+				const char *direntry = dirlist.strings[dirlistindex];
+				if (matchpattern(direntry, (char *)pattern, true))
 				{
 					for (resultlistindex = 0;resultlistindex < resultlist.numstrings;resultlistindex++)
-						if (!strcmp(resultlist.strings[resultlistindex], temp))
+						if (!strcmp(resultlist.strings[resultlistindex], direntry))
 							break;
 					if (resultlistindex == resultlist.numstrings)
 					{
-						stringlistappend(&resultlist, temp);
+						stringlistappend(&resultlist, direntry);
 						if (!quiet && developer_loading.integer)
-							Con_Printf("SearchDirFile: %s\n", temp);
+							Con_Printf("SearchDirFile: %s\n", direntry);
 					}
 				}
 			}

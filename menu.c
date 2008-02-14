@@ -4466,12 +4466,19 @@ void ModList_RebuildList(void)
 {
 	int i,j;
 	stringlist_t list;
+	int basedirlength; 
 
 	stringlistinit(&list);
 	if (fs_basedir[0])
+	{
 		listdirectory(&list, fs_basedir);
+		basedirlength = strlen( fs_basedir );
+	}
 	else
+	{
 		listdirectory(&list, "./");
+		basedirlength = 2;
+	}
 	stringlistsort(&list);
 	modlist_count = 0;
 	modlist_numenabled = fs_numgamedirs;
@@ -4486,7 +4493,7 @@ void ModList_RebuildList(void)
 		if (FS_CheckNastyPath (list.strings[i], true)) continue;
 		if (!FS_CheckGameDir(list.strings[i])) continue;
 
-		strlcpy (modlist[modlist_count].dir, list.strings[i], sizeof(modlist[modlist_count].dir));
+		strlcpy (modlist[modlist_count].dir, list.strings[i] + basedirlength, sizeof(modlist[modlist_count].dir));
 		//check currently loaded mods
 		modlist[modlist_count].loaded = false;
 		if (fs_numgamedirs)

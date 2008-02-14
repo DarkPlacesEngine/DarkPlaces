@@ -316,7 +316,7 @@ typedef struct stringlist_s
 int matchpattern(const char *in, const char *pattern, int caseinsensitive);
 void stringlistinit(stringlist_t *list);
 void stringlistfreecontents(stringlist_t *list);
-void stringlistappend(stringlist_t *list, char *text);
+void stringlistappend(stringlist_t *list, const char *text);
 void stringlistsort(stringlist_t *list);
 void listdirectory(stringlist_t *list, const char *path);
 
