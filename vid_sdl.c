@@ -491,9 +491,15 @@ static void VID_SetCaption()
 
 	icon = LoadIcon( GetModuleHandle( NULL ), MAKEINTRESOURCE( IDI_ICON1 ) );
 #ifndef _W64 //If Windows 64bit data types don't exist
+#ifndef SetClassLongPtr
 #define SetClassLongPtr SetClassLong
+#endif
+#ifndef GCLP_HICON
 #define GCLP_HICON GCL_HICON
+#endif
+#ifndef LONG_PTR
 #define LONG_PTR LONG
+#endif
 #endif
 	SetClassLongPtr( info.window, GCLP_HICON, (LONG_PTR)icon );
 }
@@ -623,7 +629,7 @@ static void VID_OutputVersion()
 					version->major, version->minor, version->patch );
 }
 
-int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate, int stereobuffer)
+int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate, int stereobuffer, int samples)
 {
 	int i;
 	static int notfirstvideomode = false;
@@ -699,6 +705,11 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 		SDL_GL_SetAttribute (SDL_GL_SWAP_CONTROL, 1);
 	else
 		SDL_GL_SetAttribute (SDL_GL_SWAP_CONTROL, 0);
+	if (samples > 1)
+	{
+		SDL_GL_SetAttribute (SDL_GL_MULTISAMPLEBUFFERS, 1);
+		SDL_GL_SetAttribute (SDL_GL_MULTISAMPLESAMPLES, samples);
+	}
 
 	video_bpp = bpp;
 	video_flags = flags;

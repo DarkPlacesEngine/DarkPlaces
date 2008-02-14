@@ -2795,7 +2795,7 @@ video_resolution_t video_resolutions[] =
 
 #define VIDEO_ITEMS 11
 static int video_cursor = 0;
-static int video_cursor_table[VIDEO_ITEMS] = {56, 68, 88, 100, 108, 116, 136, 166, 174, 182, 190};
+static int video_cursor_table[VIDEO_ITEMS] = {68, 88, 96, 104, 112, 120, 128, 136, 144, 152, 168};
 static int video_resolution;
 
 void M_Menu_Video_f (void)
@@ -2842,6 +2842,7 @@ void M_Menu_Video_f (void)
 
 static void M_Video_Draw (void)
 {
+	int t;
 	cachepic_t	*p;
 
 	M_Background(320, 200);
@@ -2850,49 +2851,64 @@ static void M_Video_Draw (void)
 	p = Draw_CachePic ("gfx/vidmodes");
 	M_DrawPic((320-p->width)/2, 4, "gfx/vidmodes");
 
-	// Current Resolution
-	M_Print(16, video_cursor_table[0], "    Current Resolution");
-	if (vid_supportrefreshrate && vid.userefreshrate && vid.fullscreen)
-		M_Print(220, video_cursor_table[0], va("%dx%d %dhz", vid.width, vid.height, vid.refreshrate));
-	else
-		M_Print(220, video_cursor_table[0], va("%dx%d", vid.width, vid.height));
+	t = 0;
 
-	// Proposed Resolution
-	M_Print(16, video_cursor_table[1], "        New Resolution");
-	M_Print(220, video_cursor_table[1], va("%dx%d", video_resolutions[video_resolution].width, video_resolutions[video_resolution].height));
-	M_Print(96, video_cursor_table[1] + 8, va("Type: %s", video_resolutions[video_resolution].type));
+	// Current and Proposed Resolution
+	M_Print(16, video_cursor_table[t] - 12, "    Current Resolution");
+	if (vid_supportrefreshrate && vid.userefreshrate && vid.fullscreen)
+		M_Print(220, video_cursor_table[t] - 12, va("%dx%d %dhz", vid.width, vid.height, vid.refreshrate));
+	else
+		M_Print(220, video_cursor_table[t] - 12, va("%dx%d", vid.width, vid.height));
+	M_Print(16, video_cursor_table[t], "        New Resolution");
+	M_Print(220, video_cursor_table[t], va("%dx%d", video_resolutions[video_resolution].width, video_resolutions[video_resolution].height));
+	M_Print(96, video_cursor_table[t] + 8, va("Type: %s", video_resolutions[video_resolution].type));
+	t++;
 
 	// Bits per pixel
-	M_Print(16, video_cursor_table[2], "        Bits per pixel");
-	M_Print(220, video_cursor_table[2], (vid_bitsperpixel.integer == 32) ? "32" : "16");
+	M_Print(16, video_cursor_table[t], "        Bits per pixel");
+	M_Print(220, video_cursor_table[t], (vid_bitsperpixel.integer == 32) ? "32" : "16");
+	t++;
+
+	// Bits per pixel
+	M_Print(16, video_cursor_table[t], "          Antialiasing");
+	M_DrawSlider(220, video_cursor_table[t], vid_samples.value, 1, 32);
+	t++;
 
 	// Refresh Rate
-	M_ItemPrint(16, video_cursor_table[3], "      Use Refresh Rate", vid_supportrefreshrate);
-	M_DrawCheckbox(220, video_cursor_table[3], vid_userefreshrate.integer);
+	M_ItemPrint(16, video_cursor_table[t], "      Use Refresh Rate", vid_supportrefreshrate);
+	M_DrawCheckbox(220, video_cursor_table[t], vid_userefreshrate.integer);
+	t++;
 
 	// Refresh Rate
-	M_ItemPrint(16, video_cursor_table[4], "          Refresh Rate", vid_supportrefreshrate && vid_userefreshrate.integer);
-	M_DrawSlider(220, video_cursor_table[4], vid_refreshrate.integer, 60, 150);
+	M_ItemPrint(16, video_cursor_table[t], "          Refresh Rate", vid_supportrefreshrate && vid_userefreshrate.integer);
+	M_DrawSlider(220, video_cursor_table[t], vid_refreshrate.integer, 60, 150);
+	t++;
 
 	// Fullscreen
-	M_Print(16, video_cursor_table[5], "            Fullscreen");
-	M_DrawCheckbox(220, video_cursor_table[5], vid_fullscreen.integer);
-
-	// "Apply" button
-	M_Print(220, video_cursor_table[6], "Apply");
+	M_Print(16, video_cursor_table[t], "            Fullscreen");
+	M_DrawCheckbox(220, video_cursor_table[t], vid_fullscreen.integer);
+	t++;
 
 	// Vertical Sync
-	M_ItemPrint(16, video_cursor_table[7], "         Vertical Sync", gl_videosyncavailable);
-	M_DrawCheckbox(220, video_cursor_table[7], vid_vsync.integer);
+	M_ItemPrint(16, video_cursor_table[t], "         Vertical Sync", gl_videosyncavailable);
+	M_DrawCheckbox(220, video_cursor_table[t], vid_vsync.integer);
+	t++;
 
-	M_ItemPrint(16, video_cursor_table[8], "    Anisotropic Filter", gl_support_anisotropy);
-	M_DrawSlider(220, video_cursor_table[8], gl_texture_anisotropy.integer, 1, gl_max_anisotropy);
+	M_ItemPrint(16, video_cursor_table[t], "    Anisotropic Filter", gl_support_anisotropy);
+	M_DrawSlider(220, video_cursor_table[t], gl_texture_anisotropy.integer, 1, gl_max_anisotropy);
+	t++;
 
-	M_ItemPrint(16, video_cursor_table[9], "       Texture Quality", true);
-	M_DrawSlider(220, video_cursor_table[9], gl_picmip.value, 3, 0);
+	M_ItemPrint(16, video_cursor_table[t], "       Texture Quality", true);
+	M_DrawSlider(220, video_cursor_table[t], gl_picmip.value, 3, 0);
+	t++;
 
-	M_ItemPrint(16, video_cursor_table[10], "   Texture Compression", gl_support_texture_compression);
-	M_DrawCheckbox(220, video_cursor_table[10], gl_texturecompression.integer);
+	M_ItemPrint(16, video_cursor_table[t], "   Texture Compression", gl_support_texture_compression);
+	M_DrawCheckbox(220, video_cursor_table[t], gl_texturecompression.integer);
+	t++;
+
+	// "Apply" button
+	M_Print(220, video_cursor_table[t], "Apply");
+	t++;
 
 	// Cursor
 	M_DrawCharacter(200, video_cursor_table[video_cursor], 12+((int)(realtime*4)&1));
@@ -2901,55 +2917,44 @@ static void M_Video_Draw (void)
 
 static void M_Menu_Video_AdjustSliders (int dir)
 {
+	int t;
+
 	S_LocalSound ("sound/misc/menu3.wav");
 
-	switch (video_cursor)
+	t = 0;
+	if (video_cursor == t++)
 	{
 		// Resolution
-		case 1:
+		int r;
+		for(r = 0;r < VID_RES_COUNT;r++)
 		{
-			int r;
-			for(r = 0;r < VID_RES_COUNT;r++)
-			{
-				video_resolution += dir;
-				if (video_resolution >= VID_RES_COUNT)
-					video_resolution = 0;
-				if (video_resolution < 0)
-					video_resolution = VID_RES_COUNT - 1;
-				if (video_resolutions[video_resolution].width >= vid_minwidth.integer && video_resolutions[video_resolution].height >= vid_minheight.integer)
-					break;
-			}
-			break;
+			video_resolution += dir;
+			if (video_resolution >= VID_RES_COUNT)
+				video_resolution = 0;
+			if (video_resolution < 0)
+				video_resolution = VID_RES_COUNT - 1;
+			if (video_resolutions[video_resolution].width >= vid_minwidth.integer && video_resolutions[video_resolution].height >= vid_minheight.integer)
+				break;
 		}
-
-		// Bits per pixel
-		case 2:
-			Cvar_SetValueQuick (&vid_bitsperpixel, (vid_bitsperpixel.integer == 32) ? 16 : 32);
-			break;
-		// Refresh Rate
-		case 3:
-			Cvar_SetValueQuick (&vid_userefreshrate, !vid_userefreshrate.integer);
-			break;
-		case 4:
-			Cvar_SetValueQuick (&vid_refreshrate, bound(60, vid_refreshrate.integer + dir, 150));
-			break;
-		case 5:
-			Cvar_SetValueQuick (&vid_fullscreen, !vid_fullscreen.integer);
-			break;
-
-		case 7:
-			Cvar_SetValueQuick (&vid_vsync, !vid_vsync.integer);
-			break;
-		case 8:
-			Cvar_SetValueQuick (&gl_texture_anisotropy, bound(1, gl_texture_anisotropy.value * (dir < 0 ? 0.5 : 2.0), gl_max_anisotropy));
-			break;
-		case 9:
-			Cvar_SetValueQuick (&gl_picmip, bound(0, gl_picmip.value - dir, 3));
-			break;
-		case 10:
-			Cvar_SetValueQuick (&gl_texturecompression, !gl_texturecompression.integer);
-			break;
 	}
+	else if (video_cursor == t++)
+		Cvar_SetValueQuick (&vid_bitsperpixel, (vid_bitsperpixel.integer == 32) ? 16 : 32);
+	else if (video_cursor == t++)
+		Cvar_SetValueQuick (&vid_samples, bound(1, vid_samples.value * (dir > 0 ? 2 : 0.5), 32));
+	else if (video_cursor == t++)
+		Cvar_SetValueQuick (&vid_userefreshrate, !vid_userefreshrate.integer);
+	else if (video_cursor == t++)
+		Cvar_SetValueQuick (&vid_refreshrate, bound(60, vid_refreshrate.integer + dir, 150));
+	else if (video_cursor == t++)
+		Cvar_SetValueQuick (&vid_fullscreen, !vid_fullscreen.integer);
+	else if (video_cursor == t++)
+		Cvar_SetValueQuick (&vid_vsync, !vid_vsync.integer);
+	else if (video_cursor == t++)
+		Cvar_SetValueQuick (&gl_texture_anisotropy, bound(1, gl_texture_anisotropy.value * (dir < 0 ? 0.5 : 2.0), gl_max_anisotropy));
+	else if (video_cursor == t++)
+		Cvar_SetValueQuick (&gl_picmip, bound(0, gl_picmip.value - dir, 3));
+	else if (video_cursor == t++)
+		Cvar_SetValueQuick (&gl_texturecompression, !gl_texturecompression.integer);
 }
 
 
@@ -2961,6 +2966,7 @@ static void M_Video_Key (int key, char ascii)
 			// vid_shared.c has a copy of the current video config. We restore it
 			Cvar_SetValueQuick(&vid_fullscreen, vid.fullscreen);
 			Cvar_SetValueQuick(&vid_bitsperpixel, vid.bitsperpixel);
+			Cvar_SetValueQuick(&vid_samples, vid.samples);
 			if (vid_supportrefreshrate)
 				Cvar_SetValueQuick(&vid_refreshrate, vid.refreshrate);
 			Cvar_SetValueQuick(&vid_userefreshrate, vid.userefreshrate);
@@ -2973,7 +2979,7 @@ static void M_Video_Key (int key, char ascii)
 			m_entersound = true;
 			switch (video_cursor)
 			{
-				case 6:
+				case (VIDEO_ITEMS - 1):
 					Cvar_SetValueQuick (&vid_width, video_resolutions[video_resolution].width);
 					Cvar_SetValueQuick (&vid_height, video_resolutions[video_resolution].height);
 					Cvar_SetValueQuick (&vid_conwidth, video_resolutions[video_resolution].conwidth);

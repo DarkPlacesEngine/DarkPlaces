@@ -70,7 +70,7 @@ void VID_Init(void)
 	InitSig(); // trap evil signals
 }
 
-int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate, int stereobuffer)
+int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate, int stereobuffer, int samples)
 {
 	return false;
 }
