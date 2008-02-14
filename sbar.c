@@ -1057,13 +1057,16 @@ void Sbar_ShowFPS(void)
 		static double nexttime = 0, lasttime = 0;
 		static double framerate = 0;
 		static int framecount = 0;
+		double interval = 0.25;
 		double newtime;
 		newtime = realtime;
 		if (newtime >= nexttime)
 		{
 			framerate = framecount / (newtime - lasttime);
+			if (nexttime < newtime - interval * 1.5)
+				nexttime = newtime;
 			lasttime = newtime;
-			nexttime = max(nexttime + 1, lasttime - 1);
+			nexttime += interval;
 			framecount = 0;
 		}
 		framecount++;
