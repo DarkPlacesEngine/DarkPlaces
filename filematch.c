@@ -78,7 +78,7 @@ void stringlistfreecontents(stringlist_t *list)
 		Z_Free(list->strings);
 }
 
-void stringlistappend(stringlist_t *list, char *text)
+void stringlistappend(stringlist_t *list, const char *text)
 {
 	size_t textlen;
 	char **oldstrings;
@@ -119,6 +119,15 @@ void stringlistsort(stringlist_t *list)
 }
 
 // operating system specific code
+static void adddirentry( stringlist_t *list, const char *path, const char *name )
+{
+	if (strcmp(name, ".") && strcmp(name, ".."))
+	{
+		char fullpath[MAX_OSPATH];
+		dpsnprintf (fullpath, sizeof (fullpath), "%s%s", path, name);
+		stringlistappend(list, fullpath);
+	}
+}
 #ifdef WIN32
 #include <io.h>
 void listdirectory(stringlist_t *list, const char *path)
@@ -127,17 +136,15 @@ void listdirectory(stringlist_t *list, const char *path)
 	char pattern[4096], *c;
 	struct _finddata_t n_file;
 	long hFile;
-	strlcpy (pattern, path, sizeof (pattern));
+	strlcpy (pattern, *path ? path : "./", sizeof (pattern));
 	strlcat (pattern, "*", sizeof (pattern));
 	// ask for the directory listing handle
 	hFile = _findfirst(pattern, &n_file);
 	if(hFile == -1)
 		return;
-	// start a new chain with the the first name
-	stringlistappend(list, n_file.name);
-	// iterate through the directory
-	while (_findnext(hFile, &n_file) == 0)
-		stringlistappend(list, n_file.name);
+	do {
+		adddirentry(list, path, n_file.name );
+	} while (_findnext(hFile, &n_file) == 0);
 	_findclose(hFile);
 
 	// convert names to lowercase because windows does not care, but pattern matching code often does
@@ -152,12 +159,11 @@ void listdirectory(stringlist_t *list, const char *path)
 {
 	DIR *dir;
 	struct dirent *ent;
-	dir = opendir(path);
+	dir = opendir( *path ? path : "./" );
 	if (!dir)
 		return;
 	while ((ent = readdir(dir)))
-		if (strcmp(ent->d_name, ".") && strcmp(ent->d_name, ".."))
-			stringlistappend(list, ent->d_name);
+		adddirentry(list, path, ent->d_name);
 	closedir(dir);
 }
 #endif
