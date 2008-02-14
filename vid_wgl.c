@@ -267,6 +267,11 @@ void VID_Finish (qboolean allowmousegrab)
 		SwapBuffers(baseDC);
 	}
 
+	// make sure a context switch can happen every frame - Logitech drivers
+	// input drivers sometimes eat cpu time every 3 seconds or lag badly
+	// without this help
+	Sleep(0);
+
 	VID_UpdateGamma(false, 256);
 }
 
