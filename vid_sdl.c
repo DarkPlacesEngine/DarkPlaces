@@ -244,7 +244,7 @@ static void IN_Activate( qboolean grab )
 			cl_ignoremousemoves = 2;
 			SDL_WM_GrabInput( SDL_GRAB_ON );
 			SDL_ShowCursor( SDL_DISABLE );
-		}		
+		}
 	}
 	else
 	{
@@ -282,7 +282,7 @@ void IN_Move( void )
 		{
 			// have the mouse stuck in the middle, example use: prevent expose effect of beryl during the game when not using
 			// window grabbing. --blub
-			
+
 			// we need 2 frames to initialize the center position
 			if(!stuck)
 			{
@@ -511,12 +511,12 @@ static void VID_SetIcon()
 	 * Somewhat restricted XPM reader. Only supports XPMs saved by GIMP 2.4 at
 	 * default settings with less than 91 colors and transparency.
 	 */
-		
+
 	int width, height, colors, isize, i, j;
 	int thenone = -1;
 	static SDL_Color palette[256];
 	unsigned short palenc[256]; // store color id by char
-		
+
 	char **idata = ENGINE_ICON;
 	char *data = idata[0];
 
@@ -533,7 +533,7 @@ static void VID_SetIcon()
 		Con_Printf("This XPM's palette is either huge or idiotically unoptimized. It's key size is %i\n", isize);
 		return;
 	}
-		
+
 	for(i = 0; i < colors; ++i)
 	{
 		int r, g, b;
@@ -576,7 +576,7 @@ static void VID_SetIcon()
 			data[j * width + i] = palenc[((unsigned char*)idata[colors+j+1])[i]];
 		}
 	}
-		
+
 	if(icon != NULL)
 	{
 		// SDL_FreeSurface should free the data too
@@ -602,7 +602,7 @@ static void VID_SetIcon()
 	icon->pixels = data;
 	SDL_SetPalette(icon, SDL_PHYSPAL|SDL_LOGPAL, palette, 0, colors);
 	SDL_SetColorKey(icon, SDL_SRCCOLORKEY, thenone);
-		
+
 	SDL_WM_SetIcon(icon, NULL);
 }
 
@@ -659,7 +659,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 		Con_Printf("Unable to load GL driver \"%s\": %s\n", drivername, SDL_GetError());
 		return false;
 	}
-	
+
 	if ((qglGetString = (const GLubyte* (GLAPIENTRY *)(GLenum name))GL_GetProcAddress("glGetString")) == NULL)
 	{
 		VID_Shutdown();
@@ -695,12 +695,16 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	}
 	if (stereobuffer)
 		SDL_GL_SetAttribute (SDL_GL_STEREO, 1);
+	if (vid_vsync.integer)
+		SDL_GL_SetAttribute (SDL_GL_SWAP_CONTROL, 1);
+	else
+		SDL_GL_SetAttribute (SDL_GL_SWAP_CONTROL, 0);
 
 	video_bpp = bpp;
 	video_flags = flags;
 	VID_SetIcon();
 	screen = SDL_SetVideoMode(width, height, bpp, flags);
-	
+
 	if (screen == NULL)
 	{
 		Con_Printf("Failed to set video mode to %ix%i: %s\n", width, height, SDL_GetError());
