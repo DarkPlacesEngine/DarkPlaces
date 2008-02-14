@@ -519,6 +519,12 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 		// keep Alt-Space from happening
 			break;
 
+		case WM_SYSCOMMAND:
+			// prevent screensaver from occuring while the active window
+			if (fActive && ((wParam & 0xFFF0) == SC_SCREENSAVE || (wParam & 0xFFF0) == SC_MONITORPOWER))
+				lRet = 0;; // note: password-locked screensavers on Vista still work
+			break;
+
 	// this is complicated because Win32 seems to pack multiple mouse events into
 	// one update sometimes, so we always check all states and look for events
 		case WM_LBUTTONDOWN:
@@ -852,7 +858,7 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp, int refreshrat
 					}
 				}
 				// otherwise, take anything
-					
+
 				memcpy(&gdevmode, &thismode, sizeof(gdevmode));
 				if(thismode.dmDisplayFrequency <= (DWORD)refreshrate)
 					foundgoodmode = true;
