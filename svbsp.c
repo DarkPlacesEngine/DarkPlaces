@@ -2,8 +2,6 @@
 // Shadow Volume BSP code written by Forest "LordHavoc" Hale on 2003-11-06 and placed into public domain.
 // Modified by LordHavoc (to make it work and other nice things like that) on 2007-01-24 and 2007-01-25
 
-#include "quakedef.h"
-
 #include <math.h>
 #include <string.h>
 #include "svbsp.h"
