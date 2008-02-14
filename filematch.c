@@ -119,13 +119,11 @@ void stringlistsort(stringlist_t *list)
 }
 
 // operating system specific code
-static void adddirentry( stringlist_t *list, const char *path, const char *name )
+static void adddirentry(stringlist_t *list, const char *name)
 {
 	if (strcmp(name, ".") && strcmp(name, ".."))
 	{
-		char fullpath[MAX_OSPATH];
-		dpsnprintf (fullpath, sizeof (fullpath), "%s%s", path, name);
-		stringlistappend(list, fullpath);
+		stringlistappend(list, name);
 	}
 }
 #ifdef WIN32
@@ -136,14 +134,14 @@ void listdirectory(stringlist_t *list, const char *path)
 	char pattern[4096], *c;
 	struct _finddata_t n_file;
 	long hFile;
-	strlcpy (pattern, *path ? path : "./", sizeof (pattern));
+	strlcpy (pattern, path, sizeof (pattern));
 	strlcat (pattern, "*", sizeof (pattern));
 	// ask for the directory listing handle
 	hFile = _findfirst(pattern, &n_file);
 	if(hFile == -1)
 		return;
 	do {
-		adddirentry(list, path, n_file.name );
+		adddirentry(list, n_file.name );
 	} while (_findnext(hFile, &n_file) == 0);
 	_findclose(hFile);
 
@@ -159,11 +157,11 @@ void listdirectory(stringlist_t *list, const char *path)
 {
 	DIR *dir;
 	struct dirent *ent;
-	dir = opendir( *path ? path : "./" );
+	dir = opendir(path);
 	if (!dir)
 		return;
 	while ((ent = readdir(dir)))
-		adddirentry(list, path, ent->d_name);
+		adddirentry(list, ent->d_name);
 	closedir(dir);
 }
 #endif
