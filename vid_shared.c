@@ -1068,7 +1068,7 @@ void VID_Shared_Init(void)
 int VID_Mode(int fullscreen, int width, int height, int bpp, int refreshrate, int stereobuffer, int samples)
 {
 	cl_ignoremousemoves = 2;
-	Con_Printf("Initialized Video Mode: %s %dx%dx%dx%dhz%s%s\n", fullscreen ? "fullscreen" : "window", width, height, bpp, refreshrate, stereobuffer ? " stereo" : "", samples > 1 ? va("(%ix AA)", samples) : "");
+	Con_Printf("Initialized Video Mode: %s %dx%dx%dx%dhz%s%s\n", fullscreen ? "fullscreen" : "window", width, height, bpp, refreshrate, stereobuffer ? " stereo" : "", samples > 1 ? va(" (%ix AA)", samples) : "");
 	if (VID_InitMode(fullscreen, width, height, bpp, vid_userefreshrate.integer ? max(1, refreshrate) : 0, stereobuffer, samples))
 	{
 		vid.fullscreen = fullscreen;
