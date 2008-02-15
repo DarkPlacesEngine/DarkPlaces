@@ -4800,7 +4800,7 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 		rsurface.basepolygonfactor += r_polygonoffset_submodel_factor.value;
 		rsurface.basepolygonoffset += r_polygonoffset_submodel_offset.value;
 	}
-	if (model->surfmesh.isanimated && (rsurface.frameblend[0].lerp != 1 || rsurface.frameblend[0].frame != 0))
+	if (model->surfmesh.isanimated && model->AnimateVertices && (rsurface.frameblend[0].lerp != 1 || rsurface.frameblend[0].frame != 0))
 	{
 		if (wanttangents)
 		{
@@ -4808,7 +4808,7 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 			rsurface.modelsvector3f = rsurface.array_modelsvector3f;
 			rsurface.modeltvector3f = rsurface.array_modeltvector3f;
 			rsurface.modelnormal3f = rsurface.array_modelnormal3f;
-			Mod_Alias_GetMesh_Vertices(model, rsurface.frameblend, rsurface.array_modelvertex3f, rsurface.array_modelnormal3f, rsurface.array_modelsvector3f, rsurface.array_modeltvector3f);
+			model->AnimateVertices(model, rsurface.frameblend, rsurface.array_modelvertex3f, rsurface.array_modelnormal3f, rsurface.array_modelsvector3f, rsurface.array_modeltvector3f);
 		}
 		else if (wantnormals)
 		{
@@ -4816,7 +4816,7 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 			rsurface.modelsvector3f = NULL;
 			rsurface.modeltvector3f = NULL;
 			rsurface.modelnormal3f = rsurface.array_modelnormal3f;
-			Mod_Alias_GetMesh_Vertices(model, rsurface.frameblend, rsurface.array_modelvertex3f, rsurface.array_modelnormal3f, NULL, NULL);
+			model->AnimateVertices(model, rsurface.frameblend, rsurface.array_modelvertex3f, rsurface.array_modelnormal3f, NULL, NULL);
 		}
 		else
 		{
@@ -4824,7 +4824,7 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 			rsurface.modelsvector3f = NULL;
 			rsurface.modeltvector3f = NULL;
 			rsurface.modelnormal3f = NULL;
-			Mod_Alias_GetMesh_Vertices(model, rsurface.frameblend, rsurface.array_modelvertex3f, NULL, NULL, NULL);
+			model->AnimateVertices(model, rsurface.frameblend, rsurface.array_modelvertex3f, NULL, NULL, NULL);
 		}
 		rsurface.modelvertex3f_bufferobject = 0;
 		rsurface.modelvertex3f_bufferoffset = 0;

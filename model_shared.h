@@ -780,6 +780,8 @@ typedef struct model_brushq3_s
 }
 model_brushq3_t;
 
+struct frameblend_s;
+
 typedef struct model_s
 {
 	// name and path of model, for example "progs/player.mdl"
@@ -851,6 +853,8 @@ typedef struct model_s
 	surfmesh_t		surfmesh;
 	// data type of model
 	const char		*modeldatatypestring;
+	// generates vertex data for a given frameblend
+	void(*AnimateVertices)(const struct model_s *model, const struct frameblend_s *frameblend, float *vertex3f, float *normal3f, float *svector3f, float *tvector3f);
 	// draw the model's sky polygons (only used by brush models)
 	void(*DrawSky)(struct entity_render_s *ent);
 	// draw refraction/reflection textures for the model's water polygons (only used by brush models)
@@ -980,7 +984,6 @@ void R_Q1BSP_DrawLight(struct entity_render_s *ent, int numsurfaces, const int *
 // alias models
 struct frameblend_s;
 void Mod_AliasInit(void);
-void Mod_Alias_GetMesh_Vertices(const model_t *model, const struct frameblend_s *frameblend, float *vertex3f, float *normal3f, float *svector3f, float *tvector3f);
 int Mod_Alias_GetTagMatrix(const model_t *model, int poseframe, int tagindex, matrix4x4_t *outmatrix);
 int Mod_Alias_GetTagIndexForName(const model_t *model, unsigned int skin, const char *tagname);
 
