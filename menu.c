@@ -4468,10 +4468,7 @@ void ModList_RebuildList(void)
 	stringlist_t list;
 
 	stringlistinit(&list);
-	if (fs_basedir[0])
-		listdirectory(&list, fs_basedir);
-	else
-		listdirectory(&list, "./");
+	listdirectory(&list, fs_basedir, "");
 	stringlistsort(&list);
 	modlist_count = 0;
 	modlist_numenabled = fs_numgamedirs;
