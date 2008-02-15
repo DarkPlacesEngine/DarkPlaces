@@ -162,7 +162,7 @@ void listdirectory(stringlist_t *list, const char *basepath, const char *path)
 	char fullpath[MAX_OSPATH];
 	DIR *dir;
 	struct dirent *ent;
-	dpsnprintf(fullpath, "%s%s", sizeof(fullpath), basepath, *path ? path : "./");
+	dpsnprintf(fullpath, sizeof(fullpath), "%s%s", basepath, *path ? path : "./");
 	dir = opendir(fullpath);
 	if (!dir)
 		return;
