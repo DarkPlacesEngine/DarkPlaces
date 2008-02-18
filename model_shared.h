@@ -75,20 +75,6 @@ skinframe_t;
 
 #define MAX_SKINS 256
 
-typedef struct overridetagname_s
-{
-	char name[MAX_QPATH];
-}
-overridetagname_t;
-
-// a replacement set of tag names, per skin
-typedef struct overridetagnameset_s
-{
-	int num_overridetagnames;
-	overridetagname_t *data_overridetagnames;
-}
-overridetagnameset_t;
-
 struct md3vertex_s;
 struct trivertx_s;
 typedef struct texvecvertex_s
@@ -885,8 +871,6 @@ typedef struct model_s
 	model_brushq2_t	brushq2;
 	*/
 	model_brushq3_t	brushq3;
-	// skin files can have different tags for each skin
-	overridetagnameset_t	*data_overridetagnamesforskin;
 	// flags this model for offseting sounds to the model center (used by brush models)
 	int soundfromcenter;
 }

@@ -1142,7 +1142,7 @@ static void Q3Shaders_Clear()
 	q3shaders_mem = Mem_AllocPool("q3shaders", 0, NULL);
 	q3shader_data = (q3shader_data_t*)Mem_Alloc (q3shaders_mem,
 		sizeof (q3shader_data_t));
-	Mem_ExpandableArray_NewArray (&q3shader_data->hash_entries, 
+	Mem_ExpandableArray_NewArray (&q3shader_data->hash_entries,
 		q3shaders_mem, sizeof (q3shader_hash_entry_t), 256);
 	Mem_ExpandableArray_NewArray (&q3shader_data->char_ptrs,
 		q3shaders_mem, sizeof (char**), 256);
@@ -1170,7 +1170,7 @@ static void Q3Shader_AddToHash (q3shaderinfo_t* shader)
 			/* Add to chain */
 			q3shader_hash_entry_t* newEntry = (q3shader_hash_entry_t*)
 			  Mem_ExpandableArray_AllocRecord (&q3shader_data->hash_entries);
-        		
+
 			while (lastEntry->chain != NULL) lastEntry = lastEntry->chain;
 			lastEntry->chain = newEntry;
 			newEntry->chain = NULL;
@@ -1868,14 +1868,12 @@ nothing                GL_ZERO GL_ONE
 
 skinfile_t *Mod_LoadSkinFiles(void)
 {
-	int i, words, numtags, line, tagsetsused = false, wordsoverflow;
+	int i, words, line, wordsoverflow;
 	char *text;
 	const char *data;
 	skinfile_t *skinfile = NULL, *first = NULL;
 	skinfileitem_t *skinfileitem;
 	char word[10][MAX_QPATH];
-	overridetagnameset_t tagsets[MAX_SKINS];
-	overridetagname_t tags[256];
 
 /*
 sample file:
@@ -1892,12 +1890,9 @@ tag_head,
 tag_weapon,
 tag_torso,
 */
-	memset(tagsets, 0, sizeof(tagsets));
 	memset(word, 0, sizeof(word));
 	for (i = 0;i < MAX_SKINS && (data = text = (char *)FS_LoadFile(va("%s_%i.skin", loadmodel->name, i), tempmempool, true, NULL));i++)
 	{
-		numtags = 0;
-
 		// If it's the first file we parse
 		if (skinfile == NULL)
 		{
@@ -1949,16 +1944,12 @@ tag_torso,
 				else
 					Con_Printf("Mod_LoadSkinFiles: parsing error in file \"%s_%i.skin\" on line #%i: wrong number of parameters to command \"%s\", see documentation in DP_GFX_SKINFILES extension in dpextensions.qc\n", loadmodel->name, i, line, word[0]);
 			}
-			else if (words == 2 && !strcmp(word[1], ","))
+			else if (words >= 2 && !strncmp(word[0], "tag_", 4))
 			{
 				// tag name, like "tag_weapon,"
-				if (developer_loading.integer)
-					Con_Printf("Mod_LoadSkinFiles: parsed tag #%i \"%s\"\n", numtags, word[0]);
-				memset(tags + numtags, 0, sizeof(tags[numtags]));
-				strlcpy (tags[numtags].name, word[0], sizeof (tags[numtags].name));
-				numtags++;
+				// not used for anything (not even in Quake3)
 			}
-			else if (words == 3 && !strcmp(word[1], ","))
+			else if (words >= 2 && !strcmp(word[1], ","))
 			{
 				// mesh shader name, like "U_RArm,models/players/Legoman/BikerA1.tga"
 				if (developer_loading.integer)
@@ -1973,21 +1964,6 @@ tag_torso,
 				Con_Printf("Mod_LoadSkinFiles: parsing error in file \"%s_%i.skin\" on line #%i: does not look like tag or mesh specification, or replace command, see documentation in DP_GFX_SKINFILES extension in dpextensions.qc\n", loadmodel->name, i, line);
 		}
 		Mem_Free(text);
-
-		if (numtags)
-		{
-			overridetagnameset_t *t;
-			t = tagsets + i;
-			t->num_overridetagnames = numtags;
-			t->data_overridetagnames = (overridetagname_t *)Mem_Alloc(loadmodel->mempool, t->num_overridetagnames * sizeof(overridetagname_t));
-			memcpy(t->data_overridetagnames, tags, t->num_overridetagnames * sizeof(overridetagname_t));
-			tagsetsused = true;
-		}
-	}
-	if (tagsetsused)
-	{
-		loadmodel->data_overridetagnamesforskin = (overridetagnameset_t *)Mem_Alloc(loadmodel->mempool, i * sizeof(overridetagnameset_t));
-		memcpy(loadmodel->data_overridetagnamesforskin, tagsets, i * sizeof(overridetagnameset_t));
 	}
 	if (i)
 		loadmodel->numskins = i;

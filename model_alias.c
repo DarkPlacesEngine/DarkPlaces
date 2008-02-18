@@ -430,10 +430,6 @@ int Mod_Alias_GetTagIndexForName(const model_t *model, unsigned int skin, const 
 	int i;
 	if(skin >= (unsigned int)model->numskins)
 		skin = 0;
-	if (model->data_overridetagnamesforskin && skin < (unsigned int)model->numskins && model->data_overridetagnamesforskin[(unsigned int)skin].num_overridetagnames)
-		for (i = 0;i < model->data_overridetagnamesforskin[skin].num_overridetagnames;i++)
-			if (!strcasecmp(tagname, model->data_overridetagnamesforskin[skin].data_overridetagnames[i].name))
-				return i + 1;
 	if (model->num_bones)
 		for (i = 0;i < model->num_bones;i++)
 			if (!strcasecmp(tagname, model->data_bones[i].name))
