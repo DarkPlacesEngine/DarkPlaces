@@ -2632,7 +2632,7 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 				
 				// prevseparator points past the '/' right before the wildcard and nextseparator at the one following it (or at the end of the string)
 				// copy everything up except nextseperator
-				strlcpy(subpattern, pattern, min(sizeof(subpattern), nextseparator - pattern + 1));
+				strlcpy(subpattern, pattern, min(sizeof(subpattern), (size_t) (nextseparator - pattern + 1)));
 				// find the last '/' before the wildcard
 				prevseparator = strrchr( subpattern, '/' ) + 1;
 				if (!prevseparator)
