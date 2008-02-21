@@ -19,7 +19,7 @@
 //4 feature darkplaces csqc: add builtins to clientside qc for gl calls
 
 sfx_t *S_FindName(const char *name);
-int Sbar_GetPlayer (int index);
+int Sbar_GetSortedPlayerIndex (int index);
 void Sbar_SortFrags (void);
 void CL_FindNonSolidLocation(const vec3_t in, vec3_t out, vec_t radius);
 void CSQC_RelinkAllEntities (int drawmask);
@@ -115,7 +115,7 @@ void VM_CL_setmodel (void)
 	if( mod ) {
 		// TODO: check if this breaks needed consistency and maybe add a cvar for it too?? [1/10/2008 Black]
 		//SetMinMaxSize (e, mod->normalmins, mod->normalmaxs);
-	} 
+	}
 	else
 	{
 		SetMinMaxSize (e, vec3_origin, vec3_origin);
@@ -1136,8 +1136,9 @@ static void VM_CL_getplayerkey (void)
 	PRVM_G_INT(OFS_RETURN) = OFS_NULL;
 	Sbar_SortFrags();
 
-	i = Sbar_GetPlayer(i);
-	if(i < 0)
+	if (i < 0)
+		i = Sbar_GetSortedPlayerIndex(-1-i);
+	if(i < 0 || i >= cl.maxclients)
 		return;
 
 	t[0] = 0;
