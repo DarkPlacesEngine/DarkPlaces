@@ -196,7 +196,7 @@ void Sys_Init_Commands (void)
 {
 }
 
-int SDL_main (int argc, char *argv[])
+int main (int argc, char *argv[])
 {
 	signal(SIGFPE, SIG_IGN);
 
