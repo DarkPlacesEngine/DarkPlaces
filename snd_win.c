@@ -20,12 +20,16 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "snd_main.h"
 
+#ifdef SUPPORTDIRECTX
 #ifndef DIRECTSOUND_VERSION
 #	define DIRECTSOUND_VERSION 0x0500  /* Version 5.0 */
 #endif
+#endif
 #include <windows.h>
 #include <mmsystem.h>
+#ifdef SUPPORTDIRECTX
 #include <dsound.h>
+#endif
 
 // ==============================================================================
 
@@ -79,7 +83,9 @@ static const GUID MY_KSDATAFORMAT_SUBTYPE_PCM =
 
 extern HWND mainwindow;
 
+#ifdef SUPPORTDIRECTX
 HRESULT (WINAPI *pDirectSoundCreate)(GUID FAR *lpGUID, LPDIRECTSOUND FAR *lplpDS, IUnknown FAR *pUnkOuter);
+#endif
 
 // Wave output: 64KB in 64 buffers of 1KB
 // (64KB is > 1 sec at 16-bit 22050 Hz mono, and is 1/3 sec at 16-bit 44100 Hz stereo)
@@ -94,16 +100,19 @@ static unsigned int wav_buffer_size;
 
 typedef enum sndinitstat_e {SIS_SUCCESS, SIS_FAILURE, SIS_NOTAVAIL} sndinitstat;
 
+#ifdef SUPPORTDIRECTX
 static qboolean	dsound_init;
-static qboolean	wav_init;
+static unsigned int dsound_time;
 static qboolean	primary_format_set;
+#endif
+
+static qboolean	wav_init;
 
 static int	snd_sent, snd_completed;
 
 static int prev_painted;
 static unsigned int paintpot;
 
-static unsigned int dsound_time;
 
 
 /*
@@ -125,13 +134,17 @@ DWORD	gSndBufSize;
 
 DWORD	dwStartTime;
 
+#ifdef SUPPORTDIRECTX
 LPDIRECTSOUND pDS;
 LPDIRECTSOUNDBUFFER pDSBuf, pDSPBuf;
 
 HINSTANCE hInstDS;
+#endif
 
 qboolean SNDDMA_InitWav (void);
+#ifdef SUPPORTDIRECTX
 sndinitstat SNDDMA_InitDirect (void);
+#endif
 
 
 /*
@@ -193,6 +206,7 @@ static qboolean SndSys_BuildWaveFormat (const snd_format_t* requested, WAVEFORMA
 }
 
 
+#ifdef SUPPORTDIRECTX
 /*
 ==================
 SndSys_InitDirectSound
@@ -404,6 +418,7 @@ static sndinitstat SndSys_InitDirectSound (const snd_format_t* requested)
 
 	return SIS_SUCCESS;
 }
+#endif
 
 
 /*
@@ -530,18 +545,23 @@ May return a suggested format if the requested format isn't available
 */
 qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 {
+#ifdef SUPPORTDIRECTX
 	qboolean wavonly;
+#endif
 	sndinitstat	stat;
 
 	Con_Print ("SndSys_Init: using the Win32 module\n");
 
+#ifdef SUPPORTDIRECTX
 // COMMANDLINEOPTION: Windows Sound: -wavonly uses wave sound instead of DirectSound
 	wavonly = (COM_CheckParm ("-wavonly") != 0);
 	dsound_init = false;
+#endif
 	wav_init = false;
 
 	stat = SIS_FAILURE;	// assume DirectSound won't initialize
 
+#ifdef SUPPORTDIRECTX
 	// Init DirectSound
 	if (!wavonly)
 	{
@@ -552,12 +572,15 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 		else
 			Con_Print("DirectSound failed to init\n");
 	}
+#endif
 
 	// if DirectSound didn't succeed in initializing, try to initialize
 	// waveOut sound, unless DirectSound failed because the hardware is
 	// already allocated (in which case the user has already chosen not
 	// to have sound)
+#ifdef SUPPORTDIRECTX
 	if (!dsound_init && (stat != SIS_NOTAVAIL))
+#endif
 	{
 		if (SndSys_InitMmsystem (requested))
 			Con_Print("Wave sound (MMSYSTEM) initialized\n");
@@ -565,7 +588,11 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 			Con_Print("Wave sound failed to init\n");
 	}
 
+#ifdef SUPPORTDIRECTX
 	return (dsound_init || wav_init);
+#else
+	return wav_init;
+#endif
 }
 
 
@@ -578,6 +605,7 @@ Stop the sound card, delete "snd_renderbuffer" and free its other resources
 */
 void SndSys_Shutdown (void)
 {
+#ifdef SUPPORTDIRECTX
 	if (pDSBuf)
 	{
 		IDirectSoundBuffer_Stop(pDSBuf);
@@ -595,6 +623,7 @@ void SndSys_Shutdown (void)
 		IDirectSound_SetCooperativeLevel (pDS, mainwindow, DSSCL_NORMAL);
 		IDirectSound_Release(pDS);
 	}
+#endif
 
 	if (hWaveOut)
 	{
@@ -629,15 +658,17 @@ void SndSys_Shutdown (void)
 		snd_renderbuffer = NULL;
 	}
 
+#ifdef SUPPORTDIRECTX
 	pDS = NULL;
 	pDSBuf = NULL;
 	pDSPBuf = NULL;
+	dsound_init = false;
+#endif
 	hWaveOut = 0;
 	hData = 0;
 	hWaveHdr = 0;
 	lpData = NULL;
 	lpWaveHdr = NULL;
-	dsound_init = false;
 	wav_init = false;
 }
 
@@ -702,6 +733,7 @@ unsigned int SndSys_GetSoundTime (void)
 
 	factor = snd_renderbuffer->format.width * snd_renderbuffer->format.channels;
 
+#ifdef SUPPORTDIRECTX
 	if (dsound_init)
 	{
 		DWORD dwTime;
@@ -714,6 +746,7 @@ unsigned int SndSys_GetSoundTime (void)
 		dsound_time += diff / factor;
 		return dsound_time;
 	}
+#endif
 
 	if (wav_init)
 	{
@@ -739,10 +772,12 @@ unsigned int SndSys_GetSoundTime (void)
 }
 
 
+#ifdef SUPPORTDIRECTX
 static DWORD dsound_dwSize;
 static DWORD dsound_dwSize2;
 static DWORD *dsound_pbuf;
 static DWORD *dsound_pbuf2;
+#endif
 
 /*
 ====================
@@ -753,6 +788,7 @@ Get the exclusive lock on "snd_renderbuffer"
 */
 qboolean SndSys_LockRenderBuffer (void)
 {
+#ifdef SUPPORTDIRECTX
 	int reps;
 	HRESULT hresult;
 	DWORD	dwStatus;
@@ -797,6 +833,7 @@ qboolean SndSys_LockRenderBuffer (void)
 			Sys_Error("SndSys_LockRenderBuffer: the ring address has changed!!!\n");
 		return true;
 	}
+#endif
 
 	return wav_init;
 }
@@ -811,6 +848,8 @@ Release the exclusive lock on "snd_renderbuffer"
 */
 void SndSys_UnlockRenderBuffer (void)
 {
+#ifdef SUPPORTDIRECTX
 	if (pDSBuf)
 		IDirectSoundBuffer_Unlock(pDSBuf, dsound_pbuf, dsound_dwSize, dsound_pbuf2, dsound_dwSize2);
+#endif
 }
