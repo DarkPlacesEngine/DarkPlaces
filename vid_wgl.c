@@ -25,10 +25,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include <windows.h>
 #include <mmsystem.h>
+#ifdef SUPPORTDIRECTX
 #include <dsound.h>
+#endif
 #include "resource.h"
 #include <commctrl.h>
+#ifdef SUPPORTDIRECTX
 #include <dinput.h>
+#endif
 
 extern HINSTANCE global_hInstance;
 
@@ -120,14 +124,14 @@ static int window_x, window_y;
 static void IN_Activate (qboolean grab);
 
 static qboolean mouseinitialized;
+
+#ifdef SUPPORTDIRECTX
 static qboolean dinput;
-
-// input code
-
 #define DINPUT_BUFFERSIZE           16
 #define iDirectInputCreate(a,b,c,d)	pDirectInputCreate(a,b,c,d)
 
 static HRESULT (WINAPI *pDirectInputCreate)(HINSTANCE hinst, DWORD dwVersion, LPDIRECTINPUT * lplpDirectInput, LPUNKNOWN punkOuter);
+#endif
 
 // LordHavoc: thanks to backslash for this support for mouse buttons 4 and 5
 /* backslash :: imouse explorer buttons */
@@ -156,9 +160,11 @@ static int			mouse_buttons;
 static int			mouse_oldbuttonstate;
 
 static unsigned int uiWheelMessage;
+#ifdef SUPPORTDIRECTX
 static qboolean	dinput_acquired;
 
 static unsigned int		mstate_di;
+#endif
 
 // joystick defines and variables
 // where should defines be moved?
@@ -220,12 +226,13 @@ static int			joy_id;
 static DWORD		joy_flags;
 static DWORD		joy_numbuttons;
 
+#ifdef SUPPORTDIRECTX
 static LPDIRECTINPUT		g_pdi;
 static LPDIRECTINPUTDEVICE	g_pMouse;
+static HINSTANCE hInstDI;
+#endif
 
 static JOYINFOEX	ji;
-
-static HINSTANCE hInstDI;
 
 // forward-referenced functions
 static void IN_StartupJoystick (void);
@@ -581,7 +588,11 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 			if (wParam & MK_XBUTTON7)
 				temp |= 512;
 
+#ifdef SUPPORTDIRECTX
 			if (vid_usingmouse && !dinput_acquired)
+#else
+			if (vid_usingmouse)
+#endif
 			{
 				// perform button actions
 				int i;
@@ -1270,12 +1281,14 @@ static void IN_Activate (qboolean grab)
 		{
 			vid_usingmouse = true;
 			cl_ignoremousemoves = 2;
+#ifdef SUPPORTDIRECTX
 			if (dinput && g_pMouse)
 			{
 				IDirectInputDevice_Acquire(g_pMouse);
 				dinput_acquired = true;
 			}
 			else
+#endif
 			{
 				RECT window_rect;
 				window_rect.left = window_x;
@@ -1309,12 +1322,14 @@ static void IN_Activate (qboolean grab)
 		{
 			vid_usingmouse = false;
 			cl_ignoremousemoves = 2;
+#ifdef SUPPORTDIRECTX
 			if (dinput_acquired)
 			{
 				IDirectInputDevice_Unacquire(g_pMouse);
 				dinput_acquired = false;
 			}
 			else
+#endif
 			{
 				// restore system mouseparms if we changed them
 				if (restore_spi)
@@ -1329,6 +1344,7 @@ static void IN_Activate (qboolean grab)
 }
 
 
+#ifdef SUPPORTDIRECTX
 /*
 ===========
 IN_InitDInput
@@ -1418,6 +1434,7 @@ static qboolean IN_InitDInput (void)
 
 	return true;
 }
+#endif
 
 
 /*
@@ -1432,6 +1449,7 @@ static void IN_StartupMouse (void)
 
 	mouseinitialized = true;
 
+#ifdef SUPPORTDIRECTX
 // COMMANDLINEOPTION: Windows Input: -dinput enables DirectInput for mouse/joystick input
 	if (COM_CheckParm ("-dinput"))
 		dinput = IN_InitDInput ();
@@ -1440,6 +1458,7 @@ static void IN_StartupMouse (void)
 		Con_Print("DirectInput initialized\n");
 	else
 		Con_Print("DirectInput not initialized\n");
+#endif
 
 	mouse_buttons = 10;
 }
@@ -1452,7 +1471,7 @@ IN_MouseMove
 */
 static void IN_MouseMove (void)
 {
-	int i, mx, my;
+	int mx, my;
 	POINT current_pos;
 
 	if (!vid_usingmouse)
@@ -1462,8 +1481,10 @@ static void IN_MouseMove (void)
 		return;
 	}
 
+#ifdef SUPPORTDIRECTX
 	if (dinput_acquired)
 	{
+		int i;
 		DIDEVICEOBJECTDATA	od;
 		DWORD				dwElements;
 		HRESULT				hr;
@@ -1552,6 +1573,7 @@ static void IN_MouseMove (void)
 		in_mouse_y = my;
 	}
 	else
+#endif
 	{
 		GetCursorPos (&current_pos);
 		mx = current_pos.x - (window_x + vid.width / 2);
@@ -2047,6 +2069,7 @@ static void IN_Shutdown(void)
 {
 	IN_Activate (false);
 
+#ifdef SUPPORTDIRECTX
 	if (g_pMouse)
 		IDirectInputDevice_Release(g_pMouse);
 	g_pMouse = NULL;
@@ -2054,4 +2077,5 @@ static void IN_Shutdown(void)
 	if (g_pdi)
 		IDirectInput_Release(g_pdi);
 	g_pdi = NULL;
+#endif
 }
