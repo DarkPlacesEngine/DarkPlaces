@@ -1041,7 +1041,7 @@ void FS_AddGameHierarchy (const char *dir)
 
 	if(COM_CheckParm("-nohome"))
 		*userdir = 0;
-	
+
 	if((i = COM_CheckParm("-userdir")) && i < com_argc - 1)
 		dpsnprintf(userdir, sizeof(userdir), "%s/", com_argv[i+1]);
 
@@ -1379,10 +1379,10 @@ void FS_Init (void)
 		strlcat(fs_basedir, "/", sizeof(fs_basedir));
 
 	if (!FS_CheckGameDir(gamedirname1))
-		Sys_Error("base gamedir %s%s/ not found!\n", fs_basedir, gamedirname1);
+		Con_Printf("WARNING: base gamedir %s%s/ not found!\n", fs_basedir, gamedirname1);
 
 	if (gamedirname2 && !FS_CheckGameDir(gamedirname2))
-		Sys_Error("base gamedir %s%s/ not found!\n", fs_basedir, gamedirname2);
+		Con_Printf("WARNING: base gamedir %s%s/ not found!\n", fs_basedir, gamedirname2);
 
 	// -game <gamedir>
 	// Adds basedir/gamedir as an override game
@@ -1397,7 +1397,7 @@ void FS_Init (void)
 			if (FS_CheckNastyPath(com_argv[i], true))
 				Sys_Error("-game %s%s/ is a dangerous/non-portable path\n", fs_basedir, com_argv[i]);
 			if (!FS_CheckGameDir(com_argv[i]))
-				Sys_Error("-game %s%s/ not found!\n", fs_basedir, com_argv[i]);
+				Con_Printf("WARNING: -game %s%s/ not found!\n", fs_basedir, com_argv[i]);
 			// add the gamedir to the list of active gamedirs
 			strlcpy (fs_gamedirs[fs_numgamedirs], com_argv[i], sizeof(fs_gamedirs[fs_numgamedirs]));
 			fs_numgamedirs++;
