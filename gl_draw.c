@@ -1194,6 +1194,8 @@ void DrawQ_Line (float width, float x1, float y1, float x2, float y2, float r, f
 {
 	_DrawQ_ProcessDrawFlag(flags);
 
+	R_SetupGenericShader(false);
+	
 	CHECKGLERROR
 	qglLineWidth(width);CHECKGLERROR
 
