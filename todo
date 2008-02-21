@@ -73,6 +73,7 @@
 0 change csqc server: change SendEntity to take the client as "other" rather than a parameter
 0 change csqc server: implement packet logging of csqc entities to deal with packet loss
 0 change csqc server: replace AddStat with RegisterStat and RegisterStatString, make them send float or string only, with string taking up only one stat slot and being sent using svc_updatestatstring, make it automatically send integer values as svc_updatestat/svc_updatestatubyte and non-integer values as svc_updatestatfloat (KrimZon, Chris, Spike)
+0 change csqc server: replace per-entity SendEntity function with a global SV_SendEntity function, because it does not make it sufficiently clear to modders that the .SendEntity function has no special meaning, that an ENT_ constant must be set up, and so on, it would be more clear if there was only a single global SV_SendEntity function, which can still call out to a .SendEntity or whatever if it wishes, but is more likely to do an if else on a .net_type field or similar (Urre)
 0 change darkplaces client: disable all possible 'cheat' things unless -developer is given on commandline, this includes r_show*, r_test, gl_lightmaps, r_fullbright, and would require changing -developer to only set developer to 1 rather than 100, as 100 is too annoying
 0 change darkplaces client: modify cl_particles_quake to make all the engine dlights be white and look as much like quake as possible (Jago)
 0 change darkplaces client: particles shouldn't be using contents checks to decide whether to die, they should use movement traces
