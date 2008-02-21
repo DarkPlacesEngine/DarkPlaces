@@ -542,8 +542,11 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 
 		case WM_SYSCOMMAND:
 			// prevent screensaver from occuring while the active window
+			// note: password-locked screensavers on Vista still work
 			if (vid_activewindow && ((wParam & 0xFFF0) == SC_SCREENSAVE || (wParam & 0xFFF0) == SC_MONITORPOWER))
-				lRet = 0;; // note: password-locked screensavers on Vista still work
+				lRet = 0;
+			else
+				lRet = DefWindowProc (hWnd, uMsg, wParam, lParam);
 			break;
 
 	// this is complicated because Win32 seems to pack multiple mouse events into
