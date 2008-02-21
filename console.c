@@ -1771,7 +1771,6 @@ void SanitizeString(char *in, char *out)
 	}
 	*out = 0;
 }
-int Sbar_GetPlayer (int index); // <- safety?
 
 // Now it becomes TRICKY :D --blub
 static char Nicks_list[MAX_SCOREBOARD][MAX_SCOREBOARDNAME];	// contains the nicks with colors and all that
@@ -1816,15 +1815,15 @@ int Nicks_strncasecmp(char *a, char *b, unsigned int a_len)
 			return Nicks_strncasecmp_nospaces(a, b, a_len);
 		return strncasecmp(a, b, a_len);
 	}
-	
+
 	space_char = (con_nickcompletion_flags.integer & NICKS_NO_SPACES) ? 'a' : ' ';
-	
+
 	// ignore non alphanumerics of B
 	// if A contains a non-alphanumeric, B must contain it as well though!
 	while(a_len)
 	{
 		qboolean alnum_a, alnum_b;
-		
+
 		if(tolower(*a) == tolower(*b))
 		{
 			if(*a == 0) // end of both strings, they're equal
@@ -1861,33 +1860,30 @@ int Nicks_CompleteCountPossible(char *line, int pos, char *s, qboolean isCon)
 	int match;
 	int spos;
 	int count = 0;
-	
+
 	if(!con_nickcompletion.integer)
 		return 0;
 
 	// changed that to 1
 	if(!line[0])// || !line[1]) // we want at least... 2 written characters
 		return 0;
-	
+
 	for(i = 0; i < cl.maxclients; ++i)
 	{
-		/*p = Sbar_GetPlayer(i);
-		if(p < 0)
-		break;*/
 		p = i;
 		if(!cl.scores[p].name[0])
 			continue;
 
 		SanitizeString(cl.scores[p].name, name);
 		//Con_Printf("Sanitized: %s^7 -> %s", cl.scores[p].name, name);
-		
+
 		if(!name[0])
 			continue;
-		
+
 		length = strlen(name);
 		match = -1;
 		spos = pos - 1; // no need for a minimum of characters :)
-		
+
 		while(spos >= 0 && (spos - pos) < length) // search-string-length < name length
 		{
 			if(spos > 0 && line[spos-1] != ' ' && line[spos-1] != ';' && line[spos-1] != '\"' && line[spos-1] != '\'')
@@ -1916,7 +1912,7 @@ int Nicks_CompleteCountPossible(char *line, int pos, char *s, qboolean isCon)
 		{
 			Nicks_matchpos = match;
 		}
-		
+
 		Nicks_offset[count] = s - (&line[match]);
 		//Con_Printf("offset for %s: %i\n", name, Nicks_offset[count]);
 
@@ -1943,7 +1939,7 @@ void Nicks_CutMatchesNormal(int count)
 		l = strlen(Nicks_sanlist[i]) - 1;
 		if(l < c)
 			c = l;
-		
+
 		for(l = 0; l <= c; ++l)
 			if(tolower(Nicks_sanlist[0][l]) != tolower(Nicks_sanlist[i][l]))
 			{
@@ -1978,7 +1974,7 @@ void Nicks_CutMatchesAlphaNumeric(int count)
 	char tempstr[sizeof(Nicks_sanlist[0])];
 	char *a, *b;
 	char space_char = (con_nickcompletion_flags.integer & NICKS_NO_SPACES) ? 'a' : ' '; // yes this is correct, we want NO spaces when no spaces
-	
+
 	c = strlen(Nicks_sanlist[0]);
 	for(i = 0, l = 0; i < (int)c; ++i)
 	{
@@ -1990,7 +1986,7 @@ void Nicks_CutMatchesAlphaNumeric(int count)
 		}
 	}
 	tempstr[l] = 0;
-	
+
 	for(i = 1; i < count; ++i)
 	{
 		a = tempstr;
@@ -2036,7 +2032,7 @@ void Nicks_CutMatchesNoSpaces(int count)
 	unsigned int c, l;
 	char tempstr[sizeof(Nicks_sanlist[0])];
 	char *a, *b;
-	
+
 	c = strlen(Nicks_sanlist[0]);
 	for(i = 0, l = 0; i < (int)c; ++i)
 	{
@@ -2046,7 +2042,7 @@ void Nicks_CutMatchesNoSpaces(int count)
 		}
 	}
 	tempstr[l] = 0;
-	
+
 	for(i = 1; i < count; ++i)
 	{
 		a = tempstr;
@@ -2106,7 +2102,7 @@ const char **Nicks_CompleteBuildList(int count)
 		buf[bpos] = Nicks_sanlist[bpos] + Nicks_offset[bpos];
 
 	Nicks_CutMatches(count);
-	
+
 	buf[bpos] = NULL;
 	return buf;
 }
@@ -2116,14 +2112,14 @@ int Nicks_AddLastColor(char *buffer, int pos)
 	qboolean quote_added = false;
 	int match;
 	char color = '7';
-	
+
 	if(con_nickcompletion_flags.integer & NICKS_ADD_QUOTE && buffer[Nicks_matchpos-1] == '\"')
 	{
 		// we'll have to add a quote :)
 		buffer[pos++] = '\"';
 		quote_added = true;
 	}
-	
+
 	if((!quote_added && con_nickcompletion_flags.integer & NICKS_ADD_COLOR) || con_nickcompletion_flags.integer & NICKS_FORCE_COLOR)
 	{
 		// add color when no quote was added, or when flags &4?
@@ -2154,7 +2150,7 @@ int Nicks_CompleteChatLine(char *buffer, size_t size, unsigned int pos)
 	{
 		size_t len;
 		char *msg;
-		
+
 		msg = Nicks_list[0];
 		len = min(size - Nicks_matchpos - 3, strlen(msg));
 		memcpy(&buffer[Nicks_matchpos], msg, len);
@@ -2203,7 +2199,7 @@ void Con_CompleteCommandLine (void)
 	int c, v, a, i, cmd_len, pos, k;
 	int n; // nicks --blub
 	const char *space, *patterns;
-	
+
 	//find what we want to complete
 	pos = key_linepos;
 	while(--pos)
@@ -2420,7 +2416,7 @@ void Con_CompleteCommandLine (void)
 	}
 
 	if (!(c + v + a + n))	// No possible matches
-	{		
+	{
 		if(s2[0])
 			strlcpy(&key_lines[edit_line][key_linepos], s2, sizeof(key_lines[edit_line]) - key_linepos);
 		return;
@@ -2434,7 +2430,7 @@ void Con_CompleteCommandLine (void)
 		cmd = *(list[2] = Cmd_CompleteAliasBuildList(s));
 	if (n)
 		cmd = *(list[3] = Nicks_CompleteBuildList(n));
-	
+
 	for (cmd_len = (int)strlen(s);;cmd_len++)
 	{
 		const char **l;

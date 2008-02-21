@@ -533,19 +533,9 @@ Sbar_SortFrags
 static int fragsort[MAX_SCOREBOARD];
 static int scoreboardlines;
 
-//[515]: Sbar_GetPlayer for csqc "getplayerkey" func
-int Sbar_GetPlayer (int index)
+int Sbar_GetSortedPlayerIndex (int index)
 {
-	if(index < 0)
-	{
-		index = -1-index;
-		if(index >= scoreboardlines)
-			return -1;
-		index = fragsort[index];
-	}
-	if(index >= scoreboardlines)
-		return -1;
-	return index;
+	return index >= 0 && index < scoreboardlines ? fragsort[index] : -1;
 }
 
 static scoreboard_t teams[MAX_SCOREBOARD];
