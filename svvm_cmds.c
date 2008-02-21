@@ -1448,11 +1448,11 @@ void VM_SV_UpdateCustomStats (client_t *client, prvm_edict_t *ent, sizebuf_t *ms
 			stats[i+35] = s[12] + s[13] * 256 + s[14] * 65536 + s[15] * 16777216;
 			break;
 		//float field sent as-is
-		case 2:
+		case 8:
 			stats[i+32] = PRVM_E_INT(ent, vm_customstats[i].fieldoffset);
 			break;
 		//integer value of float field
-		case 8:
+		case 2:
 			stats[i+32] = (int)PRVM_E_FLOAT(ent, vm_customstats[i].fieldoffset);
 			break;
 		default:
