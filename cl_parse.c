@@ -397,9 +397,9 @@ static void CL_SetupWorldModel(void)
 
 	// set up csqc world for collision culling
 	if (cl.worldmodel)
-		World_SetSize(&cl.world, cl.worldmodel->normalmins, cl.worldmodel->normalmaxs);
+		World_SetSize(&cl.world, cl.worldmodel->name, cl.worldmodel->normalmins, cl.worldmodel->normalmaxs);
 	else
-		World_SetSize(&cl.world, defaultmins, defaultmaxs);
+		World_SetSize(&cl.world, "", defaultmins, defaultmaxs);
 
 	// load or reload .loc file for team chat messages
 	CL_Locs_Reload_f();

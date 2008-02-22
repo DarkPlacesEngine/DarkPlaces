@@ -798,7 +798,7 @@ void SV_SendServerinfo (client_t *client)
 	client->clientcamera = PRVM_NUM_FOR_EDICT(client->edict);
 	MSG_WriteByte (&client->netconnection->message, svc_setview);
 	MSG_WriteShort (&client->netconnection->message, client->clientcamera);
-	
+
 	MSG_WriteByte (&client->netconnection->message, svc_signonnum);
 	MSG_WriteByte (&client->netconnection->message, 1);
 
@@ -2484,13 +2484,32 @@ void SV_SpawnServer (const char *server)
 
 	Con_DPrintf("SpawnServer: %s\n", server);
 
+	dpsnprintf (modelname, sizeof(modelname), "maps/%s.bsp", server);
+
+	if (!FS_FileExists(modelname))
+	{
+		Con_Printf("SpawnServer: no map file named %s\n", modelname);
+		return;
+	}
+
 	if (cls.state != ca_dedicated)
 	{
 		SCR_BeginLoadingPlaque();
 		S_StopAllSounds();
 	}
 
-	dpsnprintf (modelname, sizeof(modelname), "maps/%s.bsp", server);
+	if(sv.active)
+	{
+		SV_VM_Begin();
+		if(prog->funcoffsets.SV_Shutdown)
+		{
+			func_t s = prog->funcoffsets.SV_Shutdown;
+			prog->funcoffsets.SV_Shutdown = 0; // prevent it from getting called again
+			PRVM_ExecuteProgram(s,"SV_Shutdown() required");
+		}
+		SV_VM_End();
+	}
+
 	worldmodel = Mod_ForName(modelname, false, true, true);
 	if (!worldmodel || !worldmodel->TraceBox)
 	{
@@ -2606,7 +2625,7 @@ void SV_SpawnServer (const char *server)
 //
 // clear world interaction links
 //
-	World_SetSize(&sv.world, sv.worldmodel->normalmins, sv.worldmodel->normalmaxs);
+	World_SetSize(&sv.world, sv.worldmodel->name, sv.worldmodel->normalmins, sv.worldmodel->normalmaxs);
 
 	strlcpy(sv.sound_precache[0], "", sizeof(sv.sound_precache[0]));
 
@@ -2629,10 +2648,10 @@ void SV_SpawnServer (const char *server)
 	ent->fields.server->modelindex = 1;		// world model
 	ent->fields.server->solid = SOLID_BSP;
 	ent->fields.server->movetype = MOVETYPE_PUSH;
-	VectorCopy(sv.worldmodel->normalmins, ent->fields.server->mins);
-	VectorCopy(sv.worldmodel->normalmaxs, ent->fields.server->maxs);
-	VectorCopy(sv.worldmodel->normalmins, ent->fields.server->absmin);
-	VectorCopy(sv.worldmodel->normalmaxs, ent->fields.server->absmax);
+	VectorCopy(sv.world.mins, ent->fields.server->mins);
+	VectorCopy(sv.world.maxs, ent->fields.server->maxs);
+	VectorCopy(sv.world.mins, ent->fields.server->absmin);
+	VectorCopy(sv.world.maxs, ent->fields.server->absmax);
 
 	if (coop.value)
 		prog->globals.server->coop = coop.integer;

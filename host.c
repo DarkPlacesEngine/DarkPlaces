@@ -528,9 +528,6 @@ void Host_ShutdownServer(void)
 
 // make sure all the clients know we're disconnecting
 	SV_VM_Begin();
-	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
-		if (host_client->active)
-			SV_DropClient(false); // server shutdown
 	if(prog->loaded)
 		if(prog->funcoffsets.SV_Shutdown)
 		{
@@ -538,6 +535,9 @@ void Host_ShutdownServer(void)
 			prog->funcoffsets.SV_Shutdown = 0; // prevent it from getting called again
 			PRVM_ExecuteProgram(s,"SV_Shutdown() required");
 		}
+	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
+		if (host_client->active)
+			SV_DropClient(false); // server shutdown
 	SV_VM_End();
 
 	NetConn_CloseServerPorts();
