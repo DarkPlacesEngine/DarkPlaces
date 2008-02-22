@@ -80,9 +80,14 @@ World_SetSize
 
 ===============
 */
-void World_SetSize(world_t *world, const vec3_t mins, const vec3_t maxs)
+void World_SetSize(world_t *world, const char *filename, const vec3_t mins, const vec3_t maxs)
 {
 	int i;
+
+	strlcpy(world->filename, filename, sizeof(world->filename));
+	VectorCopy(mins, world->mins);
+	VectorCopy(maxs, world->maxs);
+
 	// the areagrid_marknumber is not allowed to be 0
 	if (world->areagrid_marknumber < 1)
 		world->areagrid_marknumber = 1;

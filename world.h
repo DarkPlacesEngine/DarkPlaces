@@ -41,6 +41,11 @@ typedef struct link_s
 
 typedef struct world_s
 {
+	// convenient fields
+	char filename[MAX_QPATH];
+	vec3_t mins;
+	vec3_t maxs;
+
 	int areagrid_stats_calls;
 	int areagrid_stats_nodechecks;
 	int areagrid_stats_entitychecks;
@@ -66,7 +71,7 @@ void World_InsertLinkBefore(link_t *l, link_t *before, int entitynumber);
 void World_Init(void);
 
 // called after the world model has been loaded, before linking any entities
-void World_SetSize(world_t *world, const vec3_t mins, const vec3_t maxs);
+void World_SetSize(world_t *world, const char *filename, const vec3_t mins, const vec3_t maxs);
 // unlinks all entities (used before reallocation of edicts)
 void World_UnlinkAll(world_t *world);
 
