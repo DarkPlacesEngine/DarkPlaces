@@ -798,16 +798,19 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 		for (depth  = 1;depth  < glt->inputdepth ;depth  <<= 1);
 	}
 
-	if (prevbuffer != NULL)
+	R_MakeResizeBufferBigger(width * height * depth * glt->sides * glt->bytesperpixel);
+	R_MakeResizeBufferBigger(fragwidth * fragheight * fragdepth * glt->sides * glt->bytesperpixel);
+
+	if (prevbuffer == NULL)
 	{
-		R_MakeResizeBufferBigger(width * height * depth * glt->sides * glt->bytesperpixel);
-		R_MakeResizeBufferBigger(fragwidth * fragheight * fragdepth * glt->sides * glt->bytesperpixel);
-		if (glt->textype->textype == TEXTYPE_PALETTE)
-		{
-			// promote paletted to BGRA, so we only have to worry about BGRA in the rest of this code
-			Image_Copy8bitBGRA(prevbuffer, colorconvertbuffer, fragwidth * fragheight * fragdepth * glt->sides, glt->palette);
-			prevbuffer = colorconvertbuffer;
-		}
+		memset(resizebuffer, 0, fragwidth * fragheight * fragdepth * glt->bytesperpixel);
+		prevbuffer = resizebuffer;
+	}
+	else if (glt->textype->textype == TEXTYPE_PALETTE)
+	{
+		// promote paletted to BGRA, so we only have to worry about BGRA in the rest of this code
+		Image_Copy8bitBGRA(prevbuffer, colorconvertbuffer, fragwidth * fragheight * fragdepth * glt->sides, glt->palette);
+		prevbuffer = colorconvertbuffer;
 	}
 
 	if ((glt->flags & (TEXF_MIPMAP | TEXF_PICMIP | GLTEXF_UPLOAD)) == 0 && glt->inputwidth == glt->tilewidth && glt->inputheight == glt->tileheight && glt->inputdepth == glt->tiledepth)
@@ -838,7 +841,7 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 		glt->flags &= ~GLTEXF_UPLOAD;
 
 		// cubemaps contain multiple images and thus get processed a bit differently
-		if ((prevbuffer != NULL) && (glt->texturetype != GLTEXTURETYPE_CUBEMAP))
+		if (glt->texturetype != GLTEXTURETYPE_CUBEMAP)
 		{
 			if (glt->inputwidth != width || glt->inputheight != height || glt->inputdepth != depth)
 			{
@@ -869,17 +872,8 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 			{
 				while (width > 1 || height > 1 || depth > 1)
 				{
-					if (prevbuffer != NULL)
-					{
-						Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
-						prevbuffer = resizebuffer;
-					}
-					else
-					{
-						if (width > 1) width >>= 1;
-						if (height > 1) height >>= 1;
-						if (depth > 1) depth >>= 1;
-					}
+					Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
+					prevbuffer = resizebuffer;
 					qglTexImage1D(GL_TEXTURE_1D, mip++, glt->glinternalformat, width, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
 				}
 			}
@@ -890,17 +884,8 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 			{
 				while (width > 1 || height > 1 || depth > 1)
 				{
-					if (prevbuffer != NULL)
-					{
-						Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
-						prevbuffer = resizebuffer;
-					}
-					else
-					{
-						if (width > 1) width >>= 1;
-						if (height > 1) height >>= 1;
-						if (depth > 1) depth >>= 1;
-					}
+					Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
+					prevbuffer = resizebuffer;
 					qglTexImage2D(GL_TEXTURE_2D, mip++, glt->glinternalformat, width, height, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
 				}
 			}
@@ -911,17 +896,8 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 			{
 				while (width > 1 || height > 1 || depth > 1)
 				{
-					if (prevbuffer != NULL)
-					{
-						Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
-						prevbuffer = resizebuffer;
-					}
-					else
-					{
-						if (width > 1) width >>= 1;
-						if (height > 1) height >>= 1;
-						if (depth > 1) depth >>= 1;
-					}
+					Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
+					prevbuffer = resizebuffer;
 					qglTexImage3D(GL_TEXTURE_3D, mip++, glt->glinternalformat, width, height, depth, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
 				}
 			}
@@ -929,24 +905,21 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 		case GLTEXTURETYPE_CUBEMAP:
 			// convert and upload each side in turn,
 			// from a continuous block of input texels
-			texturebuffer = prevbuffer ? (unsigned char *)prevbuffer : NULL;
+			texturebuffer = (unsigned char *)prevbuffer;
 			for (i = 0;i < 6;i++)
 			{
 				prevbuffer = texturebuffer;
-				if (prevbuffer != NULL)
+				texturebuffer += glt->inputwidth * glt->inputheight * glt->inputdepth * glt->textype->inputbytesperpixel;
+				if (glt->inputwidth != width || glt->inputheight != height || glt->inputdepth != depth)
 				{
-					texturebuffer += glt->inputwidth * glt->inputheight * glt->inputdepth * glt->textype->inputbytesperpixel;
-					if (glt->inputwidth != width || glt->inputheight != height || glt->inputdepth != depth)
-					{
-						Image_Resample32(prevbuffer, glt->inputwidth, glt->inputheight, glt->inputdepth, resizebuffer, width, height, depth, r_lerpimages.integer);
-						prevbuffer = resizebuffer;
-					}
-					// picmip/max_size
-					while (width > glt->tilewidth || height > glt->tileheight || depth > glt->tiledepth)
-					{
-						Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, glt->tilewidth, glt->tileheight, glt->tiledepth);
-						prevbuffer = resizebuffer;
-					}
+					Image_Resample32(prevbuffer, glt->inputwidth, glt->inputheight, glt->inputdepth, resizebuffer, width, height, depth, r_lerpimages.integer);
+					prevbuffer = resizebuffer;
+				}
+				// picmip/max_size
+				while (width > glt->tilewidth || height > glt->tileheight || depth > glt->tiledepth)
+				{
+					Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, glt->tilewidth, glt->tileheight, glt->tiledepth);
+					prevbuffer = resizebuffer;
 				}
 				mip = 0;
 				qglTexImage2D(cubemapside[i], mip++, glt->glinternalformat, width, height, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
@@ -954,17 +927,8 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 				{
 					while (width > 1 || height > 1 || depth > 1)
 					{
-						if (prevbuffer != NULL)
-						{
-							Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
-							prevbuffer = resizebuffer;
-						}
-						else
-						{
-							if (width > 1) width >>= 1;
-							if (height > 1) height >>= 1;
-							if (depth > 1) depth >>= 1;
-						}
+						Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
+						prevbuffer = resizebuffer;
 						qglTexImage2D(cubemapside[i], mip++, glt->glinternalformat, width, height, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
 					}
 				}
