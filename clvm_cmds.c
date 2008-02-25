@@ -1848,7 +1848,7 @@ static void VM_CL_getsurfacepointattribute(void)
 	switch( attributetype ) {
 		// float SPA_POSITION = 0;
 		case 0:
-			VectorAdd(&(model->surfmesh.data_vertex3f + 3 * surface->num_firstvertex)[pointnum * 3], ed->fields.server->origin, PRVM_G_VECTOR(OFS_RETURN));
+			VectorAdd(&(model->surfmesh.data_vertex3f + 3 * surface->num_firstvertex)[pointnum * 3], ed->fields.client->origin, PRVM_G_VECTOR(OFS_RETURN));
 			break;
 		// float SPA_S_AXIS = 1;
 		case 1:
