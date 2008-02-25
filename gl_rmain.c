@@ -1684,7 +1684,7 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 		}
 		else
 		{
-			if (r_glsl_permutation->loc_AmbientScale  >= 0) qglUniform1fARB(r_glsl_permutation->loc_AmbientScale, r_ambient.value * 1.0f / 128.0f);
+			if (r_glsl_permutation->loc_AmbientScale  >= 0) qglUniform1fARB(r_glsl_permutation->loc_AmbientScale, r_refdef.scene.ambient * 1.0f / 128.0f);
 			if (r_glsl_permutation->loc_DiffuseScale  >= 0) qglUniform1fARB(r_glsl_permutation->loc_DiffuseScale, r_refdef.lightmapintensity);
 			if (r_glsl_permutation->loc_SpecularScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularScale, r_refdef.lightmapintensity * specularscale);
 		}
@@ -2763,7 +2763,7 @@ void R_SetupView(qboolean allowwaterclippingplane)
 {
 	if (!r_refdef.view.useperspective)
 		GL_SetupView_Mode_Ortho(-r_refdef.view.ortho_x, -r_refdef.view.ortho_y, r_refdef.view.ortho_x, r_refdef.view.ortho_y, -r_refdef.farclip, r_refdef.farclip);
-	else if (r_refdef.rtworldshadows || r_refdef.rtdlightshadows)
+	else if (r_refdef.scene.rtworldshadows || r_refdef.scene.rtdlightshadows)
 		GL_SetupView_Mode_PerspectiveInfiniteFarClip(r_refdef.view.frustum_x, r_refdef.view.frustum_y, r_refdef.nearclip);
 	else
 		GL_SetupView_Mode_Perspective(r_refdef.view.frustum_x, r_refdef.view.frustum_y, r_refdef.nearclip, r_refdef.farclip);
@@ -3528,6 +3528,8 @@ void R_UpdateVariables(void)
 {
 	R_Textures_Frame();
 
+	r_refdef.scene.ambient = r_ambient.value;
+
 	r_refdef.farclip = 4096;
 	if (r_refdef.scene.worldmodel)
 		r_refdef.farclip += VectorDistance(r_refdef.scene.worldmodel->normalmins, r_refdef.scene.worldmodel->normalmaxs);
@@ -3540,17 +3542,17 @@ void R_UpdateVariables(void)
 	r_refdef.shadowpolygonfactor = r_refdef.polygonfactor + r_shadow_polygonfactor.value * (r_shadow_frontsidecasting.integer ? 1 : -1);
 	r_refdef.shadowpolygonoffset = r_refdef.polygonoffset + r_shadow_polygonoffset.value * (r_shadow_frontsidecasting.integer ? 1 : -1);
 
-	r_refdef.rtworld = r_shadow_realtime_world.integer;
-	r_refdef.rtworldshadows = r_shadow_realtime_world_shadows.integer && gl_stencil;
-	r_refdef.rtdlight = (r_shadow_realtime_world.integer || r_shadow_realtime_dlight.integer) && !gl_flashblend.integer && r_dynamic.integer;
-	r_refdef.rtdlightshadows = r_refdef.rtdlight && r_shadow_realtime_dlight_shadows.integer && gl_stencil;
-	r_refdef.lightmapintensity = r_refdef.rtworld ? r_shadow_realtime_world_lightmaps.value : 1;
+	r_refdef.scene.rtworld = r_shadow_realtime_world.integer;
+	r_refdef.scene.rtworldshadows = r_shadow_realtime_world_shadows.integer && gl_stencil;
+	r_refdef.scene.rtdlight = (r_shadow_realtime_world.integer || r_shadow_realtime_dlight.integer) && !gl_flashblend.integer && r_dynamic.integer;
+	r_refdef.scene.rtdlightshadows = r_refdef.scene.rtdlight && r_shadow_realtime_dlight_shadows.integer && gl_stencil;
+	r_refdef.lightmapintensity = r_refdef.scene.rtworld ? r_shadow_realtime_world_lightmaps.value : 1;
 	if (r_showsurfaces.integer)
 	{
-		r_refdef.rtworld = false;
-		r_refdef.rtworldshadows = false;
-		r_refdef.rtdlight = false;
-		r_refdef.rtdlightshadows = false;
+		r_refdef.scene.rtworld = false;
+		r_refdef.scene.rtworldshadows = false;
+		r_refdef.scene.rtdlight = false;
+		r_refdef.scene.rtdlightshadows = false;
 		r_refdef.lightmapintensity = 0;
 	}
 
@@ -4632,7 +4634,7 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 			if (ent->model->type == mod_brushq3)
 				colorscale *= r_refdef.scene.rtlightstylevalue[0];
 			colorscale *= r_refdef.lightmapintensity;
-			VectorScale(t->lightmapcolor, r_ambient.value * (1.0f / 64.0f), ambientcolor);
+			VectorScale(t->lightmapcolor, r_refdef.scene.ambient * (1.0f / 64.0f), ambientcolor);
 			VectorScale(t->lightmapcolor, colorscale, t->lightmapcolor);
 			// basic lit geometry
 			R_Texture_AddLayer(t, depthmask, blendfunc1, blendfunc2, TEXTURELAYERTYPE_LITTEXTURE, t->basetexture, &t->currenttexmatrix, t->lightmapcolor[0], t->lightmapcolor[1], t->lightmapcolor[2], t->lightmapcolor[3]);
