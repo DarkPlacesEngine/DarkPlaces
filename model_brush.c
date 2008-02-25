@@ -2169,7 +2169,7 @@ struct alloc_lm_state
 static void init_alloc_lm_state (struct alloc_lm_state* state)
 {
 	int r;
-	
+
 	state->currentY = 0;
 	for (r = 0; r < MAX_SINGLE_LM_SIZE; r++)
 	{
@@ -2404,12 +2404,12 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 		{
 			int i, iu, iv, lightmapx, lightmapy;
 			float u, v, ubase, vbase, uscale, vscale;
-			
+
 			smax = surface->lightmapinfo->extents[0] >> 4;
 			tmax = surface->lightmapinfo->extents[1] >> 4;
 			ssize = (surface->lightmapinfo->extents[0] >> 4) + 1;
 			tsize = (surface->lightmapinfo->extents[1] >> 4) + 1;
-			
+
 			// stainmap for permanent marks on walls
 			surface->lightmapinfo->stainsamples = (unsigned char *)Mem_Alloc(loadmodel->mempool, ssize * tsize * 3);
 			// clear to white
@@ -2624,11 +2624,14 @@ qboolean Mod_Q1BSP_CheckWaterAlphaSupport(void)
 	int i, j;
 	mleaf_t *leaf;
 	const unsigned char *pvs;
+	// if there's no vis data, assume supported (because everything is visible all the time)
+	if (!loadmodel->brush.data_pvsclusters)
+		return true;
 	// check all liquid leafs to see if they can see into empty leafs, if any
 	// can we can assume this map supports r_wateralpha
 	for (i = 0, leaf = loadmodel->brush.data_leafs;i < loadmodel->brush.num_leafs;i++, leaf++)
 	{
-		if ((leaf->contents == CONTENTS_WATER || leaf->contents == CONTENTS_SLIME) && (leaf->clusterindex >= 0 && loadmodel->brush.data_pvsclusters))
+		if ((leaf->contents == CONTENTS_WATER || leaf->contents == CONTENTS_SLIME) && leaf->clusterindex >= 0)
 		{
 			pvs = loadmodel->brush.data_pvsclusters + leaf->clusterindex * loadmodel->brush.num_pvsclusterbytes;
 			for (j = 0;j < loadmodel->brush.num_leafs;j++)
