@@ -23,7 +23,6 @@
 0 bug darkplaces loader: q1bsp loader computes wrong submodel size for submodels with no surfaces, such as a func_wall comprised entirely of SKIP or CAULK brushes (neg|ke)
 0 bug darkplaces memory: memstats doesn't account for memory used by VBO/EBO buffers in models
 0 bug darkplaces menu: load/save game menus show files that are not in the highest priority gamedir, such as id1 saves showing up when playing dpmod (Dooomer, WodahsEht)
-0 bug darkplaces qc: document the wasfreed() builtin from EXT_CSQC and entitybyindex() builtins, the latter is DP_QC_EDICT_NUM (Urre)
 0 bug darkplaces readme: it would be a very good idea to add documentation of sv_gameplayfix_* cvars in the readme as a means to run broken mods (xaGe)
 0 bug darkplaces readme: readme says that q3 shaders are not supported, this is not true, describe the working features in detail (qqshka)
 0 bug darkplaces renderer: GL13 path has broken handling of unlit surfaces in Nexuiz toxic.bsp - the small red light surfaces are black in GL13 path (m0rfar)
@@ -586,6 +585,7 @@ d bug darkplaces prvm: findflags/findchainflags are server-specific, these shoul
 d bug darkplaces prvm: the merged remove is causing a Host_Error on already removed entities, which happens in id1 start.bsp (RenegadeC)
 d bug darkplaces prvm: unknown opcode warnings are missing a \n
 d bug darkplaces qc FRIK_FILE: when opening a file for writing that already has the data/ prefix in its path, it should not add another data/ prefix (daemon)
+d bug darkplaces qc: document the wasfreed() builtin from EXT_CSQC and entitybyindex() builtins, the latter is DP_QC_EDICT_NUM (Urre)
 d bug darkplaces quakec: to stop crashing on 64bit the quakec vm needs a string manager that can allocate/free negative integer indices to the strzone strings, and also automatically add engine strings
 d bug darkplaces readme: commandline options are slightly out of date, update them (Baker)
 d bug darkplaces renderer/server: scaled sprites (or possibly all models) are getting culled as if they were not scaled (KrimZon)
