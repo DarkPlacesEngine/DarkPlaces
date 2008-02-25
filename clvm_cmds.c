@@ -853,17 +853,6 @@ void VM_CL_R_SetView (void)
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
 
-//#304 void() renderscene (EXT_CSQC)
-void VM_CL_R_RenderScene (void)
-{
-	VM_SAFEPARMCOUNT(0, VM_CL_R_RenderScene);
-	// we need to update any RENDER_VIEWMODEL entities at this point because
-	// csqc supplies its own view matrix
-	CL_UpdateViewEntities();
-	// now draw stuff!
-	R_RenderView();
-}
-
 //#305 void(vector org, float radius, vector lightcolours) adddynamiclight (EXT_CSQC)
 void VM_CL_R_AddDynamicLight (void)
 {
@@ -2302,6 +2291,23 @@ typedef struct vmpolygons_s
 // FIXME: make VM_CL_R_Polygon functions use Debug_Polygon functions?
 vmpolygons_t vmpolygons[PRVM_MAXPROGS];
 
+//#304 void() renderscene (EXT_CSQC)
+// moved that here to reset the polygons,
+// resetting them earlier causes R_Mesh_Draw to be called with numvertices = 0
+// --blub
+void VM_CL_R_RenderScene (void)
+{
+	vmpolygons_t* polys = vmpolygons + PRVM_GetProgNr();
+	VM_SAFEPARMCOUNT(0, VM_CL_R_RenderScene);
+	// we need to update any RENDER_VIEWMODEL entities at this point because
+	// csqc supplies its own view matrix
+	CL_UpdateViewEntities();
+	// now draw stuff!
+	R_RenderView();
+	
+	polys->num_vertices = polys->num_triangles = 0;
+}
+
 static void VM_ResizePolygons(vmpolygons_t *polys)
 {
 	float *oldvertex3f = polys->data_vertex3f;
@@ -2407,9 +2413,13 @@ void VMPolygons_Store(vmpolygons_t *polys)
 			polys->max_triangles *= 2;
 			VM_ResizePolygons(polys);
 		}
-		memcpy(polys->data_vertex3f + polys->num_vertices * 3, polys->begin_vertex[0], polys->num_vertices * sizeof(float[3]));
-		memcpy(polys->data_color4f + polys->num_vertices * 4, polys->begin_color[0], polys->num_vertices * sizeof(float[4]));
-		memcpy(polys->data_texcoord2f + polys->num_vertices * 2, polys->begin_texcoord[0], polys->num_vertices * sizeof(float[2]));
+		// needle in a haystack!
+		// polys->num_vertices was used for copying where we actually want to copy begin_vertices
+		// that also caused it to not render the first polygon that is added
+		// --blub
+		memcpy(polys->data_vertex3f + polys->num_vertices * 3, polys->begin_vertex[0], polys->begin_vertices * sizeof(float[3]));
+		memcpy(polys->data_color4f + polys->num_vertices * 4, polys->begin_color[0], polys->begin_vertices * sizeof(float[4]));
+		memcpy(polys->data_texcoord2f + polys->num_vertices * 2, polys->begin_texcoord[0], polys->begin_vertices * sizeof(float[2]));
 		for (i = 0;i < polys->begin_vertices-2;i++)
 		{
 			polys->data_triangles[polys->num_triangles].texture = polys->begin_texture;
@@ -2445,8 +2455,8 @@ void VM_CL_AddPolygonsToMeshQueue (void)
 		R_MeshQueue_AddTransparent(center, VM_DrawPolygonCallback, NULL, i, NULL);
 	}
 
-	polys->num_triangles = 0;
-	polys->num_vertices = 0;
+	/*polys->num_triangles = 0; // now done after rendering the scene,
+	  polys->num_vertices = 0;  // otherwise it's not rendered at all and prints an error message --blub */
 }
 
 //void(string texturename, float flag) R_BeginPolygon
