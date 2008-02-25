@@ -1020,7 +1020,6 @@ void FS_AddGameHierarchy (const char *dir)
 #ifdef WIN32
 	if(SHGetFolderPath(NULL, CSIDL_PERSONAL, NULL, 0, mydocsdir) == S_OK)
 		dpsnprintf(userdir, sizeof(userdir), "%s/My Games/%s/", mydocsdir, gameuserdirname);
-	fprintf(stderr, "userdir = %s\n", userdir);
 #else
 	homedir = getenv ("HOME");
 	if(homedir)
