@@ -461,14 +461,19 @@ void Mem_ExpandableArray_FreeRecord(memexpandablearray_t *l, void *record)
 
 size_t Mem_ExpandableArray_IndexRange(memexpandablearray_t *l)
 {
-	size_t i, j, k;
-	if (!l->numarrays)
-		return 0;
-	i = l->numarrays - 1;
-	for (j = 0, k = 0;k < l->arrays[i].numflaggedrecords;j++)
-		if (l->arrays[i].allocflags[j])
-			k++;
-	return l->numrecordsperarray * i + j;
+	size_t i, j, k, end = 0;
+	for (i = 0;i < l->numarrays;i++)
+	{
+		for (j = 0, k = 0;k < l->arrays[i].numflaggedrecords;j++)
+		{
+			if (l->arrays[i].allocflags[j])
+			{
+				end = l->numrecordsperarray * i + j + 1;
+				k++;
+			}
+		}
+	}
+	return end;
 }
 
 void *Mem_ExpandableArray_RecordAtIndex(memexpandablearray_t *l, size_t index)
