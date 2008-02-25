@@ -1432,6 +1432,8 @@ void VM_M_Cmd_Init(void)
 
 	scene->maxentities = MAX_EDICTS + 256 + 512;
 	scene->entities = (entity_render_t **)Mem_Alloc(prog->progs_mempool, sizeof(entity_render_t *) * scene->maxentities);
+
+	scene->ambient = 32.0f;
 }
 
 void VM_M_Cmd_Reset(void)

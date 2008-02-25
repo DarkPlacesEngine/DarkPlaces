@@ -3028,7 +3028,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	// count this light in the r_speeds
 	r_refdef.stats.lights++;
 
-	if (r_showshadowvolumes.integer && r_refdef.view.showdebug && numsurfaces + numshadowentities + numshadowentities_noselfshadow && rtlight->shadow && (rtlight->isstatic ? r_refdef.rtworldshadows : r_refdef.rtdlightshadows))
+	if (r_showshadowvolumes.integer && r_refdef.view.showdebug && numsurfaces + numshadowentities + numshadowentities_noselfshadow && rtlight->shadow && (rtlight->isstatic ? r_refdef.scene.rtworldshadows : r_refdef.scene.rtdlightshadows))
 	{
 		// optionally draw visible shape of the shadow volumes
 		// for performance analysis by level designers
@@ -3041,7 +3041,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 			R_Shadow_DrawEntityShadow(shadowentities_noselfshadow[i]);
 	}
 
-	if (gl_stencil && numsurfaces + numshadowentities + numshadowentities_noselfshadow && rtlight->shadow && (rtlight->isstatic ? r_refdef.rtworldshadows : r_refdef.rtdlightshadows))
+	if (gl_stencil && numsurfaces + numshadowentities + numshadowentities_noselfshadow && rtlight->shadow && (rtlight->isstatic ? r_refdef.scene.rtworldshadows : r_refdef.scene.rtdlightshadows))
 	{
 		// draw stencil shadow volumes to mask off pixels that are in shadow
 		// so that they won't receive lighting
@@ -3134,7 +3134,7 @@ void R_ShadowVolumeLighting(qboolean visible)
 
 	R_Shadow_RenderMode_Begin();
 
-	flag = r_refdef.rtworld ? LIGHTFLAG_REALTIMEMODE : LIGHTFLAG_NORMALMODE;
+	flag = r_refdef.scene.rtworld ? LIGHTFLAG_REALTIMEMODE : LIGHTFLAG_NORMALMODE;
 	if (r_shadow_debuglight.integer >= 0)
 	{
 		lightindex = r_shadow_debuglight.integer;
@@ -3151,7 +3151,7 @@ void R_ShadowVolumeLighting(qboolean visible)
 				R_DrawRTLight(&light->rtlight, visible);
 		}
 	}
-	if (r_refdef.rtdlight)
+	if (r_refdef.scene.rtdlight)
 		for (lnum = 0;lnum < r_refdef.scene.numlights;lnum++)
 			R_DrawRTLight(&r_refdef.scene.lights[lnum], visible);
 
@@ -3256,7 +3256,7 @@ void R_DrawCoronas(void)
 	if (r_coronas.value < (1.0f / 256.0f) && !gl_flashblend.integer)
 		return;
 	R_Mesh_Matrix(&identitymatrix);
-	flag = r_refdef.rtworld ? LIGHTFLAG_REALTIMEMODE : LIGHTFLAG_NORMALMODE;
+	flag = r_refdef.scene.rtworld ? LIGHTFLAG_REALTIMEMODE : LIGHTFLAG_NORMALMODE;
 	// FIXME: these traces should scan all render entities instead of cl.world
 	for (lightindex = 0;lightindex < Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray);lightindex++)
 	{
@@ -4672,7 +4672,7 @@ void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffu
 
 	if (!r_fullbright.integer && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.LightPoint)
 	{
-		ambientcolor[0] = ambientcolor[1] = ambientcolor[2] = r_ambient.value * (2.0f / 128.0f);
+		ambientcolor[0] = ambientcolor[1] = ambientcolor[2] = r_refdef.scene.ambient * (2.0f / 128.0f);
 		r_refdef.scene.worldmodel->brush.LightPoint(r_refdef.scene.worldmodel, p, ambientcolor, diffusecolor, diffusenormal);
 	}
 	else

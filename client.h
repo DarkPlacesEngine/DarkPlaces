@@ -1470,6 +1470,13 @@ typedef struct r_refdef_scene_s {
 	// 8.8bit fixed point intensities for light styles
 	// controls intensity lightmap layers
 	unsigned short lightstylevalue[256];	// 8.8 fraction of base light value
+
+	float ambient;
+
+	qboolean rtworld;
+	qboolean rtworldshadows;
+	qboolean rtdlight;
+	qboolean rtdlightshadows;
 } r_refdef_scene_t;
 
 typedef struct r_refdef_s
@@ -1523,10 +1530,6 @@ typedef struct r_refdef_s
 	// (often reduced when world rtlights are enabled)
 	float lightmapintensity;
 	// whether to draw world lights realtime, dlights realtime, and their shadows
-	qboolean rtworld;
-	qboolean rtworldshadows;
-	qboolean rtdlight;
-	qboolean rtdlightshadows;
 	float polygonfactor;
 	float polygonoffset;
 	float shadowpolygonfactor;

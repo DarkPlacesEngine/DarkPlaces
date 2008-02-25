@@ -488,7 +488,7 @@ static void CL_UpdateRenderEntity_Lighting(entity_render_t *ent)
 	vec3_t tempdiffusenormal;
 
 	// fetch the lighting from the worldmodel data
-	VectorSet(ent->modellight_ambient, r_ambient.value * (2.0f / 128.0f), r_ambient.value * (2.0f / 128.0f), r_ambient.value * (2.0f / 128.0f));
+	VectorSet(ent->modellight_ambient, r_refdef.scene.ambient * (2.0f / 128.0f), r_refdef.scene.ambient * (2.0f / 128.0f), r_refdef.scene.ambient * (2.0f / 128.0f));
 	VectorClear(ent->modellight_diffuse);
 	VectorClear(tempdiffusenormal);
 	if ((ent->flags & RENDER_LIGHT) && cl.worldmodel && cl.worldmodel->brush.LightPoint)
