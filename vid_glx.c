@@ -616,20 +616,20 @@ void VID_Init(void)
 void VID_BuildGLXAttrib(int *attrib, qboolean stencil, qboolean stereobuffer, int samples)
 {
 	*attrib++ = GLX_RGBA;
-	*attrib++ = GLX_RED_SIZE;*attrib++ = 1;
-	*attrib++ = GLX_GREEN_SIZE;*attrib++ = 1;
-	*attrib++ = GLX_BLUE_SIZE;*attrib++ = 1;
+	*attrib++ = GLX_RED_SIZE;*attrib++ = stencil ? 8 : 5;
+	*attrib++ = GLX_GREEN_SIZE;*attrib++ = stencil ? 8 : 5;
+	*attrib++ = GLX_BLUE_SIZE;*attrib++ = stencil ? 8 : 5;
 	*attrib++ = GLX_DOUBLEBUFFER;
-	*attrib++ = GLX_DEPTH_SIZE;*attrib++ = 1;
+	*attrib++ = GLX_DEPTH_SIZE;*attrib++ = stencil ? 24 : 16;
 	// if stencil is enabled, ask for alpha too
 	if (stencil)
 	{
 		*attrib++ = GLX_STENCIL_SIZE;*attrib++ = 8;
-		*attrib++ = GLX_ALPHA_SIZE;*attrib++ = 1;
+		*attrib++ = GLX_ALPHA_SIZE;*attrib++ = 8;
 	}
 	if (stereobuffer)
 		*attrib++ = GLX_STEREO;
-	if (samples)
+	if (samples > 1)
 	{
 		*attrib++ = GLX_SAMPLE_BUFFERS_ARB;
 		*attrib++ = 1;

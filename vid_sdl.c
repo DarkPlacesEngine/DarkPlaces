@@ -694,9 +694,9 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	}
 	else
 	{
-		SDL_GL_SetAttribute (SDL_GL_RED_SIZE, 1);
-		SDL_GL_SetAttribute (SDL_GL_GREEN_SIZE, 1);
-		SDL_GL_SetAttribute (SDL_GL_BLUE_SIZE, 1);
+		SDL_GL_SetAttribute (SDL_GL_RED_SIZE, 5);
+		SDL_GL_SetAttribute (SDL_GL_GREEN_SIZE, 5);
+		SDL_GL_SetAttribute (SDL_GL_BLUE_SIZE, 5);
 		SDL_GL_SetAttribute (SDL_GL_DEPTH_SIZE, 16);
 	}
 	if (stereobuffer)

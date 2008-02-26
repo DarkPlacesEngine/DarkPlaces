@@ -843,13 +843,21 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp, int refreshrat
 	// if stencil is enabled, ask for alpha too
 	if (bpp >= 32)
 	{
-		pfd.cStencilBits = 8;
+		pfd.cRedBits = 8;
+		pfd.cGreenBits = 8;
+		pfd.cBlueBits = 8;
 		pfd.cAlphaBits = 8;
+		pfd.cDepthBits = 24;
+		pfd.cStencilBits = 8;
 	}
 	else
 	{
-		pfd.cStencilBits = 0;
+		pfd.cRedBits = 5;
+		pfd.cGreenBits = 5;
+		pfd.cBlueBits = 5;
 		pfd.cAlphaBits = 0;
+		pfd.cDepthBits = 16;
+		pfd.cStencilBits = 0;
 	}
 
 	if (stereobuffer)
@@ -873,7 +881,7 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp, int refreshrat
 		*a++ = WGL_BLUE_BITS_ARB;
 		*a++ = 8;
 		*a++ = WGL_ALPHA_BITS_ARB;
-		*a++ = 1;
+		*a++ = 8;
 		*a++ = WGL_DEPTH_BITS_ARB;
 		*a++ = 24;
 		*a++ = WGL_STENCIL_BITS_ARB;

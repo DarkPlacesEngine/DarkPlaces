@@ -502,17 +502,17 @@ static void VID_ProcessPendingAsyncEvents (void)
 static void VID_BuildAGLAttrib(GLint *attrib, qboolean stencil, qboolean fullscreen, qboolean stereobuffer, int samples)
 {
 	*attrib++ = AGL_RGBA;
-	*attrib++ = AGL_RED_SIZE;*attrib++ = 1;
-	*attrib++ = AGL_GREEN_SIZE;*attrib++ = 1;
-	*attrib++ = AGL_BLUE_SIZE;*attrib++ = 1;
+	*attrib++ = AGL_RED_SIZE;*attrib++ = stencil ? 8 : 5;
+	*attrib++ = AGL_GREEN_SIZE;*attrib++ = stencil ? 8 : 5;
+	*attrib++ = AGL_BLUE_SIZE;*attrib++ = stencil ? 8 : 5;
 	*attrib++ = AGL_DOUBLEBUFFER;
-	*attrib++ = AGL_DEPTH_SIZE;*attrib++ = 1;
+	*attrib++ = AGL_DEPTH_SIZE;*attrib++ = stencil ? 24 : 16;
 
 	// if stencil is enabled, ask for alpha too
 	if (stencil)
 	{
 		*attrib++ = AGL_STENCIL_SIZE;*attrib++ = 8;
-		*attrib++ = AGL_ALPHA_SIZE;*attrib++ = 1;
+		*attrib++ = AGL_ALPHA_SIZE;*attrib++ = 8;
 	}
 	if (fullscreen)
 		*attrib++ = AGL_FULLSCREEN;
