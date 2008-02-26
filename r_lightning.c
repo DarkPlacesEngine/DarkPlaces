@@ -92,7 +92,7 @@ void r_lightningbeams_setuptexture(void)
 			if (px >= 0 && py >= 0 && px < BEAMWIDTH && py < BEAMHEIGHT)
 				image[py*BEAMWIDTH+px] += 16;
 		}
-	
+
 		for (py = 0;py < BEAMHEIGHT;py++)
 		{
 			for (px = 0;px < BEAMWIDTH;px++)
@@ -103,7 +103,7 @@ void r_lightningbeams_setuptexture(void)
 				pixels[(py*BEAMWIDTH+px)*4+3] = 255;
 			}
 		}
-	
+
 		Image_WriteTGABGRA(va("lightningbeam%i.tga", imagenumber), BEAMWIDTH, BEAMHEIGHT, pixels);
 	}
 
@@ -242,6 +242,7 @@ void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, const r
 	GL_DepthRange(0, 1);
 	GL_PolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);
 	GL_DepthTest(true);
+	GL_CullFace(GL_NONE);
 	if (r_lightningbeam_qmbtexture.integer && r_lightningbeamqmbtexture == NULL)
 		r_lightningbeams_setupqmbtexture();
 	if (!r_lightningbeam_qmbtexture.integer && r_lightningbeamtexture == NULL)
