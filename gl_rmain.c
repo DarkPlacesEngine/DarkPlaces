@@ -3997,6 +3997,7 @@ static void R_DrawEntityBBoxes_Callback(const entity_render_t *ent, const rtligh
 	// this function draws bounding boxes of server entities
 	if (!sv.active)
 		return;
+	GL_CullFace(GL_NONE);
 	R_SetupGenericShader(false);
 	SV_VM_Begin();
 	for (i = 0;i < numsurfaces;i++)
