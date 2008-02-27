@@ -1825,8 +1825,9 @@ void R_Mesh_TexMatrix(unsigned int unitnum, const matrix4x4_t *matrix)
 			unit->matrix = *matrix;
 			CHECKGLERROR
 			Matrix4x4_ToArrayDoubleGL(&unit->matrix, glmatrix);
-			qglMatrixMode(GL_TEXTURE);CHECKGLERROR
 			GL_ActiveTexture(unitnum);
+			GL_ClientActiveTexture(unitnum);
+			qglMatrixMode(GL_TEXTURE);CHECKGLERROR
 			qglLoadMatrixd(glmatrix);CHECKGLERROR
 			qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
 		}
@@ -1838,8 +1839,9 @@ void R_Mesh_TexMatrix(unsigned int unitnum, const matrix4x4_t *matrix)
 		{
 			unit->texmatrixenabled = false;
 			CHECKGLERROR
-			qglMatrixMode(GL_TEXTURE);CHECKGLERROR
 			GL_ActiveTexture(unitnum);
+			GL_ClientActiveTexture(unitnum);
+			qglMatrixMode(GL_TEXTURE);CHECKGLERROR
 			qglLoadIdentity();CHECKGLERROR
 			qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
 		}
