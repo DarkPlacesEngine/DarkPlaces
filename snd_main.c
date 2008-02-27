@@ -1463,8 +1463,9 @@ void S_UpdateAmbientSounds (void)
 static void S_PaintAndSubmit (void)
 {
 	unsigned int newsoundtime, paintedtime, endtime, maxtime, usedframes;
-	qboolean usesoundtimehack;
-	static qboolean soundtimehack = true;
+	int usesoundtimehack;
+	static int soundtimehack = -1;
+	static int oldsoundtime = 0;
 
 	if (snd_renderbuffer == NULL || nosound.integer)
 		return;
@@ -1472,15 +1473,24 @@ static void S_PaintAndSubmit (void)
 	// Update sound time
 	usesoundtimehack = true;
 	if (cls.timedemo) // SUPER NASTY HACK to mix non-realtime sound for more reliable benchmarking
+	{
+		usesoundtimehack = 1;
 		newsoundtime = (unsigned int)((double)cl.mtime[0] * (double)snd_renderbuffer->format.speed);
+	}
 	else if (cls.capturevideo.soundrate && !cls.capturevideo.realtime) // SUPER NASTY HACK to record non-realtime sound
+	{
+		usesoundtimehack = 2;
 		newsoundtime = (unsigned int)((double)cls.capturevideo.frame * (double)snd_renderbuffer->format.speed / (double)cls.capturevideo.framerate);
+	}
 	else if (simsound)
+	{
+		usesoundtimehack = 3;
 		newsoundtime = (unsigned int)((realtime - snd_starttime) * (double)snd_renderbuffer->format.speed);
+	}
 	else
 	{
+		usesoundtimehack = 0;
 		newsoundtime = SndSys_GetSoundTime();
-		usesoundtimehack = false;
 	}
 	// if the soundtimehack state changes we need to reset the soundtime
 	if (soundtimehack != usesoundtimehack)
@@ -1539,7 +1549,7 @@ static void S_PaintAndSubmit (void)
 		paintedtime = soundtime;
 
 	// mix ahead of current position
-	endtime = soundtime + (unsigned int)(_snd_mixahead.value * (float)snd_renderbuffer->format.speed);
+	endtime = soundtime + (unsigned int)(max(_snd_mixahead.value * (float)snd_renderbuffer->format.speed, min(3 * (soundtime - oldsoundtime), 0.3 * (float)snd_renderbuffer->format.speed)));
 	usedframes = snd_renderbuffer->endframe - snd_renderbuffer->startframe;
 	maxtime = paintedtime + snd_renderbuffer->maxframes - usedframes;
 	endtime = min(endtime, maxtime);
@@ -1550,6 +1560,8 @@ static void S_PaintAndSubmit (void)
 		snd_renderbuffer->startframe = snd_renderbuffer->endframe;
 	else
 		SndSys_Submit();
+
+	oldsoundtime = soundtime;
 }
 
 /*
