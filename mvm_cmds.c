@@ -26,6 +26,7 @@ char *vm_m_extensions =
 "DP_QC_CRC16 "
 "FTE_STRINGS "
 "DP_QC_CVAR_TYPE "
+"DP_QC_URI_ESCAPE "
 ;
 
 /*
@@ -1297,8 +1298,8 @@ NULL,									// #506
 NULL,									// #507
 NULL,									// #508
 NULL,									// #509
-NULL,									// #510
-NULL,									// #511
+VM_uri_escape,					// #510 string(string in) uri_escape = #510;
+VM_uri_unescape,				// #511 string(string in) uri_unescape = #511;
 NULL,									// #512
 NULL,									// #513
 NULL,									// #514

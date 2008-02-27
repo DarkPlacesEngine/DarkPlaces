@@ -4580,3 +4580,83 @@ void VM_Cmd_Reset(void)
 //	VM_BufStr_ShutDown();
 }
 
+// #510 string(string input, ...) uri_escape (DP_QC_URI_ESCAPE)
+// does URI escaping on a string (replace evil stuff by %AB escapes)
+void VM_uri_escape (void)
+{
+	char src[VM_STRINGTEMP_LENGTH];
+	char dest[VM_STRINGTEMP_LENGTH];
+	char *p, *q;
+	static const char *hex = "0123456789abcdef";
+
+	VM_SAFEPARMCOUNTRANGE(1, 8, VM_uri_escape);
+	VM_VarString(0, src, sizeof(src));
+
+	for(p = src, q = dest; *p && q < dest + sizeof(dest) - 3; ++p)
+	{
+		if((*p >= 'A' && *p <= 'Z')
+			|| (*p >= 'a' && *p <= 'z')
+			|| (*p >= '0' && *p <= '9')
+			|| (*p == '-')  || (*p == '_') || (*p == '.')
+			|| (*p == '!')  || (*p == '~') || (*p == '*')
+			|| (*p == '\'') || (*p == '(') || (*p == ')'))
+			*q++ = *p;
+		else
+		{
+			*q++ = '%';
+			*q++ = hex[(*(unsigned char *)p >> 4) & 0xF];
+			*q++ = hex[ *(unsigned char *)p       & 0xF];
+		}
+	}
+	*q++ = 0;
+
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(dest);
+}
+
+// #510 string(string input, ...) uri_unescape (DP_QC_URI_ESCAPE)
+// does URI unescaping on a string (get back the evil stuff)
+void VM_uri_unescape (void)
+{
+	char src[VM_STRINGTEMP_LENGTH];
+	char dest[VM_STRINGTEMP_LENGTH];
+	char *p, *q;
+	int hi, lo;
+
+	VM_SAFEPARMCOUNTRANGE(1, 8, VM_uri_unescape);
+	VM_VarString(0, src, sizeof(src));
+
+	for(p = src, q = dest; *p; ) // no need to check size, because unescape can't expand
+	{
+		if(*p == '%')
+		{
+			if(p[1] >= '0' && p[1] <= '9')
+				hi = p[1] - '0';
+			else if(p[1] >= 'a' && p[1] <= 'f')
+				hi = p[1] - 'a' + 10;
+			else if(p[1] >= 'A' && p[1] <= 'F')
+				hi = p[1] - 'A' + 10;
+			else
+				goto nohex;
+			if(p[2] >= '0' && p[2] <= '9')
+				lo = p[2] - '0';
+			else if(p[2] >= 'a' && p[2] <= 'f')
+				lo = p[2] - 'a' + 10;
+			else if(p[2] >= 'A' && p[2] <= 'F')
+				lo = p[2] - 'A' + 10;
+			else
+				goto nohex;
+			if(hi != 0 || lo != 0) // don't unescape NUL bytes
+				*q++ = (char) (hi * 0x10 + lo);
+			p += 3;
+			continue;
+		}
+
+nohex:
+		// otherwise:
+		*q++ = *p++;
+	}
+	*q++ = 0;
+
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(dest);
+}
+

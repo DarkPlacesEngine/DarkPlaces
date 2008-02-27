@@ -412,3 +412,6 @@ void VM_SetTraceGlobals(const trace_t *trace);
 
 void VM_Cmd_Init(void);
 void VM_Cmd_Reset(void);
+
+void VM_uri_escape (void);
+void VM_uri_unescape (void);
