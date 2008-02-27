@@ -39,6 +39,12 @@ static void Buffer_Callback (void *userdata, Uint8 *stream, int len)
 
 	RequestedFrames = (unsigned int)len / factor;
 
+	if (snd_usethreadedmixing)
+	{
+		S_MixToBuffer(stream, RequestedFrames);
+		return;
+	}
+
 	// Transfert up to a chunk of samples from snd_renderbuffer to stream
 	MaxFrames = snd_renderbuffer->endframe - snd_renderbuffer->startframe;
 	if (MaxFrames > RequestedFrames)
@@ -82,6 +88,8 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 	unsigned int buffersize;
 	SDL_AudioSpec wantspec;
 	SDL_AudioSpec obtainspec;
+
+	snd_threaded = false;
 
 	Con_DPrint ("SndSys_Init: using the SDL module\n");
 
@@ -139,6 +147,8 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 
 		return false;
 	}
+
+	snd_threaded = true;
 
 	snd_renderbuffer = Snd_CreateRingBuffer(requested, 0, NULL);
 	if (snd_channellayout.integer == SND_CHANNELLAYOUT_AUTO)

@@ -121,7 +121,8 @@ extern unsigned int total_channels;
 extern channel_t channels[MAX_CHANNELS];
 
 extern snd_ringbuffer_t *snd_renderbuffer;
-extern unsigned int soundtime;	// WARNING: sound modules must NOT use it
+extern qboolean snd_threaded; // enables use of snd_usethreadedmixing, provided that no sound hacks are in effect (like timedemo)
+extern qboolean snd_usethreadedmixing; // if true, the main thread does not mix sound, soundtime does not advance, and neither does snd_renderbuffer->endframe, instead the audio thread will call S_MixToBuffer as needed
 
 extern cvar_t _snd_mixahead;
 extern cvar_t snd_swapstereo;
@@ -146,7 +147,7 @@ extern qboolean simsound;
 //         Architecture-independent functions
 // ====================================================================
 
-void S_PaintChannels (snd_ringbuffer_t* rb, unsigned int starttime, unsigned int endtime);
+void S_MixToBuffer(void *stream, unsigned int frames);
 
 qboolean S_LoadSound (sfx_t *sfx, qboolean complain);
 
