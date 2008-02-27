@@ -566,8 +566,6 @@ void CSQC_ReadEntities (void)
 						ed = PRVM_ED_Alloc();
 						ed->fields.client->entnum = realentnum;
 						prog->globals.client->self = cl.csqc_server2csqcentitynumber[realentnum] = PRVM_EDICT_TO_PROG(ed);
-						PRVM_G_FLOAT(OFS_PARM0) = 1;
-						PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Ent_Update, "QC function CSQC_Ent_Update is missing");
 					}
 					else
 					{
@@ -577,8 +575,10 @@ void CSQC_ReadEntities (void)
 						// make sure no one gets wrong ideas
 						prog->globals.client->self = 0;
 						PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Ent_Spawn, "QC function CSQC_Ent_Spawn is missing");
-						cl.csqc_server2csqcentitynumber[realentnum] = PRVM_EDICT( PRVM_G_INT( OFS_RETURN ) );
+						prog->globals.client->self = cl.csqc_server2csqcentitynumber[realentnum] = PRVM_EDICT( PRVM_G_INT( OFS_RETURN ) );
 					}
+					PRVM_G_FLOAT(OFS_PARM0) = 1;
+					PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Ent_Update, "QC function CSQC_Ent_Update is missing");			
 				}
 				else {
 					PRVM_G_FLOAT(OFS_PARM0) = 0;
