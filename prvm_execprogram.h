@@ -306,7 +306,7 @@
 					if (builtinnumber < prog->numbuiltins && prog->builtins[builtinnumber])
 						prog->builtins[builtinnumber]();
 					else
-						PRVM_ERROR("No such builtin #%i in %s", builtinnumber, PRVM_NAME);
+						PRVM_ERROR("No such builtin #%i in %s; most likely cause: outdated engine build. Try updating!", builtinnumber, PRVM_NAME);
 				}
 				else
 					st = prog->statements + PRVM_EnterFunction(newf);
