@@ -1549,7 +1549,10 @@ static void S_PaintAndSubmit (void)
 		paintedtime = soundtime;
 
 	// mix ahead of current position
-	endtime = soundtime + (unsigned int)(max(_snd_mixahead.value * (float)snd_renderbuffer->format.speed, min(3 * (soundtime - oldsoundtime), 0.3 * (float)snd_renderbuffer->format.speed)));
+	if (soundtimehack)
+		endtime = soundtime + (unsigned int)(_snd_mixahead.value * (float)snd_renderbuffer->format.speed);
+	else
+		endtime = soundtime + (unsigned int)(max(_snd_mixahead.value * (float)snd_renderbuffer->format.speed, min(3 * (soundtime - oldsoundtime), 0.3 * (float)snd_renderbuffer->format.speed)));
 	usedframes = snd_renderbuffer->endframe - snd_renderbuffer->startframe;
 	maxtime = paintedtime + snd_renderbuffer->maxframes - usedframes;
 	endtime = min(endtime, maxtime);
