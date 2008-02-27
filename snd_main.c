@@ -1550,10 +1550,6 @@ static void S_PaintAndSubmit (void)
 	soundtime = newsoundtime;
 	recording_sound = (cls.capturevideo.soundrate != 0);
 
-	// Remove outdated samples from the ring buffer, if any
-	if (snd_renderbuffer->startframe < soundtime)
-		snd_renderbuffer->startframe = soundtime;
-
 	// Lock submitbuffer
 	if (!simsound && !SndSys_LockRenderBuffer())
 	{
@@ -1596,6 +1592,10 @@ static void S_PaintAndSubmit (void)
 		SndSys_UnlockRenderBuffer();
 
 	snd_renderbuffer->endframe = endtime;
+
+	// Remove outdated samples from the ring buffer, if any
+	if (snd_renderbuffer->startframe < soundtime)
+		snd_renderbuffer->startframe = soundtime;
 
 	if (simsound)
 		snd_renderbuffer->startframe = snd_renderbuffer->endframe;
