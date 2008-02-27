@@ -669,6 +669,19 @@ void VM_ftoe(void)
 }
 
 /*
+========================
+VM_etof
+
+float etof(entity ent)
+========================
+*/
+void VM_etof(void)
+{
+	VM_SAFEPARMCOUNT(1, VM_etof);
+	PRVM_G_FLOAT(OFS_RETURN) = PRVM_G_EDICTNUM(OFS_PARM0);
+}
+
+/*
 =========
 VM_strftime
 

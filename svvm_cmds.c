@@ -154,6 +154,7 @@ char *vm_sv_extensions =
 "DP_GECKO_SUPPORT "
 "DP_QC_GETSURFACEPOINTATTRIBUTE "
 "DP_QC_URI_ESCAPE "
+"DP_QC_NUM_FOR_EDICT "
 ;
 
 /*
@@ -3362,7 +3363,7 @@ NULL,							// #508
 NULL,							// #509
 VM_uri_escape,					// #510 string(string in) uri_escape = #510;
 VM_uri_unescape,				// #511 string(string in) uri_unescape = #511;
-NULL,							// #512
+VM_etof,					// #512 float(entity ent) num_for_edict = #512 (DP_QC_NUM_FOR_EDICT)
 NULL,							// #513
 NULL,							// #514
 NULL,							// #515
