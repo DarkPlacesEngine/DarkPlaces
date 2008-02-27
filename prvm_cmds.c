@@ -4587,7 +4587,7 @@ void VM_uri_escape (void)
 	char src[VM_STRINGTEMP_LENGTH];
 	char dest[VM_STRINGTEMP_LENGTH];
 	char *p, *q;
-	static const char *hex = "0123456789abcdef";
+	static const char *hex = "0123456789ABCDEF";
 
 	VM_SAFEPARMCOUNTRANGE(1, 8, VM_uri_escape);
 	VM_VarString(0, src, sizeof(src));
