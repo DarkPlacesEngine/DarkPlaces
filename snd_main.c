@@ -140,10 +140,12 @@ channel_t channels[MAX_CHANNELS];
 unsigned int total_channels;
 
 snd_ringbuffer_t *snd_renderbuffer = NULL;
-unsigned int soundtime = 0;
+static unsigned int soundtime = 0;
 static unsigned int oldpaintedtime = 0;
 static unsigned int extrasoundtime = 0;
 static double snd_starttime = 0.0;
+qboolean snd_threaded = false;
+qboolean snd_usethreadedmixing = false;
 
 vec3_t listener_origin;
 matrix4x4_t listener_matrix[SND_LISTENERS];
@@ -1471,6 +1473,7 @@ static void S_PaintAndSubmit (void)
 		return;
 
 	// Update sound time
+	snd_usethreadedmixing = false;
 	usesoundtimehack = true;
 	if (cls.timedemo) // SUPER NASTY HACK to mix non-realtime sound for more reliable benchmarking
 	{
@@ -1489,6 +1492,7 @@ static void S_PaintAndSubmit (void)
 	}
 	else
 	{
+		snd_usethreadedmixing = snd_threaded && !cls.capturevideo.soundrate;
 		usesoundtimehack = 0;
 		newsoundtime = SndSys_GetSoundTime();
 	}
@@ -1515,6 +1519,9 @@ static void S_PaintAndSubmit (void)
 
 	if (!soundtimehack && snd_blocked > 0)
 		return;
+
+	if (snd_usethreadedmixing)
+		return; // the audio thread will mix its own data
 
 	newsoundtime += extrasoundtime;
 	if (newsoundtime < soundtime)
@@ -1543,6 +1550,18 @@ static void S_PaintAndSubmit (void)
 	soundtime = newsoundtime;
 	recording_sound = (cls.capturevideo.soundrate != 0);
 
+	// Remove outdated samples from the ring buffer, if any
+	if (snd_renderbuffer->startframe < soundtime)
+		snd_renderbuffer->startframe = soundtime;
+
+	// Lock submitbuffer
+	if (!simsound && !SndSys_LockRenderBuffer())
+	{
+		// If the lock failed, stop here
+		Con_DPrint(">> S_PaintAndSubmit: SndSys_LockRenderBuffer() failed\n");
+		return;
+	}
+
 	// Check to make sure that we haven't overshot
 	paintedtime = snd_renderbuffer->endframe;
 	if (paintedtime < soundtime)
@@ -1557,7 +1576,26 @@ static void S_PaintAndSubmit (void)
 	maxtime = paintedtime + snd_renderbuffer->maxframes - usedframes;
 	endtime = min(endtime, maxtime);
 
-	S_PaintChannels(snd_renderbuffer, paintedtime, endtime);
+	while (paintedtime < endtime)
+	{
+		unsigned int startoffset;
+		unsigned int nbframes;
+
+		// see how much we can fit in the paint buffer
+		nbframes = endtime - paintedtime;
+		// limit to the end of the ring buffer (in case of wrapping)
+		startoffset = paintedtime % snd_renderbuffer->maxframes;
+		nbframes = min(nbframes, snd_renderbuffer->maxframes - startoffset);
+
+		// mix into the buffer
+		S_MixToBuffer(&snd_renderbuffer->ring[startoffset * snd_renderbuffer->format.width * snd_renderbuffer->format.channels], nbframes);
+
+		paintedtime += nbframes;
+	}
+	if (!simsound)
+		SndSys_UnlockRenderBuffer();
+
+	snd_renderbuffer->endframe = endtime;
 
 	if (simsound)
 		snd_renderbuffer->startframe = snd_renderbuffer->endframe;
