@@ -3359,10 +3359,30 @@ VM_gecko_resize,					// #492 void gecko_resize( string name, float w, float h )
 VM_gecko_get_texture_extent,	// #493 vector gecko_get_texture_extent( string name )
 VM_crc16,						// #494 float(float caseinsensitive, string s, ...) crc16 = #494 (DP_QC_CRC16)
 VM_cvar_type,					// #495 float(string name) cvar_type = #495; (DP_QC_CVAR_TYPE)
-NULL,							// #496
-NULL,							// #497
+VM_uri_escape,					// #496 string(string in) uri_escape = #496;
+VM_uri_unescape,				// #497 string(string in) uri_unescape = #497;
 NULL,							// #498
 NULL,							// #499
+NULL,							// #500
+NULL,							// #501
+NULL,							// #502
+NULL,							// #503
+NULL,							// #504
+NULL,							// #505
+NULL,							// #506
+NULL,							// #507
+NULL,							// #508
+NULL,							// #509
+VM_uri_escape,					// #510 string(string in) uri_escape = #510;
+VM_uri_unescape,				// #511 string(string in) uri_unescape = #511;
+NULL,							// #512
+NULL,							// #513
+NULL,							// #514
+NULL,							// #515
+NULL,							// #516
+NULL,							// #517
+NULL,							// #518
+NULL,							// #519
 };
 
 const int vm_cl_numbuiltins = sizeof(vm_cl_builtins) / sizeof(prvm_builtin_t);

@@ -153,6 +153,7 @@ char *vm_sv_extensions =
 "DP_SV_SHUTDOWN "
 "DP_GECKO_SUPPORT "
 "DP_QC_GETSURFACEPOINTATTRIBUTE "
+"DP_QC_URI_ESCAPE "
 ;
 
 /*
@@ -3349,6 +3350,26 @@ NULL,							// #496
 NULL,							// #497
 NULL,							// #498
 NULL,							// #499
+NULL,							// #500
+NULL,							// #501
+NULL,							// #502
+NULL,							// #503
+NULL,							// #504
+NULL,							// #505
+NULL,							// #506
+NULL,							// #507
+NULL,							// #508
+NULL,							// #509
+VM_uri_escape,					// #510 string(string in) uri_escape = #510;
+VM_uri_unescape,				// #511 string(string in) uri_unescape = #511;
+NULL,							// #512
+NULL,							// #513
+NULL,							// #514
+NULL,							// #515
+NULL,							// #516
+NULL,							// #517
+NULL,							// #518
+NULL,							// #519
 };
 
 const int vm_sv_numbuiltins = sizeof(vm_sv_builtins) / sizeof(prvm_builtin_t);
