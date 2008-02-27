@@ -415,3 +415,5 @@ void VM_Cmd_Reset(void);
 
 void VM_uri_escape (void);
 void VM_uri_unescape (void);
+
+void VM_etof (void);
