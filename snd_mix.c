@@ -487,7 +487,7 @@ void S_MixToBuffer(void *stream, unsigned int bufferframes)
 			if (ch->pos < 0)
 			{
 				count = -ch->pos;
-				count = min(count, frames);
+				count = min(count, frames - ltime);
 				ch->pos += count;
 				ltime += count;
 			}
