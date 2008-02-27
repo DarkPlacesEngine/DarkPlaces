@@ -413,7 +413,7 @@ static void Cmd_Toggle_f(void)
 		}
 		else
 		{ // Invalid CVar
-			Con_Printf("ERROR : CVar '%s' not found\n", Cmd_Argv(2) );
+			Con_Printf("ERROR : CVar '%s' not found\n", Cmd_Argv(1) );
 		}
 	}
 }
@@ -829,7 +829,7 @@ static void Cmd_ExecuteAlias (cmdalias_t *alias)
 	Cmd_PreprocessString( alias->value, buffer, sizeof(buffer) - 2, alias );
 	// insert at start of command buffer, so that aliases execute in order
 	// (fixes bug introduced by Black on 20050705)
-	
+
 	// Note: Cbuf_PreprocessString will be called on this string AGAIN! So we
 	// have to make sure that no second variable expansion takes place, otherwise
 	// alias parameters containing dollar signs can have bad effects.
