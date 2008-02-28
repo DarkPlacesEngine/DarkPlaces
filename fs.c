@@ -1243,9 +1243,6 @@ qboolean FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qboolean
 		}
 	}
 
-	// halt demo playback to close the file
-	CL_Disconnect();
-
 	Host_SaveConfig();
 
 	fs_numgamedirs = numgamedirs;
@@ -1303,6 +1300,9 @@ void FS_GameDir_f (void)
 		Con_Printf("Can not change gamedir while client is connected or server is running!\n");
 		return;
 	}
+
+	// halt demo playback to close the file
+	CL_Disconnect();
 
 	FS_ChangeGameDirs(numgamedirs, gamedirs, true, true);
 }
@@ -2628,7 +2628,7 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 				if( !nextseparator ) {
 					nextseparator = start + strlen( start );
 				}
-				
+
 				// prevseparator points past the '/' right before the wildcard and nextseparator at the one following it (or at the end of the string)
 				// copy everything up except nextseperator
 				strlcpy(subpattern, pattern, min(sizeof(subpattern), (size_t) (nextseparator - pattern + 1)));
@@ -2641,12 +2641,12 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 				// copy everything from start to the previous including the '/' (before the wildcard)
 				// everything up to start is already included in the path of matchedSet's entries
 				strlcpy(subpath, start, min(sizeof(subpath), (size_t) ((prevseparator - subpattern) - (start - pattern) + 1)));
-				
+
 				// for each entry in matchedSet try to open the subdirectories specified in subpath
 				for( dirlistindex = 0 ; dirlistindex < matchedSet.numstrings ; dirlistindex++ ) {
 					strlcpy( temp, matchedSet.strings[ dirlistindex ], sizeof(temp) );
 					strlcat( temp, subpath, sizeof(temp) );
-					listdirectory( &foundSet, searchpath->filename, temp );				
+					listdirectory( &foundSet, searchpath->filename, temp );
 				}
 				if( dirlistindex == 0 ) {
 					break;
@@ -2664,7 +2664,7 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 
 				start = nextseparator;
 			}
-			
+
 			for (dirlistindex = 0;dirlistindex < matchedSet.numstrings;dirlistindex++)
 			{
 				const char *temp = matchedSet.strings[dirlistindex];
