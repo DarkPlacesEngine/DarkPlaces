@@ -960,11 +960,12 @@ void FS_AddGameDirectory (const char *dir)
 	int i;
 	stringlist_t list;
 	searchpath_t *search;
+	char pakfile[MAX_OSPATH];
 
 	strlcpy (fs_gamedir, dir, sizeof (fs_gamedir));
 
 	stringlistinit(&list);
-	listdirectory(&list, "", dir);
+	listdirectory(&list, dir);
 	stringlistsort(&list);
 
 	// add any PAK package in the directory
@@ -972,7 +973,8 @@ void FS_AddGameDirectory (const char *dir)
 	{
 		if (!strcasecmp(FS_FileExtension(list.strings[i]), "pak"))
 		{
-			FS_AddPack_Fullpath(list.strings[i], NULL, false);
+			dpsnprintf (pakfile, sizeof (pakfile), "%s%s", dir, list.strings[i]);
+			FS_AddPack_Fullpath(pakfile, NULL, false);
 		}
 	}
 
@@ -981,7 +983,8 @@ void FS_AddGameDirectory (const char *dir)
 	{
 		if (!strcasecmp(FS_FileExtension(list.strings[i]), "pk3"))
 		{
-			FS_AddPack_Fullpath(list.strings[i], NULL, false);
+			dpsnprintf (pakfile, sizeof (pakfile), "%s%s", dir, list.strings[i]);
+			FS_AddPack_Fullpath(pakfile, NULL, false);
 		}
 	}
 
@@ -1318,7 +1321,7 @@ qboolean FS_CheckGameDir(const char *gamedir)
 	qboolean success;
 	stringlist_t list;
 	stringlistinit(&list);
-	listdirectory(&list, va("%s%s/", fs_basedir, gamedir), "");
+	listdirectory(&list, va("%s%s/", fs_basedir, gamedir));
 	success = list.numstrings > 0;
 	stringlistfreecontents(&list);
 	return success;
@@ -2526,6 +2529,7 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 	stringlist_t dirlist;
 	const char *slash, *backslash, *colon, *separator;
 	char *basepath;
+	char netpath[MAX_OSPATH];
 	char temp[MAX_OSPATH];
 
 	for (i = 0;pattern[i] == '.' || pattern[i] == ':' || pattern[i] == '/' || pattern[i] == '\\';i++)
@@ -2594,80 +2598,13 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 		}
 		else
 		{
-			stringlist_t matchedSet, foundSet;
-			const char *start = pattern;
-
-			stringlistinit(&matchedSet);
-			stringlistinit(&foundSet);
-			// add a first entry to the set
-			stringlistappend(&matchedSet, "");
-			// iterate through pattern's path
-			while (*start)
-			{
-				const char *asterisk, *wildcard, *nextseparator, *prevseparator;
-				char subpath[MAX_OSPATH];
-				char subpattern[MAX_OSPATH];
-
-				// find the next wildcard
-				wildcard = strchr(start, '?');
-				asterisk = strchr(start, '*');
-				if (asterisk && (!wildcard || asterisk < wildcard))
-				{
-					wildcard = asterisk;
-				}
-
-				if (wildcard)
-				{
-					nextseparator = strchr( wildcard, '/' );
-				}
-				else
-				{
-					nextseparator = NULL;
-				}
-
-				if( !nextseparator ) {
-					nextseparator = start + strlen( start );
-				}
-
-				// prevseparator points past the '/' right before the wildcard and nextseparator at the one following it (or at the end of the string)
-				// copy everything up except nextseperator
-				strlcpy(subpattern, pattern, min(sizeof(subpattern), (size_t) (nextseparator - pattern + 1)));
-				// find the last '/' before the wildcard
-				prevseparator = strrchr( subpattern, '/' ) + 1;
-				if (!prevseparator)
-				{
-					prevseparator = subpattern;
-				}
-				// copy everything from start to the previous including the '/' (before the wildcard)
-				// everything up to start is already included in the path of matchedSet's entries
-				strlcpy(subpath, start, min(sizeof(subpath), (size_t) ((prevseparator - subpattern) - (start - pattern) + 1)));
-
-				// for each entry in matchedSet try to open the subdirectories specified in subpath
-				for( dirlistindex = 0 ; dirlistindex < matchedSet.numstrings ; dirlistindex++ ) {
-					strlcpy( temp, matchedSet.strings[ dirlistindex ], sizeof(temp) );
-					strlcat( temp, subpath, sizeof(temp) );
-					listdirectory( &foundSet, searchpath->filename, temp );
-				}
-				if( dirlistindex == 0 ) {
-					break;
-				}
-				// reset the current result set
-				stringlistfreecontents( &matchedSet );
-				// match against the pattern
-				for( dirlistindex = 0 ; dirlistindex < foundSet.numstrings ; dirlistindex++ ) {
-					const char *direntry = foundSet.strings[ dirlistindex ];
-					if (matchpattern(direntry, subpattern, true)) {
-						stringlistappend( &matchedSet, direntry );
-					}
-				}
-				stringlistfreecontents( &foundSet );
-
-				start = nextseparator;
-			}
-
-			for (dirlistindex = 0;dirlistindex < matchedSet.numstrings;dirlistindex++)
-			{
-				const char *temp = matchedSet.strings[dirlistindex];
+			// get a directory listing and look at each name
+			dpsnprintf(netpath, sizeof (netpath), "%s%s", searchpath->filename, basepath);
+			stringlistinit(&dirlist);
+			listdirectory(&dirlist, netpath);
+			for (dirlistindex = 0;dirlistindex < dirlist.numstrings;dirlistindex++)
+  			{
+				dpsnprintf(temp, sizeof(temp), "%s%s", basepath, dirlist.strings[dirlistindex]);
 				if (matchpattern(temp, (char *)pattern, true))
 				{
 					for (resultlistindex = 0;resultlistindex < resultlist.numstrings;resultlistindex++)
@@ -2681,7 +2618,7 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 					}
 				}
 			}
-			stringlistfreecontents( &matchedSet );
+			stringlistfreecontents(&dirlist);
 		}
 	}
 
