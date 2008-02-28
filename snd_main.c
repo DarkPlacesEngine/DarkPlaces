@@ -1587,11 +1587,10 @@ static void S_PaintAndSubmit (void)
 		S_MixToBuffer(&snd_renderbuffer->ring[startoffset * snd_renderbuffer->format.width * snd_renderbuffer->format.channels], nbframes);
 
 		paintedtime += nbframes;
+		snd_renderbuffer->endframe = paintedtime;
 	}
 	if (!simsound)
 		SndSys_UnlockRenderBuffer();
-
-	snd_renderbuffer->endframe = endtime;
 
 	// Remove outdated samples from the ring buffer, if any
 	if (snd_renderbuffer->startframe < soundtime)
