@@ -76,7 +76,6 @@ void stringlistfreecontents(stringlist_t *list)
 	list->maxstrings = 0;
 	if (list->strings)
 		Z_Free(list->strings);
-	list->strings = NULL;
 }
 
 void stringlistappend(stringlist_t *list, const char *text)
@@ -120,32 +119,29 @@ void stringlistsort(stringlist_t *list)
 }
 
 // operating system specific code
-static void adddirentry(stringlist_t *list, const char *path, const char *name)
+static void adddirentry(stringlist_t *list, const char *name)
 {
 	if (strcmp(name, ".") && strcmp(name, ".."))
 	{
-		char temp[MAX_OSPATH];
-		dpsnprintf( temp, sizeof( temp ), "%s%s", path, name );
-		stringlistappend(list, temp);
+		stringlistappend(list, name);
 	}
 }
 #ifdef WIN32
 #include <io.h>
-void listdirectory(stringlist_t *list, const char *basepath, const char *path)
+void listdirectory(stringlist_t *list, const char *path)
 {
 	int i;
 	char pattern[4096], *c;
 	struct _finddata_t n_file;
 	long hFile;
-	strlcpy (pattern, basepath, sizeof(pattern));
-	strlcat (pattern, path, sizeof (pattern));
+	strlcpy (pattern, path, sizeof (pattern));
 	strlcat (pattern, "*", sizeof (pattern));
 	// ask for the directory listing handle
 	hFile = _findfirst(pattern, &n_file);
 	if(hFile == -1)
 		return;
 	do {
-		adddirentry(list, path, n_file.name );
+		adddirentry(list, n_file.name );
 	} while (_findnext(hFile, &n_file) == 0);
 	_findclose(hFile);
 
@@ -157,17 +153,15 @@ void listdirectory(stringlist_t *list, const char *basepath, const char *path)
 }
 #else
 #include <dirent.h>
-void listdirectory(stringlist_t *list, const char *basepath, const char *path)
+void listdirectory(stringlist_t *list, const char *path)
 {
-	char fullpath[MAX_OSPATH];
 	DIR *dir;
 	struct dirent *ent;
-	dpsnprintf(fullpath, sizeof(fullpath), "%s%s", basepath, *path ? path : "./");
-	dir = opendir(fullpath);
+	dir = opendir(path);
 	if (!dir)
 		return;
 	while ((ent = readdir(dir)))
-		adddirentry(list, path, ent->d_name);
+		adddirentry(list, ent->d_name);
 	closedir(dir);
 }
 #endif

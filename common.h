@@ -318,7 +318,7 @@ void stringlistinit(stringlist_t *list);
 void stringlistfreecontents(stringlist_t *list);
 void stringlistappend(stringlist_t *list, const char *text);
 void stringlistsort(stringlist_t *list);
-void listdirectory(stringlist_t *list, const char *basepath, const char *path);
+void listdirectory(stringlist_t *list, const char *path);
 
 char *SearchInfostring(const char *infostring, const char *key);
 
