@@ -518,9 +518,10 @@ typedef struct client_static_s
 	int td_frames; // total frames parsed
 	double td_onesecondnexttime;
 	double td_onesecondframes;
-	double td_onesecondminframes;
-	double td_onesecondmaxframes;
-	double td_onesecondavgframes;
+	double td_onesecondrealtime;
+	double td_onesecondminfps;
+	double td_onesecondmaxfps;
+	double td_onesecondavgfps;
 	int td_onesecondavgcount;
 	// LordHavoc: pausedemo
 	qboolean demopaused;

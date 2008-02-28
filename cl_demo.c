@@ -155,22 +155,25 @@ void CL_ReadDemoMessage(void)
 				{
 					cls.td_starttime = realtime;
 					cls.td_onesecondnexttime = cl.time + 1;
+					cls.td_onesecondrealtime = realtime;
 					cls.td_onesecondframes = 0;
-					cls.td_onesecondminframes = 0;
-					cls.td_onesecondmaxframes = 0;
-					cls.td_onesecondavgframes = 0;
+					cls.td_onesecondminfps = 0;
+					cls.td_onesecondmaxfps = 0;
+					cls.td_onesecondavgfps = 0;
 					cls.td_onesecondavgcount = 0;
 				}
 				if (cl.time >= cls.td_onesecondnexttime)
 				{
+					double fps = cls.td_onesecondframes / (realtime - cls.td_onesecondrealtime);
 					if (cls.td_onesecondavgcount == 0)
 					{
-						cls.td_onesecondminframes = cls.td_onesecondframes;
-						cls.td_onesecondmaxframes = cls.td_onesecondframes;
+						cls.td_onesecondminfps = fps;
+						cls.td_onesecondmaxfps = fps;
 					}
-					cls.td_onesecondminframes = min(cls.td_onesecondminframes, cls.td_onesecondframes);
-					cls.td_onesecondmaxframes = max(cls.td_onesecondmaxframes, cls.td_onesecondframes);
-					cls.td_onesecondavgframes += cls.td_onesecondframes;
+					cls.td_onesecondrealtime = realtime;
+					cls.td_onesecondminfps = min(cls.td_onesecondminfps, fps);
+					cls.td_onesecondmaxfps = max(cls.td_onesecondmaxfps, fps);
+					cls.td_onesecondavgfps += fps;
 					cls.td_onesecondavgcount++;
 					cls.td_onesecondframes = 0;
 					cls.td_onesecondnexttime++;
@@ -394,12 +397,12 @@ void CL_FinishTimeDemo (void)
 	frames = cls.td_frames;
 	time = realtime - cls.td_starttime;
 	totalfpsavg = time > 0 ? frames / time : 0;
-	fpsmin = cls.td_onesecondminframes;
-	fpsavg = cls.td_onesecondavgcount ? cls.td_onesecondavgframes / cls.td_onesecondavgcount : 0;
-	fpsmax = cls.td_onesecondmaxframes;
+	fpsmin = cls.td_onesecondminfps;
+	fpsavg = cls.td_onesecondavgcount ? cls.td_onesecondavgfps / cls.td_onesecondavgcount : 0;
+	fpsmax = cls.td_onesecondmaxfps;
 	// LordHavoc: timedemo now prints out 7 digits of fraction, and min/avg/max
-	Con_Printf("%i frames %5.7f seconds %5.7f fps, one-second min/avg/max: %.0f %.0f %.0f\n", frames, time, totalfpsavg, fpsmin, fpsavg, fpsmax);
-	Log_Printf("benchmark.log", "date %s | enginedate %s | demo %s | commandline %s | result %i frames %5.7f seconds %5.7f fps, one-second min/avg/max: %.0f %.0f %.0f\n", Sys_TimeString("%Y-%m-%d %H:%M:%S"), buildstring, cls.demoname, cmdline.string, frames, time, totalfpsavg, fpsmin, fpsavg, fpsmax);
+	Con_Printf("%i frames %5.7f seconds %5.7f fps, one-second fps min/avg/max: %.0f %.0f %.0f (%i seconds)\n", frames, time, totalfpsavg, fpsmin, fpsavg, fpsmax, cls.td_onesecondavgcount);
+	Log_Printf("benchmark.log", "date %s | enginedate %s | demo %s | commandline %s | result %i frames %5.7f seconds %5.7f fps, one-second fps min/avg/max: %.0f %.0f %.0f (%i seconds)\n", Sys_TimeString("%Y-%m-%d %H:%M:%S"), buildstring, cls.demoname, cmdline.string, frames, time, totalfpsavg, fpsmin, fpsavg, fpsmax, cls.td_onesecondavgcount);
 	if (COM_CheckParm("-benchmark"))
 		Host_Quit_f();
 }
