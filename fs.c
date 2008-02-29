@@ -2633,11 +2633,11 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 				// copy everything up except nextseperator
 				strlcpy(subpattern, pattern, min(sizeof(subpattern), (size_t) (nextseparator - pattern + 1)));
 				// find the last '/' before the wildcard
-				prevseparator = strrchr( subpattern, '/' ) + 1;
+				prevseparator = strrchr( subpattern, '/' );
 				if (!prevseparator)
-				{
 					prevseparator = subpattern;
-				}
+				else
+					prevseparator++;
 				// copy everything from start to the previous including the '/' (before the wildcard)
 				// everything up to start is already included in the path of matchedSet's entries
 				strlcpy(subpath, start, min(sizeof(subpath), (size_t) ((prevseparator - subpattern) - (start - pattern) + 1)));
