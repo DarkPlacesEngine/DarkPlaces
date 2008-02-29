@@ -1154,15 +1154,15 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp, int refreshrat
 		if ((qwglGetExtensionsStringARB = (const char *(WINAPI *)(HDC hdc))GL_GetProcAddress("wglGetExtensionsStringARB")) == NULL)
 			Con_Print("wglGetExtensionsStringARB not found\n");
 
-		gl_renderer = qglGetString(GL_RENDERER);
-		gl_vendor = qglGetString(GL_VENDOR);
-		gl_version = qglGetString(GL_VERSION);
-		gl_extensions = qglGetString(GL_EXTENSIONS);
+		gl_renderer = (const char *)qglGetString(GL_RENDERER);
+		gl_vendor = (const char *)qglGetString(GL_VENDOR);
+		gl_version = (const char *)qglGetString(GL_VERSION);
+		gl_extensions = (const char *)qglGetString(GL_EXTENSIONS);
 		gl_platform = "WGL";
 		gl_platformextensions = "";
 
 		if (qwglGetExtensionsStringARB)
-			gl_platformextensions = qwglGetExtensionsStringARB(baseDC);
+			gl_platformextensions = (const char *)qwglGetExtensionsStringARB(baseDC);
 
 		// now some nice Windows pain:
 		// we have created a window, we needed one to find out if there are
