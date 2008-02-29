@@ -16,7 +16,7 @@ cvar_t gl_texturecompression_gloss = {CVAR_SAVE, "gl_texturecompression_gloss", 
 cvar_t gl_texturecompression_glow = {CVAR_SAVE, "gl_texturecompression_glow", "1", "whether to compress glowmap (luma) textures"};
 cvar_t gl_texturecompression_2d = {CVAR_SAVE, "gl_texturecompression_2d", "1", "whether to compress 2d (hud/menu) textures other than the font"};
 cvar_t gl_texturecompression_q3bsplightmaps = {CVAR_SAVE, "gl_texturecompression_q3bsplightmaps", "1", "whether to compress lightmaps in q3bsp format levels"};
-cvar_t gl_texturecompression_q3bspdeluxemaps = {CVAR_SAVE, "gl_texturecompression_q3bspdeluxemaps", "1", "whether to compress deluxemaps in q3bsp format levels (only levels compiled with q3map2 -deluxe have these)"};
+cvar_t gl_texturecompression_q3bspdeluxemaps = {CVAR_SAVE, "gl_texturecompression_q3bspdeluxemaps", "0", "whether to compress deluxemaps in q3bsp format levels (only levels compiled with q3map2 -deluxe have these)"};
 cvar_t gl_texturecompression_sky = {CVAR_SAVE, "gl_texturecompression_sky", "0", "whether to compress sky textures"};
 cvar_t gl_texturecompression_lightcubemaps = {CVAR_SAVE, "gl_texturecompression_lightcubemaps", "1", "whether to compress light cubemaps (spotlights and other light projection images)"};
 
