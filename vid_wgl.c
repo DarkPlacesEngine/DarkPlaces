@@ -527,7 +527,7 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 			GetKeyboardState (state);
 			// alt/ctrl/shift tend to produce funky ToAscii values,
 			// and if it's not a single character we don't know care about it
-			charlength = ToAscii (wParam, lParam >> 16, state, (unsigned short *)asciichar, 0);
+			charlength = ToAscii (wParam, lParam >> 16, state, (LPWORD)asciichar, 0);
 			if (vkey == K_ALT || vkey == K_CTRL || vkey == K_SHIFT || charlength == 0)
 				asciichar[0] = 0;
 			else if( charlength == 2 ) {
