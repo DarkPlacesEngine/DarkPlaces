@@ -707,8 +707,14 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	gl_vendor = (const char *)qglGetString(GL_VENDOR);
 	gl_version = (const char *)qglGetString(GL_VERSION);
 	gl_extensions = (const char *)qglGetString(GL_EXTENSIONS);
+	gl_platformextensions = "";
 	gl_platform = "AGL";
 	gl_videosyncavailable = true;
+
+	if (!gl_extensions)
+		gl_extensions = "";
+	if (!gl_platformextensions)
+		gl_platformextensions = "";
 
 	Con_DPrintf("GL_VENDOR: %s\n", gl_vendor);
 	Con_DPrintf("GL_RENDERER: %s\n", gl_renderer);

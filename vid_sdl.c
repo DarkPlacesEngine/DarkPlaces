@@ -742,6 +742,11 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	gl_platformextensions = "";
 	gl_videosyncavailable = false;
 
+	if (!gl_extensions)
+		gl_extensions = "";
+	if (!gl_platformextensions)
+		gl_platformextensions = "";
+
 	Con_DPrintf("GL_VENDOR: %s\n", gl_vendor);
 	Con_DPrintf("GL_RENDERER: %s\n", gl_renderer);
 	Con_DPrintf("GL_VERSION: %s\n", gl_version);

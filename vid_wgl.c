@@ -1164,6 +1164,11 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp, int refreshrat
 		if (qwglGetExtensionsStringARB)
 			gl_platformextensions = (const char *)qwglGetExtensionsStringARB(baseDC);
 
+		if (!gl_extensions)
+			gl_extensions = "";
+		if (!gl_platformextensions)
+			gl_platformextensions = "";
+
 		// now some nice Windows pain:
 		// we have created a window, we needed one to find out if there are
 		// any multisample pixel formats available, the problem is that to
