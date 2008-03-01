@@ -982,7 +982,12 @@ qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s)
 		break;
 
 	case ev_field:
-		def = PRVM_ED_FindField(s);
+		if (*s != '.')
+		{
+			Con_DPrintf("PRVM_ED_ParseEpair: Bogus field name %s in %s\n", s, PRVM_NAME);
+			return false;
+		}
+		def = PRVM_ED_FindField(s + 1);
 		if (!def)
 		{
 			Con_DPrintf("PRVM_ED_ParseEpair: Can't find field %s in %s\n", s, PRVM_NAME);
