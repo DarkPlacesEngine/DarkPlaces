@@ -546,7 +546,7 @@ static const char *builtinshaderstring =
 "	gl_FragColor += tex2;\n"
 "#  endif\n"
 "#  ifdef USEVERTEXTEXTUREBLEND\n"
-"	gl_FragColor = mix(tex2, gl_FragColor, tex2.a);\n"
+"	gl_FragColor = mix(gl_FragColor, tex2, tex2.a);\n"
 "#  endif\n"
 "}\n"
 "# endif\n"
