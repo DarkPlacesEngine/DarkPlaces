@@ -397,29 +397,27 @@ int GL_CheckExtension(const char *name, const dllfunction_t *funcs, const char *
 		return false;
 	}
 
-	if (strstr(gl_extensions, name) || strstr(gl_platformextensions, name) || (strncmp(name, "GL_", 3) && strncmp(name, "WGL_", 4) && strncmp(name, "GLX_", 4) && strncmp(name, "AGL_", 4)))
-	{
-		for (func = funcs;func && func->name != NULL;func++)
-		{
-			// functions are cleared before all the extensions are evaluated
-			if (!(*func->funcvariable = (void *) GL_GetProcAddress(func->name)))
-			{
-				if (!silent)
-					Con_DPrintf("OpenGL extension \"%s\" is missing function \"%s\" - broken driver!\n", name, func->name);
-				failed = true;
-			}
-		}
-		// delay the return so it prints all missing functions
-		if (failed)
-			return false;
-		Con_DPrint("enabled\n");
-		return true;
-	}
-	else
+	if ((name[2] == '_' || name[3] == '_') && !strstr(gl_extensions ? gl_extensions : "", name) && !strstr(gl_platformextensions ? gl_platformextensions : "", name))
 	{
 		Con_DPrint("not detected\n");
 		return false;
 	}
+
+	for (func = funcs;func && func->name != NULL;func++)
+	{
+		// functions are cleared before all the extensions are evaluated
+		if (!(*func->funcvariable = (void *) GL_GetProcAddress(func->name)))
+		{
+			if (!silent)
+				Con_DPrintf("OpenGL extension \"%s\" is missing function \"%s\" - broken driver!\n", name, func->name);
+			failed = true;
+		}
+	}
+	// delay the return so it prints all missing functions
+	if (failed)
+		return false;
+	Con_DPrint("enabled\n");
+	return true;
 }
 
 static dllfunction_t opengl110funcs[] =

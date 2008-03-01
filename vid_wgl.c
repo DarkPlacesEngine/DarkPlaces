@@ -1098,6 +1098,9 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp, int refreshrat
 	// start out at the final windowpass if samples is 1 as it's the only feature we need extended pixel formats for
 	for (windowpass = samples == 1;windowpass < 2;windowpass++)
 	{
+		gl_extensions = "";
+		gl_platformextensions = "";
+
 		mainwindow = CreateWindowEx (ExWindowStyle, "DarkPlacesWindowClass", gamename, WindowStyle, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, NULL, NULL, global_hInstance, NULL);
 		if (!mainwindow)
 		{
@@ -1125,8 +1128,6 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp, int refreshrat
 			return false;
 		}
 
-		gl_extensions = "";
-		gl_platformextensions = "";
 		if (!GL_CheckExtension("wgl", wglfuncs, NULL, false))
 		{
 			VID_Shutdown();
