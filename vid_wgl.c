@@ -1095,7 +1095,8 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp, int refreshrat
 
 	pixelformat = 0;
 	newpixelformat = 0;
-	for (windowpass = 0;windowpass < 2;windowpass++)
+	// start out at the final windowpass if samples is 1 as it's the only feature we need extended pixel formats for
+	for (windowpass = samples == 1;windowpass < 2;windowpass++)
 	{
 		mainwindow = CreateWindowEx (ExWindowStyle, "DarkPlacesWindowClass", gamename, WindowStyle, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, NULL, NULL, global_hInstance, NULL);
 		if (!mainwindow)
