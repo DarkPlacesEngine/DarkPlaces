@@ -787,6 +787,11 @@ void VID_Shutdown (void)
 
 	IN_Activate(false);
 	SDL_QuitSubSystem(SDL_INIT_VIDEO);
+
+	gl_driver[0] = 0;
+	gl_extensions = "";
+	gl_platform = "";
+	gl_platformextensions = "";
 }
 
 int VID_SetGamma (unsigned short *ramps, int rampsize)
