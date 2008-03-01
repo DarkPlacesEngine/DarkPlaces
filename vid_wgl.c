@@ -1125,6 +1125,8 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp, int refreshrat
 			return false;
 		}
 
+		gl_extensions = "";
+		gl_platformextensions = "";
 		if (!GL_CheckExtension("wgl", wglfuncs, NULL, false))
 		{
 			VID_Shutdown();
