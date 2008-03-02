@@ -369,7 +369,7 @@ void *dpvsimpledecode_open(char *filename, char **errorstring)
 							if (s->videopixels != NULL)
 							{
 								size_t namelen;
-								
+
 								namelen = strlen(filename) + 10;
 								wavename = (char *)Z_Malloc(namelen);
 								if (wavename)
@@ -424,7 +424,7 @@ void dpvsimpledecode_close(void *stream)
 	if (s->videopixels)
 		Z_Free(s->videopixels);
 	if (s->sndchan != -1)
-		S_StopChannel (s->sndchan);
+		S_StopChannel (s->sndchan, true);
 	if (s->framedatablocks)
 		hz_bitstream_read_blocks_free(s->framedatablocks);
 	if (s->bitstream)

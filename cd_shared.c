@@ -171,7 +171,7 @@ void CDAudio_Play_byName (const char *trackname, qboolean looping)
 			Con_Print("Could not load BGM track.\n");
 			return;
 		}
-	
+
 		if (!cdValid)
 		{
 			CDAudio_GetAudioDiskInfo();
@@ -214,7 +214,7 @@ void CDAudio_Stop (void)
 
 	if (faketrack != -1)
 	{
-		S_StopChannel (faketrack);
+		S_StopChannel (faketrack, true);
 		faketrack = -1;
 	}
 	else if (cdPlaying && (CDAudio_SysStop() == -1))

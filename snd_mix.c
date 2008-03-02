@@ -513,7 +513,7 @@ void S_MixToBuffer(void *stream, unsigned int bufferframes)
 						ch->pos = 0;
 					else
 					{
-						S_StopChannel (ch - channels);
+						S_StopChannel (ch - channels, false);
 						break;
 					}
 				}
