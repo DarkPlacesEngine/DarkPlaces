@@ -60,6 +60,8 @@ static OSStatus audioDeviceIOProc(AudioDeviceID inDevice,
 	outBuffer = (float*)outOutputData->mBuffers[0].mData;
 	factor = snd_renderbuffer->format.channels * snd_renderbuffer->format.width;
 	frameCount = 0;
+	if (snd_blocked)
+		scale = 0;
 
 	// Lock the snd_renderbuffer
 	if (SndSys_LockRenderBuffer())
