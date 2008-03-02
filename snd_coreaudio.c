@@ -55,7 +55,7 @@ static OSStatus audioDeviceIOProc(AudioDeviceID inDevice,
 {
 	float *outBuffer;
 	unsigned int frameCount, factor, sampleIndex;
-	const float scale = 1.0f / SHRT_MAX;
+	float scale = 1.0f / SHRT_MAX;
 
 	outBuffer = (float*)outOutputData->mBuffers[0].mData;
 	factor = snd_renderbuffer->format.channels * snd_renderbuffer->format.width;
