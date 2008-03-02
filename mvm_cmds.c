@@ -876,9 +876,16 @@ VM_altstr_ins,						//  #86
 VM_findflags,						//  #87
 VM_findchainflags,				//  #88
 VM_cvar_defstring,				//  #89
+// deactivate support for model rendering in the menu until someone has time to do it right [3/2/2008 Andreas]
+#if 0
 VM_CL_setmodel,					// #90 void(entity e, string m) setmodel (QUAKE)
 VM_CL_precache_model,			// #91 void(string s) precache_model (QUAKE)
 VM_CL_setorigin,				// #92 void(entity e, vector o) setorigin (QUAKE)
+#else
+NULL,
+NULL,
+NULL,
+#endif
 NULL,									//  #93
 NULL,									//  #94
 NULL,									//  #95
@@ -1086,6 +1093,8 @@ NULL,									// #296
 NULL,									// #297
 NULL,									// #298
 NULL,									// #299
+// deactivate support for model rendering in the menu until someone has time to do it right [3/2/2008 Andreas]
+#if 0
 // CSQC range #300-#399
 VM_CL_R_ClearScene,				// #300 void() clearscene (DP_QC_RENDER_SCENE)
 VM_CL_R_AddEntities,			// #301 void(float mask) addentities (DP_QC_RENDER_SCENE)
@@ -1101,6 +1110,22 @@ NULL/*VM_CL_R_LoadWorldModel*/,				// #309 void(string modelname) R_LoadWorldMod
 VM_CL_setattachment,				// #310 void(entity e, entity tagentity, string tagname) setattachment (DP_GFX_QUAKE3MODELTAGS) (DP_QC_RENDER_SCENE)
 VM_CL_gettagindex,				// #311 float(entity ent, string tagname) gettagindex (DP_QC_GETTAGINFO) (DP_QC_RENDER_SCENE)
 VM_CL_gettaginfo,					// #312 vector(entity ent, float tagindex) gettaginfo (DP_QC_GETTAGINFO) (DP_QC_RENDER_SCENE)
+#else
+// CSQC range #300-#399
+NULL,		
+NULL,		
+NULL,		
+NULL,		
+NULL,		
+NULL,		
+NULL,		
+NULL,	
+NULL,	
+NULL,
+NULL,	
+NULL,	
+NULL,	
+#endif
 NULL,									// #313
 NULL,									// #314
 NULL,									// #315
