@@ -42,6 +42,8 @@ static void Buffer_Callback (void *userdata, Uint8 *stream, int len)
 	if (snd_usethreadedmixing)
 	{
 		S_MixToBuffer(stream, RequestedFrames);
+		if (snd_blocked)
+			memset(stream, snd_renderbuffer->format.width == 1 ? 0x80 : 0, len);
 		return;
 	}
 
