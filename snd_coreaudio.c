@@ -37,6 +37,7 @@ static unsigned int coreaudiotime = 0;  // based on the number of chunks submitt
 static qboolean s_isRunning = false;
 static pthread_mutex_t coreaudio_mutex;
 static AudioDeviceID outputDeviceID = kAudioDeviceUnknown;
+static short *mixbuffer = NULL;
 
 
 /*
@@ -53,7 +54,8 @@ static OSStatus audioDeviceIOProc(AudioDeviceID inDevice,
 								  void *inClientData)
 {
 	float *outBuffer;
-	unsigned int frameCount, factor;
+	unsigned int frameCount, factor, sampleIndex;
+	const float scale = 1.0f / SHRT_MAX;
 
 	outBuffer = (float*)outOutputData->mBuffers[0].mData;
 	factor = snd_renderbuffer->format.channels * snd_renderbuffer->format.width;
@@ -62,10 +64,19 @@ static OSStatus audioDeviceIOProc(AudioDeviceID inDevice,
 	// Lock the snd_renderbuffer
 	if (SndSys_LockRenderBuffer())
 	{
-		unsigned int maxFrames, sampleIndex, sampleCount;
+		unsigned int maxFrames, sampleCount;
 		unsigned int startOffset, endOffset;
 		const short *samples;
-		const float scale = 1.0f / SHRT_MAX;
+
+		if (snd_usethreadedmixing)
+		{
+			S_MixToBuffer(mixbuffer, submissionChunk);
+			for (sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++)
+				outBuffer[sampleIndex] = mixbuffer[sampleIndex] * scale;
+			// unlock the mutex now
+			SndSys_UnlockRenderBuffer();
+			return 0;
+		}
 
 		// Transfert up to a chunk of sample frames from snd_renderbuffer to outBuffer
 		maxFrames = snd_renderbuffer->endframe - snd_renderbuffer->startframe;
@@ -100,7 +111,7 @@ static OSStatus audioDeviceIOProc(AudioDeviceID inDevice,
 
 		snd_renderbuffer->startframe += frameCount;
 
-		// Unlock the snd_renderbuffer
+		// unlock the mutex now
 		SndSys_UnlockRenderBuffer();
 	}
 
@@ -138,6 +149,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 		return true;
 
 	Con_Printf("Initializing CoreAudio...\n");
+	snd_threaded = false;
 
 	if(requested->width != 2)
 	{
@@ -227,43 +239,52 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 
 	if(streamDesc.mFormatID != kAudioFormatLinearPCM)
 	{
+		// Add the callback function
+		status = AudioDeviceAddIOProc(outputDeviceID, audioDeviceIOProc, NULL);
+		if (!status)
+		{
+			// We haven't sent any sample frames yet
+			coreaudiotime = 0;
+			if (pthread_mutex_init(&coreaudio_mutex, NULL) == 0)
+			{
+				if ((snd_renderbuffer = Snd_CreateRingBuffer(requested, 0, NULL)))
+				{
+					if ((mixbuffer = Mem_Alloc(snd_mempool, CHUNK_SIZE * sizeof(*mixbuffer) * requested->channels)))
+					{
+						// Start sound running
+						status = AudioDeviceStart(outputDeviceID, audioDeviceIOProc);
+						if (!status)
+						{
+							s_isRunning = true;
+							snd_threaded = true;
+							Con_Print("   Initialization successful\n");
+							return true;
+						}
+						else
+							Con_Printf("CoreAudio: AudioDeviceStart() returned %d\n", (int)status);
+						Mem_Free(mixbuffer);
+						mixbuffer = NULL;
+					}
+					else
+						Con_Print("CoreAudio: can't allocate memory for mixbuffer\n");
+					Mem_Free(snd_renderbuffer->ring);
+					Mem_Free(snd_renderbuffer);
+					snd_renderbuffer = NULL;
+				}
+				else
+					Con_Print("CoreAudio: can't allocate memory for ringbuffer\n");
+				pthread_mutex_destroy(&coreaudio_mutex);
+			}
+			else
+				Con_Print("CoreAudio: can't create pthread mutex\n");
+			AudioDeviceRemoveIOProc(outputDeviceID, audioDeviceIOProc);
+		}
+		else
+			Con_Printf("CoreAudio: AudioDeviceAddIOProc() returned %d\n", (int)status);
+	}
+	else
 		Con_Print("CoreAudio: Default audio device doesn't support linear PCM!\n");
-		return false;
-	}
-
-	// Add the callback function
-	status = AudioDeviceAddIOProc(outputDeviceID, audioDeviceIOProc, NULL);
-	if (status)
-	{
-		Con_Printf("CoreAudio: AudioDeviceAddIOProc() returned %d\n", (int)status);
-		return false;
-	}
-
-	// We haven't sent any sample frames yet
-	coreaudiotime = 0;
-
-	if (pthread_mutex_init(&coreaudio_mutex, NULL) != 0)
-	{
-		Con_Print("CoreAudio: can't create pthread mutex\n");
-		AudioDeviceRemoveIOProc(outputDeviceID, audioDeviceIOProc);
-		return false;
-	}
-
-	snd_renderbuffer = Snd_CreateRingBuffer(requested, 0, NULL);
-
-	// Start sound running
-	status = AudioDeviceStart(outputDeviceID, audioDeviceIOProc);
-	if (status)
-	{
-		Con_Printf("CoreAudio: AudioDeviceStart() returned %d\n", (int)status);
-		pthread_mutex_destroy(&coreaudio_mutex);
-		AudioDeviceRemoveIOProc(outputDeviceID, audioDeviceIOProc);
-		return false;
-	}
-	s_isRunning = true;
-
-	Con_Print("   Initialization successful\n");
-	return true;
+	return false;
 }
 
 
@@ -304,6 +325,10 @@ void SndSys_Shutdown(void)
 		Mem_Free(snd_renderbuffer);
 		snd_renderbuffer = NULL;
 	}
+
+	if (mixbuffer != NULL)
+		Mem_Free(mixbuffer);
+	mixbuffer = NULL;
 }
 
 
@@ -355,5 +380,5 @@ Release the exclusive lock on "snd_renderbuffer"
 */
 void SndSys_UnlockRenderBuffer (void)
 {
-    pthread_mutex_unlock(&coreaudio_mutex);
+	pthread_mutex_unlock(&coreaudio_mutex);
 }
