@@ -2006,7 +2006,7 @@ void R_DrawDecals (void)
 	float drawdist2;
 
 	frametime = bound(0, cl.time - cl.decals_updatetime, 1);
-	cl.decals_updatetime += frametime;
+	cl.decals_updatetime = bound(cl.time - 1, cl.decals_updatetime + frametime, cl.time + 1);
 
 	// LordHavoc: early out conditions
 	if ((!cl.num_decals) || (!r_drawdecals.integer))
@@ -2267,7 +2267,7 @@ void R_DrawParticles (void)
 	qboolean update;
 
 	frametime = bound(0, cl.time - cl.particles_updatetime, 1);
-	cl.particles_updatetime += frametime;
+	cl.particles_updatetime = bound(cl.time - 1, cl.particles_updatetime + frametime, cl.time + 1);
 
 	// LordHavoc: early out conditions
 	if ((!cl.num_particles) || (!r_drawparticles.integer))
