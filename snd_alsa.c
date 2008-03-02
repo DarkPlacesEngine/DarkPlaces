@@ -73,16 +73,16 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 			Con_Printf ("SndSys_Init: suggesting sound width = %hu\n",
 						suggested->width);
 		}
-		
+
 		return false;
     }
-	
+
 	if (pcm_handle != NULL)
 	{
 		Con_Print ("SndSys_Init: WARNING: Init called before Shutdown!\n");
 		SndSys_Shutdown ();
 	}
-	
+
 	// Determine the name of the PCM handle we'll use
 	switch (requested->channels)
 	{
@@ -113,7 +113,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 					pcm_name, snd_strerror (err));
 		return false;
 	}
-	
+
 	// Allocate the hardware parameters
 	err = snd_pcm_hw_params_malloc (&hw_params);
 	if (err != 0)
@@ -203,13 +203,13 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 	alsasoundtime = 0;
 	if (snd_channellayout.integer == SND_CHANNELLAYOUT_AUTO)
 		Cvar_SetValueQuick (&snd_channellayout, SND_CHANNELLAYOUT_ALSA);
-	
+
 	return true;
 
 
 // It's not very clean, but it avoids a lot of duplicated code.
 init_error:
-	
+
 	if (hw_params != NULL)
 		snd_pcm_hw_params_free (hw_params);
 	SndSys_Shutdown ();
@@ -255,7 +255,7 @@ static qboolean SndSys_Recover (int err_num)
 	// We can only do something on underrun ("broken pipe") errors
 	if (err_num != -EPIPE)
 		return false;
-			
+
 	err = snd_pcm_prepare (pcm_handle);
 	if (err != 0)
 	{
@@ -300,7 +300,7 @@ static snd_pcm_sframes_t SndSys_Write (const unsigned char* buffer, unsigned int
 		snd_renderbuffer->startframe += written;
 		expected_delay += written;
 	}
-	
+
 	return written;
 }
 
@@ -317,7 +317,7 @@ void SndSys_Submit (void)
 	unsigned int startoffset, factor;
  	snd_pcm_uframes_t limit, nbframes;
 	snd_pcm_sframes_t written;
-	
+
 	if (pcm_handle == NULL ||
 		snd_renderbuffer->startframe == snd_renderbuffer->endframe)
 		return;
@@ -332,7 +332,7 @@ void SndSys_Submit (void)
 		written = SndSys_Write (&snd_renderbuffer->ring[startoffset * factor], limit);
 		if (written < 0 || (snd_pcm_uframes_t)written != limit)
 			return;
-		
+
 		nbframes -= limit;
 		startoffset = 0;
 	}
@@ -386,9 +386,9 @@ unsigned int SndSys_GetSoundTime (void)
 	else
 		timediff = expected_delay - delay;
 	expected_delay = delay;
-	
+
 	alsasoundtime += (unsigned int)timediff;
-	
+
 	return alsasoundtime;
 }
 
