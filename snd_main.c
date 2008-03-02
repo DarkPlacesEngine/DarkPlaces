@@ -896,7 +896,7 @@ void S_FreeSfx (sfx_t *sfx, qboolean force)
 	// Stop all channels using this sfx
 	for (i = 0; i < total_channels; i++)
 		if (channels[i].sfx == sfx)
-			S_StopChannel (i);
+			S_StopChannel (i, true);
 
 	// Free it
 	if (sfx->fetcher != NULL && sfx->fetcher->free != NULL)
@@ -1082,7 +1082,7 @@ channel_t *SND_PickChannel(int entnum, int entchannel)
 			if (ch->entnum == entnum && (ch->entchannel == entchannel || entchannel == -1) )
 			{
 				// always override sound from same entity
-				S_StopChannel (ch_idx);
+				S_StopChannel (ch_idx, true);
 				return &channels[ch_idx];
 			}
 		}
@@ -1196,9 +1196,10 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 void S_PlaySfxOnChannel (sfx_t *sfx, channel_t *target_chan, unsigned int flags, vec3_t origin, float fvol, float attenuation, qboolean isstatic)
 {
 	// Initialize the channel
+	// We MUST set sfx LAST because otherwise we could crash a threaded mixer
+	// (otherwise we'd have to call SndSys_LockRenderBuffer here)
 	memset (target_chan, 0, sizeof (*target_chan));
 	VectorCopy (origin, target_chan->origin);
-	target_chan->sfx = sfx;
 	target_chan->flags = flags;
 	target_chan->pos = 0; // start of the sound
 
@@ -1215,7 +1216,12 @@ void S_PlaySfxOnChannel (sfx_t *sfx, channel_t *target_chan, unsigned int flags,
 	// Lock the SFX during play
 	S_LockSfx (sfx);
 
-	// and finally, apply the volume
+	// finally, set the sfx pointer, so the channel becomes valid for playback
+	// and will be noticed by the mixer
+	target_chan->sfx = sfx;
+
+	// we have to set the channel volume AFTER the sfx because the function
+	// needs it for replaygain support
 	S_SetChannelVolume(target_chan - channels, fvol);
 }
 
@@ -1260,7 +1266,7 @@ int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 	return (target_chan - channels);
 }
 
-void S_StopChannel (unsigned int channel_ind)
+void S_StopChannel (unsigned int channel_ind, qboolean lockmutex)
 {
 	channel_t *ch;
 
@@ -1272,6 +1278,12 @@ void S_StopChannel (unsigned int channel_ind)
 	{
 		sfx_t *sfx = ch->sfx;
 
+		// we have to lock an audio mutex to prevent crashes if an audio mixer
+		// thread is currently mixing this channel
+		// the SndSys_LockRenderBuffer function uses such a mutex in
+		// threaded sound backends
+		if (lockmutex)
+			SndSys_LockRenderBuffer();
 		if (sfx->fetcher != NULL)
 		{
 			snd_fetcher_endsb_t fetcher_endsb = sfx->fetcher->endsb;
@@ -1284,6 +1296,8 @@ void S_StopChannel (unsigned int channel_ind)
 
 		ch->fetcher_data = NULL;
 		ch->sfx = NULL;
+		if (lockmutex)
+			SndSys_UnlockRenderBuffer();
 	}
 }
 
@@ -1313,7 +1327,7 @@ void S_StopSound(int entnum, int entchannel)
 	for (i = 0; i < MAX_DYNAMIC_CHANNELS; i++)
 		if (channels[i].entnum == entnum && channels[i].entchannel == entchannel)
 		{
-			S_StopChannel (i);
+			S_StopChannel (i, true);
 			return;
 		}
 }
@@ -1331,7 +1345,7 @@ void S_StopAllSounds (void)
 	CDAudio_Stop();
 
 	for (i = 0; i < total_channels; i++)
-		S_StopChannel (i);
+		S_StopChannel (i, true);
 
 	total_channels = MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS;	// no statics
 	memset(channels, 0, MAX_CHANNELS * sizeof(channel_t));

@@ -79,7 +79,7 @@ void S_StopSound (int entnum, int entchannel);
 void S_StopAllSounds (void);
 void S_PauseGameSounds (qboolean toggle);
 
-void S_StopChannel (unsigned int channel_ind);
+void S_StopChannel (unsigned int channel_ind, qboolean lockmutex);
 qboolean S_SetChannelFlag (unsigned int ch_ind, unsigned int flag, qboolean value);
 void S_SetChannelVolume (unsigned int ch_ind, float fvol);
 
