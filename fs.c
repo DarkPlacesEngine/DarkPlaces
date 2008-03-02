@@ -1808,17 +1808,6 @@ Open a file. The syntax is the same as fopen
 */
 qfile_t* FS_Open (const char* filepath, const char* mode, qboolean quiet, qboolean nonblocking)
 {
-#ifdef FS_FIX_PATHS
-	char fixedFileName[MAX_QPATH];
-	char *d;
-	strlcpy( fixedFileName, filepath, MAX_QPATH );
-	// try to fix common mistakes (\ instead of /)
-	for( d = fixedFileName ; *d ; d++ )
-		if( *d == '\\' )
-			*d = '/';
-	filepath = fixedFileName;
-#endif
-
 	if (FS_CheckNastyPath(filepath, false))
 	{
 		Con_Printf("FS_Open(\"%s\", \"%s\", %s): nasty filename rejected\n", filepath, mode, quiet ? "true" : "false");
