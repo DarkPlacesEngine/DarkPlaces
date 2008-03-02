@@ -239,7 +239,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 		return false;
 	}
 
-	if(streamDesc.mFormatID != kAudioFormatLinearPCM)
+	if(streamDesc.mFormatID == kAudioFormatLinearPCM)
 	{
 		// Add the callback function
 		status = AudioDeviceAddIOProc(outputDeviceID, audioDeviceIOProc, NULL);
