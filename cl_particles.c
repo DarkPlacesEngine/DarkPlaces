@@ -1119,7 +1119,10 @@ void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins
 	vec3_t center;
 	qboolean found = false;
 	if (effectnameindex < 1 || effectnameindex >= MAX_PARTICLEEFFECTNAME)
+	{
+		Con_DPrintf("Unknown effect number %i received from server\n", effectnameindex);
 		return; // invalid effect index
+	}
 	if (!particleeffectname[effectnameindex][0])
 		return; // no such effect
 	VectorLerp(originmins, 0.5, originmaxs, center);
