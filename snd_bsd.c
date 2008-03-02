@@ -68,7 +68,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 	}
 
 	AUDIO_INITINFO (&info);
-#ifdef AUMODE_PLAY	// NetBSD / OpenBSD 
+#ifdef AUMODE_PLAY	// NetBSD / OpenBSD
 	info.mode = AUMODE_PLAY;
 #endif
 	info.play.sample_rate = requested->speed;
@@ -137,7 +137,7 @@ void SndSys_Submit (void)
 {
 	unsigned int startoffset, factor, limit, nbframes;
 	int written;
-	
+
 	if (audio_fd < 0 ||
 		snd_renderbuffer->startframe == snd_renderbuffer->endframe)
 		return;
@@ -165,7 +165,7 @@ void SndSys_Submit (void)
 			Con_Printf("SndSys_Submit: audio can't keep up! (%u < %u)\n", written, limit * factor);
 			return;
 		}
-		
+
 		nbframes -= limit;
 		startoffset = 0;
 	}
