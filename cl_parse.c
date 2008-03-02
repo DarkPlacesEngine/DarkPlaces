@@ -94,6 +94,9 @@ char *svc_strings[128] =
 	"svc_entities", //			57		// [int] deltaframe [int] thisframe [float vector] eye [variable length] entitydata
 	"svc_csqcentities", //		58		// [short] entnum [variable length] entitydata ... [short] 0x0000
 	"svc_spawnstaticsound2", //	59		// [coord3] [short] samp [byte] vol [byte] aten
+	"svc_trailparticles", //	60		// [short] entnum [short] effectnum [vector] start [vector] end
+	"svc_pointparticles", //	61		// [short] effectnum [vector] start [vector] velocity [short] count
+	"svc_pointparticles1", //	62		// [short] effectnum [vector] start, same as svc_pointparticles except velocity is zero and count is 1
 };
 
 char *qw_svc_strings[128] =
@@ -2969,7 +2972,7 @@ static void CL_NetworkTimeReceived(double newtime)
 		VectorCopy(cl.mviewangles[0], cl.mviewangles[1]);
 }
 
-#define SHOWNET(x) if(cl_shownet.integer==2)Con_Printf("%3i:%s\n", msg_readcount-1, x);
+#define SHOWNET(x) if(cl_shownet.integer==2)Con_Printf("%3i:%s(%i)\n", msg_readcount-1, x, cmd);
 
 //[515]: csqc
 qboolean CL_VM_Parse_TempEntity (void);
