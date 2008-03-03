@@ -481,9 +481,16 @@ int PK3_BuildFileList (pack_t *pack, const pk3_endOfCentralDir_t *eocd)
 		// Check encryption, compression, and attributes
 		// 1st uint8  : general purpose bit flag
 		//    Check bits 0 (encryption), 3 (data descriptor after the file), and 5 (compressed patched data (?))
+		//
+		// LordHavoc: bit 3 would be a problem if we were scanning the archive
+		// but is not a problem in the central directory where the values are
+		// always real.
+		//
+		// bit 3 seems to always be set by the standard Mac OSX zip maker
+		//
 		// 2nd uint8 : external file attributes
 		//    Check bits 3 (file is a directory) and 5 (file is a volume (?))
-		if ((ptr[8] & 0x29) == 0 && (ptr[38] & 0x18) == 0)
+		if ((ptr[8] & 0x21) == 0 && (ptr[38] & 0x18) == 0)
 		{
 			// Still enough bytes for the name?
 			if (remaining < namesize || namesize >= (int)sizeof (*pack->files))
