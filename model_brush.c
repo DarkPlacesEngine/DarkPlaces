@@ -887,7 +887,7 @@ static int Mod_Q1BSP_PointSuperContents(struct model_s *model, int frame, const 
 {
 	int num = 0;
 	mplane_t *plane;
-	mclipnode_t *nodes = model->brushq1.hulls[0].clipnodes;
+	mclipnode_t *nodes = model->brushq1.hulls[0].clipnodes + model->brushq1.hulls[0].firstclipnode;
 	mplane_t *planes = model->brushq1.hulls[0].planes;
 	while (num >= 0)
 	{
