@@ -258,7 +258,10 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 						if (!status)
 						{
 							s_isRunning = true;
+#if 0
+// FIXME: This causes crashes and weird problems, why doesn't it work?
 							snd_threaded = true;
+#endif
 							Con_Print("   Initialization successful\n");
 							return true;
 						}
