@@ -709,9 +709,10 @@ void SndSys_Submit (void)
 
 		if (wResult != MMSYSERR_NOERROR)
 		{
-			Con_Print("Failed to write block to device\n");
-			SndSys_Shutdown ();
-			return;
+			if (developer.integer >= 1000)
+				Con_Print("waveOutWrite failed (too much sound data)\n");
+			//SndSys_Shutdown ();
+			//return;
 		}
 
 		paintpot -= wav_buffer_size;
