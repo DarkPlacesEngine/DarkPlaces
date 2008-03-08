@@ -87,9 +87,9 @@ extern HWND mainwindow;
 HRESULT (WINAPI *pDirectSoundCreate)(GUID FAR *lpGUID, LPDIRECTSOUND FAR *lplpDS, IUnknown FAR *pUnkOuter);
 #endif
 
-// Wave output: 64KB in 64 buffers of 1KB
-// (64KB is > 1 sec at 16-bit 22050 Hz mono, and is 1/3 sec at 16-bit 44100 Hz stereo)
-#define	WAV_BUFFERS		64
+// Wave output: how much buffer time, and how many partitions in that time
+#define WAV_BUFFERTIME	0.125
+#define	WAV_BUFFERS		16
 #define	WAV_MASK		(WAV_BUFFERS - 1)
 static unsigned int wav_buffer_size;
 
@@ -458,7 +458,7 @@ static qboolean SndSys_InitMmsystem (const snd_format_t* requested)
 		}
 	}
 
-	wav_buffer_size = (requested->speed / 2 / WAV_BUFFERS) * requested->channels * requested->width;
+	wav_buffer_size = ((int)(requested->speed * WAV_BUFFERTIME) / WAV_BUFFERS) * requested->channels * requested->width;
 
 	/*
 	 * Allocate and lock memory for the waveform data. The memory
