@@ -709,10 +709,17 @@ void SndSys_Submit (void)
 
 		if (wResult != MMSYSERR_NOERROR)
 		{
-			if (developer.integer >= 1000)
-				Con_Print("waveOutWrite failed (too much sound data)\n");
-			//SndSys_Shutdown ();
-			//return;
+			if (wResult == WAVERR_STILLPLAYING)
+			{
+				if(developer.integer >= 1000)
+					Con_Print("waveOutWrite failed (too much sound data)\n");
+			}
+			else
+			{
+				Con_Printf("waveOutWrite failed, error code %d\n", (int) wResult);
+				SndSys_Shutdown ();
+				return;
+			}
 		}
 
 		paintpot -= wav_buffer_size;
