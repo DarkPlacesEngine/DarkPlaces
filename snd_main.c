@@ -1483,8 +1483,12 @@ static void S_PaintAndSubmit (void)
 	static int soundtimehack = -1;
 	static int oldsoundtime = 0;
 
+	cls.soundstats.latency_milliseconds = -1;
+
 	if (snd_renderbuffer == NULL || nosound.integer)
 		return;
+
+	cls.soundstats.latency_milliseconds = (snd_renderbuffer->endframe - snd_renderbuffer->startframe) * 1000 / snd_renderbuffer->format.speed;
 
 	// Update sound time
 	snd_usethreadedmixing = false;
@@ -1627,7 +1631,7 @@ Called once each time through the main loop
 */
 void S_Update(const matrix4x4_t *listenermatrix)
 {
-	unsigned int i, j, total;
+	unsigned int i, j, k;
 	channel_t *ch, *combine;
 	matrix4x4_t basematrix, rotatematrix;
 
@@ -1665,11 +1669,14 @@ void S_Update(const matrix4x4_t *listenermatrix)
 	combine = NULL;
 
 	// update spatialization for static and dynamic sounds
+	cls.soundstats.totalsounds = 0;
+	cls.soundstats.mixedsounds = 0;
 	ch = channels+NUM_AMBIENTS;
 	for (i=NUM_AMBIENTS ; i<total_channels; i++, ch++)
 	{
 		if (!ch->sfx)
 			continue;
+		cls.soundstats.totalsounds++;
 
 		// respatialize channel
 		SND_Spatialize(ch, i >= MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS);
@@ -1707,29 +1714,18 @@ void S_Update(const matrix4x4_t *listenermatrix)
 				}
 			}
 		}
+		for (k = 0;k < SND_LISTENERS;k++)
+			if (ch->listener_volume[k])
+				break;
+		if (k < SND_LISTENERS)
+			cls.soundstats.mixedsounds++;
 	}
 
 	sound_spatialized = true;
 
 	// debugging output
 	if (snd_show.integer)
-	{
-		total = 0;
-		ch = channels;
-		for (i=0 ; i<total_channels; i++, ch++)
-		{
-			if (ch->sfx)
-			{
-				for (j = 0;j < SND_LISTENERS;j++)
-					if (ch->listener_volume[j])
-						break;
-				if (j < SND_LISTENERS)
-					total++;
-			}
-		}
-
-		Con_Printf("----(%u)----\n", total);
-	}
+		Con_Printf("----(%u)----\n", cls.soundstats.mixedsounds);
 
 	S_PaintAndSubmit();
 }

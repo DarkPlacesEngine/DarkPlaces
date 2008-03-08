@@ -485,6 +485,14 @@ typedef struct cl_downloadack_s
 }
 cl_downloadack_t;
 
+typedef struct cl_soundstats_s
+{
+	int mixedsounds;
+	int totalsounds;
+	int latency_milliseconds;
+}
+cl_soundstats_t;
+
 //
 // the client_static_t structure is persistent through an arbitrary number
 // of server connections
@@ -525,6 +533,9 @@ typedef struct client_static_s
 	int td_onesecondavgcount;
 	// LordHavoc: pausedemo
 	qboolean demopaused;
+
+	// sound mixer statistics for showsound display
+	cl_soundstats_t soundstats;
 
 	qboolean connect_trying;
 	int connect_remainingtries;
