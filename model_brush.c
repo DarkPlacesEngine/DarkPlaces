@@ -885,9 +885,9 @@ static void Mod_Q1BSP_TraceBox(struct model_s *model, int frame, trace_t *trace,
 
 static int Mod_Q1BSP_PointSuperContents(struct model_s *model, int frame, const vec3_t point)
 {
-	int num = 0;
+	int num = model->brushq1.hulls[0].firstclipnode;
 	mplane_t *plane;
-	mclipnode_t *nodes = model->brushq1.hulls[0].clipnodes + model->brushq1.hulls[0].firstclipnode;
+	mclipnode_t *nodes = model->brushq1.hulls[0].clipnodes;
 	mplane_t *planes = model->brushq1.hulls[0].planes;
 	while (num >= 0)
 	{
