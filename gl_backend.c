@@ -1838,6 +1838,7 @@ void R_Mesh_TexMatrix(unsigned int unitnum, const matrix4x4_t *matrix)
 		if (unit->texmatrixenabled)
 		{
 			unit->texmatrixenabled = false;
+			unit->matrix = identitymatrix;
 			CHECKGLERROR
 			GL_ActiveTexture(unitnum);
 			GL_ClientActiveTexture(unitnum);
@@ -2011,6 +2012,7 @@ void R_Mesh_ResetTextureState(void)
 		if (unit->texmatrixenabled)
 		{
 			unit->texmatrixenabled = false;
+			unit->matrix = identitymatrix;
 			CHECKGLERROR
 			qglMatrixMode(GL_TEXTURE);CHECKGLERROR
 			GL_ActiveTexture(unitnum);
