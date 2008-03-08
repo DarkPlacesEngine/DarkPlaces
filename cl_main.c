@@ -2216,7 +2216,7 @@ void CL_Init (void)
 	r_refdef.scene.maxentities = MAX_EDICTS + 256 + 512;
 	r_refdef.scene.entities = (entity_render_t **)Mem_Alloc(cls.permanentmempool, sizeof(entity_render_t *) * r_refdef.scene.maxentities);
 
-	r_refdef.scene.maxtempentities = 512;
+	r_refdef.scene.maxtempentities = 4096; // FIXME: make this grow
 	r_refdef.scene.tempentities = (entity_render_t *)Mem_Alloc(cls.permanentmempool, sizeof(entity_render_t) * r_refdef.scene.maxtempentities);
 
 	CL_InitInput ();
