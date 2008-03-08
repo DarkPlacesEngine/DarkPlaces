@@ -711,6 +711,8 @@ void SndSys_Submit (void)
 		{
 			if(developer.integer >= 1000)
 				Con_Print("waveOutWrite failed (too much sound data)\n");
+			//h->dwFlags |= WHDR_DONE;
+			//snd_sent++;
 		}
 		else
 		{
@@ -735,6 +737,8 @@ Returns the number of sample frames consumed since the sound started
 unsigned int SndSys_GetSoundTime (void)
 {
 	unsigned int factor;
+	MMRESULT res;
+	MMTIME mmtime;
 
 	factor = snd_renderbuffer->format.width * snd_renderbuffer->format.channels;
 
@@ -755,6 +759,7 @@ unsigned int SndSys_GetSoundTime (void)
 
 	if (wav_init)
 	{
+		/*
 		// Find which sound blocks have completed
 		for (;;)
 		{
@@ -771,6 +776,12 @@ unsigned int SndSys_GetSoundTime (void)
 		}
 
 		return (snd_completed * wav_buffer_size) / factor;
+		*/
+
+		mmtime.wType = TIME_SAMPLES;
+		res = waveOutGetPosition(hWaveOut, &mmtime, sizeof(mmtime));
+		if(res == MMSYSERR_NOERROR)
+			return mmtime.u.sample;
 	}
 
 	return 0;
