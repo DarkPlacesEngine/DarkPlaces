@@ -699,27 +699,24 @@ void SndSys_Submit (void)
 	{
 		h = lpWaveHdr + (snd_sent & WAV_MASK);
 
-		snd_sent++;
 		/*
 		 * Now the data block can be sent to the output device. The
 		 * waveOutWrite function returns immediately and waveform
 		 * data is sent to the output device in the background.
 		 */
 		wResult = waveOutWrite(hWaveOut, h, sizeof(WAVEHDR));
-
-		if (wResult != MMSYSERR_NOERROR)
+		if (wResult == MMSYSERR_NOERROR)
+			snd_sent++;
+		else if (wResult == WAVERR_STILLPLAYING)
 		{
-			if (wResult == WAVERR_STILLPLAYING)
-			{
-				if(developer.integer >= 1000)
-					Con_Print("waveOutWrite failed (too much sound data)\n");
-			}
-			else
-			{
-				Con_Printf("waveOutWrite failed, error code %d\n", (int) wResult);
-				SndSys_Shutdown ();
-				return;
-			}
+			if(developer.integer >= 1000)
+				Con_Print("waveOutWrite failed (too much sound data)\n");
+		}
+		else
+		{
+			Con_Printf("waveOutWrite failed, error code %d\n", (int) wResult);
+			SndSys_Shutdown ();
+			return;
 		}
 
 		paintpot -= wav_buffer_size;
