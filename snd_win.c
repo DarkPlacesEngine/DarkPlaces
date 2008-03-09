@@ -759,7 +759,6 @@ unsigned int SndSys_GetSoundTime (void)
 
 	if (wav_init)
 	{
-		/*
 		// Find which sound blocks have completed
 		for (;;)
 		{
@@ -776,12 +775,17 @@ unsigned int SndSys_GetSoundTime (void)
 		}
 
 		return (snd_completed * wav_buffer_size) / factor;
-		*/
+
+		/*
+		 * S_PaintAndSubmit: WARNING: newsoundtime (soundtime (275 < 134217707)
+		 * apparently this sound time wraps quite early?
 
 		mmtime.wType = TIME_SAMPLES;
 		res = waveOutGetPosition(hWaveOut, &mmtime, sizeof(mmtime));
 		if(res == MMSYSERR_NOERROR)
 			return mmtime.u.sample;
+
+		*/
 	}
 
 	return 0;
