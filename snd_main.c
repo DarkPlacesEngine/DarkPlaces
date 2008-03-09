@@ -1483,12 +1483,8 @@ static void S_PaintAndSubmit (void)
 	static int soundtimehack = -1;
 	static int oldsoundtime = 0;
 
-	cls.soundstats.latency_milliseconds = -1;
-
 	if (snd_renderbuffer == NULL || nosound.integer)
 		return;
-
-	cls.soundstats.latency_milliseconds = (snd_renderbuffer->endframe - snd_renderbuffer->startframe) * 1000 / snd_renderbuffer->format.speed;
 
 	// Update sound time
 	snd_usethreadedmixing = false;
@@ -1620,6 +1616,8 @@ static void S_PaintAndSubmit (void)
 		SndSys_Submit();
 
 	oldsoundtime = soundtime;
+
+	cls.soundstats.latency_milliseconds = (snd_renderbuffer->endframe - snd_renderbuffer->startframe) * 1000 / snd_renderbuffer->format.speed;
 }
 
 /*
