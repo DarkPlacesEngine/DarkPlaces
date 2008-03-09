@@ -444,6 +444,7 @@ cvar_t m_filter = {CVAR_SAVE, "m_filter","0", "smoothes mouse movement, less res
 
 cvar_t cl_netfps = {CVAR_SAVE, "cl_netfps","72", "how many input packets to send to server each second"};
 cvar_t cl_netrepeatinput = {CVAR_SAVE, "cl_netrepeatinput", "1", "how many packets in a row can be lost without movement issues when using cl_movement (technically how many input messages to repeat in each packet that have not yet been acknowledged by the server), only affects DP7 and later servers (Quake uses 0, QuakeWorld uses 2, and just for comparison Quake3 uses 1)"};
+cvar_t cl_netimmediatebuttons = {CVAR_SAVE, "cl_netimmediatebuttons", "1", "sends extra packets whenever your buttons change or an impulse is used (basically: whenever you click fire or change weapon)"};
 
 cvar_t cl_nodelta = {0, "cl_nodelta", "0", "disables delta compression of non-player entities in QW network protocol"};
 
@@ -1359,6 +1360,35 @@ void CL_SendMove(void)
 	if (!cls.netcon)
 		return;
 
+	// set button bits
+	// LordHavoc: added 6 new buttons and use and chat buttons, and prydon cursor active button
+	bits = 0;
+	if (in_attack.state   & 3) bits |=   1;
+	if (in_jump.state     & 3) bits |=   2;
+	if (in_button3.state  & 3) bits |=   4;
+	if (in_button4.state  & 3) bits |=   8;
+	if (in_button5.state  & 3) bits |=  16;
+	if (in_button6.state  & 3) bits |=  32;
+	if (in_button7.state  & 3) bits |=  64;
+	if (in_button8.state  & 3) bits |= 128;
+	if (in_use.state      & 3) bits |= 256;
+	if (key_dest != key_game || key_consoleactive) bits |= 512;
+	if (cl_prydoncursor.integer) bits |= 1024;
+	if (in_button9.state  & 3)  bits |=   2048;
+	if (in_button10.state  & 3) bits |=   4096;
+	if (in_button11.state  & 3) bits |=   8192;
+	if (in_button12.state  & 3) bits |=  16384;
+	if (in_button13.state  & 3) bits |=  32768;
+	if (in_button14.state  & 3) bits |=  65536;
+	if (in_button15.state  & 3) bits |= 131072;
+	if (in_button16.state  & 3) bits |= 262144;
+	// button bits 19-31 unused currently
+	// rotate/zoom view serverside if PRYDON_CLIENTCURSOR cursor is at edge of screen
+	if (cl.cmd.cursor_screen[0] <= -1) bits |= 8;
+	if (cl.cmd.cursor_screen[0] >=  1) bits |= 16;
+	if (cl.cmd.cursor_screen[1] <= -1) bits |= 32;
+	if (cl.cmd.cursor_screen[1] >=  1) bits |= 64;
+
 	// don't send too often or else network connections can get clogged by a high renderer framerate
 	packettime = cl.movevars_packetinterval;
 	// send input every frame in singleplayer
@@ -1367,7 +1397,7 @@ void CL_SendMove(void)
 	// send the current interpolation time
 	cl.cmd.time = cl.time;
 	cl.cmd.sequence = cls.netcon->outgoing_unreliable_sequence;
-	if (cl.cmd.time < cl.lastpackettime + packettime && (cl.mtime[0] != cl.mtime[1] || !cl.movement_needupdate))
+	if (cl.cmd.time < cl.lastpackettime + packettime && (!cl_netimmediatebuttons.integer || (bits == cl.cmd.buttons && in_impulse == cl.cmd.impulse)) && (cl.mtime[0] != cl.mtime[1] || !cl.movement_needupdate))
 		return;
 	// try to round off the lastpackettime to a multiple of the packet interval
 	// (this causes it to emit packets at a steady beat, and takes advantage
@@ -1408,38 +1438,30 @@ void CL_SendMove(void)
 	// set prydon cursor info
 	CL_UpdatePrydonCursor();
 
-	// set button bits
-	// LordHavoc: added 6 new buttons and use and chat buttons, and prydon cursor active button
-	bits = 0;
-	if (in_attack.state   & 3) bits |=   1;in_attack.state  &= ~2;
-	if (in_jump.state     & 3) bits |=   2;in_jump.state    &= ~2;
-	if (in_button3.state  & 3) bits |=   4;in_button3.state &= ~2;
-	if (in_button4.state  & 3) bits |=   8;in_button4.state &= ~2;
-	if (in_button5.state  & 3) bits |=  16;in_button5.state &= ~2;
-	if (in_button6.state  & 3) bits |=  32;in_button6.state &= ~2;
-	if (in_button7.state  & 3) bits |=  64;in_button7.state &= ~2;
-	if (in_button8.state  & 3) bits |= 128;in_button8.state &= ~2;
-	if (in_use.state      & 3) bits |= 256;in_use.state     &= ~2;
-	if (key_dest != key_game || key_consoleactive) bits |= 512;
-	if (cl_prydoncursor.integer) bits |= 1024;
-	if (in_button9.state  & 3)  bits |=   2048;in_button9.state  &= ~2;
-	if (in_button10.state  & 3) bits |=   4096;in_button10.state &= ~2;
-	if (in_button11.state  & 3) bits |=   8192;in_button11.state &= ~2;
-	if (in_button12.state  & 3) bits |=  16384;in_button12.state &= ~2;
-	if (in_button13.state  & 3) bits |=  32768;in_button13.state &= ~2;
-	if (in_button14.state  & 3) bits |=  65536;in_button14.state &= ~2;
-	if (in_button15.state  & 3) bits |= 131072;in_button15.state &= ~2;
-	if (in_button16.state  & 3) bits |= 262144;in_button16.state &= ~2;
-	// button bits 19-31 unused currently
-	// rotate/zoom view serverside if PRYDON_CLIENTCURSOR cursor is at edge of screen
-	if (cl.cmd.cursor_screen[0] <= -1) bits |= 8;
-	if (cl.cmd.cursor_screen[0] >=  1) bits |= 16;
-	if (cl.cmd.cursor_screen[1] <= -1) bits |= 32;
-	if (cl.cmd.cursor_screen[1] >=  1) bits |= 64;
+	// set buttons and impulse
 	cl.cmd.buttons = bits;
-
-	// set impulse
 	cl.cmd.impulse = in_impulse;
+
+	// clear button 'click' states
+	in_attack.state  &= ~2;
+	in_jump.state    &= ~2;
+	in_button3.state &= ~2;
+	in_button4.state &= ~2;
+	in_button5.state &= ~2;
+	in_button6.state &= ~2;
+	in_button7.state &= ~2;
+	in_button8.state &= ~2;
+	in_use.state     &= ~2;
+	in_button9.state  &= ~2;
+	in_button10.state &= ~2;
+	in_button11.state &= ~2;
+	in_button12.state &= ~2;
+	in_button13.state &= ~2;
+	in_button14.state &= ~2;
+	in_button15.state &= ~2;
+	in_button16.state &= ~2;
+
+	// clear impulse
 	in_impulse = 0;
 
 	// movement is set by input code (forwardmove/sidemove/upmove)
@@ -1755,6 +1777,7 @@ void CL_InitInput (void)
 
 	Cvar_RegisterVariable(&cl_netfps);
 	Cvar_RegisterVariable(&cl_netrepeatinput);
+	Cvar_RegisterVariable(&cl_netimmediatebuttons);
 
 	Cvar_RegisterVariable(&cl_nodelta);
 }
