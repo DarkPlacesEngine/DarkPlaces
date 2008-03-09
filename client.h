@@ -1015,7 +1015,6 @@ typedef struct client_state_s
 	float movevars_wallfriction;
 	float movevars_waterfriction;
 	float movevars_friction;
-	float movevars_packetinterval; // in game time (cl.time), not realtime
 	float movevars_timescale;
 	float movevars_gravity;
 	float movevars_stopspeed;
