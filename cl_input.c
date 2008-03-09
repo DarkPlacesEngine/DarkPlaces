@@ -1145,13 +1145,11 @@ void CL_ClientMovement_PlayerMove(cl_clientmovement_state_t *s)
 extern cvar_t slowmo;
 void CL_UpdateMoveVars(void)
 {
-	cl.movevars_packetinterval = 1.0 / bound(1, cl_netfps.value, 1000);
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
 	{
 	}
 	else if (cl.stats[STAT_MOVEVARS_TICRATE])
 	{
-		cl.movevars_packetinterval *= cl.statsf[STAT_MOVEVARS_TIMESCALE];
 		cl.movevars_timescale = cl.statsf[STAT_MOVEVARS_TIMESCALE];
 		cl.movevars_gravity = cl.statsf[STAT_MOVEVARS_GRAVITY];
 		cl.movevars_stopspeed = cl.statsf[STAT_MOVEVARS_STOPSPEED] ;
@@ -1173,7 +1171,6 @@ void CL_UpdateMoveVars(void)
 	}
 	else
 	{
-		cl.movevars_packetinterval *= slowmo.value;
 		cl.movevars_timescale = slowmo.value;
 		cl.movevars_gravity = sv_gravity.value;
 		cl.movevars_stopspeed = cl_movement_stopspeed.value;
@@ -1253,7 +1250,7 @@ void CL_ClientMovement_Replay(void)
 		{
 			cl.movement_time[1] = cl.movement_time[0];
 			cl.movement_time[0] = cl.movecmd[0].time;
-			cl.movement_time[2] = cl.time;
+			cl.movement_time[2] = cl.movecmd[0].time;//time;
 			VectorCopy(cl.movement_origin, cl.movement_oldorigin);
 			//VectorCopy(s.origin, cl.entities[cl.playerentity].state_current.origin);
 			//VectorSet(cl.entities[cl.playerentity].state_current.angles, 0, cl.viewangles[1], 0);
@@ -1390,22 +1387,22 @@ void CL_SendMove(void)
 	if (cl.cmd.cursor_screen[1] >=  1) bits |= 64;
 
 	// don't send too often or else network connections can get clogged by a high renderer framerate
-	packettime = cl.movevars_packetinterval;
+	packettime = 1.0 / bound(1, cl_netfps.value, 1000);
 	// send input every frame in singleplayer
 	if (cl.islocalgame)
 		packettime = 0;
 	// send the current interpolation time
 	cl.cmd.time = cl.time;
 	cl.cmd.sequence = cls.netcon->outgoing_unreliable_sequence;
-	if (cl.cmd.time < cl.lastpackettime + packettime && (!cl_netimmediatebuttons.integer || (bits == cl.cmd.buttons && in_impulse == cl.cmd.impulse)) && (cl.mtime[0] != cl.mtime[1] || !cl.movement_needupdate))
+	if (realtime < cl.lastpackettime + packettime && (!cl_netimmediatebuttons.integer || (bits == cl.cmd.buttons && in_impulse == cl.cmd.impulse)))
 		return;
 	// try to round off the lastpackettime to a multiple of the packet interval
 	// (this causes it to emit packets at a steady beat, and takes advantage
 	//  of the time drift compensation in the cl.time code)
 	if (packettime > 0)
-		cl.lastpackettime = floor(cl.cmd.time / packettime) * packettime;
+		cl.lastpackettime = floor(realtime / packettime) * packettime;
 	else
-		cl.lastpackettime = cl.cmd.time;
+		cl.lastpackettime = realtime;
 	// set the flag indicating that we sent a packet recently
 	cl.movement_needupdate = false;
 
