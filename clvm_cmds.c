@@ -1079,14 +1079,17 @@ static void VM_CL_getinputstate (void)
 	int i, frame;
 	VM_SAFEPARMCOUNT(1, VM_CL_getinputstate);
 	frame = (int)PRVM_G_FLOAT(OFS_PARM0);
-	for (i = 0;i < cl.movement_numqueue;i++)
-		if (cl.movement_queue[i].sequence == frame)
+	for (i = 0;i < CL_MAX_USERCMDS;i++)
+	{
+		if (cl.movecmd[i].sequence == frame)
 		{
-			VectorCopy(cl.movement_queue[i].viewangles, prog->globals.client->input_angles);
-			//prog->globals.client->input_buttons = cl.movement_queue[i].//FIXME
-			VectorCopy(cl.movement_queue[i].move, prog->globals.client->input_movevalues);
-			prog->globals.client->input_timelength = cl.movement_queue[i].frametime;
-			if(cl.movement_queue[i].crouch)
+			VectorCopy(cl.movecmd[i].viewangles, prog->globals.client->input_angles);
+			prog->globals.client->input_buttons = cl.movecmd[i].buttons; // FIXME: this should not be directly exposed to csqc (translation layer needed?)
+			prog->globals.client->input_movevalues[0] = cl.movecmd[i].forwardmove;
+			prog->globals.client->input_movevalues[1] = cl.movecmd[i].sidemove;
+			prog->globals.client->input_movevalues[2] = cl.movecmd[i].upmove;
+			prog->globals.client->input_timelength = cl.movecmd[i].frametime;
+			if(cl.movecmd[i].crouch)
 			{
 				VectorCopy(cl.playercrouchmins, prog->globals.client->pmove_mins);
 				VectorCopy(cl.playercrouchmaxs, prog->globals.client->pmove_maxs);
@@ -1097,6 +1100,7 @@ static void VM_CL_getinputstate (void)
 				VectorCopy(cl.playerstandmaxs, prog->globals.client->pmove_maxs);
 			}
 		}
+	}
 }
 
 //#346 void(float sens) setsensitivityscaler (EXT_CSQC)
@@ -2304,7 +2308,7 @@ void VM_CL_R_RenderScene (void)
 	CL_UpdateViewEntities();
 	// now draw stuff!
 	R_RenderView();
-	
+
 	polys->num_vertices = polys->num_triangles = 0;
 }
 
