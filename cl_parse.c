@@ -2960,7 +2960,7 @@ static void CL_NetworkTimeReceived(double newtime)
 	}
 	// this packet probably contains a player entity update, so we will need
 	// to update the prediction
-	cl.movement_needupdate = true;
+	cl.movement_replay = true;
 	// this may get updated later in parsing by svc_clientdata
 	cl.onground = false;
 	// if true the cl.viewangles are interpolated from cl.mviewangles[]

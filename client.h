@@ -27,9 +27,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // LordHavoc: 256 dynamic lights
 #define MAX_DLIGHTS 256
 
-// this is the maximum number of input packets that can be lost without a
-// misprediction
-#define CL_MAX_USERCMDS 16
+// this is the maximum number of input packets that can be predicted
+#define CL_MAX_USERCMDS 256
 
 // flags for rtlight rendering
 #define LIGHTFLAG_NORMALMODE 1
@@ -358,12 +357,18 @@ typedef struct usercmd_s
 
 	double time;
 	double receivetime;
-	int msec; // for qw moves
+	int msec; // for predicted moves
 	int buttons;
 	int impulse;
 	int sequence;
 	qboolean applied; // if false we're still accumulating a move
 	qboolean predicted; // if true the sequence should be sent as 0
+
+	// derived properties
+	double frametime;
+	qboolean canjump;
+	qboolean jump;
+	qboolean crouch;
 } usercmd_t;
 
 typedef struct lightstyle_s
@@ -794,18 +799,9 @@ typedef struct client_state_s
 	qboolean movement_predicted;
 	// if true the CL_ClientMovement_Replay function will update origin, etc
 	qboolean movement_replay;
-	// this is set true by svc_time parsing and causes a new movement to be
-	// queued for prediction purposes
-	qboolean movement_needupdate;
-	// timestamps of latest two predicted moves for interpolation
-	double movement_time[4];
 	// simulated data (this is valid even if cl.movement is false)
 	vec3_t movement_origin;
-	vec3_t movement_oldorigin;
 	vec3_t movement_velocity;
-	// queue of proposed moves
-	int movement_numqueue;
-	client_movementqueue_t movement_queue[256];
 	// whether the replay should allow a jump at the first sequence
 	qboolean movement_replay_canjump;
 

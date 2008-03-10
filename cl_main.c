@@ -946,11 +946,7 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 		interpolate = false;
 	if (e == cl.entities + cl.playerentity && cl.movement_predicted && (!cl.fixangle[1] || !cl.fixangle[0]))
 	{
-		lerp = (cl.time - cl.movement_time[2]) / (cl.movement_time[0] - cl.movement_time[1]);
-		lerp = bound(0, lerp, 1);
-		if (!interpolate)
-			lerp = 1;
-		VectorLerp(cl.movement_oldorigin, lerp, cl.movement_origin, origin);
+		VectorCopy(cl.movement_origin, origin);
 		VectorSet(angles, 0, cl.viewangles[1], 0);
 	}
 	else if (interpolate && e->persistent.lerpdeltatime > 0 && (lerp = (cl.time - e->persistent.lerpstarttime) / e->persistent.lerpdeltatime) < 1)
