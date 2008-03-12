@@ -610,6 +610,8 @@ void CL_Input (void)
 			cl.cmd.forwardmove -= m_forward.value * in_mouse_y * modulatedsensitivity;
 		}
 	}
+	else // don't pitch drift when csqc is controlling the mouse
+		V_StopPitchDrift();
 
 	if(v_flipped.integer)
 	{
