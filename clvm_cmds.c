@@ -853,21 +853,54 @@ void VM_CL_R_SetView (void)
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
 
-//#305 void(vector org, float radius, vector lightcolours) adddynamiclight (EXT_CSQC)
+//#305 void(vector org, float radius, vector lightcolours[, float style, string cubemapname, float pflags]) adddynamiclight (EXT_CSQC)
 void VM_CL_R_AddDynamicLight (void)
 {
-	float		*pos, *col;
-	matrix4x4_t	matrix;
-	VM_SAFEPARMCOUNTRANGE(3, 3, VM_CL_R_AddDynamicLight);
+	vec_t *org;
+	float radius = 300;
+	vec_t *col;
+	int style = -1;
+	const char *cubemapname = NULL;
+	int pflags = PFLAGS_CORONA | PFLAGS_FULLDYNAMIC;
+	float coronaintensity = 1;
+	float coronasizescale = 0.25;
+	qboolean castshadow = true;
+	float ambientscale = 0;
+	float diffusescale = 1;
+	float specularscale = 1;
+	matrix4x4_t matrix;
+	vec3_t forward, left, up;
+	VM_SAFEPARMCOUNTRANGE(3, 8, VM_CL_R_AddDynamicLight);
 
 	// if we've run out of dlights, just return
 	if (r_refdef.scene.numlights >= MAX_DLIGHTS)
 		return;
 
-	pos = PRVM_G_VECTOR(OFS_PARM0);
+	org = PRVM_G_VECTOR(OFS_PARM0);
+	radius = PRVM_G_FLOAT(OFS_PARM1);
 	col = PRVM_G_VECTOR(OFS_PARM2);
-	Matrix4x4_CreateFromQuakeEntity(&matrix, pos[0], pos[1], pos[2], 0, 0, 0, PRVM_G_FLOAT(OFS_PARM1));
-	R_RTLight_Update(&r_refdef.scene.lights[r_refdef.scene.numlights++], false, &matrix, col, -1, NULL, true, 1, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+	if (prog->argc >= 4)
+	{
+		style = (int)PRVM_G_FLOAT(OFS_PARM3);
+		if (style >= MAX_LIGHTSTYLES)
+		{
+			Con_DPrintf("VM_CL_R_AddDynamicLight: out of bounds lightstyle index %i\n", style);
+			style = -1;
+		}
+	}
+	if (prog->argc >= 5)
+		cubemapname = PRVM_G_STRING(OFS_PARM4);
+	if (prog->argc >= 6)
+		pflags = (int)PRVM_G_FLOAT(OFS_PARM5);
+	coronaintensity = (pflags & PFLAGS_CORONA) != 0;
+	castshadow = (pflags & PFLAGS_NOSHADOW) == 0;
+
+	VectorScale(prog->globals.client->v_forward, radius, forward);
+	VectorScale(prog->globals.client->v_right, -radius, left);
+	VectorScale(prog->globals.client->v_up, radius, up);
+	Matrix4x4_FromVectors(&matrix, forward, left, up, org);
+
+	R_RTLight_Update(&r_refdef.scene.lights[r_refdef.scene.numlights++], false, &matrix, col, style, cubemapname, castshadow, coronaintensity, coronasizescale, ambientscale, diffusescale, specularscale, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 }
 
 //============================================================================

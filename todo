@@ -1,5 +1,6 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
 0 bug csqc client: darkplaces lacks prediction support
+0 bug csqc: there is no WriteFloat, making ReadFloat useless (Urre)
 0 bug darkplaces client csqc: engine prediction function is not implemented - could just return the engine's current cl.movement_origin (Spike)
 0 bug darkplaces client csqc: entities not being drawn with VF_PERSPECTIVE 0? (daemon)
 0 bug darkplaces client csqc: input queue functions needed for csqc prediction aren't implemented (Spike)
