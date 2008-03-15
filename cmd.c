@@ -169,6 +169,11 @@ void Cbuf_Execute (void)
 				break;
 		}
 
+		/* should never happen
+		if(i >= MAX_INPUTLINE)
+			i = MAX_INPUTLINE - 1;
+		*/
+
 		memcpy (line, text, i);
 		line[i] = 0;
 
@@ -824,8 +829,8 @@ Called for aliases and fills in the alias into the cbuffer
 */
 static void Cmd_ExecuteAlias (cmdalias_t *alias)
 {
-	static char buffer[ MAX_INPUTLINE + 2 ];
-	static char buffer2[ MAX_INPUTLINE * 2 + 2 ];
+	static char buffer[ MAX_INPUTLINE ];
+	static char buffer2[ MAX_INPUTLINE ];
 	Cmd_PreprocessString( alias->value, buffer, sizeof(buffer) - 2, alias );
 	// insert at start of command buffer, so that aliases execute in order
 	// (fixes bug introduced by Black on 20050705)
