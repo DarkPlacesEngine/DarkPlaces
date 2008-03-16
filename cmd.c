@@ -161,7 +161,9 @@ void Cbuf_Execute (void)
 		{
 			if (text[i] == '"')
 				quotes ^= 1;
-			if (text[i] == '\\' && (text[i+1] == '"' || text[i+1] == '\\'))
+			// make sure i doesn't get > cursize which causes a negative
+			// size in memmove, which is fatal --blub
+			if (i < (cmd_text.cursize-1) && (text[i] == '\\' && (text[i+1] == '"' || text[i+1] == '\\')))
 				i++;
 			if ( !quotes &&  text[i] == ';')
 				break;	// don't break if inside a quoted string
@@ -169,13 +171,17 @@ void Cbuf_Execute (void)
 				break;
 		}
 
-		/* should never happen
+		// better than CRASHING on overlong input lines that may SOMEHOW enter the buffer
 		if(i >= MAX_INPUTLINE)
-			i = MAX_INPUTLINE - 1;
-		*/
-
-		memcpy (line, text, i);
-		line[i] = 0;
+		{
+			Con_Printf("Warning: console input buffer had an overlong line. Ignored.\n");
+			line[0] = 0;
+		}
+		else
+		{
+			memcpy (line, text, i);
+			line[i] = 0;
+		}
 
 // delete the text from the command buffer and move remaining commands down
 // this is necessary because commands (exec, alias) can insert data at the
