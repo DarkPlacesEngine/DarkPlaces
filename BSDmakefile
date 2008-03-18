@@ -31,6 +31,10 @@ LDFLAGS_CL=$(LDFLAGS_BSDCL)
 LDFLAGS_SV=$(LDFLAGS_BSDSV)
 LDFLAGS_SDL=$(LDFLAGS_BSDSDL)
 
+SDLCONFIG_CFLAGS=$(SDLCONFIG_UNIXCFLAGS)
+SDLCONFIG_LIBS=$(SDLCONFIG_UNIXLIBS)
+SDLCONFIG_STATICLIBS=$(SDLCONFIG_UNIXSTATICLIBS)
+
 EXE_CL=$(EXE_UNIXCL)
 EXE_SV=$(EXE_UNIXSV)
 EXE_SDL=$(EXE_UNIXSDL)
@@ -93,11 +97,3 @@ DO_LD=$(CC) -o $@ $> $(LDFLAGS)
 
 ##### Definitions shared by all makefiles #####
 .include "makefile.inc"
-
-
-##### Dependency files #####
-
-DEPEND_FILES != ls *.d
-.for i in $(DEPEND_FILES)
-.	include "$i"
-.endfor
