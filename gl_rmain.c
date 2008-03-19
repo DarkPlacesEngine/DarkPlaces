@@ -34,6 +34,7 @@ rtexturepool_t *r_main_texturepool;
 r_refdef_t r_refdef;
 
 cvar_t r_depthfirst = {CVAR_SAVE, "r_depthfirst", "1", "renders a depth-only version of the scene before normal rendering begins to eliminate overdraw, values: 0 = off, 1 = world depth, 2 = world and model depth"};
+cvar_t r_useinfinitefarclip = {CVAR_SAVE, "r_useinfinitefarclip", "1", "enables use of a special kind of projection matrix that has an extremely large farclip"};
 cvar_t r_nearclip = {0, "r_nearclip", "1", "distance from camera of nearclip plane" };
 cvar_t r_showbboxes = {0, "r_showbboxes", "0", "shows bounding boxes of server entities, value controls opacity scaling (1 = 10%,  10 = 100%)"};
 cvar_t r_showsurfaces = {0, "r_showsurfaces", "0", "1 shows surfaces as different colors, or a value of 2 shows triangle draw order (for analyzing whether meshes are optimized for vertex cache)"};
@@ -2230,6 +2231,7 @@ void GL_Main_Init(void)
 		Cvar_RegisterVariable (&gl_skyclip);
 	}
 	Cvar_RegisterVariable(&r_depthfirst);
+	Cvar_RegisterVariable(&r_useinfinitefarclip);
 	Cvar_RegisterVariable(&r_nearclip);
 	Cvar_RegisterVariable(&r_showbboxes);
 	Cvar_RegisterVariable(&r_showsurfaces);
@@ -2763,7 +2765,7 @@ void R_SetupView(qboolean allowwaterclippingplane)
 {
 	if (!r_refdef.view.useperspective)
 		GL_SetupView_Mode_Ortho(-r_refdef.view.ortho_x, -r_refdef.view.ortho_y, r_refdef.view.ortho_x, r_refdef.view.ortho_y, -r_refdef.farclip, r_refdef.farclip);
-	else if (r_refdef.scene.rtworldshadows || r_refdef.scene.rtdlightshadows)
+	else if (gl_stencil && r_useinfinitefarclip.integer)
 		GL_SetupView_Mode_PerspectiveInfiniteFarClip(r_refdef.view.frustum_x, r_refdef.view.frustum_y, r_refdef.nearclip);
 	else
 		GL_SetupView_Mode_Perspective(r_refdef.view.frustum_x, r_refdef.view.frustum_y, r_refdef.nearclip, r_refdef.farclip);
@@ -3532,7 +3534,7 @@ void R_UpdateVariables(void)
 
 	r_refdef.farclip = 4096;
 	if (r_refdef.scene.worldmodel)
-		r_refdef.farclip += VectorDistance(r_refdef.scene.worldmodel->normalmins, r_refdef.scene.worldmodel->normalmaxs);
+		r_refdef.farclip += r_refdef.scene.worldmodel->radius * 2;
 	r_refdef.nearclip = bound (0.001f, r_nearclip.value, r_refdef.farclip - 1.0f);
 
 	if (r_shadow_frontsidecasting.integer < 0 || r_shadow_frontsidecasting.integer > 1)
