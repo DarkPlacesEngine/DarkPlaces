@@ -5699,6 +5699,7 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	mod = loadmodel;
 	for (i = 0;i < loadmodel->brush.numsubmodels;i++)
 	{
+		qboolean boxready;
 		if (i > 0)
 		{
 			char name[10];
@@ -5738,6 +5739,33 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer, void *bufferend)
 
 		VectorCopy(mod->brushq3.data_models[i].mins, mod->normalmins);
 		VectorCopy(mod->brushq3.data_models[i].maxs, mod->normalmaxs);
+		// enlarge the bounding box to enclose all geometry of this model,
+		// because q3map2 sometimes lies (mostly to affect the lightgrid),
+		// which can in turn mess up the farclip (as well as culling when
+		// outside the level - an unimportant concern)
+		boxready = false;
+		for (j = 0;j < mod->nummodelsurfaces;j++)
+		{
+			const msurface_t *surface = mod->data_surfaces + j + mod->firstmodelsurface;
+			const float *v = mod->surfmesh.data_vertex3f + 3 * surface->num_firstvertex;
+			int k;
+			if (!surface->num_vertices)
+				continue;
+			if (!boxready)
+			{
+				VectorCopy(v, mod->normalmins);
+				VectorCopy(v, mod->normalmaxs);
+			}
+			for (k = 0;k < surface->num_vertices;k++, v += 3)
+			{
+				mod->normalmins[0] = min(mod->normalmins[0], v[0]);
+				mod->normalmins[1] = min(mod->normalmins[1], v[1]);
+				mod->normalmins[2] = min(mod->normalmins[2], v[2]);
+				mod->normalmaxs[0] = min(mod->normalmaxs[0], v[0]);
+				mod->normalmaxs[1] = min(mod->normalmaxs[1], v[1]);
+				mod->normalmaxs[2] = min(mod->normalmaxs[2], v[2]);
+			}
+		}
 		corner[0] = max(fabs(mod->normalmins[0]), fabs(mod->normalmaxs[0]));
 		corner[1] = max(fabs(mod->normalmins[1]), fabs(mod->normalmaxs[1]));
 		corner[2] = max(fabs(mod->normalmins[2]), fabs(mod->normalmaxs[2]));
