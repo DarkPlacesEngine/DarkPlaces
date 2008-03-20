@@ -64,6 +64,49 @@ static void Cmd_Wait_f (void)
 }
 
 /*
+============
+Cmd_Centerprint_f
+
+Print something to the center of the screen using SCR_Centerprint
+============
+*/
+static void Cmd_Centerprint_f (void)
+{
+	char msg[MAX_INPUTLINE];
+	unsigned int i, c, p;
+	c = Cmd_Argc();
+	if(c >= 2)
+	{
+		strlcpy(msg, Cmd_Argv(1), sizeof(msg));
+		for(i = 2; i < c; ++i)
+		{
+			strlcat(msg, " ", sizeof(msg));
+			strlcat(msg, Cmd_Argv(i), sizeof(msg));
+		}
+		c = strlen(msg);
+		for(p = 0, i = 0; i < c; ++i)
+		{
+			if(msg[i] == '\\')
+			{
+				if(msg[i+1] == 'n')
+					msg[p++] = '\n';
+				else if(msg[i+1] == '\\')
+					msg[p++] = '\\';
+				else {
+					msg[p++] = '\\';
+					msg[p++] = msg[i+1];
+				}
+				++i;
+			} else {
+				msg[p++] = msg[i];
+			}
+		}
+		msg[p] = '\0';
+		SCR_CenterPrint(msg);
+	}
+}
+
+/*
 =============================================================================
 
 						COMMAND BUFFER
@@ -926,6 +969,8 @@ void Cmd_Init_Commands (void)
 	Cmd_AddCommand ("cvar_resettodefaults_all", Cvar_ResetToDefaults_All_f, "sets all cvars to their locked default values");
 	Cmd_AddCommand ("cvar_resettodefaults_nosaveonly", Cvar_ResetToDefaults_NoSaveOnly_f, "sets all non-saved cvars to their locked default values (variables that will not be saved to config.cfg)");
 	Cmd_AddCommand ("cvar_resettodefaults_saveonly", Cvar_ResetToDefaults_SaveOnly_f, "sets all saved cvars to their locked default values (variables that will be saved to config.cfg)");
+
+	Cmd_AddCommand ("cprint", Cmd_Centerprint_f, "print something at the screen center");
 
 	// DRESK - 5/14/06
 	// Support Doom3-style Toggle Command
