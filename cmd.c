@@ -63,6 +63,54 @@ static void Cmd_Wait_f (void)
 	cmd_wait = true;
 }
 
+typedef struct cmddeferred_s
+{
+	struct cmddeferred_s *next;
+	char *value;
+	double time;
+} cmddeferred_t;
+
+static cmddeferred_t *cmd_deferred_list;
+
+/*
+============
+Cmd_Defer_f
+
+Cause a command to be executed after a delay.
+============
+*/
+static void Cmd_Defer_f (void)
+{
+	if(Cmd_Argc() == 1)
+	{
+		double time = Sys_DoubleTime();
+		cmddeferred_t *next = cmd_deferred_list;
+		if(!next)
+			Con_Printf("No commands are pending.\n");
+		while(next)
+		{
+			Con_Printf("-> In %'9.2f: %s\n", next->time-time, next->value);
+			next = next->next;
+		}
+	} else if(Cmd_Argc() != 3)
+	{
+		Con_Printf("usage: defer <seconds> <command>\n");
+		return;
+	} else {
+		const char *value = Cmd_Argv(2);
+		cmddeferred_t *defcmd = (cmddeferred_t*)Mem_Alloc(tempmempool, sizeof(*defcmd));
+		unsigned int len = strlen(value);
+
+		defcmd->time = Sys_DoubleTime() + atof(Cmd_Argv(1));
+		defcmd->value = (char*)Mem_Alloc(tempmempool, len+1);
+		memcpy(defcmd->value, value, len);
+		defcmd->value[len] = 0;
+
+		defcmd->next = cmd_deferred_list;
+		cmd_deferred_list = defcmd;
+	}
+}
+
 /*
 ============
 Cmd_Centerprint_f
@@ -178,6 +226,40 @@ void Cbuf_InsertText (const char *text)
 
 /*
 ============
+Cbuf_Execute_Deferred --blub
+============
+*/
+void Cbuf_Execute_Deferred (void)
+{
+	cmddeferred_t *cmd, *prev;
+	double time = Sys_DoubleTime();
+	prev = NULL;
+	cmd = cmd_deferred_list;
+	while(cmd)
+	{
+		if(cmd->time <= time)
+		{
+			Cbuf_AddText(cmd->value);
+			Mem_Free(cmd->value);
+			
+			if(prev)
+				prev->next = cmd->next;
+			else
+				cmd_deferred_list = cmd->next;
+			
+			Mem_Free(cmd);
+			
+			cmd = prev;
+			if(!cmd)
+				return;
+		}
+		prev = cmd;
+		cmd = cmd->next;
+	}
+}
+
+/*
+============
 Cbuf_Execute
 ============
 */
@@ -194,6 +276,7 @@ void Cbuf_Execute (void)
 	// LordHavoc: making sure the tokenizebuffer doesn't get filled up by repeated crashes
 	cmd_tokenizebufferpos = 0;
 
+	Cbuf_Execute_Deferred();
 	while (cmd_text.cursize)
 	{
 // find a \n or ; line break
@@ -971,6 +1054,7 @@ void Cmd_Init_Commands (void)
 	Cmd_AddCommand ("cvar_resettodefaults_saveonly", Cvar_ResetToDefaults_SaveOnly_f, "sets all saved cvars to their locked default values (variables that will be saved to config.cfg)");
 
 	Cmd_AddCommand ("cprint", Cmd_Centerprint_f, "print something at the screen center");
+	Cmd_AddCommand ("defer", Cmd_Defer_f, "execute a command in the future");
 
 	// DRESK - 5/14/06
 	// Support Doom3-style Toggle Command
