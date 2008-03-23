@@ -1405,6 +1405,7 @@ void PRVM_FindOffsets(void)
 	prog->fieldoffsets.message                        = PRVM_ED_FindFieldOffset("message");
 	prog->fieldoffsets.modelflags                     = PRVM_ED_FindFieldOffset("modelflags");
 	prog->fieldoffsets.movement                       = PRVM_ED_FindFieldOffset("movement");
+	prog->fieldoffsets.movetypesteplandevent          = PRVM_ED_FindFieldOffset("movetypesteplandevent");
 	prog->fieldoffsets.netaddress                     = PRVM_ED_FindFieldOffset("netaddress");
 	prog->fieldoffsets.nextthink                      = PRVM_ED_FindFieldOffset("nextthink");
 	prog->fieldoffsets.nodrawtoclient                 = PRVM_ED_FindFieldOffset("nodrawtoclient");
