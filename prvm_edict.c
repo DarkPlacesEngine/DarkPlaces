@@ -931,12 +931,12 @@ qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s, qbool
 		val->string = PRVM_AllocString(l, &new_p);
 		for (i = 0;i < l;i++)
 		{
-			if (s[i] == '\\' && i < l-1 && s[i] == 'n' && parsebackslash)
+			if (s[i] == '\\' && s[i+1] == 'n' && parsebackslash)
 			{
 				i++;
 				*new_p++ = '\n';
 			}
-			else if (s[i] == '\\' && i < l-1 && s[i] == 'r' && parsebackslash)
+			else if (s[i] == '\\' && s[i+1] == 'r' && parsebackslash)
 			{
 				i++;
 				*new_p++ = '\r';
