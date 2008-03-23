@@ -623,7 +623,7 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 			if (count == 1024)
 				CL_ParticleExplosion(center);
 			else if (cl_particles_blood_bloodhack.integer && !cl_particles_quake.integer && (palettecolor == 73 || palettecolor == 225))
-				CL_ParticleEffect(EFFECT_TE_BLOOD, count / 6.0f, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0);
+				CL_ParticleEffect(EFFECT_TE_BLOOD, count / 2.0f, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0);
 			else
 			{
 				count *= cl_particles_quality.value;
@@ -657,6 +657,7 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 			{
 				CL_Smoke(originmins, originmaxs, velocitymins, velocitymaxs, 4*count);
 				CL_Sparks(originmins, originmaxs, velocitymins, velocitymaxs, 15*count);
+				CL_NewParticle(pt_static, 0x808080,0x808080, tex_particle, 3, 0, 256, 512, 0, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), 0, 0, 0, 0, 0, 0, 0, true, 0);
 			}
 		}
 		// bullet hole
@@ -676,6 +677,7 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 			{
 				CL_Smoke(originmins, originmaxs, velocitymins, velocitymaxs, 4*count);
 				CL_Sparks(originmins, originmaxs, velocitymins, velocitymaxs, 15*count);
+				CL_NewParticle(pt_static, 0x808080,0x808080, tex_particle, 3, 0, 256, 512, 0, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), 0, 0, 0, 0, 0, 0, 0, true, 0);
 			}
 		}
 		// bullet hole
@@ -696,6 +698,7 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 			{
 				CL_Smoke(originmins, originmaxs, velocitymins, velocitymaxs, 8*count);
 				CL_Sparks(originmins, originmaxs, velocitymins, velocitymaxs, 30*count);
+				CL_NewParticle(pt_static, 0x808080,0x808080, tex_particle, 3, 0, 256, 512, 0, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), 0, 0, 0, 0, 0, 0, 0, true, 0);
 			}
 		}
 		// bullet hole
@@ -715,6 +718,7 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 			{
 				CL_Smoke(originmins, originmaxs, velocitymins, velocitymaxs, 8*count);
 				CL_Sparks(originmins, originmaxs, velocitymins, velocitymaxs, 30*count);
+				CL_NewParticle(pt_static, 0x808080,0x808080, tex_particle, 3, 0, 256, 512, 0, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), 0, 0, 0, 0, 0, 0, 0, true, 0);
 			}
 		}
 		// bullet hole
@@ -731,6 +735,7 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 		else
 		{
 			static double bloodaccumulator = 0;
+			CL_NewParticle(pt_alphastatic, 0x4f0000,0x7f0000, tex_particle, 2.5, 0, 256, 256, 0, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), 0, 0, 0, 1, 4, 0, 0, true, 0);
 			bloodaccumulator += count * 0.333 * cl_particles_quality.value;
 			for (;bloodaccumulator > 0;bloodaccumulator--)
 				CL_NewParticle(pt_blood, 0xFFFFFF, 0xFFFFFF, tex_bloodparticle[rand()&7], 8, 0, cl_particles_blood_alpha.value * 768, cl_particles_blood_alpha.value * 384, 0, -1, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]), 1, 4, 0, 64, true, 0);
@@ -755,6 +760,7 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 			{
 				CL_Smoke(originmins, originmaxs, velocitymins, velocitymaxs, 4*count);
 				CL_Sparks(originmins, originmaxs, velocitymins, velocitymaxs, 20*count);
+				CL_NewParticle(pt_static, 0x808080,0x808080, tex_particle, 3, 0, 256, 512, 0, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), 0, 0, 0, 0, 0, 0, 0, true, 0);
 			}
 		}
 		// bullet hole
@@ -771,6 +777,7 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 			{
 				CL_Smoke(originmins, originmaxs, velocitymins, velocitymaxs, 4*count);
 				CL_Sparks(originmins, originmaxs, velocitymins, velocitymaxs, 20*count);
+				CL_NewParticle(pt_static, 0x808080,0x808080, tex_particle, 3, 0, 256, 512, 0, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), 0, 0, 0, 0, 0, 0, 0, true, 0);
 			}
 		}
 		// bullet hole
