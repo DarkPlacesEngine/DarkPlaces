@@ -64,6 +64,7 @@ cvar_t r_q1bsp_skymasking = {0, "r_q1bsp_skymasking", "1", "allows sky polygons 
 cvar_t r_polygonoffset_submodel_factor = {0, "r_polygonoffset_submodel_factor", "0", "biases depth values of world submodels such as doors, to prevent z-fighting artifacts in Quake maps"};
 cvar_t r_polygonoffset_submodel_offset = {0, "r_polygonoffset_submodel_offset", "2", "biases depth values of world submodels such as doors, to prevent z-fighting artifacts in Quake maps"};
 cvar_t r_fog_exp2 = {0, "r_fog_exp2", "0", "uses GL_EXP2 fog (as in Nehahra) rather than realistic GL_EXP fog"};
+cvar_t r_drawfog = {CVAR_SAVE, "r_drawfog", "1", "allows one to disable fog rendering"};
 
 cvar_t gl_fogenable = {0, "gl_fogenable", "0", "nehahra fog enable (for Nehahra compatibility only)"};
 cvar_t gl_fogdensity = {0, "gl_fogdensity", "0.25", "nehahra fog density (recommend values below 0.1) (for Nehahra compatibility only)"};
@@ -2261,6 +2262,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_polygonoffset_submodel_factor);
 	Cvar_RegisterVariable(&r_polygonoffset_submodel_offset);
 	Cvar_RegisterVariable(&r_fog_exp2);
+	Cvar_RegisterVariable(&r_drawfog);
 	Cvar_RegisterVariable(&r_textureunits);
 	Cvar_RegisterVariable(&r_glsl);
 	Cvar_RegisterVariable(&r_glsl_contrastboost);
@@ -3590,7 +3592,7 @@ void R_UpdateVariables(void)
 
 	// R_UpdateFogColor(); // why? R_RenderScene does it anyway
 
-	if (r_refdef.fog_density)
+	if (r_refdef.fog_density && r_drawfog.integer)
 	{
 		r_refdef.fogenabled = true;
 		// this is the point where the fog reaches 0.9986 alpha, which we
