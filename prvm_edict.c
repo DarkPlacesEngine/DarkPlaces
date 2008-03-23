@@ -896,7 +896,7 @@ void PRVM_ED_ParseGlobals (const char *data)
 			continue;
 		}
 
-		if (!PRVM_ED_ParseEpair(NULL, key, com_token, false))
+		if (!PRVM_ED_ParseEpair(NULL, key, com_token, true))
 			PRVM_ERROR ("PRVM_ED_ParseGlobals: parse error");
 	}
 }
