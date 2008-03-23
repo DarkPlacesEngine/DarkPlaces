@@ -192,8 +192,9 @@ typedef struct prvm_prog_fieldoffsets_s
 	int message; // csqc
 	int modelflags; // ssqc
 	int movement; // ssqc
-	int nextthink; // common - used by OP_STATE
+	int movetypesteplandevent; // ssqc
 	int netaddress; // ssqc
+	int nextthink; // common - used by OP_STATE
 	int nodrawtoclient; // ssqc
 	int pflags; // ssqc
 	int ping; // ssqc

@@ -1991,6 +1991,13 @@ will fall if the floor is pulled out from under them.
 void SV_Physics_Step (prvm_edict_t *ent)
 {
 	int flags = (int)ent->fields.server->flags;
+
+	// DRESK
+	// Backup Velocity in the event that movetypesteplandevent is called,
+	// to provide a parameter with the entity's velocity at impact.
+	prvm_eval_t *movetypesteplandevent;
+	vec3_t backupVelocity;
+	VectorCopy(ent->fields.server->velocity, backupVelocity);
 	// don't fall at all if fly/swim
 	if (!(flags & (FL_FLY | FL_SWIM)))
 	{
@@ -2019,8 +2026,28 @@ void SV_Physics_Step (prvm_edict_t *ent)
 			SV_LinkEdict(ent, true);
 
 			// just hit ground
-			if (hitsound && (int)ent->fields.server->flags & FL_ONGROUND && sv_sound_land.string)
-				SV_StartSound(ent, 0, sv_sound_land.string, 255, 1);
+			if (hitsound && (int)ent->fields.server->flags & FL_ONGROUND)
+			{
+				// DRESK - Check for Entity Land Event Function
+				movetypesteplandevent = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.movetypesteplandevent);
+
+				if(movetypesteplandevent->function)
+				{ // Valid Function; Execute
+					// Prepare Parameters
+						// Assign Velocity at Impact
+						PRVM_G_VECTOR(OFS_PARM0)[0] = backupVelocity[0];
+						PRVM_G_VECTOR(OFS_PARM0)[1] = backupVelocity[1];
+						PRVM_G_VECTOR(OFS_PARM0)[2] = backupVelocity[2];
+						// Assign Self
+						prog->globals.server->self = PRVM_EDICT_TO_PROG(ent);
+					// Execute VM Function
+					PRVM_ExecuteProgram(movetypesteplandevent->function, "movetypesteplandevent: NULL function");
+				}
+				else
+				// Check for Engine Landing Sound
+				if(sv_sound_land.string)
+					SV_StartSound(ent, 0, sv_sound_land.string, 255, 1);
+			}
 			ent->priv.server->waterposition_forceupdate = true;
 		}
 	}

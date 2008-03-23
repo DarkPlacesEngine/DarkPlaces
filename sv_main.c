@@ -262,6 +262,7 @@ prvm_required_field_t reqfields[] =
 	{ev_function, "SendEntity"},
 	{ev_function, "contentstransition"}, // DRESK - Support for Entity Contents Transition Event
 	{ev_function, "customizeentityforclient"},
+	{ev_function, "movetypesteplandevent"}, // DRESK - Support for MOVETYPE_STEP Entity Land Event
 	{ev_string, "netaddress"},
 	{ev_string, "playermodel"},
 	{ev_string, "playerskin"},
