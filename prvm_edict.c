@@ -29,7 +29,7 @@ static prvm_prog_t prog_list[PRVM_MAXPROGS];
 int		prvm_type_size[8] = {1,sizeof(string_t)/4,1,3,1,1,sizeof(func_t)/4,sizeof(void *)/4};
 
 ddef_t *PRVM_ED_FieldAtOfs(int ofs);
-qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s);
+qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s, qboolean parsebackslash);
 
 // LordHavoc: optional runtime bounds checking (speed drain, but worth it for security, on by default - breaks most QCCX features (used by CRMod and others))
 #ifdef PRVM_BOUNDSCHECK_CVAR
@@ -896,7 +896,7 @@ void PRVM_ED_ParseGlobals (const char *data)
 			continue;
 		}
 
-		if (!PRVM_ED_ParseEpair(NULL, key, com_token))
+		if (!PRVM_ED_ParseEpair(NULL, key, com_token, false))
 			PRVM_ERROR ("PRVM_ED_ParseGlobals: parse error");
 	}
 }
@@ -912,7 +912,7 @@ Can parse either fields or globals
 returns false if error
 =============
 */
-qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s)
+qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s, qboolean parsebackslash)
 {
 	int i, l;
 	char *new_p;
@@ -931,15 +931,10 @@ qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s)
 		val->string = PRVM_AllocString(l, &new_p);
 		for (i = 0;i < l;i++)
 		{
-			if (s[i] == '\\' && i < l-1)
+			if (s[i] == '\\' && i < l-1 && s[i] == 'n' && parsebackslash)
 			{
 				i++;
-				if (s[i] == 'n')
-					*new_p++ = '\n';
-				else if (s[i] == 'r')
-					*new_p++ = '\r';
-				else
-					*new_p++ = s[i];
+				*new_p++ = '\n';
 			}
 			else
 				*new_p++ = s[i];
@@ -1108,7 +1103,7 @@ void PRVM_ED_EdictSet_f(void)
 	if((key = PRVM_ED_FindField(Cmd_Argv(3))) == 0)
 		Con_Printf("Key %s not found !\n", Cmd_Argv(3));
 	else
-		PRVM_ED_ParseEpair(ed, key, Cmd_Argv(4));
+		PRVM_ED_ParseEpair(ed, key, Cmd_Argv(4), true);
 
 	PRVM_End;
 }
@@ -1169,7 +1164,7 @@ const char *PRVM_ED_ParseEdict (const char *data, prvm_edict_t *ent)
 		}
 
 	// parse value
-		if (!COM_ParseToken_Simple(&data, false, true))
+		if (!COM_ParseToken_Simple(&data, false, false))
 			PRVM_ERROR ("PRVM_ED_ParseEdict: EOF without closing brace");
 		if (developer_entityparsing.integer)
 			Con_Printf(" \"%s\"\n", com_token);
@@ -1202,7 +1197,7 @@ const char *PRVM_ED_ParseEdict (const char *data, prvm_edict_t *ent)
 			sprintf (com_token, "0 %s 0", temp);
 		}
 
-		if (!PRVM_ED_ParseEpair(ent, key, com_token))
+		if (!PRVM_ED_ParseEpair(ent, key, com_token, strcmp(keyname, "wad") != 0))
 			PRVM_ERROR ("PRVM_ED_ParseEdict: parse error");
 	}
 
@@ -2032,7 +2027,7 @@ void PRVM_GlobalSet_f(void)
 	if( !global )
 		Con_Printf( "No global '%s' in %s!\n", Cmd_Argv(2), Cmd_Argv(1) );
 	else
-		PRVM_ED_ParseEpair( NULL, global, Cmd_Argv(3) );
+		PRVM_ED_ParseEpair( NULL, global, Cmd_Argv(3), true );
 	PRVM_End;
 }
 
