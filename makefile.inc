@@ -58,6 +58,9 @@ LIB_SND_BSD=$(LIB_SND_MODPLUG)
 OBJ_SND_WIN=$(OBJ_SND_COMMON) snd_win.o
 LIB_SND_WIN=$(LIB_SND_MODPLUG)
 
+# Qantourisc's 3D Realtime Acoustic Lib (3D RAS)
+OBJ_SND_3DRAS=snd_3dras.o
+LIB_SND_3DRAS=
 
 # CD objects
 OBJ_NOCD=cd_null.o
@@ -415,6 +418,9 @@ sys_sdl.o: sys_sdl.c
 
 snd_sdl.o: snd_sdl.c
 	$(DO_CC) $(CFLAGS_SDL)
+
+snd_3dras.o: snd_3dras.c
+	$(DO_CC)
 
 cd_sdl.o: cd_sdl.c
 	$(DO_CC) $(CFLAGS_SDL)

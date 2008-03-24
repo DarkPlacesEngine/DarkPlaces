@@ -225,6 +225,10 @@ ifeq ($(DP_SOUND_API), WIN)
 	LIB_SOUND=$(LIB_SND_WIN)
 endif
 
+ifeq ($(DP_SOUND_API),3DRAS)
+	OBJ_SOUND=$(OBJ_SND_3DRAS)
+	LIB_SOUND=$(LIB_SND_3DRAS)
+endif
 
 ##### Extra CFLAGS #####
 
