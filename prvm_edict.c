@@ -479,6 +479,11 @@ char *PRVM_UglyValueString (etype_t type, prvm_eval_t *val)
 				line[i++] = '\\';
 				line[i++] = 'r';
 			}
+			else if (*s == '\\')
+			{
+				line[i++] = '\\';
+				line[i++] = '\\';
+			}
 			else
 				line[i++] = *s;
 			s++;
@@ -931,15 +936,15 @@ qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s, qbool
 		val->string = PRVM_AllocString(l, &new_p);
 		for (i = 0;i < l;i++)
 		{
-			if (s[i] == '\\' && s[i+1] == 'n' && parsebackslash)
+			if (s[i] == '\\' && s[i+1] && parsebackslash)
 			{
 				i++;
-				*new_p++ = '\n';
-			}
-			else if (s[i] == '\\' && s[i+1] == 'r' && parsebackslash)
-			{
-				i++;
-				*new_p++ = '\r';
+				if (s[i] == 'n')
+					*new_p++ = '\n';
+				else if (s[i] == 'r')
+					*new_p++ = '\r';
+				else
+					*new_p++ = s[i];
 			}
 			else
 				*new_p++ = s[i];
