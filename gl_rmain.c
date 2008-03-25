@@ -3688,6 +3688,23 @@ R_RenderView
 */
 void R_RenderView(void)
 {
+	if (r_refdef.view.isoverlay)
+	{
+		// TODO: FIXME: move this into its own backend function maybe? [2/5/2008 Andreas]
+		GL_Clear( GL_DEPTH_BUFFER_BIT );
+		R_TimeReport("depthclear");
+
+		r_refdef.view.showdebug = false;
+
+		r_waterstate.enabled = false;
+		r_waterstate.numwaterplanes = 0;
+
+		R_RenderScene(false);
+
+		CHECKGLERROR
+		return;
+	}
+
 	if (!r_refdef.scene.entities || r_refdef.view.width * r_refdef.view.height == 0/* || !r_refdef.scene.worldmodel*/)
 		return; //Host_Error ("R_RenderView: NULL worldmodel");
 
@@ -3717,10 +3734,6 @@ void R_RenderView(void)
 		R_ClearScreen(r_refdef.fogenabled);
 		if (r_timereport_active)
 			R_TimeReport("viewclear");
-	} else {
-		// TODO: FIXME: move this into its own backend function maybe? [2/5/2008 Andreas]
-		GL_Clear( GL_DEPTH_BUFFER_BIT );
-		R_TimeReport("depthclear");
 	}
 	r_refdef.view.clear = true;
 
@@ -4447,18 +4460,10 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 	t->currentmaterialflags = t->basematerialflags;
 	t->currentalpha = ent->alpha;
 	if (t->basematerialflags & MATERIALFLAG_WATERALPHA && (model->brush.supportwateralpha || r_novis.integer))
-	{
 		t->currentalpha *= r_wateralpha.value;
-		/*
-		 * FIXME what is this supposed to do?
-		// if rendering refraction/reflection, disable transparency
-		if (r_waterstate.enabled && (t->currentalpha < 1 || (t->currentmaterialflags & MATERIALFLAG_ALPHA)))
-			t->currentmaterialflags |= MATERIALFLAG_WATERSHADER;
-		*/
-	}
-	if(t->basematerialflags & MATERIALFLAG_WATERSHADER && r_waterstate.enabled)
+	if(t->basematerialflags & MATERIALFLAG_WATERSHADER && r_waterstate.enabled && !r_refdef.view.isoverlay)
 		t->currentalpha *= t->r_water_wateralpha;
-	if(!r_waterstate.enabled)
+	if(!r_waterstate.enabled || r_refdef.view.isoverlay)
 		t->currentmaterialflags &= ~(MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION);
 	if (!(ent->flags & RENDER_LIGHT))
 		t->currentmaterialflags |= MATERIALFLAG_FULLBRIGHT;

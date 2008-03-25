@@ -1408,6 +1408,8 @@ typedef struct r_refdef_view_s
 
 	// whether to call R_ClearScreen before rendering stuff
 	qboolean clear;
+	// if true, don't clear or do any post process effects (bloom, etc)
+	qboolean isoverlay;
 
 	// whether to draw r_showtris and such, this is only true for the main
 	// view render, all secondary renders (HDR, mirrors, portals, cameras,
