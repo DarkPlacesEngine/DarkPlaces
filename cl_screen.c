@@ -1722,6 +1722,7 @@ static void R_Envmap_f (void)
 	r_refdef.view.height = size;
 	r_refdef.view.depth = 1;
 	r_refdef.view.useperspective = true;
+	r_refdef.view.isoverlay = false;
 
 	r_refdef.view.frustum_x = tan(90 * M_PI / 360.0);
 	r_refdef.view.frustum_y = tan(90 * M_PI / 360.0);
@@ -2188,6 +2189,7 @@ void CL_UpdateScreen(void)
 	qglClearColor(0,0,0,0);CHECKGLERROR
 	R_ClearScreen(false);
 	r_refdef.view.clear = false;
+	r_refdef.view.isoverlay = false;
 	r_refdef.view.quality = bound(cl_minfps_qualitymin.value, pow(cl_updatescreen_quality, cl_minfps_qualitypower.value) * cl_minfps_qualityscale.value, cl_minfps_qualitymax.value);
 
 	if(scr_stipple.integer)
