@@ -243,6 +243,7 @@ qboolean CL_VM_InputEvent (qboolean down, int key, int ascii)
 		else
 		{
 			prog->globals.client->time = cl.time;
+			prog->globals.client->self = cl.csqc_server2csqcentitynumber[cl.playerentity];
 			PRVM_G_FLOAT(OFS_PARM0) = !down; // 0 is down, 1 is up
 			PRVM_G_FLOAT(OFS_PARM1) = key;
 			PRVM_G_FLOAT(OFS_PARM2) = ascii;
@@ -265,6 +266,7 @@ qboolean CL_VM_UpdateView (void)
 	CSQC_BEGIN
 		//VectorCopy(cl.viewangles, oldangles);
 		prog->globals.client->time = cl.time;
+		prog->globals.client->self = cl.csqc_server2csqcentitynumber[cl.playerentity];
 		CSQC_SetGlobals();
 		// clear renderable entity and light lists to prevent crashes if the
 		// CSQC_UpdateView function does not call R_ClearScene as it should
@@ -289,6 +291,7 @@ qboolean CL_VM_ConsoleCommand (const char *cmd)
 	if (prog->funcoffsets.CSQC_ConsoleCommand)
 	{
 		prog->globals.client->time = cl.time;
+		prog->globals.client->self = cl.csqc_server2csqcentitynumber[cl.playerentity];
 		restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
 		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(cmd);
 		PRVM_ExecuteProgram(prog->funcoffsets.CSQC_ConsoleCommand, "QC function CSQC_ConsoleCommand is missing");
@@ -310,6 +313,7 @@ qboolean CL_VM_Parse_TempEntity (void)
 	{
 		t = msg_readcount;
 		prog->globals.client->time = cl.time;
+		prog->globals.client->self = cl.csqc_server2csqcentitynumber[cl.playerentity];
 		PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Parse_TempEntity, "QC function CSQC_Parse_TempEntity is missing");
 		r = CSQC_RETURNVAL;
 		if(!r)
@@ -351,6 +355,7 @@ void CL_VM_Parse_StuffCmd (const char *msg)
 	if(prog->funcoffsets.CSQC_Parse_StuffCmd)
 	{
 		prog->globals.client->time = cl.time;
+		prog->globals.client->self = cl.csqc_server2csqcentitynumber[cl.playerentity];
 		restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
 		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(msg);
 		PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Parse_StuffCmd, "QC function CSQC_Parse_StuffCmd is missing");
@@ -365,6 +370,7 @@ static void CL_VM_Parse_Print (const char *msg)
 {
 	int restorevm_tempstringsbuf_cursize;
 	prog->globals.client->time = cl.time;
+	prog->globals.client->self = cl.csqc_server2csqcentitynumber[cl.playerentity];
 	restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
 	PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(msg);
 	PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Parse_Print, "QC function CSQC_Parse_Print is missing");
@@ -416,6 +422,7 @@ void CL_VM_Parse_CenterPrint (const char *msg)
 	if(prog->funcoffsets.CSQC_Parse_CenterPrint)
 	{
 		prog->globals.client->time = cl.time;
+		prog->globals.client->self = cl.csqc_server2csqcentitynumber[cl.playerentity];
 		restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
 		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(msg);
 		PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Parse_CenterPrint, "QC function CSQC_Parse_CenterPrint is missing");
@@ -459,6 +466,7 @@ qboolean CL_VM_Event_Sound(int sound_num, int volume, int channel, float attenua
 		if(prog->funcoffsets.CSQC_Event_Sound)
 		{
 			prog->globals.client->time = cl.time;
+			prog->globals.client->self = cl.csqc_server2csqcentitynumber[cl.playerentity];
 			PRVM_G_FLOAT(OFS_PARM0) = ent;
 			PRVM_G_FLOAT(OFS_PARM1) = channel;
 			PRVM_G_INT(OFS_PARM2) = PRVM_SetTempString(cl.sound_name[sound_num] );
@@ -519,6 +527,7 @@ float CL_VM_Event (float event)		//[515]: needed ? I'd say "YES", but don't know
 	if(prog->funcoffsets.CSQC_Event)
 	{
 		prog->globals.client->time = cl.time;
+		prog->globals.client->self = cl.csqc_server2csqcentitynumber[cl.playerentity];
 		PRVM_G_FLOAT(OFS_PARM0) = event;
 		PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Event, "QC function CSQC_Event is missing");
 		r = CSQC_RETURNVAL;
@@ -578,7 +587,7 @@ void CSQC_ReadEntities (void)
 						prog->globals.client->self = cl.csqc_server2csqcentitynumber[realentnum] = PRVM_EDICT( PRVM_G_INT( OFS_RETURN ) );
 					}
 					PRVM_G_FLOAT(OFS_PARM0) = 1;
-					PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Ent_Update, "QC function CSQC_Ent_Update is missing");			
+					PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Ent_Update, "QC function CSQC_Ent_Update is missing");
 				}
 				else {
 					PRVM_G_FLOAT(OFS_PARM0) = 0;
@@ -755,6 +764,7 @@ void CL_VM_Init (void)
 
 	// set time
 	prog->globals.client->time = cl.time;
+	prog->globals.client->self = 0;
 
 	prog->globals.client->mapname = cl.worldmodel ? PRVM_SetEngineString(cl.worldmodel->name) : PRVM_SetEngineString("");
 	prog->globals.client->player_localentnum = cl.playerentity;
@@ -788,6 +798,7 @@ void CL_VM_ShutDown (void)
 		return;
 	CSQC_BEGIN
 		prog->globals.client->time = cl.time;
+		prog->globals.client->self = 0;
 		if (prog->funcoffsets.CSQC_Shutdown)
 			PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Shutdown, "QC function CSQC_Shutdown is missing");
 		PRVM_ResetProg();
