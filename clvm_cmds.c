@@ -764,10 +764,10 @@ void VM_CL_R_SetView (void)
 		r_refdef.view.width = (int)(f[0] * vid.width / vid_conwidth.value);
 		r_refdef.view.height = (int)(f[1] * vid.height / vid_conheight.value);
 		break;
-	case VF_SIZE_Y:
+	case VF_SIZE_X:
 		r_refdef.view.width = (int)(k * vid.width / vid_conwidth.value);
 		break;
-	case VF_SIZE_X:
+	case VF_SIZE_Y:
 		r_refdef.view.height = (int)(k * vid.height / vid_conheight.value);
 		break;
 	case VF_VIEWPORT:
