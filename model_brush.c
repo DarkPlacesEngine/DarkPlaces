@@ -4569,7 +4569,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 	{
 		// check face type first
 		type = LittleLong(in->type);
-		if (type != Q3FACETYPE_POLYGON
+		if (type != Q3FACETYPE_FLAT
 		 && type != Q3FACETYPE_PATCH
 		 && type != Q3FACETYPE_MESH
 		 && type != Q3FACETYPE_FLARE)
@@ -4638,7 +4638,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		}
 		switch(type)
 		{
-		case Q3FACETYPE_POLYGON:
+		case Q3FACETYPE_FLAT:
 		case Q3FACETYPE_MESH:
 			// no processing necessary
 			break;
@@ -4703,7 +4703,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		out->num_firsttriangle = meshtriangles;
 		switch(type)
 		{
-		case Q3FACETYPE_POLYGON:
+		case Q3FACETYPE_FLAT:
 		case Q3FACETYPE_MESH:
 			// no processing necessary, except for lightmap merging
 			for (j = 0;j < out->num_vertices;j++)

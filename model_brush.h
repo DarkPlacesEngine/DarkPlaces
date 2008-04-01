@@ -508,7 +508,7 @@ typedef struct q3deffect_s
 }
 q3deffect_t;
 
-#define Q3FACETYPE_POLYGON 1 // common
+#define Q3FACETYPE_FLAT 1 // common
 #define Q3FACETYPE_PATCH 2 // common
 #define Q3FACETYPE_MESH 3 // common
 #define Q3FACETYPE_FLARE 4 // rare (is this ever used?)
@@ -535,14 +535,14 @@ typedef struct q3dface_s
 		unknown;
 		struct
 		{
-			// Q3FACETYPE_POLYGON
-			// polygon is simply a convex polygon, renderable as a mesh
+			// Q3FACETYPE_FLAT
+			// mesh is a collection of triangles on a plane, renderable as a mesh (NOT a polygon)
 			float lightmap_origin[3];
 			float lightmap_vectors[2][3];
 			float normal[3];
 			int unused1[2];
 		}
-		polygon;
+		flat;
 		struct
 		{
 			// Q3FACETYPE_PATCH
