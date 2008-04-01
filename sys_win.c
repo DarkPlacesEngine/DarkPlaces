@@ -207,20 +207,28 @@ char *Sys_ConsoleInput (void)
 	if (cls.state != ca_dedicated)
 		return NULL;
 
-
 	for ( ;; )
 	{
 		if (!GetNumberOfConsoleInputEvents (hinput, &numevents))
-			Sys_Error ("Error getting # of console events");
+		{
+			cls.state = ca_disconnected;
+			Sys_Error ("Error getting # of console events (error code %x)", (unsigned int)GetLastError());
+		}
 
 		if (numevents <= 0)
 			break;
 
 		if (!ReadConsoleInput(hinput, recs, 1, &numread))
-			Sys_Error ("Error reading console input");
+		{
+			cls.state = ca_disconnected;
+			Sys_Error ("Error reading console input (error code %x)", (unsigned int)GetLastError());
+		}
 
 		if (numread != 1)
-			Sys_Error ("Couldn't read console input");
+		{
+			cls.state = ca_disconnected;
+			Sys_Error ("Couldn't read console input (error code %x)", (unsigned int)GetLastError());
+		}
 
 		if (recs[0].EventType == KEY_EVENT)
 		{
@@ -317,9 +325,10 @@ void Sys_InitConsole (void)
 	{
 		//if ((houtput == 0) || (houtput == INVALID_HANDLE_VALUE)) // LordHavoc: on Windows XP this is never 0 or invalid, but hinput is invalid
 		{
-		    AllocConsole ();
-		    houtput = GetStdHandle (STD_OUTPUT_HANDLE);
-		    hinput = GetStdHandle (STD_INPUT_HANDLE);
+			if (!AllocConsole ())
+				Sys_Error ("Couldn't create dedicated server console (error code %x)", (unsigned int)GetLastError());
+			houtput = GetStdHandle (STD_OUTPUT_HANDLE);
+			hinput = GetStdHandle (STD_INPUT_HANDLE);
 		}
 		if ((houtput == 0) || (houtput == INVALID_HANDLE_VALUE))
 			Sys_Error ("Couldn't create dedicated server console");
