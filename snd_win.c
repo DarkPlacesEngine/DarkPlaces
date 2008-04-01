@@ -737,8 +737,6 @@ Returns the number of sample frames consumed since the sound started
 unsigned int SndSys_GetSoundTime (void)
 {
 	unsigned int factor;
-	MMRESULT res;
-	MMTIME mmtime;
 
 	factor = snd_renderbuffer->format.width * snd_renderbuffer->format.channels;
 
@@ -779,12 +777,15 @@ unsigned int SndSys_GetSoundTime (void)
 		/*
 		 * S_PaintAndSubmit: WARNING: newsoundtime (soundtime (275 < 134217707)
 		 * apparently this sound time wraps quite early?
+		{
+		MMRESULT res;
+		MMTIME mmtime;
 
 		mmtime.wType = TIME_SAMPLES;
 		res = waveOutGetPosition(hWaveOut, &mmtime, sizeof(mmtime));
 		if(res == MMSYSERR_NOERROR)
 			return mmtime.u.sample;
-
+		}
 		*/
 	}
 
