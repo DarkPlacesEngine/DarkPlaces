@@ -260,7 +260,7 @@ OBJ_WINCD=cd_win.o
 #if you want no CD audio
 #OBJ_WINCD=$(OBJ_NOCD)
 
-OBJ_WGL= builddate.c sys_win.o vid_wgl.o conproc.o $(OBJ_SND_WIN) $(OBJ_WINCD) $(OBJ_COMMON)
+OBJ_WGL= builddate.c sys_win.o vid_wgl.o $(OBJ_SND_WIN) $(OBJ_WINCD) $(OBJ_COMMON)
 
 # Link
 # Note that Windows Vista users may need --large-address-aware because Vista seems to map over 500MB of application address space for its own purposes, which is a significant chunk taken out of the default 2GB address space, this option raises the limit to 4GB (or 3GB on Vista 32 and older versions of Windows).
