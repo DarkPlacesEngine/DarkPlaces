@@ -315,7 +315,7 @@ void Sys_InitConsole (void)
 	// if (cls.state == ca_dedicated)
 	if (COM_CheckParm("-dedicated"))
 	{
-		if ((houtput == 0) || (houtput == INVALID_HANDLE_VALUE))
+		//if ((houtput == 0) || (houtput == INVALID_HANDLE_VALUE)) // LordHavoc: on Windows XP this is never 0 or invalid, but hinput is invalid
 		{
 		    AllocConsole ();
 		    houtput = GetStdHandle (STD_OUTPUT_HANDLE);
