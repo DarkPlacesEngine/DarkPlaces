@@ -34,10 +34,12 @@ cvar_t sys_usetimegettime = {CVAR_SAVE, "sys_usetimegettime", "1", "use windows 
 
 HANDLE				hinput, houtput;
 
+#ifdef QHOST
 static HANDLE	tevent;
 static HANDLE	hFile;
 static HANDLE	heventParent;
 static HANDLE	heventChild;
+#endif
 
 
 /*
@@ -94,14 +96,18 @@ void Sys_Error (const char *error, ...)
 
 void Sys_Shutdown (void)
 {
+#ifdef QHOST
 	if (tevent)
 		CloseHandle (tevent);
+#endif
 
 	if (cls.state == ca_dedicated)
 		FreeConsole ();
 
+#ifdef QHOST
 // shut down QHOST hooks if necessary
 	DeinitConProc ();
+#endif
 }
 
 void Sys_PrintToTerminal(const char *text)
@@ -308,6 +314,7 @@ char *Sys_GetClipboardData (void)
 
 void Sys_InitConsole (void)
 {
+#ifdef QHOST
 	int t;
 
 	// initialize the windows dedicated server console if needed
@@ -315,6 +322,7 @@ void Sys_InitConsole (void)
 
 	if (!tevent)
 		Sys_Error ("Couldn't create event");
+#endif
 
 	houtput = GetStdHandle (STD_OUTPUT_HANDLE);
 	hinput = GetStdHandle (STD_INPUT_HANDLE);
@@ -334,6 +342,7 @@ void Sys_InitConsole (void)
 			Sys_Error ("Couldn't create dedicated server console");
 
 
+#ifdef QHOST
 #ifdef _WIN64
 #define atoi _atoi64
 #endif
@@ -357,6 +366,7 @@ void Sys_InitConsole (void)
 		}
 
 		InitConProc (hFile, heventParent, heventChild);
+#endif
 	}
 
 // because sound is off until we become active
