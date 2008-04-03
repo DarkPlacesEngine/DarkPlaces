@@ -303,6 +303,29 @@ void GL_SetupView_Orientation_FromEntity(const matrix4x4_t *matrix)
 	R_Mesh_Matrix(&tempmatrix);
 }
 
+static void GL_BuildFrustum(double m[16], double left, double right, double bottom, double top, double nearVal, double farVal)
+{
+	m[0]  = 2 * nearVal / (right - left);
+	m[1]  = 0;
+	m[2]  = 0;
+	m[3]  = 0;
+         
+	m[4]  = 0;
+	m[5]  = 2 * nearVal / (top - bottom);
+	m[6]  = 0;
+	m[7]  = 0;
+         
+	m[8]  = (right + left) / (right - left);
+	m[9]  = (top + bottom) / (top - bottom);
+	m[10] = - (farVal + nearVal) / (farVal - nearVal);
+	m[11] = -1;
+
+	m[12] = 0;
+	m[13] = 0;
+	m[14] = - 2 * farVal * nearVal / (farVal - nearVal);
+	m[15] = 0;
+}
+
 void GL_SetupView_Mode_Perspective (double frustumx, double frustumy, double zNear, double zFar)
 {
 	double m[16];
@@ -310,10 +333,18 @@ void GL_SetupView_Mode_Perspective (double frustumx, double frustumy, double zNe
 	// set up viewpoint
 	CHECKGLERROR
 	qglMatrixMode(GL_PROJECTION);CHECKGLERROR
-	qglLoadIdentity();CHECKGLERROR
 	// set view pyramid
+#if 1
+	// avoid glGetDoublev whenever possible, it may stall the render pipeline
+	// in the tested cases (nvidia) no measurable fps difference, but it sure
+	// makes a difference over a network line with GLX
+	GL_BuildFrustum(m, -frustumx * zNear, frustumx * zNear, -frustumy * zNear, frustumy * zNear, zNear, zFar);
+	qglLoadMatrixd(m);CHECKGLERROR
+#else
+	qglLoadIdentity();CHECKGLERROR
 	qglFrustum(-frustumx * zNear, frustumx * zNear, -frustumy * zNear, frustumy * zNear, zNear, zFar);CHECKGLERROR
 	qglGetDoublev(GL_PROJECTION_MATRIX, m);CHECKGLERROR
+#endif
 	Matrix4x4_FromArrayDoubleGL(&backend_projectmatrix, m);
 	qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
 	GL_SetupView_Orientation_Identity();
@@ -353,6 +384,29 @@ void GL_SetupView_Mode_PerspectiveInfiniteFarClip (double frustumx, double frust
 	Matrix4x4_FromArrayDoubleGL(&backend_projectmatrix, m);
 }
 
+static void GL_BuildOrtho(double m[16], double left, double right, double bottom, double top, double near, double far)
+{
+	m[0]  = 2/(right - left);
+	m[1]  = 0;
+	m[2]  = 0;
+	m[3]  = 0;
+         
+	m[4]  = 0;
+	m[5]  = 2/(top - bottom);
+	m[6]  = 0;
+	m[7]  = 0;
+         
+	m[8]  = 0;
+	m[9]  = 0;
+	m[10] = -2/(far - near);
+	m[11] = 0;
+
+	m[12] = - (right + left)/(right - left);
+	m[13] = - (top + bottom)/(top - bottom);
+	m[14] = - (far + near)/(far - near);
+	m[15] = 1;
+}
+
 void GL_SetupView_Mode_Ortho (double x1, double y1, double x2, double y2, double zNear, double zFar)
 {
 	double m[16];
@@ -360,9 +414,17 @@ void GL_SetupView_Mode_Ortho (double x1, double y1, double x2, double y2, double
 	// set up viewpoint
 	CHECKGLERROR
 	qglMatrixMode(GL_PROJECTION);CHECKGLERROR
+#if 1
+	// avoid glGetDoublev whenever possible, it may stall the render pipeline
+	// in the tested cases (nvidia) no measurable fps difference, but it sure
+	// makes a difference over a network line with GLX
+	GL_BuildOrtho(m, x1, x2, y2, y1, zNear, zFar);
+	qglLoadMatrixd(m);CHECKGLERROR
+#else
 	qglLoadIdentity();CHECKGLERROR
 	qglOrtho(x1, x2, y2, y1, zNear, zFar);CHECKGLERROR
 	qglGetDoublev(GL_PROJECTION_MATRIX, m);CHECKGLERROR
+#endif
 	Matrix4x4_FromArrayDoubleGL(&backend_projectmatrix, m);
 	qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
 	GL_SetupView_Orientation_Identity();
