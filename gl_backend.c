@@ -309,12 +309,12 @@ static void GL_BuildFrustum(double m[16], double left, double right, double bott
 	m[1]  = 0;
 	m[2]  = 0;
 	m[3]  = 0;
-         
+
 	m[4]  = 0;
 	m[5]  = 2 * nearVal / (top - bottom);
 	m[6]  = 0;
 	m[7]  = 0;
-         
+
 	m[8]  = (right + left) / (right - left);
 	m[9]  = (top + bottom) / (top - bottom);
 	m[10] = - (farVal + nearVal) / (farVal - nearVal);
@@ -384,26 +384,26 @@ void GL_SetupView_Mode_PerspectiveInfiniteFarClip (double frustumx, double frust
 	Matrix4x4_FromArrayDoubleGL(&backend_projectmatrix, m);
 }
 
-static void GL_BuildOrtho(double m[16], double left, double right, double bottom, double top, double near, double far)
+static void GL_BuildOrtho(double m[16], double left, double right, double bottom, double top, double zNear, double zFar)
 {
 	m[0]  = 2/(right - left);
 	m[1]  = 0;
 	m[2]  = 0;
 	m[3]  = 0;
-         
+
 	m[4]  = 0;
 	m[5]  = 2/(top - bottom);
 	m[6]  = 0;
 	m[7]  = 0;
-         
+
 	m[8]  = 0;
 	m[9]  = 0;
-	m[10] = -2/(far - near);
+	m[10] = -2/(zFar - zNear);
 	m[11] = 0;
 
 	m[12] = - (right + left)/(right - left);
 	m[13] = - (top + bottom)/(top - bottom);
-	m[14] = - (far + near)/(far - near);
+	m[14] = - (zFar + zNear)/(zFar - zNear);
 	m[15] = 1;
 }
 
