@@ -96,6 +96,10 @@ cvar_t con_nickcompletion_flags = {CVAR_SAVE, "con_nickcompletion_flags", "11", 
 #define NICKS_ALPHANUMERICS_ONLY 8
 #define NICKS_NO_SPACES 16
 
+cvar_t con_completion_playdemo = {CVAR_SAVE, "con_completion_playdemo", "*.dem"};
+cvar_t con_completion_timedemo = {CVAR_SAVE, "con_completion_timedemo", "*.dem"};
+cvar_t con_completion_exec = {CVAR_SAVE, "con_completion_exec", "*.cfg"};
+
 int con_linewidth;
 int con_vislines;
 
@@ -543,6 +547,10 @@ void Con_Init (void)
 	// --blub
 	Cvar_RegisterVariable (&con_nickcompletion);
 	Cvar_RegisterVariable (&con_nickcompletion_flags);
+
+	Cvar_RegisterVariable (&con_completion_playdemo); // *.dem
+	Cvar_RegisterVariable (&con_completion_timedemo); // *.dem
+	Cvar_RegisterVariable (&con_completion_exec); // *.cfg
 
 	// register our commands
 	Cmd_AddCommand ("toggleconsole", Con_ToggleConsole_f, "opens or closes the console");
