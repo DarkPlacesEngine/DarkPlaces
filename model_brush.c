@@ -3591,11 +3591,15 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 			mod->brush.LightPoint = NULL;
 			mod->brush.AmbientSoundLevelsForPoint = NULL;
 		}
+		// copy the submodel bounds, then enlarge the yaw and rotated bounds according to radius
+		VectorCopy(bm->mins, mod->normalmins);
+		VectorCopy(bm->maxs, mod->normalmaxs);
+		VectorCopy(bm->mins, mod->yawmins);
+		VectorCopy(bm->maxs, mod->yawmaxs);
+		VectorCopy(bm->mins, mod->rotatedmins);
+		VectorCopy(bm->maxs, mod->rotatedmaxs);
 		if (mod->nummodelsurfaces)
 		{
-			// LordHavoc: calculate bmodel bounding box rather than trusting what it says
-			mod->normalmins[0] = mod->normalmins[1] = mod->normalmins[2] = 1000000000.0f;
-			mod->normalmaxs[0] = mod->normalmaxs[1] = mod->normalmaxs[2] = -1000000000.0f;
 			modelyawradius = 0;
 			modelradius = 0;
 			for (j = 0, surface = &mod->data_surfaces[mod->firstmodelsurface];j < mod->nummodelsurfaces;j++, surface++)
@@ -3608,12 +3612,6 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 				// calculate bounding shapes
 				for (k = 0, vec = (loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex);k < surface->num_vertices;k++, vec += 3)
 				{
-					if (mod->normalmins[0] > vec[0]) mod->normalmins[0] = vec[0];
-					if (mod->normalmins[1] > vec[1]) mod->normalmins[1] = vec[1];
-					if (mod->normalmins[2] > vec[2]) mod->normalmins[2] = vec[2];
-					if (mod->normalmaxs[0] < vec[0]) mod->normalmaxs[0] = vec[0];
-					if (mod->normalmaxs[1] < vec[1]) mod->normalmaxs[1] = vec[1];
-					if (mod->normalmaxs[2] < vec[2]) mod->normalmaxs[2] = vec[2];
 					dist = vec[0]*vec[0]+vec[1]*vec[1];
 					if (modelyawradius < dist)
 						modelyawradius = dist;
@@ -3624,11 +3622,16 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 			}
 			modelyawradius = sqrt(modelyawradius);
 			modelradius = sqrt(modelradius);
-			mod->yawmins[0] = mod->yawmins[1] = - (mod->yawmaxs[0] = mod->yawmaxs[1] = modelyawradius);
-			mod->yawmins[2] = mod->normalmins[2];
-			mod->yawmaxs[2] = mod->normalmaxs[2];
-			mod->rotatedmins[0] = mod->rotatedmins[1] = mod->rotatedmins[2] = -modelradius;
-			mod->rotatedmaxs[0] = mod->rotatedmaxs[1] = mod->rotatedmaxs[2] = modelradius;
+			mod->yawmins[0] = min(mod->yawmins[0], -modelyawradius);
+			mod->yawmaxs[0] = min(mod->yawmaxs[0], -modelyawradius);
+			mod->yawmins[1] = min(mod->yawmins[1],  modelyawradius);
+			mod->yawmaxs[1] = min(mod->yawmaxs[1],  modelyawradius);
+			mod->rotatedmins[0] = min(mod->rotatedmins[0], -modelradius);
+			mod->rotatedmaxs[0] = min(mod->rotatedmaxs[0],  modelradius);
+			mod->rotatedmins[1] = min(mod->rotatedmins[1], -modelradius);
+			mod->rotatedmaxs[1] = min(mod->rotatedmaxs[1],  modelradius);
+			mod->rotatedmins[2] = min(mod->rotatedmins[2], -modelradius);
+			mod->rotatedmaxs[2] = min(mod->rotatedmaxs[2],  modelradius);
 			mod->radius = modelradius;
 			mod->radius2 = modelradius * modelradius;
 
