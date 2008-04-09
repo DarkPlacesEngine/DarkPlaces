@@ -1906,6 +1906,7 @@ static void r_part_shutdown(void)
 
 static void r_part_newmap(void)
 {
+	CL_Particles_LoadEffectInfo();
 }
 
 #define BATCHSIZE 256
