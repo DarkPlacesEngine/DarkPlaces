@@ -2119,17 +2119,3 @@ void R_Mesh_ResetTextureState(void)
 		}
 	}
 }
-
-void R_Mesh_Draw_ShowTris(int firstvertex, int numvertices, int numtriangles, const int *elements)
-{
-	CHECKGLERROR
-	qglBegin(GL_LINES);
-	for (;numtriangles;numtriangles--, elements += 3)
-	{
-		qglArrayElement(elements[0]);qglArrayElement(elements[1]);
-		qglArrayElement(elements[1]);qglArrayElement(elements[2]);
-		qglArrayElement(elements[2]);qglArrayElement(elements[0]);
-	}
-	qglEnd();
-	CHECKGLERROR
-}
