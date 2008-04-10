@@ -2298,7 +2298,7 @@ typedef struct vmpolygons_triangle_s
 {
 	rtexture_t		*texture;
 	int				drawflag;
-	int				element3i[3];
+	unsigned short	elements[3];
 }vmpolygons_triangle_t;
 
 typedef struct vmpolygons_s
@@ -2315,7 +2315,7 @@ typedef struct vmpolygons_s
 	int				max_triangles;
 	int				num_triangles;
 	vmpolygons_triangle_t *data_triangles;
-	int				*data_sortedelement3i;
+	unsigned short	*data_sortedelement3s;
 
 	qboolean		begin_active;
 	rtexture_t		*begin_texture;
@@ -2352,13 +2352,13 @@ static void VM_ResizePolygons(vmpolygons_t *polys)
 	float *oldcolor4f = polys->data_color4f;
 	float *oldtexcoord2f = polys->data_texcoord2f;
 	vmpolygons_triangle_t *oldtriangles = polys->data_triangles;
-	int *oldsortedelement3i = polys->data_sortedelement3i;
-	polys->max_vertices = polys->max_triangles*3;
+	unsigned short *oldsortedelement3s = polys->data_sortedelement3s;
+	polys->max_vertices = min(polys->max_triangles*3, 65536);
 	polys->data_vertex3f = (float *)Mem_Alloc(polys->pool, polys->max_vertices*sizeof(float[3]));
 	polys->data_color4f = (float *)Mem_Alloc(polys->pool, polys->max_vertices*sizeof(float[4]));
 	polys->data_texcoord2f = (float *)Mem_Alloc(polys->pool, polys->max_vertices*sizeof(float[2]));
 	polys->data_triangles = (vmpolygons_triangle_t *)Mem_Alloc(polys->pool, polys->max_triangles*sizeof(vmpolygons_triangle_t));
-	polys->data_sortedelement3i = (int *)Mem_Alloc(polys->pool, polys->max_triangles*sizeof(int[3]));
+	polys->data_sortedelement3s = (unsigned short *)Mem_Alloc(polys->pool, polys->max_triangles*sizeof(unsigned short[3]));
 	if (polys->num_vertices)
 	{
 		memcpy(polys->data_vertex3f, oldvertex3f, polys->num_vertices*sizeof(float[3]));
@@ -2368,7 +2368,7 @@ static void VM_ResizePolygons(vmpolygons_t *polys)
 	if (polys->num_triangles)
 	{
 		memcpy(polys->data_triangles, oldtriangles, polys->num_triangles*sizeof(vmpolygons_triangle_t));
-		memcpy(polys->data_sortedelement3i, oldsortedelement3i, polys->num_triangles*sizeof(int[3]));
+		memcpy(polys->data_sortedelement3s, oldsortedelement3s, polys->num_triangles*sizeof(unsigned short[3]));
 	}
 	if (oldvertex3f)
 		Mem_Free(oldvertex3f);
@@ -2378,8 +2378,8 @@ static void VM_ResizePolygons(vmpolygons_t *polys)
 		Mem_Free(oldtexcoord2f);
 	if (oldtriangles)
 		Mem_Free(oldtriangles);
-	if (oldsortedelement3i)
-		Mem_Free(oldsortedelement3i);
+	if (oldsortedelement3s)
+		Mem_Free(oldsortedelement3s);
 }
 
 static void VM_InitPolygons (vmpolygons_t* polys)
@@ -2420,10 +2420,10 @@ static void VM_DrawPolygonCallback (const entity_render_t *ent, const rtlight_t 
 		{
 			if (polys->data_triangles[surfacelist[surfacelistindex]].texture != tex || polys->data_triangles[surfacelist[surfacelistindex]].drawflag != drawflag)
 				break;
-			VectorCopy(polys->data_triangles[surfacelist[surfacelistindex]].element3i, polys->data_sortedelement3i + 3*numtriangles);
+			VectorCopy(polys->data_triangles[surfacelist[surfacelistindex]].elements, polys->data_sortedelement3s + 3*numtriangles);
 			numtriangles++;
 		}
-		R_Mesh_Draw(0, polys->num_vertices, numtriangles, polys->data_sortedelement3i, 0, 0);
+		R_Mesh_Draw(0, polys->num_vertices, 0, numtriangles, NULL, polys->data_sortedelement3s, 0, 0);
 	}
 }
 
@@ -2436,7 +2436,7 @@ void VMPolygons_Store(vmpolygons_t *polys)
 		mesh.texture = polys->begin_texture;
 		mesh.num_vertices = polys->begin_vertices;
 		mesh.num_triangles = polys->begin_vertices-2;
-		mesh.data_element3i = polygonelements;
+		mesh.data_element3s = polygonelements;
 		mesh.data_vertex3f = polys->begin_vertex[0];
 		mesh.data_color4f = polys->begin_color[0];
 		mesh.data_texcoord2f = polys->begin_texcoord[0];
@@ -2451,23 +2451,26 @@ void VMPolygons_Store(vmpolygons_t *polys)
 			polys->max_triangles *= 2;
 			VM_ResizePolygons(polys);
 		}
-		// needle in a haystack!
-		// polys->num_vertices was used for copying where we actually want to copy begin_vertices
-		// that also caused it to not render the first polygon that is added
-		// --blub
-		memcpy(polys->data_vertex3f + polys->num_vertices * 3, polys->begin_vertex[0], polys->begin_vertices * sizeof(float[3]));
-		memcpy(polys->data_color4f + polys->num_vertices * 4, polys->begin_color[0], polys->begin_vertices * sizeof(float[4]));
-		memcpy(polys->data_texcoord2f + polys->num_vertices * 2, polys->begin_texcoord[0], polys->begin_vertices * sizeof(float[2]));
-		for (i = 0;i < polys->begin_vertices-2;i++)
+		if (polys->num_vertices + polys->begin_vertices <= polys->max_vertices)
 		{
-			polys->data_triangles[polys->num_triangles].texture = polys->begin_texture;
-			polys->data_triangles[polys->num_triangles].drawflag = polys->begin_drawflag;
-			polys->data_triangles[polys->num_triangles].element3i[0] = polys->num_vertices;
-			polys->data_triangles[polys->num_triangles].element3i[1] = polys->num_vertices + i+1;
-			polys->data_triangles[polys->num_triangles].element3i[2] = polys->num_vertices + i+2;
-			polys->num_triangles++;
+			// needle in a haystack!
+			// polys->num_vertices was used for copying where we actually want to copy begin_vertices
+			// that also caused it to not render the first polygon that is added
+			// --blub
+			memcpy(polys->data_vertex3f + polys->num_vertices * 3, polys->begin_vertex[0], polys->begin_vertices * sizeof(float[3]));
+			memcpy(polys->data_color4f + polys->num_vertices * 4, polys->begin_color[0], polys->begin_vertices * sizeof(float[4]));
+			memcpy(polys->data_texcoord2f + polys->num_vertices * 2, polys->begin_texcoord[0], polys->begin_vertices * sizeof(float[2]));
+			for (i = 0;i < polys->begin_vertices-2;i++)
+			{
+				polys->data_triangles[polys->num_triangles].texture = polys->begin_texture;
+				polys->data_triangles[polys->num_triangles].drawflag = polys->begin_drawflag;
+				polys->data_triangles[polys->num_triangles].elements[0] = polys->num_vertices;
+				polys->data_triangles[polys->num_triangles].elements[1] = polys->num_vertices + i+1;
+				polys->data_triangles[polys->num_triangles].elements[2] = polys->num_vertices + i+2;
+				polys->num_triangles++;
+			}
+			polys->num_vertices += polys->begin_vertices;
 		}
-		polys->num_vertices += polys->begin_vertices;
 	}
 	polys->begin_active = false;
 }
@@ -2489,7 +2492,7 @@ void VM_CL_AddPolygonsToMeshQueue (void)
 
 	for (i = 0;i < polys->num_triangles;i++)
 	{
-		VectorMAMAM(1.0f / 3.0f, polys->data_vertex3f + 3*polys->data_triangles[i].element3i[0], 1.0f / 3.0f, polys->data_vertex3f + 3*polys->data_triangles[i].element3i[1], 1.0f / 3.0f, polys->data_vertex3f + 3*polys->data_triangles[i].element3i[2], center);
+		VectorMAMAM(1.0f / 3.0f, polys->data_vertex3f + 3*polys->data_triangles[i].elements[0], 1.0f / 3.0f, polys->data_vertex3f + 3*polys->data_triangles[i].elements[1], 1.0f / 3.0f, polys->data_vertex3f + 3*polys->data_triangles[i].elements[2], center);
 		R_MeshQueue_AddTransparent(center, VM_DrawPolygonCallback, NULL, i, NULL);
 	}
 

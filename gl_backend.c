@@ -5,6 +5,7 @@
 cvar_t gl_mesh_drawrangeelements = {0, "gl_mesh_drawrangeelements", "1", "use glDrawRangeElements function if available instead of glDrawElements (for performance comparisons or bug testing)"};
 cvar_t gl_mesh_testarrayelement = {0, "gl_mesh_testarrayelement", "0", "use glBegin(GL_TRIANGLES);glArrayElement();glEnd(); primitives instead of glDrawElements (useful to test for driver bugs with glDrawElements)"};
 cvar_t gl_mesh_testmanualfeeding = {0, "gl_mesh_testmanualfeeding", "0", "use glBegin(GL_TRIANGLES);glTexCoord2f();glVertex3f();glEnd(); primitives instead of glDrawElements (useful to test for driver bugs with glDrawElements)"};
+cvar_t gl_mesh_prefer_short_elements = {0, "gl_mesh_prefer_short_elements", "1", "use GL_UNSIGNED_SHORT element arrays instead of GL_UNSIGNED_INT"};
 cvar_t gl_paranoid = {0, "gl_paranoid", "0", "enables OpenGL error checking and other tests"};
 cvar_t gl_printcheckerror = {0, "gl_printcheckerror", "0", "prints all OpenGL error checks, useful to identify location of driver crashes"};
 
@@ -136,8 +137,8 @@ for (y = 0;y < rows - 1;y++)
 }
 */
 
-int polygonelements[(POLYGONELEMENTS_MAXPOINTS-2)*3];
-int quadelements[QUADELEMENTS_MAXQUADS*6];
+unsigned short polygonelements[(POLYGONELEMENTS_MAXPOINTS-2)*3];
+unsigned short quadelements[QUADELEMENTS_MAXQUADS*6];
 
 void GL_Backend_AllocArrays(void)
 {
@@ -261,6 +262,7 @@ void gl_backend_init(void)
 	Cvar_RegisterVariable(&gl_mesh_drawrangeelements);
 	Cvar_RegisterVariable(&gl_mesh_testarrayelement);
 	Cvar_RegisterVariable(&gl_mesh_testmanualfeeding);
+	Cvar_RegisterVariable(&gl_mesh_prefer_short_elements);
 
 	Cmd_AddCommand("gl_vbostats", GL_VBOStats_f, "prints a list of all buffer objects (vertex data and triangle elements) and total video memory used by them");
 
@@ -1083,16 +1085,22 @@ void GL_Backend_RenumberElements(int *out, int count, const int *in, int offset)
 
 // renders triangles using vertices from the active arrays
 int paranoidblah = 0;
-void R_Mesh_Draw(int firstvertex, int numvertices, int numtriangles, const int *elements, int bufferobject, size_t bufferoffset)
+void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtriangles, const int *element3i, const unsigned short *element3s, int bufferobject3i, int bufferobject3s)
 {
 	unsigned int numelements = numtriangles * 3;
 	if (numvertices < 3 || numtriangles < 1)
 	{
-		Con_Printf("R_Mesh_Draw(%d, %d, %d, %8p, %i, %p);\n", firstvertex, numvertices, numtriangles, elements, bufferobject, (void *)bufferoffset);
+		Con_Printf("R_Mesh_Draw(%d, %d, %d, %d, %8p, %8p, %i, %i);\n", firstvertex, numvertices, firsttriangle, numtriangles, element3i, element3s, bufferobject3i, bufferobject3s);
 		return;
 	}
+	if (!gl_mesh_prefer_short_elements.integer && element3i)
+		element3s = NULL;
+	if (element3i)
+		element3i += firsttriangle * 3;
+	if (element3s)
+		element3s += firsttriangle * 3;
 	if (gl_vbo.integer != 1)
-		bufferobject = 0;
+		bufferobject3i = bufferobject3s = 0;
 	CHECKGLERROR
 	r_refdef.stats.meshes++;
 	r_refdef.stats.meshes_elements += numelements;
@@ -1133,12 +1141,26 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int numtriangles, const int *
 						paranoidblah += *p;
 			}
 		}
-		for (i = 0;i < (unsigned int) numtriangles * 3;i++)
+		if (element3i)
 		{
-			if (elements[i] < firstvertex || elements[i] >= firstvertex + numvertices)
+			for (i = 0;i < (unsigned int) numtriangles * 3;i++)
 			{
-				Con_Printf("R_Mesh_Draw: invalid vertex index %i (outside range %i - %i) in elements list\n", elements[i], firstvertex, firstvertex + numvertices);
-				return;
+				if (element3i[i] < firstvertex || element3i[i] >= firstvertex + numvertices)
+				{
+					Con_Printf("R_Mesh_Draw: invalid vertex index %i (outside range %i - %i) in element3i array\n", element3i[i], firstvertex, firstvertex + numvertices);
+					return;
+				}
+			}
+		}
+		if (element3s)
+		{
+			for (i = 0;i < (unsigned int) numtriangles * 3;i++)
+			{
+				if (element3s[i] < firstvertex || element3s[i] >= firstvertex + numvertices)
+				{
+					Con_Printf("R_Mesh_Draw: invalid vertex index %i (outside range %i - %i) in element3s array\n", element3s[i], firstvertex, firstvertex + numvertices);
+					return;
+				}
 			}
 		}
 		CHECKGLERROR
@@ -1148,11 +1170,12 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int numtriangles, const int *
 		CHECKGLERROR
 		if (gl_mesh_testmanualfeeding.integer)
 		{
-			unsigned int i, j;
+			unsigned int i, j, element;
 			const GLfloat *p;
 			qglBegin(GL_TRIANGLES);
 			for (i = 0;i < (unsigned int) numtriangles * 3;i++)
 			{
+				element = element3i ? element3i[i] : element3s[i];
 				for (j = 0;j < backendarrayunits;j++)
 				{
 					if (gl_state.units[j].pointer_texcoord && gl_state.units[j].arrayenabled)
@@ -1161,22 +1184,22 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int numtriangles, const int *
 						{
 							if (gl_state.units[j].arraycomponents == 4)
 							{
-								p = ((const GLfloat *)(gl_state.units[j].pointer_texcoord)) + elements[i] * 4;
+								p = ((const GLfloat *)(gl_state.units[j].pointer_texcoord)) + element * 4;
 								qglMultiTexCoord4f(GL_TEXTURE0_ARB + j, p[0], p[1], p[2], p[3]);
 							}
 							else if (gl_state.units[j].arraycomponents == 3)
 							{
-								p = ((const GLfloat *)(gl_state.units[j].pointer_texcoord)) + elements[i] * 3;
+								p = ((const GLfloat *)(gl_state.units[j].pointer_texcoord)) + element * 3;
 								qglMultiTexCoord3f(GL_TEXTURE0_ARB + j, p[0], p[1], p[2]);
 							}
 							else if (gl_state.units[j].arraycomponents == 2)
 							{
-								p = ((const GLfloat *)(gl_state.units[j].pointer_texcoord)) + elements[i] * 2;
+								p = ((const GLfloat *)(gl_state.units[j].pointer_texcoord)) + element * 2;
 								qglMultiTexCoord2f(GL_TEXTURE0_ARB + j, p[0], p[1]);
 							}
 							else
 							{
-								p = ((const GLfloat *)(gl_state.units[j].pointer_texcoord)) + elements[i] * 1;
+								p = ((const GLfloat *)(gl_state.units[j].pointer_texcoord)) + element * 1;
 								qglMultiTexCoord1f(GL_TEXTURE0_ARB + j, p[0]);
 							}
 						}
@@ -1184,22 +1207,22 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int numtriangles, const int *
 						{
 							if (gl_state.units[j].arraycomponents == 4)
 							{
-								p = ((const GLfloat *)(gl_state.units[j].pointer_texcoord)) + elements[i] * 4;
+								p = ((const GLfloat *)(gl_state.units[j].pointer_texcoord)) + element * 4;
 								qglTexCoord4f(p[0], p[1], p[2], p[3]);
 							}
 							else if (gl_state.units[j].arraycomponents == 3)
 							{
-								p = ((const GLfloat *)(gl_state.units[j].pointer_texcoord)) + elements[i] * 3;
+								p = ((const GLfloat *)(gl_state.units[j].pointer_texcoord)) + element * 3;
 								qglTexCoord3f(p[0], p[1], p[2]);
 							}
 							else if (gl_state.units[j].arraycomponents == 2)
 							{
-								p = ((const GLfloat *)(gl_state.units[j].pointer_texcoord)) + elements[i] * 2;
+								p = ((const GLfloat *)(gl_state.units[j].pointer_texcoord)) + element * 2;
 								qglTexCoord2f(p[0], p[1]);
 							}
 							else
 							{
-								p = ((const GLfloat *)(gl_state.units[j].pointer_texcoord)) + elements[i] * 1;
+								p = ((const GLfloat *)(gl_state.units[j].pointer_texcoord)) + element * 1;
 								qglTexCoord1f(p[0]);
 							}
 						}
@@ -1207,10 +1230,10 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int numtriangles, const int *
 				}
 				if (gl_state.pointer_color && gl_state.pointer_color_enabled)
 				{
-					p = ((const GLfloat *)(gl_state.pointer_color)) + elements[i] * 4;
+					p = ((const GLfloat *)(gl_state.pointer_color)) + element * 4;
 					qglColor4f(p[0], p[1], p[2], p[3]);
 				}
-				p = ((const GLfloat *)(gl_state.pointer_vertex)) + elements[i] * 3;
+				p = ((const GLfloat *)(gl_state.pointer_vertex)) + element * 3;
 				qglVertex3f(p[0], p[1], p[2]);
 			}
 			qglEnd();
@@ -1220,24 +1243,74 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int numtriangles, const int *
 		{
 			int i;
 			qglBegin(GL_TRIANGLES);
-			for (i = 0;i < numtriangles * 3;i++)
+			if (element3i)
 			{
-				qglArrayElement(elements[i]);
+				for (i = 0;i < numtriangles * 3;i++)
+					qglArrayElement(element3i[i]);
+			}
+			else if (element3s)
+			{
+				for (i = 0;i < numtriangles * 3;i++)
+					qglArrayElement(element3s[i]);
 			}
 			qglEnd();
 			CHECKGLERROR
 		}
-		else if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
+		else if (bufferobject3s)
 		{
-			GL_BindEBO(bufferobject);
-			qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices, numelements, GL_UNSIGNED_INT, bufferobject ? (void *)bufferoffset : elements);
-			CHECKGLERROR
+			GL_BindEBO(bufferobject3s);
+			if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
+			{
+				qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices, numelements, GL_UNSIGNED_SHORT, (void *)(firsttriangle * sizeof(unsigned short[3])));
+				CHECKGLERROR
+			}
+			else
+			{
+				qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_SHORT, (void *)(firsttriangle * sizeof(unsigned short[3])));
+				CHECKGLERROR
+			}
 		}
-		else
+		else if (bufferobject3i)
 		{
-			GL_BindEBO(bufferobject);
-			qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, bufferobject ? (void *)bufferoffset : elements);
-			CHECKGLERROR
+			GL_BindEBO(bufferobject3i);
+			if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
+			{
+				qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices, numelements, GL_UNSIGNED_INT, (void *)(firsttriangle * sizeof(unsigned int[3])));
+				CHECKGLERROR
+			}
+			else
+			{
+				qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, (void *)(firsttriangle * sizeof(unsigned int[3])));
+				CHECKGLERROR
+			}
+		}
+		else if (element3s)
+		{
+			GL_BindEBO(0);
+			if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
+			{
+				qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices, numelements, GL_UNSIGNED_SHORT, element3s);
+				CHECKGLERROR
+			}
+			else
+			{
+				qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_SHORT, element3s);
+				CHECKGLERROR
+			}
+		}
+		else if (element3i)
+		{
+			GL_BindEBO(0);
+			if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
+			{
+				qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices, numelements, GL_UNSIGNED_INT, element3i);
+				CHECKGLERROR
+			}
+			else
+			{
+				qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, element3i);
+				CHECKGLERROR
+			}
 		}
 	}
 }

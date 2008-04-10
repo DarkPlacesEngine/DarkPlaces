@@ -2081,14 +2081,14 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 	if (vid.stereobuffer)
 	{
 		qglDrawBuffer(GL_FRONT_LEFT);
-		R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
+		R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
 		qglDrawBuffer(GL_FRONT_RIGHT);
-		R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
+		R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
 	}
 	else
 	{
 		qglDrawBuffer(GL_FRONT);
-		R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
+		R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
 	}
 	R_Mesh_Finish();
 	// refresh

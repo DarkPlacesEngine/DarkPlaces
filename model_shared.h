@@ -91,9 +91,11 @@ typedef struct surfmesh_s
 	// triangle data in system memory
 	int num_triangles; // number of triangles in the mesh
 	int *data_element3i; // int[tris*3] triangles of the mesh, 3 indices into vertex arrays for each
+	unsigned short *data_element3s; // unsigned short[tris*3] triangles of the mesh in unsigned short format (NULL if num_vertices > 65536)
 	int *data_neighbor3i; // int[tris*3] neighboring triangle on each edge (-1 if none)
 	// element buffer object (stores triangles in video memory)
-	int ebo;
+	int ebo3i; // unsigned int format (only allocated if num_vertices > 65536)
+	int ebo3s; // unsigned short format (only allocated if num_vertices <= 65536)
 	// vertex data in system memory
 	int num_vertices; // number of vertices in the mesh
 	float *data_vertex3f; // float[verts*3] vertex locations
@@ -156,6 +158,7 @@ typedef struct shadowmesh_s
 	float *texcoord2f;
 	// used always
 	int *element3i;
+	unsigned short *element3s;
 	// used for shadow mesh (NULL on light mesh)
 	int *neighbor3i;
 	// these are NULL after Mod_ShadowMesh_Finish is performed, only used
@@ -163,7 +166,8 @@ typedef struct shadowmesh_s
 	shadowmeshvertexhash_t **vertexhashtable, *vertexhashentries;
 	// element buffer object (stores triangles in video memory)
 	// (created by Mod_ShadowMesh_Finish if possible)
-	int ebo;
+	int ebo3i;
+	int ebo3s;
 	// vertex buffer object (stores vertices in video memory)
 	// (created by Mod_ShadowMesh_Finish if possible)
 	int vbo;

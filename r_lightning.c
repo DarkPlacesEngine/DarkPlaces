@@ -14,7 +14,7 @@ rtexture_t *r_lightningbeamtexture;
 rtexture_t *r_lightningbeamqmbtexture;
 rtexturepool_t *r_lightningbeamtexturepool;
 
-int r_lightningbeamelements[18] = {0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 8, 9, 10, 8, 10, 11};
+unsigned short r_lightningbeamelements[18] = {0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 8, 9, 10, 8, 10, 11};
 
 void r_lightningbeams_start(void)
 {
@@ -339,7 +339,7 @@ void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, const r
 
 		// draw the 3 polygons as one batch of 6 triangles using the 12 vertices
 		GL_LockArrays(0, 12);
-		R_Mesh_Draw(0, 12, 6, r_lightningbeamelements, 0, 0);
+		R_Mesh_Draw(0, 12, 0, 6, NULL, r_lightningbeamelements, 0, 0);
 		GL_LockArrays(0, 0);
 	}
 }

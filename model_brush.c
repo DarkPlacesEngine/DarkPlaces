@@ -2452,6 +2452,11 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 
 		}
 	}
+
+	// generate ushort elements array if possible
+	if (loadmodel->surfmesh.data_element3s)
+		for (i = 0;i < loadmodel->surfmesh.num_triangles*3;i++)
+			loadmodel->surfmesh.data_element3s[i] = loadmodel->surfmesh.data_element3i[i];
 }
 
 static void Mod_Q1BSP_LoadNodes_RecursiveSetParent(mnode_t *node, mnode_t *parent)
@@ -4883,6 +4888,11 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 
 	// for per pixel lighting
 	Mod_BuildTextureVectorsFromNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, true);
+
+	// generate ushort elements array if possible
+	if (loadmodel->surfmesh.data_element3s)
+		for (i = 0;i < loadmodel->surfmesh.num_triangles*3;i++)
+			loadmodel->surfmesh.data_element3s[i] = loadmodel->surfmesh.data_element3i[i];
 
 	// free the no longer needed vertex data
 	loadmodel->brushq3.num_vertices = 0;
