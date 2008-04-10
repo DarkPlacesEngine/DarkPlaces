@@ -252,7 +252,7 @@ static const float skyboxtexcoord2f[6*4*2] =
 	0, 0
 };
 
-static const int skyboxelements[6*2*3] =
+static const unsigned short skyboxelements[6*2*3] =
 {
 	// skyside[3]
 	 0,  1,  2,
@@ -294,7 +294,7 @@ static void R_SkyBox(void)
 	for (i = 0;i < 6;i++)
 	{
 		R_Mesh_TexBind(0, R_GetTexture(skyboxside[i]));
-		R_Mesh_Draw(0, 6*4, 2, skyboxelements + i * 6, 0, 0);
+		R_Mesh_Draw(0, 6*4, i*2, 2, NULL, skyboxelements, 0, 0);
 	}
 
 	if(r_refdef.fogenabled)
@@ -305,7 +305,7 @@ static void R_SkyBox(void)
 		for (i = 0;i < 6;i++)
 		{
 			R_Mesh_TexBind(0, 0);
-			R_Mesh_Draw(0, 6*4, 2, skyboxelements + i * 6, 0, 0);
+			R_Mesh_Draw(0, 6*4, i*2, 2, NULL, skyboxelements, 0, 0);
 		}
 	}
 
@@ -322,11 +322,12 @@ static void R_SkyBox(void)
 #define skysphere_numtriangles (skygridx * skygridy * 2)
 static float skysphere_vertex3f[skysphere_numverts * 3];
 static float skysphere_texcoord2f[skysphere_numverts * 2];
-static int skysphere_element3i[skysphere_numtriangles * 3];
+static unsigned short skysphere_elements[skysphere_numtriangles * 3];
 
 static void skyspherecalc(void)
 {
-	int i, j, *e;
+	int i, j;
+	unsigned short *e;
 	float a, b, x, ax, ay, v[3], length, *vertex3f, *texcoord2f;
 	float dx, dy, dz;
 	dx = 16;
@@ -354,7 +355,7 @@ static void skyspherecalc(void)
 			*vertex3f++ = v[2];
 		}
 	}
-	e = skysphere_element3i;
+	e = skysphere_elements;
 	for (j = 0;j < skygridy;j++)
 	{
 		for (i = 0;i < skygridx;i++)
@@ -414,7 +415,7 @@ static void R_SkySphere(void)
 		R_Mesh_TexCoordPointer(1, 2, skysphere_texcoord2f, 0, 0);
 		R_Mesh_TexMatrix(1, &scroll2matrix);
 		GL_LockArrays(0, skysphere_numverts);
-		R_Mesh_Draw(0, skysphere_numverts, skysphere_numtriangles, skysphere_element3i, 0, 0);
+		R_Mesh_Draw(0, skysphere_numverts, 0, skysphere_numtriangles, NULL, skysphere_elements, 0, 0);
 		GL_LockArrays(0, 0);
 		R_Mesh_TexBind(1, 0);
 	}
@@ -423,13 +424,13 @@ static void R_SkySphere(void)
 		// two pass
 		R_SetupGenericShader(true);
 		GL_LockArrays(0, skysphere_numverts);
-		R_Mesh_Draw(0, skysphere_numverts, skysphere_numtriangles, skysphere_element3i, 0, 0);
+		R_Mesh_Draw(0, skysphere_numverts, 0, skysphere_numtriangles, NULL, skysphere_elements, 0, 0);
 
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		R_Mesh_TexBind(0, R_GetTexture(r_refdef.scene.worldmodel->brush.alphaskytexture));
 		R_Mesh_TexMatrix(0, &scroll2matrix);
 		GL_LockArrays(0, skysphere_numverts);
-		R_Mesh_Draw(0, skysphere_numverts, skysphere_numtriangles, skysphere_element3i, 0, 0);
+		R_Mesh_Draw(0, skysphere_numverts, 0, skysphere_numtriangles, NULL, skysphere_elements, 0, 0);
 		GL_LockArrays(0, 0);
 	}
 
@@ -440,7 +441,7 @@ static void R_SkySphere(void)
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		GL_Color(r_refdef.fogcolor[0], r_refdef.fogcolor[1], r_refdef.fogcolor[2], 1 - r_refdef.fogmasktable[FOGMASKTABLEWIDTH-1]);
 		GL_LockArrays(0, skysphere_numverts);
-		R_Mesh_Draw(0, skysphere_numverts, skysphere_numtriangles, skysphere_element3i, 0, 0);
+		R_Mesh_Draw(0, skysphere_numverts, 0, skysphere_numtriangles, NULL, skysphere_elements, 0, 0);
 		GL_LockArrays(0, 0);
 	}
 }

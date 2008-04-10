@@ -1910,19 +1910,19 @@ static void r_part_newmap(void)
 }
 
 #define BATCHSIZE 256
-int particle_element3i[BATCHSIZE*6];
+unsigned short particle_elements[BATCHSIZE*6];
 
 void R_Particles_Init (void)
 {
 	int i;
 	for (i = 0;i < BATCHSIZE;i++)
 	{
-		particle_element3i[i*6+0] = i*4+0;
-		particle_element3i[i*6+1] = i*4+1;
-		particle_element3i[i*6+2] = i*4+2;
-		particle_element3i[i*6+3] = i*4+0;
-		particle_element3i[i*6+4] = i*4+2;
-		particle_element3i[i*6+5] = i*4+3;
+		particle_elements[i*6+0] = i*4+0;
+		particle_elements[i*6+1] = i*4+1;
+		particle_elements[i*6+2] = i*4+2;
+		particle_elements[i*6+3] = i*4+0;
+		particle_elements[i*6+4] = i*4+2;
+		particle_elements[i*6+5] = i*4+3;
 	}
 
 	Cvar_RegisterVariable(&r_drawparticles);
@@ -2003,7 +2003,7 @@ void R_DrawDecal_TransparentCallback(const entity_render_t *ent, const rtlight_t
 	GL_BlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
 	R_Mesh_TexBind(0, R_GetTexture(particletexture[63].texture));
 	GL_LockArrays(0, numsurfaces*4);
-	R_Mesh_Draw(0, numsurfaces * 4, numsurfaces * 2, particle_element3i, 0, 0);
+	R_Mesh_Draw(0, numsurfaces * 4, 0, numsurfaces * 2, NULL, particle_elements, 0, 0);
 	GL_LockArrays(0, 0);
 }
 
@@ -2260,7 +2260,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 		}
 
 		batchcount = surfacelistindex - batchstart;
-		R_Mesh_Draw(batchstart * 4, batchcount * 4, batchcount * 2, particle_element3i + batchstart * 6, 0, 0);
+		R_Mesh_Draw(batchstart * 4, batchcount * 4, batchstart * 2, batchcount * 2, NULL, particle_elements, 0, 0);
 	}
 	GL_LockArrays(0, 0);
 }

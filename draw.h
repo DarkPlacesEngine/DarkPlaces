@@ -63,7 +63,7 @@ typedef struct drawqueuemesh_s
 	rtexture_t *texture;
 	int num_triangles;
 	int num_vertices;
-	int *data_element3i;
+	unsigned short *data_element3s;
 	float *data_vertex3f;
 	float *data_texcoord2f;
 	float *data_color4f;

@@ -159,8 +159,10 @@ void Mod_UnloadModel (model_t *mod)
 	strlcpy(name, mod->name, sizeof(name));
 	isworldmodel = mod->isworldmodel;
 	used = mod->used;
-	if (mod->surfmesh.ebo)
-		R_Mesh_DestroyBufferObject(mod->surfmesh.ebo);
+	if (mod->surfmesh.ebo3i)
+		R_Mesh_DestroyBufferObject(mod->surfmesh.ebo3i);
+	if (mod->surfmesh.ebo3s)
+		R_Mesh_DestroyBufferObject(mod->surfmesh.ebo3s);
 	if (mod->surfmesh.vbo)
 		R_Mesh_DestroyBufferObject(mod->surfmesh.vbo);
 	// free textures/memory attached to the model
@@ -752,7 +754,7 @@ void Mod_BuildTextureVectorsFromNormals(int firstvertex, int numvertices, int nu
 void Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriangles, qboolean lightmapoffsets, qboolean vertexcolors, qboolean neighbors)
 {
 	unsigned char *data;
-	data = (unsigned char *)Mem_Alloc(mempool, numvertices * (3 + 3 + 3 + 3 + 2 + 2 + (vertexcolors ? 4 : 0)) * sizeof(float) + numvertices * (lightmapoffsets ? 1 : 0) * sizeof(int) + numtriangles * (3 + (neighbors ? 3 : 0)) * sizeof(int));
+	data = (unsigned char *)Mem_Alloc(mempool, numvertices * (3 + 3 + 3 + 3 + 2 + 2 + (vertexcolors ? 4 : 0)) * sizeof(float) + numvertices * (lightmapoffsets ? 1 : 0) * sizeof(int) + numtriangles * (3 + (neighbors ? 3 : 0)) * sizeof(int) + (numvertices <= 65536 ? numtriangles * sizeof(unsigned short[3]) : 0));
 	loadmodel->surfmesh.num_vertices = numvertices;
 	loadmodel->surfmesh.num_triangles = numtriangles;
 	if (loadmodel->surfmesh.num_vertices)
@@ -773,6 +775,8 @@ void Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriangles, qb
 		loadmodel->surfmesh.data_element3i = (int *)data, data += sizeof(int[3]) * loadmodel->surfmesh.num_triangles;
 		if (neighbors)
 			loadmodel->surfmesh.data_neighbor3i = (int *)data, data += sizeof(int[3]) * loadmodel->surfmesh.num_triangles;
+		if (loadmodel->surfmesh.num_vertices <= 65536)
+			loadmodel->surfmesh.data_element3s = (unsigned short *)data, data += sizeof(unsigned short[3]) * loadmodel->surfmesh.num_triangles;
 	}
 }
 
@@ -786,6 +790,8 @@ shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts, int maxtria
 	if (light)
 		size += maxverts * sizeof(float[11]);
 	size += maxtriangles * sizeof(int[3]);
+	if (maxverts <= 65536)
+		size += maxtriangles * sizeof(unsigned short[3]);
 	if (neighbors)
 		size += maxtriangles * sizeof(int[3]);
 	if (expandable)
@@ -818,6 +824,8 @@ shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts, int maxtria
 		newmesh->vertexhashtable = (shadowmeshvertexhash_t **)data;data += SHADOWMESHVERTEXHASH * sizeof(shadowmeshvertexhash_t *);
 		newmesh->vertexhashentries = (shadowmeshvertexhash_t *)data;data += maxverts * sizeof(shadowmeshvertexhash_t);
 	}
+	if (maxverts <= 65536)
+		newmesh->element3s = (unsigned short *)data;data += maxtriangles * sizeof(unsigned short[3]);
 	return newmesh;
 }
 
@@ -948,7 +956,12 @@ static void Mod_ShadowMesh_CreateVBOs(shadowmesh_t *mesh)
 
 	// element buffer is easy because it's just one array
 	if (mesh->numtriangles)
-		mesh->ebo = R_Mesh_CreateStaticBufferObject(GL_ELEMENT_ARRAY_BUFFER_ARB, mesh->element3i, mesh->numtriangles * sizeof(int[3]), "shadowmesh");
+	{
+		if (mesh->element3s)
+			mesh->ebo3s = R_Mesh_CreateStaticBufferObject(GL_ELEMENT_ARRAY_BUFFER_ARB, mesh->element3s, mesh->numtriangles * sizeof(unsigned short[3]), "shadowmesh");
+		else
+			mesh->ebo3i = R_Mesh_CreateStaticBufferObject(GL_ELEMENT_ARRAY_BUFFER_ARB, mesh->element3i, mesh->numtriangles * sizeof(unsigned int[3]), "shadowmesh");
+	}
 
 	// vertex buffer is several arrays and we put them in the same buffer
 	//
@@ -988,6 +1001,12 @@ shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh,
 			newmesh = Mod_ShadowMesh_ReAlloc(mempool, mesh, light, neighbors);
 			newmesh->next = firstmesh;
 			firstmesh = newmesh;
+			if (newmesh->element3s)
+			{
+				int i;
+				for (i = 0;i < newmesh->numtriangles*3;i++)
+					newmesh->element3s[i] = newmesh->element3i[i];
+			}
 			if (createvbo)
 				Mod_ShadowMesh_CreateVBOs(newmesh);
 		}
@@ -1050,8 +1069,10 @@ void Mod_ShadowMesh_Free(shadowmesh_t *mesh)
 	shadowmesh_t *nextmesh;
 	for (;mesh;mesh = nextmesh)
 	{
-		if (mesh->ebo)
-			R_Mesh_DestroyBufferObject(mesh->ebo);
+		if (mesh->ebo3i)
+			R_Mesh_DestroyBufferObject(mesh->ebo3i);
+		if (mesh->ebo3s)
+			R_Mesh_DestroyBufferObject(mesh->ebo3s);
 		if (mesh->vbo)
 			R_Mesh_DestroyBufferObject(mesh->vbo);
 		nextmesh = mesh->next;
@@ -2057,7 +2078,17 @@ static void Mod_BuildVBOs(void)
 
 	// element buffer is easy because it's just one array
 	if (loadmodel->surfmesh.num_triangles)
-		loadmodel->surfmesh.ebo = R_Mesh_CreateStaticBufferObject(GL_ELEMENT_ARRAY_BUFFER_ARB, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles * sizeof(int[3]), loadmodel->name);
+	{
+		if (loadmodel->surfmesh.data_element3s)
+		{
+			int i;
+			for (i = 0;i < loadmodel->surfmesh.num_triangles*3;i++)
+				loadmodel->surfmesh.data_element3s[i] = loadmodel->surfmesh.data_element3i[i];
+			loadmodel->surfmesh.ebo3s = R_Mesh_CreateStaticBufferObject(GL_ELEMENT_ARRAY_BUFFER_ARB, loadmodel->surfmesh.data_element3s, loadmodel->surfmesh.num_triangles * sizeof(unsigned short[3]), loadmodel->name);
+		}
+		else
+			loadmodel->surfmesh.ebo3i = R_Mesh_CreateStaticBufferObject(GL_ELEMENT_ARRAY_BUFFER_ARB, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles * sizeof(unsigned int[3]), loadmodel->name);
+	}
 
 	// vertex buffer is several arrays and we put them in the same buffer
 	//

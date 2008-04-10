@@ -6,9 +6,9 @@
 #define MAX_TEXTUREUNITS 64
 
 #define POLYGONELEMENTS_MAXPOINTS 258
-extern int polygonelements[(POLYGONELEMENTS_MAXPOINTS-2)*3];
+extern unsigned short polygonelements[(POLYGONELEMENTS_MAXPOINTS-2)*3];
 #define QUADELEMENTS_MAXQUADS 128
-extern int quadelements[QUADELEMENTS_MAXQUADS*6];
+extern unsigned short quadelements[QUADELEMENTS_MAXQUADS*6];
 
 void GL_SetupView_Orientation_Identity(void);
 void GL_SetupView_Orientation_FromEntity(const matrix4x4_t *matrix);
@@ -114,7 +114,7 @@ void R_Mesh_TextureState(const rmeshstate_t *m);
 void R_Mesh_ResetTextureState(void);
 
 // renders a mesh
-void R_Mesh_Draw(int firstvertex, int numvertices, int numtriangles, const int *elements, int bufferobject, size_t bufferoffset);
+void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtriangles, const int *element3i, const unsigned short *element3s, int bufferobject3i, int bufferobject3s);
 
 // saves a section of the rendered frame to a .tga or .jpg file
 qboolean SCR_ScreenShot(char *filename, unsigned char *buffer1, unsigned char *buffer2, unsigned char *buffer3, int x, int y, int width, int height, qboolean flipx, qboolean flipy, qboolean flipdiagonal, qboolean jpeg, qboolean gammacorrect);

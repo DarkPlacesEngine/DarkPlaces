@@ -29,7 +29,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 static int numexplosions = 0;
 
 static float explosiontexcoord2f[EXPLOSIONVERTS][2];
-static int explosiontris[EXPLOSIONTRIS][3];
+static unsigned short explosiontris[EXPLOSIONTRIS][3];
 static int explosionnoiseindex[EXPLOSIONVERTS];
 static vec3_t explosionpoint[EXPLOSIONVERTS];
 
@@ -210,7 +210,7 @@ static void R_DrawExplosion_TransparentCallback(const entity_render_t *ent, cons
 		// FIXME: fixed function path can't properly handle r_refdef.view.colorscale > 1
 		GL_Color(e->alpha * r_refdef.view.colorscale, e->alpha * r_refdef.view.colorscale, e->alpha * r_refdef.view.colorscale, 1);
 		GL_LockArrays(0, numverts);
-		R_Mesh_Draw(0, numverts, numtriangles, explosiontris[0], 0, 0);
+		R_Mesh_Draw(0, numverts, 0, numtriangles, NULL, explosiontris[0], 0, 0);
 		GL_LockArrays(0, 0);
 	}
 }

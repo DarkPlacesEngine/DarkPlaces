@@ -827,7 +827,7 @@ void DrawQ_Pic(float x, float y, cachepic_t *pic, float width, float height, flo
 	floats[3] = floats[6] = x + width;
 	floats[7] = floats[10] = y + height;
 
-	R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
+	R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
 }
 
 void DrawQ_Fill(float x, float y, float width, float height, float red, float green, float blue, float alpha, int flags)
@@ -848,7 +848,7 @@ void DrawQ_Fill(float x, float y, float width, float height, float red, float gr
 	floats[3] = floats[6] = x + width;
 	floats[7] = floats[10] = y + height;
 
-	R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
+	R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
 }
 
 // color tag printing
@@ -1039,7 +1039,7 @@ float DrawQ_String_Font(float startx, float starty, const char *text, size_t max
 			if (batchcount >= QUADELEMENTS_MAXQUADS)
 			{
 				GL_LockArrays(0, batchcount * 4);
-				R_Mesh_Draw(0, batchcount * 4, batchcount * 2, quadelements, 0, 0);
+				R_Mesh_Draw(0, batchcount * 4, 0, batchcount * 2, NULL, quadelements, 0, 0);
 				GL_LockArrays(0, 0);
 				batchcount = 0;
 				ac = color4f;
@@ -1052,7 +1052,7 @@ float DrawQ_String_Font(float startx, float starty, const char *text, size_t max
 	if (batchcount > 0)
 	{
 		GL_LockArrays(0, batchcount * 4);
-		R_Mesh_Draw(0, batchcount * 4, batchcount * 2, quadelements, 0, 0);
+		R_Mesh_Draw(0, batchcount * 4, 0, batchcount * 2, NULL, quadelements, 0, 0);
 		GL_LockArrays(0, 0);
 	}
 
@@ -1151,7 +1151,7 @@ void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height
 	floats[28] = r4;floats[29] = g4;floats[30] = b4;floats[31] = a4;
 	floats[32] = r3;floats[33] = g3;floats[34] = b3;floats[35] = a3;
 
-	R_Mesh_Draw(0, 4, 2, polygonelements, 0, 0);
+	R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
 }
 
 void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags)
@@ -1166,7 +1166,7 @@ void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags)
 	R_SetupGenericShader(mesh->texture != NULL);
 
 	GL_LockArrays(0, mesh->num_vertices);
-	R_Mesh_Draw(0, mesh->num_vertices, mesh->num_triangles, mesh->data_element3i, 0, 0);
+	R_Mesh_Draw(0, mesh->num_vertices, 0, mesh->num_triangles, NULL, mesh->data_element3s, 0, 0);
 	GL_LockArrays(0, 0);
 }
 
@@ -1195,7 +1195,7 @@ void DrawQ_Line (float width, float x1, float y1, float x2, float y2, float r, f
 	_DrawQ_ProcessDrawFlag(flags);
 
 	R_SetupGenericShader(false);
-	
+
 	CHECKGLERROR
 	qglLineWidth(width);CHECKGLERROR
 
@@ -1259,7 +1259,7 @@ void R_DrawGamma(void)
 			while (c[0] >= 1.01f || c[1] >= 1.01f || c[2] >= 1.01f)
 			{
 				GL_Color(bound(0, c[0] - 1, 1), bound(0, c[1] - 1, 1), bound(0, c[2] - 1, 1), 1);
-				R_Mesh_Draw(0, 3, 1, polygonelements, 0, 0);
+				R_Mesh_Draw(0, 3, 0, 1, NULL, polygonelements, 0, 0);
 				VectorScale(c, 0.5, c);
 			}
 		}
@@ -1275,7 +1275,7 @@ void R_DrawGamma(void)
 		{
 			GL_BlendFunc(GL_ONE, GL_ONE);
 			GL_Color(c[0], c[1], c[2], 1);
-			R_Mesh_Draw(0, 3, 1, polygonelements, 0, 0);
+			R_Mesh_Draw(0, 3, 0, 1, NULL, polygonelements, 0, 0);
 		}
 	}
 }
