@@ -2777,6 +2777,7 @@ video_resolution_t video_resolutions[] =
 {"WideScreen 16x9"           ,  683, 384, 683, 384, 1     },
 {"WideScreen 16x9"           ,  960, 540, 640, 360, 1     },
 {"WideScreen 16x9"           , 1280, 720, 640, 360, 1     },
+{"WideScreen 16x9"           , 1360, 768, 680, 384, 1     },
 {"WideScreen 16x9"           , 1366, 768, 683, 384, 1     },
 {"WideScreen 16x9"           , 1920,1080, 640, 360, 1     },
 {"WideScreen 16x9"           , 2560,1440, 640, 360, 1     },
