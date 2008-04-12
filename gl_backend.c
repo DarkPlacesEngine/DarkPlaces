@@ -6,6 +6,7 @@ cvar_t gl_mesh_drawrangeelements = {0, "gl_mesh_drawrangeelements", "1", "use gl
 cvar_t gl_mesh_testarrayelement = {0, "gl_mesh_testarrayelement", "0", "use glBegin(GL_TRIANGLES);glArrayElement();glEnd(); primitives instead of glDrawElements (useful to test for driver bugs with glDrawElements)"};
 cvar_t gl_mesh_testmanualfeeding = {0, "gl_mesh_testmanualfeeding", "0", "use glBegin(GL_TRIANGLES);glTexCoord2f();glVertex3f();glEnd(); primitives instead of glDrawElements (useful to test for driver bugs with glDrawElements)"};
 cvar_t gl_mesh_prefer_short_elements = {0, "gl_mesh_prefer_short_elements", "1", "use GL_UNSIGNED_SHORT element arrays instead of GL_UNSIGNED_INT"};
+cvar_t gl_workaround_mac_texmatrix = {0, "gl_workaround_mac_texmatrix", "0", "if set to 1 this uses glLoadMatrixd followed by glLoadIdentity to clear a texture matrix (normally glLoadIdentity is sufficient by itself), if set to 2 it uses glLoadMatrixd without glLoadIdentity"};
 cvar_t gl_paranoid = {0, "gl_paranoid", "0", "enables OpenGL error checking and other tests"};
 cvar_t gl_printcheckerror = {0, "gl_printcheckerror", "0", "prints all OpenGL error checks, useful to identify location of driver crashes"};
 
@@ -255,6 +256,7 @@ void gl_backend_init(void)
 	Cvar_RegisterVariable(&gl_vbo);
 	Cvar_RegisterVariable(&gl_paranoid);
 	Cvar_RegisterVariable(&gl_printcheckerror);
+	Cvar_RegisterVariable(&gl_workaround_mac_texmatrix);
 #ifdef NORENDER
 	Cvar_SetValue("r_render", 0);
 #endif
@@ -1093,8 +1095,13 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 		Con_Printf("R_Mesh_Draw(%d, %d, %d, %d, %8p, %8p, %i, %i);\n", firstvertex, numvertices, firsttriangle, numtriangles, element3i, element3s, bufferobject3i, bufferobject3s);
 		return;
 	}
-	if (!gl_mesh_prefer_short_elements.integer && element3i)
-		element3s = NULL;
+	if (!gl_mesh_prefer_short_elements.integer)
+	{
+		if (element3i)
+			element3s = NULL;
+		if (bufferobject3i)
+			bufferobject3s = 0;
+	}
 	if (element3i)
 		element3i += firsttriangle * 3;
 	if (element3s)
@@ -1947,6 +1954,8 @@ void R_Mesh_TexBindCubeMap(unsigned int unitnum, int texnum)
 	}
 }
 
+static const double gl_identitymatrix[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
+
 void R_Mesh_TexMatrix(unsigned int unitnum, const matrix4x4_t *matrix)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
@@ -1978,7 +1987,16 @@ void R_Mesh_TexMatrix(unsigned int unitnum, const matrix4x4_t *matrix)
 			GL_ActiveTexture(unitnum);
 			GL_ClientActiveTexture(unitnum);
 			qglMatrixMode(GL_TEXTURE);CHECKGLERROR
-			qglLoadIdentity();CHECKGLERROR
+			if (gl_workaround_mac_texmatrix.integer)
+			{
+				qglLoadMatrixd(gl_identitymatrix);CHECKGLERROR
+				if (gl_workaround_mac_texmatrix.integer == 2)
+					qglLoadIdentity();CHECKGLERROR
+			}
+			else
+			{
+				qglLoadIdentity();CHECKGLERROR
+			}
 			qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
 		}
 	}
