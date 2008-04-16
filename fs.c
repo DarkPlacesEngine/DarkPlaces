@@ -318,6 +318,15 @@ static dllfunction_t zlibfuncs[] =
 // Handle for Zlib DLL
 static dllhandle_t zlib_dll = NULL;
 
+#ifdef WIN32
+static HRESULT (WINAPI *qSHGetFolderPath) (HWND hwndOwner, int nFolder, HANDLE hToken, DWORD dwFlags, LPTSTR pszPath);
+static dllfunction_t shfolderfuncs[] =
+{
+	{"SHGetFolderPathA", (void **) &qSHGetFolderPath},
+	{NULL, NULL}
+};
+static dllhandle_t shfolder_dll = NULL;
+#endif
 
 /*
 ====================
@@ -1014,9 +1023,8 @@ void FS_AddGameHierarchy (const char *dir)
 	char userdir[MAX_QPATH];
 #ifdef WIN32
 	TCHAR mydocsdir[MAX_PATH + 1];
-#else
-	const char *homedir;
 #endif
+	const char *homedir;
 
 	// Add the common game directory
 	FS_AddGameDirectory (va("%s%s/", fs_basedir, dir));
@@ -1025,13 +1033,35 @@ void FS_AddGameHierarchy (const char *dir)
 
 	// Add the personal game directory
 #ifdef WIN32
-	if(SHGetFolderPath(NULL, CSIDL_PERSONAL, NULL, 0, mydocsdir) == S_OK)
+	if(qSHGetFolderPath && (qSHGetFolderPath(NULL, CSIDL_PERSONAL, NULL, 0, mydocsdir) == S_OK))
+	{
 		dpsnprintf(userdir, sizeof(userdir), "%s/My Games/%s/", mydocsdir, gameuserdirname);
+		Con_DPrintf("Obtained personal directory %s from SHGetFolderPath\n", userdir);
+	}
+	else
+	{
+		// use the environment
+		homedir = getenv ("USERPROFILE");
+		if(homedir)
+		{
+			dpsnprintf(userdir, sizeof(userdir), "%s/My Documents/My Games/%s/", homedir, gameuserdirname);
+			Con_DPrintf("Obtained personal directory %s from environment\n", userdir);
+		}
+		else
+			*userdir = 0; // just to make sure it hasn't been written to by SHGetFolderPath returning failure
+	}
+
+	if(!*userdir)
+		Con_DPrintf("Could not obtain home directory; not supporting -mygames\n");
 #else
 	homedir = getenv ("HOME");
 	if(homedir)
 		dpsnprintf(userdir, sizeof(userdir), "%s/.%s/", homedir, gameuserdirname);
+
+	if(!*userdir)
+		Con_DPrintf("Could not obtain home directory; assuming -nohome\n");
 #endif
+
 
 #ifdef WIN32
 	if(!COM_CheckParm("-mygames"))
@@ -1341,6 +1371,16 @@ void FS_Init (void)
 {
 	int i;
 
+#ifdef WIN32
+	const char* dllnames [] =
+	{
+		"shfolder.dll",  // IE 4, or Win NT and higher
+		NULL
+	};
+	Sys_LoadLibrary(dllnames, &shfolder_dll, shfolderfuncs);
+	// don't care for the result; if it fails, %USERPROFILE% will be used instead
+#endif
+
 	fs_mempool = Mem_AllocPool("file management", 0, NULL);
 
 	strlcpy(fs_gamedir, "", sizeof(fs_gamedir));
@@ -1438,6 +1478,10 @@ void FS_Shutdown (void)
 	//  by the OS anyway)
 	FS_ClearSearchPath();
 	Mem_FreePool (&fs_mempool);
+
+#ifdef WIN32
+	Sys_UnloadLibrary (&shfolder_dll);
+#endif
 }
 
 /*
