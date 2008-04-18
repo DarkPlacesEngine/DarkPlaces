@@ -5680,7 +5680,7 @@ static void RSurf_DrawBatch_GL11_VertexColor(int texturenumsurfaces, msurface_t 
 	int i;
 	float *c;
 	// TODO: optimize
-	if (texturesurfacelist[0]->lightmapinfo && texturesurfacelist[0]->lightmapinfo->stainsamples)
+	if (texturesurfacelist[0]->lightmapinfo)
 	{
 		// generate color arrays for the surfaces in this list
 		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)

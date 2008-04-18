@@ -2410,11 +2410,6 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 			ssize = (surface->lightmapinfo->extents[0] >> 4) + 1;
 			tsize = (surface->lightmapinfo->extents[1] >> 4) + 1;
 
-			// stainmap for permanent marks on walls
-			surface->lightmapinfo->stainsamples = (unsigned char *)Mem_Alloc(loadmodel->mempool, ssize * tsize * 3);
-			// clear to white
-			memset(surface->lightmapinfo->stainsamples, 255, ssize * tsize * 3);
-
 			if (!lightmaptexture || !Mod_Q1BSP_AllocLightmapBlock(&allocState, lightmapsize, lightmapsize, ssize, tsize, &lightmapx, &lightmapy))
 			{
 				// allocate a texture pool if we need it
@@ -2450,6 +2445,30 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 				(loadmodel->surfmesh.data_lightmapoffsets + surface->num_firstvertex)[i] = (bound(0, iv, tmax) * ssize + bound(0, iu, smax)) * 3;
 			}
 
+		}
+
+		if (cl_stainmaps.integer)
+		{
+			// allocate stainmaps for permanent marks on walls
+			int stainmapsize = 0;
+			unsigned char *stainsamples = NULL;
+			for (surfacenum = 0, surface = loadmodel->data_surfaces;surfacenum < count;surfacenum++, surface++)
+			{
+				ssize = (surface->lightmapinfo->extents[0] >> 4) + 1;
+				tsize = (surface->lightmapinfo->extents[1] >> 4) + 1;
+				stainmapsize += ssize * tsize * 3;
+			}
+			// allocate and clear to white
+			stainsamples = (unsigned char *)Mem_Alloc(loadmodel->mempool, stainmapsize);
+			memset(stainsamples, 255, stainmapsize);
+			// assign pointers
+			for (surfacenum = 0, surface = loadmodel->data_surfaces;surfacenum < count;surfacenum++, surface++)
+			{
+				ssize = (surface->lightmapinfo->extents[0] >> 4) + 1;
+				tsize = (surface->lightmapinfo->extents[1] >> 4) + 1;
+				surface->lightmapinfo->stainsamples = stainsamples;
+				stainsamples += ssize * tsize * 3;
+			}
 		}
 	}
 
