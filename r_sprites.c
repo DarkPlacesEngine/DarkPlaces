@@ -202,7 +202,7 @@ void R_RotateSprite(const mspriteframe_t *frame, vec3_t origin, vec3_t left, vec
 void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
 	int i;
-	model_t *model = ent->model;
+	dp_model_t *model = ent->model;
 	vec3_t left, up, org, mforward, mleft, mup, middle;
 	float scale, dx, dy, hud_vs_screen;
 	int edge = 0;

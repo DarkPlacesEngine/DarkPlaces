@@ -247,7 +247,7 @@ typedef struct entity_render_s
 	float scale;
 
 	// NULL = no model
-	model_t *model;
+	dp_model_t *model;
 	// number of the entity represents, or 0 for non-network entities
 	int entitynumber;
 	// literal colormap colors for renderer, if both are 0 0 0 it is not colormapped
@@ -671,7 +671,7 @@ typedef struct decal_s
 	// fields not used by rendering: (36 bytes in 32bit, 40 bytes in 64bit)
 	float			time2; // used for decal fade
 	unsigned int	owner; // decal stuck to this entity
-	model_t			*ownermodel; // model the decal is stuck to (used to make sure the entity is still alive)
+	dp_model_t			*ownermodel; // model the decal is stuck to (used to make sure the entity is still alive)
 	vec3_t			relativeorigin; // decal at this location in entity's coordinate space
 	vec3_t			relativenormal; // decal oriented this way relative to entity's coordinate space
 }
@@ -879,10 +879,10 @@ typedef struct client_state_s
 	int gametype;
 
 	// models and sounds used by engine code (particularly cl_parse.c)
-	model_t *model_bolt;
-	model_t *model_bolt2;
-	model_t *model_bolt3;
-	model_t *model_beam;
+	dp_model_t *model_bolt;
+	dp_model_t *model_bolt2;
+	dp_model_t *model_bolt3;
+	dp_model_t *model_beam;
 	sfx_t *sfx_wizhit;
 	sfx_t *sfx_knighthit;
 	sfx_t *sfx_tink1;
@@ -1181,7 +1181,7 @@ void CL_ValidateState(entity_state_t *s);
 void CL_MoveLerpEntityStates(entity_t *ent);
 void CL_LerpUpdate(entity_t *e);
 void CL_ParseTEnt (void);
-void CL_NewBeam (int ent, vec3_t start, vec3_t end, model_t *m, int lightning);
+void CL_NewBeam (int ent, vec3_t start, vec3_t end, dp_model_t *m, int lightning);
 void CL_RelinkBeams (void);
 void CL_Beam_CalculatePositions (const beam_t *b, vec3_t start, vec3_t end);
 void CL_ClientMovement_Replay(void);
@@ -1459,7 +1459,7 @@ typedef struct r_refdef_scene_s {
 	entity_render_t *worldentity;
 
 	// same as worldentity->model
-	model_t *worldmodel;
+	dp_model_t *worldmodel;
 
 	// renderable entities (excluding world)
 	entity_render_t **entities;

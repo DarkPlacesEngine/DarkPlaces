@@ -77,7 +77,7 @@ void VM_CL_setmodel (void)
 {
 	prvm_edict_t	*e;
 	const char		*m;
-	model_t *mod;
+	dp_model_t *mod;
 	int				i;
 
 	VM_SAFEPARMCOUNT(2, VM_CL_setmodel);
@@ -363,7 +363,7 @@ void VM_CL_precache_model (void)
 {
 	const char	*name;
 	int			i;
-	model_t		*m;
+	dp_model_t		*m;
 
 	VM_SAFEPARMCOUNT(1, VM_CL_precache_model);
 
@@ -384,7 +384,7 @@ void VM_CL_precache_model (void)
 		{
 			if (!cl.csqc_model_precache[i])
 			{
-				cl.csqc_model_precache[i] = (model_t*)m;
+				cl.csqc_model_precache[i] = (dp_model_t*)m;
 				PRVM_G_FLOAT(OFS_RETURN) = -(i+1);
 				return;
 			}
@@ -1043,7 +1043,7 @@ static void VM_CL_setmodelindex (void)
 //#334 string(float mdlindex) modelnameforindex (EXT_CSQC)
 static void VM_CL_modelnameforindex (void)
 {
-	model_t *model;
+	dp_model_t *model;
 
 	VM_SAFEPARMCOUNT(1, VM_CL_modelnameforindex);
 
@@ -1808,9 +1808,9 @@ static void VM_CL_te_flamejet (void)
 //====================================================================
 //DP_QC_GETSURFACE
 
-extern void clippointtosurface(model_t *model, msurface_t *surface, vec3_t p, vec3_t out);
+extern void clippointtosurface(dp_model_t *model, msurface_t *surface, vec3_t p, vec3_t out);
 
-static msurface_t *cl_getsurface(model_t *model, int surfacenum)
+static msurface_t *cl_getsurface(dp_model_t *model, int surfacenum)
 {
 	if (surfacenum < 0 || surfacenum >= model->nummodelsurfaces)
 		return NULL;
@@ -1820,7 +1820,7 @@ static msurface_t *cl_getsurface(model_t *model, int surfacenum)
 // #434 float(entity e, float s) getsurfacenumpoints
 static void VM_CL_getsurfacenumpoints(void)
 {
-	model_t *model;
+	dp_model_t *model;
 	msurface_t *surface;
 	VM_SAFEPARMCOUNT(2, VM_CL_getsurfacenumpoints);
 	// return 0 if no such surface
@@ -1838,7 +1838,7 @@ static void VM_CL_getsurfacenumpoints(void)
 static void VM_CL_getsurfacepoint(void)
 {
 	prvm_edict_t *ed;
-	model_t *model;
+	dp_model_t *model;
 	msurface_t *surface;
 	int pointnum;
 	VM_SAFEPARMCOUNT(3, VM_CL_getsurfacenumpoints);
@@ -1865,7 +1865,7 @@ static void VM_CL_getsurfacepoint(void)
 static void VM_CL_getsurfacepointattribute(void)
 {
 	prvm_edict_t *ed;
-	model_t *model;
+	dp_model_t *model;
 	msurface_t *surface;
 	int pointnum;
 	int attributetype;
@@ -1931,7 +1931,7 @@ static void VM_CL_getsurfacepointattribute(void)
 // #436 vector(entity e, float s) getsurfacenormal
 static void VM_CL_getsurfacenormal(void)
 {
-	model_t *model;
+	dp_model_t *model;
 	msurface_t *surface;
 	vec3_t normal;
 	VM_SAFEPARMCOUNT(2, VM_CL_getsurfacenormal);
@@ -1950,7 +1950,7 @@ static void VM_CL_getsurfacenormal(void)
 // #437 string(entity e, float s) getsurfacetexture
 static void VM_CL_getsurfacetexture(void)
 {
-	model_t *model;
+	dp_model_t *model;
 	msurface_t *surface;
 	VM_SAFEPARMCOUNT(2, VM_CL_getsurfacetexture);
 	PRVM_G_INT(OFS_RETURN) = OFS_NULL;
@@ -1966,7 +1966,7 @@ static void VM_CL_getsurfacenearpoint(void)
 	vec3_t clipped, p;
 	vec_t dist, bestdist;
 	prvm_edict_t *ed;
-	model_t *model = NULL;
+	dp_model_t *model = NULL;
 	msurface_t *surface;
 	vec_t *point;
 	VM_SAFEPARMCOUNT(2, VM_CL_getsurfacenearpoint);
@@ -2009,7 +2009,7 @@ static void VM_CL_getsurfacenearpoint(void)
 static void VM_CL_getsurfaceclippedpoint(void)
 {
 	prvm_edict_t *ed;
-	model_t *model;
+	dp_model_t *model;
 	msurface_t *surface;
 	vec3_t p, out;
 	VM_SAFEPARMCOUNT(3, VM_CL_getsurfaceclippedpoint);
@@ -2032,7 +2032,7 @@ void VM_CL_setattachment (void)
 	const char *tagname;
 	prvm_eval_t *v;
 	int modelindex;
-	model_t *model;
+	dp_model_t *model;
 	VM_SAFEPARMCOUNT(3, VM_CL_setattachment);
 
 	e = PRVM_G_EDICT(OFS_PARM0);
@@ -2080,7 +2080,7 @@ void VM_CL_setattachment (void)
 
 int CL_GetTagIndex (prvm_edict_t *e, const char *tagname)
 {
-	model_t *model = CL_GetModelFromEdict(e);
+	dp_model_t *model = CL_GetModelFromEdict(e);
 	if (model)
 		return Mod_Alias_GetTagIndexForName(model, (int)e->fields.client->skin, tagname);
 	else
@@ -2103,7 +2103,7 @@ int CL_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 	int reqframe, attachloop;
 	matrix4x4_t entitymatrix, tagmatrix, attachmatrix;
 	prvm_edict_t *attachent;
-	model_t *model;
+	dp_model_t *model;
 	float scale;
 
 	*out = identitymatrix; // warnings and errors return identical matrix

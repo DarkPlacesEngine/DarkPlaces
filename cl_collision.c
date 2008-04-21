@@ -87,7 +87,7 @@ void CL_FindNonSolidLocation(const vec3_t in, vec3_t out, vec_t radius)
 		cl.worldmodel->brush.FindNonSolidLocation(cl.worldmodel, in, out, radius);
 }
 
-model_t *CL_GetModelByIndex(int modelindex)
+dp_model_t *CL_GetModelByIndex(int modelindex)
 {
 	if(!modelindex)
 		return NULL;
@@ -105,7 +105,7 @@ model_t *CL_GetModelByIndex(int modelindex)
 	return NULL;
 }
 
-model_t *CL_GetModelFromEdict(prvm_edict_t *ed)
+dp_model_t *CL_GetModelFromEdict(prvm_edict_t *ed)
 {
 	if (!ed || ed->priv.server->free)
 		return NULL;
@@ -126,7 +126,7 @@ void CL_LinkEdict(prvm_edict_t *ent)
 
 	if (ent->fields.client->solid == SOLID_BSP)
 	{
-		model_t *model = CL_GetModelByIndex( (int)ent->fields.client->modelindex );
+		dp_model_t *model = CL_GetModelByIndex( (int)ent->fields.client->modelindex );
 		if (model == NULL)
 		{
 			Con_Printf("edict %i: SOLID_BSP with invalid modelindex!\n", PRVM_NUM_FOR_EDICT(ent));
@@ -226,7 +226,7 @@ trace_t CL_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	// matrices to transform into/out of other entity's space
 	matrix4x4_t matrix, imatrix;
 	// model of other entity
-	model_t *model;
+	dp_model_t *model;
 	// list of entities to test for collisions
 	int numtouchedicts;
 	prvm_edict_t *touchedicts[MAX_EDICTS];

@@ -127,7 +127,7 @@ loc0:
 	goto loc0;
 }
 
-int Portal_CheckPolygon(model_t *model, vec3_t eye, float *polypoints, int numpoints)
+int Portal_CheckPolygon(dp_model_t *model, vec3_t eye, float *polypoints, int numpoints)
 {
 	int i, prev, returnvalue;
 	mleaf_t *eyeleaf;
@@ -204,7 +204,7 @@ int Portal_CheckPolygon(model_t *model, vec3_t eye, float *polypoints, int numpo
 	}\
 }
 
-int Portal_CheckBox(model_t *model, vec3_t eye, vec3_t a, vec3_t b)
+int Portal_CheckBox(dp_model_t *model, vec3_t eye, vec3_t a, vec3_t b)
 {
 	if (eye[0] >= (a[0] - 1.0f) && eye[0] < (b[0] + 1.0f)
 	 && eye[1] >= (a[1] - 1.0f) && eye[1] < (b[1] + 1.0f)
@@ -277,7 +277,7 @@ typedef struct portalrecursioninfo_s
 	unsigned char *leafpvs;
 	unsigned char *shadowtrispvs;
 	unsigned char *lighttrispvs;
-	model_t *model;
+	dp_model_t *model;
 	vec3_t eye;
 	float *updateleafsmins;
 	float *updateleafsmaxs;
@@ -411,7 +411,7 @@ static void Portal_RecursiveFindLeafForFlow(portalrecursioninfo_t *info, mnode_t
 	}
 }
 
-void Portal_Visibility(model_t *model, const vec3_t eye, int *leaflist, unsigned char *leafpvs, int *numleafspointer, int *surfacelist, unsigned char *surfacepvs, int *numsurfacespointer, const mplane_t *frustumplanes, int numfrustumplanes, int exact, const float *boxmins, const float *boxmaxs, float *updateleafsmins, float *updateleafsmaxs, unsigned char *shadowtrispvs, unsigned char *lighttrispvs)
+void Portal_Visibility(dp_model_t *model, const vec3_t eye, int *leaflist, unsigned char *leafpvs, int *numleafspointer, int *surfacelist, unsigned char *surfacepvs, int *numsurfacespointer, const mplane_t *frustumplanes, int numfrustumplanes, int exact, const float *boxmins, const float *boxmaxs, float *updateleafsmins, float *updateleafsmaxs, unsigned char *shadowtrispvs, unsigned char *lighttrispvs)
 {
 	int i;
 	portalrecursioninfo_t info;

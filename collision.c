@@ -1465,7 +1465,7 @@ void Collision_BoundingBoxOfBrushTraceSegment(const colbrushf_t *start, const co
 
 //===========================================
 
-void Collision_ClipToGenericEntity(trace_t *trace, model_t *model, int frame, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask)
+void Collision_ClipToGenericEntity(trace_t *trace, dp_model_t *model, int frame, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask)
 {
 	float tempnormal[3], starttransformed[3], endtransformed[3];
 
@@ -1495,7 +1495,7 @@ void Collision_ClipToGenericEntity(trace_t *trace, model_t *model, int frame, co
 	}
 }
 
-void Collision_ClipToWorld(trace_t *trace, model_t *model, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontents)
+void Collision_ClipToWorld(trace_t *trace, dp_model_t *model, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontents)
 {
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = trace->realfraction = 1;

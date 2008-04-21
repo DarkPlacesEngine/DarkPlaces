@@ -28,7 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 cvar_t r_mipskins = {CVAR_SAVE, "r_mipskins", "0", "mipmaps model skins so they render faster in the distance and do not display noise artifacts, can cause discoloration of skins if they contain undesirable border colors"};
 
-model_t *loadmodel;
+dp_model_t *loadmodel;
 
 static mempool_t *mod_mempool;
 static memexpandablearray_t models;
@@ -52,7 +52,7 @@ static void mod_start(void)
 {
 	int i;
 	int nummodels = Mem_ExpandableArray_IndexRange(&models);
-	model_t *mod;
+	dp_model_t *mod;
 
 	// parse the Q3 shader files
 	Mod_LoadQ3Shaders();
@@ -67,7 +67,7 @@ static void mod_shutdown(void)
 {
 	int i;
 	int nummodels = Mem_ExpandableArray_IndexRange(&models);
-	model_t *mod;
+	dp_model_t *mod;
 
 	for (i = 0;i < nummodels;i++)
 		if ((mod = Mem_ExpandableArray_RecordAtIndex(&models, i)) && (mod->loaded || mod->mempool))
@@ -81,7 +81,7 @@ static void mod_newmap(void)
 	msurface_t *surface;
 	int i, j, k, surfacenum, ssize, tsize;
 	int nummodels = Mem_ExpandableArray_IndexRange(&models);
-	model_t *mod;
+	dp_model_t *mod;
 
 	R_SkinFrame_PrepareForPurge();
 	for (i = 0;i < nummodels;i++)
@@ -131,7 +131,7 @@ static void Mod_BuildVBOs(void);
 void Mod_Init (void)
 {
 	mod_mempool = Mem_AllocPool("modelinfo", 0, NULL);
-	Mem_ExpandableArray_NewArray(&models, mod_mempool, sizeof(model_t), 16);
+	Mem_ExpandableArray_NewArray(&models, mod_mempool, sizeof(dp_model_t), 16);
 
 	Mod_BrushInit();
 	Mod_AliasInit();
@@ -147,7 +147,7 @@ void Mod_RenderInit(void)
 	R_RegisterModule("Models", mod_start, mod_shutdown, mod_newmap);
 }
 
-void Mod_UnloadModel (model_t *mod)
+void Mod_UnloadModel (dp_model_t *mod)
 {
 	char name[MAX_QPATH];
 	qboolean isworldmodel;
@@ -169,7 +169,7 @@ void Mod_UnloadModel (model_t *mod)
 	R_FreeTexturePool(&mod->texturepool);
 	Mem_FreePool(&mod->mempool);
 	// clear the struct to make it available
-	memset(mod, 0, sizeof(model_t));
+	memset(mod, 0, sizeof(dp_model_t));
 	// restore the fields we want to preserve
 	strlcpy(mod->name, name, sizeof(mod->name));
 	mod->isworldmodel = isworldmodel;
@@ -184,7 +184,7 @@ Mod_LoadModel
 Loads a model
 ==================
 */
-model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, qboolean isworldmodel)
+dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk, qboolean isworldmodel)
 {
 	int num;
 	unsigned int crc;
@@ -306,7 +306,7 @@ void Mod_ClearUsed(void)
 {
 	int i;
 	int nummodels = Mem_ExpandableArray_IndexRange(&models);
-	model_t *mod;
+	dp_model_t *mod;
 	for (i = 0;i < nummodels;i++)
 		if ((mod = Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0])
 			mod->used = false;
@@ -316,7 +316,7 @@ void Mod_PurgeUnused(void)
 {
 	int i;
 	int nummodels = Mem_ExpandableArray_IndexRange(&models);
-	model_t *mod;
+	dp_model_t *mod;
 	for (i = 0;i < nummodels;i++)
 	{
 		if ((mod = Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0] && !mod->used)
@@ -328,11 +328,11 @@ void Mod_PurgeUnused(void)
 }
 
 // only used during loading!
-void Mod_RemoveStaleWorldModels(model_t *skip)
+void Mod_RemoveStaleWorldModels(dp_model_t *skip)
 {
 	int i;
 	int nummodels = Mem_ExpandableArray_IndexRange(&models);
-	model_t *mod;
+	dp_model_t *mod;
 	for (i = 0;i < nummodels;i++)
 	{
 		if ((mod = Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->isworldmodel && mod->loaded && skip != mod)
@@ -350,11 +350,11 @@ Mod_FindName
 
 ==================
 */
-model_t *Mod_FindName(const char *name)
+dp_model_t *Mod_FindName(const char *name)
 {
 	int i;
 	int nummodels = Mem_ExpandableArray_IndexRange(&models);
-	model_t *mod;
+	dp_model_t *mod;
 
 	if (!name[0])
 		Host_Error ("Mod_ForName: NULL name");
@@ -384,9 +384,9 @@ Mod_ForName
 Loads in a model for the given name
 ==================
 */
-model_t *Mod_ForName(const char *name, qboolean crash, qboolean checkdisk, qboolean isworldmodel)
+dp_model_t *Mod_ForName(const char *name, qboolean crash, qboolean checkdisk, qboolean isworldmodel)
 {
-	model_t *model;
+	dp_model_t *model;
 	model = Mod_FindName(name);
 	if (model->name[0] != '*' && (!model->loaded || checkdisk))
 		Mod_LoadModel(model, crash, checkdisk, isworldmodel);
@@ -404,7 +404,7 @@ void Mod_Reload(void)
 {
 	int i;
 	int nummodels = Mem_ExpandableArray_IndexRange(&models);
-	model_t *mod;
+	dp_model_t *mod;
 	for (i = 0;i < nummodels;i++)
 		if ((mod = Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0] && mod->name[0] != '*' && mod->used)
 			Mod_LoadModel(mod, true, true, mod->isworldmodel);
@@ -424,7 +424,7 @@ static void Mod_Print(void)
 {
 	int i;
 	int nummodels = Mem_ExpandableArray_IndexRange(&models);
-	model_t *mod;
+	dp_model_t *mod;
 
 	Con_Print("Loaded models:\n");
 	for (i = 0;i < nummodels;i++)

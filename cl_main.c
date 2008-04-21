@@ -513,7 +513,7 @@ void CL_UpdateRenderEntity(entity_render_t *ent)
 {
 	vec3_t org;
 	vec_t scale;
-	model_t *model = ent->model;
+	dp_model_t *model = ent->model;
 	// update the inverse matrix for the renderer
 	Matrix4x4_Invert_Simple(&ent->inversematrix, &ent->matrix);
 	// update the animation blend state
@@ -864,7 +864,7 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 	int j, k, l, frame;
 	float origin[3], angles[3], delta[3], lerp, d;
 	entity_t *t;
-	model_t *model;
+	dp_model_t *model;
 	//entity_persistent_t *p = &e->persistent;
 	//entity_render_t *r = &e->render;
 	// skip inactive entities and world

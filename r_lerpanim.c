@@ -10,7 +10,7 @@ void R_LerpAnimation(entity_render_t *r)
 	double sublerp, lerp, d;
 	animscene_t *scene;
 	frameblend_t *blend;
-	model_t *model = r->model;
+	dp_model_t *model = r->model;
 
 	blend = r->frameblend;
 	blend[0].frame = blend[1].frame = blend[2].frame = blend[3].frame = 0;

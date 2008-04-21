@@ -38,7 +38,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #ifdef SUNOS
 #include <sys/file.h>		// Needed for FNDELAY
-# define model_t dp_model_t // Workaround conflict with /usr/include/sys/model.h
 #endif
 
 //============================================================================

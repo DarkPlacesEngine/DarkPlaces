@@ -107,7 +107,7 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	// matrices to transform into/out of other entity's space
 	matrix4x4_t matrix, imatrix;
 	// model of other entity
-	model_t *model;
+	dp_model_t *model;
 	// list of entities to test for collisions
 	int numtouchedicts;
 	prvm_edict_t *touchedicts[MAX_EDICTS];
@@ -264,7 +264,7 @@ int SV_PointSuperContents(const vec3_t point)
 	// matrices to transform into/out of other entity's space
 	matrix4x4_t matrix, imatrix;
 	// model of other entity
-	model_t *model;
+	dp_model_t *model;
 	unsigned int modelindex;
 	int frame;
 	// list of entities to test for collisions
@@ -378,7 +378,7 @@ SV_LinkEdict
 */
 void SV_LinkEdict (prvm_edict_t *ent, qboolean touch_triggers)
 {
-	model_t *model;
+	dp_model_t *model;
 	vec3_t mins, maxs;
 
 	if (ent == prog->edicts)
@@ -1062,7 +1062,7 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 	int num_moved;
 	int numcheckentities;
 	static prvm_edict_t *checkentities[MAX_EDICTS];
-	model_t *pushermodel;
+	dp_model_t *pushermodel;
 	trace_t trace;
 	matrix4x4_t pusherfinalmatrix, pusherfinalimatrix;
 	unsigned short moved_edicts[MAX_EDICTS];

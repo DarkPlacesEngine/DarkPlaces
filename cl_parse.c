@@ -1636,7 +1636,7 @@ void CL_ParseServerInfo (void)
 
 void CL_ValidateState(entity_state_t *s)
 {
-	model_t *model;
+	dp_model_t *model;
 
 	if (!s->active)
 		return;
@@ -1976,7 +1976,7 @@ void CL_ParseEffect2 (void)
 	CL_Effect(org, modelindex, startframe, framecount, framerate);
 }
 
-void CL_NewBeam (int ent, vec3_t start, vec3_t end, model_t *m, int lightning)
+void CL_NewBeam (int ent, vec3_t start, vec3_t end, dp_model_t *m, int lightning)
 {
 	int i;
 	beam_t *b = NULL;
@@ -2015,7 +2015,7 @@ void CL_NewBeam (int ent, vec3_t start, vec3_t end, model_t *m, int lightning)
 		Con_Print("beam list overflow!\n");
 }
 
-void CL_ParseBeam (model_t *m, int lightning)
+void CL_ParseBeam (dp_model_t *m, int lightning)
 {
 	int ent;
 	vec3_t start, end;
@@ -3562,7 +3562,7 @@ void CL_ParseServerMessage(void)
 					{
 						if (i >= 1 && i < MAX_MODELS)
 						{
-							model_t *model = Mod_ForName(s, false, false, i == 1);
+							dp_model_t *model = Mod_ForName(s, false, false, i == 1);
 							if (!model)
 								Con_DPrintf("svc_precache: Mod_ForName(\"%s\") failed\n", s);
 							cl.model_precache[i] = model;
