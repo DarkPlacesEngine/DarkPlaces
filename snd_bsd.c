@@ -91,8 +91,11 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 #	endif
 #endif
 
-	if (ioctl (audio_fd, AUDIO_SETINFO, &info) == 0)
-		break;
+	if (ioctl (audio_fd, AUDIO_SETINFO, &info) != 0)
+	{
+		Con_Printf("Can't set up the sound device (%s)\n", snddev);
+		return false;
+	}
 
 	// TODO: check the parameters with AUDIO_GETINFO
 	// TODO: check AUDIO_ENCODINGFLAG_EMULATED with AUDIO_GETENC
@@ -194,7 +197,7 @@ unsigned int SndSys_GetSoundTime (void)
 	if (ioctl (audio_fd, AUDIO_GETINFO, &info) < 0)
 	{
 		Con_Print("Error: can't get audio info\n");
-		SNDDMA_Shutdown ();
+		SndSys_Shutdown ();
 		return 0;
 	}
 

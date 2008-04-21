@@ -89,7 +89,6 @@ Atom wm_delete_window_atom;
 
 static qboolean mouse_avail = true;
 static qboolean vid_usingmouse = false;
-static qboolean vid_usingdgamouse = false;
 static qboolean vid_usingvsync = false;
 static qboolean vid_usevsync = false;
 static qboolean vid_x11_hardwaregammasupported = false;
@@ -100,6 +99,7 @@ static int p_mouse_x, p_mouse_y;
 
 #if !defined(__APPLE__) && !defined(SUNOS)
 cvar_t vid_dgamouse = {CVAR_SAVE, "vid_dgamouse", "1", "make use of DGA mouse input"};
+static qboolean vid_usingdgamouse = false;
 #endif
 
 qboolean vidmode_ext = false;
@@ -289,7 +289,9 @@ static void IN_Activate (qboolean grab)
 			mouse_x = mouse_y = 0;
 			cl_ignoremousemoves = 2;
 			vid_usingmouse = true;
+#if !defined(__APPLE__) && !defined(SUNOS)
 			vid_usingdgamouse = !!vid_dgamouse.integer;
+#endif
 		}
 	}
 	else
