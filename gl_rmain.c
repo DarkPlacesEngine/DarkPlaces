@@ -4400,7 +4400,7 @@ static float R_EvaluateQ3WaveFunc(q3wavefunc_t func, const float *parms)
 void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 {
 	int i;
-	model_t *model = ent->model;
+	dp_model_t *model = ent->model;
 	float f;
 	float tcmat[12];
 	q3shaderinfo_layer_tcmod_t *tcmod;
@@ -4717,7 +4717,7 @@ void R_Mesh_ResizeArrays(int newvertices)
 
 void RSurf_ActiveWorldEntity(void)
 {
-	model_t *model = r_refdef.scene.worldmodel;
+	dp_model_t *model = r_refdef.scene.worldmodel;
 	if (rsurface.array_size < model->surfmesh.num_vertices)
 		R_Mesh_ResizeArrays(model->surfmesh.num_vertices);
 	rsurface.matrix = identitymatrix;
@@ -4786,7 +4786,7 @@ void RSurf_ActiveWorldEntity(void)
 
 void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, qboolean wanttangents)
 {
-	model_t *model = ent->model;
+	dp_model_t *model = ent->model;
 	if (rsurface.array_size < model->surfmesh.num_vertices)
 		R_Mesh_ResizeArrays(model->surfmesh.num_vertices);
 	rsurface.matrix = ent->matrix;
@@ -6453,7 +6453,7 @@ void R_DrawDebugModel(entity_render_t *ent)
 	const int *elements;
 	q3mbrush_t *brush;
 	msurface_t *surface;
-	model_t *model = ent->model;
+	dp_model_t *model = ent->model;
 	vec3_t v;
 
 	flagsmask = MATERIALFLAG_SKY | MATERIALFLAG_WALL;
@@ -6583,7 +6583,7 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 	int i, j, endj, f, flagsmask;
 	msurface_t *surface;
 	texture_t *t;
-	model_t *model = r_refdef.scene.worldmodel;
+	dp_model_t *model = r_refdef.scene.worldmodel;
 	const int maxsurfacelist = 1024;
 	int numsurfacelist = 0;
 	msurface_t *surfacelist[1024];
@@ -6665,7 +6665,7 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 	int i, j, f, flagsmask;
 	msurface_t *surface, *endsurface;
 	texture_t *t;
-	model_t *model = ent->model;
+	dp_model_t *model = ent->model;
 	const int maxsurfacelist = 1024;
 	int numsurfacelist = 0;
 	msurface_t *surfacelist[1024];

@@ -930,7 +930,7 @@ static qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *c
 	unsigned int customizeentityforclient;
 	float f;
 	vec3_t cullmins, cullmaxs;
-	model_t *model;
+	dp_model_t *model;
 	prvm_eval_t *val;
 
 	// this 2 billion unit check is actually to detect NAN origins
@@ -1188,7 +1188,7 @@ void SV_PrepareEntitiesForSending(void)
 void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 {
 	int isbmodel;
-	model_t *model;
+	dp_model_t *model;
 	prvm_edict_t *ed;
 	if (sv.sententitiesconsideration[s->number] == sv.sententitiesmark)
 		return;
@@ -2480,7 +2480,7 @@ void SV_SpawnServer (const char *server)
 	prvm_edict_t *ent;
 	int i;
 	char *entities;
-	model_t *worldmodel;
+	dp_model_t *worldmodel;
 	char modelname[sizeof(sv.modelname)];
 
 	Con_DPrintf("SpawnServer: %s\n", server);

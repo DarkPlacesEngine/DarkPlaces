@@ -130,7 +130,7 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 	float scale;
 	prvm_eval_t *val;
 	entity_render_t *entrender;
-	model_t *model;
+	dp_model_t *model;
 	matrix4x4_t tagmatrix, matrix2;
 
 	model = CL_GetModelFromEdict(ed);

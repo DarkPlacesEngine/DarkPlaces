@@ -2442,7 +2442,7 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 	int numsurfaces, numleafs, numleafpvsbytes, numshadowtrispvsbytes, numlighttrispvsbytes;
 	int lighttris, shadowtris, shadowmeshes, shadowmeshtris;
 	entity_render_t *ent = r_refdef.scene.worldentity;
-	model_t *model = r_refdef.scene.worldmodel;
+	dp_model_t *model = r_refdef.scene.worldmodel;
 	unsigned char *data;
 
 	// compile the light
@@ -2827,7 +2827,7 @@ void R_Shadow_DrawWorldLight(int numsurfaces, int *surfacelist, const unsigned c
 
 void R_Shadow_DrawEntityLight(entity_render_t *ent)
 {
-	model_t *model = ent->model;
+	dp_model_t *model = ent->model;
 	if (!model->DrawLight)
 		return;
 
@@ -2951,7 +2951,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	{
 		for (i = 0;i < r_refdef.scene.numentities;i++)
 		{
-			model_t *model;
+			dp_model_t *model;
 			entity_render_t *ent = r_refdef.scene.entities[i];
 			vec3_t org;
 			if (!BoxesOverlap(ent->mins, ent->maxs, rsurface.rtlight_cullmins, rsurface.rtlight_cullmaxs))

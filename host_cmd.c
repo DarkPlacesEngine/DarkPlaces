@@ -1812,7 +1812,7 @@ Host_Viewmodel_f
 void Host_Viewmodel_f (void)
 {
 	prvm_edict_t	*e;
-	model_t	*m;
+	dp_model_t	*m;
 
 	if (!sv.active)
 		return;
@@ -1843,7 +1843,7 @@ void Host_Viewframe_f (void)
 {
 	prvm_edict_t	*e;
 	int		f;
-	model_t	*m;
+	dp_model_t	*m;
 
 	if (!sv.active)
 		return;
@@ -1863,7 +1863,7 @@ void Host_Viewframe_f (void)
 }
 
 
-void PrintFrameName (model_t *m, int frame)
+void PrintFrameName (dp_model_t *m, int frame)
 {
 	if (m->animscenes)
 		Con_Printf("frame %i: %s\n", frame, m->animscenes[frame].name);
@@ -1879,7 +1879,7 @@ Host_Viewnext_f
 void Host_Viewnext_f (void)
 {
 	prvm_edict_t	*e;
-	model_t	*m;
+	dp_model_t	*m;
 
 	if (!sv.active)
 		return;
@@ -1906,7 +1906,7 @@ Host_Viewprev_f
 void Host_Viewprev_f (void)
 {
 	prvm_edict_t	*e;
-	model_t	*m;
+	dp_model_t	*m;
 
 	if (!sv.active)
 		return;

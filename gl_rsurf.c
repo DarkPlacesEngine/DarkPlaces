@@ -43,7 +43,7 @@ void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 	int smax, tmax, i, size, size3, maps, l;
 	int *bl, scale;
 	unsigned char *lightmap, *out, *stain;
-	model_t *model = ent->model;
+	dp_model_t *model = ent->model;
 	int *intblocklights;
 	unsigned char *templight;
 
@@ -162,7 +162,7 @@ void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 	}
 }
 
-void R_StainNode (mnode_t *node, model_t *model, const vec3_t origin, float radius, const float fcolor[8])
+void R_StainNode (mnode_t *node, dp_model_t *model, const vec3_t origin, float radius, const float fcolor[8])
 {
 	float ndist, a, ratio, maxdist, maxdist2, maxdist3, invradius, sdtable[256], td, dist2;
 	msurface_t *surface, *endsurface;
@@ -289,7 +289,7 @@ void R_Stain (const vec3_t origin, float radius, int cr1, int cg1, int cb1, int 
 	int n;
 	float fcolor[8];
 	entity_render_t *ent;
-	model_t *model;
+	dp_model_t *model;
 	vec3_t org;
 	if (r_refdef.scene.worldmodel == NULL || !r_refdef.scene.worldmodel->brush.data_nodes || !r_refdef.scene.worldmodel->brushq1.lightdata)
 		return;
@@ -370,7 +370,7 @@ void R_DrawPortals(void)
 	int i, leafnum;
 	mportal_t *portal;
 	float center[3], f;
-	model_t *model = r_refdef.scene.worldmodel;
+	dp_model_t *model = r_refdef.scene.worldmodel;
 	if (model == NULL)
 		return;
 	for (leafnum = 0;leafnum < r_refdef.scene.worldmodel->brush.num_leafs;leafnum++)
@@ -400,7 +400,7 @@ void R_View_WorldVisibility(qboolean forcenovis)
 	int i, j, *mark;
 	mleaf_t *leaf;
 	mleaf_t *viewleaf;
-	model_t *model = r_refdef.scene.worldmodel;
+	dp_model_t *model = r_refdef.scene.worldmodel;
 
 	if (!model)
 		return;
@@ -545,7 +545,7 @@ void R_Q1BSP_DrawSky(entity_render_t *ent)
 
 void R_Q1BSP_DrawAddWaterPlanes(entity_render_t *ent)
 {
-	model_t *model = ent->model;
+	dp_model_t *model = ent->model;
 	if (model == NULL)
 		return;
 	if (ent == r_refdef.scene.worldentity)
@@ -556,7 +556,7 @@ void R_Q1BSP_DrawAddWaterPlanes(entity_render_t *ent)
 
 void R_Q1BSP_Draw(entity_render_t *ent)
 {
-	model_t *model = ent->model;
+	dp_model_t *model = ent->model;
 	if (model == NULL)
 		return;
 	if (ent == r_refdef.scene.worldentity)
@@ -567,7 +567,7 @@ void R_Q1BSP_Draw(entity_render_t *ent)
 
 void R_Q1BSP_DrawDepth(entity_render_t *ent)
 {
-	model_t *model = ent->model;
+	dp_model_t *model = ent->model;
 	if (model == NULL)
 		return;
 	GL_ColorMask(0,0,0,0);
@@ -598,7 +598,7 @@ void R_Q1BSP_DrawDebug(entity_render_t *ent)
 
 typedef struct r_q1bsp_getlightinfo_s
 {
-	model_t *model;
+	dp_model_t *model;
 	vec3_t relativelightorigin;
 	float lightradius;
 	int *outleaflist;
@@ -958,7 +958,7 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 
 void R_Q1BSP_CompileShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativelightdirection, float lightradius, int numsurfaces, const int *surfacelist)
 {
-	model_t *model = ent->model;
+	dp_model_t *model = ent->model;
 	msurface_t *surface;
 	int surfacelistindex;
 	float projectdistance = relativelightdirection ? lightradius : lightradius + model->radius*2 + r_shadow_projectdistance.value;
@@ -979,7 +979,7 @@ extern cvar_t r_polygonoffset_submodel_factor;
 extern cvar_t r_polygonoffset_submodel_offset;
 void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativelightdirection, float lightradius, int modelnumsurfaces, const int *modelsurfacelist, const vec3_t lightmins, const vec3_t lightmaxs)
 {
-	model_t *model = ent->model;
+	dp_model_t *model = ent->model;
 	msurface_t *surface;
 	int modelsurfacelistindex;
 	float projectdistance = relativelightdirection ? lightradius : lightradius + model->radius*2 + r_shadow_projectdistance.value;
@@ -1057,7 +1057,7 @@ static void R_Q1BSP_DrawLight_TransparentCallback(const entity_render_t *ent, co
 
 void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surfacelist, const unsigned char *trispvs)
 {
-	model_t *model = ent->model;
+	dp_model_t *model = ent->model;
 	msurface_t *surface;
 	int i, k, kend, l, m, mend, endsurface, batchnumsurfaces, batchnumtriangles, batchfirstvertex, batchlastvertex, batchfirsttriangle;
 	qboolean usebufferobject, culltriangles;
@@ -1177,7 +1177,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 //Made by [515]
 void R_ReplaceWorldTexture (void)
 {
-	model_t		*m;
+	dp_model_t		*m;
 	texture_t	*t;
 	int			i;
 	const char	*r, *newt;
@@ -1227,7 +1227,7 @@ void R_ReplaceWorldTexture (void)
 //Made by [515]
 void R_ListWorldTextures (void)
 {
-	model_t		*m;
+	dp_model_t		*m;
 	texture_t	*t;
 	int			i;
 	if (!r_refdef.scene.worldmodel)

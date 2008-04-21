@@ -252,7 +252,7 @@ static vec3_t quakemins = {-16, -16, -16}, quakemaxs = {16, 16, 16};
 static void VM_SV_setmodel (void)
 {
 	prvm_edict_t	*e;
-	model_t	*mod;
+	dp_model_t	*mod;
 	int		i;
 
 	VM_SAFEPARMCOUNT(2, VM_setmodel);
@@ -2104,7 +2104,7 @@ static void VM_SV_te_flamejet (void)
 	SV_FlushBroadcastMessages();
 }
 
-void clippointtosurface(model_t *model, msurface_t *surface, vec3_t p, vec3_t out)
+void clippointtosurface(dp_model_t *model, msurface_t *surface, vec3_t p, vec3_t out)
 {
 	int i, j, k;
 	float *v[3], facenormal[3], edgenormal[3], sidenormal[3], temp[3], offsetdist, dist, bestdist;
@@ -2140,7 +2140,7 @@ void clippointtosurface(model_t *model, msurface_t *surface, vec3_t p, vec3_t ou
 	}
 }
 
-static model_t *getmodel(prvm_edict_t *ed)
+static dp_model_t *getmodel(prvm_edict_t *ed)
 {
 	int modelindex;
 	if (!ed || ed->priv.server->free)
@@ -2151,7 +2151,7 @@ static model_t *getmodel(prvm_edict_t *ed)
 	return sv.models[modelindex];
 }
 
-static msurface_t *getsurface(model_t *model, int surfacenum)
+static msurface_t *getsurface(dp_model_t *model, int surfacenum)
 {
 	if (surfacenum < 0 || surfacenum >= model->nummodelsurfaces)
 		return NULL;
@@ -2162,7 +2162,7 @@ static msurface_t *getsurface(model_t *model, int surfacenum)
 //PF_getsurfacenumpoints, // #434 float(entity e, float s) getsurfacenumpoints = #434;
 static void VM_SV_getsurfacenumpoints(void)
 {
-	model_t *model;
+	dp_model_t *model;
 	msurface_t *surface;
 	VM_SAFEPARMCOUNT(2, VM_SV_getsurfacenumpoints);
 	// return 0 if no such surface
@@ -2179,7 +2179,7 @@ static void VM_SV_getsurfacenumpoints(void)
 static void VM_SV_getsurfacepoint(void)
 {
 	prvm_edict_t *ed;
-	model_t *model;
+	dp_model_t *model;
 	msurface_t *surface;
 	int pointnum;
 	VM_SAFEPARMCOUNT(3, VM_SV_getsurfacepoint);
@@ -2205,7 +2205,7 @@ static void VM_SV_getsurfacepoint(void)
 static void VM_SV_getsurfacepointattribute(void)
 {
 	prvm_edict_t *ed;
-	model_t *model;
+	dp_model_t *model;
 	msurface_t *surface;
 	int pointnum;
 	int attributetype;
@@ -2270,7 +2270,7 @@ static void VM_SV_getsurfacepointattribute(void)
 //PF_getsurfacenormal,    // #436 vector(entity e, float s) getsurfacenormal = #436;
 static void VM_SV_getsurfacenormal(void)
 {
-	model_t *model;
+	dp_model_t *model;
 	msurface_t *surface;
 	vec3_t normal;
 	VM_SAFEPARMCOUNT(2, VM_SV_getsurfacenormal);
@@ -2288,7 +2288,7 @@ static void VM_SV_getsurfacenormal(void)
 //PF_getsurfacetexture,   // #437 string(entity e, float s) getsurfacetexture = #437;
 static void VM_SV_getsurfacetexture(void)
 {
-	model_t *model;
+	dp_model_t *model;
 	msurface_t *surface;
 	VM_SAFEPARMCOUNT(2, VM_SV_getsurfacetexture);
 	PRVM_G_INT(OFS_RETURN) = OFS_NULL;
@@ -2303,7 +2303,7 @@ static void VM_SV_getsurfacenearpoint(void)
 	vec3_t clipped, p;
 	vec_t dist, bestdist;
 	prvm_edict_t *ed;
-	model_t *model;
+	dp_model_t *model;
 	msurface_t *surface;
 	vec_t *point;
 	VM_SAFEPARMCOUNT(2, VM_SV_getsurfacenearpoint);
@@ -2349,7 +2349,7 @@ static void VM_SV_getsurfacenearpoint(void)
 static void VM_SV_getsurfaceclippedpoint(void)
 {
 	prvm_edict_t *ed;
-	model_t *model;
+	dp_model_t *model;
 	msurface_t *surface;
 	vec3_t p, out;
 	VM_SAFEPARMCOUNT(3, VM_SV_te_getsurfaceclippedpoint);
@@ -2394,7 +2394,7 @@ static void VM_SV_setattachment (void)
 	const char *tagname = PRVM_G_STRING(OFS_PARM2);
 	prvm_eval_t *v;
 	int modelindex;
-	model_t *model;
+	dp_model_t *model;
 	VM_SAFEPARMCOUNT(3, VM_SV_setattachment);
 
 	if (e == prog->edicts)
@@ -2438,7 +2438,7 @@ static void VM_SV_setattachment (void)
 int SV_GetTagIndex (prvm_edict_t *e, const char *tagname)
 {
 	int i;
-	model_t *model;
+	dp_model_t *model;
 
 	i = (int)e->fields.server->modelindex;
 	if (i < 1 || i >= MAX_MODELS)
@@ -2463,7 +2463,7 @@ int SV_GetEntityLocalTagMatrix(prvm_edict_t *ent, int tagindex, matrix4x4_t *out
 {
 	int modelindex;
 	int frame;
-	model_t *model;
+	dp_model_t *model;
 	if (tagindex >= 0
 	 && (modelindex = (int)ent->fields.server->modelindex) >= 1 && modelindex < MAX_MODELS
 	 && (model = sv.models[(int)ent->fields.server->modelindex])
@@ -2495,7 +2495,7 @@ int SV_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 	prvm_eval_t *val;
 	int modelindex, attachloop;
 	matrix4x4_t entitymatrix, tagmatrix, attachmatrix;
-	model_t *model;
+	dp_model_t *model;
 
 	*out = identitymatrix; // warnings and errors return identical matrix
 
@@ -2727,7 +2727,7 @@ void VM_SV_serverkey(void)
 static void VM_SV_setmodelindex (void)
 {
 	prvm_edict_t	*e;
-	model_t	*mod;
+	dp_model_t	*mod;
 	int		i;
 	VM_SAFEPARMCOUNT(2, VM_SV_setmodelindex);
 

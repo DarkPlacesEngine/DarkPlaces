@@ -5,8 +5,8 @@
 float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t normal, int *hitent, entity_render_t *ignoreent);
 void CL_FindNonSolidLocation(const vec3_t in, vec3_t out, vec_t radius);
 
-model_t *CL_GetModelByIndex(int modelindex);
-model_t *CL_GetModelFromEdict(prvm_edict_t *ed);
+dp_model_t *CL_GetModelByIndex(int modelindex);
+dp_model_t *CL_GetModelFromEdict(prvm_edict_t *ed);
 
 void CL_LinkEdict(prvm_edict_t *ent);
 int CL_GenericHitSuperContentsMask(const prvm_edict_t *edict);

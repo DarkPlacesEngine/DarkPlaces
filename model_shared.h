@@ -878,12 +878,12 @@ typedef struct model_s
 	// flags this model for offseting sounds to the model center (used by brush models)
 	int soundfromcenter;
 }
-model_t;
+dp_model_t;
 
 //============================================================================
 
 // model loading
-extern model_t *loadmodel;
+extern dp_model_t *loadmodel;
 extern unsigned char *mod_base;
 // sky/water subdivision
 //extern cvar_t gl_subdivide_size;
@@ -892,16 +892,16 @@ extern cvar_t r_fullbrights;
 
 void Mod_Init (void);
 void Mod_Reload (void);
-model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, qboolean isworldmodel);
-model_t *Mod_FindName (const char *name);
-model_t *Mod_ForName (const char *name, qboolean crash, qboolean checkdisk, qboolean isworldmodel);
-void Mod_UnloadModel (model_t *mod);
+dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk, qboolean isworldmodel);
+dp_model_t *Mod_FindName (const char *name);
+dp_model_t *Mod_ForName (const char *name, qboolean crash, qboolean checkdisk, qboolean isworldmodel);
+void Mod_UnloadModel (dp_model_t *mod);
 
 void Mod_ClearUsed(void);
 void Mod_PurgeUnused(void);
-void Mod_RemoveStaleWorldModels(model_t *skip); // only used during loading!
+void Mod_RemoveStaleWorldModels(dp_model_t *skip); // only used during loading!
 
-extern model_t *loadmodel;
+extern dp_model_t *loadmodel;
 extern char loadname[32];	// for hunk tags
 
 int Mod_BuildVertexRemapTableFromElements(int numelements, const int *elements, int numvertices, int *remapvertices);
@@ -972,27 +972,27 @@ void R_Q1BSP_DrawLight(struct entity_render_s *ent, int numsurfaces, const int *
 // alias models
 struct frameblend_s;
 void Mod_AliasInit(void);
-int Mod_Alias_GetTagMatrix(const model_t *model, int poseframe, int tagindex, matrix4x4_t *outmatrix);
-int Mod_Alias_GetTagIndexForName(const model_t *model, unsigned int skin, const char *tagname);
+int Mod_Alias_GetTagMatrix(const dp_model_t *model, int poseframe, int tagindex, matrix4x4_t *outmatrix);
+int Mod_Alias_GetTagIndexForName(const dp_model_t *model, unsigned int skin, const char *tagname);
 
 // sprite models
 void Mod_SpriteInit(void);
 
 // loaders
-void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend);
-void Mod_IBSP_Load(model_t *mod, void *buffer, void *bufferend);
-void Mod_MAP_Load(model_t *mod, void *buffer, void *bufferend);
-void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend);
-void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend);
-void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend);
-void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend);
-void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend);
-void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend);
-void Mod_IDSP_Load(model_t *mod, void *buffer, void *bufferend);
-void Mod_IDS2_Load(model_t *mod, void *buffer, void *bufferend);
+void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend);
+void Mod_IBSP_Load(dp_model_t *mod, void *buffer, void *bufferend);
+void Mod_MAP_Load(dp_model_t *mod, void *buffer, void *bufferend);
+void Mod_IDP0_Load(dp_model_t *mod, void *buffer, void *bufferend);
+void Mod_IDP2_Load(dp_model_t *mod, void *buffer, void *bufferend);
+void Mod_IDP3_Load(dp_model_t *mod, void *buffer, void *bufferend);
+void Mod_ZYMOTICMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend);
+void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend);
+void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend);
+void Mod_IDSP_Load(dp_model_t *mod, void *buffer, void *bufferend);
+void Mod_IDS2_Load(dp_model_t *mod, void *buffer, void *bufferend);
 
 // utility
-qboolean Mod_CanSeeBox_Trace(int numsamples, float t, model_t *model, vec3_t eye, vec3_t minsX, vec3_t maxsX);
+qboolean Mod_CanSeeBox_Trace(int numsamples, float t, dp_model_t *model, vec3_t eye, vec3_t minsX, vec3_t maxsX);
 
 #endif	// MODEL_SHARED_H
 
