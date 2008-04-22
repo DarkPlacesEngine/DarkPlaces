@@ -4011,11 +4011,16 @@ static void R_DrawEntityBBoxes_Callback(const entity_render_t *ent, const rtligh
 	int i;
 	float color[4];
 	prvm_edict_t *edict;
+	prvm_prog_t *prog_save = prog;
+
 	// this function draws bounding boxes of server entities
 	if (!sv.active)
 		return;
+
 	GL_CullFace(GL_NONE);
 	R_SetupGenericShader(false);
+
+	prog = 0;
 	SV_VM_Begin();
 	for (i = 0;i < numsurfaces;i++)
 	{
@@ -4036,6 +4041,7 @@ static void R_DrawEntityBBoxes_Callback(const entity_render_t *ent, const rtligh
 		R_DrawBBoxMesh(edict->priv.server->areamins, edict->priv.server->areamaxs, color[0], color[1], color[2], color[3]);
 	}
 	SV_VM_End();
+	prog = prog_save;
 }
 
 static void R_DrawEntityBBoxes(void)
@@ -4043,19 +4049,31 @@ static void R_DrawEntityBBoxes(void)
 	int i;
 	prvm_edict_t *edict;
 	vec3_t center;
+	prvm_prog_t *prog_save = prog;
+
 	// this function draws bounding boxes of server entities
 	if (!sv.active)
 		return;
+	
+	prog = 0;
 	SV_VM_Begin();
 	for (i = 0;i < prog->num_edicts;i++)
 	{
 		edict = PRVM_EDICT_NUM(i);
 		if (edict->priv.server->free)
 			continue;
+		// exclude the following for now, as they don't live in world coordinate space and can't be solid:
+		if(PRVM_EDICTFIELDVALUE(edict, prog->fieldoffsets.tag_entity)->edict != 0)
+			continue;
+		if(PRVM_EDICTFIELDVALUE(edict, prog->fieldoffsets.viewmodelforclient)->edict != 0)
+			continue;
+		if(PRVM_EDICTFIELDVALUE(edict, prog->fieldoffsets.exteriormodeltoclient)->edict != 0)
+			continue;
 		VectorLerp(edict->priv.server->areamins, 0.5f, edict->priv.server->areamaxs, center);
 		R_MeshQueue_AddTransparent(center, R_DrawEntityBBoxes_Callback, (entity_render_t *)NULL, i, (rtlight_t *)NULL);
 	}
 	SV_VM_End();
+	prog = prog_save;
 }
 
 unsigned short nomodelelements[24] =
