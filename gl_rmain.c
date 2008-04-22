@@ -4067,8 +4067,6 @@ static void R_DrawEntityBBoxes(void)
 			continue;
 		if(PRVM_EDICTFIELDVALUE(edict, prog->fieldoffsets.viewmodelforclient)->edict != 0)
 			continue;
-		if(PRVM_EDICTFIELDVALUE(edict, prog->fieldoffsets.exteriormodeltoclient)->edict != 0)
-			continue;
 		VectorLerp(edict->priv.server->areamins, 0.5f, edict->priv.server->areamaxs, center);
 		R_MeshQueue_AddTransparent(center, R_DrawEntityBBoxes_Callback, (entity_render_t *)NULL, i, (rtlight_t *)NULL);
 	}
