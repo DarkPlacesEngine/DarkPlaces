@@ -1106,8 +1106,20 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 		element3i += firsttriangle * 3;
 	if (element3s)
 		element3s += firsttriangle * 3;
-	if (gl_vbo.integer != 1)
+	switch (gl_vbo.integer)
+	{
+	default:
+	case 0:
+	case 2:
 		bufferobject3i = bufferobject3s = 0;
+		break;
+	case 1:
+		break;
+	case 3:
+		if (firsttriangle)
+			bufferobject3i = bufferobject3s = 0;
+		break;
+	}
 	CHECKGLERROR
 	r_refdef.stats.meshes++;
 	r_refdef.stats.meshes_elements += numelements;
