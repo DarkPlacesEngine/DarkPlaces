@@ -5,6 +5,11 @@
 
 int matchpattern(const char *in, const char *pattern, int caseinsensitive)
 {
+	return matchpattern_with_separator(in, pattern, caseinsensitive, "/\\:", false);
+}
+
+int matchpattern_with_separator(const char *in, const char *pattern, int caseinsensitive, const char *separators, qboolean wildcard_least_one)
+{
 	int c1, c2;
 	while (*pattern)
 	{
@@ -13,18 +18,21 @@ int matchpattern(const char *in, const char *pattern, int caseinsensitive)
 		case 0:
 			return 1; // end of pattern
 		case '?': // match any single character
-			if (*in == 0 || *in == '/' || *in == '\\' || *in == ':')
+			if (*in == 0 || strchr(separators, *in))
 				return 0; // no match
 			in++;
 			pattern++;
 			break;
 		case '*': // match anything until following string
+			if(wildcard_least_one)
+				if (*in == 0 || strchr(separators, *in))
+					return 0; // no match
 			if (!*in)
 				return 1; // match
 			pattern++;
 			while (*in)
 			{
-				if (*in == '/' || *in == '\\' || *in == ':')
+				if (strchr(separators, *in))
 					break;
 				// see if pattern matches at this offset
 				if (matchpattern(in, pattern, caseinsensitive))
