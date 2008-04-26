@@ -1979,6 +1979,7 @@ void NetConn_ClearConnectFlood(lhnetaddress_t *peeraddress)
 const char *RCon_Authenticate(const char *password, const char *s, const char *endpos)
 {
 	const char *text;
+	qboolean hasquotes;
 
 	if(!strcmp(rcon_password.string, password))
 		return "rcon";
@@ -1995,15 +1996,36 @@ const char *RCon_Authenticate(const char *password, const char *s, const char *e
 		size_t l = strlen(s);
 		if(l)
 		{
-			text = s;
-
-			if (!COM_ParseToken_Console(&text))
-				return NULL;
-
-			// com_token now contains the command
-			if(!strstr(va(" %s ", rcon_restricted_commands.string), va(" %s ", com_token)))
-				return NULL;
+			hasquotes = (strchr(s, '"') != NULL);
+			// sorry, we can't allow these substrings in wildcard expressions,
+			// as they can mess with the argument counts
+			text = rcon_restricted_commands.string;
+			while(COM_ParseToken_Console(&text))
+			{
+				// com_token now contains a pattern to check for...
+				if(strchr(com_token, '*') || strchr(com_token, '?')) // wildcard expression, * can only match a SINGLE argument
+				{
+					if(!hasquotes)
+						if(matchpattern_with_separator(s, com_token, true, " ", true)) // note how we excluded tab, newline etc. above
+							goto match;
+				}
+				else if(strchr(com_token, ' ')) // multi-arg expression? must match in whole
+				{
+					if(!strcmp(com_token, s))
+						goto match;
+				}
+				else // single-arg expression? must match the beginning of the command
+				{
+					if(!strcmp(com_token, s))
+						goto match;
+					if(!memcmp(va("%s ", com_token), s, strlen(com_token) + 1))
+						goto match;
+				}
+			}
+			// if we got here, nothing matched!
+			return NULL;
 		}
+match:
 		s += l + 1;
 	}
 

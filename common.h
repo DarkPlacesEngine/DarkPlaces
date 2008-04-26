@@ -313,6 +313,7 @@ typedef struct stringlist_s
 } stringlist_t;
 
 int matchpattern(const char *in, const char *pattern, int caseinsensitive);
+int matchpattern_with_separator(const char *in, const char *pattern, int caseinsensitive, const char *separators, qboolean wildcard_least_one);
 void stringlistinit(stringlist_t *list);
 void stringlistfreecontents(stringlist_t *list);
 void stringlistappend(stringlist_t *list, const char *text);
