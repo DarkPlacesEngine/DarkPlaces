@@ -935,7 +935,7 @@ void CL_ClientMovement_Physics_Swim(cl_clientmovement_state_t *s)
 	if (s->waterjumptime <= 0)
 	{
 		// water friction
-		f = 1 - s->cmd.frametime * cl.movevars_waterfriction /* * s->waterlevel */;
+		f = 1 - s->cmd.frametime * cl.movevars_waterfriction * (cls.protocol == PROTOCOL_QUAKEWORLD ? s->waterlevel : 1);
 		f = bound(0, f, 1);
 		VectorScale(s->velocity, f, s->velocity);
 
