@@ -767,6 +767,15 @@ void Host_Name_f (void)
 			host_client->name[j++] = host_client->name[i];
 	host_client->name[j] = 0;
 
+	if(host_client->name[0] == 1 || host_client->name[0] == 2)
+	// may interfere with chat area, and will needlessly beep; so let's add a ^7
+	{
+		memmove(host_client->name + 2, host_client->name, sizeof(host_client->name) - 2);
+		host_client->name[sizeof(host_client->name) - 1] = 0;
+		host_client->name[0] = STRING_COLOR_TAG;
+		host_client->name[1] = '0' + STRING_COLOR_DEFAULT;
+	}
+
 	COM_StringLengthNoColors(host_client->name, 0, &valid_colors);
 	if(!valid_colors) // NOTE: this also proves the string is not empty, as "" is a valid colored string
 	{
