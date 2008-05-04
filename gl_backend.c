@@ -6,7 +6,6 @@ cvar_t gl_mesh_drawrangeelements = {0, "gl_mesh_drawrangeelements", "1", "use gl
 cvar_t gl_mesh_testarrayelement = {0, "gl_mesh_testarrayelement", "0", "use glBegin(GL_TRIANGLES);glArrayElement();glEnd(); primitives instead of glDrawElements (useful to test for driver bugs with glDrawElements)"};
 cvar_t gl_mesh_testmanualfeeding = {0, "gl_mesh_testmanualfeeding", "0", "use glBegin(GL_TRIANGLES);glTexCoord2f();glVertex3f();glEnd(); primitives instead of glDrawElements (useful to test for driver bugs with glDrawElements)"};
 cvar_t gl_mesh_prefer_short_elements = {0, "gl_mesh_prefer_short_elements", "1", "use GL_UNSIGNED_SHORT element arrays instead of GL_UNSIGNED_INT"};
-cvar_t gl_workaround_mac_texmatrix = {0, "gl_workaround_mac_texmatrix", "0", "if set to 1 this always calls glClientActiveTexture when calling glActiveTexture, to work around mistargeted texture matrix updates on Mac OSX drivers"};
 cvar_t gl_paranoid = {0, "gl_paranoid", "0", "enables OpenGL error checking and other tests"};
 cvar_t gl_printcheckerror = {0, "gl_printcheckerror", "0", "prints all OpenGL error checks, useful to identify location of driver crashes"};
 
@@ -256,7 +255,6 @@ void gl_backend_init(void)
 	Cvar_RegisterVariable(&gl_vbo);
 	Cvar_RegisterVariable(&gl_paranoid);
 	Cvar_RegisterVariable(&gl_printcheckerror);
-	Cvar_RegisterVariable(&gl_workaround_mac_texmatrix);
 #ifdef NORENDER
 	Cvar_SetValue("r_render", 0);
 #endif
@@ -618,8 +616,6 @@ void GL_SetupTextureState(void)
 	for (i = 0;i < backendunits;i++)
 	{
 		GL_ActiveTexture(i);
-		if (gl_workaround_mac_texmatrix.integer)
-			GL_ClientActiveTexture(i);
 		qglDisable(GL_TEXTURE_1D);CHECKGLERROR
 		qglDisable(GL_TEXTURE_2D);CHECKGLERROR
 		if (gl_texture3d)
@@ -1984,8 +1980,6 @@ void R_Mesh_TexMatrix(unsigned int unitnum, const matrix4x4_t *matrix)
 			CHECKGLERROR
 			Matrix4x4_ToArrayDoubleGL(&unit->matrix, glmatrix);
 			GL_ActiveTexture(unitnum);
-			if (gl_workaround_mac_texmatrix.integer)
-				GL_ClientActiveTexture(unitnum);
 			qglMatrixMode(GL_TEXTURE);CHECKGLERROR
 			qglLoadMatrixd(glmatrix);CHECKGLERROR
 			qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
@@ -2000,8 +1994,6 @@ void R_Mesh_TexMatrix(unsigned int unitnum, const matrix4x4_t *matrix)
 			unit->matrix = identitymatrix;
 			CHECKGLERROR
 			GL_ActiveTexture(unitnum);
-			if (gl_workaround_mac_texmatrix.integer)
-				GL_ClientActiveTexture(unitnum);
 			qglMatrixMode(GL_TEXTURE);CHECKGLERROR
 			qglLoadIdentity();CHECKGLERROR
 			qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
@@ -2175,8 +2167,6 @@ void R_Mesh_ResetTextureState(void)
 			unit->matrix = identitymatrix;
 			CHECKGLERROR
 			GL_ActiveTexture(unitnum);
-			if (gl_workaround_mac_texmatrix.integer)
-				GL_ClientActiveTexture(unitnum);
 			qglMatrixMode(GL_TEXTURE);CHECKGLERROR
 			qglLoadIdentity();CHECKGLERROR
 			qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
