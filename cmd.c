@@ -70,7 +70,7 @@ typedef struct cmddeferred_s
 	double time;
 } cmddeferred_t;
 
-static cmddeferred_t *cmd_deferred_list;
+static cmddeferred_t *cmd_deferred_list = NULL;
 
 /*
 ============
@@ -89,25 +89,44 @@ static void Cmd_Defer_f (void)
 			Con_Printf("No commands are pending.\n");
 		while(next)
 		{
-			Con_Printf("-> In %'9.2f: %s\n", next->time-time, next->value);
+			Con_Printf("-> In %9.2f: %s\n", next->time-time, next->value);
 			next = next->next;
 		}
-	} else if(Cmd_Argc() != 3)
+	} else if(Cmd_Argc() == 2 && !strcasecmp("clear", Cmd_Argv(1)))
 	{
-		Con_Printf("usage: defer <seconds> <command>\n");
-		return;
-	} else {
+		while(cmd_deferred_list)
+		{
+			cmddeferred_t *cmd = cmd_deferred_list;
+			cmd_deferred_list = cmd->next;
+			Mem_Free(cmd->value);
+			Mem_Free(cmd);
+		}
+	} else if(Cmd_Argc() == 3)
+	{
 		const char *value = Cmd_Argv(2);
 		cmddeferred_t *defcmd = (cmddeferred_t*)Mem_Alloc(tempmempool, sizeof(*defcmd));
-		unsigned int len = strlen(value);
+		size_t len = strlen(value);
 
 		defcmd->time = Sys_DoubleTime() + atof(Cmd_Argv(1));
 		defcmd->value = (char*)Mem_Alloc(tempmempool, len+1);
-		memcpy(defcmd->value, value, len);
-		defcmd->value[len] = 0;
+		memcpy(defcmd->value, value, len+1);
+		defcmd->next = NULL;
 
-		defcmd->next = cmd_deferred_list;
-		cmd_deferred_list = defcmd;
+		if(cmd_deferred_list)
+		{
+			cmddeferred_t *next = cmd_deferred_list;
+			while(next->next)
+				next = next->next;
+			next->next = defcmd;
+		} else
+			cmd_deferred_list = defcmd;
+		/* Stupid me... this changes the order... so commands with the same delay go blub :S
+		  defcmd->next = cmd_deferred_list;
+		  cmd_deferred_list = defcmd;*/
+	} else {
+		Con_Printf("usage: defer <seconds> <command>\n"
+			   "       defer clear\n");
+		return;
 	}
 }
 
@@ -240,18 +259,19 @@ void Cbuf_Execute_Deferred (void)
 		if(cmd->time <= time)
 		{
 			Cbuf_AddText(cmd->value);
+			Cbuf_AddText(";\n");
 			Mem_Free(cmd->value);
-			
-			if(prev)
+
+			if(prev) {
 				prev->next = cmd->next;
-			else
+				Mem_Free(cmd);
+				cmd = prev->next;
+			} else {
 				cmd_deferred_list = cmd->next;
-			
-			Mem_Free(cmd);
-			
-			cmd = prev;
-			if(!cmd)
-				return;
+				Mem_Free(cmd);
+				cmd = cmd_deferred_list;
+			}
+			continue;
 		}
 		prev = cmd;
 		cmd = cmd->next;
