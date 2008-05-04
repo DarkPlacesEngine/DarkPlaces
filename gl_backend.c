@@ -6,7 +6,7 @@ cvar_t gl_mesh_drawrangeelements = {0, "gl_mesh_drawrangeelements", "1", "use gl
 cvar_t gl_mesh_testarrayelement = {0, "gl_mesh_testarrayelement", "0", "use glBegin(GL_TRIANGLES);glArrayElement();glEnd(); primitives instead of glDrawElements (useful to test for driver bugs with glDrawElements)"};
 cvar_t gl_mesh_testmanualfeeding = {0, "gl_mesh_testmanualfeeding", "0", "use glBegin(GL_TRIANGLES);glTexCoord2f();glVertex3f();glEnd(); primitives instead of glDrawElements (useful to test for driver bugs with glDrawElements)"};
 cvar_t gl_mesh_prefer_short_elements = {0, "gl_mesh_prefer_short_elements", "1", "use GL_UNSIGNED_SHORT element arrays instead of GL_UNSIGNED_INT"};
-cvar_t gl_workaround_mac_texmatrix = {0, "gl_workaround_mac_texmatrix", "0", "if set to 1 this uses glLoadMatrixd followed by glLoadIdentity to clear a texture matrix (normally glLoadIdentity is sufficient by itself), if set to 2 it uses glLoadMatrixd without glLoadIdentity"};
+cvar_t gl_workaround_mac_texmatrix = {0, "gl_workaround_mac_texmatrix", "0", "if set to 1 this always calls glClientActiveTexture when calling glActiveTexture, to work around mistargeted texture matrix updates on Mac OSX drivers"};
 cvar_t gl_paranoid = {0, "gl_paranoid", "0", "enables OpenGL error checking and other tests"};
 cvar_t gl_printcheckerror = {0, "gl_printcheckerror", "0", "prints all OpenGL error checks, useful to identify location of driver crashes"};
 
@@ -526,6 +526,7 @@ static struct gl_state_s
 	int alphatest;
 	int scissortest;
 	unsigned int unit;
+	unsigned int clientunit;
 	gltextureunit_t units[MAX_TEXTUREUNITS];
 	float color4f[4];
 	int lockrange_first;
@@ -570,6 +571,7 @@ void GL_SetupTextureState(void)
 	gltextureunit_t *unit;
 	CHECKGLERROR
 	gl_state.unit = MAX_TEXTUREUNITS;
+	gl_state.clientunit = MAX_TEXTUREUNITS;
 	for (i = 0;i < MAX_TEXTUREUNITS;i++)
 	{
 		unit = gl_state.units + i;
@@ -607,7 +609,7 @@ void GL_SetupTextureState(void)
 
 	for (i = 0;i < backendarrayunits;i++)
 	{
-		GL_ActiveTexture(i);
+		GL_ClientActiveTexture(i);
 		GL_BindVBO(0);
 		qglTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), NULL);CHECKGLERROR
 		qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
@@ -717,7 +719,22 @@ void GL_ActiveTexture(unsigned int num)
 		{
 			CHECKGLERROR
 			qglActiveTexture(GL_TEXTURE0_ARB + gl_state.unit);
-			qglClientActiveTexture(GL_TEXTURE0_ARB + gl_state.unit);
+			CHECKGLERROR
+		}
+	}
+	if (gl_workaround_mac_texmatrix.integer)
+		GL_ClientActiveTexture(num);
+}
+
+void GL_ClientActiveTexture(unsigned int num)
+{
+	if (gl_state.clientunit != num)
+	{
+		gl_state.clientunit = num;
+		if (qglActiveTexture)
+		{
+			CHECKGLERROR
+			qglClientActiveTexture(GL_TEXTURE0_ARB + gl_state.clientunit);
 			CHECKGLERROR
 		}
 	}
@@ -1136,7 +1153,7 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 		{
 			if (gl_state.units[i].arrayenabled)
 			{
-				GL_ActiveTexture(i);
+				GL_ClientActiveTexture(i);
 				if (!qglIsEnabled(GL_TEXTURE_COORD_ARRAY))
 					Con_Print("R_Mesh_Draw: texcoord array set but not enabled\n");
 				CHECKGLERROR
@@ -1529,7 +1546,7 @@ void R_Mesh_TexCoordPointer(unsigned int unitnum, unsigned int numcomponents, co
 		if (!unit->arrayenabled)
 		{
 			unit->arrayenabled = true;
-			GL_ActiveTexture(unitnum);
+			GL_ClientActiveTexture(unitnum);
 			qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 		}
 		// texcoord array
@@ -1539,7 +1556,7 @@ void R_Mesh_TexCoordPointer(unsigned int unitnum, unsigned int numcomponents, co
 			unit->pointer_texcoord_buffer = bufferobject;
 			unit->pointer_texcoord_offset = bufferoffset;
 			unit->arraycomponents = numcomponents;
-			GL_ActiveTexture(unitnum);
+			GL_ClientActiveTexture(unitnum);
 			GL_BindVBO(bufferobject);
 			qglTexCoordPointer(unit->arraycomponents, GL_FLOAT, sizeof(float) * unit->arraycomponents, bufferobject ? (void *)bufferoffset : texcoord);CHECKGLERROR
 		}
@@ -1550,7 +1567,7 @@ void R_Mesh_TexCoordPointer(unsigned int unitnum, unsigned int numcomponents, co
 		if (unit->arrayenabled)
 		{
 			unit->arrayenabled = false;
-			GL_ActiveTexture(unitnum);
+			GL_ClientActiveTexture(unitnum);
 			qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 		}
 	}
@@ -1968,11 +1985,6 @@ void R_Mesh_TexMatrix(unsigned int unitnum, const matrix4x4_t *matrix)
 			Matrix4x4_ToArrayDoubleGL(&unit->matrix, glmatrix);
 			GL_ActiveTexture(unitnum);
 			qglMatrixMode(GL_TEXTURE);CHECKGLERROR
-			if (gl_workaround_mac_texmatrix.integer & 4)
-			{
-				qglActiveTexture(GL_TEXTURE0_ARB + gl_state.unit);
-				qglClientActiveTexture(GL_TEXTURE0_ARB + gl_state.unit);
-			}
 			qglLoadMatrixd(glmatrix);CHECKGLERROR
 			qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
 		}
@@ -1988,14 +2000,6 @@ void R_Mesh_TexMatrix(unsigned int unitnum, const matrix4x4_t *matrix)
 			GL_ActiveTexture(unitnum);
 			qglMatrixMode(GL_TEXTURE);CHECKGLERROR
 			qglLoadIdentity();CHECKGLERROR
-			if (gl_workaround_mac_texmatrix.integer)
-			{
-				qglActiveTexture(GL_TEXTURE0_ARB + gl_state.unit);
-				qglClientActiveTexture(GL_TEXTURE0_ARB + gl_state.unit);
-				qglLoadMatrixd(gl_identitymatrix);CHECKGLERROR
-				if (gl_workaround_mac_texmatrix.integer & 1)
-					qglLoadIdentity();CHECKGLERROR
-			}
 			qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
 		}
 	}
@@ -2153,7 +2157,7 @@ void R_Mesh_ResetTextureState(void)
 		if (unit->arrayenabled)
 		{
 			unit->arrayenabled = false;
-			GL_ActiveTexture(unitnum);
+			GL_ClientActiveTexture(unitnum);
 			qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 		}
 	}
