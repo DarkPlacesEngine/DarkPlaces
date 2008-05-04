@@ -609,6 +609,8 @@ void GL_SetupTextureState(void)
 
 	for (i = 0;i < backendarrayunits;i++)
 	{
+		if (gl_workaround_mac_texmatrix.integer)
+			GL_ActiveTexture(i);
 		GL_ClientActiveTexture(i);
 		GL_BindVBO(0);
 		qglTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), NULL);CHECKGLERROR
@@ -618,6 +620,8 @@ void GL_SetupTextureState(void)
 	for (i = 0;i < backendunits;i++)
 	{
 		GL_ActiveTexture(i);
+		if (gl_workaround_mac_texmatrix.integer)
+			GL_ClientActiveTexture(i);
 		qglDisable(GL_TEXTURE_1D);CHECKGLERROR
 		qglDisable(GL_TEXTURE_2D);CHECKGLERROR
 		if (gl_texture3d)
@@ -1153,6 +1157,8 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 		{
 			if (gl_state.units[i].arrayenabled)
 			{
+				if (gl_workaround_mac_texmatrix.integer)
+					GL_ActiveTexture(i);
 				GL_ClientActiveTexture(i);
 				if (!qglIsEnabled(GL_TEXTURE_COORD_ARRAY))
 					Con_Print("R_Mesh_Draw: texcoord array set but not enabled\n");
@@ -1546,6 +1552,8 @@ void R_Mesh_TexCoordPointer(unsigned int unitnum, unsigned int numcomponents, co
 		if (!unit->arrayenabled)
 		{
 			unit->arrayenabled = true;
+			if (gl_workaround_mac_texmatrix.integer)
+				GL_ActiveTexture(unitnum);
 			GL_ClientActiveTexture(unitnum);
 			qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 		}
@@ -1556,6 +1564,8 @@ void R_Mesh_TexCoordPointer(unsigned int unitnum, unsigned int numcomponents, co
 			unit->pointer_texcoord_buffer = bufferobject;
 			unit->pointer_texcoord_offset = bufferoffset;
 			unit->arraycomponents = numcomponents;
+			if (gl_workaround_mac_texmatrix.integer)
+				GL_ActiveTexture(unitnum);
 			GL_ClientActiveTexture(unitnum);
 			GL_BindVBO(bufferobject);
 			qglTexCoordPointer(unit->arraycomponents, GL_FLOAT, sizeof(float) * unit->arraycomponents, bufferobject ? (void *)bufferoffset : texcoord);CHECKGLERROR
@@ -1567,6 +1577,8 @@ void R_Mesh_TexCoordPointer(unsigned int unitnum, unsigned int numcomponents, co
 		if (unit->arrayenabled)
 		{
 			unit->arrayenabled = false;
+			if (gl_workaround_mac_texmatrix.integer)
+				GL_ActiveTexture(unitnum);
 			GL_ClientActiveTexture(unitnum);
 			qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 		}
@@ -2157,6 +2169,8 @@ void R_Mesh_ResetTextureState(void)
 		if (unit->arrayenabled)
 		{
 			unit->arrayenabled = false;
+			if (gl_workaround_mac_texmatrix.integer)
+				GL_ActiveTexture(unitnum);
 			GL_ClientActiveTexture(unitnum);
 			qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 		}
