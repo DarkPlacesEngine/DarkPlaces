@@ -629,7 +629,7 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 				count *= cl_particles_quality.value;
 				for (;count > 0;count--)
 				{
-					int k = particlepalette[palettecolor + (rand()&7)];
+					int k = particlepalette[(palettecolor & ~7) + (rand()&7)];
 					CL_NewParticle(pt_alphastatic, k, k, tex_particle, 1.5, 0, 255, 0, 0.05, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]), 0, 0, 8, 0, true, lhrandom(0.1, 0.5));
 				}
 			}
@@ -656,7 +656,7 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 			}
 		}
 		// bullet hole
-		R_Stain(center, 32, 96, 96, 96, 24, 128, 128, 128, 24);
+		R_Stain(center, 16, 40, 40, 40, 64, 88, 88, 88, 64);
 		CL_SpawnDecalParticleForPoint(center, 6, 3, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
 	}
 	else if (effectnameindex == EFFECT_TE_SPIKEQUAD)
@@ -676,7 +676,7 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 			}
 		}
 		// bullet hole
-		R_Stain(center, 32, 96, 96, 96, 24, 128, 128, 128, 24);
+		R_Stain(center, 16, 40, 40, 40, 64, 88, 88, 88, 64);
 		CL_SpawnDecalParticleForPoint(center, 6, 3, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
 		CL_AllocLightFlash(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
@@ -697,7 +697,7 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 			}
 		}
 		// bullet hole
-		R_Stain(center, 32, 96, 96, 96, 24, 128, 128, 128, 24);
+		R_Stain(center, 16, 40, 40, 40, 64, 88, 88, 88, 64);
 		CL_SpawnDecalParticleForPoint(center, 6, 3, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
 	}
 	else if (effectnameindex == EFFECT_TE_SUPERSPIKEQUAD)
@@ -717,7 +717,7 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 			}
 		}
 		// bullet hole
-		R_Stain(center, 32, 96, 96, 96, 24, 128, 128, 128, 24);
+		R_Stain(center, 16, 40, 40, 40, 64, 88, 88, 88, 64);
 		CL_SpawnDecalParticleForPoint(center, 6, 3, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
 		CL_AllocLightFlash(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
@@ -741,7 +741,7 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 	else if (effectnameindex == EFFECT_TE_PLASMABURN)
 	{
 		// plasma scorch mark
-		R_Stain(center, 48, 96, 96, 96, 32, 128, 128, 128, 32);
+		R_Stain(center, 40, 40, 40, 40, 64, 88, 88, 88, 64);
 		CL_SpawnDecalParticleForPoint(center, 6, 6, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
 		CL_AllocLightFlash(NULL, &tempmatrix, 200, 1, 1, 1, 1000, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
@@ -759,7 +759,7 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 			}
 		}
 		// bullet hole
-		R_Stain(center, 32, 96, 96, 96, 24, 128, 128, 128, 24);
+		R_Stain(center, 16, 40, 40, 40, 64, 88, 88, 88, 64);
 		CL_SpawnDecalParticleForPoint(center, 6, 3, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
 	}
 	else if (effectnameindex == EFFECT_TE_GUNSHOTQUAD)
@@ -776,7 +776,7 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 			}
 		}
 		// bullet hole
-		R_Stain(center, 32, 96, 96, 96, 24, 128, 128, 128, 24);
+		R_Stain(center, 16, 40, 40, 40, 64, 88, 88, 88, 64);
 		CL_SpawnDecalParticleForPoint(center, 6, 3, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
 		CL_AllocLightFlash(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
@@ -884,7 +884,7 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 	else if (effectnameindex == EFFECT_TE_TEI_PLASMAHIT)
 	{
 		float f;
-		R_Stain(center, 40, 96, 96, 96, 40, 128, 128, 128, 40);
+		R_Stain(center, 40, 40, 40, 40, 64, 88, 88, 88, 64);
 		CL_SpawnDecalParticleForPoint(center, 6, 8, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
 		if (cl_particles_smoke.integer)
 			for (f = 0;f < count;f += 4.0f / cl_particles_quality.value)
@@ -979,7 +979,7 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 					if (cl_particles_quake.integer)
 					{
 						color = particlepalette[67 + (rand()&3)];
-						CL_NewParticle(pt_alphastatic, color, color, tex_particle, 1.5f, 0, 255, 0, 0, -0.05, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 3, 0, true, 2);
+						CL_NewParticle(pt_alphastatic, color, color, tex_particle, 1.5f, 0, 255, 0, 0.05, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 3, 0, true, 2);
 					}
 					else
 					{
@@ -993,7 +993,7 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 					{
 						dec = 6;
 						color = particlepalette[67 + (rand()&3)];
-						CL_NewParticle(pt_alphastatic, color, color, tex_particle, 1.5f, 0, 255, 0, 0, -0.05, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 3, 0, true, 2);
+						CL_NewParticle(pt_alphastatic, color, color, tex_particle, 1.5f, 0, 255, 0, 0.05, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 3, 0, true, 2);
 					}
 					else
 					{
@@ -1386,7 +1386,7 @@ void CL_ParticleExplosion (const vec3_t org)
 	trace_t trace;
 	//vec3_t v;
 	//vec3_t v2;
-	R_Stain(org, 96, 80, 80, 80, 64, 176, 176, 176, 64);
+	R_Stain(org, 96, 40, 40, 40, 64, 88, 88, 88, 64);
 	CL_SpawnDecalParticleForPoint(org, 40, 48, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
 
 	if (cl_particles_quake.integer)
@@ -2353,7 +2353,7 @@ void R_DrawParticles (void)
 							// blood - splash on solid
 							if (trace.hitq3surfaceflags & Q3SURFACEFLAG_NOMARKS)
 								goto killparticle;
-							R_Stain(p->org, 32, 32, 16, 16, (int)(p->alpha * p->size * (1.0f / 40.0f)), 192, 48, 48, (int)(p->alpha * p->size * (1.0f / 40.0f)));
+							R_Stain(p->org, 16, 64, 16, 16, (int)(p->alpha * p->size * (1.0f / 80.0f)), 64, 32, 32, (int)(p->alpha * p->size * (1.0f / 80.0f)));
 							if (cl_decals.integer)
 							{
 								// create a decal for the blood splat
