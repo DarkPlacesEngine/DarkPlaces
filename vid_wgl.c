@@ -1158,9 +1158,6 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp, int refreshrat
 		if ((qwglGetExtensionsStringARB = (const char *(WINAPI *)(HDC hdc))GL_GetProcAddress("wglGetExtensionsStringARB")) == NULL)
 			Con_Print("wglGetExtensionsStringARB not found\n");
 
-		gl_renderer = (const char *)qglGetString(GL_RENDERER);
-		gl_vendor = (const char *)qglGetString(GL_VENDOR);
-		gl_version = (const char *)qglGetString(GL_VERSION);
 		gl_extensions = (const char *)qglGetString(GL_EXTENSIONS);
 		gl_platform = "WGL";
 		gl_platformextensions = "";
@@ -1195,12 +1192,6 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp, int refreshrat
 			}
 		}
 	}
-
-	Con_DPrintf("GL_VENDOR: %s\n", gl_vendor);
-	Con_DPrintf("GL_RENDERER: %s\n", gl_renderer);
-	Con_DPrintf("GL_VERSION: %s\n", gl_version);
-	Con_DPrintf("GL_EXTENSIONS: %s\n", gl_extensions);
-	Con_DPrintf("%s_EXTENSIONS: %s\n", gl_platform, gl_platformextensions);
 
 	/*
 	if (!fullscreen)

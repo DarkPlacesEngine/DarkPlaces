@@ -2348,6 +2348,22 @@ GL_Init
 extern char *ENGINE_EXTENSIONS;
 void GL_Init (void)
 {
+	gl_renderer = (const char *)qglGetString(GL_RENDERER);
+	gl_vendor = (const char *)qglGetString(GL_VENDOR);
+	gl_version = (const char *)qglGetString(GL_VERSION);
+	gl_extensions = (const char *)qglGetString(GL_EXTENSIONS);
+
+	if (!gl_extensions)
+		gl_extensions = "";
+	if (!gl_platformextensions)
+		gl_platformextensions = "";
+
+	Con_Printf("GL_VENDOR: %s\n", gl_vendor);
+	Con_Printf("GL_RENDERER: %s\n", gl_renderer);
+	Con_Printf("GL_VERSION: %s\n", gl_version);
+	Con_Printf("GL_EXTENSIONS: %s\n", gl_extensions);
+	Con_Printf("%s_EXTENSIONS: %s\n", gl_platform, gl_platformextensions);
+
 	VID_CheckExtensions();
 
 	// LordHavoc: report supported extensions
@@ -4054,7 +4070,7 @@ static void R_DrawEntityBBoxes(void)
 	// this function draws bounding boxes of server entities
 	if (!sv.active)
 		return;
-	
+
 	prog = 0;
 	SV_VM_Begin();
 	for (i = 0;i < prog->num_edicts;i++)
