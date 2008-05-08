@@ -660,6 +660,9 @@ void Host_Main(void)
 
 		cl.islocalgame = NetConn_IsLocalGame();
 
+		// begin gathering mouse input
+		in_mouse_x = in_mouse_y = 0;
+
 		// get new key events
 		Sys_SendKeyEvents();
 
