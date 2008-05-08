@@ -243,8 +243,6 @@ static void IN_StartupMouse (void);
 
 void VID_Finish (void)
 {
-	qboolean vid_usemouse;
-
 	vid_usevsync = vid_vsync.integer && !cls.timedemo && gl_videosyncavailable;
 	if (vid_usingvsync != vid_usevsync && gl_videosyncavailable)
 	{
@@ -1477,7 +1475,7 @@ static void IN_MouseMove (void)
 	in_windowmouse_x = current_pos.x - window_x;
 	in_windowmouse_y = current_pos.y - window_y;
 
-	if (!vid_usingmouse)
+	if (!vid.mouseaim)
 		return;
 
 #ifdef SUPPORTDIRECTX

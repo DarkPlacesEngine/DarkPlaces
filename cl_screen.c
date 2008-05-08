@@ -2279,9 +2279,12 @@ void CL_UpdateScreen(void)
 	else if (key_dest == key_menu)
 		grabmouse = in_client_mouse;
 	else if (key_dest == key_game)
-		grabmouse = (vid.fullscreen || vid_mouse.integer) && !cls.demoplayback && !cl.csqc_wantsmousemove;
+		grabmouse = vid_mouse.integer && !cls.demoplayback && !cl.csqc_wantsmousemove;
 	else
 		grabmouse = false;
+	vid.mouseaim = grabmouse;
+	if (vid.fullscreen)
+		grabmouse = true;
 	if (!vid_activewindow)
 		grabmouse = false;
 

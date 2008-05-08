@@ -276,7 +276,7 @@ void IN_Move( void )
 	static int old_x = 0, old_y = 0;
 	static int stuck = 0;
 	int x, y;
-	if( vid_usingmouse )
+	if (vid.mouseaim)
 	{
 		if(vid_stick_mouse.integer)
 		{
