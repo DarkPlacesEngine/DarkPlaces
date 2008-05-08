@@ -2038,7 +2038,8 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 	if (vid_hidden || !scr_refresh.integer)
 		return;
 	// release mouse grab while loading
-	VID_GrabMouse(false);
+	if (!vid.fullscreen)
+		VID_GrabMouse(false);
 	CHECKGLERROR
 	qglViewport(0, 0, vid.width, vid.height);CHECKGLERROR
 	//qglDisable(GL_SCISSOR_TEST);CHECKGLERROR
