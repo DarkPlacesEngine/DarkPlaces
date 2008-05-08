@@ -785,6 +785,17 @@ static void VM_M_copyentity (void)
 	memcpy(out->fields.vp, in->fields.vp, prog->progs->entityfields * 4);
 }
 
+//#66 vector() getmousepos (EXT_CSQC)
+static void VM_M_getmousepos(void)
+{
+	VM_SAFEPARMCOUNT(0,VM_M_getmousepos);
+
+	if (in_client_mouse)
+		VectorSet(PRVM_G_VECTOR(OFS_RETURN), in_windowmouse_x * vid_conwidth.integer / vid.width, in_windowmouse_y * vid_conheight.integer / vid.height, 0);
+	else
+		VectorSet(PRVM_G_VECTOR(OFS_RETURN), in_mouse_x * vid_conwidth.integer / vid.width, in_mouse_y * vid_conheight.integer / vid.height, 0);
+}
+
 prvm_builtin_t vm_m_builtins[] = {
 NULL,									//   #0 NULL function (not callable)
 VM_checkextension,				//   #1
@@ -852,7 +863,7 @@ VM_clientstate,					//  #62
 VM_clcommand,						//  #63
 VM_changelevel,					//  #64
 VM_localsound,						//  #65
-VM_getmousepos,					//  #66
+VM_M_getmousepos,					//  #66
 VM_gettime,							//  #67
 VM_loadfromdata,					//  #68
 VM_loadfromfile,					//  #69
