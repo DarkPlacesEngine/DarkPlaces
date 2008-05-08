@@ -249,7 +249,7 @@ static Cursor CreateNullCursor(Display *display, Window root)
 	return cursor;
 }
 
-static void IN_Activate (qboolean grab)
+void VID_GrabMouse(qboolean grab)
 {
 	if (!vidx11_display)
 		return;
@@ -257,7 +257,7 @@ static void IN_Activate (qboolean grab)
 	{
 #if !defined(__APPLE__) && !defined(SUNOS)
 		if(vid_usingmouse && (vid_usingdgamouse != !!vid_dgamouse.integer))
-			IN_Activate(false); // ungrab first!
+			VID_GrabMouse(false); // ungrab first!
 #endif
 		if (!vid_usingmouse && mouse_avail && win)
 		{
@@ -515,18 +515,16 @@ void VID_Shutdown(void)
 	if (!ctx || !vidx11_display)
 		return;
 
-	if (vidx11_display)
-	{
-		IN_Activate(false);
-		VID_RestoreSystemGamma();
+	VID_GrabMouse(false);
+	VID_RestoreSystemGamma();
 
-		// FIXME: glXDestroyContext here?
-		if (vid_isfullscreen)
-			XF86VidModeSwitchToMode(vidx11_display, vidx11_screen, &init_vidmode);
-		if (win)
-			XDestroyWindow(vidx11_display, win);
-		XCloseDisplay(vidx11_display);
-	}
+	// FIXME: glXDestroyContext here?
+	if (vid_isfullscreen)
+		XF86VidModeSwitchToMode(vidx11_display, vidx11_screen, &init_vidmode);
+	if (win)
+		XDestroyWindow(vidx11_display, win);
+	XCloseDisplay(vidx11_display);
+
 	vid_hidden = true;
 	vid_isfullscreen = false;
 	vidx11_display = NULL;
@@ -558,10 +556,8 @@ void InitSig(void)
 	signal(SIGTERM, signal_handler);
 }
 
-void VID_Finish (qboolean allowmousegrab)
+void VID_Finish (void)
 {
-	qboolean vid_usemouse;
-
 	vid_usevsync = vid_vsync.integer && !cls.timedemo && gl_videosyncavailable;
 	if (vid_usingvsync != vid_usevsync && gl_videosyncavailable)
 	{
@@ -569,16 +565,6 @@ void VID_Finish (qboolean allowmousegrab)
 		if (qglXSwapIntervalSGI (vid_usevsync))
 			Con_Print("glXSwapIntervalSGI didn't accept the vid_vsync change, it will take effect on next vid_restart (GLX_SGI_swap_control does not allow turning off vsync)\n");
 	}
-
-	// handle the mouse state when windowed if that's changed
-	vid_usemouse = false;
-	if (allowmousegrab && vid_mouse.integer && !key_consoleactive && (key_dest != key_game || !cls.demoplayback))
-		vid_usemouse = true;
-	if (!vid_activewindow)
-		vid_usemouse = false;
-	if (vid_isfullscreen)
-		vid_usemouse = true;
-	IN_Activate(vid_usemouse);
 
 	if (r_render.integer)
 	{

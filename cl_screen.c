@@ -2037,6 +2037,8 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 	// don't do anything if not initialized yet
 	if (vid_hidden || !scr_refresh.integer)
 		return;
+	// release mouse grab while loading
+	VID_GrabMouse(false);
 	CHECKGLERROR
 	qglViewport(0, 0, vid.width, vid.height);CHECKGLERROR
 	//qglDisable(GL_SCISSOR_TEST);CHECKGLERROR
@@ -2093,7 +2095,7 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 	R_Mesh_Finish();
 	// refresh
 	// not necessary when rendering to GL_FRONT buffers
-	//VID_Finish(false);
+	//VID_Finish();
 	// however this IS necessary on Windows Vista
 	qglFinish();
 }
@@ -2111,6 +2113,11 @@ void CL_UpdateScreen(void)
 	double rendertime1;
 	float conwidth, conheight;
 
+	if (!scr_initialized || !con_initialized)
+		return;				// not initialized yet
+
+	VID_GrabMouse((vid.fullscreen || (vid_mouse.integer && !key_consoleactive && (key_dest != key_game || !cls.demoplayback))) && vid_activewindow && !cl.csqc_wantsmousemove);
+
 	if(gamemode == GAME_NEXUIZ)
 	{
 		// play a bit with the palette (experimental)
@@ -2126,9 +2133,6 @@ void CL_UpdateScreen(void)
 
 	if (vid_hidden || !scr_refresh.integer)
 		return;
-
-	if (!scr_initialized || !con_initialized)
-		return;				// not initialized yet
 
 	rendertime1 = Sys_DoubleTime();
 
@@ -2269,7 +2273,9 @@ void CL_UpdateScreen(void)
 	else
 		cl_updatescreen_quality = 1;
 
-	VID_Finish(true);
+	VID_GrabMouse((vid.fullscreen || (vid_mouse.integer && !key_consoleactive && (key_dest != key_game || !cls.demoplayback))) && vid_activewindow && !cl.csqc_wantsmousemove);
+
+	VID_Finish();
 }
 
 void CL_Screen_NewMap(void)

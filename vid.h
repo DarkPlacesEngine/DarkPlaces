@@ -146,7 +146,8 @@ void VID_UpdateGamma(qboolean force, int rampsize);
 // (called from various shutdown/deactivation functions)
 void VID_RestoreSystemGamma(void);
 
-void VID_Finish (qboolean allowmousegrab);
+void VID_GrabMouse (qboolean grab);
+void VID_Finish (void);
 
 void VID_Restart_f(void);
 

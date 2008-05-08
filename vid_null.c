@@ -51,7 +51,11 @@ void InitSig(void)
 #endif
 }
 
-void VID_Finish (qboolean allowmousegrab)
+void VID_GrabMouse (qboolean grab)
+{
+}
+
+void VID_Finish (void)
 {
 }
 
