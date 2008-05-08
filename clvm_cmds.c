@@ -1112,7 +1112,9 @@ static void VM_CL_getmousepos(void)
 {
 	VM_SAFEPARMCOUNT(0,VM_CL_getmousepos);
 
-	if (cl.csqc_wantsmousemove)
+	if (key_consoleactive || key_dest != key_game)
+		VectorSet(PRVM_G_VECTOR(OFS_RETURN), 0, 0, 0);
+	else if (cl.csqc_wantsmousemove)
 		VectorSet(PRVM_G_VECTOR(OFS_RETURN), in_windowmouse_x * vid_conwidth.integer / vid.width, in_windowmouse_y * vid_conheight.integer / vid.height, 0);
 	else
 		VectorSet(PRVM_G_VECTOR(OFS_RETURN), in_mouse_x * vid_conwidth.integer / vid.width, in_mouse_y * vid_conheight.integer / vid.height, 0);
