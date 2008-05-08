@@ -2112,11 +2112,10 @@ void CL_UpdateScreen(void)
 {
 	double rendertime1;
 	float conwidth, conheight;
+	qboolean grabmouse;
 
 	if (!scr_initialized || !con_initialized)
 		return;				// not initialized yet
-
-	VID_GrabMouse((vid.fullscreen || (vid_mouse.integer && !key_consoleactive && (key_dest != key_game || !cls.demoplayback))) && vid_activewindow && !cl.csqc_wantsmousemove);
 
 	if(gamemode == GAME_NEXUIZ)
 	{
@@ -2273,7 +2272,20 @@ void CL_UpdateScreen(void)
 	else
 		cl_updatescreen_quality = 1;
 
-	VID_GrabMouse((vid.fullscreen || (vid_mouse.integer && !key_consoleactive && (key_dest != key_game || !cls.demoplayback))) && vid_activewindow && !cl.csqc_wantsmousemove);
+	if (key_consoleactive)
+		grabmouse = false;
+	else if (key_dest == key_menu_grabbed)
+		grabmouse = true;
+	else if (key_dest == key_menu)
+		grabmouse = in_client_mouse;
+	else if (key_dest == key_game)
+		grabmouse = (vid.fullscreen || vid_mouse.integer) && !cls.demoplayback && !cl.csqc_wantsmousemove;
+	else
+		grabmouse = false;
+	if (!vid_activewindow)
+		grabmouse = false;
+
+	VID_GrabMouse(grabmouse);
 
 	VID_Finish();
 }

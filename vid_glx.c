@@ -94,8 +94,6 @@ static qboolean vid_usevsync = false;
 static qboolean vid_x11_hardwaregammasupported = false;
 static qboolean vid_x11_dgasupported = false;
 static int vid_x11_gammarampsize = 0;
-static float	mouse_x, mouse_y;
-static int p_mouse_x, p_mouse_y;
 
 #if !defined(__APPLE__) && !defined(SUNOS)
 cvar_t vid_dgamouse = {CVAR_SAVE, "vid_dgamouse", "1", "make use of DGA mouse input"};
@@ -286,7 +284,6 @@ void VID_GrabMouse(qboolean grab)
 			if (vid_grabkeyboard.integer || vid_isfullscreen)
 				XGrabKeyboard(vidx11_display, win, False, GrabModeAsync, GrabModeAsync, CurrentTime);
 
-			mouse_x = mouse_y = 0;
 			cl_ignoremousemoves = 2;
 			vid_usingmouse = true;
 #if !defined(__APPLE__) && !defined(SUNOS)
@@ -373,26 +370,23 @@ static void HandleEvents(void)
 #if !defined(__APPLE__) && !defined(SUNOS)
 				if (vid_dgamouse.integer == 1 && vid_x11_dgasupported)
 				{
-					mouse_x += event.xmotion.x_root;
-					mouse_y += event.xmotion.y_root;
+					in_mouse_x += event.xmotion.x_root;
+					in_mouse_y += event.xmotion.y_root;
 				}
 				else
 #endif
 				{
-
 					if (!event.xmotion.send_event)
 					{
-						mouse_x += event.xmotion.x - p_mouse_x;
-						mouse_y += event.xmotion.y - p_mouse_y;
+						in_mouse_x += event.xmotion.x - in_windowmouse_x;
+						in_mouse_y += event.xmotion.y - in_windowmouse_y;
 						if (abs(vid.width/2 - event.xmotion.x) > vid.width / 4 || abs(vid.height/2 - event.xmotion.y) > vid.height / 4)
 							dowarp = true;
 					}
-					p_mouse_x = event.xmotion.x;
-					p_mouse_y = event.xmotion.y;
 				}
 			}
-			//else
-			//	ui_mouseupdate(event.xmotion.x, event.xmotion.y);
+			in_windowmouse_x = event.xmotion.x;
+			in_windowmouse_y = event.xmotion.y;
 			break;
 
 		case ButtonPress:
@@ -467,9 +461,9 @@ static void HandleEvents(void)
 	if (dowarp)
 	{
 		/* move the mouse to the window center again */
-		p_mouse_x = vid.width / 2;
-		p_mouse_y = vid.height / 2;
-		XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, p_mouse_x, p_mouse_y);
+		in_windowmouse_x = (int)(vid.width / 2);
+		in_windowmouse_y = (int)(vid.height / 2);
+		XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, (int)in_windowmouse_x, (int)in_windowmouse_y);
 	}
 }
 
@@ -899,11 +893,4 @@ void Sys_SendKeyEvents(void)
 
 void IN_Move (void)
 {
-	if (mouse_avail)
-	{
-		in_mouse_x = mouse_x;
-		in_mouse_y = mouse_y;
-	}
-	mouse_x = 0;
-	mouse_y = 0;
 }

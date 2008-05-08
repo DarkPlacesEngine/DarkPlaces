@@ -10,10 +10,11 @@ qboolean isG200 = false; // LordHavoc: the Matrox G200 can't do per pixel alpha,
 qboolean isRagePro = false; // LordHavoc: the ATI Rage Pro has limitations with per pixel alpha (the color scaler does not apply to per pixel alpha images...), although not as bad as a G200.
 
 // AK FIXME -> input_dest
-qboolean in_client_mouse = true;
+qboolean in_client_mouse = false;
 
 // AK where should it be placed ?
 float in_mouse_x, in_mouse_y;
+float in_windowmouse_x, in_windowmouse_y;
 
 // value of GL_MAX_TEXTURE_<various>_SIZE
 int gl_max_texture_size = 0;

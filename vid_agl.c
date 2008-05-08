@@ -61,7 +61,6 @@ static qboolean multithreadedgl;
 static qboolean mouse_avail = true;
 static qboolean vid_usingmouse = false;
 static qboolean vid_usingnoaccel = false;
-static float mouse_x, mouse_y;
 
 static qboolean vid_isfullscreen = false;
 static qboolean vid_usingvsync = false;
@@ -159,7 +158,6 @@ void VID_GrabMouse(qboolean grab)
 				}
 			}
 
-			mouse_x = mouse_y = 0;
 			vid_usingmouse = true;
 			vid_usingnoaccel = !!apple_mouse_noaccel.integer;
 		}
@@ -965,11 +963,19 @@ void Sys_SendKeyEvents(void)
 					case kEventMouseDragged:
 					{
 						HIPoint deltaPos;
+						HIPoint windowPos;
 
 						GetEventParameter(theEvent, kEventParamMouseDelta, typeHIPoint, NULL, sizeof(deltaPos), NULL, &deltaPos);
+						GetEventParameter(theEvent, kEventParamWindowMouseLocation, typeHIPoint, NULL, sizeof(windowPos), NULL, &windowPos);
 
-						mouse_x += deltaPos.x;
-						mouse_y += deltaPos.y;
+						if (vid_usingmouse)
+						{
+							in_mouse_x += deltaPos.x;
+							in_mouse_y += deltaPos.y;
+						}
+
+						in_windowmouse_x = windowPos.x;
+						in_windowmouse_y = windowPos.y;
 						break;
 					}
 
@@ -1102,11 +1108,4 @@ void Sys_SendKeyEvents(void)
 
 void IN_Move (void)
 {
-	if (mouse_avail)
-	{
-		in_mouse_x = mouse_x;
-		in_mouse_y = mouse_y;
-	}
-	mouse_x = 0;
-	mouse_y = 0;
 }

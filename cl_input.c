@@ -550,19 +550,8 @@ void CL_Input (void)
 		cl.cmd.upmove *= cl_movespeedkey.value;
 	}
 
-	in_mouse_x = 0;
-	in_mouse_y = 0;
-
 	// allow mice or other external controllers to add to the move
 	IN_Move ();
-
-	// ignore a mouse move if mouse was activated/deactivated this frame
-	if (cl_ignoremousemoves)
-	{
-		cl_ignoremousemoves--;
-		in_mouse_x = 0;
-		in_mouse_y = 0;
-	}
 
 	// apply m_filter if it is on
 	mx = in_mouse_x;
@@ -575,8 +564,16 @@ void CL_Input (void)
 	old_mouse_x = mx;
 	old_mouse_y = my;
 
+	// ignore a mouse move if mouse was activated/deactivated this frame
+	if (cl_ignoremousemoves)
+	{
+		cl_ignoremousemoves--;
+		in_mouse_x = old_mouse_x = 0;
+		in_mouse_y = old_mouse_y = 0;
+	}
+
 	// if not in menu, apply mouse move to viewangles/movement
-	if (!cl.csqc_wantsmousemove && in_client_mouse)
+	if (!key_consoleactive && key_dest == key_game && !cl.csqc_wantsmousemove)
 	{
 		float modulatedsensitivity = sensitivity.value * cl.sensitivityscale;
 		if (cl_prydoncursor.integer)
@@ -624,6 +621,9 @@ void CL_Input (void)
 
 	// clamp after the move to prevent rendering with bad angles
 	CL_AdjustAngles ();
+
+	in_mouse_x = 0;
+	in_mouse_y = 0;
 }
 
 #include "cl_collision.h"
