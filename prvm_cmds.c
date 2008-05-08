@@ -2309,6 +2309,7 @@ void VM_getmousepos(void)
 {
 	VM_SAFEPARMCOUNT(0,VM_getmousepos);
 
+	// FIXME: somehow this should involve in_client_mouse if this is menu progs
 	if (cl.csqc_wantsmousemove)
 		VectorSet(PRVM_G_VECTOR(OFS_RETURN), in_windowmouse_x * vid_conwidth.integer / vid.width, in_windowmouse_y * vid_conheight.integer / vid.height, 0);
 	else
