@@ -2307,12 +2307,12 @@ vector	getmousepos()
 */
 void VM_getmousepos(void)
 {
-
 	VM_SAFEPARMCOUNT(0,VM_getmousepos);
 
-	PRVM_G_VECTOR(OFS_RETURN)[0] = in_mouse_x * vid_conwidth.integer / vid.width;
-	PRVM_G_VECTOR(OFS_RETURN)[1] = in_mouse_y * vid_conheight.integer / vid.height;
-	PRVM_G_VECTOR(OFS_RETURN)[2] = 0;
+	if (cl.csqc_wantsmousemove)
+		VectorSet(PRVM_G_VECTOR(OFS_RETURN), in_windowmouse_x * vid_conwidth.integer / vid.width, in_windowmouse_y * vid_conheight.integer / vid.height, 0);
+	else
+		VectorSet(PRVM_G_VECTOR(OFS_RETURN), in_mouse_x * vid_conwidth.integer / vid.width, in_mouse_y * vid_conheight.integer / vid.height, 0);
 }
 
 /*

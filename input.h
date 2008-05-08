@@ -26,6 +26,7 @@ extern cvar_t in_pitch_min;
 extern cvar_t in_pitch_max;
 
 extern qboolean in_client_mouse;
+extern float in_windowmouse_x, in_windowmouse_y;
 extern float in_mouse_x, in_mouse_y;
 
 //enum input_dest_e {input_game,input_message,input_menu} input_dest;

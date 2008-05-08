@@ -305,6 +305,11 @@ void IN_Move( void )
 			in_mouse_y = y;
 		}
 	}
+
+	SDL_GetMouseState(&x, &y);
+	in_windowmouse_x = x;
+	in_windowmouse_y = y;
+
 	if (vid_numjoysticks && joy_enable.integer && joy_index.integer >= 0 && joy_index.integer < vid_numjoysticks)
 	{
 		SDL_Joystick *joy = vid_joysticks[joy_index.integer];

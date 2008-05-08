@@ -869,8 +869,6 @@ void Host_Main(void)
 			if (host_speeds.integer)
 				time1 = Sys_DoubleTime();
 
-			//ui_update();
-
 			CL_Video_Frame();
 			CL_Gecko_Frame();
 

@@ -1471,15 +1471,14 @@ IN_MouseMove
 */
 static void IN_MouseMove (void)
 {
-	int mx, my;
 	POINT current_pos;
 
+	GetCursorPos (&current_pos);
+	in_windowmouse_x = current_pos.x - window_x;
+	in_windowmouse_y = current_pos.y - window_y;
+
 	if (!vid_usingmouse)
-	{
-		//GetCursorPos (&current_pos);
-		//ui_mouseupdate(current_pos.x - window_x, current_pos.y - window_y);
 		return;
-	}
 
 #ifdef SUPPORTDIRECTX
 	if (dinput_acquired)
@@ -1488,8 +1487,6 @@ static void IN_MouseMove (void)
 		DIDEVICEOBJECTDATA	od;
 		DWORD				dwElements;
 		HRESULT				hr;
-		mx = 0;
-		my = 0;
 
 		for (;;)
 		{
@@ -1513,11 +1510,11 @@ static void IN_MouseMove (void)
 			switch (od.dwOfs)
 			{
 				case DIMOFS_X:
-					mx += (LONG) od.dwData;
+					in_mouse_x += (LONG) od.dwData;
 					break;
 
 				case DIMOFS_Y:
-					my += (LONG) od.dwData;
+					in_mouse_y += (LONG) od.dwData;
 					break;
 
 				case DIMOFS_Z:
@@ -1568,23 +1565,15 @@ static void IN_MouseMove (void)
 			if ((mstate_di ^ mouse_oldbuttonstate) & (1<<i))
 				Key_Event (buttonremap[i], 0, (mstate_di & (1<<i)) != 0);
 		mouse_oldbuttonstate = mstate_di;
-
-		in_mouse_x = mx;
-		in_mouse_y = my;
 	}
 	else
 #endif
 	{
-		GetCursorPos (&current_pos);
-		mx = current_pos.x - (window_x + vid.width / 2);
-		my = current_pos.y - (window_y + vid.height / 2);
-
-		in_mouse_x = mx;
-		in_mouse_y = my;
+		in_mouse_x += in_windowmouse_x - (int)(vid.width / 2);
+		in_mouse_y += in_windowmouse_y - (int)(vid.height / 2);
 
 		// if the mouse has moved, force it to the center, so there's room to move
-		if (!cl.csqc_wantsmousemove)
-		if (mx || my)
+		if (in_mouse_x || in_mouse_y)
 			SetCursorPos ((window_x + vid.width / 2), (window_y + vid.height / 2));
 	}
 }
