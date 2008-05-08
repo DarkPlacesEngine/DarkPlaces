@@ -431,20 +431,28 @@ static void HandleEvents(void)
 				Sys_Quit(0);
 			break;
 		case MapNotify:
+			if (vid.fullscreen)
+				break;
 			// window restored
 			vid_hidden = false;
 			VID_RestoreSystemGamma();
 			break;
 		case UnmapNotify:
+			if (vid.fullscreen)
+				break;
 			// window iconified/rolledup/whatever
 			vid_hidden = true;
 			VID_RestoreSystemGamma();
 			break;
 		case FocusIn:
+			if (vid.fullscreen)
+				break;
 			// window is now the input focus
 			vid_activewindow = true;
 			break;
 		case FocusOut:
+			if (vid.fullscreen)
+				break;
 			// window is no longer the input focus
 			vid_activewindow = false;
 			VID_RestoreSystemGamma();
