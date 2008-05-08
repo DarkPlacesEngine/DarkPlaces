@@ -37,6 +37,9 @@ typedef struct viddef_s
 	qboolean userefreshrate;
 	int stereobuffer;
 	int samples;
+
+	// these are used for state tracking
+	qboolean mouseaim;
 } viddef_t;
 
 // global video state

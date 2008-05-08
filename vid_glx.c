@@ -365,7 +365,7 @@ static void HandleEvents(void)
 
 		case MotionNotify:
 			// mouse moved
-			if (vid_usingmouse)
+			if (vid.mouseaim)
 			{
 #if !defined(__APPLE__) && !defined(SUNOS)
 				if (vid_dgamouse.integer == 1 && vid_x11_dgasupported)

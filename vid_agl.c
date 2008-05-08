@@ -968,7 +968,7 @@ void Sys_SendKeyEvents(void)
 						GetEventParameter(theEvent, kEventParamMouseDelta, typeHIPoint, NULL, sizeof(deltaPos), NULL, &deltaPos);
 						GetEventParameter(theEvent, kEventParamWindowMouseLocation, typeHIPoint, NULL, sizeof(windowPos), NULL, &windowPos);
 
-						if (vid_usingmouse)
+						if (vid.mouseaim)
 						{
 							in_mouse_x += deltaPos.x;
 							in_mouse_y += deltaPos.y;
