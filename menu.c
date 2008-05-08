@@ -5166,6 +5166,8 @@ void MP_Init (void)
 	// note: OP_STATE is not supported by menu qc, we don't even try to detect
 	// it here
 
+	in_client_mouse = true;
+
 	// call the prog init
 	PRVM_ExecuteProgram(prog->funcoffsets.m_init,"m_init() required");
 
