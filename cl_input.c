@@ -621,9 +621,6 @@ void CL_Input (void)
 
 	// clamp after the move to prevent rendering with bad angles
 	CL_AdjustAngles ();
-
-	in_mouse_x = 0;
-	in_mouse_y = 0;
 }
 
 #include "cl_collision.h"
