@@ -121,8 +121,6 @@ static qboolean vid_isfullscreen;
 
 static int window_x, window_y;
 
-static void IN_Activate (qboolean grab);
-
 static qboolean mouseinitialized;
 
 #ifdef SUPPORTDIRECTX
@@ -243,7 +241,7 @@ static void IN_StartupMouse (void);
 
 //====================================
 
-void VID_Finish (qboolean allowmousegrab)
+void VID_Finish (void)
 {
 	qboolean vid_usemouse;
 
@@ -253,16 +251,6 @@ void VID_Finish (qboolean allowmousegrab)
 		vid_usingvsync = vid_usevsync;
 		qwglSwapIntervalEXT (vid_usevsync);
 	}
-
-// handle the mouse state when windowed if that's changed
-	vid_usemouse = false;
-	if (allowmousegrab && vid_mouse.integer && !key_consoleactive && (key_dest != key_game || !cls.demoplayback))
-		vid_usemouse = true;
-	if (vid_isfullscreen)
-		vid_usemouse = true;
-	if (!vid_activewindow)
-		vid_usemouse = false;
-	IN_Activate(vid_usemouse);
 
 	if (r_render.integer && !vid_hidden)
 	{
@@ -441,7 +429,7 @@ void AppActivate(BOOL fActive, BOOL minimize)
 
 	if (!fActive)
 	{
-		IN_Activate (false);
+		VID_GrabMouse(false);
 		if (vid_isfullscreen)
 		{
 			ChangeDisplaySettings (NULL, 0);
@@ -515,7 +503,7 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 		case WM_MOVE:
 			window_x = (int) LOWORD(lParam);
 			window_y = (int) HIWORD(lParam);
-			IN_Activate(false);
+			VID_GrabMouse(false);
 			break;
 
 		case WM_KEYDOWN:
@@ -1257,6 +1245,7 @@ void VID_Shutdown (void)
 	if(vid_initialized == false)
 		return;
 
+	VID_GrabMouse(false);
 	VID_RestoreSystemGamma();
 
 	vid_initialized = false;
@@ -1278,7 +1267,7 @@ void VID_Shutdown (void)
 	vid_isfullscreen = false;
 }
 
-static void IN_Activate (qboolean grab)
+void VID_GrabMouse(qboolean grab)
 {
 	static qboolean restore_spi;
 	static int originalmouseparms[3];
@@ -2078,8 +2067,6 @@ static void IN_Init(void)
 
 static void IN_Shutdown(void)
 {
-	IN_Activate (false);
-
 #ifdef SUPPORTDIRECTX
 	if (g_pMouse)
 		IDirectInputDevice_Release(g_pMouse);

@@ -106,12 +106,12 @@ void VID_GetWindowSize (int *x, int *y, int *width, int *height)
 	*height = scr_height;
 }
 
-static void IN_Activate( qboolean grab )
+void VID_GrabMouse(qboolean grab)
 {
 	if (grab)
 	{
 		if(vid_usingmouse && (vid_usingnoaccel != !!apple_mouse_noaccel.integer))
-			IN_Activate(false); // ungrab first!
+			VID_GrabMouse(false); // ungrab first!
 		if (!vid_usingmouse && mouse_avail && window)
 		{
 			Rect winBounds;
@@ -191,20 +191,9 @@ static void IN_Activate( qboolean grab )
 }
 
 #define GAMMA_TABLE_SIZE 256
-void VID_Finish (qboolean allowmousegrab)
+void VID_Finish (void)
 {
-	qboolean vid_usemouse;
 	qboolean vid_usevsync;
-
-	// handle the mouse state when windowed if that's changed
-	vid_usemouse = false;
-	if (allowmousegrab && vid_mouse.integer && !key_consoleactive && (key_dest != key_game || !cls.demoplayback))
-		vid_usemouse = true;
-	if (!vid_activewindow)
-		vid_usemouse = false;
-	if (vid_isfullscreen)
-		vid_usemouse = true;
-	IN_Activate(vid_usemouse);
 
 	// handle changes of the vsync option
 	vid_usevsync = (vid_vsync.integer && !cls.timedemo);
@@ -410,7 +399,7 @@ void VID_Shutdown(void)
 	if (context == NULL && window == NULL)
 		return;
 
-	IN_Activate(false);
+	VID_GrabMouse(false);
 	VID_RestoreSystemGamma();
 
 	if (context != NULL)

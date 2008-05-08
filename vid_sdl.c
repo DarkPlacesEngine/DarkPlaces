@@ -232,7 +232,7 @@ static int MapKey( unsigned int sdlkey )
     return tbl_sdltoquake[ sdlkey ];
 }
 
-static void IN_Activate( qboolean grab )
+void VID_GrabMouse(qboolean grab)
 {
 	//SDL_WM_GrabInput( SDL_GRAB_OFF );
 	//Con_Printf("< Turning off input-grabbing. --blub\n");
@@ -765,10 +765,9 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 
 void VID_Shutdown (void)
 {
-	// this is needed to retry gamma after a vid_restart
+	VID_GrabMouse(false);
 	VID_RestoreSystemGamma();
 
-	IN_Activate(false);
 	SDL_QuitSubSystem(SDL_INIT_VIDEO);
 
 	gl_driver[0] = 0;
@@ -787,10 +786,9 @@ int VID_GetGamma (unsigned short *ramps, int rampsize)
 	return !SDL_GetGammaRamp (ramps, ramps + rampsize, ramps + rampsize*2);
 }
 
-void VID_Finish (qboolean allowmousegrab)
+void VID_Finish (void)
 {
 	Uint8 appstate;
-	qboolean vid_usemouse;
 
 	//react on appstate changes
 	appstate = SDL_GetAppState();
@@ -801,16 +799,6 @@ void VID_Finish (qboolean allowmousegrab)
 		vid_activewindow = false;
 	else
 		vid_activewindow = true;
-
-	vid_usemouse = false;
-	if( allowmousegrab && vid_mouse.integer && !key_consoleactive && (key_dest != key_game || !cls.demoplayback) )
-		vid_usemouse = true;
-	if( vid_isfullscreen )
-		vid_usemouse = true;
-	if( !vid_activewindow )
-		vid_usemouse = false;
-
-	IN_Activate(vid_usemouse);
 
 	VID_UpdateGamma(false, 256);
 
