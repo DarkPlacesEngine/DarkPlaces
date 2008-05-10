@@ -51,7 +51,7 @@ void InitSig(void)
 #endif
 }
 
-void VID_GrabMouse (qboolean grab)
+void VID_SetMouse (qboolean fullscreengrab, qboolean relative, qboolean hidecursor)
 {
 }
 

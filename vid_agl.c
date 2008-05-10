@@ -60,6 +60,7 @@ CGLContextObj (*qCGLGetCurrentContext) (void);
 static qboolean multithreadedgl;
 static qboolean mouse_avail = true;
 static qboolean vid_usingmouse = false;
+static qboolean vid_usinghidecursor = false;
 static qboolean vid_usingnoaccel = false;
 
 static qboolean vid_isfullscreen = false;
@@ -105,19 +106,21 @@ void VID_GetWindowSize (int *x, int *y, int *width, int *height)
 	*height = scr_height;
 }
 
-void VID_GrabMouse(qboolean grab)
+void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecursor)
 {
-	if (grab)
+	if (!mouse_avail || !window)
+		fullscreengrab = relative = hidecursor = false;
+
+	if (relative)
 	{
 		if(vid_usingmouse && (vid_usingnoaccel != !!apple_mouse_noaccel.integer))
-			VID_GrabMouse(false); // ungrab first!
-		if (!vid_usingmouse && mouse_avail && window)
+			VID_SetMouse(false, false, false); // ungrab first!
+		if (!vid_usingmouse)
 		{
 			Rect winBounds;
 			CGPoint winCenter;
 
 			SelectWindow(window);
-			CGDisplayHideCursor(CGMainDisplayID());
 
 			// Put the mouse cursor at the center of the window
 			GetWindowBounds (window, kWindowContentRgn, &winBounds);
@@ -181,10 +184,18 @@ void VID_GrabMouse(qboolean grab)
 			}
 
 			CGAssociateMouseAndMouseCursorPosition(true);
-			CGDisplayShowCursor(CGMainDisplayID());
 
 			vid_usingmouse = false;
 		}
+	}
+
+	if (vid_usinghidecursor != hidecursor)
+	{
+		vid_usinghidecursor = hidecursor;
+		if (hidecursor)
+			CGDisplayHideCursor(CGMainDisplayID());
+		else
+			CGDisplayShowCursor(CGMainDisplayID());
 	}
 }
 
@@ -397,7 +408,7 @@ void VID_Shutdown(void)
 	if (context == NULL && window == NULL)
 		return;
 
-	VID_GrabMouse(false);
+	VID_SetMouse(false, false, false);
 	VID_RestoreSystemGamma();
 
 	if (context != NULL)
@@ -697,6 +708,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	multithreadedgl = false;
 	vid_isfullscreen = fullscreen;
 	vid_usingmouse = false;
+	vid_usinghidecursor = false;
 	vid_hidden = false;
 	vid_activewindow = true;
 	sound_active = true;
@@ -968,7 +980,7 @@ void Sys_SendKeyEvents(void)
 						GetEventParameter(theEvent, kEventParamMouseDelta, typeHIPoint, NULL, sizeof(deltaPos), NULL, &deltaPos);
 						GetEventParameter(theEvent, kEventParamWindowMouseLocation, typeHIPoint, NULL, sizeof(windowPos), NULL, &windowPos);
 
-						if (vid.mouseaim)
+						if (vid_usingmouse)
 						{
 							in_mouse_x += deltaPos.x;
 							in_mouse_y += deltaPos.y;

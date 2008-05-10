@@ -88,7 +88,9 @@ Atom wm_delete_window_atom;
 
 
 static qboolean mouse_avail = true;
+static qboolean vid_usingmousegrab = false;
 static qboolean vid_usingmouse = false;
+static qboolean vid_usinghidecursor = false;
 static qboolean vid_usingvsync = false;
 static qboolean vid_usevsync = false;
 static qboolean vid_x11_hardwaregammasupported = false;
@@ -247,23 +249,44 @@ static Cursor CreateNullCursor(Display *display, Window root)
 	return cursor;
 }
 
-void VID_GrabMouse(qboolean grab)
+void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecursor)
 {
 	qboolean usedgamouse;
-	if (!vidx11_display)
+
+	if (!vidx11_display || !win)
 		return;
-	usedgamouse = grab && vid.mouseaim && vid_dgamouse.integer;
+
+	if (!mouse_avail)
+		fullscreengrab = relative = hidecursor = false;
+
+	usedgamouse = relative && vid_dgamouse.integer;
 #if !defined(__APPLE__) && !defined(SUNOS)
 	if (!vid_x11_dgasupported)
 		usedgamouse = false;
+	if (fullscreengrab && vid_usingmouse && (vid_usingdgamouse != usedgamouse))
+		VID_SetMouse(false, false, false); // ungrab first!
 #endif
-	if (grab)
+
+	if (vid_usingmousegrab != fullscreengrab)
 	{
-#if !defined(__APPLE__) && !defined(SUNOS)
-		if(vid_usingmouse && (vid_usingdgamouse != usedgamouse))
-			VID_GrabMouse(false); // ungrab first!
-#endif
-		if (!vid_usingmouse && mouse_avail && win)
+		vid_usingmousegrab = fullscreengrab;
+		cl_ignoremousemoves = 2;
+		if (fullscreengrab)
+		{
+			XGrabPointer(vidx11_display, win,  True, 0, GrabModeAsync, GrabModeAsync, win, None, CurrentTime);
+			if (vid_grabkeyboard.integer || vid_isfullscreen)
+				XGrabKeyboard(vidx11_display, win, False, GrabModeAsync, GrabModeAsync, CurrentTime);
+		}
+		else
+		{
+			XUngrabPointer(vidx11_display, CurrentTime);
+			XUngrabKeyboard(vidx11_display, CurrentTime);
+		}
+	}
+
+	if (relative)
+	{
+		if (!vid_usingmouse)
 		{
 			XWindowAttributes attribs_1;
 			XSetWindowAttributes attribs_2;
@@ -271,11 +294,6 @@ void VID_GrabMouse(qboolean grab)
 			XGetWindowAttributes(vidx11_display, win, &attribs_1);
 			attribs_2.event_mask = attribs_1.your_event_mask | KEY_MASK | MOUSE_MASK;
 			XChangeWindowAttributes(vidx11_display, win, CWEventMask, &attribs_2);
-
-		// inviso cursor
-			XDefineCursor(vidx11_display, win, CreateNullCursor(vidx11_display, win));
-
-			XGrabPointer(vidx11_display, win,  True, 0, GrabModeAsync, GrabModeAsync, win, None, CurrentTime);
 
 #if !defined(__APPLE__) && !defined(SUNOS)
 			vid_usingdgamouse = usedgamouse;
@@ -287,9 +305,6 @@ void VID_GrabMouse(qboolean grab)
 			else
 #endif
 				XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, vid.width / 2, vid.height / 2);
-
-			if (vid_grabkeyboard.integer || vid_isfullscreen)
-				XGrabKeyboard(vidx11_display, win, False, GrabModeAsync, GrabModeAsync, CurrentTime);
 
 			cl_ignoremousemoves = 2;
 			vid_usingmouse = true;
@@ -304,17 +319,18 @@ void VID_GrabMouse(qboolean grab)
 				XF86DGADirectVideo(vidx11_display, DefaultScreen(vidx11_display), 0);
 			vid_usingdgamouse = false;
 #endif
-
-			XUngrabPointer(vidx11_display, CurrentTime);
-			XUngrabKeyboard(vidx11_display, CurrentTime);
-
-			// inviso cursor
-			if (win)
-				XUndefineCursor(vidx11_display, win);
-
 			cl_ignoremousemoves = 2;
 			vid_usingmouse = false;
 		}
+	}
+
+	if (vid_usinghidecursor != hidecursor)
+	{
+		vid_usinghidecursor = hidecursor;
+		if (hidecursor)
+			XDefineCursor(vidx11_display, win, CreateNullCursor(vidx11_display, win));
+		else
+			XUndefineCursor(vidx11_display, win);
 	}
 }
 
@@ -370,7 +386,7 @@ static void HandleEvents(void)
 
 		case MotionNotify:
 			// mouse moved
-			if (vid.mouseaim)
+			if (vid_usingmouse)
 			{
 #if !defined(__APPLE__) && !defined(SUNOS)
 				if (vid_usingdgamouse)
@@ -523,7 +539,7 @@ void VID_Shutdown(void)
 	if (!ctx || !vidx11_display)
 		return;
 
-	VID_GrabMouse(false);
+	VID_SetMouse(false, false, false);
 	VID_RestoreSystemGamma();
 
 	// FIXME: glXDestroyContext here?
@@ -866,7 +882,9 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 // COMMANDLINEOPTION: MacOSX GLX: -novideosync disables GLX_SGI_swap_control
 	gl_videosyncavailable = GL_CheckExtension("GLX_SGI_swap_control", swapcontrolfuncs, "-novideosync", false);
 
+	vid_usingmousegrab = false;
 	vid_usingmouse = false;
+	vid_usinghidecursor = false;
 	vid_usingvsync = false;
 	vid_hidden = false;
 	vid_activewindow = true;

@@ -2039,7 +2039,7 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 		return;
 	// release mouse grab while loading
 	if (!vid.fullscreen)
-		VID_GrabMouse(false);
+		VID_SetMouse(false, false, false);
 	CHECKGLERROR
 	qglViewport(0, 0, vid.width, vid.height);CHECKGLERROR
 	//qglDisable(GL_SCISSOR_TEST);CHECKGLERROR
@@ -2113,7 +2113,6 @@ void CL_UpdateScreen(void)
 {
 	double rendertime1;
 	float conwidth, conheight;
-	qboolean grabmouse;
 
 	if (!scr_initialized || !con_initialized)
 		return;				// not initialized yet
@@ -2273,23 +2272,16 @@ void CL_UpdateScreen(void)
 	else
 		cl_updatescreen_quality = 1;
 
-	if (key_consoleactive)
-		grabmouse = false;
-	else if (key_dest == key_menu_grabbed)
-		grabmouse = true;
-	else if (key_dest == key_menu)
-		grabmouse = !in_client_mouse;
-	else if (key_dest == key_game)
-		grabmouse = vid_mouse.integer && !cls.demoplayback && !cl.csqc_wantsmousemove;
-	else
-		grabmouse = false;
-	vid.mouseaim = grabmouse;
-	if (vid.fullscreen)
-		grabmouse = true;
 	if (!vid_activewindow)
-		grabmouse = false;
-
-	VID_GrabMouse(grabmouse);
+		VID_SetMouse(false, false, false);
+	else if (key_consoleactive)
+		VID_SetMouse(vid.fullscreen, false, false);
+	else if (key_dest == key_menu_grabbed)
+		VID_SetMouse(true, !in_client_mouse, true);
+	else if (key_dest == key_menu)
+		VID_SetMouse(vid.fullscreen, !in_client_mouse, true);
+	else
+		VID_SetMouse(vid.fullscreen || (vid_mouse.integer && !cls.demoplayback && !cl.csqc_wantsmousemove), vid_mouse.integer && !cls.demoplayback && !cl.csqc_wantsmousemove, true);
 
 	VID_Finish();
 }

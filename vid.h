@@ -37,9 +37,6 @@ typedef struct viddef_s
 	qboolean userefreshrate;
 	int stereobuffer;
 	int samples;
-
-	// these are used for state tracking
-	qboolean mouseaim;
 } viddef_t;
 
 // global video state
@@ -149,7 +146,7 @@ void VID_UpdateGamma(qboolean force, int rampsize);
 // (called from various shutdown/deactivation functions)
 void VID_RestoreSystemGamma(void);
 
-void VID_GrabMouse (qboolean grab);
+void VID_SetMouse (qboolean fullscreengrab, qboolean relative, qboolean hidecursor);
 void VID_Finish (void);
 
 void VID_Restart_f(void);
