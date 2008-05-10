@@ -49,7 +49,8 @@ cvar_t joy_sensitivitypitch = {0, "joy_sensitivitypitch", "1", "movement multipl
 cvar_t joy_sensitivityyaw = {0, "joy_sensitivityyaw", "-1", "movement multiplier"};
 cvar_t joy_sensitivityroll = {0, "joy_sensitivityroll", "1", "movement multiplier"};
 
-static qboolean vid_usingmouse;
+static qboolean vid_usingmouse = false;
+static qboolean vid_usinghidecursor = false;
 static qboolean vid_isfullscreen;
 static int vid_numjoysticks = 0;
 #define MAX_JOYSTICKS 8
@@ -232,29 +233,18 @@ static int MapKey( unsigned int sdlkey )
     return tbl_sdltoquake[ sdlkey ];
 }
 
-void VID_GrabMouse(qboolean grab)
+void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecursor)
 {
-	//SDL_WM_GrabInput( SDL_GRAB_OFF );
-	//Con_Printf("< Turning off input-grabbing. --blub\n");
-	if (grab)
+	if (vid_usingmouse != relative)
 	{
-		if (!vid_usingmouse)
-		{
-			vid_usingmouse = true;
-			cl_ignoremousemoves = 2;
-			SDL_WM_GrabInput( SDL_GRAB_ON );
-			SDL_ShowCursor( SDL_DISABLE );
-		}
+		vid_usingmouse = relative;
+		cl_ignoremousemoves = 2;
+		SDL_WM_GrabInput( relative ? SDL_GRAB_ON : SDL_GRAB_OFF );
 	}
-	else
+	if (vid_usinghidecursor != hidecursor)
 	{
-		if (vid_usingmouse)
-		{
-			vid_usingmouse = false;
-			cl_ignoremousemoves = 2;
-			SDL_WM_GrabInput( SDL_GRAB_OFF );
-			SDL_ShowCursor( SDL_ENABLE );
-		}
+		vid_usinghidecursor = hidecursor;
+		SDL_ShowCursor( hidecursor ? SDL_DISABLE : SDL_ENABLE);
 	}
 }
 
@@ -276,7 +266,7 @@ void IN_Move( void )
 	static int old_x = 0, old_y = 0;
 	static int stuck = 0;
 	int x, y;
-	if (vid.mouseaim)
+	if (vid_usingmouse)
 	{
 		if(vid_stick_mouse.integer)
 		{
@@ -763,6 +753,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	vid_hidden = false;
 	vid_activewindow = false;
 	vid_usingmouse = false;
+	vid_usinghidecursor = false;
 
 	SDL_WM_GrabInput(SDL_GRAB_OFF);
 	return true;
@@ -770,7 +761,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 
 void VID_Shutdown (void)
 {
-	VID_GrabMouse(false);
+	VID_SetMouse(false, false, false);
 	VID_RestoreSystemGamma();
 
 	SDL_QuitSubSystem(SDL_INIT_VIDEO);

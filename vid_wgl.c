@@ -95,6 +95,7 @@ static DEVMODE gdevmode, initialdevmode;
 static qboolean vid_initialized = false;
 static qboolean vid_wassuspended = false;
 static qboolean vid_usingmouse = false;
+static qboolean vid_usinghidecursor = false;
 static qboolean vid_usingvsync = false;
 static qboolean vid_usevsync = false;
 static HICON hIcon;
@@ -427,7 +428,7 @@ void AppActivate(BOOL fActive, BOOL minimize)
 
 	if (!fActive)
 	{
-		VID_GrabMouse(false);
+		VID_SetMouse(false, false, false);
 		if (vid_isfullscreen)
 		{
 			ChangeDisplaySettings (NULL, 0);
@@ -501,7 +502,7 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 		case WM_MOVE:
 			window_x = (int) LOWORD(lParam);
 			window_y = (int) HIWORD(lParam);
-			VID_GrabMouse(false);
+			VID_SetMouse(false, false, false);
 			break;
 
 		case WM_KEYDOWN:
@@ -1220,6 +1221,7 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp, int refreshrat
 	//vid_menudrawfn = VID_MenuDraw;
 	//vid_menukeyfn = VID_MenuKey;
 	vid_usingmouse = false;
+	vid_usinghidecursor = false;
 	vid_usingvsync = false;
 	vid_hidden = false;
 	vid_initialized = true;
@@ -1243,7 +1245,7 @@ void VID_Shutdown (void)
 	if(vid_initialized == false)
 		return;
 
-	VID_GrabMouse(false);
+	VID_SetMouse(false, false, false);
 	VID_RestoreSystemGamma();
 
 	vid_initialized = false;
@@ -1265,7 +1267,7 @@ void VID_Shutdown (void)
 	vid_isfullscreen = false;
 }
 
-void VID_GrabMouse(qboolean grab)
+void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecursor)
 {
 	static qboolean restore_spi;
 	static int originalmouseparms[3];
@@ -1273,7 +1275,7 @@ void VID_GrabMouse(qboolean grab)
 	if (!mouseinitialized)
 		return;
 
-	if (grab)
+	if (relative)
 	{
 		if (!vid_usingmouse)
 		{
@@ -1311,7 +1313,6 @@ void VID_GrabMouse(qboolean grab)
 				SetCapture (mainwindow);
 				ClipCursor (&window_rect);
 			}
-			ShowCursor (false);
 		}
 	}
 	else
@@ -1336,8 +1337,13 @@ void VID_GrabMouse(qboolean grab)
 				ClipCursor (NULL);
 				ReleaseCapture ();
 			}
-			ShowCursor (true);
 		}
+	}
+
+	if (vid_usinghidecursor != hidecursor)
+	{
+		vid_usinghidecursor = hidecursor;
+		ShowCursor (!hidecursor);
 	}
 }
 
@@ -1475,7 +1481,7 @@ static void IN_MouseMove (void)
 	in_windowmouse_x = current_pos.x - window_x;
 	in_windowmouse_y = current_pos.y - window_y;
 
-	if (!vid.mouseaim)
+	if (!vid_usingmouse)
 		return;
 
 #ifdef SUPPORTDIRECTX
