@@ -249,12 +249,18 @@ static Cursor CreateNullCursor(Display *display, Window root)
 
 void VID_GrabMouse(qboolean grab)
 {
+	qboolean usedgamouse;
 	if (!vidx11_display)
 		return;
+	usedgamouse = grab && vid.mouseaim && vid_dgamouse.integer;
+#if !defined(__APPLE__) && !defined(SUNOS)
+	if (!vid_x11_dgasupported)
+		usedgamouse = false;
+#endif
 	if (grab)
 	{
 #if !defined(__APPLE__) && !defined(SUNOS)
-		if(vid_usingmouse && (vid_usingdgamouse != !!vid_dgamouse.integer))
+		if(vid_usingmouse && (vid_usingdgamouse != usedgamouse))
 			VID_GrabMouse(false); // ungrab first!
 #endif
 		if (!vid_usingmouse && mouse_avail && win)
@@ -272,7 +278,8 @@ void VID_GrabMouse(qboolean grab)
 			XGrabPointer(vidx11_display, win,  True, 0, GrabModeAsync, GrabModeAsync, win, None, CurrentTime);
 
 #if !defined(__APPLE__) && !defined(SUNOS)
-			if (vid_dgamouse.integer && vid_x11_dgasupported)
+			vid_usingdgamouse = usedgamouse;
+			if (usedgamouse)
 			{
 				XF86DGADirectVideo(vidx11_display, DefaultScreen(vidx11_display), XF86DGADirectMouse);
 				XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, 0, 0);
@@ -286,9 +293,6 @@ void VID_GrabMouse(qboolean grab)
 
 			cl_ignoremousemoves = 2;
 			vid_usingmouse = true;
-#if !defined(__APPLE__) && !defined(SUNOS)
-			vid_usingdgamouse = !!vid_dgamouse.integer;
-#endif
 		}
 	}
 	else
@@ -296,8 +300,9 @@ void VID_GrabMouse(qboolean grab)
 		if (vid_usingmouse)
 		{
 #if !defined(__APPLE__) && !defined(SUNOS)
-			if (vid_x11_dgasupported)
+			if (vid_usingdgamouse)
 				XF86DGADirectVideo(vidx11_display, DefaultScreen(vidx11_display), 0);
+			vid_usingdgamouse = false;
 #endif
 
 			XUngrabPointer(vidx11_display, CurrentTime);
@@ -368,7 +373,7 @@ static void HandleEvents(void)
 			if (vid.mouseaim)
 			{
 #if !defined(__APPLE__) && !defined(SUNOS)
-				if (vid_dgamouse.integer == 1 && vid_x11_dgasupported)
+				if (vid_usingdgamouse)
 				{
 					in_mouse_x += event.xmotion.x_root;
 					in_mouse_y += event.xmotion.y_root;
