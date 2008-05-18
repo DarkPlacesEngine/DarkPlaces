@@ -256,6 +256,9 @@ void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecurso
 	if (!vidx11_display || !win)
 		return;
 
+	if (relative)
+		fullscreengrab = true;
+
 	if (!mouse_avail)
 		fullscreengrab = relative = hidecursor = false;
 
@@ -401,8 +404,8 @@ static void HandleEvents(void)
 					{
 						in_mouse_x += event.xmotion.x - in_windowmouse_x;
 						in_mouse_y += event.xmotion.y - in_windowmouse_y;
-						if (abs(vid.width/2 - event.xmotion.x) + abs(vid.height/2 - event.xmotion.y))
-						//if (abs(vid.width/2 - event.xmotion.x) > vid.width / 4 || abs(vid.height/2 - event.xmotion.y) > vid.height / 4)
+						//if (abs(vid.width/2 - event.xmotion.x) + abs(vid.height/2 - event.xmotion.y))
+						if (abs(vid.width/2 - event.xmotion.x) > vid.width / 4 || abs(vid.height/2 - event.xmotion.y) > vid.height / 4)
 							dowarp = true;
 					}
 				}
@@ -491,9 +494,16 @@ static void HandleEvents(void)
 	if (dowarp)
 	{
 		/* move the mouse to the window center again */
-		in_windowmouse_x = (int)(vid.width / 2);
-		in_windowmouse_y = (int)(vid.height / 2);
-		XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, (int)in_windowmouse_x, (int)in_windowmouse_y);
+		// we'll catch the warp motion by its send_event flag, updating the
+		// stored mouse position without adding any delta motion
+		XEvent event;
+		event.type = MotionNotify;
+		event.xmotion.display = vidx11_display;
+		event.xmotion.window = win;
+		event.xmotion.x = vid.width / 2;
+		event.xmotion.y = vid.height / 2;
+		XSendEvent(vidx11_display, win, False, PointerMotionMask, &event);
+		XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, vid.width / 2, vid.height / 2);
 	}
 }
 
