@@ -1076,6 +1076,8 @@ static void VM_CL_trailparticles (void)
 	start	= PRVM_G_VECTOR(OFS_PARM2);
 	end		= PRVM_G_VECTOR(OFS_PARM3);
 
+	if (i < 0)
+		return;
 	CL_ParticleEffect(i, VectorDistance(start, end), start, end, t->fields.client->velocity, t->fields.client->velocity, NULL, prog->argc >= 5 ? (int)PRVM_G_FLOAT(OFS_PARM4) : 0);
 }
 
@@ -1089,6 +1091,8 @@ static void VM_CL_pointparticles (void)
 	f = PRVM_G_VECTOR(OFS_PARM1);
 	v = PRVM_G_VECTOR(OFS_PARM2);
 	n = (int)PRVM_G_FLOAT(OFS_PARM3);
+	if (i < 0)
+		return;
 	CL_ParticleEffect(i, n, f, f, v, v, NULL, prog->argc >= 5 ? (int)PRVM_G_FLOAT(OFS_PARM4) : 0);
 }
 

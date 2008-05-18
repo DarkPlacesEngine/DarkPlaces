@@ -2809,6 +2809,9 @@ static void VM_SV_trailparticles (void)
 {
 	VM_SAFEPARMCOUNT(4, VM_SV_trailparticles);
 
+	if ((int)PRVM_G_FLOAT(OFS_PARM0) < 0)
+		return;
+
 	MSG_WriteByte(&sv.datagram, svc_trailparticles);
 	MSG_WriteShort(&sv.datagram, PRVM_G_EDICTNUM(OFS_PARM0));
 	MSG_WriteShort(&sv.datagram, (int)PRVM_G_FLOAT(OFS_PARM1));
@@ -2823,6 +2826,10 @@ static void VM_SV_pointparticles (void)
 	int effectnum, count;
 	vec3_t org, vel;
 	VM_SAFEPARMCOUNTRANGE(4, 8, VM_SV_pointparticles);
+
+	if ((int)PRVM_G_FLOAT(OFS_PARM0) < 0)
+		return;
+
 	effectnum = (int)PRVM_G_FLOAT(OFS_PARM0);
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), org);
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM2), vel);
