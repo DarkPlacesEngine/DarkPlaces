@@ -109,7 +109,7 @@ void VID_GetWindowSize (int *x, int *y, int *width, int *height)
 void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecursor)
 {
 	if (!mouse_avail || !window)
-		fullscreengrab = relative = hidecursor = false;
+		relative = hidecursor = false;
 
 	if (relative)
 	{
