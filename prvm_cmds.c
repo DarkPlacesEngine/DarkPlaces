@@ -703,11 +703,11 @@ void VM_strftime(void)
 		tm = gmtime(&t);
 	if (!tm)
 	{
-		PRVM_G_FLOAT(OFS_RETURN) = 0;
+		PRVM_G_INT(OFS_RETURN) = 0;
 		return;
 	}
 	strftime(result, sizeof(result), fmt, tm);
-	PRVM_G_FLOAT(OFS_RETURN) = PRVM_SetTempString(result);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(result);
 }
 
 /*
