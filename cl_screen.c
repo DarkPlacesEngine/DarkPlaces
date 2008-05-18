@@ -2281,7 +2281,7 @@ void CL_UpdateScreen(void)
 	else if (key_dest == key_menu)
 		VID_SetMouse(vid.fullscreen, !in_client_mouse, true);
 	else
-		VID_SetMouse(vid.fullscreen || (vid_mouse.integer && !cls.demoplayback && !cl.csqc_wantsmousemove), vid_mouse.integer && !cls.demoplayback && !cl.csqc_wantsmousemove, true);
+		VID_SetMouse(vid.fullscreen, vid_mouse.integer && !cls.demoplayback && !cl.csqc_wantsmousemove, true);
 
 	VID_Finish();
 }
