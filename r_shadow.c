@@ -3435,7 +3435,8 @@ void R_Shadow_FreeCubemaps(void)
 	{
 		if (developer_loading.integer)
 			Con_Printf("unloading cubemap \"%s\"\n", cubemaps[i].basename);
-		R_FreeTexture(cubemaps[i].texture);
+		if (cubemaps[i].texture != r_texture_whitecube)
+			R_FreeTexture(cubemaps[i].texture);
 	}
 
 	numcubemaps = 0;
