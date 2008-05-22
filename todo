@@ -14,6 +14,7 @@
 0 bug darkplaces client qw: qw skins should only be active on progs/player.mdl (Plague Monkey Rat)
 0 bug darkplaces client qw: qw/skins/*.pcx need to be cropped to 296x194 and loaded as internal textures so they are split into multiple layers (Plague Monkey Rat)
 0 bug darkplaces client qw: restrict wateralpha and such cvars according to what is permitted in qw serverinfo?
+0 bug darkplaces client sbar: when playing demos recorded from singleplayer, the deathmatch hud seems to be used, perhaps we have to force it off for maxplayers 1? (Spirit)
 0 bug darkplaces client timedemo: investigate bogus results of one-second min/avg/max, clearly not working properly (Willis)
 0 bug darkplaces client win64: crash in R_DrawRTLight due to stack overflow, change the pointer arrays to indexes into r_refdef.scene.entities, or increase projects to build with 4MB stack instead of 2MB - also clean up these warnings: http://dp.deathmask.net/log/dp_x64_buildlog_r8078.txt (Willis)
 0 bug darkplaces client: can't move mouse around in nexuiz menu if vid_mouse is 0
@@ -34,6 +35,7 @@
 0 bug darkplaces renderer: coronas are not affected by fog (div0)
 0 bug darkplaces renderer: if an animated model has transparent surfaces, each one calls RSurf_ActiveModelEntity, recomputing all vertices
 0 bug darkplaces renderer: if an animated model is entirely transparent, the RSurf_ActiveModelEntity call updating vertices is completely wasted
+0 bug darkplaces renderer: r_speeds sometimes counts entities twice, the whole counting code needs auditing (Morphed, and jim on inside3d)
 0 bug darkplaces server csqc networking: csqc entity sending code does not currently detect packet loss and repeat lost entities (FrikaC, Chris Page, div0)
 0 bug darkplaces server: SV_PushMove is ignoring model type in its angles_x handling, where as the renderer checks only model type to determine angles_x handling (Urre)
 0 bug darkplaces server: SV_PushMove's call to SV_ClipMoveToEntity should do a trace, not just a point test, to support hollow pusher models (Urre)
