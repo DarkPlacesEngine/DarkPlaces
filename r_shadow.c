@@ -3417,14 +3417,12 @@ rtexture_t *R_Shadow_Cubemap(const char *basename)
 	int i;
 	for (i = 0;i < numcubemaps;i++)
 		if (!strcasecmp(cubemaps[i].basename, basename))
-			return cubemaps[i].texture;
+			return cubemaps[i].texture ? cubemaps[i].texture : r_texture_whitecube;
 	if (i >= MAX_CUBEMAPS)
 		return r_texture_whitecube;
 	numcubemaps++;
 	strlcpy(cubemaps[i].basename, basename, sizeof(cubemaps[i].basename));
 	cubemaps[i].texture = R_Shadow_LoadCubemap(cubemaps[i].basename);
-	if (!cubemaps[i].texture)
-		cubemaps[i].texture = r_texture_whitecube;
 	return cubemaps[i].texture;
 }
 
@@ -3435,7 +3433,7 @@ void R_Shadow_FreeCubemaps(void)
 	{
 		if (developer_loading.integer)
 			Con_Printf("unloading cubemap \"%s\"\n", cubemaps[i].basename);
-		if (cubemaps[i].texture != r_texture_whitecube)
+		if (cubemaps[i].texture)
 			R_FreeTexture(cubemaps[i].texture);
 	}
 
