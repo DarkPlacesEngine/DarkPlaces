@@ -35,7 +35,7 @@
 0 bug darkplaces renderer: coronas are not affected by fog (div0)
 0 bug darkplaces renderer: if an animated model has transparent surfaces, each one calls RSurf_ActiveModelEntity, recomputing all vertices
 0 bug darkplaces renderer: if an animated model is entirely transparent, the RSurf_ActiveModelEntity call updating vertices is completely wasted
-0 bug darkplaces renderer: r_speeds sometimes counts entities twice, the whole counting code needs auditing (Morphed, and jim on inside3d)
+0 bug darkplaces renderer: r_speeds counts entities twice with r_hdr 1, the whole counting code probably needs auditing (Morphed, and jim on inside3d)
 0 bug darkplaces server csqc networking: csqc entity sending code does not currently detect packet loss and repeat lost entities (FrikaC, Chris Page, div0)
 0 bug darkplaces server: SV_PushMove is ignoring model type in its angles_x handling, where as the renderer checks only model type to determine angles_x handling (Urre)
 0 bug darkplaces server: SV_PushMove's call to SV_ClipMoveToEntity should do a trace, not just a point test, to support hollow pusher models (Urre)
