@@ -242,7 +242,7 @@ float FogPoint_World(const vec3_t p)
 
 float FogPoint_Model(const vec3_t p)
 {
-	return FogForDistance(VectorDistance((p), rsurface.modelorg));
+	return FogForDistance(VectorDistance((p), rsurface.modelorg) * Matrix4x4_ScaleFromMatrix(&rsurface.matrix));
 }
 
 static void R_BuildBlankTextures(void)
@@ -1736,7 +1736,7 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 		else
 			qglUniform3fARB(r_glsl_permutation->loc_Color_Shirt, 0, 0, 0);
 	}
-	if (r_glsl_permutation->loc_FogRangeRecip >= 0) qglUniform1fARB(r_glsl_permutation->loc_FogRangeRecip, r_refdef.fograngerecip);
+	if (r_glsl_permutation->loc_FogRangeRecip >= 0) qglUniform1fARB(r_glsl_permutation->loc_FogRangeRecip, r_refdef.fograngerecip * Matrix4x4_ScaleFromMatrix(&rsurface.matrix));
 	if (r_glsl_permutation->loc_SpecularPower >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularPower, rsurface.texture->specularpower);
 	if (r_glsl_permutation->loc_OffsetMapping_Scale >= 0) qglUniform1fARB(r_glsl_permutation->loc_OffsetMapping_Scale, r_glsl_offsetmapping_scale.value);
 	CHECKGLERROR
