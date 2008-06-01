@@ -316,7 +316,7 @@ typedef struct rsurfacestate_s
 
 	// rtlight rendering
 	// light currently being rendered
-	rtlight_t *rtlight;
+	const rtlight_t *rtlight;
 	// current light's cull box (copied out of an rtlight or calculated by GetLightInfo)
 	vec3_t rtlight_cullmins;
 	vec3_t rtlight_cullmaxs;

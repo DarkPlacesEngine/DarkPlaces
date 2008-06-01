@@ -42,6 +42,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #endif
 
 #ifndef GL_PROJECTION
+#include <stddef.h>
+
 typedef unsigned int GLenum;
 typedef unsigned char GLboolean;
 typedef unsigned int GLbitfield;
@@ -69,9 +71,9 @@ typedef double GLdouble;
 // double precision float in [0,1]
 typedef double GLclampd;
 // int whose size is the same as a pointer (?)
-typedef size_t GLintptrARB;
+typedef ptrdiff_t GLintptrARB;
 // int whose size is the same as a pointer (?)
-typedef size_t GLsizeiptrARB;
+typedef ptrdiff_t GLsizeiptrARB;
 
 #define GL_MODELVIEW				0x1700
 #define GL_PROJECTION				0x1701
@@ -609,7 +611,7 @@ extern int gl_support_shader_objects;
 // 1-byte character string
 typedef char GLcharARB;
 // 4-byte integer handle to a shader object or program object
-typedef int GLhandleARB;
+typedef unsigned int GLhandleARB;
 #endif
 extern void (GLAPIENTRY *qglDeleteObjectARB)(GLhandleARB obj);
 extern GLhandleARB (GLAPIENTRY *qglGetHandleARB)(GLenum pname);

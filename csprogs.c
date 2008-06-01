@@ -415,7 +415,7 @@ void CL_VM_Parse_CenterPrint (const char *msg)
 	int restorevm_tempstringsbuf_cursize;
 	if(!cl.csqc_loaded)
 	{
-		SCR_CenterPrint((char*)msg);
+		SCR_CenterPrint(msg);
 		return;
 	}
 	CSQC_BEGIN
@@ -429,7 +429,7 @@ void CL_VM_Parse_CenterPrint (const char *msg)
 		vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 	}
 	else
-		SCR_CenterPrint((char*)msg);
+		SCR_CenterPrint(msg);
 	CSQC_END
 }
 

@@ -90,7 +90,7 @@ Called for important messages that should stay in the center of the screen
 for a few moments
 ==============
 */
-void SCR_CenterPrint(char *str)
+void SCR_CenterPrint(const char *str)
 {
 	strlcpy (scr_centerstring, str, sizeof (scr_centerstring));
 	scr_centertime_off = scr_centertime.value;

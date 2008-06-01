@@ -525,7 +525,10 @@ void Host_Savegame_f (void)
 
 	PRVM_ED_WriteGlobals (f);
 	for (i=0 ; i<prog->num_edicts ; i++)
+	{
+		Con_Printf("edict %d...\n", i);
 		PRVM_ED_Write (f, PRVM_EDICT_NUM(i));
+	}
 
 	SV_VM_End();
 
