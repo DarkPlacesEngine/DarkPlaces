@@ -24,7 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 void CL_Screen_Init (void);
 void CL_UpdateScreen (void);
-void SCR_CenterPrint(char *str);
+void SCR_CenterPrint(const char *str);
 
 void SCR_BeginLoadingPlaque (void);
 

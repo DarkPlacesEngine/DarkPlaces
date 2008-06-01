@@ -1051,7 +1051,7 @@ void R_Shadow_RenderMode_Begin(void)
 		r_shadow_lightingrendermode = R_SHADOW_RENDERMODE_LIGHT_VERTEX;
 }
 
-void R_Shadow_RenderMode_ActiveLight(rtlight_t *rtlight)
+void R_Shadow_RenderMode_ActiveLight(const rtlight_t *rtlight)
 {
 	rsurface.rtlight = rtlight;
 }

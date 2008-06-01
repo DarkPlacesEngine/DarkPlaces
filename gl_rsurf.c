@@ -977,7 +977,7 @@ void R_Q1BSP_CompileShadowVolume(entity_render_t *ent, vec3_t relativelightorigi
 
 extern cvar_t r_polygonoffset_submodel_factor;
 extern cvar_t r_polygonoffset_submodel_offset;
-void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativelightdirection, float lightradius, int modelnumsurfaces, const int *modelsurfacelist, const vec3_t lightmins, const vec3_t lightmaxs)
+void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, const vec3_t relativelightorigin, const vec3_t relativelightdirection, float lightradius, int modelnumsurfaces, const int *modelsurfacelist, const vec3_t lightmins, const vec3_t lightmaxs)
 {
 	dp_model_t *model = ent->model;
 	msurface_t *surface;
@@ -1030,7 +1030,7 @@ static void R_Q1BSP_DrawLight_TransparentCallback(const entity_render_t *ent, co
 	msurface_t *surface;
 	// note: in practice this never actually receives batches), oh well
 	R_Shadow_RenderMode_Begin();
-	R_Shadow_RenderMode_ActiveLight((rtlight_t *)rtlight);
+	R_Shadow_RenderMode_ActiveLight(rtlight);
 	R_Shadow_RenderMode_Lighting(false, true);
 	R_Shadow_SetupEntityLight(ent);
 	for (i = 0;i < numsurfaces;i = j)
