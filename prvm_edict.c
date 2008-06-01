@@ -1297,7 +1297,8 @@ void PRVM_ED_LoadFromFile (const char *data)
 			funcname = PRVM_GetString(handle);
 			func = PRVM_ED_FindFunction (va("spawnfunc_%s", funcname));
 			if(!func)
-				func = PRVM_ED_FindFunction (funcname);
+				if(prog->globaloffsets.require_spawnfunc_prefix < 0)
+					func = PRVM_ED_FindFunction (funcname);
 
 			if (!func)
 			{
@@ -1484,6 +1485,7 @@ void PRVM_FindOffsets(void)
 	prog->globaloffsets.dmg_origin                    = PRVM_ED_FindGlobalOffset("dmg_origin");
 	prog->globaloffsets.sb_showscores                 = PRVM_ED_FindGlobalOffset("sb_showscores");
 	prog->globaloffsets.drawfont                      = PRVM_ED_FindGlobalOffset("drawfont");
+	prog->globaloffsets.require_spawnfunc_prefix      = PRVM_ED_FindGlobalOffset("require_spawnfunc_prefix");
 
 	// menu qc only uses some functions, nothing else
 	prog->funcoffsets.m_draw                          = PRVM_ED_FindFunctionOffset("m_draw");
