@@ -77,6 +77,9 @@ cvar_t chase_stevie = {0, "chase_stevie", "0", "chase cam view from above (used 
 cvar_t v_deathtilt = {0, "v_deathtilt", "1", "whether to use sideways view when dead"};
 cvar_t v_deathtiltangle = {0, "v_deathtiltangle", "80", "what roll angle to use when tilting the view while dead"};
 
+// Prophecy camera pitchangle by Alexander "motorsep" Zubov
+cvar_t chase_pitchangle = {CVAR_SAVE, "chase_pitchangle", "55", "chase cam pitch angle"};
+
 float	v_dmg_time, v_dmg_roll, v_dmg_pitch;
 
 
@@ -333,6 +336,10 @@ void V_CalcRefdef (void)
 {
 	entity_t *ent;
 	float vieworg[3], gunorg[3], viewangles[3], smoothtime;
+// begin of chase camera bounding box size for proper collisions by Alexander Zubov
+	vec3_t camboxmins = {0, 0, 0};
+	vec3_t camboxmaxs = {0, 0, 0};
+// end of chase camera bounding box size for proper collisions by Alexander Zubov
 	trace_t trace;
 	VectorClear(gunorg);
 	viewmodelmatrix = identitymatrix;
@@ -385,11 +392,12 @@ void V_CalcRefdef (void)
 
 			if (chase_active.value)
 			{
-				// observing entity from third person
-				vec_t camback, camup, dist, forward[3], chase_dest[3];
+				// observing entity from third person. Added "campitch" by Alexander "motorsep" Zubov
+				vec_t camback, camup, dist, campitch, forward[3], chase_dest[3];
 
 				camback = chase_back.value;
 				camup = chase_up.value;
+				campitch = chase_pitchangle.value;
 
 				// this + 22 is to match view_ofs for compatibility with older versions
 				camup += 22;
@@ -415,7 +423,7 @@ void V_CalcRefdef (void)
 					VectorCopy(trace.endpos, vieworg);
 					vieworg[2] -= 8;
 #else
-					trace = CL_Move(vieworg, vec3_origin, vec3_origin, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
+					trace = CL_Move(vieworg, camboxmins, camboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
 					VectorCopy(trace.endpos, bestvieworg);
 					offset[2] = 0;
 					for (offset[0] = -16;offset[0] <= 16;offset[0] += 8)
@@ -426,7 +434,7 @@ void V_CalcRefdef (void)
 							chase_dest[0] = vieworg[0] - forward[0] * camback + up[0] * camup + offset[0];
 							chase_dest[1] = vieworg[1] - forward[1] * camback + up[1] * camup + offset[1];
 							chase_dest[2] = vieworg[2] - forward[2] * camback + up[2] * camup + offset[2];
-							trace = CL_Move(vieworg, vec3_origin, vec3_origin, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
+							trace = CL_Move(vieworg, camboxmins, camboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
 							if (bestvieworg[2] > trace.endpos[2])
 								bestvieworg[2] = trace.endpos[2];
 						}
@@ -434,7 +442,7 @@ void V_CalcRefdef (void)
 					bestvieworg[2] -= 8;
 					VectorCopy(bestvieworg, vieworg);
 #endif
-					viewangles[PITCH] = 90;
+					viewangles[PITCH] = campitch;
 				}
 				else
 				{
@@ -728,6 +736,7 @@ void V_Init (void)
 	Cvar_RegisterVariable (&chase_up);
 	Cvar_RegisterVariable (&chase_active);
 	Cvar_RegisterVariable (&chase_overhead);
+	Cvar_RegisterVariable (&chase_pitchangle);
 	if (gamemode == GAME_GOODVSBAD2)
 		Cvar_RegisterVariable (&chase_stevie);
 
