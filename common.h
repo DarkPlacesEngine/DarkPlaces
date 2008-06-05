@@ -281,6 +281,7 @@ typedef enum gamemode_e
 	GAME_CONTAGIONTHEORY,
 	GAME_EDU2P,
 	GAME_BLADEMASTER,
+	GAME_PROPHECY,
 	GAME_COUNT
 }
 gamemode_t;

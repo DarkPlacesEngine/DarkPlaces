@@ -1489,6 +1489,9 @@ static const gamemode_info_t gamemode_info [GAME_COUNT] =
 // GAME_BLADEMASTER
 // COMMANDLINEOPTION: Game: -blademaster runs the game Prophecy: Return of the BladeMaster
 { "blademaster", "-blademaster", "Prophecy: Return of the BladeMaster", "basebm", NULL, "blademaster", "blademaster" },
+// GAME_PROPHECY
+// COMMANDLINEOPTION: Game: -prophecy runs the game Quake (default)
+{ "prophecy",				"-prophecy",		"Prophecy",		"data",		NULL,			"prophecy",			"prophecy" },
 };
 
 void COM_InitGameType (void)
