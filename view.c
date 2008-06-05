@@ -390,6 +390,9 @@ void V_CalcRefdef (void)
 			// TODO: add a cvar to disable this
 			viewangles[PITCH] += cl.qw_weaponkick;
 
+			// apply the viewofs (even if chasecam is used)
+			vieworg[2] += cl.stats[STAT_VIEWHEIGHT];
+
 			if (chase_active.value)
 			{
 				// observing entity from third person. Added "campitch" by Alexander "motorsep" Zubov
@@ -398,9 +401,6 @@ void V_CalcRefdef (void)
 				camback = chase_back.value;
 				camup = chase_up.value;
 				campitch = chase_pitchangle.value;
-
-				// this + 22 is to match view_ofs for compatibility with older versions
-				camup += 22;
 
 				AngleVectors(viewangles, forward, NULL, NULL);
 
@@ -423,6 +423,7 @@ void V_CalcRefdef (void)
 					VectorCopy(trace.endpos, vieworg);
 					vieworg[2] -= 8;
 #else
+					// trace from first person view location to our chosen third person view location
 					trace = CL_Move(vieworg, camboxmins, camboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
 					VectorCopy(trace.endpos, bestvieworg);
 					offset[2] = 0;
@@ -478,7 +479,6 @@ void V_CalcRefdef (void)
 				}
 				// origin
 				VectorAdd(vieworg, cl.punchvector, vieworg);
-				vieworg[2] += cl.stats[STAT_VIEWHEIGHT];
 				if (cl.stats[STAT_HEALTH] > 0)
 				{
 					double xyspeed, bob;
