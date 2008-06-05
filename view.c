@@ -337,8 +337,8 @@ void V_CalcRefdef (void)
 	entity_t *ent;
 	float vieworg[3], gunorg[3], viewangles[3], smoothtime;
 // begin of chase camera bounding box size for proper collisions by Alexander Zubov
-	vec3_t camboxmins = {0, 0, 0};
-	vec3_t camboxmaxs = {0, 0, 0};
+	vec3_t camboxmins = {-3, -3, -3};
+	vec3_t camboxmaxs = {3, 3, 3};
 // end of chase camera bounding box size for proper collisions by Alexander Zubov
 	trace_t trace;
 	VectorClear(gunorg);
@@ -419,7 +419,7 @@ void V_CalcRefdef (void)
 					chase_dest[2] = vieworg[2] - forward[2] * camback + up[2] * camup;
 #if 0
 					//trace = CL_Move(vieworg, eyeboxmins, eyeboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
-					trace = CL_Move(vieworg, vec3_origin, vec3_origin, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
+					trace = CL_Move(vieworg, camboxmins, camboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
 					VectorCopy(trace.endpos, vieworg);
 					vieworg[2] -= 8;
 #else
