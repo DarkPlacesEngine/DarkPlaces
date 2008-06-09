@@ -119,8 +119,8 @@ char particleeffectname[MAX_PARTICLEEFFECTNAME][64];
 
 particleeffectinfo_t particleeffectinfo[MAX_PARTICLEEFFECTINFO];
 
-static int particlepalette[256] =
-{
+static int particlepalette[256];
+/*
 	0x000000,0x0f0f0f,0x1f1f1f,0x2f2f2f,0x3f3f3f,0x4b4b4b,0x5b5b5b,0x6b6b6b, // 0-7
 	0x7b7b7b,0x8b8b8b,0x9b9b9b,0xababab,0xbbbbbb,0xcbcbcb,0xdbdbdb,0xebebeb, // 8-15
 	0x0f0b07,0x170f0b,0x1f170b,0x271b0f,0x2f2313,0x372b17,0x3f2f17,0x4b371b, // 16-23
@@ -153,7 +153,7 @@ static int particlepalette[256] =
 	0xb7330f,0xc34b1b,0xcf632b,0xdb7f3b,0xe3974f,0xe7ab5f,0xefbf77,0xf7d38b, // 232-239
 	0xa77b3b,0xb79b37,0xc7c337,0xe7e357,0x7fbfff,0xabe7ff,0xd7ffff,0x670000, // 240-247
 	0x8b0000,0xb30000,0xd70000,0xff0000,0xfff393,0xfff7c7,0xffffff,0x9f5b53  // 248-255
-};
+*/
 
 int		ramp1[8] = {0x6f, 0x6d, 0x6b, 0x69, 0x67, 0x65, 0x63, 0x61};
 int		ramp2[8] = {0x6f, 0x6e, 0x6d, 0x6c, 0x6b, 0x6a, 0x68, 0x66};
@@ -1892,6 +1892,10 @@ static void R_InitParticleTexture (void)
 
 static void r_part_start(void)
 {
+	int i;
+	// generate particlepalette for convenience from the main one
+	for (i = 0;i < 256;i++)
+		particlepalette[i] = palette_rgb[i][0] * 65536 + palette_rgb[i][1] * 256 + palette_rgb[i][2];
 	particletexturepool = R_AllocTexturePool();
 	R_InitParticleTexture ();
 	CL_Particles_LoadEffectInfo();
