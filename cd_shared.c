@@ -257,13 +257,13 @@ static void CD_f (void)
 	int ret;
 	int n;
 
-	if (strcasecmp(command, "remap") != 0)
-		Host_StartVideo();
-
 	if (Cmd_Argc() < 2)
 		return;
 
 	command = Cmd_Argv (1);
+
+	if (strcasecmp(command, "remap") != 0)
+		Host_StartVideo();
 
 	if (strcasecmp(command, "on") == 0)
 	{
