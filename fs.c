@@ -2513,6 +2513,11 @@ Look for a file in the filesystem only
 int FS_SysFileType (const char *path)
 {
 #if WIN32
+// Sajt - some older sdks are missing this define
+# ifndef INVALID_FILE_ATTRIBUTES
+#  define INVALID_FILE_ATTRIBUTES ((DWORD)-1)
+# endif
+
 	DWORD result = GetFileAttributes(path);
 
 	if(result == INVALID_FILE_ATTRIBUTES)
