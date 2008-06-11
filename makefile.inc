@@ -170,9 +170,9 @@ DO_CC=$(CC) $(CFLAGS) -c $< -o $@
 
 
 # Link
-LDFLAGS_DEBUG=-g -ggdb $(OPTIM_DEBUG)
-LDFLAGS_PROFILE=-g -pg $(OPTIM_RELEASE)
-LDFLAGS_RELEASE=$(OPTIM_RELEASE)
+LDFLAGS_DEBUG=-g -ggdb $(OPTIM_DEBUG) -DSVNREVISION=`test -d .svn && svnversion || echo -` -DBUILDTYPE=debug
+LDFLAGS_PROFILE=-g -pg $(OPTIM_RELEASE) -DSVNREVISION=`test -d .svn && svnversion || echo -` -DBUILDTYPE=profile
+LDFLAGS_RELEASE=$(OPTIM_RELEASE) -DSVNREVISION=`test -d .svn && svnversion || echo -` -DBUILDTYPE=release
 
 
 ##### UNIX specific variables #####
