@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/time.h>
+#include <time.h>
 #endif
 
 #include <signal.h>
@@ -14,6 +15,10 @@
 
 #ifdef WIN32
 cvar_t sys_usetimegettime = {CVAR_SAVE, "sys_usetimegettime", "1", "use windows timeGetTime function (which has issues on some motherboards) for timing rather than QueryPerformanceCounter timer (which has issues on multicore/multiprocessor machines and processors which are designed to conserve power)"};
+#else
+# ifndef MACOSX
+cvar_t sys_useclockgettime = {CVAR_SAVE, "sys_useclockgettime", "0", "use POSIX clock_gettime function (which has issues if the system clock speed is far off, as it can't get fixed by NTP) for timing rather than gettimeofday (which has issues if the system time is stepped by ntpdate, or apparently on some Xen installations)"};
+# endif
 #endif
 
 
@@ -129,9 +134,24 @@ double Sys_DoubleTime (void)
 		#endif
 	}
 #else
-	struct timeval tp;
-	gettimeofday(&tp, NULL);
-	newtime = (double) tp.tv_sec + tp.tv_usec / 1000000.0;
+# ifndef MACOSX
+	if (sys_useclockgettime.integer)
+	{
+		struct timespec ts;
+#  ifdef SUNOS
+		clock_gettime(CLOCK_HIGHRES, &ts);
+#  else
+		clock_gettime(CLOCK_MONOTONIC, &ts);
+#  endif
+		newtime = (double) ts.tv_sec + ts.tv_nsec / 1000000000.0;
+	}
+	else
+# endif
+	{
+		struct timeval tp;
+		gettimeofday(&tp, NULL);
+		newtime = (double) tp.tv_sec + tp.tv_usec / 1000000.0;
+	}
 #endif
 
 	if (first)
@@ -233,6 +253,13 @@ void Sys_InitConsole (void)
 
 void Sys_Init_Commands (void)
 {
+#ifdef WIN32
+	Cvar_RegisterVariable(&sys_usetimegettime);
+#else
+# ifndef MACOSX
+	Cvar_RegisterVariable(&sys_useclockgettime);
+# endif
+#endif
 }
 
 int main (int argc, char **argv)
