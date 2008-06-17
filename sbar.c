@@ -458,7 +458,7 @@ void Sbar_DrawNum (int x, int y, int num, int digits, int color)
 	char str[32], *ptr;
 	int l, frame;
 
-	l = sprintf(str, "%i", num);
+	l = dpsnprintf(str, sizeof(str), "%i", num);
 	ptr = str;
 	if (l > digits)
 		ptr += (l-digits);
@@ -493,10 +493,10 @@ void Sbar_DrawXNum (int x, int y, int num, int digits, int lettersize, float r, 
 	if (digits < 0)
 	{
 		digits = -digits;
-		l = sprintf(str, "%0*i", digits, num);
+		l = dpsnprintf(str, sizeof(str), "%0*i", digits, num);
 	}
 	else
-		l = sprintf(str, "%i", num);
+		l = dpsnprintf(str, sizeof(str), "%i", num);
 	ptr = str;
 	if (l > digits)
 		ptr += (l-digits);
@@ -682,7 +682,7 @@ void Sbar_SoloScoreboard (void)
 		*(strchr(str, '\n')) = 0;
 
 	// make the time string
-	timelen = sprintf(timestr, " %i:%02i", minutes, seconds);
+	timelen = dpsnprintf(timestr, sizeof(timestr), " %i:%02i", minutes, seconds);
 
 	// truncate the level name if necessary to make room for time
 	max = 38 - timelen;
@@ -701,10 +701,10 @@ void Sbar_SoloScoreboard (void)
 	int		l;
 
 	if (gamemode != GAME_NEXUIZ) {
-		sprintf (str,"Monsters:%3i /%3i", cl.stats[STAT_MONSTERS], cl.stats[STAT_TOTALMONSTERS]);
+		dpsnprintf (str, sizeof(str), "Monsters:%3i /%3i", cl.stats[STAT_MONSTERS], cl.stats[STAT_TOTALMONSTERS]);
 		Sbar_DrawString (8, 4, str);
 
-		sprintf (str,"Secrets :%3i /%3i", cl.stats[STAT_SECRETS], cl.stats[STAT_TOTALSECRETS]);
+		dpsnprintf (str, sizeof(str), "Secrets :%3i /%3i", cl.stats[STAT_SECRETS], cl.stats[STAT_TOTALSECRETS]);
 		Sbar_DrawString (8, 12, str);
 	}
 
@@ -713,7 +713,7 @@ void Sbar_SoloScoreboard (void)
 	seconds = (int)(cl.time - 60*minutes);
 	tens = seconds / 10;
 	units = seconds - 10*tens;
-	sprintf (str,"Time :%3i:%i%i", minutes, tens, units);
+	dpsnprintf (str, sizeof(str), "Time :%3i:%i%i", minutes, tens, units);
 	Sbar_DrawString (184, 4, str);
 
 // draw level name
@@ -870,7 +870,7 @@ void Sbar_DrawInventory (void)
 	// ammo counts
 	for (i=0 ; i<4 ; i++)
 	{
-		sprintf (num, "%4i",cl.stats[STAT_SHELLS+i] );
+		dpsnprintf (num, sizeof(num), "%4i",cl.stats[STAT_SHELLS+i] );
 		if (num[0] != ' ')
 			Sbar_DrawCharacter ( (6*i+0)*8 - 2, -24, 18 + num[0] - '0');
 		if (num[1] != ' ')
@@ -949,7 +949,7 @@ void Sbar_DrawFrags (void)
 
 		// draw number
 		f = s->frags;
-		sprintf (num, "%3i",f);
+		dpsnprintf (num, sizeof(num), "%3i",f);
 
 		if (k == cl.viewentity - 1)
 		{
@@ -993,7 +993,7 @@ void Sbar_DrawFace (void)
 
 		// draw number
 		f = s->frags;
-		sprintf (num, "%3i",f);
+		dpsnprintf (num, sizeof(num), "%3i",f);
 
 		if ((s->colors & 0xf0)==0)
 		{

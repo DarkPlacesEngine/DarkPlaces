@@ -328,7 +328,7 @@ static void CL_PlayVideo_f(void)
 		return;
 	}
 
-	sprintf(name, "video/%s.dpv", Cmd_Argv(1));
+	dpsnprintf(name, sizeof(name), "video/%s.dpv", Cmd_Argv(1));
 	CL_VideoStart(name);
 }
 

@@ -408,34 +408,34 @@ char *PRVM_ValueString (etype_t type, prvm_eval_t *val)
 	case ev_entity:
 		n = val->edict;
 		if (n < 0 || n >= prog->limit_edicts)
-			sprintf (line, "entity %i (invalid!)", n);
+			dpsnprintf (line, sizeof(line), "entity %i (invalid!)", n);
 		else
-			sprintf (line, "entity %i", n);
+			dpsnprintf (line, sizeof(line), "entity %i", n);
 		break;
 	case ev_function:
 		f = prog->functions + val->function;
-		sprintf (line, "%s()", PRVM_GetString(f->s_name));
+		dpsnprintf (line, sizeof(line), "%s()", PRVM_GetString(f->s_name));
 		break;
 	case ev_field:
 		def = PRVM_ED_FieldAtOfs ( val->_int );
-		sprintf (line, ".%s", PRVM_GetString(def->s_name));
+		dpsnprintf (line, sizeof(line), ".%s", PRVM_GetString(def->s_name));
 		break;
 	case ev_void:
-		sprintf (line, "void");
+		dpsnprintf (line, sizeof(line), "void");
 		break;
 	case ev_float:
 		// LordHavoc: changed from %5.1f to %10.4f
-		sprintf (line, "%10.4f", val->_float);
+		dpsnprintf (line, sizeof(line), "%10.4f", val->_float);
 		break;
 	case ev_vector:
 		// LordHavoc: changed from %5.1f to %10.4f
-		sprintf (line, "'%10.4f %10.4f %10.4f'", val->vector[0], val->vector[1], val->vector[2]);
+		dpsnprintf (line, sizeof(line), "'%10.4f %10.4f %10.4f'", val->vector[0], val->vector[1], val->vector[2]);
 		break;
 	case ev_pointer:
-		sprintf (line, "pointer");
+		dpsnprintf (line, sizeof(line), "pointer");
 		break;
 	default:
-		sprintf (line, "bad type %i", (int) type);
+		dpsnprintf (line, sizeof(line), "bad type %i", (int) type);
 		break;
 	}
 
@@ -537,11 +537,11 @@ char *PRVM_GlobalString (int ofs)
 	val = (void *)&prog->globals.generic[ofs];
 	def = PRVM_ED_GlobalAtOfs(ofs);
 	if (!def)
-		sprintf (line,"GLOBAL%i", ofs);
+		dpsnprintf (line, sizeof(line), "GLOBAL%i", ofs);
 	else
 	{
 		s = PRVM_ValueString ((etype_t)def->type, (prvm_eval_t *)val);
-		sprintf (line,"%s (=%s)", PRVM_GetString(def->s_name), s);
+		dpsnprintf (line, sizeof(line), "%s (=%s)", PRVM_GetString(def->s_name), s);
 	}
 
 	//i = strlen(line);
@@ -560,9 +560,9 @@ char *PRVM_GlobalStringNoContents (int ofs)
 
 	def = PRVM_ED_GlobalAtOfs(ofs);
 	if (!def)
-		sprintf (line,"GLOBAL%i", ofs);
+		dpsnprintf (line, sizeof(line), "GLOBAL%i", ofs);
 	else
-		sprintf (line,"%s", PRVM_GetString(def->s_name));
+		dpsnprintf (line, sizeof(line), "%s", PRVM_GetString(def->s_name));
 
 	//i = strlen(line);
 	//for ( ; i<20 ; i++)
@@ -599,7 +599,7 @@ void PRVM_ED_Print(prvm_edict_t *ed, const char *wildcard_fieldname)
 	}
 
 	tempstring[0] = 0;
-	sprintf(tempstring, "\n%s EDICT %i:\n", PRVM_NAME, PRVM_NUM_FOR_EDICT(ed));
+	dpsnprintf(tempstring, sizeof(tempstring), "\n%s EDICT %i:\n", PRVM_NAME, PRVM_NUM_FOR_EDICT(ed));
 	for (i=1 ; i<prog->progs->numfielddefs ; i++)
 	{
 		d = &prog->fielddefs[i];
@@ -1204,7 +1204,7 @@ const char *PRVM_ED_ParseEdict (const char *data, prvm_edict_t *ent)
 		{
 			char	temp[32];
 			strlcpy (temp, com_token, sizeof(temp));
-			sprintf (com_token, "0 %s 0", temp);
+			dpsnprintf (com_token, sizeof(com_token), "0 %s 0", temp);
 		}
 
 		if (!PRVM_ED_ParseEpair(ent, key, com_token, strcmp(keyname, "wad") != 0))
@@ -1915,7 +1915,7 @@ void PRVM_Fields_f (void)
 			strlcat(tempstring, "pointer  ", sizeof(tempstring));
 			break;
 		default:
-			sprintf (tempstring2, "bad type %i ", d->type & ~DEF_SAVEGLOBAL);
+			dpsnprintf (tempstring2, sizeof(tempstring2), "bad type %i ", d->type & ~DEF_SAVEGLOBAL);
 			strlcat(tempstring, tempstring2, sizeof(tempstring));
 			break;
 		}
@@ -1929,7 +1929,7 @@ void PRVM_Fields_f (void)
 		strlcat(tempstring, name, sizeof(tempstring));
 		for (j = (int)strlen(name);j < 25;j++)
 			strlcat(tempstring, " ", sizeof(tempstring));
-		sprintf(tempstring2, "%5d", counts[i]);
+		dpsnprintf(tempstring2, sizeof(tempstring2), "%5d", counts[i]);
 		strlcat(tempstring, tempstring2, sizeof(tempstring));
 		strlcat(tempstring, "\n", sizeof(tempstring));
 		if (strlen(tempstring) >= sizeof(tempstring)/2)

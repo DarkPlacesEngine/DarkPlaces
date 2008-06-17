@@ -1417,7 +1417,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 
 		if (!name[0])
 		{
-			sprintf(name, "unnamed%i", i);
+			dpsnprintf(name, sizeof(name), "unnamed%i", i);
 			Con_DPrintf("%s: warning: renaming unnamed texture to %s\n", loadmodel->name, name);
 		}
 
@@ -3560,7 +3560,7 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			if (!loadmodel->isworldmodel)
 				continue;
 			// duplicate the basic information
-			sprintf(name, "*%i", i);
+			dpsnprintf(name, sizeof(name), "*%i", i);
 			mod = Mod_FindName(name);
 			// copy the base model to this one
 			*mod = *loadmodel;
@@ -4186,6 +4186,9 @@ static void Mod_Q3BSP_LoadEntities(lump_t *l)
 			strlcpy(value, com_token, sizeof(value));
 			if (!strcmp("gridsize", key))
 			{
+#if _MSC_VER >= 1400
+#define sscanf sscanf_s
+#endif
 				if (sscanf(value, "%f %f %f", &v[0], &v[1], &v[2]) == 3 && v[0] != 0 && v[1] != 0 && v[2] != 0)
 					VectorCopy(v, loadmodel->brushq3.num_lightgrid_cellsize);
 			}
@@ -5740,7 +5743,7 @@ void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			if (!loadmodel->isworldmodel)
 				continue;
 			// duplicate the basic information
-			sprintf(name, "*%i", i);
+			dpsnprintf(name, sizeof(name), "*%i", i);
 			mod = Mod_FindName(name);
 			*mod = *loadmodel;
 			strlcpy(mod->name, name, sizeof(mod->name));

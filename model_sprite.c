@@ -148,7 +148,7 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 				Host_Error("Mod_Sprite_SharedSetup: invalid interval");
 		}
 
-		sprintf(loadmodel->animscenes[i].name, "frame %i", i);
+		dpsnprintf(loadmodel->animscenes[i].name, sizeof(loadmodel->animscenes[i].name), "frame %i", i);
 		loadmodel->animscenes[i].firstframe = realframes;
 		loadmodel->animscenes[i].framecount = groupframes;
 		loadmodel->animscenes[i].framerate = 1.0f / interval;
@@ -182,13 +182,13 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 				{
 					if (groupframes > 1)
 					{
-						sprintf (name, "%s_%i_%i", loadmodel->name, i, j);
-						sprintf (fogname, "%s_%i_%ifog", loadmodel->name, i, j);
+						dpsnprintf (name, sizeof(name), "%s_%i_%i", loadmodel->name, i, j);
+						dpsnprintf (fogname, sizeof(fogname), "%s_%i_%ifog", loadmodel->name, i, j);
 					}
 					else
 					{
-						sprintf (name, "%s_%i", loadmodel->name, i);
-						sprintf (fogname, "%s_%ifog", loadmodel->name, i);
+						dpsnprintf (name, sizeof(name), "%s_%i", loadmodel->name, i);
+						dpsnprintf (fogname, sizeof(fogname), "%s_%ifog", loadmodel->name, i);
 					}
 					if (!(skinframe = R_SkinFrame_LoadExternal(name, texflags | TEXF_COMPRESS, false)))
 					{

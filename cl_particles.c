@@ -1324,6 +1324,9 @@ void CL_ReadPointFile_f (void)
 			t++;
 		tchar = *t;
 		*t = 0;
+#if _MSC_VER >= 1400
+#define sscanf sscanf_s
+#endif
 		r = sscanf (pointfilepos,"%f %f %f", &org[0], &org[1], &org[2]);
 		*t = tchar;
 		pointfilepos = t;

@@ -1623,7 +1623,11 @@ int dpvsnprintf (char *buffer, size_t buffersize, const char *format, va_list ar
 {
 	int result;
 
+#if _MSC_VER >= 1400
+	result = _vsnprintf_s (buffer, buffersize, _TRUNCATE, format, args);
+#else
 	result = vsnprintf (buffer, buffersize, format, args);
+#endif
 	if (result < 0 || (size_t)result >= buffersize)
 	{
 		buffer[buffersize - 1] = '\0';
@@ -2026,7 +2030,7 @@ void InfoString_SetValue(char *buffer, size_t bufferlength, const char *key, con
 		// set the key/value and append the remaining text
 		char tempbuffer[4096];
 		strlcpy(tempbuffer, buffer + pos2, sizeof(tempbuffer));
-		sprintf(buffer + pos, "\\%s\\%s%s", key, value, tempbuffer);
+		dpsnprintf(buffer + pos, sizeof(buffer) - pos, "\\%s\\%s%s", key, value, tempbuffer);
 	}
 	else
 	{

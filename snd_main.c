@@ -471,7 +471,10 @@ void S_Startup (void)
 	qboolean fixed_speed, fixed_width, fixed_channels;
 	snd_format_t chosen_fmt;
 	static snd_format_t prev_render_format = {0, 0, 0};
-	const char* env;
+	char* env;
+#if _MSC_VER >= 1400
+	size_t envlen;
+#endif
 	int i;
 
 	if (!snd_initialized.integer)
@@ -487,22 +490,43 @@ void S_Startup (void)
 	chosen_fmt.channels = snd_channels.integer;
 
 	// Check the environment variables to see if the player wants a particular sound format
+#if _MSC_VER >= 1400
+	_dupenv_s(&env, &envlen, "QUAKE_SOUND_CHANNELS");
+#else
 	env = getenv("QUAKE_SOUND_CHANNELS");
+#endif
 	if (env != NULL)
 	{
 		chosen_fmt.channels = atoi (env);
+#if _MSC_VER >= 1400
+		free(env);
+#endif
 		fixed_channels = true;
 	}
+#if _MSC_VER >= 1400
+	_dupenv_s(&env, &envlen, "QUAKE_SOUND_SPEED");
+#else
 	env = getenv("QUAKE_SOUND_SPEED");
+#endif
 	if (env != NULL)
 	{
 		chosen_fmt.speed = atoi (env);
+#if _MSC_VER >= 1400
+		free(env);
+#endif
 		fixed_speed = true;
 	}
+#if _MSC_VER >= 1400
+	_dupenv_s(&env, &envlen, "QUAKE_SOUND_SAMPLEBITS");
+#else
 	env = getenv("QUAKE_SOUND_SAMPLEBITS");
+#endif
 	if (env != NULL)
 	{
 		chosen_fmt.width = atoi (env) / 8;
+#if _MSC_VER >= 1400
+		free(env);
+#endif
 		fixed_width = true;
 	}
 
