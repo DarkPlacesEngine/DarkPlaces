@@ -52,8 +52,8 @@ BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
-# ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /machine:I386
-# ADD LINK32 ws2_32.lib winmm.lib /nologo /subsystem:console /LARGEADDRESSAWARE /machine:I386
+# ADD BASE LINK32 kernel32.lib /nologo /subsystem:windows /machine:I386
+# ADD LINK32 ws2_32.lib winmm.lib user32.lib gdi32.lib /nologo /subsystem:console /LARGEADDRESSAWARE /machine:I386
 # SUBTRACT LINK32 /pdb:none
 
 !ELSEIF  "$(CFG)" == "darkplaces-dedicated - Win32 Debug"
@@ -79,8 +79,8 @@ BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
-# ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 ws2_32.lib winmm.lib /nologo /subsystem:console /LARGEADDRESSAWARE /debug /machine:I386 /out:"Debug-Dedicated/darkplaces-dedicated-debug.exe" /pdbtype:sept
+# ADD BASE LINK32 kernel32.lib /nologo /subsystem:windows /debug /machine:I386 /pdbtype:sept
+# ADD LINK32 ws2_32.lib winmm.lib user32.lib gdi32.lib /nologo /subsystem:console /LARGEADDRESSAWARE /debug /machine:I386 /out:"Debug-Dedicated/darkplaces-dedicated-debug.exe" /pdbtype:sept
 # SUBTRACT LINK32 /pdb:none
 
 !ENDIF 
@@ -111,6 +111,14 @@ SOURCE=.\cl_collision.c
 # Begin Source File
 
 SOURCE=.\cl_demo.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\cl_dyntexture.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\cl_gecko.h
 # End Source File
 # Begin Source File
 
@@ -423,6 +431,14 @@ SOURCE=.\cdaudio.h
 # Begin Source File
 
 SOURCE=.\cl_collision.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\cl_dyntexture.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\cl_gecko.h
 # End Source File
 # Begin Source File
 
