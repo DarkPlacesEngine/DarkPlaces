@@ -1119,6 +1119,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 			}
 			batchnumtriangles = 0;
 			batchfirsttriangle = surface->num_firsttriangle;
+			m = 0; // hush warning
 			for (l = k;l < kend;l++)
 			{
 				surface = batchsurfacelist[l];
