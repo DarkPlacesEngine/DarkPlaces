@@ -3646,7 +3646,11 @@ void R_Shadow_LoadWorldLights(void)
 #if _MSC_VER >= 1400
 #define sscanf sscanf_s
 #endif
-			a = sscanf(t, "%f %f %f %f %f %f %f %d %s %f %f %f %f %f %f %f %f %i", &origin[0], &origin[1], &origin[2], &radius, &color[0], &color[1], &color[2], &style, cubemapname, &corona, &angles[0], &angles[1], &angles[2], &coronasizescale, &ambientscale, &diffusescale, &specularscale, &flags);
+			a = sscanf(t, "%f %f %f %f %f %f %f %d %s %f %f %f %f %f %f %f %f %i", &origin[0], &origin[1], &origin[2], &radius, &color[0], &color[1], &color[2], &style, cubemapname
+#if _MSC_VER >= 1400
+, sizeof(cubemapname)
+#endif
+, &corona, &angles[0], &angles[1], &angles[2], &coronasizescale, &ambientscale, &diffusescale, &specularscale, &flags);
 			*s = tempchar;
 			if (a < 18)
 				flags = LIGHTFLAG_REALTIMEMODE;
