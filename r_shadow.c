@@ -3646,7 +3646,11 @@ void R_Shadow_LoadWorldLights(void)
 #if _MSC_VER >= 1400
 #define sscanf sscanf_s
 #endif
-			a = sscanf(t, "%f %f %f %f %f %f %f %d %s %f %f %f %f %f %f %f %f %i", &origin[0], &origin[1], &origin[2], &radius, &color[0], &color[1], &color[2], &style, cubemapname
+			cubemapname[sizeof(cubemapname)-1] = 0;
+#if MAX_QPATH != 128
+#error update this code if MAX_QPATH changes
+#endif
+			a = sscanf(t, "%f %f %f %f %f %f %f %d %127s %f %f %f %f %f %f %f %f %i", &origin[0], &origin[1], &origin[2], &radius, &color[0], &color[1], &color[2], &style, cubemapname
 #if _MSC_VER >= 1400
 , sizeof(cubemapname)
 #endif
