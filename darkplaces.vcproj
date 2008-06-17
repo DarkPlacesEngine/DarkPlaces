@@ -73,7 +73,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2_32.lib winmm.lib comctl32.lib user32.lib gdi32.lib"
-				OutputFile=".\Release/darkplaces.exe"
+				OutputFile="darkplaces.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\Release/darkplaces.pdb"
@@ -168,7 +168,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2_32.lib winmm.lib comctl32.lib user32.lib gdi32.lib"
-				OutputFile="Debug/darkplaces-debug.exe"
+				OutputFile="darkplaces-debug.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
