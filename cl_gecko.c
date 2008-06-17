@@ -716,8 +716,7 @@ static void cl_gecko_create_f( void ) {
 		return;
 	}
 
-	// TODO: use snprintf instead
-	sprintf(name, CLGECKOPREFIX "%s", Cmd_Argv(1));
+	dpsnprintf(name, sizeof(name), CLGECKOPREFIX "%s", Cmd_Argv(1));
 	CL_Gecko_CreateBrowser( name, -1 );
 }
 
@@ -730,8 +729,7 @@ static void cl_gecko_destroy_f( void ) {
 		return;
 	}
 
-	// TODO: use snprintf instead
-	sprintf(name, CLGECKOPREFIX "%s", Cmd_Argv(1));
+	dpsnprintf(name, sizeof(name), CLGECKOPREFIX "%s", Cmd_Argv(1));
 	CL_Gecko_DestroyBrowser( CL_Gecko_FindBrowser( name ) );
 }
 
@@ -745,8 +743,7 @@ static void cl_gecko_navigate_f( void ) {
 		return;
 	}
 
-	// TODO: use snprintf instead
-	sprintf(name, CLGECKOPREFIX "%s", Cmd_Argv(1));
+	dpsnprintf(name, sizeof(name), CLGECKOPREFIX "%s", Cmd_Argv(1));
 	URI = Cmd_Argv( 2 );
 	CL_Gecko_NavigateToURI( CL_Gecko_FindBrowser( name ), URI );
 }
@@ -763,8 +760,7 @@ static void cl_gecko_injecttext_f( void ) {
 		return;
 	}
 
-	// TODO: use snprintf instead
-	sprintf(name, CLGECKOPREFIX "%s", Cmd_Argv(1));
+	dpsnprintf(name, sizeof(name), CLGECKOPREFIX "%s", Cmd_Argv(1));
 	instance = CL_Gecko_FindBrowser( name );
 	if( !instance ) {
 		Con_Printf( "cl_gecko_injecttext_f: gecko instance '%s' couldn't be found!\n", name );
@@ -807,8 +803,7 @@ static void gl_gecko_movecursor_f( void ) {
 		return;
 	}
 
-	// TODO: use snprintf instead
-	sprintf(name, CLGECKOPREFIX "%s", Cmd_Argv(1));
+	dpsnprintf(name, sizeof(name), CLGECKOPREFIX "%s", Cmd_Argv(1));
 	x = atof( Cmd_Argv( 2 ) );
 	y = atof( Cmd_Argv( 3 ) );
 
