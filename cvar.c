@@ -316,9 +316,9 @@ void Cvar_SetValueQuick(cvar_t *var, float value)
 	char val[MAX_INPUTLINE];
 
 	if ((float)((int)value) == value)
-		sprintf(val, "%i", (int)value);
+		dpsnprintf(val, sizeof(val), "%i", (int)value);
 	else
-		sprintf(val, "%f", value);
+		dpsnprintf(val, sizeof(val), "%f", value);
 	Cvar_SetQuick(var, val);
 }
 
@@ -327,9 +327,9 @@ void Cvar_SetValue(const char *var_name, float value)
 	char val[MAX_INPUTLINE];
 
 	if ((float)((int)value) == value)
-		sprintf(val, "%i", (int)value);
+		dpsnprintf(val, sizeof(val), "%i", (int)value);
 	else
-		sprintf(val, "%f", value);
+		dpsnprintf(val, sizeof(val), "%f", value);
 	Cvar_Set(var_name, val);
 }
 

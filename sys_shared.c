@@ -10,7 +10,13 @@ static char sys_timestring[128];
 char *Sys_TimeString(const char *timeformat)
 {
 	time_t mytime = time(NULL);
+#if _MSC_VER >= 1400
+	struct tm mytm;
+	localtime_s(&mytm, &mytime);
+	strftime(sys_timestring, sizeof(sys_timestring), timeformat, &mytm);
+#else
 	strftime(sys_timestring, sizeof(sys_timestring), timeformat, localtime(&mytime));
+#endif
 	return sys_timestring;
 }
 

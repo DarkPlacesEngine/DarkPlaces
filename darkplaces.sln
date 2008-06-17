@@ -1,0 +1,32 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 9.00
+# Visual C++ Express 2005
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "darkplaces", "darkplaces.vcproj", "{2A31FD21-E0DF-462F-BB97-844CCD7B9E19}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "darkplaces-dedicated", "darkplaces-dedicated.vcproj", "{F8FBA9F0-F4E4-4B22-B6D1-21F7FB9C72F7}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "darkplaces-sdl", "darkplaces-sdl.vcproj", "{4C61C95C-3753-46B8-B817-4D57E48A9C45}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2A31FD21-E0DF-462F-BB97-844CCD7B9E19}.Debug|Win32.ActiveCfg = Debug|Win32
+		{2A31FD21-E0DF-462F-BB97-844CCD7B9E19}.Debug|Win32.Build.0 = Debug|Win32
+		{2A31FD21-E0DF-462F-BB97-844CCD7B9E19}.Release|Win32.ActiveCfg = Release|Win32
+		{2A31FD21-E0DF-462F-BB97-844CCD7B9E19}.Release|Win32.Build.0 = Release|Win32
+		{F8FBA9F0-F4E4-4B22-B6D1-21F7FB9C72F7}.Debug|Win32.ActiveCfg = Debug|Win32
+		{F8FBA9F0-F4E4-4B22-B6D1-21F7FB9C72F7}.Debug|Win32.Build.0 = Debug|Win32
+		{F8FBA9F0-F4E4-4B22-B6D1-21F7FB9C72F7}.Release|Win32.ActiveCfg = Release|Win32
+		{F8FBA9F0-F4E4-4B22-B6D1-21F7FB9C72F7}.Release|Win32.Build.0 = Release|Win32
+		{4C61C95C-3753-46B8-B817-4D57E48A9C45}.Debug|Win32.ActiveCfg = Debug|Win32
+		{4C61C95C-3753-46B8-B817-4D57E48A9C45}.Debug|Win32.Build.0 = Debug|Win32
+		{4C61C95C-3753-46B8-B817-4D57E48A9C45}.Release|Win32.ActiveCfg = Release|Win32
+		{4C61C95C-3753-46B8-B817-4D57E48A9C45}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

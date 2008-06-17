@@ -3420,6 +3420,9 @@ static void R_BlendView(void)
 		if (r_glsl_permutation->loc_UserVec1 >= 0)
 		{
 			float a=0, b=0, c=0, d=0;
+#if _MSC_VER >= 1400
+#define sscanf sscanf_s
+#endif
 			sscanf(r_glsl_postprocess_uservec1.string, "%f %f %f %f", &a, &b, &c, &d);
 			qglUniform4fARB(r_glsl_permutation->loc_UserVec1, a, b, c, d);
 		}

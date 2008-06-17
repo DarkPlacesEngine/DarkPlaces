@@ -288,7 +288,19 @@ Key_Console (int key, char ascii)
 		if ((cbd = Sys_GetClipboardData()) != 0)
 		{
 			int i;
+#if 1
+			while (*cbd)
+			{
+				if (*cbd == '\n' || *cbd == '\r' || *cbd == '\b')
+				{
+					*cbd++ = 0;
+					break;
+				}
+				cbd++;
+			}
+#else
 			strtok(cbd, "\n\r\b");
+#endif
 			i = (int)strlen(cbd);
 			if (i + key_linepos >= MAX_INPUTLINE)
 				i= MAX_INPUTLINE - key_linepos;

@@ -806,7 +806,7 @@ unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qbo
 	// now try all the formats in the selected list
 	for (format = firstformat;format->formatstring;format++)
 	{
-		sprintf (name, format->formatstring, basename);
+		dpsnprintf (name, sizeof(name), format->formatstring, basename);
 		f = FS_LoadFile(name, tempmempool, true, &filesize);
 		if (f)
 		{
@@ -845,7 +845,7 @@ unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qbo
 		Con_Printf("Couldn't load %s using ", filename);
 		for (format = firstformat;format->formatstring;format++)
 		{
-			sprintf (name, format->formatstring, basename);
+			dpsnprintf (name, sizeof(name), format->formatstring, basename);
 			Con_Printf(format == firstformat ? "\"%s\"" : (format[1].formatstring ? ", \"%s\"" : " or \"%s\".\n"), format->formatstring);
 		}
 	}

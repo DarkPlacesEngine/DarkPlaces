@@ -697,18 +697,23 @@ void R_TimeReport_EndFrame(void)
 		// put the location name in the r_speeds display as it greatly helps
 		// when creating loc files
 		loc = CL_Locs_FindNearest(cl.movement_origin);
-		if (loc)
-			sprintf(string + strlen(string), "Location: %s\n", loc->name);
-		sprintf(string + strlen(string), "%3i renders org:'%+8.2f %+8.2f %+8.2f' dir:'%+2.3f %+2.3f %+2.3f'\n", r_refdef.stats.renders, r_refdef.view.origin[0], r_refdef.view.origin[1], r_refdef.view.origin[2], r_refdef.view.forward[0], r_refdef.view.forward[1], r_refdef.view.forward[2]);
-		sprintf(string + strlen(string), "%7i surfaces%7i triangles %5i entities (%7i surfaces%7i triangles)\n", r_refdef.stats.world_surfaces, r_refdef.stats.world_triangles, r_refdef.stats.entities, r_refdef.stats.entities_surfaces, r_refdef.stats.entities_triangles);
-		sprintf(string + strlen(string), "%5i leafs%5i portals%6i/%6i particles%6i/%6i decals %3i%% quality\n", r_refdef.stats.world_leafs, r_refdef.stats.world_portals, r_refdef.stats.particles, cl.num_particles, r_refdef.stats.decals, cl.num_decals, (int)(100 * r_refdef.view.quality));
-		sprintf(string + strlen(string), "%7i lightmap updates (%7i pixels)\n", r_refdef.stats.lightmapupdates, r_refdef.stats.lightmapupdatepixels);
-		sprintf(string + strlen(string), "%4i lights%4i clears%4i scissored%7i light%7i shadow%7i dynamic\n", r_refdef.stats.lights, r_refdef.stats.lights_clears, r_refdef.stats.lights_scissored, r_refdef.stats.lights_lighttriangles, r_refdef.stats.lights_shadowtriangles, r_refdef.stats.lights_dynamicshadowtriangles);
-		if (r_refdef.stats.bloom)
-			sprintf(string + strlen(string), "rendered%6i meshes%8i triangles bloompixels%8i copied%8i drawn\n", r_refdef.stats.meshes, r_refdef.stats.meshes_elements / 3, r_refdef.stats.bloom_copypixels, r_refdef.stats.bloom_drawpixels);
-		else
-			sprintf(string + strlen(string), "rendered%6i meshes%8i triangles\n", r_refdef.stats.meshes, r_refdef.stats.meshes_elements / 3);
-		strlcat(string, r_speeds_timestring, sizeof(string));
+		dpsnprintf(string, sizeof(string),
+"%s%s\n"
+"%3i renders org:'%+8.2f %+8.2f %+8.2f' dir:'%+2.3f %+2.3f %+2.3f'\n"
+"%7i surfaces%7i triangles %5i entities (%7i surfaces%7i triangles)\n"
+"%5i leafs%5i portals%6i/%6i particles%6i/%6i decals %3i%% quality\n"
+"%7i lightmap updates (%7i pixels)\n"
+"%4i lights%4i clears%4i scissored%7i light%7i shadow%7i dynamic\n"
+"rendered%6i meshes%8i triangles bloompixels%8i copied%8i drawn\n"
+"%s"
+, loc ? "Location: " : "", loc ? loc->name : ""
+, r_refdef.stats.renders, r_refdef.view.origin[0], r_refdef.view.origin[1], r_refdef.view.origin[2], r_refdef.view.forward[0], r_refdef.view.forward[1], r_refdef.view.forward[2]
+, r_refdef.stats.world_surfaces, r_refdef.stats.world_triangles, r_refdef.stats.entities, r_refdef.stats.entities_surfaces, r_refdef.stats.entities_triangles
+, r_refdef.stats.world_leafs, r_refdef.stats.world_portals, r_refdef.stats.particles, cl.num_particles, r_refdef.stats.decals, cl.num_decals, (int)(100 * r_refdef.view.quality)
+, r_refdef.stats.lightmapupdates, r_refdef.stats.lightmapupdatepixels
+, r_refdef.stats.lights, r_refdef.stats.lights_clears, r_refdef.stats.lights_scissored, r_refdef.stats.lights_lighttriangles, r_refdef.stats.lights_shadowtriangles, r_refdef.stats.lights_dynamicshadowtriangles
+, r_refdef.stats.meshes, r_refdef.stats.meshes_elements / 3, r_refdef.stats.bloom_copypixels, r_refdef.stats.bloom_drawpixels
+, r_speeds_timestring);
 
 		memset(&r_refdef.stats, 0, sizeof(r_refdef.stats));
 
@@ -844,11 +849,11 @@ void SCR_ScreenShot_f (void)
 	unsigned char *buffer3;
 	qboolean jpeg = (scr_screenshot_jpeg.integer != 0);
 
-	sprintf (base, "screenshots/%s", scr_screenshot_name.string);
+	dpsnprintf (base, sizeof(base), "screenshots/%s", scr_screenshot_name.string);
 
 	if (strcmp (oldname, scr_screenshot_name.string))
 	{
-		sprintf(oldname, "%s", scr_screenshot_name.string);
+		dpsnprintf(oldname, sizeof(oldname), "%s", scr_screenshot_name.string);
 		shotnumber = 0;
 	}
 
@@ -862,7 +867,7 @@ void SCR_ScreenShot_f (void)
 		return;
  	}
 
-	sprintf(filename, "%s%06d.%s", base, shotnumber, jpeg ? "jpg" : "tga");
+	dpsnprintf(filename, sizeof(filename), "%s%06d.%s", base, shotnumber, jpeg ? "jpg" : "tga");
 
 	buffer1 = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 3);
 	buffer2 = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 3);
@@ -1733,7 +1738,7 @@ static void R_Envmap_f (void)
 
 	for (j = 0;j < 12;j++)
 	{
-		sprintf(filename, "env/%s%s.tga", basename, envmapinfo[j].name);
+		dpsnprintf(filename, sizeof(filename), "env/%s%s.tga", basename, envmapinfo[j].name);
 		Matrix4x4_CreateFromQuakeEntity(&r_refdef.view.matrix, r_refdef.view.origin[0], r_refdef.view.origin[1], r_refdef.view.origin[2], envmapinfo[j].angles[0], envmapinfo[j].angles[1], envmapinfo[j].angles[2], 1);
 		r_refdef.view.quality = 1;
 		r_refdef.view.clear = true;

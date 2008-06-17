@@ -561,9 +561,9 @@ void VM_ftos (void)
 	v = PRVM_G_FLOAT(OFS_PARM0);
 
 	if ((float)((int)v) == v)
-		sprintf(s, "%i", (int)v);
+		dpsnprintf(s, sizeof(s), "%i", (int)v);
 	else
-		sprintf(s, "%f", v);
+		dpsnprintf(s, sizeof(s), "%f", v);
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(s);
 }
 
@@ -599,7 +599,7 @@ void VM_vtos (void)
 
 	VM_SAFEPARMCOUNT(1,VM_vtos);
 
-	sprintf (s, "'%5.1f %5.1f %5.1f'", PRVM_G_VECTOR(OFS_PARM0)[0], PRVM_G_VECTOR(OFS_PARM0)[1], PRVM_G_VECTOR(OFS_PARM0)[2]);
+	dpsnprintf (s, sizeof(s), "'%5.1f %5.1f %5.1f'", PRVM_G_VECTOR(OFS_PARM0)[0], PRVM_G_VECTOR(OFS_PARM0)[1], PRVM_G_VECTOR(OFS_PARM0)[2]);
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(s);
 }
 
@@ -617,7 +617,7 @@ void VM_etos (void)
 
 	VM_SAFEPARMCOUNT(1, VM_etos);
 
-	sprintf (s, "entity %i", PRVM_G_EDICTNUM(OFS_PARM0));
+	dpsnprintf (s, sizeof(s), "entity %i", PRVM_G_EDICTNUM(OFS_PARM0));
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(s);
 }
 
@@ -691,22 +691,39 @@ string strftime(float uselocaltime, string[, string ...])
 void VM_strftime(void)
 {
 	time_t t;
+#if _MSC_VER >= 1400
+	struct tm tm;
+	int tmresult;
+#else
 	struct tm *tm;
+#endif
 	char fmt[VM_STRINGTEMP_LENGTH];
 	char result[VM_STRINGTEMP_LENGTH];
 	VM_SAFEPARMCOUNTRANGE(2, 8, VM_strftime);
 	VM_VarString(1, fmt, sizeof(fmt));
 	t = time(NULL);
+#if _MSC_VER >= 1400
+	if (PRVM_G_FLOAT(OFS_PARM0))
+		tmresult = localtime_s(&tm, &t);
+	else
+		tmresult = gmtime_s(&tm, &t);
+	if (!tmresult)
+#else
 	if (PRVM_G_FLOAT(OFS_PARM0))
 		tm = localtime(&t);
 	else
 		tm = gmtime(&t);
 	if (!tm)
+#endif
 	{
 		PRVM_G_INT(OFS_RETURN) = 0;
 		return;
 	}
+#if _MSC_VER >= 1400
+	strftime(result, sizeof(result), fmt, &tm);
+#else
 	strftime(result, sizeof(result), fmt, tm);
+#endif
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(result);
 }
 

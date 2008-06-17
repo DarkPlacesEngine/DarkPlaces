@@ -1042,7 +1042,7 @@ void Mod_IDP0_Load(dp_model_t *mod, void *buffer, void *bufferend)
 				}
 			}
 
-			sprintf(loadmodel->skinscenes[i].name, "skin %i", i);
+			dpsnprintf(loadmodel->skinscenes[i].name, sizeof(loadmodel->skinscenes[i].name), "skin %i", i);
 			loadmodel->skinscenes[i].firstframe = totalskins;
 			loadmodel->skinscenes[i].framecount = groupskins;
 			loadmodel->skinscenes[i].framerate = 1.0f / interval;
@@ -1051,9 +1051,9 @@ void Mod_IDP0_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			for (j = 0;j < groupskins;j++)
 			{
 				if (groupskins > 1)
-					sprintf (name, "%s_%i_%i", loadmodel->name, i, j);
+					dpsnprintf (name, sizeof(name), "%s_%i_%i", loadmodel->name, i, j);
 				else
-					sprintf (name, "%s_%i", loadmodel->name, i);
+					dpsnprintf (name, sizeof(name), "%s_%i", loadmodel->name, i);
 				if (!Mod_LoadTextureFromQ3Shader(loadmodel->data_textures + totalskins * loadmodel->num_surfaces, name, false, true, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PICMIP | TEXF_COMPRESS))
 					Mod_BuildAliasSkinFromSkinFrame(loadmodel->data_textures + totalskins * loadmodel->num_surfaces, R_SkinFrame_LoadInternalQuake(name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_PICMIP, true, r_fullbrights.integer, (unsigned char *)datapointer, skinwidth, skinheight));
 				datapointer += skinwidth * skinheight;

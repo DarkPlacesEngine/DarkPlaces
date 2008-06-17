@@ -60,6 +60,8 @@ void Sys_PrintToTerminal(const char *text)
 	// BUG: for some reason, NDELAY also affects stdout (1) when used on stdin (0).
 	int origflags = fcntl (1, F_GETFL, 0);
 	fcntl (1, F_SETFL, origflags & ~FNDELAY);
+#else
+#define write _write
 #endif
 	while(*text)
 	{
@@ -193,7 +195,7 @@ char *Sys_ConsoleInput(void)
 			if (c == '\r')
 			{
 				text[len] = '\0';
-				putch ('\n');
+				_putch ('\n');
 				len = 0;
 				return text;
 			}
@@ -201,16 +203,16 @@ char *Sys_ConsoleInput(void)
 			{
 				if (len)
 				{
-					putch (c);
-					putch (' ');
-					putch (c);
+					_putch (c);
+					_putch (' ');
+					_putch (c);
 					len--;
 				}
 				continue;
 			}
 			if (len < sizeof (text) - 1)
 			{
-				putch (c);
+				_putch (c);
 				text[len] = c;
 				len++;
 			}

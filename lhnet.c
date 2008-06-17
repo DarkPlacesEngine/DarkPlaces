@@ -143,6 +143,9 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 	// try to parse as dotted decimal ipv4 address first
 	// note this supports partial ip addresses
 	d1 = d2 = d3 = d4 = 0;
+#if _MSC_VER >= 1400
+#define sscanf sscanf_s
+#endif
 	if (sscanf(name, "%d.%d.%d.%d", &d1, &d2, &d3, &d4) >= 1 && (unsigned int)d1 < 256 && (unsigned int)d2 < 256 && (unsigned int)d3 < 256 && (unsigned int)d4 < 256)
 	{
 		// parsed a valid ipv4 address
@@ -253,7 +256,7 @@ int LHNETADDRESS_ToString(const lhnetaddress_t *address, char *string, int strin
 		{
 			if (stringbuffersize >= 12)
 			{
-				sprintf(string, "local:%d", (int)address->addressdata.loop.port);
+				dpsnprintf(string, stringbuffersize, "local:%d", (int)address->addressdata.loop.port);
 				return 1;
 			}
 		}
@@ -271,7 +274,7 @@ int LHNETADDRESS_ToString(const lhnetaddress_t *address, char *string, int strin
 		{
 			if (stringbuffersize >= 22)
 			{
-				sprintf(string, "%d.%d.%d.%d:%d", (int)address->addressdata.inet4.address[0], (int)address->addressdata.inet4.address[1], (int)address->addressdata.inet4.address[2], (int)address->addressdata.inet4.address[3], (int)ntohs(address->addressdata.inet4.port));
+				dpsnprintf(string, stringbuffersize, "%d.%d.%d.%d:%d", (int)address->addressdata.inet4.address[0], (int)address->addressdata.inet4.address[1], (int)address->addressdata.inet4.address[2], (int)address->addressdata.inet4.address[3], (int)ntohs(address->addressdata.inet4.port));
 				return 1;
 			}
 		}
@@ -279,7 +282,7 @@ int LHNETADDRESS_ToString(const lhnetaddress_t *address, char *string, int strin
 		{
 			if (stringbuffersize >= 16)
 			{
-				sprintf(string, "%d.%d.%d.%d", (int)address->addressdata.inet4.address[0], (int)address->addressdata.inet4.address[1], (int)address->addressdata.inet4.address[2], (int)address->addressdata.inet4.address[3]);
+				dpsnprintf(string, stringbuffersize, "%d.%d.%d.%d", (int)address->addressdata.inet4.address[0], (int)address->addressdata.inet4.address[1], (int)address->addressdata.inet4.address[2], (int)address->addressdata.inet4.address[3]);
 				return 1;
 			}
 		}
@@ -289,7 +292,7 @@ int LHNETADDRESS_ToString(const lhnetaddress_t *address, char *string, int strin
 		{
 			if (stringbuffersize >= 88)
 			{
-				sprintf(string, "[%x:%x:%x:%x:%x:%x:%x:%x]:%d", (int)address->addressdata.inet6.address[0], (int)address->addressdata.inet6.address[1], (int)address->addressdata.inet6.address[2], (int)address->addressdata.inet6.address[3], (int)address->addressdata.inet6.address[4], (int)address->addressdata.inet6.address[5], (int)address->addressdata.inet6.address[6], (int)address->addressdata.inet6.address[7], (int)ntohs(address->addressdata.inet6.port));
+				dpsnprintf(string, stringbuffersize, "[%x:%x:%x:%x:%x:%x:%x:%x]:%d", (int)address->addressdata.inet6.address[0], (int)address->addressdata.inet6.address[1], (int)address->addressdata.inet6.address[2], (int)address->addressdata.inet6.address[3], (int)address->addressdata.inet6.address[4], (int)address->addressdata.inet6.address[5], (int)address->addressdata.inet6.address[6], (int)address->addressdata.inet6.address[7], (int)ntohs(address->addressdata.inet6.port));
 				return 1;
 			}
 		}
@@ -297,7 +300,7 @@ int LHNETADDRESS_ToString(const lhnetaddress_t *address, char *string, int strin
 		{
 			if (stringbuffersize >= 80)
 			{
-				sprintf(string, "%x:%x:%x:%x:%x:%x:%x:%x", (int)address->addressdata.inet6.address[0], (int)address->addressdata.inet6.address[1], (int)address->addressdata.inet6.address[2], (int)address->addressdata.inet6.address[3], (int)address->addressdata.inet6.address[4], (int)address->addressdata.inet6.address[5], (int)address->addressdata.inet6.address[6], (int)address->addressdata.inet6.address[7]);
+				dpsnprintf(string, stringbuffersize, "%x:%x:%x:%x:%x:%x:%x:%x", (int)address->addressdata.inet6.address[0], (int)address->addressdata.inet6.address[1], (int)address->addressdata.inet6.address[2], (int)address->addressdata.inet6.address[3], (int)address->addressdata.inet6.address[4], (int)address->addressdata.inet6.address[5], (int)address->addressdata.inet6.address[6], (int)address->addressdata.inet6.address[7]);
 				return 1;
 			}
 		}

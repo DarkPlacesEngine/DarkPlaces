@@ -499,7 +499,7 @@ void Host_Savegame_f (void)
 	FS_Printf(f, "%i\n", SAVEGAME_VERSION);
 
 	memset(comment, 0, sizeof(comment));
-	sprintf(comment, "%-21.21s kills:%3i/%3i", PRVM_GetString(prog->edicts->fields.server->message), (int)prog->globals.server->killed_monsters, (int)prog->globals.server->total_monsters);
+	dpsnprintf(comment, sizeof(comment), "%-21.21s kills:%3i/%3i", PRVM_GetString(prog->edicts->fields.server->message), (int)prog->globals.server->killed_monsters, (int)prog->globals.server->total_monsters);
 	// convert space to _ to make stdio happy
 	// LordHavoc: convert control characters to _ as well
 	for (i=0 ; i<SAVEGAME_COMMENT_LENGTH ; i++)
@@ -1067,11 +1067,11 @@ void Host_Tell_f(void)
 
 	// note this uses the chat prefix \001
 	if (!fromServer)
-		sprintf (text, "\001%s tells you: ", host_client->name);
+		dpsnprintf (text, sizeof(text), "\001%s tells you: ", host_client->name);
 	else if(*(sv_adminnick.string))
-		sprintf (text, "\001<%s tells you> ", sv_adminnick.string);
+		dpsnprintf (text, sizeof(text), "\001<%s tells you> ", sv_adminnick.string);
 	else
-		sprintf (text, "\001<%s tells you> ", hostname.string);
+		dpsnprintf (text, sizeof(text), "\001<%s tells you> ", hostname.string);
 
 	p1 = Cmd_Args();
 	p2 = p1 + strlen(p1);

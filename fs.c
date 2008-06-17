@@ -55,6 +55,17 @@
 # define lseek _lseeki64
 #endif
 
+#if _MSC_VER >= 1400
+// suppress deprecated warnings
+# include <sys/stat.h>
+# include <share.h>
+# define read _read
+# define write _write
+# define close _close
+# define unlink _unlink
+# define dup _dup
+#endif
+
 /*
 
 All of Quake's data access is through a hierchal file system, but the contents
@@ -560,7 +571,11 @@ pack_t *FS_LoadPackPK3 (const char *packfile)
 	pack_t *pack;
 	int real_nb_files;
 
+#if _MSC_VER >= 1400
+	_sopen_s(&packhandle, packfile, O_RDONLY | O_BINARY, _SH_DENYNO, _S_IREAD | _S_IWRITE);
+#else
 	packhandle = open (packfile, O_RDONLY | O_BINARY);
+#endif
 	if (packhandle < 0)
 		return NULL;
 
@@ -771,7 +786,11 @@ pack_t *FS_LoadPackPAK (const char *packfile)
 	pack_t *pack;
 	dpackfile_t *info;
 
+#if _MSC_VER >= 1400
+	_sopen_s(&packhandle, packfile, O_RDONLY | O_BINARY, _SH_DENYNO, _S_IREAD | _S_IWRITE);
+#else
 	packhandle = open (packfile, O_RDONLY | O_BINARY);
+#endif
 	if (packhandle < 0)
 		return NULL;
 	read (packhandle, (void *)&header, sizeof(header));
@@ -1023,8 +1042,11 @@ void FS_AddGameHierarchy (const char *dir)
 	char userdir[MAX_QPATH];
 #ifdef WIN32
 	TCHAR mydocsdir[MAX_PATH + 1];
+#if _MSC_VER >= 1400
+	size_t homedirlen;
 #endif
-	const char *homedir;
+#endif
+	char *homedir;
 
 	// Add the common game directory
 	FS_AddGameDirectory (va("%s%s/", fs_basedir, dir));
@@ -1041,10 +1063,18 @@ void FS_AddGameHierarchy (const char *dir)
 	else
 	{
 		// use the environment
-		homedir = getenv ("USERPROFILE");
+#if _MSC_VER >= 1400
+		_dupenv_s (&homedir, &homedirlen, "USERPROFILE");
+#else
+		homedir = getenv("USERPROFILE");
+#endif
+
 		if(homedir)
 		{
 			dpsnprintf(userdir, sizeof(userdir), "%s/My Documents/My Games/%s/", homedir, gameuserdirname);
+#if _MSC_VER >= 1400
+			free(homedir);
+#endif
 			Con_DPrintf("Obtained personal directory %s from environment\n", userdir);
 		}
 		else
@@ -1066,7 +1096,12 @@ void FS_AddGameHierarchy (const char *dir)
 #ifdef WIN32
 	if(!COM_CheckParm("-mygames"))
 	{
+#if _MSC_VER >= 1400
+		int fd;
+		_sopen_s(&fd, va("%s%s/config.cfg", fs_basedir, dir), O_WRONLY | O_CREAT, _SH_DENYNO, _S_IREAD | _S_IWRITE); // note: no O_TRUNC here!
+#else
 		int fd = open (va("%s%s/config.cfg", fs_basedir, dir), O_WRONLY | O_CREAT, 0666); // note: no O_TRUNC here!
+#endif
 		if(fd >= 0)
 		{
 			close(fd);
@@ -1539,7 +1574,11 @@ static qfile_t* FS_SysOpen (const char* filepath, const char* mode, qboolean non
 	memset (file, 0, sizeof (*file));
 	file->ungetc = EOF;
 
+#if _MSC_VER >= 1400
+	_sopen_s(&file->handle, filepath, mod | opt, _SH_DENYNO, _S_IREAD | _S_IWRITE);
+#else
 	file->handle = open (filepath, mod | opt, 0666);
+#endif
 	if (file->handle < 0)
 	{
 		Mem_Free (file);

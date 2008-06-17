@@ -192,13 +192,22 @@ const char* Log_Timestamp (const char *desc)
 {
 	static char timestamp [128];
 	time_t crt_time;
-	const struct tm *crt_tm;
+#if _MSC_VER >= 1400
+	struct tm crt_tm;
+#else
+	struct tm *crt_tm;
+#endif
 	char timestring [64];
 
 	// Build the time stamp (ex: "Wed Jun 30 21:49:08 1993");
 	time (&crt_time);
+#if _MSC_VER >= 1400
+	localtime_s (&crt_tm, &crt_time);
+	strftime (timestring, sizeof (timestring), "%a %b %d %H:%M:%S %Y", &crt_tm);
+#else
 	crt_tm = localtime (&crt_time);
 	strftime (timestring, sizeof (timestring), "%a %b %d %H:%M:%S %Y", crt_tm);
+#endif
 
 	if (desc != NULL)
 		dpsnprintf (timestamp, sizeof (timestamp), "====== %s (%s) ======\n", desc, timestring);
@@ -1386,9 +1395,9 @@ void Con_DrawNotify (void)
 
 		// LordHavoc: speedup, and other improvements
 		if (chat_team)
-			sprintf(temptext, "say_team:%s%c", chat_buffer, (int) 10+((int)(realtime*con_cursorspeed)&1));
+			dpsnprintf(temptext, sizeof(temptext), "say_team:%s%c", chat_buffer, (int) 10+((int)(realtime*con_cursorspeed)&1));
 		else
-			sprintf(temptext, "say:%s%c", chat_buffer, (int) 10+((int)(realtime*con_cursorspeed)&1));
+			dpsnprintf(temptext, sizeof(temptext), "say:%s%c", chat_buffer, (int) 10+((int)(realtime*con_cursorspeed)&1));
 
 		// FIXME word wrap
 		inputsize = (numChatlines ? con_chatsize : con_notifysize).value;
@@ -1561,13 +1570,13 @@ its format (q1/q2/q3/hl) and even its message
 qboolean GetMapList (const char *s, char *completedname, int completednamebufferlength)
 {
 	fssearch_t	*t;
-	char		message[64];
+	char		message[1024];
 	int			i, k, max, p, o, min;
 	unsigned char *len;
 	qfile_t		*f;
 	unsigned char buf[1024];
 
-	sprintf(message, "maps/%s*.bsp", s);
+	dpsnprintf(message, sizeof(message), "maps/%s*.bsp", s);
 	t = FS_Search(message, 1, true);
 	if(!t)
 		return false;

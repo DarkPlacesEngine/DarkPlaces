@@ -1191,28 +1191,28 @@ static void VM_CL_getplayerkey (void)
 		strlcpy(t, cl.scores[i].name, sizeof(t));
 	else
 		if(!strcasecmp(c, "frags"))
-			sprintf(t, "%i", cl.scores[i].frags);
+			dpsnprintf(t, sizeof(t), "%i", cl.scores[i].frags);
 	else
 		if(!strcasecmp(c, "ping"))
-			sprintf(t, "%i", cl.scores[i].qw_ping);
+			dpsnprintf(t, sizeof(t), "%i", cl.scores[i].qw_ping);
 	else
 		if(!strcasecmp(c, "pl"))
-			sprintf(t, "%i", cl.scores[i].qw_packetloss);
+			dpsnprintf(t, sizeof(t), "%i", cl.scores[i].qw_packetloss);
 	else
 		if(!strcasecmp(c, "entertime"))
-			sprintf(t, "%f", cl.scores[i].qw_entertime);
+			dpsnprintf(t, sizeof(t), "%f", cl.scores[i].qw_entertime);
 	else
 		if(!strcasecmp(c, "colors"))
-			sprintf(t, "%i", cl.scores[i].colors);
+			dpsnprintf(t, sizeof(t), "%i", cl.scores[i].colors);
 	else
 		if(!strcasecmp(c, "topcolor"))
-			sprintf(t, "%i", cl.scores[i].colors & 0xf0);
+			dpsnprintf(t, sizeof(t), "%i", cl.scores[i].colors & 0xf0);
 	else
 		if(!strcasecmp(c, "bottomcolor"))
-			sprintf(t, "%i", (cl.scores[i].colors &15)<<4);
+			dpsnprintf(t, sizeof(t), "%i", (cl.scores[i].colors &15)<<4);
 	else
 		if(!strcasecmp(c, "viewentity"))
-			sprintf(t, "%i", i+1);
+			dpsnprintf(t, sizeof(t), "%i", i+1);
 	if(!t[0])
 		return;
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(t);

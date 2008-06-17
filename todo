@@ -5,6 +5,7 @@
 0 bug darkplaces client csqc: input queue functions needed for csqc prediction aren't implemented (Spike)
 0 bug darkplaces client csqc: precaches on client don't work, have to precache on server - what's going wrong here? (daemon, Urre)
 0 bug darkplaces client csqc: there is no WriteFloat, making ReadFloat useless (Urre)
+0 bug darkplaces client qc: trace_dphittexturename should be a static buffer rather than a tempstring, it produces unnecessary warnings currently (div0)
 0 bug darkplaces client qw: add .mvd demo support
 0 bug darkplaces client qw: add .qwd demo support
 0 bug darkplaces client qw: add spectator cvar (Plague Monkey Rat)
@@ -37,6 +38,7 @@
 0 bug darkplaces renderer: if an animated model is entirely transparent, the RSurf_ActiveModelEntity call updating vertices is completely wasted
 0 bug darkplaces renderer: r_speeds counts entities twice with r_hdr 1, the whole counting code probably needs auditing (Morphed, and jim on inside3d)
 0 bug darkplaces server csqc networking: csqc entity sending code does not currently detect packet loss and repeat lost entities (FrikaC, Chris Page, div0)
+0 bug darkplaces server qc: trace_dphittexturename should be a static buffer rather than a tempstring, it produces unnecessary warnings currently (div0)
 0 bug darkplaces server: SV_PushMove is ignoring model type in its angles_x handling, where as the renderer checks only model type to determine angles_x handling (Urre)
 0 bug darkplaces server: SV_PushMove's call to SV_ClipMoveToEntity should do a trace, not just a point test, to support hollow pusher models (Urre)
 0 bug darkplaces server: savegames do not save precaches, which means that automatic precaching frequently results in invalid modelindex values when reloading the savegame, and this bug also exists in many quake mods that randomly choose multiple variants of a monster, each with separate precaches, resulting in a different precache order when reloading the savegame

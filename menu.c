@@ -829,7 +829,7 @@ static void M_ScanSaves (void)
 	{
 		strlcpy (m_filenames[i], "--- UNUSED SLOT ---", sizeof(m_filenames[i]));
 		loadable[i] = false;
-		sprintf (name, "s%i.sav", (int)i);
+		dpsnprintf (name, sizeof(name), "s%i.sav", (int)i);
 		f = FS_Open (name, "rb", false, false);
 		if (!f)
 			continue;
@@ -1508,9 +1508,9 @@ static void M_DrawSlider (int x, int y, float num, float rangemin, float rangema
 	M_DrawCharacter (x+i*8, y, 130);
 	M_DrawCharacter (x + (SLIDER_RANGE-1)*8 * range, y, 131);
 	if (fabs((int)num - num) < 0.01)
-		sprintf(text, "%i", (int)num);
+		dpsnprintf(text, sizeof(text), "%i", (int)num);
 	else
-		sprintf(text, "%.3f", num);
+		dpsnprintf(text, sizeof(text), "%.3f", num);
 	M_Print(x + (SLIDER_RANGE+2) * 8, y, text);
 }
 
@@ -2634,7 +2634,7 @@ static void M_Keys_Key (int k, char ascii)
 		}
 		else //if (k != '`')
 		{
-			sprintf (cmd, "bind \"%s\" \"%s\"\n", Key_KeynumToString (k), bindnames[keys_cursor][0]);
+			dpsnprintf (cmd, sizeof(cmd), "bind \"%s\" \"%s\"\n", Key_KeynumToString (k), bindnames[keys_cursor][0]);
 			Cbuf_InsertText (cmd);
 		}
 
@@ -3272,7 +3272,7 @@ void M_Menu_LanConfig_f (void)
 	if (StartingGame)
 		lanConfig_cursor = 1;
 	lanConfig_port = 26000;
-	sprintf(lanConfig_portname, "%u", (unsigned int) lanConfig_port);
+	dpsnprintf(lanConfig_portname, sizeof(lanConfig_portname), "%u", (unsigned int) lanConfig_port);
 
 	M_Update_Return_Reason("");
 }
@@ -3438,7 +3438,7 @@ static void M_LanConfig_Key (int key, char ascii)
 	l =  atoi(lanConfig_portname);
 	if (l <= 65535)
 		lanConfig_port = l;
-	sprintf(lanConfig_portname, "%u", (unsigned int) lanConfig_port);
+	dpsnprintf(lanConfig_portname, sizeof(lanConfig_portname), "%u", (unsigned int) lanConfig_port);
 }
 
 //=============================================================================
