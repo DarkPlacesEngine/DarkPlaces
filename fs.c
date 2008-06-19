@@ -222,6 +222,8 @@ typedef struct dpackheader_s
 #define PACKFILE_FLAG_TRUEOFFS (1 << 0)
 // file compressed using the deflate algorithm
 #define PACKFILE_FLAG_DEFLATED (1 << 1)
+// file is a symbolic link
+#define PACKFILE_FLAG_SYMLINK (1 << 2)
 
 typedef struct packfile_s
 {
@@ -538,6 +540,18 @@ int PK3_BuildFileList (pack_t *pack, const pk3_endOfCentralDir_t *eocd)
 				offset = BuffLittleLong (&ptr[42]);
 				packsize = BuffLittleLong (&ptr[20]);
 				realsize = BuffLittleLong (&ptr[24]);
+
+				switch(ptr[5]) // C_VERSION_MADE_BY_1
+				{
+					case 3: // UNIX_
+					case 2: // VMS_
+					case 16: // BEOS_
+						if((BuffLittleShort(&ptr[40]) & 0120000) == 0120000)
+							// can't use S_ISLNK here, as this has to compile on non-UNIX too
+							flags |= PACKFILE_FLAG_SYMLINK;
+						break;
+				}
+
 				FS_AddFileToPack (filename, pack, offset, packsize, realsize, flags);
 			}
 		}
@@ -1857,7 +1871,7 @@ FS_OpenReadFile
 Look for a file in the search paths and open it in read-only mode
 ===========
 */
-qfile_t *FS_OpenReadFile (const char *filename, qboolean quiet, qboolean nonblocking)
+qfile_t *FS_OpenReadFile (const char *filename, qboolean quiet, qboolean nonblocking, int symlinkLevels)
 {
 	searchpath_t *search;
 	int pack_ind;
@@ -1877,6 +1891,80 @@ qfile_t *FS_OpenReadFile (const char *filename, qboolean quiet, qboolean nonbloc
 	}
 
 	// So, we found it in a package...
+
+	// Is it a PK3 symlink?
+	// TODO also handle directory symlinks by parsing the whole structure...
+	// but heck, file symlinks are good enough for now
+	if(search->pack->files[pack_ind].flags & PACKFILE_FLAG_SYMLINK)
+	{
+		if(symlinkLevels <= 0)
+		{
+			Con_Printf("symlink: %s: too many levels of symbolic links\n", filename);
+			return NULL;
+		}
+		else
+		{
+			char linkbuf[MAX_QPATH];
+			fs_offset_t count;
+			qfile_t *linkfile = FS_OpenPackedFile (search->pack, pack_ind);
+			const char *mergeslash;
+			char *mergestart;
+
+			if(!linkfile)
+				return NULL;
+			count = FS_Read(linkfile, linkbuf, sizeof(linkbuf) - 1);
+			FS_Close(linkfile);
+			if(count < 0)
+				return NULL;
+			linkbuf[count] = 0;
+			
+			// Now combine the paths...
+			mergeslash = strrchr(filename, '/');
+			mergestart = linkbuf;
+			if(!mergeslash)
+				mergeslash = filename;
+			while(!strncmp(mergestart, "../", 3))
+			{
+				mergestart += 3;
+				while(mergeslash > filename)
+				{
+					--mergeslash;
+					if(*mergeslash == '/')
+						break;
+				}
+			}
+			// Now, mergestart will point to the path to be appended, and mergeslash points to where it should be appended
+			if(mergeslash == filename)
+			{
+				// Either mergeslash == filename, then we just replace the name (done below)
+			}
+			else
+			{
+				// Or, we append the name after mergeslash;
+				// or rather, we can also shift the linkbuf so we can put everything up to and including mergeslash first
+				int spaceNeeded = mergeslash - filename + 1;
+				int spaceRemoved = mergestart - linkbuf;
+				if(count - spaceRemoved + spaceNeeded >= MAX_QPATH)
+				{
+					Con_DPrintf("symlink: too long path rejected\n");
+					return NULL;
+				}
+				memmove(linkbuf + spaceNeeded, linkbuf + spaceRemoved, count - spaceRemoved);
+				memcpy(linkbuf, filename, spaceNeeded);
+				linkbuf[count - spaceRemoved + spaceNeeded] = 0;
+				mergestart = linkbuf;
+			}
+			if (!quiet && developer_loading.integer)
+				Con_DPrintf("symlink: %s -> %s\n", filename, mergestart);
+			if(FS_CheckNastyPath (mergestart, false))
+			{
+				Con_DPrintf("symlink: nasty path %s rejected\n", mergestart);
+				return NULL;
+			}
+			return FS_OpenReadFile(mergestart, quiet, nonblocking, symlinkLevels - 1);
+		}
+	}
+
 	return FS_OpenPackedFile (search->pack, pack_ind);
 }
 
@@ -1919,7 +2007,7 @@ qfile_t* FS_Open (const char* filepath, const char* mode, qboolean quiet, qboole
 	}
 	// Else, we look at the various search paths and open the file in read-only mode
 	else
-		return FS_OpenReadFile (filepath, quiet, nonblocking);
+		return FS_OpenReadFile (filepath, quiet, nonblocking, 16);
 }
 
 
