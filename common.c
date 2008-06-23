@@ -2030,7 +2030,7 @@ void InfoString_SetValue(char *buffer, size_t bufferlength, const char *key, con
 		// set the key/value and append the remaining text
 		char tempbuffer[4096];
 		strlcpy(tempbuffer, buffer + pos2, sizeof(tempbuffer));
-		dpsnprintf(buffer + pos, sizeof(buffer) - pos, "\\%s\\%s%s", key, value, tempbuffer);
+		dpsnprintf(buffer + pos, bufferlength - pos, "\\%s\\%s%s", key, value, tempbuffer);
 	}
 	else
 	{
