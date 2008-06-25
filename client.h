@@ -397,7 +397,8 @@ typedef struct scoreboard_s
 typedef struct cshift_s
 {
 	float	destcolor[3];
-	float	percent;		// 0-256
+	float	percent;		// 0-255
+	float   alphafade;      // (any speed)
 } cshift_t;
 
 #define	CSHIFT_CONTENTS	0

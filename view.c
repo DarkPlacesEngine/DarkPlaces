@@ -242,6 +242,7 @@ void V_ParseDamage (void)
 	cl.faceanimtime = cl.time + 0.2;		// put sbar face into pain frame
 
 	cl.cshifts[CSHIFT_DAMAGE].percent += 3*count;
+	cl.cshifts[CSHIFT_DAMAGE].alphafade = 150;
 	if (cl.cshifts[CSHIFT_DAMAGE].percent < 0)
 		cl.cshifts[CSHIFT_DAMAGE].percent = 0;
 	if (cl.cshifts[CSHIFT_DAMAGE].percent > 150)
@@ -303,10 +304,24 @@ When you run over an item, the server sends this command
 */
 static void V_BonusFlash_f (void)
 {
-	cl.cshifts[CSHIFT_BONUS].destcolor[0] = 215;
-	cl.cshifts[CSHIFT_BONUS].destcolor[1] = 186;
-	cl.cshifts[CSHIFT_BONUS].destcolor[2] = 69;
-	cl.cshifts[CSHIFT_BONUS].percent = 50;
+	if(Cmd_Argc() == 1)
+	{
+		cl.cshifts[CSHIFT_BONUS].destcolor[0] = 215;
+		cl.cshifts[CSHIFT_BONUS].destcolor[1] = 186;
+		cl.cshifts[CSHIFT_BONUS].destcolor[2] = 69;
+		cl.cshifts[CSHIFT_BONUS].percent = 50;
+		cl.cshifts[CSHIFT_BONUS].alphafade = 100;
+	}
+	else if(Cmd_Argc() == 6)
+	{
+		cl.cshifts[CSHIFT_BONUS].destcolor[0] = atof(Cmd_Argv(1)) * 255;
+		cl.cshifts[CSHIFT_BONUS].destcolor[1] = atof(Cmd_Argv(2)) * 255;
+		cl.cshifts[CSHIFT_BONUS].destcolor[2] = atof(Cmd_Argv(3)) * 255;
+		cl.cshifts[CSHIFT_BONUS].percent = atof(Cmd_Argv(4)) * 255; // yes, these are HEXADECIMAL percent ;)
+		cl.cshifts[CSHIFT_BONUS].alphafade = atof(Cmd_Argv(5)) * 255;
+	}
+	else
+		Con_Printf("usage:\nbf, or bf R G B A alphafade\n");
 }
 
 /*
@@ -567,11 +582,11 @@ void V_FadeViewFlashs(void)
 	if (cl.time <= cl.oldtime)
 		return;
 	// drop the damage value
-	cl.cshifts[CSHIFT_DAMAGE].percent -= (cl.time - cl.oldtime)*150;
+	cl.cshifts[CSHIFT_DAMAGE].percent -= (cl.time - cl.oldtime)*cl.cshifts[CSHIFT_DAMAGE].alphafade;
 	if (cl.cshifts[CSHIFT_DAMAGE].percent <= 0)
 		cl.cshifts[CSHIFT_DAMAGE].percent = 0;
 	// drop the bonus value
-	cl.cshifts[CSHIFT_BONUS].percent -= (cl.time - cl.oldtime)*100;
+	cl.cshifts[CSHIFT_BONUS].percent -= (cl.time - cl.oldtime)*cl.cshifts[CSHIFT_BONUS].alphafade;
 	if (cl.cshifts[CSHIFT_BONUS].percent <= 0)
 		cl.cshifts[CSHIFT_BONUS].percent = 0;
 }
@@ -698,7 +713,7 @@ V_Init
 void V_Init (void)
 {
 	Cmd_AddCommand ("v_cshift", V_cshift_f, "sets tint color of view");
-	Cmd_AddCommand ("bf", V_BonusFlash_f, "briefly flashes a bright color tint on view (used when items are picked up)");
+	Cmd_AddCommand ("bf", V_BonusFlash_f, "briefly flashes a bright color tint on view (used when items are picked up); optionally takes R G B A alphafade arguments to specify how the flash looks");
 	Cmd_AddCommand ("centerview", V_StartPitchDrift, "gradually recenter view (stop looking up/down)");
 
 	Cvar_RegisterVariable (&v_centermove);
