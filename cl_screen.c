@@ -81,6 +81,8 @@ float		scr_centertime_off;
 int			scr_center_lines;
 int			scr_erase_lines;
 int			scr_erase_center;
+char        scr_infobarstring[MAX_INPUTLINE];
+float       scr_infobartime_off;
 
 /*
 ==============
@@ -442,7 +444,7 @@ SCR_DrawQWDownload
 */
 static int SCR_DrawQWDownload(int offset)
 {
-	// sync with SCR_DownloadHeight
+	// sync with SCR_InfobarHeight
 	int len;
 	float x, y;
 	float size = 8;
@@ -466,10 +468,28 @@ static int SCR_DrawQWDownload(int offset)
 	else
 		dpsnprintf(temp, sizeof(temp), "Downloading %s %3i%% (%i/%i) at %i bytes/s\n", cls.qw_downloadname, cls.qw_downloadpercent, cls.qw_downloadmemorycursize, cls.qw_downloadmemorymaxsize, cls.qw_downloadspeedrate);
 	len = (int)strlen(temp);
-	x = (vid_conwidth.integer - DrawQ_TextWidth_Font(temp, len, 0, FONT_INFOBAR) * size) / 2;
+	x = (vid_conwidth.integer - DrawQ_TextWidth_Font(temp, len, true, FONT_INFOBAR) * size) / 2;
 	y = vid_conheight.integer - size - offset;
 	DrawQ_Fill(0, y, vid_conwidth.integer, size, 0, 0, 0, cls.signon == SIGNONS ? 0.5 : 1, 0);
 	DrawQ_String_Font(x, y, temp, len, size, size, 1, 1, 1, 1, 0, NULL, true, FONT_INFOBAR);
+	return 8;
+}
+/*
+==============
+SCR_DrawInfobarString
+==============
+*/
+static int SCR_DrawInfobarString(int offset)
+{
+	int len;
+	float x, y;
+	float size = 8;
+
+	len = (int)strlen(scr_infobarstring);
+	x = (vid_conwidth.integer - DrawQ_TextWidth_Font(scr_infobarstring, len, false, FONT_INFOBAR) * size) / 2;
+	y = vid_conheight.integer - size - offset;
+	DrawQ_Fill(0, y, vid_conwidth.integer, size, 0, 0, 0, cls.signon == SIGNONS ? 0.5 : 1, 0);
+	DrawQ_String_Font(x, y, scr_infobarstring, len, size, size, 1, 1, 1, 1, 0, NULL, false, FONT_INFOBAR);
 	return 8;
 }
 
@@ -480,7 +500,7 @@ SCR_DrawCurlDownload
 */
 static int SCR_DrawCurlDownload(int offset)
 {
-	// sync with SCR_DownloadHeight
+	// sync with SCR_InfobarHeight
 	int len;
 	int nDownloads;
 	int i;
@@ -499,7 +519,7 @@ static int SCR_DrawCurlDownload(int offset)
 	if(addinfo)
 	{
 		len = (int)strlen(addinfo);
-		x = (vid_conwidth.integer - DrawQ_TextWidth_Font(addinfo, len, false, FONT_INFOBAR) * size) / 2;
+		x = (vid_conwidth.integer - DrawQ_TextWidth_Font(addinfo, len, true, FONT_INFOBAR) * size) / 2;
 		DrawQ_Fill(0, y - size, vid_conwidth.integer, size, 1, 1, 1, cls.signon == SIGNONS ? 0.8 : 1, 0);
 		DrawQ_String_Font(x, y - size, addinfo, len, size, size, 0, 0, 0, 1, 0, NULL, true, FONT_INFOBAR);
 	}
@@ -513,7 +533,7 @@ static int SCR_DrawCurlDownload(int offset)
 		else
 			dpsnprintf(temp, sizeof(temp), "Downloading %s ...  %5.1f%% @ %.1f KiB/s\n", downinfo[i].filename, 100.0 * downinfo[i].progress, downinfo[i].speed / 1024.0);
 		len = (int)strlen(temp);
-		x = (vid_conwidth.integer - DrawQ_TextWidth_Font(temp, len, false, FONT_INFOBAR) * size) / 2;
+		x = (vid_conwidth.integer - DrawQ_TextWidth_Font(temp, len, true, FONT_INFOBAR) * size) / 2;
 		DrawQ_Fill(0, y + i * size, vid_conwidth.integer, size, 0, 0, 0, cls.signon == SIGNONS ? 0.5 : 1, 0);
 		DrawQ_String_Font(x, y + i * size, temp, len, size, size, 1, 1, 1, 1, 0, NULL, true, FONT_INFOBAR);
 	}
@@ -525,27 +545,34 @@ static int SCR_DrawCurlDownload(int offset)
 
 /*
 ==============
-SCR_DrawDownload
+SCR_DrawInfobar
 ==============
 */
-static void SCR_DrawDownload()
+static void SCR_DrawInfobar()
 {
 	int offset = 0;
+	if(scr_infobartime_off > 0)
+		offset += SCR_DrawInfobarString(offset);
 	offset += SCR_DrawQWDownload(offset);
 	offset += SCR_DrawCurlDownload(offset);
 	if(offset != scr_con_margin_bottom)
 		Con_DPrintf("broken console margin calculation: %d != %d\n", offset, scr_con_margin_bottom);
 }
 
-static int SCR_DownloadHeight()
+static int SCR_InfobarHeight()
 {
 	int offset = 0;
 	Curl_downloadinfo_t *downinfo;
 	const char *addinfo;
 	int nDownloads;
 
+	if (cl.time > cl.oldtime)
+		scr_infobartime_off -= cl.time - cl.oldtime;
+	if(scr_infobartime_off > 0)
+		offset += 8;
+
 	if(cls.qw_downloadname[0])
-		offset += 0;
+		offset += 8;
 
 	downinfo = Curl_GetDownloadInfo(&nDownloads, &addinfo);
 	if(downinfo)
@@ -557,6 +584,23 @@ static int SCR_DownloadHeight()
 	return offset;
 }
 
+/*
+==============
+SCR_InfoBar_f
+==============
+*/
+void SCR_InfoBar_f()
+{
+	if(Cmd_Argc() == 3)
+	{
+		scr_infobartime_off = atof(Cmd_Argv(1));
+		strlcpy(scr_infobarstring, Cmd_Argv(2), sizeof(scr_infobarstring));
+	}
+	else
+	{
+		Con_Printf("usage:\ninfobar expiretime \"string\"\n");
+	}
+}
 //=============================================================================
 
 /*
@@ -603,7 +647,7 @@ SCR_DrawConsole
 */
 void SCR_DrawConsole (void)
 {
-	scr_con_margin_bottom = SCR_DownloadHeight();
+	scr_con_margin_bottom = SCR_InfobarHeight();
 	if (key_consoleactive & KEY_CONSOLEACTIVE_FORCED)
 	{
 		// full screen
@@ -829,6 +873,7 @@ void CL_Screen_Init(void)
 	Cmd_AddCommand ("sizedown",SCR_SizeDown_f, "decrease view size (decreases viewsize cvar)");
 	Cmd_AddCommand ("screenshot",SCR_ScreenShot_f, "takes a screenshot of the next rendered frame");
 	Cmd_AddCommand ("envmap", R_Envmap_f, "render a cubemap (skybox) of the current scene");
+	Cmd_AddCommand ("infobar", SCR_InfoBar_f, "display a text in the infobar (usage: infobar expiretime string)");
 
 	scr_initialized = true;
 }
@@ -2018,7 +2063,7 @@ void SCR_DrawScreen (void)
 
 	SCR_DrawBrand();
 
-	SCR_DrawDownload();
+	SCR_DrawInfobar();
 
 	if (r_timereport_active)
 		R_TimeReport("2d");
