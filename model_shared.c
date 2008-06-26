@@ -284,7 +284,7 @@ dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk, q
 		else if (!memcmp(buf, "ZYMOTICMODEL", 12)) Mod_ZYMOTICMODEL_Load(mod, buf, bufend);
 		else if (!memcmp(buf, "DARKPLACESMODEL", 16)) Mod_DARKPLACESMODEL_Load(mod, buf, bufend);
 		else if (!memcmp(buf, "ACTRHEAD", 8)) Mod_PSKMODEL_Load(mod, buf, bufend);
-		else if (strlen(mod->name) >= 4 && !strcmp(mod->name - 4, ".map")) Mod_MAP_Load(mod, buf, bufend);
+		else if (strlen(mod->name) >= 4 && !strcmp(mod->name + strlen(mod->name) - 4, ".map")) Mod_MAP_Load(mod, buf, bufend);
 		else if (num == BSPVERSION || num == 30) Mod_Q1BSP_Load(mod, buf, bufend);
 		else Con_Printf("Mod_LoadModel: model \"%s\" is of unknown/unsupported type\n", mod->name);
 		Mem_Free(buf);

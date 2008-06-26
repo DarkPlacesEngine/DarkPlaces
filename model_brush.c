@@ -2402,7 +2402,7 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 
 		for (surfacenum = 0, surface = loadmodel->data_surfaces;surfacenum < count;surfacenum++, surface++)
 		{
-			int i, iu, iv, lightmapx, lightmapy;
+			int i, iu, iv, lightmapx = 0, lightmapy = 0;
 			float u, v, ubase, vbase, uscale, vscale;
 
 			smax = surface->lightmapinfo->extents[0] >> 4;
