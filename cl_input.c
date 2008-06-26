@@ -1413,7 +1413,7 @@ void CL_SendMove(void)
 		packettime = 0;
 	// always send if buttons changed or an impulse is pending
 	// even if it violates the rate limit!
-	if (!cl_netimmediatebuttons.integer || (cl.movecmd[0].buttons == cl.movecmd[1].buttons && !cl.movecmd[0].impulse))
+	if (!cl.movecmd[0].impulse && (!cl_netimmediatebuttons.integer || cl.movecmd[0].buttons == cl.movecmd[1].buttons))
 	{
 		// don't choke the connection with packets (obey rate limit)
 		if ((cls.protocol == PROTOCOL_QUAKEWORLD || cls.signon == SIGNONS) && !NetConn_CanSend(cls.netcon) && !cl.islocalgame)
