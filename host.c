@@ -682,8 +682,8 @@ void Host_Main(void)
 
 		// when a server is running we only execute console commands on server frames
 		// (this mainly allows frikbot .way config files to work properly by staying in sync with the server qc)
-		// otherwise we execute them on all frames
-		if (sv_timer > 0 || !sv.active)
+		// otherwise we execute them on client frames
+		if (sv.active ? sv_timer > 0 : cl_timer > 0)
 		{
 			// process console commands
 			Cbuf_Execute();
