@@ -284,19 +284,20 @@ Key_Console (int key, char ascii)
 
 	if ((toupper(key) == 'V' && keydown[K_CTRL]) || ((key == K_INS || key == K_KP_INS) && keydown[K_SHIFT]))
 	{
-		char *cbd;
+		char *cbd, *p;
 		if ((cbd = Sys_GetClipboardData()) != 0)
 		{
 			int i;
 #if 1
-			while (*cbd)
+			p = cbd;
+			while (*p)
 			{
-				if (*cbd == '\n' || *cbd == '\r' || *cbd == '\b')
+				if (*p == '\n' || *p == '\r' || *p == '\b')
 				{
-					*cbd++ = 0;
+					*p++ = 0;
 					break;
 				}
-				cbd++;
+				p++;
 			}
 #else
 			strtok(cbd, "\n\r\b");
