@@ -2525,13 +2525,33 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->nummodelsurfaces = loadmodel->num_surfaces = nummatts;
 	loadmodel->num_textures = loadmodel->num_surfaces * loadmodel->numskins;
 	loadmodel->num_texturesperskin = loadmodel->num_surfaces;
+	loadmodel->surfmesh.num_vertices = meshvertices;
+	loadmodel->surfmesh.num_triangles = meshtriangles;
 	// do most allocations as one merged chunk
-	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + (meshvertices <= 65536 ? meshtriangles * sizeof(unsigned short[3]) : 0) + meshtriangles * sizeof(int[3]) + meshvertices * (sizeof(float[14]) + sizeof(int[4]) + sizeof(float[4])) + loadmodel->num_poses * sizeof(float[12]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t));
+	size = 0;
+	size += loadmodel->num_surfaces * sizeof(msurface_t);
+	size += loadmodel->num_surfaces * sizeof(int);
+	size += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
+	size += meshtriangles * sizeof(int[3]);
+	size += meshtriangles * sizeof(int[3]);
+	size += meshvertices * sizeof(float[3]);
+	size += meshvertices * sizeof(float[3]);
+	size += meshvertices * sizeof(float[3]);
+	size += meshvertices * sizeof(float[3]);
+	size += meshvertices * sizeof(float[2]);
+	size += meshvertices * sizeof(int[4]);
+	size += meshvertices * sizeof(float[4]);
+	size += loadmodel->num_poses * sizeof(float[12]);
+	size += loadmodel->num_bones * sizeof(float[12]);
+	size += loadmodel->numskins * sizeof(animscene_t);
+	size += loadmodel->num_bones * sizeof(aliasbone_t);
+	size += loadmodel->numframes * sizeof(animscene_t);
+	if (meshvertices <= 65536)
+		size += meshtriangles * sizeof(unsigned short[3]);
+	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, size);
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
 	loadmodel->surfacelist = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
 	loadmodel->data_textures = (texture_t *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
-	loadmodel->surfmesh.num_vertices = meshvertices;
-	loadmodel->surfmesh.num_triangles = meshtriangles;
 	loadmodel->surfmesh.data_element3i = (int *)data;data += meshtriangles * sizeof(int[3]);
 	loadmodel->surfmesh.data_neighbor3i = (int *)data;data += meshtriangles * sizeof(int[3]);
 	loadmodel->surfmesh.data_vertex3f = (float *)data;data += meshvertices * sizeof(float[3]);
@@ -2552,6 +2572,8 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		for (i = 0;i < loadmodel->surfmesh.num_triangles*3;i++)
 			loadmodel->surfmesh.data_element3s[i] = loadmodel->surfmesh.data_element3i[i];
 	}
+	if (data != (unsigned char *)loadmodel->data_surfaces + size)
+		Sys_Error("%s: combined alloc has wrong size! (%i bytes should be %i)\n", (int)size, (int)(data - (unsigned char *)loadmodel->data_surfaces));
 
 	for (i = 0;i < loadmodel->numskins;i++)
 	{
