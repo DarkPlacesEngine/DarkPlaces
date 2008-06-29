@@ -49,12 +49,12 @@ void Mod_Skeletal_AnimateVertices(const dp_model_t *model, const frameblend_t *f
 #define MAX_BONES 256
 	// vertex weighted skeletal
 	int i, k;
+	int blends;
 	float boneposerelative[MAX_BONES][12];
+	float *matrix, m[12], bonepose[MAX_BONES][12];
 	// interpolate matrices and concatenate them to their parents
 	for (i = 0;i < model->num_bones;i++)
 	{
-		int blends;
-		float *matrix, m[12], bonepose[MAX_BONES][12];
 		for (k = 0;k < 12;k++)
 			m[k] = 0;
 		for (blends = 0;blends < 4 && frameblend[blends].lerp > 0;blends++)
