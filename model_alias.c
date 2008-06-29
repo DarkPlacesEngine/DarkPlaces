@@ -2142,7 +2142,7 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 #define PSKQUATNEGATIONS
 void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 {
-	int i, j, index, version, recordsize, numrecords, meshvertices, meshtriangles;
+	int i, j, index, version, recordsize, numrecords, meshvertices, meshtriangles, size;
 	int numpnts, numvtxw, numfaces, nummatts, numbones, numrawweights, numanimbones, numanims, numanimkeys;
 	fs_offset_t filesize;
 	pskpnts_t *pnts;
@@ -2573,7 +2573,7 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			loadmodel->surfmesh.data_element3s[i] = loadmodel->surfmesh.data_element3i[i];
 	}
 	if (data != (unsigned char *)loadmodel->data_surfaces + size)
-		Sys_Error("%s: combined alloc has wrong size! (%i bytes should be %i)\n", (int)size, (int)(data - (unsigned char *)loadmodel->data_surfaces));
+		Sys_Error("%s: combined alloc has wrong size! (%i bytes should be %i)\n", loadmodel->name, (int)size, (int)(data - (unsigned char *)loadmodel->data_surfaces));
 
 	for (i = 0;i < loadmodel->numskins;i++)
 	{
