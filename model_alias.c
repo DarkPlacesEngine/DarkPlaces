@@ -52,6 +52,12 @@ void Mod_Skeletal_AnimateVertices(const dp_model_t *model, const frameblend_t *f
 	int blends;
 	float boneposerelative[MAX_BONES][12];
 	float *matrix, m[12], bonepose[MAX_BONES][12];
+	size_t size;
+
+	size = model->num_surfaces * sizeof(msurface_t) + model->num_surfaces * sizeof(int) + model->num_surfaces * model->numskins * sizeof(texture_t) + model->surfmesh.num_triangles * sizeof(int[3]) + model->surfmesh.num_triangles * sizeof(int[3]) + model->surfmesh.num_vertices * sizeof(float[3]) + model->surfmesh.num_vertices * sizeof(float[3]) + model->surfmesh.num_vertices * sizeof(float[3]) + model->surfmesh.num_vertices * sizeof(float[3]) + model->surfmesh.num_vertices * sizeof(float[2]) + model->surfmesh.num_vertices * sizeof(int[4]) + model->surfmesh.num_vertices * sizeof(float[4]) + model->num_poses * sizeof(float[12]) + model->num_bones * sizeof(float[12]) + model->numskins * sizeof(animscene_t) + model->num_bones * sizeof(aliasbone_t) + model->numframes * sizeof(animscene_t) + ((model->surfmesh.num_vertices <= 65536) ? (model->surfmesh.num_triangles * sizeof(unsigned short[3])) : 0);
+	if (size != ((memheader_t *)model->data_surfaces)[-1].size)
+		Sys_Error("%s:%i: %i != %i", __FILE__, __LINE__, (int)size, (int)((memheader_t *)model->data_surfaces)[-1].size);
+
 	// interpolate matrices and concatenate them to their parents
 	for (i = 0;i < model->num_bones;i++)
 	{
@@ -60,6 +66,8 @@ void Mod_Skeletal_AnimateVertices(const dp_model_t *model, const frameblend_t *f
 		for (blends = 0;blends < 4 && frameblend[blends].lerp > 0;blends++)
 		{
 			matrix = model->data_poses + (frameblend[blends].frame * model->num_bones + i) * 12;
+			if ((unsigned char *)(matrix + 12) >(unsigned char *)model->data_surfaces + ((memheader_t *)model->data_surfaces)[-1].size)
+				Sys_Error("%s:%i: matrix %p >= data %p + size %i\n", __FILE__, __LINE__, matrix, model->data_surfaces, (int)((memheader_t *)model->data_surfaces)[-1].size);
 			for (k = 0;k < 12;k++)
 				m[k] += matrix[k] * frameblend[blends].lerp;
 		}
@@ -2142,7 +2150,7 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 #define PSKQUATNEGATIONS
 void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 {
-	int i, j, index, version, recordsize, numrecords, meshvertices, meshtriangles, size;
+	int i, j, index, version, recordsize, numrecords, meshvertices, meshtriangles;
 	int numpnts, numvtxw, numfaces, nummatts, numbones, numrawweights, numanimbones, numanims, numanimkeys;
 	fs_offset_t filesize;
 	pskpnts_t *pnts;
@@ -2159,6 +2167,7 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	pskchunk_t *pchunk;
 	skinfile_t *skinfiles;
 	char animname[MAX_QPATH];
+	size_t size;
 
 	pchunk = (pskchunk_t *)buffer;
 	if (strcmp(pchunk->id, "ACTRHEAD"))
@@ -2528,47 +2537,28 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->surfmesh.num_vertices = meshvertices;
 	loadmodel->surfmesh.num_triangles = meshtriangles;
 	// do most allocations as one merged chunk
-	size = 0;
-	size += loadmodel->num_surfaces * sizeof(msurface_t);
-	size += loadmodel->num_surfaces * sizeof(int);
-	size += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
-	size += meshtriangles * sizeof(int[3]);
-	size += meshtriangles * sizeof(int[3]);
-	size += meshvertices * sizeof(float[3]);
-	size += meshvertices * sizeof(float[3]);
-	size += meshvertices * sizeof(float[3]);
-	size += meshvertices * sizeof(float[3]);
-	size += meshvertices * sizeof(float[2]);
-	size += meshvertices * sizeof(int[4]);
-	size += meshvertices * sizeof(float[4]);
-	size += loadmodel->num_poses * sizeof(float[12]);
-	size += loadmodel->num_bones * sizeof(float[12]);
-	size += loadmodel->numskins * sizeof(animscene_t);
-	size += loadmodel->num_bones * sizeof(aliasbone_t);
-	size += loadmodel->numframes * sizeof(animscene_t);
-	if (meshvertices <= 65536)
-		size += meshtriangles * sizeof(unsigned short[3]);
+	size = loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + loadmodel->surfmesh.num_triangles * sizeof(int[3]) + loadmodel->surfmesh.num_triangles * sizeof(int[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[2]) + loadmodel->surfmesh.num_vertices * sizeof(int[4]) + loadmodel->surfmesh.num_vertices * sizeof(float[4]) + loadmodel->num_poses * sizeof(float[12]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t) + ((loadmodel->surfmesh.num_vertices <= 65536) ? (loadmodel->surfmesh.num_triangles * sizeof(unsigned short[3])) : 0);
 	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, size);
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
 	loadmodel->surfacelist = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
 	loadmodel->data_textures = (texture_t *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
-	loadmodel->surfmesh.data_element3i = (int *)data;data += meshtriangles * sizeof(int[3]);
-	loadmodel->surfmesh.data_neighbor3i = (int *)data;data += meshtriangles * sizeof(int[3]);
-	loadmodel->surfmesh.data_vertex3f = (float *)data;data += meshvertices * sizeof(float[3]);
-	loadmodel->surfmesh.data_svector3f = (float *)data;data += meshvertices * sizeof(float[3]);
-	loadmodel->surfmesh.data_tvector3f = (float *)data;data += meshvertices * sizeof(float[3]);
-	loadmodel->surfmesh.data_normal3f = (float *)data;data += meshvertices * sizeof(float[3]);
-	loadmodel->surfmesh.data_texcoordtexture2f = (float *)data;data += meshvertices * sizeof(float[2]);
-	loadmodel->surfmesh.data_vertexweightindex4i = (int *)data;data += meshvertices * sizeof(int[4]);
-	loadmodel->surfmesh.data_vertexweightinfluence4f = (float *)data;data += meshvertices * sizeof(float[4]);
+	loadmodel->surfmesh.data_element3i = (int *)data;data += loadmodel->surfmesh.num_triangles * sizeof(int[3]);
+	loadmodel->surfmesh.data_neighbor3i = (int *)data;data += loadmodel->surfmesh.num_triangles * sizeof(int[3]);
+	loadmodel->surfmesh.data_vertex3f = (float *)data;data += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
+	loadmodel->surfmesh.data_svector3f = (float *)data;data += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
+	loadmodel->surfmesh.data_tvector3f = (float *)data;data += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
+	loadmodel->surfmesh.data_normal3f = (float *)data;data += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
+	loadmodel->surfmesh.data_texcoordtexture2f = (float *)data;data += loadmodel->surfmesh.num_vertices * sizeof(float[2]);
+	loadmodel->surfmesh.data_vertexweightindex4i = (int *)data;data += loadmodel->surfmesh.num_vertices * sizeof(int[4]);
+	loadmodel->surfmesh.data_vertexweightinfluence4f = (float *)data;data += loadmodel->surfmesh.num_vertices * sizeof(float[4]);
 	loadmodel->data_poses = (float *)data;data += loadmodel->num_poses * sizeof(float[12]);
 	loadmodel->data_baseboneposeinverse = (float *)data;data += loadmodel->num_bones * sizeof(float[12]);
 	loadmodel->skinscenes = (animscene_t *)data;data += loadmodel->numskins * sizeof(animscene_t);
 	loadmodel->data_bones = (aliasbone_t *)data;data += loadmodel->num_bones * sizeof(aliasbone_t);
 	loadmodel->animscenes = (animscene_t *)data;data += loadmodel->numframes * sizeof(animscene_t);
-	if (meshvertices <= 65536)
+	if (loadmodel->surfmesh.num_vertices <= 65536)
 	{
-		loadmodel->surfmesh.data_element3s = (unsigned short *)data;data += meshtriangles * sizeof(unsigned short[3]);
+		loadmodel->surfmesh.data_element3s = (unsigned short *)data;data += loadmodel->surfmesh.num_triangles * sizeof(unsigned short[3]);
 		for (i = 0;i < loadmodel->surfmesh.num_triangles*3;i++)
 			loadmodel->surfmesh.data_element3s[i] = loadmodel->surfmesh.data_element3i[i];
 	}
@@ -2704,6 +2694,10 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	Mod_BuildTextureVectorsFromNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, true);
 	Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
 	Mod_Alias_CalculateBoundingBox();
+
+	size = loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + loadmodel->surfmesh.num_triangles * sizeof(int[3]) + loadmodel->surfmesh.num_triangles * sizeof(int[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[2]) + loadmodel->surfmesh.num_vertices * sizeof(int[4]) + loadmodel->surfmesh.num_vertices * sizeof(float[4]) + loadmodel->num_poses * sizeof(float[12]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t) + ((loadmodel->surfmesh.num_vertices <= 65536) ? (loadmodel->surfmesh.num_triangles * sizeof(unsigned short[3])) : 0);
+	if (size != ((memheader_t *)loadmodel->data_surfaces)[-1].size)
+		Sys_Error("%s:%i: %i != %i", __FILE__, __LINE__, (int)size, (int)((memheader_t *)loadmodel->data_surfaces)[-1].size);
 
 	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || loadmodel->animscenes[0].framecount > 1;
 }

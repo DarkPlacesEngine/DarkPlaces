@@ -69,7 +69,7 @@ void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 	templight = (unsigned char *)cl.buildlightmapmemory;
 
 	// update cached lighting info
-	surface->cached_dlight = 0;
+	model->brushq1.lightmapupdateflags[surface - model->data_surfaces] = false;
 
 	lightmap = surface->lightmapinfo->samples;
 
@@ -259,7 +259,7 @@ loc0:
 			}
 			// force lightmap upload
 			if (stained)
-				surface->cached_dlight = true;
+				model->brushq1.lightmapupdateflags[surface - model->data_surfaces] = true;
 		}
 	}
 

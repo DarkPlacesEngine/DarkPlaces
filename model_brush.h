@@ -393,6 +393,7 @@ typedef struct q2darea_s
 //Q3 bsp stuff
 
 #define Q3BSPVERSION	46
+#define Q3BSPVERSION_IG	48
 
 #define	Q3LUMP_ENTITIES		0 // entities to spawn (used by server and client)
 #define	Q3LUMP_TEXTURES		1 // textures used (used by faces)
@@ -483,6 +484,14 @@ typedef struct q3dbrushside_s
 	int textureindex;
 }
 q3dbrushside_t;
+
+typedef struct q3dbrushside_ig_s
+{
+	int planeindex;
+	int textureindex;
+	int surfaceflags;
+}
+q3dbrushside_ig_t;
 
 typedef struct q3dvertex_s
 {
