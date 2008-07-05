@@ -113,7 +113,7 @@ static void mod_newmap(void)
 					ssize = (surface->lightmapinfo->extents[0] >> 4) + 1;
 					tsize = (surface->lightmapinfo->extents[1] >> 4) + 1;
 					memset(surface->lightmapinfo->stainsamples, 255, ssize * tsize * 3);
-					surface->cached_dlight = true;
+					mod->brushq1.lightmapupdateflags[surfacenum] = true;
 				}
 			}
 		}

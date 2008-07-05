@@ -2233,6 +2233,8 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 
 	loadmodel->num_surfaces = count;
 
+	loadmodel->brushq1.lightmapupdateflags = (unsigned char *)Mem_Alloc(loadmodel->mempool, count*sizeof(unsigned char));
+
 	totalverts = 0;
 	totaltris = 0;
 	for (surfacenum = 0, in = (dface_t *)(mod_base + l->fileofs);surfacenum < count;surfacenum++, in++)
@@ -2380,7 +2382,7 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 			// additionally this is used by the later code to see if a
 			// lightmap is needed on this surface (rather than duplicating the
 			// logic above)
-			surface->cached_dlight = true;
+			loadmodel->brushq1.lightmapupdateflags[surfacenum] = true;
 		}
 	}
 
@@ -3660,7 +3662,7 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			mod->radius2 = modelradius * modelradius;
 
 			// build lightstyle update chains
-			// (used to rapidly mark surface->cached_dlight on many surfaces
+			// (used to rapidly mark lightmapupdateflags on many surfaces
 			// when d_lightstylevalue changes)
 			memset(stylecounts, 0, sizeof(stylecounts));
 			for (k = 0;k < mod->nummodelsurfaces;k++)
@@ -4258,6 +4260,34 @@ static void Mod_Q3BSP_LoadBrushSides(lump_t *l)
 	int i, n, count;
 
 	in = (q3dbrushside_t *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error("Mod_Q3BSP_LoadBrushSides: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = (q3mbrushside_t *)Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel->brush.data_brushsides = out;
+	loadmodel->brush.num_brushsides = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+		n = LittleLong(in->planeindex);
+		if (n < 0 || n >= loadmodel->brush.num_planes)
+			Host_Error("Mod_Q3BSP_LoadBrushSides: invalid planeindex %i (%i planes)", n, loadmodel->brush.num_planes);
+		out->plane = loadmodel->brush.data_planes + n;
+		n = LittleLong(in->textureindex);
+		if (n < 0 || n >= loadmodel->num_textures)
+			Host_Error("Mod_Q3BSP_LoadBrushSides: invalid textureindex %i (%i textures)", n, loadmodel->num_textures);
+		out->texture = loadmodel->data_textures + n;
+	}
+}
+
+static void Mod_Q3BSP_LoadBrushSides_IG(lump_t *l)
+{
+	q3dbrushside_ig_t *in;
+	q3mbrushside_t *out;
+	int i, n, count;
+
+	in = (q3dbrushside_ig_t *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q3BSP_LoadBrushSides: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
@@ -5636,7 +5666,7 @@ void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	header = (q3dheader_t *)buffer;
 
 	i = LittleLong(header->version);
-	if (i != Q3BSPVERSION)
+	if (i != Q3BSPVERSION && i != Q3BSPVERSION_IG)
 		Host_Error("Mod_Q3BSP_Load: %s has wrong version number (%i, should be %i)", mod->name, i, Q3BSPVERSION);
 	mod->brush.ishlbsp = false;
 	if (loadmodel->isworldmodel)
@@ -5692,7 +5722,10 @@ void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	Mod_Q3BSP_LoadEntities(&header->lumps[Q3LUMP_ENTITIES]);
 	Mod_Q3BSP_LoadTextures(&header->lumps[Q3LUMP_TEXTURES]);
 	Mod_Q3BSP_LoadPlanes(&header->lumps[Q3LUMP_PLANES]);
-	Mod_Q3BSP_LoadBrushSides(&header->lumps[Q3LUMP_BRUSHSIDES]);
+	if (header->version == Q3BSPVERSION_IG)
+		Mod_Q3BSP_LoadBrushSides_IG(&header->lumps[Q3LUMP_BRUSHSIDES]);
+	else
+		Mod_Q3BSP_LoadBrushSides(&header->lumps[Q3LUMP_BRUSHSIDES]);
 	Mod_Q3BSP_LoadBrushes(&header->lumps[Q3LUMP_BRUSHES]);
 	Mod_Q3BSP_LoadEffects(&header->lumps[Q3LUMP_EFFECTS]);
 	Mod_Q3BSP_LoadVertices(&header->lumps[Q3LUMP_VERTICES]);
@@ -5832,7 +5865,7 @@ void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 void Mod_IBSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 {
 	int i = LittleLong(((int *)buffer)[1]);
-	if (i == Q3BSPVERSION)
+	if (i == Q3BSPVERSION || i == Q3BSPVERSION_IG)
 		Mod_Q3BSP_Load(mod,buffer, bufferend);
 	else if (i == Q2BSPVERSION)
 		Mod_Q2BSP_Load(mod,buffer, bufferend);

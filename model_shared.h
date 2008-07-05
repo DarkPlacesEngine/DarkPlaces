@@ -548,7 +548,6 @@ typedef struct msurface_s
 	int num_firstshadowmeshtriangle; // index into model->brush.shadowmesh
 
 	// lightmaptexture rebuild information not used in q3bsp
-	int cached_dlight; // q1bsp // forces rebuild of lightmaptexture
 	msurface_lightmapinfo_t *lightmapinfo; // q1bsp
 
 	// mesh information for collisions (only used by q3bsp curves)
@@ -706,6 +705,9 @@ typedef struct model_brushq1_s
 	// lightmap update chains for light styles
 	int				num_lightstyles;
 	model_brush_lightstyleinfo_t *data_lightstyleinfo;
+
+	// this contains bytes that are 1 if a surface needs its lightmap rebuilt
+	unsigned char *lightmapupdateflags;
 }
 model_brushq1_t;
 

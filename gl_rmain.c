@@ -2486,11 +2486,14 @@ static void R_View_UpdateEntityVisible (void)
 	if (r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.BoxTouchingVisibleLeafs)
 	{
 		// worldmodel can check visibility
+		memset(r_refdef.viewcache.entityvisible, 0, r_refdef.scene.numentities);
 		for (i = 0;i < r_refdef.scene.numentities;i++)
 		{
 			ent = r_refdef.scene.entities[i];
-			r_refdef.viewcache.entityvisible[i] = !(ent->flags & renderimask) && ((ent->model && ent->model->type == mod_sprite && (ent->model->sprite.sprnum_type == SPR_LABEL || ent->model->sprite.sprnum_type == SPR_LABEL_SCALE)) || !R_CullBox(ent->mins, ent->maxs)) && ((ent->effects & EF_NODEPTHTEST) || (ent->flags & RENDER_VIEWMODEL) || r_refdef.scene.worldmodel->brush.BoxTouchingVisibleLeafs(r_refdef.scene.worldmodel, r_refdef.viewcache.world_leafvisible, ent->mins, ent->maxs));
-
+			if (!(ent->flags & renderimask))
+			if (!R_CullBox(ent->mins, ent->maxs) || (ent->model->type == mod_sprite && (ent->model->sprite.sprnum_type == SPR_LABEL || ent->model->sprite.sprnum_type == SPR_LABEL_SCALE)))
+			if ((ent->effects & EF_NODEPTHTEST) || (ent->flags & RENDER_VIEWMODEL) || r_refdef.scene.worldmodel->brush.BoxTouchingVisibleLeafs(r_refdef.scene.worldmodel, r_refdef.viewcache.world_leafvisible, ent->mins, ent->maxs))
+				r_refdef.viewcache.entityvisible[i] = true;
 		}
 		if(r_cullentities_trace.integer && r_refdef.scene.worldmodel->brush.TraceLineOfSight)
 		{
@@ -6613,19 +6616,31 @@ void R_DrawDebugModel(entity_render_t *ent)
 }
 
 extern void R_BuildLightMap(const entity_render_t *ent, msurface_t *surface);
+int r_maxsurfacelist = 0;
+msurface_t **r_surfacelist = NULL;
 void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean addwaterplanes, qboolean debug)
 {
 	int i, j, endj, f, flagsmask;
-	msurface_t *surface;
 	texture_t *t;
 	dp_model_t *model = r_refdef.scene.worldmodel;
-	const int maxsurfacelist = 1024;
+	msurface_t *surfaces;
+	unsigned char *update;
 	int numsurfacelist = 0;
-	msurface_t *surfacelist[1024];
 	if (model == NULL)
 		return;
 
+	if (r_maxsurfacelist < model->num_surfaces)
+	{
+		r_maxsurfacelist = model->num_surfaces;
+		if (r_surfacelist)
+			Mem_Free(r_surfacelist);
+		r_surfacelist = Mem_Alloc(r_main_mempool, r_maxsurfacelist * sizeof(*r_surfacelist));
+	}
+
 	RSurf_ActiveWorldEntity();
+
+	surfaces = model->data_surfaces;
+	update = model->brushq1.lightmapupdateflags;
 
 	// update light styles on this submodel
 	if (!skysurfaces && !depthonly && !addwaterplanes && model->brushq1.num_lightstyles && r_refdef.lightmapintensity > 0)
@@ -6635,11 +6650,10 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 		{
 			if (style->value != r_refdef.scene.lightstylevalue[style->style])
 			{
-				msurface_t *surfaces = model->data_surfaces;
 				int *list = style->surfacelist;
 				style->value = r_refdef.scene.lightstylevalue[style->style];
 				for (j = 0;j < style->numsurfaces;j++)
-					surfaces[list[j]].cached_dlight = true;
+					update[list[j]] = true;
 			}
 		}
 	}
@@ -6659,53 +6673,59 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 	rsurface.texture = NULL;
 	rsurface.rtlight = NULL;
 	numsurfacelist = 0;
+	// add visible surfaces to draw list
 	j = model->firstmodelsurface;
 	endj = j + model->nummodelsurfaces;
-	while (j < endj)
+	if (update)
 	{
-		// quickly skip over non-visible surfaces
-		for (;j < endj && !r_refdef.viewcache.world_surfacevisible[j];j++)
-			;
-		// quickly iterate over visible surfaces
-		for (;j < endj && r_refdef.viewcache.world_surfacevisible[j];j++)
+		for (;j < endj;j++)
 		{
-			// process this surface
-			surface = model->data_surfaces + j;
-			// if this surface fits the criteria, add it to the list
-			if (surface->num_triangles)
+			if (r_refdef.viewcache.world_surfacevisible[j])
 			{
-				// if lightmap parameters changed, rebuild lightmap texture
-				if (surface->cached_dlight)
-					R_BuildLightMap(r_refdef.scene.worldentity, surface);
-				// add face to draw list
-				surfacelist[numsurfacelist++] = surface;
-				r_refdef.stats.world_triangles += surface->num_triangles;
-				if (numsurfacelist >= maxsurfacelist)
-				{
-					r_refdef.stats.world_surfaces += numsurfacelist;
-					R_QueueSurfaceList(r_refdef.scene.worldentity, numsurfacelist, surfacelist, flagsmask, writedepth, depthonly, addwaterplanes);
-					numsurfacelist = 0;
-				}
+				r_surfacelist[numsurfacelist++] = surfaces + j;
+				// update lightmap if needed
+				if (update[j])
+					R_BuildLightMap(r_refdef.scene.worldentity, surfaces + j);
 			}
 		}
 	}
-	r_refdef.stats.world_surfaces += numsurfacelist;
-	if (numsurfacelist)
-		R_QueueSurfaceList(r_refdef.scene.worldentity, numsurfacelist, surfacelist, flagsmask, writedepth, depthonly, addwaterplanes);
+	else
+		for (;j < endj;j++)
+			if (r_refdef.viewcache.world_surfacevisible[j])
+				r_surfacelist[numsurfacelist++] = surfaces + j;
+	// don't do anything if there were no surfaces
+	if (!numsurfacelist)
+		return;
+	R_QueueSurfaceList(r_refdef.scene.worldentity, numsurfacelist, r_surfacelist, flagsmask, writedepth, depthonly, addwaterplanes);
 	GL_AlphaTest(false);
+
+	// add to stats if desired
+	if (r_speeds.integer && !skysurfaces && !depthonly && !addwaterplanes)
+	{
+		r_refdef.stats.world_surfaces += numsurfacelist;
+		for (j = 0;j < numsurfacelist;j++)
+			r_refdef.stats.world_triangles += r_surfacelist[j]->num_triangles;
+	}
 }
 
 void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean addwaterplanes, qboolean debug)
 {
-	int i, j, f, flagsmask;
-	msurface_t *surface, *endsurface;
+	int i, j, endj, f, flagsmask;
 	texture_t *t;
 	dp_model_t *model = ent->model;
-	const int maxsurfacelist = 1024;
+	msurface_t *surfaces;
+	unsigned char *update;
 	int numsurfacelist = 0;
-	msurface_t *surfacelist[1024];
 	if (model == NULL)
 		return;
+
+	if (r_maxsurfacelist < model->num_surfaces)
+	{
+		r_maxsurfacelist = model->num_surfaces;
+		if (r_surfacelist)
+			Mem_Free(r_surfacelist);
+		r_surfacelist = Mem_Alloc(r_main_mempool, r_maxsurfacelist * sizeof(*r_surfacelist));
+	}
 
 	// if the model is static it doesn't matter what value we give for
 	// wantnormals and wanttangents, so this logic uses only rules applicable
@@ -6717,6 +6737,9 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 	else
 		RSurf_ActiveModelEntity(ent, true, r_glsl.integer && gl_support_fragment_shader && !depthonly);
 
+	surfaces = model->data_surfaces;
+	update = model->brushq1.lightmapupdateflags;
+
 	// update light styles
 	if (!skysurfaces && !depthonly && !addwaterplanes && model->brushq1.num_lightstyles && r_refdef.lightmapintensity > 0)
 	{
@@ -6725,11 +6748,10 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 		{
 			if (style->value != r_refdef.scene.lightstylevalue[style->style])
 			{
-				msurface_t *surfaces = model->data_surfaces;
 				int *list = style->surfacelist;
 				style->value = r_refdef.scene.lightstylevalue[style->style];
 				for (j = 0;j < style->numsurfaces;j++)
-					surfaces[list[j]].cached_dlight = true;
+					update[list[j]] = true;
 			}
 		}
 	}
@@ -6749,29 +6771,28 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 	rsurface.texture = NULL;
 	rsurface.rtlight = NULL;
 	numsurfacelist = 0;
-	surface = model->data_surfaces + model->firstmodelsurface;
-	endsurface = surface + model->nummodelsurfaces;
-	for (;surface < endsurface;surface++)
-	{
-		// if this surface fits the criteria, add it to the list
-		if (surface->num_triangles)
-		{
-			// if lightmap parameters changed, rebuild lightmap texture
-			if (surface->cached_dlight)
-				R_BuildLightMap(ent, surface);
-			// add face to draw list
-			surfacelist[numsurfacelist++] = surface;
-			r_refdef.stats.entities_triangles += surface->num_triangles;
-			if (numsurfacelist >= maxsurfacelist)
-			{
-				r_refdef.stats.entities_surfaces += numsurfacelist;
-				R_QueueSurfaceList(ent, numsurfacelist, surfacelist, flagsmask, writedepth, depthonly, addwaterplanes);
-				numsurfacelist = 0;
-			}
-		}
-	}
-	r_refdef.stats.entities_surfaces += numsurfacelist;
-	if (numsurfacelist)
-		R_QueueSurfaceList(ent, numsurfacelist, surfacelist, flagsmask, writedepth, depthonly, addwaterplanes);
+	// add visible surfaces to draw list
+	j = model->firstmodelsurface;
+	endj = j + model->nummodelsurfaces;
+	for (;j < endj;j++)
+		r_surfacelist[numsurfacelist++] = surfaces + j;
+	// don't do anything if there were no surfaces
+	if (!numsurfacelist)
+		return;
+	// update lightmaps if needed
+	if (update)
+		for (j = model->firstmodelsurface;j < endj;j++)
+			if (update[j])
+				R_BuildLightMap(ent, surfaces + j);
+	R_QueueSurfaceList(ent, numsurfacelist, r_surfacelist, flagsmask, writedepth, depthonly, addwaterplanes);
 	GL_AlphaTest(false);
+
+	// add to stats if desired
+	if (r_speeds.integer && !skysurfaces && !depthonly && !addwaterplanes)
+	{
+		r_refdef.stats.entities++;
+		r_refdef.stats.entities_surfaces += numsurfacelist;
+		for (j = 0;j < numsurfacelist;j++)
+			r_refdef.stats.entities_triangles += r_surfacelist[j]->num_triangles;
+	}
 }
