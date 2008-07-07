@@ -1771,6 +1771,155 @@ void VM_writetofile(void)
 	PRVM_ED_Write (file, ent);
 }
 
+// KrimZon - DP_QC_ENTITYDATA
+/*
+=========
+VM_numentityfields
+
+float() numentityfields
+Return the number of entity fields - NOT offsets
+=========
+*/
+void VM_numentityfields(void)
+{
+	PRVM_G_FLOAT(OFS_RETURN) = prog->progs->numfielddefs;
+}
+
+// KrimZon - DP_QC_ENTITYDATA
+/*
+=========
+VM_entityfieldname
+
+string(float fieldnum) entityfieldname
+Return name of the specified field as a string, or empty if the field is invalid (warning)
+=========
+*/
+void VM_entityfieldname(void)
+{
+	ddef_t *d;
+	int i = (int)PRVM_G_FLOAT(OFS_PARM0);
+	
+	if (i < 0 || i >= prog->progs->numfielddefs)
+	{
+        VM_Warning("VM_entityfieldname: %s: field index out of bounds\n", PRVM_NAME);
+        PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString("");
+		return;
+	}
+	
+	d = &prog->fielddefs[i];
+	PRVM_G_INT(OFS_RETURN) = d->s_name; // presuming that s_name points to a string already
+}
+
+// KrimZon - DP_QC_ENTITYDATA
+/*
+=========
+VM_entityfieldtype
+
+float(float fieldnum) entityfieldtype
+=========
+*/
+void VM_entityfieldtype(void)
+{
+	ddef_t *d;
+	int i = (int)PRVM_G_FLOAT(OFS_PARM0);
+	
+	if (i < 0 || i >= prog->progs->numfielddefs)
+	{
+		VM_Warning("VM_entityfieldtype: %s: field index out of bounds\n", PRVM_NAME);
+		PRVM_G_FLOAT(OFS_RETURN) = -1.0;
+		return;
+	}
+	
+	d = &prog->fielddefs[i];
+	PRVM_G_FLOAT(OFS_RETURN) = (float)d->type;
+}
+
+// KrimZon - DP_QC_ENTITYDATA
+/*
+=========
+VM_getentityfieldstring
+
+string(float fieldnum, entity ent) getentityfieldstring
+=========
+*/
+void VM_getentityfieldstring(void)
+{
+	// put the data into a string
+	ddef_t *d;
+	int type, j;
+	int *v;
+	prvm_edict_t * ent;
+	int i = (int)PRVM_G_FLOAT(OFS_PARM0);
+	
+	if (i < 0 || i >= prog->progs->numfielddefs)
+	{
+        VM_Warning("VM_entityfielddata: %s: field index out of bounds\n", PRVM_NAME);
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString("");
+		return;
+	}
+	
+	d = &prog->fielddefs[i];
+	
+	// get the entity
+	ent = PRVM_G_EDICT(OFS_PARM1);
+	if(ent->priv.required->free)
+	{
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString("");
+		VM_Warning("VM_entityfielddata: %s: entity %i is free !\n", PRVM_NAME, PRVM_NUM_FOR_EDICT(ent));
+		return;
+	}
+	v = (int *)((char *)ent->fields.vp + d->ofs*4);
+	
+	// if it's 0 or blank, return an empty string
+	type = d->type & ~DEF_SAVEGLOBAL;
+	for (j=0 ; j<prvm_type_size[type] ; j++)
+		if (v[j])
+			break;
+	if (j == prvm_type_size[type])
+	{
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString("");
+		return;
+	}
+		
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(PRVM_UglyValueString((etype_t)d->type, (prvm_eval_t *)v));
+}
+
+// KrimZon - DP_QC_ENTITYDATA
+/*
+=========
+VM_putentityfieldstring
+
+float(float fieldnum, entity ent, string s) putentityfieldstring
+=========
+*/
+void VM_putentityfieldstring(void)
+{
+	ddef_t *d;
+	prvm_edict_t * ent;
+	int i = (int)PRVM_G_FLOAT(OFS_PARM0);
+
+	if (i < 0 || i >= prog->progs->numfielddefs)
+	{
+        VM_Warning("VM_entityfielddata: %s: field index out of bounds\n", PRVM_NAME);
+		PRVM_G_FLOAT(OFS_RETURN) = 0.0f;
+		return;
+	}
+
+	d = &prog->fielddefs[i];
+
+	// get the entity
+	ent = PRVM_G_EDICT(OFS_PARM1);
+	if(ent->priv.required->free)
+	{
+		VM_Warning("VM_entityfielddata: %s: entity %i is free !\n", PRVM_NAME, PRVM_NUM_FOR_EDICT(ent));
+		PRVM_G_FLOAT(OFS_RETURN) = 0.0f;
+		return;
+	}
+
+	// parse the string into the value
+	PRVM_G_FLOAT(OFS_RETURN) = ( PRVM_ED_ParseEpair(ent, d, PRVM_G_STRING(OFS_PARM2)) ) ? 1.0f : 0.0f;
+}
+
 /*
 =========
 VM_strlen
