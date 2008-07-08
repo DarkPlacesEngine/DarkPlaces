@@ -1468,11 +1468,13 @@ FIXME: lookupnoadd the token to speed search?
 void Cmd_ExecuteString (const char *text, cmd_source_t src)
 {
 	int oldpos;
+	int found;
 	cmd_function_t *cmd;
 	cmdalias_t *a;
 
 	oldpos = cmd_tokenizebufferpos;
 	cmd_source = src;
+	found = false;
 
 	Cmd_TokenizeString (text);
 
@@ -1507,8 +1509,9 @@ void Cmd_ExecuteString (const char *text, cmd_source_t src)
 				}
 				else
 					Con_Printf("Command \"%s\" can not be executed\n", Cmd_Argv(0));
-				cmd_tokenizebufferpos = oldpos;
-				return;
+				found = true;
+				goto command_found;
+				break;
 			case src_client:
 				if (cmd->clientfunction)
 				{
@@ -1521,11 +1524,13 @@ void Cmd_ExecuteString (const char *text, cmd_source_t src)
 			break;
 		}
 	}
+command_found:
 
 	// if it's a client command and no command was found, say so.
 	if (cmd_source == src_client)
 	{
 		Con_Printf("player \"%s\" tried to %s\n", host_client->name, text);
+		cmd_tokenizebufferpos = oldpos;
 		return;
 	}
 
@@ -1538,6 +1543,12 @@ void Cmd_ExecuteString (const char *text, cmd_source_t src)
 			cmd_tokenizebufferpos = oldpos;
 			return;
 		}
+	}
+
+	if(found) // if the command was hooked and found, all is good
+	{
+		cmd_tokenizebufferpos = oldpos;
+		return;
 	}
 
 // check cvars
