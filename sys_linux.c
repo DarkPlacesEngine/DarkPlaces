@@ -13,6 +13,9 @@
 #include <signal.h>
 
 
+cvar_t sys_usenoclockbutbenchmark = {CVAR_SAVE, "sys_usenoclockbutbenchmark", "0", "don't use ANY real timing, and simulate a clock (for benchmarking); the game then runs as fast as possible. Run a QC mod with bots that does some stuff, then does a quit at the end, to benchmark a server. NEVER do this on a public server."};
+static unsigned long benchmark_time;
+
 #ifdef WIN32
 cvar_t sys_usetimegettime = {CVAR_SAVE, "sys_usetimegettime", "1", "use windows timeGetTime function (which has issues on some motherboards) for timing rather than QueryPerformanceCounter timer (which has issues on multicore/multiprocessor machines and processors which are designed to conserve power)"};
 #else
@@ -81,6 +84,11 @@ double Sys_DoubleTime (void)
 	static int first = true;
 	static double oldtime = 0.0, curtime = 0.0;
 	double newtime;
+	if(sys_usenoclockbutbenchmark.integer)
+	{
+		benchmark_time += 1;
+		return benchmark_time / 1e6;
+	}
 #ifdef WIN32
 #include <mmsystem.h>
 	// LordHavoc: note to people modifying this code, DWORD is specifically defined as an unsigned 32bit number, therefore the 65536.0 * 65536.0 is fine.
@@ -241,6 +249,11 @@ char *Sys_ConsoleInput(void)
 
 void Sys_Sleep(int microseconds)
 {
+	if(sys_usenoclockbutbenchmark.integer)
+	{
+		benchmark_time += microseconds;
+		return;
+	}
 #ifdef WIN32
 	Sleep(microseconds / 1000);
 #else
@@ -259,6 +272,7 @@ void Sys_InitConsole (void)
 
 void Sys_Init_Commands (void)
 {
+	Cvar_RegisterVariable(&sys_usenoclockbutbenchmark);
 #ifdef WIN32
 	Cvar_RegisterVariable(&sys_usetimegettime);
 #else
