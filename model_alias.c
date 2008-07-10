@@ -68,8 +68,6 @@ void Mod_Skeletal_AnimateVertices(const dp_model_t *model, const frameblend_t *f
 		for (blends = 0;blends < 4 && frameblend[blends].lerp > 0;blends++)
 		{
 			matrix = model->data_poses + (frameblend[blends].frame * model->num_bones + i) * 12;
-			if ((unsigned char *)(matrix + 12) >(unsigned char *)model->data_surfaces + ((memheader_t *)model->data_surfaces)[-1].size)
-				Sys_Error("%s:%i: matrix %p >= data %p + size %i\n", __FILE__, __LINE__, matrix, model->data_surfaces, (int)((memheader_t *)model->data_surfaces)[-1].size);
 			for (k = 0;k < 12;k++)
 				m[k] += matrix[k] * frameblend[blends].lerp;
 		}
@@ -2564,8 +2562,6 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		for (i = 0;i < loadmodel->surfmesh.num_triangles*3;i++)
 			loadmodel->surfmesh.data_element3s[i] = loadmodel->surfmesh.data_element3i[i];
 	}
-	if (data != (unsigned char *)loadmodel->data_surfaces + size)
-		Sys_Error("%s: combined alloc has wrong size! (%i bytes should be %i)\n", loadmodel->name, (int)size, (int)(data - (unsigned char *)loadmodel->data_surfaces));
 
 	for (i = 0;i < loadmodel->numskins;i++)
 	{
@@ -2696,10 +2692,6 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	Mod_BuildTextureVectorsFromNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, true);
 	Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
 	Mod_Alias_CalculateBoundingBox();
-
-	size = loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + loadmodel->surfmesh.num_triangles * sizeof(int[3]) + loadmodel->surfmesh.num_triangles * sizeof(int[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[2]) + loadmodel->surfmesh.num_vertices * sizeof(int[4]) + loadmodel->surfmesh.num_vertices * sizeof(float[4]) + loadmodel->num_poses * sizeof(float[12]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t) + ((loadmodel->surfmesh.num_vertices <= 65536) ? (loadmodel->surfmesh.num_triangles * sizeof(unsigned short[3])) : 0);
-	if (size != ((memheader_t *)loadmodel->data_surfaces)[-1].size)
-		Sys_Error("%s:%i: %i != %i", __FILE__, __LINE__, (int)size, (int)((memheader_t *)loadmodel->data_surfaces)[-1].size);
 
 	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || loadmodel->animscenes[0].framecount > 1;
 }
