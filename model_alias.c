@@ -52,13 +52,6 @@ void Mod_Skeletal_AnimateVertices(const dp_model_t *model, const frameblend_t *f
 	int blends;
 	float boneposerelative[MAX_BONES][12];
 	float *matrix, m[12], bonepose[MAX_BONES][12];
-	size_t size;
-
-	size = model->num_surfaces * sizeof(msurface_t) + model->num_surfaces * sizeof(int) + model->num_surfaces * model->numskins * sizeof(texture_t) + model->surfmesh.num_triangles * sizeof(int[3]) + model->surfmesh.num_triangles * sizeof(int[3]) + model->surfmesh.num_vertices * sizeof(float[3]) + model->surfmesh.num_vertices * sizeof(float[3]) + model->surfmesh.num_vertices * sizeof(float[3]) + model->surfmesh.num_vertices * sizeof(float[3]) + model->surfmesh.num_vertices * sizeof(float[2]) + model->surfmesh.num_vertices * sizeof(int[4]) + model->surfmesh.num_vertices * sizeof(float[4]) + model->num_poses * sizeof(float[12]) + model->num_bones * sizeof(float[12]) + model->numskins * sizeof(animscene_t) + model->num_bones * sizeof(aliasbone_t) + model->numframes * sizeof(animscene_t) + ((model->surfmesh.num_vertices <= 65536) ? (model->surfmesh.num_triangles * sizeof(unsigned short[3])) : 0);
-	if (size > ((memheader_t *)model->data_surfaces)[-1].size)
-		Con_Printf("%s:%i for %s: %i > %i\n", __FILE__, __LINE__, model->name, (int)size, (int)((memheader_t *)model->data_surfaces)[-1].size);
-	else if(size < ((memheader_t *)model->data_surfaces)[-1].size)
-		Con_DPrintf("%s:%i for %s: %i < %i\n", __FILE__, __LINE__, model->name, (int)size, (int)((memheader_t *)model->data_surfaces)[-1].size);
 
 	// interpolate matrices and concatenate them to their parents
 	for (i = 0;i < model->num_bones;i++)
