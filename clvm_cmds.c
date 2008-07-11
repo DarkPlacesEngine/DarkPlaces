@@ -4,6 +4,8 @@
 #include "csprogs.h"
 #include "cl_collision.h"
 #include "r_shadow.h"
+#include "jpeg.h"
+#include "image.h"
 
 //============================================================================
 // Client
@@ -1306,6 +1308,54 @@ static void VM_CL_ReadFloat (void)
 {
 	VM_SAFEPARMCOUNT(0, VM_CL_ReadFloat);
 	PRVM_G_FLOAT(OFS_RETURN) = MSG_ReadFloat();
+}
+
+//#501 string() readpicture (DP_CSQC_READWRITEPICTURE)
+static void VM_CL_ReadPicture (void)
+{
+	const char *name;
+	unsigned char *data;
+	unsigned char *buf;
+	int size;
+	int i;
+	cachepic_t *pic;
+
+	VM_SAFEPARMCOUNT(0, VM_CL_ReadPicture);
+
+	name = MSG_ReadString();
+	size = MSG_ReadShort();
+
+	// check if a texture of that name exists
+	// if yes, it is used and the data is discarded
+	// if not, the (low quality) data is used to build a new texture, whose name will get returned
+
+	pic = Draw_CachePic_Flags (name, CACHEPICFLAG_NOTPERSISTENT);
+
+	if(size)
+	{
+		if(pic->tex == r_texture_notexture)
+			pic->tex = NULL; // don't overwrite the notexture by Draw_NewPic
+		if(pic->tex)
+		{
+			// texture found and loaded
+			// skip over the jpeg as we don't need it
+			for(i = 0; i < size; ++i)
+				MSG_ReadByte();
+		}
+		else
+		{
+			// texture not found
+			// use the attached jpeg as texture
+			buf = Mem_Alloc(tempmempool, size);
+			MSG_ReadBytes(size, buf);
+			data = JPEG_LoadImage_BGRA(buf, size);
+			Mem_Free(buf);
+			Draw_NewPic(name, image_width, image_height, false, data);
+			Mem_Free(data);
+		}
+	}
+
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(name);
 }
 
 //////////////////////////////////////////////////////////
@@ -3422,9 +3472,9 @@ VM_entityfieldname,				// #497 string(float fieldnum) entityfieldname = #497; (D
 VM_entityfieldtype,				// #498 float(float fieldnum) entityfieldtype = #498; (DP_QC_ENTITYDATA)
 VM_getentityfieldstring,		// #499 string(float fieldnum, entity ent) getentityfieldstring = #499; (DP_QC_ENTITYDATA)
 VM_putentityfieldstring,		// #500 float(float fieldnum, entity ent, string s) putentityfieldstring = #500; (DP_QC_ENTITYDATA)
-NULL,							// #501
+VM_CL_ReadPicture,				// #501 string() ReadPicture = #501;
 NULL,							// #502
-NULL,							// #503
+VM_whichpack,					// #503 string(string) whichpack = #503;
 NULL,							// #504
 NULL,							// #505
 NULL,							// #506

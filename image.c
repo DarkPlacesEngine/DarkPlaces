@@ -26,14 +26,14 @@ void Image_CopyMux(unsigned char *outpixels, const unsigned char *inpixels, int 
 		if (inputflipdiagonal)
 		{
 			for (x = 0, line = inpixels + col_ofs; x < inputwidth; x++, line += col_inc)
-				for (y = 0, in = line + row_ofs; y < inputheight; y++, in += row_inc, outpixels += numinputcomponents)
+				for (y = 0, in = line + row_ofs; y < inputheight; y++, in += row_inc, outpixels += numoutputcomponents)
 					for (c = 0; c < numoutputcomponents; c++)
 						outpixels[c] = ((index = outputinputcomponentindices[c]) & 0x80000000) ? index : in[index];
 		}
 		else
 		{
 			for (y = 0, line = inpixels + row_ofs; y < inputheight; y++, line += row_inc)
-				for (x = 0, in = line + col_ofs; x < inputwidth; x++, in += col_inc, outpixels += numinputcomponents)
+				for (x = 0, in = line + col_ofs; x < inputwidth; x++, in += col_inc, outpixels += numoutputcomponents)
 					for (c = 0; c < numoutputcomponents; c++)
 						outpixels[c] = ((index = outputinputcomponentindices[c]) & 0x80000000) ? index : in[index];
 		}
@@ -44,14 +44,14 @@ void Image_CopyMux(unsigned char *outpixels, const unsigned char *inpixels, int 
 		if (inputflipdiagonal)
 		{
 			for (x = 0, line = inpixels + col_ofs; x < inputwidth; x++, line += col_inc)
-				for (y = 0, in = line + row_ofs; y < inputheight; y++, in += row_inc, outpixels += numinputcomponents)
+				for (y = 0, in = line + row_ofs; y < inputheight; y++, in += row_inc, outpixels += numoutputcomponents)
 					for (c = 0; c < numoutputcomponents; c++)
 						outpixels[c] = in[outputinputcomponentindices[c]];
 		}
 		else
 		{
 			for (y = 0, line = inpixels + row_ofs; y < inputheight; y++, line += row_inc)
-				for (x = 0, in = line + col_ofs; x < inputwidth; x++, in += col_inc, outpixels += numinputcomponents)
+				for (x = 0, in = line + col_ofs; x < inputwidth; x++, in += col_inc, outpixels += numoutputcomponents)
 					for (c = 0; c < numoutputcomponents; c++)
 						outpixels[c] = in[outputinputcomponentindices[c]];
 		}

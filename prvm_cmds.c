@@ -4822,3 +4822,15 @@ nohex:
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(dest);
 }
 
+// #502 string(string filename) whichpack (DP_QC_WHICHPACK)
+// returns the name of the pack containing a file, or "" if it is not in any pack (but local or non-existant)
+void VM_whichpack (void)
+{
+	const char *fn, *pack;
+
+	fn = PRVM_G_STRING(OFS_PARM0);
+	pack = FS_WhichPack(fn);
+
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(pack ? pack : "");
+}
+
