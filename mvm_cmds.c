@@ -26,6 +26,7 @@ char *vm_m_extensions =
 "DP_QC_TOKENIZEBYSEPARATOR "
 "DP_QC_UNLIMITEDTEMPSTRINGS "
 "DP_QC_URI_ESCAPE "
+"DP_QC_WHICHPACK "
 "FTE_STRINGS "
 ;
 
@@ -1329,7 +1330,7 @@ NULL,									// #499
 NULL,									// #500
 NULL,									// #501
 NULL,									// #502
-NULL,									// #503
+VM_whichpack,					// #503 string(string) whichpack = #503;
 NULL,									// #504
 NULL,									// #505
 NULL,									// #506

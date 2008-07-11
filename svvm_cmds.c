@@ -1,6 +1,7 @@
 #include "quakedef.h"
 
 #include "prvm_cmds.h"
+#include "jpeg.h"
 
 //============================================================================
 // Server
@@ -93,6 +94,7 @@ char *vm_sv_extensions =
 "DP_QC_URI_ESCAPE "
 "DP_QC_VECTOANGLES_WITH_ROLL "
 "DP_QC_VECTORVECTORS "
+"DP_QC_WHICHPACK "
 "DP_QUAKE2_MODEL "
 "DP_QUAKE2_SPRITE "
 "DP_QUAKE3_MAP "
@@ -130,6 +132,7 @@ char *vm_sv_extensions =
 "DP_SV_SHUTDOWN "
 "DP_SV_SLOWMO "
 "DP_SV_SPAWNFUNC_PREFIX "
+"DP_SV_WRITEPICTURE "
 "DP_SV_WRITEUNTERMINATEDSTRING "
 "DP_TE_BLOOD "
 "DP_TE_BLOODSHOWER "
@@ -1293,6 +1296,39 @@ static void VM_SV_WriteEntity (void)
 {
 	VM_SAFEPARMCOUNT(2, VM_SV_WriteEntity);
 	MSG_WriteShort (WriteDest(), PRVM_G_EDICTNUM(OFS_PARM1));
+}
+
+// writes a picture as at most size bytes of data
+// message:
+//   IMGNAME \0 SIZE(short) IMGDATA
+// if failed to read/compress:
+//   IMGNAME \0 \0 \0
+//#501 void(float dest, string name, float maxsize) WritePicture (DP_SV_WRITEPICTURE))
+static void VM_SV_WritePicture (void)
+{
+	const char *imgname;
+	void *buf;
+	size_t size;
+
+	VM_SAFEPARMCOUNT(3, VM_SV_WritePicture);
+
+	imgname = PRVM_G_STRING(OFS_PARM1);
+	size = PRVM_G_FLOAT(OFS_PARM2);
+	if(size > 65535)
+		size = 65535;
+
+	MSG_WriteString(WriteDest(), imgname);
+	if(Image_Compress(imgname, size, &buf, &size))
+	{
+		// actual picture
+		MSG_WriteShort(WriteDest(), size);
+		SZ_Write(WriteDest(), buf, size);
+	}
+	else
+	{
+		// placeholder
+		MSG_WriteShort(WriteDest(), 0);
+	}
 }
 
 //////////////////////////////////////////////////////////
@@ -3362,9 +3398,9 @@ VM_entityfieldname,				// #497 string(float fieldnum) entityfieldname = #497; (D
 VM_entityfieldtype,				// #498 float(float fieldnum) entityfieldtype = #498; (DP_QC_ENTITYDATA)
 VM_getentityfieldstring,		// #499 string(float fieldnum, entity ent) getentityfieldstring = #499; (DP_QC_ENTITYDATA)
 VM_putentityfieldstring,		// #500 float(float fieldnum, entity ent, string s) putentityfieldstring = #500; (DP_QC_ENTITYDATA)
-NULL,							// #501
+VM_SV_WritePicture,				// #501
 NULL,							// #502
-NULL,							// #503
+VM_whichpack,					// #503 string(string) whichpack = #503;
 NULL,							// #504
 NULL,							// #505
 NULL,							// #506

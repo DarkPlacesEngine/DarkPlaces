@@ -439,6 +439,7 @@ typedef struct
 
 	qfile_t* outfile;
 	unsigned char* buffer;
+	size_t bufsize; // used if outfile is NULL
 } my_destination_mgr;
 typedef my_destination_mgr* my_dest_ptr;
 
@@ -688,7 +689,7 @@ static void JPEG_TermDestination (j_compress_ptr cinfo)
 			error_in_jpeg = true;
 }
 
-static void JPEG_MemDest (j_compress_ptr cinfo, qfile_t* outfile)
+static void JPEG_FileDest (j_compress_ptr cinfo, qfile_t* outfile)
 {
 	my_dest_ptr dest;
 
@@ -701,6 +702,42 @@ static void JPEG_MemDest (j_compress_ptr cinfo, qfile_t* outfile)
 	dest->pub.empty_output_buffer = JPEG_EmptyOutputBuffer;
 	dest->pub.term_destination = JPEG_TermDestination;
 	dest->outfile = outfile;
+}
+
+static void JPEG_Mem_InitDestination (j_compress_ptr cinfo)
+{
+	my_dest_ptr dest = (my_dest_ptr)cinfo->dest;
+	dest->pub.next_output_byte = dest->buffer;
+	dest->pub.free_in_buffer = dest->bufsize;
+}
+
+static jboolean JPEG_Mem_EmptyOutputBuffer (j_compress_ptr cinfo)
+{
+	error_in_jpeg = true;
+	return false;
+}
+
+static void JPEG_Mem_TermDestination (j_compress_ptr cinfo)
+{
+	my_dest_ptr dest = (my_dest_ptr)cinfo->dest;
+	dest->bufsize = dest->pub.next_output_byte - dest->buffer;
+}
+static void JPEG_MemDest (j_compress_ptr cinfo, void* buf, size_t bufsize)
+{
+	my_dest_ptr dest;
+
+	// First time for this JPEG object?
+	if (cinfo->dest == NULL)
+		cinfo->dest = (struct jpeg_destination_mgr *)(*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_PERMANENT, sizeof(my_destination_mgr));
+
+	dest = (my_dest_ptr)cinfo->dest;
+	dest->pub.init_destination = JPEG_Mem_InitDestination;
+	dest->pub.empty_output_buffer = JPEG_Mem_EmptyOutputBuffer;
+	dest->pub.term_destination = JPEG_Mem_TermDestination;
+	dest->outfile = NULL;
+
+	dest->buffer = buf;
+	dest->bufsize = bufsize;
 }
 
 
@@ -736,7 +773,7 @@ qboolean JPEG_SaveImage_preflipped (const char *filename, int width, int height,
 	error_in_jpeg = false;
 
 	qjpeg_create_compress (&cinfo);
-	JPEG_MemDest (&cinfo, file);
+	JPEG_FileDest (&cinfo, file);
 
 	// Set the parameters for compression
 	cinfo.image_width = width;
@@ -774,4 +811,219 @@ qboolean JPEG_SaveImage_preflipped (const char *filename, int width, int height,
 
 	FS_Close (file);
 	return true;
+}
+
+static size_t JPEG_try_SaveImage_to_Buffer (struct jpeg_compress_struct *cinfo, char *jpegbuf, size_t jpegsize, int quality, int width, int height, unsigned char *data)
+{
+	unsigned char *scanline;
+	unsigned int linesize;
+	int offset;
+
+	error_in_jpeg = false;
+
+	JPEG_MemDest (cinfo, jpegbuf, jpegsize);
+
+	// Set the parameters for compression
+	cinfo->image_width = width;
+	cinfo->image_height = height;
+	cinfo->in_color_space = JCS_RGB;
+	cinfo->input_components = 3;
+	qjpeg_set_defaults (cinfo);
+	qjpeg_set_quality (cinfo, quality, FALSE);
+
+	cinfo->comp_info[0].h_samp_factor = 2;
+	cinfo->comp_info[0].v_samp_factor = 2;
+	cinfo->comp_info[1].h_samp_factor = 1;
+	cinfo->comp_info[1].v_samp_factor = 1;
+	cinfo->comp_info[2].h_samp_factor = 1;
+	cinfo->comp_info[2].v_samp_factor = 1;
+	cinfo->optimize_coding = 1;
+
+	qjpeg_start_compress (cinfo, true);
+
+	// Compress each scanline
+	linesize = width * 3;
+	offset = linesize * (cinfo->image_height - 1);
+	while (cinfo->next_scanline < cinfo->image_height)
+	{
+		scanline = &data[offset - cinfo->next_scanline * linesize];
+
+		qjpeg_write_scanlines (cinfo, &scanline, 1);
+		if (error_in_jpeg)
+			break;
+	}
+
+	qjpeg_finish_compress (cinfo);
+
+	return error_in_jpeg ? 0 : ((my_dest_ptr) cinfo->dest)->bufsize;
+}
+
+size_t JPEG_SaveImage_to_Buffer (char *jpegbuf, size_t jpegsize, int width, int height, unsigned char *data)
+{
+	struct jpeg_compress_struct cinfo;
+	struct jpeg_error_mgr jerr;
+
+	int quality;
+	int quality_guess;
+	size_t result;
+
+	// No DLL = no JPEGs
+	if (!jpeg_dll)
+	{
+		Con_Print("You need the libjpeg library to save JPEG images\n");
+		return false;
+	}
+
+	cinfo.err = qjpeg_std_error (&jerr);
+	cinfo.err->error_exit = JPEG_ErrorExit;
+
+	qjpeg_create_compress (&cinfo);
+
+#if 0
+	// used to get the formula below
+	{
+		char buf[1048576];
+		unsigned char *img;
+		int i;
+
+		img = Mem_Alloc(tempmempool, width * height * 3);
+		for(i = 0; i < width * height * 3; ++i)
+			img[i] = rand() & 0xFF;
+
+		for(i = 0; i <= 100; ++i)
+		{
+			Con_Printf("! %d %d %d %d\n", width, height, i, (int) JPEG_try_SaveImage_to_Buffer(&cinfo, buf, sizeof(buf), i, width, height, img));
+		}
+
+		Mem_Free(img);
+	}
+#endif
+
+	//quality_guess = (100 * jpegsize - 41000) / (width*height) + 2; // fits random data
+	quality_guess   = (256 * jpegsize - 81920) / (width*height) - 8; // fits Nexuiz's map pictures
+
+	quality_guess = bound(0, quality_guess, 90);
+	quality = quality_guess + 10; // assume it can do 10 failed attempts
+
+	while(!(result = JPEG_try_SaveImage_to_Buffer(&cinfo, jpegbuf, jpegsize, quality, width, height, data)))
+	{
+		--quality;
+		if(quality < 0)
+		{
+			Con_Printf("couldn't write image at all, probably too big\n");
+			return 0;
+		}
+	}
+	Con_DPrintf("JPEG_SaveImage_to_Buffer: guessed quality/size %d/%d, actually got %d/%d\n", quality_guess, (int)jpegsize, quality, (int)result);
+
+	return result;
+}
+
+typedef struct CompressedImageCacheItem
+{
+	char imagename[MAX_QPATH];
+	size_t maxsize;
+	void *compressed;
+	size_t compressed_size;
+	struct CompressedImageCacheItem *next;
+}
+CompressedImageCacheItem;
+#define COMPRESSEDIMAGECACHE_SIZE 4096
+static CompressedImageCacheItem *CompressedImageCache[COMPRESSEDIMAGECACHE_SIZE];
+
+static void CompressedImageCache_Add(const char *imagename, size_t maxsize, void *compressed, size_t compressed_size)
+{
+	const char *hashkey = va("%s:%d", imagename, (int) maxsize);
+	int hashindex = CRC_Block((unsigned char *) hashkey, strlen(hashkey)) % COMPRESSEDIMAGECACHE_SIZE;
+	CompressedImageCacheItem *i;
+
+	if(strlen(imagename) >= MAX_QPATH)
+		return; // can't add this
+	
+	i = Z_Malloc(sizeof(CompressedImageCacheItem));
+	strlcpy(i->imagename, imagename, sizeof(i->imagename));
+	i->maxsize = maxsize;
+	i->compressed = compressed;
+	i->compressed_size = compressed_size;
+	i->next = CompressedImageCache[hashindex];
+	CompressedImageCache[hashindex] = i;
+}
+
+static CompressedImageCacheItem *CompressedImageCache_Find(const char *imagename, size_t maxsize)
+{
+	const char *hashkey = va("%s:%d", imagename, (int) maxsize);
+	int hashindex = CRC_Block((unsigned char *) hashkey, strlen(hashkey)) % COMPRESSEDIMAGECACHE_SIZE;
+	CompressedImageCacheItem *i = CompressedImageCache[hashindex];
+
+	while(i)
+	{
+		if(i->maxsize == maxsize)
+			if(!strcmp(i->imagename, imagename))
+				return i;
+	}
+	return NULL;
+}
+
+qboolean Image_Compress(const char *imagename, size_t maxsize, void **buf, size_t *size)
+{
+	unsigned char *imagedata, *newimagedata;
+	int maxPixelCount;
+	int components[3] = {2, 1, 0};
+
+	// No DLL = no JPEGs
+	if (!jpeg_dll)
+	{
+		Con_Print("You need the libjpeg library to save JPEG images\n");
+		return false;
+	}
+
+	CompressedImageCacheItem *i = CompressedImageCache_Find(imagename, maxsize);
+	if(i)
+	{
+		*size = i->compressed_size;
+		*buf = i->compressed;
+	}
+
+	// load the image
+	imagedata = loadimagepixelsbgra(imagename, true, false);
+	if(!imagedata)
+		return false;
+
+	// find an appropriate size for somewhat okay compression
+	if(maxsize <= 768)
+		maxPixelCount = 64 * 64;
+	else if(maxsize <= 1024)
+		maxPixelCount = 128 * 128;
+	else if(maxsize <= 4096)
+		maxPixelCount = 256 * 256;
+	else
+		maxPixelCount = 512 * 512;
+
+	while(image_width * image_height > maxPixelCount)
+	{
+		int one = 1;
+		Image_MipReduce32(imagedata, imagedata, &image_width, &image_height, &one, image_width/2, image_height/2, 1);
+	}
+
+	newimagedata = Mem_Alloc(tempmempool, image_width * image_height * 3);
+
+	// convert the image from BGRA to RGB
+	Image_CopyMux(newimagedata, imagedata, image_width, image_height, false, false, false, 3, 4, components);
+	Mem_Free(imagedata);
+
+	// try to compress it to JPEG
+	*buf = Z_Malloc(maxsize);
+	*size = JPEG_SaveImage_to_Buffer(*buf, maxsize, image_width, image_height, newimagedata);
+	if(!*size)
+	{
+		Z_Free(*buf);
+		*buf = NULL;
+		Con_Printf("could not compress image %s to %d bytes\n", imagename, (int)maxsize);
+		// return false;
+		// also cache failures!
+	}
+
+	// store it in the cache
+	CompressedImageCache_Add(imagename, maxsize, *buf, *size);
+	return (*buf != NULL);
 }
