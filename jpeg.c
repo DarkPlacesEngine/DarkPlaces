@@ -991,13 +991,13 @@ qboolean Image_Compress(const char *imagename, size_t maxsize, void **buf, size_
 
 	// find an appropriate size for somewhat okay compression
 	if(maxsize <= 768)
-		maxPixelCount = 64 * 64;
+		maxPixelCount = 32 * 32;
 	else if(maxsize <= 1024)
-		maxPixelCount = 128 * 128;
+		maxPixelCount = 64 * 64;
 	else if(maxsize <= 4096)
-		maxPixelCount = 256 * 256;
+		maxPixelCount = 128 * 128;
 	else
-		maxPixelCount = 512 * 512;
+		maxPixelCount = 256 * 256;
 
 	while(image_width * image_height > maxPixelCount)
 	{
