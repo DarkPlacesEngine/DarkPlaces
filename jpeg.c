@@ -428,6 +428,7 @@ static dllfunction_t jpegfuncs[] =
 
 // Handle for JPEG DLL
 dllhandle_t jpeg_dll = NULL;
+qboolean jpeg_tried_loading = 0;
 
 static unsigned char jpeg_eoi_marker [2] = {0xFF, JPEG_EOI};
 static qboolean error_in_jpeg;
@@ -479,6 +480,11 @@ qboolean JPEG_OpenLibrary (void)
 	// Already loaded?
 	if (jpeg_dll)
 		return true;
+
+	if (jpeg_tried_loading) // only try once
+		return false;
+
+	jpeg_tried_loading = true;
 
 	// Load the DLL
 	return Sys_LoadLibrary (dllnames, &jpeg_dll, jpegfuncs);
@@ -969,6 +975,9 @@ qboolean Image_Compress(const char *imagename, size_t maxsize, void **buf, size_
 	unsigned char *imagedata, *newimagedata;
 	int maxPixelCount;
 	int components[3] = {2, 1, 0};
+	CompressedImageCacheItem *i;
+
+	JPEG_OpenLibrary (); // for now; LH had the idea of replacing this by a better format
 
 	// No DLL = no JPEGs
 	if (!jpeg_dll)
@@ -977,7 +986,7 @@ qboolean Image_Compress(const char *imagename, size_t maxsize, void **buf, size_
 		return false;
 	}
 
-	CompressedImageCacheItem *i = CompressedImageCache_Find(imagename, maxsize);
+	i = CompressedImageCache_Find(imagename, maxsize);
 	if(i)
 	{
 		*size = i->compressed_size;
