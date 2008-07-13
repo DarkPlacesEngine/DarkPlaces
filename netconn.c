@@ -2244,7 +2244,12 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 					{
 						size_t l = strlen(s);
 						if(l)
+						{
+							client_t *host_client_save = host_client;
 							Cmd_ExecuteString(s, src_command);
+							host_client = host_client_save;
+							// in case it is a command that changes host_client (like restart)
+						}
 						s += l + 1;
 					}
 					rcon_redirect_buffer[rcon_redirect_bufferpos] = 0;
