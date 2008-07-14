@@ -327,11 +327,11 @@ static void ServerList_ViewList_Insert( serverlist_entry_t *entry )
 
 	// FIXME: change this to be more readable (...)
 	// now check whether it passes through the masks
-	for( start = 0 ; serverlist_andmasks[start].active && start < SERVERLIST_ANDMASKCOUNT ; start++ )
+	for( start = 0 ; start < SERVERLIST_ANDMASKCOUNT && serverlist_andmasks[start].active; start++ )
 		if( !_ServerList_Entry_Mask( &serverlist_andmasks[start], &entry->info ) )
 			return;
 
-	for( start = 0 ; serverlist_ormasks[start].active && start < SERVERLIST_ORMASKCOUNT ; start++ )
+	for( start = 0 ; start < SERVERLIST_ORMASKCOUNT && serverlist_ormasks[start].active ; start++ )
 		if( _ServerList_Entry_Mask( &serverlist_ormasks[start], &entry->info ) )
 			break;
 	if( start == SERVERLIST_ORMASKCOUNT || (start > 0 && !serverlist_ormasks[start].active) )
