@@ -1411,7 +1411,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		// copy name, but only up to 16 characters
 		// (the output buffer can hold more than this, but the input buffer is
 		//  only 16)
-		for (j = 0;dmiptex->name[j] && j < 16;j++)
+		for (j = 0;j < 16 && dmiptex->name[j];j++)
 			name[j] = dmiptex->name[j];
 		name[j] = 0;
 
