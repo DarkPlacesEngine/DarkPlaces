@@ -237,6 +237,7 @@ typedef struct packfile_s
 typedef struct pack_s
 {
 	char filename [MAX_OSPATH];
+	char shortname [MAX_QPATH];
 	int handle;
 	int ignorecase;  // PK3 ignores case
 	int numfiles;
@@ -879,7 +880,7 @@ If keep_plain_dirs is set, the pack will be added AFTER the first sequence of
 plain directories.
 ================
 */
-static qboolean FS_AddPack_Fullpath(const char *pakfile, qboolean *already_loaded, qboolean keep_plain_dirs)
+static qboolean FS_AddPack_Fullpath(const char *pakfile, const char *shortname, qboolean *already_loaded, qboolean keep_plain_dirs)
 {
 	searchpath_t *search;
 	pack_t *pak = NULL;
@@ -907,6 +908,8 @@ static qboolean FS_AddPack_Fullpath(const char *pakfile, qboolean *already_loade
 
 	if (pak)
 	{
+		strlcpy(pak->shortname, shortname, sizeof(pak->shortname));
+		//Con_DPrintf("  Registered pack with short name %s\n", shortname);
 		if(keep_plain_dirs)
 		{
 			// find the first item whose next one is a pack or NULL
@@ -992,7 +995,7 @@ qboolean FS_AddPack(const char *pakfile, qboolean *already_loaded, qboolean keep
 
 	dpsnprintf(fullpath, sizeof(fullpath), "%s%s", search->filename, pakfile);
 
-	return FS_AddPack_Fullpath(fullpath, already_loaded, keep_plain_dirs);
+	return FS_AddPack_Fullpath(fullpath, pakfile, already_loaded, keep_plain_dirs);
 }
 
 
@@ -1021,7 +1024,7 @@ void FS_AddGameDirectory (const char *dir)
 	{
 		if (!strcasecmp(FS_FileExtension(list.strings[i]), "pak"))
 		{
-			FS_AddPack_Fullpath(list.strings[i], NULL, false);
+			FS_AddPack_Fullpath(list.strings[i], list.strings[i] + strlen(dir), NULL, false);
 		}
 	}
 
@@ -1030,7 +1033,7 @@ void FS_AddGameDirectory (const char *dir)
 	{
 		if (!strcasecmp(FS_FileExtension(list.strings[i]), "pk3"))
 		{
-			FS_AddPack_Fullpath(list.strings[i], NULL, false);
+			FS_AddPack_Fullpath(list.strings[i], list.strings[i] + strlen(dir), NULL, false);
 		}
 	}
 
@@ -2991,7 +2994,7 @@ const char *FS_WhichPack(const char *filename)
 	int index;
 	searchpath_t *sp = FS_FindFile(filename, &index, true);
 	if(sp && sp->pack)
-		return sp->pack->filename;
+		return sp->pack->shortname;
 	else
 		return 0;
 }
