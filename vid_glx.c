@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <X11/XKBlib.h> // TODO possibly ifdef this out on non-supporting systems... Solaris (as always)?
 #include <GL/glx.h>
 
 #include "quakedef.h"
@@ -697,6 +698,9 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 		Con_Print("Couldn't open the X display\n");
 		return false;
 	}
+
+	// make autorepeat send keypress/keypress/.../keyrelease instead of intervening keyrelease
+	XkbSetDetectableAutoRepeat(vidx11_display, true, NULL);
 
 	vidx11_screen = DefaultScreen(vidx11_display);
 	root = RootWindow(vidx11_display, vidx11_screen);
