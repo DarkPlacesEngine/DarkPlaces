@@ -100,6 +100,8 @@ void CL_ClearState(void)
 	int i;
 	entity_t *ent;
 
+	CL_VM_ShutDown();
+
 // wipe the entire cl structure
 	Mem_EmptyPool(cls.levelmempool);
 	memset (&cl, 0, sizeof(cl));
