@@ -896,11 +896,15 @@ Called by the system between frames for both key up and key down events
 Should NOT be called during an interrupt!
 ===================
 */
+static char tbl_keyascii[MAX_KEYS];
+static keydest_t tbl_keydest[MAX_KEYS];
+
 void
 Key_Event (int key, char ascii, qboolean down)
 {
 	const char *bind;
 	qboolean q;
+	keydest_t keydest = key_dest;
 
 	if (key < 0 || key >= MAX_KEYS)
 		return;
@@ -913,33 +917,33 @@ Key_Event (int key, char ascii, qboolean down)
 	if (developer.integer >= 1000)
 		Con_Printf("Key_Event(%i, '%c', %s) keydown %i bind \"%s\"\n", key, ascii, down ? "down" : "up", keydown[key], bind ? bind : "");
 
-#if 0
-	if(key_dest == key_game)
-	{
-		q = CL_VM_InputEvent(down, key);
-		if(q)
-		{
-			if (down)
-				keydown[key] = min(keydown[key] + 1, 2);
-			else
-				keydown[key] = 0;
-			return;
-		}
-	}
-#endif
-
+	if(key_consoleactive)
+		keydest = key_console;
+	
 	if (down)
 	{
 		// increment key repeat count each time a down is received so that things
 		// which want to ignore key repeat can ignore it
 		keydown[key] = min(keydown[key] + 1, 2);
+		if(keydown[key] == 1) {
+			tbl_keyascii[key] = ascii;
+			tbl_keydest[key] = keydest;
+		} else {
+			ascii = tbl_keyascii[key];
+			keydest = tbl_keydest[key];
+		}
 	}
 	else
 	{
 		// clear repeat count now that the key is released
 		keydown[key] = 0;
+		keydest = tbl_keydest[key];
+		ascii = tbl_keyascii[key];
 	}
 
+	if(keydest == key_void)
+		return;
+	
 	// key_consoleactive is a flag not a key_dest because the console is a
 	// high priority overlay ontop of the normal screen (designed as a safety
 	// feature so that developers and users can rescue themselves from a bad
@@ -965,9 +969,11 @@ Key_Event (int key, char ascii, qboolean down)
 		if (((key_consoleactive & KEY_CONSOLEACTIVE_USER) || keydown[K_SHIFT]) && down)
 		{
 			Con_ToggleConsole_f ();
+			tbl_keydest[key] = key_void; // ignore the release
 			return;
 		}
-		switch (key_dest)
+#if 0
+		switch (keydest)
 		{
 			case key_message:
 				if (down)
@@ -987,10 +993,11 @@ Key_Event (int key, char ascii, qboolean down)
 				Con_Printf ("Key_Event: Bad key_dest\n");
 		}
 		return;
+#endif
 	}
 
 	// send function keydowns to interpreter no matter what mode is (unless the menu has specifically grabbed the keyboard, for rebinding keys)
-	if (key_dest != key_menu_grabbed)
+	if (keydest != key_menu_grabbed)
 	if (key >= K_F1 && key <= K_F12 && down)
 	{
 		// ignore key repeats on F1-F12 binds
@@ -1016,10 +1023,11 @@ Key_Event (int key, char ascii, qboolean down)
 #else
 	// respond to toggleconsole binds while in console unless the pressed key
 	// happens to be the color prefix character (such as on German keyboards)
-	if (key_consoleactive && down && (!con_closeontoggleconsole.integer || !bind || strncmp(bind, "toggleconsole", strlen("toggleconsole")) || ascii == STRING_COLOR_TAG))
+	if (keydest == key_console && key_consoleactive && (!con_closeontoggleconsole.integer || !bind || strncmp(bind, "toggleconsole", strlen("toggleconsole")) || ascii == STRING_COLOR_TAG))
 #endif
 	{
-		Key_Console (key, ascii);
+		if(down)
+			Key_Console (key, ascii);
 		return;
 	}
 
@@ -1031,8 +1039,10 @@ Key_Event (int key, char ascii, qboolean down)
 	// keep the character from continuing an action started before a console
 	// switch.  Button commands include the kenum as a parameter, so multiple
 	// downs can be matched with ups
+	/*
 	if (!down && bind && bind[0] == '+')
 		Cbuf_AddText(va("-%s %i\n", bind + 1, key));
+	*/
 
 	// ignore binds while a video is played, let the video system handle the key event
 	if (cl_videoplaying)
@@ -1042,7 +1052,7 @@ Key_Event (int key, char ascii, qboolean down)
 	}
 
 	// anything else is a key press into the game, chat line, or menu
-	switch (key_dest)
+	switch (keydest)
 	{
 		case key_message:
 			if (down)
@@ -1055,17 +1065,26 @@ Key_Event (int key, char ascii, qboolean down)
 		case key_game:
 			q = CL_VM_InputEvent(down, key, ascii);
 			// ignore key repeats on binds and only send the bind if the event hasnt been already processed by csqc
-			if (!q && bind && keydown[key] == 1 && down)
+			if (!q && bind)
 			{
-				// button commands add keynum as a parm
-				if (bind[0] == '+')
-					Cbuf_AddText (va("%s %i\n", bind, key));
-				else
+				if(keydown[key] == 1 && down)
 				{
-					Cbuf_AddText (bind);
-					Cbuf_AddText ("\n");
-				}
+					// button commands add keynum as a parm
+					if (bind[0] == '+')
+						Cbuf_AddText (va("%s %i\n", bind, key));
+					else
+					{
+						Cbuf_AddText (bind);
+						Cbuf_AddText ("\n");
+					}
+				} else if(bind[0] == '+' && !down && keydown[key] == 0)
+					Cbuf_AddText(va("-%s %i\n", bind + 1, key));
 			}
+			break;
+		case key_console:
+			// This happens for example when pressing shift in the console
+			// closing the console, and then releasing shift.
+			// Con_Printf("Key_Event: Console key ignored\n");
 			break;
 		default:
 			Con_Printf ("Key_Event: Bad key_dest\n");
