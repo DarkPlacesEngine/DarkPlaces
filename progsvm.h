@@ -67,6 +67,8 @@ typedef struct prvm_edict_private_s
 {
 	qboolean free;
 	float freetime;
+	qboolean marked;
+	const char *allocation_origin;
 } prvm_edict_private_t;
 
 typedef struct prvm_edict_s
@@ -297,6 +299,7 @@ typedef struct prvm_stringbuffer_s
 	int max_strings;
 	int num_strings;
 	char **strings;
+	const char *origin;
 }
 prvm_stringbuffer_t;
 
@@ -332,6 +335,7 @@ typedef struct prvm_prog_s
 	int					firstfreeknownstring;
 	const char			**knownstrings;
 	unsigned char		*knownstrings_freeable;
+	const char          **knownstrings_origin;
 	const char			***stringshash;
 
 	memexpandablearray_t	stringbuffersarray;
@@ -365,7 +369,9 @@ typedef struct prvm_prog_s
 	// until this point everything also exists (with the pr_ prefix) in the old vm
 
 	qfile_t				*openfiles[PRVM_MAX_OPENFILES];
+	const char *         openfiles_origin[PRVM_MAX_OPENFILES];
 	fssearch_t			*opensearches[PRVM_MAX_OPENSEARCHES];
+	const char *         opensearches_origin[PRVM_MAX_OPENSEARCHES];
 	struct clgecko_s		*opengeckoinstances[PRVM_MAX_GECKOINSTANCES];
 
 	// copies of some vars that were former read from sv
@@ -405,6 +411,7 @@ typedef struct prvm_prog_s
 
 	// used to indicate whether a prog is loaded
 	qboolean			loaded;
+	qboolean			leaktest_active;
 
 //	prvm_builtin_mem_t  *mem_list;
 
@@ -491,6 +498,8 @@ void PRVM_PrintFunction_f (void);
 void PRVM_PrintState(void);
 void PRVM_CrashAll (void);
 void PRVM_Crash (void);
+void PRVM_ShortStackTrace(char *buf, size_t bufsize);
+const char *PRVM_AllocationOrigin();
 
 ddef_t *PRVM_ED_FindField(const char *name);
 ddef_t *PRVM_ED_FindGlobal(const char *name);

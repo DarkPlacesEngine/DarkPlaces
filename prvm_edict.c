@@ -40,6 +40,8 @@ cvar_t prvm_traceqc = {0, "prvm_traceqc", "0", "prints every QuakeC statement as
 // LordHavoc: counts usage of each QuakeC statement
 cvar_t prvm_statementprofiling = {0, "prvm_statementprofiling", "0", "counts how many times each QuakeC statement has been executed, these counts are displayed in prvm_printfunction output (if enabled)"};
 cvar_t prvm_backtraceforwarnings = {0, "prvm_backtraceforwarnings", "0", "print a backtrace for warnings too"};
+cvar_t prvm_leaktest = {0, "prvm_leaktest", "0", "try to detect memory leaks in strings or entities"};
+cvar_t prvm_leaktest_ignore_classnames = {0, "prvm_leaktest_ignore", "", "classnames of entities to NOT leak check because they are found by find(world, classname, ...) but are actually spawned by QC code (NOT map entities)"};
 
 extern sizebuf_t vm_tempstringsbuf;
 
@@ -219,6 +221,18 @@ void PRVM_ED_ClearEdict (prvm_edict_t *e)
 	PRVM_GCALL(init_edict)(e);
 }
 
+const char *PRVM_AllocationOrigin()
+{
+	char *buf = NULL;
+	if(prog->leaktest_active)
+	if(prog->depth > 0) // actually in QC code and not just parsing the entities block of a map/savegame
+	{
+		buf = (char *)PRVM_Alloc(128);
+		PRVM_ShortStackTrace(buf, 128);
+	}
+	return buf;
+}
+
 /*
 =================
 PRVM_ED_Alloc
@@ -248,6 +262,7 @@ prvm_edict_t *PRVM_ED_Alloc (void)
 		if (e->priv.required->free && ( e->priv.required->freetime < 2 || prog->globaloffsets.time < 0 || (PRVM_GLOBALFIELDVALUE(prog->globaloffsets.time)->_float - e->priv.required->freetime) > 0.5 ) )
 		{
 			PRVM_ED_ClearEdict (e);
+			e->priv.required->allocation_origin = PRVM_AllocationOrigin();
 			return e;
 		}
 	}
@@ -261,6 +276,8 @@ prvm_edict_t *PRVM_ED_Alloc (void)
 
 	e = PRVM_EDICT_NUM(i);
 	PRVM_ED_ClearEdict (e);
+
+	e->priv.required->allocation_origin = PRVM_AllocationOrigin();
 
 	return e;
 }
@@ -283,6 +300,11 @@ void PRVM_ED_Free (prvm_edict_t *ed)
 
 	ed->priv.required->free = true;
 	ed->priv.required->freetime = prog->globaloffsets.time >= 0 ? PRVM_GLOBALFIELDVALUE(prog->globaloffsets.time)->_float : 0;
+	if(ed->priv.required->allocation_origin)
+	{
+		PRVM_Free((char *)ed->priv.required->allocation_origin);
+		ed->priv.required->allocation_origin = NULL;
+	}
 }
 
 //===========================================================================
@@ -1518,8 +1540,10 @@ PRVM_ResetProg
 ===============
 */
 
+void PRVM_LeakTest();
 void PRVM_ResetProg()
 {
+	PRVM_LeakTest();
 	PRVM_GCALL(reset_cmd)();
 	Mem_FreePool(&prog->progs_mempool);
 	memset(prog,0,sizeof(prvm_prog_t));
@@ -2071,6 +2095,7 @@ void PRVM_Init (void)
 	Cvar_RegisterVariable (&prvm_traceqc);
 	Cvar_RegisterVariable (&prvm_statementprofiling);
 	Cvar_RegisterVariable (&prvm_backtraceforwarnings);
+	Cvar_RegisterVariable (&prvm_leaktest);
 
 	//VM_Cmd_Init();
 }
@@ -2094,6 +2119,7 @@ void PRVM_InitProg(int prognr)
 	prog->starttime = Sys_DoubleTime();
 
 	prog->error_cmd = Host_Error;
+	prog->leaktest_active = prvm_leaktest.integer;
 }
 
 int PRVM_GetProgNr()
@@ -2259,19 +2285,27 @@ int PRVM_SetEngineString(const char *s)
 		{
 			const char **oldstrings = prog->knownstrings;
 			const unsigned char *oldstrings_freeable = prog->knownstrings_freeable;
+			const char **oldstrings_origin = prog->knownstrings_origin;
 			prog->maxknownstrings += 128;
 			prog->knownstrings = (const char **)PRVM_Alloc(prog->maxknownstrings * sizeof(char *));
 			prog->knownstrings_freeable = (unsigned char *)PRVM_Alloc(prog->maxknownstrings * sizeof(unsigned char));
+			if(prog->leaktest_active)
+				prog->knownstrings_origin = (const char **)PRVM_Alloc(prog->maxknownstrings * sizeof(char *));
 			if (prog->numknownstrings)
 			{
 				memcpy((char **)prog->knownstrings, oldstrings, prog->numknownstrings * sizeof(char *));
 				memcpy((char **)prog->knownstrings_freeable, oldstrings_freeable, prog->numknownstrings * sizeof(unsigned char));
+				if(prog->leaktest_active)
+					memcpy((char **)prog->knownstrings_origin, oldstrings_origin, prog->numknownstrings * sizeof(char *));
 			}
 		}
 		prog->numknownstrings++;
 	}
 	prog->firstfreeknownstring = i + 1;
 	prog->knownstrings[i] = s;
+	prog->knownstrings_freeable[i] = false;
+	if(prog->leaktest_active)
+		prog->knownstrings_origin[i] = NULL;
 	return -1 - i;
 }
 
@@ -2332,20 +2366,28 @@ int PRVM_AllocString(size_t bufferlength, char **pointer)
 		{
 			const char **oldstrings = prog->knownstrings;
 			const unsigned char *oldstrings_freeable = prog->knownstrings_freeable;
+			const char **oldstrings_origin = prog->knownstrings_origin;
 			prog->maxknownstrings += 128;
 			prog->knownstrings = (const char **)PRVM_Alloc(prog->maxknownstrings * sizeof(char *));
 			prog->knownstrings_freeable = (unsigned char *)PRVM_Alloc(prog->maxknownstrings * sizeof(unsigned char));
+			if(prog->leaktest_active)
+				prog->knownstrings_origin = (const char **)PRVM_Alloc(prog->maxknownstrings * sizeof(char *));
 			if (prog->numknownstrings)
 			{
 				memcpy((char **)prog->knownstrings, oldstrings, prog->numknownstrings * sizeof(char *));
 				memcpy((char **)prog->knownstrings_freeable, oldstrings_freeable, prog->numknownstrings * sizeof(unsigned char));
+				if(prog->leaktest_active)
+					memcpy((char **)prog->knownstrings_origin, oldstrings_origin, prog->numknownstrings * sizeof(char *));
 			}
+			// TODO why not Mem_Free the old ones?
 		}
 		prog->numknownstrings++;
 	}
 	prog->firstfreeknownstring = i + 1;
 	prog->knownstrings[i] = (char *)PRVM_Alloc(bufferlength);
 	prog->knownstrings_freeable[i] = true;
+	if(prog->leaktest_active)
+		prog->knownstrings_origin[i] = PRVM_AllocationOrigin();
 	if (pointer)
 		*pointer = (char *)(prog->knownstrings[i]);
 	return -1 - i;
@@ -2362,9 +2404,12 @@ void PRVM_FreeString(int num)
 		num = -1 - num;
 		if (!prog->knownstrings[num])
 			PRVM_ERROR("PRVM_FreeString: attempt to free a non-existent or already freed string");
-		if (!prog->knownstrings[num])
+		if (!prog->knownstrings_freeable[num])
 			PRVM_ERROR("PRVM_FreeString: attempt to free a string owned by the engine");
 		PRVM_Free((char *)prog->knownstrings[num]);
+		if(prog->leaktest_active)
+			if(prog->knownstrings_origin[num])
+				PRVM_Free((char *)prog->knownstrings_origin[num]);
 		prog->knownstrings[num] = NULL;
 		prog->knownstrings_freeable[num] = false;
 		prog->firstfreeknownstring = min(prog->firstfreeknownstring, num);
@@ -2373,3 +2418,244 @@ void PRVM_FreeString(int num)
 		PRVM_ERROR("PRVM_FreeString: invalid string offset %i", num);
 }
 
+static qboolean PRVM_IsStringReferenced(string_t string)
+{
+	int i, j;
+
+	for (i = 0;i < prog->progs->numglobaldefs;i++)
+	{
+		ddef_t *d = &prog->globaldefs[i];
+		if((etype_t)((int) d->type & ~DEF_SAVEGLOBAL) != ev_string)
+			continue;
+		if(string == ((prvm_eval_t *) &prog->globals.generic[d->ofs])->string)
+			return true;
+	}
+
+	for(j = 0; j < prog->num_edicts; ++j)
+	{
+		prvm_edict_t *ed = PRVM_EDICT_NUM(j);
+		if (ed->priv.required->free)
+			continue;
+		for (i=0; i<prog->progs->numfielddefs; ++i)
+		{
+			ddef_t *d = &prog->fielddefs[i];
+			if((etype_t)((int) d->type & ~DEF_SAVEGLOBAL) != ev_string)
+				continue;
+			if(string == ((prvm_eval_t *) &((float*)ed->fields.vp)[d->ofs])->string)
+				return true;
+		}
+	}
+
+	return false;
+}
+
+static qboolean PRVM_IsEdictRelevant(prvm_edict_t *edict)
+{
+	if(PRVM_NUM_FOR_EDICT(edict) <= prog->reserved_edicts)
+		return true; // world or clients
+	switch(prog - prog_list)
+	{
+		case PRVM_SERVERPROG:
+			{
+				entvars_t *ev = edict->fields.server;
+				if(ev->solid) // can block other stuff, or is a trigger?
+					return true;
+				if(ev->modelindex) // visible ent?
+					return true;
+				if(ev->effects) // particle effect?
+					return true;
+				if(ev->think) // has a think function?
+					if(ev->nextthink > 0) // that actually will eventually run?
+						return true;
+				if(ev->takedamage)
+					return true;
+				if(*prvm_leaktest_ignore_classnames.string)
+				{
+					if(strstr(va(" %s ", prvm_leaktest_ignore_classnames.string), va(" %s ", PRVM_GetString(ev->classname))))
+						return true;
+				}
+			}
+			break;
+		case PRVM_CLIENTPROG:
+			{
+				// TODO someone add more stuff here
+				cl_entvars_t *ev = edict->fields.client;
+				if(ev->modelindex) // visible ent?
+					return true;
+				if(ev->effects) // particle effect?
+					return true;
+				if(ev->think) // has a think function?
+					if(ev->nextthink > 0) // that actually will eventually run?
+						return true;
+				if(*prvm_leaktest_ignore_classnames.string)
+				{
+					if(strstr(va(" %s ", prvm_leaktest_ignore_classnames.string), va(" %s ", PRVM_GetString(ev->classname))))
+						return true;
+				}
+			}
+			break;
+		case PRVM_MENUPROG:
+			// menu prog does not have classnames
+			break;
+	}
+	return false;
+}
+
+static qboolean PRVM_IsEdictReferenced(prvm_edict_t *edict)
+{
+	int i, j;
+	int edictnum = PRVM_NUM_FOR_EDICT(edict);
+	const char *targetname = NULL;
+
+	switch(prog - prog_list)
+	{
+		case PRVM_SERVERPROG:
+			targetname = PRVM_GetString(edict->fields.server->targetname);
+			break;
+	}
+
+	if(targetname)
+		if(!*targetname) // ""
+			targetname = NULL;
+
+	for (i = 0;i < prog->progs->numglobaldefs;i++)
+	{
+		ddef_t *d = &prog->globaldefs[i];
+		if((etype_t)((int) d->type & ~DEF_SAVEGLOBAL) != ev_entity)
+			continue;
+		if(edictnum == ((prvm_eval_t *) &prog->globals.generic[d->ofs])->edict)
+			return true;
+	}
+
+	for(j = 0; j < prog->num_edicts; ++j)
+	{
+		prvm_edict_t *ed = PRVM_EDICT_NUM(j);
+		if (!ed->priv.required->marked)
+			continue;
+		if(ed == edict)
+			continue;
+		if(targetname)
+		{
+			const char *target = PRVM_GetString(ed->fields.server->target);
+			if(target)
+				if(!strcmp(target, targetname))
+					return true;
+		}
+		for (i=0; i<prog->progs->numfielddefs; ++i)
+		{
+			ddef_t *d = &prog->fielddefs[i];
+			if((etype_t)((int) d->type & ~DEF_SAVEGLOBAL) != ev_entity)
+				continue;
+			if(edictnum == ((prvm_eval_t *) &((float*)ed->fields.vp)[d->ofs])->edict)
+				return true;
+		}
+	}
+
+	return false;
+}
+
+static void PRVM_MarkReferencedEdicts()
+{
+	int j;
+	qboolean found_new;
+
+	for(j = 0; j < prog->num_edicts; ++j)
+	{
+		prvm_edict_t *ed = PRVM_EDICT_NUM(j);
+		if(ed->priv.required->free)
+			continue;
+		ed->priv.required->marked = PRVM_IsEdictRelevant(ed);
+	}
+
+	do
+	{
+		found_new = false;
+		for(j = 0; j < prog->num_edicts; ++j)
+		{
+			prvm_edict_t *ed = PRVM_EDICT_NUM(j);
+			if(ed->priv.required->free)
+				continue;
+			if(ed->priv.required->marked)
+				continue;
+			if(PRVM_IsEdictReferenced(ed))
+			{
+				ed->priv.required->marked = true;
+				found_new = true;
+			}
+		}
+	}
+	while(found_new);
+}
+
+void PRVM_LeakTest()
+{
+	int i, j;
+	qboolean leaked = false;
+
+	if(!prog->leaktest_active)
+		return;
+
+	// 1. Strings
+	for (i = 0; i < prog->numknownstrings; ++i)
+	{
+		if(prog->knownstrings[i])
+		if(prog->knownstrings_freeable[i])
+		if(prog->knownstrings_origin[i])
+		if(!PRVM_IsStringReferenced(-1 - i))
+		{
+			Con_Printf("Unreferenced string found!\n  Value: %s\n  Origin: %s\n", prog->knownstrings[i], prog->knownstrings_origin[i]);
+			leaked = true;
+		}
+	}
+
+	// 2. Edicts
+	PRVM_MarkReferencedEdicts();
+	for(j = 0; j < prog->num_edicts; ++j)
+	{
+		prvm_edict_t *ed = PRVM_EDICT_NUM(j);
+		if(ed->priv.required->free)
+			continue;
+		if(!ed->priv.required->marked)
+		if(ed->priv.required->allocation_origin)
+		{
+			Con_Printf("Unreferenced edict found!\n  Allocated at: %s\n", ed->priv.required->allocation_origin);
+			PRVM_ED_Print(ed, NULL);
+			Con_Print("\n");
+			leaked = true;
+		}
+	}
+
+	for (i = 0; i < (int)Mem_ExpandableArray_IndexRange(&prog->stringbuffersarray); ++i)
+	{
+		prvm_stringbuffer_t *stringbuffer = Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, i);
+		if(stringbuffer)
+		if(stringbuffer->origin)
+		{
+			Con_Printf("Open string buffer handle found!\n  Allocated at: %s\n", stringbuffer->origin);
+			leaked = true;
+		}
+	}
+
+	for(i = 0; i < PRVM_MAX_OPENFILES; ++i)
+	{
+		if(prog->openfiles[i])
+		if(prog->openfiles_origin[i])
+		{
+			Con_Printf("Open file handle found!\n  Allocated at: %s\n", prog->openfiles_origin[i]);
+			leaked = true;
+		}
+	}
+
+	for(i = 0; i < PRVM_MAX_OPENSEARCHES; ++i)
+	{
+		if(prog->opensearches[i])
+		if(prog->opensearches_origin[i])
+		{
+			Con_Printf("Open search handle found!\n  Allocated at: %s\n", prog->opensearches_origin[i]);
+			leaked = true;
+		}
+	}
+
+	if(!leaked)
+		Con_Printf("Congratulations. No leaks found.\n");
+}

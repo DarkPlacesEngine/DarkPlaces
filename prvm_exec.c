@@ -265,6 +265,37 @@ void PRVM_StackTrace (void)
 	}
 }
 
+void PRVM_ShortStackTrace(char *buf, size_t bufsize)
+{
+	mfunction_t	*f;
+	int			i;
+
+	if(prog)
+	{
+		dpsnprintf(buf, bufsize, "(%s) ", prog->name);
+	}
+	else
+	{
+		strlcpy(buf, "<NO PROG>", sizeof(buf));
+		return;
+	}
+
+	prog->stack[prog->depth].s = prog->xstatement;
+	prog->stack[prog->depth].f = prog->xfunction;
+	for (i = prog->depth;i > 0;i--)
+	{
+		f = prog->stack[i].f;
+
+		if(strlcat(buf,
+			f
+				? va("%s:%s(%i) ", PRVM_GetString(f->s_file), PRVM_GetString(f->s_name), prog->stack[i].s - f->first_statement)
+				: "<NULL> ",
+			bufsize
+		) >= bufsize)
+			break;
+	}
+}
+
 
 void PRVM_CallProfile ()
 {
