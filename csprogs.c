@@ -1,4 +1,4 @@
-#include "quakedef.h"
+###include "quakedef.h"
 #include "progsvm.h"
 #include "clprogdefs.h"
 #include "csprogs.h"
@@ -792,8 +792,8 @@ void CL_VM_Init (void)
 void CL_VM_ShutDown (void)
 {
 	Cmd_ClearCsqcFuncs();
-	Cvar_SetValueQuick(&csqc_progcrc, -1);
-	Cvar_SetValueQuick(&csqc_progsize, -1);
+	//Cvar_SetValueQuick(&csqc_progcrc, -1);
+	//Cvar_SetValueQuick(&csqc_progsize, -1);
 	if(!cl.csqc_loaded)
 		return;
 	CSQC_BEGIN

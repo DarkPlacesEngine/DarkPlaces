@@ -304,6 +304,8 @@ void CL_Disconnect(void)
 
 	Con_DPrintf("CL_Disconnect\n");
 
+    Cvar_SetValueQuick(&csqc_progcrc, -1);
+	Cvar_SetValueQuick(&csqc_progsize, -1);
 	CL_VM_ShutDown();
 // stop sounds (especially looping!)
 	S_StopAllSounds ();
