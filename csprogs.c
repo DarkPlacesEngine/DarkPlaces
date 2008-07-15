@@ -1,4 +1,4 @@
-###include "quakedef.h"
+#include "quakedef.h"
 #include "progsvm.h"
 #include "clprogdefs.h"
 #include "csprogs.h"
