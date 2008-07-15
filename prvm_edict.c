@@ -2096,6 +2096,7 @@ void PRVM_Init (void)
 	Cvar_RegisterVariable (&prvm_statementprofiling);
 	Cvar_RegisterVariable (&prvm_backtraceforwarnings);
 	Cvar_RegisterVariable (&prvm_leaktest);
+	Cvar_RegisterVariable (&prvm_leaktest_ignore_classnames);
 
 	//VM_Cmd_Init();
 }
