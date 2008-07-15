@@ -95,6 +95,7 @@ CL_ClearState
 
 =====================
 */
+void CL_VM_ShutDown (void);
 void CL_ClearState(void)
 {
 	int i;
@@ -283,7 +284,6 @@ void CL_ExpandEntities(int num)
 	}
 }
 
-void CL_VM_ShutDown (void);
 /*
 =====================
 CL_Disconnect
