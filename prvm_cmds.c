@@ -1619,6 +1619,7 @@ void VM_fopen(void)
 		PRVM_G_FLOAT(OFS_RETURN) = filenum;
 		if (developer.integer >= 100)
 			Con_Printf("VM_fopen: %s: %s mode %s opened as #%i\n", PRVM_NAME, filename, modestring, filenum);
+		prog->openfiles_origin[filenum] = PRVM_AllocationOrigin();
 	}
 }
 
@@ -1649,6 +1650,8 @@ void VM_fclose(void)
 	}
 	FS_Close(prog->openfiles[filenum]);
 	prog->openfiles[filenum] = NULL;
+	if(prog->openfiles_origin[filenum])
+		PRVM_Free((char *)prog->openfiles_origin[filenum]);
 	if (developer.integer >= 100)
 		Con_Printf("VM_fclose: %s: #%i closed\n", PRVM_NAME, filenum);
 }
@@ -2627,7 +2630,10 @@ void VM_search_begin(void)
 	if(!(prog->opensearches[handle] = FS_Search(pattern,caseinsens, quiet)))
 		PRVM_G_FLOAT(OFS_RETURN) = -1;
 	else
+	{
+		prog->opensearches_origin[handle] = PRVM_AllocationOrigin();
 		PRVM_G_FLOAT(OFS_RETURN) = handle;
+	}
 }
 
 /*
@@ -2657,6 +2663,8 @@ void VM_search_end(void)
 
 	FS_FreeSearch(prog->opensearches[handle]);
 	prog->opensearches[handle] = NULL;
+	if(prog->opensearches_origin[handle])
+		PRVM_Free((char *)prog->opensearches_origin[handle]);
 }
 
 /*
@@ -3893,6 +3901,7 @@ void VM_buf_create (void)
 	VM_SAFEPARMCOUNT(0, VM_buf_create);
 	stringbuffer = Mem_ExpandableArray_AllocRecord(&prog->stringbuffersarray);
 	for (i = 0;stringbuffer != Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, i);i++);
+	stringbuffer->origin = PRVM_AllocationOrigin();
 	PRVM_G_FLOAT(OFS_RETURN) = i;
 }
 
@@ -3916,6 +3925,8 @@ void VM_buf_del (void)
 				Mem_Free(stringbuffer->strings[i]);
 		if (stringbuffer->strings)
 			Mem_Free(stringbuffer->strings);
+		if(stringbuffer->origin)
+			PRVM_Free((char *)stringbuffer->origin);
 		Mem_ExpandableArray_FreeRecord(&prog->stringbuffersarray, stringbuffer);
 	}
 	else

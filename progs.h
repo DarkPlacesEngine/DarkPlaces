@@ -32,6 +32,10 @@ typedef struct edict_engineprivate_s
 	// sv.time when the object was freed (to prevent early reuse which could
 	// mess up client interpolation or obscure severe QuakeC bugs)
 	float freetime;
+	// mark for the leak detector
+	qboolean marked;
+	// place in the code where it was allocated (for the leak detector)
+	const char *allocation_origin;
 	// initially false to prevent projectiles from moving on their first frame
 	// (even if they were spawned by an synchronous client think)
 	qboolean move;
