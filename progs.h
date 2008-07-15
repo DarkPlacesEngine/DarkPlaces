@@ -33,7 +33,7 @@ typedef struct edict_engineprivate_s
 	// mess up client interpolation or obscure severe QuakeC bugs)
 	float freetime;
 	// mark for the leak detector
-	qboolean marked;
+	int mark;
 	// place in the code where it was allocated (for the leak detector)
 	const char *allocation_origin;
 	// initially false to prevent projectiles from moving on their first frame

@@ -67,7 +67,7 @@ typedef struct prvm_edict_private_s
 {
 	qboolean free;
 	float freetime;
-	qboolean marked;
+	int mark;
 	const char *allocation_origin;
 } prvm_edict_private_t;
 

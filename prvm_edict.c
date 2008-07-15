@@ -2501,7 +2501,7 @@ static qboolean PRVM_IsEdictRelevant(prvm_edict_t *edict)
 	return false;
 }
 
-static qboolean PRVM_IsEdictReferenced(prvm_edict_t *edict)
+static qboolean PRVM_IsEdictReferenced(prvm_edict_t *edict, int mark)
 {
 	int i, j;
 	int edictnum = PRVM_NUM_FOR_EDICT(edict);
@@ -2530,7 +2530,7 @@ static qboolean PRVM_IsEdictReferenced(prvm_edict_t *edict)
 	for(j = 0; j < prog->num_edicts; ++j)
 	{
 		prvm_edict_t *ed = PRVM_EDICT_NUM(j);
-		if (!ed->priv.required->marked)
+		if (ed->priv.required->mark < mark)
 			continue;
 		if(ed == edict)
 			continue;
@@ -2558,15 +2558,17 @@ static void PRVM_MarkReferencedEdicts()
 {
 	int j;
 	qboolean found_new;
+	int stage;
 
 	for(j = 0; j < prog->num_edicts; ++j)
 	{
 		prvm_edict_t *ed = PRVM_EDICT_NUM(j);
 		if(ed->priv.required->free)
 			continue;
-		ed->priv.required->marked = PRVM_IsEdictRelevant(ed);
+		ed->priv.required->mark = PRVM_IsEdictRelevant(ed) ? 1 : 0;
 	}
 
+	stage = 1;
 	do
 	{
 		found_new = false;
@@ -2575,16 +2577,18 @@ static void PRVM_MarkReferencedEdicts()
 			prvm_edict_t *ed = PRVM_EDICT_NUM(j);
 			if(ed->priv.required->free)
 				continue;
-			if(ed->priv.required->marked)
+			if(ed->priv.required->mark)
 				continue;
-			if(PRVM_IsEdictReferenced(ed))
+			if(PRVM_IsEdictReferenced(ed, stage))
 			{
-				ed->priv.required->marked = true;
+				ed->priv.required->mark = stage + 1;
 				found_new = true;
 			}
 		}
+		++stage;
 	}
 	while(found_new);
+	Con_DPrintf("leak check used %d stages to find all references\n", stage);
 }
 
 void PRVM_LeakTest()
@@ -2615,7 +2619,7 @@ void PRVM_LeakTest()
 		prvm_edict_t *ed = PRVM_EDICT_NUM(j);
 		if(ed->priv.required->free)
 			continue;
-		if(!ed->priv.required->marked)
+		if(!ed->priv.required->mark)
 		if(ed->priv.required->allocation_origin)
 		{
 			Con_Printf("Unreferenced edict found!\n  Allocated at: %s\n", ed->priv.required->allocation_origin);
