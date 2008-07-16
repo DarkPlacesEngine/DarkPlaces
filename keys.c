@@ -1026,8 +1026,12 @@ Key_Event (int key, char ascii, qboolean down)
 	if (keydest == key_console && key_consoleactive && (!con_closeontoggleconsole.integer || !bind || strncmp(bind, "toggleconsole", strlen("toggleconsole")) || ascii == STRING_COLOR_TAG))
 #endif
 	{
-		if(down)
-			Key_Console (key, ascii);
+		if(down) {
+			if(key == K_ESCAPE)
+				MR_ToggleMenu_f();
+			else
+				Key_Console (key, ascii);
+		}
 		return;
 	}
 
