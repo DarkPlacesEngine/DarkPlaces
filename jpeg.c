@@ -501,6 +501,7 @@ Unload the JPEG DLL
 void JPEG_CloseLibrary (void)
 {
 	Sys_UnloadLibrary (&jpeg_dll);
+	jpeg_tried_loading = false; // allow retry
 }
 
 
