@@ -42,6 +42,7 @@ cvar_t prvm_statementprofiling = {0, "prvm_statementprofiling", "0", "counts how
 cvar_t prvm_backtraceforwarnings = {0, "prvm_backtraceforwarnings", "0", "print a backtrace for warnings too"};
 cvar_t prvm_leaktest = {0, "prvm_leaktest", "0", "try to detect memory leaks in strings or entities"};
 cvar_t prvm_leaktest_ignore_classnames = {0, "prvm_leaktest_ignore_classnames", "", "classnames of entities to NOT leak check because they are found by find(world, classname, ...) but are actually spawned by QC code (NOT map entities)"};
+cvar_t prvm_errordump = {0, "prvm_errordump", "0", "write a savegame on crash to crash-server.dmp"};
 
 extern sizebuf_t vm_tempstringsbuf;
 
@@ -2097,6 +2098,7 @@ void PRVM_Init (void)
 	Cvar_RegisterVariable (&prvm_backtraceforwarnings);
 	Cvar_RegisterVariable (&prvm_leaktest);
 	Cvar_RegisterVariable (&prvm_leaktest_ignore_classnames);
+	Cvar_RegisterVariable (&prvm_errordump);
 
 	//VM_Cmd_Init();
 }
