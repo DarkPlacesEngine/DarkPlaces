@@ -232,7 +232,7 @@ endif
 
 ##### Extra CFLAGS #####
 
-CFLAGS_MAKEDEP?=-MD
+CFLAGS_MAKEDEP?=-MMD
 ifdef DP_FS_BASEDIR
 	CFLAGS_FS=-DDP_FS_BASEDIR='\"$(DP_FS_BASEDIR)\"'
 else
