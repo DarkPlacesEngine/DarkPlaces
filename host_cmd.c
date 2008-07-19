@@ -435,6 +435,75 @@ LOAD / SAVE GAME
 
 #define	SAVEGAME_VERSION	5
 
+void Host_Savegame_to (const char *name)
+{
+	qfile_t	*f;
+	int		i;
+	char	comment[SAVEGAME_COMMENT_LENGTH+1];
+	qboolean isserver;
+
+	isserver = !strcmp(PRVM_NAME, "server");
+
+	Con_Printf("Saving game to %s...\n", name);
+	f = FS_Open (name, "wb", false, false);
+	if (!f)
+	{
+		Con_Print("ERROR: couldn't open.\n");
+		return;
+	}
+
+	FS_Printf(f, "%i\n", SAVEGAME_VERSION);
+
+	memset(comment, 0, sizeof(comment));
+	if(isserver)
+		dpsnprintf(comment, sizeof(comment), "%-21.21s kills:%3i/%3i", PRVM_GetString(prog->edicts->fields.server->message), (int)prog->globals.server->killed_monsters, (int)prog->globals.server->total_monsters);
+	else
+		dpsnprintf(comment, sizeof(comment), "(crash dump of %s progs)", PRVM_NAME);
+	// convert space to _ to make stdio happy
+	// LordHavoc: convert control characters to _ as well
+	for (i=0 ; i<SAVEGAME_COMMENT_LENGTH ; i++)
+		if (comment[i] <= ' ')
+			comment[i] = '_';
+	comment[SAVEGAME_COMMENT_LENGTH] = '\0';
+
+	FS_Printf(f, "%s\n", comment);
+	if(isserver)
+	{
+		for (i=0 ; i<NUM_SPAWN_PARMS ; i++)
+			FS_Printf(f, "%f\n", svs.clients[0].spawn_parms[i]);
+		FS_Printf(f, "%d\n", current_skill);
+		FS_Printf(f, "%s\n", sv.name);
+		FS_Printf(f, "%f\n",sv.time);
+	}
+	else
+	{
+		for (i=0 ; i<NUM_SPAWN_PARMS ; i++)
+			FS_Printf(f, "(dummy)\n");
+		FS_Printf(f, "%d\n", 0);
+		FS_Printf(f, "%s\n", "(dummy)");
+		FS_Printf(f, "%f\n", realtime);
+	}
+
+	// write the light styles
+	for (i=0 ; i<MAX_LIGHTSTYLES ; i++)
+	{
+		if (isserver && sv.lightstyles[i][0])
+			FS_Printf(f, "%s\n", sv.lightstyles[i]);
+		else
+			FS_Print(f,"m\n");
+	}
+
+	PRVM_ED_WriteGlobals (f);
+	for (i=0 ; i<prog->num_edicts ; i++)
+	{
+		//Con_Printf("edict %d...\n", i);
+		PRVM_ED_Write (f, PRVM_EDICT_NUM(i));
+	}
+
+	FS_Close (f);
+	Con_Print("done.\n");
+}
+
 /*
 ===============
 Host_Savegame_f
@@ -443,9 +512,6 @@ Host_Savegame_f
 void Host_Savegame_f (void)
 {
 	char	name[MAX_QPATH];
-	qfile_t	*f;
-	int		i;
-	char	comment[SAVEGAME_COMMENT_LENGTH+1];
 
 	if (!sv.active)
 	{
@@ -486,54 +552,9 @@ void Host_Savegame_f (void)
 	strlcpy (name, Cmd_Argv(1), sizeof (name));
 	FS_DefaultExtension (name, ".sav", sizeof (name));
 
-	Con_Printf("Saving game to %s...\n", name);
-	f = FS_Open (name, "wb", false, false);
-	if (!f)
-	{
-		Con_Print("ERROR: couldn't open.\n");
-		return;
-	}
-
 	SV_VM_Begin();
-
-	FS_Printf(f, "%i\n", SAVEGAME_VERSION);
-
-	memset(comment, 0, sizeof(comment));
-	dpsnprintf(comment, sizeof(comment), "%-21.21s kills:%3i/%3i", PRVM_GetString(prog->edicts->fields.server->message), (int)prog->globals.server->killed_monsters, (int)prog->globals.server->total_monsters);
-	// convert space to _ to make stdio happy
-	// LordHavoc: convert control characters to _ as well
-	for (i=0 ; i<SAVEGAME_COMMENT_LENGTH ; i++)
-		if (comment[i] <= ' ')
-			comment[i] = '_';
-	comment[SAVEGAME_COMMENT_LENGTH] = '\0';
-
-	FS_Printf(f, "%s\n", comment);
-	for (i=0 ; i<NUM_SPAWN_PARMS ; i++)
-		FS_Printf(f, "%f\n", svs.clients[0].spawn_parms[i]);
-	FS_Printf(f, "%d\n", current_skill);
-	FS_Printf(f, "%s\n", sv.name);
-	FS_Printf(f, "%f\n",sv.time);
-
-	// write the light styles
-	for (i=0 ; i<MAX_LIGHTSTYLES ; i++)
-	{
-		if (sv.lightstyles[i][0])
-			FS_Printf(f, "%s\n", sv.lightstyles[i]);
-		else
-			FS_Print(f,"m\n");
-	}
-
-	PRVM_ED_WriteGlobals (f);
-	for (i=0 ; i<prog->num_edicts ; i++)
-	{
-		Con_Printf("edict %d...\n", i);
-		PRVM_ED_Write (f, PRVM_EDICT_NUM(i));
-	}
-
+	Host_Savegame_to(name);
 	SV_VM_End();
-
-	FS_Close (f);
-	Con_Print("done.\n");
 }
 
 

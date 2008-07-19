@@ -455,6 +455,8 @@ void PRVM_PrintState(void)
 }
 
 extern sizebuf_t vm_tempstringsbuf;
+extern cvar_t prvm_errordump;
+void Host_Savegame_to (const char *name);
 void PRVM_Crash(void)
 {
 	if (prog == NULL)
@@ -466,6 +468,12 @@ void PRVM_Crash(void)
 	{
 		Con_Printf("QuakeC crash report for %s:\n", PRVM_NAME);
 		PRVM_PrintState();
+	}
+
+	if(prvm_errordump.integer)
+	{
+		// make a savegame
+		Host_Savegame_to(va("crash-%s.dmp", PRVM_NAME));
 	}
 
 	// dump the stack so host_error can shutdown functions
