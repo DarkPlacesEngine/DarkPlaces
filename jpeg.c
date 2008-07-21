@@ -760,7 +760,7 @@ qboolean JPEG_SaveImage_preflipped (const char *filename, int width, int height,
 	struct jpeg_compress_struct cinfo;
 	struct jpeg_error_mgr jerr;
 	unsigned char *scanline;
-	unsigned int linesize;
+	unsigned int offset, linesize;
 	qfile_t* file;
 
 	// No DLL = no JPEGs
@@ -803,9 +803,10 @@ qboolean JPEG_SaveImage_preflipped (const char *filename, int width, int height,
 
 	// Compress each scanline
 	linesize = cinfo.image_width * 3;
+	offset = linesize * (cinfo.image_height - 1);
 	while (cinfo.next_scanline < cinfo.image_height)
 	{
-		scanline = &data[cinfo.next_scanline * linesize];
+		scanline = &data[offset - cinfo.next_scanline * linesize];
 
 		qjpeg_write_scanlines (&cinfo, &scanline, 1);
 		if (error_in_jpeg)
@@ -823,7 +824,6 @@ static size_t JPEG_try_SaveImage_to_Buffer (struct jpeg_compress_struct *cinfo, 
 {
 	unsigned char *scanline;
 	unsigned int linesize;
-	int offset;
 
 	error_in_jpeg = false;
 
@@ -849,10 +849,9 @@ static size_t JPEG_try_SaveImage_to_Buffer (struct jpeg_compress_struct *cinfo, 
 
 	// Compress each scanline
 	linesize = width * 3;
-	offset = linesize * (cinfo->image_height - 1);
 	while (cinfo->next_scanline < cinfo->image_height)
 	{
-		scanline = &data[offset - cinfo->next_scanline * linesize];
+		scanline = &data[cinfo->next_scanline * linesize];
 
 		qjpeg_write_scanlines (cinfo, &scanline, 1);
 		if (error_in_jpeg)
