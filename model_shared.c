@@ -1865,6 +1865,8 @@ nothing                GL_ZERO GL_ONE
 			texture->basematerialflags |= MATERIALFLAG_SKY | MATERIALFLAG_NOSHADOW;
 		else
 			texture->basematerialflags |= MATERIALFLAG_WALL;
+		if (defaulttexflags & TEXF_ALPHA)
+			texture->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
 		texture->numskinframes = 1;
 		if (fallback)
 		{
