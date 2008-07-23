@@ -140,6 +140,7 @@ void R_SkinFrame_Purge(void);
 skinframe_t *R_SkinFrame_FindNextByName( skinframe_t *last, const char *name );
 skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewidth, int compareheight, int comparecrc, qboolean add);
 skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboolean complain);
+skinframe_t *R_SkinFrame_LoadExternal_CheckAlpha(const char *name, int textureflags, qboolean complain, qboolean *has_alpha);
 skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, const unsigned char *skindata, int width, int height);
 skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, int loadpantsandshirt, int loadglowtexture, const unsigned char *skindata, int width, int height);
 skinframe_t *R_SkinFrame_LoadMissing(void);
