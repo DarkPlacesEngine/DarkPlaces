@@ -1017,21 +1017,21 @@ Key_Event (int key, char ascii, qboolean down)
 		return;
 	}
 
-#if 0
-	// ignore binds (other than the above escape/F1-F12 keys) while in console
-	if (key_consoleactive && down)
-#else
-	// respond to toggleconsole binds while in console unless the pressed key
-	// happens to be the color prefix character (such as on German keyboards)
-	if (keydest == key_console && key_consoleactive && (!con_closeontoggleconsole.integer || !bind || strncmp(bind, "toggleconsole", strlen("toggleconsole")) || ascii == STRING_COLOR_TAG))
-#endif
+	// send input to console if it wants it
+	if (keydest == key_console && key != K_ESCAPE)
 	{
-		if(down) {
-			if(key == K_ESCAPE)
-				MR_ToggleMenu_f();
-			else
-				Key_Console (key, ascii);
+		if (!down)
+			return;
+		// con_closeontoggleconsole enables toggleconsole keys to close the
+		// console, as long as they are not the color prefix character
+		// (special exemption for german keyboard layouts)
+		if (con_closeontoggleconsole.integer && bind && !strncmp(bind, "toggleconsole", strlen("toggleconsole")) && (key_consoleactive & KEY_CONSOLEACTIVE_USER) && ascii != STRING_COLOR_TAG)
+		{
+			Con_ToggleConsole_f ();
+			tbl_keydest[key] = key_void; // ignore the release
+			return;
 		}
+		Key_Console (key, ascii);
 		return;
 	}
 
