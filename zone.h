@@ -160,8 +160,8 @@ void Mem_ExpandableArray_NewArray(memexpandablearray_t *l, mempool_t *mempool, s
 void Mem_ExpandableArray_FreeArray(memexpandablearray_t *l);
 void *Mem_ExpandableArray_AllocRecord(memexpandablearray_t *l);
 void Mem_ExpandableArray_FreeRecord(memexpandablearray_t *l, void *record);
-size_t Mem_ExpandableArray_IndexRange(memexpandablearray_t *l);
-void *Mem_ExpandableArray_RecordAtIndex(memexpandablearray_t *l, size_t index);
+size_t Mem_ExpandableArray_IndexRange(const memexpandablearray_t *l) DP_FUNC_PURE;
+void *Mem_ExpandableArray_RecordAtIndex(const memexpandablearray_t *l, size_t index) DP_FUNC_PURE;
 
 // used for temporary allocations
 extern mempool_t *tempmempool;
