@@ -1865,12 +1865,16 @@ nothing                GL_ZERO GL_ONE
 			texture->basematerialflags |= MATERIALFLAG_SKY | MATERIALFLAG_NOSHADOW;
 		else
 			texture->basematerialflags |= MATERIALFLAG_WALL;
-		if (defaulttexflags & TEXF_ALPHA)
-			texture->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
 		texture->numskinframes = 1;
 		if (fallback)
 		{
-			if (!(texture->skinframes[0] = R_SkinFrame_LoadExternal(texture->name, defaulttexflags, false)))
+			qboolean has_alpha;
+			if ((texture->skinframes[0] = R_SkinFrame_LoadExternal_CheckAlpha(texture->name, defaulttexflags, false, &has_alpha)))
+			{
+				if(has_alpha && (defaulttexflags & TEXF_ALPHA))
+					texture->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
+			}
+			else
 				success = false;
 		}
 		else

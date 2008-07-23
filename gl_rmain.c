@@ -1862,7 +1862,7 @@ skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewid
 	return item;
 }
 
-skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboolean complain)
+skinframe_t *R_SkinFrame_LoadExternal_CheckAlpha(const char *name, int textureflags, qboolean complain, qboolean *has_alpha)
 {
 	// FIXME: it should be possible to disable loading various layers using
 	// cvars, to prevent wasted loading time and memory usage if the user does
@@ -1878,6 +1878,8 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 	int basepixels_width;
 	int basepixels_height;
 	skinframe_t *skinframe;
+
+	*has_alpha = false;
 
 	if (cls.state == ca_dedicated)
 		return NULL;
@@ -1921,6 +1923,7 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 		if (j < basepixels_width * basepixels_height * 4)
 		{
 			// has transparent pixels
+			*has_alpha = true;
 			pixels = (unsigned char *)Mem_Alloc(tempmempool, image_width * image_height * 4);
 			for (j = 0;j < image_width * image_height * 4;j += 4)
 			{
@@ -1971,6 +1974,12 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 		Mem_Free(basepixels);
 
 	return skinframe;
+}
+
+skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboolean complain)
+{
+	qboolean has_alpha;
+	return R_SkinFrame_LoadExternal_CheckAlpha(name, textureflags, complain, &has_alpha);
 }
 
 static rtexture_t *R_SkinFrame_TextureForSkinLayer(const unsigned char *in, int width, int height, const char *name, const unsigned int *palette, int textureflags, qboolean force)
