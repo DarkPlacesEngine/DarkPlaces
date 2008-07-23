@@ -459,7 +459,7 @@ void Mem_ExpandableArray_FreeRecord(memexpandablearray_t *l, void *record)
 	}
 }
 
-size_t Mem_ExpandableArray_IndexRange(memexpandablearray_t *l)
+size_t Mem_ExpandableArray_IndexRange(const memexpandablearray_t *l)
 {
 	size_t i, j, k, end = 0;
 	for (i = 0;i < l->numarrays;i++)
@@ -476,7 +476,7 @@ size_t Mem_ExpandableArray_IndexRange(memexpandablearray_t *l)
 	return end;
 }
 
-void *Mem_ExpandableArray_RecordAtIndex(memexpandablearray_t *l, size_t index)
+void *Mem_ExpandableArray_RecordAtIndex(const memexpandablearray_t *l, size_t index)
 {
 	size_t i, j;
 	i = index / l->numrecordsperarray;
