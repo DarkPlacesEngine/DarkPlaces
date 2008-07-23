@@ -439,7 +439,16 @@ void *Mem_ExpandableArray_AllocRecord(memexpandablearray_t *l)
 	}
 }
 
-void Mem_ExpandableArray_FreeRecord(memexpandablearray_t *l, void *record)
+/*****************************************************************************
+ * IF YOU EDIT THIS:
+ * If this function was to change the size of the "expandable" array, you have
+ * to update r_shadow.c
+ * Just do a search for "range =", R_ShadowClearWorldLights would be the first
+ * function to look at. (And also seems like the only one?) You  might have to
+ * move the  call to Mem_ExpandableArray_IndexRange  back into for(...) loop's
+ * condition
+ */
+void Mem_ExpandableArray_FreeRecord(memexpandablearray_t *l, void *record) // const!
 {
 	size_t i, j;
 	unsigned char *p = (unsigned char *)record;

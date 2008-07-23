@@ -255,12 +255,14 @@ unsigned char *W_GetTextureBGRA(char *name)
 	unsigned char *data;
 	mwad_t *w;
 	char texname[17];
+	size_t range;
 
 	texname[16] = 0;
 	W_CleanupName(name, texname);
 	if (!wad.hlwads.mempool)
 		Mem_ExpandableArray_NewArray(&wad.hlwads, cls.permanentmempool, sizeof(mwad_t), 16);
-	for (k = 0;k < Mem_ExpandableArray_IndexRange(&wad.hlwads);k++)
+	range = Mem_ExpandableArray_IndexRange(&wad.hlwads);
+	for (k = 0;k < range;k++)
 	{
 		w = (mwad_t *)Mem_ExpandableArray_RecordAtIndex(&wad.hlwads, k);
 		if (!w)

@@ -2560,7 +2560,8 @@ void R_Shadow_UncompileWorldLights(void)
 {
 	size_t lightindex;
 	dlight_t *light;
-	for (lightindex = 0;lightindex < Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray);lightindex++)
+	size_t range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
+	for (lightindex = 0;lightindex < range;lightindex++)
 	{
 		light = Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
 		if (!light)
@@ -3128,6 +3129,7 @@ void R_ShadowVolumeLighting(qboolean visible)
 	int lnum;
 	size_t lightindex;
 	dlight_t *light;
+	size_t range;
 
 	if (r_editlights.integer)
 		R_Shadow_DrawLightSprites();
@@ -3144,7 +3146,8 @@ void R_ShadowVolumeLighting(qboolean visible)
 	}
 	else
 	{
-		for (lightindex = 0;lightindex < Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray);lightindex++)
+		range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
+		for (lightindex = 0;lightindex < range;lightindex++)
 		{
 			light = Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
 			if (light && (light->flags & flag))
@@ -3253,12 +3256,14 @@ void R_DrawCoronas(void)
 	size_t lightindex;
 	dlight_t *light;
 	rtlight_t *rtlight;
+	size_t range;
 	if (r_coronas.value < (1.0f / 256.0f) && !gl_flashblend.integer)
 		return;
 	R_Mesh_Matrix(&identitymatrix);
 	flag = r_refdef.scene.rtworld ? LIGHTFLAG_REALTIMEMODE : LIGHTFLAG_NORMALMODE;
 	// FIXME: these traces should scan all render entities instead of cl.world
-	for (lightindex = 0;lightindex < Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray);lightindex++)
+	range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
+	for (lightindex = 0;lightindex < range;lightindex++)
 	{
 		light = Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
 		if (!light)
@@ -3494,7 +3499,8 @@ void R_Shadow_ClearWorldLights(void)
 {
 	size_t lightindex;
 	dlight_t *light;
-	for (lightindex = 0;lightindex < Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray);lightindex++)
+	size_t range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
+	for (lightindex = 0;lightindex < range;lightindex++)
 	{
 		light = Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
 		if (light)
@@ -3557,7 +3563,8 @@ void R_Shadow_DrawLightSprites(void)
 {
 	size_t lightindex;
 	dlight_t *light;
-	for (lightindex = 0;lightindex < Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray);lightindex++)
+	size_t range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
+	for (lightindex = 0;lightindex < range;lightindex++)
 	{
 		light = Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
 		if (light)
@@ -3572,9 +3579,10 @@ void R_Shadow_SelectLightInView(void)
 	dlight_t *best;
 	size_t lightindex;
 	dlight_t *light;
+	size_t range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
 	best = NULL;
 	bestrating = 0;
-	for (lightindex = 0;lightindex < Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray);lightindex++)
+	for (lightindex = 0;lightindex < range;lightindex++)
 	{
 		light = Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
 		if (!light)
@@ -3706,7 +3714,9 @@ void R_Shadow_SaveWorldLights(void)
 	char *buf, *oldbuf;
 	char name[MAX_QPATH];
 	char line[MAX_INPUTLINE];
-	if (!Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray))
+	size_t range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked, assuming the dpsnprintf mess doesn't screw it up...
+	// I hate lines which are 3 times my screen size :( --blub
+	if (!range)
 		return;
 	if (cl.worldmodel == NULL)
 	{
@@ -3717,7 +3727,7 @@ void R_Shadow_SaveWorldLights(void)
 	strlcat (name, ".rtlights", sizeof (name));
 	bufchars = bufmaxchars = 0;
 	buf = NULL;
-	for (lightindex = 0;lightindex < Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray);lightindex++)
+	for (lightindex = 0;lightindex < range;lightindex++)
 	{
 		light = Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
 		if (!light)
@@ -4434,6 +4444,7 @@ void R_Shadow_EditLights_EditAll_f(void)
 {
 	size_t lightindex;
 	dlight_t *light;
+	size_t range;
 
 	if (!r_editlights.integer)
 	{
@@ -4441,7 +4452,9 @@ void R_Shadow_EditLights_EditAll_f(void)
 		return;
 	}
 
-	for (lightindex = 0;lightindex < Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray);lightindex++)
+	// EditLights doesn't seem to have a "remove" command or something so:
+	range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
+	for (lightindex = 0;lightindex < range;lightindex++)
 	{
 		light = Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
 		if (!light)
@@ -4454,7 +4467,7 @@ void R_Shadow_EditLights_EditAll_f(void)
 void R_Shadow_EditLights_DrawSelectedLightProperties(void)
 {
 	int lightnumber, lightcount;
-	size_t lightindex;
+	size_t lightindex, range;
 	dlight_t *light;
 	float x, y;
 	char temp[256];
@@ -4465,7 +4478,8 @@ void R_Shadow_EditLights_DrawSelectedLightProperties(void)
 	DrawQ_Pic(x-5, y-5, NULL, 250, 155, 0, 0, 0, 0.75, 0);
 	lightnumber = -1;
 	lightcount = 0;
-	for (lightindex = 0;lightindex < Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray);lightindex++)
+	range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
+	for (lightindex = 0;lightindex < range;lightindex++)
 	{
 		light = Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
 		if (!light)
