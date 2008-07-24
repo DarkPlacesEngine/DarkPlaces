@@ -251,14 +251,14 @@ void EntityFrameQuake_ISeeDeadEntities(void)
 // packet logs and thus if an update is lost it is never repeated, this makes
 // csqc entities useless at the moment.
 
-void EntityFrameCSQC_WriteState (sizebuf_t *msg, int number, qboolean doupdate, qboolean *sectionstarted)
+void EntityFrameCSQC_WriteState (sizebuf_t *msg, int maxsize, int number, qboolean doupdate, qboolean *sectionstarted)
 {
 	int version;
 	prvm_eval_t *val, *val2;
 	version = 0;
 	if (doupdate)
 	{
-		if (msg->cursize + !*sectionstarted + 2 + 1 + 2 > msg->maxsize)
+		if (msg->cursize + !*sectionstarted + 2 + 1 + 2 > maxsize)
 			return;
 		val2 = PRVM_EDICTFIELDVALUE((&prog->edicts[number]), prog->fieldoffsets.Version);
 		version = (int)val2->_float;
@@ -300,12 +300,14 @@ void EntityFrameCSQC_WriteState (sizebuf_t *msg, int number, qboolean doupdate, 
 			if(!*sectionstarted)
 				MSG_WriteByte(msg, svc_csqcentities);
 			MSG_WriteShort(msg, number);
+			msg->allowoverflow = true;
 			PRVM_G_INT(OFS_PARM0) = sv.writeentitiestoclient_cliententitynumber;
 			prog->globals.server->self = number;
 			PRVM_ExecuteProgram(val->function, "Null SendEntity\n");
+			msg->allowoverflow = false;
 			if(PRVM_G_FLOAT(OFS_RETURN))
 			{
-				if (msg->cursize + 2 > msg->maxsize)
+				if (msg->cursize + 2 > maxsize)
 				{
 					// if the packet no longer has enough room to write the
 					// final index code that ends the message, rollback to the
@@ -325,6 +327,7 @@ void EntityFrameCSQC_WriteState (sizebuf_t *msg, int number, qboolean doupdate, 
 			{
 				// rollback the buffer to its state before the writes
 				msg->cursize = oldcursize;
+				msg->overflowed = false;
 				// if the function returned FALSE, simply write a remove
 				// this is done by falling through to the remove code below
 				version = 0;
@@ -337,7 +340,7 @@ void EntityFrameCSQC_WriteState (sizebuf_t *msg, int number, qboolean doupdate, 
 		return;
 	// if there isn't enough room to write the remove message, just return, as
 	// it will be handled in a later packet
-	if (msg->cursize + !*sectionstarted + 2 + 2 > msg->maxsize)
+	if (msg->cursize + !*sectionstarted + 2 + 2 > maxsize)
 		return;
 	// first write the message identifier if needed
 	if(!*sectionstarted)
@@ -351,7 +354,7 @@ void EntityFrameCSQC_WriteState (sizebuf_t *msg, int number, qboolean doupdate, 
 }
 
 //[515]: we use only one array per-client for SendEntity feature
-void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int numstates, const entity_state_t *states)
+void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numstates, const entity_state_t *states)
 {
 	int i, num;
 	qboolean sectionstarted = false;
@@ -362,7 +365,7 @@ void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int numstates, const entity_sta
 		return;
 	// make sure there is enough room to store the svc_csqcentities byte,
 	// the terminator (0x0000) and at least one entity update
-	if (msg->cursize + 32 >= msg->maxsize)
+	if (msg->cursize + 32 >= maxsize)
 		return;
 
 	num = 1;
@@ -371,16 +374,16 @@ void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int numstates, const entity_sta
 		// all entities between the previous entity state and this one are dead
 		for (;num < n->number;num++)
 			if(svs.clients[sv.writeentitiestoclient_clientnumber].csqcentityversion[num])
-				EntityFrameCSQC_WriteState(msg, num, false, &sectionstarted);
+				EntityFrameCSQC_WriteState(msg, maxsize, num, false, &sectionstarted);
 		// update this entity
-		EntityFrameCSQC_WriteState(msg, num, true, &sectionstarted);
+		EntityFrameCSQC_WriteState(msg, maxsize, num, true, &sectionstarted);
 		// advance to next entity so the next iteration doesn't immediately remove it
 		num++;
 	}
 	// all remaining entities are dead
 	for (;num < prog->num_edicts;num++)
 		if(svs.clients[sv.writeentitiestoclient_clientnumber].csqcentityversion[num])
-			EntityFrameCSQC_WriteState(msg, num, false, &sectionstarted);
+			EntityFrameCSQC_WriteState(msg, maxsize, num, false, &sectionstarted);
 	if (sectionstarted)
 	{
 		// write index 0 to end the update (0 is never used by real entities)
@@ -467,7 +470,7 @@ void Protocol_WriteStatsReliable(void)
 }
 
 
-void EntityFrameQuake_WriteFrame(sizebuf_t *msg, int numstates, const entity_state_t *states)
+void EntityFrameQuake_WriteFrame(sizebuf_t *msg, int maxsize, int numstates, const entity_state_t *states)
 {
 	const entity_state_t *s;
 	entity_state_t baseline;
@@ -619,7 +622,7 @@ void EntityFrameQuake_WriteFrame(sizebuf_t *msg, int numstates, const entity_sta
 		}
 
 		// if the commit is full, we're done this frame
-		if (msg->cursize + buf.cursize > msg->maxsize)
+		if (msg->cursize + buf.cursize > maxsize)
 		{
 			// next frame we will continue where we left off
 			break;
@@ -1114,7 +1117,7 @@ void EntityFrame_AddFrame(entityframe_database_t *d, vec3_t eye, int framenum, i
 }
 
 // (server) writes a frame to network stream
-void EntityFrame_WriteFrame(sizebuf_t *msg, entityframe_database_t *d, int numstates, const entity_state_t *states, int viewentnum)
+void EntityFrame_WriteFrame(sizebuf_t *msg, int maxsize, entityframe_database_t *d, int numstates, const entity_state_t *states, int viewentnum)
 {
 	int i, onum, number;
 	entity_frame_t *o = &d->deltaframe;
@@ -1590,7 +1593,7 @@ void EntityFrame4_CL_ReadFrame(void)
 		EntityFrame4_ResetDatabase(d);
 }
 
-void EntityFrame4_WriteFrame(sizebuf_t *msg, entityframe4_database_t *d, int numstates, const entity_state_t *states)
+void EntityFrame4_WriteFrame(sizebuf_t *msg, int maxsize, entityframe4_database_t *d, int numstates, const entity_state_t *states)
 {
 	const entity_state_t *e, *s;
 	entity_state_t inactiveentitystate;
@@ -1600,7 +1603,7 @@ void EntityFrame4_WriteFrame(sizebuf_t *msg, entityframe4_database_t *d, int num
 	prvm_eval_t *val;
 
 	// if there isn't enough space to accomplish anything, skip it
-	if (msg->cursize + 24 > msg->maxsize)
+	if (msg->cursize + 24 > maxsize)
 		return;
 
 	// prepare the buffer
@@ -1670,7 +1673,7 @@ void EntityFrame4_WriteFrame(sizebuf_t *msg, entityframe4_database_t *d, int num
 			}
 		}
 		// if the commit is full, we're done this frame
-		if (msg->cursize + buf.cursize > msg->maxsize - 4)
+		if (msg->cursize + buf.cursize > maxsize - 4)
 		{
 			// next frame we will continue where we left off
 			break;
@@ -2277,7 +2280,7 @@ void EntityFrame5_AckFrame(entityframe5_database_t *d, int framenum)
 			d->packetlog[i].packetnumber = 0;
 }
 
-void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int numstates, const entity_state_t *states, int viewentnum, int movesequence)
+void EntityFrame5_WriteFrame(sizebuf_t *msg, int maxsize, entityframe5_database_t *d, int numstates, const entity_state_t *states, int viewentnum, int movesequence)
 {
 	const entity_state_t *n;
 	int i, num, l, framenum, packetlognumber, priority;
@@ -2389,7 +2392,7 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 	// write stat updates
 	if (sv.protocol != PROTOCOL_QUAKE && sv.protocol != PROTOCOL_QUAKEDP && sv.protocol != PROTOCOL_NEHAHRAMOVIE && sv.protocol != PROTOCOL_NEHAHRABJP && sv.protocol != PROTOCOL_NEHAHRABJP2 && sv.protocol != PROTOCOL_NEHAHRABJP3 && sv.protocol != PROTOCOL_DARKPLACES1 && sv.protocol != PROTOCOL_DARKPLACES2 && sv.protocol != PROTOCOL_DARKPLACES3 && sv.protocol != PROTOCOL_DARKPLACES4 && sv.protocol != PROTOCOL_DARKPLACES5)
 	{
-		for (i = 0;i < MAX_CL_STATS && msg->cursize + 6 + 11 <= msg->maxsize;i++)
+		for (i = 0;i < MAX_CL_STATS && msg->cursize + 6 + 11 <= maxsize;i++)
 		{
 			if (host_client->statsdeltabits[i>>3] & (1<<(i&7)))
 			{
@@ -2429,7 +2432,7 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 			buf.cursize = 0;
 			EntityState5_WriteUpdate(num, n, d->deltabits[num], &buf);
 			// if the entity won't fit, try the next one
-			if (msg->cursize + buf.cursize + 2 > msg->maxsize)
+			if (msg->cursize + buf.cursize + 2 > maxsize)
 				continue;
 			// write entity to the packet
 			SZ_Write(msg, buf.data, buf.cursize);
