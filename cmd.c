@@ -826,7 +826,8 @@ static const char *Cmd_GetCvarValue(const char *var, size_t varlen, cmdalias_t *
 		// Exception: $* and $n- don't use the quoted form by default
 		varstr = Cmd_GetDirectCvarValue(varname, alias, &is_multiple);
 		if(is_multiple)
-			varfunc = "asis";
+			if(!varfunc)
+				varfunc = "asis";
 	}
 
 	if(!varstr)
