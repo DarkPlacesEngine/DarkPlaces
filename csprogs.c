@@ -563,7 +563,13 @@ void CSQC_ReadEntities (void)
 					cl.csqc_server2csqcentitynumber[realentnum] = 0;
 				}
 				else
-					Con_Printf("Bad csqc_server2csqcentitynumber map\n");	//[515]: never happens ?
+				{
+					// LordHavoc: removing an entity that is already gone on
+					// the csqc side is possible for legitimate reasons (such
+					// as a repeat of the remove message), so no warning is
+					// needed
+					//Con_Printf("Bad csqc_server2csqcentitynumber map\n");	//[515]: never happens ?
+				}
 			}
 			else
 			{
