@@ -30,7 +30,7 @@ static void SV_VM_Setup();
 
 void VM_CustomStats_Clear (void);
 void VM_SV_UpdateCustomStats (client_t *client, prvm_edict_t *ent, sizebuf_t *msg, int *stats);
-void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int numstates, const entity_state_t *states);
+void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numstates, const entity_state_t *states);
 
 cvar_t coop = {0, "coop","0", "coop mode, 0 = no coop, 1 = coop mode, multiple players playing through the singleplayer game (coop mode also shuts off deathmatch)"};
 cvar_t deathmatch = {0, "deathmatch","0", "deathmatch mode, values depend on mod but typically 0 = no deathmatch, 1 = normal deathmatch with respawning weapons, 2 = weapons stay (players can only pick up new weapons)"};
@@ -1326,14 +1326,14 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 	sv.sententities[s->number] = sv.sententitiesmark;
 }
 
-void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *msg)
+void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *msg, int maxsize)
 {
 	int i, numsendstates;
 	entity_state_t *s;
 	prvm_edict_t *camera;
 
 	// if there isn't enough space to accomplish anything, skip it
-	if (msg->cursize + 25 > msg->maxsize)
+	if (msg->cursize + 25 > maxsize)
 		return;
 
 	sv.writeentitiestoclient_msg = msg;
@@ -1374,23 +1374,23 @@ void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *
 	if (sv_cullentities_stats.integer)
 		Con_Printf("client \"%s\" entities: %d total, %d visible, %d culled by: %d pvs %d trace\n", client->name, sv.writeentitiestoclient_stats_totalentities, sv.writeentitiestoclient_stats_visibleentities, sv.writeentitiestoclient_stats_culled_pvs + sv.writeentitiestoclient_stats_culled_trace, sv.writeentitiestoclient_stats_culled_pvs, sv.writeentitiestoclient_stats_culled_trace);
 
-	EntityFrameCSQC_WriteFrame(msg, numsendstates, sv.writeentitiestoclient_sendstates);
+	EntityFrameCSQC_WriteFrame(msg, maxsize, numsendstates, sv.writeentitiestoclient_sendstates);
 
 	if (client->entitydatabase5)
-		EntityFrame5_WriteFrame(msg, client->entitydatabase5, numsendstates, sv.writeentitiestoclient_sendstates, client - svs.clients + 1, client->movesequence);
+		EntityFrame5_WriteFrame(msg, maxsize, client->entitydatabase5, numsendstates, sv.writeentitiestoclient_sendstates, client - svs.clients + 1, client->movesequence);
 	else if (client->entitydatabase4)
 	{
-		EntityFrame4_WriteFrame(msg, client->entitydatabase4, numsendstates, sv.writeentitiestoclient_sendstates);
+		EntityFrame4_WriteFrame(msg, maxsize, client->entitydatabase4, numsendstates, sv.writeentitiestoclient_sendstates);
 		Protocol_WriteStatsReliable();
 	}
 	else if (client->entitydatabase)
 	{
-		EntityFrame_WriteFrame(msg, client->entitydatabase, numsendstates, sv.writeentitiestoclient_sendstates, client - svs.clients + 1);
+		EntityFrame_WriteFrame(msg, maxsize, client->entitydatabase, numsendstates, sv.writeentitiestoclient_sendstates, client - svs.clients + 1);
 		Protocol_WriteStatsReliable();
 	}
 	else
 	{
-		EntityFrameQuake_WriteFrame(msg, numsendstates, sv.writeentitiestoclient_sendstates);
+		EntityFrameQuake_WriteFrame(msg, maxsize, numsendstates, sv.writeentitiestoclient_sendstates);
 		Protocol_WriteStatsReliable();
 	}
 }
@@ -1694,23 +1694,24 @@ void SV_FlushBroadcastMessages(void)
 	SZ_Clear(&sv.datagram);
 }
 
-static void SV_WriteUnreliableMessages(client_t *client, sizebuf_t *msg)
+static void SV_WriteUnreliableMessages(client_t *client, sizebuf_t *msg, int maxsize)
 {
 	// scan the splitpoints to find out how many we can fit in
 	int numsegments, j, split;
 	if (!client->unreliablemsg_splitpoints)
 		return;
-	// always accept the first one if it's within 1400 bytes, this ensures
+	// always accept the first one if it's within 1024 bytes, this ensures
 	// that very big datagrams which are over the rate limit still get
 	// through, just to keep it working
-	if (msg->cursize + client->unreliablemsg_splitpoint[0] > msg->maxsize && msg->maxsize < 1400)
+	j = msg->cursize + client->unreliablemsg_splitpoint[0];
+	if (maxsize < 1024 && j > maxsize && j <= 1024)
 	{
 		numsegments = 1;
-		msg->maxsize = 1400;
+		maxsize = 1024;
 	}
 	else
 		for (numsegments = 0;numsegments < client->unreliablemsg_splitpoints;numsegments++)
-			if (msg->cursize + client->unreliablemsg_splitpoint[numsegments] > msg->maxsize)
+			if (msg->cursize + client->unreliablemsg_splitpoint[numsegments] > maxsize)
 				break;
 	if (numsegments > 0)
 	{
@@ -1719,7 +1720,7 @@ static void SV_WriteUnreliableMessages(client_t *client, sizebuf_t *msg)
 		// note this discards ones that were accepted by the segments scan but
 		// can not fit, such as a really huge first one that will never ever
 		// fit in a packet...
-		if (msg->cursize + split <= msg->maxsize)
+		if (msg->cursize + split <= maxsize)
 			SZ_Write(msg, client->unreliablemsg.data, split);
 		// remove the part we sent, keeping any remaining data
 		client->unreliablemsg.cursize -= split;
@@ -1744,40 +1745,47 @@ static void SV_SendClientDatagram (client_t *client)
 	int stats[MAX_CL_STATS];
 	unsigned char sv_sendclientdatagram_buf[NET_MAXMESSAGE];
 
+	// obey rate limit by limiting packet frequency if the packet size
+	// limiting fails
+	// (usually this is caused by reliable messages)
+	if (!NetConn_CanSend(client->netconnection))
+		return;
+
 	// PROTOCOL_DARKPLACES5 and later support packet size limiting of updates
 	maxrate = max(NET_MINRATE, sv_maxrate.integer);
 	if (sv_maxrate.integer != maxrate)
 		Cvar_SetValueQuick(&sv_maxrate, maxrate);
+
 	// clientrate determines the 'cleartime' of a packet
 	// (how long to wait before sending another, based on this packet's size)
 	clientrate = bound(NET_MINRATE, client->rate, maxrate);
 
-	if (LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) == LHNETADDRESSTYPE_LOOP && !sv_ratelimitlocalplayer.integer)
+	switch (sv.protocol)
 	{
-		// for good singleplayer, send huge packets
-		maxsize = sizeof(sv_sendclientdatagram_buf);
-		maxsize2 = sizeof(sv_sendclientdatagram_buf);
-		// never limit frequency in singleplayer
-		clientrate = 1000000000;
-	}
-	else if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE || sv.protocol == PROTOCOL_NEHAHRABJP || sv.protocol == PROTOCOL_NEHAHRABJP2 || sv.protocol == PROTOCOL_NEHAHRABJP3 || sv.protocol == PROTOCOL_QUAKEWORLD)
-	{
+	case PROTOCOL_QUAKE:
+	case PROTOCOL_QUAKEDP:
+	case PROTOCOL_NEHAHRAMOVIE:
+	case PROTOCOL_NEHAHRABJP:
+	case PROTOCOL_NEHAHRABJP2:
+	case PROTOCOL_NEHAHRABJP3:
+	case PROTOCOL_QUAKEWORLD:
 		// no packet size limit support on Quake protocols because it just
 		// causes missing entities/effects
 		// packets are simply sent less often to obey the rate limit
 		maxsize = 1024;
 		maxsize2 = 1024;
-	}
-	else if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4)
-	{
+		break;
+	case PROTOCOL_DARKPLACES1:
+	case PROTOCOL_DARKPLACES2:
+	case PROTOCOL_DARKPLACES3:
+	case PROTOCOL_DARKPLACES4:
 		// no packet size limit support on DP1-4 protocols because they kick
 		// the client off if they overflow, and miss effects
 		// packets are simply sent less often to obey the rate limit
 		maxsize = sizeof(sv_sendclientdatagram_buf);
 		maxsize2 = sizeof(sv_sendclientdatagram_buf);
-	}
-	else
-	{
+		break;
+	default:
 		// DP5 and later protocols support packet size limiting which is a
 		// better method than limiting packet frequency as QW does
 		//
@@ -1790,13 +1798,17 @@ static void SV_SendClientDatagram (client_t *client)
 		// mods that use csqc (they are likely to use less bandwidth anyway)
 		if (sv.csqc_progsize > 0)
 			maxsize = maxsize2;
+		break;
 	}
 
-	// obey rate limit by limiting packet frequency if the packet size
-	// limiting fails
-	// (usually this is caused by reliable messages)
-	if (!NetConn_CanSend(client->netconnection))
-		return;
+	if (LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) == LHNETADDRESSTYPE_LOOP && !sv_ratelimitlocalplayer.integer)
+	{
+		// for good singleplayer, send huge packets
+		maxsize = sizeof(sv_sendclientdatagram_buf);
+		maxsize2 = sizeof(sv_sendclientdatagram_buf);
+		// never limit frequency in singleplayer
+		clientrate = 1000000000;
+	}
 
 	// while downloading, limit entity updates to half the packet
 	// (any leftover space will be used for downloading)
@@ -1804,7 +1816,7 @@ static void SV_SendClientDatagram (client_t *client)
 		maxsize /= 2;
 
 	msg.data = sv_sendclientdatagram_buf;
-	msg.maxsize = maxsize;
+	msg.maxsize = sizeof(sv_sendclientdatagram_buf);
 	msg.cursize = 0;
 	msg.allowoverflow = false;
 
@@ -1823,30 +1835,24 @@ static void SV_SendClientDatagram (client_t *client)
 
 		// add as many queued unreliable messages (effects) as we can fit
 		// limit effects to half of the remaining space
-		msg.maxsize -= (msg.maxsize - msg.cursize) / 2;
 		if (client->unreliablemsg.cursize)
-			SV_WriteUnreliableMessages (client, &msg);
-
-		msg.maxsize = maxsize;
+			SV_WriteUnreliableMessages (client, &msg, (msg.cursize + maxsize) / 2);
 
 		// now write as many entities as we can fit, and also sends stats
-		SV_WriteEntitiesToClient (client, client->edict, &msg);
+		SV_WriteEntitiesToClient (client, client->edict, &msg, maxsize);
 	}
 	else if (realtime > client->keepalivetime)
 	{
 		// the player isn't totally in the game yet
 		// send small keepalive messages if too much time has passed
 		// (may also be sending downloads)
-		msg.maxsize = maxsize2;
 		client->keepalivetime = realtime + 5;
 		MSG_WriteChar (&msg, svc_nop);
 	}
 
-	msg.maxsize = maxsize2;
-
 	// if a download is active, see if there is room to fit some download data
 	// in this packet
-	downloadsize = maxsize * 2 - msg.cursize - 7;
+	downloadsize = min(maxsize*2,maxsize2) - msg.cursize - 7;
 	if (host_client->download_file && host_client->download_started && downloadsize > 0)
 	{
 		fs_offset_t downloadstart;
