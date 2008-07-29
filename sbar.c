@@ -1690,9 +1690,9 @@ float Sbar_PrintScoreboardItem(scoreboard_t *s, float x, float y)
 			//
 			//
 			c = palette_rgb_pantsscoreboard[(s->colors & 0xf0) >> 4];
-			DrawQ_Fill(x + 14*8*FONT_SBAR->width_of[0], y+1, 40*FONT_SBAR->width_of[0], 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), sbar_alpha_fg.value, 0);
+			DrawQ_Fill(x + 14*8*FONT_SBAR->maxwidth, y+1, 40*FONT_SBAR->maxwidth, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), sbar_alpha_fg.value, 0);
 			c = palette_rgb_shirtscoreboard[s->colors & 0xf];
-			DrawQ_Fill(x + 14*8*FONT_SBAR->width_of[0], y+4, 40*FONT_SBAR->width_of[0], 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), sbar_alpha_fg.value, 0);
+			DrawQ_Fill(x + 14*8*FONT_SBAR->maxwidth, y+4, 40*FONT_SBAR->maxwidth, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), sbar_alpha_fg.value, 0);
 			// print the text
 			//DrawQ_String(x, y, va("%c%4i %s", myself ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL, true);
 			if (s->qw_ping || s->qw_packetloss)
@@ -1714,9 +1714,9 @@ float Sbar_PrintScoreboardItem(scoreboard_t *s, float x, float y)
 		{
 			// draw colors behind score
 			c = palette_rgb_pantsscoreboard[(s->colors & 0xf0) >> 4];
-			DrawQ_Fill(x + 9*8*FONT_SBAR->width_of[0], y+1, 40*FONT_SBAR->width_of[0], 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), sbar_alpha_fg.value, 0);
+			DrawQ_Fill(x + 9*8*FONT_SBAR->maxwidth, y+1, 40*FONT_SBAR->maxwidth, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), sbar_alpha_fg.value, 0);
 			c = palette_rgb_shirtscoreboard[s->colors & 0xf];
-			DrawQ_Fill(x + 9*8*FONT_SBAR->width_of[0], y+4, 40*FONT_SBAR->width_of[0], 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), sbar_alpha_fg.value, 0);
+			DrawQ_Fill(x + 9*8*FONT_SBAR->maxwidth, y+4, 40*FONT_SBAR->maxwidth, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), sbar_alpha_fg.value, 0);
 			// print the text
 			//DrawQ_String(x, y, va("%c%4i %s", myself ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL, true);
 			if (s->qw_ping || s->qw_packetloss)
@@ -1774,9 +1774,9 @@ void Sbar_DeathmatchOverlay (void)
 	ymax = 40 + 8 + (Sbar_IsTeammatch() ? (teamlines * 8 + 5): 0) + scoreboardlines * 8 - 1;
 
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
-		xmin = (vid_conwidth.integer - (26 + 15) * 8 * FONT_SBAR->width_of[0]) / 2; // 26 characters until name, then we assume 15 character names (they can be longer but usually aren't)
+		xmin = (vid_conwidth.integer - (26 + 15) * 8 * FONT_SBAR->maxwidth) / 2; // 26 characters until name, then we assume 15 character names (they can be longer but usually aren't)
 	else
-		xmin = (vid_conwidth.integer - (16 + 25) * 8 * FONT_SBAR->width_of[0]) / 2; // 16 characters until name, then we assume 25 character names (they can be longer but usually aren't)
+		xmin = (vid_conwidth.integer - (16 + 25) * 8 * FONT_SBAR->maxwidth) / 2; // 16 characters until name, then we assume 25 character names (they can be longer but usually aren't)
 	xmax = vid_conwidth.integer - xmin;
 
 	if(gamemode == GAME_NEXUIZ)

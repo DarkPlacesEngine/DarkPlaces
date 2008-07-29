@@ -601,7 +601,7 @@ extern int con_linewidth; // to force rewrapping
 static void LoadFont(qboolean override, const char *name, dp_font_t *fnt)
 {
 	int i;
-	float maxwidth;
+	float maxwidth, scale;
 	char widthfile[MAX_QPATH];
 	char *widthbuf;
 	fs_offset_t widthbufsize;
@@ -624,6 +624,7 @@ static void LoadFont(qboolean override, const char *name, dp_font_t *fnt)
 	// unspecified width == 1 (base width)
 	for(i = 1; i < 256; ++i)
 		fnt->width_of[i] = 1;
+	scale = 1;
 
 	// FIXME load "name.width", if it fails, fill all with 1
 	if((widthbuf = (char *) FS_LoadFile(widthfile, tempmempool, true, &widthbufsize)))
@@ -643,6 +644,12 @@ static void LoadFont(qboolean override, const char *name, dp_font_t *fnt)
 					return;
 				extraspacing = atof(com_token);
 			}
+			else if(!strcmp(com_token, "scale"))
+			{
+				if(!COM_ParseToken_Simple(&p, false, false))
+					return;
+				scale = atof(com_token);
+			}
 			else
 				fnt->width_of[ch++] = atof(com_token) + extraspacing;
 		}
@@ -653,7 +660,11 @@ static void LoadFont(qboolean override, const char *name, dp_font_t *fnt)
 	maxwidth = fnt->width_of[1];
 	for(i = 2; i < 256; ++i)
 		maxwidth = max(maxwidth, fnt->width_of[i]);
-	fnt->width_of[0] = maxwidth;
+	fnt->maxwidth = maxwidth;
+
+	// fix up maxwidth for overlap
+	fnt->maxwidth *= scale;
+	fnt->scale = scale;
 
 	if(fnt == FONT_CONSOLE)
 		con_linewidth = -1; // rewrap console in next frame
@@ -908,6 +919,8 @@ float DrawQ_TextWidth_Font_UntilWidth_TrackColors(const char *text, size_t *maxl
 	else
 		colorindex = *outcolor;
 
+	maxwidth /= fnt->scale;
+
 	for (i = 0;i < *maxlen && text[i];i++)
 	{
 		if (text[i] == ' ')
@@ -941,7 +954,7 @@ float DrawQ_TextWidth_Font_UntilWidth_TrackColors(const char *text, size_t *maxl
 	if (outcolor)
 		*outcolor = colorindex;
 
-	return x;
+	return x * fnt->scale;
 }
 
 float DrawQ_String_Font(float startx, float starty, const char *text, size_t maxlen, float w, float h, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt)
@@ -959,6 +972,10 @@ float DrawQ_String_Font(float startx, float starty, const char *text, size_t max
 	int tw, th;
 	tw = R_TextureWidth(fnt->tex);
 	th = R_TextureHeight(fnt->tex);
+
+	starty -= (fnt->scale - 1) * h * 0.5; // center
+	w *= fnt->scale;
+	h *= fnt->scale;
 
 	if (maxlen < 1)
 		maxlen = 1<<30;
