@@ -638,20 +638,44 @@ static void LoadFont(qboolean override, const char *name, dp_font_t *fnt)
 			if(!COM_ParseToken_Simple(&p, false, false))
 				return;
 
-			if(!strcmp(com_token, "extraspacing"))
+			switch(*com_token)
 			{
-				if(!COM_ParseToken_Simple(&p, false, false))
-					return;
-				extraspacing = atof(com_token);
+				case '0':
+				case '1':
+				case '2':
+				case '3':
+				case '4':
+				case '5':
+				case '6':
+				case '7':
+				case '8':
+				case '9':
+				case '+':
+				case '-':
+				case '.':
+					fnt->width_of[ch++] = atof(com_token) + extraspacing;
+					break;
+				default:
+					if(!strcmp(com_token, "extraspacing"))
+					{
+						if(!COM_ParseToken_Simple(&p, false, false))
+							return;
+						extraspacing = atof(com_token);
+					}
+					else if(!strcmp(com_token, "scale"))
+					{
+						if(!COM_ParseToken_Simple(&p, false, false))
+							return;
+						scale = atof(com_token);
+					}
+					else
+					{
+						Con_Printf("Warning: skipped unknown font property %s\n", com_token);
+						if(!COM_ParseToken_Simple(&p, false, false))
+							return;
+					}
+					break;
 			}
-			else if(!strcmp(com_token, "scale"))
-			{
-				if(!COM_ParseToken_Simple(&p, false, false))
-					return;
-				scale = atof(com_token);
-			}
-			else
-				fnt->width_of[ch++] = atof(com_token) + extraspacing;
 		}
 
 		Mem_Free(widthbuf);
