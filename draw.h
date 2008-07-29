@@ -81,7 +81,9 @@ DRAWFLAG_NUMFLAGS
 typedef struct dp_font_s
 {
 	rtexture_t *tex;
-	float width_of[256]; // width_of[0] == max width of any char; 1.0f is base width (1/16 of texture width); therefore, all widths have to be <= 1
+	float width_of[256]; // width_of[0] == max width of any char; 1.0f is base width (1/16 of texture width); therefore, all widths have to be <= 1 (does not include scale)
+	float maxwidth; // precalculated max width of the font (includes scale)
+	float scale; // scales the font (without changing line height!)
 	char texpath[MAX_QPATH];
 	char title[MAX_QPATH];
 }

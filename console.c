@@ -1195,7 +1195,7 @@ float Con_WordWidthFunc(void *passthrough, const char *w, size_t *length, float 
 	if(w == NULL)
 	{
 		ti->colorindex = -1;
-		return ti->fontsize * ti->font->width_of[0];
+		return ti->fontsize * ti->font->maxwidth;
 	}
 	if(maxWidth >= 0)
 		return DrawQ_TextWidth_Font_UntilWidth(w, length, false, ti->font, maxWidth / ti->fontsize) * ti->fontsize;
