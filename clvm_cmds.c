@@ -1311,6 +1311,7 @@ static void VM_CL_ReadFloat (void)
 }
 
 //#501 string() readpicture (DP_CSQC_READWRITEPICTURE)
+extern cvar_t cl_readpicture_force;
 static void VM_CL_ReadPicture (void)
 {
 	const char *name;
@@ -1335,7 +1336,7 @@ static void VM_CL_ReadPicture (void)
 	{
 		if(pic->tex == r_texture_notexture)
 			pic->tex = NULL; // don't overwrite the notexture by Draw_NewPic
-		if(pic->tex)
+		if(pic->tex && !cl_readpicture_force.integer)
 		{
 			// texture found and loaded
 			// skip over the jpeg as we don't need it
