@@ -168,6 +168,7 @@ cvar_t cl_sound_tink1 = {0, "cl_sound_tink1", "weapons/tink1.wav", "sound to pla
 cvar_t cl_sound_ric1 = {0, "cl_sound_ric1", "weapons/ric1.wav", "sound to play with 5% chance during TE_SPIKE/TE_SUPERSPIKE (empty cvar disables sound)"};
 cvar_t cl_sound_ric2 = {0, "cl_sound_ric2", "weapons/ric2.wav", "sound to play with 5% chance during TE_SPIKE/TE_SUPERSPIKE (empty cvar disables sound)"};
 cvar_t cl_sound_ric3 = {0, "cl_sound_ric3", "weapons/ric3.wav", "sound to play with 10% chance during TE_SPIKE/TE_SUPERSPIKE (empty cvar disables sound)"};
+cvar_t cl_readpicture_force = {0, "cl_readpicture_force", "0", "when enabled, the low quality pictures read by ReadPicture() are preferred over the high quality pictures on the file system"};
 
 #define RIC_GUNSHOT		1
 #define RIC_GUNSHOTQUAD	2
@@ -3874,6 +3875,7 @@ void CL_Parse_Init(void)
 	Cvar_RegisterVariable(&cl_nettimesyncboundmode);
 	Cvar_RegisterVariable(&cl_nettimesyncboundtolerance);
 	Cvar_RegisterVariable(&cl_iplog_name);
+	Cvar_RegisterVariable(&cl_readpicture_force);
 
 	Cmd_AddCommand("nextul", QW_CL_NextUpload, "sends next fragment of current upload buffer (screenshot for example)");
 	Cmd_AddCommand("stopul", QW_CL_StopUpload, "aborts current upload (screenshot for example)");
