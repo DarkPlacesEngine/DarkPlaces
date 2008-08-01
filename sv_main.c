@@ -65,10 +65,12 @@ cvar_t sv_cullentities_pvs = {0, "sv_cullentities_pvs", "1", "fast but loose cul
 cvar_t sv_cullentities_stats = {0, "sv_cullentities_stats", "0", "displays stats on network entities culled by various methods for each client"};
 cvar_t sv_cullentities_trace = {0, "sv_cullentities_trace", "0", "somewhat slow but very tight culling of hidden entities, minimizes network traffic and makes wallhack cheats useless"};
 cvar_t sv_cullentities_trace_delay = {0, "sv_cullentities_trace_delay", "1", "number of seconds until the entity gets actually culled"};
+cvar_t sv_cullentities_trace_delay_players = {0, "sv_cullentities_trace_delay_players", "0.2", "number of seconds until the entity gets actually culled if it is a player entity"};
 cvar_t sv_cullentities_trace_enlarge = {0, "sv_cullentities_trace_enlarge", "0", "box enlargement for entity culling"};
 cvar_t sv_cullentities_trace_prediction = {0, "sv_cullentities_trace_prediction", "1", "also trace from the predicted player position"};
 cvar_t sv_cullentities_trace_samples = {0, "sv_cullentities_trace_samples", "1", "number of samples to test for entity culling"};
 cvar_t sv_cullentities_trace_samples_extra = {0, "sv_cullentities_trace_samples_extra", "2", "number of samples to test for entity culling when the entity affects its surroundings by e.g. dlight"};
+cvar_t sv_cullentities_trace_samples_players = {0, "sv_cullentities_trace_samples_players", "8", "number of samples to test for entity culling when the entity is a player entity"};
 cvar_t sv_debugmove = {CVAR_NOTIFY, "sv_debugmove", "0", "disables collision detection optimizations for debugging purposes"};
 cvar_t sv_echobprint = {CVAR_SAVE, "sv_echobprint", "1", "prints gamecode bprint() calls to server console"};
 cvar_t sv_edgefriction = {0, "edgefriction", "2", "how much you slow down when nearing a ledge you might fall off"};
@@ -337,10 +339,12 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_cullentities_stats);
 	Cvar_RegisterVariable (&sv_cullentities_trace);
 	Cvar_RegisterVariable (&sv_cullentities_trace_delay);
+	Cvar_RegisterVariable (&sv_cullentities_trace_delay_players);
 	Cvar_RegisterVariable (&sv_cullentities_trace_enlarge);
 	Cvar_RegisterVariable (&sv_cullentities_trace_prediction);
 	Cvar_RegisterVariable (&sv_cullentities_trace_samples);
 	Cvar_RegisterVariable (&sv_cullentities_trace_samples_extra);
+	Cvar_RegisterVariable (&sv_cullentities_trace_samples_players);
 	Cvar_RegisterVariable (&sv_debugmove);
 	Cvar_RegisterVariable (&sv_echobprint);
 	Cvar_RegisterVariable (&sv_edgefriction);
@@ -1272,48 +1276,62 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 			// or not seen by random tracelines
 			if (sv_cullentities_trace.integer && !isbmodel && sv.worldmodel->brush.TraceLineOfSight)
 			{
-				int samples = s->specialvisibilityradius ? sv_cullentities_trace_samples_extra.integer : sv_cullentities_trace_samples.integer;
+				int samples =
+					s->number <= svs.maxclients
+						? sv_cullentities_trace_samples_players.integer
+						:
+					s->specialvisibilityradius
+						? sv_cullentities_trace_samples_extra.integer
+						: sv_cullentities_trace_samples.integer;
 				float enlarge = sv_cullentities_trace_enlarge.value;
 
 				qboolean visible = TRUE;
 
-				do
+				if(samples > 0)
 				{
-					if(Mod_CanSeeBox_Trace(samples, enlarge, sv.worldmodel, sv.writeentitiestoclient_testeye, ed->priv.server->cullmins, ed->priv.server->cullmaxs))
-						break; // directly visible from the server's view
-
-					if(sv_cullentities_trace_prediction.integer)
+					do
 					{
-						vec3_t predeye;
+						if(Mod_CanSeeBox_Trace(samples, enlarge, sv.worldmodel, sv.writeentitiestoclient_testeye, ed->priv.server->cullmins, ed->priv.server->cullmaxs))
+							break; // directly visible from the server's view
 
-						// get player velocity
-						float predtime = bound(0, host_client->ping, 0.2); // / 2
-							// sorry, no wallhacking by high ping please, and at 200ms
-							// ping a FPS is annoying to play anyway and a player is
-							// likely to have changed his direction
-						VectorMA(sv.writeentitiestoclient_testeye, predtime, host_client->edict->fields.server->velocity, predeye);
-						if(sv.worldmodel->brush.TraceLineOfSight(sv.worldmodel, sv.writeentitiestoclient_testeye, predeye)) // must be able to go there...
+						if(sv_cullentities_trace_prediction.integer)
 						{
-							if(Mod_CanSeeBox_Trace(samples, enlarge, sv.worldmodel, predeye, ed->priv.server->cullmins, ed->priv.server->cullmaxs))
-								break; // directly visible from the predicted view
+							vec3_t predeye;
+
+							// get player velocity
+							float predtime = bound(0, host_client->ping, 0.2); // / 2
+								// sorry, no wallhacking by high ping please, and at 200ms
+								// ping a FPS is annoying to play anyway and a player is
+								// likely to have changed his direction
+							VectorMA(sv.writeentitiestoclient_testeye, predtime, host_client->edict->fields.server->velocity, predeye);
+							if(sv.worldmodel->brush.TraceLineOfSight(sv.worldmodel, sv.writeentitiestoclient_testeye, predeye)) // must be able to go there...
+							{
+								if(Mod_CanSeeBox_Trace(samples, enlarge, sv.worldmodel, predeye, ed->priv.server->cullmins, ed->priv.server->cullmaxs))
+									break; // directly visible from the predicted view
+							}
+							else
+							{
+								//Con_DPrintf("Trying to walk into solid in a pingtime... not predicting for culling\n");
+							}
 						}
-						else
-						{
-							//Con_DPrintf("Trying to walk into solid in a pingtime... not predicting for culling\n");
-						}
+
+						// when we get here, we can't see the entity
+						visible = false;
 					}
+					while(0);
 
-					// when we get here, we can't see the entity
-					visible = false;
-				}
-				while(0);
-
-				if(visible)
-					svs.clients[sv.writeentitiestoclient_clientnumber].visibletime[s->number] = realtime + sv_cullentities_trace_delay.value;
-				else if (realtime > svs.clients[sv.writeentitiestoclient_clientnumber].visibletime[s->number])
-				{
-					sv.writeentitiestoclient_stats_culled_trace++;
-					return;
+					if(visible)
+						svs.clients[sv.writeentitiestoclient_clientnumber].visibletime[s->number] =
+							realtime + (
+								s->number <= svs.maxclients
+									? sv_cullentities_trace_delay_players.value
+									: sv_cullentities_trace_delay.value
+							);
+					else if (realtime > svs.clients[sv.writeentitiestoclient_clientnumber].visibletime[s->number])
+					{
+						sv.writeentitiestoclient_stats_culled_trace++;
+						return;
+					}
 				}
 			}
 		}
