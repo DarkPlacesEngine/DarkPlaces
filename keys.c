@@ -982,8 +982,15 @@ Key_Event (int key, char ascii, qboolean down)
 		{
 			case key_console:
 				if(down)
-					if(key_consoleactive & KEY_CONSOLEACTIVE_USER)
+				{
+					if(key_consoleactive & KEY_CONSOLEACTIVE_FORCED)
+					{
+						key_consoleactive &= ~KEY_CONSOLEACTIVE_USER;
+						MR_ToggleMenu_f ();
+					}
+					else
 						Con_ToggleConsole_f();
+				}
 				break;
 
 			case key_message:
