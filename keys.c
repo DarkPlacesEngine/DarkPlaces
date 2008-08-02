@@ -960,40 +960,53 @@ Key_Event (int key, char ascii, qboolean down)
 		// ignore key repeats on escape
 		if (keydown[key] > 1)
 			return;
+
 		// escape does these things:
 		// key_consoleactive - close console
 		// key_message - abort messagemode
 		// key_menu - go to parent menu (or key_game)
 		// key_game - open menu
+
 		// in all modes shift-escape toggles console
-		if (((key_consoleactive & KEY_CONSOLEACTIVE_USER) || keydown[K_SHIFT]) && down)
+		if (keydown[K_SHIFT])
 		{
-			Con_ToggleConsole_f ();
-			tbl_keydest[key] = key_void; // ignore the release
+			if(down)
+			{
+				Con_ToggleConsole_f ();
+				tbl_keydest[key] = key_void; // esc release should go nowhere (especially not to key_menu or key_game)
+			}
 			return;
 		}
-#if 0
+
 		switch (keydest)
 		{
+			case key_console:
+				if(down)
+					if(key_consoleactive & KEY_CONSOLEACTIVE_USER)
+						Con_ToggleConsole_f();
+				break;
+
 			case key_message:
 				if (down)
-					Key_Message (key, ascii);
+					Key_Message (key, ascii); // that'll close the message input
 				break;
+
 			case key_menu:
 			case key_menu_grabbed:
 				MR_KeyEvent (key, ascii, down);
 				break;
+
 			case key_game:
 				// csqc has priority over toggle menu if it wants to (e.g. handling escape for UI stuff in-game.. :sick:)
 				q = CL_VM_InputEvent(down, key, ascii);
 				if (!q && down)
 					MR_ToggleMenu_f ();
 				break;
+
 			default:
 				Con_Printf ("Key_Event: Bad key_dest\n");
 		}
 		return;
-#endif
 	}
 
 	// send function keydowns to interpreter no matter what mode is (unless the menu has specifically grabbed the keyboard, for rebinding keys)
@@ -1018,7 +1031,7 @@ Key_Event (int key, char ascii, qboolean down)
 	}
 
 	// send input to console if it wants it
-	if (keydest == key_console && key != K_ESCAPE)
+	if (keydest == key_console)
 	{
 		if (!down)
 			return;
@@ -1028,25 +1041,12 @@ Key_Event (int key, char ascii, qboolean down)
 		if (con_closeontoggleconsole.integer && bind && !strncmp(bind, "toggleconsole", strlen("toggleconsole")) && (key_consoleactive & KEY_CONSOLEACTIVE_USER) && ascii != STRING_COLOR_TAG)
 		{
 			Con_ToggleConsole_f ();
-			tbl_keydest[key] = key_void; // ignore the release
 			return;
 		}
 		Key_Console (key, ascii);
 		return;
 	}
 
-
-	// FIXME: actually the up-bind should only be called if the button was actually pressed while key_dest == key_game [12/17/2007 Black]
-	//			 especially CL_VM_InputEvent should be able to prevent it from being called (to intercept the binds)
-	// key up events only generate commands if the game key binding is a button
-	// command (leading + sign).  These will occur even in console mode, to
-	// keep the character from continuing an action started before a console
-	// switch.  Button commands include the kenum as a parameter, so multiple
-	// downs can be matched with ups
-	/*
-	if (!down && bind && bind[0] == '+')
-		Cbuf_AddText(va("-%s %i\n", bind + 1, key));
-	*/
 
 	// ignore binds while a video is played, let the video system handle the key event
 	if (cl_videoplaying)
@@ -1084,11 +1084,6 @@ Key_Event (int key, char ascii, qboolean down)
 				} else if(bind[0] == '+' && !down && keydown[key] == 0)
 					Cbuf_AddText(va("-%s %i\n", bind + 1, key));
 			}
-			break;
-		case key_console:
-			// This happens for example when pressing shift in the console
-			// closing the console, and then releasing shift.
-			// Con_Printf("Key_Event: Console key ignored\n");
 			break;
 		default:
 			Con_Printf ("Key_Event: Bad key_dest\n");
