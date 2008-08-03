@@ -2483,6 +2483,8 @@ static qboolean PRVM_IsEdictRelevant(prvm_edict_t *edict)
 			{
 				// TODO someone add more stuff here
 				cl_entvars_t *ev = edict->fields.client;
+				if(ev->entnum) // csqc networked
+					return true;
 				if(ev->modelindex) // visible ent?
 					return true;
 				if(ev->effects) // particle effect?
