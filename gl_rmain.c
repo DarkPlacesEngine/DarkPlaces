@@ -1942,7 +1942,7 @@ skinframe_t *R_SkinFrame_LoadExternal_CheckAlpha(const char *name, int texturefl
 	{
 		if ((pixels = loadimagepixelsbgra(va("%s_norm", skinframe->basename), false, false)) != NULL)
 		{
-			skinframe->nmap = R_LoadTexture2D (r_main_texturepool, va("%s_nmap", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, skinframe->textureflags & (gl_texturecompression_normal.integer ? ~0 : ~TEXF_COMPRESS), NULL);
+			skinframe->nmap = R_LoadTexture2D (r_main_texturepool, va("%s_nmap", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, (TEXF_ALPHA | skinframe->textureflags) & (gl_texturecompression_normal.integer ? ~0 : ~TEXF_COMPRESS), NULL);
 			Mem_Free(pixels);
 			pixels = NULL;
 		}
@@ -1950,7 +1950,7 @@ skinframe_t *R_SkinFrame_LoadExternal_CheckAlpha(const char *name, int texturefl
 		{
 			pixels = (unsigned char *)Mem_Alloc(tempmempool, image_width * image_height * 4);
 			Image_HeightmapToNormalmap_BGRA(bumppixels, pixels, image_width, image_height, false, r_shadow_bumpscale_bumpmap.value);
-			skinframe->nmap = R_LoadTexture2D (r_main_texturepool, va("%s_nmap", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, skinframe->textureflags & (gl_texturecompression_normal.integer ? ~0 : ~TEXF_COMPRESS), NULL);
+			skinframe->nmap = R_LoadTexture2D (r_main_texturepool, va("%s_nmap", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, (TEXF_ALPHA | skinframe->textureflags) & (gl_texturecompression_normal.integer ? ~0 : ~TEXF_COMPRESS), NULL);
 			Mem_Free(pixels);
 			Mem_Free(bumppixels);
 		}
@@ -1958,7 +1958,7 @@ skinframe_t *R_SkinFrame_LoadExternal_CheckAlpha(const char *name, int texturefl
 		{
 			pixels = (unsigned char *)Mem_Alloc(tempmempool, basepixels_width * basepixels_height * 4);
 			Image_HeightmapToNormalmap_BGRA(basepixels, pixels, basepixels_width, basepixels_height, false, r_shadow_bumpscale_basetexture.value);
-			skinframe->nmap = R_LoadTexture2D (r_main_texturepool, va("%s_nmap", skinframe->basename), basepixels_width, basepixels_height, pixels, TEXTYPE_BGRA, skinframe->textureflags & (gl_texturecompression_normal.integer ? ~0 : ~TEXF_COMPRESS), NULL);
+			skinframe->nmap = R_LoadTexture2D (r_main_texturepool, va("%s_nmap", skinframe->basename), basepixels_width, basepixels_height, pixels, TEXTYPE_BGRA, (TEXF_ALPHA | skinframe->textureflags) & (gl_texturecompression_normal.integer ? ~0 : ~TEXF_COMPRESS), NULL);
 			Mem_Free(pixels);
 		}
 	}
