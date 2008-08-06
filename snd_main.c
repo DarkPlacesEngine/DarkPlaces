@@ -179,14 +179,38 @@ cvar_t snd_swapstereo = {CVAR_SAVE, "snd_swapstereo", "0", "swaps left/right spe
 extern cvar_t v_flipped;
 cvar_t snd_channellayout = {0, "snd_channellayout", "0", "channel layout. Can be 0 (auto - snd_restart needed), 1 (standard layout), or 2 (ALSA layout)"};
 cvar_t snd_mutewhenidle = {CVAR_SAVE, "snd_mutewhenidle", "1", "whether to disable sound output when game window is inactive"};
-cvar_t snd_entchannel0volume = {CVAR_SAVE, "snd_entchannel0volume", "1", "volume multiplier of the auto-allocate entity channel"};
-cvar_t snd_entchannel1volume = {CVAR_SAVE, "snd_entchannel1volume", "1", "volume multiplier of the 1st entity channel"};
-cvar_t snd_entchannel2volume = {CVAR_SAVE, "snd_entchannel2volume", "1", "volume multiplier of the 2nd entity channel"};
-cvar_t snd_entchannel3volume = {CVAR_SAVE, "snd_entchannel3volume", "1", "volume multiplier of the 3rd entity channel"};
-cvar_t snd_entchannel4volume = {CVAR_SAVE, "snd_entchannel4volume", "1", "volume multiplier of the 4th entity channel"};
-cvar_t snd_entchannel5volume = {CVAR_SAVE, "snd_entchannel5volume", "1", "volume multiplier of the 5th entity channel"};
-cvar_t snd_entchannel6volume = {CVAR_SAVE, "snd_entchannel6volume", "1", "volume multiplier of the 6th entity channel"};
-cvar_t snd_entchannel7volume = {CVAR_SAVE, "snd_entchannel7volume", "1", "volume multiplier of the 7th entity channel"};
+cvar_t snd_entchannel0volume = {CVAR_SAVE, "snd_entchannel0volume", "1", "volume multiplier of the auto-allocate entity channel of regular entities"};
+cvar_t snd_entchannel1volume = {CVAR_SAVE, "snd_entchannel1volume", "1", "volume multiplier of the 1st entity channel of regular entities"};
+cvar_t snd_entchannel2volume = {CVAR_SAVE, "snd_entchannel2volume", "1", "volume multiplier of the 2nd entity channel of regular entities"};
+cvar_t snd_entchannel3volume = {CVAR_SAVE, "snd_entchannel3volume", "1", "volume multiplier of the 3rd entity channel of regular entities"};
+cvar_t snd_entchannel4volume = {CVAR_SAVE, "snd_entchannel4volume", "1", "volume multiplier of the 4th entity channel of regular entities"};
+cvar_t snd_entchannel5volume = {CVAR_SAVE, "snd_entchannel5volume", "1", "volume multiplier of the 5th entity channel of regular entities"};
+cvar_t snd_entchannel6volume = {CVAR_SAVE, "snd_entchannel6volume", "1", "volume multiplier of the 6th entity channel of regular entities"};
+cvar_t snd_entchannel7volume = {CVAR_SAVE, "snd_entchannel7volume", "1", "volume multiplier of the 7th entity channel of regular entities"};
+cvar_t snd_playerchannel0volume = {CVAR_SAVE, "snd_playerchannel0volume", "1", "volume multiplier of the auto-allocate entity channel of player entities"};
+cvar_t snd_playerchannel1volume = {CVAR_SAVE, "snd_playerchannel1volume", "1", "volume multiplier of the 1st entity channel of player entities"};
+cvar_t snd_playerchannel2volume = {CVAR_SAVE, "snd_playerchannel2volume", "1", "volume multiplier of the 2nd entity channel of player entities"};
+cvar_t snd_playerchannel3volume = {CVAR_SAVE, "snd_playerchannel3volume", "1", "volume multiplier of the 3rd entity channel of player entities"};
+cvar_t snd_playerchannel4volume = {CVAR_SAVE, "snd_playerchannel4volume", "1", "volume multiplier of the 4th entity channel of player entities"};
+cvar_t snd_playerchannel5volume = {CVAR_SAVE, "snd_playerchannel5volume", "1", "volume multiplier of the 5th entity channel of player entities"};
+cvar_t snd_playerchannel6volume = {CVAR_SAVE, "snd_playerchannel6volume", "1", "volume multiplier of the 6th entity channel of player entities"};
+cvar_t snd_playerchannel7volume = {CVAR_SAVE, "snd_playerchannel7volume", "1", "volume multiplier of the 7th entity channel of player entities"};
+cvar_t snd_worldchannel0volume = {CVAR_SAVE, "snd_worldchannel0volume", "1", "volume multiplier of the auto-allocate entity channel of the world entity"};
+cvar_t snd_worldchannel1volume = {CVAR_SAVE, "snd_worldchannel1volume", "1", "volume multiplier of the 1st entity channel of the world entity"};
+cvar_t snd_worldchannel2volume = {CVAR_SAVE, "snd_worldchannel2volume", "1", "volume multiplier of the 2nd entity channel of the world entity"};
+cvar_t snd_worldchannel3volume = {CVAR_SAVE, "snd_worldchannel3volume", "1", "volume multiplier of the 3rd entity channel of the world entity"};
+cvar_t snd_worldchannel4volume = {CVAR_SAVE, "snd_worldchannel4volume", "1", "volume multiplier of the 4th entity channel of the world entity"};
+cvar_t snd_worldchannel5volume = {CVAR_SAVE, "snd_worldchannel5volume", "1", "volume multiplier of the 5th entity channel of the world entity"};
+cvar_t snd_worldchannel6volume = {CVAR_SAVE, "snd_worldchannel6volume", "1", "volume multiplier of the 6th entity channel of the world entity"};
+cvar_t snd_worldchannel7volume = {CVAR_SAVE, "snd_worldchannel7volume", "1", "volume multiplier of the 7th entity channel of the world entity"};
+cvar_t snd_csqcchannel0volume = {CVAR_SAVE, "snd_csqcchannel0volume", "1", "volume multiplier of the auto-allocate entity channel of the world entity"};
+cvar_t snd_csqcchannel1volume = {CVAR_SAVE, "snd_csqcchannel1volume", "1", "volume multiplier of the 1st entity channel of the world entity"};
+cvar_t snd_csqcchannel2volume = {CVAR_SAVE, "snd_csqcchannel2volume", "1", "volume multiplier of the 2nd entity channel of the world entity"};
+cvar_t snd_csqcchannel3volume = {CVAR_SAVE, "snd_csqcchannel3volume", "1", "volume multiplier of the 3rd entity channel of the world entity"};
+cvar_t snd_csqcchannel4volume = {CVAR_SAVE, "snd_csqcchannel4volume", "1", "volume multiplier of the 4th entity channel of the world entity"};
+cvar_t snd_csqcchannel5volume = {CVAR_SAVE, "snd_csqcchannel5volume", "1", "volume multiplier of the 5th entity channel of the world entity"};
+cvar_t snd_csqcchannel6volume = {CVAR_SAVE, "snd_csqcchannel6volume", "1", "volume multiplier of the 6th entity channel of the world entity"};
+cvar_t snd_csqcchannel7volume = {CVAR_SAVE, "snd_csqcchannel7volume", "1", "volume multiplier of the 7th entity channel of the world entity"};
 
 // Local cvars
 static cvar_t nosound = {0, "nosound", "0", "disables sound"};
@@ -754,6 +778,30 @@ void S_Init(void)
 	Cvar_RegisterVariable(&snd_entchannel5volume);
 	Cvar_RegisterVariable(&snd_entchannel6volume);
 	Cvar_RegisterVariable(&snd_entchannel7volume);
+	Cvar_RegisterVariable(&snd_worldchannel0volume);
+	Cvar_RegisterVariable(&snd_worldchannel1volume);
+	Cvar_RegisterVariable(&snd_worldchannel2volume);
+	Cvar_RegisterVariable(&snd_worldchannel3volume);
+	Cvar_RegisterVariable(&snd_worldchannel4volume);
+	Cvar_RegisterVariable(&snd_worldchannel5volume);
+	Cvar_RegisterVariable(&snd_worldchannel6volume);
+	Cvar_RegisterVariable(&snd_worldchannel7volume);
+	Cvar_RegisterVariable(&snd_playerchannel0volume);
+	Cvar_RegisterVariable(&snd_playerchannel1volume);
+	Cvar_RegisterVariable(&snd_playerchannel2volume);
+	Cvar_RegisterVariable(&snd_playerchannel3volume);
+	Cvar_RegisterVariable(&snd_playerchannel4volume);
+	Cvar_RegisterVariable(&snd_playerchannel5volume);
+	Cvar_RegisterVariable(&snd_playerchannel6volume);
+	Cvar_RegisterVariable(&snd_playerchannel7volume);
+	Cvar_RegisterVariable(&snd_csqcchannel0volume);
+	Cvar_RegisterVariable(&snd_csqcchannel1volume);
+	Cvar_RegisterVariable(&snd_csqcchannel2volume);
+	Cvar_RegisterVariable(&snd_csqcchannel3volume);
+	Cvar_RegisterVariable(&snd_csqcchannel4volume);
+	Cvar_RegisterVariable(&snd_csqcchannel5volume);
+	Cvar_RegisterVariable(&snd_csqcchannel6volume);
+	Cvar_RegisterVariable(&snd_csqcchannel7volume);
 
 	Cvar_RegisterVariable(&snd_speed);
 	Cvar_RegisterVariable(&snd_width);
@@ -1198,17 +1246,65 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 		mastervol *= snd_staticvolume.value;
 	else if(!(ch->flags & CHANNELFLAG_FULLVOLUME)) // same as SND_PaintChannel uses
 	{
-		switch(ch->entchannel)
+		if(ch->entnum >= 32768)
 		{
-			case 0: mastervol *= snd_entchannel0volume.value; break;
-			case 1: mastervol *= snd_entchannel1volume.value; break;
-			case 2: mastervol *= snd_entchannel2volume.value; break;
-			case 3: mastervol *= snd_entchannel3volume.value; break;
-			case 4: mastervol *= snd_entchannel4volume.value; break;
-			case 5: mastervol *= snd_entchannel5volume.value; break;
-			case 6: mastervol *= snd_entchannel6volume.value; break;
-			case 7: mastervol *= snd_entchannel7volume.value; break;
-			default:                                          break;
+			switch(ch->entchannel)
+			{
+				case 0: mastervol *= snd_csqcchannel0volume.value; break;
+				case 1: mastervol *= snd_csqcchannel1volume.value; break;
+				case 2: mastervol *= snd_csqcchannel2volume.value; break;
+				case 3: mastervol *= snd_csqcchannel3volume.value; break;
+				case 4: mastervol *= snd_csqcchannel4volume.value; break;
+				case 5: mastervol *= snd_csqcchannel5volume.value; break;
+				case 6: mastervol *= snd_csqcchannel6volume.value; break;
+				case 7: mastervol *= snd_csqcchannel7volume.value; break;
+				default:                                           break;
+			}
+		}
+		else if(ch->entnum == 0)
+		{
+			switch(ch->entchannel)
+			{
+				case 0: mastervol *= snd_worldchannel0volume.value; break;
+				case 1: mastervol *= snd_worldchannel1volume.value; break;
+				case 2: mastervol *= snd_worldchannel2volume.value; break;
+				case 3: mastervol *= snd_worldchannel3volume.value; break;
+				case 4: mastervol *= snd_worldchannel4volume.value; break;
+				case 5: mastervol *= snd_worldchannel5volume.value; break;
+				case 6: mastervol *= snd_worldchannel6volume.value; break;
+				case 7: mastervol *= snd_worldchannel7volume.value; break;
+				default:                                            break;
+			}
+		}
+		else if(ch->entnum > 0 && ch->entnum <= cl.maxclients)
+		{
+			switch(ch->entchannel)
+			{
+				case 0: mastervol *= snd_playerchannel0volume.value; break;
+				case 1: mastervol *= snd_playerchannel1volume.value; break;
+				case 2: mastervol *= snd_playerchannel2volume.value; break;
+				case 3: mastervol *= snd_playerchannel3volume.value; break;
+				case 4: mastervol *= snd_playerchannel4volume.value; break;
+				case 5: mastervol *= snd_playerchannel5volume.value; break;
+				case 6: mastervol *= snd_playerchannel6volume.value; break;
+				case 7: mastervol *= snd_playerchannel7volume.value; break;
+				default:                                             break;
+			}
+		}
+		else
+		{
+			switch(ch->entchannel)
+			{
+				case 0: mastervol *= snd_entchannel0volume.value; break;
+				case 1: mastervol *= snd_entchannel1volume.value; break;
+				case 2: mastervol *= snd_entchannel2volume.value; break;
+				case 3: mastervol *= snd_entchannel3volume.value; break;
+				case 4: mastervol *= snd_entchannel4volume.value; break;
+				case 5: mastervol *= snd_entchannel5volume.value; break;
+				case 6: mastervol *= snd_entchannel6volume.value; break;
+				case 7: mastervol *= snd_entchannel7volume.value; break;
+				default:                                          break;
+			}
 		}
 	}
 
