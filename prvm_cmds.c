@@ -2925,7 +2925,7 @@ void VM_drawcolorcodedstring(void)
 	string = PRVM_G_STRING(OFS_PARM1);
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	scale = PRVM_G_VECTOR(OFS_PARM2);
-	flag = (int)PRVM_G_FLOAT(OFS_PARM5);
+	flag = (int)PRVM_G_FLOAT(OFS_PARM4);
 
 	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
 	{
