@@ -208,6 +208,12 @@ static qboolean _ServerList_Entry_Compare( serverlist_entry_t *A, serverlist_ent
 		case SLIF_NAME:
 			result = strcasecmp( B->info.name, A->info.name );
 			break;
+		case SLIF_QCSTATUS:
+			result = strcasecmp( B->info.qcstatus, A->info.qcstatus ); // not really THAT useful, though
+			break;
+		case SLIF_PLAYERS:
+			result = strcasecmp( B->info.players, A->info.qcstatus ); // not really THAT useful, though
+			break;
 		default:
 			Con_DPrint( "_ServerList_Entry_Compare: Bad serverlist_sortbyfield!\n" );
 			break;
@@ -240,6 +246,8 @@ static qboolean _ServerList_CompareInt( int A, serverlist_maskop_t op, int B )
 		case SLMO_GREATEREQUAL:
 		case SLMO_CONTAINS:
 		case SLMO_NOTCONTAIN:
+		case SLMO_STARTSWITH:
+		case SLMO_NOTSTARTSWITH:
 			return A >= B;
 		default:
 			Con_DPrint( "_ServerList_CompareInt: Bad op!\n" );
@@ -250,9 +258,10 @@ static qboolean _ServerList_CompareInt( int A, serverlist_maskop_t op, int B )
 static qboolean _ServerList_CompareStr( const char *A, serverlist_maskop_t op, const char *B )
 {
 	int i;
-	char bufferA[ 256 ], bufferB[ 256 ]; // should be more than enough
-	for (i = 0;i < (int)sizeof(bufferA)-1 && A[i];i++)
-		bufferA[i] = (A[i] >= 'A' && A[i] <= 'Z') ? (A[i] + 'a' - 'A') : A[i];
+	char bufferA[ 1400 ], bufferB[ 1400 ]; // should be more than enough
+	COM_StringDecolorize(A, 0, bufferA, sizeof(bufferA), false);
+	for (i = 0;i < (int)sizeof(bufferA)-1 && bufferA[i];i++)
+		bufferA[i] = (bufferA[i] >= 'A' && bufferA[i] <= 'Z') ? (bufferA[i] + 'a' - 'A') : bufferA[i];
 	bufferA[i] = 0;
 	for (i = 0;i < (int)sizeof(bufferB)-1 && B[i];i++)
 		bufferB[i] = (B[i] >= 'A' && B[i] <= 'Z') ? (B[i] + 'a' - 'A') : B[i];
@@ -265,6 +274,11 @@ static qboolean _ServerList_CompareStr( const char *A, serverlist_maskop_t op, c
 			return *bufferB && !!strstr( bufferA, bufferB ); // we want a real bool
 		case SLMO_NOTCONTAIN:
 			return !*bufferB || !strstr( bufferA, bufferB );
+		case SLMO_STARTSWITH:
+			//Con_Printf("startsWith: %s %s\n", bufferA, bufferB);
+			return *bufferB && !memcmp(bufferA, bufferB, strlen(bufferB));
+		case SLMO_NOTSTARTSWITH:
+			return !*bufferB || memcmp(bufferA, bufferB, strlen(bufferB));
 		case SLMO_LESS:
 			return strcmp( bufferA, bufferB ) < 0;
 		case SLMO_LESSEQUAL:
@@ -313,6 +327,12 @@ static qboolean _ServerList_Entry_Mask( serverlist_mask_t *mask, serverlist_info
 		return false;
 	if( *mask->info.name
 		&& !_ServerList_CompareStr( info->name, mask->tests[SLIF_NAME], mask->info.name ) )
+		return false;
+	if( *mask->info.qcstatus
+		&& !_ServerList_CompareStr( info->qcstatus, mask->tests[SLIF_QCSTATUS], mask->info.qcstatus ) )
+		return false;
+	if( *mask->info.players
+		&& !_ServerList_CompareStr( info->players, mask->tests[SLIF_PLAYERS], mask->info.players ) )
 		return false;
 	return true;
 }
@@ -1403,6 +1423,58 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			M_Update_Return_Reason(rejectreason);
 			return true;
 		}
+		if (length >= 15 && !memcmp(string, "statusResponse\x0A", 15))
+		{
+			serverlist_info_t *info;
+			char *p;
+			int n;
+
+			string += 15;
+			// search the cache for this server and update it
+			n = NetConn_ClientParsePacket_ServerList_ProcessReply(addressstring2);
+			if (n < 0)
+				return true;
+
+			info = &serverlist_cache[n].info;
+			info->game[0] = 0;
+			info->mod[0]  = 0;
+			info->map[0]  = 0;
+			info->name[0] = 0;
+			info->qcstatus[0] = 0;
+			info->players[0] = 0;
+			info->protocol = -1;
+			info->numplayers = 0;
+			info->numbots = -1;
+			info->maxplayers  = 0;
+			info->gameversion = 0;
+
+			p = strchr(string, '\n');
+			if(p)
+			{
+				*p = 0; // cut off the string there
+				++p;
+			}
+			else
+				Con_Printf("statusResponse without players block?\n");
+
+			if ((s = SearchInfostring(string, "gamename"     )) != NULL) strlcpy(info->game, s, sizeof (info->game));
+			if ((s = SearchInfostring(string, "modname"      )) != NULL) strlcpy(info->mod , s, sizeof (info->mod ));
+			if ((s = SearchInfostring(string, "mapname"      )) != NULL) strlcpy(info->map , s, sizeof (info->map ));
+			if ((s = SearchInfostring(string, "hostname"     )) != NULL) strlcpy(info->name, s, sizeof (info->name));
+			if ((s = SearchInfostring(string, "protocol"     )) != NULL) info->protocol = atoi(s);
+			if ((s = SearchInfostring(string, "clients"      )) != NULL) info->numplayers = atoi(s);
+			if ((s = SearchInfostring(string, "bots"         )) != NULL) info->numbots = atoi(s);
+			if ((s = SearchInfostring(string, "sv_maxclients")) != NULL) info->maxplayers = atoi(s);
+			if ((s = SearchInfostring(string, "gameversion"  )) != NULL) info->gameversion = atoi(s);
+			if ((s = SearchInfostring(string, "qcstatus"     )) != NULL) strlcpy(info->qcstatus, s, sizeof(info->qcstatus));
+			if (p                                               != NULL) strlcpy(info->players, p, sizeof(info->players));
+			info->numhumans = info->numplayers - max(0, info->numbots);
+			info->freeslots = info->maxplayers - info->numplayers;
+
+			NetConn_ClientParsePacket_ServerList_UpdateCache(n);
+
+			return true;
+		}
 		if (length >= 13 && !memcmp(string, "infoResponse\x0A", 13))
 		{
 			serverlist_info_t *info;
@@ -1419,11 +1491,14 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			info->mod[0]  = 0;
 			info->map[0]  = 0;
 			info->name[0] = 0;
+			info->qcstatus[0] = 0;
+			info->players[0] = 0;
 			info->protocol = -1;
 			info->numplayers = 0;
 			info->numbots = -1;
 			info->maxplayers  = 0;
 			info->gameversion = 0;
+
 			if ((s = SearchInfostring(string, "gamename"     )) != NULL) strlcpy(info->game, s, sizeof (info->game));
 			if ((s = SearchInfostring(string, "modname"      )) != NULL) strlcpy(info->mod , s, sizeof (info->mod ));
 			if ((s = SearchInfostring(string, "mapname"      )) != NULL) strlcpy(info->map , s, sizeof (info->map ));
@@ -1433,6 +1508,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			if ((s = SearchInfostring(string, "bots"         )) != NULL) info->numbots = atoi(s);
 			if ((s = SearchInfostring(string, "sv_maxclients")) != NULL) info->maxplayers = atoi(s);
 			if ((s = SearchInfostring(string, "gameversion"  )) != NULL) info->gameversion = atoi(s);
+			if ((s = SearchInfostring(string, "qcstatus"     )) != NULL) strlcpy(info->qcstatus, s, sizeof(info->qcstatus));
 			info->numhumans = info->numplayers - max(0, info->numbots);
 			info->freeslots = info->maxplayers - info->numplayers;
 
@@ -1738,7 +1814,7 @@ void NetConn_QueryQueueFrame(void)
 			else
 			{
 				for (socket	= 0; socket	< cl_numsockets ;	socket++)
-					NetConn_WriteString(cl_sockets[socket], "\377\377\377\377getinfo", &address);
+					NetConn_WriteString(cl_sockets[socket], "\377\377\377\377getstatus", &address);
 			}
 
 			//	update the entry fields
@@ -1831,10 +1907,14 @@ static void NetConn_BuildChallengeString(char *buffer, int bufferlength)
 	buffer[i] = 0;
 }
 
+// (div0) build the full response only if possible; better a getinfo response than no response at all if getstatus won't fit
 static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg, size_t out_size, qboolean fullstatus)
 {
+	const char *qcstatus = NULL;
 	unsigned int nb_clients = 0, nb_bots = 0, i;
 	int length;
+
+	SV_VM_Begin();
 
 	// How many clients are there?
 	for (i = 0;i < (unsigned int)svs.maxclients;i++)
@@ -1847,27 +1927,50 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 		}
 	}
 
+	if(prog->globaloffsets.worldstatus >= 0)
+	{
+		const char *str = PRVM_G_STRING(prog->globaloffsets.worldstatus);
+		if(str && *str)
+		{
+			char *p;
+			const char *q;
+			qcstatus = p = Mem_Alloc(tempmempool, strlen(str) + 1);
+			for(q = str; *q; ++q)
+				if(*q != '\\')
+					*p++ = *q;
+			*p = 0;
+		}
+	}
+
 	// TODO: we should add more information for the full status string
 	length = dpsnprintf(out_msg, out_size,
 						"\377\377\377\377%s\x0A"
 						"\\gamename\\%s\\modname\\%s\\gameversion\\%d\\sv_maxclients\\%d"
 						"\\clients\\%d\\bots\\%d\\mapname\\%s\\hostname\\%s\\protocol\\%d"
 						"%s%s"
+						"%s%s"
 						"%s",
 						fullstatus ? "statusResponse" : "infoResponse",
 						gamename, com_modname, gameversion.integer, svs.maxclients,
 						nb_clients, nb_bots, sv.name, hostname.string, NET_PROTOCOL_VERSION,
+						qcstatus ? "\\qcstatus\\" : "", qcstatus ? qcstatus : "",
 						challenge ? "\\challenge\\" : "", challenge ? challenge : "",
 						fullstatus ? "\n" : "");
 
+	if(qcstatus)
+		Mem_Free((char *)qcstatus);
+
 	// Make sure it fits in the buffer
 	if (length < 0)
-		return false;
+		goto bad;
 
 	if (fullstatus)
 	{
 		char *ptr;
 		int left;
+		int savelength;
+
+		savelength = length;
 
 		ptr = out_msg + length;
 		left = (int)out_size - length;
@@ -1900,19 +2003,57 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 					pingvalue = bound(1, pingvalue, 9999);
 				else
 					pingvalue = 0;
-				length = dpsnprintf(ptr, left, "%d %d \"%s\"\n",
-									cl->frags,
-									pingvalue,
-									cleanname);
+
+				if(prog->fieldoffsets.clientstatus >= 0)
+				{
+					const char *str = PRVM_E_STRING(PRVM_EDICT_NUM(i + 1), prog->fieldoffsets.clientstatus);
+					if(str && *str)
+					{
+						char *p;
+						const char *q;
+						qcstatus = p = Mem_Alloc(tempmempool, strlen(str) + 1);
+						for(q = str; *q; ++q)
+							if(*q != '\\' && *q != ' ')
+								*p++ = *q;
+						*p = 0;
+					}
+				}
+
+				if(qcstatus)
+				{
+					length = dpsnprintf(ptr, left, "%s %d \"%s\"\n",
+										qcstatus,
+										pingvalue,
+										cleanname);
+					Mem_Free((char *)qcstatus);
+				}
+				else
+					length = dpsnprintf(ptr, left, "%d %d \"%s\"\n",
+										cl->frags,
+										pingvalue,
+										cleanname);
+
 				if(length < 0)
-					return false;
+				{
+					// out of space?
+					// turn it into an infoResponse!
+					out_msg[savelength] = 0;
+					memcpy(out_msg + 4, "infoResponse\x0A", 13);
+					memmove(out_msg + 17, out_msg + 19, savelength - 19);
+					break;
+				}
 				left -= length;
 				ptr += length;
 			}
 		}
 	}
 
+	SV_VM_End();
 	return true;
+
+bad:
+	SV_VM_End();
+	return false;
 }
 
 static qboolean NetConn_PreventConnectFlood(lhnetaddress_t *peeraddress)
@@ -2586,7 +2727,7 @@ void NetConn_QueryMasters(qboolean querydp, qboolean queryqw)
 				SZ_Clear(&net_message);
 
 				// search LAN for DarkPlaces servers
-				NetConn_WriteString(cl_sockets[i], "\377\377\377\377getinfo", &broadcastaddress);
+				NetConn_WriteString(cl_sockets[i], "\377\377\377\377getstatus", &broadcastaddress);
 
 				// build the getservers message to send to the dpmaster master servers
 				dpsnprintf(request, sizeof(request), "\377\377\377\377getservers %s %u empty full\x0A", gamename, NET_PROTOCOL_VERSION);

@@ -1457,6 +1457,7 @@ void PRVM_FindOffsets(void)
 	prog->fieldoffsets.viewzoom                       = PRVM_ED_FindFieldOffset("viewzoom");
 	prog->fieldoffsets.yaw_speed                      = PRVM_ED_FindFieldOffset("yaw_speed");
 	prog->fieldoffsets.clientcamera                   = PRVM_ED_FindFieldOffset("clientcamera");
+	prog->fieldoffsets.clientstatus                   = PRVM_ED_FindFieldOffset("clientstatus");
 	prog->funcoffsets.CSQC_ConsoleCommand             = PRVM_ED_FindFunctionOffset("CSQC_ConsoleCommand");
 	prog->funcoffsets.CSQC_Ent_Remove                 = PRVM_ED_FindFunctionOffset("CSQC_Ent_Remove");
 	prog->funcoffsets.CSQC_Ent_Update                 = PRVM_ED_FindFunctionOffset("CSQC_Ent_Update");
@@ -1509,6 +1510,7 @@ void PRVM_FindOffsets(void)
 	prog->globaloffsets.sb_showscores                 = PRVM_ED_FindGlobalOffset("sb_showscores");
 	prog->globaloffsets.drawfont                      = PRVM_ED_FindGlobalOffset("drawfont");
 	prog->globaloffsets.require_spawnfunc_prefix      = PRVM_ED_FindGlobalOffset("require_spawnfunc_prefix");
+	prog->globaloffsets.worldstatus                   = PRVM_ED_FindGlobalOffset("worldstatus");
 
 	// menu qc only uses some functions, nothing else
 	prog->funcoffsets.m_draw                          = PRVM_ED_FindFunctionOffset("m_draw");

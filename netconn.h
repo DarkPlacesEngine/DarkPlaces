@@ -227,7 +227,9 @@ typedef enum serverlist_maskop_e
 	SLMO_EQUAL,
 	SLMO_GREATER,
 	SLMO_GREATEREQUAL,
-	SLMO_NOTEQUAL
+	SLMO_NOTEQUAL,
+	SLMO_STARTSWITH,
+	SLMO_NOTSTARTSWITH
 } serverlist_maskop_t;
 
 // struct with all fields that you can search for or sort by
@@ -245,6 +247,10 @@ typedef struct serverlist_info_s
 	char map[32];
 	// name of the session
 	char name[128];
+	// qc-defined short status string
+	char qcstatus[128];
+	// frags/ping/name list (if they fit in the packet)
+	char players[1400];
 	// max client number
 	int maxplayers;
 	// number of currently connected players (including bots)
@@ -277,6 +283,8 @@ typedef enum
 	SLIF_NUMBOTS,
 	SLIF_NUMHUMANS,
 	SLIF_FREESLOTS,
+	SLIF_QCSTATUS,
+	SLIF_PLAYERS,
 	SLIF_COUNT
 } serverlist_infofield_t;
 
