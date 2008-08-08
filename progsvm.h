@@ -217,6 +217,7 @@ typedef struct prvm_prog_fieldoffsets_s
 	int viewzoom; // ssqc
 	int yaw_speed; // ssqc / csqc
 	int clientcamera; // ssqc
+	int clientstatus; // ssqc
 }
 prvm_prog_fieldoffsets_t;
 
@@ -253,6 +254,7 @@ typedef struct prvm_prog_globaloffsets_s
 	int sb_showscores; // csqc
 	int drawfont; // csqc / menu
 	int require_spawnfunc_prefix; // ssqc
+	int worldstatus; // ssqc
 }
 prvm_prog_globaloffsets_t;
 

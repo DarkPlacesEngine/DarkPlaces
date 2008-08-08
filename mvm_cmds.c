@@ -371,6 +371,12 @@ void VM_M_setserverlistmaskstring( void )
 		case SLIF_NAME:
 			strlcpy( mask->info.name, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.name)  );
 			break;
+		case SLIF_QCSTATUS:
+			strlcpy( mask->info.qcstatus, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.qcstatus)  );
+			break;
+		case SLIF_PLAYERS:
+			strlcpy( mask->info.players, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.players)  );
+			break;
 		case SLIF_MAP:
 			strlcpy( mask->info.map, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.map)  );
 			break;
@@ -496,6 +502,12 @@ void VM_M_getserverliststring(void)
 			break;
 		case SLIF_NAME:
 			PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( cache->info.name );
+			break;
+		case SLIF_QCSTATUS:
+			PRVM_G_INT (OFS_RETURN ) = PRVM_SetEngineString (cache->info.qcstatus );
+			break;
+		case SLIF_PLAYERS:
+			PRVM_G_INT (OFS_RETURN ) = PRVM_SetEngineString (cache->info.players );
 			break;
 		case SLIF_GAME:
 			PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( cache->info.game );
@@ -624,6 +636,10 @@ void VM_M_getserverlistindexforkey( void )
 		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_MAP;
 	else if( !strcmp( key, "name" ) )
 		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_NAME;
+	else if( !strcmp( key, "qcstatus" ) )
+		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_QCSTATUS;
+	else if( !strcmp( key, "players" ) )
+		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_PLAYERS;
 	else if( !strcmp( key, "maxplayers" ) )
 		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_MAXPLAYERS;
 	else if( !strcmp( key, "numplayers" ) )
