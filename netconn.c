@@ -1958,7 +1958,10 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 						fullstatus ? "\n" : "");
 
 	if(qcstatus)
+	{
 		Mem_Free((char *)qcstatus);
+		qcstatus = NULL;
+	}
 
 	// Make sure it fits in the buffer
 	if (length < 0)
@@ -2026,6 +2029,7 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 										pingvalue,
 										cleanname);
 					Mem_Free((char *)qcstatus);
+					qcstatus = NULL;
 				}
 				else
 					length = dpsnprintf(ptr, left, "%d %d \"%s\"\n",
