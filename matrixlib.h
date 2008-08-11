@@ -39,9 +39,23 @@ int Matrix4x4_Invert_Full (matrix4x4_t *out, const matrix4x4_t *in1);
 // creates a matrix that does the opposite of the matrix provided
 // only supports translate, rotate, scale (not scale3) matrices
 void Matrix4x4_Invert_Simple (matrix4x4_t *out, const matrix4x4_t *in1);
+// blends between two matrices, used primarily for animation interpolation
+// (note: it is recommended to follow this with Matrix4x4_Normalize, a method
+//  known as nlerp rotation, often better for animation purposes than slerp)
+void Matrix4x4_Interpolate (matrix4x4_t *out, matrix4x4_t *in1, matrix4x4_t *in2, double frac);
+// zeros all matrix components, used with Matrix4x4_Accumulate
+void Matrix4x4_Clear (matrix4x4_t *out);
+// adds a weighted contribution from the supplied matrix, used to blend 3 or
+// more matrices with weighting, it is recommended that Matrix4x4_Normalize be
+// called afterward (a method known as nlerp rotation, often better for
+// animation purposes than slerp)
+void Matrix4x4_Accumulate (matrix4x4_t *out, matrix4x4_t *in, double weight);
 // creates a matrix that does the same rotation and translation as the matrix
 // provided, but no uniform scaling, does not support scale3 matrices
 void Matrix4x4_Normalize (matrix4x4_t *out, matrix4x4_t *in1);
+// creates a matrix with vectors normalized individually (use after
+// Matrix4x4_Accumulate)
+void Matrix4x4_Normalize3 (matrix4x4_t *out, matrix4x4_t *in1);
 // modifies a matrix to have all vectors and origin reflected across the plane
 // to the opposite side (at least if axisscale is -2)
 void Matrix4x4_Reflect (matrix4x4_t *out, double normalx, double normaly, double normalz, double dist, double axisscale);

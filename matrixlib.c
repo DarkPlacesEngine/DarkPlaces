@@ -362,6 +362,30 @@ void Matrix4x4_Invert_Simple (matrix4x4_t *out, const matrix4x4_t *in1)
 #endif
 }
 
+void Matrix4x4_Interpolate (matrix4x4_t *out, matrix4x4_t *in1, matrix4x4_t *in2, double frac)
+{
+	int i, j;
+	for (i = 0;i < 4;i++)
+		for (j = 0;j < 4;j++)
+			out->m[i][j] = in1->m[i][j] + frac * (in2->m[i][j] - in1->m[i][j]);
+}
+
+void Matrix4x4_Clear (matrix4x4_t *out)
+{
+	int i, j;
+	for (i = 0;i < 4;i++)
+		for (j = 0;j < 4;j++)
+			out->m[i][j] = 0;
+}
+
+void Matrix4x4_Accumulate (matrix4x4_t *out, matrix4x4_t *in, double weight)
+{
+	int i, j;
+	for (i = 0;i < 4;i++)
+		for (j = 0;j < 4;j++)
+			out->m[i][j] += in->m[i][j] * weight;
+}
+
 void Matrix4x4_Normalize (matrix4x4_t *out, matrix4x4_t *in1)
 {
 	// scale rotation matrix vectors to a length of 1
@@ -369,6 +393,33 @@ void Matrix4x4_Normalize (matrix4x4_t *out, matrix4x4_t *in1)
 	double scale = 1.0 / sqrt(in1->m[0][0] * in1->m[0][0] + in1->m[0][1] * in1->m[0][1] + in1->m[0][2] * in1->m[0][2]);
 	*out = *in1;
 	Matrix4x4_Scale(out, scale, 1);
+}
+
+void Matrix4x4_Normalize3 (matrix4x4_t *out, matrix4x4_t *in1)
+{
+	int i;
+	double scale;
+	// scale each rotation matrix vector to a length of 1
+	// intended for use after Matrix4x4_Interpolate or Matrix4x4_Accumulate
+	*out = *in1;
+	for (i = 0;i < 3;i++)
+	{
+#ifdef MATRIX4x4_OPENGLORIENTATION
+		scale = sqrt(in1->m[i][0] * in1->m[i][0] + in1->m[i][1] * in1->m[i][1] + in1->m[i][2] * in1->m[i][2]);
+		if (scale)
+			scale = 1.0 / scale;
+		out->m[i][0] *= scale;
+		out->m[i][1] *= scale;
+		out->m[i][2] *= scale;
+#else
+		scale = sqrt(in1->m[0][i] * in1->m[0][i] + in1->m[1][i] * in1->m[1][i] + in1->m[2][i] * in1->m[2][i]);
+		if (scale)
+			scale = 1.0 / scale;
+		out->m[0][i] *= scale;
+		out->m[1][i] *= scale;
+		out->m[2][i] *= scale;
+#endif
+	}
 }
 
 void Matrix4x4_Reflect (matrix4x4_t *out, double normalx, double normaly, double normalz, double dist, double axisscale)
