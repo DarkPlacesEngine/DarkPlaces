@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "sv_demo.h"
 #include "libcurl.h"
+#include "csprogs.h"
 
 static void SV_SaveEntFile_f(void);
 static void SV_StartDownload_f(void);
@@ -739,6 +740,28 @@ void SV_SendServerinfo (client_t *client)
 	dpsnprintf (message, sizeof (message), "\nServer: %s build %s (progs %i crc)", gamename, buildstring, prog->filecrc);
 	MSG_WriteString (&client->netconnection->message,message);
 
+	SV_StopDemoRecording(client); // to split up demos into different files
+	if(sv_autodemo_perclient.integer && client->netconnection)
+	{
+		char demofile[MAX_OSPATH];
+		char levelname[MAX_QPATH];
+		char ipaddress[MAX_QPATH];
+		size_t i;
+
+		// start a new demo file
+		strlcpy(levelname, FS_FileWithoutPath(sv.worldmodel->name), sizeof(levelname));
+		if (strrchr(levelname, '.'))
+			*(strrchr(levelname, '.')) = 0;
+
+		LHNETADDRESS_ToString(&(client->netconnection->peeraddress), ipaddress, sizeof(ipaddress), true);
+		for(i = 0; ipaddress[i]; ++i)
+			if(!isalnum(ipaddress[i]))
+				ipaddress[i] = '-';
+		dpsnprintf (demofile, sizeof(demofile), "%s_%s_%d_%s.dem", Sys_TimeString (sv_autodemo_perclient_nameformat.string), levelname, PRVM_NUM_FOR_EDICT(client->edict), ipaddress);
+
+		SV_StartDemoRecording(client, demofile, -1);
+	}
+
 	//[515]: init csprogs according to version of svprogs, check the crc, etc.
 	if (sv.csqc_progname[0])
 	{
@@ -750,6 +773,29 @@ void SV_SendServerinfo (client_t *client)
 		MSG_WriteString (&client->netconnection->message, va("csqc_progsize %i\n", sv.csqc_progsize));
 		MSG_WriteByte (&client->netconnection->message, svc_stufftext);
 		MSG_WriteString (&client->netconnection->message, va("csqc_progcrc %i\n", sv.csqc_progcrc));
+
+		if(client->sv_demo_file != NULL)
+		{
+			void *csqcbuf;
+			fs_offset_t csqclen;
+			int csqccrc;
+			int i;
+			char buf[NET_MAXMESSAGE];
+			sizebuf_t sb;
+
+			csqcbuf = FS_LoadFile(sv.csqc_progname, tempmempool, true, &csqclen);
+			if(csqcbuf)
+			{
+				csqccrc = CRC_Block(csqcbuf, csqclen);
+				sb.data = (void *) buf;
+				sb.maxsize = sizeof(buf);
+				i = 0;
+				while(MakeDownloadPacket(sv.csqc_progname, csqcbuf, csqclen, csqccrc, i++, &sb, sv.protocol))
+					SV_WriteDemoMessage(client, &sb, false);
+				Mem_Free(csqcbuf);
+			}
+		}
+
 		//[515]: init stufftext string (it is sent before svc_serverinfo)
 		val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.SV_InitCmd);
 		if (val)
@@ -819,28 +865,6 @@ void SV_SendServerinfo (client_t *client)
 	client->num_pings = 0;
 #endif
 	client->ping = 0;
-
-	SV_StopDemoRecording(client); // to split up demos into different files
-	if(sv_autodemo_perclient.integer && client->netconnection)
-	{
-		char demofile[MAX_OSPATH];
-		char levelname[MAX_QPATH];
-		char ipaddress[MAX_QPATH];
-		size_t i;
-
-		// start a new demo file
-		strlcpy(levelname, FS_FileWithoutPath(sv.worldmodel->name), sizeof(levelname));
-		if (strrchr(levelname, '.'))
-			*(strrchr(levelname, '.')) = 0;
-
-		LHNETADDRESS_ToString(&(client->netconnection->peeraddress), ipaddress, sizeof(ipaddress), true);
-		for(i = 0; ipaddress[i]; ++i)
-			if(!isalnum(ipaddress[i]))
-				ipaddress[i] = '-';
-		dpsnprintf (demofile, sizeof(demofile), "%s_%s_%d_%s.dem", Sys_TimeString (sv_autodemo_perclient_nameformat.string), levelname, PRVM_NUM_FOR_EDICT(client->edict), ipaddress);
-
-		SV_StartDemoRecording(client, demofile, -1);
-	}
 }
 
 /*

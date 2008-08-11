@@ -424,6 +424,7 @@ static void CL_SetupWorldModel(void)
 	if (cl.loadcsqc)
 	{
 		cl.loadcsqc = false;
+
 		CL_VM_Init();
 	}
 }
@@ -1644,6 +1645,7 @@ void CL_ParseServerInfo (void)
 			cls.forcetrack = -1;
 			FS_Printf (cls.demofile, "%i\n", cls.forcetrack);
 			cls.demorecording = true;
+			strlcpy(cls.demoname, demofile, sizeof(cls.demoname));
 		}
 		else
 			Con_Print ("ERROR: couldn't open.\n");

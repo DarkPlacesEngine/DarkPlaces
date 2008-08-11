@@ -664,6 +664,46 @@ qboolean CL_VM_CB_LoadEdict(prvm_edict_t *ent)
 
 void Cmd_ClearCsqcFuncs (void);
 
+// returns true if the packet is valid, false if end of file is reached
+// used for dumping the CSQC download into demo files
+qboolean MakeDownloadPacket(const char *filename, void *data, unsigned long len, int crc, int cnt, sizebuf_t *buf, int protocol)
+{
+	int packetsize = buf->maxsize - 7; // byte short long
+	int npackets = (len + packetsize - 1) / (packetsize);
+
+	if(protocol == PROTOCOL_QUAKEWORLD)
+		return false; // CSQC can't run in QW anyway
+
+	SZ_Clear(buf);
+	if(cnt == 0)
+	{
+		MSG_WriteByte(buf, svc_stufftext);
+		MSG_WriteString(buf, va("\ncl_downloadbegin %lu %s\n", len, filename));
+		return true;
+	}
+	else if(cnt >= 1 && cnt <= npackets)
+	{
+		unsigned long thispacketoffset = (cnt - 1) * packetsize;
+		int thispacketsize = len - thispacketoffset;
+		if(thispacketsize > packetsize)
+			thispacketsize = packetsize;
+
+		MSG_WriteByte(buf, svc_downloaddata);
+		MSG_WriteLong(buf, thispacketoffset);
+		MSG_WriteShort(buf, thispacketsize);
+		SZ_Write(buf, data + thispacketoffset, thispacketsize);
+
+		return true;
+	}
+	else if(cnt == npackets + 1)
+	{
+		MSG_WriteByte(buf, svc_stufftext);
+		MSG_WriteString(buf, va("\ncl_downloadfinished %lu %d\n", len, crc));
+		return true;
+	}
+	return false;
+}
+
 void CL_VM_Init (void)
 {
 	const char* csprogsfn;
@@ -696,16 +736,19 @@ void CL_VM_Init (void)
 	if (csprogsdata)
 	{
 		csprogsdatacrc = CRC_Block(csprogsdata, csprogsdatasize);
-		Mem_Free(csprogsdata);
 		if (csprogsdatacrc != requiredcrc || csprogsdatasize != requiredsize)
 		{
 			if (cls.demoplayback)
 			{
 				Con_Printf("^1Warning: Your %s is not the same version as the demo was recorded with (CRC/size are %i/%i but should be %i/%i)\n", csqc_progname.string, csprogsdatacrc, (int)csprogsdatasize, requiredcrc, requiredsize);
-				return;
+				// Mem_Free(csprogsdata);
+				// return;
+				// We WANT to continue here, and play the demo with different csprogs!
+				// After all, this is just a warning. Sure things may go wrong from here.
 			}
 			else
 			{
+				Mem_Free(csprogsdata);
 				Con_Printf("^1Your %s is not the same version as the server (CRC is %i/%i but should be %i/%i)\n", csqc_progname.string, csprogsdatacrc, (int)csprogsdatasize, requiredcrc, requiredsize);
 				CL_Disconnect();
 				return;
@@ -759,10 +802,29 @@ void CL_VM_Init (void)
 		CL_VM_Error("CSQC %s ^2failed to load\n", csprogsfn);
 		if(!sv.active)
 			CL_Disconnect();
+		Mem_Free(csprogsdata);
 		return;
 	}
 
 	Con_Printf("CSQC %s ^5loaded (crc=%i, size=%i)\n", csprogsfn, csprogsdatacrc, (int)csprogsdatasize);
+
+	if(cls.demorecording)
+	{
+		int i;
+		char buf[NET_MAXMESSAGE];
+		sizebuf_t sb;
+		void *demobuf; fs_offset_t demofilesize;
+
+		sb.data = (void *) buf;
+		sb.maxsize = sizeof(buf);
+		i = 0;
+
+		CL_CutDemo(&demobuf, &demofilesize);
+		while(MakeDownloadPacket(csprogsfn, csprogsdata, csprogsdatasize, csprogsdatacrc, i++, &sb, cls.protocol))
+			CL_WriteDemoMessage(&sb);
+		CL_PasteDemo(&demobuf, &demofilesize);
+	}
+	Mem_Free(csprogsdata);
 
 	// check if OP_STATE animation is possible in this dat file
 	if (prog->fieldoffsets.nextthink >= 0 && prog->fieldoffsets.frame >= 0 && prog->fieldoffsets.think >= 0 && prog->globaloffsets.self >= 0)
