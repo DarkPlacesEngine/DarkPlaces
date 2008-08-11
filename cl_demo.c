@@ -121,6 +121,57 @@ void CL_WriteDemoMessage (sizebuf_t *message)
 
 /*
 ====================
+CL_CutDemo
+
+Dumps the current demo to a buffer, and resets the demo to its starting point.
+Used to insert csprogs.dat files as a download to the beginning of a demo file.
+====================
+*/
+void CL_CutDemo (void **buf, fs_offset_t *filesize)
+{
+	*buf = NULL;
+	*filesize = 0;
+
+	FS_Close(cls.demofile);
+	*buf = FS_LoadFile(cls.demoname, tempmempool, false, filesize);
+
+	// restart the demo recording
+	cls.demofile = FS_Open(cls.demoname, "wb", false, false);
+	if(!cls.demofile)
+		Host_Error("failed to reopen the demo file");
+	FS_Printf(cls.demofile, "%i\n", cls.forcetrack);
+}
+
+/*
+====================
+CL_PasteDemo
+
+Adds the cut stuff back to the demo. Also frees the buffer.
+Used to insert csprogs.dat files as a download to the beginning of a demo file.
+====================
+*/
+void CL_PasteDemo (void **buf, fs_offset_t *filesize)
+{
+	fs_offset_t startoffset = 0;
+
+	if(!*buf)
+		return;
+
+	// skip cdtrack
+	while(startoffset < *filesize && ((char *)(*buf))[startoffset] != '\n')
+		++startoffset;
+	if(startoffset < *filesize)
+		++startoffset;
+
+	FS_Write(cls.demofile, *buf + startoffset, *filesize - startoffset);
+
+	Mem_Free(*buf);
+	*buf = NULL;
+	*filesize = 0;
+}
+
+/*
+====================
 CL_ReadDemoMessage
 
 Handles playback of demos
@@ -208,6 +259,9 @@ void CL_ReadDemoMessage(void)
 		{
 			MSG_BeginReading();
 			CL_ParseServerMessage();
+
+			if (cls.signon != SIGNONS)
+				Cbuf_Execute(); // immediately execute svc_stufftext if in the demo before connect!
 
 			// In case the demo contains a "svc_disconnect" message
 			if (!cls.demoplayback)
@@ -317,6 +371,7 @@ void CL_Record_f (void)
 		Con_Print("ERROR: couldn't open.\n");
 		return;
 	}
+	strlcpy(cls.demoname, name, sizeof(cls.demoname));
 
 	cls.forcetrack = track;
 	FS_Printf(cls.demofile, "%i\n", cls.forcetrack);
@@ -364,8 +419,8 @@ void CL_PlayDemo_f (void)
 		cls.demonum = -1;		// stop demo loop
 		return;
 	}
-
 	strlcpy(cls.demoname, name, sizeof(cls.demoname));
+
 	cls.demoplayback = true;
 	cls.state = ca_connected;
 	cls.forcetrack = 0;

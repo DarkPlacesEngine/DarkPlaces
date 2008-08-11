@@ -518,7 +518,7 @@ typedef struct client_static_s
 	// list of demos in loop
 	char demos[MAX_DEMOS][MAX_DEMONAME];
 	// the actively playing demo (set by CL_PlayDemo_f)
-	char demoname[64];
+	char demoname[MAX_QPATH];
 
 // demo recording info must be here, because record is started before
 // entering a map (and clearing client_state_t)
@@ -1213,6 +1213,9 @@ int Key_StringToKeynum (const char *str);
 void CL_StopPlayback(void);
 void CL_ReadDemoMessage(void);
 void CL_WriteDemoMessage(sizebuf_t *mesage);
+
+void CL_CutDemo(void **buf, fs_offset_t *filesize);
+void CL_PasteDemo(void **buf, fs_offset_t *filesize);
 
 void CL_NextDemo(void);
 void CL_Stop_f(void);
