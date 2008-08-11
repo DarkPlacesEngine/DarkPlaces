@@ -619,6 +619,22 @@ void Curl_Begin(const char *URL, const char *name, qboolean ispak, qboolean fort
 		length = q ? (size_t)(q - p) : strlen(p);
 		dpsnprintf(fn, sizeof(fn), "dlcache/%.*s", (int)length, p);
 
+		if(cls.demorecording)
+		{
+			void *demobuf; fs_offset_t demofilesize;
+			char msg[MAX_QPATH + 16];
+			sizebuf_t sb;
+
+			sb.data = (void *) msg;
+			sb.maxsize = sizeof(msg);
+			SZ_Clear(&sb);
+			MSG_WriteByte(&sb, svc_stufftext);
+			MSG_WriteString(&sb, va("\ncurl --pak \"%.*s\"\n", (int)length, p));
+
+			CL_CutDemo(&demobuf, &demofilesize);
+			CL_WriteDemoMessage(&sb);
+			CL_PasteDemo(&demobuf, &demofilesize);
+		}
 
 		// already downloading the file?
 		{
