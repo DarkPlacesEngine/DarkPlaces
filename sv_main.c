@@ -2757,6 +2757,7 @@ void SV_SpawnServer (const char *server)
 // send serverinfo to all connected clients, and set up botclients coming back from a level change
 	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
 	{
+		host_client->clientconnectcalled = false; // do NOT call ClientDisconnect if he drops before ClientConnect!
 		if (!host_client->active)
 			continue;
 		if (host_client->netconnection)
