@@ -2030,7 +2030,7 @@ static void SV_UpdateToReliableMessages (void)
 	}
 
 	for (j = 0, client = svs.clients;j < svs.maxclients;j++, client++)
-		if (client->netconnection && client->spawned)
+		if (client->netconnection && (client->spawned || client->clientconnectcalled)) // also send MSG_ALL to people who are past ClientConnect, but not spawned yet
 			SZ_Write (&client->netconnection->message, sv.reliable_datagram.data, sv.reliable_datagram.cursize);
 
 	SZ_Clear (&sv.reliable_datagram);
