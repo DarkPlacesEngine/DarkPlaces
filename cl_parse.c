@@ -1046,7 +1046,7 @@ void CL_BeginDownloads(qboolean aborteddownload)
 	}
 
 	if(gamemode == GAME_NEXUIZ)
-		goto skipdownloads;
+		Cvar_SetValueQuick(&cl_serverextension_download, false);
 		// in Nexuiz, the built in download protocol is kinda broken (misses lots
 		// of dependencies) anyway, and can mess around with the game directory;
 		// until this is fixed, only support pk3 downloads via curl, and turn off
@@ -1103,6 +1103,8 @@ void CL_BeginDownloads(qboolean aborteddownload)
 			if (cl.downloadmodel_current == 1)
 			{
 				// we now have the worldmodel so we can set up the game world
+				// or maybe we do not have it (cl_serverextension_download 0)
+				// then we need to continue loading ANYWAY!
 				CL_SetupWorldModel();
 				if (!cl.loadfinished && cl_joinbeforedownloadsfinish.integer)
 				{
@@ -1151,7 +1153,6 @@ void CL_BeginDownloads(qboolean aborteddownload)
 		// finished loading sounds
 	}
 
-skipdownloads:
 	if (!cl.loadfinished)
 	{
 		cl.loadfinished = true;
