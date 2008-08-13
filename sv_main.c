@@ -2030,7 +2030,7 @@ static void SV_UpdateToReliableMessages (void)
 	}
 
 	for (j = 0, client = svs.clients;j < svs.maxclients;j++, client++)
-		if (client->netconnection)
+		if (client->netconnection && client->spawned)
 			SZ_Write (&client->netconnection->message, sv.reliable_datagram.data, sv.reliable_datagram.cursize);
 
 	SZ_Clear (&sv.reliable_datagram);
