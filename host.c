@@ -1030,7 +1030,9 @@ static void Host_Init (void)
 	Host_InitLocal();
 	Host_ServerOptions();
 
-	if (cls.state != ca_dedicated)
+	if (cls.state == ca_dedicated)
+		Cmd_AddCommand ("disconnect", CL_Disconnect_f, "disconnect from server (or disconnect all clients if running a server)");
+	else
 	{
 		Con_DPrintf("Initializing client\n");
 
