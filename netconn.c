@@ -1623,7 +1623,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				return true;
 
 			info = &serverlist_cache[n].info;
-			strlcpy(info->game, "QuakeWorld", sizeof(info->game));;
+			strlcpy(info->game, "QuakeWorld", sizeof(info->game));
 			if ((s = SearchInfostring(string, "*gamedir"     )) != NULL) strlcpy(info->mod , s, sizeof (info->mod ));else info->mod[0]  = 0;
 			if ((s = SearchInfostring(string, "map"          )) != NULL) strlcpy(info->map , s, sizeof (info->map ));else info->map[0]  = 0;
 			if ((s = SearchInfostring(string, "hostname"     )) != NULL) strlcpy(info->name, s, sizeof (info->name));else info->name[0] = 0;

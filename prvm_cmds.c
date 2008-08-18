@@ -2323,7 +2323,7 @@ void VM_tokenizebyseparator (void)
 	strlcpy(string, PRVM_G_STRING(OFS_PARM0), sizeof(string));
 	p = string;
 
-	numseparators = 0;;
+	numseparators = 0;
 	for (j = 1;j < prog->argc;j++)
 	{
 		// skip any blank separator strings
