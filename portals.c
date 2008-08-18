@@ -273,6 +273,7 @@ typedef struct portalrecursioninfo_s
 	int *surfacelist;
 	unsigned char *surfacepvs;
 	int numleafs;
+	unsigned char *visitingleafpvs; // used to prevent infinite loops
 	int *leaflist;
 	unsigned char *leafpvs;
 	unsigned char *shadowtrispvs;
@@ -291,6 +292,12 @@ static void Portal_RecursiveFlow (portalrecursioninfo_t *info, mleaf_t *leaf, in
 	float dist;
 	vec3_t center;
 	tinyplane_t *newplanes;
+	int leafindex = leaf - info->model->brush.data_leafs;
+
+	if (CHECKPVSBIT(info->visitingleafpvs, leafindex))
+		return; // recursive loop of leafs (cmc.bsp for megatf coop)
+
+	SETPVSBIT(info->visitingleafpvs, leafindex);
 
 	for (i = 0;i < 3;i++)
 	{
@@ -301,7 +308,6 @@ static void Portal_RecursiveFlow (portalrecursioninfo_t *info, mleaf_t *leaf, in
 
 	if (info->leafpvs)
 	{
-		int leafindex = leaf - info->model->brush.data_leafs;
 		if (!CHECKPVSBIT(info->leafpvs, leafindex))
 		{
 			SETPVSBIT(info->leafpvs, leafindex);
@@ -391,6 +397,8 @@ static void Portal_RecursiveFlow (portalrecursioninfo_t *info, mleaf_t *leaf, in
 			}
 		}
 	}
+
+	CLEARPVSBIT(info->visitingleafpvs, leafindex);
 }
 
 static void Portal_RecursiveFindLeafForFlow(portalrecursioninfo_t *info, mnode_t *node)
@@ -411,7 +419,7 @@ static void Portal_RecursiveFindLeafForFlow(portalrecursioninfo_t *info, mnode_t
 	}
 }
 
-void Portal_Visibility(dp_model_t *model, const vec3_t eye, int *leaflist, unsigned char *leafpvs, int *numleafspointer, int *surfacelist, unsigned char *surfacepvs, int *numsurfacespointer, const mplane_t *frustumplanes, int numfrustumplanes, int exact, const float *boxmins, const float *boxmaxs, float *updateleafsmins, float *updateleafsmaxs, unsigned char *shadowtrispvs, unsigned char *lighttrispvs)
+void Portal_Visibility(dp_model_t *model, const vec3_t eye, int *leaflist, unsigned char *leafpvs, int *numleafspointer, int *surfacelist, unsigned char *surfacepvs, int *numsurfacespointer, const mplane_t *frustumplanes, int numfrustumplanes, int exact, const float *boxmins, const float *boxmaxs, float *updateleafsmins, float *updateleafsmaxs, unsigned char *shadowtrispvs, unsigned char *lighttrispvs, unsigned char *visitingleafpvs)
 {
 	int i;
 	portalrecursioninfo_t info;
@@ -446,6 +454,7 @@ void Portal_Visibility(dp_model_t *model, const vec3_t eye, int *leaflist, unsig
 	info.surfacelist = surfacelist;
 	info.surfacepvs = surfacepvs;
 	info.numleafs = 0;
+	info.visitingleafpvs = visitingleafpvs;
 	info.leaflist = leaflist;
 	info.leafpvs = leafpvs;
 	info.model = model;

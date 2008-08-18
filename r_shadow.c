@@ -178,6 +178,7 @@ int *vertexremap;
 int vertexupdatenum;
 
 int r_shadow_buffer_numleafpvsbytes;
+unsigned char *r_shadow_buffer_visitingleafpvs;
 unsigned char *r_shadow_buffer_leafpvs;
 int *r_shadow_buffer_leaflist;
 
@@ -318,6 +319,7 @@ void r_shadow_start(void)
 	shadowmarklist = NULL;
 	shadowmarkcount = 0;
 	r_shadow_buffer_numleafpvsbytes = 0;
+	r_shadow_buffer_visitingleafpvs = NULL;
 	r_shadow_buffer_leafpvs = NULL;
 	r_shadow_buffer_leaflist = NULL;
 	r_shadow_buffer_numsurfacepvsbytes = 0;
@@ -363,6 +365,9 @@ void r_shadow_shutdown(void)
 	shadowmarklist = NULL;
 	shadowmarkcount = 0;
 	r_shadow_buffer_numleafpvsbytes = 0;
+	if (r_shadow_buffer_visitingleafpvs)
+		Mem_Free(r_shadow_buffer_visitingleafpvs);
+	r_shadow_buffer_visitingleafpvs = NULL;
 	if (r_shadow_buffer_leafpvs)
 		Mem_Free(r_shadow_buffer_leafpvs);
 	r_shadow_buffer_leafpvs = NULL;
@@ -484,6 +489,7 @@ void R_Shadow_Init(void)
 	shadowmarklist = NULL;
 	shadowmarkcount = 0;
 	r_shadow_buffer_numleafpvsbytes = 0;
+	r_shadow_buffer_visitingleafpvs = NULL;
 	r_shadow_buffer_leafpvs = NULL;
 	r_shadow_buffer_leaflist = NULL;
 	r_shadow_buffer_numsurfacepvsbytes = 0;
@@ -542,11 +548,14 @@ static void R_Shadow_EnlargeLeafSurfaceTrisBuffer(int numleafs, int numsurfaces,
 	int numlighttrispvsbytes = (((numlighttriangles + 7) >> 3) + 255) & ~255;
 	if (r_shadow_buffer_numleafpvsbytes < numleafpvsbytes)
 	{
+		if (r_shadow_buffer_visitingleafpvs)
+			Mem_Free(r_shadow_buffer_visitingleafpvs);
 		if (r_shadow_buffer_leafpvs)
 			Mem_Free(r_shadow_buffer_leafpvs);
 		if (r_shadow_buffer_leaflist)
 			Mem_Free(r_shadow_buffer_leaflist);
 		r_shadow_buffer_numleafpvsbytes = numleafpvsbytes;
+		r_shadow_buffer_visitingleafpvs = (unsigned char *)Mem_Alloc(r_main_mempool, r_shadow_buffer_numleafpvsbytes);
 		r_shadow_buffer_leafpvs = (unsigned char *)Mem_Alloc(r_main_mempool, r_shadow_buffer_numleafpvsbytes);
 		r_shadow_buffer_leaflist = (int *)Mem_Alloc(r_main_mempool, r_shadow_buffer_numleafpvsbytes * 8 * sizeof(*r_shadow_buffer_leaflist));
 	}
@@ -2468,7 +2477,7 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 		// this variable must be set for the CompileShadowVolume code
 		r_shadow_compilingrtlight = rtlight;
 		R_Shadow_EnlargeLeafSurfaceTrisBuffer(model->brush.num_leafs, model->num_surfaces, model->brush.shadowmesh ? model->brush.shadowmesh->numtriangles : model->surfmesh.num_triangles, model->surfmesh.num_triangles);
-		model->GetLightInfo(ent, rtlight->shadoworigin, rtlight->radius, rtlight->cullmins, rtlight->cullmaxs, r_shadow_buffer_leaflist, r_shadow_buffer_leafpvs, &numleafs, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces, r_shadow_buffer_shadowtrispvs, r_shadow_buffer_lighttrispvs);
+		model->GetLightInfo(ent, rtlight->shadoworigin, rtlight->radius, rtlight->cullmins, rtlight->cullmaxs, r_shadow_buffer_leaflist, r_shadow_buffer_leafpvs, &numleafs, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces, r_shadow_buffer_shadowtrispvs, r_shadow_buffer_lighttrispvs, r_shadow_buffer_visitingleafpvs);
 		numleafpvsbytes = (model->brush.num_leafs + 7) >> 3;
 		numshadowtrispvsbytes = ((model->brush.shadowmesh ? model->brush.shadowmesh->numtriangles : model->surfmesh.num_triangles) + 7) >> 3;
 		numlighttrispvsbytes = (model->surfmesh.num_triangles + 7) >> 3;
@@ -2909,7 +2918,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 		// dynamic light, world available and can receive realtime lighting
 		// calculate lit surfaces and leafs
 		R_Shadow_EnlargeLeafSurfaceTrisBuffer(r_refdef.scene.worldmodel->brush.num_leafs, r_refdef.scene.worldmodel->num_surfaces, r_refdef.scene.worldmodel->brush.shadowmesh ? r_refdef.scene.worldmodel->brush.shadowmesh->numtriangles : r_refdef.scene.worldmodel->surfmesh.num_triangles, r_refdef.scene.worldmodel->surfmesh.num_triangles);
-		r_refdef.scene.worldmodel->GetLightInfo(r_refdef.scene.worldentity, rtlight->shadoworigin, rtlight->radius, rsurface.rtlight_cullmins, rsurface.rtlight_cullmaxs, r_shadow_buffer_leaflist, r_shadow_buffer_leafpvs, &numleafs, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces, r_shadow_buffer_shadowtrispvs, r_shadow_buffer_lighttrispvs);
+		r_refdef.scene.worldmodel->GetLightInfo(r_refdef.scene.worldentity, rtlight->shadoworigin, rtlight->radius, rsurface.rtlight_cullmins, rsurface.rtlight_cullmaxs, r_shadow_buffer_leaflist, r_shadow_buffer_leafpvs, &numleafs, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces, r_shadow_buffer_shadowtrispvs, r_shadow_buffer_lighttrispvs, r_shadow_buffer_visitingleafpvs);
 		leaflist = r_shadow_buffer_leaflist;
 		leafpvs = r_shadow_buffer_leafpvs;
 		surfacelist = r_shadow_buffer_surfacelist;
