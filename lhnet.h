@@ -4,20 +4,24 @@
 #ifndef LHNET_H
 #define LHNET_H
 
-#define LHNETADDRESSTYPE_NONE 0
-#define LHNETADDRESSTYPE_LOOP 1
-#define LHNETADDRESSTYPE_INET4 2
-#define LHNETADDRESSTYPE_INET6 3
+typedef enum lhnetaddresstype_e
+{
+	LHNETADDRESSTYPE_NONE,
+	LHNETADDRESSTYPE_LOOP,
+	LHNETADDRESSTYPE_INET4,
+	LHNETADDRESSTYPE_INET6,
+}
+lhnetaddresstype_t;
 
 typedef struct lhnetaddress_s
 {
-	int addresstype;
+	lhnetaddresstype_t addresstype;
 	int port; // used by LHNETADDRESSTYPE_LOOP
 	unsigned char storage[256]; // sockaddr_in or sockaddr_in6
 }
 lhnetaddress_t;
 
-int LHNETADDRESS_FromPort(lhnetaddress_t *address, int addresstype, int port);
+int LHNETADDRESS_FromPort(lhnetaddress_t *address, lhnetaddresstype_t addresstype, int port);
 int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int defaultport);
 int LHNETADDRESS_ToString(const lhnetaddress_t *address, char *string, int stringbuffersize, int includeport);
 int LHNETADDRESS_GetAddressType(const lhnetaddress_t *address);

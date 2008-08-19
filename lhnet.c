@@ -68,7 +68,7 @@
 
 typedef struct lhnetaddressnative_s
 {
-	int addresstype;
+	lhnetaddresstype_t addresstype;
 	int port;
 	union
 	{
@@ -91,13 +91,15 @@ static struct namecache_s
 namecache[MAX_NAMECACHE];
 static int namecacheposition = 0;
 
-int LHNETADDRESS_FromPort(lhnetaddress_t *vaddress, int addresstype, int port)
+int LHNETADDRESS_FromPort(lhnetaddress_t *vaddress, lhnetaddresstype_t addresstype, int port)
 {
 	lhnetaddressnative_t *address = (lhnetaddressnative_t *)vaddress;
 	if (!address)
 		return 0;
 	switch(addresstype)
 	{
+	default:
+		return 0;
 	case LHNETADDRESSTYPE_LOOP:
 		// local:port  (loopback)
 		memset(address, 0, sizeof(*address));
