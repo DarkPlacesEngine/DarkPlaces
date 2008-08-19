@@ -4486,7 +4486,7 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 	}
 
 	// update currentskinframe to be a qw skin or animation frame
-	if ((i = ent->entitynumber - 1) >= 0 && i < cl.maxclients)
+	if ((i = ent->entitynumber - 1) >= 0 && i < cl.maxclients && cls.protocol == PROTOCOL_QUAKEWORLD && cl.scores[i].qw_skin[0] && !strcmp(ent->model->name, "progs/player.mdl"))
 	{
 		if (strcmp(r_qwskincache[i], cl.scores[i].qw_skin))
 		{
