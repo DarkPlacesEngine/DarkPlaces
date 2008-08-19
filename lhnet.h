@@ -9,50 +9,11 @@
 #define LHNETADDRESSTYPE_INET4 2
 #define LHNETADDRESSTYPE_INET6 3
 
-typedef struct lhnetaddress_loop_s
-{
-	unsigned short port;
-}
-lhnetaddress_loop_t;
-
-#define LHNETADDRESSTYPE_INET4_FAMILY 2
-#ifdef WIN32
-#define LHNETADDRESSTYPE_INET6_FAMILY 23
-#else
-#define LHNETADDRESSTYPE_INET6_FAMILY 10
-#endif
-
-// compatible with sockaddr_in
-typedef struct lhnetaddress_inet4_s
-{
-	unsigned short family; // 2
-	unsigned short port;
-	unsigned char address[4];
-	unsigned char padding[8]; // to match sockaddr_in
-}
-lhnetaddress_inet4_t;
-
-// compatible with sockaddr_in6
-typedef struct lhnetaddress_inet6_s
-{
-	unsigned short family; // 10
-	unsigned short port;
-	unsigned int flowinfo;
-	unsigned short address[8];
-	unsigned int scope_id;
-}
-lhnetaddress_inet6_t;
-
 typedef struct lhnetaddress_s
 {
 	int addresstype;
-	union
-	{
-		lhnetaddress_loop_t loop;
-		lhnetaddress_inet4_t inet4;
-		lhnetaddress_inet6_t inet6;
-	}
-	addressdata;
+	int port; // used by LHNETADDRESSTYPE_LOOP
+	unsigned char storage[256]; // sockaddr_in or sockaddr_in6
 }
 lhnetaddress_t;
 
