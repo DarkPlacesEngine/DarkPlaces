@@ -10,9 +10,11 @@
 #include <time.h>
 #include <string.h>
 #ifdef WIN32
-#include <winsock.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #else
 #include <unistd.h>
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <errno.h>
@@ -64,19 +66,34 @@
 #define SOCKLEN_T socklen_t
 #endif
 
+typedef struct lhnetaddressnative_s
+{
+	int addresstype;
+	int port;
+	union
+	{
+		struct sockaddr sock;
+		struct sockaddr_in in;
+		struct sockaddr_in6 in6;
+	}
+	addr;
+}
+lhnetaddressnative_t;
+
 // to make LHNETADDRESS_FromString resolve repeated hostnames faster, cache them
 #define MAX_NAMECACHE 64
 static struct namecache_s
 {
-	lhnetaddress_t address;
+	lhnetaddressnative_t address;
 	double expirationtime;
 	char name[64];
 }
 namecache[MAX_NAMECACHE];
 static int namecacheposition = 0;
 
-int LHNETADDRESS_FromPort(lhnetaddress_t *address, int addresstype, int port)
+int LHNETADDRESS_FromPort(lhnetaddress_t *vaddress, int addresstype, int port)
 {
+	lhnetaddressnative_t *address = (lhnetaddressnative_t *)vaddress;
 	if (!address)
 		return 0;
 	switch(addresstype)
@@ -85,32 +102,39 @@ int LHNETADDRESS_FromPort(lhnetaddress_t *address, int addresstype, int port)
 		// local:port  (loopback)
 		memset(address, 0, sizeof(*address));
 		address->addresstype = LHNETADDRESSTYPE_LOOP;
-		address->addressdata.loop.port = port;
+		address->port = port;
 		return 1;
 	case LHNETADDRESSTYPE_INET4:
 		// 0.0.0.0:port  (INADDR_ANY, binds to all interfaces)
 		memset(address, 0, sizeof(*address));
 		address->addresstype = LHNETADDRESSTYPE_INET4;
-		address->addressdata.inet4.family = LHNETADDRESSTYPE_INET4_FAMILY;
-		address->addressdata.inet4.port = htons((unsigned short)port);
+		address->port = port;
+		address->addr.in.sin_family = AF_INET;
+		address->addr.in.sin_port = htons((unsigned short)port);
 		return 1;
 	case LHNETADDRESSTYPE_INET6:
 		// [0:0:0:0:0:0:0:0]:port  (IN6ADDR_ANY, binds to all interfaces)
 		memset(address, 0, sizeof(*address));
 		address->addresstype = LHNETADDRESSTYPE_INET6;
-		address->addressdata.inet6.family = LHNETADDRESSTYPE_INET6_FAMILY;
-		address->addressdata.inet6.port = htons((unsigned short)port);
+		address->port = port;
+		address->addr.in6.sin6_family = AF_INET6;
+		address->addr.in6.sin6_port = htons((unsigned short)port);
 		return 1;
 	}
 	return 0;
 }
 
-int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int defaultport)
+int LHNETADDRESS_FromString(lhnetaddress_t *vaddress, const char *string, int defaultport)
 {
+	lhnetaddressnative_t *address = (lhnetaddressnative_t *)vaddress;
 	int i, port, namelen, d1, d2, d3, d4;
 	struct hostent *hostentry;
+	unsigned char *a;
 	const char *colon;
 	char name[128];
+#ifdef STANDALONETEST
+	char string2[128];
+#endif
 	if (!address || !string || !*string)
 		return 0;
 	memset(address, 0, sizeof(*address));
@@ -137,7 +161,7 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 	if (!strcmp(name, "local"))
 	{
 		address->addresstype = LHNETADDRESSTYPE_LOOP;
-		address->addressdata.loop.port = port;
+		address->port = port;
 		return 1;
 	}
 	// try to parse as dotted decimal ipv4 address first
@@ -150,14 +174,17 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 	{
 		// parsed a valid ipv4 address
 		address->addresstype = LHNETADDRESSTYPE_INET4;
-		address->addressdata.inet4.family = LHNETADDRESSTYPE_INET4_FAMILY;
-		address->addressdata.inet4.port = htons((unsigned short)port);
-		address->addressdata.inet4.address[0] = (unsigned char)d1;
-		address->addressdata.inet4.address[1] = (unsigned char)d2;
-		address->addressdata.inet4.address[2] = (unsigned char)d3;
-		address->addressdata.inet4.address[3] = (unsigned char)d4;
+		address->port = port;
+		address->addr.in.sin_family = AF_INET;
+		address->addr.in.sin_port = htons((unsigned short)port);
+		a = (unsigned char *)&address->addr.in.sin_addr;
+		a[0] = d1;
+		a[1] = d2;
+		a[2] = d3;
+		a[3] = d4;
 #ifdef STANDALONETEST
-		printf("manual parsing of ipv4 dotted decimal address \"%s\" successful: %d.%d.%d.%d:%d\n", string, (int)address->addressdata.inet4.address[0], (int)address->addressdata.inet4.address[1], (int)address->addressdata.inet4.address[2], (int)address->addressdata.inet4.address[3], (int)ntohs(address->addressdata.inet4.port));
+		LHNETADDRESS_ToString(address, string2, sizeof(string2), 1);
+		printf("manual parsing of ipv4 dotted decimal address \"%s\" successful: %s\n", string, string2);
 #endif
 		return 1;
 	}
@@ -171,14 +198,15 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 #endif
 	{
 		*address = namecache[i].address;
+		address->port = port;
 		if (address->addresstype == LHNETADDRESSTYPE_INET6)
 		{
-			address->addressdata.inet6.port = htons((unsigned short)port);
+			address->addr.in6.sin6_port = htons((unsigned short)port);
 			return 1;
 		}
 		else if (address->addresstype == LHNETADDRESSTYPE_INET4)
 		{
-			address->addressdata.inet4.port = htons((unsigned short)port);
+			address->addr.in.sin_port = htons((unsigned short)port);
 			return 1;
 		}
 		return 0;
@@ -187,13 +215,14 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 	hostentry = gethostbyname(name);
 	if (hostentry)
 	{
-		if (hostentry->h_addrtype == LHNETADDRESSTYPE_INET6_FAMILY)
+		if (hostentry->h_addrtype == AF_INET6)
 		{
 			// great it worked
 			address->addresstype = LHNETADDRESSTYPE_INET6;
-			address->addressdata.inet6.family = hostentry->h_addrtype;
-			address->addressdata.inet6.port = htons((unsigned short)port);
-			memcpy(address->addressdata.inet6.address, hostentry->h_addr_list[0], sizeof(address->addressdata.inet6.address));
+			address->port = port;
+			address->addr.in6.sin6_family = hostentry->h_addrtype;
+			address->addr.in6.sin6_port = htons((unsigned short)port);
+			memcpy(&address->addr.in6.sin6_addr, hostentry->h_addr_list[0], sizeof(address->addr.in6.sin6_addr));
 			for (i = 0;i < (int)sizeof(namecache[namecacheposition].name)-1 && name[i];i++)
 				namecache[namecacheposition].name[i] = name[i];
 			namecache[namecacheposition].name[i] = 0;
@@ -203,17 +232,19 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 			namecache[namecacheposition].address = *address;
 			namecacheposition = (namecacheposition + 1) % MAX_NAMECACHE;
 #ifdef STANDALONETEST
-			printf("gethostbyname(\"%s\") returned ipv6 address [%x:%x:%x:%x:%x:%x:%x:%x]:%d\n", name, (int)address->addressdata.inet6.address[0], (int)address->addressdata.inet6.address[1], (int)address->addressdata.inet6.address[2], (int)address->addressdata.inet6.address[3], (int)address->addressdata.inet6.address[4], (int)address->addressdata.inet6.address[5], (int)address->addressdata.inet6.address[6], (int)address->addressdata.inet6.address[7], (int)ntohs(address->addressdata.inet6.port));
+			LHNETADDRESS_ToString(address, string2, sizeof(string2), 1);
+			printf("gethostbyname(\"%s\") returned ipv6 address %s\n", string, string2);
 #endif
 			return 1;
 		}
-		else if (hostentry->h_addrtype == LHNETADDRESSTYPE_INET4_FAMILY)
+		else if (hostentry->h_addrtype == AF_INET)
 		{
 			// great it worked
 			address->addresstype = LHNETADDRESSTYPE_INET4;
-			address->addressdata.inet4.family = hostentry->h_addrtype;
-			address->addressdata.inet4.port = htons((unsigned short)port);
-			memcpy(address->addressdata.inet4.address, hostentry->h_addr_list[0], sizeof(address->addressdata.inet4.address));
+			address->port = port;
+			address->addr.in.sin_family = hostentry->h_addrtype;
+			address->addr.in.sin_port = htons((unsigned short)port);
+			memcpy(&address->addr.in.sin_addr, hostentry->h_addr_list[0], sizeof(address->addr.in.sin_addr));
 			for (i = 0;i < (int)sizeof(namecache[namecacheposition].name)-1 && name[i];i++)
 				namecache[namecacheposition].name[i] = name[i];
 			namecache[namecacheposition].name[i] = 0;
@@ -223,7 +254,8 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 			namecache[namecacheposition].address = *address;
 			namecacheposition = (namecacheposition + 1) % MAX_NAMECACHE;
 #ifdef STANDALONETEST
-			printf("gethostbyname(\"%s\") returned ipv4 address %d.%d.%d.%d:%d\n", name, (int)address->addressdata.inet4.address[0], (int)address->addressdata.inet4.address[1], (int)address->addressdata.inet4.address[2], (int)address->addressdata.inet4.address[3], (int)ntohs(address->addressdata.inet4.port));
+			LHNETADDRESS_ToString(address, string2, sizeof(string2), 1);
+			printf("gethostbyname(\"%s\") returned ipv4 address %s\n", string, string2);
 #endif
 			return 1;
 		}
@@ -242,8 +274,10 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 	return 0;
 }
 
-int LHNETADDRESS_ToString(const lhnetaddress_t *address, char *string, int stringbuffersize, int includeport)
+int LHNETADDRESS_ToString(const lhnetaddress_t *vaddress, char *string, int stringbuffersize, int includeport)
 {
+	lhnetaddressnative_t *address = (lhnetaddressnative_t *)vaddress;
+	const unsigned char *a;
 	*string = 0;
 	if (!address || !string || stringbuffersize < 1)
 		return 0;
@@ -256,7 +290,7 @@ int LHNETADDRESS_ToString(const lhnetaddress_t *address, char *string, int strin
 		{
 			if (stringbuffersize >= 12)
 			{
-				dpsnprintf(string, stringbuffersize, "local:%d", (int)address->addressdata.loop.port);
+				dpsnprintf(string, stringbuffersize, "local:%d", address->port);
 				return 1;
 			}
 		}
@@ -270,11 +304,12 @@ int LHNETADDRESS_ToString(const lhnetaddress_t *address, char *string, int strin
 		}
 		break;
 	case LHNETADDRESSTYPE_INET4:
+		a = (const unsigned char *)(&address->addr.in.sin_addr);
 		if (includeport)
 		{
 			if (stringbuffersize >= 22)
 			{
-				dpsnprintf(string, stringbuffersize, "%d.%d.%d.%d:%d", (int)address->addressdata.inet4.address[0], (int)address->addressdata.inet4.address[1], (int)address->addressdata.inet4.address[2], (int)address->addressdata.inet4.address[3], (int)ntohs(address->addressdata.inet4.port));
+				dpsnprintf(string, stringbuffersize, "%d.%d.%d.%d:%d", a[0], a[1], a[2], a[3], address->port);
 				return 1;
 			}
 		}
@@ -282,17 +317,18 @@ int LHNETADDRESS_ToString(const lhnetaddress_t *address, char *string, int strin
 		{
 			if (stringbuffersize >= 16)
 			{
-				dpsnprintf(string, stringbuffersize, "%d.%d.%d.%d", (int)address->addressdata.inet4.address[0], (int)address->addressdata.inet4.address[1], (int)address->addressdata.inet4.address[2], (int)address->addressdata.inet4.address[3]);
+				dpsnprintf(string, stringbuffersize, "%d.%d.%d.%d", a[0], a[1], a[2], a[3]);
 				return 1;
 			}
 		}
 		break;
 	case LHNETADDRESSTYPE_INET6:
+		a = (const unsigned char *)(&address->addr.in6.sin6_addr);
 		if (includeport)
 		{
 			if (stringbuffersize >= 88)
 			{
-				dpsnprintf(string, stringbuffersize, "[%x:%x:%x:%x:%x:%x:%x:%x]:%d", (int)address->addressdata.inet6.address[0], (int)address->addressdata.inet6.address[1], (int)address->addressdata.inet6.address[2], (int)address->addressdata.inet6.address[3], (int)address->addressdata.inet6.address[4], (int)address->addressdata.inet6.address[5], (int)address->addressdata.inet6.address[6], (int)address->addressdata.inet6.address[7], (int)ntohs(address->addressdata.inet6.port));
+				dpsnprintf(string, stringbuffersize, "[%x:%x:%x:%x:%x:%x:%x:%x]:%d", a[0] * 256 + a[1], a[2] * 256 + a[3], a[4] * 256 + a[5], a[6] * 256 + a[7], a[8] * 256 + a[9], a[10] * 256 + a[11], a[12] * 256 + a[13], a[14] * 256 + a[15], address->port);
 				return 1;
 			}
 		}
@@ -300,7 +336,7 @@ int LHNETADDRESS_ToString(const lhnetaddress_t *address, char *string, int strin
 		{
 			if (stringbuffersize >= 80)
 			{
-				dpsnprintf(string, stringbuffersize, "%x:%x:%x:%x:%x:%x:%x:%x", (int)address->addressdata.inet6.address[0], (int)address->addressdata.inet6.address[1], (int)address->addressdata.inet6.address[2], (int)address->addressdata.inet6.address[3], (int)address->addressdata.inet6.address[4], (int)address->addressdata.inet6.address[5], (int)address->addressdata.inet6.address[6], (int)address->addressdata.inet6.address[7]);
+				dpsnprintf(string, stringbuffersize, "%x:%x:%x:%x:%x:%x:%x:%x", a[0] * 256 + a[1], a[2] * 256 + a[3], a[4] * 256 + a[5], a[6] * 256 + a[7], a[8] * 256 + a[9], a[10] * 256 + a[11], a[12] * 256 + a[13], a[14] * 256 + a[15]);
 				return 1;
 			}
 		}
@@ -321,41 +357,34 @@ int LHNETADDRESS_GetPort(const lhnetaddress_t *address)
 {
 	if (!address)
 		return -1;
-	switch(address->addresstype)
-	{
-	case LHNETADDRESSTYPE_LOOP:
-		return address->addressdata.loop.port;
-	case LHNETADDRESSTYPE_INET4:
-		return ntohs(address->addressdata.inet4.port);
-	case LHNETADDRESSTYPE_INET6:
-		return ntohs(address->addressdata.inet6.port);
-	default:
-		return -1;
-	}
+	return address->port;
 }
 
-int LHNETADDRESS_SetPort(lhnetaddress_t *address, int port)
+int LHNETADDRESS_SetPort(lhnetaddress_t *vaddress, int port)
 {
+	lhnetaddressnative_t *address = (lhnetaddressnative_t *)vaddress;
 	if (!address)
 		return 0;
+	address->port = port;
 	switch(address->addresstype)
 	{
 	case LHNETADDRESSTYPE_LOOP:
-		address->addressdata.loop.port = port;
 		return 1;
 	case LHNETADDRESSTYPE_INET4:
-		address->addressdata.inet4.port = htons((unsigned short)port);
+		address->addr.in.sin_port = htons((unsigned short)port);
 		return 1;
 	case LHNETADDRESSTYPE_INET6:
-		address->addressdata.inet6.port = htons((unsigned short)port);
+		address->addr.in6.sin6_port = htons((unsigned short)port);
 		return 1;
 	default:
 		return 0;
 	}
 }
 
-int LHNETADDRESS_Compare(const lhnetaddress_t *address1, const lhnetaddress_t *address2)
+int LHNETADDRESS_Compare(const lhnetaddress_t *vaddress1, const lhnetaddress_t *vaddress2)
 {
+	lhnetaddressnative_t *address1 = (lhnetaddressnative_t *)vaddress1;
+	lhnetaddressnative_t *address2 = (lhnetaddressnative_t *)vaddress2;
 	if (!address1 || !address2)
 		return 1;
 	if (address1->addresstype != address2->addresstype)
@@ -363,23 +392,23 @@ int LHNETADDRESS_Compare(const lhnetaddress_t *address1, const lhnetaddress_t *a
 	switch(address1->addresstype)
 	{
 	case LHNETADDRESSTYPE_LOOP:
-		if (address1->addressdata.loop.port != address2->addressdata.loop.port)
+		if (address1->port != address2->port)
 			return -1;
 		return 0;
 	case LHNETADDRESSTYPE_INET4:
-		if (address1->addressdata.inet4.family != address2->addressdata.inet4.family)
+		if (address1->addr.in.sin_family != address2->addr.in.sin_family)
 			return 1;
-		if (memcmp(address1->addressdata.inet4.address, address2->addressdata.inet4.address, sizeof(address1->addressdata.inet4.address)))
+		if (memcmp(&address1->addr.in.sin_addr, &address2->addr.in.sin_addr, sizeof(address1->addr.in.sin_addr)))
 			return 1;
-		if (address1->addressdata.inet4.port != address2->addressdata.inet4.port)
+		if (address1->port != address2->port)
 			return -1;
 		return 0;
 	case LHNETADDRESSTYPE_INET6:
-		if (address1->addressdata.inet6.family != address2->addressdata.inet6.family)
+		if (address1->addr.in6.sin6_family != address2->addr.in6.sin6_family)
 			return 1;
-		if (memcmp(address1->addressdata.inet6.address, address2->addressdata.inet6.address, sizeof(address1->addressdata.inet6.address)))
+		if (memcmp(&address1->addr.in6.sin6_addr, &address2->addr.in6.sin6_addr, sizeof(address1->addr.in6.sin6_addr)))
 			return 1;
-		if (address1->addressdata.inet6.port != address2->addressdata.inet6.port)
+		if (address1->port != address2->port)
 			return -1;
 		return 0;
 	default:
@@ -540,29 +569,29 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 		switch(lhnetsocket->address.addresstype)
 		{
 		case LHNETADDRESSTYPE_LOOP:
-			if (lhnetsocket->address.addressdata.loop.port == 0)
+			if (lhnetsocket->address.port == 0)
 			{
 				// allocate a port dynamically
 				// this search will always terminate because there is never
 				// an allocated socket with port 0, so if the number wraps it
 				// will find the port is unused, and then refuse to use port
 				// 0, causing an intentional failure condition
-				lhnetsocket->address.addressdata.loop.port = 1024;
+				lhnetsocket->address.port = 1024;
 				for (;;)
 				{
 					for (s = lhnet_socketlist.next;s != &lhnet_socketlist;s = s->next)
-						if (s->address.addresstype == lhnetsocket->address.addresstype && s->address.addressdata.loop.port == lhnetsocket->address.addressdata.loop.port)
+						if (s->address.addresstype == lhnetsocket->address.addresstype && s->address.port == lhnetsocket->address.port)
 							break;
 					if (s == &lhnet_socketlist)
 						break;
-					lhnetsocket->address.addressdata.loop.port++;
+					lhnetsocket->address.port++;
 				}
 			}
 			// check if the port is available
 			for (s = lhnet_socketlist.next;s != &lhnet_socketlist;s = s->next)
-				if (s->address.addresstype == lhnetsocket->address.addresstype && s->address.addressdata.loop.port == lhnetsocket->address.addressdata.loop.port)
+				if (s->address.addresstype == lhnetsocket->address.addresstype && s->address.port == lhnetsocket->address.port)
 					break;
-			if (s == &lhnet_socketlist && lhnetsocket->address.addressdata.loop.port != 0)
+			if (s == &lhnet_socketlist && lhnetsocket->address.port != 0)
 			{
 				lhnetsocket->next = &lhnet_socketlist;
 				lhnetsocket->prev = lhnetsocket->next->prev;
@@ -577,7 +606,7 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 			if (lhnet_didWSAStartup)
 			{
 #endif
-				if ((lhnetsocket->inetsocket = socket(address->addresstype == LHNETADDRESSTYPE_INET6 ? LHNETADDRESSTYPE_INET6_FAMILY : LHNETADDRESSTYPE_INET4_FAMILY, SOCK_DGRAM, IPPROTO_UDP)) != -1)
+				if ((lhnetsocket->inetsocket = socket(address->addresstype == LHNETADDRESSTYPE_INET6 ? PF_INET6 : PF_INET, SOCK_DGRAM, IPPROTO_UDP)) != -1)
 				{
 #ifdef WIN32
 					u_long _true = 1;
@@ -587,12 +616,26 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 #endif
 					if (ioctlsocket(lhnetsocket->inetsocket, FIONBIO, &_true) != -1)
 					{
+						lhnetaddressnative_t *localaddress = (lhnetaddressnative_t *)&lhnetsocket->address;
 						SOCKLEN_T namelen;
-						namelen = address->addresstype == LHNETADDRESSTYPE_INET6 ? sizeof(lhnetsocket->address.addressdata.inet6) : sizeof(lhnetsocket->address.addressdata.inet4);
-						if (bind(lhnetsocket->inetsocket, (struct sockaddr *)&lhnetsocket->address.addressdata, namelen) != -1)
+						int bindresult;
+						if (address->addresstype == LHNETADDRESSTYPE_INET6)
+						{
+							namelen = sizeof(localaddress->addr.in6);
+							bindresult = bind(lhnetsocket->inetsocket, &localaddress->addr.sock, namelen);
+							if (bindresult != -1)
+								getsockname(lhnetsocket->inetsocket, &localaddress->addr.sock, &namelen);
+						}
+						else
+						{
+							namelen = sizeof(localaddress->addr.in);
+							bindresult = bind(lhnetsocket->inetsocket, &localaddress->addr.sock, namelen);
+							if (bindresult != -1)
+								getsockname(lhnetsocket->inetsocket, &localaddress->addr.sock, &namelen);
+						}
+						if (bindresult != -1)
 						{
 							int i = 1;
-							getsockname(lhnetsocket->inetsocket, (struct sockaddr *)&lhnetsocket->address.addressdata, &namelen);
 							// enable broadcast on this socket
 							setsockopt(lhnetsocket->inetsocket, SOL_SOCKET, SO_BROADCAST, (char *)&i, sizeof(i));
 							lhnetsocket->next = &lhnet_socketlist;
@@ -657,8 +700,9 @@ lhnetaddress_t *LHNET_AddressFromSocket(lhnetsocket_t *sock)
 		return NULL;
 }
 
-int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, lhnetaddress_t *address)
+int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, lhnetaddress_t *vaddress)
 {
+	lhnetaddressnative_t *address = (lhnetaddressnative_t *)vaddress;
 	int value = 0;
 	if (!lhnetsocket || !address || !content || maxcontentlength < 1)
 		return -1;
@@ -684,12 +728,13 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 			if (cl_netlocalping.value && (realtime - cl_netlocalping.value * (1.0 / 2000.0)) < p->sentdoubletime)
 				continue;
 #endif
-			if (value == 0 && p->destinationport == lhnetsocket->address.addressdata.loop.port)
+			if (value == 0 && p->destinationport == lhnetsocket->address.port)
 			{
 				if (p->length <= maxcontentlength)
 				{
-					*address = lhnetsocket->address;
-					address->addressdata.loop.port = p->sourceport;
+					lhnetaddressnative_t *localaddress = (lhnetaddressnative_t *)&lhnetsocket->address;
+					*address = *localaddress;
+					address->port = p->sourceport;
 					memcpy(content, p->data, p->length);
 					value = p->length;
 				}
@@ -706,11 +751,12 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 	{
 		unsigned int inetaddresslength;
 		address->addresstype = LHNETADDRESSTYPE_NONE;
-		inetaddresslength = sizeof(address->addressdata.inet4);
-		value = recvfrom(lhnetsocket->inetsocket, content, maxcontentlength, 0, (struct sockaddr *)&address->addressdata.inet4, &inetaddresslength);
+		inetaddresslength = sizeof(address->addr.in);
+		value = recvfrom(lhnetsocket->inetsocket, content, maxcontentlength, 0, &address->addr.sock, &inetaddresslength);
 		if (value > 0)
 		{
 			address->addresstype = LHNETADDRESSTYPE_INET4;
+			address->port = ntohs(address->addr.in.sin_port);
 			return value;
 		}
 		else if (value == -1)
@@ -731,11 +777,12 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 	{
 		unsigned int inetaddresslength;
 		address->addresstype = LHNETADDRESSTYPE_NONE;
-		inetaddresslength = sizeof(address->addressdata.inet6);
-		value = recvfrom(lhnetsocket->inetsocket, content, maxcontentlength, 0, (struct sockaddr *)&address->addressdata.inet6, &inetaddresslength);
+		inetaddresslength = sizeof(address->addr.in6);
+		value = recvfrom(lhnetsocket->inetsocket, content, maxcontentlength, 0, &address->addr.sock, &inetaddresslength);
 		if (value > 0)
 		{
 			address->addresstype = LHNETADDRESSTYPE_INET6;
+			address->port = ntohs(address->addr.in6.sin6_port);
 			return value;
 		}
 		else if (value == -1)
@@ -755,8 +802,9 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 	return value;
 }
 
-int LHNET_Write(lhnetsocket_t *lhnetsocket, const void *content, int contentlength, const lhnetaddress_t *address)
+int LHNET_Write(lhnetsocket_t *lhnetsocket, const void *content, int contentlength, const lhnetaddress_t *vaddress)
 {
+	lhnetaddressnative_t *address = (lhnetaddressnative_t *)vaddress;
 	int value = -1;
 	if (!lhnetsocket || !address || !content || contentlength < 1)
 		return -1;
@@ -769,8 +817,8 @@ int LHNET_Write(lhnetsocket_t *lhnetsocket, const void *content, int contentleng
 		p->data = (void *)(p + 1);
 		memcpy(p->data, content, contentlength);
 		p->length = contentlength;
-		p->sourceport = lhnetsocket->address.addressdata.loop.port;
-		p->destinationport = address->addressdata.loop.port;
+		p->sourceport = lhnetsocket->address.port;
+		p->destinationport = address->port;
 		p->timeout = time(NULL) + 10;
 		p->next = &lhnet_packetlist;
 		p->prev = p->next->prev;
@@ -783,7 +831,7 @@ int LHNET_Write(lhnetsocket_t *lhnetsocket, const void *content, int contentleng
 	}
 	else if (lhnetsocket->address.addresstype == LHNETADDRESSTYPE_INET4)
 	{
-		value = sendto(lhnetsocket->inetsocket, content, contentlength, 0, (struct sockaddr *)&address->addressdata.inet4, sizeof(address->addressdata.inet4));
+		value = sendto(lhnetsocket->inetsocket, content, contentlength, 0, (struct sockaddr *)&address->addr.in, sizeof(struct sockaddr_in));
 		if (value == -1)
 		{
 			if (SOCKETERRNO == EWOULDBLOCK)
@@ -793,7 +841,7 @@ int LHNET_Write(lhnetsocket_t *lhnetsocket, const void *content, int contentleng
 	}
 	else if (lhnetsocket->address.addresstype == LHNETADDRESSTYPE_INET6)
 	{
-		value = sendto(lhnetsocket->inetsocket, content, contentlength, 0, (struct sockaddr *)&address->addressdata.inet6, sizeof(address->addressdata.inet6));
+		value = sendto(lhnetsocket->inetsocket, content, contentlength, 0, (struct sockaddr *)&address->addr.in6, sizeof(struct sockaddr_in6));
 		if (value == -1)
 		{
 			if (SOCKETERRNO == EWOULDBLOCK)
