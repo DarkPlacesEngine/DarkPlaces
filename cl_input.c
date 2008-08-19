@@ -1013,27 +1013,30 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 	{
 		// apply edge friction
 		f = sqrt(s->velocity[0] * s->velocity[0] + s->velocity[1] * s->velocity[1]);
-		friction = cl.movevars_friction;
-		if (f > 0 && cl.movevars_edgefriction != 1)
+		if (f > 0)
 		{
-			vec3_t neworigin2;
-			vec3_t neworigin3;
-			// note: QW uses the full player box for the trace, and yet still
-			// uses s->origin[2] + s->mins[2], which is clearly an bug, but
-			// this mimics it for compatibility
-			VectorSet(neworigin2, s->origin[0] + s->velocity[0]*(16/f), s->origin[1] + s->velocity[1]*(16/f), s->origin[2] + s->mins[2]);
-			VectorSet(neworigin3, neworigin2[0], neworigin2[1], neworigin2[2] - 34);
-			if (cls.protocol == PROTOCOL_QUAKEWORLD)
-				trace = CL_Move(neworigin2, s->mins, s->maxs, neworigin3, MOVE_NORMAL, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true, true, NULL, false);
-			else
-				trace = CL_Move(neworigin2, vec3_origin, vec3_origin, neworigin3, MOVE_NORMAL, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true, true, NULL, false);
-			if (trace.fraction == 1 && !trace.startsolid)
-				friction *= cl.movevars_edgefriction;
+			friction = cl.movevars_friction;
+			if (cl.movevars_edgefriction != 1)
+			{
+				vec3_t neworigin2;
+				vec3_t neworigin3;
+				// note: QW uses the full player box for the trace, and yet still
+				// uses s->origin[2] + s->mins[2], which is clearly an bug, but
+				// this mimics it for compatibility
+				VectorSet(neworigin2, s->origin[0] + s->velocity[0]*(16/f), s->origin[1] + s->velocity[1]*(16/f), s->origin[2] + s->mins[2]);
+				VectorSet(neworigin3, neworigin2[0], neworigin2[1], neworigin2[2] - 34);
+				if (cls.protocol == PROTOCOL_QUAKEWORLD)
+					trace = CL_Move(neworigin2, s->mins, s->maxs, neworigin3, MOVE_NORMAL, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true, true, NULL, false);
+				else
+					trace = CL_Move(neworigin2, vec3_origin, vec3_origin, neworigin3, MOVE_NORMAL, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true, true, NULL, false);
+				if (trace.fraction == 1 && !trace.startsolid)
+					friction *= cl.movevars_edgefriction;
+			}
+			// apply ground friction
+			f = 1 - s->cmd.frametime * friction * ((f < cl.movevars_stopspeed) ? (cl.movevars_stopspeed / f) : 1);
+			f = max(f, 0);
+			VectorScale(s->velocity, f, s->velocity);
 		}
-		// apply ground friction
-		f = 1 - s->cmd.frametime * friction * ((f < cl.movevars_stopspeed) ? (cl.movevars_stopspeed / f) : 1);
-		f = max(f, 0);
-		VectorScale(s->velocity, f, s->velocity);
 		addspeed = wishspeed - DotProduct(s->velocity, wishdir);
 		if (addspeed > 0)
 		{
