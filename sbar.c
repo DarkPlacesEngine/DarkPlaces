@@ -97,6 +97,8 @@ cvar_t showdate_format = {CVAR_SAVE, "showdate_format", "%Y-%m-%d", "format stri
 cvar_t sbar_alpha_bg = {CVAR_SAVE, "sbar_alpha_bg", "0.4", "opacity value of the statusbar background image"};
 cvar_t sbar_alpha_fg = {CVAR_SAVE, "sbar_alpha_fg", "1", "opacity value of the statusbar weapon/item icons and numbers"};
 cvar_t sbar_hudselector = {CVAR_SAVE, "sbar_hudselector", "0", "selects which of the builtin hud layouts to use (meaning is somewhat dependent on gamemode, so nexuiz has a very different set of hud layouts than quake for example)"};
+cvar_t sbar_scorerank = {CVAR_SAVE, "sbar_scorerank", "1", "shows an overlay for your score (or team score) and rank in the scoreboard"};
+cvar_t sbar_gametime = {CVAR_SAVE, "sbar_gametime", "1", "shows an overlay for the time left in the current match/level (or current game time if there is no timelimit set)"};
 cvar_t sbar_miniscoreboard_size = {CVAR_SAVE, "sbar_miniscoreboard_size", "-1", "sets the size of the mini deathmatch overlay in items, or disables it when set to 0, or sets it to a sane default when set to -1"};
 cvar_t sbar_flagstatus_right = {CVAR_SAVE, "sbar_flagstatus_right", "0", "moves Nexuiz flag status icons to the right"};
 cvar_t sbar_flagstatus_pos = {CVAR_SAVE, "sbar_flagstatus_pos", "115", "pixel position of the Nexuiz flag status icons, from the bottom"};
@@ -381,6 +383,8 @@ void Sbar_Init (void)
 	Cvar_RegisterVariable(&sbar_alpha_bg);
 	Cvar_RegisterVariable(&sbar_alpha_fg);
 	Cvar_RegisterVariable(&sbar_hudselector);
+	Cvar_RegisterVariable(&sbar_scorerank);
+	Cvar_RegisterVariable(&sbar_gametime);
 	Cvar_RegisterVariable(&sbar_miniscoreboard_size);
 	Cvar_RegisterVariable(&cl_deathscoreboard);
 
@@ -1927,11 +1931,12 @@ void Sbar_Score (int margin)
 	int sbar_x_save = sbar_x;
 	int sbar_y_save = sbar_y;
 
+
 	sbar_y = vid_conheight.value - (32+12);
 	sbar_x -= margin;
 
 	me = cl.playerentity - 1;
-	if (me >= 0 && me < cl.maxclients)
+	if (sbar_scorerank.integer && me >= 0 && me < cl.maxclients)
 	{
 		if(Sbar_IsTeammatch())
 		{
@@ -2021,7 +2026,7 @@ void Sbar_Score (int margin)
 		}
 	}
 
-	if (cl.statsf[STAT_TIMELIMIT])
+	if (sbar_gametime.integer && cl.statsf[STAT_TIMELIMIT])
 	{
 		timeleft = max(0, cl.statsf[STAT_TIMELIMIT] * 60 - cl.time);
 		minutes = (int)floor(timeleft / 60);
@@ -2045,7 +2050,7 @@ void Sbar_Score (int margin)
 		else
 			Sbar_DrawXNum(-12*2, 32, seconds, -2, 12, 1, 0, 0, 1, 0);
 	}
-	else
+	else if (sbar_gametime.integer)
 	{
 		minutes = (int)floor(cl.time / 60);
 		seconds = (int)(floor(cl.time) - minutes * 60);
