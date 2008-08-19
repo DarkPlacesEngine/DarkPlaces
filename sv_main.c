@@ -2917,8 +2917,6 @@ static qboolean SV_VM_CB_LoadEdict(prvm_edict_t *ent)
 static void SV_VM_Setup(void)
 {
 	extern cvar_t csqc_progname;	//[515]: csqc crc check and right csprogs name according to progs.dat
-	extern cvar_t csqc_progcrc;
-	extern cvar_t csqc_progsize;
 	size_t csprogsdatasize;
 	PRVM_Begin;
 	PRVM_InitProg( PRVM_SERVERPROG );
