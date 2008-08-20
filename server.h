@@ -147,6 +147,9 @@ typedef struct server_s
 	int sententitiesmark;
 	int sententities[MAX_EDICTS];
 	int sententitiesconsideration[MAX_EDICTS];
+
+	// legacy support for self.Version based csqc entity networking
+	unsigned char csqcentityversion[MAX_EDICTS]; // legacy
 } server_t;
 
 // if defined this does ping smoothing, otherwise it does not
@@ -215,8 +218,12 @@ typedef struct client_s
 	// visibility state
 	float visibletime[MAX_EDICTS];
 
-	// version number of csqc-based entity to decide whether to send it
-	unsigned char csqcentityversion[MAX_EDICTS];
+	// scope is whether an entity is currently being networked to this client
+	// sendflags is what properties have changed on the entity since the last
+	// update that was sent
+	int csqcnumedicts;
+	unsigned char csqcentityscope[MAX_EDICTS];
+	unsigned int csqcentitysendflags[MAX_EDICTS];
 
 	// prevent animated names
 	float nametime;

@@ -215,6 +215,7 @@ prvm_required_field_t reqfields[] =
 	{ev_entity, "nodrawtoclient"},
 	{ev_entity, "tag_entity"},
 	{ev_entity, "viewmodelforclient"},
+	{ev_float, "SendFlags"},
 	{ev_float, "Version"},
 	{ev_float, "alpha"},
 	{ev_float, "ammo_cells1"},
@@ -733,7 +734,11 @@ void SV_SendServerinfo (client_t *client)
 	}
 
 	// reset csqc entity versions
-	memset(client->csqcentityversion, 0, sizeof(client->csqcentityversion));
+	for (i = 0;i < prog->max_edicts;i++)
+	{
+		client->csqcentityscope[i] = 0;
+		client->csqcentitysendflags[i] = 0xFFFFFF;
+	}
 
 	SZ_Clear (&client->netconnection->message);
 	MSG_WriteByte (&client->netconnection->message, svc_print);
@@ -954,12 +959,14 @@ crosses a waterline.
 static qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, int enumber)
 {
 	int i;
+	unsigned int sendflags;
+	unsigned int version;
 	unsigned int modelindex, effects, flags, glowsize, lightstyle, lightpflags, light[4], specialvisibilityradius;
 	unsigned int customizeentityforclient;
 	float f;
 	vec3_t cullmins, cullmaxs;
 	dp_model_t *model;
-	prvm_eval_t *val;
+	prvm_eval_t *val, *val2;
 
 	// this 2 billion unit check is actually to detect NAN origins
 	// (we really don't want to send those)
@@ -1190,6 +1197,30 @@ static qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *c
 			if (i <= MAX_ENTITYCLUSTERS)
 				ent->priv.server->pvs_numclusters = i;
 		}
+	}
+
+	// we need to do some csqc entity upkeep here
+	// get self.SendFlags and clear them
+	// (to let the QC know that they've been read)
+	val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.SendEntity);
+	if (val->function)
+	{
+		val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.SendFlags);
+		sendflags = (unsigned int)val->_float;
+		val->_float = 0;
+		// legacy self.Version system
+		val2 = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.Version);
+		if (val2->_float)
+		{
+			version = (unsigned int)val2->_float;
+			if (sv.csqcentityversion[enumber] != version)
+				sendflags = 0xFFFFFF;
+			sv.csqcentityversion[enumber] = version;
+		}
+		// move sendflags into the per-client sendflags
+		if (sendflags)
+			for (i = 0;i < svs.maxclients;i++)
+				svs.clients[i].csqcentitysendflags[enumber] |= sendflags;
 	}
 
 	return true;
@@ -2850,6 +2881,9 @@ static void SV_VM_CB_InitEdict(prvm_edict_t *e)
 
 static void SV_VM_CB_FreeEdict(prvm_edict_t *ed)
 {
+	int i;
+	int e;
+
 	World_UnlinkEdict(ed);		// unlink from world bsp
 
 	ed->fields.server->model = 0;
@@ -2862,6 +2896,16 @@ static void SV_VM_CB_FreeEdict(prvm_edict_t *ed)
 	VectorClear(ed->fields.server->angles);
 	ed->fields.server->nextthink = -1;
 	ed->fields.server->solid = 0;
+
+	// make sure csqc networking is aware of the removed entity
+	e = PRVM_NUM_FOR_EDICT(ed);
+	sv.csqcentityversion[e] = 0;
+	for (i = 0;i < svs.maxclients;i++)
+	{
+		if (svs.clients[i].csqcentityscope[e])
+			svs.clients[i].csqcentityscope[e] = 1; // removed, awaiting send
+		svs.clients[i].csqcentitysendflags[e] = 0xFFFFFF;
+	}
 }
 
 static void SV_VM_CB_CountEdicts(void)

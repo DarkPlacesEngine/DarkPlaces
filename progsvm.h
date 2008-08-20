@@ -128,7 +128,8 @@ typedef struct prvm_prog_fieldoffsets_s
 {
 	// server and client use a lot of similar fields, so this is combined
 	int SendEntity; // ssqc
-	int Version; // ssqc
+	int SendFlags; // ssqc
+	int Version; // ssqc (legacy)
 	int alpha; // ssqc / csqc
 	int ammo_cells1; // ssqc - Dissolution of Eternity mission pack
 	int ammo_lava_nails; // ssqc - Dissolution of Eternity mission pack
