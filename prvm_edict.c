@@ -1369,6 +1369,7 @@ void PRVM_FindOffsets(void)
 
 	// server and client qc use a lot of similar fields, so this is combined
 	prog->fieldoffsets.SendEntity                     = PRVM_ED_FindFieldOffset("SendEntity");
+	prog->fieldoffsets.SendFlags                      = PRVM_ED_FindFieldOffset("SendFlags");
 	prog->fieldoffsets.Version                        = PRVM_ED_FindFieldOffset("Version");
 	prog->fieldoffsets.alpha                          = PRVM_ED_FindFieldOffset("alpha");
 	prog->fieldoffsets.ammo_cells1                    = PRVM_ED_FindFieldOffset("ammo_cells1");

@@ -251,139 +251,142 @@ void EntityFrameQuake_ISeeDeadEntities(void)
 // packet logs and thus if an update is lost it is never repeated, this makes
 // csqc entities useless at the moment.
 
-void EntityFrameCSQC_WriteState (sizebuf_t *msg, int maxsize, int number, qboolean doupdate, qboolean *sectionstarted)
-{
-	int version;
-	prvm_eval_t *val, *val2;
-	version = 0;
-	if (doupdate)
-	{
-		if (msg->cursize + !*sectionstarted + 2 + 1 + 2 > maxsize)
-			return;
-		val2 = PRVM_EDICTFIELDVALUE((&prog->edicts[number]), prog->fieldoffsets.Version);
-		version = (int)val2->_float;
-		// LordHavoc: do some validity checks on self.Version
-		// if self.Version reaches 255, it will soon exceed the byte used to
-		// store an entity version in the client struct, so we need to reset
-		// all the version to 1 and force all the existing clients' version of
-		// it to 255 (which we're not allowing to actually occur)
-		if (version < 0)
-			val2->_float = 0;
-		if (version >= 255)
-		{
-			int i;
-			val2->_float = version = 1;
-			// since we just reset the Version field to 1, it may accidentally
-			// end up being equal to an existing client version now or in the
-			// future, so to fix this situation we have to loop over all
-			// clients and change their versions for this entity to be -1
-			// which never matches, thus causing them to receive the update
-			// soon, as they should
-			for (i = 0;i < svs.maxclients;i++)
-				if (svs.clients[sv.writeentitiestoclient_clientnumber].csqcentityversion[number])
-					svs.clients[sv.writeentitiestoclient_clientnumber].csqcentityversion[number] = 255;
-		}
-	}
-	// if the version already matches, we don't need to do anything as the
-	// latest version has already been sent.
-	if (svs.clients[sv.writeentitiestoclient_clientnumber].csqcentityversion[number] == version)
-		return;
-	if (version)
-	{
-		// if there's no SendEntity function, treat it as a remove
-		val = PRVM_EDICTFIELDVALUE((&prog->edicts[number]), prog->fieldoffsets.SendEntity);
-		if (val->function)
-		{
-			// there is a function to call, save the cursize value incase we
-			// have to do a rollback due to overflow
-			int oldcursize = msg->cursize;
-			if(!*sectionstarted)
-				MSG_WriteByte(msg, svc_csqcentities);
-			MSG_WriteShort(msg, number);
-			msg->allowoverflow = true;
-			PRVM_G_INT(OFS_PARM0) = sv.writeentitiestoclient_cliententitynumber;
-			prog->globals.server->self = number;
-			PRVM_ExecuteProgram(val->function, "Null SendEntity\n");
-			msg->allowoverflow = false;
-			if(PRVM_G_FLOAT(OFS_RETURN))
-			{
-				if (msg->cursize + 2 > maxsize)
-				{
-					// if the packet no longer has enough room to write the
-					// final index code that ends the message, rollback to the
-					// state before we tried to write anything and then return
-					msg->cursize = oldcursize;
-					msg->overflowed = false;
-					return;
-				}
-				// an update has been successfully written, update the version
-				svs.clients[sv.writeentitiestoclient_clientnumber].csqcentityversion[number] = version;
-				// and take note that we have begun the svc_csqcentities
-				// section of the packet
-				*sectionstarted = 1;
-				return;
-			}
-			else
-			{
-				// rollback the buffer to its state before the writes
-				msg->cursize = oldcursize;
-				msg->overflowed = false;
-				// if the function returned FALSE, simply write a remove
-				// this is done by falling through to the remove code below
-				version = 0;
-			}
-		}
-	}
-	// write a remove message if needed
-	// if already removed, do nothing
-	if (!svs.clients[sv.writeentitiestoclient_clientnumber].csqcentityversion[number])
-		return;
-	// if there isn't enough room to write the remove message, just return, as
-	// it will be handled in a later packet
-	if (msg->cursize + !*sectionstarted + 2 + 2 > maxsize)
-		return;
-	// first write the message identifier if needed
-	if(!*sectionstarted)
-	{
-		*sectionstarted = 1;
-		MSG_WriteByte(msg, svc_csqcentities);
-	}
-	// write the remove message
-	MSG_WriteShort(msg, (unsigned short)number | 0x8000);
-	svs.clients[sv.writeentitiestoclient_clientnumber].csqcentityversion[number] = 0;
-}
-
 //[515]: we use only one array per-client for SendEntity feature
 void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numstates, const entity_state_t *states)
 {
-	int i, num;
+	int num, number, end, sendflags;
 	qboolean sectionstarted = false;
 	const entity_state_t *n;
+	prvm_edict_t *ed;
+	prvm_eval_t *val;
+	client_t *client = svs.clients + sv.writeentitiestoclient_clientnumber;
 
 	// if this server progs is not CSQC-aware, return early
 	if(prog->fieldoffsets.SendEntity < 0 || prog->fieldoffsets.Version < 0)
 		return;
+
 	// make sure there is enough room to store the svc_csqcentities byte,
 	// the terminator (0x0000) and at least one entity update
 	if (msg->cursize + 32 >= maxsize)
 		return;
 
-	num = 1;
+	if (client->csqcnumedicts < prog->num_edicts)
+		client->csqcnumedicts = prog->num_edicts;
+
+	number = 1;
+	for (num = 0, n = states;num < numstates;num++, n++)
+	{
+		end = n->number;
+		for (;number < end;number++)
+		{
+			if (client->csqcentityscope[number])
+			{
+				client->csqcentityscope[number] = 1;
+				client->csqcentitysendflags[number] = 0xFFFFFF;
+			}
+		}
+		ed = prog->edicts + number;
+		val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.SendEntity);
+		if (val->function)
+			client->csqcentityscope[number] = 2;
+		else if (client->csqcentityscope[number])
+		{
+			client->csqcentityscope[number] = 1;
+			client->csqcentitysendflags[number] = 0xFFFFFF;
+		}
+		number++;
+	}
+	end = client->csqcnumedicts;
+	for (;number < end;number++)
+	{
+		if (client->csqcentityscope[number])
+		{
+			client->csqcentityscope[number] = 1;
+			client->csqcentitysendflags[number] = 0xFFFFFF;
+		}
+	}
+
+	/*
+	// mark all scope entities as remove
+	for (number = 1;number < client->csqcnumedicts;number++)
+		if (client->csqcentityscope[number])
+			client->csqcentityscope[number] = 1;
+	// keep visible entities
 	for (i = 0, n = states;i < numstates;i++, n++)
 	{
-		// all entities between the previous entity state and this one are dead
-		for (;num < n->number;num++)
-			if(svs.clients[sv.writeentitiestoclient_clientnumber].csqcentityversion[num])
-				EntityFrameCSQC_WriteState(msg, maxsize, num, false, &sectionstarted);
-		// update this entity
-		EntityFrameCSQC_WriteState(msg, maxsize, num, true, &sectionstarted);
-		// advance to next entity so the next iteration doesn't immediately remove it
-		num++;
+		number = n->number;
+		ed = prog->edicts + number;
+		val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.SendEntity);
+		if (val->function)
+			client->csqcentityscope[number] = 2;
 	}
-	// all remaining entities are dead
-	for (;num < prog->num_edicts;num++)
-		if(svs.clients[sv.writeentitiestoclient_clientnumber].csqcentityversion[num])
-			EntityFrameCSQC_WriteState(msg, maxsize, num, false, &sectionstarted);
+	*/
+
+	// now try to emit the entity updates
+	// (FIXME: prioritize by distance?)
+	end = client->csqcnumedicts;
+	for (number = 1;number < end;number++)
+	{
+		if (!client->csqcentityscope[number])
+			continue;
+		sendflags = client->csqcentitysendflags[number];
+		if (!sendflags)
+			continue;
+		ed = prog->edicts + number;
+		// entity scope is either update (2) or remove (1)
+		if (client->csqcentityscope[number] == 1)
+		{
+			// write a remove message
+			// first write the message identifier if needed
+			if(!sectionstarted)
+			{
+				sectionstarted = 1;
+				MSG_WriteByte(msg, svc_csqcentities);
+			}
+			// write the remove message
+			MSG_WriteShort(msg, (unsigned short)number | 0x8000);
+			client->csqcentityscope[number] = 0;
+			client->csqcentitysendflags[number] = 0;
+			if (msg->cursize + 17 >= maxsize)
+				break;
+		}
+		else
+		{
+			// write an update
+			// save the cursize value in case we overflow and have to rollback
+			int oldcursize = msg->cursize;
+			client->csqcentityscope[number] = 1;
+			val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.SendEntity);
+			if (val->function)
+			{
+				if(!sectionstarted)
+					MSG_WriteByte(msg, svc_csqcentities);
+				MSG_WriteShort(msg, number);
+				msg->allowoverflow = true;
+				PRVM_G_INT(OFS_PARM0) = sv.writeentitiestoclient_cliententitynumber;
+				PRVM_G_FLOAT(OFS_PARM1) = sendflags;
+				prog->globals.server->self = number;
+				PRVM_ExecuteProgram(val->function, "Null SendEntity\n");
+				msg->allowoverflow = false;
+				if(PRVM_G_FLOAT(OFS_RETURN) && msg->cursize + 2 <= maxsize)
+				{
+					// an update has been successfully written
+					client->csqcentitysendflags[number] = 0;
+					// and take note that we have begun the svc_csqcentities
+					// section of the packet
+					sectionstarted = 1;
+					if (msg->cursize + 17 >= maxsize)
+						break;
+					continue;
+				}
+			}
+			// self.SendEntity returned false (or does not exist) or the
+			// update was too big for this packet - rollback the buffer to its
+			// state before the writes occurred, we'll try again next frame
+			msg->cursize = oldcursize;
+			msg->overflowed = false;
+		}
+	}
 	if (sectionstarted)
 	{
 		// write index 0 to end the update (0 is never used by real entities)
