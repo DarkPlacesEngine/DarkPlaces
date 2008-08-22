@@ -364,6 +364,12 @@ typedef struct q3shaderinfo_s
 	char skyboxname[Q3PATHLENGTH];
 	q3shaderinfo_deform_t deforms[Q3MAXDEFORMS];
 
+	// dp-specific additions:
+
+	// shadow control
+	qboolean dpshadow;
+	qboolean dpnoshadow;
+
 	// reflection
 	float reflectmin; // when refraction is used, minimum amount of reflection (when looking straight down)
 	float reflectmax; // when refraction is used, maximum amount of reflection (when looking parallel to water)
