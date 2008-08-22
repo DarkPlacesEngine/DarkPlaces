@@ -1582,6 +1582,10 @@ void Mod_LoadQ3Shaders(void)
 					else
 						Con_DPrintf("%s parsing warning: unknown surfaceparm \"%s\"\n", search->filenames[fileindex], parameter[1]);
 				}
+				else if (!strcasecmp(parameter[0], "dpshadow"))
+					shader.dpshadow = true;
+				else if (!strcasecmp(parameter[0], "dpnoshadow"))
+					shader.dpnoshadow = true;
 				else if (!strcasecmp(parameter[0], "sky") && numparameters >= 2)
 				{
 					// some q3 skies don't have the sky parm set
@@ -1832,6 +1836,10 @@ nothing                GL_ZERO GL_ONE
 				}
 			}
 		}
+		if (shader->dpshadow)
+			texture->basematerialflags &= ~MATERIALFLAG_NOSHADOW;
+		if (shader->dpnoshadow)
+			texture->basematerialflags |= MATERIALFLAG_NOSHADOW;
 		memcpy(texture->deforms, shader->deforms, sizeof(texture->deforms));
 		texture->reflectmin = shader->reflectmin;
 		texture->reflectmax = shader->reflectmax;
