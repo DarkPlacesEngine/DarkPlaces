@@ -26,6 +26,7 @@
 #include "image.h"
 #include "jpeg.h"
 
+cvar_t sv_writepicture_quality = {CVAR_SAVE, "sv_writepicture_quality", "10", "WritePicture quality offset (higher means better quality, but slower)"};
 
 /*
 =================================================================
@@ -431,7 +432,8 @@ dllhandle_t jpeg_dll = NULL;
 qboolean jpeg_tried_loading = 0;
 
 static unsigned char jpeg_eoi_marker [2] = {0xFF, JPEG_EOI};
-static qboolean error_in_jpeg;
+static jmp_buf error_in_jpeg;
+static qboolean jpeg_toolarge;
 
 // Our own output manager for JPEG compression
 typedef struct
@@ -553,7 +555,7 @@ static void JPEG_MemSrc (j_decompress_ptr cinfo, const unsigned char *buffer, si
 static void JPEG_ErrorExit (j_common_ptr cinfo)
 {
 	((struct jpeg_decompress_struct*)cinfo)->err->output_message (cinfo);
-	error_in_jpeg = true;
+	longjmp(error_in_jpeg, 1);
 }
 
 
@@ -568,7 +570,7 @@ unsigned char* JPEG_LoadImage_BGRA (const unsigned char *f, int filesize)
 {
 	struct jpeg_decompress_struct cinfo;
 	struct jpeg_error_mgr jerr;
-	unsigned char *image_buffer, *scanline;
+	unsigned char *image_buffer = NULL, *scanline = NULL;
 	unsigned int line;
 
 	// No DLL = no JPEGs
@@ -577,6 +579,10 @@ unsigned char* JPEG_LoadImage_BGRA (const unsigned char *f, int filesize)
 
 	cinfo.err = qjpeg_std_error (&jerr);
 	qjpeg_create_decompress (&cinfo);
+	if(setjmp(error_in_jpeg))
+		goto error_caught;
+	cinfo.err = qjpeg_std_error (&jerr);
+	cinfo.err->error_exit = JPEG_ErrorExit;
 	JPEG_MemSrc (&cinfo, f, filesize);
 	qjpeg_read_header (&cinfo, TRUE);
 	qjpeg_start_decompress (&cinfo);
@@ -650,6 +656,14 @@ unsigned char* JPEG_LoadImage_BGRA (const unsigned char *f, int filesize)
 	qjpeg_destroy_decompress (&cinfo);
 
 	return image_buffer;
+
+error_caught:
+	if(scanline)
+		Mem_Free (scanline);
+	if(image_buffer)
+		Mem_Free (image_buffer);
+	qjpeg_destroy_decompress (&cinfo);
+	return NULL;
 }
 
 
@@ -675,10 +689,7 @@ static jboolean JPEG_EmptyOutputBuffer (j_compress_ptr cinfo)
 	my_dest_ptr dest = (my_dest_ptr)cinfo->dest;
 
 	if (FS_Write (dest->outfile, dest->buffer, JPEG_OUTPUT_BUF_SIZE) != (size_t) JPEG_OUTPUT_BUF_SIZE)
-	{
-		error_in_jpeg = true;
-		return false;
-	}
+		longjmp(error_in_jpeg, 1);
 
 	dest->pub.next_output_byte = dest->buffer;
 	dest->pub.free_in_buffer = JPEG_OUTPUT_BUF_SIZE;
@@ -693,7 +704,7 @@ static void JPEG_TermDestination (j_compress_ptr cinfo)
 	// Write any data remaining in the buffer
 	if (datacount > 0)
 		if (FS_Write (dest->outfile, dest->buffer, datacount) != (fs_offset_t)datacount)
-			error_in_jpeg = true;
+			longjmp(error_in_jpeg, 1);
 }
 
 static void JPEG_FileDest (j_compress_ptr cinfo, qfile_t* outfile)
@@ -720,8 +731,11 @@ static void JPEG_Mem_InitDestination (j_compress_ptr cinfo)
 
 static jboolean JPEG_Mem_EmptyOutputBuffer (j_compress_ptr cinfo)
 {
-	error_in_jpeg = true;
-	return false;
+	my_dest_ptr dest = (my_dest_ptr)cinfo->dest;
+	jpeg_toolarge = true;
+	dest->pub.next_output_byte = dest->buffer;
+	dest->pub.free_in_buffer = dest->bufsize;
+	return true;
 }
 
 static void JPEG_Mem_TermDestination (j_compress_ptr cinfo)
@@ -775,9 +789,10 @@ qboolean JPEG_SaveImage_preflipped (const char *filename, int width, int height,
 	if (!file)
 		return false;
 
+	if(setjmp(error_in_jpeg))
+		goto error_caught;
 	cinfo.err = qjpeg_std_error (&jerr);
 	cinfo.err->error_exit = JPEG_ErrorExit;
-	error_in_jpeg = false;
 
 	qjpeg_create_compress (&cinfo);
 	JPEG_FileDest (&cinfo, file);
@@ -809,8 +824,6 @@ qboolean JPEG_SaveImage_preflipped (const char *filename, int width, int height,
 		scanline = &data[offset - cinfo.next_scanline * linesize];
 
 		qjpeg_write_scanlines (&cinfo, &scanline, 1);
-		if (error_in_jpeg)
-			break;
 	}
 
 	qjpeg_finish_compress (&cinfo);
@@ -818,6 +831,11 @@ qboolean JPEG_SaveImage_preflipped (const char *filename, int width, int height,
 
 	FS_Close (file);
 	return true;
+
+error_caught:
+	qjpeg_destroy_compress (&cinfo);
+	FS_Close (file);
+	return false;
 }
 
 static size_t JPEG_try_SaveImage_to_Buffer (struct jpeg_compress_struct *cinfo, char *jpegbuf, size_t jpegsize, int quality, int width, int height, unsigned char *data)
@@ -825,8 +843,7 @@ static size_t JPEG_try_SaveImage_to_Buffer (struct jpeg_compress_struct *cinfo, 
 	unsigned char *scanline;
 	unsigned int linesize;
 
-	error_in_jpeg = false;
-
+	jpeg_toolarge = false;
 	JPEG_MemDest (cinfo, jpegbuf, jpegsize);
 
 	// Set the parameters for compression
@@ -854,13 +871,14 @@ static size_t JPEG_try_SaveImage_to_Buffer (struct jpeg_compress_struct *cinfo, 
 		scanline = &data[cinfo->next_scanline * linesize];
 
 		qjpeg_write_scanlines (cinfo, &scanline, 1);
-		if (error_in_jpeg)
-			break;
 	}
 
 	qjpeg_finish_compress (cinfo);
 
-	return error_in_jpeg ? 0 : ((my_dest_ptr) cinfo->dest)->bufsize;
+	if(jpeg_toolarge)
+		return 0;
+
+	return ((my_dest_ptr) cinfo->dest)->bufsize;
 }
 
 size_t JPEG_SaveImage_to_Buffer (char *jpegbuf, size_t jpegsize, int width, int height, unsigned char *data)
@@ -879,6 +897,8 @@ size_t JPEG_SaveImage_to_Buffer (char *jpegbuf, size_t jpegsize, int width, int 
 		return false;
 	}
 
+	if(setjmp(error_in_jpeg))
+		goto error_caught;
 	cinfo.err = qjpeg_std_error (&jerr);
 	cinfo.err->error_exit = JPEG_ErrorExit;
 
@@ -907,8 +927,8 @@ size_t JPEG_SaveImage_to_Buffer (char *jpegbuf, size_t jpegsize, int width, int 
 	//quality_guess = (100 * jpegsize - 41000) / (width*height) + 2; // fits random data
 	quality_guess   = (256 * jpegsize - 81920) / (width*height) - 8; // fits Nexuiz's map pictures
 
-	quality_guess = bound(0, quality_guess, 90);
-	quality = quality_guess + 10; // assume it can do 10 failed attempts
+	quality_guess = bound(0, quality_guess, 100);
+	quality = bound(0, quality_guess + sv_writepicture_quality.integer, 100); // assume it can do 10 failed attempts
 
 	while(!(result = JPEG_try_SaveImage_to_Buffer(&cinfo, jpegbuf, jpegsize, quality, width, height, data)))
 	{
@@ -919,9 +939,14 @@ size_t JPEG_SaveImage_to_Buffer (char *jpegbuf, size_t jpegsize, int width, int 
 			return 0;
 		}
 	}
+	qjpeg_destroy_compress (&cinfo);
 	Con_DPrintf("JPEG_SaveImage_to_Buffer: guessed quality/size %d/%d, actually got %d/%d\n", quality_guess, (int)jpegsize, quality, (int)result);
 
 	return result;
+
+error_caught:
+	qjpeg_destroy_compress (&cinfo);
+	return 0;
 }
 
 typedef struct CompressedImageCacheItem

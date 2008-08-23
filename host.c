@@ -202,6 +202,7 @@ Host_InitLocal
 */
 void Host_SaveConfig_f(void);
 void Host_LoadConfig_f(void);
+extern cvar_t sv_writepicture_quality;
 static void Host_InitLocal (void)
 {
 	Cmd_AddCommand("saveconfig", Host_SaveConfig_f, "save settings to config.cfg (or a specified filename) immediately (also automatic when quitting)");
@@ -225,6 +226,8 @@ static void Host_InitLocal (void)
 
 	Cvar_RegisterVariable (&timestamps);
 	Cvar_RegisterVariable (&timeformat);
+
+	Cvar_RegisterVariable (&sv_writepicture_quality);
 }
 
 
