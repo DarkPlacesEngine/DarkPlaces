@@ -2176,7 +2176,7 @@ static void M_Options_ColorControl_Draw (void)
 	float x, c, s, t, u, v;
 	cachepic_t	*p, *dither;
 
-	dither = Draw_CachePic ("gfx/colorcontrol/ditherpattern");
+	dither = Draw_CachePic_Flags ("gfx/colorcontrol/ditherpattern", CACHEPICFLAG_NOCLAMP);
 
 	M_Background(320, 256);
 

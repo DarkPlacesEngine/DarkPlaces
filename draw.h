@@ -43,6 +43,7 @@ typedef enum cachepicflags_e
 	CACHEPICFLAG_NOTPERSISTENT = 1,
 	CACHEPICFLAG_QUIET = 2,
 	CACHEPICFLAG_NOCOMPRESSION = 4,
+	CACHEPICFLAG_NOCLAMP = 8,
 }
 cachepicflags_t;
 
