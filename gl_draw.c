@@ -452,7 +452,7 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 	flags = TEXF_ALPHA;
 	if (!(cachepicflags & CACHEPICFLAG_NOTPERSISTENT))
 		flags |= TEXF_PRECACHE;
-	if (!(flags & CACHEPICFLAG_NOCLAMP))
+	if (!(cachepicflags & CACHEPICFLAG_NOCLAMP))
 		flags |= TEXF_CLAMP;
 	if (!(cachepicflags & CACHEPICFLAG_NOCOMPRESSION) && gl_texturecompression_2d.integer)
 		flags |= TEXF_COMPRESS;
