@@ -28,9 +28,9 @@ extern int con_totallines;
 extern int con_backscroll;
 extern qboolean con_initialized;
 
-extern qboolean rcon_redirect;
-extern int rcon_redirect_bufferpos;
-extern char rcon_redirect_buffer[1400];
+void Con_Rcon_Redirect_Init(lhnetsocket_t *sock, lhnetaddress_t *dest);
+void Con_Rcon_Redirect_End();
+void Con_Rcon_Redirect_Abort();
 
 void Con_CheckResize (void);
 void Con_Init (void);

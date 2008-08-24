@@ -103,7 +103,8 @@ void Host_Error (const char *error, ...)
 	va_list argptr;
 
 	// turn off rcon redirect if it was active when the crash occurred
-	rcon_redirect = false;
+	// to prevent loops when it is a networking problem
+	Con_Rcon_Redirect_Abort();
 
 	va_start (argptr,error);
 	dpvsnprintf (hosterrorstring1,sizeof(hosterrorstring1),error,argptr);
