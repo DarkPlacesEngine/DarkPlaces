@@ -666,7 +666,7 @@ void Cmd_ClearCsqcFuncs (void);
 
 // returns true if the packet is valid, false if end of file is reached
 // used for dumping the CSQC download into demo files
-qboolean MakeDownloadPacket(const char *filename, void *data, unsigned long len, int crc, int cnt, sizebuf_t *buf, int protocol)
+qboolean MakeDownloadPacket(const char *filename, unsigned char *data, unsigned long len, int crc, int cnt, sizebuf_t *buf, int protocol)
 {
 	int packetsize = buf->maxsize - 7; // byte short long
 	int npackets = (len + packetsize - 1) / (packetsize);
@@ -691,7 +691,7 @@ qboolean MakeDownloadPacket(const char *filename, void *data, unsigned long len,
 		MSG_WriteByte(buf, svc_downloaddata);
 		MSG_WriteLong(buf, thispacketoffset);
 		MSG_WriteShort(buf, thispacketsize);
-		SZ_Write(buf, (char*)data + thispacketoffset, thispacketsize);
+		SZ_Write(buf, data + thispacketoffset, thispacketsize);
 
 		return true;
 	}
@@ -810,19 +810,25 @@ void CL_VM_Init (void)
 
 	if(cls.demorecording)
 	{
-		int i;
-		char buf[NET_MAXMESSAGE];
-		sizebuf_t sb;
-		void *demobuf; fs_offset_t demofilesize;
+		if(cls.demo_lastcsprogssize != csprogsdatasize || cls.demo_lastcsprogscrc != csprogsdatacrc)
+		{
+			int i;
+			char buf[NET_MAXMESSAGE];
+			sizebuf_t sb;
+			unsigned char *demobuf; fs_offset_t demofilesize;
 
-		sb.data = (void *) buf;
-		sb.maxsize = sizeof(buf);
-		i = 0;
+			sb.data = (void *) buf;
+			sb.maxsize = sizeof(buf);
+			i = 0;
 
-		CL_CutDemo(&demobuf, &demofilesize);
-		while(MakeDownloadPacket(csprogsfn, csprogsdata, csprogsdatasize, csprogsdatacrc, i++, &sb, cls.protocol))
-			CL_WriteDemoMessage(&sb);
-		CL_PasteDemo(&demobuf, &demofilesize);
+			CL_CutDemo(&demobuf, &demofilesize);
+			while(MakeDownloadPacket(csprogsfn, csprogsdata, csprogsdatasize, csprogsdatacrc, i++, &sb, cls.protocol))
+				CL_WriteDemoMessage(&sb);
+			CL_PasteDemo(&demobuf, &demofilesize);
+
+			cls.demo_lastcsprogssize = csprogsdatasize;
+			cls.demo_lastcsprogscrc = csprogsdatacrc;
+		}
 	}
 	Mem_Free(csprogsdata);
 
