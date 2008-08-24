@@ -691,7 +691,7 @@ qboolean MakeDownloadPacket(const char *filename, void *data, unsigned long len,
 		MSG_WriteByte(buf, svc_downloaddata);
 		MSG_WriteLong(buf, thispacketoffset);
 		MSG_WriteShort(buf, thispacketsize);
-		SZ_Write(buf, data + thispacketoffset, thispacketsize);
+		SZ_Write(buf, (char*)data + thispacketoffset, thispacketsize);
 
 		return true;
 	}
