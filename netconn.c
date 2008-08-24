@@ -2383,8 +2383,9 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 						s_ptr += l + 1;
 					}
 					Con_Printf("\n");
-					rcon_redirect = true;
-					rcon_redirect_bufferpos = 0;
+
+					if (!host_client || !host_client->netconnection || LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) != LHNETADDRESSTYPE_LOOP)
+						Con_Rcon_Redirect_Init(mysocket, peeraddress);
 					while(s != endpos)
 					{
 						size_t l = strlen(s);
@@ -2397,27 +2398,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 						}
 						s += l + 1;
 					}
-					rcon_redirect_buffer[rcon_redirect_bufferpos] = 0;
-					rcon_redirect = false;
-					// print resulting text to client
-					// if client is playing, send a reliable reply instead of
-					// a command packet
-					if (host_client)
-					{
-						// if the netconnection is loop, then this is the
-						// local player on a listen mode server, and it would
-						// result in duplicate printing to the console
-						// (not that the local player should be using rcon
-						//  when they have the console)
-						if (host_client->netconnection && LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) != LHNETADDRESSTYPE_LOOP)
-							SV_ClientPrintf("%s", rcon_redirect_buffer);
-					}
-					else
-					{
-						// qw print command
-						dpsnprintf(response, sizeof(response), "\377\377\377\377n%s", rcon_redirect_buffer);
-						NetConn_WriteString(mysocket, response, peeraddress);
-					}
+					Con_Rcon_Redirect_End();
 				}
 				else
 				{

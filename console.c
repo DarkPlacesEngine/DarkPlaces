@@ -106,7 +106,8 @@ int con_vislines;
 qboolean con_initialized;
 
 // used for server replies to rcon command
-qboolean rcon_redirect = false;
+lhnetsocket_t *rcon_redirect_sock = NULL;
+lhnetaddress_t *rcon_redirect_dest = NULL;
 int rcon_redirect_bufferpos = 0;
 char rcon_redirect_buffer[1400];
 
@@ -791,6 +792,35 @@ static char qfont_table[256] = {
 	'x',  'y',  'z',  '{',  '|',  '}',  '~',  '<'
 };
 
+void Con_Rcon_Redirect_Init(lhnetsocket_t *sock, lhnetaddress_t *dest)
+{
+	rcon_redirect_sock = sock;
+	rcon_redirect_dest = dest;
+	memcpy(rcon_redirect_buffer, "\377\377\377\377n", 5); // QW rcon print
+	rcon_redirect_bufferpos = 5;
+}
+
+void Con_Rcon_Redirect_Flush()
+{
+	rcon_redirect_buffer[rcon_redirect_bufferpos] = 0;
+	NetConn_WriteString(rcon_redirect_sock, rcon_redirect_buffer, rcon_redirect_dest);
+	memcpy(rcon_redirect_buffer, "\377\377\377\377n", 5); // QW rcon print
+	rcon_redirect_bufferpos = 5;
+}
+
+void Con_Rcon_Redirect_End()
+{
+	Con_Rcon_Redirect_Flush();
+	rcon_redirect_dest = NULL;
+	rcon_redirect_sock = NULL;
+}
+
+void Con_Rcon_Redirect_Abort()
+{
+	rcon_redirect_dest = NULL;
+	rcon_redirect_sock = NULL;
+}
+
 /*
 ================
 Con_Rcon_AddChar
@@ -807,8 +837,12 @@ void Con_Rcon_AddChar(char c)
 	// if this print is in response to an rcon command, add the character
 	// to the rcon redirect buffer
 
-	if (rcon_redirect && rcon_redirect_bufferpos < (int)sizeof(rcon_redirect_buffer) - 1)
+	if (rcon_redirect_dest)
+	{
 		rcon_redirect_buffer[rcon_redirect_bufferpos++] = c;
+		if(rcon_redirect_bufferpos >= (int)sizeof(rcon_redirect_buffer) - 1)
+			Con_Rcon_Redirect_Flush();
+	}
 	else if(*log_dest_udp.string) // don't duplicate rcon command responses here, these are sent another way
 	{
 		if(log_dest_buffer_pos == 0)
