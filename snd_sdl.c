@@ -101,7 +101,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 		return false;
 	}
 
-	buffersize = (unsigned int)ceil((double)requested->speed / 20.0);
+	buffersize = (unsigned int)ceil((double)requested->speed / 50.0); // 1024 bytes on 24kHz to 48kHz
 
 	// Init the SDL Audio subsystem
 	wantspec.callback = Buffer_Callback;
