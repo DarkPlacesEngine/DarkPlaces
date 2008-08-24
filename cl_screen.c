@@ -2327,9 +2327,9 @@ void CL_UpdateScreen(void)
 	else if (key_consoleactive)
 		VID_SetMouse(vid.fullscreen, false, false);
 	else if (key_dest == key_menu_grabbed)
-		VID_SetMouse(true, !in_client_mouse, true);
+		VID_SetMouse(true, vid_mouse.integer && !in_client_mouse, true);
 	else if (key_dest == key_menu)
-		VID_SetMouse(vid.fullscreen, !in_client_mouse, true);
+		VID_SetMouse(vid.fullscreen, vid_mouse.integer && !in_client_mouse, true);
 	else
 		VID_SetMouse(vid.fullscreen, vid_mouse.integer && !cls.demoplayback && !cl.csqc_wantsmousemove, true);
 
