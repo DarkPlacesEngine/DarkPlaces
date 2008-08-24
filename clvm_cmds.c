@@ -2586,7 +2586,7 @@ void VM_CL_R_PolygonBegin (void)
 		return;
 	}
 	picname = PRVM_G_STRING(OFS_PARM0);
-	polys->begin_texture = picname[0] ? Draw_CachePic (picname)->tex : r_texture_white;
+	polys->begin_texture = picname[0] ? Draw_CachePic_Flags (picname, CACHEPICFLAG_NOCLAMP)->tex : r_texture_white;
 	polys->begin_drawflag = (int)PRVM_G_FLOAT(OFS_PARM1);
 	polys->begin_vertices = 0;
 	polys->begin_active = true;
