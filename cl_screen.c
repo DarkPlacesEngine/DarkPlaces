@@ -589,7 +589,7 @@ static int SCR_InfobarHeight()
 SCR_InfoBar_f
 ==============
 */
-void SCR_InfoBar_f()
+void SCR_InfoBar_f(void)
 {
 	if(Cmd_Argc() == 3)
 	{

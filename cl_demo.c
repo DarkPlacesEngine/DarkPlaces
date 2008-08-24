@@ -163,7 +163,7 @@ void CL_PasteDemo (void **buf, fs_offset_t *filesize)
 	if(startoffset < *filesize)
 		++startoffset;
 
-	FS_Write(cls.demofile, *buf + startoffset, *filesize - startoffset);
+	FS_Write(cls.demofile, (char*)*buf + startoffset, *filesize - startoffset);
 
 	Mem_Free(*buf);
 	*buf = NULL;
