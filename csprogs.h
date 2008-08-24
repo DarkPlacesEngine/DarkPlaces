@@ -53,6 +53,6 @@ extern cvar_t csqc_progname;	//[515]: csqc crc check and right csprogs name acco
 extern cvar_t csqc_progcrc;
 extern cvar_t csqc_progsize;
 
-qboolean MakeDownloadPacket(const char *filename, void *data, unsigned long len, int crc, int cnt, sizebuf_t *buf, int protocol);
+qboolean MakeDownloadPacket(const char *filename, unsigned char *data, unsigned long len, int crc, int cnt, sizebuf_t *buf, int protocol);
 
 #endif

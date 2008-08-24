@@ -523,6 +523,8 @@ typedef struct client_static_s
 // demo recording info must be here, because record is started before
 // entering a map (and clearing client_state_t)
 	qboolean demorecording;
+	fs_offset_t demo_lastcsprogssize;
+	int demo_lastcsprogscrc;
 	qboolean demoplayback;
 	qboolean timedemo;
 	// -1 = use normal cd track
@@ -1214,8 +1216,8 @@ void CL_StopPlayback(void);
 void CL_ReadDemoMessage(void);
 void CL_WriteDemoMessage(sizebuf_t *mesage);
 
-void CL_CutDemo(void **buf, fs_offset_t *filesize);
-void CL_PasteDemo(void **buf, fs_offset_t *filesize);
+void CL_CutDemo(unsigned char **buf, fs_offset_t *filesize);
+void CL_PasteDemo(unsigned char **buf, fs_offset_t *filesize);
 
 void CL_NextDemo(void);
 void CL_Stop_f(void);

@@ -127,7 +127,7 @@ Dumps the current demo to a buffer, and resets the demo to its starting point.
 Used to insert csprogs.dat files as a download to the beginning of a demo file.
 ====================
 */
-void CL_CutDemo (void **buf, fs_offset_t *filesize)
+void CL_CutDemo (unsigned char **buf, fs_offset_t *filesize)
 {
 	*buf = NULL;
 	*filesize = 0;
@@ -150,7 +150,7 @@ Adds the cut stuff back to the demo. Also frees the buffer.
 Used to insert csprogs.dat files as a download to the beginning of a demo file.
 ====================
 */
-void CL_PasteDemo (void **buf, fs_offset_t *filesize)
+void CL_PasteDemo (unsigned char **buf, fs_offset_t *filesize)
 {
 	fs_offset_t startoffset = 0;
 
@@ -163,7 +163,7 @@ void CL_PasteDemo (void **buf, fs_offset_t *filesize)
 	if(startoffset < *filesize)
 		++startoffset;
 
-	FS_Write(cls.demofile, (char*)*buf + startoffset, *filesize - startoffset);
+	FS_Write(cls.demofile, *buf + startoffset, *filesize - startoffset);
 
 	Mem_Free(*buf);
 	*buf = NULL;
@@ -377,6 +377,8 @@ void CL_Record_f (void)
 	FS_Printf(cls.demofile, "%i\n", cls.forcetrack);
 
 	cls.demorecording = true;
+	cls.demo_lastcsprogssize = -1;
+	cls.demo_lastcsprogscrc = -1;
 }
 
 
