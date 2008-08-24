@@ -1018,21 +1018,25 @@ Key_Event (int key, char ascii, qboolean down)
 
 	// send function keydowns to interpreter no matter what mode is (unless the menu has specifically grabbed the keyboard, for rebinding keys)
 	if (keydest != key_menu_grabbed)
-	if (key >= K_F1 && key <= K_F12 && down)
+	if (key >= K_F1 && key <= K_F12)
 	{
 		// ignore key repeats on F1-F12 binds
 		if (keydown[key] > 1)
 			return;
 		if (bind)
 		{
-			// button commands add keynum as a parm
-			if (bind[0] == '+')
-				Cbuf_AddText (va("%s %i\n", bind, key));
-			else
+			if(keydown[key] == 1 && down)
 			{
-				Cbuf_AddText (bind);
-				Cbuf_AddText ("\n");
-			}
+				// button commands add keynum as a parm
+				if (bind[0] == '+')
+					Cbuf_AddText (va("%s %i\n", bind, key));
+				else
+				{
+					Cbuf_AddText (bind);
+					Cbuf_AddText ("\n");
+				}
+			} else if(bind[0] == '+' && !down && keydown[key] == 0)
+				Cbuf_AddText(va("-%s %i\n", bind + 1, key));
 		}
 		return;
 	}
