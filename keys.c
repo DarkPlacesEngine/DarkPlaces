@@ -1020,9 +1020,6 @@ Key_Event (int key, char ascii, qboolean down)
 	if (keydest != key_menu_grabbed)
 	if (key >= K_F1 && key <= K_F12)
 	{
-		// ignore key repeats on F1-F12 binds
-		if (keydown[key] > 1)
-			return;
 		if (bind)
 		{
 			if(keydown[key] == 1 && down)
