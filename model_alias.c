@@ -995,12 +995,12 @@ void Mod_IDP0_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 	// load the skins
 	skinfiles = Mod_LoadSkinFiles();
-	loadmodel->skinscenes = (animscene_t *)Mem_Alloc(loadmodel->mempool, loadmodel->numskins * sizeof(animscene_t));
-	loadmodel->num_textures = loadmodel->num_surfaces * totalskins;
-	loadmodel->num_texturesperskin = loadmodel->num_surfaces;
-	loadmodel->data_textures = (texture_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * totalskins * sizeof(texture_t));
 	if (skinfiles)
 	{
+		loadmodel->skinscenes = (animscene_t *)Mem_Alloc(loadmodel->mempool, loadmodel->numskins * sizeof(animscene_t));
+		loadmodel->num_textures = loadmodel->num_surfaces * loadmodel->numskins;
+		loadmodel->num_texturesperskin = loadmodel->num_surfaces;
+		loadmodel->data_textures = (texture_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t));
 		Mod_BuildAliasSkinsFromSkinFiles(loadmodel->data_textures, skinfiles, "default", "");
 		Mod_FreeSkinFiles(skinfiles);
 		for (i = 0;i < loadmodel->numskins;i++)
@@ -1013,6 +1013,10 @@ void Mod_IDP0_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	}
 	else
 	{
+		loadmodel->skinscenes = (animscene_t *)Mem_Alloc(loadmodel->mempool, loadmodel->numskins * sizeof(animscene_t));
+		loadmodel->num_textures = loadmodel->num_surfaces * totalskins;
+		loadmodel->num_texturesperskin = loadmodel->num_surfaces;
+		loadmodel->data_textures = (texture_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * totalskins * sizeof(texture_t));
 		totalskins = 0;
 		datapointer = startskins;
 		for (i = 0;i < loadmodel->numskins;i++)
