@@ -47,7 +47,7 @@ OBJ_SND_ALSA=$(OBJ_SND_COMMON) snd_alsa.o
 LIB_SND_ALSA=-lasound $(LIB_SND_MODPLUG)
 
 # Core Audio (Mac OS X)
-OBJ_SND_COREAUDIO=$(OBJ_SND_COMMON) snd_coreaudio.c
+OBJ_SND_COREAUDIO=$(OBJ_SND_COMMON) snd_coreaudio.o
 LIB_SND_COREAUDIO=-framework CoreAudio $(LIB_SND_MODPLUG)
 
 # BSD / Sun audio API (NetBSD and OpenBSD)
