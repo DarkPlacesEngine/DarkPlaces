@@ -1,3 +1,7 @@
+# Invalid call detection
+CHECKLEVEL1 = @if [ "$(LEVEL)" != 1 ]; then $(MAKE) help; false; fi
+CHECKLEVEL2 = @if [ "$(LEVEL)" != 2 ]; then $(MAKE) help; false; fi
+
 # Choose the compiler you want to use
 CC=gcc
 
@@ -322,134 +326,153 @@ nexuiz :
 cl-debug :
 	$(MAKE) bin-debug \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		EXE="$(EXE_CL)" LDFLAGS_COMMON="$(LDFLAGS_CL)"
+		EXE="$(EXE_CL)" LDFLAGS_COMMON="$(LDFLAGS_CL)" LEVEL=1
 
 cl-profile :
 	$(MAKE) bin-profile \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		EXE="$(EXE_CL)" LDFLAGS_COMMON="$(LDFLAGS_CL)"
+		EXE="$(EXE_CL)" LDFLAGS_COMMON="$(LDFLAGS_CL)" LEVEL=1
 
 cl-release :
 	$(MAKE) bin-release \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		EXE="$(EXE_CL)" LDFLAGS_COMMON="$(LDFLAGS_CL)"
+		EXE="$(EXE_CL)" LDFLAGS_COMMON="$(LDFLAGS_CL)" LEVEL=1
 
 cl-nexuiz :
 	$(MAKE) bin-release \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		EXE="$(EXE_CLNEXUIZ)" LDFLAGS_COMMON="$(LDFLAGS_CL)"
+		EXE="$(EXE_CLNEXUIZ)" LDFLAGS_COMMON="$(LDFLAGS_CL)" LEVEL=1
 
 sv-debug :
 	$(MAKE) bin-debug \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		EXE="$(EXE_SV)" LDFLAGS_COMMON="$(LDFLAGS_SV)"
+		EXE="$(EXE_SV)" LDFLAGS_COMMON="$(LDFLAGS_SV)" LEVEL=1
 
 sv-profile :
 	$(MAKE) bin-profile \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		EXE="$(EXE_SV)" LDFLAGS_COMMON="$(LDFLAGS_SV)"
+		EXE="$(EXE_SV)" LDFLAGS_COMMON="$(LDFLAGS_SV)" LEVEL=1
 
 sv-release :
 	$(MAKE) bin-release \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		EXE="$(EXE_SV)" LDFLAGS_COMMON="$(LDFLAGS_SV)"
+		EXE="$(EXE_SV)" LDFLAGS_COMMON="$(LDFLAGS_SV)" LEVEL=1
 
 sv-nexuiz :
 	$(MAKE) bin-release \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		EXE="$(EXE_SVNEXUIZ)" LDFLAGS_COMMON="$(LDFLAGS_SV)"
+		EXE="$(EXE_SVNEXUIZ)" LDFLAGS_COMMON="$(LDFLAGS_SV)" LEVEL=1
 
 sdl-debug :
 	$(MAKE) bin-debug \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		EXE="$(EXE_SDL)" LDFLAGS_COMMON="$(LDFLAGS_SDL)"
+		EXE="$(EXE_SDL)" LDFLAGS_COMMON="$(LDFLAGS_SDL)" LEVEL=1
 
 sdl-profile :
 	$(MAKE) bin-profile \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		EXE="$(EXE_SDL)" LDFLAGS_COMMON="$(LDFLAGS_SDL)"
+		EXE="$(EXE_SDL)" LDFLAGS_COMMON="$(LDFLAGS_SDL)" LEVEL=1
 
 sdl-release :
 	$(MAKE) bin-release \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		EXE="$(EXE_SDL)" LDFLAGS_COMMON="$(LDFLAGS_SDL)"
+		EXE="$(EXE_SDL)" LDFLAGS_COMMON="$(LDFLAGS_SDL)" LEVEL=1
 
 sdl-nexuiz :
 	$(MAKE) bin-release \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		EXE="$(EXE_SDLNEXUIZ)" LDFLAGS_COMMON="$(LDFLAGS_SDL)"
+		EXE="$(EXE_SDLNEXUIZ)" LDFLAGS_COMMON="$(LDFLAGS_SDL)" LEVEL=1
 
 bin-debug :
+	$(CHECKLEVEL1)
 	@echo
 	@echo "========== $(EXE) (debug) =========="
 	$(MAKE) $(EXE) \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
 		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_EXTRA) $(CFLAGS_DEBUG) $(OPTIM_DEBUG)"\
-		LDFLAGS="$(LDFLAGS_DEBUG) $(LDFLAGS_COMMON)"
+		LDFLAGS="$(LDFLAGS_DEBUG) $(LDFLAGS_COMMON)" LEVEL=2
 
 bin-profile :
+	$(CHECKLEVEL1)
 	@echo
 	@echo "========== $(EXE) (profile) =========="
 	$(MAKE) $(EXE) \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
 		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_EXTRA) $(CFLAGS_PROFILE) $(OPTIM_RELEASE)"\
-		LDFLAGS="$(LDFLAGS_PROFILE) $(LDFLAGS_COMMON)"
+		LDFLAGS="$(LDFLAGS_PROFILE) $(LDFLAGS_COMMON)" LEVEL=2
 
 bin-release :
+	$(CHECKLEVEL1)
 	@echo
 	@echo "========== $(EXE) (release) =========="
 	$(MAKE) $(EXE) \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
 		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_EXTRA) $(CFLAGS_RELEASE) $(OPTIM_RELEASE)"\
-		LDFLAGS="$(LDFLAGS_RELEASE) $(LDFLAGS_COMMON)"
+		LDFLAGS="$(LDFLAGS_RELEASE) $(LDFLAGS_COMMON)" LEVEL=2
 	$(STRIP) $(EXE)
 
 snd_modplug.o: snd_modplug.c
+	$(CHECKLEVEL2)
 	$(DO_CC) $(CFLAGS_SND_MODPLUG)
 
 vid_glx.o: vid_glx.c
+	$(CHECKLEVEL2)
 	$(DO_CC) -I/usr/X11R6/include
 
 vid_sdl.o: vid_sdl.c
+	$(CHECKLEVEL2)
 	$(DO_CC) $(CFLAGS_SDL)
 
 sys_sdl.o: sys_sdl.c
+	$(CHECKLEVEL2)
 	$(DO_CC) $(CFLAGS_SDL)
 
 snd_sdl.o: snd_sdl.c
+	$(CHECKLEVEL2)
 	$(DO_CC) $(CFLAGS_SDL)
 
 snd_3dras.o: snd_3dras.c
+	$(CHECKLEVEL2)
 	$(DO_CC)
 
 cd_sdl.o: cd_sdl.c
+	$(CHECKLEVEL2)
 	$(DO_CC) $(CFLAGS_SDL)
 
 darkplaces.o: %.o : %.rc
+	$(CHECKLEVEL2)
 	$(WINDRES) -o $@ $<
 
 nexuiz.o: %.o : %.rc
+	$(CHECKLEVEL2)
 	$(WINDRES) -o $@ $<
 
 .c.o:
+	$(CHECKLEVEL2)
 	$(DO_CC)
 
 $(EXE_CL): $(OBJ_CL) $(OBJ_ICON)
+	$(CHECKLEVEL2)
 	$(DO_LD)
 
 $(EXE_SV): $(OBJ_SV) $(OBJ_ICON)
+	$(CHECKLEVEL2)
 	$(DO_LD)
 
 $(EXE_SDL): $(OBJ_SDL) $(OBJ_ICON)
+	$(CHECKLEVEL2)
 	$(DO_LD)
 
 $(EXE_CLNEXUIZ): $(OBJ_CL) $(OBJ_ICON_NEXUIZ)
+	$(CHECKLEVEL2)
 	$(DO_LD)
 
 $(EXE_SVNEXUIZ): $(OBJ_SV) $(OBJ_ICON_NEXUIZ)
+	$(CHECKLEVEL2)
 	$(DO_LD)
 
 $(EXE_SDLNEXUIZ): $(OBJ_SDL) $(OBJ_ICON_NEXUIZ)
+	$(CHECKLEVEL2)
 	$(DO_LD)
 
 clean:
