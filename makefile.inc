@@ -6,19 +6,21 @@ CHECKLEVEL2 = @if [ "$(LEVEL)" != 2 ]; then $(MAKE) help; false; fi
 CC=gcc
 
 # athlon optimizations
-#CPUOPTIMIZATIONS=-march=athlon
+#CPUOPTIMIZATIONS?=-march=athlon
 # athlon xp optimizations
-#CPUOPTIMIZATIONS=-march=athlon-xp
+#CPUOPTIMIZATIONS?=-march=athlon-xp
 # athlon 64 optimizations
-#CPUOPTIMIZATIONS=-march=athlon64 -m32
+#CPUOPTIMIZATIONS?=-march=athlon64 -m32
 # Pentium 3 optimizations
-#CPUOPTIMIZATIONS=-march=pentium3
+#CPUOPTIMIZATIONS?=-march=pentium3
 # Pentium 4 optimizations
-#CPUOPTIMIZATIONS=-march=pentium4
+#CPUOPTIMIZATIONS?=-march=pentium4
 # 686 (Pentium Pro/II) optimizations
-#CPUOPTIMIZATIONS=-march=i686
+#CPUOPTIMIZATIONS?=-march=i686
 # No specific CPU (386 compatible)
-CPUOPTIMIZATIONS=
+CPUOPTIMIZATIONS?=
+# Experimental
+#CPUOPTIMIZATIONS?=-fno-math-errno -ffinite-math-only -fno-rounding-math -fno-signaling-nans -fassociative-math -freciprocal-math -fno-signed-zeros -fno-trapping-math
 
 SDL_CONFIG?=sdl-config
 SDLCONFIG_UNIXCFLAGS?=`$(SDL_CONFIG) --cflags`
