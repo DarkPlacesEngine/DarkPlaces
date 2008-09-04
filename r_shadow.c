@@ -2860,10 +2860,10 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	int numlightentities_noselfshadow;
 	int numshadowentities;
 	int numshadowentities_noselfshadow;
-	entity_render_t *lightentities[MAX_EDICTS];
-	entity_render_t *lightentities_noselfshadow[MAX_EDICTS];
-	entity_render_t *shadowentities[MAX_EDICTS];
-	entity_render_t *shadowentities_noselfshadow[MAX_EDICTS];
+	static entity_render_t *lightentities[MAX_EDICTS];
+	static entity_render_t *lightentities_noselfshadow[MAX_EDICTS];
+	static entity_render_t *shadowentities[MAX_EDICTS];
+	static entity_render_t *shadowentities_noselfshadow[MAX_EDICTS];
 
 	// skip lights that don't light because of ambientscale+diffusescale+specularscale being 0 (corona only lights)
 	// skip lights that are basically invisible (color 0 0 0)
