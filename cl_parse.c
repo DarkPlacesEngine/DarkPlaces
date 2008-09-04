@@ -1541,6 +1541,10 @@ void CL_ParseServerInfo (void)
 
 	// parse gametype
 		cl.gametype = MSG_ReadByte ();
+		// the original id singleplayer demos are bugged and contain
+		// GAME_DEATHMATCH even for singleplayer
+		if (cl.maxclients == 1 && cls.protocol == PROTOCOL_QUAKE)
+			cl.gametype = GAME_COOP;
 
 	// parse signon message
 		str = MSG_ReadString ();
