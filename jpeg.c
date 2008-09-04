@@ -785,7 +785,7 @@ qboolean JPEG_SaveImage_preflipped (const char *filename, int width, int height,
 	}
 
 	// Open the file
-	file = FS_Open (filename, "wb", true, false);
+	file = FS_OpenRealFile(filename, "wb", true);
 	if (!file)
 		return false;
 

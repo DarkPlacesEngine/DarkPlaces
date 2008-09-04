@@ -1270,7 +1270,7 @@ Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 	//else
 	{
 		cls.capturevideo.format = CAPTUREVIDEOFORMAT_AVI_I420;
-		cls.capturevideo.videofile = FS_Open (va("%s.avi", cls.capturevideo.basename), "wb", false, true);
+		cls.capturevideo.videofile = FS_OpenRealFile(va("%s.avi", cls.capturevideo.basename), "wb", false);
 		SCR_CaptureVideo_RIFF_Start();
 		// enclosing RIFF chunk (there can be multiple of these in >1GB files, the later ones are "AVIX" instead of "AVI " and have no header/stream info)
 		SCR_CaptureVideo_RIFF_Push("RIFF", "AVI ");

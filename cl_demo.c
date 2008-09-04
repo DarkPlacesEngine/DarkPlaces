@@ -136,7 +136,7 @@ void CL_CutDemo (unsigned char **buf, fs_offset_t *filesize)
 	*buf = FS_LoadFile(cls.demoname, tempmempool, false, filesize);
 
 	// restart the demo recording
-	cls.demofile = FS_Open(cls.demoname, "wb", false, false);
+	cls.demofile = FS_OpenRealFile(cls.demoname, "wb", false);
 	if(!cls.demofile)
 		Host_Error("failed to reopen the demo file");
 	FS_Printf(cls.demofile, "%i\n", cls.forcetrack);
@@ -365,7 +365,7 @@ void CL_Record_f (void)
 
 	// open the demo file
 	Con_Printf("recording to %s.\n", name);
-	cls.demofile = FS_Open (name, "wb", false, false);
+	cls.demofile = FS_OpenRealFile(name, "wb", false);
 	if (!cls.demofile)
 	{
 		Con_Print("ERROR: couldn't open.\n");
@@ -414,7 +414,7 @@ void CL_PlayDemo_f (void)
 	cls.protocol = PROTOCOL_QUAKE;
 
 	Con_Printf("Playing demo %s.\n", name);
-	cls.demofile = FS_Open (name, "rb", false, false);
+	cls.demofile = FS_OpenVirtualFile(name, false);
 	if (!cls.demofile)
 	{
 		Con_Print("ERROR: couldn't open.\n");

@@ -2221,7 +2221,7 @@ static void SV_Download_f(void)
 		}
 	}
 
-	host_client->download_file = FS_Open(host_client->download_name, "rb", true, false);
+	host_client->download_file = FS_OpenVirtualFile(host_client->download_name, true);
 	if (!host_client->download_file)
 	{
 		SV_ClientPrintf("Download rejected: server could not open the file \"%s\"\n", host_client->download_name);

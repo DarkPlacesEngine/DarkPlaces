@@ -830,7 +830,7 @@ static void M_ScanSaves (void)
 		strlcpy (m_filenames[i], "--- UNUSED SLOT ---", sizeof(m_filenames[i]));
 		loadable[i] = false;
 		dpsnprintf (name, sizeof(name), "s%i.sav", (int)i);
-		f = FS_Open (name, "rb", false, false);
+		f = FS_OpenRealFile (name, "rb", false);
 		if (!f)
 			continue;
 		// read enough to get the comment

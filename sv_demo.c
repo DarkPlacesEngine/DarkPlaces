@@ -13,7 +13,7 @@ void SV_StartDemoRecording(client_t *client, const char *filename, int forcetrac
 
 	Con_Printf("Recording demo for # %d (%s) to %s\n", PRVM_NUM_FOR_EDICT(client->edict), client->netaddress, name);
 
-	client->sv_demo_file = FS_Open(name, "wb", false, false);
+	client->sv_demo_file = FS_OpenRealFile(name, "wb", false);
 	if(!client->sv_demo_file)
 	{
 		Con_Print("ERROR: couldn't open.\n");

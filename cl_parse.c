@@ -434,7 +434,7 @@ static qboolean QW_CL_CheckOrDownloadFile(const char *filename)
 	qfile_t *file;
 
 	// see if the file already exists
-	file = FS_Open(filename, "rb", true, false);
+	file = FS_OpenVirtualFile(filename, true);
 	if (file)
 	{
 		FS_Close(file);
@@ -1640,7 +1640,7 @@ void CL_ParseServerInfo (void)
 
 		Con_Printf ("Auto-recording to %s.\n", demofile);
 
-		cls.demofile = FS_Open (demofile, "wb", false, false);
+		cls.demofile = FS_OpenRealFile(demofile, "wb", false);
 		if (cls.demofile)
 		{
 			cls.forcetrack = -1;

@@ -1585,28 +1585,29 @@ void VM_fopen(void)
 		VM_Warning("VM_fopen: %s ran out of file handles (%i)\n", PRVM_NAME, PRVM_MAX_OPENFILES);
 		return;
 	}
+	filename = PRVM_G_STRING(OFS_PARM0);
 	mode = (int)PRVM_G_FLOAT(OFS_PARM1);
 	switch(mode)
 	{
 	case 0: // FILE_READ
 		modestring = "rb";
+		prog->openfiles[filenum] = FS_OpenVirtualFile(va("data/%s", filename), false);
+		if (prog->openfiles[filenum] == NULL)
+			prog->openfiles[filenum] = FS_OpenVirtualFile(va("%s", filename), false);
 		break;
 	case 1: // FILE_APPEND
-		modestring = "ab";
+		modestring = "a";
+		prog->openfiles[filenum] = FS_OpenRealFile(va("data/%s", filename), modestring, false);
 		break;
 	case 2: // FILE_WRITE
-		modestring = "wb";
+		modestring = "w";
+		prog->openfiles[filenum] = FS_OpenRealFile(va("data/%s", filename), modestring, false);
 		break;
 	default:
 		PRVM_G_FLOAT(OFS_RETURN) = -3;
 		VM_Warning("VM_fopen: %s: no such mode %i (valid: 0 = read, 1 = append, 2 = write)\n", PRVM_NAME, mode);
 		return;
 	}
-	filename = PRVM_G_STRING(OFS_PARM0);
-
-	prog->openfiles[filenum] = FS_Open(va("data/%s", filename), modestring, false, false);
-	if (prog->openfiles[filenum] == NULL && mode == 0)
-		prog->openfiles[filenum] = FS_Open(va("%s", filename), modestring, false, false);
 
 	if (prog->openfiles[filenum] == NULL)
 	{

@@ -741,7 +741,7 @@ static packfile_t* FS_AddFileToPack (const char* name, pack_t* pack,
 ============
 FS_CreatePath
 
-Only used for FS_Open.
+Only used for FS_OpenRealFile.
 ============
 */
 void FS_CreatePath (char *path)
@@ -1982,35 +1982,48 @@ MAIN PUBLIC FUNCTIONS
 
 /*
 ====================
-FS_Open
+FS_OpenRealFile
+
+Open a file in the userpath. The syntax is the same as fopen
+Used for savegame scanning in menu, and all file writing.
+====================
+*/
+qfile_t* FS_OpenRealFile (const char* filepath, const char* mode, qboolean quiet)
+{
+	char real_path [MAX_OSPATH];
+
+	if (FS_CheckNastyPath(filepath, false))
+	{
+		Con_Printf("FS_OpenRealFile(\"%s\", \"%s\", %s): nasty filename rejected\n", filepath, mode, quiet ? "true" : "false");
+		return NULL;
+	}
+
+	dpsnprintf (real_path, sizeof (real_path), "%s/%s", fs_gamedir, filepath);
+
+	// If the file is opened in "write", "append", or "read/write" mode,
+	// create directories up to the file.
+	if (mode[0] == 'w' || mode[0] == 'a' || strchr (mode, '+'))
+		FS_CreatePath (real_path);
+	return FS_SysOpen (real_path, mode, false);
+}
+
+
+/*
+====================
+FS_OpenVirtualFile
 
 Open a file. The syntax is the same as fopen
 ====================
 */
-qfile_t* FS_Open (const char* filepath, const char* mode, qboolean quiet, qboolean nonblocking)
+qfile_t* FS_OpenVirtualFile (const char* filepath, qboolean quiet)
 {
 	if (FS_CheckNastyPath(filepath, false))
 	{
-		Con_Printf("FS_Open(\"%s\", \"%s\", %s): nasty filename rejected\n", filepath, mode, quiet ? "true" : "false");
+		Con_Printf("FS_OpenVirtualFile(\"%s\", %s): nasty filename rejected\n", filepath, quiet ? "true" : "false");
 		return NULL;
 	}
 
-	// If the file is opened in "write", "append", or "read/write" mode
-	if (mode[0] == 'w' || mode[0] == 'a' || strchr (mode, '+'))
-	{
-		char real_path [MAX_OSPATH];
-
-		// Open the file on disk directly
-		dpsnprintf (real_path, sizeof (real_path), "%s/%s", fs_gamedir, filepath);
-
-		// Create directories up to the file
-		FS_CreatePath (real_path);
-
-		return FS_SysOpen (real_path, mode, nonblocking);
-	}
-	// Else, we look at the various search paths and open the file in read-only mode
-	else
-		return FS_OpenReadFile (filepath, quiet, nonblocking, 16);
+	return FS_OpenReadFile (filepath, quiet, false, 16);
 }
 
 
@@ -2491,7 +2504,7 @@ unsigned char *FS_LoadFile (const char *path, mempool_t *pool, qboolean quiet, f
 	unsigned char *buf = NULL;
 	fs_offset_t filesize = 0;
 
-	file = FS_Open (path, "rb", quiet, false);
+	file = FS_OpenVirtualFile(path, quiet);
 	if (file)
 	{
 		filesize = file->real_length;
@@ -2520,7 +2533,7 @@ qboolean FS_WriteFile (const char *filename, void *data, fs_offset_t len)
 {
 	qfile_t *file;
 
-	file = FS_Open (filename, "wb", false, false);
+	file = FS_OpenRealFile(filename, "wb", false);
 	if (!file)
 	{
 		Con_Printf("FS_WriteFile: failed on %s\n", filename);

@@ -248,7 +248,7 @@ void Host_SaveConfig_to(const char *file)
 	// LordHavoc: don't save a config if it crashed in startup
 	if (host_framecount >= 3 && cls.state != ca_dedicated && !COM_CheckParm("-benchmark") && !COM_CheckParm("-capturedemo"))
 	{
-		f = FS_Open (file, "wb", false, false);
+		f = FS_OpenRealFile(file, "wb", false);
 		if (!f)
 		{
 			Con_Printf("Couldn't write %s.\n", file);

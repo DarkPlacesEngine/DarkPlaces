@@ -415,7 +415,7 @@ static void Curl_EndDownload(downloadinfo *di, CurlStatus status, CURLcode error
 
 			// reopen to enforce it to have zero bytes again
 			FS_Close(di->stream);
-			di->stream = FS_Open(di->filename, "w", false, false);
+			di->stream = FS_OpenRealFile(di->filename, "wb", false);
 
 			break;
 	}
@@ -478,7 +478,7 @@ static void CheckPendingDownloads()
 			{
 				Con_Printf("Downloading %s -> %s", di->url, di->filename);
 
-				di->stream = FS_Open(di->filename, "ab", false, false);
+				di->stream = FS_OpenRealFile(di->filename, "ab", false);
 				if(!di->stream)
 				{
 					Con_Printf("\nFAILED: Could not open output file %s\n", di->filename);
@@ -659,7 +659,7 @@ void Curl_Begin(const char *URL, const char *name, qboolean ispak, qboolean fort
 			}
 			else
 			{
-				qfile_t *f = FS_Open(fn, "rb", false, false);
+				qfile_t *f = FS_OpenVirtualFile(fn, false);
 				if(f)
 				{
 					char buf[4] = {0};
@@ -669,7 +669,7 @@ void Curl_Begin(const char *URL, const char *name, qboolean ispak, qboolean fort
 					{
 						Con_DPrintf("Detected non-PAK %s, clearing and NOT resuming.\n", fn);
 						FS_Close(f);
-						f = FS_Open(fn, "w", false, false);
+						f = FS_OpenRealFile(fn, "wb", false);
 						if(f)
 							FS_Close(f);
 					}

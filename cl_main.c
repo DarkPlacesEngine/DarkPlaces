@@ -1992,7 +1992,7 @@ void CL_Locs_Save_f(void)
 	FS_StripExtension(cl.worldmodel->name, locfilename, sizeof(locfilename));
 	strlcat(locfilename, ".loc", sizeof(locfilename));
 
-	outfile = FS_Open(locfilename, "w", false, false);
+	outfile = FS_OpenRealFile(locfilename, "w", false);
 	if (!outfile)
 		return;
 	// if any boxes are used then this is a proquake-format loc file, which

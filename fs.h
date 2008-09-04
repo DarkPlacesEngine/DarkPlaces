@@ -53,11 +53,12 @@ extern char fs_gamedirs[MAX_GAMEDIRS][MAX_QPATH];
 // ------ Main functions ------ //
 
 // IMPORTANT: the file path is automatically prefixed by the current game directory for
-// each file created by FS_WriteFile, or opened in "write" or "append" mode by FS_Open
+// each file created by FS_WriteFile, or opened in "write" or "append" mode by FS_OpenRealFile
 
 qboolean FS_AddPack(const char *pakfile, qboolean *already_loaded, qboolean keep_plain_dirs); // already_loaded may be NULL if caller does not care
 const char *FS_WhichPack(const char *filename);
-qfile_t *FS_Open (const char* filepath, const char* mode, qboolean quiet, qboolean nonblocking);
+qfile_t* FS_OpenRealFile (const char* filepath, const char* mode, qboolean quiet);
+qfile_t* FS_OpenVirtualFile (const char* filepath, qboolean quiet);
 int FS_Close (qfile_t* file);
 fs_offset_t FS_Write (qfile_t* file, const void* data, size_t datasize);
 fs_offset_t FS_Read (qfile_t* file, void* buffer, size_t buffersize);
