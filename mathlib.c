@@ -523,8 +523,16 @@ void AnglesFromVectors (vec3_t angles, const vec3_t forward, const vec3_t up, qb
 {
 	if (forward[0] == 0 && forward[1] == 0)
 	{
-		angles[PITCH] = forward[2] > 0 ? -M_PI * 0.5 : M_PI * 0.5;
-		angles[YAW] = up ? atan2(-up[1], -up[0]) : 0;
+		if(forward[2] > 0)
+		{
+			angles[PITCH] = -M_PI * 0.5;
+			angles[YAW] = up ? atan2(-up[1], -up[0]) : 0;
+		}
+		else
+		{
+			angles[PITCH] = M_PI * 0.5;
+			angles[YAW] = up ? atan2(up[1], up[0]) : 0;
+		}
 		angles[ROLL] = 0;
 	}
 	else
