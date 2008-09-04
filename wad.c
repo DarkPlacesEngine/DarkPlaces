@@ -164,7 +164,7 @@ void W_LoadTextureWadFile (char *filename, int complain)
 	int				numlumps;
 	mwad_t			*w;
 
-	file = FS_Open (filename, "rb", false, false);
+	file = FS_OpenVirtualFile(filename, false);
 	if (!file)
 	{
 		if (complain)

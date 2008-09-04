@@ -1392,7 +1392,7 @@ void R_GLSL_DumpShader_f(void)
 {
 	int i;
 
-	qfile_t *file = FS_Open("glsl/default.glsl", "w", false, false);
+	qfile_t *file = FS_OpenRealFile("glsl/default.glsl", "w", false);
 	if(!file)
 	{
 		Con_Printf("failed to write to glsl/default.glsl\n");

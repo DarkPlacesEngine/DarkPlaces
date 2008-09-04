@@ -229,7 +229,7 @@ void Log_Open (void)
 	if (logfile != NULL || log_file.string[0] == '\0')
 		return;
 
-	logfile = FS_Open (log_file.string, "ab", false, false);
+	logfile = FS_OpenRealFile(log_file.string, "a", false);
 	if (logfile != NULL)
 	{
 		strlcpy (crt_log_file, log_file.string, sizeof (crt_log_file));
@@ -363,7 +363,7 @@ void Log_Printf (const char *logfilename, const char *fmt, ...)
 {
 	qfile_t *file;
 
-	file = FS_Open (logfilename, "ab", true, false);
+	file = FS_OpenRealFile(logfilename, "a", true);
 	if (file != NULL)
 	{
 		va_list argptr;
@@ -501,7 +501,7 @@ void Con_ConDump_f (void)
 		Con_Printf("usage: condump <filename>\n");
 		return;
 	}
-	file = FS_Open(Cmd_Argv(1), "wb", false, false);
+	file = FS_OpenRealFile(Cmd_Argv(1), "w", false);
 	if (!file)
 	{
 		Con_Printf("condump: unable to write file \"%s\"\n", Cmd_Argv(1));
@@ -1639,7 +1639,7 @@ qboolean GetMapList (const char *s, char *completedname, int completednamebuffer
 		char entfilename[MAX_QPATH];
 		strlcpy(message, "^1**ERROR**^7", sizeof(message));
 		p = 0;
-		f = FS_Open(t->filenames[i], "rb", true, false);
+		f = FS_OpenVirtualFile(t->filenames[i], true);
 		if(f)
 		{
 			memset(buf, 0, 1024);

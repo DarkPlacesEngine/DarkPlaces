@@ -445,7 +445,7 @@ void Host_Savegame_to (const char *name)
 	isserver = !strcmp(PRVM_NAME, "server");
 
 	Con_Printf("Saving game to %s...\n", name);
-	f = FS_Open (name, "wb", false, false);
+	f = FS_OpenRealFile(name, "wb", false);
 	if (!f)
 	{
 		Con_Print("ERROR: couldn't open.\n");
