@@ -1,23 +1,20 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
-0 bug darkplaces client csqc: darkplaces's standard prediction builtin is empty
 0 bug darkplaces client csqc: engine prediction function is not implemented - could just return the engine's current cl.movement_origin (Spike)
 0 bug darkplaces client csqc: entities not being drawn with VF_PERSPECTIVE 0? (daemon)
 0 bug darkplaces client csqc: input queue functions needed for csqc prediction aren't implemented (Spike)
 0 bug darkplaces client csqc: precaches on client don't work, have to precache on server - what's going wrong here? (daemon, Urre)
 0 bug darkplaces client csqc: there is no WriteFloat, making ReadFloat useless (Urre)
+0 bug darkplaces client csqc: world not being drawn with VF_PERSPECTIVE 0? (VorteX)
 0 bug darkplaces client qc: trace_dphittexturename should be a static buffer rather than a tempstring, it produces unnecessary warnings currently (div0)
 0 bug darkplaces client qw: add .mvd demo support
 0 bug darkplaces client qw: add .qwd demo support
 0 bug darkplaces client qw: add spectator cvar (Plague Monkey Rat)
 0 bug darkplaces client qw: add spectator prediction
-0 bug darkplaces client qw: cl_netinputpacketspersecond 20 is too low for QW physics to behave properly, add a separate cl_netinputpacketspersecond_qw cvar which defaults to 72 (Plague Monkey Rat)
 0 bug darkplaces client qw: inactive player entities are showing up at 0 0 0 (Plague Monkey Rat)
 0 bug darkplaces client qw: qw skins should only be active on progs/player.mdl (Plague Monkey Rat)
 0 bug darkplaces client qw: qw/skins/*.pcx need to be cropped to 296x194 and loaded as internal textures so they are split into multiple layers (Plague Monkey Rat)
 0 bug darkplaces client qw: restrict wateralpha and such cvars according to what is permitted in qw serverinfo?
-0 bug darkplaces client sbar: when playing demos recorded from singleplayer, the deathmatch hud seems to be used, perhaps we have to force it off for maxplayers 1? (Spirit)
 0 bug darkplaces client timedemo: investigate bogus results of one-second min/avg/max, clearly not working properly (Willis)
-0 bug darkplaces client win64: crash in R_DrawRTLight due to stack overflow, change the pointer arrays to indexes into r_refdef.scene.entities, or increase projects to build with 4MB stack instead of 2MB - also clean up these warnings: http://dp.deathmask.net/log/dp_x64_buildlog_r8078.txt (Willis)
 0 bug darkplaces client: can't move mouse around in nexuiz menu if vid_mouse is 0
 0 bug darkplaces client: if you press 1 during the demo loop when quake starts, escape doesn't do anything until you hit some other key (daemon)
 0 bug darkplaces effects: add a cvar to disable colored dlights (leileilol)
@@ -29,7 +26,6 @@
 0 bug darkplaces loader: png loading crashes if the image is transparent (Urre)
 0 bug darkplaces loader: q1bsp loader computes wrong submodel size for submodels with no surfaces, such as a func_wall comprised entirely of SKIP or CAULK brushes (neg|ke)
 0 bug darkplaces memory: memstats doesn't account for memory used by VBO/EBO buffers in models
-0 bug darkplaces menu: load/save game menus show files that are not in the highest priority gamedir, such as id1 saves showing up when playing dpmod (Dooomer, WodahsEht)
 0 bug darkplaces readme: it would be a very good idea to add documentation of sv_gameplayfix_* cvars in the readme as a means to run broken mods (xaGe)
 0 bug darkplaces readme: readme says that q3 shaders are not supported, this is not true, describe the working features in detail (qqshka)
 0 bug darkplaces renderer: GL13 path has broken handling of unlit surfaces in Nexuiz toxic.bsp - the small red light surfaces are black in GL13 path (m0rfar)
@@ -273,7 +269,6 @@
 1 bug darkplaces server: silver key missing in the map Menkalinan at http://quakemaps.nm.ru/maps2.html (zarquon)
 1 bug darkplaces: if progdefs.h is out of date it causes a Sys_Error, after clicking OK on the message box the engine crashes, probably something to do with partially loaded progs
 1 bug hmap: qbsp dies from runaway allocations if a duplicate plane is found on a brush (Tomaz)
-1 change darkplaces client: reduce number of particles used, and particle limit, to save some memory (LordHavoc)
 1 change darkplaces protocol: document the TEI stuff used in Nexuiz
 1 change darkplaces protocol: send additional stats for movement parameters and slowmo and gravity, replacing the rather silly cl_movement and cl_slowmo and cl_gravity cvars (Vermeulen)
 1 change darkplaces renderer: add gunshot (shotgun pellet) and nail (spike) decals to the particlefont so that these can look different from explosions (Morphed)
@@ -492,6 +487,9 @@ d bug darkplaces SDL input: changing video mode causes it to ignore all characte
 d bug darkplaces WGL client: default WGL input back to GDI, the DirectInput driver is malfunctioning, losing key release messages, stuttering mouse input, and lacks mouse wheel support (Wazat, Kinn)
 d bug darkplaces WGL client: fix GDI input init/shutdown, it is using weird mouse acceleration and not restoring it on exit (innovati)
 d bug darkplaces X11 keyboard: make sure that the XLookupString code is not little endian specific (Elric, jitspoe)
+d bug darkplaces client qw: cl_netinputpacketspersecond 20 is too low for QW physics to behave properly, add a separate cl_netinputpacketspersecond_qw cvar which defaults to 72 (Plague Monkey Rat)
+d bug darkplaces client sbar: when playing demos recorded from singleplayer, the deathmatch hud seems to be used, perhaps we have to force it off for maxplayers 1? (Spirit)
+d bug darkplaces client win64: crash in R_DrawRTLight due to stack overflow, change the pointer arrays to indexes into r_refdef.scene.entities, or increase projects to build with 4MB stack instead of 2MB - also clean up these warnings: http://dp.deathmask.net/log/dp_x64_buildlog_r8078.txt (Willis)
 d bug darkplaces client/server: unable to control player in TAoV multiplayer (RenegadeC)
 d bug darkplaces client/server: viewzoom values above 1 are not working properly
 d bug darkplaces client: GAME_NEHAHRA: make sure cutscenes and movies work, got a report of seeing a black screen (NightFright)
@@ -571,6 +569,7 @@ d bug darkplaces loading: when gamedir (or -game) contains a directory which lis
 d bug darkplaces makefile: build nexuiz.exe using nexuiz.rc (Vermeulen)
 d bug darkplaces menu: if no data is found, the menu should be text
 d bug darkplaces menu: if no data is found, there are only 3 menu options selectable, even though that is not enough to be able to select quit...  perhaps some nexuiz-specific logic is malfunctioning?
+d bug darkplaces menu: load/save game menus show files that are not in the highest priority gamedir, such as id1 saves showing up when playing dpmod (Dooomer, WodahsEht)
 d bug darkplaces menuvm: menu input focus is lost if a map command occurs while in menu, even if it fails the menu still lost focus and is unusable until closed and reopened with escape key (Black, Vermeulen)
 d bug darkplaces model: don't Host_Error when a model is unknown/unsupported type (SavageX, Vermeulen)
 d bug darkplaces model: ignore attempts to load "" (SavageX, Vermeulen)
@@ -699,6 +698,7 @@ d change darkplaces client: add some particles to teleportsplash (Uffe)
 d change darkplaces client: change timedemo minfps/maxfps to be the lowest and highest fps in one second segments, similar to the showfps display, this should solve the precision problems resulting in stupidly high/low fps reports (m0rfar)
 d change darkplaces client: get image sizes from .lmp files if present
 d change darkplaces client: implement inversion of non-uniform scaling in Matrix4x4_Invert_Simple or replace it with a full featured matrix inverter
+d change darkplaces client: reduce number of particles used, and particle limit, to save some memory (LordHavoc)
 d change darkplaces client: tone down scrag and hell knight shot trails
 d change darkplaces extensions: add DP_QUAKE3MAP extension to indicate that the engine supports Q3BSP files
 d change darkplaces menu: remove gl_combine from menu as it's not saved to config and really shouldn't be changed except when debugging drivers (QuakeMatt)
