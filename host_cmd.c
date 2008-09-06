@@ -25,6 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 int current_skill;
 cvar_t sv_cheats = {0, "sv_cheats", "0", "enables cheat commands in any game, and cheat impulses in dpmod"};
 cvar_t sv_adminnick = {CVAR_SAVE, "sv_adminnick", "", "nick name to use for admin messages instead of host name"};
+cvar_t sv_status_privacy = {CVAR_SAVE, "sv_status_privacy", "0", "do not show IP addresses in 'status' replies to clients"};
 cvar_t rcon_password = {CVAR_PRIVATE, "rcon_password", "", "password to authenticate rcon commands"};
 cvar_t rcon_address = {0, "rcon_address", "", "server address to send rcon commands to (when not connected to a server)"};
 cvar_t team = {CVAR_USERINFO | CVAR_SAVE, "team", "none", "QW team (4 character limit, example: blue)"};
@@ -101,7 +102,10 @@ void Host_Status_f (void)
 		else
 			hours = 0;
 		print ("#%-3u %-16.16s  %3i  %2i:%02i:%02i\n", j+1, client->name, client->frags, hours, minutes, seconds);
-		print ("   %s\n", client->netconnection ? client->netconnection->address : "botclient");
+		if(sv_status_privacy.integer && cmd_source != src_command)
+			print ("   %s\n", client->netconnection ? "hidden" : "botclient");
+		else
+			print ("   %s\n", client->netconnection ? client->netconnection->address : "botclient");
 	}
 }
 
@@ -2553,6 +2557,7 @@ void Host_InitCommands (void)
 
 	Cvar_RegisterVariable(&sv_cheats);
 	Cvar_RegisterVariable(&sv_adminnick);
+	Cvar_RegisterVariable(&sv_status_privacy);
 }
 
 void Host_NoOperation_f(void)
