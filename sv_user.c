@@ -585,7 +585,7 @@ void SV_ExecuteClientMoves(void)
 				// this is a new move
 				move->time = bound(sv.time - 1, move->time, sv.time); // prevent slowhack/speedhack combos
 				move->time = max(move->time, host_client->cmd.time); // prevent backstepping of time
-				moveframetime = bound(0, move->time - host_client->cmd.time, 0.1);
+				moveframetime = bound(0, move->time - host_client->cmd.time, sv.frametime * sv_clmovement_waitforinput.integer);
 				//Con_Printf("movesequence = %i (%i lost), moveframetime = %f\n", move->sequence, move->sequence ? move->sequence - host_client->movesequence - 1 : 0, moveframetime);
 				host_client->cmd = *move;
 				host_client->movesequence = move->sequence;

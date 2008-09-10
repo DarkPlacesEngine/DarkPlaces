@@ -2190,7 +2190,10 @@ void SV_Physics_ClientEntity(prvm_edict_t *ent)
 
 	// don't run physics here if running asynchronously
 	if (host_client->clmovement_skipphysicsframes <= 0)
+	{
 		SV_ClientThink();
+		//host_client->cmd.time = max(host_client->cmd.time, sv.time);
+	}
 
 	// make sure the velocity is sane (not a NaN)
 	SV_CheckVelocity(ent);
