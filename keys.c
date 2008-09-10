@@ -523,7 +523,7 @@ Key_Console (int key, char ascii)
 
 //============================================================================
 
-qboolean	chat_team;
+int chat_mode;
 char		chat_buffer[MAX_INPUTLINE];
 unsigned int	chat_bufferlen = 0;
 
@@ -535,13 +535,18 @@ Key_Message (int key, char ascii)
 
 	if (key == K_ENTER || ascii == 10 || ascii == 13)
 	{
-		Cmd_ForwardStringToServer(va("%s %s", chat_team ? "say_team" : "say ", chat_buffer));
+		if(chat_mode < 0)
+			Cbuf_AddText(va("%s\n", chat_buffer));
+		else
+			Cmd_ForwardStringToServer(va("%s %s", chat_mode ? "say_team" : "say ", chat_buffer));
 
 		key_dest = key_game;
 		chat_bufferlen = 0;
 		chat_buffer[0] = 0;
 		return;
 	}
+
+	// TODO add support for arrow keys and simple editing
 
 	if (key == K_ESCAPE) {
 		key_dest = key_game;
