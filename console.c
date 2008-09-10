@@ -431,7 +431,7 @@ Con_MessageMode_f
 void Con_MessageMode_f (void)
 {
 	key_dest = key_message;
-	chat_team = false;
+	chat_mode = 0; // "say"
 }
 
 
@@ -443,9 +443,24 @@ Con_MessageMode2_f
 void Con_MessageMode2_f (void)
 {
 	key_dest = key_message;
-	chat_team = true;
+	chat_mode = 1; // "say_team"
 }
 
+/*
+================
+Con_CommandMode_f
+================
+*/
+void Con_CommandMode_f (void)
+{
+	key_dest = key_message;
+	if(Cmd_Argc() > 1)
+	{
+		dpsnprintf(chat_buffer, sizeof(chat_buffer), "%s ", Cmd_Args());
+		chat_bufferlen = strlen(chat_buffer);
+	}
+	chat_mode = -1; // command
+}
 
 /*
 ================
@@ -566,6 +581,7 @@ void Con_Init (void)
 	Cmd_AddCommand ("toggleconsole", Con_ToggleConsole_f, "opens or closes the console");
 	Cmd_AddCommand ("messagemode", Con_MessageMode_f, "input a chat message to say to everyone");
 	Cmd_AddCommand ("messagemode2", Con_MessageMode2_f, "input a chat message to say to only your team");
+	Cmd_AddCommand ("commandmode", Con_CommandMode_f, "input a console command");
 	Cmd_AddCommand ("clear", Con_Clear_f, "clear console history");
 	Cmd_AddCommand ("maps", Con_Maps_f, "list information about available maps");
 	Cmd_AddCommand ("condump", Con_ConDump_f, "output console history to a file (see also log_file)");
@@ -1428,7 +1444,9 @@ void Con_DrawNotify (void)
 		int colorindex = -1;
 
 		// LordHavoc: speedup, and other improvements
-		if (chat_team)
+		if (chat_mode < 0)
+			dpsnprintf(temptext, sizeof(temptext), "]%s%c", chat_buffer, (int) 10+((int)(realtime*con_cursorspeed)&1));
+		else if(chat_mode)
 			dpsnprintf(temptext, sizeof(temptext), "say_team:%s%c", chat_buffer, (int) 10+((int)(realtime*con_cursorspeed)&1));
 		else
 			dpsnprintf(temptext, sizeof(temptext), "say:%s%c", chat_buffer, (int) 10+((int)(realtime*con_cursorspeed)&1));

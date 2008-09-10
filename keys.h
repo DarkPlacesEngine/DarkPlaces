@@ -208,7 +208,7 @@ extern	int			key_consoleactive;
 extern	char		*keybindings[MAX_BINDMAPS][MAX_KEYS];
 
 extern void Key_ClearEditLine(int edit_line);
-extern qboolean chat_team;
+extern int chat_mode; // 0 for say, 1 for say_team, -1 for command
 extern char chat_buffer[MAX_INPUTLINE];
 extern unsigned int chat_bufferlen;
 
