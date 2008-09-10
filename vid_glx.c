@@ -252,7 +252,9 @@ static Cursor CreateNullCursor(Display *display, Window root)
 
 void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecursor)
 {
+#if !defined(__APPLE__) && !defined(SUNOS)
 	qboolean usedgamouse;
+#endif
 
 	if (!vidx11_display || !win)
 		return;
@@ -263,8 +265,8 @@ void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecurso
 	if (!mouse_avail)
 		fullscreengrab = relative = hidecursor = false;
 
-	usedgamouse = relative && vid_dgamouse.integer;
 #if !defined(__APPLE__) && !defined(SUNOS)
+	usedgamouse = relative && vid_dgamouse.integer;
 	if (!vid_x11_dgasupported)
 		usedgamouse = false;
 	if (fullscreengrab && vid_usingmouse && (vid_usingdgamouse != usedgamouse))
