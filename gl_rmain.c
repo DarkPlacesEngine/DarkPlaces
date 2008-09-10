@@ -907,7 +907,7 @@ static const char *builtinshaderstring =
 "	// directional model lighting\n"
 "# ifdef USEDIFFUSE\n"
 "	// get the light normal\n"
-"	myhalf3 diffusenormal = myhalf3(LightVector);\n"
+"	myhalf3 diffusenormal = myhalf3(normalize(LightVector));\n"
 "# endif\n"
 "# ifdef USESPECULAR\n"
 "	// calculate directional shading\n"
