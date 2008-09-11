@@ -881,8 +881,16 @@ static const char *builtinshaderstring =
 "	myhalf3 diffusenormal = myhalf3(normalize(LightVector));\n"
 "# endif\n"
 "# ifdef USESPECULAR\n"
+"#  ifndef USEEXACTSPECULARMATH\n"
+"	myhalf3 specularnormal = normalize(diffusenormal + myhalf3(normalize(EyeVector)));\n"
+"\n"
+"#  endif\n"
 "	// calculate directional shading\n"
+"#  ifdef USEEXACTSPECULARMATH\n"
 "	color.rgb = myhalf(texture2D(Texture_Attenuation, vec2(length(CubeVector), 0.0))) * (color.rgb * (AmbientScale + DiffuseScale * myhalf(max(float(dot(surfacenormal, diffusenormal)), 0.0))) + (SpecularScale * pow(myhalf(max(float(dot(reflect(diffusenormal, surfacenormal), normalize(EyeVector)))*-1.0, 0.0)), SpecularPower)) * glosscolor);\n"
+"#  else\n"
+"	color.rgb = myhalf(texture2D(Texture_Attenuation, vec2(length(CubeVector), 0.0))) * (color.rgb * (AmbientScale + DiffuseScale * myhalf(max(float(dot(surfacenormal, diffusenormal)), 0.0))) + (SpecularScale * pow(myhalf(max(float(dot(surfacenormal, specularnormal)), 0.0)), SpecularPower)) * glosscolor);\n"
+"#  endif\n"
 "# else\n"
 "#  ifdef USEDIFFUSE\n"
 "	// calculate directional shading\n"
@@ -912,7 +920,12 @@ static const char *builtinshaderstring =
 "# ifdef USESPECULAR\n"
 "	// calculate directional shading\n"
 "	color.rgb *= AmbientColor + DiffuseColor * myhalf(max(float(dot(surfacenormal, diffusenormal)), 0.0));\n"
+"#  ifdef USEEXACTSPECULARMATH\n"
 "	color.rgb += myhalf3(texture2D(Texture_Gloss, TexCoord)) * SpecularColor * pow(myhalf(max(float(dot(reflect(diffusenormal, surfacenormal), normalize(EyeVector)))*-1.0, 0.0)), SpecularPower);\n"
+"#  else\n"
+"	myhalf3 specularnormal = normalize(diffusenormal + myhalf3(normalize(EyeVector)));\n"
+"	color.rgb += myhalf3(texture2D(Texture_Gloss, TexCoord)) * SpecularColor * pow(myhalf(max(float(dot(surfacenormal, specularnormal)), 0.0)), SpecularPower);\n"
+"#  endif\n"
 "# else\n"
 "#  ifdef USEDIFFUSE\n"
 "\n"
@@ -939,7 +952,12 @@ static const char *builtinshaderstring =
 "	// calculate directional shading\n"
 "	myhalf3 tempcolor = color.rgb * (DiffuseScale * myhalf(max(float(dot(surfacenormal, diffusenormal)), 0.0)));\n"
 "# ifdef USESPECULAR\n"
+"#  ifdef USEEXACTSPECULARMATH\n"
 "	tempcolor += myhalf3(texture2D(Texture_Gloss, TexCoord)) * SpecularScale * pow(myhalf(max(float(dot(reflect(diffusenormal, surfacenormal), normalize(EyeVector)))*-1.0, 0.0)), SpecularPower);\n"
+"#  else\n"
+"	myhalf3 specularnormal = myhalf3(normalize(diffusenormal + myhalf3(normalize(EyeVector))));\n"
+"	tempcolor += myhalf3(texture2D(Texture_Gloss, TexCoord)) * SpecularScale * pow(myhalf(max(float(dot(surfacenormal, specularnormal)), 0.0)), SpecularPower);\n"
+"#  endif\n"
 "# endif\n"
 "\n"
 "	// apply lightmap color\n"
@@ -957,7 +975,12 @@ static const char *builtinshaderstring =
 "	// calculate directional shading\n"
 "	myhalf3 tempcolor = color.rgb * (DiffuseScale * myhalf(max(float(dot(surfacenormal, diffusenormal)), 0.0)));\n"
 "# ifdef USESPECULAR\n"
+"#  ifdef USEEXACTSPECULARMATH\n"
 "	tempcolor += myhalf3(texture2D(Texture_Gloss, TexCoord)) * SpecularScale * pow(myhalf(max(float(dot(reflect(diffusenormal, surfacenormal), normalize(EyeVector)))*-1.0, 0.0)), SpecularPower);\n"
+"#  else\n"
+"	myhalf3 specularnormal = myhalf3(normalize(diffusenormal + myhalf3(normalize(EyeVector))));\n"
+"	tempcolor += myhalf3(texture2D(Texture_Gloss, TexCoord)) * SpecularScale * pow(myhalf(max(float(dot(surfacenormal, specularnormal)), 0.0)), SpecularPower);\n"
+"#  endif\n"
 "# endif\n"
 "\n"
 "	// apply lightmap color\n"
@@ -1056,13 +1079,14 @@ typedef enum shaderpermutation_e
 	SHADERPERMUTATION_CUBEFILTER = 1<<5, // (lightsource) use cubemap light filter
 	SHADERPERMUTATION_GLOW = 1<<6, // (lightmap) blend in an additive glow texture
 	SHADERPERMUTATION_SPECULAR = 1<<7, // (lightsource or deluxemapping) render specular effects
-	SHADERPERMUTATION_REFLECTION = 1<<8, // normalmap-perturbed reflection of the scene infront of the surface, preformed as an overlay on the surface
-	SHADERPERMUTATION_OFFSETMAPPING = 1<<9, // adjust texcoords to roughly simulate a displacement mapped surface
-	SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING = 1<<10, // adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
-	SHADERPERMUTATION_GAMMARAMPS = 1<<11, // gamma (postprocessing only)
-	SHADERPERMUTATION_POSTPROCESSING = 1<<12, // user defined postprocessing
-	SHADERPERMUTATION_LIMIT = 1<<13, // size of permutations array
-	SHADERPERMUTATION_COUNT = 13 // size of shaderpermutationinfo array
+	SHADERPERMUTATION_EXACTSPECULARMATH = 1<<8, // (lightsource or deluxemapping) use exact reflection map for specular effects, as opposed to the usual OpenGL approximation
+	SHADERPERMUTATION_REFLECTION = 1<<9, // normalmap-perturbed reflection of the scene infront of the surface, preformed as an overlay on the surface
+	SHADERPERMUTATION_OFFSETMAPPING = 1<<10, // adjust texcoords to roughly simulate a displacement mapped surface
+	SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING = 1<<11, // adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
+	SHADERPERMUTATION_GAMMARAMPS = 1<<12, // gamma (postprocessing only)
+	SHADERPERMUTATION_POSTPROCESSING = 1<<13, // user defined postprocessing
+	SHADERPERMUTATION_LIMIT = 1<<14, // size of permutations array
+	SHADERPERMUTATION_COUNT = 14 // size of shaderpermutationinfo array
 }
 shaderpermutation_t;
 
@@ -1077,6 +1101,7 @@ shaderpermutationinfo_t shaderpermutationinfo[SHADERPERMUTATION_COUNT] =
 	{"#define USECUBEFILTER\n", " cubefilter"},
 	{"#define USEGLOW\n", " glow"},
 	{"#define USESPECULAR\n", " specular"},
+	{"#define USEEXACTSPECULARMATH\n", " exactspecularmath"},
 	{"#define USEREFLECTION\n", " reflection"},
 	{"#define USEOFFSETMAPPING\n", " offsetmapping"},
 	{"#define USEOFFSETMAPPING_RELIEFMAPPING\n", " reliefmapping"},
@@ -1472,7 +1497,7 @@ void R_SetupGenericTwoTextureShader(int texturemode)
 	if (gl_support_fragment_shader)
 	{
 		if (r_glsl.integer && r_glsl_usegeneric.integer)
-			R_SetupShader_SetPermutation(SHADERMODE_GENERIC, SHADERPERMUTATION_DIFFUSE | SHADERPERMUTATION_SPECULAR | (texturemode == GL_MODULATE ? SHADERPERMUTATION_COLORMAPPING : (texturemode == GL_ADD ? SHADERPERMUTATION_GLOW : (texturemode == GL_DECAL ? SHADERPERMUTATION_VERTEXTEXTUREBLEND : 0))));
+			R_SetupShader_SetPermutation(SHADERMODE_GENERIC, SHADERPERMUTATION_DIFFUSE | SHADERPERMUTATION_SPECULAR | (r_shadow_glossexact.integer ? SHADERPERMUTATION_EXACTSPECULARMATH : 0) | (texturemode == GL_MODULATE ? SHADERPERMUTATION_COLORMAPPING : (texturemode == GL_ADD ? SHADERPERMUTATION_GLOW : (texturemode == GL_DECAL ? SHADERPERMUTATION_VERTEXTEXTUREBLEND : 0))));
 		else if (r_glsl_permutation)
 		{
 			r_glsl_permutation = NULL;
@@ -1651,6 +1676,9 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
 			permutation |= SHADERPERMUTATION_REFLECTION;
 	}
+	if(permutation & SHADERPERMUTATION_SPECULAR)
+		if(r_shadow_glossexact.integer)
+			permutation |= SHADERPERMUTATION_EXACTSPECULARMATH;
 	R_SetupShader_SetPermutation(mode, permutation);
 	if (mode == SHADERMODE_LIGHTSOURCE)
 	{
@@ -1736,7 +1764,14 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 			qglUniform3fARB(r_glsl_permutation->loc_Color_Shirt, 0, 0, 0);
 	}
 	if (r_glsl_permutation->loc_FogRangeRecip >= 0) qglUniform1fARB(r_glsl_permutation->loc_FogRangeRecip, r_refdef.fograngerecip * Matrix4x4_ScaleFromMatrix(&rsurface.matrix));
-	if (r_glsl_permutation->loc_SpecularPower >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularPower, rsurface.texture->specularpower);
+	if(permutation & SHADERPERMUTATION_EXACTSPECULARMATH)
+	{
+		if (r_glsl_permutation->loc_SpecularPower >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularPower, rsurface.texture->specularpower * 0.25);
+	}
+	else
+	{
+		if (r_glsl_permutation->loc_SpecularPower >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularPower, rsurface.texture->specularpower);
+	}
 	if (r_glsl_permutation->loc_OffsetMapping_Scale >= 0) qglUniform1fARB(r_glsl_permutation->loc_OffsetMapping_Scale, r_glsl_offsetmapping_scale.value);
 	CHECKGLERROR
 }
