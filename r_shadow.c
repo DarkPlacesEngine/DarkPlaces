@@ -211,6 +211,7 @@ cvar_t r_shadow_gloss = {CVAR_SAVE, "r_shadow_gloss", "1", "0 disables gloss (sp
 cvar_t r_shadow_gloss2intensity = {0, "r_shadow_gloss2intensity", "0.125", "how bright the forced flat gloss should look if r_shadow_gloss is 2"};
 cvar_t r_shadow_glossintensity = {0, "r_shadow_glossintensity", "1", "how bright textured glossmaps should look if r_shadow_gloss is 1 or 2"};
 cvar_t r_shadow_glossexponent = {0, "r_shadow_glossexponent", "32", "how 'sharp' the gloss should appear (specular power)"};
+cvar_t r_shadow_glossexact = {0, "r_shadow_glossexact", "1", "use exact reflection math for gloss (slightly slower, but should look a tad better)"};
 cvar_t r_shadow_lightattenuationdividebias = {0, "r_shadow_lightattenuationdividebias", "1", "changes attenuation texture generation"};
 cvar_t r_shadow_lightattenuationlinearscale = {0, "r_shadow_lightattenuationlinearscale", "2", "changes attenuation texture generation"};
 cvar_t r_shadow_lightintensityscale = {0, "r_shadow_lightintensityscale", "1", "renders all world lights brighter or darker"};
@@ -440,6 +441,7 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_gloss2intensity);
 	Cvar_RegisterVariable(&r_shadow_glossintensity);
 	Cvar_RegisterVariable(&r_shadow_glossexponent);
+	Cvar_RegisterVariable(&r_shadow_glossexact);
 	Cvar_RegisterVariable(&r_shadow_lightattenuationdividebias);
 	Cvar_RegisterVariable(&r_shadow_lightattenuationlinearscale);
 	Cvar_RegisterVariable(&r_shadow_lightintensityscale);

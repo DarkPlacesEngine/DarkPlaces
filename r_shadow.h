@@ -9,6 +9,7 @@ extern cvar_t r_shadow_gloss;
 extern cvar_t r_shadow_gloss2intensity;
 extern cvar_t r_shadow_glossintensity;
 extern cvar_t r_shadow_glossexponent;
+extern cvar_t r_shadow_glossexact;
 extern cvar_t r_shadow_lightattenuationpower;
 extern cvar_t r_shadow_lightattenuationscale;
 extern cvar_t r_shadow_lightintensityscale;
