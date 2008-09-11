@@ -5652,7 +5652,7 @@ void Mod_Q3BSP_RecursiveFindNumLeafs(mnode_t *node)
 
 void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 {
-	int i, j, numshadowmeshtriangles;
+	int i, j, numshadowmeshtriangles, lumps;
 	q3dheader_t *header;
 	float corner[3], yawradius, modelradius;
 	msurface_t *surface;
@@ -5666,7 +5666,7 @@ void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	header = (q3dheader_t *)buffer;
 
 	i = LittleLong(header->version);
-	if (i != Q3BSPVERSION && i != Q3BSPVERSION_IG)
+	if (i != Q3BSPVERSION && i != Q3BSPVERSION_IG && i != Q3BSPVERSION_LIVE)
 		Host_Error("Mod_Q3BSP_Load: %s has wrong version number (%i, should be %i)", mod->name, i, Q3BSPVERSION);
 	mod->brush.ishlbsp = false;
 	if (loadmodel->isworldmodel)
@@ -5701,15 +5701,21 @@ void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	// swap all the lumps
 	header->ident = LittleLong(header->ident);
 	header->version = LittleLong(header->version);
-	for (i = 0;i < Q3HEADER_LUMPS;i++)
+	lumps = (header->version == Q3BSPVERSION_LIVE) ? Q3HEADER_LUMPS_LIVE : Q3HEADER_LUMPS;
+	for (i = 0;i < lumps;i++)
 	{
 		header->lumps[i].fileofs = LittleLong(header->lumps[i].fileofs);
 		header->lumps[i].filelen = LittleLong(header->lumps[i].filelen);
 	}
+	for (i = lumps;i < Q3HEADER_LUMPS_MAX;i++)
+	{
+		header->lumps[i].fileofs = 0;
+		header->lumps[i].filelen = 0;
+	}
 
 	mod->brush.qw_md4sum = 0;
 	mod->brush.qw_md4sum2 = 0;
-	for (i = 0;i < Q3HEADER_LUMPS;i++)
+	for (i = 0;i < lumps;i++)
 	{
 		if (i == Q3LUMP_ENTITIES)
 			continue;
@@ -5865,7 +5871,7 @@ void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 void Mod_IBSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 {
 	int i = LittleLong(((int *)buffer)[1]);
-	if (i == Q3BSPVERSION || i == Q3BSPVERSION_IG)
+	if (i == Q3BSPVERSION || i == Q3BSPVERSION_IG || i == Q3BSPVERSION_LIVE)
 		Mod_Q3BSP_Load(mod,buffer, bufferend);
 	else if (i == Q2BSPVERSION)
 		Mod_Q2BSP_Load(mod,buffer, bufferend);

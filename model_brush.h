@@ -393,6 +393,7 @@ typedef struct q2darea_s
 //Q3 bsp stuff
 
 #define Q3BSPVERSION	46
+#define Q3BSPVERSION_LIVE 47
 #define Q3BSPVERSION_IG	48
 
 #define	Q3LUMP_ENTITIES		0 // entities to spawn (used by server and client)
@@ -413,12 +414,15 @@ typedef struct q2darea_s
 #define	Q3LUMP_LIGHTGRID	15 // lighting as a voxel grid (used by rendering)
 #define	Q3LUMP_PVS			16 // potentially visible set; bit[clusters][clusters] (used by rendering)
 #define	Q3HEADER_LUMPS		17
+#define	Q3LUMP_ADVERTISEMENTS 17 // quake live stuff written by zeroradiant's q3map2 (ignored by DP)
+#define	Q3HEADER_LUMPS_LIVE	18
+#define	Q3HEADER_LUMPS_MAX	18
 
 typedef struct q3dheader_s
 {
 	int			ident;
 	int			version;
-	lump_t		lumps[Q3HEADER_LUMPS];
+	lump_t		lumps[Q3HEADER_LUMPS_MAX];
 } q3dheader_t;
 
 typedef struct q3dtexture_s
