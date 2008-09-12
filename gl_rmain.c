@@ -4480,6 +4480,7 @@ static float R_EvaluateQ3WaveFunc(q3wavefunc_t func, const float *parms)
 
 void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 {
+	int w, h, idx;
 	int i;
 	dp_model_t *model = ent->model;
 	float f;
@@ -4607,6 +4608,14 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 			break;
 		case Q3TCMOD_SCROLL:
 			Matrix4x4_CreateTranslate(&matrix, tcmod->parms[0] * r_refdef.scene.time, tcmod->parms[1] * r_refdef.scene.time, 0);
+			break;
+		case Q3TCMOD_PAGE: // poor man's animmap (to store animations into a single file, useful for HTTP downloaded textures)
+			w = tcmod->parms[0];
+			h = tcmod->parms[1];
+			f = r_refdef.scene.time / (tcmod->parms[2] * w * h);
+			f = f - floor(f);
+			idx = floor(f * w * h);
+			Matrix4x4_CreateTranslate(&matrix, (idx % w) / tcmod->parms[0], (idx / w) / tcmod->parms[1], 0);
 			break;
 		case Q3TCMOD_STRETCH:
 			f = 1.0f / R_EvaluateQ3WaveFunc(tcmod->wavefunc, tcmod->waveparms);

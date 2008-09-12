@@ -1340,3 +1340,13 @@ Shader parameters for DP's own features:
   - set this to a small value like 0.1 to emphasize the reflection and make
   the water transparent; but if r_water is 0, alpha isn't used, so the water can
   be very visible then too.
+- tcmod page <width> <height> <delay>
+  The texture is shifted by 1/<width> every <delay> seconds, and by 1/<height>
+  every <delay>*<width> seconds. It is some sort of animmap replacement that keeps
+  all animation frames in a single texture.
+  To use it, make a texture with the frames aligned in a grid like this:
+    1   2   3   4
+    5   6   7   8
+  then align it in Radiant so only one of the animation frames can be seen on
+  the surface, and specify "tcmod page 4 2 0.1". DP will then display the frames
+  in order and the cycle will repeat every 0.8 seconds.
