@@ -1482,6 +1482,7 @@ void PRVM_FindOffsets(void)
 	prog->funcoffsets.SV_OnEntityNoSpawnFunction      = PRVM_ED_FindFunctionOffset("SV_OnEntityNoSpawnFunction");
 	prog->funcoffsets.GameCommand                     = PRVM_ED_FindFunctionOffset("GameCommand");
 	prog->funcoffsets.SV_Shutdown                     = PRVM_ED_FindFunctionOffset("SV_Shutdown");
+	prog->funcoffsets.URI_Get_Callback                = PRVM_ED_FindFunctionOffset("URI_Get_Callback");
 	prog->globaloffsets.SV_InitCmd                    = PRVM_ED_FindGlobalOffset("SV_InitCmd");
 	prog->globaloffsets.self                          = PRVM_ED_FindGlobalOffset("self");
 	prog->globaloffsets.time                          = PRVM_ED_FindGlobalOffset("time");
