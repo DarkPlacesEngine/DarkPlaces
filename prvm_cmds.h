@@ -429,3 +429,4 @@ void VM_uri_unescape (void);
 void VM_whichpack (void);
 
 void VM_etof (void);
+void VM_uri_get (void);

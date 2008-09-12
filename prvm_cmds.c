@@ -7,6 +7,7 @@
 #include "quakedef.h"
 
 #include "prvm_cmds.h"
+#include "libcurl.h"
 #include <time.h>
 
 extern cvar_t prvm_backtraceforwarnings;
@@ -4846,3 +4847,71 @@ void VM_whichpack (void)
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(pack ? pack : "");
 }
 
+typedef struct
+{
+	int prognr;
+	double starttime;
+	float id;
+	char buffer[MAX_INPUTLINE];
+}
+uri_to_prog_t;
+
+static void uri_to_string_callback(int status, size_t length_received, unsigned char *buffer, void *cbdata)
+{
+	uri_to_prog_t *handle = cbdata;
+
+	if(!PRVM_ProgLoaded(handle->prognr))
+	{
+		// curl reply came too late... so just drop it
+		Z_Free(handle);
+		return;
+	}
+		
+	PRVM_SetProg(handle->prognr);
+	PRVM_Begin;
+		if((prog->starttime == handle->starttime) && (prog->funcoffsets.URI_Get_Callback))
+		{
+			if(length_received >= sizeof(handle->buffer))
+				length_received = sizeof(handle->buffer) - 1;
+			handle->buffer[length_received] = 0;
+		
+			PRVM_G_FLOAT(OFS_PARM0) = handle->id;
+			PRVM_G_FLOAT(OFS_PARM1) = status;
+			PRVM_G_INT(OFS_PARM2) = PRVM_SetTempString(handle->buffer);
+			PRVM_ExecuteProgram(prog->funcoffsets.URI_Get_Callback, "QC function URI_Get_Callback is missing");
+		}
+	PRVM_End;
+	
+	Z_Free(handle);
+}
+
+// uri_get() gets content from an URL and calls a callback "uri_get_callback" with it set as string; an unique ID of the transfer is returned
+// returns 1 on success, and then calls the callback with the ID, 0 or the HTTP status code, and the received data in a string
+void VM_uri_get (void)
+{
+	const char *url;
+	float id;
+	qboolean ret;
+	uri_to_prog_t *handle;
+
+	if(!prog->funcoffsets.URI_Get_Callback)
+		PRVM_ERROR("uri_get called by %s without URI_Get_Callback defined", PRVM_NAME);
+
+	url = PRVM_G_STRING(OFS_PARM0);
+	id = PRVM_G_FLOAT(OFS_PARM1);
+	handle = Z_Malloc(sizeof(*handle)); // this can't be the prog's mem pool, as curl may call the callback later!
+
+	handle->prognr = PRVM_GetProgNr();
+	handle->starttime = prog->starttime;
+	handle->id = id;
+	ret = Curl_Begin_ToMemory(url, (unsigned char *) handle->buffer, sizeof(handle->buffer), uri_to_string_callback, handle);
+	if(ret)
+	{
+		PRVM_G_INT(OFS_RETURN) = 1;
+	}
+	else
+	{
+		Z_Free(handle);
+		PRVM_G_INT(OFS_RETURN) = 0;
+	}
+}

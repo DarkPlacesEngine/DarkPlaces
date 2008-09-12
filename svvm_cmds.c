@@ -92,6 +92,7 @@ char *vm_sv_extensions =
 "DP_QC_TRACE_MOVETYPE_WORLDONLY "
 "DP_QC_UNLIMITEDTEMPSTRINGS "
 "DP_QC_URI_ESCAPE "
+"DP_QC_URI_GET "
 "DP_QC_VECTOANGLES_WITH_ROLL "
 "DP_QC_VECTORVECTORS "
 "DP_QC_WHICHPACK "
@@ -3411,7 +3412,7 @@ NULL,							// #509
 VM_uri_escape,					// #510 string(string in) uri_escape = #510;
 VM_uri_unescape,				// #511 string(string in) uri_unescape = #511;
 VM_etof,					// #512 float(entity ent) num_for_edict = #512 (DP_QC_NUM_FOR_EDICT)
-NULL,							// #513
+VM_uri_get,						// #513 float(string uril, float id) uri_get = #513; (DP_QC_URI_GET)
 NULL,							// #514
 NULL,							// #515
 NULL,							// #516
