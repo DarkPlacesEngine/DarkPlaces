@@ -180,6 +180,11 @@ typedef struct downloadinfo_s
 	unsigned long bytes_received;
 	struct downloadinfo_s *next, *prev;
 	qboolean forthismap;
+
+	unsigned char *buffer;
+	size_t buffersize;
+	curl_callback_t callback;
+	void *callback_data;
 }
 downloadinfo;
 static downloadinfo *downloads = NULL;
@@ -361,14 +366,27 @@ this.
 */
 static size_t CURL_fwrite(void *data, size_t size, size_t nmemb, void *vdi)
 {
-	fs_offset_t ret;
+	fs_offset_t ret = -1;
 	size_t bytes = size * nmemb;
 	downloadinfo *di = (downloadinfo *) vdi;
 
+	if(di->buffer)
+	{
+		if(di->bytes_received + bytes <= di->buffersize)
+		{
+			memcpy(di->buffer + di->bytes_received, data, bytes);
+			ret = bytes;
+		}
+		// otherwise: buffer overrun, ret stays -1
+	}
+
+	if(di->stream)
+	{
+		ret = FS_Write(di->stream, data, bytes);
+	}
+
 	bytes_received += bytes;
 	di->bytes_received += bytes;
-
-	ret = FS_Write(di->stream, data, bytes);
 
 	return ret; // why not ret / nmemb?
 }
@@ -401,22 +419,42 @@ static void Curl_EndDownload(downloadinfo *di, CurlStatus status, CURLcode error
 		case CURL_DOWNLOAD_SUCCESS:
 			Con_Printf("Download of %s: OK\n", di->filename);
 			ok = true;
+
+			if(di->callback)
+				di->callback(CURLCBSTATUS_OK, di->bytes_received, di->buffer, di->callback_data);
 			break;
 		case CURL_DOWNLOAD_FAILED:
 			Con_Printf("Download of %s: FAILED\n", di->filename);
 			if(error)
 				Con_Printf("Reason given by libcurl: %s\n", qcurl_easy_strerror(error));
+
+			if(di->callback)
+				di->callback(CURLCBSTATUS_FAILED, di->bytes_received, di->buffer, di->callback_data);
 			break;
 		case CURL_DOWNLOAD_ABORTED:
 			Con_Printf("Download of %s: ABORTED\n", di->filename);
+
+			if(di->callback)
+				di->callback(CURLCBSTATUS_ABORTED, di->bytes_received, di->buffer, di->callback_data);
 			break;
 		case CURL_DOWNLOAD_SERVERERROR:
 			Con_Printf("Download of %s: %d\n", di->filename, (int) error);
 
 			// reopen to enforce it to have zero bytes again
-			FS_Close(di->stream);
-			di->stream = FS_OpenRealFile(di->filename, "wb", false);
+			if(di->stream)
+			{
+				FS_Close(di->stream);
+				di->stream = FS_OpenRealFile(di->filename, "wb", false);
+			}
 
+			if(di->callback)
+				di->callback(error ? (int) error : CURLCBSTATUS_SERVERERROR, di->bytes_received, di->buffer, di->callback_data);
+			break;
+		default:
+			Con_Printf("Download of %s: ???\n", di->filename);
+
+			if(di->callback)
+				di->callback(CURLCBSTATUS_UNKNOWN, di->bytes_received, di->buffer, di->callback_data);
 			break;
 	}
 
@@ -478,16 +516,23 @@ static void CheckPendingDownloads()
 			{
 				Con_Printf("Downloading %s -> %s", di->url, di->filename);
 
-				di->stream = FS_OpenRealFile(di->filename, "ab", false);
-				if(!di->stream)
+				if(!di->buffer)
 				{
-					Con_Printf("\nFAILED: Could not open output file %s\n", di->filename);
-					Curl_EndDownload(di, CURL_DOWNLOAD_FAILED, CURLE_OK);
-					return;
+					di->stream = FS_OpenRealFile(di->filename, "ab", false);
+					if(!di->stream)
+					{
+						Con_Printf("\nFAILED: Could not open output file %s\n", di->filename);
+						Curl_EndDownload(di, CURL_DOWNLOAD_FAILED, CURLE_OK);
+						return;
+					}
+					FS_Seek(di->stream, 0, SEEK_END);
+					di->startpos = FS_Tell(di->stream);
+				}
+				else
+				{
+					di->startpos = 0;
 				}
 
-				FS_Seek(di->stream, 0, SEEK_END);
-				di->startpos = FS_Tell(di->stream);
 				if(di->startpos > 0)
 					Con_Printf(", resuming from position %ld", (long) di->startpos);
 				Con_Print("...\n");
@@ -574,10 +619,12 @@ Starts a download of a given URL to the file name portion of this URL (or name
 if given) in the "dlcache/" folder.
 ====================
 */
-void Curl_Begin(const char *URL, const char *name, qboolean ispak, qboolean forthismap)
+static qboolean Curl_Begin(const char *URL, const char *name, qboolean ispak, qboolean forthismap, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata)
 {
 	if(!curl_dll)
-		return;
+	{
+		return false;
+	}
 	else
 	{
 		char fn[MAX_QPATH];
@@ -613,70 +660,77 @@ void Curl_Begin(const char *URL, const char *name, qboolean ispak, qboolean fort
 
 		if(!name)
 			name = URL;
-		p = strrchr(name, '/');
-		p = p ? (p+1) : name;
-		q = strchr(p, '?');
-		length = q ? (size_t)(q - p) : strlen(p);
-		dpsnprintf(fn, sizeof(fn), "dlcache/%.*s", (int)length, p);
 
-		// already downloading the file?
+		if(!buf)
 		{
-			downloadinfo *di = Curl_Find(fn);
-			if(di)
+			p = strrchr(name, '/');
+			p = p ? (p+1) : name;
+			q = strchr(p, '?');
+			length = q ? (size_t)(q - p) : strlen(p);
+			dpsnprintf(fn, sizeof(fn), "dlcache/%.*s", (int)length, p);
+
+			name = fn; // make it point back
+
+			// already downloading the file?
 			{
-				Con_Printf("Can't download %s, already getting it from %s!\n", fn, di->url);
-
-				// however, if it was not for this map yet...
-				if(forthismap && !di->forthismap)
+				downloadinfo *di = Curl_Find(fn);
+				if(di)
 				{
-					di->forthismap = true;
-					// this "fakes" a download attempt so the client will wait for
-					// the download to finish and then reconnect
-					++numdownloads_added;
-				}
+					Con_Printf("Can't download %s, already getting it from %s!\n", fn, di->url);
 
-				return;
-			}
-		}
-
-		if(ispak && FS_FileExists(fn))
-		{
-			qboolean already_loaded;
-			if(FS_AddPack(fn, &already_loaded, true))
-			{
-				Con_DPrintf("%s already exists, not downloading!\n", fn);
-				if(already_loaded)
-					Con_DPrintf("(pak was already loaded)\n");
-				else
-				{
-					if(forthismap)
+					// however, if it was not for this map yet...
+					if(forthismap && !di->forthismap)
 					{
+						di->forthismap = true;
+						// this "fakes" a download attempt so the client will wait for
+						// the download to finish and then reconnect
 						++numdownloads_added;
-						++numdownloads_success;
 					}
-				}
-				return;
-			}
-			else
-			{
-				qfile_t *f = FS_OpenVirtualFile(fn, false);
-				if(f)
-				{
-					char buf[4] = {0};
-					FS_Read(f, buf, sizeof(buf)); // no "-1", I will use memcmp
 
-					if(memcmp(buf, "PK\x03\x04", 4) && memcmp(buf, "PACK", 4))
-					{
-						Con_DPrintf("Detected non-PAK %s, clearing and NOT resuming.\n", fn);
-						FS_Close(f);
-						f = FS_OpenRealFile(fn, "wb", false);
-						if(f)
-							FS_Close(f);
-					}
+					return false;
+				}
+			}
+
+			if(ispak && FS_FileExists(fn))
+			{
+				qboolean already_loaded;
+				if(FS_AddPack(fn, &already_loaded, true))
+				{
+					Con_DPrintf("%s already exists, not downloading!\n", fn);
+					if(already_loaded)
+						Con_DPrintf("(pak was already loaded)\n");
 					else
 					{
-						// OK
-						FS_Close(f);
+						if(forthismap)
+						{
+							++numdownloads_added;
+							++numdownloads_success;
+						}
+					}
+
+					return false;
+				}
+				else
+				{
+					qfile_t *f = FS_OpenVirtualFile(fn, false);
+					if(f)
+					{
+						char buf[4] = {0};
+						FS_Read(f, buf, sizeof(buf)); // no "-1", I will use memcmp
+
+						if(memcmp(buf, "PK\x03\x04", 4) && memcmp(buf, "PACK", 4))
+						{
+							Con_DPrintf("Detected non-PAK %s, clearing and NOT resuming.\n", fn);
+							FS_Close(f);
+							f = FS_OpenRealFile(fn, "wb", false);
+							if(f)
+								FS_Close(f);
+						}
+						else
+						{
+							// OK
+							FS_Close(f);
+						}
 					}
 				}
 			}
@@ -685,7 +739,7 @@ void Curl_Begin(const char *URL, const char *name, qboolean ispak, qboolean fort
 		if(forthismap)
 			++numdownloads_added;
 		di = (downloadinfo *) Z_Malloc(sizeof(*di));
-		strlcpy(di->filename, fn, sizeof(di->filename));
+		strlcpy(di->filename, name, sizeof(di->filename));
 		strlcpy(di->url, URL, sizeof(di->url));
 		dpsnprintf(di->referer, sizeof(di->referer), "dp://%s/", cls.netcon ? cls.netcon->address : "notconnected.invalid");
 		di->forthismap = forthismap;
@@ -699,10 +753,25 @@ void Curl_Begin(const char *URL, const char *name, qboolean ispak, qboolean fort
 		di->prev = NULL;
 		if(di->next)
 			di->next->prev = di;
+
+		di->buffer = buf;
+		di->buffersize = bufsize;
+		di->callback = callback;
+		di->callback_data = cbdata;
+
 		downloads = di;
+		return true;
 	}
 }
 
+qboolean Curl_Begin_ToFile(const char *URL, const char *name, qboolean ispak, qboolean forthismap)
+{
+	return Curl_Begin(URL, name, ispak, forthismap, NULL, 0, NULL, NULL);
+}
+qboolean Curl_Begin_ToMemory(const char *URL, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata)
+{
+	return Curl_Begin(URL, NULL, false, false, buf, bufsize, callback, cbdata);
+}
 
 /*
 ====================
@@ -1049,8 +1118,24 @@ void Curl_Curl_f(void)
 	}
 
 needthefile:
-	Curl_Begin(url, name, pak, forthismap);
+	Curl_Begin_ToFile(url, name, pak, forthismap);
 }
+
+/*
+static void curl_curlcat_callback(int code, size_t length_received, unsigned char *buffer, void *cbdata)
+{
+	Con_Printf("Received %d bytes (status %d):\n%.*s\n", (int) length_received, code, (int) length_received, buffer);
+	Z_Free(buffer);
+}
+
+void Curl_CurlCat_f(void)
+{
+	unsigned char *buf;
+	const char *url = Cmd_Argv(1);
+	buf = Z_Malloc(16384);
+	Curl_Begin_ToMemory(url, buf, 16384, curl_curlcat_callback, NULL);
+}
+*/
 
 /*
 ====================
@@ -1067,6 +1152,7 @@ void Curl_Init_Commands(void)
 	Cvar_RegisterVariable (&sv_curl_defaulturl);
 	Cvar_RegisterVariable (&sv_curl_serverpackages);
 	Cmd_AddCommand ("curl", Curl_Curl_f, "download data from an URL and add to search path");
+	//Cmd_AddCommand ("curlcat", Curl_CurlCat_f, "display data from an URL (debugging command)");
 }
 
 /*
