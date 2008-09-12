@@ -736,6 +736,14 @@ static qboolean Curl_Begin(const char *URL, const char *name, qboolean ispak, qb
 			}
 		}
 
+		// if we get here, we actually want to download... so first verify the
+		// URL scheme (so one can't read local files using file://)
+		if(strncmp(URL, "http://", 7) && strncmp(URL, "ftp://", 6) && strncmp(URL, "https://", 8))
+		{
+			Con_Printf("Curl_Begin(\"%s\")): nasty URL scheme rejected\n", URL);
+			return false;
+		}
+
 		if(forthismap)
 			++numdownloads_added;
 		di = (downloadinfo *) Z_Malloc(sizeof(*di));
