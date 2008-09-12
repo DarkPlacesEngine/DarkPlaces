@@ -1,6 +1,19 @@
+enum
+{
+	CURLCBSTATUS_OK = 0,
+	CURLCBSTATUS_FAILED = -1, // failed for generic reason (e.g. buffer too small)
+	CURLCBSTATUS_ABORTED = -2, // aborted by curl --cancel
+	CURLCBSTATUS_SERVERERROR = -3, // only used if no HTTP status code is available
+	CURLCBSTATUS_UNKNOWN = -4 // should never happen
+};
+typedef void (*curl_callback_t) (int status, size_t length_received, unsigned char *buffer, void *cbdata);
+// code is one of the CURLCBSTATUS constants, or the HTTP error code (when > 0).
+
 void Curl_Run();
 qboolean Curl_Running();
-void Curl_Begin(const char *URL, const char *name, qboolean ispak, qboolean forthismap);
+qboolean Curl_Begin_ToFile(const char *URL, const char *name, qboolean ispak, qboolean forthismap);
+qboolean Curl_Begin_ToMemory(const char *URL, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata);
+	// NOTE: if it returns false, the callback will NOT get called, so free your buffer then!
 void Curl_Init();
 void Curl_Init_Commands();
 void Curl_Shutdown();
