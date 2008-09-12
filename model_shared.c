@@ -1447,6 +1447,7 @@ void Mod_LoadQ3Shaders(void)
 								else if (!strcasecmp(parameter[1], "rotate"))          layer->tcmods[tcmodindex].tcmod = Q3TCMOD_ROTATE;
 								else if (!strcasecmp(parameter[1], "scale"))           layer->tcmods[tcmodindex].tcmod = Q3TCMOD_SCALE;
 								else if (!strcasecmp(parameter[1], "scroll"))          layer->tcmods[tcmodindex].tcmod = Q3TCMOD_SCROLL;
+								else if (!strcasecmp(parameter[1], "page"))            layer->tcmods[tcmodindex].tcmod = Q3TCMOD_PAGE;
 								else if (!strcasecmp(parameter[1], "stretch"))
 								{
 									layer->tcmods[tcmodindex].tcmod = Q3TCMOD_STRETCH;
