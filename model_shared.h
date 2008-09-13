@@ -776,6 +776,9 @@ typedef struct model_brushq3_s
 	// true if the detected deluxemaps are the modelspace kind, rather than
 	// the faster tangentspace kind
 	qboolean deluxemapping_modelspace;
+	// size of lightmaps (128 by default, but may be another poweroftwo if
+	// external lightmaps are used (q3map2 -lightmapsize)
+	int lightmapsize;
 }
 model_brushq3_t;
 
