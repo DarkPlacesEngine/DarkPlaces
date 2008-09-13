@@ -14,6 +14,8 @@ qboolean Curl_Running();
 qboolean Curl_Begin_ToFile(const char *URL, const char *name, qboolean ispak, qboolean forthismap);
 qboolean Curl_Begin_ToMemory(const char *URL, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata);
 	// NOTE: if it returns false, the callback will NOT get called, so free your buffer then!
+void Curl_Cancel_ToMemory(curl_callback_t callback, void *cbdata);
+	// removes all downloads with the given callback and cbdata (this does NOT call the callbacks!)
 void Curl_Init();
 void Curl_Init_Commands();
 void Curl_Shutdown();

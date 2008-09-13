@@ -400,6 +400,38 @@ typedef enum
 }
 CurlStatus;
 
+static void curl_default_callback(int status, size_t length_received, unsigned char *buffer, void *cbdata)
+{
+	downloadinfo *di = (downloadinfo *) cbdata;
+	switch(status)
+	{
+		case CURLCBSTATUS_OK:
+			Con_Printf("Download of %s: OK\n", di->filename);
+			break;
+		case CURLCBSTATUS_FAILED:
+			Con_Printf("Download of %s: FAILED\n", di->filename);
+			break;
+		case CURLCBSTATUS_ABORTED:
+			Con_Printf("Download of %s: ABORTED\n", di->filename);
+			break;
+		case CURLCBSTATUS_SERVERERROR:
+			Con_Printf("Download of %s: (unknown server error)\n", di->filename);
+			break;
+		case CURLCBSTATUS_UNKNOWN:
+			Con_Printf("Download of %s: (unknown client error)\n", di->filename);
+			break;
+		default:
+			Con_Printf("Download of %s: %d\n", di->filename, status);
+			break;
+	}
+}
+
+static void curl_quiet_callback(int status, size_t length_received, unsigned char *buffer, void *cbdata)
+{
+	if(developer.integer)
+		curl_default_callback(status, length_received, buffer, cbdata);
+}
+
 /*
 ====================
 Curl_EndDownload
@@ -417,29 +449,16 @@ static void Curl_EndDownload(downloadinfo *di, CurlStatus status, CURLcode error
 	switch(status)
 	{
 		case CURL_DOWNLOAD_SUCCESS:
-			Con_Printf("Download of %s: OK\n", di->filename);
 			ok = true;
-
-			if(di->callback)
-				di->callback(CURLCBSTATUS_OK, di->bytes_received, di->buffer, di->callback_data);
+			di->callback(CURLCBSTATUS_OK, di->bytes_received, di->buffer, di->callback_data);
 			break;
 		case CURL_DOWNLOAD_FAILED:
-			Con_Printf("Download of %s: FAILED\n", di->filename);
-			if(error)
-				Con_Printf("Reason given by libcurl: %s\n", qcurl_easy_strerror(error));
-
-			if(di->callback)
-				di->callback(CURLCBSTATUS_FAILED, di->bytes_received, di->buffer, di->callback_data);
+			di->callback(CURLCBSTATUS_FAILED, di->bytes_received, di->buffer, di->callback_data);
 			break;
 		case CURL_DOWNLOAD_ABORTED:
-			Con_Printf("Download of %s: ABORTED\n", di->filename);
-
-			if(di->callback)
-				di->callback(CURLCBSTATUS_ABORTED, di->bytes_received, di->buffer, di->callback_data);
+			di->callback(CURLCBSTATUS_ABORTED, di->bytes_received, di->buffer, di->callback_data);
 			break;
 		case CURL_DOWNLOAD_SERVERERROR:
-			Con_Printf("Download of %s: %d\n", di->filename, (int) error);
-
 			// reopen to enforce it to have zero bytes again
 			if(di->stream)
 			{
@@ -451,8 +470,6 @@ static void Curl_EndDownload(downloadinfo *di, CurlStatus status, CURLcode error
 				di->callback(error ? (int) error : CURLCBSTATUS_SERVERERROR, di->bytes_received, di->buffer, di->callback_data);
 			break;
 		default:
-			Con_Printf("Download of %s: ???\n", di->filename);
-
 			if(di->callback)
 				di->callback(CURLCBSTATUS_UNKNOWN, di->bytes_received, di->buffer, di->callback_data);
 			break;
@@ -514,10 +531,10 @@ static void CheckPendingDownloads()
 		{
 			if(!di->started)
 			{
-				Con_Printf("Downloading %s -> %s", di->url, di->filename);
-
 				if(!di->buffer)
 				{
+					Con_Printf("Downloading %s -> %s", di->url, di->filename);
+
 					di->stream = FS_OpenRealFile(di->filename, "ab", false);
 					if(!di->stream)
 					{
@@ -527,15 +544,16 @@ static void CheckPendingDownloads()
 					}
 					FS_Seek(di->stream, 0, SEEK_END);
 					di->startpos = FS_Tell(di->stream);
+
+					if(di->startpos > 0)
+						Con_Printf(", resuming from position %ld", (long) di->startpos);
+					Con_Print("...\n");
 				}
 				else
 				{
+					Con_DPrintf("Downloading %s -> memory\n", di->url);
 					di->startpos = 0;
 				}
-
-				if(di->startpos > 0)
-					Con_Printf(", resuming from position %ld", (long) di->startpos);
-				Con_Print("...\n");
 
 				di->curle = qcurl_easy_init();
 				qcurl_easy_setopt(di->curle, CURLOPT_URL, di->url);
@@ -609,6 +627,24 @@ static downloadinfo *Curl_Find(const char *filename)
 		if(!strcasecmp(di->filename, filename))
 			return di;
 	return NULL;
+}
+
+void Curl_Cancel_ToMemory(curl_callback_t callback, void *cbdata)
+{
+	downloadinfo *di;
+	if(!curl_dll)
+		return;
+	for(di = downloads; di; )
+	{
+		if(di->callback == callback && di->callback_data == cbdata)
+		{
+			di->callback = curl_quiet_callback; // do NOT call the callback
+			Curl_EndDownload(di, CURL_DOWNLOAD_ABORTED, CURLE_OK);
+			di = downloads;
+		}
+		else
+			di = di->next;
+	}
 }
 
 /*
@@ -764,8 +800,16 @@ static qboolean Curl_Begin(const char *URL, const char *name, qboolean ispak, qb
 
 		di->buffer = buf;
 		di->buffersize = bufsize;
-		di->callback = callback;
-		di->callback_data = cbdata;
+		if(callback == NULL)
+		{
+			di->callback = curl_default_callback;
+			di->callback_data = di;
+		}
+		else
+		{
+			di->callback = callback;
+			di->callback_data = cbdata;
+		}
 
 		downloads = di;
 		return true;
@@ -1176,7 +1220,7 @@ array must be freed later using Z_Free.
 */
 Curl_downloadinfo_t *Curl_GetDownloadInfo(int *nDownloads, const char **additional_info)
 {
-	int n, i;
+	int i;
 	downloadinfo *di;
 	Curl_downloadinfo_t *downinfo;
 	static char addinfo[128];
@@ -1189,14 +1233,18 @@ Curl_downloadinfo_t *Curl_GetDownloadInfo(int *nDownloads, const char **addition
 		return NULL;
 	}
 
-	n = 0;
+	i = 0;
 	for(di = downloads; di; di = di->next)
-		++n;
+		++i;
 
-	downinfo = (Curl_downloadinfo_t *) Z_Malloc(sizeof(*downinfo) * n);
+	downinfo = (Curl_downloadinfo_t *) Z_Malloc(sizeof(*downinfo) * i);
 	i = 0;
 	for(di = downloads; di; di = di->next)
 	{
+		// do not show infobars for background downloads
+		if(!developer.integer)
+			if(di->buffer)
+				continue;
 		strlcpy(downinfo[i].filename, di->filename, sizeof(downinfo[i].filename));
 		if(di->curle)
 		{
@@ -1228,7 +1276,7 @@ Curl_downloadinfo_t *Curl_GetDownloadInfo(int *nDownloads, const char **addition
 			*additional_info = NULL;
 	}
 
-	*nDownloads = n;
+	*nDownloads = i;
 	return downinfo;
 }
 
