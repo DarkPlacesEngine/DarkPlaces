@@ -4518,13 +4518,13 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 		if (l->filelen % sizeof(*input_pointer))
 			Host_Error("Mod_Q3BSP_LoadLightmaps: funny lump size in %s",loadmodel->name);
 		count = l->filelen / sizeof(*input_pointer);
-		loadmodel->brushq3.num_originallightmaps = count;
 		for(i = 0; i < count; ++i)
 			inpixels[i] = input_pointer[i].rgb;
 	}
 
 	convertedpixels = Mem_Alloc(tempmempool, size*size*4); // TODO free this
 	loadmodel->brushq3.lightmapsize = size;
+	loadmodel->brushq3.num_originallightmaps = count;
 
 	// now check the surfaces to see if any of them index an odd numbered
 	// lightmap, if so this is not a deluxemapped bsp file
