@@ -4455,20 +4455,76 @@ static void Mod_Q3BSP_LoadTriangles(lump_t *l)
 
 static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 {
-	q3dlightmap_t *in;
+	q3dlightmap_t *input_pointer;
 	int i, j, k, count, power, power2, mask, endlightmap, mergewidth, mergeheight;
 	unsigned char *c;
-	unsigned char convertedpixels[128*128*4];
 
-	if (!l->filelen)
-		return;
+	unsigned char *convertedpixels;
+	char mapname[MAX_QPATH];
+	int size, bytesperpixel, rgbmap[3];
+	qboolean external;
+	unsigned char *inpixels[10000]; // max count q3map2 can output (it uses 4 digits)
+
+	// defaults for q3bsp
+	size = 128;
+	bytesperpixel = 3;
+	rgbmap[0] = 2;
+	rgbmap[1] = 1;
+	rgbmap[2] = 0;
+	external = false;
+	loadmodel->brushq3.lightmapsize = 128;
+
 	if (cls.state == ca_dedicated)
 		return;
-	in = (q3dlightmap_t *)(mod_base + l->fileofs);
-	if (l->filelen % sizeof(*in))
-		Host_Error("Mod_Q3BSP_LoadLightmaps: funny lump size in %s",loadmodel->name);
-	count = l->filelen / sizeof(*in);
-	loadmodel->brushq3.num_originallightmaps = count;
+
+	FS_StripExtension(loadmodel->name, mapname, sizeof(mapname));
+	inpixels[0] = loadimagepixelsbgra(va("%s/lm_%04d", mapname, 0), false, false);
+	if(inpixels[0])
+	{
+		// using EXTERNAL lightmaps instead
+		if(image_width != (int) CeilPowerOf2(image_width) || image_width != image_height)
+		{
+			Mem_Free(inpixels[0]);
+			Host_Error("Mod_Q3BSP_LoadLightmaps: invalid external lightmap size in %s",loadmodel->name);
+		}
+
+		size = image_width;
+		bytesperpixel = 4;
+		rgbmap[0] = 0;
+		rgbmap[1] = 1;
+		rgbmap[2] = 2;
+		external = true;
+
+		for(count = 1; ; ++count)
+		{
+			inpixels[count] = loadimagepixelsbgra(va("%s/lm_%04d", mapname, count), false, false);
+			if(!inpixels[count])
+				break; // we got all of them
+			if(image_width != size || image_height != size)
+			{
+				for(i = 0; i <= count; ++i)
+					Mem_Free(inpixels[i]);
+				Host_Error("Mod_Q3BSP_LoadLightmaps: invalid external lightmap size in %s",loadmodel->name);
+			}
+		}
+	}
+	else
+	{
+		if (!l->filelen)
+		{
+			return;
+		}
+		input_pointer = (q3dlightmap_t *)(mod_base + l->fileofs);
+		if (l->filelen % sizeof(*input_pointer))
+			Host_Error("Mod_Q3BSP_LoadLightmaps: funny lump size in %s",loadmodel->name);
+		count = l->filelen / sizeof(*input_pointer);
+		loadmodel->brushq3.num_originallightmaps = count;
+		for(i = 0; i < count; ++i)
+			inpixels[i] = input_pointer[i].rgb;
+	}
+
+	convertedpixels = Mem_Alloc(tempmempool, size*size*4); // TODO free this
+	loadmodel->brushq3.lightmapsize = size;
 
 	// now check the surfaces to see if any of them index an odd numbered
 	// lightmap, if so this is not a deluxemapped bsp file
@@ -4510,11 +4566,17 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 	// blank lightmaps, which must be handled properly as well
 	if (endlightmap == 1 && count > 1)
 	{
-		c = in[1].rgb;
-		for (i = 0;i < 128*128*3;i++)
-			if (c[i])
+		c = inpixels[1];
+		for (i = 0;i < size*size;i++)
+		{
+			if (c[bytesperpixel*i + rgbmap[0]])
 				break;
-		if (i == 128*128*3)
+			if (c[bytesperpixel*i + rgbmap[1]])
+				break;
+			if (c[bytesperpixel*i + rgbmap[2]])
+				break;
+		}
+		if (i == size*size)
 		{
 			// all pixels in the unused lightmap were black...
 			loadmodel->brushq3.deluxemapping = false;
@@ -4527,6 +4589,14 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 	loadmodel->brushq3.num_lightmapmergepower = 0;
 	for (power = 1;power <= mod_q3bsp_lightmapmergepower.integer && (128 << power) <= gl_max_texture_size && (1 << (power * 2)) < 4 * (count >> loadmodel->brushq3.deluxemapping);power++)
 		loadmodel->brushq3.num_lightmapmergepower = power;
+
+	// as the lightmap size may actually be another power of 2, adjust for this
+	// (and interpret it as the power for 128x128 lightmaps above)
+	for(i = 0; (128 << i) < size; ++i)
+		loadmodel->brushq3.num_lightmapmergepower -= 1;
+	if(loadmodel->brushq3.num_lightmapmergepower < 0)
+		loadmodel->brushq3.num_lightmapmergepower = 0;
+
 	loadmodel->brushq3.num_lightmapmerge = 1 << loadmodel->brushq3.num_lightmapmergepower;
 
 	loadmodel->brushq3.num_mergedlightmaps = ((count >> loadmodel->brushq3.deluxemapping) + (1 << (loadmodel->brushq3.num_lightmapmergepower * 2)) - 1) >> (loadmodel->brushq3.num_lightmapmergepower * 2);
@@ -4545,11 +4615,11 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 	{
 		// figure out which merged lightmap texture this fits into
 		int lightmapindex = i >> (loadmodel->brushq3.deluxemapping + power2);
-		for (k = 0;k < 128*128;k++)
+		for (k = 0;k < size*size;k++)
 		{
-			convertedpixels[k*4+2] = in[i].rgb[k*3+0];
-			convertedpixels[k*4+1] = in[i].rgb[k*3+1];
-			convertedpixels[k*4+0] = in[i].rgb[k*3+2];
+			convertedpixels[k*4+0] = inpixels[i][k*bytesperpixel+rgbmap[0]];
+			convertedpixels[k*4+1] = inpixels[i][k*bytesperpixel+rgbmap[1]];
+			convertedpixels[k*4+2] = inpixels[i][k*bytesperpixel+rgbmap[2]];
 			convertedpixels[k*4+3] = 255;
 		}
 		if (loadmodel->brushq3.num_lightmapmergepower > 0)
@@ -4558,7 +4628,7 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 			if (!loadmodel->brushq3.data_lightmaps[lightmapindex])
 			{
 				// create a lightmap only as large as necessary to hold the
-				// remaining 128x128 blocks
+				// remaining size*size blocks
 				// if there are multiple merged lightmap textures then they will
 				// all be full size except the last one which may be smaller
 				// because it only needs to the remaining blocks, and it will often
@@ -4569,27 +4639,33 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 				for (mergeheight = 1;mergewidth*mergeheight < j && mergeheight < (1 << power);mergeheight *= 2)
 					;
 				if (developer_loading.integer)
-					Con_Printf("lightmap merge texture #%i is %ix%i (%i of %i used)\n", lightmapindex, mergewidth*128, mergeheight*128, min(j, mergewidth*mergeheight), mergewidth*mergeheight);
-				loadmodel->brushq3.data_lightmaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", lightmapindex), mergewidth * 128, mergeheight * 128, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : 0), NULL);
+					Con_Printf("lightmap merge texture #%i is %ix%i (%i of %i used)\n", lightmapindex, mergewidth*size, mergeheight*size, min(j, mergewidth*mergeheight), mergewidth*mergeheight);
+				loadmodel->brushq3.data_lightmaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", lightmapindex), mergewidth * size, mergeheight * size, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : 0), NULL);
 				if (loadmodel->brushq3.data_deluxemaps)
-					loadmodel->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%04i", lightmapindex), mergewidth * 128, mergeheight * 128, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE | (gl_texturecompression_q3bspdeluxemaps.integer ? TEXF_COMPRESS : 0), NULL);
+					loadmodel->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%04i", lightmapindex), mergewidth * size, mergeheight * size, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE | (gl_texturecompression_q3bspdeluxemaps.integer ? TEXF_COMPRESS : 0), NULL);
 			}
-			mergewidth = R_TextureWidth(loadmodel->brushq3.data_lightmaps[lightmapindex]) / 128;
-			mergeheight = R_TextureHeight(loadmodel->brushq3.data_lightmaps[lightmapindex]) / 128;
+			mergewidth = R_TextureWidth(loadmodel->brushq3.data_lightmaps[lightmapindex]) / size;
+			mergeheight = R_TextureHeight(loadmodel->brushq3.data_lightmaps[lightmapindex]) / size;
 			j = (i >> loadmodel->brushq3.deluxemapping) & ((1 << power2) - 1);
 			if (loadmodel->brushq3.deluxemapping && (i & 1))
-				R_UpdateTexture(loadmodel->brushq3.data_deluxemaps[lightmapindex], convertedpixels, (j % mergewidth) * 128, (j / mergewidth) * 128, 128, 128);
+				R_UpdateTexture(loadmodel->brushq3.data_deluxemaps[lightmapindex], convertedpixels, (j % mergewidth) * size, (j / mergewidth) * size, size, size);
 			else
-				R_UpdateTexture(loadmodel->brushq3.data_lightmaps [lightmapindex], convertedpixels, (j % mergewidth) * 128, (j / mergewidth) * 128, 128, 128);
+				R_UpdateTexture(loadmodel->brushq3.data_lightmaps [lightmapindex], convertedpixels, (j % mergewidth) * size, (j / mergewidth) * size, size, size);
 		}
 		else
 		{
 			// figure out which merged lightmap texture this fits into
 			if (loadmodel->brushq3.deluxemapping && (i & 1))
-				loadmodel->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%04i", lightmapindex), 128, 128, convertedpixels, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE | (gl_texturecompression_q3bspdeluxemaps.integer ? TEXF_COMPRESS : 0), NULL);
+				loadmodel->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%04i", lightmapindex), size, size, convertedpixels, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE | (gl_texturecompression_q3bspdeluxemaps.integer ? TEXF_COMPRESS : 0), NULL);
 			else
-				loadmodel->brushq3.data_lightmaps [lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", lightmapindex), 128, 128, convertedpixels, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : 0), NULL);
+				loadmodel->brushq3.data_lightmaps [lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", lightmapindex), size, size, convertedpixels, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : 0), NULL);
 		}
+	}
+
+	if(external)
+	{
+		for(i = 0; i < count; ++i)
+			Mem_Free(inpixels[i]);
 	}
 }
 
@@ -4899,8 +4975,8 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			{
 				// figure out which part of the merged lightmap this fits into
 				int lightmapindex = LittleLong(in->lightmapindex) >> loadmodel->brushq3.deluxemapping;
-				int mergewidth = R_TextureWidth(out->lightmaptexture) / 128;
-				int mergeheight = R_TextureHeight(out->lightmaptexture) / 128;
+				int mergewidth = R_TextureWidth(out->lightmaptexture) / loadmodel->brushq3.lightmapsize;
+				int mergeheight = R_TextureHeight(out->lightmaptexture) / loadmodel->brushq3.lightmapsize;
 				lightmapindex &= mergewidth * mergeheight - 1;
 				lightmaptcscale[0] = 1.0f / mergewidth;
 				lightmaptcscale[1] = 1.0f / mergeheight;
