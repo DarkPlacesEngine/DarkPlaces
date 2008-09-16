@@ -3494,6 +3494,8 @@ NULL,							// #516
 NULL,							// #517
 NULL,							// #518
 NULL,							// #519
+VM_keynumtostring,				// #520 string keynumtostring(float keynum)
+VM_findkeysforcommand,		// #521 string findkeysforcommand(string command)
 };
 
 const int vm_cl_numbuiltins = sizeof(vm_cl_builtins) / sizeof(prvm_builtin_t);

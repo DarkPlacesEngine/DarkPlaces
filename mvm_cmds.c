@@ -231,40 +231,6 @@ void VM_M_getresolution(void)
 
 /*
 =========
-VM_M_findkeysforcommand
-
-string	findkeysforcommand(string command)
-
-the returned string is an altstring
-=========
-*/
-#define NUMKEYS 5 // TODO: merge the constant in keys.c with this one somewhen
-
-void M_FindKeysForCommand(const char *command, int *keys);
-void VM_M_findkeysforcommand(void)
-{
-	const char *cmd;
-	char ret[VM_STRINGTEMP_LENGTH];
-	int keys[NUMKEYS];
-	int i;
-
-	VM_SAFEPARMCOUNT(1, VM_M_findkeysforcommand);
-
-	cmd = PRVM_G_STRING(OFS_PARM0);
-
-	VM_CheckEmptyString(cmd);
-
-	M_FindKeysForCommand(cmd, keys);
-
-	ret[0] = 0;
-	for(i = 0; i < NUMKEYS; i++)
-		strlcat(ret, va(" \'%i\'", keys[i]), sizeof(ret));
-
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(ret);
-}
-
-/*
-=========
 VM_M_getserverliststat
 
 float	getserverliststat(float type)
@@ -1454,7 +1420,7 @@ VM_writetofile,					// #606 void writetofile(float fhandle, entity ent)
 VM_M_isfunction,					// #607 float isfunction(string function_name)
 VM_M_getresolution,				// #608 vector getresolution(float number)
 VM_keynumtostring,				// #609 string keynumtostring(float keynum)
-VM_M_findkeysforcommand,		// #610 string findkeysforcommand(string command)
+VM_findkeysforcommand,		// #610 string findkeysforcommand(string command)
 VM_M_getserverliststat,			// #611 float gethostcachevalue(float type)
 VM_M_getserverliststring,		// #612 string gethostcachestring(float type, float hostnr)
 VM_parseentitydata,				// #613 void parseentitydata(entity ent, string data)
