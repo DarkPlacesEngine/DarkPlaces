@@ -3175,6 +3175,40 @@ void VM_keynumtostring (void)
 
 /*
 =========
+VM_findkeysforcommand
+
+string	findkeysforcommand(string command)
+
+the returned string is an altstring
+=========
+*/
+#define NUMKEYS 5 // TODO: merge the constant in keys.c with this one somewhen
+
+void M_FindKeysForCommand(const char *command, int *keys);
+void VM_findkeysforcommand(void)
+{
+	const char *cmd;
+	char ret[VM_STRINGTEMP_LENGTH];
+	int keys[NUMKEYS];
+	int i;
+
+	VM_SAFEPARMCOUNT(1, VM_findkeysforcommand);
+
+	cmd = PRVM_G_STRING(OFS_PARM0);
+
+	VM_CheckEmptyString(cmd);
+
+	M_FindKeysForCommand(cmd, keys);
+
+	ret[0] = 0;
+	for(i = 0; i < NUMKEYS; i++)
+		strlcat(ret, va(" \'%i\'", keys[i]), sizeof(ret));
+
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(ret);
+}
+
+/*
+=========
 VM_stringtokeynum
 
 float stringtokeynum(string key)
