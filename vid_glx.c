@@ -730,13 +730,6 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 
 	VID_BuildGLXAttrib(attrib, bpp == 32, stereobuffer, samples);
 	visinfo = qglXChooseVisual(vidx11_display, vidx11_screen, attrib);
-	if (!visinfo && (samples == 1))
-	{
-                /* Some Mesa drivers reject sample buffers with 1 sample, so try
-                 * entirely without one */
-		VID_BuildGLXAttrib(attrib, bpp == 32, stereobuffer, 0);
-		visinfo = qglXChooseVisual(vidx11_display, vidx11_screen, attrib);
-	}
 	if (!visinfo)
 	{
 		Con_Print("Couldn't get an RGB, Double-buffered, Depth visual\n");
