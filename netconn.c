@@ -75,6 +75,7 @@ static cvar_t net_slist_queriesperframe = {0, "net_slist_queriesperframe", "4", 
 static cvar_t net_slist_timeout = {0, "net_slist_timeout", "4", "how long to listen for a server information response before giving up"};
 static cvar_t net_slist_pause = {0, "net_slist_pause", "0", "when set to 1, the server list won't update until it is set back to 0"};
 static cvar_t net_slist_maxtries = {0, "net_slist_maxtries", "3", "how many times to ask the same server for information (more times gives better ping reports but takes longer)"};
+static cvar_t net_slist_favorites = {CVAR_SAVE, "net_slist_favorites", "", "contains a list of IP addresses and ports to always query explicitly"};
 
 static cvar_t gameversion = {0, "gameversion", "0", "version of game data (mod-specific), when client and server gameversion mismatch in the server browser the server is shown as incompatible"};
 static cvar_t rcon_restricted_password = {CVAR_PRIVATE, "rcon_restricted_password", "", "password to authenticate rcon commands in restricted mode"};
@@ -131,7 +132,7 @@ serverlist_mask_t serverlist_andmasks[SERVERLIST_ANDMASKCOUNT];
 serverlist_mask_t serverlist_ormasks[SERVERLIST_ORMASKCOUNT];
 
 serverlist_infofield_t serverlist_sortbyfield;
-qboolean serverlist_sortdescending;
+int serverlist_sortflags;
 
 int serverlist_viewcount = 0;
 serverlist_entry_t *serverlist_viewlist[SERVERLIST_VIEWLISTSIZE];
@@ -170,6 +171,12 @@ static void _ServerList_ViewList_Helper_Remove( int index )
 static qboolean _ServerList_Entry_Compare( serverlist_entry_t *A, serverlist_entry_t *B )
 {
 	int result = 0; // > 0 if for numbers A > B and for text if A < B
+
+	if( serverlist_sortflags & SLSF_FAVORITESFIRST )
+	{
+		if(A->info.isfavorite != B->info.isfavorite)
+			return A->info.isfavorite;
+	}
 
 	switch( serverlist_sortbyfield ) {
 		case SLIF_PING:
@@ -211,18 +218,22 @@ static qboolean _ServerList_Entry_Compare( serverlist_entry_t *A, serverlist_ent
 		case SLIF_QCSTATUS:
 			result = strcasecmp( B->info.qcstatus, A->info.qcstatus ); // not really THAT useful, though
 			break;
-		case SLIF_PLAYERS:
-			result = strcasecmp( B->info.players, A->info.qcstatus ); // not really THAT useful, though
+		case SLIF_ISFAVORITE:
+			result = !!B->info.isfavorite - !!A->info.isfavorite;
 			break;
 		default:
 			Con_DPrint( "_ServerList_Entry_Compare: Bad serverlist_sortbyfield!\n" );
 			break;
 	}
 
-	if( serverlist_sortdescending )
-		return result > 0;
 	if (result != 0)
-		return result < 0;
+	{
+		if( serverlist_sortflags & SLSF_DESCENDING )
+			return result > 0;
+		else
+			return result < 0;
+	}
+
 	// if the chosen sort key is identical, sort by index
 	// (makes this a stable sort, so that later replies from servers won't
 	//  shuffle the servers around when they have the same ping)
@@ -334,16 +345,31 @@ static qboolean _ServerList_Entry_Mask( serverlist_mask_t *mask, serverlist_info
 	if( *mask->info.players
 		&& !_ServerList_CompareStr( info->players, mask->tests[SLIF_PLAYERS], mask->info.players ) )
 		return false;
+	if( !_ServerList_CompareInt( info->isfavorite, mask->tests[SLIF_ISFAVORITE], mask->info.isfavorite ))
+		return false;
 	return true;
 }
 
 static void ServerList_ViewList_Insert( serverlist_entry_t *entry )
 {
 	int start, end, mid;
+	const char *text;
 
 	// reject incompatible servers
 	if (entry->info.gameversion != gameversion.integer)
 		return;
+
+	// refresh the "favorite" status
+	text = net_slist_favorites.string;
+	entry->info.isfavorite = false;
+	while(COM_ParseToken_Console(&text))
+	{
+		if(!strcmp(com_token, entry->info.cname))
+		{
+			entry->info.isfavorite = true;
+			break;
+		}
+	}
 
 	// FIXME: change this to be more readable (...)
 	// now check whether it passes through the masks
@@ -1285,6 +1311,16 @@ static int NetConn_ClientParsePacket_ServerList_ProcessReply(const char *address
 		if (serverlist_consoleoutput)
 			Con_Printf("querying %s\n", addressstring);
 		++serverlist_cachecount;
+
+#if 0
+		// we should not NEED this part...
+		text = net_slist_favorites.string;
+		while(COM_ParseToken_Console(&text))
+		{
+			if(!strcmp(com_token, addressstring))
+				entry->isfavorite = 1;
+		}
+#endif
 	}
 	// if this is the first reply from this server, count it as having replied
 	pingtime = (int)((realtime - entry->querytime) * 1000.0 + 0.5);
@@ -1326,7 +1362,7 @@ static void NetConn_ClientParsePacket_ServerList_UpdateCache(int n)
 }
 
 // returns true, if it's sensible to continue the processing
-static qboolean NetConn_ClientParsePacket_ServerList_PrepareQuery( int protocol, const char *ipstring ) {
+static qboolean NetConn_ClientParsePacket_ServerList_PrepareQuery( int protocol, const char *ipstring, qboolean isfavorite ) {
 	int n;
 	serverlist_entry_t *entry;
 
@@ -1349,6 +1385,8 @@ static qboolean NetConn_ClientParsePacket_ServerList_PrepareQuery( int protocol,
 	entry->protocol =	protocol;
 	//	store	the data	the engine cares about (address and	ping)
 	strlcpy (entry->info.cname, ipstring, sizeof(entry->info.cname));
+
+	entry->info.isfavorite = isfavorite;
 	
 	// no, then reset the ping right away
 	entry->info.ping = -1;
@@ -1530,7 +1568,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				if (serverlist_consoleoutput && developer_networking.integer)
 					Con_Printf("Requesting info from DarkPlaces server %s\n", ipstring);
 				
-				if( !NetConn_ClientParsePacket_ServerList_PrepareQuery( PROTOCOL_DARKPLACES7, ipstring ) ) {
+				if( !NetConn_ClientParsePacket_ServerList_PrepareQuery( PROTOCOL_DARKPLACES7, ipstring, false ) ) {
 					break;
 				}
 
@@ -1557,7 +1595,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				if (serverlist_consoleoutput && developer_networking.integer)
 					Con_Printf("Requesting info from QuakeWorld server %s\n", ipstring);
 				
-				if( !NetConn_ClientParsePacket_ServerList_PrepareQuery( PROTOCOL_QUAKEWORLD, ipstring ) ) {
+				if( !NetConn_ClientParsePacket_ServerList_PrepareQuery( PROTOCOL_QUAKEWORLD, ipstring, false ) ) {
 					break;
 				}
 
@@ -2684,6 +2722,8 @@ void NetConn_QueryMasters(qboolean querydp, qboolean queryqw)
 	int masternum;
 	lhnetaddress_t masteraddress;
 	lhnetaddress_t broadcastaddress;
+	lhnetaddress_t serveraddress;
+	const char *text;
 	char request[256];
 
 	if (serverlist_cachecount >= SERVERLIST_TOTALSIZE)
@@ -2700,19 +2740,24 @@ void NetConn_QueryMasters(qboolean querydp, qboolean queryqw)
 		{
 			if (cl_sockets[i])
 			{
-				// search LAN for Quake servers
-				SZ_Clear(&net_message);
-				// save space for the header, filled in later
-				MSG_WriteLong(&net_message, 0);
-				MSG_WriteByte(&net_message, CCREQ_SERVER_INFO);
-				MSG_WriteString(&net_message, "QUAKE");
-				MSG_WriteByte(&net_message, NET_PROTOCOL_VERSION);
-				*((int *)net_message.data) = BigLong(NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
-				NetConn_Write(cl_sockets[i], net_message.data, net_message.cursize, &broadcastaddress);
-				SZ_Clear(&net_message);
+				int af = LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(cl_sockets[i]));
 
-				// search LAN for DarkPlaces servers
-				NetConn_WriteString(cl_sockets[i], "\377\377\377\377getstatus", &broadcastaddress);
+				if(LHNETADDRESS_GetAddressType(&broadcastaddress) == af)
+				{
+					// search LAN for Quake servers
+					SZ_Clear(&net_message);
+					// save space for the header, filled in later
+					MSG_WriteLong(&net_message, 0);
+					MSG_WriteByte(&net_message, CCREQ_SERVER_INFO);
+					MSG_WriteString(&net_message, "QUAKE");
+					MSG_WriteByte(&net_message, NET_PROTOCOL_VERSION);
+					*((int *)net_message.data) = BigLong(NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
+					NetConn_Write(cl_sockets[i], net_message.data, net_message.cursize, &broadcastaddress);
+					SZ_Clear(&net_message);
+
+					// search LAN for DarkPlaces servers
+					NetConn_WriteString(cl_sockets[i], "\377\377\377\377getstatus", &broadcastaddress);
+				}
 
 				// build the getservers message to send to the dpmaster master servers
 				dpsnprintf(request, sizeof(request), "\377\377\377\377getservers %s %u empty full\x0A", gamename, NET_PROTOCOL_VERSION);
@@ -2720,10 +2765,20 @@ void NetConn_QueryMasters(qboolean querydp, qboolean queryqw)
 				// search internet
 				for (masternum = 0;sv_masters[masternum].name;masternum++)
 				{
-					if (sv_masters[masternum].string && sv_masters[masternum].string[0] && LHNETADDRESS_FromString(&masteraddress, sv_masters[masternum].string, DPMASTER_PORT) && LHNETADDRESS_GetAddressType(&masteraddress) == LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(cl_sockets[i])))
+					if (sv_masters[masternum].string && sv_masters[masternum].string[0] && LHNETADDRESS_FromString(&masteraddress, sv_masters[masternum].string, DPMASTER_PORT) && LHNETADDRESS_GetAddressType(&masteraddress) == af)
 					{
 						masterquerycount++;
 						NetConn_WriteString(cl_sockets[i], request, &masteraddress);
+					}
+				}
+
+				// search favorite servers
+				text = net_slist_favorites.string;
+				while(COM_ParseToken_Console(&text))
+				{
+					if(LHNETADDRESS_FromString(&serveraddress, com_token, 26000) && LHNETADDRESS_GetAddressType(&masteraddress) == af)
+					{
+						NetConn_ClientParsePacket_ServerList_PrepareQuery( PROTOCOL_DARKPLACES7, com_token, true );
 					}
 				}
 			}
@@ -2737,12 +2792,17 @@ void NetConn_QueryMasters(qboolean querydp, qboolean queryqw)
 		{
 			if (cl_sockets[i])
 			{
-				// search LAN for QuakeWorld servers
-				NetConn_WriteString(cl_sockets[i], "\377\377\377\377status\n", &broadcastaddress);
+				int af = LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(cl_sockets[i]));
 
-				// build the getservers message to send to the qwmaster master servers
-				// note this has no -1 prefix, and the trailing nul byte is sent
-				dpsnprintf(request, sizeof(request), "c\n");
+				if(LHNETADDRESS_GetAddressType(&broadcastaddress) == af)
+				{
+					// search LAN for QuakeWorld servers
+					NetConn_WriteString(cl_sockets[i], "\377\377\377\377status\n", &broadcastaddress);
+
+					// build the getservers message to send to the qwmaster master servers
+					// note this has no -1 prefix, and the trailing nul byte is sent
+					dpsnprintf(request, sizeof(request), "c\n");
+				}
 
 				// search internet
 				for (masternum = 0;sv_qwmasters[masternum].name;masternum++)
@@ -2757,6 +2817,20 @@ void NetConn_QueryMasters(qboolean querydp, qboolean queryqw)
 						}
 						masterquerycount++;
 						NetConn_Write(cl_sockets[i], request, (int)strlen(request) + 1, &masteraddress);
+					}
+				}
+
+				// search favorite servers
+				text = net_slist_favorites.string;
+				while(COM_ParseToken_Console(&text))
+				{
+					if(LHNETADDRESS_FromString(&serveraddress, com_token, 26000) && LHNETADDRESS_GetAddressType(&masteraddress) == af)
+					{
+						// writing AND querying to catch replies for both
+						// protocols (in case DP has been queried above, this
+						// would only try the DP protocol otherwise)
+						NetConn_WriteString(cl_sockets[i], "\377\377\377\377status\n", &serveraddress);
+						NetConn_ClientParsePacket_ServerList_PrepareQuery( PROTOCOL_QUAKEWORLD, com_token, true );
 					}
 				}
 			}
@@ -2847,7 +2921,7 @@ void Net_Slist_f(void)
 {
 	ServerList_ResetMasks();
 	serverlist_sortbyfield = SLIF_PING;
-	serverlist_sortdescending = false;
+	serverlist_sortflags = 0;
     if (m_state != m_slist) {
 		Con_Print("Sending requests to master servers\n");
 		ServerList_QueryList(true, true, false, true);
@@ -2860,7 +2934,7 @@ void Net_SlistQW_f(void)
 {
 	ServerList_ResetMasks();
 	serverlist_sortbyfield = SLIF_PING;
-	serverlist_sortdescending = false;
+	serverlist_sortflags = 0;
     if (m_state != m_slist) {
 		Con_Print("Sending requests to master servers\n");
 		ServerList_QueryList(true, false, true, true);
@@ -2886,6 +2960,7 @@ void NetConn_Init(void)
 	Cvar_RegisterVariable(&net_slist_queriesperframe);
 	Cvar_RegisterVariable(&net_slist_timeout);
 	Cvar_RegisterVariable(&net_slist_maxtries);
+	Cvar_RegisterVariable(&net_slist_favorites);
 	Cvar_RegisterVariable(&net_slist_pause);
 	Cvar_RegisterVariable(&net_messagetimeout);
 	Cvar_RegisterVariable(&net_connecttimeout);

@@ -267,6 +267,8 @@ typedef struct serverlist_info_s
 	// (an integer that is used for filtering incompatible servers,
 	//  not filterable by QC)
 	int gameversion;
+	// favorite server flag
+	qboolean isfavorite;
 } serverlist_info_t;
 
 typedef enum
@@ -285,8 +287,15 @@ typedef enum
 	SLIF_FREESLOTS,
 	SLIF_QCSTATUS,
 	SLIF_PLAYERS,
+	SLIF_ISFAVORITE,
 	SLIF_COUNT
 } serverlist_infofield_t;
+
+typedef enum
+{
+	SLSF_DESCENDING = 1,
+	SLSF_FAVORITESFIRST = 2
+} serverlist_sortflags_t;
 
 typedef enum
 {
@@ -326,7 +335,7 @@ extern serverlist_mask_t serverlist_andmasks[SERVERLIST_ANDMASKCOUNT];
 extern serverlist_mask_t serverlist_ormasks[SERVERLIST_ORMASKCOUNT];
 
 extern serverlist_infofield_t serverlist_sortbyfield;
-extern qboolean serverlist_sortdescending;
+extern int serverlist_sortflags; // not using the enum, as it is a bitmask
 
 extern int serverlist_viewcount;
 extern serverlist_entry_t *serverlist_viewlist[SERVERLIST_VIEWLISTSIZE];

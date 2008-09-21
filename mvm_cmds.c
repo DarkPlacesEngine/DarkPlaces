@@ -245,7 +245,7 @@ float	getserverliststat(float type)
 4	serverquerycount
 5	serverreplycount
 6	sortfield
-7	sortdescending
+7	sortflags
 */
 void VM_M_getserverliststat( void )
 {
@@ -278,7 +278,7 @@ void VM_M_getserverliststat( void )
 		PRVM_G_FLOAT ( OFS_RETURN ) = serverlist_sortbyfield;
 		return;
 	case 7:
-		PRVM_G_FLOAT ( OFS_RETURN ) = serverlist_sortdescending;
+		PRVM_G_FLOAT ( OFS_RETURN ) = serverlist_sortflags;
 		return;
 	default:
 		VM_Warning( "VM_M_getserverliststat: bad type %i!\n", type );
@@ -416,6 +416,9 @@ void VM_M_setserverlistmasknumber( void )
 		case SLIF_FREESLOTS:
 			mask->info.freeslots = number;
 			break;
+		case SLIF_ISFAVORITE:
+			mask->info.isfavorite = number;
+			break;
 		default:
 			VM_Warning( "VM_M_setserverlistmasknumber: Bad field number %i passed!\n", field );
 			return;
@@ -543,6 +546,9 @@ void VM_M_getserverlistnumber(void)
 		case SLIF_PROTOCOL:
 			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.protocol;
 			break;
+		case SLIF_ISFAVORITE:
+			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.isfavorite;
+			break;
 		default:
 			Con_Print("VM_M_getserverlistnumber: bad field number passed!\n");
 	}
@@ -552,7 +558,7 @@ void VM_M_getserverlistnumber(void)
 ========================
 VM_M_setserverlistsort
 
-setserverlistsort(float field, float descending)
+setserverlistsort(float field, float flags)
 ========================
 */
 void VM_M_setserverlistsort( void )
@@ -560,7 +566,7 @@ void VM_M_setserverlistsort( void )
 	VM_SAFEPARMCOUNT( 2, VM_M_setserverlistsort );
 
 	serverlist_sortbyfield = (serverlist_infofield_t)((int)PRVM_G_FLOAT( OFS_PARM0 ));
-	serverlist_sortdescending = (qboolean) PRVM_G_FLOAT( OFS_PARM1 );
+	serverlist_sortflags = (qboolean) PRVM_G_FLOAT( OFS_PARM1 );
 }
 
 /*
@@ -619,6 +625,8 @@ void VM_M_getserverlistindexforkey( void )
 		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_FREESLOTS;
 	else if( !strcmp( key, "protocol" ) )
 		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_PROTOCOL;
+	else if( !strcmp( key, "isfavorite" ) )
+		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_ISFAVORITE;
 	else
 		PRVM_G_FLOAT( OFS_RETURN ) = -1;
 }
