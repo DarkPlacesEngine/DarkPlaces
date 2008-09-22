@@ -1442,7 +1442,8 @@ VM_M_refreshserverlist,			// #620 void refreshhostcache(void)
 VM_M_getserverlistnumber,		// #621 float gethostcachenumber(float fld, float hostnr)
 VM_M_getserverlistindexforkey,// #622 float gethostcacheindexforkey(string key)
 VM_M_addwantedserverlistkey,	// #623 void addwantedhostcachekey(string key)
-VM_M_getextresponse				// #624 string getextresponse(void)
+VM_M_getextresponse,			// #624 string getextresponse(void)
+VM_netaddress_resolve           // #625 string netaddress_resolve(string, float)
 };
 
 const int vm_m_numbuiltins = sizeof(vm_m_builtins) / sizeof(prvm_builtin_t);
