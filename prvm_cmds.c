@@ -4875,6 +4875,7 @@ void VM_whichpack (void)
 {
 	const char *fn, *pack;
 
+	VM_SAFEPARMCOUNT(1, VM_whichpack);
 	fn = PRVM_G_STRING(OFS_PARM0);
 	pack = FS_WhichPack(fn);
 
@@ -4931,6 +4932,8 @@ void VM_uri_get (void)
 	if(!prog->funcoffsets.URI_Get_Callback)
 		PRVM_ERROR("uri_get called by %s without URI_Get_Callback defined", PRVM_NAME);
 
+	VM_SAFEPARMCOUNT(2, VM_uri_get);
+
 	url = PRVM_G_STRING(OFS_PARM0);
 	id = PRVM_G_FLOAT(OFS_PARM1);
 	handle = Z_Malloc(sizeof(*handle)); // this can't be the prog's mem pool, as curl may call the callback later!
@@ -4948,4 +4951,24 @@ void VM_uri_get (void)
 		Z_Free(handle);
 		PRVM_G_INT(OFS_RETURN) = 0;
 	}
+}
+
+void VM_netaddress_resolve (void)
+{
+	const char *ip;
+	char normalized[128];
+	int port;
+	lhnetaddress_t addr;
+
+	VM_SAFEPARMCOUNTRANGE(1, 2, VM_netaddress_resolve);
+
+	ip = PRVM_G_STRING(OFS_PARM0);
+	port = 0;
+	if(prog->argc > 1)
+		port = PRVM_G_FLOAT(OFS_PARM1);
+
+	if(LHNETADDRESS_FromString(&addr, ip, port) && LHNETADDRESS_ToString(&addr, normalized, sizeof(normalized), prog->argc > 1))
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(normalized);
+	else
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString("");
 }
