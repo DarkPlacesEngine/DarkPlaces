@@ -4528,7 +4528,7 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 		}
 	}
 
-	convertedpixels = Mem_Alloc(tempmempool, size*size*4); // TODO free this
+	convertedpixels = Mem_Alloc(tempmempool, size*size*4);
 	loadmodel->brushq3.lightmapsize = size;
 	loadmodel->brushq3.num_originallightmaps = count;
 
@@ -4668,6 +4668,7 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 		}
 	}
 
+	Mem_Free(convertedpixels);
 	if(external)
 	{
 		for(i = 0; i < count; ++i)
