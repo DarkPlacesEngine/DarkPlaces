@@ -4477,10 +4477,29 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 	if (cls.state == ca_dedicated)
 		return;
 
-	FS_StripExtension(loadmodel->name, mapname, sizeof(mapname));
-	inpixels[0] = loadimagepixelsbgra(va("%s/lm_%04d", mapname, 0), false, false);
-	if(inpixels[0])
+	if(l->filelen)
 	{
+		// prefer internal LMs for compatibility (a BSP contains no info on whether external LMs exist)
+		if (developer_loading.integer)
+			Con_Printf("Using internal lightmaps\n");
+		input_pointer = (q3dlightmap_t *)(mod_base + l->fileofs);
+		if (l->filelen % sizeof(*input_pointer))
+			Host_Error("Mod_Q3BSP_LoadLightmaps: funny lump size in %s",loadmodel->name);
+		count = l->filelen / sizeof(*input_pointer);
+		for(i = 0; i < count; ++i)
+			inpixels[i] = input_pointer[i].rgb;
+	}
+	else
+	{
+		// no internal lightmaps
+		// try external lightmaps
+		if (developer_loading.integer)
+			Con_Printf("Using external lightmaps\n");
+		FS_StripExtension(loadmodel->name, mapname, sizeof(mapname));
+		inpixels[0] = loadimagepixelsbgra(va("%s/lm_%04d", mapname, 0), false, false);
+		if(!inpixels[0])
+			return;
+
 		// using EXTERNAL lightmaps instead
 		if(image_width != (int) CeilPowerOf2(image_width) || image_width != image_height)
 		{
@@ -4507,19 +4526,6 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 				Host_Error("Mod_Q3BSP_LoadLightmaps: invalid external lightmap size in %s",loadmodel->name);
 			}
 		}
-	}
-	else
-	{
-		if (!l->filelen)
-		{
-			return;
-		}
-		input_pointer = (q3dlightmap_t *)(mod_base + l->fileofs);
-		if (l->filelen % sizeof(*input_pointer))
-			Host_Error("Mod_Q3BSP_LoadLightmaps: funny lump size in %s",loadmodel->name);
-		count = l->filelen / sizeof(*input_pointer);
-		for(i = 0; i < count; ++i)
-			inpixels[i] = input_pointer[i].rgb;
 	}
 
 	convertedpixels = Mem_Alloc(tempmempool, size*size*4); // TODO free this
