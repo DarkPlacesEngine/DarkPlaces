@@ -272,6 +272,9 @@ qboolean CL_VM_UpdateView (void)
 		// CSQC_UpdateView function does not call R_ClearScene as it should
 		r_refdef.scene.numentities = 0;
 		r_refdef.scene.numlights = 0;
+		// pass in width and height as parameters (EXT_CSQC_1)
+		PRVM_G_FLOAT(OFS_PARM0) = vid.width;
+		PRVM_G_FLOAT(OFS_PARM1) = vid.height;
 		PRVM_ExecuteProgram(prog->funcoffsets.CSQC_UpdateView, "QC function CSQC_UpdateView is missing");
 		//VectorCopy(oldangles, cl.viewangles);
 		// Dresk : Reset Dmg Globals Here
