@@ -442,9 +442,15 @@ LOAD / SAVE GAME
 void Host_Savegame_to (const char *name)
 {
 	qfile_t	*f;
-	int		i;
+	int		i, lightstyles = 64;
 	char	comment[SAVEGAME_COMMENT_LENGTH+1];
 	qboolean isserver;
+
+	// first we have to figure out if this can be saved in 64 lightstyles
+	// (for Quake compatibility)
+	for (i=64 ; i<MAX_LIGHTSTYLES ; i++)
+		if (sv.lightstyles[i][0])
+			lightstyles = i+1;
 
 	isserver = !strcmp(PRVM_NAME, "server");
 
@@ -489,7 +495,7 @@ void Host_Savegame_to (const char *name)
 	}
 
 	// write the light styles
-	for (i=0 ; i<MAX_LIGHTSTYLES ; i++)
+	for (i=0 ; i<lightstyles ; i++)
 	{
 		if (isserver && sv.lightstyles[i][0])
 			FS_Printf(f, "%s\n", sv.lightstyles[i]);
@@ -500,9 +506,30 @@ void Host_Savegame_to (const char *name)
 	PRVM_ED_WriteGlobals (f);
 	for (i=0 ; i<prog->num_edicts ; i++)
 	{
+		FS_Printf(f,"// edict %d\n", i);
 		//Con_Printf("edict %d...\n", i);
 		PRVM_ED_Write (f, PRVM_EDICT_NUM(i));
 	}
+
+#if 1
+	FS_Printf(f,"/*\n");
+	FS_Printf(f,"// DarkPlaces extended savegame\n");
+	// darkplaces extension - extra lightstyles, support for color lightstyles
+	for (i=0 ; i<MAX_LIGHTSTYLES ; i++)
+		if (isserver && sv.lightstyles[i][0])
+			FS_Printf(f, "sv.lightstyles %i %s\n", i, sv.lightstyles[i]);
+
+	// darkplaces extension - model precaches
+	for (i=1 ; i<MAX_MODELS ; i++)
+		if (sv.model_precache[i][0])
+			FS_Printf(f,"sv.model_precache %i %s\n", i, sv.model_precache[i]);
+
+	// darkplaces extension - sound precaches
+	for (i=1 ; i<MAX_SOUNDS ; i++)
+		if (sv.sound_precache[i][0])
+			FS_Printf(f,"sv.sound_precache %i %s\n", i, sv.sound_precache[i]);
+	FS_Printf(f,"*/\n");
+#endif
 
 	FS_Close (f);
 	Con_Print("done.\n");
@@ -573,8 +600,8 @@ void Host_Loadgame_f (void)
 	char mapname[MAX_QPATH];
 	float time;
 	const char *start;
+	const char *end;
 	const char *t;
-	const char *oldt;
 	char *text;
 	prvm_edict_t *ent;
 	int i;
@@ -655,16 +682,20 @@ void Host_Loadgame_f (void)
 
 // load the light styles
 
+	SV_VM_Begin();
+	// -1 is the globals
+	entnum = -1;
+
 	for (i = 0;i < MAX_LIGHTSTYLES;i++)
 	{
 		// light style
-		oldt = t;
+		start = t;
 		COM_ParseToken_Simple(&t, false, false);
 		// if this is a 64 lightstyle savegame produced by Quake, stop now
-		// we have to check this because darkplaces saves 256 lightstyle savegames
+		// we have to check this because darkplaces may save more than 64
 		if (com_token[0] == '{')
 		{
-			t = oldt;
+			t = start;
 			break;
 		}
 		strlcpy(sv.lightstyles[i], com_token, sizeof(sv.lightstyles[i]));
@@ -674,21 +705,20 @@ void Host_Loadgame_f (void)
 	// (this is for forward compatibility, so that older versions (at
 	// least ones with this fix) can load savegames with extra data before the
 	// first brace, as might be produced by a later engine version)
-	for(;;)
+	for (;;)
 	{
-		oldt = t;
-		COM_ParseToken_Simple(&t, false, false);
+		start = t;
+		if (!COM_ParseToken_Simple(&t, false, false))
+			break;
 		if (com_token[0] == '{')
 		{
-			t = oldt;
+			t = start;
 			break;
 		}
 	}
 
 // load the edicts out of the savegame file
-	SV_VM_Begin();
-	// -1 is the globals
-	entnum = -1;
+	end = t;
 	for (;;)
 	{
 		start = t;
@@ -731,6 +761,7 @@ void Host_Loadgame_f (void)
 				SV_LinkEdict (ent, false);
 		}
 
+		end = t;
 		entnum++;
 	}
 	Mem_Free(text);
@@ -740,6 +771,59 @@ void Host_Loadgame_f (void)
 
 	for (i = 0;i < NUM_SPAWN_PARMS;i++)
 		svs.clients[0].spawn_parms[i] = spawn_parms[i];
+
+	// read extended data if present
+	// the extended data is stored inside a /* */ comment block, which the
+	// parser intentionally skips, so we have to check for it manually here
+	while (*end == '\r' || *end == '\n')
+		end++;
+	if (end[0] == '/' && end[1] == '*' && (end[2] == '\r' || end[2] == '\n'))
+	{
+		Con_Printf("Loading extended DarkPlaces savegame\n");
+		t = end + 2;
+		memset(sv.lightstyles[0], 0, sizeof(sv.lightstyles));
+		memset(sv.model_precache[0], 0, sizeof(sv.model_precache));
+		memset(sv.sound_precache[0], 0, sizeof(sv.sound_precache));
+		while (COM_ParseToken_Simple(&t, false, false))
+		{
+			if (!strcmp(com_token, "sv.lightstyles"))
+			{
+				COM_ParseToken_Simple(&t, false, false);
+				i = atoi(com_token);
+				COM_ParseToken_Simple(&t, false, false);
+				if (i >= 0 && i < MAX_LIGHTSTYLES)
+					strlcpy(sv.lightstyles[i], com_token, sizeof(sv.lightstyles[i]));
+				else
+					Con_Printf("unsupported lightstyle %i \"%s\"\n", i, com_token);
+			}
+			else if (!strcmp(com_token, "sv.model_precache"))
+			{
+				COM_ParseToken_Simple(&t, false, false);
+				i = atoi(com_token);
+				COM_ParseToken_Simple(&t, false, false);
+				if (i >= 0 && i < MAX_MODELS)
+				{
+					strlcpy(sv.model_precache[i], com_token, sizeof(sv.model_precache[i]));
+					sv.models[i] = Mod_ForName (sv.model_precache[i], true, false, false);
+				}
+				else
+					Con_Printf("unsupported model %i \"%s\"\n", i, com_token);
+			}
+			else if (!strcmp(com_token, "sv.sound_precache"))
+			{
+				COM_ParseToken_Simple(&t, false, false);
+				i = atoi(com_token);
+				COM_ParseToken_Simple(&t, false, false);
+				if (i >= 0 && i < MAX_SOUNDS)
+					strlcpy(sv.sound_precache[i], com_token, sizeof(sv.sound_precache[i]));
+				else
+					Con_Printf("unsupported sound %i \"%s\"\n", i, com_token);
+			}
+			// skip any trailing text or unrecognized commands
+			while (COM_ParseToken_Simple(&t, true, false) && strcmp(com_token, "\n"))
+				;
+		}
+	}
 
 	SV_VM_End();
 
