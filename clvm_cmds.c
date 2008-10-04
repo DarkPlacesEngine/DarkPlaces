@@ -2574,7 +2574,13 @@ void VM_CL_AddPolygonsToMeshQueue (void)
 void VM_CL_R_PolygonBegin (void)
 {
 	const char		*picname;
+	skinframe_t     *sf;
 	vmpolygons_t* polys = vmpolygons + PRVM_GetProgNr();
+	int tf;
+
+	// TODO instead of using skinframes here (which provides the benefit of
+	// better management of flags, and is more suited for 3D rendering), what
+	// about supporting Q3 shaders?
 
 	VM_SAFEPARMCOUNT(2, VM_CL_R_PolygonBegin);
 
@@ -2586,8 +2592,29 @@ void VM_CL_R_PolygonBegin (void)
 		return;
 	}
 	picname = PRVM_G_STRING(OFS_PARM0);
-	polys->begin_texture = picname[0] ? Draw_CachePic_Flags (picname, CACHEPICFLAG_NOCLAMP)->tex : r_texture_white;
-	polys->begin_drawflag = (int)PRVM_G_FLOAT(OFS_PARM1);
+
+	sf = NULL;
+	if(*picname)
+	{
+		tf = TEXF_ALPHA;
+		if((int)PRVM_G_FLOAT(OFS_PARM1) & DRAWFLAG_MIPMAP)
+			tf |= TEXF_MIPMAP;
+
+		do
+		{
+			sf = R_SkinFrame_FindNextByName(sf, picname);
+		}
+		while(sf && sf->textureflags != tf);
+
+		if(!sf || !sf->base)
+			sf = R_SkinFrame_LoadExternal(picname, tf, true);
+
+		if(sf)
+			R_SkinFrame_MarkUsed(sf);
+	}
+
+	polys->begin_texture = (sf && sf->base) ? sf->base : r_texture_white;
+	polys->begin_drawflag = (int)PRVM_G_FLOAT(OFS_PARM1) & DRAWFLAG_MASK;
 	polys->begin_vertices = 0;
 	polys->begin_active = true;
 }
