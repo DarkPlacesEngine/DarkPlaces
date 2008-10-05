@@ -2373,6 +2373,7 @@ typedef struct vmpolygons_s
 {
 	mempool_t		*pool;
 	qboolean		initialized;
+	double          progstarttime;
 
 	int				max_vertices;
 	int				num_vertices;
@@ -2412,6 +2413,7 @@ void VM_CL_R_RenderScene (void)
 	R_RenderView();
 
 	polys->num_vertices = polys->num_triangles = 0;
+	polys->progstarttime = prog->starttime;
 }
 
 static void VM_ResizePolygons(vmpolygons_t *polys)
@@ -2463,6 +2465,8 @@ static void VM_DrawPolygonCallback (const entity_render_t *ent, const rtlight_t 
 {
 	int surfacelistindex;
 	vmpolygons_t* polys = vmpolygons + PRVM_GetProgNr();
+	if(polys->progstarttime != prog->starttime) // from other progs? won't draw these (this can cause crashes!)
+		return;
 	R_Mesh_ResetTextureState();
 	R_Mesh_Matrix(&identitymatrix);
 	GL_CullFace(GL_NONE);
@@ -2586,6 +2590,12 @@ void VM_CL_R_PolygonBegin (void)
 
 	if (!polys->initialized)
 		VM_InitPolygons(polys);
+	if(polys->progstarttime != prog->starttime)
+	{
+		// from another progs? then reset the polys first (fixes crashes on map change, because that can make skinframe textures invalid)
+		polys->num_vertices = polys->num_triangles = 0;
+		polys->progstarttime = prog->starttime;
+	}
 	if (polys->begin_active)
 	{
 		VM_Warning("VM_CL_R_PolygonBegin: called twice without VM_CL_R_PolygonBegin after first\n");
