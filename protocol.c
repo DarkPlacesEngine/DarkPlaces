@@ -1,6 +1,23 @@
 
 #include "quakedef.h"
 
+#define ENTITYSIZEPROFILING_START(msg, num) \
+	int entityprofiling_startsize = msg->cursize
+
+#define ENTITYSIZEPROFILING_END(msg, num) \
+	if(developer_networkentities.integer >= 2) \
+	{ \
+		prvm_edict_t *ed = prog->edicts + num; \
+		const char *cname = "(no classname)"; \
+		if(prog->fieldoffsets.classname >= 0) \
+		{ \
+			string_t handle =  PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.classname)->string; \
+			if (handle) \
+				cname = PRVM_GetString(handle); \
+		} \
+		Con_Printf("sent entity update of size %d for a %s\n", (msg->cursize - entityprofiling_startsize), cname); \
+	}
+
 // this is 88 bytes (must match entity_state_t in protocol.h)
 entity_state_t defaultstate =
 {
@@ -344,9 +361,13 @@ void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numstates, con
 				MSG_WriteByte(msg, svc_csqcentities);
 			}
 			// write the remove message
-			MSG_WriteShort(msg, (unsigned short)number | 0x8000);
-			client->csqcentityscope[number] = 0;
-			client->csqcentitysendflags[number] = 0xFFFFFF; // resend completely if it becomes active again
+			{
+				ENTITYSIZEPROFILING_START(msg, number);
+				MSG_WriteShort(msg, (unsigned short)number | 0x8000);
+				client->csqcentityscope[number] = 0;
+				client->csqcentitysendflags[number] = 0xFFFFFF; // resend completely if it becomes active again
+				ENTITYSIZEPROFILING_END(msg, number);
+			}
 			if (msg->cursize + 17 >= maxsize)
 				break;
 		}
@@ -359,6 +380,7 @@ void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numstates, con
 			val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.SendEntity);
 			if (val->function)
 			{
+				ENTITYSIZEPROFILING_START(msg, number);
 				if(!sectionstarted)
 					MSG_WriteByte(msg, svc_csqcentities);
 				MSG_WriteShort(msg, number);
@@ -377,6 +399,7 @@ void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numstates, con
 					sectionstarted = 1;
 					if (msg->cursize + 17 >= maxsize)
 						break;
+					ENTITYSIZEPROFILING_END(msg, number);
 					continue;
 				}
 			}
@@ -497,6 +520,7 @@ void EntityFrameQuake_WriteFrame(sizebuf_t *msg, int maxsize, int numstates, con
 		SZ_Clear(&buf);
 
 // send an update
+		ENTITYSIZEPROFILING_START(msg, s->number);
 		bits = 0;
 		if (s->number >= 256)
 			bits |= U_LONGENTITY;
@@ -632,6 +656,7 @@ void EntityFrameQuake_WriteFrame(sizebuf_t *msg, int maxsize, int numstates, con
 		}
 		// write the message to the packet
 		SZ_Write(msg, buf.data, buf.cursize);
+		ENTITYSIZEPROFILING_END(msg, s->number);
 	}
 }
 
@@ -817,6 +842,7 @@ void EntityState_WriteFields(const entity_state_t *ent, sizebuf_t *msg, unsigned
 void EntityState_WriteUpdate(const entity_state_t *ent, sizebuf_t *msg, const entity_state_t *delta)
 {
 	unsigned int bits;
+	ENTITYSIZEPROFILING_START(msg, ent->number);
 	if (ent->active)
 	{
 		// entity is active, check for changes from the delta
@@ -837,6 +863,7 @@ void EntityState_WriteUpdate(const entity_state_t *ent, sizebuf_t *msg, const en
 			MSG_WriteShort(msg, ent->number | 0x8000);
 		}
 	}
+	ENTITYSIZEPROFILING_END(msg, ent->number);
 }
 
 int EntityState_ReadExtendBits(void)
@@ -1800,6 +1827,8 @@ int EntityState5_Priority(entityframe5_database_t *d, int stateindex)
 void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbits, sizebuf_t *msg)
 {
 	unsigned int bits = 0;
+	int startsize;
+	ENTITYSIZEPROFILING_START(msg, s->number);
 
 	prvm_eval_t *val;
 	val = PRVM_EDICTFIELDVALUE((&prog->edicts[s->number]), prog->fieldoffsets.SendEntity);
@@ -1938,6 +1967,8 @@ void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbi
 			MSG_WriteByte(msg, s->colormod[2]);
 		}
 	}
+
+	ENTITYSIZEPROFILING_END(msg, s->number);
 }
 
 void EntityState5_ReadUpdate(entity_state_t *s, int number)
