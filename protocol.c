@@ -380,27 +380,29 @@ void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numstates, con
 			val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.SendEntity);
 			if (val->function)
 			{
-				ENTITYSIZEPROFILING_START(msg, number);
 				if(!sectionstarted)
 					MSG_WriteByte(msg, svc_csqcentities);
-				MSG_WriteShort(msg, number);
-				msg->allowoverflow = true;
-				PRVM_G_INT(OFS_PARM0) = sv.writeentitiestoclient_cliententitynumber;
-				PRVM_G_FLOAT(OFS_PARM1) = sendflags;
-				prog->globals.server->self = number;
-				PRVM_ExecuteProgram(val->function, "Null SendEntity\n");
-				msg->allowoverflow = false;
-				if(PRVM_G_FLOAT(OFS_RETURN) && msg->cursize + 2 <= maxsize)
 				{
-					// an update has been successfully written
-					client->csqcentitysendflags[number] = 0;
-					// and take note that we have begun the svc_csqcentities
-					// section of the packet
-					sectionstarted = 1;
-					if (msg->cursize + 17 >= maxsize)
-						break;
-					ENTITYSIZEPROFILING_END(msg, number);
-					continue;
+					ENTITYSIZEPROFILING_START(msg, number);
+					MSG_WriteShort(msg, number);
+					msg->allowoverflow = true;
+					PRVM_G_INT(OFS_PARM0) = sv.writeentitiestoclient_cliententitynumber;
+					PRVM_G_FLOAT(OFS_PARM1) = sendflags;
+					prog->globals.server->self = number;
+					PRVM_ExecuteProgram(val->function, "Null SendEntity\n");
+					msg->allowoverflow = false;
+					if(PRVM_G_FLOAT(OFS_RETURN) && msg->cursize + 2 <= maxsize)
+					{
+						// an update has been successfully written
+						client->csqcentitysendflags[number] = 0;
+						// and take note that we have begun the svc_csqcentities
+						// section of the packet
+						sectionstarted = 1;
+						if (msg->cursize + 17 >= maxsize)
+							break;
+						ENTITYSIZEPROFILING_END(msg, number);
+						continue;
+					}
 				}
 			}
 			// self.SendEntity returned false (or does not exist) or the
@@ -512,6 +514,7 @@ void EntityFrameQuake_WriteFrame(sizebuf_t *msg, int maxsize, int numstates, con
 
 	for (i = 0, s = states;i < numstates;i++, s++)
 	{
+		ENTITYSIZEPROFILING_START(msg, s->number);
 		val = PRVM_EDICTFIELDVALUE((&prog->edicts[s->number]), prog->fieldoffsets.SendEntity);
 		if(val && val->function)
 			continue;
@@ -520,7 +523,6 @@ void EntityFrameQuake_WriteFrame(sizebuf_t *msg, int maxsize, int numstates, con
 		SZ_Clear(&buf);
 
 // send an update
-		ENTITYSIZEPROFILING_START(msg, s->number);
 		bits = 0;
 		if (s->number >= 256)
 			bits |= U_LONGENTITY;
@@ -1827,7 +1829,6 @@ int EntityState5_Priority(entityframe5_database_t *d, int stateindex)
 void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbits, sizebuf_t *msg)
 {
 	unsigned int bits = 0;
-	int startsize;
 	ENTITYSIZEPROFILING_START(msg, s->number);
 
 	prvm_eval_t *val;
