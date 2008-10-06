@@ -346,7 +346,7 @@ void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numstates, con
 			// write the remove message
 			MSG_WriteShort(msg, (unsigned short)number | 0x8000);
 			client->csqcentityscope[number] = 0;
-			client->csqcentitysendflags[number] = 0;
+			client->csqcentitysendflags[number] = 0xFFFFFF; // resend completely if it becomes active again
 			if (msg->cursize + 17 >= maxsize)
 				break;
 		}
