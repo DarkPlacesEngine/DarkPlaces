@@ -5747,6 +5747,8 @@ void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	mod->numskins = 1;
 
 	header = (q3dheader_t *)buffer;
+	if((char *) bufferend < (char *) buffer + sizeof(q3dheader_t))
+		Host_Error("Mod_Q3BSP_Load: %s is smaller than its header", mod->name);
 
 	i = LittleLong(header->version);
 	if (i != Q3BSPVERSION && i != Q3BSPVERSION_IG && i != Q3BSPVERSION_LIVE)
@@ -5787,14 +5789,25 @@ void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	lumps = (header->version == Q3BSPVERSION_LIVE) ? Q3HEADER_LUMPS_LIVE : Q3HEADER_LUMPS;
 	for (i = 0;i < lumps;i++)
 	{
-		header->lumps[i].fileofs = LittleLong(header->lumps[i].fileofs);
-		header->lumps[i].filelen = LittleLong(header->lumps[i].filelen);
+		j = (header->lumps[i].fileofs = LittleLong(header->lumps[i].fileofs));
+		if((char *) bufferend < (char *) buffer + j)
+			Host_Error("Mod_Q3BSP_Load: %s has a lump that starts outside the file!", mod->name);
+		j += (header->lumps[i].filelen = LittleLong(header->lumps[i].filelen));
+		if((char *) bufferend < (char *) buffer + j)
+			Host_Error("Mod_Q3BSP_Load: %s has a lump that ends outside the file!", mod->name);
 	}
+	/*
+	 * NO, do NOT clear them!
+	 * they contain actual data referenced by other stuff.
+	 * Instead, before using the advertisements lump, check header->versio
+	 * again!
+	 * Sorry, but otherwise it breaks memory of the first lump.
 	for (i = lumps;i < Q3HEADER_LUMPS_MAX;i++)
 	{
 		header->lumps[i].fileofs = 0;
 		header->lumps[i].filelen = 0;
 	}
+	*/
 
 	mod->brush.qw_md4sum = 0;
 	mod->brush.qw_md4sum2 = 0;
