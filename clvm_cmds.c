@@ -2480,12 +2480,16 @@ static void VM_DrawPolygonCallback (const entity_render_t *ent, const rtlight_t 
 		int numtriangles = 0;
 		rtexture_t *tex = polys->data_triangles[surfacelist[surfacelistindex]].texture;
 		int drawflag = polys->data_triangles[surfacelist[surfacelistindex]].drawflag;
+		// this can't call _DrawQ_ProcessDrawFlag, but should be in sync with it
+		// FIXME factor this out
 		if(drawflag == DRAWFLAG_ADDITIVE)
 			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 		else if(drawflag == DRAWFLAG_MODULATE)
 			GL_BlendFunc(GL_DST_COLOR, GL_ZERO);
 		else if(drawflag == DRAWFLAG_2XMODULATE)
 			GL_BlendFunc(GL_DST_COLOR,GL_SRC_COLOR);
+		else if(drawflag == DRAWFLAG_SCREEN)
+			GL_BlendFunc(GL_ONE_MINUS_DST_COLOR,GL_ONE);
 		else
 			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		R_Mesh_TexBind(0, R_GetTexture(tex));

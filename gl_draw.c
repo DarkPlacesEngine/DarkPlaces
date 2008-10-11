@@ -813,6 +813,8 @@ static void _DrawQ_ProcessDrawFlag(int flags)
 		GL_BlendFunc(GL_DST_COLOR, GL_ZERO);
 	else if(flags == DRAWFLAG_2XMODULATE)
 		GL_BlendFunc(GL_DST_COLOR,GL_SRC_COLOR);
+	else if(flags == DRAWFLAG_SCREEN)
+		GL_BlendFunc(GL_ONE_MINUS_DST_COLOR,GL_ONE);
 	else
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
