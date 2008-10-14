@@ -49,8 +49,8 @@ extern vec3_t vec3_origin;
 #define max(A,B) ((A) > (B) ? (A) : (B))
 #endif
 
-//#define lhrandom(MIN,MAX) ((rand() & 32767) * (((MAX)-(MIN)) * (1.0f / 32767.0f)) + (MIN))
-#define lhrandom(MIN,MAX) (((double)rand() / RAND_MAX) * ((MAX)-(MIN)) + (MIN))
+//#define lhrandom(MIN,MAX) ((rand() & 32767) * (((MAX)-(MIN)) * (1.0f / 32768.0f)) + (MIN))
+#define lhrandom(MIN,MAX) (((double)rand() / ((double)RAND_MAX + 1)) * ((MAX)-(MIN)) + (MIN))
 
 #define invpow(base,number) (log(number) / log(base))
 
@@ -86,9 +86,9 @@ unsigned int CeilPowerOf2(unsigned int value);
 #define VectorCopy(a,b) ((b)[0]=(a)[0],(b)[1]=(a)[1],(b)[2]=(a)[2])
 #define VectorMultiply(a,b,c) ((c)[0]=(a)[0]*(b)[0],(c)[1]=(a)[1]*(b)[1],(c)[2]=(a)[2]*(b)[2])
 #define CrossProduct(a,b,c) ((c)[0]=(a)[1]*(b)[2]-(a)[2]*(b)[1],(c)[1]=(a)[2]*(b)[0]-(a)[0]*(b)[2],(c)[2]=(a)[0]*(b)[1]-(a)[1]*(b)[0])
-#define VectorNormalize(v) {float ilength = (float) sqrt(DotProduct(v,v));if (ilength) ilength = 1.0f / ilength;v[0] *= ilength;v[1] *= ilength;v[2] *= ilength;}
-#define VectorNormalize2(v,dest) {float ilength = (float) sqrt(DotProduct(v,v));if (ilength) ilength = 1.0f / ilength;dest[0] = v[0] * ilength;dest[1] = v[1] * ilength;dest[2] = v[2] * ilength;}
-#define VectorNormalizeDouble(v) {double ilength = sqrt(DotProduct(v,v));if (ilength) ilength = 1.0 / ilength;v[0] *= ilength;v[1] *= ilength;v[2] *= ilength;}
+#define VectorNormalize(v) {float ilength = (float) sqrt(DotProduct((v),(v)));if (ilength) ilength = 1.0f / ilength;(v)[0] *= ilength;(v)[1] *= ilength;(v)[2] *= ilength;}
+#define VectorNormalize2(v,dest) {float ilength = (float) sqrt(DotProduct((v),(v)));if (ilength) ilength = 1.0f / ilength;dest[0] = (v)[0] * ilength;dest[1] = (v)[1] * ilength;dest[2] = (v)[2] * ilength;}
+#define VectorNormalizeDouble(v) {double ilength = sqrt(DotProduct((v),(v)));if (ilength) ilength = 1.0 / ilength;(v)[0] *= ilength;(v)[1] *= ilength;(v)[2] *= ilength;}
 #define VectorDistance2(a, b) (((a)[0] - (b)[0]) * ((a)[0] - (b)[0]) + ((a)[1] - (b)[1]) * ((a)[1] - (b)[1]) + ((a)[2] - (b)[2]) * ((a)[2] - (b)[2]))
 #define VectorDistance(a, b) (sqrt(VectorDistance2(a,b)))
 #define VectorLength(a) (sqrt(DotProduct(a, a)))
