@@ -340,12 +340,21 @@ unsigned char *PNG_LoadImage_BGRA (const unsigned char *raw, int filesize)
 			qpng_read_image(png, my_png.FRowPtrs);
 		}
 		else
-			Con_DPrintf("PNG_LoadImage : not enough memory\n");
+		{
+			Con_Printf("PNG_LoadImage : not enough memory\n");
+			qpng_destroy_read_struct(&png, &pnginfo, 0);
+			Mem_Free(my_png.FRowPtrs);
+			return NULL;
+		}
 		Mem_Free(my_png.FRowPtrs);
 		my_png.FRowPtrs = NULL;
 	}
 	else
-		Con_DPrintf("PNG_LoadImage : not enough memory\n");
+	{
+		Con_Printf("PNG_LoadImage : not enough memory\n");
+		qpng_destroy_read_struct(&png, &pnginfo, 0);
+		return NULL;
+	}
 
 	qpng_read_end(png, pnginfo);
 	qpng_destroy_read_struct(&png, &pnginfo, 0);
@@ -357,7 +366,7 @@ unsigned char *PNG_LoadImage_BGRA (const unsigned char *raw, int filesize)
 	{
 		Con_Printf ("PNG_LoadImage : bad color depth\n");
 		Mem_Free(imagedata);
-		imagedata = NULL;
+		return NULL;
 	}
 
 	// swizzle RGBA to BGRA
