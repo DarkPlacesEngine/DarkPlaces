@@ -28,6 +28,7 @@ cvar_t r_skeletal_debugbonevalue = {0, "r_skeletal_debugbonevalue", "100", "deve
 cvar_t r_skeletal_debugtranslatex = {0, "r_skeletal_debugtranslatex", "1", "development cvar for testing skeletal model code"};
 cvar_t r_skeletal_debugtranslatey = {0, "r_skeletal_debugtranslatey", "1", "development cvar for testing skeletal model code"};
 cvar_t r_skeletal_debugtranslatez = {0, "r_skeletal_debugtranslatez", "1", "development cvar for testing skeletal model code"};
+cvar_t mod_alias_supporttagscale = {0, "mod_alias_supporttagscale", "1", "support scaling factors in bone/tag attachment matrices as supported by MD3"};
 
 float mod_md3_sin[320];
 
@@ -40,6 +41,7 @@ void Mod_AliasInit (void)
 	Cvar_RegisterVariable(&r_skeletal_debugtranslatex);
 	Cvar_RegisterVariable(&r_skeletal_debugtranslatey);
 	Cvar_RegisterVariable(&r_skeletal_debugtranslatez);
+	Cvar_RegisterVariable(&mod_alias_supporttagscale);
 	for (i = 0;i < 320;i++)
 		mod_md3_sin[i] = sin(i * M_PI * 2.0f / 256.0);
 }
@@ -423,6 +425,10 @@ int Mod_Alias_GetTagMatrix(const dp_model_t *model, int poseframe, int tagindex,
 			return 6;
 		Matrix4x4_FromArray12FloatGL(outmatrix, model->data_tags[poseframe * model->num_tags + tagindex].matrixgl);
 	}
+
+	if(!mod_alias_supporttagscale.integer)
+		Matrix4x4_Normalize3(outmatrix, outmatrix);
+
 	return 0;
 }
 
