@@ -226,7 +226,7 @@ void R_MarkDirtyTexture(rtexture_t *rt) {
 	if( !glt->dirtytexnum && glt->flags & GLTEXF_DYNAMIC ) {
 		glt->dirtytexnum = glt->texnum;
 		// mark it as dirty, so R_RealGetTexture gets called
-		glt->texnum = -1;
+		glt->texnum = 0;
 	}
 }
 
@@ -1047,7 +1047,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	glt->glformat = texinfo->glformat;
 	glt->bytesperpixel = texinfo->internalbytesperpixel;
 	glt->sides = glt->texturetype == GLTEXTURETYPE_CUBEMAP ? 6 : 1;
-	glt->texnum = -1;
+	glt->texnum = 0;
 	// init the dynamic texture attributes, too [11/22/2007 Black]
 	glt->dirtytexnum = 0;
 	glt->updatecallback = NULL;
