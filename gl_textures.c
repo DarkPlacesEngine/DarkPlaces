@@ -308,7 +308,7 @@ void R_FreeTexture(rtexture_t *rt)
 	else
 		Host_Error("R_FreeTexture: texture \"%s\" not linked in pool", glt->identifier);
 
-	if (glt->texnum > 0)
+	if (!(glt->flags & GLTEXF_UPLOAD))
 	{
 		CHECKGLERROR
 		qglDeleteTextures(1, (GLuint *)&glt->texnum);CHECKGLERROR
