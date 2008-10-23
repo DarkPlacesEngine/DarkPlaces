@@ -87,7 +87,7 @@ void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, in
 
 // returns the renderer dependent texture slot number (call this before each
 // use, as a texture might not have been precached)
-#define R_GetTexture(rt) ((rt) ? ((rt)->texnum >= 0 ? (rt)->texnum : R_RealGetTexture(rt)) : r_texture_white->texnum)
+#define R_GetTexture(rt) ((rt) ? ((rt)->texnum > 0 ? (rt)->texnum : R_RealGetTexture(rt)) : r_texture_white->texnum)
 int R_RealGetTexture (rtexture_t *rt);
 
 // returns true if the texture is transparent (useful for rendering code)
