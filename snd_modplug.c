@@ -96,6 +96,8 @@ static int (*ModPlug_Read) (ModPlugFile* file, void* buffer, int size);
 static void (*ModPlug_Seek) (ModPlugFile* file, int millisecond);
 static void (*ModPlug_GetSettings) (ModPlug_Settings* settings);
 static void (*ModPlug_SetSettings) (const ModPlug_Settings* settings);
+static void (*ModPlug_SetMasterVolume) (ModPlugFile* file,unsigned int cvol) ;
+
 
 static dllfunction_t modplugfuncs[] =
 {
@@ -155,7 +157,15 @@ qboolean ModPlug_OpenLibrary (void)
 	// Load the DLLs
 	// We need to load both by hand because some OSes seem to not load
 	// the modplug DLL automatically when loading the modplugFile DLL
-	return Sys_LoadLibrary (dllnames_modplug, &modplug_dll, modplugfuncs);
+	if(Sys_LoadLibrary (dllnames_modplug, &modplug_dll, modplugfuncs))
+	{
+		ModPlug_SetMasterVolume = Sys_GetProcAddress(modplug_dll, "ModPlug_SetMasterVolume");
+		if(!ModPlug_SetMasterVolume)
+			Con_Print("Warning: modplug volume control not supported. Try getting a newer version of libmodplug.\n");
+		return true;
+	}
+	else
+		return false;
 }
 
 
@@ -245,6 +255,10 @@ static const snd_buffer_t* ModPlug_FetchSound (void *sfxfetcher, void **chfetche
 			Mem_Free (per_ch);
 			return NULL;
 		}
+
+		if(ModPlug_SetMasterVolume)
+			ModPlug_SetMasterVolume(per_ch->mf, 512); // max volume, DP scales down!
+
 		per_ch->bs = 0;
 
 		per_ch->sb_offset = 0;
@@ -451,6 +465,9 @@ qboolean ModPlug_LoadModPlugFile (const char *filename, sfx_t *sfx)
 		Mem_Free(data);
 		return false;
 	}
+
+	if(ModPlug_SetMasterVolume)
+		ModPlug_SetMasterVolume(mf, 512); // max volume, DP scales down!
 
 	if (developer_loading.integer >= 2)
 		Con_Printf ("\"%s\" will be streamed\n", filename);

@@ -43,6 +43,7 @@ cvar_t mod_q3bsp_curves_collisions = {0, "mod_q3bsp_curves_collisions", "1", "en
 cvar_t mod_q3bsp_optimizedtraceline = {0, "mod_q3bsp_optimizedtraceline", "1", "whether to use optimized traceline code for line traces (as opposed to tracebox code)"};
 cvar_t mod_q3bsp_debugtracebrush = {0, "mod_q3bsp_debugtracebrush", "0", "selects different tracebrush bsp recursion algorithms (for debugging purposes only)"};
 cvar_t mod_q3bsp_lightmapmergepower = {CVAR_SAVE, "mod_q3bsp_lightmapmergepower", "4", "merges the quake3 128x128 lightmap textures into larger lightmap group textures to speed up rendering, 1 = 256x256, 2 = 512x512, 3 = 1024x1024, 4 = 2048x2048, 5 = 4096x4096, ..."};
+cvar_t mod_q3bsp_nolightmaps = {CVAR_SAVE, "mod_q3bsp_nolightmaps", "0", "do not load lightmaps in Q3BSP maps (to save video RAM, but be warned: it looks ugly)"};
 
 static texture_t mod_q1bsp_texture_solid;
 static texture_t mod_q1bsp_texture_sky;
@@ -69,6 +70,7 @@ void Mod_BrushInit(void)
 	Cvar_RegisterVariable(&mod_q3bsp_optimizedtraceline);
 	Cvar_RegisterVariable(&mod_q3bsp_debugtracebrush);
 	Cvar_RegisterVariable(&mod_q3bsp_lightmapmergepower);
+	Cvar_RegisterVariable(&mod_q3bsp_nolightmaps);
 
 	memset(&mod_q1bsp_texture_solid, 0, sizeof(mod_q1bsp_texture_solid));
 	strlcpy(mod_q1bsp_texture_solid.name, "solid" , sizeof(mod_q1bsp_texture_solid.name));
@@ -4477,7 +4479,11 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 	if (cls.state == ca_dedicated)
 		return;
 
-	if(l->filelen)
+	if(mod_q3bsp_nolightmaps.integer)
+	{
+		return;
+	}
+	else if(l->filelen)
 	{
 		// prefer internal LMs for compatibility (a BSP contains no info on whether external LMs exist)
 		if (developer_loading.integer)
@@ -4749,7 +4755,8 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 				n = -1;
 			else if (n >= loadmodel->brushq3.num_originallightmaps)
 			{
-				Con_Printf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): invalid lightmapindex %i (%i lightmaps)\n", i, out->texture->name, n, loadmodel->brushq3.num_originallightmaps);
+				if(loadmodel->brushq3.num_originallightmaps != 0)
+					Con_Printf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): invalid lightmapindex %i (%i lightmaps)\n", i, out->texture->name, n, loadmodel->brushq3.num_originallightmaps);
 				n = -1;
 			}
 			else
