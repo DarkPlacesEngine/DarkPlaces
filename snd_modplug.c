@@ -256,7 +256,9 @@ static const snd_buffer_t* ModPlug_FetchSound (void *sfxfetcher, void **chfetche
 			return NULL;
 		}
 
+#ifndef SND_MODPLUG_STATIC
 		if(ModPlug_SetMasterVolume)
+#endif
 			ModPlug_SetMasterVolume(per_ch->mf, 512); // max volume, DP scales down!
 
 		per_ch->bs = 0;
@@ -466,7 +468,9 @@ qboolean ModPlug_LoadModPlugFile (const char *filename, sfx_t *sfx)
 		return false;
 	}
 
+#ifndef SND_MODPLUG_STATIC
 	if(ModPlug_SetMasterVolume)
+#endif
 		ModPlug_SetMasterVolume(mf, 512); // max volume, DP scales down!
 
 	if (developer_loading.integer >= 2)
