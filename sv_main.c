@@ -31,7 +31,6 @@ static void SV_VM_Setup();
 
 void VM_CustomStats_Clear (void);
 void VM_SV_UpdateCustomStats (client_t *client, prvm_edict_t *ent, sizebuf_t *msg, int *stats);
-void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numstates, const entity_state_t *states);
 
 cvar_t coop = {0, "coop","0", "coop mode, 0 = no coop, 1 = coop mode, multiple players playing through the singleplayer game (coop mode also shuts off deathmatch)"};
 cvar_t deathmatch = {0, "deathmatch","0", "deathmatch mode, values depend on mod but typically 0 = no deathmatch, 1 = normal deathmatch with respawning weapons, 2 = weapons stay (players can only pick up new weapons)"};
@@ -738,7 +737,15 @@ void SV_SendServerinfo (client_t *client)
 	{
 		client->csqcentityscope[i] = 0;
 		client->csqcentitysendflags[i] = 0xFFFFFF;
+		client->csqcentityglobalhistory[i] = 0;
 	}
+	for (i = 0;i < NUM_CSQCENTITYDB_FRAMES;i++)
+	{
+		client->csqcentityframehistory[i].num = 0;
+		client->csqcentityframehistory[i].framenum = -1;
+	}
+	client->csqcnumedicts = 0;
+	client->csqcentityframehistory_next = 0;
 
 	SZ_Clear (&client->netconnection->message);
 	MSG_WriteByte (&client->netconnection->message, svc_print);
@@ -1447,7 +1454,10 @@ void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *
 	if (sv_cullentities_stats.integer)
 		Con_Printf("client \"%s\" entities: %d total, %d visible, %d culled by: %d pvs %d trace\n", client->name, sv.writeentitiestoclient_stats_totalentities, sv.writeentitiestoclient_stats_visibleentities, sv.writeentitiestoclient_stats_culled_pvs + sv.writeentitiestoclient_stats_culled_trace, sv.writeentitiestoclient_stats_culled_pvs, sv.writeentitiestoclient_stats_culled_trace);
 
-	EntityFrameCSQC_WriteFrame(msg, maxsize, numsendstates, sv.writeentitiestoclient_sendstates);
+	if(client->entitydatabase5)
+		EntityFrameCSQC_WriteFrame(msg, maxsize, numsendstates, sv.writeentitiestoclient_sendstates, client->entitydatabase5->latestframenum + 1);
+	else
+		EntityFrameCSQC_WriteFrame(msg, maxsize, numsendstates, sv.writeentitiestoclient_sendstates, 0);
 
 	if (client->entitydatabase5)
 		EntityFrame5_WriteFrame(msg, maxsize, client->entitydatabase5, numsendstates, sv.writeentitiestoclient_sendstates, client - svs.clients + 1, client->movesequence);

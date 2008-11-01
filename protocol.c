@@ -1,4 +1,3 @@
-
 #include "quakedef.h"
 
 #define ENTITYSIZEPROFILING_START(msg, num) \
@@ -264,12 +263,174 @@ void EntityFrameQuake_ISeeDeadEntities(void)
 	}
 }
 
-// FIXME FIXME FIXME: at this time the CSQC entity writing does not store
-// packet logs and thus if an update is lost it is never repeated, this makes
-// csqc entities useless at the moment.
+// NOTE: this only works with DP5 protocol and upwards. For lower protocols
+// (including QUAKE), no packet loss handling for CSQC is done, which makes
+// CSQC basically useless.
+// Always use the DP5 protocol, or a higher one, when using CSQC entities.
+static void EntityFrameCSQC_LostAllFrames(client_t *client)
+{
+	// mark ALL csqc entities as requiring a FULL resend!
+	// I know this is a bad workaround, but better than nothing.
+	int i, n;
+	prvm_eval_t *val;
+	prvm_edict_t *ed;
+
+	if(prog->fieldoffsets.SendEntity < 0 || prog->fieldoffsets.Version < 0)
+		return;
+
+	n = client->csqcnumedicts;
+	for(i = 0; i < n; ++i)
+	{
+		if(client->csqcentityglobalhistory[i])
+		{
+			ed = prog->edicts + i;
+			val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.SendEntity);
+			if (val->function)
+				client->csqcentitysendflags[i] |= 0xFFFFFF; // FULL RESEND
+			else // if it was ever sent to that client as a CSQC entity
+			{
+				client->csqcentityscope[i] = 1; // REMOVE
+				client->csqcentitysendflags[i] |= 0xFFFFFF;
+			}
+		}
+	}
+}
+void EntityFrameCSQC_LostFrame(client_t *client, int framenum)
+{
+	// marks a frame as lost
+	int i, j, n;
+	qboolean valid;
+	int ringfirst, ringlast;
+	int recoversendflags[MAX_EDICTS];
+	csqcentityframedb_t *d;
+
+	n = client->csqcnumedicts;
+
+	// is our frame out of history?
+	ringfirst = client->csqcentityframehistory_next; // oldest entry
+	ringlast = (ringfirst + NUM_CSQCENTITYDB_FRAMES - 1) % NUM_CSQCENTITYDB_FRAMES; // most recently added entry
+
+	valid = false;
+	
+	for(j = 0; j < NUM_CSQCENTITYDB_FRAMES; ++j)
+	{
+		d = &client->csqcentityframehistory[(ringfirst + j) % NUM_CSQCENTITYDB_FRAMES];
+		if(d->framenum < 0)
+			continue;
+		if(d->framenum == framenum)
+			break;
+		else if(d->framenum < framenum)
+			valid = true;
+	}
+	if(j == NUM_CSQCENTITYDB_FRAMES)
+	{
+		if(valid) // got beaten, i.e. there is a frame < framenum
+		{
+			// a non-csqc frame got lost... great
+			return;
+		}
+		else
+		{
+			// a too old frame got lost... sorry, cannot handle this
+			Con_DPrintf("CSQC entity DB: lost a frame too early to do any handling (resending ALL)...\n");
+			Con_DPrintf("Lost frame = %d\n", framenum);
+			Con_DPrintf("Entity DB = %d to %d\n", client->csqcentityframehistory[ringfirst].framenum, client->csqcentityframehistory[ringlast].framenum);
+			EntityFrameCSQC_LostAllFrames(client);
+		}
+		return;
+	}
+
+	// so j is the frame that got lost
+	// ringlast is the frame that we have to go to
+	ringfirst = (ringfirst + j) % NUM_CSQCENTITYDB_FRAMES;
+	if(ringlast < ringfirst)
+		ringlast += NUM_CSQCENTITYDB_FRAMES;
+	
+	memset(recoversendflags, 0, sizeof(recoversendflags));
+
+	for(j = ringfirst; j <= ringlast; ++j)
+	{
+		d = &client->csqcentityframehistory[j % NUM_CSQCENTITYDB_FRAMES];
+		if(d->framenum < 0)
+		{
+			// deleted frame
+		}
+		else if(d->framenum < framenum)
+		{
+			// a frame in the past... should never happen
+			Con_Printf("CSQC entity DB encountered a frame from the past when recovering from PL...?\n");
+		}
+		else if(d->framenum == framenum)
+		{
+			// handling the actually lost frame now
+			for(i = 0; i < d->num; ++i)
+			{
+				int sf = d->sendflags[i];
+				int ent = d->entno[i];
+				if(sf < 0) // remove
+					recoversendflags[ent] |= -1; // all bits, including sign
+				else if(sf > 0)
+					recoversendflags[ent] |= sf;
+			}
+		}
+		else
+		{
+			// handling the frames that followed it now
+			for(i = 0; i < d->num; ++i)
+			{
+				int sf = d->sendflags[i];
+				int ent = d->entno[i];
+				if(sf < 0) // remove
+				{
+					recoversendflags[ent] = 0; // no need to update, we got a more recent remove (and will fix it THEN)
+					break; // no flags left to remove...
+				}
+				else if(sf > 0)
+					recoversendflags[ent] &= ~sf; // no need to update these bits, we already got them later
+			}
+		}
+	}
+
+	for(i = 0; i < client->csqcnumedicts; ++i)
+	{
+		if(recoversendflags[i] < 0)
+		{
+			// a remove got lost, then either send a remove or - if it was
+			// recreated later - a FULL update to make totally sure
+			client->csqcentityscope[i] = 1;
+			client->csqcentitysendflags[i] = 0xFFFFFF;
+		}
+		else
+			client->csqcentitysendflags[i] |= recoversendflags[i];
+	}
+}
+static int EntityFrameCSQC_AllocFrame(client_t *client, int framenum)
+{
+	int ringfirst = client->csqcentityframehistory_next; // oldest entry
+	client->csqcentityframehistory_next += 1;
+	client->csqcentityframehistory_next %= NUM_CSQCENTITYDB_FRAMES;
+	client->csqcentityframehistory[ringfirst].framenum = framenum;
+	client->csqcentityframehistory[ringfirst].num = 0;
+	return ringfirst;
+}
+static void EntityFrameCSQC_DeallocFrame(client_t *client, int framenum)
+{
+	int ringfirst = client->csqcentityframehistory_next; // oldest entry
+	int ringlast = (ringfirst + NUM_CSQCENTITYDB_FRAMES - 1) % NUM_CSQCENTITYDB_FRAMES; // most recently added entry
+	if(framenum == client->csqcentityframehistory[ringlast].framenum)
+	{
+		client->csqcentityframehistory[ringlast].framenum = -1;
+		client->csqcentityframehistory[ringlast].num = 0;
+		client->csqcentityframehistory_next = ringlast;
+	}
+	else
+		Con_Printf("Trying to dealloc the wrong entity frame\n");
+}
 
 //[515]: we use only one array per-client for SendEntity feature
-void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numstates, const entity_state_t *states)
+// TODO: add some handling for entity send priorities, to better deal with huge
+// amounts of csqc networked entities
+void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numstates, const entity_state_t *states, int framenum)
 {
 	int num, number, end, sendflags;
 	qboolean sectionstarted = false;
@@ -277,6 +438,10 @@ void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numstates, con
 	prvm_edict_t *ed;
 	prvm_eval_t *val;
 	client_t *client = svs.clients + sv.writeentitiestoclient_clientnumber;
+	int dbframe = EntityFrameCSQC_AllocFrame(client, framenum);
+	csqcentityframedb_t *db = &client->csqcentityframehistory[dbframe];
+
+	maxsize -= 24; // always fit in an empty svc_entities message (for packet loss detection!)
 
 	// if this server progs is not CSQC-aware, return early
 	if(prog->fieldoffsets.SendEntity < 0 || prog->fieldoffsets.Version < 0)
@@ -349,6 +514,8 @@ void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numstates, con
 		sendflags = client->csqcentitysendflags[number];
 		if (!sendflags)
 			continue;
+		if(db->num >= NUM_CSQCENTITIES_PER_FRAME)
+			break;
 		ed = prog->edicts + number;
 		// entity scope is either update (2) or remove (1)
 		if (client->csqcentityscope[number] == 1)
@@ -366,6 +533,10 @@ void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numstates, con
 				MSG_WriteShort(msg, (unsigned short)number | 0x8000);
 				client->csqcentityscope[number] = 0;
 				client->csqcentitysendflags[number] = 0xFFFFFF; // resend completely if it becomes active again
+				db->entno[db->num] = number;
+				db->sendflags[db->num] = -1;
+				db->num += 1;
+				client->csqcentityglobalhistory[number] = 1;
 				ENTITYSIZEPROFILING_END(msg, number);
 			}
 			if (msg->cursize + 17 >= maxsize)
@@ -395,12 +566,16 @@ void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numstates, con
 					{
 						// an update has been successfully written
 						client->csqcentitysendflags[number] = 0;
+						db->entno[db->num] = number;
+						db->sendflags[db->num] = sendflags;
+						db->num += 1;
+						client->csqcentityglobalhistory[number] = 1;
 						// and take note that we have begun the svc_csqcentities
 						// section of the packet
 						sectionstarted = 1;
+						ENTITYSIZEPROFILING_END(msg, number);
 						if (msg->cursize + 17 >= maxsize)
 							break;
-						ENTITYSIZEPROFILING_END(msg, number);
 						continue;
 					}
 				}
@@ -417,6 +592,11 @@ void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numstates, con
 		// write index 0 to end the update (0 is never used by real entities)
 		MSG_WriteShort(msg, 0);
 	}
+
+	if(db->num == 0)
+		// if no single ent got added, remove the frame from the DB again, to allow
+		// for a larger history
+		EntityFrameCSQC_DeallocFrame(client, framenum);
 }
 
 void Protocol_UpdateClientStats(const int *stats)
@@ -1752,7 +1932,7 @@ void EntityFrame5_FreeDatabase(entityframe5_database_t *d)
 	Mem_Free(d);
 }
 
-void EntityFrame5_ExpandEdicts(entityframe5_database_t *d, int newmax)
+static void EntityFrame5_ExpandEdicts(entityframe5_database_t *d, int newmax)
 {
 	if (d->maxedicts < newmax)
 	{
@@ -1783,7 +1963,7 @@ void EntityFrame5_ExpandEdicts(entityframe5_database_t *d, int newmax)
 	}
 }
 
-int EntityState5_Priority(entityframe5_database_t *d, int stateindex)
+static int EntityState5_Priority(entityframe5_database_t *d, int stateindex)
 {
 	int limit, priority;
 	entity_state_t *s;
@@ -1972,7 +2152,7 @@ void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbi
 	ENTITYSIZEPROFILING_END(msg, s->number);
 }
 
-void EntityState5_ReadUpdate(entity_state_t *s, int number)
+static void EntityState5_ReadUpdate(entity_state_t *s, int number)
 {
 	int bits;
 	bits = MSG_ReadByte();
@@ -2138,7 +2318,7 @@ void EntityState5_ReadUpdate(entity_state_t *s, int number)
 	}
 }
 
-int EntityState5_DeltaBits(const entity_state_t *o, const entity_state_t *n)
+static int EntityState5_DeltaBits(const entity_state_t *o, const entity_state_t *n)
 {
 	unsigned int bits = 0;
 	if (n->active)
