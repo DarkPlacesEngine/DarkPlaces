@@ -967,5 +967,9 @@ void EntityFrameQW_FreeDatabase(entityframeqw_database_t *d);
 void EntityStateQW_ReadPlayerUpdate(void);
 void EntityFrameQW_CL_ReadFrame(qboolean delta);
 
+struct client_s;
+void EntityFrameCSQC_LostFrame(struct client_s *client, int framenum);
+void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numstates, const entity_state_t *states, int framenum);
+
 #endif
 

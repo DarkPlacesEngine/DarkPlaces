@@ -706,7 +706,10 @@ void SV_ApplyClientMove (void)
 void SV_FrameLost(int framenum)
 {
 	if (host_client->entitydatabase5)
+	{
 		EntityFrame5_LostFrame(host_client->entitydatabase5, framenum);
+		EntityFrameCSQC_LostFrame(host_client, framenum);
+	}
 }
 
 void SV_FrameAck(int framenum)
