@@ -825,7 +825,7 @@ void CL_VM_Init (void)
 			i = 0;
 
 			CL_CutDemo(&demobuf, &demofilesize);
-			while(MakeDownloadPacket(csprogsfn, csprogsdata, csprogsdatasize, csprogsdatacrc, i++, &sb, cls.protocol))
+			while(MakeDownloadPacket(csqc_progname.string, csprogsdata, csprogsdatasize, csprogsdatacrc, i++, &sb, cls.protocol))
 				CL_WriteDemoMessage(&sb);
 			CL_PasteDemo(&demobuf, &demofilesize);
 
