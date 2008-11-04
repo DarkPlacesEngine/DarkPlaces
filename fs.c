@@ -472,7 +472,11 @@ int PK3_BuildFileList (pack_t *pack, const pk3_endOfCentralDir_t *eocd)
 	// Load the central directory in memory
 	central_dir = (unsigned char *)Mem_Alloc (tempmempool, eocd->cdir_size);
 	lseek (pack->handle, eocd->cdir_offset, SEEK_SET);
-	read (pack->handle, central_dir, eocd->cdir_size);
+	if(read (pack->handle, central_dir, eocd->cdir_size) != eocd->cdir_size)
+	{
+		Mem_Free (central_dir);
+		return -1;
+	}
 
 	// Extract the files properties
 	// The parsing is done "by hand" because some fields have variable sizes and
@@ -808,7 +812,12 @@ pack_t *FS_LoadPackPAK (const char *packfile)
 #endif
 	if (packhandle < 0)
 		return NULL;
-	read (packhandle, (void *)&header, sizeof(header));
+	if(read (packhandle, (void *)&header, sizeof(header)) != sizeof(header))
+	{
+		Con_Printf ("%s is not a packfile\n", packfile);
+		close(packhandle);
+		return NULL;
+	}
 	if (memcmp(header.id, "PACK", 4))
 	{
 		Con_Printf ("%s is not a packfile\n", packfile);

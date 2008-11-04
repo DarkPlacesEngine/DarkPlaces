@@ -2158,7 +2158,7 @@ void Host_SendCvar_f (void)
 		if(svs.clients[i].active && svs.clients[i].netconnection)
 		{
 			host_client = &svs.clients[i];
-			Host_ClientCommands(va("sendcvar %s\n", cvarname));
+			Host_ClientCommands("sendcvar %s\n", cvarname);
 		}
 	host_client = old;
 }
