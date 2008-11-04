@@ -107,7 +107,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 	// Open the audio device
 	Con_Printf ("SndSys_Init: PCM device is \"%s\"\n", pcm_name);
 	err = snd_pcm_open (&pcm_handle, pcm_name, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
-	if (err != 0)
+	if (err < 0)
 	{
 		Con_Printf ("SndSys_Init: can't open audio device \"%s\" (%s)\n",
 					pcm_name, snd_strerror (err));
@@ -116,14 +116,14 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 
 	// Allocate the hardware parameters
 	err = snd_pcm_hw_params_malloc (&hw_params);
-	if (err != 0)
+	if (err < 0)
 	{
 		Con_Printf ("SndSys_Init: can't allocate hardware parameters (%s)\n",
 					snd_strerror (err));
 		goto init_error;
 	}
 	err = snd_pcm_hw_params_any (pcm_handle, hw_params);
-	if (err != 0)
+	if (err < 0)
 	{
 		Con_Printf ("SndSys_Init: can't initialize hardware parameters (%s)\n",
 					snd_strerror (err));
@@ -132,7 +132,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 
 	// Set the access type
 	err = snd_pcm_hw_params_set_access (pcm_handle, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED);
-	if (err != 0)
+	if (err < 0)
 	{
 		Con_Printf ("SndSys_Init: can't set access type (%s)\n",
 					snd_strerror (err));
@@ -145,7 +145,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 	else
 		snd_pcm_format = SND_PCM_FORMAT_S16;
 	err = snd_pcm_hw_params_set_format (pcm_handle, hw_params, snd_pcm_format);
-	if (err != 0)
+	if (err < 0)
 	{
 		Con_Printf ("SndSys_Init: can't set sound width to %hu (%s)\n",
 					requested->width, snd_strerror (err));
@@ -154,7 +154,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 
 	// Set the sound channels
 	err = snd_pcm_hw_params_set_channels (pcm_handle, hw_params, requested->channels);
-	if (err != 0)
+	if (err < 0)
 	{
 		Con_Printf ("SndSys_Init: can't set sound channels to %hu (%s)\n",
 					requested->channels, snd_strerror (err));
@@ -163,7 +163,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 
 	// Set the sound speed
 	err = snd_pcm_hw_params_set_rate (pcm_handle, hw_params, requested->speed, 0);
-	if (err != 0)
+	if (err < 0)
 	{
 		Con_Printf ("SndSys_Init: can't set sound speed to %u (%s)\n",
 					requested->speed, snd_strerror (err));
@@ -172,7 +172,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 
 	buffer_size = requested->speed / 5;
 	err = snd_pcm_hw_params_set_buffer_size_near (pcm_handle, hw_params, &buffer_size);
-	if (err != 0)
+	if (err < 0)
 	{
 		Con_Printf ("SndSys_Init: can't set sound buffer size to %lu (%s)\n",
 					buffer_size, snd_strerror (err));
@@ -181,7 +181,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 
 	buffer_size /= NB_PERIODS;
 	err = snd_pcm_hw_params_set_period_size_near(pcm_handle, hw_params, &buffer_size, 0);
-	if (err != 0)
+	if (err < 0)
 	{
 		Con_Printf ("SndSys_Init: can't set sound period size to %lu (%s)\n",
 					buffer_size, snd_strerror (err));
@@ -189,7 +189,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 	}
 
 	err = snd_pcm_hw_params (pcm_handle, hw_params);
-	if (err != 0)
+	if (err < 0)
 	{
 		Con_Printf ("SndSys_Init: can't set hardware parameters (%s)\n",
 					snd_strerror (err));
@@ -257,7 +257,7 @@ static qboolean SndSys_Recover (int err_num)
 		return false;
 
 	err = snd_pcm_prepare (pcm_handle);
-	if (err != 0)
+	if (err < 0)
 	{
 		Con_Printf ("SndSys_Recover: unable to recover (%s)\n",
 					 snd_strerror (err));
@@ -359,7 +359,7 @@ unsigned int SndSys_GetSoundTime (void)
 		return 0;
 
 	err = snd_pcm_delay (pcm_handle, &delay);
-	if (err != 0)
+	if (err < 0)
 	{
 		if (developer.integer >= 1000 && vid_activewindow)
 			Con_DPrintf ("SndSys_GetSoundTime: can't get playback delay (%s)\n",
@@ -369,7 +369,7 @@ unsigned int SndSys_GetSoundTime (void)
 			return 0;
 
 		err = snd_pcm_delay (pcm_handle, &delay);
-		if (err != 0)
+		if (err < 0)
 		{
 			Con_DPrintf ("SndSys_GetSoundTime: can't get playback delay, again (%s)\n",
 						 snd_strerror (err));
