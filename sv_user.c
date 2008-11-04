@@ -860,7 +860,7 @@ clc_stringcmd_invalid:
 						Mem_Free(temp);
 						// calculated crc, send the file info to the client
 						// (so that it can verify the data)
-						Host_ClientCommands(va("\ncl_downloadfinished %i %i %s\n", size, crc, host_client->download_name));
+						Host_ClientCommands("\ncl_downloadfinished %i %i %s\n", size, crc, host_client->download_name);
 						Con_DPrintf("Download of %s by %s has finished\n", host_client->download_name, host_client->name);
 						FS_Close(host_client->download_file);
 						host_client->download_file = NULL;

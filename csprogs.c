@@ -44,7 +44,7 @@ void CL_VM_Error (const char *format, ...)	//[515]: hope it will be never execut
 	Cvar_SetValueQuick(&csqc_progsize, -1);
 
 //	Host_AbortCurrentFrame();	//[515]: hmmm... if server says it needs csqc then client MUST disconnect
-	Host_Error(va("CL_VM_Error: %s", errorstring));
+	Host_Error("CL_VM_Error: %s", errorstring);
 }
 void CL_VM_UpdateDmgGlobals (int dmg_take, int dmg_save, vec3_t dmg_origin)
 {
