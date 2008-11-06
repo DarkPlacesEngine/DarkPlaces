@@ -20,6 +20,8 @@
 //4 feature darkplaces csqc: add builtin to clientside qc for reading triangles of model meshes (useful to orient a ui along a triangle of a model mesh)
 //4 feature darkplaces csqc: add builtins to clientside qc for gl calls
 
+extern cvar_t v_flipped;
+
 sfx_t *S_FindName(const char *name);
 int Sbar_GetSortedPlayerIndex (int index);
 void Sbar_SortFrags (void);
@@ -916,6 +918,8 @@ static void VM_CL_unproject (void)
 
 	VM_SAFEPARMCOUNT(1, VM_CL_unproject);
 	f = PRVM_G_VECTOR(OFS_PARM0);
+	if(v_flipped.integer)
+		f[0] = r_refdef.view.x + r_refdef.view.width - f[0];
 	VectorSet(temp, f[2], (-1.0 + 2.0 * (f[0] - r_refdef.view.x)) / r_refdef.view.width * f[2] * -r_refdef.view.frustum_x, (-1.0 + 2.0 * (f[1] - r_refdef.view.y))  / r_refdef.view.height * f[2] * -r_refdef.view.frustum_y);
 	Matrix4x4_Transform(&r_refdef.view.matrix, temp, PRVM_G_VECTOR(OFS_RETURN));
 }
@@ -931,6 +935,8 @@ static void VM_CL_project (void)
 	f = PRVM_G_VECTOR(OFS_PARM0);
 	Matrix4x4_Invert_Simple(&m, &r_refdef.view.matrix);
 	Matrix4x4_Transform(&m, f, v);
+	if(v_flipped.integer)
+		v[1] = -v[1];
 	VectorSet(PRVM_G_VECTOR(OFS_RETURN), r_refdef.view.x + r_refdef.view.width*0.5*(1.0+v[1]/v[0]/-r_refdef.view.frustum_x), r_refdef.view.y + r_refdef.view.height*0.5*(1.0+v[2]/v[0]/-r_refdef.view.frustum_y), v[0]);
 }
 
