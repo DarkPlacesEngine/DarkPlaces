@@ -1816,7 +1816,11 @@ nothing                GL_ZERO GL_ONE
 			texture->skinframerate = primarylayer->framerate;
 			for (j = 0;j < primarylayer->numframes;j++)
 			{
-				if (!(texture->skinframes[j] = R_SkinFrame_LoadExternal(primarylayer->texturename[j], primarylayer->texflags, false)))
+				if(cls.state == ca_dedicated)
+				{
+					texture->skinframes[j] = NULL;
+				}
+				else if (!(texture->skinframes[j] = R_SkinFrame_LoadExternal(primarylayer->texturename[j], primarylayer->texflags, false)))
 				{
 					Con_Printf("^1%s:^7 could not load texture ^3\"%s\"^7 (frame %i) for shader ^2\"%s\"\n", loadmodel->name, primarylayer->texturename[j], j, texture->name);
 					texture->skinframes[j] = R_SkinFrame_LoadMissing();
@@ -1830,7 +1834,11 @@ nothing                GL_ZERO GL_ONE
 			texture->backgroundskinframerate = backgroundlayer->framerate;
 			for (j = 0;j < backgroundlayer->numframes;j++)
 			{
-				if (!(texture->backgroundskinframes[j] = R_SkinFrame_LoadExternal(backgroundlayer->texturename[j], backgroundlayer->texflags, false)))
+				if(cls.state == ca_dedicated)
+				{
+					texture->skinframes[j] = NULL;
+				}
+				else if (!(texture->backgroundskinframes[j] = R_SkinFrame_LoadExternal(backgroundlayer->texturename[j], backgroundlayer->texflags, false)))
 				{
 					Con_Printf("^1%s:^7 could not load texture ^3\"%s\"^7 (background frame %i) for shader ^2\"%s\"\n", loadmodel->name, backgroundlayer->texturename[j], j, texture->name);
 					texture->backgroundskinframes[j] = R_SkinFrame_LoadMissing();
@@ -1875,21 +1883,28 @@ nothing                GL_ZERO GL_ONE
 		else
 			texture->basematerialflags |= MATERIALFLAG_WALL;
 		texture->numskinframes = 1;
-		if (fallback)
+		if(cls.state == ca_dedicated)
 		{
-			qboolean has_alpha;
-			if ((texture->skinframes[0] = R_SkinFrame_LoadExternal_CheckAlpha(texture->name, defaulttexflags, false, &has_alpha)))
+			texture->skinframes[0] = NULL;
+		}
+		else
+		{
+			if (fallback)
 			{
-				if(has_alpha && (defaulttexflags & TEXF_ALPHA))
-					texture->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
+				qboolean has_alpha;
+				if ((texture->skinframes[0] = R_SkinFrame_LoadExternal_CheckAlpha(texture->name, defaulttexflags, false, &has_alpha)))
+				{
+					if(has_alpha && (defaulttexflags & TEXF_ALPHA))
+						texture->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
+				}
+				else
+					success = false;
 			}
 			else
 				success = false;
+			if (!success && warnmissing)
+				Con_Printf("^1%s:^7 could not load texture ^3\"%s\"\n", loadmodel->name, texture->name);
 		}
-		else
-			success = false;
-		if (!success && warnmissing)
-			Con_Printf("^1%s:^7 could not load texture ^3\"%s\"\n", loadmodel->name, texture->name);
 	}
 	// init the animation variables
 	texture->currentframe = texture;
