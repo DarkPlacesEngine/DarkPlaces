@@ -252,6 +252,11 @@ static Cursor CreateNullCursor(Display *display, Window root)
 
 void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecursor)
 {
+	static int originalmouseparms_num;
+	static int originalmouseparms_denom;
+	static int originalmouseparms_threshold;
+	static qboolean restore_spi;
+
 #if !defined(__APPLE__) && !defined(SUNOS)
 	qboolean usedgamouse;
 #endif
@@ -312,6 +317,20 @@ void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecurso
 #endif
 				XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, vid.width / 2, vid.height / 2);
 
+// COMMANDLINEOPTION: X11 Input: -noforcemparms disables setting of mouse parameters (not used with DGA, windows only)
+#if !defined(__APPLE__) && !defined(SUNOS)
+			if (!COM_CheckParm ("-noforcemparms") && !usedgamouse)
+#else
+			if (!COM_CheckParm ("-noforcemparms"))
+#endif
+			{
+				XGetPointerControl(vidx11_display, &originalmouseparms_num, &originalmouseparms_denom, &originalmouseparms_threshold);
+				XChangePointerControl (vidx11_display, true, false, 1, 1, -1); // TODO maybe change threshold here, or remove this comment
+				restore_spi = true;
+			}
+			else
+				restore_spi = false;
+
 			cl_ignoremousemoves = 2;
 			vid_usingmouse = true;
 		}
@@ -326,6 +345,11 @@ void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecurso
 			vid_usingdgamouse = false;
 #endif
 			cl_ignoremousemoves = 2;
+
+			if (restore_spi)
+				XChangePointerControl (vidx11_display, true, true, originalmouseparms_num, originalmouseparms_denom, originalmouseparms_threshold);
+			restore_spi = false;
+
 			vid_usingmouse = false;
 		}
 	}
@@ -382,6 +406,7 @@ static void HandleEvents(void)
 			// key pressed
 			key = XLateKey (&event.xkey, &ascii);
 			Key_Event(key, ascii, true);
+			printf("keypress\n");
 			break;
 
 		case KeyRelease:
