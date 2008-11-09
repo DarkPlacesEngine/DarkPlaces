@@ -406,7 +406,6 @@ static void HandleEvents(void)
 			// key pressed
 			key = XLateKey (&event.xkey, &ascii);
 			Key_Event(key, ascii, true);
-			printf("keypress\n");
 			break;
 
 		case KeyRelease:
