@@ -3182,6 +3182,7 @@ void R_DrawModelShadows(void)
 	vec3_t relativelightorigin;
 	vec3_t relativelightdirection;
 	vec3_t relativeshadowmins, relativeshadowmaxs;
+	vec3_t tmp;
 	float vertex3f[12];
 
 	if (!r_drawentities.integer || !gl_stencil)
@@ -3210,7 +3211,33 @@ void R_DrawModelShadows(void)
 			relativethrowdistance = r_shadows_throwdistance.value * Matrix4x4_ScaleFromMatrix(&ent->inversematrix);
 			VectorSet(relativeshadowmins, -relativethrowdistance, -relativethrowdistance, -relativethrowdistance);
 			VectorSet(relativeshadowmaxs, relativethrowdistance, relativethrowdistance, relativethrowdistance);
-			VectorNegate(ent->modellight_lightdir, relativelightdirection);
+
+			if(ent->entitynumber != 0)
+			{
+				// networked entity - might be attached in some way (then we should use the parent's light direction, to not tear apart attached entities)
+				int entnum, entnum2, recursion;
+				entnum = entnum2 = ent->entitynumber;
+				for(recursion = 32; recursion > 0; --recursion)
+				{
+					entnum2 = cl.entities[entnum].state_current.tagentity;
+					if(entnum2 >= 1 && entnum2 < cl.num_entities && cl.entities_active[entnum2])
+						entnum = entnum2;
+					else
+						break;
+				}
+				if(recursion && recursion != 32) // if we followed a valid non-empty attachment chain
+				{
+					VectorNegate(cl.entities[entnum].render.modellight_lightdir, relativelightdirection);
+					// transform into modelspace of OUR entity
+					Matrix4x4_Transform3x3(&cl.entities[entnum].render.matrix, relativelightdirection, tmp);
+					Matrix4x4_Transform3x3(&ent->inversematrix, tmp, relativelightdirection);
+				}
+				else
+					VectorNegate(ent->modellight_lightdir, relativelightdirection);
+			}
+			else
+				VectorNegate(ent->modellight_lightdir, relativelightdirection);
+
 			VectorScale(relativelightdirection, -relativethrowdistance, relativelightorigin);
 			RSurf_ActiveModelEntity(ent, false, false);
 			ent->model->DrawShadowVolume(ent, relativelightorigin, relativelightdirection, relativethrowdistance, ent->model->nummodelsurfaces, ent->model->surfacelist, relativeshadowmins, relativeshadowmaxs);
