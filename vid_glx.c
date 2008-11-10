@@ -432,7 +432,7 @@ static void HandleEvents(void)
 						in_mouse_x += event.xmotion.x - in_windowmouse_x;
 						in_mouse_y += event.xmotion.y - in_windowmouse_y;
 						//if (abs(vid.width/2 - event.xmotion.x) + abs(vid.height/2 - event.xmotion.y))
-						if (abs(vid.width/2 - event.xmotion.x) > vid.width / 4 || abs(vid.height/2 - event.xmotion.y) > vid.height / 4)
+						if (vid_stick_mouse.integer || abs(vid.width/2 - event.xmotion.x) > vid.width / 4 || abs(vid.height/2 - event.xmotion.y) > vid.height / 4)
 							dowarp = true;
 					}
 				}
