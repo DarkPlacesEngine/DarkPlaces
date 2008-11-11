@@ -2511,7 +2511,7 @@ static int		bind_grab;
 
 void M_Menu_Keys_f (void)
 {
-	key_dest = key_menu;
+	key_dest = key_menu_grabbed;
 	m_state = m_keys;
 	m_entersound = true;
 }
