@@ -212,6 +212,7 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 	else
 		CL_SetEntityColormapColors(entrender, c);
 
+	entrender->flags &= ~(RENDER_SHADOW | RENDER_LIGHT | RENDER_NOSELFSHADOW);
 	// either fullbright or lit
 	if (!(entrender->effects & EF_FULLBRIGHT) && !r_fullbright.integer)
 		entrender->flags |= RENDER_LIGHT;
