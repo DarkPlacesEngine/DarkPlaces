@@ -350,6 +350,46 @@ void CL_VM_Parse_StuffCmd (const char *msg)
 		csqc_progsize.flags = sizeflags;
 		return;
 	}
+
+	if(cls.demoplayback)
+	if(!strncmp(msg, "curl --clear_autodownload\ncurl --pak --forthismap --as ", 55))
+	{
+		// special handling for map download commands
+		// run these commands IMMEDIATELY, instead of waiting for a client frame
+		// that way, there is no black screen when playing back demos
+		// I know this is a really ugly hack, but I can't think of any better way
+		// FIXME find the actual CAUSE of this, and make demo playback WAIT
+		// until all maps are loaded, then remove this hack
+
+		char buf[MAX_INPUTLINE];
+		const char *p, *q;
+		size_t l;
+
+		p = msg;
+
+		for(;;)
+		{
+			q = strchr(p, '\n');
+			if(q)
+				l = q - p;
+			else
+				l = strlen(p);
+			if(l > sizeof(buf) - 1)
+				l = sizeof(buf) - 1;
+			strlcpy(buf, p, l + 1); // strlcpy needs a + 1 as it includes the newline!
+
+			Cmd_ExecuteString(buf, src_command);
+
+			p += l;
+			if(*p == '\n')
+				++p; // skip the newline and continue
+			else
+				break; // end of string or overflow
+		}
+		Cmd_ExecuteString("curl --clear_autodownload", src_command); // don't inhibit CSQC loading
+		return;
+	}
+
 	if(!cl.csqc_loaded)
 	{
 		Cbuf_AddText(msg);
