@@ -1484,7 +1484,7 @@ void Mod_LoadQ3Shaders(void)
 					layer->texflags = TEXF_ALPHA | TEXF_PRECACHE;
 					if (!(shader.surfaceparms & Q3SURFACEPARM_NOMIPMAPS))
 						layer->texflags |= TEXF_MIPMAP;
-					if (!(shader.textureflags & Q3TEXTUREFLAG_NOPICMIP) && (r_picmipworld.integer || (layer->texturename && layer->texturename[0] && strncmp(layer->texturename[0], "textures/", 9))))
+					if (!(shader.textureflags & Q3TEXTUREFLAG_NOPICMIP))
 						layer->texflags |= TEXF_PICMIP | TEXF_COMPRESS;
 					if (layer->clampmap)
 						layer->texflags |= TEXF_CLAMP;
@@ -1736,6 +1736,13 @@ qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qbool
 			Con_Printf("%s: loaded shader for %s\n", loadmodel->name, name);
 		texture->surfaceparms = shader->surfaceparms;
 		texture->textureflags = shader->textureflags;
+
+		// allow disabling of picmip or compression by defaulttexflags
+		if(!(defaulttexflags & TEXF_PICMIP))
+			texture->textureflags &= ~TEXF_PICMIP;
+		if(!(defaulttexflags & TEXF_COMPRESS))
+			texture->textureflags &= ~TEXF_COMPRESS;
+
 		texture->basematerialflags = 0;
 		if (shader->surfaceparms & Q3SURFACEPARM_SKY)
 		{
