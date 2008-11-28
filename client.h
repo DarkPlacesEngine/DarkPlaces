@@ -691,6 +691,7 @@ typedef struct particle_s
 	float			alpha; // 0-255
 	unsigned char	color[3];
 	unsigned char	qualityreduction; // enables skipping of this particle according to r_refdef.view.qualityreduction
+	float           stretch; // only for sparks
 
 	// fields not used by rendering:  (40 bytes)
 	float			sizeincrease; // rate of size change per second
