@@ -5858,17 +5858,20 @@ void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 	// make a single combined shadow mesh to allow optimized shadow volume creation
 	numshadowmeshtriangles = 0;
-	for (j = 0, surface = loadmodel->data_surfaces;j < loadmodel->num_surfaces;j++, surface++)
+	if (cls.state != ca_dedicated)
 	{
-		surface->num_firstshadowmeshtriangle = numshadowmeshtriangles;
-		numshadowmeshtriangles += surface->num_triangles;
+		for (j = 0, surface = loadmodel->data_surfaces;j < loadmodel->num_surfaces;j++, surface++)
+		{
+			surface->num_firstshadowmeshtriangle = numshadowmeshtriangles;
+			numshadowmeshtriangles += surface->num_triangles;
+		}
+		loadmodel->brush.shadowmesh = Mod_ShadowMesh_Begin(loadmodel->mempool, numshadowmeshtriangles * 3, numshadowmeshtriangles, NULL, NULL, NULL, false, false, true);
+		for (j = 0, surface = loadmodel->data_surfaces;j < loadmodel->num_surfaces;j++, surface++)
+			if (surface->num_triangles > 0)
+				Mod_ShadowMesh_AddMesh(loadmodel->mempool, loadmodel->brush.shadowmesh, NULL, NULL, NULL, loadmodel->surfmesh.data_vertex3f, NULL, NULL, NULL, NULL, surface->num_triangles, (loadmodel->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
+		loadmodel->brush.shadowmesh = Mod_ShadowMesh_Finish(loadmodel->mempool, loadmodel->brush.shadowmesh, false, true, false);
+		Mod_BuildTriangleNeighbors(loadmodel->brush.shadowmesh->neighbor3i, loadmodel->brush.shadowmesh->element3i, loadmodel->brush.shadowmesh->numtriangles);
 	}
-	loadmodel->brush.shadowmesh = Mod_ShadowMesh_Begin(loadmodel->mempool, numshadowmeshtriangles * 3, numshadowmeshtriangles, NULL, NULL, NULL, false, false, true);
-	for (j = 0, surface = loadmodel->data_surfaces;j < loadmodel->num_surfaces;j++, surface++)
-		if (surface->num_triangles > 0)
-			Mod_ShadowMesh_AddMesh(loadmodel->mempool, loadmodel->brush.shadowmesh, NULL, NULL, NULL, loadmodel->surfmesh.data_vertex3f, NULL, NULL, NULL, NULL, surface->num_triangles, (loadmodel->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
-	loadmodel->brush.shadowmesh = Mod_ShadowMesh_Finish(loadmodel->mempool, loadmodel->brush.shadowmesh, false, true, false);
-	Mod_BuildTriangleNeighbors(loadmodel->brush.shadowmesh->neighbor3i, loadmodel->brush.shadowmesh->element3i, loadmodel->brush.shadowmesh->numtriangles);
 
 	loadmodel->brush.num_leafs = 0;
 	Mod_Q3BSP_RecursiveFindNumLeafs(loadmodel->brush.data_nodes);
