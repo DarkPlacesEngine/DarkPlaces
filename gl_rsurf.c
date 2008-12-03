@@ -216,7 +216,7 @@ loc0:
 			s = bound(0, impacts, smax * 16) - impacts;
 			t = bound(0, impactt, tmax * 16) - impactt;
 			i = (int)(s * s + t * t + dist2);
-			if ((i > maxdist) || (smax > sizeof(sdtable)/sizeof(sdtable[0]))) // smax overflow fix from Andreas Dehmel
+			if ((i > maxdist) || (smax > (int)(sizeof(sdtable)/sizeof(sdtable[0])))) // smax overflow fix from Andreas Dehmel
 				continue;
 
 			// reduce calculations
