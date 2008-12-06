@@ -5844,6 +5844,29 @@ static void RSurf_DrawBatch_GL11_ApplyColor(int texturenumsurfaces, msurface_t *
 	rsurface.lightmapcolor4f_bufferoffset = 0;
 }
 
+static void RSurf_DrawBatch_GL11_ApplyAmbient(int texturenumsurfaces, msurface_t **texturesurfacelist)
+{
+	int texturesurfaceindex;
+	int i;
+	float *c, *c2;
+	if (!rsurface.lightmapcolor4f)
+		return;
+	for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+	{
+		const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+		for (i = 0, c = (rsurface.lightmapcolor4f + 4 * surface->num_firstvertex), c2 = (rsurface.array_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, c += 4, c2 += 4)
+		{
+			c2[0] = c[0] + r_refdef.scene.ambient / 64.0;
+			c2[1] = c[1] + r_refdef.scene.ambient / 64.0;
+			c2[2] = c[2] + r_refdef.scene.ambient / 64.0;
+			c2[3] = c[3];
+		}
+	}
+	rsurface.lightmapcolor4f = rsurface.array_color4f;
+	rsurface.lightmapcolor4f_bufferobject = 0;
+	rsurface.lightmapcolor4f_bufferoffset = 0;
+}
+
 static void RSurf_DrawBatch_GL11_Lightmap(int texturenumsurfaces, msurface_t **texturesurfacelist, float r, float g, float b, float a, qboolean applycolor, qboolean applyfog)
 {
 	// TODO: optimize
@@ -6551,6 +6574,7 @@ static void R_ProcessTextureSurfaceList(int texturenumsurfaces, msurface_t **tex
 			rsurface.lightmapcolor4f_bufferobject = rsurface.modellightmapcolor4f_bufferobject;
 			rsurface.lightmapcolor4f_bufferoffset = rsurface.modellightmapcolor4f_bufferoffset;
 			GL_Color(c[0], c[1], c[2], c[3]);
+			RSurf_DrawBatch_GL11_ApplyAmbient(texturenumsurfaces, texturesurfacelist);
 			RSurf_DrawBatch_GL11_ApplyColor(texturenumsurfaces, texturesurfacelist, c[0], c[1], c[2], c[3]);
 
 			if (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT)
