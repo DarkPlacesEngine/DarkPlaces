@@ -5974,7 +5974,7 @@ static void RSurf_DrawBatch_GL11_VertexShade(int texturenumsurfaces, msurface_t 
 	diffusecolor[0] = rsurface.modellight_diffuse[0] * r * f;
 	diffusecolor[1] = rsurface.modellight_diffuse[1] * g * f;
 	diffusecolor[2] = rsurface.modellight_diffuse[2] * b * f;
-	if (VectorLength2(diffusecolor) > 0)
+	if (VectorLength2(diffusecolor) > 0 && rsurface.normal3f)
 	{
 		// generate color arrays for the surfaces in this list
 		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
@@ -6582,7 +6582,7 @@ static void R_ProcessTextureSurfaceList(int texturenumsurfaces, msurface_t **tex
 			RSurf_DrawBatch_GL11_ApplyAmbient(texturenumsurfaces, texturesurfacelist);
 			RSurf_DrawBatch_GL11_ApplyColor(texturenumsurfaces, texturesurfacelist, c[0], c[1], c[2], c[3]);
 
-			if ((rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) && rsurface.normal3f)
+			if (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT)
 			{
 				r_refdef.lightmapintensity = 1;
 				RSurf_DrawBatch_GL11_VertexShade(texturenumsurfaces, texturesurfacelist, c[0], c[1], c[2], c[3], false, false);
