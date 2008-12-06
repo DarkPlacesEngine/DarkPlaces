@@ -1921,7 +1921,7 @@ skinframe_t *R_SkinFrame_LoadExternal_CheckAlpha(const char *name, int texturefl
 	int basepixels_width;
 	int basepixels_height;
 	skinframe_t *skinframe;
-	double avgcolor[4];
+	double avgcolor[4], w, wsum;
 
 	*has_alpha = false;
 
@@ -1985,21 +1985,24 @@ skinframe_t *R_SkinFrame_LoadExternal_CheckAlpha(const char *name, int texturefl
 	avgcolor[1] = 0;
 	avgcolor[2] = 0;
 	avgcolor[3] = 0;
+	wsum = 0;
 	for(j = 0; j < basepixels_width * basepixels_height * 4; j += 4)
 	{
-		avgcolor[2] += basepixels[j + 0];
-		avgcolor[1] += basepixels[j + 1];
-		avgcolor[0] += basepixels[j + 2];
-		avgcolor[3] += basepixels[j + 3];
+		w = (int)basepixels[j + 0] + (int)basepixels[j + 1] + (int)basepixels[j + 2]; // use this weight, so black pixels don't contribute (needed for model skins)
+		avgcolor[2] += basepixels[j + 0] * w;
+		avgcolor[1] += basepixels[j + 1] * w;
+		avgcolor[0] += basepixels[j + 2] * w;
+		avgcolor[3] += basepixels[j + 3] * w;
+		wsum += w;
 	}
 	if(avgcolor[3] == 0) // just fully transparent pixels seen? bad luck...
-		avgcolor[3] = 255.0 * basepixels_width * basepixels_height;
+		avgcolor[3] = 255.0 * wsum;
 	if(avgcolor[3] == 0) // no pixels seen? even worse
 		avgcolor[3] = 1;
 	avgcolor[0] /= avgcolor[3];
 	avgcolor[1] /= avgcolor[3];
 	avgcolor[2] /= avgcolor[3];
-	avgcolor[3] /= basepixels_width * 255.0 * basepixels_height; // to 0..1 range
+	avgcolor[3] /= 255.0 * wsum; // to 0..1 range
 	skinframe->avgcolor[0] = avgcolor[0];
 	skinframe->avgcolor[1] = avgcolor[1];
 	skinframe->avgcolor[2] = avgcolor[2];
@@ -2070,7 +2073,7 @@ skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, co
 	int i;
 	unsigned char *temp1, *temp2;
 	skinframe_t *skinframe;
-	double avgcolor[4];
+	double avgcolor[4], w, wsum;
 	int j;
 
 	if (cls.state == ca_dedicated)
@@ -2127,21 +2130,24 @@ skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, co
 	avgcolor[1] = 0;
 	avgcolor[2] = 0;
 	avgcolor[3] = 0;
+	wsum = 0;
 	for(j = 0; j < width * height * 4; j += 4)
 	{
-		avgcolor[2] += skindata[j + 0];
-		avgcolor[1] += skindata[j + 1];
-		avgcolor[0] += skindata[j + 2];
-		avgcolor[3] += skindata[j + 3];
+		w = (int)skindata[j + 0] + (int)skindata[j + 1] + (int)skindata[j + 2];
+		avgcolor[2] += skindata[j + 0] * w;
+		avgcolor[1] += skindata[j + 1] * w;
+		avgcolor[0] += skindata[j + 2] * w;
+		avgcolor[3] += skindata[j + 3] * w;
+		wsum += w;
 	}
 	if(avgcolor[3] == 0) // just fully transparent pixels seen? bad luck...
-		avgcolor[3] = 255.0 * width * height;
+		avgcolor[3] = 255.0 * wsum;
 	if(avgcolor[3] == 0) // no pixels seen? even worse
 		avgcolor[3] = 1;
 	avgcolor[0] /= avgcolor[3];
 	avgcolor[1] /= avgcolor[3];
 	avgcolor[2] /= avgcolor[3];
-	avgcolor[3] /= width * 255.0 * height; // to 0..1 range
+	avgcolor[3] /= 255.0 * wsum; // to 0..1 range
 	skinframe->avgcolor[0] = avgcolor[0];
 	skinframe->avgcolor[1] = avgcolor[1];
 	skinframe->avgcolor[2] = avgcolor[2];
@@ -2155,7 +2161,7 @@ skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, i
 	int i;
 	unsigned char *temp1, *temp2;
 	skinframe_t *skinframe;
-	double avgcolor[4];
+	double avgcolor[4], w, wsum;
 	int j;
 
 	if (cls.state == ca_dedicated)
@@ -2217,22 +2223,25 @@ skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, i
 	avgcolor[1] = 0;
 	avgcolor[2] = 0;
 	avgcolor[3] = 0;
+	wsum = 0;
 	for(j = 0; j < width * height; ++j)
 	{
 		temp1 = ((unsigned char *)palette_bgra_alpha) + (skindata[j]*4);
-		avgcolor[2] += temp1[0];
-		avgcolor[1] += temp1[1];
-		avgcolor[0] += temp1[2];
-		avgcolor[3] += temp1[3];
+		w = (int)temp1[0] + (int)temp1[1] + (int)temp1[2];
+		avgcolor[2] += temp1[0] * w;
+		avgcolor[1] += temp1[1] * w;
+		avgcolor[0] += temp1[2] * w;
+		avgcolor[3] += temp1[3] * w;
+		wsum += w;
 	}
 	if(avgcolor[3] == 0) // just fully transparent pixels seen? bad luck...
-		avgcolor[3] = 255.0 * width * height;
+		avgcolor[3] = 255.0 * wsum;
 	if(avgcolor[3] == 0) // no pixels seen? even worse
 		avgcolor[3] = 1;
 	avgcolor[0] /= avgcolor[3];
 	avgcolor[1] /= avgcolor[3];
 	avgcolor[2] /= avgcolor[3];
-	avgcolor[3] /= width * 255.0 * height; // to 0..1 range
+	avgcolor[3] /= 255.0 * wsum; // to 0..1 range
 	skinframe->avgcolor[0] = avgcolor[0];
 	skinframe->avgcolor[1] = avgcolor[1];
 	skinframe->avgcolor[2] = avgcolor[2];
@@ -6424,7 +6433,7 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 	// to a model, knowing that they are meaningless otherwise
 	if (ent == r_refdef.scene.worldentity)
 		RSurf_ActiveWorldEntity();
-	else if ((ent->effects & EF_FULLBRIGHT) || r_showsurfaces.integer || VectorLength2(ent->modellight_diffuse) < (1.0f / 256.0f))
+	else if ((ent->effects & EF_FULLBRIGHT) || (r_showsurfaces.integer && r_showsurfaces.integer != 3) || VectorLength2(ent->modellight_diffuse) < (1.0f / 256.0f))
 		RSurf_ActiveModelEntity(ent, false, false);
 	else
 		RSurf_ActiveModelEntity(ent, true, r_glsl.integer && gl_support_fragment_shader);
@@ -6485,13 +6494,42 @@ static void R_ProcessTextureSurfaceList(int texturenumsurfaces, msurface_t **tex
 		}
 		else if (r_showsurfaces.integer == 3)
 		{
-			const float cbase[4] = {1, 0, 1, 1};
-			const float *c = cbase;
+			float c[4];
 			if(rsurface.texture && rsurface.texture->currentskinframe)
-				c = rsurface.texture->currentskinframe->avgcolor;
+				memcpy(c, rsurface.texture->currentskinframe->avgcolor, sizeof(c));
+			else
+			{
+				c[0] = 1;
+				c[1] = 0;
+				c[2] = 1;
+				c[3] = 1;
+			}
+
+			if (rsurface.texture->currentskinframe->pants || rsurface.texture->currentskinframe->shirt)
+			{
+				c[0] = rsurface.colormap_pantscolor[0] * 0.3 + rsurface.colormap_shirtcolor[0] * 0.7;
+				c[1] = rsurface.colormap_pantscolor[1] * 0.3 + rsurface.colormap_shirtcolor[1] * 0.7;
+				c[2] = rsurface.colormap_pantscolor[2] * 0.3 + rsurface.colormap_shirtcolor[2] * 0.7;
+			}
+
 			GL_Color(c[0], c[1], c[2], c[3]);
-			RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
-			// TODO how to apply vertex light here?
+
+			rsurface.lightmapcolor4f = rsurface.modellightmapcolor4f;
+			rsurface.lightmapcolor4f_bufferobject = rsurface.modellightmapcolor4f_bufferobject;
+			rsurface.lightmapcolor4f_bufferoffset = rsurface.modellightmapcolor4f_bufferoffset;
+
+			if (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT)
+			{
+				r_refdef.lightmapintensity = 1;
+				RSurf_DrawBatch_GL11_VertexShade(texturenumsurfaces, texturesurfacelist, c[0], c[1], c[2], c[3], false, false);
+				r_refdef.lightmapintensity = 0; // we're in showsurfaces, after all
+			}
+			else
+			{
+				GL_Color(c[0], c[1], c[2], c[3]);
+				R_Mesh_ColorPointer(rsurface.lightmapcolor4f, rsurface.lightmapcolor4f_bufferobject, rsurface.lightmapcolor4f_bufferoffset);
+				RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
+			}
 		}
 		else 
 			RSurf_DrawBatch_ShowSurfaces(texturenumsurfaces, texturesurfacelist);
@@ -6886,7 +6924,7 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 	// to a model, knowing that they are meaningless otherwise
 	if (ent == r_refdef.scene.worldentity)
 		RSurf_ActiveWorldEntity();
-	else if ((ent->effects & EF_FULLBRIGHT) || r_showsurfaces.integer || VectorLength2(ent->modellight_diffuse) < (1.0f / 256.0f))
+	else if ((ent->effects & EF_FULLBRIGHT) || (r_showsurfaces.integer && r_showsurfaces.integer != 3) || VectorLength2(ent->modellight_diffuse) < (1.0f / 256.0f))
 		RSurf_ActiveModelEntity(ent, false, false);
 	else
 		RSurf_ActiveModelEntity(ent, true, r_glsl.integer && gl_support_fragment_shader && !depthonly);
