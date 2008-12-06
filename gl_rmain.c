@@ -6534,6 +6534,11 @@ static void R_ProcessTextureSurfaceList(int texturenumsurfaces, msurface_t **tex
 				c[3] = 1;
 			}
 
+			// brighten it up (as texture value 127 means "unlit")
+			c[0] *= 2;
+			c[1] *= 2;
+			c[2] *= 2;
+
 			if (rsurface.texture->currentskinframe->pants || rsurface.texture->currentskinframe->shirt)
 			{
 				c[0] = rsurface.colormap_pantscolor[0] * 0.3 + rsurface.colormap_shirtcolor[0] * 0.7;
