@@ -6582,7 +6582,7 @@ static void R_ProcessTextureSurfaceList(int texturenumsurfaces, msurface_t **tex
 			RSurf_DrawBatch_GL11_ApplyAmbient(texturenumsurfaces, texturesurfacelist);
 			RSurf_DrawBatch_GL11_ApplyColor(texturenumsurfaces, texturesurfacelist, c[0], c[1], c[2], c[3]);
 
-			if ((rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) && rsurface.texture->normal3f)
+			if ((rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) && rsurface.normal3f)
 			{
 				r_refdef.lightmapintensity = 1;
 				RSurf_DrawBatch_GL11_VertexShade(texturenumsurfaces, texturesurfacelist, c[0], c[1], c[2], c[3], false, false);
