@@ -1921,7 +1921,7 @@ skinframe_t *R_SkinFrame_LoadExternal_CheckAlpha(const char *name, int texturefl
 	int basepixels_width;
 	int basepixels_height;
 	skinframe_t *skinframe;
-	double avgcolor[4], w, wsum;
+	double avgcolor[5], w, wsum;
 
 	*has_alpha = false;
 
@@ -1985,6 +1985,7 @@ skinframe_t *R_SkinFrame_LoadExternal_CheckAlpha(const char *name, int texturefl
 	avgcolor[1] = 0;
 	avgcolor[2] = 0;
 	avgcolor[3] = 0;
+	avgcolor[4] = 0;
 	wsum = 0;
 	for(j = 0; j < basepixels_width * basepixels_height * 4; j += 4)
 	{
@@ -1993,6 +1994,7 @@ skinframe_t *R_SkinFrame_LoadExternal_CheckAlpha(const char *name, int texturefl
 		avgcolor[1] += basepixels[j + 1] * w;
 		avgcolor[0] += basepixels[j + 2] * w;
 		avgcolor[3] += basepixels[j + 3] * w;
+		avgcolor[4] += basepixels[j + 3];
 		wsum += w;
 	}
 	if(avgcolor[3] == 0) // just fully transparent pixels seen? bad luck...
@@ -2006,7 +2008,7 @@ skinframe_t *R_SkinFrame_LoadExternal_CheckAlpha(const char *name, int texturefl
 	skinframe->avgcolor[0] = avgcolor[0];
 	skinframe->avgcolor[1] = avgcolor[1];
 	skinframe->avgcolor[2] = avgcolor[2];
-	skinframe->avgcolor[3] = avgcolor[3];
+	skinframe->avgcolor[3] = avgcolor[4] / (basepixels_width * 255.0 * basepixels_height);
 
 	// _norm is the name used by tenebrae and has been adopted as standard
 	if (loadnormalmap)
@@ -2073,7 +2075,7 @@ skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, co
 	int i;
 	unsigned char *temp1, *temp2;
 	skinframe_t *skinframe;
-	double avgcolor[4], w, wsum;
+	double avgcolor[5], w, wsum;
 	int j;
 
 	if (cls.state == ca_dedicated)
@@ -2130,6 +2132,7 @@ skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, co
 	avgcolor[1] = 0;
 	avgcolor[2] = 0;
 	avgcolor[3] = 0;
+	avgcolor[4] = 0;
 	wsum = 0;
 	for(j = 0; j < width * height * 4; j += 4)
 	{
@@ -2138,6 +2141,7 @@ skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, co
 		avgcolor[1] += skindata[j + 1] * w;
 		avgcolor[0] += skindata[j + 2] * w;
 		avgcolor[3] += skindata[j + 3] * w;
+		avgcolor[4] += skindata[j + 3];
 		wsum += w;
 	}
 	if(avgcolor[3] == 0) // just fully transparent pixels seen? bad luck...
@@ -2151,7 +2155,7 @@ skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, co
 	skinframe->avgcolor[0] = avgcolor[0];
 	skinframe->avgcolor[1] = avgcolor[1];
 	skinframe->avgcolor[2] = avgcolor[2];
-	skinframe->avgcolor[3] = avgcolor[3];
+	skinframe->avgcolor[3] = avgcolor[4] / (width * 255.0 * height);
 
 	return skinframe;
 }
@@ -2161,7 +2165,7 @@ skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, i
 	int i;
 	unsigned char *temp1, *temp2;
 	skinframe_t *skinframe;
-	double avgcolor[4], w, wsum;
+	double avgcolor[5], w, wsum;
 	int j;
 
 	if (cls.state == ca_dedicated)
@@ -2223,6 +2227,7 @@ skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, i
 	avgcolor[1] = 0;
 	avgcolor[2] = 0;
 	avgcolor[3] = 0;
+	avgcolor[4] = 0;
 	wsum = 0;
 	for(j = 0; j < width * height; ++j)
 	{
@@ -2232,6 +2237,7 @@ skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, i
 		avgcolor[1] += temp1[1] * w;
 		avgcolor[0] += temp1[2] * w;
 		avgcolor[3] += temp1[3] * w;
+		avgcolor[4] += temp1[3];
 		wsum += w;
 	}
 	if(avgcolor[3] == 0) // just fully transparent pixels seen? bad luck...
@@ -2245,7 +2251,7 @@ skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, i
 	skinframe->avgcolor[0] = avgcolor[0];
 	skinframe->avgcolor[1] = avgcolor[1];
 	skinframe->avgcolor[2] = avgcolor[2];
-	skinframe->avgcolor[3] = avgcolor[3];
+	skinframe->avgcolor[3] = avgcolor[4] / (width * 255.0 * height);
 
 	return skinframe;
 }
@@ -6476,12 +6482,9 @@ static void R_ProcessTextureSurfaceList(int texturenumsurfaces, msurface_t **tex
 		RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
 		RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
 	}
-	else if (r_showsurfaces.integer)
+	else if (r_showsurfaces.integer && !(r_showsurfaces.integer == 3 && (rsurface.texture->currentmaterialflags & MATERIALFLAG_SKY)))
 	{
 		RSurf_SetupDepthAndCulling();
-		GL_DepthTest(true);
-		GL_BlendFunc(GL_ONE, GL_ZERO);
-		GL_DepthMask(true);
 		GL_AlphaTest(false);
 		R_Mesh_ColorPointer(NULL, 0, 0);
 		R_Mesh_ResetTextureState();
@@ -6490,6 +6493,9 @@ static void R_ProcessTextureSurfaceList(int texturenumsurfaces, msurface_t **tex
 		if (!r_refdef.view.showdebug)
 		{
 			GL_Color(0, 0, 0, 1);
+			GL_BlendFunc(GL_ONE, GL_ZERO);
+			GL_DepthTest(writedepth);
+			GL_DepthMask(true);
 			RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
 		}
 		else if (r_showsurfaces.integer == 3)
@@ -6512,11 +6518,40 @@ static void R_ProcessTextureSurfaceList(int texturenumsurfaces, msurface_t **tex
 				c[2] = rsurface.colormap_pantscolor[2] * 0.3 + rsurface.colormap_shirtcolor[2] * 0.7;
 			}
 
-			GL_Color(c[0], c[1], c[2], c[3]);
+			if(rsurface.texture->currentmaterialflags & MATERIALFLAG_WATERALPHA)
+				c[3] *= r_wateralpha.value;
+
+			if(rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHA && c[3] != 1)
+			{
+				GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				GL_DepthMask(false);
+			}
+			else if(rsurface.texture->currentmaterialflags & MATERIALFLAG_ADD)
+			{
+				GL_BlendFunc(GL_ONE, GL_ONE);
+				GL_DepthMask(false);
+			}
+			else if(rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
+			{
+				GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // can't do alpha test without texture, so let's blend instead
+				GL_DepthMask(false);
+			}
+			else if(rsurface.texture->currentmaterialflags & MATERIALFLAG_CUSTOMBLEND)
+			{
+				GL_BlendFunc(rsurface.texture->customblendfunc[0], rsurface.texture->customblendfunc[1]);
+				GL_DepthMask(false);
+			}
+			else
+			{
+				GL_BlendFunc(GL_ONE, GL_ZERO);
+				GL_DepthMask(writedepth);
+			}
 
 			rsurface.lightmapcolor4f = rsurface.modellightmapcolor4f;
 			rsurface.lightmapcolor4f_bufferobject = rsurface.modellightmapcolor4f_bufferobject;
 			rsurface.lightmapcolor4f_bufferoffset = rsurface.modellightmapcolor4f_bufferoffset;
+			GL_Color(c[0], c[1], c[2], c[3]);
+			RSurf_DrawBatch_GL11_ApplyColor(texturenumsurfaces, texturesurfacelist, c[0], c[1], c[2], c[3]);
 
 			if (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT)
 			{
@@ -6526,13 +6561,17 @@ static void R_ProcessTextureSurfaceList(int texturenumsurfaces, msurface_t **tex
 			}
 			else
 			{
-				GL_Color(c[0], c[1], c[2], c[3]);
 				R_Mesh_ColorPointer(rsurface.lightmapcolor4f, rsurface.lightmapcolor4f_bufferobject, rsurface.lightmapcolor4f_bufferoffset);
 				RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
 			}
 		}
 		else 
+		{
+			GL_DepthTest(true);
+			GL_DepthMask(true);
+			GL_BlendFunc(GL_ONE, GL_ZERO);
 			RSurf_DrawBatch_ShowSurfaces(texturenumsurfaces, texturesurfacelist);
+		}
 	}
 	else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_SKY)
 		R_DrawTextureSurfaceList_Sky(texturenumsurfaces, texturesurfacelist);
