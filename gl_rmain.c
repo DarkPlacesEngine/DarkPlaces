@@ -1921,6 +1921,7 @@ skinframe_t *R_SkinFrame_LoadExternal_CheckAlpha(const char *name, int texturefl
 	int basepixels_width;
 	int basepixels_height;
 	skinframe_t *skinframe;
+	double avgcolor[4];
 
 	*has_alpha = false;
 
@@ -1979,6 +1980,30 @@ skinframe_t *R_SkinFrame_LoadExternal_CheckAlpha(const char *name, int texturefl
 			Mem_Free(pixels);
 		}
 	}
+
+	avgcolor[0] = 0;
+	avgcolor[1] = 0;
+	avgcolor[2] = 0;
+	avgcolor[3] = 0;
+	for(j = 0; j < basepixels_width * basepixels_height * 4; j += 4)
+	{
+		avgcolor[2] += basepixels[j + 0];
+		avgcolor[1] += basepixels[j + 1];
+		avgcolor[0] += basepixels[j + 2];
+		avgcolor[3] += basepixels[j + 3];
+	}
+	if(avgcolor[3] == 0) // just fully transparent pixels seen? bad luck...
+		avgcolor[3] = 255.0 * basepixels_width * basepixels_height;
+	if(avgcolor[3] == 0) // no pixels seen? even worse
+		avgcolor[3] = 1;
+	avgcolor[0] /= avgcolor[3];
+	avgcolor[1] /= avgcolor[3];
+	avgcolor[2] /= avgcolor[3];
+	avgcolor[3] /= basepixels_width * 255.0 * basepixels_height; // to 0..1 range
+	skinframe->avgcolor[0] = avgcolor[0];
+	skinframe->avgcolor[1] = avgcolor[1];
+	skinframe->avgcolor[2] = avgcolor[2];
+	skinframe->avgcolor[3] = avgcolor[3];
 
 	// _norm is the name used by tenebrae and has been adopted as standard
 	if (loadnormalmap)
@@ -2045,6 +2070,8 @@ skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, co
 	int i;
 	unsigned char *temp1, *temp2;
 	skinframe_t *skinframe;
+	double avgcolor[4];
+	int j;
 
 	if (cls.state == ca_dedicated)
 		return NULL;
@@ -2096,6 +2123,30 @@ skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, co
 		}
 	}
 
+	avgcolor[0] = 0;
+	avgcolor[1] = 0;
+	avgcolor[2] = 0;
+	avgcolor[3] = 0;
+	for(j = 0; j < width * height * 4; j += 4)
+	{
+		avgcolor[2] += skindata[j + 0];
+		avgcolor[1] += skindata[j + 1];
+		avgcolor[0] += skindata[j + 2];
+		avgcolor[3] += skindata[j + 3];
+	}
+	if(avgcolor[3] == 0) // just fully transparent pixels seen? bad luck...
+		avgcolor[3] = 255.0 * width * height;
+	if(avgcolor[3] == 0) // no pixels seen? even worse
+		avgcolor[3] = 1;
+	avgcolor[0] /= avgcolor[3];
+	avgcolor[1] /= avgcolor[3];
+	avgcolor[2] /= avgcolor[3];
+	avgcolor[3] /= width * 255.0 * height; // to 0..1 range
+	skinframe->avgcolor[0] = avgcolor[0];
+	skinframe->avgcolor[1] = avgcolor[1];
+	skinframe->avgcolor[2] = avgcolor[2];
+	skinframe->avgcolor[3] = avgcolor[3];
+
 	return skinframe;
 }
 
@@ -2104,6 +2155,8 @@ skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, i
 	int i;
 	unsigned char *temp1, *temp2;
 	skinframe_t *skinframe;
+	double avgcolor[4];
+	int j;
 
 	if (cls.state == ca_dedicated)
 		return NULL;
@@ -2160,6 +2213,31 @@ skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, i
 			skinframe->fog = R_SkinFrame_TextureForSkinLayer(skindata, width, height, va("%s_fog", skinframe->basename), palette_bgra_alpha, skinframe->textureflags, true); // fog mask
 	}
 
+	avgcolor[0] = 0;
+	avgcolor[1] = 0;
+	avgcolor[2] = 0;
+	avgcolor[3] = 0;
+	for(j = 0; j < width * height; ++j)
+	{
+		temp1 = ((unsigned char *)palette_bgra_alpha) + (skindata[j]*4);
+		avgcolor[2] += temp1[0];
+		avgcolor[1] += temp1[1];
+		avgcolor[0] += temp1[2];
+		avgcolor[3] += temp1[3];
+	}
+	if(avgcolor[3] == 0) // just fully transparent pixels seen? bad luck...
+		avgcolor[3] = 255.0 * width * height;
+	if(avgcolor[3] == 0) // no pixels seen? even worse
+		avgcolor[3] = 1;
+	avgcolor[0] /= avgcolor[3];
+	avgcolor[1] /= avgcolor[3];
+	avgcolor[2] /= avgcolor[3];
+	avgcolor[3] /= width * 255.0 * height; // to 0..1 range
+	skinframe->avgcolor[0] = avgcolor[0];
+	skinframe->avgcolor[1] = avgcolor[1];
+	skinframe->avgcolor[2] = avgcolor[2];
+	skinframe->avgcolor[3] = avgcolor[3];
+
 	return skinframe;
 }
 
@@ -2180,6 +2258,11 @@ skinframe_t *R_SkinFrame_LoadMissing(void)
 	skinframe->gloss = NULL;
 	skinframe->glow = NULL;
 	skinframe->fog = NULL;
+
+	skinframe->avgcolor[0] = rand() / RAND_MAX;
+	skinframe->avgcolor[1] = rand() / RAND_MAX;
+	skinframe->avgcolor[2] = rand() / RAND_MAX;
+	skinframe->avgcolor[3] = 1;
 
 	return skinframe;
 }
@@ -6400,7 +6483,17 @@ static void R_ProcessTextureSurfaceList(int texturenumsurfaces, msurface_t **tex
 			GL_Color(0, 0, 0, 1);
 			RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
 		}
-		else
+		else if (r_showsurfaces.integer == 3)
+		{
+			const float cbase[4] = {1, 0, 1, 1};
+			const float *c = cbase;
+			if(rsurface.texture && rsurface.texture->currentskinframe)
+				c = rsurface.texture->currentskinframe->avgcolor;
+			GL_Color(c[0], c[1], c[2], c[3]);
+			RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
+			// TODO how to apply vertex light here?
+		}
+		else 
 			RSurf_DrawBatch_ShowSurfaces(texturenumsurfaces, texturesurfacelist);
 	}
 	else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_SKY)

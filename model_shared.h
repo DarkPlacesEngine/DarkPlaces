@@ -70,6 +70,8 @@ typedef struct skinframe_s
 	int loadsequence;
 	// on 32bit systems this makes the struct 128 bytes long
 	int padding;
+	// average texture color, if applicable
+	float avgcolor[4];
 }
 skinframe_t;
 
