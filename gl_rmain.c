@@ -3027,7 +3027,7 @@ static void R_Water_StartFrame(void)
 
 	// calculate desired texture sizes
 	// can't use water if the card does not support the texture size
-	if (!r_water.integer || !r_glsl.integer || !gl_support_fragment_shader || waterwidth > gl_max_texture_size || waterheight > gl_max_texture_size)
+	if (!r_water.integer || !r_glsl.integer || !gl_support_fragment_shader || waterwidth > gl_max_texture_size || waterheight > gl_max_texture_size || r_showsurfaces.integer)
 		texturewidth = textureheight = waterwidth = waterheight = 0;
 	else if (gl_support_arb_texture_non_power_of_two)
 	{
@@ -6505,25 +6505,41 @@ static void R_ProcessTextureSurfaceList(int texturenumsurfaces, msurface_t **tex
 		RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
 		RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
 	}
-	else if (r_showsurfaces.integer && !(r_showsurfaces.integer == 3 && (rsurface.texture->currentmaterialflags & MATERIALFLAG_SKY)))
+	else if (r_showsurfaces.integer == 3) // eeepc mode
 	{
-		RSurf_SetupDepthAndCulling();
-		GL_AlphaTest(false);
-		R_Mesh_ColorPointer(NULL, 0, 0);
-		R_Mesh_ResetTextureState();
-		R_SetupGenericShader(false);
-		RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
 		if (!r_refdef.view.showdebug)
 		{
+			RSurf_SetupDepthAndCulling();
+			GL_AlphaTest(false);
+			R_Mesh_ColorPointer(NULL, 0, 0);
+			R_Mesh_ResetTextureState();
+			R_SetupGenericShader(false);
+			RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
 			GL_Color(0, 0, 0, 1);
 			GL_BlendFunc(GL_ONE, GL_ZERO);
 			GL_DepthTest(writedepth);
 			GL_DepthMask(true);
 			RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
 		}
-		else if (r_showsurfaces.integer == 3)
+		else 
 		{
 			float c[4];
+
+			if(rsurface.texture->currentmaterialflags & MATERIALFLAG_SKY)
+			{
+				R_DrawTextureSurfaceList_Sky(texturenumsurfaces, texturesurfacelist);
+				return;
+			}
+
+			if(!rsurface.texture->currentnumlayers)
+				return;
+
+			RSurf_SetupDepthAndCulling();
+			GL_AlphaTest(false);
+			R_Mesh_ColorPointer(NULL, 0, 0);
+			R_Mesh_ResetTextureState();
+			R_SetupGenericShader(false);
+
 			if(rsurface.texture && rsurface.texture->currentskinframe)
 				memcpy(c, rsurface.texture->currentskinframe->avgcolor, sizeof(c));
 			else
@@ -6578,27 +6594,43 @@ static void R_ProcessTextureSurfaceList(int texturenumsurfaces, msurface_t **tex
 			rsurface.lightmapcolor4f = rsurface.modellightmapcolor4f;
 			rsurface.lightmapcolor4f_bufferobject = rsurface.modellightmapcolor4f_bufferobject;
 			rsurface.lightmapcolor4f_bufferoffset = rsurface.modellightmapcolor4f_bufferoffset;
-			GL_Color(c[0], c[1], c[2], c[3]);
 			RSurf_DrawBatch_GL11_ApplyAmbient(texturenumsurfaces, texturesurfacelist);
 			RSurf_DrawBatch_GL11_ApplyColor(texturenumsurfaces, texturesurfacelist, c[0], c[1], c[2], c[3]);
 
 			if (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT)
 			{
+				RSurf_PrepareVerticesForBatch(true, false, texturenumsurfaces, texturesurfacelist);
 				r_refdef.lightmapintensity = 1;
 				RSurf_DrawBatch_GL11_VertexShade(texturenumsurfaces, texturesurfacelist, c[0], c[1], c[2], c[3], false, false);
 				r_refdef.lightmapintensity = 0; // we're in showsurfaces, after all
 			}
 			else
 			{
+				RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
 				R_Mesh_ColorPointer(rsurface.lightmapcolor4f, rsurface.lightmapcolor4f_bufferobject, rsurface.lightmapcolor4f_bufferoffset);
 				RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
 			}
 		}
+	}
+	else if (r_showsurfaces.integer)
+	{
+		RSurf_SetupDepthAndCulling();
+		GL_AlphaTest(false);
+		R_Mesh_ColorPointer(NULL, 0, 0);
+		R_Mesh_ResetTextureState();
+		R_SetupGenericShader(false);
+		RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
+		GL_DepthMask(true);
+		GL_BlendFunc(GL_ONE, GL_ZERO);
+		if (!r_refdef.view.showdebug)
+		{
+			GL_Color(0, 0, 0, 1);
+			GL_DepthTest(writedepth);
+			RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
+		}
 		else 
 		{
 			GL_DepthTest(true);
-			GL_DepthMask(true);
-			GL_BlendFunc(GL_ONE, GL_ZERO);
 			RSurf_DrawBatch_ShowSurfaces(texturenumsurfaces, texturesurfacelist);
 		}
 	}
