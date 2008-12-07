@@ -5779,6 +5779,29 @@ static void RSurf_DrawBatch_ShowSurfaces(int texturenumsurfaces, msurface_t **te
 	}
 }
 
+static void RSurf_DrawBatch_GL11_MakeFullbrightLightmapColorArray(int texturenumsurfaces, msurface_t **texturesurfacelist)
+{
+	int texturesurfaceindex;
+	int i;
+	float f;
+	float *v, *c2;
+	for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+	{
+		const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+		for (i = 0, v = (rsurface.vertex3f + 3 * surface->num_firstvertex), c2 = (rsurface.array_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, v += 3, c2 += 4)
+		{
+			f = FogPoint_Model(v);
+			c2[0] = 1;
+			c2[1] = 1;
+			c2[2] = 1;
+			c2[3] = 1;
+		}
+	}
+	rsurface.lightmapcolor4f = rsurface.array_color4f;
+	rsurface.lightmapcolor4f_bufferobject = 0;
+	rsurface.lightmapcolor4f_bufferoffset = 0;
+}
+
 static void RSurf_DrawBatch_GL11_ApplyFog(int texturenumsurfaces, msurface_t **texturesurfacelist)
 {
 	int texturesurfaceindex;
@@ -6531,6 +6554,9 @@ static void R_DrawTextureSurfaceList_ShowSurfaces3(int texturenumsurfaces, msurf
 	rsurface.lightmapcolor4f = rsurface.modellightmapcolor4f;
 	rsurface.lightmapcolor4f_bufferobject = rsurface.modellightmapcolor4f_bufferobject;
 	rsurface.lightmapcolor4f_bufferoffset = rsurface.modellightmapcolor4f_bufferoffset;
+
+	if(!rsurface.lightmapcolor4f)
+		RSurf_DrawBatch_GL11_MakeFullbrightLightmapColorArray(texturenumsurfaces, texturesurfacelist);
 
 	if (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT)
 	{
