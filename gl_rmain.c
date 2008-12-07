@@ -1918,23 +1918,25 @@ skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewid
 		for(pix = 0; pix < cnt; ++pix) \
 		{ \
 			w = 0; \
-			for(comp = 0; comp < 4; ++comp) \
+			for(comp = 0; comp < 3; ++comp) \
 				w += getpixel; \
 			if(w) /* ignore perfectly black pixels because that is better for model skins */ \
 			{ \
 				++wsum; \
-				for(comp = 0; comp < 4; ++comp) \
-					avgcolor[comp] += (w = getpixel); \
+				/* comp = 3; -- not needed, comp is always 3 when we get here */ \
+				w = getpixel; \
+				for(comp = 0; comp < 3; ++comp) \
+					avgcolor[comp] += getpixel * w; \
+				avgcolor[3] += w; \
 			} \
-			avgcolor[4] += w; \
+			/* comp = 3; -- not needed, comp is always 3 when we get here */ \
+			avgcolor[4] += getpixel; \
 		} \
-		if(avgcolor[3] == 0) /* just fully transparent pixels seen? bad luck... */ \
-			avgcolor[3] = 255 * wsum; \
 		if(avgcolor[3] == 0) /* no pixels seen? even worse */ \
 			avgcolor[3] = 1; \
-		skinframe->avgcolor[0] = avgcolor[2] / (1.0 * avgcolor[3]); \
-		skinframe->avgcolor[1] = avgcolor[1] / (1.0 * avgcolor[3]); \
-		skinframe->avgcolor[2] = avgcolor[0] / (1.0 * avgcolor[3]); \
+		skinframe->avgcolor[0] = avgcolor[2] / (255.0 * avgcolor[3]); \
+		skinframe->avgcolor[1] = avgcolor[1] / (255.0 * avgcolor[3]); \
+		skinframe->avgcolor[2] = avgcolor[0] / (255.0 * avgcolor[3]); \
 		skinframe->avgcolor[3] = avgcolor[4] / (255.0 * cnt); \
 	}
 
