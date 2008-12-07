@@ -1905,6 +1905,39 @@ skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewid
 	return item;
 }
 
+#define R_SKINFRAME_LOAD_AVERAGE_COLORS(cnt, getpixel) \
+	{ \
+		unsigned long avgcolor[5], wsum; \
+		int pix, comp, w; \
+		avgcolor[0] = 0; \
+		avgcolor[1] = 0; \
+		avgcolor[2] = 0; \
+		avgcolor[3] = 0; \
+		avgcolor[4] = 0; \
+		wsum = 0; \
+		for(pix = 0; pix < cnt; ++pix) \
+		{ \
+			w = 0; \
+			for(comp = 0; comp < 4; ++comp) \
+				w += getpixel; \
+			if(w) /* ignore perfectly black pixels because that is better for model skins */ \
+			{ \
+				++wsum; \
+				for(comp = 0; comp < 4; ++comp) \
+					avgcolor[comp] += (w = getpixel); \
+			} \
+			avgcolor[4] += w; \
+		} \
+		if(avgcolor[3] == 0) /* just fully transparent pixels seen? bad luck... */ \
+			avgcolor[3] = 255 * wsum; \
+		if(avgcolor[3] == 0) /* no pixels seen? even worse */ \
+			avgcolor[3] = 1; \
+		skinframe->avgcolor[0] = avgcolor[2] / (1.0 * avgcolor[3]); \
+		skinframe->avgcolor[1] = avgcolor[1] / (1.0 * avgcolor[3]); \
+		skinframe->avgcolor[2] = avgcolor[0] / (1.0 * avgcolor[3]); \
+		skinframe->avgcolor[3] = avgcolor[4] / (255.0 * cnt); \
+	}
+
 skinframe_t *R_SkinFrame_LoadExternal_CheckAlpha(const char *name, int textureflags, qboolean complain, qboolean *has_alpha)
 {
 	// FIXME: it should be possible to disable loading various layers using
@@ -1921,7 +1954,6 @@ skinframe_t *R_SkinFrame_LoadExternal_CheckAlpha(const char *name, int texturefl
 	int basepixels_width;
 	int basepixels_height;
 	skinframe_t *skinframe;
-	double avgcolor[5], w, wsum;
 
 	*has_alpha = false;
 
@@ -1981,34 +2013,7 @@ skinframe_t *R_SkinFrame_LoadExternal_CheckAlpha(const char *name, int texturefl
 		}
 	}
 
-	avgcolor[0] = 0;
-	avgcolor[1] = 0;
-	avgcolor[2] = 0;
-	avgcolor[3] = 0;
-	avgcolor[4] = 0;
-	wsum = 0;
-	for(j = 0; j < basepixels_width * basepixels_height * 4; j += 4)
-	{
-		w = (int)basepixels[j + 0] + (int)basepixels[j + 1] + (int)basepixels[j + 2]; // use this weight, so black pixels don't contribute (needed for model skins)
-		avgcolor[2] += basepixels[j + 0] * w;
-		avgcolor[1] += basepixels[j + 1] * w;
-		avgcolor[0] += basepixels[j + 2] * w;
-		avgcolor[3] += basepixels[j + 3] * w;
-		avgcolor[4] += basepixels[j + 3];
-		wsum += w;
-	}
-	if(avgcolor[3] == 0) // just fully transparent pixels seen? bad luck...
-		avgcolor[3] = 255.0 * wsum;
-	if(avgcolor[3] == 0) // no pixels seen? even worse
-		avgcolor[3] = 1;
-	avgcolor[0] /= avgcolor[3];
-	avgcolor[1] /= avgcolor[3];
-	avgcolor[2] /= avgcolor[3];
-	avgcolor[3] /= 255.0 * wsum; // to 0..1 range
-	skinframe->avgcolor[0] = avgcolor[0];
-	skinframe->avgcolor[1] = avgcolor[1];
-	skinframe->avgcolor[2] = avgcolor[2];
-	skinframe->avgcolor[3] = avgcolor[4] / (basepixels_width * 255.0 * basepixels_height);
+	R_SKINFRAME_LOAD_AVERAGE_COLORS(basepixels_width * basepixels_height, basepixels[4 * pix + comp]);
 
 	// _norm is the name used by tenebrae and has been adopted as standard
 	if (loadnormalmap)
@@ -2075,8 +2080,6 @@ skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, co
 	int i;
 	unsigned char *temp1, *temp2;
 	skinframe_t *skinframe;
-	double avgcolor[5], w, wsum;
-	int j;
 
 	if (cls.state == ca_dedicated)
 		return NULL;
@@ -2128,34 +2131,7 @@ skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, co
 		}
 	}
 
-	avgcolor[0] = 0;
-	avgcolor[1] = 0;
-	avgcolor[2] = 0;
-	avgcolor[3] = 0;
-	avgcolor[4] = 0;
-	wsum = 0;
-	for(j = 0; j < width * height * 4; j += 4)
-	{
-		w = (int)skindata[j + 0] + (int)skindata[j + 1] + (int)skindata[j + 2];
-		avgcolor[2] += skindata[j + 0] * w;
-		avgcolor[1] += skindata[j + 1] * w;
-		avgcolor[0] += skindata[j + 2] * w;
-		avgcolor[3] += skindata[j + 3] * w;
-		avgcolor[4] += skindata[j + 3];
-		wsum += w;
-	}
-	if(avgcolor[3] == 0) // just fully transparent pixels seen? bad luck...
-		avgcolor[3] = 255.0 * wsum;
-	if(avgcolor[3] == 0) // no pixels seen? even worse
-		avgcolor[3] = 1;
-	avgcolor[0] /= avgcolor[3];
-	avgcolor[1] /= avgcolor[3];
-	avgcolor[2] /= avgcolor[3];
-	avgcolor[3] /= 255.0 * wsum; // to 0..1 range
-	skinframe->avgcolor[0] = avgcolor[0];
-	skinframe->avgcolor[1] = avgcolor[1];
-	skinframe->avgcolor[2] = avgcolor[2];
-	skinframe->avgcolor[3] = avgcolor[4] / (width * 255.0 * height);
+	R_SKINFRAME_LOAD_AVERAGE_COLORS(width * height, skindata[4 * pix + comp]);
 
 	return skinframe;
 }
@@ -2165,8 +2141,6 @@ skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, i
 	int i;
 	unsigned char *temp1, *temp2;
 	skinframe_t *skinframe;
-	double avgcolor[5], w, wsum;
-	int j;
 
 	if (cls.state == ca_dedicated)
 		return NULL;
@@ -2223,35 +2197,7 @@ skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, i
 			skinframe->fog = R_SkinFrame_TextureForSkinLayer(skindata, width, height, va("%s_fog", skinframe->basename), palette_bgra_alpha, skinframe->textureflags, true); // fog mask
 	}
 
-	avgcolor[0] = 0;
-	avgcolor[1] = 0;
-	avgcolor[2] = 0;
-	avgcolor[3] = 0;
-	avgcolor[4] = 0;
-	wsum = 0;
-	for(j = 0; j < width * height; ++j)
-	{
-		temp1 = ((unsigned char *)palette_bgra_alpha) + (skindata[j]*4);
-		w = (int)temp1[0] + (int)temp1[1] + (int)temp1[2];
-		avgcolor[2] += temp1[0] * w;
-		avgcolor[1] += temp1[1] * w;
-		avgcolor[0] += temp1[2] * w;
-		avgcolor[3] += temp1[3] * w;
-		avgcolor[4] += temp1[3];
-		wsum += w;
-	}
-	if(avgcolor[3] == 0) // just fully transparent pixels seen? bad luck...
-		avgcolor[3] = 255.0 * wsum;
-	if(avgcolor[3] == 0) // no pixels seen? even worse
-		avgcolor[3] = 1;
-	avgcolor[0] /= avgcolor[3];
-	avgcolor[1] /= avgcolor[3];
-	avgcolor[2] /= avgcolor[3];
-	avgcolor[3] /= 255.0 * wsum; // to 0..1 range
-	skinframe->avgcolor[0] = avgcolor[0];
-	skinframe->avgcolor[1] = avgcolor[1];
-	skinframe->avgcolor[2] = avgcolor[2];
-	skinframe->avgcolor[3] = avgcolor[4] / (width * 255.0 * height);
+	R_SKINFRAME_LOAD_AVERAGE_COLORS(width * height, ((unsigned char *)palette_bgra_alpha)[skindata[pix]*4 + comp]);
 
 	return skinframe;
 }
