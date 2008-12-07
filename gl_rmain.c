@@ -6458,9 +6458,9 @@ static void R_DrawTextureSurfaceList_ShowSurfaces3(int texturenumsurfaces, msurf
 
 	if (rsurface.texture->currentskinframe->pants || rsurface.texture->currentskinframe->shirt)
 	{
-		c[0] = (rsurface.colormap_pantscolor[0] * 0.2 + rsurface.colormap_shirtcolor[0] * 0.3) * (c[0] + 1);
-		c[1] = (rsurface.colormap_pantscolor[1] * 0.2 + rsurface.colormap_shirtcolor[1] * 0.3) * (c[1] + 1);
-		c[2] = (rsurface.colormap_pantscolor[2] * 0.2 + rsurface.colormap_shirtcolor[2] * 0.3) * (c[2] + 1);
+		c[0] = (rsurface.colormap_pantscolor[0] * 0.3 + rsurface.colormap_shirtcolor[0] * 0.7);
+		c[1] = (rsurface.colormap_pantscolor[1] * 0.3 + rsurface.colormap_shirtcolor[1] * 0.7);
+		c[2] = (rsurface.colormap_pantscolor[2] * 0.3 + rsurface.colormap_shirtcolor[2] * 0.7);
 	}
 
 	// brighten it up (as texture value 127 means "unlit")
