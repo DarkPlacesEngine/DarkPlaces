@@ -6510,17 +6510,17 @@ static void R_DrawTextureSurfaceList_ShowSurfaces3(int texturenumsurfaces, msurf
 		c[3] = 1;
 	}
 
-	// brighten it up (as texture value 127 means "unlit")
-	c[0] *= 2;
-	c[1] *= 2;
-	c[2] *= 2;
-
 	if (rsurface.texture->currentskinframe->pants || rsurface.texture->currentskinframe->shirt)
 	{
-		c[0] = rsurface.colormap_pantscolor[0] * 0.3 + rsurface.colormap_shirtcolor[0] * 0.7;
-		c[1] = rsurface.colormap_pantscolor[1] * 0.3 + rsurface.colormap_shirtcolor[1] * 0.7;
-		c[2] = rsurface.colormap_pantscolor[2] * 0.3 + rsurface.colormap_shirtcolor[2] * 0.7;
+		c[0] = rsurface.colormap_pantscolor[0] * 0.2 + rsurface.colormap_shirtcolor[0] * 0.3;
+		c[1] = rsurface.colormap_pantscolor[1] * 0.2 + rsurface.colormap_shirtcolor[1] * 0.3;
+		c[2] = rsurface.colormap_pantscolor[2] * 0.2 + rsurface.colormap_shirtcolor[2] * 0.3;
 	}
+
+	// brighten it up (as texture value 127 means "unlit")
+	c[0] *= 2 * r_refdef.view.colorscale;
+	c[1] *= 2 * r_refdef.view.colorscale;
+	c[2] *= 2 * r_refdef.view.colorscale;
 
 	if(rsurface.texture->currentmaterialflags & MATERIALFLAG_WATERALPHA)
 		c[3] *= r_wateralpha.value;
@@ -6555,9 +6555,6 @@ static void R_DrawTextureSurfaceList_ShowSurfaces3(int texturenumsurfaces, msurf
 	rsurface.lightmapcolor4f_bufferobject = rsurface.modellightmapcolor4f_bufferobject;
 	rsurface.lightmapcolor4f_bufferoffset = rsurface.modellightmapcolor4f_bufferoffset;
 
-	if(!rsurface.lightmapcolor4f)
-		RSurf_DrawBatch_GL11_MakeFullbrightLightmapColorArray(texturenumsurfaces, texturesurfacelist);
-
 	if (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT)
 	{
 		qboolean applycolor = true;
@@ -6570,6 +6567,9 @@ static void R_DrawTextureSurfaceList_ShowSurfaces3(int texturenumsurfaces, msurf
 	}
 	else
 		RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
+
+	if(!rsurface.lightmapcolor4f)
+		RSurf_DrawBatch_GL11_MakeFullbrightLightmapColorArray(texturenumsurfaces, texturesurfacelist);
 
 	RSurf_DrawBatch_GL11_ApplyAmbient(texturenumsurfaces, texturesurfacelist);
 	RSurf_DrawBatch_GL11_ApplyColor(texturenumsurfaces, texturesurfacelist, c[0], c[1], c[2], c[3]);
