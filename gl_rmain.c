@@ -5731,17 +5731,15 @@ static void RSurf_DrawBatch_GL11_MakeFullbrightLightmapColorArray(int texturenum
 {
 	int texturesurfaceindex;
 	int i;
-	float f;
 	float *v, *c2;
 	for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 	{
 		const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 		for (i = 0, v = (rsurface.vertex3f + 3 * surface->num_firstvertex), c2 = (rsurface.array_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, v += 3, c2 += 4)
 		{
-			f = FogPoint_Model(v);
-			c2[0] = 1;
-			c2[1] = 1;
-			c2[2] = 1;
+			c2[0] = 0.5;
+			c2[1] = 0.5;
+			c2[2] = 0.5;
 			c2[3] = 1;
 		}
 	}
@@ -6499,22 +6497,35 @@ static void R_DrawTextureSurfaceList_ShowSurfaces3(int texturenumsurfaces, msurf
 		GL_DepthMask(writedepth);
 	}
 
-	rsurface.lightmapcolor4f = rsurface.modellightmapcolor4f;
-	rsurface.lightmapcolor4f_bufferobject = rsurface.modellightmapcolor4f_bufferobject;
-	rsurface.lightmapcolor4f_bufferoffset = rsurface.modellightmapcolor4f_bufferoffset;
+	rsurface.lightmapcolor4f = NULL;
 
-	if (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT)
+	if (rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
+	{
+		RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
+
+		rsurface.lightmapcolor4f = NULL;
+		rsurface.lightmapcolor4f_bufferobject = 0;
+		rsurface.lightmapcolor4f_bufferoffset = 0;
+	}
+	else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT)
 	{
 		qboolean applycolor = true;
 		float one = 1.0;
 
 		RSurf_PrepareVerticesForBatch(true, false, texturenumsurfaces, texturesurfacelist);
+
 		r_refdef.lightmapintensity = 1;
 		RSurf_DrawBatch_GL11_ApplyVertexShade(texturenumsurfaces, texturesurfacelist, &one, &one, &one, &one, &applycolor);
 		r_refdef.lightmapintensity = 0; // we're in showsurfaces, after all
 	}
 	else
+	{
 		RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
+
+		rsurface.lightmapcolor4f = rsurface.modellightmapcolor4f;
+		rsurface.lightmapcolor4f_bufferobject = rsurface.modellightmapcolor4f_bufferobject;
+		rsurface.lightmapcolor4f_bufferoffset = rsurface.modellightmapcolor4f_bufferoffset;
+	}
 
 	if(!rsurface.lightmapcolor4f)
 		RSurf_DrawBatch_GL11_MakeFullbrightLightmapColorArray(texturenumsurfaces, texturesurfacelist);
