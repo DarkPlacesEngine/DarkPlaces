@@ -5851,9 +5851,9 @@ static void RSurf_DrawBatch_GL11_ApplyAmbient(int texturenumsurfaces, msurface_t
 		const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 		for (i = 0, c = (rsurface.lightmapcolor4f + 4 * surface->num_firstvertex), c2 = (rsurface.array_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, c += 4, c2 += 4)
 		{
-			c2[0] = c[0] + r_refdef.scene.ambient / 64.0;
-			c2[1] = c[1] + r_refdef.scene.ambient / 64.0;
-			c2[2] = c[2] + r_refdef.scene.ambient / 64.0;
+			c2[0] = c[0] + r_refdef.scene.ambient / 128.0;
+			c2[1] = c[1] + r_refdef.scene.ambient / 128.0;
+			c2[2] = c[2] + r_refdef.scene.ambient / 128.0;
 			c2[3] = c[3];
 		}
 	}
