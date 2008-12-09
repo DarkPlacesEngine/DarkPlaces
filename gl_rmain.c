@@ -1907,7 +1907,7 @@ skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewid
 
 #define R_SKINFRAME_LOAD_AVERAGE_COLORS(cnt, getpixel) \
 	{ \
-		unsigned long avgcolor[5], wsum; \
+		unsigned long long avgcolor[5], wsum; \
 		int pix, comp, w; \
 		avgcolor[0] = 0; \
 		avgcolor[1] = 0; \
@@ -2016,6 +2016,7 @@ skinframe_t *R_SkinFrame_LoadExternal_CheckAlpha(const char *name, int texturefl
 	}
 
 	R_SKINFRAME_LOAD_AVERAGE_COLORS(basepixels_width * basepixels_height, basepixels[4 * pix + comp]);
+	//Con_Printf("Texture %s has average colors %f %f %f alpha %f\n", name, skinframe->avgcolor[0], skinframe->avgcolor[1], skinframe->avgcolor[2], skinframe->avgcolor[3]);
 
 	// _norm is the name used by tenebrae and has been adopted as standard
 	if (loadnormalmap)
