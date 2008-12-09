@@ -2135,6 +2135,7 @@ skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, co
 	}
 
 	R_SKINFRAME_LOAD_AVERAGE_COLORS(width * height, skindata[4 * pix + comp]);
+	//Con_Printf("Texture %s has average colors %f %f %f alpha %f\n", name, skinframe->avgcolor[0], skinframe->avgcolor[1], skinframe->avgcolor[2], skinframe->avgcolor[3]);
 
 	return skinframe;
 }
@@ -2143,6 +2144,7 @@ skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, i
 {
 	int i;
 	unsigned char *temp1, *temp2;
+	unsigned int *palette;
 	skinframe_t *skinframe;
 
 	if (cls.state == ca_dedicated)
@@ -2152,6 +2154,8 @@ skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, i
 	skinframe = R_SkinFrame_Find(name, textureflags, width, height, skindata ? CRC_Block(skindata, width*height) : 0, true);
 	if (skinframe && skinframe->base)
 		return skinframe;
+
+	palette = (loadglowtexture ? palette_bgra_nofullbrights : ((skinframe->textureflags & TEXF_ALPHA) ? palette_bgra_transparent : palette_bgra_complete));
 
 	skinframe->stain = NULL;
 	skinframe->merged = NULL;
@@ -2181,7 +2185,7 @@ skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, i
 		Mem_Free(temp1);
 	}
 	// use either a custom palette, or the quake palette
-	skinframe->base = skinframe->merged = R_SkinFrame_TextureForSkinLayer(skindata, width, height, va("%s_merged", skinframe->basename), (loadglowtexture ? palette_bgra_nofullbrights : ((skinframe->textureflags & TEXF_ALPHA) ? palette_bgra_transparent : palette_bgra_complete)), skinframe->textureflags, true); // all
+	skinframe->base = skinframe->merged = R_SkinFrame_TextureForSkinLayer(skindata, width, height, va("%s_merged", skinframe->basename), palette, skinframe->textureflags, true); // all
 	if (loadglowtexture)
 		skinframe->glow = R_SkinFrame_TextureForSkinLayer(skindata, width, height, va("%s_glow", skinframe->basename), palette_bgra_onlyfullbrights, skinframe->textureflags, false); // glow
 	if (loadpantsandshirt)
@@ -2200,7 +2204,8 @@ skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, i
 			skinframe->fog = R_SkinFrame_TextureForSkinLayer(skindata, width, height, va("%s_fog", skinframe->basename), palette_bgra_alpha, skinframe->textureflags, true); // fog mask
 	}
 
-	R_SKINFRAME_LOAD_AVERAGE_COLORS(width * height, ((unsigned char *)palette_bgra_alpha)[skindata[pix]*4 + comp]);
+	R_SKINFRAME_LOAD_AVERAGE_COLORS(width * height, ((unsigned char *)palette)[skindata[pix]*4 + comp]);
+	//Con_Printf("Texture %s has average colors %f %f %f alpha %f\n", name, skinframe->avgcolor[0], skinframe->avgcolor[1], skinframe->avgcolor[2], skinframe->avgcolor[3]);
 
 	return skinframe;
 }
