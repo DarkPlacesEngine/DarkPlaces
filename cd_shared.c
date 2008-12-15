@@ -43,6 +43,7 @@ extern void CDAudio_SysShutdown (void);
 
 // used by menu to ghost CD audio slider
 cvar_t cdaudioinitialized = {CVAR_READONLY,"cdaudioinitialized","0","indicates if CD Audio system is active"};
+cvar_t cdaudio = {CVAR_SAVE,"cdaudio","1","CD playing mode (0 = never access CD drive, 1 = play CD tracks if no replacement available, 2 = play fake tracks if no CD track available, 3 = play only real CD tracks)"};
 
 static qboolean wasPlaying = false;
 static qboolean initialized = false;
@@ -67,6 +68,9 @@ static void CDAudio_Eject (void)
 {
 	if (!enabled)
 		return;
+	
+	if(cdaudio.integer == 0)
+		return;
 
 	CDAudio_SysEject();
 }
@@ -75,6 +79,9 @@ static void CDAudio_Eject (void)
 static void CDAudio_CloseDoor (void)
 {
 	if (!enabled)
+		return;
+
+	if(cdaudio.integer == 0)
 		return;
 
 	CDAudio_SysCloseDoor();
@@ -86,6 +93,9 @@ static int CDAudio_GetAudioDiskInfo (void)
 
 	cdValid = false;
 
+	if(cdaudio.integer == 0)
+		return -1;
+
 	ret = CDAudio_SysGetAudioDiskInfo();
 	if (ret < 1)
 		return -1;
@@ -96,6 +106,41 @@ static int CDAudio_GetAudioDiskInfo (void)
 	return 0;
 }
 
+qboolean CDAudio_Play_real (int track, qboolean looping, qboolean complain)
+{
+	if(track < 1)
+	{
+		if(complain)
+			Con_Print("Could not load BGM track.\n");
+		return false;
+	}
+
+	if (!cdValid)
+	{
+		CDAudio_GetAudioDiskInfo();
+		if (!cdValid)
+		{
+			if(complain)
+				Con_Print ("No CD in player.\n");
+			return false;
+		}
+	}
+
+	if (track > maxTrack)
+	{
+		if(complain)
+			Con_Printf("CDAudio: Bad track number %u.\n", track);
+		return false;
+	}
+
+	if (CDAudio_SysPlay(track) == -1)
+		return false;
+
+	if(cdaudio.integer != 3 || developer.integer)
+		Con_Printf ("CD track %u playing...\n", track);
+
+	return true;
+}
 
 void CDAudio_Play_byName (const char *trackname, qboolean looping)
 {
@@ -131,6 +176,22 @@ void CDAudio_Play_byName (const char *trackname, qboolean looping)
 		return;
 	CDAudio_Stop ();
 
+	if(track >= 1)
+	{
+		if(cdaudio.integer == 3) // only play real CD tracks at all
+		{
+			if(CDAudio_Play_real(track, looping, true))
+				goto success;
+			return;
+		}
+
+		if(cdaudio.integer == 2) // prefer real CD track over fake
+		{
+				if(CDAudio_Play_real(track, looping, false))
+					goto success;
+		}
+	}
+
 	// Try playing a fake track (sound file) first
 	if(track >= 1)
 	{
@@ -157,41 +218,31 @@ void CDAudio_Play_byName (const char *trackname, qboolean looping)
 				S_SetChannelFlag (faketrack, CHANNELFLAG_FORCELOOP, true);
 			S_SetChannelFlag (faketrack, CHANNELFLAG_FULLVOLUME, true);
 			if(track >= 1)
-				Con_Printf ("Fake CD track %u playing...\n", track);
+			{
+				if(cdaudio.integer != 0 || developer.integer) // we don't need these messages if only fake tracks can be played anyway
+					Con_Printf ("Fake CD track %u playing...\n", track);
+			}
 			else
-				Con_Printf ("BGM track %s playing...\n", trackname);
+				Con_DPrintf ("BGM track %s playing...\n", trackname);
 		}
 	}
 
 	// If we can't play a fake CD track, try the real one
 	if (faketrack == -1)
 	{
-		if(track < 1)
+		if(cdaudio.integer == 0 || track < 1)
 		{
 			Con_Print("Could not load BGM track.\n");
 			return;
 		}
-
-		if (!cdValid)
+		else
 		{
-			CDAudio_GetAudioDiskInfo();
-			if (!cdValid)
-			{
-				Con_Print ("No CD in player.\n");
+			if(!CDAudio_Play_real(track, looping, true))
 				return;
-			}
 		}
-
-		if (track > maxTrack)
-		{
-			Con_Printf("CDAudio: Bad track number %u.\n", track);
-			return;
-		}
-
-		if (CDAudio_SysPlay(track) == -1)
-			return;
 	}
 
+success:
 	cdPlayLooping = looping;
 	cdPlayTrack = track;
 	cdPlaying = true;
@@ -397,7 +448,8 @@ void CDAudio_SetVolume (float newvol)
 
 		if (faketrack != -1)
 			S_SetChannelVolume (faketrack, newvol);
-		CDAudio_SysSetVolume (newvol);
+		else
+			CDAudio_SysSetVolume (newvol);
 	}
 
 	cdvolume = newvol;
@@ -410,7 +462,7 @@ void CDAudio_Update (void)
 
 	CDAudio_SetVolume (bgmvolume.value);
 
-	if (faketrack == -1)
+	if (faketrack == -1 && cdaudio.integer != 0)
 		CDAudio_SysUpdate();
 }
 
@@ -430,6 +482,7 @@ int CDAudio_Init (void)
 	for (i = 0; i < MAXTRACKS; i++)
 		*remap[i] = 0;
 
+	Cvar_RegisterVariable(&cdaudio);
 	Cvar_RegisterVariable(&cdaudioinitialized);
 	Cvar_SetValueQuick(&cdaudioinitialized, true);
 	enabled = true;
