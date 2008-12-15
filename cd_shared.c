@@ -43,7 +43,7 @@ extern void CDAudio_SysShutdown (void);
 
 // used by menu to ghost CD audio slider
 cvar_t cdaudioinitialized = {CVAR_READONLY,"cdaudioinitialized","0","indicates if CD Audio system is active"};
-cvar_t cdaudio = {CVAR_SAVE,"cdaudio","1","CD playing mode (0 = never access CD drive, 1 = play CD tracks if no replacement available, 2 = play fake tracks if no CD track available, 3 = play only real CD tracks)"};
+cvar_t cdaudio = {CVAR_SAVE,"cdaudio","1","CD playing mode (0 = never access CD drive, 1 = play CD tracks if no replacement available, 2 = play fake tracks if no CD track available, 3 = play only real CD tracks, 4 = play real CD tracks even instead of named fake tracks)"};
 
 static qboolean wasPlaying = false;
 static qboolean initialized = false;
@@ -187,9 +187,27 @@ void CDAudio_Play_byName (const char *trackname, qboolean looping)
 
 		if(cdaudio.integer == 2) // prefer real CD track over fake
 		{
-				if(CDAudio_Play_real(track, looping, false))
-					goto success;
+			if(CDAudio_Play_real(track, looping, false))
+				goto success;
 		}
+	}
+
+	if(cdaudio.integer == 4) // only play real CD tracks, EVEN instead of fake tracks!
+	{
+		if(CDAudio_Play_real(track, looping, false))
+			goto success;
+		
+		if(cdValid && maxTrack > 0)
+		{
+			track = 1 + (rand() % maxTrack);
+			if(CDAudio_Play_real(track, looping, true))
+				goto success;
+		}
+		else
+		{
+			Con_Print ("No CD in player.\n");
+		}
+		return;
 	}
 
 	// Try playing a fake track (sound file) first
@@ -208,6 +226,10 @@ void CDAudio_Play_byName (const char *trackname, qboolean looping)
 		sfx = S_PrecacheSound (va("cdtracks/%s.wav", trackname), false, false);
 		if (sfx == NULL || !S_IsSoundPrecached (sfx))
 			sfx = S_PrecacheSound (va("cdtracks/%s", trackname), false, false);
+		if (sfx == NULL || !S_IsSoundPrecached (sfx))
+			sfx = S_PrecacheSound (va("%s.wav", trackname), false, false);
+		if (sfx == NULL || !S_IsSoundPrecached (sfx))
+			sfx = S_PrecacheSound (va("%s", trackname), false, false);
 	}
 	if (sfx != NULL)
 	{
