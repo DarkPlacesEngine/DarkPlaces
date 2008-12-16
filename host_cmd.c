@@ -793,7 +793,6 @@ void Host_Loadgame_f (void)
 		end = t;
 		entnum++;
 	}
-	Mem_Free(text);
 
 	prog->num_edicts = entnum;
 	sv.time = time;
@@ -862,6 +861,7 @@ void Host_Loadgame_f (void)
 			}
 		}
 	}
+	Mem_Free(text);
 
 	if(developer_entityparsing.integer)
 		Con_Printf("Host_Loadgame_f: finished\n");
