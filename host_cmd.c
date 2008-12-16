@@ -807,56 +807,59 @@ void Host_Loadgame_f (void)
 	// read extended data if present
 	// the extended data is stored inside a /* */ comment block, which the
 	// parser intentionally skips, so we have to check for it manually here
-	while (*end == '\r' || *end == '\n')
-		end++;
-	if (end[0] == '/' && end[1] == '*' && (end[2] == '\r' || end[2] == '\n'))
+	if(end)
 	{
-		if(developer_entityparsing.integer)
-			Con_Printf("Host_Loadgame_f: loading extended data\n");
-
-		Con_Printf("Loading extended DarkPlaces savegame\n");
-		t = end + 2;
-		memset(sv.lightstyles[0], 0, sizeof(sv.lightstyles));
-		memset(sv.model_precache[0], 0, sizeof(sv.model_precache));
-		memset(sv.sound_precache[0], 0, sizeof(sv.sound_precache));
-		while (COM_ParseToken_Simple(&t, false, false))
+		while (*end == '\r' || *end == '\n')
+			end++;
+		if (end[0] == '/' && end[1] == '*' && (end[2] == '\r' || end[2] == '\n'))
 		{
-			if (!strcmp(com_token, "sv.lightstyles"))
+			if(developer_entityparsing.integer)
+				Con_Printf("Host_Loadgame_f: loading extended data\n");
+
+			Con_Printf("Loading extended DarkPlaces savegame\n");
+			t = end + 2;
+			memset(sv.lightstyles[0], 0, sizeof(sv.lightstyles));
+			memset(sv.model_precache[0], 0, sizeof(sv.model_precache));
+			memset(sv.sound_precache[0], 0, sizeof(sv.sound_precache));
+			while (COM_ParseToken_Simple(&t, false, false))
 			{
-				COM_ParseToken_Simple(&t, false, false);
-				i = atoi(com_token);
-				COM_ParseToken_Simple(&t, false, false);
-				if (i >= 0 && i < MAX_LIGHTSTYLES)
-					strlcpy(sv.lightstyles[i], com_token, sizeof(sv.lightstyles[i]));
-				else
-					Con_Printf("unsupported lightstyle %i \"%s\"\n", i, com_token);
-			}
-			else if (!strcmp(com_token, "sv.model_precache"))
-			{
-				COM_ParseToken_Simple(&t, false, false);
-				i = atoi(com_token);
-				COM_ParseToken_Simple(&t, false, false);
-				if (i >= 0 && i < MAX_MODELS)
+				if (!strcmp(com_token, "sv.lightstyles"))
 				{
-					strlcpy(sv.model_precache[i], com_token, sizeof(sv.model_precache[i]));
-					sv.models[i] = Mod_ForName (sv.model_precache[i], true, false, false);
+					COM_ParseToken_Simple(&t, false, false);
+					i = atoi(com_token);
+					COM_ParseToken_Simple(&t, false, false);
+					if (i >= 0 && i < MAX_LIGHTSTYLES)
+						strlcpy(sv.lightstyles[i], com_token, sizeof(sv.lightstyles[i]));
+					else
+						Con_Printf("unsupported lightstyle %i \"%s\"\n", i, com_token);
 				}
-				else
-					Con_Printf("unsupported model %i \"%s\"\n", i, com_token);
+				else if (!strcmp(com_token, "sv.model_precache"))
+				{
+					COM_ParseToken_Simple(&t, false, false);
+					i = atoi(com_token);
+					COM_ParseToken_Simple(&t, false, false);
+					if (i >= 0 && i < MAX_MODELS)
+					{
+						strlcpy(sv.model_precache[i], com_token, sizeof(sv.model_precache[i]));
+						sv.models[i] = Mod_ForName (sv.model_precache[i], true, false, false);
+					}
+					else
+						Con_Printf("unsupported model %i \"%s\"\n", i, com_token);
+				}
+				else if (!strcmp(com_token, "sv.sound_precache"))
+				{
+					COM_ParseToken_Simple(&t, false, false);
+					i = atoi(com_token);
+					COM_ParseToken_Simple(&t, false, false);
+					if (i >= 0 && i < MAX_SOUNDS)
+						strlcpy(sv.sound_precache[i], com_token, sizeof(sv.sound_precache[i]));
+					else
+						Con_Printf("unsupported sound %i \"%s\"\n", i, com_token);
+				}
+				// skip any trailing text or unrecognized commands
+				while (COM_ParseToken_Simple(&t, true, false) && strcmp(com_token, "\n"))
+					;
 			}
-			else if (!strcmp(com_token, "sv.sound_precache"))
-			{
-				COM_ParseToken_Simple(&t, false, false);
-				i = atoi(com_token);
-				COM_ParseToken_Simple(&t, false, false);
-				if (i >= 0 && i < MAX_SOUNDS)
-					strlcpy(sv.sound_precache[i], com_token, sizeof(sv.sound_precache[i]));
-				else
-					Con_Printf("unsupported sound %i \"%s\"\n", i, com_token);
-			}
-			// skip any trailing text or unrecognized commands
-			while (COM_ParseToken_Simple(&t, true, false) && strcmp(com_token, "\n"))
-				;
 		}
 	}
 
