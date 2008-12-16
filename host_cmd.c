@@ -35,6 +35,7 @@ cvar_t r_fixtrans_auto = {0, "r_fixtrans_auto", "0", "automatically fixtrans tex
 qboolean allowcheats = false;
 
 extern qboolean host_shuttingdown;
+extern cvar_t developer_entityparsing;
 
 /*
 ==================
@@ -636,6 +637,9 @@ void Host_Loadgame_f (void)
 		return;
 	}
 
+	if(developer_entityparsing.integer)
+		Con_Printf("Host_Loadgame_f: loading version\n");
+
 	// version
 	COM_ParseToken_Simple(&t, false, false);
 	version = atoi(com_token);
@@ -645,6 +649,9 @@ void Host_Loadgame_f (void)
 		Con_Printf("Savegame is version %i, not %i\n", version, SAVEGAME_VERSION);
 		return;
 	}
+
+	if(developer_entityparsing.integer)
+		Con_Printf("Host_Loadgame_f: loading description\n");
 
 	// description
 	COM_ParseToken_Simple(&t, false, false);
@@ -660,15 +667,24 @@ void Host_Loadgame_f (void)
 	current_skill = (int)(atof(com_token) + 0.5);
 	Cvar_SetValue ("skill", (float)current_skill);
 
+	if(developer_entityparsing.integer)
+		Con_Printf("Host_Loadgame_f: loading mapname\n");
+
 	// mapname
 	COM_ParseToken_Simple(&t, false, false);
 	strlcpy (mapname, com_token, sizeof(mapname));
+
+	if(developer_entityparsing.integer)
+		Con_Printf("Host_Loadgame_f: loading time\n");
 
 	// time
 	COM_ParseToken_Simple(&t, false, false);
 	time = atof(com_token);
 
 	allowcheats = sv_cheats.integer != 0;
+
+	if(developer_entityparsing.integer)
+		Con_Printf("Host_Loadgame_f: spawning server\n");
 
 	SV_SpawnServer (mapname);
 	if (!sv.active)
@@ -679,6 +695,9 @@ void Host_Loadgame_f (void)
 	}
 	sv.paused = true;		// pause until all clients connect
 	sv.loadgame = true;
+
+	if(developer_entityparsing.integer)
+		Con_Printf("Host_Loadgame_f: loading light styles\n");
 
 // load the light styles
 
@@ -700,6 +719,9 @@ void Host_Loadgame_f (void)
 		}
 		strlcpy(sv.lightstyles[i], com_token, sizeof(sv.lightstyles[i]));
 	}
+
+	if(developer_entityparsing.integer)
+		Con_Printf("Host_Loadgame_f: skipping until globals\n");
 
 	// now skip everything before the first opening brace
 	// (this is for forward compatibility, so that older versions (at
@@ -738,6 +760,9 @@ void Host_Loadgame_f (void)
 
 		if (entnum == -1)
 		{
+			if(developer_entityparsing.integer)
+				Con_Printf("Host_Loadgame_f: loading globals\n");
+
 			// parse the global vars
 			PRVM_ED_ParseGlobals (start);
 		}
@@ -754,6 +779,10 @@ void Host_Loadgame_f (void)
 			ent = PRVM_EDICT_NUM(entnum);
 			memset (ent->fields.server, 0, prog->progs->entityfields * 4);
 			ent->priv.server->free = false;
+
+			if(developer_entityparsing.integer)
+				Con_Printf("Host_Loadgame_f: loading edict %d\n", entnum);
+
 			PRVM_ED_ParseEdict (start, ent);
 
 			// link it into the bsp tree
@@ -772,6 +801,9 @@ void Host_Loadgame_f (void)
 	for (i = 0;i < NUM_SPAWN_PARMS;i++)
 		svs.clients[0].spawn_parms[i] = spawn_parms[i];
 
+	if(developer_entityparsing.integer)
+		Con_Printf("Host_Loadgame_f: skipping until extended data\n");
+
 	// read extended data if present
 	// the extended data is stored inside a /* */ comment block, which the
 	// parser intentionally skips, so we have to check for it manually here
@@ -779,6 +811,9 @@ void Host_Loadgame_f (void)
 		end++;
 	if (end[0] == '/' && end[1] == '*' && (end[2] == '\r' || end[2] == '\n'))
 	{
+		if(developer_entityparsing.integer)
+			Con_Printf("Host_Loadgame_f: loading extended data\n");
+
 		Con_Printf("Loading extended DarkPlaces savegame\n");
 		t = end + 2;
 		memset(sv.lightstyles[0], 0, sizeof(sv.lightstyles));
@@ -824,6 +859,9 @@ void Host_Loadgame_f (void)
 				;
 		}
 	}
+
+	if(developer_entityparsing.integer)
+		Con_Printf("Host_Loadgame_f: finished\n");
 
 	SV_VM_End();
 

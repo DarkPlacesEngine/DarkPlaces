@@ -507,6 +507,11 @@ char *PRVM_UglyValueString (etype_t type, prvm_eval_t *val)
 				line[i++] = '\\';
 				line[i++] = '\\';
 			}
+			else if (*s == '"')
+			{
+				line[i++] = '\\';
+				line[i++] = '"';
+			}
 			else
 				line[i++] = *s;
 			s++;
@@ -686,6 +691,7 @@ PRVM_ED_Write
 For savegames
 =============
 */
+extern cvar_t developer_entityparsing;
 void PRVM_ED_Write (qfile_t *f, prvm_edict_t *ed)
 {
 	ddef_t	*d;
@@ -706,6 +712,10 @@ void PRVM_ED_Write (qfile_t *f, prvm_edict_t *ed)
 	{
 		d = &prog->fielddefs[i];
 		name = PRVM_GetString(d->s_name);
+
+		if(developer_entityparsing.integer)
+			Con_Printf("PRVM_ED_Write: at entity %d field %s\n", PRVM_NUM_FOR_EDICT(ed), name);
+
 		if (name[strlen(name)-2] == '_')
 			continue;	// skip _x, _y, _z vars
 
@@ -884,6 +894,10 @@ void PRVM_ED_WriteGlobals (qfile_t *f)
 			continue;
 
 		name = PRVM_GetString(def->s_name);
+
+		if(developer_entityparsing.integer)
+			Con_Printf("PRVM_ED_WriteGlobals: at global %s\n", name);
+
 		FS_Printf(f,"\"%s\" ", name);
 		FS_Printf(f,"\"%s\"\n", PRVM_UglyValueString((etype_t)type, (prvm_eval_t *)&prog->globals.generic[def->ofs]));
 	}
@@ -908,11 +922,17 @@ void PRVM_ED_ParseGlobals (const char *data)
 		if (com_token[0] == '}')
 			break;
 
+		if (developer_entityparsing.integer)
+			Con_Printf("Key: \"%s\"", com_token);
+
 		strlcpy (keyname, com_token, sizeof(keyname));
 
 		// parse value
 		if (!COM_ParseToken_Simple(&data, false, true))
 			PRVM_ERROR ("PRVM_ED_ParseGlobals: EOF without closing brace");
+
+		if (developer_entityparsing.integer)
+			Con_Printf(" \"%s\"\n", com_token);
 
 		if (com_token[0] == '}')
 			PRVM_ERROR ("PRVM_ED_ParseGlobals: closing brace without data");
@@ -1150,7 +1170,6 @@ ed should be a properly initialized empty edict.
 Used for initial level load and for savegames.
 ====================
 */
-extern cvar_t developer_entityparsing;
 const char *PRVM_ED_ParseEdict (const char *data, prvm_edict_t *ent)
 {
 	ddef_t *key;
