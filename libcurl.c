@@ -170,7 +170,7 @@ static dllhandle_t curl_dll = NULL;
 typedef struct downloadinfo_s
 {
 	char filename[MAX_QPATH];
-	char url[256];
+	char url[1024];
 	char referer[256];
 	qfile_t *stream;
 	fs_offset_t startpos;
@@ -1307,7 +1307,7 @@ this file for obvious reasons.
 */
 static const char *Curl_FindPackURL(const char *filename)
 {
-	static char foundurl[256];
+	static char foundurl[1024];
 	fs_offset_t filesize;
 	char *buf = (char *) FS_LoadFile("curl_urls.txt", tempmempool, true, &filesize);
 	if(buf && filesize)
