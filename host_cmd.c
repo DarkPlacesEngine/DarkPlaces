@@ -59,9 +59,10 @@ Host_Status_f
 void Host_Status_f (void)
 {
 	client_t *client;
-	int seconds, minutes, hours = 0, j, players;
+	int seconds, minutes, hours = 0, i, j, k, in, players, ping, packetloss;
 	void (*print) (const char *fmt, ...);
-
+	char ip[22];
+	
 	if (cmd_source == src_command)
 	{
 		// if running a client, try to send over network so the client's status report parser will see the report
@@ -77,9 +78,18 @@ void Host_Status_f (void)
 
 	if (!sv.active)
 		return;
+	
+	in = 0;
+	if (Cmd_Argc() == 2)
+	{
+		if (strcmp(Cmd_Argv(1), "1") == 0)
+			in = 1;
+		else if (strcmp(Cmd_Argv(1), "2") == 0)
+			in = 2;
+	}
 
-	for (players = 0, j = 0;j < svs.maxclients;j++)
-		if (svs.clients[j].active)
+	for (players = 0, i = 0;i < svs.maxclients;i++)
+		if (svs.clients[i].active)
 			players++;
 	print ("host:     %s\n", Cvar_VariableString ("hostname"));
 	print ("version:  %s build %s\n", gamename, buildstring);
@@ -87,26 +97,73 @@ void Host_Status_f (void)
 	print ("map:      %s\n", sv.name);
 	print ("timing:   %s\n", Host_TimingReport());
 	print ("players:  %i active (%i max)\n\n", players, svs.maxclients);
-	for (j = 0, client = svs.clients;j < svs.maxclients;j++, client++)
+
+	if (in == 1)
+		print ("^2IP                   %%pl ping  time   frags  no  name\n");
+	else if (in == 2)
+		print ("^5IP                    no  name\n");
+
+	for (i = 0, k = 0, client = svs.clients;i < svs.maxclients;i++, client++)
 	{
 		if (!client->active)
 			continue;
-		seconds = (int)(realtime - client->connecttime);
-		minutes = seconds / 60;
-		if (minutes)
+
+		++k;
+
+		if (in == 0 || in == 1)
 		{
-			seconds -= (minutes * 60);
-			hours = minutes / 60;
-			if (hours)
-				minutes -= (hours * 60);
+			seconds = (int)(realtime - client->connecttime);
+			minutes = seconds / 60;
+			if (minutes)
+			{
+				seconds -= (minutes * 60);
+				hours = minutes / 60;
+				if (hours)
+					minutes -= (hours * 60);
+			}
+			else
+				hours = 0;
+			
+			packetloss = 0;
+			if (client->netconnection)
+				for (j = 0;j < NETGRAPH_PACKETS;j++)
+					if (client->netconnection->incoming_unreliablesize[j] == NETGRAPH_LOSTPACKET)
+						packetloss++;
+			packetloss = packetloss * 100 / NETGRAPH_PACKETS;
+			ping = bound(0, (int)floor(client->ping*1000+0.5), 9999);
 		}
-		else
-			hours = 0;
-		print ("#%-3u %-16.16s  %3i  %2i:%02i:%02i\n", j+1, client->name, client->frags, hours, minutes, seconds);
+
 		if(sv_status_privacy.integer && cmd_source != src_command)
-			print ("   %s\n", client->netconnection ? "hidden" : "botclient");
+			strlcpy(ip, client->netconnection ? "hidden" : "botclient" , 22);
 		else
-			print ("   %s\n", client->netconnection ? client->netconnection->address : "botclient");
+			strlcpy(ip, client->netconnection->address ? client->netconnection->address : "botclient", 22);
+		
+		if (in == 0) // default layout
+		{
+			print ("#%-3u ", i+1);
+			print ("%-16.16s  ", client->name);
+			print ("%3i  ", client->frags);
+			print ("%2i:%02i:%02i\n   ", hours, minutes, seconds);
+			print ("%s\n", ip);
+		}
+		else if (in == 1) // extended layout
+		{
+			k%2 ? print("^3") : print("^7");
+			print ("%-21s ", ip);
+			print ("%2i ", packetloss);
+			print ("%4i ", ping);
+			print ("%2i:%02i:%02i ", hours, minutes, seconds);
+			print ("%4i  ", client->frags);
+			print ("#%-2u ", i+1);
+			print ("^7%s\n", client->name);
+		}
+		else if (in == 2) // reduced layout
+		{
+			k%2 ? print("^3") : print("^7");
+			print ("%-21s ", ip);
+			print ("#%-2u ", i+1);
+			print ("^7%s\n", client->name);
+		}
 	}
 }
 
