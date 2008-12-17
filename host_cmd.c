@@ -59,7 +59,7 @@ Host_Status_f
 void Host_Status_f (void)
 {
 	client_t *client;
-	int seconds, minutes, hours = 0, i, j, k, in, players, ping, packetloss;
+	int seconds = 0, minutes = 0, hours = 0, i, j, k, in, players, ping = 0, packetloss = 0;
 	void (*print) (const char *fmt, ...);
 	char ip[22];
 	
