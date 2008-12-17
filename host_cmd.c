@@ -136,7 +136,7 @@ void Host_Status_f (void)
 		if(sv_status_privacy.integer && cmd_source != src_command)
 			strlcpy(ip, client->netconnection ? "hidden" : "botclient" , 22);
 		else
-			strlcpy(ip, client->netconnection->address ? client->netconnection->address : "botclient", 22);
+			strlcpy(ip, (client->netconnection && client->netconnection->address) ? client->netconnection->address : "botclient", 22);
 		
 		if (in == 0) // default layout
 		{
