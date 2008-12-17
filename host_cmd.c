@@ -99,9 +99,9 @@ void Host_Status_f (void)
 	print ("players:  %i active (%i max)\n\n", players, svs.maxclients);
 
 	if (in == 1)
-		print ("^2IP                   %%pl ping  time   frags  no  name\n");
+		print ("^2IP                   %%pl ping  time   frags  no   name\n");
 	else if (in == 2)
-		print ("^5IP                    no  name\n");
+		print ("^5IP                    no   name\n");
 
 	for (i = 0, k = 0, client = svs.clients;i < svs.maxclients;i++, client++)
 	{
@@ -154,14 +154,14 @@ void Host_Status_f (void)
 			print ("%4i ", ping);
 			print ("%2i:%02i:%02i ", hours, minutes, seconds);
 			print ("%4i  ", client->frags);
-			print ("#%-2u ", i+1);
+			print ("#%-3u ", i+1);
 			print ("^7%s\n", client->name);
 		}
 		else if (in == 2) // reduced layout
 		{
 			k%2 ? print("^3") : print("^7");
 			print ("%-21s ", ip);
-			print ("#%-2u ", i+1);
+			print ("#%-3u ", i+1);
 			print ("^7%s\n", client->name);
 		}
 	}
