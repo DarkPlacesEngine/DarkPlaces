@@ -308,7 +308,7 @@ void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend)
 		else if (!strcmp(argv[0], "size")) {readfloats(info->size, 2);}
 		else if (!strcmp(argv[0], "sizeincrease")) {readfloat(info->size[2]);}
 		else if (!strcmp(argv[0], "alpha")) {readfloats(info->alpha, 3);}
-		else if (!strcmp(argv[0], "time")) {readints(info->time, 2);}
+		else if (!strcmp(argv[0], "time")) {readfloats(info->time, 2);}
 		else if (!strcmp(argv[0], "gravity")) {readfloat(info->gravity);}
 		else if (!strcmp(argv[0], "bounce")) {readfloat(info->bounce);}
 		else if (!strcmp(argv[0], "airfriction")) {readfloat(info->airfriction);}
