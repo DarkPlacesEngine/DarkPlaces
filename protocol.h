@@ -57,7 +57,7 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define EF_NODEPTHTEST			8192		// LordHavoc: shows through walls
 #define EF_SELECTABLE			16384		// LordHavoc: highlights when PRYDON_CLIENTCURSOR mouse is over it
 #define EF_DOUBLESIDED			32768		//[515]: disable cull face for this entity
-#define EF_UNUSED16				65536
+#define EF_NOSELFSHADOW			65536		// LordHavoc: does not cast a shadow on itself (or any other EF_NOSELFSHADOW entities)
 #define EF_UNUSED17				131072
 #define EF_UNUSED18				262144
 #define EF_UNUSED19				524288
