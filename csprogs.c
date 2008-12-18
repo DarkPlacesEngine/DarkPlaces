@@ -224,6 +224,8 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 		entrender->flags |= RENDER_SHADOW;
 	if (entrender->flags & RENDER_VIEWMODEL)
 		entrender->flags |= RENDER_NOSELFSHADOW;
+	if (entrender->effects & EF_NOSELFSHADOW)
+		entrender->flags |= RENDER_NOSELFSHADOW;
 
 	// make the other useful stuff
 	CL_UpdateRenderEntity(entrender);
