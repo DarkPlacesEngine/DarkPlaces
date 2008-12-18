@@ -1,4 +1,7 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
+0 feature darkplaces client rtlights: ChrisP has a suggestion of selecting rtlight properties using the number keys, and increasing/decreasing their value using the mouse wheel (cvars needed for amounts to adjust by), and ability to right click a light to delete it, left click to select a light, left drag to move a light on the XY plane it is on (ChrisP)
+0 feature darkplaces client particles: effectinfo.txt should have a "particlefont" command specifying a filename, number of cells per row, number of rows, number of bottom rows that are beams, this would allow more particle images to be used (ChrisP)
+d feature darkplaces client extensions: EF_NOSELFSHADOW flag (ChrisP)
 0 bug darkplaces client csqc: engine prediction function is not implemented - could just return the engine's current cl.movement_origin (Spike)
 0 bug darkplaces client csqc: entities not being drawn with VF_PERSPECTIVE 0? (daemon)
 0 bug darkplaces client csqc: input queue functions needed for csqc prediction aren't implemented (Spike)

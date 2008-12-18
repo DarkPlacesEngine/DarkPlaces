@@ -1065,6 +1065,8 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 		e->render.flags |= RENDER_SHADOW;
 	if (e->render.flags & RENDER_VIEWMODEL)
 		e->render.flags |= RENDER_NOSELFSHADOW;
+	if (e->render.effects & EF_NOSELFSHADOW)
+		e->render.flags |= RENDER_NOSELFSHADOW;
 
 	// make the other useful stuff
 	CL_UpdateRenderEntity(&e->render);
