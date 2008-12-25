@@ -189,7 +189,7 @@ double Sys_DoubleTime (void)
 
 char *Sys_ConsoleInput(void)
 {
-	if (cls.state == ca_dedicated)
+	//if (cls.state == ca_dedicated)
 	{
 		static char text[MAX_INPUTLINE];
 		static unsigned int len = 0;
