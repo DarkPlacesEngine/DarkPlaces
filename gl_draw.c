@@ -922,7 +922,15 @@ static void DrawQ_GetTextColor(float color[4], int colorindex, float r, float g,
 {
 	float C = r_textcontrast.value;
 	float B = r_textbrightness.value;
-	Vector4Copy(string_colors[colorindex], color);
+	if (colorindex & 0x10000) // that bit means RGB color
+	{
+		color[0] = ((colorindex >> 12) & 0xf) / 15.0;
+		color[1] = ((colorindex >> 8) & 0xf) / 15.0;
+		color[2] = ((colorindex >> 4) & 0xf) / 15.0;
+		color[3] = (colorindex & 0xf) / 15.0;
+	}
+	else
+		Vector4Copy(string_colors[colorindex], color);
 	Vector4Set(color, (color[0] * C + B) * r, (color[1] * C + B) * g, (color[2] * C + B) * b, color[3] * a);
 	if (shadow)
 	{
@@ -936,6 +944,8 @@ float DrawQ_TextWidth_Font_UntilWidth_TrackColors(const char *text, size_t *maxl
 	int num, colorindex = STRING_COLOR_DEFAULT;
 	size_t i;
 	float x = 0;
+	char ch;
+	int current_alpha, tempcolorindex;
 
 	if (*maxlen < 1)
 		*maxlen = 1<<30;
@@ -946,6 +956,8 @@ float DrawQ_TextWidth_Font_UntilWidth_TrackColors(const char *text, size_t *maxl
 		colorindex = *outcolor;
 
 	maxwidth /= fnt->scale;
+
+	current_alpha = 0xf;
 
 	for (i = 0;i < *maxlen && text[i];i++)
 	{
@@ -958,16 +970,69 @@ float DrawQ_TextWidth_Font_UntilWidth_TrackColors(const char *text, size_t *maxl
 		}
 		if (text[i] == STRING_COLOR_TAG && !ignorecolorcodes && i + 1 < *maxlen)
 		{
-			if (text[i+1] == STRING_COLOR_TAG)
+			ch = text[++i];
+            if (ch <= '9' && ch >= '0') // ^[0-9] found
 			{
-				i++;
+				colorindex = ch - '0';
+                continue;
 			}
-			else if (text[i+1] >= '0' && text[i+1] <= '9')
+			else if (ch == STRING_COLOR_RGB_DEFAULT && i + 3 < *maxlen ) // ^x found
 			{
-				colorindex = text[i+1] - '0';
+				// building colorindex...
+				ch = tolower(text[i+1]);
+				tempcolorindex = 0x10000; // binary: 1,0000,0000,0000,0000
+				if (ch <= '9' && ch >= '0') tempcolorindex |= (ch - '0') << 12;
+				else if (ch >= 'a' && ch <= 'f') tempcolorindex |= (ch - 87) << 12;
+				else tempcolorindex = 0;
+				if (tempcolorindex)
+				{
+					ch = tolower(text[i+2]);
+					if (ch <= '9' && ch >= '0') tempcolorindex |= (ch - '0') << 8;
+					else if (ch >= 'a' && ch <= 'f') tempcolorindex |= (ch - 87) << 8;
+					else tempcolorindex = 0;
+					if (tempcolorindex)
+					{
+						ch = tolower(text[i+3]);
+						if (ch <= '9' && ch >= '0') tempcolorindex |= (ch - '0') << 4;
+						else if (ch >= 'a' && ch <= 'f') tempcolorindex |= (ch - 87) << 4;
+						else tempcolorindex = 0;
+						if (tempcolorindex)
+						{
+							colorindex = tempcolorindex | current_alpha;
+							// ...done! now colorindex has rgba codes (1,rrrr,gggg,bbbb,aaaa)
+							i+=3;
+							continue;
+						}
+					}
+				}
+			}
+			/*else if (ch == 'a' && i + 1 < *maxlen) // ^a found
+			{
+				if (colorindex > 9)
+				{
+					ch = tolower(text[i+1]);
+					if (ch <= '9' && ch >= '0') current_alpha = (ch - '0');
+					else if (ch >= 'a' && ch <= 'f') current_alpha = (ch - 87);
+					else if (ch == '+' && colorindex > 9)
+					{
+						current_alpha = colorindex & 0xf;
+						if (current_alpha < 0xf)
+							current_alpha++;
+					}
+					else if (ch == '-' && colorindex > 9)
+					{
+						current_alpha = colorindex & 0xf;
+						if (current_alpha > 0)
+							current_alpha--;
+					}
+					colorindex = ((colorindex >> 4 ) << 4) + current_alpha;
+				}
 				i++;
 				continue;
-			}
+			}*/
+			else if (ch == STRING_COLOR_TAG) // ^^ found, ignore the first ^ and go to print the second
+				i++;
+			i--;
 		}
 		num = (unsigned char) text[i];
 		if(x + fnt->width_of[num] > maxwidth)
@@ -994,6 +1059,8 @@ float DrawQ_String_Font(float startx, float starty, const char *text, size_t max
 	float vertex3f[QUADELEMENTS_MAXQUADS*4*3];
 	float texcoord2f[QUADELEMENTS_MAXQUADS*4*2];
 	float color4f[QUADELEMENTS_MAXQUADS*4*4];
+	char ch;
+	int current_alpha, tempcolorindex;
 
 	int tw, th;
 	tw = R_TextureWidth(fnt->tex);
@@ -1035,6 +1102,7 @@ float DrawQ_String_Font(float startx, float starty, const char *text, size_t max
 			x += r_textshadow.value;
 			y += r_textshadow.value;
 		}
+		current_alpha = 0xf;
 		for (i = 0;i < maxlen && text[i];i++)
 		{
 			if (text[i] == ' ')
@@ -1044,17 +1112,74 @@ float DrawQ_String_Font(float startx, float starty, const char *text, size_t max
 			}
 			if (text[i] == STRING_COLOR_TAG && !ignorecolorcodes && i + 1 < maxlen)
 			{
-				if (text[i+1] == STRING_COLOR_TAG)
+				ch = text[++i];
+				if (ch <= '9' && ch >= '0') // ^[0-9] found
 				{
-					i++;
-				}
-				else if (text[i+1] >= '0' && text[i+1] <= '9')
-				{
-					colorindex = text[i+1] - '0';
+					colorindex = ch - '0';
 					DrawQ_GetTextColor(color, colorindex, basered, basegreen, baseblue, basealpha, shadow);
-					i++;
 					continue;
 				}
+				else if (ch == STRING_COLOR_RGB_DEFAULT && i+3 < maxlen ) // ^x found
+				{
+					// building colorindex...
+					ch = tolower(text[i+1]);
+					tempcolorindex = 0x10000; // binary: 1,0000,0000,0000,0000
+					if (ch <= '9' && ch >= '0') tempcolorindex |= (ch - '0') << 12;
+					else if (ch >= 'a' && ch <= 'f') tempcolorindex |= (ch - 87) << 12;
+					else tempcolorindex = 0;
+					if (tempcolorindex)
+					{
+						ch = tolower(text[i+2]);
+						if (ch <= '9' && ch >= '0') tempcolorindex |= (ch - '0') << 8;
+						else if (ch >= 'a' && ch <= 'f') tempcolorindex |= (ch - 87) << 8;
+						else tempcolorindex = 0;
+						if (tempcolorindex)
+						{
+							ch = tolower(text[i+3]);
+							if (ch <= '9' && ch >= '0') tempcolorindex |= (ch - '0') << 4;
+							else if (ch >= 'a' && ch <= 'f') tempcolorindex |= (ch - 87) << 4;
+							else tempcolorindex = 0;
+							if (tempcolorindex)
+							{
+								colorindex = tempcolorindex | current_alpha;
+								// ...done! now colorindex has rgba codes (1,rrrr,gggg,bbbb,aaaa)
+								//Con_Printf("^1colorindex:^7 %x\n", colorindex);
+								DrawQ_GetTextColor(color, colorindex, basered, basegreen, baseblue, basealpha, shadow);
+								i+=3;
+								continue;
+							}
+						}
+					}
+				}
+				/*else if (ch == 'a' && i+1 < maxlen ) // ^a found
+				{
+					if (colorindex > 9) // colorindex is a RGB color
+					{
+						ch = tolower(text[i+1]);
+						if (ch <= '9' && ch >= '0') current_alpha = (ch - '0');
+						else if (ch >= 'a' && ch <= 'f') current_alpha = (ch - 87);
+						else if (ch == '+' && colorindex > 9)
+						{
+							current_alpha = colorindex & 0xf;
+							if (current_alpha < 0xf)
+								current_alpha++;
+						}
+						else if (ch == '-' && colorindex > 9)
+						{
+							current_alpha = colorindex & 0xf;
+							if (current_alpha > 0)
+								current_alpha--;
+						}
+						colorindex = ((colorindex >> 4 ) << 4) + current_alpha;
+						//Con_Printf("^1colorindex:^7 %x\n", colorindex);
+						DrawQ_GetTextColor(color, colorindex, basered, basegreen, baseblue, basealpha, shadow);
+					}
+					i++;
+					continue;
+				}*/
+				else if (ch == STRING_COLOR_TAG)
+					i++;
+				i--;
 			}
 			num = (unsigned char) text[i];
 			thisw = fnt->width_of[num];
@@ -1067,14 +1192,14 @@ float DrawQ_String_Font(float startx, float starty, const char *text, size_t max
 			ac[ 4] = color[0];ac[ 5] = color[1];ac[ 6] = color[2];ac[ 7] = color[3];
 			ac[ 8] = color[0];ac[ 9] = color[1];ac[10] = color[2];ac[11] = color[3];
 			ac[12] = color[0];ac[13] = color[1];ac[14] = color[2];ac[15] = color[3];
-			at[ 0] = s  ;at[ 1] = t  ;
-			at[ 2] = s+u;at[ 3] = t  ;
-			at[ 4] = s+u;at[ 5] = t+v;
-			at[ 6] = s  ;at[ 7] = t+v;
-			av[ 0] = x  ;av[ 1] = y  ;av[ 2] = 10;
-			av[ 3] = x+w*thisw;av[ 4] = y  ;av[ 5] = 10;
-			av[ 6] = x+w*thisw;av[ 7] = y+h;av[ 8] = 10;
-			av[ 9] = x  ;av[10] = y+h;av[11] = 10;
+			at[ 0] = s		; at[ 1] = t	;
+			at[ 2] = s+u	; at[ 3] = t	;
+			at[ 4] = s+u	; at[ 5] = t+v	;
+			at[ 6] = s		; at[ 7] = t+v	;
+			av[ 0] = x			; av[ 1] = y	; av[ 2] = 10;
+			av[ 3] = x+w*thisw	; av[ 4] = y	; av[ 5] = 10;
+			av[ 6] = x+w*thisw	; av[ 7] = y+h	; av[ 8] = 10;
+			av[ 9] = x			; av[10] = y+h	; av[11] = 10;
 			ac += 16;
 			at += 8;
 			av += 12;
@@ -1111,18 +1236,19 @@ float DrawQ_String(float startx, float starty, const char *text, size_t maxlen, 
 	return DrawQ_String_Font(startx, starty, text, maxlen, w, h, basered, basegreen, baseblue, basealpha, flags, outcolor, ignorecolorcodes, &dp_fonts[0]);
 }
 
-float DrawQ_TextWidth_Font_UntilWidth(const char *text, size_t *maxlen, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxWidth)
-{
-	return DrawQ_TextWidth_Font_UntilWidth_TrackColors(text, maxlen, NULL, ignorecolorcodes, fnt, maxWidth);
-}
-
 float DrawQ_TextWidth_Font(const char *text, size_t maxlen, qboolean ignorecolorcodes, const dp_font_t *fnt)
 {
 	return DrawQ_TextWidth_Font_UntilWidth(text, &maxlen, ignorecolorcodes, fnt, 1000000000);
 }
 
+float DrawQ_TextWidth_Font_UntilWidth(const char *text, size_t *maxlen, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxWidth)
+{
+	return DrawQ_TextWidth_Font_UntilWidth_TrackColors(text, maxlen, NULL, ignorecolorcodes, fnt, maxWidth);
+}
+
 #if 0
 // not used
+// no ^xrgb management
 static int DrawQ_BuildColoredText(char *output2c, size_t maxoutchars, const char *text, int maxreadchars, qboolean ignorecolorcodes, int *outcolor)
 {
 	int color, numchars = 0;

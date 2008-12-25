@@ -873,6 +873,69 @@ void Con_Rcon_AddChar(char c)
 	--log_dest_buffer_appending;
 }
 
+/**
+ * Convert an RGB color to its nearest quake color.
+ * I'll cheat on this a bit by translating the colors to HSV first,
+ * S and V decide if it's black or white, otherwise, H will decide the
+ * actual color.
+ * @param _r Red (0-255)
+ * @param _g Green (0-255)
+ * @param _b Blue (0-255)
+ * @return A quake color character.
+ */
+static char Sys_Con_NearestColor(const unsigned char _r, const unsigned char _g, const unsigned char _b)
+{
+	float r = ((float)_r)/255.0;
+	float g = ((float)_g)/255.0;
+	float b = ((float)_b)/255.0;
+	float min = min(r, min(g, b));
+	float max = max(r, max(g, b));
+
+	int h; ///< Hue angle [0,360]
+	float s; ///< Saturation [0,1]
+	float v = max; ///< In HSV v == max [0,1]
+
+	if(max == min)
+		s = 0;
+	else
+		s = 1.0 - (min/max);
+
+	// Saturation threshold. We now say 0.2 is the minimum value for a color!
+	if(s < 0.2)
+	{
+		// If the value is less than half, return a black color code.
+		// Otherwise return a white one.
+		if(v < 0.5)
+			return '0';
+		return '7';
+	}
+
+	// Let's get the hue angle to define some colors:
+	if(max == min)
+		h = 0;
+	else if(max == r)
+		h = (int)(60.0 * (g-b)/(max-min))%360;
+	else if(max == g)
+		h = (int)(60.0 * (b-r)/(max-min) + 120);
+	else if(max == b)
+		h = (int)(60.0 * (r-g)/(max-min) + 240);
+
+	if(h < 36) // *red* to orange
+		return '1';
+	else if(h < 80) // orange over *yellow* to evilish-bright-green
+		return '3';
+	else if(h < 150) // evilish-bright-green over *green* to ugly bright blue
+		return '2';
+	else if(h < 200) // ugly bright blue over *bright blue* to darkish blue
+		return '5';
+	else if(h < 270) // darkish blue over *dark blue* to cool purple
+		return '4';
+	else if(h < 330) // cool purple over *purple* to ugly swiny red
+		return '6';
+	else // ugly red to red closes the circly
+		return '1';
+}
+
 /*
 ================
 Con_Print
@@ -967,13 +1030,39 @@ void Con_Print(const char *msg)
 					int lastcolor = 0;
 					const char *in;
 					char *out;
+					char color;
 					for(in = line, out = printline; *in; ++in)
 					{
 						switch(*in)
 						{
 							case STRING_COLOR_TAG:
-								switch(in[1])
+								if( in[1] == STRING_COLOR_RGB_DEFAULT && isxdigit(in[2]) && isxdigit(in[3]) && isxdigit(in[4]) )
 								{
+									char r = tolower(in[2]);
+									char g = tolower(in[3]);
+									char b = tolower(in[4]);
+									// it's a hex digit already, so the else part needs no check --blub
+									if(isdigit(r)) r -= '0';
+									else r -= 87;
+									if(isdigit(g)) g -= '0';
+									else g -= 87;
+									if(isdigit(b)) b -= '0';
+									else b -= 87;
+									
+									color = Sys_Con_NearestColor(r * 17, g * 17, b * 17);
+									in += 3; // 3 only, the switch down there does the fourth
+								}
+								else
+									color = in[1];
+								
+								switch(color)
+								{
+									/*case 'a':
+										if ( isxdigit(in[2]) || in[2] == '+' || in[2] == '-' )
+										{
+											in+=2;
+											break;
+										}*/
 									case STRING_COLOR_TAG:
 										++in;
 										*out++ = STRING_COLOR_TAG;
@@ -1072,6 +1161,18 @@ void Con_Print(const char *msg)
 							case STRING_COLOR_TAG:
 								switch(in[1])
 								{
+									case STRING_COLOR_RGB_DEFAULT:
+										if ( isxdigit(in[2]) && isxdigit(in[3]) && isxdigit(in[4]) )
+										{
+											in+=4;
+											break;
+										}
+									/*case 'a':
+										if ( isxdigit(in[2]) || in[2] == '+' || in[2] == '-' )
+										{
+											in+=2;
+											break;
+										}*/
 									case STRING_COLOR_TAG:
 										++in;
 										*out++ = STRING_COLOR_TAG;
@@ -1436,7 +1537,7 @@ void Con_DrawNotify (void)
 	if(numChatlines)
 	{
 		v = chatstart + numChatlines * con_chatsize.value;
-		Con_DrawNotifyRect(CON_MASK_CHAT, 0, con_chattime.value, 0, chatstart, vid_conwidth.value * con_chatwidth.value, v - chatstart, con_chatsize.value, 0.0, 1.0, "^3\014\014\014 "); // 015 is ·> character in conchars.tga
+		Con_DrawNotifyRect(CON_MASK_CHAT, 0, con_chattime.value, 0, chatstart, vid_conwidth.value * con_chatwidth.value, v - chatstart, con_chatsize.value, 0.0, 1.0, "^3\014\014\014 "); // 015 is Â·> character in conchars.tga
 	}
 
 	if (key_dest == key_message)
@@ -1804,11 +1905,10 @@ void Con_DisplayList(const char **list)
 		Con_Print("\n\n");
 }
 
-/* Nicks_CompleteCountPossible
-
-   Count the number of possible nicks to complete
- */
-//qboolean COM_StringDecolorize(const char *in, size_t size_in, char *out, size_t size_out, qboolean escape_carets);
+/*
+	SanitizeString strips color tags from the string in
+	and writes the result on string out
+*/
 void SanitizeString(char *in, char *out)
 {
 	while(*in)
@@ -1821,18 +1921,47 @@ void SanitizeString(char *in, char *out)
 				out[0] = STRING_COLOR_TAG;
 				out[1] = 0;
 				return;
-			} else if(*in >= '0' && *in <= '9')
+			}
+			else if (*in >= '0' && *in <= '9') // ^[0-9] found
 			{
 				++in;
-				if(!*in) // end
+				if(!*in)
 				{
 					*out = 0;
 					return;
-				} else if (*in == STRING_COLOR_TAG)
+				} else if (*in == STRING_COLOR_TAG) // ^[0-9]^ found, don't print ^[0-9]
 					continue;
-			} else if (*in != STRING_COLOR_TAG) {
-				--in;
 			}
+			else if (*in == STRING_COLOR_RGB_DEFAULT) // ^x found
+			{
+				if ( isxdigit(in[1]) && isxdigit(in[2]) && isxdigit(in[3]) )
+				{
+					in+=4;
+					if (!*in)
+					{
+						*out = 0;
+						return;
+					} else if (*in == STRING_COLOR_TAG) // ^xrgb^ found, don't print ^xrgb
+						continue;
+				}
+				else in--;
+			}
+			/*else if (*in == 'a') // ^a found
+			{
+				if ( isxdigit(in[1]) || isxdigit(in[1]) == '+' || isxdigit(in[1]) == '-')
+				{
+					in+=2;
+					if (!*in)
+					{
+						*out = 0;
+						return;
+					} else if (*in == STRING_COLOR_TAG) // ^ax^ found, don't print ^ax
+						continue;
+				}
+				else in = in--;
+			}*/
+			else if (*in != STRING_COLOR_TAG)
+				--in;
 		}
 		*out = qfont_table[*(unsigned char*)in];
 		++in;
@@ -1921,6 +2050,11 @@ int Nicks_strncasecmp(char *a, char *b, unsigned int a_len)
 	return 0;
 }
 
+
+/* Nicks_CompleteCountPossible
+
+   Count the number of possible nicks to complete
+ */
 int Nicks_CompleteCountPossible(char *line, int pos, char *s, qboolean isCon)
 {
 	char name[128];
@@ -1944,7 +2078,7 @@ int Nicks_CompleteCountPossible(char *line, int pos, char *s, qboolean isCon)
 			continue;
 
 		SanitizeString(cl.scores[p].name, name);
-		//Con_Printf("Sanitized: %s^7 -> %s", cl.scores[p].name, name);
+		//Con_Printf(" ^2Sanitized: ^7%s -> %s", cl.scores[p].name, name);
 
 		if(!name[0])
 			continue;
@@ -2176,11 +2310,16 @@ const char **Nicks_CompleteBuildList(int count)
 	return buf;
 }
 
+/*
+	Nicks_AddLastColor
+	Restores the previous used color, after the autocompleted name.
+*/
 int Nicks_AddLastColor(char *buffer, int pos)
 {
 	qboolean quote_added = false;
 	int match;
-	char color = '7';
+	char color = STRING_COLOR_DEFAULT + '0';
+	char r = 0, g = 0, b = 0;
 
 	if(con_nickcompletion_flags.integer & NICKS_ADD_QUOTE && buffer[Nicks_matchpos-1] == '\"')
 	{
@@ -2195,16 +2334,58 @@ int Nicks_AddLastColor(char *buffer, int pos)
 		// find last color
 		for(match = Nicks_matchpos-1; match >= 0; --match)
 		{
-			if(buffer[match] == STRING_COLOR_TAG && buffer[match+1] >= '0' && buffer[match+1] <= '9')
+			if(buffer[match] == STRING_COLOR_TAG)
 			{
-				color = buffer[match+1];
-				break;
+				if( isdigit(buffer[match+1]) )
+				{
+					color = buffer[match+1];
+					break;
+				}
+				else if(buffer[match+1] == STRING_COLOR_RGB_DEFAULT)
+				{
+					if ( isxdigit(buffer[match+2]) && isxdigit(buffer[match+3]) && isxdigit(buffer[match+4]) )
+						r = buffer[match+2];
+						g = buffer[match+3];
+						b = buffer[match+4];
+						color = -1;
+						break;
+				}
 			}
 		}
-		if(!quote_added && buffer[pos-2] == STRING_COLOR_TAG && buffer[pos-1] >= '0' && buffer[pos-1] <= '9') // when thes use &4
-			pos -= 2;
-		buffer[pos++] = STRING_COLOR_TAG;
-		buffer[pos++] = color;
+		if(!quote_added)
+		{
+			if( buffer[pos-2] == STRING_COLOR_TAG && isdigit(buffer[pos-1]) ) // when thes use &4
+			{
+				pos -= 2;
+			}
+			else if( pos >= 5 && buffer[pos-5] == STRING_COLOR_TAG && buffer[pos-4] == STRING_COLOR_RGB_DEFAULT)
+			{
+				if ( isxdigit(buffer[pos-3]) && isxdigit(buffer[pos-2]) && isxdigit(buffer[pos-1]) )
+				{
+					pos -= 5;
+					color = -1;
+				}
+			}
+		}
+		if (color == -1)
+		{
+			buffer[pos++] = STRING_COLOR_TAG;
+			buffer[pos++] = STRING_COLOR_RGB_DEFAULT;
+			buffer[pos++] = r;
+			buffer[pos++] = g;
+			buffer[pos++] = b;
+		}
+		/*else if (color == -2)
+		{
+			buffer[pos++] = STRING_COLOR_TAG;
+			buffer[pos++] = 'a';
+			buffer[pos++] = a;
+		}*/
+		else
+		{
+			buffer[pos++] = STRING_COLOR_TAG;
+			buffer[pos++] = color;
+		}
 	}
 	return pos;
 }
@@ -2223,7 +2404,7 @@ int Nicks_CompleteChatLine(char *buffer, size_t size, unsigned int pos)
 		msg = Nicks_list[0];
 		len = min(size - Nicks_matchpos - 3, strlen(msg));
 		memcpy(&buffer[Nicks_matchpos], msg, len);
-		if( len < (size - 4) ) // space for color and space and \0
+		if( len < (size - 7) ) // space for color (^[0-9] or ^xrgb) and space and \0
 			len = Nicks_AddLastColor(buffer, Nicks_matchpos+len);
 		buffer[len++] = ' ';
 		buffer[len] = 0;

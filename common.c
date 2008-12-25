@@ -1777,6 +1777,26 @@ COM_StringLengthNoColors(const char *s, size_t size_s, qboolean *valid)
 				++s;
 				switch((s == end) ? 0 : *s)
 				{
+					case STRING_COLOR_RGB_DEFAULT:
+						if (s+1 != end && isxdigit(s[1]) &&
+							s+2 != end && isxdigit(s[2]) &&
+							s+3 != end && isxdigit(s[3]) )
+						{
+							s+=3;
+							break;
+						}
+						++len; // STRING_COLOR_TAG
+						++len; // STRING_COLOR_RGB_DEFAULT
+						break;
+					/*case 'a':
+						if ( s+1 != end && ( isxdigit(s[1]) || (s[1] == '+' || s[1] == '-') ) )
+						{
+							s++;
+							break;
+						}
+						++len; // STRING_COLOR_TAG
+						++len; // STRING_COLOR_RGB_DEFAULT
+						break;*/
 					case 0: // ends with unfinished color code!
 						++len;
 						if(valid)
@@ -1841,6 +1861,20 @@ COM_StringDecolorize(const char *in, size_t size_in, char *out, size_t size_out,
 				++in;
 				switch((in == end) ? 0 : *in)
 				{
+					case STRING_COLOR_RGB_DEFAULT:
+						if (in+1 != end && isxdigit(in[1]) &&
+							in+2 != end && isxdigit(in[2]) &&
+							in+3 != end && isxdigit(in[3]) )
+						{
+							in+=3;
+							break;
+						}
+					/*case 'a':
+						if ( in+1 != end && ( isxdigit(in[1]) || (in[1] == '+' || in[1] == '-') ) )
+						{
+							in++;
+							break;
+						}*/
 					case 0: // ends with unfinished color code!
 						APPEND(STRING_COLOR_TAG);
 						// finish the code by appending another caret when escaping
