@@ -1957,9 +1957,7 @@ void VM_strdecolorize(void)
 	// Prepare Strings
 	VM_SAFEPARMCOUNT(1,VM_strdecolorize);
 	szString = PRVM_G_STRING(OFS_PARM0);
-
 	COM_StringDecolorize(szString, 0, szNewString, sizeof(szNewString), TRUE);
-
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(szNewString);
 }
 
@@ -4409,50 +4407,18 @@ void VM_changepitch (void)
 	PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.angles)->vector[0] = ANGLEMOD (current + move);
 }
 
-// TODO: adapt all static function names to use a single naming convention... [12/3/2007 Black]
-static int Is_Text_Color (char c, char t)
-{
-	int a = 0;
-	char c2 = c - (c & 128);
-	char t2 = t - (t & 128);
-
-	if(c != STRING_COLOR_TAG && c2 != STRING_COLOR_TAG)		return 0;
-	if(t >= '0' && t <= '9')		a = 1;
-	if(t2 >= '0' && t2 <= '9')		a = 1;
-/*	if(t >= 'A' && t <= 'Z')		a = 2;
-	if(t2 >= 'A' && t2 <= 'Z')		a = 2;
-
-	if(a == 1 && scr_colortext.integer > 0)
-		return 1;
-	if(a == 2 && scr_multifonts.integer > 0)
-		return 2;
-*/
-	return a;
-}
 
 void VM_uncolorstring (void)
 {
-	const char	*in;
-	char		out[VM_STRINGTEMP_LENGTH];
-	int			k = 0, i = 0;
+	char szNewString[VM_STRINGTEMP_LENGTH];
+	const char *szString;
 
+	// Prepare Strings
 	VM_SAFEPARMCOUNT(1, VM_uncolorstring);
-	in = PRVM_G_STRING(OFS_PARM0);
-	VM_CheckEmptyString (in);
-
-	while (in[k])
-	{
-		if(in[k+1])
-		if(Is_Text_Color(in[k], in[k+1]) == 1/* || (in[k] == '&' && in[k+1] == 'r')*/)
-		{
-			k += 2;
-			continue;
-		}
-		out[i] = in[k];
-		++k;
-		++i;
-	}
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(out);
+	szString = PRVM_G_STRING(OFS_PARM0);
+	COM_StringDecolorize(szString, 0, szNewString, sizeof(szNewString), TRUE);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(szNewString);
+	
 }
 
 // #221 float(string str, string sub[, float startpos]) strstrofs (FTE_STRINGS)
