@@ -917,7 +917,7 @@ static char Sys_Con_NearestColor(const unsigned char _r, const unsigned char _g,
 		h = (int)(60.0 * (g-b)/(max-min))%360;
 	else if(max == g)
 		h = (int)(60.0 * (b-r)/(max-min) + 120);
-	else if(max == b)
+	else // if(max == b) redundant check
 		h = (int)(60.0 * (r-g)/(max-min) + 240);
 
 	if(h < 36) // *red* to orange
