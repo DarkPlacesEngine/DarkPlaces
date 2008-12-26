@@ -931,10 +931,10 @@ static void DrawQ_GetTextColor(float color[4], int colorindex, float r, float g,
 	}
 	else
 		Vector4Copy(string_colors[colorindex], color);
-	Vector4Set(color, (color[0] * C + B) * r, (color[1] * C + B) * g, (color[2] * C + B) * b, color[3] * a);
+	Vector4Set(color, color[0] * r * C + B, color[1] * g * C + B, color[2] * b * C + B, color[3] * a);
 	if (shadow)
 	{
-		float shadowalpha = color[0]+color[1]+color[2] * 0.8;
+		float shadowalpha = (color[0]+color[1]+color[2]) * 0.8;
 		Vector4Set(color, 0, 0, 0, color[3] * bound(0, shadowalpha, 1));
 	}
 }
@@ -1093,6 +1093,7 @@ float DrawQ_String_Font(float startx, float starty, const char *text, size_t max
 			colorindex = STRING_COLOR_DEFAULT;
 		else
 			colorindex = *outcolor;
+
 		DrawQ_GetTextColor(color, colorindex, basered, basegreen, baseblue, basealpha, shadow);
 
 		x = startx;
