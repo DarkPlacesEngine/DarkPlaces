@@ -2270,24 +2270,68 @@ float tokenize(string s)
 //float(string s) tokenize = #441; // takes apart a string into individal words (access them with argv), returns how many
 //this function originally written by KrimZon, made shorter by LordHavoc
 //20040203: rewritten by LordHavoc (no longer uses allocations)
-int num_tokens = 0;
-int tokens[256];
+static int num_tokens = 0;
+static int tokens[256];
+static int tokens_startpos[256];
+static int tokens_endpos[256];
 void VM_tokenize (void)
 {
 	const char *p;
-	static char string[VM_STRINGTEMP_LENGTH]; // static, because it's big
+	const char *string;
 
 	VM_SAFEPARMCOUNT(1,VM_tokenize);
 
-	strlcpy(string, PRVM_G_STRING(OFS_PARM0), sizeof(string));
+	string = PRVM_G_STRING(OFS_PARM0);
 	p = string;
 
 	num_tokens = 0;
-	while(COM_ParseToken_VM_Tokenize(&p, false))
+	for(;;)
 	{
 		if (num_tokens >= (int)(sizeof(tokens)/sizeof(tokens[0])))
 			break;
-		tokens[num_tokens++] = PRVM_SetTempString(com_token);
+
+		// skip whitespace here to find token start pos
+		while(*p && (unsigned char) *p <= ' ')
+			++p;
+
+		tokens_startpos[num_tokens] = p - string;
+		if(!COM_ParseToken_VM_Tokenize(&p, false))
+			break;
+		tokens_endpos[num_tokens] = p - string;
+		tokens[num_tokens] = PRVM_SetTempString(com_token);
+		++num_tokens;
+	}
+
+	PRVM_G_FLOAT(OFS_RETURN) = num_tokens;
+}
+
+//float(string s) tokenize = #514; // takes apart a string into individal words (access them with argv), returns how many
+void VM_tokenize_console (void)
+{
+	const char *p;
+	const char *string;
+
+	VM_SAFEPARMCOUNT(1,VM_tokenize);
+
+	string = PRVM_G_STRING(OFS_PARM0);
+	p = string;
+
+	num_tokens = 0;
+	for(;;)
+	{
+		if (num_tokens >= (int)(sizeof(tokens)/sizeof(tokens[0])))
+			break;
+
+		// skip whitespace here to find token start pos
+		while(*p && (unsigned char) *p <= ' ')
+			++p;
+
+		tokens_startpos[num_tokens] = p - string;
+		if(!COM_ParseToken_Console(&p))
+			break;
+		tokens_endpos[num_tokens] = p - string;
+		tokens[num_tokens] = PRVM_SetTempString(com_token);
+		++num_tokens;
 	}
 
 	PRVM_G_FLOAT(OFS_RETURN) = num_tokens;
@@ -2316,11 +2360,11 @@ void VM_tokenizebyseparator (void)
 	const char *p;
 	const char *token;
 	char tokentext[MAX_INPUTLINE];
-	static char string[VM_STRINGTEMP_LENGTH]; // static, because it's big
+	const char *string;
 
 	VM_SAFEPARMCOUNTRANGE(2, 8,VM_tokenizebyseparator);
 
-	strlcpy(string, PRVM_G_STRING(OFS_PARM0), sizeof(string));
+	string = PRVM_G_STRING(OFS_PARM0);
 	p = string;
 
 	numseparators = 0;
@@ -2341,6 +2385,7 @@ void VM_tokenizebyseparator (void)
 	while (num_tokens < (int)(sizeof(tokens)/sizeof(tokens[0])))
 	{
 		token = tokentext + j;
+		tokens_startpos[num_tokens] = p - string;
 		while (*p)
 		{
 			for (k = 0;k < numseparators;k++)
@@ -2357,6 +2402,7 @@ void VM_tokenizebyseparator (void)
 				tokentext[j++] = *p;
 			p++;
 		}
+		tokens_endpos[num_tokens] = p - string;
 		if (j >= (int)sizeof(tokentext))
 			break;
 		tokentext[j++] = 0;
@@ -2378,10 +2424,49 @@ void VM_argv (void)
 
 	token_num = (int)PRVM_G_FLOAT(OFS_PARM0);
 
+	if(token_num < 0)
+		token_num += num_tokens;
+
 	if (token_num >= 0 && token_num < num_tokens)
 		PRVM_G_INT(OFS_RETURN) = tokens[token_num];
 	else
 		PRVM_G_INT(OFS_RETURN) = OFS_NULL;
+}
+
+//float(float n) argv_start_index = #515; // returns the start index of a token
+void VM_argv_start_index (void)
+{
+	int token_num;
+
+	VM_SAFEPARMCOUNT(1,VM_argv);
+
+	token_num = (int)PRVM_G_FLOAT(OFS_PARM0);
+
+	if(token_num < 0)
+		token_num += num_tokens;
+
+	if (token_num >= 0 && token_num < num_tokens)
+		PRVM_G_FLOAT(OFS_RETURN) = tokens_startpos[token_num];
+	else
+		PRVM_G_FLOAT(OFS_RETURN) = -1;
+}
+
+//float(float n) argv_end_index = #516; // returns the end index of a token
+void VM_argv_end_index (void)
+{
+	int token_num;
+
+	VM_SAFEPARMCOUNT(1,VM_argv);
+
+	token_num = (int)PRVM_G_FLOAT(OFS_PARM0);
+
+	if(token_num < 0)
+		token_num += num_tokens;
+
+	if (token_num >= 0 && token_num < num_tokens)
+		PRVM_G_FLOAT(OFS_RETURN) = tokens_endpos[token_num];
+	else
+		PRVM_G_FLOAT(OFS_RETURN) = -1;
 }
 
 /*

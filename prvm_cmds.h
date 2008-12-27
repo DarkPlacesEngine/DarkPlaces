@@ -432,3 +432,7 @@ void VM_whichpack (void);
 void VM_etof (void);
 void VM_uri_get (void);
 void VM_netaddress_resolve (void);
+
+void VM_tokenize_console (void);
+void VM_argv_start_index (void);
+void VM_argv_end_index (void);
