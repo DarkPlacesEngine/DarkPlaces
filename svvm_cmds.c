@@ -87,6 +87,7 @@ char *vm_sv_extensions =
 "DP_QC_STRING_CASE_FUNCTIONS "
 "DP_QC_STRREPLACE "
 "DP_QC_TOKENIZEBYSEPARATOR "
+"DP_QC_TOKENIZE_CONSOLE "
 "DP_QC_TRACEBOX "
 "DP_QC_TRACETOSS "
 "DP_QC_TRACE_MOVETYPE_HITMODEL "
@@ -3414,9 +3415,9 @@ VM_uri_escape,					// #510 string(string in) uri_escape = #510;
 VM_uri_unescape,				// #511 string(string in) uri_unescape = #511;
 VM_etof,					// #512 float(entity ent) num_for_edict = #512 (DP_QC_NUM_FOR_EDICT)
 VM_uri_get,						// #513 float(string uril, float id) uri_get = #513; (DP_QC_URI_GET)
-NULL,							// #514
-NULL,							// #515
-NULL,							// #516
+VM_tokenize_console,					// #514 float(string str) tokenize_console = #514; (DP_QC_TOKENIZE_CONSOLE)
+VM_argv_start_index,					// #515 float(float idx) argv_start_index = #515; (DP_QC_TOKENIZE_CONSOLE)
+VM_argv_end_index,						// #516 float(float idx) argv_end_index = #516; (DP_QC_TOKENIZE_CONSOLE)
 NULL,							// #517
 NULL,							// #518
 NULL,							// #519
