@@ -269,7 +269,7 @@ char *Sys_ConsoleInput (void)
 						break;
 
 					default:
-						if (ch >= ' ')
+						if (ch >= (int) (unsigned char) ' ')
 						{
 							WriteFile(houtput, &ch, 1, &dummy, NULL);
 							text[len] = ch;
@@ -423,7 +423,7 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	// FIXME: this tokenizer is rather redundent, call a more general one
 	while (*lpCmdLine && (com_argc < MAX_NUM_ARGVS))
 	{
-		while (*lpCmdLine && *lpCmdLine <= ' ')
+		while (*lpCmdLine && ISWHITESPACE(*lpCmdLine))
 			lpCmdLine++;
 
 		if (!*lpCmdLine)
@@ -443,7 +443,7 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 			// unquoted word
 			argv[com_argc] = lpCmdLine;
 			com_argc++;
-			while (*lpCmdLine && *lpCmdLine > ' ')
+			while (*lpCmdLine && !ISWHITESPACE(*lpCmdLine))
 				lpCmdLine++;
 		}
 

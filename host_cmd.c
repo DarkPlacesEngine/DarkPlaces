@@ -530,7 +530,7 @@ void Host_Savegame_to (const char *name)
 	// convert space to _ to make stdio happy
 	// LordHavoc: convert control characters to _ as well
 	for (i=0 ; i<SAVEGAME_COMMENT_LENGTH ; i++)
-		if (comment[i] <= ' ')
+		if (ISWHITESPACEORCONTROL(comment[i]))
 			comment[i] = '_';
 	comment[SAVEGAME_COMMENT_LENGTH] = '\0';
 
@@ -2317,7 +2317,7 @@ void Host_Rcon_f (void) // credit: taken from QuakeWorld
 
 	for (i = 0;rcon_password.string[i];i++)
 	{
-		if (rcon_password.string[i] <= ' ')
+		if (ISWHITESPACE(rcon_password.string[i]))
 		{
 			Con_Printf("rcon_password is not allowed to have any whitespace.\n");
 			return;

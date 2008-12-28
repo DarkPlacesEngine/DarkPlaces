@@ -45,7 +45,7 @@ void VM_Warning(const char *fmt, ...)
 
 void VM_CheckEmptyString (const char *s)
 {
-	if (s[0] <= ' ')
+	if (ISWHITESPACE(s[0]))
 		PRVM_ERROR ("%s: Bad string", PRVM_NAME);
 }
 
@@ -2291,7 +2291,7 @@ void VM_tokenize (void)
 			break;
 
 		// skip whitespace here to find token start pos
-		while(*p && (unsigned char) *p <= ' ')
+		while(*p && ISWHITESPACE(*p))
 			++p;
 
 		tokens_startpos[num_tokens] = p - string;
@@ -2323,7 +2323,7 @@ void VM_tokenize_console (void)
 			break;
 
 		// skip whitespace here to find token start pos
-		while(*p && (unsigned char) *p <= ' ')
+		while(*p && ISWHITESPACE(*p))
 			++p;
 
 		tokens_startpos[num_tokens] = p - string;

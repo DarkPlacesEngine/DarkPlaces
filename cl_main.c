@@ -209,7 +209,7 @@ void CL_SetInfo(const char *key, const char *value, qboolean send, qboolean allo
 	if (!allowmodel && (!strcasecmp(key, "pmodel") || !strcasecmp(key, "emodel")))
 		fail = true;
 	for (i = 0;key[i];i++)
-		if (key[i] <= ' ' || key[i] == '\"')
+		if (ISWHITESPACE(key[i]) || key[i] == '\"')
 			fail = true;
 	for (i = 0;value[i];i++)
 		if (value[i] == '\r' || value[i] == '\n' || value[i] == '\"')
@@ -2097,10 +2097,10 @@ void CL_Locs_Reload_f(void)
 		if (text < textend)
 			text++;
 		// trim trailing whitespace
-		while (lineend > linestart && lineend[-1] <= ' ')
+		while (lineend > linestart && ISWHITESPACE(lineend[-1]))
 			lineend--;
 		// trim leading whitespace
-		while (linestart < lineend && *linestart <= ' ')
+		while (linestart < lineend && ISWHITESPACE(*linestart))
 			linestart++;
 		// check if this is a comment
 		if (linestart + 2 <= lineend && !strncmp(linestart, "//", 2))
@@ -2117,7 +2117,7 @@ void CL_Locs_Reload_f(void)
 			else
 				maxs[i - 3] = atof(linetext);
 			// now advance past the number
-			while (linetext < lineend && *linetext > ' ' && *linetext != ',')
+			while (linetext < lineend && !ISWHITESPACE(*linetext) && *linetext != ',')
 				linetext++;
 			// advance through whitespace
 			if (linetext < lineend)
@@ -2128,10 +2128,10 @@ void CL_Locs_Reload_f(void)
 					limit = 6;
 					// note: comma can be followed by whitespace
 				}
-				if (*linetext <= ' ')
+				if (ISWHITESPACE(*linetext))
 				{
 					// skip whitespace
-					while (linetext < lineend && *linetext <= ' ')
+					while (linetext < lineend && ISWHITESPACE(*linetext))
 						linetext++;
 				}
 			}

@@ -354,5 +354,12 @@ void Sys_Shared_Init(void);
 // debug protocol exploits.
 #define DEMOMSG_CLIENT_TO_SERVER 0x80000000
 
+// In Quake, any char in 0..32 counts as whitespace
+//#define ISWHITESPACE(ch) ((unsigned char) ch <= (unsigned char) ' ')
+#define ISWHITESPACE(ch) (!(ch) || (ch) == ' ' || (ch) == '\t' || (ch) == '\r' || (ch) == '\n')
+
+// This also includes extended characters, and ALL control chars
+#define ISWHITESPACEORCONTROL(ch) ((signed char) (ch) <= (signed char) ' ')
+
 #endif
 

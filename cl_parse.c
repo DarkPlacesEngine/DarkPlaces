@@ -2716,7 +2716,7 @@ static void CL_IPLog_Load(void)
 			text++;
 		if (line[0] == '/' && line[1] == '/')
 			continue; // skip comments if anyone happens to add them
-		for (i = 0;i < len && line[i] > ' ';i++)
+		for (i = 0;i < len && !ISWHITESPACE(line[i]);i++)
 			address[i] = line[i];
 		address[i] = 0;
 		// skip exactly one space character

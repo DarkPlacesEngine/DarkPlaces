@@ -995,7 +995,7 @@ qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s, qbool
 		break;
 
 	case ev_float:
-		while (*s && *s <= ' ')
+		while (*s && ISWHITESPACE(*s))
 			s++;
 		val->_float = atof(s);
 		break;
@@ -1003,12 +1003,12 @@ qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s, qbool
 	case ev_vector:
 		for (i = 0;i < 3;i++)
 		{
-			while (*s && *s <= ' ')
+			while (*s && ISWHITESPACE(*s))
 				s++;
 			if (!*s)
 				break;
 			val->vector[i] = atof(s);
-			while (*s > ' ')
+			while (!ISWHITESPACE(*s))
 				s++;
 			if (!*s)
 				break;
@@ -1016,7 +1016,7 @@ qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s, qbool
 		break;
 
 	case ev_entity:
-		while (*s && *s <= ' ')
+		while (*s && ISWHITESPACE(*s))
 			s++;
 		i = atoi(s);
 		if (i >= prog->limit_edicts)
