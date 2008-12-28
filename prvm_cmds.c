@@ -2274,15 +2274,15 @@ static int num_tokens = 0;
 static int tokens[256];
 static int tokens_startpos[256];
 static int tokens_endpos[256];
+static char tokenize_string[VM_STRINGTEMP_LENGTH];
 void VM_tokenize (void)
 {
 	const char *p;
-	const char *string;
 
 	VM_SAFEPARMCOUNT(1,VM_tokenize);
 
-	string = PRVM_G_STRING(OFS_PARM0);
-	p = string;
+	strlcpy(tokenize_string, PRVM_G_STRING(OFS_PARM0), sizeof(tokenize_string));
+	p = tokenize_string;
 
 	num_tokens = 0;
 	for(;;)
@@ -2294,10 +2294,10 @@ void VM_tokenize (void)
 		while(*p && ISWHITESPACE(*p))
 			++p;
 
-		tokens_startpos[num_tokens] = p - string;
+		tokens_startpos[num_tokens] = p - tokenize_string;
 		if(!COM_ParseToken_VM_Tokenize(&p, false))
 			break;
-		tokens_endpos[num_tokens] = p - string;
+		tokens_endpos[num_tokens] = p - tokenize_string;
 		tokens[num_tokens] = PRVM_SetTempString(com_token);
 		++num_tokens;
 	}
@@ -2309,12 +2309,11 @@ void VM_tokenize (void)
 void VM_tokenize_console (void)
 {
 	const char *p;
-	const char *string;
 
 	VM_SAFEPARMCOUNT(1,VM_tokenize);
 
-	string = PRVM_G_STRING(OFS_PARM0);
-	p = string;
+	strlcpy(tokenize_string, PRVM_G_STRING(OFS_PARM0), sizeof(tokenize_string));
+	p = tokenize_string;
 
 	num_tokens = 0;
 	for(;;)
@@ -2326,10 +2325,10 @@ void VM_tokenize_console (void)
 		while(*p && ISWHITESPACE(*p))
 			++p;
 
-		tokens_startpos[num_tokens] = p - string;
+		tokens_startpos[num_tokens] = p - tokenize_string;
 		if(!COM_ParseToken_Console(&p))
 			break;
-		tokens_endpos[num_tokens] = p - string;
+		tokens_endpos[num_tokens] = p - tokenize_string;
 		tokens[num_tokens] = PRVM_SetTempString(com_token);
 		++num_tokens;
 	}
@@ -2360,12 +2359,11 @@ void VM_tokenizebyseparator (void)
 	const char *p;
 	const char *token;
 	char tokentext[MAX_INPUTLINE];
-	const char *string;
 
 	VM_SAFEPARMCOUNTRANGE(2, 8,VM_tokenizebyseparator);
 
-	string = PRVM_G_STRING(OFS_PARM0);
-	p = string;
+	strlcpy(tokenize_string, PRVM_G_STRING(OFS_PARM0), sizeof(tokenize_string));
+	p = tokenize_string;
 
 	numseparators = 0;
 	for (j = 1;j < prog->argc;j++)
@@ -2385,7 +2383,7 @@ void VM_tokenizebyseparator (void)
 	while (num_tokens < (int)(sizeof(tokens)/sizeof(tokens[0])))
 	{
 		token = tokentext + j;
-		tokens_startpos[num_tokens] = p - string;
+		tokens_startpos[num_tokens] = p - tokenize_string;
 		while (*p)
 		{
 			for (k = 0;k < numseparators;k++)
@@ -2402,7 +2400,7 @@ void VM_tokenizebyseparator (void)
 				tokentext[j++] = *p;
 			p++;
 		}
-		tokens_endpos[num_tokens] = p - string;
+		tokens_endpos[num_tokens] = p - tokenize_string;
 		if (j >= (int)sizeof(tokentext))
 			break;
 		tokentext[j++] = 0;
