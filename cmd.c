@@ -712,7 +712,7 @@ static const char *Cmd_GetDirectCvarValue(const char *varname, cmdalias_t *alias
 						*is_multiple = true;
 
 					// kill pre-argument whitespace
-					for (;*p && *p <= ' ';p++)
+					for (;*p && ISWHITESPACE(*p);p++)
 						;
 
 					return p;
@@ -1143,7 +1143,7 @@ static void Cmd_TokenizeString (const char *text)
 	while (1)
 	{
 		// skip whitespace up to a /n
-		while (*text && *text <= ' ' && *text != '\r' && *text != '\n')
+		while (*text && ISWHITESPACE(*text) && *text != '\r' && *text != '\n')
 			text++;
 
 		// line endings:

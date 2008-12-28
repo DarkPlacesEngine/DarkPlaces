@@ -68,7 +68,7 @@ void Sys_PrintToTerminal(const char *text)
 #endif
 	while(*text)
 	{
-		int written = (int)write(1, text, (int)strlen(text));
+		ssize_t written = write(1, text, strlen(text));
 		if(written <= 0)
 			break; // sorry, I cannot do anything about this error - without an output
 		text += written;
@@ -87,7 +87,7 @@ double Sys_DoubleTime (void)
 	if(sys_usenoclockbutbenchmark.integer)
 	{
 		benchmark_time += 1;
-		return benchmark_time / 1e6;
+		return ((double) benchmark_time) / 1e6;
 	}
 #ifdef WIN32
 #include <mmsystem.h>

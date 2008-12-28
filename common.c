@@ -643,7 +643,7 @@ void Com_HexDumpToConsole(const unsigned char *data, int size)
 					*cur++ = STRING_COLOR_TAG;
 					*cur++ = STRING_COLOR_TAG;
 				}
-				else if (d[j] >= ' ')
+				else if (d[j] >= (unsigned char) ' ')
 					*cur++ = d[j];
 				else
 					*cur++ = '.';
@@ -996,7 +996,7 @@ skipwhite:
 	// UNIX: \n
 	// Mac: \r
 	// Windows: \r\n
-	for (;*data <= ' ' && ((*data != '\n' && *data != '\r') || !returnnewline);data++)
+	for (;ISWHITESPACE(*data) && ((*data != '\n' && *data != '\r') || !returnnewline);data++)
 	{
 		if (*data == 0)
 		{
@@ -1072,7 +1072,7 @@ skipwhite:
 	else
 	{
 		// regular word
-		for (;*data > ' ';data++)
+		for (;!ISWHITESPACE(*data);data++)
 			if (len < (int)sizeof(com_token) - 1)
 				com_token[len++] = *data;
 		com_token[len] = 0;
@@ -1109,7 +1109,7 @@ skipwhite:
 	// UNIX: \n
 	// Mac: \r
 	// Windows: \r\n
-	for (;*data <= ' ' && ((*data != '\n' && *data != '\r') || !returnnewline);data++)
+	for (;ISWHITESPACE(*data) && ((*data != '\n' && *data != '\r') || !returnnewline);data++)
 	{
 		if (*data == 0)
 		{
@@ -1186,7 +1186,7 @@ skipwhite:
 	else
 	{
 		// regular word
-		for (;*data > ' ' && *data != '{' && *data != '}' && *data != ')' && *data != '(' && *data != ']' && *data != '[' && *data != ':' && *data != ',' && *data != ';';data++)
+		for (;!ISWHITESPACE(*data) && *data != '{' && *data != '}' && *data != ')' && *data != '(' && *data != ']' && *data != '[' && *data != ':' && *data != ',' && *data != ';';data++)
 			if (len < (int)sizeof(com_token) - 1)
 				com_token[len++] = *data;
 		com_token[len] = 0;
@@ -1223,7 +1223,7 @@ skipwhite:
 	// UNIX: \n
 	// Mac: \r
 	// Windows: \r\n
-	for (;*data <= ' ' && ((*data != '\n' && *data != '\r') || !returnnewline);data++)
+	for (;ISWHITESPACE(*data) && ((*data != '\n' && *data != '\r') || !returnnewline);data++)
 	{
 		if (*data == 0)
 		{
@@ -1300,7 +1300,7 @@ skipwhite:
 	else
 	{
 		// regular word
-		for (;*data > ' ' && *data != ',' && *data != ';' && *data != '{' && *data != '}' && *data != ')' && *data != '(' && *data != ']' && *data != '[' && *data != ':' && *data != ',' && *data != ';';data++)
+		for (;!ISWHITESPACE(*data) && *data != ',' && *data != ';' && *data != '{' && *data != '}' && *data != ')' && *data != '(' && *data != ']' && *data != '[' && *data != ':' && *data != ',' && *data != ';';data++)
 			if (len < (int)sizeof(com_token) - 1)
 				com_token[len++] = *data;
 		com_token[len] = 0;
@@ -1332,7 +1332,7 @@ int COM_ParseToken_Console(const char **datapointer)
 
 // skip whitespace
 skipwhite:
-	for (;*data <= ' ';data++)
+	for (;ISWHITESPACE(*data);data++)
 	{
 		if (*data == 0)
 		{
@@ -1368,7 +1368,7 @@ skipwhite:
 	else
 	{
 		// regular word
-		for (;*data > ' ';data++)
+		for (;!ISWHITESPACE(*data);data++)
 			if (len < (int)sizeof(com_token) - 1)
 				com_token[len++] = *data;
 		com_token[len] = 0;
@@ -1693,7 +1693,7 @@ int COM_ReadAndTokenizeLine(const char **text, char **argv, int maxargc, char *t
 		commentprefixlength = (int)strlen(commentprefix);
 	while (*l && *l != '\n' && *l != '\r')
 	{
-		if (*l > ' ')
+		if (!ISWHITESPACE(*l))
 		{
 			if (commentprefixlength && !strncmp(l, commentprefix, commentprefixlength))
 			{
@@ -1718,7 +1718,7 @@ int COM_ReadAndTokenizeLine(const char **text, char **argv, int maxargc, char *t
 			}
 			else
 			{
-				while (*l > ' ')
+				while (!ISWHITESPACE(*l))
 				{
 					if (tokenbuf >= tokenbufend)
 						return -1;

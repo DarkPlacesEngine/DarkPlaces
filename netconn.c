@@ -2171,7 +2171,7 @@ const char *RCon_Authenticate(const char *password, const char *s, const char *e
 		return NULL;
 
 	for(text = s; text != endpos; ++text)
-		if(*text > 0 && (*text < ' ' || *text == ';'))
+		if((signed char) *text > 0 && ((signed char) *text < (signed char) ' ' || *text == ';'))
 			return NULL; // block possible exploits against the parser/alias expansion
 
 	while(s != endpos)
@@ -2399,13 +2399,13 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			char *s = string + 5;
 			char *endpos = string + length + 1; // one behind the NUL, so adding strlen+1 will eventually reach it
 			char password[64];
-			for (i = 0;*s > ' ';s++)
+			for (i = 0;!ISWHITESPACE(*s);s++)
 				if (i < (int)sizeof(password) - 1)
 					password[i++] = *s;
-			if(*s <= ' ' && s != endpos) // skip leading ugly space
+			if(ISWHITESPACE(*s) && s != endpos) // skip leading ugly space
 				++s;
 			password[i] = 0;
-			if (password[0] > ' ')
+			if (!ISWHITESPACE(password[0]))
 			{
 				const char *userlevel = RCon_Authenticate(password, s, endpos);
 				if(userlevel)

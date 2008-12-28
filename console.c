@@ -1812,8 +1812,8 @@ qboolean GetMapList (const char *s, char *completedname, int completednamebuffer
 					if (com_token[0] == '}')
 						break;
 					// skip leading whitespace
-					for (k = 0;com_token[k] && com_token[k] <= ' ';k++);
-					for (l = 0;l < (int)sizeof(keyname) - 1 && com_token[k+l] && com_token[k+l] > ' ';l++)
+					for (k = 0;com_token[k] && ISWHITESPACE(com_token[k]);k++);
+					for (l = 0;l < (int)sizeof(keyname) - 1 && com_token[k+l] && !ISWHITESPACE(com_token[k+l]);l++)
 						keyname[l] = com_token[k+l];
 					keyname[l] = 0;
 					if (!COM_ParseToken_Simple(&data, false, false))
