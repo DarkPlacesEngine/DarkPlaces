@@ -1085,7 +1085,7 @@ void CL_BeginDownloads(qboolean aborteddownload)
 				continue;
 			if (cls.signon < SIGNONS)
 				CL_KeepaliveMessage(true);
-			if (!FS_FileExists(cl.model_name[cl.downloadmodel_current]))
+			if (strcmp(cl.model_name[cl.downloadmodel_current], "null") && !FS_FileExists(cl.model_name[cl.downloadmodel_current]))
 			{
 				if (cl.downloadmodel_current == 1)
 					Con_Printf("Map %s not found\n", cl.model_name[cl.downloadmodel_current]);
