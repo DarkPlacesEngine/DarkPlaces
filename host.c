@@ -929,6 +929,8 @@ void Host_StartVideo(void)
 	if (!vid_opened && cls.state != ca_dedicated)
 	{
 		vid_opened = true;
+		// make sure we open sockets before opening video because the Windows Firewall "unblock?" dialog can screw up the graphics context on some graphics drivers
+		NetConn_UpdateSockets();
 		VID_Start();
 		CDAudio_Startup();
 	}
