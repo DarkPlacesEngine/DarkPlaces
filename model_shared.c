@@ -203,6 +203,12 @@ dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk, q
 	
 	if (!strcmp(mod->name, "null"))
 	{
+		if (mod->isworldmodel != isworldmodel)
+			mod->loaded = false;
+
+		if(mod->loaded)
+			return mod;
+
 		if (mod->loaded || mod->mempool)
 			Mod_UnloadModel(mod);
 
