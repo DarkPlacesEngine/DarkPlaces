@@ -30,7 +30,7 @@ m*_t structures are in-memory
 
 */
 
-typedef enum modtype_e {mod_invalid, mod_brushq1, mod_sprite, mod_alias, mod_brushq2, mod_brushq3} modtype_t;
+typedef enum modtype_e {mod_invalid, mod_brushq1, mod_sprite, mod_alias, mod_brushq2, mod_brushq3, mod_null} modtype_t;
 
 typedef struct animscene_s
 {

@@ -177,6 +177,11 @@ void Mod_UnloadModel (dp_model_t *mod)
 	mod->loaded = false;
 }
 
+void R_Model_Null_Draw(entity_render_t *ent)
+{
+	return;
+}
+
 /*
 ==================
 Mod_LoadModel
@@ -195,6 +200,38 @@ dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk, q
 
 	if (mod->name[0] == '*') // submodel
 		return mod;
+	
+	if (!strcmp(mod->name, "null"))
+	{
+		if (mod->loaded || mod->mempool)
+			Mod_UnloadModel(mod);
+
+		if (developer_loading.integer)
+			Con_Printf("loading model %s\n", mod->name);
+
+		mod->isworldmodel = isworldmodel;
+		mod->used = true;
+		mod->crc = -1;
+		mod->loaded = false;
+
+		VectorClear(mod->normalmins);
+		VectorClear(mod->normalmaxs);
+		VectorClear(mod->yawmins);
+		VectorClear(mod->yawmaxs);
+		VectorClear(mod->rotatedmins);
+		VectorClear(mod->rotatedmaxs);
+
+		mod->modeldatatypestring = "null";
+		mod->type = mod_null;
+		mod->Draw = R_Model_Null_Draw;
+		mod->numframes = 2;
+		mod->numskins = 1;
+
+		// no fatal errors occurred, so this model is ready to use.
+		mod->loaded = true;
+
+		return mod;
+	}
 
 	crc = 0;
 	buf = NULL;
