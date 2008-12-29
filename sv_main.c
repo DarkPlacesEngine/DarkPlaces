@@ -1150,7 +1150,7 @@ static qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *c
 	// calculate the visible box of this entity (don't use the physics box
 	// as that is often smaller than a model, and would not count
 	// specialvisibilityradius)
-	if ((model = sv.models[modelindex]))
+	if ((model = sv.models[modelindex]) && (model->type != mod_null))
 	{
 		float scale = cs->scale * (1.0f / 16.0f);
 		if (cs->angles[0] || cs->angles[2]) // pitch and roll
