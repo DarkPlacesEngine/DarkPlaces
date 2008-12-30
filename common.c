@@ -1835,7 +1835,7 @@ for example).
 
 If the output buffer size did not suffice for converting, the function returns
 FALSE. Generally, if escape_carets is false, the output buffer needs
-strlen(str)+1 bytes, and if escape_carets is true, it can need strlen(str)+2
+strlen(str)+1 bytes, and if escape_carets is true, it can need strlen(str)*1.5+2
 bytes. In any case, the function makes sure that the resulting string is
 zero terminated.
 
@@ -1869,6 +1869,11 @@ COM_StringDecolorize(const char *in, size_t size_in, char *out, size_t size_out,
 							in+=3;
 							break;
 						}
+						APPEND(STRING_COLOR_TAG);
+						if(escape_carets)
+							APPEND(STRING_COLOR_TAG);
+						APPEND(STRING_COLOR_RGB_DEFAULT);
+						break;
 					/*case 'a':
 						if ( in+1 != end && ( isxdigit(in[1]) || (in[1] == '+' || in[1] == '-') ) )
 						{

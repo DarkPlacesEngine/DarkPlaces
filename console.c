@@ -1167,6 +1167,10 @@ void Con_Print(const char *msg)
 											in+=4;
 											break;
 										}
+										*out++ = STRING_COLOR_TAG;
+										*out++ = STRING_COLOR_RGB_DEFAULT;
+										++in;
+										break;
 									/*case 'a':
 										if ( isxdigit(in[2]) || in[2] == '+' || in[2] == '-' )
 										{
@@ -2344,11 +2348,13 @@ int Nicks_AddLastColor(char *buffer, int pos)
 				else if(buffer[match+1] == STRING_COLOR_RGB_DEFAULT)
 				{
 					if ( isxdigit(buffer[match+2]) && isxdigit(buffer[match+3]) && isxdigit(buffer[match+4]) )
+					{
 						r = buffer[match+2];
 						g = buffer[match+3];
 						b = buffer[match+4];
 						color = -1;
 						break;
+					}
 				}
 			}
 		}
