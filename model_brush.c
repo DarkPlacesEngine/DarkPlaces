@@ -1835,8 +1835,9 @@ static void Mod_Q1BSP_LoadEntities(lump_t *l)
 	loadmodel->brush.entities = NULL;
 	if (!l->filelen)
 		return;
-	loadmodel->brush.entities = (char *)Mem_Alloc(loadmodel->mempool, l->filelen);
+	loadmodel->brush.entities = (char *)Mem_Alloc(loadmodel->mempool, l->filelen + 1);
 	memcpy(loadmodel->brush.entities, mod_base + l->fileofs, l->filelen);
+	loadmodel->brush.entities[l->filelen] = 0;
 	if (loadmodel->brush.ishlbsp)
 		Mod_Q1BSP_ParseWadsFromEntityLump(loadmodel->brush.entities);
 }
@@ -4167,8 +4168,9 @@ static void Mod_Q3BSP_LoadEntities(lump_t *l)
 	loadmodel->brushq3.num_lightgrid_cellsize[2] = 128;
 	if (!l->filelen)
 		return;
-	loadmodel->brush.entities = (char *)Mem_Alloc(loadmodel->mempool, l->filelen);
+	loadmodel->brush.entities = (char *)Mem_Alloc(loadmodel->mempool, l->filelen + 1);
 	memcpy(loadmodel->brush.entities, mod_base + l->fileofs, l->filelen);
+	loadmodel->brush.entities[l->filelen] = 0;
 	data = loadmodel->brush.entities;
 	// some Q3 maps override the lightgrid_cellsize with a worldspawn key
 	if (data && COM_ParseToken_Simple(&data, false, false) && com_token[0] == '{')
