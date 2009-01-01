@@ -4684,11 +4684,23 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 	}
 }
 
+typedef struct patchtess_s
+{
+	qboolean grouped;
+	int surface_id;
+	int xtess, ytess;
+	int xsize, ysize;
+	int cxtess, cytess;
+	int cxsize, cysize;
+	float lodgroup[6];
+}
+patchtess_t;
+
 static void Mod_Q3BSP_LoadFaces(lump_t *l)
 {
 	q3dface_t *in, *oldin;
 	msurface_t *out, *oldout;
-	int i, oldi, j, n, count, invalidelements, patchsize[2], finalwidth, finalheight, xtess, ytess, finalvertices, finaltriangles, firstvertex, firstelement, type, oldnumtriangles, oldnumtriangles2, meshvertices, meshtriangles, numvertices, numtriangles;
+	int i, oldi, j, n, count, invalidelements, patchsize[2], finalwidth, finalheight, xtess, ytess, finalvertices, finaltriangles, firstvertex, firstelement, type, oldnumtriangles, oldnumtriangles2, meshvertices, meshtriangles, numvertices, numtriangles, groupsize, cxtess, cytess;
 	float lightmaptcbase[2], lightmaptcscale[2];
 	//int *originalelement3i;
 	//int *originalneighbor3i;
@@ -4700,6 +4712,8 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 	float *originaltexcoordtexture2f;
 	float *originaltexcoordlightmap2f;
 	float *v;
+	patchtess_t *patchtess = NULL;
+	int patchtesscount = 0;
 
 	in = (q3dface_t *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -4709,6 +4723,9 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 
 	loadmodel->data_surfaces = out;
 	loadmodel->num_surfaces = count;
+
+	if(count > 0)
+		patchtess = Mem_Alloc(tempmempool, count * sizeof(*patchtess));
 
 	i = 0;
 	oldi = i;
@@ -4803,6 +4820,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 				continue;
 			}
 			originalvertex3f = loadmodel->brushq3.data_vertex3f + firstvertex * 3;
+
 			// convert patch to Q3FACETYPE_MESH
 			xtess = Q3PatchTesselationOnX(patchsize[0], patchsize[1], 3, originalvertex3f, r_subdivisions_tolerance.value);
 			ytess = Q3PatchTesselationOnY(patchsize[0], patchsize[1], 3, originalvertex3f, r_subdivisions_tolerance.value);
@@ -4812,18 +4830,35 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			// bound to sanity settings
 			xtess = bound(1, xtess, 1024);
 			ytess = bound(1, ytess, 1024);
-			// bound to user limit on vertices
-			while ((xtess > 1 || ytess > 1) && (((patchsize[0] - 1) * xtess) + 1) * (((patchsize[1] - 1) * ytess) + 1) > min(r_subdivisions_maxvertices.integer, 262144))
-			{
-				if (xtess > ytess)
-					xtess--;
-				else
-					ytess--;
-			}
-			finalwidth = ((patchsize[0] - 1) * xtess) + 1;
-			finalheight = ((patchsize[1] - 1) * ytess) + 1;
-			numvertices = finalwidth * finalheight;
-			numtriangles = (finalwidth - 1) * (finalheight - 1) * 2;
+
+			// lower quality collision patches! Same procedure as before, but different cvars
+			// convert patch to Q3FACETYPE_MESH
+			cxtess = Q3PatchTesselationOnX(patchsize[0], patchsize[1], 3, originalvertex3f, r_subdivisions_collision_tolerance.value);
+			cytess = Q3PatchTesselationOnY(patchsize[0], patchsize[1], 3, originalvertex3f, r_subdivisions_collision_tolerance.value);
+			// bound to user settings
+			cxtess = bound(r_subdivisions_mintess.integer, xtess, r_subdivisions_collision_maxtess.integer);
+			cytess = bound(r_subdivisions_mintess.integer, ytess, r_subdivisions_collision_maxtess.integer);
+			// bound to sanity settings
+			cxtess = bound(1, xtess, 1024);
+			cytess = bound(1, ytess, 1024);
+
+			// store it for the LOD grouping step
+			patchtess[patchtesscount].surface_id = i;
+			patchtess[patchtesscount].grouped = false;
+			patchtess[patchtesscount].xtess = xtess;
+			patchtess[patchtesscount].ytess = ytess;
+			patchtess[patchtesscount].xsize = patchsize[0];
+			patchtess[patchtesscount].ysize = patchsize[1];
+			patchtess[patchtesscount].lodgroup[0] = in->specific.patch.mins[0];
+			patchtess[patchtesscount].lodgroup[1] = in->specific.patch.mins[1];
+			patchtess[patchtesscount].lodgroup[2] = in->specific.patch.mins[2];
+			patchtess[patchtesscount].lodgroup[3] = in->specific.patch.maxs[0];
+			patchtess[patchtesscount].lodgroup[4] = in->specific.patch.maxs[1];
+			patchtess[patchtesscount].lodgroup[5] = in->specific.patch.maxs[2];
+
+			patchtess[patchtesscount].cxtess = xtess;
+			patchtess[patchtesscount].cytess = ytess;
+			++patchtesscount;
 			break;
 		case Q3FACETYPE_FLARE:
 			if (developer.integer >= 100)
@@ -4835,6 +4870,131 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		out->num_triangles = numtriangles;
 		meshvertices += out->num_vertices;
 		meshtriangles += out->num_triangles;
+	}
+
+	for(i = 0; i < patchtesscount; ++i)
+	{
+		if(patchtess[i].grouped) // already grouped
+			continue;
+
+		// get the highest required tess parameters for this group
+		groupsize = 0;
+		xtess = ytess = 0;
+		cxtess = cytess = 0;
+		for(j = 0; j < patchtesscount; ++j)
+		{
+			if(patchtess[j].grouped) // already grouped
+				continue;
+			if(memcmp(patchtess[i].lodgroup, patchtess[j].lodgroup, sizeof(patchtess[i].lodgroup)))
+				continue;
+			if(patchtess[j].xtess > xtess)
+				xtess = patchtess[j].xtess;
+			if(patchtess[j].ytess > ytess)
+				ytess = patchtess[j].ytess;
+			if(patchtess[j].cxtess > cxtess)
+				cxtess = patchtess[j].cxtess;
+			if(patchtess[j].cytess > cytess)
+				cytess = patchtess[j].cytess;
+			++groupsize;
+		}
+
+		if(groupsize == 0)
+		{
+			Con_Printf("ERROR: patch %d isn't in any LOD group (1)?!?\n", patchtess[i].surface_id);
+			continue;
+		}
+
+		// bound to user limit on vertices
+		for(;;)
+		{
+			numvertices = 0;
+			numtriangles = 0;
+
+			for(j = 0; j < patchtesscount; ++j)
+			{
+				if(patchtess[j].grouped) // already grouped
+					continue;
+				if(memcmp(patchtess[i].lodgroup, patchtess[j].lodgroup, sizeof(patchtess[i].lodgroup)))
+					continue;
+
+				finalwidth = (patchtess[j].xsize - 1) * xtess + 1;
+				finalheight = (patchtess[j].ysize - 1) * ytess + 1;
+				numvertices += finalwidth * finalheight;
+				numtriangles += (finalwidth - 1) * (finalheight - 1) * 2;
+			}
+
+			if(xtess <= 1 && ytess <= 1)
+				break;
+
+			if(numvertices > min(r_subdivisions_maxvertices.integer, 262144) * groupsize)
+			{
+				if (xtess > ytess)
+					xtess--;
+				else
+					ytess--;
+				continue; // try again
+			}
+
+			break;
+		}
+
+		// bound to user limit on vertices (collision)
+		for(;;)
+		{
+			numvertices = 0;
+			numtriangles = 0;
+
+			for(j = 0; j < patchtesscount; ++j)
+			{
+				if(patchtess[j].grouped) // already grouped
+					continue;
+				if(memcmp(patchtess[i].lodgroup, patchtess[j].lodgroup, sizeof(patchtess[i].lodgroup)))
+					continue;
+
+				finalwidth = (patchtess[j].xsize - 1) * cxtess + 1;
+				finalheight = (patchtess[j].ysize - 1) * cytess + 1;
+				numvertices += finalwidth * finalheight;
+				numtriangles += (finalwidth - 1) * (finalheight - 1) * 2;
+			}
+
+			if(cxtess <= 1 && cytess <= 1)
+				break;
+
+			if(numvertices > min(r_subdivisions_collision_maxvertices.integer, 262144) * groupsize)
+			{
+				if (cxtess > cytess)
+					cxtess--;
+				else
+					cytess--;
+				continue; // try again
+			}
+
+			break;
+		}
+
+		for(j = 0; j < patchtesscount; ++j)
+		{
+			if(patchtess[j].grouped) // already grouped
+				continue;
+			if(memcmp(patchtess[i].lodgroup, patchtess[j].lodgroup, sizeof(patchtess[i].lodgroup)))
+				continue;
+
+			finalwidth = (patchtess[j].xsize - 1) * xtess + 1;
+			finalheight = (patchtess[j].ysize - 1) * ytess + 1;
+			numvertices = finalwidth * finalheight;
+			numtriangles = (finalwidth - 1) * (finalheight - 1) * 2;
+
+			oldout[patchtess[j].surface_id].num_vertices = numvertices;
+			oldout[patchtess[j].surface_id].num_triangles = numtriangles;
+			meshvertices += oldout[patchtess[j].surface_id].num_vertices;
+			meshtriangles += oldout[patchtess[j].surface_id].num_triangles;
+
+			patchtess[j].grouped = true;
+			patchtess[j].xtess = xtess;
+			patchtess[j].ytess = ytess;
+			patchtess[j].cxtess = cxtess;
+			patchtess[j].cytess = cytess;
+		}
 	}
 
 	i = oldi;
@@ -4886,23 +5046,23 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			originaltexcoordtexture2f = loadmodel->brushq3.data_texcoordtexture2f + firstvertex * 2;
 			originaltexcoordlightmap2f = loadmodel->brushq3.data_texcoordlightmap2f + firstvertex * 2;
 			originalcolor4f = loadmodel->brushq3.data_color4f + firstvertex * 4;
-			// convert patch to Q3FACETYPE_MESH
-			xtess = Q3PatchTesselationOnX(patchsize[0], patchsize[1], 3, originalvertex3f, r_subdivisions_tolerance.value);
-			ytess = Q3PatchTesselationOnY(patchsize[0], patchsize[1], 3, originalvertex3f, r_subdivisions_tolerance.value);
-			// bound to user settings
-			xtess = bound(r_subdivisions_mintess.integer, xtess, r_subdivisions_maxtess.integer);
-			ytess = bound(r_subdivisions_mintess.integer, ytess, r_subdivisions_maxtess.integer);
-			// bound to sanity settings
-			xtess = bound(1, xtess, 1024);
-			ytess = bound(1, ytess, 1024);
-			// bound to user limit on vertices
-			while ((xtess > 1 || ytess > 1) && (((patchsize[0] - 1) * xtess) + 1) * (((patchsize[1] - 1) * ytess) + 1) > min(r_subdivisions_maxvertices.integer, 262144))
+
+			xtess = ytess = cxtess = cytess = 0;
+			for(j = 0; j < patchtesscount; ++j)
+				if(patchtess[j].grouped && patchtess[j].surface_id == i)
+				{
+					xtess = patchtess[j].xtess;
+					ytess = patchtess[j].ytess;
+					cxtess = patchtess[j].cxtess;
+					cytess = patchtess[j].cytess;
+					break;
+				}
+			if(xtess == 0)
 			{
-				if (xtess > ytess)
-					xtess--;
-				else
-					ytess--;
+				Con_Printf("ERROR: patch %d isn't in any LOD group (2)?!?\n", i);
+				xtess = ytess = cxtess = cytess = 1;
 			}
+
 			finalwidth = ((patchsize[0] - 1) * xtess) + 1;
 			finalheight = ((patchsize[1] - 1) * ytess) + 1;
 			finalvertices = finalwidth * finalheight;
@@ -4926,24 +5086,8 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			}
 			// q3map does not put in collision brushes for curves... ugh
 			// build the lower quality collision geometry
-			xtess = Q3PatchTesselationOnX(patchsize[0], patchsize[1], 3, originalvertex3f, r_subdivisions_collision_tolerance.value);
-			ytess = Q3PatchTesselationOnY(patchsize[0], patchsize[1], 3, originalvertex3f, r_subdivisions_collision_tolerance.value);
-			// bound to user settings
-			xtess = bound(r_subdivisions_collision_mintess.integer, xtess, r_subdivisions_collision_maxtess.integer);
-			ytess = bound(r_subdivisions_collision_mintess.integer, ytess, r_subdivisions_collision_maxtess.integer);
-			// bound to sanity settings
-			xtess = bound(1, xtess, 1024);
-			ytess = bound(1, ytess, 1024);
-			// bound to user limit on vertices
-			while ((xtess > 1 || ytess > 1) && (((patchsize[0] - 1) * xtess) + 1) * (((patchsize[1] - 1) * ytess) + 1) > min(r_subdivisions_collision_maxvertices.integer, 262144))
-			{
-				if (xtess > ytess)
-					xtess--;
-				else
-					ytess--;
-			}
-			finalwidth = ((patchsize[0] - 1) * xtess) + 1;
-			finalheight = ((patchsize[1] - 1) * ytess) + 1;
+			finalwidth = ((patchsize[0] - 1) * cxtess) + 1;
+			finalheight = ((patchsize[1] - 1) * cytess) + 1;
 			finalvertices = finalwidth * finalheight;
 			finaltriangles = (finalwidth - 1) * (finalheight - 1) * 2;
 
@@ -4951,7 +5095,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			out->data_collisionelement3i = (int *)Mem_Alloc(loadmodel->mempool, sizeof(int[3]) * finaltriangles);
 			out->num_collisionvertices = finalvertices;
 			out->num_collisiontriangles = finaltriangles;
-			Q3PatchTesselateFloat(3, sizeof(float[3]), out->data_collisionvertex3f, patchsize[0], patchsize[1], sizeof(float[3]), originalvertex3f, xtess, ytess);
+			Q3PatchTesselateFloat(3, sizeof(float[3]), out->data_collisionvertex3f, patchsize[0], patchsize[1], sizeof(float[3]), originalvertex3f, cxtess, cytess);
 			Q3PatchTriangleElements(out->data_collisionelement3i, finalwidth, finalheight, 0);
 
 			//Mod_SnapVertices(3, out->num_vertices, (loadmodel->surfmesh.data_vertex3f + 3 * out->num_firstvertex), 0.25);
@@ -5052,6 +5196,9 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 	if (loadmodel->brushq3.data_element3i)
 		Mem_Free(loadmodel->brushq3.data_element3i);
 	loadmodel->brushq3.data_element3i = NULL;
+
+	if(patchtess)
+		Mem_Free(patchtess);
 }
 
 static void Mod_Q3BSP_LoadModels(lump_t *l)
