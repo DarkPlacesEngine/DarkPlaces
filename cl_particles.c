@@ -2468,7 +2468,7 @@ void R_DrawParticles (void)
 		default:
 			if(!cl_particles_novis.integer)
 				if (!r_refdef.viewcache.world_novis)
-					if(r_refdef.scene.worldmodel->brush.PointInLeaf)
+					if(r_refdef.scene.worldmodel->brush.BoxTouchingPVS)
 					{
 						vec3_t mins, maxs, unit;
 						VectorSet(unit, 1, 1, 1);
