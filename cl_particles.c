@@ -192,6 +192,7 @@ cvar_t cl_particles_smoke_alpha = {CVAR_SAVE, "cl_particles_smoke_alpha", "0.5",
 cvar_t cl_particles_smoke_alphafade = {CVAR_SAVE, "cl_particles_smoke_alphafade", "0.55", "brightness fade per second"};
 cvar_t cl_particles_sparks = {CVAR_SAVE, "cl_particles_sparks", "1", "enables sparks (used by multiple effects)"};
 cvar_t cl_particles_bubbles = {CVAR_SAVE, "cl_particles_bubbles", "1", "enables bubbles (used by multiple effects)"};
+cvar_t cl_particles_novis = {CVAR_SAVE, "cl_particles_novis", "1", "when disabled, particles use vis data too (sometimes causes bad quality or missing effects)"};
 cvar_t cl_decals = {CVAR_SAVE, "cl_decals", "1", "enables decals (bullet holes, blood, etc)"};
 cvar_t cl_decals_time = {CVAR_SAVE, "cl_decals_time", "20", "how long before decals start to fade away"};
 cvar_t cl_decals_fadetime = {CVAR_SAVE, "cl_decals_fadetime", "1", "how long decals take to fade away"};
@@ -441,6 +442,7 @@ void CL_Particles_Init (void)
 	Cvar_RegisterVariable (&cl_particles_smoke_alphafade);
 	Cvar_RegisterVariable (&cl_particles_sparks);
 	Cvar_RegisterVariable (&cl_particles_bubbles);
+	Cvar_RegisterVariable (&cl_particles_novis);
 	Cvar_RegisterVariable (&cl_decals);
 	Cvar_RegisterVariable (&cl_decals_time);
 	Cvar_RegisterVariable (&cl_decals_fadetime);
@@ -2060,7 +2062,20 @@ void R_DrawDecals (void)
 		}
 
 		if (DotProduct(r_refdef.view.origin, decal->normal) > DotProduct(decal->org, decal->normal) && VectorDistance2(decal->org, r_refdef.view.origin) < drawdist2 * (decal->size * decal->size))
+		{
+			if(!cl_particles_novis.integer)
+				if (!r_refdef.viewcache.world_novis)
+					if(r_refdef.scene.worldmodel->brush.BoxTouchingPVS)
+					{
+						vec3_t mins, maxs, unit;
+						VectorSet(unit, 1, 1, 1);
+						VectorMA(decal->org, -decal->size, unit, mins);
+						VectorMA(decal->org, +decal->size, unit, maxs);
+						if(!r_refdef.scene.worldmodel->brush.BoxTouchingPVS(r_refdef.scene.worldmodel, r_refdef.viewcache.world_pvsbits, mins, maxs))
+							continue;
+					}
 			R_MeshQueue_AddTransparent(decal->org, R_DrawDecal_TransparentCallback, NULL, i, NULL);
+		}
 		continue;
 killdecal:
 		decal->typeindex = 0;
@@ -2451,6 +2466,17 @@ void R_DrawParticles (void)
 			R_MeshQueue_AddTransparent(p->org, R_DrawParticle_TransparentCallback, NULL, i, NULL);
 			break;
 		default:
+			if(!cl_particles_novis.integer)
+				if (!r_refdef.viewcache.world_novis)
+					if(r_refdef.scene.worldmodel->brush.PointInLeaf)
+					{
+						vec3_t mins, maxs, unit;
+						VectorSet(unit, 1, 1, 1);
+						VectorMA(p->org, -p->size, unit, mins);
+						VectorMA(p->org, +p->size, unit, maxs);
+						if(!r_refdef.scene.worldmodel->brush.BoxTouchingPVS(r_refdef.scene.worldmodel, r_refdef.viewcache.world_pvsbits, mins, maxs))
+							continue;
+					}
 			// anything else just has to be in front of the viewer and visible at this distance
 			if (DotProduct(p->org, r_refdef.view.forward) >= minparticledist && VectorDistance2(p->org, r_refdef.view.origin) < drawdist2 * (p->size * p->size))
 				R_MeshQueue_AddTransparent(p->org, R_DrawParticle_TransparentCallback, NULL, i, NULL);
