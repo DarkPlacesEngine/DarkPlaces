@@ -4696,6 +4696,16 @@ typedef struct patchtess_s
 }
 patchtess_t;
 
+#define PATCHTESS_SAME_LODGROUP(a,b) \
+	( \
+		(a).lodgroup[0] == (b).lodgroup[0] && \
+		(a).lodgroup[1] == (b).lodgroup[1] && \
+		(a).lodgroup[2] == (b).lodgroup[2] && \
+		(a).lodgroup[3] == (b).lodgroup[3] && \
+		(a).lodgroup[4] == (b).lodgroup[4] && \
+		(a).lodgroup[5] == (b).lodgroup[5] \
+	)
+
 static void Mod_Q3BSP_LoadFaces(lump_t *l)
 {
 	q3dface_t *in, *oldin;
@@ -4885,7 +4895,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		{
 			if(patchtess[j].grouped) // already grouped
 				continue;
-			if(memcmp(patchtess[i].lodgroup, patchtess[j].lodgroup, sizeof(patchtess[i].lodgroup)))
+			if(!PATCHTESS_SAME_LODGROUP(patchtess[i], patchtess[j]))
 				continue;
 			if(patchtess[j].xtess > xtess)
 				xtess = patchtess[j].xtess;
@@ -4914,7 +4924,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			{
 				if(patchtess[j].grouped) // already grouped
 					continue;
-				if(memcmp(patchtess[i].lodgroup, patchtess[j].lodgroup, sizeof(patchtess[i].lodgroup)))
+				if(!PATCHTESS_SAME_LODGROUP(patchtess[i], patchtess[j]))
 					continue;
 
 				finalwidth = (patchtess[j].xsize - 1) * xtess + 1;
@@ -4948,7 +4958,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			{
 				if(patchtess[j].grouped) // already grouped
 					continue;
-				if(memcmp(patchtess[i].lodgroup, patchtess[j].lodgroup, sizeof(patchtess[i].lodgroup)))
+				if(!PATCHTESS_SAME_LODGROUP(patchtess[i], patchtess[j]))
 					continue;
 
 				finalwidth = (patchtess[j].xsize - 1) * cxtess + 1;
@@ -4976,7 +4986,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		{
 			if(patchtess[j].grouped) // already grouped
 				continue;
-			if(memcmp(patchtess[i].lodgroup, patchtess[j].lodgroup, sizeof(patchtess[i].lodgroup)))
+			if(!PATCHTESS_SAME_LODGROUP(patchtess[i], patchtess[j]))
 				continue;
 
 			finalwidth = (patchtess[j].xsize - 1) * xtess + 1;
