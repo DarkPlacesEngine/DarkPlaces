@@ -1020,6 +1020,12 @@ void Host_Name_f (void)
 				i++;
 				continue;
 			}
+			if (host_client->name[i+1] == STRING_COLOR_RGB_DEFAULT && isxdigit(host_client->name[i+2]) && isxdigit(host_client->name[i+3]) && isxdigit(host_client->name[i+4]))
+			{
+				j = i;
+				i += 4;
+				continue;
+			}
 			if (host_client->name[i+1] == STRING_COLOR_TAG)
 			{
 				i++;
