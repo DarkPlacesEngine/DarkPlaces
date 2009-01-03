@@ -1055,6 +1055,7 @@ SV_PushMove
 void SV_PushMove (prvm_edict_t *pusher, float movetime)
 {
 	int i, e, index;
+	int pusherowner, pusherprog;
 	int checkcontents;
 	qboolean rotated;
 	float savesolid, movetime2, pushltime;
@@ -1103,6 +1104,8 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 		return;
 	}
 	pushermodel = sv.models[index];
+	pusherowner = pusher->fields.server->owner;
+	pusherprog = PRVM_EDICT_TO_PROG(pusher);
 
 	rotated = VectorLength2(pusher->fields.server->angles) + VectorLength2(pusher->fields.server->avelocity) > 0;
 
@@ -1192,6 +1195,12 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 		 || check->fields.server->movetype == MOVETYPE_FOLLOW
 		 || check->fields.server->movetype == MOVETYPE_NOCLIP
 		 || check->fields.server->movetype == MOVETYPE_FAKEPUSH)
+			continue;
+
+		if (check->fields.server->owner == pusherprog)
+			continue;
+
+		if (pusherowner == PRVM_EDICT_TO_PROG(check))
 			continue;
 
 		//Con_Printf("%i %s ", PRVM_NUM_FOR_EDICT(check), PRVM_GetString(check->fields.server->classname));
