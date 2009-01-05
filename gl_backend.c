@@ -1090,7 +1090,8 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 	unsigned int numelements = numtriangles * 3;
 	if (numvertices < 3 || numtriangles < 1)
 	{
-		Con_Printf("R_Mesh_Draw(%d, %d, %d, %d, %8p, %8p, %i, %i);\n", firstvertex, numvertices, firsttriangle, numtriangles, element3i, element3s, bufferobject3i, bufferobject3s);
+		if (numvertices < 0 || numtriangles < 0 || developer.integer >= 100)
+			Con_Printf("R_Mesh_Draw(%d, %d, %d, %d, %8p, %8p, %i, %i);\n", firstvertex, numvertices, firsttriangle, numtriangles, element3i, element3s, bufferobject3i, bufferobject3s);
 		return;
 	}
 	if (!gl_mesh_prefer_short_elements.integer)
