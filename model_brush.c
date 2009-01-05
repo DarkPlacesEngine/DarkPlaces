@@ -5184,6 +5184,18 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		//out->lightmapinfo->styles[3] = 255;
 	}
 
+	i = oldi;
+	out = oldout;
+	for (;i < count;i++, out++)
+	{
+		if(out->num_vertices && out->num_triangles)
+			continue;
+		if(out->num_vertices == 0)
+			Con_Printf("Mod_Q3BSP_LoadFaces: surface %d has no vertices, ignoring\n", i);
+		if(out->num_triangles == 0)
+			Con_Printf("Mod_Q3BSP_LoadFaces: surface %d has no triangles, ignoring\n", i);
+	}
+
 	// for per pixel lighting
 	Mod_BuildTextureVectorsFromNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, true);
 
