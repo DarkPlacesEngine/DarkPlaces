@@ -602,6 +602,56 @@ static const snd_format_t* OGG_GetFormat (sfx_t* sfx)
 
 static const snd_fetcher_t ogg_fetcher = { OGG_FetchSound, OGG_FetchEnd, OGG_FreeSfx, OGG_GetFormat };
 
+static void OGG_DecodeTags(vorbis_comment *vc, unsigned int *start, unsigned int *length, double samplesfactor, unsigned int numsamples, double *peak, double *gaindb)
+{
+	const char *startcomment = NULL, *lengthcomment = NULL, *endcomment = NULL, *thiscomment = NULL;
+
+	*start = numsamples;
+	*length = numsamples;
+	*peak = 0.0;
+	*gaindb = 0.0;
+
+	if(!vc)
+		return;
+
+	thiscomment = qvorbis_comment_query(vc, "REPLAYGAIN_TRACK_PEAK", 0);
+	if(thiscomment)
+		*peak = atof(thiscomment);
+	thiscomment = qvorbis_comment_query(vc, "REPLAYGAIN_TRACK_GAIN", 0);
+	if(thiscomment)
+		*gaindb = atof(thiscomment);
+	
+	startcomment = qvorbis_comment_query(vc, "LOOP_START", 0); // DarkPlaces, and some Japanese app
+	if(startcomment)
+	{
+		endcomment = qvorbis_comment_query(vc, "LOOP_END", 0);
+		if(!endcomment)
+			lengthcomment = qvorbis_comment_query(vc, "LOOP_LENGTH", 0);
+	}
+	else
+	{
+		startcomment = qvorbis_comment_query(vc, "LOOPSTART", 0); // RPG Maker VX
+		if(startcomment)
+		{
+			lengthcomment = qvorbis_comment_query(vc, "LOOPLENGTH", 0);
+			if(!lengthcomment)
+				endcomment = qvorbis_comment_query(vc, "LOOPEND", 0);
+		}
+		else
+		{
+			startcomment = qvorbis_comment_query(vc, "LOOPPOINT", 0); // Sonic Robo Blast 2
+		}
+	}
+
+	if(startcomment)
+	{
+		*start = bound(0, atof(startcomment) * samplesfactor, numsamples);
+		if(endcomment)
+			*length = bound(0, atof(endcomment) * samplesfactor, numsamples);
+		else if(lengthcomment)
+			*length = bound(0, *start + atof(lengthcomment) * samplesfactor, numsamples);
+	}
+}
 
 /*
 ====================
@@ -613,15 +663,13 @@ Load an Ogg Vorbis file into memory
 qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *sfx)
 {
 	unsigned char *data;
-	const char *thiscomment;
 	fs_offset_t filesize;
 	ov_decode_t ov_decode;
 	OggVorbis_File vf;
 	vorbis_info *vi;
 	vorbis_comment *vc;
 	ogg_int64_t len, buff_len;
-	double peak = 0.0;
-	double gaindb = 0.0;
+	double peak, gaindb;
 
 	if (!vf_dll)
 		return false;
@@ -684,21 +732,11 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *sfx)
 		sfx->fetcher_data = per_sfx;
 		sfx->fetcher = &ogg_fetcher;
 		sfx->flags |= SFXFLAG_STREAMED;
-		per_sfx->total_length = sfx->total_length = (int)((size_t)len / (per_sfx->format.channels * 2) * ((double)snd_renderbuffer->format.speed / per_sfx->format.speed));
-		sfx->loopstart = sfx->total_length;
+		sfx->total_length = (int)((size_t)len / (per_sfx->format.channels * 2) * ((double)snd_renderbuffer->format.speed / per_sfx->format.speed));
 		vc = qov_comment(&vf, -1);
-		if(vc)
-		{
-			thiscomment = qvorbis_comment_query(vc, "LOOP_START", 0);
-			if(thiscomment)
-				sfx->loopstart = bound(0, (unsigned int) (atof(thiscomment) * (double)snd_renderbuffer->format.speed / (double)per_sfx->format.speed), sfx->total_length);
-			thiscomment = qvorbis_comment_query(vc, "REPLAYGAIN_TRACK_PEAK", 0);
-			if(thiscomment)
-				peak = atof(thiscomment);
-			thiscomment = qvorbis_comment_query(vc, "REPLAYGAIN_TRACK_GAIN", 0);
-			if(thiscomment)
-				gaindb = atof(thiscomment);
-		}
+		OGG_DecodeTags(vc, &sfx->loopstart, &sfx->total_length, (double)snd_renderbuffer->format.speed / (double)per_sfx->format.speed, sfx->total_length, &peak, &gaindb);
+		per_sfx->total_length = sfx->total_length;
+		qov_clear (&vf);
 	}
 	else
 	{
@@ -743,22 +781,10 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *sfx)
 		sfx->total_length = sb->nbframes;
 		sfx->memsize += sb->maxframes * sb->format.channels * sb->format.width + sizeof (*sb) - sizeof (sb->samples);
 
-		sfx->loopstart = sfx->total_length;
 		sfx->flags &= ~SFXFLAG_STREAMED;
 		vc = qov_comment(&vf, -1);
-		if(vc)
-		{
-			thiscomment = qvorbis_comment_query(vc, "LOOP_START", 0);
-			if(thiscomment)
-				sfx->loopstart = bound(0, (unsigned int) (atoi(thiscomment) * (double)snd_renderbuffer->format.speed / (double)sb->format.speed), sfx->total_length);
-			thiscomment = qvorbis_comment_query(vc, "REPLAYGAIN_TRACK_PEAK", 0);
-			if(thiscomment)
-				peak = atof(thiscomment);
-			thiscomment = qvorbis_comment_query(vc, "REPLAYGAIN_TRACK_GAIN", 0);
-			if(thiscomment)
-				gaindb = atof(thiscomment);
-		}
-
+		OGG_DecodeTags(vc, &sfx->loopstart, &sfx->total_length, (double)snd_renderbuffer->format.speed / (double)sb->format.speed, sfx->total_length, &peak, &gaindb);
+		sb->nbframes = sfx->total_length;
 		qov_clear (&vf);
 		Mem_Free (data);
 		Mem_Free (buff);
