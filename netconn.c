@@ -1948,9 +1948,10 @@ static void NetConn_BuildChallengeString(char *buffer, int bufferlength)
 // (div0) build the full response only if possible; better a getinfo response than no response at all if getstatus won't fit
 static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg, size_t out_size, qboolean fullstatus)
 {
-	const char *qcstatus = NULL;
+	char qcstatus[256];
 	unsigned int nb_clients = 0, nb_bots = 0, i;
 	int length;
+	char teambuf[3];
 
 	SV_VM_Begin();
 
@@ -1965,6 +1966,7 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 		}
 	}
 
+	*qcstatus = 0;
 	if(prog->globaloffsets.worldstatus >= 0)
 	{
 		const char *str = PRVM_G_STRING(prog->globaloffsets.worldstatus);
@@ -1972,9 +1974,9 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 		{
 			char *p;
 			const char *q;
-			qcstatus = p = Mem_Alloc(tempmempool, strlen(str) + 1);
+			p = qcstatus;
 			for(q = str; *q; ++q)
-				if(*q != '\\')
+				if(*q != '\\' && *q != '\n')
 					*p++ = *q;
 			*p = 0;
 		}
@@ -1991,15 +1993,9 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 						fullstatus ? "statusResponse" : "infoResponse",
 						gamename, com_modname, gameversion.integer, svs.maxclients,
 						nb_clients, nb_bots, sv.name, hostname.string, NET_PROTOCOL_VERSION,
-						qcstatus ? "\\qcstatus\\" : "", qcstatus ? qcstatus : "",
+						*qcstatus ? "\\qcstatus\\" : "", qcstatus,
 						challenge ? "\\challenge\\" : "", challenge ? challenge : "",
 						fullstatus ? "\n" : "");
-
-	if(qcstatus)
-	{
-		Mem_Free((char *)qcstatus);
-		qcstatus = NULL;
-	}
 
 	// Make sure it fits in the buffer
 	if (length < 0)
@@ -2045,6 +2041,7 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 				else
 					pingvalue = 0;
 
+				*qcstatus = 0;
 				if(prog->fieldoffsets.clientstatus >= 0)
 				{
 					const char *str = PRVM_E_STRING(PRVM_EDICT_NUM(i + 1), prog->fieldoffsets.clientstatus);
@@ -2052,27 +2049,44 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 					{
 						char *p;
 						const char *q;
-						qcstatus = p = Mem_Alloc(tempmempool, strlen(str) + 1);
-						for(q = str; *q; ++q)
-							if(*q != '\\' && *q != ' ')
+						p = qcstatus;
+						for(q = str; *q && p != qcstatus + sizeof(qcstatus) - 1; ++q)
+							if(*q != '\\' && *q != '"' && !ISWHITESPACE(*q))
 								*p++ = *q;
 						*p = 0;
 					}
 				}
 
-				if(qcstatus)
+				if ((gamemode == GAME_NEXUIZ) && (teamplay.integer > 0))
 				{
-					length = dpsnprintf(ptr, left, "%s %d \"%s\"\n",
-										qcstatus,
-										pingvalue,
-										cleanname);
-					Mem_Free((char *)qcstatus);
-					qcstatus = NULL;
+					if(cl->frags == -666) // spectator
+						strlcpy(teambuf, " 0", sizeof(teambuf));
+					else if(cl->colors == 0x44) // red team
+						strlcpy(teambuf, " 1", sizeof(teambuf));
+					else if(cl->colors == 0xDD) // blue team
+						strlcpy(teambuf, " 2", sizeof(teambuf));
+					else if(cl->colors == 0xCC) // yellow team
+						strlcpy(teambuf, " 3", sizeof(teambuf));
+					else if(cl->colors == 0x99) // pink team
+						strlcpy(teambuf, " 4", sizeof(teambuf));
+					else
+						strlcpy(teambuf, " 0", sizeof(teambuf));
 				}
 				else
-					length = dpsnprintf(ptr, left, "%d %d \"%s\"\n",
+					*teambuf = 0;
+
+				// note: team number is inserted according to SoF2 protocol
+				if(*qcstatus)
+					length = dpsnprintf(ptr, left, "%s %d%s \"%s\"\n",
+										qcstatus,
+										pingvalue,
+										teambuf,
+										cleanname);
+				else
+					length = dpsnprintf(ptr, left, "%d %d%s \"%s\"\n",
 										cl->frags,
 										pingvalue,
+										teambuf,
 										cleanname);
 
 				if(length < 0)
