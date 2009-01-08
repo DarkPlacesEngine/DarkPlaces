@@ -995,7 +995,10 @@ void CL_BeginDownloads(qboolean aborteddownload)
 		 && !FS_FileExists(va("dlcache/%s.%i.%i", csqc_progname.string, csqc_progsize.integer, csqc_progcrc.integer)))
 		{
 			Con_Printf("Downloading new CSQC code to dlcache/%s.%i.%i\n", csqc_progname.string, csqc_progsize.integer, csqc_progcrc.integer);
-			Cmd_ForwardStringToServer(va("download %s", csqc_progname.string));
+			if(cl_serverextension_download.integer >= 2 && FS_HasZlib())
+				Cmd_ForwardStringToServer(va("download %s deflate", csqc_progname.string));
+			else
+				Cmd_ForwardStringToServer(va("download %s", csqc_progname.string));
 			return;
 		}
 	}
@@ -1184,37 +1187,57 @@ void CL_StopDownload(int size, int crc)
 		size_t existingsize;
 		const char *extension;
 
-		// finished file
-		// save to disk only if we don't already have it
-		// (this is mainly for playing back demos)
-		existingcrc = FS_CRCFile(cls.qw_downloadname, &existingsize);
-		if (existingsize || gamemode == GAME_NEXUIZ || !strcmp(cls.qw_downloadname, csqc_progname.string))
-			// let csprogs ALWAYS go to dlcache, to prevent "viral csprogs"; also, never put files outside dlcache for Nexuiz
+		if(cls.qw_download_deflate)
 		{
-			if ((int)existingsize != size || existingcrc != crc)
-			{
-				// we have a mismatching file, pick another name for it
-				char name[MAX_QPATH*2];
-				dpsnprintf(name, sizeof(name), "dlcache/%s.%i.%i", cls.qw_downloadname, size, crc);
-				if (!FS_FileExists(name))
-				{
-					Con_Printf("Downloaded \"%s\" (%i bytes, %i CRC)\n", name, size, crc);
-					FS_WriteFile(name, cls.qw_downloadmemory, cls.qw_downloadmemorycursize);
-				}
-			}
+			unsigned char *out;
+			size_t inflated_size;
+			out = FS_Inflate(cls.qw_downloadmemory, cls.qw_downloadmemorycursize, &inflated_size, tempmempool);
+			Mem_Free(cls.qw_downloadmemory);
+			Con_Printf("Inflated download: new size: %u (%g%%)\n", (unsigned)inflated_size, 100.0 - 100.0*(cls.qw_downloadmemorycursize / (float)inflated_size));
+			cls.qw_downloadmemory = out;
+			cls.qw_downloadmemorycursize = inflated_size;
+		}
+
+		if(!cls.qw_downloadmemory)
+		{
+			Con_Printf("Download \"%s\" is corrupt (see above!)\n", cls.qw_downloadname);
 		}
 		else
 		{
-			// we either don't have it or have a mismatching file...
-			// so it's time to accept the file
-			// but if we already have a mismatching file we need to rename
-			// this new one, and if we already have this file in renamed form,
-			// we do nothing
-			Con_Printf("Downloaded \"%s\" (%i bytes, %i CRC)\n", cls.qw_downloadname, size, crc);
-			FS_WriteFile(cls.qw_downloadname, cls.qw_downloadmemory, cls.qw_downloadmemorycursize);
-			extension = FS_FileExtension(cls.qw_downloadname);
-			if (!strcasecmp(extension, "pak") || !strcasecmp(extension, "pk3"))
-				FS_Rescan();
+			crc = CRC_Block(cls.qw_downloadmemory, cls.qw_downloadmemorycursize);
+			size = cls.qw_downloadmemorycursize;
+			// finished file
+			// save to disk only if we don't already have it
+			// (this is mainly for playing back demos)
+			existingcrc = FS_CRCFile(cls.qw_downloadname, &existingsize);
+			if (existingsize || gamemode == GAME_NEXUIZ || !strcmp(cls.qw_downloadname, csqc_progname.string))
+				// let csprogs ALWAYS go to dlcache, to prevent "viral csprogs"; also, never put files outside dlcache for Nexuiz
+			{
+				if ((int)existingsize != size || existingcrc != crc)
+				{
+					// we have a mismatching file, pick another name for it
+					char name[MAX_QPATH*2];
+					dpsnprintf(name, sizeof(name), "dlcache/%s.%i.%i", cls.qw_downloadname, size, crc);
+					if (!FS_FileExists(name))
+					{
+						Con_Printf("Downloaded \"%s\" (%i bytes, %i CRC)\n", name, size, crc);
+						FS_WriteFile(name, cls.qw_downloadmemory, cls.qw_downloadmemorycursize);
+					}
+				}
+			}
+			else
+			{
+				// we either don't have it or have a mismatching file...
+				// so it's time to accept the file
+				// but if we already have a mismatching file we need to rename
+				// this new one, and if we already have this file in renamed form,
+				// we do nothing
+				Con_Printf("Downloaded \"%s\" (%i bytes, %i CRC)\n", cls.qw_downloadname, size, crc);
+				FS_WriteFile(cls.qw_downloadname, cls.qw_downloadmemory, cls.qw_downloadmemorycursize);
+				extension = FS_FileExtension(cls.qw_downloadname);
+				if (!strcasecmp(extension, "pak") || !strcasecmp(extension, "pk3"))
+					FS_Rescan();
+			}
 		}
 	}
 	else if (cls.qw_downloadmemory && size)
@@ -1292,6 +1315,14 @@ void CL_DownloadBegin_f(void)
 	cls.qw_downloadmemorymaxsize = size;
 	cls.qw_downloadmemory = Mem_Alloc(cls.permanentmempool, cls.qw_downloadmemorymaxsize);
 	cls.qw_downloadnumber++;
+
+	cls.qw_download_deflate = false;
+	if(Cmd_Argc() >= 4)
+	{
+		if(!strcmp(Cmd_Argv(3), "deflate"))
+			cls.qw_download_deflate = true;
+		// check further encodings here
+	}
 
 	Cmd_ForwardStringToServer("sv_startdownload");
 }

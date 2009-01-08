@@ -86,6 +86,9 @@ typedef struct server_s
 	int csqc_progcrc; // -1 = no progs
 	int csqc_progsize; // -1 = no progs
 	char csqc_progname[MAX_QPATH]; // copied from csqc_progname at level start
+	unsigned char *csqc_progdata;
+	size_t csqc_progsize_deflated;
+	unsigned char *csqc_progdata_deflated;
 
 	// collision culling data
 	world_t world;
@@ -270,6 +273,7 @@ typedef struct client_s
 	int download_expectedposition; // next position the client should ack
 	qboolean download_started;
 	char download_name[MAX_QPATH];
+	qboolean download_deflate;
 
 	// fixangle data
 	qboolean fixangle_angles_set;

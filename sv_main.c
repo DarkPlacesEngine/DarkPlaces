@@ -788,24 +788,15 @@ void SV_SendServerinfo (client_t *client)
 
 		if(client->sv_demo_file != NULL)
 		{
-			void *csqcbuf;
-			fs_offset_t csqclen;
-			int csqccrc;
 			int i;
 			char buf[NET_MAXMESSAGE];
 			sizebuf_t sb;
 
-			csqcbuf = FS_LoadFile(sv.csqc_progname, tempmempool, true, &csqclen);
-			if(csqcbuf)
-			{
-				csqccrc = CRC_Block(csqcbuf, csqclen);
-				sb.data = (void *) buf;
-				sb.maxsize = sizeof(buf);
-				i = 0;
-				while(MakeDownloadPacket(sv.csqc_progname, csqcbuf, csqclen, csqccrc, i++, &sb, sv.protocol))
-					SV_WriteDemoMessage(client, &sb, false);
-				Mem_Free(csqcbuf);
-			}
+			sb.data = (void *) buf;
+			sb.maxsize = sizeof(buf);
+			i = 0;
+			while(MakeDownloadPacket(sv.csqc_progname, sv.csqc_progdata, sv.csqc_progsize, sv.csqc_progcrc, i++, &sb, sv.protocol))
+				SV_WriteDemoMessage(client, &sb, false);
 		}
 
 		//[515]: init stufftext string (it is sent before svc_serverinfo)
@@ -817,10 +808,12 @@ void SV_SendServerinfo (client_t *client)
 		}
 	}
 
-	if (sv_allowdownloads.integer)
+	//if (sv_allowdownloads.integer)
+	// always send the info that the server supports the protocol, even if downloads are forbidden
+	// only because of that, the CSQC exception can work
 	{
 		MSG_WriteByte (&client->netconnection->message, svc_stufftext);
-		MSG_WriteString (&client->netconnection->message, "cl_serverextension_download 1\n");
+		MSG_WriteString (&client->netconnection->message, "cl_serverextension_download 2\n");
 	}
 
 	// send at this time so it's guaranteed to get executed at the right time
@@ -2128,13 +2121,33 @@ static void SV_StartDownload_f(void)
 		host_client->download_started = true;
 }
 
+static void Download_CheckExtensions(void)
+{
+	int i;
+	int argc = Cmd_Argc();
+
+	// first reset them all
+	host_client->download_deflate = false;
+	
+	for(i = 2; i < argc; ++i)
+	{
+		if(!strcmp(Cmd_Argv(i), "deflate"))
+		{
+			host_client->download_deflate = true;
+			break;
+		}
+	}
+}
+
 static void SV_Download_f(void)
 {
 	const char *whichpack, *whichpack2, *extension;
+	qboolean is_csqc; // so we need to check only once
 
-	if (Cmd_Argc() != 2)
+	if (Cmd_Argc() < 2)
 	{
-		SV_ClientPrintf("usage: download <filename>\n");
+		SV_ClientPrintf("usage: download <filename> {<extensions>}*\n");
+		SV_ClientPrintf("       supported extensions: deflate\n");
 		return;
 	}
 
@@ -2158,12 +2171,16 @@ static void SV_Download_f(void)
 		host_client->download_started = false;
 	}
 
-	if (!sv_allowdownloads.integer)
+	is_csqc = (sv.csqc_progname[0] && strcmp(Cmd_Argv(1), sv.csqc_progname) == 0);
+	
+	if (!sv_allowdownloads.integer && !is_csqc)
 	{
 		SV_ClientPrintf("Downloads are disabled on this server\n");
 		Host_ClientCommands("\nstopdownload\n");
 		return;
 	}
+
+	Download_CheckExtensions();
 
 	strlcpy(host_client->download_name, Cmd_Argv(1), sizeof(host_client->download_name));
 	extension = FS_FileExtension(host_client->download_name);
@@ -2171,6 +2188,30 @@ static void SV_Download_f(void)
 	// host_client is asking to download a specified file
 	if (developer.integer >= 100)
 		Con_Printf("Download request for %s by %s\n", host_client->download_name, host_client->name);
+
+	if(is_csqc)
+	{
+		char extensions[MAX_QPATH]; // make sure this can hold all extensions
+		extensions[0] = '\0';
+		
+		if(host_client->download_deflate)
+			strlcat(extensions, " deflate", sizeof(extensions));
+		
+		Con_DPrintf("Downloading %s to %s\n", host_client->download_name, host_client->name);
+
+		if(host_client->download_deflate)
+			host_client->download_file = FS_FileFromData(sv.csqc_progdata_deflated, sv.csqc_progsize_deflated, true);
+		else
+			host_client->download_file = FS_FileFromData(sv.csqc_progdata, sv.csqc_progsize, true);
+		
+		// no, no space is needed between %s and %s :P
+		Host_ClientCommands("\ncl_downloadbegin %i %s%s\n", (int)FS_FileSize(host_client->download_file), host_client->download_name, extensions);
+
+		host_client->download_expectedposition = 0;
+		host_client->download_started = false;
+		host_client->sendsignon = true; // make sure this message is sent
+		return;
+	}
 
 	if (!FS_FileExists(host_client->download_name))
 	{
@@ -2259,6 +2300,20 @@ static void SV_Download_f(void)
 
 	Con_DPrintf("Downloading %s to %s\n", host_client->download_name, host_client->name);
 
+	/*
+	 * we can only do this if we would actually deflate on the fly
+	 * which we do not (yet)!
+	{
+		char extensions[MAX_QPATH]; // make sure this can hold all extensions
+		extensions[0] = '\0';
+		
+		if(host_client->download_deflate)
+			strlcat(extensions, " deflate", sizeof(extensions));
+
+		// no, no space is needed between %s and %s :P
+		Host_ClientCommands("\ncl_downloadbegin %i %s%s\n", (int)FS_FileSize(host_client->download_file), host_client->download_name, extensions);
+	}
+	*/
 	Host_ClientCommands("\ncl_downloadbegin %i %s\n", (int)FS_FileSize(host_client->download_file), host_client->download_name);
 
 	host_client->download_expectedposition = 0;
@@ -2537,6 +2592,51 @@ static void SV_CreateBaseline (void)
 	}
 }
 
+/*
+================
+SV_Prepare_CSQC
+
+Load csprogs.dat and comperss it so it doesn't need to be
+reloaded on request.
+================
+*/
+void SV_Prepare_CSQC(void)
+{
+	fs_offset_t progsize;
+
+	if(sv.csqc_progdata)
+	{
+		Con_DPrintf("Unloading old CSQC data.\n");
+		Mem_Free(sv.csqc_progdata);
+		if(sv.csqc_progdata_deflated)
+			Mem_Free(sv.csqc_progdata_deflated);
+	}
+
+	sv.csqc_progdata = NULL;
+	sv.csqc_progdata_deflated = NULL;
+	
+	Con_Print("Loading csprogs.dat\n");
+
+	sv.csqc_progname[0] = 0;
+	sv.csqc_progdata = FS_LoadFile(csqc_progname.string, sv_mempool, false, &progsize);
+
+	if(progsize > 0)
+	{
+		size_t deflated_size;
+		
+		sv.csqc_progsize = (int)progsize;
+		sv.csqc_progcrc = CRC_Block(sv.csqc_progdata, progsize);
+		strlcpy(sv.csqc_progname, csqc_progname.string, sizeof(sv.csqc_progname));
+		Con_Printf("server detected csqc progs file \"%s\" with size %i and crc %i\n", sv.csqc_progname, sv.csqc_progsize, sv.csqc_progcrc);
+
+		Con_Print("Compressing csprogs.dat\n");
+		//unsigned char *FS_Deflate(const unsigned char *data, size_t size, size_t *deflated_size, int level, mempool_t *mempool);
+		sv.csqc_progdata_deflated = FS_Deflate(sv.csqc_progdata, progsize, &deflated_size, -1, sv_mempool);
+		sv.csqc_progsize_deflated = (int)deflated_size;
+		Con_Printf("Deflated: %g%%\n", 100.0 - 100.0 * (deflated_size / (float)progsize));
+		Con_DPrintf("Uncompressed: %u\nCompressed:   %u\n", (unsigned)sv.csqc_progsize, (unsigned)sv.csqc_progsize_deflated);
+	}
+}
 
 /*
 ================
@@ -2980,7 +3080,6 @@ static qboolean SV_VM_CB_LoadEdict(prvm_edict_t *ent)
 static void SV_VM_Setup(void)
 {
 	extern cvar_t csqc_progname;	//[515]: csqc crc check and right csprogs name according to progs.dat
-	size_t csprogsdatasize;
 	PRVM_Begin;
 	PRVM_InitProg( PRVM_SERVERPROG );
 
@@ -3054,15 +3153,7 @@ static void SV_VM_Setup(void)
 
 	PRVM_End;
 
-	// see if there is a csprogs.dat installed, and if so, set the csqc_progcrc accordingly, this will be sent to connecting clients to tell them to only load a matching csprogs.dat file
-	sv.csqc_progname[0] = 0;
-	sv.csqc_progcrc = FS_CRCFile(csqc_progname.string, &csprogsdatasize);
-	sv.csqc_progsize = csprogsdatasize;
-	if (sv.csqc_progsize > 0)
-	{
-		strlcpy(sv.csqc_progname, csqc_progname.string, sizeof(sv.csqc_progname));
-		Con_DPrintf("server detected csqc progs file \"%s\" with size %i and crc %i\n", sv.csqc_progname, sv.csqc_progsize, sv.csqc_progcrc);
-	}
+	SV_Prepare_CSQC();
 }
 
 void SV_VM_Begin(void)

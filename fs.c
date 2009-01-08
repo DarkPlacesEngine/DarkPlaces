@@ -111,7 +111,22 @@ CONSTANTS
 #define MAX_WBITS		15
 #define Z_OK			0
 #define Z_STREAM_END	1
+#define Z_STREAM_ERROR  (-2)
+#define Z_DATA_ERROR    (-3)
+#define Z_MEM_ERROR     (-4)
+#define Z_BUF_ERROR     (-5)
 #define ZLIB_VERSION	"1.2.3"
+
+#define Z_BINARY 0
+#define Z_DEFLATED 8
+#define Z_MEMLEVEL_DEFAULT 8
+
+#define Z_NULL 0
+#define Z_DEFAULT_COMPRESSION (-1)
+#define Z_NO_FLUSH 0
+#define Z_SYNC_FLUSH 2
+#define Z_FULL_FLUSH 3
+#define Z_FINISH 4
 
 // Uncomment the following line if the zlib DLL you have still uses
 // the 1.1.x series calling convention on Win32 (WINAPI)
@@ -156,6 +171,8 @@ typedef struct
 #define QFILE_FLAG_PACKED (1 << 0)
 // file is compressed using the deflate algorithm (PK3 only)
 #define QFILE_FLAG_DEFLATED (1 << 1)
+// file is actually already loaded data
+#define QFILE_FLAG_DATA (1 << 2)
 
 #define FILE_BUFF_SIZE 2048
 typedef struct
@@ -182,6 +199,9 @@ struct qfile_s
 
 	// For zipped files
 	ztoolkit_t*		ztk;
+
+	// for data files
+	const unsigned char *data;
 };
 
 
@@ -316,9 +336,16 @@ static int (ZEXPORT *qz_inflate) (z_stream* strm, int flush);
 static int (ZEXPORT *qz_inflateEnd) (z_stream* strm);
 static int (ZEXPORT *qz_inflateInit2_) (z_stream* strm, int windowBits, const char *version, int stream_size);
 static int (ZEXPORT *qz_inflateReset) (z_stream* strm);
+static int (ZEXPORT *qz_deflateInit2_) (z_stream* strm, int level, int method, int windowBits, int memLevel, int strategy, const char *version, int stream_size);
+static int (ZEXPORT *qz_deflateEnd) (z_stream* strm);
+static int (ZEXPORT *qz_deflate) (z_stream* strm, int flush);
 
 #define qz_inflateInit2(strm, windowBits) \
         qz_inflateInit2_((strm), (windowBits), ZLIB_VERSION, sizeof(z_stream))
+#define qz_deflateInit2(strm, level, method, windowBits, memLevel, strategy) \
+        qz_deflateInit2_((strm), (level), (method), (windowBits), (memLevel), (strategy), ZLIB_VERSION, sizeof(z_stream))
+
+//        qz_deflateInit_((strm), (level), ZLIB_VERSION, sizeof(z_stream))
 
 static dllfunction_t zlibfuncs[] =
 {
@@ -326,6 +353,9 @@ static dllfunction_t zlibfuncs[] =
 	{"inflateEnd",		(void **) &qz_inflateEnd},
 	{"inflateInit2_",	(void **) &qz_inflateInit2_},
 	{"inflateReset",	(void **) &qz_inflateReset},
+	{"deflateInit2_",   (void **) &qz_deflateInit2_},
+	{"deflateEnd",      (void **) &qz_deflateEnd},
+	{"deflate",         (void **) &qz_deflate},
 	{NULL, NULL}
 };
 
@@ -392,6 +422,18 @@ qboolean PK3_OpenLibrary (void)
 	return Sys_LoadLibrary (dllnames, &zlib_dll, zlibfuncs);
 }
 
+/*
+====================
+FS_HasZlib
+
+See if zlib is available
+====================
+*/
+qboolean FS_HasZlib(void)
+{
+	PK3_OpenLibrary(); // to be safe
+	return (zlib_dll != 0);
+}
 
 /*
 ====================
@@ -2038,6 +2080,25 @@ qfile_t* FS_OpenVirtualFile (const char* filepath, qboolean quiet)
 
 /*
 ====================
+FS_FileFromData
+
+Open a file. The syntax is the same as fopen
+====================
+*/
+qfile_t* FS_FileFromData (const unsigned char *data, const size_t size, qboolean quiet)
+{
+	qfile_t* file;
+	file = (qfile_t *)Mem_Alloc (fs_mempool, sizeof (*file));
+	memset (file, 0, sizeof (*file));
+	file->flags = QFILE_FLAG_DATA;
+	file->ungetc = EOF;
+	file->real_length = size;
+	file->data = data;
+	return file;
+}
+
+/*
+====================
 FS_Close
 
 Close a file
@@ -2045,6 +2106,12 @@ Close a file
 */
 int FS_Close (qfile_t* file)
 {
+	if(file->flags & QFILE_FLAG_DATA)
+	{
+		Mem_Free(file);
+		return 0;
+	}
+
 	if (close (file->handle))
 		return EOF;
 
@@ -2114,6 +2181,16 @@ fs_offset_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 	}
 	else
 		done = 0;
+
+	if(file->flags & QFILE_FLAG_DATA)
+	{
+		size_t left = file->real_length - file->position;
+		if(buffersize > left)
+			buffersize = left;
+		memcpy(buffer, file->data + file->position, buffersize);
+		file->position += buffersize;
+		return buffersize;
+	}
 
 	// First, we copy as many bytes as we can from "buff"
 	if (file->buff_ind < file->buff_len)
@@ -2395,6 +2472,12 @@ int FS_Seek (qfile_t* file, fs_offset_t offset, int whence)
 	}
 	if (offset < 0 || offset > file->real_length)
 		return -1;
+
+	if(file->flags & QFILE_FLAG_DATA)
+	{
+		file->position = offset;
+		return 0;
+	}
 
 	// If we have the data in our read buffer, we don't need to actually seek
 	if (file->position - file->buff_len <= offset && offset <= file->position)
@@ -3102,3 +3185,181 @@ int FS_CRCFile(const char *filename, size_t *filesizepointer)
 	return crc;
 }
 
+unsigned char *FS_Deflate(const unsigned char *data, size_t size, size_t *deflated_size, int level, mempool_t *mempool)
+{
+	z_stream strm;
+	unsigned char *out = NULL;
+	unsigned char *tmp;
+
+	memset(&strm, 0, sizeof(strm));
+	strm.zalloc = Z_NULL;
+	strm.zfree = Z_NULL;
+	strm.opaque = Z_NULL;
+
+	if(level < 0)
+		level = Z_DEFAULT_COMPRESSION;
+
+	if(qz_deflateInit2(&strm, level, Z_DEFLATED, -MAX_WBITS, Z_MEMLEVEL_DEFAULT, Z_BINARY) != Z_OK)
+	{
+		Con_Printf("FS_Deflate: deflate init error!\n");
+		return NULL;
+	}
+
+	strm.next_in = (unsigned char*)data;
+	strm.avail_in = size;
+
+	tmp = Mem_Alloc(tempmempool, size);
+	if(!tmp)
+	{
+		Con_Printf("FS_Deflate: not enough memory in tempmempool!\n");
+		qz_deflateEnd(&strm);
+		return NULL;
+	}
+
+	strm.next_out = tmp;
+	strm.avail_out = size;
+
+	if(qz_deflate(&strm, Z_FINISH) != Z_STREAM_END)
+	{
+		Con_Printf("FS_Deflate: deflate failed!\n");
+		qz_deflateEnd(&strm);
+		Mem_Free(tmp);
+		return NULL;
+	}
+	
+	if(qz_deflateEnd(&strm) != Z_OK)
+	{
+		Con_Printf("FS_Deflate: deflateEnd failed\n");
+		Mem_Free(tmp);
+		return NULL;
+	}
+
+	if(strm.total_out >= size)
+	{
+		Con_Printf("FS_Deflate: deflate is useless on this data!\n");
+		Mem_Free(tmp);
+		return NULL;
+	}
+
+	out = Mem_Alloc(mempool, strm.total_out);
+	if(!out)
+	{
+		Con_Printf("FS_Deflate: not enough memory in target mempool!\n");
+		Mem_Free(tmp);
+		return NULL;
+	}
+
+	if(deflated_size)
+		*deflated_size = (size_t)strm.total_out;
+
+	memcpy(out, tmp, strm.total_out);
+	Mem_Free(tmp);
+	
+	return out;
+}
+
+static void AssertBufsize(sizebuf_t *buf, int length)
+{
+	if(buf->cursize + length > buf->maxsize)
+	{
+		int oldsize = buf->maxsize;
+		unsigned char *olddata;
+		olddata = buf->data;
+		buf->maxsize += length;
+		buf->data = Mem_Alloc(tempmempool, buf->maxsize);
+		if(olddata)
+		{
+			memcpy(buf->data, olddata, oldsize);
+			Mem_Free(olddata);
+		}
+	}
+}
+
+unsigned char *FS_Inflate(const unsigned char *data, size_t size, size_t *inflated_size, mempool_t *mempool)
+{
+	int ret;
+	z_stream strm;
+	unsigned char *out = NULL;
+	unsigned char tmp[2048];
+	unsigned int have;
+	sizebuf_t outbuf;
+
+	memset(&outbuf, 0, sizeof(outbuf));
+	outbuf.data = Mem_Alloc(tempmempool, sizeof(tmp));
+	outbuf.maxsize = sizeof(tmp);
+
+	memset(&strm, 0, sizeof(strm));
+	strm.zalloc = Z_NULL;
+	strm.zfree = Z_NULL;
+	strm.opaque = Z_NULL;
+
+	if(qz_inflateInit2(&strm, -MAX_WBITS) != Z_OK)
+	{
+		Con_Printf("FS_Inflate: inflate init error!\n");
+		Mem_Free(outbuf.data);
+		return NULL;
+	}
+
+	strm.next_in = (unsigned char*)data;
+	strm.avail_in = size;
+
+	do
+	{
+		strm.next_out = tmp;
+		strm.avail_out = sizeof(tmp);
+		ret = qz_inflate(&strm, Z_NO_FLUSH);
+		// it either returns Z_OK on progress, Z_STREAM_END on end
+		// or an error code
+		switch(ret)
+		{
+			case Z_STREAM_END:
+			case Z_OK:
+				break;
+				
+			case Z_STREAM_ERROR:
+				Con_Print("FS_Inflate: stream error!\n");
+				break;
+			case Z_DATA_ERROR:
+				Con_Print("FS_Inflate: data error!\n");
+				break;
+			case Z_MEM_ERROR:
+				Con_Print("FS_Inflate: mem error!\n");
+				break;
+			case Z_BUF_ERROR:
+				Con_Print("FS_Inflate: buf error!\n");
+				break;
+			default:
+				Con_Print("FS_Inflate: unknown error!\n");
+				break;
+				
+		}
+		if(ret != Z_OK && ret != Z_STREAM_END)
+		{
+			Con_Printf("Error after inflating %u bytes\n", (unsigned)strm.total_in);
+			Mem_Free(outbuf.data);
+			qz_inflateEnd(&strm);
+			return NULL;
+		}
+		have = sizeof(tmp) - strm.avail_out;
+		AssertBufsize(&outbuf, max(have, sizeof(tmp)));
+		SZ_Write(&outbuf, tmp, have);
+	} while(ret != Z_STREAM_END);
+
+	qz_inflateEnd(&strm);
+
+	out = Mem_Alloc(mempool, outbuf.cursize);
+	if(!out)
+	{
+		Con_Printf("FS_Inflate: not enough memory in target mempool!\n");
+		Mem_Free(outbuf.data);
+		return NULL;
+	}
+
+	memcpy(out, outbuf.data, outbuf.cursize);
+	Mem_Free(outbuf.data);
+
+	if(inflated_size)
+		*inflated_size = (size_t)outbuf.cursize;
+	
+	return out;
+}
