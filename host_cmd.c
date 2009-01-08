@@ -65,6 +65,7 @@ void Host_Status_f (void)
 	void (*print) (const char *fmt, ...);
 	char ip[22];
 	int frags;
+	prvm_prog_t *prog0;
 
 	if (cmd_source == src_command)
 	{
@@ -82,6 +83,9 @@ void Host_Status_f (void)
 	if (!sv.active)
 		return;
 	
+	prog0 = prog;
+	prog = NULL;
+
 	SV_VM_Begin();
 	
 	in = 0;
@@ -191,6 +195,8 @@ void Host_Status_f (void)
 	}
 
 	SV_VM_End();
+
+	prog = prog0;
 }
 
 
