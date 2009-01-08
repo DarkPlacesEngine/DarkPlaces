@@ -2034,6 +2034,7 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 							break;
 					}
 				} while (curchar != '\0');
+				cleanname[cleanind] = 0; // cleanind is always a valid index even at this point
 
 				pingvalue = (int)(cl->ping * 1000.0f);
 				if(cl->netconnection)
