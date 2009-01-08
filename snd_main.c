@@ -177,8 +177,8 @@ cvar_t snd_staticvolume = {CVAR_SAVE, "snd_staticvolume", "1", "volume of ambien
 cvar_t snd_soundradius = {0, "snd_soundradius", "2000", "radius of weapon sounds and other standard sound effects (monster idle noises are half this radius and flickering light noises are one third of this radius)"};
 cvar_t snd_spatialization_min_radius = {0, "snd_spatialization_min_radius", "10000", "use minimum spatialization above to this radius"};
 cvar_t snd_spatialization_max_radius = {0, "snd_spatialization_max_radius", "100", "use maximum spatialization below this radius"};
-cvar_t snd_spatialization_min = {0, "snd_spatialization_min", "0.5", "minimum spatializazion of sounds"};
-cvar_t snd_spatialization_max = {0, "snd_spatialization_max", "0.9", "maximum spatialization of sounds"};
+cvar_t snd_spatialization_min = {0, "snd_spatialization_min", "0.70", "minimum spatializazion of sounds"};
+cvar_t snd_spatialization_max = {0, "snd_spatialization_max", "0.95", "maximum spatialization of sounds"};
 cvar_t snd_spatialization_power = {0, "snd_spatialization_power", "0", "exponent of the spatialization falloff curve (0: logarithmic)"};
 cvar_t snd_spatialization_control = {0, "snd_spatialization_control", "0", "enable spatialization control (headphone friendly mode)"};
 
