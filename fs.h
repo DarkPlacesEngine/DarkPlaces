@@ -59,6 +59,7 @@ qboolean FS_AddPack(const char *pakfile, qboolean *already_loaded, qboolean keep
 const char *FS_WhichPack(const char *filename);
 qfile_t* FS_OpenRealFile (const char* filepath, const char* mode, qboolean quiet);
 qfile_t* FS_OpenVirtualFile (const char* filepath, qboolean quiet);
+qfile_t* FS_FileFromData (const unsigned char *data, const size_t size, qboolean quiet);
 int FS_Close (qfile_t* file);
 fs_offset_t FS_Write (qfile_t* file, const void* data, size_t datasize);
 fs_offset_t FS_Read (qfile_t* file, void* buffer, size_t buffersize);
@@ -112,5 +113,9 @@ qboolean FS_SysFileExists (const char *filename);	// only look for files outside
 
 void FS_mkdir (const char *path);
 
+unsigned char *FS_Deflate(const unsigned char *data, size_t size, size_t *deflated_size, int level, mempool_t *mempool);
+unsigned char *FS_Inflate(const unsigned char *data, size_t size, size_t *inflated_size, mempool_t *mempool);
+
+qboolean FS_HasZlib(void);
 
 #endif

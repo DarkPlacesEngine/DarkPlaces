@@ -589,6 +589,7 @@ typedef struct client_static_s
 	double qw_downloadspeedtime;
 	int qw_downloadspeedcount;
 	int qw_downloadspeedrate;
+	qboolean qw_download_deflate;
 
 	// current file upload buffer (for uploading screenshots to server)
 	unsigned char *qw_uploaddata;
