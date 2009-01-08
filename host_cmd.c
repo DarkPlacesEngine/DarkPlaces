@@ -65,7 +65,7 @@ void Host_Status_f (void)
 	void (*print) (const char *fmt, ...);
 	char ip[22];
 	int frags;
-	
+
 	if (cmd_source == src_command)
 	{
 		// if running a client, try to send over network so the client's status report parser will see the report
@@ -81,6 +81,8 @@ void Host_Status_f (void)
 
 	if (!sv.active)
 		return;
+	
+	SV_VM_Begin();
 	
 	in = 0;
 	if (Cmd_Argc() == 2)
@@ -187,6 +189,8 @@ void Host_Status_f (void)
 			print ("^7%s\n", client->name);
 		}
 	}
+
+	SV_VM_End();
 }
 
 
