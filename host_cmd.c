@@ -26,6 +26,7 @@ int current_skill;
 cvar_t sv_cheats = {0, "sv_cheats", "0", "enables cheat commands in any game, and cheat impulses in dpmod"};
 cvar_t sv_adminnick = {CVAR_SAVE, "sv_adminnick", "", "nick name to use for admin messages instead of host name"};
 cvar_t sv_status_privacy = {CVAR_SAVE, "sv_status_privacy", "0", "do not show IP addresses in 'status' replies to clients"};
+cvar_t sv_status_show_qcstatus = {CVAR_SAVE, "sv_status_show_qcstatus", "0", "show the 'qcstatus' field in status replies, not the 'frags' field. Turn this on if your mod uses this field, and the 'frags' field on the other hand has no meaningful value."};
 cvar_t rcon_password = {CVAR_PRIVATE, "rcon_password", "", "password to authenticate rcon commands"};
 cvar_t rcon_address = {0, "rcon_address", "", "server address to send rcon commands to (when not connected to a server)"};
 cvar_t team = {CVAR_USERINFO | CVAR_SAVE, "team", "none", "QW team (4 character limit, example: blue)"};
@@ -58,10 +59,12 @@ Host_Status_f
 */
 void Host_Status_f (void)
 {
+	char qcstatus[256];
 	client_t *client;
 	int seconds = 0, minutes = 0, hours = 0, i, j, k, in, players, ping = 0, packetloss = 0;
 	void (*print) (const char *fmt, ...);
 	char ip[22];
+	int frags;
 	
 	if (cmd_source == src_command)
 	{
@@ -137,12 +140,31 @@ void Host_Status_f (void)
 			strlcpy(ip, client->netconnection ? "hidden" : "botclient" , 22);
 		else
 			strlcpy(ip, (client->netconnection && client->netconnection->address) ? client->netconnection->address : "botclient", 22);
+
+		frags = client->frags;
+
+		if(sv_status_show_qcstatus.integer && prog->fieldoffsets.clientstatus >= 0)
+		{
+			const char *str = PRVM_E_STRING(PRVM_EDICT_NUM(i + 1), prog->fieldoffsets.clientstatus);
+			if(str && *str)
+			{
+				char *p;
+				const char *q;
+				p = qcstatus;
+				for(q = str; *q && p != qcstatus + sizeof(qcstatus) - 1; ++q)
+					if(*q != '\\' && *q != '"' && !ISWHITESPACE(*q))
+						*p++ = *q;
+				*p = 0;
+				if(*qcstatus)
+					frags = atoi(qcstatus);
+			}
+		}
 		
 		if (in == 0) // default layout
 		{
 			print ("#%-3u ", i+1);
-			print ("%-16.16s  ", client->name);
-			print ("%3i  ", client->frags);
+			print ("%-16.16s ", client->name);
+			print ("%4i  ", frags);
 			print ("%2i:%02i:%02i\n   ", hours, minutes, seconds);
 			print ("%s\n", ip);
 		}
@@ -153,7 +175,7 @@ void Host_Status_f (void)
 			print ("%2i ", packetloss);
 			print ("%4i ", ping);
 			print ("%2i:%02i:%02i ", hours, minutes, seconds);
-			print ("%4i  ", client->frags);
+			print ("%4i  ", frags);
 			print ("#%-3u ", i+1);
 			print ("^7%s\n", client->name);
 		}
@@ -2746,6 +2768,7 @@ void Host_InitCommands (void)
 	Cvar_RegisterVariable(&sv_cheats);
 	Cvar_RegisterVariable(&sv_adminnick);
 	Cvar_RegisterVariable(&sv_status_privacy);
+	Cvar_RegisterVariable(&sv_status_show_qcstatus);
 }
 
 void Host_NoOperation_f(void)
