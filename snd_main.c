@@ -165,12 +165,22 @@ static int current_swapstereo = false;
 static int current_channellayout = SND_CHANNELLAYOUT_AUTO;
 static int current_channellayout_used = SND_CHANNELLAYOUT_AUTO;
 
+static double spatialpower, spatialmin, spatialdiff, spatialoffset, spatialfactor;
+typedef enum { SPATIAL_NONE, SPATIAL_LOG, SPATIAL_POW, SPATIAL_THRESH } spatialmethod_t;
+spatialmethod_t spatialmethod;
+
 // Cvars declared in sound.h (part of the sound API)
 cvar_t bgmvolume = {CVAR_SAVE, "bgmvolume", "1", "volume of background music (such as CD music or replacement files such as sound/cdtracks/track002.ogg)"};
 cvar_t volume = {CVAR_SAVE, "volume", "0.7", "volume of sound effects"};
 cvar_t snd_initialized = { CVAR_READONLY, "snd_initialized", "0", "indicates the sound subsystem is active"};
 cvar_t snd_staticvolume = {CVAR_SAVE, "snd_staticvolume", "1", "volume of ambient sound effects (such as swampy sounds at the start of e1m2)"};
 cvar_t snd_soundradius = {0, "snd_soundradius", "2000", "radius of weapon sounds and other standard sound effects (monster idle noises are half this radius and flickering light noises are one third of this radius)"};
+cvar_t snd_spatialization_min_radius = {0, "snd_spatialization_min_radius", "10000", "use minimum spatialization above to this radius"};
+cvar_t snd_spatialization_max_radius = {0, "snd_spatialization_max_radius", "100", "use maximum spatialization below this radius"};
+cvar_t snd_spatialization_min = {0, "snd_spatialization_min", "0.5", "minimum spatializazion of sounds"};
+cvar_t snd_spatialization_max = {0, "snd_spatialization_max", "0.9", "maximum spatialization of sounds"};
+cvar_t snd_spatialization_power = {0, "snd_spatialization_power", "0", "exponent of the spatialization falloff curve (0: logarithmic)"};
+cvar_t snd_spatialization_control = {0, "snd_spatialization_control", "0", "enable spatialization control (headphone friendly mode)"};
 
 // Cvars declared in snd_main.h (shared with other snd_*.c files)
 cvar_t _snd_mixahead = {CVAR_SAVE, "_snd_mixahead", "0.1", "how much sound to mix ahead of time"};
@@ -803,6 +813,13 @@ void S_Init(void)
 	Cvar_RegisterVariable(&snd_csqcchannel6volume);
 	Cvar_RegisterVariable(&snd_csqcchannel7volume);
 
+	Cvar_RegisterVariable(&snd_spatialization_min_radius);
+	Cvar_RegisterVariable(&snd_spatialization_max_radius);
+	Cvar_RegisterVariable(&snd_spatialization_min);
+	Cvar_RegisterVariable(&snd_spatialization_max);
+	Cvar_RegisterVariable(&snd_spatialization_power);
+	Cvar_RegisterVariable(&snd_spatialization_control);
+
 	Cvar_RegisterVariable(&snd_speed);
 	Cvar_RegisterVariable(&snd_width);
 	Cvar_RegisterVariable(&snd_channels);
@@ -1220,6 +1237,7 @@ extern cvar_t cl_gameplayfix_soundsmovewithentities;
 void SND_Spatialize(channel_t *ch, qboolean isstatic)
 {
 	int i;
+	double f;
 	vec_t dist, mastervol, intensity, vol;
 	vec3_t source_vec;
 
@@ -1330,6 +1348,29 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 			{
 				Matrix4x4_Transform(&listener_matrix[i], ch->origin, source_vec);
 				VectorNormalize(source_vec);
+
+				switch(spatialmethod)
+				{
+					case SPATIAL_LOG:
+						if(dist == 0)
+							f = spatialmin + spatialdiff * (spatialfactor < 0); // avoid log(0), but do the right thing
+						else
+							f = spatialmin + spatialdiff * bound(0, (log(dist) - spatialoffset) * spatialfactor, 1);
+						VectorScale(source_vec, f, source_vec);
+						break;
+					case SPATIAL_POW:
+						f = spatialmin + spatialdiff * bound(0, (pow(dist, spatialpower) - spatialoffset) * spatialfactor, 1);
+						VectorScale(source_vec, f, source_vec);
+						break;
+					case SPATIAL_THRESH:
+						f = spatialmin + spatialdiff * (dist < spatialoffset);
+						VectorScale(source_vec, f, source_vec);
+						break;
+					case SPATIAL_NONE:
+					default:
+						break;
+				}
+
 				vol = intensity * max(0, source_vec[0] * snd_speakerlayout.listeners[i].dotscale + snd_speakerlayout.listeners[i].dotbias);
 				ch->listener_volume[i] = (int)bound(0, vol, 255);
 			}
@@ -1787,6 +1828,45 @@ void S_Update(const matrix4x4_t *listenermatrix)
 
 	if (snd_renderbuffer == NULL || nosound.integer)
 		return;
+
+	{
+		double mindist_trans, maxdist_trans;
+
+		spatialmin = snd_spatialization_min.value;
+		spatialdiff = snd_spatialization_max.value - spatialmin;
+
+		if(snd_spatialization_control.value)
+		{
+			spatialpower = snd_spatialization_power.value;
+
+			if(spatialpower == 0)
+			{
+				spatialmethod = SPATIAL_LOG;
+				mindist_trans = log(max(1, snd_spatialization_min_radius.value));
+				maxdist_trans = log(max(1, snd_spatialization_max_radius.value));
+			}
+			else
+			{
+				spatialmethod = SPATIAL_POW;
+				mindist_trans = pow(snd_spatialization_min_radius.value, spatialpower);
+				maxdist_trans = pow(snd_spatialization_max_radius.value, spatialpower);
+			}
+
+			if(mindist_trans - maxdist_trans == 0)
+			{
+				spatialmethod = SPATIAL_THRESH;
+				mindist_trans = snd_spatialization_min_radius.value;
+			}
+			else
+			{
+				spatialoffset = mindist_trans;
+				spatialfactor = 1 / (maxdist_trans - mindist_trans);
+			}
+		}
+		else
+			spatialmethod = SPATIAL_NONE;
+
+	}
 
 	// If snd_swapstereo or snd_channellayout has changed, recompute the channel layout
 	if (current_swapstereo != boolxor(snd_swapstereo.integer, v_flipped.integer) ||
