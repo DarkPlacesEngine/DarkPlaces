@@ -174,13 +174,13 @@ cvar_t bgmvolume = {CVAR_SAVE, "bgmvolume", "1", "volume of background music (su
 cvar_t volume = {CVAR_SAVE, "volume", "0.7", "volume of sound effects"};
 cvar_t snd_initialized = { CVAR_READONLY, "snd_initialized", "0", "indicates the sound subsystem is active"};
 cvar_t snd_staticvolume = {CVAR_SAVE, "snd_staticvolume", "1", "volume of ambient sound effects (such as swampy sounds at the start of e1m2)"};
-cvar_t snd_soundradius = {0, "snd_soundradius", "2000", "radius of weapon sounds and other standard sound effects (monster idle noises are half this radius and flickering light noises are one third of this radius)"};
-cvar_t snd_spatialization_min_radius = {0, "snd_spatialization_min_radius", "10000", "use minimum spatialization above to this radius"};
-cvar_t snd_spatialization_max_radius = {0, "snd_spatialization_max_radius", "100", "use maximum spatialization below this radius"};
-cvar_t snd_spatialization_min = {0, "snd_spatialization_min", "0.70", "minimum spatializazion of sounds"};
-cvar_t snd_spatialization_max = {0, "snd_spatialization_max", "0.95", "maximum spatialization of sounds"};
-cvar_t snd_spatialization_power = {0, "snd_spatialization_power", "0", "exponent of the spatialization falloff curve (0: logarithmic)"};
-cvar_t snd_spatialization_control = {0, "snd_spatialization_control", "0", "enable spatialization control (headphone friendly mode)"};
+cvar_t snd_soundradius = {CVAR_SAVE, "snd_soundradius", "2000", "radius of weapon sounds and other standard sound effects (monster idle noises are half this radius and flickering light noises are one third of this radius)"};
+cvar_t snd_spatialization_min_radius = {CVAR_SAVE, "snd_spatialization_min_radius", "10000", "use minimum spatialization above to this radius"};
+cvar_t snd_spatialization_max_radius = {CVAR_SAVE, "snd_spatialization_max_radius", "100", "use maximum spatialization below this radius"};
+cvar_t snd_spatialization_min = {CVAR_SAVE, "snd_spatialization_min", "0.70", "minimum spatializazion of sounds"};
+cvar_t snd_spatialization_max = {CVAR_SAVE, "snd_spatialization_max", "0.95", "maximum spatialization of sounds"};
+cvar_t snd_spatialization_power = {CVAR_SAVE, "snd_spatialization_power", "0", "exponent of the spatialization falloff curve (0: logarithmic)"};
+cvar_t snd_spatialization_control = {CVAR_SAVE, "snd_spatialization_control", "0", "enable spatialization control (headphone friendly mode)"};
 
 // Cvars declared in snd_main.h (shared with other snd_*.c files)
 cvar_t _snd_mixahead = {CVAR_SAVE, "_snd_mixahead", "0.1", "how much sound to mix ahead of time"};
