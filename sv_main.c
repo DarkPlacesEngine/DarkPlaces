@@ -2121,6 +2121,31 @@ static void SV_StartDownload_f(void)
 		host_client->download_started = true;
 }
 
+/*
+ * Compression extension negotiation:
+ *
+ * Server to client:
+ *   cl_serverextension_download 2
+ *
+ * Client to server:
+ *   download <filename> <list of zero or more suppported compressions in order of preference>
+ * e.g.
+ *   download maps/map1.bsp lzo deflate huffman
+ *
+ * Server to client:
+ *   cl_downloadbegin <compressed size> <filename> <compression method actually used>
+ * e.g.
+ *   cl_downloadbegin 123456 maps/map1.bsp deflate
+ *
+ * The server may choose not to compress the file by sending no compression name, like:
+ *   cl_downloadbegin 345678 maps/map1.bsp
+ *
+ * NOTE: the "download" command may only specify compression algorithms if
+ *       cl_serverextension_download is 2!
+ *       If cl_serverextension_download has a different value, the client must
+ *       assume this extension is not supported!
+ */
+
 static void Download_CheckExtensions(void)
 {
 	int i;
