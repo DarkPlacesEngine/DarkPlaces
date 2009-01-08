@@ -995,7 +995,7 @@ void CL_BeginDownloads(qboolean aborteddownload)
 		 && !FS_FileExists(va("dlcache/%s.%i.%i", csqc_progname.string, csqc_progsize.integer, csqc_progcrc.integer)))
 		{
 			Con_Printf("Downloading new CSQC code to dlcache/%s.%i.%i\n", csqc_progname.string, csqc_progsize.integer, csqc_progcrc.integer);
-			if(cl_serverextension_download.integer >= 2 && FS_HasZlib())
+			if(cl_serverextension_download.integer == 2 && FS_HasZlib())
 				Cmd_ForwardStringToServer(va("download %s deflate", csqc_progname.string));
 			else
 				Cmd_ForwardStringToServer(va("download %s", csqc_progname.string));
