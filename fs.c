@@ -2517,6 +2517,13 @@ unsigned char *FS_LoadFile (const char *path, mempool_t *pool, qboolean quiet, f
 	if (file)
 	{
 		filesize = file->real_length;
+		if(filesize < 0)
+		{
+			Con_Printf("FS_LoadFile(\"%s\", pool, %s, filesizepointer): trying to open a non-regular file\n", path, quiet ? "true" : "false");
+			FS_Close(file);
+			return NULL;
+		}
+
 		buf = (unsigned char *)Mem_Alloc (pool, filesize + 1);
 		buf[filesize] = '\0';
 		FS_Read (file, buf, filesize);
