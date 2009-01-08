@@ -2248,6 +2248,15 @@ static void SV_Download_f(void)
 		return;
 	}
 
+	if (FS_FileSize(host_client->download_file) < 0)
+	{
+		SV_ClientPrintf("Download rejected: file \"%s\" is not a regular file\n", host_client->download_name);
+		Host_ClientCommands("\nstopdownload\n");
+		FS_Close(host_client->download_file);
+		host_client->download_file = NULL;
+		return;
+	}
+
 	Con_DPrintf("Downloading %s to %s\n", host_client->download_name, host_client->name);
 
 	Host_ClientCommands("\ncl_downloadbegin %i %s\n", (int)FS_FileSize(host_client->download_file), host_client->download_name);
