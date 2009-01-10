@@ -478,13 +478,12 @@ static const char *builtinshaderstring =
 "uniform vec3 Gamma;\n"
 "#endif\n"
 "//uncomment these if you want to use them:\n"
-"// uniform vec4 UserVec1;\n"
+"uniform vec4 UserVec1;\n"
 "// uniform vec4 UserVec2;\n"
 "// uniform vec4 UserVec3;\n"
 "// uniform vec4 UserVec4;\n"
 "// uniform float ClientTime;\n"
-"// uniform vec2 PixelSize;\n"
-"// uniform vec2 LowerRightCorner;\n"
+"uniform vec2 PixelSize;\n"
 "void main(void)\n"
 "{\n"
 "	gl_FragColor = texture2D(Texture_First, gl_TexCoord[0].xy);\n"
@@ -496,7 +495,14 @@ static const char *builtinshaderstring =
 "#endif\n"
 "\n"
 "#ifdef USEPOSTPROCESSING\n"
-"// add your own postprocessing here or make your own ifdef for it\n"
+"// do r_glsl_dumpshader, edit glsl/default.glsl, and replace this by your own postprocessing if you want\n"
+"// this code does a blur with the radius specified in the first component of r_glsl_postprocess_uservec1\n"
+"	gl_FragColor += texture2D(Texture_First, gl_TexCoord[0].xy + PixelSize*UserVec1.x*vec2( 0.987688,  0.156434));\n"
+"	gl_FragColor += texture2D(Texture_First, gl_TexCoord[0].xy + PixelSize*UserVec1.x*vec2( 0.156434,  0.891007));\n"
+"	gl_FragColor += texture2D(Texture_First, gl_TexCoord[0].xy + PixelSize*UserVec1.x*vec2(-0.891007,  0.453990));\n"
+"	gl_FragColor += texture2D(Texture_First, gl_TexCoord[0].xy + PixelSize*UserVec1.x*vec2(-0.707107, -0.707107));\n"
+"	gl_FragColor += texture2D(Texture_First, gl_TexCoord[0].xy + PixelSize*UserVec1.x*vec2( 0.453990, -0.891007));\n"
+"	gl_FragColor /= 6;\n"
 "#endif\n"
 "\n"
 "#ifdef USEGAMMARAMPS\n"
@@ -1215,7 +1221,6 @@ typedef struct r_glsl_permutation_s
 	int loc_UserVec4;
 	int loc_ClientTime;
 	int loc_PixelSize;
-	int loc_LowerRightCorner;
 }
 r_glsl_permutation_t;
 
@@ -1376,7 +1381,6 @@ static void R_GLSL_CompilePermutation(shadermode_t mode, shaderpermutation_t per
 		p->loc_UserVec4                   = qglGetUniformLocationARB(p->program, "UserVec4");
 		p->loc_ClientTime                 = qglGetUniformLocationARB(p->program, "ClientTime");
 		p->loc_PixelSize                  = qglGetUniformLocationARB(p->program, "PixelSize");
-		p->loc_LowerRightCorner           = qglGetUniformLocationARB(p->program, "LowerRightCorner");
 		// initialize the samplers to refer to the texture units we use
 		if (p->loc_Texture_First           >= 0) qglUniform1iARB(p->loc_Texture_First          , GL20TU_FIRST);
 		if (p->loc_Texture_Second          >= 0) qglUniform1iARB(p->loc_Texture_Second         , GL20TU_SECOND);
@@ -3527,8 +3531,6 @@ static void R_BlendView(void)
 			qglUniform1fARB(r_glsl_permutation->loc_ClientTime, cl.time);
 		if (r_glsl_permutation->loc_PixelSize >= 0)
 			qglUniform2fARB(r_glsl_permutation->loc_PixelSize, 1.0/r_bloomstate.screentexturewidth, 1.0/r_bloomstate.screentextureheight);
-		if (r_glsl_permutation->loc_LowerRightCorner >= 0)
-			qglUniform2fARB(r_glsl_permutation->loc_LowerRightCorner, vid.width/r_bloomstate.screentexturewidth, vid.height/r_bloomstate.screentextureheight);
 		if (r_glsl_permutation->loc_UserVec1 >= 0)
 		{
 			float a=0, b=0, c=0, d=0;
