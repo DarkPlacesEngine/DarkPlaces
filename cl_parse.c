@@ -1682,6 +1682,8 @@ void CL_ParseServerInfo (void)
 			FS_Printf (cls.demofile, "%i\n", cls.forcetrack);
 			cls.demorecording = true;
 			strlcpy(cls.demoname, demofile, sizeof(cls.demoname));
+			cls.demo_lastcsprogssize = -1;
+			cls.demo_lastcsprogscrc = -1;
 		}
 		else
 			Con_Print ("ERROR: couldn't open.\n");
