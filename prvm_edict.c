@@ -31,10 +31,6 @@ int		prvm_type_size[8] = {1,sizeof(string_t)/4,1,3,1,1,sizeof(func_t)/4,sizeof(v
 ddef_t *PRVM_ED_FieldAtOfs(int ofs);
 qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s, qboolean parsebackslash);
 
-// LordHavoc: optional runtime bounds checking (speed drain, but worth it for security, on by default - breaks most QCCX features (used by CRMod and others))
-#ifdef PRVM_BOUNDSCHECK_CVAR
-cvar_t prvm_boundscheck = {0, "prvm_boundscheck", "1", "enables detection of out of bounds memory access in the QuakeC code being run (in other words, prevents really exceedingly bad QuakeC code from doing nasty things to your computer)"};
-#endif
 // LordHavoc: prints every opcode as it executes - warning: this is significant spew
 cvar_t prvm_traceqc = {0, "prvm_traceqc", "0", "prints every QuakeC statement as it is executed (only for really thorough debugging!)"};
 // LordHavoc: counts usage of each QuakeC statement
@@ -43,6 +39,12 @@ cvar_t prvm_backtraceforwarnings = {0, "prvm_backtraceforwarnings", "0", "print 
 cvar_t prvm_leaktest = {0, "prvm_leaktest", "0", "try to detect memory leaks in strings or entities"};
 cvar_t prvm_leaktest_ignore_classnames = {0, "prvm_leaktest_ignore_classnames", "", "classnames of entities to NOT leak check because they are found by find(world, classname, ...) but are actually spawned by QC code (NOT map entities)"};
 cvar_t prvm_errordump = {0, "prvm_errordump", "0", "write a savegame on crash to crash-server.dmp"};
+
+qboolean prvm_runawaycheck = true;
+
+// LordHavoc: optional runtime bounds checking (speed drain, but worth it for security, on by default - breaks most QCCX features (used by CRMod and others))
+// enables detection of out of bounds memory access in the QuakeC code being run (in other words, prevents really exceedingly bad QuakeC code from doing nasty things to your computer)
+qboolean prvm_boundscheck = true;
 
 extern sizebuf_t vm_tempstringsbuf;
 
@@ -2112,16 +2114,19 @@ void PRVM_Init (void)
 	Cmd_AddCommand ("cl_cmd", PRVM_GameCommand_Client_f, "calls the client QC function GameCommand with the supplied string as argument");
 	Cmd_AddCommand ("menu_cmd", PRVM_GameCommand_Menu_f, "calls the menu QC function GameCommand with the supplied string as argument");
 	Cmd_AddCommand ("sv_cmd", PRVM_GameCommand_Server_f, "calls the server QC function GameCommand with the supplied string as argument");
-	// LordHavoc: optional runtime bounds checking (speed drain, but worth it for security, on by default - breaks most QCCX features (used by CRMod and others))
-#ifdef PRVM_BOUNDSCHECK_CVAR
-	Cvar_RegisterVariable (&prvm_boundscheck);
-#endif
+
+	// COMMANDLINEOPTION: PRVM: -noboundscheck disables the bounds checks (security hole if CSQC is in use!)
+	prvm_boundscheck = !COM_CheckParm("-noboundscheck");
+
 	Cvar_RegisterVariable (&prvm_traceqc);
 	Cvar_RegisterVariable (&prvm_statementprofiling);
 	Cvar_RegisterVariable (&prvm_backtraceforwarnings);
 	Cvar_RegisterVariable (&prvm_leaktest);
 	Cvar_RegisterVariable (&prvm_leaktest_ignore_classnames);
 	Cvar_RegisterVariable (&prvm_errordump);
+
+	// COMMANDLINEOPTION: PRVM: -norunaway disables the runaway loop check (it might be impossible to exit DarkPlaces if used!)
+	prvm_runawaycheck = !COM_CheckParm("-norunaway");
 
 	//VM_Cmd_Init();
 }

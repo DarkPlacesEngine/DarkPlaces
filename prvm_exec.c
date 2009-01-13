@@ -586,12 +586,11 @@ PRVM_ExecuteProgram
 #define OPA ((prvm_eval_t *)&prog->globals.generic[(unsigned short) st->a])
 #define OPB ((prvm_eval_t *)&prog->globals.generic[(unsigned short) st->b])
 #define OPC ((prvm_eval_t *)&prog->globals.generic[(unsigned short) st->c])
-#ifdef PRVM_BOUNDSCHECK_CVAR
-extern cvar_t prvm_boundscheck;
-#endif
 extern cvar_t prvm_traceqc;
 extern cvar_t prvm_statementprofiling;
 extern sizebuf_t vm_tempstringsbuf;
+extern qboolean prvm_runawaycheck;
+extern qboolean prvm_boundscheck;
 void PRVM_ExecuteProgram (func_t fnum, const char *errormessage)
 {
 	dstatement_t	*st, *startst;
@@ -634,77 +633,141 @@ void PRVM_ExecuteProgram (func_t fnum, const char *errormessage)
 
 chooseexecprogram:
 	cachedpr_trace = prog->trace;
-	if (prvm_statementprofiling.integer)
+	if (prvm_runawaycheck)
 	{
-#define PRVMSTATEMENTPROFILING 1
-#ifdef PRVM_BOUNDSCHECK_CVAR
-		if (prvm_boundscheck.integer)
-#endif
+#define PRVMRUNAWAYCHECK 1
+		if (prvm_statementprofiling.integer)
 		{
-#define PRVMBOUNDSCHECK 1
-			if (prog->trace)
+#define PRVMSTATEMENTPROFILING 1
+			if (prvm_boundscheck)
 			{
+#define PRVMBOUNDSCHECK 1
+				if (prog->trace)
+				{
 #define PRVMTRACE 1
 #include "prvm_execprogram.h"
 #undef PRVMTRACE
+				}
+				else
+				{
+#include "prvm_execprogram.h"
+				}
+#undef PRVMBOUNDSCHECK
 			}
 			else
 			{
+				if (prog->trace)
+				{
+#define PRVMTRACE 1
 #include "prvm_execprogram.h"
+#undef PRVMTRACE
+				}
+				else
+				{
+#include "prvm_execprogram.h"
+				}
 			}
-#undef PRVMBOUNDSCHECK
+#undef PRVMSTATEMENTPROFILING
 		}
-#ifdef PRVM_BOUNDSCHECK_CVAR
 		else
 		{
-			if (prog->trace)
+			if (prvm_boundscheck)
 			{
+#define PRVMBOUNDSCHECK 1
+				if (prog->trace)
+				{
 #define PRVMTRACE 1
 #include "prvm_execprogram.h"
 #undef PRVMTRACE
+				}
+				else
+				{
+#include "prvm_execprogram.h"
+				}
+#undef PRVMBOUNDSCHECK
 			}
 			else
 			{
+				if (prog->trace)
+				{
+#define PRVMTRACE 1
 #include "prvm_execprogram.h"
+#undef PRVMTRACE
+				}
+				else
+				{
+#include "prvm_execprogram.h"
+				}
 			}
 		}
-#endif
-#undef PRVMSTATEMENTPROFILING
+#undef PRVMRUNAWAYCHECK 1
 	}
 	else
 	{
-#ifdef PRVM_BOUNDSCHECK_CVAR
-		if (prvm_boundscheck.integer)
-#endif
+		if (prvm_statementprofiling.integer)
 		{
-#define PRVMBOUNDSCHECK 1
-			if (prog->trace)
+#define PRVMSTATEMENTPROFILING 1
+			if (prvm_boundscheck)
 			{
+#define PRVMBOUNDSCHECK 1
+				if (prog->trace)
+				{
 #define PRVMTRACE 1
 #include "prvm_execprogram.h"
 #undef PRVMTRACE
+				}
+				else
+				{
+#include "prvm_execprogram.h"
+				}
+#undef PRVMBOUNDSCHECK
 			}
 			else
 			{
+				if (prog->trace)
+				{
+#define PRVMTRACE 1
 #include "prvm_execprogram.h"
+#undef PRVMTRACE
+				}
+				else
+				{
+#include "prvm_execprogram.h"
+				}
 			}
-#undef PRVMBOUNDSCHECK
+#undef PRVMSTATEMENTPROFILING
 		}
-#ifdef PRVM_BOUNDSCHECK_CVAR
 		else
 		{
-			if (prog->trace)
+			if (prvm_boundscheck)
 			{
+#define PRVMBOUNDSCHECK 1
+				if (prog->trace)
+				{
 #define PRVMTRACE 1
 #include "prvm_execprogram.h"
 #undef PRVMTRACE
+				}
+				else
+				{
+#include "prvm_execprogram.h"
+				}
+#undef PRVMBOUNDSCHECK
 			}
 			else
 			{
+				if (prog->trace)
+				{
+#define PRVMTRACE 1
 #include "prvm_execprogram.h"
+#undef PRVMTRACE
+				}
+				else
+				{
+#include "prvm_execprogram.h"
+				}
 			}
 		}
-#endif
 	}
 
 cleanup:
