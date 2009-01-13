@@ -49,6 +49,7 @@ cvar_t scr_zoomwindow_fov = {CVAR_SAVE, "scr_zoomwindow_fov", "20", "fov of zoom
 cvar_t scr_stipple = {0, "scr_stipple", "0", "interlacing-like stippling of the display"};
 cvar_t scr_refresh = {0, "scr_refresh", "1", "allows you to completely shut off rendering for benchmarking purposes"};
 cvar_t shownetgraph = {CVAR_SAVE, "shownetgraph", "0", "shows a graph of packet sizes and other information, 0 = off, 1 = show client netgraph, 2 = show client and server netgraphs (when hosting a server)"};
+cvar_t cl_demo_mousegrab = {0, "cl_demo_mousegrab", "0", "Allows reading the mouse input while playing demos. Useful for camera mods developed in csqc. (0: never, 1: always)"};
 
 #define AVI_MASTER_INDEX_SIZE 640 // GB ought to be enough for anyone
 
@@ -868,6 +869,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable(&scr_stipple);
 	Cvar_RegisterVariable(&scr_refresh);
 	Cvar_RegisterVariable(&shownetgraph);
+	Cvar_RegisterVariable(&cl_demo_mousegrab);
 
 	Cmd_AddCommand ("sizeup",SCR_SizeUp_f, "increase view size (increases viewsize cvar)");
 	Cmd_AddCommand ("sizedown",SCR_SizeDown_f, "decrease view size (decreases viewsize cvar)");
@@ -2331,7 +2333,7 @@ void CL_UpdateScreen(void)
 	else if (key_dest == key_menu)
 		VID_SetMouse(vid.fullscreen, vid_mouse.integer && !in_client_mouse, true);
 	else
-		VID_SetMouse(vid.fullscreen, vid_mouse.integer && !cls.demoplayback && !cl.csqc_wantsmousemove, true);
+		VID_SetMouse(vid.fullscreen, vid_mouse.integer && !cl.csqc_wantsmousemove && (!cls.demoplayback || cl_demo_mousegrab.integer), true);
 
 	VID_Finish();
 }
