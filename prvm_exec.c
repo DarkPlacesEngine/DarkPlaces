@@ -700,7 +700,7 @@ chooseexecprogram:
 				}
 			}
 		}
-#undef PRVMRUNAWAYCHECK 1
+#undef PRVMRUNAWAYCHECK
 	}
 	else
 	{
