@@ -1531,7 +1531,7 @@ void CL_ParseServerInfo (void)
 		cl.movevars_wallfriction = 0;
 		cl.movevars_timescale = 1;
 		cl.movevars_jumpvelocity = 270;
-		cl.movevars_edgefriction = 2;
+		cl.movevars_edgefriction = 1;
 		cl.movevars_maxairspeed = 30;
 		cl.movevars_stepheight = 18;
 		cl.movevars_airaccel_qw = 1;
