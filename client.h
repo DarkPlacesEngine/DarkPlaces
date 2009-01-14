@@ -642,7 +642,7 @@ typedef enum
 {
 	PBLEND_ALPHA = 0,
 	PBLEND_ADD = 1,
-	PBLEND_MOD = 2
+	PBLEND_INVMOD = 2
 }
 pblend_t;
 
