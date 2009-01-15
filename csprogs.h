@@ -55,4 +55,6 @@ extern cvar_t csqc_progsize;
 
 qboolean MakeDownloadPacket(const char *filename, unsigned char *data, unsigned long len, int crc, int cnt, sizebuf_t *buf, int protocol);
 
+qboolean CL_VM_GetEntitySoundOrigin(int entnum, vec3_t out);
+
 #endif

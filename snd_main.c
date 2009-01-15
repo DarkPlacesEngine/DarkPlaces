@@ -24,6 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "snd_main.h"
 #include "snd_ogg.h"
 #include "snd_modplug.h"
+#include "csprogs.h"
 
 
 #define SND_MIN_SPEED 8000
@@ -1246,7 +1247,9 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 	{
 		if (ch->entnum >= 32768)
 		{
-			// TODO: sounds that follow CSQC entities?
+			//Con_Printf("-- entnum %i origin %f %f %f neworigin %f %f %f\n", ch->entnum, ch->origin[0], ch->origin[1], ch->origin[2], cl.entities[ch->entnum].state_current.origin[0], cl.entities[ch->entnum].state_current.origin[1], cl.entities[ch->entnum].state_current.origin[2]);
+
+			CL_VM_GetEntitySoundOrigin(ch->entnum, ch->origin);
 		}
 		else if (cl.entities[ch->entnum].state_current.active)
 		{
