@@ -684,8 +684,10 @@ decal_t;
 typedef struct particle_s
 {
 	// fields used by rendering: (40 bytes)
-	unsigned short	typeindex;
-	unsigned short	texnum;
+	unsigned char   typeindex;
+	unsigned char   blendmode;
+	unsigned char   orientation;
+	unsigned char   texnum;
 	vec3_t			org;
 	vec3_t			vel; // velocity of particle, or orientation of decal, or end point of beam
 	float			size;
