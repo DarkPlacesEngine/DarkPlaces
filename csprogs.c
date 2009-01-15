@@ -13,6 +13,7 @@
 #define CSQC_RETURNVAL	prog->globals.generic[OFS_RETURN]
 #define CSQC_BEGIN		csqc_tmpprog=prog;prog=0;PRVM_SetProg(PRVM_CLIENTPROG);
 #define CSQC_END		prog=csqc_tmpprog;
+
 static prvm_prog_t *csqc_tmpprog;
 
 //[515]: these are required funcs
@@ -925,4 +926,28 @@ void CL_VM_ShutDown (void)
 	CSQC_END
 	Con_Print("CSQC ^1unloaded\n");
 	cl.csqc_loaded = false;
+}
+
+qboolean CL_VM_GetEntitySoundOrigin(int entnum, vec3_t out)
+{
+	prvm_edict_t *ed;
+	dp_model_t *mod;
+	qboolean r = 0;
+
+	CSQC_BEGIN;
+
+	ed = PRVM_EDICT_NUM(entnum - 32768);
+
+	if(!ed->priv.required->free)
+	{
+		mod = CL_GetModelFromEdict(ed);
+		VectorCopy(ed->fields.client->origin, out);
+		if (mod && mod->soundfromcenter)
+			VectorMAMAM(1.0f, out, 0.5f, mod->normalmins, 0.5f, mod->normalmaxs, out);
+		r = 1;
+	}
+
+	CSQC_END;
+
+	return r;
 }
