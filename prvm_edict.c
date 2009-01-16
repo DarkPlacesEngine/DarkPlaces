@@ -1520,6 +1520,7 @@ void PRVM_FindOffsets(void)
 	prog->globaloffsets.trace_plane_normal            = PRVM_ED_FindGlobalOffset("trace_plane_normal");
 	prog->globaloffsets.trace_plane_dist              = PRVM_ED_FindGlobalOffset("trace_plane_dist");
 	prog->globaloffsets.trace_ent                     = PRVM_ED_FindGlobalOffset("trace_ent");
+	prog->globaloffsets.trace_networkentity           = PRVM_ED_FindGlobalOffset("trace_networkentity");
 	prog->globaloffsets.trace_dphitcontents           = PRVM_ED_FindGlobalOffset("trace_dphitcontents");
 	prog->globaloffsets.trace_dphitq3surfaceflags     = PRVM_ED_FindGlobalOffset("trace_dphitq3surfaceflags");
 	prog->globaloffsets.trace_dphittexturename        = PRVM_ED_FindGlobalOffset("trace_dphittexturename");

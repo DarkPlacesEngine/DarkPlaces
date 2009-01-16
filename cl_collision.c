@@ -317,9 +317,12 @@ trace_t CL_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	{
 		vec3_t origin, entmins, entmaxs;
 		matrix4x4_t entmatrix, entinversematrix;
-		for (i = 1;i < cl.maxclients+1;i++)
+		for (i = 1;i <= cl.maxclients;i++)
 		{
 			entity_render_t *ent = &cl.entities[i].render;
+			// don't hit players that don't exist
+			if (!cl.scores[i-1].name[0])
+				continue;
 			// don't hit ourselves
 			if (i == cl.playerentity)
 				continue;

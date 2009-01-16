@@ -230,12 +230,20 @@ static void VM_CL_spawn (void)
 	VM_RETURN_EDICT(ed);
 }
 
+void CL_VM_SetTraceGlobals(const trace_t *trace, int svent)
+{
+	prvm_eval_t *val;
+	VM_SetTraceGlobals(trace);
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_networkentity)))
+		val->_float = svent;
+}
+
 // #16 float(vector v1, vector v2, float movetype, entity ignore) traceline
 static void VM_CL_traceline (void)
 {
 	float	*v1, *v2;
 	trace_t	trace;
-	int		move;
+	int		move, svent;
 	prvm_edict_t	*ent;
 
 	VM_SAFEPARMCOUNTRANGE(4, 4, VM_CL_traceline);
@@ -250,9 +258,9 @@ static void VM_CL_traceline (void)
 	if (IS_NAN(v1[0]) || IS_NAN(v1[1]) || IS_NAN(v1[2]) || IS_NAN(v2[0]) || IS_NAN(v1[2]) || IS_NAN(v2[2]))
 		PRVM_ERROR("%s: NAN errors detected in traceline('%f %f %f', '%f %f %f', %i, entity %i)\n", PRVM_NAME, v1[0], v1[1], v1[2], v2[0], v2[1], v2[2], move, PRVM_EDICT_TO_PROG(ent));
 
-	trace = CL_Move(v1, vec3_origin, vec3_origin, v2, move, ent, CL_GenericHitSuperContentsMask(ent), true, true, NULL, true);
+	trace = CL_Move(v1, vec3_origin, vec3_origin, v2, move, ent, CL_GenericHitSuperContentsMask(ent), true, true, &svent, true);
 
-	VM_SetTraceGlobals(&trace);
+	CL_VM_SetTraceGlobals(&trace, svent);
 }
 
 /*
@@ -271,7 +279,7 @@ static void VM_CL_tracebox (void)
 {
 	float	*v1, *v2, *m1, *m2;
 	trace_t	trace;
-	int		move;
+	int		move, svent;
 	prvm_edict_t	*ent;
 
 	VM_SAFEPARMCOUNTRANGE(6, 8, VM_CL_tracebox); // allow more parameters for future expansion
@@ -288,12 +296,12 @@ static void VM_CL_tracebox (void)
 	if (IS_NAN(v1[0]) || IS_NAN(v1[1]) || IS_NAN(v1[2]) || IS_NAN(v2[0]) || IS_NAN(v1[2]) || IS_NAN(v2[2]))
 		PRVM_ERROR("%s: NAN errors detected in tracebox('%f %f %f', '%f %f %f', '%f %f %f', '%f %f %f', %i, entity %i)\n", PRVM_NAME, v1[0], v1[1], v1[2], m1[0], m1[1], m1[2], m2[0], m2[1], m2[2], v2[0], v2[1], v2[2], move, PRVM_EDICT_TO_PROG(ent));
 
-	trace = CL_Move(v1, m1, m2, v2, move, ent, CL_GenericHitSuperContentsMask(ent), true, true, NULL, true);
+	trace = CL_Move(v1, m1, m2, v2, move, ent, CL_GenericHitSuperContentsMask(ent), true, true, &svent, true);
 
-	VM_SetTraceGlobals(&trace);
+	CL_VM_SetTraceGlobals(&trace, svent);
 }
 
-trace_t CL_Trace_Toss (prvm_edict_t *tossent, prvm_edict_t *ignore)
+trace_t CL_Trace_Toss (prvm_edict_t *tossent, prvm_edict_t *ignore, int *svent)
 {
 	int i;
 	float gravity;
@@ -343,6 +351,7 @@ static void VM_CL_tracetoss (void)
 	trace_t	trace;
 	prvm_edict_t	*ent;
 	prvm_edict_t	*ignore;
+	int svent;
 
 	prog->xfunction->builtinsprofile += 600;
 
@@ -356,9 +365,9 @@ static void VM_CL_tracetoss (void)
 	}
 	ignore = PRVM_G_EDICT(OFS_PARM1);
 
-	trace = CL_Trace_Toss (ent, ignore);
+	trace = CL_Trace_Toss (ent, ignore, &svent);
 
-	VM_SetTraceGlobals(&trace);
+	CL_VM_SetTraceGlobals(&trace, svent);
 }
 
 
@@ -2827,7 +2836,7 @@ qboolean CL_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qboolean 
 	float		dz;
 	vec3_t		oldorg, neworg, end, traceendpos;
 	trace_t		trace;
-	int			i;
+	int			i, svent;
 	prvm_edict_t		*enemy;
 	prvm_eval_t	*val;
 
@@ -2851,9 +2860,9 @@ qboolean CL_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qboolean 
 				if (dz < 30)
 					neworg[2] += 8;
 			}
-			trace = CL_Move (ent->fields.client->origin, ent->fields.client->mins, ent->fields.client->maxs, neworg, MOVE_NORMAL, ent, CL_GenericHitSuperContentsMask(ent), true, true, NULL, true);
+			trace = CL_Move (ent->fields.client->origin, ent->fields.client->mins, ent->fields.client->maxs, neworg, MOVE_NORMAL, ent, CL_GenericHitSuperContentsMask(ent), true, true, &svent, true);
 			if (settrace)
-				VM_SetTraceGlobals(&trace);
+				CL_VM_SetTraceGlobals(&trace, svent);
 
 			if (trace.fraction == 1)
 			{
@@ -2879,16 +2888,16 @@ qboolean CL_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qboolean 
 	VectorCopy (neworg, end);
 	end[2] -= sv_stepheight.value*2;
 
-	trace = CL_Move (neworg, ent->fields.client->mins, ent->fields.client->maxs, end, MOVE_NORMAL, ent, CL_GenericHitSuperContentsMask(ent), true, true, NULL, true);
+	trace = CL_Move (neworg, ent->fields.client->mins, ent->fields.client->maxs, end, MOVE_NORMAL, ent, CL_GenericHitSuperContentsMask(ent), true, true, &svent, true);
 	if (settrace)
-		VM_SetTraceGlobals(&trace);
+		CL_VM_SetTraceGlobals(&trace, svent);
 
 	if (trace.startsolid)
 	{
 		neworg[2] -= sv_stepheight.value;
-		trace = CL_Move (neworg, ent->fields.client->mins, ent->fields.client->maxs, end, MOVE_NORMAL, ent, CL_GenericHitSuperContentsMask(ent), true, true, NULL, true);
+		trace = CL_Move (neworg, ent->fields.client->mins, ent->fields.client->maxs, end, MOVE_NORMAL, ent, CL_GenericHitSuperContentsMask(ent), true, true, &svent, true);
 		if (settrace)
-			VM_SetTraceGlobals(&trace);
+			CL_VM_SetTraceGlobals(&trace, svent);
 		if (trace.startsolid)
 			return false;
 	}
