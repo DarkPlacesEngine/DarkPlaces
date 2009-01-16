@@ -257,6 +257,9 @@ typedef struct prvm_prog_globaloffsets_s
 	int drawfont; // csqc / menu
 	int require_spawnfunc_prefix; // ssqc
 	int worldstatus; // ssqc
+	int servertime; // csqc
+	int serverprevtime; // csqc
+	int serverdeltatime; // csqc
 }
 prvm_prog_globaloffsets_t;
 
