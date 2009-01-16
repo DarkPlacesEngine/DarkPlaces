@@ -2949,6 +2949,7 @@ qboolean CL_ExaminePrintString(const char *text)
 }
 
 extern cvar_t slowmo;
+extern void CSQC_UpdateNetworkTimes(double newtime, double oldtime);
 static void CL_NetworkTimeReceived(double newtime)
 {
 	double timehigh;
@@ -3026,6 +3027,8 @@ static void CL_NetworkTimeReceived(double newtime)
 	cl.fixangle[0] = false;
 	if (!cls.demoplayback)
 		VectorCopy(cl.mviewangles[0], cl.mviewangles[1]);
+	// update the csqc's server timestamps, critical for proper sync
+	CSQC_UpdateNetworkTimes(cl.mtime[0], cl.mtime[1]);
 }
 
 #define SHOWNET(x) if(cl_shownet.integer==2)Con_Printf("%3i:%s(%i)\n", msg_readcount-1, x, cmd);

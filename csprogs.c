@@ -69,6 +69,22 @@ void CL_VM_UpdateDmgGlobals (int dmg_take, int dmg_save, vec3_t dmg_origin)
 		CSQC_END
 	}
 }
+
+void CSQC_UpdateNetworkTimes(double newtime, double oldtime)
+{
+	prvm_eval_t *val;
+	if(!cl.csqc_loaded)
+		return;
+	CSQC_BEGIN
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.servertime)))
+		val->_float = newtime;
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.serverprevtime)))
+		val->_float = oldtime;
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.serverdeltatime)))
+		val->_float = newtime - oldtime;
+	CSQC_END
+}
+
 //[515]: set globals before calling R_UpdateView, WEIRD CRAP
 static void CSQC_SetGlobals (void)
 {
