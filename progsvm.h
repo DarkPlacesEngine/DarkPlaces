@@ -242,6 +242,7 @@ typedef struct prvm_prog_globaloffsets_s
 	int trace_plane_normal; // ssqc / csqc
 	int trace_plane_dist; // ssqc / csqc
 	int trace_ent; // ssqc / csqc
+	int trace_networkentity; // csqc
 	int trace_dphitcontents; // ssqc / csqc
 	int trace_dphitq3surfaceflags; // ssqc / csqc
 	int trace_dphittexturename; // ssqc / csqc
