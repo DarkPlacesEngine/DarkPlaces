@@ -99,7 +99,7 @@ static qboolean vid_x11_dgasupported = false;
 static int vid_x11_gammarampsize = 0;
 
 #if !defined(__APPLE__) && !defined(SUNOS)
-cvar_t vid_dgamouse = {CVAR_SAVE, "vid_dgamouse", "1", "make use of DGA mouse input"};
+cvar_t vid_dgamouse = {CVAR_SAVE, "vid_dgamouse", "0", "make use of DGA mouse input"};
 static qboolean vid_usingdgamouse = false;
 #endif
 
