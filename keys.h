@@ -215,7 +215,7 @@ extern unsigned int chat_bufferlen;
 void Key_WriteBindings(qfile_t *f);
 void Key_Init(void);
 void Key_Init_Cvars(void);
-void Key_Event(int key, char ascii, qboolean down);
+void Key_Event(int key, int ascii, qboolean down);
 void Key_ClearStates (void);
 void Key_SetBinding (int keynum, int bindmap, const char *binding);
 

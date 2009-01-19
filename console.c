@@ -844,7 +844,7 @@ Con_Rcon_AddChar
 Adds a character to the rcon buffer
 ================
 */
-void Con_Rcon_AddChar(char c)
+void Con_Rcon_AddChar(int c)
 {
 	if(log_dest_buffer_appending)
 		return;
@@ -1030,7 +1030,7 @@ void Con_Print(const char *msg)
 					int lastcolor = 0;
 					const char *in;
 					char *out;
-					char color;
+					int color;
 					for(in = line, out = printline; *in; ++in)
 					{
 						switch(*in)
@@ -2322,7 +2322,7 @@ int Nicks_AddLastColor(char *buffer, int pos)
 {
 	qboolean quote_added = false;
 	int match;
-	char color = STRING_COLOR_DEFAULT + '0';
+	int color = STRING_COLOR_DEFAULT + '0';
 	char r = 0, g = 0, b = 0;
 
 	if(con_nickcompletion_flags.integer & NICKS_ADD_QUOTE && buffer[Nicks_matchpos-1] == '\"')

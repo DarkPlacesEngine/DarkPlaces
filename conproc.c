@@ -39,7 +39,7 @@ BOOL GetScreenBufferLines (int *piLines);
 BOOL SetScreenBufferLines (int iLines);
 BOOL ReadText (LPTSTR pszText, int iBeginLine, int iEndLine);
 BOOL WriteText (LPCTSTR szText);
-int CharToCode (char c);
+int CharToCode (int c);
 BOOL SetConsoleCXCY(HANDLE hStdout, int cx, int cy);
 
 
@@ -262,7 +262,7 @@ BOOL WriteText (LPCTSTR szText)
 }
 
 
-int CharToCode (char c)
+int CharToCode (int c)
 {
 	char upper;
 		

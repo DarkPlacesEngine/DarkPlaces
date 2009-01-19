@@ -80,7 +80,7 @@ void MP_Shutdown (void);*/
 void MR_Init_Commands (void);
 void MR_Init (void);
 void MR_Restart (void);
-extern void (*MR_KeyEvent) (int key, char ascii, qboolean downevent);
+extern void (*MR_KeyEvent) (int key, int ascii, qboolean downevent);
 extern void (*MR_Draw) (void);
 extern void (*MR_ToggleMenu_f) (void);
 extern void (*MR_Shutdown) (void);

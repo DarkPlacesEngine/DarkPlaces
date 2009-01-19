@@ -112,7 +112,7 @@ void CDAudio_SysSetVolume (float volume)
 }
 
 
-int CDAudio_SysPlay (unsigned char track)
+int CDAudio_SysPlay (int track)
 {
 	struct cdrom_tocentry entry;
 	struct cdrom_ti ti;

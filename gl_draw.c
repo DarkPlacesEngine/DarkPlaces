@@ -1059,7 +1059,7 @@ float DrawQ_String_Font(float startx, float starty, const char *text, size_t max
 	float vertex3f[QUADELEMENTS_MAXQUADS*4*3];
 	float texcoord2f[QUADELEMENTS_MAXQUADS*4*2];
 	float color4f[QUADELEMENTS_MAXQUADS*4*4];
-	char ch;
+	int ch;
 	int current_alpha, tempcolorindex;
 
 	int tw, th;
