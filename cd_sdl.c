@@ -80,7 +80,7 @@ void CDAudio_SysSetVolume (float volume)
 }
 
 
-int CDAudio_SysPlay (unsigned char track)
+int CDAudio_SysPlay (int track)
 {
 	SDL_CDStop( cd );
 	endtime = realtime + (float) cd->track[ track - 1 ].length / CD_FPS;

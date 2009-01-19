@@ -122,7 +122,7 @@ void CDAudio_SysSetVolume (float volume)
 }
 
 
-int CDAudio_SysPlay (unsigned char track)
+int CDAudio_SysPlay (int track)
 {
 	struct ioc_read_toc_entry rte;
 	struct cd_toc_entry entry;

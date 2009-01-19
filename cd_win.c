@@ -99,7 +99,7 @@ void CDAudio_SysSetVolume (float volume)
 }
 
 
-int CDAudio_SysPlay (unsigned char track)
+int CDAudio_SysPlay (int track)
 {
 	DWORD				dwReturn;
 	MCI_PLAY_PARMS		mciPlayParms;

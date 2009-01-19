@@ -233,7 +233,7 @@ Interactive line editing and console scrollback
 ====================
 */
 static void
-Key_Console (int key, char ascii)
+Key_Console (int key, int ascii)
 {
 	// LordHavoc: copied most of this from Q2 to improve keyboard handling
 	switch (key)
@@ -530,7 +530,7 @@ unsigned int	chat_bufferlen = 0;
 extern int Nicks_CompleteChatLine(char *buffer, size_t size, unsigned int pos);
 
 static void
-Key_Message (int key, char ascii)
+Key_Message (int key, int ascii)
 {
 
 	if (key == K_ENTER || ascii == 10 || ascii == 13)
@@ -905,7 +905,7 @@ static char tbl_keyascii[MAX_KEYS];
 static keydest_t tbl_keydest[MAX_KEYS];
 
 void
-Key_Event (int key, char ascii, qboolean down)
+Key_Event (int key, int ascii, qboolean down)
 {
 	const char *bind;
 	qboolean q;

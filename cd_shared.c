@@ -32,7 +32,7 @@ extern void CDAudio_SysCloseDoor (void);
 extern int CDAudio_SysGetAudioDiskInfo (void);
 extern float CDAudio_SysGetVolume (void);
 extern void CDAudio_SysSetVolume (float volume);
-extern int CDAudio_SysPlay (unsigned char track);
+extern int CDAudio_SysPlay (int track);
 extern int CDAudio_SysStop (void);
 extern int CDAudio_SysPause (void);
 extern int CDAudio_SysResume (void);
@@ -273,7 +273,7 @@ success:
 		CDAudio_Pause ();
 }
 
-void CDAudio_Play (unsigned char track, qboolean looping)
+void CDAudio_Play (int track, qboolean looping)
 {
 	char buf[20];
 	dpsnprintf(buf, sizeof(buf), "%d", (int) track);

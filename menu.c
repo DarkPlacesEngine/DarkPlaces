@@ -82,28 +82,28 @@ static void M_ServerList_Draw (void);
 static void M_ModList_Draw (void);
 
 
-static void M_Main_Key (int key, char ascii);
-	static void M_SinglePlayer_Key (int key, char ascii);
-		static void M_Transfusion_Episode_Key (int key, char ascii);
-			static void M_Transfusion_Skill_Key (int key, char ascii);
-		static void M_Load_Key (int key, char ascii);
-		static void M_Save_Key (int key, char ascii);
-	static void M_MultiPlayer_Key (int key, char ascii);
-		static void M_Setup_Key (int key, char ascii);
-	static void M_Options_Key (int key, char ascii);
-	static void M_Options_Effects_Key (int key, char ascii);
-	static void M_Options_Graphics_Key (int key, char ascii);
-	static void M_Options_ColorControl_Key (int key, char ascii);
-		static void M_Keys_Key (int key, char ascii);
-		static void M_Reset_Key (int key, char ascii);
-		static void M_Video_Key (int key, char ascii);
-	static void M_Help_Key (int key, char ascii);
-	static void M_Credits_Key (int key, char ascii);
-	static void M_Quit_Key (int key, char ascii);
-static void M_LanConfig_Key (int key, char ascii);
-static void M_GameOptions_Key (int key, char ascii);
-static void M_ServerList_Key (int key, char ascii);
-static void M_ModList_Key (int key, char ascii);
+static void M_Main_Key (int key, int ascii);
+	static void M_SinglePlayer_Key (int key, int ascii);
+		static void M_Transfusion_Episode_Key (int key, int ascii);
+			static void M_Transfusion_Skill_Key (int key, int ascii);
+		static void M_Load_Key (int key, int ascii);
+		static void M_Save_Key (int key, int ascii);
+	static void M_MultiPlayer_Key (int key, int ascii);
+		static void M_Setup_Key (int key, int ascii);
+	static void M_Options_Key (int key, int ascii);
+	static void M_Options_Effects_Key (int key, int ascii);
+	static void M_Options_Graphics_Key (int key, int ascii);
+	static void M_Options_ColorControl_Key (int key, int ascii);
+		static void M_Keys_Key (int key, int ascii);
+		static void M_Reset_Key (int key, int ascii);
+		static void M_Video_Key (int key, int ascii);
+	static void M_Help_Key (int key, int ascii);
+	static void M_Credits_Key (int key, int ascii);
+	static void M_Quit_Key (int key, int ascii);
+static void M_LanConfig_Key (int key, int ascii);
+static void M_GameOptions_Key (int key, int ascii);
+static void M_ServerList_Key (int key, int ascii);
+static void M_ModList_Key (int key, int ascii);
 
 static qboolean	m_entersound;		// play after drawing a frame, so caching won't disrupt the sound
 
@@ -316,7 +316,7 @@ void M_Menu_Demos_f (void)
 }
 
 
-static void M_Demo_Key (int k, char ascii)
+static void M_Demo_Key (int k, int ascii)
 {
 	switch (k)
 	{
@@ -467,7 +467,7 @@ static void M_Main_Draw (void)
 }
 
 
-static void M_Main_Key (int key, char ascii)
+static void M_Main_Key (int key, int ascii)
 {
 	switch (key)
 	{
@@ -748,7 +748,7 @@ static void M_SinglePlayer_Draw (void)
 }
 
 
-static void M_SinglePlayer_Key (int key, char ascii)
+static void M_SinglePlayer_Key (int key, int ascii)
 {
 	if (gamemode == GAME_GOODVSBAD2 || gamemode == GAME_BATTLEMECH)
 	{
@@ -913,7 +913,7 @@ static void M_Save_Draw (void)
 }
 
 
-static void M_Load_Key (int k, char ascii)
+static void M_Load_Key (int k, int ascii)
 {
 	switch (k)
 	{
@@ -954,7 +954,7 @@ static void M_Load_Key (int k, char ascii)
 }
 
 
-static void M_Save_Key (int k, char ascii)
+static void M_Save_Key (int k, int ascii)
 {
 	switch (k)
 	{
@@ -1017,7 +1017,7 @@ static void M_Transfusion_Episode_Draw (void)
 	M_DrawPic (0, 120 + (m_episode_cursor + 1) * 40, va("gfx/menu/episode%iselected", m_episode_cursor + 1));
 }
 
-static void M_Transfusion_Episode_Key (int key, char ascii)
+static void M_Transfusion_Episode_Key (int key, int ascii)
 {
 	switch (key)
 	{
@@ -1075,7 +1075,7 @@ static void M_Transfusion_Skill_Draw (void)
 	M_DrawPic (0, 140 + (m_skill_cursor + 1) *40, va("gfx/menu/difficulty%iselected", m_skill_cursor + 1));
 }
 
-static void M_Transfusion_Skill_Key (int key, char ascii)
+static void M_Transfusion_Skill_Key (int key, int ascii)
 {
 	switch (key)
 	{
@@ -1189,7 +1189,7 @@ static void M_MultiPlayer_Draw (void)
 }
 
 
-static void M_MultiPlayer_Key (int key, char ascii)
+static void M_MultiPlayer_Key (int key, int ascii)
 {
 	switch (key)
 	{
@@ -1382,7 +1382,7 @@ static void M_Setup_Draw (void)
 }
 
 
-static void M_Setup_Key (int k, char ascii)
+static void M_Setup_Key (int k, int ascii)
 {
 	int			l;
 
@@ -1668,7 +1668,7 @@ static void M_Options_Draw (void)
 }
 
 
-static void M_Options_Key (int k, char ascii)
+static void M_Options_Key (int k, int ascii)
 {
 	switch (k)
 	{
@@ -1883,7 +1883,7 @@ static void M_Options_Effects_Draw (void)
 }
 
 
-static void M_Options_Effects_Key (int k, char ascii)
+static void M_Options_Effects_Key (int k, int ascii)
 {
 	switch (k)
 	{
@@ -2019,7 +2019,7 @@ static void M_Options_Graphics_Draw (void)
 }
 
 
-static void M_Options_Graphics_Key (int k, char ascii)
+static void M_Options_Graphics_Key (int k, int ascii)
 {
 	switch (k)
 	{
@@ -2246,7 +2246,7 @@ static void M_Options_ColorControl_Draw (void)
 }
 
 
-static void M_Options_ColorControl_Key (int k, char ascii)
+static void M_Options_ColorControl_Key (int k, int ascii)
 {
 	switch (k)
 	{
@@ -2620,7 +2620,7 @@ static void M_Keys_Draw (void)
 }
 
 
-static void M_Keys_Key (int k, char ascii)
+static void M_Keys_Key (int k, int ascii)
 {
 	char	cmd[80];
 	int		keys[NUMKEYS];
@@ -2696,7 +2696,7 @@ void M_Menu_Reset_f (void)
 }
 
 
-static void M_Reset_Key (int key, char ascii)
+static void M_Reset_Key (int key, int ascii)
 {
 	switch (key)
 	{
@@ -2959,7 +2959,7 @@ static void M_Menu_Video_AdjustSliders (int dir)
 }
 
 
-static void M_Video_Key (int key, char ascii)
+static void M_Video_Key (int key, int ascii)
 {
 	switch (key)
 	{
@@ -3042,7 +3042,7 @@ static void M_Help_Draw (void)
 }
 
 
-static void M_Help_Key (int key, char ascii)
+static void M_Help_Key (int key, int ascii)
 {
 	switch (key)
 	{
@@ -3089,7 +3089,7 @@ static void M_Credits_Draw (void)
 }
 
 
-static void M_Credits_Key (int key, char ascii)
+static void M_Credits_Key (int key, int ascii)
 {
 		M_Menu_Main_f ();
 }
@@ -3196,7 +3196,7 @@ void M_Menu_Quit_f (void)
 }
 
 
-static void M_Quit_Key (int key, char ascii)
+static void M_Quit_Key (int key, int ascii)
 {
 	switch (key)
 	{
@@ -3331,7 +3331,7 @@ static void M_LanConfig_Draw (void)
 }
 
 
-static void M_LanConfig_Key (int key, char ascii)
+static void M_LanConfig_Key (int key, int ascii)
 {
 	int		l;
 
@@ -4239,7 +4239,7 @@ static void M_NetStart_Change (int dir)
 	}
 }
 
-static void M_GameOptions_Key (int key, char ascii)
+static void M_GameOptions_Key (int key, int ascii)
 {
 	gamelevels_t *g;
 	int l;
@@ -4395,7 +4395,7 @@ static void M_ServerList_Draw (void)
 }
 
 
-static void M_ServerList_Key(int k, char ascii)
+static void M_ServerList_Key(int k, int ascii)
 {
 	switch (k)
 	{
@@ -4615,7 +4615,7 @@ static void M_ModList_Draw (void)
 	}
 }
 
-static void M_ModList_Key(int k, char ascii)
+static void M_ModList_Key(int k, int ascii)
 {
 	switch (k)
 	{
@@ -4665,7 +4665,7 @@ static void M_ModList_Key(int k, char ascii)
 //=============================================================================
 /* Menu Subsystem */
 
-static void M_KeyEvent(int key, char ascii, qboolean downevent);
+static void M_KeyEvent(int key, int ascii, qboolean downevent);
 static void M_Draw(void);
 void M_ToggleMenu_f(void);
 static void M_Shutdown(void);
@@ -4902,7 +4902,7 @@ void M_Draw (void)
 }
 
 
-void M_KeyEvent (int key, char ascii, qboolean downevent)
+void M_KeyEvent (int key, int ascii, qboolean downevent)
 {
 	if (!downevent)
 		return;
@@ -5067,7 +5067,7 @@ void MP_Error(const char *format, ...)
 	Host_AbortCurrentFrame();
 }
 
-void MP_KeyEvent (int key, char ascii, qboolean downevent)
+void MP_KeyEvent (int key, int ascii, qboolean downevent)
 {
 	PRVM_Begin;
 	PRVM_SetProg(PRVM_MENUPROG);
@@ -5182,7 +5182,7 @@ void MP_Restart(void)
 //============================================================================
 // Menu router
 
-void (*MR_KeyEvent) (int key, char ascii, qboolean downevent);
+void (*MR_KeyEvent) (int key, int ascii, qboolean downevent);
 void (*MR_Draw) (void);
 void (*MR_ToggleMenu_f) (void);
 void (*MR_Shutdown) (void);
