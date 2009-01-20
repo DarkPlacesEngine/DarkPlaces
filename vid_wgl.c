@@ -579,9 +579,7 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 				temp |= 512;
 
 #ifdef SUPPORTDIRECTX
-			if (vid_usingmouse && !dinput_acquired)
-#else
-			if (vid_usingmouse)
+			if (!dinput_acquired)
 #endif
 			{
 				// perform button actions
