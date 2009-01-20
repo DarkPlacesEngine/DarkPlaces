@@ -157,10 +157,10 @@ float noise4f(float x, float y, float z, float w)
 			r[i] = (int)(rand() * (double)NOISE_SIZE / ((double)RAND_MAX + 1)) & NOISE_MASK;
 			// that & is only needed if RAND_MAX is > the range of double, which isn't the case on most platforms
 	}
-	frac[1][0] = x - floor(x);index[0][0] = ((int)floor(x)) & NOISE_MASK;
+	frac[0][1] = x - floor(x);index[0][0] = ((int)floor(x)) & NOISE_MASK;
 	frac[1][1] = y - floor(y);index[1][0] = ((int)floor(y)) & NOISE_MASK;
-	frac[1][2] = z - floor(z);index[2][0] = ((int)floor(z)) & NOISE_MASK;
-	frac[1][3] = w - floor(w);index[3][0] = ((int)floor(w)) & NOISE_MASK;
+	frac[2][1] = z - floor(z);index[2][0] = ((int)floor(z)) & NOISE_MASK;
+	frac[3][1] = w - floor(w);index[3][0] = ((int)floor(w)) & NOISE_MASK;
 	for (i = 0;i < 4;i++)
 		frac[i][0] = 1 - frac[i][1];
 	for (i = 0;i < 4;i++)
