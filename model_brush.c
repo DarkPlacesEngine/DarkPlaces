@@ -3383,7 +3383,7 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	dheader_t *header;
 	dmodel_t *bm;
 	mempool_t *mainmempool;
-	float dist, modelyawradius, modelradius, *vec;
+	float dist, modelyawradius, modelradius;
 	msurface_t *surface;
 	int numshadowmeshtriangles;
 	hullinfo_t hullinfo;
@@ -3620,17 +3620,31 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			mod->brush.LightPoint = NULL;
 			mod->brush.AmbientSoundLevelsForPoint = NULL;
 		}
+
 		// copy the submodel bounds, then enlarge the yaw and rotated bounds according to radius
+		// (previously this code measured the radius of the vertices of surfaces in the submodel, but that broke submodels that contain only CLIP brushes, which do not produce surfaces)
 		VectorCopy(bm->mins, mod->normalmins);
 		VectorCopy(bm->maxs, mod->normalmaxs);
-		VectorCopy(bm->mins, mod->yawmins);
-		VectorCopy(bm->maxs, mod->yawmaxs);
-		VectorCopy(bm->mins, mod->rotatedmins);
-		VectorCopy(bm->maxs, mod->rotatedmaxs);
+		dist = max(fabs(mod->normalmins[0]), fabs(mod->normalmaxs[0]));
+		modelyawradius = max(fabs(mod->normalmins[0]), fabs(mod->normalmaxs[0]));
+		modelyawradius = dist*dist+modelyawradius*modelyawradius;
+		modelradius = max(fabs(mod->normalmins[2]), fabs(mod->normalmaxs[2]));
+		modelradius = modelyawradius + modelradius * modelradius;
+		modelyawradius = sqrt(modelyawradius);
+		modelradius = sqrt(modelradius);
+		mod->yawmins[0] = mod->yawmins[1] = -modelyawradius;
+		mod->yawmins[2] = mod->normalmins[2];
+		mod->yawmaxs[0] = mod->yawmaxs[1] =  modelyawradius;
+		mod->yawmaxs[2] = mod->normalmaxs[2];
+		mod->rotatedmins[0] = mod->rotatedmins[1] = mod->rotatedmins[2] = -modelradius;
+		mod->rotatedmaxs[0] = mod->rotatedmaxs[1] = mod->rotatedmaxs[2] =  modelradius;
+		mod->radius = modelradius;
+		mod->radius2 = modelradius * modelradius;
+
+		// scan surfaces for sky and water and flag the submodel as possessing these features or not
+		// build lightstyle lists for quick marking of dirty lightmaps when lightstyles flicker
 		if (mod->nummodelsurfaces)
 		{
-			modelyawradius = 0;
-			modelradius = 0;
 			for (j = 0, surface = &mod->data_surfaces[mod->firstmodelsurface];j < mod->nummodelsurfaces;j++, surface++)
 			{
 				// we only need to have a drawsky function if it is used(usually only on world model)
@@ -3638,31 +3652,7 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 					mod->DrawSky = R_Q1BSP_DrawSky;
 				if (surface->texture->basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION))
 					mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
-				// calculate bounding shapes
-				for (k = 0, vec = (loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex);k < surface->num_vertices;k++, vec += 3)
-				{
-					dist = vec[0]*vec[0]+vec[1]*vec[1];
-					if (modelyawradius < dist)
-						modelyawradius = dist;
-					dist += vec[2]*vec[2];
-					if (modelradius < dist)
-						modelradius = dist;
-				}
 			}
-			modelyawradius = sqrt(modelyawradius);
-			modelradius = sqrt(modelradius);
-			mod->yawmins[0] = min(mod->yawmins[0], -modelyawradius);
-			mod->yawmaxs[0] = min(mod->yawmaxs[0], -modelyawradius);
-			mod->yawmins[1] = min(mod->yawmins[1],  modelyawradius);
-			mod->yawmaxs[1] = min(mod->yawmaxs[1],  modelyawradius);
-			mod->rotatedmins[0] = min(mod->rotatedmins[0], -modelradius);
-			mod->rotatedmaxs[0] = min(mod->rotatedmaxs[0],  modelradius);
-			mod->rotatedmins[1] = min(mod->rotatedmins[1], -modelradius);
-			mod->rotatedmaxs[1] = min(mod->rotatedmaxs[1],  modelradius);
-			mod->rotatedmins[2] = min(mod->rotatedmins[2], -modelradius);
-			mod->rotatedmaxs[2] = min(mod->rotatedmaxs[2],  modelradius);
-			mod->radius = modelradius;
-			mod->radius2 = modelradius * modelradius;
 
 			// build lightstyle update chains
 			// (used to rapidly mark lightmapupdateflags on many surfaces
