@@ -1323,9 +1323,17 @@ void PRVM_ED_LoadFromFile (const char *data)
 			continue;
 		}
 
+		if (prog->funcoffsets.SV_OnEntityPreSpawnFunction)
+		{
+			// self = ent
+			PRVM_GLOBALFIELDVALUE(prog->globaloffsets.self)->edict = PRVM_EDICT_TO_PROG(ent);
+			PRVM_ExecuteProgram (prog->funcoffsets.SV_OnEntityPreSpawnFunction, "QC function SV_OnEntityPreSpawnFunction is missing");
+		}
+
 //
 // immediately call spawn function, but only if there is a self global and a classname
 //
+		if(!ent->priv.required->free)
 		if(prog->globaloffsets.self >= 0 && prog->fieldoffsets.classname >= 0)
 		{
 			string_t handle =  PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.classname)->string;
@@ -1361,7 +1369,7 @@ void PRVM_ED_LoadFromFile (const char *data)
 						PRVM_ED_Print(ent, NULL);
 					}
 					PRVM_ED_Free (ent);
-					continue;
+					continue; // not included in "inhibited" count
 				}
 			}
 			else
@@ -1370,6 +1378,14 @@ void PRVM_ED_LoadFromFile (const char *data)
 				PRVM_GLOBALFIELDVALUE(prog->globaloffsets.self)->edict = PRVM_EDICT_TO_PROG(ent);
 				PRVM_ExecuteProgram (func - prog->functions, "");
 			}
+		}
+
+		if(!ent->priv.required->free)
+		if (prog->funcoffsets.SV_OnEntityPostSpawnFunction)
+		{
+			// self = ent
+			PRVM_GLOBALFIELDVALUE(prog->globaloffsets.self)->edict = PRVM_EDICT_TO_PROG(ent);
+			PRVM_ExecuteProgram (prog->funcoffsets.SV_OnEntityPostSpawnFunction, "QC function SV_OnEntityPostSpawnFunction is missing");
 		}
 
 		spawned++;
@@ -1501,6 +1517,8 @@ void PRVM_FindOffsets(void)
 	prog->funcoffsets.SV_ParseClientCommand           = PRVM_ED_FindFunctionOffset("SV_ParseClientCommand");
 	prog->funcoffsets.SV_PlayerPhysics                = PRVM_ED_FindFunctionOffset("SV_PlayerPhysics");
 	prog->funcoffsets.SV_OnEntityNoSpawnFunction      = PRVM_ED_FindFunctionOffset("SV_OnEntityNoSpawnFunction");
+	prog->funcoffsets.SV_OnEntityPreSpawnFunction     = PRVM_ED_FindFunctionOffset("SV_OnEntityPreSpawnFunction");
+	prog->funcoffsets.SV_OnEntityPostSpawnFunction    = PRVM_ED_FindFunctionOffset("SV_OnEntityPostSpawnFunction");
 	prog->funcoffsets.GameCommand                     = PRVM_ED_FindFunctionOffset("GameCommand");
 	prog->funcoffsets.SV_Shutdown                     = PRVM_ED_FindFunctionOffset("SV_Shutdown");
 	prog->funcoffsets.URI_Get_Callback                = PRVM_ED_FindFunctionOffset("URI_Get_Callback");

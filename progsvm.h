@@ -287,7 +287,9 @@ typedef struct prvm_prog_funcoffsets_s
 	func_t SV_ChangeTeam; // ssqc
 	func_t SV_ParseClientCommand; // ssqc
 	func_t SV_PlayerPhysics; // ssqc
+	func_t SV_OnEntityPreSpawnFunction; // ssqc
 	func_t SV_OnEntityNoSpawnFunction; // ssqc
+	func_t SV_OnEntityPostSpawnFunction; // ssqc
 	func_t GameCommand; // any
 	func_t SV_Shutdown; // ssqc
 	func_t URI_Get_Callback; // any
