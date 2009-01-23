@@ -62,6 +62,7 @@ char *vm_sv_extensions =
 "DP_QC_COPYENTITY "
 "DP_QC_CRC16 "
 "DP_QC_CVAR_DEFSTRING "
+"DP_QC_CVAR_DESCRIPTION "
 "DP_QC_CVAR_STRING "
 "DP_QC_CVAR_TYPE "
 "DP_QC_EDICT_NUM "
@@ -84,6 +85,7 @@ char *vm_sv_extensions =
 "DP_QC_SINCOSSQRTPOW "
 "DP_QC_STRFTIME "
 "DP_QC_STRINGBUFFERS "
+"DP_QC_STRINGBUFFERS_CVARLIST "
 "DP_QC_STRINGCOLORFUNCTIONS "
 "DP_QC_STRING_CASE_FUNCTIONS "
 "DP_QC_STRREPLACE "
@@ -3420,8 +3422,8 @@ VM_uri_get,						// #513 float(string uril, float id) uri_get = #513; (DP_QC_URI
 VM_tokenize_console,					// #514 float(string str) tokenize_console = #514; (DP_QC_TOKENIZE_CONSOLE)
 VM_argv_start_index,					// #515 float(float idx) argv_start_index = #515; (DP_QC_TOKENIZE_CONSOLE)
 VM_argv_end_index,						// #516 float(float idx) argv_end_index = #516; (DP_QC_TOKENIZE_CONSOLE)
-NULL,							// #517
-NULL,							// #518
+VM_buf_cvarlist,						// #517 void(float buf, string prefix) buf_cvarlist = #517; (DP_QC_STRINGBUFFERS_CVARLIST)
+VM_cvar_description,					// #518 float(string name) cvar_description = #518; (DP_QC_CVAR_DESCRIPTION)
 NULL,							// #519
 };
 

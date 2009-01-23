@@ -21,6 +21,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
+char *cvar_dummy_description = "custom cvar";
+
 cvar_t *cvar_vars = NULL;
 cvar_t *cvar_hashtable[65536];
 char *cvar_null_string = "";
@@ -112,6 +114,21 @@ const char *Cvar_VariableDefString (const char *var_name)
 	if (!var)
 		return cvar_null_string;
 	return var->defstring;
+}
+
+/*
+============
+Cvar_VariableDescription
+============
+*/
+const char *Cvar_VariableDescription (const char *var_name)
+{
+	cvar_t *var;
+
+	var = Cvar_FindVar (var_name);
+	if (!var)
+		return cvar_null_string;
+	return var->description;
 }
 
 
@@ -434,7 +451,7 @@ Cvar_Get
 Adds a newly allocated variable to the variable list or sets its value.
 ============
 */
-cvar_t *Cvar_Get (const char *name, const char *value, int flags)
+cvar_t *Cvar_Get (const char *name, const char *value, int flags, const char *newdescription)
 {
 	int hashindex;
 	cvar_t *current, *next, *cvar;
@@ -449,6 +466,20 @@ cvar_t *Cvar_Get (const char *name, const char *value, int flags)
 	{
 		cvar->flags |= flags;
 		Cvar_SetQuick_Internal (cvar, value);
+		if(newdescription && (cvar->flags & CVAR_ALLOCATED))
+		{
+			if(cvar->description != cvar_dummy_description)
+				Z_Free(cvar->description);
+
+			if(*newdescription)
+			{
+				alloclen = strlen(newdescription) + 1;
+				cvar->description = (char *)Z_Malloc(alloclen);
+				memcpy(cvar->description, newdescription, alloclen);
+			}
+			else
+				cvar->description = cvar_dummy_description;
+		}
 		return cvar;
 	}
 
@@ -474,7 +505,15 @@ cvar_t *Cvar_Get (const char *name, const char *value, int flags)
 	memcpy(cvar->defstring, value, alloclen);
 	cvar->value = atof (cvar->string);
 	cvar->integer = (int) cvar->value;
-	cvar->description = "custom cvar"; // actually checked by VM_cvar_type
+
+	if(newdescription && *newdescription)
+	{
+		alloclen = strlen(newdescription) + 1;
+		cvar->description = (char *)Z_Malloc(alloclen);
+		memcpy(cvar->description, newdescription, alloclen);
+	}
+	else
+		cvar->description = cvar_dummy_description; // actually checked by VM_cvar_type
 
 // link the variable in
 // alphanumerical order
@@ -660,7 +699,7 @@ void Cvar_Set_f (void)
 	// make sure it's the right number of parameters
 	if (Cmd_Argc() < 3)
 	{
-		Con_Printf("Set: wrong number of parameters, usage: set <variablename> <value>\n");
+		Con_Printf("Set: wrong number of parameters, usage: set <variablename> <value> [<description>]\n");
 		return;
 	}
 
@@ -676,7 +715,7 @@ void Cvar_Set_f (void)
 		Con_DPrint("Set: ");
 
 	// all looks ok, create/modify the cvar
-	Cvar_Get(Cmd_Argv(1), Cmd_Argv(2), 0);
+	Cvar_Get(Cmd_Argv(1), Cmd_Argv(2), 0, Cmd_Argc() >= 3 ? Cmd_Argv(3) : NULL);
 }
 
 void Cvar_SetA_f (void)
@@ -686,7 +725,7 @@ void Cvar_SetA_f (void)
 	// make sure it's the right number of parameters
 	if (Cmd_Argc() < 3)
 	{
-		Con_Printf("SetA: wrong number of parameters, usage: seta <variablename> <value>\n");
+		Con_Printf("SetA: wrong number of parameters, usage: seta <variablename> <value> [<description>]\n");
 		return;
 	}
 
@@ -702,7 +741,7 @@ void Cvar_SetA_f (void)
 		Con_DPrint("SetA: ");
 
 	// all looks ok, create/modify the cvar
-	Cvar_Get(Cmd_Argv(1), Cmd_Argv(2), CVAR_SAVE);
+	Cvar_Get(Cmd_Argv(1), Cmd_Argv(2), CVAR_SAVE, Cmd_Argc() >= 3 ? Cmd_Argv(3) : NULL);
 }
 
 

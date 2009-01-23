@@ -158,6 +158,9 @@ const char *Cvar_VariableString (const char *var_name);
 const char *Cvar_VariableDefString (const char *var_name);
 // returns an empty string if not defined
 
+const char *Cvar_VariableDescription (const char *var_name);
+// returns an empty string if not defined
+
 const char *Cvar_CompleteVariable (const char *partial);
 // attempts to match a partial variable name for command line completion
 // returns NULL if nothing fits
@@ -199,9 +202,12 @@ void Cvar_SetA_f (void);
 // commands to create new cvars (or set existing ones)
 // seta creates an archived cvar (saved to config)
 
-cvar_t *Cvar_Get (const char *name, const char *value, int flags);
+cvar_t *Cvar_Get (const char *name, const char *value, int flags, const char *newdescription);
 // allocates a cvar by name and returns its address,
 // or merely sets its value if it already exists.
+
+char *cvar_dummy_description; // ALWAYS the same pointer
+cvar_t *cvar_vars; // used to list all cvars
 
 #endif
 

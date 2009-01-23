@@ -466,7 +466,7 @@ void VM_cvar_type (void)
 		ret |= 4; // CVAR_TYPE_PRIVATE
 	if(!(cvar->flags & CVAR_ALLOCATED))
 		ret |= 8; // CVAR_TYPE_ENGINE
-	if(strcmp(cvar->description, "custom cvar")) // has to match Cvar_Get's placeholder string
+	if(cvar->description != cvar_dummy_description)
 		ret |= 16; // CVAR_TYPE_HASDESCRIPTION
 	
 	PRVM_G_FLOAT(OFS_RETURN) = ret;
@@ -503,6 +503,22 @@ void VM_cvar_defstring (void)
 	VM_VarString(0, string, sizeof(string));
 	VM_CheckEmptyString(string);
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(Cvar_VariableDefString(string));
+}
+
+/*
+========================
+VM_cvar_defstring
+
+const string	VM_cvar_description (string, ...)
+========================
+*/
+void VM_cvar_description (void)
+{
+	char string[VM_STRINGTEMP_LENGTH];
+	VM_SAFEPARMCOUNTRANGE(1,8,VM_cvar_description);
+	VM_VarString(0, string, sizeof(string));
+	VM_CheckEmptyString(string);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(Cvar_VariableDescription(string));
 }
 /*
 =================
@@ -1439,7 +1455,7 @@ void VM_registercvar (void)
 		return;
 	}
 
-	Cvar_Get(name, value, flags);
+	Cvar_Get(name, value, flags, NULL);
 
 	PRVM_G_FLOAT(OFS_RETURN) = 1; // success
 }
@@ -4365,6 +4381,71 @@ void VM_bufstr_free (void)
 
 	BufStr_Shrink(stringbuffer);
 }
+
+
+
+
+
+
+
+void VM_buf_cvarlist(void)
+{
+	cvar_t *cvar;
+	const char *partial;
+	size_t len;
+	size_t alloclen;
+	int n;
+	prvm_stringbuffer_t	*stringbuffer;
+	VM_SAFEPARMCOUNT(2, VM_bufstr_free);
+
+	stringbuffer = (prvm_stringbuffer_t *)Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, (int)PRVM_G_FLOAT(OFS_PARM0));
+	if(!stringbuffer)
+	{
+		VM_Warning("VM_bufstr_free: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
+		return;
+	}
+
+	partial = PRVM_G_STRING(OFS_PARM1);
+	if(!partial)
+		len = 0;
+	else
+		len = strlen(partial);
+	
+	for (n = 0;n < stringbuffer->num_strings;n++)
+		if (stringbuffer->strings[n])
+			Mem_Free(stringbuffer->strings[n]);
+	if (stringbuffer->strings)
+		Mem_Free(stringbuffer->strings);
+	stringbuffer->strings = NULL;
+
+	n = 0;
+	for(cvar = cvar_vars; cvar; cvar = cvar->next)
+	{
+		if(partial && strncasecmp(partial, cvar->name, len))
+			continue;
+		++n;
+	}
+
+	stringbuffer->max_strings = stringbuffer->num_strings = n;
+	if (stringbuffer->max_strings)
+		stringbuffer->strings = (char **)Mem_Alloc(prog->progs_mempool, sizeof(stringbuffer->strings[0]) * stringbuffer->max_strings);
+	
+	n = 0;
+	for(cvar = cvar_vars; cvar; cvar = cvar->next)
+	{
+		if(partial && strncasecmp(partial, cvar->name, len))
+			continue;
+
+		alloclen = strlen(cvar->name) + 1;
+		stringbuffer->strings[n] = (char *)Mem_Alloc(prog->progs_mempool, alloclen);
+		memcpy(stringbuffer->strings[n], cvar->name, alloclen);
+
+		++n;
+	}
+}
+
+
+
 
 //=============
 
