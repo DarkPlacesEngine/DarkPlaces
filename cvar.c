@@ -715,7 +715,7 @@ void Cvar_Set_f (void)
 		Con_DPrint("Set: ");
 
 	// all looks ok, create/modify the cvar
-	Cvar_Get(Cmd_Argv(1), Cmd_Argv(2), 0, Cmd_Argc() >= 3 ? Cmd_Argv(3) : NULL);
+	Cvar_Get(Cmd_Argv(1), Cmd_Argv(2), 0, Cmd_Argc() > 3 ? Cmd_Argv(3) : NULL);
 }
 
 void Cvar_SetA_f (void)
@@ -741,7 +741,7 @@ void Cvar_SetA_f (void)
 		Con_DPrint("SetA: ");
 
 	// all looks ok, create/modify the cvar
-	Cvar_Get(Cmd_Argv(1), Cmd_Argv(2), CVAR_SAVE, Cmd_Argc() >= 3 ? Cmd_Argv(3) : NULL);
+	Cvar_Get(Cmd_Argv(1), Cmd_Argv(2), CVAR_SAVE, Cmd_Argc() > 3 ? Cmd_Argv(3) : NULL);
 }
 
 
