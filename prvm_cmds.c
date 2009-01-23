@@ -4435,6 +4435,10 @@ void VM_buf_cvarlist(void)
 	{
 		if(partial && strncasecmp(partial, cvar->name, len))
 			continue;
+
+		if(antilen && !strncasecmp(antipartial, cvar->name, antilen))
+			continue;
+
 		++n;
 	}
 
