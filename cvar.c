@@ -40,7 +40,7 @@ cvar_t *Cvar_FindVar (const char *var_name)
 	// use hash lookup to minimize search time
 	hashindex = CRC_Block((const unsigned char *)var_name, strlen(var_name));
 	for (var = cvar_hashtable[hashindex];var;var = var->nextonhashchain)
-		if (!strcasecmp (var_name, var->name))
+		if (!strcmp (var_name, var->name))
 			return var;
 
 	return NULL;
@@ -663,6 +663,7 @@ void Cvar_List_f (void)
 	const char *partial;
 	size_t len;
 	int count;
+	qboolean ispattern;
 
 	if (Cmd_Argc() > 1)
 	{
@@ -675,18 +676,25 @@ void Cvar_List_f (void)
 		len = 0;
 	}
 
+	ispattern = partial && (strchr(partial, '*') || strchr(partial, '?'));
+
 	count = 0;
 	for (cvar = cvar_vars; cvar; cvar = cvar->next)
 	{
-		if (partial && strncasecmp (partial,cvar->name,len))
+		if (len && (ispattern ? !matchpattern_with_separator(cvar->name, partial, false, "", false) : strncmp (partial,cvar->name,len)))
 			continue;
 
 		Con_Printf("%s is \"%s\" [\"%s\"] %s\n", cvar->name, cvar->string, cvar->defstring, cvar->description);
 		count++;
 	}
 
-	if (partial)
-		Con_Printf("%i cvar(s) beginning with \"%s\"\n", count, partial);
+	if (len)
+	{
+		if(ispattern)
+			Con_Printf("%i cvar(s) matching \"%s\"\n", count, partial);
+		else
+			Con_Printf("%i cvar(s) beginning with \"%s\"\n", count, partial);
+	}
 	else
 		Con_Printf("%i cvar(s)\n", count);
 }
