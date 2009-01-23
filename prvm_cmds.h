@@ -436,3 +436,6 @@ void VM_netaddress_resolve (void);
 void VM_tokenize_console (void);
 void VM_argv_start_index (void);
 void VM_argv_end_index (void);
+
+void VM_buf_cvarlist(void);
+void VM_cvar_description(void);

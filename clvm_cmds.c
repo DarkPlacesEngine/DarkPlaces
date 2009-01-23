@@ -3547,8 +3547,8 @@ VM_uri_get,						// #513 float(string uril, float id) uri_get = #512; (DP_QC_URI
 VM_tokenize_console,					// #514 float(string str) tokenize_console = #514; (DP_QC_TOKENIZE_CONSOLE)
 VM_argv_start_index,					// #515 float(float idx) argv_start_index = #515; (DP_QC_TOKENIZE_CONSOLE)
 VM_argv_end_index,						// #516 float(float idx) argv_end_index = #516; (DP_QC_TOKENIZE_CONSOLE)
-NULL,							// #517
-NULL,							// #518
+VM_buf_cvarlist,						// #517 void(float buf, string prefix) buf_cvarlist = #517; (DP_QC_STRINGBUFFERS_CVARLIST)
+VM_cvar_description,					// #518 float(string name) cvar_description = #518; (DP_QC_CVAR_DESCRIPTION)
 NULL,							// #519
 VM_keynumtostring,				// #520 string keynumtostring(float keynum)
 VM_findkeysforcommand,		// #521 string findkeysforcommand(string command)
