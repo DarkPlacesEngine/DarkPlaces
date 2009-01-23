@@ -439,6 +439,7 @@ float CVAR_TYPEFLAG_SAVED = 2;
 float CVAR_TYPEFLAG_PRIVATE = 4;
 float CVAR_TYPEFLAG_ENGINE = 8;
 float CVAR_TYPEFLAG_HASDESCRIPTION = 16;
+float CVAR_TYPEFLAG_READONLY = 32;
 =================
 */
 void VM_cvar_type (void)
@@ -468,6 +469,8 @@ void VM_cvar_type (void)
 		ret |= 8; // CVAR_TYPE_ENGINE
 	if(cvar->description != cvar_dummy_description)
 		ret |= 16; // CVAR_TYPE_HASDESCRIPTION
+	if(cvar->flags & CVAR_READONLY)
+		ret |= 32; // CVAR_TYPE_READONLY
 	
 	PRVM_G_FLOAT(OFS_RETURN) = ret;
 }
@@ -4391,12 +4394,12 @@ void VM_bufstr_free (void)
 void VM_buf_cvarlist(void)
 {
 	cvar_t *cvar;
-	const char *partial;
-	size_t len;
+	const char *partial, *antipartial;
+	size_t len, antilen;
 	size_t alloclen;
 	int n;
 	prvm_stringbuffer_t	*stringbuffer;
-	VM_SAFEPARMCOUNT(2, VM_bufstr_free);
+	VM_SAFEPARMCOUNTRANGE(2, 3, VM_buf_cvarlist);
 
 	stringbuffer = (prvm_stringbuffer_t *)Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, (int)PRVM_G_FLOAT(OFS_PARM0));
 	if(!stringbuffer)
@@ -4410,6 +4413,15 @@ void VM_buf_cvarlist(void)
 		len = 0;
 	else
 		len = strlen(partial);
+
+	if(prog->argc == 3)
+		antipartial = PRVM_G_STRING(OFS_PARM2);
+	else
+		antipartial = NULL;
+	if(!antipartial)
+		antilen = 0;
+	else
+		antilen = strlen(antipartial);
 	
 	for (n = 0;n < stringbuffer->num_strings;n++)
 		if (stringbuffer->strings[n])
@@ -4433,7 +4445,10 @@ void VM_buf_cvarlist(void)
 	n = 0;
 	for(cvar = cvar_vars; cvar; cvar = cvar->next)
 	{
-		if(partial && strncasecmp(partial, cvar->name, len))
+		if(len && strncasecmp(partial, cvar->name, len))
+			continue;
+
+		if(antilen && !strncasecmp(antipartial, cvar->name, antilen))
 			continue;
 
 		alloclen = strlen(cvar->name) + 1;
