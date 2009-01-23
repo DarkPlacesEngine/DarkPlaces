@@ -4397,6 +4397,7 @@ void VM_buf_cvarlist(void)
 	const char *partial, *antipartial;
 	size_t len, antilen;
 	size_t alloclen;
+	qboolean ispattern, antiispattern;
 	int n;
 	prvm_stringbuffer_t	*stringbuffer;
 	VM_SAFEPARMCOUNTRANGE(2, 3, VM_buf_cvarlist);
@@ -4430,13 +4431,16 @@ void VM_buf_cvarlist(void)
 		Mem_Free(stringbuffer->strings);
 	stringbuffer->strings = NULL;
 
+	ispattern = partial && (strchr(partial, '*') || strchr(partial, '?'));
+	antiispattern = antipartial && (strchr(antipartial, '*') || strchr(antipartial, '?'));
+
 	n = 0;
 	for(cvar = cvar_vars; cvar; cvar = cvar->next)
 	{
-		if(partial && strncasecmp(partial, cvar->name, len))
+		if(len && (ispattern ? !matchpattern_with_separator(cvar->name, partial, false, "", false) : strncmp(partial, cvar->name, len)))
 			continue;
 
-		if(antilen && !strncasecmp(antipartial, cvar->name, antilen))
+		if(antilen && (antiispattern ? matchpattern_with_separator(cvar->name, antipartial, false, "", false) : !strncmp(antipartial, cvar->name, antilen)))
 			continue;
 
 		++n;
@@ -4449,10 +4453,10 @@ void VM_buf_cvarlist(void)
 	n = 0;
 	for(cvar = cvar_vars; cvar; cvar = cvar->next)
 	{
-		if(len && strncasecmp(partial, cvar->name, len))
+		if(len && (ispattern ? !matchpattern_with_separator(cvar->name, partial, false, "", false) : strncmp(partial, cvar->name, len)))
 			continue;
 
-		if(antilen && !strncasecmp(antipartial, cvar->name, antilen))
+		if(antilen && (antiispattern ? matchpattern_with_separator(cvar->name, antipartial, false, "", false) : !strncmp(antipartial, cvar->name, antilen)))
 			continue;
 
 		alloclen = strlen(cvar->name) + 1;
