@@ -3626,7 +3626,7 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		VectorCopy(bm->mins, mod->normalmins);
 		VectorCopy(bm->maxs, mod->normalmaxs);
 		dist = max(fabs(mod->normalmins[0]), fabs(mod->normalmaxs[0]));
-		modelyawradius = max(fabs(mod->normalmins[0]), fabs(mod->normalmaxs[0]));
+		modelyawradius = max(fabs(mod->normalmins[1]), fabs(mod->normalmaxs[1]));
 		modelyawradius = dist*dist+modelyawradius*modelyawradius;
 		modelradius = max(fabs(mod->normalmins[2]), fabs(mod->normalmaxs[2]));
 		modelradius = modelyawradius + modelradius * modelradius;
