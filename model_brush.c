@@ -4836,11 +4836,11 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			cxtess = Q3PatchTesselationOnX(patchsize[0], patchsize[1], 3, originalvertex3f, r_subdivisions_collision_tolerance.value);
 			cytess = Q3PatchTesselationOnY(patchsize[0], patchsize[1], 3, originalvertex3f, r_subdivisions_collision_tolerance.value);
 			// bound to user settings
-			cxtess = bound(r_subdivisions_mintess.integer, xtess, r_subdivisions_collision_maxtess.integer);
-			cytess = bound(r_subdivisions_mintess.integer, ytess, r_subdivisions_collision_maxtess.integer);
+			cxtess = bound(r_subdivisions_collision_mintess.integer, cxtess, r_subdivisions_collision_maxtess.integer);
+			cytess = bound(r_subdivisions_collision_mintess.integer, cytess, r_subdivisions_collision_maxtess.integer);
 			// bound to sanity settings
-			cxtess = bound(1, xtess, 1024);
-			cytess = bound(1, ytess, 1024);
+			cxtess = bound(1, cxtess, 1024);
+			cytess = bound(1, cytess, 1024);
 
 			// store it for the LOD grouping step
 			patchtess[patchtesscount].surface_id = i;
@@ -4856,8 +4856,8 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			patchtess[patchtesscount].lodgroup[4] = in->specific.patch.maxs[1];
 			patchtess[patchtesscount].lodgroup[5] = in->specific.patch.maxs[2];
 
-			patchtess[patchtesscount].cxtess = xtess;
-			patchtess[patchtesscount].cytess = ytess;
+			patchtess[patchtesscount].cxtess = cxtess;
+			patchtess[patchtesscount].cytess = cytess;
 			++patchtesscount;
 			break;
 		case Q3FACETYPE_FLARE:
