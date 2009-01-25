@@ -2114,7 +2114,7 @@ int Mod_RemoveDegenerateTriangles(int numtriangles, const int *inelement3i, int 
 	{
 		// calculate first edge
 		VectorSubtract(vertex3f + inelement3i[1] * 3, vertex3f + inelement3i[0] * 3, edgedir1);
-		VectorSubtract(vertex3f + inelement3i[1] * 3, vertex3f + inelement3i[0] * 3, edgedir2);
+		VectorSubtract(vertex3f + inelement3i[2] * 3, vertex3f + inelement3i[0] * 3, edgedir2);
 		CrossProduct(edgedir1, edgedir2, temp);
 		if (VectorLength2(temp) < 0.001f)
 			continue; // degenerate triangle (no area)
