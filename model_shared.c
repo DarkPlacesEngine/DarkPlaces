@@ -2105,7 +2105,7 @@ void Mod_SnapVertices(int numcomponents, int numvertices, float *vertices, float
 int Mod_RemoveDegenerateTriangles(int numtriangles, const int *inelement3i, int *outelement3i, const float *vertex3f)
 {
 	int i, outtriangles;
-	float d, edgedir1[3], edgedir2[3], temp[3];
+	float edgedir1[3], edgedir2[3], temp[3];
 	// a degenerate triangle is one with no width (thickness, surface area)
 	// these are characterized by having all 3 points colinear (along a line)
 	// or having two points identical
