@@ -788,7 +788,7 @@ int EntityState5_DeltaBitsForState(entity_state_t *o, entity_state_t *n);
 void EntityFrame5_CL_ReadFrame(void);
 void EntityFrame5_LostFrame(entityframe5_database_t *d, int framenum);
 void EntityFrame5_AckFrame(entityframe5_database_t *d, int framenum);
-void EntityFrame5_WriteFrame(sizebuf_t *msg, int maxsize, entityframe5_database_t *d, int numstates, const entity_state_t *states, int viewentnum, int movesequence);
+void EntityFrame5_WriteFrame(sizebuf_t *msg, int maxsize, entityframe5_database_t *d, int numstates, const entity_state_t *states, int viewentnum, int movesequence, qboolean need_empty);
 
 extern cvar_t developer_networkentities;
 
@@ -969,7 +969,7 @@ void EntityFrameQW_CL_ReadFrame(qboolean delta);
 
 struct client_s;
 void EntityFrameCSQC_LostFrame(struct client_s *client, int framenum);
-void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numstates, const entity_state_t *states, int framenum);
+qboolean EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numstates, const entity_state_t *states, int framenum);
 
 #endif
 

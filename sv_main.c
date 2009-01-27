@@ -1401,6 +1401,7 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 
 void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *msg, int maxsize)
 {
+	qboolean need_empty = false;
 	int i, numsendstates;
 	entity_state_t *s;
 	prvm_edict_t *camera;
@@ -1448,12 +1449,12 @@ void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *
 		Con_Printf("client \"%s\" entities: %d total, %d visible, %d culled by: %d pvs %d trace\n", client->name, sv.writeentitiestoclient_stats_totalentities, sv.writeentitiestoclient_stats_visibleentities, sv.writeentitiestoclient_stats_culled_pvs + sv.writeentitiestoclient_stats_culled_trace, sv.writeentitiestoclient_stats_culled_pvs, sv.writeentitiestoclient_stats_culled_trace);
 
 	if(client->entitydatabase5)
-		EntityFrameCSQC_WriteFrame(msg, maxsize, numsendstates, sv.writeentitiestoclient_sendstates, client->entitydatabase5->latestframenum + 1);
+		need_empty = EntityFrameCSQC_WriteFrame(msg, maxsize, numsendstates, sv.writeentitiestoclient_sendstates, client->entitydatabase5->latestframenum + 1);
 	else
 		EntityFrameCSQC_WriteFrame(msg, maxsize, numsendstates, sv.writeentitiestoclient_sendstates, 0);
 
 	if (client->entitydatabase5)
-		EntityFrame5_WriteFrame(msg, maxsize, client->entitydatabase5, numsendstates, sv.writeentitiestoclient_sendstates, client - svs.clients + 1, client->movesequence);
+		EntityFrame5_WriteFrame(msg, maxsize, client->entitydatabase5, numsendstates, sv.writeentitiestoclient_sendstates, client - svs.clients + 1, client->movesequence, need_empty);
 	else if (client->entitydatabase4)
 	{
 		EntityFrame4_WriteFrame(msg, maxsize, client->entitydatabase4, numsendstates, sv.writeentitiestoclient_sendstates);
