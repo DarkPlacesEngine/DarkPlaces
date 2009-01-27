@@ -430,7 +430,7 @@ static void EntityFrameCSQC_DeallocFrame(client_t *client, int framenum)
 //[515]: we use only one array per-client for SendEntity feature
 // TODO: add some handling for entity send priorities, to better deal with huge
 // amounts of csqc networked entities
-void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numstates, const entity_state_t *states, int framenum)
+qboolean EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numstates, const entity_state_t *states, int framenum)
 {
 	int num, number, end, sendflags;
 	qboolean sectionstarted = false;
@@ -445,12 +445,12 @@ void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numstates, con
 
 	// if this server progs is not CSQC-aware, return early
 	if(prog->fieldoffsets.SendEntity < 0 || prog->fieldoffsets.Version < 0)
-		return;
+		return false;
 
 	// make sure there is enough room to store the svc_csqcentities byte,
 	// the terminator (0x0000) and at least one entity update
 	if (msg->cursize + 32 >= maxsize)
-		return;
+		return false;
 
 	if (client->csqcnumedicts < prog->num_edicts)
 		client->csqcnumedicts = prog->num_edicts;
@@ -597,6 +597,8 @@ void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numstates, con
 		// if no single ent got added, remove the frame from the DB again, to allow
 		// for a larger history
 		EntityFrameCSQC_DeallocFrame(client, framenum);
+	
+	return sectionstarted;
 }
 
 void Protocol_UpdateClientStats(const int *stats)
@@ -2495,7 +2497,7 @@ void EntityFrame5_AckFrame(entityframe5_database_t *d, int framenum)
 			d->packetlog[i].packetnumber = 0;
 }
 
-void EntityFrame5_WriteFrame(sizebuf_t *msg, int maxsize, entityframe5_database_t *d, int numstates, const entity_state_t *states, int viewentnum, int movesequence)
+void EntityFrame5_WriteFrame(sizebuf_t *msg, int maxsize, entityframe5_database_t *d, int numstates, const entity_state_t *states, int viewentnum, int movesequence, qboolean need_empty)
 {
 	const entity_state_t *n;
 	int i, num, l, framenum, packetlognumber, priority;
@@ -2618,16 +2620,23 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, int maxsize, entityframe5_database_
 					MSG_WriteByte(msg, svc_updatestatubyte);
 					MSG_WriteByte(msg, i);
 					MSG_WriteByte(msg, host_client->stats[i]);
+					l = 1;
 				}
 				else
 				{
 					MSG_WriteByte(msg, svc_updatestat);
 					MSG_WriteByte(msg, i);
 					MSG_WriteLong(msg, host_client->stats[i]);
+					l = 1;
 				}
 			}
 		}
 	}
+
+	// only send empty svc_entities frame if needed
+	if(!l && !need_empty)
+		return;
+
 	// write state updates
 	if (developer_networkentities.integer >= 10)
 		Con_Printf("send: svc_entities %i\n", framenum);
