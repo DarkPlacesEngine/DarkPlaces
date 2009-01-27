@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <X11/Xatom.h>
 #include <X11/XKBlib.h> // TODO possibly ifdef this out on non-supporting systems... Solaris (as always)?
 #include <GL/glx.h>
 
@@ -102,6 +103,7 @@ static int vid_x11_gammarampsize = 0;
 cvar_t vid_dgamouse = {CVAR_SAVE, "vid_dgamouse", "0", "make use of DGA mouse input"};
 static qboolean vid_usingdgamouse = false;
 #endif
+cvar_t vid_netwmfullscreen = {CVAR_SAVE, "vid_netwmfullscreen", "0", "make use _NET_WM_STATE_FULLSCREEN; turn this off if fullscreen does not work for you"};
 
 qboolean vidmode_ext = false;
 
@@ -285,7 +287,7 @@ void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecurso
 		if (fullscreengrab)
 		{
 			XGrabPointer(vidx11_display, win,  True, 0, GrabModeAsync, GrabModeAsync, win, None, CurrentTime);
-			if (vid_grabkeyboard.integer || vid_isfullscreen)
+			if (vid_grabkeyboard.integer || (vid_isfullscreen && !vid_netwmfullscreen.integer))
 				XGrabKeyboard(vidx11_display, win, False, GrabModeAsync, GrabModeAsync, CurrentTime);
 		}
 		else
@@ -656,6 +658,7 @@ void VID_Init(void)
 #if !defined(__APPLE__) && !defined(SUNOS)
 	Cvar_RegisterVariable (&vid_dgamouse);
 #endif
+	Cvar_RegisterVariable (&vid_netwmfullscreen);
 	InitSig(); // trap evil signals
 // COMMANDLINEOPTION: Input: -nomouse disables mouse support (see also vid_mouse cvar)
 	if (COM_CheckParm ("-nomouse"))
@@ -827,10 +830,19 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	attr.event_mask = X_MASK;
 	if (vid_isfullscreen)
 	{
-		mask = CWBackPixel | CWColormap | CWSaveUnder | CWBackingStore | CWEventMask | CWOverrideRedirect;
-		attr.override_redirect = True;
-		attr.backing_store = NotUseful;
-		attr.save_under = False;
+		if(vid_netwmfullscreen.integer)
+		{
+			mask = CWBackPixel | CWColormap | CWSaveUnder | CWBackingStore | CWEventMask | CWOverrideRedirect;
+			attr.override_redirect = True;
+			attr.backing_store = NotUseful;
+			attr.save_under = False;
+		}
+		else
+		{
+			mask = CWBackPixel | CWColormap | CWSaveUnder | CWBackingStore | CWEventMask;
+			attr.backing_store = NotUseful;
+			attr.save_under = False;
+		}
 	}
 	else
 		mask = CWBackPixel | CWBorderPixel | CWColormap | CWEventMask;
@@ -859,6 +871,14 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	XFree(clshints);
 	XFree(wmhints);
 	XFree(szhints);
+
+	if(vid_isfullscreen && vid_netwmfullscreen.integer)
+	{
+		Atom net_wm_state_atom = XInternAtom(vidx11_display, "_NET_WM_STATE", false);
+		Atom net_wm_state_fullscreen_atom = XInternAtom(vidx11_display, "_NET_WM_STATE_FULLSCREEN", false);
+		XChangeProperty(vidx11_display, win, net_wm_state_atom, XA_ATOM, 32, PropModeReplace, (unsigned char *) &net_wm_state_fullscreen_atom, 1);
+	}
+
 	//XStoreName(vidx11_display, win, gamename);
 	XMapWindow(vidx11_display, win);
 
