@@ -499,13 +499,13 @@ static void HandleEvents(void)
 			VID_RestoreSystemGamma();
 			break;
 		case FocusIn:
-			if (vid.fullscreen)
+			if (vid.fullscreen && !vid_netwmfullscreen.integer)
 				break;
 			// window is now the input focus
 			vid_activewindow = true;
 			break;
 		case FocusOut:
-			if (vid.fullscreen)
+			if (vid.fullscreen && !vid_netwmfullscreen.integer)
 				break;
 			// window is no longer the input focus
 			vid_activewindow = false;
