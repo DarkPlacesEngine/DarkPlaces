@@ -832,14 +832,14 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	{
 		if(vid_netwmfullscreen.integer)
 		{
-			mask = CWBackPixel | CWColormap | CWSaveUnder | CWBackingStore | CWEventMask | CWOverrideRedirect;
-			attr.override_redirect = True;
+			mask = CWBackPixel | CWColormap | CWSaveUnder | CWBackingStore | CWEventMask;
 			attr.backing_store = NotUseful;
 			attr.save_under = False;
 		}
 		else
 		{
-			mask = CWBackPixel | CWColormap | CWSaveUnder | CWBackingStore | CWEventMask;
+			mask = CWBackPixel | CWColormap | CWSaveUnder | CWBackingStore | CWEventMask | CWOverrideRedirect;
+			attr.override_redirect = True;
 			attr.backing_store = NotUseful;
 			attr.save_under = False;
 		}
