@@ -109,8 +109,9 @@ qboolean vidmode_ext = false;
 
 static int win_x, win_y;
 
-static XF86VidModeModeInfo init_vidmode;
+static XF86VidModeModeInfo init_vidmode, game_vidmode;
 static qboolean vid_isfullscreen = false;
+static qboolean vid_isnetwmfullscreen = false;
 
 static Visual *vidx11_visual;
 static Colormap vidx11_colormap;
@@ -287,7 +288,7 @@ void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecurso
 		if (fullscreengrab)
 		{
 			XGrabPointer(vidx11_display, win,  True, 0, GrabModeAsync, GrabModeAsync, win, None, CurrentTime);
-			if (vid_grabkeyboard.integer || (vid_isfullscreen && !vid_netwmfullscreen.integer))
+			if (vid_grabkeyboard.integer || (vid_isfullscreen && !vid_isnetwmfullscreen))
 				XGrabKeyboard(vidx11_display, win, False, GrabModeAsync, GrabModeAsync, CurrentTime);
 		}
 		else
@@ -485,31 +486,63 @@ static void HandleEvents(void)
 				Sys_Quit(0);
 			break;
 		case MapNotify:
-			if (vid.fullscreen)
+			if (vid_isfullscreen && !vid_isnetwmfullscreen)
 				break;
 			// window restored
 			vid_hidden = false;
 			VID_RestoreSystemGamma();
+
+			if(vid_isfullscreen)
+			{
+				Atom net_wm_state_atom = XInternAtom(vidx11_display, "_NET_WM_STATE", false);
+				Atom net_wm_state_fullscreen_atom = XInternAtom(vidx11_display, "_NET_WM_STATE_FULLSCREEN", false);
+
+				// set our video mode
+				XF86VidModeSwitchToMode(vidx11_display, vidx11_screen, &game_vidmode);
+
+				// reenter fullscreen
+				XChangeProperty(vidx11_display, win, net_wm_state_atom, XA_ATOM, 32, PropModeReplace, (unsigned char *) &net_wm_state_fullscreen_atom, 1);
+
+				// Move the viewport to top left
+				XF86VidModeSetViewPort(vidx11_display, vidx11_screen, 0, 0);
+
+				// Move the window to the right place
+				XMoveWindow(vidx11_display, win, 0, 0);
+				XRaiseWindow(vidx11_display, win);
+				XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, 0, 0);
+				XFlush(vidx11_display);
+			}
+
 			break;
 		case UnmapNotify:
-			if (vid.fullscreen)
+			if (vid_isfullscreen && !vid_isnetwmfullscreen)
 				break;
 			// window iconified/rolledup/whatever
 			vid_hidden = true;
 			VID_RestoreSystemGamma();
+
+			if(vid_isfullscreen)
+				XF86VidModeSwitchToMode(vidx11_display, vidx11_screen, &init_vidmode);
+
 			break;
 		case FocusIn:
-			if (vid.fullscreen && !vid_netwmfullscreen.integer)
+			if (vid_isfullscreen && !vid_isnetwmfullscreen)
 				break;
 			// window is now the input focus
 			vid_activewindow = true;
 			break;
 		case FocusOut:
-			if (vid.fullscreen && !vid_netwmfullscreen.integer)
+			if (vid_isfullscreen && !vid_isnetwmfullscreen)
 				break;
 			// window is no longer the input focus
 			vid_activewindow = false;
 			VID_RestoreSystemGamma();
+
+			if(vid_isfullscreen)
+				XUnmapWindow(vidx11_display, win);
+				// iconify netwm fullscreen window when it loses focus
+				// when the user selects it in the taskbar, the window manager will map it again and send MapNotify
+
 			break;
 		case EnterNotify:
 			// mouse entered window
@@ -590,6 +623,7 @@ void VID_Shutdown(void)
 
 	vid_hidden = true;
 	vid_isfullscreen = false;
+	vid_isnetwmfullscreen = false;
 	vidx11_display = NULL;
 	win = 0;
 	ctx = NULL;
@@ -807,6 +841,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 
 				// change to the mode
 				XF86VidModeSwitchToMode(vidx11_display, vidx11_screen, vidmodes[best_fit]);
+				memcpy(&game_vidmode, vidmodes[best_fit], sizeof(game_vidmode));
 				vid_isfullscreen = true;
 
 				// Move the viewport to top left
@@ -830,7 +865,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	attr.event_mask = X_MASK;
 	if (vid_isfullscreen)
 	{
-		if(vid_netwmfullscreen.integer)
+		if(vid_isnetwmfullscreen)
 		{
 			mask = CWBackPixel | CWColormap | CWSaveUnder | CWBackingStore | CWEventMask;
 			attr.backing_store = NotUseful;
@@ -877,7 +912,10 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 		Atom net_wm_state_atom = XInternAtom(vidx11_display, "_NET_WM_STATE", false);
 		Atom net_wm_state_fullscreen_atom = XInternAtom(vidx11_display, "_NET_WM_STATE_FULLSCREEN", false);
 		XChangeProperty(vidx11_display, win, net_wm_state_atom, XA_ATOM, 32, PropModeReplace, (unsigned char *) &net_wm_state_fullscreen_atom, 1);
+		vid_isnetwmfullscreen = true;
 	}
+	else
+		vid_isnetwmfullscreen = false;
 
 	//XStoreName(vidx11_display, win, gamename);
 	XMapWindow(vidx11_display, win);
