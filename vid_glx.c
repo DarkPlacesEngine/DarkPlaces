@@ -76,10 +76,13 @@ static dllfunction_t swapcontrolfuncs[] =
 
 static Display *vidx11_display = NULL;
 static int vidx11_screen;
-static Window win;
+static Window win, root;
 static GLXContext ctx = NULL;
 
 Atom wm_delete_window_atom;
+Atom net_wm_state_atom;
+Atom net_wm_state_hidden_atom;
+Atom net_wm_state_fullscreen_atom;
 
 #define KEY_MASK (KeyPressMask | KeyReleaseMask)
 #define MOUSE_MASK (ButtonPressMask | ButtonReleaseMask | \
@@ -494,23 +497,28 @@ static void HandleEvents(void)
 
 			if(vid_isfullscreen)
 			{
-				Atom net_wm_state_atom = XInternAtom(vidx11_display, "_NET_WM_STATE", false);
-				Atom net_wm_state_fullscreen_atom = XInternAtom(vidx11_display, "_NET_WM_STATE_FULLSCREEN", false);
-
 				// set our video mode
 				XF86VidModeSwitchToMode(vidx11_display, vidx11_screen, &game_vidmode);
-
-				// reenter fullscreen
-				XChangeProperty(vidx11_display, win, net_wm_state_atom, XA_ATOM, 32, PropModeReplace, (unsigned char *) &net_wm_state_fullscreen_atom, 1);
 
 				// Move the viewport to top left
 				XF86VidModeSetViewPort(vidx11_display, vidx11_screen, 0, 0);
 
-				// Move the window to the right place
-				XMoveWindow(vidx11_display, win, 0, 0);
-				XRaiseWindow(vidx11_display, win);
-				XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, 0, 0);
-				XFlush(vidx11_display);
+				// make sure it's fullscreen
+				XEvent event;
+				event.type = ClientMessage;
+				event.xclient.serial = 0;
+				event.xclient.send_event = True;
+				event.xclient.message_type = net_wm_state_atom;
+				event.xclient.window = win;
+				event.xclient.format = 32;
+				event.xclient.data.l[0] = 1;
+				event.xclient.data.l[1] = net_wm_state_fullscreen_atom;
+				event.xclient.data.l[2] = 0;
+				event.xclient.data.l[3] = 1;
+				event.xclient.data.l[4] = 0;
+				XSendEvent(vidx11_display, root, False, SubstructureRedirectMask | SubstructureNotifyMask, &event);
+
+				dowarp = true;
 			}
 
 			break;
@@ -534,14 +542,29 @@ static void HandleEvents(void)
 		case FocusOut:
 			if (vid_isfullscreen && !vid_isnetwmfullscreen)
 				break;
+
+			if(vid_isfullscreen & event.xfocus.mode == NotifyNormal)
+			{
+				// iconify netwm fullscreen window when it loses focus
+				// when the user selects it in the taskbar, the window manager will map it again and send MapNotify
+				XEvent event;
+				event.type = ClientMessage;
+				event.xclient.serial = 0;
+				event.xclient.send_event = True;
+				event.xclient.message_type = net_wm_state_atom;
+				event.xclient.window = win;
+				event.xclient.format = 32;
+				event.xclient.data.l[0] = 1;
+				event.xclient.data.l[1] = net_wm_state_hidden_atom;
+				event.xclient.data.l[2] = 0;
+				event.xclient.data.l[3] = 1;
+				event.xclient.data.l[4] = 0;
+				XSendEvent(vidx11_display, root, False, SubstructureRedirectMask | SubstructureNotifyMask, &event);
+			}
+
 			// window is no longer the input focus
 			vid_activewindow = false;
 			VID_RestoreSystemGamma();
-
-			if(vid_isfullscreen)
-				XUnmapWindow(vidx11_display, win);
-				// iconify netwm fullscreen window when it loses focus
-				// when the user selects it in the taskbar, the window manager will map it again and send MapNotify
 
 			break;
 		case EnterNotify:
@@ -734,7 +757,6 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	XWMHints *wmhints;
 	XSizeHints *szhints;
 	unsigned long mask;
-	Window root;
 	XVisualInfo *visinfo;
 	int MajorVersion, MinorVersion;
 	const char *drivername;
@@ -761,6 +783,13 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 		Con_Print("Couldn't open the X display\n");
 		return false;
 	}
+
+	// LordHavoc: making the close button on a window do the right thing
+	// seems to involve this mess, sigh...
+	wm_delete_window_atom = XInternAtom(vidx11_display, "WM_DELETE_WINDOW", false);
+	net_wm_state_atom = XInternAtom(vidx11_display, "_NET_WM_STATE", false);
+	net_wm_state_fullscreen_atom = XInternAtom(vidx11_display, "_NET_WM_STATE_FULLSCREEN", false);
+	net_wm_state_hidden_atom = XInternAtom(vidx11_display, "_NET_WM_STATE_HIDDEN", false);
 
 	// make autorepeat send keypress/keypress/.../keyrelease instead of intervening keyrelease
 	XkbSetDetectableAutoRepeat(vidx11_display, true, NULL);
@@ -813,7 +842,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 			XF86VidModeGetModeLine(vidx11_display, vidx11_screen, (int*)&init_vidmode.dotclock, current_vidmode);
 
 			XF86VidModeGetAllModeLines(vidx11_display, vidx11_screen, &num_vidmodes, &vidmodes);
-			best_dist = 9999999;
+			best_dist = 0;
 			best_fit = -1;
 
 			for (i = 0; i < num_vidmodes; i++)
@@ -824,7 +853,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 				x = width - vidmodes[i]->hdisplay;
 				y = height - vidmodes[i]->vdisplay;
 				dist = (x * x) + (y * y);
-				if (dist < best_dist)
+				if (best_fit == -1 || dist < best_dist)
 				{
 					best_dist = dist;
 					best_fit = i;
@@ -863,13 +892,15 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	// LordHavoc: save the colormap for later, too
 	vidx11_colormap = attr.colormap = XCreateColormap(vidx11_display, root, visinfo->visual, AllocNone);
 	attr.event_mask = X_MASK;
+
 	if (vid_isfullscreen)
 	{
-		if(vid_isnetwmfullscreen)
+		if(vid_netwmfullscreen.integer)
 		{
 			mask = CWBackPixel | CWColormap | CWSaveUnder | CWBackingStore | CWEventMask;
 			attr.backing_store = NotUseful;
 			attr.save_under = False;
+			vid_isnetwmfullscreen = true;
 		}
 		else
 		{
@@ -877,10 +908,14 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 			attr.override_redirect = True;
 			attr.backing_store = NotUseful;
 			attr.save_under = False;
+			vid_isnetwmfullscreen = false;
 		}
 	}
 	else
+	{
 		mask = CWBackPixel | CWBorderPixel | CWColormap | CWEventMask;
+		vid_isnetwmfullscreen = false;
+	}
 
 	win = XCreateWindow(vidx11_display, root, 0, 0, width, height, 0, visinfo->depth, InputOutput, visinfo->visual, mask, &attr);
 
@@ -895,7 +930,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	clshints->res_class = strdup("DarkPlaces");
 
 	szhints = XAllocSizeHints();
-	if(vid_resizable.integer == 0)
+	if(vid_resizable.integer == 0 && !vid_isnetwmfullscreen)
 	{
 		szhints->min_width = szhints->max_width = width;
 		szhints->min_height = szhints->max_height = height;
@@ -907,25 +942,12 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	XFree(wmhints);
 	XFree(szhints);
 
-	if(vid_isfullscreen && vid_netwmfullscreen.integer)
-	{
-		Atom net_wm_state_atom = XInternAtom(vidx11_display, "_NET_WM_STATE", false);
-		Atom net_wm_state_fullscreen_atom = XInternAtom(vidx11_display, "_NET_WM_STATE_FULLSCREEN", false);
-		XChangeProperty(vidx11_display, win, net_wm_state_atom, XA_ATOM, 32, PropModeReplace, (unsigned char *) &net_wm_state_fullscreen_atom, 1);
-		vid_isnetwmfullscreen = true;
-	}
-	else
-		vid_isnetwmfullscreen = false;
-
 	//XStoreName(vidx11_display, win, gamename);
 	XMapWindow(vidx11_display, win);
 
-	// LordHavoc: making the close button on a window do the right thing
-	// seems to involve this mess, sigh...
-	wm_delete_window_atom = XInternAtom(vidx11_display, "WM_DELETE_WINDOW", false);
 	XSetWMProtocols(vidx11_display, win, &wm_delete_window_atom, 1);
 
-	if (vid_isfullscreen)
+	if (vid_isfullscreen && !vid_isnetwmfullscreen)
 	{
 		XMoveWindow(vidx11_display, win, 0, 0);
 		XRaiseWindow(vidx11_display, win);
