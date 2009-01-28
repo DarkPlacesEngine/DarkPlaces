@@ -1706,7 +1706,7 @@ void CL_ValidateState(entity_state_t *s)
 	// (this used to happen, sometimes affecting skin and frame)
 
 	// colormap is client index + 1
-	if ((!s->flags & RENDER_COLORMAPPED) && s->colormap > cl.maxclients)
+	if (!(s->flags & RENDER_COLORMAPPED) && s->colormap > cl.maxclients)
 		Con_DPrintf("CL_ValidateState: colormap (%i) > cl.maxclients (%i)\n", s->colormap, cl.maxclients);
 
 	model = cl.model_precache[s->modelindex];
