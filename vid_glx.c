@@ -504,21 +504,23 @@ static void HandleEvents(void)
 				XF86VidModeSetViewPort(vidx11_display, vidx11_screen, 0, 0);
 
 				// make sure it's fullscreen
-				XEvent event;
-				event.type = ClientMessage;
-				event.xclient.serial = 0;
-				event.xclient.send_event = True;
-				event.xclient.message_type = net_wm_state_atom;
-				event.xclient.window = win;
-				event.xclient.format = 32;
-				event.xclient.data.l[0] = 1;
-				event.xclient.data.l[1] = net_wm_state_fullscreen_atom;
-				event.xclient.data.l[2] = 0;
-				event.xclient.data.l[3] = 1;
-				event.xclient.data.l[4] = 0;
-				XSendEvent(vidx11_display, root, False, SubstructureRedirectMask | SubstructureNotifyMask, &event);
+				{
+					XEvent event;
+					event.type = ClientMessage;
+					event.xclient.serial = 0;
+					event.xclient.send_event = True;
+					event.xclient.message_type = net_wm_state_atom;
+					event.xclient.window = win;
+					event.xclient.format = 32;
+					event.xclient.data.l[0] = 1;
+					event.xclient.data.l[1] = net_wm_state_fullscreen_atom;
+					event.xclient.data.l[2] = 0;
+					event.xclient.data.l[3] = 1;
+					event.xclient.data.l[4] = 0;
+					XSendEvent(vidx11_display, root, False, SubstructureRedirectMask | SubstructureNotifyMask, &event);
 
-				dowarp = true;
+					dowarp = true;
+				}
 			}
 
 			break;
@@ -543,7 +545,7 @@ static void HandleEvents(void)
 			if (vid_isfullscreen && !vid_isnetwmfullscreen)
 				break;
 
-			if(vid_isfullscreen & event.xfocus.mode == NotifyNormal)
+			if(vid_isfullscreen && event.xfocus.mode == NotifyNormal)
 			{
 				// iconify netwm fullscreen window when it loses focus
 				// when the user selects it in the taskbar, the window manager will map it again and send MapNotify
