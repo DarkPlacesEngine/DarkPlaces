@@ -59,12 +59,12 @@ snd_ringbuffer_t *Snd_CreateRingBuffer (const snd_format_t* format, unsigned int
 			maxframes = sampleframes;
 
 		memsize = maxframes * format->width * format->channels;
-		ringbuffer->ring = Mem_Alloc(snd_mempool, memsize);
+		ringbuffer->ring = (unsigned char *) Mem_Alloc(snd_mempool, memsize);
 		ringbuffer->maxframes = maxframes;
 	}
 	else
 	{
-		ringbuffer->ring = buffer;
+		ringbuffer->ring = (unsigned char *) buffer;
 		ringbuffer->maxframes = sampleframes;
 	}
 
@@ -82,7 +82,7 @@ snd_buffer_t *Snd_CreateSndBuffer (const unsigned char *samples, unsigned int sa
 	size_t newsampleframes, memsize;
 	snd_buffer_t* sb;
 
-	newsampleframes = (double)sampleframes * (double)sb_speed / (double)in_format->speed;
+	newsampleframes = (size_t) ((double)sampleframes * (double)sb_speed / (double)in_format->speed);
 
 	memsize = newsampleframes * in_format->channels * in_format->width;
 	memsize += sizeof (*sb) - sizeof (sb->samples);
@@ -124,7 +124,7 @@ qboolean Snd_AppendToSndBuffer (snd_buffer_t* sb, const unsigned char *samples, 
 		return false;
 	}
 
-	outcount = (double)sampleframes * (double)sb->format.speed / (double)format->speed;
+	outcount = (size_t) ((double)sampleframes * (double)sb->format.speed / (double)format->speed);
 
 	// If the sound buffer is too short
 	if (outcount > sb->maxframes - sb->nbframes)

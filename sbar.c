@@ -1296,14 +1296,14 @@ void Sbar_Draw (void)
 				{
 					// The Impossible Combination[tm]
 					// Can only happen in Key Hunt mode...
-					Sbar_DrawPic (x, (vid_conheight.integer - sbar_y) - (sbar_flagstatus_pos.value + 128), sb_items[14]);
+					Sbar_DrawPic ((int) x, (int) ((vid_conheight.integer - sbar_y) - (sbar_flagstatus_pos.value + 128)), sb_items[14]);
 				}
 				else
 				{
 					if (redflag)
-						Sbar_DrawPic (x, (vid_conheight.integer - sbar_y) - (sbar_flagstatus_pos.value + 64), sb_items[redflag+10]);
+						Sbar_DrawPic ((int) x, (int) ((vid_conheight.integer - sbar_y) - (sbar_flagstatus_pos.value + 64)), sb_items[redflag+10]);
 					if (blueflag)
-						Sbar_DrawPic (x, (vid_conheight.integer - sbar_y) - (sbar_flagstatus_pos.value + 128), sb_items[blueflag+14]);
+						Sbar_DrawPic ((int) x, (int) ((vid_conheight.integer - sbar_y) - (sbar_flagstatus_pos.value + 128)), sb_items[blueflag+14]);
 				}
 
 				// armor
@@ -1401,14 +1401,14 @@ void Sbar_Draw (void)
 				{
 					// The Impossible Combination[tm]
 					// Can only happen in Key Hunt mode...
-					Sbar_DrawPic (x, -179, sb_items[14]);
+					Sbar_DrawPic ((int) x, -179, sb_items[14]);
 				}
 				else
 				{
 					if (redflag)
-						Sbar_DrawPic (x, -117, sb_items[redflag+10]);
+						Sbar_DrawPic ((int) x, -117, sb_items[redflag+10]);
 					if (blueflag)
-						Sbar_DrawPic (x, -177, sb_items[blueflag+14]);
+						Sbar_DrawPic ((int) x, -177, sb_items[blueflag+14]);
 				}
 
 				// armor
@@ -1778,9 +1778,9 @@ void Sbar_DeathmatchOverlay (void)
 	ymax = 40 + 8 + (Sbar_IsTeammatch() ? (teamlines * 8 + 5): 0) + scoreboardlines * 8 - 1;
 
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
-		xmin = (vid_conwidth.integer - (26 + 15) * 8 * FONT_SBAR->maxwidth) / 2; // 26 characters until name, then we assume 15 character names (they can be longer but usually aren't)
+		xmin = (int) (vid_conwidth.integer - (26 + 15) * 8 * FONT_SBAR->maxwidth) / 2; // 26 characters until name, then we assume 15 character names (they can be longer but usually aren't)
 	else
-		xmin = (vid_conwidth.integer - (16 + 25) * 8 * FONT_SBAR->maxwidth) / 2; // 16 characters until name, then we assume 25 character names (they can be longer but usually aren't)
+		xmin = (int) (vid_conwidth.integer - (16 + 25) * 8 * FONT_SBAR->maxwidth) / 2; // 16 characters until name, then we assume 25 character names (they can be longer but usually aren't)
 	xmax = vid_conwidth.integer - xmin;
 
 	if(gamemode == GAME_NEXUIZ)
@@ -1827,7 +1827,7 @@ void Sbar_MiniDeathmatchOverlay (int x, int y)
 		return;
 	// adjust the given y if sbar_miniscoreboard_size doesn't indicate default (< 0)
 	if(sbar_miniscoreboard_size.value > 0)
-		y = vid_conheight.integer - sbar_miniscoreboard_size.value * 8;
+		y = (int) (vid_conheight.integer - sbar_miniscoreboard_size.value * 8);
 
 	// scores
 	Sbar_SortFrags ();
@@ -1932,7 +1932,7 @@ void Sbar_Score (int margin)
 	int sbar_y_save = sbar_y;
 
 
-	sbar_y = vid_conheight.value - (32+12);
+	sbar_y = (int) (vid_conheight.value - (32+12));
 	sbar_x -= margin;
 
 	me = cl.playerentity - 1;

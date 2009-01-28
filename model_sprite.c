@@ -192,7 +192,7 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 					}
 					if (!(skinframe = R_SkinFrame_LoadExternal(name, texflags | TEXF_COMPRESS, false)))
 					{
-						unsigned char *pixels = Mem_Alloc(loadmodel->mempool, width*height*4);
+						unsigned char *pixels = (unsigned char *) Mem_Alloc(loadmodel->mempool, width*height*4);
 						if (version == SPRITE32_VERSION)
 						{
 							for (x = 0;x < width*height;x++)

@@ -330,7 +330,7 @@ qboolean S_LoadWavFile (const char *filename, sfx_t *sfx)
 	if (info.loopstart < 0)
 		sfx->loopstart = sfx->total_length;
 	else
-		sfx->loopstart = (double)info.loopstart * (double)sb->format.speed / (double)info.rate;
+		sfx->loopstart = (unsigned int) ((double)info.loopstart * (double)sb->format.speed / (double)info.rate);
 	sfx->loopstart = min(sfx->loopstart, sfx->total_length);
 	sfx->flags &= ~SFXFLAG_STREAMED;
 

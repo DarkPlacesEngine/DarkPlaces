@@ -1321,7 +1321,7 @@ static void VM_SV_WritePicture (void)
 	VM_SAFEPARMCOUNT(3, VM_SV_WritePicture);
 
 	imgname = PRVM_G_STRING(OFS_PARM1);
-	size = PRVM_G_FLOAT(OFS_PARM2);
+	size = (int) PRVM_G_FLOAT(OFS_PARM2);
 	if(size > 65535)
 		size = 65535;
 
@@ -1330,7 +1330,7 @@ static void VM_SV_WritePicture (void)
 	{
 		// actual picture
 		MSG_WriteShort(WriteDest(), size);
-		SZ_Write(WriteDest(), buf, size);
+		SZ_Write(WriteDest(), (unsigned char *) buf, size);
 	}
 	else
 	{

@@ -886,7 +886,7 @@ void Curl_Run()
 						case 4: // e.g. 404?
 						case 5: // e.g. 500?
 							failed = CURL_DOWNLOAD_SERVERERROR;
-							result = code;
+							result = (CURLcode) code;
 							break;
 					}
 				}

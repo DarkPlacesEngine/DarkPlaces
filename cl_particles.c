@@ -30,7 +30,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // must match ptype_t values
 particletype_t particletype[pt_total] =
 {
-	{0, 0, false}, // pt_dead
+	{PBLEND_INVALID, PARTICLE_INVALID, false}, //pt_dead (should never happen)
 	{PBLEND_ALPHA, PARTICLE_BILLBOARD, false}, //pt_alphastatic
 	{PBLEND_ADD, PARTICLE_BILLBOARD, false}, //pt_static
 	{PBLEND_ADD, PARTICLE_SPARK, false}, //pt_spark
@@ -2164,6 +2164,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 		c4f[3] = p->alpha * colormultiplier[3];
 		switch (blendmode)
 		{
+		case PBLEND_INVALID:
 		case PBLEND_INVMOD:
 		case PBLEND_ADD:
 			// additive and modulate can just fade out in fog (this is correct)
@@ -2204,6 +2205,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 		tex = &particletexture[p->texnum];
 		switch(p->orientation)
 		{
+		case PARTICLE_INVALID:
 		case PARTICLE_BILLBOARD:
 			VectorScale(r_refdef.view.left, -size * p->stretch, right);
 			VectorScale(r_refdef.view.up, size, up);
@@ -2274,7 +2276,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 	}
 
 	// now render batches of particles based on blendmode and texture
-	blendmode = -1;
+	blendmode = PBLEND_INVALID;
 	texture = NULL;
 	GL_LockArrays(0, numsurfaces*4);
 	batchstart = 0;
@@ -2291,6 +2293,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 			case PBLEND_ALPHA:
 				GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 				break;
+			case PBLEND_INVALID:
 			case PBLEND_ADD:
 				GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 				break;

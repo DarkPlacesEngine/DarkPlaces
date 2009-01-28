@@ -436,7 +436,7 @@ clgecko_t * CL_Gecko_FindBrowser( const char *name ) {
 }
 
 static void cl_gecko_updatecallback( rtexture_t *texture, void* callbackData ) {
-	clgecko_t *instance = callbackData;
+	clgecko_t *instance = (clgecko_t *) callbackData;
 	const unsigned char *data;
 	if( instance->browser ) {
 		// TODO: OSGK only supports BGRA right now
@@ -514,7 +514,7 @@ static OSGK_ScriptResult dpGlobal_query (void* objTag, void* methTag,
 					 OSGK_ScriptVariant** params,
 					 OSGK_ScriptVariant** returnVal)
 {
-  clgecko_t *instance = objTag;
+  clgecko_t *instance = (clgecko_t *) objTag;
   OSGK_ScriptVariant* strVal;
   OSGK_ScriptResult result = srFailed;
   prvm_prog_t * saveProg;
@@ -789,7 +789,7 @@ static void cl_gecko_injecttext_f( void ) {
 				break;
 		}
 
-		CL_Gecko_Event_Key( instance, key, CLG_BET_PRESS );
+		CL_Gecko_Event_Key( instance, (keynum_t) key, CLG_BET_PRESS );
 	}
 }
 
@@ -902,8 +902,8 @@ void CL_Gecko_Event_CursorMove( clgecko_t *instance, float x, float y ) {
 		return;
 	}
 
-	mappedx = x * instance->width;
-	mappedy = y * instance->height;
+	mappedx = (int) (x * instance->width);
+	mappedy = (int) (y * instance->height);
 	osgk_browser_event_mouse_move( instance->browser, mappedx, mappedy );
 }
 

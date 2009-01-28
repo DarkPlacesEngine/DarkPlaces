@@ -1384,9 +1384,9 @@ int Con_DisplayLineFunc(void *passthrough, const char *line, size_t length, floa
 		(void) 0;
 	else
 	{
-		int x = ti->x + (ti->width - width) * ti->alignment;
+		int x = (int) (ti->x + (ti->width - width) * ti->alignment);
 		if(isContinuation && *ti->continuationString)
-			x += DrawQ_String_Font(x, ti->y, ti->continuationString, strlen(ti->continuationString), ti->fontsize, ti->fontsize, 1.0, 1.0, 1.0, 1.0, 0, NULL, false, ti->font);
+			x += (int) DrawQ_String_Font(x, ti->y, ti->continuationString, strlen(ti->continuationString), ti->fontsize, ti->fontsize, 1.0, 1.0, 1.0, 1.0, 0, NULL, false, ti->font);
 		if(length > 0)
 			DrawQ_String_Font(x, ti->y, line, length, ti->fontsize, ti->fontsize, 1.0, 1.0, 1.0, 1.0, 0, &(ti->colorindex), false, ti->font);
 	}
@@ -1419,7 +1419,7 @@ int Con_DrawNotifyRect(int mask_must, int mask_mustnot, float maxage, float x, f
 	l = 0;
 	Con_WordWidthFunc(&ti, NULL, &l, -1);
 	l = strlen(continuationString);
-	continuationWidth = Con_WordWidthFunc(&ti, continuationString, &l, -1);
+	continuationWidth = (int) Con_WordWidthFunc(&ti, continuationString, &l, -1);
 
 	// first find the first line to draw by backwards iterating and word wrapping to find their length...
 	startidx = con_lines_count;

@@ -505,7 +505,7 @@ static const snd_buffer_t* OGG_FetchSound (void *sfxfetcher, void **chfetcherpoi
 		}
 		sb->nbframes = 0;
 
-		real_start = (float)ogg_start / per_sfx->format.speed * snd_renderbuffer->format.speed;
+		real_start = (unsigned int) ((float)ogg_start / per_sfx->format.speed * snd_renderbuffer->format.speed);
 		if (*start - real_start + nbsampleframes > sb->maxframes)
 		{
 			Con_Printf ("OGG_FetchSound: stream buffer too small after seek (%u sample frames required)\n",
@@ -645,11 +645,11 @@ static void OGG_DecodeTags(vorbis_comment *vc, unsigned int *start, unsigned int
 
 	if(startcomment)
 	{
-		*start = bound(0, atof(startcomment) * samplesfactor, numsamples);
+		*start = (unsigned int) bound(0, atof(startcomment) * samplesfactor, numsamples);
 		if(endcomment)
-			*length = bound(0, atof(endcomment) * samplesfactor, numsamples);
+			*length = (unsigned int) bound(0, atof(endcomment) * samplesfactor, numsamples);
 		else if(lengthcomment)
-			*length = bound(0, *start + atof(lengthcomment) * samplesfactor, numsamples);
+			*length = (unsigned int) bound(0, *start + atof(lengthcomment) * samplesfactor, numsamples);
 	}
 }
 

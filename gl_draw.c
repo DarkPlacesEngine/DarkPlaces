@@ -963,9 +963,9 @@ float DrawQ_TextWidth_Font_UntilWidth_TrackColors(const char *text, size_t *maxl
 	{
 		if (text[i] == ' ')
 		{
-			if(x + fnt->width_of[' '] > maxwidth)
+			if(x + fnt->width_of[(int) ' '] > maxwidth)
 				break; // oops, can't draw this
-			x += fnt->width_of[' '];
+			x += fnt->width_of[(int) ' '];
 			continue;
 		}
 		if (text[i] == STRING_COLOR_TAG && !ignorecolorcodes && i + 1 < *maxlen)
@@ -1108,7 +1108,7 @@ float DrawQ_String_Font(float startx, float starty, const char *text, size_t max
 		{
 			if (text[i] == ' ')
 			{
-				x += fnt->width_of[' '] * w;
+				x += fnt->width_of[(int) ' '] * w;
 				continue;
 			}
 			if (text[i] == STRING_COLOR_TAG && !ignorecolorcodes && i + 1 < maxlen)

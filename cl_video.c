@@ -36,7 +36,7 @@ static qboolean OpenStream( clvideo_t * video )
 }
 
 static void VideoUpdateCallback(rtexture_t *rt, void *data) {
-	clvideo_t *video = data;
+	clvideo_t *video = (clvideo_t *) data;
 	R_UpdateTexture( video->cpif.tex, (unsigned char *)video->imagedata, 0, 0, video->cpif.width, video->cpif.height );
 }
 

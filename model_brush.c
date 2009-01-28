@@ -4526,7 +4526,7 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 		}
 	}
 
-	convertedpixels = Mem_Alloc(tempmempool, size*size*4);
+	convertedpixels = (unsigned char *) Mem_Alloc(tempmempool, size*size*4);
 	loadmodel->brushq3.lightmapsize = size;
 	loadmodel->brushq3.num_originallightmaps = count;
 
@@ -4725,7 +4725,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 	loadmodel->num_surfaces = count;
 
 	if(count > 0)
-		patchtess = Mem_Alloc(tempmempool, count * sizeof(*patchtess));
+		patchtess = (patchtess_t*) Mem_Alloc(tempmempool, count * sizeof(*patchtess));
 
 	i = 0;
 	oldi = i;

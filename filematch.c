@@ -96,14 +96,14 @@ void stringlistappend(stringlist_t *list, const char *text)
 	{
 		oldstrings = list->strings;
 		list->maxstrings += 4096;
-		list->strings = Z_Malloc(list->maxstrings * sizeof(*list->strings));
+		list->strings = (char **) Z_Malloc(list->maxstrings * sizeof(*list->strings));
 		if (list->numstrings)
 			memcpy(list->strings, oldstrings, list->numstrings * sizeof(*list->strings));
 		if (oldstrings)
 			Z_Free(oldstrings);
 	}
 	textlen = strlen(text) + 1;
-	list->strings[list->numstrings] = Z_Malloc(textlen);
+	list->strings[list->numstrings] = (char *) Z_Malloc(textlen);
 	memcpy(list->strings[list->numstrings], text, textlen);
 	list->numstrings++;
 }

@@ -873,7 +873,7 @@ int fixtransparentpixels(unsigned char *data, int w, int h)
 	int const FIXTRANS_HAS_U = 8;
 	int const FIXTRANS_HAS_D = 16;
 	int const FIXTRANS_FIXED = 32;
-	unsigned char *fixMask = Mem_Alloc(tempmempool, w * h);
+	unsigned char *fixMask = (unsigned char *) Mem_Alloc(tempmempool, w * h);
 	int fixPixels = 0;
 	int changedPixels = 0;
 	int x, y;

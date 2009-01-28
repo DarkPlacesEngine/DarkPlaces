@@ -2389,7 +2389,7 @@ int PRVM_SetTempString(const char *s)
 		{
 			if (developer.integer >= 100)
 				Con_Printf("PRVM_SetTempString: enlarging tempstrings buffer (%iKB -> %iKB)\n", old.maxsize/1024, vm_tempstringsbuf.maxsize/1024);
-			vm_tempstringsbuf.data = Mem_Alloc(sv_mempool, vm_tempstringsbuf.maxsize);
+			vm_tempstringsbuf.data = (unsigned char *) Mem_Alloc(sv_mempool, vm_tempstringsbuf.maxsize);
 			if (old.cursize)
 				memcpy(vm_tempstringsbuf.data, old.data, old.cursize);
 			if (old.data)
@@ -2683,7 +2683,7 @@ void PRVM_LeakTest()
 
 	for (i = 0; i < (int)Mem_ExpandableArray_IndexRange(&prog->stringbuffersarray); ++i)
 	{
-		prvm_stringbuffer_t *stringbuffer = Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, i);
+		prvm_stringbuffer_t *stringbuffer = (prvm_stringbuffer_t*) Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, i);
 		if(stringbuffer)
 		if(stringbuffer->origin)
 		{

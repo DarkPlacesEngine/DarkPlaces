@@ -204,8 +204,8 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 	// self.frame1time is the animation base time for the interpolation target
 	// self.frame2 is the interpolation start (previous frame)
 	// self.frame2time is the animation base time for the interpolation start
-	entrender->frame1 = entrender->frame2 = ed->fields.client->frame;
-	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame2))) entrender->frame2 = val->_float;
+	entrender->frame1 = entrender->frame2 = (int) ed->fields.client->frame;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame2))) entrender->frame2 = (int) val->_float;
 	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame1time))) entrender->frame2time = val->_float;
 	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame2time))) entrender->frame1time = val->_float;
 	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.lerpfrac))) entrender->framelerp = val->_float;
@@ -520,7 +520,7 @@ void CL_VM_UpdateShowingScoresState (int showingscores)
 		CSQC_END
 	}
 }
-qboolean CL_VM_Event_Sound(int sound_num, int volume, int channel, float attenuation, int ent, vec3_t pos)
+qboolean CL_VM_Event_Sound(int sound_num, float volume, int channel, float attenuation, int ent, vec3_t pos)
 {
 	qboolean r = false;
 	if(cl.csqc_loaded)
@@ -880,7 +880,7 @@ void CL_VM_Init (void)
 			sizebuf_t sb;
 			unsigned char *demobuf; fs_offset_t demofilesize;
 
-			sb.data = (void *) buf;
+			sb.data = (unsigned char *) buf;
 			sb.maxsize = sizeof(buf);
 			i = 0;
 

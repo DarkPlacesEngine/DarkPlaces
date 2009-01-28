@@ -58,7 +58,7 @@ static void mod_start(void)
 	Mod_LoadQ3Shaders();
 
 	for (i = 0;i < nummodels;i++)
-		if ((mod = Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0] && mod->name[0] != '*')
+		if ((mod = (dp_model_t*) Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0] && mod->name[0] != '*')
 			if (mod->used)
 				Mod_LoadModel(mod, true, false, mod->isworldmodel);
 }
@@ -70,7 +70,7 @@ static void mod_shutdown(void)
 	dp_model_t *mod;
 
 	for (i = 0;i < nummodels;i++)
-		if ((mod = Mem_ExpandableArray_RecordAtIndex(&models, i)) && (mod->loaded || mod->mempool))
+		if ((mod = (dp_model_t*) Mem_ExpandableArray_RecordAtIndex(&models, i)) && (mod->loaded || mod->mempool))
 			Mod_UnloadModel(mod);
 
 	Mem_FreePool (&q3shaders_mem);
@@ -86,7 +86,7 @@ static void mod_newmap(void)
 	R_SkinFrame_PrepareForPurge();
 	for (i = 0;i < nummodels;i++)
 	{
-		if ((mod = Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->mempool && mod->data_textures)
+		if ((mod = (dp_model_t*) Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->mempool && mod->data_textures)
 		{
 			for (j = 0;j < mod->num_textures;j++)
 			{
@@ -104,7 +104,7 @@ static void mod_newmap(void)
 
 	for (i = 0;i < nummodels;i++)
 	{
-		if ((mod = Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->mempool && mod->data_surfaces)
+		if ((mod = (dp_model_t*) Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->mempool && mod->data_surfaces)
 		{
 			for (surfacenum = 0, surface = mod->data_surfaces;surfacenum < mod->num_surfaces;surfacenum++, surface++)
 			{
@@ -351,7 +351,7 @@ void Mod_ClearUsed(void)
 	int nummodels = Mem_ExpandableArray_IndexRange(&models);
 	dp_model_t *mod;
 	for (i = 0;i < nummodels;i++)
-		if ((mod = Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0])
+		if ((mod = (dp_model_t*) Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0])
 			mod->used = false;
 }
 
@@ -362,7 +362,7 @@ void Mod_PurgeUnused(void)
 	dp_model_t *mod;
 	for (i = 0;i < nummodels;i++)
 	{
-		if ((mod = Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0] && !mod->used)
+		if ((mod = (dp_model_t*) Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0] && !mod->used)
 		{
 			Mod_UnloadModel(mod);
 			Mem_ExpandableArray_FreeRecord(&models, mod);
@@ -378,7 +378,7 @@ void Mod_RemoveStaleWorldModels(dp_model_t *skip)
 	dp_model_t *mod;
 	for (i = 0;i < nummodels;i++)
 	{
-		if ((mod = Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->isworldmodel && mod->loaded && skip != mod)
+		if ((mod = (dp_model_t*) Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->isworldmodel && mod->loaded && skip != mod)
 		{
 			Mod_UnloadModel(mod);
 			mod->isworldmodel = false;
@@ -405,7 +405,7 @@ dp_model_t *Mod_FindName(const char *name)
 	// search the currently loaded models
 	for (i = 0;i < nummodels;i++)
 	{
-		if ((mod = Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0] && !strcmp(mod->name, name))
+		if ((mod = (dp_model_t*) Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0] && !strcmp(mod->name, name))
 		{
 			mod->used = true;
 			return mod;
@@ -413,7 +413,7 @@ dp_model_t *Mod_FindName(const char *name)
 	}
 
 	// no match found, create a new one
-	mod = Mem_ExpandableArray_AllocRecord(&models);
+	mod = (dp_model_t *) Mem_ExpandableArray_AllocRecord(&models);
 	strlcpy(mod->name, name, sizeof(mod->name));
 	mod->loaded = false;
 	mod->used = true;
@@ -449,7 +449,7 @@ void Mod_Reload(void)
 	int nummodels = Mem_ExpandableArray_IndexRange(&models);
 	dp_model_t *mod;
 	for (i = 0;i < nummodels;i++)
-		if ((mod = Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0] && mod->name[0] != '*' && mod->used)
+		if ((mod = (dp_model_t *) Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0] && mod->name[0] != '*' && mod->used)
 			Mod_LoadModel(mod, true, true, mod->isworldmodel);
 }
 
@@ -471,7 +471,7 @@ static void Mod_Print(void)
 
 	Con_Print("Loaded models:\n");
 	for (i = 0;i < nummodels;i++)
-		if ((mod = Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0])
+		if ((mod = (dp_model_t *) Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0])
 			Con_Printf("%4iK %s\n", mod->mempool ? (int)((mod->mempool->totalsize + 1023) / 1024) : 0, mod->name);
 }
 
@@ -1403,7 +1403,7 @@ void Mod_LoadQ3Shaders(void)
 							int i;
 							layer->numframes = min(numparameters - 2, TEXTURE_MAXFRAMES);
 							layer->framerate = atof(parameter[1]);
-							layer->texturename = Mem_Alloc (q3shaders_mem, sizeof (char*) * layer->numframes);
+							layer->texturename = (char **) Mem_Alloc (q3shaders_mem, sizeof (char*) * layer->numframes);
 							for (i = 0;i < layer->numframes;i++)
 								layer->texturename[i] = Mem_strdup (q3shaders_mem, parameter[i + 2]);
 						}
@@ -1445,7 +1445,7 @@ void Mod_LoadQ3Shaders(void)
 							else if (!strcasecmp(parameter[1], "vertex"))           layer->alphagen.alphagen = Q3ALPHAGEN_VERTEX;
 							else if (!strcasecmp(parameter[1], "wave"))
 							{
-								layer->alphagen.alphagen = Q3RGBGEN_WAVE;
+								layer->alphagen.alphagen = Q3ALPHAGEN_WAVE;
 								layer->alphagen.wavefunc = Mod_LoadQ3Shaders_EnumerateWaveFunc(parameter[2]);
 								for (i = 0;i < numparameters - 3 && i < Q3WAVEPARMS;i++)
 									layer->alphagen.waveparms[i] = atof(parameter[i+3]);

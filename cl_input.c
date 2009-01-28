@@ -1283,11 +1283,11 @@ void QW_MSG_WriteDeltaUsercmd(sizebuf_t *buf, usercmd_t *from, usercmd_t *to)
 	if (bits & QW_CM_ANGLE3)
 		MSG_WriteAngle16i(buf, to->viewangles[2]);
 	if (bits & QW_CM_FORWARD)
-		MSG_WriteShort(buf, to->forwardmove);
+		MSG_WriteShort(buf, (short) to->forwardmove);
 	if (bits & QW_CM_SIDE)
-		MSG_WriteShort(buf, to->sidemove);
+		MSG_WriteShort(buf, (short) to->sidemove);
 	if (bits & QW_CM_UP)
-		MSG_WriteShort(buf, to->upmove);
+		MSG_WriteShort(buf, (short) to->upmove);
 	if (bits & QW_CM_BUTTONS)
 		MSG_WriteByte(buf, to->buttons);
 	if (bits & QW_CM_IMPULSE)

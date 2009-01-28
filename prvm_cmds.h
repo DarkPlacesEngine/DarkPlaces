@@ -308,7 +308,7 @@ void VM_putentityfieldstring(void);
 // And declared these ones for VM_getentityfieldstring and VM_putentityfieldstring in prvm_cmds.c
 // the function is from prvm_edict.c
 char *PRVM_UglyValueString (etype_t type, prvm_eval_t *val);
-qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s);
+qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s, qboolean parsebackslash);
 
 // DRESK - String Length (not counting color codes)
 void VM_strlennocol(void);

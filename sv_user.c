@@ -854,7 +854,7 @@ clc_stringcmd_invalid:
 						int crc;
 						unsigned char *temp;
 						FS_Seek(host_client->download_file, 0, SEEK_SET);
-						temp = Mem_Alloc(tempmempool, size);
+						temp = (unsigned char *) Mem_Alloc(tempmempool, size);
 						FS_Read(host_client->download_file, temp, size);
 						crc = CRC_Block(temp, size);
 						Mem_Free(temp);

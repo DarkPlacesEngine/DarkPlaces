@@ -1929,7 +1929,7 @@ void CL_Locs_AddNode(vec3_t mins, vec3_t maxs, const char *name)
 	if (!name)
 		name = "";
 	namelen = strlen(name);
-	node = Mem_Alloc(cls.levelmempool, sizeof(cl_locnode_t) + namelen + 1);
+	node = (cl_locnode_t *) Mem_Alloc(cls.levelmempool, sizeof(cl_locnode_t) + namelen + 1);
 	VectorSet(node->mins, min(mins[0], maxs[0]), min(mins[1], maxs[1]), min(mins[2], maxs[2]));
 	VectorSet(node->maxs, max(mins[0], maxs[0]), max(mins[1], maxs[1]), max(mins[2], maxs[2]));
 	node->name = (char *)(node + 1);

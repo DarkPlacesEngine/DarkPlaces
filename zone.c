@@ -411,7 +411,7 @@ void *Mem_ExpandableArray_AllocRecord(memexpandablearray_t *l)
 			{
 				memexpandablearray_array_t *oldarrays = l->arrays;
 				l->maxarrays = max(l->maxarrays * 2, 128);
-				l->arrays = Mem_Alloc(l->mempool, l->maxarrays * sizeof(*l->arrays));
+				l->arrays = (memexpandablearray_array_t*) Mem_Alloc(l->mempool, l->maxarrays * sizeof(*l->arrays));
 				if (oldarrays)
 				{
 					memcpy(l->arrays, oldarrays, l->numarrays * sizeof(*l->arrays));
@@ -419,7 +419,7 @@ void *Mem_ExpandableArray_AllocRecord(memexpandablearray_t *l)
 				}
 			}
 			l->arrays[i].numflaggedrecords = 0;
-			l->arrays[i].data = Mem_Alloc(l->mempool, (l->recordsize + 1) * l->numrecordsperarray);
+			l->arrays[i].data = (unsigned char *) Mem_Alloc(l->mempool, (l->recordsize + 1) * l->numrecordsperarray);
 			l->arrays[i].allocflags = l->arrays[i].data + l->recordsize * l->numrecordsperarray;
 			l->numarrays++;
 		}
