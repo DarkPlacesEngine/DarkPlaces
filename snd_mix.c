@@ -455,7 +455,7 @@ void S_MixToBuffer(void *stream, unsigned int bufferframes)
 	unsigned int i;
 	channel_t *ch;
 	unsigned int frames;
-	unsigned char *outbytes = stream;
+	unsigned char *outbytes = (unsigned char *) stream;
 
 	// mix as many times as needed to fill the requested buffer
 	while (bufferframes)

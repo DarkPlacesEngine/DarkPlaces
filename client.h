@@ -634,7 +634,8 @@ typedef enum
 	PARTICLE_BILLBOARD = 0,
 	PARTICLE_SPARK = 1,
 	PARTICLE_ORIENTED_DOUBLESIDED = 2,
-	PARTICLE_BEAM = 3
+	PARTICLE_BEAM = 3,
+	PARTICLE_INVALID = -1
 }
 porientation_t;
 
@@ -642,7 +643,8 @@ typedef enum
 {
 	PBLEND_ALPHA = 0,
 	PBLEND_ADD = 1,
-	PBLEND_INVMOD = 2
+	PBLEND_INVMOD = 2,
+	PBLEND_INVALID = -1
 }
 pblend_t;
 
@@ -685,8 +687,8 @@ typedef struct particle_s
 {
 	// fields used by rendering: (40 bytes)
 	unsigned char   typeindex;
-	unsigned char   blendmode;
-	unsigned char   orientation;
+	pblend_t   blendmode;
+	porientation_t   orientation;
 	unsigned char   texnum;
 	vec3_t			org;
 	vec3_t			vel; // velocity of particle, or orientation of decal, or end point of beam

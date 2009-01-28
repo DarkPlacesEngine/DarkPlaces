@@ -757,7 +757,7 @@ static void JPEG_MemDest (j_compress_ptr cinfo, void* buf, size_t bufsize)
 	dest->pub.term_destination = JPEG_Mem_TermDestination;
 	dest->outfile = NULL;
 
-	dest->buffer = buf;
+	dest->buffer = (unsigned char *) buf;
 	dest->bufsize = bufsize;
 }
 
@@ -970,7 +970,7 @@ static void CompressedImageCache_Add(const char *imagename, size_t maxsize, void
 	if(strlen(imagename) >= MAX_QPATH)
 		return; // can't add this
 	
-	i = Z_Malloc(sizeof(CompressedImageCacheItem));
+	i = (CompressedImageCacheItem*) Z_Malloc(sizeof(CompressedImageCacheItem));
 	strlcpy(i->imagename, imagename, sizeof(i->imagename));
 	i->maxsize = maxsize;
 	i->compressed = compressed;
@@ -1038,7 +1038,7 @@ qboolean Image_Compress(const char *imagename, size_t maxsize, void **buf, size_
 		Image_MipReduce32(imagedata, imagedata, &image_width, &image_height, &one, image_width/2, image_height/2, 1);
 	}
 
-	newimagedata = Mem_Alloc(tempmempool, image_width * image_height * 3);
+	newimagedata = (unsigned char *) Mem_Alloc(tempmempool, image_width * image_height * 3);
 
 	// convert the image from BGRA to RGB
 	Image_CopyMux(newimagedata, imagedata, image_width, image_height, false, false, false, 3, 4, components);
@@ -1046,7 +1046,7 @@ qboolean Image_Compress(const char *imagename, size_t maxsize, void **buf, size_
 
 	// try to compress it to JPEG
 	*buf = Z_Malloc(maxsize);
-	*size = JPEG_SaveImage_to_Buffer(*buf, maxsize, image_width, image_height, newimagedata);
+	*size = JPEG_SaveImage_to_Buffer((char *) *buf, maxsize, image_width, image_height, newimagedata);
 	if(!*size)
 	{
 		Z_Free(*buf);

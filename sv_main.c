@@ -792,7 +792,7 @@ void SV_SendServerinfo (client_t *client)
 			char buf[NET_MAXMESSAGE];
 			sizebuf_t sb;
 
-			sb.data = (void *) buf;
+			sb.data = (unsigned char *) buf;
 			sb.maxsize = sizeof(buf);
 			i = 0;
 			while(MakeDownloadPacket(sv.csqc_progname, sv.csqc_progdata, sv.csqc_progsize, sv.csqc_progcrc, i++, &sb, sv.protocol))
@@ -1608,8 +1608,8 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 	stats[STAT_CELLS] = (int)ent->fields.server->ammo_cells;
 	stats[STAT_ACTIVEWEAPON] = (int)ent->fields.server->weapon;
 	stats[STAT_VIEWZOOM] = viewzoom;
-	stats[STAT_TOTALSECRETS] = prog->globals.server->total_secrets;
-	stats[STAT_TOTALMONSTERS] = prog->globals.server->total_monsters;
+	stats[STAT_TOTALSECRETS] = (int)prog->globals.server->total_secrets;
+	stats[STAT_TOTALMONSTERS] = (int)prog->globals.server->total_monsters;
 	// the QC bumps these itself by sending svc_'s, so we have to keep them
 	// zero or they'll be corrected by the engine
 	//stats[STAT_SECRETS] = prog->globals.server->found_secrets;
@@ -3105,7 +3105,6 @@ static qboolean SV_VM_CB_LoadEdict(prvm_edict_t *ent)
 
 static void SV_VM_Setup(void)
 {
-	extern cvar_t csqc_progname;	//[515]: csqc crc check and right csprogs name according to progs.dat
 	PRVM_Begin;
 	PRVM_InitProg( PRVM_SERVERPROG );
 

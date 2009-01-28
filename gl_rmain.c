@@ -1243,13 +1243,13 @@ static char *R_GLSL_GetText(const char *filename, qboolean printfromdisknotice)
 	}
 	else if (!strcmp(filename, "glsl/default.glsl"))
 	{
-		shaderstring = Mem_Alloc(r_main_mempool, strlen(builtinshaderstring) + 1);
+		shaderstring = (char *) Mem_Alloc(r_main_mempool, strlen(builtinshaderstring) + 1);
 		memcpy(shaderstring, builtinshaderstring, strlen(builtinshaderstring) + 1);
 	}
 	return shaderstring;
 }
 
-static void R_GLSL_CompilePermutation(shadermode_t mode, shaderpermutation_t permutation)
+static void R_GLSL_CompilePermutation(unsigned int mode, unsigned int permutation)
 {
 	int i;
 	shadermodeinfo_t *modeinfo = shadermodeinfo + mode;
@@ -1420,8 +1420,8 @@ static void R_GLSL_CompilePermutation(shadermode_t mode, shaderpermutation_t per
 
 void R_GLSL_Restart_f(void)
 {
-	shadermode_t mode;
-	shaderpermutation_t permutation;
+	unsigned int mode;
+	unsigned int permutation;
 	for (mode = 0;mode < SHADERMODE_COUNT;mode++)
 		for (permutation = 0;permutation < SHADERPERMUTATION_LIMIT;permutation++)
 			if (r_glsl_permutations[mode][permutation].program)
@@ -1453,7 +1453,7 @@ void R_GLSL_DumpShader_f(void)
 	Con_Printf("glsl/default.glsl written\n");
 }
 
-void R_SetupShader_SetPermutation(shadermode_t mode, unsigned int permutation)
+void R_SetupShader_SetPermutation(unsigned int mode, unsigned int permutation)
 {
 	r_glsl_permutation_t *perm = &r_glsl_permutations[mode][permutation];
 	if (r_glsl_permutation != perm)
@@ -1552,7 +1552,7 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 	// minimum features necessary to avoid wasting rendering time in the
 	// fragment shader on features that are not being used
 	unsigned int permutation = 0;
-	shadermode_t mode = 0;
+	unsigned int mode = 0;
 	// TODO: implement geometry-shader based shadow volumes someday
 	if (r_glsl_offsetmapping.integer)
 	{
@@ -1794,13 +1794,14 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 
 #define SKINFRAME_HASH 1024
 
-struct
+typedef struct
 {
 	int loadsequence; // incremented each level change
 	memexpandablearray_t array;
 	skinframe_t *hash[SKINFRAME_HASH];
 }
-r_skinframe;
+r_skinframe_t;
+r_skinframe_t r_skinframe;
 
 void R_SkinFrame_PrepareForPurge(void)
 {
@@ -4678,11 +4679,11 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 			Matrix4x4_CreateTranslate(&matrix, tcmod->parms[0] * r_refdef.scene.time, tcmod->parms[1] * r_refdef.scene.time, 0);
 			break;
 		case Q3TCMOD_PAGE: // poor man's animmap (to store animations into a single file, useful for HTTP downloaded textures)
-			w = tcmod->parms[0];
-			h = tcmod->parms[1];
+			w = (int) tcmod->parms[0];
+			h = (int) tcmod->parms[1];
 			f = r_refdef.scene.time / (tcmod->parms[2] * w * h);
 			f = f - floor(f);
-			idx = floor(f * w * h);
+			idx = (int) floor(f * w * h);
 			Matrix4x4_CreateTranslate(&matrix, (idx % w) / tcmod->parms[0], (idx / w) / tcmod->parms[1], 0);
 			break;
 		case Q3TCMOD_STRETCH:
@@ -6942,7 +6943,7 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 		r_maxsurfacelist = model->num_surfaces;
 		if (r_surfacelist)
 			Mem_Free(r_surfacelist);
-		r_surfacelist = Mem_Alloc(r_main_mempool, r_maxsurfacelist * sizeof(*r_surfacelist));
+		r_surfacelist = (msurface_t **) Mem_Alloc(r_main_mempool, r_maxsurfacelist * sizeof(*r_surfacelist));
 	}
 
 	RSurf_ActiveWorldEntity();
@@ -7032,7 +7033,7 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 		r_maxsurfacelist = model->num_surfaces;
 		if (r_surfacelist)
 			Mem_Free(r_surfacelist);
-		r_surfacelist = Mem_Alloc(r_main_mempool, r_maxsurfacelist * sizeof(*r_surfacelist));
+		r_surfacelist = (msurface_t **) Mem_Alloc(r_main_mempool, r_maxsurfacelist * sizeof(*r_surfacelist));
 	}
 
 	// if the model is static it doesn't matter what value we give for

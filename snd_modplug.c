@@ -96,7 +96,8 @@ static int (*ModPlug_Read) (ModPlugFile* file, void* buffer, int size);
 static void (*ModPlug_Seek) (ModPlugFile* file, int millisecond);
 static void (*ModPlug_GetSettings) (ModPlug_Settings* settings);
 static void (*ModPlug_SetSettings) (const ModPlug_Settings* settings);
-static void (*ModPlug_SetMasterVolume) (ModPlugFile* file,unsigned int cvol) ;
+typedef void (ModPlug_SetMasterVolume_t) (ModPlugFile* file,unsigned int cvol) ;
+ModPlug_SetMasterVolume_t *ModPlug_SetMasterVolume;
 
 
 static dllfunction_t modplugfuncs[] =
@@ -159,7 +160,7 @@ qboolean ModPlug_OpenLibrary (void)
 	// the modplug DLL automatically when loading the modplugFile DLL
 	if(Sys_LoadLibrary (dllnames_modplug, &modplug_dll, modplugfuncs))
 	{
-		ModPlug_SetMasterVolume = Sys_GetProcAddress(modplug_dll, "ModPlug_SetMasterVolume");
+		ModPlug_SetMasterVolume = (ModPlug_SetMasterVolume_t *) Sys_GetProcAddress(modplug_dll, "ModPlug_SetMasterVolume");
 		if(!ModPlug_SetMasterVolume)
 			Con_Print("Warning: modplug volume control not supported. Try getting a newer version of libmodplug.\n");
 		return true;
@@ -317,7 +318,7 @@ static const snd_buffer_t* ModPlug_FetchSound (void *sfxfetcher, void **chfetche
 		ModPlug_Seek(per_ch->mf, modplug_start);
 		sb->nbframes = 0;
 
-		real_start = (float)modplug_start / 1000 * snd_renderbuffer->format.speed;
+		real_start = (unsigned int) ((float)modplug_start / 1000 * snd_renderbuffer->format.speed);
 		if (*start - real_start + nbsampleframes > sb->maxframes)
 		{
 			Con_Printf ("ModPlug_FetchSound: stream buffer too small after seek (%u sample frames required)\n",

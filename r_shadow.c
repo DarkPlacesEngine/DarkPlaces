@@ -2574,7 +2574,7 @@ void R_Shadow_UncompileWorldLights(void)
 	size_t range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
 	for (lightindex = 0;lightindex < range;lightindex++)
 	{
-		light = Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+		light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
 		if (!light)
 			continue;
 		R_RTLight_Uncompile(&light->rtlight);
@@ -3151,7 +3151,7 @@ void R_ShadowVolumeLighting(qboolean visible)
 	if (r_shadow_debuglight.integer >= 0)
 	{
 		lightindex = r_shadow_debuglight.integer;
-		light = Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+		light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
 		if (light && (light->flags & flag))
 			R_DrawRTLight(&light->rtlight, visible);
 	}
@@ -3160,7 +3160,7 @@ void R_ShadowVolumeLighting(qboolean visible)
 		range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
 		for (lightindex = 0;lightindex < range;lightindex++)
 		{
-			light = Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+			light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
 			if (light && (light->flags & flag))
 				R_DrawRTLight(&light->rtlight, visible);
 		}
@@ -3313,7 +3313,7 @@ void R_DrawCoronas(void)
 	range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
 	for (lightindex = 0;lightindex < range;lightindex++)
 	{
-		light = Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+		light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
 		if (!light)
 			continue;
 		rtlight = &light->rtlight;
@@ -3550,7 +3550,7 @@ void R_Shadow_ClearWorldLights(void)
 	size_t range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
 	for (lightindex = 0;lightindex < range;lightindex++)
 	{
-		light = Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+		light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
 		if (light)
 			R_Shadow_FreeWorldLight(light);
 	}
@@ -3614,7 +3614,7 @@ void R_Shadow_DrawLightSprites(void)
 	size_t range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
 	for (lightindex = 0;lightindex < range;lightindex++)
 	{
-		light = Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+		light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
 		if (light)
 			R_MeshQueue_AddTransparent(light->origin, R_Shadow_DrawLightSprite_TransparentCallback, (entity_render_t *)light, 5, &light->rtlight);
 	}
@@ -3632,7 +3632,7 @@ void R_Shadow_SelectLightInView(void)
 	bestrating = 0;
 	for (lightindex = 0;lightindex < range;lightindex++)
 	{
-		light = Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+		light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
 		if (!light)
 			continue;
 		VectorSubtract(light->origin, r_refdef.view.origin, temp);
@@ -3777,7 +3777,7 @@ void R_Shadow_SaveWorldLights(void)
 	buf = NULL;
 	for (lightindex = 0;lightindex < range;lightindex++)
 	{
-		light = Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+		light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
 		if (!light)
 			continue;
 		if (light->coronasizescale != 0.25f || light->ambientscale != 0 || light->diffusescale != 1 || light->specularscale != 1 || light->flags != LIGHTFLAG_REALTIMEMODE)
@@ -4504,7 +4504,7 @@ void R_Shadow_EditLights_EditAll_f(void)
 	range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
 	for (lightindex = 0;lightindex < range;lightindex++)
 	{
-		light = Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+		light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
 		if (!light)
 			continue;
 		R_Shadow_SelectLight(light);
@@ -4529,7 +4529,7 @@ void R_Shadow_EditLights_DrawSelectedLightProperties(void)
 	range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
 	for (lightindex = 0;lightindex < range;lightindex++)
 	{
-		light = Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+		light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
 		if (!light)
 			continue;
 		if (light == r_shadow_selectedlight)

@@ -3208,7 +3208,7 @@ unsigned char *FS_Deflate(const unsigned char *data, size_t size, size_t *deflat
 	strm.next_in = (unsigned char*)data;
 	strm.avail_in = size;
 
-	tmp = Mem_Alloc(tempmempool, size);
+	tmp = (unsigned char *) Mem_Alloc(tempmempool, size);
 	if(!tmp)
 	{
 		Con_Printf("FS_Deflate: not enough memory in tempmempool!\n");
@@ -3241,7 +3241,7 @@ unsigned char *FS_Deflate(const unsigned char *data, size_t size, size_t *deflat
 		return NULL;
 	}
 
-	out = Mem_Alloc(mempool, strm.total_out);
+	out = (unsigned char *) Mem_Alloc(mempool, strm.total_out);
 	if(!out)
 	{
 		Con_Printf("FS_Deflate: not enough memory in target mempool!\n");
@@ -3266,7 +3266,7 @@ static void AssertBufsize(sizebuf_t *buf, int length)
 		unsigned char *olddata;
 		olddata = buf->data;
 		buf->maxsize += length;
-		buf->data = Mem_Alloc(tempmempool, buf->maxsize);
+		buf->data = (unsigned char *) Mem_Alloc(tempmempool, buf->maxsize);
 		if(olddata)
 		{
 			memcpy(buf->data, olddata, oldsize);
@@ -3285,7 +3285,7 @@ unsigned char *FS_Inflate(const unsigned char *data, size_t size, size_t *inflat
 	sizebuf_t outbuf;
 
 	memset(&outbuf, 0, sizeof(outbuf));
-	outbuf.data = Mem_Alloc(tempmempool, sizeof(tmp));
+	outbuf.data = (unsigned char *) Mem_Alloc(tempmempool, sizeof(tmp));
 	outbuf.maxsize = sizeof(tmp);
 
 	memset(&strm, 0, sizeof(strm));
@@ -3347,7 +3347,7 @@ unsigned char *FS_Inflate(const unsigned char *data, size_t size, size_t *inflat
 
 	qz_inflateEnd(&strm);
 
-	out = Mem_Alloc(mempool, outbuf.cursize);
+	out = (unsigned char *) Mem_Alloc(mempool, outbuf.cursize);
 	if(!out)
 	{
 		Con_Printf("FS_Inflate: not enough memory in target mempool!\n");

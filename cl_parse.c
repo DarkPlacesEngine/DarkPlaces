@@ -188,7 +188,7 @@ void QW_CL_StartUpload(unsigned char *data, int size);
 //static qboolean QW_CL_IsUploading(void);
 static void QW_CL_StopUpload(void);
 void CL_VM_UpdateIntermissionState(int intermission);
-qboolean CL_VM_Event_Sound(int sound_num, int volume, int channel, float attenuation, int ent, vec3_t pos);
+qboolean CL_VM_Event_Sound(int sound_num, float volume, int channel, float attenuation, int ent, vec3_t pos);
 
 /*
 ==================
@@ -1313,7 +1313,7 @@ void CL_DownloadBegin_f(void)
 	// we're really beginning a download now, so initialize stuff
 	strlcpy(cls.qw_downloadname, Cmd_Argv(2), sizeof(cls.qw_downloadname));
 	cls.qw_downloadmemorymaxsize = size;
-	cls.qw_downloadmemory = Mem_Alloc(cls.permanentmempool, cls.qw_downloadmemorymaxsize);
+	cls.qw_downloadmemory = (unsigned char *) Mem_Alloc(cls.permanentmempool, cls.qw_downloadmemorymaxsize);
 	cls.qw_downloadnumber++;
 
 	cls.qw_download_deflate = false;
@@ -2695,7 +2695,7 @@ static void CL_IPLog_Add(const char *address, const char *name, qboolean checkex
 	{
 		cl_iplog_item_t *olditems = cl_iplog_items;
 		cl_iplog_maxitems = max(1024, cl_iplog_maxitems + 256);
-		cl_iplog_items = Mem_Alloc(cls.permanentmempool, cl_iplog_maxitems * sizeof(cl_iplog_item_t));
+		cl_iplog_items = (cl_iplog_item_t *) Mem_Alloc(cls.permanentmempool, cl_iplog_maxitems * sizeof(cl_iplog_item_t));
 		if (olditems)
 		{
 			if (cl_iplog_numitems)
@@ -2703,8 +2703,8 @@ static void CL_IPLog_Add(const char *address, const char *name, qboolean checkex
 			Mem_Free(olditems);
 		}
 	}
-	cl_iplog_items[cl_iplog_numitems].address = Mem_Alloc(cls.permanentmempool, strlen(address) + 1);
-	cl_iplog_items[cl_iplog_numitems].name = Mem_Alloc(cls.permanentmempool, strlen(name) + 1);
+	cl_iplog_items[cl_iplog_numitems].address = (char *) Mem_Alloc(cls.permanentmempool, strlen(address) + 1);
+	cl_iplog_items[cl_iplog_numitems].name = (char *) Mem_Alloc(cls.permanentmempool, strlen(name) + 1);
 	strlcpy(cl_iplog_items[cl_iplog_numitems].address, address, strlen(address) + 1);
 	// TODO: maybe it would be better to strip weird characters from name when
 	// copying it here rather than using a straight strcpy?

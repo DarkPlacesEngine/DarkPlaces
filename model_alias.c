@@ -452,7 +452,7 @@ static void Mod_BuildBaseBonePoses(void)
 {
 	int i, k;
 	double scale;
-	float *basebonepose = Mem_Alloc(tempmempool, loadmodel->num_bones * sizeof(float[12]));
+	float *basebonepose = (float *) Mem_Alloc(tempmempool, loadmodel->num_bones * sizeof(float[12]));
 	float *in12f = loadmodel->data_poses;
 	float *out12f = basebonepose;
 	float *outinv12f = loadmodel->data_baseboneposeinverse;
@@ -502,7 +502,7 @@ static void Mod_Alias_CalculateBoundingBox(void)
 	frameblend_t frameblend[4];
 	memset(frameblend, 0, sizeof(frameblend));
 	frameblend[0].lerp = 1;
-	vertex3f = Mem_Alloc(loadmodel->mempool, loadmodel->surfmesh.num_vertices * sizeof(float[3]));
+	vertex3f = (float *) Mem_Alloc(loadmodel->mempool, loadmodel->surfmesh.num_vertices * sizeof(float[3]));
 	VectorClear(loadmodel->normalmins);
 	VectorClear(loadmodel->normalmaxs);
 	yawradius = 0;
@@ -749,7 +749,7 @@ static void Mod_BuildAliasSkinFromSkinFrame(texture_t *texture, skinframe_t *ski
 	texture->currentmaterialflags = texture->basematerialflags;
 }
 
-static void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfile, char *meshname, char *shadername)
+static void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfile, const char *meshname, const char *shadername)
 {
 	int i;
 	skinfileitem_t *skinfileitem;
@@ -2565,7 +2565,7 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		for (i = 0;i < loadmodel->surfmesh.num_triangles*3;i++)
 			loadmodel->surfmesh.data_element3s[i] = loadmodel->surfmesh.data_element3i[i];
 	}
-	loadmodel->data_poses = Mem_Alloc(loadmodel->mempool, loadmodel->num_poses * sizeof(float[12]));
+	loadmodel->data_poses = (float *) Mem_Alloc(loadmodel->mempool, loadmodel->num_poses * sizeof(float[12]));
 
 	for (i = 0;i < loadmodel->numskins;i++)
 	{

@@ -206,8 +206,8 @@ cvar_t *Cvar_Get (const char *name, const char *value, int flags, const char *ne
 // allocates a cvar by name and returns its address,
 // or merely sets its value if it already exists.
 
-char *cvar_dummy_description; // ALWAYS the same pointer
-cvar_t *cvar_vars; // used to list all cvars
+extern char *cvar_dummy_description; // ALWAYS the same pointer
+extern cvar_t *cvar_vars; // used to list all cvars
 
 #endif
 

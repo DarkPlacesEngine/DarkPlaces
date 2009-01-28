@@ -1362,7 +1362,7 @@ static void VM_CL_ReadPicture (void)
 		{
 			// texture not found
 			// use the attached jpeg as texture
-			buf = Mem_Alloc(tempmempool, size);
+			buf = (unsigned char *) Mem_Alloc(tempmempool, size);
 			MSG_ReadBytes(size, buf);
 			data = JPEG_LoadImage_BGRA(buf, size);
 			Mem_Free(buf);

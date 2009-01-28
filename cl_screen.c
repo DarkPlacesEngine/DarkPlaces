@@ -149,7 +149,7 @@ void SCR_DrawCenterString (void)
 		int l = newline ? (newline - start) : (int)strlen(start);
 		float width = DrawQ_TextWidth_Font(start, l, false, FONT_CENTERPRINT) * 8;
 
-		x = (vid_conwidth.integer - width)/2;
+		x = (int) (vid_conwidth.integer - width)/2;
 		if (l > 0)
 		{
 			if (remaining < l)
@@ -1029,7 +1029,7 @@ static void GrowBuf(sizebuf_t *buf, int extralen)
 		unsigned char *olddata;
 		olddata = buf->data;
 		buf->maxsize = max(buf->maxsize * 2, 4096);
-		buf->data = Mem_Alloc(tempmempool, buf->maxsize);
+		buf->data = (unsigned char *) Mem_Alloc(tempmempool, buf->maxsize);
 		if(olddata)
 		{
 			memcpy(buf->data, olddata, oldsize);
@@ -1173,7 +1173,7 @@ static void FindFraction(double val, int *num, int *denom, int denomMax)
 
 	for(i = 1; i <= denomMax; ++i)
 	{
-		int inum = floor(0.5 + val * i);
+		int inum = (int) floor(0.5 + val * i);
 		double diff = fabs(val - inum / (double)i);
 		if(diff < bestdiff)
 		{
@@ -1579,12 +1579,12 @@ static void SCR_ScaleDownBGRA(unsigned char *in, int inw, int inh, unsigned char
 	area = (float)outw * (float)outh / (float)inw / (float)inh;
 	for(y = 0; y < outh; ++y)
 	{
-		float iny0 =  y    / (float)outh * inh; int iny0_i = floor(iny0);
-		float iny1 = (y+1) / (float)outh * inh; int iny1_i = ceil(iny1);
+		float iny0 =  y    / (float)outh * inh; int iny0_i = (int) floor(iny0);
+		float iny1 = (y+1) / (float)outh * inh; int iny1_i = (int) ceil(iny1);
 		for(x = 0; x < outw; ++x)
 		{
-			float inx0 =  x    / (float)outw * inw; int inx0_i = floor(inx0);
-			float inx1 = (x+1) / (float)outw * inw; int inx1_i = ceil(inx1);
+			float inx0 =  x    / (float)outw * inw; int inx0_i = (int) floor(inx0);
+			float inx1 = (x+1) / (float)outw * inw; int inx1_i = (int) ceil(inx1);
 			float r = 0, g = 0, b = 0, alpha = 0;
 			int xx, yy;
 
@@ -1601,10 +1601,10 @@ static void SCR_ScaleDownBGRA(unsigned char *in, int inw, int inh, unsigned char
 				}
 			}
 
-			out[4*(x + outw * y)+0] = r * area;
-			out[4*(x + outw * y)+1] = g * area;
-			out[4*(x + outw * y)+2] = b * area;
-			out[4*(x + outw * y)+3] = alpha * area;
+			out[4*(x + outw * y)+0] = (unsigned char) (r * area);
+			out[4*(x + outw * y)+1] = (unsigned char) (g * area);
+			out[4*(x + outw * y)+2] = (unsigned char) (b * area);
+			out[4*(x + outw * y)+3] = (unsigned char) (alpha * area);
 		}
 	}
 }
@@ -1838,7 +1838,7 @@ void SHOWLMP_decodeshow(void)
 	{
 		showlmp_t *oldshowlmps = cl.showlmps;
 		cl.max_showlmps += 16;
-		cl.showlmps = Mem_Alloc(cls.levelmempool, cl.max_showlmps * sizeof(showlmp_t));
+		cl.showlmps = (showlmp_t *) Mem_Alloc(cls.levelmempool, cl.max_showlmps * sizeof(showlmp_t));
 		if (cl.num_showlmps)
 			memcpy(cl.showlmps, oldshowlmps, cl.num_showlmps * sizeof(showlmp_t));
 		if (oldshowlmps)
@@ -2172,12 +2172,12 @@ void CL_UpdateScreen(void)
 	if(gamemode == GAME_NEXUIZ)
 	{
 		// play a bit with the palette (experimental)
-		palette_rgb_pantscolormap[15][0] = 128 + 127 * sin(cl.time / exp(1) + 0*M_PI/3);
-		palette_rgb_pantscolormap[15][1] = 128 + 127 * sin(cl.time / exp(1) + 2*M_PI/3);
-		palette_rgb_pantscolormap[15][2] = 128 + 127 * sin(cl.time / exp(1) + 4*M_PI/3);
-		palette_rgb_shirtcolormap[15][0] = 128 + 127 * sin(cl.time /  M_PI  + 5*M_PI/3);
-		palette_rgb_shirtcolormap[15][1] = 128 + 127 * sin(cl.time /  M_PI  + 3*M_PI/3);
-		palette_rgb_shirtcolormap[15][2] = 128 + 127 * sin(cl.time /  M_PI  + 1*M_PI/3);
+		palette_rgb_pantscolormap[15][0] = (unsigned char) (128 + 127 * sin(cl.time / exp(1) + 0*M_PI/3));
+		palette_rgb_pantscolormap[15][1] = (unsigned char) (128 + 127 * sin(cl.time / exp(1) + 2*M_PI/3));
+		palette_rgb_pantscolormap[15][2] = (unsigned char) (128 + 127 * sin(cl.time / exp(1) + 4*M_PI/3));
+		palette_rgb_shirtcolormap[15][0] = (unsigned char) (128 + 127 * sin(cl.time /  M_PI  + 5*M_PI/3));
+		palette_rgb_shirtcolormap[15][1] = (unsigned char) (128 + 127 * sin(cl.time /  M_PI  + 3*M_PI/3));
+		palette_rgb_shirtcolormap[15][2] = (unsigned char) (128 + 127 * sin(cl.time /  M_PI  + 1*M_PI/3));
 		memcpy(palette_rgb_pantsscoreboard[15], palette_rgb_pantscolormap[15], sizeof(*palette_rgb_pantscolormap));
 		memcpy(palette_rgb_shirtscoreboard[15], palette_rgb_shirtcolormap[15], sizeof(*palette_rgb_shirtcolormap));
 	}

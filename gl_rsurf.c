@@ -60,7 +60,7 @@ void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 		cl.buildlightmapmemorysize = size*sizeof(int[3]);
 		if (cl.buildlightmapmemory)
 			Mem_Free(cl.buildlightmapmemory);
-		cl.buildlightmapmemory = Mem_Alloc(cls.levelmempool, cl.buildlightmapmemorysize);
+		cl.buildlightmapmemory = (unsigned char *) Mem_Alloc(cls.levelmempool, cl.buildlightmapmemorysize);
 	}
 
 	// these both point at the same buffer, templight is only used for final
@@ -819,7 +819,7 @@ void R_Q1BSP_CallRecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, qboolean us
 		if (!r_svbsp.nodes)
 		{
 			r_svbsp.maxnodes = max(r_svbsp.maxnodes, 1<<18);
-			r_svbsp.nodes = Mem_Alloc(r_main_mempool, r_svbsp.maxnodes * sizeof(svbsp_node_t));
+			r_svbsp.nodes = (svbsp_node_t*) Mem_Alloc(r_main_mempool, r_svbsp.maxnodes * sizeof(svbsp_node_t));
 		}
 		info->svbsp_active = true;
 		info->svbsp_insertoccluder = true;
@@ -835,7 +835,7 @@ void R_Q1BSP_CallRecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, qboolean us
 					break;
 				Mem_Free(r_svbsp.nodes);
 				r_svbsp.maxnodes *= 2;
-				r_svbsp.nodes = Mem_Alloc(tempmempool, r_svbsp.maxnodes * sizeof(svbsp_node_t));
+				r_svbsp.nodes = (svbsp_node_t*) Mem_Alloc(tempmempool, r_svbsp.maxnodes * sizeof(svbsp_node_t));
 			}
 			else
 				break;

@@ -95,7 +95,7 @@ void W_UnloadAll(void)
 	// close all hlwad files and free their lumps data
 	for (i = 0;i < Mem_ExpandableArray_IndexRange(&wad.hlwads);i++)
 	{
-		w = Mem_ExpandableArray_RecordAtIndex(&wad.hlwads, i);
+		w = (mwad_t *) Mem_ExpandableArray_RecordAtIndex(&wad.hlwads, i);
 		if (!w)
 			continue;
 		if (w->file)
@@ -187,10 +187,10 @@ void W_LoadTextureWadFile (char *filename, int complain)
 
 	if (!wad.hlwads.mempool)
 		Mem_ExpandableArray_NewArray(&wad.hlwads, cls.permanentmempool, sizeof(mwad_t), 16);
-	w = Mem_ExpandableArray_AllocRecord(&wad.hlwads);
+	w = (mwad_t *) Mem_ExpandableArray_AllocRecord(&wad.hlwads);
 	w->file = file;
 	w->numlumps = numlumps;
-	w->lumps = Mem_Alloc(cls.permanentmempool, w->numlumps * sizeof(lumpinfo_t));
+	w->lumps = (lumpinfo_t *) Mem_Alloc(cls.permanentmempool, w->numlumps * sizeof(lumpinfo_t));
 
 	if (!w->lumps)
 	{

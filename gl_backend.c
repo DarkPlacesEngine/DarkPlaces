@@ -1407,7 +1407,7 @@ int R_Mesh_CreateStaticBufferObject(unsigned int target, void *data, size_t size
 	}
 	qglBufferDataARB(target, size, data, GL_STATIC_DRAW_ARB);
 
-	info = Mem_ExpandableArray_AllocRecord(&gl_bufferobjectinfoarray);
+	info = (gl_bufferobjectinfo_t *) Mem_ExpandableArray_AllocRecord(&gl_bufferobjectinfoarray);
 	memset(info, 0, sizeof(*info));
 	info->target = target;
 	info->object = bufferobject;
@@ -1427,7 +1427,7 @@ void R_Mesh_DestroyBufferObject(int bufferobject)
 	endindex = Mem_ExpandableArray_IndexRange(&gl_bufferobjectinfoarray);
 	for (i = 0;i < endindex;i++)
 	{
-		info = Mem_ExpandableArray_RecordAtIndex(&gl_bufferobjectinfoarray, i);
+		info = (gl_bufferobjectinfo_t *) Mem_ExpandableArray_RecordAtIndex(&gl_bufferobjectinfoarray, i);
 		if (!info)
 			continue;
 		if (info->object == bufferobject)
@@ -1447,7 +1447,7 @@ void GL_Mesh_ListVBOs(qboolean printeach)
 	endindex = Mem_ExpandableArray_IndexRange(&gl_bufferobjectinfoarray);
 	for (i = 0;i < endindex;i++)
 	{
-		info = Mem_ExpandableArray_RecordAtIndex(&gl_bufferobjectinfoarray, i);
+		info = (gl_bufferobjectinfo_t *) Mem_ExpandableArray_RecordAtIndex(&gl_bufferobjectinfoarray, i);
 		if (!info)
 			continue;
 		switch(info->target)

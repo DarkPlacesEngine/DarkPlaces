@@ -1941,7 +1941,7 @@ void VM_putentityfieldstring(void)
 	}
 
 	// parse the string into the value
-	PRVM_G_FLOAT(OFS_RETURN) = ( PRVM_ED_ParseEpair(ent, d, PRVM_G_STRING(OFS_PARM2)) ) ? 1.0f : 0.0f;
+	PRVM_G_FLOAT(OFS_RETURN) = ( PRVM_ED_ParseEpair(ent, d, PRVM_G_STRING(OFS_PARM2), false) ) ? 1.0f : 0.0f;
 }
 
 /*
@@ -2912,7 +2912,7 @@ dp_font_t *getdrawfont()
 {
 	if(prog->globaloffsets.drawfont >= 0)
 	{
-		int f = PRVM_G_FLOAT(prog->globaloffsets.drawfont);
+		int f = (int) PRVM_G_FLOAT(prog->globaloffsets.drawfont);
 		if(f < 0 || f >= MAX_FONTS)
 			return FONT_DEFAULT;
 		return &dp_fonts[f];
@@ -3593,7 +3593,7 @@ void VM_gecko_keyevent( void ) {
 		return;
 	}
 
-	PRVM_G_FLOAT( OFS_RETURN ) = (CL_Gecko_Event_Key( instance, key, eventtype ) == true);
+	PRVM_G_FLOAT( OFS_RETURN ) = (CL_Gecko_Event_Key( instance, (keynum_t) key, eventtype ) == true);
 }
 
 /*
@@ -3646,7 +3646,7 @@ void VM_gecko_resize( void ) {
 	if( !instance ) {
 		return;
 	}
-	CL_Gecko_Resize( instance, w, h );
+	CL_Gecko_Resize( instance, (int) w, (int) h );
 }
 
 
@@ -3979,7 +3979,7 @@ static void BufStr_Expand(prvm_stringbuffer_t *stringbuffer, int strindex)
 		stringbuffer->max_strings = max(stringbuffer->max_strings * 2, 128);
 		while (stringbuffer->max_strings <= strindex)
 			stringbuffer->max_strings *= 2;
-		stringbuffer->strings = Mem_Alloc(prog->progs_mempool, stringbuffer->max_strings * sizeof(stringbuffer->strings[0]));
+		stringbuffer->strings = (char **) Mem_Alloc(prog->progs_mempool, stringbuffer->max_strings * sizeof(stringbuffer->strings[0]));
 		if (stringbuffer->num_strings > 0)
 			memcpy(stringbuffer->strings, oldstrings, stringbuffer->num_strings * sizeof(stringbuffer->strings[0]));
 		if (oldstrings)
@@ -4035,7 +4035,7 @@ void VM_buf_create (void)
 	prvm_stringbuffer_t *stringbuffer;
 	int i;
 	VM_SAFEPARMCOUNT(0, VM_buf_create);
-	stringbuffer = Mem_ExpandableArray_AllocRecord(&prog->stringbuffersarray);
+	stringbuffer = (prvm_stringbuffer_t *) Mem_ExpandableArray_AllocRecord(&prog->stringbuffersarray);
 	for (i = 0;stringbuffer != Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, i);i++);
 	stringbuffer->origin = PRVM_AllocationOrigin();
 	PRVM_G_FLOAT(OFS_RETURN) = i;
@@ -4617,7 +4617,7 @@ void VM_strstrofs (void)
 	VM_SAFEPARMCOUNTRANGE(2, 3, VM_strstrofs);
 	instr = PRVM_G_STRING(OFS_PARM0);
 	match = PRVM_G_STRING(OFS_PARM1);
-	firstofs = (prog->argc > 2)?PRVM_G_FLOAT(OFS_PARM2):0;
+	firstofs = (prog->argc > 2)?(int)PRVM_G_FLOAT(OFS_PARM2):0;
 
 	if (firstofs && (firstofs < 0 || firstofs > (int)strlen(instr)))
 	{
@@ -4746,9 +4746,9 @@ void VM_strconv (void)
 
 	VM_SAFEPARMCOUNTRANGE(3, 8, VM_strconv);
 
-	ccase = PRVM_G_FLOAT(OFS_PARM0);	//0 same, 1 lower, 2 upper
-	redalpha = PRVM_G_FLOAT(OFS_PARM1);	//0 same, 1 white, 2 red,  5 alternate, 6 alternate-alternate
-	rednum = PRVM_G_FLOAT(OFS_PARM2);	//0 same, 1 white, 2 red, 3 redspecial, 4 whitespecial, 5 alternate, 6 alternate-alternate
+	ccase = (int) PRVM_G_FLOAT(OFS_PARM0);	//0 same, 1 lower, 2 upper
+	redalpha = (int) PRVM_G_FLOAT(OFS_PARM1);	//0 same, 1 white, 2 red,  5 alternate, 6 alternate-alternate
+	rednum = (int) PRVM_G_FLOAT(OFS_PARM2);	//0 same, 1 white, 2 red, 3 redspecial, 4 whitespecial, 5 alternate, 6 alternate-alternate
 	VM_VarString(3, (char *) resbuf, sizeof(resbuf));
 	len = strlen((char *) resbuf);
 
@@ -4791,7 +4791,7 @@ void VM_strpad (void)
 	char destbuf[VM_STRINGTEMP_LENGTH];
 	int pad;
 	VM_SAFEPARMCOUNTRANGE(1, 8, VM_strpad);
-	pad = PRVM_G_FLOAT(OFS_PARM0);
+	pad = (int) PRVM_G_FLOAT(OFS_PARM0);
 	VM_VarString(1, src, sizeof(src));
 
 	// note: < 0 = left padding, > 0 = right padding,
@@ -5046,7 +5046,7 @@ uri_to_prog_t;
 
 static void uri_to_string_callback(int status, size_t length_received, unsigned char *buffer, void *cbdata)
 {
-	uri_to_prog_t *handle = cbdata;
+	uri_to_prog_t *handle = (uri_to_prog_t *) cbdata;
 
 	if(!PRVM_ProgLoaded(handle->prognr))
 	{
@@ -5089,7 +5089,7 @@ void VM_uri_get (void)
 
 	url = PRVM_G_STRING(OFS_PARM0);
 	id = PRVM_G_FLOAT(OFS_PARM1);
-	handle = Z_Malloc(sizeof(*handle)); // this can't be the prog's mem pool, as curl may call the callback later!
+	handle = (uri_to_prog_t *) Z_Malloc(sizeof(*handle)); // this can't be the prog's mem pool, as curl may call the callback later!
 
 	handle->prognr = PRVM_GetProgNr();
 	handle->starttime = prog->starttime;
@@ -5118,7 +5118,7 @@ void VM_netaddress_resolve (void)
 	ip = PRVM_G_STRING(OFS_PARM0);
 	port = 0;
 	if(prog->argc > 1)
-		port = PRVM_G_FLOAT(OFS_PARM1);
+		port = (int) PRVM_G_FLOAT(OFS_PARM1);
 
 	if(LHNETADDRESS_FromString(&addr, ip, port) && LHNETADDRESS_ToString(&addr, normalized, sizeof(normalized), prog->argc > 1))
 		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(normalized);

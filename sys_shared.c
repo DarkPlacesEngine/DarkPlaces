@@ -31,10 +31,16 @@ void Sys_Quit (int returnvalue)
 	exit(returnvalue);
 }
 
+#if defined(__linux__) || defined(__FreeBSD__)
+#ifdef __cplusplus
+extern "C"
+#endif
+int moncontrol(int);
+#endif
+
 void Sys_AllowProfiling(qboolean enable)
 {
 #if defined(__linux__) || defined(__FreeBSD__)
-int moncontrol(int);
 	moncontrol(enable);
 #endif
 }
