@@ -1069,9 +1069,11 @@ void VID_Shared_Init(void)
 
 int VID_Mode(int fullscreen, int width, int height, int bpp, int refreshrate, int stereobuffer, int samples)
 {
+	int requestedWidth = width;
+	int requestedHeight = height;
 	cl_ignoremousemoves = 2;
 	Con_Printf("Initializing Video Mode: %s %dx%dx%dx%dhz%s%s\n", fullscreen ? "fullscreen" : "window", width, height, bpp, refreshrate, stereobuffer ? " stereo" : "", samples > 1 ? va(" (%ix AA)", samples) : "");
-	if (VID_InitMode(fullscreen, width, height, bpp, vid_userefreshrate.integer ? max(1, refreshrate) : 0, stereobuffer, samples))
+	if (VID_InitMode(fullscreen, &width, &height, bpp, vid_userefreshrate.integer ? max(1, refreshrate) : 0, stereobuffer, samples))
 	{
 		vid.fullscreen = fullscreen;
 		vid.width = width;
@@ -1089,6 +1091,10 @@ int VID_Mode(int fullscreen, int width, int height, int bpp, int refreshrate, in
 		if(vid_userefreshrate.integer)
 			Cvar_SetValueQuick(&vid_refreshrate, refreshrate);
 		Cvar_SetValueQuick(&vid_stereobuffer, stereobuffer);
+
+		if(width != requestedWidth || height != requestedHeight)
+			Con_Printf("Chose a similar video mode %dx%d instead of the requested mode %dx%d\n", width, height, requestedWidth, requestedHeight);
+
 		return true;
 	}
 	else

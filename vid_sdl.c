@@ -624,15 +624,15 @@ static void VID_OutputVersion()
 					version->major, version->minor, version->patch );
 }
 
-int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate, int stereobuffer, int samples)
+int VID_InitMode(int fullscreen, int *width, int *height, int bpp, int refreshrate, int stereobuffer, int samples)
 {
 	int i;
 	static int notfirstvideomode = false;
 	int flags = SDL_OPENGL;
 	const char *drivername;
 
-	win_half_width = width>>1;
-	win_half_height = height>>1;
+	win_half_width = *width>>1;
+	win_half_height = *height>>1;
 
 	if(vid_resizable.integer)
 		flags |= SDL_RESIZABLE;
@@ -709,11 +709,11 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	video_bpp = bpp;
 	video_flags = flags;
 	VID_SetIcon();
-	screen = SDL_SetVideoMode(width, height, bpp, flags);
+	screen = SDL_SetVideoMode(*width, *height, bpp, flags);
 
 	if (screen == NULL)
 	{
-		Con_Printf("Failed to set video mode to %ix%i: %s\n", width, height, SDL_GetError());
+		Con_Printf("Failed to set video mode to %ix%i: %s\n", *width, *height, SDL_GetError());
 		VID_Shutdown();
 		return false;
 	}

@@ -531,7 +531,7 @@ static void VID_BuildAGLAttrib(GLint *attrib, qboolean stencil, qboolean fullscr
 	*attrib++ = AGL_NONE;
 }
 
-int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate, int stereobuffer, int samples)
+int VID_InitMode(int fullscreen, int *width, int *height, int bpp, int refreshrate, int stereobuffer, int samples)
 {
     const EventTypeSpec winEvents[] =
 	{
@@ -583,8 +583,8 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	// Create the window, a bit towards the center of the screen
 	windowBounds.left = 100;
 	windowBounds.top = 100;
-	windowBounds.right = width + 100;
-	windowBounds.bottom = height + 100;
+	windowBounds.right = *width + 100;
+	windowBounds.bottom = *height + 100;
 	carbonError = CreateNewWindow(kDocumentWindowClass, kWindowStandardFloatingAttributes | kWindowStandardHandlerAttribute, &windowBounds, &window);
 	if (carbonError != noErr || window == NULL)
 	{
@@ -629,7 +629,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 
 		// TOCHECK: not sure whether or not it's necessary to change the resolution
 		// "by hand", or if aglSetFullscreen does the job anyway
-		refDisplayMode = CGDisplayBestModeForParametersAndRefreshRate(mainDisplay, bpp, width, height, refreshrate, NULL);
+		refDisplayMode = CGDisplayBestModeForParametersAndRefreshRate(mainDisplay, bpp, *width, *height, refreshrate, NULL);
 		CGDisplaySwitchToMode(mainDisplay, refDisplayMode);
 		DMGetGDeviceByDisplayID((DisplayIDType)mainDisplay, &gdhDisplay, false);
 
@@ -672,7 +672,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	// Attempt fullscreen if requested
 	if (fullscreen)
 	{
-		qaglSetFullScreen (context, width, height, refreshrate, 0);
+		qaglSetFullScreen (context, *width, *height, refreshrate, 0);
 		error = qaglGetError();
 		if (error != AGL_NO_ERROR)
 		{
@@ -695,8 +695,8 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 		}
 	}
 
-	scr_width = width;
-	scr_height = height;
+	scr_width = *width;
+	scr_height = *height;
 
 	if ((qglGetString = (const GLubyte* (GLAPIENTRY *)(GLenum name))GL_GetProcAddress("glGetString")) == NULL)
 		Sys_Error("glGetString not found in %s", gl_driver);

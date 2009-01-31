@@ -781,7 +781,7 @@ void VID_Init(void)
 	IN_Init();
 }
 
-int VID_InitMode (int fullscreen, int width, int height, int bpp, int refreshrate, int stereobuffer, int samples)
+int VID_InitMode (int fullscreen, int *width, int *height, int bpp, int refreshrate, int stereobuffer, int samples)
 {
 	int i;
 	HDC hdc;
@@ -922,8 +922,8 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp, int refreshrat
 			foundmode = true;
 			gdevmode.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT;
 			gdevmode.dmBitsPerPel = bpp;
-			gdevmode.dmPelsWidth = width;
-			gdevmode.dmPelsHeight = height;
+			gdevmode.dmPelsWidth = *width;
+			gdevmode.dmPelsHeight = *height;
 			gdevmode.dmSize = sizeof (gdevmode);
 			if(refreshrate)
 			{
@@ -1014,13 +1014,13 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp, int refreshrat
 		if (!foundmode)
 		{
 			VID_Shutdown();
-			Con_Printf("Unable to find the requested mode %dx%dx%dbpp\n", width, height, bpp);
+			Con_Printf("Unable to find the requested mode %dx%dx%dbpp\n", *width, *height, bpp);
 			return false;
 		}
 		else if(ChangeDisplaySettings (&gdevmode, CDS_FULLSCREEN) != DISP_CHANGE_SUCCESSFUL)
 		{
 			VID_Shutdown();
-			Con_Printf("Unable to change to requested mode %dx%dx%dbpp\n", width, height, bpp);
+			Con_Printf("Unable to change to requested mode %dx%dx%dbpp\n", *width, *height, bpp);
 			return false;
 		}
 
@@ -1053,8 +1053,8 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp, int refreshrat
 
 	rect.top = 0;
 	rect.left = 0;
-	rect.right = width;
-	rect.bottom = height;
+	rect.right = *width;
+	rect.bottom = *height;
 	AdjustWindowRectEx(&rect, WindowStyle, false, 0);
 
 	if (fullscreen)
