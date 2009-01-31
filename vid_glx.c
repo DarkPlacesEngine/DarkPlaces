@@ -114,7 +114,9 @@ static int win_x, win_y;
 
 static XF86VidModeModeInfo init_vidmode, game_vidmode;
 static qboolean vid_isfullscreen = false;
+static qboolean vid_isvidmodefullscreen = false;
 static qboolean vid_isnetwmfullscreen = false;
+static qboolean vid_isoverrideredirect = false;
 
 static Visual *vidx11_visual;
 static Colormap vidx11_colormap;
@@ -291,7 +293,7 @@ void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecurso
 		if (fullscreengrab)
 		{
 			XGrabPointer(vidx11_display, win,  True, 0, GrabModeAsync, GrabModeAsync, win, None, CurrentTime);
-			if (vid_grabkeyboard.integer || (vid_isfullscreen && !vid_isnetwmfullscreen))
+			if (vid_grabkeyboard.integer || vid_isoverrideredirect)
 				XGrabKeyboard(vidx11_display, win, False, GrabModeAsync, GrabModeAsync, CurrentTime);
 		}
 		else
@@ -489,63 +491,64 @@ static void HandleEvents(void)
 				Sys_Quit(0);
 			break;
 		case MapNotify:
-			if (vid_isfullscreen && !vid_isnetwmfullscreen)
+			if (vid_isoverrideredirect)
 				break;
 			// window restored
 			vid_hidden = false;
 			VID_RestoreSystemGamma();
 
-			if(vid_isfullscreen)
+			if(vid_isvidmodefullscreen)
 			{
 				// set our video mode
 				XF86VidModeSwitchToMode(vidx11_display, vidx11_screen, &game_vidmode);
 
 				// Move the viewport to top left
 				XF86VidModeSetViewPort(vidx11_display, vidx11_screen, 0, 0);
-
-				// make sure it's fullscreen
-				{
-					XEvent event;
-					event.type = ClientMessage;
-					event.xclient.serial = 0;
-					event.xclient.send_event = True;
-					event.xclient.message_type = net_wm_state_atom;
-					event.xclient.window = win;
-					event.xclient.format = 32;
-					event.xclient.data.l[0] = 1;
-					event.xclient.data.l[1] = net_wm_state_fullscreen_atom;
-					event.xclient.data.l[2] = 0;
-					event.xclient.data.l[3] = 1;
-					event.xclient.data.l[4] = 0;
-					XSendEvent(vidx11_display, root, False, SubstructureRedirectMask | SubstructureNotifyMask, &event);
-
-					dowarp = true;
-				}
 			}
+
+			if(vid_isnetwmfullscreen)
+			{
+				// make sure it's fullscreen
+				XEvent event;
+				event.type = ClientMessage;
+				event.xclient.serial = 0;
+				event.xclient.send_event = True;
+				event.xclient.message_type = net_wm_state_atom;
+				event.xclient.window = win;
+				event.xclient.format = 32;
+				event.xclient.data.l[0] = 1;
+				event.xclient.data.l[1] = net_wm_state_fullscreen_atom;
+				event.xclient.data.l[2] = 0;
+				event.xclient.data.l[3] = 1;
+				event.xclient.data.l[4] = 0;
+				XSendEvent(vidx11_display, root, False, SubstructureRedirectMask | SubstructureNotifyMask, &event);
+			}
+
+			dowarp = true;
 
 			break;
 		case UnmapNotify:
-			if (vid_isfullscreen && !vid_isnetwmfullscreen)
+			if (vid_isoverrideredirect)
 				break;
 			// window iconified/rolledup/whatever
 			vid_hidden = true;
 			VID_RestoreSystemGamma();
 
-			if(vid_isfullscreen)
+			if(vid_isvidmodefullscreen)
 				XF86VidModeSwitchToMode(vidx11_display, vidx11_screen, &init_vidmode);
 
 			break;
 		case FocusIn:
-			if (vid_isfullscreen && !vid_isnetwmfullscreen)
+			if (vid_isoverrideredirect)
 				break;
 			// window is now the input focus
 			vid_activewindow = true;
 			break;
 		case FocusOut:
-			if (vid_isfullscreen && !vid_isnetwmfullscreen)
+			if (vid_isoverrideredirect)
 				break;
 
-			if(vid_isfullscreen && event.xfocus.mode == NotifyNormal)
+			if(vid_isnetwmfullscreen && event.xfocus.mode == NotifyNormal)
 			{
 				// iconify netwm fullscreen window when it loses focus
 				// when the user selects it in the taskbar, the window manager will map it again and send MapNotify
@@ -640,7 +643,7 @@ void VID_Shutdown(void)
 	VID_RestoreSystemGamma();
 
 	// FIXME: glXDestroyContext here?
-	if (vid_isfullscreen)
+	if (vid_isvidmodefullscreen)
 		XF86VidModeSwitchToMode(vidx11_display, vidx11_screen, &init_vidmode);
 	if (win)
 		XDestroyWindow(vidx11_display, win);
@@ -649,6 +652,8 @@ void VID_Shutdown(void)
 	vid_hidden = true;
 	vid_isfullscreen = false;
 	vid_isnetwmfullscreen = false;
+	vid_isvidmodefullscreen = false;
+	vid_isoverrideredirect = false;
 	vidx11_display = NULL;
 	win = 0;
 	ctx = NULL;
@@ -763,6 +768,11 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	int MajorVersion, MinorVersion;
 	const char *drivername;
 
+	vid_isfullscreen = false;
+	vid_isnetwmfullscreen = false;
+	vid_isvidmodefullscreen = false;
+	vid_isoverrideredirect = false;
+
 #if defined(__APPLE__) && defined(__MACH__)
 	drivername = "/usr/X11R6/lib/libGL.1.dylib";
 #else
@@ -828,13 +838,21 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 		return false;
 	}
 
-	if (vidmode_ext)
+	if (fullscreen)
 	{
-		int best_fit, best_dist, dist, x, y;
-
-		// Are we going fullscreen?  If so, let's change video mode
-		if (fullscreen)
+		if(vid_netwmfullscreen.integer)
 		{
+			// TODO detect WM support
+			vid_isnetwmfullscreen = true;
+			vid_isfullscreen = true;
+			// width and height will be filled in later
+		}
+
+		if(!vid_isfullscreen && vidmode_ext)
+		{
+			int best_fit, best_dist, dist, x, y;
+
+			// Are we going fullscreen?  If so, let's change video mode
 			XF86VidModeModeLine *current_vidmode;
 			XF86VidModeModeInfo **vidmodes;
 			int num_vidmodes;
@@ -873,15 +891,24 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 				// change to the mode
 				XF86VidModeSwitchToMode(vidx11_display, vidx11_screen, vidmodes[best_fit]);
 				memcpy(&game_vidmode, vidmodes[best_fit], sizeof(game_vidmode));
+				vid_isvidmodefullscreen = true;
 				vid_isfullscreen = true;
 
 				// Move the viewport to top left
 				XF86VidModeSetViewPort(vidx11_display, vidx11_screen, 0, 0);
 			}
-			else
-				fullscreen = 0;
 
 			free(vidmodes);
+		}
+
+		if(!vid_isfullscreen)
+		{
+			// sorry, no FS available
+			// use the full desktop resolution
+			vid_isfullscreen = true;
+			// width and height will be filled in later
+			width = DisplayWidth(vidx11_display, vidx11_screen);
+			height = DisplayHeight(vidx11_display, vidx11_screen);
 		}
 	}
 
@@ -895,14 +922,13 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	vidx11_colormap = attr.colormap = XCreateColormap(vidx11_display, root, visinfo->visual, AllocNone);
 	attr.event_mask = X_MASK;
 
-	if (vid_isfullscreen)
+	if (fullscreen)
 	{
-		if(vid_netwmfullscreen.integer)
+		if(vid_isnetwmfullscreen)
 		{
 			mask = CWBackPixel | CWColormap | CWSaveUnder | CWBackingStore | CWEventMask;
 			attr.backing_store = NotUseful;
 			attr.save_under = False;
-			vid_isnetwmfullscreen = true;
 		}
 		else
 		{
@@ -910,13 +936,12 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 			attr.override_redirect = True;
 			attr.backing_store = NotUseful;
 			attr.save_under = False;
-			vid_isnetwmfullscreen = false;
+			vid_isoverrideredirect = true; // so it knows to grab
 		}
 	}
 	else
 	{
 		mask = CWBackPixel | CWBorderPixel | CWColormap | CWEventMask;
-		vid_isnetwmfullscreen = false;
 	}
 
 	win = XCreateWindow(vidx11_display, root, 0, 0, width, height, 0, visinfo->depth, InputOutput, visinfo->visual, mask, &attr);
@@ -949,12 +974,16 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 
 	XSetWMProtocols(vidx11_display, win, &wm_delete_window_atom, 1);
 
-	if (vid_isfullscreen && !vid_isnetwmfullscreen)
+	if (vid_isoverrideredirect)
 	{
 		XMoveWindow(vidx11_display, win, 0, 0);
 		XRaiseWindow(vidx11_display, win);
 		XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, 0, 0);
 		XFlush(vidx11_display);
+	}
+
+	if(vid_isvidmodefullscreen)
+	{
 		// Move the viewport to top left
 		XF86VidModeSetViewPort(vidx11_display, vidx11_screen, 0, 0);
 	}
