@@ -956,13 +956,13 @@ int VID_InitMode (int fullscreen, int *width, int *height, int bpp, int refreshr
 						Con_Printf("wrong bpp\n");
 					continue;
 				}
-				if(thismode.dmPelsWidth != (DWORD)width)
+				if(thismode.dmPelsWidth != (DWORD)*width)
 				{
 					if(developer.integer >= 100)
 						Con_Printf("wrong width\n");
 					continue;
 				}
-				if(thismode.dmPelsHeight != (DWORD)height)
+				if(thismode.dmPelsHeight != (DWORD)*height)
 				{
 					if(developer.integer >= 100)
 						Con_Printf("wrong height\n");
