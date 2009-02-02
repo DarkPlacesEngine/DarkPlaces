@@ -138,24 +138,24 @@ static void adddirentry(stringlist_t *list, const char *path, const char *name)
 	}
 }
 #ifdef WIN32
-#include <io.h>
+#include <windows.h>
 void listdirectory(stringlist_t *list, const char *basepath, const char *path)
 {
 	int i;
 	char pattern[4096], *c;
-	struct _finddata_t n_file;
-	long hFile;
+	WIN32_FIND_DATA n_file;
+	HANDLE hFile;
 	strlcpy (pattern, basepath, sizeof(pattern));
 	strlcat (pattern, path, sizeof (pattern));
 	strlcat (pattern, "*", sizeof (pattern));
 	// ask for the directory listing handle
-	hFile = _findfirst(pattern, &n_file);
-	if(hFile == -1)
+	hFile = FindFirstFile(pattern, &n_file);
+	if(hFile == INVALID_HANDLE_VALUE)
 		return;
 	do {
-		adddirentry(list, path, n_file.name );
-	} while (_findnext(hFile, &n_file) == 0);
-	_findclose(hFile);
+		adddirentry(list, path, n_file.cFileName);
+	} while (FindNextFile(hFile, &n_file) != 0);
+	FindClose(hFile);
 
 	// convert names to lowercase because windows does not care, but pattern matching code often does
 	for (i = 0;i < list->numstrings;i++)
