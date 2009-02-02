@@ -3,7 +3,7 @@ CHECKLEVEL1 = @if [ "$(LEVEL)" != 1 ]; then $(MAKE) help; false; fi
 CHECKLEVEL2 = @if [ "$(LEVEL)" != 2 ]; then $(MAKE) help; false; fi
 
 # Choose the compiler you want to use
-CC=gcc
+CC?=gcc
 
 # athlon optimizations
 #CPUOPTIMIZATIONS?=-march=athlon
