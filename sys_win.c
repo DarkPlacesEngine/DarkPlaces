@@ -460,6 +460,8 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	return true;
 }
 
+#if 0
+// unused, this file is only used when building windows client and vid_wgl provides WinMain() instead
 int main (int argc, const char* argv[])
 {
 	MEMORYSTATUS lpBuffer;
@@ -479,3 +481,5 @@ int main (int argc, const char* argv[])
 
 	return true;
 }
+#endif
+
