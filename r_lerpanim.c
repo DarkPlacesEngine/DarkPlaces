@@ -112,7 +112,7 @@ void R_LerpAnimation(entity_render_t *r)
 
 			if (scene->framecount > 1)
 			{
-				sublerp = scene->framerate * (cl.time - r->frame1time);
+				sublerp = scene->framerate * (cl.time - r->frame2time);
 				sub1 = (int) (sublerp);
 				sub2 = sub1 + 1;
 				sublerp -= sub1;
