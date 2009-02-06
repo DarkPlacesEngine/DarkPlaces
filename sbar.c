@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // sbar.c -- status bar code
 
 #include "quakedef.h"
+#include "time.h"
 
 cachepic_t *sb_disc;
 
@@ -90,6 +91,7 @@ cachepic_t *sb_finale;
 cvar_t showfps = {CVAR_SAVE, "showfps", "0", "shows your rendered fps (frames per second)"};
 cvar_t showsound = {CVAR_SAVE, "showsound", "0", "shows number of active sound sources, sound latency, and other statistics"};
 cvar_t showspeed = {CVAR_SAVE, "showspeed", "0", "shows your current speed (qu per second); number selects unit: 1 = qu/s, 2 = m/s, 3 = km/h, 4 = mph, 5 = knots"};
+cvar_t showtopspeed = {CVAR_SAVE, "showtopspeed", "0", "shows your top speed (kept on screen for max 3 seconds); value -1 takes over the unit from showspeed, otherwise it's an unit number just like in topspeed"};
 cvar_t showtime = {CVAR_SAVE, "showtime", "0", "shows current time of day (useful on screenshots)"};
 cvar_t showtime_format = {CVAR_SAVE, "showtime_format", "%H:%M:%S", "format string for time of day"};
 cvar_t showdate = {CVAR_SAVE, "showdate", "0", "shows current date (useful on screenshots)"};
@@ -376,6 +378,7 @@ void Sbar_Init (void)
 	Cvar_RegisterVariable(&showfps);
 	Cvar_RegisterVariable(&showsound);
 	Cvar_RegisterVariable(&showspeed);
+	Cvar_RegisterVariable(&showtopspeed);
 	Cvar_RegisterVariable(&showtime);
 	Cvar_RegisterVariable(&showtime_format);
 	Cvar_RegisterVariable(&showdate);
@@ -1034,6 +1037,49 @@ void Sbar_DrawFace (void)
 		Sbar_DrawPic (112, 0, sb_faces[f][cl.time <= cl.faceanimtime]);
 	}
 }
+double topspeed = 0;
+double topspeedxy = 0;
+time_t current_time = 3;
+time_t top_time = 0;
+time_t topxy_time = 0;
+
+static void get_showspeed_unit(int unitnumber, double *conversion_factor, const char **unit)
+{
+	if(unitnumber < 0)
+		unitnumber = showspeed.integer;
+	switch(unitnumber)
+	{
+		default:
+		case 1:
+			if(gamemode == GAME_NEXUIZ)
+				*unit = "in/s";
+			else
+				*unit = "qu/s";
+			*conversion_factor = 1.0;
+			break;
+		case 2:
+			*unit = "m/s";
+			*conversion_factor = 0.0254;
+			if(gamemode != GAME_NEXUIZ) *conversion_factor *= 1.5;
+			// 1qu=1.5in is for non-Nexuiz only - Nexuiz players are overly large, but 1qu=1in fixes that
+			break;
+		case 3:
+			*unit = "km/h";
+			*conversion_factor = 0.0254 * 3.6;
+			if(gamemode != GAME_NEXUIZ) *conversion_factor *= 1.5;
+			break;
+		case 4:
+			*unit = "mph";
+			*conversion_factor = 0.0254 * 3.6 * 0.6213711922;
+			if(gamemode != GAME_NEXUIZ) *conversion_factor *= 1.5;
+			break;
+		case 5:
+			*unit = "knots";
+			*conversion_factor = 0.0254 * 1.943844492; // 1 m/s = 1.943844492 knots, because 1 knot = 1.852 km/h
+			if(gamemode != GAME_NEXUIZ) *conversion_factor *= 1.5;
+			break;
+	}
+}
 
 void Sbar_ShowFPS(void)
 {
@@ -1043,12 +1089,14 @@ void Sbar_ShowFPS(void)
 	char timestring[32];
 	char datestring[32];
 	char speedstring[32];
+	char topspeedstring[32];
 	qboolean red = false;
 	soundstring[0] = 0;
 	fpsstring[0] = 0;
 	timestring[0] = 0;
 	datestring[0] = 0;
 	speedstring[0] = 0;
+	topspeedstring[0] = 0;
 	if (showfps.integer)
 	{
 		float calc;
@@ -1081,51 +1129,47 @@ void Sbar_ShowFPS(void)
 		strlcpy(datestring, Sys_TimeString(showdate_format.string), sizeof(datestring));
 	if (showsound.integer)
 		dpsnprintf(soundstring, sizeof(soundstring), "%4i/%4i at %3ims\n", cls.soundstats.mixedsounds, cls.soundstats.totalsounds, cls.soundstats.latency_milliseconds);
-	if (showspeed.integer)
+	if (showspeed.integer || showtopspeed.integer)
 	{
 		double speed, speedxy, f;
 		const char *unit;
 		speed = VectorLength(cl.movement_velocity);
 		speedxy = sqrt(cl.movement_velocity[0] * cl.movement_velocity[0] + cl.movement_velocity[1] * cl.movement_velocity[1]);
-		switch(showspeed.integer)
+		if (showspeed.integer)
 		{
-			default:
-			case 1:
-				if(gamemode == GAME_NEXUIZ)
-					unit = "in/s";
-				else
-					unit = "qu/s";
-				f = 1.0;
-				break;
-			case 2:
-				unit = "m/s";
-				f = 0.0254;
-				if(gamemode != GAME_NEXUIZ) f *= 1.5;
-				// 1qu=1.5in is for non-Nexuiz only - Nexuiz players are overly large, but 1qu=1in fixes that
-				break;
-			case 3:
-				unit = "km/h";
-				f = 0.0254 * 3.6;
-				if(gamemode != GAME_NEXUIZ) f *= 1.5;
-				break;
-			case 4:
-				unit = "mph";
-				f = 0.0254 * 3.6 * 0.6213711922;
-				if(gamemode != GAME_NEXUIZ) f *= 1.5;
-				break;
-			case 5:
-				unit = "knots";
-				f = 0.0254 * 1.943844492; // 1 m/s = 1.943844492 knots, because 1 knot = 1.852 km/h
-				if(gamemode != GAME_NEXUIZ) f *= 1.5;
-				break;
+			get_showspeed_unit(showspeed.integer, &f, &unit);
+			dpsnprintf(speedstring, sizeof(speedstring), "%.0f (%.0f) %s", f*speed, f*speedxy, unit);
 		}
-		dpsnprintf(speedstring, sizeof(speedstring), "%.0f (%.0f) %s", f*speed, f*speedxy, unit);
+		if (showtopspeed.integer)
+		{
+			qboolean topspeed_latched = false, topspeedxy_latched = false;
+			get_showspeed_unit(showtopspeed.integer, &f, &unit);
+			if (speed >= topspeed || current_time - top_time > 3)
+			{
+				topspeed = speed;
+				time(&top_time);
+			}
+			else
+				topspeed_latched = true;
+			if (speedxy >= topspeedxy || current_time - topxy_time > 3)
+			{
+				topspeedxy = speedxy;
+				time(&topxy_time);
+			}
+			else
+				topspeedxy_latched = true;
+			dpsnprintf(topspeedstring, sizeof(topspeedstring), "%s%.0f%s (%s%.0f%s) %s",
+				topspeed_latched ? "^xf00" : "^xf88", f*topspeed, "^xf88",
+				topspeedxy_latched ? "^xf00" : "^xf88", f*topspeedxy, "^xf88",
+				unit);
+			time(&current_time);
+		}
 	}
-	if (fpsstring[0] || timestring[0] || datestring[0] || speedstring[0])
+	if (fpsstring[0] || timestring[0] || datestring[0] || speedstring[0] || topspeedstring[0])
 	{
 		fps_scalex = 12;
 		fps_scaley = 12;
-		fps_height = fps_scaley * ((soundstring[0] != 0) + (fpsstring[0] != 0) + (timestring[0] != 0) + (datestring[0] != 0) + (speedstring[0] != 0));
+		fps_height = fps_scaley * ((soundstring[0] != 0) + (fpsstring[0] != 0) + (timestring[0] != 0) + (datestring[0] != 0) + (speedstring[0] != 0) + (topspeedstring[0] != 0));
 		//fps_y = vid_conheight.integer - sb_lines; // yes this may draw over the sbar
 		//fps_y = bound(0, fps_y, vid_conheight.integer - fps_height);
 		fps_y = vid_conheight.integer - fps_height;
@@ -1165,6 +1209,13 @@ void Sbar_ShowFPS(void)
 			fps_x = vid_conwidth.integer - DrawQ_TextWidth_Font(speedstring, 0, true, FONT_INFOBAR) * fps_scalex;
 			DrawQ_Fill(fps_x, fps_y, vid_conwidth.integer - fps_x, fps_scaley, 0, 0, 0, 0.5, 0);
 			DrawQ_String_Font(fps_x, fps_y, speedstring, 0, fps_scalex, fps_scaley, 1, 1, 1, 1, 0, NULL, true, FONT_INFOBAR);
+			fps_y += fps_scaley;
+		}
+		if (topspeedstring[0])
+		{
+			fps_x = vid_conwidth.integer - DrawQ_TextWidth_Font(topspeedstring, 0, false, FONT_INFOBAR) * fps_scalex;
+			DrawQ_Fill(fps_x, fps_y, vid_conwidth.integer - fps_x, fps_scaley, 0, 0, 0, 0.5, 0);
+			DrawQ_String_Font(fps_x, fps_y, topspeedstring, 0, fps_scalex, fps_scaley, 1, 1, 1, 1, 0, NULL, false, FONT_INFOBAR);
 			fps_y += fps_scaley;
 		}
 	}
