@@ -91,7 +91,7 @@ cachepic_t *sb_finale;
 cvar_t showfps = {CVAR_SAVE, "showfps", "0", "shows your rendered fps (frames per second)"};
 cvar_t showsound = {CVAR_SAVE, "showsound", "0", "shows number of active sound sources, sound latency, and other statistics"};
 cvar_t showspeed = {CVAR_SAVE, "showspeed", "0", "shows your current speed (qu per second); number selects unit: 1 = qu/s, 2 = m/s, 3 = km/h, 4 = mph, 5 = knots"};
-cvar_t showtopspeed = {CVAR_SAVE, "showtopspeed", "0", "shows your top speed (kept on screen for max 3 seconds); value -1 takes over the unit from showspeed, otherwise it's an unit number just like in topspeed"};
+cvar_t showtopspeed = {CVAR_SAVE, "showtopspeed", "0", "shows your top speed (kept on screen for max 3 seconds); value -1 takes over the unit from showspeed, otherwise it's an unit number just like in showspeed"};
 cvar_t showtime = {CVAR_SAVE, "showtime", "0", "shows current time of day (useful on screenshots)"};
 cvar_t showtime_format = {CVAR_SAVE, "showtime_format", "%H:%M:%S", "format string for time of day"};
 cvar_t showdate = {CVAR_SAVE, "showdate", "0", "shows current date (useful on screenshots)"};
@@ -1089,7 +1089,7 @@ void Sbar_ShowFPS(void)
 	char timestring[32];
 	char datestring[32];
 	char speedstring[32];
-	char topspeedstring[32];
+	char topspeedstring[48];
 	qboolean red = false;
 	soundstring[0] = 0;
 	fpsstring[0] = 0;
@@ -1159,8 +1159,8 @@ void Sbar_ShowFPS(void)
 			else
 				topspeedxy_latched = true;
 			dpsnprintf(topspeedstring, sizeof(topspeedstring), "%s%.0f%s (%s%.0f%s) %s",
-				topspeed_latched ? "^xf00" : "^xf88", f*topspeed, "^xf88",
-				topspeedxy_latched ? "^xf00" : "^xf88", f*topspeedxy, "^xf88",
+				topspeed_latched ? "^1" : "^xf88", f*topspeed, "^xf88",
+				topspeedxy_latched ? "^1" : "^xf88", f*topspeedxy, "^xf88",
 				unit);
 			time(&current_time);
 		}
