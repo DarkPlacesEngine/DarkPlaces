@@ -238,6 +238,9 @@ void CL_VM_SetTraceGlobals(const trace_t *trace, int svent)
 		val->_float = svent;
 }
 
+#define CL_HitNetworkBrushModels(move) !((move) == MOVE_WORLDONLY)
+#define CL_HitNetworkPlayers(move)     !((move) == MOVE_WORLDONLY || (move) == MOVE_NOMONSTERS)
+
 // #16 float(vector v1, vector v2, float movetype, entity ignore) traceline
 static void VM_CL_traceline (void)
 {
@@ -258,7 +261,7 @@ static void VM_CL_traceline (void)
 	if (IS_NAN(v1[0]) || IS_NAN(v1[1]) || IS_NAN(v1[2]) || IS_NAN(v2[0]) || IS_NAN(v1[2]) || IS_NAN(v2[2]))
 		PRVM_ERROR("%s: NAN errors detected in traceline('%f %f %f', '%f %f %f', %i, entity %i)\n", PRVM_NAME, v1[0], v1[1], v1[2], v2[0], v2[1], v2[2], move, PRVM_EDICT_TO_PROG(ent));
 
-	trace = CL_Move(v1, vec3_origin, vec3_origin, v2, move, ent, CL_GenericHitSuperContentsMask(ent), true, true, &svent, true);
+	trace = CL_Move(v1, vec3_origin, vec3_origin, v2, move, ent, CL_GenericHitSuperContentsMask(ent), CL_HitNetworkBrushModels(move), CL_HitNetworkPlayers(move), &svent, true);
 
 	CL_VM_SetTraceGlobals(&trace, svent);
 }
@@ -296,7 +299,7 @@ static void VM_CL_tracebox (void)
 	if (IS_NAN(v1[0]) || IS_NAN(v1[1]) || IS_NAN(v1[2]) || IS_NAN(v2[0]) || IS_NAN(v1[2]) || IS_NAN(v2[2]))
 		PRVM_ERROR("%s: NAN errors detected in tracebox('%f %f %f', '%f %f %f', '%f %f %f', '%f %f %f', %i, entity %i)\n", PRVM_NAME, v1[0], v1[1], v1[2], m1[0], m1[1], m1[2], m2[0], m2[1], m2[2], v2[0], v2[1], v2[2], move, PRVM_EDICT_TO_PROG(ent));
 
-	trace = CL_Move(v1, m1, m2, v2, move, ent, CL_GenericHitSuperContentsMask(ent), true, true, &svent, true);
+	trace = CL_Move(v1, m1, m2, v2, move, ent, CL_GenericHitSuperContentsMask(ent), CL_HitNetworkBrushModels(move), CL_HitNetworkPlayers(move), &svent, true);
 
 	CL_VM_SetTraceGlobals(&trace, svent);
 }
@@ -2798,7 +2801,7 @@ realcheck:
 	start[0] = stop[0] = (mins[0] + maxs[0])*0.5;
 	start[1] = stop[1] = (mins[1] + maxs[1])*0.5;
 	stop[2] = start[2] - 2*sv_stepheight.value;
-	trace = CL_Move (start, vec3_origin, vec3_origin, stop, MOVE_NOMONSTERS, ent, CL_GenericHitSuperContentsMask(ent), true, true, NULL, true);
+	trace = CL_Move (start, vec3_origin, vec3_origin, stop, MOVE_NOMONSTERS, ent, CL_GenericHitSuperContentsMask(ent), true, false, NULL, true);
 
 	if (trace.fraction == 1.0)
 		return false;
@@ -2811,7 +2814,7 @@ realcheck:
 			start[0] = stop[0] = x ? maxs[0] : mins[0];
 			start[1] = stop[1] = y ? maxs[1] : mins[1];
 
-			trace = CL_Move (start, vec3_origin, vec3_origin, stop, MOVE_NOMONSTERS, ent, CL_GenericHitSuperContentsMask(ent), true, true, NULL, true);
+			trace = CL_Move (start, vec3_origin, vec3_origin, stop, MOVE_NOMONSTERS, ent, CL_GenericHitSuperContentsMask(ent), true, false, NULL, true);
 
 			if (trace.fraction != 1.0 && trace.endpos[2] > bottom)
 				bottom = trace.endpos[2];
