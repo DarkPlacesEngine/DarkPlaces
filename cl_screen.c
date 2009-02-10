@@ -1011,8 +1011,10 @@ static void SCR_CaptureVideo_RIFF_Pop(void)
 	offset = SCR_CaptureVideo_RIFF_GetPosition();
 	x = (int)(offset - (cls.capturevideo.riffstackstartoffset[cls.capturevideo.riffstacklevel]));
 	sizebytes[0] = (x) & 0xff;sizebytes[1] = (x >> 8) & 0xff;sizebytes[2] = (x >> 16) & 0xff;sizebytes[3] = (x >> 24) & 0xff;
-	FS_Seek(cls.capturevideo.videofile, -(x + 4), SEEK_END);
-	FS_Write(cls.capturevideo.videofile, sizebytes, 4);
+	if(FS_Seek(cls.capturevideo.videofile, -(x + 4), SEEK_END) >= 0)
+	{
+		FS_Write(cls.capturevideo.videofile, sizebytes, 4);
+	}
 	FS_Seek(cls.capturevideo.videofile, 0, SEEK_END);
 	if (offset & 1)
 	{
@@ -1092,18 +1094,22 @@ static void SCR_CaptureVideo_RIFF_MakeIxChunk(const char *fcc, const char *dwChu
 	pos = SCR_CaptureVideo_RIFF_GetPosition();
 	SCR_CaptureVideo_RIFF_Flush();
 
-	FS_Seek(cls.capturevideo.videofile, masteridx_start + 16 * *masteridx_count, SEEK_SET);
-	SCR_CaptureVideo_RIFF_Write32(ix & (fs_offset_t) 0xFFFFFFFFu);
-	SCR_CaptureVideo_RIFF_Write32(((fs_offset_t) ix) >> 32);
-	SCR_CaptureVideo_RIFF_Write32(pos - ix);
-	SCR_CaptureVideo_RIFF_Write32(nMatching);
-	SCR_CaptureVideo_RIFF_Flush();
+	if(FS_Seek(cls.capturevideo.videofile, masteridx_start + 16 * *masteridx_count, SEEK_SET) >= 0)
+	{
+		SCR_CaptureVideo_RIFF_Write32(ix & (fs_offset_t) 0xFFFFFFFFu);
+		SCR_CaptureVideo_RIFF_Write32(((fs_offset_t) ix) >> 32);
+		SCR_CaptureVideo_RIFF_Write32(pos - ix);
+		SCR_CaptureVideo_RIFF_Write32(nMatching);
+		SCR_CaptureVideo_RIFF_Flush();
+	}
 
-	FS_Seek(cls.capturevideo.videofile, masteridx_counter, SEEK_SET);
-	SCR_CaptureVideo_RIFF_Write32(++*masteridx_count);
-	SCR_CaptureVideo_RIFF_Flush();
+	if(FS_Seek(cls.capturevideo.videofile, masteridx_counter, SEEK_SET) >= 0)
+	{
+		SCR_CaptureVideo_RIFF_Write32(++*masteridx_count);
+		SCR_CaptureVideo_RIFF_Flush();
+	}
 
-	FS_Seek(cls.capturevideo.videofile, 0, SEEK_END);
+	FS_Seek(cls.capturevideo.videofile, 0, SEEK_END); // return value doesn't matter here
 }
 
 static void SCR_CaptureVideo_RIFF_Finish(qboolean final)
@@ -1130,9 +1136,11 @@ static void SCR_CaptureVideo_RIFF_Finish(qboolean final)
 	if(cls.capturevideo.videofile_firstchunkframes_offset)
 	{
 		Con_DPrintf("Finishing first chunk (%d frames)\n", cls.capturevideo.frame);
-		FS_Seek(cls.capturevideo.videofile, cls.capturevideo.videofile_firstchunkframes_offset, SEEK_SET);
-		SCR_CaptureVideo_RIFF_Write32(cls.capturevideo.frame);
-		SCR_CaptureVideo_RIFF_Flush();
+		if(FS_Seek(cls.capturevideo.videofile, cls.capturevideo.videofile_firstchunkframes_offset, SEEK_SET) >= 0)
+		{
+			SCR_CaptureVideo_RIFF_Write32(cls.capturevideo.frame);
+			SCR_CaptureVideo_RIFF_Flush();
+		}
 		FS_Seek(cls.capturevideo.videofile, 0, SEEK_END);
 		cls.capturevideo.videofile_firstchunkframes_offset = 0;
 	}
@@ -1484,17 +1492,23 @@ void SCR_CaptureVideo_EndVideo(void)
 			SCR_CaptureVideo_RIFF_Finish(true);
 			// go back and fix the video frames and audio samples fields
 			Con_DPrintf("Finishing capture (%d frames, %d audio frames)\n", cls.capturevideo.frame, cls.capturevideo.soundsampleframe);
-			FS_Seek(cls.capturevideo.videofile, cls.capturevideo.videofile_totalframes_offset1, SEEK_SET);
-			SCR_CaptureVideo_RIFF_Write32(cls.capturevideo.frame);
-			SCR_CaptureVideo_RIFF_Flush();
-			FS_Seek(cls.capturevideo.videofile, cls.capturevideo.videofile_totalframes_offset2, SEEK_SET);
-			SCR_CaptureVideo_RIFF_Write32(cls.capturevideo.frame);
-			SCR_CaptureVideo_RIFF_Flush();
+			if(FS_Seek(cls.capturevideo.videofile, cls.capturevideo.videofile_totalframes_offset1, SEEK_SET) >= 0)
+			{
+				SCR_CaptureVideo_RIFF_Write32(cls.capturevideo.frame);
+				SCR_CaptureVideo_RIFF_Flush();
+			}
+			if(FS_Seek(cls.capturevideo.videofile, cls.capturevideo.videofile_totalframes_offset2, SEEK_SET) >= 0)
+			{
+				SCR_CaptureVideo_RIFF_Write32(cls.capturevideo.frame);
+				SCR_CaptureVideo_RIFF_Flush();
+			}
 			if (cls.capturevideo.soundrate)
 			{
-				FS_Seek(cls.capturevideo.videofile, cls.capturevideo.videofile_totalsampleframes_offset, SEEK_SET);
-				SCR_CaptureVideo_RIFF_Write32(cls.capturevideo.soundsampleframe);
-				SCR_CaptureVideo_RIFF_Flush();
+				if(FS_Seek(cls.capturevideo.videofile, cls.capturevideo.videofile_totalsampleframes_offset, SEEK_SET) >= 0)
+				{
+					SCR_CaptureVideo_RIFF_Write32(cls.capturevideo.soundsampleframe);
+					SCR_CaptureVideo_RIFF_Flush();
+				}
 			}
 			break;
 		default:
