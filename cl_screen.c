@@ -998,7 +998,7 @@ static fs_offset_t SCR_CaptureVideo_RIFF_GetPosition(void)
 static void SCR_CaptureVideo_RIFF_Push(const char *chunkfourcc, const char *listtypefourcc, fs_offset_t sizeHint)
 {
 	Con_Printf("RIFF push: %s\n", chunkfourcc);
-	if (listtypefourcc)
+	if (listtypefourcc && sizeHint >= 0)
 		sizeHint += 4; // size hint is for INNER size
 	SCR_CaptureVideo_RIFF_WriteFourCC(chunkfourcc);
 	SCR_CaptureVideo_RIFF_Write32(sizeHint);
