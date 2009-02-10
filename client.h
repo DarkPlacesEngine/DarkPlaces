@@ -461,10 +461,12 @@ typedef struct capturevideostate_s
 	fs_offset_t videofile_ix_master_video_inuse_offset;
 	fs_offset_t videofile_ix_master_video_start_offset;
 	fs_offset_t videofile_ix_movistart;
+	fs_offset_t position;
 	qfile_t *videofile;
 	qboolean active;
 	qboolean realtime;
 	qboolean error;
+	qboolean canseek;
 	capturevideoformat_t format;
 	int soundrate;
 	int frame;
@@ -477,6 +479,8 @@ typedef struct capturevideostate_s
 	sizebuf_t riffindexbuffer;
 	int riffstacklevel;
 	fs_offset_t riffstackstartoffset[4];
+	fs_offset_t riffstacksizehint[4];
+	const char *riffstackfourcc[4];
 	short rgbtoyuvscaletable[3][3][256];
 	unsigned char yuvnormalizetable[3][256];
 	char basename[64];
