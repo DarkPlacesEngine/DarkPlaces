@@ -997,7 +997,6 @@ static fs_offset_t SCR_CaptureVideo_RIFF_GetPosition(void)
 
 static void SCR_CaptureVideo_RIFF_Push(const char *chunkfourcc, const char *listtypefourcc, fs_offset_t sizeHint)
 {
-	Con_Printf("RIFF push: %s\n", chunkfourcc);
 	if (listtypefourcc && sizeHint >= 0)
 		sizeHint += 4; // size hint is for INNER size
 	SCR_CaptureVideo_RIFF_WriteFourCC(chunkfourcc);
@@ -1022,8 +1021,6 @@ static void SCR_CaptureVideo_RIFF_Pop(void)
 
 	sizehint = cls.capturevideo.riffstacksizehint[cls.capturevideo.riffstacklevel];
 	x = (int)(offset - (cls.capturevideo.riffstackstartoffset[cls.capturevideo.riffstacklevel]));
-
-	Con_Printf("RIFF pop: %s\n", cls.capturevideo.riffstackfourcc[cls.capturevideo.riffstacklevel]);
 
 	if(x != sizehint)
 	{
