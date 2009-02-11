@@ -1217,7 +1217,8 @@ void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins
 						// glowing entity
 						// called by CL_LinkNetworkEntity
 						Matrix4x4_Scale(&tempmatrix, info->lightradiusstart, 1);
-						R_RTLight_Update(&r_refdef.scene.lights[r_refdef.scene.numlights++], false, &tempmatrix, info->lightcolor, -1, info->lightcubemapnum > 0 ? va("cubemaps/%i", info->lightcubemapnum) : NULL, info->lightshadow, 1, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+						if(r_refdef.scene.numlights < MAX_DLIGHTS)
+							R_RTLight_Update(&r_refdef.scene.lights[r_refdef.scene.numlights++], false, &tempmatrix, info->lightcolor, -1, info->lightcubemapnum > 0 ? va("cubemaps/%i", info->lightcubemapnum) : NULL, info->lightshadow, 1, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 					}
 				}
 
