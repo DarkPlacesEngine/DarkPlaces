@@ -1492,7 +1492,8 @@ typedef struct r_refdef_scene_s {
 	int maxtempentities;
 
 	// renderable dynamic lights
-	rtlight_t lights[MAX_DLIGHTS];
+	rtlight_t *lights[MAX_DLIGHTS];
+	rtlight_t templights[MAX_DLIGHTS];
 	int numlights;
 
 	// intensities for light styles right now, controls rtlights
