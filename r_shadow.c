@@ -3175,7 +3175,7 @@ void R_ShadowVolumeLighting(qboolean visible)
 	}
 	if (r_refdef.scene.rtdlight)
 		for (lnum = 0;lnum < r_refdef.scene.numlights;lnum++)
-			R_DrawRTLight(&r_refdef.scene.lights[lnum], visible);
+			R_DrawRTLight(r_refdef.scene.lights[lnum], visible);
 
 	R_Shadow_RenderMode_End();
 }
@@ -3412,7 +3412,7 @@ void R_DrawCoronas(void)
 	}
 	for (i = 0;i < r_refdef.scene.numlights;i++)
 	{
-		rtlight = &r_refdef.scene.lights[i];
+		rtlight = r_refdef.scene.lights[i];
 		rtlight->corona_visibility = 0;
 		rtlight->corona_queryindex_visiblepixels = 0;
 		rtlight->corona_queryindex_allpixels = 0;
@@ -3438,7 +3438,7 @@ void R_DrawCoronas(void)
 	}
 	for (i = 0;i < r_refdef.scene.numlights;i++)
 	{
-		rtlight = &r_refdef.scene.lights[i];
+		rtlight = r_refdef.scene.lights[i];
 		if (rtlight->corona_visibility <= 0)
 			continue;
 		if (gl_flashblend.integer)
@@ -4847,7 +4847,7 @@ void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffu
 		rtlight_t *light;
 		for (i = 0;i < r_refdef.scene.numlights;i++)
 		{
-			light = &r_refdef.scene.lights[i];
+			light = r_refdef.scene.lights[i];
 			Matrix4x4_Transform(&light->matrix_worldtolight, p, v);
 			f = 1 - VectorLength2(v);
 			if (f > 0 && CL_Move(p, vec3_origin, vec3_origin, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction == 1)

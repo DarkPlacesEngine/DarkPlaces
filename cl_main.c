@@ -750,7 +750,9 @@ void CL_RelinkLightFlashes(void)
 			{
 				tempmatrix = dl->matrix;
 				Matrix4x4_Scale(&tempmatrix, dl->radius, 1);
-				R_RTLight_Update(&r_refdef.scene.lights[r_refdef.scene.numlights++], false, &tempmatrix, dl->color, dl->style, dl->cubemapname, dl->shadow, dl->corona, dl->coronasizescale, dl->ambientscale, dl->diffusescale, dl->specularscale, dl->flags);
+				// we need the corona fading to be persistent
+				R_RTLight_Update(&dl->rtlight, false, &tempmatrix, dl->color, dl->style, dl->cubemapname, dl->shadow, dl->corona, dl->coronasizescale, dl->ambientscale, dl->diffusescale, dl->specularscale, dl->flags);
+				r_refdef.scene.lights[r_refdef.scene.numlights++] = &dl->rtlight;
 			}
 		}
 	}
@@ -1361,7 +1363,8 @@ void CL_LinkNetworkEntity(entity_t *e)
 		Matrix4x4_SetOrigin(&tempmatrix, trace.endpos[0], trace.endpos[1], trace.endpos[2]);
 		Matrix4x4_Scale(&tempmatrix, 150, 1);
 		VectorSet(color, e->persistent.muzzleflash * 4.0f, e->persistent.muzzleflash * 4.0f, e->persistent.muzzleflash * 4.0f);
-		R_RTLight_Update(&r_refdef.scene.lights[r_refdef.scene.numlights++], false, &tempmatrix, color, -1, NULL, true, 0, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		R_RTLight_Update(&r_refdef.scene.templights[r_refdef.scene.numlights], false, &tempmatrix, color, -1, NULL, true, 0, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		r_refdef.scene.lights[r_refdef.scene.numlights] = &r_refdef.scene.templights[r_refdef.scene.numlights++];
 	}
 	// LordHavoc: if the model has no flags, don't check each
 	if (e->render.model && e->render.effects && !(e->render.flags & RENDER_VIEWMODEL))
@@ -1392,17 +1395,6 @@ void CL_LinkNetworkEntity(entity_t *e)
 		dlightradius = max(dlightradius, e->state_current.glowsize * 4);
 		VectorMA(dlightcolor, (1.0f / 255.0f), palette_rgb[e->state_current.glowcolor], dlightcolor);
 	}
-	// make the glow dlight
-	if (dlightradius > 0 && (dlightcolor[0] || dlightcolor[1] || dlightcolor[2]) && !(e->render.flags & RENDER_VIEWMODEL) && r_refdef.scene.numlights < MAX_DLIGHTS)
-	{
-		matrix4x4_t dlightmatrix;
-		Matrix4x4_Normalize(&dlightmatrix, &e->render.matrix);
-		// hack to make glowing player light shine on their gun
-		//if (e->state_current.number == cl.viewentity/* && !chase_active.integer*/)
-		//	Matrix4x4_AdjustOrigin(&dlightmatrix, 0, 0, 30);
-		Matrix4x4_Scale(&dlightmatrix, dlightradius, 1);
-		R_RTLight_Update(&r_refdef.scene.lights[r_refdef.scene.numlights++], false, &dlightmatrix, dlightcolor, -1, NULL, true, 1, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-	}
 	// custom rtlight
 	if ((e->state_current.lightpflags & PFLAGS_FULLDYNAMIC) && r_refdef.scene.numlights < MAX_DLIGHTS)
 	{
@@ -1417,7 +1409,20 @@ void CL_LinkNetworkEntity(entity_t *e)
 		// FIXME: add ambient/diffuse/specular scales as an extension ontop of TENEBRAE_GFX_DLIGHTS?
 		Matrix4x4_Normalize(&dlightmatrix, &e->render.matrix);
 		Matrix4x4_Scale(&dlightmatrix, light[3], 1);
-		R_RTLight_Update(&r_refdef.scene.lights[r_refdef.scene.numlights++], false, &dlightmatrix, light, e->state_current.lightstyle, e->state_current.skin > 0 ? va("cubemaps/%i", e->state_current.skin) : NULL, !(e->state_current.lightpflags & PFLAGS_NOSHADOW), (e->state_current.lightpflags & PFLAGS_CORONA) != 0, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		R_RTLight_Update(&r_refdef.scene.templights[r_refdef.scene.numlights], false, &dlightmatrix, light, e->state_current.lightstyle, e->state_current.skin > 0 ? va("cubemaps/%i", e->state_current.skin) : NULL, !(e->state_current.lightpflags & PFLAGS_NOSHADOW), (e->state_current.lightpflags & PFLAGS_CORONA) != 0, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		r_refdef.scene.lights[r_refdef.scene.numlights] = &r_refdef.scene.templights[r_refdef.scene.numlights++];
+	}
+	// make the glow dlight
+	else if (dlightradius > 0 && (dlightcolor[0] || dlightcolor[1] || dlightcolor[2]) && !(e->render.flags & RENDER_VIEWMODEL) && r_refdef.scene.numlights < MAX_DLIGHTS)
+	{
+		matrix4x4_t dlightmatrix;
+		Matrix4x4_Normalize(&dlightmatrix, &e->render.matrix);
+		// hack to make glowing player light shine on their gun
+		//if (e->state_current.number == cl.viewentity/* && !chase_active.integer*/)
+		//	Matrix4x4_AdjustOrigin(&dlightmatrix, 0, 0, 30);
+		Matrix4x4_Scale(&dlightmatrix, dlightradius, 1);
+		R_RTLight_Update(&r_refdef.scene.templights[r_refdef.scene.numlights], false, &dlightmatrix, dlightcolor, -1, NULL, true, 1, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		r_refdef.scene.lights[r_refdef.scene.numlights] = &r_refdef.scene.templights[r_refdef.scene.numlights++];
 	}
 	// do trail light
 	if (e->render.flags & RENDER_GLOWTRAIL)
@@ -1618,7 +1623,8 @@ void CL_RelinkBeams(void)
 				vec3_t dlightcolor;
 				VectorSet(dlightcolor, 0.3, 0.7, 1);
 				Matrix4x4_CreateFromQuakeEntity(&tempmatrix, end[0], end[1], end[2], 0, 0, 0, 200);
-				R_RTLight_Update(&r_refdef.scene.lights[r_refdef.scene.numlights++], false, &tempmatrix, dlightcolor, -1, NULL, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+				R_RTLight_Update(&r_refdef.scene.templights[r_refdef.scene.numlights], false, &tempmatrix, dlightcolor, -1, NULL, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+				r_refdef.scene.lights[r_refdef.scene.numlights] = &r_refdef.scene.templights[r_refdef.scene.numlights++];
 			}
 			if (cl_beams_polygons.integer)
 				continue;
