@@ -807,7 +807,25 @@ extern void (GLAPIENTRY *qglGetCompressedTexImageARB)(GLenum target, GLint lod, 
 #define GL_NUM_COMPRESSED_TEXTURE_FORMATS_ARB		0x86A2
 #define GL_COMPRESSED_TEXTURE_FORMATS_ARB			0x86A3
 #endif
- 
+
+// GL_ARB_occlusion_query
+extern int gl_support_arb_occlusion_query;
+extern void (GLAPIENTRY *qglGenQueriesARB)(GLsizei n, GLuint *ids);
+extern void (GLAPIENTRY *qglDeleteQueriesARB)(GLsizei n, const GLuint *ids);
+extern GLboolean (GLAPIENTRY *qglIsQueryARB)(GLuint qid);
+extern void (GLAPIENTRY *qglBeginQueryARB)(GLenum target, GLuint qid);
+extern void (GLAPIENTRY *qglEndQueryARB)(GLenum target);
+extern void (GLAPIENTRY *qglGetQueryivARB)(GLenum target, GLenum pname, GLint *params);
+extern void (GLAPIENTRY *qglGetQueryObjectivARB)(GLuint qid, GLenum pname, GLint *params);
+extern void (GLAPIENTRY *qglGetQueryObjectuivARB)(GLuint qid, GLenum pname, GLuint *params);
+#ifndef GL_SAMPLES_PASSED_ARB
+#define GL_SAMPLES_PASSED_ARB                             0x8914
+#define GL_QUERY_COUNTER_BITS_ARB                         0x8864
+#define GL_CURRENT_QUERY_ARB                              0x8865
+#define GL_QUERY_RESULT_ARB                               0x8866
+#define GL_QUERY_RESULT_AVAILABLE_ARB                     0x8867
+#endif
+
 // GL_EXT_bgr
 #define GL_BGR					0x80E0
 

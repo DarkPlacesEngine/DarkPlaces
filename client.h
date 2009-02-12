@@ -109,6 +109,10 @@ typedef struct rtlight_s
 	// rendering properties, updated each time a light is rendered
 	// this is rtlight->color * d_lightstylevalue
 	vec3_t currentcolor;
+	// used by corona updates, due to occlusion query
+	float corona_visibility;
+	unsigned int corona_queryindex_visiblepixels;
+	unsigned int corona_queryindex_allpixels;
 	// this is R_Shadow_Cubemap(rtlight->cubemapname)
 	rtexture_t *currentcubemap;
 

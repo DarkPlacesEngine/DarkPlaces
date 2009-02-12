@@ -63,6 +63,8 @@ int gl_support_fragment_shader = false;
 int gl_support_arb_vertex_buffer_object = false;
 //GL_ARB_texture_compression
 int gl_support_texture_compression = false;
+//GL_ARB_occlusion_query
+int gl_support_arb_occlusion_query = false;
 
 // LordHavoc: if window is hidden, don't update screen
 qboolean vid_hidden = true;
@@ -381,6 +383,15 @@ void (GLAPIENTRY *qglCompressedTexSubImage3DARB)(GLenum target, GLint level, GLi
 void (GLAPIENTRY *qglCompressedTexSubImage2DARB)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLsizei imageSize, const void *data);
 void (GLAPIENTRY *qglCompressedTexSubImage1DARB)(GLenum target, GLint level, GLint xoffset, GLsizei width, GLenum format, GLsizei imageSize, const void *data);
 void (GLAPIENTRY *qglGetCompressedTexImageARB)(GLenum target, GLint lod, void *img);
+
+void (GLAPIENTRY *qglGenQueriesARB)(GLsizei n, GLuint *ids);
+void (GLAPIENTRY *qglDeleteQueriesARB)(GLsizei n, const GLuint *ids);
+GLboolean (GLAPIENTRY *qglIsQueryARB)(GLuint qid);
+void (GLAPIENTRY *qglBeginQueryARB)(GLenum target, GLuint qid);
+void (GLAPIENTRY *qglEndQueryARB)(GLenum target);
+void (GLAPIENTRY *qglGetQueryivARB)(GLenum target, GLenum pname, GLint *params);
+void (GLAPIENTRY *qglGetQueryObjectivARB)(GLuint qid, GLenum pname, GLint *params);
+void (GLAPIENTRY *qglGetQueryObjectuivARB)(GLuint qid, GLenum pname, GLuint *params);
 
 int GL_CheckExtension(const char *name, const dllfunction_t *funcs, const char *disableparm, int silent)
 {
@@ -705,6 +716,19 @@ static dllfunction_t texturecompressionfuncs[] =
 	{NULL, NULL}
 };
 
+static dllfunction_t occlusionqueryfuncs[] =
+{
+	{"glGenQueriesARB",              (void **) &qglGenQueriesARB},
+	{"glDeleteQueriesARB",           (void **) &qglDeleteQueriesARB},
+	{"glIsQueryARB",                 (void **) &qglIsQueryARB},
+	{"glBeginQueryARB",              (void **) &qglBeginQueryARB},
+	{"glEndQueryARB",                (void **) &qglEndQueryARB},
+	{"glGetQueryivARB",              (void **) &qglGetQueryivARB},
+	{"glGetQueryObjectivARB",        (void **) &qglGetQueryObjectivARB},
+	{"glGetQueryObjectuivARB",       (void **) &qglGetQueryObjectuivARB},
+	{NULL, NULL}
+};
+
 void VID_CheckExtensions(void)
 {
 	gl_stencil = vid_bitsperpixel.integer == 32;
@@ -734,6 +758,7 @@ void VID_CheckExtensions(void)
 	gl_support_fragment_shader = false;
 	gl_support_arb_vertex_buffer_object = false;
 	gl_support_texture_compression = false;
+	gl_support_arb_occlusion_query = false;
 
 	if (!GL_CheckExtension("OpenGL 1.1.0", opengl110funcs, NULL, false))
 		Sys_Error("OpenGL 1.1.0 functions not found");
@@ -813,6 +838,9 @@ void VID_CheckExtensions(void)
 			if ((gl_support_vertex_shader = GL_CheckExtension("GL_ARB_vertex_shader", vertexshaderfuncs, "-novertexshader", false)))
 				gl_support_fragment_shader = GL_CheckExtension("GL_ARB_fragment_shader", NULL, "-nofragmentshader", false);
 	CHECKGLERROR
+
+// COMMANDLINEOPTION: GL: -noocclusionquery disables GL_ARB_occlusion_query (which allows coronas to fade according to visibility, and potentially used for rendering optimizations)
+	gl_support_arb_occlusion_query = GL_CheckExtension("GL_ARB_occlusion_query", occlusionqueryfuncs, "-noocclusionquery", false);
 }
 
 void Force_CenterView_f (void)
