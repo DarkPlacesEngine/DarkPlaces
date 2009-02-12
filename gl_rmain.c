@@ -168,6 +168,10 @@ rtexture_t *r_texture_gammaramps;
 unsigned int r_texture_gammaramps_serial;
 //rtexture_t *r_texture_fogintensity;
 
+unsigned int r_queries[R_MAX_OCCLUSION_QUERIES];
+unsigned int r_numqueries;
+unsigned int r_maxqueries;
+
 char r_qwskincache[MAX_SCOREBOARD][MAX_QPATH];
 skinframe_t *r_qwskincache_skinframe[MAX_SCOREBOARD];
 
@@ -1734,7 +1738,7 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 			if (r_glsl_permutation->loc_SpecularScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularScale, r_refdef.lightmapintensity * specularscale);
 		}
 		if (r_glsl_permutation->loc_TintColor >= 0) qglUniform4fARB(r_glsl_permutation->loc_TintColor, rsurface.texture->lightmapcolor[0], rsurface.texture->lightmapcolor[1], rsurface.texture->lightmapcolor[2], rsurface.texture->lightmapcolor[3]);
-		if (r_glsl_permutation->loc_GlowScale     >= 0) qglUniform1fARB(r_glsl_permutation->loc_GlowScale, r_hdr_glowintensity.value);
+		if (r_glsl_permutation->loc_GlowScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_GlowScale, r_hdr_glowintensity.value);
 		// additive passes are only darkened by fog, not tinted
 		if (r_glsl_permutation->loc_FogColor >= 0)
 		{
@@ -2246,6 +2250,10 @@ skinframe_t *R_SkinFrame_LoadMissing(void)
 
 void gl_main_start(void)
 {
+	r_numqueries = 0;
+	r_maxqueries = 0;
+	memset(r_queries, 0, sizeof(r_queries));
+
 	memset(r_qwskincache, 0, sizeof(r_qwskincache));
 	memset(r_qwskincache_skinframe, 0, sizeof(r_qwskincache_skinframe));
 
@@ -2275,6 +2283,13 @@ void gl_main_start(void)
 
 void gl_main_shutdown(void)
 {
+	if (r_maxqueries)
+		qglDeleteQueriesARB(r_maxqueries, r_queries);
+
+	r_numqueries = 0;
+	r_maxqueries = 0;
+	memset(r_queries, 0, sizeof(r_queries));
+
 	memset(r_qwskincache, 0, sizeof(r_qwskincache));
 	memset(r_qwskincache_skinframe, 0, sizeof(r_qwskincache_skinframe));
 
@@ -2473,8 +2488,8 @@ void GL_Init (void)
 	Con_Printf("GL_VENDOR: %s\n", gl_vendor);
 	Con_Printf("GL_RENDERER: %s\n", gl_renderer);
 	Con_Printf("GL_VERSION: %s\n", gl_version);
-	Con_Printf("GL_EXTENSIONS: %s\n", gl_extensions);
-	Con_Printf("%s_EXTENSIONS: %s\n", gl_platform, gl_platformextensions);
+	Con_DPrintf("GL_EXTENSIONS: %s\n", gl_extensions);
+	Con_DPrintf("%s_EXTENSIONS: %s\n", gl_platform, gl_platformextensions);
 
 	VID_CheckExtensions();
 

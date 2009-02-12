@@ -236,6 +236,8 @@ cvar_t r_shadow_polygonfactor = {0, "r_shadow_polygonfactor", "0", "how much to 
 cvar_t r_shadow_polygonoffset = {0, "r_shadow_polygonoffset", "1", "how much to push shadow volumes into the distance when rendering, to reduce chances of zfighting artifacts (should not be less than 0)"};
 cvar_t r_shadow_texture3d = {0, "r_shadow_texture3d", "1", "use 3D voxel textures for spherical attenuation rather than cylindrical (does not affect r_glsl lighting)"};
 cvar_t r_coronas = {CVAR_SAVE, "r_coronas", "1", "brightness of corona flare effects around certain lights, 0 disables corona effects"};
+cvar_t r_coronas_occlusionsizescale = {CVAR_SAVE, "r_coronas_occlusionsizescale", "0.1", "size of light source for corona occlusion checksm the proportion of hidden pixels controls corona intensity"};
+cvar_t r_coronas_occlusionquery = {CVAR_SAVE, "r_coronas_occlusionquery", "1", "use GL_ARB_occlusion_query extension if supported (fades coronas according to visibility)"};
 cvar_t gl_flashblend = {CVAR_SAVE, "gl_flashblend", "0", "render bright coronas for dynamic lights instead of actual lighting, fast but ugly"};
 cvar_t gl_ext_separatestencil = {0, "gl_ext_separatestencil", "1", "make use of OpenGL 2.0 glStencilOpSeparate or GL_ATI_separate_stencil extension"};
 cvar_t gl_ext_stenciltwoside = {0, "gl_ext_stenciltwoside", "1", "make use of GL_EXT_stenciltwoside extension (NVIDIA only)"};
@@ -466,6 +468,8 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_polygonoffset);
 	Cvar_RegisterVariable(&r_shadow_texture3d);
 	Cvar_RegisterVariable(&r_coronas);
+	Cvar_RegisterVariable(&r_coronas_occlusionsizescale);
+	Cvar_RegisterVariable(&r_coronas_occlusionquery);
 	Cvar_RegisterVariable(&gl_flashblend);
 	Cvar_RegisterVariable(&gl_ext_separatestencil);
 	Cvar_RegisterVariable(&gl_ext_stenciltwoside);
@@ -623,28 +627,6 @@ int R_Shadow_ConstructShadowVolume(int innumvertices, int innumtris, const int *
 		VectorScale(projectdirection, projectdistance, projectvector);
 	else
 		VectorClear(projectvector);
-
-	if (maxvertexupdate < innumvertices)
-	{
-		maxvertexupdate = innumvertices;
-		if (vertexupdate)
-			Mem_Free(vertexupdate);
-		if (vertexremap)
-			Mem_Free(vertexremap);
-		vertexupdate = (int *)Mem_Alloc(r_main_mempool, maxvertexupdate * sizeof(int));
-		vertexremap = (int *)Mem_Alloc(r_main_mempool, maxvertexupdate * sizeof(int));
-		vertexupdatenum = 0;
-	}
-	vertexupdatenum++;
-	if (vertexupdatenum == 0)
-	{
-		vertexupdatenum = 1;
-		memset(vertexupdate, 0, maxvertexupdate * sizeof(int));
-		memset(vertexremap, 0, maxvertexupdate * sizeof(int));
-	}
-
-	for (i = 0;i < numshadowmarktris;i++)
-		shadowmark[shadowmarktris[i]] = shadowmarkcount;
 
 	// create the vertices
 	if (projectdirection)
@@ -889,36 +871,9 @@ void R_Shadow_MarkVolumeFromBox(int firsttriangle, int numtris, const float *inv
 	}
 }
 
-static void R_Shadow_RenderVolume(int numvertices, int numtriangles, const float *vertex3f, const int *element3i)
+void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f, const int *elements, const int *neighbors, const vec3_t projectorigin, const vec3_t projectdirection, float projectdistance, int nummarktris, const int *marktris, vec3_t trismins, vec3_t trismaxs)
 {
-	if (r_shadow_compilingrtlight)
-	{
-		// if we're compiling an rtlight, capture the mesh
-		Mod_ShadowMesh_AddMesh(r_main_mempool, r_shadow_compilingrtlight->static_meshchain_shadow, NULL, NULL, NULL, vertex3f, NULL, NULL, NULL, NULL, numtriangles, element3i);
-		return;
-	}
-	r_refdef.stats.lights_shadowtriangles += numtriangles;
-	CHECKGLERROR
-	R_Mesh_VertexPointer(vertex3f, 0, 0);
-	GL_LockArrays(0, numvertices);
-	if (r_shadow_rendermode == R_SHADOW_RENDERMODE_STENCIL)
-	{
-		// decrement stencil if backface is behind depthbuffer
-		GL_CullFace(r_refdef.view.cullface_front);
-		qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);CHECKGLERROR
-		R_Mesh_Draw(0, numvertices, 0, numtriangles, element3i, NULL, 0, 0);
-		// increment stencil if frontface is behind depthbuffer
-		GL_CullFace(r_refdef.view.cullface_back);
-		qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);CHECKGLERROR
-	}
-	R_Mesh_Draw(0, numvertices, 0, numtriangles, element3i, NULL, 0, 0);
-	GL_LockArrays(0, 0);
-	CHECKGLERROR
-}
-
-void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f, const int *elements, const int *neighbors, const vec3_t projectorigin, const vec3_t projectdirection, float projectdistance, int nummarktris, const int *marktris)
-{
-	int tris, outverts;
+	int i, tris, outverts;
 	if (projectdistance < 0.1)
 	{
 		Con_Printf("R_Shadow_Volume: projectdistance %f\n", projectdistance);
@@ -929,9 +884,57 @@ void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f,
 	// make sure shadowelements is big enough for this volume
 	if (maxshadowtriangles < nummarktris || maxshadowvertices < numverts)
 		R_Shadow_ResizeShadowArrays((numverts + 255) & ~255, (nummarktris + 255) & ~255);
-	tris = R_Shadow_ConstructShadowVolume(numverts, numtris, elements, neighbors, invertex3f, &outverts, shadowelements, shadowvertex3f, projectorigin, projectdirection, projectdistance, nummarktris, marktris);
-	r_refdef.stats.lights_dynamicshadowtriangles += tris;
-	R_Shadow_RenderVolume(outverts, tris, shadowvertex3f, shadowelements);
+
+	if (maxvertexupdate < numverts)
+	{
+		maxvertexupdate = numverts;
+		if (vertexupdate)
+			Mem_Free(vertexupdate);
+		if (vertexremap)
+			Mem_Free(vertexremap);
+		vertexupdate = (int *)Mem_Alloc(r_main_mempool, maxvertexupdate * sizeof(int));
+		vertexremap = (int *)Mem_Alloc(r_main_mempool, maxvertexupdate * sizeof(int));
+		vertexupdatenum = 0;
+	}
+	vertexupdatenum++;
+	if (vertexupdatenum == 0)
+	{
+		vertexupdatenum = 1;
+		memset(vertexupdate, 0, maxvertexupdate * sizeof(int));
+		memset(vertexremap, 0, maxvertexupdate * sizeof(int));
+	}
+
+	for (i = 0;i < nummarktris;i++)
+		shadowmark[marktris[i]] = shadowmarkcount;
+
+	if (r_shadow_compilingrtlight)
+	{
+		// if we're compiling an rtlight, capture the mesh
+		tris = R_Shadow_ConstructShadowVolume(numverts, numtris, elements, neighbors, invertex3f, &outverts, shadowelements, shadowvertex3f, projectorigin, projectdirection, projectdistance, nummarktris, marktris);
+		Mod_ShadowMesh_AddMesh(r_main_mempool, r_shadow_compilingrtlight->static_meshchain_shadow, NULL, NULL, NULL, shadowvertex3f, NULL, NULL, NULL, NULL, tris, shadowelements);
+	}
+	else
+	{
+		tris = R_Shadow_ConstructShadowVolume(numverts, numtris, elements, neighbors, invertex3f, &outverts, shadowelements, shadowvertex3f, projectorigin, projectdirection, projectdistance, nummarktris, marktris);
+		r_refdef.stats.lights_dynamicshadowtriangles += tris;
+		r_refdef.stats.lights_shadowtriangles += tris;
+		CHECKGLERROR
+		R_Mesh_VertexPointer(shadowvertex3f, 0, 0);
+		GL_LockArrays(0, outverts);
+		if (r_shadow_rendermode == R_SHADOW_RENDERMODE_STENCIL)
+		{
+			// decrement stencil if backface is behind depthbuffer
+			GL_CullFace(r_refdef.view.cullface_front);
+			qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);CHECKGLERROR
+			R_Mesh_Draw(0, outverts, 0, tris, shadowelements, NULL, 0, 0);
+			// increment stencil if frontface is behind depthbuffer
+			GL_CullFace(r_refdef.view.cullface_back);
+			qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);CHECKGLERROR
+		}
+		R_Mesh_Draw(0, outverts, 0, tris, shadowelements, NULL, 0, 0);
+		GL_LockArrays(0, 0);
+		CHECKGLERROR
+	}
 }
 
 static void R_Shadow_MakeTextures_MakeCorona(void)
@@ -1092,7 +1095,14 @@ void R_Shadow_RenderMode_Reset(void)
 	R_SetupGenericShader(false);
 }
 
-void R_Shadow_RenderMode_StencilShadowVolumes(qboolean clearstencil)
+void R_Shadow_ClearStencil(void)
+{
+	CHECKGLERROR
+	GL_Clear(GL_STENCIL_BUFFER_BIT);
+	r_refdef.stats.lights_clears++;
+}
+
+void R_Shadow_RenderMode_StencilShadowVolumes(void)
 {
 	CHECKGLERROR
 	R_Shadow_RenderMode_Reset();
@@ -1119,9 +1129,6 @@ void R_Shadow_RenderMode_StencilShadowVolumes(qboolean clearstencil)
 		qglStencilMask(~0);CHECKGLERROR
 		qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);CHECKGLERROR
 	}
-	if (clearstencil)
-		GL_Clear(GL_STENCIL_BUFFER_BIT);
-	r_refdef.stats.lights_clears++;
 }
 
 void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent)
@@ -2787,7 +2794,7 @@ void R_Shadow_DrawWorldShadow(int numsurfaces, int *surfacelist, const unsigned 
 				if (CHECKPVSBIT(trispvs, t))
 					shadowmarklist[numshadowmark++] = t;
 		}
-		R_Shadow_VolumeFromList(r_refdef.scene.worldmodel->brush.shadowmesh->numverts, r_refdef.scene.worldmodel->brush.shadowmesh->numtriangles, r_refdef.scene.worldmodel->brush.shadowmesh->vertex3f, r_refdef.scene.worldmodel->brush.shadowmesh->element3i, r_refdef.scene.worldmodel->brush.shadowmesh->neighbor3i, rsurface.rtlight->shadoworigin, NULL, rsurface.rtlight->radius + r_refdef.scene.worldmodel->radius*2 + r_shadow_projectdistance.value, numshadowmark, shadowmarklist);
+		R_Shadow_VolumeFromList(r_refdef.scene.worldmodel->brush.shadowmesh->numverts, r_refdef.scene.worldmodel->brush.shadowmesh->numtriangles, r_refdef.scene.worldmodel->brush.shadowmesh->vertex3f, r_refdef.scene.worldmodel->brush.shadowmesh->element3i, r_refdef.scene.worldmodel->brush.shadowmesh->neighbor3i, rsurface.rtlight->shadoworigin, NULL, rsurface.rtlight->radius + r_refdef.scene.worldmodel->radius*2 + r_shadow_projectdistance.value, numshadowmark, shadowmarklist, r_refdef.scene.worldmodel->normalmins, r_refdef.scene.worldmodel->normalmaxs);
 	}
 	else if (numsurfaces)
 		r_refdef.scene.worldmodel->DrawShadowVolume(r_refdef.scene.worldentity, rsurface.rtlight->shadoworigin, NULL, rsurface.rtlight->radius, numsurfaces, surfacelist, rsurface.rtlight_cullmins, rsurface.rtlight_cullmaxs);
@@ -3057,7 +3064,8 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	{
 		// draw stencil shadow volumes to mask off pixels that are in shadow
 		// so that they won't receive lighting
-		R_Shadow_RenderMode_StencilShadowVolumes(true);
+		R_Shadow_ClearStencil();
+		R_Shadow_RenderMode_StencilShadowVolumes();
 		if (numsurfaces)
 			R_Shadow_DrawWorldShadow(numsurfaces, surfacelist, shadowtrispvs);
 		for (i = 0;i < numshadowentities;i++)
@@ -3078,7 +3086,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 					R_Shadow_DrawEntityLight(lightentities_noselfshadow[i]);
 			}
 
-			R_Shadow_RenderMode_StencilShadowVolumes(false);
+			R_Shadow_RenderMode_StencilShadowVolumes();
 		}
 		for (i = 0;i < numshadowentities_noselfshadow;i++)
 			R_Shadow_DrawEntityShadow(shadowentities_noselfshadow[i]);
@@ -3201,7 +3209,8 @@ void R_DrawModelShadows(void)
 	else
 		r_shadow_shadowingrendermode = R_SHADOW_RENDERMODE_STENCIL;
 
-	R_Shadow_RenderMode_StencilShadowVolumes(true);
+	R_Shadow_ClearStencil();
+	R_Shadow_RenderMode_StencilShadowVolumes();
 
 	for (i = 0;i < r_refdef.scene.numentities;i++)
 	{
@@ -3297,64 +3306,145 @@ void R_DrawModelShadows(void)
 	R_Shadow_RenderMode_End();
 }
 
+void R_BeginCoronaQuery(rtlight_t *rtlight, float scale, qboolean usequery)
+{
+	// if it's too close, skip it
+	if (VectorLength(rtlight->color) < (1.0f / 256.0f))
+		return;
+	if (VectorDistance2(rtlight->shadoworigin, r_refdef.view.origin) < 32.0f * 32.0f)
+		return;
+	if (usequery && r_numqueries + 2 <= r_maxqueries)
+	{
+		rtlight->corona_queryindex_allpixels = r_queries[r_numqueries++];
+		rtlight->corona_queryindex_visiblepixels = r_queries[r_numqueries++];
+		CHECKGLERROR
+		qglBeginQueryARB(GL_SAMPLES_PASSED_ARB, rtlight->corona_queryindex_allpixels);
+		R_DrawSprite(GL_ONE, GL_ZERO, r_shadow_lightcorona, NULL, true, false, rtlight->shadoworigin, r_refdef.view.right, r_refdef.view.up, scale, -scale, -scale, scale, 1, 1, 1, 1);
+		qglEndQueryARB(GL_SAMPLES_PASSED_ARB);
+		qglBeginQueryARB(GL_SAMPLES_PASSED_ARB, rtlight->corona_queryindex_visiblepixels);
+		R_DrawSprite(GL_ONE, GL_ZERO, r_shadow_lightcorona, NULL, false, false, rtlight->shadoworigin, r_refdef.view.right, r_refdef.view.up, scale, -scale, -scale, scale, 1, 1, 1, 1);
+		qglEndQueryARB(GL_SAMPLES_PASSED_ARB);
+		CHECKGLERROR
+	}
+	rtlight->corona_visibility = 1;
+}
+
+void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
+{
+	vec3_t color;
+	GLint allpixels = 0, visiblepixels = 0;
+	// now we have to check the query result
+	if (rtlight->corona_queryindex_visiblepixels)
+	{
+		CHECKGLERROR
+		qglGetQueryObjectivARB(rtlight->corona_queryindex_visiblepixels, GL_QUERY_RESULT_ARB, &visiblepixels);
+		qglGetQueryObjectivARB(rtlight->corona_queryindex_allpixels, GL_QUERY_RESULT_ARB, &allpixels);
+		CHECKGLERROR
+		//Con_Printf("%i of %i pixels\n", (int)visiblepixels, (int)allpixels);
+		if (visiblepixels < 1 || allpixels < 1)
+			return;
+		rtlight->corona_visibility *= (float)visiblepixels / (float)allpixels;
+		cscale *= rtlight->corona_visibility;
+	}
+	else
+	{
+		// FIXME: these traces should scan all render entities instead of cl.world
+		if (CL_Move(r_refdef.view.origin, vec3_origin, vec3_origin, rtlight->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction < 1)
+			return;
+	}
+	VectorScale(rtlight->color, cscale, color);
+	if (VectorLength(color) > (1.0f / 256.0f))
+		R_DrawSprite(GL_ONE, GL_ONE, r_shadow_lightcorona, NULL, true, false, rtlight->shadoworigin, r_refdef.view.right, r_refdef.view.up, scale, -scale, -scale, scale, color[0], color[1], color[2], 1);
+}
+
 void R_DrawCoronas(void)
 {
 	int i, flag;
-	float cscale, scale;
+	qboolean usequery;
 	size_t lightindex;
 	dlight_t *light;
 	rtlight_t *rtlight;
 	size_t range;
 	if (r_coronas.value < (1.0f / 256.0f) && !gl_flashblend.integer)
 		return;
-	R_Mesh_Matrix(&identitymatrix);
+	if (r_waterstate.renderingscene)
+		return;
 	flag = r_refdef.scene.rtworld ? LIGHTFLAG_REALTIMEMODE : LIGHTFLAG_NORMALMODE;
-	// FIXME: these traces should scan all render entities instead of cl.world
+	R_Mesh_Matrix(&identitymatrix);
+
 	range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
+
+	// check occlusion of coronas
+	// use GL_ARB_occlusion_query if available
+	// otherwise use raytraces
+	r_numqueries = 0;
+	usequery = gl_support_arb_occlusion_query && r_coronas_occlusionquery.integer;
+	if (usequery)
+	{
+		GL_ColorMask(0,0,0,0);
+		if (r_maxqueries < range + r_refdef.scene.numlights)
+		if (r_maxqueries < R_MAX_OCCLUSION_QUERIES)
+		{
+			i = r_maxqueries;
+			r_maxqueries = (range + r_refdef.scene.numlights) * 2;
+			r_maxqueries = min(r_maxqueries, R_MAX_OCCLUSION_QUERIES);
+			CHECKGLERROR
+			qglGenQueriesARB(r_maxqueries - i, r_queries + i);
+			CHECKGLERROR
+		}
+	}
 	for (lightindex = 0;lightindex < range;lightindex++)
 	{
 		light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
 		if (!light)
 			continue;
 		rtlight = &light->rtlight;
-		if (!(rtlight->flags & flag))
-			continue;
-		if (rtlight->corona * r_coronas.value <= 0)
-			continue;
-		if (r_shadow_debuglight.integer >= 0 && r_shadow_debuglight.integer != (int)lightindex)
-			continue;
-		cscale = rtlight->corona * r_coronas.value* 0.25f;
-		scale = rtlight->radius * rtlight->coronasizescale;
-		if (VectorDistance2(rtlight->shadoworigin, r_refdef.view.origin) < 16.0f * 16.0f)
-			continue;
-		if (CL_Move(r_refdef.view.origin, vec3_origin, vec3_origin, rtlight->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction < 1)
-			continue;
-		R_DrawSprite(GL_ONE, GL_ONE, r_shadow_lightcorona, NULL, true, false, rtlight->shadoworigin, r_refdef.view.right, r_refdef.view.up, scale, -scale, -scale, scale, rtlight->color[0] * cscale, rtlight->color[1] * cscale, rtlight->color[2] * cscale, 1);
-	}
-	for (i = 0;i < r_refdef.scene.numlights;i++)
-	{
-		rtlight = &r_refdef.scene.lights[i];
+		rtlight->corona_visibility = 0;
+		rtlight->corona_queryindex_visiblepixels = 0;
+		rtlight->corona_queryindex_allpixels = 0;
 		if (!(rtlight->flags & flag))
 			continue;
 		if (rtlight->corona <= 0)
 			continue;
-		if (VectorDistance2(rtlight->shadoworigin, r_refdef.view.origin) < 32.0f * 32.0f)
+		if (r_shadow_debuglight.integer >= 0 && r_shadow_debuglight.integer != (int)lightindex)
+			continue;
+		R_BeginCoronaQuery(rtlight, rtlight->radius * rtlight->coronasizescale * r_coronas_occlusionsizescale.value, usequery);
+	}
+	for (i = 0;i < r_refdef.scene.numlights;i++)
+	{
+		rtlight = &r_refdef.scene.lights[i];
+		rtlight->corona_visibility = 0;
+		rtlight->corona_queryindex_visiblepixels = 0;
+		rtlight->corona_queryindex_allpixels = 0;
+		if (!(rtlight->flags & flag))
+			continue;
+		if (rtlight->corona <= 0)
+			continue;
+		R_BeginCoronaQuery(rtlight, rtlight->radius * rtlight->coronasizescale * r_coronas_occlusionsizescale.value, usequery);
+	}
+	if (usequery)
+		GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
+
+	// now draw the coronas using the query data for intensity info
+	for (lightindex = 0;lightindex < range;lightindex++)
+	{
+		light = Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+		if (!light)
+			continue;
+		rtlight = &light->rtlight;
+		if (rtlight->corona_visibility <= 0)
+			continue;
+		R_DrawCorona(rtlight, rtlight->corona * r_coronas.value * 0.25f, rtlight->radius * rtlight->coronasizescale);
+	}
+	for (i = 0;i < r_refdef.scene.numlights;i++)
+	{
+		rtlight = &r_refdef.scene.lights[i];
+		if (rtlight->corona_visibility <= 0)
 			continue;
 		if (gl_flashblend.integer)
-		{
-			cscale = rtlight->corona * 1.0f;
-			scale = rtlight->radius * rtlight->coronasizescale * 2.0f;
-		}
+			R_DrawCorona(rtlight, rtlight->corona, rtlight->radius * rtlight->coronasizescale * 2.0f);
 		else
-		{
-			cscale = rtlight->corona * r_coronas.value* 0.25f;
-			scale = rtlight->radius * rtlight->coronasizescale;
-		}
-		if (VectorLength(rtlight->color) * cscale < (1.0f / 256.0f))
-			continue;
-		if (CL_Move(r_refdef.view.origin, vec3_origin, vec3_origin, rtlight->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction < 1)
-			continue;
-		R_DrawSprite(GL_ONE, GL_ONE, r_shadow_lightcorona, NULL, true, false, rtlight->shadoworigin, r_refdef.view.right, r_refdef.view.up, scale, -scale, -scale, scale, rtlight->color[0] * cscale, rtlight->color[1] * cscale, rtlight->color[2] * cscale, 1);
+			R_DrawCorona(rtlight, rtlight->corona * r_coronas.value * 0.25f, rtlight->radius * rtlight->coronasizescale);
 	}
 }
 

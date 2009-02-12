@@ -191,6 +191,11 @@ extern rtexture_t *r_texture_normalizationcube;
 extern rtexture_t *r_texture_fogattenuation;
 //extern rtexture_t *r_texture_fogintensity;
 
+#define R_MAX_OCCLUSION_QUERIES 4096
+extern unsigned int r_queries[R_MAX_OCCLUSION_QUERIES];
+extern unsigned int r_numqueries;
+extern unsigned int r_maxqueries;
+
 void R_TimeReport(char *name);
 
 // r_stain
