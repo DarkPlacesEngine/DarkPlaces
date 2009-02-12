@@ -2229,7 +2229,7 @@ skinframe_t *R_SkinFrame_LoadMissing(void)
 	if (cls.state == ca_dedicated)
 		return NULL;
 
-	skinframe = R_SkinFrame_Find("missing", TEXF_PRECACHE, 0, 0, 0, true);
+	skinframe = R_SkinFrame_Find("missing", TEXF_PRECACHE | TEXF_FORCENEAREST, 0, 0, 0, true);
 	skinframe->stain = NULL;
 	skinframe->merged = NULL;
 	skinframe->base = r_texture_notexture;
