@@ -122,7 +122,8 @@ typedef struct rtlight_s
 	// true if this is a compiled world light, cleared if the light changes
 	int compiled;
 	// premade shadow volumes to render for world entity
-	shadowmesh_t *static_meshchain_shadow;
+	shadowmesh_t *static_meshchain_shadow_zpass;
+	shadowmesh_t *static_meshchain_shadow_zfail;
 	// used for visibility testing (more exact than bbox)
 	int static_numleafs;
 	int static_numleafpvsbytes;

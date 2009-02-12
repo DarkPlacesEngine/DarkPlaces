@@ -615,7 +615,7 @@ void R_Shadow_PrepareShadowMark(int numtris)
 	numshadowmark = 0;
 }
 
-int R_Shadow_ConstructShadowVolume(int innumvertices, int innumtris, const int *inelement3i, const int *inneighbor3i, const float *invertex3f, int *outnumvertices, int *outelement3i, float *outvertex3f, const float *projectorigin, const float *projectdirection, float projectdistance, int numshadowmarktris, const int *shadowmarktris)
+static int R_Shadow_ConstructShadowVolume_ZFail(int innumvertices, int innumtris, const int *inelement3i, const int *inneighbor3i, const float *invertex3f, int *outnumvertices, int *outelement3i, float *outvertex3f, const float *projectorigin, const float *projectdirection, float projectdistance, int numshadowmarktris, const int *shadowmarktris)
 {
 	int i, j;
 	int outtriangles = 0, outvertices = 0;
@@ -812,6 +812,117 @@ int R_Shadow_ConstructShadowVolume(int innumvertices, int innumtris, const int *
 	return outtriangles;
 }
 
+#if 0
+static int R_Shadow_ConstructShadowVolume_ZPass(int innumvertices, int innumtris, const int *inelement3i, const int *inneighbor3i, const float *invertex3f, int *outnumvertices, int *outelement3i, float *outvertex3f, const float *projectorigin, const float *projectdirection, float projectdistance, int numshadowmarktris, const int *shadowmarktris)
+{
+	int i, j, k;
+	int outtriangles = 0, outvertices = 0;
+	const int *element;
+	const float *vertex;
+	float ratio, direction[3], projectvector[3];
+	qboolean side[4];
+
+	if (projectdirection)
+		VectorScale(projectdirection, projectdistance, projectvector);
+	else
+		VectorClear(projectvector);
+
+	for (i = 0;i < numshadowmarktris;i++)
+	{
+		int remappedelement[3];
+		int markindex;
+		const int *neighbortriangle;
+
+		markindex = shadowmarktris[i] * 3;
+		neighbortriangle = inneighbor3i + markindex;
+		side[0] = shadowmark[neighbortriangle[0]] != shadowmarkcount;
+		side[1] = shadowmark[neighbortriangle[1]] != shadowmarkcount;
+		side[2] = shadowmark[neighbortriangle[2]] != shadowmarkcount;
+		if (side[0] + side[1] + side[2] == 0)
+			continue;
+
+		side[3] = side[0];
+		element = inelement3i + markindex;
+
+		for (j = 0;j < 3;j++)
+		{
+			if (side[j] + side[j+1] == 0)
+				continue;
+			k = element[j];
+			if (vertexupdate[k] != vertexupdatenum)
+			{
+				vertexupdate[k] = vertexupdatenum;
+				vertexremap[k] = outvertices;
+				vertex = invertex3f + element[j] * 3;
+				VectorCopy(vertex, outvertex3f);
+				if (projectdirection)
+				{
+					// project one copy of the vertex according to projectvector
+					VectorAdd(vertex, projectvector, (outvertex3f + 3));
+				}
+				else
+				{
+					// project one copy of the vertex to the sphere radius of the light
+					// (FIXME: would projecting it to the light box be better?)
+					VectorSubtract(vertex, projectorigin, direction);
+					ratio = projectdistance / VectorLength(direction);
+					VectorMA(projectorigin, ratio, direction, (outvertex3f + 3));
+				}
+				outvertex3f += 6;
+				outvertices += 2;
+			}
+		}
+
+		// output the sides (facing outward from this triangle)
+		if (side[0])
+		{
+			remappedelement[0] = vertexremap[element[0]];
+			remappedelement[1] = vertexremap[element[1]];
+			outelement3i[0] = remappedelement[1];
+			outelement3i[1] = remappedelement[0];
+			outelement3i[2] = remappedelement[0] + 1;
+			outelement3i[3] = remappedelement[1];
+			outelement3i[4] = remappedelement[0] + 1;
+			outelement3i[5] = remappedelement[1] + 1;
+
+			outelement3i += 6;
+			outtriangles += 2;
+		}
+		if (side[1])
+		{
+			remappedelement[1] = vertexremap[element[1]];
+			remappedelement[2] = vertexremap[element[2]];
+			outelement3i[0] = remappedelement[2];
+			outelement3i[1] = remappedelement[1];
+			outelement3i[2] = remappedelement[1] + 1;
+			outelement3i[3] = remappedelement[2];
+			outelement3i[4] = remappedelement[1] + 1;
+			outelement3i[5] = remappedelement[2] + 1;
+
+			outelement3i += 6;
+			outtriangles += 2;
+		}
+		if (side[2])
+		{
+			remappedelement[0] = vertexremap[element[0]];
+			remappedelement[2] = vertexremap[element[2]];
+			outelement3i[0] = remappedelement[0];
+			outelement3i[1] = remappedelement[2];
+			outelement3i[2] = remappedelement[2] + 1;
+			outelement3i[3] = remappedelement[0];
+			outelement3i[4] = remappedelement[2] + 1;
+			outelement3i[5] = remappedelement[0] + 1;
+
+			outelement3i += 6;
+			outtriangles += 2;
+		}
+	}
+	if (outnumvertices)
+		*outnumvertices = outvertices;
+	return outtriangles;
+}
+#endif
+
 void R_Shadow_MarkVolumeFromBox(int firsttriangle, int numtris, const float *invertex3f, const int *elements, const vec3_t projectorigin, const vec3_t projectdirection, const vec3_t lightmins, const vec3_t lightmaxs, const vec3_t surfacemins, const vec3_t surfacemaxs)
 {
 	int t, tend;
@@ -871,6 +982,24 @@ void R_Shadow_MarkVolumeFromBox(int firsttriangle, int numtris, const float *inv
 	}
 }
 
+qboolean R_Shadow_UseZPass(vec3_t mins, vec3_t maxs)
+{
+#if 1
+	return false;
+#else
+	if (r_shadow_compilingrtlight || !r_shadow_frontsidecasting.integer || !r_shadow_usezpassifpossible.integer)
+		return false;
+	// check if the shadow volume intersects the near plane
+	//
+	// a ray between the eye and light origin may intersect the caster,
+	// indicating that the shadow may touch the eye location, however we must
+	// test the near plane (a polygon), not merely the eye location, so it is
+	// easiest to enlarge the caster bounding shape slightly for this.
+	// TODO
+	return true;
+#endif
+}
+
 void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f, const int *elements, const int *neighbors, const vec3_t projectorigin, const vec3_t projectdirection, float projectdistance, int nummarktris, const int *marktris, vec3_t trismins, vec3_t trismaxs)
 {
 	int i, tris, outverts;
@@ -910,12 +1039,12 @@ void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f,
 	if (r_shadow_compilingrtlight)
 	{
 		// if we're compiling an rtlight, capture the mesh
-		tris = R_Shadow_ConstructShadowVolume(numverts, numtris, elements, neighbors, invertex3f, &outverts, shadowelements, shadowvertex3f, projectorigin, projectdirection, projectdistance, nummarktris, marktris);
-		Mod_ShadowMesh_AddMesh(r_main_mempool, r_shadow_compilingrtlight->static_meshchain_shadow, NULL, NULL, NULL, shadowvertex3f, NULL, NULL, NULL, NULL, tris, shadowelements);
+		tris = R_Shadow_ConstructShadowVolume_ZFail(numverts, numtris, elements, neighbors, invertex3f, &outverts, shadowelements, shadowvertex3f, projectorigin, projectdirection, projectdistance, nummarktris, marktris);
+		Mod_ShadowMesh_AddMesh(r_main_mempool, r_shadow_compilingrtlight->static_meshchain_shadow_zfail, NULL, NULL, NULL, shadowvertex3f, NULL, NULL, NULL, NULL, tris, shadowelements);
 	}
 	else
 	{
-		tris = R_Shadow_ConstructShadowVolume(numverts, numtris, elements, neighbors, invertex3f, &outverts, shadowelements, shadowvertex3f, projectorigin, projectdirection, projectdistance, nummarktris, marktris);
+		tris = R_Shadow_ConstructShadowVolume_ZFail(numverts, numtris, elements, neighbors, invertex3f, &outverts, shadowelements, shadowvertex3f, projectorigin, projectdirection, projectdistance, nummarktris, marktris);
 		r_refdef.stats.lights_dynamicshadowtriangles += tris;
 		r_refdef.stats.lights_shadowtriangles += tris;
 		CHECKGLERROR
@@ -2461,10 +2590,11 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 {
 	int i;
 	int numsurfaces, numleafs, numleafpvsbytes, numshadowtrispvsbytes, numlighttrispvsbytes;
-	int lighttris, shadowtris, shadowmeshes, shadowmeshtris;
+	int lighttris, shadowtris, shadowzpasstris, shadowzfailtris;
 	entity_render_t *ent = r_refdef.scene.worldentity;
 	dp_model_t *model = r_refdef.scene.worldmodel;
 	unsigned char *data;
+	shadowmesh_t *mesh;
 
 	// compile the light
 	rtlight->compiled = true;
@@ -2522,17 +2652,15 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 	//rtlight->cullradius = RadiusFromBoundsAndOrigin(rtlight->cullmins, rtlight->cullmaxs, rtlight->shadoworigin);
 	//rtlight->cullradius = min(rtlight->cullradius, rtlight->radius);
 
-	shadowmeshes = 0;
-	shadowmeshtris = 0;
-	if (rtlight->static_meshchain_shadow)
-	{
-		shadowmesh_t *mesh;
-		for (mesh = rtlight->static_meshchain_shadow;mesh;mesh = mesh->next)
-		{
-			shadowmeshes++;
-			shadowmeshtris += mesh->numtriangles;
-		}
-	}
+	shadowzpasstris = 0;
+	if (rtlight->static_meshchain_shadow_zpass)
+		for (mesh = rtlight->static_meshchain_shadow_zpass;mesh;mesh = mesh->next)
+			shadowzpasstris += mesh->numtriangles;
+
+	shadowzfailtris = 0;
+	if (rtlight->static_meshchain_shadow_zfail)
+		for (mesh = rtlight->static_meshchain_shadow_zfail;mesh;mesh = mesh->next)
+			shadowzfailtris += mesh->numtriangles;
 
 	lighttris = 0;
 	if (rtlight->static_numlighttrispvsbytes)
@@ -2547,16 +2675,19 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 				shadowtris++;
 
 	if (developer.integer >= 10)
-		Con_Printf("static light built: %f %f %f : %f %f %f box, %i light triangles, %i shadow triangles, %i compiled shadow volume triangles (in %i meshes)\n", rtlight->cullmins[0], rtlight->cullmins[1], rtlight->cullmins[2], rtlight->cullmaxs[0], rtlight->cullmaxs[1], rtlight->cullmaxs[2], lighttris, shadowtris, shadowmeshtris, shadowmeshes);
+		Con_Printf("static light built: %f %f %f : %f %f %f box, %i light triangles, %i shadow triangles, %i zpass/%i zfail compiled shadow volume triangles\n", rtlight->cullmins[0], rtlight->cullmins[1], rtlight->cullmins[2], rtlight->cullmaxs[0], rtlight->cullmaxs[1], rtlight->cullmaxs[2], lighttris, shadowtris, shadowzpasstris, shadowzfailtris);
 }
 
 void R_RTLight_Uncompile(rtlight_t *rtlight)
 {
 	if (rtlight->compiled)
 	{
-		if (rtlight->static_meshchain_shadow)
-			Mod_ShadowMesh_Free(rtlight->static_meshchain_shadow);
-		rtlight->static_meshchain_shadow = NULL;
+		if (rtlight->static_meshchain_shadow_zpass)
+			Mod_ShadowMesh_Free(rtlight->static_meshchain_shadow_zpass);
+		rtlight->static_meshchain_shadow_zpass = NULL;
+		if (rtlight->static_meshchain_shadow_zfail)
+			Mod_ShadowMesh_Free(rtlight->static_meshchain_shadow_zfail);
+		rtlight->static_meshchain_shadow_zfail = NULL;
 		// these allocations are grouped
 		if (rtlight->static_surfacelist)
 			Mem_Free(rtlight->static_surfacelist);
@@ -2756,12 +2887,17 @@ void R_Shadow_ComputeShadowCasterCullingPlanes(rtlight_t *rtlight)
 
 void R_Shadow_DrawWorldShadow(int numsurfaces, int *surfacelist, const unsigned char *trispvs)
 {
+	shadowmesh_t *mesh;
+	int t, tend;
+	int surfacelistindex;
+	msurface_t *surface;
+
 	RSurf_ActiveWorldEntity();
 	if (rsurface.rtlight->compiled && r_shadow_realtime_world_compile.integer && r_shadow_realtime_world_compileshadow.integer)
 	{
-		shadowmesh_t *mesh;
 		CHECKGLERROR
-		for (mesh = rsurface.rtlight->static_meshchain_shadow;mesh;mesh = mesh->next)
+		mesh = rsurface.rtlight->static_meshchain_shadow_zfail;
+		for (;mesh;mesh = mesh->next)
 		{
 			r_refdef.stats.lights_shadowtriangles += mesh->numtriangles;
 			R_Mesh_VertexPointer(mesh->vertex3f, mesh->vbo, mesh->vbooffset_vertex3f);
@@ -2783,9 +2919,6 @@ void R_Shadow_DrawWorldShadow(int numsurfaces, int *surfacelist, const unsigned 
 	}
 	else if (numsurfaces && r_refdef.scene.worldmodel->brush.shadowmesh && r_shadow_culltriangles.integer)
 	{
-		int t, tend;
-		int surfacelistindex;
-		msurface_t *surface;
 		R_Shadow_PrepareShadowMark(r_refdef.scene.worldmodel->brush.shadowmesh->numtriangles);
 		for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 		{
