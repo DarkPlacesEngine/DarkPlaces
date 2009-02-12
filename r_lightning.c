@@ -25,7 +25,7 @@ void r_lightningbeams_start(void)
 
 void r_lightningbeams_setupqmbtexture(void)
 {
-	r_lightningbeamqmbtexture = loadtextureimage(r_lightningbeamtexturepool, "textures/particles/lightning.pcx", false, TEXF_ALPHA | TEXF_PRECACHE, false);
+	r_lightningbeamqmbtexture = loadtextureimage(r_lightningbeamtexturepool, "textures/particles/lightning.pcx", false, TEXF_ALPHA | TEXF_PRECACHE | TEXF_FORCELINEAR, false);
 	if (r_lightningbeamqmbtexture == NULL)
 		Cvar_SetValueQuick(&r_lightningbeam_qmbtexture, false);
 }
@@ -107,7 +107,7 @@ void r_lightningbeams_setuptexture(void)
 		Image_WriteTGABGRA(va("lightningbeam%i.tga", imagenumber), BEAMWIDTH, BEAMHEIGHT, pixels);
 	}
 
-	r_lightningbeamtexture = R_LoadTexture2D(r_lightningbeamtexturepool, "lightningbeam", BEAMWIDTH, BEAMHEIGHT, pixels, TEXTYPE_BGRA, TEXF_PRECACHE, NULL);
+	r_lightningbeamtexture = R_LoadTexture2D(r_lightningbeamtexturepool, "lightningbeam", BEAMWIDTH, BEAMHEIGHT, pixels, TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_FORCELINEAR, NULL);
 
 	Mem_Free(pixels);
 	Mem_Free(image);
@@ -145,7 +145,7 @@ void r_lightningbeams_setuptexture(void)
 		}
 	}
 
-	r_lightningbeamtexture = R_LoadTexture2D(r_lightningbeamtexturepool, "lightningbeam", BEAMWIDTH, BEAMHEIGHT, data, TEXTYPE_BGRA, TEXF_PRECACHE, NULL);
+	r_lightningbeamtexture = R_LoadTexture2D(r_lightningbeamtexturepool, "lightningbeam", BEAMWIDTH, BEAMHEIGHT, data, TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_FORCELINEAR, NULL);
 	Mem_Free(noise1);
 	Mem_Free(noise2);
 	Mem_Free(data);
