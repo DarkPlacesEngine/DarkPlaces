@@ -179,6 +179,7 @@ typedef struct prvm_prog_fieldoffsets_s
 	int frame1time; // csqc
 	int frame2; // csqc
 	int frame2time; // csqc
+	int shadertime; // csqc
 	int frame; // common - used by OP_STATE
 	int fullbright; // ssqc - Nehahra support
 	int glow_color; // ssqc

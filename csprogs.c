@@ -154,7 +154,7 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 	if (!model)
 		return false;
 
-	entrender = CL_NewTempEntity();
+	entrender = CL_NewTempEntity(0);
 	if (!entrender)
 		return false;
 
@@ -209,6 +209,7 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame1time))) entrender->frame2time = val->_float;
 	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame2time))) entrender->frame1time = val->_float;
 	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.lerpfrac))) entrender->framelerp = val->_float;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.shadertime))) entrender->shadertime = val->_float;
 
 	// concat the matrices to make the entity relative to its tag
 	Matrix4x4_Concat(&entrender->matrix, &tagmatrix, &matrix2);

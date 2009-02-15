@@ -598,7 +598,7 @@ void CL_ClearTempEntities (void)
 	r_refdef.scene.numtempentities = 0;
 }
 
-entity_render_t *CL_NewTempEntity(void)
+entity_render_t *CL_NewTempEntity(double shadertime)
 {
 	entity_render_t *render;
 
@@ -610,6 +610,7 @@ entity_render_t *CL_NewTempEntity(void)
 	memset (render, 0, sizeof(*render));
 	r_refdef.scene.entities[r_refdef.scene.numentities++] = render;
 
+	render->shadertime = shadertime;
 	render->alpha = 1;
 	VectorSet(render->colormod, 1, 1, 1);
 	return render;
@@ -822,7 +823,7 @@ void CL_AddQWCTFFlagModel(entity_t *player, int skin)
 	}
 	// end of code taken from QuakeWorld
 
-	flagrender = CL_NewTempEntity();
+	flagrender = CL_NewTempEntity(player->render.shadertime);
 	if (!flagrender)
 		return;
 
@@ -1533,7 +1534,7 @@ static void CL_RelinkEffects(void)
 
 			// if we're drawing effects, get a new temp entity
 			// (NewTempEntity adds it to the render entities list for us)
-			if (r_draweffects.integer && (entrender = CL_NewTempEntity()))
+			if (r_draweffects.integer && (entrender = CL_NewTempEntity(e->starttime)))
 			{
 				// interpolation stuff
 				entrender->frame1 = intframe;
@@ -1658,7 +1659,7 @@ void CL_RelinkBeams(void)
 		d = VectorNormalizeLength(dist);
 		while (d > 0)
 		{
-			entrender = CL_NewTempEntity ();
+			entrender = CL_NewTempEntity (0);
 			if (!entrender)
 				return;
 			//VectorCopy (org, ent->render.origin);
@@ -1690,7 +1691,7 @@ static void CL_RelinkQWNails(void)
 
 		// if we're drawing effects, get a new temp entity
 		// (NewTempEntity adds it to the render entities list for us)
-		if (!(entrender = CL_NewTempEntity()))
+		if (!(entrender = CL_NewTempEntity(0)))
 			continue;
 
 		// normal stuff

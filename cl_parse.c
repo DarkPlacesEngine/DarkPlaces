@@ -1734,6 +1734,7 @@ void CL_MoveLerpEntityStates(entity_t *ent)
 		ent->render.frame1 = ent->render.frame2 = ent->state_current.frame;
 		ent->render.frame1time = ent->render.frame2time = cl.time;
 		ent->render.framelerp = 1;
+		ent->render.shadertime = cl.time;
 		// reset various persistent stuff
 		ent->persistent.muzzleflash = 0;
 		ent->persistent.trail_allowed = false;

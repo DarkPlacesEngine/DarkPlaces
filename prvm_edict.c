@@ -1457,6 +1457,7 @@ void PRVM_FindOffsets(void)
 	prog->fieldoffsets.frame1time                     = PRVM_ED_FindFieldOffset("frame1time");
 	prog->fieldoffsets.frame2                         = PRVM_ED_FindFieldOffset("frame2");
 	prog->fieldoffsets.frame2time                     = PRVM_ED_FindFieldOffset("frame2time");
+	prog->fieldoffsets.shadertime                     = PRVM_ED_FindFieldOffset("shadertime");
 	prog->fieldoffsets.fullbright                     = PRVM_ED_FindFieldOffset("fullbright");
 	prog->fieldoffsets.glow_color                     = PRVM_ED_FindFieldOffset("glow_color");
 	prog->fieldoffsets.glow_size                      = PRVM_ED_FindFieldOffset("glow_size");
@@ -1553,6 +1554,9 @@ void PRVM_FindOffsets(void)
 	prog->globaloffsets.drawfont                      = PRVM_ED_FindGlobalOffset("drawfont");
 	prog->globaloffsets.require_spawnfunc_prefix      = PRVM_ED_FindGlobalOffset("require_spawnfunc_prefix");
 	prog->globaloffsets.worldstatus                   = PRVM_ED_FindGlobalOffset("worldstatus");
+	prog->globaloffsets.servertime                    = PRVM_ED_FindGlobalOffset("servertime");
+	prog->globaloffsets.serverprevtime                = PRVM_ED_FindGlobalOffset("serverprevtime");
+	prog->globaloffsets.serverdeltatime               = PRVM_ED_FindGlobalOffset("serverdeltatime");
 
 	// menu qc only uses some functions, nothing else
 	prog->funcoffsets.m_draw                          = PRVM_ED_FindFunctionOffset("m_draw");
