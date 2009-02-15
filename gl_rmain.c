@@ -4616,12 +4616,12 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 		}
 		t->currentskinframe = r_qwskincache_skinframe[i];
 		if (t->currentskinframe == NULL)
-			t->currentskinframe = t->skinframes[(int)(t->skinframerate * (cl.time - ent->frame2time)) % t->numskinframes];
+			t->currentskinframe = t->skinframes[(int)(t->skinframerate * (cl.time - ent->shadertime)) % t->numskinframes];
 	}
 	else if (t->numskinframes >= 2)
-		t->currentskinframe = t->skinframes[(int)(t->skinframerate * (cl.time - ent->frame2time)) % t->numskinframes];
+		t->currentskinframe = t->skinframes[(int)(t->skinframerate * (cl.time - ent->shadertime)) % t->numskinframes];
 	if (t->backgroundnumskinframes >= 2)
-		t->backgroundcurrentskinframe = t->backgroundskinframes[(int)(t->backgroundskinframerate * (cl.time - ent->frame2time)) % t->backgroundnumskinframes];
+		t->backgroundcurrentskinframe = t->backgroundskinframes[(int)(t->backgroundskinframerate * (cl.time - ent->shadertime)) % t->backgroundnumskinframes];
 
 	t->currentmaterialflags = t->basematerialflags;
 	t->currentalpha = ent->alpha;
