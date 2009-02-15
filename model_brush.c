@@ -1774,7 +1774,6 @@ static void Mod_Q1BSP_LoadVisibility(lump_t *l)
 static void Mod_Q1BSP_ParseWadsFromEntityLump(const char *data)
 {
 	char key[128], value[4096];
-	char wadname[128];
 	int i, j, k;
 	if (!data)
 		return;
@@ -1816,9 +1815,7 @@ static void Mod_Q1BSP_ParseWadsFromEntityLump(const char *data)
 						{
 							k = value[i];
 							value[i] = 0;
-							strlcpy(wadname, "textures/", sizeof(wadname));
-							strlcat(wadname, &value[j], sizeof(wadname));
-							W_LoadTextureWadFile(wadname, false);
+							W_LoadTextureWadFile(&value[j], false);
 							j = i+1;
 							if (!k)
 								break;
