@@ -52,6 +52,7 @@ void Mod_Skeletal_AnimateVertices(const dp_model_t *model, const frameblend_t *f
 	// vertex weighted skeletal
 	int i, k;
 	int blends;
+	float desiredscale[3];
 	float boneposerelative[MAX_BONES][12];
 	float *matrix, m[12], bonepose[MAX_BONES][12];
 
@@ -60,12 +61,22 @@ void Mod_Skeletal_AnimateVertices(const dp_model_t *model, const frameblend_t *f
 	{
 		for (k = 0;k < 12;k++)
 			m[k] = 0;
+		VectorClear(desiredscale);
 		for (blends = 0;blends < 4 && frameblend[blends].lerp > 0;blends++)
 		{
 			matrix = model->data_poses + (frameblend[blends].frame * model->num_bones + i) * 12;
 			for (k = 0;k < 12;k++)
 				m[k] += matrix[k] * frameblend[blends].lerp;
+			desiredscale[0] += frameblend[blends].lerp * VectorLength(matrix    );
+			desiredscale[1] += frameblend[blends].lerp * VectorLength(matrix + 4);
+			desiredscale[2] += frameblend[blends].lerp * VectorLength(matrix + 8);
 		}
+		VectorNormalize(m    );
+		VectorNormalize(m + 4);
+		VectorNormalize(m + 8);
+		VectorScale(m    , desiredscale[0], m    );
+		VectorScale(m + 4, desiredscale[1], m + 4);
+		VectorScale(m + 8, desiredscale[2], m + 8);
 		if (i == r_skeletal_debugbone.integer)
 			m[r_skeletal_debugbonecomponent.integer % 12] += r_skeletal_debugbonevalue.value;
 		m[3] *= r_skeletal_debugtranslatex.value;
