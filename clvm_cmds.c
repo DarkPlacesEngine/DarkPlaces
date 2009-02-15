@@ -2187,9 +2187,8 @@ extern cvar_t cl_bobup;
 int CL_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 {
 	prvm_eval_t *val;
-	int reqframe, attachloop;
-	matrix4x4_t entitymatrix, tagmatrix, attachmatrix;
-	prvm_edict_t *attachent;
+	int reqframe;
+	matrix4x4_t entitymatrix, tagmatrix;
 	dp_model_t *model;
 	float scale;
 
@@ -2220,86 +2219,15 @@ int CL_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 	else
 		tagmatrix = identitymatrix;
 
-	if ((val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.tag_entity)) && val->edict)
-	{ // DP_GFX_QUAKE3MODELTAGS, scan all chain and stop on unattached entity
-		attachloop = 0;
-		do
-		{
-			attachent = PRVM_EDICT_NUM(val->edict); // to this it entity our entity is attached
-			val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.tag_index);
-
-			model = CL_GetModelFromEdict(attachent);
-
-			if (model && val->_float >= 1 && model->animscenes && attachent->fields.client->frame >= 0 && attachent->fields.client->frame < model->numframes)
-				Mod_Alias_GetTagMatrix(model, model->animscenes[(int)attachent->fields.client->frame].firstframe, (int)val->_float - 1, &attachmatrix);
-			else
-				attachmatrix = identitymatrix;
-
-			// apply transformation by child entity matrix
-			scale = 1;
-			val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.scale);
-			if (val && val->_float != 0)
-				scale = val->_float;
-			Matrix4x4_CreateFromQuakeEntity(&entitymatrix, ent->fields.client->origin[0], ent->fields.client->origin[1], ent->fields.client->origin[2], -ent->fields.client->angles[0], ent->fields.client->angles[1], ent->fields.client->angles[2], scale);
-			Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
-			Matrix4x4_Copy(&tagmatrix, out);
-
-			// finally transformate by matrix of tag on parent entity
-			Matrix4x4_Concat(out, &attachmatrix, &tagmatrix);
-			Matrix4x4_Copy(&tagmatrix, out);
-
-			ent = attachent;
-			attachloop += 1;
-			if (attachloop > 255) // prevent runaway looping
-				return 5;
-		}
-		while ((val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.tag_entity)) && val->edict);
-	}
-
 	// normal or RENDER_VIEWMODEL entity (or main parent entity on attach chain)
 	scale = 1;
 	val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.scale);
 	if (val && val->_float != 0)
 		scale = val->_float;
 	// Alias models have inverse pitch, bmodels can't have tags, so don't check for modeltype...
+	// FIXME: support RF_USEAXIS
 	Matrix4x4_CreateFromQuakeEntity(&entitymatrix, ent->fields.client->origin[0], ent->fields.client->origin[1], ent->fields.client->origin[2], -ent->fields.client->angles[0], ent->fields.client->angles[1], ent->fields.client->angles[2], scale);
 	Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
-
-	if ((val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.renderflags)) && (RF_VIEWMODEL & (int)val->_float))
-	{// RENDER_VIEWMODEL magic
-		Matrix4x4_Copy(&tagmatrix, out);
-
-		scale = 1;
-		val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.scale);
-		if (val && val->_float != 0)
-			scale = val->_float;
-
-		Matrix4x4_CreateFromQuakeEntity(&entitymatrix, cl.csqc_origin[0], cl.csqc_origin[1], cl.csqc_origin[2], cl.csqc_angles[0], cl.csqc_angles[1], cl.csqc_angles[2], scale);
-		Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
-
-		/*
-		// Cl_bob, ported from rendering code
-		if (ent->fields.client->health > 0 && cl_bob.value && cl_bobcycle.value)
-		{
-			double bob, cycle;
-			// LordHavoc: this code is *weird*, but not replacable (I think it
-			// should be done in QC on the server, but oh well, quake is quake)
-			// LordHavoc: figured out bobup: the time at which the sin is at 180
-			// degrees (which allows lengthening or squishing the peak or valley)
-			cycle = cl.time/cl_bobcycle.value;
-			cycle -= (int)cycle;
-			if (cycle < cl_bobup.value)
-				cycle = sin(M_PI * cycle / cl_bobup.value);
-			else
-				cycle = sin(M_PI + M_PI * (cycle-cl_bobup.value)/(1.0 - cl_bobup.value));
-			// bob is proportional to velocity in the xy plane
-			// (don't count Z, or jumping messes it up)
-			bob = sqrt(ent->fields.client->velocity[0]*ent->fields.client->velocity[0] + ent->fields.client->velocity[1]*ent->fields.client->velocity[1])*cl_bob.value;
-			bob = bob*0.3 + bob*0.7*cycle;
-			Matrix4x4_AdjustOrigin(out, 0, 0, bound(-7, bob, 4));
-		}
-		*/
-	}
 	return 0;
 }
 
