@@ -38,7 +38,7 @@ typedef struct effect_s
 {
 	int active;
 	vec3_t origin;
-	float starttime;
+	double starttime;
 	float framerate;
 	int modelindex;
 	int startframe;
@@ -282,6 +282,8 @@ typedef struct entity_render_s
 	double frame1time;
 	// time frame2 began playing (for framegroup animations)
 	double frame2time;
+	// time of last model change (for shader animations)
+	double shadertime;
 
 	// calculated by the renderer (but not persistent)
 
@@ -1205,7 +1207,7 @@ void CL_Beam_CalculatePositions (const beam_t *b, vec3_t start, vec3_t end);
 void CL_ClientMovement_Replay(void);
 
 void CL_ClearTempEntities (void);
-entity_render_t *CL_NewTempEntity (void);
+entity_render_t *CL_NewTempEntity (double shadertime);
 
 void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float framerate);
 
