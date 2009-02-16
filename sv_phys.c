@@ -756,17 +756,32 @@ Returns the clipflags if the velocity was modified (hit something solid)
 If stepnormal is not NULL, the plane normal of any vertical wall hit will be stored
 ============
 */
+static float SV_Gravity (prvm_edict_t *ent);
 // LordHavoc: increased from 5 to 32
 #define MAX_CLIP_PLANES 32
-int SV_FlyMove (prvm_edict_t *ent, float time, float *stepnormal, int hitsupercontentsmask)
+static int SV_FlyMove (prvm_edict_t *ent, float time, qboolean applygravity, float *stepnormal, int hitsupercontentsmask)
 {
 	int blocked, bumpcount;
 	int i, j, impact, numplanes;
-	float d, time_left;
+	float d, time_left, gravity;
 	vec3_t dir, end, planes[MAX_CLIP_PLANES], primal_velocity, original_velocity, new_velocity;
 	trace_t trace;
 	if (time <= 0)
 		return 0;
+	gravity = 0;
+	if (applygravity)
+	{
+		if (sv_gameplayfix_gravityunaffectedbyticrate.integer)
+		{
+			gravity = SV_Gravity(ent) * 0.5f;
+			ent->fields.server->velocity[2] -= gravity;
+		}
+		else
+		{
+			applygravity = false;
+			ent->fields.server->velocity[2] -= SV_Gravity(ent);
+		}
+	}
 	blocked = 0;
 	VectorCopy(ent->fields.server->velocity, original_velocity);
 	VectorCopy(ent->fields.server->velocity, primal_velocity);
@@ -980,16 +995,18 @@ int SV_FlyMove (prvm_edict_t *ent, float time, float *stepnormal, int hitsuperco
 	// LordHavoc: this came from QW and allows you to get out of water more easily
 	if (sv_gameplayfix_easierwaterjump.integer && ((int)ent->fields.server->flags & FL_WATERJUMP))
 		VectorCopy(primal_velocity, ent->fields.server->velocity);
+	if (applygravity && !((int)ent->fields.server->flags & FL_ONGROUND))
+		ent->fields.server->velocity[2] -= gravity;
 	return blocked;
 }
 
 /*
 ============
-SV_AddGravity
+SV_Gravity
 
 ============
 */
-void SV_AddGravity (prvm_edict_t *ent)
+static float SV_Gravity (prvm_edict_t *ent)
 {
 	float ent_gravity;
 	prvm_eval_t *val;
@@ -999,7 +1016,7 @@ void SV_AddGravity (prvm_edict_t *ent)
 		ent_gravity = val->_float;
 	else
 		ent_gravity = 1.0;
-	ent->fields.server->velocity[2] -= ent_gravity * sv_gravity.value * sv.frametime;
+	return ent_gravity * sv_gravity.value * sv.frametime;
 }
 
 
@@ -1628,11 +1645,16 @@ void SV_WalkMove (prvm_edict_t *ent)
 	int clip, oldonground, originalmove_clip, originalmove_flags, originalmove_groundentity, hitsupercontentsmask;
 	vec3_t upmove, downmove, start_origin, start_velocity, stepnormal, originalmove_origin, originalmove_velocity;
 	trace_t downtrace;
+	qboolean applygravity;
 
 	// if frametime is 0 (due to client sending the same timestamp twice),
 	// don't move
 	if (sv.frametime <= 0)
 		return;
+
+	SV_CheckStuck (ent);
+
+	applygravity = !SV_CheckWater (ent) && ent->fields.server->movetype == MOVETYPE_WALK && ! ((int)ent->fields.server->flags & FL_WATERJUMP);
 
 	hitsupercontentsmask = SV_GenericHitSuperContentsMask(ent);
 
@@ -1644,13 +1666,14 @@ void SV_WalkMove (prvm_edict_t *ent)
 	VectorCopy (ent->fields.server->origin, start_origin);
 	VectorCopy (ent->fields.server->velocity, start_velocity);
 
-	clip = SV_FlyMove (ent, sv.frametime, NULL, hitsupercontentsmask);
+	clip = SV_FlyMove (ent, sv.frametime, applygravity, NULL, hitsupercontentsmask);
 
 	// if the move did not hit the ground at any point, we're not on ground
 	if (!(clip & 1))
 		ent->fields.server->flags = (int)ent->fields.server->flags & ~FL_ONGROUND;
 
 	SV_CheckVelocity(ent);
+	SV_LinkEdict (ent, true);
 
 	VectorCopy(ent->fields.server->origin, originalmove_origin);
 	VectorCopy(ent->fields.server->velocity, originalmove_velocity);
@@ -1696,10 +1719,11 @@ void SV_WalkMove (prvm_edict_t *ent)
 
 		// move forward
 		ent->fields.server->velocity[2] = 0;
-		clip = SV_FlyMove (ent, sv.frametime, stepnormal, hitsupercontentsmask);
+		clip = SV_FlyMove (ent, sv.frametime, applygravity, stepnormal, hitsupercontentsmask);
 		ent->fields.server->velocity[2] += start_velocity[2];
 
 		SV_CheckVelocity(ent);
+		SV_LinkEdict (ent, true);
 
 		// check for stuckness, possibly due to the limited precision of floats
 		// in the clipping hulls
@@ -1763,6 +1787,7 @@ void SV_WalkMove (prvm_edict_t *ent)
 	}
 
 	SV_CheckVelocity(ent);
+	SV_LinkEdict (ent, true);
 }
 
 //============================================================================
@@ -1900,7 +1925,7 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 
 // add gravity
 	if (ent->fields.server->movetype == MOVETYPE_TOSS || ent->fields.server->movetype == MOVETYPE_BOUNCE)
-		SV_AddGravity (ent);
+		ent->fields.server->velocity[2] -= SV_Gravity(ent);
 
 // move angles
 	VectorMA (ent->fields.server->angles, sv.frametime, ent->fields.server->avelocity, ent->fields.server->angles);
@@ -2017,9 +2042,8 @@ void SV_Physics_Step (prvm_edict_t *ent)
 			if ((ent->fields.server->velocity[2] >= (1.0 / 32.0) && sv_gameplayfix_upwardvelocityclearsongroundflag.integer) || ent->fields.server->groundentity)
 			{
 				ent->fields.server->flags -= FL_ONGROUND;
-				SV_AddGravity(ent);
 				SV_CheckVelocity(ent);
-				SV_FlyMove(ent, sv.frametime, NULL, SV_GenericHitSuperContentsMask(ent));
+				SV_FlyMove(ent, sv.frametime, true, NULL, SV_GenericHitSuperContentsMask(ent));
 				SV_LinkEdict(ent, true);
 				ent->priv.server->waterposition_forceupdate = true;
 			}
@@ -2029,9 +2053,8 @@ void SV_Physics_Step (prvm_edict_t *ent)
 			// freefall if not onground
 			int hitsound = ent->fields.server->velocity[2] < sv_gravity.value * -0.1;
 
-			SV_AddGravity(ent);
 			SV_CheckVelocity(ent);
-			SV_FlyMove(ent, sv.frametime, NULL, SV_GenericHitSuperContentsMask(ent));
+			SV_FlyMove(ent, sv.frametime, true, NULL, SV_GenericHitSuperContentsMask(ent));
 			SV_LinkEdict(ent, true);
 
 			// just hit ground
@@ -2109,13 +2132,7 @@ static void SV_Physics_Entity (prvm_edict_t *ent)
 		break;
 	case MOVETYPE_WALK:
 		if (SV_RunThink (ent))
-		{
-			if (!SV_CheckWater (ent) && ! ((int)ent->fields.server->flags & FL_WATERJUMP) )
-				SV_AddGravity (ent);
-			SV_CheckStuck (ent);
 			SV_WalkMove (ent);
-			SV_LinkEdict (ent, true);
-		}
 		break;
 	case MOVETYPE_TOSS:
 	case MOVETYPE_BOUNCE:
@@ -2158,16 +2175,7 @@ void SV_Physics_ClientMove(void)
 		VectorClear(ent->fields.server->velocity);
 
 	// perform MOVETYPE_WALK behavior
-	if (!SV_CheckWater (ent) && ! ((int)ent->fields.server->flags & FL_WATERJUMP) )
-		SV_AddGravity (ent);
-	SV_CheckStuck (ent);
 	SV_WalkMove (ent);
-
-	SV_CheckVelocity (ent);
-
-	SV_LinkEdict (ent, true);
-
-	SV_CheckVelocity (ent);
 
 	// call standard player post-think, with frametime = 0
 	prog->globals.server->time = sv.time;
@@ -2246,12 +2254,7 @@ void SV_Physics_ClientEntity(prvm_edict_t *ent)
 		SV_RunThink (ent);
 		// don't run physics here if running asynchronously
 		if (host_client->clmovement_skipphysicsframes <= 0)
-		{
-			if (!SV_CheckWater (ent) && ! ((int)ent->fields.server->flags & FL_WATERJUMP) )
-				SV_AddGravity (ent);
-			SV_CheckStuck (ent);
 			SV_WalkMove (ent);
-		}
 		break;
 	case MOVETYPE_TOSS:
 	case MOVETYPE_BOUNCE:
@@ -2263,7 +2266,6 @@ void SV_Physics_ClientEntity(prvm_edict_t *ent)
 		break;
 	case MOVETYPE_FLY:
 		SV_RunThink (ent);
-		SV_CheckWater (ent);
 		SV_WalkMove (ent);
 		break;
 	default:

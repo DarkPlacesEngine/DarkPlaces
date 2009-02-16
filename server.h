@@ -408,6 +408,7 @@ extern cvar_t sv_gameplayfix_stepdown;
 extern cvar_t sv_gameplayfix_stepwhilejumping;
 extern cvar_t sv_gameplayfix_swiminbmodels;
 extern cvar_t sv_gameplayfix_upwardvelocityclearsongroundflag;
+extern cvar_t sv_gameplayfix_gravityunaffectedbyticrate;
 extern cvar_t sv_gravity;
 extern cvar_t sv_idealpitchscale;
 extern cvar_t sv_jumpstep;

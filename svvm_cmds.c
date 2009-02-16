@@ -637,7 +637,7 @@ static trace_t SV_Trace_Toss (prvm_edict_t *tossent, prvm_edict_t *ignore)
 		gravity = val->_float;
 	else
 		gravity = 1.0;
-	gravity *= sv_gravity.value * 0.05;
+	gravity *= sv_gravity.value * 0.025;
 
 	for (i = 0;i < 200;i++) // LordHavoc: sanity check; never trace more than 10 seconds
 	{
@@ -648,6 +648,7 @@ static trace_t SV_Trace_Toss (prvm_edict_t *tossent, prvm_edict_t *ignore)
 		VectorAdd (tossent->fields.server->origin, move, end);
 		trace = SV_Move (tossent->fields.server->origin, tossent->fields.server->mins, tossent->fields.server->maxs, end, MOVE_NORMAL, tossent, SV_GenericHitSuperContentsMask(tossent));
 		VectorCopy (trace.endpos, tossent->fields.server->origin);
+		tossent->fields.server->velocity[2] -= gravity;
 
 		if (trace.fraction < 1)
 			break;
