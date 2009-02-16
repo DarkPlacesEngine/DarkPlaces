@@ -145,9 +145,12 @@ extern void R_Shadow_EditLights_Init(void);
 typedef enum r_shadow_rendermode_e
 {
 	R_SHADOW_RENDERMODE_NONE,
-	R_SHADOW_RENDERMODE_STENCIL,
-	R_SHADOW_RENDERMODE_SEPARATESTENCIL,
-	R_SHADOW_RENDERMODE_STENCILTWOSIDE,
+	R_SHADOW_RENDERMODE_ZPASS_STENCIL,
+	R_SHADOW_RENDERMODE_ZPASS_SEPARATESTENCIL,
+	R_SHADOW_RENDERMODE_ZPASS_STENCILTWOSIDE,
+	R_SHADOW_RENDERMODE_ZFAIL_STENCIL,
+	R_SHADOW_RENDERMODE_ZFAIL_SEPARATESTENCIL,
+	R_SHADOW_RENDERMODE_ZFAIL_STENCILTWOSIDE,
 	R_SHADOW_RENDERMODE_LIGHT_VERTEX,
 	R_SHADOW_RENDERMODE_LIGHT_DOT3,
 	R_SHADOW_RENDERMODE_LIGHT_GLSL,
@@ -158,7 +161,8 @@ r_shadow_rendermode_t;
 
 r_shadow_rendermode_t r_shadow_rendermode = R_SHADOW_RENDERMODE_NONE;
 r_shadow_rendermode_t r_shadow_lightingrendermode = R_SHADOW_RENDERMODE_NONE;
-r_shadow_rendermode_t r_shadow_shadowingrendermode = R_SHADOW_RENDERMODE_NONE;
+r_shadow_rendermode_t r_shadow_shadowingrendermode_zpass = R_SHADOW_RENDERMODE_NONE;
+r_shadow_rendermode_t r_shadow_shadowingrendermode_zfail = R_SHADOW_RENDERMODE_NONE;
 
 int maxshadowtriangles;
 int *shadowelements;
@@ -812,7 +816,6 @@ static int R_Shadow_ConstructShadowVolume_ZFail(int innumvertices, int innumtris
 	return outtriangles;
 }
 
-#if 0
 static int R_Shadow_ConstructShadowVolume_ZPass(int innumvertices, int innumtris, const int *inelement3i, const int *inneighbor3i, const float *invertex3f, int *outnumvertices, int *outelement3i, float *outvertex3f, const float *projectorigin, const float *projectdirection, float projectdistance, int numshadowmarktris, const int *shadowmarktris)
 {
 	int i, j, k;
@@ -835,15 +838,16 @@ static int R_Shadow_ConstructShadowVolume_ZPass(int innumvertices, int innumtris
 
 		markindex = shadowmarktris[i] * 3;
 		neighbortriangle = inneighbor3i + markindex;
-		side[0] = shadowmark[neighbortriangle[0]] != shadowmarkcount;
-		side[1] = shadowmark[neighbortriangle[1]] != shadowmarkcount;
-		side[2] = shadowmark[neighbortriangle[2]] != shadowmarkcount;
+		side[0] = shadowmark[neighbortriangle[0]] == shadowmarkcount;
+		side[1] = shadowmark[neighbortriangle[1]] == shadowmarkcount;
+		side[2] = shadowmark[neighbortriangle[2]] == shadowmarkcount;
 		if (side[0] + side[1] + side[2] == 0)
 			continue;
 
 		side[3] = side[0];
 		element = inelement3i + markindex;
 
+		// create the vertices
 		for (j = 0;j < 3;j++)
 		{
 			if (side[j] + side[j+1] == 0)
@@ -853,7 +857,7 @@ static int R_Shadow_ConstructShadowVolume_ZPass(int innumvertices, int innumtris
 			{
 				vertexupdate[k] = vertexupdatenum;
 				vertexremap[k] = outvertices;
-				vertex = invertex3f + element[j] * 3;
+				vertex = invertex3f + k * 3;
 				VectorCopy(vertex, outvertex3f);
 				if (projectdirection)
 				{
@@ -874,7 +878,7 @@ static int R_Shadow_ConstructShadowVolume_ZPass(int innumvertices, int innumtris
 		}
 
 		// output the sides (facing outward from this triangle)
-		if (side[0])
+		if (!side[0])
 		{
 			remappedelement[0] = vertexremap[element[0]];
 			remappedelement[1] = vertexremap[element[1]];
@@ -888,7 +892,7 @@ static int R_Shadow_ConstructShadowVolume_ZPass(int innumvertices, int innumtris
 			outelement3i += 6;
 			outtriangles += 2;
 		}
-		if (side[1])
+		if (!side[1])
 		{
 			remappedelement[1] = vertexremap[element[1]];
 			remappedelement[2] = vertexremap[element[2]];
@@ -902,7 +906,7 @@ static int R_Shadow_ConstructShadowVolume_ZPass(int innumvertices, int innumtris
 			outelement3i += 6;
 			outtriangles += 2;
 		}
-		if (side[2])
+		if (!side[2])
 		{
 			remappedelement[0] = vertexremap[element[0]];
 			remappedelement[2] = vertexremap[element[2]];
@@ -921,7 +925,6 @@ static int R_Shadow_ConstructShadowVolume_ZPass(int innumvertices, int innumtris
 		*outnumvertices = outvertices;
 	return outtriangles;
 }
-#endif
 
 void R_Shadow_MarkVolumeFromBox(int firsttriangle, int numtris, const float *invertex3f, const int *elements, const vec3_t projectorigin, const vec3_t projectdirection, const vec3_t lightmins, const vec3_t lightmaxs, const vec3_t surfacemins, const vec3_t surfacemaxs)
 {
@@ -1039,18 +1042,36 @@ void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f,
 	if (r_shadow_compilingrtlight)
 	{
 		// if we're compiling an rtlight, capture the mesh
+		//tris = R_Shadow_ConstructShadowVolume_ZPass(numverts, numtris, elements, neighbors, invertex3f, &outverts, shadowelements, shadowvertex3f, projectorigin, projectdirection, projectdistance, nummarktris, marktris);
+		//Mod_ShadowMesh_AddMesh(r_main_mempool, r_shadow_compilingrtlight->static_meshchain_shadow_zpass, NULL, NULL, NULL, shadowvertex3f, NULL, NULL, NULL, NULL, tris, shadowelements);
 		tris = R_Shadow_ConstructShadowVolume_ZFail(numverts, numtris, elements, neighbors, invertex3f, &outverts, shadowelements, shadowvertex3f, projectorigin, projectdirection, projectdistance, nummarktris, marktris);
 		Mod_ShadowMesh_AddMesh(r_main_mempool, r_shadow_compilingrtlight->static_meshchain_shadow_zfail, NULL, NULL, NULL, shadowvertex3f, NULL, NULL, NULL, NULL, tris, shadowelements);
 	}
 	else
 	{
-		tris = R_Shadow_ConstructShadowVolume_ZFail(numverts, numtris, elements, neighbors, invertex3f, &outverts, shadowelements, shadowvertex3f, projectorigin, projectdirection, projectdistance, nummarktris, marktris);
+		// decide which type of shadow to generate and set stencil mode
+		R_Shadow_RenderMode_StencilShadowVolumes(R_Shadow_UseZPass(trismins, trismaxs));
+		// generate the sides or a solid volume, depending on type
+		if (r_shadow_rendermode >= R_SHADOW_RENDERMODE_ZPASS_STENCIL && r_shadow_rendermode <= R_SHADOW_RENDERMODE_ZPASS_STENCILTWOSIDE)
+			tris = R_Shadow_ConstructShadowVolume_ZPass(numverts, numtris, elements, neighbors, invertex3f, &outverts, shadowelements, shadowvertex3f, projectorigin, projectdirection, projectdistance, nummarktris, marktris);
+		else
+			tris = R_Shadow_ConstructShadowVolume_ZFail(numverts, numtris, elements, neighbors, invertex3f, &outverts, shadowelements, shadowvertex3f, projectorigin, projectdirection, projectdistance, nummarktris, marktris);
 		r_refdef.stats.lights_dynamicshadowtriangles += tris;
 		r_refdef.stats.lights_shadowtriangles += tris;
 		CHECKGLERROR
 		R_Mesh_VertexPointer(shadowvertex3f, 0, 0);
 		GL_LockArrays(0, outverts);
-		if (r_shadow_rendermode == R_SHADOW_RENDERMODE_STENCIL)
+		if (r_shadow_rendermode == R_SHADOW_RENDERMODE_ZPASS_STENCIL)
+		{
+			// increment stencil if frontface is infront of depthbuffer
+			GL_CullFace(r_refdef.view.cullface_front);
+			qglStencilOp(GL_KEEP, GL_KEEP, GL_DECR);CHECKGLERROR
+			R_Mesh_Draw(0, outverts, 0, tris, shadowelements, NULL, 0, 0);
+			// decrement stencil if backface is infront of depthbuffer
+			GL_CullFace(r_refdef.view.cullface_back);
+			qglStencilOp(GL_KEEP, GL_KEEP, GL_INCR);CHECKGLERROR
+		}
+		else if (r_shadow_rendermode == R_SHADOW_RENDERMODE_ZFAIL_STENCIL)
 		{
 			// decrement stencil if backface is behind depthbuffer
 			GL_CullFace(r_refdef.view.cullface_front);
@@ -1180,11 +1201,20 @@ void R_Shadow_RenderMode_Begin(void)
 	r_shadow_rendermode = R_SHADOW_RENDERMODE_NONE;
 
 	if (gl_ext_separatestencil.integer)
-		r_shadow_shadowingrendermode = R_SHADOW_RENDERMODE_SEPARATESTENCIL;
+	{
+		r_shadow_shadowingrendermode_zpass = R_SHADOW_RENDERMODE_ZPASS_SEPARATESTENCIL;
+		r_shadow_shadowingrendermode_zfail = R_SHADOW_RENDERMODE_ZFAIL_SEPARATESTENCIL;
+	}
 	else if (gl_ext_stenciltwoside.integer)
-		r_shadow_shadowingrendermode = R_SHADOW_RENDERMODE_STENCILTWOSIDE;
+	{
+		r_shadow_shadowingrendermode_zpass = R_SHADOW_RENDERMODE_ZPASS_STENCILTWOSIDE;
+		r_shadow_shadowingrendermode_zfail = R_SHADOW_RENDERMODE_ZFAIL_STENCILTWOSIDE;
+	}
 	else
-		r_shadow_shadowingrendermode = R_SHADOW_RENDERMODE_STENCIL;
+	{
+		r_shadow_shadowingrendermode_zpass = R_SHADOW_RENDERMODE_ZPASS_STENCIL;
+		r_shadow_shadowingrendermode_zfail = R_SHADOW_RENDERMODE_ZFAIL_STENCIL;
+	}
 
 	if (r_glsl.integer && gl_support_fragment_shader)
 		r_shadow_lightingrendermode = R_SHADOW_RENDERMODE_LIGHT_GLSL;
@@ -1202,7 +1232,7 @@ void R_Shadow_RenderMode_ActiveLight(const rtlight_t *rtlight)
 void R_Shadow_RenderMode_Reset(void)
 {
 	CHECKGLERROR
-	if (r_shadow_rendermode == R_SHADOW_RENDERMODE_STENCILTWOSIDE)
+	if (r_shadow_rendermode == R_SHADOW_RENDERMODE_ZPASS_STENCILTWOSIDE || r_shadow_rendermode == R_SHADOW_RENDERMODE_ZFAIL_STENCILTWOSIDE)
 	{
 		qglDisable(GL_STENCIL_TEST_TWO_SIDE_EXT);CHECKGLERROR
 	}
@@ -1231,8 +1261,11 @@ void R_Shadow_ClearStencil(void)
 	r_refdef.stats.lights_clears++;
 }
 
-void R_Shadow_RenderMode_StencilShadowVolumes(void)
+void R_Shadow_RenderMode_StencilShadowVolumes(qboolean zpass)
 {
+	r_shadow_rendermode_t mode = zpass ? r_shadow_shadowingrendermode_zpass : r_shadow_shadowingrendermode_zfail;
+	if (r_shadow_rendermode == mode)
+		return;
 	CHECKGLERROR
 	R_Shadow_RenderMode_Reset();
 	GL_ColorMask(0, 0, 0, 0);
@@ -1240,15 +1273,32 @@ void R_Shadow_RenderMode_StencilShadowVolumes(void)
 	R_SetupDepthOrShadowShader();
 	qglDepthFunc(GL_LESS);CHECKGLERROR
 	qglEnable(GL_STENCIL_TEST);CHECKGLERROR
-	r_shadow_rendermode = r_shadow_shadowingrendermode;
-	if (r_shadow_rendermode == R_SHADOW_RENDERMODE_SEPARATESTENCIL)
+	r_shadow_rendermode = mode;
+	switch(mode)
 	{
+	default:
+		break;
+	case R_SHADOW_RENDERMODE_ZPASS_SEPARATESTENCIL:
+		GL_CullFace(GL_NONE);
+		qglStencilOpSeparate(r_refdef.view.cullface_front, GL_KEEP, GL_KEEP, GL_INCR);CHECKGLERROR
+		qglStencilOpSeparate(r_refdef.view.cullface_back, GL_KEEP, GL_KEEP, GL_DECR);CHECKGLERROR
+		break;
+	case R_SHADOW_RENDERMODE_ZFAIL_SEPARATESTENCIL:
 		GL_CullFace(GL_NONE);
 		qglStencilOpSeparate(r_refdef.view.cullface_front, GL_KEEP, GL_INCR, GL_KEEP);CHECKGLERROR
 		qglStencilOpSeparate(r_refdef.view.cullface_back, GL_KEEP, GL_DECR, GL_KEEP);CHECKGLERROR
-	}
-	else if (r_shadow_rendermode == R_SHADOW_RENDERMODE_STENCILTWOSIDE)
-	{
+		break;
+	case R_SHADOW_RENDERMODE_ZPASS_STENCILTWOSIDE:
+		GL_CullFace(GL_NONE);
+		qglEnable(GL_STENCIL_TEST_TWO_SIDE_EXT);CHECKGLERROR
+		qglActiveStencilFaceEXT(r_refdef.view.cullface_front);CHECKGLERROR
+		qglStencilMask(~0);CHECKGLERROR
+		qglStencilOp(GL_KEEP, GL_KEEP, GL_INCR);CHECKGLERROR
+		qglActiveStencilFaceEXT(r_refdef.view.cullface_back);CHECKGLERROR
+		qglStencilMask(~0);CHECKGLERROR
+		qglStencilOp(GL_KEEP, GL_KEEP, GL_DECR);CHECKGLERROR
+		break;
+	case R_SHADOW_RENDERMODE_ZFAIL_STENCILTWOSIDE:
 		GL_CullFace(GL_NONE);
 		qglEnable(GL_STENCIL_TEST_TWO_SIDE_EXT);CHECKGLERROR
 		qglActiveStencilFaceEXT(r_refdef.view.cullface_front);CHECKGLERROR
@@ -1257,6 +1307,7 @@ void R_Shadow_RenderMode_StencilShadowVolumes(void)
 		qglActiveStencilFaceEXT(r_refdef.view.cullface_back);CHECKGLERROR
 		qglStencilMask(~0);CHECKGLERROR
 		qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);CHECKGLERROR
+		break;
 	}
 }
 
@@ -2887,6 +2938,7 @@ void R_Shadow_ComputeShadowCasterCullingPlanes(rtlight_t *rtlight)
 
 void R_Shadow_DrawWorldShadow(int numsurfaces, int *surfacelist, const unsigned char *trispvs)
 {
+	qboolean zpass;
 	shadowmesh_t *mesh;
 	int t, tend;
 	int surfacelistindex;
@@ -2896,13 +2948,25 @@ void R_Shadow_DrawWorldShadow(int numsurfaces, int *surfacelist, const unsigned 
 	if (rsurface.rtlight->compiled && r_shadow_realtime_world_compile.integer && r_shadow_realtime_world_compileshadow.integer)
 	{
 		CHECKGLERROR
-		mesh = rsurface.rtlight->static_meshchain_shadow_zfail;
+		zpass = R_Shadow_UseZPass(r_refdef.scene.worldmodel->normalmins, r_refdef.scene.worldmodel->normalmaxs);
+		R_Shadow_RenderMode_StencilShadowVolumes(zpass);
+		mesh = zpass ? rsurface.rtlight->static_meshchain_shadow_zpass : rsurface.rtlight->static_meshchain_shadow_zfail;
 		for (;mesh;mesh = mesh->next)
 		{
 			r_refdef.stats.lights_shadowtriangles += mesh->numtriangles;
 			R_Mesh_VertexPointer(mesh->vertex3f, mesh->vbo, mesh->vbooffset_vertex3f);
 			GL_LockArrays(0, mesh->numverts);
-			if (r_shadow_rendermode == R_SHADOW_RENDERMODE_STENCIL)
+			if (r_shadow_rendermode == R_SHADOW_RENDERMODE_ZPASS_STENCIL)
+			{
+				// increment stencil if frontface is infront of depthbuffer
+				GL_CullFace(r_refdef.view.cullface_back);
+				qglStencilOp(GL_KEEP, GL_KEEP, GL_INCR);CHECKGLERROR
+				R_Mesh_Draw(0, mesh->numverts, 0, mesh->numtriangles, mesh->element3i, mesh->element3s, mesh->ebo3i, mesh->ebo3s);
+				// decrement stencil if backface is infront of depthbuffer
+				GL_CullFace(r_refdef.view.cullface_front);
+				qglStencilOp(GL_KEEP, GL_KEEP, GL_DECR);CHECKGLERROR
+			}
+			else if (r_shadow_rendermode == R_SHADOW_RENDERMODE_ZFAIL_STENCIL)
 			{
 				// decrement stencil if backface is behind depthbuffer
 				GL_CullFace(r_refdef.view.cullface_front);
@@ -3198,7 +3262,6 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 		// draw stencil shadow volumes to mask off pixels that are in shadow
 		// so that they won't receive lighting
 		R_Shadow_ClearStencil();
-		R_Shadow_RenderMode_StencilShadowVolumes();
 		if (numsurfaces)
 			R_Shadow_DrawWorldShadow(numsurfaces, surfacelist, shadowtrispvs);
 		for (i = 0;i < numshadowentities;i++)
@@ -3218,8 +3281,6 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 				for (i = 0;i < numlightentities_noselfshadow;i++)
 					R_Shadow_DrawEntityLight(lightentities_noselfshadow[i]);
 			}
-
-			R_Shadow_RenderMode_StencilShadowVolumes();
 		}
 		for (i = 0;i < numshadowentities_noselfshadow;i++)
 			R_Shadow_DrawEntityShadow(shadowentities_noselfshadow[i]);
@@ -3336,14 +3397,22 @@ void R_DrawModelShadows(void)
 	r_shadow_rendermode = R_SHADOW_RENDERMODE_NONE;
 
 	if (gl_ext_separatestencil.integer)
-		r_shadow_shadowingrendermode = R_SHADOW_RENDERMODE_SEPARATESTENCIL;
+	{
+		r_shadow_shadowingrendermode_zpass = R_SHADOW_RENDERMODE_ZPASS_SEPARATESTENCIL;
+		r_shadow_shadowingrendermode_zfail = R_SHADOW_RENDERMODE_ZFAIL_SEPARATESTENCIL;
+	}
 	else if (gl_ext_stenciltwoside.integer)
-		r_shadow_shadowingrendermode = R_SHADOW_RENDERMODE_STENCILTWOSIDE;
+	{
+		r_shadow_shadowingrendermode_zpass = R_SHADOW_RENDERMODE_ZPASS_STENCILTWOSIDE;
+		r_shadow_shadowingrendermode_zfail = R_SHADOW_RENDERMODE_ZFAIL_STENCILTWOSIDE;
+	}
 	else
-		r_shadow_shadowingrendermode = R_SHADOW_RENDERMODE_STENCIL;
+	{
+		r_shadow_shadowingrendermode_zpass = R_SHADOW_RENDERMODE_ZPASS_STENCIL;
+		r_shadow_shadowingrendermode_zfail = R_SHADOW_RENDERMODE_ZFAIL_STENCIL;
+	}
 
 	R_Shadow_ClearStencil();
-	R_Shadow_RenderMode_StencilShadowVolumes();
 
 	for (i = 0;i < r_refdef.scene.numentities;i++)
 	{

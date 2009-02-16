@@ -44,7 +44,7 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int firsttriangle
 void R_Shadow_RenderMode_Begin(void);
 void R_Shadow_RenderMode_ActiveLight(const rtlight_t *rtlight);
 void R_Shadow_RenderMode_Reset(void);
-void R_Shadow_RenderMode_StencilShadowVolumes(void);
+void R_Shadow_RenderMode_StencilShadowVolumes(qboolean zpass);
 void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent);
 void R_Shadow_RenderMode_VisibleShadowVolumes(void);
 void R_Shadow_RenderMode_VisibleLighting(qboolean stenciltest, qboolean transparent);
