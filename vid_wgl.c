@@ -480,8 +480,8 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 {
 	LONG    lRet = 1;
 	int		fActive, fMinimized, temp;
-	char	state[256];
-	char	asciichar[4];
+	unsigned char state[256];
+	unsigned char asciichar[4];
 	int		vkey;
 	int		charlength;
 	qboolean down = false;
@@ -810,7 +810,7 @@ int VID_InitMode (int fullscreen, int *width, int *height, int bpp, int refreshr
 	};
 	int windowpass;
 	int pixelformat, newpixelformat;
-	int numpixelformats;
+	UINT numpixelformats;
 	DWORD WindowStyle, ExWindowStyle;
 	int CenterX, CenterY;
 	const char *gldrivername;
