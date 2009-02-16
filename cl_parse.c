@@ -1739,7 +1739,10 @@ void CL_MoveLerpEntityStates(entity_t *ent)
 		ent->persistent.muzzleflash = 0;
 		ent->persistent.trail_allowed = false;
 	}
-	else if (DotProduct(odelta, odelta) > 1000*1000 || (cl.fixangle[0] && !cl.fixangle[1]))
+	else if (DotProduct(odelta, odelta) > 1000*1000
+		|| (cl.fixangle[0] && !cl.fixangle[1])
+		|| (ent->state_previous.tagindex != ent->state_current.tagindex)
+		|| (ent->state_previous.tagentity != ent->state_current.tagentity))
 	{
 		// don't interpolate the move
 		// (the fixangle[] check detects teleports, but not constant fixangles
