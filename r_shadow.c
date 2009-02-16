@@ -3630,7 +3630,7 @@ void R_DrawCoronas(void)
 	// now draw the coronas using the query data for intensity info
 	for (lightindex = 0;lightindex < range;lightindex++)
 	{
-		light = Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+		light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
 		if (!light)
 			continue;
 		rtlight = &light->rtlight;
