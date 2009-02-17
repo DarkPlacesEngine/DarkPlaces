@@ -988,6 +988,7 @@ struct frameblend_s;
 void Mod_AliasInit(void);
 int Mod_Alias_GetTagMatrix(const dp_model_t *model, int poseframe, int tagindex, matrix4x4_t *outmatrix);
 int Mod_Alias_GetTagIndexForName(const dp_model_t *model, unsigned int skin, const char *tagname);
+int Mod_Alias_GetExtendedTagInfoForIndex(const dp_model_t *model, unsigned int skin, int poseframe, int tagindex, int *parentindex, const char **tagname, matrix4x4_t *tag_localmatrix);
 
 // sprite models
 void Mod_SpriteInit(void);

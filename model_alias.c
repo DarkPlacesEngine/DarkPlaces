@@ -443,6 +443,41 @@ int Mod_Alias_GetTagMatrix(const dp_model_t *model, int poseframe, int tagindex,
 	return 0;
 }
 
+int Mod_Alias_GetExtendedTagInfoForIndex(const dp_model_t *model, unsigned int skin, int poseframe, int tagindex, int *parentindex, const char **tagname, matrix4x4_t *tag_localmatrix)
+{
+	const float *boneframe;
+
+	if(skin >= (unsigned int)model->numskins)
+		skin = 0;
+
+	if (model->num_bones)
+	{
+		if(tagindex >= model->num_bones || tagindex < 0)
+			return 1;
+		if (poseframe >= model->num_poses)
+			return 2;
+
+		boneframe = model->data_poses + poseframe * model->num_bones * 12;
+		*parentindex = model->data_bones[tagindex].parent;
+		*tagname = model->data_bones[tagindex].name;
+		Matrix4x4_FromArray12FloatD3D(tag_localmatrix, boneframe + tagindex * 12);
+		return 0;
+	}
+
+	if (model->num_tags)
+	{
+		if(tagindex >= model->num_tags || tagindex < 0)
+			return 1;
+		if (poseframe >= model->num_tagframes)
+			return 2;
+		*tagname = model->data_tags[tagindex].name;
+		Matrix4x4_FromArray12FloatGL(tag_localmatrix, model->data_tags[poseframe * model->num_tags + tagindex].matrixgl);
+		return 0;
+	}
+
+	return 2;
+}
+
 int Mod_Alias_GetTagIndexForName(const dp_model_t *model, unsigned int skin, const char *tagname)
 {
 	int i;
