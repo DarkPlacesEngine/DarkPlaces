@@ -1786,7 +1786,6 @@ qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qbool
 		if(!(defaulttexflags & TEXF_COMPRESS))
 			texture->textureflags &= ~TEXF_COMPRESS;
 
-		texture->basematerialflags = 0;
 		if (shader->surfaceparms & Q3SURFACEPARM_SKY)
 		{
 			texture->basematerialflags = MATERIALFLAG_SKY | MATERIALFLAG_NOSHADOW;
@@ -1800,6 +1799,7 @@ qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qbool
 			texture->basematerialflags = MATERIALFLAG_NODRAW | MATERIALFLAG_NOSHADOW;
 		else
 			texture->basematerialflags = MATERIALFLAG_WALL;
+
 		if (shader->layers[0].alphatest)
 			texture->basematerialflags |= MATERIALFLAG_ALPHATEST | MATERIALFLAG_NOSHADOW;
 		if (shader->textureflags & Q3TEXTUREFLAG_TWOSIDED)
