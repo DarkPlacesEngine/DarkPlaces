@@ -261,6 +261,12 @@ typedef struct prvm_prog_globaloffsets_s
 	int servertime; // csqc
 	int serverprevtime; // csqc
 	int serverdeltatime; // csqc
+	int gettaginfo_name; // ssqc / csqc
+	int gettaginfo_parent; // ssqc / csqc
+	int gettaginfo_offset; // ssqc / csqc
+	int gettaginfo_forward; // ssqc / csqc
+	int gettaginfo_right; // ssqc / csqc
+	int gettaginfo_up; // ssqc / csqc
 }
 prvm_prog_globaloffsets_t;
 

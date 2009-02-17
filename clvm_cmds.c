@@ -2165,6 +2165,35 @@ void VM_CL_setattachment (void)
 /////////////////////////////////////////
 // DP_MD3_TAGINFO extension coded by VorteX
 
+int CL_GetExtendedTagInfo (prvm_edict_t *e, int tagindex, int *parentindex, const char **tagname, matrix4x4_t *tag_localmatrix)
+{
+	int r;
+	dp_model_t *model;
+	int frame;
+
+	*tagname = NULL;
+	*parentindex = 0;
+	Matrix4x4_CreateIdentity(tag_localmatrix);
+
+	if (tagindex >= 0
+	 && (model = CL_GetModelFromEdict(e))
+	 && model->animscenes)
+	{
+		frame = (int)e->fields.client->frame;
+		if (frame < 0 || frame >= model->numframes)
+			frame = 0;
+
+		r = Mod_Alias_GetExtendedTagInfoForIndex(model, (int)e->fields.client->skin, model->animscenes[frame].firstframe, tagindex - 1, parentindex, tagname, tag_localmatrix);
+
+		if(!r) // success?
+			*parentindex += 1;
+
+		return r;
+	}
+
+	return 1;
+}
+
 int CL_GetTagIndex (prvm_edict_t *e, const char *tagname)
 {
 	dp_model_t *model = CL_GetModelFromEdict(e);
@@ -2272,7 +2301,12 @@ void VM_CL_gettaginfo (void)
 	prvm_edict_t *e;
 	int tagindex;
 	matrix4x4_t tag_matrix;
+	matrix4x4_t tag_localmatrix;
+	int parentindex;
+	const char *tagname;
 	int returncode;
+	prvm_eval_t *val;
+	vec3_t fo, ri, up, trans;
 
 	VM_SAFEPARMCOUNT(2, VM_CL_gettaginfo);
 
@@ -2280,6 +2314,21 @@ void VM_CL_gettaginfo (void)
 	tagindex = (int)PRVM_G_FLOAT(OFS_PARM1);
 	returncode = CL_GetTagMatrix(&tag_matrix, e, tagindex);
 	Matrix4x4_ToVectors(&tag_matrix, prog->globals.client->v_forward, prog->globals.client->v_right, prog->globals.client->v_up, PRVM_G_VECTOR(OFS_RETURN));
+	CL_GetExtendedTagInfo(e, tagindex, &parentindex, &tagname, &tag_localmatrix);
+	Matrix4x4_ToVectors(&tag_localmatrix, fo, ri, up, trans);
+
+	if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.gettaginfo_parent)))
+		val->_float = parentindex;
+	if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.gettaginfo_name)))
+		val->string = tagname ? PRVM_SetTempString(tagname) : 0;
+	if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.gettaginfo_offset)))
+		VectorCopy(trans, val->vector);
+	if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.gettaginfo_forward)))
+		VectorCopy(fo, val->vector);
+	if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.gettaginfo_right)))
+		VectorCopy(ri, val->vector);
+	if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.gettaginfo_up)))
+		VectorCopy(up, val->vector);
 
 	switch(returncode)
 	{

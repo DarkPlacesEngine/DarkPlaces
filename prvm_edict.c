@@ -1557,6 +1557,12 @@ void PRVM_FindOffsets(void)
 	prog->globaloffsets.servertime                    = PRVM_ED_FindGlobalOffset("servertime");
 	prog->globaloffsets.serverprevtime                = PRVM_ED_FindGlobalOffset("serverprevtime");
 	prog->globaloffsets.serverdeltatime               = PRVM_ED_FindGlobalOffset("serverdeltatime");
+	prog->globaloffsets.gettaginfo_name               = PRVM_ED_FindGlobalOffset("gettaginfo_name");
+	prog->globaloffsets.gettaginfo_parent             = PRVM_ED_FindGlobalOffset("gettaginfo_parent");
+	prog->globaloffsets.gettaginfo_offset             = PRVM_ED_FindGlobalOffset("gettaginfo_offset");
+	prog->globaloffsets.gettaginfo_forward            = PRVM_ED_FindGlobalOffset("gettaginfo_forward");
+	prog->globaloffsets.gettaginfo_right              = PRVM_ED_FindGlobalOffset("gettaginfo_right");
+	prog->globaloffsets.gettaginfo_up                 = PRVM_ED_FindGlobalOffset("gettaginfo_up");
 
 	// menu qc only uses some functions, nothing else
 	prog->funcoffsets.m_draw                          = PRVM_ED_FindFunctionOffset("m_draw");

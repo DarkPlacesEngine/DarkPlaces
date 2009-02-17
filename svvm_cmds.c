@@ -78,6 +78,7 @@ char *vm_sv_extensions =
 "DP_QC_GETSURFACE "
 "DP_QC_GETSURFACEPOINTATTRIBUTE "
 "DP_QC_GETTAGINFO "
+"DP_QC_GETTAGINFO_BONEPROPERTIES "
 "DP_QC_MINMAXBOUND "
 "DP_QC_MULTIPLETEMPSTRINGS "
 "DP_QC_NUM_FOR_EDICT "
@@ -2493,7 +2494,38 @@ int SV_GetTagIndex (prvm_edict_t *e, const char *tagname)
 	model = sv.models[i];
 
 	return Mod_Alias_GetTagIndexForName(model, (int)e->fields.server->skin, tagname);
-};
+}
+
+int SV_GetExtendedTagInfo (prvm_edict_t *e, int tagindex, int *parentindex, const char **tagname, matrix4x4_t *tag_localmatrix)
+{
+	int r;
+	dp_model_t *model;
+	int frame;
+	int modelindex;
+
+	*tagname = NULL;
+	*parentindex = 0;
+	Matrix4x4_CreateIdentity(tag_localmatrix);
+
+	if (tagindex >= 0
+	 && (modelindex = (int)e->fields.server->modelindex) >= 1 && modelindex < MAX_MODELS
+	 && (model = sv.models[(int)e->fields.server->modelindex])
+	 && model->animscenes)
+	{
+		frame = (int)e->fields.server->frame;
+		if (frame < 0 || frame >= model->numframes)
+			frame = 0;
+
+		r = Mod_Alias_GetExtendedTagInfoForIndex(model, (int)e->fields.server->skin, model->animscenes[frame].firstframe, tagindex - 1, parentindex, tagname, tag_localmatrix);
+
+		if(!r) // success?
+			*parentindex += 1;
+
+		return r;
+	}
+
+	return 1;
+}
 
 void SV_GetEntityMatrix (prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatrix)
 {
@@ -2662,7 +2694,12 @@ static void VM_SV_gettaginfo (void)
 	prvm_edict_t *e;
 	int tagindex;
 	matrix4x4_t tag_matrix;
+	matrix4x4_t tag_localmatrix;
+	int parentindex;
+	const char *tagname;
 	int returncode;
+	prvm_eval_t *val;
+	vec3_t fo, ri, up, trans;
 
 	VM_SAFEPARMCOUNT(2, VM_SV_gettaginfo);
 
@@ -2671,6 +2708,21 @@ static void VM_SV_gettaginfo (void)
 
 	returncode = SV_GetTagMatrix(&tag_matrix, e, tagindex);
 	Matrix4x4_ToVectors(&tag_matrix, prog->globals.server->v_forward, prog->globals.server->v_right, prog->globals.server->v_up, PRVM_G_VECTOR(OFS_RETURN));
+	SV_GetExtendedTagInfo(e, tagindex, &parentindex, &tagname, &tag_localmatrix);
+	Matrix4x4_ToVectors(&tag_localmatrix, fo, ri, up, trans);
+
+	if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.gettaginfo_parent)))
+		val->_float = parentindex;
+	if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.gettaginfo_name)))
+		val->string = tagname ? PRVM_SetTempString(tagname) : 0;
+	if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.gettaginfo_offset)))
+		VectorCopy(trans, val->vector);
+	if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.gettaginfo_forward)))
+		VectorCopy(fo, val->vector);
+	if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.gettaginfo_right)))
+		VectorCopy(ri, val->vector);
+	if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.gettaginfo_up)))
+		VectorCopy(up, val->vector);
 
 	switch(returncode)
 	{
