@@ -1358,7 +1358,6 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			tx->skinframerate = 1;
 			tx->skinframes[0] = skinframe;
 			tx->currentskinframe = tx->skinframes[0];
-			tx->basematerialflags = 0;
 		}
 		tx->basematerialflags = MATERIALFLAG_WALL;
 		if (i == loadmodel->num_textures - 1)
@@ -1563,7 +1562,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			else if (!strncmp(tx->name, "sky", 3))
 				tx->basematerialflags = MATERIALFLAG_SKY | MATERIALFLAG_NOSHADOW;
 			else if (!strcmp(tx->name, "caulk"))
-				tx->basematerialflags = MATERIALFLAG_NODRAW;
+				tx->basematerialflags = MATERIALFLAG_NODRAW | MATERIALFLAG_NOSHADOW;
 			else if (tx->skinframes[0] && tx->skinframes[0]->fog)
 				tx->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
 

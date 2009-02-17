@@ -4573,7 +4573,7 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 
 	if (t->basematerialflags & MATERIALFLAG_NODRAW)
 	{
-		t->currentmaterialflags = MATERIALFLAG_NODRAW;
+		t->currentmaterialflags = t->basematerialflags & (MATERIALFLAG_NODRAW | MATERIALFLAG_NOSHADOW);
 		return;
 	}
 

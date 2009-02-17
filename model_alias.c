@@ -819,7 +819,7 @@ static void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfi
 			{
 				// don't render unmentioned meshes
 				Mod_BuildAliasSkinFromSkinFrame(skin, NULL);
-				skin->basematerialflags = skin->currentmaterialflags = 0;
+				skin->basematerialflags = skin->currentmaterialflags = MATERIALFLAG_NOSHADOW | MATERIALFLAG_NODRAW;
 			}
 		}
 	}
