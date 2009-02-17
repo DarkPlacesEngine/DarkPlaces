@@ -62,7 +62,7 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define EF_UNUSED18				262144
 #define EF_UNUSED19				524288
 #define EF_UNUSED20				1048576
-#define EF_UNUSED21				2197152
+#define EF_TELEPORT_BIT			2197152		// div0: teleport bit (toggled when teleporting, prevents lerping when the bit has changed)
 #define EF_LOWPRECISION			4194304		// LordHavoc: entity is low precision (integer coordinates) to save network bandwidth  (serverside only)
 #define EF_NOMODELFLAGS			8388608		// indicates the model's .effects should be ignored (allows overriding them)
 #define EF_ROCKET				16777216	// leave a trail

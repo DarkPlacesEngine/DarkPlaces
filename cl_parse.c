@@ -1739,6 +1739,28 @@ void CL_MoveLerpEntityStates(entity_t *ent)
 		ent->persistent.muzzleflash = 0;
 		ent->persistent.trail_allowed = false;
 	}
+	else if ((ent->state_previous.effects & EF_TELEPORT_BIT) != (ent->state_current.effects & EF_TELEPORT_BIT))
+	{
+		// don't interpolate the move
+		ent->persistent.lerpdeltatime = 0;
+		ent->persistent.lerpstarttime = cl.mtime[1];
+		VectorCopy(ent->state_current.origin, ent->persistent.oldorigin);
+		VectorCopy(ent->state_current.angles, ent->persistent.oldangles);
+		VectorCopy(ent->state_current.origin, ent->persistent.neworigin);
+		VectorCopy(ent->state_current.angles, ent->persistent.newangles);
+		ent->persistent.trail_allowed = false;
+
+		if(ent->state_current.frame != ent->state_previous.frame)
+		{
+			// if we ALSO changed animation frame in the process (but ONLY then!)
+			// then let's reset the animation interpolation too
+			ent->render.frame1 = ent->render.frame2 = ent->state_current.frame;
+			ent->render.frame1time = ent->render.frame2time = cl.time;
+			ent->render.framelerp = 1;
+		}
+
+		// note that this case must do everything the following case does too
+	}
 	else if (DotProduct(odelta, odelta) > 1000*1000
 		|| (cl.fixangle[0] && !cl.fixangle[1])
 		|| (ent->state_previous.tagindex != ent->state_current.tagindex)
