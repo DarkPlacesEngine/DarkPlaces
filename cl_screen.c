@@ -1332,7 +1332,7 @@ Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 		SCR_CaptureVideo_RIFF_Write32(0); // padding granularity
 		SCR_CaptureVideo_RIFF_Write32(0x910); // flags (AVIF_HASINDEX | AVIF_ISINTERLEAVED | AVIF_TRUSTCKTYPE)
 		cls.capturevideo.videofile_firstchunkframes_offset = SCR_CaptureVideo_RIFF_GetPosition();
-		SCR_CaptureVideo_RIFF_Write32(0); // total frames
+		SCR_CaptureVideo_RIFF_Write32(0xFFFFFFFF); // total frames
 		SCR_CaptureVideo_RIFF_Write32(0); // initial frames
 		if (cls.capturevideo.soundrate)
 			SCR_CaptureVideo_RIFF_Write32(2); // number of streams
@@ -1360,7 +1360,7 @@ Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 		SCR_CaptureVideo_RIFF_Write32(n); // samples/second multiplied by divisor
 		SCR_CaptureVideo_RIFF_Write32(0); // start
 		cls.capturevideo.videofile_totalframes_offset1 = SCR_CaptureVideo_RIFF_GetPosition();
-		SCR_CaptureVideo_RIFF_Write32(0); // length
+		SCR_CaptureVideo_RIFF_Write32(0xFFFFFFFF); // length
 		SCR_CaptureVideo_RIFF_Write32(width*height+(width/2)*(height/2)*2); // suggested buffer size
 		SCR_CaptureVideo_RIFF_Write32(0); // quality
 		SCR_CaptureVideo_RIFF_Write32(0); // sample size
@@ -1436,7 +1436,7 @@ Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 			SCR_CaptureVideo_RIFF_Write32((int)(cls.capturevideo.soundrate)); // samples/second multiplied by divisor
 			SCR_CaptureVideo_RIFF_Write32(0); // start
 			cls.capturevideo.videofile_totalsampleframes_offset = SCR_CaptureVideo_RIFF_GetPosition();
-			SCR_CaptureVideo_RIFF_Write32(0); // length
+			SCR_CaptureVideo_RIFF_Write32(0xFFFFFFFF); // length
 			SCR_CaptureVideo_RIFF_Write32(cls.capturevideo.soundrate * 2); // suggested buffer size (this is a half second)
 			SCR_CaptureVideo_RIFF_Write32(0); // quality
 			SCR_CaptureVideo_RIFF_Write32(4); // sample size
@@ -1481,7 +1481,7 @@ Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 		SCR_CaptureVideo_RIFF_Push("LIST", "odml", 8+4);
 		SCR_CaptureVideo_RIFF_Push("dmlh", NULL, 4);
 		cls.capturevideo.videofile_totalframes_offset2 = SCR_CaptureVideo_RIFF_GetPosition();
-		SCR_CaptureVideo_RIFF_Write32(0);
+		SCR_CaptureVideo_RIFF_Write32(0xFFFFFFFF);
 		SCR_CaptureVideo_RIFF_Pop();
 		SCR_CaptureVideo_RIFF_Pop();
 
