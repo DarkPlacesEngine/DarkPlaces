@@ -6,6 +6,7 @@
 #include "cl_collision.h"
 #include "libcurl.h"
 #include "csprogs.h"
+#include "cap_ogg.h"
 
 // we have to include snd_main.h here only to get access to snd_renderbuffer->format.speed when writing the AVI headers
 #include "snd_main.h"
@@ -35,6 +36,7 @@ cvar_t cl_capturevideo_height = {0, "cl_capturevideo_height", "0", "scales all f
 cvar_t cl_capturevideo_realtime = {0, "cl_capturevideo_realtime", "0", "causes video saving to operate in realtime (mostly useful while playing, not while capturing demos), this can produce a much lower quality video due to poor sound/video sync and will abort saving if your machine stalls for over a minute"};
 cvar_t cl_capturevideo_fps = {0, "cl_capturevideo_fps", "30", "how many frames per second to save (29.97 for NTSC, 30 for typical PC video, 15 can be useful)"};
 cvar_t cl_capturevideo_number = {CVAR_SAVE, "cl_capturevideo_number", "1", "number to append to video filename, incremented each time a capture begins"};
+cvar_t cl_capturevideo_ogg = {0, "cl_capturevideo_ogg", "0", "save captured video data as Ogg/Vorbis/Theora streams"};
 cvar_t r_letterbox = {0, "r_letterbox", "0", "reduces vertical height of view to simulate a letterboxed movie effect (can be used by mods for cutscenes)"};
 cvar_t r_stereo_separation = {0, "r_stereo_separation", "4", "separation distance of eyes in the world (negative values are only useful for cross-eyed viewing)"};
 cvar_t r_stereo_sidebyside = {0, "r_stereo_sidebyside", "0", "side by side views for those who can't afford glasses but can afford eye strain (note: use a negative r_stereo_separation if you want cross-eyed viewing)"};
@@ -855,6 +857,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&cl_capturevideo_realtime);
 	Cvar_RegisterVariable (&cl_capturevideo_fps);
 	Cvar_RegisterVariable (&cl_capturevideo_number);
+	Cvar_RegisterVariable (&cl_capturevideo_ogg);
 	Cvar_RegisterVariable (&r_letterbox);
 	Cvar_RegisterVariable(&r_stereo_separation);
 	Cvar_RegisterVariable(&r_stereo_sidebyside);
@@ -876,6 +879,8 @@ void CL_Screen_Init(void)
 	Cmd_AddCommand ("screenshot",SCR_ScreenShot_f, "takes a screenshot of the next rendered frame");
 	Cmd_AddCommand ("envmap", R_Envmap_f, "render a cubemap (skybox) of the current scene");
 	Cmd_AddCommand ("infobar", SCR_InfoBar_f, "display a text in the infobar (usage: infobar expiretime string)");
+
+	SCR_CaptureVideo_Ogg_Init();
 
 	scr_initialized = true;
 }
@@ -1209,28 +1214,6 @@ static void SCR_CaptureVideo_RIFF_OverflowCheck(int framesize)
 	}
 }
 
-static void FindFraction(double val, int *num, int *denom, int denomMax)
-{
-	int i;
-	double bestdiff;
-	// initialize
-	bestdiff = fabs(val);
-	*num = 0;
-	*denom = 1;
-
-	for(i = 1; i <= denomMax; ++i)
-	{
-		int inum = (int) floor(0.5 + val * i);
-		double diff = fabs(val - inum / (double)i);
-		if(diff < bestdiff)
-		{
-			bestdiff = diff;
-			*num = inum;
-			*denom = i;
-		}
-	}
-}
-
 void SCR_CaptureVideo_BeginVideo(void)
 {
 	double gamma, g, aspect;
@@ -1264,8 +1247,9 @@ void SCR_CaptureVideo_BeginVideo(void)
 	cls.capturevideo.height = height;
 	cls.capturevideo.active = true;
 	cls.capturevideo.starttime = realtime;
-	cls.capturevideo.framerate = bound(1, cl_capturevideo_fps.value, 1000);
+	cls.capturevideo.framerate = bound(1, cl_capturevideo_fps.value, 1001);
 	cls.capturevideo.soundrate = S_GetSoundRate();
+	cls.capturevideo.soundchannels = S_GetSoundChannels();
 	cls.capturevideo.frame = 0;
 	cls.capturevideo.soundsampleframe = 0;
 	cls.capturevideo.realtime = cl_capturevideo_realtime.integer != 0;
@@ -1313,17 +1297,19 @@ Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 		cls.capturevideo.yuvnormalizetable[2][i] = 16 + i * (240-16) / 256;
 	}
 
-	//if (cl_capturevideo_)
-	//{
-	//}
-	//else
+	if (cl_capturevideo_ogg.integer && SCR_CaptureVideo_Ogg_Available())
+	{
+		cls.capturevideo.format = CAPTUREVIDEOFORMAT_OGG_VORBIS_THEORA;
+		SCR_CaptureVideo_Ogg_Begin();
+	}
+	else
 	{
 		cls.capturevideo.format = CAPTUREVIDEOFORMAT_AVI_I420;
 		cls.capturevideo.videofile = FS_OpenRealFile(va("%s.avi", cls.capturevideo.basename), "wb", false);
 		cls.capturevideo.canseek = (FS_Seek(cls.capturevideo.videofile, 0, SEEK_SET) == 0);
 		SCR_CaptureVideo_RIFF_Start();
 		// enclosing RIFF chunk (there can be multiple of these in >1GB files, the later ones are "AVIX" instead of "AVI " and have no header/stream info)
-		SCR_CaptureVideo_RIFF_Push("RIFF", "AVI ", -1);
+		SCR_CaptureVideo_RIFF_Push("RIFF", "AVI ", cls.capturevideo.canseek ? -1 : 12+(8+56+12+(12+52+8+40+8+68)+(cls.capturevideo.soundrate?(12+12+52+8+18):0)+12+(8+4))+12+(8+(((int) strlen(engineversion) | 1) + 1))+12);
 		// AVI main header
 		SCR_CaptureVideo_RIFF_Push("LIST", "hdrl", cls.capturevideo.canseek ? -1 : 8+56+12+(12+52+8+40+8+68)+(cls.capturevideo.soundrate?(12+12+52+8+18):0)+12+(8+4));
 		SCR_CaptureVideo_RIFF_Push("avih", NULL, 56);
@@ -1332,7 +1318,7 @@ Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 		SCR_CaptureVideo_RIFF_Write32(0); // padding granularity
 		SCR_CaptureVideo_RIFF_Write32(0x910); // flags (AVIF_HASINDEX | AVIF_ISINTERLEAVED | AVIF_TRUSTCKTYPE)
 		cls.capturevideo.videofile_firstchunkframes_offset = SCR_CaptureVideo_RIFF_GetPosition();
-		SCR_CaptureVideo_RIFF_Write32(0xFFFFFFFF); // total frames
+		SCR_CaptureVideo_RIFF_Write32(0); // total frames
 		SCR_CaptureVideo_RIFF_Write32(0); // initial frames
 		if (cls.capturevideo.soundrate)
 			SCR_CaptureVideo_RIFF_Write32(2); // number of streams
@@ -1507,17 +1493,27 @@ Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 #endif
 		SCR_CaptureVideo_RIFF_Pop();
 		// begin the actual video section now
-		SCR_CaptureVideo_RIFF_Push("LIST", "movi", -1);
+		SCR_CaptureVideo_RIFF_Push("LIST", "movi", cls.capturevideo.canseek ? -1 : 0);
 		cls.capturevideo.videofile_ix_movistart = cls.capturevideo.riffstackstartoffset[1];
 		// we're done with the headers now...
 		SCR_CaptureVideo_RIFF_Flush();
 		if (cls.capturevideo.riffstacklevel != 2)
 			Sys_Error("SCR_CaptureVideo_BeginVideo: broken AVI writing code (stack level is %i (should be 2) at end of headers)\n", cls.capturevideo.riffstacklevel);
+
+		if(!cls.capturevideo.canseek)
+		{
+			// close the movi immediately
+			SCR_CaptureVideo_RIFF_Pop();
+			// close the AVI immediately (we'll put all frames into AVIX)
+			SCR_CaptureVideo_RIFF_Pop();
+		}
 	}
 
 	switch(cls.capturevideo.format)
 	{
 	case CAPTUREVIDEOFORMAT_AVI_I420:
+		break;
+	case CAPTUREVIDEOFORMAT_OGG_VORBIS_THEORA:
 		break;
 	default:
 		break;
@@ -1534,31 +1530,39 @@ void SCR_CaptureVideo_EndVideo(void)
 		switch(cls.capturevideo.format)
 		{
 		case CAPTUREVIDEOFORMAT_AVI_I420:
-			// close any open chunks
-			SCR_CaptureVideo_RIFF_Finish(true);
-			// go back and fix the video frames and audio samples fields
 			Con_DPrintf("Finishing capture (%d frames, %d audio frames)\n", cls.capturevideo.frame, cls.capturevideo.soundsampleframe);
-			if(cls.capturevideo.videofile_totalframes_offset1)
-			if(FS_Seek(cls.capturevideo.videofile, cls.capturevideo.videofile_totalframes_offset1, SEEK_SET) >= 0)
+
+			if(cls.capturevideo.canseek)
 			{
-				SCR_CaptureVideo_RIFF_Write32(cls.capturevideo.frame);
-				SCR_CaptureVideo_RIFF_Flush();
-			}
-			if(cls.capturevideo.videofile_totalframes_offset2)
-			if(FS_Seek(cls.capturevideo.videofile, cls.capturevideo.videofile_totalframes_offset2, SEEK_SET) >= 0)
-			{
-				SCR_CaptureVideo_RIFF_Write32(cls.capturevideo.frame);
-				SCR_CaptureVideo_RIFF_Flush();
-			}
-			if (cls.capturevideo.soundrate)
-			{
-				if(cls.capturevideo.videofile_totalsampleframes_offset)
-				if(FS_Seek(cls.capturevideo.videofile, cls.capturevideo.videofile_totalsampleframes_offset, SEEK_SET) >= 0)
+				// close any open chunks
+				SCR_CaptureVideo_RIFF_Finish(true);
+
+				// go back and fix the video frames and audio samples fields
+				if(cls.capturevideo.videofile_totalframes_offset1)
+				if(FS_Seek(cls.capturevideo.videofile, cls.capturevideo.videofile_totalframes_offset1, SEEK_SET) >= 0)
 				{
-					SCR_CaptureVideo_RIFF_Write32(cls.capturevideo.soundsampleframe);
+					SCR_CaptureVideo_RIFF_Write32(cls.capturevideo.frame);
 					SCR_CaptureVideo_RIFF_Flush();
 				}
+				if(cls.capturevideo.videofile_totalframes_offset2)
+				if(FS_Seek(cls.capturevideo.videofile, cls.capturevideo.videofile_totalframes_offset2, SEEK_SET) >= 0)
+				{
+					SCR_CaptureVideo_RIFF_Write32(cls.capturevideo.frame);
+					SCR_CaptureVideo_RIFF_Flush();
+				}
+				if (cls.capturevideo.soundrate)
+				{
+					if(cls.capturevideo.videofile_totalsampleframes_offset)
+					if(FS_Seek(cls.capturevideo.videofile, cls.capturevideo.videofile_totalsampleframes_offset, SEEK_SET) >= 0)
+					{
+						SCR_CaptureVideo_RIFF_Write32(cls.capturevideo.soundsampleframe);
+						SCR_CaptureVideo_RIFF_Flush();
+					}
+				}
 			}
+			break;
+		case CAPTUREVIDEOFORMAT_OGG_VORBIS_THEORA:
+			SCR_CaptureVideo_Ogg_EndVideo();
 			break;
 		default:
 			break;
@@ -1679,6 +1683,10 @@ qboolean SCR_CaptureVideo_VideoFrame(int newframenum)
 	CHECKGLERROR
 	//return SCR_ScreenShot(filename, cls.capturevideo.buffer, cls.capturevideo.buffer + vid.width * vid.height * 3, cls.capturevideo.buffer + vid.width * vid.height * 6, 0, 0, vid.width, vid.height, false, false, false, jpeg, true);
 	// speed is critical here, so do saving as directly as possible
+
+	qglReadPixels (x, y, vid.width, vid.height, GL_BGRA, GL_UNSIGNED_BYTE, cls.capturevideo.screenbuffer);CHECKGLERROR
+	SCR_ScaleDownBGRA (cls.capturevideo.screenbuffer, vid.width, vid.height, cls.capturevideo.outbuffer, width, height);
+
 	switch (cls.capturevideo.format)
 	{
 	case CAPTUREVIDEOFORMAT_AVI_I420:
@@ -1686,42 +1694,94 @@ qboolean SCR_CaptureVideo_VideoFrame(int newframenum)
 		if (!cls.capturevideo.videofile)
 			return false;
 		// FIXME: width/height must be multiple of 2, enforce this?
-		qglReadPixels (x, y, vid.width, vid.height, GL_BGRA, GL_UNSIGNED_BYTE, cls.capturevideo.screenbuffer);CHECKGLERROR
-		SCR_ScaleDownBGRA (cls.capturevideo.screenbuffer, vid.width, vid.height, cls.capturevideo.outbuffer, width, height);
 		in = cls.capturevideo.outbuffer;
 		out = cls.capturevideo.outbuffer + width*height*4;
 		SCR_CaptureVideo_ConvertFrame_BGRA_to_I420_flip(width, height, in, out);
 		x = width*height+(width/2)*(height/2)*2;
-		SCR_CaptureVideo_RIFF_OverflowCheck(8 + x);
 		for (;cls.capturevideo.frame < newframenum;cls.capturevideo.frame++)
 		{
 			if(cls.capturevideo.canseek)
+			{
+				SCR_CaptureVideo_RIFF_OverflowCheck(8 + x);
 				SCR_CaptureVideo_RIFF_IndexEntry("00dc", x, 0x10); // AVIIF_KEYFRAME
+			}
+
+			if(!cls.capturevideo.canseek)
+			{
+				SCR_CaptureVideo_RIFF_Push("RIFF", "AVIX", 12+8+x);
+				SCR_CaptureVideo_RIFF_Push("LIST", "movi", 8+x);
+			}
 			SCR_CaptureVideo_RIFF_Push("00dc", NULL, x);
 			SCR_CaptureVideo_RIFF_WriteBytes(out, x);
 			SCR_CaptureVideo_RIFF_Pop();
+			if(!cls.capturevideo.canseek)
+			{
+				SCR_CaptureVideo_RIFF_Pop();
+				SCR_CaptureVideo_RIFF_Pop();
+			}
 		}
+		return true;
+	case CAPTUREVIDEOFORMAT_OGG_VORBIS_THEORA:
+		for (;cls.capturevideo.frame < newframenum;cls.capturevideo.frame++)
+			SCR_CaptureVideo_Ogg_VideoFrame();
 		return true;
 	default:
 		return false;
 	}
 }
 
-void SCR_CaptureVideo_SoundFrame(unsigned char *bufstereo16le, size_t length, int rate)
+void SCR_CaptureVideo_SoundFrame(const portable_sampleframe_t *paintbuffer, size_t length)
 {
 	int x;
-	cls.capturevideo.soundrate = rate;
+	unsigned char bufstereo16le[PAINTBUFFER_SIZE * 4];
+	unsigned char* out_ptr;
+	size_t i;
+
 	cls.capturevideo.soundsampleframe += length;
+
 	switch (cls.capturevideo.format)
 	{
 	case CAPTUREVIDEOFORMAT_AVI_I420:
+
+		// write the sound buffer as little endian 16bit interleaved stereo
+		for(i = 0, out_ptr = bufstereo16le; i < length; i++, out_ptr += 4)
+		{
+			int n0, n1;
+
+			n0 = paintbuffer[i].sample[0];
+			n0 = bound(-32768, n0, 32767);
+			out_ptr[0] = (unsigned char)n0;
+			out_ptr[1] = (unsigned char)(n0 >> 8);
+
+			n1 = paintbuffer[i].sample[1];
+			n1 = bound(-32768, n1, 32767);
+			out_ptr[2] = (unsigned char)n1;
+			out_ptr[3] = (unsigned char)(n1 >> 8);
+		}
+
 		x = length*4;
-		SCR_CaptureVideo_RIFF_OverflowCheck(8 + x);
 		if(cls.capturevideo.canseek)
+		{
+			SCR_CaptureVideo_RIFF_OverflowCheck(8 + x);
 			SCR_CaptureVideo_RIFF_IndexEntry("01wb", x, 0x10); // AVIIF_KEYFRAME
+		}
+
+		if(!cls.capturevideo.canseek)
+		{
+			SCR_CaptureVideo_RIFF_Push("RIFF", "AVIX", 12+8+x);
+			SCR_CaptureVideo_RIFF_Push("LIST", "movi", 8+x);
+		}
 		SCR_CaptureVideo_RIFF_Push("01wb", NULL, x);
 		SCR_CaptureVideo_RIFF_WriteBytes(bufstereo16le, x);
 		SCR_CaptureVideo_RIFF_Pop();
+		if(!cls.capturevideo.canseek)
+		{
+			SCR_CaptureVideo_RIFF_Pop();
+			SCR_CaptureVideo_RIFF_Pop();
+		}
+		break;
+	case CAPTUREVIDEOFORMAT_OGG_VORBIS_THEORA:
+		SCR_CaptureVideo_Ogg_SoundFrame(paintbuffer, length);
 		break;
 	default:
 		break;

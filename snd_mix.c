@@ -22,42 +22,16 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "snd_main.h"
 
 
-typedef struct portable_samplepair_s
-{
-	int sample[SND_LISTENERS];
-} portable_sampleframe_t;
-
-// LordHavoc: was 512, expanded to 2048
-#define	PAINTBUFFER_SIZE 2048
 static portable_sampleframe_t paintbuffer[PAINTBUFFER_SIZE];
 
 
-extern void SCR_CaptureVideo_SoundFrame(unsigned char *bufstereo16le, size_t length, int rate);
+extern void SCR_CaptureVideo_SoundFrame(const portable_sampleframe_t *paintbuffer, size_t length);
 static void S_CaptureAVISound(size_t length)
 {
-	size_t i;
-	unsigned char out[PAINTBUFFER_SIZE * 4];
-	unsigned char* out_ptr;
-
 	if (!cls.capturevideo.active)
 		return;
 
-	// write the sound buffer as little endian 16bit interleaved stereo
-	for(i = 0, out_ptr = out; i < length; i++, out_ptr += 4)
-	{
-		int n0, n1;
-
-		n0 = paintbuffer[i].sample[0];
-		n0 = bound(-32768, n0, 32767);
-		out_ptr[0] = (unsigned char)n0;
-		out_ptr[1] = (unsigned char)(n0 >> 8);
-
-		n1 = paintbuffer[i].sample[1];
-		n1 = bound(-32768, n1, 32767);
-		out_ptr[2] = (unsigned char)n1;
-		out_ptr[3] = (unsigned char)(n1 >> 8);
-	}
-	SCR_CaptureVideo_SoundFrame(out, length, snd_renderbuffer->format.speed);
+	SCR_CaptureVideo_SoundFrame(paintbuffer, length);
 }
 
 static void S_ConvertPaintBuffer(const portable_sampleframe_t *painted_ptr, void *rb_ptr, int nbframes, int width, int channels)

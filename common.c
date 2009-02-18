@@ -2190,3 +2190,25 @@ strlcpy(char *dst, const char *src, size_t siz)
 }
 
 #endif  // #ifndef HAVE_STRLCPY
+
+void FindFraction(double val, int *num, int *denom, int denomMax)
+{
+	int i;
+	double bestdiff;
+	// initialize
+	bestdiff = fabs(val);
+	*num = 0;
+	*denom = 1;
+
+	for(i = 1; i <= denomMax; ++i)
+	{
+		int inum = (int) floor(0.5 + val * i);
+		double diff = fabs(val - inum / (double)i);
+		if(diff < bestdiff)
+		{
+			bestdiff = diff;
+			*num = inum;
+			*denom = i;
+		}
+	}
+}

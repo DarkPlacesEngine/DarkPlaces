@@ -87,5 +87,6 @@ void S_BlockSound (void);
 void S_UnblockSound (void);
 
 int S_GetSoundRate (void);
+int S_GetSoundChannels (void);
 
 #endif

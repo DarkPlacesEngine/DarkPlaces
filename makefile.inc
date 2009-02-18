@@ -77,6 +77,7 @@ OBJ_NOCD=cd_null.o
 
 # Common objects
 OBJ_COMMON= \
+	cap_ogg.o \
 	cd_shared.o \
 	cl_collision.o \
 	cl_demo.o \
