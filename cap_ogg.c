@@ -1,0 +1,902 @@
+#include <sys/types.h>
+
+#include "quakedef.h"
+#include "client.h"
+#include "cap_ogg.h"
+
+// ogg.h stuff
+typedef int16_t ogg_int16_t;
+typedef u_int16_t ogg_uint16_t;
+typedef int32_t ogg_int32_t;
+typedef u_int32_t ogg_uint32_t;
+typedef int64_t ogg_int64_t;
+
+typedef struct {
+  long endbyte;
+  int  endbit;
+
+  unsigned char *buffer;
+  unsigned char *ptr;
+  long storage;
+} oggpack_buffer;
+
+/* ogg_page is used to encapsulate the data in one Ogg bitstream page *****/
+
+typedef struct {
+  unsigned char *header;
+  long header_len;
+  unsigned char *body;
+  long body_len;
+} ogg_page;
+
+/* ogg_stream_state contains the current encode/decode state of a logical
+   Ogg bitstream **********************************************************/
+
+typedef struct {
+  unsigned char   *body_data;    /* bytes from packet bodies */
+  long    body_storage;          /* storage elements allocated */
+  long    body_fill;             /* elements stored; fill mark */
+  long    body_returned;         /* elements of fill returned */
+
+
+  int     *lacing_vals;      /* The values that will go to the segment table */
+  ogg_int64_t *granule_vals; /* granulepos values for headers. Not compact
+				this way, but it is simple coupled to the
+				lacing fifo */
+  long    lacing_storage;
+  long    lacing_fill;
+  long    lacing_packet;
+  long    lacing_returned;
+
+  unsigned char    header[282];      /* working space for header encode */
+  int              header_fill;
+
+  int     e_o_s;          /* set when we have buffered the last packet in the
+                             logical bitstream */
+  int     b_o_s;          /* set after we've written the initial page
+                             of a logical bitstream */
+  long    serialno;
+  long    pageno;
+  ogg_int64_t  packetno;      /* sequence number for decode; the framing
+                             knows where there's a hole in the data,
+                             but we need coupling so that the codec
+                             (which is in a seperate abstraction
+                             layer) also knows about the gap */
+  ogg_int64_t   granulepos;
+
+} ogg_stream_state;
+
+/* ogg_packet is used to encapsulate the data and metadata belonging
+   to a single raw Ogg/Vorbis packet *************************************/
+
+typedef struct {
+  unsigned char *packet;
+  long  bytes;
+  long  b_o_s;
+  long  e_o_s;
+
+  ogg_int64_t  granulepos;
+  
+  ogg_int64_t  packetno;     /* sequence number for decode; the framing
+				knows where there's a hole in the data,
+				but we need coupling so that the codec
+				(which is in a seperate abstraction
+				layer) also knows about the gap */
+} ogg_packet;
+
+typedef struct {
+  unsigned char *data;
+  int storage;
+  int fill;
+  int returned;
+
+  int unsynced;
+  int headerbytes;
+  int bodybytes;
+} ogg_sync_state;
+
+/* Ogg BITSTREAM PRIMITIVES: encoding **************************/
+
+static int      (*qogg_stream_packetin) (ogg_stream_state *os, ogg_packet *op);
+static int      (*qogg_stream_pageout) (ogg_stream_state *os, ogg_page *og);
+static int      (*qogg_stream_flush) (ogg_stream_state *os, ogg_page *og);
+
+/* Ogg BITSTREAM PRIMITIVES: general ***************************/
+
+static int      (*qogg_stream_init) (ogg_stream_state *os,int serialno);
+static int      (*qogg_stream_clear) (ogg_stream_state *os);
+
+// end of ogg.h stuff
+
+// vorbis/codec.h stuff
+typedef struct vorbis_info{
+  int version;
+  int channels;
+  long rate;
+
+  /* The below bitrate declarations are *hints*.
+     Combinations of the three values carry the following implications:
+
+     all three set to the same value:
+       implies a fixed rate bitstream
+     only nominal set:
+       implies a VBR stream that averages the nominal bitrate.  No hard
+       upper/lower limit
+     upper and or lower set:
+       implies a VBR bitstream that obeys the bitrate limits. nominal
+       may also be set to give a nominal rate.
+     none set:
+       the coder does not care to speculate.
+  */
+
+  long bitrate_upper;
+  long bitrate_nominal;
+  long bitrate_lower;
+  long bitrate_window;
+
+  void *codec_setup;
+} vorbis_info;
+
+/* vorbis_dsp_state buffers the current vorbis audio
+   analysis/synthesis state.  The DSP state belongs to a specific
+   logical bitstream ****************************************************/
+typedef struct vorbis_dsp_state{
+  int analysisp;
+  vorbis_info *vi;
+
+  float **pcm;
+  float **pcmret;
+  int      pcm_storage;
+  int      pcm_current;
+  int      pcm_returned;
+
+  int  preextrapolate;
+  int  eofflag;
+
+  long lW;
+  long W;
+  long nW;
+  long centerW;
+
+  ogg_int64_t granulepos;
+  ogg_int64_t sequence;
+
+  ogg_int64_t glue_bits;
+  ogg_int64_t time_bits;
+  ogg_int64_t floor_bits;
+  ogg_int64_t res_bits;
+
+  void       *backend_state;
+} vorbis_dsp_state;
+
+typedef struct vorbis_block{
+  /* necessary stream state for linking to the framing abstraction */
+  float  **pcm;       /* this is a pointer into local storage */
+  oggpack_buffer opb;
+
+  long  lW;
+  long  W;
+  long  nW;
+  int   pcmend;
+  int   mode;
+
+  int         eofflag;
+  ogg_int64_t granulepos;
+  ogg_int64_t sequence;
+  vorbis_dsp_state *vd; /* For read-only access of configuration */
+
+  /* local storage to avoid remallocing; it's up to the mapping to
+     structure it */
+  void               *localstore;
+  long                localtop;
+  long                localalloc;
+  long                totaluse;
+  struct alloc_chain *reap;
+
+  /* bitmetrics for the frame */
+  long glue_bits;
+  long time_bits;
+  long floor_bits;
+  long res_bits;
+
+  void *internal;
+
+} vorbis_block;
+
+/* vorbis_block is a single block of data to be processed as part of
+the analysis/synthesis stream; it belongs to a specific logical
+bitstream, but is independant from other vorbis_blocks belonging to
+that logical bitstream. *************************************************/
+
+struct alloc_chain{
+  void *ptr;
+  struct alloc_chain *next;
+};
+
+/* vorbis_info contains all the setup information specific to the
+   specific compression/decompression mode in progress (eg,
+   psychoacoustic settings, channel setup, options, codebook
+   etc). vorbis_info and substructures are in backends.h.
+*********************************************************************/
+
+/* the comments are not part of vorbis_info so that vorbis_info can be
+   static storage */
+typedef struct vorbis_comment{
+  /* unlimited user comment fields.  libvorbis writes 'libvorbis'
+     whatever vendor is set to in encode */
+  char **user_comments;
+  int   *comment_lengths;
+  int    comments;
+  char  *vendor;
+
+} vorbis_comment;
+
+
+/* libvorbis encodes in two abstraction layers; first we perform DSP
+   and produce a packet (see docs/analysis.txt).  The packet is then
+   coded into a framed OggSquish bitstream by the second layer (see
+   docs/framing.txt).  Decode is the reverse process; we sync/frame
+   the bitstream and extract individual packets, then decode the
+   packet back into PCM audio.
+
+   The extra framing/packetizing is used in streaming formats, such as
+   files.  Over the net (such as with UDP), the framing and
+   packetization aren't necessary as they're provided by the transport
+   and the streaming layer is not used */
+
+/* Vorbis PRIMITIVES: general ***************************************/
+
+static void     (*qvorbis_info_init) (vorbis_info *vi);
+static void     (*qvorbis_info_clear) (vorbis_info *vi);
+static void     (*qvorbis_comment_init) (vorbis_comment *vc);
+static void     (*qvorbis_comment_clear) (vorbis_comment *vc);
+
+static int      (*qvorbis_block_init) (vorbis_dsp_state *v, vorbis_block *vb);
+static int      (*qvorbis_block_clear) (vorbis_block *vb);
+static void     (*qvorbis_dsp_clear) (vorbis_dsp_state *v);
+
+/* Vorbis PRIMITIVES: analysis/DSP layer ****************************/
+
+static int      (*qvorbis_analysis_init) (vorbis_dsp_state *v,vorbis_info *vi);
+static int      (*qvorbis_commentheader_out) (vorbis_comment *vc, ogg_packet *op);
+static int      (*qvorbis_analysis_headerout) (vorbis_dsp_state *v,
+					  vorbis_comment *vc,
+					  ogg_packet *op,
+					  ogg_packet *op_comm,
+					  ogg_packet *op_code);
+static float ** (*qvorbis_analysis_buffer) (vorbis_dsp_state *v,int vals);
+static int      (*qvorbis_analysis_wrote) (vorbis_dsp_state *v,int vals);
+static int      (*qvorbis_analysis_blockout) (vorbis_dsp_state *v,vorbis_block *vb);
+static int      (*qvorbis_analysis) (vorbis_block *vb,ogg_packet *op);
+
+static int      (*qvorbis_bitrate_addblock) (vorbis_block *vb);
+static int      (*qvorbis_bitrate_flushpacket) (vorbis_dsp_state *vd,
+					   ogg_packet *op);
+
+// end of vorbis/codec.h stuff
+
+// vorbisenc.h stuff
+static int (*qvorbis_encode_init_vbr) (vorbis_info *vi,
+				  long channels,
+				  long rate,
+
+				  float base_quality /* quality level from 0. (lo) to 1. (hi) */
+				  );
+// end of vorbisenc.h stuff
+
+// theora.h stuff
+typedef struct {
+    int   y_width;      /**< Width of the Y' luminance plane */
+    int   y_height;     /**< Height of the luminance plane */
+    int   y_stride;     /**< Offset in bytes between successive rows */
+
+    int   uv_width;     /**< Width of the Cb and Cr chroma planes */
+    int   uv_height;    /**< Height of the chroma planes */
+    int   uv_stride;    /**< Offset between successive chroma rows */
+    unsigned char *y;   /**< Pointer to start of luminance data */
+    unsigned char *u;   /**< Pointer to start of Cb data */
+    unsigned char *v;   /**< Pointer to start of Cr data */
+
+} yuv_buffer;
+
+/**
+ * A Colorspace.
+ */
+typedef enum {
+  OC_CS_UNSPECIFIED,    /**< The colorspace is unknown or unspecified */
+  OC_CS_ITU_REC_470M,   /**< This is the best option for 'NTSC' content */
+  OC_CS_ITU_REC_470BG,  /**< This is the best option for 'PAL' content */
+  OC_CS_NSPACES         /**< This marks the end of the defined colorspaces */
+} theora_colorspace;
+
+/**
+ * A Chroma subsampling
+ *
+ * These enumerate the available chroma subsampling options supported
+ * by the theora format. See Section 4.4 of the specification for
+ * exact definitions.
+ */
+typedef enum {
+  OC_PF_420,    /**< Chroma subsampling by 2 in each direction (4:2:0) */
+  OC_PF_RSVD,   /**< Reserved value */
+  OC_PF_422,    /**< Horizonatal chroma subsampling by 2 (4:2:2) */
+  OC_PF_444,    /**< No chroma subsampling at all (4:4:4) */
+} theora_pixelformat;
+/**
+ * Theora bitstream info.
+ * Contains the basic playback parameters for a stream,
+ * corresponding to the initial 'info' header packet.
+ * 
+ * Encoded theora frames must be a multiple of 16 in width and height.
+ * To handle other frame sizes, a crop rectangle is specified in
+ * frame_height and frame_width, offset_x and * offset_y. The offset
+ * and size should still be a multiple of 2 to avoid chroma sampling
+ * shifts. Offset values in this structure are measured from the
+ * upper left of the image.
+ *
+ * Frame rate, in frames per second, is stored as a rational
+ * fraction. Aspect ratio is also stored as a rational fraction, and
+ * refers to the aspect ratio of the frame pixels, not of the
+ * overall frame itself.
+ * 
+ * See <a href="http://svn.xiph.org/trunk/theora/examples/encoder_example.c">
+ * examples/encoder_example.c</a> for usage examples of the
+ * other paramters and good default settings for the encoder parameters.
+ */
+typedef struct {
+  ogg_uint32_t  width;      /**< encoded frame width  */
+  ogg_uint32_t  height;     /**< encoded frame height */
+  ogg_uint32_t  frame_width;    /**< display frame width  */
+  ogg_uint32_t  frame_height;   /**< display frame height */
+  ogg_uint32_t  offset_x;   /**< horizontal offset of the displayed frame */
+  ogg_uint32_t  offset_y;   /**< vertical offset of the displayed frame */
+  ogg_uint32_t  fps_numerator;      /**< frame rate numerator **/
+  ogg_uint32_t  fps_denominator;    /**< frame rate denominator **/
+  ogg_uint32_t  aspect_numerator;   /**< pixel aspect ratio numerator */
+  ogg_uint32_t  aspect_denominator; /**< pixel aspect ratio denominator */
+  theora_colorspace colorspace;     /**< colorspace */
+  int           target_bitrate;     /**< nominal bitrate in bits per second */
+  int           quality;  /**< Nominal quality setting, 0-63 */
+  int           quick_p;  /**< Quick encode/decode */
+
+  /* decode only */
+  unsigned char version_major;
+  unsigned char version_minor;
+  unsigned char version_subminor;
+
+  void *codec_setup;
+
+  /* encode only */
+  int           dropframes_p;
+  int           keyframe_auto_p;
+  ogg_uint32_t  keyframe_frequency;
+  ogg_uint32_t  keyframe_frequency_force;  /* also used for decode init to
+                                              get granpos shift correct */
+  ogg_uint32_t  keyframe_data_target_bitrate;
+  ogg_int32_t   keyframe_auto_threshold;
+  ogg_uint32_t  keyframe_mindistance;
+  ogg_int32_t   noise_sensitivity;
+  ogg_int32_t   sharpness;
+
+  theora_pixelformat pixelformat;   /**< chroma subsampling mode to expect */
+
+} theora_info;
+
+/** Codec internal state and context.
+ */
+typedef struct{
+  theora_info *i;
+  ogg_int64_t granulepos;
+
+  void *internal_encode;
+  void *internal_decode;
+
+} theora_state;
+
+/** 
+ * Comment header metadata.
+ *
+ * This structure holds the in-stream metadata corresponding to
+ * the 'comment' header packet.
+ *
+ * Meta data is stored as a series of (tag, value) pairs, in
+ * length-encoded string vectors. The first occurence of the 
+ * '=' character delimits the tag and value. A particular tag
+ * may occur more than once. The character set encoding for
+ * the strings is always UTF-8, but the tag names are limited
+ * to case-insensitive ASCII. See the spec for details.
+ *
+ * In filling in this structure, qtheora_decode_header() will
+ * null-terminate the user_comment strings for safety. However,
+ * the bitstream format itself treats them as 8-bit clean,
+ * and so the length array should be treated as authoritative
+ * for their length.
+ */
+typedef struct theora_comment{
+  char **user_comments;         /**< An array of comment string vectors */
+  int   *comment_lengths;       /**< An array of corresponding string vector lengths in bytes */
+  int    comments;              /**< The total number of comment string vectors */
+  char  *vendor;                /**< The vendor string identifying the encoder, null terminated */
+
+} theora_comment;
+static int (*qtheora_encode_init) (theora_state *th, theora_info *ti);
+static int (*qtheora_encode_YUVin) (theora_state *t, yuv_buffer *yuv);
+static int (*qtheora_encode_packetout) ( theora_state *t, int last_p,
+                                    ogg_packet *op);
+static int (*qtheora_encode_header) (theora_state *t, ogg_packet *op);
+static int (*qtheora_encode_comment) (theora_comment *tc, ogg_packet *op);
+static int (*qtheora_encode_tables) (theora_state *t, ogg_packet *op);
+static void (*qtheora_info_init) (theora_info *c);
+static void (*qtheora_info_clear) (theora_info *c);
+static void (*qtheora_clear) (theora_state *t);
+static void (*qtheora_comment_init) (theora_comment *tc);
+static void  (*qtheora_comment_clear) (theora_comment *tc);
+// end of theora.h stuff
+
+static dllfunction_t oggfuncs[] =
+{
+	{"ogg_stream_packetin", (void **) &qogg_stream_packetin},
+	{"ogg_stream_pageout", (void **) &qogg_stream_pageout},
+	{"ogg_stream_flush", (void **) &qogg_stream_flush},
+	{"ogg_stream_init", (void **) &qogg_stream_init},
+	{"ogg_stream_clear", (void **) &qogg_stream_clear},
+	{NULL, NULL}
+};
+
+static dllfunction_t vorbisencfuncs[] =
+{
+	{"vorbis_encode_init_vbr", (void **) &qvorbis_encode_init_vbr},
+	{NULL, NULL}
+};
+
+static dllfunction_t vorbisfuncs[] =
+{
+	{"vorbis_info_init", (void **) &qvorbis_info_init},
+	{"vorbis_info_clear", (void **) &qvorbis_info_clear},
+	{"vorbis_comment_init", (void **) &qvorbis_comment_init},
+	{"vorbis_comment_clear", (void **) &qvorbis_comment_clear},
+	{"vorbis_block_init", (void **) &qvorbis_block_init},
+	{"vorbis_block_clear", (void **) &qvorbis_block_clear},
+	{"vorbis_dsp_clear", (void **) &qvorbis_dsp_clear},
+	{"vorbis_analysis_init", (void **) &qvorbis_analysis_init},
+	{"vorbis_commentheader_out", (void **) &qvorbis_commentheader_out},
+	{"vorbis_analysis_headerout", (void **) &qvorbis_analysis_headerout},
+	{"vorbis_analysis_buffer", (void **) &qvorbis_analysis_buffer},
+	{"vorbis_analysis_wrote", (void **) &qvorbis_analysis_wrote},
+	{"vorbis_analysis_blockout", (void **) &qvorbis_analysis_blockout},
+	{"vorbis_analysis", (void **) &qvorbis_analysis},
+	{"vorbis_bitrate_addblock", (void **) &qvorbis_bitrate_addblock},
+	{"vorbis_bitrate_flushpacket", (void **) &qvorbis_bitrate_flushpacket},
+	{NULL, NULL}
+};
+
+static dllfunction_t theorafuncs[] =
+{
+	{"theora_info_init", (void **) &qtheora_info_init},
+	{"theora_info_clear", (void **) &qtheora_info_clear},
+	{"theora_comment_init", (void **) &qtheora_comment_init},
+	{"theora_comment_clear", (void **) &qtheora_comment_clear},
+	{"theora_encode_init", (void **) &qtheora_encode_init},
+	{"theora_encode_YUVin", (void **) &qtheora_encode_YUVin},
+	{"theora_encode_packetout", (void **) &qtheora_encode_packetout},
+	{"theora_encode_header", (void **) &qtheora_encode_header},
+	{"theora_encode_comment", (void **) &qtheora_encode_comment},
+	{"theora_encode_tables", (void **) &qtheora_encode_tables},
+	{"theora_clear", (void **) &qtheora_clear},
+	{NULL, NULL}
+};
+
+static dllhandle_t og_dll = NULL, vo_dll = NULL, ve_dll = NULL, th_dll = NULL;
+
+qboolean SCR_CaptureVideo_Ogg_OpenLibrary()
+{
+	const char* dllnames_og [] =
+	{
+#if defined(WIN64)
+		"libogg64.dll",
+#elif defined(WIN32)
+		"libogg.dll",
+		"ogg.dll",
+#elif defined(MACOSX)
+		"libogg.dylib",
+#else
+		"libogg.so.0",
+		"libogg.so",
+#endif
+		NULL
+	};
+	const char* dllnames_vo [] =
+	{
+#if defined(WIN64)
+		"libvorbis64.dll",
+#elif defined(WIN32)
+		"libvorbis.dll",
+		"vorbis.dll",
+#elif defined(MACOSX)
+		"libvorbis.dylib",
+#else
+		"libvorbis.so.0",
+		"libvorbis.so",
+#endif
+		NULL
+	};
+	const char* dllnames_ve [] =
+	{
+#if defined(WIN64)
+		"libvorbisenc64.dll",
+#elif defined(WIN32)
+		"libvorbisenc.dll",
+		"vorbisenc.dll",
+#elif defined(MACOSX)
+		"libvorbisenc.dylib",
+#else
+		"libvorbisenc.so.2",
+		"libvorbisenc.so",
+#endif
+		NULL
+	};
+	const char* dllnames_th [] =
+	{
+#if defined(WIN64)
+		"libtheora64.dll",
+#elif defined(WIN32)
+		"libtheora.dll",
+		"theora.dll",
+#elif defined(MACOSX)
+		"libtheora.dylib",
+#else
+		"libtheora.so.0",
+		"libtheora.so",
+#endif
+		NULL
+	};
+
+	return
+		Sys_LoadLibrary (dllnames_og, &og_dll, oggfuncs)
+		&&
+		Sys_LoadLibrary (dllnames_th, &th_dll, theorafuncs)
+		&&
+		Sys_LoadLibrary (dllnames_vo, &vo_dll, vorbisfuncs)
+		&&
+		Sys_LoadLibrary (dllnames_ve, &ve_dll, vorbisencfuncs);
+}
+
+void SCR_CaptureVideo_Ogg_Init()
+{
+	SCR_CaptureVideo_Ogg_OpenLibrary();
+}
+
+qboolean SCR_CaptureVideo_Ogg_Available()
+{
+	return og_dll && th_dll && vo_dll && ve_dll;
+}
+
+void SCR_CaptureVideo_Ogg_CloseDLL()
+{
+	Sys_UnloadLibrary (&ve_dll);
+	Sys_UnloadLibrary (&vo_dll);
+	Sys_UnloadLibrary (&th_dll);
+	Sys_UnloadLibrary (&og_dll);
+}
+
+typedef struct capturevideostate_ogg_formatspecific_s
+{
+	ogg_stream_state to, vo;
+	int serial1, serial2;
+	theora_info ti;
+	theora_state ts;
+	vorbis_info vi;
+	vorbis_dsp_state vd;
+	vorbis_block vb;
+	yuv_buffer yuv;
+	int channels;
+}
+capturevideostate_ogg_formatspecific_t;
+#define LOAD_FORMATSPECIFIC() capturevideostate_ogg_formatspecific_t *format = (capturevideostate_ogg_formatspecific_t *) cls.capturevideo.formatspecific
+
+void SCR_CaptureVideo_Ogg_Begin()
+{
+	cls.capturevideo.videofile = FS_OpenRealFile(va("%s.ogv", cls.capturevideo.basename), "wb", false);
+	cls.capturevideo.formatspecific = Mem_Alloc(tempmempool, sizeof(capturevideostate_ogg_formatspecific_t));
+	{
+		LOAD_FORMATSPECIFIC();
+		int num, denom;
+		ogg_page pg;
+		ogg_packet pt, pt2, pt3;
+		theora_comment tc;
+		vorbis_comment vc;
+
+		format->serial1 = rand();
+		qogg_stream_init(&format->to, format->serial1);
+
+		if(cls.capturevideo.soundrate)
+		{
+			do
+			{
+				format->serial2 = rand();
+			}
+			while(format->serial1 == format->serial2);
+			qogg_stream_init(&format->vo, format->serial2);
+		}
+
+		qtheora_info_init(&format->ti);
+		format->ti.frame_width = cls.capturevideo.width;
+		format->ti.frame_height = cls.capturevideo.height;
+		format->ti.width = (format->ti.frame_width + 15) & ~15;
+		format->ti.height = (format->ti.frame_height + 15) & ~15;
+		format->ti.offset_x = ((format->ti.width - format->ti.frame_width) / 2) & ~1;
+		format->ti.offset_y = ((format->ti.height - format->ti.frame_height) / 2) & ~1;
+
+		format->yuv.y_width = format->ti.width;
+		format->yuv.y_height = format->ti.height;
+		format->yuv.y_stride = format->ti.width;
+
+		format->yuv.uv_width = format->ti.width / 2;
+		format->yuv.uv_height = format->ti.height / 2;
+		format->yuv.uv_stride = format->ti.width / 2;
+
+		format->yuv.y = Mem_Alloc(tempmempool, format->yuv.y_stride * format->yuv.y_height);
+		format->yuv.u = Mem_Alloc(tempmempool, format->yuv.uv_stride * format->yuv.uv_height);
+		format->yuv.v = Mem_Alloc(tempmempool, format->yuv.uv_stride * format->yuv.uv_height);
+
+		FindFraction(cls.capturevideo.framerate, &num, &denom, 1001);
+		format->ti.fps_numerator = num;
+		format->ti.fps_denominator = denom;
+
+		FindFraction(1 / vid_pixelheight.value, &num, &denom, 1000);
+		format->ti.aspect_numerator = num;
+		format->ti.aspect_denominator = denom;
+
+		format->ti.colorspace = OC_CS_UNSPECIFIED;
+		format->ti.pixelformat = OC_PF_420;
+
+		format->ti.target_bitrate = -1;
+		format->ti.quality = 63; // TODO find good values here later
+		format->ti.quick_p = false;
+
+		format->ti.dropframes_p = false;
+		format->ti.keyframe_auto_p = false;
+		format->ti.keyframe_frequency = 64;
+		format->ti.keyframe_frequency_force = 64; // TODO
+		format->ti.keyframe_data_target_bitrate = -1;
+		format->ti.keyframe_auto_threshold = 80;
+		format->ti.keyframe_mindistance = 8;
+		format->ti.noise_sensitivity = 1; // TODO
+		format->ti.sharpness = 0;
+
+		qtheora_encode_init(&format->ts, &format->ti);
+
+		// vorbis?
+		if(cls.capturevideo.soundrate)
+		{
+			qvorbis_info_init(&format->vi);
+			qvorbis_encode_init_vbr(&format->vi, cls.capturevideo.soundchannels, cls.capturevideo.soundrate, 9);
+			qvorbis_comment_init(&vc);
+			qvorbis_analysis_init(&format->vd, &format->vi);
+			qvorbis_block_init(&format->vd, &format->vb);
+		}
+
+		qtheora_comment_init(&tc);
+
+		/* create the remaining theora headers */
+		qtheora_encode_header(&format->ts, &pt);
+		qogg_stream_packetin(&format->to, &pt);
+		if (qogg_stream_pageout (&format->to, &pg) != 1)
+			fprintf (stderr, "Internal Ogg library error.\n");
+		FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);
+		FS_Write(cls.capturevideo.videofile, pg.body, pg.body_len);
+
+		qtheora_encode_comment(&tc, &pt);
+		qogg_stream_packetin(&format->to, &pt);
+		qtheora_encode_tables(&format->ts, &pt);
+		qogg_stream_packetin (&format->to, &pt);
+
+		qtheora_comment_clear(&tc);
+
+		if(cls.capturevideo.soundrate)
+		{
+			qvorbis_analysis_headerout(&format->vd, &vc, &pt, &pt2, &pt3);
+			qogg_stream_packetin(&format->vo, &pt);
+			if (qogg_stream_pageout (&format->vo, &pg) != 1)
+				fprintf (stderr, "Internal Ogg library error.\n");
+			FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);
+			FS_Write(cls.capturevideo.videofile, pg.body, pg.body_len);
+
+			qogg_stream_packetin(&format->vo, &pt2);
+			qogg_stream_packetin(&format->vo, &pt3);
+
+			qvorbis_comment_clear(&vc);
+		}
+
+		for(;;)
+		{
+			int result = qogg_stream_flush (&format->to, &pg);
+			if (result < 0)
+				fprintf (stderr, "Internal Ogg library error.\n"); // TODO Host_Error
+			if (result <= 0)
+				break;
+			FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);
+			FS_Write(cls.capturevideo.videofile, pg.body, pg.body_len);
+		}
+
+		if(cls.capturevideo.soundrate)
+		for(;;)
+		{
+			int result = qogg_stream_flush (&format->vo, &pg);
+			if (result < 0)
+				fprintf (stderr, "Internal Ogg library error.\n"); // TODO Host_Error
+			if (result <= 0)
+				break;
+			FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);
+			FS_Write(cls.capturevideo.videofile, pg.body, pg.body_len);
+		}
+	}
+}
+
+void SCR_CaptureVideo_Ogg_EndVideo()
+{
+	LOAD_FORMATSPECIFIC();
+	ogg_page pg;
+	ogg_packet pt;
+
+	// repeat the last frame so we can set the end-of-stream flag
+	qtheora_encode_YUVin(&format->ts, &format->yuv);
+	qtheora_encode_packetout(&format->ts, true, &pt);
+	qogg_stream_packetin(&format->to, &pt);
+
+	if(cls.capturevideo.soundrate)
+	{
+		qvorbis_analysis_wrote(&format->vd, 0);
+		while(qvorbis_analysis_blockout(&format->vd, &format->vb) == 1)
+		{
+			qvorbis_analysis(&format->vb, NULL);
+			qvorbis_bitrate_addblock(&format->vb);
+			while(qvorbis_bitrate_flushpacket(&format->vd, &pt))
+				qogg_stream_packetin(&format->vo, &pt);
+		}
+	}
+
+	if(qogg_stream_pageout(&format->to, &pg) > 0)
+	{
+		FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);
+		FS_Write(cls.capturevideo.videofile, pg.body, pg.body_len);
+	}
+
+	if(cls.capturevideo.soundrate)
+	{
+		if(qogg_stream_pageout(&format->vo, &pg) > 0)
+		{
+			FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);
+			FS_Write(cls.capturevideo.videofile, pg.body, pg.body_len);
+		}
+	}
+		
+	while (1) {
+		int result = qogg_stream_flush (&format->to, &pg);
+		if (result < 0)
+			fprintf (stderr, "Internal Ogg library error.\n"); // TODO Host_Error
+		if (result <= 0)
+			break;
+		FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);
+		FS_Write(cls.capturevideo.videofile, pg.body, pg.body_len);
+	}
+
+	if(cls.capturevideo.soundrate)
+	{
+		while (1) {
+			int result = qogg_stream_flush (&format->vo, &pg);
+			if (result < 0)
+				fprintf (stderr, "Internal Ogg library error.\n"); // TODO Host_Error
+			if (result <= 0)
+				break;
+			FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);
+			FS_Write(cls.capturevideo.videofile, pg.body, pg.body_len);
+		}
+
+		qogg_stream_clear(&format->vo);
+		qvorbis_block_clear(&format->vb);
+		qvorbis_dsp_clear(&format->vd);
+		qvorbis_info_clear(&format->vi);
+	}
+
+	qogg_stream_clear(&format->to);
+	qtheora_clear(&format->ts);
+
+	Mem_Free(format);
+
+	// cl_screen.c does this
+	// FS_Close(cls.capturevideo.videofile);
+	// cls.capturevideo.videofile = NULL;
+}
+
+void SCR_CaptureVideo_Ogg_ConvertFrame_BGRA_to_YUV()
+{
+	LOAD_FORMATSPECIFIC();
+	int x, y;
+	int blockr, blockg, blockb;
+	unsigned char *b = cls.capturevideo.outbuffer;
+	int w = cls.capturevideo.width;
+	int h = cls.capturevideo.height;
+	int inpitch = w*4;
+
+	for(y = 0; y < h; ++y)
+	{
+		for(b = cls.capturevideo.outbuffer + (h-1-y)*w*4, x = 0; x < w; ++x)
+		{
+			blockr = b[2];
+			blockg = b[1];
+			blockb = b[0];
+			format->yuv.y[x + format->yuv.y_stride * y] =
+				cls.capturevideo.yuvnormalizetable[0][cls.capturevideo.rgbtoyuvscaletable[0][0][blockr] + cls.capturevideo.rgbtoyuvscaletable[0][1][blockg] + cls.capturevideo.rgbtoyuvscaletable[0][2][blockb]];
+			b += 4;
+		}
+
+		if((y & 1) == 0)
+		{
+			for(b = cls.capturevideo.outbuffer + (h-2-y)*w*4, x = 0; x < w/2; ++x)
+			{
+				blockr = (b[2] + b[6] + b[inpitch+2] + b[inpitch+6]) >> 2;
+				blockg = (b[1] + b[5] + b[inpitch+1] + b[inpitch+5]) >> 2;
+				blockb = (b[0] + b[4] + b[inpitch+0] + b[inpitch+4]) >> 2;
+				format->yuv.u[x + format->yuv.uv_stride * (y/2)] =
+					cls.capturevideo.yuvnormalizetable[1][cls.capturevideo.rgbtoyuvscaletable[1][0][blockr] + cls.capturevideo.rgbtoyuvscaletable[1][1][blockg] + cls.capturevideo.rgbtoyuvscaletable[1][2][blockb] + 128];
+				format->yuv.v[x + format->yuv.uv_stride * (y/2)] =
+					cls.capturevideo.yuvnormalizetable[2][cls.capturevideo.rgbtoyuvscaletable[2][0][blockr] + cls.capturevideo.rgbtoyuvscaletable[2][1][blockg] + cls.capturevideo.rgbtoyuvscaletable[2][2][blockb] + 128];
+				b += 8;
+			}
+		}
+	}
+}
+
+void SCR_CaptureVideo_Ogg_VideoFrame()
+{
+	LOAD_FORMATSPECIFIC();
+	ogg_page pg;
+	ogg_packet pt;
+
+	// data is in cls.capturevideo.outbuffer as BGRA and has size width*height
+
+	SCR_CaptureVideo_Ogg_ConvertFrame_BGRA_to_YUV();
+	qtheora_encode_YUVin(&format->ts, &format->yuv);
+	qtheora_encode_packetout(&format->ts, false, &pt);
+	qogg_stream_packetin(&format->to, &pt);
+
+	while(qogg_stream_pageout(&format->to, &pg) > 0)
+	{
+		FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);
+		FS_Write(cls.capturevideo.videofile, pg.body, pg.body_len);
+	}
+}
+
+void SCR_CaptureVideo_Ogg_SoundFrame(const portable_sampleframe_t *paintbuffer, size_t length)
+{
+	LOAD_FORMATSPECIFIC();
+	float **vorbis_buffer;
+	size_t i;
+	int j;
+	ogg_page pg;
+	ogg_packet pt;
+
+	vorbis_buffer = qvorbis_analysis_buffer(&format->vd, length);
+	for(i = 0; i < length; ++i)
+	{
+		for(j = 0; j < cls.capturevideo.soundchannels; ++j)
+			vorbis_buffer[j][i] = paintbuffer[i].sample[j] / 32768.0f;
+	}
+	qvorbis_analysis_wrote(&format->vd, length);
+
+	while(qvorbis_analysis_blockout(&format->vd, &format->vb) == 1)
+	{
+		qvorbis_analysis(&format->vb, NULL);
+		qvorbis_bitrate_addblock(&format->vb);
+
+		while(qvorbis_bitrate_flushpacket(&format->vd, &pt))
+			qogg_stream_packetin(&format->vo, &pt);
+	}
+
+	while(qogg_stream_pageout(&format->vo, &pg) > 0)
+	{
+		FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);
+		FS_Write(cls.capturevideo.videofile, pg.body, pg.body_len);
+	}
+}
