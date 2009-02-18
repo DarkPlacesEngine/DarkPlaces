@@ -5,7 +5,7 @@
 #include "cap_ogg.h"
 
 // video capture cvars
-static cvar_t cl_capturevideo_ogg_theora_quality = {CVAR_SAVE, "cl_capturevideo_ogg_theora_quality", "16", "video quality factor (0 to 63), or -1 to use bitrate only; higher is better"};
+static cvar_t cl_capturevideo_ogg_theora_quality = {CVAR_SAVE, "cl_capturevideo_ogg_theora_quality", "32", "video quality factor (0 to 63), or -1 to use bitrate only; higher is better"};
 static cvar_t cl_capturevideo_ogg_theora_bitrate = {CVAR_SAVE, "cl_capturevideo_ogg_theora_bitrate", "-1", "video bitrate (45 to 2000 kbps), or -1 to use quality only; higher is better"};
 static cvar_t cl_capturevideo_ogg_theora_keyframe_bitrate_multiplier = {CVAR_SAVE, "cl_capturevideo_ogg_theora_keyframe_bitrate_multiplier", "1.5", "how much more bit rate to use for keyframes, specified as a factor of at least 1"};
 static cvar_t cl_capturevideo_ogg_theora_keyframe_frequency = {CVAR_SAVE, "cl_capturevideo_ogg_theora_keyframe_frequency", "64", "maximum number of frames between two key frames (1 to 1000)"};
