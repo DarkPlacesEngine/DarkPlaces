@@ -354,6 +354,11 @@ int S_GetSoundRate(void)
 	return snd_renderbuffer ? snd_renderbuffer->format.speed : 0;
 }
 
+int S_GetSoundChannels(void)
+{
+	return snd_renderbuffer ? snd_renderbuffer->format.channels : 0;
+}
+
 
 static qboolean S_ChooseCheaperFormat (snd_format_t* format, qboolean fixed_speed, qboolean fixed_width, qboolean fixed_channels)
 {

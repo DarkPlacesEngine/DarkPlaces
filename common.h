@@ -355,5 +355,7 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 
 #endif  // #ifndef HAVE_STRLCPY
 
+void FindFraction(double val, int *num, int *denom, int denomMax);
+
 #endif
 

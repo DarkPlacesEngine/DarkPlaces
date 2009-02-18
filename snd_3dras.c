@@ -1022,3 +1022,9 @@ int S_GetSoundRate (void){
 	Con_Printf("So let's assume 44100.\n");
 	return 44100;
 }
+
+int S_GetSoundChannels (void){
+	Con_Printf("Inside 3DRAS, the soundrate of the end-user is NONE of the dev's concern.\n");
+	Con_Printf("So let's assume 2.\n");
+	return 2;
+}

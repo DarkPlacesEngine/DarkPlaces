@@ -131,3 +131,8 @@ int S_GetSoundRate(void)
 {
 	return 0;
 }
+
+int S_GetSoundChannels(void)
+{
+	return 0;
+}

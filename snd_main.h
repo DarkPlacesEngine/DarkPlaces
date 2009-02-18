@@ -185,5 +185,12 @@ qboolean SndSys_LockRenderBuffer (void);
 // Release the exclusive lock on "snd_renderbuffer"
 void SndSys_UnlockRenderBuffer (void);
 
+// exported for capturevideo so ogg can see all channels
+typedef struct portable_samplepair_s
+{
+	int sample[SND_LISTENERS];
+} portable_sampleframe_t;
+// LordHavoc: was 512, expanded to 2048
+#define	PAINTBUFFER_SIZE 2048
 
 #endif

@@ -448,7 +448,8 @@ qw_downloadtype_t;
 
 typedef enum capturevideoformat_e
 {
-	CAPTUREVIDEOFORMAT_AVI_I420
+	CAPTUREVIDEOFORMAT_AVI_I420,
+	CAPTUREVIDEOFORMAT_OGG_VORBIS_THEORA,
 }
 capturevideoformat_t;
 
@@ -476,6 +477,7 @@ typedef struct capturevideostate_s
 	qboolean canseek;
 	capturevideoformat_t format;
 	int soundrate;
+	int soundchannels;
 	int frame;
 	int soundsampleframe; // for AVI saving
 	unsigned char *screenbuffer;
@@ -492,6 +494,7 @@ typedef struct capturevideostate_s
 	unsigned char yuvnormalizetable[3][256];
 	char basename[64];
 	int width, height;
+	void *formatspecific;
 }
 capturevideostate_t;
 
