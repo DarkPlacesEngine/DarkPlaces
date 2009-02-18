@@ -4,6 +4,17 @@
 #include "client.h"
 #include "cap_ogg.h"
 
+// video capture cvars
+static cvar_t cl_capturevideo_ogg_theora_quality = {CVAR_SAVE, "cl_capturevideo_ogg_theora_quality", "16", "video quality factor (0 to 63), or -1 to use bitrate only; higher is better"};
+static cvar_t cl_capturevideo_ogg_theora_bitrate = {CVAR_SAVE, "cl_capturevideo_ogg_theora_quality", "-1", "video bitrate (45000 to 2000000 kbps), or -1 to use quality only; higher is better"};
+static cvar_t cl_capturevideo_ogg_theora_keyframe_bitrate_multiplier = {CVAR_SAVE, "cl_capturevideo_ogg_theora_keyframe_bitrate_multiplier", "1.5", "how much more bit rate to use for keyframes, specified as a factor of at least 1"};
+static cvar_t cl_capturevideo_ogg_theora_keyframe_frequency = {CVAR_SAVE, "cl_capturevideo_ogg_theora_keyframe_frequency", "64", "maximum number of frames between two key frames (1 to 1000)"};
+static cvar_t cl_capturevideo_ogg_theora_keyframe_mindistance = {CVAR_SAVE, "cl_capturevideo_ogg_theora_keyframe_mindistance", "8", "minimum number of frames between two key frames (1 to 1000)"};
+static cvar_t cl_capturevideo_ogg_theora_keyframe_auto_threshold = {CVAR_SAVE, "cl_capturevideo_ogg_theora_keyframe_auto_threshold", "80", "threshold for key frame decision (0 to 100)"};
+static cvar_t cl_capturevideo_ogg_theora_noise_sensitivity = {CVAR_SAVE, "cl_capturevideo_ogg_theora_noise_sensitivity", "1", "video noise sensitivity (0 to 6); lower is better"};
+static cvar_t cl_capturevideo_ogg_theora_sharpness = {CVAR_SAVE, "cl_capturevideo_ogg_theora_sharpness", "0", "sharpness (0 to 2); lower is sharper"};
+static cvar_t cl_capturevideo_ogg_vorbis_quality = {CVAR_SAVE, "cl_capturevideo_ogg_vorbis_quality", "5", "audio quality (-1 to 10); higher is better"};
+
 // ogg.h stuff
 typedef int16_t ogg_int16_t;
 typedef u_int16_t ogg_uint16_t;
@@ -564,6 +575,15 @@ qboolean SCR_CaptureVideo_Ogg_OpenLibrary()
 void SCR_CaptureVideo_Ogg_Init()
 {
 	SCR_CaptureVideo_Ogg_OpenLibrary();
+
+	Cvar_RegisterVariable(&cl_capturevideo_ogg_theora_quality);
+	Cvar_RegisterVariable(&cl_capturevideo_ogg_theora_bitrate);
+	Cvar_RegisterVariable(&cl_capturevideo_ogg_theora_keyframe_bitrate_multiplier);
+	Cvar_RegisterVariable(&cl_capturevideo_ogg_theora_keyframe_frequency);
+	Cvar_RegisterVariable(&cl_capturevideo_ogg_theora_keyframe_mindistance);
+	Cvar_RegisterVariable(&cl_capturevideo_ogg_theora_keyframe_auto_threshold);
+	Cvar_RegisterVariable(&cl_capturevideo_ogg_theora_noise_sensitivity);
+	Cvar_RegisterVariable(&cl_capturevideo_ogg_vorbis_quality);
 }
 
 qboolean SCR_CaptureVideo_Ogg_Available()
@@ -583,9 +603,7 @@ typedef struct capturevideostate_ogg_formatspecific_s
 {
 	ogg_stream_state to, vo;
 	int serial1, serial2;
-	theora_info ti;
 	theora_state ts;
-	vorbis_info vi;
 	vorbis_dsp_state vd;
 	vorbis_block vb;
 	yuv_buffer yuv;
@@ -605,6 +623,8 @@ void SCR_CaptureVideo_Ogg_Begin()
 		ogg_packet pt, pt2, pt3;
 		theora_comment tc;
 		vorbis_comment vc;
+		theora_info ti;
+		vorbis_info vi;
 
 		format->serial1 = rand();
 		qogg_stream_init(&format->to, format->serial1);
@@ -619,60 +639,93 @@ void SCR_CaptureVideo_Ogg_Begin()
 			qogg_stream_init(&format->vo, format->serial2);
 		}
 
-		qtheora_info_init(&format->ti);
-		format->ti.frame_width = cls.capturevideo.width;
-		format->ti.frame_height = cls.capturevideo.height;
-		format->ti.width = (format->ti.frame_width + 15) & ~15;
-		format->ti.height = (format->ti.frame_height + 15) & ~15;
-		format->ti.offset_x = ((format->ti.width - format->ti.frame_width) / 2) & ~1;
-		format->ti.offset_y = ((format->ti.height - format->ti.frame_height) / 2) & ~1;
+		qtheora_info_init(&ti);
+		ti.frame_width = cls.capturevideo.width;
+		ti.frame_height = cls.capturevideo.height;
+		ti.width = (ti.frame_width + 15) & ~15;
+		ti.height = (ti.frame_height + 15) & ~15;
+		//ti.offset_x = ((ti.width - ti.frame_width) / 2) & ~1;
+		//ti.offset_y = ((ti.height - ti.frame_height) / 2) & ~1;
 
-		format->yuv.y_width = format->ti.width;
-		format->yuv.y_height = format->ti.height;
-		format->yuv.y_stride = format->ti.width;
+		format->yuv.y_width = ti.width;
+		format->yuv.y_height = ti.height;
+		format->yuv.y_stride = ti.width;
 
-		format->yuv.uv_width = format->ti.width / 2;
-		format->yuv.uv_height = format->ti.height / 2;
-		format->yuv.uv_stride = format->ti.width / 2;
+		format->yuv.uv_width = ti.width / 2;
+		format->yuv.uv_height = ti.height / 2;
+		format->yuv.uv_stride = ti.width / 2;
 
 		format->yuv.y = Mem_Alloc(tempmempool, format->yuv.y_stride * format->yuv.y_height);
 		format->yuv.u = Mem_Alloc(tempmempool, format->yuv.uv_stride * format->yuv.uv_height);
 		format->yuv.v = Mem_Alloc(tempmempool, format->yuv.uv_stride * format->yuv.uv_height);
 
 		FindFraction(cls.capturevideo.framerate, &num, &denom, 1001);
-		format->ti.fps_numerator = num;
-		format->ti.fps_denominator = denom;
+		ti.fps_numerator = num;
+		ti.fps_denominator = denom;
 
 		FindFraction(1 / vid_pixelheight.value, &num, &denom, 1000);
-		format->ti.aspect_numerator = num;
-		format->ti.aspect_denominator = denom;
+		ti.aspect_numerator = num;
+		ti.aspect_denominator = denom;
 
-		format->ti.colorspace = OC_CS_UNSPECIFIED;
-		format->ti.pixelformat = OC_PF_420;
+		ti.colorspace = OC_CS_UNSPECIFIED;
+		ti.pixelformat = OC_PF_420;
 
-		format->ti.target_bitrate = -1;
-		format->ti.quality = 63; // TODO find good values here later
-		format->ti.quick_p = false;
+		ti.quick_p = true; // http://mlblog.osdir.com/multimedia.ogg.theora.general/2004-07/index.shtml
+		ti.dropframes_p = false;
 
-		format->ti.dropframes_p = false;
-		format->ti.keyframe_auto_p = false;
-		format->ti.keyframe_frequency = 64;
-		format->ti.keyframe_frequency_force = 64; // TODO
-		format->ti.keyframe_data_target_bitrate = -1;
-		format->ti.keyframe_auto_threshold = 80;
-		format->ti.keyframe_mindistance = 8;
-		format->ti.noise_sensitivity = 1; // TODO
-		format->ti.sharpness = 0;
+		ti.target_bitrate = cl_capturevideo_ogg_theora_bitrate.integer;
+		ti.quality = cl_capturevideo_ogg_theora_quality.integer;
 
-		qtheora_encode_init(&format->ts, &format->ti);
+		if(ti.target_bitrate <= 0)
+		{
+			if(ti.quality < 0)
+			{
+				ti.target_bitrate = -1;
+				ti.keyframe_data_target_bitrate = -1;
+				ti.quality = 63;
+			}
+			else
+			{
+				ti.target_bitrate = -1;
+				ti.keyframe_data_target_bitrate = -1;
+				ti.quality = bound(0, ti.quality, 63);
+			}
+		}
+		else
+		{
+			if(ti.quality < 0)
+			{
+				ti.target_bitrate = bound(45000, ti.target_bitrate, 2000000);
+				ti.keyframe_data_target_bitrate = ti.target_bitrate * max(1, cl_capturevideo_ogg_theora_keyframe_bitrate_multiplier.value);
+				ti.quality = -1;
+			}
+			else
+			{
+				ti.target_bitrate = bound(45000, ti.target_bitrate, 2000000);
+				ti.keyframe_data_target_bitrate = ti.target_bitrate * max(1, cl_capturevideo_ogg_theora_keyframe_bitrate_multiplier.value);
+				ti.quality = -1;
+			}
+		}
+
+		ti.keyframe_frequency = bound(1, cl_capturevideo_ogg_theora_keyframe_frequency.integer, 1000);
+		ti.keyframe_mindistance = bound(1, cl_capturevideo_ogg_theora_keyframe_mindistance.integer, (int) ti.keyframe_frequency);
+		ti.noise_sensitivity = bound(0, cl_capturevideo_ogg_theora_noise_sensitivity.integer, 6);
+		ti.sharpness = bound(0, cl_capturevideo_ogg_theora_sharpness.integer, 2);
+		ti.keyframe_auto_threshold = bound(0, cl_capturevideo_ogg_theora_keyframe_auto_threshold.integer, 100);
+
+		ti.keyframe_frequency_force = ti.keyframe_frequency;
+		ti.keyframe_auto_p = (ti.keyframe_frequency != ti.keyframe_mindistance);
+
+		qtheora_encode_init(&format->ts, &ti);
+		qtheora_info_clear(&ti);
 
 		// vorbis?
 		if(cls.capturevideo.soundrate)
 		{
-			qvorbis_info_init(&format->vi);
-			qvorbis_encode_init_vbr(&format->vi, cls.capturevideo.soundchannels, cls.capturevideo.soundrate, 9);
+			qvorbis_info_init(&vi);
+			qvorbis_encode_init_vbr(&vi, cls.capturevideo.soundchannels, cls.capturevideo.soundrate, bound(-1, cl_capturevideo_ogg_vorbis_quality.value, 10) * 0.1);
 			qvorbis_comment_init(&vc);
-			qvorbis_analysis_init(&format->vd, &format->vi);
+			qvorbis_analysis_init(&format->vd, &vi);
 			qvorbis_block_init(&format->vd, &format->vb);
 		}
 
@@ -706,6 +759,7 @@ void SCR_CaptureVideo_Ogg_Begin()
 			qogg_stream_packetin(&format->vo, &pt3);
 
 			qvorbis_comment_clear(&vc);
+			qvorbis_info_clear(&vi);
 		}
 
 		for(;;)
@@ -796,12 +850,14 @@ void SCR_CaptureVideo_Ogg_EndVideo()
 		qogg_stream_clear(&format->vo);
 		qvorbis_block_clear(&format->vb);
 		qvorbis_dsp_clear(&format->vd);
-		qvorbis_info_clear(&format->vi);
 	}
 
 	qogg_stream_clear(&format->to);
 	qtheora_clear(&format->ts);
 
+	Mem_Free(format->yuv.y);
+	Mem_Free(format->yuv.u);
+	Mem_Free(format->yuv.v);
 	Mem_Free(format);
 
 	// cl_screen.c does this
