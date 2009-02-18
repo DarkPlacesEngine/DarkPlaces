@@ -630,6 +630,8 @@ static void SCR_CaptureVideo_Ogg_Interleave()
 {
 	LOAD_FORMATSPECIFIC_OGG();
 
+	//fprintf(stderr, "<");
+
 	if(!cls.capturevideo.soundrate)
 	{
 		for(;;)
@@ -653,10 +655,32 @@ static void SCR_CaptureVideo_Ogg_Interleave()
 		// first: make sure we have a page of both types
 		if(!format->have_videopage)
 			if(qogg_stream_pageout(&format->to, &format->videopage) > 0)
+			{
+				//fprintf(stderr, "V");
 				format->have_videopage = true;
+
+				// why do I have to do this? the code should work without the
+				// following three lines, which turn this attempt at correct
+				// interleaving back into the old stupid one that oggz-validate
+				// hates
+				FS_Write(cls.capturevideo.videofile, format->videopage.header, format->videopage.header_len);
+				FS_Write(cls.capturevideo.videofile, format->videopage.body, format->videopage.body_len);
+				format->have_videopage = false;
+			}
 		if(!format->have_audiopage)
 			if(qogg_stream_pageout(&format->vo, &format->audiopage) > 0)
+			{
+				//fprintf(stderr, "A");
 				format->have_audiopage = true;
+
+				// why do I have to do this? the code should work without the
+				// following three lines, which turn this attempt at correct
+				// interleaving back into the old stupid one that oggz-validate
+				// hates
+				FS_Write(cls.capturevideo.videofile, format->audiopage.header, format->audiopage.header_len);
+				FS_Write(cls.capturevideo.videofile, format->audiopage.body, format->audiopage.body_len);
+				format->have_audiopage = false;
+			}
 
 		if(format->have_videopage && format->have_audiopage)
 		{
@@ -668,17 +692,24 @@ static void SCR_CaptureVideo_Ogg_Interleave()
 				FS_Write(cls.capturevideo.videofile, format->audiopage.header, format->audiopage.header_len);
 				FS_Write(cls.capturevideo.videofile, format->audiopage.body, format->audiopage.body_len);
 				format->have_audiopage = false;
+
+				//fprintf(stderr, "a");
 			}
 			else
 			{
 				FS_Write(cls.capturevideo.videofile, format->videopage.header, format->videopage.header_len);
 				FS_Write(cls.capturevideo.videofile, format->videopage.body, format->videopage.body_len);
 				format->have_videopage = false;
+
+				//fprintf(stderr, "v");
 			}
 		}
 		else
 			break;
 	}
+
+	fprintf(stderr, ">");
+
 }
 
 static void SCR_CaptureVideo_Ogg_FlushInterleaving()
@@ -834,8 +865,9 @@ static void SCR_CaptureVideo_Ogg_VideoFrames(int num)
 	while(num-- > 0)
 	{
 		qtheora_encode_YUVin(&format->ts, &format->yuv);
-		qtheora_encode_packetout(&format->ts, false, &pt);
-		qogg_stream_packetin(&format->to, &pt);
+
+		while(qtheora_encode_packetout(&format->ts, false, &pt))
+			qogg_stream_packetin(&format->to, &pt);
 
 		SCR_CaptureVideo_Ogg_Interleave();
 	}
@@ -864,9 +896,9 @@ static void SCR_CaptureVideo_Ogg_SoundFrame(const portable_sampleframe_t *paintb
 
 		while(qvorbis_bitrate_flushpacket(&format->vd, &pt))
 			qogg_stream_packetin(&format->vo, &pt);
-
-		SCR_CaptureVideo_Ogg_Interleave();
 	}
+
+	SCR_CaptureVideo_Ogg_Interleave();
 }
 
 void SCR_CaptureVideo_Ogg_BeginVideo()
