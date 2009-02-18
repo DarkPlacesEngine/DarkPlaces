@@ -116,6 +116,7 @@ static int      (*qogg_stream_flush) (ogg_stream_state *os, ogg_page *og);
 
 static int      (*qogg_stream_init) (ogg_stream_state *os,int serialno);
 static int      (*qogg_stream_clear) (ogg_stream_state *os);
+static ogg_int64_t  (*qogg_page_granulepos) (ogg_page *og);
 
 // end of ogg.h stuff
 
@@ -265,6 +266,8 @@ static void     (*qvorbis_comment_clear) (vorbis_comment *vc);
 static int      (*qvorbis_block_init) (vorbis_dsp_state *v, vorbis_block *vb);
 static int      (*qvorbis_block_clear) (vorbis_block *vb);
 static void     (*qvorbis_dsp_clear) (vorbis_dsp_state *v);
+static double   (*qvorbis_granule_time) (vorbis_dsp_state *v,
+				    ogg_int64_t granulepos);
 
 /* Vorbis PRIMITIVES: analysis/DSP layer ****************************/
 
@@ -442,6 +445,7 @@ static void (*qtheora_info_clear) (theora_info *c);
 static void (*qtheora_clear) (theora_state *t);
 static void (*qtheora_comment_init) (theora_comment *tc);
 static void  (*qtheora_comment_clear) (theora_comment *tc);
+static double (*qtheora_granule_time) (theora_state *th,ogg_int64_t granulepos);
 // end of theora.h stuff
 
 static dllfunction_t oggfuncs[] =
@@ -451,6 +455,7 @@ static dllfunction_t oggfuncs[] =
 	{"ogg_stream_flush", (void **) &qogg_stream_flush},
 	{"ogg_stream_init", (void **) &qogg_stream_init},
 	{"ogg_stream_clear", (void **) &qogg_stream_clear},
+	{"ogg_page_granulepos", (void **) &qogg_page_granulepos},
 	{NULL, NULL}
 };
 
@@ -478,6 +483,7 @@ static dllfunction_t vorbisfuncs[] =
 	{"vorbis_analysis", (void **) &qvorbis_analysis},
 	{"vorbis_bitrate_addblock", (void **) &qvorbis_bitrate_addblock},
 	{"vorbis_bitrate_flushpacket", (void **) &qvorbis_bitrate_flushpacket},
+	{"vorbis_granule_time", (void **) &qvorbis_granule_time},
 	{NULL, NULL}
 };
 
@@ -494,6 +500,7 @@ static dllfunction_t theorafuncs[] =
 	{"theora_encode_comment", (void **) &qtheora_encode_comment},
 	{"theora_encode_tables", (void **) &qtheora_encode_tables},
 	{"theora_clear", (void **) &qtheora_clear},
+	{"theora_granule_time", (void **) &qtheora_granule_time},
 	{NULL, NULL}
 };
 
@@ -609,9 +616,90 @@ typedef struct capturevideostate_ogg_formatspecific_s
 	vorbis_info vi;
 	yuv_buffer yuv;
 	int channels;
+
+	// for interleaving
+	ogg_page videopage;
+	ogg_page audiopage;
+	qboolean have_videopage;
+	qboolean have_audiopage;
 }
 capturevideostate_ogg_formatspecific_t;
 #define LOAD_FORMATSPECIFIC_OGG() capturevideostate_ogg_formatspecific_t *format = (capturevideostate_ogg_formatspecific_t *) cls.capturevideo.formatspecific
+
+static void SCR_CaptureVideo_Ogg_Interleave()
+{
+	LOAD_FORMATSPECIFIC_OGG();
+
+	if(!cls.capturevideo.soundrate)
+	{
+		for(;;)
+		{
+			// first: make sure we have a page of both types
+			if(!format->have_videopage)
+				if(qogg_stream_pageout(&format->to, &format->videopage) > 0)
+					format->have_videopage = true;
+			if(format->have_videopage)
+			{
+				FS_Write(cls.capturevideo.videofile, format->videopage.header, format->videopage.header_len);
+				FS_Write(cls.capturevideo.videofile, format->videopage.body, format->videopage.body_len);
+				format->have_videopage = false;
+			}
+		}
+		return;
+	}
+
+	for(;;)
+	{
+		// first: make sure we have a page of both types
+		if(!format->have_videopage)
+			if(qogg_stream_pageout(&format->to, &format->videopage) > 0)
+				format->have_videopage = true;
+		if(!format->have_audiopage)
+			if(qogg_stream_pageout(&format->vo, &format->audiopage) > 0)
+				format->have_audiopage = true;
+
+		if(format->have_videopage && format->have_audiopage)
+		{
+			// output the page that ends first
+			double audiotime = qvorbis_granule_time(&format->vd, qogg_page_granulepos(&format->audiopage));
+			double videotime = qtheora_granule_time(&format->ts, qogg_page_granulepos(&format->videopage));
+			if(audiotime < videotime)
+			{
+				FS_Write(cls.capturevideo.videofile, format->audiopage.header, format->audiopage.header_len);
+				FS_Write(cls.capturevideo.videofile, format->audiopage.body, format->audiopage.body_len);
+				format->have_audiopage = false;
+			}
+			else
+			{
+				FS_Write(cls.capturevideo.videofile, format->videopage.header, format->videopage.header_len);
+				FS_Write(cls.capturevideo.videofile, format->videopage.body, format->videopage.body_len);
+				format->have_videopage = false;
+			}
+		}
+		else
+			break;
+	}
+}
+
+static void SCR_CaptureVideo_Ogg_FlushInterleaving()
+{
+	LOAD_FORMATSPECIFIC_OGG();
+
+	if(cls.capturevideo.soundrate)
+	if(format->have_audiopage)
+	{
+		FS_Write(cls.capturevideo.videofile, format->audiopage.header, format->audiopage.header_len);
+		FS_Write(cls.capturevideo.videofile, format->audiopage.body, format->audiopage.body_len);
+		format->have_audiopage = false;
+	}
+
+	if(format->have_videopage)
+	{
+		FS_Write(cls.capturevideo.videofile, format->videopage.header, format->videopage.header_len);
+		FS_Write(cls.capturevideo.videofile, format->videopage.body, format->videopage.body_len);
+		format->have_videopage = false;
+	}
+}
 
 static void SCR_CaptureVideo_Ogg_EndVideo()
 {
@@ -623,6 +711,7 @@ static void SCR_CaptureVideo_Ogg_EndVideo()
 	qtheora_encode_YUVin(&format->ts, &format->yuv);
 	qtheora_encode_packetout(&format->ts, true, &pt);
 	qogg_stream_packetin(&format->to, &pt);
+	SCR_CaptureVideo_Ogg_Interleave();
 
 	if(cls.capturevideo.soundrate)
 	{
@@ -633,8 +722,11 @@ static void SCR_CaptureVideo_Ogg_EndVideo()
 			qvorbis_bitrate_addblock(&format->vb);
 			while(qvorbis_bitrate_flushpacket(&format->vd, &pt))
 				qogg_stream_packetin(&format->vo, &pt);
+			SCR_CaptureVideo_Ogg_Interleave();
 		}
 	}
+
+	SCR_CaptureVideo_Ogg_FlushInterleaving();
 
 	while(qogg_stream_pageout(&format->to, &pg) > 0)
 	{
@@ -733,7 +825,6 @@ static void SCR_CaptureVideo_Ogg_ConvertFrame_BGRA_to_YUV()
 static void SCR_CaptureVideo_Ogg_VideoFrames(int num)
 {
 	LOAD_FORMATSPECIFIC_OGG();
-	ogg_page pg;
 	ogg_packet pt;
 
 	// data is in cls.capturevideo.outbuffer as BGRA and has size width*height
@@ -746,11 +837,7 @@ static void SCR_CaptureVideo_Ogg_VideoFrames(int num)
 		qtheora_encode_packetout(&format->ts, false, &pt);
 		qogg_stream_packetin(&format->to, &pt);
 
-		while(qogg_stream_pageout(&format->to, &pg) > 0)
-		{
-			FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);
-			FS_Write(cls.capturevideo.videofile, pg.body, pg.body_len);
-		}
+		SCR_CaptureVideo_Ogg_Interleave();
 	}
 }
 
@@ -760,7 +847,6 @@ static void SCR_CaptureVideo_Ogg_SoundFrame(const portable_sampleframe_t *paintb
 	float **vorbis_buffer;
 	size_t i;
 	int j;
-	ogg_page pg;
 	ogg_packet pt;
 
 	vorbis_buffer = qvorbis_analysis_buffer(&format->vd, length);
@@ -778,12 +864,8 @@ static void SCR_CaptureVideo_Ogg_SoundFrame(const portable_sampleframe_t *paintb
 
 		while(qvorbis_bitrate_flushpacket(&format->vd, &pt))
 			qogg_stream_packetin(&format->vo, &pt);
-	}
 
-	while(qogg_stream_pageout(&format->vo, &pg) > 0)
-	{
-		FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);
-		FS_Write(cls.capturevideo.videofile, pg.body, pg.body_len);
+		SCR_CaptureVideo_Ogg_Interleave();
 	}
 }
 
@@ -816,6 +898,8 @@ void SCR_CaptureVideo_Ogg_BeginVideo()
 			while(format->serial1 == format->serial2);
 			qogg_stream_init(&format->vo, format->serial2);
 		}
+
+		format->have_videopage = format->have_audiopage = false;
 
 		qtheora_info_init(&ti);
 		ti.frame_width = cls.capturevideo.width;
