@@ -6,14 +6,14 @@
 
 // video capture cvars
 static cvar_t cl_capturevideo_ogg_theora_quality = {CVAR_SAVE, "cl_capturevideo_ogg_theora_quality", "16", "video quality factor (0 to 63), or -1 to use bitrate only; higher is better"};
-static cvar_t cl_capturevideo_ogg_theora_bitrate = {CVAR_SAVE, "cl_capturevideo_ogg_theora_quality", "-1", "video bitrate (45000 to 2000000 kbps), or -1 to use quality only; higher is better"};
+static cvar_t cl_capturevideo_ogg_theora_bitrate = {CVAR_SAVE, "cl_capturevideo_ogg_theora_bitrate", "-1", "video bitrate (45 to 2000 kbps), or -1 to use quality only; higher is better"};
 static cvar_t cl_capturevideo_ogg_theora_keyframe_bitrate_multiplier = {CVAR_SAVE, "cl_capturevideo_ogg_theora_keyframe_bitrate_multiplier", "1.5", "how much more bit rate to use for keyframes, specified as a factor of at least 1"};
 static cvar_t cl_capturevideo_ogg_theora_keyframe_frequency = {CVAR_SAVE, "cl_capturevideo_ogg_theora_keyframe_frequency", "64", "maximum number of frames between two key frames (1 to 1000)"};
 static cvar_t cl_capturevideo_ogg_theora_keyframe_mindistance = {CVAR_SAVE, "cl_capturevideo_ogg_theora_keyframe_mindistance", "8", "minimum number of frames between two key frames (1 to 1000)"};
 static cvar_t cl_capturevideo_ogg_theora_keyframe_auto_threshold = {CVAR_SAVE, "cl_capturevideo_ogg_theora_keyframe_auto_threshold", "80", "threshold for key frame decision (0 to 100)"};
 static cvar_t cl_capturevideo_ogg_theora_noise_sensitivity = {CVAR_SAVE, "cl_capturevideo_ogg_theora_noise_sensitivity", "1", "video noise sensitivity (0 to 6); lower is better"};
 static cvar_t cl_capturevideo_ogg_theora_sharpness = {CVAR_SAVE, "cl_capturevideo_ogg_theora_sharpness", "0", "sharpness (0 to 2); lower is sharper"};
-static cvar_t cl_capturevideo_ogg_vorbis_quality = {CVAR_SAVE, "cl_capturevideo_ogg_vorbis_quality", "5", "audio quality (-1 to 10); higher is better"};
+static cvar_t cl_capturevideo_ogg_vorbis_quality = {CVAR_SAVE, "cl_capturevideo_ogg_vorbis_quality", "1", "audio quality (-1 to 10); higher is better"};
 
 // ogg.h stuff
 typedef int16_t ogg_int16_t;
@@ -606,25 +606,203 @@ typedef struct capturevideostate_ogg_formatspecific_s
 	theora_state ts;
 	vorbis_dsp_state vd;
 	vorbis_block vb;
+	vorbis_info vi;
 	yuv_buffer yuv;
 	int channels;
 }
 capturevideostate_ogg_formatspecific_t;
-#define LOAD_FORMATSPECIFIC() capturevideostate_ogg_formatspecific_t *format = (capturevideostate_ogg_formatspecific_t *) cls.capturevideo.formatspecific
+#define LOAD_FORMATSPECIFIC_OGG() capturevideostate_ogg_formatspecific_t *format = (capturevideostate_ogg_formatspecific_t *) cls.capturevideo.formatspecific
 
-void SCR_CaptureVideo_Ogg_Begin()
+static void SCR_CaptureVideo_Ogg_EndVideo()
 {
+	LOAD_FORMATSPECIFIC_OGG();
+	ogg_page pg;
+	ogg_packet pt;
+
+	// repeat the last frame so we can set the end-of-stream flag
+	qtheora_encode_YUVin(&format->ts, &format->yuv);
+	qtheora_encode_packetout(&format->ts, true, &pt);
+	qogg_stream_packetin(&format->to, &pt);
+
+	if(cls.capturevideo.soundrate)
+	{
+		qvorbis_analysis_wrote(&format->vd, 0);
+		while(qvorbis_analysis_blockout(&format->vd, &format->vb) == 1)
+		{
+			qvorbis_analysis(&format->vb, NULL);
+			qvorbis_bitrate_addblock(&format->vb);
+			while(qvorbis_bitrate_flushpacket(&format->vd, &pt))
+				qogg_stream_packetin(&format->vo, &pt);
+		}
+	}
+
+	while(qogg_stream_pageout(&format->to, &pg) > 0)
+	{
+		FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);
+		FS_Write(cls.capturevideo.videofile, pg.body, pg.body_len);
+	}
+
+	if(cls.capturevideo.soundrate)
+	{
+		while(qogg_stream_pageout(&format->vo, &pg) > 0)
+		{
+			FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);
+			FS_Write(cls.capturevideo.videofile, pg.body, pg.body_len);
+		}
+	}
+		
+	while (1) {
+		int result = qogg_stream_flush (&format->to, &pg);
+		if (result < 0)
+			fprintf (stderr, "Internal Ogg library error.\n"); // TODO Host_Error
+		if (result <= 0)
+			break;
+		FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);
+		FS_Write(cls.capturevideo.videofile, pg.body, pg.body_len);
+	}
+
+	if(cls.capturevideo.soundrate)
+	{
+		while (1) {
+			int result = qogg_stream_flush (&format->vo, &pg);
+			if (result < 0)
+				fprintf (stderr, "Internal Ogg library error.\n"); // TODO Host_Error
+			if (result <= 0)
+				break;
+			FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);
+			FS_Write(cls.capturevideo.videofile, pg.body, pg.body_len);
+		}
+
+		qogg_stream_clear(&format->vo);
+		qvorbis_block_clear(&format->vb);
+		qvorbis_dsp_clear(&format->vd);
+	}
+
+	qogg_stream_clear(&format->to);
+	qtheora_clear(&format->ts);
+	qvorbis_info_clear(&format->vi);
+
+	Mem_Free(format->yuv.y);
+	Mem_Free(format->yuv.u);
+	Mem_Free(format->yuv.v);
+	Mem_Free(format);
+
+	FS_Close(cls.capturevideo.videofile);
+	cls.capturevideo.videofile = NULL;
+}
+
+static void SCR_CaptureVideo_Ogg_ConvertFrame_BGRA_to_YUV()
+{
+	LOAD_FORMATSPECIFIC_OGG();
+	int x, y;
+	int blockr, blockg, blockb;
+	unsigned char *b = cls.capturevideo.outbuffer;
+	int w = cls.capturevideo.width;
+	int h = cls.capturevideo.height;
+	int inpitch = w*4;
+
+	for(y = 0; y < h; ++y)
+	{
+		for(b = cls.capturevideo.outbuffer + (h-1-y)*w*4, x = 0; x < w; ++x)
+		{
+			blockr = b[2];
+			blockg = b[1];
+			blockb = b[0];
+			format->yuv.y[x + format->yuv.y_stride * y] =
+				cls.capturevideo.yuvnormalizetable[0][cls.capturevideo.rgbtoyuvscaletable[0][0][blockr] + cls.capturevideo.rgbtoyuvscaletable[0][1][blockg] + cls.capturevideo.rgbtoyuvscaletable[0][2][blockb]];
+			b += 4;
+		}
+
+		if((y & 1) == 0)
+		{
+			for(b = cls.capturevideo.outbuffer + (h-2-y)*w*4, x = 0; x < w/2; ++x)
+			{
+				blockr = (b[2] + b[6] + b[inpitch+2] + b[inpitch+6]) >> 2;
+				blockg = (b[1] + b[5] + b[inpitch+1] + b[inpitch+5]) >> 2;
+				blockb = (b[0] + b[4] + b[inpitch+0] + b[inpitch+4]) >> 2;
+				format->yuv.u[x + format->yuv.uv_stride * (y/2)] =
+					cls.capturevideo.yuvnormalizetable[1][cls.capturevideo.rgbtoyuvscaletable[1][0][blockr] + cls.capturevideo.rgbtoyuvscaletable[1][1][blockg] + cls.capturevideo.rgbtoyuvscaletable[1][2][blockb] + 128];
+				format->yuv.v[x + format->yuv.uv_stride * (y/2)] =
+					cls.capturevideo.yuvnormalizetable[2][cls.capturevideo.rgbtoyuvscaletable[2][0][blockr] + cls.capturevideo.rgbtoyuvscaletable[2][1][blockg] + cls.capturevideo.rgbtoyuvscaletable[2][2][blockb] + 128];
+				b += 8;
+			}
+		}
+	}
+}
+
+static void SCR_CaptureVideo_Ogg_VideoFrames(int num)
+{
+	LOAD_FORMATSPECIFIC_OGG();
+	ogg_page pg;
+	ogg_packet pt;
+
+	// data is in cls.capturevideo.outbuffer as BGRA and has size width*height
+
+	SCR_CaptureVideo_Ogg_ConvertFrame_BGRA_to_YUV();
+
+	while(num-- > 0)
+	{
+		qtheora_encode_YUVin(&format->ts, &format->yuv);
+		qtheora_encode_packetout(&format->ts, false, &pt);
+		qogg_stream_packetin(&format->to, &pt);
+
+		while(qogg_stream_pageout(&format->to, &pg) > 0)
+		{
+			FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);
+			FS_Write(cls.capturevideo.videofile, pg.body, pg.body_len);
+		}
+	}
+}
+
+static void SCR_CaptureVideo_Ogg_SoundFrame(const portable_sampleframe_t *paintbuffer, size_t length)
+{
+	LOAD_FORMATSPECIFIC_OGG();
+	float **vorbis_buffer;
+	size_t i;
+	int j;
+	ogg_page pg;
+	ogg_packet pt;
+
+	vorbis_buffer = qvorbis_analysis_buffer(&format->vd, length);
+	for(i = 0; i < length; ++i)
+	{
+		for(j = 0; j < cls.capturevideo.soundchannels; ++j)
+			vorbis_buffer[j][i] = paintbuffer[i].sample[j] / 32768.0f;
+	}
+	qvorbis_analysis_wrote(&format->vd, length);
+
+	while(qvorbis_analysis_blockout(&format->vd, &format->vb) == 1)
+	{
+		qvorbis_analysis(&format->vb, NULL);
+		qvorbis_bitrate_addblock(&format->vb);
+
+		while(qvorbis_bitrate_flushpacket(&format->vd, &pt))
+			qogg_stream_packetin(&format->vo, &pt);
+	}
+
+	while(qogg_stream_pageout(&format->vo, &pg) > 0)
+	{
+		FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);
+		FS_Write(cls.capturevideo.videofile, pg.body, pg.body_len);
+	}
+}
+
+void SCR_CaptureVideo_Ogg_BeginVideo()
+{
+	cls.capturevideo.format = CAPTUREVIDEOFORMAT_OGG_VORBIS_THEORA;
 	cls.capturevideo.videofile = FS_OpenRealFile(va("%s.ogv", cls.capturevideo.basename), "wb", false);
+	cls.capturevideo.endvideo = SCR_CaptureVideo_Ogg_EndVideo;
+	cls.capturevideo.videoframes = SCR_CaptureVideo_Ogg_VideoFrames;
+	cls.capturevideo.soundframe = SCR_CaptureVideo_Ogg_SoundFrame;
 	cls.capturevideo.formatspecific = Mem_Alloc(tempmempool, sizeof(capturevideostate_ogg_formatspecific_t));
 	{
-		LOAD_FORMATSPECIFIC();
+		LOAD_FORMATSPECIFIC_OGG();
 		int num, denom;
 		ogg_page pg;
 		ogg_packet pt, pt2, pt3;
 		theora_comment tc;
 		vorbis_comment vc;
 		theora_info ti;
-		vorbis_info vi;
 
 		format->serial1 = rand();
 		qogg_stream_init(&format->to, format->serial1);
@@ -673,7 +851,7 @@ void SCR_CaptureVideo_Ogg_Begin()
 		ti.quick_p = true; // http://mlblog.osdir.com/multimedia.ogg.theora.general/2004-07/index.shtml
 		ti.dropframes_p = false;
 
-		ti.target_bitrate = cl_capturevideo_ogg_theora_bitrate.integer;
+		ti.target_bitrate = cl_capturevideo_ogg_theora_bitrate.integer * 1000;
 		ti.quality = cl_capturevideo_ogg_theora_quality.integer;
 
 		if(ti.target_bitrate <= 0)
@@ -722,10 +900,10 @@ void SCR_CaptureVideo_Ogg_Begin()
 		// vorbis?
 		if(cls.capturevideo.soundrate)
 		{
-			qvorbis_info_init(&vi);
-			qvorbis_encode_init_vbr(&vi, cls.capturevideo.soundchannels, cls.capturevideo.soundrate, bound(-1, cl_capturevideo_ogg_vorbis_quality.value, 10) * 0.1);
+			qvorbis_info_init(&format->vi);
+			qvorbis_encode_init_vbr(&format->vi, cls.capturevideo.soundchannels, cls.capturevideo.soundrate, bound(-1, cl_capturevideo_ogg_vorbis_quality.value, 10) * 0.099);
 			qvorbis_comment_init(&vc);
-			qvorbis_analysis_init(&format->vd, &vi);
+			qvorbis_analysis_init(&format->vd, &format->vi);
 			qvorbis_block_init(&format->vd, &format->vb);
 		}
 
@@ -759,7 +937,6 @@ void SCR_CaptureVideo_Ogg_Begin()
 			qogg_stream_packetin(&format->vo, &pt3);
 
 			qvorbis_comment_clear(&vc);
-			qvorbis_info_clear(&vi);
 		}
 
 		for(;;)
@@ -784,175 +961,5 @@ void SCR_CaptureVideo_Ogg_Begin()
 			FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);
 			FS_Write(cls.capturevideo.videofile, pg.body, pg.body_len);
 		}
-	}
-}
-
-void SCR_CaptureVideo_Ogg_EndVideo()
-{
-	LOAD_FORMATSPECIFIC();
-	ogg_page pg;
-	ogg_packet pt;
-
-	// repeat the last frame so we can set the end-of-stream flag
-	qtheora_encode_YUVin(&format->ts, &format->yuv);
-	qtheora_encode_packetout(&format->ts, true, &pt);
-	qogg_stream_packetin(&format->to, &pt);
-
-	if(cls.capturevideo.soundrate)
-	{
-		qvorbis_analysis_wrote(&format->vd, 0);
-		while(qvorbis_analysis_blockout(&format->vd, &format->vb) == 1)
-		{
-			qvorbis_analysis(&format->vb, NULL);
-			qvorbis_bitrate_addblock(&format->vb);
-			while(qvorbis_bitrate_flushpacket(&format->vd, &pt))
-				qogg_stream_packetin(&format->vo, &pt);
-		}
-	}
-
-	if(qogg_stream_pageout(&format->to, &pg) > 0)
-	{
-		FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);
-		FS_Write(cls.capturevideo.videofile, pg.body, pg.body_len);
-	}
-
-	if(cls.capturevideo.soundrate)
-	{
-		if(qogg_stream_pageout(&format->vo, &pg) > 0)
-		{
-			FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);
-			FS_Write(cls.capturevideo.videofile, pg.body, pg.body_len);
-		}
-	}
-		
-	while (1) {
-		int result = qogg_stream_flush (&format->to, &pg);
-		if (result < 0)
-			fprintf (stderr, "Internal Ogg library error.\n"); // TODO Host_Error
-		if (result <= 0)
-			break;
-		FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);
-		FS_Write(cls.capturevideo.videofile, pg.body, pg.body_len);
-	}
-
-	if(cls.capturevideo.soundrate)
-	{
-		while (1) {
-			int result = qogg_stream_flush (&format->vo, &pg);
-			if (result < 0)
-				fprintf (stderr, "Internal Ogg library error.\n"); // TODO Host_Error
-			if (result <= 0)
-				break;
-			FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);
-			FS_Write(cls.capturevideo.videofile, pg.body, pg.body_len);
-		}
-
-		qogg_stream_clear(&format->vo);
-		qvorbis_block_clear(&format->vb);
-		qvorbis_dsp_clear(&format->vd);
-	}
-
-	qogg_stream_clear(&format->to);
-	qtheora_clear(&format->ts);
-
-	Mem_Free(format->yuv.y);
-	Mem_Free(format->yuv.u);
-	Mem_Free(format->yuv.v);
-	Mem_Free(format);
-
-	// cl_screen.c does this
-	// FS_Close(cls.capturevideo.videofile);
-	// cls.capturevideo.videofile = NULL;
-}
-
-void SCR_CaptureVideo_Ogg_ConvertFrame_BGRA_to_YUV()
-{
-	LOAD_FORMATSPECIFIC();
-	int x, y;
-	int blockr, blockg, blockb;
-	unsigned char *b = cls.capturevideo.outbuffer;
-	int w = cls.capturevideo.width;
-	int h = cls.capturevideo.height;
-	int inpitch = w*4;
-
-	for(y = 0; y < h; ++y)
-	{
-		for(b = cls.capturevideo.outbuffer + (h-1-y)*w*4, x = 0; x < w; ++x)
-		{
-			blockr = b[2];
-			blockg = b[1];
-			blockb = b[0];
-			format->yuv.y[x + format->yuv.y_stride * y] =
-				cls.capturevideo.yuvnormalizetable[0][cls.capturevideo.rgbtoyuvscaletable[0][0][blockr] + cls.capturevideo.rgbtoyuvscaletable[0][1][blockg] + cls.capturevideo.rgbtoyuvscaletable[0][2][blockb]];
-			b += 4;
-		}
-
-		if((y & 1) == 0)
-		{
-			for(b = cls.capturevideo.outbuffer + (h-2-y)*w*4, x = 0; x < w/2; ++x)
-			{
-				blockr = (b[2] + b[6] + b[inpitch+2] + b[inpitch+6]) >> 2;
-				blockg = (b[1] + b[5] + b[inpitch+1] + b[inpitch+5]) >> 2;
-				blockb = (b[0] + b[4] + b[inpitch+0] + b[inpitch+4]) >> 2;
-				format->yuv.u[x + format->yuv.uv_stride * (y/2)] =
-					cls.capturevideo.yuvnormalizetable[1][cls.capturevideo.rgbtoyuvscaletable[1][0][blockr] + cls.capturevideo.rgbtoyuvscaletable[1][1][blockg] + cls.capturevideo.rgbtoyuvscaletable[1][2][blockb] + 128];
-				format->yuv.v[x + format->yuv.uv_stride * (y/2)] =
-					cls.capturevideo.yuvnormalizetable[2][cls.capturevideo.rgbtoyuvscaletable[2][0][blockr] + cls.capturevideo.rgbtoyuvscaletable[2][1][blockg] + cls.capturevideo.rgbtoyuvscaletable[2][2][blockb] + 128];
-				b += 8;
-			}
-		}
-	}
-}
-
-void SCR_CaptureVideo_Ogg_VideoFrame()
-{
-	LOAD_FORMATSPECIFIC();
-	ogg_page pg;
-	ogg_packet pt;
-
-	// data is in cls.capturevideo.outbuffer as BGRA and has size width*height
-
-	SCR_CaptureVideo_Ogg_ConvertFrame_BGRA_to_YUV();
-	qtheora_encode_YUVin(&format->ts, &format->yuv);
-	qtheora_encode_packetout(&format->ts, false, &pt);
-	qogg_stream_packetin(&format->to, &pt);
-
-	while(qogg_stream_pageout(&format->to, &pg) > 0)
-	{
-		FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);
-		FS_Write(cls.capturevideo.videofile, pg.body, pg.body_len);
-	}
-}
-
-void SCR_CaptureVideo_Ogg_SoundFrame(const portable_sampleframe_t *paintbuffer, size_t length)
-{
-	LOAD_FORMATSPECIFIC();
-	float **vorbis_buffer;
-	size_t i;
-	int j;
-	ogg_page pg;
-	ogg_packet pt;
-
-	vorbis_buffer = qvorbis_analysis_buffer(&format->vd, length);
-	for(i = 0; i < length; ++i)
-	{
-		for(j = 0; j < cls.capturevideo.soundchannels; ++j)
-			vorbis_buffer[j][i] = paintbuffer[i].sample[j] / 32768.0f;
-	}
-	qvorbis_analysis_wrote(&format->vd, length);
-
-	while(qvorbis_analysis_blockout(&format->vd, &format->vb) == 1)
-	{
-		qvorbis_analysis(&format->vb, NULL);
-		qvorbis_bitrate_addblock(&format->vb);
-
-		while(qvorbis_bitrate_flushpacket(&format->vd, &pt))
-			qogg_stream_packetin(&format->vo, &pt);
-	}
-
-	while(qogg_stream_pageout(&format->vo, &pg) > 0)
-	{
-		FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);
-		FS_Write(cls.capturevideo.videofile, pg.body, pg.body_len);
 	}
 }

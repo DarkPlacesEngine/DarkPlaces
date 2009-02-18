@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define CLIENT_H
 
 #include "matrixlib.h"
+#include "snd_main.h"
 
 // LordHavoc: 256 dynamic lights
 #define MAX_DLIGHTS 256
@@ -455,45 +456,33 @@ capturevideoformat_t;
 
 typedef struct capturevideostate_s
 {
-	double starttime;
+	double startrealtime;
 	double framerate;
-	// for AVI saving some values have to be written after capture ends
-	fs_offset_t videofile_firstchunkframes_offset;
-	fs_offset_t videofile_totalframes_offset1;
-	fs_offset_t videofile_totalframes_offset2;
-	fs_offset_t videofile_totalsampleframes_offset;
-	int videofile_ix_master_audio_inuse;
-	fs_offset_t videofile_ix_master_audio_inuse_offset;
-	fs_offset_t videofile_ix_master_audio_start_offset;
-	int videofile_ix_master_video_inuse;
-	fs_offset_t videofile_ix_master_video_inuse_offset;
-	fs_offset_t videofile_ix_master_video_start_offset;
-	fs_offset_t videofile_ix_movistart;
-	fs_offset_t position;
 	qfile_t *videofile;
 	qboolean active;
 	qboolean realtime;
 	qboolean error;
-	qboolean canseek;
 	capturevideoformat_t format;
 	int soundrate;
 	int soundchannels;
 	int frame;
-	int soundsampleframe; // for AVI saving
+	double starttime;
+	double lastfpstime;
+	int lastfpsframe;
+	int soundsampleframe;
 	unsigned char *screenbuffer;
 	unsigned char *outbuffer;
-	sizebuf_t riffbuffer;
-	unsigned char riffbufferdata[128];
-	// note: riffindex buffer has an allocated ->data member, not static like most!
-	sizebuf_t riffindexbuffer;
-	int riffstacklevel;
-	fs_offset_t riffstackstartoffset[4];
-	fs_offset_t riffstacksizehint[4];
-	const char *riffstackfourcc[4];
-	short rgbtoyuvscaletable[3][3][256];
-	unsigned char yuvnormalizetable[3][256];
 	char basename[64];
 	int width, height;
+	short rgbtoyuvscaletable[3][3][256];
+	unsigned char yuvnormalizetable[3][256];
+
+	// format specific functions
+	void (*endvideo) ();
+	void (*videoframes) (int num);
+	void (*soundframe) (const portable_sampleframe_t *paintbuffer, size_t length);
+
+	// format specific data
 	void *formatspecific;
 }
 capturevideostate_t;
