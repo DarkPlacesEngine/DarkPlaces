@@ -1254,8 +1254,9 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 		{
 			//Con_Printf("-- entnum %i origin %f %f %f neworigin %f %f %f\n", ch->entnum, ch->origin[0], ch->origin[1], ch->origin[2], cl.entities[ch->entnum].state_current.origin[0], cl.entities[ch->entnum].state_current.origin[1], cl.entities[ch->entnum].state_current.origin[2]);
 
-			if(ch->entnum != 32768) // not for world
-				CL_VM_GetEntitySoundOrigin(ch->entnum, ch->origin);
+			if (ch->entnum > 32768)
+				if (!CL_VM_GetEntitySoundOrigin(ch->entnum, ch->origin))
+					ch->entnum = 32768; // entity was removed, disown sound
 		}
 		else if (cl.entities[ch->entnum].state_current.active)
 		{
