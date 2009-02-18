@@ -637,6 +637,7 @@ typedef struct capturevideostate_ogg_formatspecific_s
 capturevideostate_ogg_formatspecific_t;
 #define LOAD_FORMATSPECIFIC_OGG() capturevideostate_ogg_formatspecific_t *format = (capturevideostate_ogg_formatspecific_t *) cls.capturevideo.formatspecific
 
+#define INTERLEAVING_NOT_WORKING
 static void SCR_CaptureVideo_Ogg_Interleave()
 {
 	LOAD_FORMATSPECIFIC_OGG();
@@ -670,6 +671,7 @@ static void SCR_CaptureVideo_Ogg_Interleave()
 				//fprintf(stderr, "V");
 				format->have_videopage = true;
 
+#ifdef INTERLEAVING_NOT_WORKING
 				// why do I have to do this? the code should work without the
 				// following three lines, which turn this attempt at correct
 				// interleaving back into the old stupid one that oggz-validate
@@ -677,6 +679,8 @@ static void SCR_CaptureVideo_Ogg_Interleave()
 				FS_Write(cls.capturevideo.videofile, format->videopage.header, format->videopage.header_len);
 				FS_Write(cls.capturevideo.videofile, format->videopage.body, format->videopage.body_len);
 				format->have_videopage = false;
+				continue;
+#endif
 			}
 		if(!format->have_audiopage)
 			if(qogg_stream_pageout(&format->vo, &format->audiopage) > 0)
@@ -684,6 +688,7 @@ static void SCR_CaptureVideo_Ogg_Interleave()
 				//fprintf(stderr, "A");
 				format->have_audiopage = true;
 
+#ifdef INTERLEAVING_NOT_WORKING
 				// why do I have to do this? the code should work without the
 				// following three lines, which turn this attempt at correct
 				// interleaving back into the old stupid one that oggz-validate
@@ -691,6 +696,8 @@ static void SCR_CaptureVideo_Ogg_Interleave()
 				FS_Write(cls.capturevideo.videofile, format->audiopage.header, format->audiopage.header_len);
 				FS_Write(cls.capturevideo.videofile, format->audiopage.body, format->audiopage.body_len);
 				format->have_audiopage = false;
+				continue;
+#endif
 			}
 
 		if(format->have_videopage && format->have_audiopage)
@@ -698,6 +705,7 @@ static void SCR_CaptureVideo_Ogg_Interleave()
 			// output the page that ends first
 			double audiotime = qvorbis_granule_time(&format->vd, qogg_page_granulepos(&format->audiopage));
 			double videotime = qtheora_granule_time(&format->ts, qogg_page_granulepos(&format->videopage));
+			//fprintf(stderr, "(A=%f V=%f)\n", audiotime, videotime);
 			if(audiotime < videotime)
 			{
 				FS_Write(cls.capturevideo.videofile, format->audiopage.header, format->audiopage.header_len);
