@@ -763,7 +763,7 @@ static void SCR_CaptureVideo_Ogg_EndVideo()
 	if(format->yuvi >= 0)
 	{
 		// send the previous (and last) frame
-		while(format->lastnum > 0)
+		while(format->lastnum-- > 0)
 		{
 			qtheora_encode_YUVin(&format->ts, &format->yuv[format->yuvi]);
 
