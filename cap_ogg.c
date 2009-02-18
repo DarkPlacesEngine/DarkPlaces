@@ -625,7 +625,9 @@ typedef struct capturevideostate_ogg_formatspecific_s
 	vorbis_dsp_state vd;
 	vorbis_block vb;
 	vorbis_info vi;
-	yuv_buffer yuv;
+	yuv_buffer yuv[2];
+	int yuvi;
+	int lastnum;
 	int channels;
 
 	// for interleaving
@@ -658,6 +660,8 @@ static void SCR_CaptureVideo_Ogg_Interleave()
 				FS_Write(cls.capturevideo.videofile, format->videopage.body, format->videopage.body_len);
 				format->have_videopage = false;
 			}
+			else
+				break;
 		}
 		return;
 	}
@@ -756,11 +760,19 @@ static void SCR_CaptureVideo_Ogg_EndVideo()
 	ogg_page pg;
 	ogg_packet pt;
 
-	// repeat the last frame so we can set the end-of-stream flag
-	qtheora_encode_YUVin(&format->ts, &format->yuv);
-	qtheora_encode_packetout(&format->ts, true, &pt);
-	qogg_stream_packetin(&format->to, &pt);
-	SCR_CaptureVideo_Ogg_Interleave();
+	if(format->yuvi >= 0)
+	{
+		// send the previous (and last) frame
+		while(format->lastnum > 0)
+		{
+			qtheora_encode_YUVin(&format->ts, &format->yuv[format->yuvi]);
+
+			while(qtheora_encode_packetout(&format->ts, !format->lastnum, &pt))
+				qogg_stream_packetin(&format->to, &pt);
+
+			SCR_CaptureVideo_Ogg_Interleave();
+		}
+	}
 
 	if(cls.capturevideo.soundrate)
 	{
@@ -823,9 +835,12 @@ static void SCR_CaptureVideo_Ogg_EndVideo()
 	qtheora_clear(&format->ts);
 	qvorbis_info_clear(&format->vi);
 
-	Mem_Free(format->yuv.y);
-	Mem_Free(format->yuv.u);
-	Mem_Free(format->yuv.v);
+	Mem_Free(format->yuv[0].y);
+	Mem_Free(format->yuv[0].u);
+	Mem_Free(format->yuv[0].v);
+	Mem_Free(format->yuv[1].y);
+	Mem_Free(format->yuv[1].u);
+	Mem_Free(format->yuv[1].v);
 	Mem_Free(format);
 
 	FS_Close(cls.capturevideo.videofile);
@@ -835,12 +850,15 @@ static void SCR_CaptureVideo_Ogg_EndVideo()
 static void SCR_CaptureVideo_Ogg_ConvertFrame_BGRA_to_YUV()
 {
 	LOAD_FORMATSPECIFIC_OGG();
+	yuv_buffer *yuv;
 	int x, y;
 	int blockr, blockg, blockb;
 	unsigned char *b = cls.capturevideo.outbuffer;
 	int w = cls.capturevideo.width;
 	int h = cls.capturevideo.height;
 	int inpitch = w*4;
+
+	yuv = &format->yuv[format->yuvi];
 
 	for(y = 0; y < h; ++y)
 	{
@@ -849,7 +867,7 @@ static void SCR_CaptureVideo_Ogg_ConvertFrame_BGRA_to_YUV()
 			blockr = b[2];
 			blockg = b[1];
 			blockb = b[0];
-			format->yuv.y[x + format->yuv.y_stride * y] =
+			yuv->y[x + yuv->y_stride * y] =
 				cls.capturevideo.yuvnormalizetable[0][cls.capturevideo.rgbtoyuvscaletable[0][0][blockr] + cls.capturevideo.rgbtoyuvscaletable[0][1][blockg] + cls.capturevideo.rgbtoyuvscaletable[0][2][blockb]];
 			b += 4;
 		}
@@ -861,9 +879,9 @@ static void SCR_CaptureVideo_Ogg_ConvertFrame_BGRA_to_YUV()
 				blockr = (b[2] + b[6] + b[inpitch+2] + b[inpitch+6]) >> 2;
 				blockg = (b[1] + b[5] + b[inpitch+1] + b[inpitch+5]) >> 2;
 				blockb = (b[0] + b[4] + b[inpitch+0] + b[inpitch+4]) >> 2;
-				format->yuv.u[x + format->yuv.uv_stride * (y/2)] =
+				yuv->u[x + yuv->uv_stride * (y/2)] =
 					cls.capturevideo.yuvnormalizetable[1][cls.capturevideo.rgbtoyuvscaletable[1][0][blockr] + cls.capturevideo.rgbtoyuvscaletable[1][1][blockg] + cls.capturevideo.rgbtoyuvscaletable[1][2][blockb] + 128];
-				format->yuv.v[x + format->yuv.uv_stride * (y/2)] =
+				yuv->v[x + yuv->uv_stride * (y/2)] =
 					cls.capturevideo.yuvnormalizetable[2][cls.capturevideo.rgbtoyuvscaletable[2][0][blockr] + cls.capturevideo.rgbtoyuvscaletable[2][1][blockg] + cls.capturevideo.rgbtoyuvscaletable[2][2][blockb] + 128];
 				b += 8;
 			}
@@ -878,17 +896,25 @@ static void SCR_CaptureVideo_Ogg_VideoFrames(int num)
 
 	// data is in cls.capturevideo.outbuffer as BGRA and has size width*height
 
-	SCR_CaptureVideo_Ogg_ConvertFrame_BGRA_to_YUV();
-
-	while(num-- > 0)
+	if(format->yuvi >= 0)
 	{
-		qtheora_encode_YUVin(&format->ts, &format->yuv);
+		// send the previous frame
+		while(format->lastnum-- > 0)
+		{
+			qtheora_encode_YUVin(&format->ts, &format->yuv[format->yuvi]);
 
-		while(qtheora_encode_packetout(&format->ts, false, &pt))
-			qogg_stream_packetin(&format->to, &pt);
+			while(qtheora_encode_packetout(&format->ts, false, &pt))
+				qogg_stream_packetin(&format->to, &pt);
 
-		SCR_CaptureVideo_Ogg_Interleave();
+			SCR_CaptureVideo_Ogg_Interleave();
+		}
 	}
+
+	format->yuvi = (format->yuvi + 1) % 2;
+	SCR_CaptureVideo_Ogg_ConvertFrame_BGRA_to_YUV();
+	format->lastnum = num;
+
+	// TODO maybe send num-1 frames from here already
 }
 
 static void SCR_CaptureVideo_Ogg_SoundFrame(const portable_sampleframe_t *paintbuffer, size_t length)
@@ -929,7 +955,7 @@ void SCR_CaptureVideo_Ogg_BeginVideo()
 	cls.capturevideo.formatspecific = Mem_Alloc(tempmempool, sizeof(capturevideostate_ogg_formatspecific_t));
 	{
 		LOAD_FORMATSPECIFIC_OGG();
-		int num, denom;
+		int num, denom, i;
 		ogg_page pg;
 		ogg_packet pt, pt2, pt3;
 		theora_comment tc;
@@ -959,17 +985,19 @@ void SCR_CaptureVideo_Ogg_BeginVideo()
 		//ti.offset_x = ((ti.width - ti.frame_width) / 2) & ~1;
 		//ti.offset_y = ((ti.height - ti.frame_height) / 2) & ~1;
 
-		format->yuv.y_width = ti.width;
-		format->yuv.y_height = ti.height;
-		format->yuv.y_stride = ti.width;
-
-		format->yuv.uv_width = ti.width / 2;
-		format->yuv.uv_height = ti.height / 2;
-		format->yuv.uv_stride = ti.width / 2;
-
-		format->yuv.y = Mem_Alloc(tempmempool, format->yuv.y_stride * format->yuv.y_height);
-		format->yuv.u = Mem_Alloc(tempmempool, format->yuv.uv_stride * format->yuv.uv_height);
-		format->yuv.v = Mem_Alloc(tempmempool, format->yuv.uv_stride * format->yuv.uv_height);
+		for(i = 0; i < 2; ++i)
+		{
+			format->yuv[i].y_width = ti.width;
+			format->yuv[i].y_height = ti.height;
+			format->yuv[i].y_stride = ti.width;
+			format->yuv[i].uv_width = ti.width / 2;
+			format->yuv[i].uv_height = ti.height / 2;
+			format->yuv[i].uv_stride = ti.width / 2;
+			format->yuv[i].y = Mem_Alloc(tempmempool, format->yuv[i].y_stride * format->yuv[i].y_height);
+			format->yuv[i].u = Mem_Alloc(tempmempool, format->yuv[i].uv_stride * format->yuv[i].uv_height);
+			format->yuv[i].v = Mem_Alloc(tempmempool, format->yuv[i].uv_stride * format->yuv[i].uv_height);
+		}
+		format->yuvi = -1; // -1: no frame valid yet, write into 0
 
 		FindFraction(cls.capturevideo.framerate, &num, &denom, 1001);
 		ti.fps_numerator = num;
