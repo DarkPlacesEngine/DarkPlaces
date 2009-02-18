@@ -716,8 +716,7 @@ static void SCR_CaptureVideo_Ogg_Interleave()
 			break;
 	}
 
-	fprintf(stderr, ">");
-
+	//fprintf(stderr, ">");
 }
 
 static void SCR_CaptureVideo_Ogg_FlushInterleaving()
