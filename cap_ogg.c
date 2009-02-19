@@ -889,6 +889,19 @@ static void SCR_CaptureVideo_Ogg_VideoFrames(int num)
 	// TODO maybe send num-1 frames from here already
 }
 
+typedef int channelmapping_t[8];
+channelmapping_t mapping[8] =
+{
+	{ 0, -1, -1, -1, -1, -1, -1, -1 }, // mono
+	{ 0, 1, -1, -1, -1, -1, -1, -1 }, // stereo
+	{ 0, 1, 2, -1, -1, -1, -1, -1 }, // L C R
+	{ 0, 1, 2, 3, -1, -1, -1, -1 }, // surround40
+	{ 0, 4, 1, 2, 3, -1, -1, -1 }, // FL FC FR RL RR
+	{ 0, 4, 1, 2, 3, 5, -1, -1 }, // surround51
+	{ 0, 4, 1, 2, 3, 5, 6, -1 }, // (not defined by vorbis spec)
+	{ 0, 4, 1, 2, 3, 5, 6, 7 } // surround71 (not defined by vorbis spec)
+};
+
 static void SCR_CaptureVideo_Ogg_SoundFrame(const portable_sampleframe_t *paintbuffer, size_t length)
 {
 	LOAD_FORMATSPECIFIC_OGG();
@@ -896,12 +909,14 @@ static void SCR_CaptureVideo_Ogg_SoundFrame(const portable_sampleframe_t *paintb
 	size_t i;
 	int j;
 	ogg_packet pt;
+	int *map = mapping[bound(1, cls.capturevideo.soundchannels, 8) - 1];
 
 	vorbis_buffer = qvorbis_analysis_buffer(&format->vd, length);
-	for(i = 0; i < length; ++i)
+	for(j = 0; j < cls.capturevideo.soundchannels; ++j)
 	{
-		for(j = 0; j < cls.capturevideo.soundchannels; ++j)
-			vorbis_buffer[j][i] = paintbuffer[i].sample[j] / 32768.0f;
+		float *b = vorbis_buffer[map[j]];
+		for(i = 0; i < length; ++i)
+			b[i] = paintbuffer[i].sample[j] / 32768.0f;
 	}
 	qvorbis_analysis_wrote(&format->vd, length);
 

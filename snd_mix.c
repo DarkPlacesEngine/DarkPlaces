@@ -23,15 +23,28 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 
 static portable_sampleframe_t paintbuffer[PAINTBUFFER_SIZE];
+static portable_sampleframe_t paintbuffer_unswapped[PAINTBUFFER_SIZE];
 
+extern speakerlayout_t snd_speakerlayout; // for querying the listeners
 
 extern void SCR_CaptureVideo_SoundFrame(const portable_sampleframe_t *paintbuffer, size_t length);
 static void S_CaptureAVISound(size_t length)
 {
+	size_t i;
+	unsigned int j;
+
 	if (!cls.capturevideo.active)
 		return;
 
-	SCR_CaptureVideo_SoundFrame(paintbuffer, length);
+	// undo whatever swapping the channel layout (swapstereo, ALSA) did
+	for(j = 0; j < snd_speakerlayout.channels; ++j)
+	{
+		unsigned int j0 = snd_speakerlayout.listeners[j].channel_unswapped;
+		for(i = 0; i < length; ++i)
+			paintbuffer_unswapped[i].sample[j0] = paintbuffer[i].sample[j];
+	}
+
+	SCR_CaptureVideo_SoundFrame(paintbuffer_unswapped, length);
 }
 
 static void S_ConvertPaintBuffer(const portable_sampleframe_t *painted_ptr, void *rb_ptr, int nbframes, int width, int channels)
