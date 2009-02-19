@@ -193,4 +193,21 @@ typedef struct portable_samplepair_s
 // LordHavoc: was 512, expanded to 2048
 #define	PAINTBUFFER_SIZE 2048
 
+typedef struct listener_s
+{
+	int channel_unswapped; // for un-swapping
+	float yawangle;
+	float dotscale;
+	float dotbias;
+	float ambientvolume;
+}
+listener_t;
+typedef struct speakerlayout_s
+{
+	const char *name;
+	unsigned int channels;
+	listener_t listeners[SND_LISTENERS];
+}
+speakerlayout_t;
+
 #endif

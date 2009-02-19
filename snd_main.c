@@ -33,27 +33,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define SND_MAX_WIDTH 2
 #define SND_MIN_CHANNELS 1
 #define SND_MAX_CHANNELS 8
-
 #if SND_LISTENERS != 8
 #	error this data only supports up to 8 channel, update it!
 #endif
-typedef struct listener_s
-{
-	float yawangle;
-	float dotscale;
-	float dotbias;
-	float ambientvolume;
-}
-listener_t;
-typedef struct speakerlayout_s
-{
-	const char *name;
-	unsigned int channels;
-	listener_t listeners[SND_LISTENERS];
-}
-speakerlayout_t;
 
-static speakerlayout_t snd_speakerlayout;
+speakerlayout_t snd_speakerlayout;
 
 // Our speaker layouts are based on ALSA. They differ from those
 // Win32 and Mac OS X APIs use when there's more than 4 channels.
@@ -64,27 +48,27 @@ static const speakerlayout_t snd_speakerlayouts[] =
 	{
 		"surround71", 8,
 		{
-			{45, 0.2, 0.2, 0.5}, // front left
-			{315, 0.2, 0.2, 0.5}, // front right
-			{135, 0.2, 0.2, 0.5}, // rear left
-			{225, 0.2, 0.2, 0.5}, // rear right
-			{0, 0.2, 0.2, 0.5}, // front center
-			{0, 0, 0, 0}, // lfe (we don't have any good lfe sound sources and it would take some filtering work to generate them (and they'd probably still be wrong), so...  no lfe)
-			{90, 0.2, 0.2, 0.5}, // side left
-			{180, 0.2, 0.2, 0.5}, // side right
+			{0, 45, 0.2, 0.2, 0.5}, // front left
+			{1, 315, 0.2, 0.2, 0.5}, // front right
+			{2, 135, 0.2, 0.2, 0.5}, // rear left
+			{3, 225, 0.2, 0.2, 0.5}, // rear right
+			{4, 0, 0.2, 0.2, 0.5}, // front center
+			{5, 0, 0, 0, 0}, // lfe (we don't have any good lfe sound sources and it would take some filtering work to generate them (and they'd probably still be wrong), so...  no lfe)
+			{6, 90, 0.2, 0.2, 0.5}, // side left
+			{7, 180, 0.2, 0.2, 0.5}, // side right
 		}
 	},
 	{
 		"surround51", 6,
 		{
-			{45, 0.2, 0.2, 0.5}, // front left
-			{315, 0.2, 0.2, 0.5}, // front right
-			{135, 0.2, 0.2, 0.5}, // rear left
-			{225, 0.2, 0.2, 0.5}, // rear right
-			{0, 0.2, 0.2, 0.5}, // front center
-			{0, 0, 0, 0}, // lfe (we don't have any good lfe sound sources and it would take some filtering work to generate them (and they'd probably still be wrong), so...  no lfe)
-			{0, 0, 0, 0},
-			{0, 0, 0, 0},
+			{0, 45, 0.2, 0.2, 0.5}, // front left
+			{1, 315, 0.2, 0.2, 0.5}, // front right
+			{2, 135, 0.2, 0.2, 0.5}, // rear left
+			{3, 225, 0.2, 0.2, 0.5}, // rear right
+			{4, 0, 0.2, 0.2, 0.5}, // front center
+			{5, 0, 0, 0, 0}, // lfe (we don't have any good lfe sound sources and it would take some filtering work to generate them (and they'd probably still be wrong), so...  no lfe)
+			{0, 0, 0, 0, 0},
+			{0, 0, 0, 0, 0},
 		}
 	},
 	{
@@ -92,14 +76,14 @@ static const speakerlayout_t snd_speakerlayouts[] =
 		// channel of its own
 		"surround40", 4,
 		{
-			{45, 0.3, 0.3, 0.8}, // front left
-			{315, 0.3, 0.3, 0.8}, // front right
-			{135, 0.3, 0.3, 0.8}, // rear left
-			{225, 0.3, 0.3, 0.8}, // rear right
-			{0, 0, 0, 0},
-			{0, 0, 0, 0},
-			{0, 0, 0, 0},
-			{0, 0, 0, 0},
+			{0, 45, 0.3, 0.3, 0.8}, // front left
+			{1, 315, 0.3, 0.3, 0.8}, // front right
+			{2, 135, 0.3, 0.3, 0.8}, // rear left
+			{3, 225, 0.3, 0.3, 0.8}, // rear right
+			{0, 0, 0, 0, 0},
+			{0, 0, 0, 0, 0},
+			{0, 0, 0, 0, 0},
+			{0, 0, 0, 0, 0},
 		}
 	},
 	{
@@ -107,27 +91,27 @@ static const speakerlayout_t snd_speakerlayouts[] =
 		// channel of its own
 		"stereo", 2,
 		{
-			{90, 0.5, 0.5, 1}, // side left
-			{270, 0.5, 0.5, 1}, // side right
-			{0, 0, 0, 0},
-			{0, 0, 0, 0},
-			{0, 0, 0, 0},
-			{0, 0, 0, 0},
-			{0, 0, 0, 0},
-			{0, 0, 0, 0},
+			{0, 90, 0.5, 0.5, 1}, // side left
+			{1, 270, 0.5, 0.5, 1}, // side right
+			{0, 0, 0, 0, 0},
+			{0, 0, 0, 0, 0},
+			{0, 0, 0, 0, 0},
+			{0, 0, 0, 0, 0},
+			{0, 0, 0, 0, 0},
+			{0, 0, 0, 0, 0},
 		}
 	},
 	{
 		"mono", 1,
 		{
-			{0, 0, 1, 1}, // center
-			{0, 0, 0, 0},
-			{0, 0, 0, 0},
-			{0, 0, 0, 0},
-			{0, 0, 0, 0},
-			{0, 0, 0, 0},
-			{0, 0, 0, 0},
-			{0, 0, 0, 0},
+			{0, 0, 0, 1, 1}, // center
+			{0, 0, 0, 0, 0},
+			{0, 0, 0, 0, 0},
+			{0, 0, 0, 0, 0},
+			{0, 0, 0, 0, 0},
+			{0, 0, 0, 0, 0},
+			{0, 0, 0, 0, 0},
+			{0, 0, 0, 0, 0},
 		}
 	}
 };
