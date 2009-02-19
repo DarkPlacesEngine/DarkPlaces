@@ -1035,7 +1035,7 @@ void SCR_CaptureVideo_EndVideo(void)
 		return;
 	cls.capturevideo.active = false;
 
-	Con_DPrintf("Finishing capture (%d frames, %d audio frames)\n", cls.capturevideo.frame, cls.capturevideo.soundsampleframe);
+	Con_Printf("Finishing capture of %s.%s (%d frames, %d audio frames)\n", cls.capturevideo.basename, cls.capturevideo.formatextension, cls.capturevideo.frame, cls.capturevideo.soundsampleframe);
 
 	if (cls.capturevideo.videofile)
 	{

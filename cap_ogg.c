@@ -617,6 +617,21 @@ void SCR_CaptureVideo_Ogg_CloseDLL()
 	Sys_UnloadLibrary (&og_dll);
 }
 
+// this struct should not be needed
+// however, libogg appears to pull the ogg_page's data element away from our
+// feet before we get to write the data due to interleaving
+// so this struct is used to keep the page data around until it actually gets
+// written
+typedef struct allocatedoggpage_s
+{
+	size_t len;
+	double time;
+	unsigned char data[65307];
+	// this number is from RFC 3533. In case libogg writes more, we'll have to increase this
+	// but we'll get a Host_Error in this case so we can track it down
+}
+allocatedoggpage_t;
+
 typedef struct capturevideostate_ogg_formatspecific_s
 {
 	ogg_stream_state to, vo;
@@ -630,38 +645,22 @@ typedef struct capturevideostate_ogg_formatspecific_s
 	int lastnum;
 	int channels;
 
-	// for interleaving
-	ogg_page videopage;
-	ogg_page audiopage;
-	qboolean have_videopage;
-	qboolean have_audiopage;
+	allocatedoggpage_t videopage, audiopage;
 }
 capturevideostate_ogg_formatspecific_t;
 #define LOAD_FORMATSPECIFIC_OGG() capturevideostate_ogg_formatspecific_t *format = (capturevideostate_ogg_formatspecific_t *) cls.capturevideo.formatspecific
 
-#define INTERLEAVING_NOT_WORKING
 static void SCR_CaptureVideo_Ogg_Interleave()
 {
 	LOAD_FORMATSPECIFIC_OGG();
-
-	//fprintf(stderr, "<");
+	ogg_page pg;
 
 	if(!cls.capturevideo.soundrate)
 	{
-		for(;;)
+		while(qogg_stream_pageout(&format->to, &pg) > 0)
 		{
-			// first: make sure we have a page of both types
-			if(!format->have_videopage)
-				if(qogg_stream_pageout(&format->to, &format->videopage) > 0)
-					format->have_videopage = true;
-			if(format->have_videopage)
-			{
-				FS_Write(cls.capturevideo.videofile, format->videopage.header, format->videopage.header_len);
-				FS_Write(cls.capturevideo.videofile, format->videopage.body, format->videopage.body_len);
-				format->have_videopage = false;
-			}
-			else
-				break;
+			FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);
+			FS_Write(cls.capturevideo.videofile, pg.body, pg.body_len);
 		}
 		return;
 	}
@@ -669,69 +668,44 @@ static void SCR_CaptureVideo_Ogg_Interleave()
 	for(;;)
 	{
 		// first: make sure we have a page of both types
-		if(!format->have_videopage)
-			if(qogg_stream_pageout(&format->to, &format->videopage) > 0)
+		if(!format->videopage.len)
+			if(qogg_stream_pageout(&format->to, &pg) > 0)
 			{
-				//fprintf(stderr, "V");
-				format->have_videopage = true;
-
-#ifdef INTERLEAVING_NOT_WORKING
-				// why do I have to do this? the code should work without the
-				// following three lines, which turn this attempt at correct
-				// interleaving back into the old stupid one that oggz-validate
-				// hates
-				FS_Write(cls.capturevideo.videofile, format->videopage.header, format->videopage.header_len);
-				FS_Write(cls.capturevideo.videofile, format->videopage.body, format->videopage.body_len);
-				format->have_videopage = false;
-				continue;
-#endif
+				format->videopage.len = pg.header_len + pg.body_len;
+				format->videopage.time = qtheora_granule_time(&format->ts, qogg_page_granulepos(&pg));
+				if(format->videopage.len > sizeof(format->videopage.data))
+					Host_Error("video page too long");
+				memcpy(format->videopage.data, pg.header, pg.header_len);
+				memcpy(format->videopage.data + pg.header_len, pg.body, pg.body_len);
 			}
-		if(!format->have_audiopage)
-			if(qogg_stream_pageout(&format->vo, &format->audiopage) > 0)
+		if(!format->audiopage.len)
+			if(qogg_stream_pageout(&format->vo, &pg) > 0)
 			{
-				//fprintf(stderr, "A");
-				format->have_audiopage = true;
-
-#ifdef INTERLEAVING_NOT_WORKING
-				// why do I have to do this? the code should work without the
-				// following three lines, which turn this attempt at correct
-				// interleaving back into the old stupid one that oggz-validate
-				// hates
-				FS_Write(cls.capturevideo.videofile, format->audiopage.header, format->audiopage.header_len);
-				FS_Write(cls.capturevideo.videofile, format->audiopage.body, format->audiopage.body_len);
-				format->have_audiopage = false;
-				continue;
-#endif
+				format->audiopage.len = pg.header_len + pg.body_len;
+				format->audiopage.time = qvorbis_granule_time(&format->vd, qogg_page_granulepos(&pg));
+				if(format->audiopage.len > sizeof(format->audiopage.data))
+					Host_Error("audio page too long");
+				memcpy(format->audiopage.data, pg.header, pg.header_len);
+				memcpy(format->audiopage.data + pg.header_len, pg.body, pg.body_len);
 			}
 
-		if(format->have_videopage && format->have_audiopage)
+		if(format->videopage.len && format->audiopage.len)
 		{
 			// output the page that ends first
-			double audiotime = qvorbis_granule_time(&format->vd, qogg_page_granulepos(&format->audiopage));
-			double videotime = qtheora_granule_time(&format->ts, qogg_page_granulepos(&format->videopage));
-			//fprintf(stderr, "(A=%f V=%f)\n", audiotime, videotime);
-			if(audiotime < videotime)
+			if(format->videopage.time < format->audiopage.time)
 			{
-				FS_Write(cls.capturevideo.videofile, format->audiopage.header, format->audiopage.header_len);
-				FS_Write(cls.capturevideo.videofile, format->audiopage.body, format->audiopage.body_len);
-				format->have_audiopage = false;
-
-				//fprintf(stderr, "a");
+				FS_Write(cls.capturevideo.videofile, format->videopage.data, format->videopage.len);
+				format->videopage.len = 0;
 			}
 			else
 			{
-				FS_Write(cls.capturevideo.videofile, format->videopage.header, format->videopage.header_len);
-				FS_Write(cls.capturevideo.videofile, format->videopage.body, format->videopage.body_len);
-				format->have_videopage = false;
-
-				//fprintf(stderr, "v");
+				FS_Write(cls.capturevideo.videofile, format->audiopage.data, format->audiopage.len);
+				format->audiopage.len = 0;
 			}
 		}
 		else
 			break;
 	}
-
-	//fprintf(stderr, ">");
 }
 
 static void SCR_CaptureVideo_Ogg_FlushInterleaving()
@@ -739,18 +713,16 @@ static void SCR_CaptureVideo_Ogg_FlushInterleaving()
 	LOAD_FORMATSPECIFIC_OGG();
 
 	if(cls.capturevideo.soundrate)
-	if(format->have_audiopage)
+	if(format->audiopage.len)
 	{
-		FS_Write(cls.capturevideo.videofile, format->audiopage.header, format->audiopage.header_len);
-		FS_Write(cls.capturevideo.videofile, format->audiopage.body, format->audiopage.body_len);
-		format->have_audiopage = false;
+		FS_Write(cls.capturevideo.videofile, format->audiopage.data, format->audiopage.len);
+		format->audiopage.len = 0;
 	}
 
-	if(format->have_videopage)
+	if(format->videopage.len)
 	{
-		FS_Write(cls.capturevideo.videofile, format->videopage.header, format->videopage.header_len);
-		FS_Write(cls.capturevideo.videofile, format->videopage.body, format->videopage.body_len);
-		format->have_videopage = false;
+		FS_Write(cls.capturevideo.videofile, format->videopage.data, format->videopage.len);
+		format->videopage.len = 0;
 	}
 }
 
@@ -948,7 +920,8 @@ static void SCR_CaptureVideo_Ogg_SoundFrame(const portable_sampleframe_t *paintb
 void SCR_CaptureVideo_Ogg_BeginVideo()
 {
 	cls.capturevideo.format = CAPTUREVIDEOFORMAT_OGG_VORBIS_THEORA;
-	cls.capturevideo.videofile = FS_OpenRealFile(va("%s.ogv", cls.capturevideo.basename), "wb", false);
+	cls.capturevideo.formatextension = "ogv";
+	cls.capturevideo.videofile = FS_OpenRealFile(va("%s.%s", cls.capturevideo.basename, cls.capturevideo.formatextension), "wb", false);
 	cls.capturevideo.endvideo = SCR_CaptureVideo_Ogg_EndVideo;
 	cls.capturevideo.videoframes = SCR_CaptureVideo_Ogg_VideoFrames;
 	cls.capturevideo.soundframe = SCR_CaptureVideo_Ogg_SoundFrame;
@@ -975,7 +948,7 @@ void SCR_CaptureVideo_Ogg_BeginVideo()
 			qogg_stream_init(&format->vo, format->serial2);
 		}
 
-		format->have_videopage = format->have_audiopage = false;
+		format->videopage.len = format->audiopage.len = 0;
 
 		qtheora_info_init(&ti);
 		ti.frame_width = cls.capturevideo.width;
