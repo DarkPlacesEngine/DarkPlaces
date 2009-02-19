@@ -1028,7 +1028,7 @@ void SCR_CaptureVideo_Ogg_BeginVideo()
 		ti.keyframe_auto_threshold = bound(0, cl_capturevideo_ogg_theora_keyframe_auto_threshold.integer, 100);
 
 		ti.keyframe_frequency_force = ti.keyframe_frequency;
-		ti.keyframe_auto_p = (ti.keyframe_frequency != ti.keyframe_mindistance);
+		ti.keyframe_auto_p = (ti.keyframe_frequency != ti.keyframe_mindistance + 1);
 
 		qtheora_encode_init(&format->ts, &ti);
 		qtheora_info_clear(&ti);
