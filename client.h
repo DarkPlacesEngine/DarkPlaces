@@ -458,11 +458,9 @@ typedef struct capturevideostate_s
 {
 	double startrealtime;
 	double framerate;
-	qfile_t *videofile;
 	qboolean active;
 	qboolean realtime;
 	qboolean error;
-	capturevideoformat_t format;
 	int soundrate;
 	int soundchannels;
 	int frame;
@@ -472,12 +470,20 @@ typedef struct capturevideostate_s
 	int soundsampleframe;
 	unsigned char *screenbuffer;
 	unsigned char *outbuffer;
-	char basename[64];
+	char basename[MAX_QPATH];
 	int width, height;
+
+	// precomputed RGB to YUV tables
+	// if a capturevideo module uses these, it doesn't need to care for scr_screenshot_gammaboost.value
 	short rgbtoyuvscaletable[3][3][256];
 	unsigned char yuvnormalizetable[3][256];
 
-	// format specific functions
+	// stuff to be filled in by the video format module
+	capturevideoformat_t format;
+	const char *formatextension;
+	qfile_t *videofile;
+		// always use this:
+		//   cls.capturevideo.videofile = FS_OpenRealFile(va("%s.%s", cls.capturevideo.basename, cls.capturevideo.formatextension), "wb", false);
 	void (*endvideo) ();
 	void (*videoframes) (int num);
 	void (*soundframe) (const portable_sampleframe_t *paintbuffer, size_t length);

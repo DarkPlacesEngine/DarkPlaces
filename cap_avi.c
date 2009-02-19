@@ -493,7 +493,8 @@ void SCR_CaptureVideo_Avi_BeginVideo()
 	aspect = vid.width / (vid.height * vid_pixelheight.value);
 
 	cls.capturevideo.format = CAPTUREVIDEOFORMAT_AVI_I420;
-	cls.capturevideo.videofile = FS_OpenRealFile(va("%s.avi", cls.capturevideo.basename), "wb", false);
+	cls.capturevideo.formatextension = "avi";
+	cls.capturevideo.videofile = FS_OpenRealFile(va("%s.%s", cls.capturevideo.basename, cls.capturevideo.formatextension), "wb", false);
 	cls.capturevideo.endvideo = SCR_CaptureVideo_Avi_EndVideo;
 	cls.capturevideo.videoframes = SCR_CaptureVideo_Avi_VideoFrames;
 	cls.capturevideo.soundframe = SCR_CaptureVideo_Avi_SoundFrame;
