@@ -11,8 +11,8 @@
 static cvar_t cl_capturevideo_ogg_theora_quality = {CVAR_SAVE, "cl_capturevideo_ogg_theora_quality", "32", "video quality factor (0 to 63), or -1 to use bitrate only; higher is better"};
 static cvar_t cl_capturevideo_ogg_theora_bitrate = {CVAR_SAVE, "cl_capturevideo_ogg_theora_bitrate", "-1", "video bitrate (45 to 2000 kbps), or -1 to use quality only; higher is better"};
 static cvar_t cl_capturevideo_ogg_theora_keyframe_bitrate_multiplier = {CVAR_SAVE, "cl_capturevideo_ogg_theora_keyframe_bitrate_multiplier", "1.5", "how much more bit rate to use for keyframes, specified as a factor of at least 1"};
-static cvar_t cl_capturevideo_ogg_theora_keyframe_frequency = {CVAR_SAVE, "cl_capturevideo_ogg_theora_keyframe_frequency", "64", "maximum number of frames between two key frames (1 to 1000)"};
-static cvar_t cl_capturevideo_ogg_theora_keyframe_mindistance = {CVAR_SAVE, "cl_capturevideo_ogg_theora_keyframe_mindistance", "8", "minimum number of frames between two key frames (1 to 1000)"};
+static cvar_t cl_capturevideo_ogg_theora_keyframe_maxinterval = {CVAR_SAVE, "cl_capturevideo_ogg_theora_keyframe_maxinterval", "64", "maximum keyframe interval (1 to 1000)"};
+static cvar_t cl_capturevideo_ogg_theora_keyframe_mininterval = {CVAR_SAVE, "cl_capturevideo_ogg_theora_keyframe_mininterval", "8", "minimum keyframe interval (1 to 1000)"};
 static cvar_t cl_capturevideo_ogg_theora_keyframe_auto_threshold = {CVAR_SAVE, "cl_capturevideo_ogg_theora_keyframe_auto_threshold", "80", "threshold for key frame decision (0 to 100)"};
 static cvar_t cl_capturevideo_ogg_theora_noise_sensitivity = {CVAR_SAVE, "cl_capturevideo_ogg_theora_noise_sensitivity", "1", "video noise sensitivity (0 to 6); lower is better"};
 static cvar_t cl_capturevideo_ogg_theora_sharpness = {CVAR_SAVE, "cl_capturevideo_ogg_theora_sharpness", "0", "sharpness (0 to 2); lower is sharper"};
@@ -597,8 +597,8 @@ void SCR_CaptureVideo_Ogg_Init()
 	Cvar_RegisterVariable(&cl_capturevideo_ogg_theora_quality);
 	Cvar_RegisterVariable(&cl_capturevideo_ogg_theora_bitrate);
 	Cvar_RegisterVariable(&cl_capturevideo_ogg_theora_keyframe_bitrate_multiplier);
-	Cvar_RegisterVariable(&cl_capturevideo_ogg_theora_keyframe_frequency);
-	Cvar_RegisterVariable(&cl_capturevideo_ogg_theora_keyframe_mindistance);
+	Cvar_RegisterVariable(&cl_capturevideo_ogg_theora_keyframe_maxinterval);
+	Cvar_RegisterVariable(&cl_capturevideo_ogg_theora_keyframe_mininterval);
 	Cvar_RegisterVariable(&cl_capturevideo_ogg_theora_keyframe_auto_threshold);
 	Cvar_RegisterVariable(&cl_capturevideo_ogg_theora_noise_sensitivity);
 	Cvar_RegisterVariable(&cl_capturevideo_ogg_vorbis_quality);
@@ -1020,8 +1020,9 @@ void SCR_CaptureVideo_Ogg_BeginVideo()
 			}
 		}
 
-		ti.keyframe_frequency = bound(1, cl_capturevideo_ogg_theora_keyframe_frequency.integer, 1000);
-		ti.keyframe_mindistance = bound(1, cl_capturevideo_ogg_theora_keyframe_mindistance.integer, (int) ti.keyframe_frequency);
+		// this -1 magic is because ti.keyframe_frequency and ti.keyframe_mindistance use different metrics
+		ti.keyframe_frequency = bound(1, cl_capturevideo_ogg_theora_keyframe_maxinterval.integer, 1000);
+		ti.keyframe_mindistance = bound(1, cl_capturevideo_ogg_theora_keyframe_mininterval.integer, (int) ti.keyframe_frequency) - 1;
 		ti.noise_sensitivity = bound(0, cl_capturevideo_ogg_theora_noise_sensitivity.integer, 6);
 		ti.sharpness = bound(0, cl_capturevideo_ogg_theora_sharpness.integer, 2);
 		ti.keyframe_auto_threshold = bound(0, cl_capturevideo_ogg_theora_keyframe_auto_threshold.integer, 100);
