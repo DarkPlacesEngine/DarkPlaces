@@ -896,10 +896,10 @@ channelmapping_t mapping[8] =
 	{ 0, 1, -1, -1, -1, -1, -1, -1 }, // stereo
 	{ 0, 1, 2, -1, -1, -1, -1, -1 }, // L C R
 	{ 0, 1, 2, 3, -1, -1, -1, -1 }, // surround40
-	{ 0, 4, 1, 2, 3, -1, -1, -1 }, // FL FC FR RL RR
-	{ 0, 4, 1, 2, 3, 5, -1, -1 }, // surround51
-	{ 0, 4, 1, 2, 3, 5, 6, -1 }, // (not defined by vorbis spec)
-	{ 0, 4, 1, 2, 3, 5, 6, 7 } // surround71 (not defined by vorbis spec)
+	{ 0, 2, 3, 4, 1, -1, -1, -1 }, // FL FC FR RL RR
+	{ 0, 2, 3, 4, 1, 5, -1, -1 }, // surround51
+	{ 0, 2, 3, 4, 1, 5, 6, -1 }, // (not defined by vorbis spec)
+	{ 0, 2, 3, 4, 1, 5, 6, 7 } // surround71 (not defined by vorbis spec)
 };
 
 static void SCR_CaptureVideo_Ogg_SoundFrame(const portable_sampleframe_t *paintbuffer, size_t length)
