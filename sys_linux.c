@@ -1,6 +1,8 @@
 #include "quakedef.h"
 
 #ifdef WIN32
+#include <windows.h>
+#include <mmsystem.h>
 #include <io.h>
 #include "conio.h"
 #else
@@ -90,7 +92,6 @@ double Sys_DoubleTime (void)
 		return ((double) benchmark_time) / 1e6;
 	}
 #ifdef WIN32
-#include <mmsystem.h>
 	// LordHavoc: note to people modifying this code, DWORD is specifically defined as an unsigned 32bit number, therefore the 65536.0 * 65536.0 is fine.
 	if (sys_usetimegettime.integer)
 	{
