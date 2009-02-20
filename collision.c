@@ -698,6 +698,7 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush
 			trace->startsolid = true;
 			if (leavefrac < 1)
 				trace->allsolid = true;
+			VectorCopy(newimpactnormal, trace->plane.normal);
 		}
 	}
 }
@@ -819,6 +820,7 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 			trace->startsolid = true;
 			if (leavefrac < 1)
 				trace->allsolid = true;
+			VectorCopy(newimpactnormal, trace->plane.normal);
 		}
 	}
 }
@@ -1467,7 +1469,7 @@ void Collision_BoundingBoxOfBrushTraceSegment(const colbrushf_t *start, const co
 
 void Collision_ClipToGenericEntity(trace_t *trace, dp_model_t *model, int frame, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask)
 {
-	float tempnormal[3], starttransformed[3], endtransformed[3];
+	float starttransformed[3], endtransformed[3];
 
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = trace->realfraction = 1;
@@ -1486,13 +1488,10 @@ void Collision_ClipToGenericEntity(trace_t *trace, dp_model_t *model, int frame,
 	trace->fraction = bound(0, trace->fraction, 1);
 	trace->realfraction = bound(0, trace->realfraction, 1);
 
-	if (trace->fraction < 1)
-	{
-		VectorLerp(start, trace->fraction, end, trace->endpos);
-		VectorCopy(trace->plane.normal, tempnormal);
-		Matrix4x4_Transform3x3(matrix, tempnormal, trace->plane.normal);
-		// FIXME: should recalc trace->plane.dist
-	}
+	VectorLerp(start, trace->fraction, end, trace->endpos);
+	// transform plane
+	// NOTE: this relies on plane.dist being directly after plane.normal
+	Matrix4x4_TransformPositivePlane(matrix, trace->plane.normal[0], trace->plane.normal[1], trace->plane.normal[2], trace->plane.dist, trace->plane.normal);
 }
 
 void Collision_ClipToWorld(trace_t *trace, dp_model_t *model, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontents)
@@ -1526,7 +1525,7 @@ void Collision_CombineTraces(trace_t *cliptrace, const trace_t *trace, void *tou
 	//	cliptrace->inopen = true;
 	if (trace->inwater)
 		cliptrace->inwater = true;
-	if (trace->realfraction < cliptrace->realfraction)
+	if (trace->realfraction <= cliptrace->realfraction)
 	{
 		cliptrace->fraction = trace->fraction;
 		cliptrace->realfraction = trace->realfraction;
