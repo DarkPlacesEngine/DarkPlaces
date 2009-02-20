@@ -1036,7 +1036,7 @@ void Con_Print(const char *msg)
 						switch(*in)
 						{
 							case STRING_COLOR_TAG:
-								if( in[1] == STRING_COLOR_RGB_DEFAULT && isxdigit(in[2]) && isxdigit(in[3]) && isxdigit(in[4]) )
+								if( in[1] == STRING_COLOR_RGB_TAG_CHAR && isxdigit(in[2]) && isxdigit(in[3]) && isxdigit(in[4]) )
 								{
 									char r = tolower(in[2]);
 									char g = tolower(in[3]);
@@ -1057,12 +1057,6 @@ void Con_Print(const char *msg)
 								
 								switch(color)
 								{
-									/*case 'a':
-										if ( isxdigit(in[2]) || in[2] == '+' || in[2] == '-' )
-										{
-											in+=2;
-											break;
-										}*/
 									case STRING_COLOR_TAG:
 										++in;
 										*out++ = STRING_COLOR_TAG;
@@ -1161,22 +1155,16 @@ void Con_Print(const char *msg)
 							case STRING_COLOR_TAG:
 								switch(in[1])
 								{
-									case STRING_COLOR_RGB_DEFAULT:
+									case STRING_COLOR_RGB_TAG_CHAR:
 										if ( isxdigit(in[2]) && isxdigit(in[3]) && isxdigit(in[4]) )
 										{
 											in+=4;
 											break;
 										}
 										*out++ = STRING_COLOR_TAG;
-										*out++ = STRING_COLOR_RGB_DEFAULT;
+										*out++ = STRING_COLOR_RGB_TAG_CHAR;
 										++in;
 										break;
-									/*case 'a':
-										if ( isxdigit(in[2]) || in[2] == '+' || in[2] == '-' )
-										{
-											in+=2;
-											break;
-										}*/
 									case STRING_COLOR_TAG:
 										++in;
 										*out++ = STRING_COLOR_TAG;
@@ -1936,7 +1924,7 @@ void SanitizeString(char *in, char *out)
 				} else if (*in == STRING_COLOR_TAG) // ^[0-9]^ found, don't print ^[0-9]
 					continue;
 			}
-			else if (*in == STRING_COLOR_RGB_DEFAULT) // ^x found
+			else if (*in == STRING_COLOR_RGB_TAG_CHAR) // ^x found
 			{
 				if ( isxdigit(in[1]) && isxdigit(in[2]) && isxdigit(in[3]) )
 				{
@@ -1950,20 +1938,6 @@ void SanitizeString(char *in, char *out)
 				}
 				else in--;
 			}
-			/*else if (*in == 'a') // ^a found
-			{
-				if ( isxdigit(in[1]) || isxdigit(in[1]) == '+' || isxdigit(in[1]) == '-')
-				{
-					in+=2;
-					if (!*in)
-					{
-						*out = 0;
-						return;
-					} else if (*in == STRING_COLOR_TAG) // ^ax^ found, don't print ^ax
-						continue;
-				}
-				else in = in--;
-			}*/
 			else if (*in != STRING_COLOR_TAG)
 				--in;
 		}
@@ -2345,7 +2319,7 @@ int Nicks_AddLastColor(char *buffer, int pos)
 					color = buffer[match+1];
 					break;
 				}
-				else if(buffer[match+1] == STRING_COLOR_RGB_DEFAULT)
+				else if(buffer[match+1] == STRING_COLOR_RGB_TAG_CHAR)
 				{
 					if ( isxdigit(buffer[match+2]) && isxdigit(buffer[match+3]) && isxdigit(buffer[match+4]) )
 					{
@@ -2364,7 +2338,7 @@ int Nicks_AddLastColor(char *buffer, int pos)
 			{
 				pos -= 2;
 			}
-			else if( pos >= 5 && buffer[pos-5] == STRING_COLOR_TAG && buffer[pos-4] == STRING_COLOR_RGB_DEFAULT)
+			else if( pos >= 5 && buffer[pos-5] == STRING_COLOR_TAG && buffer[pos-4] == STRING_COLOR_RGB_TAG_CHAR)
 			{
 				if ( isxdigit(buffer[pos-3]) && isxdigit(buffer[pos-2]) && isxdigit(buffer[pos-1]) )
 				{
@@ -2376,17 +2350,11 @@ int Nicks_AddLastColor(char *buffer, int pos)
 		if (color == -1)
 		{
 			buffer[pos++] = STRING_COLOR_TAG;
-			buffer[pos++] = STRING_COLOR_RGB_DEFAULT;
+			buffer[pos++] = STRING_COLOR_RGB_TAG_CHAR;
 			buffer[pos++] = r;
 			buffer[pos++] = g;
 			buffer[pos++] = b;
 		}
-		/*else if (color == -2)
-		{
-			buffer[pos++] = STRING_COLOR_TAG;
-			buffer[pos++] = 'a';
-			buffer[pos++] = a;
-		}*/
 		else
 		{
 			buffer[pos++] = STRING_COLOR_TAG;

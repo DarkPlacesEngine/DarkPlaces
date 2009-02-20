@@ -110,10 +110,8 @@ extern dp_font_t dp_fonts[MAX_FONTS];
 #define STRING_COLOR_TAG			'^'
 #define STRING_COLOR_DEFAULT		7
 #define STRING_COLOR_DEFAULT_STR	"^7"
-#define STRING_COLOR_RGB_DEFAULT 'x'
-#define STRING_COLOR_RGB_DEFAULT_STR "^xfff"
-//#define STRING_COLOR_ALPHA_DEFAULT 'a'
-//#define STRING_COLOR_ALPHA_DEFAULT_STR "^af"
+#define STRING_COLOR_RGB_TAG_CHAR	'x'
+#define STRING_COLOR_RGB_TAG		"^x"
 
 // all of these functions will set r_defdef.draw2dstage if not in 2D rendering mode (and of course prepare for 2D rendering in that case)
 
