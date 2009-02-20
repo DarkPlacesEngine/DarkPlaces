@@ -561,11 +561,13 @@ colbrushf_t *Collision_AllocBrushFromPermanentPolygonFloat(mempool_t *mempool, i
 void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, const colbrushf_t *thatbrush_start, const colbrushf_t *thatbrush_end)
 {
 	int nplane, nplane2, hitq3surfaceflags = 0;
-	float enterfrac = -1, leavefrac = 1, d1, d2, f, imove, newimpactnormal[3], enterfrac2 = -1;
+	float enterfrac = -1, leavefrac = 1, d1, d2, s, e, ie, f, imove, enterfrac2 = -1;
 	const colplanef_t *startplane, *endplane;
+	plane_t newimpactplane;
 	texture_t *hittexture = NULL;
 
-	VectorClear(newimpactnormal);
+	VectorClear(newimpactplane.normal);
+	newimpactplane.dist = 0;
 
 	for (nplane = 0;nplane < thatbrush_start->numplanes + thisbrush_start->numplanes;nplane++)
 	{
@@ -587,8 +589,10 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush
 				if (fabs(f - startplane->dist) > COLLISION_PLANE_DIST_EPSILON)
 					Con_Printf("startplane->dist %f != calculated %f (thisbrush_start)\n", startplane->dist, f);
 			}
-			d1 = nearestplanedist_float(startplane->normal, thisbrush_start->points, thisbrush_start->numpoints) - furthestplanedist_float(startplane->normal, thatbrush_start->points, thatbrush_start->numpoints) - collision_startnudge.value;
-			d2 = nearestplanedist_float(endplane->normal, thisbrush_end->points, thisbrush_end->numpoints) - furthestplanedist_float(endplane->normal, thatbrush_end->points, thatbrush_end->numpoints) - collision_endnudge.value;
+			s = furthestplanedist_float(startplane->normal, thatbrush_start->points, thatbrush_start->numpoints);
+			e = furthestplanedist_float(endplane->normal, thatbrush_end->points, thatbrush_end->numpoints);
+			d1 = nearestplanedist_float(startplane->normal, thisbrush_start->points, thisbrush_start->numpoints) - s - collision_startnudge.value;
+			d2 = nearestplanedist_float(endplane->normal, thisbrush_end->points, thisbrush_end->numpoints) - e - collision_endnudge.value;
 		}
 		else
 		{
@@ -606,8 +610,10 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush
 				if (fabs(f - startplane->dist) > COLLISION_PLANE_DIST_EPSILON)
 					Con_Printf("startplane->dist %f != calculated %f (thatbrush_start)\n", startplane->dist, f);
 			}
-			d1 = nearestplanedist_float(startplane->normal, thisbrush_start->points, thisbrush_start->numpoints) - startplane->dist - collision_startnudge.value;
-			d2 = nearestplanedist_float(endplane->normal, thisbrush_end->points, thisbrush_end->numpoints) - endplane->dist - collision_endnudge.value;
+			s = startplane->dist;
+			e = endplane->dist;
+			d1 = nearestplanedist_float(startplane->normal, thisbrush_start->points, thisbrush_start->numpoints) - s - collision_startnudge.value;
+			d2 = nearestplanedist_float(endplane->normal, thisbrush_end->points, thisbrush_end->numpoints) - e - collision_endnudge.value;
 		}
 		//Con_Printf("%c%i: d1 = %f, d2 = %f, d1 / (d1 - d2) = %f\n", nplane2 != nplane ? 'b' : 'a', nplane2, d1, d2, d1 / (d1 - d2));
 
@@ -639,7 +645,11 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush
 					// calculate the nudged fraction and impact normal we'll
 					// need if we accept this collision later
 					enterfrac2 = (d1 - collision_impactnudge.value) * imove;
-					VectorLerp(startplane->normal, enterfrac, endplane->normal, newimpactnormal);
+					ie = 1.0f - enterfrac;
+					newimpactplane.normal[0] = startplane->normal[0] * ie + endplane->normal[0] * enterfrac;
+					newimpactplane.normal[1] = startplane->normal[1] * ie + endplane->normal[1] * enterfrac;
+					newimpactplane.normal[2] = startplane->normal[2] * ie + endplane->normal[2] * enterfrac;
+					newimpactplane.dist      = s                     * ie + e                   * enterfrac;
 					hitq3surfaceflags = startplane->q3surfaceflags;
 					hittexture = startplane->texture;
 				}
@@ -686,7 +696,7 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush
 			trace->fraction = bound(0, enterfrac2, 1);
 			if (collision_prefernudgedfraction.integer)
 				trace->realfraction = trace->fraction;
-			VectorCopy(newimpactnormal, trace->plane.normal);
+			trace->plane = newimpactplane;
 		}
 	}
 	else
@@ -698,7 +708,7 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush
 			trace->startsolid = true;
 			if (leavefrac < 1)
 				trace->allsolid = true;
-			VectorCopy(newimpactnormal, trace->plane.normal);
+			trace->plane = newimpactplane;
 		}
 	}
 }
@@ -707,11 +717,13 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush
 void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const vec3_t lineend, const colbrushf_t *thatbrush_start, const colbrushf_t *thatbrush_end)
 {
 	int nplane, hitq3surfaceflags = 0;
-	float enterfrac = -1, leavefrac = 1, d1, d2, f, imove, newimpactnormal[3], enterfrac2 = -1;
+	float enterfrac = -1, leavefrac = 1, d1, d2, ie, f, imove, enterfrac2 = -1;
 	const colplanef_t *startplane, *endplane;
+	plane_t newimpactplane;
 	texture_t *hittexture = NULL;
 
-	VectorClear(newimpactnormal);
+	VectorClear(newimpactplane.normal);
+	newimpactplane.dist = 0;
 
 	for (nplane = 0;nplane < thatbrush_start->numplanes;nplane++)
 	{
@@ -763,7 +775,10 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 					// calculate the nudged fraction and impact normal we'll
 					// need if we accept this collision later
 					enterfrac2 = (d1 - collision_impactnudge.value) * imove;
-					VectorLerp(startplane->normal, enterfrac, endplane->normal, newimpactnormal);
+					newimpactplane.normal[0] = startplane->normal[0] * ie + endplane->normal[0] * enterfrac;
+					newimpactplane.normal[1] = startplane->normal[1] * ie + endplane->normal[1] * enterfrac;
+					newimpactplane.normal[2] = startplane->normal[2] * ie + endplane->normal[2] * enterfrac;
+					newimpactplane.dist      = startplane->dist      * ie + endplane->dist      * enterfrac;
 					hitq3surfaceflags = startplane->q3surfaceflags;
 					hittexture = startplane->texture;
 				}
@@ -808,7 +823,7 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 			trace->fraction = bound(0, enterfrac2, 1);
 			if (collision_prefernudgedfraction.integer)
 				trace->realfraction = trace->fraction;
-			VectorCopy(newimpactnormal, trace->plane.normal);
+			trace->plane = newimpactplane;
 		}
 	}
 	else
@@ -820,7 +835,7 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 			trace->startsolid = true;
 			if (leavefrac < 1)
 				trace->allsolid = true;
-			VectorCopy(newimpactnormal, trace->plane.normal);
+			trace->plane = newimpactplane;
 		}
 	}
 }
