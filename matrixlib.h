@@ -124,6 +124,10 @@ void Matrix4x4_Transform4 (const matrix4x4_t *in, const float v[4], float out[4]
 //void Matrix4x4_SimpleUntransform (const matrix4x4_t *in, const float v[3], float out[3]);
 // transforms a direction vector through the rotation part of a matrix
 void Matrix4x4_Transform3x3 (const matrix4x4_t *in, const float v[3], float out[3]);
+// transforms a positive distance plane (A*x+B*y+C*z-D=0) through a matrix
+void Matrix4x4_TransformPositivePlane (const matrix4x4_t *in, float x, float y, float z, float d, float *o);
+// transforms a standard plane (A*x+B*y+C*z+D=0) through a matrix
+void Matrix4x4_TransformStandardPlane (const matrix4x4_t *in, float x, float y, float z, float d, float *o);
 
 // ease of use functions
 // immediately applies a Translate to the matrix
