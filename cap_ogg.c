@@ -981,9 +981,9 @@ void SCR_CaptureVideo_Ogg_BeginVideo()
 			format->yuv[i].uv_width = ti.width / 2;
 			format->yuv[i].uv_height = ti.height / 2;
 			format->yuv[i].uv_stride = ti.width / 2;
-			format->yuv[i].y = Mem_Alloc(tempmempool, format->yuv[i].y_stride * format->yuv[i].y_height);
-			format->yuv[i].u = Mem_Alloc(tempmempool, format->yuv[i].uv_stride * format->yuv[i].uv_height);
-			format->yuv[i].v = Mem_Alloc(tempmempool, format->yuv[i].uv_stride * format->yuv[i].uv_height);
+			format->yuv[i].y = (unsigned char *) Mem_Alloc(tempmempool, format->yuv[i].y_stride * format->yuv[i].y_height);
+			format->yuv[i].u = (unsigned char *) Mem_Alloc(tempmempool, format->yuv[i].uv_stride * format->yuv[i].uv_height);
+			format->yuv[i].v = (unsigned char *) Mem_Alloc(tempmempool, format->yuv[i].uv_stride * format->yuv[i].uv_height);
 		}
 		format->yuvi = -1; // -1: no frame valid yet, write into 0
 
