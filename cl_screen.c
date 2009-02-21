@@ -37,6 +37,7 @@ cvar_t cl_capturevideo_width = {CVAR_SAVE, "cl_capturevideo_width", "0", "scales
 cvar_t cl_capturevideo_height = {CVAR_SAVE, "cl_capturevideo_height", "0", "scales all frames to this resolution before saving the video"};
 cvar_t cl_capturevideo_realtime = {0, "cl_capturevideo_realtime", "0", "causes video saving to operate in realtime (mostly useful while playing, not while capturing demos), this can produce a much lower quality video due to poor sound/video sync and will abort saving if your machine stalls for over a minute"};
 cvar_t cl_capturevideo_fps = {CVAR_SAVE, "cl_capturevideo_fps", "30", "how many frames per second to save (29.97 for NTSC, 30 for typical PC video, 15 can be useful)"};
+cvar_t cl_capturevideo_nameformat = {CVAR_SAVE, "cl_capturevideo_nameformat", "dpvideo", "prefix for saved videos"};
 cvar_t cl_capturevideo_number = {CVAR_SAVE, "cl_capturevideo_number", "1", "number to append to video filename, incremented each time a capture begins"};
 cvar_t cl_capturevideo_ogg = {CVAR_SAVE, "cl_capturevideo_ogg", "1", "save captured video data as Ogg/Vorbis/Theora streams"};
 cvar_t r_letterbox = {0, "r_letterbox", "0", "reduces vertical height of view to simulate a letterboxed movie effect (can be used by mods for cutscenes)"};
@@ -857,6 +858,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&cl_capturevideo_height);
 	Cvar_RegisterVariable (&cl_capturevideo_realtime);
 	Cvar_RegisterVariable (&cl_capturevideo_fps);
+	Cvar_RegisterVariable (&cl_capturevideo_nameformat);
 	Cvar_RegisterVariable (&cl_capturevideo_number);
 	Cvar_RegisterVariable (&cl_capturevideo_ogg);
 	Cvar_RegisterVariable (&r_letterbox);
@@ -894,33 +896,33 @@ SCR_ScreenShot_f
 void SCR_ScreenShot_f (void)
 {
 	static int shotnumber;
-	static char oldname[MAX_QPATH];
-	char base[MAX_QPATH];
+	static char old_prefix_name[MAX_QPATH];
+	char prefix_name[MAX_QPATH];
 	char filename[MAX_QPATH];
 	unsigned char *buffer1;
 	unsigned char *buffer2;
 	unsigned char *buffer3;
 	qboolean jpeg = (scr_screenshot_jpeg.integer != 0);
 
-	dpsnprintf (base, sizeof(base), "screenshots/%s", scr_screenshot_name.string);
+	dpsnprintf (prefix_name, sizeof(prefix_name), "%s", Sys_TimeString(scr_screenshot_name.string));
 
-	if (strcmp (oldname, scr_screenshot_name.string))
+	if (strcmp(old_prefix_name, prefix_name))
 	{
-		dpsnprintf(oldname, sizeof(oldname), "%s", scr_screenshot_name.string);
+		dpsnprintf(old_prefix_name, sizeof(old_prefix_name), "%s", prefix_name );
 		shotnumber = 0;
 	}
 
 	// find a file name to save it to
 	for (;shotnumber < 1000000;shotnumber++)
-		if (!FS_SysFileExists(va("%s/%s%06d.tga", fs_gamedir, base, shotnumber)) && !FS_SysFileExists(va("%s/%s%06d.jpg", fs_gamedir, base, shotnumber)))
+		if (!FS_SysFileExists(va("%s/screenshots/%s%06d.tga", fs_gamedir, prefix_name, shotnumber)) && !FS_SysFileExists(va("%s/screenshots/%s%06d.jpg", fs_gamedir, prefix_name, shotnumber)))
 			break;
 	if (shotnumber >= 1000000)
 	{
-		Con_Print("SCR_ScreenShot_f: Couldn't create the image file\n");
+		Con_Print("Couldn't create the image file\n");
 		return;
  	}
 
-	dpsnprintf(filename, sizeof(filename), "%s%06d.%s", base, shotnumber, jpeg ? "jpg" : "tga");
+	dpsnprintf(filename, sizeof(filename), "screenshots/%s%06d.%s", prefix_name, shotnumber, jpeg ? "jpg" : "tga");
 
 	buffer1 = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 3);
 	buffer2 = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 3);
@@ -929,7 +931,7 @@ void SCR_ScreenShot_f (void)
 	if (SCR_ScreenShot (filename, buffer1, buffer2, buffer3, 0, 0, vid.width, vid.height, false, false, false, jpeg, true))
 		Con_Printf("Wrote %s\n", filename);
 	else
-		Con_Printf("unable to write %s\n", filename);
+		Con_Printf("Unable to write %s\n", filename);
 
 	Mem_Free (buffer1);
 	Mem_Free (buffer2);
@@ -978,7 +980,7 @@ void SCR_CaptureVideo_BeginVideo(void)
 	cls.capturevideo.screenbuffer = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 4);
 	cls.capturevideo.outbuffer = (unsigned char *)Mem_Alloc(tempmempool, width * height * (4+4) + 18);
 	gamma = 1.0/scr_screenshot_gammaboost.value;
-	dpsnprintf(cls.capturevideo.basename, sizeof(cls.capturevideo.basename), "video/dpvideo%03i", cl_capturevideo_number.integer);
+	dpsnprintf(cls.capturevideo.basename, sizeof(cls.capturevideo.basename), "video/%s%03i", Sys_TimeString(cl_capturevideo_nameformat.string), cl_capturevideo_number.integer);
 	Cvar_SetValueQuick(&cl_capturevideo_number, cl_capturevideo_number.integer + 1);
 
 	/*
