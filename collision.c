@@ -775,6 +775,7 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 					// calculate the nudged fraction and impact normal we'll
 					// need if we accept this collision later
 					enterfrac2 = (d1 - collision_impactnudge.value) * imove;
+					ie = 1.0f - enterfrac;
 					newimpactplane.normal[0] = startplane->normal[0] * ie + endplane->normal[0] * enterfrac;
 					newimpactplane.normal[1] = startplane->normal[1] * ie + endplane->normal[1] * enterfrac;
 					newimpactplane.normal[2] = startplane->normal[2] * ie + endplane->normal[2] * enterfrac;
