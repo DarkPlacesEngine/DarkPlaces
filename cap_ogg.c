@@ -1024,13 +1024,13 @@ void SCR_CaptureVideo_Ogg_BeginVideo()
 			if(ti.quality < 0)
 			{
 				ti.target_bitrate = bound(45000, ti.target_bitrate, 2000000);
-				ti.keyframe_data_target_bitrate = ti.target_bitrate * max(1, cl_capturevideo_ogg_theora_keyframe_bitrate_multiplier.value);
+				ti.keyframe_data_target_bitrate = (int) (ti.target_bitrate * max(1, cl_capturevideo_ogg_theora_keyframe_bitrate_multiplier.value));
 				ti.quality = -1;
 			}
 			else
 			{
 				ti.target_bitrate = bound(45000, ti.target_bitrate, 2000000);
-				ti.keyframe_data_target_bitrate = ti.target_bitrate * max(1, cl_capturevideo_ogg_theora_keyframe_bitrate_multiplier.value);
+				ti.keyframe_data_target_bitrate = (int) (ti.target_bitrate * max(1, cl_capturevideo_ogg_theora_keyframe_bitrate_multiplier.value));
 				ti.quality = -1;
 			}
 		}
