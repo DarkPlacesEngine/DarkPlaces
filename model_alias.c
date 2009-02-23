@@ -614,8 +614,8 @@ static void Mod_Alias_MorphMesh_CompileFrames(void)
 		// encode the svector and tvector in 3 byte format for permanent storage
 		for (j = 0;j < loadmodel->surfmesh.num_vertices;j++)
 		{
-			VectorScale(loadmodel->surfmesh.data_svector3f + j * 3, 127.0f, loadmodel->surfmesh.data_morphtexvecvertex[i*loadmodel->surfmesh.num_vertices+j].svec);
-			VectorScale(loadmodel->surfmesh.data_tvector3f + j * 3, 127.0f, loadmodel->surfmesh.data_morphtexvecvertex[i*loadmodel->surfmesh.num_vertices+j].tvec);
+			VectorScaleCast(loadmodel->surfmesh.data_svector3f + j * 3, 127.0f, signed char, loadmodel->surfmesh.data_morphtexvecvertex[i*loadmodel->surfmesh.num_vertices+j].svec);
+			VectorScaleCast(loadmodel->surfmesh.data_tvector3f + j * 3, 127.0f, signed char, loadmodel->surfmesh.data_morphtexvecvertex[i*loadmodel->surfmesh.num_vertices+j].tvec);
 		}
 	}
 }

@@ -94,6 +94,7 @@ unsigned int CeilPowerOf2(unsigned int value);
 #define VectorLength(a) (sqrt(DotProduct(a, a)))
 #define VectorLength2(a) (DotProduct(a, a))
 #define VectorScale(in, scale, out) ((out)[0] = (in)[0] * (scale),(out)[1] = (in)[1] * (scale),(out)[2] = (in)[2] * (scale))
+#define VectorScaleCast(in, scale, outtype, out) ((out)[0] = (outtype) ((in)[0] * (scale)),(out)[1] = (outtype) ((in)[1] * (scale)),(out)[2] = (outtype) ((in)[2] * (scale)))
 #define VectorCompare(a,b) (((a)[0]==(b)[0])&&((a)[1]==(b)[1])&&((a)[2]==(b)[2]))
 #define VectorMA(a, scale, b, c) ((c)[0] = (a)[0] + (scale) * (b)[0],(c)[1] = (a)[1] + (scale) * (b)[1],(c)[2] = (a)[2] + (scale) * (b)[2])
 #define VectorM(scale1, b1, c) ((c)[0] = (scale1) * (b1)[0],(c)[1] = (scale1) * (b1)[1],(c)[2] = (scale1) * (b1)[2])
