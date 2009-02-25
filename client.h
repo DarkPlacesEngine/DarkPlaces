@@ -474,9 +474,13 @@ typedef struct capturevideostate_s
 	int width, height;
 
 	// precomputed RGB to YUV tables
-	// if a capturevideo module uses these, it doesn't need to care for scr_screenshot_gammaboost.value
+	// converts the RGB values to YUV (see cap_avi.c for how to use them)
 	short rgbtoyuvscaletable[3][3][256];
 	unsigned char yuvnormalizetable[3][256];
+
+	// precomputed gamma ramp (only needed if the capturevideo module uses RGB output)
+	// note: to map from these values to RGB24, you have to multiply by 255.0/65535.0, then add 0.5, then cast to integer
+	unsigned short vidramp[256 * 3];
 
 	// stuff to be filled in by the video format module
 	capturevideoformat_t format;
