@@ -3769,7 +3769,7 @@ void R_UpdateVariables(void)
 			// build GLSL gamma texture
 #define RAMPWIDTH 256
 			unsigned short ramp[RAMPWIDTH * 3];
-			unsigned char ramprgb[RAMPWIDTH][4];
+			unsigned char rampbgr[RAMPWIDTH][4];
 			int i;
 
 			r_texture_gammaramps_serial = vid_gammatables_serial;
@@ -3777,18 +3777,18 @@ void R_UpdateVariables(void)
 			VID_BuildGammaTables(&ramp[0], RAMPWIDTH);
 			for(i = 0; i < RAMPWIDTH; ++i)
 			{
-				ramprgb[i][0] = ramp[i] >> 8;
-				ramprgb[i][1] = ramp[i + RAMPWIDTH] >> 8;
-				ramprgb[i][2] = ramp[i + 2 * RAMPWIDTH] >> 8;
-				ramprgb[i][3] = 0;
+				rampbgr[i][0] = (unsigned char) (ramp[i + 2 * RAMPWIDTH] * 255.0 / 65535.0 + 0.5);
+				rampbgr[i][1] = (unsigned char) (ramp[i + RAMPWIDTH] * 255.0 / 65535.0 + 0.5);
+				rampbgr[i][2] = (unsigned char) (ramp[i] * 255.0 / 65535.0 + 0.5);
+				rampbgr[i][3] = 0;
 			}
 			if (r_texture_gammaramps)
 			{
-				R_UpdateTexture(r_texture_gammaramps, &ramprgb[0][0], 0, 0, RAMPWIDTH, 1);
+				R_UpdateTexture(r_texture_gammaramps, &rampbgr[0][0], 0, 0, RAMPWIDTH, 1);
 			}
 			else
 			{
-				r_texture_gammaramps = R_LoadTexture2D(r_main_texturepool, "gammaramps", RAMPWIDTH, 1, &ramprgb[0][0], TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_PERSISTENT, NULL);
+				r_texture_gammaramps = R_LoadTexture2D(r_main_texturepool, "gammaramps", RAMPWIDTH, 1, &rampbgr[0][0], TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_PERSISTENT, NULL);
 			}
 		}
 	}
