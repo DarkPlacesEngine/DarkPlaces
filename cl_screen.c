@@ -30,6 +30,7 @@ cvar_t vid_pixelheight = {CVAR_SAVE, "vid_pixelheight", "1", "adjusts vertical f
 cvar_t scr_screenshot_jpeg = {CVAR_SAVE, "scr_screenshot_jpeg","1", "save jpeg instead of targa"};
 cvar_t scr_screenshot_jpeg_quality = {CVAR_SAVE, "scr_screenshot_jpeg_quality","0.9", "image quality of saved jpeg"};
 cvar_t scr_screenshot_gammaboost = {CVAR_SAVE, "scr_screenshot_gammaboost","1", "gamma correction on saved screenshots and videos, 1.0 saves unmodified images"};
+cvar_t scr_screenshot_hwgamma = {CVAR_SAVE, "scr_screenshot_hwgamma","1", "apply the video gamma ramp to saved screenshots and videos"};
 // scr_screenshot_name is defined in fs.c
 cvar_t cl_capturevideo = {0, "cl_capturevideo", "0", "enables saving of video to a .avi file using uncompressed I420 colorspace and PCM audio, note that scr_screenshot_gammaboost affects the brightness of the output)"};
 cvar_t cl_capturevideo_printfps = {CVAR_SAVE, "cl_capturevideo_printfps", "1", "prints the frames per second captured in capturevideo (is only written to the log file, not to the console, as that would be visible on the video)"};
@@ -55,6 +56,10 @@ cvar_t scr_stipple = {0, "scr_stipple", "0", "interlacing-like stippling of the 
 cvar_t scr_refresh = {0, "scr_refresh", "1", "allows you to completely shut off rendering for benchmarking purposes"};
 cvar_t shownetgraph = {CVAR_SAVE, "shownetgraph", "0", "shows a graph of packet sizes and other information, 0 = off, 1 = show client netgraph, 2 = show client and server netgraphs (when hosting a server)"};
 cvar_t cl_demo_mousegrab = {0, "cl_demo_mousegrab", "0", "Allows reading the mouse input while playing demos. Useful for camera mods developed in csqc. (0: never, 1: always)"};
+
+extern cvar_t r_glsl;
+extern cvar_t v_glslgamma;
+#define WANT_SCREENSHOT_HWGAMMA (scr_screenshot_hwgamma.integer && !(r_glsl.integer && v_glslgamma.integer))
 
 int jpeg_supported = false;
 
@@ -852,6 +857,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_screenshot_jpeg);
 	Cvar_RegisterVariable (&scr_screenshot_jpeg_quality);
 	Cvar_RegisterVariable (&scr_screenshot_gammaboost);
+	Cvar_RegisterVariable (&scr_screenshot_hwgamma);
 	Cvar_RegisterVariable (&cl_capturevideo);
 	Cvar_RegisterVariable (&cl_capturevideo_printfps);
 	Cvar_RegisterVariable (&cl_capturevideo_width);
@@ -942,7 +948,7 @@ void SCR_ScreenShot_f (void)
 
 void SCR_CaptureVideo_BeginVideo(void)
 {
-	double gamma, g;
+	double r, g, b;
 	unsigned int i;
 	int width = cl_capturevideo_width.integer, height = cl_capturevideo_height.integer;
 	if (cls.capturevideo.active)
@@ -979,7 +985,6 @@ void SCR_CaptureVideo_BeginVideo(void)
 	cls.capturevideo.realtime = cl_capturevideo_realtime.integer != 0;
 	cls.capturevideo.screenbuffer = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 4);
 	cls.capturevideo.outbuffer = (unsigned char *)Mem_Alloc(tempmempool, width * height * (4+4) + 18);
-	gamma = 1.0/scr_screenshot_gammaboost.value;
 	dpsnprintf(cls.capturevideo.basename, sizeof(cls.capturevideo.basename), "video/%s%03i", Sys_TimeString(cl_capturevideo_nameformat.string), cl_capturevideo_number.integer);
 	Cvar_SetValueQuick(&cl_capturevideo_number, cl_capturevideo_number.integer + 1);
 
@@ -1000,25 +1005,46 @@ Y = R *  .299 + G *  .587 + B *  .114;
 Cb = R * -.169 + G * -.332 + B *  .500 + 128.;
 Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 */
+
+	if(WANT_SCREENSHOT_HWGAMMA)
+	{
+		VID_BuildGammaTables(&cls.capturevideo.vidramp[0], 256);
+	}
+	else
+	{
+		// identity gamma table
+		BuildGammaTable16(1.0f, 1.0f, 1.0f, 0.0f, 1.0f, cls.capturevideo.vidramp, 256);
+		BuildGammaTable16(1.0f, 1.0f, 1.0f, 0.0f, 1.0f, cls.capturevideo.vidramp + 256, 256);
+		BuildGammaTable16(1.0f, 1.0f, 1.0f, 0.0f, 1.0f, cls.capturevideo.vidramp + 256*2, 256);
+	}
+	if(scr_screenshot_gammaboost.value != 1)
+	{
+		double igamma = 1 / scr_screenshot_gammaboost.value;
+		for (i = 0;i < 256 * 3;i++)
+			cls.capturevideo.vidramp[i] = (unsigned short) (0.5 + pow(cls.capturevideo.vidramp[i] * (1.0 / 65535.0), igamma) * 65535.0);
+	}
+
 	for (i = 0;i < 256;i++)
 	{
-		g = 255*pow(i/255.0, gamma);
+		r = 255*cls.capturevideo.vidramp[i]/65535.0;
+		g = 255*cls.capturevideo.vidramp[i+256]/65535.0;
+		b = 255*cls.capturevideo.vidramp[i+512]/65535.0;
 		// Y weights from RGB
-		cls.capturevideo.rgbtoyuvscaletable[0][0][i] = (short)(g *  0.299);
-		cls.capturevideo.rgbtoyuvscaletable[0][1][i] = (short)(g *  0.587);
-		cls.capturevideo.rgbtoyuvscaletable[0][2][i] = (short)(g *  0.114);
+		cls.capturevideo.rgbtoyuvscaletable[0][0][i] = (short)(r *  0.299 + 0.5);
+		cls.capturevideo.rgbtoyuvscaletable[0][1][i] = (short)(g *  0.587 + 0.5);
+		cls.capturevideo.rgbtoyuvscaletable[0][2][i] = (short)(b *  0.114 + 0.5);
 		// Cb weights from RGB
-		cls.capturevideo.rgbtoyuvscaletable[1][0][i] = (short)(g * -0.169);
-		cls.capturevideo.rgbtoyuvscaletable[1][1][i] = (short)(g * -0.332);
-		cls.capturevideo.rgbtoyuvscaletable[1][2][i] = (short)(g *  0.500);
+		cls.capturevideo.rgbtoyuvscaletable[1][0][i] = (short)(r * -0.169 + 0.5);
+		cls.capturevideo.rgbtoyuvscaletable[1][1][i] = (short)(g * -0.332 + 0.5);
+		cls.capturevideo.rgbtoyuvscaletable[1][2][i] = (short)(b *  0.500 + 0.5);
 		// Cr weights from RGB
-		cls.capturevideo.rgbtoyuvscaletable[2][0][i] = (short)(g *  0.500);
-		cls.capturevideo.rgbtoyuvscaletable[2][1][i] = (short)(g * -0.419);
-		cls.capturevideo.rgbtoyuvscaletable[2][2][i] = (short)(g * -0.0813);
+		cls.capturevideo.rgbtoyuvscaletable[2][0][i] = (short)(r *  0.500 + 0.5);
+		cls.capturevideo.rgbtoyuvscaletable[2][1][i] = (short)(g * -0.419 + 0.5);
+		cls.capturevideo.rgbtoyuvscaletable[2][2][i] = (short)(b * -0.0813 + 0.5);
 		// range reduction of YCbCr to valid signal range
-		cls.capturevideo.yuvnormalizetable[0][i] = 16 + i * (236-16) / 256;
-		cls.capturevideo.yuvnormalizetable[1][i] = 16 + i * (240-16) / 256;
-		cls.capturevideo.yuvnormalizetable[2][i] = 16 + i * (240-16) / 256;
+		cls.capturevideo.yuvnormalizetable[0][i] = 16 + i * (236-16) / 256 + 0.5;
+		cls.capturevideo.yuvnormalizetable[1][i] = 16 + i * (240-16) / 256 + 0.5;
+		cls.capturevideo.yuvnormalizetable[2][i] = 16 + i * (240-16) / 256 + 0.5;
 	}
 
 	if (cl_capturevideo_ogg.integer)
@@ -1371,15 +1397,33 @@ qboolean SCR_ScreenShot(char *filename, unsigned char *buffer1, unsigned char *b
 	CHECKGLERROR
 	qglReadPixels (x, y, width, height, jpeg ? GL_RGB : GL_BGR, GL_UNSIGNED_BYTE, buffer1);CHECKGLERROR
 
-	if (scr_screenshot_gammaboost.value != 1 && gammacorrect)
+	if(gammacorrect && (scr_screenshot_gammaboost.value != 1 || WANT_SCREENSHOT_HWGAMMA))
 	{
 		int i;
 		double igamma = 1.0 / scr_screenshot_gammaboost.value;
-		unsigned char ramp[256];
-		for (i = 0;i < 256;i++)
-			ramp[i] = (unsigned char) (pow(i * (1.0 / 255.0), igamma) * 255.0);
-		for (i = 0;i < width*height*3;i++)
-			buffer1[i] = ramp[buffer1[i]];
+		unsigned short vidramp[256 * 3];
+		if(WANT_SCREENSHOT_HWGAMMA)
+		{
+			VID_BuildGammaTables(&vidramp[0], 256);
+		}
+		else
+		{
+			// identity gamma table
+			BuildGammaTable16(1.0f, 1.0f, 1.0f, 0.0f, 1.0f, vidramp, 256);
+			BuildGammaTable16(1.0f, 1.0f, 1.0f, 0.0f, 1.0f, vidramp + 256, 256);
+			BuildGammaTable16(1.0f, 1.0f, 1.0f, 0.0f, 1.0f, vidramp + 256*2, 256);
+		}
+		if(scr_screenshot_gammaboost.value != 1)
+		{
+			for (i = 0;i < 256 * 3;i++)
+				vidramp[i] = (unsigned short) (0.5 + pow(vidramp[i] * (1.0 / 65535.0), igamma) * 65535.0);
+		}
+		for (i = 0;i < width*height*3;i += 3)
+		{
+			buffer1[i] = (unsigned char) (vidramp[buffer1[i]] * 255.0 / 65535.0 + 0.5);
+			buffer1[i+1] = (unsigned char) (vidramp[buffer1[i+1] + 256] * 255.0 / 65535.0 + 0.5);
+			buffer1[i+2] = (unsigned char) (vidramp[buffer1[i+2] + 512] * 255.0 / 65535.0 + 0.5);
+		}
 	}
 
 	Image_CopyMux (buffer2, buffer1, width, height, flipx, flipy, flipdiagonal, 3, 3, indices);
