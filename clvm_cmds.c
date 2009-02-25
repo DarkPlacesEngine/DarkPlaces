@@ -3606,6 +3606,17 @@ VM_cvar_description,					// #518 float(string name) cvar_description = #518; (DP
 NULL,							// #519
 VM_keynumtostring,				// #520 string keynumtostring(float keynum)
 VM_findkeysforcommand,		// #521 string findkeysforcommand(string command)
+NULL,							// #522
+NULL,							// #523
+NULL,							// #524
+NULL,							// #525
+NULL,							// #526
+NULL,							// #527
+NULL,							// #528
+NULL,							// #529
+NULL,							// #530
+NULL,					// #531
+NULL,							// #532
 };
 
 const int vm_cl_numbuiltins = sizeof(vm_cl_builtins) / sizeof(prvm_builtin_t);

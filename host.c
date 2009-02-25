@@ -801,6 +801,11 @@ void Host_Main(void)
 
 			// send all messages to the clients
 			SV_SendClientMessages();
+			
+			if (sv.paused == 1 && realtime > sv.pausedstart && sv.pausedstart > 0) {
+				prog->globals.generic[OFS_PARM0] = realtime - sv.pausedstart;
+				PRVM_ExecuteProgram(prog->funcoffsets.SV_PausedTic, "QC function SV_PausedTic is missing");
+			}
 
 			// end the server VM frame
 			SV_VM_End();
