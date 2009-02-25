@@ -68,6 +68,7 @@ typedef struct server_s
 	qboolean active;
 
 	qboolean paused;
+	double pausedstart;
 	// handle connections specially
 	qboolean loadgame;
 

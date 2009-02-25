@@ -300,6 +300,7 @@ typedef struct prvm_prog_funcoffsets_s
 	func_t GameCommand; // any
 	func_t SV_Shutdown; // ssqc
 	func_t URI_Get_Callback; // any
+	func_t SV_PausedTic; //ssqc
 
 	// menu qc only uses some functions, nothing else
 	func_t m_draw; // mqc

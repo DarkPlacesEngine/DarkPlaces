@@ -170,6 +170,7 @@ char *vm_sv_extensions =
 "PRYDON_CLIENTCURSOR "
 "TENEBRAE_GFX_DLIGHTS "
 "TW_SV_STEPCONTROL "
+"ZQ_PAUSE "
 //"EXT_CSQC " // not ready yet
 ;
 
@@ -2954,6 +2955,24 @@ static void VM_SV_pointparticles (void)
 	SV_FlushBroadcastMessages();
 }
 
+//PF_setpause,    // void(float pause) setpause	= #531;
+static void VM_SV_setpause(void) {
+	int pauseValue;
+	pauseValue = (int)PRVM_G_FLOAT(OFS_PARM0);
+	if (pauseValue != 0) { //pause the game
+		sv.paused = 1;
+		sv.pausedstart = Sys_DoubleTime();
+	} else { //disable pause, in case it was enabled
+		if (sv.paused != 0) {
+			sv.paused = 0;
+			sv.pausedstart = 0;
+		}
+	}
+	// send notification to all clients
+	MSG_WriteByte(&sv.reliable_datagram, svc_setpause);
+	MSG_WriteByte(&sv.reliable_datagram, sv.paused);
+}
+
 prvm_builtin_t vm_sv_builtins[] = {
 NULL,							// #0 NULL function (not callable) (QUAKE)
 VM_makevectors,					// #1 void(vector ang) makevectors (QUAKE)
@@ -3479,6 +3498,19 @@ VM_argv_end_index,						// #516 float(float idx) argv_end_index = #516; (DP_QC_T
 VM_buf_cvarlist,						// #517 void(float buf, string prefix, string antiprefix) buf_cvarlist = #517; (DP_QC_STRINGBUFFERS_CVARLIST)
 VM_cvar_description,					// #518 float(string name) cvar_description = #518; (DP_QC_CVAR_DESCRIPTION)
 NULL,							// #519
+NULL,							// #520
+NULL,							// #521
+NULL,							// #522
+NULL,							// #523
+NULL,							// #524
+NULL,							// #525
+NULL,							// #526
+NULL,							// #527
+NULL,							// #528
+NULL,							// #529
+NULL,							// #530
+VM_SV_setpause,					// #531 void(float pause) setpause = #531;
+NULL,							// #532
 };
 
 const int vm_sv_numbuiltins = sizeof(vm_sv_builtins) / sizeof(prvm_builtin_t);
