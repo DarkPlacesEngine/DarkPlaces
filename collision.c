@@ -1541,7 +1541,7 @@ void Collision_CombineTraces(trace_t *cliptrace, const trace_t *trace, void *tou
 	//	cliptrace->inopen = true;
 	if (trace->inwater)
 		cliptrace->inwater = true;
-	if ((trace->realfraction <= cliptrace->realfraction) && (trace->realfraction != 1))
+	if ((trace->realfraction <= cliptrace->realfraction) && (VectorLength2(trace->plane->normal) > 0))
 	{
 		cliptrace->fraction = trace->fraction;
 		cliptrace->realfraction = trace->realfraction;
