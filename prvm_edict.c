@@ -1330,6 +1330,12 @@ void PRVM_ED_LoadFromFile (const char *data)
 			PRVM_ExecuteProgram (prog->funcoffsets.SV_OnEntityPreSpawnFunction, "QC function SV_OnEntityPreSpawnFunction is missing");
 		}
 
+		if(ent->priv.required->free)
+		{
+			inhibited++;
+			continue;
+		}
+
 //
 // immediately call spawn function, but only if there is a self global and a classname
 //
