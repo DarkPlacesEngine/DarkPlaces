@@ -28,6 +28,7 @@ static void SV_SaveEntFile_f(void);
 static void SV_StartDownload_f(void);
 static void SV_Download_f(void);
 static void SV_VM_Setup();
+extern cvar_t net_connecttimeout;
 
 void VM_CustomStats_Clear (void);
 void VM_SV_UpdateCustomStats (client_t *client, prvm_edict_t *ent, sizebuf_t *msg, int *stats);
@@ -872,6 +873,9 @@ void SV_SendServerinfo (client_t *client)
 	client->num_pings = 0;
 #endif
 	client->ping = 0;
+
+	// allow the client some time to send his keepalives, even if map loading took ages
+	client->netconnection->timeout = realtime + net_connecttimeout.value;
 }
 
 /*
@@ -2695,7 +2699,7 @@ void SV_SaveSpawnparms (void)
 
 /*
 ================
-SV_SpawnServer
+SV_/pawnServer
 
 This is called at the start of each level
 ================
@@ -2931,7 +2935,10 @@ void SV_SpawnServer (const char *server)
 // create a baseline for more efficient communications
 	if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE || sv.protocol == PROTOCOL_NEHAHRABJP || sv.protocol == PROTOCOL_NEHAHRABJP2 || sv.protocol == PROTOCOL_NEHAHRABJP3)
 		SV_CreateBaseline ();
-
+	
+	// to prevent network timeouts
+	realtime = Sys_DoubleTime();
+	
 // send serverinfo to all connected clients, and set up botclients coming back from a level change
 	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
 	{

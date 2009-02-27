@@ -1064,6 +1064,9 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	GL_Texture_CalcImageSize(glt->texturetype, glt->flags, glt->inputwidth, glt->inputheight, glt->inputdepth, &glt->tilewidth, &glt->tileheight, &glt->tiledepth);
 	R_PrecacheTexture(glt);
 
+	// texture converting and uploading can take a while, so make sure we're sending keepalives
+	CL_KeepaliveMessage(false);
+
 	return (rtexture_t *)glt;
 }
 

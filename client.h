@@ -1254,6 +1254,7 @@ void CL_Parse_DumpPacket(void);
 void CL_Parse_ErrorCleanUp(void);
 void QW_CL_StartUpload(unsigned char *data, int size);
 extern cvar_t qport;
+void CL_KeepaliveMessage(qboolean readmessages); // call this during loading of large content
 
 //
 // view

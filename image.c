@@ -849,6 +849,10 @@ unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qbo
 			Con_Printf(format == firstformat ? "\"%s\"" : (format[1].formatstring ? ", \"%s\"" : " or \"%s\".\n"), format->formatstring);
 		}
 	}
+
+	// texture loading can take a while, so make sure we're sending keepalives
+	CL_KeepaliveMessage(false);
+
 	if (developer_memorydebug.integer)
 		Mem_CheckSentinelsGlobal();
 	return NULL;
