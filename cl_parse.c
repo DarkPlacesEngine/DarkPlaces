@@ -290,12 +290,15 @@ void CL_KeepaliveMessage (qboolean readmessages)
 {
 	float time;
 	static double nextmsg = -1;
+#if 0
+	static double lasttime = -1;
+#endif
 	int oldreadcount;
 	qboolean oldbadread;
 	sizebuf_t old;
 
 	// no need if server is local and definitely not if this is a demo
-	if (!cls.netcon || cls.protocol == PROTOCOL_QUAKEWORLD)
+	if (!cls.netcon || cls.protocol == PROTOCOL_QUAKEWORLD || cls.signon >= SIGNONS)
 		return;
 
 	if (readmessages)
@@ -313,6 +316,14 @@ void CL_KeepaliveMessage (qboolean readmessages)
 		net_message = old;
 		memcpy(net_message.data, olddata, net_message.cursize);
 	}
+
+#if 0
+	if((time = Sys_DoubleTime()) >= lasttime + 1)
+	{
+		Con_Printf("long delta: %f\n", time - lasttime);
+	}
+	lasttime = Sys_DoubleTime();
+#endif
 
 	if (cls.netcon && (time = Sys_DoubleTime()) >= nextmsg)
 	{
@@ -411,8 +422,14 @@ static void CL_SetupWorldModel(void)
 	// load or reload .loc file for team chat messages
 	CL_Locs_Reload_f();
 
+	// make sure we send enough keepalives
+	CL_KeepaliveMessage(false);
+
 	// reset particles and other per-level things
 	R_Modules_NewMap();
+
+	// make sure we send enough keepalives
+	CL_KeepaliveMessage(false);
 
 	// load the team chat beep if possible
 	cl.foundtalk2wav = FS_FileExists("sound/misc/talk2.wav");
@@ -1011,8 +1028,7 @@ void CL_BeginDownloads(qboolean aborteddownload)
 		{
 			if (cl.model_precache[cl.loadmodel_current] && cl.model_precache[cl.loadmodel_current]->Draw)
 				continue;
-			if (cls.signon < SIGNONS)
-				CL_KeepaliveMessage(true);
+			CL_KeepaliveMessage(true);
 			cl.model_precache[cl.loadmodel_current] = Mod_ForName(cl.model_name[cl.loadmodel_current], false, false, cl.loadmodel_current == 1);
 			if (cl.model_precache[cl.loadmodel_current] && cl.model_precache[cl.loadmodel_current]->Draw && cl.loadmodel_current == 1)
 			{
@@ -1039,8 +1055,7 @@ void CL_BeginDownloads(qboolean aborteddownload)
 		{
 			if (cl.sound_precache[cl.loadsound_current] && S_IsSoundPrecached(cl.sound_precache[cl.loadsound_current]))
 				continue;
-			if (cls.signon < SIGNONS)
-				CL_KeepaliveMessage(true);
+			CL_KeepaliveMessage(true);
 			// Don't lock the sfx here, S_ServerSounds already did that
 			cl.sound_precache[cl.loadsound_current] = S_PrecacheSound(cl.sound_name[cl.loadsound_current], false, false);
 		}
@@ -1086,8 +1101,7 @@ void CL_BeginDownloads(qboolean aborteddownload)
 			}
 			if (cl.model_precache[cl.downloadmodel_current] && cl.model_precache[cl.downloadmodel_current]->Draw)
 				continue;
-			if (cls.signon < SIGNONS)
-				CL_KeepaliveMessage(true);
+			CL_KeepaliveMessage(true);
 			if (strcmp(cl.model_name[cl.downloadmodel_current], "null") && !FS_FileExists(cl.model_name[cl.downloadmodel_current]))
 			{
 				if (cl.downloadmodel_current == 1)
@@ -1136,8 +1150,7 @@ void CL_BeginDownloads(qboolean aborteddownload)
 			}
 			if (cl.sound_precache[cl.downloadsound_current] && S_IsSoundPrecached(cl.sound_precache[cl.downloadsound_current]))
 				continue;
-			if (cls.signon < SIGNONS)
-				CL_KeepaliveMessage(true);
+			CL_KeepaliveMessage(true);
 			dpsnprintf(soundname, sizeof(soundname), "sound/%s", cl.sound_name[cl.downloadsound_current]);
 			if (!FS_FileExists(soundname) && !FS_FileExists(cl.sound_name[cl.downloadsound_current]))
 			{
@@ -3091,8 +3104,7 @@ void CL_ParseServerMessage(void)
 
 	cl.last_received_message = realtime;
 
-	if (cls.netcon && cls.signon < SIGNONS)
-		CL_KeepaliveMessage(false);
+	CL_KeepaliveMessage(false);
 
 //
 // if recording demos, copy the message out

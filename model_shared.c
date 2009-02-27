@@ -985,10 +985,16 @@ void Mod_ShadowMesh_AddMesh(mempool_t *mempool, shadowmesh_t *mesh, rtexture_t *
 		}
 		Mod_ShadowMesh_AddTriangle(mempool, mesh, map_diffuse, map_specular, map_normal, vbuf);
 	}
+
+	// the triangle calculation can take a while, so let's do a keepalive here
+	CL_KeepaliveMessage(false);
 }
 
 shadowmesh_t *Mod_ShadowMesh_Begin(mempool_t *mempool, int maxverts, int maxtriangles, rtexture_t *map_diffuse, rtexture_t *map_specular, rtexture_t *map_normal, int light, int neighbors, int expandable)
 {
+	// the preparation before shadow mesh initialization can take a while, so let's do a keepalive here
+	CL_KeepaliveMessage(false);
+
 	return Mod_ShadowMesh_Alloc(mempool, maxverts, maxtriangles, map_diffuse, map_specular, map_normal, light, neighbors, expandable);
 }
 
@@ -1055,6 +1061,10 @@ shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh,
 		}
 		Mem_Free(mesh);
 	}
+
+	// this can take a while, so let's do a keepalive here
+	CL_KeepaliveMessage(false);
+
 	return firstmesh;
 }
 
