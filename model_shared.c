@@ -565,6 +565,9 @@ void Mod_BuildTriangleNeighbors(int *neighbors, const int *elements, int numtria
 				match = -1;
 			n[p] = match;
 		}
+
+		// also send a keepalive here (this can take a while too!)
+		CL_KeepaliveMessage(false);
 	}
 	// free the allocated buffer
 	if (edgehashentries != edgehashentriesbuffer)
