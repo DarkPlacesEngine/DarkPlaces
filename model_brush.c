@@ -4348,6 +4348,9 @@ static void Mod_Q3BSP_LoadBrushes(lump_t *l)
 		}
 		// make the colbrush from the planes
 		out->colbrushf = Collision_NewBrushFromPlanes(loadmodel->mempool, out->numbrushsides, planes, out->texture->supercontents);
+
+		// this whole loop can take a while (e.g. on redstarrepublic4)
+		CL_KeepaliveMessage(false);
 	}
 	if (planes)
 		Mem_Free(planes);
@@ -5983,6 +5986,9 @@ void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		if (i == Q3LUMP_PVS || i == Q3LUMP_LEAFS || i == Q3LUMP_NODES)
 			continue;
 		mod->brush.qw_md4sum2 ^= Com_BlockChecksum(mod_base + header->lumps[i].fileofs, header->lumps[i].filelen);
+
+		// all this checksumming can take a while, so let's send keepalives here too
+		CL_KeepaliveMessage(false);
 	}
 
 	Mod_Q3BSP_LoadEntities(&header->lumps[Q3LUMP_ENTITIES]);
