@@ -624,7 +624,6 @@ void CL_SpawnDecalParticleForSurface(int hitent, const vec3_t org, const vec3_t 
 				decal->clusterindex = leaf->clusterindex;
 		}
 	}
-	Con_Printf("hitent=%i clusterindex=%i\n", hitent, decal->clusterindex);
 }
 
 void CL_SpawnDecalParticleForPoint(const vec3_t org, float maxdist, float size, float alpha, int texnum, int color1, int color2)
