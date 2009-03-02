@@ -3520,9 +3520,12 @@ void R_BeginCoronaQuery(rtlight_t *rtlight, float scale, qboolean usequery)
 		rtlight->corona_queryindex_allpixels = r_queries[r_numqueries++];
 		rtlight->corona_queryindex_visiblepixels = r_queries[r_numqueries++];
 		CHECKGLERROR
+		// NOTE: we can't disable depth testing using R_DrawSprite's depthdisable argument, which calls GL_DepthTest, as that's broken in the ATI drivers
 		qglBeginQueryARB(GL_SAMPLES_PASSED_ARB, rtlight->corona_queryindex_allpixels);
-		R_DrawSprite(GL_ONE, GL_ZERO, r_shadow_lightcorona, NULL, true, false, rtlight->shadoworigin, r_refdef.view.right, r_refdef.view.up, scale, -scale, -scale, scale, 1, 1, 1, 1);
+		qglDepthFunc(GL_ALWAYS);
+		R_DrawSprite(GL_ONE, GL_ZERO, r_shadow_lightcorona, NULL, false, false, rtlight->shadoworigin, r_refdef.view.right, r_refdef.view.up, scale, -scale, -scale, scale, 1, 1, 1, 1);
 		qglEndQueryARB(GL_SAMPLES_PASSED_ARB);
+		qglDepthFunc(GL_LEQUAL);
 		qglBeginQueryARB(GL_SAMPLES_PASSED_ARB, rtlight->corona_queryindex_visiblepixels);
 		R_DrawSprite(GL_ONE, GL_ZERO, r_shadow_lightcorona, NULL, false, false, rtlight->shadoworigin, r_refdef.view.right, r_refdef.view.up, scale, -scale, -scale, scale, 1, 1, 1, 1);
 		qglEndQueryARB(GL_SAMPLES_PASSED_ARB);
