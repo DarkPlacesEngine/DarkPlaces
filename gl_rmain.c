@@ -4358,6 +4358,7 @@ float spritetexcoord2f[4*2] = {0, 1, 0, 0, 1, 0, 1, 1};
 
 void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, rtexture_t *fogtexture, qboolean depthdisable, qboolean depthshort, const vec3_t origin, const vec3_t left, const vec3_t up, float scalex1, float scalex2, float scaley1, float scaley2, float cr, float cg, float cb, float ca)
 {
+	// NOTE: this must not call qglDepthFunc (see r_shadow.c, R_BeginCoronaQuery) thanks to ATI
 	float fog = 1.0f;
 	float vertex3f[12];
 
