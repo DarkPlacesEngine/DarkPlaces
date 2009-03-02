@@ -677,7 +677,7 @@ ptype_t;
 
 typedef struct decal_s
 {
-	// fields used by rendering:  (40 bytes)
+	// fields used by rendering:  (44 bytes)
 	unsigned short	typeindex;
 	unsigned short	texnum;
 	vec3_t			org;
@@ -686,6 +686,7 @@ typedef struct decal_s
 	float			alpha; // 0-255
 	unsigned char	color[3];
 	unsigned char	unused1;
+	int				clusterindex; // cheap culling by pvs
 
 	// fields not used by rendering: (36 bytes in 32bit, 40 bytes in 64bit)
 	float			time2; // used for decal fade
