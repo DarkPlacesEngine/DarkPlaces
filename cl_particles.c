@@ -196,8 +196,9 @@ cvar_t cl_particles_smoke_alpha = {CVAR_SAVE, "cl_particles_smoke_alpha", "0.5",
 cvar_t cl_particles_smoke_alphafade = {CVAR_SAVE, "cl_particles_smoke_alphafade", "0.55", "brightness fade per second"};
 cvar_t cl_particles_sparks = {CVAR_SAVE, "cl_particles_sparks", "1", "enables sparks (used by multiple effects)"};
 cvar_t cl_particles_bubbles = {CVAR_SAVE, "cl_particles_bubbles", "1", "enables bubbles (used by multiple effects)"};
-cvar_t cl_particles_novis = {CVAR_SAVE, "cl_particles_novis", "1", "turn off PVS culling of particles"};
+cvar_t cl_particles_visculling = {CVAR_SAVE, "cl_particles_visculling", "0", "perform a costly check if each particle is visible before drawing"};
 cvar_t cl_decals = {CVAR_SAVE, "cl_decals", "1", "enables decals (bullet holes, blood, etc)"};
+cvar_t cl_decals_visculling = {CVAR_SAVE, "cl_decals_visculling", "1", "perform a very cheap check if each decal is visible before drawing"};
 cvar_t cl_decals_time = {CVAR_SAVE, "cl_decals_time", "20", "how long before decals start to fade away"};
 cvar_t cl_decals_fadetime = {CVAR_SAVE, "cl_decals_fadetime", "1", "how long decals take to fade away"};
 
@@ -467,8 +468,9 @@ void CL_Particles_Init (void)
 	Cvar_RegisterVariable (&cl_particles_smoke_alphafade);
 	Cvar_RegisterVariable (&cl_particles_sparks);
 	Cvar_RegisterVariable (&cl_particles_bubbles);
-	Cvar_RegisterVariable (&cl_particles_novis);
+	Cvar_RegisterVariable (&cl_particles_visculling);
 	Cvar_RegisterVariable (&cl_decals);
+	Cvar_RegisterVariable (&cl_decals_visculling);
 	Cvar_RegisterVariable (&cl_decals_time);
 	Cvar_RegisterVariable (&cl_decals_fadetime);
 }
@@ -605,6 +607,7 @@ void CL_SpawnDecalParticleForSurface(int hitent, const vec3_t org, const vec3_t 
 	decal->color[1] = ((((color1 >>  8) & 0xFF) * l1 + ((color2 >>  8) & 0xFF) * l2) >> 8) & 0xFF;
 	decal->color[2] = ((((color1 >>  0) & 0xFF) * l1 + ((color2 >>  0) & 0xFF) * l2) >> 8) & 0xFF;
 	decal->owner = hitent;
+	decal->clusterindex = -1000; // no vis culling unless we're sure
 	if (hitent)
 	{
 		// these relative things are only used to regenerate p->org and p->vel if decal->owner is not world (0)
@@ -612,6 +615,16 @@ void CL_SpawnDecalParticleForSurface(int hitent, const vec3_t org, const vec3_t 
 		Matrix4x4_Transform(&cl.entities[decal->owner].render.inversematrix, org, decal->relativeorigin);
 		Matrix4x4_Transform3x3(&cl.entities[decal->owner].render.inversematrix, normal, decal->relativenormal);
 	}
+	else
+	{
+		if(r_refdef.scene.worldmodel->brush.PointInLeaf)
+		{
+			mleaf_t *leaf = r_refdef.scene.worldmodel->brush.PointInLeaf(r_refdef.scene.worldmodel, decal->org);
+			if(leaf)
+				decal->clusterindex = leaf->clusterindex;
+		}
+	}
+	Con_Printf("hitent=%i clusterindex=%i\n", hitent, decal->clusterindex);
 }
 
 void CL_SpawnDecalParticleForPoint(const vec3_t org, float maxdist, float size, float alpha, int texnum, int color1, int color2)
@@ -2090,19 +2103,11 @@ void R_DrawDecals (void)
 				goto killdecal;
 		}
 
+		if(cl_decals_visculling.integer && decal->clusterindex > -1000 && !CHECKPVSBIT(r_refdef.viewcache.world_pvsbits, decal->clusterindex))
+			continue;
+
 		if (DotProduct(r_refdef.view.origin, decal->normal) > DotProduct(decal->org, decal->normal) && VectorDistance2(decal->org, r_refdef.view.origin) < drawdist2 * (decal->size * decal->size))
-		{
-			if(!cl_particles_novis.integer)
-				if (!r_refdef.viewcache.world_novis)
-					if(r_refdef.scene.worldmodel->brush.PointInLeaf)
-					{
-						mleaf_t *leaf = r_refdef.scene.worldmodel->brush.PointInLeaf(r_refdef.scene.worldmodel, decal->org);
-						if(leaf)
-							if(!CHECKPVSBIT(r_refdef.viewcache.world_pvsbits, leaf->clusterindex))
-								continue;
-					}
 			R_MeshQueue_AddTransparent(decal->org, R_DrawDecal_TransparentCallback, NULL, i, NULL);
-		}
 		continue;
 killdecal:
 		decal->typeindex = 0;
@@ -2496,7 +2501,7 @@ void R_DrawParticles (void)
 			R_MeshQueue_AddTransparent(p->org, R_DrawParticle_TransparentCallback, NULL, i, NULL);
 			break;
 		default:
-			if(!cl_particles_novis.integer)
+			if(cl_particles_visculling.integer)
 				if (!r_refdef.viewcache.world_novis)
 					if(r_refdef.scene.worldmodel->brush.PointInLeaf)
 					{
