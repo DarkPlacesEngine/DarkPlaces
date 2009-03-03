@@ -617,7 +617,7 @@ void CL_SpawnDecalParticleForSurface(int hitent, const vec3_t org, const vec3_t 
 	}
 	else
 	{
-		if(r_refdef.scene.worldmodel->brush.PointInLeaf)
+		if(r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.PointInLeaf)
 		{
 			mleaf_t *leaf = r_refdef.scene.worldmodel->brush.PointInLeaf(r_refdef.scene.worldmodel, decal->org);
 			if(leaf)
@@ -2502,7 +2502,7 @@ void R_DrawParticles (void)
 		default:
 			if(cl_particles_visculling.integer)
 				if (!r_refdef.viewcache.world_novis)
-					if(r_refdef.scene.worldmodel->brush.PointInLeaf)
+					if(r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.PointInLeaf)
 					{
 						mleaf_t *leaf = r_refdef.scene.worldmodel->brush.PointInLeaf(r_refdef.scene.worldmodel, p->org);
 						if(leaf)
