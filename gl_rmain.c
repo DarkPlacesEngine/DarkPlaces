@@ -4368,14 +4368,6 @@ void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, rtexture_
 	R_Mesh_Matrix(&identitymatrix);
 	GL_BlendFunc(blendfunc1, blendfunc2);
 
-	if(v_flipped_state)
-	{
-		scalex1 = -scalex1;
-		scalex2 = -scalex2;
-		GL_CullFace(r_refdef.view.cullface_front);
-	}
-	else
-		GL_CullFace(r_refdef.view.cullface_back);
 	GL_CullFace(GL_NONE);
 
 	GL_DepthMask(false);
