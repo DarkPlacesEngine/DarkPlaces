@@ -313,7 +313,7 @@ char fs_basedir[MAX_OSPATH];
 int fs_numgamedirs = 0;
 char fs_gamedirs[MAX_GAMEDIRS][MAX_QPATH];
 
-cvar_t scr_screenshot_name = {0, "scr_screenshot_name","dp", "prefix name for saved screenshots (changes based on -game commandline, as well as which game mode is running)"};
+cvar_t scr_screenshot_name = {0, "scr_screenshot_name","dp", "prefix name for saved screenshots (changes based on -game commandline, as well as which game mode is running; the date is encoded using strftime escapes)"};
 cvar_t fs_empty_files_in_pack_mark_deletions = {0, "fs_empty_files_in_pack_mark_deletions", "0", "if enabled, empty files in a pak/pk3 count as not existing but cancel the search in further packs, effectively allowing patch pak/pk3 files to 'delete' files"};
 
 
