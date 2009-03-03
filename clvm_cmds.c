@@ -942,12 +942,10 @@ static void VM_CL_project (void)
 {
 	float	*f;
 	vec3_t	v;
-	matrix4x4_t m;
 
 	VM_SAFEPARMCOUNT(1, VM_CL_project);
 	f = PRVM_G_VECTOR(OFS_PARM0);
-	Matrix4x4_Invert_Simple(&m, &r_refdef.view.matrix);
-	Matrix4x4_Transform(&m, f, v);
+	Matrix4x4_Transform(&r_refdef.view.inverse_matrix, f, v);
 	if(v_flipped.integer)
 		v[1] = -v[1];
 	VectorSet(PRVM_G_VECTOR(OFS_RETURN), r_refdef.view.x + r_refdef.view.width*0.5*(1.0+v[1]/v[0]/-r_refdef.view.frustum_x), r_refdef.view.y + r_refdef.view.height*0.5*(1.0+v[2]/v[0]/-r_refdef.view.frustum_y), v[0]);
