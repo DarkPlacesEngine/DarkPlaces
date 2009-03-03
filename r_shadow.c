@@ -3510,20 +3510,25 @@ void R_DrawModelShadows(void)
 
 void R_BeginCoronaQuery(rtlight_t *rtlight, float scale, qboolean usequery)
 {
+	float zdist;
+	vec3_t centerorigin;
 	// if it's too close, skip it
 	if (VectorLength(rtlight->color) < (1.0f / 256.0f))
 		return;
-	if (VectorDistance2(rtlight->shadoworigin, r_refdef.view.origin) < 32.0f * 32.0f)
-		return;
+	zdist = (DotProduct(rtlight->shadoworigin, r_refdef.view.forward) - DotProduct(r_refdef.view.origin, r_refdef.view.forward));
+	if (zdist < 32)
+ 		return;
 	if (usequery && r_numqueries + 2 <= r_maxqueries)
 	{
 		rtlight->corona_queryindex_allpixels = r_queries[r_numqueries++];
 		rtlight->corona_queryindex_visiblepixels = r_queries[r_numqueries++];
+		VectorMA(r_refdef.view.origin, zdist, r_refdef.view.forward, centerorigin);
+
 		CHECKGLERROR
 		// NOTE: we can't disable depth testing using R_DrawSprite's depthdisable argument, which calls GL_DepthTest, as that's broken in the ATI drivers
 		qglBeginQueryARB(GL_SAMPLES_PASSED_ARB, rtlight->corona_queryindex_allpixels);
 		qglDepthFunc(GL_ALWAYS);
-		R_DrawSprite(GL_ONE, GL_ZERO, r_shadow_lightcorona, NULL, false, false, rtlight->shadoworigin, r_refdef.view.right, r_refdef.view.up, scale, -scale, -scale, scale, 1, 1, 1, 1);
+		R_DrawSprite(GL_ONE, GL_ZERO, r_shadow_lightcorona, NULL, false, false, centerorigin, r_refdef.view.right, r_refdef.view.up, scale, -scale, -scale, scale, 1, 1, 1, 1);
 		qglEndQueryARB(GL_SAMPLES_PASSED_ARB);
 		qglDepthFunc(GL_LEQUAL);
 		qglBeginQueryARB(GL_SAMPLES_PASSED_ARB, rtlight->corona_queryindex_visiblepixels);
@@ -3531,7 +3536,7 @@ void R_BeginCoronaQuery(rtlight_t *rtlight, float scale, qboolean usequery)
 		qglEndQueryARB(GL_SAMPLES_PASSED_ARB);
 		CHECKGLERROR
 	}
-	rtlight->corona_visibility = 1;
+	rtlight->corona_visibility = bound(0, (zdist - 32) / 32, 1);
 }
 
 void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
@@ -3548,7 +3553,7 @@ void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 		//Con_Printf("%i of %i pixels\n", (int)visiblepixels, (int)allpixels);
 		if (visiblepixels < 1 || allpixels < 1)
 			return;
-		rtlight->corona_visibility *= (float)visiblepixels / (float)allpixels;
+		rtlight->corona_visibility *= bound(0, (float)visiblepixels / (float)allpixels, 1);
 		cscale *= rtlight->corona_visibility;
 	}
 	else
@@ -3587,11 +3592,11 @@ void R_DrawCoronas(void)
 	if (usequery)
 	{
 		GL_ColorMask(0,0,0,0);
-		if (r_maxqueries < range + r_refdef.scene.numlights)
+		if (r_maxqueries < (range + r_refdef.scene.numlights) * 2)
 		if (r_maxqueries < R_MAX_OCCLUSION_QUERIES)
 		{
 			i = r_maxqueries;
-			r_maxqueries = (range + r_refdef.scene.numlights) * 2;
+			r_maxqueries = (range + r_refdef.scene.numlights) * 4;
 			r_maxqueries = min(r_maxqueries, R_MAX_OCCLUSION_QUERIES);
 			CHECKGLERROR
 			qglGenQueriesARB(r_maxqueries - i, r_queries + i);
