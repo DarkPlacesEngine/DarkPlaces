@@ -2290,9 +2290,9 @@ float tokenize(string s)
 //this function originally written by KrimZon, made shorter by LordHavoc
 //20040203: rewritten by LordHavoc (no longer uses allocations)
 static int num_tokens = 0;
-static int tokens[256];
-static int tokens_startpos[256];
-static int tokens_endpos[256];
+static int tokens[VM_STRINGTEMP_LENGTH / 2];
+static int tokens_startpos[VM_STRINGTEMP_LENGTH / 2];
+static int tokens_endpos[VM_STRINGTEMP_LENGTH / 2];
 static char tokenize_string[VM_STRINGTEMP_LENGTH];
 void VM_tokenize (void)
 {
