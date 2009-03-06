@@ -2375,7 +2375,7 @@ void VM_tokenizebyseparator (void)
 	int numseparators;
 	int separatorlen[7];
 	const char *separators[7];
-	const char *p;
+	const char *p, *p0;
 	const char *token;
 	char tokentext[MAX_INPUTLINE];
 
@@ -2403,6 +2403,7 @@ void VM_tokenizebyseparator (void)
 	{
 		token = tokentext + j;
 		tokens_startpos[num_tokens] = p - tokenize_string;
+		p0 = p;
 		while (*p)
 		{
 			for (k = 0;k < numseparators;k++)
@@ -2418,8 +2419,9 @@ void VM_tokenizebyseparator (void)
 			if (j < (int)sizeof(tokentext)-1)
 				tokentext[j++] = *p;
 			p++;
+			p0 = p;
 		}
-		tokens_endpos[num_tokens] = p - tokenize_string;
+		tokens_endpos[num_tokens] = p0 - tokenize_string;
 		if (j >= (int)sizeof(tokentext))
 			break;
 		tokentext[j++] = 0;
