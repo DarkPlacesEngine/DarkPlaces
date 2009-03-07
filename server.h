@@ -25,7 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 typedef struct server_static_s
 {
 	// number of svs.clients slots (updated by maxplayers command)
-	int maxclients;
+	int maxclients, maxclients_next;
 	// client slots
 	struct client_s *clients;
 	// episode completion information

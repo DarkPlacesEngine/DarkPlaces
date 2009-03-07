@@ -363,6 +363,14 @@ void Host_Map_f (void)
 	CL_Disconnect ();
 	Host_ShutdownServer();
 
+	if(svs.maxclients != svs.maxclients_next)
+	{
+		svs.maxclients = svs.maxclients_next;
+		if (svs.clients)
+			Mem_Free(svs.clients);
+		svs.clients = (client_t *)Mem_Alloc(sv_mempool, sizeof(client_t) * svs.maxclients);
+	}
+
 	// remove menu
 	key_dest = key_game;
 
@@ -2308,17 +2316,14 @@ static void MaxPlayers_f(void)
 	if (sv.active)
 	{
 		Con_Print("maxplayers can not be changed while a server is running.\n");
-		return;
+		Con_Print("It will be changed on next server startup (\"map\" command).\n");
 	}
 
 	n = atoi(Cmd_Argv(1));
 	n = bound(1, n, MAX_SCOREBOARD);
 	Con_Printf("\"maxplayers\" set to \"%u\"\n", n);
 
-	if (svs.clients)
-		Mem_Free(svs.clients);
-	svs.maxclients = n;
-	svs.clients = (client_t *)Mem_Alloc(sv_mempool, sizeof(client_t) * svs.maxclients);
+	svs.maxclients_next = n;
 	if (n == 1)
 		Cvar_Set ("deathmatch", "0");
 	else
