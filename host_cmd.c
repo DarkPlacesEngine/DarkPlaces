@@ -2309,7 +2309,7 @@ static void MaxPlayers_f(void)
 
 	if (Cmd_Argc() != 2)
 	{
-		Con_Printf("\"maxplayers\" is \"%u\"\n", svs.maxclients);
+		Con_Printf("\"maxplayers\" is \"%u\"\n", svs.maxclients_next);
 		return;
 	}
 
