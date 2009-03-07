@@ -188,7 +188,7 @@ void Host_ServerOptions (void)
 		}
 	}
 
-	svs.maxclients = bound(1, svs.maxclients, MAX_SCOREBOARD);
+	svs.maxclients = svs.maxclients_next = bound(1, svs.maxclients, MAX_SCOREBOARD);
 
 	svs.clients = (client_t *)Mem_Alloc(sv_mempool, sizeof(client_t) * svs.maxclients);
 
