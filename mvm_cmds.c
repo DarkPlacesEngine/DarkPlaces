@@ -569,7 +569,7 @@ void VM_M_setserverlistsort( void )
 	VM_SAFEPARMCOUNT( 2, VM_M_setserverlistsort );
 
 	serverlist_sortbyfield = (serverlist_infofield_t)((int)PRVM_G_FLOAT( OFS_PARM0 ));
-	serverlist_sortflags = (qboolean) PRVM_G_FLOAT( OFS_PARM1 );
+	serverlist_sortflags = (int) PRVM_G_FLOAT( OFS_PARM1 );
 }
 
 /*
