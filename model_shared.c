@@ -2217,25 +2217,57 @@ static void Mod_BuildVBOs(void)
 	}
 }
 
-static void Mod_Decompile_OBJ(dp_model_t *model, const char *filename, const char *originalfilename)
+static void Mod_Decompile_OBJ(dp_model_t *model, const char *filename, const char *mtlfilename, const char *originalfilename)
 {
-	int vertexindex, surfaceindex, triangleindex, countvertices = 0, countsurfaces = 0, countfaces = 0;
+	int vertexindex, surfaceindex, triangleindex, textureindex, countvertices = 0, countsurfaces = 0, countfaces = 0, counttextures = 0;
+	const char *texname;
 	const int *e;
 	const float *v, *vn, *vt;
 	size_t l;
 	size_t outbufferpos = 0;
-	size_t outbuffermax = 0x10000;
+	size_t outbuffermax = 0x100000;
 	char *outbuffer = Z_Malloc(outbuffermax), *oldbuffer;
 	const msurface_t *surface;
+	const int maxtextures = 256;
+	char *texturenames = Z_Malloc(maxtextures * MAX_QPATH);
 
+	// construct the mtllib file
+	l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "# mtllib for %s exported by darkplaces engine\n", originalfilename);
+	if (l > 0)
+		outbufferpos += l;
 	for (surfaceindex = 0, surface = model->data_surfaces;surfaceindex < model->num_surfaces;surfaceindex++, surface++)
 	{
 		countsurfaces++;
 		countvertices += surface->num_vertices;
 		countfaces += surface->num_triangles;
+		texname = (surface->texture && surface->texture->name[0]) ? surface->texture->name : "default";
+		for (textureindex = 0;textureindex < maxtextures && texturenames[textureindex*MAX_QPATH];textureindex++)
+			if (!strcmp(texturenames + textureindex * MAX_QPATH, texname))
+				break;
+		if (textureindex >= maxtextures)
+			continue; // just a precaution
+		if (counttextures < textureindex + 1)
+			counttextures = textureindex + 1;
+		strlcpy(texturenames + textureindex * MAX_QPATH, texname, MAX_QPATH);
+		if (outbufferpos >= outbuffermax >> 1)
+		{
+			outbuffermax *= 2;
+			oldbuffer = outbuffer;
+			outbuffer = Z_Malloc(outbuffermax);
+			memcpy(outbuffer, oldbuffer, outbufferpos);
+			Z_Free(oldbuffer);
+		}
+		l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "newmtl %s\nNs 96.078431\nKa 0 0 0\nKd 0.64 0.64 0.64\nKs 0.5 0.5 0.5\nNi 1\nd 1\nillum 2\nmap_Kd %s%s\n\n", texname, texname, strstr(texname, ".tga") ? "" : ".tga");
+		if (l > 0)
+			outbufferpos += l;
 	}
 
-	l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "# model exported from %s by darkplaces engine\n# %i vertices, %i faces, %i surfaces\n", originalfilename, countvertices, countfaces, countsurfaces);
+	// write the mtllib file
+	FS_WriteFile(mtlfilename, outbuffer, outbufferpos);
+	outbufferpos = 0;
+
+	// construct the obj file
+	l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "# model exported from %s by darkplaces engine\n# %i vertices, %i faces, %i surfaces\nmtllib %s\n", originalfilename, countvertices, countfaces, countsurfaces, mtlfilename);
 	if (l > 0)
 		outbufferpos += l;
 	for (vertexindex = 0, v = model->surfmesh.data_vertex3f, vn = model->surfmesh.data_normal3f, vt = model->surfmesh.data_texcoordtexture2f;vertexindex < model->surfmesh.num_vertices;vertexindex++, v += 3, vn += 3, vt += 2)
@@ -2248,17 +2280,13 @@ static void Mod_Decompile_OBJ(dp_model_t *model, const char *filename, const cha
 			memcpy(outbuffer, oldbuffer, outbufferpos);
 			Z_Free(oldbuffer);
 		}
-		l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "v %f %f %f\nvn %f %f %f\nvt %f %f\n", v[0], v[2], v[1], vn[0], vn[2], vn[1], vt[0], 1-vt[1]);
+		l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "v %f %f %f\nvn %f %f %f\nvt %f %f\n", v[0], -v[2], v[1], vn[0], vn[2], vn[1], vt[0], -vt[1]);
 		if (l > 0)
 			outbufferpos += l;
 	}
-
 	for (surfaceindex = 0, surface = model->data_surfaces;surfaceindex < model->num_surfaces;surfaceindex++, surface++)
 	{
-		if (surface->texture && surface->texture->name[0])
-			l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "usemtl %s\n", surface->texture->name);
-		else
-			l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "usemtl default\n");
+		l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "usemtl %s\n", (surface->texture && surface->texture->name[0]) ? surface->texture->name : "default");
 		if (l > 0)
 			outbufferpos += l;
 		for (triangleindex = 0, e = model->surfmesh.data_element3i + surface->num_firsttriangle * 3;triangleindex < surface->num_triangles;triangleindex++, e += 3)
@@ -2271,16 +2299,21 @@ static void Mod_Decompile_OBJ(dp_model_t *model, const char *filename, const cha
 				memcpy(outbuffer, oldbuffer, outbufferpos);
 				Z_Free(oldbuffer);
 			}
-			l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "f %i/%i/%i %i/%i/%i %i/%i/%i\n", e[0]+1, e[0]+1, e[0]+1, e[2]+1, e[2]+1, e[2]+1, e[1]+1, e[1]+1, e[1]+1);
+			l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "f %i/%i/%i %i/%i/%i %i/%i/%i\n", e[0]+1, e[0]+1, e[0]+1, e[1]+1, e[1]+1, e[1]+1, e[2]+1, e[2]+1, e[2]+1);
 			if (l > 0)
 				outbufferpos += l;
 		}
 	}
 
+	// write the obj file
 	FS_WriteFile(filename, outbuffer, outbufferpos);
-	Z_Free(outbuffer);
 
-	Con_Printf("Wrote %s (%i bytes, %i vertices, %i faces, %i surfaces)\n", filename, (int)outbufferpos, countvertices, countfaces, countsurfaces);
+	// clean up
+	Z_Free(outbuffer);
+	Z_Free(texturenames);
+
+	// print some stats
+	Con_Printf("Wrote %s (%i bytes, %i vertices, %i faces, %i surfaces with %i distinct textures)\n", filename, (int)outbufferpos, countvertices, countfaces, countsurfaces, counttextures);
 }
 
 static void Mod_Decompile_SMD(dp_model_t *model, const char *filename, int firstpose, int numposes, qboolean writetriangles)
@@ -2295,7 +2328,7 @@ static void Mod_Decompile_SMD(dp_model_t *model, const char *filename, int first
 	const float *pose;
 	size_t l;
 	size_t outbufferpos = 0;
-	size_t outbuffermax = 0x10000;
+	size_t outbuffermax = 0x100000;
 	char *outbuffer = Z_Malloc(outbuffermax), *oldbuffer;
 	const msurface_t *surface;
 	l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "version 1\nnodes\n");
@@ -2458,6 +2491,7 @@ static void Mod_Decompile_f(void)
 	dp_model_t *mod;
 	char inname[MAX_QPATH];
 	char outname[MAX_QPATH];
+	char mtlname[MAX_QPATH];
 	char basename[MAX_QPATH];
 	char animname[MAX_QPATH];
 	char animname2[MAX_QPATH];
@@ -2489,7 +2523,8 @@ static void Mod_Decompile_f(void)
 	if (mod->surfmesh.num_triangles)
 	{
 		dpsnprintf(outname, sizeof(outname), "%s_decompiled.obj", basename);
-		Mod_Decompile_OBJ(mod, outname, inname);
+		dpsnprintf(mtlname, sizeof(mtlname), "%s_decompiled.mtl", basename);
+		Mod_Decompile_OBJ(mod, outname, mtlname, inname);
 	}
 
 	// export SMD if possible (only for skeletal models)
