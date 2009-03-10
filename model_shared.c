@@ -2248,7 +2248,7 @@ static void Mod_Decompile_OBJ(dp_model_t *model, const char *filename, const cha
 			memcpy(outbuffer, oldbuffer, outbufferpos);
 			Z_Free(oldbuffer);
 		}
-		l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "v %f %f %f\nvn %f %f %f\nvt %f %f\n", v[0], v[2], v[1], vn[0], vn[2], vn[1], vt[0], vt[1]);
+		l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "v %f %f %f\nvn %f %f %f\nvt %f %f\n", v[0], v[2], v[1], vn[0], vn[2], vn[1], vt[0], 1-vt[1]);
 		if (l > 0)
 			outbufferpos += l;
 	}
@@ -2271,7 +2271,7 @@ static void Mod_Decompile_OBJ(dp_model_t *model, const char *filename, const cha
 				memcpy(outbuffer, oldbuffer, outbufferpos);
 				Z_Free(oldbuffer);
 			}
-			l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "f %i/%i/%i %i/%i/%i %i/%i/%i\n", e[0], e[0], e[0], e[2], e[2], e[2], e[1], e[1], e[1]);
+			l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "f %i/%i/%i %i/%i/%i %i/%i/%i\n", e[0]+1, e[0]+1, e[0]+1, e[2]+1, e[2]+1, e[2]+1, e[1]+1, e[1]+1, e[1]+1);
 			if (l > 0)
 				outbufferpos += l;
 		}
