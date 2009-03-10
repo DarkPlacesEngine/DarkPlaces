@@ -2230,7 +2230,7 @@ static void Mod_Decompile_OBJ(dp_model_t *model, const char *filename, const cha
 
 	for (surfaceindex = 0, surface = model->data_surfaces;surfaceindex < model->num_surfaces;surfaceindex++, surface++)
 	{
-		countmaterials++;
+		countsurfaces++;
 		countvertices += surface->num_vertices;
 		countfaces += surface->num_triangles;
 	}
