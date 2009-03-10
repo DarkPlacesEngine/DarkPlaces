@@ -127,6 +127,7 @@ Mod_Init
 */
 static void Mod_Print(void);
 static void Mod_Precache (void);
+static void Mod_Decompile_f(void);
 static void Mod_BuildVBOs(void);
 void Mod_Init (void)
 {
@@ -140,6 +141,7 @@ void Mod_Init (void)
 	Cvar_RegisterVariable(&r_mipskins);
 	Cmd_AddCommand ("modellist", Mod_Print, "prints a list of loaded models");
 	Cmd_AddCommand ("modelprecache", Mod_Precache, "load a model");
+	Cmd_AddCommand ("modeldecompile", Mod_Decompile_f, "exports a model in several formats for editing purposes");
 }
 
 void Mod_RenderInit(void)
@@ -396,8 +398,13 @@ Mod_FindName
 dp_model_t *Mod_FindName(const char *name)
 {
 	int i;
-	int nummodels = Mem_ExpandableArray_IndexRange(&models);
+	int nummodels;
 	dp_model_t *mod;
+
+	// if we're not dedicatd, the renderer calls will crash without video
+	Host_StartVideo();
+
+	nummodels = Mem_ExpandableArray_IndexRange(&models);
 
 	if (!name[0])
 		Host_Error ("Mod_ForName: NULL name");
@@ -2209,3 +2216,336 @@ static void Mod_BuildVBOs(void)
 		Mem_Free(mem);
 	}
 }
+
+static void Mod_Decompile_OBJ(dp_model_t *model, const char *filename, const char *originalfilename)
+{
+	int vertexindex, surfaceindex, triangleindex, countvertices = 0, countsurfaces = 0, countfaces = 0;
+	const int *e;
+	const float *v, *vn, *vt;
+	size_t l;
+	size_t outbufferpos = 0;
+	size_t outbuffermax = 0x10000;
+	char *outbuffer = Z_Malloc(outbuffermax), *oldbuffer;
+	const msurface_t *surface;
+
+	for (surfaceindex = 0, surface = model->data_surfaces;surfaceindex < model->num_surfaces;surfaceindex++, surface++)
+	{
+		countmaterials++;
+		countvertices += surface->num_vertices;
+		countfaces += surface->num_triangles;
+	}
+
+	l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "# model exported from %s by darkplaces engine\n# %i vertices, %i faces, %i surfaces\n", originalfilename, countvertices, countfaces, countsurfaces);
+	if (l > 0)
+		outbufferpos += l;
+	for (vertexindex = 0, v = model->surfmesh.data_vertex3f, vn = model->surfmesh.data_normal3f, vt = model->surfmesh.data_texcoordtexture2f;vertexindex < model->surfmesh.num_vertices;vertexindex++, v += 3, vn += 3, vt += 2)
+	{
+		if (outbufferpos >= outbuffermax >> 1)
+		{
+			outbuffermax *= 2;
+			oldbuffer = outbuffer;
+			outbuffer = Z_Malloc(outbuffermax);
+			memcpy(outbuffer, oldbuffer, outbufferpos);
+			Z_Free(oldbuffer);
+		}
+		l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "v %f %f %f\nvn %f %f %f\nvt %f %f\n", v[0], v[2], v[1], vn[0], vn[2], vn[1], vt[0], vt[1]);
+		if (l > 0)
+			outbufferpos += l;
+	}
+
+	for (surfaceindex = 0, surface = model->data_surfaces;surfaceindex < model->num_surfaces;surfaceindex++, surface++)
+	{
+		if (surface->texture && surface->texture->name[0])
+			l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "usemtl %s\n", surface->texture->name);
+		else
+			l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "usemtl default\n");
+		if (l > 0)
+			outbufferpos += l;
+		for (triangleindex = 0, e = model->surfmesh.data_element3i + surface->num_firsttriangle * 3;triangleindex < surface->num_triangles;triangleindex++, e += 3)
+		{
+			if (outbufferpos >= outbuffermax >> 1)
+			{
+				outbuffermax *= 2;
+				oldbuffer = outbuffer;
+				outbuffer = Z_Malloc(outbuffermax);
+				memcpy(outbuffer, oldbuffer, outbufferpos);
+				Z_Free(oldbuffer);
+			}
+			l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "f %i/%i/%i %i/%i/%i %i/%i/%i\n", e[0], e[0], e[0], e[2], e[2], e[2], e[1], e[1], e[1]);
+			if (l > 0)
+				outbufferpos += l;
+		}
+	}
+
+	FS_WriteFile(filename, outbuffer, outbufferpos);
+	Z_Free(outbuffer);
+
+	Con_Printf("Wrote %s (%i bytes, %i vertices, %i faces, %i surfaces)\n", filename, (int)outbufferpos, countvertices, countfaces, countsurfaces);
+}
+
+static void Mod_Decompile_SMD(dp_model_t *model, const char *filename, int firstpose, int numposes, qboolean writetriangles)
+{
+	int countnodes = 0, counttriangles = 0, countframes = 0;
+	int surfaceindex;
+	int triangleindex;
+	int transformindex;
+	int poseindex;
+	int cornerindex;
+	const int *e;
+	const float *pose;
+	size_t l;
+	size_t outbufferpos = 0;
+	size_t outbuffermax = 0x10000;
+	char *outbuffer = Z_Malloc(outbuffermax), *oldbuffer;
+	const msurface_t *surface;
+	l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "version 1\nnodes\n");
+	if (l > 0)
+		outbufferpos += l;
+	for (transformindex = 0;transformindex < model->num_bones;transformindex++)
+	{
+		if (outbufferpos >= outbuffermax >> 1)
+		{
+			outbuffermax *= 2;
+			oldbuffer = outbuffer;
+			outbuffer = Z_Malloc(outbuffermax);
+			memcpy(outbuffer, oldbuffer, outbufferpos);
+			Z_Free(oldbuffer);
+		}
+		countnodes++;
+		l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "%3i \"%s\" %3i\n", transformindex, model->data_bones[transformindex].name, model->data_bones[transformindex].parent);
+		if (l > 0)
+			outbufferpos += l;
+	}
+	l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "end\nskeleton\n");
+	if (l > 0)
+		outbufferpos += l;
+	for (poseindex = 0, pose = model->data_poses + model->num_bones * 12 * firstpose;poseindex < numposes;poseindex++)
+	{
+		countframes++;
+		l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "time %i\n", poseindex);
+		if (l > 0)
+			outbufferpos += l;
+		for (transformindex = 0;transformindex < model->num_bones;transformindex++, pose += 12)
+		{
+			float a, b, c;
+			float angles[3];
+			float mtest[3][4];
+			if (outbufferpos >= outbuffermax >> 1)
+			{
+				outbuffermax *= 2;
+				oldbuffer = outbuffer;
+				outbuffer = Z_Malloc(outbuffermax);
+				memcpy(outbuffer, oldbuffer, outbufferpos);
+				Z_Free(oldbuffer);
+			}
+
+			// strangely the smd angles are for a transposed matrix, so we
+			// have to generate a transposed matrix, then convert that...
+			mtest[0][0] = pose[ 0];
+			mtest[0][1] = pose[ 4];
+			mtest[0][2] = pose[ 8];
+			mtest[0][3] = pose[ 3];
+			mtest[1][0] = pose[ 1];
+			mtest[1][1] = pose[ 5];
+			mtest[1][2] = pose[ 9];
+			mtest[1][3] = pose[ 7];
+			mtest[2][0] = pose[ 2];
+			mtest[2][1] = pose[ 6];
+			mtest[2][2] = pose[10];
+			mtest[2][3] = pose[11];
+			AnglesFromVectors(angles, mtest[0], mtest[2], false);
+			if (angles[0] >= 180) angles[0] -= 360;
+			if (angles[1] >= 180) angles[1] -= 360;
+			if (angles[2] >= 180) angles[2] -= 360;
+
+			a = DEG2RAD(angles[ROLL]);
+			b = DEG2RAD(angles[PITCH]);
+			c = DEG2RAD(angles[YAW]);
+
+#if 0
+{
+			float cy, sy, cp, sp, cr, sr;
+			float test[3][4];
+			// smd matrix construction, for comparing to non-transposed m
+			sy = sin(c);
+			cy = cos(c);
+			sp = sin(b);
+			cp = cos(b);
+			sr = sin(a);
+			cr = cos(a);
+
+			test[0][0] = cp*cy;
+			test[1][0] = cp*sy;
+			test[2][0] = -sp;
+			test[0][1] = sr*sp*cy+cr*-sy;
+			test[1][1] = sr*sp*sy+cr*cy;
+			test[2][1] = sr*cp;
+			test[0][2] = (cr*sp*cy+-sr*-sy);
+			test[1][2] = (cr*sp*sy+-sr*cy);
+			test[2][2] = cr*cp;
+			test[0][3] = pose[3];
+			test[1][3] = pose[7];
+			test[2][3] = pose[11];
+}
+#endif
+			l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "%3i %f %f %f %f %f %f\n", transformindex, pose[3], pose[7], pose[11], DEG2RAD(angles[ROLL]), DEG2RAD(angles[PITCH]), DEG2RAD(angles[YAW]));
+			if (l > 0)
+				outbufferpos += l;
+		}
+	}
+	l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "end\n");
+	if (l > 0)
+		outbufferpos += l;
+	if (writetriangles)
+	{
+		l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "triangles\n");
+		if (l > 0)
+			outbufferpos += l;
+		for (surfaceindex = 0, surface = model->data_surfaces;surfaceindex < model->num_surfaces;surfaceindex++, surface++)
+		{
+			for (triangleindex = 0, e = model->surfmesh.data_element3i + surface->num_firsttriangle * 3;triangleindex < surface->num_triangles;triangleindex++, e += 3)
+			{
+				counttriangles++;
+				if (outbufferpos >= outbuffermax >> 1)
+				{
+					outbuffermax *= 2;
+					oldbuffer = outbuffer;
+					outbuffer = Z_Malloc(outbuffermax);
+					memcpy(outbuffer, oldbuffer, outbufferpos);
+					Z_Free(oldbuffer);
+				}
+				l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "%s\n", surface->texture && surface->texture->name[0] ? surface->texture->name : "default.bmp");
+				if (l > 0)
+					outbufferpos += l;
+				for (cornerindex = 0;cornerindex < 3;cornerindex++)
+				{
+					const int index = e[2-cornerindex];
+					const float *v = model->surfmesh.data_vertex3f + index * 3;
+					const float *vn = model->surfmesh.data_normal3f + index * 3;
+					const float *vt = model->surfmesh.data_texcoordtexture2f + index * 2;
+					const int *wi = model->surfmesh.data_vertexweightindex4i + index * 4;
+					const float *wf = model->surfmesh.data_vertexweightinfluence4f + index * 4;
+					     if (wf[3]) l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "%3i %f %f %f %f %f %f %f %f 4 %i %f %i %f %i %f %i %f\n", wi[0], v[0], v[1], v[2], vn[0], vn[1], vn[2], vt[0], 1 - vt[1], wi[0], wf[0], wi[1], wf[1], wi[2], wf[2], wi[3], wf[3]);
+					else if (wf[2]) l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "%3i %f %f %f %f %f %f %f %f 3 %i %f %i %f %i %f\n"      , wi[0], v[0], v[1], v[2], vn[0], vn[1], vn[2], vt[0], 1 - vt[1], wi[0], wf[0], wi[1], wf[1], wi[2], wf[2]);
+					else if (wf[1]) l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "%3i %f %f %f %f %f %f %f %f 2 %i %f %i %f\n"            , wi[0], v[0], v[1], v[2], vn[0], vn[1], vn[2], vt[0], 1 - vt[1], wi[0], wf[0], wi[1], wf[1]);
+					else            l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "%3i %f %f %f %f %f %f %f %f\n"                          , wi[0], v[0], v[1], v[2], vn[0], vn[1], vn[2], vt[0], 1 - vt[1]);
+					if (l > 0)
+						outbufferpos += l;
+				}
+			}
+		}
+		l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "end\n");
+		if (l > 0)
+			outbufferpos += l;
+	}
+
+	FS_WriteFile(filename, outbuffer, outbufferpos);
+	Z_Free(outbuffer);
+
+	Con_Printf("Wrote %s (%i bytes, %i nodes, %i frames, %i triangles)\n", filename, (int)outbufferpos, countnodes, countframes, counttriangles);
+}
+
+/*
+================
+Mod_Decompile_f
+
+decompiles a model to editable files
+================
+*/
+static void Mod_Decompile_f(void)
+{
+	int i, j, k, l, first, count;
+	dp_model_t *mod;
+	char inname[MAX_QPATH];
+	char outname[MAX_QPATH];
+	char basename[MAX_QPATH];
+	char animname[MAX_QPATH];
+	char animname2[MAX_QPATH];
+	char textbuffer[32768];
+	int textsize = 0;
+
+	if (Cmd_Argc() != 2)
+	{
+		Con_Print("usage: modeldecompile <filename>\n");
+		return;
+	}
+
+	strlcpy(inname, Cmd_Argv(1), sizeof(inname));
+	FS_StripExtension(inname, basename, sizeof(basename));
+
+	mod = Mod_ForName(inname, false, true, cl.worldmodel && !strcasecmp(inname, cl.worldmodel->name));
+	if (!mod)
+	{
+		Con_Print("No such model\n");
+		return;
+	}
+	if (!mod->surfmesh.num_triangles)
+	{
+		Con_Print("Empty model (or sprite)\n");
+		return;
+	}
+
+	// export OBJ if possible (not on sprites)
+	if (mod->surfmesh.num_triangles)
+	{
+		dpsnprintf(outname, sizeof(outname), "%s_decompiled.obj", basename);
+		Mod_Decompile_OBJ(mod, outname, inname);
+	}
+
+	// export SMD if possible (only for skeletal models)
+	if (mod->surfmesh.num_triangles && mod->num_poses)
+	{
+		dpsnprintf(outname, sizeof(outname), "%s_decompiled/ref1.smd", basename);
+		Mod_Decompile_SMD(mod, outname, 0, 1, true);
+		l = dpsnprintf(textbuffer + textsize, sizeof(textbuffer) - textsize, "outputdir .\nmodel out\nscale 1\norigin 0 0 0\nscene ref1.smd\n");
+		if (l > 0) textsize += l;
+		for (i = 0;i < mod->numframes;i = j)
+		{
+			strlcpy(animname, mod->animscenes[i].name, sizeof(animname));
+			first = mod->animscenes[i].firstframe;
+			if (mod->animscenes[i].framecount > 1)
+			{
+				// framegroup anim
+				count = mod->animscenes[i].framecount;
+				j = i + 1;
+			}
+			else
+			{
+				// individual frame
+				// check for additional frames with same name
+				for (l = 0, k = strlen(animname);animname[l];l++)
+					if ((animname[l] < '0' || animname[l] > '9') && animname[l] != '_')
+						k = l + 1;
+				animname[k] = 0;
+				count = (mod->num_poses / mod->num_bones) - first;
+				for (j = i + 1;j < mod->numframes;j++)
+				{
+					strlcpy(animname2, mod->animscenes[j].name, sizeof(animname2));
+					for (l = 0, k = strlen(animname2);animname2[l];l++)
+						if ((animname2[l] < '0' || animname2[l] > '9') && animname2[l] != '_')
+							k = l + 1;
+					animname2[k] = 0;
+					if (strcmp(animname2, animname) || mod->animscenes[j].framecount > 1)
+					{
+						count = mod->animscenes[j].firstframe - first;
+						break;
+					}
+				}
+				// if it's only one frame, use the original frame name
+				if (j == i + 1)
+					strlcpy(animname, mod->animscenes[i].name, sizeof(animname));
+				
+			}
+			dpsnprintf(outname, sizeof(outname), "%s_decompiled/%s.smd", basename, animname);
+			Mod_Decompile_SMD(mod, outname, first, count, false);
+			if (textsize < (int)sizeof(textbuffer) - 100)
+			{
+				l = dpsnprintf(textbuffer + textsize, sizeof(textbuffer) - textsize, "scene %s.smd\n", animname);
+				if (l > 0) textsize += l;
+			}
+		}
+		if (textsize)
+			FS_WriteFile(va("%s_decompiled/out.txt", basename), textbuffer, (fs_offset_t)textsize);
+	}
+}
+
