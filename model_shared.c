@@ -2280,7 +2280,7 @@ static void Mod_Decompile_OBJ(dp_model_t *model, const char *filename, const cha
 			memcpy(outbuffer, oldbuffer, outbufferpos);
 			Z_Free(oldbuffer);
 		}
-		l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "v %f %f %f\nvn %f %f %f\nvt %f %f\n", v[0], -v[2], v[1], vn[0], vn[2], vn[1], vt[0], -vt[1]);
+		l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "v %f %f %f\nvn %f %f %f\nvt %f %f\n", v[0], v[2], -v[1], vn[0], vn[2], vn[1], vt[0], 1-vt[1]);
 		if (l > 0)
 			outbufferpos += l;
 	}
@@ -2495,8 +2495,10 @@ static void Mod_Decompile_f(void)
 	char basename[MAX_QPATH];
 	char animname[MAX_QPATH];
 	char animname2[MAX_QPATH];
-	char textbuffer[32768];
-	int textsize = 0;
+	char zymtextbuffer[16384];
+	char dpmtextbuffer[16384];
+	int zymtextsize = 0;
+	int dpmtextsize = 0;
 
 	if (Cmd_Argc() != 2)
 	{
@@ -2532,8 +2534,10 @@ static void Mod_Decompile_f(void)
 	{
 		dpsnprintf(outname, sizeof(outname), "%s_decompiled/ref1.smd", basename);
 		Mod_Decompile_SMD(mod, outname, 0, 1, true);
-		l = dpsnprintf(textbuffer + textsize, sizeof(textbuffer) - textsize, "outputdir .\nmodel out\nscale 1\norigin 0 0 0\nscene ref1.smd\n");
-		if (l > 0) textsize += l;
+		l = dpsnprintf(zymtextbuffer + zymtextsize, sizeof(zymtextbuffer) - zymtextsize, "texturedir textures\nscale 1\norigin 0 0 0\nmesh ref1.smd\n");
+		if (l > 0) zymtextsize += l;
+		l = dpsnprintf(dpmtextbuffer + dpmtextsize, sizeof(dpmtextbuffer) - dpmtextsize, "outputdir .\nmodel out\nscale 1\norigin 0 0 0\nscene ref1.smd\n");
+		if (l > 0) dpmtextsize += l;
 		for (i = 0;i < mod->numframes;i = j)
 		{
 			strlcpy(animname, mod->animscenes[i].name, sizeof(animname));
@@ -2573,14 +2577,21 @@ static void Mod_Decompile_f(void)
 			}
 			dpsnprintf(outname, sizeof(outname), "%s_decompiled/%s.smd", basename, animname);
 			Mod_Decompile_SMD(mod, outname, first, count, false);
-			if (textsize < (int)sizeof(textbuffer) - 100)
+			if (zymtextsize < (int)sizeof(zymtextbuffer) - 100)
 			{
-				l = dpsnprintf(textbuffer + textsize, sizeof(textbuffer) - textsize, "scene %s.smd\n", animname);
-				if (l > 0) textsize += l;
+				l = dpsnprintf(zymtextbuffer + zymtextsize, sizeof(zymtextbuffer) - zymtextsize, "scene %s.smd fps %g\n", animname, mod->animscenes[i].framerate);
+				if (l > 0) zymtextsize += l;
+			}
+			if (dpmtextsize < (int)sizeof(dpmtextbuffer) - 100)
+			{
+				l = dpsnprintf(dpmtextbuffer + dpmtextsize, sizeof(dpmtextbuffer) - dpmtextsize, "scene %s.smd\n", animname);
+				if (l > 0) dpmtextsize += l;
 			}
 		}
-		if (textsize)
-			FS_WriteFile(va("%s_decompiled/out.txt", basename), textbuffer, (fs_offset_t)textsize);
+		if (zymtextsize)
+			FS_WriteFile(va("%s_decompiled/out_zym.txt", basename), zymtextbuffer, (fs_offset_t)zymtextsize);
+		if (dpmtextsize)
+			FS_WriteFile(va("%s_decompiled/out_dpm.txt", basename), dpmtextbuffer, (fs_offset_t)dpmtextsize);
 	}
 }
 
