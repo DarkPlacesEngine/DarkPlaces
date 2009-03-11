@@ -2220,6 +2220,7 @@ static void Mod_BuildVBOs(void)
 static void Mod_Decompile_OBJ(dp_model_t *model, const char *filename, const char *mtlfilename, const char *originalfilename)
 {
 	int vertexindex, surfaceindex, triangleindex, textureindex, countvertices = 0, countsurfaces = 0, countfaces = 0, counttextures = 0;
+	int a, b, c;
 	const char *texname;
 	const int *e;
 	const float *v, *vn, *vt;
@@ -2299,7 +2300,10 @@ static void Mod_Decompile_OBJ(dp_model_t *model, const char *filename, const cha
 				memcpy(outbuffer, oldbuffer, outbufferpos);
 				Z_Free(oldbuffer);
 			}
-			l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "f %i/%i/%i %i/%i/%i %i/%i/%i\n", e[0]+1, e[0]+1, e[0]+1, e[2]+1, e[2]+1, e[2]+1, e[1]+1, e[1]+1, e[1]+1);
+			a = e[0]+1;
+			b = e[2]+1;
+			c = e[1]+1;
+			l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "f %i/%i/%i %i/%i/%i %i/%i/%i\n", a,a,a,b,b,b,c,c,c);
 			if (l > 0)
 				outbufferpos += l;
 		}
