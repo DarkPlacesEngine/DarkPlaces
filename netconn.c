@@ -1455,7 +1455,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			char rejectreason[32];
 			cls.connect_trying = false;
 			string += 7;
-			length = max(length - 7, (int)sizeof(rejectreason) - 1);
+			length = min(length - 7, (int)sizeof(rejectreason) - 1);
 			memcpy(rejectreason, string, length);
 			rejectreason[length] = 0;
 			M_Update_Return_Reason(rejectreason);
@@ -2309,7 +2309,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				return true;
 
 			// check engine protocol
-			if (strcmp(SearchInfostring(string, "protocol"), "darkplaces 3"))
+			if(!(s = SearchInfostring(string, "protocol")) || strcmp(s, "darkplaces 3"))
 			{
 				if (developer.integer >= 10)
 					Con_Printf("Datagram_ParseConnectionless: sending \"reject Wrong game protocol.\" to %s.\n", addressstring2);
