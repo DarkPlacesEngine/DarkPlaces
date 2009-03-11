@@ -2299,7 +2299,7 @@ static void Mod_Decompile_OBJ(dp_model_t *model, const char *filename, const cha
 				memcpy(outbuffer, oldbuffer, outbufferpos);
 				Z_Free(oldbuffer);
 			}
-			l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "f %i/%i/%i %i/%i/%i %i/%i/%i\n", e[0]+1, e[0]+1, e[0]+1, e[1]+1, e[1]+1, e[1]+1, e[2]+1, e[2]+1, e[2]+1);
+			l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "f %i/%i/%i %i/%i/%i %i/%i/%i\n", e[0]+1, e[0]+1, e[0]+1, e[2]+1, e[2]+1, e[2]+1, e[1]+1, e[1]+1, e[1]+1);
 			if (l > 0)
 				outbufferpos += l;
 		}
