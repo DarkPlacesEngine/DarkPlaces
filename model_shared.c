@@ -2545,7 +2545,7 @@ static void Mod_Decompile_f(void)
 	}
 
 	// export SMD if possible (only for skeletal models)
-	if (mod->surfmesh.num_triangles && mod->num_poses)
+	if (mod->surfmesh.num_triangles && mod->num_bones)
 	{
 		dpsnprintf(outname, sizeof(outname), "%s_decompiled/ref1.smd", basename);
 		Mod_Decompile_SMD(mod, outname, 0, 1, true);
