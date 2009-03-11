@@ -2227,10 +2227,10 @@ static void Mod_Decompile_OBJ(dp_model_t *model, const char *filename, const cha
 	size_t l;
 	size_t outbufferpos = 0;
 	size_t outbuffermax = 0x100000;
-	char *outbuffer = Z_Malloc(outbuffermax), *oldbuffer;
+	char *outbuffer = (char *) Z_Malloc(outbuffermax), *oldbuffer;
 	const msurface_t *surface;
 	const int maxtextures = 256;
-	char *texturenames = Z_Malloc(maxtextures * MAX_QPATH);
+	char *texturenames = (char *) Z_Malloc(maxtextures * MAX_QPATH);
 
 	// construct the mtllib file
 	l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "# mtllib for %s exported by darkplaces engine\n", originalfilename);
@@ -2254,7 +2254,7 @@ static void Mod_Decompile_OBJ(dp_model_t *model, const char *filename, const cha
 		{
 			outbuffermax *= 2;
 			oldbuffer = outbuffer;
-			outbuffer = Z_Malloc(outbuffermax);
+			outbuffer = (char *) Z_Malloc(outbuffermax);
 			memcpy(outbuffer, oldbuffer, outbufferpos);
 			Z_Free(oldbuffer);
 		}
@@ -2277,7 +2277,7 @@ static void Mod_Decompile_OBJ(dp_model_t *model, const char *filename, const cha
 		{
 			outbuffermax *= 2;
 			oldbuffer = outbuffer;
-			outbuffer = Z_Malloc(outbuffermax);
+			outbuffer = (char *) Z_Malloc(outbuffermax);
 			memcpy(outbuffer, oldbuffer, outbufferpos);
 			Z_Free(oldbuffer);
 		}
@@ -2296,7 +2296,7 @@ static void Mod_Decompile_OBJ(dp_model_t *model, const char *filename, const cha
 			{
 				outbuffermax *= 2;
 				oldbuffer = outbuffer;
-				outbuffer = Z_Malloc(outbuffermax);
+				outbuffer = (char *) Z_Malloc(outbuffermax);
 				memcpy(outbuffer, oldbuffer, outbufferpos);
 				Z_Free(oldbuffer);
 			}
@@ -2334,7 +2334,7 @@ static void Mod_Decompile_SMD(dp_model_t *model, const char *filename, int first
 	size_t l;
 	size_t outbufferpos = 0;
 	size_t outbuffermax = 0x100000;
-	char *outbuffer = Z_Malloc(outbuffermax), *oldbuffer;
+	char *outbuffer = (char *) Z_Malloc(outbuffermax), *oldbuffer;
 	const msurface_t *surface;
 	l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "version 1\nnodes\n");
 	if (l > 0)
@@ -2355,7 +2355,7 @@ static void Mod_Decompile_SMD(dp_model_t *model, const char *filename, int first
 		{
 			outbuffermax *= 2;
 			oldbuffer = outbuffer;
-			outbuffer = Z_Malloc(outbuffermax);
+			outbuffer = (char *) Z_Malloc(outbuffermax);
 			memcpy(outbuffer, oldbuffer, outbufferpos);
 			Z_Free(oldbuffer);
 		}
@@ -2382,7 +2382,7 @@ static void Mod_Decompile_SMD(dp_model_t *model, const char *filename, int first
 			{
 				outbuffermax *= 2;
 				oldbuffer = outbuffer;
-				outbuffer = Z_Malloc(outbuffermax);
+				outbuffer = (char *) Z_Malloc(outbuffermax);
 				memcpy(outbuffer, oldbuffer, outbufferpos);
 				Z_Free(oldbuffer);
 			}
@@ -2458,7 +2458,7 @@ static void Mod_Decompile_SMD(dp_model_t *model, const char *filename, int first
 				{
 					outbuffermax *= 2;
 					oldbuffer = outbuffer;
-					outbuffer = Z_Malloc(outbuffermax);
+					outbuffer = (char *) Z_Malloc(outbuffermax);
 					memcpy(outbuffer, oldbuffer, outbufferpos);
 					Z_Free(oldbuffer);
 				}
