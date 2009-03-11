@@ -2328,6 +2328,7 @@ static void Mod_Decompile_SMD(dp_model_t *model, const char *filename, int first
 	int transformindex;
 	int poseindex;
 	int cornerindex;
+	float modelscale;
 	const int *e;
 	const float *pose;
 	size_t l;
@@ -2338,6 +2339,16 @@ static void Mod_Decompile_SMD(dp_model_t *model, const char *filename, int first
 	l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "version 1\nnodes\n");
 	if (l > 0)
 		outbufferpos += l;
+	modelscale = 1;
+	if(model->num_poses >= 0)
+		modelscale = sqrt(model->data_poses[0] * model->data_poses[0] + model->data_poses[1] * model->data_poses[1] + model->data_poses[2] * model->data_poses[2]);
+	if(fabs(modelscale - 1) > 1e-4)
+	{
+		if(firstpose == 0) // only print the when writing the reference pose
+			Con_Printf("The model has an old-style model scale of %f\n", modelscale);
+	}
+	else
+		modelscale = 1;
 	for (transformindex = 0;transformindex < model->num_bones;transformindex++)
 	{
 		if (outbufferpos >= outbuffermax >> 1)
@@ -2425,7 +2436,7 @@ static void Mod_Decompile_SMD(dp_model_t *model, const char *filename, int first
 			test[2][3] = pose[11];
 }
 #endif
-			l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "%3i %f %f %f %f %f %f\n", transformindex, pose[3], pose[7], pose[11], DEG2RAD(angles[ROLL]), DEG2RAD(angles[PITCH]), DEG2RAD(angles[YAW]));
+			l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "%3i %f %f %f %f %f %f\n", transformindex, pose[3] * modelscale, pose[7] * modelscale, pose[11] * modelscale, DEG2RAD(angles[ROLL]), DEG2RAD(angles[PITCH]), DEG2RAD(angles[YAW]));
 			if (l > 0)
 				outbufferpos += l;
 		}
