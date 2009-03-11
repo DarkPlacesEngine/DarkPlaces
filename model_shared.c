@@ -2534,7 +2534,7 @@ static void Mod_Decompile_f(void)
 	{
 		dpsnprintf(outname, sizeof(outname), "%s_decompiled/ref1.smd", basename);
 		Mod_Decompile_SMD(mod, outname, 0, 1, true);
-		l = dpsnprintf(zymtextbuffer + zymtextsize, sizeof(zymtextbuffer) - zymtextsize, "texturedir textures\nscale 1\norigin 0 0 0\nmesh ref1.smd\n");
+		l = dpsnprintf(zymtextbuffer + zymtextsize, sizeof(zymtextbuffer) - zymtextsize, "output out.zym\nscale 1\norigin 0 0 0\nmesh ref1.smd\n");
 		if (l > 0) zymtextsize += l;
 		l = dpsnprintf(dpmtextbuffer + dpmtextsize, sizeof(dpmtextbuffer) - dpmtextsize, "outputdir .\nmodel out\nscale 1\norigin 0 0 0\nscene ref1.smd\n");
 		if (l > 0) dpmtextsize += l;
