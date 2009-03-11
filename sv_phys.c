@@ -2100,10 +2100,16 @@ void SV_Physics_Step (prvm_edict_t *ent)
 
 static void SV_Physics_Entity (prvm_edict_t *ent)
 {
-	// don't run a move on newly spawned projectiles as it messes up movement
-	// interpolation and rocket trails
+	// don't run think/move on newly spawned projectiles as it messes up
+	// movement interpolation and rocket trails, and is inconsistent with
+	// respect to entities spawned in the same frame
+	// (if an ent spawns a higher numbered ent, it moves in the same frame,
+	//  but if it spawns a lower numbered ent, it doesn't - this never moves
+	//  ents in the first frame regardless)
 	qboolean runmove = ent->priv.server->move;
 	ent->priv.server->move = true;
+	if (!runmove && sv_gameplayfix_delayprojectiles.integer)
+		return;
 	switch ((int) ent->fields.server->movetype)
 	{
 	case MOVETYPE_PUSH:
@@ -2140,7 +2146,7 @@ static void SV_Physics_Entity (prvm_edict_t *ent)
 	case MOVETYPE_FLYMISSILE:
 	case MOVETYPE_FLY:
 		// regular thinking
-		if (SV_RunThink (ent) && (runmove || !sv_gameplayfix_delayprojectiles.integer))
+		if (SV_RunThink (ent))
 			SV_Physics_Toss (ent);
 		break;
 	default:
