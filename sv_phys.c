@@ -1896,6 +1896,8 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 {
 	trace_t trace;
 	vec3_t move;
+	vec_t movetime;
+	int bump;
 
 // if onground, return without moving
 	if ((int)ent->fields.server->flags & FL_ONGROUND)
@@ -1930,22 +1932,25 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 // move angles
 	VectorMA (ent->fields.server->angles, sv.frametime, ent->fields.server->avelocity, ent->fields.server->angles);
 
-// move origin
-	VectorScale (ent->fields.server->velocity, sv.frametime, move);
-	trace = SV_PushEntity (ent, move, true);
-	if (ent->priv.server->free)
-		return;
-	if (trace.bmodelstartsolid)
+	movetime = sv.frametime;
+	for (bump = 0;bump < MAX_CLIP_PLANES && movetime > 0;bump++)
 	{
-		// try to unstick the entity
-		SV_UnstickEntity(ent);
-		trace = SV_PushEntity (ent, move, false);
+	// move origin
+		VectorScale (ent->fields.server->velocity, movetime, move);
+		trace = SV_PushEntity (ent, move, true);
 		if (ent->priv.server->free)
 			return;
-	}
-
-	if (trace.fraction < 1)
-	{
+		if (trace.bmodelstartsolid)
+		{
+			// try to unstick the entity
+			SV_UnstickEntity(ent);
+			trace = SV_PushEntity (ent, move, false);
+			if (ent->priv.server->free)
+				return;
+		}
+		if (trace.fraction == 1)
+			break;
+		movetime *= 1 - min(1, trace.fraction);
 		if (ent->fields.server->movetype == MOVETYPE_BOUNCEMISSILE)
 		{
 			ClipVelocity (ent->fields.server->velocity, trace.plane.normal, ent->fields.server->velocity, 2.0);
@@ -1959,7 +1964,7 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 			if (sv_gameplayfix_grenadebouncedownslopes.integer)
 			{
 				d = DotProduct(trace.plane.normal, ent->fields.server->velocity);
-				if (trace.plane.normal[2] > 0.7 && fabs(d) < 60)
+				if (trace.plane.normal[2] > 0.7 && fabs(d) < sv_gravity.value * (60.0 / 800.0))
 				{
 					ent->fields.server->flags = (int)ent->fields.server->flags | FL_ONGROUND;
 					ent->fields.server->groundentity = PRVM_EDICT_TO_PROG(trace.ent);
@@ -1971,7 +1976,7 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 			}
 			else
 			{
-				if (trace.plane.normal[2] > 0.7 && ent->fields.server->velocity[2] < 60)
+				if (trace.plane.normal[2] > 0.7 && ent->fields.server->velocity[2] < sv_gravity.value * (60.0 / 800.0))
 				{
 					ent->fields.server->flags = (int)ent->fields.server->flags | FL_ONGROUND;
 					ent->fields.server->groundentity = PRVM_EDICT_TO_PROG(trace.ent);
@@ -1997,6 +2002,8 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 			else
 				ent->fields.server->flags = (int)ent->fields.server->flags & ~FL_ONGROUND;
 		}
+		if (!sv_gameplayfix_slidemoveprojectiles.integer)
+			break;
 	}
 
 // check for in water
