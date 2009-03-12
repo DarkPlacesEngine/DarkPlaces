@@ -52,6 +52,18 @@ static void SCR_CaptureVideo_RIFF_Flush(void)
 	}
 }
 
+static void SCR_CaptureVideo_RIFF_FlushNoIncrease(void)
+{
+	LOAD_FORMATSPECIFIC_AVI();
+	if (format->riffbuffer.cursize > 0)
+	{
+		if (!FS_Write(cls.capturevideo.videofile, format->riffbuffer.data, format->riffbuffer.cursize))
+			cls.capturevideo.error = true;
+		format->riffbuffer.cursize = 0;
+		format->riffbuffer.overflowed = false;
+	}
+}
+
 static void SCR_CaptureVideo_RIFF_WriteBytes(const unsigned char *data, size_t size)
 {
 	LOAD_FORMATSPECIFIC_AVI();
@@ -245,13 +257,13 @@ static void SCR_CaptureVideo_RIFF_MakeIxChunk(const char *fcc, const char *dwChu
 		SCR_CaptureVideo_RIFF_Write32(((fs_offset_t) ix) >> 32);
 		SCR_CaptureVideo_RIFF_Write32(pos - ix);
 		SCR_CaptureVideo_RIFF_Write32(nMatching);
-		SCR_CaptureVideo_RIFF_Flush();
+		SCR_CaptureVideo_RIFF_FlushNoIncrease();
 	}
 
 	if(FS_Seek(cls.capturevideo.videofile, masteridx_counter, SEEK_SET) >= 0)
 	{
 		SCR_CaptureVideo_RIFF_Write32(++*masteridx_count);
-		SCR_CaptureVideo_RIFF_Flush();
+		SCR_CaptureVideo_RIFF_FlushNoIncrease();
 	}
 
 	FS_Seek(cls.capturevideo.videofile, 0, SEEK_END); // return value doesn't matter here
@@ -285,7 +297,7 @@ static void SCR_CaptureVideo_RIFF_Finish(qboolean final)
 		if(FS_Seek(cls.capturevideo.videofile, format->videofile_firstchunkframes_offset, SEEK_SET) >= 0)
 		{
 			SCR_CaptureVideo_RIFF_Write32(cls.capturevideo.frame);
-			SCR_CaptureVideo_RIFF_Flush();
+			SCR_CaptureVideo_RIFF_FlushNoIncrease();
 		}
 		FS_Seek(cls.capturevideo.videofile, 0, SEEK_END);
 		format->videofile_firstchunkframes_offset = 0;
@@ -405,13 +417,13 @@ void SCR_CaptureVideo_Avi_EndVideo()
 			if(FS_Seek(cls.capturevideo.videofile, format->videofile_totalframes_offset1, SEEK_SET) >= 0)
 			{
 				SCR_CaptureVideo_RIFF_Write32(cls.capturevideo.frame);
-				SCR_CaptureVideo_RIFF_Flush();
+				SCR_CaptureVideo_RIFF_FlushNoIncrease();
 			}
 		if(format->videofile_totalframes_offset2)
 			if(FS_Seek(cls.capturevideo.videofile, format->videofile_totalframes_offset2, SEEK_SET) >= 0)
 			{
 				SCR_CaptureVideo_RIFF_Write32(cls.capturevideo.frame);
-				SCR_CaptureVideo_RIFF_Flush();
+				SCR_CaptureVideo_RIFF_FlushNoIncrease();
 			}
 		if (cls.capturevideo.soundrate)
 		{
@@ -419,7 +431,7 @@ void SCR_CaptureVideo_Avi_EndVideo()
 				if(FS_Seek(cls.capturevideo.videofile, format->videofile_totalsampleframes_offset, SEEK_SET) >= 0)
 				{
 					SCR_CaptureVideo_RIFF_Write32(cls.capturevideo.soundsampleframe);
-					SCR_CaptureVideo_RIFF_Flush();
+					SCR_CaptureVideo_RIFF_FlushNoIncrease();
 				}
 		}
 	}
