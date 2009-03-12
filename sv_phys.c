@@ -1958,13 +1958,19 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 		}
 		else if (ent->fields.server->movetype == MOVETYPE_BOUNCE)
 		{
-			float d;
+			float d, ent_gravity;
+			prvm_eval_t *val;
 			ClipVelocity (ent->fields.server->velocity, trace.plane.normal, ent->fields.server->velocity, 1.5);
 			// LordHavoc: fixed grenades not bouncing when fired down a slope
+			val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.gravity);
+			if (val!=0 && val->_float)
+				ent_gravity = val->_float;
+			else
+				ent_gravity = 1.0;
 			if (sv_gameplayfix_grenadebouncedownslopes.integer)
 			{
 				d = DotProduct(trace.plane.normal, ent->fields.server->velocity);
-				if (trace.plane.normal[2] > 0.7 && fabs(d) < sv_gravity.value * (60.0 / 800.0))
+				if (trace.plane.normal[2] > 0.7 && fabs(d) < sv_gravity.value * (60.0 / 800.0) * ent_gravity)
 				{
 					ent->fields.server->flags = (int)ent->fields.server->flags | FL_ONGROUND;
 					ent->fields.server->groundentity = PRVM_EDICT_TO_PROG(trace.ent);
@@ -1976,7 +1982,7 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 			}
 			else
 			{
-				if (trace.plane.normal[2] > 0.7 && ent->fields.server->velocity[2] < sv_gravity.value * (60.0 / 800.0))
+				if (trace.plane.normal[2] > 0.7 && ent->fields.server->velocity[2] < sv_gravity.value * (60.0 / 800.0) * ent_gravity)
 				{
 					ent->fields.server->flags = (int)ent->fields.server->flags | FL_ONGROUND;
 					ent->fields.server->groundentity = PRVM_EDICT_TO_PROG(trace.ent);
