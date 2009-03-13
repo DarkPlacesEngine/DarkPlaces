@@ -49,8 +49,14 @@ extern vec3_t vec3_origin;
 #define max(A,B) ((A) > (B) ? (A) : (B))
 #endif
 
-//#define lhrandom(MIN,MAX) ((rand() & 32767) * (((MAX)-(MIN)) * (1.0f / 32768.0f)) + (MIN))
-#define lhrandom(MIN,MAX) (((double)rand() / ((double)RAND_MAX + 1)) * ((MAX)-(MIN)) + (MIN))
+// LordHavoc: this function never returns exactly MIN or exactly MAX, because
+// of a QuakeC bug in id1 where the line
+// self.nextthink = self.nexthink + random() * 0.5;
+// can result in 0 (self.nextthink is 0 at this point in the code to begin
+// with), causing "stone monsters" that never spawned properly, also MAX is
+// avoided because some people use random() as an index into arrays or for
+// loop conditions, where hitting exactly MAX may be a fatal error
+#define lhrandom(MIN,MAX) (((double)(rand() + 0.5) / ((double)RAND_MAX + 1)) * ((MAX)-(MIN)) + (MIN))
 
 #define invpow(base,number) (log(number) / log(base))
 
