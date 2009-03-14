@@ -40,17 +40,35 @@ double bsplinesample(int dimensions, double t, double *param)
 */
 
 #include "quakedef.h"
+#include "mathlib.h"
 
 #include <math.h>
 #include "curves.h"
+
+// Calculate number of resulting vertex rows/columns by given patch size and tesselation factor
+// tess=0 means that we reduce detalization of base 3x3 patches by removing middle row and column of vertices
+// "DimForTess" is "DIMension FOR TESSelation factor"
+// NB: tess=0 actually means that tess must be 0.5, but obviously it can't because it is of int type. (so "a*tess"-like code is replaced by "a/2" if tess=0)
+int Q3PatchDimForTess(int size, int tess)
+{
+	if (tess > 0)
+		return (size - 1) * tess + 1;
+	else if (tess == 0)
+		return (size - 1) / 2 + 1;
+	else
+		return 0; // Maybe warn about wrong tess here?
+}
 
 // usage:
 // to expand a 5x5 patch to 21x21 vertices (4x4 tesselation), one might use this call:
 // Q3PatchSubdivideFloat(3, sizeof(float[3]), outvertices, 5, 5, sizeof(float[3]), patchvertices, 4, 4);
 void Q3PatchTesselateFloat(int numcomponents, int outputstride, float *outputvertices, int patchwidth, int patchheight, int inputstride, float *patchvertices, int tesselationwidth, int tesselationheight)
 {
-	int k, l, x, y, component, outputwidth = (patchwidth-1)*tesselationwidth+1;
+	int k, l, x, y, component, outputwidth = Q3PatchDimForTess(patchwidth, tesselationwidth);
 	float px, py, *v, a, b, c, *cp[3][3], temp[3][64];
+	int xmax = max(1, 2*tesselationwidth);
+	int ymax = max(1, 2*tesselationheight);
+	
 	// iterate over the individual 3x3 quadratic spline surfaces one at a time
 	// expanding them to fill the output array (with some overlap to ensure
 	// the edges are filled)
@@ -63,11 +81,11 @@ void Q3PatchTesselateFloat(int numcomponents, int outputstride, float *outputver
 				for (x = 0;x < 3;x++)
 					cp[y][x] = (float *)((unsigned char *)patchvertices + ((k+y)*patchwidth+(l+x)) * inputstride);
 			// for each row...
-			for (y = 0;y <= tesselationheight*2;y++)
+			for (y = 0;y <= ymax;y++)
 			{
 				// calculate control points for this row by collapsing the 3
 				// rows of control points to one row using py
-				py = (float)y / (float)(tesselationheight*2);
+				py = (float)y / (float)ymax;
 				// calculate quadratic spline weights for py
 				a = ((1.0f - py) * (1.0f - py));
 				b = ((1.0f - py) * (2.0f * py));
@@ -79,12 +97,12 @@ void Q3PatchTesselateFloat(int numcomponents, int outputstride, float *outputver
 					temp[2][component] = cp[0][2][component] * a + cp[1][2][component] * b + cp[2][2][component] * c;
 				}
 				// fetch a pointer to the beginning of the output vertex row
-				v = (float *)((unsigned char *)outputvertices + ((k * tesselationheight + y) * outputwidth + l * tesselationwidth) * outputstride);
+				v = (float *)((unsigned char *)outputvertices + ((k * ymax / 2 + y) * outputwidth + l * xmax / 2) * outputstride);
 				// for each column of the row...
-				for (x = 0;x <= (tesselationwidth*2);x++)
+				for (x = 0;x <= xmax;x++)
 				{
 					// calculate point based on the row control points
-					px = (float)x / (float)(tesselationwidth*2);
+					px = (float)x / (float)xmax;
 					// calculate quadratic spline weights for px
 					// (could be precalculated)
 					a = ((1.0f - px) * (1.0f - px));
@@ -118,6 +136,25 @@ void Q3PatchTesselateFloat(int numcomponents, int outputstride, float *outputver
 #endif
 }
 
+static int Q3PatchTesselation(float bestsquareddeviation, float tolerance)
+{
+	float f;
+	f = sqrt(bestsquareddeviation) / tolerance;
+	//if(f < 0.25) // REALLY flat patches
+	if(f < 0.0001) // TOTALLY flat patches
+		return 0;
+	else if(f < 2)
+		return 1;
+	else
+		return (int) floor(log(f) / log(2)) + 1;
+		// this is always at least 2
+		// maps [0.25..0.5[ to -1 (actually, 1 is returned)
+		// maps [0.5..1[ to 0 (actually, 1 is returned)
+		// maps [1..2[ to 1
+		// maps [2..4[ to 2
+		// maps [4..8[ to 4
+}
+
 // returns how much tesselation of each segment is needed to remain under tolerance
 int Q3PatchTesselationOnX(int patchwidth, int patchheight, int components, const float *in, float tolerance)
 {
@@ -139,7 +176,7 @@ int Q3PatchTesselationOnX(int patchwidth, int patchheight, int components, const
 				bestsquareddeviation = squareddeviation;
 		}
 	}
-	return (int)floor(log(sqrt(bestsquareddeviation) / tolerance) / log(2)) + 1;
+	return Q3PatchTesselation(bestsquareddeviation, tolerance);
 }
 
 // returns how much tesselation of each segment is needed to remain under tolerance
@@ -163,13 +200,137 @@ int Q3PatchTesselationOnY(int patchwidth, int patchheight, int components, const
 				bestsquareddeviation = squareddeviation;
 		}
 	}
-	return (int)floor(log(sqrt(bestsquareddeviation) / tolerance) / log(2)) + 1;
+	return Q3PatchTesselation(bestsquareddeviation, tolerance);
 }
+
+// Find an equal vertex in array. Check only vertices with odd X and Y
+static int FindEqualOddVertexInArray(int numcomponents, float *vertex, float *vertices, int width, int height)
+{
+	int x, y, j;
+	for (y=0; y<height; y+=2)
+	{
+		for (x=0; x<width; x+=2)
+		{
+			qboolean found = true;
+			for (j=0; j<numcomponents; j++)
+				if (fabs(*(vertex+j) - *(vertices+j)) > 0.05)
+				// div0: this is notably smaller than the smallest radiant grid
+				// but large enough so we don't need to get scared of roundoff
+				// errors
+				{
+					found = false;
+					break;
+				}
+			if(found)
+				return y*width+x;
+			vertices += numcomponents*2;
+		}
+		vertices += numcomponents*(width-1);
+	}
+	return -1;
+}
+
+#define SIDE_INVALID -1
+#define SIDE_X 0
+#define SIDE_Y 1
+
+static int GetSide(int p1, int p2, int width, int height, int *pointdist)
+{
+	int x1 = p1 % width, y1 = p1 / width;
+	int x2 = p2 % width, y2 = p2 / width;
+	if (p1 < 0 || p2 < 0)
+		return SIDE_INVALID;
+	if (x1 == x2)
+	{
+		if (y1 != y2)
+		{
+			*pointdist = abs(y2 - y1);
+			return SIDE_Y;
+		}
+		else
+			return SIDE_INVALID;
+	}
+	else if (y1 == y2)
+	{
+		*pointdist = abs(x2 - x1);
+		return SIDE_X;
+	}
+	else
+		return SIDE_INVALID;
+}
+
+// Increase tesselation of one of two touching patches to make a seamless connection between them
+// Returns 0 in case if patches were not modified, otherwise 1
+int Q3PatchAdjustTesselation(int numcomponents, patchinfo_t *patch1, float *patchvertices1, patchinfo_t *patch2, float *patchvertices2)
+{
+	// what we are doing here is:
+	//   we take for each corner of one patch
+	//   and check if the other patch contains that corner
+	//   once we have a pair of such matches
+
+	struct {int id1,id2;} commonverts[8];
+	int i, j, k, side1, side2, *tess1, *tess2;
+	int dist1, dist2;
+	qboolean modified = false;
+
+	// Potential paired vertices (corners of the first patch)
+	commonverts[0].id1 = 0;
+	commonverts[1].id1 = patch1->xsize-1;
+	commonverts[2].id1 = patch1->xsize*(patch1->ysize-1);
+	commonverts[3].id1 = patch1->xsize*patch1->ysize-1;
+	for (i=0;i<4;++i)
+		commonverts[i].id2 = FindEqualOddVertexInArray(numcomponents, patchvertices1+numcomponents*commonverts[i].id1, patchvertices2, patch2->xsize, patch2->ysize);
+
+	// Corners of the second patch
+	commonverts[4].id2 = 0;
+	commonverts[5].id2 = patch2->xsize-1;
+	commonverts[6].id2 = patch2->xsize*(patch2->ysize-1);
+	commonverts[7].id2 = patch2->xsize*patch2->ysize-1;
+	for (i=4;i<8;++i)
+		commonverts[i].id1 = FindEqualOddVertexInArray(numcomponents, patchvertices2+numcomponents*commonverts[i].id2, patchvertices1, patch1->xsize, patch1->ysize);
+
+	for (i=0;i<8;++i)
+		for (j=i+1;j<8;++j)
+		{
+			side1 = GetSide(commonverts[i].id1,commonverts[j].id1,patch1->xsize,patch1->ysize,&dist1);
+			side2 = GetSide(commonverts[i].id2,commonverts[j].id2,patch2->xsize,patch2->ysize,&dist2);
+
+			if (side1 == SIDE_INVALID || side2 == SIDE_INVALID)
+				continue;
+
+			if(dist1 != dist2)
+			{
+				// no patch welding if the resolutions mismatch
+				continue;
+			}
+
+			// Update every lod level
+			for (k=0;k<PATCH_LODS_NUM;++k)
+			{
+				tess1 = side1 == SIDE_X ? &patch1->lods[k].xtess : &patch1->lods[k].ytess;
+				tess2 = side2 == SIDE_X ? &patch2->lods[k].xtess : &patch2->lods[k].ytess;
+				if (*tess1 != *tess2)
+				{
+					if (*tess1 < *tess2)
+						*tess1 = *tess2;
+					else
+						*tess2 = *tess1;
+					modified = true;
+				}
+			}
+		}
+
+	return modified;
+}
+
+#undef SIDE_INVALID 
+#undef SIDE_X
+#undef SIDE_Y
 
 // calculates elements for a grid of vertices
 // (such as those produced by Q3PatchTesselate)
 // (note: width and height are the actual vertex size, this produces
-//  (width-1)*(height-1)*2 triangles, 3 elements each)
+// (width-1)*(height-1)*2 triangles, 3 elements each)
 void Q3PatchTriangleElements(int *elements, int width, int height, int firstvertex)
 {
 	int x, y, row0, row1;

@@ -32,11 +32,11 @@ cvar_t r_novis = {0, "r_novis", "0", "draws whole level, see also sv_cullentitie
 cvar_t r_picmipworld = {CVAR_SAVE, "r_picmipworld", "1", "whether gl_picmip shall apply to world textures too"};
 cvar_t r_nosurftextures = {0, "r_nosurftextures", "0", "pretends there was no texture lump found in the q1bsp/hlbsp loading (useful for debugging this rare case)"};
 cvar_t r_subdivisions_tolerance = {0, "r_subdivisions_tolerance", "4", "maximum error tolerance on curve subdivision for rendering purposes (in other words, the curves will be given as many polygons as necessary to represent curves at this quality)"};
-cvar_t r_subdivisions_mintess = {0, "r_subdivisions_mintess", "1", "minimum number of subdivisions (values above 1 will smooth curves that don't need it)"};
+cvar_t r_subdivisions_mintess = {0, "r_subdivisions_mintess", "0", "minimum number of subdivisions (values above 0 will smooth curves that don't need it)"};
 cvar_t r_subdivisions_maxtess = {0, "r_subdivisions_maxtess", "1024", "maximum number of subdivisions (prevents curves beyond a certain detail level, limits smoothing)"};
 cvar_t r_subdivisions_maxvertices = {0, "r_subdivisions_maxvertices", "65536", "maximum vertices allowed per subdivided curve"};
 cvar_t r_subdivisions_collision_tolerance = {0, "r_subdivisions_collision_tolerance", "15", "maximum error tolerance on curve subdivision for collision purposes (usually a larger error tolerance than for rendering)"};
-cvar_t r_subdivisions_collision_mintess = {0, "r_subdivisions_collision_mintess", "1", "minimum number of subdivisions (values above 1 will smooth curves that don't need it)"};
+cvar_t r_subdivisions_collision_mintess = {0, "r_subdivisions_collision_mintess", "0", "minimum number of subdivisions (values above 0 will smooth curves that don't need it)"};
 cvar_t r_subdivisions_collision_maxtess = {0, "r_subdivisions_collision_maxtess", "1024", "maximum number of subdivisions (prevents curves beyond a certain detail level, limits smoothing)"};
 cvar_t r_subdivisions_collision_maxvertices = {0, "r_subdivisions_collision_maxvertices", "4225", "maximum vertices allowed per subdivided curve"};
 cvar_t mod_q3bsp_curves_collisions = {0, "mod_q3bsp_curves_collisions", "1", "enables collisions with curves (SLOW)"};
@@ -4675,15 +4675,13 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 
 typedef struct patchtess_s
 {
-	qboolean grouped;
+	patchinfo_t info;
+
+	// Auxiliary data used only by patch loading code in Mod_Q3BSP_LoadFaces
 	int surface_id;
-	int xtess, ytess;
-	int xsize, ysize;
-	int cxtess, cytess;
-	int cxsize, cysize;
 	float lodgroup[6];
-}
-patchtess_t;
+	float *originalvertex3f;
+} patchtess_t;
 
 #define PATCHTESS_SAME_LODGROUP(a,b) \
 	( \
@@ -4699,7 +4697,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 {
 	q3dface_t *in, *oldin;
 	msurface_t *out, *oldout;
-	int i, oldi, j, n, count, invalidelements, patchsize[2], finalwidth, finalheight, xtess, ytess, finalvertices, finaltriangles, firstvertex, firstelement, type, oldnumtriangles, oldnumtriangles2, meshvertices, meshtriangles, numvertices, numtriangles, groupsize, cxtess, cytess;
+	int i, oldi, j, n, count, invalidelements, patchsize[2], finalwidth, finalheight, xtess, ytess, finalvertices, finaltriangles, firstvertex, firstelement, type, oldnumtriangles, oldnumtriangles2, meshvertices, meshtriangles, numvertices, numtriangles, cxtess, cytess;
 	float lightmaptcbase[2], lightmaptcscale[2];
 	//int *originalelement3i;
 	//int *originalneighbor3i;
@@ -4713,6 +4711,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 	float *v;
 	patchtess_t *patchtess = NULL;
 	int patchtesscount = 0;
+	qboolean again;
 
 	in = (q3dface_t *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -4827,8 +4826,8 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			xtess = bound(r_subdivisions_mintess.integer, xtess, r_subdivisions_maxtess.integer);
 			ytess = bound(r_subdivisions_mintess.integer, ytess, r_subdivisions_maxtess.integer);
 			// bound to sanity settings
-			xtess = bound(1, xtess, 1024);
-			ytess = bound(1, ytess, 1024);
+			xtess = bound(0, xtess, 1024);
+			ytess = bound(0, ytess, 1024);
 
 			// lower quality collision patches! Same procedure as before, but different cvars
 			// convert patch to Q3FACETYPE_MESH
@@ -4838,25 +4837,25 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			cxtess = bound(r_subdivisions_collision_mintess.integer, cxtess, r_subdivisions_collision_maxtess.integer);
 			cytess = bound(r_subdivisions_collision_mintess.integer, cytess, r_subdivisions_collision_maxtess.integer);
 			// bound to sanity settings
-			cxtess = bound(1, cxtess, 1024);
-			cytess = bound(1, cytess, 1024);
+			cxtess = bound(0, cxtess, 1024);
+			cytess = bound(0, cytess, 1024);
 
 			// store it for the LOD grouping step
+	 		patchtess[patchtesscount].info.xsize = patchsize[0];
+	 		patchtess[patchtesscount].info.ysize = patchsize[1];
+	 		patchtess[patchtesscount].info.lods[PATCH_LOD_VISUAL].xtess = xtess;
+	 		patchtess[patchtesscount].info.lods[PATCH_LOD_VISUAL].ytess = ytess;
+	 		patchtess[patchtesscount].info.lods[PATCH_LOD_COLLISION].xtess = cxtess;
+	 		patchtess[patchtesscount].info.lods[PATCH_LOD_COLLISION].ytess = cytess;
+	
 			patchtess[patchtesscount].surface_id = i;
-			patchtess[patchtesscount].grouped = false;
-			patchtess[patchtesscount].xtess = xtess;
-			patchtess[patchtesscount].ytess = ytess;
-			patchtess[patchtesscount].xsize = patchsize[0];
-			patchtess[patchtesscount].ysize = patchsize[1];
 			patchtess[patchtesscount].lodgroup[0] = in->specific.patch.mins[0];
 			patchtess[patchtesscount].lodgroup[1] = in->specific.patch.mins[1];
 			patchtess[patchtesscount].lodgroup[2] = in->specific.patch.mins[2];
 			patchtess[patchtesscount].lodgroup[3] = in->specific.patch.maxs[0];
 			patchtess[patchtesscount].lodgroup[4] = in->specific.patch.maxs[1];
 			patchtess[patchtesscount].lodgroup[5] = in->specific.patch.maxs[2];
-
-			patchtess[patchtesscount].cxtess = cxtess;
-			patchtess[patchtesscount].cytess = cytess;
+			patchtess[patchtesscount].originalvertex3f = originalvertex3f;
 			++patchtesscount;
 			break;
 		case Q3FACETYPE_FLARE:
@@ -4871,129 +4870,36 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		meshtriangles += out->num_triangles;
 	}
 
+	// Fix patches tesselations so that they make no seams
+	do
+	{
+		again = false;
+		for(i = 0; i < patchtesscount; ++i)
+		{
+			for(j = i+1; j < patchtesscount; ++j)
+			{
+				if (!PATCHTESS_SAME_LODGROUP(patchtess[i], patchtess[j]))
+					continue;
+
+				if (Q3PatchAdjustTesselation(3, &patchtess[i].info, patchtess[i].originalvertex3f, &patchtess[j].info, patchtess[j].originalvertex3f) )
+					again = true;
+			}
+		}
+	}
+	while (again);
+
+	// Calculate resulting number of triangles
 	for(i = 0; i < patchtesscount; ++i)
 	{
-		if(patchtess[i].grouped) // already grouped
-			continue;
+		finalwidth = Q3PatchDimForTess(patchtess[i].info.xsize, patchtess[i].info.lods[PATCH_LOD_VISUAL].xtess);
+		finalheight = Q3PatchDimForTess(patchtess[i].info.ysize,patchtess[i].info.lods[PATCH_LOD_VISUAL].ytess);
+		numvertices = finalwidth * finalheight;
+		numtriangles = (finalwidth - 1) * (finalheight - 1) * 2;
 
-		// get the highest required tess parameters for this group
-		groupsize = 0;
-		xtess = ytess = 0;
-		cxtess = cytess = 0;
-		for(j = 0; j < patchtesscount; ++j)
-		{
-			if(patchtess[j].grouped) // already grouped
-				continue;
-			if(!PATCHTESS_SAME_LODGROUP(patchtess[i], patchtess[j]))
-				continue;
-			if(patchtess[j].xtess > xtess)
-				xtess = patchtess[j].xtess;
-			if(patchtess[j].ytess > ytess)
-				ytess = patchtess[j].ytess;
-			if(patchtess[j].cxtess > cxtess)
-				cxtess = patchtess[j].cxtess;
-			if(patchtess[j].cytess > cytess)
-				cytess = patchtess[j].cytess;
-			++groupsize;
-		}
-
-		if(groupsize == 0)
-		{
-			Con_Printf("ERROR: patch %d isn't in any LOD group (1)?!?\n", patchtess[i].surface_id);
-			continue;
-		}
-
-		// bound to user limit on vertices
-		for(;;)
-		{
-			numvertices = 0;
-			numtriangles = 0;
-
-			for(j = 0; j < patchtesscount; ++j)
-			{
-				if(patchtess[j].grouped) // already grouped
-					continue;
-				if(!PATCHTESS_SAME_LODGROUP(patchtess[i], patchtess[j]))
-					continue;
-
-				finalwidth = (patchtess[j].xsize - 1) * xtess + 1;
-				finalheight = (patchtess[j].ysize - 1) * ytess + 1;
-				numvertices += finalwidth * finalheight;
-				numtriangles += (finalwidth - 1) * (finalheight - 1) * 2;
-			}
-
-			if(xtess <= 1 && ytess <= 1)
-				break;
-
-			if(numvertices > min(r_subdivisions_maxvertices.integer, 262144) * groupsize)
-			{
-				if (xtess > ytess)
-					xtess--;
-				else
-					ytess--;
-				continue; // try again
-			}
-
-			break;
-		}
-
-		// bound to user limit on vertices (collision)
-		for(;;)
-		{
-			numvertices = 0;
-			numtriangles = 0;
-
-			for(j = 0; j < patchtesscount; ++j)
-			{
-				if(patchtess[j].grouped) // already grouped
-					continue;
-				if(!PATCHTESS_SAME_LODGROUP(patchtess[i], patchtess[j]))
-					continue;
-
-				finalwidth = (patchtess[j].xsize - 1) * cxtess + 1;
-				finalheight = (patchtess[j].ysize - 1) * cytess + 1;
-				numvertices += finalwidth * finalheight;
-				numtriangles += (finalwidth - 1) * (finalheight - 1) * 2;
-			}
-
-			if(cxtess <= 1 && cytess <= 1)
-				break;
-
-			if(numvertices > min(r_subdivisions_collision_maxvertices.integer, 262144) * groupsize)
-			{
-				if (cxtess > cytess)
-					cxtess--;
-				else
-					cytess--;
-				continue; // try again
-			}
-
-			break;
-		}
-
-		for(j = 0; j < patchtesscount; ++j)
-		{
-			if(patchtess[j].grouped) // already grouped
-				continue;
-			if(!PATCHTESS_SAME_LODGROUP(patchtess[i], patchtess[j]))
-				continue;
-
-			finalwidth = (patchtess[j].xsize - 1) * xtess + 1;
-			finalheight = (patchtess[j].ysize - 1) * ytess + 1;
-			numvertices = finalwidth * finalheight;
-			numtriangles = (finalwidth - 1) * (finalheight - 1) * 2;
-
-			oldout[patchtess[j].surface_id].num_vertices = numvertices;
-			oldout[patchtess[j].surface_id].num_triangles = numtriangles;
-			meshvertices += oldout[patchtess[j].surface_id].num_vertices;
-			meshtriangles += oldout[patchtess[j].surface_id].num_triangles;
-
-			patchtess[j].grouped = true;
-			patchtess[j].xtess = xtess;
-			patchtess[j].ytess = ytess;
-			patchtess[j].cxtess = cxtess;
-			patchtess[j].cytess = cytess;
-		}
+		oldout[patchtess[i].surface_id].num_vertices = numvertices;
+		oldout[patchtess[i].surface_id].num_triangles = numtriangles;
+		meshvertices += oldout[patchtess[i].surface_id].num_vertices;
+		meshtriangles += oldout[patchtess[i].surface_id].num_triangles;
 	}
 
 	i = oldi;
@@ -5046,24 +4952,24 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			originaltexcoordlightmap2f = loadmodel->brushq3.data_texcoordlightmap2f + firstvertex * 2;
 			originalcolor4f = loadmodel->brushq3.data_color4f + firstvertex * 4;
 
-			xtess = ytess = cxtess = cytess = 0;
+			xtess = ytess = cxtess = cytess = -1;
 			for(j = 0; j < patchtesscount; ++j)
-				if(patchtess[j].grouped && patchtess[j].surface_id == i)
+				if(patchtess[j].surface_id == i)
 				{
-					xtess = patchtess[j].xtess;
-					ytess = patchtess[j].ytess;
-					cxtess = patchtess[j].cxtess;
-					cytess = patchtess[j].cytess;
+					xtess = patchtess[j].info.lods[PATCH_LOD_VISUAL].xtess;
+					ytess = patchtess[j].info.lods[PATCH_LOD_VISUAL].ytess;
+					cxtess = patchtess[j].info.lods[PATCH_LOD_COLLISION].xtess;
+					cytess = patchtess[j].info.lods[PATCH_LOD_COLLISION].ytess;
 					break;
 				}
-			if(xtess == 0)
+			if(xtess == -1)
 			{
-				Con_Printf("ERROR: patch %d isn't in any LOD group (2)?!?\n", i);
-				xtess = ytess = cxtess = cytess = 1;
+				Con_Printf("ERROR: patch %d isn't preprocessed?!?\n", i);
+				xtess = ytess = cxtess = cytess = 0;
 			}
 
-			finalwidth = ((patchsize[0] - 1) * xtess) + 1;
-			finalheight = ((patchsize[1] - 1) * ytess) + 1;
+			finalwidth = Q3PatchDimForTess(patchsize[0],xtess); //((patchsize[0] - 1) * xtess) + 1;
+			finalheight = Q3PatchDimForTess(patchsize[1],ytess); //((patchsize[1] - 1) * ytess) + 1;
 			finalvertices = finalwidth * finalheight;
 			finaltriangles = (finalwidth - 1) * (finalheight - 1) * 2;
 			type = Q3FACETYPE_MESH;
@@ -5075,7 +4981,9 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			Q3PatchTesselateFloat(2, sizeof(float[2]), (loadmodel->surfmesh.data_texcoordlightmap2f + 2 * out->num_firstvertex), patchsize[0], patchsize[1], sizeof(float[2]), originaltexcoordlightmap2f, xtess, ytess);
 			Q3PatchTesselateFloat(4, sizeof(float[4]), (loadmodel->surfmesh.data_lightmapcolor4f + 4 * out->num_firstvertex), patchsize[0], patchsize[1], sizeof(float[4]), originalcolor4f, xtess, ytess);
 			Q3PatchTriangleElements((loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle), finalwidth, finalheight, out->num_firstvertex);
+
 			out->num_triangles = Mod_RemoveDegenerateTriangles(out->num_triangles, (loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle), (loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle), loadmodel->surfmesh.data_vertex3f);
+
 			if (developer.integer >= 100)
 			{
 				if (out->num_triangles < finaltriangles)
@@ -5085,8 +4993,8 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			}
 			// q3map does not put in collision brushes for curves... ugh
 			// build the lower quality collision geometry
-			finalwidth = ((patchsize[0] - 1) * cxtess) + 1;
-			finalheight = ((patchsize[1] - 1) * cytess) + 1;
+			finalwidth = Q3PatchDimForTess(patchsize[0],cxtess); //((patchsize[0] - 1) * cxtess) + 1;
+			finalheight = Q3PatchDimForTess(patchsize[1],cytess); //((patchsize[1] - 1) * cytess) + 1;
 			finalvertices = finalwidth * finalheight;
 			finaltriangles = (finalwidth - 1) * (finalheight - 1) * 2;
 
