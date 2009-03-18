@@ -70,6 +70,7 @@ char *vm_sv_extensions =
 "DP_QC_ENTITYDATA "
 "DP_QC_ETOS "
 "DP_QC_FINDCHAIN "
+"DP_QC_FINDCHAIN_TOFIELD "
 "DP_QC_FINDCHAINFLAGS "
 "DP_QC_FINDCHAINFLOAT "
 "DP_QC_FINDFLAGS "
@@ -837,8 +838,16 @@ static void VM_SV_findradius (void)
 	int i;
 	int numtouchedicts;
 	prvm_edict_t *touchedicts[MAX_EDICTS];
+	int chainfield;
 
-	VM_SAFEPARMCOUNT(2, VM_SV_findradius);
+	VM_SAFEPARMCOUNTRANGE(2, 3, VM_SV_findradius);
+
+	if(prog->argc == 3)
+		chainfield = PRVM_G_INT(OFS_PARM2);
+	else
+		chainfield = prog->fieldoffsets.chain;
+	if (chainfield < 0)
+		PRVM_ERROR("VM_findchain: %s doesnt have the specified chain field !", PRVM_NAME);
 
 	chain = (prvm_edict_t *)prog->edicts;
 
@@ -881,7 +890,7 @@ static void VM_SV_findradius (void)
 			VectorMAMAM(1, eorg, -0.5f, ent->fields.server->mins, -0.5f, ent->fields.server->maxs, eorg);
 		if (DotProduct(eorg, eorg) < radius2)
 		{
-			ent->fields.server->chain = PRVM_EDICT_TO_PROG(chain);
+			PRVM_EDICTFIELDVALUE(ent,chainfield)->edict = PRVM_EDICT_TO_PROG(chain);
 			chain = ent;
 		}
 	}
