@@ -162,6 +162,7 @@ char *vm_sv_extensions =
 "DP_VIEWZOOM "
 "EXT_BITSHIFT "
 "FRIK_FILE "
+"FTE_QC_CHECKPVS "
 "FTE_STRINGS "
 "KRIMZON_SV_PARSECLIENTCOMMAND "
 "NEH_CMD_PLAY2 "
@@ -787,6 +788,72 @@ static void VM_SV_checkclient (void)
 }
 
 //============================================================================
+
+/*
+=================
+VM_SV_checkpvs
+
+Checks if an entity is in a point's PVS.
+Should be fast but can be inexact.
+
+float checkpvs(vector viewpos, entity viewee) = #240;
+=================
+*/
+static void VM_SV_checkpvs (void)
+{
+	vec3_t viewpos;
+	prvm_edict_t *viewee;
+#if 1
+	unsigned char *pvs;
+#else
+	static int fatpvsbytes;
+	static unsigned char fatpvs[MAX_MAP_LEAFS/8];
+#endif
+
+	VM_SAFEPARMCOUNT(2, VM_SV_checkpvs);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), viewpos);
+	viewee = PRVM_G_EDICT(OFS_PARM1);
+
+	if(viewee->priv.server->free)
+	{
+		VM_Warning("checkpvs: can not check free entity\n");
+		PRVM_G_FLOAT(OFS_RETURN) = 4;
+		return;
+	}
+
+#if 1
+	if(!sv.worldmodel->brush.GetPVS || !sv.worldmodel->brush.BoxTouchingPVS)
+	{
+		// no PVS support on this worldmodel... darn
+		PRVM_G_FLOAT(OFS_RETURN) = 3;
+		return;
+	}
+	pvs = sv.worldmodel->brush.GetPVS(sv.worldmodel, viewpos);
+	if(!pvs)
+	{
+		// viewpos isn't in any PVS... darn
+		PRVM_G_FLOAT(OFS_RETURN) = 2;
+		return;
+	}
+	PRVM_G_FLOAT(OFS_RETURN) = sv.worldmodel->brush.BoxTouchingPVS(sv.worldmodel, pvs, viewee->fields.server->absmin, viewee->fields.server->absmax);
+#else
+	// using fat PVS like FTEQW does (slow)
+	if(!sv.worldmodel->brush.FatPVS || !sv.worldmodel->brush.BoxTouchingPVS)
+	{
+		// no PVS support on this worldmodel... darn
+		PRVM_G_FLOAT(OFS_RETURN) = 3;
+		return;
+	}
+	fatpvsbytes = sv.worldmodel->brush.FatPVS(sv.worldmodel, viewpos, 8, fatpvs, sizeof(fatpvs), false);
+	if(!fatpvsbytes)
+	{
+		// viewpos isn't in any PVS... darn
+		PRVM_G_FLOAT(OFS_RETURN) = 2;
+		return;
+	}
+	PRVM_G_FLOAT(OFS_RETURN) = sv.worldmodel->brush.BoxTouchingPVS(sv.worldmodel, fatpvs, viewee->fields.server->absmin, viewee->fields.server->absmax);
+#endif
+}
 
 
 /*
@@ -3225,7 +3292,7 @@ NULL,							// #236
 NULL,							// #237
 NULL,							// #238
 NULL,							// #239
-NULL,							// #240
+VM_SV_checkpvs,					// #240 float(vector viewpos, entity viewee) checkpvs;
 NULL,							// #241
 NULL,							// #242
 NULL,							// #243
