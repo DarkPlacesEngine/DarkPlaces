@@ -891,11 +891,16 @@ void VM_findchain (void)
 	int		f;
 	const char	*s, *t;
 	prvm_edict_t	*ent, *chain;
+	int chainfield;
 
-	VM_SAFEPARMCOUNT(2,VM_findchain);
+	VM_SAFEPARMCOUNTRANGE(2,3,VM_findchain);
 
-	if (prog->fieldoffsets.chain < 0)
-		PRVM_ERROR("VM_findchain: %s doesnt have a chain field !", PRVM_NAME);
+	if(prog->argc == 3)
+		chainfield = PRVM_G_INT(OFS_PARM2);
+	else
+		chainfield = prog->fieldoffsets.chain;
+	if (chainfield < 0)
+		PRVM_ERROR("VM_findchain: %s doesnt have the specified chain field !", PRVM_NAME);
 
 	chain = prog->edicts;
 
@@ -918,7 +923,7 @@ void VM_findchain (void)
 		if (strcmp(t,s))
 			continue;
 
-		PRVM_EDICTFIELDVALUE(ent,prog->fieldoffsets.chain)->edict = PRVM_NUM_FOR_EDICT(chain);
+		PRVM_EDICTFIELDVALUE(ent,chainfield)->edict = PRVM_NUM_FOR_EDICT(chain);
 		chain = ent;
 	}
 
@@ -941,11 +946,16 @@ void VM_findchainfloat (void)
 	int		f;
 	float	s;
 	prvm_edict_t	*ent, *chain;
+	int chainfield;
 
-	VM_SAFEPARMCOUNT(2, VM_findchainfloat);
+	VM_SAFEPARMCOUNTRANGE(2, 3, VM_findchainfloat);
 
-	if (prog->fieldoffsets.chain < 0)
-		PRVM_ERROR("VM_findchainfloat: %s doesnt have a chain field !", PRVM_NAME);
+	if(prog->argc == 3)
+		chainfield = PRVM_G_INT(OFS_PARM2);
+	else
+		chainfield = prog->fieldoffsets.chain;
+	if (chainfield < 0)
+		PRVM_ERROR("VM_findchain: %s doesnt have the specified chain field !", PRVM_NAME);
 
 	chain = (prvm_edict_t *)prog->edicts;
 
@@ -961,7 +971,7 @@ void VM_findchainfloat (void)
 		if (PRVM_E_FLOAT(ent,f) != s)
 			continue;
 
-		PRVM_EDICTFIELDVALUE(ent,prog->fieldoffsets.chain)->edict = PRVM_EDICT_TO_PROG(chain);
+		PRVM_EDICTFIELDVALUE(ent,chainfield)->edict = PRVM_EDICT_TO_PROG(chain);
 		chain = ent;
 	}
 
@@ -1022,11 +1032,16 @@ void VM_findchainflags (void)
 	int		f;
 	int		s;
 	prvm_edict_t	*ent, *chain;
+	int chainfield;
 
-	VM_SAFEPARMCOUNT(2, VM_findchainflags);
+	VM_SAFEPARMCOUNTRANGE(2, 3, VM_findchainflags);
 
-	if (prog->fieldoffsets.chain < 0)
-		PRVM_ERROR("VM_findchainflags: %s doesnt have a chain field !", PRVM_NAME);
+	if(prog->argc == 3)
+		chainfield = PRVM_G_INT(OFS_PARM2);
+	else
+		chainfield = prog->fieldoffsets.chain;
+	if (chainfield < 0)
+		PRVM_ERROR("VM_findchain: %s doesnt have the specified chain field !", PRVM_NAME);
 
 	chain = (prvm_edict_t *)prog->edicts;
 
@@ -1044,7 +1059,7 @@ void VM_findchainflags (void)
 		if (!((int)PRVM_E_FLOAT(ent,f) & s))
 			continue;
 
-		PRVM_EDICTFIELDVALUE(ent,prog->fieldoffsets.chain)->edict = PRVM_EDICT_TO_PROG(chain);
+		PRVM_EDICTFIELDVALUE(ent,chainfield)->edict = PRVM_EDICT_TO_PROG(chain);
 		chain = ent;
 	}
 

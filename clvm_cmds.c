@@ -435,8 +435,16 @@ static void VM_CL_findradius (void)
 	vec3_t			org, eorg, mins, maxs;
 	int				i, numtouchedicts;
 	prvm_edict_t	*touchedicts[MAX_EDICTS];
+	int             chainfield;
 
-	VM_SAFEPARMCOUNT(2, VM_CL_findradius);
+	VM_SAFEPARMCOUNTRANGE(2, 3, VM_CL_findradius);
+
+	if(prog->argc == 3)
+		chainfield = PRVM_G_INT(OFS_PARM2);
+	else
+		chainfield = prog->fieldoffsets.chain;
+	if(chainfield < 0)
+		PRVM_ERROR("VM_findchain: %s doesnt have the specified chain field !", PRVM_NAME);
 
 	chain = (prvm_edict_t *)prog->edicts;
 
@@ -478,7 +486,7 @@ static void VM_CL_findradius (void)
 			VectorMAMAM(1, eorg, -0.5f, ent->fields.client->mins, -0.5f, ent->fields.client->maxs, eorg);
 		if (DotProduct(eorg, eorg) < radius2)
 		{
-			ent->fields.client->chain = PRVM_EDICT_TO_PROG(chain);
+			PRVM_EDICTFIELDVALUE(ent, chainfield)->edict = PRVM_EDICT_TO_PROG(chain);
 			chain = ent;
 		}
 	}
