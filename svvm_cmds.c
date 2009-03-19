@@ -2607,13 +2607,36 @@ int SV_GetExtendedTagInfo (prvm_edict_t *e, int tagindex, int *parentindex, cons
 
 void SV_GetEntityMatrix (prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatrix)
 {
-	float scale = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.scale)->_float;
-	if (scale == 0)
-		scale = 1;
+	prvm_eval_t *val;
+	float scale;
+	float WTFsign;
+	int modelindex;
+	dp_model_t *model;
+
+	scale = 1;
+	val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.scale);
+	if (val && val->_float != 0)
+		scale = val->_float;
+	
 	if (viewmatrix)
-		Matrix4x4_CreateFromQuakeEntity(out, ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2] + ent->fields.server->view_ofs[2], ent->fields.server->v_angle[0], ent->fields.server->v_angle[1], ent->fields.server->v_angle[2], scale);
+		Matrix4x4_CreateFromQuakeEntity(out, ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2] + ent->fields.server->view_ofs[2], ent->fields.server->v_angle[0], ent->fields.server->v_angle[1], ent->fields.server->v_angle[2], scale * cl_viewmodel_scale.value);
 	else
-		Matrix4x4_CreateFromQuakeEntity(out, ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2], -ent->fields.server->angles[0], ent->fields.server->angles[1], ent->fields.server->angles[2], scale * cl_viewmodel_scale.value);
+	{
+		WTFsign = 1;
+		if (
+			((modelindex = (int)ent->fields.server->modelindex) >= 1 && modelindex < MAX_MODELS && (model = sv.models[(int)ent->fields.server->modelindex]))
+			?
+				model->type == mod_alias
+			:
+				(
+					(((unsigned char)PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.pflags)->_float) & PFLAGS_FULLDYNAMIC)
+					||
+					(gamemode == GAME_TENEBRAE) && ((unsigned int)ent->fields.server->effects & (16 | 32))
+				)
+		)
+			WTFsign = -1;
+		Matrix4x4_CreateFromQuakeEntity(out, ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2], WTFsign * ent->fields.server->angles[0], ent->fields.server->angles[1], ent->fields.server->angles[2], scale);
+	}
 }
 
 int SV_GetEntityLocalTagMatrix(prvm_edict_t *ent, int tagindex, matrix4x4_t *out)
@@ -2679,9 +2702,9 @@ int SV_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 		ret = SV_GetEntityLocalTagMatrix(ent, tagindex - 1, &attachmatrix);
 		if (ret && attachloop == 0)
 			return ret;
-		Matrix4x4_Concat(out, &attachmatrix, &tagmatrix);
 		SV_GetEntityMatrix(ent, &entitymatrix, false);
-		Matrix4x4_Concat(&tagmatrix, &entitymatrix, out);
+		Matrix4x4_Concat(&tagmatrix, &attachmatrix, out);
+		Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
 		// next iteration we process the parent entity
 		if ((val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.tag_entity)) && val->edict)
 		{
@@ -2777,7 +2800,7 @@ static void VM_SV_gettaginfo (void)
 	const char *tagname;
 	int returncode;
 	prvm_eval_t *val;
-	vec3_t fo, ri, up, trans;
+	vec3_t fo, le, up, trans;
 
 	VM_SAFEPARMCOUNT(2, VM_SV_gettaginfo);
 
@@ -2785,9 +2808,10 @@ static void VM_SV_gettaginfo (void)
 	tagindex = (int)PRVM_G_FLOAT(OFS_PARM1);
 
 	returncode = SV_GetTagMatrix(&tag_matrix, e, tagindex);
-	Matrix4x4_ToVectors(&tag_matrix, prog->globals.server->v_forward, prog->globals.server->v_right, prog->globals.server->v_up, PRVM_G_VECTOR(OFS_RETURN));
+	Matrix4x4_ToVectors(&tag_matrix, prog->globals.server->v_forward, le, prog->globals.server->v_up, PRVM_G_VECTOR(OFS_RETURN));
+	VectorScale(le, -1, prog->globals.server->v_right);
 	SV_GetExtendedTagInfo(e, tagindex, &parentindex, &tagname, &tag_localmatrix);
-	Matrix4x4_ToVectors(&tag_localmatrix, fo, ri, up, trans);
+	Matrix4x4_ToVectors(&tag_localmatrix, fo, le, up, trans);
 
 	if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.gettaginfo_parent)))
 		val->_float = parentindex;
@@ -2798,7 +2822,7 @@ static void VM_SV_gettaginfo (void)
 	if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.gettaginfo_forward)))
 		VectorCopy(fo, val->vector);
 	if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.gettaginfo_right)))
-		VectorCopy(ri, val->vector);
+		VectorScale(le, -1, val->vector);
 	if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.gettaginfo_up)))
 		VectorCopy(up, val->vector);
 

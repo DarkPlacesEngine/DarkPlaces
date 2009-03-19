@@ -2173,6 +2173,15 @@ void VM_CL_setattachment (void)
 /////////////////////////////////////////
 // DP_MD3_TAGINFO extension coded by VorteX
 
+int CL_GetTagIndex (prvm_edict_t *e, const char *tagname)
+{
+	dp_model_t *model = CL_GetModelFromEdict(e);
+	if (model)
+		return Mod_Alias_GetTagIndexForName(model, (int)e->fields.client->skin, tagname);
+	else
+		return -1;
+};
+
 int CL_GetExtendedTagInfo (prvm_edict_t *e, int tagindex, int *parentindex, const char **tagname, matrix4x4_t *tag_localmatrix)
 {
 	int r;
@@ -2202,14 +2211,41 @@ int CL_GetExtendedTagInfo (prvm_edict_t *e, int tagindex, int *parentindex, cons
 	return 1;
 }
 
-int CL_GetTagIndex (prvm_edict_t *e, const char *tagname)
+void CL_GetEntityMatrix (prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatrix)
 {
-	dp_model_t *model = CL_GetModelFromEdict(e);
-	if (model)
-		return Mod_Alias_GetTagIndexForName(model, (int)e->fields.client->skin, tagname);
+	prvm_eval_t *val;
+	float scale;
+
+	scale = 1;
+	val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.scale);
+	if (val && val->_float != 0)
+		scale = val->_float;
+
+	// TODO do we need the same weird angle inverting logic here as in the server side case?
+	if(viewmatrix)
+		Matrix4x4_CreateFromQuakeEntity(out, cl.csqc_origin[0], cl.csqc_origin[1], cl.csqc_origin[2], cl.csqc_angles[0], cl.csqc_angles[1], cl.csqc_angles[2], scale * cl_viewmodel_scale.value);
 	else
-		return -1;
-};
+		Matrix4x4_CreateFromQuakeEntity(out, ent->fields.client->origin[0], ent->fields.client->origin[1], ent->fields.client->origin[2], -ent->fields.client->angles[0], ent->fields.client->angles[1], ent->fields.client->angles[2], scale);
+}
+
+
+int CL_GetEntityLocalTagMatrix(prvm_edict_t *ent, int tagindex, matrix4x4_t *out)
+{
+	int frame;
+	dp_model_t *model;
+	if (tagindex >= 0
+	 && (model = CL_GetModelFromEdict(ent))
+	 && model->animscenes)
+	{
+		// if model has wrong frame, engine automatically switches to model first frame
+		frame = (int)ent->fields.client->frame;
+		if (frame < 0 || frame >= model->numframes)
+			frame = 0;
+		return Mod_Alias_GetTagMatrix(model, model->animscenes[frame].firstframe, tagindex, out);
+	}
+	*out = identitymatrix;
+	return 0;
+}
 
 // Warnings/errors code:
 // 0 - normal (everything all-right)
@@ -2223,12 +2259,11 @@ extern cvar_t cl_bobcycle;
 extern cvar_t cl_bobup;
 int CL_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 {
+	int ret;
 	prvm_eval_t *val;
-	int reqframe, attachloop;
+	int attachloop;
 	matrix4x4_t entitymatrix, tagmatrix, attachmatrix;
-	prvm_edict_t *attachent;
 	dp_model_t *model;
-	float scale;
 
 	*out = identitymatrix; // warnings and errors return identical matrix
 
@@ -2238,81 +2273,40 @@ int CL_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 		return 2;
 
 	model = CL_GetModelFromEdict(ent);
-
 	if(!model)
 		return 3;
 
-	if (ent->fields.client->frame >= 0 && ent->fields.client->frame < model->numframes && model->animscenes)
-		reqframe = model->animscenes[(int)ent->fields.client->frame].firstframe;
-	else
-		reqframe = 0; // if model has wrong frame, engine automatically switches to model first frame
-
-	// get initial tag matrix
-	if (tagindex)
+	tagmatrix = identitymatrix;
+	attachloop = 0;
+	for(;;)
 	{
-		int ret = Mod_Alias_GetTagMatrix(model, reqframe, tagindex - 1, &tagmatrix);
-		if (ret)
+		if(attachloop >= 256)
+			return 5;
+		// apply transformation by child's tagindex on parent entity and then
+		// by parent entity itself
+		ret = CL_GetEntityLocalTagMatrix(ent, tagindex - 1, &attachmatrix);
+		if(ret && attachloop == 0)
 			return ret;
-	}
-	else
-		tagmatrix = identitymatrix;
-
-	if ((val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.tag_entity)) && val->edict)
-	{ // DP_GFX_QUAKE3MODELTAGS, scan all chain and stop on unattached entity
-		attachloop = 0;
-		do
+		CL_GetEntityMatrix(ent, &entitymatrix, false);
+		Matrix4x4_Concat(&tagmatrix, &attachmatrix, out);
+		Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
+		// next iteration we process the parent entity
+		if ((val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.tag_entity)) && val->edict)
 		{
-			attachent = PRVM_EDICT_NUM(val->edict); // to this it entity our entity is attached
-			val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.tag_index);
-
-			model = CL_GetModelFromEdict(attachent);
-
-			if (model && val->_float >= 1 && model->animscenes && attachent->fields.client->frame >= 0 && attachent->fields.client->frame < model->numframes)
-				Mod_Alias_GetTagMatrix(model, model->animscenes[(int)attachent->fields.client->frame].firstframe, (int)val->_float - 1, &attachmatrix);
-			else
-				attachmatrix = identitymatrix;
-
-			// apply transformation by child entity matrix
-			scale = 1;
-			val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.scale);
-			if (val && val->_float != 0)
-				scale = val->_float;
-			Matrix4x4_CreateFromQuakeEntity(&entitymatrix, ent->fields.client->origin[0], ent->fields.client->origin[1], ent->fields.client->origin[2], -ent->fields.client->angles[0], ent->fields.client->angles[1], ent->fields.client->angles[2], scale);
-			Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
-			Matrix4x4_Copy(&tagmatrix, out);
-
-			// finally transformate by matrix of tag on parent entity
-			Matrix4x4_Concat(out, &attachmatrix, &tagmatrix);
-			Matrix4x4_Copy(&tagmatrix, out);
-
-			ent = attachent;
-			attachloop += 1;
-			if (attachloop > 255) // prevent runaway looping
-				return 5;
+			tagindex = (int)PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.tag_index)->_float;
+			ent = PRVM_EDICT_NUM(val->edict);
 		}
-		while ((val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.tag_entity)) && val->edict);
+		else
+			break;
+		attachloop++;
 	}
 
-	// normal or RENDER_VIEWMODEL entity (or main parent entity on attach chain)
-	scale = 1;
-	val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.scale);
-	if (val && val->_float != 0)
-		scale = val->_float;
-	// Alias models have inverse pitch, bmodels can't have tags, so don't check for modeltype...
-	// FIXME: support RF_USEAXIS
-	Matrix4x4_CreateFromQuakeEntity(&entitymatrix, ent->fields.client->origin[0], ent->fields.client->origin[1], ent->fields.client->origin[2], -ent->fields.client->angles[0], ent->fields.client->angles[1], ent->fields.client->angles[2], scale);
-	Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
-
+	// RENDER_VIEWMODEL magic
 	if ((val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.renderflags)) && (RF_VIEWMODEL & (int)val->_float))
-	{// RENDER_VIEWMODEL magic
+	{
 		Matrix4x4_Copy(&tagmatrix, out);
 
-		scale = 1;
-		val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.scale);
-		if (val && val->_float != 0)
-			scale = val->_float;
-
-		Matrix4x4_CreateFromQuakeEntity(&entitymatrix, cl.csqc_origin[0], cl.csqc_origin[1], cl.csqc_origin[2], cl.csqc_angles[0], cl.csqc_angles[1], cl.csqc_angles[2], scale);
+		CL_GetEntityMatrix(prog->edicts, &entitymatrix, true);
 		Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
 
 		/*
@@ -2387,16 +2381,17 @@ void VM_CL_gettaginfo (void)
 	const char *tagname;
 	int returncode;
 	prvm_eval_t *val;
-	vec3_t fo, ri, up, trans;
+	vec3_t fo, le, up, trans;
 
 	VM_SAFEPARMCOUNT(2, VM_CL_gettaginfo);
 
 	e = PRVM_G_EDICT(OFS_PARM0);
 	tagindex = (int)PRVM_G_FLOAT(OFS_PARM1);
 	returncode = CL_GetTagMatrix(&tag_matrix, e, tagindex);
-	Matrix4x4_ToVectors(&tag_matrix, prog->globals.client->v_forward, prog->globals.client->v_right, prog->globals.client->v_up, PRVM_G_VECTOR(OFS_RETURN));
+	Matrix4x4_ToVectors(&tag_matrix, prog->globals.client->v_forward, le, prog->globals.client->v_up, PRVM_G_VECTOR(OFS_RETURN));
+	VectorScale(le, -1, prog->globals.client->v_right);
 	CL_GetExtendedTagInfo(e, tagindex, &parentindex, &tagname, &tag_localmatrix);
-	Matrix4x4_ToVectors(&tag_localmatrix, fo, ri, up, trans);
+	Matrix4x4_ToVectors(&tag_localmatrix, fo, le, up, trans);
 
 	if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.gettaginfo_parent)))
 		val->_float = parentindex;
@@ -2407,7 +2402,7 @@ void VM_CL_gettaginfo (void)
 	if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.gettaginfo_forward)))
 		VectorCopy(fo, val->vector);
 	if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.gettaginfo_right)))
-		VectorCopy(ri, val->vector);
+		VectorScale(le, -1, val->vector);
 	if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.gettaginfo_up)))
 		VectorCopy(up, val->vector);
 
