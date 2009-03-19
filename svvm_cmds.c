@@ -2631,7 +2631,7 @@ void SV_GetEntityMatrix (prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatri
 				(
 					(((unsigned char)PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.pflags)->_float) & PFLAGS_FULLDYNAMIC)
 					||
-					(gamemode == GAME_TENEBRAE) && ((unsigned int)ent->fields.server->effects & (16 | 32))
+					((gamemode == GAME_TENEBRAE) && ((unsigned int)ent->fields.server->effects & (16 | 32)))
 				)
 		)
 			WTFsign = -1;
