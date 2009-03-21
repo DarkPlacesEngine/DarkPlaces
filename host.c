@@ -54,6 +54,7 @@ double realtime;
 client_t *host_client;
 
 jmp_buf host_abortframe;
+double host_starttime = 0;
 
 // pretend frames take this amount of time (in seconds), 0 = realtime
 cvar_t host_framerate = {0, "host_framerate","0", "locks frame timing to this value in seconds, 0.05 is 20fps for example, note that this can easily run too fast, use cl_maxfps if you want to limit your framerate instead, or sys_ticrate to limit server speed"};
@@ -612,7 +613,7 @@ void Host_Main(void)
 	cl_timer = 0;
 	sv_timer = 0;
 
-	realtime = Sys_DoubleTime();
+	realtime = host_starttime = Sys_DoubleTime();
 	for (;;)
 	{
 		if (setjmp(host_abortframe))
