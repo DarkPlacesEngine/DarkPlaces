@@ -136,11 +136,12 @@ void Q3PatchTesselateFloat(int numcomponents, int outputstride, float *outputver
 #endif
 }
 
-static int Q3PatchTesselation(float bestsquareddeviation, float tolerance)
+static int Q3PatchTesselation(float largestsquared2xcurvearea, float tolerance)
 {
 	float f;
-	f = sqrt(bestsquareddeviation) / tolerance;
-	//if(f < 0.25) // REALLY flat patches
+	// f is actually a squared 2x curve area... so the formula had to be adjusted to give roughly the same subdivisions
+	f = pow(largestsquared2xcurvearea / 64.0, 0.25) / tolerance;
+	//if(f < 0.25) // VERY flat patches
 	if(f < 0.0001) // TOTALLY flat patches
 		return 0;
 	else if(f < 2)
@@ -155,52 +156,107 @@ static int Q3PatchTesselation(float bestsquareddeviation, float tolerance)
 		// maps [4..8[ to 4
 }
 
+float Squared2xCurveArea(const float *a, const float *control, const float *b, int components)
+{
+#if 0
+	// mimicing the old behaviour with the new code...
+
+	float deviation;
+	float quartercurvearea = 0;
+	int c;
+	for (c = 0;c < components;c++)
+	{
+		deviation = control[c] * 0.5f - a[c] * 0.25f - b[c] * 0.25f;
+		quartercurvearea += deviation*deviation;
+	}
+
+	// But as the new code now works on the squared 2x curve area, let's scale the value
+	return quartercurvearea * quartercurvearea * 64.0;
+
+#else
+	// ideally, we'd like the area between the spline a->control->b and the line a->b.
+	// but as this is hard to calculate, let's calculate an upper bound of it:
+	// the area of the triangle a->control->b->a.
+	//
+	// why are we going for the spline area anyway?
+	// we know that:
+	//
+	//   the area between the spline and the line a->b is a measure of the
+	//   error of approximation of the spline by the line.
+	//
+	//   also, on circle-like or parabola-like curves, you easily get that the
+	//   double amount of line approximation segments reduces the error to its quarter
+	//
+	// so...
+	//
+	// let's calculate the area! but we have to avoid the cross product, as
+	// components is not necessarily 3
+	//
+	// the area of a triangle spanned by vectors a and b is
+	//
+	// 0.5 * |a| |b| sin gamma
+	//
+	// now, cos gamma is
+	//
+	// a.b / (|a| |b|)
+	//
+	// so the area is
+	// 
+	// 0.5 * sqrt(|a|^2 |b|^2 - (a.b)^2)
+	int c;
+	float aa = 0, bb = 0, ab = 0;
+	for (c = 0;c < components;c++)
+	{
+		float xa = a[c] - control[c];
+		float xb = b[c] - control[c];
+		aa += xa * xa;
+		ab += xa * xb;
+		bb += xb * xb;
+	}
+	// area is 0.5 * sqrt(aa*bb - ab*ab)
+	// 2x area is sqrt(aa*bb - ab*ab)
+	return aa * bb - ab * ab;
+#endif
+}
+
 // returns how much tesselation of each segment is needed to remain under tolerance
 int Q3PatchTesselationOnX(int patchwidth, int patchheight, int components, const float *in, float tolerance)
 {
-	int c, x, y;
+	int x, y;
 	const float *patch;
-	float deviation, squareddeviation, bestsquareddeviation;
-	bestsquareddeviation = 0;
+	float squared2xcurvearea, largestsquared2xcurvearea;
+	largestsquared2xcurvearea = 0;
 	for (y = 0;y < patchheight;y++)
 	{
 		for (x = 0;x < patchwidth-1;x += 2)
 		{
-			squareddeviation = 0;
-			for (c = 0, patch = in + ((y * patchwidth) + x) * components;c < components;c++, patch++)
-			{
-				deviation = patch[components] * 0.5f - patch[0] * 0.25f - patch[2*components] * 0.25f;
-				squareddeviation += deviation*deviation;
-			}
-			if (bestsquareddeviation < squareddeviation)
-				bestsquareddeviation = squareddeviation;
+			patch = in + ((y * patchwidth) + x) * components;
+			squared2xcurvearea = Squared2xCurveArea(&patch[0], &patch[components], &patch[2*components], components);
+			if (largestsquared2xcurvearea < squared2xcurvearea)
+				largestsquared2xcurvearea = squared2xcurvearea;
 		}
 	}
-	return Q3PatchTesselation(bestsquareddeviation, tolerance);
+	return Q3PatchTesselation(largestsquared2xcurvearea, tolerance);
 }
 
 // returns how much tesselation of each segment is needed to remain under tolerance
 int Q3PatchTesselationOnY(int patchwidth, int patchheight, int components, const float *in, float tolerance)
 {
-	int c, x, y;
+	int x, y;
 	const float *patch;
-	float deviation, squareddeviation, bestsquareddeviation;
-	bestsquareddeviation = 0;
+	float squared2xcurvearea, largestsquared2xcurvearea;
+	largestsquared2xcurvearea = 0;
 	for (y = 0;y < patchheight-1;y += 2)
 	{
 		for (x = 0;x < patchwidth;x++)
 		{
-			squareddeviation = 0;
-			for (c = 0, patch = in + ((y * patchwidth) + x) * components;c < components;c++, patch++)
-			{
-				deviation = patch[patchwidth*components] * 0.5f - patch[0] * 0.25f - patch[2*patchwidth*components] * 0.25f;
-				squareddeviation += deviation*deviation;
-			}
-			if (bestsquareddeviation < squareddeviation)
-				bestsquareddeviation = squareddeviation;
+			patch = in + ((y * patchwidth) + x) * components;
+			squared2xcurvearea = Squared2xCurveArea(&patch[0], &patch[patchwidth*components], &patch[2*patchwidth*components], components);
+			if (largestsquared2xcurvearea < squared2xcurvearea)
+				largestsquared2xcurvearea = squared2xcurvearea;
 		}
 	}
-	return Q3PatchTesselation(bestsquareddeviation, tolerance);
+	return Q3PatchTesselation(largestsquared2xcurvearea, tolerance);
 }
 
 // Find an equal vertex in array. Check only vertices with odd X and Y
