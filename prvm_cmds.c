@@ -2593,11 +2593,40 @@ VM_gettime
 float	gettime(void)
 =========
 */
+extern double host_starttime;
 void VM_gettime(void)
 {
-	VM_SAFEPARMCOUNT(0,VM_gettime);
+	int timer_index;
 
-	PRVM_G_FLOAT(OFS_RETURN) = (float) realtime;
+	VM_SAFEPARMCOUNTRANGE(0,1,VM_gettime);
+
+	if(prog->argc == 0)
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = (float) realtime;
+	}
+	else
+	{
+		timer_index = (int) PRVM_G_FLOAT(OFS_PARM0);
+        switch(timer_index)
+        {
+            case 0: // GETTIME_FRAMESTART
+                PRVM_G_FLOAT(OFS_RETURN) = (float) realtime;
+                break;
+            case 1: // GETTIME_REALTIME
+                PRVM_G_FLOAT(OFS_RETURN) = (float) Sys_DoubleTime();
+                break;
+            case 2: // GETTIME_HIRES
+                PRVM_G_FLOAT(OFS_RETURN) = (float) (Sys_DoubleTime() - realtime);
+                break;
+            case 3: // GETTIME_UPTIME
+                PRVM_G_FLOAT(OFS_RETURN) = (float) Sys_DoubleTime() - host_starttime;
+                break;
+			default:
+				VM_Warning("VM_gettime: %s: unsupported timer specified, returning realtime\n", PRVM_NAME);
+				PRVM_G_FLOAT(OFS_RETURN) = (float) realtime;
+				break;
+		}
+	}
 }
 
 /*

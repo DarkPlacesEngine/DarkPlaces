@@ -81,6 +81,7 @@ char *vm_sv_extensions =
 "DP_QC_GETSURFACEPOINTATTRIBUTE "
 "DP_QC_GETTAGINFO "
 "DP_QC_GETTAGINFO_BONEPROPERTIES "
+"DP_QC_GETTIME "
 "DP_QC_MINMAXBOUND "
 "DP_QC_MULTIPLETEMPSTRINGS "
 "DP_QC_NUM_FOR_EDICT "
@@ -3597,7 +3598,7 @@ VM_argv_start_index,					// #515 float(float idx) argv_start_index = #515; (DP_Q
 VM_argv_end_index,						// #516 float(float idx) argv_end_index = #516; (DP_QC_TOKENIZE_CONSOLE)
 VM_buf_cvarlist,						// #517 void(float buf, string prefix, string antiprefix) buf_cvarlist = #517; (DP_QC_STRINGBUFFERS_CVARLIST)
 VM_cvar_description,					// #518 float(string name) cvar_description = #518; (DP_QC_CVAR_DESCRIPTION)
-NULL,							// #519
+VM_gettime,						// #519 float(float timer) gettime = #519; (DP_QC_GETTIME)
 NULL,							// #520
 NULL,							// #521
 NULL,							// #522
