@@ -491,7 +491,17 @@ static void Curl_EndDownload(downloadinfo *di, CurlStatus status, CURLcode error
 		FS_Close(di->stream);
 
 	if(ok && di->ispak)
+	{
 		ok = FS_AddPack(di->filename, NULL, true);
+		if(!ok)
+		{
+			// pack loading failed?
+			// this is critical
+			// better clear the file again...
+			di->stream = FS_OpenRealFile(di->filename, "wb", false);
+			FS_Close(di->stream);
+		}
+	}
 
 	if(di->prev)
 		di->prev->next = di->next;
@@ -748,7 +758,7 @@ static qboolean Curl_Begin(const char *URL, const char *name, qboolean ispak, qb
 				}
 				else
 				{
-					qfile_t *f = FS_OpenVirtualFile(fn, false);
+					qfile_t *f = FS_OpenRealFile(fn, "rb", false);
 					if(f)
 					{
 						char buf[4] = {0};
