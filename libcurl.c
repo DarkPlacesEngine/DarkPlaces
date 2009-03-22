@@ -962,7 +962,7 @@ static double Curl_GetDownloadAmount(downloadinfo *di)
 		double length;
 		qcurl_easy_getinfo(di->curle, CURLINFO_CONTENT_LENGTH_DOWNLOAD, &length);
 		if(length > 0)
-			return di->bytes_received / length;
+			return (di->startpos + di->bytes_received) / (di->startpos + length);
 		else
 			return 0;
 	}
