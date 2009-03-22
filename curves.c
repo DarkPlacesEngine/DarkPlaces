@@ -156,7 +156,7 @@ static int Q3PatchTesselation(float largestsquared2xcurvearea, float tolerance)
 		// maps [4..8[ to 4
 }
 
-float Squared2xCurveArea(const float *a, const float *control, const float *b, int components)
+float Squared3xCurveArea(const float *a, const float *control, const float *b, int components)
 {
 #if 0
 	// mimicing the old behaviour with the new code...
@@ -178,6 +178,13 @@ float Squared2xCurveArea(const float *a, const float *control, const float *b, i
 	// but as this is hard to calculate, let's calculate an upper bound of it:
 	// the area of the triangle a->control->b->a.
 	//
+	// one can prove that the area of a quadratic spline = 2/3 * the area of
+	// the triangle of its control points!
+	// to do it, first prove it for the spline through (0,0), (1,1), (2,0)
+	// (which is a parabola) and then note that moving the control point
+	// left/right is just shearing and keeps the area of both the spline and
+	// the triangle invariant.
+	//
 	// why are we going for the spline area anyway?
 	// we know that:
 	//
@@ -186,6 +193,8 @@ float Squared2xCurveArea(const float *a, const float *control, const float *b, i
 	//
 	//   also, on circle-like or parabola-like curves, you easily get that the
 	//   double amount of line approximation segments reduces the error to its quarter
+	//   (also, easy to prove for splines by doing it for one specific one, and using
+	//   affine transforms to get all other splines)
 	//
 	// so...
 	//
@@ -214,7 +223,8 @@ float Squared2xCurveArea(const float *a, const float *control, const float *b, i
 		bb += xb * xb;
 	}
 	// area is 0.5 * sqrt(aa*bb - ab*ab)
-	// 2x area is sqrt(aa*bb - ab*ab)
+	// 2x TRIANGLE area is sqrt(aa*bb - ab*ab)
+	// 3x CURVE area is sqrt(aa*bb - ab*ab)
 	return aa * bb - ab * ab;
 #endif
 }
@@ -231,7 +241,7 @@ int Q3PatchTesselationOnX(int patchwidth, int patchheight, int components, const
 		for (x = 0;x < patchwidth-1;x += 2)
 		{
 			patch = in + ((y * patchwidth) + x) * components;
-			squared2xcurvearea = Squared2xCurveArea(&patch[0], &patch[components], &patch[2*components], components);
+			squared2xcurvearea = Squared3xCurveArea(&patch[0], &patch[components], &patch[2*components], components);
 			if (largestsquared2xcurvearea < squared2xcurvearea)
 				largestsquared2xcurvearea = squared2xcurvearea;
 		}
@@ -251,7 +261,7 @@ int Q3PatchTesselationOnY(int patchwidth, int patchheight, int components, const
 		for (x = 0;x < patchwidth;x++)
 		{
 			patch = in + ((y * patchwidth) + x) * components;
-			squared2xcurvearea = Squared2xCurveArea(&patch[0], &patch[patchwidth*components], &patch[2*patchwidth*components], components);
+			squared2xcurvearea = Squared3xCurveArea(&patch[0], &patch[patchwidth*components], &patch[2*patchwidth*components], components);
 			if (largestsquared2xcurvearea < squared2xcurvearea)
 				largestsquared2xcurvearea = squared2xcurvearea;
 		}
