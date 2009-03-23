@@ -431,6 +431,9 @@ typedef struct prvm_prog_s
 	qboolean			loaded;
 	qboolean			leaktest_active;
 
+	// printed together with backtraces
+	const char *statestring;
+
 //	prvm_builtin_mem_t  *mem_list;
 
 // now passed as parameter of PRVM_LoadProgs
@@ -458,7 +461,6 @@ typedef struct prvm_prog_s
 	void				(*reset_cmd)(void); // [INIT] used by PRVM_ResetProg
 
 	void				(*error_cmd)(const char *format, ...) DP_FUNC_PRINTF(1); // [INIT]
-
 } prvm_prog_t;
 
 extern prvm_prog_t * prog;

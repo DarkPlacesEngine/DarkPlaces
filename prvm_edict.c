@@ -732,7 +732,9 @@ void PRVM_ED_Write (qfile_t *f, prvm_edict_t *ed)
 			continue;
 
 		FS_Printf(f,"\"%s\" ",name);
+		prog->statestring = va("PRVM_ED_Write, ent=%d, name=%s", i, name);
 		FS_Printf(f,"\"%s\"\n", PRVM_UglyValueString((etype_t)d->type, (prvm_eval_t *)v));
+		prog->statestring = NULL;
 	}
 
 	FS_Print(f, "}\n");
@@ -900,8 +902,10 @@ void PRVM_ED_WriteGlobals (qfile_t *f)
 		if(developer_entityparsing.integer)
 			Con_Printf("PRVM_ED_WriteGlobals: at global %s\n", name);
 
+		prog->statestring = va("PRVM_ED_WriteGlobals, name=%s", name);
 		FS_Printf(f,"\"%s\" ", name);
 		FS_Printf(f,"\"%s\"\n", PRVM_UglyValueString((etype_t)type, (prvm_eval_t *)&prog->globals.generic[def->ofs]));
+		prog->statestring = NULL;
 	}
 	FS_Print(f,"}\n");
 }
