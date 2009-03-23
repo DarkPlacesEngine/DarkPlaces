@@ -443,6 +443,10 @@ void PRVM_CrashAll()
 void PRVM_PrintState(void)
 {
 	int i;
+	if(prog->statestring)
+	{
+		Con_Printf("Caller-provided information: %s\n", prog->statestring);
+	}
 	if (prog->xfunction)
 	{
 		for (i = -7; i <= 0;i++)
@@ -452,10 +456,6 @@ void PRVM_PrintState(void)
 	else
 		Con_Print("null function executing??\n");
 	PRVM_StackTrace ();
-	if(prog->statestring)
-	{
-		Con_Printf("Additional information: %s\n", prog->statestring);
-	}
 }
 
 extern sizebuf_t vm_tempstringsbuf;
