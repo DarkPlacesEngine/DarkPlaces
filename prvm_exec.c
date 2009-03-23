@@ -452,6 +452,10 @@ void PRVM_PrintState(void)
 	else
 		Con_Print("null function executing??\n");
 	PRVM_StackTrace ();
+	if(prog->statestring)
+	{
+		Con_Printf("Additional information: %s\n", prog->statestring);
+	}
 }
 
 extern sizebuf_t vm_tempstringsbuf;
