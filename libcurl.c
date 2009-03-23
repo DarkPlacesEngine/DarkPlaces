@@ -441,6 +441,7 @@ CURL_DOWNLOAD_FAILED or CURL_DOWNLOAD_ABORTED) and in the second case the error
 code from libcurl, or 0, if another error has occurred.
 ====================
 */
+static qboolean Curl_Begin(const char *URL, const char *name, qboolean ispak, qboolean forthismap, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata);
 static void Curl_EndDownload(downloadinfo *di, CurlStatus status, CURLcode error)
 {
 	qboolean ok = false;
@@ -500,6 +501,14 @@ static void Curl_EndDownload(downloadinfo *di, CurlStatus status, CURLcode error
 			// better clear the file again...
 			di->stream = FS_OpenRealFile(di->filename, "wb", false);
 			FS_Close(di->stream);
+
+			if(di->startpos && !di->callback)
+			{
+				// this was a resume?
+				// then try to redownload it without reporting the error
+				Curl_Begin(di->url, di->filename, di->ispak, di->forthismap, NULL, 0, NULL, NULL);
+				di->forthismap = false; // don't count the error
+			}
 		}
 	}
 
@@ -801,7 +810,7 @@ static qboolean Curl_Begin(const char *URL, const char *name, qboolean ispak, qb
 		di->startpos = 0;
 		di->curle = NULL;
 		di->started = false;
-		di->ispak = ispak;
+		di->ispak = (ispak && !buf);
 		di->bytes_received = 0;
 		di->next = downloads;
 		di->prev = NULL;
