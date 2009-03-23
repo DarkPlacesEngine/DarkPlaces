@@ -136,11 +136,11 @@ void Q3PatchTesselateFloat(int numcomponents, int outputstride, float *outputver
 #endif
 }
 
-static int Q3PatchTesselation(float largestsquared2xcurvearea, float tolerance)
+static int Q3PatchTesselation(float largestsquared3xcurvearea, float tolerance)
 {
 	float f;
 	// f is actually a squared 2x curve area... so the formula had to be adjusted to give roughly the same subdivisions
-	f = pow(largestsquared2xcurvearea / 64.0, 0.25) / tolerance;
+	f = pow(largestsquared3xcurvearea / 64.0, 0.25) / tolerance;
 	//if(f < 0.25) // VERY flat patches
 	if(f < 0.0001) // TOTALLY flat patches
 		return 0;
@@ -234,19 +234,19 @@ int Q3PatchTesselationOnX(int patchwidth, int patchheight, int components, const
 {
 	int x, y;
 	const float *patch;
-	float squared2xcurvearea, largestsquared2xcurvearea;
-	largestsquared2xcurvearea = 0;
+	float squared3xcurvearea, largestsquared3xcurvearea;
+	largestsquared3xcurvearea = 0;
 	for (y = 0;y < patchheight;y++)
 	{
 		for (x = 0;x < patchwidth-1;x += 2)
 		{
 			patch = in + ((y * patchwidth) + x) * components;
-			squared2xcurvearea = Squared3xCurveArea(&patch[0], &patch[components], &patch[2*components], components);
-			if (largestsquared2xcurvearea < squared2xcurvearea)
-				largestsquared2xcurvearea = squared2xcurvearea;
+			squared3xcurvearea = Squared3xCurveArea(&patch[0], &patch[components], &patch[2*components], components);
+			if (largestsquared3xcurvearea < squared3xcurvearea)
+				largestsquared3xcurvearea = squared3xcurvearea;
 		}
 	}
-	return Q3PatchTesselation(largestsquared2xcurvearea, tolerance);
+	return Q3PatchTesselation(largestsquared3xcurvearea, tolerance);
 }
 
 // returns how much tesselation of each segment is needed to remain under tolerance
@@ -254,19 +254,19 @@ int Q3PatchTesselationOnY(int patchwidth, int patchheight, int components, const
 {
 	int x, y;
 	const float *patch;
-	float squared2xcurvearea, largestsquared2xcurvearea;
-	largestsquared2xcurvearea = 0;
+	float squared3xcurvearea, largestsquared3xcurvearea;
+	largestsquared3xcurvearea = 0;
 	for (y = 0;y < patchheight-1;y += 2)
 	{
 		for (x = 0;x < patchwidth;x++)
 		{
 			patch = in + ((y * patchwidth) + x) * components;
-			squared2xcurvearea = Squared3xCurveArea(&patch[0], &patch[patchwidth*components], &patch[2*patchwidth*components], components);
-			if (largestsquared2xcurvearea < squared2xcurvearea)
-				largestsquared2xcurvearea = squared2xcurvearea;
+			squared3xcurvearea = Squared3xCurveArea(&patch[0], &patch[patchwidth*components], &patch[2*patchwidth*components], components);
+			if (largestsquared3xcurvearea < squared3xcurvearea)
+				largestsquared3xcurvearea = squared3xcurvearea;
 		}
 	}
-	return Q3PatchTesselation(largestsquared2xcurvearea, tolerance);
+	return Q3PatchTesselation(largestsquared3xcurvearea, tolerance);
 }
 
 // Find an equal vertex in array. Check only vertices with odd X and Y
