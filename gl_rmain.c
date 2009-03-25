@@ -4081,7 +4081,7 @@ void R_RenderScene(qboolean addwaterplanes)
 
 	R_SetupGenericShader(true);
 
-	if (r_refdef.view.showdebug && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->DrawDebug && (r_showtris.value > 0 || r_shownormals.value > 0 || r_showcollisionbrushes.value > 0))
+	if (r_refdef.view.showdebug && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->DrawDebug && (r_showtris.value > 0 || r_shownormals.value != 0 || r_showcollisionbrushes.value > 0))
 	{
 		r_refdef.scene.worldmodel->DrawDebug(r_refdef.scene.worldentity);
 		if (r_timereport_active)
@@ -6875,14 +6875,26 @@ void R_DrawDebugModel(entity_render_t *ent)
 					else
 						GL_Color(0, r_refdef.view.colorscale, 0, r_showtris.value);
 					elements = (ent->model->surfmesh.data_element3i + 3 * surface->num_firsttriangle);
+					R_Mesh_VertexPointer(rsurface.vertex3f, 0, 0);
+					R_Mesh_ColorPointer(NULL, 0, 0);
+					R_Mesh_TexCoordPointer(0, 0, NULL, 0, 0);
+					qglPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+					//R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_firsttriangle, surface->num_triangles, ent->model->surfmesh.data_element3i, NULL, 0, 0);
+					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_firsttriangle, surface->num_triangles, rsurface.modelelement3i, rsurface.modelelement3s, rsurface.modelelement3i_bufferobject, rsurface.modelelement3s_bufferobject);
+					qglPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 					CHECKGLERROR
+				}
+				if (r_shownormals.value < 0)
+				{
 					qglBegin(GL_LINES);
-					for (k = 0;k < surface->num_triangles;k++, elements += 3)
+					for (k = 0, l = surface->num_firstvertex;k < surface->num_vertices;k++, l++)
 					{
-#define GLVERTEXELEMENT(n) qglVertex3f(rsurface.vertex3f[elements[n]*3+0], rsurface.vertex3f[elements[n]*3+1], rsurface.vertex3f[elements[n]*3+2])
-						GLVERTEXELEMENT(0);GLVERTEXELEMENT(1);
-						GLVERTEXELEMENT(1);GLVERTEXELEMENT(2);
-						GLVERTEXELEMENT(2);GLVERTEXELEMENT(0);
+						VectorCopy(rsurface.vertex3f + l * 3, v);
+						GL_Color(r_refdef.view.colorscale, 0, 0, 1);
+						qglVertex3f(v[0], v[1], v[2]);
+						VectorMA(v, -r_shownormals.value, rsurface.svector3f + l * 3, v);
+						GL_Color(r_refdef.view.colorscale, 1, 1, 1);
+						qglVertex3f(v[0], v[1], v[2]);
 					}
 					qglEnd();
 					CHECKGLERROR
