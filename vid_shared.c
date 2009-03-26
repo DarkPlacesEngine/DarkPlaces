@@ -796,12 +796,6 @@ void VID_CheckExtensions(void)
 // COMMANDLINEOPTION: GL: -nocubemap disables GL_ARB_texture_cube_map (required for bumpmapping)
 	if ((gl_texturecubemap = GL_CheckExtension("GL_ARB_texture_cube_map", NULL, "-nocubemap", false)))
 		qglGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE_ARB, &gl_max_cube_map_texture_size);
-#ifndef __APPLE__
-	// TODO: blacklist this extension on Radeon X1600-X1950 hardware (they support it only with certain filtering/repeat modes)
-	// LordHavoc: this is blocked on Mac OS X because the drivers claim support but often can't accelerate it or crash when used.
-// COMMANDLINEOPTION: GL: -notexturenonpoweroftwo disables GL_ARB_texture_non_power_of_two (which saves video memory if it is supported, but crashes on some buggy drivers)
-	gl_support_arb_texture_non_power_of_two = GL_CheckExtension("GL_ARB_texture_non_power_of_two", NULL, "-notexturenonpoweroftwo", false);
-#endif
 // COMMANDLINEOPTION: GL: -notexturecompression disables GL_ARB_texture_compression (which saves video memory if it is supported, but can also degrade image quality, see gl_texturecompression cvar documentation for more information)
 	gl_support_texture_compression = GL_CheckExtension("GL_ARB_texture_compression", texturecompressionfuncs, "-notexturecompression", false);
 // COMMANDLINEOPTION: GL: -nocva disables GL_EXT_compiled_vertex_array (renders faster)
@@ -838,6 +832,18 @@ void VID_CheckExtensions(void)
 			if ((gl_support_vertex_shader = GL_CheckExtension("GL_ARB_vertex_shader", vertexshaderfuncs, "-novertexshader", false)))
 				gl_support_fragment_shader = GL_CheckExtension("GL_ARB_fragment_shader", NULL, "-nofragmentshader", false);
 	CHECKGLERROR
+#ifndef __APPLE__
+	// LordHavoc: this is blocked on Mac OS X because the drivers claim support but often can't accelerate it or crash when used.
+// COMMANDLINEOPTION: GL: -notexturenonpoweroftwo disables GL_ARB_texture_non_power_of_two (which saves video memory if it is supported, but crashes on some buggy drivers)
+	
+	{
+		// blacklist this extension on Radeon X1600-X1950 hardware (they support it only with certain filtering/repeat modes)
+		int val = 0;
+		if(gl_support_vertex_shader)
+			qglGetIntegerv(GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS_ARB, &val);
+		gl_support_arb_texture_non_power_of_two = val > 0 && GL_CheckExtension("GL_ARB_texture_non_power_of_two", NULL, "-notexturenonpoweroftwo", false);
+	}
+#endif
 
 // COMMANDLINEOPTION: GL: -noocclusionquery disables GL_ARB_occlusion_query (which allows coronas to fade according to visibility, and potentially used for rendering optimizations)
 	gl_support_arb_occlusion_query = GL_CheckExtension("GL_ARB_occlusion_query", occlusionqueryfuncs, "-noocclusionquery", false);
