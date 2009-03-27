@@ -949,6 +949,7 @@ qboolean CL_VM_GetEntitySoundOrigin(int entnum, vec3_t out)
 {
 	prvm_edict_t *ed;
 	dp_model_t *mod;
+	matrix4x4_t matrix;
 	qboolean r = 0;
 
 	CSQC_BEGIN;
@@ -961,6 +962,8 @@ qboolean CL_VM_GetEntitySoundOrigin(int entnum, vec3_t out)
 	{
 		mod = CL_GetModelFromEdict(ed);
 		VectorCopy(ed->fields.client->origin, out);
+		if(CL_GetTagMatrix (&matrix, ed, 0) == 0)
+			Matrix4x4_OriginFromMatrix(&matrix, out);
 		if (mod && mod->soundfromcenter)
 			VectorMAMAM(1.0f, out, 0.5f, mod->normalmins, 0.5f, mod->normalmaxs, out);
 		r = 1;
