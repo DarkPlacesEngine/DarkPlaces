@@ -1245,9 +1245,10 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 		else if (cl.entities[ch->entnum].state_current.active)
 		{
 			//Con_Printf("-- entnum %i origin %f %f %f neworigin %f %f %f\n", ch->entnum, ch->origin[0], ch->origin[1], ch->origin[2], cl.entities[ch->entnum].state_current.origin[0], cl.entities[ch->entnum].state_current.origin[1], cl.entities[ch->entnum].state_current.origin[2]);
-			VectorCopy(cl.entities[ch->entnum].state_current.origin, ch->origin);
 			if (cl.entities[ch->entnum].state_current.modelindex && cl.model_precache[cl.entities[ch->entnum].state_current.modelindex] && cl.model_precache[cl.entities[ch->entnum].state_current.modelindex]->soundfromcenter)
-				VectorMAMAM(1.0f, ch->origin, 0.5f, cl.model_precache[cl.entities[ch->entnum].state_current.modelindex]->normalmins, 0.5f, cl.model_precache[cl.entities[ch->entnum].state_current.modelindex]->normalmaxs, ch->origin);
+				VectorMAM(0.5f, cl.entities[ch->entnum].render.mins, 0.5f, cl.entities[ch->entnum].render.maxs, ch->origin);
+			else
+				Matrix4x4_OriginFromMatrix(&cl.entities[ch->entnum].render.matrix, ch->origin);
 		}
 	}
 
