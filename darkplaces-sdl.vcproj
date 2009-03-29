@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="8.00"
+	Version="9.00"
 	Name="darkplaces-sdl"
 	ProjectGUID="{4C61C95C-3753-46B8-B817-4D57E48A9C45}"
 	RootNamespace="darkplaces-sdl"
+	TargetFrameworkVersion="131072"
 	>
 	<Platforms>
 		<Platform
@@ -79,6 +80,8 @@
 				IgnoreDefaultLibraryNames=""
 				SubSystem="1"
 				LargeAddressAware="2"
+				RandomizedBaseAddress="1"
+				DataExecutionPrevention="0"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -100,9 +103,6 @@
 			/>
 			<Tool
 				Name="VCAppVerifierTool"
-			/>
-			<Tool
-				Name="VCWebDeploymentTool"
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
@@ -171,6 +171,8 @@
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				LargeAddressAware="2"
+				RandomizedBaseAddress="1"
+				DataExecutionPrevention="0"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -192,9 +194,6 @@
 			/>
 			<Tool
 				Name="VCAppVerifierTool"
-			/>
-			<Tool
-				Name="VCWebDeploymentTool"
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
@@ -432,6 +431,14 @@
 						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\cap_avi.c"
+				>
+			</File>
+			<File
+				RelativePath=".\cap_ogg.c"
+				>
 			</File>
 			<File
 				RelativePath="cd_sdl.c"
@@ -4010,6 +4017,14 @@
 			>
 			<File
 				RelativePath="bspfile.h"
+				>
+			</File>
+			<File
+				RelativePath=".\cap_avi.h"
+				>
+			</File>
+			<File
+				RelativePath=".\cap_ogg.h"
 				>
 			</File>
 			<File
