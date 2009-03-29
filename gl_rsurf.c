@@ -538,20 +538,48 @@ void R_Q1BSP_DrawSky(entity_render_t *ent)
 	if (ent->model == NULL)
 		return;
 	if (ent == r_refdef.scene.worldentity)
-		R_DrawWorldSurfaces(true, true, false, false, false);
+		R_DrawWorldSurfaces(true, true, false, false);
 	else
-		R_DrawModelSurfaces(ent, true, true, false, false, false);
+		R_DrawModelSurfaces(ent, true, true, false, false);
 }
 
+extern void R_Water_AddWaterPlane(msurface_t *surface);
 void R_Q1BSP_DrawAddWaterPlanes(entity_render_t *ent)
 {
+	int i, j, flagsmask;
 	dp_model_t *model = ent->model;
+	msurface_t *surfaces;
 	if (model == NULL)
 		return;
+
 	if (ent == r_refdef.scene.worldentity)
-		R_DrawWorldSurfaces(false, false, false, true, false);
+		RSurf_ActiveWorldEntity();
 	else
-		R_DrawModelSurfaces(ent, false, false, false, true, false);
+		RSurf_ActiveModelEntity(ent, false, false);
+
+	surfaces = model->data_surfaces;
+	flagsmask = MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION;
+
+	// add visible surfaces to draw list
+	if (ent == r_refdef.scene.worldentity)
+	{
+		for (i = 0;i < model->nummodelsurfaces;i++)
+		{
+			j = model->sortedmodelsurfaces[i];
+			if (r_refdef.viewcache.world_surfacevisible[j])
+				if (surfaces[j].texture->basematerialflags & flagsmask)
+					R_Water_AddWaterPlane(surfaces + j);
+		}
+	}
+	else
+	{
+		for (i = 0;i < model->nummodelsurfaces;i++)
+		{
+			j = model->sortedmodelsurfaces[i];
+			if (surfaces[j].texture->basematerialflags & flagsmask)
+				R_Water_AddWaterPlane(surfaces + j);
+		}
+	}
 }
 
 void R_Q1BSP_Draw(entity_render_t *ent)
@@ -560,9 +588,9 @@ void R_Q1BSP_Draw(entity_render_t *ent)
 	if (model == NULL)
 		return;
 	if (ent == r_refdef.scene.worldentity)
-		R_DrawWorldSurfaces(false, true, false, false, false);
+		R_DrawWorldSurfaces(false, true, false, false);
 	else
-		R_DrawModelSurfaces(ent, false, true, false, false, false);
+		R_DrawModelSurfaces(ent, false, true, false, false);
 }
 
 void R_Q1BSP_DrawDepth(entity_render_t *ent)
@@ -580,9 +608,9 @@ void R_Q1BSP_DrawDepth(entity_render_t *ent)
 	R_Mesh_ResetTextureState();
 	R_SetupDepthOrShadowShader();
 	if (ent == r_refdef.scene.worldentity)
-		R_DrawWorldSurfaces(false, false, true, false, false);
+		R_DrawWorldSurfaces(false, false, true, false);
 	else
-		R_DrawModelSurfaces(ent, false, false, true, false, false);
+		R_DrawModelSurfaces(ent, false, false, true, false);
 	GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
 }
 
@@ -591,9 +619,9 @@ void R_Q1BSP_DrawDebug(entity_render_t *ent)
 	if (ent->model == NULL)
 		return;
 	if (ent == r_refdef.scene.worldentity)
-		R_DrawWorldSurfaces(false, false, false, false, true);
+		R_DrawWorldSurfaces(false, false, false, true);
 	else
-		R_DrawModelSurfaces(ent, false, false, false, false, true);
+		R_DrawModelSurfaces(ent, false, false, false, true);
 }
 
 typedef struct r_q1bsp_getlightinfo_s
@@ -621,7 +649,7 @@ typedef struct r_q1bsp_getlightinfo_s
 }
 r_q1bsp_getlightinfo_t;
 
-void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
+static void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
 {
 	int sides;
 	mleaf_t *leaf;
@@ -721,6 +749,7 @@ void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
 		int leafsurfaceindex;
 		int surfaceindex;
 		int triangleindex, t;
+		int currentmaterialflags;
 		msurface_t *surface;
 		const int *e;
 		const vec_t *v[3];
@@ -731,8 +760,9 @@ void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
 			if (!CHECKPVSBIT(info->outsurfacepvs, surfaceindex))
 			{
 				surface = info->model->data_surfaces + surfaceindex;
+				currentmaterialflags = R_GetCurrentTexture(surface->texture)->currentmaterialflags;
 				if (BoxesOverlap(info->lightmins, info->lightmaxs, surface->mins, surface->maxs)
-				 && (!info->svbsp_insertoccluder || !(surface->texture->currentframe->currentmaterialflags & MATERIALFLAG_NOSHADOW)))
+				 && (!info->svbsp_insertoccluder || !(currentmaterialflags & MATERIALFLAG_NOSHADOW)))
 				{
 					qboolean addedtris = false;
 					qboolean insidebox = BoxInsideBox(surface->mins, surface->maxs, info->lightmins, info->lightmaxs);
@@ -745,9 +775,9 @@ void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
 						{
 							if (info->svbsp_insertoccluder)
 							{
-								if (!(surface->texture->currentframe->currentmaterialflags & MATERIALFLAG_NOCULLFACE) && r_shadow_frontsidecasting.integer != PointInfrontOfTriangle(info->relativelightorigin, v[0], v[1], v[2]))
+								if (!(currentmaterialflags & MATERIALFLAG_NOCULLFACE) && r_shadow_frontsidecasting.integer != PointInfrontOfTriangle(info->relativelightorigin, v[0], v[1], v[2]))
 									continue;
-								if (surface->texture->currentframe->currentmaterialflags & MATERIALFLAG_NOSHADOW)
+								if (currentmaterialflags & MATERIALFLAG_NOSHADOW)
 									continue;
 								VectorCopy(v[0], v2[0]);
 								VectorCopy(v[1], v2[1]);
@@ -766,13 +796,13 @@ void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
 									if (!(SVBSP_AddPolygon(&r_svbsp, 3, v2[0], false, NULL, NULL, 0) & 2))
 										continue;
 								}
-								if (surface->texture->currentframe->currentmaterialflags & MATERIALFLAG_NOCULLFACE)
+								if (currentmaterialflags & MATERIALFLAG_NOCULLFACE)
 								{
 									// if the material is double sided we
 									// can't cull by direction
 									SETPVSBIT(info->outlighttrispvs, t);
 									addedtris = true;
-									if (!(surface->texture->currentframe->currentmaterialflags & MATERIALFLAG_NOSHADOW))
+									if (!(currentmaterialflags & MATERIALFLAG_NOSHADOW))
 										SETPVSBIT(info->outshadowtrispvs, t);
 								}
 								else if (r_shadow_frontsidecasting.integer)
@@ -784,7 +814,7 @@ void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
 										continue;
 									SETPVSBIT(info->outlighttrispvs, t);
 									addedtris = true;
-									if (!(surface->texture->currentframe->currentmaterialflags & MATERIALFLAG_NOSHADOW))
+									if (!(currentmaterialflags & MATERIALFLAG_NOSHADOW))
 										SETPVSBIT(info->outshadowtrispvs, t);
 								}
 								else
@@ -793,7 +823,7 @@ void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
 									// anything so we can't cull lit polygons
 									SETPVSBIT(info->outlighttrispvs, t);
 									addedtris = true;
-									if (!PointInfrontOfTriangle(info->relativelightorigin, v[0], v[1], v[2]) && !(surface->texture->currentframe->currentmaterialflags & MATERIALFLAG_NOSHADOW))
+									if (!PointInfrontOfTriangle(info->relativelightorigin, v[0], v[1], v[2]) && !(currentmaterialflags & MATERIALFLAG_NOSHADOW))
 										SETPVSBIT(info->outshadowtrispvs, t);
 								}
 							}
@@ -810,7 +840,7 @@ void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
 	}
 }
 
-void R_Q1BSP_CallRecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, qboolean use_svbsp)
+static void R_Q1BSP_CallRecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, qboolean use_svbsp)
 {
 	if (use_svbsp)
 	{
@@ -926,7 +956,7 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 		info.pvs = info.model->brush.GetPVS(info.model, info.relativelightorigin);
 	else
 		info.pvs = NULL;
-	R_UpdateAllTextureInfo(ent);
+	RSurf_ActiveWorldEntity();
 
 	if (r_shadow_frontsidecasting.integer && r_shadow_compilingrtlight && r_shadow_realtime_world_compileportalculling.integer && info.model->brush.data_portals)
 	{
@@ -970,7 +1000,7 @@ void R_Q1BSP_CompileShadowVolume(entity_render_t *ent, vec3_t relativelightorigi
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 	{
 		surface = model->data_surfaces + surfacelist[surfacelistindex];
-		if (surface->texture->currentframe->basematerialflags & MATERIALFLAG_NOSHADOW)
+		if (surface->texture->basematerialflags & MATERIALFLAG_NOSHADOW)
 			continue;
 		R_Shadow_MarkVolumeFromBox(surface->num_firstshadowmeshtriangle, surface->num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, relativelightorigin, relativelightdirection, r_shadow_compilingrtlight->cullmins, r_shadow_compilingrtlight->cullmaxs, surface->mins, surface->maxs);
 	}
@@ -989,7 +1019,6 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, const vec3_t relativelightor
 	// check the box in modelspace, it was already checked in worldspace
 	if (!BoxesOverlap(model->normalmins, model->normalmaxs, lightmins, lightmaxs))
 		return;
-	R_UpdateAllTextureInfo(ent);
 	if (ent->model->brush.submodel)
 		GL_PolygonOffset(r_refdef.shadowpolygonfactor + r_polygonoffset_submodel_factor.value, r_refdef.shadowpolygonoffset + r_polygonoffset_submodel_offset.value);
 	if (model->brush.shadowmesh)
@@ -998,7 +1027,7 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, const vec3_t relativelightor
 		for (modelsurfacelistindex = 0;modelsurfacelistindex < modelnumsurfaces;modelsurfacelistindex++)
 		{
 			surface = model->data_surfaces + modelsurfacelist[modelsurfacelistindex];
-			if (surface->texture->currentframe->currentmaterialflags & MATERIALFLAG_NOSHADOW)
+			if (R_GetCurrentTexture(surface->texture)->currentmaterialflags & MATERIALFLAG_NOSHADOW)
 				continue;
 			R_Shadow_MarkVolumeFromBox(surface->num_firstshadowmeshtriangle, surface->num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, relativelightorigin, relativelightdirection, lightmins, lightmaxs, surface->mins, surface->maxs);
 		}
@@ -1012,7 +1041,7 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, const vec3_t relativelightor
 		for (modelsurfacelistindex = 0;modelsurfacelistindex < modelnumsurfaces;modelsurfacelistindex++)
 		{
 			surface = model->data_surfaces + modelsurfacelist[modelsurfacelistindex];
-			rsurface.texture = surface->texture->currentframe;
+			rsurface.texture = R_GetCurrentTexture(surface->texture);
 			if (rsurface.texture->currentmaterialflags & MATERIALFLAG_NOSHADOW)
 				continue;
 			RSurf_PrepareVerticesForBatch(false, false, 1, &surface);
@@ -1041,8 +1070,7 @@ static void R_Q1BSP_DrawLight_TransparentCallback(const entity_render_t *ent, co
 		j = i + 1;
 		surface = rsurface.modelsurfaces + surfacelist[i];
 		t = surface->texture;
-		R_UpdateTextureInfo(ent, t);
-		rsurface.texture = t->currentframe;
+		rsurface.texture = R_GetCurrentTexture(t);
 		endsurface = min(j + BATCHSIZE, numsurfaces);
 		for (j = i;j < endsurface;j++)
 		{
@@ -1069,7 +1097,6 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 	int batchelements[BATCHSIZE*3];
 	texture_t *tex;
 	CHECKGLERROR
-	R_UpdateAllTextureInfo(ent);
 	culltriangles = r_shadow_culltriangles.integer && !(ent->flags & RENDER_NOSELFSHADOW);
 	element3i = rsurface.modelelement3i;
 	// this is a double loop because non-visible surface skipping has to be
@@ -1097,7 +1124,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 		{
 			surface = batchsurfacelist[k];
 			tex = surface->texture;
-			rsurface.texture = tex->currentframe;
+			rsurface.texture = R_GetCurrentTexture(tex);
 			// gather surfaces into a batch range
 			for (kend = k;kend < batchnumsurfaces && tex == batchsurfacelist[kend]->texture;kend++)
 				;

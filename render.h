@@ -340,6 +340,11 @@ typedef struct rsurfacestate_s
 	matrix4x4_t entitytoattenuationxyz;
 	// this transforms only the Z to S, and T is always 0.5
 	matrix4x4_t entitytoattenuationz;
+
+	// pointer to an entity_render_t used only by R_GetCurrentTexture and
+	// RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity as a unique id within
+	// each frame (see r_frame also)
+	entity_render_t *entity;
 }
 rsurfacestate_t;
 
@@ -351,14 +356,10 @@ void RSurf_SetupDepthAndCulling(void);
 
 void R_Mesh_ResizeArrays(int newvertices);
 
-struct entity_render_s;
-struct texture_s;
-struct msurface_s;
-void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t);
-void R_UpdateAllTextureInfo(entity_render_t *ent);
-void R_QueueTextureSurfaceList(int texturenumsurfaces, msurface_t **texturesurfacelist);
-void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean addwaterplanes, qboolean debug);
-void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean addwaterplanes, qboolean debug);
+texture_t *R_GetCurrentTexture(texture_t *t);
+void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean debug);
+void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean debug);
+void R_AddWaterPlanes(entity_render_t *ent);
 
 void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generatetangents, int texturenumsurfaces, msurface_t **texturesurfacelist);
 void RSurf_DrawBatch_Simple(int texturenumsurfaces, msurface_t **texturesurfacelist);

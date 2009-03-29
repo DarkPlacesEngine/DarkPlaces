@@ -28,6 +28,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 mempool_t *r_main_mempool;
 rtexturepool_t *r_main_texturepool;
 
+static int r_frame = 0; // used only by R_GetCurrentTexture
+
 //
 // screen size info
 //
@@ -2601,6 +2603,51 @@ int R_CullBoxCustomPlanes(const vec3_t mins, const vec3_t maxs, int numplanes, c
 
 //==================================================================================
 
+static void R_View_UpdateEntityLighting (void)
+{
+	int i;
+	entity_render_t *ent;
+	vec3_t tempdiffusenormal;
+
+	for (i = 0;i < r_refdef.scene.numentities;i++)
+	{
+		ent = r_refdef.scene.entities[i];
+
+		// skip unseen models
+		if (!r_refdef.viewcache.entityvisible[i] && r_shadows.integer != 1)
+			continue;
+
+		// skip bsp models
+		if (ent->model && ent->model->brush.num_leafs)
+		{
+			// TODO: use modellight for r_ambient settings on world?
+			VectorSet(ent->modellight_ambient, 0, 0, 0);
+			VectorSet(ent->modellight_diffuse, 0, 0, 0);
+			VectorSet(ent->modellight_lightdir, 0, 0, 1);
+			continue;
+		}
+
+		// fetch the lighting from the worldmodel data
+		VectorSet(ent->modellight_ambient, r_refdef.scene.ambient * (2.0f / 128.0f), r_refdef.scene.ambient * (2.0f / 128.0f), r_refdef.scene.ambient * (2.0f / 128.0f));
+		VectorClear(ent->modellight_diffuse);
+		VectorClear(tempdiffusenormal);
+		if ((ent->flags & RENDER_LIGHT) && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.LightPoint)
+		{
+			vec3_t org;
+			Matrix4x4_OriginFromMatrix(&ent->matrix, org);
+			r_refdef.scene.worldmodel->brush.LightPoint(r_refdef.scene.worldmodel, org, ent->modellight_ambient, ent->modellight_diffuse, tempdiffusenormal);
+		}
+		else // highly rare
+			VectorSet(ent->modellight_ambient, 1, 1, 1);
+
+		// move the light direction into modelspace coordinates for lighting code
+		Matrix4x4_Transform3x3(&ent->inversematrix, tempdiffusenormal, ent->modellight_lightdir);
+		if(VectorLength2(ent->modellight_lightdir) == 0)
+			VectorSet(ent->modellight_lightdir, 0, 0, 1); // have to set SOME valid vector here
+		VectorNormalize(ent->modellight_lightdir);
+	}
+}
+
 static void R_View_UpdateEntityVisible (void)
 {
 	int i, renderimask;
@@ -2907,6 +2954,7 @@ void R_View_Update(void)
 	R_View_SetFrustum();
 	R_View_WorldVisibility(r_refdef.view.useclipplane);
 	R_View_UpdateEntityVisible();
+	R_View_UpdateEntityLighting();
 }
 
 void R_SetupView(qboolean allowwaterclippingplane)
@@ -2989,7 +3037,8 @@ void R_ResetViewRendering3D(void)
 	R_SetupGenericShader(true);
 }
 
-void R_RenderScene(qboolean addwaterplanes);
+void R_RenderScene(void);
+void R_RenderWaterPlanes(void);
 
 static void R_Water_StartFrame(void)
 {
@@ -3052,7 +3101,7 @@ static void R_Water_StartFrame(void)
 	r_waterstate.numwaterplanes = 0;
 }
 
-static void R_Water_AddWaterPlane(msurface_t *surface)
+void R_Water_AddWaterPlane(msurface_t *surface)
 {
 	int triangleindex, planeindex;
 	const int *e;
@@ -3061,6 +3110,7 @@ static void R_Water_AddWaterPlane(msurface_t *surface)
 	vec3_t center;
 	mplane_t plane;
 	r_waterstate_waterplane_t *p;
+	texture_t *t = R_GetCurrentTexture(surface->texture);
 	// just use the first triangle with a valid normal for any decisions
 	VectorClear(normal);
 	for (triangleindex = 0, e = rsurface.modelelement3i + surface->num_firsttriangle * 3;triangleindex < surface->num_triangles;triangleindex++, e += 3)
@@ -3080,7 +3130,7 @@ static void R_Water_AddWaterPlane(msurface_t *surface)
 	if (PlaneDiff(r_refdef.view.origin, &plane) < 0)
 	{
 		// skip backfaces (except if nocullface is set)
-		if (!(surface->texture->currentframe->currentmaterialflags & MATERIALFLAG_NOCULLFACE))
+		if (!(t->currentmaterialflags & MATERIALFLAG_NOCULLFACE))
 			return;
 		VectorNegate(plane.normal, plane.normal);
 		plane.dist *= -1;
@@ -3106,7 +3156,7 @@ static void R_Water_AddWaterPlane(msurface_t *surface)
 		p->pvsvalid = false;
 	}
 	// merge this surface's materialflags into the waterplane
-	p->materialflags |= surface->texture->currentframe->currentmaterialflags;
+	p->materialflags |= t->currentmaterialflags;
 	// merge this surface's PVS into the waterplane
 	VectorMAM(0.5f, surface->mins, 0.5f, surface->maxs, center);
 	if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION) && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.FatPVS
@@ -3120,6 +3170,7 @@ static void R_Water_AddWaterPlane(msurface_t *surface)
 static void R_Water_ProcessPlanes(void)
 {
 	r_refdef_view_t originalview;
+	r_refdef_view_t myview;
 	int planeindex;
 	r_waterstate_waterplane_t *p;
 
@@ -3146,24 +3197,29 @@ static void R_Water_ProcessPlanes(void)
 	}
 
 	// render views
+	r_refdef.view = originalview;
+	r_refdef.view.showdebug = false;
+	r_refdef.view.width = r_waterstate.waterwidth;
+	r_refdef.view.height = r_waterstate.waterheight;
+	r_refdef.view.useclipplane = true;
+	myview = r_refdef.view;
+	r_waterstate.renderingscene = true;
 	for (planeindex = 0, p = r_waterstate.waterplanes;planeindex < r_waterstate.numwaterplanes;planeindex++, p++)
 	{
-		r_refdef.view.showdebug = false;
-		r_refdef.view.width = r_waterstate.waterwidth;
-		r_refdef.view.height = r_waterstate.waterheight;
-		r_refdef.view.useclipplane = true;
-		r_waterstate.renderingscene = true;
-
 		// render the normal view scene and copy into texture
 		// (except that a clipping plane should be used to hide everything on one side of the water, and the viewer's weapon model should be omitted)
 		if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION))
 		{
+			r_refdef.view = myview;
 			r_refdef.view.clipplane = p->plane;
 			VectorNegate(r_refdef.view.clipplane.normal, r_refdef.view.clipplane.normal);
 			r_refdef.view.clipplane.dist = -r_refdef.view.clipplane.dist;
 			PlaneClassify(&r_refdef.view.clipplane);
 
-			R_RenderScene(false);
+			R_ResetViewRendering3D();
+			R_ClearScreen(r_refdef.fogenabled);
+			R_View_Update();
+			R_RenderScene();
 
 			// copy view into the screen texture
 			R_Mesh_TexBind(0, R_GetTexture(p->texture_refraction));
@@ -3174,6 +3230,7 @@ static void R_Water_ProcessPlanes(void)
 
 		if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFLECTION))
 		{
+			r_refdef.view = myview;
 			// render reflected scene and copy into texture
 			Matrix4x4_Reflect(&r_refdef.view.matrix, p->plane.normal[0], p->plane.normal[1], p->plane.normal[2], p->plane.dist, -2);
 			// update the r_refdef.view.origin because otherwise the sky renders at the wrong location (amongst other problems)
@@ -3193,26 +3250,20 @@ static void R_Water_ProcessPlanes(void)
 
 			R_ResetViewRendering3D();
 			R_ClearScreen(r_refdef.fogenabled);
-			if (r_timereport_active)
-				R_TimeReport("viewclear");
-
-			R_RenderScene(false);
+			R_View_Update();
+			R_RenderScene();
 
 			R_Mesh_TexBind(0, R_GetTexture(p->texture_reflection));
 			GL_ActiveTexture(0);
 			CHECKGLERROR
 			qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_refdef.view.x, vid.height - (r_refdef.view.y + r_refdef.view.height), r_refdef.view.width, r_refdef.view.height);CHECKGLERROR
-
-			R_ResetViewRendering3D();
-			R_ClearScreen(r_refdef.fogenabled);
-			if (r_timereport_active)
-				R_TimeReport("viewclear");
 		}
-
-		r_refdef.view = originalview;
-		r_refdef.view.clear = true;
-		r_waterstate.renderingscene = false;
 	}
+	r_waterstate.renderingscene = false;
+	r_refdef.view = originalview;
+	R_ResetViewRendering3D();
+	R_ClearScreen(r_refdef.fogenabled);
+	R_View_Update();
 	return;
 error:
 	r_refdef.view = originalview;
@@ -3477,9 +3528,17 @@ void R_HDR_RenderBloomTexture(void)
 	if (r_timereport_active)
 		R_TimeReport("HDRclear");
 
+	R_View_Update();
+	if (r_timereport_active)
+		R_TimeReport("visibility");
+
 	r_waterstate.numwaterplanes = 0;
-	R_RenderScene(r_waterstate.enabled);
+	if (r_waterstate.enabled)
+		R_RenderWaterPlanes();
+
 	r_refdef.view.showdebug = true;
+	R_RenderScene();
+	r_waterstate.numwaterplanes = 0;
 
 	R_ResetViewRendering2D();
 
@@ -3645,8 +3704,6 @@ static void R_BlendView(void)
 		R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
 	}
 }
-
-void R_RenderScene(qboolean addwaterplanes);
 
 matrix4x4_t r_waterscrollmatrix;
 
@@ -3837,6 +3894,9 @@ R_RenderView
 */
 void R_RenderView(void)
 {
+	r_frame++; // used only by R_GetCurrentTexture
+	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
+
 	if (r_refdef.view.isoverlay)
 	{
 		// TODO: FIXME: move this into its own backend function maybe? [2/5/2008 Andreas]
@@ -3848,7 +3908,7 @@ void R_RenderView(void)
 		r_waterstate.enabled = false;
 		r_waterstate.numwaterplanes = 0;
 
-		R_RenderScene(false);
+		R_RenderScene();
 
 		CHECKGLERROR
 		return;
@@ -3886,14 +3946,22 @@ void R_RenderView(void)
 	}
 	r_refdef.view.clear = true;
 
-	r_refdef.view.showdebug = true;
-
 	// this produces a bloom texture to be used in R_BlendView() later
 	if (r_hdr.integer)
 		R_HDR_RenderBloomTexture();
 
+	r_refdef.view.showdebug = true;
+
+	R_View_Update();
+	if (r_timereport_active)
+		R_TimeReport("visibility");
+
 	r_waterstate.numwaterplanes = 0;
-	R_RenderScene(r_waterstate.enabled);
+	if (r_waterstate.enabled)
+		R_RenderWaterPlanes();
+
+	R_RenderScene();
+	r_waterstate.numwaterplanes = 0;
 
 	R_BlendView();
 	if (r_timereport_active)
@@ -3904,47 +3972,42 @@ void R_RenderView(void)
 	CHECKGLERROR
 }
 
+void R_RenderWaterPlanes(void)
+{
+	if (cl.csqc_vidvars.drawworld && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->DrawAddWaterPlanes)
+	{
+		r_refdef.scene.worldmodel->DrawAddWaterPlanes(r_refdef.scene.worldentity);
+		if (r_timereport_active)
+			R_TimeReport("waterworld");
+	}
+
+	// don't let sound skip if going slow
+	if (r_refdef.scene.extraupdate)
+		S_ExtraUpdate ();
+
+	R_DrawModelsAddWaterPlanes();
+	if (r_timereport_active)
+		R_TimeReport("watermodels");
+
+	if (r_waterstate.numwaterplanes)
+	{
+		R_Water_ProcessPlanes();
+		if (r_timereport_active)
+			R_TimeReport("waterscenes");
+	}
+}
+
 extern void R_DrawLightningBeams (void);
 extern void VM_CL_AddPolygonsToMeshQueue (void);
 extern void R_DrawPortals (void);
 extern cvar_t cl_locs_show;
 static void R_DrawLocs(void);
 static void R_DrawEntityBBoxes(void);
-void R_RenderScene(qboolean addwaterplanes)
+void R_RenderScene(void)
 {
 	r_refdef.stats.renders++;
 
 	R_UpdateFogColor();
-
-	if (addwaterplanes)
-	{
-		R_ResetViewRendering3D();
-
-		R_View_Update();
-		if (r_timereport_active)
-			R_TimeReport("watervis");
-
-		if (cl.csqc_vidvars.drawworld && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->DrawAddWaterPlanes)
-		{
-			r_refdef.scene.worldmodel->DrawAddWaterPlanes(r_refdef.scene.worldentity);
-			if (r_timereport_active)
-				R_TimeReport("waterworld");
-		}
-
-		// don't let sound skip if going slow
-		if (r_refdef.scene.extraupdate)
-			S_ExtraUpdate ();
-
-		R_DrawModelsAddWaterPlanes();
-		if (r_timereport_active)
-			R_TimeReport("watermodels");
-
-		R_Water_ProcessPlanes();
-		if (r_timereport_active)
-			R_TimeReport("waterscenes");
-	}
-
-	R_ResetViewRendering3D();
 
 	// don't let sound skip if going slow
 	if (r_refdef.scene.extraupdate)
@@ -3953,10 +4016,6 @@ void R_RenderScene(qboolean addwaterplanes)
 	R_MeshQueue_BeginScene();
 
 	R_SkyStartFrame();
-
-	R_View_Update();
-	if (r_timereport_active)
-		R_TimeReport("visibility");
 
 	Matrix4x4_CreateTranslate(&r_waterscrollmatrix, sin(r_refdef.scene.time) * 0.025 * r_waterscroll.value, sin(r_refdef.scene.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
 
@@ -4555,20 +4614,20 @@ static float R_EvaluateQ3WaveFunc(q3wavefunc_t func, const float *parms)
 	return (float)(parms[0] + parms[1] * f);
 }
 
-void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
+texture_t *R_GetCurrentTexture(texture_t *t)
 {
 	int w, h, idx;
 	int i;
+	const entity_render_t *ent = rsurface.entity;
 	dp_model_t *model = ent->model;
 	float f;
 	float tcmat[12];
 	q3shaderinfo_layer_tcmod_t *tcmod;
 
-	if (t->basematerialflags & MATERIALFLAG_NODRAW)
-	{
-		t->currentmaterialflags = t->basematerialflags & (MATERIALFLAG_NODRAW | MATERIALFLAG_NOSHADOW);
-		return;
-	}
+	if (t->update_lastrenderframe == r_frame && t->update_lastrenderentity == (void *)ent)
+		return t->currentframe;
+	t->update_lastrenderframe = r_frame;
+	t->update_lastrenderentity = (void *)ent;
 
 	// switch to an alternate material if this is a q1bsp animated material
 	{
@@ -4848,14 +4907,8 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 			R_Texture_AddLayer(t, false, GL_SRC_ALPHA, (t->currentmaterialflags & MATERIALFLAG_BLENDED) ? GL_ONE : GL_ONE_MINUS_SRC_ALPHA, TEXTURELAYERTYPE_FOG, t->currentskinframe->fog, &identitymatrix, r_refdef.fogcolor[0] / r_refdef.view.colorscale, r_refdef.fogcolor[1] / r_refdef.view.colorscale, r_refdef.fogcolor[2] / r_refdef.view.colorscale, t->lightmapcolor[3]);
 		}
 	}
-}
 
-void R_UpdateAllTextureInfo(entity_render_t *ent)
-{
-	int i;
-	if (ent->model)
-		for (i = 0;i < ent->model->num_texturesperskin;i++)
-			R_UpdateTextureInfo(ent, ent->model->data_textures + i);
+	return t->currentframe;
 }
 
 rsurfacestate_t rsurface;
@@ -4885,6 +4938,9 @@ void R_Mesh_ResizeArrays(int newvertices)
 void RSurf_ActiveWorldEntity(void)
 {
 	dp_model_t *model = r_refdef.scene.worldmodel;
+	//if (rsurface.entity == r_refdef.scene.worldentity)
+	//	return;
+	rsurface.entity = r_refdef.scene.worldentity;
 	if (rsurface.array_size < model->surfmesh.num_vertices)
 		R_Mesh_ResizeArrays(model->surfmesh.num_vertices);
 	rsurface.matrix = identitymatrix;
@@ -4954,6 +5010,9 @@ void RSurf_ActiveWorldEntity(void)
 void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, qboolean wanttangents)
 {
 	dp_model_t *model = ent->model;
+	//if (rsurface.entity == ent && (!model->surfmesh.isanimated || (!wantnormals && !wanttangents)))
+	//	return;
+	rsurface.entity = (entity_render_t *)ent;
 	if (rsurface.array_size < model->surfmesh.num_vertices)
 		R_Mesh_ResizeArrays(model->surfmesh.num_vertices);
 	rsurface.matrix = ent->matrix;
@@ -6561,7 +6620,22 @@ static void R_DrawTextureSurfaceList_ShowSurfaces3(int texturenumsurfaces, msurf
 	RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
 }
 
-static void R_DrawTextureSurfaceList(int texturenumsurfaces, msurface_t **texturesurfacelist, qboolean writedepth)
+static void R_DrawWorldTextureSurfaceList(int texturenumsurfaces, msurface_t **texturesurfacelist, qboolean writedepth)
+{
+	CHECKGLERROR
+	RSurf_SetupDepthAndCulling();
+	if (r_showsurfaces.integer == 3)
+		R_DrawTextureSurfaceList_ShowSurfaces3(texturenumsurfaces, texturesurfacelist, writedepth);
+	else if (r_glsl.integer && gl_support_fragment_shader)
+		R_DrawTextureSurfaceList_GL20(texturenumsurfaces, texturesurfacelist, writedepth);
+	else if (gl_combine.integer && r_textureunits.integer >= 2)
+		R_DrawTextureSurfaceList_GL13(texturenumsurfaces, texturesurfacelist, writedepth);
+	else
+		R_DrawTextureSurfaceList_GL11(texturenumsurfaces, texturesurfacelist, writedepth);
+	CHECKGLERROR
+}
+
+static void R_DrawModelTextureSurfaceList(int texturenumsurfaces, msurface_t **texturesurfacelist, qboolean writedepth)
 {
 	CHECKGLERROR
 	RSurf_SetupDepthAndCulling();
@@ -6599,8 +6673,7 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 		j = i + 1;
 		surface = rsurface.modelsurfaces + surfacelist[i];
 		texture = surface->texture;
-		R_UpdateTextureInfo(ent, texture);
-		rsurface.texture = texture->currentframe;
+		rsurface.texture = R_GetCurrentTexture(texture);
 		rsurface.uselightmaptexture = surface->lightmaptexture != NULL;
 		// scan ahead until we find a different texture
 		endsurface = min(i + 1024, numsurfaces);
@@ -6614,12 +6687,115 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 			texturesurfacelist[texturenumsurfaces++] = surface;
 		}
 		// render the range of surfaces
-		R_DrawTextureSurfaceList(texturenumsurfaces, texturesurfacelist, false);
+		if (ent == r_refdef.scene.worldentity)
+			R_DrawWorldTextureSurfaceList(texturenumsurfaces, texturesurfacelist, false);
+		else
+			R_DrawModelTextureSurfaceList(texturenumsurfaces, texturesurfacelist, false);
 	}
+	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
 	GL_AlphaTest(false);
 }
 
-static void R_ProcessTextureSurfaceList(int texturenumsurfaces, msurface_t **texturesurfacelist, qboolean writedepth, qboolean depthonly, const entity_render_t *queueentity)
+static void R_ProcessWorldTextureSurfaceList(int texturenumsurfaces, msurface_t **texturesurfacelist, qboolean writedepth, qboolean depthonly)
+{
+	const entity_render_t *queueentity = r_refdef.scene.worldentity;
+	CHECKGLERROR
+	if (depthonly)
+	{
+		if ((rsurface.texture->currentmaterialflags & (MATERIALFLAG_NODEPTHTEST | MATERIALFLAG_BLENDED | MATERIALFLAG_ALPHATEST)))
+			return;
+		if (r_waterstate.renderingscene && (rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFLECTION)))
+			return;
+		RSurf_SetupDepthAndCulling();
+		RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
+		RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
+	}
+	else if (r_showsurfaces.integer && !r_refdef.view.showdebug)
+	{
+		RSurf_SetupDepthAndCulling();
+		GL_AlphaTest(false);
+		R_Mesh_ColorPointer(NULL, 0, 0);
+		R_Mesh_ResetTextureState();
+		R_SetupGenericShader(false);
+		RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
+		GL_DepthMask(true);
+		GL_BlendFunc(GL_ONE, GL_ZERO);
+		GL_Color(0, 0, 0, 1);
+		GL_DepthTest(writedepth);
+		RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
+	}
+	else if (r_showsurfaces.integer && r_showsurfaces.integer != 3)
+	{
+		RSurf_SetupDepthAndCulling();
+		GL_AlphaTest(false);
+		R_Mesh_ColorPointer(NULL, 0, 0);
+		R_Mesh_ResetTextureState();
+		R_SetupGenericShader(false);
+		RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
+		GL_DepthMask(true);
+		GL_BlendFunc(GL_ONE, GL_ZERO);
+		GL_DepthTest(true);
+		RSurf_DrawBatch_ShowSurfaces(texturenumsurfaces, texturesurfacelist);
+	}
+	else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_SKY)
+		R_DrawTextureSurfaceList_Sky(texturenumsurfaces, texturesurfacelist);
+	else if (!rsurface.texture->currentnumlayers)
+		return;
+	else if (((rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED) || (r_showsurfaces.integer == 3 && (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST))) && queueentity)
+	{
+		// transparent surfaces get pushed off into the transparent queue
+		int surfacelistindex;
+		const msurface_t *surface;
+		vec3_t tempcenter, center;
+		for (surfacelistindex = 0;surfacelistindex < texturenumsurfaces;surfacelistindex++)
+		{
+			surface = texturesurfacelist[surfacelistindex];
+			tempcenter[0] = (surface->mins[0] + surface->maxs[0]) * 0.5f;
+			tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
+			tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
+			Matrix4x4_Transform(&rsurface.matrix, tempcenter, center);
+			R_MeshQueue_AddTransparent(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_refdef.view.origin : center, R_DrawSurface_TransparentCallback, queueentity, surface - rsurface.modelsurfaces, rsurface.rtlight);
+		}
+	}
+	else
+	{
+		// the alphatest check is to make sure we write depth for anything we skipped on the depth-only pass earlier
+		R_DrawWorldTextureSurfaceList(texturenumsurfaces, texturesurfacelist, writedepth || (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST));
+	}
+	CHECKGLERROR
+}
+
+void R_QueueWorldSurfaceList(int numsurfaces, msurface_t **surfacelist, int flagsmask, qboolean writedepth, qboolean depthonly)
+{
+	int i, j;
+	texture_t *texture;
+	// break the surface list down into batches by texture and use of lightmapping
+	for (i = 0;i < numsurfaces;i = j)
+	{
+		j = i + 1;
+		// texture is the base texture pointer, rsurface.texture is the
+		// current frame/skin the texture is directing us to use (for example
+		// if a model has 2 skins and it is on skin 1, then skin 0 tells us to
+		// use skin 1 instead)
+		texture = surfacelist[i]->texture;
+		rsurface.texture = R_GetCurrentTexture(texture);
+		rsurface.uselightmaptexture = surfacelist[i]->lightmaptexture != NULL;
+		if (!(rsurface.texture->currentmaterialflags & flagsmask) || (rsurface.texture->currentmaterialflags & MATERIALFLAG_NODRAW))
+		{
+			// if this texture is not the kind we want, skip ahead to the next one
+			for (;j < numsurfaces && texture == surfacelist[j]->texture;j++)
+				;
+			continue;
+		}
+		// simply scan ahead until we find a different texture or lightmap state
+		for (;j < numsurfaces && texture == surfacelist[j]->texture && rsurface.uselightmaptexture == (surfacelist[j]->lightmaptexture != NULL);j++)
+			;
+		// render the range of surfaces
+		R_ProcessWorldTextureSurfaceList(j - i, surfacelist + i, writedepth, depthonly);
+	}
+}
+
+static void R_ProcessModelTextureSurfaceList(int texturenumsurfaces, msurface_t **texturesurfacelist, qboolean writedepth, qboolean depthonly, const entity_render_t *queueentity)
 {
 	CHECKGLERROR
 	if (depthonly)
@@ -6682,23 +6858,15 @@ static void R_ProcessTextureSurfaceList(int texturenumsurfaces, msurface_t **tex
 	else
 	{
 		// the alphatest check is to make sure we write depth for anything we skipped on the depth-only pass earlier
-		R_DrawTextureSurfaceList(texturenumsurfaces, texturesurfacelist, writedepth || (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST));
+		R_DrawModelTextureSurfaceList(texturenumsurfaces, texturesurfacelist, writedepth || (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST));
 	}
 	CHECKGLERROR
 }
 
-void R_QueueSurfaceList(entity_render_t *ent, int numsurfaces, msurface_t **surfacelist, int flagsmask, qboolean writedepth, qboolean depthonly, qboolean addwaterplanes)
+void R_QueueModelSurfaceList(entity_render_t *ent, int numsurfaces, msurface_t **surfacelist, int flagsmask, qboolean writedepth, qboolean depthonly)
 {
 	int i, j;
 	texture_t *texture;
-	// if we're rendering water textures (extra scene renders), use a separate loop to avoid burdening the main one
-	if (addwaterplanes)
-	{
-		for (i = 0;i < numsurfaces;i++)
-			if (surfacelist[i]->texture->currentframe->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION))
-				R_Water_AddWaterPlane(surfacelist[i]);
-		return;
-	}
 	// break the surface list down into batches by texture and use of lightmapping
 	for (i = 0;i < numsurfaces;i = j)
 	{
@@ -6708,7 +6876,7 @@ void R_QueueSurfaceList(entity_render_t *ent, int numsurfaces, msurface_t **surf
 		// if a model has 2 skins and it is on skin 1, then skin 0 tells us to
 		// use skin 1 instead)
 		texture = surfacelist[i]->texture;
-		rsurface.texture = texture->currentframe;
+		rsurface.texture = R_GetCurrentTexture(texture);
 		rsurface.uselightmaptexture = surfacelist[i]->lightmaptexture != NULL;
 		if (!(rsurface.texture->currentmaterialflags & flagsmask) || (rsurface.texture->currentmaterialflags & MATERIALFLAG_NODRAW))
 		{
@@ -6721,7 +6889,7 @@ void R_QueueSurfaceList(entity_render_t *ent, int numsurfaces, msurface_t **surf
 		for (;j < numsurfaces && texture == surfacelist[j]->texture && rsurface.uselightmaptexture == (surfacelist[j]->lightmaptexture != NULL);j++)
 			;
 		// render the range of surfaces
-		R_ProcessTextureSurfaceList(j - i, surfacelist + i, writedepth, depthonly, ent);
+		R_ProcessModelTextureSurfaceList(j - i, surfacelist + i, writedepth, depthonly, ent);
 	}
 }
 
@@ -6862,7 +7030,7 @@ void R_DrawDebugModel(entity_render_t *ent)
 		{
 			if (ent == r_refdef.scene.worldentity && !r_refdef.viewcache.world_surfacevisible[j])
 				continue;
-			rsurface.texture = surface->texture->currentframe;
+			rsurface.texture = R_GetCurrentTexture(surface->texture);
 			if ((rsurface.texture->currentmaterialflags & flagsmask) && surface->num_triangles)
 			{
 				RSurf_PrepareVerticesForBatch(true, true, 1, &surface);
@@ -6947,7 +7115,7 @@ void R_DrawDebugModel(entity_render_t *ent)
 extern void R_BuildLightMap(const entity_render_t *ent, msurface_t *surface);
 int r_maxsurfacelist = 0;
 msurface_t **r_surfacelist = NULL;
-void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean addwaterplanes, qboolean debug)
+void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean debug)
 {
 	int i, j, endj, f, flagsmask;
 	texture_t *t;
@@ -6972,7 +7140,7 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 	update = model->brushq1.lightmapupdateflags;
 
 	// update light styles on this submodel
-	if (!skysurfaces && !depthonly && !addwaterplanes && model->brushq1.num_lightstyles && r_refdef.lightmapintensity > 0)
+	if (!skysurfaces && !depthonly && model->brushq1.num_lightstyles && r_refdef.lightmapintensity > 0)
 	{
 		model_brush_lightstyleinfo_t *style;
 		for (i = 0, style = model->brushq1.data_lightstyleinfo;i < model->brushq1.num_lightstyles;i++, style++)
@@ -6987,8 +7155,7 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 		}
 	}
 
-	R_UpdateAllTextureInfo(r_refdef.scene.worldentity);
-	flagsmask = addwaterplanes ? (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION) : (skysurfaces ? MATERIALFLAG_SKY : MATERIALFLAG_WALL);
+	flagsmask = skysurfaces ? MATERIALFLAG_SKY : MATERIALFLAG_WALL;
 
 	if (debug)
 	{
@@ -7003,33 +7170,26 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 	rsurface.rtlight = NULL;
 	numsurfacelist = 0;
 	// add visible surfaces to draw list
-	j = model->firstmodelsurface;
-	endj = j + model->nummodelsurfaces;
-	if (update)
+	for (i = 0;i < model->nummodelsurfaces;i++)
 	{
-		for (;j < endj;j++)
-		{
+		j = model->sortedmodelsurfaces[i];
+		if (r_refdef.viewcache.world_surfacevisible[j])
+			r_surfacelist[numsurfacelist++] = surfaces + j;
+	}
+	// update lightmaps if needed
+	if (update)
+		for (j = model->firstmodelsurface, endj = model->firstmodelsurface + model->nummodelsurfaces;j < endj;j++)
 			if (r_refdef.viewcache.world_surfacevisible[j])
-			{
-				r_surfacelist[numsurfacelist++] = surfaces + j;
-				// update lightmap if needed
 				if (update[j])
 					R_BuildLightMap(r_refdef.scene.worldentity, surfaces + j);
-			}
-		}
-	}
-	else
-		for (;j < endj;j++)
-			if (r_refdef.viewcache.world_surfacevisible[j])
-				r_surfacelist[numsurfacelist++] = surfaces + j;
 	// don't do anything if there were no surfaces
 	if (!numsurfacelist)
 		return;
-	R_QueueSurfaceList(r_refdef.scene.worldentity, numsurfacelist, r_surfacelist, flagsmask, writedepth, depthonly, addwaterplanes);
+	R_QueueWorldSurfaceList(numsurfacelist, r_surfacelist, flagsmask, writedepth, depthonly);
 	GL_AlphaTest(false);
 
 	// add to stats if desired
-	if (r_speeds.integer && !skysurfaces && !depthonly && !addwaterplanes)
+	if (r_speeds.integer && !skysurfaces && !depthonly)
 	{
 		r_refdef.stats.world_surfaces += numsurfacelist;
 		for (j = 0;j < numsurfacelist;j++)
@@ -7037,7 +7197,7 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 	}
 }
 
-void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean addwaterplanes, qboolean debug)
+void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean debug)
 {
 	int i, j, endj, f, flagsmask;
 	texture_t *t;
@@ -7070,7 +7230,7 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 	update = model->brushq1.lightmapupdateflags;
 
 	// update light styles
-	if (!skysurfaces && !depthonly && !addwaterplanes && model->brushq1.num_lightstyles && r_refdef.lightmapintensity > 0)
+	if (!skysurfaces && !depthonly && model->brushq1.num_lightstyles && r_refdef.lightmapintensity > 0)
 	{
 		model_brush_lightstyleinfo_t *style;
 		for (i = 0, style = model->brushq1.data_lightstyleinfo;i < model->brushq1.num_lightstyles;i++, style++)
@@ -7085,8 +7245,7 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 		}
 	}
 
-	R_UpdateAllTextureInfo(ent);
-	flagsmask = addwaterplanes ? (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION) : (skysurfaces ? MATERIALFLAG_SKY : MATERIALFLAG_WALL);
+	flagsmask = skysurfaces ? MATERIALFLAG_SKY : MATERIALFLAG_WALL;
 
 	if (debug)
 	{
@@ -7101,23 +7260,21 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 	rsurface.rtlight = NULL;
 	numsurfacelist = 0;
 	// add visible surfaces to draw list
-	j = model->firstmodelsurface;
-	endj = j + model->nummodelsurfaces;
-	for (;j < endj;j++)
-		r_surfacelist[numsurfacelist++] = surfaces + j;
+	for (i = 0;i < model->nummodelsurfaces;i++)
+		r_surfacelist[numsurfacelist++] = surfaces + model->sortedmodelsurfaces[i];
 	// don't do anything if there were no surfaces
 	if (!numsurfacelist)
 		return;
 	// update lightmaps if needed
 	if (update)
-		for (j = model->firstmodelsurface;j < endj;j++)
+		for (j = model->firstmodelsurface, endj = model->firstmodelsurface + model->nummodelsurfaces;j < endj;j++)
 			if (update[j])
 				R_BuildLightMap(ent, surfaces + j);
-	R_QueueSurfaceList(ent, numsurfacelist, r_surfacelist, flagsmask, writedepth, depthonly, addwaterplanes);
+	R_QueueModelSurfaceList(ent, numsurfacelist, r_surfacelist, flagsmask, writedepth, depthonly);
 	GL_AlphaTest(false);
 
 	// add to stats if desired
-	if (r_speeds.integer && !skysurfaces && !depthonly && !addwaterplanes)
+	if (r_speeds.integer && !skysurfaces && !depthonly)
 	{
 		r_refdef.stats.entities++;
 		r_refdef.stats.entities_surfaces += numsurfacelist;

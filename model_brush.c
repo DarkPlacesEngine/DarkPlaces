@@ -3590,9 +3590,8 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		mod->nummodelsurfaces = bm->numfaces;
 
 		// make the model surface list (used by shadowing/lighting)
-		mod->surfacelist = (int *)datapointer;datapointer += mod->nummodelsurfaces * sizeof(int);
-		for (j = 0;j < mod->nummodelsurfaces;j++)
-			mod->surfacelist[j] = mod->firstmodelsurface + j;
+		mod->sortedmodelsurfaces = (int *)datapointer;datapointer += mod->nummodelsurfaces * sizeof(int);
+		Mod_MakeSortedSurfaces(mod);
 
 		// this gets altered below if sky or water is used
 		mod->DrawSky = NULL;
@@ -5983,9 +5982,8 @@ void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		mod->nummodelsurfaces = mod->brushq3.data_models[i].numfaces;
 		mod->firstmodelbrush = mod->brushq3.data_models[i].firstbrush;
 		mod->nummodelbrushes = mod->brushq3.data_models[i].numbrushes;
-		mod->surfacelist = (int *)Mem_Alloc(loadmodel->mempool, mod->nummodelsurfaces * sizeof(*mod->surfacelist));
-		for (j = 0;j < mod->nummodelsurfaces;j++)
-			mod->surfacelist[j] = mod->firstmodelsurface + j;
+		mod->sortedmodelsurfaces = (int *)Mem_Alloc(loadmodel->mempool, mod->nummodelsurfaces * sizeof(*mod->sortedmodelsurfaces));
+		Mod_MakeSortedSurfaces(mod);
 
 		VectorCopy(mod->brushq3.data_models[i].mins, mod->normalmins);
 		VectorCopy(mod->brushq3.data_models[i].maxs, mod->normalmaxs);
