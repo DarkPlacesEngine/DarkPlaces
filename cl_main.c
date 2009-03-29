@@ -487,32 +487,13 @@ static void CL_SoundIndexList_f(void)
 	}
 }
 
-static void CL_UpdateRenderEntity_Lighting(entity_render_t *ent)
-{
-	vec3_t tempdiffusenormal;
+/*
+===============
+CL_UpdateRenderEntity
 
-	// fetch the lighting from the worldmodel data
-	VectorSet(ent->modellight_ambient, r_refdef.scene.ambient * (2.0f / 128.0f), r_refdef.scene.ambient * (2.0f / 128.0f), r_refdef.scene.ambient * (2.0f / 128.0f));
-	VectorClear(ent->modellight_diffuse);
-	VectorClear(tempdiffusenormal);
-	if ((ent->flags & RENDER_LIGHT) && cl.worldmodel && cl.worldmodel->brush.LightPoint)
-	{
-		vec3_t org;
-		Matrix4x4_OriginFromMatrix(&ent->matrix, org);
-		cl.worldmodel->brush.LightPoint(cl.worldmodel, org, ent->modellight_ambient, ent->modellight_diffuse, tempdiffusenormal);
-	}
-	else // highly rare
-		VectorSet(ent->modellight_ambient, 1, 1, 1);
-
-	// move the light direction into modelspace coordinates for lighting code
-	Matrix4x4_Transform3x3(&ent->inversematrix, tempdiffusenormal, ent->modellight_lightdir);
-	if(VectorLength2(ent->modellight_lightdir) <= 0)
-		VectorSet(ent->modellight_lightdir, 0, 0, 1); // have to set SOME valid vector here
-	VectorNormalize(ent->modellight_lightdir);
-}
-
-//static const vec3_t nomodelmins = {-16, -16, -16};
-//static const vec3_t nomodelmaxs = {16, 16, 16};
+Updates inversematrix, animation interpolation factors, scale, and mins/maxs
+===============
+*/
 void CL_UpdateRenderEntity(entity_render_t *ent)
 {
 	vec3_t org;
@@ -564,7 +545,6 @@ void CL_UpdateRenderEntity(entity_render_t *ent)
 		ent->maxs[1] = org[1] + 16;
 		ent->maxs[2] = org[2] + 16;
 	}
-	CL_UpdateRenderEntity_Lighting(ent);
 }
 
 /*

@@ -456,6 +456,9 @@ typedef struct texture_s
 	// (this is an optimization in the renderer)
 	int animated;
 
+	// renderer checks if this texture needs updating...
+	int update_lastrenderframe;
+	void *update_lastrenderentity;
 	// the current alpha of this texture (may be affected by r_wateralpha)
 	float currentalpha;
 	// the current texture frame in animation
@@ -829,6 +832,7 @@ typedef struct model_s
 	// range of surface numbers in this (sub)model
 	int				firstmodelsurface;
 	int				nummodelsurfaces;
+	int				*sortedmodelsurfaces;
 	// range of collision brush numbers in this (sub)model
 	int				firstmodelbrush;
 	int				nummodelbrushes;
@@ -925,6 +929,7 @@ void Mod_BuildNormals(int firstvertex, int numvertices, int numtriangles, const 
 void Mod_BuildTextureVectorsFromNormals(int firstvertex, int numvertices, int numtriangles, const float *vertex3f, const float *texcoord2f, const float *normal3f, const int *elements, float *svector3f, float *tvector3f, qboolean areaweighting);
 
 void Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriangles, qboolean lightmapoffsets, qboolean vertexcolors, qboolean neighbors);
+void Mod_MakeSortedSurfaces(dp_model_t *mod);
 
 shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts, int maxtriangles, rtexture_t *map_diffuse, rtexture_t *map_specular, rtexture_t *map_normal, int light, int neighbors, int expandable);
 shadowmesh_t *Mod_ShadowMesh_ReAlloc(mempool_t *mempool, shadowmesh_t *oldmesh, int light, int neighbors);
@@ -997,6 +1002,7 @@ void Mod_SpriteInit(void);
 void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend);
 void Mod_IBSP_Load(dp_model_t *mod, void *buffer, void *bufferend);
 void Mod_MAP_Load(dp_model_t *mod, void *buffer, void *bufferend);
+void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend);
 void Mod_IDP0_Load(dp_model_t *mod, void *buffer, void *bufferend);
 void Mod_IDP2_Load(dp_model_t *mod, void *buffer, void *bufferend);
 void Mod_IDP3_Load(dp_model_t *mod, void *buffer, void *bufferend);

@@ -320,7 +320,8 @@ dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk, q
 		num = LittleLong(*((int *)buf));
 		// call the apropriate loader
 		loadmodel = mod;
-		     if (!memcmp(buf, "IDPO", 4)) Mod_IDP0_Load(mod, buf, bufend);
+		     if (!strcasecmp(FS_FileExtension(mod->name), "obj")) Mod_OBJ_Load(mod, buf, bufend);
+		else if (!memcmp(buf, "IDPO", 4)) Mod_IDP0_Load(mod, buf, bufend);
 		else if (!memcmp(buf, "IDP2", 4)) Mod_IDP2_Load(mod, buf, bufend);
 		else if (!memcmp(buf, "IDP3", 4)) Mod_IDP3_Load(mod, buf, bufend);
 		else if (!memcmp(buf, "IDSP", 4)) Mod_IDSP_Load(mod, buf, bufend);
@@ -2166,6 +2167,39 @@ void Mod_VertexRangeFromElements(int numelements, const int *elements, int *firs
 		*firstvertexpointer = firstvertex;
 	if (lastvertexpointer)
 		*lastvertexpointer = lastvertex;
+}
+
+void Mod_MakeSortedSurfaces(dp_model_t *mod)
+{
+	// make an optimal set of texture-sorted batches to draw...
+	int j, t;
+	int *firstsurfacefortexture;
+	int *numsurfacesfortexture;
+	if (!mod->sortedmodelsurfaces)
+		mod->sortedmodelsurfaces = Mem_Alloc(tempmempool, mod->nummodelsurfaces * sizeof(*mod->sortedmodelsurfaces));
+	firstsurfacefortexture = Mem_Alloc(tempmempool, mod->num_textures * sizeof(*firstsurfacefortexture));
+	numsurfacesfortexture = Mem_Alloc(tempmempool, mod->num_textures * sizeof(*numsurfacesfortexture));
+	memset(numsurfacesfortexture, 0, mod->num_textures * sizeof(*numsurfacesfortexture));
+	for (j = 0;j < mod->nummodelsurfaces;j++)
+	{
+		const msurface_t *surface = mod->data_surfaces + j + mod->firstmodelsurface;
+		int t = (int)(surface->texture - mod->data_textures);
+		numsurfacesfortexture[t]++;
+	}
+	j = 0;
+	for (t = 0;t < mod->num_textures;t++)
+	{
+		firstsurfacefortexture[t] = j;
+		j += numsurfacesfortexture[t];
+	}
+	for (j = 0;j < mod->nummodelsurfaces;j++)
+	{
+		const msurface_t *surface = mod->data_surfaces + j + mod->firstmodelsurface;
+		int t = (int)(surface->texture - mod->data_textures);
+		mod->sortedmodelsurfaces[firstsurfacefortexture[t]++] = j + mod->firstmodelsurface;
+	}
+	Mem_Free(firstsurfacefortexture);
+	Mem_Free(numsurfacesfortexture);
 }
 
 static void Mod_BuildVBOs(void)

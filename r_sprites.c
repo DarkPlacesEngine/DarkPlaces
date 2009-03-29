@@ -360,11 +360,10 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 		if (ent->frameblend[i].lerp >= 0.01f)
 		{
 			mspriteframe_t *frame = model->sprite.sprdata_frames + ent->frameblend[i].frame;
-			texture_t *texture = model->data_textures + ent->frameblend[i].frame;
+			texture_t *texture = R_GetCurrentTexture(model->data_textures + ent->frameblend[i].frame);
 #if 0
 			vec3_t o, l, u;
 #endif
-			R_UpdateTextureInfo(ent, texture);
 
 			// SPR_LABEL should not use depth test AT ALL
 			if(model->sprite.sprnum_type == SPR_LABEL || model->sprite.sprnum_type == SPR_LABEL_SCALE)

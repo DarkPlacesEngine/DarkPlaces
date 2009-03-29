@@ -3010,7 +3010,7 @@ void R_Shadow_DrawEntityShadow(entity_render_t *ent)
 	relativeshadowmaxs[0] = relativeshadoworigin[0] + relativeshadowradius;
 	relativeshadowmaxs[1] = relativeshadoworigin[1] + relativeshadowradius;
 	relativeshadowmaxs[2] = relativeshadoworigin[2] + relativeshadowradius;
-	ent->model->DrawShadowVolume(ent, relativeshadoworigin, NULL, relativeshadowradius, ent->model->nummodelsurfaces, ent->model->surfacelist, relativeshadowmins, relativeshadowmaxs);
+	ent->model->DrawShadowVolume(ent, relativeshadoworigin, NULL, relativeshadowradius, ent->model->nummodelsurfaces, ent->model->sortedmodelsurfaces, relativeshadowmins, relativeshadowmaxs);
 }
 
 void R_Shadow_SetupEntityLight(const entity_render_t *ent)
@@ -3052,7 +3052,7 @@ void R_Shadow_DrawEntityLight(entity_render_t *ent)
 
 	R_Shadow_SetupEntityLight(ent);
 
-	model->DrawLight(ent, model->nummodelsurfaces, model->surfacelist, NULL);
+	model->DrawLight(ent, model->nummodelsurfaces, model->sortedmodelsurfaces, NULL);
 }
 
 void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
@@ -3461,7 +3461,7 @@ void R_DrawModelShadows(void)
 
 			VectorScale(relativelightdirection, -relativethrowdistance, relativelightorigin);
 			RSurf_ActiveModelEntity(ent, false, false);
-			ent->model->DrawShadowVolume(ent, relativelightorigin, relativelightdirection, relativethrowdistance, ent->model->nummodelsurfaces, ent->model->surfacelist, relativeshadowmins, relativeshadowmaxs);
+			ent->model->DrawShadowVolume(ent, relativelightorigin, relativelightdirection, relativethrowdistance, ent->model->nummodelsurfaces, ent->model->sortedmodelsurfaces, relativeshadowmins, relativeshadowmaxs);
 		}
 	}
 
