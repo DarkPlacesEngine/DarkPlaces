@@ -222,9 +222,26 @@ typedef struct dlight_s
 }
 dlight_t;
 
+#define MAX_FRAMEGROUPBLENDS 4
+typedef struct framegroupblend_s
+{
+	// animation number and blend factor
+	// (for most models this is the frame number)
+	int frame;
+	float lerp;
+	// time frame began playing (for framegroup animations)
+	double start;
+}
+framegroupblend_t;
+
+// this is derived from processing of the framegroupblend array
+// note: technically each framegroupblend can produce two of these, but that
+// never happens in practice because no one blends between more than 2
+// framegroups at once
+#define MAX_FRAMEBLENDS MAX_FRAMEGROUPBLENDS
 typedef struct frameblend_s
 {
-	int frame;
+	int subframe;
 	float lerp;
 }
 frameblend_t;
@@ -271,18 +288,9 @@ typedef struct entity_render_s
 	// colormod tinting of models
 	float colormod[3];
 
-	// interpolated animation
+	// interpolated animation - active framegroups and blend factors
+	framegroupblend_t framegroupblend[MAX_FRAMEGROUPBLENDS];
 
-	// frame that the model is interpolating from
-	int frame1;
-	// frame that the model is interpolating to
-	int frame2;
-	// interpolation factor, usually computed from frame2time
-	float framelerp;
-	// time frame1 began playing (for framegroup animations)
-	double frame1time;
-	// time frame2 began playing (for framegroup animations)
-	double frame2time;
 	// time of last model change (for shader animations)
 	double shadertime;
 
@@ -290,8 +298,8 @@ typedef struct entity_render_s
 
 	// calculated during R_AddModelEntities
 	vec3_t mins, maxs;
-	// 4 frame numbers (-1 if not used) and their blending scalers (0-1), if interpolation is not desired, use frame instead
-	frameblend_t frameblend[4];
+	// subframe numbers (-1 if not used) and their blending scalers (0-1), if interpolation is not desired, use subframeblend[0].subframe
+	frameblend_t frameblend[MAX_FRAMEBLENDS];
 
 	// current lighting from map (updated ONLY by client code, not renderer)
 	vec3_t modellight_ambient;

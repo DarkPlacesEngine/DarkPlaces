@@ -157,7 +157,9 @@ typedef struct prvm_prog_fieldoffsets_s
 	int buttonuse; // ssqc
 	int chain; // common - used by find builtins
 	int classname; // common
+	int clientcamera; // ssqc
 	int clientcolors; // ssqc
+	int clientstatus; // ssqc
 	int color; // ssqc
 	int colormod; // ssqc / csqc
 	int contentstransition; // ssqc
@@ -179,7 +181,10 @@ typedef struct prvm_prog_fieldoffsets_s
 	int frame1time; // csqc
 	int frame2; // csqc
 	int frame2time; // csqc
-	int shadertime; // csqc
+	int frame3; // csqc
+	int frame3time; // csqc
+	int frame4; // csqc
+	int frame4time; // csqc
 	int frame; // common - used by OP_STATE
 	int fullbright; // ssqc - Nehahra support
 	int glow_color; // ssqc
@@ -191,6 +196,8 @@ typedef struct prvm_prog_fieldoffsets_s
 	int ideal_yaw; // ssqc / csqc
 	int idealpitch; // ssqc / csqc
 	int items2; // ssqc
+	int lerpfrac3; // csqc
+	int lerpfrac4; // csqc
 	int lerpfrac; // csqc
 	int light_lev; // ssqc
 	int message; // csqc
@@ -211,6 +218,7 @@ typedef struct prvm_prog_fieldoffsets_s
 	int renderflags; // csqc
 	int rendermode; // ssqc - HalfLife support
 	int scale; // ssqc / csqc
+	int shadertime; // csqc
 	int style; // ssqc
 	int tag_entity; // ssqc / csqc
 	int tag_index; // ssqc / csqc
@@ -218,8 +226,6 @@ typedef struct prvm_prog_fieldoffsets_s
 	int viewmodelforclient; // ssqc
 	int viewzoom; // ssqc
 	int yaw_speed; // ssqc / csqc
-	int clientcamera; // ssqc
-	int clientstatus; // ssqc
 }
 prvm_prog_fieldoffsets_t;
 

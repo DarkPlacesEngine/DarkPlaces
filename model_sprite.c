@@ -340,6 +340,8 @@ void Mod_IDSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	else
 		Host_Error("Mod_IDSP_Load: %s has wrong version number (%i). Only %i (quake), %i (HalfLife), and %i (sprite32) supported",
 					loadmodel->name, version, SPRITE_VERSION, SPRITEHL_VERSION, SPRITE32_VERSION);
+
+	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || loadmodel->animscenes[0].framecount > 1;
 }
 
 
@@ -445,4 +447,6 @@ void Mod_IDS2_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	}
 	loadmodel->radius = modelradius;
 	loadmodel->radius2 = modelradius * modelradius;
+
+	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || loadmodel->animscenes[0].framecount > 1;
 }

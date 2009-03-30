@@ -57,7 +57,7 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 			continue;
 
 		//if (ent->model && ent->model->TraceBox)
-			ent->model->TraceBox(ent->model, ent->frameblend[0].frame, &trace, starttransformed, vec3_origin, vec3_origin, endtransformed, SUPERCONTENTS_SOLID);
+			ent->model->TraceBox(ent->model, ent->frameblend[0].subframe, &trace, starttransformed, vec3_origin, vec3_origin, endtransformed, SUPERCONTENTS_SOLID);
 
 		if (maxrealfrac > trace.realfraction)
 		{
@@ -305,7 +305,7 @@ trace_t CL_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 			entity_render_t *ent = &cl.entities[cl.brushmodel_entities[i]].render;
 			if (!BoxesOverlap(clipboxmins, clipboxmaxs, ent->mins, ent->maxs))
 				continue;
-			Collision_ClipToGenericEntity(&trace, ent->model, ent->frame2, vec3_origin, vec3_origin, 0, &ent->matrix, &ent->inversematrix, start, mins, maxs, end, hitsupercontentsmask);
+			Collision_ClipToGenericEntity(&trace, ent->model, ent->frameblend[0].subframe, vec3_origin, vec3_origin, 0, &ent->matrix, &ent->inversematrix, start, mins, maxs, end, hitsupercontentsmask);
 			if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
 				*hitnetworkentity = cl.brushmodel_entities[i];
 			Collision_CombineTraces(&cliptrace, &trace, NULL, true);

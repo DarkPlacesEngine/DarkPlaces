@@ -301,7 +301,7 @@ typedef struct rsurfacestate_s
 	matrix4x4_t matrix;
 	matrix4x4_t inversematrix;
 	// animation blending state from entity
-	frameblend_t frameblend[4];
+	frameblend_t frameblend[MAX_FRAMEBLENDS];
 	// directional model shading state from entity
 	vec3_t modellight_ambient;
 	vec3_t modellight_diffuse;
