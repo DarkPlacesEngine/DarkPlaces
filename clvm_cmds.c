@@ -1415,10 +1415,10 @@ static void VM_CL_makestatic (void)
 		// copy it to the current state
 		memset(staticent, 0, sizeof(*staticent));
 		staticent->render.model = CL_GetModelByIndex((int)ent->fields.client->modelindex);
-		staticent->render.frame1 = staticent->render.frame2 = (int)ent->fields.client->frame;
-		staticent->render.framelerp = 0;
+		staticent->render.framegroupblend[0].frame = (int)ent->fields.client->frame;
+		staticent->render.framegroupblend[0].lerp = 1;
 		// make torchs play out of sync
-		staticent->render.frame1time = staticent->render.frame2time = lhrandom(-10, -1);
+		staticent->render.framegroupblend[0].start = lhrandom(-10, -1);
 		staticent->render.skinnum = (int)ent->fields.client->skin;
 		staticent->render.effects = (int)ent->fields.client->effects;
 		staticent->render.alpha = 1;

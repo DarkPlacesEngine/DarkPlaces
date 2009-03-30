@@ -693,7 +693,7 @@ r_hdr_range                                       4                   how much d
 r_hdr_scenebrightness                             1                   global rendering brightness
 r_lerpimages                                      1                   bilinear filters images when scaling them up to power of 2 size (mode 1), looks better than glquake (mode 0)
 r_lerpmodels                                      1                   enables animation smoothing on models
-r_lerpsprites                                     1                   enables animation smoothing on sprites (requires r_lerpmodels 1)
+r_lerpsprites                                     1                   enables animation smoothing on sprites
 r_letterbox                                       0                   reduces vertical height of view to simulate a letterboxed movie effect (can be used by mods for cutscenes)
 r_lightmaprgba                                    1                   whether to use RGBA (32bit) or RGB (24bit) lightmaps
 r_lightningbeam_color_blue                        1                   color of the lightning beam effect

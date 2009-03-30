@@ -441,7 +441,7 @@ static void CL_PrintEntities_f(void)
 			modelname = ent->render.model->name;
 		else
 			modelname = "--no model--";
-		Con_Printf("%3i: %-25s:%4i (%5i %5i %5i) [%3i %3i %3i] %4.2f %5.3f\n", i, modelname, ent->render.frame2, (int) ent->state_current.origin[0], (int) ent->state_current.origin[1], (int) ent->state_current.origin[2], (int) ent->state_current.angles[0] % 360, (int) ent->state_current.angles[1] % 360, (int) ent->state_current.angles[2] % 360, ent->render.scale, ent->render.alpha);
+		Con_Printf("%3i: %-25s:%4i (%5i %5i %5i) [%3i %3i %3i] %4.2f %5.3f\n", i, modelname, ent->render.framegroupblend[0].frame, (int) ent->state_current.origin[0], (int) ent->state_current.origin[1], (int) ent->state_current.origin[2], (int) ent->state_current.angles[0] % 360, (int) ent->state_current.angles[1] % 360, (int) ent->state_current.angles[2] % 360, ent->render.scale, ent->render.alpha);
 	}
 }
 
@@ -767,39 +767,40 @@ void CL_RelinkLightFlashes(void)
 
 void CL_AddQWCTFFlagModel(entity_t *player, int skin)
 {
+	int frame = player->render.framegroupblend[0].frame;
 	float f;
 	entity_render_t *flagrender;
 	matrix4x4_t flagmatrix;
 
 	// this code taken from QuakeWorld
 	f = 14;
-	if (player->render.frame2 >= 29 && player->render.frame2 <= 40)
+	if (frame >= 29 && frame <= 40)
 	{
-		if (player->render.frame2 >= 29 && player->render.frame2 <= 34)
+		if (frame >= 29 && frame <= 34)
 		{ //axpain
-			if      (player->render.frame2 == 29) f = f + 2;
-			else if (player->render.frame2 == 30) f = f + 8;
-			else if (player->render.frame2 == 31) f = f + 12;
-			else if (player->render.frame2 == 32) f = f + 11;
-			else if (player->render.frame2 == 33) f = f + 10;
-			else if (player->render.frame2 == 34) f = f + 4;
+			if      (frame == 29) f = f + 2;
+			else if (frame == 30) f = f + 8;
+			else if (frame == 31) f = f + 12;
+			else if (frame == 32) f = f + 11;
+			else if (frame == 33) f = f + 10;
+			else if (frame == 34) f = f + 4;
 		}
-		else if (player->render.frame2 >= 35 && player->render.frame2 <= 40)
+		else if (frame >= 35 && frame <= 40)
 		{ // pain
-			if      (player->render.frame2 == 35) f = f + 2;
-			else if (player->render.frame2 == 36) f = f + 10;
-			else if (player->render.frame2 == 37) f = f + 10;
-			else if (player->render.frame2 == 38) f = f + 8;
-			else if (player->render.frame2 == 39) f = f + 4;
-			else if (player->render.frame2 == 40) f = f + 2;
+			if      (frame == 35) f = f + 2;
+			else if (frame == 36) f = f + 10;
+			else if (frame == 37) f = f + 10;
+			else if (frame == 38) f = f + 8;
+			else if (frame == 39) f = f + 4;
+			else if (frame == 40) f = f + 2;
 		}
 	}
-	else if (player->render.frame2 >= 103 && player->render.frame2 <= 118)
+	else if (frame >= 103 && frame <= 118)
 	{
-		if      (player->render.frame2 >= 103 && player->render.frame2 <= 104) f = f + 6;  //nailattack
-		else if (player->render.frame2 >= 105 && player->render.frame2 <= 106) f = f + 6;  //light
-		else if (player->render.frame2 >= 107 && player->render.frame2 <= 112) f = f + 7;  //rocketattack
-		else if (player->render.frame2 >= 112 && player->render.frame2 <= 118) f = f + 7;  //shotattack
+		if      (frame >= 103 && frame <= 104) f = f + 6;  //nailattack
+		else if (frame >= 105 && frame <= 106) f = f + 6;  //light
+		else if (frame >= 107 && frame <= 112) f = f + 7;  //rocketattack
+		else if (frame >= 112 && frame <= 118) f = f + 7;  //shotattack
 	}
 	// end of code taken from QuakeWorld
 
@@ -897,10 +898,10 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 		{
 			// blend the matrices
 			memset(&blendmatrix, 0, sizeof(blendmatrix));
-			for (j = 0;j < 4 && t->render.frameblend[j].lerp > 0;j++)
+			for (j = 0;j < MAX_FRAMEBLENDS && t->render.frameblend[j].lerp > 0;j++)
 			{
 				matrix4x4_t tagmatrix;
-				Mod_Alias_GetTagMatrix(model, t->render.frameblend[j].frame, e->state_current.tagindex - 1, &tagmatrix);
+				Mod_Alias_GetTagMatrix(model, t->render.frameblend[j].subframe, e->state_current.tagindex - 1, &tagmatrix);
 				d = t->render.frameblend[j].lerp;
 				for (l = 0;l < 4;l++)
 					for (k = 0;k < 4;k++)
@@ -991,27 +992,29 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 	}
 
 	// animation lerp
-	if (e->render.frame2 == frame)
+	if (e->render.framegroupblend[0].frame == frame)
 	{
 		// update frame lerp fraction
-		e->render.framelerp = 1;
-		if (e->render.frame2time > e->render.frame1time)
+		e->render.framegroupblend[0].lerp = 1;
+		e->render.framegroupblend[1].lerp = 0;
+		if (e->render.framegroupblend[0].start > e->render.framegroupblend[1].start)
 		{
 			// make sure frame lerp won't last longer than 100ms
 			// (this mainly helps with models that use framegroups and
 			// switch between them infrequently)
-			e->render.framelerp = (cl.time - e->render.frame2time) / min(e->render.frame2time - e->render.frame1time, 0.1);
-			e->render.framelerp = bound(0, e->render.framelerp, 1);
+			e->render.framegroupblend[0].lerp = (cl.time - e->render.framegroupblend[0].start) / min(e->render.framegroupblend[0].start - e->render.framegroupblend[1].start, 0.1);
+			e->render.framegroupblend[0].lerp = bound(0, e->render.framegroupblend[0].lerp, 1);
+			e->render.framegroupblend[1].lerp = 1 - e->render.framegroupblend[0].lerp;
 		}
 	}
 	else
 	{
 		// begin a new frame lerp
-		e->render.frame1 = e->render.frame2;
-		e->render.frame1time = e->render.frame2time;
-		e->render.frame2 = frame;
-		e->render.frame2time = cl.time;
-		e->render.framelerp = 0;
+		e->render.framegroupblend[1] = e->render.framegroupblend[0];
+		e->render.framegroupblend[1].lerp = 1;
+		e->render.framegroupblend[0].frame = frame;
+		e->render.framegroupblend[0].start = cl.time;
+		e->render.framegroupblend[0].lerp = 0;
 	}
 
 	// set up the render matrix
@@ -1246,9 +1249,9 @@ void CL_UpdateViewModel(void)
 	// reset animation interpolation on weaponmodel if model changed
 	if (ent->state_previous.modelindex != ent->state_current.modelindex)
 	{
-		ent->render.frame1 = ent->render.frame2 = ent->state_current.frame;
-		ent->render.frame1time = ent->render.frame2time = cl.time;
-		ent->render.framelerp = 1;
+		ent->render.framegroupblend[0].frame = ent->render.framegroupblend[1].frame = ent->state_current.frame;
+		ent->render.framegroupblend[0].start = ent->render.framegroupblend[1].start = cl.time;
+		ent->render.framegroupblend[0].lerp = 1;ent->render.framegroupblend[1].lerp = 0;
 	}
 	CL_UpdateNetworkEntity(ent, 32, true);
 }
@@ -1517,13 +1520,21 @@ static void CL_RelinkEffects(void)
 			if (r_draweffects.integer && (entrender = CL_NewTempEntity(e->starttime)))
 			{
 				// interpolation stuff
-				entrender->frame1 = intframe;
-				entrender->frame2 = intframe + 1;
-				if (entrender->frame2 >= e->endframe)
-					entrender->frame2 = -1; // disappear
-				entrender->framelerp = frame - intframe;
-				entrender->frame1time = e->frame1time;
-				entrender->frame2time = e->frame2time;
+				entrender->framegroupblend[0].frame = intframe;
+				entrender->framegroupblend[0].lerp = 1 - frame - intframe;
+				entrender->framegroupblend[0].start = e->frame1time;
+				if (intframe + 1 >= e->endframe)
+				{
+					entrender->framegroupblend[1].frame = 0; // disappear
+					entrender->framegroupblend[1].lerp = 0;
+					entrender->framegroupblend[1].start = 0;
+				}
+				else
+				{
+					entrender->framegroupblend[1].frame = intframe + 1;
+					entrender->framegroupblend[1].lerp = frame - intframe;
+					entrender->framegroupblend[1].start = e->frame2time;
+				}
 
 				// normal stuff
 				if(e->modelindex < MAX_MODELS)

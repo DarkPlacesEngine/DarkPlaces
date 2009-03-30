@@ -355,12 +355,12 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 	R_Mesh_Matrix(&identitymatrix);
 
 	// LordHavoc: interpolated sprite rendering
-	for (i = 0;i < 4;i++)
+	for (i = 0;i < MAX_FRAMEBLENDS;i++)
 	{
 		if (ent->frameblend[i].lerp >= 0.01f)
 		{
-			mspriteframe_t *frame = model->sprite.sprdata_frames + ent->frameblend[i].frame;
-			texture_t *texture = R_GetCurrentTexture(model->data_textures + ent->frameblend[i].frame);
+			mspriteframe_t *frame = model->sprite.sprdata_frames + ent->frameblend[i].subframe;
+			texture_t *texture = R_GetCurrentTexture(model->data_textures + ent->frameblend[i].subframe);
 #if 0
 			vec3_t o, l, u;
 #endif
@@ -400,7 +400,7 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 void R_Model_Sprite_Draw(entity_render_t *ent)
 {
 	vec3_t org;
-	if (ent->frameblend[0].frame < 0)
+	if (ent->frameblend[0].subframe < 0)
 		return;
 
 	Matrix4x4_OriginFromMatrix(&ent->matrix, org);

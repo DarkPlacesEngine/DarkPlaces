@@ -1744,9 +1744,9 @@ void CL_MoveLerpEntityStates(entity_t *ent)
 		VectorCopy(ent->state_current.origin, ent->persistent.neworigin);
 		VectorCopy(ent->state_current.angles, ent->persistent.newangles);
 		// reset animation interpolation as well
-		ent->render.frame1 = ent->render.frame2 = ent->state_current.frame;
-		ent->render.frame1time = ent->render.frame2time = cl.time;
-		ent->render.framelerp = 1;
+		ent->render.framegroupblend[0].frame = ent->render.framegroupblend[1].frame = ent->state_current.frame;
+		ent->render.framegroupblend[0].start = ent->render.framegroupblend[1].start = cl.time;
+		ent->render.framegroupblend[0].lerp = 1;ent->render.framegroupblend[1].lerp = 0;
 		ent->render.shadertime = cl.time;
 		// reset various persistent stuff
 		ent->persistent.muzzleflash = 0;
@@ -1767,9 +1767,9 @@ void CL_MoveLerpEntityStates(entity_t *ent)
 		{
 			// if we ALSO changed animation frame in the process (but ONLY then!)
 			// then let's reset the animation interpolation too
-			ent->render.frame1 = ent->render.frame2 = ent->state_current.frame;
-			ent->render.frame1time = ent->render.frame2time = cl.time;
-			ent->render.framelerp = 1;
+			ent->render.framegroupblend[0].frame = ent->render.framegroupblend[1].frame = ent->state_current.frame;
+			ent->render.framegroupblend[0].start = ent->render.framegroupblend[1].start = cl.time;
+			ent->render.framegroupblend[0].lerp = 1;ent->render.framegroupblend[1].lerp = 0;
 		}
 
 		// note that this case must do everything the following case does too
@@ -2007,10 +2007,10 @@ void CL_ParseStatic (int large)
 
 // copy it to the current state
 	ent->render.model = cl.model_precache[ent->state_baseline.modelindex];
-	ent->render.frame1 = ent->render.frame2 = ent->state_baseline.frame;
-	ent->render.framelerp = 0;
+	ent->render.framegroupblend[0].frame = ent->state_baseline.frame;
+	ent->render.framegroupblend[0].lerp = 1;
 	// make torchs play out of sync
-	ent->render.frame1time = ent->render.frame2time = lhrandom(-10, -1);
+	ent->render.framegroupblend[0].start = lhrandom(-10, -1);
 	ent->render.skinnum = ent->state_baseline.skin;
 	ent->render.effects = ent->state_baseline.effects;
 	ent->render.alpha = 1;

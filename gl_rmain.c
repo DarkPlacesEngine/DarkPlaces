@@ -98,7 +98,7 @@ cvar_t r_water_resolutionmultiplier = {CVAR_SAVE, "r_water_resolutionmultiplier"
 cvar_t r_water_refractdistort = {CVAR_SAVE, "r_water_refractdistort", "0.01", "how much water refractions shimmer"};
 cvar_t r_water_reflectdistort = {CVAR_SAVE, "r_water_reflectdistort", "0.01", "how much water reflections shimmer"};
 
-cvar_t r_lerpsprites = {CVAR_SAVE, "r_lerpsprites", "1", "enables animation smoothing on sprites (requires r_lerpmodels 1)"};
+cvar_t r_lerpsprites = {CVAR_SAVE, "r_lerpsprites", "1", "enables animation smoothing on sprites"};
 cvar_t r_lerpmodels = {CVAR_SAVE, "r_lerpmodels", "1", "enables animation smoothing on models"};
 cvar_t r_lerplightstyles = {CVAR_SAVE, "r_lerplightstyles", "0", "enable animation smoothing on flickering lights"};
 cvar_t r_waterscroll = {CVAR_SAVE, "r_waterscroll", "1", "makes water scroll around, value controls how much"};
@@ -4648,7 +4648,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		{
 			// use an alternate animation if the entity's frame is not 0,
 			// and only if the texture has an alternate animation
-			if (ent->frame2 != 0 && t->anim_total[1])
+			if (ent->framegroupblend[0].frame != 0 && t->anim_total[1])
 				t = t->anim_frames[1][(t->anim_total[1] >= 2) ? ((int)(r_refdef.scene.time * 5.0f) % t->anim_total[1]) : 0];
 			else
 				t = t->anim_frames[0][(t->anim_total[0] >= 2) ? ((int)(r_refdef.scene.time * 5.0f) % t->anim_total[0]) : 0];
@@ -4952,14 +4952,8 @@ void RSurf_ActiveWorldEntity(void)
 	VectorSet(rsurface.modellight_lightdir, 0, 0, 1);
 	VectorSet(rsurface.colormap_pantscolor, 0, 0, 0);
 	VectorSet(rsurface.colormap_shirtcolor, 0, 0, 0);
-	rsurface.frameblend[0].frame = 0;
+	memset(rsurface.frameblend, 0, sizeof(rsurface.frameblend));
 	rsurface.frameblend[0].lerp = 1;
-	rsurface.frameblend[1].frame = 0;
-	rsurface.frameblend[1].lerp = 0;
-	rsurface.frameblend[2].frame = 0;
-	rsurface.frameblend[2].lerp = 0;
-	rsurface.frameblend[3].frame = 0;
-	rsurface.frameblend[3].lerp = 0;
 	rsurface.basepolygonfactor = r_refdef.polygonfactor;
 	rsurface.basepolygonoffset = r_refdef.polygonoffset;
 	rsurface.modelvertex3f  = model->surfmesh.data_vertex3f;
@@ -5029,10 +5023,7 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 	VectorCopy(ent->modellight_lightdir, rsurface.modellight_lightdir);
 	VectorCopy(ent->colormap_pantscolor, rsurface.colormap_pantscolor);
 	VectorCopy(ent->colormap_shirtcolor, rsurface.colormap_shirtcolor);
-	rsurface.frameblend[0] = ent->frameblend[0];
-	rsurface.frameblend[1] = ent->frameblend[1];
-	rsurface.frameblend[2] = ent->frameblend[2];
-	rsurface.frameblend[3] = ent->frameblend[3];
+	memcpy(rsurface.frameblend, ent->frameblend, sizeof(ent->frameblend));
 	rsurface.basepolygonfactor = r_refdef.polygonfactor;
 	rsurface.basepolygonoffset = r_refdef.polygonoffset;
 	if (ent->model->brush.submodel)
@@ -5040,7 +5031,7 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 		rsurface.basepolygonfactor += r_polygonoffset_submodel_factor.value;
 		rsurface.basepolygonoffset += r_polygonoffset_submodel_offset.value;
 	}
-	if (model->surfmesh.isanimated && model->AnimateVertices && (rsurface.frameblend[0].lerp != 1 || rsurface.frameblend[0].frame != 0))
+	if (model->surfmesh.isanimated && model->AnimateVertices && (rsurface.frameblend[0].lerp != 1 || rsurface.frameblend[0].subframe != 0))
 	{
 		if (wanttangents)
 		{

@@ -62,9 +62,9 @@ void Mod_Skeletal_AnimateVertices(const dp_model_t *model, const frameblend_t *f
 		for (k = 0;k < 12;k++)
 			m[k] = 0;
 		VectorClear(desiredscale);
-		for (blends = 0;blends < 4 && frameblend[blends].lerp > 0;blends++)
+		for (blends = 0;blends < MAX_FRAMEBLENDS && frameblend[blends].lerp > 0;blends++)
 		{
-			matrix = model->data_poses + (frameblend[blends].frame * model->num_bones + i) * 12;
+			matrix = model->data_poses + (frameblend[blends].subframe * model->num_bones + i) * 12;
 			for (k = 0;k < 12;k++)
 				m[k] += matrix[k] * frameblend[blends].lerp;
 			desiredscale[0] += frameblend[blends].lerp * VectorLength(matrix    );
@@ -233,7 +233,7 @@ void Mod_MD3_AnimateVertices(const dp_model_t *model, const frameblend_t *frameb
 	int i, numblends, blendnum;
 	int numverts = model->surfmesh.num_vertices;
 	numblends = 0;
-	for (blendnum = 0;blendnum < 4;blendnum++)
+	for (blendnum = 0;blendnum < MAX_FRAMEBLENDS;blendnum++)
 	{
 		//VectorMA(translate, model->surfmesh.num_morphmdlframetranslate, frameblend[blendnum].lerp, translate);
 		if (frameblend[blendnum].lerp > 0)
@@ -242,7 +242,7 @@ void Mod_MD3_AnimateVertices(const dp_model_t *model, const frameblend_t *frameb
 	// special case for the first blend because it avoids some adds and the need to memset the arrays first
 	for (blendnum = 0;blendnum < numblends;blendnum++)
 	{
-		const md3vertex_t *verts = model->surfmesh.data_morphmd3vertex + numverts * frameblend[blendnum].frame;
+		const md3vertex_t *verts = model->surfmesh.data_morphmd3vertex + numverts * frameblend[blendnum].subframe;
 		float scale = frameblend[blendnum].lerp * (1.0f / 64.0f);
 		if (blendnum == 0)
 		{
@@ -291,7 +291,7 @@ void Mod_MD3_AnimateVertices(const dp_model_t *model, const frameblend_t *frameb
 		}
 		if (svector3f)
 		{
-			const texvecvertex_t *texvecvert = model->surfmesh.data_morphtexvecvertex + numverts * frameblend[blendnum].frame;
+			const texvecvertex_t *texvecvert = model->surfmesh.data_morphtexvecvertex + numverts * frameblend[blendnum].subframe;
 			float f = frameblend[blendnum].lerp * (1.0f / 127.0f);
 			if (blendnum == 0)
 			{
@@ -323,10 +323,10 @@ void Mod_MDL_AnimateVertices(const dp_model_t *model, const frameblend_t *frameb
 	numblends = 0;
 	// blend the frame translates to avoid redundantly doing so on each vertex
 	// (a bit of a brain twister but it works)
-	for (blendnum = 0;blendnum < 4;blendnum++)
+	for (blendnum = 0;blendnum < MAX_FRAMEBLENDS;blendnum++)
 	{
 		if (model->surfmesh.data_morphmd2framesize6f)
-			VectorMA(translate, frameblend[blendnum].lerp, model->surfmesh.data_morphmd2framesize6f + frameblend[blendnum].frame * 6 + 3, translate);
+			VectorMA(translate, frameblend[blendnum].lerp, model->surfmesh.data_morphmd2framesize6f + frameblend[blendnum].subframe * 6 + 3, translate);
 		else
 			VectorMA(translate, frameblend[blendnum].lerp, model->surfmesh.num_morphmdlframetranslate, translate);
 		if (frameblend[blendnum].lerp > 0)
@@ -335,10 +335,10 @@ void Mod_MDL_AnimateVertices(const dp_model_t *model, const frameblend_t *frameb
 	// special case for the first blend because it avoids some adds and the need to memset the arrays first
 	for (blendnum = 0;blendnum < numblends;blendnum++)
 	{
-		const trivertx_t *verts = model->surfmesh.data_morphmdlvertex + numverts * frameblend[blendnum].frame;
+		const trivertx_t *verts = model->surfmesh.data_morphmdlvertex + numverts * frameblend[blendnum].subframe;
 		float scale[3];
 		if (model->surfmesh.data_morphmd2framesize6f)
-			VectorScale(model->surfmesh.data_morphmd2framesize6f + frameblend[blendnum].frame * 6, frameblend[blendnum].lerp, scale);
+			VectorScale(model->surfmesh.data_morphmd2framesize6f + frameblend[blendnum].subframe * 6, frameblend[blendnum].lerp, scale);
 		else
 			VectorScale(model->surfmesh.num_morphmdlframescale, frameblend[blendnum].lerp, scale);
 		if (blendnum == 0)
@@ -385,7 +385,7 @@ void Mod_MDL_AnimateVertices(const dp_model_t *model, const frameblend_t *frameb
 		}
 		if (svector3f)
 		{
-			const texvecvertex_t *texvecvert = model->surfmesh.data_morphtexvecvertex + numverts * frameblend[blendnum].frame;
+			const texvecvertex_t *texvecvert = model->surfmesh.data_morphtexvecvertex + numverts * frameblend[blendnum].subframe;
 			float f = frameblend[blendnum].lerp * (1.0f / 127.0f);
 			if (blendnum == 0)
 			{
@@ -545,7 +545,7 @@ static void Mod_Alias_CalculateBoundingBox(void)
 	float dist, yawradius, radius;
 	float *v;
 	float *vertex3f;
-	frameblend_t frameblend[4];
+	frameblend_t frameblend[MAX_FRAMEBLENDS];
 	memset(frameblend, 0, sizeof(frameblend));
 	frameblend[0].lerp = 1;
 	vertex3f = (float *) Mem_Alloc(loadmodel->mempool, loadmodel->surfmesh.num_vertices * sizeof(float[3]));
@@ -553,7 +553,7 @@ static void Mod_Alias_CalculateBoundingBox(void)
 	VectorClear(loadmodel->normalmaxs);
 	yawradius = 0;
 	radius = 0;
-	for (frameblend[0].frame = 0;frameblend[0].frame < loadmodel->num_poses;frameblend[0].frame++)
+	for (frameblend[0].subframe = 0;frameblend[0].subframe < loadmodel->num_poses;frameblend[0].subframe++)
 	{
 		loadmodel->AnimateVertices(loadmodel, frameblend, vertex3f, NULL, NULL, NULL);
 		for (vnum = 0, v = vertex3f;vnum < loadmodel->surfmesh.num_vertices;vnum++, v += 3)
@@ -597,8 +597,10 @@ static void Mod_Alias_CalculateBoundingBox(void)
 static void Mod_Alias_MorphMesh_CompileFrames(void)
 {
 	int i, j;
-	frameblend_t frameblend[4] = {{0, 1}, {0, 0}, {0, 0}, {0, 0}};
+	frameblend_t frameblend[MAX_FRAMEBLENDS];
 	unsigned char *datapointer;
+	memset(frameblend, 0, sizeof(frameblend));
+	frameblend[0].lerp = 1;
 	datapointer = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->surfmesh.num_vertices * (sizeof(float[3]) * 4 + loadmodel->surfmesh.num_morphframes * sizeof(texvecvertex_t)));
 	loadmodel->surfmesh.data_vertex3f = (float *)datapointer;datapointer += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
 	loadmodel->surfmesh.data_svector3f = (float *)datapointer;datapointer += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
@@ -608,7 +610,7 @@ static void Mod_Alias_MorphMesh_CompileFrames(void)
 	// this counts down from the last frame to the first so that the final data in surfmesh is for frame zero (which is what the renderer expects to be there)
 	for (i = loadmodel->surfmesh.num_morphframes-1;i >= 0;i--)
 	{
-		frameblend[0].frame = i;
+		frameblend[0].subframe = i;
 		loadmodel->AnimateVertices(loadmodel, frameblend, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_normal3f, NULL, NULL);
 		Mod_BuildTextureVectorsFromNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, r_smoothnormals_areaweighting.integer);
 		// encode the svector and tvector in 3 byte format for permanent storage
@@ -624,7 +626,7 @@ static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, int frame, trace_t *trace,
 {
 	int i;
 	float segmentmins[3], segmentmaxs[3];
-	frameblend_t frameblend[4];
+	frameblend_t frameblend[MAX_FRAMEBLENDS];
 	msurface_t *surface;
 	static int maxvertices = 0;
 	static float *vertex3f = NULL;
@@ -633,7 +635,7 @@ static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, int frame, trace_t *trace,
 	trace->realfraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
 	memset(frameblend, 0, sizeof(frameblend));
-	frameblend[0].frame = frame;
+	frameblend[0].subframe = frame;
 	frameblend[0].lerp = 1;
 	if (maxvertices < model->surfmesh.num_vertices)
 	{
