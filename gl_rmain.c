@@ -3524,6 +3524,8 @@ void R_HDR_RenderBloomTexture(void)
 	r_refdef.view.showdebug = false;
 	r_refdef.view.colorscale *= r_bloom_colorscale.value / bound(1, r_hdr_range.value, 16);
 
+	R_ResetViewRendering3D();
+
 	R_ClearScreen(r_refdef.fogenabled);
 	if (r_timereport_active)
 		R_TimeReport("HDRclear");
