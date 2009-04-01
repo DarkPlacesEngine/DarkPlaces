@@ -580,6 +580,7 @@ void R_Q1BSP_DrawAddWaterPlanes(entity_render_t *ent)
 				R_Water_AddWaterPlane(surfaces + j);
 		}
 	}
+	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
 }
 
 void R_Q1BSP_Draw(entity_render_t *ent)
@@ -976,6 +977,8 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 		//  debugging not actual use)
 		R_Q1BSP_CallRecursiveGetLightInfo(&info, r_shadow_compilingrtlight ? r_shadow_realtime_world_compilesvbsp.integer : r_shadow_realtime_dlight_svbspculling.integer);
 	}
+
+	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
 
 	// limit combined leaf box to light boundaries
 	outmins[0] = max(info.outmins[0] - 1, info.lightmins[0]);

@@ -2995,6 +2995,8 @@ void R_Shadow_DrawWorldShadow(int numsurfaces, int *surfacelist, const unsigned 
 	}
 	else if (numsurfaces)
 		r_refdef.scene.worldmodel->DrawShadowVolume(r_refdef.scene.worldentity, rsurface.rtlight->shadoworigin, NULL, rsurface.rtlight->radius, numsurfaces, surfacelist, rsurface.rtlight_cullmins, rsurface.rtlight_cullmaxs);
+
+	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
 }
 
 void R_Shadow_DrawEntityShadow(entity_render_t *ent)
@@ -3011,6 +3013,7 @@ void R_Shadow_DrawEntityShadow(entity_render_t *ent)
 	relativeshadowmaxs[1] = relativeshadoworigin[1] + relativeshadowradius;
 	relativeshadowmaxs[2] = relativeshadoworigin[2] + relativeshadowradius;
 	ent->model->DrawShadowVolume(ent, relativeshadoworigin, NULL, relativeshadowradius, ent->model->nummodelsurfaces, ent->model->sortedmodelsurfaces, relativeshadowmins, relativeshadowmaxs);
+	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
 }
 
 void R_Shadow_SetupEntityLight(const entity_render_t *ent)
@@ -3042,6 +3045,8 @@ void R_Shadow_DrawWorldLight(int numsurfaces, int *surfacelist, const unsigned c
 		R_Mesh_TexMatrix(3, &rsurface.entitytolight);
 
 	r_refdef.scene.worldmodel->DrawLight(r_refdef.scene.worldentity, numsurfaces, surfacelist, trispvs);
+
+	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
 }
 
 void R_Shadow_DrawEntityLight(entity_render_t *ent)
@@ -3053,6 +3058,8 @@ void R_Shadow_DrawEntityLight(entity_render_t *ent)
 	R_Shadow_SetupEntityLight(ent);
 
 	model->DrawLight(ent, model->nummodelsurfaces, model->sortedmodelsurfaces, NULL);
+
+	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
 }
 
 void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
@@ -3462,6 +3469,7 @@ void R_DrawModelShadows(void)
 			VectorScale(relativelightdirection, -relativethrowdistance, relativelightorigin);
 			RSurf_ActiveModelEntity(ent, false, false);
 			ent->model->DrawShadowVolume(ent, relativelightorigin, relativelightdirection, relativethrowdistance, ent->model->nummodelsurfaces, ent->model->sortedmodelsurfaces, relativeshadowmins, relativeshadowmaxs);
+			rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
 		}
 	}
 
