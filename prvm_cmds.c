@@ -413,6 +413,13 @@ void VM_localcmd (void)
 	Cbuf_AddText(string);
 }
 
+static qboolean PRVM_Cvar_ReadOk(const char *string)
+{
+	cvar_t *cvar;
+	cvar = Cvar_FindVar(string);
+	return ((cvar) && ((cvar->flags & CVAR_PRIVATE) == 0));
+}
+
 /*
 =================
 VM_cvar
@@ -426,7 +433,7 @@ void VM_cvar (void)
 	VM_SAFEPARMCOUNTRANGE(1,8,VM_cvar);
 	VM_VarString(0, string, sizeof(string));
 	VM_CheckEmptyString(string);
-	PRVM_G_FLOAT(OFS_RETURN) = Cvar_VariableValue(string);
+	PRVM_G_FLOAT(OFS_RETURN) = PRVM_Cvar_ReadOk(string) ? Cvar_VariableValue(string) : 0;
 }
 
 /*
@@ -488,7 +495,7 @@ void VM_cvar_string(void)
 	VM_SAFEPARMCOUNTRANGE(1,8,VM_cvar_string);
 	VM_VarString(0, string, sizeof(string));
 	VM_CheckEmptyString(string);
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(Cvar_VariableString(string));
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(PRVM_Cvar_ReadOk(string) ? Cvar_VariableString(string) : "");
 }
 
 
