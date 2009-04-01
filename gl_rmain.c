@@ -975,7 +975,7 @@ static const char *builtinshaderstring =
 "		// 0.25 supports up to 75.5 degrees normal/deluxe angle\n"
 "# ifdef USESPECULAR\n"
 "#  ifdef USEEXACTSPECULARMATH\n"
-"	tempcolor += myhalf3(texture2D(Texture_Gloss, TexCoord)) * SpecularScale * pow(myhalf(max(float(dot(reflect(diffusenormal, surfacenormal), normalize(EyeVector)))*-1.0, 0.0)), SpecularPower);\n"
+"	tempcolor += myhalf3(texture2D(Texture_Gloss, TexCoord)) * SpecularScale * pow(myhalf(max(float(dot(reflect(normalize(diffusenormal), surfacenormal), normalize(EyeVector)))*-1.0, 0.0)), SpecularPower);\n"
 "#  else\n"
 "	myhalf3 specularnormal = myhalf3(normalize(diffusenormal + myhalf3(normalize(EyeVector))));\n"
 "	tempcolor += myhalf3(texture2D(Texture_Gloss, TexCoord)) * SpecularScale * pow(myhalf(max(float(dot(surfacenormal, specularnormal)), 0.0)), SpecularPower);\n"
