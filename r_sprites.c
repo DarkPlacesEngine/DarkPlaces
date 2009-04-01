@@ -208,6 +208,9 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 	int edge = 0;
 	float dir_angle = 0.0f;
 
+	// R_GetCurrentTexture needs this
+	rsurface.entity = (entity_render_t *)ent;
+
 	// nudge it toward the view to make sure it isn't in a wall
 	Matrix4x4_ToVectors(&ent->matrix, mforward, mleft, mup, org);
 	VectorSubtract(org, r_refdef.view.forward, org);
@@ -395,6 +398,8 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 			}
 		}
 	}
+
+	rsurface.entity = NULL;
 }
 
 void R_Model_Sprite_Draw(entity_render_t *ent)
