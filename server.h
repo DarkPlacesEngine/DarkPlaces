@@ -212,8 +212,8 @@ typedef struct client_s
 
 	// this is used by sv_clmovement_minping code
 	double clmovement_disabletimeout;
-	// this is used by sv_clmvoement_waitforinput code
-	int clmovement_skipphysicsframes;
+	// this is used by sv_clmovement_inputtimeout code
+	float clmovement_inputtimeout;
 
 // spawn parms are carried from level to level
 	float spawn_parms[NUM_SPAWN_PARMS];
@@ -378,7 +378,7 @@ extern cvar_t sv_checkforpacketsduringsleep;
 extern cvar_t sv_clmovement_enable;
 extern cvar_t sv_clmovement_minping;
 extern cvar_t sv_clmovement_minping_disabletime;
-extern cvar_t sv_clmovement_waitforinput;
+extern cvar_t sv_clmovement_inputtimeout;
 extern cvar_t sv_cullentities_nevercullbmodels;
 extern cvar_t sv_cullentities_pvs;
 extern cvar_t sv_cullentities_stats;
