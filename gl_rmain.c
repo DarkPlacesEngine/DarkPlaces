@@ -7153,6 +7153,7 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 	if (debug)
 	{
 		R_DrawDebugModel(r_refdef.scene.worldentity);
+		rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
 		return;
 	}
 
@@ -7188,6 +7189,7 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 		for (j = 0;j < numsurfacelist;j++)
 			r_refdef.stats.world_triangles += r_surfacelist[j]->num_triangles;
 	}
+	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
 }
 
 void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean debug)
@@ -7243,6 +7245,7 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 	if (debug)
 	{
 		R_DrawDebugModel(ent);
+		rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
 		return;
 	}
 
@@ -7274,4 +7277,5 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 		for (j = 0;j < numsurfacelist;j++)
 			r_refdef.stats.entities_triangles += r_surfacelist[j]->num_triangles;
 	}
+	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
 }
