@@ -567,7 +567,7 @@ void SV_ExecuteClientMoves(void)
 	if (ceil(max(sv_readmoves[sv_numreadmoves-1].receivetime - sv_readmoves[sv_numreadmoves-1].time, 0) * 1000.0) < sv_clmovement_minping.integer)
 		host_client->clmovement_disabletimeout = realtime + sv_clmovement_minping_disabletime.value / 1000.0;
 	// several conditions govern whether clientside movement prediction is allowed
-	if (sv_readmoves[sv_numreadmoves-1].sequence && sv_clmovement_enable.integer && sv_clmovement_waitforinput.integer > 0 && host_client->clmovement_disabletimeout <= realtime && host_client->edict->fields.server->movetype == MOVETYPE_WALK && (!(val = PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.disableclientprediction)) || !val->_float))
+	if (sv_readmoves[sv_numreadmoves-1].sequence && sv_clmovement_enable.integer && sv_clmovement_inputtimeout.value > 0 && host_client->clmovement_disabletimeout <= realtime && host_client->edict->fields.server->movetype == MOVETYPE_WALK && (!(val = PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.disableclientprediction)) || !val->_float))
 	{
 		// process the moves in order and ignore old ones
 		// but always trust the latest move
@@ -585,7 +585,7 @@ void SV_ExecuteClientMoves(void)
 				// this is a new move
 				move->time = bound(sv.time - 1, move->time, sv.time); // prevent slowhack/speedhack combos
 				move->time = max(move->time, host_client->cmd.time); // prevent backstepping of time
-				moveframetime = bound(0, move->time - host_client->cmd.time, min(0.1, sv.frametime * sv_clmovement_waitforinput.integer));
+				moveframetime = bound(0, move->time - host_client->cmd.time, min(0.1, sv_clmovement_inputtimeout.value));
 				//Con_Printf("movesequence = %i (%i lost), moveframetime = %f\n", move->sequence, move->sequence ? move->sequence - host_client->movesequence - 1 : 0, moveframetime);
 				host_client->cmd = *move;
 				host_client->movesequence = move->sequence;
@@ -595,7 +595,7 @@ void SV_ExecuteClientMoves(void)
 				// (they can't go beyond the current time so there is no cheat issue
 				//  with this approach, and if they don't send input for a while they
 				//  start moving anyway, so the longest 'lagaport' possible is
-				//  determined by the sv_clmovement_waitforinput cvar)
+				//  determined by the sv_clmovement_inputtimeout cvar)
 				if (moveframetime <= 0)
 					continue;
 				oldframetime = prog->globals.server->frametime;
@@ -613,7 +613,7 @@ void SV_ExecuteClientMoves(void)
 				SV_Physics_ClientMove();
 				sv.frametime = oldframetime2;
 				prog->globals.server->frametime = oldframetime;
-				host_client->clmovement_skipphysicsframes = sv_clmovement_waitforinput.integer;
+				host_client->clmovement_inputtimeout = sv_clmovement_inputtimeout.value;
 			}
 		}
 	}
@@ -641,7 +641,7 @@ void SV_ExecuteClientMoves(void)
 			// time
 		host_client->movesequence = 0;
 		// make sure that normal physics takes over immediately
-		host_client->clmovement_skipphysicsframes = 0;
+		host_client->clmovement_inputtimeout = 0;
 	}
 
 	// calculate average ping time

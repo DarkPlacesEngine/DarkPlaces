@@ -2225,7 +2225,7 @@ void SV_Physics_ClientEntity(prvm_edict_t *ent)
 	}
 
 	// don't run physics here if running asynchronously
-	if (host_client->clmovement_skipphysicsframes <= 0)
+	if (host_client->clmovement_inputtimeout <= 0)
 	{
 		SV_ClientThink();
 		//host_client->cmd.time = max(host_client->cmd.time, sv.time);
@@ -2272,7 +2272,7 @@ void SV_Physics_ClientEntity(prvm_edict_t *ent)
 	case MOVETYPE_WALK:
 		SV_RunThink (ent);
 		// don't run physics here if running asynchronously
-		if (host_client->clmovement_skipphysicsframes <= 0)
+		if (host_client->clmovement_inputtimeout <= 0)
 			SV_WalkMove (ent);
 		break;
 	case MOVETYPE_TOSS:
@@ -2294,8 +2294,10 @@ void SV_Physics_ClientEntity(prvm_edict_t *ent)
 
 	// decrement the countdown variable used to decide when to go back to
 	// synchronous physics
-	if (host_client->clmovement_skipphysicsframes > 0)
-		host_client->clmovement_skipphysicsframes--;
+	if (host_client->clmovement_inputtimeout > sv.frametime)
+		host_client->clmovement_inputtimeout -= sv.frametime;
+	else
+		host_client->clmovement_inputtimeout = 0;
 
 	SV_CheckVelocity (ent);
 
