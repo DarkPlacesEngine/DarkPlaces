@@ -7178,7 +7178,10 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 					R_BuildLightMap(r_refdef.scene.worldentity, surfaces + j);
 	// don't do anything if there were no surfaces
 	if (!numsurfacelist)
+	{
+		rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
 		return;
+	}
 	R_QueueWorldSurfaceList(numsurfacelist, r_surfacelist, flagsmask, writedepth, depthonly);
 	GL_AlphaTest(false);
 
@@ -7260,7 +7263,10 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 		r_surfacelist[numsurfacelist++] = surfaces + model->sortedmodelsurfaces[i];
 	// don't do anything if there were no surfaces
 	if (!numsurfacelist)
+	{
+		rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
 		return;
+	}
 	// update lightmaps if needed
 	if (update)
 		for (j = model->firstmodelsurface, endj = model->firstmodelsurface + model->nummodelsurfaces;j < endj;j++)
@@ -7272,7 +7278,6 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 	// add to stats if desired
 	if (r_speeds.integer && !skysurfaces && !depthonly)
 	{
-		r_refdef.stats.entities++;
 		r_refdef.stats.entities_surfaces += numsurfacelist;
 		for (j = 0;j < numsurfacelist;j++)
 			r_refdef.stats.entities_triangles += r_surfacelist[j]->num_triangles;
