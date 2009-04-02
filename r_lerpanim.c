@@ -58,6 +58,10 @@ void R_LerpAnimation(entity_render_t *r)
 				f = (int) floor(sublerp);
 				sublerp -= f;
 				sub2 = f + 1;
+				if (sublerp < (1.0 / 65536.0f))
+					sublerp = 0;
+				if (sublerp > (65535.0f / 65536.0f))
+					sublerp = 1;
 				if (nolerp)
 					sublerp = 0;
 				if (scene->loop)
@@ -69,7 +73,7 @@ void R_LerpAnimation(entity_render_t *r)
 				sub2 = bound(0, sub2, (scene->framecount - 1)) + scene->firstframe;
 				d = sublerp * lerp;
 				// two framelerps produced from one animation
-				if (f != sub2 && d > 0)
+				if (d > 0)
 				{
 					for (i = 0;i < MAX_FRAMEBLENDS;i++)
 					{
