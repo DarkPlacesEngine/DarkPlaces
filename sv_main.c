@@ -2792,6 +2792,13 @@ void SV_SpawnServer (const char *server)
 	//Cvar_SetValue ("skill", (float)current_skill);
 	current_skill = (int)(skill.value + 0.5);
 
+	if(sv.csqc_progdata)
+	{
+		Con_DPrintf("Unloading CSQC data.\n");
+		Mem_Free(sv.csqc_progdata);
+		if(sv.csqc_progdata_deflated)
+			Mem_Free(sv.csqc_progdata_deflated);
+	}
 //
 // set up the new server
 //
