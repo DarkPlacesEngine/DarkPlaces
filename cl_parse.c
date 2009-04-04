@@ -560,24 +560,24 @@ static void QW_CL_RequestNextDownload(void)
 		if (!sv.active)
 			Mod_ClearUsed();
 		for (i = 1;i < MAX_MODELS && cl.model_name[i][0];i++)
-			Mod_FindName(cl.model_name[i]);
+			Mod_FindName(cl.model_name[i], cl.model_name[i][0] == '*' ? cl.model_name[1] : NULL);
 		// precache any models used by the client (this also marks them used)
-		cl.model_bolt = Mod_ForName("progs/bolt.mdl", false, false, false);
-		cl.model_bolt2 = Mod_ForName("progs/bolt2.mdl", false, false, false);
-		cl.model_bolt3 = Mod_ForName("progs/bolt3.mdl", false, false, false);
-		cl.model_beam = Mod_ForName("progs/beam.mdl", false, false, false);
+		cl.model_bolt = Mod_ForName("progs/bolt.mdl", false, false, NULL);
+		cl.model_bolt2 = Mod_ForName("progs/bolt2.mdl", false, false, NULL);
+		cl.model_bolt3 = Mod_ForName("progs/bolt3.mdl", false, false, NULL);
+		cl.model_beam = Mod_ForName("progs/beam.mdl", false, false, NULL);
 		Mod_PurgeUnused();
 
 		// now we try to load everything that is new
 
 		// world model
-		cl.model_precache[1] = Mod_ForName(cl.model_name[1], false, false, true);
+		cl.model_precache[1] = Mod_ForName(cl.model_name[1], false, false, NULL);
 		if (cl.model_precache[1]->Draw == NULL)
 			Con_Printf("Map %s could not be found or downloaded\n", cl.model_name[1]);
 
 		// normal models
 		for (i = 2;i < MAX_MODELS && cl.model_name[i][0];i++)
-			if ((cl.model_precache[i] = Mod_ForName(cl.model_name[i], false, false, false))->Draw == NULL)
+			if ((cl.model_precache[i] = Mod_ForName(cl.model_name[i], false, false, cl.model_name[i][0] == '*' ? cl.model_name[1] : NULL))->Draw == NULL)
 				Con_Printf("Model %s could not be found or downloaded\n", cl.model_name[i]);
 
 		// check memory integrity
@@ -1029,7 +1029,7 @@ void CL_BeginDownloads(qboolean aborteddownload)
 			if (cl.model_precache[cl.loadmodel_current] && cl.model_precache[cl.loadmodel_current]->Draw)
 				continue;
 			CL_KeepaliveMessage(true);
-			cl.model_precache[cl.loadmodel_current] = Mod_ForName(cl.model_name[cl.loadmodel_current], false, false, cl.loadmodel_current == 1);
+			cl.model_precache[cl.loadmodel_current] = Mod_ForName(cl.model_name[cl.loadmodel_current], false, false, cl.model_name[cl.loadmodel_current][0] == '*' ? cl.model_name[1] : NULL);
 			if (cl.model_precache[cl.loadmodel_current] && cl.model_precache[cl.loadmodel_current]->Draw && cl.loadmodel_current == 1)
 			{
 				// we now have the worldmodel so we can set up the game world
@@ -1102,7 +1102,7 @@ void CL_BeginDownloads(qboolean aborteddownload)
 			if (cl.model_precache[cl.downloadmodel_current] && cl.model_precache[cl.downloadmodel_current]->Draw)
 				continue;
 			CL_KeepaliveMessage(true);
-			if (strcmp(cl.model_name[cl.downloadmodel_current], "null") && !FS_FileExists(cl.model_name[cl.downloadmodel_current]))
+			if (cl.model_name[cl.downloadmodel_current][0] != '*' && strcmp(cl.model_name[cl.downloadmodel_current], "null") && !FS_FileExists(cl.model_name[cl.downloadmodel_current]))
 			{
 				if (cl.downloadmodel_current == 1)
 					Con_Printf("Map %s not found\n", cl.model_name[cl.downloadmodel_current]);
@@ -1116,7 +1116,7 @@ void CL_BeginDownloads(qboolean aborteddownload)
 					return;
 				}
 			}
-			cl.model_precache[cl.downloadmodel_current] = Mod_ForName(cl.model_name[cl.downloadmodel_current], false, false, cl.downloadmodel_current == 1);
+			cl.model_precache[cl.downloadmodel_current] = Mod_ForName(cl.model_name[cl.downloadmodel_current], false, false, cl.model_name[cl.downloadmodel_current][0] == '*' ? cl.model_name[1] : NULL);
 			if (cl.downloadmodel_current == 1)
 			{
 				// we now have the worldmodel so we can set up the game world
@@ -1445,6 +1445,10 @@ static void CL_SignonReply (void)
 		break;
 
 	case 4:
+		// after the level has been loaded, we shouldn't need the shaders, and
+		// if they are needed again they will be automatically loaded...
+		Mod_FreeQ3Shaders();
+
 		Con_ClearNotify();
 		if (COM_CheckParm("-profilegameonly"))
 			Sys_AllowProfiling(true);
@@ -1471,6 +1475,8 @@ void CL_ParseServerInfo (void)
 	{
 		SCR_BeginLoadingPlaque();
 		S_StopAllSounds();
+		// free q3 shaders so that any newly downloaded shaders will be active
+		Mod_FreeQ3Shaders();
 	}
 
 	// check memory integrity
@@ -1631,12 +1637,12 @@ void CL_ParseServerInfo (void)
 		if (!sv.active)
 			Mod_ClearUsed();
 		for (i = 1;i < nummodels;i++)
-			Mod_FindName(cl.model_name[i]);
+			Mod_FindName(cl.model_name[i], cl.model_name[i][0] == '*' ? cl.model_name[1] : NULL);
 		// precache any models used by the client (this also marks them used)
-		cl.model_bolt = Mod_ForName("progs/bolt.mdl", false, false, false);
-		cl.model_bolt2 = Mod_ForName("progs/bolt2.mdl", false, false, false);
-		cl.model_bolt3 = Mod_ForName("progs/bolt3.mdl", false, false, false);
-		cl.model_beam = Mod_ForName("progs/beam.mdl", false, false, false);
+		cl.model_bolt = Mod_ForName("progs/bolt.mdl", false, false, NULL);
+		cl.model_bolt2 = Mod_ForName("progs/bolt2.mdl", false, false, NULL);
+		cl.model_bolt3 = Mod_ForName("progs/bolt3.mdl", false, false, NULL);
+		cl.model_beam = Mod_ForName("progs/beam.mdl", false, false, NULL);
 		Mod_PurgeUnused();
 
 		// do the same for sounds
@@ -2593,7 +2599,7 @@ void CL_ParseTempEntity(void)
 
 	// LordHavoc: for compatibility with the Nehahra movie...
 		case TE_LIGHTNING4NEH:
-			CL_ParseBeam(Mod_ForName(MSG_ReadString(), true, false, false), false);
+			CL_ParseBeam(Mod_ForName(MSG_ReadString(), true, false, NULL), false);
 			break;
 
 		case TE_LAVASPLASH:
@@ -3659,7 +3665,7 @@ void CL_ParseServerMessage(void)
 					{
 						if (i >= 1 && i < MAX_MODELS)
 						{
-							dp_model_t *model = Mod_ForName(s, false, false, i == 1);
+							dp_model_t *model = Mod_ForName(s, false, false, s[0] == '*' ? cl.model_name[1] : NULL);
 							if (!model)
 								Con_DPrintf("svc_precache: Mod_ForName(\"%s\") failed\n", s);
 							cl.model_precache[i] = model;

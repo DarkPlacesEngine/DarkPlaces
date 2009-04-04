@@ -461,7 +461,7 @@ static void CL_ModelIndexList_f(void)
 
 	while(cl.model_precache[i] && i != MAX_MODELS)
 	{ // Valid Model
-		if(cl.model_precache[i]->loaded || cl.model_precache[i]->isworldmodel)
+		if(cl.model_precache[i]->loaded || i == 1)
 			Con_Printf("%3i: %-30s %-8s %-10i\n", i, cl.model_precache[i]->name, cl.model_precache[i]->modeldatatypestring, cl.model_precache[i]->surfmesh.num_triangles);
 		else
 			Con_Printf("%3i: %-30s %-30s\n", i, cl.model_precache[i]->name, "--no local model found--");

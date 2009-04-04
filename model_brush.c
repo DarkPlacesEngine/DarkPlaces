@@ -27,7 +27,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 
 //cvar_t r_subdivide_size = {CVAR_SAVE, "r_subdivide_size", "128", "how large water polygons should be (smaller values produce more polygons which give better warping effects)"};
-cvar_t halflifebsp = {0, "halflifebsp", "0", "indicates the current map is hlbsp format (useful to know because of different bounding box sizes)"};
 cvar_t r_novis = {0, "r_novis", "0", "draws whole level, see also sv_cullentities_pvs 0"};
 cvar_t r_picmipworld = {CVAR_SAVE, "r_picmipworld", "1", "whether gl_picmip shall apply to world textures too"};
 cvar_t r_nosurftextures = {0, "r_nosurftextures", "0", "pretends there was no texture lump found in the q1bsp/hlbsp loading (useful for debugging this rare case)"};
@@ -54,7 +53,6 @@ static texture_t mod_q1bsp_texture_water;
 void Mod_BrushInit(void)
 {
 //	Cvar_RegisterVariable(&r_subdivide_size);
-	Cvar_RegisterVariable(&halflifebsp);
 	Cvar_RegisterVariable(&r_novis);
 	Cvar_RegisterVariable(&r_picmipworld);
 	Cvar_RegisterVariable(&r_nosurftextures);
@@ -1487,17 +1485,14 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			// LordHavoc: HL sky textures are entirely different than quake
 			if (!loadmodel->brush.ishlbsp && !strncmp(tx->name, "sky", 3) && mtwidth == 256 && mtheight == 128)
 			{
-				if (loadmodel->isworldmodel)
+				data = loadimagepixelsbgra(tx->name, false, false);
+				if (data && image_width == 256 && image_height == 128)
 				{
-					data = loadimagepixelsbgra(tx->name, false, false);
-					if (data && image_width == 256 && image_height == 128)
-					{
-						R_Q1BSP_LoadSplitSky(data, image_width, image_height, 4);
-						Mem_Free(data);
-					}
-					else if (mtdata != NULL)
-						R_Q1BSP_LoadSplitSky(mtdata, mtwidth, mtheight, 1);
+					R_Q1BSP_LoadSplitSky(data, image_width, image_height, 4);
+					Mem_Free(data);
 				}
+				else if (mtdata != NULL)
+					R_Q1BSP_LoadSplitSky(mtdata, mtwidth, mtheight, 1);
 			}
 			else
 			{
@@ -3447,9 +3442,13 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	mod->brush.AmbientSoundLevelsForPoint = Mod_Q1BSP_AmbientSoundLevelsForPoint;
 	mod->brush.RoundUpToHullSize = Mod_Q1BSP_RoundUpToHullSize;
 	mod->brush.PointInLeaf = Mod_Q1BSP_PointInLeaf;
-
-	if (loadmodel->isworldmodel)
-		Cvar_SetValue("halflifebsp", mod->brush.ishlbsp);
+	mod->Draw = R_Q1BSP_Draw;
+	mod->DrawDepth = R_Q1BSP_DrawDepth;
+	mod->DrawDebug = R_Q1BSP_DrawDebug;
+	mod->GetLightInfo = R_Q1BSP_GetLightInfo;
+	mod->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
+	mod->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
+	mod->DrawLight = R_Q1BSP_DrawLight;
 
 // load into heap
 
@@ -3555,21 +3554,26 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		if (i > 0)
 		{
 			char name[10];
-			// LordHavoc: only register submodels if it is the world
-			// (prevents external bsp models from replacing world submodels with
-			//  their own)
-			if (!loadmodel->isworldmodel)
-				continue;
 			// duplicate the basic information
 			dpsnprintf(name, sizeof(name), "*%i", i);
-			mod = Mod_FindName(name);
+			mod = Mod_FindName(name, loadmodel->name);
 			// copy the base model to this one
 			*mod = *loadmodel;
 			// rename the clone back to its proper name
 			strlcpy(mod->name, name, sizeof(mod->name));
+			mod->brush.parentmodel = loadmodel;
 			// textures and memory belong to the main model
 			mod->texturepool = NULL;
 			mod->mempool = NULL;
+			mod->brush.TraceLineOfSight = NULL;
+			mod->brush.GetPVS = NULL;
+			mod->brush.FatPVS = NULL;
+			mod->brush.BoxTouchingPVS = NULL;
+			mod->brush.BoxTouchingLeafPVS = NULL;
+			mod->brush.BoxTouchingVisibleLeafs = NULL;
+			mod->brush.FindBoxClusters = NULL;
+			mod->brush.LightPoint = NULL;
+			mod->brush.AmbientSoundLevelsForPoint = NULL;
 		}
 
 		mod->brush.submodel = i;
@@ -3593,29 +3597,6 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		mod->sortedmodelsurfaces = (int *)datapointer;datapointer += mod->nummodelsurfaces * sizeof(int);
 		Mod_MakeSortedSurfaces(mod);
 
-		// this gets altered below if sky or water is used
-		mod->DrawSky = NULL;
-		mod->DrawAddWaterPlanes = NULL;
-		mod->Draw = R_Q1BSP_Draw;
-		mod->DrawDepth = R_Q1BSP_DrawDepth;
-		mod->DrawDebug = R_Q1BSP_DrawDebug;
-		mod->GetLightInfo = R_Q1BSP_GetLightInfo;
-		mod->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
-		mod->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
-		mod->DrawLight = R_Q1BSP_DrawLight;
-		if (i != 0)
-		{
-			mod->brush.TraceLineOfSight = NULL;
-			mod->brush.GetPVS = NULL;
-			mod->brush.FatPVS = NULL;
-			mod->brush.BoxTouchingPVS = NULL;
-			mod->brush.BoxTouchingLeafPVS = NULL;
-			mod->brush.BoxTouchingVisibleLeafs = NULL;
-			mod->brush.FindBoxClusters = NULL;
-			mod->brush.LightPoint = NULL;
-			mod->brush.AmbientSoundLevelsForPoint = NULL;
-		}
-
 		// copy the submodel bounds, then enlarge the yaw and rotated bounds according to radius
 		// (previously this code measured the radius of the vertices of surfaces in the submodel, but that broke submodels that contain only CLIP brushes, which do not produce surfaces)
 		VectorCopy(bm->mins, mod->normalmins);
@@ -3636,18 +3617,25 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		mod->radius = modelradius;
 		mod->radius2 = modelradius * modelradius;
 
+		// this gets altered below if sky or water is used
+		mod->DrawSky = NULL;
+		mod->DrawAddWaterPlanes = NULL;
+
 		// scan surfaces for sky and water and flag the submodel as possessing these features or not
 		// build lightstyle lists for quick marking of dirty lightmaps when lightstyles flicker
 		if (mod->nummodelsurfaces)
 		{
 			for (j = 0, surface = &mod->data_surfaces[mod->firstmodelsurface];j < mod->nummodelsurfaces;j++, surface++)
-			{
-				// we only need to have a drawsky function if it is used(usually only on world model)
 				if (surface->texture->basematerialflags & MATERIALFLAG_SKY)
-					mod->DrawSky = R_Q1BSP_DrawSky;
+					break;
+			if (j < mod->nummodelsurfaces)
+				mod->DrawSky = R_Q1BSP_DrawSky;
+
+			for (j = 0, surface = &mod->data_surfaces[mod->firstmodelsurface];j < mod->nummodelsurfaces;j++, surface++)
 				if (surface->texture->basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION))
-					mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
-			}
+					break;
+			if (j < mod->nummodelsurfaces)
+				mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
 
 			// build lightstyle update chains
 			// (used to rapidly mark lightmapupdateflags on many surfaces
@@ -4097,9 +4085,6 @@ void static Mod_Q2BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	i = LittleLong(header->version);
 	if (i != Q2BSPVERSION)
 		Host_Error("Mod_Q2BSP_Load: %s has wrong version number (%i, should be %i)", mod->name, i, Q2BSPVERSION);
-	mod->brush.ishlbsp = false;
-	if (loadmodel->isworldmodel)
-		Cvar_SetValue("halflifebsp", mod->brush.ishlbsp);
 
 	mod_base = (unsigned char *)header;
 
@@ -5827,9 +5812,6 @@ void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	i = LittleLong(header->version);
 	if (i != Q3BSPVERSION && i != Q3BSPVERSION_IG && i != Q3BSPVERSION_LIVE)
 		Host_Error("Mod_Q3BSP_Load: %s has wrong version number (%i, should be %i)", mod->name, i, Q3BSPVERSION);
-	mod->brush.ishlbsp = false;
-	if (loadmodel->isworldmodel)
-		Cvar_SetValue("halflifebsp", mod->brush.ishlbsp);
 
 	mod->soundfromcenter = true;
 	mod->TraceBox = Mod_Q3BSP_TraceBox;
@@ -5845,6 +5827,8 @@ void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	mod->brush.FindBoxClusters = Mod_Q1BSP_FindBoxClusters;
 	mod->brush.LightPoint = Mod_Q3BSP_LightPoint;
 	mod->brush.FindNonSolidLocation = Mod_Q1BSP_FindNonSolidLocation;
+	mod->brush.AmbientSoundLevelsForPoint = NULL;
+	mod->brush.RoundUpToHullSize = NULL;
 	mod->brush.PointInLeaf = Mod_Q1BSP_PointInLeaf;
 	mod->Draw = R_Q1BSP_Draw;
 	mod->DrawDepth = R_Q1BSP_DrawDepth;
@@ -5853,7 +5837,6 @@ void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	mod->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
 	mod->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	mod->DrawLight = R_Q1BSP_DrawLight;
-	mod->DrawAddWaterPlanes = NULL;
 
 	mod_base = (unsigned char *)header;
 
@@ -5952,16 +5935,14 @@ void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		if (i > 0)
 		{
 			char name[10];
-			// LordHavoc: only register submodels if it is the world
-			// (prevents external bsp models from replacing world submodels with
-			//  their own)
-			if (!loadmodel->isworldmodel)
-				continue;
 			// duplicate the basic information
 			dpsnprintf(name, sizeof(name), "*%i", i);
-			mod = Mod_FindName(name);
+			mod = Mod_FindName(name, loadmodel->name);
+			// copy the base model to this one
 			*mod = *loadmodel;
+			// rename the clone back to its proper name
 			strlcpy(mod->name, name, sizeof(mod->name));
+			mod->brush.parentmodel = loadmodel;
 			// textures and memory belong to the main model
 			mod->texturepool = NULL;
 			mod->mempool = NULL;
@@ -5973,7 +5954,7 @@ void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			mod->brush.BoxTouchingVisibleLeafs = NULL;
 			mod->brush.FindBoxClusters = NULL;
 			mod->brush.LightPoint = NULL;
-			mod->brush.FindNonSolidLocation = Mod_Q1BSP_FindNonSolidLocation;
+			mod->brush.AmbientSoundLevelsForPoint = NULL;
 		}
 		mod->brush.submodel = i;
 
@@ -6025,21 +6006,21 @@ void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		mod->radius = modelradius;
 		mod->radius2 = modelradius * modelradius;
 
+		// this gets altered below if sky or water is used
+		mod->DrawSky = NULL;
+		mod->DrawAddWaterPlanes = NULL;
+
 		for (j = 0;j < mod->nummodelsurfaces;j++)
 			if (mod->data_surfaces[j + mod->firstmodelsurface].texture->basematerialflags & MATERIALFLAG_SKY)
 				break;
 		if (j < mod->nummodelsurfaces)
 			mod->DrawSky = R_Q1BSP_DrawSky;
-		else
-			mod->DrawSky = NULL;
 
 		for (j = 0;j < mod->nummodelsurfaces;j++)
 			if (mod->data_surfaces[j + mod->firstmodelsurface].texture->basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION))
 				break;
 		if (j < mod->nummodelsurfaces)
 			mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
-		else
-			mod->DrawAddWaterPlanes = NULL;
 	}
 }
 

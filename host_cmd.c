@@ -933,7 +933,7 @@ void Host_Loadgame_f (void)
 					if (i >= 0 && i < MAX_MODELS)
 					{
 						strlcpy(sv.model_precache[i], com_token, sizeof(sv.model_precache[i]));
-						sv.models[i] = Mod_ForName (sv.model_precache[i], true, false, false);
+						sv.models[i] = Mod_ForName (sv.model_precache[i], true, false, sv.model_precache[i][0] == '*' ? sv.modelname : NULL);
 					}
 					else
 						Con_Printf("unsupported model %i \"%s\"\n", i, com_token);
@@ -2084,7 +2084,7 @@ void Host_Viewmodel_f (void)
 	if (!e)
 		return;
 
-	m = Mod_ForName (Cmd_Argv(1), false, true, false);
+	m = Mod_ForName (Cmd_Argv(1), false, true, NULL);
 	if (!m || !m->loaded || !m->Draw)
 	{
 		Con_Printf("viewmodel: can't load %s\n", Cmd_Argv(1));

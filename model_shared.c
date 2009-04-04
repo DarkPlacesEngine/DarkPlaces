@@ -54,13 +54,10 @@ static void mod_start(void)
 	int nummodels = Mem_ExpandableArray_IndexRange(&models);
 	dp_model_t *mod;
 
-	// parse the Q3 shader files
-	Mod_LoadQ3Shaders();
-
 	for (i = 0;i < nummodels;i++)
 		if ((mod = (dp_model_t*) Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0] && mod->name[0] != '*')
 			if (mod->used)
-				Mod_LoadModel(mod, true, false, mod->isworldmodel);
+				Mod_LoadModel(mod, true, false);
 }
 
 static void mod_shutdown(void)
@@ -73,7 +70,7 @@ static void mod_shutdown(void)
 		if ((mod = (dp_model_t*) Mem_ExpandableArray_RecordAtIndex(&models, i)) && (mod->loaded || mod->mempool))
 			Mod_UnloadModel(mod);
 
-	Mem_FreePool (&q3shaders_mem);
+	Mod_FreeQ3Shaders();
 }
 
 static void mod_newmap(void)
@@ -152,14 +149,14 @@ void Mod_RenderInit(void)
 void Mod_UnloadModel (dp_model_t *mod)
 {
 	char name[MAX_QPATH];
-	qboolean isworldmodel;
 	qboolean used;
+	dp_model_t *parentmodel;
 
 	if (developer_loading.integer)
 		Con_Printf("unloading model %s\n", mod->name);
 
 	strlcpy(name, mod->name, sizeof(name));
-	isworldmodel = mod->isworldmodel;
+	parentmodel = mod->brush.parentmodel;
 	used = mod->used;
 	if (mod->surfmesh.ebo3i)
 		R_Mesh_DestroyBufferObject(mod->surfmesh.ebo3i);
@@ -174,7 +171,7 @@ void Mod_UnloadModel (dp_model_t *mod)
 	memset(mod, 0, sizeof(dp_model_t));
 	// restore the fields we want to preserve
 	strlcpy(mod->name, name, sizeof(mod->name));
-	mod->isworldmodel = isworldmodel;
+	mod->brush.parentmodel = parentmodel;
 	mod->used = used;
 	mod->loaded = false;
 }
@@ -191,7 +188,7 @@ Mod_LoadModel
 Loads a model
 ==================
 */
-dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk, qboolean isworldmodel)
+dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk)
 {
 	int num;
 	unsigned int crc;
@@ -205,9 +202,6 @@ dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk, q
 	
 	if (!strcmp(mod->name, "null"))
 	{
-		if (mod->isworldmodel != isworldmodel)
-			mod->loaded = false;
-
 		if(mod->loaded)
 			return mod;
 
@@ -217,7 +211,6 @@ dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk, q
 		if (developer_loading.integer)
 			Con_Printf("loading model %s\n", mod->name);
 
-		mod->isworldmodel = isworldmodel;
 		mod->used = true;
 		mod->crc = -1;
 		mod->loaded = false;
@@ -245,12 +238,6 @@ dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk, q
 	buf = NULL;
 
 	// even if the model is loaded it still may need reloading...
-
-	// if the model is a worldmodel and is being referred to as a
-	// non-worldmodel here, then it needs reloading to get rid of the
-	// submodels
-	if (mod->isworldmodel != isworldmodel)
-		mod->loaded = false;
 
 	// if it is not loaded or checkdisk is true we need to calculate the crc
 	if (!mod->loaded || checkdisk)
@@ -283,7 +270,6 @@ dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk, q
 		Mod_UnloadModel(mod);
 
 	// load the model
-	mod->isworldmodel = isworldmodel;
 	mod->used = true;
 	mod->crc = crc;
 	// errors can prevent the corresponding mod->loaded = true;
@@ -298,15 +284,9 @@ dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk, q
 	VectorSet(mod->rotatedmins, -mod->radius, -mod->radius, -mod->radius);
 	VectorSet(mod->rotatedmaxs, mod->radius, mod->radius, mod->radius);
 
-	// if we're loading a worldmodel, then this is a level change
-	if (mod->isworldmodel)
+	if (!q3shaders_mem)
 	{
-		// clear out any stale submodels or worldmodels lying around
-		// if we did this clear before now, an error might abort loading and
-		// leave things in a bad state
-		Mod_RemoveStaleWorldModels(mod);
-		// reload q3 shaders, to make sure they are ready to go for this level
-		// (including any models loaded for this level)
+		// load q3 shaders for the first time, or after a level change
 		Mod_LoadQ3Shaders();
 	}
 
@@ -373,34 +353,20 @@ void Mod_PurgeUnused(void)
 	}
 }
 
-// only used during loading!
-void Mod_RemoveStaleWorldModels(dp_model_t *skip)
-{
-	int i;
-	int nummodels = Mem_ExpandableArray_IndexRange(&models);
-	dp_model_t *mod;
-	for (i = 0;i < nummodels;i++)
-	{
-		if ((mod = (dp_model_t*) Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->isworldmodel && mod->loaded && skip != mod)
-		{
-			Mod_UnloadModel(mod);
-			mod->isworldmodel = false;
-			mod->used = false;
-		}
-	}
-}
-
 /*
 ==================
 Mod_FindName
 
 ==================
 */
-dp_model_t *Mod_FindName(const char *name)
+dp_model_t *Mod_FindName(const char *name, const char *parentname)
 {
 	int i;
 	int nummodels;
 	dp_model_t *mod;
+
+	if (!parentname)
+		parentname = "";
 
 	// if we're not dedicatd, the renderer calls will crash without video
 	Host_StartVideo();
@@ -413,7 +379,7 @@ dp_model_t *Mod_FindName(const char *name)
 	// search the currently loaded models
 	for (i = 0;i < nummodels;i++)
 	{
-		if ((mod = (dp_model_t*) Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0] && !strcmp(mod->name, name))
+		if ((mod = (dp_model_t*) Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0] && !strcmp(mod->name, name) && ((!mod->brush.parentmodel && !parentname[0]) || (mod->brush.parentmodel && parentname[0] && !strcmp(mod->brush.parentmodel->name, parentname))))
 		{
 			mod->used = true;
 			return mod;
@@ -423,6 +389,10 @@ dp_model_t *Mod_FindName(const char *name)
 	// no match found, create a new one
 	mod = (dp_model_t *) Mem_ExpandableArray_AllocRecord(&models);
 	strlcpy(mod->name, name, sizeof(mod->name));
+	if (parentname[0])
+		mod->brush.parentmodel = Mod_FindName(parentname, NULL);
+	else
+		mod->brush.parentmodel = NULL;
 	mod->loaded = false;
 	mod->used = true;
 	return mod;
@@ -435,12 +405,12 @@ Mod_ForName
 Loads in a model for the given name
 ==================
 */
-dp_model_t *Mod_ForName(const char *name, qboolean crash, qboolean checkdisk, qboolean isworldmodel)
+dp_model_t *Mod_ForName(const char *name, qboolean crash, qboolean checkdisk, const char *parentname)
 {
 	dp_model_t *model;
-	model = Mod_FindName(name);
-	if (model->name[0] != '*' && (!model->loaded || checkdisk))
-		Mod_LoadModel(model, crash, checkdisk, isworldmodel);
+	model = Mod_FindName(name, parentname);
+	if (!model->loaded || checkdisk)
+		Mod_LoadModel(model, crash, checkdisk);
 	return model;
 }
 
@@ -458,7 +428,7 @@ void Mod_Reload(void)
 	dp_model_t *mod;
 	for (i = 0;i < nummodels;i++)
 		if ((mod = (dp_model_t *) Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0] && mod->name[0] != '*' && mod->used)
-			Mod_LoadModel(mod, true, true, mod->isworldmodel);
+			Mod_LoadModel(mod, true, true);
 }
 
 unsigned char *mod_base;
@@ -479,8 +449,15 @@ static void Mod_Print(void)
 
 	Con_Print("Loaded models:\n");
 	for (i = 0;i < nummodels;i++)
-		if ((mod = (dp_model_t *) Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0])
-			Con_Printf("%4iK %s\n", mod->mempool ? (int)((mod->mempool->totalsize + 1023) / 1024) : 0, mod->name);
+	{
+		if ((mod = (dp_model_t *) Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0] && mod->name[0] != '*')
+		{
+			if (mod->brush.numsubmodels)
+				Con_Printf("%4iK %s (%i submodels)\n", mod->mempool ? (int)((mod->mempool->totalsize + 1023) / 1024) : 0, mod->name, mod->brush.numsubmodels);
+			else
+				Con_Printf("%4iK %s\n", mod->mempool ? (int)((mod->mempool->totalsize + 1023) / 1024) : 0, mod->name);
+		}
+	}
 }
 
 /*
@@ -491,7 +468,7 @@ Mod_Precache
 static void Mod_Precache(void)
 {
 	if (Cmd_Argc() == 2)
-		Mod_ForName(Cmd_Argv(1), false, true, cl.worldmodel && !strcasecmp(Cmd_Argv(1), cl.worldmodel->name));
+		Mod_ForName(Cmd_Argv(1), false, true, Cmd_Argv(1)[0] == '*' ? cl.model_name[1] : NULL);
 	else
 		Con_Print("usage: modelprecache <filename>\n");
 }
@@ -1219,18 +1196,9 @@ q3wavefunc_t Mod_LoadQ3Shaders_EnumerateWaveFunc(const char *s)
 	return Q3WAVEFUNC_NONE;
 }
 
-static void Q3Shaders_Clear()
+void Mod_FreeQ3Shaders(void)
 {
-	/* Just clear out everything... */
-	Mem_FreePool (&q3shaders_mem);
-	/* ...and alloc the structs again. */
-	q3shaders_mem = Mem_AllocPool("q3shaders", 0, NULL);
-	q3shader_data = (q3shader_data_t*)Mem_Alloc (q3shaders_mem,
-		sizeof (q3shader_data_t));
-	Mem_ExpandableArray_NewArray (&q3shader_data->hash_entries,
-		q3shaders_mem, sizeof (q3shader_hash_entry_t), 256);
-	Mem_ExpandableArray_NewArray (&q3shader_data->char_ptrs,
-		q3shaders_mem, sizeof (char**), 256);
+	Mem_FreePool(&q3shaders_mem);
 }
 
 static void Q3Shader_AddToHash (q3shaderinfo_t* shader)
@@ -1280,7 +1248,15 @@ void Mod_LoadQ3Shaders(void)
 	int numparameters;
 	char parameter[TEXTURE_MAXFRAMES + 4][Q3PATHLENGTH];
 
-	Q3Shaders_Clear();
+	Mod_FreeQ3Shaders();
+
+	q3shaders_mem = Mem_AllocPool("q3shaders", 0, NULL);
+	q3shader_data = (q3shader_data_t*)Mem_Alloc (q3shaders_mem,
+		sizeof (q3shader_data_t));
+	Mem_ExpandableArray_NewArray (&q3shader_data->hash_entries,
+		q3shaders_mem, sizeof (q3shader_hash_entry_t), 256);
+	Mem_ExpandableArray_NewArray (&q3shader_data->char_ptrs,
+		q3shaders_mem, sizeof (char**), 256);
 
 	search = FS_Search("scripts/*.shader", true, false);
 	if (!search)
@@ -1774,8 +1750,12 @@ void Mod_LoadQ3Shaders(void)
 
 q3shaderinfo_t *Mod_LookupQ3Shader(const char *name)
 {
-	unsigned short hash = CRC_Block_CaseInsensitive ((const unsigned char *)name, strlen (name));
-	q3shader_hash_entry_t* entry = q3shader_data->hash + (hash % Q3SHADER_HASH_SIZE);
+	unsigned short hash;
+	q3shader_hash_entry_t* entry;
+	if (!q3shaders_mem)
+		Mod_LoadQ3Shaders();
+	hash = CRC_Block_CaseInsensitive ((const unsigned char *)name, strlen (name));
+	entry = q3shader_data->hash + (hash % Q3SHADER_HASH_SIZE);
 	while (entry != NULL)
 	{
 		if (strcasecmp (entry->shader.name, name) == 0)
@@ -2558,7 +2538,14 @@ static void Mod_Decompile_f(void)
 	strlcpy(inname, Cmd_Argv(1), sizeof(inname));
 	FS_StripExtension(inname, basename, sizeof(basename));
 
-	mod = Mod_ForName(inname, false, true, cl.worldmodel && !strcasecmp(inname, cl.worldmodel->name));
+	mod = Mod_ForName(inname, false, true, inname[0] == '*' ? cl.model_name[1] : NULL);
+	if (mod->brush.submodel)
+	{
+		// if we're decompiling a submodel, be sure to give it a proper name based on its parent
+		FS_StripExtension(cl.model_name[1], outname, sizeof(outname));
+		dpsnprintf(basename, sizeof(basename), "%s/%s", outname, mod->name);
+		outname[0] = 0;
+	}
 	if (!mod)
 	{
 		Con_Print("No such model\n");
