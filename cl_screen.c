@@ -1678,6 +1678,7 @@ static float SCR_DrawLoadingStack_r(loadingscreenstack_t *s, float y)
 			len = strlen(s->msg);
 			x = (vid_conwidth.integer - DrawQ_TextWidth_Font(s->msg, len, true, FONT_INFOBAR) * size) / 2;
 			y -= size;
+			DrawQ_Fill(0, y, vid_conwidth.integer, size, 0, 0, 0, 1, 0);
 			DrawQ_String_Font(x, y, s->msg, len, size, size, 1, 1, 1, 1, 0, NULL, true, FONT_INFOBAR);
 			total += size;
 		}
