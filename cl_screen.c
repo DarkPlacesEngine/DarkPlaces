@@ -1787,6 +1787,9 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 	//VID_Finish();
 	// however this IS necessary on Windows Vista
 	qglFinish();
+
+	// this goes into the event loop, and should prevent unresponsive cursor on vista
+	Sys_SendKeyEvents();
 }
 
 extern cvar_t cl_minfps;
