@@ -1810,6 +1810,9 @@ static void SCR_DrawLoadingScreen_SharedFinish (qboolean clear)
 
 void SCR_UpdateLoadingScreen (qboolean clear)
 {
+	keydest_t	old_key_dest;
+	int			old_key_consoleactive;
+
 	if(loadingscreentime != realtime)
 	{
 		loadingscreentime = realtime;
@@ -1837,7 +1840,13 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 	SCR_DrawLoadingScreen_SharedFinish(clear);
 
 	// this goes into the event loop, and should prevent unresponsive cursor on vista
+	old_key_dest = key_dest;
+	old_key_consoleactive = key_consoleactive;
+	key_dest = key_void;
+	key_consoleactive = false;
 	Sys_SendKeyEvents();
+	key_dest = old_key_dest;
+	key_consoleactive = old_key_consoleactive;
 }
 
 extern cvar_t cl_minfps;
