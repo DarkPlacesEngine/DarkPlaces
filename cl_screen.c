@@ -1623,6 +1623,12 @@ static double loadingscreentime = -1;
 static qboolean loadingscreencleared = false;
 static float loadingscreenheight = 0;
 
+void SCR_UpdateLoadingScreenIfShown()
+{
+	if(realtime == loadingscreentime)
+		SCR_UpdateLoadingScreen(loadingscreencleared);
+}
+
 void SCR_PushLoadingScreen (qboolean redraw, const char *msg, float len_in_parent)
 {
 	loadingscreenstack_t *s = (loadingscreenstack_t *) Z_Malloc(sizeof(loadingscreenstack_t));
@@ -1645,8 +1651,8 @@ void SCR_PushLoadingScreen (qboolean redraw, const char *msg, float len_in_paren
 		s->absolute_loading_amount_len = 1;
 	}
 
-	if(redraw && realtime == loadingscreentime)
-		SCR_UpdateLoadingScreen(loadingscreencleared);
+	if(redraw)
+		SCR_UpdateLoadingScreenIfShown();
 }
 
 void SCR_PopLoadingScreen (qboolean redraw)
@@ -1657,8 +1663,8 @@ void SCR_PopLoadingScreen (qboolean redraw)
 		s->prev->relative_completion = (s->absolute_loading_amount_min + s->absolute_loading_amount_len - s->prev->absolute_loading_amount_min) / s->prev->absolute_loading_amount_len;
 	Z_Free(s);
 
-	if(redraw && realtime == loadingscreentime)
-		SCR_UpdateLoadingScreen(loadingscreencleared);
+	if(redraw)
+		SCR_UpdateLoadingScreenIfShown();
 }
 
 static float SCR_DrawLoadingStack_r(loadingscreenstack_t *s, float y)

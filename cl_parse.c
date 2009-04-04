@@ -297,6 +297,8 @@ void CL_KeepaliveMessage (qboolean readmessages)
 	qboolean oldbadread;
 	sizebuf_t old;
 
+	SCR_UpdateLoadingScreenIfShown();
+
 	// no need if server is local and definitely not if this is a demo
 	if (!cls.netcon || cls.protocol == PROTOCOL_QUAKEWORLD || cls.signon >= SIGNONS)
 		return;
