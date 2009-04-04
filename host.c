@@ -60,6 +60,7 @@ double host_starttime = 0;
 cvar_t host_framerate = {0, "host_framerate","0", "locks frame timing to this value in seconds, 0.05 is 20fps for example, note that this can easily run too fast, use cl_maxfps if you want to limit your framerate instead, or sys_ticrate to limit server speed"};
 // shows time used by certain subsystems
 cvar_t host_speeds = {0, "host_speeds","0", "reports how much time is used in server/graphics/sound"};
+cvar_t host_sleep = {0, "host_sleep","1", "gives up some processing time to other applications each frame, value in milliseconds"};
 cvar_t cl_minfps = {CVAR_SAVE, "cl_minfps", "40", "minimum fps target - while the rendering performance is below this, it will drift toward lower quality"};
 cvar_t cl_minfps_fade = {CVAR_SAVE, "cl_minfps_fade", "0.2", "how fast the quality adapts to varying framerate"};
 cvar_t cl_minfps_qualitymax = {CVAR_SAVE, "cl_minfps_qualitymax", "1", "highest allowed drawdistance multiplier"};
@@ -212,6 +213,7 @@ static void Host_InitLocal (void)
 
 	Cvar_RegisterVariable (&host_framerate);
 	Cvar_RegisterVariable (&host_speeds);
+	Cvar_RegisterVariable (&host_sleep);
 	Cvar_RegisterVariable (&cl_minfps);
 	Cvar_RegisterVariable (&cl_minfps_fade);
 	Cvar_RegisterVariable (&cl_minfps_qualitymax);
@@ -912,6 +914,9 @@ void Host_Main(void)
 				Con_Printf("%6ius total %6ius server %6ius gfx %6ius snd\n",
 							pass1+pass2+pass3, pass1, pass2, pass3);
 			}
+			wait = bound(0, host_sleep.value * 1000, 100000);
+			if (wait >= 1)
+				Sys_Sleep((int)wait);
 		}
 
 		// if there is some time remaining from this frame, reset the timers
