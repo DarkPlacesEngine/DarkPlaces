@@ -32,8 +32,8 @@ void SCR_BeginLoadingPlaque (void);
 void SCR_UpdateLoadingScreen(qboolean clear);
 
 // pushes an item on the loading screen
-void SCR_PushLoadingScreen (const char *msg, float len_in_parent);
-void SCR_PopLoadingScreen ();
+void SCR_PushLoadingScreen (qboolean redraw, const char *msg, float len_in_parent);
+void SCR_PopLoadingScreen (qboolean redraw);
 
 extern float scr_con_current; // current height of displayed console
 
