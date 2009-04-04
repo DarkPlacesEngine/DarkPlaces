@@ -1047,6 +1047,8 @@ qboolean Image_Compress(const char *imagename, size_t maxsize, void **buf, size_
 	// try to compress it to JPEG
 	*buf = Z_Malloc(maxsize);
 	*size = JPEG_SaveImage_to_Buffer((char *) *buf, maxsize, image_width, image_height, newimagedata);
+	Mem_Free(newimagedata);
+
 	if(!*size)
 	{
 		Z_Free(*buf);
