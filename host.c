@@ -549,14 +549,6 @@ void Host_ShutdownServer(void)
 
 	NetConn_CloseServerPorts();
 
-	if(sv.csqc_progdata)
-	{
-		Con_DPrintf("Unloading CSQC data.\n");
-		Mem_Free(sv.csqc_progdata);
-		if(sv.csqc_progdata_deflated)
-			Mem_Free(sv.csqc_progdata_deflated);
-	}
-
 	sv.active = false;
 //
 // clear structures
