@@ -1609,12 +1609,91 @@ void SCR_DrawScreen (void)
 	R_Mesh_Finish();
 }
 
+typedef struct loadingscreenstack_s
+{
+	struct loadingscreenstack_s *prev;
+	char msg[MAX_QPATH];
+	float absolute_loading_amount_min; // this corresponds to relative completion 0 of this item
+	float absolute_loading_amount_len; // this corresponds to relative completion 1 of this item
+	float relative_completion; // 0 .. 1
+}
+loadingscreenstack_t;
+static loadingscreenstack_t *loadingscreenstack = NULL;
+
+void SCR_PushLoadingScreen (const char *msg, float len_in_parent)
+{
+	loadingscreenstack_t *s = (loadingscreenstack_t *) Z_Malloc(sizeof(loadingscreenstack_t));
+	s->prev = loadingscreenstack;
+	loadingscreenstack = s;
+
+	strlcpy(s->msg, msg, sizeof(s->msg));
+	s->relative_completion = 0;
+
+	if(s->prev)
+	{
+		s->absolute_loading_amount_min = s->prev->absolute_loading_amount_min + s->prev->absolute_loading_amount_len * s->prev->relative_completion;
+		s->absolute_loading_amount_len =                                        s->prev->absolute_loading_amount_len * len_in_parent;
+	}
+	else
+	{
+		s->absolute_loading_amount_min = 0;
+		s->absolute_loading_amount_len = 1;
+	}
+
+	SCR_UpdateLoadingScreen(true);
+}
+
+void SCR_PopLoadingScreen ()
+{
+	loadingscreenstack_t *s = loadingscreenstack;
+	loadingscreenstack = s->prev;
+	if(s->prev)
+		s->prev->relative_completion = (s->absolute_loading_amount_min + s->absolute_loading_amount_len - s->prev->absolute_loading_amount_min) / s->prev->absolute_loading_amount_len;
+	Z_Free(s);
+	SCR_UpdateLoadingScreen(true);
+}
+
+static float SCR_DrawLoadingStack_r(loadingscreenstack_t *s, float y)
+{
+	float size = 8;
+	float x;
+	size_t len;
+	float total;
+
+	total = 0;
+	if(s)
+	{
+		if(!s->prev || strcmp(s->msg, s->prev->msg))
+		{
+			len = strlen(s->msg);
+			x = (vid_conwidth.integer - DrawQ_TextWidth_Font(s->msg, len, true, FONT_INFOBAR) * size) / 2;
+			y -= size;
+			DrawQ_String_Font(x, y, s->msg, len, size, size, 1, 1, 1, 1, 0, NULL, true, FONT_INFOBAR);
+			total += size;
+		}
+		total += SCR_DrawLoadingStack_r(s->prev, y);
+	}
+	return total;
+}
+
+static void SCR_DrawLoadingStack()
+{
+	float height;
+	height = SCR_DrawLoadingStack_r(loadingscreenstack, vid_conheight.integer);
+	if(loadingscreenstack)
+	{
+		height = 32; // sorry, using the normal one is ugly
+		DrawQ_Fill((vid_conwidth.integer + 2) * loadingscreenstack->absolute_loading_amount_min - 2, vid_conheight.integer - height, 2, height, 1, 0, 0, 1, DRAWFLAG_ADDITIVE);
+	}
+}
+
 void SCR_UpdateLoadingScreen (qboolean clear)
 {
 	float x, y;
 	cachepic_t *pic;
 	float vertex3f[12];
 	float texcoord2f[8];
+
 	// don't do anything if not initialized yet
 	if (vid_hidden || !scr_refresh.integer)
 		return;
@@ -1662,17 +1741,21 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 	texcoord2f[2] = 1;texcoord2f[3] = 0;
 	texcoord2f[4] = 1;texcoord2f[5] = 1;
 	texcoord2f[6] = 0;texcoord2f[7] = 1;
+
 	if (vid.stereobuffer)
 	{
 		qglDrawBuffer(GL_FRONT_LEFT);
 		R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
+		SCR_DrawLoadingStack();
 		qglDrawBuffer(GL_FRONT_RIGHT);
 		R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
+		SCR_DrawLoadingStack();
 	}
 	else
 	{
 		qglDrawBuffer(GL_FRONT);
 		R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
+		SCR_DrawLoadingStack();
 	}
 	R_Mesh_Finish();
 	// refresh
