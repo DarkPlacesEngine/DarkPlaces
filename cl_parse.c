@@ -1045,6 +1045,13 @@ void CL_BeginDownloads(qboolean aborteddownload)
 				continue;
 			}
 			CL_KeepaliveMessage(true);
+
+			if(cl.loadmodel_current == 1)
+			{
+				// they'll be soon loaded, but make sure we apply freshly downloaded shaders from a curled pk3
+				Mod_FreeQ3Shaders();
+			}
+
 			cl.model_precache[cl.loadmodel_current] = Mod_ForName(cl.model_name[cl.loadmodel_current], false, false, cl.model_name[cl.loadmodel_current][0] == '*' ? cl.model_name[1] : NULL);
 			SCR_PopLoadingScreen(false);
 			if (cl.model_precache[cl.loadmodel_current] && cl.model_precache[cl.loadmodel_current]->Draw && cl.loadmodel_current == 1)
@@ -1109,9 +1116,11 @@ void CL_BeginDownloads(qboolean aborteddownload)
 		{
 			if (aborteddownload)
 			{
+
 				if (cl.downloadmodel_current == 1)
 				{
 					// the worldmodel failed, but we need to set up anyway
+					Mod_FreeQ3Shaders();
 					CL_SetupWorldModel();
 					if (!cl.loadfinished && cl_joinbeforedownloadsfinish.integer)
 					{
@@ -1141,6 +1150,13 @@ void CL_BeginDownloads(qboolean aborteddownload)
 					return;
 				}
 			}
+
+			if(cl.loadmodel_current == 1)
+			{
+				// they'll be soon loaded, but make sure we apply freshly downloaded shaders from a curled pk3
+				Mod_FreeQ3Shaders();
+			}
+
 			cl.model_precache[cl.downloadmodel_current] = Mod_ForName(cl.model_name[cl.downloadmodel_current], false, false, cl.model_name[cl.downloadmodel_current][0] == '*' ? cl.model_name[1] : NULL);
 			if (cl.downloadmodel_current == 1)
 			{
