@@ -1553,7 +1553,7 @@ static void M_Menu_Options_AdjustSliders (int dir)
 	else if (options_cursor == optnum++) ;
 	else if (options_cursor == optnum++) ;
 	else if (options_cursor == optnum++) ;
-	else if (options_cursor == optnum++) Cvar_SetValueQuick(&crosshair, bound(0, crosshair.integer + dir, 6));
+	else if (options_cursor == optnum++) Cvar_SetValueQuick(&crosshair, bound(0, crosshair.integer + dir, 7));
 	else if (options_cursor == optnum++) Cvar_SetValueQuick(&sensitivity, bound(1, sensitivity.value + dir * 0.5, 50));
 	else if (options_cursor == optnum++) Cvar_SetValueQuick(&m_pitch, -m_pitch.value);
 	else if (options_cursor == optnum++) Cvar_SetValueQuick(&scr_fov, bound(1, scr_fov.integer + dir * 1, 170));
@@ -1642,7 +1642,7 @@ static void M_Options_Draw (void)
 	M_Options_PrintCommand( "         Go to console", true);
 	M_Options_PrintCommand( "     Reset to defaults", true);
 	M_Options_PrintCommand( "     Change Video Mode", true);
-	M_Options_PrintSlider(  "             Crosshair", true, crosshair.value, 0, 5);
+	M_Options_PrintSlider(  "             Crosshair", true, crosshair.value, 0, 7);
 	M_Options_PrintSlider(  "           Mouse Speed", true, sensitivity.value, 1, 50);
 	M_Options_PrintCheckbox("          Invert Mouse", true, m_pitch.value < 0);
 	M_Options_PrintSlider(  "         Field of View", true, scr_fov.integer, 1, 170);
