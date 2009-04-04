@@ -1619,8 +1619,9 @@ typedef struct loadingscreenstack_s
 }
 loadingscreenstack_t;
 static loadingscreenstack_t *loadingscreenstack = NULL;
+static double loadingscreentime;
 
-void SCR_PushLoadingScreen (const char *msg, float len_in_parent)
+void SCR_PushLoadingScreen (qboolean redraw, const char *msg, float len_in_parent)
 {
 	loadingscreenstack_t *s = (loadingscreenstack_t *) Z_Malloc(sizeof(loadingscreenstack_t));
 	s->prev = loadingscreenstack;
@@ -1632,7 +1633,9 @@ void SCR_PushLoadingScreen (const char *msg, float len_in_parent)
 	if(s->prev)
 	{
 		s->absolute_loading_amount_min = s->prev->absolute_loading_amount_min + s->prev->absolute_loading_amount_len * s->prev->relative_completion;
-		s->absolute_loading_amount_len =                                        s->prev->absolute_loading_amount_len * len_in_parent;
+		s->absolute_loading_amount_len = s->prev->absolute_loading_amount_len * len_in_parent;
+		if(s->absolute_loading_amount_len > s->prev->absolute_loading_amount_min + s->prev->absolute_loading_amount_len - s->absolute_loading_amount_min)
+			s->absolute_loading_amount_len = s->prev->absolute_loading_amount_min + s->prev->absolute_loading_amount_len - s->absolute_loading_amount_min;
 	}
 	else
 	{
@@ -1640,17 +1643,20 @@ void SCR_PushLoadingScreen (const char *msg, float len_in_parent)
 		s->absolute_loading_amount_len = 1;
 	}
 
-	SCR_UpdateLoadingScreen(true);
+	if(redraw && realtime == loadingscreentime)
+		SCR_UpdateLoadingScreen(true);
 }
 
-void SCR_PopLoadingScreen ()
+void SCR_PopLoadingScreen (qboolean redraw)
 {
 	loadingscreenstack_t *s = loadingscreenstack;
 	loadingscreenstack = s->prev;
 	if(s->prev)
 		s->prev->relative_completion = (s->absolute_loading_amount_min + s->absolute_loading_amount_len - s->prev->absolute_loading_amount_min) / s->prev->absolute_loading_amount_len;
 	Z_Free(s);
-	SCR_UpdateLoadingScreen(true);
+
+	if(redraw && realtime == loadingscreentime)
+		SCR_UpdateLoadingScreen(true);
 }
 
 static float SCR_DrawLoadingStack_r(loadingscreenstack_t *s, float y)
@@ -1679,11 +1685,27 @@ static float SCR_DrawLoadingStack_r(loadingscreenstack_t *s, float y)
 static void SCR_DrawLoadingStack()
 {
 	float height;
+	float verts[12];
+	float colors[16];
 	height = SCR_DrawLoadingStack_r(loadingscreenstack, vid_conheight.integer);
 	if(loadingscreenstack)
 	{
-		height = 32; // sorry, using the normal one is ugly
-		DrawQ_Fill((vid_conwidth.integer + 2) * loadingscreenstack->absolute_loading_amount_min - 2, vid_conheight.integer - height, 2, height, 1, 0, 0, 1, DRAWFLAG_ADDITIVE);
+		// height = 32; // sorry, using the normal one is ugly
+		//DrawQ_Fill((vid_conwidth.integer + 2) * loadingscreenstack->absolute_loading_amount_min - 2, vid_conheight.integer - height, 2, height, 1, 0, 0, 1, DRAWFLAG_ADDITIVE);
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+		GL_Color(1, 1, 1, 1);
+		R_Mesh_VertexPointer(verts, 0, 0);
+		R_Mesh_ColorPointer(colors, 0, 0);
+		R_Mesh_ResetTextureState();
+		R_SetupGenericShader(false);
+		verts[2] = verts[5] = verts[8] = verts[11] = 0;
+		verts[0] = verts[9] = (vid_conwidth.integer + 2) * loadingscreenstack->absolute_loading_amount_min - 2;
+		verts[1] = verts[4] = vid_conheight.integer - 32;
+		verts[3] = verts[6] = (vid_conwidth.integer + 2) * loadingscreenstack->absolute_loading_amount_min;
+		verts[7] = verts[10] = vid_conheight.integer;
+		colors[0] = colors[1] = colors[2] = colors[4] = colors[5] = colors[6] = colors[8] = colors[9] = colors[10] = colors[11] = colors[12] = colors[13] = colors[14] = colors[15] = 1;
+		colors[3] = colors[7] = 0;
+		R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
 	}
 }
 
@@ -1693,6 +1715,8 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 	cachepic_t *pic;
 	float vertex3f[12];
 	float texcoord2f[8];
+
+	loadingscreentime = realtime;
 
 	// don't do anything if not initialized yet
 	if (vid_hidden || !scr_refresh.integer)

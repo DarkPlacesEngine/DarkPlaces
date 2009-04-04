@@ -1023,17 +1023,34 @@ void CL_BeginDownloads(qboolean aborteddownload)
 	if (cl.loadmodel_current < cl.loadmodel_total)
 	{
 		// loading models
-
+		if(cl.loadmodel_current == 1)
+		{
+			// worldmodel counts as 16 models (15 + world model setup), for better progress bar
+			SCR_PushLoadingScreen(false, "Loading precached models", (cl.loadmodel_total + 15) / (float) (cl.loadmodel_total + cl.loadsound_total + 15));
+			SCR_BeginLoadingPlaque();
+		}
 		for (;cl.loadmodel_current < cl.loadmodel_total;cl.loadmodel_current++)
 		{
+			SCR_PushLoadingScreen(true, cl.model_name[cl.loadmodel_current], (cl.loadmodel_current == 1 ? 15.0 : 1.0) / cl.loadmodel_total);
 			if (cl.model_precache[cl.loadmodel_current] && cl.model_precache[cl.loadmodel_current]->Draw)
+			{
+				SCR_PopLoadingScreen(false);
+				if(cl.loadmodel_current == 1)
+				{
+					SCR_PushLoadingScreen(false, cl.model_name[cl.loadmodel_current], 1.0 / cl.loadmodel_total);
+					SCR_PopLoadingScreen(false);
+				}
 				continue;
+			}
 			CL_KeepaliveMessage(true);
 			cl.model_precache[cl.loadmodel_current] = Mod_ForName(cl.model_name[cl.loadmodel_current], false, false, cl.model_name[cl.loadmodel_current][0] == '*' ? cl.model_name[1] : NULL);
+			SCR_PopLoadingScreen(false);
 			if (cl.model_precache[cl.loadmodel_current] && cl.model_precache[cl.loadmodel_current]->Draw && cl.loadmodel_current == 1)
 			{
 				// we now have the worldmodel so we can set up the game world
+				SCR_PushLoadingScreen(true, "world model setup", 1.0 / cl.loadmodel_total);
 				CL_SetupWorldModel();
+				SCR_PopLoadingScreen(true);
 				if (!cl.loadfinished && cl_joinbeforedownloadsfinish.integer)
 				{
 					cl.loadfinished = true;
@@ -1043,23 +1060,29 @@ void CL_BeginDownloads(qboolean aborteddownload)
 				}
 			}
 		}
-
+		SCR_PopLoadingScreen(false);
 		// finished loading models
 	}
 
 	if (cl.loadsound_current < cl.loadsound_total)
 	{
 		// loading sounds
-
+		if(cl.loadsound_current == 1)
+			SCR_PushLoadingScreen(false, "Loading precached sounds", cl.loadsound_total / (float) (cl.loadmodel_total + cl.loadsound_total + 15));
 		for (;cl.loadsound_current < cl.loadsound_total;cl.loadsound_current++)
 		{
+			SCR_PushLoadingScreen(true, cl.sound_name[cl.loadsound_current], 1.0 / cl.loadsound_total);
 			if (cl.sound_precache[cl.loadsound_current] && S_IsSoundPrecached(cl.sound_precache[cl.loadsound_current]))
+			{
+				SCR_PopLoadingScreen(false);
 				continue;
+			}
 			CL_KeepaliveMessage(true);
 			// Don't lock the sfx here, S_ServerSounds already did that
 			cl.sound_precache[cl.loadsound_current] = S_PrecacheSound(cl.sound_name[cl.loadsound_current], false, false);
+			SCR_PopLoadingScreen(false);
 		}
-
+		SCR_PopLoadingScreen(false);
 		// finished loading sounds
 	}
 
@@ -1169,6 +1192,8 @@ void CL_BeginDownloads(qboolean aborteddownload)
 		// finished loading sounds
 	}
 
+	SCR_PopLoadingScreen(false);
+
 	if (!cl.loadfinished)
 	{
 		cl.loadfinished = true;
@@ -1189,7 +1214,10 @@ void CL_BeginDownloads_f(void)
 	if(cl.loadbegun)
 		Con_Printf("cl_begindownloads is only valid once per match\n");
 	else
+	{
+		SCR_PushLoadingScreen(false, "Loading precaches", 1);
 		CL_BeginDownloads(false);
+	}
 }
 
 void CL_StopDownload(int size, int crc)
