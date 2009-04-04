@@ -1619,7 +1619,9 @@ typedef struct loadingscreenstack_s
 }
 loadingscreenstack_t;
 static loadingscreenstack_t *loadingscreenstack = NULL;
-static double loadingscreentime;
+static double loadingscreentime = -1;
+static qboolean loadingscreencleared = false;
+static float loadingscreenheight = 0;
 
 void SCR_PushLoadingScreen (qboolean redraw, const char *msg, float len_in_parent)
 {
@@ -1644,7 +1646,7 @@ void SCR_PushLoadingScreen (qboolean redraw, const char *msg, float len_in_paren
 	}
 
 	if(redraw && realtime == loadingscreentime)
-		SCR_UpdateLoadingScreen(true);
+		SCR_UpdateLoadingScreen(loadingscreencleared);
 }
 
 void SCR_PopLoadingScreen (qboolean redraw)
@@ -1656,7 +1658,7 @@ void SCR_PopLoadingScreen (qboolean redraw)
 	Z_Free(s);
 
 	if(redraw && realtime == loadingscreentime)
-		SCR_UpdateLoadingScreen(true);
+		SCR_UpdateLoadingScreen(loadingscreencleared);
 }
 
 static float SCR_DrawLoadingStack_r(loadingscreenstack_t *s, float y)
@@ -1669,6 +1671,8 @@ static float SCR_DrawLoadingStack_r(loadingscreenstack_t *s, float y)
 	total = 0;
 	if(s)
 	{
+		total += SCR_DrawLoadingStack_r(s->prev, y);
+		y -= total;
 		if(!s->prev || strcmp(s->msg, s->prev->msg))
 		{
 			len = strlen(s->msg);
@@ -1677,50 +1681,72 @@ static float SCR_DrawLoadingStack_r(loadingscreenstack_t *s, float y)
 			DrawQ_String_Font(x, y, s->msg, len, size, size, 1, 1, 1, 1, 0, NULL, true, FONT_INFOBAR);
 			total += size;
 		}
-		total += SCR_DrawLoadingStack_r(s->prev, y);
 	}
 	return total;
 }
 
 static void SCR_DrawLoadingStack()
 {
-	float height;
 	float verts[12];
 	float colors[16];
-	height = SCR_DrawLoadingStack_r(loadingscreenstack, vid_conheight.integer);
+	int i;
+
+	if(loadingscreenheight > 0)
+	{
+		GL_BlendFunc(GL_ONE, GL_ZERO);
+		GL_DepthRange(0, 1);
+		GL_PolygonOffset(0, 0);
+		GL_DepthTest(false);
+		GL_Color(0, 0, 0, 1);
+		R_Mesh_VertexPointer(verts, 0, 0);
+		R_Mesh_ColorPointer(NULL, 0, 0);
+		R_Mesh_ResetTextureState();
+		R_SetupGenericShader(false);
+		verts[2] = verts[5] = verts[8] = verts[11] = 0;
+		verts[0] = verts[9] = 0;
+		verts[1] = verts[4] = vid_conheight.integer - loadingscreenheight;
+		verts[3] = verts[6] = vid_conwidth.integer;
+		verts[7] = verts[10] = vid_conheight.integer;
+		R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
+	}
+	loadingscreenheight = SCR_DrawLoadingStack_r(loadingscreenstack, vid_conheight.integer);
 	if(loadingscreenstack)
 	{
-		// height = 32; // sorry, using the normal one is ugly
-		//DrawQ_Fill((vid_conwidth.integer + 2) * loadingscreenstack->absolute_loading_amount_min - 2, vid_conheight.integer - height, 2, height, 1, 0, 0, 1, DRAWFLAG_ADDITIVE);
+		// height = 32; // sorry, using the actual one is ugly
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-		GL_Color(1, 1, 1, 1);
+		GL_DepthRange(0, 1);
+		GL_PolygonOffset(0, 0);
+		GL_DepthTest(false);
 		R_Mesh_VertexPointer(verts, 0, 0);
 		R_Mesh_ColorPointer(colors, 0, 0);
 		R_Mesh_ResetTextureState();
 		R_SetupGenericShader(false);
 		verts[2] = verts[5] = verts[8] = verts[11] = 0;
-		verts[0] = verts[9] = (vid_conwidth.integer + 2) * loadingscreenstack->absolute_loading_amount_min - 2;
-		verts[1] = verts[4] = vid_conheight.integer - 32;
-		verts[3] = verts[6] = (vid_conwidth.integer + 2) * loadingscreenstack->absolute_loading_amount_min;
+		verts[0] = verts[9] = 0;
+		verts[1] = verts[4] = vid_conheight.integer - 8;
+		verts[3] = verts[6] = vid_conwidth.integer * loadingscreenstack->absolute_loading_amount_min;
 		verts[7] = verts[10] = vid_conheight.integer;
-		colors[0] = colors[1] = colors[2] = colors[4] = colors[5] = colors[6] = colors[8] = colors[9] = colors[10] = colors[11] = colors[12] = colors[13] = colors[14] = colors[15] = 1;
-		colors[3] = colors[7] = 0;
+
+		for(i = 0; i < 16; ++i)
+			colors[i] = (i % 4 == 3) || (i >= 8 && i % 4 == 2);
+			//                                     ^^^^^^^^^^ blue component
+			//                           ^^^^^^ bottom row
+			//          ^^^^^^^^^^^^ alpha is always on
 		R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
+
+		// make sure everything is cleared, including the progress indicator
+		if(loadingscreenheight < 8)
+			loadingscreenheight = 8;
 	}
 }
 
-void SCR_UpdateLoadingScreen (qboolean clear)
+static cachepic_t *loadingscreen_pic;
+static float loadingscreen_vertex3f[12];
+static float loadingscreen_texcoord2f[8];
+
+static void SCR_DrawLoadingScreen_SharedSetup (qboolean clear)
 {
 	float x, y;
-	cachepic_t *pic;
-	float vertex3f[12];
-	float texcoord2f[8];
-
-	loadingscreentime = realtime;
-
-	// don't do anything if not initialized yet
-	if (vid_hidden || !scr_refresh.integer || cls.state == ca_dedicated)
-		return;
 	// release mouse grab while loading
 	if (!vid.fullscreen)
 		VID_SetMouse(false, false, false);
@@ -1732,61 +1758,83 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 	qglClearColor(0,0,0,0);CHECKGLERROR
 	// when starting up a new video mode, make sure the screen is cleared to black
 	if (clear)
-	{
 		qglClear(GL_COLOR_BUFFER_BIT);CHECKGLERROR
-	}
-	//qglDisable(GL_CULL_FACE);CHECKGLERROR
-	//R_ClearScreen();
 	R_Textures_Frame();
 	GL_SetupView_Mode_Ortho(0, 0, vid_conwidth.integer, vid_conheight.integer, -10, 100);
 	R_Mesh_Start();
 	R_Mesh_Matrix(&identitymatrix);
 	// draw the loading plaque
-	pic = Draw_CachePic ("gfx/loading");
-	x = (vid_conwidth.integer - pic->width)/2;
-	y = (vid_conheight.integer - pic->height)/2;
-	GL_Color(1,1,1,1);
-	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	GL_DepthRange(0, 1);
-	GL_PolygonOffset(0, 0);
-	GL_DepthTest(false);
-	R_Mesh_VertexPointer(vertex3f, 0, 0);
-	R_Mesh_ColorPointer(NULL, 0, 0);
-	R_Mesh_ResetTextureState();
-	R_Mesh_TexBind(0, R_GetTexture(pic->tex));
-	R_Mesh_TexCoordPointer(0, 2, texcoord2f, 0, 0);
-	R_SetupGenericShader(true);
-	vertex3f[2] = vertex3f[5] = vertex3f[8] = vertex3f[11] = 0;
-	vertex3f[0] = vertex3f[9] = x;
-	vertex3f[1] = vertex3f[4] = y;
-	vertex3f[3] = vertex3f[6] = x + pic->width;
-	vertex3f[7] = vertex3f[10] = y + pic->height;
-	texcoord2f[0] = 0;texcoord2f[1] = 0;
-	texcoord2f[2] = 1;texcoord2f[3] = 0;
-	texcoord2f[4] = 1;texcoord2f[5] = 1;
-	texcoord2f[6] = 0;texcoord2f[7] = 1;
+	loadingscreen_pic = Draw_CachePic ("gfx/loading");
+	x = (vid_conwidth.integer - loadingscreen_pic->width)/2;
+	y = (vid_conheight.integer - loadingscreen_pic->height)/2;
+	loadingscreen_vertex3f[2] = loadingscreen_vertex3f[5] = loadingscreen_vertex3f[8] = loadingscreen_vertex3f[11] = 0;
+	loadingscreen_vertex3f[0] = loadingscreen_vertex3f[9] = x;
+	loadingscreen_vertex3f[1] = loadingscreen_vertex3f[4] = y;
+	loadingscreen_vertex3f[3] = loadingscreen_vertex3f[6] = x + loadingscreen_pic->width;
+	loadingscreen_vertex3f[7] = loadingscreen_vertex3f[10] = y + loadingscreen_pic->height;
+	loadingscreen_texcoord2f[0] = 0;loadingscreen_texcoord2f[1] = 0;
+	loadingscreen_texcoord2f[2] = 1;loadingscreen_texcoord2f[3] = 0;
+	loadingscreen_texcoord2f[4] = 1;loadingscreen_texcoord2f[5] = 1;
+	loadingscreen_texcoord2f[6] = 0;loadingscreen_texcoord2f[7] = 1;
+}
 
+static void SCR_DrawLoadingScreen (qboolean clear)
+{
+	// we only need to draw the image if it isn't already there
+	if(loadingscreenheight <= 0)
+	{
+		GL_Color(1,1,1,1);
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		GL_DepthRange(0, 1);
+		GL_PolygonOffset(0, 0);
+		GL_DepthTest(false);
+		R_SetupGenericShader(true);
+		R_Mesh_ColorPointer(NULL, 0, 0);
+		R_Mesh_VertexPointer(loadingscreen_vertex3f, 0, 0);
+		R_Mesh_ResetTextureState();
+		R_Mesh_TexBind(0, R_GetTexture(loadingscreen_pic->tex));
+		R_Mesh_TexCoordPointer(0, 2, loadingscreen_texcoord2f, 0, 0);
+		R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
+	}
+	SCR_DrawLoadingStack();
+}
+
+static void SCR_DrawLoadingScreen_SharedFinish (qboolean clear)
+{
+	R_Mesh_Finish();
+	// refresh
+	VID_Finish();
+	// however this IS necessary on Windows Vista
+	qglFinish();
+}
+
+void SCR_UpdateLoadingScreen (qboolean clear)
+{
+	if(loadingscreentime != realtime)
+	{
+		loadingscreentime = realtime;
+		loadingscreenheight = 0;
+	}
+	loadingscreencleared = clear;
+
+	// don't do anything if not initialized yet
+	if (vid_hidden || !scr_refresh.integer || cls.state == ca_dedicated)
+		return;
+	
+	SCR_DrawLoadingScreen_SharedSetup(clear);
 	if (vid.stereobuffer)
 	{
-		qglDrawBuffer(GL_FRONT_LEFT);
-		R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
-		SCR_DrawLoadingStack();
-		qglDrawBuffer(GL_FRONT_RIGHT);
-		R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
-		SCR_DrawLoadingStack();
+		qglDrawBuffer(GL_BACK_LEFT);
+		SCR_DrawLoadingScreen(clear);
+		qglDrawBuffer(GL_BACK_RIGHT);
+		SCR_DrawLoadingScreen(clear);
 	}
 	else
 	{
-		qglDrawBuffer(GL_FRONT);
-		R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
-		SCR_DrawLoadingStack();
+		qglDrawBuffer(GL_BACK);
+		SCR_DrawLoadingScreen(clear);
 	}
-	R_Mesh_Finish();
-	// refresh
-	// not necessary when rendering to GL_FRONT buffers
-	//VID_Finish();
-	// however this IS necessary on Windows Vista
-	qglFinish();
+	SCR_DrawLoadingScreen_SharedFinish(clear);
 
 	// this goes into the event loop, and should prevent unresponsive cursor on vista
 	Sys_SendKeyEvents();
