@@ -50,14 +50,25 @@ static q3shader_data_t* q3shader_data;
 
 static void mod_start(void)
 {
-	int i;
+	int i, count;
 	int nummodels = Mem_ExpandableArray_IndexRange(&models);
 	dp_model_t *mod;
 
+	SCR_PushLoadingScreen("Loading models", 1.0);
+	count = 0;
 	for (i = 0;i < nummodels;i++)
 		if ((mod = (dp_model_t*) Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0] && mod->name[0] != '*')
 			if (mod->used)
+				++count;
+	for (i = 0;i < nummodels;i++)
+		if ((mod = (dp_model_t*) Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0] && mod->name[0] != '*')
+			if (mod->used)
+			{
+				SCR_PushLoadingScreen(mod->name, 1.0 / count);
 				Mod_LoadModel(mod, true, false);
+				SCR_PopLoadingScreen();
+			}
+	SCR_PopLoadingScreen();
 }
 
 static void mod_shutdown(void)
@@ -264,6 +275,8 @@ dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk)
 
 	if (developer_loading.integer)
 		Con_Printf("loading model %s\n", mod->name);
+	
+	SCR_PushLoadingScreen(mod->name, 1);
 
 	// LordHavoc: unload the existing model in this slot (if there is one)
 	if (mod->loaded || mod->mempool)
@@ -325,6 +338,9 @@ dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk)
 		// LordHavoc: Sys_Error was *ANNOYING*
 		Con_Printf ("Mod_LoadModel: %s not found\n", mod->name);
 	}
+
+	SCR_PopLoadingScreen();
+
 	return mod;
 }
 
@@ -423,12 +439,23 @@ Reloads all models if they have changed
 */
 void Mod_Reload(void)
 {
-	int i;
+	int i, count;
 	int nummodels = Mem_ExpandableArray_IndexRange(&models);
 	dp_model_t *mod;
+
+	SCR_PushLoadingScreen("Reloading models", 1.0);
+	count = 0;
 	for (i = 0;i < nummodels;i++)
 		if ((mod = (dp_model_t *) Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0] && mod->name[0] != '*' && mod->used)
+			++count;
+	for (i = 0;i < nummodels;i++)
+		if ((mod = (dp_model_t *) Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0] && mod->name[0] != '*' && mod->used)
+		{
+			SCR_PushLoadingScreen(mod->name, 1.0 / count);
 			Mod_LoadModel(mod, true, true);
+			SCR_PopLoadingScreen();
+		}
+	SCR_PopLoadingScreen();
 }
 
 unsigned char *mod_base;

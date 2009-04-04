@@ -28,6 +28,13 @@ void SCR_CenterPrint(const char *str);
 
 void SCR_BeginLoadingPlaque (void);
 
+// invoke refresh of loading plaque (nothing else seen)
+void SCR_UpdateLoadingScreen(qboolean clear);
+
+// pushes an item on the loading screen
+void SCR_PushLoadingScreen (const char *msg, float len_in_parent);
+void SCR_PopLoadingScreen ();
+
 extern float scr_con_current; // current height of displayed console
 
 extern int sb_lines;

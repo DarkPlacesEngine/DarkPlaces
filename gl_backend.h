@@ -120,8 +120,6 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 qboolean SCR_ScreenShot(char *filename, unsigned char *buffer1, unsigned char *buffer2, unsigned char *buffer3, int x, int y, int width, int height, qboolean flipx, qboolean flipy, qboolean flipdiagonal, qboolean jpeg, qboolean gammacorrect);
 // used by R_Envmap_f and internally in backend, clears the frame
 void R_ClearScreen(qboolean fogcolor);
-// invoke refresh of loading plaque (nothing else seen)
-void SCR_UpdateLoadingScreen(qboolean clear);
 
 #endif
 
