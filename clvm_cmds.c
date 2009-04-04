@@ -393,7 +393,7 @@ void VM_CL_precache_model (void)
 		}
 	}
 	PRVM_G_FLOAT(OFS_RETURN) = 0;
-	m = Mod_ForName(name, false, false, false);
+	m = Mod_ForName(name, false, false, name[0] == '*' ? cl.model_name[1] : NULL);
 	if(m && m->loaded)
 	{
 		for (i = 0;i < MAX_MODELS;i++)

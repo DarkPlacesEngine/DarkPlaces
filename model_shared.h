@@ -604,14 +604,15 @@ typedef struct model_brush_s
 	// string of entity definitions (.map format)
 	char *entities;
 
-	// if non-zero this is a submodel
+	// if not NULL this is a submodel
+	struct model_s *parentmodel;
 	// (this is the number of the submodel, an index into submodels)
 	int submodel;
 
 	// number of submodels in this map (just used by server to know how many
 	// submodels to load)
 	int numsubmodels;
-	// pointers to each of the submodels if .isworldmodel is true
+	// pointers to each of the submodels
 	struct model_s **submodels;
 
 	int num_planes;
@@ -797,8 +798,6 @@ typedef struct model_s
 	qboolean		loaded;
 	// set if the model is used in current map, models which are not, are purged
 	qboolean		used;
-	// true if this is the world model (I.E. defines what sky to use, and may contain submodels)
-	qboolean		isworldmodel;
 	// CRC of the file this model was loaded from, to reload if changed
 	unsigned int	crc;
 	// mod_brush, mod_alias, mod_sprite
@@ -910,9 +909,9 @@ extern cvar_t r_fullbrights;
 
 void Mod_Init (void);
 void Mod_Reload (void);
-dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk, qboolean isworldmodel);
-dp_model_t *Mod_FindName (const char *name);
-dp_model_t *Mod_ForName (const char *name, qboolean crash, qboolean checkdisk, qboolean isworldmodel);
+dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk);
+dp_model_t *Mod_FindName (const char *name, const char *parentname);
+dp_model_t *Mod_ForName (const char *name, qboolean crash, qboolean checkdisk, const char *parentname);
 void Mod_UnloadModel (dp_model_t *mod);
 
 void Mod_ClearUsed(void);
@@ -941,6 +940,7 @@ shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh,
 void Mod_ShadowMesh_CalcBBox(shadowmesh_t *firstmesh, vec3_t mins, vec3_t maxs, vec3_t center, float *radius);
 void Mod_ShadowMesh_Free(shadowmesh_t *mesh);
 
+void Mod_FreeQ3Shaders(void);
 void Mod_LoadQ3Shaders(void);
 q3shaderinfo_t *Mod_LookupQ3Shader(const char *name);
 qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qboolean warnmissing, qboolean fallback, int defaulttexflags);
