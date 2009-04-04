@@ -1151,7 +1151,7 @@ void CL_BeginDownloads(qboolean aborteddownload)
 				}
 			}
 
-			if(cl.loadmodel_current == 1)
+			if(cl.downloadmodel_current == 1)
 			{
 				// they'll be soon loaded, but make sure we apply freshly downloaded shaders from a curled pk3
 				Mod_FreeQ3Shaders();
