@@ -1719,7 +1719,7 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 	loadingscreentime = realtime;
 
 	// don't do anything if not initialized yet
-	if (vid_hidden || !scr_refresh.integer)
+	if (vid_hidden || !scr_refresh.integer || cls.state == ca_dedicated)
 		return;
 	// release mouse grab while loading
 	if (!vid.fullscreen)
