@@ -290,6 +290,7 @@ void CL_KeepaliveMessage (qboolean readmessages)
 {
 	float time;
 	static double nextmsg = -1;
+	static double nextupdate = -1;
 #if 0
 	static double lasttime = -1;
 #endif
@@ -297,7 +298,14 @@ void CL_KeepaliveMessage (qboolean readmessages)
 	qboolean oldbadread;
 	sizebuf_t old;
 
-	SCR_UpdateLoadingScreenIfShown();
+	if(cls.state != ca_dedicated)
+	{
+		if((time = Sys_DoubleTime()) >= nextupdate)
+		{
+			SCR_UpdateLoadingScreenIfShown();
+			nextupdate = time + 2;
+		}
+	}
 
 	// no need if server is local and definitely not if this is a demo
 	if (!cls.netcon || cls.protocol == PROTOCOL_QUAKEWORLD || cls.signon >= SIGNONS)
@@ -979,6 +987,11 @@ static void CL_UpdateItemsAndWeapon(void)
 	cl.activeweapon = cl.stats[STAT_ACTIVEWEAPON];
 }
 
+#define DOWNLOADPROGRESSWEIGHT_SOUND            1.0
+#define DOWNLOADPROGRESSWEIGHT_MODEL            4.0
+#define DOWNLOADPROGRESSWEIGHT_WORLDMODEL      30.0
+#define DOWNLOADPROGRESSWEIGHT_WORLDMODEL_INIT 32.0
+
 void CL_BeginDownloads(qboolean aborteddownload)
 {
 	// quakeworld works differently
@@ -1030,12 +1043,31 @@ void CL_BeginDownloads(qboolean aborteddownload)
 		if(cl.loadmodel_current == 1)
 		{
 			// worldmodel counts as 16 models (15 + world model setup), for better progress bar
-			SCR_PushLoadingScreen(false, "Loading precached models", (cl.loadmodel_total + 15) / (float) (cl.loadmodel_total + cl.loadsound_total + 15));
+			SCR_PushLoadingScreen(false, "Loading precached models",
+				(
+					(cl.loadmodel_total - 1) * DOWNLOADPROGRESSWEIGHT_MODEL
+				+	DOWNLOADPROGRESSWEIGHT_WORLDMODEL
+				+	DOWNLOADPROGRESSWEIGHT_WORLDMODEL_INIT
+				) / (
+					(cl.loadmodel_total - 1) * DOWNLOADPROGRESSWEIGHT_MODEL
+				+	DOWNLOADPROGRESSWEIGHT_WORLDMODEL
+				+	DOWNLOADPROGRESSWEIGHT_WORLDMODEL_INIT
+				+	cl.loadsound_total * DOWNLOADPROGRESSWEIGHT_SOUND
+				)
+			);
 			SCR_BeginLoadingPlaque();
 		}
 		for (;cl.loadmodel_current < cl.loadmodel_total;cl.loadmodel_current++)
 		{
-			SCR_PushLoadingScreen(true, cl.model_name[cl.loadmodel_current], (cl.loadmodel_current == 1 ? 15.0 : 1.0) / cl.loadmodel_total);
+			SCR_PushLoadingScreen(true, cl.model_name[cl.loadmodel_current],
+				(
+					(cl.loadmodel_current == 1) ? DOWNLOADPROGRESSWEIGHT_WORLDMODEL : DOWNLOADPROGRESSWEIGHT_MODEL
+				) / (
+					(cl.loadmodel_total - 1) * DOWNLOADPROGRESSWEIGHT_MODEL
+				+	DOWNLOADPROGRESSWEIGHT_WORLDMODEL
+				+	DOWNLOADPROGRESSWEIGHT_WORLDMODEL_INIT
+				)
+			);
 			if (cl.model_precache[cl.loadmodel_current] && cl.model_precache[cl.loadmodel_current]->Draw)
 			{
 				SCR_PopLoadingScreen(false);
@@ -1059,7 +1091,15 @@ void CL_BeginDownloads(qboolean aborteddownload)
 			if (cl.model_precache[cl.loadmodel_current] && cl.model_precache[cl.loadmodel_current]->Draw && cl.loadmodel_current == 1)
 			{
 				// we now have the worldmodel so we can set up the game world
-				SCR_PushLoadingScreen(true, "world model setup", 1.0 / cl.loadmodel_total);
+				SCR_PushLoadingScreen(true, "world model setup",
+					(
+						DOWNLOADPROGRESSWEIGHT_WORLDMODEL_INIT
+					) / (
+						(cl.loadmodel_total - 1) * DOWNLOADPROGRESSWEIGHT_MODEL
+					+	DOWNLOADPROGRESSWEIGHT_WORLDMODEL
+					+	DOWNLOADPROGRESSWEIGHT_WORLDMODEL_INIT
+					)
+				);
 				CL_SetupWorldModel();
 				SCR_PopLoadingScreen(true);
 				if (!cl.loadfinished && cl_joinbeforedownloadsfinish.integer)
@@ -1079,7 +1119,16 @@ void CL_BeginDownloads(qboolean aborteddownload)
 	{
 		// loading sounds
 		if(cl.loadsound_current == 1)
-			SCR_PushLoadingScreen(false, "Loading precached sounds", cl.loadsound_total / (float) (cl.loadmodel_total + cl.loadsound_total + 15));
+			SCR_PushLoadingScreen(false, "Loading precached sounds",
+				(
+					cl.loadsound_total * DOWNLOADPROGRESSWEIGHT_SOUND
+				) / (
+					(cl.loadmodel_total - 1) * DOWNLOADPROGRESSWEIGHT_MODEL
+				+	DOWNLOADPROGRESSWEIGHT_WORLDMODEL
+				+	DOWNLOADPROGRESSWEIGHT_WORLDMODEL_INIT
+				+	cl.loadsound_total * DOWNLOADPROGRESSWEIGHT_SOUND
+				)
+			);
 		for (;cl.loadsound_current < cl.loadsound_total;cl.loadsound_current++)
 		{
 			SCR_PushLoadingScreen(true, cl.sound_name[cl.loadsound_current], 1.0 / cl.loadsound_total);
