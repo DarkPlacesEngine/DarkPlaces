@@ -1448,7 +1448,10 @@ static void CL_SignonReply (void)
 			//MSG_WriteString (&cls.netcon->message, "prespawn");
 		}
 		else // playing a demo...  make sure loading occurs as soon as possible
+		{
+			SCR_PushLoadingScreen(false, "Loading precaches", 1);
 			CL_BeginDownloads(false);
+		}
 		break;
 
 	case 2:
