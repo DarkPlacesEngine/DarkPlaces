@@ -222,7 +222,7 @@ void VID_Finish (void)
 	if (r_render.integer)
 	{
 		CHECKGLERROR
-		if (r_speeds.integer || gl_finish.integer)
+		if (r_speeds.integer == 2 || gl_finish.integer)
 		{
 			qglFinish();CHECKGLERROR
 		}
