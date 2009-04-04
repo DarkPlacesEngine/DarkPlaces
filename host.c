@@ -915,7 +915,7 @@ void Host_Main(void)
 							pass1+pass2+pass3, pass1, pass2, pass3);
 			}
 			wait = bound(0, host_sleep.value * 1000, 100000);
-			if (wait >= 1)
+			if (!cls.timedemo && wait >= 1)
 				Sys_Sleep((int)wait);
 		}
 
