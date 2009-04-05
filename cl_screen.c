@@ -1707,6 +1707,13 @@ void SCR_PushLoadingScreen (qboolean redraw, const char *msg, float len_in_paren
 void SCR_PopLoadingScreen (qboolean redraw)
 {
 	loadingscreenstack_t *s = loadingscreenstack;
+
+	if(!s)
+	{
+		Con_DPrintf("Popping a loading screen item from an empty stack!\n");
+		return;
+	}
+
 	loadingscreenstack = s->prev;
 	if(s->prev)
 		s->prev->relative_completion = (s->absolute_loading_amount_min + s->absolute_loading_amount_len - s->prev->absolute_loading_amount_min) / s->prev->absolute_loading_amount_len;
@@ -1714,6 +1721,12 @@ void SCR_PopLoadingScreen (qboolean redraw)
 
 	if(redraw)
 		SCR_UpdateLoadingScreenIfShown();
+}
+
+void SCR_ClearLoadingScreen (qboolean redraw)
+{
+	while(loadingscreenstack)
+		SCR_PopLoadingScreen(redraw && !loadingscreenstack->prev);
 }
 
 static float SCR_DrawLoadingStack_r(loadingscreenstack_t *s, float y)

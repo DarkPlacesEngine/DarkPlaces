@@ -619,7 +619,10 @@ void Host_Main(void)
 	for (;;)
 	{
 		if (setjmp(host_abortframe))
+		{
+			SCR_ClearLoadingScreen(false);
 			continue;			// something bad happened, or the server disconnected
+		}
 
 		oldrealtime = realtime;
 		realtime = Sys_DoubleTime();
