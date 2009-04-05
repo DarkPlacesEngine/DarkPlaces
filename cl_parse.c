@@ -987,10 +987,10 @@ static void CL_UpdateItemsAndWeapon(void)
 	cl.activeweapon = cl.stats[STAT_ACTIVEWEAPON];
 }
 
-#define DOWNLOADPROGRESSWEIGHT_SOUND            1.0
-#define DOWNLOADPROGRESSWEIGHT_MODEL            4.0
-#define DOWNLOADPROGRESSWEIGHT_WORLDMODEL      30.0
-#define DOWNLOADPROGRESSWEIGHT_WORLDMODEL_INIT  2.0
+#define LOADPROGRESSWEIGHT_SOUND            1.0
+#define LOADPROGRESSWEIGHT_MODEL            4.0
+#define LOADPROGRESSWEIGHT_WORLDMODEL      30.0
+#define LOADPROGRESSWEIGHT_WORLDMODEL_INIT  2.0
 
 void CL_BeginDownloads(qboolean aborteddownload)
 {
@@ -1045,14 +1045,14 @@ void CL_BeginDownloads(qboolean aborteddownload)
 			// worldmodel counts as 16 models (15 + world model setup), for better progress bar
 			SCR_PushLoadingScreen(false, "Loading precached models",
 				(
-					(cl.loadmodel_total - 1) * DOWNLOADPROGRESSWEIGHT_MODEL
-				+	DOWNLOADPROGRESSWEIGHT_WORLDMODEL
-				+	DOWNLOADPROGRESSWEIGHT_WORLDMODEL_INIT
+					(cl.loadmodel_total - 1) * LOADPROGRESSWEIGHT_MODEL
+				+	LOADPROGRESSWEIGHT_WORLDMODEL
+				+	LOADPROGRESSWEIGHT_WORLDMODEL_INIT
 				) / (
-					(cl.loadmodel_total - 1) * DOWNLOADPROGRESSWEIGHT_MODEL
-				+	DOWNLOADPROGRESSWEIGHT_WORLDMODEL
-				+	DOWNLOADPROGRESSWEIGHT_WORLDMODEL_INIT
-				+	cl.loadsound_total * DOWNLOADPROGRESSWEIGHT_SOUND
+					(cl.loadmodel_total - 1) * LOADPROGRESSWEIGHT_MODEL
+				+	LOADPROGRESSWEIGHT_WORLDMODEL
+				+	LOADPROGRESSWEIGHT_WORLDMODEL_INIT
+				+	cl.loadsound_total * LOADPROGRESSWEIGHT_SOUND
 				)
 			);
 			SCR_BeginLoadingPlaque();
@@ -1061,11 +1061,11 @@ void CL_BeginDownloads(qboolean aborteddownload)
 		{
 			SCR_PushLoadingScreen(true, cl.model_name[cl.loadmodel_current],
 				(
-					(cl.loadmodel_current == 1) ? DOWNLOADPROGRESSWEIGHT_WORLDMODEL : DOWNLOADPROGRESSWEIGHT_MODEL
+					(cl.loadmodel_current == 1) ? LOADPROGRESSWEIGHT_WORLDMODEL : LOADPROGRESSWEIGHT_MODEL
 				) / (
-					(cl.loadmodel_total - 1) * DOWNLOADPROGRESSWEIGHT_MODEL
-				+	DOWNLOADPROGRESSWEIGHT_WORLDMODEL
-				+	DOWNLOADPROGRESSWEIGHT_WORLDMODEL_INIT
+					(cl.loadmodel_total - 1) * LOADPROGRESSWEIGHT_MODEL
+				+	LOADPROGRESSWEIGHT_WORLDMODEL
+				+	LOADPROGRESSWEIGHT_WORLDMODEL_INIT
 				)
 			);
 			if (cl.model_precache[cl.loadmodel_current] && cl.model_precache[cl.loadmodel_current]->Draw)
@@ -1093,11 +1093,11 @@ void CL_BeginDownloads(qboolean aborteddownload)
 				// we now have the worldmodel so we can set up the game world
 				SCR_PushLoadingScreen(true, "world model setup",
 					(
-						DOWNLOADPROGRESSWEIGHT_WORLDMODEL_INIT
+						LOADPROGRESSWEIGHT_WORLDMODEL_INIT
 					) / (
-						(cl.loadmodel_total - 1) * DOWNLOADPROGRESSWEIGHT_MODEL
-					+	DOWNLOADPROGRESSWEIGHT_WORLDMODEL
-					+	DOWNLOADPROGRESSWEIGHT_WORLDMODEL_INIT
+						(cl.loadmodel_total - 1) * LOADPROGRESSWEIGHT_MODEL
+					+	LOADPROGRESSWEIGHT_WORLDMODEL
+					+	LOADPROGRESSWEIGHT_WORLDMODEL_INIT
 					)
 				);
 				CL_SetupWorldModel();
@@ -1121,12 +1121,12 @@ void CL_BeginDownloads(qboolean aborteddownload)
 		if(cl.loadsound_current == 1)
 			SCR_PushLoadingScreen(false, "Loading precached sounds",
 				(
-					cl.loadsound_total * DOWNLOADPROGRESSWEIGHT_SOUND
+					cl.loadsound_total * LOADPROGRESSWEIGHT_SOUND
 				) / (
-					(cl.loadmodel_total - 1) * DOWNLOADPROGRESSWEIGHT_MODEL
-				+	DOWNLOADPROGRESSWEIGHT_WORLDMODEL
-				+	DOWNLOADPROGRESSWEIGHT_WORLDMODEL_INIT
-				+	cl.loadsound_total * DOWNLOADPROGRESSWEIGHT_SOUND
+					(cl.loadmodel_total - 1) * LOADPROGRESSWEIGHT_MODEL
+				+	LOADPROGRESSWEIGHT_WORLDMODEL
+				+	LOADPROGRESSWEIGHT_WORLDMODEL_INIT
+				+	cl.loadsound_total * LOADPROGRESSWEIGHT_SOUND
 				)
 			);
 		for (;cl.loadsound_current < cl.loadsound_total;cl.loadsound_current++)
