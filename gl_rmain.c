@@ -2283,6 +2283,7 @@ void gl_main_start(void)
 	r_refdef.fogmasktable_density = 0;
 }
 
+extern rtexture_t *loadingscreentexture;
 void gl_main_shutdown(void)
 {
 	if (r_maxqueries)
@@ -2303,6 +2304,7 @@ void gl_main_shutdown(void)
 		Mem_Free(r_svbsp.nodes);
 	memset(&r_svbsp, 0, sizeof (r_svbsp));
 	R_FreeTexturePool(&r_main_texturepool);
+	loadingscreentexture = NULL;
 	r_texture_blanknormalmap = NULL;
 	r_texture_white = NULL;
 	r_texture_grey128 = NULL;

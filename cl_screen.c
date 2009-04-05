@@ -1623,6 +1623,54 @@ static loadingscreenstack_t *loadingscreenstack = NULL;
 static double loadingscreentime = -1;
 static qboolean loadingscreencleared = false;
 static float loadingscreenheight = 0;
+rtexture_t *loadingscreentexture = NULL;
+static float loadingscreentexture_vertex3f[12];
+static float loadingscreentexture_texcoord2f[8];
+
+static void SCR_ClearLoadingScreenTexture()
+{
+	if(loadingscreentexture)
+		R_FreeTexture(loadingscreentexture);
+	loadingscreentexture = NULL;
+}
+
+extern rtexturepool_t r_main_texturepool;
+static void SCR_SetLoadingScreenTexture()
+{
+	int w, h;
+	float loadingscreentexture_w;
+	float loadingscreentexture_h;
+
+	SCR_ClearLoadingScreenTexture();
+
+	if (gl_support_arb_texture_non_power_of_two && 0)
+	{
+		w = vid.width; h = vid.height;
+		loadingscreentexture_w = loadingscreentexture_h = 1;
+	}
+	else
+	{
+		w = CeilPowerOf2(vid.width); h = CeilPowerOf2(vid.height);
+		loadingscreentexture_w = vid.width / (float) w;
+		loadingscreentexture_h = vid.height / (float) h;
+	}
+
+	loadingscreentexture = R_LoadTexture2D(&r_main_texturepool, "loadingscreentexture", w, h, NULL, TEXTYPE_BGRA, TEXF_FORCENEAREST | TEXF_CLAMP | TEXF_ALWAYSPRECACHE, NULL);
+	R_Mesh_TexBind(0, R_GetTexture(loadingscreentexture));
+	GL_ActiveTexture(0);
+	CHECKGLERROR
+	qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, vid.width, vid.height);CHECKGLERROR
+
+	loadingscreentexture_vertex3f[2] = loadingscreentexture_vertex3f[5] = loadingscreentexture_vertex3f[8] = loadingscreentexture_vertex3f[11] = 0;
+	loadingscreentexture_vertex3f[0] = loadingscreentexture_vertex3f[9] = 0;
+	loadingscreentexture_vertex3f[1] = loadingscreentexture_vertex3f[4] = 0;
+	loadingscreentexture_vertex3f[3] = loadingscreentexture_vertex3f[6] = vid_conwidth.integer;
+	loadingscreentexture_vertex3f[7] = loadingscreentexture_vertex3f[10] = vid_conheight.integer;
+	loadingscreentexture_texcoord2f[0] = 0;loadingscreentexture_texcoord2f[1] = loadingscreentexture_h;
+	loadingscreentexture_texcoord2f[2] = loadingscreentexture_w;loadingscreentexture_texcoord2f[3] = loadingscreentexture_h;
+	loadingscreentexture_texcoord2f[4] = loadingscreentexture_w;loadingscreentexture_texcoord2f[5] = 0;
+	loadingscreentexture_texcoord2f[6] = 0;loadingscreentexture_texcoord2f[7] = 0;
+}
 
 void SCR_UpdateLoadingScreenIfShown()
 {
@@ -1711,24 +1759,6 @@ static void SCR_DrawLoadingStack()
 	float colors[16];
 	int i;
 
-	if(loadingscreenheight > 0)
-	{
-		GL_BlendFunc(GL_ONE, GL_ZERO);
-		GL_DepthRange(0, 1);
-		GL_PolygonOffset(0, 0);
-		GL_DepthTest(false);
-		GL_Color(0, 0, 0, 1);
-		R_Mesh_VertexPointer(verts, 0, 0);
-		R_Mesh_ColorPointer(NULL, 0, 0);
-		R_Mesh_ResetTextureState();
-		R_SetupGenericShader(false);
-		verts[2] = verts[5] = verts[8] = verts[11] = 0;
-		verts[0] = verts[9] = 0;
-		verts[1] = verts[4] = vid_conheight.integer - loadingscreenheight;
-		verts[3] = verts[6] = vid_conwidth.integer;
-		verts[7] = verts[10] = vid_conheight.integer;
-		R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
-	}
 	loadingscreenheight = SCR_DrawLoadingStack_r(loadingscreenstack, vid_conheight.integer);
 	if(loadingscreenstack)
 	{
@@ -1760,9 +1790,9 @@ static void SCR_DrawLoadingStack()
 	}
 }
 
-static cachepic_t *loadingscreen_pic;
-static float loadingscreen_vertex3f[12];
-static float loadingscreen_texcoord2f[8];
+static cachepic_t *loadingscreenpic;
+static float loadingscreenpic_vertex3f[12];
+static float loadingscreenpic_texcoord2f[8];
 
 static void SCR_DrawLoadingScreen_SharedSetup (qboolean clear)
 {
@@ -1784,38 +1814,43 @@ static void SCR_DrawLoadingScreen_SharedSetup (qboolean clear)
 	R_Mesh_Start();
 	R_Mesh_Matrix(&identitymatrix);
 	// draw the loading plaque
-	loadingscreen_pic = Draw_CachePic ("gfx/loading");
-	x = (vid_conwidth.integer - loadingscreen_pic->width)/2;
-	y = (vid_conheight.integer - loadingscreen_pic->height)/2;
-	loadingscreen_vertex3f[2] = loadingscreen_vertex3f[5] = loadingscreen_vertex3f[8] = loadingscreen_vertex3f[11] = 0;
-	loadingscreen_vertex3f[0] = loadingscreen_vertex3f[9] = x;
-	loadingscreen_vertex3f[1] = loadingscreen_vertex3f[4] = y;
-	loadingscreen_vertex3f[3] = loadingscreen_vertex3f[6] = x + loadingscreen_pic->width;
-	loadingscreen_vertex3f[7] = loadingscreen_vertex3f[10] = y + loadingscreen_pic->height;
-	loadingscreen_texcoord2f[0] = 0;loadingscreen_texcoord2f[1] = 0;
-	loadingscreen_texcoord2f[2] = 1;loadingscreen_texcoord2f[3] = 0;
-	loadingscreen_texcoord2f[4] = 1;loadingscreen_texcoord2f[5] = 1;
-	loadingscreen_texcoord2f[6] = 0;loadingscreen_texcoord2f[7] = 1;
+	loadingscreenpic = Draw_CachePic ("gfx/loading");
+	x = (vid_conwidth.integer - loadingscreenpic->width)/2;
+	y = (vid_conheight.integer - loadingscreenpic->height)/2;
+	loadingscreenpic_vertex3f[2] = loadingscreenpic_vertex3f[5] = loadingscreenpic_vertex3f[8] = loadingscreenpic_vertex3f[11] = 0;
+	loadingscreenpic_vertex3f[0] = loadingscreenpic_vertex3f[9] = x;
+	loadingscreenpic_vertex3f[1] = loadingscreenpic_vertex3f[4] = y;
+	loadingscreenpic_vertex3f[3] = loadingscreenpic_vertex3f[6] = x + loadingscreenpic->width;
+	loadingscreenpic_vertex3f[7] = loadingscreenpic_vertex3f[10] = y + loadingscreenpic->height;
+	loadingscreenpic_texcoord2f[0] = 0;loadingscreenpic_texcoord2f[1] = 0;
+	loadingscreenpic_texcoord2f[2] = 1;loadingscreenpic_texcoord2f[3] = 0;
+	loadingscreenpic_texcoord2f[4] = 1;loadingscreenpic_texcoord2f[5] = 1;
+	loadingscreenpic_texcoord2f[6] = 0;loadingscreenpic_texcoord2f[7] = 1;
 }
 
 static void SCR_DrawLoadingScreen (qboolean clear)
 {
 	// we only need to draw the image if it isn't already there
-	if(loadingscreenheight <= 0)
+	GL_Color(1,1,1,1);
+	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	GL_DepthRange(0, 1);
+	GL_PolygonOffset(0, 0);
+	GL_DepthTest(false);
+	R_SetupGenericShader(true);
+	R_Mesh_ColorPointer(NULL, 0, 0);
+	if(loadingscreentexture)
 	{
-		GL_Color(1,1,1,1);
-		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		GL_DepthRange(0, 1);
-		GL_PolygonOffset(0, 0);
-		GL_DepthTest(false);
-		R_SetupGenericShader(true);
-		R_Mesh_ColorPointer(NULL, 0, 0);
-		R_Mesh_VertexPointer(loadingscreen_vertex3f, 0, 0);
+		R_Mesh_VertexPointer(loadingscreentexture_vertex3f, 0, 0);
 		R_Mesh_ResetTextureState();
-		R_Mesh_TexBind(0, R_GetTexture(loadingscreen_pic->tex));
-		R_Mesh_TexCoordPointer(0, 2, loadingscreen_texcoord2f, 0, 0);
+		R_Mesh_TexBind(0, R_GetTexture(loadingscreentexture));
+		R_Mesh_TexCoordPointer(0, 2, loadingscreentexture_texcoord2f, 0, 0);
 		R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
 	}
+	R_Mesh_VertexPointer(loadingscreenpic_vertex3f, 0, 0);
+	R_Mesh_ResetTextureState();
+	R_Mesh_TexBind(0, R_GetTexture(loadingscreenpic->tex));
+	R_Mesh_TexCoordPointer(0, 2, loadingscreenpic_texcoord2f, 0, 0);
+	R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
 	SCR_DrawLoadingStack();
 }
 
@@ -1833,10 +1868,14 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 	keydest_t	old_key_dest;
 	int			old_key_consoleactive;
 
-	// sorry, currently, we can only do this WITH clearing...
-	// to support not clearing, we'd have to first copy the screen to a
-	// texture, and render that as background
-	clear = true;
+	// don't do anything if not initialized yet
+	if (vid_hidden || !scr_refresh.integer || cls.state == ca_dedicated)
+		return;
+	
+	if(clear)
+		SCR_ClearLoadingScreenTexture();
+	else if(loadingscreentime != realtime)
+		SCR_SetLoadingScreenTexture();
 
 	if(loadingscreentime != realtime)
 	{
@@ -1845,10 +1884,6 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 	}
 	loadingscreencleared = clear;
 
-	// don't do anything if not initialized yet
-	if (vid_hidden || !scr_refresh.integer || cls.state == ca_dedicated)
-		return;
-	
 	SCR_DrawLoadingScreen_SharedSetup(clear);
 	if (vid.stereobuffer)
 	{
