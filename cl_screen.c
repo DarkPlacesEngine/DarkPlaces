@@ -1643,7 +1643,7 @@ static void SCR_SetLoadingScreenTexture()
 
 	SCR_ClearLoadingScreenTexture();
 
-	if (gl_support_arb_texture_non_power_of_two && 0)
+	if (gl_support_arb_texture_non_power_of_two)
 	{
 		w = vid.width; h = vid.height;
 		loadingscreentexture_w = loadingscreentexture_h = 1;
