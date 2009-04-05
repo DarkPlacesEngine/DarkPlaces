@@ -1029,22 +1029,23 @@ Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 		r = 255*cls.capturevideo.vidramp[i]/65535.0;
 		g = 255*cls.capturevideo.vidramp[i+256]/65535.0;
 		b = 255*cls.capturevideo.vidramp[i+512]/65535.0;
+		// NOTE: we have to round DOWN here, or integer overflows happen. Sorry for slightly wrong looking colors sometimes...
 		// Y weights from RGB
-		cls.capturevideo.rgbtoyuvscaletable[0][0][i] = (short)(r *  0.299 + 0.5);
-		cls.capturevideo.rgbtoyuvscaletable[0][1][i] = (short)(g *  0.587 + 0.5);
-		cls.capturevideo.rgbtoyuvscaletable[0][2][i] = (short)(b *  0.114 + 0.5);
+		cls.capturevideo.rgbtoyuvscaletable[0][0][i] = (short)(r *  0.299);
+		cls.capturevideo.rgbtoyuvscaletable[0][1][i] = (short)(g *  0.587);
+		cls.capturevideo.rgbtoyuvscaletable[0][2][i] = (short)(b *  0.114);
 		// Cb weights from RGB
-		cls.capturevideo.rgbtoyuvscaletable[1][0][i] = (short)(r * -0.169 + 0.5);
-		cls.capturevideo.rgbtoyuvscaletable[1][1][i] = (short)(g * -0.332 + 0.5);
-		cls.capturevideo.rgbtoyuvscaletable[1][2][i] = (short)(b *  0.500 + 0.5);
+		cls.capturevideo.rgbtoyuvscaletable[1][0][i] = (short)(r * -0.169);
+		cls.capturevideo.rgbtoyuvscaletable[1][1][i] = (short)(g * -0.332);
+		cls.capturevideo.rgbtoyuvscaletable[1][2][i] = (short)(b *  0.500);
 		// Cr weights from RGB
-		cls.capturevideo.rgbtoyuvscaletable[2][0][i] = (short)(r *  0.500 + 0.5);
-		cls.capturevideo.rgbtoyuvscaletable[2][1][i] = (short)(g * -0.419 + 0.5);
-		cls.capturevideo.rgbtoyuvscaletable[2][2][i] = (short)(b * -0.0813 + 0.5);
+		cls.capturevideo.rgbtoyuvscaletable[2][0][i] = (short)(r *  0.500);
+		cls.capturevideo.rgbtoyuvscaletable[2][1][i] = (short)(g * -0.419);
+		cls.capturevideo.rgbtoyuvscaletable[2][2][i] = (short)(b * -0.0813);
 		// range reduction of YCbCr to valid signal range
-		cls.capturevideo.yuvnormalizetable[0][i] = 16 + i * (236-16) / 256 + 0.5;
-		cls.capturevideo.yuvnormalizetable[1][i] = 16 + i * (240-16) / 256 + 0.5;
-		cls.capturevideo.yuvnormalizetable[2][i] = 16 + i * (240-16) / 256 + 0.5;
+		cls.capturevideo.yuvnormalizetable[0][i] = 16 + i * (236-16) / 256;
+		cls.capturevideo.yuvnormalizetable[1][i] = 16 + i * (240-16) / 256;
+		cls.capturevideo.yuvnormalizetable[2][i] = 16 + i * (240-16) / 256;
 	}
 
 	if (cl_capturevideo_ogg.integer)
