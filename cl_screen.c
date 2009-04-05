@@ -1833,6 +1833,11 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 	keydest_t	old_key_dest;
 	int			old_key_consoleactive;
 
+	// sorry, currently, we can only do this WITH clearing...
+	// to support not clearing, we'd have to first copy the screen to a
+	// texture, and render that as background
+	clear = true;
+
 	if(loadingscreentime != realtime)
 	{
 		loadingscreentime = realtime;
