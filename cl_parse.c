@@ -990,7 +990,7 @@ static void CL_UpdateItemsAndWeapon(void)
 #define DOWNLOADPROGRESSWEIGHT_SOUND            1.0
 #define DOWNLOADPROGRESSWEIGHT_MODEL            4.0
 #define DOWNLOADPROGRESSWEIGHT_WORLDMODEL      30.0
-#define DOWNLOADPROGRESSWEIGHT_WORLDMODEL_INIT 32.0
+#define DOWNLOADPROGRESSWEIGHT_WORLDMODEL_INIT  2.0
 
 void CL_BeginDownloads(qboolean aborteddownload)
 {
