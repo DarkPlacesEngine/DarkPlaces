@@ -581,7 +581,8 @@ static void Mod_Alias_CalculateBoundingBox(void)
 				radius = dist;
 		}
 	}
-	Mem_Free(vertex3f);
+	if (vertex3f)
+		Mem_Free(vertex3f);
 	radius = sqrt(radius);
 	yawradius = sqrt(yawradius);
 	loadmodel->yawmins[0] = loadmodel->yawmins[1] = -yawradius;
