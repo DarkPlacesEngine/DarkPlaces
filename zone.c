@@ -204,7 +204,10 @@ static void _Mem_FreeBlock(memheader_t *mem, const char *filename, int fileline)
 void _Mem_Free(void *data, const char *filename, int fileline)
 {
 	if (data == NULL)
-		Sys_Error("Mem_Free: data == NULL (called at %s:%i)", filename, fileline);
+	{
+		Con_DPrintf("Mem_Free: data == NULL (called at %s:%i)", filename, fileline);
+		return;
+	}
 
 	if (developer.integer && developer_memorydebug.integer)
 	{
