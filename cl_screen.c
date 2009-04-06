@@ -1791,9 +1791,9 @@ static void SCR_DrawLoadingStack()
 		verts[7] = verts[10] = vid_conheight.integer;
 
 		for(i = 0; i < 16; ++i)
-			colors[i] = (i % 4 == 3) || (i >= 8 && i % 4 == 2);
-			//                                     ^^^^^^^^^^ blue component
-			//                           ^^^^^^ bottom row
+			colors[i] = (i % 4 == 3) ? 1 : (i >= 8 && i % 4 == 2) ? 1 : 0;
+			//                                        ^^^^^^^^^^ blue component
+			//                              ^^^^^^ bottom row
 			//          ^^^^^^^^^^^^ alpha is always on
 		R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
 
