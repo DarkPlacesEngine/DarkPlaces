@@ -791,7 +791,7 @@ void R_TimeReport_EndFrame(void)
 				lines++;
 		y = vid_conheight.integer - sb_lines - lines * 8;
 		i = j = 0;
-		DrawQ_Fill(0, y, vid_conwidth.integer, lines * 8, 0, 0, 0, 0.5, 0);
+		DrawQ_Fill(0, y, vid_conwidth.integer, lines * 8, 0, 0, 0, 1, 0);
 		while (string[i])
 		{
 			j = i;
