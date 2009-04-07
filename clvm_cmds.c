@@ -2215,6 +2215,8 @@ void CL_GetEntityMatrix (prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatri
 {
 	prvm_eval_t *val;
 	float scale;
+	float pitchsign;
+	dp_model_t *model;
 
 	scale = 1;
 	val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.scale);
@@ -2225,7 +2227,12 @@ void CL_GetEntityMatrix (prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatri
 	if(viewmatrix)
 		Matrix4x4_CreateFromQuakeEntity(out, cl.csqc_origin[0], cl.csqc_origin[1], cl.csqc_origin[2], cl.csqc_angles[0], cl.csqc_angles[1], cl.csqc_angles[2], scale * cl_viewmodel_scale.value);
 	else
-		Matrix4x4_CreateFromQuakeEntity(out, ent->fields.client->origin[0], ent->fields.client->origin[1], ent->fields.client->origin[2], -ent->fields.client->angles[0], ent->fields.client->angles[1], ent->fields.client->angles[2], scale);
+	{
+		pitchsign = 1;
+		if ((model = CL_GetModelFromEdict(ent)) && model->type == mod_alias)
+			pitchsign = -1;
+		Matrix4x4_CreateFromQuakeEntity(out, ent->fields.client->origin[0], ent->fields.client->origin[1], ent->fields.client->origin[2], pitchsign * ent->fields.client->angles[0], ent->fields.client->angles[1], ent->fields.client->angles[2], scale);
+	}
 }
 
 

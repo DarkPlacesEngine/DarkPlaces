@@ -2612,7 +2612,7 @@ void SV_GetEntityMatrix (prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatri
 {
 	prvm_eval_t *val;
 	float scale;
-	float WTFsign;
+	float pitchsign;
 	int modelindex;
 	dp_model_t *model;
 
@@ -2625,7 +2625,7 @@ void SV_GetEntityMatrix (prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatri
 		Matrix4x4_CreateFromQuakeEntity(out, ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2] + ent->fields.server->view_ofs[2], ent->fields.server->v_angle[0], ent->fields.server->v_angle[1], ent->fields.server->v_angle[2], scale * cl_viewmodel_scale.value);
 	else
 	{
-		WTFsign = 1;
+		pitchsign = 1;
 		if (
 			((modelindex = (int)ent->fields.server->modelindex) >= 1 && modelindex < MAX_MODELS && (model = sv.models[(int)ent->fields.server->modelindex]))
 			?
@@ -2637,8 +2637,8 @@ void SV_GetEntityMatrix (prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatri
 					((gamemode == GAME_TENEBRAE) && ((unsigned int)ent->fields.server->effects & (16 | 32)))
 				)
 		)
-			WTFsign = -1;
-		Matrix4x4_CreateFromQuakeEntity(out, ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2], WTFsign * ent->fields.server->angles[0], ent->fields.server->angles[1], ent->fields.server->angles[2], scale);
+			pitchsign = -1;
+		Matrix4x4_CreateFromQuakeEntity(out, ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2], pitchsign * ent->fields.server->angles[0], ent->fields.server->angles[1], ent->fields.server->angles[2], scale);
 	}
 }
 
