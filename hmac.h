@@ -2,7 +2,7 @@
 #define HMAC_H
 
 typedef void (*hashfunc_t) (unsigned char *out, unsigned char *in, int n);
-void hmac(
+qboolean hmac(
 	hashfunc_t hfunc, int hlen, int hblock,
 	unsigned char *out,
 	unsigned char *in, int n,
