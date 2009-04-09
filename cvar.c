@@ -294,6 +294,13 @@ void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 			CL_SetInfo("playermodel", var->string, true, false, false, false);
 		else if (!strcmp(var->name, "_cl_name"))
 			CL_SetInfo("name", var->string, true, false, false, false);
+		else if (!strcmp(var->name, "rcon_secure"))
+		{
+			// whenever rcon_secure is changed, clear rcon_password for
+			// security reasons (prevents a send-rcon-password-as-plaintext
+			// attack based on NQ protocol session takeover and svc_stufftext)
+			Cvar_Set("rcon_password", "");
+		}
 	}
 }
 
