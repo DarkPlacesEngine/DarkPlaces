@@ -107,6 +107,7 @@ OBJ_COMMON= \
 	gl_rmain.o \
 	gl_rsurf.o \
 	gl_textures.o \
+	hmac.o \
 	host.o \
 	host_cmd.o \
 	image.o \
