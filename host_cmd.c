@@ -2390,10 +2390,12 @@ void Host_Rcon_f (void) // credit: taken from QuakeWorld
 			char argbuf[1500];
 			dpsnprintf(argbuf, sizeof(argbuf), "%ld %s", (long) time(NULL), Cmd_Args());
 			memcpy(buf, "\377\377\377\377srcon HMAC-MD4 TIME ", 24);
-			HMAC_MDFOUR_16BYTES((unsigned char *) (buf + 24), (unsigned char *) argbuf, strlen(argbuf), (unsigned char *) rcon_password.string, strlen(rcon_password.string));
-			buf[40] = ' ';
-			strlcpy(buf + 41, argbuf, sizeof(buf) - 41);
-			NetConn_Write(mysocket, buf, 41 + strlen(buf + 41), &to);
+			if(HMAC_MDFOUR_16BYTES((unsigned char *) (buf + 24), (unsigned char *) argbuf, strlen(argbuf), (unsigned char *) rcon_password.string, strlen(rcon_password.string)))
+			{
+				buf[40] = ' ';
+				strlcpy(buf + 41, argbuf, sizeof(buf) - 41);
+				NetConn_Write(mysocket, buf, 41 + strlen(buf + 41), &to);
+			}
 		}
 		else
 		{

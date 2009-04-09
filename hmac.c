@@ -1,7 +1,7 @@
 #include "quakedef.h"
 #include "hmac.h"
 
-void hmac(
+qboolean hmac(
 	hashfunc_t hfunc, int hlen, int hblock,
 	unsigned char *out,
 	unsigned char *in, int n,
@@ -15,15 +15,15 @@ void hmac(
 	int i;
 
 	if(sizeof(hashbuf) < (size_t) hlen)
-		Host_Error("Invalid hash function used for HMAC - too long hash length");
+		return false;
 	if(sizeof(k_xor_ipad) < (size_t) hblock)
-		Host_Error("Invalid hash function used for HMAC - too long hash block length");
+		return false;
 	if(sizeof(k_xor_ipad) < (size_t) hlen)
-		Host_Error("Invalid hash function used for HMAC - too long hash length");
+		return false;
 	if(sizeof(catbuf) < (size_t) hblock + (size_t) hlen)
-		Host_Error("Invalid hash function used for HMAC - too long hash block length");
+		return false;
 	if(sizeof(catbuf) < (size_t) hblock + (size_t) n)
-		Host_Error("Invalid hash function used for HMAC - too long message length");
+		return false;
 
 	if(k > hblock)
 	{
@@ -56,4 +56,5 @@ void hmac(
 	memcpy(catbuf, k_xor_opad, hblock);
 	memcpy(catbuf + hblock, hashbuf, hlen);
 	hfunc(out, catbuf, hblock + hlen);
+	return true;
 }

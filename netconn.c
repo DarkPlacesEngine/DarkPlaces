@@ -2192,7 +2192,9 @@ qboolean hmac_mdfour_matching(const char *password, const char *hash, const char
 	if(abs(t1 - t2) > rcon_secure_maxdiff.integer)
 		return false;
 
-	HMAC_MDFOUR_16BYTES((unsigned char *) mdfourbuf, (unsigned char *) s, slen, (unsigned char *) password, strlen(password));
+	if(!HMAC_MDFOUR_16BYTES((unsigned char *) mdfourbuf, (unsigned char *) s, slen, (unsigned char *) password, strlen(password)))
+		return false;
+
 	return !memcmp(mdfourbuf, hash, 16);
 }
 
