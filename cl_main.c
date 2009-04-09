@@ -1915,6 +1915,7 @@ void CL_Locs_FreeNode(cl_locnode_t *node)
 		{
 			*pointer = node->next;
 			Mem_Free(node);
+			return;
 		}
 	}
 	Con_Printf("CL_Locs_FreeNode: no such node! (%p)\n", node);
