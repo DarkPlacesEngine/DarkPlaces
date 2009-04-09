@@ -18,6 +18,8 @@ void hmac(
 		Host_Error("Invalid hash function used for HMAC - too long hash length");
 	if(sizeof(k_xor_ipad) < (size_t) hblock)
 		Host_Error("Invalid hash function used for HMAC - too long hash block length");
+	if(sizeof(k_xor_ipad) < (size_t) hlen)
+		Host_Error("Invalid hash function used for HMAC - too long hash length");
 	if(sizeof(catbuf) < (size_t) hblock + (size_t) hlen)
 		Host_Error("Invalid hash function used for HMAC - too long hash block length");
 	if(sizeof(catbuf) < (size_t) hblock + (size_t) n)
@@ -26,16 +28,16 @@ void hmac(
 	if(k > hblock)
 	{
 		// hash the key if it is too long
-		// NO! that makes it too short if hblock != hlen
-		// just shorten it, then
-		// hfunc(hashbuf, key, k);
-		// key = hashbuf;
-		k = hblock;
+		hfunc(k_xor_opad, key, k);
+		key = k_xor_opad;
+		k = hlen;
 	}
-	else if(k < hblock)
+
+	if(k < hblock)
 	{
 		// zero pad the key if it is too short
-		memcpy(k_xor_opad, key, k);
+		if(key != k_xor_opad)
+			memcpy(k_xor_opad, key, k);
 		for(i = k; i < hblock; ++i)
 			k_xor_opad[i] = 0;
 		key = k_xor_opad;
