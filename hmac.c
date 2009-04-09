@@ -8,10 +8,10 @@ void hmac(
 	unsigned char *key, int k
 )
 {
-	unsigned char hashbuf[32];
-	unsigned char k_xor_ipad[128];
-	unsigned char k_xor_opad[128];
-	unsigned char catbuf[256];
+	static unsigned char hashbuf[32];
+	static unsigned char k_xor_ipad[128];
+	static unsigned char k_xor_opad[128];
+	static unsigned char catbuf[4096];
 	int i;
 
 	if(sizeof(hashbuf) < (size_t) hlen)

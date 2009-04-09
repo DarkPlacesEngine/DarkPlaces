@@ -23,6 +23,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "lhnet.h"
 
+// for secure rcon authentication
+#include "hmac.h"
+#include "mdfour.h"
+#include <time.h>
+
 #define QWMASTER_PORT 27000
 #define DPMASTER_PORT 27950
 
@@ -80,6 +85,8 @@ static cvar_t net_slist_favorites = {CVAR_SAVE, "net_slist_favorites", "", "cont
 static cvar_t gameversion = {0, "gameversion", "0", "version of game data (mod-specific), when client and server gameversion mismatch in the server browser the server is shown as incompatible"};
 static cvar_t rcon_restricted_password = {CVAR_PRIVATE, "rcon_restricted_password", "", "password to authenticate rcon commands in restricted mode"};
 static cvar_t rcon_restricted_commands = {0, "rcon_restricted_commands", "", "allowed commands for rcon when the restricted mode password was used"};
+static cvar_t rcon_secure_maxdiff = {0, "rcon_secure_maxdiff", "5", "maximum time difference between rcon request and server system clock (to protect against replay attack)"};
+extern cvar_t rcon_secure;
 
 /* statistic counters */
 static int packetsSent = 0;
@@ -2173,16 +2180,37 @@ void NetConn_ClearConnectFlood(lhnetaddress_t *peeraddress)
 	}
 }
 
+typedef qboolean (*rcon_matchfunc_t) (const char *password, const char *hash, const char *s, int slen);
+
+qboolean hmac_mdfour_matching(const char *password, const char *hash, const char *s, int slen)
+{
+	char mdfourbuf[16];
+	long t1, t2;
+
+	t1 = (long) time(NULL);
+	t2 = strtol(s, NULL, 0);
+	if(abs(t1 - t2) > rcon_secure_maxdiff.integer)
+		return false;
+
+	HMAC_MDFOUR_16BYTES((unsigned char *) mdfourbuf, (unsigned char *) s, slen, (unsigned char *) password, strlen(password));
+	return !memcmp(mdfourbuf, hash, 16);
+}
+
+qboolean plaintext_matching(const char *password, const char *hash, const char *s, int slen)
+{
+	return !strcmp(password, hash);
+}
+
 // returns a string describing the user level, or NULL for auth failure
-const char *RCon_Authenticate(const char *password, const char *s, const char *endpos)
+const char *RCon_Authenticate(const char *password, const char *s, const char *endpos, rcon_matchfunc_t comparator, const char *cs, int cslen)
 {
 	const char *text;
 	qboolean hasquotes;
 
-	if(!strcmp(rcon_password.string, password))
+	if(comparator(rcon_password.string, password, cs, cslen))
 		return "rcon";
 	
-	if(strcmp(rcon_restricted_password.string, password))
+	if(!comparator(rcon_restricted_password.string, password, cs, cslen))
 		return NULL;
 
 	for(text = s; text != endpos; ++text)
@@ -2228,6 +2256,44 @@ match:
 	}
 
 	return "restricted rcon";
+}
+
+void RCon_Execute(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress, const char *addressstring2, const char *userlevel, const char *s, const char *endpos)
+{
+	if(userlevel)
+	{
+		// looks like a legitimate rcon command with the correct password
+		const char *s_ptr = s;
+		Con_Printf("server received %s command from %s: ", userlevel, host_client ? host_client->name : addressstring2);
+		while(s_ptr != endpos)
+		{
+			size_t l = strlen(s_ptr);
+			if(l)
+				Con_Printf(" %s;", s_ptr);
+			s_ptr += l + 1;
+		}
+		Con_Printf("\n");
+
+		if (!host_client || !host_client->netconnection || LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) != LHNETADDRESSTYPE_LOOP)
+			Con_Rcon_Redirect_Init(mysocket, peeraddress);
+		while(s != endpos)
+		{
+			size_t l = strlen(s);
+			if(l)
+			{
+				client_t *host_client_save = host_client;
+				Cmd_ExecuteString(s, src_command);
+				host_client = host_client_save;
+				// in case it is a command that changes host_client (like restart)
+			}
+			s += l + 1;
+		}
+		Con_Rcon_Redirect_End();
+	}
+	else
+	{
+		Con_Printf("server denied rcon access to %s\n", host_client ? host_client->name : addressstring2);
+	}
 }
 
 extern void SV_SendServerinfo (client_t *client);
@@ -2408,12 +2474,31 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			}
 			return true;
 		}
+		if (length >= 37 && !memcmp(string, "srcon HMAC-MD4 TIME ", 20))
+		{
+			char *password = string + 20;
+			char *timeval = string + 37;
+			char *s = strchr(timeval, ' ');
+			char *endpos = string + length + 1; // one behind the NUL, so adding strlen+1 will eventually reach it
+			const char *userlevel;
+			if(!s)
+				return true; // invalid packet
+			++s;
+
+			userlevel = RCon_Authenticate(password, s, endpos, hmac_mdfour_matching, timeval, endpos - timeval - 1); // not including the appended \0 into the HMAC
+			RCon_Execute(mysocket, peeraddress, addressstring2, userlevel, s, endpos);
+			return true;
+		}
 		if (length >= 5 && !memcmp(string, "rcon ", 5))
 		{
 			int i;
 			char *s = string + 5;
 			char *endpos = string + length + 1; // one behind the NUL, so adding strlen+1 will eventually reach it
 			char password[64];
+
+			if(rcon_secure.integer)
+				return true;
+
 			for (i = 0;!ISWHITESPACE(*s);s++)
 				if (i < (int)sizeof(password) - 1)
 					password[i++] = *s;
@@ -2422,41 +2507,8 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			password[i] = 0;
 			if (!ISWHITESPACE(password[0]))
 			{
-				const char *userlevel = RCon_Authenticate(password, s, endpos);
-				if(userlevel)
-				{
-					// looks like a legitimate rcon command with the correct password
-					char *s_ptr = s;
-					Con_Printf("server received %s command from %s: ", userlevel, host_client ? host_client->name : addressstring2);
-					while(s_ptr != endpos)
-					{
-						size_t l = strlen(s_ptr);
-						if(l)
-							Con_Printf(" %s;", s_ptr);
-						s_ptr += l + 1;
-					}
-					Con_Printf("\n");
-
-					if (!host_client || !host_client->netconnection || LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) != LHNETADDRESSTYPE_LOOP)
-						Con_Rcon_Redirect_Init(mysocket, peeraddress);
-					while(s != endpos)
-					{
-						size_t l = strlen(s);
-						if(l)
-						{
-							client_t *host_client_save = host_client;
-							Cmd_ExecuteString(s, src_command);
-							host_client = host_client_save;
-							// in case it is a command that changes host_client (like restart)
-						}
-						s += l + 1;
-					}
-					Con_Rcon_Redirect_End();
-				}
-				else
-				{
-					Con_Printf("server denied rcon access to %s\n", host_client ? host_client->name : addressstring2);
-				}
+				const char *userlevel = RCon_Authenticate(password, s, endpos, plaintext_matching, NULL, 0);
+				RCon_Execute(mysocket, peeraddress, addressstring2, userlevel, s, endpos);
 			}
 			return true;
 		}
@@ -2971,6 +3023,7 @@ void NetConn_Init(void)
 	Cmd_AddCommand("heartbeat", Net_Heartbeat_f, "send a heartbeat to the master server (updates your server information)");
 	Cvar_RegisterVariable(&rcon_restricted_password);
 	Cvar_RegisterVariable(&rcon_restricted_commands);
+	Cvar_RegisterVariable(&rcon_secure_maxdiff);
 	Cvar_RegisterVariable(&net_slist_queriespersecond);
 	Cvar_RegisterVariable(&net_slist_queriesperframe);
 	Cvar_RegisterVariable(&net_slist_timeout);
