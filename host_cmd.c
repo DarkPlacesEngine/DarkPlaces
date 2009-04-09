@@ -22,12 +22,18 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "sv_demo.h"
 #include "image.h"
 
+// for secure rcon authentication
+#include "hmac.h"
+#include "mdfour.h"
+#include <time.h>
+
 int current_skill;
 cvar_t sv_cheats = {0, "sv_cheats", "0", "enables cheat commands in any game, and cheat impulses in dpmod"};
 cvar_t sv_adminnick = {CVAR_SAVE, "sv_adminnick", "", "nick name to use for admin messages instead of host name"};
 cvar_t sv_status_privacy = {CVAR_SAVE, "sv_status_privacy", "0", "do not show IP addresses in 'status' replies to clients"};
 cvar_t sv_status_show_qcstatus = {CVAR_SAVE, "sv_status_show_qcstatus", "0", "show the 'qcstatus' field in status replies, not the 'frags' field. Turn this on if your mod uses this field, and the 'frags' field on the other hand has no meaningful value."};
 cvar_t rcon_password = {CVAR_PRIVATE, "rcon_password", "", "password to authenticate rcon commands"};
+cvar_t rcon_secure = {0, "rcon_secure", "1", "force secure rcon authentication"};
 cvar_t rcon_address = {0, "rcon_address", "", "server address to send rcon commands to (when not connected to a server)"};
 cvar_t team = {CVAR_USERINFO | CVAR_SAVE, "team", "none", "QW team (4 character limit, example: blue)"};
 cvar_t skin = {CVAR_USERINFO | CVAR_SAVE, "skin", "", "QW player skin name (example: base)"};
@@ -2378,7 +2384,21 @@ void Host_Rcon_f (void) // credit: taken from QuakeWorld
 	if (mysocket)
 	{
 		// simply put together the rcon packet and send it
-		NetConn_WriteString(mysocket, va("\377\377\377\377rcon %s %s", rcon_password.string, Cmd_Args()), &to);
+		if(rcon_secure.integer)
+		{
+			char buf[1500];
+			char argbuf[1500];
+			dpsnprintf(argbuf, sizeof(argbuf), "%ld %s", (long) time(NULL), Cmd_Args());
+			memcpy(buf, "\377\377\377\377srcon HMAC-MD4 TIME ", 24);
+			HMAC_MDFOUR_16BYTES((unsigned char *) (buf + 24), (unsigned char *) argbuf, strlen(argbuf), (unsigned char *) rcon_password.string, strlen(rcon_password.string));
+			buf[40] = ' ';
+			strlcpy(buf + 41, argbuf, sizeof(buf) - 41);
+			NetConn_Write(mysocket, buf, 41 + strlen(buf + 41), &to);
+		}
+		else
+		{
+			NetConn_WriteString(mysocket, va("\377\377\377\377rcon %s %s", rcon_password.string, Cmd_Args()), &to);
+		}
 	}
 }
 
@@ -2756,6 +2776,7 @@ void Host_InitCommands (void)
 
 	Cvar_RegisterVariable (&rcon_password);
 	Cvar_RegisterVariable (&rcon_address);
+	Cvar_RegisterVariable (&rcon_secure);
 	Cmd_AddCommand ("rcon", Host_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's)");
 	Cmd_AddCommand ("user", Host_User_f, "prints additional information about a player number or name on the scoreboard");
 	Cmd_AddCommand ("users", Host_Users_f, "prints additional information about all players on the scoreboard");
