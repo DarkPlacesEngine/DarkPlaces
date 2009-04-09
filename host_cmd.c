@@ -473,7 +473,11 @@ void Host_Reconnect_f (void)
 		// will still contain its IP address, so get the address...
 		InfoString_GetValue(cls.userinfo, "*ip", temp, sizeof(temp));
 		if (temp[0])
+		{
+			// clear the rcon password, to prevent vulnerability by stuffcmd-ing a setinfo command to change *ip, then reconnect
+			Cvar_SetQuick(&rcon_password, "");
 			CL_EstablishConnection(temp);
+		}
 		else
 			Con_Printf("Reconnect to what server?  (you have not connected to a server yet)\n");
 		return;
@@ -525,6 +529,8 @@ void Host_Connect_f (void)
 		Con_Print("connect <serveraddress> : connect to a multiplayer game\n");
 		return;
 	}
+	// clear the rcon password, to prevent vulnerability by stuffcmd-ing a connect command
+	Cvar_SetQuick(&rcon_password, "");
 	CL_EstablishConnection(Cmd_Argv(1));
 }
 
