@@ -33,7 +33,7 @@ cvar_t sv_adminnick = {CVAR_SAVE, "sv_adminnick", "", "nick name to use for admi
 cvar_t sv_status_privacy = {CVAR_SAVE, "sv_status_privacy", "0", "do not show IP addresses in 'status' replies to clients"};
 cvar_t sv_status_show_qcstatus = {CVAR_SAVE, "sv_status_show_qcstatus", "0", "show the 'qcstatus' field in status replies, not the 'frags' field. Turn this on if your mod uses this field, and the 'frags' field on the other hand has no meaningful value."};
 cvar_t rcon_password = {CVAR_PRIVATE, "rcon_password", "", "password to authenticate rcon commands; NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password"};
-cvar_t rcon_secure = {CVAR_NQUSERINFOHACK, "rcon_secure", "1", "force secure rcon authentication; NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password"};
+cvar_t rcon_secure = {CVAR_NQUSERINFOHACK, "rcon_secure", "0", "force secure rcon authentication; NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password"};
 cvar_t rcon_address = {0, "rcon_address", "", "server address to send rcon commands to (when not connected to a server)"};
 cvar_t team = {CVAR_USERINFO | CVAR_SAVE, "team", "none", "QW team (4 character limit, example: blue)"};
 cvar_t skin = {CVAR_USERINFO | CVAR_SAVE, "skin", "", "QW player skin name (example: base)"};
@@ -475,7 +475,8 @@ void Host_Reconnect_f (void)
 		if (temp[0])
 		{
 			// clear the rcon password, to prevent vulnerability by stuffcmd-ing a setinfo command to change *ip, then reconnect
-			Cvar_SetQuick(&rcon_password, "");
+			if(!rcon_secure.integer)
+				Cvar_SetQuick(&rcon_password, "");
 			CL_EstablishConnection(temp);
 		}
 		else
@@ -530,7 +531,8 @@ void Host_Connect_f (void)
 		return;
 	}
 	// clear the rcon password, to prevent vulnerability by stuffcmd-ing a connect command
-	Cvar_SetQuick(&rcon_password, "");
+	if(!rcon_secure.integer)
+		Cvar_SetQuick(&rcon_password, "");
 	CL_EstablishConnection(Cmd_Argv(1));
 }
 
@@ -2390,7 +2392,7 @@ void Host_Rcon_f (void) // credit: taken from QuakeWorld
 	if (mysocket)
 	{
 		// simply put together the rcon packet and send it
-		if(rcon_secure.integer)
+		if(Cmd_Argv(0)[0] == 's' || rcon_secure.integer)
 		{
 			char buf[1500];
 			char argbuf[1500];
@@ -2786,6 +2788,7 @@ void Host_InitCommands (void)
 	Cvar_RegisterVariable (&rcon_address);
 	Cvar_RegisterVariable (&rcon_secure);
 	Cmd_AddCommand ("rcon", Host_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's)");
+	Cmd_AddCommand ("srcon", Host_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's); this always works as if rcon_secure is set");
 	Cmd_AddCommand ("user", Host_User_f, "prints additional information about a player number or name on the scoreboard");
 	Cmd_AddCommand ("users", Host_Users_f, "prints additional information about all players on the scoreboard");
 	Cmd_AddCommand ("fullserverinfo", Host_FullServerinfo_f, "internal use only, sent by server to client to update client's local copy of serverinfo string");
