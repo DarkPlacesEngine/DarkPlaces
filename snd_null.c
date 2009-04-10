@@ -53,6 +53,11 @@ void S_ServerSounds (char serversound [][MAX_QPATH], unsigned int numsounds)
 {
 }
 
+void S_PurgeUnused (void)
+{
+}
+
+
 void S_StaticSound (sfx_t *sfx, vec3_t origin, float fvol, float attenuation)
 {
 }

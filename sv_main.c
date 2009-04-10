@@ -2940,7 +2940,8 @@ void SV_SpawnServer (const char *server)
 		SV_Physics ();
 	}
 
-	Mod_PurgeUnused();
+	if (cls.state == ca_dedicated)
+		Mod_PurgeUnused();
 
 // create a baseline for more efficient communications
 	if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE || sv.protocol == PROTOCOL_NEHAHRABJP || sv.protocol == PROTOCOL_NEHAHRABJP2 || sv.protocol == PROTOCOL_NEHAHRABJP3)

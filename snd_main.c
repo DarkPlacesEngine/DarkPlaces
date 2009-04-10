@@ -1050,6 +1050,17 @@ void S_ServerSounds (char serversound [][MAX_QPATH], unsigned int numsounds)
 			sfx->flags |= SFXFLAG_SERVERSOUND;
 		}
 	}
+}
+
+/*
+==================
+S_PurgeUnused
+==================
+*/
+void S_PurgeUnused(void)
+{
+	sfx_t *sfx;
+	sfx_t *sfxnext;
 
 	// Free all unlocked sfx
 	for (sfx = known_sfx;sfx;sfx = sfxnext)
@@ -1497,7 +1508,8 @@ qboolean S_SetChannelFlag (unsigned int ch_ind, unsigned int flag, qboolean valu
 
 	if (flag != CHANNELFLAG_FORCELOOP &&
 		flag != CHANNELFLAG_PAUSED &&
-		flag != CHANNELFLAG_FULLVOLUME)
+		flag != CHANNELFLAG_FULLVOLUME &&
+		flag != CHANNELFLAG_LOCALSOUND)
 		return false;
 
 	if (value)

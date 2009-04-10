@@ -576,7 +576,9 @@ static void QW_CL_RequestNextDownload(void)
 		cl.model_bolt2 = Mod_ForName("progs/bolt2.mdl", false, false, NULL);
 		cl.model_bolt3 = Mod_ForName("progs/bolt3.mdl", false, false, NULL);
 		cl.model_beam = Mod_ForName("progs/beam.mdl", false, false, NULL);
-		Mod_PurgeUnused();
+
+		// we purge the models and sounds later in CL_SignonReply
+		//Mod_PurgeUnused();
 
 		// now we try to load everything that is new
 
@@ -649,6 +651,9 @@ static void QW_CL_RequestNextDownload(void)
 			// Don't lock the sfx here, S_ServerSounds already did that
 			cl.sound_precache[i] = S_PrecacheSound(cl.sound_name[i], true, false);
 		}
+
+		// we purge the models and sounds later in CL_SignonReply
+		//S_PurgeUnused();
 
 		// check memory integrity
 		Mem_CheckSentinelsGlobal();
@@ -1541,7 +1546,10 @@ static void CL_SignonReply (void)
 	case 4:
 		// after the level has been loaded, we shouldn't need the shaders, and
 		// if they are needed again they will be automatically loaded...
+		// we also don't need the unused models or sounds from the last level
 		Mod_FreeQ3Shaders();
+		Mod_PurgeUnused();
+		S_PurgeUnused();
 
 		Con_ClearNotify();
 		if (COM_CheckParm("-profilegameonly"))
@@ -1737,10 +1745,12 @@ void CL_ParseServerInfo (void)
 		cl.model_bolt2 = Mod_ForName("progs/bolt2.mdl", false, false, NULL);
 		cl.model_bolt3 = Mod_ForName("progs/bolt3.mdl", false, false, NULL);
 		cl.model_beam = Mod_ForName("progs/beam.mdl", false, false, NULL);
-		Mod_PurgeUnused();
+
+		// we purge the models and sounds later in CL_SignonReply
+		//Mod_PurgeUnused();
+		//S_PurgeUnused();
 
 		// do the same for sounds
-		// FIXME: S_ServerSounds does not know about cl.sfx_ sounds
 		S_ServerSounds (cl.sound_name, numsounds);
 
 		// precache any sounds used by the client
