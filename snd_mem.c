@@ -326,6 +326,8 @@ qboolean S_LoadSound (sfx_t *sfx, qboolean complain)
 	if (developer_loading.integer)
 		Con_Printf("loading sound %s\n", sfx->name);
 
+	SCR_PushLoadingScreen(true, sfx->name, 1);
+
 	// LordHavoc: if the sound filename does not begin with sound/, try adding it
 	if (strncasecmp(sfx->name, "sound/", 6))
 	{
@@ -334,18 +336,18 @@ qboolean S_LoadSound (sfx_t *sfx, qboolean complain)
 		if (len >= 4 && !strcasecmp (namebuffer + len - 4, ".wav"))
 		{
 			if (S_LoadWavFile (namebuffer, sfx))
-				return true;
+				goto loaded;
 			memcpy (namebuffer + len - 3, "ogg", 4);
 		}
 		if (len >= 4 && !strcasecmp (namebuffer + len - 4, ".ogg"))
 		{
 			if (OGG_LoadVorbisFile (namebuffer, sfx))
-				return true;
+				goto loaded;
 		}
 		else
 		{
 			if (ModPlug_LoadModPlugFile (namebuffer, sfx))
-				return true;
+				goto loaded;
 		}
 	}
 
@@ -358,23 +360,29 @@ qboolean S_LoadSound (sfx_t *sfx, qboolean complain)
 	if (len >= 4 && !strcasecmp (namebuffer + len - 4, ".wav"))
 	{
 		if (S_LoadWavFile (namebuffer, sfx))
-			return true;
+			goto loaded;
 		memcpy (namebuffer + len - 3, "ogg", 4);
 	}
 	if (len >= 4 && !strcasecmp (namebuffer + len - 4, ".ogg"))
 	{
 		if (OGG_LoadVorbisFile (namebuffer, sfx))
-			return true;
+			goto loaded;
 	}
 	else
 	{
 		if (ModPlug_LoadModPlugFile (namebuffer, sfx))
-			return true;
+			goto loaded;
 	}
 
 	// Can't load the sound!
 	sfx->flags |= SFXFLAG_FILEMISSING;
 	if (complain)
 		Con_DPrintf("failed to load sound \"%s\"\n", sfx->name);
+
+	SCR_PopLoadingScreen(false);
 	return false;
+
+loaded:
+	SCR_PopLoadingScreen(false);
+	return true;
 }
