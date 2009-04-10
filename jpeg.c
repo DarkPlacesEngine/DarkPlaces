@@ -990,6 +990,7 @@ static CompressedImageCacheItem *CompressedImageCache_Find(const char *imagename
 		if(i->maxsize == maxsize)
 			if(!strcmp(i->imagename, imagename))
 				return i;
+		i = i->next;
 	}
 	return NULL;
 }
