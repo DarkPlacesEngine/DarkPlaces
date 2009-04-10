@@ -60,7 +60,7 @@ double host_starttime = 0;
 cvar_t host_framerate = {0, "host_framerate","0", "locks frame timing to this value in seconds, 0.05 is 20fps for example, note that this can easily run too fast, use cl_maxfps if you want to limit your framerate instead, or sys_ticrate to limit server speed"};
 // shows time used by certain subsystems
 cvar_t host_speeds = {0, "host_speeds","0", "reports how much time is used in server/graphics/sound"};
-cvar_t host_sleep = {0, "host_sleep","1", "gives up some processing time to other applications each frame, value in milliseconds"};
+cvar_t host_sleep = {0, "host_sleep","0", "gives up some processing time to other applications each frame, value in milliseconds"};
 cvar_t cl_minfps = {CVAR_SAVE, "cl_minfps", "40", "minimum fps target - while the rendering performance is below this, it will drift toward lower quality"};
 cvar_t cl_minfps_fade = {CVAR_SAVE, "cl_minfps_fade", "0.2", "how fast the quality adapts to varying framerate"};
 cvar_t cl_minfps_qualitymax = {CVAR_SAVE, "cl_minfps_qualitymax", "1", "highest allowed drawdistance multiplier"};
@@ -670,9 +670,6 @@ void Host_Main(void)
 
 		cl.islocalgame = NetConn_IsLocalGame();
 
-		// begin gathering mouse input
-		in_mouse_x = in_mouse_y = 0;
-
 		// get new key events
 		Sys_SendKeyEvents();
 
@@ -907,6 +904,9 @@ void Host_Main(void)
 				S_Update(&r_refdef.view.matrix);
 
 			CDAudio_Update();
+
+			// reset gathering of mouse input
+			in_mouse_x = in_mouse_y = 0;
 
 			if (host_speeds.integer)
 			{
