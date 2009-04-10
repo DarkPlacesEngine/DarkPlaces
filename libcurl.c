@@ -482,7 +482,7 @@ static void Curl_EndDownload(downloadinfo *di, CurlStatus status, CURLcode error
 		qcurl_easy_cleanup(di->curle);
 	}
 
-	if(ok && !di->bytes_received)
+	if(!di->callback && ok && !di->bytes_received)
 	{
 		Con_Printf("ERROR: empty file\n");
 		ok = false;
