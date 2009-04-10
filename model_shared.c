@@ -329,15 +329,15 @@ dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk)
 		Mem_Free(buf);
 
 		Mod_BuildVBOs();
-
-		// no fatal errors occurred, so this model is ready to use.
-		mod->loaded = true;
 	}
 	else if (crash)
 	{
 		// LordHavoc: Sys_Error was *ANNOYING*
 		Con_Printf ("Mod_LoadModel: %s not found\n", mod->name);
 	}
+
+	// no fatal errors occurred, so this model is ready to use.
+	mod->loaded = true;
 
 	SCR_PopLoadingScreen(false);
 

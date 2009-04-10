@@ -146,6 +146,7 @@ void CDAudio_Play_byName (const char *trackname, qboolean looping)
 {
 	unsigned int track;
 	sfx_t* sfx;
+	char filename[MAX_QPATH];
 
 	Host_StartVideo();
 
@@ -213,25 +214,24 @@ void CDAudio_Play_byName (const char *trackname, qboolean looping)
 	// Try playing a fake track (sound file) first
 	if(track >= 1)
 	{
-		sfx = S_PrecacheSound (va ("cdtracks/track%02u.wav", track), false, false);
-		if (sfx == NULL || !S_IsSoundPrecached (sfx))
-			sfx = S_PrecacheSound (va ("cdtracks/track%03u.wav", track), false, false);
-		if (sfx == NULL || !S_IsSoundPrecached (sfx))
-			sfx = S_PrecacheSound (va ("cdtracks/track%02u", track), false, false);
-		if (sfx == NULL || !S_IsSoundPrecached (sfx))
-			sfx = S_PrecacheSound (va ("cdtracks/track%03u", track), false, false);
+		                              dpsnprintf(filename, sizeof(filename), "sound/cdtracks/track%03u.wav", track);
+		if (!FS_FileExists(filename)) dpsnprintf(filename, sizeof(filename), "sound/cdtracks/track%03u.ogg", track);
+		if (!FS_FileExists(filename)) dpsnprintf(filename, sizeof(filename), "sound/cdtracks/track%02u.wav", track);
+		if (!FS_FileExists(filename)) dpsnprintf(filename, sizeof(filename), "sound/cdtracks/track%02u.ogg", track);
 	}
 	else
 	{
-		sfx = S_PrecacheSound (va("cdtracks/%s.wav", trackname), false, false);
-		if (sfx == NULL || !S_IsSoundPrecached (sfx))
-			sfx = S_PrecacheSound (va("cdtracks/%s", trackname), false, false);
-		if (sfx == NULL || !S_IsSoundPrecached (sfx))
-			sfx = S_PrecacheSound (va("%s.wav", trackname), false, false);
-		if (sfx == NULL || !S_IsSoundPrecached (sfx))
-			sfx = S_PrecacheSound (va("%s", trackname), false, false);
+		                              dpsnprintf(filename, sizeof(filename), "%s", trackname);
+		if (!FS_FileExists(filename)) dpsnprintf(filename, sizeof(filename), "%s.wav", trackname);
+		if (!FS_FileExists(filename)) dpsnprintf(filename, sizeof(filename), "%s.ogg", trackname);
+		if (!FS_FileExists(filename)) dpsnprintf(filename, sizeof(filename), "sound/%s", trackname);
+		if (!FS_FileExists(filename)) dpsnprintf(filename, sizeof(filename), "sound/%s.wav", trackname);
+		if (!FS_FileExists(filename)) dpsnprintf(filename, sizeof(filename), "sound/%s.ogg", trackname);
+		if (!FS_FileExists(filename)) dpsnprintf(filename, sizeof(filename), "sound/cdtracks/%s", trackname);
+		if (!FS_FileExists(filename)) dpsnprintf(filename, sizeof(filename), "sound/cdtracks/%s.wav", trackname);
+		if (!FS_FileExists(filename)) dpsnprintf(filename, sizeof(filename), "sound/cdtracks/%s.ogg", trackname);
 	}
-	if (sfx != NULL)
+	if (FS_FileExists(filename) && (sfx = S_PrecacheSound (filename, false, false)))
 	{
 		faketrack = S_StartSound (-1, 0, sfx, vec3_origin, cdvolume, 0);
 		if (faketrack != -1)
@@ -239,6 +239,7 @@ void CDAudio_Play_byName (const char *trackname, qboolean looping)
 			if (looping)
 				S_SetChannelFlag (faketrack, CHANNELFLAG_FORCELOOP, true);
 			S_SetChannelFlag (faketrack, CHANNELFLAG_FULLVOLUME, true);
+			S_SetChannelFlag (faketrack, CHANNELFLAG_LOCALSOUND, true); // not pausable
 			if(track >= 1)
 			{
 				if(cdaudio.integer != 0 || developer.integer) // we don't need these messages if only fake tracks can be played anyway
