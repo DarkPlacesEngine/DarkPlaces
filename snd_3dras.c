@@ -588,6 +588,7 @@ sfx_t* S_FindName (const char *name){
 	return NULL;
 }
 int S_LoadSound(sfx_t *sfx, int complain){
+	// TODO add SCR_PushLoadingScreen, SCR_PopLoadingScreen calls to this
 	fs_offset_t filesize;
 	char namebuffer[MAX_QPATH +16  ];
 	char filename  [MAX_QPATH +16+4];

@@ -1059,7 +1059,7 @@ void CL_BeginDownloads(qboolean aborteddownload)
 		}
 		for (;cl.loadmodel_current < cl.loadmodel_total;cl.loadmodel_current++)
 		{
-			SCR_PushLoadingScreen(true, cl.model_name[cl.loadmodel_current],
+			SCR_PushLoadingScreen(false, cl.model_name[cl.loadmodel_current],
 				(
 					(cl.loadmodel_current == 1) ? LOADPROGRESSWEIGHT_WORLDMODEL : LOADPROGRESSWEIGHT_MODEL
 				) / (
@@ -1131,7 +1131,7 @@ void CL_BeginDownloads(qboolean aborteddownload)
 			);
 		for (;cl.loadsound_current < cl.loadsound_total;cl.loadsound_current++)
 		{
-			SCR_PushLoadingScreen(true, cl.sound_name[cl.loadsound_current], 1.0 / cl.loadsound_total);
+			SCR_PushLoadingScreen(false, cl.sound_name[cl.loadsound_current], 1.0 / cl.loadsound_total);
 			if (cl.sound_precache[cl.loadsound_current] && S_IsSoundPrecached(cl.sound_precache[cl.loadsound_current]))
 			{
 				SCR_PopLoadingScreen(false);
