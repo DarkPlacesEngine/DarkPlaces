@@ -1008,7 +1008,7 @@ S_ServerSounds
 void S_ServerSounds (char serversound [][MAX_QPATH], unsigned int numsounds)
 {
 	sfx_t *sfx;
-	sfx_t *sfxnext;
+//	sfx_t *sfxnext;
 	unsigned int i;
 
 	// Start the ambient sounds and make them loop
