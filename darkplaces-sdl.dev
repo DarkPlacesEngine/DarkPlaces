@@ -1,12 +1,12 @@
 [Project]
 FileName=darkplaces-sdl.dev
 Name=DarkPlaces
-UnitCount=174
+UnitCount=175
 Type=0
 Ver=1
 ObjFiles=
-Includes=
-Libs=
+Includes=C:\Dev-Cpp\SDL\include;C:\Dev-Cpp\SDL\include\SDL
+Libs=C:\Dev-Cpp\SDL\lib
 PrivateResource=darkplaces_private.rc
 ResourceIncludes=
 MakeIncludes=
@@ -1748,7 +1748,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit175]
-FileName=darkplaces_private.h
+FileName=hmac.h
 CompileCpp=0
 Folder=Header Files
 Compile=1
@@ -1898,9 +1898,9 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit174]
-FileName=timing.h
+FileName=hmac.c
 CompileCpp=0
-Folder=Header Files
+Folder=Source Files
 Compile=1
 Link=1
 Priority=1000
@@ -1938,7 +1938,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit172]
-FileName=darkplaces_private.h
+FileName=SDLMain.h
 CompileCpp=0
 Folder=Header Files
 Compile=1
@@ -1948,7 +1948,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit173]
-FileName=SDLMain.h
+FileName=timing.h
 CompileCpp=0
 Folder=Header Files
 Compile=1
