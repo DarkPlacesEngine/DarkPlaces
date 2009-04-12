@@ -2604,10 +2604,7 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, int maxsize, entityframe5_database_
 		}
 	}
 
-	// add packetlog entry
-	packetlog = d->packetlog + packetlognumber;
-	packetlog->packetnumber = framenum;
-	packetlog->numstates = 0;
+	packetlog = NULL;
 	// write stat updates
 	if (sv.protocol != PROTOCOL_QUAKE && sv.protocol != PROTOCOL_QUAKEDP && sv.protocol != PROTOCOL_NEHAHRAMOVIE && sv.protocol != PROTOCOL_NEHAHRABJP && sv.protocol != PROTOCOL_NEHAHRABJP2 && sv.protocol != PROTOCOL_NEHAHRABJP3 && sv.protocol != PROTOCOL_DARKPLACES1 && sv.protocol != PROTOCOL_DARKPLACES2 && sv.protocol != PROTOCOL_DARKPLACES3 && sv.protocol != PROTOCOL_DARKPLACES4 && sv.protocol != PROTOCOL_DARKPLACES5)
 	{
@@ -2616,6 +2613,13 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, int maxsize, entityframe5_database_
 			if (host_client->statsdeltabits[i>>3] & (1<<(i&7)))
 			{
 				host_client->statsdeltabits[i>>3] &= ~(1<<(i&7));
+				// add packetlog entry now that we have something for it
+				if (!packetlog)
+				{
+					packetlog = d->packetlog + packetlognumber;
+					packetlog->packetnumber = framenum;
+					packetlog->numstates = 0;
+				}
 				packetlog->statsdeltabits[i>>3] |= (1<<(i&7));
 				if (host_client->stats[i] >= 0 && host_client->stats[i] < 256)
 				{
@@ -2638,6 +2642,14 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, int maxsize, entityframe5_database_
 	// only send empty svc_entities frame if needed
 	if(!l && !need_empty)
 		return;
+
+	// add packetlog entry now that we have something for it
+	if (!packetlog)
+	{
+		packetlog = d->packetlog + packetlognumber;
+		packetlog->packetnumber = framenum;
+		packetlog->numstates = 0;
+	}
 
 	// write state updates
 	if (developer_networkentities.integer >= 10)
