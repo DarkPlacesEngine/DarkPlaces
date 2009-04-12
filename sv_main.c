@@ -2930,7 +2930,7 @@ void SV_SpawnServer (const char *server)
 	VectorClear(prog->edicts->fields.server->angles);
 
 // all setup is completed, any further precache statements are errors
-	sv.state = ss_active;
+//	sv.state = ss_active; // LordHavoc: workaround for svc_precache bug
 	prog->allowworldwrites = false;
 
 // run two frames to allow everything to settle
@@ -2946,7 +2946,9 @@ void SV_SpawnServer (const char *server)
 // create a baseline for more efficient communications
 	if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE || sv.protocol == PROTOCOL_NEHAHRABJP || sv.protocol == PROTOCOL_NEHAHRABJP2 || sv.protocol == PROTOCOL_NEHAHRABJP3)
 		SV_CreateBaseline ();
-	
+
+	sv.state = ss_active; // LordHavoc: workaround for svc_precache bug
+
 	// to prevent network timeouts
 	realtime = Sys_DoubleTime();
 	
