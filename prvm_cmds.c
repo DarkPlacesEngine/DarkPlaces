@@ -2101,7 +2101,7 @@ string	substring(string s, float start, float length)
 // returns a section of a string as a tempstring
 void VM_substring(void)
 {
-	int i, start, length;
+	int start, length, slength;
 	const char *s;
 	char string[VM_STRINGTEMP_LENGTH];
 
@@ -2110,10 +2110,16 @@ void VM_substring(void)
 	s = PRVM_G_STRING(OFS_PARM0);
 	start = (int)PRVM_G_FLOAT(OFS_PARM1);
 	length = (int)PRVM_G_FLOAT(OFS_PARM2);
-	for (i = 0;i < start && *s;i++, s++);
-	for (i = 0;i < (int)sizeof(string) - 1 && *s && i < length;i++, s++)
-		string[i] = *s;
-	string[i] = 0;
+	slength = strlen(s);
+	if (length < 0) // FTE_STRINGS feature
+		length += slength - start;
+	if (start < 0) // FTE_STRINGS feature
+		start += slength;
+	start = bound(0, start, slength); // consistent with php 5.2.0 but not 5.2.3
+	length = min(length, (int)sizeof(string) - 1);
+	length = min(length, slength - start);
+	memcpy(string, s + start, length);
+	string[length] = 0;
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(string);
 }
 
