@@ -1,7 +1,7 @@
 [Project]
 FileName=darkplaces-dedicated.dev
 Name=DarkPlaces
-UnitCount=156
+UnitCount=162
 Type=1
 Ver=1
 ObjFiles=
@@ -1440,9 +1440,9 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit157]
-FileName=timing.h
+FileName=hmac.c
 CompileCpp=0
-Folder=Header Files
+Folder=Source Files
 Compile=1
 Link=1
 Priority=1000
@@ -1538,9 +1538,9 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit158]
-FileName=clvm_cmds.h
+FileName=hmac.h
 CompileCpp=0
-Folder=DarkPlaces
+Folder=Header Files
 Compile=1
 Link=1
 Priority=1000
@@ -1548,9 +1548,9 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit159]
-FileName=libcurl.c
+FileName=cap_avi.c
 CompileCpp=0
-Folder=DarkPlaces
+Folder=Source Files
 Compile=1
 Link=1
 Priority=1000
@@ -1558,9 +1558,9 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit160]
-FileName=libcurl.h
+FileName=cap_avi.h
 CompileCpp=0
-Folder=DarkPlaces
+Folder=Header Files
 Compile=1
 Link=1
 Priority=1000
@@ -1568,9 +1568,9 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit161]
-FileName=sv_demo.c
+FileName=cap_ogg.h
 CompileCpp=0
-Folder=DarkPlaces
+Folder=Header Files
 Compile=1
 Link=1
 Priority=1000
@@ -1578,9 +1578,9 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit162]
-FileName=sv_demo.h
+FileName=cap_ogg.c
 CompileCpp=0
-Folder=DarkPlaces
+Folder=Source Files
 Compile=1
 Link=1
 Priority=1000

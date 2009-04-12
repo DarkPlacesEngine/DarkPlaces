@@ -1509,6 +1509,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\hmac.c"
+				>
+			</File>
+			<File
 				RelativePath="host.c"
 				>
 				<FileConfiguration
@@ -3503,6 +3507,10 @@
 			</File>
 			<File
 				RelativePath="glquake.h"
+				>
+			</File>
+			<File
+				RelativePath=".\hmac.h"
 				>
 			</File>
 			<File

@@ -1,7 +1,7 @@
 [Project]
 FileName=darkplaces.dev
 Name=DarkPlaces
-UnitCount=166
+UnitCount=172
 Type=0
 Ver=1
 ObjFiles=
@@ -1699,6 +1699,66 @@ BuildCmd=
 
 [Unit166]
 FileName=cl_dyntexture.h
+CompileCpp=0
+Folder=Header Files
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit167]
+FileName=hmac.c
+CompileCpp=0
+Folder=Source Files
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit168]
+FileName=hmac.h
+CompileCpp=0
+Folder=Header Files
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit169]
+FileName=cap_avi.c
+CompileCpp=0
+Folder=Source Files
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit170]
+FileName=cap_avi.h
+CompileCpp=0
+Folder=Header Files
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit171]
+FileName=cap_ogg.c
+CompileCpp=0
+Folder=Source Files
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit172]
+FileName=cap_ogg.h
 CompileCpp=0
 Folder=Header Files
 Compile=1
