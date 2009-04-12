@@ -858,6 +858,9 @@ void Host_Main(void)
 			if (host_framerate.value)
 				clframetime = host_framerate.value;
 
+			if (cl.paused || (cl.islocalgame && (key_dest != key_game || key_consoleactive)))
+				clframetime = 0;
+
 			if (cls.timedemo)
 				clframetime = cl.realframetime = cl_timer;
 
