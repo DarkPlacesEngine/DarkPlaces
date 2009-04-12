@@ -3082,6 +3082,75 @@ void VM_CL_serverkey(void)
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(string);
 }
 
+/*
+=================
+VM_CL_checkpvs
+
+Checks if an entity is in a point's PVS.
+Should be fast but can be inexact.
+
+float checkpvs(vector viewpos, entity viewee) = #240;
+=================
+*/
+static void VM_CL_checkpvs (void)
+{
+	vec3_t viewpos;
+	prvm_edict_t *viewee;
+	vec3_t mi, ma;
+#if 1
+	unsigned char *pvs;
+#else
+	static int fatpvsbytes;
+	static unsigned char fatpvs[MAX_MAP_LEAFS/8];
+#endif
+
+	VM_SAFEPARMCOUNT(2, VM_SV_checkpvs);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), viewpos);
+	viewee = PRVM_G_EDICT(OFS_PARM1);
+
+	if(viewee->priv.required->free)
+	{
+		VM_Warning("checkpvs: can not check free entity\n");
+		PRVM_G_FLOAT(OFS_RETURN) = 4;
+		return;
+	}
+
+	VectorAdd(viewee->fields.server->origin, viewee->fields.server->mins, mi);
+	VectorAdd(viewee->fields.server->origin, viewee->fields.server->maxs, ma);
+
+#if 1
+	if(!sv.worldmodel->brush.GetPVS || !sv.worldmodel->brush.BoxTouchingPVS)
+	{
+		// no PVS support on this worldmodel... darn
+		PRVM_G_FLOAT(OFS_RETURN) = 3;
+		return;
+	}
+	pvs = sv.worldmodel->brush.GetPVS(sv.worldmodel, viewpos);
+	if(!pvs)
+	{
+		// viewpos isn't in any PVS... darn
+		PRVM_G_FLOAT(OFS_RETURN) = 2;
+		return;
+	}
+	PRVM_G_FLOAT(OFS_RETURN) = sv.worldmodel->brush.BoxTouchingPVS(sv.worldmodel, pvs, mi, ma);
+#else
+	// using fat PVS like FTEQW does (slow)
+	if(!sv.worldmodel->brush.FatPVS || !sv.worldmodel->brush.BoxTouchingPVS)
+	{
+		// no PVS support on this worldmodel... darn
+		PRVM_G_FLOAT(OFS_RETURN) = 3;
+		return;
+	}
+	fatpvsbytes = sv.worldmodel->brush.FatPVS(sv.worldmodel, viewpos, 8, fatpvs, sizeof(fatpvs), false);
+	if(!fatpvsbytes)
+	{
+		// viewpos isn't in any PVS... darn
+		PRVM_G_FLOAT(OFS_RETURN) = 2;
+		return;
+	}
+	PRVM_G_FLOAT(OFS_RETURN) = sv.worldmodel->brush.BoxTouchingPVS(sv.worldmodel, fatpvs, mi, ma);
+#endif
+}
 //============================================================================
 
 // To create a almost working builtin file from this replace:
@@ -3334,7 +3403,7 @@ NULL,							// #236
 NULL,							// #237
 NULL,							// #238
 NULL,							// #239
-NULL,							// #240
+VM_CL_checkpvs,					// #240
 NULL,							// #241
 NULL,							// #242
 NULL,							// #243
