@@ -2934,6 +2934,7 @@ void SV_SpawnServer (const char *server)
 	prog->allowworldwrites = false;
 
 // run two frames to allow everything to settle
+	prog->globals.server->time = sv.time = 1.0001;
 	for (i = 0;i < 2;i++)
 	{
 		sv.frametime = 0.1;
