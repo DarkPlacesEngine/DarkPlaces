@@ -586,6 +586,14 @@ void SV_ExecuteClientMoves(void)
 				move->time = bound(sv.time - 1, move->time, sv.time); // prevent slowhack/speedhack combos
 				move->time = max(move->time, host_client->cmd.time); // prevent backstepping of time
 				moveframetime = bound(0, move->time - host_client->cmd.time, min(0.1, sv_clmovement_inputtimeout.value));
+
+				// discard (treat like lost) moves with too low distance from
+				// the previous one to prevent hacks using float inaccuracy
+				// clients will see this as packet loss in the netgraph
+				if(sv_clmovement_maxnetfps.value > 0)
+				if(moveframetime < 1 / sv_clmovement_maxnetfps.value)
+					continue;
+
 				//Con_Printf("movesequence = %i (%i lost), moveframetime = %f\n", move->sequence, move->sequence ? move->sequence - host_client->movesequence - 1 : 0, moveframetime);
 				host_client->cmd = *move;
 				host_client->movesequence = move->sequence;
