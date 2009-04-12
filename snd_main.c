@@ -1394,7 +1394,19 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 
 void S_PlaySfxOnChannel (sfx_t *sfx, channel_t *target_chan, unsigned int flags, vec3_t origin, float fvol, float attenuation, qboolean isstatic)
 {
+	if (!sfx)
+	{
+		Con_Printf("S_PlaySfxOnChannel called with NULL??\n");
+		return;
+	}
 	// Initialize the channel
+	// a crash was reported on an in-use channel, so check here...
+	if (target_chan->sfx)
+	{
+		int channelindex = (int)(target_chan - channels);
+		Con_Printf("S_PlaySfxOnChannel(%s): channel %i already in use??  Clearing.\n", sfx->name, channelindex);
+		S_StopChannel (channelindex, true);
+	}
 	// We MUST set sfx LAST because otherwise we could crash a threaded mixer
 	// (otherwise we'd have to call SndSys_LockRenderBuffer here)
 	memset (target_chan, 0, sizeof (*target_chan));
