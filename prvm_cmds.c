@@ -3173,6 +3173,51 @@ void VM_drawpic(void)
 }
 /*
 =========
+VM_drawrotpic
+
+float	drawrotpic(vector position, string pic, vector size, vector org, float angle, vector rgb, float alpha, float flag)
+=========
+*/
+void VM_drawrotpic(void)
+{
+	const char *picname;
+	float *size, *pos, *org, *rgb;
+	int flag;
+
+	VM_SAFEPARMCOUNT(8,VM_drawrotpic);
+
+	picname = PRVM_G_STRING(OFS_PARM1);
+	VM_CheckEmptyString (picname);
+
+	// is pic cached ? no function yet for that
+	if(!1)
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -4;
+		VM_Warning("VM_drawrotpic: %s: %s not cached !\n", PRVM_NAME, picname);
+		return;
+	}
+
+	pos = PRVM_G_VECTOR(OFS_PARM0);
+	size = PRVM_G_VECTOR(OFS_PARM2);
+	org = PRVM_G_VECTOR(OFS_PARM3);
+	rgb = PRVM_G_VECTOR(OFS_PARM5);
+	flag = (int) PRVM_G_FLOAT(OFS_PARM7);
+
+	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -2;
+		VM_Warning("VM_drawrotpic: %s: wrong DRAWFLAG %i !\n",PRVM_NAME,flag);
+		return;
+	}
+
+	if(pos[2] || size[2] || org[2])
+		Con_Printf("VM_drawrotpic: z value from pos/size/org discarded\n");
+
+	DrawQ_RotPic(pos[0], pos[1], Draw_CachePic(picname), size[0], size[1], org[0], org[1], PRVM_G_FLOAT(OFS_PARM4), rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM6), flag);
+	PRVM_G_FLOAT(OFS_RETURN) = 1;
+}
+/*
+=========
 VM_drawsubpic
 
 float	drawsubpic(vector position, vector size, string pic, vector srcPos, vector srcSize, vector rgb, float alpha, float flag)

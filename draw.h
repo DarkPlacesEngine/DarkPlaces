@@ -117,6 +117,8 @@ extern dp_font_t dp_fonts[MAX_FONTS];
 
 // draw an image (or a filled rectangle if pic == NULL)
 void DrawQ_Pic(float x, float y, cachepic_t *pic, float width, float height, float red, float green, float blue, float alpha, int flags);
+// draw a rotated image
+void DrawQ_RotPic(float x, float y, cachepic_t *pic, float width, float height, float org_x, float org_y, float angle, float red, float green, float blue, float alpha, int flags);
 // draw a filled rectangle (slightly faster than DrawQ_Pic with pic = NULL)
 void DrawQ_Fill(float x, float y, float width, float height, float red, float green, float blue, float alpha, int flags);
 // draw a text string,

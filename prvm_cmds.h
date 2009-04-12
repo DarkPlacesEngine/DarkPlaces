@@ -349,6 +349,7 @@ void VM_drawstring(void);
 void VM_drawcolorcodedstring(void);
 void VM_stringwidth(void);
 void VM_drawpic(void);
+void VM_drawrotpic(void);
 void VM_drawsubpic(void);
 void VM_drawfill(void);
 void VM_drawsetcliparea(void);

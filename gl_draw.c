@@ -867,6 +867,59 @@ void DrawQ_Pic(float x, float y, cachepic_t *pic, float width, float height, flo
 	R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
 }
 
+void DrawQ_RotPic(float x, float y, cachepic_t *pic, float width, float height, float org_x, float org_y, float angle, float red, float green, float blue, float alpha, int flags)
+{
+	float floats[20];
+	float af = DEG2RAD(-angle); // forward
+	float ar = DEG2RAD(-angle + 90); // right
+	float sinaf = sin(af);
+	float cosaf = cos(af);
+	float sinar = sin(ar);
+	float cosar = cos(ar);
+
+	_DrawQ_ProcessDrawFlag(flags);
+	GL_Color(red, green, blue, alpha);
+
+	R_Mesh_VertexPointer(floats, 0, 0);
+	R_Mesh_ColorPointer(NULL, 0, 0);
+	R_Mesh_ResetTextureState();
+	R_SetupGenericShader(pic != NULL);
+	if (pic)
+	{
+		if (width == 0)
+			width = pic->width;
+		if (height == 0)
+			height = pic->height;
+		R_Mesh_TexBind(0, R_GetTexture(pic->tex));
+		R_Mesh_TexCoordPointer(0, 2, floats + 12, 0, 0);
+
+		floats[12] = 0.0f;floats[13] = 0.0f;
+		floats[14] = 1.0f;floats[15] = 0.0f;
+		floats[16] = 1.0f;floats[17] = 1.0f;
+		floats[18] = 0.0f;floats[19] = 1.0f;
+	}
+
+	floats[2] = floats[5] = floats[8] = floats[11] = 0;
+
+// top left
+	floats[0] = x - cosaf*org_x - cosar*org_y;
+	floats[1] = y - sinaf*org_x - sinar*org_y;
+
+// top right
+	floats[3] = x + cosaf*(width-org_x) - cosar*org_y;
+	floats[4] = y + sinaf*(width-org_x) - sinar*org_y;
+
+// bottom right
+	floats[6] = x + cosaf*(width-org_x) + cosar*(height-org_y);
+	floats[7] = y + sinaf*(width-org_x) + sinar*(height-org_y);
+
+// bottom left
+	floats[9]  = x - cosaf*org_x + cosar*(height-org_y);
+	floats[10] = y - sinaf*org_x + sinar*(height-org_y);
+
+	R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
+}
+
 void DrawQ_Fill(float x, float y, float width, float height, float red, float green, float blue, float alpha, int flags)
 {
 	float floats[12];
