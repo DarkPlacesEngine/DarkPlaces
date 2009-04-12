@@ -3424,7 +3424,7 @@ VM_drawresetcliparea,			// #325 void(void) drawresetcliparea
 VM_drawcolorcodedstring,		// #326 float drawcolorcodedstring(vector position, string text, vector scale, vector rgb, float alpha, float flag) (EXT_CSQC)
 VM_stringwidth,                 // #327 // FIXME is this okay?
 VM_drawsubpic,					// #328 // FIXME is this okay?
-NULL,							// #329
+VM_drawrotpic,					// #329 // FIXME is this okay?
 VM_CL_getstatf,					// #330 float(float stnum) getstatf (EXT_CSQC)
 VM_CL_getstati,					// #331 float(float stnum) getstati (EXT_CSQC)
 VM_CL_getstats,					// #332 string(float firststnum) getstats (EXT_CSQC)
