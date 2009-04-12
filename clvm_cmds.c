@@ -241,7 +241,7 @@ void CL_VM_SetTraceGlobals(const trace_t *trace, int svent)
 #define CL_HitNetworkBrushModels(move) !((move) == MOVE_WORLDONLY)
 #define CL_HitNetworkPlayers(move)     !((move) == MOVE_WORLDONLY || (move) == MOVE_NOMONSTERS)
 
-// #16 float(vector v1, vector v2, float movetype, entity ignore) traceline
+// #16 void(vector v1, vector v2, float movetype, entity ignore) traceline
 static void VM_CL_traceline (void)
 {
 	float	*v1, *v2;
@@ -3108,7 +3108,7 @@ VM_vlen,						// #12 float(vector v) vlen (QUAKE)
 VM_vectoyaw,					// #13 float(vector v) vectoyaw (QUAKE)
 VM_CL_spawn,					// #14 entity() spawn (QUAKE)
 VM_remove,						// #15 void(entity e) remove (QUAKE)
-VM_CL_traceline,				// #16 float(vector v1, vector v2, float tryents, entity ignoreentity) traceline (QUAKE)
+VM_CL_traceline,				// #16 void(vector v1, vector v2, float tryents, entity ignoreentity) traceline (QUAKE)
 NULL,							// #17 entity() checkclient (QUAKE)
 VM_find,						// #18 entity(entity start, .string fld, string match) find (QUAKE)
 VM_precache_sound,				// #19 void(string s) precache_sound (QUAKE)
