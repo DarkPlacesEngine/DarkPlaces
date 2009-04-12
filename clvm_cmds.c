@@ -1159,6 +1159,7 @@ static void VM_CL_getinputstate (void)
 	int i, frame;
 	VM_SAFEPARMCOUNT(1, VM_CL_getinputstate);
 	frame = (int)PRVM_G_FLOAT(OFS_PARM0);
+	PRVM_G_FLOAT(OFS_RETURN) = false;
 	for (i = 0;i < CL_MAX_USERCMDS;i++)
 	{
 		if (cl.movecmd[i].sequence == frame)
@@ -1179,6 +1180,7 @@ static void VM_CL_getinputstate (void)
 				VectorCopy(cl.playerstandmins, prog->globals.client->pmove_mins);
 				VectorCopy(cl.playerstandmaxs, prog->globals.client->pmove_maxs);
 			}
+			PRVM_G_FLOAT(OFS_RETURN) = true;
 		}
 	}
 }
