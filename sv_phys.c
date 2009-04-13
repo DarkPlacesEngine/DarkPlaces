@@ -2008,7 +2008,7 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 			else
 				ent->fields.server->flags = (int)ent->fields.server->flags & ~FL_ONGROUND;
 		}
-		if (!sv_gameplayfix_slidemoveprojectiles.integer || (ent->fields.server->movetype != MOVETYPE_BOUNCE && ent->fields.server->movetype == MOVETYPE_BOUNCEMISSILE))
+		if (!sv_gameplayfix_slidemoveprojectiles.integer || (ent->fields.server->movetype != MOVETYPE_BOUNCE && ent->fields.server->movetype == MOVETYPE_BOUNCEMISSILE) || ((int)ent->fields.server->flags & FL_ONGROUND))
 			break;
 	}
 
