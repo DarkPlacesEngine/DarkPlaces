@@ -49,7 +49,7 @@ void S_Shutdown (void)
 {
 }
 
-void S_ServerSounds (char serversound [][MAX_QPATH], unsigned int numsounds)
+void S_ClearUsed (void)
 {
 }
 
@@ -88,7 +88,7 @@ void S_SetChannelVolume (unsigned int ch_ind, float fvol)
 {
 }
 
-sfx_t *S_PrecacheSound (const char *sample, qboolean complain, qboolean lock)
+sfx_t *S_PrecacheSound (const char *sample, qboolean complain, qboolean serversound)
 {
 	return NULL;
 }

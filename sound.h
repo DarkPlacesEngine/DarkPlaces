@@ -66,8 +66,8 @@ void S_UnloadAllSounds_f (void);
 void S_Update(const matrix4x4_t *listenermatrix);
 void S_ExtraUpdate (void);
 
-sfx_t *S_PrecacheSound (const char *sample, qboolean complain, qboolean lock);
-void S_ServerSounds (char serversound [][MAX_QPATH], unsigned int numsounds);
+sfx_t *S_PrecacheSound (const char *sample, qboolean complain, qboolean serversound);
+void S_ClearUsed (void);
 void S_PurgeUnused (void);
 qboolean S_IsSoundPrecached (const sfx_t *sfx);
 

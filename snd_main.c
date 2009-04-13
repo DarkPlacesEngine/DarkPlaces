@@ -254,7 +254,7 @@ static void S_Play_Common (float fvol, float attenuation)
 			i++;
 		}
 
-		sfx = S_PrecacheSound (name, true, false);
+		sfx = S_PrecacheSound (name, true, true);
 		if (sfx)
 		{
 			ch_ind = S_StartSound (-1, 0, sfx, listener_origin, fvol, attenuation);
@@ -1002,10 +1002,10 @@ void S_FreeSfx (sfx_t *sfx, qboolean force)
 
 /*
 ==================
-S_ServerSounds
+S_ClearUsed
 ==================
 */
-void S_ServerSounds (char serversound [][MAX_QPATH], unsigned int numsounds)
+void S_ClearUsed (void)
 {
 	sfx_t *sfx;
 //	sfx_t *sfxnext;
@@ -1036,20 +1036,6 @@ void S_ServerSounds (char serversound [][MAX_QPATH], unsigned int numsounds)
 			S_UnlockSfx (sfx);
 			sfx->flags &= ~SFXFLAG_SERVERSOUND;
 		}
-
-	// Add 1 lock and the SFXFLAG_SERVERSOUND flag to each sfx in "serversound"
-	for (i = 1; i < numsounds; i++)
-	{
-		sfx = S_FindName (serversound[i]);
-		if (sfx != NULL)
-		{
-			// clear the FILEMISSING flag so that S_LoadSound will try again on a
-			// previously missing file
-			sfx->flags &= ~ SFXFLAG_FILEMISSING;
-			S_LockSfx (sfx);
-			sfx->flags |= SFXFLAG_SERVERSOUND;
-		}
-	}
 }
 
 /*
@@ -1076,7 +1062,7 @@ void S_PurgeUnused(void)
 S_PrecacheSound
 ==================
 */
-sfx_t *S_PrecacheSound (const char *name, qboolean complain, qboolean lock)
+sfx_t *S_PrecacheSound (const char *name, qboolean complain, qboolean serversound)
 {
 	sfx_t *sfx;
 
@@ -1095,8 +1081,11 @@ sfx_t *S_PrecacheSound (const char *name, qboolean complain, qboolean lock)
 	// previously missing file
 	sfx->flags &= ~ SFXFLAG_FILEMISSING;
 
-	if (lock)
+	if (serversound && !(sfx->flags & SFXFLAG_SERVERSOUND))
+	{
 		S_LockSfx (sfx);
+		sfx->flags |= SFXFLAG_SERVERSOUND;
+	}
 
 	if (!nosound.integer && snd_precache.integer)
 		S_LoadSound(sfx, complain);

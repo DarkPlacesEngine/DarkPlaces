@@ -231,7 +231,7 @@ void CDAudio_Play_byName (const char *trackname, qboolean looping)
 		if (!FS_FileExists(filename)) dpsnprintf(filename, sizeof(filename), "sound/cdtracks/%s.wav", trackname);
 		if (!FS_FileExists(filename)) dpsnprintf(filename, sizeof(filename), "sound/cdtracks/%s.ogg", trackname);
 	}
-	if (FS_FileExists(filename) && (sfx = S_PrecacheSound (filename, false, false)))
+	if (FS_FileExists(filename) && (sfx = S_PrecacheSound (filename, false, true)))
 	{
 		faketrack = S_StartSound (-1, 0, sfx, vec3_origin, cdvolume, 0);
 		if (faketrack != -1)

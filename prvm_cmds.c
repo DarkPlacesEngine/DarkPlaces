@@ -1090,7 +1090,7 @@ void VM_precache_sound (void)
 	PRVM_G_INT(OFS_RETURN) = PRVM_G_INT(OFS_PARM0);
 	VM_CheckEmptyString(s);
 
-	if(snd_initialized.integer && !S_PrecacheSound(s, true, false))
+	if(snd_initialized.integer && !S_PrecacheSound(s, true, true))
 	{
 		VM_Warning("VM_precache_sound: Failed to load %s for %s\n", s, PRVM_NAME);
 		return;
