@@ -519,7 +519,20 @@ static int SV_TestEntityPosition (prvm_edict_t *ent, vec3_t offset)
 	}
 	// if the trace found a better position for the entity, move it there
 	if (VectorDistance2(trace.endpos, ent->fields.server->origin) >= 0.0001)
+	{
+#if 0
+		// please switch back to this code when trace.endpos sometimes being in solid bug is fixed
 		VectorCopy(trace.endpos, ent->fields.server->origin);
+#else
+		// verify if the endpos is REALLY outside solid
+		VectorCopy(trace.endpos, org);
+		trace = SV_Move (org, ent->fields.server->mins, ent->fields.server->maxs, org, MOVE_NOMONSTERS, ent, SUPERCONTENTS_SOLID);
+		if(trace.startsolid)
+			Con_Printf("SV_TestEntityPosition: trace.endpos detected to be in solid. NOT using it.\n");
+		else
+			VectorCopy(org, ent->fields.server->origin);
+#endif
+	}
 	return false;
 }
 
