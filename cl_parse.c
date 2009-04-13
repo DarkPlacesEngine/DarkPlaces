@@ -632,9 +632,8 @@ static void QW_CL_RequestNextDownload(void)
 
 		cls.qw_downloadtype = dl_none;
 
-		// load new sounds and unload old ones
-		// FIXME: S_ServerSounds does not know about cl.sfx_ sounds
-		S_ServerSounds(cl.sound_name, cls.qw_downloadnumber);
+		// clear sound usage flags for purging of unused sounds
+		S_ClearUsed();
 
 		// precache any sounds used by the client
 		cl.sfx_wizhit = S_PrecacheSound(cl_sound_wizardhit.string, false, true);
@@ -645,12 +644,9 @@ static void QW_CL_RequestNextDownload(void)
 		cl.sfx_ric3 = S_PrecacheSound(cl_sound_ric3.string, false, true);
 		cl.sfx_r_exp3 = S_PrecacheSound(cl_sound_r_exp3.string, false, true);
 
-		// sounds
+		// sounds used by the game
 		for (i = 1;i < MAX_SOUNDS && cl.sound_name[i][0];i++)
-		{
-			// Don't lock the sfx here, S_ServerSounds already did that
-			cl.sound_precache[i] = S_PrecacheSound(cl.sound_name[i], true, false);
-		}
+			cl.sound_precache[i] = S_PrecacheSound(cl.sound_name[i], true, true);
 
 		// we purge the models and sounds later in CL_SignonReply
 		//S_PurgeUnused();
@@ -1143,8 +1139,7 @@ void CL_BeginDownloads(qboolean aborteddownload)
 				continue;
 			}
 			CL_KeepaliveMessage(true);
-			// Don't lock the sfx here, S_ServerSounds already did that
-			cl.sound_precache[cl.loadsound_current] = S_PrecacheSound(cl.sound_name[cl.loadsound_current], false, false);
+			cl.sound_precache[cl.loadsound_current] = S_PrecacheSound(cl.sound_name[cl.loadsound_current], false, true);
 			SCR_PopLoadingScreen(false);
 		}
 		SCR_PopLoadingScreen(false);
@@ -1259,8 +1254,7 @@ void CL_BeginDownloads(qboolean aborteddownload)
 					return;
 				}
 			}
-			// Don't lock the sfx here, S_ServerSounds already did that
-			cl.sound_precache[cl.downloadsound_current] = S_PrecacheSound(cl.sound_name[cl.downloadsound_current], false, false);
+			cl.sound_precache[cl.downloadsound_current] = S_PrecacheSound(cl.sound_name[cl.downloadsound_current], false, true);
 		}
 
 		// finished loading sounds
@@ -1750,8 +1744,8 @@ void CL_ParseServerInfo (void)
 		//Mod_PurgeUnused();
 		//S_PurgeUnused();
 
-		// do the same for sounds
-		S_ServerSounds (cl.sound_name, numsounds);
+		// clear sound usage flags for purging of unused sounds
+		S_ClearUsed();
 
 		// precache any sounds used by the client
 		cl.sfx_wizhit = S_PrecacheSound(cl_sound_wizardhit.string, false, true);
@@ -1761,6 +1755,10 @@ void CL_ParseServerInfo (void)
 		cl.sfx_ric2 = S_PrecacheSound(cl_sound_ric2.string, false, true);
 		cl.sfx_ric3 = S_PrecacheSound(cl_sound_ric3.string, false, true);
 		cl.sfx_r_exp3 = S_PrecacheSound(cl_sound_r_exp3.string, false, true);
+
+		// sounds used by the game
+		for (i = 1;i < MAX_SOUNDS && cl.sound_name[i][0];i++)
+			cl.sound_precache[i] = S_PrecacheSound(cl.sound_name[i], true, true);
 
 		// now we try to load everything that is new
 		cl.loadmodel_current = 1;
@@ -3782,7 +3780,7 @@ void CL_ParseServerMessage(void)
 						i -= 32768;
 						if (i >= 1 && i < MAX_SOUNDS)
 						{
-							sfx_t *sfx = S_PrecacheSound (s, true, false);
+							sfx_t *sfx = S_PrecacheSound (s, true, true);
 							if (!sfx && snd_initialized.integer)
 								Con_DPrintf("svc_precache: S_PrecacheSound(\"%s\") failed\n", s);
 							cl.sound_precache[i] = sfx;

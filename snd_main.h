@@ -66,9 +66,8 @@ struct sfx_s
 
 										// One lock is automatically granted while the sfx is
 										// playing (and removed when stopped). Locks can also be
-	int					locks;			// added by S_PrecacheSound and S_ServerSounds.
-										// A SFX with no lock and no SFXFLAG_PERMANENTLOCK is
-										// freed at level change by S_ServerSounds.
+	int					locks;			// added by S_PrecacheSound.
+										// A SFX with no lock, no SFXFLAG_PERMANENTLOCK, and not precached after a level change is freed
 
 	unsigned int		flags;			// cf SFXFLAG_* defines
 	unsigned int		loopstart;		// in sample frames. equals total_length if not looped

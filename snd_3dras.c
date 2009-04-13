@@ -268,7 +268,7 @@ static void S_Play_Common (float fvol, float attenuation){
 				i++;
 			}
 
-			sfx = S_PrecacheSound (name, true, false);
+			sfx = S_PrecacheSound (name, true, true);
 			if (sfx)
 				S_StartSound (-1, 0, sfx, listener_location, fvol, attenuation);
 		}
@@ -686,11 +686,11 @@ int S_LoadSound(sfx_t *sfx, int complain){
 	}
 	return false;
 }
-sfx_t *S_PrecacheSound (const char *name, qboolean complain, qboolean lock){
+sfx_t *S_PrecacheSound (const char *name, qboolean complain, qboolean serversound){
 	sfx_t *sfx;
 	if(ras_version>0 && ras_dll){
 		#ifdef RAS_PRINT
-		Con_Printf("Called S_PrecacheSound %s, %i, %i\n",name,complain,lock);
+		Con_Printf("Called S_PrecacheSound %s, %i, %i\n",name,complain,serversound);
 		#endif
 		if (name == NULL || name[0] == 0)
 			return NULL;
@@ -702,12 +702,12 @@ sfx_t *S_PrecacheSound (const char *name, qboolean complain, qboolean lock){
 	}
 	return NULL;
 }
-void S_ServerSounds (char serversound [][MAX_QPATH], unsigned int numsounds){
+void S_ClearUsed (void){
 	sfx_t *prev_s, *now_s;
 	unsigned int i;
 
 	if(ras_version>0 && ras_dll){
-		Con_Printf("Called S_ServerSounds\n");
+		Con_Printf("Called S_ClearUsed\n");
 		for(i=0;i<numsounds;++i){
 			Con_Printf("Loading :'%s'\n",serversound[i]);
 			// Load the ambient sounds
@@ -720,17 +720,11 @@ void S_ServerSounds (char serversound [][MAX_QPATH], unsigned int numsounds){
 				if (now_s->flags & SFXFLAG_SERVERSOUND) now_s->flags &= ~SFXFLAG_SERVERSOUND;
 				sfx_next(&prev_s,&now_s);
 			}
-			
-			// Add 1 lock and the SFXFLAG_SERVERSOUND flag to each sfx in "serversound"
-			for (i = 1; i < numsounds; i++){
-				now_s = S_FindName (serversound[i]);
-				if (now_s != NULL)
-					now_s->flags |= SFXFLAG_SERVERSOUND;
-			}
-			
-			Free_Unlocked_Sfx();
 		}
 	}
+}
+void S_PurgeUnused(void){
+	Free_Unlocked_Sfx();
 }
 qboolean S_IsSoundPrecached (const sfx_t *sfx){
 	if(ras_version>0 && ras_dll){
@@ -905,7 +899,7 @@ qboolean S_LocalSound (const char *s){
 		Con_Printf("Called S_LocalSound %s\n",s);
 		#endif
 
-		sfx = S_PrecacheSound (s, true, false);
+		sfx = S_PrecacheSound (s, true, true);
 		if (!sfx)
 		{
 			Con_Printf("S_LocalSound: can't precache %s\n", s);
