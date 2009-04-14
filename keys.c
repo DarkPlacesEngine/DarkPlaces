@@ -304,11 +304,20 @@ Key_Console (int key, int ascii)
 #endif
 			i = (int)strlen(cbd);
 			if (i + key_linepos >= MAX_INPUTLINE)
-				i= MAX_INPUTLINE - key_linepos;
+				i= MAX_INPUTLINE - key_linepos - 1;
 			if (i > 0)
 			{
+				// terencehill: insert the clipboard text between the characters of the line
+				char *temp = Z_Malloc(MAX_INPUTLINE);
 				cbd[i]=0;
+				temp[0]=0;
+				if ( key_linepos < (int)strlen(key_lines[edit_line]) )
+					strlcpy(temp, key_lines[edit_line] + key_linepos, (int)strlen(key_lines[edit_line]) - key_linepos +1);
+				key_lines[edit_line][key_linepos] = 0;
 				strlcat(key_lines[edit_line], cbd, sizeof(key_lines[edit_line]));
+				if (temp[0])
+					strlcat(key_lines[edit_line], temp, sizeof(key_lines[edit_line]));
+				Z_Free(temp);
 				key_linepos += i;
 			}
 			Z_Free(cbd);
@@ -357,14 +366,14 @@ Key_Console (int key, int ascii)
 	// Advanced Console Editing by Radix radix@planetquake.com
 	// Added/Modified by EvilTypeGuy eviltypeguy@qeradiant.com
 	// Enhanced by [515]
+	// Enhanced by terencehill
 
-	// left arrow will just move left one without erasing, backspace will
-	// actually erase character
+	// move cursor to the previous character
 	if (key == K_LEFTARROW || key == K_KP_LEFTARROW)
 	{
 		if (key_linepos < 2)
 			return;
-		if(keydown[K_CTRL])
+		if(keydown[K_CTRL]) // move cursor to the previous word
 		{
 			int		pos;
 			char	k;
@@ -375,6 +384,23 @@ Key_Console (int key, int ascii)
 					k = key_lines[edit_line][pos];
 					if(k == '\"' || k == ';' || k == ' ' || k == '\'')
 						break;
+				}
+			key_linepos = pos + 1;
+		}
+		else if(keydown[K_SHIFT]) // move cursor to the previous character ignoring colors
+		{
+			int		pos;
+			pos = key_linepos-1;
+			while (pos)
+				if(pos-1 > 0 && key_lines[edit_line][pos-1] == STRING_COLOR_TAG && isdigit(key_lines[edit_line][pos]))
+					pos-=2;
+				else if(pos-4 > 0 && key_lines[edit_line][pos-4] == STRING_COLOR_TAG && key_lines[edit_line][pos-3] == STRING_COLOR_RGB_TAG_CHAR
+						&& isxdigit(key_lines[edit_line][pos-2]) && isxdigit(key_lines[edit_line][pos-1]) && isxdigit(key_lines[edit_line][pos]))
+					pos-=5;
+				else
+				{
+					pos--;
+					break;
 				}
 			key_linepos = pos + 1;
 		}
@@ -405,13 +431,12 @@ Key_Console (int key, int ascii)
 	}
 
 
-	// if we're at the end, get one character from previous line,
-	// otherwise just go right one
+	// move cursor to the next character
 	if (key == K_RIGHTARROW || key == K_KP_RIGHTARROW)
 	{
 		if (key_linepos >= (int)strlen(key_lines[edit_line]))
 			return;
-		if(keydown[K_CTRL])
+		if(keydown[K_CTRL]) // move cursor to the next word
 		{
 			int		pos, len;
 			char	k;
@@ -423,6 +448,34 @@ Key_Console (int key, int ascii)
 				if(k == '\"' || k == ';' || k == ' ' || k == '\'')
 					break;
 			}
+			key_linepos = pos;
+		}
+		else if(keydown[K_SHIFT]) // move cursor to the next character ignoring colors
+		{
+			int		pos, len;
+			len = (int)strlen(key_lines[edit_line]);
+			pos = key_linepos;
+			// check if there is a color tag right after the cursor
+			if (key_lines[edit_line][pos] == STRING_COLOR_TAG)
+			{
+				if(isdigit(key_lines[edit_line][pos+1]))
+					pos+=1;
+				else if(key_lines[edit_line][pos+1] == STRING_COLOR_RGB_TAG_CHAR && isxdigit(key_lines[edit_line][pos+2]) && isxdigit(key_lines[edit_line][pos+3]) && isxdigit(key_lines[edit_line][pos+4]))
+					pos+=4;
+			}
+			pos++;
+			
+			// now go beyond all next consecutive color tags, if any
+			if(pos < len)
+				while (key_lines[edit_line][pos] == STRING_COLOR_TAG)
+				{
+					if(isdigit(key_lines[edit_line][pos+1]))
+						pos+=2;
+					else if(key_lines[edit_line][pos+1] == STRING_COLOR_RGB_TAG_CHAR && isxdigit(key_lines[edit_line][pos+2]) && isxdigit(key_lines[edit_line][pos+3]) && isxdigit(key_lines[edit_line][pos+4]))
+						pos+=5;
+					else
+						break;
+				}
 			key_linepos = pos;
 		}
 		else
@@ -473,13 +526,23 @@ Key_Console (int key, int ascii)
 
 	if (key == K_PGUP || key == K_KP_PGUP || key == K_MWHEELUP)
 	{
-		con_backscroll += ((int) vid_conheight.integer >> 5);
+		if(keydown[K_CTRL])
+		{
+			con_backscroll += 3;
+		}
+		else
+			con_backscroll += ((int) vid_conheight.integer >> 5);
 		return;
 	}
 
 	if (key == K_PGDN || key == K_KP_PGDN || key == K_MWHEELDOWN)
 	{
-		con_backscroll -= ((int) vid_conheight.integer >> 5);
+		if(keydown[K_CTRL])
+		{
+			con_backscroll -= 3;
+		}
+		else
+			con_backscroll -= ((int) vid_conheight.integer >> 5);
 		return;
 	}
 
