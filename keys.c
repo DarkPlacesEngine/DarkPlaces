@@ -731,15 +731,16 @@ static void
 Key_In_Unbind_f (void)
 {
 	int         b, m;
+	char *errchar = NULL;
 
 	if (Cmd_Argc () != 3) {
 		Con_Print("in_unbind <bindmap> <key> : remove commands from a key\n");
 		return;
 	}
 
-	m = strtol(Cmd_Argv (1), NULL, 0);
-	if ((m < 0) || (m >= 8)) {
-		Con_Printf("%d isn't a valid bindmap\n", m);
+	m = strtol(Cmd_Argv (1), &errchar, 0);
+	if ((m < 0) || (m >= 8) || (errchar && *errchar)) {
+		Con_Printf("%s isn't a valid bindmap\n", Cmd_Argv(1));
 		return;
 	}
 
@@ -757,6 +758,7 @@ Key_In_Bind_f (void)
 {
 	int         i, c, b, m;
 	char        cmd[MAX_INPUTLINE];
+	char *errchar = NULL;
 
 	c = Cmd_Argc ();
 
@@ -765,9 +767,9 @@ Key_In_Bind_f (void)
 		return;
 	}
 
-	m = strtol(Cmd_Argv (1), NULL, 0);
-	if ((m < 0) || (m >= 8)) {
-		Con_Printf("%d isn't a valid bindmap\n", m);
+	m = strtol(Cmd_Argv (1), &errchar, 0);
+	if ((m < 0) || (m >= 8) || (errchar && *errchar)) {
+		Con_Printf("%s isn't a valid bindmap\n", Cmd_Argv(1));
 		return;
 	}
 
@@ -799,6 +801,7 @@ static void
 Key_In_Bindmap_f (void)
 {
 	int         m1, m2, c;
+	char *errchar = NULL;
 
 	c = Cmd_Argc ();
 
@@ -807,15 +810,15 @@ Key_In_Bindmap_f (void)
 		return;
 	}
 
-	m1 = strtol(Cmd_Argv (1), NULL, 0);
-	if ((m1 < 0) || (m1 >= 8)) {
-		Con_Printf("%d isn't a valid bindmap\n", m1);
+	m1 = strtol(Cmd_Argv (1), &errchar, 0);
+	if ((m1 < 0) || (m1 >= 8) || (errchar && *errchar)) {
+		Con_Printf("%s isn't a valid bindmap\n", Cmd_Argv(1));
 		return;
 	}
 
-	m2 = strtol(Cmd_Argv (2), NULL, 0);
-	if ((m2 < 0) || (m2 >= 8)) {
-		Con_Printf("%d isn't a valid bindmap\n", m2);
+	m2 = strtol(Cmd_Argv (2), &errchar, 0);
+	if ((m2 < 0) || (m2 >= 8) || (errchar && *errchar)) {
+		Con_Printf("%s isn't a valid bindmap\n", Cmd_Argv(2));
 		return;
 	}
 
@@ -853,6 +856,54 @@ Key_Unbindall_f (void)
 				Key_SetBinding (i, j, "");
 }
 
+static void
+Key_PrintBindList(int j)
+{
+	char bindbuf[MAX_INPUTLINE];
+	const char *p;
+	int i;
+
+	for (i = 0; i < (int)(sizeof(keybindings[0])/sizeof(keybindings[0][0])); i++)
+	{
+		p = keybindings[j][i];
+		if (p)
+		{
+			Cmd_QuoteString(bindbuf, sizeof(bindbuf), p, "\"\\");
+			if (j == 0)
+				Con_Printf("^2%s ^7= \"%s\"\n", Key_KeynumToString (i), bindbuf);
+			else
+				Con_Printf("^3bindmap %d: ^2%s ^7= \"%s\"\n", j, Key_KeynumToString (i), bindbuf);
+		}
+	}
+}
+
+static void
+Key_In_BindList_f (void)
+{
+	int m;
+	char *errchar = NULL;
+
+	if(Cmd_Argc() >= 2)
+	{
+		m = strtol(Cmd_Argv(1), &errchar, 0);
+		if ((m < 0) || (m >= 8) || (errchar && *errchar)) {
+			Con_Printf("%s isn't a valid bindmap\n", Cmd_Argv(1));
+			return;
+		}
+		Key_PrintBindList(m);
+	}
+	else
+	{
+		for (m = 0; m < MAX_BINDMAPS; m++)
+			Key_PrintBindList(m);
+	}
+}
+
+static void
+Key_BindList_f (void)
+{
+	Key_PrintBindList(0);
+}
 
 static void
 Key_Bind_f (void)
@@ -936,10 +987,12 @@ Key_Init (void)
 //
 	Cmd_AddCommand ("in_bind", Key_In_Bind_f, "binds a command to the specified key in the selected bindmap");
 	Cmd_AddCommand ("in_unbind", Key_In_Unbind_f, "removes command on the specified key in the selected bindmap");
+	Cmd_AddCommand ("in_bindlist", Key_In_BindList_f, "bindlist: displays bound keys for all bindmaps, or the given bindmap");
 	Cmd_AddCommand ("in_bindmap", Key_In_Bindmap_f, "selects active foreground and background (used only if a key is not bound in the foreground) bindmaps for typing");
 
 	Cmd_AddCommand ("bind", Key_Bind_f, "binds a command to the specified key in bindmap 0");
 	Cmd_AddCommand ("unbind", Key_Unbind_f, "removes a command on the specified key in bindmap 0");
+	Cmd_AddCommand ("bindlist", Key_BindList_f, "bindlist: displays bound keys for bindmap 0 bindmaps");
 	Cmd_AddCommand ("unbindall", Key_Unbindall_f, "removes all commands from all keys in all bindmaps (leaving only shift-escape and escape)");
 
 	Cvar_RegisterVariable (&con_closeontoggleconsole);
