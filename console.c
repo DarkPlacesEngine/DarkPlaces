@@ -2065,7 +2065,7 @@ int Nicks_CompleteCountPossible(char *line, int pos, char *s, qboolean isCon)
 		match = -1;
 		spos = pos - 1; // no need for a minimum of characters :)
 
-		while(spos >= 0 && (spos - pos) < length) // search-string-length < name length
+		while(spos >= 0)
 		{
 			if(spos > 0 && line[spos-1] != ' ' && line[spos-1] != ';' && line[spos-1] != '\"' && line[spos-1] != '\'')
 			{
@@ -2334,32 +2334,22 @@ int Nicks_AddLastColor(char *buffer, int pos)
 		}
 		if(!quote_added)
 		{
-			if( buffer[pos-2] == STRING_COLOR_TAG && isdigit(buffer[pos-1]) ) // when thes use &4
-			{
+			if( pos >= 2 && buffer[pos-2] == STRING_COLOR_TAG && isdigit(buffer[pos-1]) ) // when thes use &4
 				pos -= 2;
-			}
-			else if( pos >= 5 && buffer[pos-5] == STRING_COLOR_TAG && buffer[pos-4] == STRING_COLOR_RGB_TAG_CHAR)
-			{
-				if ( isxdigit(buffer[pos-3]) && isxdigit(buffer[pos-2]) && isxdigit(buffer[pos-1]) )
-				{
-					pos -= 5;
-					color = -1;
-				}
-			}
+			else if( pos >= 5 && buffer[pos-5] == STRING_COLOR_TAG && buffer[pos-4] == STRING_COLOR_RGB_TAG_CHAR
+					 && isxdigit(buffer[pos-3]) && isxdigit(buffer[pos-2]) && isxdigit(buffer[pos-1]) )
+				pos -= 5;
 		}
+		buffer[pos++] = STRING_COLOR_TAG;
 		if (color == -1)
 		{
-			buffer[pos++] = STRING_COLOR_TAG;
 			buffer[pos++] = STRING_COLOR_RGB_TAG_CHAR;
 			buffer[pos++] = r;
 			buffer[pos++] = g;
 			buffer[pos++] = b;
 		}
 		else
-		{
-			buffer[pos++] = STRING_COLOR_TAG;
 			buffer[pos++] = color;
-		}
 	}
 	return pos;
 }
@@ -2387,7 +2377,7 @@ int Nicks_CompleteChatLine(char *buffer, size_t size, unsigned int pos)
 	{
 		int len;
 		char *msg;
-		Con_Printf("\n%i possible nick%s\n", n, (n > 1) ? "s: " : ":");
+		Con_Printf("\n%i possible nicks:\n", n);
 		Cmd_CompleteNicksPrint(n);
 
 		Nicks_CutMatches(n);
