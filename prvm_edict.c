@@ -238,6 +238,24 @@ const char *PRVM_AllocationOrigin()
 
 /*
 =================
+PRVM_ED_CanAlloc
+
+Returns if this particular edict could get allocated by PRVM_ED_Alloc
+=================
+*/
+qboolean PRVM_ED_CanAlloc(prvm_edict_t *e)
+{
+	if(!e->priv.required->free)
+		return false;
+	if(e->priv.required->freetime < prog->starttime + 2)
+		return true;
+	if(realtime > e->priv.required->freetime + 1)
+		return true;
+	return false; // entity slot still blocked because the entity was freed less than one second ago
+}
+
+/*
+=================
 PRVM_ED_Alloc
 
 Either finds a free edict, or allocates a new one.
@@ -260,9 +278,7 @@ prvm_edict_t *PRVM_ED_Alloc (void)
 	for (i = prog->reserved_edicts + 1;i < prog->num_edicts;i++)
 	{
 		e = PRVM_EDICT_NUM(i);
-		// the first couple seconds of server time can involve a lot of
-		// freeing and allocating, so relax the replacement policy
-		if (e->priv.required->free && ( e->priv.required->freetime < prog->starttime + 2 || (realtime - e->priv.required->freetime) > 1 ) )
+		if(PRVM_ED_CanAlloc(e))
 		{
 			PRVM_ED_ClearEdict (e);
 			e->priv.required->allocation_origin = PRVM_AllocationOrigin();
