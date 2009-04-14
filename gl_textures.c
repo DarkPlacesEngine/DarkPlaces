@@ -1077,6 +1077,9 @@ rtexture_t *R_LoadTexture1D(rtexturepool_t *rtexturepool, const char *identifier
 
 rtexture_t *R_LoadTexture2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, const unsigned char *data, textype_t textype, int flags, const unsigned int *palette)
 {
+	if(!strcmp(identifier, "textures/evil8_floor/e8clangfloor"))
+		Con_Printf("%d\n", flags & TEXF_PICMIP);
+
 	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, flags, textype, GLTEXTURETYPE_2D, data, palette);
 }
 
