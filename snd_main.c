@@ -1191,7 +1191,7 @@ channel_t *SND_PickChannel(int entnum, int entchannel)
 		{
 			// no sound on this channel
 			first_to_die = ch_idx;
-			break;
+			goto emptychan_found;
 		}
 
 		// don't let monster sounds override player sounds
@@ -1212,7 +1212,10 @@ channel_t *SND_PickChannel(int entnum, int entchannel)
 
 	if (first_to_die == -1)
 		return NULL;
+	
+	S_StopChannel (first_to_die, true);
 
+emptychan_found:
 	return &channels[first_to_die];
 }
 
