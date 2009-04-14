@@ -2387,7 +2387,7 @@ void SV_Physics (void)
 	}
 
 	// decrement prog->num_edicts if the highest number entities died
-	for (;PRVM_EDICT_NUM(prog->num_edicts - 1)->priv.server->free;prog->num_edicts--);
+	for (;PRVM_ED_CanAlloc(PRVM_EDICT_NUM(prog->num_edicts - 1));prog->num_edicts--);
 
 	if (!sv_freezenonclients.integer)
 		sv.time += sv.frametime;

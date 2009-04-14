@@ -539,6 +539,7 @@ func_t PRVM_ED_FindFunctionOffset(const char *name);
 
 void PRVM_MEM_IncreaseEdicts(void);
 
+qboolean PRVM_ED_CanAlloc(prvm_edict_t *e);
 prvm_edict_t *PRVM_ED_Alloc (void);
 void PRVM_ED_Free (prvm_edict_t *ed);
 void PRVM_ED_ClearEdict (prvm_edict_t *e);
