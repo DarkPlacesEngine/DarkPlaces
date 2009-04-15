@@ -2117,7 +2117,7 @@ void VM_substring(void)
 	start = bound(0, start, slength);
 
 	if (length < 0) // FTE_STRINGS feature
-		length += slength - start;
+		length += slength - start + 1;
 	maxlen = min((int)sizeof(string) - 1, slength - start);
 	length = bound(0, length, maxlen);
 
@@ -2610,6 +2610,7 @@ float	gettime(void)
 =========
 */
 extern double host_starttime;
+float CDAudio_GetPosition(void);
 void VM_gettime(void)
 {
 	int timer_index;
@@ -2635,7 +2636,10 @@ void VM_gettime(void)
                 PRVM_G_FLOAT(OFS_RETURN) = (float) (Sys_DoubleTime() - realtime);
                 break;
             case 3: // GETTIME_UPTIME
-                PRVM_G_FLOAT(OFS_RETURN) = (float) Sys_DoubleTime() - host_starttime;
+                PRVM_G_FLOAT(OFS_RETURN) = (float) (Sys_DoubleTime() - host_starttime);
+                break;
+            case 4: // GETTIME_CDTRACK
+                PRVM_G_FLOAT(OFS_RETURN) = (float) CDAudio_GetPosition();
                 break;
 			default:
 				VM_Warning("VM_gettime: %s: unsupported timer specified, returning realtime\n", PRVM_NAME);

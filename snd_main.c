@@ -1598,6 +1598,22 @@ void S_SetChannelVolume (unsigned int ch_ind, float fvol)
 	channels[ch_ind].master_vol = (int)(fvol * 255.0f);
 }
 
+float S_GetChannelPosition (unsigned int ch_ind)
+{
+	// note: this is NOT accurate yet
+	int s;
+	channel_t *ch = &channels[ch_ind];
+	sfx_t *sfx = ch->sfx;
+
+	s = ch->pos;
+	/*
+	if(!snd_usethreadedmixing)
+		s += _snd_mixahead.value * S_GetSoundRate();
+	*/
+	return (s % sfx->total_length) / (float) S_GetSoundRate();
+}
+
+
 
 /*
 =================
