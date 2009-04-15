@@ -281,6 +281,13 @@ void CDAudio_Play (int track, qboolean looping)
 	CDAudio_Play_byName(buf, looping);
 }
 
+float CDAudio_GetPosition ()
+{
+	if(faketrack != -1)
+		return S_GetChannelPosition(faketrack);
+	return -1;
+}
+
 void CDAudio_Stop (void)
 {
 	if (!enabled)

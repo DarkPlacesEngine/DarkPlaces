@@ -47,4 +47,4 @@ void CDAudio_Resume(void);
 int CDAudio_Startup(void);
 void CDAudio_Shutdown(void);
 void CDAudio_Update(void);
-
+float CDAudio_GetPosition(void);

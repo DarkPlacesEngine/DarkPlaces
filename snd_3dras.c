@@ -1002,6 +1002,12 @@ void S_SetChannelVolume (unsigned int ch_ind, float fvol){
 	}
 }
 
+float S_GetChannelPosition (unsigned int ch_ind)
+{
+	// FIXME unsupported
+	return -1;
+}
+
 void S_BlockSound (void){
 	soundblocked++;
 }

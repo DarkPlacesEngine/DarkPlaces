@@ -141,3 +141,9 @@ int S_GetSoundChannels(void)
 {
 	return 0;
 }
+
+float S_GetChannelPosition (unsigned int ch_ind)
+{
+	return -1;
+}
+
