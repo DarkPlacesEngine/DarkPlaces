@@ -71,6 +71,7 @@ char *vm_sv_extensions =
 "DP_QC_EDICT_NUM "
 "DP_QC_ENTITYDATA "
 "DP_QC_ETOS "
+"DP_QC_EXTRESPONSEPACKET "
 "DP_QC_FINDCHAIN "
 "DP_QC_FINDCHAIN_TOFIELD "
 "DP_QC_FINDCHAINFLAGS "
@@ -3615,6 +3616,99 @@ NULL,							// #529
 NULL,							// #530
 VM_SV_setpause,					// #531 void(float pause) setpause = #531;
 NULL,							// #532
+NULL,							// #533
+NULL,							// #534
+NULL,							// #535
+NULL,							// #536
+NULL,							// #537
+NULL,							// #538
+NULL,							// #539
+NULL,							// #540
+NULL,							// #541
+NULL,							// #542
+NULL,							// #543
+NULL,							// #544
+NULL,							// #545
+NULL,							// #546
+NULL,							// #547
+NULL,							// #548
+NULL,							// #549
+NULL,							// #550
+NULL,							// #551
+NULL,							// #552
+NULL,							// #553
+NULL,							// #554
+NULL,							// #555
+NULL,							// #556
+NULL,							// #557
+NULL,							// #558
+NULL,							// #559
+NULL,							// #560
+NULL,							// #561
+NULL,							// #562
+NULL,							// #563
+NULL,							// #564
+NULL,							// #565
+NULL,							// #566
+NULL,							// #567
+NULL,							// #568
+NULL,							// #569
+NULL,							// #570
+NULL,							// #571
+NULL,							// #572
+NULL,							// #573
+NULL,							// #574
+NULL,							// #575
+NULL,							// #576
+NULL,							// #577
+NULL,							// #578
+NULL,							// #579
+NULL,							// #580
+NULL,							// #581
+NULL,							// #582
+NULL,							// #583
+NULL,							// #584
+NULL,							// #585
+NULL,							// #586
+NULL,							// #587
+NULL,							// #588
+NULL,							// #589
+NULL,							// #590
+NULL,							// #591
+NULL,							// #592
+NULL,							// #593
+NULL,							// #594
+NULL,							// #595
+NULL,							// #596
+NULL,							// #597
+NULL,							// #598
+NULL,							// #599
+NULL,							// #600
+NULL,							// #601
+NULL,							// #602
+NULL,							// #603
+NULL,							// #604
+NULL,							// #605
+NULL,							// #606
+NULL,							// #607
+NULL,							// #608
+NULL,							// #609
+NULL,							// #610
+NULL,							// #611
+NULL,							// #612
+NULL,							// #613
+NULL,							// #614
+NULL,							// #615
+NULL,							// #616
+NULL,							// #617
+NULL,							// #618
+NULL,							// #619
+NULL,							// #620
+NULL,							// #621
+NULL,							// #622
+NULL,							// #623
+VM_getextresponse,				// #624 string getextresponse(void)
+NULL,							// #625
 };
 
 const int vm_sv_numbuiltins = sizeof(vm_sv_builtins) / sizeof(prvm_builtin_t);

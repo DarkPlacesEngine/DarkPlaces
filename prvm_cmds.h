@@ -440,3 +440,5 @@ void VM_argv_end_index (void);
 
 void VM_buf_cvarlist(void);
 void VM_cvar_description(void);
+
+void VM_getextresponse (void);
