@@ -5236,3 +5236,19 @@ void VM_netaddress_resolve (void)
 	else
 		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString("");
 }
+
+//string(void) getextresponse = #624; // returns the next extResponse packet that was sent to this client
+void VM_getextresponse (void)
+{
+	VM_SAFEPARMCOUNT(0,VM_argv);
+
+	if (net_extresponse_count <= 0)
+		PRVM_G_INT(OFS_RETURN) = OFS_NULL;
+	else
+	{
+		int first;
+		--net_extresponse_count;
+		first = (net_extresponse_last + NET_EXTRESPONSE_MAX - net_extresponse_count) % NET_EXTRESPONSE_MAX;
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(net_extresponse[first]);
+	}
+}

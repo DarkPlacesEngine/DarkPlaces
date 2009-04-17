@@ -747,22 +747,6 @@ void VM_M_WriteEntity (void)
 	MSG_WriteShort (VM_M_WriteDest(), PRVM_G_EDICTNUM(OFS_PARM0));
 }
 
-//string(void) getextresponse = #624; // returns the next extResponse packet that was sent to this client
-void VM_M_getextresponse (void)
-{
-	VM_SAFEPARMCOUNT(0,VM_argv);
-
-	if (net_extresponse_count <= 0)
-		PRVM_G_INT(OFS_RETURN) = OFS_NULL;
-	else
-	{
-		int first;
-		--net_extresponse_count;
-		first = (net_extresponse_last + NET_EXTRESPONSE_MAX - net_extresponse_count) % NET_EXTRESPONSE_MAX;
-		PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(net_extresponse[first]);
-	}
-}
-
 /*
 =================
 VM_M_copyentity
@@ -1446,7 +1430,7 @@ VM_M_refreshserverlist,			// #620 void refreshhostcache(void)
 VM_M_getserverlistnumber,		// #621 float gethostcachenumber(float fld, float hostnr)
 VM_M_getserverlistindexforkey,// #622 float gethostcacheindexforkey(string key)
 VM_M_addwantedserverlistkey,	// #623 void addwantedhostcachekey(string key)
-VM_M_getextresponse,			// #624 string getextresponse(void)
+VM_getextresponse,				// #624 string getextresponse(void)
 VM_netaddress_resolve           // #625 string netaddress_resolve(string, float)
 };
 
