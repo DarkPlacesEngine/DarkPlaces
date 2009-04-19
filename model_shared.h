@@ -770,8 +770,6 @@ typedef struct model_brushq3_s
 	int num_lightgrid_imins[3];
 	int num_lightgrid_imaxs[3];
 	int num_lightgrid_isize[3];
-	// indexing/clamping
-	int num_lightgrid_dimensions[3];
 	// transform modelspace coordinates to lightgrid index
 	matrix4x4_t num_lightgrid_indexfromworld;
 
