@@ -1,10 +1,4 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
-0 feature darkplaces client rtlights: ChrisP has a suggestion of selecting rtlight properties using the number keys, and increasing/decreasing their value using the mouse wheel (cvars needed for amounts to adjust by), and ability to right click a light to delete it, left click to select a light, left drag to move a light on the XY plane it is on (ChrisP)
-0 feature darkplaces client particles: effectinfo.txt should have a "particlefont" command specifying a filename, number of cells per row, number of rows, number of bottom rows that are beams, this would allow more particle images to be used (ChrisP)
-d feature darkplaces client extensions: DP_EF_NOSELFSHADOW extension (ChrisP)
-0 feature darkplaces client csqc: DP_CSQC_SOUNDLENGTH extension which defines a builtin float(float f) soundlength = #??; which returns the sound length in seconds, or 0 if the sound is not loaded, or the engine was started with -nosound (ChrisP)
-0 feature darkplaces client coronas: r_coronas_fadetime cvar and r_coronas_raisetime cvar which control fading of coronas when they come into view and pass out of view (ChrisP)
-0 feature darkplaces client text: support for font rasterizing at pixel-accurate sizes and caching them to disk, support freetype2 for this purpose if it is present (ChrisP)
 0 bug darkplaces client csqc: engine prediction function is not implemented - could just return the engine's current cl.movement_origin (Spike)
 0 bug darkplaces client csqc: entities not being drawn with VF_PERSPECTIVE 0? (daemon)
 0 bug darkplaces client csqc: input queue functions needed for csqc prediction aren't implemented (Spike)
@@ -43,6 +37,7 @@ d feature darkplaces client extensions: DP_EF_NOSELFSHADOW extension (ChrisP)
 0 bug darkplaces server qc: trace_dphittexturename should be a static buffer rather than a tempstring, it produces unnecessary warnings currently (div0)
 0 bug darkplaces server: SV_PushMove is ignoring model type in its angles_x handling, where as the renderer checks only model type to determine angles_x handling (Urre)
 0 bug darkplaces server: SV_PushMove's call to SV_ClipMoveToEntity should do a trace, not just a point test, to support hollow pusher models (Urre)
+0 bug darkplaces server: X-Men mod has flying enemies that tend to go through the floor, sometimes preventing a level from being completed.  x1m1 has two alcoves that open to reveal Storm and Archangel but often Storm disappears through the ground of hear alcove and then the level can't be completed.  A similar problem with Storm apears in x1m3 in an alcove.  (ewwfq yahoo com)
 0 bug darkplaces server: savegames do not save precaches, which means that automatic precaching frequently results in invalid modelindex values when reloading the savegame, and this bug also exists in many quake mods that randomly choose multiple variants of a monster, each with separate precaches, resulting in a different precache order when reloading the savegame
 0 bug darkplaces wgl client: during video mode setup, sometimes another application's window becomes permanently top most, not darkplaces' fullscreen window, why? (tZork)
 0 bug darkplaces windows sound: freezing on exit sometimes when freeing sound buffer during sound shutdown (Black)
@@ -114,6 +109,10 @@ d feature darkplaces client extensions: DP_EF_NOSELFSHADOW extension (ChrisP)
 0 change hmap2: qbsp should do tjunc fixing on leaky maps
 0 change revelation: change the wabbit kill message to " was hunting wabbit but shot " " instead"
 0 change zmodel: include the example script in the build zips, not just in the files directory
+0 feature darkplaces client csqc: DP_CSQC_SOUNDLENGTH extension which defines a builtin float(float f) soundlength = #??; which returns the sound length in seconds, or 0 if the sound is not loaded, or the engine was started with -nosound (ChrisP)
+0 feature darkplaces client particles: effectinfo.txt should have a "particlefont" command specifying a filename, number of cells per row, number of rows, number of bottom rows that are beams, this would allow more particle images to be used (ChrisP)
+0 feature darkplaces client rtlights: ChrisP has a suggestion of selecting rtlight properties using the number keys, and increasing/decreasing their value using the mouse wheel (cvars needed for amounts to adjust by), and ability to right click a light to delete it, left click to select a light, left drag to move a light on the XY plane it is on (ChrisP)
+0 feature darkplaces client text: support for font rasterizing at pixel-accurate sizes and caching them to disk, support freetype2 for this purpose if it is present (ChrisP)
 0 feature darkplaces client: add DP_GFX_EFFECTINFO_TXT to extensions and document it, the feature has been in for a long time, also update wiki.quakesrc.org accordingly
 0 feature darkplaces client: add a cl_showspeed cvar to display a hud overlay of your current velocity, speed as length of velocity, and speed along forward vector (Spike)
 0 feature darkplaces client: add a cvar to make the renderer use a different entity for pvs than for viewing, this might be useful for a third person camera that should only see what the player sees (Urre)
@@ -1246,6 +1245,7 @@ d dpzoo.map: rain
 d dpzoo.map: skybox
 d dpzoo.map: snow
 d dpzoo.map: transparent glass bmodels (DP_ENT_ALPHA)
+d feature darkplaces client extensions: DP_EF_NOSELFSHADOW extension (ChrisP)
 d feature darkplaces client: add .loc file support and say macros
 d feature darkplaces client: add BX_WAL_SUPPORT to extensions and document it, the feature has been in for a long time, also update wiki.quakesrc.org accordingly
 d feature darkplaces client: add a dot crosshair texture (HellToupee)
