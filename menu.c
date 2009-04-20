@@ -5245,7 +5245,7 @@ void MR_Init_Commands(void)
 	// set router console commands
 	Cvar_RegisterVariable (&forceqmenu);
 	Cvar_RegisterVariable (&menu_options_colorcontrol_correctionvalue);
-	Cmd_AddCommand ("menu_restart",MR_Restart, "restart menu system (reloads menu.dat");
+	Cmd_AddCommand ("menu_restart",MR_Restart, "restart menu system (reloads menu.dat)");
 	Cmd_AddCommand ("togglemenu", Call_MR_ToggleMenu_f, "opens or closes menu");
 }
 
