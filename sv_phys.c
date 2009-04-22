@@ -1403,49 +1403,89 @@ CLIENT MOVEMENT
 
 static float unstickoffsets[] =
 {
+	// poutting -/+z changes first as they are least weird
+	 0,  0,  -1,
+	 0,  0,  1,
+	 // x or y changes
 	-1,  0,  0,
 	 1,  0,  0,
 	 0, -1,  0,
 	 0,  1,  0,
+	 // x and y changes
 	-1, -1,  0,
 	 1, -1,  0,
 	-1,  1,  0,
 	 1,  1,  0,
-	 0,  0,  -1,
-	 0,  0,  1,
-	 0,  0,  -2,
-	 0,  0,  2,
-	 0,  0,  -3,
-	 0,  0,  3,
-	 0,  0,  -4,
-	 0,  0,  4,
-	 0,  0,  -5,
-	 0,  0,  5,
-	 0,  0,  -6,
-	 0,  0,  6,
-	 0,  0,  -7,
-	 0,  0,  7,
-	 0,  0,  -8,
-	 0,  0,  8,
-	 0,  0,  -9,
-	 0,  0,  9,
-	 0,  0,  -10,
-	 0,  0,  10,
-	 0,  0,  -11,
-	 0,  0,  11,
-	 0,  0,  -12,
-	 0,  0,  12,
-	 0,  0,  -13,
-	 0,  0,  13,
-	 0,  0,  -14,
-	 0,  0,  14,
-	 0,  0,  -15,
-	 0,  0,  15,
-	 0,  0,  -16,
-	 0,  0,  16,
-	 0,  0,  -17,
-	 0,  0,  17,
 };
+
+typedef enum unstickresult_e
+{
+	UNSTICK_STUCK = 0,
+	UNSTICK_GOOD = 1,
+	UNSTICK_UNSTUCK = 2
+}
+unstickresult_t;
+
+unstickresult_t SV_UnstickEntityReturnOffset (prvm_edict_t *ent, vec3_t offset)
+{
+	int i, maxunstick;
+
+	// if not stuck in a bmodel, just return
+	if (!SV_TestEntityPosition(ent, vec3_origin))
+		return UNSTICK_GOOD;
+
+	for (i = 0;i < (int)(sizeof(unstickoffsets) / sizeof(unstickoffsets[0]));i += 3)
+	{
+		if (!SV_TestEntityPosition(ent, unstickoffsets + i))
+		{
+			VectorCopy(unstickoffsets + i, offset);
+			SV_LinkEdict (ent, true);
+			return UNSTICK_UNSTUCK;
+		}
+	}
+
+	maxunstick = (int) ((ent->fields.server->maxs[2] - ent->fields.server->mins[2]) * 0.36);
+	// magic number 0.36 allows unsticking by up to 17 units with the largest supported bbox
+
+	for(i = 2; i <= maxunstick; ++i)
+	{
+		VectorClear(offset);
+		offset[2] = -i;
+		if (!SV_TestEntityPosition(ent, offset))
+		{
+			SV_LinkEdict (ent, true);
+			return UNSTICK_UNSTUCK;
+		}
+		offset[2] = i;
+		if (!SV_TestEntityPosition(ent, offset))
+		{
+			SV_LinkEdict (ent, true);
+			return UNSTICK_UNSTUCK;
+		}
+	}
+
+	return UNSTICK_STUCK;
+}
+
+qboolean SV_UnstickEntity (prvm_edict_t *ent)
+{
+	vec3_t offset;
+	switch(SV_UnstickEntityReturnOffset(ent, offset))
+	{
+		case UNSTICK_GOOD:
+			return true;
+		case UNSTICK_UNSTUCK:
+			Con_DPrintf("Unstuck entity %i (classname \"%s\") with offset %f %f %f.\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname), offset[0], offset[1], offset[2]);
+			return true;
+		case UNSTICK_STUCK:
+			if (developer.integer >= 100)
+				Con_Printf("Stuck entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname));
+			return false;
+		default:
+			Con_Printf("SV_UnstickEntityReturnOffset returned a value outside its enum.\n");
+			return false;
+	}
+}
 
 /*
 =============
@@ -1457,57 +1497,29 @@ clipping hull.
 */
 void SV_CheckStuck (prvm_edict_t *ent)
 {
-	int i;
 	vec3_t offset;
 
-	if (!SV_TestEntityPosition(ent, vec3_origin))
+	switch(SV_UnstickEntityReturnOffset(ent, offset))
 	{
-		VectorCopy (ent->fields.server->origin, ent->fields.server->oldorigin);
-		return;
+		case UNSTICK_GOOD:
+			VectorCopy (ent->fields.server->origin, ent->fields.server->oldorigin);
+			break;
+		case UNSTICK_UNSTUCK:
+			Con_DPrintf("Unstuck player entity %i (classname \"%s\") with offset %f %f %f.\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname), offset[0], offset[1], offset[2]);
+			break;
+		case UNSTICK_STUCK:
+			VectorSubtract(ent->fields.server->oldorigin, ent->fields.server->origin, offset);
+			if (!SV_TestEntityPosition(ent, offset))
+			{
+				Con_DPrintf("Unstuck player entity %i (classname \"%s\") by restoring oldorigin.\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname));
+				SV_LinkEdict (ent, true);
+			}
+			else
+				Con_DPrintf("Stuck player entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname));
+			break;
+		default:
+			Con_Printf("SV_UnstickEntityReturnOffset returned a value outside its enum.\n");
 	}
-
-	for (i = 0;i < (int)(sizeof(unstickoffsets) / sizeof(unstickoffsets[0]));i += 3)
-	{
-		if (!SV_TestEntityPosition(ent, unstickoffsets + i))
-		{
-			Con_DPrintf("Unstuck player entity %i (classname \"%s\") with offset %f %f %f.\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname), unstickoffsets[i+0], unstickoffsets[i+1], unstickoffsets[i+2]);
-			SV_LinkEdict (ent, true);
-			return;
-		}
-	}
-
-	VectorSubtract(ent->fields.server->oldorigin, ent->fields.server->origin, offset);
-	if (!SV_TestEntityPosition(ent, offset))
-	{
-		Con_DPrintf("Unstuck player entity %i (classname \"%s\") by restoring oldorigin.\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname));
-		SV_LinkEdict (ent, true);
-		return;
-	}
-
-	Con_DPrintf("Stuck player entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname));
-}
-
-qboolean SV_UnstickEntity (prvm_edict_t *ent)
-{
-	int i;
-
-	// if not stuck in a bmodel, just return
-	if (!SV_TestEntityPosition(ent, vec3_origin))
-		return true;
-
-	for (i = 0;i < (int)(sizeof(unstickoffsets) / sizeof(unstickoffsets[0]));i += 3)
-	{
-		if (!SV_TestEntityPosition(ent, unstickoffsets + i))
-		{
-			Con_DPrintf("Unstuck entity %i (classname \"%s\") with offset %f %f %f.\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname), unstickoffsets[i+0], unstickoffsets[i+1], unstickoffsets[i+2]);
-			SV_LinkEdict (ent, true);
-			return true;
-		}
-	}
-
-	if (developer.integer >= 100)
-		Con_Printf("Stuck entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname));
-	return false;
 }
 
 
