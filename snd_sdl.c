@@ -39,41 +39,47 @@ static void Buffer_Callback (void *userdata, Uint8 *stream, int len)
 
 	RequestedFrames = (unsigned int)len / factor;
 
-	if (snd_usethreadedmixing)
+	if (SndSys_LockRenderBuffer())
 	{
-		S_MixToBuffer(stream, RequestedFrames);
-		if (snd_blocked)
-			memset(stream, snd_renderbuffer->format.width == 1 ? 0x80 : 0, len);
-		return;
+		if (snd_usethreadedmixing)
+		{
+			S_MixToBuffer(stream, RequestedFrames);
+			if (snd_blocked)
+				memset(stream, snd_renderbuffer->format.width == 1 ? 0x80 : 0, len);
+			SndSys_UnlockRenderBuffer();
+			return;
+		}
+
+		// Transfert up to a chunk of samples from snd_renderbuffer to stream
+		MaxFrames = snd_renderbuffer->endframe - snd_renderbuffer->startframe;
+		if (MaxFrames > RequestedFrames)
+			FrameCount = RequestedFrames;
+		else
+			FrameCount = MaxFrames;
+		StartOffset = snd_renderbuffer->startframe % snd_renderbuffer->maxframes;
+		EndOffset = (snd_renderbuffer->startframe + FrameCount) % snd_renderbuffer->maxframes;
+		if (StartOffset > EndOffset)  // if the buffer wraps
+		{
+			unsigned int PartialLength1, PartialLength2;
+
+			PartialLength1 = (snd_renderbuffer->maxframes - StartOffset) * factor;
+			memcpy(stream, &snd_renderbuffer->ring[StartOffset * factor], PartialLength1);
+
+			PartialLength2 = FrameCount * factor - PartialLength1;
+			memcpy(&stream[PartialLength1], &snd_renderbuffer->ring[0], PartialLength2);
+		}
+		else
+			memcpy(stream, &snd_renderbuffer->ring[StartOffset * factor], FrameCount * factor);
+
+		snd_renderbuffer->startframe += FrameCount;
+
+		if (FrameCount < RequestedFrames && developer.integer >= 1000 && vid_activewindow)
+			Con_Printf("SDL sound: %u sample frames missing\n", RequestedFrames - FrameCount);
+
+		sdlaudiotime += RequestedFrames;
+
+		SndSys_UnlockRenderBuffer();
 	}
-
-	// Transfert up to a chunk of samples from snd_renderbuffer to stream
-	MaxFrames = snd_renderbuffer->endframe - snd_renderbuffer->startframe;
-	if (MaxFrames > RequestedFrames)
-		FrameCount = RequestedFrames;
-	else
-		FrameCount = MaxFrames;
-	StartOffset = snd_renderbuffer->startframe % snd_renderbuffer->maxframes;
-	EndOffset = (snd_renderbuffer->startframe + FrameCount) % snd_renderbuffer->maxframes;
-	if (StartOffset > EndOffset)  // if the buffer wraps
-	{
-		unsigned int PartialLength1, PartialLength2;
-
-		PartialLength1 = (snd_renderbuffer->maxframes - StartOffset) * factor;
-		memcpy(stream, &snd_renderbuffer->ring[StartOffset * factor], PartialLength1);
-
-		PartialLength2 = FrameCount * factor - PartialLength1;
-		memcpy(&stream[PartialLength1], &snd_renderbuffer->ring[0], PartialLength2);
-	}
-	else
-		memcpy(stream, &snd_renderbuffer->ring[StartOffset * factor], FrameCount * factor);
-
-	snd_renderbuffer->startframe += FrameCount;
-
-	if (FrameCount < RequestedFrames && developer.integer >= 1000 && vid_activewindow)
-		Con_Printf("SDL sound: %u sample frames missing\n", RequestedFrames - FrameCount);
-
-	sdlaudiotime += RequestedFrames;
 }
 
 
