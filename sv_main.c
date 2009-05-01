@@ -1315,7 +1315,7 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 			ed = PRVM_EDICT_NUM(s->number);
 
 			// if not touching a visible leaf
-			if (sv_cullentities_pvs.integer && sv.writeentitiestoclient_pvsbytes)
+			if (sv_cullentities_pvs.integer && !r_novis.integer && sv.writeentitiestoclient_pvsbytes)
 			{
 				if (ed->priv.server->pvs_numclusters < 0)
 				{
