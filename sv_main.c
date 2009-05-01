@@ -444,6 +444,13 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&halflifebsp);
 
 	// any special defaults for gamemodes go here
+	if (gamemode == GAME_NEHAHRA)
+	{
+		// Nehahra pushable crates malfunction in some levels if this is on
+		Cvar_SetValueQuick (&sv_gameplayfix_upwardvelocityclearsongroundflag, 0);
+		// Nehahra NPC AI is confused by this feature
+		Cvar_SetValueQuick (&sv_gameplayfix_blowupfallenzombies, 0);
+	}
 	if (gamemode == GAME_HIPNOTIC)
 	{
 		// hipnotic mission pack has issues in their 'friendly monster' ai, which seem to attempt to attack themselves for some reason when findradius() returns non-solid entities.
