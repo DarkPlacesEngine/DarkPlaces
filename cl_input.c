@@ -964,6 +964,30 @@ void CL_ClientMovement_Physics_Swim(cl_clientmovement_state_t *s)
 	CL_ClientMovement_Move(s);
 }
 
+void CL_ClientMovement_Physics_CPM_PM_Aircontrol(cl_clientmovement_state_t *s, vec3_t wishdir, vec_t wishspeed)
+{
+	vec_t zspeed, speed, dot, k;
+
+	if(s->cmd.forwardmove == 0 || s->cmd.sidemove != 0)
+		return;
+	
+	zspeed = s->velocity[2];
+	s->velocity[2] = 0;
+	speed = VectorNormalizeLength(s->velocity);
+
+	dot = DotProduct(s->velocity, wishdir);
+	k = 32;
+	k *= cl.movevars_aircontrol*dot*dot*s->cmd.frametime;
+
+	if(dot > 0) { // we can't change direction while slowing down
+		VectorMAM(speed, s->velocity, k, wishdir, s->velocity);
+		VectorNormalize(s->velocity);
+	}
+
+	VectorScale(s->velocity, speed, s->velocity);
+	s->velocity[2] = zspeed;
+}
+
 void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 {
 	vec_t friction;
@@ -1057,9 +1081,26 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 			vec_t vel_straight;
 			vec_t vel_z;
 			vec3_t vel_perpend;
+			float wishspeed2, accel;
 
 			// apply air speed limit
 			wishspeed = min(wishspeed, cl.movevars_maxairspeed);
+			accel = cl.movevars_airaccelerate;
+			
+			// CPM: air control
+			wishspeed2 = wishspeed;
+			if(cl.movevars_airstopaccelerate != 0)
+				if(DotProduct(s->velocity, wishdir) < 0)
+					accel = cl.movevars_airstopaccelerate;
+			if(s->cmd.forwardmove == 0 && s->cmd.sidemove != 0)
+			{
+				if(cl.movevars_maxairstrafespeed)
+					if(wishspeed > cl.movevars_maxairstrafespeed)
+						wishspeed = cl.movevars_maxairstrafespeed;
+				if(cl.movevars_airstrafeaccelerate)
+					accel = cl.movevars_airstrafeaccelerate;
+			}
+			// !CPM
 
 			/*
 			addspeed = wishspeed - DotProduct(s->velocity, wishdir);
@@ -1077,14 +1118,17 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 
 			f = wishspeed - vel_straight;
 			if(f > 0)
-				vel_straight += min(f, cl.movevars_airaccelerate * s->cmd.frametime * wishspeed) * cl.movevars_airaccel_qw;
+				vel_straight += min(f, accel * s->cmd.frametime * wishspeed) * cl.movevars_airaccel_qw;
 			if(wishspeed > 0)
-				vel_straight += min(wishspeed, cl.movevars_airaccelerate * s->cmd.frametime * wishspeed) * (1 - cl.movevars_airaccel_qw);
+				vel_straight += min(wishspeed, accel * s->cmd.frametime * wishspeed) * (1 - cl.movevars_airaccel_qw);
 
 			VectorM(1 - (s->cmd.frametime * (wishspeed / cl.movevars_maxairspeed) * cl.movevars_airaccel_sideways_friction), vel_perpend, vel_perpend);
 
 			VectorMA(vel_perpend, vel_straight, wishdir, s->velocity);
 			s->velocity[2] += vel_z;
+
+			if(cl.movevars_aircontrol)
+				CL_ClientMovement_Physics_CPM_PM_Aircontrol(s, wishdir, wishspeed2);
 		}
 		s->velocity[2] -= cl.movevars_gravity * cl.movevars_entgravity * s->cmd.frametime;
 		CL_ClientMovement_Move(s);
@@ -1130,6 +1174,10 @@ void CL_UpdateMoveVars(void)
 		cl.movevars_friction = cl.statsf[STAT_MOVEVARS_FRICTION];
 		cl.movevars_wallfriction = cl.statsf[STAT_MOVEVARS_WALLFRICTION];
 		cl.movevars_waterfriction = cl.statsf[STAT_MOVEVARS_WATERFRICTION];
+		cl.movevars_airstopaccelerate = cl.statsf[STAT_MOVEVARS_AIRSTOPACCELERATE];
+		cl.movevars_airstrafeaccelerate = cl.statsf[STAT_MOVEVARS_AIRSTRAFEACCELERATE];
+		cl.movevars_maxairstrafespeed = cl.statsf[STAT_MOVEVARS_MAXAIRSTRAFESPEED];
+		cl.movevars_aircontrol = cl.statsf[STAT_MOVEVARS_AIRCONTROL];
 	}
 	else
 	{
@@ -1151,6 +1199,10 @@ void CL_UpdateMoveVars(void)
 		cl.movevars_stepheight = cl_movement_stepheight.value;
 		cl.movevars_airaccel_qw = cl_movement_airaccel_qw.value;
 		cl.movevars_airaccel_sideways_friction = cl_movement_airaccel_sideways_friction.value;
+		cl.movevars_airstopaccelerate = 0;
+		cl.movevars_airstrafeaccelerate = 0;
+		cl.movevars_maxairstrafespeed = 0;
+		cl.movevars_aircontrol = 0;
 	}
 }
 

@@ -50,6 +50,10 @@ cvar_t sv_aim = {CVAR_SAVE, "sv_aim", "2", "maximum cosine angle for quake's ver
 cvar_t sv_airaccel_qw = {0, "sv_airaccel_qw", "1", "ratio of QW-style air control as opposed to simple acceleration"};
 cvar_t sv_airaccel_sideways_friction = {0, "sv_airaccel_sideways_friction", "", "anti-sideways movement stabilization (reduces speed gain when zigzagging)"};
 cvar_t sv_airaccelerate = {0, "sv_airaccelerate", "-1", "rate at which a player accelerates to sv_maxairspeed while in the air, if less than 0 the sv_accelerate variable is used instead"};
+cvar_t sv_airstopaccelerate = {0, "sv_airstopaccelerate", "0", "when set, replacement for sv_airaccelerate when moving backwards"};
+cvar_t sv_airstrafeaccelerate = {0, "sv_airstrafeaccelerate", "0", "when set, replacement for sv_airaccelerate when just strafing"};
+cvar_t sv_maxairstrafespeed = {0, "sv_maxairstrafespeed", "0", "when set, replacement for sv_maxairspeed when just strafing"};
+cvar_t sv_aircontrol = {0, "sv_aircontrol", "0", "CPMA-style air control"};
 cvar_t sv_allowdownloads = {0, "sv_allowdownloads", "1", "whether to allow clients to download files from the server (does not affect http downloads)"};
 cvar_t sv_allowdownloads_archive = {0, "sv_allowdownloads_archive", "0", "whether to allow downloads of archives (pak/pk3)"};
 cvar_t sv_allowdownloads_config = {0, "sv_allowdownloads_config", "0", "whether to allow downloads of config files (cfg)"};
@@ -329,6 +333,10 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_airaccel_qw);
 	Cvar_RegisterVariable (&sv_airaccel_sideways_friction);
 	Cvar_RegisterVariable (&sv_airaccelerate);
+	Cvar_RegisterVariable (&sv_airstopaccelerate);
+	Cvar_RegisterVariable (&sv_airstrafeaccelerate);
+	Cvar_RegisterVariable (&sv_maxairstrafespeed);
+	Cvar_RegisterVariable (&sv_aircontrol);
 	Cvar_RegisterVariable (&sv_allowdownloads);
 	Cvar_RegisterVariable (&sv_allowdownloads_archive);
 	Cvar_RegisterVariable (&sv_allowdownloads_config);
@@ -1656,6 +1664,10 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 	statsf[STAT_MOVEVARS_AIRACCEL_SIDEWAYS_FRICTION] = sv_airaccel_sideways_friction.value;
 	statsf[STAT_MOVEVARS_FRICTION] = sv_friction.value;
 	statsf[STAT_MOVEVARS_WATERFRICTION] = sv_waterfriction.value >= 0 ? sv_waterfriction.value : sv_friction.value;
+	statsf[STAT_MOVEVARS_AIRSTOPACCELERATE] = sv_airstopaccelerate.value;
+	statsf[STAT_MOVEVARS_AIRSTRAFEACCELERATE] = sv_airstrafeaccelerate.value;
+	statsf[STAT_MOVEVARS_MAXAIRSTRAFESPEED] = sv_maxairstrafespeed.value;
+	statsf[STAT_MOVEVARS_AIRCONTROL] = sv_aircontrol.value;
 	statsf[STAT_FRAGLIMIT] = fraglimit.value;
 	statsf[STAT_TIMELIMIT] = timelimit.value;
 
