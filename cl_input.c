@@ -1028,13 +1028,13 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 		VectorScale(wishvel, 1 / wishspeed, wishdir);
 	else
 		VectorSet( wishdir, 0.0, 0.0, 0.0 );
-	wishspeed = min(wishspeed, cl.movevars_maxspeed);
-	if (s->crouched)
-		wishspeed *= 0.5;
-
 	// check if onground
 	if (s->onground)
 	{
+		wishspeed = min(wishspeed, cl.movevars_maxspeed);
+		if (s->crouched)
+			wishspeed *= 0.5;
+
 		// apply edge friction
 		f = sqrt(s->velocity[0] * s->velocity[0] + s->velocity[1] * s->velocity[1]);
 		if (f > 0)
@@ -1085,6 +1085,9 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 
 			// apply air speed limit
 			wishspeed = min(wishspeed, cl.movevars_maxairspeed);
+			if (s->crouched)
+				wishspeed *= 0.5;
+
 			accel = cl.movevars_airaccelerate;
 			
 			// CPM: air control
