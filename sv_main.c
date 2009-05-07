@@ -125,7 +125,7 @@ cvar_t sv_waterfriction = {CVAR_NOTIFY, "sv_waterfriction","-1", "how fast you s
 cvar_t sv_warsowbunny_airforwardaccel = {0, "sv_warsowbunny_airforwardaccel", "1.00001", "how fast you accelerate until you reach sv_maxspeed"};
 cvar_t sv_warsowbunny_accel = {0, "sv_warsowbunny_accel", "0.1585", "how fast you accelerate until after reaching sv_maxspeed (it gets harder as you near sv_warsowbunny_topspeed)"};
 cvar_t sv_warsowbunny_topspeed = {0, "sv_warsowbunny_topspeed", "925", "soft speed limit (can get faster with rjs and on ramps)"};
-cvar_t sv_warsowbunny_turnaccel = {0, "sv_warsowbunny_turnaccel", "9", "max sharpness of turns (also master switch for the sv_warsowbunny_* mode)"};
+cvar_t sv_warsowbunny_turnaccel = {0, "sv_warsowbunny_turnaccel", "0", "max sharpness of turns (also master switch for the sv_warsowbunny_* mode; set this to 9 to enable)"};
 cvar_t sv_warsowbunny_backtosideratio = {0, "sv_warsowbunny_backtosideratio", "0.8", "lower values make it easier to change direction without losing speed; the drawback is \"understeering\" in sharp turns"};
 cvar_t sys_ticrate = {CVAR_SAVE, "sys_ticrate","0.0138889", "how long a server frame is in seconds, 0.05 is 20fps server rate, 0.1 is 10fps (can not be set higher than 0.1), 0 runs as many server frames as possible (makes games against bots a little smoother, overwhelms network players), 0.0138889 matches QuakeWorld physics"};
 cvar_t teamplay = {CVAR_NOTIFY, "teamplay","0", "teamplay mode, values depend on mod but typically 0 = no teams, 1 = no team damage no self damage, 2 = team damage and self damage, some mods support 3 = no team damage but can damage self"};
