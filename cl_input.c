@@ -988,6 +988,79 @@ void CL_ClientMovement_Physics_CPM_PM_Aircontrol(cl_clientmovement_state_t *s, v
 	s->velocity[2] = zspeed;
 }
 
+void CL_ClientMovement_Physics_PM_Accelerate(cl_clientmovement_state_t *s, vec3_t wishdir, vec_t wishspeed, vec_t accel, vec_t accelqw, vec_t sidefric)
+{
+	vec_t vel_straight, vel_z;
+	vec3_t vel_perpend;
+	vec_t addspeed;
+
+	vel_straight = DotProduct(s->velocity, wishdir);
+	vel_z = s->velocity[2];
+	VectorMA(s->velocity, -vel_straight, wishdir, vel_perpend); vel_perpend[2] -= vel_z;
+
+	addspeed = wishspeed - vel_straight;
+	if(addspeed > 0)
+		vel_straight = vel_straight + min(addspeed, accel * s->cmd.frametime * wishspeed) * accelqw;
+	if(wishspeed > 0)
+		vel_straight = vel_straight + min(wishspeed, accel * s->cmd.frametime * wishspeed) * (1 - accelqw);
+	
+	VectorScale(vel_perpend, 1 - s->cmd.frametime * wishspeed * sidefric, vel_perpend);
+
+	VectorMA(vel_perpend, vel_straight, wishdir, s->velocity);
+	s->velocity[2] += vel_z;
+}
+
+void CL_ClientMovement_Physics_PM_AirAccelerate(cl_clientmovement_state_t *s, vec3_t wishdir, vec_t wishspeed)
+{
+    vec3_t curvel, wishvel, acceldir, curdir;
+    float addspeed, accelspeed, curspeed;
+    float dot;
+
+    float airforwardaccel = cl.movevars_warsowbunny_airforwardaccel;
+    float bunnyaccel = cl.movevars_warsowbunny_accel;
+    float bunnytopspeed = cl.movevars_warsowbunny_topspeed;
+    float turnaccel = cl.movevars_warsowbunny_turnaccel;
+    float backtosideratio = cl.movevars_warsowbunny_backtosideratio;
+
+    if( !wishspeed )
+        return;
+
+    VectorCopy( s->velocity, curvel );
+    curvel[2] = 0;
+    curspeed = VectorLength( curvel );
+
+    if( wishspeed > curspeed * 1.01f )
+    {
+        float accelspeed = curspeed + airforwardaccel * cl.movevars_maxairspeed * s->cmd.frametime;
+        if( accelspeed < wishspeed )
+            wishspeed = accelspeed;
+    }
+    else
+    {
+        float f = ( bunnytopspeed - curspeed ) / ( bunnytopspeed - cl.movevars_maxairspeed );
+        if( f < 0 )
+            f = 0;
+        wishspeed = max( curspeed, cl.movevars_maxairspeed ) + bunnyaccel * f * cl.movevars_maxairspeed * s->cmd.frametime;
+    }
+    VectorScale( wishdir, wishspeed, wishvel );
+    VectorSubtract( wishvel, curvel, acceldir );
+    addspeed = VectorNormalizeLength( acceldir );
+
+    accelspeed = turnaccel * cl.movevars_maxairspeed /* wishspeed */ * s->cmd.frametime;
+    if( accelspeed > addspeed )
+        accelspeed = addspeed;
+
+    if( backtosideratio < 1.0f )
+    {
+        VectorNormalize2( curvel, curdir );
+        dot = DotProduct( acceldir, curdir );
+        if( dot < 0 )
+            VectorMA( acceldir, -( 1.0f - backtosideratio ) * dot, curdir, acceldir );
+    }
+
+    VectorMA( s->velocity, accelspeed, acceldir, s->velocity );
+}
+
 void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 {
 	vec_t friction;
@@ -1077,61 +1150,68 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 	{
 		if (s->waterjumptime <= 0)
 		{
-			vec_t f;
-			vec_t vel_straight;
-			vec_t vel_z;
-			vec3_t vel_perpend;
-			float wishspeed2, accel;
-
 			// apply air speed limit
+			vec_t accel, wishspeed2;
 			wishspeed = min(wishspeed, cl.movevars_maxairspeed);
 			if (s->crouched)
 				wishspeed *= 0.5;
-
 			accel = cl.movevars_airaccelerate;
-			
-			// CPM: air control
 			wishspeed2 = wishspeed;
-			if(cl.movevars_airstopaccelerate != 0)
-				if(DotProduct(s->velocity, wishdir) < 0)
-					accel = cl.movevars_airstopaccelerate;
-			if(s->cmd.forwardmove == 0 && s->cmd.sidemove != 0)
+
+			if(cl.movevars_warsowbunny_turnaccel)
 			{
-				if(cl.movevars_maxairstrafespeed)
-					if(wishspeed > cl.movevars_maxairstrafespeed)
-						wishspeed = cl.movevars_maxairstrafespeed;
-				if(cl.movevars_airstrafeaccelerate)
-					accel = cl.movevars_airstrafeaccelerate;
-			}
-			// !CPM
+				qboolean accelerating, decelerating, aircontrol;
+				accelerating = (DotProduct(s->velocity, wishdir) > 0);
+				decelerating = (DotProduct(s->velocity, wishdir) < 0);
+				aircontrol = false;
 
-			/*
-			addspeed = wishspeed - DotProduct(s->velocity, wishdir);
-			if (addspeed > 0)
+				if(accelerating && s->cmd.sidemove == 0 && s->cmd.forwardmove != 0)
+				{
+					CL_ClientMovement_Physics_PM_AirAccelerate(s, wishdir, wishspeed2);
+				}
+				else
+				{
+					// CPM: air control
+					if(cl.movevars_airstopaccelerate != 0)
+						if(DotProduct(s->velocity, wishdir) < 0)
+							accel = cl.movevars_airstopaccelerate;
+					if(s->cmd.forwardmove == 0 && s->cmd.sidemove != 0)
+					{
+						if(cl.movevars_maxairstrafespeed)
+							if(wishspeed > cl.movevars_maxairstrafespeed)
+								wishspeed = cl.movevars_maxairstrafespeed;
+						if(cl.movevars_airstrafeaccelerate)
+							accel = cl.movevars_airstrafeaccelerate;
+						if(cl.movevars_aircontrol)
+							aircontrol = true;
+					}
+					// !CPM
+					
+					CL_ClientMovement_Physics_PM_Accelerate(s, wishdir, wishspeed, accel, cl.movevars_airaccel_qw, cl.movevars_airaccel_sideways_friction / cl.movevars_maxairspeed);
+					if(aircontrol)
+						CL_ClientMovement_Physics_CPM_PM_Aircontrol(s, wishdir, wishspeed2);
+				}
+			}
+			else
 			{
-				accelspeed = min(cl.movevars_accelerate * s->q.frametime * wishspeed, addspeed);
-				VectorMA(s->velocity, accelspeed, wishdir, s->velocity);
+				// CPM: air control
+				if(cl.movevars_airstopaccelerate != 0)
+					if(DotProduct(s->velocity, wishdir) < 0)
+						accel = cl.movevars_airstopaccelerate;
+				if(s->cmd.forwardmove == 0 && s->cmd.sidemove != 0)
+				{
+					if(cl.movevars_maxairstrafespeed)
+						if(wishspeed > cl.movevars_maxairstrafespeed)
+							wishspeed = cl.movevars_maxairstrafespeed;
+					if(cl.movevars_airstrafeaccelerate)
+						accel = cl.movevars_airstrafeaccelerate;
+				}
+				// !CPM
+
+				CL_ClientMovement_Physics_PM_Accelerate(s, wishdir, wishspeed, accel, cl.movevars_airaccel_qw, cl.movevars_airaccel_sideways_friction / cl.movevars_maxairspeed);
+				if(cl.movevars_aircontrol)
+					CL_ClientMovement_Physics_CPM_PM_Aircontrol(s, wishdir, wishspeed2);
 			}
-			*/
-
-			vel_straight = DotProduct(s->velocity, wishdir);
-			vel_z = s->velocity[2];
-			VectorMA(s->velocity, -vel_straight, wishdir, vel_perpend);
-			vel_perpend[2] -= vel_z;
-
-			f = wishspeed - vel_straight;
-			if(f > 0)
-				vel_straight += min(f, accel * s->cmd.frametime * wishspeed) * cl.movevars_airaccel_qw;
-			if(wishspeed > 0)
-				vel_straight += min(wishspeed, accel * s->cmd.frametime * wishspeed) * (1 - cl.movevars_airaccel_qw);
-
-			VectorM(1 - (s->cmd.frametime * (wishspeed / cl.movevars_maxairspeed) * cl.movevars_airaccel_sideways_friction), vel_perpend, vel_perpend);
-
-			VectorMA(vel_perpend, vel_straight, wishdir, s->velocity);
-			s->velocity[2] += vel_z;
-
-			if(cl.movevars_aircontrol)
-				CL_ClientMovement_Physics_CPM_PM_Aircontrol(s, wishdir, wishspeed2);
 		}
 		s->velocity[2] -= cl.movevars_gravity * cl.movevars_entgravity * s->cmd.frametime;
 		CL_ClientMovement_Move(s);
@@ -1181,6 +1261,11 @@ void CL_UpdateMoveVars(void)
 		cl.movevars_airstrafeaccelerate = cl.statsf[STAT_MOVEVARS_AIRSTRAFEACCELERATE];
 		cl.movevars_maxairstrafespeed = cl.statsf[STAT_MOVEVARS_MAXAIRSTRAFESPEED];
 		cl.movevars_aircontrol = cl.statsf[STAT_MOVEVARS_AIRCONTROL];
+		cl.movevars_warsowbunny_airforwardaccel = cl.statsf[STAT_MOVEVARS_WARSOWBUNNY_AIRFORWARDACCEL];
+		cl.movevars_warsowbunny_accel = cl.statsf[STAT_MOVEVARS_WARSOWBUNNY_ACCEL];
+		cl.movevars_warsowbunny_topspeed = cl.statsf[STAT_MOVEVARS_WARSOWBUNNY_TOPSPEED];
+		cl.movevars_warsowbunny_turnaccel = cl.statsf[STAT_MOVEVARS_WARSOWBUNNY_TURNACCEL];
+		cl.movevars_warsowbunny_backtosideratio = cl.statsf[STAT_MOVEVARS_WARSOWBUNNY_BACKTOSIDERATIO];
 	}
 	else
 	{
@@ -1206,6 +1291,11 @@ void CL_UpdateMoveVars(void)
 		cl.movevars_airstrafeaccelerate = 0;
 		cl.movevars_maxairstrafespeed = 0;
 		cl.movevars_aircontrol = 0;
+		cl.movevars_warsowbunny_airforwardaccel = 0;
+		cl.movevars_warsowbunny_accel = 0;
+		cl.movevars_warsowbunny_topspeed = 0;
+		cl.movevars_warsowbunny_turnaccel = 0;
+		cl.movevars_warsowbunny_backtosideratio = 0;
 	}
 }
 

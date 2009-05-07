@@ -1062,6 +1062,11 @@ typedef struct client_state_s
 	float movevars_airstrafeaccelerate;
 	float movevars_maxairstrafespeed;
 	float movevars_aircontrol;
+	float movevars_warsowbunny_airforwardaccel;
+	float movevars_warsowbunny_accel;
+	float movevars_warsowbunny_topspeed;
+	float movevars_warsowbunny_turnaccel;
+	float movevars_warsowbunny_backtosideratio;
 
 	// models used by qw protocol
 	int qw_modelindex_spike;
