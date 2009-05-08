@@ -80,8 +80,7 @@ static cvar_t net_slist_queriesperframe = {0, "net_slist_queriesperframe", "4", 
 static cvar_t net_slist_timeout = {0, "net_slist_timeout", "4", "how long to listen for a server information response before giving up"};
 static cvar_t net_slist_pause = {0, "net_slist_pause", "0", "when set to 1, the server list won't update until it is set back to 0"};
 static cvar_t net_slist_maxtries = {0, "net_slist_maxtries", "3", "how many times to ask the same server for information (more times gives better ping reports but takes longer)"};
-static cvar_t net_slist_favorites = {CVAR_SAVE, "net_slist_favorites", "", "contains a list of IP addresses and ports to always query explicitly"};
-
+static cvar_t net_slist_favorites = {CVAR_SAVE | CVAR_NQUSERINFOHACK, "net_slist_favorites", "", "contains a list of IP addresses and ports to always query explicitly"};
 static cvar_t gameversion = {0, "gameversion", "0", "version of game data (mod-specific), when client and server gameversion mismatch in the server browser the server is shown as incompatible"};
 static cvar_t rcon_restricted_password = {CVAR_PRIVATE, "rcon_restricted_password", "", "password to authenticate rcon commands in restricted mode"};
 static cvar_t rcon_restricted_commands = {0, "rcon_restricted_commands", "", "allowed commands for rcon when the restricted mode password was used"};
@@ -148,6 +147,21 @@ int serverlist_cachecount;
 serverlist_entry_t serverlist_cache[SERVERLIST_TOTALSIZE];
 
 qboolean serverlist_consoleoutput;
+
+static int nFavorites = 0;
+static lhnetaddress_t favorites[256];
+
+void NetConn_UpdateFavorites()
+{
+	const char *p;
+	nFavorites = 0;
+	p = net_slist_favorites.string;
+	while((size_t) nFavorites < sizeof(favorites) / sizeof(*favorites) && COM_ParseToken_Console(&p))
+	{
+		if(LHNETADDRESS_FromString(&favorites[nFavorites], com_token, 26000))
+			++nFavorites;
+	}
+}
 
 // helper function to insert a value into the viewset
 // spare entries will be removed
@@ -359,22 +373,24 @@ static qboolean _ServerList_Entry_Mask( serverlist_mask_t *mask, serverlist_info
 
 static void ServerList_ViewList_Insert( serverlist_entry_t *entry )
 {
-	int start, end, mid;
-	const char *text;
+	int start, end, mid, i;
+	lhnetaddress_t addr;
 
 	// reject incompatible servers
 	if (entry->info.gameversion != gameversion.integer)
 		return;
 
 	// refresh the "favorite" status
-	text = net_slist_favorites.string;
 	entry->info.isfavorite = false;
-	while(COM_ParseToken_Console(&text))
+	if(LHNETADDRESS_FromString(&addr, entry->info.cname, 26000))
 	{
-		if(!strcmp(com_token, entry->info.cname))
+		for(i = 0; i < nFavorites; ++i)
 		{
-			entry->info.isfavorite = true;
-			break;
+			if(LHNETADDRESS_Compare(&addr, &favorites[i]) == 0)
+			{
+				entry->info.isfavorite = true;
+				break;
+			}
 		}
 	}
 
@@ -1318,16 +1334,6 @@ static int NetConn_ClientParsePacket_ServerList_ProcessReply(const char *address
 		if (serverlist_consoleoutput)
 			Con_Printf("querying %s\n", addressstring);
 		++serverlist_cachecount;
-
-#if 0
-		// we should not NEED this part...
-		text = net_slist_favorites.string;
-		while(COM_ParseToken_Console(&text))
-		{
-			if(!strcmp(com_token, addressstring))
-				entry->isfavorite = 1;
-		}
-#endif
 	}
 	// if this is the first reply from this server, count it as having replied
 	pingtime = (int)((realtime - entry->querytime) * 1000.0 + 0.5);
@@ -2787,12 +2793,10 @@ void NetConn_SleepMicroseconds(int microseconds)
 
 void NetConn_QueryMasters(qboolean querydp, qboolean queryqw)
 {
-	int i;
+	int i, j;
 	int masternum;
 	lhnetaddress_t masteraddress;
 	lhnetaddress_t broadcastaddress;
-	lhnetaddress_t serveraddress;
-	const char *text;
 	char request[256];
 
 	if (serverlist_cachecount >= SERVERLIST_TOTALSIZE)
@@ -2842,12 +2846,12 @@ void NetConn_QueryMasters(qboolean querydp, qboolean queryqw)
 				}
 
 				// search favorite servers
-				text = net_slist_favorites.string;
-				while(COM_ParseToken_Console(&text))
+				for(j = 0; j < nFavorites; ++j)
 				{
-					if(LHNETADDRESS_FromString(&serveraddress, com_token, 26000) && LHNETADDRESS_GetAddressType(&masteraddress) == af)
+					if(LHNETADDRESS_GetAddressType(&favorites[j]) == af)
 					{
-						NetConn_ClientParsePacket_ServerList_PrepareQuery( PROTOCOL_DARKPLACES7, com_token, true );
+						if(LHNETADDRESS_ToString(&favorites[j], request, sizeof(request), true))
+							NetConn_ClientParsePacket_ServerList_PrepareQuery( PROTOCOL_DARKPLACES7, request, true );
 					}
 				}
 			}
@@ -2890,16 +2894,15 @@ void NetConn_QueryMasters(qboolean querydp, qboolean queryqw)
 				}
 
 				// search favorite servers
-				text = net_slist_favorites.string;
-				while(COM_ParseToken_Console(&text))
+				for(j = 0; j < nFavorites; ++j)
 				{
-					if(LHNETADDRESS_FromString(&serveraddress, com_token, 26000) && LHNETADDRESS_GetAddressType(&masteraddress) == af)
+					if(LHNETADDRESS_GetAddressType(&favorites[j]) == af)
 					{
-						// writing AND querying to catch replies for both
-						// protocols (in case DP has been queried above, this
-						// would only try the DP protocol otherwise)
-						NetConn_WriteString(cl_sockets[i], "\377\377\377\377status\n", &serveraddress);
-						NetConn_ClientParsePacket_ServerList_PrepareQuery( PROTOCOL_QUAKEWORLD, com_token, true );
+						if(LHNETADDRESS_ToString(&favorites[j], request, sizeof(request), true))
+						{
+							NetConn_WriteString(cl_sockets[i], "\377\377\377\377status\n", &favorites[j]);
+							NetConn_ClientParsePacket_ServerList_PrepareQuery( PROTOCOL_QUAKEWORLD, request, true );
+						}
 					}
 				}
 			}
