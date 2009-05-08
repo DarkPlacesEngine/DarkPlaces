@@ -1160,10 +1160,11 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 
 			if(cl.movevars_warsowbunny_turnaccel)
 			{
-				qboolean accelerating, decelerating, aircontrol;
+				qboolean accelerating, decelerating;
+				//qboolean aircontrol;
 				accelerating = (DotProduct(s->velocity, wishdir) > 0);
 				decelerating = (DotProduct(s->velocity, wishdir) < 0);
-				aircontrol = false;
+				//aircontrol = false;
 
 				if(accelerating && s->cmd.sidemove == 0 && s->cmd.forwardmove != 0)
 				{
@@ -1182,14 +1183,15 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 								wishspeed = cl.movevars_maxairstrafespeed;
 						if(cl.movevars_airstrafeaccelerate)
 							accel = cl.movevars_airstrafeaccelerate;
-						if(cl.movevars_aircontrol)
-							aircontrol = true;
+						//if(cl.movevars_aircontrol)
+							//aircontrol = true;
 					}
 					// !CPM
 					
 					CL_ClientMovement_Physics_PM_Accelerate(s, wishdir, wishspeed, accel, cl.movevars_airaccel_qw, cl.movevars_airaccel_sideways_friction / cl.movevars_maxairspeed);
-					if(aircontrol)
-						CL_ClientMovement_Physics_CPM_PM_Aircontrol(s, wishdir, wishspeed2);
+					//if(aircontrol)
+						//CL_ClientMovement_Physics_CPM_PM_Aircontrol(s, wishdir, wishspeed2);
+						// div0: this never kicks in, as aircontrol is only set to TRUE if self.movement_x == 0 && self.movement_y != 0, but then the function does nothing
 				}
 			}
 			else
