@@ -1152,68 +1152,37 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 		{
 			// apply air speed limit
 			vec_t accel, wishspeed2;
+			qboolean accelerating;
+
 			wishspeed = min(wishspeed, cl.movevars_maxairspeed);
 			if (s->crouched)
 				wishspeed *= 0.5;
 			accel = cl.movevars_airaccelerate;
+
+			accelerating = (DotProduct(s->velocity, wishdir) > 0);
 			wishspeed2 = wishspeed;
 
-			if(cl.movevars_warsowbunny_turnaccel)
+			// CPM: air control
+			if(cl.movevars_airstopaccelerate != 0)
+				if(DotProduct(s->velocity, wishdir) < 0)
+					accel = cl.movevars_airstopaccelerate;
+			if(s->cmd.forwardmove == 0 && s->cmd.sidemove != 0)
 			{
-				qboolean accelerating, decelerating;
-				//qboolean aircontrol;
-				accelerating = (DotProduct(s->velocity, wishdir) > 0);
-				decelerating = (DotProduct(s->velocity, wishdir) < 0);
-				//aircontrol = false;
-
-				if(accelerating && s->cmd.sidemove == 0 && s->cmd.forwardmove != 0)
-				{
-					CL_ClientMovement_Physics_PM_AirAccelerate(s, wishdir, wishspeed2);
-				}
-				else
-				{
-					// CPM: air control
-					if(cl.movevars_airstopaccelerate != 0)
-						if(DotProduct(s->velocity, wishdir) < 0)
-							accel = cl.movevars_airstopaccelerate;
-					if(s->cmd.forwardmove == 0 && s->cmd.sidemove != 0)
-					{
-						if(cl.movevars_maxairstrafespeed)
-							if(wishspeed > cl.movevars_maxairstrafespeed)
-								wishspeed = cl.movevars_maxairstrafespeed;
-						if(cl.movevars_airstrafeaccelerate)
-							accel = cl.movevars_airstrafeaccelerate;
-						//if(cl.movevars_aircontrol)
-							//aircontrol = true;
-					}
-					// !CPM
-					
-					CL_ClientMovement_Physics_PM_Accelerate(s, wishdir, wishspeed, accel, cl.movevars_airaccel_qw, cl.movevars_airaccel_sideways_friction / cl.movevars_maxairspeed);
-					//if(aircontrol)
-						//CL_ClientMovement_Physics_CPM_PM_Aircontrol(s, wishdir, wishspeed2);
-						// div0: this never kicks in, as aircontrol is only set to TRUE if self.movement_x == 0 && self.movement_y != 0, but then the function does nothing
-				}
+				if(cl.movevars_maxairstrafespeed)
+					if(wishspeed > cl.movevars_maxairstrafespeed)
+						wishspeed = cl.movevars_maxairstrafespeed;
+				if(cl.movevars_airstrafeaccelerate)
+					accel = cl.movevars_airstrafeaccelerate;
 			}
+			// !CPM
+
+			if(cl.movevars_warsowbunny_turnaccel && accelerating && s->cmd.sidemove == 0 && s->cmd.forwardmove != 0)
+				CL_ClientMovement_Physics_PM_AirAccelerate(s, wishdir, wishspeed2);
 			else
-			{
-				// CPM: air control
-				if(cl.movevars_airstopaccelerate != 0)
-					if(DotProduct(s->velocity, wishdir) < 0)
-						accel = cl.movevars_airstopaccelerate;
-				if(s->cmd.forwardmove == 0 && s->cmd.sidemove != 0)
-				{
-					if(cl.movevars_maxairstrafespeed)
-						if(wishspeed > cl.movevars_maxairstrafespeed)
-							wishspeed = cl.movevars_maxairstrafespeed;
-					if(cl.movevars_airstrafeaccelerate)
-						accel = cl.movevars_airstrafeaccelerate;
-				}
-				// !CPM
-
 				CL_ClientMovement_Physics_PM_Accelerate(s, wishdir, wishspeed, accel, cl.movevars_airaccel_qw, cl.movevars_airaccel_sideways_friction / cl.movevars_maxairspeed);
-				if(cl.movevars_aircontrol)
-					CL_ClientMovement_Physics_CPM_PM_Aircontrol(s, wishdir, wishspeed2);
-			}
+
+			if(cl.movevars_aircontrol)
+				CL_ClientMovement_Physics_CPM_PM_Aircontrol(s, wishdir, wishspeed2);
 		}
 		s->velocity[2] -= cl.movevars_gravity * cl.movevars_entgravity * s->cmd.frametime;
 		CL_ClientMovement_Move(s);
