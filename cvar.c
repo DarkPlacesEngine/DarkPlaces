@@ -302,6 +302,8 @@ void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 			if(!var->integer)
 				Cvar_Set("rcon_password", "");
 		}
+		else if (!strcmp(var->name, "net_slist_favorites"))
+			NetConn_UpdateFavorites();
 	}
 }
 
