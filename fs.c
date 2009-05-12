@@ -285,6 +285,7 @@ FUNCTION PROTOTYPES
 
 void FS_Dir_f(void);
 void FS_Ls_f(void);
+void FS_Which_f(void);
 
 static searchpath_t *FS_FindFile (const char *name, int* index, qboolean quiet);
 static packfile_t* FS_AddFileToPack (const char* name, pack_t* pack,
@@ -1567,6 +1568,7 @@ void FS_Init_Commands(void)
 	Cmd_AddCommand ("path", FS_Path_f, "print searchpath (game directories and archives)");
 	Cmd_AddCommand ("dir", FS_Dir_f, "list files in searchpath matching an * filename pattern, one per line");
 	Cmd_AddCommand ("ls", FS_Ls_f, "list files in searchpath matching an * filename pattern, multiple per line");
+	Cmd_AddCommand ("which", FS_Which_f, "accepts a file name as argument and reports where the file is taken from");
 }
 
 /*
@@ -3100,6 +3102,29 @@ void FS_Ls_f(void)
 {
 	FS_ListDirectoryCmd("ls", false);
 }
+
+void FS_Which_f(void)
+{
+	const char *filename;
+	int index;
+	searchpath_t *sp;
+	if (Cmd_Argc() != 2)
+	{
+		Con_Printf("usage:\n%s <file>\n", Cmd_Argv(0));
+		return;
+	}  
+	filename = Cmd_Argv(1);
+	sp = FS_FindFile(filename, &index, true);
+	if (!sp) {
+		Con_Printf("%s isn't anywhere\n", filename);
+		return;
+	}
+	if (sp->pack)
+		Con_Printf("%s is in package %s\n", filename, sp->pack->shortname);
+	else
+		Con_Printf("%s is file %s%s\n", filename, sp->filename, filename);
+}
+
 
 const char *FS_WhichPack(const char *filename)
 {
