@@ -441,6 +441,10 @@ cvar_t in_pitch_min = {0, "in_pitch_min", "-90", "how far downward you can aim (
 cvar_t in_pitch_max = {0, "in_pitch_max", "90", "how far upward you can aim (quake used 80"};
 
 cvar_t m_filter = {CVAR_SAVE, "m_filter","0", "smoothes mouse movement, less responsive but smoother aiming"};
+cvar_t m_accelerate = {CVAR_SAVE, "m_accelerate","1", "mouse acceleration factor (try 2)"};
+cvar_t m_accelerate_minspeed = {CVAR_SAVE, "m_accelerate_minspeed","5000", "below this speed, no acceleration is done"};
+cvar_t m_accelerate_maxspeed = {CVAR_SAVE, "m_accelerate_maxspeed","10000", "above this speed, full acceleration is done"};
+cvar_t m_accelerate_filter = {CVAR_SAVE, "m_accelerate_filter","0.1", "mouse acceleration factor filtering"};
 
 cvar_t cl_netfps = {CVAR_SAVE, "cl_netfps","20", "how many input packets to send to server each second"};
 cvar_t cl_netrepeatinput = {CVAR_SAVE, "cl_netrepeatinput", "1", "how many packets in a row can be lost without movement issues when using cl_movement (technically how many input messages to repeat in each packet that have not yet been acknowledged by the server), only affects DP7 and later servers (Quake uses 0, QuakeWorld uses 2, and just for comparison Quake3 uses 1)"};
@@ -552,6 +556,47 @@ void CL_Input (void)
 
 	// allow mice or other external controllers to add to the move
 	IN_Move ();
+
+	// apply m_accelerate if it is on
+	if(m_accelerate.value > 1)
+	{
+		static float averagespeed = 0;
+		float speed, f, mi, ma;
+
+		speed = sqrt(in_mouse_x * in_mouse_x + in_mouse_y * in_mouse_y) / cl.realframetime;
+		if(m_accelerate_filter.value > 0)
+			f = bound(0, cl.realframetime / m_accelerate_filter.value, 1);
+		else
+			f = 1;
+		averagespeed = speed * f + averagespeed * (1 - f);
+
+		mi = max(1, m_accelerate_minspeed.value);
+		ma = max(m_accelerate_minspeed.value + 1, m_accelerate_maxspeed.value);
+
+		if(averagespeed <= mi)
+		{
+			f = 1;
+		}
+		else if(averagespeed >= ma)
+		{
+			f = m_accelerate.value;
+		}
+		else
+		{
+			/*
+			f = log(averagespeed);
+			mi = log(mi);
+			ma = log(ma);
+			*/
+			f = averagespeed;
+			mi = mi;
+			ma = ma;
+			f = (f - mi) / (ma - mi) * (m_accelerate.value - 1) + 1;
+		}
+
+		in_mouse_x *= f;
+		in_mouse_y *= f;
+	}
 
 	// apply m_filter if it is on
 	mx = in_mouse_x;
@@ -1876,6 +1921,10 @@ void CL_InitInput (void)
 	Cvar_RegisterVariable(&in_pitch_min);
 	Cvar_RegisterVariable(&in_pitch_max);
 	Cvar_RegisterVariable(&m_filter);
+	Cvar_RegisterVariable(&m_accelerate);
+	Cvar_RegisterVariable(&m_accelerate_minspeed);
+	Cvar_RegisterVariable(&m_accelerate_maxspeed);
+	Cvar_RegisterVariable(&m_accelerate_filter);
 
 	Cvar_RegisterVariable(&cl_netfps);
 	Cvar_RegisterVariable(&cl_netrepeatinput);
