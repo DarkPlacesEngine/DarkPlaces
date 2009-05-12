@@ -1245,7 +1245,7 @@ viewmodel                                         change model of viewthing enti
 viewnext                                          change to next animation frame of viewthing entity in current level
 viewprev                                          change to previous animation frame of viewthing entity in current level
 wait                                              make script execution wait for next rendered frame
-
+which                                             accepts a file name as argument and reports where the file is taken from
 
 
 How to install Quake on Windows:
