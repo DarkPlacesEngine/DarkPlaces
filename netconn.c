@@ -127,7 +127,7 @@ mempool_t *netconn_mempool = NULL;
 cvar_t cl_netport = {0, "cl_port", "0", "forces client to use chosen port number if not 0"};
 cvar_t sv_netport = {0, "port", "26000", "server port for players to connect to"};
 cvar_t net_address = {0, "net_address", "0.0.0.0", "network address to open ports on"};
-//cvar_t net_netaddress_ipv6 = {0, "net_address_ipv6", "[0:0:0:0:0:0:0:0]", "network address to open ipv6 ports on"};
+cvar_t net_address_ipv6 = {0, "net_address_ipv6", "[0:0:0:0:0:0:0:0]", "network address to open ipv6 ports on"};
 
 char net_extresponse[NET_EXTRESPONSE_MAX][1400];
 int net_extresponse_count = 0;
@@ -863,7 +863,7 @@ void NetConn_OpenClientPorts(void)
 		Con_Printf("Client using port %i\n", port);
 	NetConn_OpenClientPort("local:2", 0);
 	NetConn_OpenClientPort(net_address.string, port);
-	//NetConn_OpenClientPort(net_address_ipv6.string, port);
+	NetConn_OpenClientPort(net_address_ipv6.string, port);
 }
 
 void NetConn_CloseServerPorts(void)
@@ -922,7 +922,7 @@ void NetConn_OpenServerPorts(int opennetports)
 	if (opennetports)
 	{
 		NetConn_OpenServerPort(net_address.string, port);
-		//NetConn_OpenServerPort(net_address_ipv6.string, port);
+		NetConn_OpenServerPort(net_address_ipv6.string, port);
 	}
 	if (sv_numsockets == 0)
 		Host_Error("NetConn_OpenServerPorts: unable to open any ports!");
@@ -1412,6 +1412,79 @@ static qboolean NetConn_ClientParsePacket_ServerList_PrepareQuery( int protocol,
 	return true;
 }
 
+static void NetConn_ClientParsePacket_ServerList_ParseDPList(lhnetaddress_t *senderaddress, const unsigned char *data, int length, qboolean isextended)
+{
+	masterreplycount++;
+	if (serverlist_consoleoutput)
+		Con_Printf("received DarkPlaces %sserver list...\n", isextended ? "extended " : "");
+	while (length >= 7)
+	{
+		char ipstring [128];
+
+		// IPv4 address
+		if (data[0] == '\\')
+		{
+			unsigned short port = data[5] * 256 + data[6];
+
+			if (port != 0 && (data[1] != 0xFF || data[2] != 0xFF || data[3] != 0xFF || data[4] != 0xFF))
+				dpsnprintf (ipstring, sizeof (ipstring), "%u.%u.%u.%u:%hu", data[1], data[2], data[3], data[4], port);
+
+			// move on to next address in packet
+			data += 7;
+			length -= 7;
+		}
+		// IPv6 address
+		else if (data[0] == '/' && isextended && length >= 19)
+		{
+			unsigned short port = data[17] * 256 + data[18];
+
+			if (port != 0)
+			{
+				const char *ifname;
+
+				// TODO: make some basic checks of the IP address (broadcast, ...)
+
+				ifname = LHNETADDRESS_GetInterfaceName(senderaddress);
+				if (ifname != NULL)
+				{
+					dpsnprintf (ipstring, sizeof (ipstring), "[%x%02x:%x%02x:%x%02x:%x%02x:%x%02x:%x%02x:%x%02x:%x%02x%%%s]:%hu",
+								data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8],
+								data[9], data[10], data[11], data[12], data[13], data[14], data[15], data[16],
+								ifname, port);
+				}
+				else
+				{
+					dpsnprintf (ipstring, sizeof (ipstring), "[%x%02x:%x%02x:%x%02x:%x%02x:%x%02x:%x%02x:%x%02x:%x%02x]:%hu",
+								data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8],
+								data[9], data[10], data[11], data[12], data[13], data[14], data[15], data[16],
+								port);
+				}
+			}
+
+			// move on to next address in packet
+			data += 19;
+			length -= 19;
+		}
+		else
+		{
+			Con_Print("Error while parsing the server list\n");
+			break;
+		}
+
+		if (serverlist_consoleoutput && developer_networking.integer)
+			Con_Printf("Requesting info from DarkPlaces server %s\n", ipstring);
+		
+		if( !NetConn_ClientParsePacket_ServerList_PrepareQuery( PROTOCOL_DARKPLACES7, ipstring, false ) ) {
+			break;
+		}
+
+	}
+
+	// begin or resume serverlist queries
+	serverlist_querysleep = false;
+	serverlist_querywaittime = realtime + 3;
+}
+
 static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *data, int length, lhnetaddress_t *peeraddress)
 {
 	qboolean fromserver;
@@ -1572,26 +1645,15 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			// Extract the IP addresses
 			data += 18;
 			length -= 18;
-			masterreplycount++;
-			if (serverlist_consoleoutput)
-				Con_Print("received DarkPlaces server list...\n");
-			while (length >= 7 && data[0] == '\\' && (data[1] != 0xFF || data[2] != 0xFF || data[3] != 0xFF || data[4] != 0xFF) && data[5] * 256 + data[6] != 0)
-			{
-				dpsnprintf (ipstring, sizeof (ipstring), "%u.%u.%u.%u:%u", data[1], data[2], data[3], data[4], data[5] * 256 + data[6]);
-				if (serverlist_consoleoutput && developer_networking.integer)
-					Con_Printf("Requesting info from DarkPlaces server %s\n", ipstring);
-				
-				if( !NetConn_ClientParsePacket_ServerList_PrepareQuery( PROTOCOL_DARKPLACES7, ipstring, false ) ) {
-					break;
-				}
-
-				// move on to next address in packet
-				data += 7;
-				length -= 7;
-			}
-			// begin or resume serverlist queries
-			serverlist_querysleep = false;
-			serverlist_querywaittime = realtime + 3;
+			NetConn_ClientParsePacket_ServerList_ParseDPList(peeraddress, data, length, false);
+			return true;
+		}
+		if (!strncmp(string, "getserversExtResponse", 21) && serverlist_cachecount < SERVERLIST_TOTALSIZE)
+		{
+			// Extract the IP addresses
+			data += 21;
+			length -= 21;
+			NetConn_ClientParsePacket_ServerList_ParseDPList(peeraddress, data, length, true);
 			return true;
 		}
 		if (!memcmp(string, "d\n", 2) && serverlist_cachecount < SERVERLIST_TOTALSIZE)
@@ -2813,6 +2875,7 @@ void NetConn_QueryMasters(qboolean querydp, qboolean queryqw)
 		{
 			if (cl_sockets[i])
 			{
+				const char *cmdname, *extraoptions;
 				int af = LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(cl_sockets[i]));
 
 				if(LHNETADDRESS_GetAddressType(&broadcastaddress) == af)
@@ -2833,7 +2896,17 @@ void NetConn_QueryMasters(qboolean querydp, qboolean queryqw)
 				}
 
 				// build the getservers message to send to the dpmaster master servers
-				dpsnprintf(request, sizeof(request), "\377\377\377\377getservers %s %u empty full\x0A", gamename, NET_PROTOCOL_VERSION);
+				if (LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(cl_sockets[i])) == LHNETADDRESSTYPE_INET6)
+				{
+					cmdname = "getserversExt";
+					extraoptions = " ipv4 ipv6";  // ask for IPv4 and IPv6 servers
+				}
+				else
+				{
+					cmdname = "getservers";
+					extraoptions = "";
+				}
+				dpsnprintf(request, sizeof(request), "\377\377\377\377%s %s %u empty full%s", cmdname, gamename, NET_PROTOCOL_VERSION, extraoptions);
 
 				// search internet
 				for (masternum = 0;sv_masters[masternum].name;masternum++)
@@ -3046,7 +3119,7 @@ void NetConn_Init(void)
 	Cvar_RegisterVariable(&cl_netport);
 	Cvar_RegisterVariable(&sv_netport);
 	Cvar_RegisterVariable(&net_address);
-	//Cvar_RegisterVariable(&net_address_ipv6);
+	Cvar_RegisterVariable(&net_address_ipv6);
 	Cvar_RegisterVariable(&sv_public);
 	Cvar_RegisterVariable(&sv_heartbeatperiod);
 	for (i = 0;sv_masters[i].name;i++)

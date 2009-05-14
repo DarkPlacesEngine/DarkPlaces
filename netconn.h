@@ -371,7 +371,7 @@ extern cvar_t cl_netlocalping;
 extern cvar_t cl_netport;
 extern cvar_t sv_netport;
 extern cvar_t net_address;
-//extern cvar_t net_netaddress_ipv6;
+extern cvar_t net_address_ipv6;
 
 qboolean NetConn_CanSend(netconn_t *conn);
 int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolversion_t protocol, int rate, qboolean quakesignon_suppressreliables);

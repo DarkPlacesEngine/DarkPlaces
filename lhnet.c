@@ -21,6 +21,7 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <net/if.h>
 #endif
 
 #ifdef __MORPHOS__
@@ -126,39 +127,122 @@ int LHNETADDRESS_FromPort(lhnetaddress_t *vaddress, lhnetaddresstype_t addressty
 	return 0;
 }
 
+int LHNETADDRESS_Resolve(lhnetaddressnative_t *address, const char *name, int port)
+{
+	char port_buff [16];
+	struct addrinfo hints;
+	struct addrinfo* addrinf;
+	int err;
+
+	dpsnprintf (port_buff, sizeof (port_buff), "%d", port);
+	port_buff[sizeof (port_buff) - 1] = '\0';
+
+	memset(&hints, 0, sizeof (hints));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_DGRAM;
+	//hints.ai_flags = AI_PASSIVE;
+
+	err = getaddrinfo(name, port_buff, &hints, &addrinf);
+	if (err != 0 || addrinf == NULL)
+		return 0;
+	if (addrinf->ai_addr->sa_family != AF_INET6 && addrinf->ai_addr->sa_family != AF_INET)
+		return 0;
+
+	// great it worked
+	if (addrinf->ai_addr->sa_family == AF_INET6)
+	{
+		address->addresstype = LHNETADDRESSTYPE_INET6;
+		memcpy(&address->addr.in6, addrinf->ai_addr, sizeof(address->addr.in6));
+	}
+	else
+	{
+		address->addresstype = LHNETADDRESSTYPE_INET4;
+		memcpy(&address->addr.in, addrinf->ai_addr, sizeof(address->addr.in));
+	}
+	address->port = port;
+	
+	freeaddrinfo (addrinf);
+	return 1;
+}
+
 int LHNETADDRESS_FromString(lhnetaddress_t *vaddress, const char *string, int defaultport)
 {
 	lhnetaddressnative_t *address = (lhnetaddressnative_t *)vaddress;
-	int i, port, namelen, d1, d2, d3, d4;
-	struct hostent *hostentry;
+	int i, port, d1, d2, d3, d4, resolved;
+	size_t namelen;
 	unsigned char *a;
-	const char *colon;
 	char name[128];
 #ifdef STANDALONETEST
 	char string2[128];
 #endif
+	const char* addr_start;
+	const char* addr_end = NULL;
+	const char* port_name = NULL;
+	int addr_family = AF_UNSPEC;
+
 	if (!address || !string || !*string)
 		return 0;
 	memset(address, 0, sizeof(*address));
 	address->addresstype = LHNETADDRESSTYPE_NONE;
 	port = 0;
-	colon = strrchr(string, ':');
-	if (colon)
-		port = atoi(colon + 1);
+
+	// If it's a bracketed IPv6 address
+	if (string[0] == '[')
+	{
+		const char* end_bracket = strchr(string, ']');
+
+		if (end_bracket == NULL)
+			return 0;
+
+		if (end_bracket[1] == ':')
+			port_name = end_bracket + 2;
+		else if (end_bracket[1] != '\0')
+			return 0;
+
+		addr_family = AF_INET6;
+		addr_start = &string[1];
+		addr_end = end_bracket;
+	}
 	else
-		colon = string + strlen(string);
+	{
+		const char* first_colon;
+
+		addr_start = string;
+
+		// If it's a numeric non-bracket IPv6 address (-> no port),
+		// or it's a numeric IPv4 address, or a name, with a port
+		first_colon = strchr(string, ':');
+		if (first_colon != NULL)
+		{
+			const char* last_colon = strrchr(first_colon + 1, ':');
+
+			// If it's an numeric IPv4 address, or a name, with a port
+			if (last_colon == NULL)
+			{
+				addr_end = first_colon;
+				port_name = first_colon + 1;
+			}
+			else
+				addr_family = AF_INET6;
+		}
+	}
+
+	if (addr_end != NULL)
+		namelen = addr_end - addr_start;
+	else
+		namelen = strlen (addr_start);
+
+	if (namelen >= sizeof(name))
+		namelen = sizeof(name) - 1;
+	memcpy (name, addr_start, namelen);
+	name[namelen] = 0;
+
+	if (port_name)
+		port = atoi(port_name);
+
 	if (port == 0)
 		port = defaultport;
-	namelen = colon - string;
-	if (namelen > 127)
-		namelen = 127;
-	if (string[0] == '[' && namelen > 0 && string[namelen-1] == ']') // ipv6
-	{
-		string++;
-		namelen -= 2;
-	}
-	memcpy(name, string, namelen);
-	name[namelen] = 0;
+
 	// handle loopback
 	if (!strcmp(name, "local"))
 	{
@@ -172,7 +256,8 @@ int LHNETADDRESS_FromString(lhnetaddress_t *vaddress, const char *string, int de
 #if _MSC_VER >= 1400
 #define sscanf sscanf_s
 #endif
-	if (sscanf(name, "%d.%d.%d.%d", &d1, &d2, &d3, &d4) >= 1 && (unsigned int)d1 < 256 && (unsigned int)d2 < 256 && (unsigned int)d3 < 256 && (unsigned int)d4 < 256)
+	if (addr_family != AF_INET6 &&
+		sscanf(name, "%d.%d.%d.%d", &d1, &d2, &d3, &d4) >= 1 && (unsigned int)d1 < 256 && (unsigned int)d2 < 256 && (unsigned int)d3 < 256 && (unsigned int)d4 < 256)
 	{
 		// parsed a valid ipv4 address
 		address->addresstype = LHNETADDRESSTYPE_INET4;
@@ -213,67 +298,48 @@ int LHNETADDRESS_FromString(lhnetaddress_t *vaddress, const char *string, int de
 		}
 		return 0;
 	}
-	// try gethostbyname (handles dns and other ip formats)
-	hostentry = gethostbyname(name);
-	if (hostentry)
-	{
-		if (hostentry->h_addrtype == AF_INET6)
-		{
-			// great it worked
-			address->addresstype = LHNETADDRESSTYPE_INET6;
-			address->port = port;
-			address->addr.in6.sin6_family = hostentry->h_addrtype;
-			address->addr.in6.sin6_port = htons((unsigned short)port);
-			memcpy(&address->addr.in6.sin6_addr, hostentry->h_addr_list[0], sizeof(address->addr.in6.sin6_addr));
-			for (i = 0;i < (int)sizeof(namecache[namecacheposition].name)-1 && name[i];i++)
-				namecache[namecacheposition].name[i] = name[i];
-			namecache[namecacheposition].name[i] = 0;
-#ifndef STANDALONETEST
-			namecache[namecacheposition].expirationtime = realtime + 12 * 3600; // 12 hours
-#endif
-			namecache[namecacheposition].address = *address;
-			namecacheposition = (namecacheposition + 1) % MAX_NAMECACHE;
-#ifdef STANDALONETEST
-			LHNETADDRESS_ToString(address, string2, sizeof(string2), 1);
-			printf("gethostbyname(\"%s\") returned ipv6 address %s\n", string, string2);
-#endif
-			return 1;
-		}
-		else if (hostentry->h_addrtype == AF_INET)
-		{
-			// great it worked
-			address->addresstype = LHNETADDRESSTYPE_INET4;
-			address->port = port;
-			address->addr.in.sin_family = hostentry->h_addrtype;
-			address->addr.in.sin_port = htons((unsigned short)port);
-			memcpy(&address->addr.in.sin_addr, hostentry->h_addr_list[0], sizeof(address->addr.in.sin_addr));
-			for (i = 0;i < (int)sizeof(namecache[namecacheposition].name)-1 && name[i];i++)
-				namecache[namecacheposition].name[i] = name[i];
-			namecache[namecacheposition].name[i] = 0;
-#ifndef STANDALONETEST
-			namecache[namecacheposition].expirationtime = realtime + 12 * 3600; // 12 hours
-#endif
-			namecache[namecacheposition].address = *address;
-			namecacheposition = (namecacheposition + 1) % MAX_NAMECACHE;
-#ifdef STANDALONETEST
-			LHNETADDRESS_ToString(address, string2, sizeof(string2), 1);
-			printf("gethostbyname(\"%s\") returned ipv4 address %s\n", string, string2);
-#endif
-			return 1;
-		}
-	}
-#ifdef STANDALONETEST
-	printf("gethostbyname failed on address \"%s\"\n", name);
-#endif
+
 	for (i = 0;i < (int)sizeof(namecache[namecacheposition].name)-1 && name[i];i++)
 		namecache[namecacheposition].name[i] = name[i];
 	namecache[namecacheposition].name[i] = 0;
 #ifndef STANDALONETEST
 	namecache[namecacheposition].expirationtime = realtime + 12 * 3600; // 12 hours
 #endif
-	namecache[namecacheposition].address.addresstype = LHNETADDRESSTYPE_NONE;
+
+	// try resolving the address (handles dns and other ip formats)
+	resolved = LHNETADDRESS_Resolve(address, name, port);
+	if (resolved)
+	{
+#ifdef STANDALONETEST
+		const char *protoname;
+
+		switch (address->addresstype)
+		{
+			case LHNETADDRESSTYPE_INET6:
+				protoname = "ipv6";
+				break;
+			case LHNETADDRESSTYPE_INET4:
+				protoname = "ipv4";
+				break;
+			default:
+				protoname = "UNKNOWN";
+				break;
+		}
+		LHNETADDRESS_ToString(vaddress, string2, sizeof(string2), 1);
+		Con_Printf("LHNETADDRESS_Resolve(\"%s\") returned %s address %s\n", string, protoname, string2);
+#endif
+		namecache[namecacheposition].address = *address;
+	}
+	else
+	{
+#ifdef STANDALONETEST
+		printf("name resolution failed on address \"%s\"\n", name);
+#endif
+		namecache[namecacheposition].address.addresstype = LHNETADDRESSTYPE_NONE;
+	}
+	
 	namecacheposition = (namecacheposition + 1) % MAX_NAMECACHE;
-	return 0;
+	return resolved;
 }
 
 int LHNETADDRESS_ToString(const lhnetaddress_t *vaddress, char *string, int stringbuffersize, int includeport)
@@ -353,6 +419,35 @@ int LHNETADDRESS_GetAddressType(const lhnetaddress_t *address)
 		return address->addresstype;
 	else
 		return LHNETADDRESSTYPE_NONE;
+}
+
+const char *LHNETADDRESS_GetInterfaceName(const lhnetaddress_t *vaddress)
+{
+	lhnetaddressnative_t *address = (lhnetaddressnative_t *)vaddress;
+
+	if (address && address->addresstype == LHNETADDRESSTYPE_INET6)
+	{
+#ifndef _WIN32
+
+		static char ifname [IF_NAMESIZE];
+		
+		if (if_indextoname(address->addr.in6.sin6_scope_id, ifname) == ifname)
+			return ifname;
+
+#else
+
+		// The Win32 API doesn't have if_indextoname() until Windows Vista,
+		// but luckily it just uses the interface ID as the interface name
+
+		static char ifname [16];
+
+		if (dpsnprintf(ifname, sizeof(ifname), "%lu", address->addr.in6.sin6_scope_id) > 0)
+			return ifname;
+
+#endif
+	}
+
+	return NULL;
 }
 
 int LHNETADDRESS_GetPort(const lhnetaddress_t *address)
@@ -618,40 +713,61 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 #endif
 					if (ioctlsocket(lhnetsocket->inetsocket, FIONBIO, &_true) != -1)
 					{
-						lhnetaddressnative_t *localaddress = (lhnetaddressnative_t *)&lhnetsocket->address;
-						SOCKLEN_T namelen;
-						int bindresult;
-						if (address->addresstype == LHNETADDRESSTYPE_INET6)
-						{
-							namelen = sizeof(localaddress->addr.in6);
-							bindresult = bind(lhnetsocket->inetsocket, &localaddress->addr.sock, namelen);
-							if (bindresult != -1)
-								getsockname(lhnetsocket->inetsocket, &localaddress->addr.sock, &namelen);
-						}
-						else
-						{
-							namelen = sizeof(localaddress->addr.in);
-							bindresult = bind(lhnetsocket->inetsocket, &localaddress->addr.sock, namelen);
-							if (bindresult != -1)
-								getsockname(lhnetsocket->inetsocket, &localaddress->addr.sock, &namelen);
-						}
-						if (bindresult != -1)
-						{
-							int i = 1;
-							// enable broadcast on this socket
-							setsockopt(lhnetsocket->inetsocket, SOL_SOCKET, SO_BROADCAST, (char *)&i, sizeof(i));
-							lhnetsocket->next = &lhnet_socketlist;
-							lhnetsocket->prev = lhnetsocket->next->prev;
-							lhnetsocket->next->prev = lhnetsocket;
-							lhnetsocket->prev->next = lhnetsocket;
+#ifdef IPV6_V6ONLY
+						// We need to set this flag to tell the OS that we only listen on IPv6. If we don't
+						// most OSes will create a dual-protocol socket that also listens on IPv4. In this case
+						// if an IPv4 socket is already bound to the port we want, our bind() call will fail.
+						int ipv6_only = 1;
+						if (address->addresstype != LHNETADDRESSTYPE_INET6
+							|| setsockopt (lhnetsocket->inetsocket, IPPROTO_IPV6, IPV6_V6ONLY,
+										   (const void *)&ipv6_only, sizeof(ipv6_only)) == 0
 #ifdef WIN32
-							if (ioctlsocket(lhnetsocket->inetsocket, SIO_UDP_CONNRESET, &_false) == -1)
-								Con_DPrintf("LHNET_OpenSocket_Connectionless: ioctlsocket SIO_UDP_CONNRESET returned error: %s\n", LHNETPRIVATE_StrError());
+							// The Win32 API only supports IPV6_V6ONLY since Windows Vista, but fortunately
+							// the default value is what we want on Win32 anyway (IPV6_V6ONLY = true)
+							|| SOCKETERRNO == WSAENOPROTOOPT
 #endif
-							return lhnetsocket;
+							)
+#endif
+						{
+							lhnetaddressnative_t *localaddress = (lhnetaddressnative_t *)&lhnetsocket->address;
+							SOCKLEN_T namelen;
+							int bindresult;
+							if (address->addresstype == LHNETADDRESSTYPE_INET6)
+							{
+								namelen = sizeof(localaddress->addr.in6);
+								bindresult = bind(lhnetsocket->inetsocket, &localaddress->addr.sock, namelen);
+								if (bindresult != -1)
+									getsockname(lhnetsocket->inetsocket, &localaddress->addr.sock, &namelen);
+							}
+							else
+							{
+								namelen = sizeof(localaddress->addr.in);
+								bindresult = bind(lhnetsocket->inetsocket, &localaddress->addr.sock, namelen);
+								if (bindresult != -1)
+									getsockname(lhnetsocket->inetsocket, &localaddress->addr.sock, &namelen);
+							}
+							if (bindresult != -1)
+							{
+								int i = 1;
+								// enable broadcast on this socket
+								setsockopt(lhnetsocket->inetsocket, SOL_SOCKET, SO_BROADCAST, (char *)&i, sizeof(i));
+								lhnetsocket->next = &lhnet_socketlist;
+								lhnetsocket->prev = lhnetsocket->next->prev;
+								lhnetsocket->next->prev = lhnetsocket;
+								lhnetsocket->prev->next = lhnetsocket;
+#ifdef WIN32
+								if (ioctlsocket(lhnetsocket->inetsocket, SIO_UDP_CONNRESET, &_false) == -1)
+									Con_DPrintf("LHNET_OpenSocket_Connectionless: ioctlsocket SIO_UDP_CONNRESET returned error: %s\n", LHNETPRIVATE_StrError());
+#endif
+								return lhnetsocket;
+							}
+							else
+								Con_Printf("LHNET_OpenSocket_Connectionless: bind returned error: %s\n", LHNETPRIVATE_StrError());
 						}
+#ifdef IPV6_V6ONLY
 						else
-							Con_Printf("LHNET_OpenSocket_Connectionless: bind returned error: %s\n", LHNETPRIVATE_StrError());
+							Con_Printf("LHNET_OpenSocket_Connectionless: setsockopt(IPV6_V6ONLY) returned error: %s\n", LHNETPRIVATE_StrError());
+#endif
 					}
 					else
 						Con_Printf("LHNET_OpenSocket_Connectionless: ioctlsocket returned error: %s\n", LHNETPRIVATE_StrError());

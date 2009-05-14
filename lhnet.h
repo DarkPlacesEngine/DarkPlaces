@@ -25,6 +25,7 @@ int LHNETADDRESS_FromPort(lhnetaddress_t *address, lhnetaddresstype_t addresstyp
 int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int defaultport);
 int LHNETADDRESS_ToString(const lhnetaddress_t *address, char *string, int stringbuffersize, int includeport);
 int LHNETADDRESS_GetAddressType(const lhnetaddress_t *address);
+const char *LHNETADDRESS_GetInterfaceName(const lhnetaddress_t *address);
 int LHNETADDRESS_GetPort(const lhnetaddress_t *address);
 int LHNETADDRESS_SetPort(lhnetaddress_t *address, int port);
 int LHNETADDRESS_Compare(const lhnetaddress_t *address1, const lhnetaddress_t *address2);
