@@ -335,6 +335,7 @@ static void R_DrawPortal_Callback(const entity_render_t *ent, const rtlight_t *r
 	// called with a batch, so numsurfaces is always 1, and the surfacelist
 	// contains only a leaf number for coloring purposes
 	const mportal_t *portal = (mportal_t *)ent;
+	qboolean isvis;
 	int i, numpoints;
 	float *v;
 	float vertex3f[POLYGONELEMENTS_MAXPOINTS*3];
@@ -354,11 +355,13 @@ static void R_DrawPortal_Callback(const entity_render_t *ent, const rtlight_t *r
 	R_Mesh_ResetTextureState();
 	R_SetupGenericShader(false);
 
-	i = surfacelist[0];
+	isvis = (portal->here->clusterindex >= 0 && portal->past->clusterindex >= 0 && portal->here->clusterindex != portal->past->clusterindex);
+
+	i = surfacelist[0] >> 1;
 	GL_Color(((i & 0x0007) >> 0) * (1.0f / 7.0f) * r_refdef.view.colorscale,
 			 ((i & 0x0038) >> 3) * (1.0f / 7.0f) * r_refdef.view.colorscale,
 			 ((i & 0x01C0) >> 6) * (1.0f / 7.0f) * r_refdef.view.colorscale,
-			 0.125f);
+			 isvis ? 0.125f : 0.03125f);
 	for (i = 0, v = vertex3f;i < numpoints;i++, v += 3)
 		VectorCopy(portal->points[i].position, v);
 	R_Mesh_Draw(0, numpoints, 0, numpoints - 2, NULL, polygonelements, 0, 0);
