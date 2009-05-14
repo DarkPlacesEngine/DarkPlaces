@@ -3257,7 +3257,7 @@ static int		lanConfig_cursor_table [] = {56, 76, 84, 120};
 
 static int 	lanConfig_port;
 static char	lanConfig_portname[6];
-static char	lanConfig_joinname[22];
+static char	lanConfig_joinname[40];
 
 void M_Menu_LanConfig_f (void)
 {
@@ -3301,7 +3301,7 @@ static void M_LanConfig_Draw (void)
 	basex += 8;
 
 	M_Print(basex, lanConfig_cursor_table[0], "Port");
-	M_DrawTextBox (basex+8*8, lanConfig_cursor_table[0]-8, 6, 1);
+	M_DrawTextBox (basex+8*8, lanConfig_cursor_table[0]-8, sizeof(lanConfig_portname), 1);
 	M_Print(basex+9*8, lanConfig_cursor_table[0], lanConfig_portname);
 
 	if (JoiningGame)
@@ -3309,7 +3309,7 @@ static void M_LanConfig_Draw (void)
 		M_Print(basex, lanConfig_cursor_table[1], "Search for DarkPlaces games...");
 		M_Print(basex, lanConfig_cursor_table[2], "Search for QuakeWorld games...");
 		M_Print(basex, lanConfig_cursor_table[3]-16, "Join game at:");
-		M_DrawTextBox (basex+8, lanConfig_cursor_table[3]-8, 22, 1);
+		M_DrawTextBox (basex+8, lanConfig_cursor_table[3]-8, sizeof(lanConfig_joinname), 1);
 		M_Print(basex+16, lanConfig_cursor_table[3], lanConfig_joinname);
 	}
 	else
@@ -3407,7 +3407,7 @@ static void M_LanConfig_Key (int key, int ascii)
 		if (lanConfig_cursor == 3)
 		{
 			l = (int)strlen(lanConfig_joinname);
-			if (l < 21)
+			if (l < (int)sizeof(lanConfig_joinname) - 1)
 			{
 				lanConfig_joinname[l+1] = 0;
 				lanConfig_joinname[l] = ascii;
@@ -3419,7 +3419,7 @@ static void M_LanConfig_Key (int key, int ascii)
 		if (lanConfig_cursor == 0)
 		{
 			l = (int)strlen(lanConfig_portname);
-			if (l < 5)
+			if (l < (int)sizeof(lanConfig_portname) - 1)
 			{
 				lanConfig_portname[l+1] = 0;
 				lanConfig_portname[l] = ascii;
