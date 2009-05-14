@@ -327,7 +327,7 @@ void CDAudio_Stop (void)
 		return;
 	else if(wasPlaying)
 	{
-		CDAudio_Resume(); // needed by SDL - can't stop while paused there
+		CDAudio_Resume(); // needed by SDL - can't stop while paused there (causing pause/stop to fail after play, pause, stop, play otherwise)
 		if (cdPlaying && (CDAudio_SysStop() == -1))
 			return;
 	}
@@ -369,7 +369,7 @@ static void CD_f (void)
 	int ret;
 	int n;
 
-	command = (Cmd_Argc() >= 2) ? Cmd_Argv (1) : "";
+	command = Cmd_Argv (1);
 
 	if (strcasecmp(command, "remap") != 0)
 		Host_StartVideo();
@@ -399,7 +399,6 @@ static void CD_f (void)
 
 	if (strcasecmp(command, "rescan") == 0)
 	{
-		CDAudio_Stop();
 		CDAudio_Shutdown();
 		CDAudio_Startup();
 		return;
@@ -458,7 +457,7 @@ static void CD_f (void)
 
 	if (strcasecmp(command, "eject") == 0)
 	{
-		if (cdPlaying && faketrack == -1)
+		if (faketrack == -1)
 			CDAudio_Stop();
 		CDAudio_Eject();
 		cdValid = false;
@@ -486,7 +485,8 @@ static void CD_f (void)
 	Con_Printf("CD commands:\n");
 	Con_Printf("cd on - enables CD audio system\n");
 	Con_Printf("cd off - stops and disables CD audio system\n");
-	Con_Printf("cd reset - resets CD audio system (clears track remapping and re-reads disc information)");
+	Con_Printf("cd reset - resets CD audio system (clears track remapping and re-reads disc information)\n");
+	Con_Printf("cd rescan - rescans disks in drives (to use another disc)\n");
 	Con_Printf("cd remap <remap1> [remap2] [remap3] [...] - chooses (possibly emulated) CD tracks to play when a map asks for a particular track, this has many uses\n");
 	Con_Printf("cd close - closes CD tray\n");
 	Con_Printf("cd eject - stops playing music and opens CD tray to allow you to change disc\n");
