@@ -10,6 +10,8 @@
 #include <time.h>
 #include <string.h>
 #ifdef WIN32
+#define _WIN32_WINNT 0x0501
+	// Windows XP or higher is required for getaddrinfo
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #else
