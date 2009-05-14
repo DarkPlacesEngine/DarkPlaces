@@ -22,23 +22,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "cdaudio.h"
 #include <SDL.h>
-
-/*IMPORTANT:
-SDL 1.2.7 and older seems to have a strange bug regarding CDPause and CDResume under WIN32.
-If CDResume is called, it plays to end of the CD regardless what values for lasttrack and lastframe
-were passed to CDPlayTracks.
-*/
+#include <time.h>
 
 // If one of the functions fails, it returns -1, if not 0
 
 // SDL supports multiple cd devices - so we are going to support this, too.
 static void CDAudio_SDL_CDDrive_f( void );
 
-// we only support playing on CD at a time
+// we only support playing one CD at a time
 static SDL_CD *cd;
-static int drive;
-static double pauseoffset;
-static double endtime;
 
 static int ValidateDrive( void )
 {
@@ -59,7 +51,6 @@ void CDAudio_SysCloseDoor (void)
 	//NO SDL FUNCTION
 }
 
-
 int CDAudio_SysGetAudioDiskInfo (void)
 {
 	if( ValidateDrive() ) // everything > 0 is ok, 0 is trayempty and -1 is error
@@ -67,65 +58,57 @@ int CDAudio_SysGetAudioDiskInfo (void)
 	return -1;
 }
 
-
 float CDAudio_SysGetVolume (void)
 {
 	return -1.0f;
 }
-
 
 void CDAudio_SysSetVolume (float volume)
 {
 	//NO SDL FUNCTION
 }
 
-
 int CDAudio_SysPlay (int track)
 {
-	SDL_CDStop( cd );
-	endtime = realtime + (float) cd->track[ track - 1 ].length / CD_FPS;
-	return SDL_CDPlayTracks( cd, track - 1, 0, track, 1 ); //FIXME: shall we play the whole cd or only the track?
+	return SDL_CDPlayTracks(cd, track, 0, 1, 0);
 }
-
 
 int CDAudio_SysStop (void)
 {
-	endtime = -1.0;
 	return SDL_CDStop( cd );
 }
 
-
 int CDAudio_SysPause (void)
 {
-	SDL_CDStatus( cd );
-	pauseoffset = cd->cur_frame;
 	return SDL_CDPause( cd );
 }
 
 int CDAudio_SysResume (void)
 {
-	SDL_CDResume( cd );
-	endtime = realtime + (cd->track[ cdPlayTrack - 1 ].length - pauseoffset) / CD_FPS;
-	return SDL_CDPlayTracks( cd, cdPlayTrack - 1, (int)pauseoffset, cdPlayTrack, 0 );
+	return SDL_CDResume( cd );
 }
 
 int CDAudio_SysUpdate (void)
 {
-	if( !cd || cd->status <= 0 ) {
-		cdValid = false;
-		return -1;
-	}
-	if( endtime > 0.0 && realtime >= endtime )
-		if( SDL_CDStatus( cd ) == CD_STOPPED ){
-			endtime = -1.0;
+	static time_t lastchk = 0;
+
+	if (cdPlaying && lastchk < time(NULL))
+	{
+		lastchk = time(NULL) + 2; //two seconds between chks
+		if( !cd || cd->status <= 0 ) {
+			cdValid = false;
+			return -1;
+		}
+		if (SDL_CDStatus( cd ) == CD_STOPPED)
+		{
 			if( cdPlayLooping )
 				CDAudio_SysPlay( cdPlayTrack );
 			else
 				cdPlaying = false;
 		}
+	}
 	return 0;
 }
-
 
 void CDAudio_SysInit (void)
 {
@@ -176,8 +159,6 @@ int CDAudio_SysStartup (void)
 	if( i == numdrives && !cd )
 		return -1;
 
-	drive = i;
-
 	return 0;
 }
 
@@ -217,7 +198,6 @@ void CDAudio_SDL_CDDrive_f( void )
 	else if( !IsAudioCD() )
 		Con_Printf( "The CD in drive %i is not an audio CD.\n", i );
 
-	drive = i;
 	ValidateDrive();
 }
 
