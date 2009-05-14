@@ -1,6 +1,12 @@
 
 // Written by Forest Hale 2003-06-15 and placed into public domain.
 
+#ifdef WIN32
+// Windows XP or higher is required for getaddrinfo, but the inclusion of wspiapi provides fallbacks for older versions
+#include <ws2tcpip.h>
+#include <wspiapi.h>
+#endif
+
 #ifndef STANDALONETEST
 #include "quakedef.h"
 #endif
@@ -9,12 +15,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
-#ifdef WIN32
-#define _WIN32_WINNT 0x0501
-	// Windows XP or higher is required for getaddrinfo
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#else
+#ifndef WIN32
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
