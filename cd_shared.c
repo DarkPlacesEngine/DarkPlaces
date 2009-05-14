@@ -157,8 +157,32 @@ void CDAudio_Play_byName (const char *trackname, qboolean looping)
 	{
 		track = (unsigned char) atoi(trackname);
 		if(track > 0 && track < MAXTRACKS)
-				if(*remap[track])
+			if(*remap[track])
+			{
+				if(strspn(remap[track], "0123456789") == strlen(remap[track]))
+				{
 					trackname = remap[track];
+				}
+				else
+				{
+					// ignore remappings to fake tracks if we're going to play a real track
+					switch(cdaudio.integer)
+					{
+						case 0: // we never access CD
+						case 1: // we have a replacement
+							trackname = remap[track];
+							break;
+						case 2: // we only use fake track replacement if CD track is invalid
+							CDAudio_GetAudioDiskInfo();
+							if(!cdValid || track > maxTrack)
+								trackname = remap[track];
+							break;
+						case 3: // we always play from CD - ignore this remapping then
+						case 4: // we randomize anyway
+							break;
+					}
+				}
+			}
 	}
 
 	if(strspn(trackname, "0123456789") == strlen(trackname))
@@ -173,6 +197,7 @@ void CDAudio_Play_byName (const char *trackname, qboolean looping)
 	else
 		track = 0;
 
+	// div0: I assume this code was intentionally there. Maybe turn it into a cvar?
 	if (cdPlaying && cdPlayTrack == track && faketrack == -1)
 		return;
 	CDAudio_Stop ();
@@ -270,7 +295,7 @@ success:
 	cdPlayTrack = track;
 	cdPlaying = true;
 
-	if (cdvolume == 0.0)
+	if (cdvolume == 0.0 || bgmvolume.value == 0)
 		CDAudio_Pause ();
 }
 
@@ -300,6 +325,12 @@ void CDAudio_Stop (void)
 	}
 	else if (cdPlaying && (CDAudio_SysStop() == -1))
 		return;
+	else if(wasPlaying)
+	{
+		CDAudio_Resume(); // needed by SDL - can't stop while paused there
+		if (cdPlaying && (CDAudio_SysStop() == -1))
+			return;
+	}
 
 	wasPlaying = false;
 	cdPlaying = false;
@@ -338,10 +369,7 @@ static void CD_f (void)
 	int ret;
 	int n;
 
-	if (Cmd_Argc() < 2)
-		return;
-
-	command = Cmd_Argv (1);
+	command = (Cmd_Argc() >= 2) ? Cmd_Argv (1) : "";
 
 	if (strcasecmp(command, "remap") != 0)
 		Host_StartVideo();
@@ -363,11 +391,18 @@ static void CD_f (void)
 	if (strcasecmp(command, "reset") == 0)
 	{
 		enabled = true;
-		if (cdPlaying)
-			CDAudio_Stop();
+		CDAudio_Stop();
 		for (n = 0; n < MAXTRACKS; n++)
 			*remap[n] = 0; // empty string, that is, unremapped
 		CDAudio_GetAudioDiskInfo();
+		return;
+	}
+
+	if (strcasecmp(command, "rescan") == 0)
+	{
+		CDAudio_Stop();
+		CDAudio_Shutdown();
+		CDAudio_Startup();
 		return;
 	}
 
@@ -442,7 +477,10 @@ static void CD_f (void)
 			Con_Printf("Currently %s track %u\n", cdPlayLooping ? "looping" : "playing", cdPlayTrack);
 		else if (wasPlaying)
 			Con_Printf("Paused %s track %u\n", cdPlayLooping ? "looping" : "playing", cdPlayTrack);
-		Con_Printf("Volume is %f\n", cdvolume);
+		if (cdvolume >= 0)
+			Con_Printf("Volume is %f\n", cdvolume);
+		else
+			Con_Printf("Can't get CD volume\n");
 		return;
 	}
 
@@ -491,8 +529,8 @@ void CDAudio_Update (void)
 		return;
 
 	CDAudio_SetVolume (bgmvolume.value);
-
-	if (faketrack == -1 && cdaudio.integer != 0)
+	
+	if (faketrack == -1 && cdaudio.integer != 0 && bgmvolume.value != 0)
 		CDAudio_SysUpdate();
 }
 
