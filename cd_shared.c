@@ -382,8 +382,7 @@ static void CD_f (void)
 
 	if (strcasecmp(command, "off") == 0)
 	{
-		if (cdPlaying)
-			CDAudio_Stop();
+		CDAudio_Stop();
 		enabled = false;
 		return;
 	}
