@@ -2341,6 +2341,7 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 		if (i == -1)
 		{
 			surface->lightmapinfo->samples = NULL;
+#if 0
 			// give non-lightmapped water a 1x white lightmap
 			if (surface->texture->name[0] == '*' && (surface->lightmapinfo->texinfo->flags & TEX_SPECIAL) && ssize <= 256 && tsize <= 256)
 			{
@@ -2348,6 +2349,7 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 				surface->lightmapinfo->styles[0] = 0;
 				memset(surface->lightmapinfo->samples, 128, ssize * tsize * 3);
 			}
+#endif
 		}
 		else if (loadmodel->brush.ishlbsp) // LordHavoc: HalfLife map (bsp version 30)
 			surface->lightmapinfo->samples = loadmodel->brushq1.lightdata + i;
@@ -2394,6 +2396,7 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 	// now that we've decided the lightmap texture size, we can do the rest
 	if (cls.state != ca_dedicated)
 	{
+		int stainmapsize = 0;
 		struct alloc_lm_state allocState;
 
 		for (surfacenum = 0, surface = loadmodel->data_surfaces;surfacenum < count;surfacenum++, surface++)
@@ -2401,10 +2404,14 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 			int i, iu, iv, lightmapx = 0, lightmapy = 0;
 			float u, v, ubase, vbase, uscale, vscale;
 
+			if (!loadmodel->brushq1.lightmapupdateflags[surfacenum])
+				continue;
+
 			smax = surface->lightmapinfo->extents[0] >> 4;
 			tmax = surface->lightmapinfo->extents[1] >> 4;
 			ssize = (surface->lightmapinfo->extents[0] >> 4) + 1;
 			tsize = (surface->lightmapinfo->extents[1] >> 4) + 1;
+			stainmapsize += ssize * tsize * 3;
 
 			if (!lightmaptexture || !Mod_Q1BSP_AllocLightmapBlock(&allocState, lightmapsize, lightmapsize, ssize, tsize, &lightmapx, &lightmapy))
 			{
@@ -2440,26 +2447,19 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 				iv = (int) v;
 				(loadmodel->surfmesh.data_lightmapoffsets + surface->num_firstvertex)[i] = (bound(0, iv, tmax) * ssize + bound(0, iu, smax)) * 3;
 			}
-
 		}
 
 		if (cl_stainmaps.integer)
 		{
-			// allocate stainmaps for permanent marks on walls
-			int stainmapsize = 0;
+			// allocate stainmaps for permanent marks on walls and clear white
 			unsigned char *stainsamples = NULL;
-			for (surfacenum = 0, surface = loadmodel->data_surfaces;surfacenum < count;surfacenum++, surface++)
-			{
-				ssize = (surface->lightmapinfo->extents[0] >> 4) + 1;
-				tsize = (surface->lightmapinfo->extents[1] >> 4) + 1;
-				stainmapsize += ssize * tsize * 3;
-			}
-			// allocate and clear to white
 			stainsamples = (unsigned char *)Mem_Alloc(loadmodel->mempool, stainmapsize);
 			memset(stainsamples, 255, stainmapsize);
 			// assign pointers
 			for (surfacenum = 0, surface = loadmodel->data_surfaces;surfacenum < count;surfacenum++, surface++)
 			{
+				if (!loadmodel->brushq1.lightmapupdateflags[surfacenum])
+					continue;
 				ssize = (surface->lightmapinfo->extents[0] >> 4) + 1;
 				tsize = (surface->lightmapinfo->extents[1] >> 4) + 1;
 				surface->lightmapinfo->stainsamples = stainsamples;
