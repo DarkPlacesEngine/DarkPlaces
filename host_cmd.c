@@ -997,7 +997,7 @@ void Host_Name_f (void)
 	}
 
 	if (Cmd_Argc () == 2)
-		newNameSource = Cmd_Argv(i);
+		newNameSource = Cmd_Argv(1);
 	else
 		newNameSource = Cmd_Args();
 
