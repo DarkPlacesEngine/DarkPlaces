@@ -1008,7 +1008,7 @@ void Host_Name_f (void)
 		Cvar_Set ("_cl_name", newName);
 		if (strlen(newNameSource) >= sizeof(newName)) // overflowed
 		{
-			Con_Printf("Your name is longer than %i chars! It has been truncated.\n", sizeof(newName) - 1);
+			Con_Printf("Your name is longer than %i chars! It has been truncated.\n", (int) (sizeof(newName) - 1));
 			Con_Printf("name: %s\n", cl_name.string);
 		}
 		return;
