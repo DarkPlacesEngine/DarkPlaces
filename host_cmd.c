@@ -987,22 +987,29 @@ void Host_Name_f (void)
 {
 	int i, j;
 	qboolean valid_colors;
+	const char *newNameSource;
 	char newName[sizeof(host_client->name)];
 
 	if (Cmd_Argc () == 1)
 	{
-		Con_Printf("\"name\" is \"%s\"\n", cl_name.string);
+		Con_Printf("name: %s\n", cl_name.string);
 		return;
 	}
 
 	if (Cmd_Argc () == 2)
-		strlcpy (newName, Cmd_Argv(1), sizeof (newName));
+		newNameSource = Cmd_Argv(i);
 	else
-		strlcpy (newName, Cmd_Args(), sizeof (newName));
+		newNameSource = Cmd_Args();
 
 	if (cmd_source == src_command)
 	{
+		strlcpy(newName, newNameSource, sizeof(newName));
 		Cvar_Set ("_cl_name", newName);
+		if (strlen(newNameSource) >= sizeof(newName)) // overflowed
+		{
+			Con_Printf("Your name is longer than %i chars! It has been truncated.\n", sizeof(newName) - 1);
+			Con_Printf("name: %s\n", cl_name.string);
+		}
 		return;
 	}
 
