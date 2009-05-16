@@ -1001,9 +1001,10 @@ void Host_Name_f (void)
 	else
 		newNameSource = Cmd_Args();
 
+	strlcpy(newName, newNameSource, sizeof(newName));
+
 	if (cmd_source == src_command)
 	{
-		strlcpy(newName, newNameSource, sizeof(newName));
 		Cvar_Set ("_cl_name", newName);
 		if (strlen(newNameSource) >= sizeof(newName)) // overflowed
 		{
