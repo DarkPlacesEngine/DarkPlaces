@@ -151,7 +151,10 @@ int LHNETADDRESS_Resolve(lhnetaddressnative_t *address, const char *name, int po
 	if (err != 0 || addrinf == NULL)
 		return 0;
 	if (addrinf->ai_addr->sa_family != AF_INET6 && addrinf->ai_addr->sa_family != AF_INET)
+	{
+		freeaddrinfo (addrinf);
 		return 0;
+	}
 
 	// great it worked
 	if (addrinf->ai_addr->sa_family == AF_INET6)
