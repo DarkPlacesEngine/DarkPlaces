@@ -29,14 +29,144 @@ cvar_t con_closeontoggleconsole = {CVAR_SAVE, "con_closeontoggleconsole","1", "a
 key up events are sent even if in console mode
 */
 
-int			edit_line = MAX_INPUTLINES-1;
-int			history_line = MAX_INPUTLINES-1;
-char		key_lines[MAX_INPUTLINES][MAX_INPUTLINE];
+char		key_line[MAX_INPUTLINE];
 int			key_linepos;
 qboolean	key_insert = true;	// insert key toggle (for editing)
 keydest_t	key_dest;
 int			key_consoleactive;
 char		*keybindings[MAX_BINDMAPS][MAX_KEYS];
+int         history_line;
+int			history_line_idx;
+char		history_savedline[MAX_INPUTLINE];
+
+static void Key_History_Init()
+{
+	qfile_t *historyfile = FS_OpenRealFile("dp_history.txt", "r", false);
+	if(historyfile)
+	{
+		char buf[MAX_INPUTLINE];
+		int bufpos;
+		int c;
+
+		*buf = ']';
+		bufpos = 1;
+		for(;;)
+		{
+			c = FS_Getc(historyfile);
+			if(c < 0 || c == 0 || c == '\r' || c == '\n')
+			{
+				if(bufpos > 1)
+				{
+					buf[bufpos] = 0;
+					Con_AddLine(buf, bufpos, CON_MASK_INPUT);
+					bufpos = 1;
+				}
+				if(c < 0)
+					break;
+			}
+			else
+			{
+				if(bufpos < MAX_INPUTLINE - 1)
+					buf[bufpos++] = c;
+			}
+		}
+
+		FS_Close(historyfile);
+	}
+
+	history_line = -1;
+}
+
+static void Key_History_Shutdown()
+{
+	// TODO write history to a file
+
+	qfile_t *historyfile = FS_OpenRealFile("dp_history.txt", "w", false);
+	if(historyfile)
+	{
+		int l = -1;
+		while((l = Con_FindNextLine(CON_MASK_INPUT, 0, l)) != -1)
+			FS_Printf(historyfile, "%s\n", Con_GetLine(l) + 1); // +1: skip the ]
+		FS_Close(historyfile);
+	}
+}
+
+static void Key_History_Push()
+{
+	int mask;
+
+	mask = CON_MASK_INPUT;
+	if(!key_line[1]) // empty?
+		mask = 0;
+	if(!strcmp(key_line, "]quit")) // putting these into the history just sucks
+		mask = 0;
+	Con_AddLine(key_line, strlen(key_line), mask);
+	Con_PrintNotToHistory(key_line); // don't mark empty lines as history
+	Con_PrintNotToHistory("\n");
+	history_line = -1;
+}
+
+static void Key_History_Up()
+{
+	int l;
+
+	if(history_line >= 0)
+	{
+		history_line = Con_GetLineByID(history_line_idx);
+		if(history_line == -1)
+			history_line = -2; // -2 means before first
+	}
+
+	// invalid history line? bad
+	if(history_line == -2)
+		return;
+
+	if(history_line == -1) // editing the "new" line
+		strlcpy(history_savedline, key_line, sizeof(history_savedline));
+	l = Con_FindPrevLine(CON_MASK_INPUT, 0, history_line);
+	if(l != -1)
+	{
+		history_line = l;
+		history_line_idx = Con_GetLineID(l);
+		strlcpy(key_line, Con_GetLine(history_line), sizeof(key_line));
+	}
+
+	key_linepos = strlen(key_line);
+}
+
+static void Key_History_Down()
+{
+	int l;
+
+	if(history_line >= 0)
+	{
+		history_line = Con_GetLineByID(history_line_idx);
+		if(history_line == -1)
+			history_line = -2; // -2 means before first
+	}
+
+	if(history_line == -1) // editing the "new" line
+		return;
+
+	// invalid history line? take the first line then
+	if(history_line == -2)
+		history_line = -1; // next Con_FindNextLine will fix it
+
+	l = Con_FindNextLine(CON_MASK_INPUT, 0, history_line);
+	if(l != -1)
+	{
+		history_line = l;
+		history_line_idx = Con_GetLineID(l);
+		strlcpy(key_line, Con_GetLine(history_line), sizeof(key_line));
+	}
+	else
+	{
+		history_line = -1;
+		strlcpy(key_line, history_savedline, sizeof(key_line));
+	}
+
+	key_linepos = strlen(key_line);
+}
 
 static int	key_bmap, key_bmap2;
 static unsigned char keydown[MAX_KEYS];	// 0 = up, 1 = down, 2 = repeating
@@ -222,8 +352,8 @@ static const keyname_t   keynames[] = {
 void
 Key_ClearEditLine (int edit_line)
 {
-	memset (key_lines[edit_line], '\0', sizeof(key_lines[edit_line]));
-	key_lines[edit_line][0] = ']';
+	memset (key_line, '\0', sizeof(key_line));
+	key_line[0] = ']';
 	key_linepos = 1;
 }
 
@@ -311,12 +441,12 @@ Key_Console (int key, int ascii)
 				char *temp = Z_Malloc(MAX_INPUTLINE);
 				cbd[i]=0;
 				temp[0]=0;
-				if ( key_linepos < (int)strlen(key_lines[edit_line]) )
-					strlcpy(temp, key_lines[edit_line] + key_linepos, (int)strlen(key_lines[edit_line]) - key_linepos +1);
-				key_lines[edit_line][key_linepos] = 0;
-				strlcat(key_lines[edit_line], cbd, sizeof(key_lines[edit_line]));
+				if ( key_linepos < (int)strlen(key_line) )
+					strlcpy(temp, key_line + key_linepos, (int)strlen(key_line) - key_linepos +1);
+				key_line[key_linepos] = 0;
+				strlcat(key_line, cbd, sizeof(key_line));
 				if (temp[0])
-					strlcat(key_lines[edit_line], temp, sizeof(key_lines[edit_line]));
+					strlcat(key_line, temp, sizeof(key_line));
 				Z_Free(temp);
 				key_linepos += i;
 			}
@@ -336,17 +466,11 @@ Key_Console (int key, int ascii)
 
 	if (key == K_ENTER || key == K_KP_ENTER)
 	{
-		Cbuf_AddText (key_lines[edit_line]+1);	// skip the ]
+		Cbuf_AddText (key_line+1);	// skip the ]
 		Cbuf_AddText ("\n");
-		Con_Printf("%s\n",key_lines[edit_line]);
-		if(key_lines[edit_line][1] == 0) // empty line (just a ])?
-			return; // no, no, you can't submit empty lines to the history...
-		// LordHavoc: redesigned edit_line/history_line
-		edit_line = 31;
-		history_line = edit_line;
-		memmove(key_lines[0], key_lines[1], sizeof(key_lines[0]) * edit_line);
-		key_lines[edit_line][0] = ']';
-		key_lines[edit_line][1] = 0;	// EvilTypeGuy: null terminate
+		Key_History_Push();
+		key_line[0] = ']';
+		key_line[1] = 0;	// EvilTypeGuy: null terminate
 		key_linepos = 1;
 		// force an update, because the command may take some time
 		if (cls.state == ca_disconnected)
@@ -381,7 +505,7 @@ Key_Console (int key, int ascii)
 			if(pos)
 				while(--pos)
 				{
-					k = key_lines[edit_line][pos];
+					k = key_line[pos];
 					if(k == '\"' || k == ';' || k == ' ' || k == '\'')
 						break;
 				}
@@ -392,10 +516,10 @@ Key_Console (int key, int ascii)
 			int		pos;
 			pos = key_linepos-1;
 			while (pos)
-				if(pos-1 > 0 && key_lines[edit_line][pos-1] == STRING_COLOR_TAG && isdigit(key_lines[edit_line][pos]))
+				if(pos-1 > 0 && key_line[pos-1] == STRING_COLOR_TAG && isdigit(key_line[pos]))
 					pos-=2;
-				else if(pos-4 > 0 && key_lines[edit_line][pos-4] == STRING_COLOR_TAG && key_lines[edit_line][pos-3] == STRING_COLOR_RGB_TAG_CHAR
-						&& isxdigit(key_lines[edit_line][pos-2]) && isxdigit(key_lines[edit_line][pos-1]) && isxdigit(key_lines[edit_line][pos]))
+				else if(pos-4 > 0 && key_line[pos-4] == STRING_COLOR_TAG && key_line[pos-3] == STRING_COLOR_RGB_TAG_CHAR
+						&& isxdigit(key_line[pos-2]) && isxdigit(key_line[pos-1]) && isxdigit(key_line[pos]))
 					pos-=5;
 				else
 				{
@@ -414,7 +538,7 @@ Key_Console (int key, int ascii)
 	{
 		if (key_linepos > 1)
 		{
-			strlcpy(key_lines[edit_line] + key_linepos - 1, key_lines[edit_line] + key_linepos, sizeof(key_lines[edit_line]) + 1 - key_linepos);
+			strlcpy(key_line + key_linepos - 1, key_line + key_linepos, sizeof(key_line) + 1 - key_linepos);
 			key_linepos--;
 		}
 		return;
@@ -424,9 +548,9 @@ Key_Console (int key, int ascii)
 	if (key == K_DEL || key == K_KP_DEL)
 	{
 		size_t linelen;
-		linelen = strlen(key_lines[edit_line]);
+		linelen = strlen(key_line);
 		if (key_linepos < (int)linelen)
-			memmove(key_lines[edit_line] + key_linepos, key_lines[edit_line] + key_linepos + 1, linelen - key_linepos);
+			memmove(key_line + key_linepos, key_line + key_linepos + 1, linelen - key_linepos);
 		return;
 	}
 
@@ -434,17 +558,17 @@ Key_Console (int key, int ascii)
 	// move cursor to the next character
 	if (key == K_RIGHTARROW || key == K_KP_RIGHTARROW)
 	{
-		if (key_linepos >= (int)strlen(key_lines[edit_line]))
+		if (key_linepos >= (int)strlen(key_line))
 			return;
 		if(keydown[K_CTRL]) // move cursor to the next word
 		{
 			int		pos, len;
 			char	k;
-			len = (int)strlen(key_lines[edit_line]);
+			len = (int)strlen(key_line);
 			pos = key_linepos;
 			while(++pos < len)
 			{
-				k = key_lines[edit_line][pos];
+				k = key_line[pos];
 				if(k == '\"' || k == ';' || k == ' ' || k == '\'')
 					break;
 			}
@@ -453,25 +577,25 @@ Key_Console (int key, int ascii)
 		else if(keydown[K_SHIFT]) // move cursor to the next character ignoring colors
 		{
 			int		pos, len;
-			len = (int)strlen(key_lines[edit_line]);
+			len = (int)strlen(key_line);
 			pos = key_linepos;
 			// check if there is a color tag right after the cursor
-			if (key_lines[edit_line][pos] == STRING_COLOR_TAG)
+			if (key_line[pos] == STRING_COLOR_TAG)
 			{
-				if(isdigit(key_lines[edit_line][pos+1]))
+				if(isdigit(key_line[pos+1]))
 					pos+=1;
-				else if(key_lines[edit_line][pos+1] == STRING_COLOR_RGB_TAG_CHAR && isxdigit(key_lines[edit_line][pos+2]) && isxdigit(key_lines[edit_line][pos+3]) && isxdigit(key_lines[edit_line][pos+4]))
+				else if(key_line[pos+1] == STRING_COLOR_RGB_TAG_CHAR && isxdigit(key_line[pos+2]) && isxdigit(key_line[pos+3]) && isxdigit(key_line[pos+4]))
 					pos+=4;
 			}
 			pos++;
 			
 			// now go beyond all next consecutive color tags, if any
 			if(pos < len)
-				while (key_lines[edit_line][pos] == STRING_COLOR_TAG)
+				while (key_line[pos] == STRING_COLOR_TAG)
 				{
-					if(isdigit(key_lines[edit_line][pos+1]))
+					if(isdigit(key_line[pos+1]))
 						pos+=2;
-					else if(key_lines[edit_line][pos+1] == STRING_COLOR_RGB_TAG_CHAR && isxdigit(key_lines[edit_line][pos+2]) && isxdigit(key_lines[edit_line][pos+3]) && isxdigit(key_lines[edit_line][pos+4]))
+					else if(key_line[pos+1] == STRING_COLOR_RGB_TAG_CHAR && isxdigit(key_line[pos+2]) && isxdigit(key_line[pos+3]) && isxdigit(key_line[pos+4]))
 						pos+=5;
 					else
 						break;
@@ -493,34 +617,13 @@ Key_Console (int key, int ascii)
 
 	if (key == K_UPARROW || key == K_KP_UPARROW || (key == 'p' && keydown[K_CTRL]))
 	{
-		if (history_line > 0 && key_lines[history_line-1][1])
-		{
-			size_t linelen;
-			history_line--;
-			linelen = strlen(key_lines[history_line]);
-			memcpy(key_lines[edit_line], key_lines[history_line], linelen + 1);
-			key_linepos = (int)linelen;
-		}
+		Key_History_Up();
 		return;
 	}
 
 	if (key == K_DOWNARROW || key == K_KP_DOWNARROW || (key == 'n' && keydown[K_CTRL]))
 	{
-		history_line++;
-		if (history_line >= edit_line)
-		{
-			history_line = edit_line;
-			key_lines[edit_line][0] = ']';
-			key_lines[edit_line][1] = 0;
-			key_linepos = 1;
-		}
-		else
-		{
-			size_t linelen;
-			linelen = strlen(key_lines[history_line]);
-			memcpy(key_lines[edit_line], key_lines[history_line], linelen + 1);
-			key_linepos = (int)linelen;
-		}
+		Key_History_Down();
 		return;
 	}
 
@@ -560,7 +663,7 @@ Key_Console (int key, int ascii)
 		if (keydown[K_CTRL])
 			con_backscroll = 0;
 		else
-			key_linepos = (int)strlen(key_lines[edit_line]);
+			key_linepos = (int)strlen(key_line);
 		return;
 	}
 
@@ -571,15 +674,15 @@ Key_Console (int key, int ascii)
 	if (key_linepos < MAX_INPUTLINE-1)
 	{
 		int len;
-		len = (int)strlen(&key_lines[edit_line][key_linepos]);
+		len = (int)strlen(&key_line[key_linepos]);
 		// check insert mode, or always insert if at end of line
 		if (key_insert || len == 0)
 		{
 			// can't use strcpy to move string to right
 			len++;
-			memmove(&key_lines[edit_line][key_linepos + 1], &key_lines[edit_line][key_linepos], len);
+			memmove(&key_line[key_linepos + 1], &key_line[key_linepos], len);
 		}
-		key_lines[edit_line][key_linepos] = ascii;
+		key_line[key_linepos] = ascii;
 		key_linepos++;
 	}
 }
@@ -974,12 +1077,9 @@ Key_WriteBindings (qfile_t *f)
 void
 Key_Init (void)
 {
-	int         i;
-
-	for (i = 0; i < 32; i++) {
-		key_lines[i][0] = ']';
-		key_lines[i][1] = 0;
-	}
+	Key_History_Init();
+	key_line[0] = ']';
+	key_line[1] = 0;
 	key_linepos = 1;
 
 //
@@ -996,6 +1096,12 @@ Key_Init (void)
 	Cmd_AddCommand ("unbindall", Key_Unbindall_f, "removes all commands from all keys in all bindmaps (leaving only shift-escape and escape)");
 
 	Cvar_RegisterVariable (&con_closeontoggleconsole);
+}
+
+void
+Key_Shutdown (void)
+{
+	Key_History_Shutdown();
 }
 
 const char *Key_GetBind (int key)

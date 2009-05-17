@@ -37,6 +37,7 @@ void Con_Init (void);
 void Con_Init_Commands (void);
 void Con_DrawConsole (int lines);
 void Con_Print(const char *txt);
+void Con_PrintNotToHistory(const char *txt);
 void Con_Printf(const char *fmt, ...) DP_FUNC_PRINTF(1);
 void Con_DPrint(const char *msg);
 void Con_DPrintf(const char *fmt, ...) DP_FUNC_PRINTF(1);
@@ -67,6 +68,18 @@ void Log_Start (void);
 void Log_DestBuffer_Flush (void); // call this once per frame to send out replies to rcon streaming clients
 
 void Log_Printf(const char *logfilename, const char *fmt, ...) DP_FUNC_PRINTF(2);
+
+#define CON_MASK_HIDENOTIFY 128
+#define CON_MASK_CHAT 1
+#define CON_MASK_INPUT 2
+#define CON_MASK_LOADEDHISTORY 4
+
+void Con_AddLine(const char *line, int len, int mask);
+int Con_FindPrevLine(int mask_must, int mask_mustnot, int start);
+int Con_FindNextLine(int mask_must, int mask_mustnot, int start);
+const char *Con_GetLine(int i);
+int Con_GetLineID(int i);
+int Con_GetLineByID(int i);
 
 #endif
 
