@@ -28,8 +28,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 float con_cursorspeed = 4;
 
-#define		CON_TEXTSIZE	131072
-#define		CON_MAXLINES	  4096
+#define		CON_TEXTSIZE	1048576
+#define		CON_MAXLINES	  16384
 
 // lines up from bottom to display
 int con_backscroll;
@@ -37,13 +37,10 @@ int con_backscroll;
 // console buffer
 char con_text[CON_TEXTSIZE];
 
-#define CON_MASK_HIDENOTIFY 128
-#define CON_MASK_CHAT 1
-
 typedef struct
 {
 	char *start;
-	int len;
+	size_t len;
 
 	double addtime;
 	int mask;
@@ -56,6 +53,7 @@ con_lineinfo con_lines[CON_MAXLINES];
 int con_lines_first; // cyclic buffer
 int con_lines_count;
 #define CON_LINES_IDX(i) ((con_lines_first + (i)) % CON_MAXLINES)
+#define CON_LINES_UNIDX(i) (((i) - con_lines_first + CON_MAXLINES) % CON_MAXLINES)
 #define CON_LINES_LAST CON_LINES_IDX(con_lines_count - 1)
 #define CON_LINES(i) con_lines[CON_LINES_IDX(i)]
 #define CON_LINES_PRED(i) (((i) + CON_MAXLINES - 1) % CON_MAXLINES)
@@ -946,7 +944,7 @@ Prints to all appropriate console targets, and adds timestamps
 extern cvar_t timestamps;
 extern cvar_t timeformat;
 extern qboolean sys_nostdout;
-void Con_Print(const char *msg)
+static void Con_Print_Internal(const char *msg, qboolean history)
 {
 	static int mask = 0;
 	static int index = 0;
@@ -1007,7 +1005,7 @@ void Con_Print(const char *msg)
 			// send to log file
 			Log_ConPrint(line);
 			// send to scrollable buffer
-			if (con_initialized && cls.state != ca_dedicated)
+			if (history && con_initialized && cls.state != ca_dedicated)
 			{
 				Con_PrintToHistory(line, mask);
 				mask = 0;
@@ -1200,6 +1198,14 @@ void Con_Print(const char *msg)
 		}
 	}
 }
+void Con_Print(const char *msg)
+{
+	Con_Print_Internal(msg, true);
+}
+void Con_PrintNotToHistory(const char *msg)
+{
+	Con_Print_Internal(msg, false);
+}
 
 
 /*
@@ -1285,7 +1291,7 @@ void Con_DrawInput (void)
 	if (!key_consoleactive)
 		return;		// don't draw anything
 
-	strlcpy(editlinecopy, key_lines[edit_line], sizeof(editlinecopy));
+	strlcpy(editlinecopy, key_line, sizeof(editlinecopy));
 	text = editlinecopy;
 
 	// Advanced Console Editing by Radix radix@planetquake.com
@@ -1313,7 +1319,7 @@ void Con_DrawInput (void)
 	DrawQ_String_Font(x, con_vislines - con_textsize.value*2, text, 0, con_textsize.value, con_textsize.value, 1.0, 1.0, 1.0, 1.0, 0, NULL, false, FONT_CONSOLE );
 
 	// remove cursor
-//	key_lines[edit_line][key_linepos] = 0;
+//	key_line[key_linepos] = 0;
 }
 
 typedef struct
@@ -1383,6 +1389,65 @@ int Con_DisplayLineFunc(void *passthrough, const char *line, size_t length, floa
 	return 1;
 }
 
+int Con_FindPrevLine(int mask_must, int mask_mustnot, int start)
+{
+	int i;
+	if(start == -1)
+		start = con_lines_count;
+	for(i = start - 1; i >= 0; --i)
+	{
+		con_lineinfo *l = &CON_LINES(i);
+
+		if((l->mask & mask_must) != mask_must)
+			continue;
+		if(l->mask & mask_mustnot)
+			continue;
+
+		return i;
+	}
+
+	return -1;
+}
+
+int Con_FindNextLine(int mask_must, int mask_mustnot, int start)
+{
+	int i;
+	for(i = start + 1; i < con_lines_count; ++i)
+	{
+		con_lineinfo *l = &CON_LINES(i);
+
+		if((l->mask & mask_must) != mask_must)
+			continue;
+		if(l->mask & mask_mustnot)
+			continue;
+
+		return i;
+	}
+
+	return -1;
+}
+
+const char *Con_GetLine(int i)
+{
+	static char buf[MAX_INPUTLINE];
+	con_lineinfo *l = &CON_LINES(i);
+	size_t sz = l->len+1 > sizeof(buf) ? sizeof(buf) : l->len+1;
+	strlcpy(buf, l->start, sz);
+	return buf;
+}
+
+int Con_GetLineID(int i)
+{
+	return CON_LINES_IDX(i);
+}
+
+int Con_GetLineByID(int i)
+{
+	i = CON_LINES_UNIDX(i);
+	if(i >= con_lines_count)
+		return -1;
+	return i;
+}
 
 int Con_DrawNotifyRect(int mask_must, int mask_mustnot, float maxage, float x, float y, float width, float height, float fontsize, float alignment_x, float alignment_y, const char *continuationString)
 {
@@ -1523,13 +1588,13 @@ void Con_DrawNotify (void)
 		chatstart = 0; // shut off gcc warning
 	}
 
-	v = notifystart + con_notifysize.value * Con_DrawNotifyRect(0, CON_MASK_HIDENOTIFY | (numChatlines ? CON_MASK_CHAT : 0), con_notifytime.value, 0, notifystart, vid_conwidth.value, con_notify.value * con_notifysize.value, con_notifysize.value, align, 0.0, "");
+	v = notifystart + con_notifysize.value * Con_DrawNotifyRect(0, CON_MASK_LOADEDHISTORY | CON_MASK_INPUT | CON_MASK_HIDENOTIFY | (numChatlines ? CON_MASK_CHAT : 0), con_notifytime.value, 0, notifystart, vid_conwidth.value, con_notify.value * con_notifysize.value, con_notifysize.value, align, 0.0, "");
 
 	// chat?
 	if(numChatlines)
 	{
 		v = chatstart + numChatlines * con_chatsize.value;
-		Con_DrawNotifyRect(CON_MASK_CHAT, 0, con_chattime.value, 0, chatstart, vid_conwidth.value * con_chatwidth.value, v - chatstart, con_chatsize.value, 0.0, 1.0, "^3\014\014\014 "); // 015 is ·> character in conchars.tga
+		Con_DrawNotifyRect(CON_MASK_CHAT, CON_MASK_LOADEDHISTORY | CON_MASK_INPUT, con_chattime.value, 0, chatstart, vid_conwidth.value * con_chatwidth.value, v - chatstart, con_chatsize.value, 0.0, 1.0, "^3\014\014\014 "); // 015 is ·> character in conchars.tga
 	}
 
 	if (key_dest == key_message)
@@ -1564,6 +1629,10 @@ int Con_MeasureConsoleLine(int lineno)
 {
 	float width = vid_conwidth.value;
 	con_text_info_t ti;
+
+	if(con_lines[lineno].mask & CON_MASK_LOADEDHISTORY)
+		return 0;
+
 	ti.fontsize = con_textsize.value;
 	ti.font = FONT_CONSOLE;
 
@@ -1597,8 +1666,11 @@ returned.
 int Con_DrawConsoleLine(float y, int lineno, float ymin, float ymax)
 {
 	float width = vid_conwidth.value;
-
 	con_text_info_t ti;
+
+	if(con_lines[lineno].mask & CON_MASK_LOADEDHISTORY)
+		return 0;
+
 	ti.continuationString = "";
 	ti.alignment = 0;
 	ti.fontsize = con_textsize.value;
@@ -2418,20 +2490,20 @@ void Con_CompleteCommandLine (void)
 	pos = key_linepos;
 	while(--pos)
 	{
-		k = key_lines[edit_line][pos];
+		k = key_line[pos];
 		if(k == '\"' || k == ';' || k == ' ' || k == '\'')
 			break;
 	}
 	pos++;
 
-	s = key_lines[edit_line] + pos;
-	strlcpy(s2, key_lines[edit_line] + key_linepos, sizeof(s2));	//save chars after cursor
-	key_lines[edit_line][key_linepos] = 0;					//hide them
+	s = key_line + pos;
+	strlcpy(s2, key_line + key_linepos, sizeof(s2));	//save chars after cursor
+	key_line[key_linepos] = 0;					//hide them
 
-	space = strchr(key_lines[edit_line] + 1, ' ');
-	if(space && pos == (space - key_lines[edit_line]) + 1)
+	space = strchr(key_line + 1, ' ');
+	if(space && pos == (space - key_line) + 1)
 	{
-		strlcpy(command, key_lines[edit_line] + 1, min(sizeof(command), (unsigned int)(space - key_lines[edit_line])));
+		strlcpy(command, key_line + 1, min(sizeof(command), (unsigned int)(space - key_line)));
 
 		patterns = Cvar_VariableString(va("con_completion_%s", command)); // TODO maybe use a better place for this?
 		if(patterns && !*patterns)
@@ -2448,12 +2520,12 @@ void Con_CompleteCommandLine (void)
 
 				// and now do the actual work
 				*s = 0;
-				strlcat(key_lines[edit_line], t, MAX_INPUTLINE);
-				strlcat(key_lines[edit_line], s2, MAX_INPUTLINE); //add back chars after cursor
+				strlcat(key_line, t, MAX_INPUTLINE);
+				strlcat(key_line, s2, MAX_INPUTLINE); //add back chars after cursor
 
 				// and fix the cursor
-				if(key_linepos > (int) strlen(key_lines[edit_line]))
-					key_linepos = (int) strlen(key_lines[edit_line]);
+				if(key_linepos > (int) strlen(key_line))
+					key_linepos = (int) strlen(key_line);
 			}
 			return;
 		}
@@ -2588,12 +2660,12 @@ void Con_CompleteCommandLine (void)
 
 					// and now do the actual work
 					*s = 0;
-					strlcat(key_lines[edit_line], t, MAX_INPUTLINE);
-					strlcat(key_lines[edit_line], s2, MAX_INPUTLINE); //add back chars after cursor
+					strlcat(key_line, t, MAX_INPUTLINE);
+					strlcat(key_line, s2, MAX_INPUTLINE); //add back chars after cursor
 
 					// and fix the cursor
-					if(key_linepos > (int) strlen(key_lines[edit_line]))
-						key_linepos = (int) strlen(key_lines[edit_line]);
+					if(key_linepos > (int) strlen(key_line))
+						key_linepos = (int) strlen(key_line);
 				}
 				stringlistfreecontents(&resultbuf);
 				stringlistfreecontents(&dirbuf);
@@ -2622,7 +2694,7 @@ void Con_CompleteCommandLine (void)
 		Con_Printf("\n%i possible aliases%s\n", a, (a > 1) ? "s: " : ":");
 		Cmd_CompleteAliasPrint(s);
 	}
-	n = Nicks_CompleteCountPossible(key_lines[edit_line], key_linepos, s, true);
+	n = Nicks_CompleteCountPossible(key_line, key_linepos, s, true);
 	if (n)
 	{
 		Con_Printf("\n%i possible nick%s\n", n, (n > 1) ? "s: " : ":");
@@ -2632,7 +2704,7 @@ void Con_CompleteCommandLine (void)
 	if (!(c + v + a + n))	// No possible matches
 	{
 		if(s2[0])
-			strlcpy(&key_lines[edit_line][key_linepos], s2, sizeof(key_lines[edit_line]) - key_linepos);
+			strlcpy(&key_line[key_linepos], s2, sizeof(key_line) - key_linepos);
 		return;
 	}
 
@@ -2664,33 +2736,33 @@ void Con_CompleteCommandLine (void)
 done:
 
 	// prevent a buffer overrun by limiting cmd_len according to remaining space
-	cmd_len = min(cmd_len, (int)sizeof(key_lines[edit_line]) - 1 - pos);
+	cmd_len = min(cmd_len, (int)sizeof(key_line) - 1 - pos);
 	if (cmd)
 	{
 		key_linepos = pos;
-		memcpy(&key_lines[edit_line][key_linepos], cmd, cmd_len);
+		memcpy(&key_line[key_linepos], cmd, cmd_len);
 		key_linepos += cmd_len;
 		// if there is only one match, add a space after it
-		if (c + v + a + n == 1 && key_linepos < (int)sizeof(key_lines[edit_line]) - 1)
+		if (c + v + a + n == 1 && key_linepos < (int)sizeof(key_line) - 1)
 		{
 			if(n)
 			{ // was a nick, might have an offset, and needs colors ;) --blub
 				key_linepos = pos - Nicks_offset[0];
 				cmd_len = strlen(Nicks_list[0]);
-				cmd_len = min(cmd_len, (int)sizeof(key_lines[edit_line]) - 3 - pos);
+				cmd_len = min(cmd_len, (int)sizeof(key_line) - 3 - pos);
 
-				memcpy(&key_lines[edit_line][key_linepos] , Nicks_list[0], cmd_len);
+				memcpy(&key_line[key_linepos] , Nicks_list[0], cmd_len);
 				key_linepos += cmd_len;
-				if(key_linepos < (int)(sizeof(key_lines[edit_line])-4)) // space for ^, X and space and \0
-					key_linepos = Nicks_AddLastColor(key_lines[edit_line], key_linepos);
+				if(key_linepos < (int)(sizeof(key_line)-4)) // space for ^, X and space and \0
+					key_linepos = Nicks_AddLastColor(key_line, key_linepos);
 			}
-			key_lines[edit_line][key_linepos++] = ' ';
+			key_line[key_linepos++] = ' ';
 		}
 	}
 
 	// use strlcat to avoid a buffer overrun
-	key_lines[edit_line][key_linepos] = 0;
-	strlcat(key_lines[edit_line], s2, sizeof(key_lines[edit_line]));
+	key_line[key_linepos] = 0;
+	strlcat(key_line, s2, sizeof(key_line));
 
 	// free the command, cvar, and alias lists
 	for (i = 0; i < 4; i++)

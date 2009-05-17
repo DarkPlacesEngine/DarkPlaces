@@ -1215,6 +1215,7 @@ void Host_Shutdown(void)
 	}
 
 	Cmd_Shutdown();
+	Key_Shutdown();
 	CL_Shutdown();
 	Sys_Shutdown();
 	Log_Close();
