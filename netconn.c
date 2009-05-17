@@ -126,8 +126,8 @@ mempool_t *netconn_mempool = NULL;
 
 cvar_t cl_netport = {0, "cl_port", "0", "forces client to use chosen port number if not 0"};
 cvar_t sv_netport = {0, "port", "26000", "server port for players to connect to"};
-cvar_t net_address = {0, "net_address", "0.0.0.0", "network address to open ports on"};
-cvar_t net_address_ipv6 = {0, "net_address_ipv6", "[0:0:0:0:0:0:0:0]", "network address to open ipv6 ports on"};
+cvar_t net_address = {0, "net_address", "", "network address to open ipv4 ports on (if empty, use default interfaces)"};
+cvar_t net_address_ipv6 = {0, "net_address_ipv6", "", "network address to open ipv6 ports on (if empty, use default interfaces)"};
 
 char net_extresponse[NET_EXTRESPONSE_MAX][1400];
 int net_extresponse_count = 0;
@@ -827,12 +827,17 @@ void NetConn_CloseClientPorts(void)
 			LHNET_CloseSocket(cl_sockets[cl_numsockets - 1]);
 }
 
-void NetConn_OpenClientPort(const char *addressstring, int defaultport)
+void NetConn_OpenClientPort(const char *addressstring, lhnetaddresstype_t addresstype, int defaultport)
 {
 	lhnetaddress_t address;
 	lhnetsocket_t *s;
+	int success;
 	char addressstring2[1024];
-	if (LHNETADDRESS_FromString(&address, addressstring, defaultport))
+	if (addressstring && addressstring[0])
+		success = LHNETADDRESS_FromString(&address, addressstring, defaultport);
+	else
+		success = LHNETADDRESS_FromPort(&address, addresstype, defaultport);
+	if (success)
 	{
 		if ((s = LHNET_OpenSocket_Connectionless(&address)))
 		{
@@ -861,9 +866,9 @@ void NetConn_OpenClientPorts(void)
 		Con_Printf("Client using an automatically assigned port\n");
 	else
 		Con_Printf("Client using port %i\n", port);
-	NetConn_OpenClientPort("local:2", 0);
-	NetConn_OpenClientPort(net_address.string, port);
-	NetConn_OpenClientPort(net_address_ipv6.string, port);
+	NetConn_OpenClientPort(NULL, LHNETADDRESSTYPE_LOOP, 2);
+	NetConn_OpenClientPort(net_address.string, LHNETADDRESSTYPE_INET4, port);
+	NetConn_OpenClientPort(net_address_ipv6.string, LHNETADDRESSTYPE_INET6, port);
 }
 
 void NetConn_CloseServerPorts(void)
@@ -873,16 +878,21 @@ void NetConn_CloseServerPorts(void)
 			LHNET_CloseSocket(sv_sockets[sv_numsockets - 1]);
 }
 
-qboolean NetConn_OpenServerPort(const char *addressstring, int defaultport, int range)
+qboolean NetConn_OpenServerPort(const char *addressstring, lhnetaddresstype_t addresstype, int defaultport, int range)
 {
 	lhnetaddress_t address;
 	lhnetsocket_t *s;
 	int port;
 	char addressstring2[1024];
+	int success;
 
 	for (port = defaultport; port <= defaultport + range; port++)
 	{
-		if (LHNETADDRESS_FromString(&address, addressstring, port))
+		if (addressstring && addressstring[0])
+			success = LHNETADDRESS_FromString(&address, addressstring, port);
+		else
+			success = LHNETADDRESS_FromPort(&address, addresstype, port);
+		if (success)
 		{
 			if ((s = LHNET_OpenSocket_Connectionless(&address)))
 			{
@@ -919,11 +929,11 @@ void NetConn_OpenServerPorts(int opennetports)
 	if (sv_netport.integer != port)
 		Cvar_SetValueQuick(&sv_netport, port);
 	if (cls.state != ca_dedicated)
-		NetConn_OpenServerPort("local:1", 0, 1);
+		NetConn_OpenServerPort(NULL, LHNETADDRESSTYPE_LOOP, 1, 1);
 	if (opennetports)
 	{
-		qboolean ip4success = NetConn_OpenServerPort(net_address.string, port, 100);
-		NetConn_OpenServerPort(net_address_ipv6.string, port, ip4success ? 1 : 100);
+		qboolean ip4success = NetConn_OpenServerPort(net_address.string, LHNETADDRESSTYPE_INET4, port, 100);
+		NetConn_OpenServerPort(net_address_ipv6.string, LHNETADDRESSTYPE_INET6, port, ip4success ? 1 : 100);
 	}
 	if (sv_numsockets == 0)
 		Host_Error("NetConn_OpenServerPorts: unable to open any ports!");
