@@ -873,14 +873,14 @@ void NetConn_CloseServerPorts(void)
 			LHNET_CloseSocket(sv_sockets[sv_numsockets - 1]);
 }
 
-void NetConn_OpenServerPort(const char *addressstring, int defaultport)
+qboolean NetConn_OpenServerPort(const char *addressstring, int defaultport, int range)
 {
 	lhnetaddress_t address;
 	lhnetsocket_t *s;
 	int port;
 	char addressstring2[1024];
 
-	for (port = defaultport; port <= defaultport + 100; port++)
+	for (port = defaultport; port <= defaultport + range; port++)
 	{
 		if (LHNETADDRESS_FromString(&address, addressstring, port))
 		{
@@ -889,7 +889,7 @@ void NetConn_OpenServerPort(const char *addressstring, int defaultport)
 				sv_sockets[sv_numsockets++] = s;
 				LHNETADDRESS_ToString(LHNET_AddressFromSocket(s), addressstring2, sizeof(addressstring2), true);
 				Con_Printf("Server listening on address %s\n", addressstring2);
-				break;
+				return true;
 			}
 			else
 			{
@@ -901,9 +901,10 @@ void NetConn_OpenServerPort(const char *addressstring, int defaultport)
 		{
 			Con_Printf("Server unable to parse address %s\n", addressstring);
 			// if it cant parse one address, it wont be able to parse another for sure
-			break;
+			return false;
 		}
 	}
+	return false;
 }
 
 void NetConn_OpenServerPorts(int opennetports)
@@ -918,11 +919,11 @@ void NetConn_OpenServerPorts(int opennetports)
 	if (sv_netport.integer != port)
 		Cvar_SetValueQuick(&sv_netport, port);
 	if (cls.state != ca_dedicated)
-		NetConn_OpenServerPort("local:1", 0);
+		NetConn_OpenServerPort("local:1", 0, 1);
 	if (opennetports)
 	{
-		NetConn_OpenServerPort(net_address.string, port);
-		NetConn_OpenServerPort(net_address_ipv6.string, port);
+		qboolean ip4success = NetConn_OpenServerPort(net_address.string, port, 100);
+		NetConn_OpenServerPort(net_address_ipv6.string, port, ip4success ? 1 : 100);
 	}
 	if (sv_numsockets == 0)
 		Host_Error("NetConn_OpenServerPorts: unable to open any ports!");
