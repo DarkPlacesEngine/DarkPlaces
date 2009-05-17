@@ -100,6 +100,8 @@ static void Key_History_Push()
 		mask = 0;
 	if(!strcmp(key_line, "]quit")) // putting these into the history just sucks
 		mask = 0;
+	if(!strncmp(key_line, "]quit ", 6)) // putting these into the history just sucks
+		mask = 0;
 	Con_AddLine(key_line, strlen(key_line), mask);
 	Con_PrintNotToHistory(key_line); // don't mark empty lines as history
 	Con_PrintNotToHistory("\n");
