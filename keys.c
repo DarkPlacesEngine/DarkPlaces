@@ -41,7 +41,7 @@ char		history_savedline[MAX_INPUTLINE];
 
 static void Key_History_Init()
 {
-	qfile_t *historyfile = FS_OpenRealFile("dp_history.txt", "r", false);
+	qfile_t *historyfile = FS_OpenRealFile("darkplaces_history.txt", "r", false);
 	if(historyfile)
 	{
 		char buf[MAX_INPUTLINE];
@@ -81,7 +81,7 @@ static void Key_History_Shutdown()
 {
 	// TODO write history to a file
 
-	qfile_t *historyfile = FS_OpenRealFile("dp_history.txt", "w", false);
+	qfile_t *historyfile = FS_OpenRealFile("darkplaces_history.txt", "w", false);
 	if(historyfile)
 	{
 		int l = -1;
