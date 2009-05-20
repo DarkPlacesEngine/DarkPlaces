@@ -96,14 +96,9 @@ typedef struct conbuffer_s
 }
 conbuffer_t;
 
-#define CONBUFFER_LINES_IDX(buf, i) (((buf)->lines_first + (i)) % (buf)->maxlines)
-#define CONBUFFER_LINES_UNIDX(buf, i) (((i) - (buf)->lines_first + (buf)->maxlines) % (buf)->maxlines)
-#define CONBUFFER_LINES_LAST(buf) CONBUFFER_LINES_IDX(buf, (buf)->lines_count - 1)
-#define CONBUFFER_LINES(buf, i) (buf)->lines[CONBUFFER_LINES_IDX(buf, i)]
-#define CONBUFFER_LINES_PRED(buf, i) (((i) + (buf)->maxlines - 1) % (buf)->maxlines)
-#define CONBUFFER_LINES_SUCC(buf, i) (((i) + 1) % (buf)->maxlines)
-#define CONBUFFER_LINES_FIRST(buf) ((buf)->lines_first)
+#define CONBUFFER_LINES(buf, i) (buf)->lines[((buf)->lines_first + (i)) % (buf)->maxlines]
 #define CONBUFFER_LINES_COUNT(buf) ((buf)->lines_count)
+#define CONBUFFER_LINES_LAST(buf) CONBUFFER_LINES(buf, CONBUFFER_LINES_COUNT(buf) - 1)
 
 void ConBuffer_Init(conbuffer_t *buf, int textsize, int maxlines, mempool_t *mempool);
 void ConBuffer_Clear (conbuffer_t *buf);
