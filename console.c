@@ -36,13 +36,8 @@ int con_backscroll;
 
 conbuffer_t con;
 
-#define CON_LINES_IDX(i) CONBUFFER_LINES_IDX(&con, i)
-#define CON_LINES_UNIDX(i) CONBUFFER_LINES_UNIDX(&con, i)
-#define CON_LINES_LAST CONBUFFER_LINES_LAST(&con)
 #define CON_LINES(i) CONBUFFER_LINES(&con, i)
-#define CON_LINES_PRED(i) CONBUFFER_LINES_PRED(&con, i)
-#define CON_LINES_SUCC(i) CONBUFFER_LINES_SUCC(&con, i)
-#define CON_LINES_FIRST CONBUFFER_LINES_FIRST(&con)
+#define CON_LINES_LAST CONBUFFER_LINES_LAST(&con)
 #define CON_LINES_COUNT CONBUFFER_LINES_COUNT(&con)
 
 cvar_t con_notifytime = {CVAR_SAVE, "con_notifytime","3", "how long notify lines last, in seconds"};
@@ -144,7 +139,7 @@ void ConBuffer_FixTimes(conbuffer_t *buf)
 	int i;
 	if(buf->lines_count >= 1)
 	{
-		double diff = cl.time - (buf->lines + CONBUFFER_LINES_LAST(buf))->addtime;
+		double diff = cl.time - CONBUFFER_LINES_LAST(buf).addtime;
 		if(diff < 0)
 		{
 			for(i = 0; i < buf->lines_count; ++i)
@@ -165,7 +160,7 @@ void ConBuffer_DeleteLine(conbuffer_t *buf)
 	if(buf->lines_count == 0)
 		return;
 	--buf->lines_count;
-	buf->lines_first = CONBUFFER_LINES_IDX(buf, 1);
+	buf->lines_first = (buf->lines_first) % buf->maxlines;
 }
 
 /*
@@ -199,7 +194,7 @@ static char *ConBuffer_BytesLeft(conbuffer_t *buf, int len)
 	else
 	{
 		char *firstline_start = buf->lines[buf->lines_first].start;
-		char *lastline_onepastend = buf->lines[CONBUFFER_LINES_LAST(buf)].start + buf->lines[CONBUFFER_LINES_LAST(buf)].len;
+		char *lastline_onepastend = CONBUFFER_LINES_LAST(buf).start + CONBUFFER_LINES_LAST(buf).len;
 		// the buffer is cyclic, so we first have two cases...
 		if(firstline_start < lastline_onepastend) // buffer is contiguous
 		{
@@ -251,7 +246,7 @@ void ConBuffer_AddLine(conbuffer_t *buf, const char *line, int len, int mask)
 
 	//fprintf(stderr, "Now have %d lines (%d -> %d).\n", buf->lines_count, buf->lines_first, CON_LINES_LAST);
 
-	p = buf->lines + CONBUFFER_LINES_LAST(buf);
+	p = &CONBUFFER_LINES_LAST(buf);
 	p->start = putpos;
 	p->len = len;
 	p->addtime = cl.time;
@@ -1629,6 +1624,7 @@ int Con_MeasureConsoleLine(int lineno)
 {
 	float width = vid_conwidth.value;
 	con_text_info_t ti;
+	con_lineinfo_t *li = &CON_LINES(lineno);
 
 	//if(con.lines[lineno].mask & CON_MASK_LOADEDHISTORY)
 	//	return 0;
@@ -1636,8 +1632,7 @@ int Con_MeasureConsoleLine(int lineno)
 	ti.fontsize = con_textsize.value;
 	ti.font = FONT_CONSOLE;
 
-	return COM_Wordwrap(con.lines[lineno].start, con.lines[lineno].len, 0, width, Con_WordWidthFunc, &ti, Con_CountLineFunc, NULL);
-		// FIXME uses con in a non abstracted way
+	return COM_Wordwrap(li->start, li->len, 0, width, Con_WordWidthFunc, &ti, Con_CountLineFunc, NULL);
 }
 
 /*
@@ -1649,11 +1644,11 @@ Returns the height of a given console line; calculates it if necessary.
 */
 int Con_LineHeight(int i)
 {
-	int h = con.lines[i].height;
+	con_lineinfo_t *li = &CON_LINES(i);
+	int h = li->height;
 	if(h != -1)
 		return h;
-	return con.lines[i].height = Con_MeasureConsoleLine(i);
-		// FIXME uses con in a non abstracted way
+	return li->height = Con_MeasureConsoleLine(i);
 }
 
 /*
@@ -1669,6 +1664,7 @@ int Con_DrawConsoleLine(float y, int lineno, float ymin, float ymax)
 {
 	float width = vid_conwidth.value;
 	con_text_info_t ti;
+	con_lineinfo_t *li = &CON_LINES(lineno);
 
 	//if(con.lines[lineno].mask & CON_MASK_LOADEDHISTORY)
 	//	return 0;
@@ -1683,8 +1679,7 @@ int Con_DrawConsoleLine(float y, int lineno, float ymin, float ymax)
 	ti.ymax = ymax;
 	ti.width = width;
 
-	return COM_Wordwrap(con.lines[lineno].start, con.lines[lineno].len, 0, width, Con_WordWidthFunc, &ti, Con_DisplayLineFunc, &ti);
-		// FIXME uses con in a non abstracted way
+	return COM_Wordwrap(li->start, li->len, 0, width, Con_WordWidthFunc, &ti, Con_DisplayLineFunc, &ti);
 }
 
 /*
@@ -1698,15 +1693,14 @@ con_backscroll.
 void Con_LastVisibleLine(int *last, int *limitlast)
 {
 	int lines_seen = 0;
-	int ic;
+	int i;
 
 	if(con_backscroll < 0)
 		con_backscroll = 0;
 
 	// now count until we saw con_backscroll actual lines
-	for(ic = 0; ic < CON_LINES_COUNT; ++ic)
+	for(i = CON_LINES_COUNT - 1; i >= 0; --i)
 	{
-		int i = CON_LINES_IDX(CON_LINES_COUNT - 1 - ic);
 		int h = Con_LineHeight(i);
 
 		// line is the last visible line?
@@ -1758,20 +1752,19 @@ void Con_DrawConsole (int lines)
 		y = ymax - con_textsize.value;
 
 		if(limitlast)
-			y += (con.lines[last].height - limitlast) * con_textsize.value;
+			y += (CON_LINES(last).height - limitlast) * con_textsize.value;
 				// FIXME uses con in a non abstracted way
 		i = last;
 
 		for(;;)
 		{
 			y -= Con_DrawConsoleLine(y, i, 0, ymax) * con_textsize.value;
-			if(i == con.lines_first)
-				// FIXME uses con in a non abstracted way
+			if(i == 0)
 				break; // top of console buffer
 			if(y < 0)
 				break; // top of console window
 			limitlast = 0;
-			i = CON_LINES_PRED(i);
+			--i;
 		}
 	}
 
