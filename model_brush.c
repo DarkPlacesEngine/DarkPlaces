@@ -564,7 +564,7 @@ int Mod_Q1BSP_SuperContentsFromNativeContents(dp_model_t *model, int nativeconte
 		case CONTENTS_EMPTY:
 			return 0;
 		case CONTENTS_SOLID:
-			return SUPERCONTENTS_SOLID;
+			return SUPERCONTENTS_SOLID | SUPERCONTENTS_OPAQUE;
 		case CONTENTS_WATER:
 			return SUPERCONTENTS_WATER;
 		case CONTENTS_SLIME:
@@ -572,7 +572,7 @@ int Mod_Q1BSP_SuperContentsFromNativeContents(dp_model_t *model, int nativeconte
 		case CONTENTS_LAVA:
 			return SUPERCONTENTS_LAVA | SUPERCONTENTS_NODROP;
 		case CONTENTS_SKY:
-			return SUPERCONTENTS_SKY | SUPERCONTENTS_NODROP;
+			return SUPERCONTENTS_SKY | SUPERCONTENTS_NODROP | SUPERCONTENTS_OPAQUE; // to match behaviour of Q3 maps, let sky count as opaque
 	}
 	return 0;
 }
@@ -5750,6 +5750,10 @@ static int Mod_Q3BSP_SuperContentsFromNativeContents(dp_model_t *model, int nati
 		supercontents |= SUPERCONTENTS_MONSTERCLIP;
 	if (nativecontents & CONTENTSQ3_DONOTENTER)
 		supercontents |= SUPERCONTENTS_DONOTENTER;
+	if (nativecontents & CONTENTSQ3_BOTCLIP)
+		supercontents |= SUPERCONTENTS_BOTCLIP;
+	if (!(nativecontents & CONTENTSQ3_TRANSLUCENT))
+		supercontents |= SUPERCONTENTS_OPAQUE;
 	return supercontents;
 }
 
@@ -5776,6 +5780,10 @@ static int Mod_Q3BSP_NativeContentsFromSuperContents(dp_model_t *model, int supe
 		nativecontents |= CONTENTSQ3_MONSTERCLIP;
 	if (supercontents & SUPERCONTENTS_DONOTENTER)
 		nativecontents |= CONTENTSQ3_DONOTENTER;
+	if (supercontents & SUPERCONTENTS_BOTCLIP)
+		nativecontents |= CONTENTSQ3_BOTCLIP;
+	if (!(supercontents & SUPERCONTENTS_OPAQUE))
+		nativecontents |= CONTENTSQ3_TRANSLUCENT;
 	return nativecontents;
 }
 

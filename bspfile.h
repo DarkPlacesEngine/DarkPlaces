@@ -169,6 +169,7 @@ typedef struct dplane_s
 #define CONTENTSQ3_JUMPPAD			0x00080000 // hint for Q3's bots
 #define CONTENTSQ3_CLUSTERPORTAL	0x00100000 // hint for Q3's bots
 #define CONTENTSQ3_DONOTENTER		0x00200000 // hint for Q3's bots
+#define CONTENTSQ3_BOTCLIP			0x00400000 // hint for Q3's bots
 #define CONTENTSQ3_ORIGIN			0x01000000 // used by origin brushes to indicate origin of bmodel (removed by map compiler)
 #define CONTENTSQ3_BODY				0x02000000 // used by bbox entities (should never be on a brush)
 #define CONTENTSQ3_CORPSE			0x04000000 // used by dead bodies (SOLID_CORPSE in darkplaces)
@@ -189,6 +190,17 @@ typedef struct dplane_s
 #define SUPERCONTENTS_PLAYERCLIP	0x00000100
 #define SUPERCONTENTS_MONSTERCLIP	0x00000200
 #define SUPERCONTENTS_DONOTENTER	0x00000400
+#define SUPERCONTENTS_BOTCLIP		0x00000800
+#define SUPERCONTENTS_OPAQUE		0x00001000
+// TODO: is there any reason to define:
+//   fog?
+//   areaportal?
+//   teleporter?
+//   jumppad?
+//   clusterportal?
+//   detail?         (div0) no, game code should not be allowed to differentiate between structural and detail
+//   structural?     (div0) no, game code should not be allowed to differentiate between structural and detail
+//   trigger?        (div0) no, as these are always solid anyway, and that's all that matters for trigger brushes
 #define SUPERCONTENTS_LIQUIDSMASK	(SUPERCONTENTS_LAVA | SUPERCONTENTS_SLIME | SUPERCONTENTS_WATER)
 
 /*
