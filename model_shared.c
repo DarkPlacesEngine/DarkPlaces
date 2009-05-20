@@ -2187,9 +2187,9 @@ void Mod_MakeSortedSurfaces(dp_model_t *mod)
 	int *firstsurfacefortexture;
 	int *numsurfacesfortexture;
 	if (!mod->sortedmodelsurfaces)
-		mod->sortedmodelsurfaces = Mem_Alloc(loadmodel->mempool, mod->nummodelsurfaces * sizeof(*mod->sortedmodelsurfaces));
-	firstsurfacefortexture = Mem_Alloc(tempmempool, mod->num_textures * sizeof(*firstsurfacefortexture));
-	numsurfacesfortexture = Mem_Alloc(tempmempool, mod->num_textures * sizeof(*numsurfacesfortexture));
+		mod->sortedmodelsurfaces = (int *) Mem_Alloc(loadmodel->mempool, mod->nummodelsurfaces * sizeof(*mod->sortedmodelsurfaces));
+	firstsurfacefortexture = (int *) Mem_Alloc(tempmempool, mod->num_textures * sizeof(*firstsurfacefortexture));
+	numsurfacesfortexture = (int *) Mem_Alloc(tempmempool, mod->num_textures * sizeof(*numsurfacesfortexture));
 	memset(numsurfacesfortexture, 0, mod->num_textures * sizeof(*numsurfacesfortexture));
 	for (j = 0;j < mod->nummodelsurfaces;j++)
 	{

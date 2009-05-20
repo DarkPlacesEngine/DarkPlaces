@@ -95,9 +95,9 @@ char rcon_redirect_buffer[1400];
 void ConBuffer_Init(conbuffer_t *buf, int textsize, int maxlines, mempool_t *mempool)
 {
 	buf->textsize = textsize;
-	buf->text = Mem_Alloc(mempool, textsize);
+	buf->text = (char *) Mem_Alloc(mempool, textsize);
 	buf->maxlines = maxlines;
-	buf->lines = Mem_Alloc(mempool, maxlines * sizeof(*buf->lines));
+	buf->lines = (con_lineinfo_t *) Mem_Alloc(mempool, maxlines * sizeof(*buf->lines));
 	buf->lines_first = 0;
 	buf->lines_count = 0;
 }

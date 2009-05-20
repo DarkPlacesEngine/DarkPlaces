@@ -418,7 +418,7 @@ Key_Console (int key, int ascii)
 			if (i > 0)
 			{
 				// terencehill: insert the clipboard text between the characters of the line
-				char *temp = Z_Malloc(MAX_INPUTLINE);
+				char *temp = (char *) Z_Malloc(MAX_INPUTLINE);
 				cbd[i]=0;
 				temp[0]=0;
 				if ( key_linepos < (int)strlen(key_line) )
