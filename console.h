@@ -35,6 +35,7 @@ void Con_Rcon_Redirect_Abort();
 void Con_CheckResize (void);
 void Con_Init (void);
 void Con_Init_Commands (void);
+void Con_Shutdown (void);
 void Con_DrawConsole (int lines);
 void Con_Print(const char *txt);
 void Con_Printf(const char *fmt, ...) DP_FUNC_PRINTF(1);
@@ -95,12 +96,14 @@ typedef struct conbuffer_s
 }
 conbuffer_t;
 
-#define CONBUF_LINES_IDX(buf, i) (((buf)->lines_first + (i)) % (buf)->maxlines)
-#define CONBUF_LINES_UNIDX(buf, i) (((i) - (buf)->lines_first + (buf)->maxlines) % (buf)->maxlines)
-#define CONBUF_LINES_LAST(buf) CONBUF_LINES_IDX(buf, (buf)->lines_count - 1)
-#define CONBUF_LINES(buf, i) (buf)->lines[CONBUF_LINES_IDX(buf, i)]
-#define CONBUF_LINES_PRED(buf, i) (((i) + (buf)->maxlines - 1) % (buf)->maxlines)
-#define CONBUF_LINES_SUCC(buf, i) (((i) + 1) % (buf)->maxlines)
+#define CONBUFFER_LINES_IDX(buf, i) (((buf)->lines_first + (i)) % (buf)->maxlines)
+#define CONBUFFER_LINES_UNIDX(buf, i) (((i) - (buf)->lines_first + (buf)->maxlines) % (buf)->maxlines)
+#define CONBUFFER_LINES_LAST(buf) CONBUFFER_LINES_IDX(buf, (buf)->lines_count - 1)
+#define CONBUFFER_LINES(buf, i) (buf)->lines[CONBUFFER_LINES_IDX(buf, i)]
+#define CONBUFFER_LINES_PRED(buf, i) (((i) + (buf)->maxlines - 1) % (buf)->maxlines)
+#define CONBUFFER_LINES_SUCC(buf, i) (((i) + 1) % (buf)->maxlines)
+#define CONBUFFER_LINES_FIRST(buf) ((buf)->lines_first)
+#define CONBUFFER_LINES_COUNT(buf) ((buf)->lines_count)
 
 void ConBuffer_Init(conbuffer_t *buf, int textsize, int maxlines, mempool_t *mempool);
 void ConBuffer_Clear (conbuffer_t *buf);

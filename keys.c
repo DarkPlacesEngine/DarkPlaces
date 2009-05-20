@@ -89,10 +89,12 @@ static void Key_History_Shutdown()
 	if(historyfile)
 	{
 		int i;
-		for(i = 0; i < history.lines_count; ++i)
+		for(i = 0; i < CONBUFFER_LINES_COUNT(&history); ++i)
 			FS_Printf(historyfile, "%s\n", ConBuffer_GetLine(&history, i));
 		FS_Close(historyfile);
 	}
+
+	ConBuffer_Shutdown(&history);
 }
 
 static void Key_History_Push()
@@ -112,7 +114,7 @@ static void Key_History_Up()
 
 	if(history_line == -1)
 	{
-		history_line = history.lines_count - 1;
+		history_line = CONBUFFER_LINES_COUNT(&history) - 1;
 		if(history_line != -1)
 		{
 			strlcpy(key_line + 1, ConBuffer_GetLine(&history, history_line), sizeof(key_line) - 1);
@@ -132,7 +134,7 @@ static void Key_History_Down()
 	if(history_line == -1) // editing the "new" line
 		return;
 
-	if(history_line < history.lines_count - 1)
+	if(history_line < CONBUFFER_LINES_COUNT(&history) - 1)
 	{
 		++history_line;
 		strlcpy(key_line + 1, ConBuffer_GetLine(&history, history_line), sizeof(key_line) - 1);
