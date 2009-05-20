@@ -36,30 +36,34 @@ keydest_t	key_dest;
 int			key_consoleactive;
 char		*keybindings[MAX_BINDMAPS][MAX_KEYS];
 int         history_line;
-int			history_line_idx;
 char		history_savedline[MAX_INPUTLINE];
+conbuffer_t history;
+#define HIST_TEXTSIZE 262144
+#define HIST_MAXLINES 4096
 
 static void Key_History_Init()
 {
-	qfile_t *historyfile = FS_OpenRealFile("darkplaces_history.txt", "r", false);
+	qfile_t *historyfile;
+	ConBuffer_Init(&history, HIST_TEXTSIZE, HIST_MAXLINES, zonemempool);
+
+	historyfile = FS_OpenRealFile("darkplaces_history.txt", "rb", false); // rb to handle unix line endings on windows too
 	if(historyfile)
 	{
 		char buf[MAX_INPUTLINE];
 		int bufpos;
 		int c;
 
-		*buf = ']';
-		bufpos = 1;
+		bufpos = 0;
 		for(;;)
 		{
 			c = FS_Getc(historyfile);
 			if(c < 0 || c == 0 || c == '\r' || c == '\n')
 			{
-				if(bufpos > 1)
+				if(bufpos > 0)
 				{
 					buf[bufpos] = 0;
-					Con_AddLine(buf, bufpos, CON_MASK_INPUT);
-					bufpos = 1;
+					ConBuffer_AddLine(&history, buf, bufpos, 0);
+					bufpos = 0;
 				}
 				if(c < 0)
 					break;
@@ -84,87 +88,59 @@ static void Key_History_Shutdown()
 	qfile_t *historyfile = FS_OpenRealFile("darkplaces_history.txt", "w", false);
 	if(historyfile)
 	{
-		int l = -1;
-		while((l = Con_FindNextLine(CON_MASK_INPUT, 0, l)) != -1)
-			FS_Printf(historyfile, "%s\n", Con_GetLine(l) + 1); // +1: skip the ]
+		int i;
+		for(i = 0; i < history.lines_count; ++i)
+			FS_Printf(historyfile, "%s\n", ConBuffer_GetLine(&history, i));
 		FS_Close(historyfile);
 	}
 }
 
 static void Key_History_Push()
 {
-	int mask;
-
-	mask = CON_MASK_INPUT;
-	if(!key_line[1]) // empty?
-		mask = 0;
-	if(!strcmp(key_line, "]quit")) // putting these into the history just sucks
-		mask = 0;
-	if(!strncmp(key_line, "]quit ", 6)) // putting these into the history just sucks
-		mask = 0;
-	Con_AddLine(key_line, strlen(key_line), mask);
-	Con_PrintNotToHistory(key_line); // don't mark empty lines as history
-	Con_PrintNotToHistory("\n");
+	if(key_line[1]) // empty?
+	if(strcmp(key_line, "]quit")) // putting these into the history just sucks
+	if(strncmp(key_line, "]quit ", 6)) // putting these into the history just sucks
+		ConBuffer_AddLine(&history, key_line + 1, strlen(key_line) - 1, 0);
+	Con_Printf("%s\n", key_line); // don't mark empty lines as history
 	history_line = -1;
 }
 
 static void Key_History_Up()
 {
-	int l;
-
-	if(history_line >= 0)
-	{
-		history_line = Con_GetLineByID(history_line_idx);
-		if(history_line == -1)
-			history_line = -2; // -2 means before first
-	}
-
-	// invalid history line? bad
-	if(history_line == -2)
-		return;
-
 	if(history_line == -1) // editing the "new" line
-		strlcpy(history_savedline, key_line, sizeof(history_savedline));
-	l = Con_FindPrevLine(CON_MASK_INPUT, 0, history_line);
-	if(l != -1)
-	{
-		history_line = l;
-		history_line_idx = Con_GetLineID(l);
-		strlcpy(key_line, Con_GetLine(history_line), sizeof(key_line));
-	}
+		strlcpy(history_savedline, key_line + 1, sizeof(history_savedline));
 
-	key_linepos = strlen(key_line);
+	if(history_line == -1)
+	{
+		history_line = history.lines_count - 1;
+		if(history_line != -1)
+		{
+			strlcpy(key_line + 1, ConBuffer_GetLine(&history, history_line), sizeof(key_line) - 1);
+			key_linepos = strlen(key_line);
+		}
+	}
+	else if(history_line > 0)
+	{
+		--history_line; // this also does -1 -> 0, so it is good
+		strlcpy(key_line + 1, ConBuffer_GetLine(&history, history_line), sizeof(key_line) - 1);
+		key_linepos = strlen(key_line);
+	}
 }
 
 static void Key_History_Down()
 {
-	int l;
-
-	if(history_line >= 0)
-	{
-		history_line = Con_GetLineByID(history_line_idx);
-		if(history_line == -1)
-			history_line = -2; // -2 means before first
-	}
-
 	if(history_line == -1) // editing the "new" line
 		return;
 
-	// invalid history line? take the first line then
-	if(history_line == -2)
-		history_line = -1; // next Con_FindNextLine will fix it
-
-	l = Con_FindNextLine(CON_MASK_INPUT, 0, history_line);
-	if(l != -1)
+	if(history_line < history.lines_count - 1)
 	{
-		history_line = l;
-		history_line_idx = Con_GetLineID(l);
-		strlcpy(key_line, Con_GetLine(history_line), sizeof(key_line));
+		++history_line;
+		strlcpy(key_line + 1, ConBuffer_GetLine(&history, history_line), sizeof(key_line) - 1);
 	}
 	else
 	{
 		history_line = -1;
-		strlcpy(key_line, history_savedline, sizeof(key_line));
+		strlcpy(key_line + 1, history_savedline, sizeof(key_line) - 1);
 	}
 
 	key_linepos = strlen(key_line);

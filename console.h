@@ -37,7 +37,6 @@ void Con_Init (void);
 void Con_Init_Commands (void);
 void Con_DrawConsole (int lines);
 void Con_Print(const char *txt);
-void Con_PrintNotToHistory(const char *txt);
 void Con_Printf(const char *fmt, ...) DP_FUNC_PRINTF(1);
 void Con_DPrint(const char *msg);
 void Con_DPrintf(const char *fmt, ...) DP_FUNC_PRINTF(1);
@@ -72,14 +71,47 @@ void Log_Printf(const char *logfilename, const char *fmt, ...) DP_FUNC_PRINTF(2)
 #define CON_MASK_HIDENOTIFY 128
 #define CON_MASK_CHAT 1
 #define CON_MASK_INPUT 2
-#define CON_MASK_LOADEDHISTORY 4
 
-void Con_AddLine(const char *line, int len, int mask);
-int Con_FindPrevLine(int mask_must, int mask_mustnot, int start);
-int Con_FindNextLine(int mask_must, int mask_mustnot, int start);
-const char *Con_GetLine(int i);
-int Con_GetLineID(int i);
-int Con_GetLineByID(int i);
+typedef struct con_lineinfo_s
+{
+	char *start;
+	size_t len;
+	int mask;
+
+	// used only by console.c
+	double addtime;
+	int height; // recalculated line height when needed (-1 to unset)
+}
+con_lineinfo_t;
+
+typedef struct conbuffer_s
+{
+	int textsize;
+	char *text;
+	int maxlines;
+	con_lineinfo_t *lines;
+	int lines_first;
+	int lines_count; // cyclic buffer
+}
+conbuffer_t;
+
+#define CONBUF_LINES_IDX(buf, i) (((buf)->lines_first + (i)) % (buf)->maxlines)
+#define CONBUF_LINES_UNIDX(buf, i) (((i) - (buf)->lines_first + (buf)->maxlines) % (buf)->maxlines)
+#define CONBUF_LINES_LAST(buf) CONBUF_LINES_IDX(buf, (buf)->lines_count - 1)
+#define CONBUF_LINES(buf, i) (buf)->lines[CONBUF_LINES_IDX(buf, i)]
+#define CONBUF_LINES_PRED(buf, i) (((i) + (buf)->maxlines - 1) % (buf)->maxlines)
+#define CONBUF_LINES_SUCC(buf, i) (((i) + 1) % (buf)->maxlines)
+
+void ConBuffer_Init(conbuffer_t *buf, int textsize, int maxlines, mempool_t *mempool);
+void ConBuffer_Clear (conbuffer_t *buf);
+void ConBuffer_Shutdown(conbuffer_t *buf);
+void ConBuffer_FixTimes(conbuffer_t *buf);
+void ConBuffer_DeleteLine(conbuffer_t *buf);
+void ConBuffer_DeleteLastLine(conbuffer_t *buf);
+void ConBuffer_AddLine(conbuffer_t *buf, const char *line, int len, int mask);
+int ConBuffer_FindPrevLine(conbuffer_t *buf, int mask_must, int mask_mustnot, int start);
+int ConBuffer_FindNextLine(conbuffer_t *buf, int mask_must, int mask_mustnot, int start);
+const char *ConBuffer_GetLine(conbuffer_t *buf, int i);
 
 #endif
 
