@@ -160,7 +160,7 @@ void ConBuffer_DeleteLine(conbuffer_t *buf)
 	if(buf->lines_count == 0)
 		return;
 	--buf->lines_count;
-	buf->lines_first = (buf->lines_first) % buf->maxlines;
+	buf->lines_first = (buf->lines_first + 1) % buf->maxlines;
 }
 
 /*
