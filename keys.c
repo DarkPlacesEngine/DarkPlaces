@@ -392,7 +392,7 @@ Key_Console (int key, int ascii)
 		break;
 	}
 
-	if ((toupper(key) == 'V' && keydown[K_CTRL]) || ((key == K_INS || key == K_KP_INS) && keydown[K_SHIFT]))
+	if (key == 'v' && keydown[K_CTRL]) || ((key == K_INS || key == K_KP_INS) && keydown[K_SHIFT]))
 	{
 		char *cbd, *p;
 		if ((cbd = Sys_GetClipboardData()) != 0)
@@ -435,13 +435,29 @@ Key_Console (int key, int ascii)
 		return;
 	}
 
-	if (key == 'l')
+	if (key == 'l' && keydown[K_CTRL])
 	{
-		if (keydown[K_CTRL])
-		{
-			Cbuf_AddText ("clear\n");
-			return;
-		}
+		Cbuf_AddText ("clear\n");
+		return;
+	}
+
+	if (key == 'u' && keydown[K_CTRL]) // like vi/readline ^u: delete currently edited line
+	{
+		// clear line
+		key_line[0] = ']';
+		key_line[1] = 0;
+		key_linepos = 1;
+		return;
+	}
+
+	if (key == 'q' && keydown[K_CTRL]) // like zsh ^q: push line to history, don't execute, and clear
+	{
+		// clear line
+		Key_History_Push();
+		key_line[0] = ']';
+		key_line[1] = 0;
+		key_linepos = 1;
+		return;
 	}
 
 	if (key == K_ENTER || key == K_KP_ENTER)
