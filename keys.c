@@ -392,7 +392,7 @@ Key_Console (int key, int ascii)
 		break;
 	}
 
-	if (key == 'v' && keydown[K_CTRL]) || ((key == K_INS || key == K_KP_INS) && keydown[K_SHIFT]))
+	if ((key == 'v' && keydown[K_CTRL]) || ((key == K_INS || key == K_KP_INS) && keydown[K_SHIFT]))
 	{
 		char *cbd, *p;
 		if ((cbd = Sys_GetClipboardData()) != 0)
