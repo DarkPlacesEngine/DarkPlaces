@@ -115,7 +115,7 @@ typedef struct particleeffectinfo_s
 	float lightcolor[3];
 	qboolean lightshadow;
 	int lightcubemapnum;
-	unsigned int staincolor[2];
+	unsigned int staincolor[2]; // note: 0x808080 = neutral (particle's own color), these are modding factors for the particle's original color!
 	int staintex[2];
 }
 particleeffectinfo_t;
@@ -534,13 +534,20 @@ static particle_t *CL_NewParticle(unsigned short ptypeindex, int pcolor1, int pc
 	{
 		l2 = (int)lhrandom(0.5, 256.5);
 		l1 = 256 - l2;
-		r = (((((staincolor1 >> 16) & 0xFF) * l1 + ((staincolor2 >> 16) & 0xFF) * l2) * part->color[0]) / 0xFF00) & 0xFF;
-		g = (((((staincolor1 >>  8) & 0xFF) * l1 + ((staincolor2 >>  8) & 0xFF) * l2) * part->color[1]) / 0xFF00) & 0xFF;
-		b = (((((staincolor1 >>  0) & 0xFF) * l1 + ((staincolor2 >>  0) & 0xFF) * l2) * part->color[1]) / 0xFF00) & 0xFF;
-		part->staincolor = (255 - r) * 65536 + (255 - g) * 256 + (255 - b); // inverted, as decals draw in inverted color (subtractive)!
+		r = ((((staincolor1 >> 16) & 0xFF) * l1 + ((staincolor2 >> 16) & 0xFF) * l2) * part->color[0]) / 0x8000; // staincolor 0x808080 keeps color invariant
+		g = ((((staincolor1 >>  8) & 0xFF) * l1 + ((staincolor2 >>  8) & 0xFF) * l2) * part->color[1]) / 0x8000;
+		b = ((((staincolor1 >>  0) & 0xFF) * l1 + ((staincolor2 >>  0) & 0xFF) * l2) * part->color[1]) / 0x8000;
+		if(r > 0xFF) r = 0xFF;
+		if(g > 0xFF) g = 0xFF;
+		if(b > 0xFF) b = 0xFF;
 	}
 	else
-		part->staincolor = -1;
+	{
+		r = part->color[0]; // -1 is shorthand for stain = particle color
+		g = part->color[1];
+		b = part->color[2];
+	}
+	part->staincolor = (r * 65536 + g * 256 + b) ^ 0xFFFFFF; // inverted, as decals draw in inverted color (subtractive)!
 	part->texnum = ptex;
 	part->size = psize;
 	part->sizeincrease = psizeincrease;
@@ -2445,18 +2452,17 @@ void R_DrawParticles (void)
 					{
 						VectorCopy(trace.endpos, p->org);
 
-						if (p->staintexnum >= 0 || p->staincolor >= 0)
+						if (p->staintexnum >= 0)
 						{
 							// blood - splash on solid
 							if (!(trace.hitq3surfaceflags & Q3SURFACEFLAG_NOMARKS))
 							{
-								if(p->staincolor >= 0)
-								{
-									R_Stain(p->org, 16,
-										(p->staincolor >> 16) & 0xFF, (p->staincolor >> 8) & 0xFF, p->staincolor & 0xFF, (int)(p->alpha * p->size * (1.0f / 80.0f)),
-										(p->staincolor >> 16) & 0xFF, (p->staincolor >> 8) & 0xFF, p->staincolor & 0xFF, (int)(p->alpha * p->size * (1.0f / 80.0f)));
-								}
-								if (cl_decals.integer && p->staintexnum >= 0)
+								R_Stain(p->org, 16,
+									(p->staincolor >> 16) & 0xFF, (p->staincolor >> 8) & 0xFF, p->staincolor & 0xFF, (int)(p->alpha * p->size * (1.0f / 80.0f)),
+									(p->staincolor >> 16) & 0xFF, (p->staincolor >> 8) & 0xFF, p->staincolor & 0xFF, (int)(p->alpha * p->size * (1.0f / 80.0f)));
+									// FIXME does the stain color need to be inverted?
+									// it currently IS inverted as decals need that, but does R_Stain need it too?
+								if (cl_decals.integer)
 								{
 									// create a decal for the blood splat
 									CL_SpawnDecalParticleForSurface(hitent, p->org, trace.plane.normal, p->staincolor, p->staincolor, p->staintexnum, p->size * 2, p->alpha);
