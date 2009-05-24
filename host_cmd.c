@@ -2790,8 +2790,8 @@ void Host_InitCommands (void)
 	Cvar_RegisterVariable (&rcon_password);
 	Cvar_RegisterVariable (&rcon_address);
 	Cvar_RegisterVariable (&rcon_secure);
-	Cmd_AddCommand ("rcon", Host_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's)");
-	Cmd_AddCommand ("srcon", Host_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's); this always works as if rcon_secure is set");
+	Cmd_AddCommand ("rcon", Host_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's); note: if rcon_secure is set, client and server clocks must be synced e.g. via NTP");
+	Cmd_AddCommand ("srcon", Host_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's); this always works as if rcon_secure is set; note: client and server clocks must be synced e.g. via NTP");
 	Cmd_AddCommand ("user", Host_User_f, "prints additional information about a player number or name on the scoreboard");
 	Cmd_AddCommand ("users", Host_Users_f, "prints additional information about all players on the scoreboard");
 	Cmd_AddCommand ("fullserverinfo", Host_FullServerinfo_f, "internal use only, sent by server to client to update client's local copy of serverinfo string");
