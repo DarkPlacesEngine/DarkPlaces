@@ -2475,7 +2475,7 @@ void R_DrawParticles (void)
 							// blood - splash on solid
 							if (trace.hitq3surfaceflags & Q3SURFACEFLAG_NOMARKS)
 								goto killparticle;
-							if(p->staintexnum == -1 && p->staincolor < 0) // staintex < -1 means no stains at all
+							if(p->staintexnum == -1) // staintex < -1 means no stains at all
 							{
 								R_Stain(p->org, 16, 64, 16, 16, (int)(p->alpha * p->size * (1.0f / 80.0f)), 64, 32, 32, (int)(p->alpha * p->size * (1.0f / 80.0f)));
 								if (cl_decals.integer)
