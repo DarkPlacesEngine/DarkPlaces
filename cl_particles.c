@@ -534,9 +534,18 @@ static particle_t *CL_NewParticle(unsigned short ptypeindex, int pcolor1, int pc
 	{
 		l2 = (int)lhrandom(0.5, 256.5);
 		l1 = 256 - l2;
-		r = ((((staincolor1 >> 16) & 0xFF) * l1 + ((staincolor2 >> 16) & 0xFF) * l2) * part->color[0]) / 0x8000; // staincolor 0x808080 keeps color invariant
-		g = ((((staincolor1 >>  8) & 0xFF) * l1 + ((staincolor2 >>  8) & 0xFF) * l2) * part->color[1]) / 0x8000;
-		b = ((((staincolor1 >>  0) & 0xFF) * l1 + ((staincolor2 >>  0) & 0xFF) * l2) * part->color[1]) / 0x8000;
+		if(blendmode == PBLEND_INVMOD)
+		{
+			r = ((((staincolor1 >> 16) & 0xFF) * l1 + ((staincolor2 >> 16) & 0xFF) * l2) * (255 - part->color[0])) / 0x8000; // staincolor 0x808080 keeps color invariant
+			g = ((((staincolor1 >>  8) & 0xFF) * l1 + ((staincolor2 >>  8) & 0xFF) * l2) * (255 - part->color[1])) / 0x8000;
+			b = ((((staincolor1 >>  0) & 0xFF) * l1 + ((staincolor2 >>  0) & 0xFF) * l2) * (255 - part->color[2])) / 0x8000;
+		}
+		else
+		{
+			r = ((((staincolor1 >> 16) & 0xFF) * l1 + ((staincolor2 >> 16) & 0xFF) * l2) * part->color[0]) / 0x8000; // staincolor 0x808080 keeps color invariant
+			g = ((((staincolor1 >>  8) & 0xFF) * l1 + ((staincolor2 >>  8) & 0xFF) * l2) * part->color[1]) / 0x8000;
+			b = ((((staincolor1 >>  0) & 0xFF) * l1 + ((staincolor2 >>  0) & 0xFF) * l2) * part->color[2]) / 0x8000;
+		}
 		if(r > 0xFF) r = 0xFF;
 		if(g > 0xFF) g = 0xFF;
 		if(b > 0xFF) b = 0xFF;
@@ -547,7 +556,7 @@ static particle_t *CL_NewParticle(unsigned short ptypeindex, int pcolor1, int pc
 		g = part->color[1];
 		b = part->color[2];
 	}
-	part->staincolor = (r * 65536 + g * 256 + b) ^ 0xFFFFFF; // inverted, as decals draw in inverted color (subtractive)!
+	part->staincolor = r * 65536 + g * 256 + b;
 	part->texnum = ptex;
 	part->size = psize;
 	part->sizeincrease = psizeincrease;
@@ -2460,12 +2469,10 @@ void R_DrawParticles (void)
 								R_Stain(p->org, 16,
 									(p->staincolor >> 16) & 0xFF, (p->staincolor >> 8) & 0xFF, p->staincolor & 0xFF, (int)(p->alpha * p->size * (1.0f / 80.0f)),
 									(p->staincolor >> 16) & 0xFF, (p->staincolor >> 8) & 0xFF, p->staincolor & 0xFF, (int)(p->alpha * p->size * (1.0f / 80.0f)));
-									// FIXME does the stain color need to be inverted?
-									// it currently IS inverted as decals need that, but does R_Stain need it too?
 								if (cl_decals.integer)
 								{
 									// create a decal for the blood splat
-									CL_SpawnDecalParticleForSurface(hitent, p->org, trace.plane.normal, p->staincolor, p->staincolor, p->staintexnum, p->size * 2, p->alpha);
+									CL_SpawnDecalParticleForSurface(hitent, p->org, trace.plane.normal, 0xFFFFFF ^ p->staincolor, 0xFFFFFF ^ p->staincolor, p->staintexnum, p->size * 2, p->alpha); // staincolor needs to be inverted for decals!
 								}
 							}
 						}
