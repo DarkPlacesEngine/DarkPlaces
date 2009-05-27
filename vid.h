@@ -109,7 +109,7 @@ extern qboolean isRagePro;
 extern int gl_videosyncavailable;
 
 void *GL_GetProcAddress(const char *name);
-int GL_CheckExtension(const char *name, const dllfunction_t *funcs, const char *disableparm, int silent);
+int GL_CheckExtension(const char *minglver_or_ext, const dllfunction_t *funcs, const char *disableparm, int silent);
 
 void VID_Shared_Init(void);
 
