@@ -393,12 +393,23 @@ void (GLAPIENTRY *qglGetQueryivARB)(GLenum target, GLenum pname, GLint *params);
 void (GLAPIENTRY *qglGetQueryObjectivARB)(GLuint qid, GLenum pname, GLint *params);
 void (GLAPIENTRY *qglGetQueryObjectuivARB)(GLuint qid, GLenum pname, GLuint *params);
 
-int GL_CheckExtension(const char *name, const dllfunction_t *funcs, const char *disableparm, int silent)
+#if _MSC_VER >= 1400
+#define sscanf sscanf_s
+#endif
+
+int GL_CheckExtension(const char *minglver_or_ext, const dllfunction_t *funcs, const char *disableparm, int silent)
 {
 	int failed = false;
 	const dllfunction_t *func;
+	struct { int major, minor; } min_version, curr_version;
+	int ext;
 
-	Con_DPrintf("checking for %s...  ", name);
+	ext = !(sscanf(minglver_or_ext, "%d.%d", &min_version.major, &min_version.minor) == 2);
+
+	if (ext)
+		Con_DPrintf("checking for %s...  ", minglver_or_ext);
+	else
+		Con_DPrintf("checking for OpenGL %s core features...  ", minglver_or_ext);
 
 	for (func = funcs;func && func->name;func++)
 		*func->funcvariable = NULL;
@@ -409,19 +420,39 @@ int GL_CheckExtension(const char *name, const dllfunction_t *funcs, const char *
 		return false;
 	}
 
-	if ((name[2] == '_' || name[3] == '_') && !strstr(gl_extensions ? gl_extensions : "", name) && !strstr(gl_platformextensions ? gl_platformextensions : "", name))
+	if (ext)
 	{
-		Con_DPrint("not detected\n");
-		return false;
+		if (!strstr(gl_extensions ? gl_extensions : "", minglver_or_ext) && !strstr(gl_platformextensions ? gl_platformextensions : "", minglver_or_ext))
+		{
+			Con_DPrint("not detected\n");
+			return false;
+		}
+	}
+	else
+	{
+		sscanf(gl_version, "%d.%d", &curr_version.major, &curr_version.minor);
+
+		if (curr_version.major < min_version.major || (curr_version.major == min_version.major && curr_version.minor < min_version.minor))
+		{
+			Con_DPrintf("not detected (OpenGL %d.%d loaded)\n", curr_version.major, curr_version.minor);
+			return false;
+		}
 	}
 
 	for (func = funcs;func && func->name != NULL;func++)
 	{
+		// Con_DPrintf("\n    %s...  ", func->name);
+
 		// functions are cleared before all the extensions are evaluated
 		if (!(*func->funcvariable = (void *) GL_GetProcAddress(func->name)))
 		{
 			if (!silent)
-				Con_DPrintf("OpenGL extension \"%s\" is missing function \"%s\" - broken driver!\n", name, func->name);
+			{
+				if (ext)
+					Con_DPrintf("%s is missing function \"%s\" - broken driver!\n", minglver_or_ext, func->name);
+				else
+					Con_DPrintf("OpenGL %s core features are missing function \"%s\" - broken driver!\n", minglver_or_ext, func->name);
+			}
 			failed = true;
 		}
 	}
@@ -760,7 +791,7 @@ void VID_CheckExtensions(void)
 	gl_support_texture_compression = false;
 	gl_support_arb_occlusion_query = false;
 
-	if (!GL_CheckExtension("OpenGL 1.1.0", opengl110funcs, NULL, false))
+	if (!GL_CheckExtension("1.1", opengl110funcs, NULL, false))
 		Sys_Error("OpenGL 1.1.0 functions not found");
 
 	CHECKGLERROR
@@ -769,7 +800,7 @@ void VID_CheckExtensions(void)
 	Con_DPrint("Checking OpenGL extensions...\n");
 
 // COMMANDLINEOPTION: GL: -nodrawrangeelements disables GL_EXT_draw_range_elements (renders faster)
-	if (!GL_CheckExtension("glDrawRangeElements", drawrangeelementsfuncs, "-nodrawrangeelements", true))
+	if (!GL_CheckExtension("1.2", drawrangeelementsfuncs, "-nodrawrangeelements", true))
 		GL_CheckExtension("GL_EXT_draw_range_elements", drawrangeelementsextfuncs, "-nodrawrangeelements", false);
 
 // COMMANDLINEOPTION: GL: -nomtex disables GL_ARB_multitexture (required for faster map rendering)
@@ -811,7 +842,7 @@ void VID_CheckExtensions(void)
 	gl_support_ext_blend_subtract = GL_CheckExtension("GL_EXT_blend_subtract", blendequationfuncs, "-noblendsubtract", false);
 
 // COMMANDLINEOPTION: GL: -noseparatestencil disables use of OpenGL2.0 glStencilOpSeparate and GL_ATI_separate_stencil extensions (which accelerate shadow rendering)
-	if (!(gl_support_separatestencil = GL_CheckExtension("glStencilOpSeparate", gl2separatestencilfuncs, "-noseparatestencil", true)))
+	if (!(gl_support_separatestencil = (GL_CheckExtension("2.0", gl2separatestencilfuncs, "-noseparatestencil", true))))
 		gl_support_separatestencil = GL_CheckExtension("GL_ATI_separate_stencil", atiseparatestencilfuncs, "-noseparatestencil", false);
 // COMMANDLINEOPTION: GL: -nostenciltwoside disables GL_EXT_stencil_two_side (which accelerate shadow rendering)
 	gl_support_stenciltwoside = GL_CheckExtension("GL_EXT_stencil_two_side", stenciltwosidefuncs, "-nostenciltwoside", false);
