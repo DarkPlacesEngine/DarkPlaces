@@ -701,9 +701,9 @@ void Cvar_List_f (void)
 	if (len)
 	{
 		if(ispattern)
-			Con_Printf("%i cvar(s) matching \"%s\"\n", count, partial);
+			Con_Printf("%i cvar%s matching \"%s\"\n", count, (count > 1) ? "s" : "", partial);
 		else
-			Con_Printf("%i cvar(s) beginning with \"%s\"\n", count, partial);
+			Con_Printf("%i cvar%s beginning with \"%s\"\n", count, (count > 1) ? "s" : "", partial);
 	}
 	else
 		Con_Printf("%i cvar(s)\n", count);

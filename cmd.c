@@ -608,7 +608,7 @@ static void Cmd_Alias_f (void)
 	{
 		Con_Print("Current alias commands:\n");
 		for (a = cmd_alias ; a ; a=a->next)
-			Con_Printf("%s : %s\n", a->name, a->value);
+			Con_Printf("%s : %s", a->name, a->value);
 		return;
 	}
 
@@ -659,6 +659,8 @@ static void Cmd_Alias_f (void)
 	strlcat (cmd, "\n", sizeof (cmd));
 
 	alloclen = strlen (cmd) + 1;
+	if(alloclen >= 2)
+		cmd[alloclen - 2] = '\n'; // to make sure a newline is appended even if too long
 	a->value = (char *)Z_Malloc (alloclen);
 	memcpy (a->value, cmd, alloclen);
 }
@@ -1022,12 +1024,14 @@ static void Cmd_List_f (void)
 {
 	cmd_function_t *cmd;
 	const char *partial;
-	int len, count;
+	size_t len;
+	int count;
+	qboolean ispattern;
 
 	if (Cmd_Argc() > 1)
 	{
 		partial = Cmd_Argv (1);
-		len = (int)strlen(partial);
+		len = strlen(partial);
 	}
 	else
 	{
@@ -1035,19 +1039,84 @@ static void Cmd_List_f (void)
 		len = 0;
 	}
 
+	ispattern = partial && (strchr(partial, '*') || strchr(partial, '?'));
+
 	count = 0;
 	for (cmd = cmd_functions; cmd; cmd = cmd->next)
 	{
-		if (partial && strncmp(partial, cmd->name, len))
+		if (partial && (ispattern ? !matchpattern_with_separator(cmd->name, partial, false, "", false) : strncmp(partial, cmd->name, len)))
 			continue;
 		Con_Printf("%s : %s\n", cmd->name, cmd->description);
 		count++;
 	}
 
-	if (partial)
-		Con_Printf("%i Command%s beginning with \"%s\"\n\n", count, (count > 1) ? "s" : "", partial);
+	if (len)
+	{
+		if(ispattern)
+			Con_Printf("%i Command%s matching \"%s\"\n\n", count, (count > 1) ? "s" : "", partial);
+		else
+			Con_Printf("%i Command%s beginning with \"%s\"\n\n", count, (count > 1) ? "s" : "", partial);
+	}
 	else
 		Con_Printf("%i Command%s\n\n", count, (count > 1) ? "s" : "");
+}
+
+static void Cmd_Apropos_f(void)
+{
+	cmd_function_t *cmd;
+	cvar_t *cvar;
+	cmdalias_t *alias;
+	const char *partial;
+	size_t len;
+	int count;
+	qboolean ispattern;
+
+	if (Cmd_Argc() > 1)
+	{
+		partial = Cmd_Args();
+		len = strlen(partial);
+	}
+	else
+	{
+		Con_Printf("usage: apropos <string>\n");
+		return;
+	}
+
+	ispattern = partial && (strchr(partial, '*') || strchr(partial, '?'));
+	if(!ispattern)
+	{
+		partial = va("*%s*", partial);
+		len += 2;
+	}
+
+	count = 0;
+	Con_Printf("Cvars:\n");
+	for (cvar = cvar_vars; cvar; cvar = cvar->next)
+	{
+		if (!matchpattern_with_separator(cvar->name, partial, false, "", false))
+		if (!matchpattern_with_separator(cvar->description, partial, false, "", false))
+			continue;
+		Con_Printf("^3%s^7: %s\n", cvar->name, cvar->description);
+		count++;
+	}
+	Con_Printf("Commands:\n");
+	for (cmd = cmd_functions; cmd; cmd = cmd->next)
+	{
+		if (!matchpattern_with_separator(cmd->name, partial, false, "", false))
+		if (!matchpattern_with_separator(cmd->description, partial, false, "", false))
+			continue;
+		Con_Printf("^3%s^7: %s\n", cmd->name, cmd->description);
+		count++;
+	}
+	Con_Printf("Aliases:\n");
+	for (alias = cmd_alias; alias; alias = alias->next)
+	{
+		if (!matchpattern_with_separator(alias->name, partial, false, "", false))
+		if (!matchpattern_with_separator(alias->value, partial, false, "", false))
+			continue;
+		Con_Printf("^3%s^7: %s", alias->name, alias->value);
+		count++;
+	}
 }
 
 /*
@@ -1082,6 +1151,7 @@ void Cmd_Init_Commands (void)
 	// Added/Modified by EvilTypeGuy eviltypeguy@qeradiant.com
 	Cmd_AddCommand ("cmdlist", Cmd_List_f, "lists all console commands beginning with the specified prefix");
 	Cmd_AddCommand ("cvarlist", Cvar_List_f, "lists all console variables beginning with the specified prefix");
+	Cmd_AddCommand ("apropos", Cmd_Apropos_f, "lists all console variables/commands/aliases containing the specified string in the name or description");
 
 	Cmd_AddCommand ("cvar_lockdefaults", Cvar_LockDefaults_f, "stores the current values of all cvars into their default values, only used once during startup after parsing default.cfg");
 	Cmd_AddCommand ("cvar_resettodefaults_all", Cvar_ResetToDefaults_All_f, "sets all cvars to their locked default values");
