@@ -75,9 +75,9 @@ cvar_t con_nickcompletion_flags = {CVAR_SAVE, "con_nickcompletion_flags", "11", 
 #define NICKS_ALPHANUMERICS_ONLY 8
 #define NICKS_NO_SPACES 16
 
-cvar_t con_completion_playdemo = {CVAR_SAVE, "con_completion_playdemo", "*.dem"};
-cvar_t con_completion_timedemo = {CVAR_SAVE, "con_completion_timedemo", "*.dem"};
-cvar_t con_completion_exec = {CVAR_SAVE, "con_completion_exec", "*.cfg"};
+cvar_t con_completion_playdemo = {CVAR_SAVE, "con_completion_playdemo", "*.dem", "completion pattern for the playdemo command"};
+cvar_t con_completion_timedemo = {CVAR_SAVE, "con_completion_timedemo", "*.dem", "completion pattern for the timedemo command"};
+cvar_t con_completion_exec = {CVAR_SAVE, "con_completion_exec", "*.cfg", "completion pattern for the exec command"};
 
 int con_linewidth;
 int con_vislines;
