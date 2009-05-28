@@ -291,7 +291,7 @@ void Cbuf_Execute (void)
 	char line[MAX_INPUTLINE];
 	char preprocessed[MAX_INPUTLINE];
 	char *firstchar;
-	int quotes;
+	qboolean quotes, comment;
 
 	// LordHavoc: making sure the tokenizebuffer doesn't get filled up by repeated crashes
 	cmd_tokenizebufferpos = 0;
@@ -302,17 +302,31 @@ void Cbuf_Execute (void)
 // find a \n or ; line break
 		text = (char *)cmd_text.data;
 
-		quotes = 0;
-		for (i=0 ; i< cmd_text.cursize ; i++)
+		quotes = false;
+		comment = false;
+		for (i=0 ; i < cmd_text.cursize ; i++)
 		{
-			if (text[i] == '"')
-				quotes ^= 1;
-			// make sure i doesn't get > cursize which causes a negative
-			// size in memmove, which is fatal --blub
-			if (i < (cmd_text.cursize-1) && (text[i] == '\\' && (text[i+1] == '"' || text[i+1] == '\\')))
-				i++;
-			if ( !quotes &&  text[i] == ';')
-				break;	// don't break if inside a quoted string
+			if(!comment)
+			{
+				if (text[i] == '"')
+					quotes = !quotes;
+
+				if(quotes)
+				{
+					// make sure i doesn't get > cursize which causes a negative
+					// size in memmove, which is fatal --blub
+					if (i < (cmd_text.cursize-1) && (text[i] == '\\' && (text[i+1] == '"' || text[i+1] == '\\')))
+						i++;
+				}
+				else
+				{
+					if(text[i] == '/' && text[i + 1] == '/')
+						comment = true;
+					if(text[i] == ';')
+						break;	// don't break if inside a quoted string or comment
+				}
+			}
+
 			if (text[i] == '\r' || text[i] == '\n')
 				break;
 		}
