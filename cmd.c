@@ -1090,33 +1090,31 @@ static void Cmd_Apropos_f(void)
 	}
 
 	count = 0;
-	Con_Printf("Cvars:\n");
 	for (cvar = cvar_vars; cvar; cvar = cvar->next)
 	{
-		if (!matchpattern_with_separator(cvar->name, partial, false, "", false))
-		if (!matchpattern_with_separator(cvar->description, partial, false, "", false))
+		if (!matchpattern_with_separator(cvar->name, partial, true, "", false))
+		if (!matchpattern_with_separator(cvar->description, partial, true, "", false))
 			continue;
-		Con_Printf("^3%s^7: %s\n", cvar->name, cvar->description);
+		Con_Printf("cvar ^3%s^7: %s\n", cvar->name, cvar->description);
 		count++;
 	}
-	Con_Printf("Commands:\n");
 	for (cmd = cmd_functions; cmd; cmd = cmd->next)
 	{
-		if (!matchpattern_with_separator(cmd->name, partial, false, "", false))
-		if (!matchpattern_with_separator(cmd->description, partial, false, "", false))
+		if (!matchpattern_with_separator(cmd->name, partial, true, "", false))
+		if (!matchpattern_with_separator(cmd->description, partial, true, "", false))
 			continue;
-		Con_Printf("^3%s^7: %s\n", cmd->name, cmd->description);
+		Con_Printf("command ^2%s^7: %s\n", cmd->name, cmd->description);
 		count++;
 	}
-	Con_Printf("Aliases:\n");
 	for (alias = cmd_alias; alias; alias = alias->next)
 	{
-		if (!matchpattern_with_separator(alias->name, partial, false, "", false))
-		if (!matchpattern_with_separator(alias->value, partial, false, "", false))
+		if (!matchpattern_with_separator(alias->name, partial, true, "", false))
+		if (!matchpattern_with_separator(alias->value, partial, true, "", false))
 			continue;
-		Con_Printf("^3%s^7: %s", alias->name, alias->value);
+		Con_Printf("alias ^5%s^7: %s", alias->name, alias->value);
 		count++;
 	}
+	Con_Printf("%i result%s\n\n", count, (count > 1) ? "s" : "");
 }
 
 /*
@@ -1434,7 +1432,7 @@ void Cmd_CompleteCommandPrint (const char *partial)
 	// Loop through the command list and print all matches
 	for (cmd = cmd_functions; cmd; cmd = cmd->next)
 		if (!strncasecmp(partial, cmd->name, len))
-			Con_Printf("%s : %s\n", cmd->name, cmd->description);
+			Con_Printf("^2%s^7: %s\n", cmd->name, cmd->description);
 }
 
 /*
@@ -1472,7 +1470,7 @@ void Cmd_CompleteAliasPrint (const char *partial)
 	// Loop through the alias list and print all matches
 	for (alias = cmd_alias; alias; alias = alias->next)
 		if (!strncasecmp(partial, alias->name, len))
-			Con_Printf("%s : %s\n", alias->name, alias->value);
+			Con_Printf("^5%s^7: %s", alias->name, alias->value);
 }
 
 
