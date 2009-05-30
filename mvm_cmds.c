@@ -778,6 +778,13 @@ static void VM_M_getmousepos(void)
 		VectorSet(PRVM_G_VECTOR(OFS_RETURN), in_mouse_x * vid_conwidth.integer / vid.width, in_mouse_y * vid_conheight.integer / vid.height, 0);
 }
 
+//#349 float() isdemo (EXT_CSQC)
+static void VM_M_isdemo (void)
+{
+	VM_SAFEPARMCOUNT(0, VM_M_isdemo);
+	PRVM_G_FLOAT(OFS_RETURN) = cls.demoplayback;
+}
+
 prvm_builtin_t vm_m_builtins[] = {
 NULL,									//   #0 NULL function (not callable)
 VM_checkextension,				//   #1
@@ -1155,7 +1162,7 @@ NULL,									// #345
 NULL,									// #346
 NULL,									// #347
 NULL,									// #348
-NULL,									// #349
+VM_M_isdemo,								// #349
 NULL,									// #350
 NULL,									// #351
 NULL,									// #352
