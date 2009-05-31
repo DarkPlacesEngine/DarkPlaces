@@ -404,7 +404,12 @@ int GL_CheckExtension(const char *minglver_or_ext, const dllfunction_t *funcs, c
 	struct { int major, minor; } min_version, curr_version;
 	int ext;
 
-	ext = !(sscanf(minglver_or_ext, "%d.%d", &min_version.major, &min_version.minor) == 2);
+	if(sscanf(minglver_or_ext, "%d.%d", &min_version.major, &min_version.minor) == 2)
+		ext = 0; // opengl version
+	else if(minglver_or_ext[0] != toupper(minglver_or_ext[0]))
+		ext = -1; // pseudo name
+	else
+		ext = 1; // extension name
 
 	if (ext)
 		Con_DPrintf("checking for %s...  ", minglver_or_ext);
@@ -420,7 +425,7 @@ int GL_CheckExtension(const char *minglver_or_ext, const dllfunction_t *funcs, c
 		return false;
 	}
 
-	if (ext)
+	if (ext == 1) // opengl extension
 	{
 		if (!strstr(gl_extensions ? gl_extensions : "", minglver_or_ext) && !strstr(gl_platformextensions ? gl_platformextensions : "", minglver_or_ext))
 		{
@@ -428,7 +433,8 @@ int GL_CheckExtension(const char *minglver_or_ext, const dllfunction_t *funcs, c
 			return false;
 		}
 	}
-	else
+
+	if(ext == 0) // opengl version
 	{
 		sscanf(gl_version, "%d.%d", &curr_version.major, &curr_version.minor);
 
