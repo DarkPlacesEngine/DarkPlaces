@@ -1113,7 +1113,7 @@ int VID_InitMode (int fullscreen, int *width, int *height, int bpp, int refreshr
 			return false;
 		}
 
-		if (!GL_CheckExtension("1.0", wglfuncs, NULL, false))
+		if (!GL_CheckExtension("wgl", wglfuncs, NULL, false))
 		{
 			VID_Shutdown();
 			Con_Print("wgl functions not found\n");
