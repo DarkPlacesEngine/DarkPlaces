@@ -1480,7 +1480,7 @@ void S_StopChannel (unsigned int channel_ind, qboolean lockmutex)
 	// thread is currently mixing this channel
 	// the SndSys_LockRenderBuffer function uses such a mutex in
 	// threaded sound backends
-	if (lockmutex)
+	if (lockmutex && !simsound)
 		SndSys_LockRenderBuffer();
 	
 	ch = &channels[channel_ind];
@@ -1501,7 +1501,7 @@ void S_StopChannel (unsigned int channel_ind, qboolean lockmutex)
 		ch->fetcher_data = NULL;
 		ch->sfx = NULL;
 	}
-	if (lockmutex)
+	if (lockmutex && !simsound)
 		SndSys_UnlockRenderBuffer();
 }
 
@@ -1549,18 +1549,18 @@ void S_StopAllSounds (void)
 	// stop CD audio because it may be using a faketrack
 	CDAudio_Stop();
 
-	for (i = 0; i < total_channels; i++)
-		S_StopChannel (i, true);
-
-	total_channels = MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS;	// no statics
-	memset(channels, 0, MAX_CHANNELS * sizeof(channel_t));
-
-	// Mute the contents of the submittion buffer
 	if (simsound || SndSys_LockRenderBuffer ())
 	{
 		int clear;
 		size_t memsize;
 
+		for (i = 0; i < total_channels; i++)
+			S_StopChannel (i, false);
+
+		total_channels = MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS;	// no statics
+		memset(channels, 0, MAX_CHANNELS * sizeof(channel_t));
+
+		// Mute the contents of the submittion buffer
 		clear = (snd_renderbuffer->format.width == 1) ? 0x80 : 0;
 		memsize = snd_renderbuffer->maxframes * snd_renderbuffer->format.width * snd_renderbuffer->format.channels;
 		memset(snd_renderbuffer->ring, clear, memsize);
