@@ -1476,17 +1476,18 @@ void S_StopChannel (unsigned int channel_ind, qboolean lockmutex)
 	if (channel_ind >= total_channels)
 		return;
 
+	// we have to lock an audio mutex to prevent crashes if an audio mixer
+	// thread is currently mixing this channel
+	// the SndSys_LockRenderBuffer function uses such a mutex in
+	// threaded sound backends
+	if (lockmutex)
+		SndSys_LockRenderBuffer();
+	
 	ch = &channels[channel_ind];
 	if (ch->sfx != NULL)
 	{
 		sfx_t *sfx = ch->sfx;
 
-		// we have to lock an audio mutex to prevent crashes if an audio mixer
-		// thread is currently mixing this channel
-		// the SndSys_LockRenderBuffer function uses such a mutex in
-		// threaded sound backends
-		if (lockmutex)
-			SndSys_LockRenderBuffer();
 		if (sfx->fetcher != NULL)
 		{
 			snd_fetcher_endsb_t fetcher_endsb = sfx->fetcher->endsb;
@@ -1499,9 +1500,9 @@ void S_StopChannel (unsigned int channel_ind, qboolean lockmutex)
 
 		ch->fetcher_data = NULL;
 		ch->sfx = NULL;
-		if (lockmutex)
-			SndSys_UnlockRenderBuffer();
 	}
+	if (lockmutex)
+		SndSys_UnlockRenderBuffer();
 }
 
 
