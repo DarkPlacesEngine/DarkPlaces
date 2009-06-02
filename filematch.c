@@ -35,7 +35,7 @@ int matchpattern_with_separator(const char *in, const char *pattern, int caseins
 				if (strchr(separators, *in))
 					break;
 				// see if pattern matches at this offset
-				if (matchpattern(in, pattern, caseinsensitive))
+				if (matchpattern_with_separator(in, pattern, caseinsensitive, separators, wildcard_least_one))
 					return 1;
 				// nope, advance to next offset
 				in++;
