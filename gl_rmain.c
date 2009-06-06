@@ -128,6 +128,7 @@ cvar_t r_track_sprites = {CVAR_SAVE, "r_track_sprites", "1", "track SPR_LABEL* s
 cvar_t r_track_sprites_flags = {CVAR_SAVE, "r_track_sprites_flags", "1", "1: Rotate sprites accodringly, 2: Make it a continuous rotation"};
 cvar_t r_track_sprites_scalew = {CVAR_SAVE, "r_track_sprites_scalew", "1", "width scaling of tracked sprites"};
 cvar_t r_track_sprites_scaleh = {CVAR_SAVE, "r_track_sprites_scaleh", "1", "height scaling of tracked sprites"};
+cvar_t r_glsl_saturation = {CVAR_SAVE, "r_glsl_saturation", "1", "saturation multiplier (only working in glsl!)"};
 
 extern cvar_t v_glslgamma;
 
@@ -477,6 +478,9 @@ static const char *builtinshaderstring =
 "#ifdef USEGAMMARAMPS\n"
 "uniform sampler2D Texture_GammaRamps;\n"
 "#endif\n"
+"#ifdef USESATURATION\n"
+"uniform float Saturation;\n"
+"#endif\n"
 "#ifdef USEVERTEXTEXTUREBLEND\n"
 "uniform vec4 TintColor;\n"
 "#endif\n"
@@ -509,6 +513,13 @@ static const char *builtinshaderstring =
 "	gl_FragColor += texture2D(Texture_First, gl_TexCoord[0].xy + PixelSize*UserVec1.x*vec2( 0.707107,  0.707107)) * UserVec1.y;\n"
 "	gl_FragColor += texture2D(Texture_First, gl_TexCoord[0].xy + PixelSize*UserVec1.x*vec2(-0.453990,  0.891007)) * UserVec1.y;\n"
 "	gl_FragColor /= (1 + 5 * UserVec1.y);\n"
+"#endif\n"
+"\n"
+"#ifdef USESATURATION\n"
+"	//apply saturation BEFORE gamma ramps, so v_glslgamma value does not matter\n"
+"	myhalf y = dot(gl_FragColor.rgb, vec3(0.299, 0.587, 0.114));\n"
+"	//gl_FragColor = vec3(y, y, y) + (gl_FragColor.rgb - vec3(y, y, y)) * Saturation;\n"
+"	gl_FragColor.rgb = mix(vec3(y, y, y), gl_FragColor.rgb, Saturation);\n" // TODO: test this on ATI
 "#endif\n"
 "\n"
 "#ifdef USEGAMMARAMPS\n"
@@ -1107,8 +1118,9 @@ typedef enum shaderpermutation_e
 	SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING = 1<<11, // adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
 	SHADERPERMUTATION_GAMMARAMPS = 1<<12, // gamma (postprocessing only)
 	SHADERPERMUTATION_POSTPROCESSING = 1<<13, // user defined postprocessing
-	SHADERPERMUTATION_LIMIT = 1<<14, // size of permutations array
-	SHADERPERMUTATION_COUNT = 14 // size of shaderpermutationinfo array
+	SHADERPERMUTATION_SATURATION = 1<<14, // user defined postprocessing
+	SHADERPERMUTATION_LIMIT = 1<<15, // size of permutations array
+	SHADERPERMUTATION_COUNT = 15 // size of shaderpermutationinfo array
 }
 shaderpermutation_t;
 
@@ -1129,6 +1141,7 @@ shaderpermutationinfo_t shaderpermutationinfo[SHADERPERMUTATION_COUNT] =
 	{"#define USEOFFSETMAPPING_RELIEFMAPPING\n", " reliefmapping"},
 	{"#define USEGAMMARAMPS\n", " gammaramps"},
 	{"#define USEPOSTPROCESSING\n", " postprocessing"},
+	{"#define USESATURATION\n", " saturation"},
 };
 
 // this enum is multiplied by SHADERPERMUTATION_MODEBASE
@@ -1227,6 +1240,7 @@ typedef struct r_glsl_permutation_s
 	int loc_UserVec4;
 	int loc_ClientTime;
 	int loc_PixelSize;
+	int loc_Saturation;
 }
 r_glsl_permutation_t;
 
@@ -2432,6 +2446,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&gl_lightmaps);
 	Cvar_RegisterVariable(&r_test);
 	Cvar_RegisterVariable(&r_batchmode);
+	Cvar_RegisterVariable(&r_glsl_saturation);
 	if (gamemode == GAME_NEHAHRA || gamemode == GAME_TENEBRAE)
 		Cvar_SetValue("r_fullbrights", 0);
 	R_RegisterModule("GL_Main", gl_main_start, gl_main_shutdown, gl_main_newmap);
@@ -3309,7 +3324,7 @@ void R_Bloom_StartFrame(void)
 		Cvar_SetValueQuick(&r_bloom, 0);
 	}
 
-	if (!(r_glsl.integer && (r_glsl_postprocess.integer || (v_glslgamma.integer && !vid_gammatables_trivial) || r_bloom.integer || r_hdr.integer)) && !r_bloom.integer)
+	if (!(r_glsl.integer && (r_glsl_postprocess.integer || r_glsl_saturation.value != 1 || (v_glslgamma.integer && !vid_gammatables_trivial) || r_bloom.integer || r_hdr.integer)) && !r_bloom.integer)
 		screentexturewidth = screentextureheight = 0;
 	if (!r_hdr.integer && !r_bloom.integer)
 		bloomtexturewidth = bloomtextureheight = 0;
@@ -3581,7 +3596,8 @@ static void R_BlendView(void)
 			  (r_bloomstate.texture_bloom ? SHADERPERMUTATION_GLOW : 0)
 			| (r_refdef.viewblend[3] > 0 ? SHADERPERMUTATION_VERTEXTEXTUREBLEND : 0)
 			| ((v_glslgamma.value && !vid_gammatables_trivial) ? SHADERPERMUTATION_GAMMARAMPS : 0)
-			| (r_glsl_postprocess.integer ? SHADERPERMUTATION_POSTPROCESSING : 0);
+			| (r_glsl_postprocess.integer ? SHADERPERMUTATION_POSTPROCESSING : 0)
+			| (r_glsl_saturation.value != 1 ? SHADERPERMUTATION_SATURATION : 0);
 
 		if (r_bloomstate.texture_bloom && !r_bloomstate.hdr)
 		{
@@ -3637,6 +3653,8 @@ static void R_BlendView(void)
 			sscanf(r_glsl_postprocess_uservec4.string, "%f %f %f %f", &a, &b, &c, &d);
 			qglUniform4fARB(r_glsl_permutation->loc_UserVec4, a, b, c, d);
 		}
+		if (r_glsl_permutation->loc_Saturation >= 0)
+			qglUniform1fARB(r_glsl_permutation->loc_Saturation, r_glsl_saturation.value);
 		R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
 		r_refdef.stats.bloom_drawpixels += r_refdef.view.width * r_refdef.view.height;
 		return;
