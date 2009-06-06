@@ -41,6 +41,9 @@ conbuffer_t history;
 #define HIST_TEXTSIZE 262144
 #define HIST_MAXLINES 4096
 
+extern cvar_t	con_textsize;
+
+
 static void Key_History_Init()
 {
 	qfile_t *historyfile;
@@ -402,11 +405,13 @@ Key_Console (int key, int ascii)
 			p = cbd;
 			while (*p)
 			{
-				if (*p == '\n' || *p == '\r' || *p == '\b')
+				if (*p == '\r' && *(p+1) == '\n')
 				{
-					*p++ = 0;
-					break;
+					*p++ = ';';
+					*p++ = ' ';
 				}
+				else if (*p == '\n' || *p == '\r' || *p == '\b')
+					*p++ = ';';
 				p++;
 			}
 #else
@@ -476,6 +481,57 @@ Key_Console (int key, int ascii)
 
 	if (key == K_TAB)
 	{
+		if(keydown[K_CTRL]) // append to the cvar its value
+		{
+			int		cvar_len, cvar_str_len, chars_to_move;
+			char	k;
+			char	cvar[MAX_INPUTLINE];
+			const char *cvar_str;
+			
+			// go to the start of the variable
+			while(--key_linepos)
+			{
+				k = key_line[key_linepos];
+				if(k == '\"' || k == ';' || k == ' ' || k == '\'')
+					break;
+			}
+			key_linepos++;
+			
+			// save the variable name in cvar
+			for(cvar_len=0; (k = key_line[key_linepos + cvar_len]) != 0; cvar_len++)
+			{
+				if(k == '\"' || k == ';' || k == ' ' || k == '\'')
+					break;
+				cvar[cvar_len] = k;
+			}
+			if (cvar_len==0)
+				return;
+			cvar[cvar_len] = 0;
+			
+			// go to the end of the cvar
+			key_linepos += cvar_len;
+			
+			// save the content of the variable in cvar_str
+			cvar_str = Cvar_VariableString(va(cvar));
+			cvar_str_len = strlen(cvar_str);
+			if (cvar_str_len==0)
+				return;
+			
+			// insert space and cvar_str in key_line
+			chars_to_move = strlen(&key_line[key_linepos]);
+			if (key_linepos + 1 + cvar_str_len + chars_to_move < MAX_INPUTLINE)
+			{
+				if (chars_to_move)
+					memmove(&key_line[key_linepos + 1 + cvar_str_len], &key_line[key_linepos], chars_to_move);
+				key_line[key_linepos++] = ' ';
+				memcpy(&key_line[key_linepos], cvar_str, cvar_str_len);
+				key_linepos += cvar_str_len;
+				key_line[key_linepos + chars_to_move] = 0;
+			}
+			else
+				Con_Printf("Couldn't append cvar value, edit line too long.\n");
+			return;
+		}
 		// Enhanced command completion
 		// by EvilTypeGuy eviltypeguy@qeradiant.com
 		// Thanks to Fett, Taniwha
@@ -498,6 +554,15 @@ Key_Console (int key, int ascii)
 			int		pos;
 			char	k;
 			pos = key_linepos-1;
+
+			if(pos) // skip all "; ' after the word
+				while(--pos)
+				{
+					k = key_line[pos];
+					if (!(k == '\"' || k == ';' || k == ' ' || k == '\''))
+						break;
+				}
+
 			if(pos)
 				while(--pos)
 				{
@@ -519,6 +584,8 @@ Key_Console (int key, int ascii)
 					pos-=5;
 				else
 				{
+					if(pos-1 > 0 && key_line[pos-1] == STRING_COLOR_TAG && key_line[pos] == STRING_COLOR_TAG) // consider ^^ as a character
+						pos--;
 					pos--;
 					break;
 				}
@@ -562,12 +629,21 @@ Key_Console (int key, int ascii)
 			char	k;
 			len = (int)strlen(key_line);
 			pos = key_linepos;
+
 			while(++pos < len)
 			{
 				k = key_line[pos];
 				if(k == '\"' || k == ';' || k == ' ' || k == '\'')
 					break;
 			}
+			
+			if (pos < len) // skip all "; ' after the word
+				while(++pos < len)
+				{
+					k = key_line[pos];
+					if (!(k == '\"' || k == ';' || k == ' ' || k == '\''))
+						break;
+				}
 			key_linepos = pos;
 		}
 		else if(keydown[K_SHIFT]) // move cursor to the next character ignoring colors
@@ -575,14 +651,22 @@ Key_Console (int key, int ascii)
 			int		pos, len;
 			len = (int)strlen(key_line);
 			pos = key_linepos;
-			// check if there is a color tag right after the cursor
-			if (key_line[pos] == STRING_COLOR_TAG)
-			{
-				if(isdigit(key_line[pos+1]))
-					pos+=1;
-				else if(key_line[pos+1] == STRING_COLOR_RGB_TAG_CHAR && isxdigit(key_line[pos+2]) && isxdigit(key_line[pos+3]) && isxdigit(key_line[pos+4]))
-					pos+=4;
-			}
+			
+			// go beyond all initial consecutive color tags, if any
+			if(pos < len)
+				while (key_line[pos] == STRING_COLOR_TAG)
+				{
+					if(isdigit(key_line[pos+1]))
+						pos+=2;
+					else if(key_line[pos+1] == STRING_COLOR_RGB_TAG_CHAR && isxdigit(key_line[pos+2]) && isxdigit(key_line[pos+3]) && isxdigit(key_line[pos+4]))
+						pos+=5;
+					else
+						break;
+				}
+			
+			// skip the char
+			if (key_line[pos] == STRING_COLOR_TAG && key_line[pos+1] == STRING_COLOR_TAG) // consider ^^ as a character
+				pos++;
 			pos++;
 			
 			// now go beyond all next consecutive color tags, if any
@@ -622,27 +706,73 @@ Key_Console (int key, int ascii)
 		Key_History_Down();
 		return;
 	}
-
-	if (key == K_PGUP || key == K_KP_PGUP || key == K_MWHEELUP)
+	// ~1.0795 = 82/76  using con_textsize 64 76 is height of the char, 6 is the distance between 2 lines
+	if (key == K_PGUP || key == K_KP_PGUP)
 	{
 		if(keydown[K_CTRL])
 		{
-			con_backscroll += 3;
+			con_backscroll += (int)floor((vid_conheight.integer >> 2) / con_textsize.integer)-1;
 		}
 		else
-			con_backscroll += ((int) vid_conheight.integer >> 5);
+			con_backscroll += (int)floor((vid_conheight.integer >> 1) / con_textsize.integer)-3;
 		return;
 	}
 
-	if (key == K_PGDN || key == K_KP_PGDN || key == K_MWHEELDOWN)
+	if (key == K_PGDN || key == K_KP_PGDN)
 	{
 		if(keydown[K_CTRL])
 		{
-			con_backscroll -= 3;
+			con_backscroll -= (int)floor((vid_conheight.integer >> 2) / con_textsize.integer)-1;
 		}
 		else
-			con_backscroll -= ((int) vid_conheight.integer >> 5);
+			con_backscroll -= (int)floor((vid_conheight.integer >> 1) / con_textsize.integer)-3;
 		return;
+	}
+ 
+	if (key == K_MWHEELUP)
+	{
+		if(keydown[K_CTRL])
+			con_backscroll += 1;
+		else if(keydown[K_SHIFT])
+			con_backscroll += (int)floor((vid_conheight.integer >> 2) / con_textsize.integer)-1;
+		else
+			con_backscroll += 5;
+		return;
+	}
+
+	if (key == K_MWHEELDOWN)
+	{
+		if(keydown[K_CTRL])
+			con_backscroll -= 1;
+		else if(keydown[K_SHIFT])
+			con_backscroll -= (int)floor((vid_conheight.integer >> 2) / con_textsize.integer)-1;
+		else
+			con_backscroll -= 5;
+		return;
+	}
+
+	if (keydown[K_CTRL])
+	{
+		// text zoom in
+		if (key == '+' || key == K_KP_PLUS)
+		{
+			if (con_textsize.integer < 128)
+				Cvar_SetValueQuick(&con_textsize, con_textsize.integer + 1);
+			return;
+		}
+		// text zoom out
+		if (key == '-' || key == K_KP_MINUS)
+		{
+			if (con_textsize.integer > 1)
+				Cvar_SetValueQuick(&con_textsize, con_textsize.integer - 1);
+			return;
+		}
+		// text zoom reset
+		if (key == '0' || key == K_KP_INS)
+		{
+			Cvar_SetValueQuick(&con_textsize, atoi(Cvar_VariableDefString("con_textsize")));
+			return;
+		}
 	}
 
 	if (key == K_HOME || key == K_KP_HOME)
