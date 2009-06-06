@@ -518,8 +518,8 @@ static const char *builtinshaderstring =
 "#ifdef USESATURATION\n"
 "	//apply saturation BEFORE gamma ramps, so v_glslgamma value does not matter\n"
 "	myhalf y = dot(gl_FragColor.rgb, vec3(0.299, 0.587, 0.114));\n"
-"	//gl_FragColor = vec3(y, y, y) + (gl_FragColor.rgb - vec3(y, y, y)) * Saturation;\n"
-"	gl_FragColor.rgb = mix(vec3(y, y, y), gl_FragColor.rgb, Saturation);\n" // TODO: test this on ATI
+"	//gl_FragColor = vec3(y) + (gl_FragColor.rgb - vec3(y)) * Saturation;\n"
+"	gl_FragColor.rgb = mix(vec3(y), gl_FragColor.rgb, Saturation);\n" // TODO: test this on ATI
 "#endif\n"
 "\n"
 "#ifdef USEGAMMARAMPS\n"
