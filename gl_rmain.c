@@ -5517,12 +5517,28 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 			float *out_tc = rsurface.array_generatedtexcoordtexture2f + 2 * surface->num_firstvertex;
 			for (j = 0;j < surface->num_vertices;j++, vertex += 3, normal += 3, out_tc += 2)
 			{
-				float l, d, eyedir[3];
-				VectorSubtract(rsurface.modelorg, vertex, eyedir);
-				l = 0.5f / VectorLength(eyedir);
-				d = DotProduct(normal, eyedir)*2;
-				out_tc[0] = 0.5f + (normal[1]*d - eyedir[1])*l;
-				out_tc[1] = 0.5f - (normal[2]*d - eyedir[2])*l;
+				// identical to Q3A's method, but executed in worldspace so
+				// carried models can be shiny too
+
+				float viewer[3], d, reflected[3], worldreflected[3];
+
+				VectorSubtract(rsurface.modelorg, vertex, viewer);
+				// VectorNormalize(viewer);
+
+				d = DotProduct(normal, viewer);
+
+				reflected[0] = normal[0]*2*d - viewer[0];
+				reflected[1] = normal[1]*2*d - viewer[1];
+				reflected[2] = normal[2]*2*d - viewer[2];
+				// note: this is proportinal to viewer, so we can normalize later
+
+				Matrix4x4_Transform3x3(&rsurface.matrix, reflected, worldreflected);
+				VectorNormalize(worldreflected);
+
+				// note: this sphere map only uses world x and z!
+				// so positive and negative y will LOOK THE SAME.
+				out_tc[0] = 0.5 + 0.5 * worldreflected[1];
+				out_tc[1] = 0.5 - 0.5 * worldreflected[2];
 			}
 		}
 		rsurface.texcoordtexture2f               = rsurface.array_generatedtexcoordtexture2f;
