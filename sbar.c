@@ -104,6 +104,7 @@ cvar_t sbar_gametime = {CVAR_SAVE, "sbar_gametime", "1", "shows an overlay for t
 cvar_t sbar_miniscoreboard_size = {CVAR_SAVE, "sbar_miniscoreboard_size", "-1", "sets the size of the mini deathmatch overlay in items, or disables it when set to 0, or sets it to a sane default when set to -1"};
 cvar_t sbar_flagstatus_right = {CVAR_SAVE, "sbar_flagstatus_right", "0", "moves Nexuiz flag status icons to the right"};
 cvar_t sbar_flagstatus_pos = {CVAR_SAVE, "sbar_flagstatus_pos", "115", "pixel position of the Nexuiz flag status icons, from the bottom"};
+cvar_t sbar_info_pos = {CVAR_SAVE, "sbar_info_pos", "0", "pixel position of the info strings (such as ahowfps), from the bottom"};
 
 cvar_t cl_deathscoreboard = {0, "cl_deathscoreboard", "1", "shows scoreboard (+showscores) while dead"};
 
@@ -389,6 +390,7 @@ void Sbar_Init (void)
 	Cvar_RegisterVariable(&sbar_scorerank);
 	Cvar_RegisterVariable(&sbar_gametime);
 	Cvar_RegisterVariable(&sbar_miniscoreboard_size);
+	Cvar_RegisterVariable(&sbar_info_pos);
 	Cvar_RegisterVariable(&cl_deathscoreboard);
 
 	Cvar_RegisterVariable(&crosshair_color_red);
@@ -1172,7 +1174,7 @@ void Sbar_ShowFPS(void)
 		fps_height = fps_scaley * ((soundstring[0] != 0) + (fpsstring[0] != 0) + (timestring[0] != 0) + (datestring[0] != 0) + (speedstring[0] != 0) + (topspeedstring[0] != 0));
 		//fps_y = vid_conheight.integer - sb_lines; // yes this may draw over the sbar
 		//fps_y = bound(0, fps_y, vid_conheight.integer - fps_height);
-		fps_y = vid_conheight.integer - fps_height;
+		fps_y = vid_conheight.integer - sbar_info_pos.integer - fps_height;
 		if (soundstring[0])
 		{
 			fps_x = vid_conwidth.integer - DrawQ_TextWidth_Font(soundstring, 0, true, FONT_INFOBAR) * fps_scalex;
