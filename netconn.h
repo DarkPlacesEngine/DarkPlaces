@@ -62,6 +62,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // CCREQ_RULE_INFO
 //		string	rule
 //
+// CCREQ_RCON
+//		string	password
+//		string	command
+//
 //
 //
 // CCREP_ACCEPT
@@ -89,6 +93,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // CCREP_RULE_INFO
 //		string	rule
 //		string	value
+//
+// CCREP_RCON
+//		string	reply
 
 //	note:
 //		There are two address forms used above.  The short form is just a
@@ -104,12 +111,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define CCREQ_SERVER_INFO	0x02
 #define CCREQ_PLAYER_INFO	0x03
 #define CCREQ_RULE_INFO		0x04
+#define CCREQ_RCON		0x05 // RocketGuy: ProQuake rcon support
 
 #define CCREP_ACCEPT		0x81
 #define CCREP_REJECT		0x82
 #define CCREP_SERVER_INFO	0x83
 #define CCREP_PLAYER_INFO	0x84
 #define CCREP_RULE_INFO		0x85
+#define CCREP_RCON		0x86 // RocketGuy: ProQuake rcon support
 
 typedef struct netconn_s
 {
