@@ -972,7 +972,7 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 	BOUNDCVAR(v_gamma, 0.1, 5);
 	BOUNDCVAR(v_contrast, 1, 5);
 	BOUNDCVAR(v_brightness, 0, 0.8);
-	BOUNDCVAR(v_contrastboost, 0.0625, 16);
+	//BOUNDCVAR(v_contrastboost, 0.0625, 16);
 	BOUNDCVAR(v_color_black_r, 0, 0.8);
 	BOUNDCVAR(v_color_black_g, 0, 0.8);
 	BOUNDCVAR(v_color_black_b, 0, 0.8);
