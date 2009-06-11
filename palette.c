@@ -173,14 +173,18 @@ void BuildGammaTable8(float prescale, float gamma, float scale, float base, floa
 {
 	int i, adjusted;
 	double invgamma;
-	double t;
+	double t, d;
 
 	invgamma = 1.0 / gamma;
 	prescale /= (double) (rampsize - 1);
 	for (i = 0;i < rampsize;i++)
 	{
 		t = i * prescale;
-		t = contrastboost * t / ((contrastboost - 1) * t + 1);
+		d = ((contrastboost - 1) * t + 1);
+		if(d == 0)
+			t = 0; // we could just as well assume 1 here, depending on which side of the division by zero we want to be
+		else
+			t = contrastboost * t / d;
 		adjusted = (int) (255.0 * (pow(t, invgamma) * scale + base) + 0.5);
 		out[i] = bound(0, adjusted, 255);
 	}
