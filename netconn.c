@@ -1852,6 +1852,12 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			NetConn_ClientParsePacket_ServerList_UpdateCache(n);
 
 			break;
+		case CCREP_RCON: // RocketGuy: ProQuake rcon support
+			if (developer.integer >= 10)
+				Con_Printf("Datagram_ParseConnectionless: received CCREP_RCON from %s.\n", addressstring2);
+
+			Con_Printf("%s\n", MSG_ReadString());
+			break;
 		case CCREP_PLAYER_INFO:
 			// we got a CCREP_PLAYER_INFO??
 			//if (developer.integer >= 10)
