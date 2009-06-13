@@ -1529,6 +1529,8 @@ void PRVM_FindOffsets(void)
 	prog->fieldoffsets.viewmodelforclient             = PRVM_ED_FindFieldOffset("viewmodelforclient");
 	prog->fieldoffsets.viewzoom                       = PRVM_ED_FindFieldOffset("viewzoom");
 	prog->fieldoffsets.yaw_speed                      = PRVM_ED_FindFieldOffset("yaw_speed");
+	prog->fieldoffsets.bouncefactor                   = PRVM_ED_FindFieldOffset("bouncefactor");
+	prog->fieldoffsets.bouncestop                     = PRVM_ED_FindFieldOffset("bouncestop");
 	prog->funcoffsets.CSQC_ConsoleCommand             = PRVM_ED_FindFunctionOffset("CSQC_ConsoleCommand");
 	prog->funcoffsets.CSQC_Ent_Remove                 = PRVM_ED_FindFunctionOffset("CSQC_Ent_Remove");
 	prog->funcoffsets.CSQC_Ent_Spawn                  = PRVM_ED_FindFunctionOffset("CSQC_Ent_Spawn");
