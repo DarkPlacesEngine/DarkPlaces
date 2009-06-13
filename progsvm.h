@@ -226,6 +226,8 @@ typedef struct prvm_prog_fieldoffsets_s
 	int viewmodelforclient; // ssqc
 	int viewzoom; // ssqc
 	int yaw_speed; // ssqc / csqc
+	int bouncefactor; // ssqc
+	int bouncestop; // ssqc
 }
 prvm_prog_fieldoffsets_t;
 
