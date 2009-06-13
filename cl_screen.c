@@ -59,6 +59,7 @@ cvar_t cl_demo_mousegrab = {0, "cl_demo_mousegrab", "0", "Allows reading the mou
 
 extern cvar_t r_glsl;
 extern cvar_t v_glslgamma;
+extern cvar_t sbar_info_pos;
 #define WANT_SCREENSHOT_HWGAMMA (scr_screenshot_hwgamma.integer && !(r_glsl.integer && v_glslgamma.integer))
 
 int jpeg_supported = false;
@@ -305,7 +306,7 @@ void SCR_DrawNetGraph (void)
 
 	index = 0;
 	netgraph_x = (vid_conwidth.integer + separator2) - (1 + (index % netgraphsperrow)) * (barwidth * NETGRAPH_PACKETS * 2 + separator1 + separator2);
-	netgraph_y = (vid_conheight.integer - 48 + separator2) - (1 + (index / netgraphsperrow)) * (barheight + textsize + separator2);
+	netgraph_y = (vid_conheight.integer - 48 - sbar_info_pos.integer + separator2) - (1 + (index / netgraphsperrow)) * (barheight + textsize + separator2);
 	SCR_DrawNetGraph_DrawConnection_Client(cls.netcon, netgraph_x, netgraph_y, barwidth, barheight, bardivide, "incoming", separator1, "outgoing", textsize);
 	index++;
 

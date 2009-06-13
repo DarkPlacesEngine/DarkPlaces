@@ -512,7 +512,7 @@ Key_Console (int key, int ascii)
 			key_linepos += cvar_len;
 			
 			// save the content of the variable in cvar_str
-			cvar_str = Cvar_VariableString(va(cvar));
+			cvar_str = Cvar_VariableString(cvar);
 			cvar_str_len = strlen(cvar_str);
 			if (cvar_str_len==0)
 				return;
