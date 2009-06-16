@@ -24,9 +24,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // LordHavoc: this is pointless with a good C library
 //#define MEMCLUMPING
 
-#define POOLNAMESIZE 128
-// if set this pool will be printed in memlist reports
-#define POOLFLAG_TEMP 1
+// div0: heap overflow detection paranoia
+#define MEMPARANOIA 1
+
 #if MEMCLUMPING
 // give malloc padding so we can't waste most of a page at the end
 #define MEMCLUMPSIZE (65536 - 1536)
@@ -34,11 +34,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MEMUNIT 8
 #define MEMBITS (MEMCLUMPSIZE / MEMUNIT)
 #define MEMBITINTS (MEMBITS / 32)
-#define MEMCLUMP_SENTINEL 0xABADCAFE
 #endif
 
-#define MEMHEADER_SENTINEL1 0xDEADF00D
-#define MEMHEADER_SENTINEL2 0xDF
+#define POOLNAMESIZE 128
+// if set this pool will be printed in memlist reports
+#define POOLFLAG_TEMP 1
 
 typedef struct memheader_s
 {

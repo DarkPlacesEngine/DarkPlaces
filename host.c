@@ -925,6 +925,10 @@ void Host_Main(void)
 				Sys_Sleep((int)wait);
 		}
 
+#if MEMPARANOIA
+		Mem_CheckSentinelsGlobal();
+#endif
+
 		// if there is some time remaining from this frame, reset the timers
 		if (cl_timer >= 0)
 			cl_timer = 0;
