@@ -987,7 +987,7 @@ void SCR_CaptureVideo_Ogg_BeginVideo()
 		}
 		format->yuvi = -1; // -1: no frame valid yet, write into 0
 
-		FindFraction(cls.capturevideo.framerate, &num, &denom, 1001);
+		FindFraction(cls.capturevideo.framerate / cls.capturevideo.framestep, &num, &denom, 1001);
 		ti.fps_numerator = num;
 		ti.fps_denominator = denom;
 
