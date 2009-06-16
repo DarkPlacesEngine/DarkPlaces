@@ -466,6 +466,8 @@ typedef struct capturevideostate_s
 {
 	double startrealtime;
 	double framerate;
+	int framestep;
+	int framestepframe;
 	qboolean active;
 	qboolean realtime;
 	qboolean error;

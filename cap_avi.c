@@ -520,7 +520,7 @@ void SCR_CaptureVideo_Avi_BeginVideo()
 		// AVI main header
 		SCR_CaptureVideo_RIFF_Push("LIST", "hdrl", format->canseek ? -1 : 8+56+12+(12+52+8+40+8+68)+(cls.capturevideo.soundrate?(12+12+52+8+18):0)+12+(8+4));
 		SCR_CaptureVideo_RIFF_Push("avih", NULL, 56);
-		SCR_CaptureVideo_RIFF_Write32((int)(1000000.0 / cls.capturevideo.framerate)); // microseconds per frame
+		SCR_CaptureVideo_RIFF_Write32((int)(1000000.0 / (cls.capturevideo.framerate / cls.capturevideo.framestep))); // microseconds per frame
 		SCR_CaptureVideo_RIFF_Write32(0); // max bytes per second
 		SCR_CaptureVideo_RIFF_Write32(0); // padding granularity
 		SCR_CaptureVideo_RIFF_Write32(0x910); // flags (AVIF_HASINDEX | AVIF_ISINTERLEAVED | AVIF_TRUSTCKTYPE)
@@ -548,7 +548,7 @@ void SCR_CaptureVideo_Avi_BeginVideo()
 		SCR_CaptureVideo_RIFF_Write16(0); // language
 		SCR_CaptureVideo_RIFF_Write32(0); // initial frames
 		// find an ideal divisor for the framerate
-		FindFraction(cls.capturevideo.framerate, &n, &d, 1000);
+		FindFraction(cls.capturevideo.framerate / cls.capturevideo.framestep, &n, &d, 1000);
 		SCR_CaptureVideo_RIFF_Write32(d); // samples/second divisor
 		SCR_CaptureVideo_RIFF_Write32(n); // samples/second multiplied by divisor
 		SCR_CaptureVideo_RIFF_Write32(0); // start
@@ -597,7 +597,7 @@ void SCR_CaptureVideo_Avi_BeginVideo()
 		SCR_CaptureVideo_RIFF_Push("vprp", NULL, 68);
 		SCR_CaptureVideo_RIFF_Write32(0); // VideoFormatToken
 		SCR_CaptureVideo_RIFF_Write32(0); // VideoStandard
-		SCR_CaptureVideo_RIFF_Write32((int)cls.capturevideo.framerate); // dwVerticalRefreshRate (bogus)
+		SCR_CaptureVideo_RIFF_Write32((int)(cls.capturevideo.framerate / cls.capturevideo.framestep)); // dwVerticalRefreshRate (bogus)
 		SCR_CaptureVideo_RIFF_Write32(width); // dwHTotalInT
 		SCR_CaptureVideo_RIFF_Write32(height); // dwVTotalInLines
 		FindFraction(aspect, &n, &d, 1000);

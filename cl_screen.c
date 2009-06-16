@@ -41,6 +41,7 @@ cvar_t cl_capturevideo_fps = {CVAR_SAVE, "cl_capturevideo_fps", "30", "how many 
 cvar_t cl_capturevideo_nameformat = {CVAR_SAVE, "cl_capturevideo_nameformat", "dpvideo", "prefix for saved videos (the date is encoded using strftime escapes)"};
 cvar_t cl_capturevideo_number = {CVAR_SAVE, "cl_capturevideo_number", "1", "number to append to video filename, incremented each time a capture begins"};
 cvar_t cl_capturevideo_ogg = {CVAR_SAVE, "cl_capturevideo_ogg", "1", "save captured video data as Ogg/Vorbis/Theora streams"};
+cvar_t cl_capturevideo_framestep = {CVAR_SAVE, "cl_capturevideo_framestep", "1", "when set to n >= 1, render n frames to capture one (useful for motion blur like effects)"};
 cvar_t r_letterbox = {0, "r_letterbox", "0", "reduces vertical height of view to simulate a letterboxed movie effect (can be used by mods for cutscenes)"};
 cvar_t r_stereo_separation = {0, "r_stereo_separation", "4", "separation distance of eyes in the world (negative values are only useful for cross-eyed viewing)"};
 cvar_t r_stereo_sidebyside = {0, "r_stereo_sidebyside", "0", "side by side views for those who can't afford glasses but can afford eye strain (note: use a negative r_stereo_separation if you want cross-eyed viewing)"};
@@ -870,6 +871,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&cl_capturevideo_nameformat);
 	Cvar_RegisterVariable (&cl_capturevideo_number);
 	Cvar_RegisterVariable (&cl_capturevideo_ogg);
+	Cvar_RegisterVariable (&cl_capturevideo_framestep);
 	Cvar_RegisterVariable (&r_letterbox);
 	Cvar_RegisterVariable(&r_stereo_separation);
 	Cvar_RegisterVariable(&r_stereo_sidebyside);
@@ -978,7 +980,8 @@ void SCR_CaptureVideo_BeginVideo(void)
 	cls.capturevideo.width = width;
 	cls.capturevideo.height = height;
 	cls.capturevideo.active = true;
-	cls.capturevideo.framerate = bound(1, cl_capturevideo_fps.value, 1001);
+	cls.capturevideo.framerate = bound(1, cl_capturevideo_fps.value, 1001) * bound(1, cl_capturevideo_framestep.integer, 64);
+	cls.capturevideo.framestep = cl_capturevideo_framestep.integer;
 	cls.capturevideo.soundrate = S_GetSoundRate();
 	cls.capturevideo.soundchannels = S_GetSoundChannels();
 	cls.capturevideo.startrealtime = realtime;
@@ -1141,10 +1144,13 @@ static void SCR_ScaleDownBGRA(unsigned char *in, int inw, int inh, unsigned char
 	}
 }
 
-void SCR_CaptureVideo_VideoFrame(int newframenum)
+void SCR_CaptureVideo_VideoFrame(int newframestepframenum)
 {
 	int x = 0, y = 0;
 	int width = cls.capturevideo.width, height = cls.capturevideo.height;
+
+	if(newframestepframenum == cls.capturevideo.framestepframe)
+		return;
 
 	CHECKGLERROR
 	//return SCR_ScreenShot(filename, cls.capturevideo.buffer, cls.capturevideo.buffer + vid.width * vid.height * 3, cls.capturevideo.buffer + vid.width * vid.height * 6, 0, 0, vid.width, vid.height, false, false, false, jpeg, true);
@@ -1153,8 +1159,8 @@ void SCR_CaptureVideo_VideoFrame(int newframenum)
 	qglReadPixels (x, y, vid.width, vid.height, GL_BGRA, GL_UNSIGNED_BYTE, cls.capturevideo.screenbuffer);CHECKGLERROR
 	SCR_ScaleDownBGRA (cls.capturevideo.screenbuffer, vid.width, vid.height, cls.capturevideo.outbuffer, width, height);
 
-	cls.capturevideo.videoframes(newframenum - cls.capturevideo.frame);
-	cls.capturevideo.frame = newframenum;
+	cls.capturevideo.videoframes(newframestepframenum - cls.capturevideo.framestepframe);
+	cls.capturevideo.framestepframe = newframestepframenum;
 
 	if(cl_capturevideo_printfps.integer)
 	{
@@ -1185,7 +1191,7 @@ void SCR_CaptureVideo(void)
 	{
 		if (!cls.capturevideo.active)
 			SCR_CaptureVideo_BeginVideo();
-		if (cls.capturevideo.framerate != cl_capturevideo_fps.value)
+		if (cls.capturevideo.framerate != cl_capturevideo_fps.value * cl_capturevideo_framestep.integer)
 		{
 			Con_Printf("You can not change the video framerate while recording a video.\n");
 			Cvar_SetValueQuick(&cl_capturevideo_fps, cls.capturevideo.framerate);
@@ -1209,7 +1215,8 @@ void SCR_CaptureVideo(void)
 			return;
 		}
 		// write frames
-		SCR_CaptureVideo_VideoFrame(newframenum);
+		SCR_CaptureVideo_VideoFrame(newframenum / cls.capturevideo.framestep);
+		cls.capturevideo.frame = newframenum;
 		if (cls.capturevideo.error)
 		{
 			Cvar_SetValueQuick(&cl_capturevideo, 0);
