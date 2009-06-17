@@ -762,4 +762,39 @@ void Cvar_SetA_f (void)
 	Cvar_Get(Cmd_Argv(1), Cmd_Argv(2), CVAR_SAVE, Cmd_Argc() > 3 ? Cmd_Argv(3) : NULL);
 }
 
-
+#ifdef FILLALLCVARSWITHRUBBISH
+void Cvar_FillAll_f()
+{
+	char *buf, *p, *q;
+	int n, i;
+	cvar_t *var;
+	qboolean verify;
+	if(Cmd_Argc() != 2)
+	{
+		Con_Printf("Usage: %s length to plant rubbish\n", Cmd_Argv(0));
+		Con_Printf("Usage: %s -length to verify that the rubbish is still there\n", Cmd_Argv(0));
+		return;
+	}
+	n = atoi(Cmd_Argv(1));
+	verify = (n < 0);
+	if(verify)
+		n = -n;
+	buf = Z_Malloc(n + 1);
+	buf[n] = 0;
+	for(var = cvar_vars; var; var = var->next)
+	{
+		for(i = 0, p = buf, q = var->name; i < n; ++i)
+		{
+			*p++ = *q++;
+			if(!*q)
+				q = var->name;
+		}
+		if(verify && strcmp(var->string, buf))
+		{
+			Con_Printf("\n%s does not contain the right rubbish, either this is the first run or a possible overrun was detected, or something changed it intentionally; it DOES contain: %s\n", var->name, var->string);
+		}
+		Cvar_SetQuick(var, buf);
+	}
+	Z_Free(buf);
+}
+#endif /* FILLALLCVARSWITHRUBBISH */
