@@ -35,6 +35,16 @@ static int r_frame = 0; // used only by R_GetCurrentTexture
 //
 r_refdef_t r_refdef;
 
+cvar_t r_motionblur = {CVAR_SAVE, "r_motionblur", "0", "motionblur frame-by-frame alpha control {0 to 1} - 0.7 recommended"};
+cvar_t r_damageblur = {CVAR_SAVE, "r_damageblur", "0", "motionblur based on damage; requires r_motionblur to have a value"};
+cvar_t r_motionblur_vmin = {CVAR_SAVE, "r_motionblur_vmin", "300", "velocity at which there is minimum blur"};
+cvar_t r_motionblur_vmax = {CVAR_SAVE, "r_motionblur_vmax", "600", "velocity at which there is full blur"};
+cvar_t r_motionblur_bmin = {CVAR_SAVE, "r_motionblur_bmin", "0.5", "velocity at which there is no blur yet (may be negative to always have some blur)"};
+cvar_t r_motionblur_vtime = {CVAR_SAVE, "r_motionblur_vcoeff", "0.05", "sliding average reaction time for velocity"};
+cvar_t r_motionblur_maxblur = {CVAR_SAVE, "r_motionblur_maxblur", "0.88", "cap for the alpha level of the motion blur variable"};
+cvar_t r_motionblur_randomize = {CVAR_SAVE, "r_motionblur_randomize", "0.01", "randomizing coefficient to fix ghosting"};
+cvar_t r_motionblur_debug = {0, "r_motionblur_debug", "0", "outputs current motionblur alpha value"};
+
 cvar_t r_depthfirst = {CVAR_SAVE, "r_depthfirst", "0", "renders a depth-only version of the scene before normal rendering begins to eliminate overdraw, values: 0 = off, 1 = world depth, 2 = world and model depth"};
 cvar_t r_useinfinitefarclip = {CVAR_SAVE, "r_useinfinitefarclip", "1", "enables use of a special kind of projection matrix that has an extremely large farclip"};
 cvar_t r_nearclip = {0, "r_nearclip", "1", "distance from camera of nearclip plane" };
@@ -142,7 +152,7 @@ static struct r_bloomstate_s
 	int bloomwidth, bloomheight;
 
 	int screentexturewidth, screentextureheight;
-	rtexture_t *texture_screen;
+	rtexture_t *texture_screen; // also used for motion blur if enabled!
 
 	int bloomtexturewidth, bloomtextureheight;
 	rtexture_t *texture_bloom;
@@ -2376,6 +2386,15 @@ void GL_Main_Init(void)
 		Cvar_RegisterVariable (&gl_fogend);
 		Cvar_RegisterVariable (&gl_skyclip);
 	}
+	Cvar_RegisterVariable(&r_motionblur);
+	Cvar_RegisterVariable(&r_motionblur_maxblur);
+	Cvar_RegisterVariable(&r_motionblur_bmin);
+	Cvar_RegisterVariable(&r_motionblur_vmin);
+	Cvar_RegisterVariable(&r_motionblur_vmax);
+	Cvar_RegisterVariable(&r_motionblur_vtime);
+	Cvar_RegisterVariable(&r_motionblur_randomize);
+	Cvar_RegisterVariable(&r_damageblur);
+	Cvar_RegisterVariable(&r_motionblur_debug);
 	Cvar_RegisterVariable(&r_depthfirst);
 	Cvar_RegisterVariable(&r_useinfinitefarclip);
 	Cvar_RegisterVariable(&r_nearclip);
@@ -3318,13 +3337,14 @@ void R_Bloom_StartFrame(void)
 		for (bloomtextureheight  = 1;bloomtextureheight  < r_bloomstate.bloomheight;bloomtextureheight  *= 2);
 	}
 
-	if ((r_hdr.integer || r_bloom.integer) && ((r_bloom_resolution.integer < 4 || r_bloom_blur.value < 1 || r_bloom_blur.value >= 512) || r_refdef.view.width > gl_max_texture_size || r_refdef.view.height > gl_max_texture_size))
+	if ((r_hdr.integer || r_bloom.integer || r_motionblur.value) && ((r_bloom_resolution.integer < 4 || r_bloom_blur.value < 1 || r_bloom_blur.value >= 512) || r_refdef.view.width > gl_max_texture_size || r_refdef.view.height > gl_max_texture_size))
 	{
 		Cvar_SetValueQuick(&r_hdr, 0);
 		Cvar_SetValueQuick(&r_bloom, 0);
+		//Cvar_SetValueQuick(&r_motionblur, 0);
 	}
 
-	if (!(r_glsl.integer && (r_glsl_postprocess.integer || r_glsl_saturation.value != 1 || (v_glslgamma.integer && !vid_gammatables_trivial) || r_bloom.integer || r_hdr.integer)) && !r_bloom.integer)
+	if (!(r_glsl.integer && (r_glsl_postprocess.integer || (v_glslgamma.integer && !vid_gammatables_trivial))) && !r_bloom.integer && !r_hdr.integer && !r_motionblur.value)
 		screentexturewidth = screentextureheight = 0;
 	if (!r_hdr.integer && !r_bloom.integer)
 		bloomtexturewidth = bloomtextureheight = 0;
@@ -3580,12 +3600,62 @@ static void R_BlendView(void)
 {
 	if (r_bloomstate.texture_screen)
 	{
-		// copy view into the screen texture
+		// make sure the buffer is available
+		if (r_bloom_blur.value < 1) { Cvar_SetValueQuick(&r_bloom_blur, 1); }
+
 		R_ResetViewRendering2D();
 		R_Mesh_VertexPointer(r_screenvertex3f, 0, 0);
 		R_Mesh_ColorPointer(NULL, 0, 0);
 		R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_screen));
 		GL_ActiveTexture(0);CHECKGLERROR
+
+		if(r_motionblur.value > 0 || r_damageblur.value > 0)
+		{  
+			// declare alpha variable
+			float a;
+			float speed;
+			static float avgspeed;
+
+			speed = VectorLength(cl.movement_velocity);
+
+			a = bound(0, (cl.time - cl.oldtime) / max(0.001, r_motionblur_vtime.value), 1);
+			avgspeed = avgspeed * (1 - a) + speed * a;
+
+			speed = (avgspeed - r_motionblur_vmin.value) / max(1, r_motionblur_vmax.value - r_motionblur_vmin.value);
+			speed = bound(0, speed, 1);
+			speed = speed * (1 - r_motionblur_bmin.value) + r_motionblur_bmin.value;
+
+			// calculate values into a standard alpha
+			a = 1 - exp(-
+					(
+					 (r_motionblur.value * speed / 80)
+					 +
+					 (r_damageblur.value * (cl.cshifts[CSHIFT_DAMAGE].percent / 1600))
+					)
+					/
+					max(0.0001, cl.time - cl.oldtime) // fps independent
+				   );
+
+			a *= lhrandom(1 - r_motionblur_randomize.value, 1 + r_motionblur_randomize.value);
+			a = bound(0, a, r_motionblur_maxblur.value);
+
+			// developer debug of current value
+			if (r_motionblur_debug.value) { Con_Printf("blur alpha = %f\n", a); }
+
+			// apply the blur
+			if (a > 0)
+			{
+				R_SetupGenericShader(true);
+				GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				GL_Color(1, 1, 1, a); // to do: add color changing support for damage blur
+				R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_screen));
+				R_Mesh_TexCoordPointer(0, 2, r_bloomstate.screentexcoord2f, 0, 0);
+				R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
+				r_refdef.stats.bloom_drawpixels += r_refdef.view.width * r_refdef.view.height;
+			}
+		}
+
+		// copy view into the screen texture
 		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_refdef.view.x, vid.height - (r_refdef.view.y + r_refdef.view.height), r_refdef.view.width, r_refdef.view.height);CHECKGLERROR
 		r_refdef.stats.bloom_copypixels += r_refdef.view.width * r_refdef.view.height;
 	}
