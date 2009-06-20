@@ -610,6 +610,8 @@ void Con_MessageMode_f (void)
 {
 	key_dest = key_message;
 	chat_mode = 0; // "say"
+	chat_bufferlen = 0;
+	chat_buffer[0] = 0;
 }
 
 
@@ -622,6 +624,8 @@ void Con_MessageMode2_f (void)
 {
 	key_dest = key_message;
 	chat_mode = 1; // "say_team"
+	chat_bufferlen = 0;
+	chat_buffer[0] = 0;
 }
 
 /*
