@@ -280,9 +280,8 @@ void Mod_FrameGroupify(dp_model_t *mod, const char *buf)
 	mod->numframes = cnt;
 
 	// 1. reallocate
-	if(mod->animscenes)
-		Mem_Free(mod->animscenes);
-	mod->animscenes = (animscene_t *) Mem_Alloc(tempmempool, sizeof(animscene_t) * mod->numframes);
+	// (we do not free the previous animscenes, but model unloading will free the pool owning them, so it's okay)
+	mod->animscenes = (animscene_t *) Mem_Alloc(mod->mempool, sizeof(animscene_t) * mod->numframes);
 
 	// 2. parse
 	Mod_FrameGroupify_ParseGroups(buf, Mod_FrameGroupify_ParseGroups_Store, mod);
