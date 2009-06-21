@@ -256,12 +256,13 @@ void Mod_FrameGroupify_ParseGroups_Count (unsigned int i, int start, int len, fl
 
 void Mod_FrameGroupify_ParseGroups_Store (unsigned int i, int start, int len, float fps, qboolean loop, void *pass)
 {
-	animscene_t *anim = (animscene_t *) pass;
-	dpsnprintf(anim[i].name, sizeof(anim[i].name), "groupified_%d", i);
-	anim[i].firstframe = start;
-	anim[i].framecount = len;
-	anim[i].framerate = fps;
-	anim[i].loop = loop;
+	dp_model_t *mod = (dp_model_t *) pass;
+	animscene_t *anim = &mod->animscenes[i];
+	dpsnprintf(anim->name, sizeof(anim[i].name), "groupified_%d", i);
+	anim->firstframe = bound(0, start, mod->num_poses - 1);
+	anim->framecount = bound(1, len, mod->num_poses - anim->firstframe);
+	anim->framerate = max(1, fps);
+	anim->loop = !!loop;
 	//Con_Printf("frame group %d is %d %d %f %d\n", i, start, len, fps, loop);
 }
 
@@ -271,14 +272,20 @@ void Mod_FrameGroupify(dp_model_t *mod, const char *buf)
 
 	// 0. count
 	cnt = Mod_FrameGroupify_ParseGroups(buf, NULL, NULL);
+	if(!cnt)
+	{
+		Con_Printf("no scene found in framegroups file, aborting\n");
+		return;
+	}
+	mod->numframes = cnt;
 
 	// 1. reallocate
 	if(mod->animscenes)
 		Mem_Free(mod->animscenes);
-	mod->animscenes = (animscene_t *) Mem_Alloc(tempmempool, sizeof(animscene_t) * cnt);
+	mod->animscenes = (animscene_t *) Mem_Alloc(tempmempool, sizeof(animscene_t) * mod->numframes);
 
 	// 2. parse
-	Mod_FrameGroupify_ParseGroups(buf, Mod_FrameGroupify_ParseGroups_Store, mod->animscenes);
+	Mod_FrameGroupify_ParseGroups(buf, Mod_FrameGroupify_ParseGroups_Store, mod);
 }
 
 /*
