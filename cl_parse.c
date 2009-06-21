@@ -1871,10 +1871,11 @@ void CL_MoveLerpEntityStates(entity_t *ent)
 		VectorCopy(ent->state_current.angles, ent->persistent.newangles);
 		ent->persistent.trail_allowed = false;
 
-		if(ent->state_current.frame != ent->state_previous.frame)
+		// if(ent->state_current.frame != ent->state_previous.frame)
+		// do this even if we did change the frame
+		// teleport bit is only used if an animation restart, or a jump, is necessary
+		// so it should be always harmless to do this
 		{
-			// if we ALSO changed animation frame in the process (but ONLY then!)
-			// then let's reset the animation interpolation too
 			ent->render.framegroupblend[0].frame = ent->render.framegroupblend[1].frame = ent->state_current.frame;
 			ent->render.framegroupblend[0].start = ent->render.framegroupblend[1].start = cl.time;
 			ent->render.framegroupblend[0].lerp = 1;ent->render.framegroupblend[1].lerp = 0;
