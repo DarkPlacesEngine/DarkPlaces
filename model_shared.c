@@ -192,6 +192,95 @@ void R_Model_Null_Draw(entity_render_t *ent)
 	return;
 }
 
+
+typedef void (*mod_framegroupify_parsegroups_t) (unsigned int i, int start, int len, float fps, qboolean loop, void *pass);
+
+int Mod_FrameGroupify_ParseGroups(const char *buf, mod_framegroupify_parsegroups_t cb, void *pass)
+{
+	const char *bufptr;
+	int start, len;
+	float fps;
+	unsigned int i;
+	qboolean loop;
+
+	bufptr = buf;
+	i = 0;
+	for(;;)
+	{
+		// an anim scene!
+		if (!COM_ParseToken_Simple(&bufptr, true, false))
+			break;
+		if (!strcmp(com_token, "\n"))
+			continue; // empty line
+		start = atoi(com_token);
+		if (!COM_ParseToken_Simple(&bufptr, true, false))
+			break;
+		if (!strcmp(com_token, "\n"))
+		{
+			Con_Printf("framegroups file: missing number of frames\n");
+			continue;
+		}
+		len = atoi(com_token);
+		if (!COM_ParseToken_Simple(&bufptr, true, false))
+			break;
+		// we default to looping as it's usually wanted, so to NOT loop you append a 0
+		if (strcmp(com_token, "\n"))
+		{
+			fps = atof(com_token);
+			if (!COM_ParseToken_Simple(&bufptr, true, false))
+				break;
+			if (strcmp(com_token, "\n"))
+				loop = atoi(com_token);
+			else
+				loop = true;
+		}
+		else
+		{
+			fps = 20;
+			loop = true;
+		}
+
+		if(cb)
+			cb(i, start, len, fps, loop, pass);
+		++i;
+	}
+
+	return i;
+}
+
+void Mod_FrameGroupify_ParseGroups_Count (unsigned int i, int start, int len, float fps, qboolean loop, void *pass)
+{
+	unsigned int *cnt = (unsigned int *) pass;
+	++*cnt;
+}
+
+void Mod_FrameGroupify_ParseGroups_Store (unsigned int i, int start, int len, float fps, qboolean loop, void *pass)
+{
+	animscene_t *anim = (animscene_t *) pass;
+	dpsnprintf(anim[i].name, sizeof(anim[i].name), "groupified_%d", i);
+	anim[i].firstframe = start;
+	anim[i].framecount = len;
+	anim[i].framerate = fps;
+	anim[i].loop = loop;
+	//Con_Printf("frame group %d is %d %d %f %d\n", i, start, len, fps, loop);
+}
+
+void Mod_FrameGroupify(dp_model_t *mod, const char *buf)
+{
+	unsigned int cnt;
+
+	// 0. count
+	cnt = Mod_FrameGroupify_ParseGroups(buf, NULL, NULL);
+
+	// 1. reallocate
+	if(mod->animscenes)
+		Mem_Free(mod->animscenes);
+	mod->animscenes = (animscene_t *) Mem_Alloc(tempmempool, sizeof(animscene_t) * cnt);
+
+	// 2. parse
+	Mod_FrameGroupify_ParseGroups(buf, Mod_FrameGroupify_ParseGroups_Store, mod->animscenes);
+}
+
 /*
 ==================
 Mod_LoadModel
@@ -326,6 +415,11 @@ dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk)
 		else if (strlen(mod->name) >= 4 && !strcmp(mod->name + strlen(mod->name) - 4, ".map")) Mod_MAP_Load(mod, buf, bufend);
 		else if (num == BSPVERSION || num == 30) Mod_Q1BSP_Load(mod, buf, bufend);
 		else Con_Printf("Mod_LoadModel: model \"%s\" is of unknown/unsupported type\n", mod->name);
+		Mem_Free(buf);
+
+		buf = FS_LoadFile (va("%s.framegroups", mod->name), tempmempool, false, &filesize);
+		if(buf)
+			Mod_FrameGroupify(mod, buf);
 		Mem_Free(buf);
 
 		Mod_BuildVBOs();
