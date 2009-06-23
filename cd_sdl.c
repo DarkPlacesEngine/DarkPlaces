@@ -70,7 +70,7 @@ void CDAudio_SysSetVolume (float volume)
 
 int CDAudio_SysPlay (int track)
 {
-	return SDL_CDPlayTracks(cd, track, 0, 1, 0);
+	return SDL_CDPlayTracks(cd, track-1, 0, 1, 0);
 }
 
 int CDAudio_SysStop (void)
