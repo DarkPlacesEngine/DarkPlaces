@@ -876,7 +876,7 @@ static const char *Cmd_GetCvarValue(const char *var, size_t varlen, cmdalias_t *
 /*
 Cmd_PreprocessString
 
-Preprocesses strings and replaces $*, $param#, $cvar accordingly
+Preprocesses strings and replaces $*, $param#, $cvar accordingly. Also strips comments.
 */
 static void Cmd_PreprocessString( const char *intext, char *outtext, unsigned maxoutlen, cmdalias_t *alias ) {
 	const char *in;
@@ -983,9 +983,11 @@ static void Cmd_PreprocessString( const char *intext, char *outtext, unsigned ma
 					--eat;
 				}
 			}
-		} else {
-			outtext[outlen++] = *in++;
 		}
+		else if( *in == '/' && *(in+1) == '/') // comment line starting
+			break;
+		else 
+			outtext[outlen++] = *in++;
 	}
 	outtext[outlen] = 0;
 }
@@ -1140,7 +1142,7 @@ void Cmd_Init_Commands (void)
 	Cmd_AddCommand ("stuffcmds",Cmd_StuffCmds_f, "execute commandline parameters (must be present in quake.rc script)");
 	Cmd_AddCommand ("exec",Cmd_Exec_f, "execute a script file");
 	Cmd_AddCommand ("echo",Cmd_Echo_f, "print a message to the console (useful in scripts)");
-	Cmd_AddCommand ("alias",Cmd_Alias_f, "create a script function (parameters are passed in as $1 through $9, and $* for all parameters)");
+	Cmd_AddCommand ("alias",Cmd_Alias_f, "create a script function (parameters are passed in as $X (being X a number), $* for all parameters, $X- for all parameters starting from $X). Without arguments show the list of all alias");
 	Cmd_AddCommand ("cmd", Cmd_ForwardToServer, "send a console commandline to the server (used by some mods)");
 	Cmd_AddCommand ("wait", Cmd_Wait_f, "make script execution wait for next rendered frame");
 	Cmd_AddCommand ("set", Cvar_Set_f, "create or change the value of a console variable");
