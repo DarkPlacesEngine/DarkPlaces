@@ -321,7 +321,7 @@ void Cbuf_Execute (void)
 				}
 				else
 				{
-					if(text[i] == '/' && text[i + 1] == '/')
+					if(text[i] == '/' && text[i + 1] == '/' && (i == 0 || ISWHITESPACE(text[i-1])))
 						comment = true;
 					if(text[i] == ';')
 						break;	// don't break if inside a quoted string or comment
