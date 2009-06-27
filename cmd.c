@@ -984,8 +984,6 @@ static void Cmd_PreprocessString( const char *intext, char *outtext, unsigned ma
 				}
 			}
 		}
-		else if( *in == '/' && *(in+1) == '/') // comment line starting
-			break;
 		else 
 			outtext[outlen++] = *in++;
 	}
