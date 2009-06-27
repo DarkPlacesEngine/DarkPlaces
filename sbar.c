@@ -674,8 +674,13 @@ void Sbar_SoloScoreboard (void)
 	// monsters and secrets are now both on the top row
 	if (cl.stats[STAT_TOTALMONSTERS])
 		Sbar_DrawString(8, 4, va("Monsters:%3i /%3i", cl.stats[STAT_MONSTERS], cl.stats[STAT_TOTALMONSTERS]));
+	else if (cl.stats[STAT_MONSTERS]) // LA: Display something if monsters_killed is non-zero, but total_monsters is zero
+		Sbar_DrawString(8, 4, va("Monsters:%3i", cl.stats[STAT_MONSTERS]));
+
 	if (cl.stats[STAT_TOTALSECRETS])
 		Sbar_DrawString(8+22*8, 4, va("Secrets:%3i /%3i", cl.stats[STAT_SECRETS], cl.stats[STAT_TOTALSECRETS]));
+	else if (cl.stats[STAT_SECRETS]) // LA: And similarly for secrets
+		Sbar_DrawString(8+22*8, 4, va("Secrets:%3i", cl.stats[STAT_SECRETS]));
 
 	// figure out the map's filename without path or extension
 	strlcpy(str, FS_FileWithoutPath(cl.worldmodel ? cl.worldmodel->name : ""), sizeof(str));
@@ -2148,16 +2153,30 @@ void Sbar_IntermissionOverlay (void)
 	Sbar_DrawPic (246,64,sb_nums[0][num/10]);
 	Sbar_DrawPic (266,64,sb_nums[0][num%10]);
 
-	Sbar_DrawNum (160, 104, cl.stats[STAT_SECRETS], 3, 0);
-	if (gamemode != GAME_NEXUIZ)
-		Sbar_DrawPic (232, 104, sb_slash);
-	Sbar_DrawNum (240, 104, cl.stats[STAT_TOTALSECRETS], 3, 0);
+// LA: Display as "a" instead of "a/b" if b is 0
+	if(cl.stats[STAT_TOTALSECRETS])
+	{
+		Sbar_DrawNum (160, 104, cl.stats[STAT_SECRETS], 3, 0);
+		if (gamemode != GAME_NEXUIZ)
+			Sbar_DrawPic (232, 104, sb_slash);
+		Sbar_DrawNum (240, 104, cl.stats[STAT_TOTALSECRETS], 3, 0);
+	}
+	else
+	{
+		Sbar_DrawNum (240, 104, cl.stats[STAT_SECRETS], 3, 0);
+	}
 
-	Sbar_DrawNum (160, 144, cl.stats[STAT_MONSTERS], 3, 0);
-	if (gamemode != GAME_NEXUIZ)
-		Sbar_DrawPic (232, 144, sb_slash);
-	Sbar_DrawNum (240, 144, cl.stats[STAT_TOTALMONSTERS], 3, 0);
-
+	if(cl.stats[STAT_TOTALMONSTERS])
+	{
+		Sbar_DrawNum (160, 144, cl.stats[STAT_MONSTERS], 3, 0);
+		if (gamemode != GAME_NEXUIZ)
+			Sbar_DrawPic (232, 144, sb_slash);
+		Sbar_DrawNum (240, 144, cl.stats[STAT_TOTALMONSTERS], 3, 0);
+	}
+	else
+	{
+		Sbar_DrawNum (240, 144, cl.stats[STAT_MONSTERS], 3, 0);
+	}
 }
 
 
