@@ -3120,19 +3120,30 @@ void VM_drawcolorcodedstring(void)
 =========
 VM_stringwidth
 
-float	stringwidth(string text, float allowColorCodes)
+float	stringwidth(string text, float allowColorCodes, float size)
 =========
 */
 void VM_stringwidth(void)
 {
 	const char  *string;
+	float sz, mult; // sz is intended font size so we can later add freetype support, mult is font size multiplier in pixels per character cell
 	int colors;
-	VM_SAFEPARMCOUNT(2,VM_drawstring);
+	VM_SAFEPARMCOUNTRANGE(2,3,VM_drawstring);
+
+	if(prog->argc == 3)
+	{
+		mult = sz = PRVM_G_FLOAT(OFS_PARM2);
+	}
+	else
+	{
+		sz = 8;
+		mult = 1;
+	}
 
 	string = PRVM_G_STRING(OFS_PARM0);
 	colors = (int)PRVM_G_FLOAT(OFS_PARM1);
 
-	PRVM_G_FLOAT(OFS_RETURN) = DrawQ_TextWidth_Font(string, 0, !colors, getdrawfont()); // 1x1 characters, don't actually draw
+	PRVM_G_FLOAT(OFS_RETURN) = DrawQ_TextWidth_Font(string, 0, !colors, getdrawfont()) * mult; // 1x1 characters, don't actually draw
 }
 /*
 =========
