@@ -1196,9 +1196,10 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 		if (s->waterjumptime <= 0)
 		{
 			// apply air speed limit
-			vec_t accel, wishspeed2;
+			vec_t accel, wishspeed2, accelqw;
 			qboolean accelerating;
 
+			accelqw = cl.movevars_airaccel_qw;
 			wishspeed = min(wishspeed, cl.movevars_maxairspeed);
 			if (s->crouched)
 				wishspeed *= 0.5;
@@ -1217,14 +1218,21 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 					if(wishspeed > cl.movevars_maxairstrafespeed)
 						wishspeed = cl.movevars_maxairstrafespeed;
 				if(cl.movevars_airstrafeaccelerate)
+				{
 					accel = cl.movevars_airstrafeaccelerate;
+					if(cl.movevars_airstrafeaccelerate > cl.movevars_airaccelerate)
+						accelqw = 1;
+						// otherwise, CPMA-style air acceleration misbehaves a lot
+						// if partially non-QW acceleration is used (as in, strafing
+						// would get faster than moving forward straight)
+				}
 			}
 			// !CPM
 
 			if(cl.movevars_warsowbunny_turnaccel && accelerating && s->cmd.sidemove == 0 && s->cmd.forwardmove != 0)
 				CL_ClientMovement_Physics_PM_AirAccelerate(s, wishdir, wishspeed2);
 			else
-				CL_ClientMovement_Physics_PM_Accelerate(s, wishdir, wishspeed, accel, cl.movevars_airaccel_qw, cl.movevars_airaccel_sideways_friction / cl.movevars_maxairspeed);
+				CL_ClientMovement_Physics_PM_Accelerate(s, wishdir, wishspeed, accel, accelqw, cl.movevars_airaccel_sideways_friction / cl.movevars_maxairspeed);
 
 			if(cl.movevars_aircontrol)
 				CL_ClientMovement_Physics_CPM_PM_Aircontrol(s, wishdir, wishspeed2);
