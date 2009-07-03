@@ -1215,8 +1215,15 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 			if(s->cmd.forwardmove == 0 && s->cmd.sidemove != 0)
 			{
 				if(cl.movevars_maxairstrafespeed)
+				{
 					if(wishspeed > cl.movevars_maxairstrafespeed)
 						wishspeed = cl.movevars_maxairstrafespeed;
+					if(cl.movevars_maxairstrafespeed < cl.movevars_maxairspeed)
+						accelqw = 1;
+						// otherwise, CPMA-style air acceleration misbehaves a lot
+						// if partially non-QW acceleration is used (as in, strafing
+						// would get faster than moving forward straight)
+				}
 				if(cl.movevars_airstrafeaccelerate)
 				{
 					accel = cl.movevars_airstrafeaccelerate;
