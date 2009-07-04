@@ -2361,7 +2361,7 @@ void Host_PQRcon_f (void)
 	lhnetsocket_t *mysocket;
 	char peer_address[64];
 
-	if (!rcon_password.string || !rcon_password.string[0] || !rcon_secure.integer)
+	if (!rcon_password.string || !rcon_password.string[0] || rcon_secure.integer)
 	{
 		Con_Printf ("You must set rcon_password before issuing an pqrcon command, and rcon_secure must be 0.\n");
 		return;
