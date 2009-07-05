@@ -465,12 +465,14 @@ typedef struct texture_s
 	struct texture_s *currentframe;
 	// current texture transform matrix (used for water scrolling)
 	matrix4x4_t currenttexmatrix;
+	matrix4x4_t currentbackgroundtexmatrix;
 
 	// various q3 shader features
 	q3shaderinfo_layer_rgbgen_t rgbgen;
 	q3shaderinfo_layer_alphagen_t alphagen;
 	q3shaderinfo_layer_tcgen_t tcgen;
 	q3shaderinfo_layer_tcmod_t tcmods[Q3MAXTCMODS];
+	q3shaderinfo_layer_tcmod_t backgroundtcmods[Q3MAXTCMODS];
 	q3shaderinfo_deform_t deforms[Q3MAXDEFORMS];
 
 	qboolean colormapping;
