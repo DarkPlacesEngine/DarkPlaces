@@ -2908,7 +2908,7 @@ void SV_SpawnServer (const char *server)
 
 	strlcpy(sv.model_precache[0], "", sizeof(sv.model_precache[0]));
 	strlcpy(sv.model_precache[1], sv.modelname, sizeof(sv.model_precache[1]));
-	for (i = 1;i < sv.worldmodel->brush.numsubmodels;i++)
+	for (i = 1;i < sv.worldmodel->brush.numsubmodels && i+1 < MAX_MODELS;i++)
 	{
 		dpsnprintf(sv.model_precache[i+1], sizeof(sv.model_precache[i+1]), "*%i", i);
 		sv.models[i+1] = Mod_ForName (sv.model_precache[i+1], false, false, sv.modelname);

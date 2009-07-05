@@ -392,7 +392,7 @@ void SV_LinkEdict (prvm_edict_t *ent, qboolean touch_triggers)
 	if (ent->fields.server->solid == SOLID_BSP)
 	{
 		int modelindex = (int)ent->fields.server->modelindex;
-		if (modelindex < 0 || modelindex > MAX_MODELS)
+		if (modelindex < 0 || modelindex >= MAX_MODELS)
 		{
 			Con_Printf("edict %i: SOLID_BSP with invalid modelindex!\n", PRVM_NUM_FOR_EDICT(ent));
 			modelindex = 0;
