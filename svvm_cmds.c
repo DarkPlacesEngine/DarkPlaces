@@ -2691,7 +2691,7 @@ int SV_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 		return 2;
 
 	modelindex = (int)ent->fields.server->modelindex;
-	if (modelindex <= 0 || modelindex > MAX_MODELS)
+	if (modelindex <= 0 || modelindex >= MAX_MODELS)
 		return 3;
 
 	model = sv.models[modelindex];
@@ -2783,7 +2783,7 @@ static void VM_SV_gettagindex (void)
 
 	modelindex = (int)ent->fields.server->modelindex;
 	tag_index = 0;
-	if (modelindex <= 0 || modelindex > MAX_MODELS)
+	if (modelindex <= 0 || modelindex >= MAX_MODELS)
 		Con_DPrintf("gettagindex(entity #%i): null or non-precached model\n", PRVM_NUM_FOR_EDICT(ent));
 	else
 	{
@@ -2950,7 +2950,7 @@ static void VM_SV_setmodelindex (void)
 		return;
 	}
 	i = (int)PRVM_G_FLOAT(OFS_PARM1);
-	if (i <= 0 || i > MAX_MODELS)
+	if (i <= 0 || i >= MAX_MODELS)
 	{
 		VM_Warning("setmodelindex: invalid modelindex\n");
 		return;
@@ -2986,7 +2986,7 @@ static void VM_SV_modelnameforindex (void)
 	PRVM_G_INT(OFS_RETURN) = OFS_NULL;
 
 	i = (int)PRVM_G_FLOAT(OFS_PARM0);
-	if (i <= 0 || i > MAX_MODELS)
+	if (i <= 0 || i >= MAX_MODELS)
 	{
 		VM_Warning("modelnameforindex: invalid modelindex\n");
 		return;
