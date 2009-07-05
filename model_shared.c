@@ -2012,6 +2012,9 @@ nothing                GL_ZERO GL_ONE
 		if (shader->backgroundlayer >= 0)
 		{
 			q3shaderinfo_layer_t* backgroundlayer = shader->layers + shader->backgroundlayer;
+			// copy over one secondarylayer parameter
+			memcpy(texture->backgroundtcmods, backgroundlayer->tcmods, sizeof(texture->backgroundtcmods));
+			// load the textures
 			texture->backgroundnumskinframes = backgroundlayer->numframes;
 			texture->backgroundskinframerate = backgroundlayer->framerate;
 			for (j = 0;j < backgroundlayer->numframes;j++)

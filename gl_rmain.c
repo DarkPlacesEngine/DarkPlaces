@@ -590,6 +590,9 @@ static const char *builtinshaderstring =
 "#else // !MODE_GENERIC\n"
 "\n"
 "varying vec2 TexCoord;\n"
+"#ifdef USEVERTEXTEXTUREBLEND\n"
+"varying vec2 TexCoord2;\n"
+"#endif\n"
 "varying vec2 TexCoordLightmap;\n"
 "\n"
 "#ifdef MODE_LIGHTSOURCE\n"
@@ -640,6 +643,9 @@ static const char *builtinshaderstring =
 "	gl_FrontColor = gl_Color;\n"
 "	// copy the surface texcoord\n"
 "	TexCoord = vec2(gl_TextureMatrix[0] * gl_MultiTexCoord0);\n"
+"#ifdef USEVERTEXTEXTUREBLEND\n"
+"	TexCoord2 = vec2(gl_TextureMatrix[1] * gl_MultiTexCoord0);\n"
+"#endif\n"
 "#ifndef MODE_LIGHTSOURCE\n"
 "# ifndef MODE_LIGHTDIRECTION\n"
 "	TexCoordLightmap = vec2(gl_MultiTexCoord4);\n"
@@ -881,7 +887,7 @@ static const char *builtinshaderstring =
 "	myhalf terrainblend = clamp(myhalf(gl_Color.a) * color.a * 2.0 - 0.5, myhalf(0.0), myhalf(1.0));\n"
 "	//myhalf terrainblend = min(myhalf(gl_Color.a) * color.a * 2.0, myhalf(1.0));\n"
 "	//myhalf terrainblend = myhalf(gl_Color.a) * color.a > 0.5;\n"
-"	color.rgb = mix(myhalf3(texture2D(Texture_SecondaryColor, TexCoord)), color.rgb, terrainblend);\n"
+"	color.rgb = mix(myhalf3(texture2D(Texture_SecondaryColor, TexCoord2)), color.rgb, terrainblend);\n"
 "	color.a = 1.0;\n"
 "	//color = mix(myhalf4(1, 0, 0, 1), color, terrainblend);\n"
 "#endif\n"
@@ -889,9 +895,9 @@ static const char *builtinshaderstring =
 "#ifdef USEDIFFUSE\n"
 "	// get the surface normal and the gloss color\n"
 "# ifdef USEVERTEXTEXTUREBLEND\n"
-"	myhalf3 surfacenormal = normalize(mix(myhalf3(texture2D(Texture_SecondaryNormal, TexCoord)), myhalf3(texture2D(Texture_Normal, TexCoord)), terrainblend) - myhalf3(0.5, 0.5, 0.5));\n"
+"	myhalf3 surfacenormal = normalize(mix(myhalf3(texture2D(Texture_SecondaryNormal, TexCoord2)), myhalf3(texture2D(Texture_Normal, TexCoord)), terrainblend) - myhalf3(0.5, 0.5, 0.5));\n"
 "#  ifdef USESPECULAR\n"
-"	myhalf3 glosscolor = mix(myhalf3(texture2D(Texture_SecondaryGloss, TexCoord)), myhalf3(texture2D(Texture_Gloss, TexCoord)), terrainblend);\n"
+"	myhalf3 glosscolor = mix(myhalf3(texture2D(Texture_SecondaryGloss, TexCoord2)), myhalf3(texture2D(Texture_Gloss, TexCoord)), terrainblend);\n"
 "#  endif\n"
 "# else\n"
 "	myhalf3 surfacenormal = normalize(myhalf3(texture2D(Texture_Normal, TexCoord)) - myhalf3(0.5, 0.5, 0.5));\n"
@@ -1061,7 +1067,11 @@ static const char *builtinshaderstring =
 "	color *= TintColor;\n"
 "\n"
 "#ifdef USEGLOW\n"
+"#ifdef USEVERTEXTEXTUREBLEND\n"
+"	color.rgb += mix(myhalf3(texture2D(Texture_SecondaryGlow, TexCoord2)), myhalf3(texture2D(Texture_Glow, TexCoord)), terrainblend);\n"
+"#else\n"
 "	color.rgb += myhalf3(texture2D(Texture_Glow, TexCoord)) * GlowScale;\n"
+"#endif\n"
 "#endif\n"
 "\n"
 "#ifdef USECONTRASTBOOST\n"
@@ -4706,14 +4716,70 @@ static float R_EvaluateQ3WaveFunc(q3wavefunc_t func, const float *parms)
 	return (float)(parms[0] + parms[1] * f);
 }
 
-texture_t *R_GetCurrentTexture(texture_t *t)
+void R_tcMod_ApplyToMatrix(matrix4x4_t *texmatrix, q3shaderinfo_layer_tcmod_t *tcmod, int currentmaterialflags)
 {
 	int w, h, idx;
+	float f;
+	float tcmat[12];
+	matrix4x4_t matrix, temp;
+	switch(tcmod->tcmod)
+	{
+		case Q3TCMOD_COUNT:
+		case Q3TCMOD_NONE:
+			if (currentmaterialflags & MATERIALFLAG_WATERSCROLL)
+				matrix = r_waterscrollmatrix;
+			else
+				matrix = identitymatrix;
+			break;
+		case Q3TCMOD_ENTITYTRANSLATE:
+			// this is used in Q3 to allow the gamecode to control texcoord
+			// scrolling on the entity, which is not supported in darkplaces yet.
+			Matrix4x4_CreateTranslate(&matrix, 0, 0, 0);
+			break;
+		case Q3TCMOD_ROTATE:
+			Matrix4x4_CreateTranslate(&matrix, 0.5, 0.5, 0);
+			Matrix4x4_ConcatRotate(&matrix, tcmod->parms[0] * r_refdef.scene.time, 0, 0, 1);
+			Matrix4x4_ConcatTranslate(&matrix, -0.5, -0.5, 0);
+			break;
+		case Q3TCMOD_SCALE:
+			Matrix4x4_CreateScale3(&matrix, tcmod->parms[0], tcmod->parms[1], 1);
+			break;
+		case Q3TCMOD_SCROLL:
+			Matrix4x4_CreateTranslate(&matrix, tcmod->parms[0] * r_refdef.scene.time, tcmod->parms[1] * r_refdef.scene.time, 0);
+			break;
+		case Q3TCMOD_PAGE: // poor man's animmap (to store animations into a single file, useful for HTTP downloaded textures)
+			w = (int) tcmod->parms[0];
+			h = (int) tcmod->parms[1];
+			f = r_refdef.scene.time / (tcmod->parms[2] * w * h);
+			f = f - floor(f);
+			idx = (int) floor(f * w * h);
+			Matrix4x4_CreateTranslate(&matrix, (idx % w) / tcmod->parms[0], (idx / w) / tcmod->parms[1], 0);
+			break;
+		case Q3TCMOD_STRETCH:
+			f = 1.0f / R_EvaluateQ3WaveFunc(tcmod->wavefunc, tcmod->waveparms);
+			Matrix4x4_CreateFromQuakeEntity(&matrix, 0.5f * (1 - f), 0.5 * (1 - f), 0, 0, 0, 0, f);
+			break;
+		case Q3TCMOD_TRANSFORM:
+			VectorSet(tcmat +  0, tcmod->parms[0], tcmod->parms[1], 0);
+			VectorSet(tcmat +  3, tcmod->parms[2], tcmod->parms[3], 0);
+			VectorSet(tcmat +  6, 0                   , 0                , 1);
+			VectorSet(tcmat +  9, tcmod->parms[4], tcmod->parms[5], 0);
+			Matrix4x4_FromArray12FloatGL(&matrix, tcmat);
+			break;
+		case Q3TCMOD_TURBULENT:
+			// this is handled in the RSurf_PrepareVertices function
+			matrix = identitymatrix;
+			break;
+	}
+	temp = *texmatrix;
+	Matrix4x4_Concat(texmatrix, &matrix, &temp);
+}
+
+texture_t *R_GetCurrentTexture(texture_t *t)
+{
 	int i;
 	const entity_render_t *ent = rsurface.entity;
 	dp_model_t *model = ent->model;
-	float f;
-	float tcmat[12];
 	q3shaderinfo_layer_tcmod_t *tcmod;
 
 	if (t->update_lastrenderframe == r_frame && t->update_lastrenderentity == (void *)ent)
@@ -4807,69 +4873,20 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 
 	// there is no tcmod
 	if (t->currentmaterialflags & MATERIALFLAG_WATERSCROLL)
+	{
 		t->currenttexmatrix = r_waterscrollmatrix;
+		t->currentbackgroundtexmatrix = r_waterscrollmatrix;
+	}
+	else
+	{
+		Matrix4x4_CreateIdentity(&t->currenttexmatrix);
+		Matrix4x4_CreateIdentity(&t->currentbackgroundtexmatrix);
+	}
 
 	for (i = 0, tcmod = t->tcmods;i < Q3MAXTCMODS && tcmod->tcmod;i++, tcmod++)
-	{
-		matrix4x4_t matrix;
-		switch(tcmod->tcmod)
-		{
-		case Q3TCMOD_COUNT:
-		case Q3TCMOD_NONE:
-			if (t->currentmaterialflags & MATERIALFLAG_WATERSCROLL)
-				matrix = r_waterscrollmatrix;
-			else
-				matrix = identitymatrix;
-			break;
-		case Q3TCMOD_ENTITYTRANSLATE:
-			// this is used in Q3 to allow the gamecode to control texcoord
-			// scrolling on the entity, which is not supported in darkplaces yet.
-			Matrix4x4_CreateTranslate(&matrix, 0, 0, 0);
-			break;
-		case Q3TCMOD_ROTATE:
-			Matrix4x4_CreateTranslate(&matrix, 0.5, 0.5, 0);
-			Matrix4x4_ConcatRotate(&matrix, tcmod->parms[0] * r_refdef.scene.time, 0, 0, 1);
-			Matrix4x4_ConcatTranslate(&matrix, -0.5, -0.5, 0);
-			break;
-		case Q3TCMOD_SCALE:
-			Matrix4x4_CreateScale3(&matrix, tcmod->parms[0], tcmod->parms[1], 1);
-			break;
-		case Q3TCMOD_SCROLL:
-			Matrix4x4_CreateTranslate(&matrix, tcmod->parms[0] * r_refdef.scene.time, tcmod->parms[1] * r_refdef.scene.time, 0);
-			break;
-		case Q3TCMOD_PAGE: // poor man's animmap (to store animations into a single file, useful for HTTP downloaded textures)
-			w = (int) tcmod->parms[0];
-			h = (int) tcmod->parms[1];
-			f = r_refdef.scene.time / (tcmod->parms[2] * w * h);
-			f = f - floor(f);
-			idx = (int) floor(f * w * h);
-			Matrix4x4_CreateTranslate(&matrix, (idx % w) / tcmod->parms[0], (idx / w) / tcmod->parms[1], 0);
-			break;
-		case Q3TCMOD_STRETCH:
-			f = 1.0f / R_EvaluateQ3WaveFunc(tcmod->wavefunc, tcmod->waveparms);
-			Matrix4x4_CreateFromQuakeEntity(&matrix, 0.5f * (1 - f), 0.5 * (1 - f), 0, 0, 0, 0, f);
-			break;
-		case Q3TCMOD_TRANSFORM:
-			VectorSet(tcmat +  0, tcmod->parms[0], tcmod->parms[1], 0);
-			VectorSet(tcmat +  3, tcmod->parms[2], tcmod->parms[3], 0);
-			VectorSet(tcmat +  6, 0                   , 0                , 1);
-			VectorSet(tcmat +  9, tcmod->parms[4], tcmod->parms[5], 0);
-			Matrix4x4_FromArray12FloatGL(&matrix, tcmat);
-			break;
-		case Q3TCMOD_TURBULENT:
-			// this is handled in the RSurf_PrepareVertices function
-			matrix = identitymatrix;
-			break;
-		}
-		// either replace or concatenate the transformation
-		if (i < 1)
-			t->currenttexmatrix = matrix;
-		else
-		{
-			matrix4x4_t temp = t->currenttexmatrix;
-			Matrix4x4_Concat(&t->currenttexmatrix, &matrix, &temp);
-		}
-	}
+		R_tcMod_ApplyToMatrix(&t->currenttexmatrix, tcmod, t->currentmaterialflags);
+	for (i = 0, tcmod = t->backgroundtcmods;i < Q3MAXTCMODS && tcmod->tcmod;i++, tcmod++)
+		R_tcMod_ApplyToMatrix(&t->currentbackgroundtexmatrix, tcmod, t->currentmaterialflags);
 
 	t->colormapping = VectorLength2(ent->colormap_pantscolor) + VectorLength2(ent->colormap_shirtcolor) >= (1.0f / 1048576.0f);
 	t->basetexture = (!t->colormapping && t->currentskinframe->merged) ? t->currentskinframe->merged : t->currentskinframe->base;
@@ -6270,6 +6287,7 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, msurface_t **t
 		return;
 
 	R_Mesh_TexMatrix(0, &rsurface.texture->currenttexmatrix);
+	R_Mesh_TexMatrix(1, &rsurface.texture->currentbackgroundtexmatrix);
 	R_Mesh_TexBind(GL20TU_NORMAL, R_GetTexture(rsurface.texture->currentskinframe->nmap));
 	R_Mesh_TexBind(GL20TU_COLOR, R_GetTexture(rsurface.texture->basetexture));
 	R_Mesh_TexBind(GL20TU_GLOSS, R_GetTexture(rsurface.texture->glosstexture));

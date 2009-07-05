@@ -1737,6 +1737,7 @@ static void R_Shadow_RenderLighting_Light_GLSL(int firstvertex, int numvertices,
 	else
 		R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_TexMatrix(0, &rsurface.texture->currenttexmatrix);
+	R_Mesh_TexMatrix(1, &rsurface.texture->currentbackgroundtexmatrix);
 	R_Mesh_TexBind(GL20TU_NORMAL, R_GetTexture(rsurface.texture->currentskinframe->nmap));
 	R_Mesh_TexBind(GL20TU_COLOR, R_GetTexture(rsurface.texture->basetexture));
 	R_Mesh_TexBind(GL20TU_GLOSS, R_GetTexture(rsurface.texture->glosstexture));
@@ -1745,6 +1746,7 @@ static void R_Shadow_RenderLighting_Light_GLSL(int firstvertex, int numvertices,
 		R_Mesh_TexBind(GL20TU_SECONDARY_NORMAL, R_GetTexture(rsurface.texture->backgroundcurrentskinframe->nmap));
 		R_Mesh_TexBind(GL20TU_SECONDARY_COLOR, R_GetTexture(rsurface.texture->backgroundbasetexture));
 		R_Mesh_TexBind(GL20TU_SECONDARY_GLOSS, R_GetTexture(rsurface.texture->backgroundglosstexture));
+		R_Mesh_TexBind(GL20TU_SECONDARY_GLOW, R_GetTexture(rsurface.texture->backgroundcurrentskinframe->glow));
 	}
 	//R_Mesh_TexBindCubeMap(GL20TU_CUBE, R_GetTexture(rsurface.rtlight->currentcubemap));
 	R_Mesh_TexBind(GL20TU_FOGMASK, R_GetTexture(r_texture_fogattenuation));
