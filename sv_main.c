@@ -2913,6 +2913,8 @@ void SV_SpawnServer (const char *server)
 		dpsnprintf(sv.model_precache[i+1], sizeof(sv.model_precache[i+1]), "*%i", i);
 		sv.models[i+1] = Mod_ForName (sv.model_precache[i+1], false, false, sv.modelname);
 	}
+	if(i < sv.worldmodel->brush.numsubmodels)
+		Con_Printf("Too many submodels (MAX_MODELS is %i)\n", MAX_MODELS);
 
 //
 // load the rest of the entities
