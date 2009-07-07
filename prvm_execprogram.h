@@ -554,7 +554,7 @@
 					goto cleanup;
 				}
 #endif
-				pr_globals[OPB->_int] = OPA->_float;
+				pr_iglobals[OPB->_int] = OPA->_int;
 				break;
 			case OP_GSTOREP_V:
 #if PRBOUNDSCHECK
@@ -582,7 +582,7 @@
 					goto cleanup;
 				}
 #endif
-				OPC->_float = pr_globals[i];
+				OPC->_int = pr_iglobals[i];
 				break;
 
 			case OP_GLOAD_I:
@@ -600,7 +600,7 @@
 					goto cleanup;
 				}
 #endif
-				OPC->_float = pr_globals[OPA->_int];
+				OPC->_int = pr_iglobals[OPA->_int];
 				break;
 
 			case OP_GLOAD_V:
