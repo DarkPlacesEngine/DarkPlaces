@@ -1421,6 +1421,7 @@ static void R_GLSL_CompilePermutation(unsigned int mode, unsigned int permutatio
 		p->loc_UserVec4                   = qglGetUniformLocationARB(p->program, "UserVec4");
 		p->loc_ClientTime                 = qglGetUniformLocationARB(p->program, "ClientTime");
 		p->loc_PixelSize                  = qglGetUniformLocationARB(p->program, "PixelSize");
+		p->loc_Saturation                 = qglGetUniformLocationARB(p->program, "Saturation");
 		// initialize the samplers to refer to the texture units we use
 		if (p->loc_Texture_First           >= 0) qglUniform1iARB(p->loc_Texture_First          , GL20TU_FIRST);
 		if (p->loc_Texture_Second          >= 0) qglUniform1iARB(p->loc_Texture_Second         , GL20TU_SECOND);
