@@ -175,9 +175,9 @@
 				}
 #endif
 				ptr = (prvm_eval_t *)((unsigned char *)prog->edictsfields + OPB->_int);
-				ptr->vector[0] = OPA->vector[0];
-				ptr->vector[1] = OPA->vector[1];
-				ptr->vector[2] = OPA->vector[2];
+				ptr->ivector[0] = OPA->ivector[0];
+				ptr->ivector[1] = OPA->ivector[1];
+				ptr->ivector[2] = OPA->ivector[2];
 				break;
 
 			case OP_ADDRESS:
@@ -230,9 +230,9 @@
 				}
 #endif
 				ed = PRVM_PROG_TO_EDICT(OPA->edict);
-				OPC->vector[0] = ((prvm_eval_t *)((int *)ed->fields.vp + OPB->_int))->vector[0];
-				OPC->vector[1] = ((prvm_eval_t *)((int *)ed->fields.vp + OPB->_int))->vector[1];
-				OPC->vector[2] = ((prvm_eval_t *)((int *)ed->fields.vp + OPB->_int))->vector[2];
+				OPC->ivector[0] = ((prvm_eval_t *)((int *)ed->fields.vp + OPB->_int))->ivector[0];
+				OPC->ivector[1] = ((prvm_eval_t *)((int *)ed->fields.vp + OPB->_int))->ivector[1];
+				OPC->ivector[2] = ((prvm_eval_t *)((int *)ed->fields.vp + OPB->_int))->ivector[2];
 				break;
 
 		//==================
@@ -566,9 +566,9 @@
 					goto cleanup;
 				}
 #endif
-				pr_globals[OPB->_int  ] = OPA->vector[0];
-				pr_globals[OPB->_int+1] = OPA->vector[1];
-				pr_globals[OPB->_int+2] = OPA->vector[2];
+				pr_iglobals[OPB->_int  ] = OPA->ivector[0];
+				pr_iglobals[OPB->_int+1] = OPA->ivector[1];
+				pr_iglobals[OPB->_int+2] = OPA->ivector[2];
 				break;
 
 			case OP_GADDRESS:
@@ -613,9 +613,9 @@
 					goto cleanup;
 				}
 #endif
-				OPC->vector[0] = pr_globals[OPA->_int  ];
-				OPC->vector[1] = pr_globals[OPA->_int+1];
-				OPC->vector[2] = pr_globals[OPA->_int+2];
+				OPC->ivector[0] = pr_iglobals[OPA->_int  ];
+				OPC->ivector[1] = pr_iglobals[OPA->_int+1];
+				OPC->ivector[2] = pr_iglobals[OPA->_int+2];
 				break;
 
 			case OP_BOUNDCHECK:
