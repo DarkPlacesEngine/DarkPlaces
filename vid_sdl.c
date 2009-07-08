@@ -537,7 +537,7 @@ static void VID_SetIcon()
 
 	for(i = 0; i < colors; ++i)
 	{
-		int r, g, b;
+		unsigned int r, g, b;
 		char idx;
 
 		if(sscanf(idata[i+1], "%c c #%02x%02x%02x", &idx, &r, &g, &b) != 4)

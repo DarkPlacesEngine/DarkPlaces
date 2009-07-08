@@ -2793,7 +2793,7 @@ static void VM_SV_gettagindex (void)
 				Con_Printf("gettagindex(entity #%i): tag \"%s\" not found\n", PRVM_NUM_FOR_EDICT(ent), tag_name);
 	}
 	PRVM_G_FLOAT(OFS_RETURN) = tag_index;
-};
+}
 
 //vector(entity ent, float tagindex) gettaginfo;
 static void VM_SV_gettaginfo (void)

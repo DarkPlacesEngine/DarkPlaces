@@ -601,7 +601,7 @@ void Mem_PrintStats(void)
 	{
 		if ((pool->flags & POOLFLAG_TEMP) && pool->chain)
 		{
-			Con_Printf("Memory pool %p has sprung a leak totalling %lu bytes (%.3fMB)!  Listing contents...\n", pool, (unsigned long)pool->totalsize, pool->totalsize / 1048576.0);
+			Con_Printf("Memory pool %p has sprung a leak totalling %lu bytes (%.3fMB)!  Listing contents...\n", (void *)pool, (unsigned long)pool->totalsize, pool->totalsize / 1048576.0);
 			for (mem = pool->chain;mem;mem = mem->next)
 				Con_Printf("%10lu bytes allocated at %s:%i\n", (unsigned long)mem->size, mem->filename, mem->fileline);
 		}

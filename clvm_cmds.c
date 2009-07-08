@@ -2182,7 +2182,7 @@ int CL_GetTagIndex (prvm_edict_t *e, const char *tagname)
 		return Mod_Alias_GetTagIndexForName(model, (int)e->fields.client->skin, tagname);
 	else
 		return -1;
-};
+}
 
 int CL_GetExtendedTagInfo (prvm_edict_t *e, int tagindex, int *parentindex, const char **tagname, matrix4x4_t *tag_localmatrix)
 {
