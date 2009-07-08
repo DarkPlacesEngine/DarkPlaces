@@ -1384,7 +1384,7 @@ void DrawQ_SetClipArea(float x, float y, float width, float height)
 
 	// We have to convert the con coords into real coords
 	// OGL uses top to bottom
-	GL_Scissor((int)(x * ((float)vid.width / vid_conwidth.integer)), (int)(y * ((float) vid.height / vid_conheight.integer)), (int)(width * ((float)vid.width / vid_conwidth.integer)), (int)(height * ((float)vid.height / vid_conheight.integer)));
+	GL_Scissor((int)(0.5 + x * ((float)vid.width / vid_conwidth.integer)), (int)(0.5 + y * ((float) vid.height / vid_conheight.integer)), (int)(width * ((float)vid.width / vid_conwidth.integer)), (int)(height * ((float)vid.height / vid_conheight.integer)));
 
 	GL_ScissorTest(true);
 }
