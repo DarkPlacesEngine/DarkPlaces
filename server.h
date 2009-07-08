@@ -24,15 +24,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 typedef struct server_static_s
 {
-	// number of svs.clients slots (updated by maxplayers command)
+	/// number of svs.clients slots (updated by maxplayers command)
 	int maxclients, maxclients_next;
-	// client slots
+	/// client slots
 	struct client_s *clients;
-	// episode completion information
+	/// episode completion information
 	int serverflags;
-	// cleared when at SV_SpawnServer
+	/// cleared when at SV_SpawnServer
 	qboolean changelevel_issued;
-	// server infostring
+	/// server infostring
 	char serverinfo[MAX_SERVERINFO_STRING];
 	// performance data
 	float perf_cpuload;
@@ -70,15 +70,15 @@ server_connectfloodaddress_t;
 
 typedef struct server_s
 {
-	// false if only a net client
+	/// false if only a net client
 	qboolean active;
 
 	qboolean paused;
 	double pausedstart;
-	// handle connections specially
+	/// handle connections specially
 	qboolean loadgame;
 
-	// one of the PROTOCOL_ values
+	/// one of the PROTOCOL_ values
 	protocolversion_t protocol;
 
 	double time;
@@ -94,12 +94,12 @@ typedef struct server_s
 	int csqc_progsize; // -1 = no progs
 	char csqc_progname[MAX_QPATH]; // copied from csqc_progname at level start
 
-	// collision culling data
+	/// collision culling data
 	world_t world;
 
-	// map name
+	/// map name
 	char name[64];
-	// maps/<name>.bsp, for model_precache[0]
+	/// maps/<name>.bsp, for model_precache[0]
 	char modelname[64];
 	struct model_s *worldmodel;
 	// NULL terminated
@@ -112,7 +112,7 @@ typedef struct server_s
 	// updated by SV_SoundIndex
 	char sound_precache[MAX_SOUNDS][MAX_QPATH];
 	char lightstyles[MAX_LIGHTSTYLES][64];
-	// some actions are only valid during load
+	/// some actions are only valid during load
 	server_state_t state;
 
 	sizebuf_t datagram;
@@ -123,12 +123,12 @@ typedef struct server_s
 	unsigned char reliable_datagram_buf[NET_MAXMESSAGE];
 
 	sizebuf_t signon;
-	// LordHavoc: increased signon message buffer from 8192
+	/// LordHavoc: increased signon message buffer from 8192
 	unsigned char signon_buf[NET_MAXMESSAGE];
 
-	// connection flood blocking
-	// note this is in server_t rather than server_static_t so that it is
-	// reset on each map command (such as New Game in singleplayer)
+	/// connection flood blocking
+	/// note this is in server_t rather than server_static_t so that it is
+	/// reset on each map command (such as New Game in singleplayer)
 	server_connectfloodaddress_t connectfloodaddresses[MAX_CONNECTFLOODADDRESSES];
 
 #define SV_MAX_PARTICLEEFFECTNAME 256
@@ -155,7 +155,7 @@ typedef struct server_s
 	int sententities[MAX_EDICTS];
 	int sententitiesconsideration[MAX_EDICTS];
 
-	// legacy support for self.Version based csqc entity networking
+	/// legacy support for self.Version based csqc entity networking
 	unsigned char csqcentityversion[MAX_EDICTS]; // legacy
 } server_t;
 
@@ -175,50 +175,50 @@ typedef struct csqcentityframedb_s
 
 typedef struct client_s
 {
-	// false = empty client slot
+	/// false = empty client slot
 	qboolean active;
-	// false = don't do ClientDisconnect on drop
+	/// false = don't do ClientDisconnect on drop
 	qboolean clientconnectcalled;
-	// false = don't send datagrams
+	/// false = don't send datagrams
 	qboolean spawned;
-	// 1 = send svc_serverinfo and advance to 2, 2 doesn't send, then advances to 0 (allowing unlimited sending) when prespawn is received
+	/// 1 = send svc_serverinfo and advance to 2, 2 doesn't send, then advances to 0 (allowing unlimited sending) when prespawn is received
 	int sendsignon;
 
-	// requested rate in bytes per second
+	/// requested rate in bytes per second
 	int rate;
 
-	// realtime this client connected
+	/// realtime this client connected
 	double connecttime;
 
-	// keepalive messages must be sent periodically during signon
+	/// keepalive messages must be sent periodically during signon
 	double keepalivetime;
 
-	// communications handle
+	/// communications handle
 	netconn_t *netconnection;
 
 	int movesequence;
-	// movement
+	/// movement
 	usercmd_t cmd;
-	// intended motion calced from cmd
+	/// intended motion calced from cmd
 	vec3_t wishdir;
 
-	// PRVM_EDICT_NUM(clientnum+1)
+	/// PRVM_EDICT_NUM(clientnum+1)
 	prvm_edict_t *edict;
 
 #ifdef NUM_PING_TIMES
 	float ping_times[NUM_PING_TIMES];
-	// ping_times[num_pings%NUM_PING_TIMES]
+	/// ping_times[num_pings%NUM_PING_TIMES]
 	int num_pings;
 #endif
-	// LordHavoc: can be used for prediction or whatever...
+	/// LordHavoc: can be used for prediction or whatever...
 	float ping;
 
-	// this is used by sv_clmovement_minping code
+	/// this is used by sv_clmovement_minping code
 	double clmovement_disabletimeout;
-	// this is used by sv_clmovement_inputtimeout code
+	/// this is used by sv_clmovement_inputtimeout code
 	float clmovement_inputtimeout;
 
-// spawn parms are carried from level to level
+/// spawn parms are carried from level to level
 	float spawn_parms[NUM_SPAWN_PARMS];
 
 	// properties that are sent across the network only when changed
@@ -228,10 +228,10 @@ typedef struct client_s
 	char playermodel[MAX_QPATH], old_model[MAX_QPATH];
 	char playerskin[MAX_QPATH], old_skin[MAX_QPATH];
 
-	// netaddress support
+	/// netaddress support
 	char netaddress[MAX_QPATH];
 
-	// visibility state
+	/// visibility state
 	float visibletime[MAX_EDICTS];
 
 	// scope is whether an entity is currently being networked to this client
@@ -246,17 +246,17 @@ typedef struct client_s
 	csqcentityframedb_t csqcentityframehistory[NUM_CSQCENTITYDB_FRAMES];
 	int csqcentityframehistory_next;
 
-	// prevent animated names
+	/// prevent animated names
 	float nametime;
 
-	// latest received clc_ackframe (used to detect packet loss)
+	/// latest received clc_ackframe (used to detect packet loss)
 	int latestframenum;
 
-	// cache weaponmodel name lookups
+	/// cache weaponmodel name lookups
 	char weaponmodel[MAX_QPATH];
 	int weaponmodelindex;
 
-	// clientcamera (entity to use as camera)
+	/// clientcamera (entity to use as camera)
 	int clientcamera;
 
 	entityframe_database_t *entitydatabase;
@@ -274,7 +274,7 @@ typedef struct client_s
 
 	// information on an active download if any
 	qfile_t *download_file;
-	int download_expectedposition; // next position the client should ack
+	int download_expectedposition; ///< next position the client should ack
 	qboolean download_started;
 	char download_name[MAX_QPATH];
 	qboolean download_deflate;
@@ -283,7 +283,7 @@ typedef struct client_s
 	qboolean fixangle_angles_set;
 	vec3_t fixangle_angles;
 
-	// demo recording
+	/// demo recording
 	qfile_t *sv_demo_file;
 } client_t;
 
@@ -291,29 +291,29 @@ typedef struct client_s
 //=============================================================================
 
 // edict->movetype values
-#define	MOVETYPE_NONE			0		// never moves
+#define	MOVETYPE_NONE			0		///< never moves
 #define	MOVETYPE_ANGLENOCLIP	1
 #define	MOVETYPE_ANGLECLIP		2
-#define	MOVETYPE_WALK			3		// gravity
-#define	MOVETYPE_STEP			4		// gravity, special edge handling
+#define	MOVETYPE_WALK			3		///< gravity
+#define	MOVETYPE_STEP			4		///< gravity, special edge handling
 #define	MOVETYPE_FLY			5
-#define	MOVETYPE_TOSS			6		// gravity
-#define	MOVETYPE_PUSH			7		// no clip to world, push and crush
+#define	MOVETYPE_TOSS			6		///< gravity
+#define	MOVETYPE_PUSH			7		///< no clip to world, push and crush
 #define	MOVETYPE_NOCLIP			8
-#define	MOVETYPE_FLYMISSILE		9		// extra size to monsters
+#define	MOVETYPE_FLYMISSILE		9		///< extra size to monsters
 #define	MOVETYPE_BOUNCE			10
-#define MOVETYPE_BOUNCEMISSILE	11		// bounce w/o gravity
-#define MOVETYPE_FOLLOW			12		// track movement of aiment
-#define MOVETYPE_FAKEPUSH		13		// tenebrae's push that doesn't push
+#define MOVETYPE_BOUNCEMISSILE	11		///< bounce w/o gravity
+#define MOVETYPE_FOLLOW			12		///< track movement of aiment
+#define MOVETYPE_FAKEPUSH		13		///< tenebrae's push that doesn't push
 
 // edict->solid values
-#define	SOLID_NOT				0		// no interaction with other objects
-#define	SOLID_TRIGGER			1		// touch on edge, but not blocking
-#define	SOLID_BBOX				2		// touch on edge, block
-#define	SOLID_SLIDEBOX			3		// touch on edge, but not an onground
-#define	SOLID_BSP				4		// bsp clip, touch on edge, block
+#define	SOLID_NOT				0		///< no interaction with other objects
+#define	SOLID_TRIGGER			1		///< touch on edge, but not blocking
+#define	SOLID_BBOX				2		///< touch on edge, block
+#define	SOLID_SLIDEBOX			3		///< touch on edge, but not an onground
+#define	SOLID_BSP				4		///< bsp clip, touch on edge, block
 // LordHavoc: corpse code
-#define	SOLID_CORPSE			5		// same as SOLID_BBOX, except it behaves as SOLID_NOT against SOLID_SLIDEBOX objects (players/monsters)
+#define	SOLID_CORPSE			5		///< same as SOLID_BBOX, except it behaves as SOLID_NOT against SOLID_SLIDEBOX objects (players/monsters)
 
 // edict->deadflag values
 #define	DEAD_NO					0
@@ -335,9 +335,9 @@ typedef struct client_s
 #define	FL_NOTARGET				128
 #define	FL_ITEM					256
 #define	FL_ONGROUND				512
-#define	FL_PARTIALGROUND		1024	// not all corners are valid
-#define	FL_WATERJUMP			2048	// player jumping out of water
-#define	FL_JUMPRELEASED			4096	// for jump debouncing
+#define	FL_PARTIALGROUND		1024	///< not all corners are valid
+#define	FL_WATERJUMP			2048	///< player jumping out of water
+#define	FL_JUMPRELEASED			4096	///< for jump debouncing
 
 #define	SPAWNFLAG_NOT_EASY			256
 #define	SPAWNFLAG_NOT_MEDIUM		512
@@ -448,9 +448,9 @@ extern cvar_t timelimit;
 
 extern mempool_t *sv_mempool;
 
-// persistant server info
+/// persistant server info
 extern server_static_t svs;
-// local server
+/// local server
 extern server_t sv;
 
 extern client_t *host_client;
@@ -499,18 +499,20 @@ qboolean SV_PlayerCheckGround (prvm_edict_t *ent);
 qboolean SV_CheckBottom (prvm_edict_t *ent);
 qboolean SV_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qboolean noenemy, qboolean settrace);
 
-// Needs to be called any time an entity changes origin, mins, maxs, or solid
-// sets ent->v.absmin and ent->v.absmax
-// if touchtriggers, calls prog functions for the intersected triggers
+/*! Needs to be called any time an entity changes origin, mins, maxs, or solid
+ * sets ent->v.absmin and ent->v.absmax
+ * if touchtriggers, calls prog functions for the intersected triggers
+ */
 void SV_LinkEdict (prvm_edict_t *ent, qboolean touch_triggers);
 
-// move an entity that is stuck by small amounts in various directions to try to nudge it back into the collision hull
-// returns true if it found a better place
+/*! move an entity that is stuck by small amounts in various directions to try to nudge it back into the collision hull
+ * returns true if it found a better place
+ */
 qboolean SV_UnstickEntity (prvm_edict_t *ent);
 
-// calculates hitsupercontentsmask for a generic qc entity
+/// calculates hitsupercontentsmask for a generic qc entity
 int SV_GenericHitSuperContentsMask(const prvm_edict_t *edict);
-// traces a box move against worldmodel and all entities in the specified area
+/// traces a box move against worldmodel and all entities in the specified area
 trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, prvm_edict_t *passedict, int hitsupercontentsmask);
 
 int SV_PointSuperContents(const vec3_t point);
@@ -531,7 +533,7 @@ void SV_SetupVM(void);
 void SV_VM_Begin(void);
 void SV_VM_End(void);
 
-const char *Host_TimingReport(); // for output in Host_Status_f
+const char *Host_TimingReport(); ///< for output in Host_Status_f
 
 #endif
 

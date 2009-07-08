@@ -105,7 +105,7 @@ static void M_GameOptions_Key (int key, int ascii);
 static void M_ServerList_Key (int key, int ascii);
 static void M_ModList_Key (int key, int ascii);
 
-static qboolean	m_entersound;		// play after drawing a frame, so caching won't disrupt the sound
+static qboolean	m_entersound;		///< play after drawing a frame, so caching won't disrupt the sound
 
 void M_Update_Return_Reason(char *s)
 {
@@ -810,7 +810,7 @@ static void M_SinglePlayer_Key (int key, int ascii)
 //=============================================================================
 /* LOAD/SAVE MENU */
 
-static int		load_cursor;		// 0 < load_cursor < MAX_SAVEGAMES
+static int		load_cursor;		///< 0 < load_cursor < MAX_SAVEGAMES
 
 #define	MAX_SAVEGAMES		12
 static char	m_filenames[MAX_SAVEGAMES][SAVEGAME_COMMENT_LENGTH+1];

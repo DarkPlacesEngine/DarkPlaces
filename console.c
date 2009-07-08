@@ -309,6 +309,8 @@ LOGGING
 ==============================================================================
 */
 
+/// \name Logging
+//@{
 cvar_t log_file = {0, "log_file","", "filename to log messages to"};
 cvar_t log_dest_udp = {0, "log_dest_udp","", "UDP address to log messages to (in QW rcon compatible format); multiple destinations can be separated by spaces; DO NOT SPECIFY DNS NAMES HERE"};
 char log_dest_buffer[1400]; // UDP packet
@@ -322,7 +324,7 @@ size_t logq_ind = 0;
 size_t logq_size = 0;
 
 void Log_ConPrint (const char *msg);
-
+//@}
 /*
 ====================
 Log_DestBuffer_Init
@@ -589,8 +591,6 @@ void Con_ToggleConsole_f (void)
 /*
 ================
 Con_ClearNotify
-
-Clear all notify lines.
 ================
 */
 void Con_ClearNotify (void)
@@ -647,8 +647,6 @@ void Con_CommandMode_f (void)
 /*
 ================
 Con_CheckResize
-
-If the line width has changed, reformat the buffer.
 ================
 */
 void Con_CheckResize (void)
@@ -836,7 +834,7 @@ void Con_PrintToHistory(const char *txt, int mask)
 	}
 }
 
-/* The translation table between the graphical font and plain ASCII  --KB */
+/*! The translation table between the graphical font and plain ASCII  --KB */
 static char qfont_table[256] = {
 	'\0', '#',  '#',  '#',  '#',  '.',  '#',  '#',
 	'#',  9,    10,   '#',  ' ',  13,   '.',  '.',
@@ -905,10 +903,9 @@ void Con_Rcon_Redirect_Abort()
 /*
 ================
 Con_Rcon_AddChar
-
-Adds a character to the rcon buffer
 ================
 */
+/// Adds a character to the rcon buffer.
 void Con_Rcon_AddChar(int c)
 {
 	if(log_dest_buffer_appending)
@@ -1004,8 +1001,6 @@ static char Sys_Con_NearestColor(const unsigned char _r, const unsigned char _g,
 /*
 ================
 Con_Print
-
-Prints to all appropriate console targets, and adds timestamps
 ================
 */
 extern cvar_t timestamps;
@@ -1270,8 +1265,6 @@ void Con_Print(const char *msg)
 /*
 ================
 Con_Printf
-
-Prints to all appropriate console targets
 ================
 */
 void Con_Printf(const char *fmt, ...)
@@ -1289,8 +1282,6 @@ void Con_Printf(const char *fmt, ...)
 /*
 ================
 Con_DPrint
-
-A Con_Print that only shows up if the "developer" cvar is set
 ================
 */
 void Con_DPrint(const char *msg)
@@ -1303,8 +1294,6 @@ void Con_DPrint(const char *msg)
 /*
 ================
 Con_DPrintf
-
-A Con_Printf that only shows up if the "developer" cvar is set
 ================
 */
 void Con_DPrintf(const char *fmt, ...)

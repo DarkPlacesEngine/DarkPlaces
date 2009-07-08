@@ -941,7 +941,7 @@ void DrawQ_Fill(float x, float y, float width, float height, float red, float gr
 	R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
 }
 
-// color tag printing
+/// color tag printing
 static const vec4_t string_colors[] =
 {
 	// Quake3 colors

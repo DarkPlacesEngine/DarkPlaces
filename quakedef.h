@@ -22,7 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef QUAKEDEF_H
 #define QUAKEDEF_H
 
-// on UNIX platforms we need to define this so that video saving does not cause a SIGFSZ (file size) signal when a video clip exceeds 2GB
+/// on UNIX platforms we need to define this so that video saving does not cause a SIGFSZ (file size) signal when a video clip exceeds 2GB
 #define _FILE_OFFSET_BITS 64
 
 // for cd_linux.c
@@ -56,14 +56,14 @@ extern char engineversion[128];
 #define MAX_NUM_ARGVS	50
 
 
-#define	MAX_QPATH		128			// max length of a quake game pathname
-#define	MAX_OSPATH		1024		// max length of a filesystem pathname
+#define	MAX_QPATH		128			///< max length of a quake game pathname
+#define	MAX_OSPATH		1024		///< max length of a filesystem pathname
 
-#define	ON_EPSILON		0.1			// point on plane side epsilon
+#define	ON_EPSILON		0.1			///< point on plane side epsilon
 
-#define MAX_PACKETFRAGMENT 1024		// max length of packet fragment
+#define MAX_PACKETFRAGMENT 1024		///< max length of packet fragment
 #define NET_MAXMESSAGE	65536
-#define NET_MINRATE		1000 // limits "rate" and "sv_maxrate" cvars
+#define NET_MINRATE		1000 ///< limits "rate" and "sv_maxrate" cvars
 
 //
 // per-level limits
@@ -97,43 +97,43 @@ extern char engineversion[128];
 #define	STAT_ACTIVEWEAPON	10
 #define	STAT_TOTALSECRETS	11
 #define	STAT_TOTALMONSTERS	12
-#define	STAT_SECRETS		13		// bumped on client side by svc_foundsecret
-#define	STAT_MONSTERS		14		// bumped by svc_killedmonster
-#define STAT_ITEMS			15 // FTE, DP
-#define STAT_VIEWHEIGHT		16 // FTE, DP
-//#define STAT_TIME			17 // FTE
-//#define STAT_VIEW2		20 // FTE
-#define STAT_VIEWZOOM		21 // DP
-#define STAT_MOVEVARS_WARSOWBUNNY_AIRFORWARDACCEL	226 // DP
-#define STAT_MOVEVARS_WARSOWBUNNY_ACCEL				227 // DP
-#define STAT_MOVEVARS_WARSOWBUNNY_TOPSPEED			228 // DP
-#define STAT_MOVEVARS_WARSOWBUNNY_TURNACCEL			229 // DP
-#define STAT_MOVEVARS_WARSOWBUNNY_BACKTOSIDERATIO	230 // DP
-#define STAT_MOVEVARS_AIRSTOPACCELERATE				231 // DP
-#define STAT_MOVEVARS_AIRSTRAFEACCELERATE			232 // DP
-#define STAT_MOVEVARS_MAXAIRSTRAFESPEED				233 // DP
-#define STAT_MOVEVARS_AIRCONTROL					234 // DP
-#define STAT_FRAGLIMIT								235 // DP
-#define STAT_TIMELIMIT								236 // DP
-#define STAT_MOVEVARS_WALLFRICTION					237 // DP
-#define STAT_MOVEVARS_FRICTION						238 // DP
-#define STAT_MOVEVARS_WATERFRICTION					239 // DP
-#define STAT_MOVEVARS_TICRATE						240 // DP
-#define STAT_MOVEVARS_TIMESCALE						241 // DP
-#define STAT_MOVEVARS_GRAVITY						242 // DP
-#define STAT_MOVEVARS_STOPSPEED						243 // DP
-#define STAT_MOVEVARS_MAXSPEED						244 // DP
-#define STAT_MOVEVARS_SPECTATORMAXSPEED				245 // DP
-#define STAT_MOVEVARS_ACCELERATE					246 // DP
-#define STAT_MOVEVARS_AIRACCELERATE					247 // DP
-#define STAT_MOVEVARS_WATERACCELERATE				248 // DP
-#define STAT_MOVEVARS_ENTGRAVITY					249 // DP
-#define STAT_MOVEVARS_JUMPVELOCITY					250 // DP
-#define STAT_MOVEVARS_EDGEFRICTION					251 // DP
-#define STAT_MOVEVARS_MAXAIRSPEED					252 // DP
-#define STAT_MOVEVARS_STEPHEIGHT					253 // DP
-#define STAT_MOVEVARS_AIRACCEL_QW					254 // DP
-#define STAT_MOVEVARS_AIRACCEL_SIDEWAYS_FRICTION	255 // DP
+#define	STAT_SECRETS		13		///< bumped on client side by svc_foundsecret
+#define	STAT_MONSTERS		14		///< bumped by svc_killedmonster
+#define STAT_ITEMS			15 ///< FTE, DP
+#define STAT_VIEWHEIGHT		16 ///< FTE, DP
+//#define STAT_TIME			17 ///< FTE
+//#define STAT_VIEW2		20 ///< FTE
+#define STAT_VIEWZOOM		21 ///< DP
+#define STAT_MOVEVARS_WARSOWBUNNY_AIRFORWARDACCEL	226 ///< DP
+#define STAT_MOVEVARS_WARSOWBUNNY_ACCEL				227 ///< DP
+#define STAT_MOVEVARS_WARSOWBUNNY_TOPSPEED			228 ///< DP
+#define STAT_MOVEVARS_WARSOWBUNNY_TURNACCEL			229 ///< DP
+#define STAT_MOVEVARS_WARSOWBUNNY_BACKTOSIDERATIO	230 ///< DP
+#define STAT_MOVEVARS_AIRSTOPACCELERATE				231 ///< DP
+#define STAT_MOVEVARS_AIRSTRAFEACCELERATE			232 ///< DP
+#define STAT_MOVEVARS_MAXAIRSTRAFESPEED				233 ///< DP
+#define STAT_MOVEVARS_AIRCONTROL					234 ///< DP
+#define STAT_FRAGLIMIT								235 ///< DP
+#define STAT_TIMELIMIT								236 ///< DP
+#define STAT_MOVEVARS_WALLFRICTION					237 ///< DP
+#define STAT_MOVEVARS_FRICTION						238 ///< DP
+#define STAT_MOVEVARS_WATERFRICTION					239 ///< DP
+#define STAT_MOVEVARS_TICRATE						240 ///< DP
+#define STAT_MOVEVARS_TIMESCALE						241 ///< DP
+#define STAT_MOVEVARS_GRAVITY						242 ///< DP
+#define STAT_MOVEVARS_STOPSPEED						243 ///< DP
+#define STAT_MOVEVARS_MAXSPEED						244 ///< DP
+#define STAT_MOVEVARS_SPECTATORMAXSPEED				245 ///< DP
+#define STAT_MOVEVARS_ACCELERATE					246 ///< DP
+#define STAT_MOVEVARS_AIRACCELERATE					247 ///< DP
+#define STAT_MOVEVARS_WATERACCELERATE				248 ///< DP
+#define STAT_MOVEVARS_ENTGRAVITY					249 ///< DP
+#define STAT_MOVEVARS_JUMPVELOCITY					250 ///< DP
+#define STAT_MOVEVARS_EDGEFRICTION					251 ///< DP
+#define STAT_MOVEVARS_MAXAIRSPEED					252 ///< DP
+#define STAT_MOVEVARS_STEPHEIGHT					253 ///< DP
+#define STAT_MOVEVARS_AIRACCEL_QW					254 ///< DP
+#define STAT_MOVEVARS_AIRACCEL_SIDEWAYS_FRICTION	255 ///< DP
 
 // stock defines
 
@@ -322,9 +322,9 @@ extern cvar_t developer_loading;
 # define DP_ARCH_STR		"x86"
 #endif
 
-// incremented every frame, never reset
+/// incremented every frame, never reset
 extern int host_framecount;
-// not bounded in any way, changed at start of every frame, never reset
+/// not bounded in any way, changed at start of every frame, never reset
 extern double realtime;
 
 void Host_InitCommands(void);
@@ -340,7 +340,7 @@ void Host_NoOperation_f(void);
 
 void Host_AbortCurrentFrame(void);
 
-// skill level for currently loaded level (in case the user changes the cvar while the level is running, this reflects the level actually in use)
+/// skill level for currently loaded level (in case the user changes the cvar while the level is running, this reflects the level actually in use)
 extern int current_skill;
 
 //

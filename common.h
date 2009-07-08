@@ -21,11 +21,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef COMMON_H
 #define COMMON_H
 
-// many buffers use this size
+/// many buffers use this size
 #define MAX_INPUTLINE 16384
 
 
-// MSVC has a different name for several standard functions
+/// MSVC has a different name for several standard functions
 #ifdef WIN32
 # define strcasecmp _stricmp
 # define strncasecmp _strnicmp
@@ -37,15 +37,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #endif
 
 #ifdef SUNOS
-#include <sys/file.h>		// Needed for FNDELAY
+#include <sys/file.h>		///< Needed for FNDELAY
 #endif
 
 //============================================================================
 
 typedef struct sizebuf_s
 {
-	qboolean	allowoverflow;	// if false, do a Sys_Error
-	qboolean	overflowed;		// set to true if the buffer size failed
+	qboolean	allowoverflow;	///< if false, do a Sys_Error
+	qboolean	overflowed;		///< set to true if the buffer size failed
 	unsigned char		*data;
 	int			maxsize;
 	int			cursize;
@@ -102,9 +102,17 @@ void Com_BlockFullChecksum (void *buffer, int len, unsigned char *outbuf);
 # endif
 #endif
 
+/*! \name Byte order functions.
+ * @{
+ */
 
+/// Swaps the byte order of the given short \p l.
 short ShortSwap (short l);
+
+/// Swaps the byte order of the given long \p l.
 int LongSwap (int l);
+
+/// Swaps the byte order of the given float \p f.
 float FloatSwap (float f);
 
 #if BYTE_ORDER == LITTLE_ENDIAN
@@ -125,11 +133,18 @@ float FloatSwap (float f);
 #define LittleFloat(l) FloatSwap(l)
 #endif
 
+/// Extract a big endian long from the given \p buffer.
 unsigned int BuffBigLong (const unsigned char *buffer);
-unsigned short BuffBigShort (const unsigned char *buffer);
-unsigned int BuffLittleLong (const unsigned char *buffer);
-unsigned short BuffLittleShort (const unsigned char *buffer);
 
+/// Extract a big endian short from the given \p buffer.
+unsigned short BuffBigShort (const unsigned char *buffer);
+
+/// Extract a little endian long from the given \p buffer.
+unsigned int BuffLittleLong (const unsigned char *buffer);
+
+/// Extract a little endian short from the given \p buffer.
+unsigned short BuffLittleShort (const unsigned char *buffer);
+//@}
 
 //============================================================================
 
@@ -138,22 +153,27 @@ unsigned short BuffLittleShort (const unsigned char *buffer);
 typedef enum protocolversion_e
 {
 	PROTOCOL_UNKNOWN,
-	PROTOCOL_DARKPLACES7, // added QuakeWorld-style movement protocol to allow more consistent prediction
-	PROTOCOL_DARKPLACES6, // various changes
-	PROTOCOL_DARKPLACES5, // uses EntityFrame5 entity snapshot encoder/decoder which is based on a Tribes networking article at http://www.garagegames.com/articles/networking1/
-	PROTOCOL_DARKPLACES4, // various changes
-	PROTOCOL_DARKPLACES3, // uses EntityFrame4 entity snapshot encoder/decoder which is broken, this attempted to do partial snapshot updates on a QuakeWorld-like protocol, but it is broken and impossible to fix
-	PROTOCOL_DARKPLACES2, // various changes
-	PROTOCOL_DARKPLACES1, // uses EntityFrame entity snapshot encoder/decoder which is a QuakeWorld-like entity snapshot delta compression method
-	PROTOCOL_QUAKEDP, // darkplaces extended quake protocol (used by TomazQuake and others), backwards compatible as long as no extended features are used
-	PROTOCOL_NEHAHRAMOVIE, // Nehahra movie protocol, a big nasty hack dating back to early days of the Quake Standards Group (but only ever used by neh_gl.exe), this is potentially backwards compatible with quake protocol as long as no extended features are used (but in actuality the neh_gl.exe which wrote this protocol ALWAYS wrote the extended information)
-	PROTOCOL_QUAKE, // quake (aka netquake/normalquake/nq) protocol
-	PROTOCOL_QUAKEWORLD, // quakeworld protocol
-	PROTOCOL_NEHAHRABJP, // same as QUAKEDP but with 16bit modelindex
-	PROTOCOL_NEHAHRABJP2, // same as NEHAHRABJP but with 16bit soundindex
-	PROTOCOL_NEHAHRABJP3, // same as NEHAHRABJP2 but with some changes
+	PROTOCOL_DARKPLACES7, ///< added QuakeWorld-style movement protocol to allow more consistent prediction
+	PROTOCOL_DARKPLACES6, ///< various changes
+	PROTOCOL_DARKPLACES5, ///< uses EntityFrame5 entity snapshot encoder/decoder which is based on a Tribes networking article at http://www.garagegames.com/articles/networking1/
+	PROTOCOL_DARKPLACES4, ///< various changes
+	PROTOCOL_DARKPLACES3, ///< uses EntityFrame4 entity snapshot encoder/decoder which is broken, this attempted to do partial snapshot updates on a QuakeWorld-like protocol, but it is broken and impossible to fix
+	PROTOCOL_DARKPLACES2, ///< various changes
+	PROTOCOL_DARKPLACES1, ///< uses EntityFrame entity snapshot encoder/decoder which is a QuakeWorld-like entity snapshot delta compression method
+	PROTOCOL_QUAKEDP, ///< darkplaces extended quake protocol (used by TomazQuake and others), backwards compatible as long as no extended features are used
+	PROTOCOL_NEHAHRAMOVIE, ///< Nehahra movie protocol, a big nasty hack dating back to early days of the Quake Standards Group (but only ever used by neh_gl.exe), this is potentially backwards compatible with quake protocol as long as no extended features are used (but in actuality the neh_gl.exe which wrote this protocol ALWAYS wrote the extended information)
+	PROTOCOL_QUAKE, ///< quake (aka netquake/normalquake/nq) protocol
+	PROTOCOL_QUAKEWORLD, ///< quakeworld protocol
+	PROTOCOL_NEHAHRABJP, ///< same as QUAKEDP but with 16bit modelindex
+	PROTOCOL_NEHAHRABJP2, ///< same as NEHAHRABJP but with 16bit soundindex
+	PROTOCOL_NEHAHRABJP3, ///< same as NEHAHRABJP2 but with some changes
 }
 protocolversion_t;
+
+/*! \name Message IO functions.
+ * Handles byte ordering and avoids alignment errors
+ * @{
+ */
 
 void MSG_WriteChar (sizebuf_t *sb, int c);
 void MSG_WriteByte (sizebuf_t *sb, int c);
@@ -200,7 +220,7 @@ float MSG_ReadCoord32f (void);
 float MSG_ReadCoord (protocolversion_t protocol);
 void MSG_ReadVector (float *v, protocolversion_t protocol);
 float MSG_ReadAngle (protocolversion_t protocol);
-
+//@}
 //============================================================================
 
 typedef float (*COM_WordWidthFunc_t) (void *passthrough, const char *w, size_t *length, float maxWidth); // length is updated to the longest fitting string into maxWidth; if maxWidth < 0, all characters are used and length is used as is
@@ -307,7 +327,7 @@ void COM_ToUpperString (const char *in, char *out, size_t size_out);
 
 typedef struct stringlist_s
 {
-	// maxstrings changes as needed, causing reallocation of strings[] array
+	/// maxstrings changes as needed, causing reallocation of strings[] array
 	int maxstrings;
 	int numstrings;
 	char **strings;
@@ -335,7 +355,7 @@ void InfoString_Print(char *buffer);
 #endif
 
 #ifndef HAVE_STRLCAT
-/*
+/*!
  * Appends src to string dst of size siz (unlike strncat, siz is the
  * full size of dst, not space left).  At most siz-1 characters
  * will be copied.  Always NUL terminates (unless siz <= strlen(dst)).
@@ -346,7 +366,7 @@ size_t strlcat(char *dst, const char *src, size_t siz);
 #endif  // #ifndef HAVE_STRLCAT
 
 #ifndef HAVE_STRLCPY
-/*
+/*!
  * Copy src to string dst of size siz.  At most siz-1 characters
  * will be copied.  Always NUL terminates (unless siz == 0).
  * Returns strlen(src); if retval >= siz, truncation occurred.

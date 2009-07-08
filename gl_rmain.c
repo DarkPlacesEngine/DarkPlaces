@@ -28,7 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 mempool_t *r_main_mempool;
 rtexturepool_t *r_main_texturepool;
 
-static int r_frame = 0; // used only by R_GetCurrentTexture
+static int r_frame = 0; ///< used only by R_GetCurrentTexture
 
 //
 // screen size info
@@ -152,7 +152,7 @@ static struct r_bloomstate_s
 	int bloomwidth, bloomheight;
 
 	int screentexturewidth, screentextureheight;
-	rtexture_t *texture_screen; // also used for motion blur if enabled!
+	rtexture_t *texture_screen; /// \note also used for motion blur if enabled!
 
 	int bloomtexturewidth, bloomtextureheight;
 	rtexture_t *texture_bloom;
@@ -166,7 +166,7 @@ r_bloomstate;
 
 r_waterstate_t r_waterstate;
 
-// shadow volume bsp struct with automatically growing nodes buffer
+/// shadow volume bsp struct with automatically growing nodes buffer
 svbsp_t r_svbsp;
 
 rtexture_t *r_texture_blanknormalmap;
@@ -188,7 +188,7 @@ unsigned int r_maxqueries;
 char r_qwskincache[MAX_SCOREBOARD][MAX_QPATH];
 skinframe_t *r_qwskincache_skinframe[MAX_SCOREBOARD];
 
-// vertex coordinates for a quad that covers the screen exactly
+/// vertex coordinates for a quad that covers the screen exactly
 const static float r_screenvertex3f[12] =
 {
 	0, 0, 0,
@@ -1124,23 +1124,23 @@ shadermodeinfo_t;
 
 typedef enum shaderpermutation_e
 {
-	SHADERPERMUTATION_DIFFUSE = 1<<0, // (lightsource) whether to use directional shading
-	SHADERPERMUTATION_VERTEXTEXTUREBLEND = 1<<1, // indicates this is a two-layer material blend based on vertex alpha (q3bsp)
-	SHADERPERMUTATION_COLORMAPPING = 1<<2, // indicates this is a colormapped skin
-	SHADERPERMUTATION_CONTRASTBOOST = 1<<3, // r_glsl_contrastboost boosts the contrast at low color levels (similar to gamma)
-	SHADERPERMUTATION_FOG = 1<<4, // tint the color by fog color or black if using additive blend mode
-	SHADERPERMUTATION_CUBEFILTER = 1<<5, // (lightsource) use cubemap light filter
-	SHADERPERMUTATION_GLOW = 1<<6, // (lightmap) blend in an additive glow texture
-	SHADERPERMUTATION_SPECULAR = 1<<7, // (lightsource or deluxemapping) render specular effects
-	SHADERPERMUTATION_EXACTSPECULARMATH = 1<<8, // (lightsource or deluxemapping) use exact reflection map for specular effects, as opposed to the usual OpenGL approximation
-	SHADERPERMUTATION_REFLECTION = 1<<9, // normalmap-perturbed reflection of the scene infront of the surface, preformed as an overlay on the surface
-	SHADERPERMUTATION_OFFSETMAPPING = 1<<10, // adjust texcoords to roughly simulate a displacement mapped surface
-	SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING = 1<<11, // adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
-	SHADERPERMUTATION_GAMMARAMPS = 1<<12, // gamma (postprocessing only)
-	SHADERPERMUTATION_POSTPROCESSING = 1<<13, // user defined postprocessing
-	SHADERPERMUTATION_SATURATION = 1<<14, // user defined postprocessing
-	SHADERPERMUTATION_LIMIT = 1<<15, // size of permutations array
-	SHADERPERMUTATION_COUNT = 15 // size of shaderpermutationinfo array
+	SHADERPERMUTATION_DIFFUSE = 1<<0, ///< (lightsource) whether to use directional shading
+	SHADERPERMUTATION_VERTEXTEXTUREBLEND = 1<<1, ///< indicates this is a two-layer material blend based on vertex alpha (q3bsp)
+	SHADERPERMUTATION_COLORMAPPING = 1<<2, ///< indicates this is a colormapped skin
+	SHADERPERMUTATION_CONTRASTBOOST = 1<<3, ///< r_glsl_contrastboost boosts the contrast at low color levels (similar to gamma)
+	SHADERPERMUTATION_FOG = 1<<4, ///< tint the color by fog color or black if using additive blend mode
+	SHADERPERMUTATION_CUBEFILTER = 1<<5, ///< (lightsource) use cubemap light filter
+	SHADERPERMUTATION_GLOW = 1<<6, ///< (lightmap) blend in an additive glow texture
+	SHADERPERMUTATION_SPECULAR = 1<<7, ///< (lightsource or deluxemapping) render specular effects
+	SHADERPERMUTATION_EXACTSPECULARMATH = 1<<8, ///< (lightsource or deluxemapping) use exact reflection map for specular effects, as opposed to the usual OpenGL approximation
+	SHADERPERMUTATION_REFLECTION = 1<<9, ///< normalmap-perturbed reflection of the scene infront of the surface, preformed as an overlay on the surface
+	SHADERPERMUTATION_OFFSETMAPPING = 1<<10, ///< adjust texcoords to roughly simulate a displacement mapped surface
+	SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING = 1<<11, ///< adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
+	SHADERPERMUTATION_GAMMARAMPS = 1<<12, ///< gamma (postprocessing only)
+	SHADERPERMUTATION_POSTPROCESSING = 1<<13, ///< user defined postprocessing
+	SHADERPERMUTATION_SATURATION = 1<<14, ///< user defined postprocessing
+	SHADERPERMUTATION_LIMIT = 1<<15, ///< size of permutations array
+	SHADERPERMUTATION_COUNT = 15 ///< size of shaderpermutationinfo array
 }
 shaderpermutation_t;
 
@@ -1164,21 +1164,21 @@ shaderpermutationinfo_t shaderpermutationinfo[SHADERPERMUTATION_COUNT] =
 	{"#define USESATURATION\n", " saturation"},
 };
 
-// this enum is multiplied by SHADERPERMUTATION_MODEBASE
+/// this enum is multiplied by SHADERPERMUTATION_MODEBASE
 typedef enum shadermode_e
 {
-	SHADERMODE_GENERIC, // (particles/HUD/etc) vertex color, optionally multiplied by one texture
-	SHADERMODE_POSTPROCESS, // postprocessing shader (r_glsl_postprocess)
-	SHADERMODE_DEPTH_OR_SHADOW, // (depthfirst/shadows) vertex shader only
-	SHADERMODE_FLATCOLOR, // (lightmap) modulate texture by uniform color (q1bsp, q3bsp)
-	SHADERMODE_VERTEXCOLOR, // (lightmap) modulate texture by vertex colors (q3bsp)
-	SHADERMODE_LIGHTMAP, // (lightmap) modulate texture by lightmap texture (q1bsp, q3bsp)
-	SHADERMODE_LIGHTDIRECTIONMAP_MODELSPACE, // (lightmap) use directional pixel shading from texture containing modelspace light directions (q3bsp deluxemap)
-	SHADERMODE_LIGHTDIRECTIONMAP_TANGENTSPACE, // (lightmap) use directional pixel shading from texture containing tangentspace light directions (q1bsp deluxemap)
-	SHADERMODE_LIGHTDIRECTION, // (lightmap) use directional pixel shading from fixed light direction (q3bsp)
-	SHADERMODE_LIGHTSOURCE, // (lightsource) use directional pixel shading from light source (rtlight)
-	SHADERMODE_REFRACTION, // refract background (the material is rendered normally after this pass)
-	SHADERMODE_WATER, // refract background and reflection (the material is rendered normally after this pass)
+	SHADERMODE_GENERIC, ///< (particles/HUD/etc) vertex color, optionally multiplied by one texture
+	SHADERMODE_POSTPROCESS, ///< postprocessing shader (r_glsl_postprocess)
+	SHADERMODE_DEPTH_OR_SHADOW, ///< (depthfirst/shadows) vertex shader only
+	SHADERMODE_FLATCOLOR, ///< (lightmap) modulate texture by uniform color (q1bsp, q3bsp)
+	SHADERMODE_VERTEXCOLOR, ///< (lightmap) modulate texture by vertex colors (q3bsp)
+	SHADERMODE_LIGHTMAP, ///< (lightmap) modulate texture by lightmap texture (q1bsp, q3bsp)
+	SHADERMODE_LIGHTDIRECTIONMAP_MODELSPACE, ///< (lightmap) use directional pixel shading from texture containing modelspace light directions (q3bsp deluxemap)
+	SHADERMODE_LIGHTDIRECTIONMAP_TANGENTSPACE, ///< (lightmap) use directional pixel shading from texture containing tangentspace light directions (q1bsp deluxemap)
+	SHADERMODE_LIGHTDIRECTION, ///< (lightmap) use directional pixel shading from fixed light direction (q3bsp)
+	SHADERMODE_LIGHTSOURCE, ///< (lightsource) use directional pixel shading from light source (rtlight)
+	SHADERMODE_REFRACTION, ///< refract background (the material is rendered normally after this pass)
+	SHADERMODE_WATER, ///< refract background and reflection (the material is rendered normally after this pass)
 	SHADERMODE_COUNT
 }
 shadermode_t;
@@ -1202,11 +1202,11 @@ shadermodeinfo_t shadermodeinfo[SHADERMODE_COUNT] =
 
 typedef struct r_glsl_permutation_s
 {
-	// indicates if we have tried compiling this permutation already
+	/// indicates if we have tried compiling this permutation already
 	qboolean compiled;
-	// 0 if compilation failed
+	/// 0 if compilation failed
 	int program;
-	// locations of detected uniforms in program object, or -1 if not found
+	/// locations of detected uniforms in program object, or -1 if not found
 	int loc_Texture_First;
 	int loc_Texture_Second;
 	int loc_Texture_GammaRamps;
@@ -1245,8 +1245,8 @@ typedef struct r_glsl_permutation_s
 	int loc_DiffuseColor;
 	int loc_SpecularColor;
 	int loc_LightDir;
-	int loc_ContrastBoostCoeff; // 1 - 1/ContrastBoost
-	int loc_GammaCoeff; // 1 / gamma
+	int loc_ContrastBoostCoeff; ///< 1 - 1/ContrastBoost
+	int loc_GammaCoeff; ///< 1 / gamma
 	int loc_DistortScaleRefractReflect;
 	int loc_ScreenScaleRefractReflect;
 	int loc_ScreenCenterRefractReflect;
@@ -1264,9 +1264,9 @@ typedef struct r_glsl_permutation_s
 }
 r_glsl_permutation_t;
 
-// information about each possible shader permutation
+/// information about each possible shader permutation
 r_glsl_permutation_t r_glsl_permutations[SHADERMODE_COUNT][SHADERPERMUTATION_LIMIT];
-// currently selected permutation
+/// currently selected permutation
 r_glsl_permutation_t *r_glsl_permutation;
 
 static char *R_GLSL_GetText(const char *filename, qboolean printfromdisknotice)
@@ -2742,7 +2742,7 @@ static void R_View_UpdateEntityVisible (void)
 	}
 }
 
-// only used if skyrendermasked, and normally returns false
+/// only used if skyrendermasked, and normally returns false
 int R_DrawBrushModelsSky (void)
 {
 	int i, sky;

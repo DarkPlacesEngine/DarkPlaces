@@ -70,21 +70,21 @@ void World_InsertLinkBefore(link_t *l, link_t *before, int entitynumber);
 
 void World_Init(void);
 
-// called after the world model has been loaded, before linking any entities
+/// called after the world model has been loaded, before linking any entities
 void World_SetSize(world_t *world, const char *filename, const vec3_t mins, const vec3_t maxs);
-// unlinks all entities (used before reallocation of edicts)
+/// unlinks all entities (used before reallocation of edicts)
 void World_UnlinkAll(world_t *world);
 
 void World_PrintAreaStats(world_t *world, const char *worldname);
 
-// call before removing an entity, and before trying to move one,
-// so it doesn't clip against itself
+/// call before removing an entity, and before trying to move one,
+/// so it doesn't clip against itself
 void World_UnlinkEdict(struct prvm_edict_s *ent);
 
-// Needs to be called any time an entity changes origin, mins, maxs
+/// Needs to be called any time an entity changes origin, mins, maxs
 void World_LinkEdict(world_t *world, struct prvm_edict_s *ent, const vec3_t mins, const vec3_t maxs);
 
-// returns list of entities touching a box
+/// \returns list of entities touching a box
 int World_EntitiesInBox(world_t *world, const vec3_t mins, const vec3_t maxs, int maxlist, struct prvm_edict_s **list);
 
 #endif
