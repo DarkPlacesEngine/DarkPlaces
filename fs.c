@@ -66,7 +66,7 @@
 # define dup _dup
 #endif
 
-/*
+/** \page fs File System
 
 All of Quake's data access is through a hierchal file system, but the contents
 of the file system can be transparently merged from several sources.
@@ -141,67 +141,66 @@ TYPES
 =============================================================================
 */
 
-// Zlib stream (from zlib.h)
-// Warning: some pointers we don't use directly have
-// been cast to "void*" for a matter of simplicity
+/*! Zlib stream (from zlib.h)
+ * \warning: some pointers we don't use directly have
+ * been cast to "void*" for a matter of simplicity
+ */
 typedef struct
 {
-	unsigned char			*next_in;	// next input byte
-	unsigned int	avail_in;	// number of bytes available at next_in
-	unsigned long	total_in;	// total nb of input bytes read so far
+	unsigned char			*next_in;	///< next input byte
+	unsigned int	avail_in;	///< number of bytes available at next_in
+	unsigned long	total_in;	///< total nb of input bytes read so far
 
-	unsigned char			*next_out;	// next output byte should be put there
-	unsigned int	avail_out;	// remaining free space at next_out
-	unsigned long	total_out;	// total nb of bytes output so far
+	unsigned char			*next_out;	///< next output byte should be put there
+	unsigned int	avail_out;	///< remaining free space at next_out
+	unsigned long	total_out;	///< total nb of bytes output so far
 
-	char			*msg;		// last error message, NULL if no error
-	void			*state;		// not visible by applications
+	char			*msg;		///< last error message, NULL if no error
+	void			*state;		///< not visible by applications
 
-	void			*zalloc;	// used to allocate the internal state
-	void			*zfree;		// used to free the internal state
-	void			*opaque;	// private data object passed to zalloc and zfree
+	void			*zalloc;	///< used to allocate the internal state
+	void			*zfree;		///< used to free the internal state
+	void			*opaque;	///< private data object passed to zalloc and zfree
 
-	int				data_type;	// best guess about the data type: ascii or binary
-	unsigned long	adler;		// adler32 value of the uncompressed data
-	unsigned long	reserved;	// reserved for future use
+	int				data_type;	///< best guess about the data type: ascii or binary
+	unsigned long	adler;		///< adler32 value of the uncompressed data
+	unsigned long	reserved;	///< reserved for future use
 } z_stream;
 
 
-// inside a package (PAK or PK3)
+/// inside a package (PAK or PK3)
 #define QFILE_FLAG_PACKED (1 << 0)
-// file is compressed using the deflate algorithm (PK3 only)
+/// file is compressed using the deflate algorithm (PK3 only)
 #define QFILE_FLAG_DEFLATED (1 << 1)
-// file is actually already loaded data
+/// file is actually already loaded data
 #define QFILE_FLAG_DATA (1 << 2)
 
 #define FILE_BUFF_SIZE 2048
 typedef struct
 {
 	z_stream	zstream;
-	size_t		comp_length;			// length of the compressed file
-	size_t		in_ind, in_len;			// input buffer current index and length
-	size_t		in_position;			// position in the compressed file
+	size_t		comp_length;			///< length of the compressed file
+	size_t		in_ind, in_len;			///< input buffer current index and length
+	size_t		in_position;			///< position in the compressed file
 	unsigned char		input [FILE_BUFF_SIZE];
 } ztoolkit_t;
 
 struct qfile_s
 {
 	int				flags;
-	int				handle;					// file descriptor
-	fs_offset_t		real_length;			// uncompressed file size (for files opened in "read" mode)
-	fs_offset_t		position;				// current position in the file
-	fs_offset_t		offset;					// offset into the package (0 if external file)
-	int				ungetc;					// single stored character from ungetc, cleared to EOF when read
+	int				handle;					///< file descriptor
+	fs_offset_t		real_length;			///< uncompressed file size (for files opened in "read" mode)
+	fs_offset_t		position;				///< current position in the file
+	fs_offset_t		offset;					///< offset into the package (0 if external file)
+	int				ungetc;					///< single stored character from ungetc, cleared to EOF when read
 
 	// Contents buffer
-	fs_offset_t		buff_ind, buff_len;		// buffer current index and length
+	fs_offset_t		buff_ind, buff_len;		///< buffer current index and length
 	unsigned char			buff [FILE_BUFF_SIZE];
 
-	// For zipped files
-	ztoolkit_t*		ztk;
+	ztoolkit_t*		ztk;	///< For zipped files.
 
-	// for data files
-	const unsigned char *data;
+	const unsigned char *data;	///< For data files.
 };
 
 
@@ -213,11 +212,11 @@ typedef struct pk3_endOfCentralDir_s
 {
 	unsigned int signature;
 	unsigned short disknum;
-	unsigned short cdir_disknum;	// number of the disk with the start of the central directory
-	unsigned short localentries;	// number of entries in the central directory on this disk
-	unsigned short nbentries;		// total number of entries in the central directory on this disk
-	unsigned int cdir_size;			// size of the central directory
-	unsigned int cdir_offset;		// with respect to the starting disk number
+	unsigned short cdir_disknum;	///< number of the disk with the start of the central directory
+	unsigned short localentries;	///< number of entries in the central directory on this disk
+	unsigned short nbentries;		///< total number of entries in the central directory on this disk
+	unsigned int cdir_size;			///< size of the central directory
+	unsigned int cdir_offset;		///< with respect to the starting disk number
 	unsigned short comment_size;
 } pk3_endOfCentralDir_t;
 
@@ -237,12 +236,14 @@ typedef struct dpackheader_s
 } dpackheader_t;
 
 
-// Packages in memory
-// the offset in packfile_t is the true contents offset
+/*! \name Packages in memory
+ * @{
+ */
+/// the offset in packfile_t is the true contents offset
 #define PACKFILE_FLAG_TRUEOFFS (1 << 0)
-// file compressed using the deflate algorithm
+/// file compressed using the deflate algorithm
 #define PACKFILE_FLAG_DEFLATED (1 << 1)
-// file is a symbolic link
+/// file is a symbolic link
 #define PACKFILE_FLAG_SYMLINK (1 << 2)
 
 typedef struct packfile_s
@@ -250,8 +251,8 @@ typedef struct packfile_s
 	char name [MAX_QPATH];
 	int flags;
 	fs_offset_t offset;
-	fs_offset_t packsize;	// size in the package
-	fs_offset_t realsize;	// real file size (uncompressed)
+	fs_offset_t packsize;	///< size in the package
+	fs_offset_t realsize;	///< real file size (uncompressed)
 } packfile_t;
 
 typedef struct pack_s
@@ -259,13 +260,13 @@ typedef struct pack_s
 	char filename [MAX_OSPATH];
 	char shortname [MAX_QPATH];
 	int handle;
-	int ignorecase;  // PK3 ignores case
+	int ignorecase;  ///< PK3 ignores case
 	int numfiles;
 	packfile_t *files;
 } pack_t;
+//@}
 
-
-// Search paths for files (including packages)
+/// Search paths for files (including packages)
 typedef struct searchpath_s
 {
 	// only one of filename / pack will be used
@@ -360,7 +361,7 @@ static dllfunction_t zlibfuncs[] =
 	{NULL, NULL}
 };
 
-// Handle for Zlib DLL
+/// Handle for Zlib DLL
 static dllhandle_t zlib_dll = NULL;
 
 #ifdef WIN32
@@ -833,13 +834,12 @@ void FS_Path_f (void)
 /*
 =================
 FS_LoadPackPAK
-
-Takes an explicit (not game tree related) path to a pak file.
-
-Loads the header and directory, adding the files at the beginning
-of the list so they override previous pack files.
 =================
 */
+/*! Takes an explicit (not game tree related) path to a pak file.
+ *Loads the header and directory, adding the files at the beginning
+ *of the list so they override previous pack files.
+ */
 pack_t *FS_LoadPackPAK (const char *packfile)
 {
 	dpackheader_t header;
@@ -921,17 +921,18 @@ pack_t *FS_LoadPackPAK (const char *packfile)
 /*
 ================
 FS_AddPack_Fullpath
-
-Adds the given pack to the search path.
-The pack type is autodetected by the file extension.
-
-Returns true if the file was successfully added to the
-search path or if it was already included.
-
-If keep_plain_dirs is set, the pack will be added AFTER the first sequence of
-plain directories.
 ================
 */
+/*! Adds the given pack to the search path.
+ * The pack type is autodetected by the file extension.
+ *
+ * Returns true if the file was successfully added to the
+ * search path or if it was already included.
+ *
+ * If keep_plain_dirs is set, the pack will be added AFTER the first sequence of
+ * plain directories.
+ *
+ */
 static qboolean FS_AddPack_Fullpath(const char *pakfile, const char *shortname, qboolean *already_loaded, qboolean keep_plain_dirs)
 {
 	searchpath_t *search;
@@ -1017,17 +1018,17 @@ static qboolean FS_AddPack_Fullpath(const char *pakfile, const char *shortname, 
 /*
 ================
 FS_AddPack
-
-Adds the given pack to the search path and searches for it in the game path.
-The pack type is autodetected by the file extension.
-
-Returns true if the file was successfully added to the
-search path or if it was already included.
-
-If keep_plain_dirs is set, the pack will be added AFTER the first sequence of
-plain directories.
 ================
 */
+/*! Adds the given pack to the search path and searches for it in the game path.
+ * The pack type is autodetected by the file extension.
+ *
+ * Returns true if the file was successfully added to the
+ * search path or if it was already included.
+ *
+ * If keep_plain_dirs is set, the pack will be added AFTER the first sequence of
+ * plain directories.
+ */
 qboolean FS_AddPack(const char *pakfile, qboolean *already_loaded, qboolean keep_plain_dirs)
 {
 	char fullpath[MAX_QPATH];

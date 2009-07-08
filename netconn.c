@@ -105,12 +105,12 @@ int masterreplycount = 0;
 int serverquerycount = 0;
 int serverreplycount = 0;
 
-// this is only false if there are still servers left to query
+/// this is only false if there are still servers left to query
 static qboolean serverlist_querysleep = true;
 static qboolean serverlist_paused = false;
-// this is pushed a second or two ahead of realtime whenever a master server
-// reply is received, to avoid issuing queries while master replies are still
-// flooding in (which would make a mess of the ping times)
+/// this is pushed a second or two ahead of realtime whenever a master server
+/// reply is received, to avoid issuing queries while master replies are still
+/// flooding in (which would make a mess of the ping times)
 static double serverlist_querywaittime = 0;
 
 static unsigned char sendbuffer[NET_HEADERSIZE+NET_MAXMESSAGE];
@@ -163,8 +163,8 @@ void NetConn_UpdateFavorites()
 	}
 }
 
-// helper function to insert a value into the viewset
-// spare entries will be removed
+/// helper function to insert a value into the viewset
+/// spare entries will be removed
 static void _ServerList_ViewList_Helper_InsertBefore( int index, serverlist_entry_t *entry )
 {
     int i;
@@ -180,7 +180,7 @@ static void _ServerList_ViewList_Helper_InsertBefore( int index, serverlist_entr
 	serverlist_viewlist[index] = entry;
 }
 
-// we suppose serverlist_viewcount to be valid, ie > 0
+/// we suppose serverlist_viewcount to be valid, ie > 0
 static void _ServerList_ViewList_Helper_Remove( int index )
 {
 	serverlist_viewcount--;
@@ -188,7 +188,7 @@ static void _ServerList_ViewList_Helper_Remove( int index )
 		serverlist_viewlist[index] = serverlist_viewlist[index + 1];
 }
 
-// returns true if A should be inserted before B
+/// \returns true if A should be inserted before B
 static qboolean _ServerList_Entry_Compare( serverlist_entry_t *A, serverlist_entry_t *B )
 {
 	int result = 0; // > 0 if for numbers A > B and for text if A < B
@@ -1453,7 +1453,7 @@ static void NetConn_ClientParsePacket_ServerList_ParseDPList(lhnetaddress_t *sen
 			{
 				const char *ifname;
 
-				// TODO: make some basic checks of the IP address (broadcast, ...)
+				/// \TODO: make some basic checks of the IP address (broadcast, ...)
 
 				ifname = LHNETADDRESS_GetInterfaceName(senderaddress);
 				if (ifname != NULL)
@@ -2037,7 +2037,7 @@ static void NetConn_BuildChallengeString(char *buffer, int bufferlength)
 	buffer[i] = 0;
 }
 
-// (div0) build the full response only if possible; better a getinfo response than no response at all if getstatus won't fit
+/// (div0) build the full response only if possible; better a getinfo response than no response at all if getstatus won't fit
 static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg, size_t out_size, qboolean fullstatus)
 {
 	char qcstatus[256];
@@ -2074,7 +2074,7 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 		}
 	}
 
-	// TODO: we should add more information for the full status string
+	/// \TODO: we should add more information for the full status string
 	length = dpsnprintf(out_msg, out_size,
 						"\377\377\377\377%s\x0A"
 						"\\gamename\\%s\\modname\\%s\\gameversion\\%d\\sv_maxclients\\%d"
@@ -2288,7 +2288,7 @@ qboolean plaintext_matching(const char *password, const char *hash, const char *
 	return !strcmp(password, hash);
 }
 
-// returns a string describing the user level, or NULL for auth failure
+/// returns a string describing the user level, or NULL for auth failure
 const char *RCon_Authenticate(const char *password, const char *s, const char *endpos, rcon_matchfunc_t comparator, const char *cs, int cslen)
 {
 	const char *text;

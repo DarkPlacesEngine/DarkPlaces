@@ -90,7 +90,7 @@ typedef struct video_resolution_s
 	const char *type;
 	int width, height;
 	int conwidth, conheight;
-	double pixelheight; // pixel aspect
+	double pixelheight; ///< pixel aspect
 }
 video_resolution_t;
 extern video_resolution_t video_resolutions[];

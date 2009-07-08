@@ -17,7 +17,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
-// input.h -- external (non-keyboard) input devices
+/// \file input.h -- external (non-keyboard) input devices
 
 #ifndef INPUT_H
 #define INPUT_H
@@ -43,11 +43,11 @@ typedef struct
 	int weaponbit;
 	int ammostat;
 	int ammomin;
-	// TODO add a parameter for the picture to be used by the sbar, and use it there
+	/// \TODO add a parameter for the picture to be used by the sbar, and use it there
 }
 in_bestweapon_info_t;
 extern in_bestweapon_info_t in_bestweapon_info[IN_BESTWEAPON_MAX];
-void IN_BestWeapon_ResetData(void); // call before each map so QC can start from a clean state
+void IN_BestWeapon_ResetData(void); ///< call before each map so QC can start from a clean state
 
 #endif
 

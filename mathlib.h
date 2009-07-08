@@ -49,27 +49,28 @@ extern vec3_t vec3_origin;
 #define max(A,B) ((A) > (B) ? (A) : (B))
 #endif
 
-// LordHavoc: this function never returns exactly MIN or exactly MAX, because
-// of a QuakeC bug in id1 where the line
-// self.nextthink = self.nexthink + random() * 0.5;
-// can result in 0 (self.nextthink is 0 at this point in the code to begin
-// with), causing "stone monsters" that never spawned properly, also MAX is
-// avoided because some people use random() as an index into arrays or for
-// loop conditions, where hitting exactly MAX may be a fatal error
+/// LordHavoc: this function never returns exactly MIN or exactly MAX, because
+/// of a QuakeC bug in id1 where the line
+/// self.nextthink = self.nexthink + random() * 0.5;
+/// can result in 0 (self.nextthink is 0 at this point in the code to begin
+/// with), causing "stone monsters" that never spawned properly, also MAX is
+/// avoided because some people use random() as an index into arrays or for
+/// loop conditions, where hitting exactly MAX may be a fatal error
 #define lhrandom(MIN,MAX) (((double)(rand() + 0.5) / ((double)RAND_MAX + 1)) * ((MAX)-(MIN)) + (MIN))
 
 #define invpow(base,number) (log(number) / log(base))
 
-// returns log base 2 of "n" (WARNING: "n" MUST be a power of 2!)
+/// returns log base 2 of "n"
+/// \WARNING: "n" MUST be a power of 2!
 #define log2i(n) ((((n) & 0xAAAAAAAA) != 0 ? 1 : 0) | (((n) & 0xCCCCCCCC) != 0 ? 2 : 0) | (((n) & 0xF0F0F0F0) != 0 ? 4 : 0) | (((n) & 0xFF00FF00) != 0 ? 8 : 0) | (((n) & 0xFFFF0000) != 0 ? 16 : 0))
 
-// TOCHECK: what is this function supposed to do?
+/// \TODO: what is this function supposed to do?
 #define bit2i(n) log2i((n) << 1)
 
-// boolean XOR (why doesn't C have the ^^ operator for this purpose?)
+/// boolean XOR (why doesn't C have the ^^ operator for this purpose?)
 #define boolxor(a,b) (!(a) != !(b))
 
-// returns the smallest integer greater than or equal to "value", or 0 if "value" is too big
+/// returns the smallest integer greater than or equal to "value", or 0 if "value" is too big
 unsigned int CeilPowerOf2(unsigned int value);
 
 #define DEG2RAD(a) ((a) * ((float) M_PI / 180.0f))
@@ -120,16 +121,17 @@ unsigned int CeilPowerOf2(unsigned int value);
 	(n)[2] = ((a)[0] - (b)[0]) * ((c)[1] - (b)[1]) - ((a)[1] - (b)[1]) * ((c)[0] - (b)[0]) \
 	)
 
-// fast PointInfrontOfTriangle
-// subtracts v1 from v0 and v2, combined into a crossproduct, combined with a
-// dotproduct of the light location relative to the first point of the
-// triangle (any point works, since any triangle is obviously flat), and
-// finally a comparison to determine if the light is infront of the triangle
-// (the goal of this statement) we do not need to normalize the surface
-// normal because both sides of the comparison use it, therefore they are
-// both multiplied the same amount...  furthermore a subtract can be done on
-// the point to eliminate one dotproduct
-// this is ((p - a) * cross(a-b,c-b))
+/*! Fast PointInfrontOfTriangle.
+ * subtracts v1 from v0 and v2, combined into a crossproduct, combined with a
+ * dotproduct of the light location relative to the first point of the
+ * triangle (any point works, since any triangle is obviously flat), and
+ * finally a comparison to determine if the light is infront of the triangle
+ * (the goal of this statement) we do not need to normalize the surface
+ * normal because both sides of the comparison use it, therefore they are
+ * both multiplied the same amount...  furthermore a subtract can be done on
+ * the point to eliminate one dotproduct
+ * this is ((p - a) * cross(a-b,c-b))
+ */
 #define PointInfrontOfTriangle(p,a,b,c) \
 ( ((p)[0] - (a)[0]) * (((a)[1] - (b)[1]) * ((c)[2] - (b)[2]) - ((a)[2] - (b)[2]) * ((c)[1] - (b)[1])) \
 + ((p)[1] - (a)[1]) * (((a)[2] - (b)[2]) * ((c)[0] - (b)[0]) - ((a)[0] - (b)[0]) * ((c)[2] - (b)[2])) \
@@ -205,8 +207,12 @@ float r2is = 1.0f / sin(r2);\
 #define VectorCopy4(a,b) {(b)[0]=(a)[0];(b)[1]=(a)[1];(b)[2]=(a)[2];(b)[3]=(a)[3];}
 
 vec_t Length (vec3_t v);
-float VectorNormalizeLength (vec3_t v);		// returns vector length
-float VectorNormalizeLength2 (vec3_t v, vec3_t dest);		// returns vector length
+
+/// returns vector length
+float VectorNormalizeLength (vec3_t v);
+
+/// returns vector length
+float VectorNormalizeLength2 (vec3_t v, vec3_t dest);
 
 #define NUMVERTEXNORMALS	162
 extern float m_bytenormals[NUMVERTEXNORMALS][3];
@@ -218,14 +224,14 @@ void R_ConcatRotations (const float in1[3*3], const float in2[3*3], float out[3*
 void R_ConcatTransforms (const float in1[3*4], const float in2[3*4], float out[3*4]);
 
 void AngleVectors (const vec3_t angles, vec3_t forward, vec3_t right, vec3_t up);
-// LordHavoc: proper matrix version of AngleVectors
+/// LordHavoc: proper matrix version of AngleVectors
 void AngleVectorsFLU (const vec3_t angles, vec3_t forward, vec3_t left, vec3_t up);
-// LordHavoc: builds a [3][4] matrix
+/// LordHavoc: builds a [3][4] matrix
 void AngleMatrix (const vec3_t angles, const vec3_t translate, vec_t matrix[][4]);
-// LordHavoc: calculates pitch/yaw/roll angles from forward and up vectors
+/// LordHavoc: calculates pitch/yaw/roll angles from forward and up vectors
 void AnglesFromVectors (vec3_t angles, const vec3_t forward, const vec3_t up, qboolean flippitch);
 
-// LordHavoc: like AngleVectors, but taking a forward vector instead of angles, useful!
+/// LordHavoc: like AngleVectors, but taking a forward vector instead of angles, useful!
 void VectorVectors(const vec3_t forward, vec3_t right, vec3_t up);
 void VectorVectorsDouble(const double *forward, double *right, double *up);
 
@@ -240,7 +246,7 @@ void BoxPlaneCornerDistances_Separate(const vec3_t emins, const vec3_t emaxs, co
 #define PlaneDist(point,plane)  ((plane)->type < 3 ? (point)[(plane)->type] : DotProduct((point), (plane)->normal))
 #define PlaneDiff(point,plane) (((plane)->type < 3 ? (point)[(plane)->type] : DotProduct((point), (plane)->normal)) - (plane)->dist)
 
-// LordHavoc: minimal plane structure
+/// LordHavoc: minimal plane structure
 typedef struct tinyplane_s
 {
 	float normal[3], dist;
@@ -258,8 +264,8 @@ void RotatePointAroundVector(vec3_t dst, const vec3_t dir, const vec3_t point, f
 float RadiusFromBounds (const vec3_t mins, const vec3_t maxs);
 float RadiusFromBoundsAndOrigin (const vec3_t mins, const vec3_t maxs, const vec3_t origin);
 
-// print a matrix to the console
 struct matrix4x4_s;
+/// print a matrix to the console
 void Matrix4x4_Print(const struct matrix4x4_s *in);
 int Math_atov(const char *s, vec3_t out);
 

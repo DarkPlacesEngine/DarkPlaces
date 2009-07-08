@@ -36,7 +36,7 @@ void World_Init(void)
 
 //============================================================================
 
-// World_ClearLink is used for new headnodes
+/// World_ClearLink is used for new headnodes
 void World_ClearLink (link_t *l)
 {
 	l->entitynumber = 0;

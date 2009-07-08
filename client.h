@@ -28,7 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // LordHavoc: 256 dynamic lights
 #define MAX_DLIGHTS 256
 
-// this is the maximum number of input packets that can be predicted
+/// this is the maximum number of input packets that can be predicted
 #define CL_MAX_USERCMDS 256
 
 // flags for rtlight rendering
@@ -69,37 +69,37 @@ typedef struct rtlight_s
 	// note that the world to light matrices are inversely scaled (divided) by lightradius
 
 	// core properties
-	// matrix for transforming light filter coordinates to world coordinates
+	/// matrix for transforming light filter coordinates to world coordinates
 	matrix4x4_t matrix_lighttoworld;
-	// matrix for transforming world coordinates to light filter coordinates
+	/// matrix for transforming world coordinates to light filter coordinates
 	matrix4x4_t matrix_worldtolight;
-	// typically 1 1 1, can be lower (dim) or higher (overbright)
+	/// typically 1 1 1, can be lower (dim) or higher (overbright)
 	vec3_t color;
-	// size of the light (remove?)
+	/// size of the light (remove?)
 	vec_t radius;
-	// light filter
+	/// light filter
 	char cubemapname[64];
-	// light style to monitor for brightness
+	/// light style to monitor for brightness
 	int style;
-	// whether light should render shadows
+	/// whether light should render shadows
 	int shadow;
-	// intensity of corona to render
+	/// intensity of corona to render
 	vec_t corona;
-	// radius scale of corona to render (1.0 means same as light radius)
+	/// radius scale of corona to render (1.0 means same as light radius)
 	vec_t coronasizescale;
-	// ambient intensity to render
+	/// ambient intensity to render
 	vec_t ambientscale;
-	// diffuse intensity to render
+	/// diffuse intensity to render
 	vec_t diffusescale;
-	// specular intensity to render
+	/// specular intensity to render
 	vec_t specularscale;
-	// LIGHTFLAG_* flags
+	/// LIGHTFLAG_* flags
 	int flags;
 
 	// generated properties
-	// used only for shadow volumes
+	/// used only for shadow volumes
 	vec3_t shadoworigin;
-	// culling
+	/// culling
 	vec3_t cullmins;
 	vec3_t cullmaxs;
 	// culling
@@ -110,40 +110,40 @@ typedef struct rtlight_s
 	// rendering properties, updated each time a light is rendered
 	// this is rtlight->color * d_lightstylevalue
 	vec3_t currentcolor;
-	// used by corona updates, due to occlusion query
+	/// used by corona updates, due to occlusion query
 	float corona_visibility;
 	unsigned int corona_queryindex_visiblepixels;
 	unsigned int corona_queryindex_allpixels;
-	// this is R_Shadow_Cubemap(rtlight->cubemapname)
+	/// this is R_Shadow_Cubemap(rtlight->cubemapname)
 	rtexture_t *currentcubemap;
 
-	// static light info
-	// true if this light should be compiled as a static light
+	/// static light info
+	/// true if this light should be compiled as a static light
 	int isstatic;
-	// true if this is a compiled world light, cleared if the light changes
+	/// true if this is a compiled world light, cleared if the light changes
 	int compiled;
-	// premade shadow volumes to render for world entity
+	/// premade shadow volumes to render for world entity
 	shadowmesh_t *static_meshchain_shadow_zpass;
 	shadowmesh_t *static_meshchain_shadow_zfail;
-	// used for visibility testing (more exact than bbox)
+	/// used for visibility testing (more exact than bbox)
 	int static_numleafs;
 	int static_numleafpvsbytes;
 	int *static_leaflist;
 	unsigned char *static_leafpvs;
-	// surfaces seen by light
+	/// surfaces seen by light
 	int static_numsurfaces;
 	int *static_surfacelist;
-	// flag bits indicating which triangles of the world model should cast
-	// shadows, and which ones should be lit
-	//
-	// this avoids redundantly scanning the triangles in each surface twice
-	// for whether they should cast shadows, once in culling and once in the
-	// actual shadowmarklist production.
+	/// flag bits indicating which triangles of the world model should cast
+	/// shadows, and which ones should be lit
+	///
+	/// this avoids redundantly scanning the triangles in each surface twice
+	/// for whether they should cast shadows, once in culling and once in the
+	/// actual shadowmarklist production.
 	int static_numshadowtrispvsbytes;
 	unsigned char *static_shadowtrispvs;
-	// this allows the lighting batch code to skip backfaces andother culled
-	// triangles not relevant for lighting
-	// (important on big surfaces such as terrain)
+	/// this allows the lighting batch code to skip backfaces andother culled
+	/// triangles not relevant for lighting
+	/// (important on big surfaces such as terrain)
 	int static_numlighttrispvsbytes;
 	unsigned char *static_lighttrispvs;
 }

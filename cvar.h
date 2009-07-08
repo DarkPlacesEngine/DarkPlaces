@@ -136,15 +136,15 @@ void Cvar_MenuString(cvar_t *variable, int menu);
 void Cvar_MenuOption(cvar_t *variable, int menu, int value[16], const char *name[16]);
 */
 
+/// registers a cvar that already has the name, string, and optionally the
+/// archive elements set.
 void Cvar_RegisterVariable (cvar_t *variable);
-// registers a cvar that already has the name, string, and optionally the
-// archive elements set.
 
+/// equivelant to "<name> <variable>" typed at the console
 void Cvar_Set (const char *var_name, const char *value);
-// equivelant to "<name> <variable>" typed at the console
 
+/// expands value to a string and calls Cvar_Set
 void Cvar_SetValue (const char *var_name, float value);
-// expands value to a string and calls Cvar_Set
 
 void Cvar_SetQuick (cvar_t *var, const char *value);
 void Cvar_SetValueQuick (cvar_t *var, float value);
@@ -191,20 +191,20 @@ const char **Cvar_CompleteBuildList (const char *partial);
 // Thanks to Fett erich@heintz.com
 // Thanks to taniwha
 
+/// Prints a list of Cvars including a count of them to the user console
+/// Referenced in cmd.c in Cmd_Init hence it's inclusion here.
+/// Added by EvilTypeGuy eviltypeguy@qeradiant.com
+/// Thanks to Matthias "Maddes" Buecher, http://www.inside3d.com/qip/
 void Cvar_List_f (void);
-// Prints a list of Cvars including a count of them to the user console
-// Referenced in cmd.c in Cmd_Init hence it's inclusion here
-// Added by EvilTypeGuy eviltypeguy@qeradiant.com
-// Thanks to Matthias "Maddes" Buecher, http://www.inside3d.com/qip/
 
 void Cvar_Set_f (void);
 void Cvar_SetA_f (void);
 // commands to create new cvars (or set existing ones)
 // seta creates an archived cvar (saved to config)
 
+/// allocates a cvar by name and returns its address,
+/// or merely sets its value if it already exists.
 cvar_t *Cvar_Get (const char *name, const char *value, int flags, const char *newdescription);
-// allocates a cvar by name and returns its address,
-// or merely sets its value if it already exists.
 
 extern char *cvar_dummy_description; // ALWAYS the same pointer
 extern cvar_t *cvar_vars; // used to list all cvars

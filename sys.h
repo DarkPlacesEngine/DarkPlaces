@@ -44,48 +44,54 @@ typedef struct dllfunction_s
 }
 dllfunction_t;
 
-// "dllnames" is an NULL terminated array of possible names for the DLL you want to load
+/*! Loads a library. 
+ * \param dllnames a NULL terminated array of possible names for the DLL you want to load.
+ * \param handle
+ * \param fcts
+ */
 qboolean Sys_LoadLibrary (const char** dllnames, dllhandle_t* handle, const dllfunction_t *fcts);
 void Sys_UnloadLibrary (dllhandle_t* handle);
 void* Sys_GetProcAddress (dllhandle_t handle, const char* name);
 
-// called early in Host_Init
+/// called early in Host_Init
 void Sys_InitConsole (void);
-// called after command system is initialized but before first Con_Print
+/// called after command system is initialized but before first Con_Print
 void Sys_Init_Commands (void);
 
 
-// returns current timestamp
+/// \returns current timestamp
 char *Sys_TimeString(const char *timeformat);
 
 //
 // system IO interface (these are the sys functions that need to be implemented in a new driver atm)
 //
+
+/// an error will cause the entire program to exit
 void Sys_Error (const char *error, ...) DP_FUNC_PRINTF(1);
-// an error will cause the entire program to exit
 
+/// (may) output text to terminal which launched program
 void Sys_PrintToTerminal(const char *text);
-// (may) output text to terminal which launched program
 
-void Sys_Shutdown (void); //INFO: This is only called by Host_Shutdown so we dont need testing for recursion
+/// INFO: This is only called by Host_Shutdown so we dont need testing for recursion
+void Sys_Shutdown (void);
 void Sys_Quit (int returnvalue);
 
-// on some build/platform combinations (such as Linux gcc with the -pg
-// profiling option) this can turn on/off profiling, used primarily to limit
-// profiling to certain areas of the code, such as ingame performance without
-// regard for loading/shutdown performance (-profilegameonly on commandline)
+/*! on some build/platform combinations (such as Linux gcc with the -pg
+ * profiling option) this can turn on/off profiling, used primarily to limit
+ * profiling to certain areas of the code, such as ingame performance without
+ * regard for loading/shutdown performance (-profilegameonly on commandline)
+ */
 void Sys_AllowProfiling (qboolean enable);
 
 double Sys_DoubleTime (void);
 
 char *Sys_ConsoleInput (void);
 
+/// called to yield for a little bit so as not to hog cpu when paused or debugging
 void Sys_Sleep(int microseconds);
-// called to yield for a little bit so as
-// not to hog cpu when paused or debugging
 
+/// Perform Key_Event () callbacks until the input que is empty
 void Sys_SendKeyEvents (void);
-// Perform Key_Event () callbacks until the input que is empty
 
 char *Sys_GetClipboardData (void);
 
