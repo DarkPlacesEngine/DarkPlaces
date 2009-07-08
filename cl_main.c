@@ -1918,7 +1918,7 @@ void CL_Locs_FreeNode(cl_locnode_t *node)
 			return;
 		}
 	}
-	Con_Printf("CL_Locs_FreeNode: no such node! (%p)\n", node);
+	Con_Printf("CL_Locs_FreeNode: no such node! (%p)\n", (void *)node);
 }
 
 void CL_Locs_AddNode(vec3_t mins, vec3_t maxs, const char *name)

@@ -325,7 +325,7 @@ OSGK_DERIVEDTYPE(OSGK_ScriptObjectTemplate);
 typedef enum OSGK_ScriptResult
 {
   srSuccess = 0,
-  srFailed = 0x80004005L /* actually NS_ERROR_FAILURE */
+  srFailed = (int)0x80004005L /* actually NS_ERROR_FAILURE */
 } OSGK_ScriptResult;
 
 typedef struct OSGK_ScriptObjectCreateParams_s

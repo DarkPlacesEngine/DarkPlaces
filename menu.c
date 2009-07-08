@@ -3177,7 +3177,7 @@ static int M_ChooseQuitMessage(int request)
 		break;
 	}
 	return 0;
-};
+}
 
 void M_Menu_Quit_f (void)
 {

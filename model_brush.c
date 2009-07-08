@@ -2611,7 +2611,7 @@ static void Mod_Q1BSP_LoadLeafs(lump_t *l)
 
 		out->firstleafsurface = loadmodel->brush.data_leafsurfaces + (unsigned short)LittleShort(in->firstmarksurface);
 		out->numleafsurfaces = (unsigned short)LittleShort(in->nummarksurfaces);
-		if (out->firstleafsurface < 0 || (unsigned short)LittleShort(in->firstmarksurface) + out->numleafsurfaces > loadmodel->brush.num_leafsurfaces)
+		if ((unsigned short)LittleShort(in->firstmarksurface) + out->numleafsurfaces > loadmodel->brush.num_leafsurfaces)
 		{
 			Con_Printf("Mod_Q1BSP_LoadLeafs: invalid leafsurface range %i:%i outside range %i:%i\n", (int)(out->firstleafsurface - loadmodel->brush.data_leafsurfaces), (int)(out->firstleafsurface + out->numleafsurfaces - loadmodel->brush.data_leafsurfaces), 0, loadmodel->brush.num_leafsurfaces);
 			out->firstleafsurface = NULL;

@@ -446,7 +446,7 @@ void CL_Particles_LoadEffectInfo(void)
 		CL_Particles_ParseEffectInfo((const char *)filedata, (const char *)filedata + filesize);
 		Mem_Free(filedata);
 	}
-};
+}
 
 /*
 ===============

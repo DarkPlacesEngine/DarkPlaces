@@ -32,7 +32,7 @@
 
 static void				(*qpng_set_sig_bytes)		(void*, int);
 static int				(*qpng_sig_cmp)				(const unsigned char*, size_t, size_t);
-static void*			(*qpng_create_read_struct)	(const char*, void*, void*, void*);
+static void*			(*qpng_create_read_struct)	(const char*, void*, void(*)(void *png, const char *message), void(*)(void *png, const char *message));
 static void*			(*qpng_create_info_struct)	(void*);
 static void				(*qpng_read_info)			(void*, void*);
 static void				(*qpng_set_expand)			(void*);
@@ -45,7 +45,7 @@ static void				(*qpng_read_update_info)	(void*, void*);
 static void				(*qpng_read_image)			(void*, unsigned char**);
 static void				(*qpng_read_end)			(void*, void*);
 static void				(*qpng_destroy_read_struct)	(void**, void**, void**);
-static void				(*qpng_set_read_fn)			(void*, void*, void*);
+static void				(*qpng_set_read_fn)			(void*, void*, void(*)(void *png, unsigned char *data, size_t length));
 static unsigned int		(*qpng_get_valid)			(void*, void*, unsigned int);
 static unsigned int		(*qpng_get_rowbytes)		(void*, void*);
 static unsigned char	(*qpng_get_channels)		(void*, void*);
@@ -238,7 +238,7 @@ unsigned char *PNG_LoadImage_BGRA (const unsigned char *raw, int filesize)
 
 	if(qpng_sig_cmp(raw, 0, filesize))
 		return NULL;
-	png = (void *)qpng_create_read_struct(PNG_LIBPNG_VER_STRING, 0, (void *)PNG_error_fn, (void *)PNG_warning_fn);
+	png = (void *)qpng_create_read_struct(PNG_LIBPNG_VER_STRING, 0, PNG_error_fn, PNG_warning_fn);
 	if(!png)
 		return NULL;
 
@@ -288,7 +288,7 @@ unsigned char *PNG_LoadImage_BGRA (const unsigned char *raw, int filesize)
 	//my_png.Interlace	= 0;
 	//my_png.Compression	= 0;
 	//my_png.Filter		= 0;
-	qpng_set_read_fn(png, ioBuffer, (void *)PNG_fReadData);
+	qpng_set_read_fn(png, ioBuffer, PNG_fReadData);
 	qpng_read_info(png, pnginfo);
 	qpng_get_IHDR(png, pnginfo, &my_png.Width, &my_png.Height,&my_png.BitDepth, &my_png.ColorType, &my_png.Interlace, &my_png.Compression, &my_png.Filter);
 

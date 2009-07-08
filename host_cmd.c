@@ -2660,7 +2660,7 @@ void Host_Packet_f (void) // credit: taken from QuakeWorld
 
 	in = Cmd_Argv(2);
 	out = send+4;
-	send[0] = send[1] = send[2] = send[3] = 0xff;
+	send[0] = send[1] = send[2] = send[3] = -1;
 
 	l = (int)strlen (in);
 	for (i=0 ; i<l ; i++)
