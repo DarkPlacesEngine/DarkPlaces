@@ -674,7 +674,9 @@ Memory_Init
 */
 void Memory_Init (void)
 {
+#if MEMPARANOIA
 	sentinel_seed = rand();
+#endif
 	poolchain = NULL;
 	tempmempool = Mem_AllocPool("Temporary Memory", POOLFLAG_TEMP, NULL);
 	zonemempool = Mem_AllocPool("Zone", 0, NULL);
