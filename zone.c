@@ -22,7 +22,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 
 #if MEMPARANOIA
+#ifdef _MSC_VER
+#include <vadefs.h>
+#else
 #include <stdint.h>
+#endif
 #define MEMHEADER_SENTINEL_FOR_ADDRESS(p) ((sentinel_seed ^ (unsigned int) (uintptr_t) (p)) + sentinel_seed)
 unsigned int sentinel_seed;
 #else
