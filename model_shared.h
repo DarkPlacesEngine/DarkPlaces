@@ -356,6 +356,7 @@ q3shaderinfo_deform_t;
 typedef struct q3shaderinfo_s
 {
 	char name[Q3PATHLENGTH];
+#define Q3SHADERINFO_COMPARE_START surfaceparms
 	int surfaceparms;
 	int textureflags;
 	int numlayers;
@@ -381,6 +382,7 @@ typedef struct q3shaderinfo_s
 	float reflectfactor; // amount of reflection distort (1.0 = like the cvar specifies)
 	vec4_t reflectcolor4f; // color tint of reflection (including alpha factor)
 	float r_water_wateralpha; // additional wateralpha to apply when r_water is active
+#define Q3SHADERINFO_COMPARE_END r_water_wateralpha
 }
 q3shaderinfo_t;
 
