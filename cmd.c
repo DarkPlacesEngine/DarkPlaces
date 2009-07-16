@@ -667,6 +667,47 @@ static void Cmd_Alias_f (void)
 }
 
 /*
+===============
+Cmd_UnAlias_f
+
+Remove existing aliases.
+===============
+*/
+static void Cmd_UnAlias_f (void)
+{
+	cmdalias_t	*a, *p;
+	int i;
+	const char *s;
+
+	if(Cmd_Argc() == 1)
+	{
+		Con_Print("unalias: Usage: unalias alias1 [alias2 ...]\n");
+		return;
+	}
+
+	for(i = 1; i < Cmd_Argc(); ++i)
+	{
+		s = Cmd_Argv(i);
+		p = NULL;
+		for(a = cmd_alias; a; p = a, a = a->next)
+		{
+			if(!strcmp(s, a->name))
+			{
+				if(a == cmd_alias)
+					cmd_alias = a->next;
+				if(p)
+					p->next = a->next;
+				Z_Free(a->value);
+				Z_Free(a);
+				break;
+			}
+		}
+		if(!a)
+			Con_Printf("unalias: %s alias not found\n", s);
+	}
+}
+
+/*
 =============================================================================
 
 					COMMAND EXECUTION
@@ -1141,6 +1182,7 @@ void Cmd_Init_Commands (void)
 	Cmd_AddCommand ("exec",Cmd_Exec_f, "execute a script file");
 	Cmd_AddCommand ("echo",Cmd_Echo_f, "print a message to the console (useful in scripts)");
 	Cmd_AddCommand ("alias",Cmd_Alias_f, "create a script function (parameters are passed in as $X (being X a number), $* for all parameters, $X- for all parameters starting from $X). Without arguments show the list of all alias");
+	Cmd_AddCommand ("unalias",Cmd_UnAlias_f, "remove an alias");
 	Cmd_AddCommand ("cmd", Cmd_ForwardToServer, "send a console commandline to the server (used by some mods)");
 	Cmd_AddCommand ("wait", Cmd_Wait_f, "make script execution wait for next rendered frame");
 	Cmd_AddCommand ("set", Cvar_Set_f, "create or change the value of a console variable");

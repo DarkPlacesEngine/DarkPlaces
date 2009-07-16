@@ -249,7 +249,7 @@ void _Mem_Free(void *data, const char *filename, int fileline)
 {
 	if (data == NULL)
 	{
-		Con_DPrintf("Mem_Free: data == NULL (called at %s:%i)", filename, fileline);
+		Con_DPrintf("Mem_Free: data == NULL (called at %s:%i)\n", filename, fileline);
 		return;
 	}
 

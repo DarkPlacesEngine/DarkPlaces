@@ -1138,7 +1138,7 @@ void Sbar_ShowFPS(void)
 	if (showdate.integer)
 		strlcpy(datestring, Sys_TimeString(showdate_format.string), sizeof(datestring));
 	if (showsound.integer)
-		dpsnprintf(soundstring, sizeof(soundstring), "%4i/%4i at %3ims\n", cls.soundstats.mixedsounds, cls.soundstats.totalsounds, cls.soundstats.latency_milliseconds);
+		dpsnprintf(soundstring, sizeof(soundstring), "%4i/4%i at %3ims", cls.soundstats.mixedsounds, cls.soundstats.totalsounds, cls.soundstats.latency_milliseconds);
 	if (showspeed.integer || showtopspeed.integer)
 	{
 		double speed, speedxy, f;
