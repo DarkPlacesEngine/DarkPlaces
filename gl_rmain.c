@@ -40,7 +40,7 @@ cvar_t r_damageblur = {CVAR_SAVE, "r_damageblur", "0", "motionblur based on dama
 cvar_t r_motionblur_vmin = {CVAR_SAVE, "r_motionblur_vmin", "300", "velocity at which there is minimum blur"};
 cvar_t r_motionblur_vmax = {CVAR_SAVE, "r_motionblur_vmax", "600", "velocity at which there is full blur"};
 cvar_t r_motionblur_bmin = {CVAR_SAVE, "r_motionblur_bmin", "0.5", "velocity at which there is no blur yet (may be negative to always have some blur)"};
-cvar_t r_motionblur_vtime = {CVAR_SAVE, "r_motionblur_vcoeff", "0.05", "sliding average reaction time for velocity"};
+cvar_t r_motionblur_vcoeff = {CVAR_SAVE, "r_motionblur_vcoeff", "0.05", "sliding average reaction time for velocity"};
 cvar_t r_motionblur_maxblur = {CVAR_SAVE, "r_motionblur_maxblur", "0.88", "cap for the alpha level of the motion blur variable"};
 cvar_t r_motionblur_randomize = {CVAR_SAVE, "r_motionblur_randomize", "0.1", "randomizing coefficient to fix ghosting"};
 cvar_t r_motionblur_debug = {0, "r_motionblur_debug", "0", "outputs current motionblur alpha value"};
@@ -2402,7 +2402,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_motionblur_bmin);
 	Cvar_RegisterVariable(&r_motionblur_vmin);
 	Cvar_RegisterVariable(&r_motionblur_vmax);
-	Cvar_RegisterVariable(&r_motionblur_vtime);
+	Cvar_RegisterVariable(&r_motionblur_vcoeff);
 	Cvar_RegisterVariable(&r_motionblur_randomize);
 	Cvar_RegisterVariable(&r_damageblur);
 	Cvar_RegisterVariable(&r_motionblur_debug);
@@ -3630,7 +3630,7 @@ static void R_BlendView(void)
 
 			speed = VectorLength(cl.movement_velocity);
 
-			a = bound(0, (cl.time - cl.oldtime) / max(0.001, r_motionblur_vtime.value), 1);
+			a = bound(0, (cl.time - cl.oldtime) / max(0.001, r_motionblur_vcoeff.value), 1);
 			avgspeed = avgspeed * (1 - a) + speed * a;
 
 			speed = (avgspeed - r_motionblur_vmin.value) / max(1, r_motionblur_vmax.value - r_motionblur_vmin.value);
