@@ -425,8 +425,10 @@ dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk)
 
 		buf = FS_LoadFile (va("%s.framegroups", mod->name), tempmempool, false, &filesize);
 		if(buf)
+		{
 			Mod_FrameGroupify(mod, buf);
-		Mem_Free(buf);
+			Mem_Free(buf);
+		}
 
 		Mod_BuildVBOs();
 	}
