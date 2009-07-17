@@ -940,8 +940,11 @@ static void VM_CL_unproject (void)
 	VM_SAFEPARMCOUNT(1, VM_CL_unproject);
 	f = PRVM_G_VECTOR(OFS_PARM0);
 	if(v_flipped.integer)
-		f[0] = 2 * r_refdef.view.x + r_refdef.view.width - f[0];
-	VectorSet(temp, f[2], (-1.0 + 2.0 * (f[0] - r_refdef.view.x) / r_refdef.view.width) * f[2] * -r_refdef.view.frustum_x, (-1.0 + 2.0 * (f[1] - r_refdef.view.y) / r_refdef.view.height) * f[2] * -r_refdef.view.frustum_y);
+		f[0] = (2 * r_refdef.view.x + r_refdef.view.width) * (vid_conwidth.integer / (float) vid.width) - f[0];
+	VectorSet(temp,
+		f[2],
+		(-1.0 + 2.0 * (f[0] / (vid_conwidth.integer / (float) vid.width) - r_refdef.view.x) / r_refdef.view.width) * f[2] * -r_refdef.view.frustum_x,
+		(-1.0 + 2.0 * (f[1] / (vid_conheight.integer / (float) vid.height) - r_refdef.view.y) / r_refdef.view.height) * f[2] * -r_refdef.view.frustum_y);
 	Matrix4x4_Transform(&r_refdef.view.matrix, temp, PRVM_G_VECTOR(OFS_RETURN));
 }
 
@@ -958,7 +961,10 @@ static void VM_CL_project (void)
 	Matrix4x4_Transform(&m, f, v);
 	if(v_flipped.integer)
 		v[1] = -v[1];
-	VectorSet(PRVM_G_VECTOR(OFS_RETURN), r_refdef.view.x + r_refdef.view.width*0.5*(1.0+v[1]/v[0]/-r_refdef.view.frustum_x), r_refdef.view.y + r_refdef.view.height*0.5*(1.0+v[2]/v[0]/-r_refdef.view.frustum_y), v[0]);
+	VectorSet(PRVM_G_VECTOR(OFS_RETURN),
+		(vid_conwidth.integer / (float) vid.width) * (r_refdef.view.x + r_refdef.view.width*0.5*(1.0+v[1]/v[0]/-r_refdef.view.frustum_x)),
+		(vid_conheight.integer / (float) vid.height) * (r_refdef.view.y + r_refdef.view.height*0.5*(1.0+v[2]/v[0]/-r_refdef.view.frustum_y)),
+		v[0]);
 }
 
 //#330 float(float stnum) getstatf (EXT_CSQC)
