@@ -940,7 +940,7 @@ static void VM_CL_unproject (void)
 	VM_SAFEPARMCOUNT(1, VM_CL_unproject);
 	f = PRVM_G_VECTOR(OFS_PARM0);
 	if(v_flipped.integer)
-		f[0] = r_refdef.view.x + r_refdef.view.width - f[0];
+		f[0] = 2 * r_refdef.view.x + r_refdef.view.width - f[0];
 	VectorSet(temp, f[2], (-1.0 + 2.0 * (f[0] - r_refdef.view.x) / r_refdef.view.width) * f[2] * -r_refdef.view.frustum_x, (-1.0 + 2.0 * (f[1] - r_refdef.view.y) / r_refdef.view.height) * f[2] * -r_refdef.view.frustum_y);
 	Matrix4x4_Transform(&r_refdef.view.matrix, temp, PRVM_G_VECTOR(OFS_RETURN));
 }
