@@ -28,6 +28,32 @@
 
 cvar_t sv_writepicture_quality = {CVAR_SAVE, "sv_writepicture_quality", "10", "WritePicture quality offset (higher means better quality, but slower)"};
 
+// jboolean is unsigned char instead of int on Win32
+#ifdef WIN32
+typedef unsigned char jboolean;
+#else
+typedef int jboolean;
+#endif
+
+#ifdef LINK_TO_LIBJPEG
+#include <jpeglib.h>
+#define qjpeg_create_compress jpeg_create_compress
+#define qjpeg_create_decompress jpeg_create_decompress
+#define qjpeg_destroy_compress jpeg_destroy_compress
+#define qjpeg_destroy_decompress jpeg_destroy_decompress
+#define qjpeg_finish_compress jpeg_finish_compress
+#define qjpeg_finish_decompress jpeg_finish_decompress
+#define qjpeg_resync_to_restart jpeg_resync_to_restart
+#define qjpeg_read_header jpeg_read_header
+#define qjpeg_read_scanlines jpeg_read_scanlines
+#define qjpeg_set_defaults jpeg_set_defaults
+#define qjpeg_set_quality jpeg_set_quality
+#define qjpeg_start_compress jpeg_start_compress
+#define qjpeg_start_decompress jpeg_start_decompress
+#define qjpeg_std_error jpeg_std_error
+#define qjpeg_write_scanlines jpeg_write_scanlines
+#define jpeg_dll true
+#else
 /*
 =================================================================
 
@@ -39,18 +65,12 @@ cvar_t sv_writepicture_quality = {CVAR_SAVE, "sv_writepicture_quality", "10", "W
 =================================================================
 */
 
-// jboolean is unsigned char instead of int on Win32
-#ifdef WIN32
-typedef unsigned char jboolean;
-#else
-typedef int jboolean;
-#endif
-
-#define JPEG_LIB_VERSION  62  // Version 6b
-
 typedef void *j_common_ptr;
 typedef struct jpeg_compress_struct *j_compress_ptr;
 typedef struct jpeg_decompress_struct *j_decompress_ptr;
+
+#define JPEG_LIB_VERSION  62  // Version 6b
+
 typedef enum
 {
 	JCS_UNKNOWN,
@@ -430,6 +450,7 @@ static dllfunction_t jpegfuncs[] =
 // Handle for JPEG DLL
 dllhandle_t jpeg_dll = NULL;
 qboolean jpeg_tried_loading = 0;
+#endif
 
 static unsigned char jpeg_eoi_marker [2] = {0xFF, JPEG_EOI};
 static jmp_buf error_in_jpeg;
@@ -464,6 +485,9 @@ Try to load the JPEG DLL
 */
 qboolean JPEG_OpenLibrary (void)
 {
+#ifdef LINK_TO_LIBJPEG
+	return true;
+#else
 	const char* dllnames [] =
 	{
 #if defined(WIN64)
@@ -490,6 +514,7 @@ qboolean JPEG_OpenLibrary (void)
 
 	// Load the DLL
 	return Sys_LoadLibrary (dllnames, &jpeg_dll, jpegfuncs);
+#endif
 }
 
 
@@ -502,8 +527,10 @@ Unload the JPEG DLL
 */
 void JPEG_CloseLibrary (void)
 {
+#ifndef LINK_TO_LIBJPEG
 	Sys_UnloadLibrary (&jpeg_dll);
 	jpeg_tried_loading = false; // allow retry
+#endif
 }
 
 
