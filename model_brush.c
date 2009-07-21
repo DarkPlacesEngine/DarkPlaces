@@ -39,6 +39,7 @@ cvar_t r_subdivisions_collision_mintess = {0, "r_subdivisions_collision_mintess"
 cvar_t r_subdivisions_collision_maxtess = {0, "r_subdivisions_collision_maxtess", "1024", "maximum number of subdivisions (prevents curves beyond a certain detail level, limits smoothing)"};
 cvar_t r_subdivisions_collision_maxvertices = {0, "r_subdivisions_collision_maxvertices", "4225", "maximum vertices allowed per subdivided curve"};
 cvar_t mod_q3bsp_curves_collisions = {0, "mod_q3bsp_curves_collisions", "1", "enables collisions with curves (SLOW)"};
+cvar_t mod_q3bsp_curves_collisions_stride = {0, "mod_q3bsp_curves_collisions_stride", "32", "collisions against curves: optimize performance by doing a combined collision check for this triangle amount first"};
 cvar_t mod_q3bsp_optimizedtraceline = {0, "mod_q3bsp_optimizedtraceline", "1", "whether to use optimized traceline code for line traces (as opposed to tracebox code)"};
 cvar_t mod_q3bsp_debugtracebrush = {0, "mod_q3bsp_debugtracebrush", "0", "selects different tracebrush bsp recursion algorithms (for debugging purposes only)"};
 cvar_t mod_q3bsp_lightmapmergepower = {CVAR_SAVE, "mod_q3bsp_lightmapmergepower", "4", "merges the quake3 128x128 lightmap textures into larger lightmap group textures to speed up rendering, 1 = 256x256, 2 = 512x512, 3 = 1024x1024, 4 = 2048x2048, 5 = 4096x4096, ..."};
@@ -65,6 +66,7 @@ void Mod_BrushInit(void)
 	Cvar_RegisterVariable(&r_subdivisions_collision_maxtess);
 	Cvar_RegisterVariable(&r_subdivisions_collision_maxvertices);
 	Cvar_RegisterVariable(&mod_q3bsp_curves_collisions);
+	Cvar_RegisterVariable(&mod_q3bsp_curves_collisions_stride);
 	Cvar_RegisterVariable(&mod_q3bsp_optimizedtraceline);
 	Cvar_RegisterVariable(&mod_q3bsp_debugtracebrush);
 	Cvar_RegisterVariable(&mod_q3bsp_lightmapmergepower);
@@ -4995,6 +4997,53 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			oldnumtriangles = out->num_triangles;
 			oldnumtriangles2 = out->num_collisiontriangles;
 			out->num_collisiontriangles = Mod_RemoveDegenerateTriangles(out->num_collisiontriangles, out->data_collisionelement3i, out->data_collisionelement3i, out->data_collisionvertex3f);
+
+			// now optimize the collision mesh by finding triangle bboxes...
+			if(mod_q3bsp_curves_collisions_stride.integer > 0)
+			{
+				int k, cnt, tri;
+				float *mins, *maxs, *vert;
+				out->num_collisionstride = mod_q3bsp_curves_collisions_stride.integer;
+				cnt = (out->num_collisiontriangles + out->num_collisionstride - 1) / out->num_collisionstride;
+				out->data_collisionbbox6f = (float *) Mem_Alloc(loadmodel->mempool, sizeof(float[6]) * cnt);
+				for(j = 0; j < cnt; ++j)
+				{
+					mins = &(out->data_collisionbbox6f[6 * j + 0]);
+					maxs = &(out->data_collisionbbox6f[6 * j + 3]);
+					for(k = 0; k < out->num_collisionstride; ++k)
+					{
+						tri = j * out->num_collisionstride + k;
+						if(tri >= out->num_collisiontriangles)
+							break;
+						vert = &(out->data_collisionvertex3f[out->data_collisionelement3i[3 * tri + 0] * 3]);
+						if(!k || vert[0] < mins[0]) mins[0] = vert[0];
+						if(!k || vert[1] < mins[1]) mins[1] = vert[1];
+						if(!k || vert[2] < mins[2]) mins[2] = vert[2];
+						if(!k || vert[0] > maxs[0]) maxs[0] = vert[0];
+						if(!k || vert[1] > maxs[1]) maxs[1] = vert[1];
+						if(!k || vert[2] > maxs[2]) maxs[2] = vert[2];
+						vert = &(out->data_collisionvertex3f[out->data_collisionelement3i[3 * tri + 1] * 3]);
+						if(vert[0] < mins[0]) mins[0] = vert[0];
+						if(vert[1] < mins[1]) mins[1] = vert[1];
+						if(vert[2] < mins[2]) mins[2] = vert[2];
+						if(vert[0] > maxs[0]) maxs[0] = vert[0];
+						if(vert[1] > maxs[1]) maxs[1] = vert[1];
+						if(vert[2] > maxs[2]) maxs[2] = vert[2];
+						vert = &(out->data_collisionvertex3f[out->data_collisionelement3i[3 * tri + 2] * 3]);
+						if(vert[0] < mins[0]) mins[0] = vert[0];
+						if(vert[1] < mins[1]) mins[1] = vert[1];
+						if(vert[2] < mins[2]) mins[2] = vert[2];
+						if(vert[0] > maxs[0]) maxs[0] = vert[0];
+						if(vert[1] > maxs[1]) maxs[1] = vert[1];
+						if(vert[2] > maxs[2]) maxs[2] = vert[2];
+					}
+				}
+			}
+			else
+			{
+				out->num_collisionstride = 0;
+			}
+
 			if (developer.integer >= 100)
 				Con_Printf("Mod_Q3BSP_LoadFaces: %ix%i curve became %i:%i vertices / %i:%i triangles (%i:%i degenerate)\n", patchsize[0], patchsize[1], out->num_vertices, out->num_collisionvertices, oldnumtriangles, oldnumtriangles2, oldnumtriangles - out->num_triangles, oldnumtriangles2 - out->num_collisiontriangles);
 			break;
@@ -5528,7 +5577,7 @@ static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, dp_model_t *mod
 			if (surface->num_collisiontriangles && surface->collisionmarkframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, surface->mins, surface->maxs))
 			{
 				surface->collisionmarkframe = markframe;
-				Collision_TraceLineTriangleMeshFloat(trace, linestart, lineend, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->texture->supercontents, surface->texture->surfaceflags, surface->texture, segmentmins, segmentmaxs);
+				Collision_TraceLineTriangleMeshFloat(trace, linestart, lineend, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->num_collisionstride, surface->data_collisionbbox6f, surface->texture->supercontents, surface->texture->surfaceflags, surface->texture, segmentmins, segmentmaxs);
 			}
 		}
 	}
@@ -5609,7 +5658,7 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, dp_model_t *mo
 			if (surface->num_collisiontriangles && surface->collisionmarkframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, surface->mins, surface->maxs))
 			{
 				surface->collisionmarkframe = markframe;
-				Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->texture->supercontents, surface->texture->surfaceflags, surface->texture, segmentmins, segmentmaxs);
+				Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->num_collisionstride, surface->data_collisionbbox6f, surface->texture->supercontents, surface->texture->surfaceflags, surface->texture, segmentmins, segmentmaxs);
 			}
 		}
 	}
@@ -5657,7 +5706,7 @@ static void Mod_Q3BSP_TraceBox(dp_model_t *model, int frame, trace_t *trace, con
 				if (mod_q3bsp_curves_collisions.integer)
 					for (i = 0, surface = model->data_surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surface++)
 						if (surface->num_collisiontriangles)
-							Collision_TraceLineTriangleMeshFloat(trace, start, end, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->texture->supercontents, surface->texture->surfaceflags, surface->texture, segmentmins, segmentmaxs);
+							Collision_TraceLineTriangleMeshFloat(trace, start, end, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->num_collisionstride, surface->data_collisionbbox6f, surface->texture->supercontents, surface->texture->surfaceflags, surface->texture, segmentmins, segmentmaxs);
 			}
 			else
 				Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, model, model->brush.data_nodes, start, end, 0, 1, start, end, ++markframe, segmentmins, segmentmaxs);
@@ -5688,7 +5737,7 @@ static void Mod_Q3BSP_TraceBox(dp_model_t *model, int frame, trace_t *trace, con
 			if (mod_q3bsp_curves_collisions.integer)
 				for (i = 0, surface = model->data_surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surface++)
 					if (surface->num_collisiontriangles)
-						Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->texture->supercontents, surface->texture->surfaceflags, surface->texture, segmentmins, segmentmaxs);
+						Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->num_collisionstride, surface->data_collisionbbox6f, surface->texture->supercontents, surface->texture->surfaceflags, surface->texture, segmentmins, segmentmaxs);
 		}
 		else
 			Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, model, model->brush.data_nodes, thisbrush_start, thisbrush_end, ++markframe, segmentmins, segmentmaxs);
