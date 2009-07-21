@@ -901,7 +901,7 @@ void Collision_TraceBrushPolygonFloat(trace_t *trace, const colbrushf_t *thisbru
 	Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, &polyf_brush, &polyf_brush);
 }
 
-void Collision_TraceBrushTriangleMeshFloat(trace_t *trace, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, int numtriangles, const int *element3i, const float *vertex3f, int supercontents, int q3surfaceflags, texture_t *texture, const vec3_t segmentmins, const vec3_t segmentmaxs)
+void Collision_TraceBrushTriangleMeshFloat(trace_t *trace, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, int numtriangles, const int *element3i, const float *vertex3f, int stride, float *bbox6f, int supercontents, int q3surfaceflags, texture_t *texture, const vec3_t segmentmins, const vec3_t segmentmaxs)
 {
 	int i;
 	polyf_brush.numpoints = 3;
@@ -914,17 +914,44 @@ void Collision_TraceBrushTriangleMeshFloat(trace_t *trace, const colbrushf_t *th
 		polyf_brush.planes[i].q3surfaceflags = q3surfaceflags;
 		polyf_brush.planes[i].texture = texture;
 	}
-	for (i = 0;i < numtriangles;i++, element3i += 3)
+	if(stride)
 	{
-		if (TriangleOverlapsBox(vertex3f + element3i[0]*3, vertex3f + element3i[1]*3, vertex3f + element3i[2]*3, segmentmins, segmentmaxs))
+		int k, cnt, tri;
+		cnt = (numtriangles + stride - 1) / stride;
+		for(i = 0; i < cnt; ++i)
 		{
-			VectorCopy(vertex3f + element3i[0] * 3, polyf_points[0].v);
-			VectorCopy(vertex3f + element3i[1] * 3, polyf_points[1].v);
-			VectorCopy(vertex3f + element3i[2] * 3, polyf_points[2].v);
-			Collision_SnapCopyPoints(polyf_brush.numpoints, polyf_points, polyf_points, COLLISION_SNAPSCALE, COLLISION_SNAP);
-			Collision_CalcPlanesForPolygonBrushFloat(&polyf_brush);
-			//Collision_PrintBrushAsQHull(&polyf_brush, "polyf_brush");
-			Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, &polyf_brush, &polyf_brush);
+			if(BoxesOverlap(bbox6f + i * 6, bbox6f + i * 6 + 3, segmentmins, segmentmaxs))
+			{
+				for(k = 0; k < stride; ++k)
+				{
+					tri = i * stride + k;
+					if(tri >= numtriangles)
+						break;
+					VectorCopy(vertex3f + element3i[tri * 3 + 0] * 3, polyf_points[0].v);
+					VectorCopy(vertex3f + element3i[tri * 3 + 1] * 3, polyf_points[1].v);
+					VectorCopy(vertex3f + element3i[tri * 3 + 2] * 3, polyf_points[2].v);
+					Collision_SnapCopyPoints(polyf_brush.numpoints, polyf_points, polyf_points, COLLISION_SNAPSCALE, COLLISION_SNAP);
+					Collision_CalcPlanesForPolygonBrushFloat(&polyf_brush);
+					//Collision_PrintBrushAsQHull(&polyf_brush, "polyf_brush");
+					Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, &polyf_brush, &polyf_brush);
+				}
+			}
+		}
+	}
+	else
+	{
+		for (i = 0;i < numtriangles;i++, element3i += 3)
+		{
+			if (TriangleOverlapsBox(vertex3f + element3i[0]*3, vertex3f + element3i[1]*3, vertex3f + element3i[2]*3, segmentmins, segmentmaxs))
+			{
+				VectorCopy(vertex3f + element3i[0] * 3, polyf_points[0].v);
+				VectorCopy(vertex3f + element3i[1] * 3, polyf_points[1].v);
+				VectorCopy(vertex3f + element3i[2] * 3, polyf_points[2].v);
+				Collision_SnapCopyPoints(polyf_brush.numpoints, polyf_points, polyf_points, COLLISION_SNAPSCALE, COLLISION_SNAP);
+				Collision_CalcPlanesForPolygonBrushFloat(&polyf_brush);
+				//Collision_PrintBrushAsQHull(&polyf_brush, "polyf_brush");
+				Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, &polyf_brush, &polyf_brush);
+			}
 		}
 	}
 }
@@ -948,13 +975,34 @@ void Collision_TraceLinePolygonFloat(trace_t *trace, const vec3_t linestart, con
 	Collision_TraceLineBrushFloat(trace, linestart, lineend, &polyf_brush, &polyf_brush);
 }
 
-void Collision_TraceLineTriangleMeshFloat(trace_t *trace, const vec3_t linestart, const vec3_t lineend, int numtriangles, const int *element3i, const float *vertex3f, int supercontents, int q3surfaceflags, texture_t *texture, const vec3_t segmentmins, const vec3_t segmentmaxs)
+void Collision_TraceLineTriangleMeshFloat(trace_t *trace, const vec3_t linestart, const vec3_t lineend, int numtriangles, const int *element3i, const float *vertex3f, int stride, float *bbox6f, int supercontents, int q3surfaceflags, texture_t *texture, const vec3_t segmentmins, const vec3_t segmentmaxs)
 {
 	int i;
 #if 1
 	// FIXME: snap vertices?
-	for (i = 0;i < numtriangles;i++, element3i += 3)
-		Collision_TraceLineTriangleFloat(trace, linestart, lineend, vertex3f + element3i[0] * 3, vertex3f + element3i[1] * 3, vertex3f + element3i[2] * 3, supercontents, q3surfaceflags, texture);
+	if(stride)
+	{
+		int k, cnt, tri;
+		cnt = (numtriangles + stride - 1) / stride;
+		for(i = 0; i < cnt; ++i)
+		{
+			if(BoxesOverlap(bbox6f + i * 6, bbox6f + i * 6 + 3, segmentmins, segmentmaxs))
+			{
+				for(k = 0; k < stride; ++k)
+				{
+					tri = i * stride + k;
+					if(tri >= numtriangles)
+						break;
+					Collision_TraceLineTriangleFloat(trace, linestart, lineend, vertex3f + element3i[tri * 3 + 0] * 3, vertex3f + element3i[tri * 3 + 1] * 3, vertex3f + element3i[tri * 3 + 2] * 3, supercontents, q3surfaceflags, texture);
+				}
+			}
+		}
+	}
+	else
+	{
+		for (i = 0;i < numtriangles;i++, element3i += 3)
+			Collision_TraceLineTriangleFloat(trace, linestart, lineend, vertex3f + element3i[0] * 3, vertex3f + element3i[1] * 3, vertex3f + element3i[2] * 3, supercontents, q3surfaceflags, texture);
+	}
 #else
 	polyf_brush.numpoints = 3;
 	polyf_brush.numplanes = 5;
