@@ -4714,7 +4714,7 @@ static void Mod_Q3BSP_BuildBBoxes(const int *element3i, int num_triangles, const
 			maxs = &((*collisionbbox6f)[6 * j + 3]);
 			for(k = 0; k < stride; ++k)
 			{
-				tri = j * stride;
+				tri = j * stride + k;
 				if(tri >= num_triangles)
 					break;
 				vert = &(vertex3f[element3i[3 * tri + 0] * 3]);
@@ -5057,7 +5057,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			Q3PatchTesselateFloat(4, sizeof(float[4]), (loadmodel->surfmesh.data_lightmapcolor4f + 4 * out->num_firstvertex), patchsize[0], patchsize[1], sizeof(float[4]), originalcolor4f, xtess, ytess);
 			Q3PatchTriangleElements((loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle), finalwidth, finalheight, out->num_firstvertex);
 
-			out->num_triangles = Mod_RemoveDegenerateTriangles(out->num_triangles, (loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle), (loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle), loadmodel->surfmesh.data_vertex3f + 3 * out->num_firstvertex);
+			out->num_triangles = Mod_RemoveDegenerateTriangles(out->num_triangles, (loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle), (loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle), loadmodel->surfmesh.data_vertex3f);
 
 			if (developer.integer >= 100)
 			{
@@ -5089,7 +5089,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 
 			// now optimize the collision mesh by finding triangle bboxes...
 			Mod_Q3BSP_BuildBBoxes(out->data_collisionelement3i, out->num_collisiontriangles, out->data_collisionvertex3f, &out->data_collisionbbox6f, &out->num_collisionbboxstride, mod_q3bsp_curves_collisions_stride.integer);
-			Mod_Q3BSP_BuildBBoxes(loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle, out->num_triangles, loadmodel->surfmesh.data_vertex3f + 3 * out->num_firstvertex, &out->data_bbox6f, &out->num_bboxstride, mod_q3bsp_curves_stride.integer);
+			Mod_Q3BSP_BuildBBoxes(loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle, out->num_triangles, loadmodel->surfmesh.data_vertex3f, &out->data_bbox6f, &out->num_bboxstride, mod_q3bsp_curves_stride.integer);
 
 			if (developer.integer >= 100)
 				Con_Printf("Mod_Q3BSP_LoadFaces: %ix%i curve became %i:%i vertices / %i:%i triangles (%i:%i degenerate)\n", patchsize[0], patchsize[1], out->num_vertices, out->num_collisionvertices, oldnumtriangles, oldnumtriangles2, oldnumtriangles - out->num_triangles, oldnumtriangles2 - out->num_collisiontriangles);
