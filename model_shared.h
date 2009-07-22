@@ -571,11 +571,15 @@ typedef struct msurface_s
 	int *data_collisionelement3i; // q3bsp
 	int num_collisionvertices; // q3bsp
 	float *data_collisionvertex3f; // q3bsp
-	float *data_collisionbbox6f; // collision optimization - contains combined bboxes of every data_collisionstride triangles
-	int num_collisionstride;
 	struct q3deffect_s *effect; // q3bsp
 	// FIXME: collisionmarkframe should be kept in a separate array
 	int collisionmarkframe; // q3bsp // don't collide twice in one trace
+
+	// optimization...
+	float *data_collisionbbox6f; // collision optimization - contains combined bboxes of every data_collisionstride triangles
+	int num_collisionbboxstride;
+	float *data_bbox6f; // collision optimization - contains combined bboxes of every data_collisionstride triangles
+	int num_bboxstride;
 }
 msurface_t;
 
