@@ -415,6 +415,7 @@ static int Mod_Q1BSP_BoxTouchingVisibleLeafs(dp_model_t *model, const unsigned c
 typedef struct findnonsolidlocationinfo_s
 {
 	vec3_t center;
+	vec3_t absmin, absmax;
 	vec_t radius;
 	vec3_t nudge;
 	vec_t bestdist;
@@ -519,9 +520,30 @@ static void Mod_Q1BSP_FindNonSolidLocation_r_Leaf(findnonsolidlocationinfo_t *in
 		surface = info->model->data_surfaces + *mark;
 		if (surface->texture->supercontents & SUPERCONTENTS_SOLID)
 		{
-			for (k = 0;k < surface->num_triangles;k++)
+			if(surface->num_bboxstride)
 			{
-				Mod_Q1BSP_FindNonSolidLocation_r_Triangle(info, surface, k);
+				int i, cnt, tri;
+				cnt = (surface->num_triangles + surface->num_bboxstride - 1) / surface->num_bboxstride;
+				for(i = 0; i < cnt; ++i)
+				{
+					if(BoxesOverlap(surface->data_bbox6f + i * 6, surface->data_bbox6f + i * 6 + 3, info->absmin, info->absmax))
+					{
+						for(k = 0; k < surface->num_bboxstride; ++k)
+						{
+							tri = i * surface->num_bboxstride + k;
+							if(tri >= surface->num_triangles)
+								break;
+							Mod_Q1BSP_FindNonSolidLocation_r_Triangle(info, surface, tri);
+						}
+					}
+				}
+			}
+			else
+			{
+				for (k = 0;k < surface->num_triangles;k++)
+				{
+					Mod_Q1BSP_FindNonSolidLocation_r_Triangle(info, surface, k);
+				}
 			}
 		}
 	}
@@ -561,6 +583,14 @@ static void Mod_Q1BSP_FindNonSolidLocation(dp_model_t *model, const vec3_t in, v
 	{
 		VectorClear(info.nudge);
 		info.bestdist = radius;
+		VectorCopy(info.center, info.absmin);
+		VectorCopy(info.center, info.absmax);
+		info.absmin[0] -= info.radius + 1;
+		info.absmin[1] -= info.radius + 1;
+		info.absmin[2] -= info.radius + 1;
+		info.absmax[0] += info.radius + 1;
+		info.absmax[1] += info.radius + 1;
+		info.absmax[2] += info.radius + 1;
 		Mod_Q1BSP_FindNonSolidLocation_r(&info, model->brush.data_nodes + model->brushq1.hulls[0].firstclipnode);
 		VectorAdd(info.center, info.nudge, info.center);
 	}
