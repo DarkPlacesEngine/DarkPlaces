@@ -5667,6 +5667,7 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, dp_model_t *mo
 static void Mod_Q3BSP_TraceBox(dp_model_t *model, int frame, trace_t *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask)
 {
 	int i;
+	vec3_t shiftstart, shiftend;
 	float segmentmins[3], segmentmaxs[3];
 	static int markframe = 0;
 	msurface_t *surface;
@@ -5675,41 +5676,43 @@ static void Mod_Q3BSP_TraceBox(dp_model_t *model, int frame, trace_t *trace, con
 	trace->fraction = 1;
 	trace->realfraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
-	if (mod_q3bsp_optimizedtraceline.integer && VectorLength2(boxmins) + VectorLength2(boxmaxs) == 0)
+	if (mod_q3bsp_optimizedtraceline.integer && VectorCompare(boxmins, boxmaxs))
 	{
-		if (VectorCompare(start, end))
+		VectorAdd(start, boxmins, shiftstart);
+		VectorAdd(end, boxmins, shiftend);
+		if (VectorCompare(shiftstart, shiftend))
 		{
 			// point trace
 			if (model->brush.submodel)
 			{
 				for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)
 					if (brush->colbrushf)
-						Collision_TracePointBrushFloat(trace, start, brush->colbrushf);
+						Collision_TracePointBrushFloat(trace, shiftstart, brush->colbrushf);
 			}
 			else
-				Mod_Q3BSP_TracePoint_RecursiveBSPNode(trace, model, model->brush.data_nodes, start, ++markframe);
+				Mod_Q3BSP_TracePoint_RecursiveBSPNode(trace, model, model->brush.data_nodes, shiftstart, ++markframe);
 		}
 		else
 		{
 			// line trace
-			segmentmins[0] = min(start[0], end[0]) - 1;
-			segmentmins[1] = min(start[1], end[1]) - 1;
-			segmentmins[2] = min(start[2], end[2]) - 1;
-			segmentmaxs[0] = max(start[0], end[0]) + 1;
-			segmentmaxs[1] = max(start[1], end[1]) + 1;
-			segmentmaxs[2] = max(start[2], end[2]) + 1;
+			segmentmins[0] = min(shiftstart[0], shiftend[0]) - 1;
+			segmentmins[1] = min(shiftstart[1], shiftend[1]) - 1;
+			segmentmins[2] = min(shiftstart[2], shiftend[2]) - 1;
+			segmentmaxs[0] = max(shiftstart[0], shiftend[0]) + 1;
+			segmentmaxs[1] = max(shiftstart[1], shiftend[1]) + 1;
+			segmentmaxs[2] = max(shiftstart[2], shiftend[2]) + 1;
 			if (model->brush.submodel)
 			{
 				for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)
 					if (brush->colbrushf)
-						Collision_TraceLineBrushFloat(trace, start, end, brush->colbrushf, brush->colbrushf);
+						Collision_TraceLineBrushFloat(trace, shiftstart, shiftend, brush->colbrushf, brush->colbrushf);
 				if (mod_q3bsp_curves_collisions.integer)
 					for (i = 0, surface = model->data_surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surface++)
 						if (surface->num_collisiontriangles)
-							Collision_TraceLineTriangleMeshFloat(trace, start, end, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->num_collisionstride, surface->data_collisionbbox6f, surface->texture->supercontents, surface->texture->surfaceflags, surface->texture, segmentmins, segmentmaxs);
+							Collision_TraceLineTriangleMeshFloat(trace, shiftstart, shiftend, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->num_collisionstride, surface->data_collisionbbox6f, surface->texture->supercontents, surface->texture->surfaceflags, surface->texture, segmentmins, segmentmaxs);
 			}
 			else
-				Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, model, model->brush.data_nodes, start, end, 0, 1, start, end, ++markframe, segmentmins, segmentmaxs);
+				Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, model, model->brush.data_nodes, shiftstart, shiftend, 0, 1, shiftstart, shiftend, ++markframe, segmentmins, segmentmaxs);
 		}
 	}
 	else
