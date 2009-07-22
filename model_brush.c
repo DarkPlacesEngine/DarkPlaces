@@ -422,10 +422,97 @@ typedef struct findnonsolidlocationinfo_s
 }
 findnonsolidlocationinfo_t;
 
+static void Mod_Q1BSP_FindNonSolidLocation_r_Triangle(findnonsolidlocationinfo_t *info, msurface_t *surface, int k)
+{
+	int i, *tri;
+	float dist, f, vert[3][3], edge[3][3], facenormal[3], edgenormal[3][3], point[3];
+
+	tri = (info->model->surfmesh.data_element3i + 3 * surface->num_firsttriangle) + k * 3;
+	VectorCopy((info->model->surfmesh.data_vertex3f + tri[0] * 3), vert[0]);
+	VectorCopy((info->model->surfmesh.data_vertex3f + tri[1] * 3), vert[1]);
+	VectorCopy((info->model->surfmesh.data_vertex3f + tri[2] * 3), vert[2]);
+	VectorSubtract(vert[1], vert[0], edge[0]);
+	VectorSubtract(vert[2], vert[1], edge[1]);
+	CrossProduct(edge[1], edge[0], facenormal);
+	if (facenormal[0] || facenormal[1] || facenormal[2])
+	{
+		VectorNormalize(facenormal);
+		f = DotProduct(info->center, facenormal) - DotProduct(vert[0], facenormal);
+		if (f <= info->bestdist && f >= -info->bestdist)
+		{
+			VectorSubtract(vert[0], vert[2], edge[2]);
+			VectorNormalize(edge[0]);
+			VectorNormalize(edge[1]);
+			VectorNormalize(edge[2]);
+			CrossProduct(facenormal, edge[0], edgenormal[0]);
+			CrossProduct(facenormal, edge[1], edgenormal[1]);
+			CrossProduct(facenormal, edge[2], edgenormal[2]);
+			// face distance
+			if (DotProduct(info->center, edgenormal[0]) < DotProduct(vert[0], edgenormal[0])
+					&& DotProduct(info->center, edgenormal[1]) < DotProduct(vert[1], edgenormal[1])
+					&& DotProduct(info->center, edgenormal[2]) < DotProduct(vert[2], edgenormal[2]))
+			{
+				// we got lucky, the center is within the face
+				dist = DotProduct(info->center, facenormal) - DotProduct(vert[0], facenormal);
+				if (dist < 0)
+				{
+					dist = -dist;
+					if (info->bestdist > dist)
+					{
+						info->bestdist = dist;
+						VectorScale(facenormal, (info->radius - -dist), info->nudge);
+					}
+				}
+				else
+				{
+					if (info->bestdist > dist)
+					{
+						info->bestdist = dist;
+						VectorScale(facenormal, (info->radius - dist), info->nudge);
+					}
+				}
+			}
+			else
+			{
+				// check which edge or vertex the center is nearest
+				for (i = 0;i < 3;i++)
+				{
+					f = DotProduct(info->center, edge[i]);
+					if (f >= DotProduct(vert[0], edge[i])
+							&& f <= DotProduct(vert[1], edge[i]))
+					{
+						// on edge
+						VectorMA(info->center, -f, edge[i], point);
+						dist = sqrt(DotProduct(point, point));
+						if (info->bestdist > dist)
+						{
+							info->bestdist = dist;
+							VectorScale(point, (info->radius / dist), info->nudge);
+						}
+						// skip both vertex checks
+						// (both are further away than this edge)
+						i++;
+					}
+					else
+					{
+						// not on edge, check first vertex of edge
+						VectorSubtract(info->center, vert[i], point);
+						dist = sqrt(DotProduct(point, point));
+						if (info->bestdist > dist)
+						{
+							info->bestdist = dist;
+							VectorScale(point, (info->radius / dist), info->nudge);
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
 static void Mod_Q1BSP_FindNonSolidLocation_r_Leaf(findnonsolidlocationinfo_t *info, mleaf_t *leaf)
 {
-	int i, surfacenum, k, *tri, *mark;
-	float dist, f, vert[3][3], edge[3][3], facenormal[3], edgenormal[3][3], point[3];
+	int surfacenum, k, *mark;
 	msurface_t *surface;
 	for (surfacenum = 0, mark = leaf->firstleafsurface;surfacenum < leaf->numleafsurfaces;surfacenum++, mark++)
 	{
@@ -434,87 +521,7 @@ static void Mod_Q1BSP_FindNonSolidLocation_r_Leaf(findnonsolidlocationinfo_t *in
 		{
 			for (k = 0;k < surface->num_triangles;k++)
 			{
-				tri = (info->model->surfmesh.data_element3i + 3 * surface->num_firsttriangle) + k * 3;
-				VectorCopy((info->model->surfmesh.data_vertex3f + tri[0] * 3), vert[0]);
-				VectorCopy((info->model->surfmesh.data_vertex3f + tri[1] * 3), vert[1]);
-				VectorCopy((info->model->surfmesh.data_vertex3f + tri[2] * 3), vert[2]);
-				VectorSubtract(vert[1], vert[0], edge[0]);
-				VectorSubtract(vert[2], vert[1], edge[1]);
-				CrossProduct(edge[1], edge[0], facenormal);
-				if (facenormal[0] || facenormal[1] || facenormal[2])
-				{
-					VectorNormalize(facenormal);
-					f = DotProduct(info->center, facenormal) - DotProduct(vert[0], facenormal);
-					if (f <= info->bestdist && f >= -info->bestdist)
-					{
-						VectorSubtract(vert[0], vert[2], edge[2]);
-						VectorNormalize(edge[0]);
-						VectorNormalize(edge[1]);
-						VectorNormalize(edge[2]);
-						CrossProduct(facenormal, edge[0], edgenormal[0]);
-						CrossProduct(facenormal, edge[1], edgenormal[1]);
-						CrossProduct(facenormal, edge[2], edgenormal[2]);
-						// face distance
-						if (DotProduct(info->center, edgenormal[0]) < DotProduct(vert[0], edgenormal[0])
-						 && DotProduct(info->center, edgenormal[1]) < DotProduct(vert[1], edgenormal[1])
-						 && DotProduct(info->center, edgenormal[2]) < DotProduct(vert[2], edgenormal[2]))
-						{
-							// we got lucky, the center is within the face
-							dist = DotProduct(info->center, facenormal) - DotProduct(vert[0], facenormal);
-							if (dist < 0)
-							{
-								dist = -dist;
-								if (info->bestdist > dist)
-								{
-									info->bestdist = dist;
-									VectorScale(facenormal, (info->radius - -dist), info->nudge);
-								}
-							}
-							else
-							{
-								if (info->bestdist > dist)
-								{
-									info->bestdist = dist;
-									VectorScale(facenormal, (info->radius - dist), info->nudge);
-								}
-							}
-						}
-						else
-						{
-							// check which edge or vertex the center is nearest
-							for (i = 0;i < 3;i++)
-							{
-								f = DotProduct(info->center, edge[i]);
-								if (f >= DotProduct(vert[0], edge[i])
-								 && f <= DotProduct(vert[1], edge[i]))
-								{
-									// on edge
-									VectorMA(info->center, -f, edge[i], point);
-									dist = sqrt(DotProduct(point, point));
-									if (info->bestdist > dist)
-									{
-										info->bestdist = dist;
-										VectorScale(point, (info->radius / dist), info->nudge);
-									}
-									// skip both vertex checks
-									// (both are further away than this edge)
-									i++;
-								}
-								else
-								{
-									// not on edge, check first vertex of edge
-									VectorSubtract(info->center, vert[i], point);
-									dist = sqrt(DotProduct(point, point));
-									if (info->bestdist > dist)
-									{
-										info->bestdist = dist;
-										VectorScale(point, (info->radius / dist), info->nudge);
-									}
-								}
-							}
-						}
-					}
-				}
+				Mod_Q1BSP_FindNonSolidLocation_r_Triangle(info, surface, k);
 			}
 		}
 	}
