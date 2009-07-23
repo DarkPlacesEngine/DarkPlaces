@@ -5425,8 +5425,8 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 					VectorSubtract(end, start, up);
 					VectorNormalize(up);
 					// calculate a forward vector to use instead of the original plane normal (this is how we get a new right vector)
-					//VectorSubtract(rsurface.modelorg, center, forward);
-					Matrix4x4_Transform3x3(&rsurface.inversematrix, r_refdef.view.forward, forward);
+					VectorSubtract(rsurface.modelorg, center, forward);
+					//Matrix4x4_Transform3x3(&rsurface.inversematrix, r_refdef.view.forward, forward);
 					VectorNegate(forward, forward);
 					VectorReflect(forward, 0, up, forward);
 					VectorNormalize(forward);
