@@ -1969,8 +1969,8 @@ void CL_UpdateScreen(void)
 
 	rendertime1 = Sys_DoubleTime();
 
-	conwidth = bound(320, vid_conwidth.value, 2048);
-	conheight = bound(200, vid_conheight.value, 1536);
+	conwidth = bound(160, vid_conwidth.value, 32768);
+	conheight = bound(90, vid_conheight.value, 24576);
 	if (vid_conwidth.value != conwidth)
 		Cvar_SetValue("vid_conwidth", conwidth);
 	if (vid_conheight.value != conheight)
