@@ -3356,7 +3356,7 @@ void R_Bloom_StartFrame(void)
 		Cvar_SetValueQuick(&r_damageblur, 0);
 	}
 
-	if (!(r_glsl.integer && (r_glsl_postprocess.integer || (v_glslgamma.integer && !vid_gammatables_trivial))) && !r_bloom.integer && !r_hdr.integer && r_motionblur.value <= 0 && r_damageblur.value <= 0)
+	if (!(r_glsl.integer && (r_glsl_postprocess.integer || r_glsl_saturation.value != 1 || (v_glslgamma.integer && !vid_gammatables_trivial))) && !r_bloom.integer && !r_hdr.integer && r_motionblur.value <= 0 && r_damageblur.value <= 0)
 		screentexturewidth = screentextureheight = 0;
 	if (!r_hdr.integer && !r_bloom.integer)
 		bloomtexturewidth = bloomtextureheight = 0;
