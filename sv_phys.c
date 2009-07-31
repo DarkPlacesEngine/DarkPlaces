@@ -815,11 +815,11 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qboolean applygravity, flo
 #endif
 		trace = SV_PushEntity(ent, push, false, false); // the caller calls SV_LinkEntity on the own later
 
-		if(!VectorCompare(trace.endpos, ent->fields.server->origin))
+		VectorCopy(trace.endpos, push); // convert to float for comparing
+		if(!VectorCompare(push, ent->fields.server->origin))
 		{
 			// we got teleported by a touch function
 			// let's abort the move
-			Con_DPrintf("we got teleported\n");
 			break;
 		}
 
@@ -1745,7 +1745,7 @@ void SV_WalkMove (prvm_edict_t *ent)
 		// move up
 		VectorClear (upmove);
 		upmove[2] = sv_stepheight.value;
-		SV_PushEntity(ent, upmove, false, false);
+		SV_PushEntity(ent, upmove, false, true);
 
 		// move forward
 		ent->fields.server->velocity[2] = 0;
@@ -1786,7 +1786,7 @@ void SV_WalkMove (prvm_edict_t *ent)
 	// move down
 	VectorClear (downmove);
 	downmove[2] = -sv_stepheight.value + start_velocity[2]*sv.frametime;
-	downtrace = SV_PushEntity (ent, downmove, false, false);
+	downtrace = SV_PushEntity (ent, downmove, false, true);
 
 	if (downtrace.fraction < 1 && downtrace.plane.normal[2] > 0.7)
 	{
