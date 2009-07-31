@@ -2735,7 +2735,7 @@ static void Mod_Decompile_f(void)
 					if ((animname[l] < '0' || animname[l] > '9') && animname[l] != '_')
 						k = l + 1;
 				animname[k] = 0;
-				count = (mod->num_poses / mod->num_bones) - first;
+				count = mod->num_poses - first;
 				for (j = i + 1;j < mod->numframes;j++)
 				{
 					strlcpy(animname2, mod->animscenes[j].name, sizeof(animname2));
