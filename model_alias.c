@@ -1997,7 +1997,7 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 	loadmodel->numframes = pheader->num_frames;
 	loadmodel->num_bones = pheader->num_bones;
-	loadmodel->num_poses = loadmodel->num_frames;
+	loadmodel->num_poses = loadmodel->numframes;
 	loadmodel->nummodelsurfaces = loadmodel->num_surfaces = pheader->num_meshs;
 	loadmodel->num_textures = loadmodel->num_surfaces * loadmodel->numskins;
 	loadmodel->num_texturesperskin = loadmodel->num_surfaces;
