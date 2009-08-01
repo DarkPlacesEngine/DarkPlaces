@@ -650,7 +650,7 @@ static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, int frame, trace_t *trace,
 	{
 		// line trace
 		VectorAdd(start, boxmins, shiftstart);
-		VectorAdd(shiftend, boxmins, shiftend);
+		VectorAdd(end, boxmins, shiftend);
 		segmentmins[0] = min(shiftstart[0], shiftend[0]) - 1;
 		segmentmins[1] = min(shiftstart[1], shiftend[1]) - 1;
 		segmentmins[2] = min(shiftstart[2], shiftend[2]) - 1;
