@@ -91,6 +91,7 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	vec3_t hullmins, hullmaxs;
 	int i, bodysupercontents;
 	int passedictprog;
+	float pitchsign;
 	qboolean pointtrace;
 	prvm_edict_t *traceowner, *touch;
 	trace_t trace;
@@ -218,9 +219,22 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 			// if the modelindex is 0, it shouldn't be SOLID_BSP!
 			if (modelindex > 0 && modelindex < MAX_MODELS)
 				model = sv.models[(int)touch->fields.server->modelindex];
+			pitchsign = 1;
+			if (
+				((modelindex = (int)touch->fields.server->modelindex) >= 1 && modelindex < MAX_MODELS && (model = sv.models[(int)touch->fields.server->modelindex]))
+				?
+					model->type == mod_alias
+				:
+					(
+						(((unsigned char)PRVM_EDICTFIELDVALUE(touch, prog->fieldoffsets.pflags)->_float) & PFLAGS_FULLDYNAMIC)
+						||
+						((gamemode == GAME_TENEBRAE) && ((unsigned int)touch->fields.server->effects & (16 | 32)))
+					)
+			)
+				pitchsign = -1;
 		}
 		if (model)
-			Matrix4x4_CreateFromQuakeEntity(&matrix, touch->fields.server->origin[0], touch->fields.server->origin[1], touch->fields.server->origin[2], touch->fields.server->angles[0], touch->fields.server->angles[1], touch->fields.server->angles[2], 1);
+			Matrix4x4_CreateFromQuakeEntity(&matrix, touch->fields.server->origin[0], touch->fields.server->origin[1], touch->fields.server->origin[2], pitchsign * touch->fields.server->angles[0], touch->fields.server->angles[1], touch->fields.server->angles[2], 1);
 		else
 			Matrix4x4_CreateTranslate(&matrix, touch->fields.server->origin[0], touch->fields.server->origin[1], touch->fields.server->origin[2]);
 		Matrix4x4_Invert_Simple(&imatrix, &matrix);
@@ -684,20 +698,24 @@ qboolean SV_RunThink (prvm_edict_t *ent)
 SV_Impact
 
 Two entities have touched, so run their touch functions
+returns true if the impact kept the origin of the touching entity intact
 ==================
 */
 extern void VM_SetTraceGlobals(const trace_t *trace);
 extern sizebuf_t vm_tempstringsbuf;
-void SV_Impact (prvm_edict_t *e1, trace_t *trace)
+qboolean SV_Impact (prvm_edict_t *e1, trace_t *trace)
 {
 	int restorevm_tempstringsbuf_cursize;
 	int old_self, old_other;
+	vec3_t org;
 	prvm_edict_t *e2 = (prvm_edict_t *)trace->ent;
 	prvm_eval_t *val;
 
 	old_self = prog->globals.server->self;
 	old_other = prog->globals.server->other;
 	restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
+
+	VectorCopy(e1->fields.server->origin, org);
 
 	VM_SetTraceGlobals(trace);
 
@@ -731,6 +749,8 @@ void SV_Impact (prvm_edict_t *e1, trace_t *trace)
 	prog->globals.server->self = old_self;
 	prog->globals.server->other = old_other;
 	vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
+
+	return VectorCompare(e1->fields.server->origin, org);
 }
 
 
@@ -771,7 +791,7 @@ If stepnormal is not NULL, the plane normal of any vertical wall hit will be sto
 ============
 */
 static float SV_Gravity (prvm_edict_t *ent);
-static trace_t SV_PushEntity (prvm_edict_t *ent, vec3_t push, qboolean failonbmodelstartsolid, qboolean dolink);
+static qboolean SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, qboolean failonbmodelstartsolid, qboolean dolink);
 // LordHavoc: increased from 5 to 32
 #define MAX_CLIP_PLANES 32
 static int SV_FlyMove (prvm_edict_t *ent, float time, qboolean applygravity, float *stepnormal, int hitsupercontentsmask)
@@ -814,10 +834,7 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qboolean applygravity, flo
 #if 0
 		VectorAdd(ent->fields.server->origin, push, end);
 #endif
-		trace = SV_PushEntity(ent, push, false, false); // the caller calls SV_LinkEntity on the own later
-
-		VectorCopy(trace.endpos, push); // convert to float for comparing
-		if(!VectorCompare(push, ent->fields.server->origin))
+		if(!SV_PushEntity(&trace, ent, push, false, false))
 		{
 			// we got teleported by a touch function
 			// let's abort the move
@@ -1046,12 +1063,13 @@ PUSHMOVE
 SV_PushEntity
 
 Does not change the entities velocity at all
+The trace struct is filled with the trace that has been done.
+Returns true if the push did not result in the entity being teleported by QC code.
 ============
 */
-static trace_t SV_PushEntity (prvm_edict_t *ent, vec3_t push, qboolean failonbmodelstartsolid, qboolean dolink)
+static qboolean SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, qboolean failonbmodelstartsolid, qboolean dolink)
 {
 	int type;
-	trace_t trace;
 	vec3_t end;
 	qboolean impact;
 
@@ -1064,23 +1082,31 @@ static trace_t SV_PushEntity (prvm_edict_t *ent, vec3_t push, qboolean failonbmo
 	else
 		type = MOVE_NORMAL;
 
-	trace = SV_Move (ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, end, type, ent, SV_GenericHitSuperContentsMask(ent));
-	if (trace.bmodelstartsolid && failonbmodelstartsolid)
-		return trace;
+	*trace = SV_Move (ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, end, type, ent, SV_GenericHitSuperContentsMask(ent));
+	if (trace->bmodelstartsolid && failonbmodelstartsolid)
+		return true;
 
-	VectorCopy (trace.endpos, ent->fields.server->origin);
+	VectorCopy (trace->endpos, ent->fields.server->origin);
 
-	impact = (ent->fields.server->solid >= SOLID_TRIGGER && trace.ent && (!((int)ent->fields.server->flags & FL_ONGROUND) || ent->fields.server->groundentity != PRVM_EDICT_TO_PROG(trace.ent)));
+#if 0
+	if(!trace->startsolid)
+	if(SV_Move (ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, ent->fields.server->origin, type, ent, SV_GenericHitSuperContentsMask(ent)).startsolid)
+	{
+		Con_Printf("something eeeeevil happened\n");
+	}
+#endif
+
+	impact = (ent->fields.server->solid >= SOLID_TRIGGER && trace->ent && (!((int)ent->fields.server->flags & FL_ONGROUND) || ent->fields.server->groundentity != PRVM_EDICT_TO_PROG(trace->ent)));
 
 	if(impact)
 	{
 		SV_LinkEdict (ent, dolink);
-		SV_Impact (ent, &trace);
+		return SV_Impact (ent, trace);
 	}
 	else if(dolink)
 		SV_LinkEdict (ent, true);
 
-	return trace;
+	return true;
 }
 
 
@@ -1102,7 +1128,7 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 	int numcheckentities;
 	static prvm_edict_t *checkentities[MAX_EDICTS];
 	dp_model_t *pushermodel;
-	trace_t trace;
+	trace_t trace, trace2;
 	matrix4x4_t pusherfinalmatrix, pusherfinalimatrix;
 	unsigned short moved_edicts[MAX_EDICTS];
 
@@ -1283,7 +1309,13 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 
 		// try moving the contacted entity
 		pusher->fields.server->solid = SOLID_NOT;
-		trace = SV_PushEntity (check, move, true, true);
+		if(!SV_PushEntity (&trace, check, move, true, true))
+		{
+			// entity "check" got teleported
+			check->fields.server->angles[1] += trace.fraction * moveangle[1];
+			pusher->fields.server->solid = savesolid; // was SOLID_BSP
+			continue; // pushed enough
+		}
 		// FIXME: turn players specially
 		check->fields.server->angles[1] += trace.fraction * moveangle[1];
 		pusher->fields.server->solid = savesolid; // was SOLID_BSP
@@ -1305,7 +1337,11 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 			VectorScale(move, 1.1, move2);
 			VectorCopy (check->priv.server->moved_from, check->fields.server->origin);
 			VectorCopy (check->priv.server->moved_fromangles, check->fields.server->angles);
-			SV_PushEntity (check, move2, true, true);
+			if(!SV_PushEntity (&trace2, check, move2, true, true))
+			{
+				// entity "check" got teleported
+				continue;
+			}
 			pusher->fields.server->solid = savesolid;
 			Collision_ClipToGenericEntity(&trace, pushermodel, (int) pusher->fields.server->frame, pusher->fields.server->mins, pusher->fields.server->maxs, SUPERCONTENTS_BODY, &pusherfinalmatrix, &pusherfinalimatrix, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, checkcontents);
 			if (trace.startsolid)
@@ -1315,7 +1351,11 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 				VectorScale(move, 0.9, move2);
 				VectorCopy (check->priv.server->moved_from, check->fields.server->origin);
 				VectorCopy (check->priv.server->moved_fromangles, check->fields.server->angles);
-				SV_PushEntity (check, move2, true, true);
+				if(!SV_PushEntity (&trace2, check, move2, true, true))
+				{
+					// entity "check" got teleported
+					continue;
+				}
 				pusher->fields.server->solid = savesolid;
 				Collision_ClipToGenericEntity(&trace, pushermodel, (int) pusher->fields.server->frame, pusher->fields.server->mins, pusher->fields.server->maxs, SUPERCONTENTS_BODY, &pusherfinalmatrix, &pusherfinalimatrix, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, checkcontents);
 				if (trace.startsolid)
@@ -1640,7 +1680,7 @@ int SV_TryUnstick (prvm_edict_t *ent, vec3_t oldvel)
 			case 7: dir[0] = -2; dir[1] = -2; break;
 		}
 
-		SV_PushEntity (ent, dir, false, true);
+		SV_PushEntity (&trace, ent, dir, false, true);
 
 		// retry the original move
 		ent->fields.server->velocity[0] = oldvel[0];
@@ -1677,7 +1717,7 @@ void SV_WalkMove (prvm_edict_t *ent)
 {
 	int clip, oldonground, originalmove_clip, originalmove_flags, originalmove_groundentity, hitsupercontentsmask;
 	vec3_t upmove, downmove, start_origin, start_velocity, stepnormal, originalmove_origin, originalmove_velocity;
-	trace_t downtrace;
+	trace_t downtrace, trace;
 	qboolean applygravity;
 
 	// if frametime is 0 (due to client sending the same timestamp twice),
@@ -1750,12 +1790,22 @@ void SV_WalkMove (prvm_edict_t *ent)
 		// move up
 		VectorClear (upmove);
 		upmove[2] = sv_stepheight.value;
-		SV_PushEntity(ent, upmove, false, true);
+		if(!SV_PushEntity(&trace, ent, upmove, false, true))
+		{
+			// we got teleported when upstepping... must abort the move
+			return;
+		}
 
 		// move forward
 		ent->fields.server->velocity[2] = 0;
 		clip = SV_FlyMove (ent, sv.frametime, applygravity, stepnormal, hitsupercontentsmask);
 		ent->fields.server->velocity[2] += start_velocity[2];
+		if(clip & 8)
+		{
+			// we got teleported when upstepping... must abort the move
+			// note that z velocity handling may not be what QC expects here, but we cannot help it
+			return;
+		}
 
 		SV_CheckVelocity(ent);
 		SV_LinkEdict (ent, true);
@@ -1791,7 +1841,11 @@ void SV_WalkMove (prvm_edict_t *ent)
 	// move down
 	VectorClear (downmove);
 	downmove[2] = -sv_stepheight.value + start_velocity[2]*sv.frametime;
-	downtrace = SV_PushEntity (ent, downmove, false, true);
+	if(!SV_PushEntity (&downtrace, ent, downmove, false, true))
+	{
+		// we got teleported when downstepping... must abort the move
+		return;
+	}
 
 	if (downtrace.fraction < 1 && downtrace.plane.normal[2] > 0.7)
 	{
@@ -1971,14 +2025,16 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 	{
 	// move origin
 		VectorScale (ent->fields.server->velocity, movetime, move);
-		trace = SV_PushEntity (ent, move, true, true);
+		if(!SV_PushEntity (&trace, ent, move, true, true))
+			return; // teleported
 		if (ent->priv.server->free)
 			return;
 		if (trace.bmodelstartsolid)
 		{
 			// try to unstick the entity
 			SV_UnstickEntity(ent);
-			trace = SV_PushEntity (ent, move, false, true);
+			if(!SV_PushEntity (&trace, ent, move, false, true))
+				return; // teleported
 			if (ent->priv.server->free)
 				return;
 		}
