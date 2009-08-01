@@ -626,6 +626,7 @@ static void Mod_Alias_MorphMesh_CompileFrames(void)
 static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, int frame, trace_t *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask)
 {
 	int i;
+	vec3_t shiftstart, shiftend;
 	float segmentmins[3], segmentmaxs[3];
 	frameblend_t frameblend[MAX_FRAMEBLENDS];
 	msurface_t *surface;
@@ -645,19 +646,21 @@ static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, int frame, trace_t *trace,
 		maxvertices = (model->surfmesh.num_vertices + 255) & ~255;
 		vertex3f = (float *)Z_Malloc(maxvertices * sizeof(float[3]));
 	}
-	if (VectorLength2(boxmins) + VectorLength2(boxmaxs) == 0)
+	if (VectorCompare(boxmins, boxmaxs))
 	{
 		// line trace
-		segmentmins[0] = min(start[0], end[0]) - 1;
-		segmentmins[1] = min(start[1], end[1]) - 1;
-		segmentmins[2] = min(start[2], end[2]) - 1;
-		segmentmaxs[0] = max(start[0], end[0]) + 1;
-		segmentmaxs[1] = max(start[1], end[1]) + 1;
-		segmentmaxs[2] = max(start[2], end[2]) + 1;
+		VectorAdd(start, boxmins, shiftstart);
+		VectorAdd(shiftend, boxmins, shiftend);
+		segmentmins[0] = min(shiftstart[0], shiftend[0]) - 1;
+		segmentmins[1] = min(shiftstart[1], shiftend[1]) - 1;
+		segmentmins[2] = min(shiftstart[2], shiftend[2]) - 1;
+		segmentmaxs[0] = max(shiftstart[0], shiftend[0]) + 1;
+		segmentmaxs[1] = max(shiftstart[1], shiftend[1]) + 1;
+		segmentmaxs[2] = max(shiftstart[2], shiftend[2]) + 1;
 		for (i = 0, surface = model->data_surfaces;i < model->num_surfaces;i++, surface++)
 		{
 			model->AnimateVertices(model, frameblend, vertex3f, NULL, NULL, NULL);
-			Collision_TraceLineTriangleMeshFloat(trace, start, end, model->surfmesh.num_triangles, model->surfmesh.data_element3i, vertex3f, 0, NULL, SUPERCONTENTS_SOLID | (surface->texture->basematerialflags & MATERIALFLAGMASK_TRANSLUCENT ? 0 : SUPERCONTENTS_OPAQUE), 0, surface->texture, segmentmins, segmentmaxs);
+			Collision_TraceLineTriangleMeshFloat(trace, shiftstart, shiftend, model->surfmesh.num_triangles, model->surfmesh.data_element3i, vertex3f, 0, NULL, SUPERCONTENTS_SOLID | (surface->texture->basematerialflags & MATERIALFLAGMASK_TRANSLUCENT ? 0 : SUPERCONTENTS_OPAQUE), 0, surface->texture, segmentmins, segmentmaxs);
 		}
 	}
 	else
