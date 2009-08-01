@@ -766,6 +766,7 @@ Returns the clipflags if the velocity was modified (hit something solid)
 1 = floor
 2 = wall / step
 4 = dead stop
+8 = teleported by touch method
 If stepnormal is not NULL, the plane normal of any vertical wall hit will be stored
 ============
 */
@@ -820,6 +821,7 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qboolean applygravity, flo
 		{
 			// we got teleported by a touch function
 			// let's abort the move
+			blocked |= 8;
 			break;
 		}
 
@@ -1004,7 +1006,7 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qboolean applygravity, flo
 	*/
 
 	// LordHavoc: this came from QW and allows you to get out of water more easily
-	if (sv_gameplayfix_easierwaterjump.integer && ((int)ent->fields.server->flags & FL_WATERJUMP))
+	if (sv_gameplayfix_easierwaterjump.integer && ((int)ent->fields.server->flags & FL_WATERJUMP) && !(blocked & 8))
 		VectorCopy(primal_velocity, ent->fields.server->velocity);
 	if (applygravity && !((int)ent->fields.server->flags & FL_ONGROUND))
 		ent->fields.server->velocity[2] -= gravity;
@@ -1706,17 +1708,20 @@ void SV_WalkMove (prvm_edict_t *ent)
 	SV_CheckVelocity(ent);
 	SV_LinkEdict (ent, true);
 
-	VectorCopy(ent->fields.server->origin, originalmove_origin);
-	VectorCopy(ent->fields.server->velocity, originalmove_velocity);
-	originalmove_clip = clip;
-	originalmove_flags = (int)ent->fields.server->flags;
-	originalmove_groundentity = ent->fields.server->groundentity;
+	if(clip & 8) // teleport
+		return;
 
 	if ((int)ent->fields.server->flags & FL_WATERJUMP)
 		return;
 
 	if (sv_nostep.integer)
 		return;
+
+	VectorCopy(ent->fields.server->origin, originalmove_origin);
+	VectorCopy(ent->fields.server->velocity, originalmove_velocity);
+	originalmove_clip = clip;
+	originalmove_flags = (int)ent->fields.server->flags;
+	originalmove_groundentity = ent->fields.server->groundentity;
 
 	// if move didn't block on a step, return
 	if (clip & 2)
