@@ -498,11 +498,13 @@ returns true if the entity is in solid currently
 */
 static int SV_TestEntityPosition (prvm_edict_t *ent, vec3_t offset)
 {
+	int contents;
 	vec3_t org;
 	trace_t trace;
+	contents = SV_GenericHitSuperContentsMask(ent);
 	VectorAdd(ent->fields.server->origin, offset, org);
-	trace = SV_Move (org, ent->fields.server->mins, ent->fields.server->maxs, ent->fields.server->origin, MOVE_NOMONSTERS, ent, SUPERCONTENTS_SOLID);
-	if (trace.startsupercontents & SUPERCONTENTS_SOLID)
+	trace = SV_Move (org, ent->fields.server->mins, ent->fields.server->maxs, ent->fields.server->origin, MOVE_NOMONSTERS, ent, contents);
+	if (trace.startsupercontents & contents)
 		return true;
 	else
 	{
@@ -526,7 +528,7 @@ static int SV_TestEntityPosition (prvm_edict_t *ent, vec3_t offset)
 				v[0] = (i & 1) ? m2[0] : m1[0];
 				v[1] = (i & 2) ? m2[1] : m1[1];
 				v[2] = (i & 4) ? m2[2] : m1[2];
-				if (SV_PointSuperContents(v) & SUPERCONTENTS_SOLID)
+				if (SV_PointSuperContents(v) & contents)
 					return true;
 			}
 		}
@@ -540,7 +542,7 @@ static int SV_TestEntityPosition (prvm_edict_t *ent, vec3_t offset)
 #else
 		// verify if the endpos is REALLY outside solid
 		VectorCopy(trace.endpos, org);
-		trace = SV_Move (org, ent->fields.server->mins, ent->fields.server->maxs, org, MOVE_NOMONSTERS, ent, SUPERCONTENTS_SOLID);
+		trace = SV_Move (org, ent->fields.server->mins, ent->fields.server->maxs, org, MOVE_NOMONSTERS, ent, contents);
 		if(trace.startsolid)
 			Con_Printf("SV_TestEntityPosition: trace.endpos detected to be in solid. NOT using it.\n");
 		else
