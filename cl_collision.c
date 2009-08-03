@@ -16,7 +16,7 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 	float tempnormal[3], starttransformed[3], endtransformed[3];
 #ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
 	vec3_t end;
-	vec_t len;
+	vec_t len = 0;
 
 	if(!VectorCompare(start, pEnd))
 	{
@@ -71,8 +71,10 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 		Matrix4x4_Transform(&ent->inversematrix, start, starttransformed);
 		Matrix4x4_Transform(&ent->inversematrix, end, endtransformed);
 		Collision_ClipTrace_Box(&trace, ent->model->normalmins, ent->model->normalmaxs, starttransformed, vec3_origin, vec3_origin, endtransformed, SUPERCONTENTS_SOLID, SUPERCONTENTS_SOLID, 0, NULL);
+#ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
 		if(!VectorCompare(start, pEnd))
 			Collision_ShortenTrace(&trace, len / (len + 1), pEnd);
+#endif
 		if (maxrealfrac < trace.realfraction)
 			continue;
 
@@ -255,7 +257,7 @@ trace_t CL_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	prvm_edict_t *touchedicts[MAX_EDICTS];
 #ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
 	vec3_t end;
-	vec_t len;
+	vec_t len = 0;
 
 	if(!VectorCompare(start, pEnd))
 	{
