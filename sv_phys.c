@@ -122,7 +122,7 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	prvm_edict_t *touchedicts[MAX_EDICTS];
 #ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
 	vec3_t end;
-	vec_t len;
+	vec_t len = 0;
 
 	if(!VectorCompare(start, pEnd))
 	{
