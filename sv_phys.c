@@ -82,10 +82,18 @@ int SV_GenericHitSuperContentsMask(const prvm_edict_t *passedict)
 SV_Move
 ==================
 */
+#ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
+#if COLLISIONPARANOID >= 1
+trace_t SV_Move_(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t pEnd, int type, prvm_edict_t *passedict, int hitsupercontentsmask)
+#else
+trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t pEnd, int type, prvm_edict_t *passedict, int hitsupercontentsmask)
+#endif
+#else
 #if COLLISIONPARANOID >= 1
 trace_t SV_Move_(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, prvm_edict_t *passedict, int hitsupercontentsmask)
 #else
 trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, prvm_edict_t *passedict, int hitsupercontentsmask)
+#endif
 #endif
 {
 	vec3_t hullmins, hullmaxs;
@@ -112,6 +120,20 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	// list of entities to test for collisions
 	int numtouchedicts;
 	prvm_edict_t *touchedicts[MAX_EDICTS];
+#ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
+	vec3_t end;
+	vec_t len;
+
+	if(!VectorCompare(start, pEnd))
+	{
+		// TRICK: make the trace 1 qu longer!
+		VectorSubtract(pEnd, start, end);
+		len = VectorNormalizeLength(end);
+		VectorAdd(pEnd, end, end);
+	}
+	else
+		VectorCopy(pEnd, end);
+#endif
 
 	VectorCopy(start, clipstart);
 	VectorCopy(end, clipend);
@@ -129,7 +151,7 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	if (cliptrace.startsolid || cliptrace.fraction < 1)
 		cliptrace.ent = prog->edicts;
 	if (type == MOVE_WORLDONLY)
-		return cliptrace;
+		goto finished;
 
 	if (type == MOVE_MISSILE)
 	{
@@ -246,6 +268,11 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 		Collision_CombineTraces(&cliptrace, &trace, (void *)touch, touch->fields.server->solid == SOLID_BSP);
 	}
 
+finished:
+#ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
+	if(!VectorCompare(start, pEnd))
+		Collision_ShortenTrace(&cliptrace, len / (len + 1), pEnd);
+#endif
 	return cliptrace;
 }
 

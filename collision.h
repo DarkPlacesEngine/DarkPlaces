@@ -138,6 +138,9 @@ void Collision_ClipToWorld(trace_t *trace, dp_model_t *model, const vec3_t start
 // updates fraction, endpos, plane and surface info if new fraction is shorter
 void Collision_CombineTraces(trace_t *cliptrace, const trace_t *trace, void *touch, qboolean isbmodel);
 
+// shorten a trace by the given factor
+void Collision_ShortenTrace(trace_t *trace, float shorten_factor, const vec3_t end);
+
 // this enables rather large debugging spew!
 // settings:
 // 0 = no spew
@@ -145,5 +148,9 @@ void Collision_CombineTraces(trace_t *cliptrace, const trace_t *trace, void *tou
 // 2 = spew trace calls always
 // 3 = spew detailed trace flow (bsp tree recursion info)
 #define COLLISIONPARANOID 0
+
+// make every trace 1qu longer, and shorten the result, to work around a stupid bug somewhere
+#define COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
+
 
 #endif
