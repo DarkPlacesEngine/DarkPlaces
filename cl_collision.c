@@ -2,7 +2,11 @@
 #include "quakedef.h"
 #include "cl_collision.h"
 
+#ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
+float CL_SelectTraceLine(const vec3_t start, const vec3_t pEnd, vec3_t impact, vec3_t normal, int *hitent, entity_render_t *ignoreent)
+#else
 float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t normal, int *hitent, entity_render_t *ignoreent)
+#endif
 {
 	float maxfrac, maxrealfrac;
 	int n;
@@ -10,6 +14,20 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 	float tracemins[3], tracemaxs[3];
 	trace_t trace;
 	float tempnormal[3], starttransformed[3], endtransformed[3];
+#ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
+	vec3_t end;
+	vec_t len;
+
+	if(!VectorCompare(start, pEnd))
+	{
+		// TRICK: make the trace 1 qu longer!
+		VectorSubtract(pEnd, start, end);
+		len = VectorNormalizeLength(end);
+		VectorAdd(pEnd, end, end);
+	}
+	else
+		VectorCopy(pEnd, end);
+#endif
 
 	memset (&trace, 0 , sizeof(trace_t));
 	trace.fraction = 1;
@@ -53,11 +71,12 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 		Matrix4x4_Transform(&ent->inversematrix, start, starttransformed);
 		Matrix4x4_Transform(&ent->inversematrix, end, endtransformed);
 		Collision_ClipTrace_Box(&trace, ent->model->normalmins, ent->model->normalmaxs, starttransformed, vec3_origin, vec3_origin, endtransformed, SUPERCONTENTS_SOLID, SUPERCONTENTS_SOLID, 0, NULL);
+		if(!VectorCompare(start, pEnd))
+			Collision_ShortenTrace(&trace, len / (len + 1), pEnd);
 		if (maxrealfrac < trace.realfraction)
 			continue;
 
-		//if (ent->model && ent->model->TraceBox)
-			ent->model->TraceBox(ent->model, ent->frameblend[0].subframe, &trace, starttransformed, vec3_origin, vec3_origin, endtransformed, SUPERCONTENTS_SOLID);
+		ent->model->TraceBox(ent->model, ent->frameblend[0].subframe, &trace, starttransformed, vec3_origin, vec3_origin, endtransformed, SUPERCONTENTS_SOLID);
 
 		if (maxrealfrac > trace.realfraction)
 		{
@@ -205,7 +224,11 @@ int CL_GenericHitSuperContentsMask(const prvm_edict_t *passedict)
 CL_Move
 ==================
 */
+#ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
+trace_t CL_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t pEnd, int type, prvm_edict_t *passedict, int hitsupercontentsmask, qboolean hitnetworkbrushmodels, qboolean hitnetworkplayers, int *hitnetworkentity, qboolean hitcsqcentities)
+#else
 trace_t CL_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, prvm_edict_t *passedict, int hitsupercontentsmask, qboolean hitnetworkbrushmodels, qboolean hitnetworkplayers, int *hitnetworkentity, qboolean hitcsqcentities)
+#endif
 {
 	vec3_t hullmins, hullmaxs;
 	int i, bodysupercontents;
@@ -230,6 +253,20 @@ trace_t CL_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	// list of entities to test for collisions
 	int numtouchedicts;
 	prvm_edict_t *touchedicts[MAX_EDICTS];
+#ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
+	vec3_t end;
+	vec_t len;
+
+	if(!VectorCompare(start, pEnd))
+	{
+		// TRICK: make the trace 1 qu longer!
+		VectorSubtract(pEnd, start, end);
+		len = VectorNormalizeLength(end);
+		VectorAdd(pEnd, end, end);
+	}
+	else
+		VectorCopy(pEnd, end);
+#endif
 
 	if (hitnetworkentity)
 		*hitnetworkentity = 0;
@@ -250,7 +287,7 @@ trace_t CL_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	if (cliptrace.startsolid || cliptrace.fraction < 1)
 		cliptrace.ent = prog ? prog->edicts : NULL;
 	if (type == MOVE_WORLDONLY)
-		return cliptrace;
+		goto finished;
 
 	if (type == MOVE_MISSILE)
 	{
@@ -427,5 +464,10 @@ skipnetworkplayers:
 		Collision_CombineTraces(&cliptrace, &trace, (void *)touch, touch->fields.client->solid == SOLID_BSP);
 	}
 
+finished:
+#ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
+	if(!VectorCompare(start, pEnd))
+		Collision_ShortenTrace(&cliptrace, len / (len + 1), pEnd);
+#endif
 	return cliptrace;
 }

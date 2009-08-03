@@ -1602,3 +1602,22 @@ void Collision_CombineTraces(trace_t *cliptrace, const trace_t *trace, void *tou
 	}
 	cliptrace->startsupercontents |= trace->startsupercontents;
 }
+
+void Collision_ShortenTrace(trace_t *trace, float shorten_factor, const vec3_t end)
+{
+	// now undo our moving end 1 qu farther...
+	trace->fraction = bound(trace->fraction, trace->fraction / shorten_factor - 1e-6, 1); // we subtract 1e-6 to guard for roundoff errors
+	trace->realfraction = bound(trace->realfraction, trace->realfraction / shorten_factor - 1e-6, 1); // we subtract 1e-6 to guard for roundoff errors
+	if(trace->fraction >= 1) // trace would NOT hit if not expanded!
+	{
+		trace->fraction = 1;
+		trace->realfraction = 1;
+		VectorCopy(end, trace->endpos);
+		memset(&trace->plane, 0, sizeof(trace->plane));
+		trace->ent = NULL;
+		trace->hitsupercontentsmask = 0;
+		trace->hitsupercontents = 0;
+		trace->hitq3surfaceflags = 0;
+		trace->hittexture = NULL;
+	}
+}
