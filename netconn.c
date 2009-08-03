@@ -81,7 +81,9 @@ static cvar_t net_slist_timeout = {0, "net_slist_timeout", "4", "how long to lis
 static cvar_t net_slist_pause = {0, "net_slist_pause", "0", "when set to 1, the server list won't update until it is set back to 0"};
 static cvar_t net_slist_maxtries = {0, "net_slist_maxtries", "3", "how many times to ask the same server for information (more times gives better ping reports but takes longer)"};
 static cvar_t net_slist_favorites = {CVAR_SAVE | CVAR_NQUSERINFOHACK, "net_slist_favorites", "", "contains a list of IP addresses and ports to always query explicitly"};
-static cvar_t gameversion = {0, "gameversion", "0", "version of game data (mod-specific), when client and server gameversion mismatch in the server browser the server is shown as incompatible"};
+static cvar_t gameversion = {0, "gameversion", "0", "version of game data (mod-specific) to be sent to querying clients"};
+static cvar_t gameversion_min = {0, "gameversion_min", "-1", "minimum version of game data (mod-specific), when client and server gameversion mismatch in the server browser the server is shown as incompatible; if -1, gameversion is used alone"};
+static cvar_t gameversion_max = {0, "gameversion_max", "-1", "maximum version of game data (mod-specific), when client and server gameversion mismatch in the server browser the server is shown as incompatible; if -1, gameversion is used alone"};
 static cvar_t rcon_restricted_password = {CVAR_PRIVATE, "rcon_restricted_password", "", "password to authenticate rcon commands in restricted mode"};
 static cvar_t rcon_restricted_commands = {0, "rcon_restricted_commands", "", "allowed commands for rcon when the restricted mode password was used"};
 static cvar_t rcon_secure_maxdiff = {0, "rcon_secure_maxdiff", "5", "maximum time difference between rcon request and server system clock (to protect against replay attack)"};
@@ -377,7 +379,16 @@ static void ServerList_ViewList_Insert( serverlist_entry_t *entry )
 	lhnetaddress_t addr;
 
 	// reject incompatible servers
-	if (entry->info.gameversion != gameversion.integer)
+	if(
+		entry->info.gameversion != gameversion.integer
+		&&
+		!(
+			   gameversion_min.integer >= 0 // min/max range set by user/mod?
+			&& gameversion_max.integer >= 0
+			&& gameversion_min.integer >= entry->info.gameversion // version of server in min/max range?
+			&& gameversion_max.integer <= entry->info.gameversion
+		 )
+	)
 		return;
 
 	// refresh the "favorite" status
@@ -1369,7 +1380,18 @@ static void NetConn_ClientParsePacket_ServerList_UpdateCache(int n)
 	serverlist_info_t *info = &entry->info;
 	// update description strings for engine menu and console output
 	dpsnprintf(entry->line1, sizeof(serverlist_cache[n].line1), "^%c%5d^7 ^%c%3u^7/%3u %-65.65s", info->ping >= 300 ? '1' : (info->ping >= 200 ? '3' : '7'), (int)info->ping, ((info->numhumans > 0 && info->numhumans < info->maxplayers) ? (info->numhumans >= 4 ? '7' : '3') : '1'), info->numplayers, info->maxplayers, info->name);
-	dpsnprintf(entry->line2, sizeof(serverlist_cache[n].line2), "^4%-21.21s %-19.19s ^%c%-17.17s^4 %-20.20s", info->cname, info->game, (info->gameversion != gameversion.integer) ? '1' : '4', info->mod, info->map);
+	dpsnprintf(entry->line2, sizeof(serverlist_cache[n].line2), "^4%-21.21s %-19.19s ^%c%-17.17s^4 %-20.20s", info->cname, info->game,
+			(
+			 info->gameversion != gameversion.integer
+			 &&
+			 !(
+				    gameversion_min.integer >= 0 // min/max range set by user/mod?
+				 && gameversion_max.integer >= 0
+				 && gameversion_min.integer >= info->gameversion // version of server in min/max range?
+				 && gameversion_max.integer <= info->gameversion
+			  )
+			) ? '1' : '4',
+			info->mod, info->map);
 	if (entry->query == SQS_QUERIED)
 	{
 		if(!serverlist_paused)
@@ -3142,6 +3164,8 @@ void NetConn_Init(void)
 	for (i = 0;sv_masters[i].name;i++)
 		Cvar_RegisterVariable(&sv_masters[i]);
 	Cvar_RegisterVariable(&gameversion);
+	Cvar_RegisterVariable(&gameversion_min);
+	Cvar_RegisterVariable(&gameversion_max);
 // COMMANDLINEOPTION: Server: -ip <ipaddress> sets the ip address of this machine for purposes of networking (default 0.0.0.0 also known as INADDR_ANY), use only if you have multiple network adapters and need to choose one specifically.
 	if ((i = COM_CheckParm("-ip")) && i + 1 < com_argc)
 	{
