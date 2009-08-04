@@ -826,7 +826,7 @@ void CL_ClientMovement_UpdateStatus(cl_clientmovement_state_t *s)
 
 	// set onground
 	VectorSet(origin1, s->origin[0], s->origin[1], s->origin[2] + 1);
-	VectorSet(origin2, s->origin[0], s->origin[1], s->origin[2] - 2);
+	VectorSet(origin2, s->origin[0], s->origin[1], s->origin[2] - 1); // -2 causes clientside doublejump bug at above 150fps, raising that to 300fps :)
 	trace = CL_Move(origin1, s->mins, s->maxs, origin2, MOVE_NORMAL, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true, true, NULL, false);
 	s->onground = trace.fraction < 1 && trace.plane.normal[2] > 0.7;
 
