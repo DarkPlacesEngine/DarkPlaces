@@ -93,6 +93,7 @@ typedef struct video_resolution_s
 	double pixelheight; ///< pixel aspect
 }
 video_resolution_t;
-extern video_resolution_t video_resolutions[];
+extern video_resolution_t *video_resolutions;
+extern int video_resolutions_count;
 #endif
 

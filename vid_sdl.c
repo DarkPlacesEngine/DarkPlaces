@@ -808,3 +808,26 @@ void VID_Finish (void)
 		SDL_GL_SwapBuffers();
 	}
 }
+
+size_t VID_ListModes(vid_mode_t *modes, size_t maxcount)
+{
+	int i;
+	size_t k;
+	SDL_Rect **vidmodes;
+	int bpp = SDL_GetVideoInfo()->vfmt->BitsPerPixel;
+
+	k = 0;
+	for(vidmodes = SDL_ListModes(NULL, SDL_FULLSCREEN|SDL_HWSURFACE); *vidmodes; ++vidmodes)
+	{
+		if(k >= maxcount)
+			break;
+		modes[k].width = vidmodes[i]->w;
+		modes[k].height = vidmodes[i]->h;
+		modes[k].bpp = bpp;
+		modes[k].refreshrate = 60; // no support for refresh rate in SDL
+		modes[k].pixelheight_num = 1;
+		modes[k].pixelheight_denom = 1; // SDL does not provide this
+		++k;
+	}
+	return k;
+}

@@ -91,3 +91,8 @@ void Sys_SendKeyEvents(void)
 void IN_Move(void)
 {
 }
+
+size_t VID_ListModes(vid_mode_t *modes, size_t maxcount)
+{
+	return 0;
+}

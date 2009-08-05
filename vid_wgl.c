@@ -2068,3 +2068,31 @@ static void IN_Shutdown(void)
 	g_pdi = NULL;
 #endif
 }
+
+size_t VID_ListModes(vid_mode_t *modes, size_t maxcount)
+{
+	int i, k;
+	DEVMODE thismode;
+
+	thismode.dmSize = sizeof(thismode);
+	thismode.dmDriverExtra = 0;
+	k = 0;
+	for(i = 0; EnumDisplaySettings(NULL, i, &thismode); ++i)
+	{
+		if(~thismode.dmFields & (DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT | DM_DISPLAYFREQUENCY))
+		{
+			Con_DPrintf("enumerating modes yielded a bogus item... please debug this\n");
+			continue;
+		}
+		if(k >= maxcount)
+			break;
+		modes[k].width = thismode.dmPelsWidth;
+		modes[k].height = thismode.dmPelsHeight;
+		modes[k].bpp = thismode.dmBitsPerPixel;
+		modes[k].refreshrate = thismode.dmDisplayFrequency;
+		modes[k].pixelheight_num = 1;
+		modes[k].pixelheight_denom = 1; // Win32 apparently does not provide this (FIXME)
+		++k;
+	}
+	return k;
+}
