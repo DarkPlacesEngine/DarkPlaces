@@ -2071,7 +2071,8 @@ static void IN_Shutdown(void)
 
 size_t VID_ListModes(vid_mode_t *modes, size_t maxcount)
 {
-	int i, k;
+	int i;
+	size_t k;
 	DEVMODE thismode;
 
 	thismode.dmSize = sizeof(thismode);
@@ -2088,7 +2089,7 @@ size_t VID_ListModes(vid_mode_t *modes, size_t maxcount)
 			break;
 		modes[k].width = thismode.dmPelsWidth;
 		modes[k].height = thismode.dmPelsHeight;
-		modes[k].bpp = thismode.dmBitsPerPixel;
+		modes[k].bpp = thismode.dmBitsPerPel;
 		modes[k].refreshrate = thismode.dmDisplayFrequency;
 		modes[k].pixelheight_num = 1;
 		modes[k].pixelheight_denom = 1; // Win32 apparently does not provide this (FIXME)
