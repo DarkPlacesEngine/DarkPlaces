@@ -1122,6 +1122,23 @@ void IN_Move (void)
 {
 }
 
+static bool GetDictionaryBoolean(CFDictionaryRef d, const void *key)
+{
+    CFBooleanRef ref = (CFBooleanRef) CFDictionaryGetValue(d, key);
+    if(ref)
+        return CFBooleanGetValue(ref);
+    return false;
+}
+
+long GetDictionaryLong(CFDictionaryRef d, const void *key)
+{
+	long value = 0;
+    CFBooleanRef ref = (CFBooleanRef) CFDictionaryGetValue(d, key);
+    if(ref)
+        CFNumberGetValue(ref, kCFNumberLongType, &value);
+    return value;
+}
+
 size_t VID_ListModes(vid_mode_t *modes, size_t maxcount)
 {
 	CFArrayRef vidmodes = CGDisplayAvailableModes(mainDisplay);
