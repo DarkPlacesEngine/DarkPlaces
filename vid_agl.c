@@ -629,7 +629,7 @@ int VID_InitMode(int fullscreen, int *width, int *height, int bpp, int refreshra
 
 		// TOCHECK: not sure whether or not it's necessary to change the resolution
 		// "by hand", or if aglSetFullscreen does the job anyway
-		refDisplayMode = CGDisplayBestModeForParametersAndRefreshRate(mainDisplay, bpp, *width, *height, refreshrate, NULL);
+		refDisplayMode = CGDisplayBestModeForParametersAndRefreshRateWithProperty(mainDisplay, bpp, *width, *height, refreshrate, kCGDisplayModeIsSafeForHardware, NULL);
 		CGDisplaySwitchToMode(mainDisplay, refDisplayMode);
 		DMGetGDeviceByDisplayID((DisplayIDType)mainDisplay, &gdhDisplay, false);
 
@@ -1124,5 +1124,28 @@ void IN_Move (void)
 
 size_t VID_ListModes(vid_mode_t *modes, size_t maxcount)
 {
-	return 0; // FIXME implement this
+	CFArrayRef vidmodes = CGDisplayAvailableModes(mainDisplay);
+	CFDictionaryRef thismode;
+	unsigned int n = CFArrayGetCount(vidmodes);
+	unsigned int i;
+	size_t k;
+
+	k = 0;
+	for(i = 0; i < n; ++i)
+	{
+		thismode = (CFDictionaryRef) CFArrayGetValueAtIndex(vidmodes, i);
+		if(!GetDictionaryBoolean(thismode, kCGDisplayModeIsSafeForHardware))
+			continue;
+
+		if(k >= maxcount)
+			break;
+		modes[k].width = GetDictionaryLong(thismode, kCGDisplayWidth);
+		modes[k].height = GetDictionaryLong(thismode, kCGDisplayHeight);
+		modes[k].bpp = GetDictionaryLong(thismode, kCGDisplayBitsPerPixel);
+		modes[k].refreshrate = GetDictionaryLong(thismode, kCGDisplayRefreshRate);
+		modes[k].pixelheight_num = 1;
+		modes[k].pixelheight_denom = 1; // OS X doesn't expose this either
+		++k;
+	}
+	return k;
 }
