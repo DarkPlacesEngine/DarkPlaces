@@ -1133,7 +1133,7 @@ static bool GetDictionaryBoolean(CFDictionaryRef d, const void *key)
 long GetDictionaryLong(CFDictionaryRef d, const void *key)
 {
 	long value = 0;
-    CFBooleanRef ref = (CFBooleanRef) CFDictionaryGetValue(d, key);
+    CFNumberRef ref = (CFNumberRef) CFDictionaryGetValue(d, key);
     if(ref)
         CFNumberGetValue(ref, kCFNumberLongType, &value);
     return value;
@@ -1141,12 +1141,12 @@ long GetDictionaryLong(CFDictionaryRef d, const void *key)
 
 size_t VID_ListModes(vid_mode_t *modes, size_t maxcount)
 {
+	CGDirectDisplayID mainDisplay = CGMainDisplayID();
 	CFArrayRef vidmodes = CGDisplayAvailableModes(mainDisplay);
 	CFDictionaryRef thismode;
 	unsigned int n = CFArrayGetCount(vidmodes);
 	unsigned int i;
 	size_t k;
-	CGDirectDisplayID mainDisplay = CGMainDisplayID();
 
 	k = 0;
 	for(i = 0; i < n; ++i)
