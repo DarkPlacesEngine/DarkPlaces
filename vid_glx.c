@@ -1078,3 +1078,37 @@ void Sys_SendKeyEvents(void)
 void IN_Move (void)
 {
 }
+
+size_t VID_ListModes(vid_mode_t *modes, size_t maxcount)
+{
+	if(vidmode_ext)
+	{
+		int i, bpp;
+		size_t k;
+		XF86VidModeModeInfo **vidmodes;
+		int num_vidmodes;
+
+		XF86VidModeGetAllModeLines(vidx11_display, vidx11_screen, &num_vidmodes, &vidmodes);
+		k = 0;
+		for (i = 0; i < num_vidmodes; i++)
+		{
+			if(k >= maxcount)
+				break;
+			// we don't get bpp info, so let's just assume all of 8, 15, 16, 24, 32 work
+			for(bpp = 8; bpp <= 32; bpp = ((bpp == 8) ? 15 : (bpp & 0xF8) + 8))
+			{
+				if(k >= maxcount)
+					break;
+				modes[k].width = vidmodes[i]->hdisplay;
+				modes[k].height = vidmodes[i]->vdisplay;
+				modes[k].bpp = 8;
+				modes[k].refreshrate = vidmodes[i]->dotclock / vidmodes[i]->htotal / vidmodes[i]->vtotal;
+				modes[k].pixelheight_num = 1;
+				modes[k].pixelheight_denom = 1; // xvidmode does not provide this
+				++k;
+			}
+		}
+		return k;
+	}
+	return 0; // FIXME implement this
+}

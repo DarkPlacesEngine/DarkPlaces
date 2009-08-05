@@ -1267,3 +1267,60 @@ void VID_Start(void)
 	VID_OpenSystems();
 }
 
+int VID_SortModes_Compare(void *a_, void *b_)
+{
+	vid_mode_t *a = (vid_mode_t *) a_;
+	vid_mode_t *b = (vid_mode_t *) b_;
+	if(a->width > b->width)
+		return +1;
+	if(a->width < b->width)
+		return -1;
+	if(a->height > b->height)
+		return +1;
+	if(a->height < b->height)
+		return -1;
+	if(a->refreshrate > b->refreshrate)
+		return +1;
+	if(a->refreshrate < b->refreshrate)
+		return -1;
+	if(a->bpp > b->bpp)
+		return +1;
+	if(a->bpp < b->bpp)
+		return -1;
+	if(a->pixelheight_num * b->pixelheight_denom > a->pixelheight_denom * b->pixelheight_num)
+		return +1;
+	if(a->pixelheight_num * b->pixelheight_denom < a->pixelheight_denom * b->pixelheight_num)
+		return -1;
+	return 0;
+}
+size_t VID_SortModes(vid_mode_t *modes, size_t count, qboolean usebpp, qboolean userefreshrate, qboolean useaspect)
+{
+	size_t i;
+	if(count == 0)
+		return;
+	// 1. sort them
+	qsort(modes, count, sizeof(*modes), VID_SortModes_Compare);
+	// 2. remove duplicates
+	for(i = 1; i < count; ++i)
+	{
+		if(modes[i].width != modes[i-1].width)
+			continue;
+		if(modes[i].height != modes[i-1].height)
+			continue;
+		if(userefreshrate)
+			if(modes[i].refreshrate != modes[i-1].refreshrate)
+				continue;
+		if(usebpp)
+			if(modes[i].bpp != modes[i-1].bpp)
+				continue;
+		if(useaspect)
+			if(modes[i].pixelheight_num * modes[i-1].pixelheight_denom != modes[i].pixelheight_denom * modes[i-1].pixelheight_num)
+				continue;
+		// a dupe!
+		if(i < count-1)
+			memmove(&modes[i], &modes[i+1], sizeof(*modes) * (count-1 - i));
+		--i; // check this index again, as mode i+1 is now here
+		--count;
+	}
+	return count;
+}
