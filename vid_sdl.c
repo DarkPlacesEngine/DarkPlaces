@@ -811,7 +811,6 @@ void VID_Finish (void)
 
 size_t VID_ListModes(vid_mode_t *modes, size_t maxcount)
 {
-	int i;
 	size_t k;
 	SDL_Rect **vidmodes;
 	int bpp = SDL_GetVideoInfo()->vfmt->BitsPerPixel;
@@ -821,8 +820,8 @@ size_t VID_ListModes(vid_mode_t *modes, size_t maxcount)
 	{
 		if(k >= maxcount)
 			break;
-		modes[k].width = vidmodes[i]->w;
-		modes[k].height = vidmodes[i]->h;
+		modes[k].width = (*vidmodes)->w;
+		modes[k].height = (*vidmodes)->h;
 		modes[k].bpp = bpp;
 		modes[k].refreshrate = 60; // no support for refresh rate in SDL
 		modes[k].pixelheight_num = 1;
