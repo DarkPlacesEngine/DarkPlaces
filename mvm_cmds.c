@@ -227,10 +227,18 @@ void VM_M_getresolution(void)
 
 	nr = (int)PRVM_G_FLOAT(OFS_PARM0);
 
-	// FIXME bounds check
-	PRVM_G_VECTOR(OFS_RETURN)[0] = video_resolutions[nr].width;
-	PRVM_G_VECTOR(OFS_RETURN)[1] = video_resolutions[nr].height;
-	PRVM_G_VECTOR(OFS_RETURN)[2] = 0;
+	if(nr < 0 || nr >= video_resolutions_count)
+	{
+		PRVM_G_VECTOR(OFS_RETURN)[0] = 0;
+		PRVM_G_VECTOR(OFS_RETURN)[1] = 0;
+		PRVM_G_VECTOR(OFS_RETURN)[2] = 0;
+	}
+	else
+	{
+		PRVM_G_VECTOR(OFS_RETURN)[0] = video_resolutions[nr].width;
+		PRVM_G_VECTOR(OFS_RETURN)[1] = video_resolutions[nr].height;
+		PRVM_G_VECTOR(OFS_RETURN)[2] = 0;
+	}
 }
 
 /*
