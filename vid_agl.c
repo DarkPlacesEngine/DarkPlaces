@@ -1129,6 +1129,7 @@ size_t VID_ListModes(vid_mode_t *modes, size_t maxcount)
 	unsigned int n = CFArrayGetCount(vidmodes);
 	unsigned int i;
 	size_t k;
+	CGDirectDisplayID mainDisplay = CGMainDisplayID();
 
 	k = 0;
 	for(i = 0; i < n; ++i)
