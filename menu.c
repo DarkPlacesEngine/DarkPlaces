@@ -4672,121 +4672,6 @@ static void M_Shutdown(void);
 
 void M_Init (void)
 {
-	vid_mode_t res[1024];
-	size_t res_count, i;
-
-	res_count = VID_ListModes(res, sizeof(res) / sizeof(*res));
-	res_count = VID_SortModes(res, res_count, false, false, true);
-	if(res_count)
-	{
-		video_resolutions_count = res_count;
-		video_resolutions = (video_resolution_t *) Mem_Alloc(cls.permanentmempool, sizeof(*video_resolutions) * (video_resolutions_count + 1));
-		memset(&video_resolutions[video_resolutions_count], 0, sizeof(video_resolutions[video_resolutions_count]));
-		for(i = 0; i < res_count; ++i)
-		{
-			int n, d, t;
-			video_resolutions[i].type = "Detected mode"; // FIXME make this more dynamic
-			video_resolutions[i].width = res[i].width;
-			video_resolutions[i].height = res[i].height;
-			video_resolutions[i].pixelheight = res[i].pixelheight_num / (double) res[i].pixelheight_denom;
-			n = res[i].pixelheight_denom * video_resolutions[i].width;
-			d = res[i].pixelheight_num * video_resolutions[i].height;
-			while(d)
-			{
-				t = n;
-				n = d;
-				d = t % d;
-			}
-			d = (res[i].pixelheight_num * video_resolutions[i].height) / n;
-			n = (res[i].pixelheight_denom * video_resolutions[i].width) / n;
-			switch(n * 0x10000 | d)
-			{
-				case 0x00040003:
-					video_resolutions[i].conwidth = 640;
-					video_resolutions[i].conheight = 480;
-					video_resolutions[i].type = "Standard 4x3";
-					break;
-				case 0x00050004:
-					video_resolutions[i].conwidth = 640;
-					video_resolutions[i].conheight = 512;
-					if(res[i].pixelheight_denom == res[i].pixelheight_num)
-						video_resolutions[i].type = "Square Pixel (LCD) 5x4";
-					else
-						video_resolutions[i].type = "Short Pixel (CRT) 5x4";
-					break;
-				case 0x00080005:
-					video_resolutions[i].conwidth = 640;
-					video_resolutions[i].conheight = 400;
-					if(res[i].pixelheight_denom == res[i].pixelheight_num)
-						video_resolutions[i].type = "Widescreen 8x5";
-					else
-						video_resolutions[i].type = "Tall Pixel (CRT) 8x5";
-
-					break;
-				case 0x00050003:
-					video_resolutions[i].conwidth = 640;
-					video_resolutions[i].conheight = 384;
-					video_resolutions[i].type = "Widescreen 5x3";
-					break;
-				case 0x000D0009:
-					video_resolutions[i].conwidth = 640;
-					video_resolutions[i].conheight = 400;
-					video_resolutions[i].type = "Widescreen 14x9";
-					break;
-				case 0x00100009:
-					video_resolutions[i].conwidth = 640;
-					video_resolutions[i].conheight = 480;
-					video_resolutions[i].type = "Widescreen 16x9";
-					break;
-				case 0x00030002:
-					video_resolutions[i].conwidth = 720;
-					video_resolutions[i].conheight = 480;
-					video_resolutions[i].type = "NTSC 3x2";
-					break;
-				case 0x000D000B:
-					video_resolutions[i].conwidth = 720;
-					video_resolutions[i].conheight = 566;
-					video_resolutions[i].type = "PAL 14x11";
-					break;
-				case 0x00080007:
-					if(video_resolutions[i].width >= 512)
-					{
-						video_resolutions[i].conwidth = 512;
-						video_resolutions[i].conheight = 448;
-						video_resolutions[i].type = "SNES 8x7";
-					}
-					else
-					{
-						video_resolutions[i].conwidth = 256;
-						video_resolutions[i].conheight = 224;
-						video_resolutions[i].type = "NES 8x7";
-					}
-					break;
-				default:
-					video_resolutions[i].conwidth = 640;
-					video_resolutions[i].conheight = 640 * d / n;
-					video_resolutions[i].type = "Detected mode";
-					break;
-			}
-			if(video_resolutions[i].conwidth > video_resolutions[i].width || video_resolutions[i].conheight > video_resolutions[i].height)
-			{
-				double f1, f2;
-				f1 = video_resolutions[i].conwidth > video_resolutions[i].width;
-				f2 = video_resolutions[i].conheight > video_resolutions[i].height;
-				if(f1 > f2)
-				{
-					video_resolutions[i].conwidth = video_resolutions[i].width;
-					video_resolutions[i].conheight = video_resolutions[i].conheight / f1;
-				}
-				else
-				{
-					video_resolutions[i].conwidth = video_resolutions[i].conwidth / f2;
-					video_resolutions[i].conheight = video_resolutions[i].height;
-				}
-			}
-		}
-	}
-
 	menuplyr_load = true;
 	menuplyr_pixels = NULL;
 
@@ -5366,6 +5251,126 @@ void MR_Init_Commands(void)
 
 void MR_Init(void)
 {
+	vid_mode_t res[1024];
+	size_t res_count, i;
+
+	res_count = VID_ListModes(res, sizeof(res) / sizeof(*res));
+	res_count = VID_SortModes(res, res_count, false, false, true);
+	if(res_count)
+	{
+		video_resolutions_count = res_count;
+		video_resolutions = (video_resolution_t *) Mem_Alloc(cls.permanentmempool, sizeof(*video_resolutions) * (video_resolutions_count + 1));
+		memset(&video_resolutions[video_resolutions_count], 0, sizeof(video_resolutions[video_resolutions_count]));
+		for(i = 0; i < res_count; ++i)
+		{
+			int n, d, t;
+			video_resolutions[i].type = "Detected mode"; // FIXME make this more dynamic
+			video_resolutions[i].width = res[i].width;
+			video_resolutions[i].height = res[i].height;
+			video_resolutions[i].pixelheight = res[i].pixelheight_num / (double) res[i].pixelheight_denom;
+			n = res[i].pixelheight_denom * video_resolutions[i].width;
+			d = res[i].pixelheight_num * video_resolutions[i].height;
+			while(d)
+			{
+				t = n;
+				n = d;
+				d = t % d;
+			}
+			d = (res[i].pixelheight_num * video_resolutions[i].height) / n;
+			n = (res[i].pixelheight_denom * video_resolutions[i].width) / n;
+			switch(n * 0x10000 | d)
+			{
+				case 0x00040003:
+					video_resolutions[i].conwidth = 640;
+					video_resolutions[i].conheight = 480;
+					video_resolutions[i].type = "Standard 4x3";
+					break;
+				case 0x00050004:
+					video_resolutions[i].conwidth = 640;
+					video_resolutions[i].conheight = 512;
+					if(res[i].pixelheight_denom == res[i].pixelheight_num)
+						video_resolutions[i].type = "Square Pixel (LCD) 5x4";
+					else
+						video_resolutions[i].type = "Short Pixel (CRT) 5x4";
+					break;
+				case 0x00080005:
+					video_resolutions[i].conwidth = 640;
+					video_resolutions[i].conheight = 400;
+					if(res[i].pixelheight_denom == res[i].pixelheight_num)
+						video_resolutions[i].type = "Widescreen 8x5";
+					else
+						video_resolutions[i].type = "Tall Pixel (CRT) 8x5";
+
+					break;
+				case 0x00050003:
+					video_resolutions[i].conwidth = 640;
+					video_resolutions[i].conheight = 384;
+					video_resolutions[i].type = "Widescreen 5x3";
+					break;
+				case 0x000D0009:
+					video_resolutions[i].conwidth = 640;
+					video_resolutions[i].conheight = 400;
+					video_resolutions[i].type = "Widescreen 14x9";
+					break;
+				case 0x00100009:
+					video_resolutions[i].conwidth = 640;
+					video_resolutions[i].conheight = 480;
+					video_resolutions[i].type = "Widescreen 16x9";
+					break;
+				case 0x00030002:
+					video_resolutions[i].conwidth = 720;
+					video_resolutions[i].conheight = 480;
+					video_resolutions[i].type = "NTSC 3x2";
+					break;
+				case 0x000D000B:
+					video_resolutions[i].conwidth = 720;
+					video_resolutions[i].conheight = 566;
+					video_resolutions[i].type = "PAL 14x11";
+					break;
+				case 0x00080007:
+					if(video_resolutions[i].width >= 512)
+					{
+						video_resolutions[i].conwidth = 512;
+						video_resolutions[i].conheight = 448;
+						video_resolutions[i].type = "SNES 8x7";
+					}
+					else
+					{
+						video_resolutions[i].conwidth = 256;
+						video_resolutions[i].conheight = 224;
+						video_resolutions[i].type = "NES 8x7";
+					}
+					break;
+				default:
+					video_resolutions[i].conwidth = 640;
+					video_resolutions[i].conheight = 640 * d / n;
+					video_resolutions[i].type = "Detected mode";
+					break;
+			}
+			if(video_resolutions[i].conwidth > video_resolutions[i].width || video_resolutions[i].conheight > video_resolutions[i].height)
+			{
+				double f1, f2;
+				f1 = video_resolutions[i].conwidth > video_resolutions[i].width;
+				f2 = video_resolutions[i].conheight > video_resolutions[i].height;
+				if(f1 > f2)
+				{
+					video_resolutions[i].conwidth = video_resolutions[i].width;
+					video_resolutions[i].conheight = video_resolutions[i].conheight / f1;
+				}
+				else
+				{
+					video_resolutions[i].conwidth = video_resolutions[i].conwidth / f2;
+					video_resolutions[i].conheight = video_resolutions[i].height;
+				}
+			}
+		}
+	}
+	else
+	{
+		video_resolutions = video_resolutions_hardcoded;
+		video_resolutions_count = sizeof(video_resolutions_hardcoded) / sizeof(*video_resolutions_hardcoded) - 1;
+	}
+
 	// use -forceqmenu to use always the normal quake menu (it sets forceqmenu to 1)
 // COMMANDLINEOPTION: Client: -forceqmenu disables menu.dat (same as +forceqmenu 1)
 	if(COM_CheckParm("-forceqmenu"))
