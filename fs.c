@@ -317,6 +317,10 @@ char fs_basedir[MAX_OSPATH];
 int fs_numgamedirs = 0;
 char fs_gamedirs[MAX_GAMEDIRS][MAX_QPATH];
 
+// list of all gamedirs with modinfo.txt
+gamedir_t *fs_all_gamedirs = NULL;
+int fs_all_gamedirs_count = 0;
+
 cvar_t scr_screenshot_name = {0, "scr_screenshot_name","dp", "prefix name for saved screenshots (changes based on -game commandline, as well as which game mode is running; the date is encoded using strftime escapes)"};
 cvar_t fs_empty_files_in_pack_mark_deletions = {0, "fs_empty_files_in_pack_mark_deletions", "0", "if enabled, empty files in a pak/pk3 count as not existing but cancel the search in further packs, effectively allowing patch pak/pk3 files to 'delete' files"};
 
@@ -1422,7 +1426,17 @@ const char *FS_CheckGameDir(const char *gamedir)
 
 	ret = FS_SysCheckGameDir(va("%s%s/", fs_userdir, gamedir));
 	if(ret)
+	{
+		if(!*ret)
+		{
+			// get description from basedir
+			ret = FS_SysCheckGameDir(va("%s%s/", fs_basedir, gamedir));
+			if(ret)
+				return ret;
+			return "";
+		}
 		return ret;
+	}
 
 	ret = FS_SysCheckGameDir(va("%s%s/", fs_basedir, gamedir));
 	if(ret)
@@ -1431,6 +1445,54 @@ const char *FS_CheckGameDir(const char *gamedir)
 	return fs_checkgamedir_missing;
 }
 
+static void FS_ListGameDirs()
+{
+	stringlist_t list, list2;
+	int i, j;
+	const char *info;
+
+	fs_all_gamedirs_count = 0;
+	if(fs_all_gamedirs)
+		Mem_Free(fs_all_gamedirs);
+
+	stringlistinit(&list);
+	listdirectory(&list, va("%s/", fs_basedir), "");
+	listdirectory(&list, va("%s/", fs_userdir), "");
+	stringlistsort(&list);
+
+	stringlistinit(&list2);
+	for(i = 0; i < list.numstrings; ++i)
+	{
+		if(i)
+			if(!strcmp(list.strings[i-1], list.strings[i]))
+				continue;
+		info = FS_CheckGameDir(list.strings[i]);
+		if(!info)
+			continue;
+		if(info == fs_checkgamedir_missing)
+			continue;
+		if(!*info)
+			continue;
+		stringlistappend(&list2, list.strings[i]); 
+	}
+	stringlistfreecontents(&list);
+
+	fs_all_gamedirs = Mem_Alloc(fs_mempool, list2.numstrings * sizeof(*fs_all_gamedirs));
+	for(i = 0; i < list2.numstrings; ++i)
+	{
+		info = FS_CheckGameDir(list2.strings[i]);
+		// all this cannot happen any more, but better be safe than sorry
+		if(!info)
+			continue;
+		if(info == fs_checkgamedir_missing)
+			continue;
+		if(!*info)
+			continue;
+		strlcpy(fs_all_gamedirs[fs_all_gamedirs_count].name, list2.strings[i], sizeof(fs_all_gamedirs[j].name));
+		strlcpy(fs_all_gamedirs[fs_all_gamedirs_count].description, info, sizeof(fs_all_gamedirs[j].description));
+		++fs_all_gamedirs_count;
+	}
+}
 
 /*
 ================
@@ -1566,6 +1628,8 @@ void FS_Init (void)
 	// add a path separator to the end of the basedir if it lacks one
 	if (fs_basedir[0] && fs_basedir[strlen(fs_basedir) - 1] != '/' && fs_basedir[strlen(fs_basedir) - 1] != '\\')
 		strlcat(fs_basedir, "/", sizeof(fs_basedir));
+
+	FS_ListGameDirs();
 
 	p = FS_CheckGameDir(gamedirname1);
 	if(!p || p == fs_checkgamedir_missing)
