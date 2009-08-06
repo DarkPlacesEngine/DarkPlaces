@@ -4,6 +4,8 @@
 #include "clvm_cmds.h"
 #include "menu.h"
 
+// TODO check which strings really should be engine strings
+
 //============================================================================
 // Menu
 
@@ -238,6 +240,25 @@ void VM_M_getresolution(void)
 		PRVM_G_VECTOR(OFS_RETURN)[0] = video_resolutions[nr].width;
 		PRVM_G_VECTOR(OFS_RETURN)[1] = video_resolutions[nr].height;
 		PRVM_G_VECTOR(OFS_RETURN)[2] = 0;
+	}
+}
+
+void VM_M_getgamedirinfo(void)
+{
+	int nr, item;
+	VM_SAFEPARMCOUNT(2, VM_getgamedirinfo);
+
+	nr = (int)PRVM_G_FLOAT(OFS_PARM0);
+	item = (int)PRVM_G_FLOAT(OFS_PARM1);
+
+	PRVM_G_INT( OFS_RETURN ) = OFS_NULL;
+
+	if(nr >= 0 && nr < fs_all_gamedirs_count)
+	{
+		if(item == 0)
+			PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( fs_all_gamedirs[nr].name );
+		else if(item == 1)
+			PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( fs_all_gamedirs[nr].description );
 	}
 }
 
@@ -1446,7 +1467,9 @@ VM_M_getserverlistnumber,		// #621 float gethostcachenumber(float fld, float hos
 VM_M_getserverlistindexforkey,// #622 float gethostcacheindexforkey(string key)
 VM_M_addwantedserverlistkey,	// #623 void addwantedhostcachekey(string key)
 VM_getextresponse,				// #624 string getextresponse(void)
-VM_netaddress_resolve           // #625 string netaddress_resolve(string, float)
+VM_netaddress_resolve,          // #625 string netaddress_resolve(string, float)
+VM_M_getgamedirinfo,            // #626 string getgamedirinfo(float n, float prop)
+NULL
 };
 
 const int vm_m_numbuiltins = sizeof(vm_m_builtins) / sizeof(prvm_builtin_t);
