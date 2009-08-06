@@ -79,6 +79,15 @@ int FS_CheckNastyPath (const char *path, qboolean isgamedir);
 extern const char *const fs_checkgamedir_missing; // "(missing)"
 const char *FS_CheckGameDir(const char *gamedir); // returns NULL if nasty, fs_checkgamedir_missing (exact pointer) if missing
 
+typedef struct
+{
+	char name[MAX_OSPATH];
+	char description[8192];
+}
+gamedir_t;
+extern gamedir_t *fs_all_gamedirs; // terminated by entry with empty name
+extern int fs_all_gamedirs_count;
+
 qboolean FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qboolean complain, qboolean failmissing);
 qboolean FS_IsRegisteredQuakePack(const char *name);
 int FS_CRCFile(const char *filename, size_t *filesizepointer);
