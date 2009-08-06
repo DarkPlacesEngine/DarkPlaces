@@ -305,9 +305,11 @@ VARIABLES
 mempool_t *fs_mempool;
 
 searchpath_t *fs_searchpaths = NULL;
+const char *const fs_checkgamedir_missing = "missing";
 
 #define MAX_FILES_IN_PACK	65536
 
+char fs_userdir[MAX_OSPATH];
 char fs_gamedir[MAX_OSPATH];
 char fs_basedir[MAX_OSPATH];
 
@@ -1108,86 +1110,11 @@ FS_AddGameHierarchy
 */
 void FS_AddGameHierarchy (const char *dir)
 {
-	int i;
-	char userdir[MAX_QPATH];
-#ifdef WIN32
-	TCHAR mydocsdir[MAX_PATH + 1];
-#if _MSC_VER >= 1400
-	size_t homedirlen;
-#endif
-#endif
-	char *homedir;
-
 	// Add the common game directory
 	FS_AddGameDirectory (va("%s%s/", fs_basedir, dir));
 
-	*userdir = 0;
-
-	// Add the personal game directory
-#ifdef WIN32
-	if(qSHGetFolderPath && (qSHGetFolderPath(NULL, CSIDL_PERSONAL, NULL, 0, mydocsdir) == S_OK))
-	{
-		dpsnprintf(userdir, sizeof(userdir), "%s/My Games/%s/", mydocsdir, gameuserdirname);
-		Con_DPrintf("Obtained personal directory %s from SHGetFolderPath\n", userdir);
-	}
-	else
-	{
-		// use the environment
-#if _MSC_VER >= 1400
-		_dupenv_s (&homedir, &homedirlen, "USERPROFILE");
-#else
-		homedir = getenv("USERPROFILE");
-#endif
-
-		if(homedir)
-		{
-			dpsnprintf(userdir, sizeof(userdir), "%s/My Documents/My Games/%s/", homedir, gameuserdirname);
-#if _MSC_VER >= 1400
-			free(homedir);
-#endif
-			Con_DPrintf("Obtained personal directory %s from environment\n", userdir);
-		}
-		else
-			*userdir = 0; // just to make sure it hasn't been written to by SHGetFolderPath returning failure
-	}
-
-	if(!*userdir)
-		Con_DPrintf("Could not obtain home directory; not supporting -mygames\n");
-#else
-	homedir = getenv ("HOME");
-	if(homedir)
-		dpsnprintf(userdir, sizeof(userdir), "%s/.%s/", homedir, gameuserdirname);
-
-	if(!*userdir)
-		Con_DPrintf("Could not obtain home directory; assuming -nohome\n");
-#endif
-
-
-#ifdef WIN32
-	if(!COM_CheckParm("-mygames"))
-	{
-#if _MSC_VER >= 1400
-		int fd;
-		_sopen_s(&fd, va("%s%s/config.cfg", fs_basedir, dir), O_WRONLY | O_CREAT, _SH_DENYNO, _S_IREAD | _S_IWRITE); // note: no O_TRUNC here!
-#else
-		int fd = open (va("%s%s/config.cfg", fs_basedir, dir), O_WRONLY | O_CREAT, 0666); // note: no O_TRUNC here!
-#endif
-		if(fd >= 0)
-		{
-			close(fd);
-			*userdir = 0; // we have write access to the game dir, so let's use it
-		}
-	}
-#endif
-
-	if(COM_CheckParm("-nohome"))
-		*userdir = 0;
-
-	if((i = COM_CheckParm("-userdir")) && i < com_argc - 1)
-		dpsnprintf(userdir, sizeof(userdir), "%s/", com_argv[i+1]);
-
-	if (*userdir)
-		FS_AddGameDirectory(va("%s%s/", userdir, dir));
+	if (*fs_userdir)
+		FS_AddGameDirectory(va("%s%s/", fs_userdir, dir));
 }
 
 
@@ -1347,6 +1274,7 @@ extern void Host_LoadConfig_f (void);
 qboolean FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qboolean complain, qboolean failmissing)
 {
 	int i;
+	const char *p;
 
 	if (fs_numgamedirs == numgamedirs)
 	{
@@ -1367,17 +1295,14 @@ qboolean FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qboolean
 	for (i = 0;i < numgamedirs;i++)
 	{
 		// if string is nasty, reject it
-		if(FS_CheckNastyPath(gamedirs[i], true))
+		p = FS_CheckGameDir(gamedirs[i]);
+		if(!p)
 		{
 			if (complain)
 				Con_Printf("Nasty gamedir name rejected: %s\n", gamedirs[i]);
 			return false; // nasty gamedirs
 		}
-	}
-
-	for (i = 0;i < numgamedirs;i++)
-	{
-		if (!FS_CheckGameDir(gamedirs[i]) && failmissing)
+		if(p == fs_checkgamedir_missing && failmissing)
 		{
 			if (complain)
 				Con_Printf("Gamedir missing: %s%s/\n", fs_basedir, gamedirs[i]);
@@ -1449,21 +1374,61 @@ void FS_GameDir_f (void)
 	FS_ChangeGameDirs(numgamedirs, gamedirs, true, true);
 }
 
+static qfile_t* FS_SysOpen (const char* filepath, const char* mode, qboolean nonblocking);
+static const char *FS_SysCheckGameDir(const char *gamedir)
+{
+	static char buf[8192];
+	qboolean success;
+	qfile_t *f;
+	stringlist_t list;
+	fs_offset_t n;
+
+	stringlistinit(&list);
+	listdirectory(&list, gamedir, "");
+	success = list.numstrings > 0;
+	stringlistfreecontents(&list);
+
+	if(success)
+	{
+		f = FS_SysOpen(va("%smodinfo.txt", gamedir), "r", false);
+		if(f)
+		{
+			n = FS_Read (f, buf, sizeof(buf) - 1);
+			if(n >= 0)
+				buf[n] = 0;
+			else
+				*buf = 0;
+			FS_Close(f);
+		}
+		else
+			*buf = 0;
+		return buf;
+	}
+
+	return NULL;
+}
 
 /*
 ================
 FS_CheckGameDir
 ================
 */
-qboolean FS_CheckGameDir(const char *gamedir)
+const char *FS_CheckGameDir(const char *gamedir)
 {
-	qboolean success;
-	stringlist_t list;
-	stringlistinit(&list);
-	listdirectory(&list, va("%s%s/", fs_basedir, gamedir), "");
-	success = list.numstrings > 0;
-	stringlistfreecontents(&list);
-	return success;
+	const char *ret;
+
+	if (FS_CheckNastyPath(gamedir, true))
+		return NULL;
+
+	ret = FS_SysCheckGameDir(va("%s%s/", fs_userdir, gamedir));
+	if(ret)
+		return ret;
+
+	ret = FS_SysCheckGameDir(va("%s%s/", fs_basedir, gamedir));
+	if(ret)
+		return ret;
+	
+	return fs_checkgamedir_missing;
 }
 
 
@@ -1474,7 +1439,15 @@ FS_Init
 */
 void FS_Init (void)
 {
+	const char *p;
 	int i;
+#ifdef WIN32
+	TCHAR mydocsdir[MAX_PATH + 1];
+#if _MSC_VER >= 1400
+	size_t homedirlen;
+#endif
+#endif
+	char *homedir;
 
 #ifdef WIN32
 	const char* dllnames [] =
@@ -1488,13 +1461,78 @@ void FS_Init (void)
 
 	fs_mempool = Mem_AllocPool("file management", 0, NULL);
 
+	// Add the personal game directory
+	if((i = COM_CheckParm("-userdir")) && i < com_argc - 1)
+	{
+		dpsnprintf(fs_userdir, sizeof(fs_userdir), "%s/", com_argv[i+1]);
+	}
+	else if(COM_CheckParm("-nohome"))
+	{
+		*fs_userdir = 0;
+	}
+	else
+	{
+#ifdef WIN32
+		if(qSHGetFolderPath && (qSHGetFolderPath(NULL, CSIDL_PERSONAL, NULL, 0, mydocsdir) == S_OK))
+		{
+			dpsnprintf(fs_userdir, sizeof(fs_userdir), "%s/My Games/%s/", mydocsdir, gameuserdirname);
+			Con_DPrintf("Obtained personal directory %s from SHGetFolderPath\n", fs_userdir);
+		}
+		else
+		{
+			// use the environment
+#if _MSC_VER >= 1400
+			_dupenv_s (&homedir, &homedirlen, "USERPROFILE");
+#else
+			homedir = getenv("USERPROFILE");
+#endif
+
+			if(homedir)
+			{
+				dpsnprintf(fs_userdir, sizeof(fs_userdir), "%s/My Documents/My Games/%s/", homedir, gameuserdirname);
+#if _MSC_VER >= 1400
+				free(homedir);
+#endif
+				Con_DPrintf("Obtained personal directory %s from environment\n", fs_userdir);
+			}
+		}
+
+		if(!*fs_userdir)
+			Con_DPrintf("Could not obtain home directory; not supporting -mygames\n");
+#else
+		homedir = getenv ("HOME");
+		if(homedir)
+			dpsnprintf(fs_userdir, sizeof(fs_userdir), "%s/.%s/", homedir, gameuserdirname);
+
+		if(!*fs_userdir)
+			Con_DPrintf("Could not obtain home directory; assuming -nohome\n");
+#endif
+
+#ifdef WIN32
+		if(!COM_CheckParm("-mygames"))
+		{
+#if _MSC_VER >= 1400
+			int fd;
+			_sopen_s(&fd, va("%s%s/config.cfg", fs_basedir, dir), O_WRONLY | O_CREAT, _SH_DENYNO, _S_IREAD | _S_IWRITE); // note: no O_TRUNC here!
+#else
+			int fd = open (va("%s%s/config.cfg", fs_basedir, dir), O_WRONLY | O_CREAT, 0666); // note: no O_TRUNC here!
+#endif
+			if(fd >= 0)
+			{
+				close(fd);
+				*fs_userdir = 0; // we have write access to the game dir, so let's use it
+			}
+		}
+#endif
+	}
+
 	strlcpy(fs_gamedir, "", sizeof(fs_gamedir));
 
 // If the base directory is explicitly defined by the compilation process
 #ifdef DP_FS_BASEDIR
 	strlcpy(fs_basedir, DP_FS_BASEDIR, sizeof(fs_basedir));
 #else
-	strlcpy(fs_basedir, "", sizeof(fs_basedir));
+	*fs_basedir = 0;
 
 #ifdef MACOSX
 	// FIXME: is there a better way to find the directory outside the .app?
@@ -1529,11 +1567,16 @@ void FS_Init (void)
 	if (fs_basedir[0] && fs_basedir[strlen(fs_basedir) - 1] != '/' && fs_basedir[strlen(fs_basedir) - 1] != '\\')
 		strlcat(fs_basedir, "/", sizeof(fs_basedir));
 
-	if (!FS_CheckGameDir(gamedirname1))
+	p = FS_CheckGameDir(gamedirname1);
+	if(!p || p == fs_checkgamedir_missing)
 		Con_Printf("WARNING: base gamedir %s%s/ not found!\n", fs_basedir, gamedirname1);
 
-	if (gamedirname2 && !FS_CheckGameDir(gamedirname2))
-		Con_Printf("WARNING: base gamedir %s%s/ not found!\n", fs_basedir, gamedirname2);
+	if(gamedirname2)
+	{
+		p = FS_CheckGameDir(gamedirname2);
+		if(!p || p == fs_checkgamedir_missing)
+			Con_Printf("WARNING: base gamedir %s%s/ not found!\n", fs_basedir, gamedirname2);
+	}
 
 	// -game <gamedir>
 	// Adds basedir/gamedir as an override game
@@ -1545,9 +1588,10 @@ void FS_Init (void)
 		if (!strcmp (com_argv[i], "-game") && i < com_argc-1)
 		{
 			i++;
-			if (FS_CheckNastyPath(com_argv[i], true))
-				Sys_Error("-game %s%s/ is a dangerous/non-portable path\n", fs_basedir, com_argv[i]);
-			if (!FS_CheckGameDir(com_argv[i]))
+			p = FS_CheckGameDir(com_argv[i]);
+			if(!p)
+				Sys_Error("Nasty -game name rejected: %s", com_argv[i]);
+			if(p == fs_checkgamedir_missing)
 				Con_Printf("WARNING: -game %s%s/ not found!\n", fs_basedir, com_argv[i]);
 			// add the gamedir to the list of active gamedirs
 			strlcpy (fs_gamedirs[fs_numgamedirs], com_argv[i], sizeof(fs_gamedirs[fs_numgamedirs]));
