@@ -75,7 +75,10 @@ void FS_Purge (qfile_t* file);
 const char *FS_FileWithoutPath (const char *in);
 const char *FS_FileExtension (const char *in);
 int FS_CheckNastyPath (const char *path, qboolean isgamedir);
-qboolean FS_CheckGameDir(const char *gamedir);
+
+extern const char *const fs_checkgamedir_missing; // "(missing)"
+const char *FS_CheckGameDir(const char *gamedir); // returns NULL if nasty, fs_checkgamedir_missing (exact pointer) if missing
+
 qboolean FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qboolean complain, qboolean failmissing);
 qboolean FS_IsRegisteredQuakePack(const char *name);
 int FS_CRCFile(const char *filename, size_t *filesizepointer);
