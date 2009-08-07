@@ -828,6 +828,7 @@ void Host_Main(void)
 			// decide the simulation time
 			if (cls.capturevideo.active)
 			{
+				//***
 				if (cls.capturevideo.realtime)
 					clframetime = cl.realframetime = max(cl_timer, 1.0 / cls.capturevideo.framerate);
 				else
@@ -870,6 +871,10 @@ void Host_Main(void)
 			cl.oldtime = cl.time;
 			cl.time += clframetime;
 
+			// update video
+			if (host_speeds.integer)
+				time1 = Sys_DoubleTime();
+
 			// Collect input into cmd
 			CL_Input();
 
@@ -884,10 +889,6 @@ void Host_Main(void)
 
 			// update client world (interpolate entities, create trails, etc)
 			CL_UpdateWorld();
-
-			// update video
-			if (host_speeds.integer)
-				time1 = Sys_DoubleTime();
 
 			CL_Video_Frame();
 			CL_Gecko_Frame();

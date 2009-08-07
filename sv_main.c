@@ -1443,6 +1443,7 @@ void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *
 	int i, numsendstates;
 	entity_state_t *s;
 	prvm_edict_t *camera;
+	qboolean success;
 
 	// if there isn't enough space to accomplish anything, skip it
 	if (msg->cursize + 25 > maxsize)
@@ -1491,23 +1492,31 @@ void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *
 	else
 		EntityFrameCSQC_WriteFrame(msg, maxsize, numsendstates, sv.writeentitiestoclient_sendstates, 0);
 
+	if(client->num_skippedentityframes >= 5)
+		need_empty = true; // force every 5th frame to be not empty (or cl_movement replay takes too long)
+
 	if (client->entitydatabase5)
-		EntityFrame5_WriteFrame(msg, maxsize, client->entitydatabase5, numsendstates, sv.writeentitiestoclient_sendstates, client - svs.clients + 1, client->movesequence, need_empty);
+		success = EntityFrame5_WriteFrame(msg, maxsize, client->entitydatabase5, numsendstates, sv.writeentitiestoclient_sendstates, client - svs.clients + 1, client->movesequence, need_empty);
 	else if (client->entitydatabase4)
 	{
-		EntityFrame4_WriteFrame(msg, maxsize, client->entitydatabase4, numsendstates, sv.writeentitiestoclient_sendstates);
+		success = EntityFrame4_WriteFrame(msg, maxsize, client->entitydatabase4, numsendstates, sv.writeentitiestoclient_sendstates);
 		Protocol_WriteStatsReliable();
 	}
 	else if (client->entitydatabase)
 	{
-		EntityFrame_WriteFrame(msg, maxsize, client->entitydatabase, numsendstates, sv.writeentitiestoclient_sendstates, client - svs.clients + 1);
+		success = EntityFrame_WriteFrame(msg, maxsize, client->entitydatabase, numsendstates, sv.writeentitiestoclient_sendstates, client - svs.clients + 1);
 		Protocol_WriteStatsReliable();
 	}
 	else
 	{
-		EntityFrameQuake_WriteFrame(msg, maxsize, numsendstates, sv.writeentitiestoclient_sendstates);
+		success = EntityFrameQuake_WriteFrame(msg, maxsize, numsendstates, sv.writeentitiestoclient_sendstates);
 		Protocol_WriteStatsReliable();
 	}
+
+	if(success)
+		client->num_skippedentityframes = 0;
+	else
+		++client->num_skippedentityframes;
 }
 
 /*

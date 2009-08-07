@@ -680,7 +680,7 @@ void Protocol_WriteStatsReliable(void)
 }
 
 
-void EntityFrameQuake_WriteFrame(sizebuf_t *msg, int maxsize, int numstates, const entity_state_t *states)
+qboolean EntityFrameQuake_WriteFrame(sizebuf_t *msg, int maxsize, int numstates, const entity_state_t *states)
 {
 	const entity_state_t *s;
 	entity_state_t baseline;
@@ -688,6 +688,7 @@ void EntityFrameQuake_WriteFrame(sizebuf_t *msg, int maxsize, int numstates, con
 	sizebuf_t buf;
 	unsigned char data[128];
 	prvm_eval_t *val;
+	qboolean success = false;
 
 	// prepare the buffer
 	memset(&buf, 0, sizeof(buf));
@@ -840,8 +841,10 @@ void EntityFrameQuake_WriteFrame(sizebuf_t *msg, int maxsize, int numstates, con
 		}
 		// write the message to the packet
 		SZ_Write(msg, buf.data, buf.cursize);
+		success = true;
 		ENTITYSIZEPROFILING_END(msg, s->number);
 	}
+	return success;
 }
 
 int EntityState_DeltaBits(const entity_state_t *o, const entity_state_t *n)
@@ -1331,7 +1334,7 @@ void EntityFrame_AddFrame(entityframe_database_t *d, vec3_t eye, int framenum, i
 }
 
 // (server) writes a frame to network stream
-void EntityFrame_WriteFrame(sizebuf_t *msg, int maxsize, entityframe_database_t *d, int numstates, const entity_state_t *states, int viewentnum)
+qboolean EntityFrame_WriteFrame(sizebuf_t *msg, int maxsize, entityframe_database_t *d, int numstates, const entity_state_t *states, int viewentnum)
 {
 	int i, onum, number;
 	entity_frame_t *o = &d->deltaframe;
@@ -1370,7 +1373,7 @@ void EntityFrame_WriteFrame(sizebuf_t *msg, int maxsize, entityframe_database_t 
 
 		val = PRVM_EDICTFIELDVALUE((&prog->edicts[number]), prog->fieldoffsets.SendEntity);
 		if(val && val->function)
-				continue;
+			continue;
 		for (;onum < o->numentities && o->entitydata[onum].number < number;onum++)
 		{
 			// write remove message
@@ -1396,6 +1399,8 @@ void EntityFrame_WriteFrame(sizebuf_t *msg, int maxsize, entityframe_database_t 
 		MSG_WriteShort(msg, o->entitydata[onum].number | 0x8000);
 	}
 	MSG_WriteShort(msg, 0xFFFF);
+
+	return true;
 }
 
 // (client) reads a frame from network stream
@@ -1807,7 +1812,7 @@ void EntityFrame4_CL_ReadFrame(void)
 		EntityFrame4_ResetDatabase(d);
 }
 
-void EntityFrame4_WriteFrame(sizebuf_t *msg, int maxsize, entityframe4_database_t *d, int numstates, const entity_state_t *states)
+qboolean EntityFrame4_WriteFrame(sizebuf_t *msg, int maxsize, entityframe4_database_t *d, int numstates, const entity_state_t *states)
 {
 	const entity_state_t *e, *s;
 	entity_state_t inactiveentitystate;
@@ -1818,7 +1823,7 @@ void EntityFrame4_WriteFrame(sizebuf_t *msg, int maxsize, entityframe4_database_
 
 	// if there isn't enough space to accomplish anything, skip it
 	if (msg->cursize + 24 > maxsize)
-		return;
+		return false;
 
 	// prepare the buffer
 	memset(&buf, 0, sizeof(buf));
@@ -1830,7 +1835,7 @@ void EntityFrame4_WriteFrame(sizebuf_t *msg, int maxsize, entityframe4_database_
 			break;
 	// if commit buffer full, just don't bother writing an update this frame
 	if (i == MAX_ENTITY_HISTORY)
-		return;
+		return false;
 	d->currentcommit = d->commit + i;
 
 	// this state's number gets played around with later
@@ -1909,6 +1914,8 @@ void EntityFrame4_WriteFrame(sizebuf_t *msg, int maxsize, entityframe4_database_
 	MSG_WriteShort(msg, d->currententitynumber);
 	// just to be sure
 	d->currentcommit = NULL;
+
+	return true;
 }
 
 
@@ -2499,7 +2506,7 @@ void EntityFrame5_AckFrame(entityframe5_database_t *d, int framenum)
 			d->packetlog[i].packetnumber = 0;
 }
 
-void EntityFrame5_WriteFrame(sizebuf_t *msg, int maxsize, entityframe5_database_t *d, int numstates, const entity_state_t *states, int viewentnum, int movesequence, qboolean need_empty)
+qboolean EntityFrame5_WriteFrame(sizebuf_t *msg, int maxsize, entityframe5_database_t *d, int numstates, const entity_state_t *states, int viewentnum, int movesequence, qboolean need_empty)
 {
 	const entity_state_t *n;
 	int i, num, l, framenum, packetlognumber, priority;
@@ -2581,7 +2588,7 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, int maxsize, entityframe5_database_
 	// if there isn't at least enough room for an empty svc_entities,
 	// don't bother trying...
 	if (buf.cursize + 11 > buf.maxsize)
-		return;
+		return false;
 
 	// build lists of entities by priority level
 	memset(d->prioritychaincounts, 0, sizeof(d->prioritychaincounts));
@@ -2641,7 +2648,7 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, int maxsize, entityframe5_database_
 
 	// only send empty svc_entities frame if needed
 	if(!l && !need_empty)
-		return;
+		return false;
 
 	// add packetlog entry now that we have something for it
 	if (!packetlog)
@@ -2686,6 +2693,8 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, int maxsize, entityframe5_database_
 		}
 	}
 	MSG_WriteShort(msg, 0x8000);
+
+	return true;
 }
 
 
