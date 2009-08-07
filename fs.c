@@ -1575,9 +1575,9 @@ void FS_Init (void)
 		{
 #if _MSC_VER >= 1400
 			int fd;
-			_sopen_s(&fd, va("%s%s/config.cfg", fs_basedir, dir), O_WRONLY | O_CREAT, _SH_DENYNO, _S_IREAD | _S_IWRITE); // note: no O_TRUNC here!
+			_sopen_s(&fd, va("%s%s/config.cfg", fs_basedir, gamedirname1), O_WRONLY | O_CREAT, _SH_DENYNO, _S_IREAD | _S_IWRITE); // note: no O_TRUNC here!
 #else
-			int fd = open (va("%s%s/config.cfg", fs_basedir, dir), O_WRONLY | O_CREAT, 0666); // note: no O_TRUNC here!
+			int fd = open (va("%s%s/config.cfg", fs_basedir, gamedirname1), O_WRONLY | O_CREAT, 0666); // note: no O_TRUNC here!
 #endif
 			if(fd >= 0)
 			{
