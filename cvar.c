@@ -617,7 +617,8 @@ void Cvar_ResetToDefaults_All_f (void)
 	cvar_t *var;
 	// restore the default values of all cvars
 	for (var = cvar_vars ; var ; var = var->next)
-		Cvar_SetQuick(var, var->defstring);
+		if((var->flags & CVAR_NORESETTODEFAULTS) == 0)
+			Cvar_SetQuick(var, var->defstring);
 }
 
 
@@ -626,7 +627,7 @@ void Cvar_ResetToDefaults_NoSaveOnly_f (void)
 	cvar_t *var;
 	// restore the default values of all cvars
 	for (var = cvar_vars ; var ; var = var->next)
-		if (!(var->flags & CVAR_SAVE))
+		if ((var->flags & (CVAR_NORESETTODEFAULTS | CVAR_SAVE)) == 0)
 			Cvar_SetQuick(var, var->defstring);
 }
 
@@ -636,7 +637,7 @@ void Cvar_ResetToDefaults_SaveOnly_f (void)
 	cvar_t *var;
 	// restore the default values of all cvars
 	for (var = cvar_vars ; var ; var = var->next)
-		if (var->flags & CVAR_SAVE)
+		if ((var->flags & (CVAR_NORESETTODEFAULTS | CVAR_SAVE)) == CVAR_SAVE)
 			Cvar_SetQuick(var, var->defstring);
 }
 

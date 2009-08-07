@@ -68,7 +68,9 @@ interface from being ambiguous.
 // this means that this cvar should update a userinfo key but the name does not correspond directly to the userinfo key to update, and may require additional conversion ("_cl_color" for example should update "topcolor" and "bottomcolor")
 #define CVAR_NQUSERINFOHACK 64
 // used to determine if flags is valid
-#define CVAR_MAXFLAGSVAL 127
+#define CVAR_NORESETTODEFAULTS 128
+// for engine-owned cvars that must not be reset on gametype switch (e.g. scr_screenshot_name, which otherwise isn't set to the mod name properly)
+#define CVAR_MAXFLAGSVAL 255
 // for internal use only!
 #define CVAR_DEFAULTSET (1<<30)
 #define CVAR_ALLOCATED (1<<31)
