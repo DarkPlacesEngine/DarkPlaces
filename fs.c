@@ -321,8 +321,9 @@ char fs_gamedirs[MAX_GAMEDIRS][MAX_QPATH];
 gamedir_t *fs_all_gamedirs = NULL;
 int fs_all_gamedirs_count = 0;
 
-cvar_t scr_screenshot_name = {0, "scr_screenshot_name","dp", "prefix name for saved screenshots (changes based on -game commandline, as well as which game mode is running; the date is encoded using strftime escapes)"};
+cvar_t scr_screenshot_name = {CVAR_NORESETTODEFAULTS, "scr_screenshot_name","dp", "prefix name for saved screenshots (changes based on -game commandline, as well as which game mode is running; the date is encoded using strftime escapes)"};
 cvar_t fs_empty_files_in_pack_mark_deletions = {0, "fs_empty_files_in_pack_mark_deletions", "0", "if enabled, empty files in a pak/pk3 count as not existing but cancel the search in further packs, effectively allowing patch pak/pk3 files to 'delete' files"};
+cvar_t cvar_fs_gamedir = {CVAR_READONLY | CVAR_NORESETTODEFAULTS, "fs_gamedir", "", "the list of currently selected gamedirs (use the 'gamedir' command to change this)"};
 
 
 /*
@@ -1204,6 +1205,7 @@ void FS_Rescan (void)
 {
 	int i;
 	qboolean fs_modified = false;
+	char gamedirbuf[MAX_INPUTLINE];
 
 	FS_ClearSearchPath();
 
@@ -1225,13 +1227,19 @@ void FS_Rescan (void)
 	// Adds basedir/gamedir as an override game
 	// LordHavoc: now supports multiple -game directories
 	// set the com_modname (reported in server info)
+	*gamedirbuf = 0;
 	for (i = 0;i < fs_numgamedirs;i++)
 	{
 		fs_modified = true;
 		FS_AddGameHierarchy (fs_gamedirs[i]);
 		// update the com_modname (used server info)
 		strlcpy (com_modname, fs_gamedirs[i], sizeof (com_modname));
+		if(i)
+			strlcat(gamedirbuf, va(" %s", fs_gamedirs[i]), sizeof(gamedirbuf));
+		else
+			strlcpy(gamedirbuf, fs_gamedirs[i], sizeof(gamedirbuf));
 	}
+	Cvar_SetQuick(&cvar_fs_gamedir, gamedirbuf); // so QC or console code can query it
 
 	// set the default screenshot name to either the mod name or the
 	// gamemode screenshot name
@@ -1671,6 +1679,7 @@ void FS_Init_Commands(void)
 {
 	Cvar_RegisterVariable (&scr_screenshot_name);
 	Cvar_RegisterVariable (&fs_empty_files_in_pack_mark_deletions);
+	Cvar_RegisterVariable (&cvar_fs_gamedir);
 
 	Cmd_AddCommand ("gamedir", FS_GameDir_f, "changes active gamedir list (can take multiple arguments), not including base directory (example usage: gamedir ctf)");
 	Cmd_AddCommand ("fs_rescan", FS_Rescan_f, "rescans filesystem for new pack archives and any other changes");
