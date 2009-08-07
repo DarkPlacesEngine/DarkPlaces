@@ -25,7 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //#define MEMCLUMPING
 
 // div0: heap overflow detection paranoia
-#define MEMPARANOIA 1
+//#define MEMPARANOIA 1
 
 #if MEMCLUMPING
 // give malloc padding so we can't waste most of a page at the end
