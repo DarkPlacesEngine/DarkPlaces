@@ -475,6 +475,8 @@ void SV_Init (void)
 		Cvar_SetValueQuick (&sv_gameplayfix_blowupfallenzombies, 0);
 		// hipnotic mission pack has issues with bobbing water entities 'jittering' between different heights on alternate frames at the default 0.0138889 ticrate, 0.02 avoids this issue
 		Cvar_SetValueQuick (&sys_ticrate, 0.02);
+		// hipnotic mission pack has issues in their proximity mine sticking code, which causes them to bounce off.                                                                                     
+		Cvar_SetValueQuick (&sv_gameplayfix_slidemoveprojectiles, 0);                                                                                                                                   
 	}
 	if (gamemode == GAME_ROGUE)
 	{
