@@ -1247,6 +1247,9 @@ void FS_Rescan (void)
 		Cvar_SetQuick (&scr_screenshot_name, com_modname);
 	else
 		Cvar_SetQuick (&scr_screenshot_name, gamescreenshotname);
+	
+	if((i = COM_CheckParm("-modname")) && i < com_argc - 1)
+		strlcpy(com_modname, com_argv[i+1], sizeof(com_modname));
 
 	// If "-condebug" is in the command line, remove the previous log file
 	if (COM_CheckParm ("-condebug") != 0)
