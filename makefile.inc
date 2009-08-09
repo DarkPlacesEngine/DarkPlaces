@@ -166,8 +166,9 @@ OBJ_SDL= builddate.c sys_sdl.o vid_sdl.o $(OBJ_SND_COMMON) snd_sdl.o cd_sdl.o $(
 # Compilation
 CFLAGS_COMMON=$(CFLAGS_MAKEDEP) $(CFLAGS_PRELOAD) $(CFLAGS_FS) -Wall -Wsign-compare -Wdeclaration-after-statement
 CFLAGS_DEBUG=-ggdb
-CFLAGS_PROFILE=-g -pg -ggdb
+CFLAGS_PROFILE=-g -pg -ggdb -fprofile-arcs
 CFLAGS_RELEASE=
+CFLAGS_RELEASE_PROFILE=-fbranch-probabilities
 CFLAGS_SDL=$(SDLCONFIG_CFLAGS)
 
 OPTIM_DEBUG=$(CPUOPTIMIZATIONS)
@@ -182,7 +183,7 @@ DO_CC=$(CC) $(CFLAGS) -c $< -o $@
 
 # Link
 LDFLAGS_DEBUG=-g -ggdb $(OPTIM_DEBUG) -DSVNREVISION=`test -d .svn && svnversion || echo -` -DBUILDTYPE=debug
-LDFLAGS_PROFILE=-g -pg $(OPTIM_RELEASE) -DSVNREVISION=`test -d .svn && svnversion || echo -` -DBUILDTYPE=profile
+LDFLAGS_PROFILE=-g -pg -fprofile-arcs $(OPTIM_RELEASE) -DSVNREVISION=`test -d .svn && svnversion || echo -` -DBUILDTYPE=profile
 LDFLAGS_RELEASE=$(OPTIM_RELEASE) -DSVNREVISION=`test -d .svn && svnversion || echo -` -DBUILDTYPE=release
 
 
@@ -289,7 +290,7 @@ EXE_WINSDLNEXUIZ=nexuiz-sdl.exe
 
 ##### Commands #####
 
-.PHONY : clean help \
+.PHONY : clean clean-profile help \
 	 debug profile release \
 	 cl-debug cl-profile cl-release \
 	 sv-debug sv-profile sv-release \
@@ -298,24 +299,36 @@ EXE_WINSDLNEXUIZ=nexuiz-sdl.exe
 help:
 	@echo
 	@echo "===== Choose one ====="
-	@echo "* $(MAKE) clean       : delete all files produced by the build"
-	@echo "* $(MAKE) help        : this help"
-	@echo "* $(MAKE) debug       : make client and server binaries (debug versions)"
-	@echo "* $(MAKE) profile     : make client and server binaries (profile versions)"
-	@echo "* $(MAKE) release     : make client and server binaries (release versions)"
-	@echo "* $(MAKE) nexuiz      : make client and server binaries with nexuiz icon (release versions)"
-	@echo "* $(MAKE) cl-debug    : make client (debug version)"
-	@echo "* $(MAKE) cl-profile  : make client (profile version)"
-	@echo "* $(MAKE) cl-release  : make client (release version)"
-	@echo "* $(MAKE) cl-nexuiz   : make client with nexuiz icon (release version)"
-	@echo "* $(MAKE) sv-debug    : make dedicated server (debug version)"
-	@echo "* $(MAKE) sv-profile  : make dedicated server (profile version)"
-	@echo "* $(MAKE) sv-release  : make dedicated server (release version)"
-	@echo "* $(MAKE) sv-nexuiz   : make dedicated server with nexuiz icon (release version)"
-	@echo "* $(MAKE) sdl-debug   : make SDL client (debug version)"
-	@echo "* $(MAKE) sdl-profile : make SDL client (profile version)"
-	@echo "* $(MAKE) sdl-release : make SDL client (release version)"
-	@echo "* $(MAKE) sdl-nexuiz  : make SDL client with nexuiz icon (release version)"
+	@echo "* $(MAKE) clean               : delete all files produced by the build except"
+	@echo "                             profiling information"
+	@echo "* $(MAKE) clean-profile       : delete all files produced by the build, including"
+	@echo "                             profiling informaiton"
+	@echo "* $(MAKE) help                : this help"
+	@echo "* $(MAKE) debug               : make client and server binaries (debug versions)"
+	@echo "* $(MAKE) profile             : make client and server binaries (profile versions)"
+	@echo "* $(MAKE) release             : make client and server binaries (release versions)"
+	@echo "* $(MAKE) release-profile     : make client and server binaries (release versions)"
+	@echo "                             with profileing optomizations) The profiled"
+	@echo "                             version of the program must have been"
+	@echo "                             previously compiled"
+	@echo "* $(MAKE) nexuiz              : make client and server binaries with nexuiz icon"
+	@echo "                             (release versions)"
+	@echo "* $(MAKE) cl-debug            : make client (debug version)"
+	@echo "* $(MAKE) cl-profile          : make client (profile version)"
+	@echo "* $(MAKE) cl-release          : make client (release version)"
+	@echo "* $(MAKE) cl-release-profile  : make client (release version)"
+	@echo "* $(MAKE) cl-nexuiz           : make client with nexuiz icon (release version)"
+	@echo "* $(MAKE) sv-debug            : make dedicated server (debug version)"
+	@echo "* $(MAKE) sv-profile          : make dedicated server (profile version)"
+	@echo "* $(MAKE) sv-release          : make dedicated server (release version)"
+	@echo "* $(MAKE) sv-release-profile  : make dedicated server (release version)"
+	@echo "* $(MAKE) sv-nexuiz           : make dedicated server with nexuiz icon"
+	@echo "                             (release version)"
+	@echo "* $(MAKE) sdl-debug           : make SDL client (debug version)"
+	@echo "* $(MAKE) sdl-profile         : make SDL client (profile version)"
+	@echo "* $(MAKE) sdl-profile-profile : make SDL client (profile version)"
+	@echo "* $(MAKE) sdl-release         : make SDL client (release version)"
+	@echo "* $(MAKE) sdl-nexuiz          : make SDL client with nexuiz icon (release version)"
 	@echo
 
 debug :
@@ -326,6 +339,9 @@ profile :
 
 release :
 	$(MAKE) sv-release cl-release sdl-release
+
+release-profile :
+	$(MAKE) sv-release-profile cl-release-profile sdl-release-profile
 
 nexuiz :
 	$(MAKE) sv-nexuiz cl-nexuiz sdl-nexuiz
@@ -342,6 +358,11 @@ cl-profile :
 
 cl-release :
 	$(MAKE) bin-release \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
+		EXE="$(EXE_CL)" LDFLAGS_COMMON="$(LDFLAGS_CL)" LEVEL=1
+
+cl-release-profile :
+	$(MAKE) bin-release-profile \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
 		EXE="$(EXE_CL)" LDFLAGS_COMMON="$(LDFLAGS_CL)" LEVEL=1
 
@@ -365,6 +386,11 @@ sv-release :
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
 		EXE="$(EXE_SV)" LDFLAGS_COMMON="$(LDFLAGS_SV)" LEVEL=1
 
+sv-release-profile :
+	$(MAKE) bin-release-profile \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
+		EXE="$(EXE_SV)" LDFLAGS_COMMON="$(LDFLAGS_SV)" LEVEL=1
+
 sv-nexuiz :
 	$(MAKE) bin-release \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
@@ -382,6 +408,11 @@ sdl-profile :
 
 sdl-release :
 	$(MAKE) bin-release \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
+		EXE="$(EXE_SDL)" LDFLAGS_COMMON="$(LDFLAGS_SDL)" LEVEL=1
+
+sdl-release-profile :
+	$(MAKE) bin-release-profile \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
 		EXE="$(EXE_SDL)" LDFLAGS_COMMON="$(LDFLAGS_SDL)" LEVEL=1
 
@@ -417,6 +448,17 @@ bin-release :
 		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_EXTRA) $(CFLAGS_RELEASE) $(OPTIM_RELEASE)"\
 		LDFLAGS="$(LDFLAGS_RELEASE) $(LDFLAGS_COMMON)" LEVEL=2
 	$(STRIP) $(EXE)
+
+bin-release-profile :
+	$(CHECKLEVEL1)
+	@echo
+	@echo "========== $(EXE) (release) =========="
+	$(MAKE) $(EXE) \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
+		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_EXTRA) $(CFLAGS_RELEASE_PROFILE) $(OPTIM_RELEASE)"\
+		LDFLAGS="$(LDFLAGS_RELEASE) $(LDFLAGS_COMMON)" LEVEL=2
+	$(STRIP) $(EXE)
+
 
 snd_modplug.o: snd_modplug.c
 	$(CHECKLEVEL2)
@@ -491,3 +533,8 @@ clean:
 	-$(CMD_RM) $(EXE_SDLNEXUIZ)
 	-$(CMD_RM) *.o
 	-$(CMD_RM) *.d
+
+clean-profile: clean
+	-$(CMD_RM) *.gcda
+	-$(CMD_RM) *.gcno
+
