@@ -1,10 +1,13 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
+0 bug darkplaces client csqc: CSQC_InputEvent is supposed to handle mouse movement, compare to FTEQW code (avirox)
 0 bug darkplaces client csqc: engine prediction function is not implemented - could just return the engine's current cl.movement_origin (Spike)
 0 bug darkplaces client csqc: entities not being drawn with VF_PERSPECTIVE 0? (daemon)
 0 bug darkplaces client csqc: input queue functions needed for csqc prediction aren't implemented (Spike)
 0 bug darkplaces client csqc: precaches on client don't work, have to precache on server - what's going wrong here? (daemon, Urre)
 0 bug darkplaces client csqc: there is no WriteFloat, making ReadFloat useless (Urre)
+0 bug darkplaces client csqc: unproject Z handling differs in DP and FTEQW, project also must be directly compatible with unproject (avirox)
 0 bug darkplaces client csqc: world not being drawn with VF_PERSPECTIVE 0? (VorteX)
+0 bug darkplaces client net: proquake server compatibility broke between the last build of 2008 and the first of 2009 (Tomas Vredeveld)
 0 bug darkplaces client qc: trace_dphittexturename should be a static buffer rather than a tempstring, it produces unnecessary warnings currently (div0)
 0 bug darkplaces client qw: add .mvd demo support
 0 bug darkplaces client qw: add .qwd demo support
@@ -14,7 +17,9 @@
 0 bug darkplaces client qw: qw skins should only be active on progs/player.mdl (Plague Monkey Rat)
 0 bug darkplaces client qw: qw/skins/*.pcx need to be cropped to 296x194 and loaded as internal textures so they are split into multiple layers (Plague Monkey Rat)
 0 bug darkplaces client qw: restrict wateralpha and such cvars according to what is permitted in qw serverinfo?
+0 bug darkplaces client sound: -nocdaudio disables emulated music tracks (Tomas Vredeveld)
 0 bug darkplaces client timedemo: investigate bogus results of one-second min/avg/max, clearly not working properly (Willis)
+0 bug darkplaces client win32: add some kind of workaround for Windows Firewall prompt killing the OpenGL context (motorsep)
 0 bug darkplaces client: can't move mouse around in nexuiz menu if vid_mouse is 0
 0 bug darkplaces client: if you press 1 during the demo loop when quake starts, escape doesn't do anything until you hit some other key (daemon)
 0 bug darkplaces effects: add a cvar to disable colored dlights (leileilol)
@@ -117,6 +122,7 @@
 0 feature darkplaces client: add a cl_showspeed cvar to display a hud overlay of your current velocity, speed as length of velocity, and speed along forward vector (Spike)
 0 feature darkplaces client: add a cvar to make the renderer use a different entity for pvs than for viewing, this might be useful for a third person camera that should only see what the player sees (Urre)
 0 feature darkplaces client: add an alias to control whether the nexuiz logo.dpv splash video plays at startup and whether the menu opens, this way the config can change it before it happens, for instance to disable it, or to set up a similar thing in other games (green)
+0 feature darkplaces client: add cvar r_fonttexturenearest to force font textures to be GL_NEAREST sampled and disable the squished-character boxes, although that should be a different cvar (leilei)
 0 feature darkplaces client: add ezQuake-style hud layout as an option - http://quake.tek.pl/_sshots/candy/redfog.png
 0 feature darkplaces client: add test and test2 commands, test queries a server and prints player list,  (Yellow No. 5)
 0 feature darkplaces client: somehow handle alt-enter on windows, and any other equivilant toggle-maximize shortcut on other platforms (Spirit)
