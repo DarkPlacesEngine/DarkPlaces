@@ -422,7 +422,7 @@ void Sys_SendKeyEvents( void )
 					// so, let's better queue it for next frame
 					if(!sdl_needs_restart)
 					{
-						Cbuf_AddText("\nwait; wait; r_restart\n"); // do three "wait"s to not r_restart TOO often during resizing, as that'd be highly annoying
+						Cbuf_AddText("\nr_restart\n");
 						sdl_needs_restart = true;
 					}
 #endif
