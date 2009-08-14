@@ -22,6 +22,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
+#ifdef WIN32
+#define SDL_R_RESTART
+#endif
+
 // Tell startup code that we have a client
 int cl_available = true;
 
@@ -336,6 +340,20 @@ static int Sys_EventFilter( SDL_Event *event )
 	return 1;
 }
 
+#ifdef SDL_R_RESTART
+static qboolean sdl_needs_restart;
+static void sdl_start()
+{
+}
+static void sdl_shutdown()
+{
+	sdl_needs_restart = false;
+}
+static void sdl_newmap()
+{
+}
+#endif
+
 static keynum_t buttonremap[18] =
 {
 	K_MOUSE1,
@@ -399,6 +417,15 @@ void Sys_SendKeyEvents( void )
 					vid.width = event.resize.w;
 					vid.height = event.resize.h;
 					SDL_SetVideoMode(vid.width, vid.height, video_bpp, video_flags);
+#ifdef SDL_R_RESTART
+					// better not call R_Modules_Restart from here directly, as this may wreak havoc...
+					// so, let's better queue it for next frame
+					if(!sdl_needs_restart)
+					{
+						Cbuf_AddText("\nwait; wait; r_restart\n"); // do three "wait"s to not r_restart TOO often during resizing, as that'd be highly annoying
+						sdl_needs_restart = true;
+					}
+#endif
 				}
 				break;
 		}
@@ -435,6 +462,7 @@ void *GL_GetProcAddress(const char *name)
 
 static int Sys_EventFilter( SDL_Event *event );
 static qboolean vid_sdl_initjoysticksystem = false;
+
 void VID_Init (void)
 {
 	Cvar_RegisterVariable(&joy_detected);
@@ -458,6 +486,10 @@ void VID_Init (void)
 	Cvar_RegisterVariable(&joy_sensitivitypitch);
 	Cvar_RegisterVariable(&joy_sensitivityyaw);
 	//Cvar_RegisterVariable(&joy_sensitivityroll);
+	
+#ifdef SDL_R_RESTART
+	R_RegisterModule("SDL", sdl_start, sdl_shutdown, sdl_newmap);
+#endif
 
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 		Sys_Error ("Failed to init SDL video subsystem: %s", SDL_GetError());
