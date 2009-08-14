@@ -2338,7 +2338,10 @@ const char *PRVM_GetString(int num)
 		if (num < prog->numknownstrings)
 		{
 			if (!prog->knownstrings[num])
+			{
 				VM_Warning("PRVM_GetString: Invalid zone-string offset (%i has been freed)\n", num);
+				return "";
+			}
 			return prog->knownstrings[num];
 		}
 		else
