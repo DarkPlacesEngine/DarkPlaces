@@ -238,7 +238,10 @@
 		//==================
 
 			case OP_IFNOT:
-				if (!OPA->_int)
+				if (!OPA->_float)
+				// TODO add an "int-ifnot"
+				// although mostly unneeded, thanks to the only float being false being 0x0 and 0x80000000 (negative zero)
+				// and entity, string, field values can never have that value
 				{
 					prog->xfunction->profile += (st - startst);
 					st += st->b - 1;	// offset the s++
@@ -255,7 +258,10 @@
 				break;
 
 			case OP_IF:
-				if (OPA->_int)
+				if (OPA->_float)
+				// TODO add an "int-if"
+				// although mostly unneeded, thanks to the only float being false being 0x0 and 0x80000000 (negative zero)
+				// and entity, string, field values can never have that value
 				{
 					prog->xfunction->profile += (st - startst);
 					st += st->b - 1;	// offset the s++
