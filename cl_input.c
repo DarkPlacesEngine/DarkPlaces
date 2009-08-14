@@ -413,6 +413,7 @@ cvar_t cl_backspeed = {CVAR_SAVE, "cl_backspeed","400","backward movement speed"
 cvar_t cl_sidespeed = {CVAR_SAVE, "cl_sidespeed","350","strafe movement speed"};
 
 cvar_t cl_movespeedkey = {CVAR_SAVE, "cl_movespeedkey","2.0","how much +speed multiplies keyboard movement speed"};
+cvar_t cl_movecliptokeyboard = {0, "cl_movecliptokeyboard", "0", "if set to 1, any move is clipped to the nine keyboard states; if set to 2, only the direction is clipped, not the amount"};
 
 cvar_t cl_yawspeed = {CVAR_SAVE, "cl_yawspeed","140","keyboard yaw turning speed"};
 cvar_t cl_pitchspeed = {CVAR_SAVE, "cl_pitchspeed","150","keyboard pitch turning speed"};
@@ -666,6 +667,71 @@ void CL_Input (void)
 
 	// clamp after the move to prevent rendering with bad angles
 	CL_AdjustAngles ();
+
+	if(cl_movecliptokeyboard.integer)
+	{
+		vec_t f = 1;
+		if (in_speed.state & 1)
+			f *= cl_movespeedkey.value;
+		if(cl_movecliptokeyboard.integer == 2)
+		{
+			// digital direction, analog amount
+			vec_t wishvel_x, wishvel_y;
+			f *= max(cl_sidespeed.value, max(cl_forwardspeed.value, cl_backspeed.value));
+			wishvel_x = fabs(cl.cmd.forwardmove);
+			wishvel_y = fabs(cl.cmd.sidemove);
+			if(wishvel_x != 0 && wishvel_y != 0 && wishvel_x != wishvel_y)
+			{
+				vec_t wishspeed = sqrt(wishvel_x * wishvel_x + wishvel_y * wishvel_y);
+				if(wishvel_x >= 2 * wishvel_y)
+				{
+					// pure X motion
+					if(cl.cmd.forwardmove > 0)
+						cl.cmd.forwardmove = wishspeed;
+					else
+						cl.cmd.forwardmove = -wishspeed;
+					cl.cmd.sidemove = 0;
+				}
+				else if(wishvel_y >= 2 * wishvel_x)
+				{
+					// pure Y motion
+					cl.cmd.forwardmove = 0;
+					if(cl.cmd.sidemove > 0)
+						cl.cmd.sidemove = wishspeed;
+					else
+						cl.cmd.sidemove = -wishspeed;
+				}
+				else
+				{
+					// diagonal
+					if(cl.cmd.forwardmove > 0)
+						cl.cmd.forwardmove = 0.70710678118654752440 * wishspeed;
+					else
+						cl.cmd.forwardmove = -0.70710678118654752440 * wishspeed;
+					if(cl.cmd.sidemove > 0)
+						cl.cmd.sidemove = 0.70710678118654752440 * wishspeed;
+					else
+						cl.cmd.sidemove = -0.70710678118654752440 * wishspeed;
+				}
+			}
+		}
+		else if(cl_movecliptokeyboard.integer)
+		{
+			// digital direction, digital amount
+			if(cl.cmd.sidemove >= cl_sidespeed.value * f * 0.5)
+				cl.cmd.sidemove = cl_sidespeed.value * f;
+			else if(cl.cmd.sidemove <= -cl_sidespeed.value * f * 0.5)
+				cl.cmd.sidemove = -cl_sidespeed.value * f;
+			else
+				cl.cmd.sidemove = 0;
+			if(cl.cmd.forwardmove >= cl_forwardspeed.value * f * 0.5)
+				cl.cmd.forwardmove = cl_forwardspeed.value * f;
+			else if(cl.cmd.forwardmove <= -cl_backspeed.value * f * 0.5)
+				cl.cmd.forwardmove = -cl_backspeed.value * f;
+			else
+				cl.cmd.forwardmove = 0;
+		}
+	}
 }
 
 #include "cl_collision.h"
@@ -1915,6 +1981,7 @@ void CL_InitInput (void)
 	Cmd_AddCommand ("cycleweapon", IN_CycleWeapon, "send an impulse number to server to select the next usable weapon out of several (example: 9 4 8) if you are holding one of these, and choose the first one if you are holding none of these");
 	Cmd_AddCommand ("register_bestweapon", IN_BestWeapon_Register_f, "(for QC usage only) change weapon parameters to be used by bestweapon; stuffcmd this in ClientConnect");
 
+	Cvar_RegisterVariable(&cl_movecliptokeyboard);
 	Cvar_RegisterVariable(&cl_movement);
 	Cvar_RegisterVariable(&cl_movement_minping);
 	Cvar_RegisterVariable(&cl_movement_track_canjump);
