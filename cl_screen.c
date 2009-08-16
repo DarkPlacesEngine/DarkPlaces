@@ -1194,7 +1194,7 @@ void SCR_CaptureVideo(void)
 		if (cls.capturevideo.framerate != cl_capturevideo_fps.value * cl_capturevideo_framestep.integer)
 		{
 			Con_Printf("You can not change the video framerate while recording a video.\n");
-			Cvar_SetValueQuick(&cl_capturevideo_fps, cls.capturevideo.framerate);
+			Cvar_SetValueQuick(&cl_capturevideo_fps, cls.capturevideo.framerate / (double) cl_capturevideo_framestep.integer);
 		}
 		// for AVI saving we have to make sure that sound is saved before video
 		if (cls.capturevideo.soundrate && !cls.capturevideo.soundsampleframe)
