@@ -99,7 +99,7 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	vec3_t hullmins, hullmaxs;
 	int i, bodysupercontents;
 	int passedictprog;
-	float pitchsign;
+	float pitchsign = 1;
 	qboolean pointtrace;
 	prvm_edict_t *traceowner, *touch;
 	trace_t trace;
@@ -241,7 +241,7 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 			// if the modelindex is 0, it shouldn't be SOLID_BSP!
 			if (modelindex > 0 && modelindex < MAX_MODELS)
 				model = sv.models[(int)touch->fields.server->modelindex];
-			pitchsign = 1;
+			//pitchsign = 1;
 			if (
 				((modelindex = (int)touch->fields.server->modelindex) >= 1 && modelindex < MAX_MODELS && (model = sv.models[(int)touch->fields.server->modelindex]))
 				?
