@@ -51,6 +51,7 @@ cvar_t con_chatwidth = {CVAR_SAVE, "con_chatwidth","1.0", "relative chat window 
 cvar_t con_textsize = {CVAR_SAVE, "con_textsize","8", "console text size in virtual 2D pixels"};
 cvar_t con_notifysize = {CVAR_SAVE, "con_notifysize","8", "notify text size in virtual 2D pixels"};
 cvar_t con_chatsize = {CVAR_SAVE, "con_chatsize","8", "chat text size in virtual 2D pixels (if con_chat is enabled)"};
+cvar_t con_chatsound = {CVAR_SAVE, "con_chatsound","1", "enables chat sound to play on message"};
 
 
 cvar_t sys_specialcharactertranslation = {0, "sys_specialcharactertranslation", "1", "terminal console conchars to ASCII translation (set to 0 if your conchars.tga is for an 8bit character set or if you want raw output)"};
@@ -753,6 +754,7 @@ void Con_Init (void)
 	Cvar_RegisterVariable (&con_notifysize);
 	Cvar_RegisterVariable (&con_notifytime);
 	Cvar_RegisterVariable (&con_textsize);
+	Cvar_RegisterVariable (&con_chatsound);
 
 	// --blub
 	Cvar_RegisterVariable (&con_nickcompletion);
@@ -1031,19 +1033,22 @@ void Con_Print(const char *msg)
 				// play talk wav
 				if (*msg == 1)
 				{
-					if(gamemode == GAME_NEXUIZ)
+					if (con_chatsound.value)
 					{
-						if(msg[1] == '\r' && cl.foundtalk2wav)
-							S_LocalSound ("sound/misc/talk2.wav");
+						if(gamemode == GAME_NEXUIZ)
+						{
+							if(msg[1] == '\r' && cl.foundtalk2wav)
+								S_LocalSound ("sound/misc/talk2.wav");
+							else
+								S_LocalSound ("sound/misc/talk.wav");
+						}
 						else
-							S_LocalSound ("sound/misc/talk.wav");
-					}
-					else
-					{
-						if (msg[1] == '(' && cl.foundtalk2wav)
-							S_LocalSound ("sound/misc/talk2.wav");
-						else
-							S_LocalSound ("sound/misc/talk.wav");
+						{
+							if (msg[1] == '(' && cl.foundtalk2wav)
+								S_LocalSound ("sound/misc/talk2.wav");
+							else
+								S_LocalSound ("sound/misc/talk.wav");
+						}
 					}
 					mask = CON_MASK_CHAT;
 				}
