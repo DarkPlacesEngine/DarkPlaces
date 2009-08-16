@@ -6647,7 +6647,10 @@ static void R_DrawTextureSurfaceList_ShowSurfaces3(int texturenumsurfaces, msurf
 	R_SetupGenericShader(false);
 
 	if(rsurface.texture && rsurface.texture->currentskinframe)
+	{
 		memcpy(c, rsurface.texture->currentskinframe->avgcolor, sizeof(c));
+		c[3] *= rsurface.texture->currentalpha;
+	}
 	else
 	{
 		c[0] = 1;
