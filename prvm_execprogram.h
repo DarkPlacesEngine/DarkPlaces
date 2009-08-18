@@ -3,7 +3,7 @@
 
 		while (1)
 		{
-			st++;
+			st++; // TODO bounds check
 
 #if PRVMTRACE
 			PRVM_PrintStatement(st);
