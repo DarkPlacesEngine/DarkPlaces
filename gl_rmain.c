@@ -35,14 +35,14 @@ static int r_frame = 0; ///< used only by R_GetCurrentTexture
 //
 r_refdef_t r_refdef;
 
-cvar_t r_motionblur = {CVAR_SAVE, "r_motionblur", "0", "motionblur frame-by-frame alpha control {0 to 1} - 0.7 recommended"};
-cvar_t r_damageblur = {CVAR_SAVE, "r_damageblur", "0", "motionblur based on damage; requires r_motionblur to have a value"};
-cvar_t r_motionblur_vmin = {CVAR_SAVE, "r_motionblur_vmin", "300", "velocity at which there is minimum blur"};
-cvar_t r_motionblur_vmax = {CVAR_SAVE, "r_motionblur_vmax", "600", "velocity at which there is full blur"};
+cvar_t r_motionblur = {CVAR_SAVE, "r_motionblur", "0", "motionblur value scale - 0.7 recommended"};
+cvar_t r_damageblur = {CVAR_SAVE, "r_damageblur", "0", "motionblur based on damage"};
+cvar_t r_motionblur_vmin = {CVAR_SAVE, "r_motionblur_vmin", "300", "minimum influence from velocity"};
+cvar_t r_motionblur_vmax = {CVAR_SAVE, "r_motionblur_vmax", "600", "maximum influence from velocity"};
 cvar_t r_motionblur_bmin = {CVAR_SAVE, "r_motionblur_bmin", "0.5", "velocity at which there is no blur yet (may be negative to always have some blur)"};
 cvar_t r_motionblur_vcoeff = {CVAR_SAVE, "r_motionblur_vcoeff", "0.05", "sliding average reaction time for velocity"};
-cvar_t r_motionblur_maxblur = {CVAR_SAVE, "r_motionblur_maxblur", "0.88", "cap for the alpha level of the motion blur variable"};
-cvar_t r_motionblur_randomize = {CVAR_SAVE, "r_motionblur_randomize", "0.1", "randomizing coefficient to fix ghosting"};
+cvar_t r_motionblur_maxblur = {CVAR_SAVE, "r_motionblur_maxblur", "0.88", "cap for motionblur alpha value"};
+cvar_t r_motionblur_randomize = {CVAR_SAVE, "r_motionblur_randomize", "0.1", "randomizing coefficient to workaround ghosting"};
 cvar_t r_motionblur_debug = {0, "r_motionblur_debug", "0", "outputs current motionblur alpha value"};
 
 cvar_t r_depthfirst = {CVAR_SAVE, "r_depthfirst", "0", "renders a depth-only version of the scene before normal rendering begins to eliminate overdraw, values: 0 = off, 1 = world depth, 2 = world and model depth"};
