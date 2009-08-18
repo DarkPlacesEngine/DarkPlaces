@@ -40,8 +40,6 @@
 				OPC->vector[0] = OPA->_float * OPB->vector[0];
 				OPC->vector[1] = OPA->_float * OPB->vector[1];
 				OPC->vector[2] = OPA->_float * OPB->vector[2];
-				break;
-			case OP_MUL_VF:
 				OPC->vector[0] = OPB->_float * OPA->vector[0];
 				OPC->vector[1] = OPB->_float * OPA->vector[1];
 				OPC->vector[2] = OPB->_float * OPA->vector[2];
@@ -215,7 +213,7 @@
 					goto cleanup;
 				}
 #endif
-				ed = PRVM_PROG_TO_EDICT(OPA->edict);
+				ed = PRVM_PROG_TO_EDICT(OPA->edict); // TODO bounds check entity number
 				OPC->_int = ((prvm_eval_t *)((int *)ed->fields.vp + OPB->_int))->_int;
 				break;
 
@@ -229,7 +227,7 @@
 					goto cleanup;
 				}
 #endif
-				ed = PRVM_PROG_TO_EDICT(OPA->edict);
+				ed = PRVM_PROG_TO_EDICT(OPA->edict); // TODO bounds check entity number
 				OPC->ivector[0] = ((prvm_eval_t *)((int *)ed->fields.vp + OPB->_int))->ivector[0];
 				OPC->ivector[1] = ((prvm_eval_t *)((int *)ed->fields.vp + OPB->_int))->ivector[1];
 				OPC->ivector[2] = ((prvm_eval_t *)((int *)ed->fields.vp + OPB->_int))->ivector[2];
@@ -306,8 +304,7 @@
 				prog->argc = st->op - OP_CALL0;
 				if (!OPA->function)
 					PRVM_ERROR("NULL function in %s", PRVM_NAME);
-
-				newf = &prog->functions[OPA->function];
+				newf = &prog->functions[OPA->function]; // TODO bounds check function
 				newf->callcount++;
 
 				if (newf->first_statement < 0)
