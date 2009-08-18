@@ -40,6 +40,8 @@
 				OPC->vector[0] = OPA->_float * OPB->vector[0];
 				OPC->vector[1] = OPA->_float * OPB->vector[1];
 				OPC->vector[2] = OPA->_float * OPB->vector[2];
+				break;
+			case OP_MUL_VF:
 				OPC->vector[0] = OPB->_float * OPA->vector[0];
 				OPC->vector[1] = OPB->_float * OPA->vector[1];
 				OPC->vector[2] = OPB->_float * OPA->vector[2];
