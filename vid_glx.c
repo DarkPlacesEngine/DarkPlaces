@@ -1055,7 +1055,7 @@ void Sys_SendKeyEvents(void)
 	static qboolean sound_active = true;
 
 	// enable/disable sound on focus gain/loss
-	if (!vid_hidden && (vid_activewindow || !snd_mutewhenidle.integer))
+	if ((!vid_hidden && vid_activewindow) || !snd_mutewhenidle.integer)
 	{
 		if (!sound_active)
 		{
