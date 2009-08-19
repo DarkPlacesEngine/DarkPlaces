@@ -1707,6 +1707,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 	prog->progs = (dprograms_t *)FS_LoadFile (filename, prog->progs_mempool, false, &filesize);
 	if (prog->progs == NULL || filesize < (fs_offset_t)sizeof(dprograms_t))
 		PRVM_ERROR ("PRVM_LoadProgs: couldn't load %s for %s", filename, PRVM_NAME);
+	// TODO bounds check header fields (e.g. numstatements), they must never go behind end of file
 
 	Con_DPrintf("%s programs occupy %iK.\n", PRVM_NAME, (int)(filesize/1024));
 
@@ -1772,6 +1773,9 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 		prog->functions[i].numparms = LittleLong (dfunctions[i].numparms);
 		prog->functions[i].locals = LittleLong (dfunctions[i].locals);
 		memcpy(prog->functions[i].parm_size, dfunctions[i].parm_size, sizeof(dfunctions[i].parm_size));
+		if(prog->functions[i]->first_statement < 0 || prog->functions[i]->first_statement >= prog->progs->numstatements)
+			PRVM_ERROR("PRVM_LoadProgs: out of bounds function statement (function %d) in %s", i, PRVM_NAME);
+		// TODO bounds check parm_start, s_name, s_file, numparms, locals, parm_size
 	}
 
 	for (i=0 ; i<prog->progs->numglobaldefs ; i++)
@@ -1779,6 +1783,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 		prog->globaldefs[i].type = LittleShort (prog->globaldefs[i].type);
 		prog->globaldefs[i].ofs = LittleShort (prog->globaldefs[i].ofs);
 		prog->globaldefs[i].s_name = LittleLong (prog->globaldefs[i].s_name);
+		// TODO bounds check ofs, s_name
 	}
 
 	// copy the progs fields to the new fields list
@@ -1789,6 +1794,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 			PRVM_ERROR ("PRVM_LoadProgs: prog->fielddefs[i].type & DEF_SAVEGLOBAL in %s", PRVM_NAME);
 		prog->fielddefs[i].ofs = LittleShort (infielddefs[i].ofs);
 		prog->fielddefs[i].s_name = LittleLong (infielddefs[i].s_name);
+		// TODO bounds check ofs, s_name
 	}
 
 	// append the required fields
@@ -1797,6 +1803,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 		prog->fielddefs[prog->progs->numfielddefs].type = required_field[i].type;
 		prog->fielddefs[prog->progs->numfielddefs].ofs = prog->progs->entityfields;
 		prog->fielddefs[prog->progs->numfielddefs].s_name = PRVM_SetEngineString(required_field[i].name);
+		// TODO bounds check ofs, s_name
 		if (prog->fielddefs[prog->progs->numfielddefs].type == ev_vector)
 			prog->progs->entityfields += 3;
 		else
