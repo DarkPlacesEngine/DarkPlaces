@@ -473,13 +473,21 @@ static void VID_AppFocusChanged(qboolean windowIsActive)
 			VID_RestoreSystemGamma();
 	}
 
-	if (sound_active != windowIsActive)
+	if (windowIsActive || !snd_mutewhenidle.integer)
 	{
-		sound_active = windowIsActive;
-		if (sound_active)
+		if (!sound_active)
+		{
 			S_UnblockSound ();
-		else
+			sound_active = true;
+		}
+	}
+	else
+	{
+		if (sound_active)
+		{
 			S_BlockSound ();
+			sound_active = false;
+		}
 	}
 }
 
