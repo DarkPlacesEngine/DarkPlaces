@@ -1773,7 +1773,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 		prog->functions[i].numparms = LittleLong (dfunctions[i].numparms);
 		prog->functions[i].locals = LittleLong (dfunctions[i].locals);
 		memcpy(prog->functions[i].parm_size, dfunctions[i].parm_size, sizeof(dfunctions[i].parm_size));
-		if(prog->functions[i].first_statement < 0 || prog->functions[i].first_statement >= prog->progs->numstatements)
+		if(prog->functions[i].first_statement >= prog->progs->numstatements)
 			PRVM_ERROR("PRVM_LoadProgs: out of bounds function statement (function %d) in %s", i, PRVM_NAME);
 		// TODO bounds check parm_start, s_name, s_file, numparms, locals, parm_size
 	}
