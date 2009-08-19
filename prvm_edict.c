@@ -1920,6 +1920,20 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 			break;
 		}
 	}
+	if(prog->progs->numstatements < 1)
+	{
+		PRVM_ERROR("PRVM_LoadProgs: empty program in %s", PRVM_NAME);
+	}
+	else switch(prog->statements[prog->progs->numstatements - 1].op)
+	{
+		case OP_RETURN:
+		case OP_GOTO:
+		case OP_DONE:
+			break;
+		default:
+			PRVM_ERROR("PRVM_LoadProgs: program may fall off the edge (does not end with RETURN, GOTO or DONE) in %s", PRVM_NAME);
+			break;
+	}
 
 	PRVM_LoadLNO(filename);
 
