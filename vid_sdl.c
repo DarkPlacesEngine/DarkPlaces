@@ -431,7 +431,7 @@ void Sys_SendKeyEvents( void )
 		}
 
 	// enable/disable sound on focus gain/loss
-	if (!vid_hidden && (vid_activewindow || !snd_mutewhenidle.integer))
+	if ((!vid_hidden && vid_activewindow) || !snd_mutewhenidle.integer)
 	{
 		if (!sound_active)
 		{
