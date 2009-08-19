@@ -1279,7 +1279,7 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 			GL_BindEBO(bufferobject3s);
 			if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
 			{
-				qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices, numelements, GL_UNSIGNED_SHORT, (void *)(firsttriangle * sizeof(unsigned short[3])));
+				qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices - 1, numelements, GL_UNSIGNED_SHORT, (void *)(firsttriangle * sizeof(unsigned short[3])));
 				CHECKGLERROR
 			}
 			else
@@ -1293,7 +1293,7 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 			GL_BindEBO(bufferobject3i);
 			if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
 			{
-				qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices, numelements, GL_UNSIGNED_INT, (void *)(firsttriangle * sizeof(unsigned int[3])));
+				qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices - 1, numelements, GL_UNSIGNED_INT, (void *)(firsttriangle * sizeof(unsigned int[3])));
 				CHECKGLERROR
 			}
 			else
@@ -1307,7 +1307,7 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 			GL_BindEBO(0);
 			if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
 			{
-				qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices, numelements, GL_UNSIGNED_SHORT, element3s);
+				qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices - 1, numelements, GL_UNSIGNED_SHORT, element3s);
 				CHECKGLERROR
 			}
 			else
@@ -1321,7 +1321,7 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 			GL_BindEBO(0);
 			if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
 			{
-				qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices, numelements, GL_UNSIGNED_INT, element3i);
+				qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices - 1, numelements, GL_UNSIGNED_INT, element3i);
 				CHECKGLERROR
 			}
 			else
