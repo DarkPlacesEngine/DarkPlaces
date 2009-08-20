@@ -527,7 +527,7 @@ void PRVM_PrintState(void);
 void PRVM_CrashAll (void);
 void PRVM_Crash (void);
 void PRVM_ShortStackTrace(char *buf, size_t bufsize);
-const char *PRVM_AllocationOrigin();
+const char *PRVM_AllocationOrigin(void);
 
 ddef_t *PRVM_ED_FindField(const char *name);
 ddef_t *PRVM_ED_FindGlobal(const char *name);

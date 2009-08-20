@@ -78,7 +78,7 @@ static WindowRef window;
 
 static double originalMouseSpeed = -1.0;
 
-io_connect_t IN_GetIOHandle()
+io_connect_t IN_GetIOHandle(void)
 {
 	io_connect_t iohandle = MACH_PORT_NULL;
 	kern_return_t status;

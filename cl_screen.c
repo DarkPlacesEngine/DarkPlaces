@@ -559,7 +559,7 @@ static int SCR_DrawCurlDownload(int offset)
 SCR_DrawInfobar
 ==============
 */
-static void SCR_DrawInfobar()
+static void SCR_DrawInfobar(void)
 {
 	int offset = 0;
 	if(scr_infobartime_off > 0)
@@ -570,7 +570,7 @@ static void SCR_DrawInfobar()
 		Con_DPrintf("broken console margin calculation: %d != %d\n", offset, scr_con_margin_bottom);
 }
 
-static int SCR_InfobarHeight()
+static int SCR_InfobarHeight(void)
 {
 	int offset = 0;
 	Curl_downloadinfo_t *downinfo;
@@ -1637,7 +1637,7 @@ rtexture_t *loadingscreentexture = NULL;
 static float loadingscreentexture_vertex3f[12];
 static float loadingscreentexture_texcoord2f[8];
 
-static void SCR_ClearLoadingScreenTexture()
+static void SCR_ClearLoadingScreenTexture(void)
 {
 	if(loadingscreentexture)
 		R_FreeTexture(loadingscreentexture);
@@ -1645,7 +1645,7 @@ static void SCR_ClearLoadingScreenTexture()
 }
 
 extern rtexturepool_t *r_main_texturepool;
-static void SCR_SetLoadingScreenTexture()
+static void SCR_SetLoadingScreenTexture(void)
 {
 	int w, h;
 	float loadingscreentexture_w;
@@ -1682,7 +1682,7 @@ static void SCR_SetLoadingScreenTexture()
 	loadingscreentexture_texcoord2f[6] = 0;loadingscreentexture_texcoord2f[7] = 0;
 }
 
-void SCR_UpdateLoadingScreenIfShown()
+void SCR_UpdateLoadingScreenIfShown(void)
 {
 	if(realtime == loadingscreentime)
 		SCR_UpdateLoadingScreen(loadingscreencleared);
@@ -1776,7 +1776,7 @@ static float SCR_DrawLoadingStack_r(loadingscreenstack_t *s, float y)
 	return total;
 }
 
-static void SCR_DrawLoadingStack()
+static void SCR_DrawLoadingStack(void)
 {
 	float verts[12];
 	float colors[16];

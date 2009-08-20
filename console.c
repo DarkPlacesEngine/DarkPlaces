@@ -331,7 +331,7 @@ void Log_ConPrint (const char *msg);
 Log_DestBuffer_Init
 ====================
 */
-static void Log_DestBuffer_Init()
+static void Log_DestBuffer_Init(void)
 {
 	memcpy(log_dest_buffer, "\377\377\377\377n", 5); // QW rcon print
 	log_dest_buffer_pos = 5;
@@ -342,7 +342,7 @@ static void Log_DestBuffer_Init()
 Log_DestBuffer_Flush
 ====================
 */
-void Log_DestBuffer_Flush()
+void Log_DestBuffer_Flush(void)
 {
 	lhnetaddress_t log_dest_addr;
 	lhnetsocket_t *log_dest_socket;
@@ -881,7 +881,7 @@ void Con_Rcon_Redirect_Init(lhnetsocket_t *sock, lhnetaddress_t *dest)
 	rcon_redirect_bufferpos = 5;
 }
 
-void Con_Rcon_Redirect_Flush()
+void Con_Rcon_Redirect_Flush(void)
 {
 	rcon_redirect_buffer[rcon_redirect_bufferpos] = 0;
 	NetConn_WriteString(rcon_redirect_sock, rcon_redirect_buffer, rcon_redirect_dest);
@@ -889,14 +889,14 @@ void Con_Rcon_Redirect_Flush()
 	rcon_redirect_bufferpos = 5;
 }
 
-void Con_Rcon_Redirect_End()
+void Con_Rcon_Redirect_End(void)
 {
 	Con_Rcon_Redirect_Flush();
 	rcon_redirect_dest = NULL;
 	rcon_redirect_sock = NULL;
 }
 
-void Con_Rcon_Redirect_Abort()
+void Con_Rcon_Redirect_Abort(void)
 {
 	rcon_redirect_dest = NULL;
 	rcon_redirect_sock = NULL;

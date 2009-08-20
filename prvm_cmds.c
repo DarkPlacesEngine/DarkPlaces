@@ -2974,7 +2974,7 @@ void VM_freepic(void)
 	Draw_FreePic(s);
 }
 
-dp_font_t *getdrawfont()
+dp_font_t *getdrawfont(void)
 {
 	if(prog->globaloffsets.drawfont >= 0)
 	{

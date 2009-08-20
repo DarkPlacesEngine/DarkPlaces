@@ -30,7 +30,7 @@ void SCR_BeginLoadingPlaque (void);
 
 // invoke refresh of loading plaque (nothing else seen)
 void SCR_UpdateLoadingScreen(qboolean clear);
-void SCR_UpdateLoadingScreenIfShown();
+void SCR_UpdateLoadingScreenIfShown(void);
 
 // pushes an item on the loading screen
 void SCR_PushLoadingScreen (qboolean redraw, const char *msg, float len_in_parent);

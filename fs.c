@@ -1456,7 +1456,7 @@ const char *FS_CheckGameDir(const char *gamedir)
 	return fs_checkgamedir_missing;
 }
 
-static void FS_ListGameDirs()
+static void FS_ListGameDirs(void)
 {
 	stringlist_t list, list2;
 	int i, j;

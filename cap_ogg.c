@@ -517,7 +517,7 @@ static dllfunction_t theorafuncs[] =
 
 static dllhandle_t og_dll = NULL, vo_dll = NULL, ve_dll = NULL, th_dll = NULL;
 
-qboolean SCR_CaptureVideo_Ogg_OpenLibrary()
+qboolean SCR_CaptureVideo_Ogg_OpenLibrary(void)
 {
 	const char* dllnames_og [] =
 	{
@@ -590,7 +590,7 @@ qboolean SCR_CaptureVideo_Ogg_OpenLibrary()
 		Sys_LoadLibrary (dllnames_ve, &ve_dll, vorbisencfuncs);
 }
 
-void SCR_CaptureVideo_Ogg_Init()
+void SCR_CaptureVideo_Ogg_Init(void)
 {
 	SCR_CaptureVideo_Ogg_OpenLibrary();
 
@@ -604,12 +604,12 @@ void SCR_CaptureVideo_Ogg_Init()
 	Cvar_RegisterVariable(&cl_capturevideo_ogg_vorbis_quality);
 }
 
-qboolean SCR_CaptureVideo_Ogg_Available()
+qboolean SCR_CaptureVideo_Ogg_Available(void)
 {
 	return og_dll && th_dll && vo_dll && ve_dll;
 }
 
-void SCR_CaptureVideo_Ogg_CloseDLL()
+void SCR_CaptureVideo_Ogg_CloseDLL(void)
 {
 	Sys_UnloadLibrary (&ve_dll);
 	Sys_UnloadLibrary (&vo_dll);
@@ -650,7 +650,7 @@ typedef struct capturevideostate_ogg_formatspecific_s
 capturevideostate_ogg_formatspecific_t;
 #define LOAD_FORMATSPECIFIC_OGG() capturevideostate_ogg_formatspecific_t *format = (capturevideostate_ogg_formatspecific_t *) cls.capturevideo.formatspecific
 
-static void SCR_CaptureVideo_Ogg_Interleave()
+static void SCR_CaptureVideo_Ogg_Interleave(void)
 {
 	LOAD_FORMATSPECIFIC_OGG();
 	ogg_page pg;
@@ -708,7 +708,7 @@ static void SCR_CaptureVideo_Ogg_Interleave()
 	}
 }
 
-static void SCR_CaptureVideo_Ogg_FlushInterleaving()
+static void SCR_CaptureVideo_Ogg_FlushInterleaving(void)
 {
 	LOAD_FORMATSPECIFIC_OGG();
 
@@ -726,7 +726,7 @@ static void SCR_CaptureVideo_Ogg_FlushInterleaving()
 	}
 }
 
-static void SCR_CaptureVideo_Ogg_EndVideo()
+static void SCR_CaptureVideo_Ogg_EndVideo(void)
 {
 	LOAD_FORMATSPECIFIC_OGG();
 	ogg_page pg;
@@ -819,7 +819,7 @@ static void SCR_CaptureVideo_Ogg_EndVideo()
 	cls.capturevideo.videofile = NULL;
 }
 
-static void SCR_CaptureVideo_Ogg_ConvertFrame_BGRA_to_YUV()
+static void SCR_CaptureVideo_Ogg_ConvertFrame_BGRA_to_YUV(void)
 {
 	LOAD_FORMATSPECIFIC_OGG();
 	yuv_buffer *yuv;
@@ -932,7 +932,7 @@ static void SCR_CaptureVideo_Ogg_SoundFrame(const portable_sampleframe_t *paintb
 	SCR_CaptureVideo_Ogg_Interleave();
 }
 
-void SCR_CaptureVideo_Ogg_BeginVideo()
+void SCR_CaptureVideo_Ogg_BeginVideo(void)
 {
 	cls.capturevideo.format = CAPTUREVIDEOFORMAT_OGG_VORBIS_THEORA;
 	cls.capturevideo.formatextension = "ogv";

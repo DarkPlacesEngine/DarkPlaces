@@ -537,7 +537,7 @@ void SV_SetupVM(void);
 void SV_VM_Begin(void);
 void SV_VM_End(void);
 
-const char *Host_TimingReport(); ///< for output in Host_Status_f
+const char *Host_TimingReport(void); ///< for output in Host_Status_f
 
 #endif
 

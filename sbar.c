@@ -529,7 +529,7 @@ void Sbar_DrawXNum (int x, int y, int num, int digits, int lettersize, float r, 
 //=============================================================================
 
 
-int Sbar_IsTeammatch()
+int Sbar_IsTeammatch(void)
 {
 	// currently only nexuiz uses the team score board
 	return ((gamemode == GAME_NEXUIZ)

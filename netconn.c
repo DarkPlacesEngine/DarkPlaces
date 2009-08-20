@@ -153,7 +153,7 @@ qboolean serverlist_consoleoutput;
 static int nFavorites = 0;
 static lhnetaddress_t favorites[256];
 
-void NetConn_UpdateFavorites()
+void NetConn_UpdateFavorites(void)
 {
 	const char *p;
 	nFavorites = 0;

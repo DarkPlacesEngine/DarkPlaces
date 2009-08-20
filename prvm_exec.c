@@ -297,7 +297,7 @@ void PRVM_ShortStackTrace(char *buf, size_t bufsize)
 }
 
 
-void PRVM_CallProfile ()
+void PRVM_CallProfile (void)
 {
 	mfunction_t *f, *best;
 	int i;
@@ -424,7 +424,7 @@ void PRVM_Profile_f (void)
 	PRVM_End;
 }
 
-void PRVM_CrashAll()
+void PRVM_CrashAll(void)
 {
 	int i;
 	prvm_prog_t *oldprog = prog;
