@@ -342,14 +342,14 @@ static int Sys_EventFilter( SDL_Event *event )
 
 #ifdef SDL_R_RESTART
 static qboolean sdl_needs_restart;
-static void sdl_start()
+static void sdl_start(void)
 {
 }
-static void sdl_shutdown()
+static void sdl_shutdown(void)
 {
 	sdl_needs_restart = false;
 }
-static void sdl_newmap()
+static void sdl_newmap(void)
 {
 }
 #endif
