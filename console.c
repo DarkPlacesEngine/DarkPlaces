@@ -712,7 +712,7 @@ void Con_ConDump_f (void)
 	FS_Close(file);
 }
 
-void Con_Clear_f ()
+void Con_Clear_f (void)
 {
 	ConBuffer_Clear(&con);
 }
