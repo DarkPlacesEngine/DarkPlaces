@@ -99,25 +99,23 @@ typedef unsigned int JDIMENSION;
 #define C_MAX_BLOCKS_IN_MCU 10
 #define D_MAX_BLOCKS_IN_MCU 10
 
-#pragma GCC diagnostic ignored "-Wstrict-prototypes"
 struct jpeg_memory_mgr
 {
   void* (*alloc_small) (j_common_ptr cinfo, int pool_id, size_t sizeofobject);
-  void (*alloc_large) ();
-  void (*alloc_sarray) ();
-  void (*alloc_barray) ();
-  void (*request_virt_sarray) ();
-  void (*request_virt_barray) ();
-  void (*realize_virt_arrays) ();
-  void (*access_virt_sarray) ();
-  void (*access_virt_barray) ();
-  void (*free_pool) ();
-  void (*self_destruct) ();
+  void (*alloc_large) (void *dummy, ...);
+  void (*alloc_sarray) (void *dummy, ...);
+  void (*alloc_barray) (void *dummy, ...);
+  void (*request_virt_sarray) (void *dummy, ...);
+  void (*request_virt_barray) (void *dummy, ...);
+  void (*realize_virt_arrays) (void *dummy, ...);
+  void (*access_virt_sarray) (void *dummy, ...);
+  void (*access_virt_barray) (void *dummy, ...);
+  void (*free_pool) (void *dummy, ...);
+  void (*self_destruct) (void *dummy, ...);
 
   long max_memory_to_use;
   long max_alloc_chunk;
 };
-#pragma GCC diagnostic warning "-Wstrict-prototypes"
 
 struct jpeg_error_mgr
 {
