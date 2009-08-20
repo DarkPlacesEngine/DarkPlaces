@@ -587,7 +587,7 @@ Host_TimeReport
 Returns a time report string, for example for
 ==================
 */
-const char *Host_TimingReport()
+const char *Host_TimingReport(void)
 {
 	return va("%.1f%% CPU, %.2f%% lost, offset avg %.1fms, max %.1fms, sdev %.1fms", svs.perf_cpuload * 100, svs.perf_lost * 100, svs.perf_offset_avg * 1000, svs.perf_offset_max * 1000, svs.perf_offset_sdev * 1000);
 }

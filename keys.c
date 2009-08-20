@@ -44,7 +44,7 @@ conbuffer_t history;
 extern cvar_t	con_textsize;
 
 
-static void Key_History_Init()
+static void Key_History_Init(void)
 {
 	qfile_t *historyfile;
 	ConBuffer_Init(&history, HIST_TEXTSIZE, HIST_MAXLINES, zonemempool);
@@ -84,7 +84,7 @@ static void Key_History_Init()
 	history_line = -1;
 }
 
-static void Key_History_Shutdown()
+static void Key_History_Shutdown(void)
 {
 	// TODO write history to a file
 
@@ -100,7 +100,7 @@ static void Key_History_Shutdown()
 	ConBuffer_Shutdown(&history);
 }
 
-static void Key_History_Push()
+static void Key_History_Push(void)
 {
 	if(key_line[1]) // empty?
 	if(strcmp(key_line, "]quit")) // putting these into the history just sucks
@@ -110,7 +110,7 @@ static void Key_History_Push()
 	history_line = -1;
 }
 
-static void Key_History_Up()
+static void Key_History_Up(void)
 {
 	if(history_line == -1) // editing the "new" line
 		strlcpy(history_savedline, key_line + 1, sizeof(history_savedline));
@@ -132,7 +132,7 @@ static void Key_History_Up()
 	}
 }
 
-static void Key_History_Down()
+static void Key_History_Down(void)
 {
 	if(history_line == -1) // editing the "new" line
 		return;

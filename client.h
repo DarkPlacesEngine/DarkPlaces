@@ -498,7 +498,7 @@ typedef struct capturevideostate_s
 	qfile_t *videofile;
 		// always use this:
 		//   cls.capturevideo.videofile = FS_OpenRealFile(va("%s.%s", cls.capturevideo.basename, cls.capturevideo.formatextension), "wb", false);
-	void (*endvideo) ();
+	void (*endvideo) (void);
 	void (*videoframes) (int num);
 	void (*soundframe) (const portable_sampleframe_t *paintbuffer, size_t length);
 

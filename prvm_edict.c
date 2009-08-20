@@ -224,7 +224,7 @@ void PRVM_ED_ClearEdict (prvm_edict_t *e)
 	PRVM_GCALL(init_edict)(e);
 }
 
-const char *PRVM_AllocationOrigin()
+const char *PRVM_AllocationOrigin(void)
 {
 	char *buf = NULL;
 	if(prog->leaktest_active)
@@ -1630,8 +1630,8 @@ PRVM_ResetProg
 ===============
 */
 
-void PRVM_LeakTest();
-void PRVM_ResetProg()
+void PRVM_LeakTest(void);
+void PRVM_ResetProg(void)
 {
 	PRVM_LeakTest();
 	PRVM_GCALL(reset_cmd)();
@@ -2238,7 +2238,7 @@ void PRVM_InitProg(int prognr)
 	prog->leaktest_active = prvm_leaktest.integer;
 }
 
-int PRVM_GetProgNr()
+int PRVM_GetProgNr(void)
 {
 	return prog - prog_list;
 }
@@ -2675,7 +2675,7 @@ static qboolean PRVM_IsEdictReferenced(prvm_edict_t *edict, int mark)
 	return false;
 }
 
-static void PRVM_MarkReferencedEdicts()
+static void PRVM_MarkReferencedEdicts(void)
 {
 	int j;
 	qboolean found_new;
@@ -2712,7 +2712,7 @@ static void PRVM_MarkReferencedEdicts()
 	Con_DPrintf("leak check used %d stages to find all references\n", stage);
 }
 
-void PRVM_LeakTest()
+void PRVM_LeakTest(void)
 {
 	int i, j;
 	qboolean leaked = false;

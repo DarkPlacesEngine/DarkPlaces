@@ -27,7 +27,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 static void SV_SaveEntFile_f(void);
 static void SV_StartDownload_f(void);
 static void SV_Download_f(void);
-static void SV_VM_Setup();
+static void SV_VM_Setup(void);
 extern cvar_t net_connecttimeout;
 
 void VM_CustomStats_Clear (void);

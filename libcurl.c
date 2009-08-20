@@ -128,15 +128,15 @@ typedef struct
 CURLMsg;
 
 static void (*qcurl_global_init) (long flags);
-static void (*qcurl_global_cleanup) ();
+static void (*qcurl_global_cleanup) (void);
 
-static CURL * (*qcurl_easy_init) ();
+static CURL * (*qcurl_easy_init) (void);
 static void (*qcurl_easy_cleanup) (CURL *handle);
 static CURLcode (*qcurl_easy_setopt) (CURL *handle, CURLoption option, ...);
 static CURLcode (*qcurl_easy_getinfo) (CURL *handle, CURLINFO info, ...);
 static const char * (*qcurl_easy_strerror) (CURLcode);
 
-static CURLM * (*qcurl_multi_init) ();
+static CURLM * (*qcurl_multi_init) (void);
 static CURLMcode (*qcurl_multi_perform) (CURLM *multi_handle, int *running_handles);
 static CURLMcode (*qcurl_multi_add_handle) (CURLM *multi_handle, CURL *easy_handle);
 static CURLMcode (*qcurl_multi_remove_handle) (CURLM *multi_handle, CURL *easy_handle);
@@ -240,7 +240,7 @@ Curl_Clear_forthismap
 Clears the "will disconnect on failure" flags.
 ====================
 */
-void Curl_Clear_forthismap()
+void Curl_Clear_forthismap(void)
 {
 	downloadinfo *di;
 	if(noclear)
@@ -261,12 +261,12 @@ Curl_Have_forthismap
 Returns true if a download needed for the current game is running.
 ====================
 */
-qboolean Curl_Have_forthismap()
+qboolean Curl_Have_forthismap(void)
 {
 	return numdownloads_added;
 }
 
-void Curl_Register_predownload()
+void Curl_Register_predownload(void)
 {
 	Curl_CommandWhenDone("cl_begindownloads");
 	Curl_CommandWhenError("cl_begindownloads");
@@ -280,7 +280,7 @@ Checks if a "done command" is to be executed.
 All downloads finished, at least one success since connect, no single failure
 -> execute the command.
 */
-static void Curl_CheckCommandWhenDone()
+static void Curl_CheckCommandWhenDone(void)
 {
 	if(!curl_dll)
 		return;
@@ -539,7 +539,7 @@ To not start too many downloads at once, only one download is added at a time,
 up to a maximum number of cl_curl_maxdownloads are running.
 ====================
 */
-static void CheckPendingDownloads()
+static void CheckPendingDownloads(void)
 {
 	if(!curl_dll)
 		return;
@@ -603,7 +603,7 @@ this function MUST be called before using anything else in this file.
 On Win32, this must be called AFTER WSAStartup has been done!
 ====================
 */
-void Curl_Init()
+void Curl_Init(void)
 {
 	CURL_OpenLibrary();
 	if(!curl_dll)
@@ -619,8 +619,8 @@ Curl_Shutdown
 Surprise... closes all the stuff. Please do this BEFORE shutting down LHNET.
 ====================
 */
-void Curl_ClearRequirements();
-void Curl_Shutdown()
+void Curl_ClearRequirements(void);
+void Curl_Shutdown(void)
 {
 	if(!curl_dll)
 		return;
@@ -852,7 +852,7 @@ call this regularily as this will always download as much as possible without
 blocking.
 ====================
 */
-void Curl_Run()
+void Curl_Run(void)
 {
 	noclear = FALSE;
 
@@ -937,7 +937,7 @@ Curl_CancelAll
 Stops ALL downloads.
 ====================
 */
-void Curl_CancelAll()
+void Curl_CancelAll(void)
 {
 	if(!curl_dll)
 		return;
@@ -956,7 +956,7 @@ Curl_Running
 returns true iff there is a download running.
 ====================
 */
-qboolean Curl_Running()
+qboolean Curl_Running(void)
 {
 	if(!curl_dll)
 		return false;
@@ -1018,7 +1018,7 @@ prints the download list
 ====================
 */
 // TODO rewrite using Curl_GetDownloadInfo?
-static void Curl_Info_f()
+static void Curl_Info_f(void)
 {
 	downloadinfo *di;
 	if(!curl_dll)
@@ -1418,7 +1418,7 @@ Clears the list of required files for playing on the current map.
 This should be called at every map change.
 ====================
 */
-void Curl_ClearRequirements()
+void Curl_ClearRequirements(void)
 {
 	const char *p;
 	while(requirements)
@@ -1448,7 +1448,7 @@ This is done by sending him the following console commands:
 	curl --finish_autodownload
 ====================
 */
-void Curl_SendRequirements()
+void Curl_SendRequirements(void)
 {
 	// for each requirement, find the pack name
 	char sendbuffer[4096] = "";

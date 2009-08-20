@@ -423,7 +423,7 @@ void ServerList_ResetMasks(void);
 void ServerList_QueryList(qboolean resetcache, qboolean querydp, qboolean queryqw, qboolean consoleoutput);
 
 /// called whenever net_slist_favorites changes
-void NetConn_UpdateFavorites();
+void NetConn_UpdateFavorites(void);
 
 #endif
 

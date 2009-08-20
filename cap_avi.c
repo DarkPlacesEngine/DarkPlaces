@@ -403,7 +403,7 @@ static void SCR_CaptureVideo_Avi_VideoFrames(int num)
 	}
 }
 
-void SCR_CaptureVideo_Avi_EndVideo()
+void SCR_CaptureVideo_Avi_EndVideo(void)
 {
 	LOAD_FORMATSPECIFIC_AVI();
 
@@ -494,7 +494,7 @@ void SCR_CaptureVideo_Avi_SoundFrame(const portable_sampleframe_t *paintbuffer, 
 	}
 }
 
-void SCR_CaptureVideo_Avi_BeginVideo()
+void SCR_CaptureVideo_Avi_BeginVideo(void)
 {
 	int width = cls.capturevideo.width;
 	int height = cls.capturevideo.height;

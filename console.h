@@ -29,8 +29,8 @@ extern int con_backscroll;
 extern qboolean con_initialized;
 
 void Con_Rcon_Redirect_Init(lhnetsocket_t *sock, lhnetaddress_t *dest);
-void Con_Rcon_Redirect_End();
-void Con_Rcon_Redirect_Abort();
+void Con_Rcon_Redirect_End(void);
+void Con_Rcon_Redirect_Abort(void);
 
 /// If the line width has changed, reformat the buffer.
 void Con_CheckResize (void);
