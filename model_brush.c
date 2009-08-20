@@ -4614,18 +4614,15 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 	Con_DPrintf("%s is %sdeluxemapped\n", loadmodel->name, loadmodel->brushq3.deluxemapping ? "" : "not ");
 
 	// figure out what the most reasonable merge power is within limits
-	loadmodel->brushq3.num_lightmapmergepower = 0;
-	for (power = 1;power <= mod_q3bsp_lightmapmergepower.integer && (128 << power) <= gl_max_texture_size; power++)
-		loadmodel->brushq3.num_lightmapmergepower = power;
 
-	// as the lightmap size may actually be another power of 2, adjust for this
-	// (and interpret it as the power for 128x128 lightmaps above)
+	loadmodel->brushq3.num_lightmapmergepower = 0;
+
 	for(i = 0; (128 << i) < size; ++i)
-		loadmodel->brushq3.num_lightmapmergepower -= 1;
-	while ((1 << (loadmodel->brushq3.num_lightmapmergepower * 2)) >= 4 * (count >> loadmodel->brushq3.deluxemapping))
-		loadmodel->brushq3.num_lightmapmergepower -= 1;
-	if(loadmodel->brushq3.num_lightmapmergepower < 0)
-		loadmodel->brushq3.num_lightmapmergepower = 0;
+		;
+	// i is now 0 for 128, 1 for 256, etc
+
+	for (power = 1;power + i <= mod_q3bsp_lightmapmergepower.integer && (size << power) <= gl_max_texture_size && (1 << (power * 2)) < 4 * (count >> loadmodel->brushq3.deluxemapping); power++)
+		loadmodel->brushq3.num_lightmapmergepower = power;
 
 	loadmodel->brushq3.num_lightmapmerge = 1 << loadmodel->brushq3.num_lightmapmergepower;
 
