@@ -503,7 +503,7 @@ void VID_Init (void)
 #ifdef WIN32
 #include "resource.h"
 #include <SDL_syswm.h>
-static void VID_SetCaption()
+static void VID_SetCaption(void)
 {
     SDL_SysWMinfo	info;
 	HICON			icon;
