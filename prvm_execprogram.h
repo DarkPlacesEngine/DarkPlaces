@@ -82,10 +82,10 @@
 				OPC->_float = OPA->_float < OPB->_float;
 				break;
 			case OP_AND:
-				OPC->_float = FLOAT_IS_TRUE_FOR_INT(OPA->_int) && FLOAT_IS_TRUE_FOR_INT(OBA->_int); // TODO change this back to float, and add AND_I to be used by fteqcc for anything not a float
+				OPC->_float = FLOAT_IS_TRUE_FOR_INT(OPA->_int) && FLOAT_IS_TRUE_FOR_INT(OPA->_int); // TODO change this back to float, and add AND_I to be used by fteqcc for anything not a float
 				break;
 			case OP_OR:
-				OPC->_float = FLOAT_IS_TRUE_FOR_INT(OPA->_int) || FLOAT_IS_TRUE_FOR_INT(OBA->_int); // TODO change this back to float, and add OR_I to be used by fteqcc for anything not a float
+				OPC->_float = FLOAT_IS_TRUE_FOR_INT(OPA->_int) || FLOAT_IS_TRUE_FOR_INT(OPA->_int); // TODO change this back to float, and add OR_I to be used by fteqcc for anything not a float
 				break;
 			case OP_NOT_F:
 				OPC->_float = !FLOAT_IS_TRUE_FOR_INT(OPA->_int);
