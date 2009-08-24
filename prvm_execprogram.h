@@ -182,6 +182,13 @@
 
 			case OP_ADDRESS:
 #if PRVMBOUNDSCHECK
+				if (OPA->edict < 0 || OPA->edict >= prog->max_edicts)
+				{
+					prog->xfunction->profile += (st - startst);
+					prog->xstatement = st - prog->statements;
+					PRVM_ERROR ("%s Progs attempted to address an out of bounds edict number", PRVM_NAME);
+					goto cleanup;
+				}
 				if ((unsigned int)(OPB->_int) >= (unsigned int)(prog->progs->entityfields))
 				{
 					prog->xfunction->profile += (st - startst);
@@ -207,7 +214,7 @@
 			case OP_LOAD_S:
 			case OP_LOAD_FNC:
 #if PRVMBOUNDSCHECK
-				if (OPA->edict < 0 || OPA->edict >= prog->edictareasize)
+				if (OPA->edict < 0 || OPA->edict >= prog->max_edicts)
 				{
 					prog->xfunction->profile += (st - startst);
 					prog->xstatement = st - prog->statements;
@@ -228,7 +235,7 @@
 
 			case OP_LOAD_V:
 #if PRVMBOUNDSCHECK
-				if (OPA->edict < 0 || OPA->edict >= prog->edictareasize)
+				if (OPA->edict < 0 || OPA->edict >= prog->max_edicts)
 				{
 					prog->xfunction->profile += (st - startst);
 					prog->xstatement = st - prog->statements;
@@ -553,7 +560,7 @@
 				break;
 			case OP_LOAD_I:
 #if PRBOUNDSCHECK
-				if (OPA->edict < 0 || OPA->edict >= pr_edictareasize)
+				if (OPA->edict < 0 || OPA->edict >= prog->max_edicts)
 				{
 					prog->xfunction->profile += (st - startst);
 					prog->xstatement = st - prog->statements;
