@@ -371,5 +371,8 @@ void Sys_Shared_Init(void);
 // This also includes extended characters, and ALL control chars
 #define ISWHITESPACEORCONTROL(ch) ((signed char) (ch) <= (signed char) ' ')
 
+
+#define FLOAT_IS_TRUE_FOR_INT(x) ((x) & 0x7FFFFFFF) // also match "negative zero" floats of value 0x80000000
+
 #endif
 
