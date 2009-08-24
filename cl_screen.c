@@ -55,7 +55,7 @@ cvar_t scr_zoomwindow_viewsizey = {CVAR_SAVE, "scr_zoomwindow_viewsizey", "20", 
 cvar_t scr_zoomwindow_fov = {CVAR_SAVE, "scr_zoomwindow_fov", "20", "fov of zoom window"};
 cvar_t scr_stipple = {0, "scr_stipple", "0", "interlacing-like stippling of the display"};
 cvar_t scr_refresh = {0, "scr_refresh", "1", "allows you to completely shut off rendering for benchmarking purposes"};
-cvar_t scr_screenshot_name_use_mapname = {CVAR_SAVE, "scr_screenshot_name_use_mapname", "0", "allows you to include the map name into file names of screenshots, this is useful for creating portfolios or logical image directories; if set to 1, it is used as suffix to scr_screenshot_name, if set to 2, as a prefix instead"};
+cvar_t scr_screenshot_name_in_mapdir = {CVAR_SAVE, "scr_screenshot_name_in_mapdir", "0", "if set to 1, screenshots are placed in a subdirectory named like the map they are from"};
 cvar_t shownetgraph = {CVAR_SAVE, "shownetgraph", "0", "shows a graph of packet sizes and other information, 0 = off, 1 = show client netgraph, 2 = show client and server netgraphs (when hosting a server)"};
 cvar_t cl_demo_mousegrab = {0, "cl_demo_mousegrab", "0", "Allows reading the mouse input while playing demos. Useful for camera mods developed in csqc. (0: never, 1: always)"};
 
@@ -863,7 +863,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_screenshot_jpeg_quality);
 	Cvar_RegisterVariable (&scr_screenshot_gammaboost);
 	Cvar_RegisterVariable (&scr_screenshot_hwgamma);
-	Cvar_RegisterVariable (&scr_screenshot_name_use_mapname);
+	Cvar_RegisterVariable (&scr_screenshot_name_in_mapdir);
 	Cvar_RegisterVariable (&cl_capturevideo);
 	Cvar_RegisterVariable (&cl_capturevideo_printfps);
 	Cvar_RegisterVariable (&cl_capturevideo_width);
@@ -919,15 +919,12 @@ void SCR_ScreenShot_f (void)
 	qboolean jpeg = (scr_screenshot_jpeg.integer != 0);
 
 	// TODO maybe make capturevideo and screenshot use similar name patterns?
-	if (scr_screenshot_name_use_mapname.integer && cl.worldmodel) {
+	if (scr_screenshot_name_in_mapdir.integer && cl.worldmodel && *cl.worldmodel->name) {
 		// figure out the map's filename without path or extension
 		strlcpy(mapname, FS_FileWithoutPath(cl.worldmodel->name), sizeof(mapname));
 		if (strrchr(mapname, '.'))
 			*(strrchr(mapname, '.')) = 0;
-		if(scr_screenshot_name_use_mapname.integer >= 2)
-			dpsnprintf (prefix_name, sizeof(prefix_name), "%s%s", mapname, Sys_TimeString(scr_screenshot_name.string));
-		else
-			dpsnprintf (prefix_name, sizeof(prefix_name), "%s%s", Sys_TimeString(scr_screenshot_name.string), mapname);
+		dpsnprintf (prefix_name, sizeof(prefix_name), "%s/%s", mapname, Sys_TimeString(scr_screenshot_name.string));
 	} else {
 		dpsnprintf (prefix_name, sizeof(prefix_name), "%s", Sys_TimeString(scr_screenshot_name.string));
 	}
