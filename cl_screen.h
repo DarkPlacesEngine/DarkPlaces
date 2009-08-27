@@ -19,5 +19,7 @@ void CL_Screen_Init(void);
 void CL_Screen_Shutdown(void);
 void CL_UpdateScreen(void);
 
+qboolean R_Stereo_Active(void);
+
 #endif
 

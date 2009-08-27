@@ -1947,6 +1947,11 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 	key_consoleactive = old_key_consoleactive;
 }
 
+qboolean R_Stereo_Active(void)
+{
+	return (vid.stereobuffer || r_stereo_redblue.integer || r_stereo_redgreen.integer || r_stereo_redcyan.integer || r_stereo_sidebyside.integer);
+}
+
 extern cvar_t cl_minfps;
 extern cvar_t cl_minfps_fade;
 extern cvar_t cl_minfps_qualitymax;
@@ -2063,7 +2068,7 @@ void CL_UpdateScreen(void)
 	else
 		qglDisable(GL_POLYGON_STIPPLE);
 
-	if (vid.stereobuffer || r_stereo_redblue.integer || r_stereo_redgreen.integer || r_stereo_redcyan.integer || r_stereo_sidebyside.integer)
+	if (R_Stereo_Active())
 	{
 		matrix4x4_t originalmatrix = r_refdef.view.matrix;
 		matrix4x4_t offsetmatrix;
