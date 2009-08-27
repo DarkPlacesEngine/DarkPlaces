@@ -1947,9 +1947,14 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 	key_consoleactive = old_key_consoleactive;
 }
 
+qboolean R_Stereo_ColorMasking(void)
+{
+	return r_stereo_redblue.integer || r_stereo_redgreen.integer || r_stereo_redcyan.integer;
+}
+
 qboolean R_Stereo_Active(void)
 {
-	return (vid.stereobuffer || r_stereo_redblue.integer || r_stereo_redgreen.integer || r_stereo_redcyan.integer || r_stereo_sidebyside.integer);
+	return (vid.stereobuffer || r_stereo_sidebyside.integer || R_Stereo_ColorMasking());
 }
 
 extern cvar_t cl_minfps;
