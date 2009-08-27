@@ -3348,7 +3348,7 @@ void R_Bloom_StartFrame(void)
 		for (bloomtextureheight  = 1;bloomtextureheight  < r_bloomstate.bloomheight;bloomtextureheight  *= 2);
 	}
 
-	if ((r_hdr.integer || r_bloom.integer || r_motionblur.value > 0 || r_damageblur.value > 0) && ((r_bloom_resolution.integer < 4 || r_bloom_blur.value < 1 || r_bloom_blur.value >= 512) || r_refdef.view.width > gl_max_texture_size || r_refdef.view.height > gl_max_texture_size))
+	if ((r_hdr.integer || r_bloom.integer || (!R_Stereo_Active() && (r_motionblur.value > 0 || r_damageblur.value > 0))) && ((r_bloom_resolution.integer < 4 || r_bloom_blur.value < 1 || r_bloom_blur.value >= 512) || r_refdef.view.width > gl_max_texture_size || r_refdef.view.height > gl_max_texture_size))
 	{
 		Cvar_SetValueQuick(&r_hdr, 0);
 		Cvar_SetValueQuick(&r_bloom, 0);
@@ -3356,7 +3356,7 @@ void R_Bloom_StartFrame(void)
 		Cvar_SetValueQuick(&r_damageblur, 0);
 	}
 
-	if (!(r_glsl.integer && (r_glsl_postprocess.integer || r_glsl_saturation.value != 1 || (v_glslgamma.integer && !vid_gammatables_trivial))) && !r_bloom.integer && !r_hdr.integer && r_motionblur.value <= 0 && r_damageblur.value <= 0)
+	if (!(r_glsl.integer && (r_glsl_postprocess.integer || (!R_Stereo_Active() && r_glsl_saturation.value != 1) || (v_glslgamma.integer && !vid_gammatables_trivial))) && !r_bloom.integer && !r_hdr.integer && (R_Stereo_Active() || (r_motionblur.value <= 0 && r_damageblur.value <= 0)))
 		screentexturewidth = screentextureheight = 0;
 	if (!r_hdr.integer && !r_bloom.integer)
 		bloomtexturewidth = bloomtextureheight = 0;
@@ -3621,7 +3621,7 @@ static void R_BlendView(void)
 		R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_screen));
 		GL_ActiveTexture(0);CHECKGLERROR
 
-		if(r_motionblur.value > 0 || r_damageblur.value > 0)
+		if(!R_Stereo_Active() && (r_motionblur.value > 0 || r_damageblur.value > 0))
 		{  
 			// declare alpha variable
 			float a;
@@ -3679,7 +3679,7 @@ static void R_BlendView(void)
 			| (r_refdef.viewblend[3] > 0 ? SHADERPERMUTATION_VERTEXTEXTUREBLEND : 0)
 			| ((v_glslgamma.value && !vid_gammatables_trivial) ? SHADERPERMUTATION_GAMMARAMPS : 0)
 			| (r_glsl_postprocess.integer ? SHADERPERMUTATION_POSTPROCESSING : 0)
-			| (r_glsl_saturation.value != 1 ? SHADERPERMUTATION_SATURATION : 0);
+			| ((!R_Stereo_Active() && r_glsl_saturation.value != 1) ? SHADERPERMUTATION_SATURATION : 0);
 
 		if (r_bloomstate.texture_bloom && !r_bloomstate.hdr)
 		{
