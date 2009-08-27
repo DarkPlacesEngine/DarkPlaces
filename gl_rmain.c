@@ -3356,7 +3356,7 @@ void R_Bloom_StartFrame(void)
 		Cvar_SetValueQuick(&r_damageblur, 0);
 	}
 
-	if (!(r_glsl.integer && (r_glsl_postprocess.integer || (!R_Stereo_Active() && r_glsl_saturation.value != 1) || (v_glslgamma.integer && !vid_gammatables_trivial))) && !r_bloom.integer && !r_hdr.integer && (R_Stereo_Active() || (r_motionblur.value <= 0 && r_damageblur.value <= 0)))
+	if (!(r_glsl.integer && (r_glsl_postprocess.integer || (!R_Stereo_ColorMasking() && r_glsl_saturation.value != 1) || (v_glslgamma.integer && !vid_gammatables_trivial))) && !r_bloom.integer && !r_hdr.integer && (R_Stereo_Active() || (r_motionblur.value <= 0 && r_damageblur.value <= 0)))
 		screentexturewidth = screentextureheight = 0;
 	if (!r_hdr.integer && !r_bloom.integer)
 		bloomtexturewidth = bloomtextureheight = 0;
@@ -3679,7 +3679,7 @@ static void R_BlendView(void)
 			| (r_refdef.viewblend[3] > 0 ? SHADERPERMUTATION_VERTEXTEXTUREBLEND : 0)
 			| ((v_glslgamma.value && !vid_gammatables_trivial) ? SHADERPERMUTATION_GAMMARAMPS : 0)
 			| (r_glsl_postprocess.integer ? SHADERPERMUTATION_POSTPROCESSING : 0)
-			| ((!R_Stereo_Active() && r_glsl_saturation.value != 1) ? SHADERPERMUTATION_SATURATION : 0);
+			| ((!R_Stereo_ColorMasking() && r_glsl_saturation.value != 1) ? SHADERPERMUTATION_SATURATION : 0);
 
 		if (r_bloomstate.texture_bloom && !r_bloomstate.hdr)
 		{
