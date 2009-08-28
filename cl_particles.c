@@ -1852,8 +1852,8 @@ static void R_InitParticleTexture (void)
 		unsigned char *particletexturedata = (unsigned char *)Mem_Alloc(tempmempool, PARTICLEFONTSIZE*PARTICLEFONTSIZE*4);
 		unsigned char data[PARTICLETEXTURESIZE][PARTICLETEXTURESIZE][4];
 
-		particlefontwidth = particlefontheight = PARTICLETEXTURESIZE;
-		particlefontcellwidth = particlefontcellheight = PARTICLEFONTSIZE;
+		particlefontwidth = particlefontheight = PARTICLEFONTSIZE;
+		particlefontcellwidth = particlefontcellheight = PARTICLETEXTURESIZE;
 		particlefontcols = 8;
 		particlefontrows = 8;
 
