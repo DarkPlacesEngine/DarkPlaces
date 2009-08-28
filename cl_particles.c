@@ -34,7 +34,7 @@ particletype_t particletype[pt_total] =
 	{PBLEND_ALPHA, PARTICLE_BILLBOARD, false}, //pt_alphastatic
 	{PBLEND_ADD, PARTICLE_BILLBOARD, false}, //pt_static
 	{PBLEND_ADD, PARTICLE_SPARK, false}, //pt_spark
-	{PBLEND_ADD, PARTICLE_BEAM, false}, //pt_beam
+	{PBLEND_ADD, PARTICLE_HBEAM, false}, //pt_beam
 	{PBLEND_ADD, PARTICLE_SPARK, false}, //pt_rain
 	{PBLEND_ADD, PARTICLE_ORIENTED_DOUBLESIDED, false}, //pt_raindecal
 	{PBLEND_ADD, PARTICLE_BILLBOARD, false}, //pt_snow
@@ -168,6 +168,19 @@ int		ramp2[8] = {0x6f, 0x6e, 0x6d, 0x6c, 0x6b, 0x6a, 0x68, 0x66};
 int		ramp3[8] = {0x6d, 0x6b, 6, 5, 4, 3};
 
 //static int explosparkramp[8] = {0x4b0700, 0x6f0f00, 0x931f07, 0xb7330f, 0xcf632b, 0xe3974f, 0xffe7b5, 0xffffff};
+
+#define MAX_PARTICLETEXTURES 1024
+// particletexture_t is a rectangle in the particlefonttexture
+typedef struct particletexture_s
+{
+	rtexture_t *texture;
+	float s1, t1, s2, t2;
+}
+particletexture_t;
+
+static rtexturepool_t *particletexturepool;
+static rtexture_t *particlefonttexture;
+static particletexture_t particletexture[MAX_PARTICLETEXTURES];
 
 // texture numbers in particle font
 static const int tex_smoke[8] = {0, 1, 2, 3, 4, 5, 6, 7};
@@ -333,7 +346,7 @@ void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend)
 			if (!strcmp(argv[1], "billboard")) info->orientation = PARTICLE_BILLBOARD;
 			else if (!strcmp(argv[1], "spark")) info->orientation = PARTICLE_SPARK;
 			else if (!strcmp(argv[1], "oriented")) info->orientation = PARTICLE_ORIENTED_DOUBLESIDED;
-			else if (!strcmp(argv[1], "beam")) info->orientation = PARTICLE_BEAM;
+			else if (!strcmp(argv[1], "beam")) info->orientation = PARTICLE_HBEAM;
 			else Con_Printf("effectinfo.txt:%i: unrecognized orientation %s\n", linenumber, argv[1]);
 		}
 		else if (!strcmp(argv[0], "color")) {readints(info->color, 2);}
@@ -492,7 +505,7 @@ void CL_Particles_Shutdown (void)
 // ptype - any of the pt_ enum values (pt_static, pt_blood, etc), see ptype_t near the top of this file
 // pcolor1,pcolor2 - minimum and maximum ranges of color, randomly interpolated to decide particle color
 // ptex - any of the tex_ values such as tex_smoke[rand()&7] or tex_particle
-// psize - size of particle (or thickness for PARTICLE_SPARK and PARTICLE_BEAM)
+// psize - size of particle (or thickness for PARTICLE_SPARK and PARTICLE_*BEAM)
 // palpha - opacity of particle as 0-255 (can be more than 255)
 // palphafade - rate of fade per second (so 256 would mean a 256 alpha particle would fade to nothing in 1 second)
 // ptime - how long the particle can live (note it is also removed if alpha drops to nothing)
@@ -523,7 +536,16 @@ static particle_t *CL_NewParticle(unsigned short ptypeindex, int pcolor1, int pc
 	memset(part, 0, sizeof(*part));
 	part->typeindex = ptypeindex;
 	part->blendmode = blendmode;
-	part->orientation = orientation;
+	if(orientation == PARTICLE_HBEAM || orientation == PARTICLE_VBEAM)
+	{
+		particletexture_t *tex = &particletexture[ptex];
+		if(tex->t1 == 0 && tex->t2 == 1) // full height of texture?
+			part->orientation = PARTICLE_VBEAM;
+		else
+			part->orientation = PARTICLE_HBEAM;
+	}
+	else
+		part->orientation = orientation;
 	l2 = (int)lhrandom(0.5, 256.5);
 	l1 = 256 - l2;
 	part->color[0] = ((((pcolor1 >> 16) & 0xFF) * l1 + ((pcolor2 >> 16) & 0xFF) * l2) >> 8) & 0xFF;
@@ -951,7 +973,7 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 		CL_AllocLightFlash(NULL, &tempmatrix, 200, 2.0f, 2.0f, 2.0f, 400, 99.0f, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
 	else if (effectnameindex == EFFECT_TE_TEI_G3)
-		CL_NewParticle(pt_beam, 0xFFFFFF, 0xFFFFFF, tex_beam, 8, 0, 256, 256, 0, 0, originmins[0], originmins[1], originmins[2], originmaxs[0], originmaxs[1], originmaxs[2], 0, 0, 0, 0, false, 0, 1, PBLEND_ADD, PARTICLE_BEAM, -1, -1, -1);
+		CL_NewParticle(pt_beam, 0xFFFFFF, 0xFFFFFF, tex_beam, 8, 0, 256, 256, 0, 0, originmins[0], originmins[1], originmins[2], originmaxs[0], originmaxs[1], originmaxs[2], 0, 0, 0, 0, false, 0, 1, PBLEND_ADD, PARTICLE_HBEAM, -1, -1, -1);
 	else if (effectnameindex == EFFECT_TE_TEI_SMOKE)
 	{
 		if (cl_particles_smoke.integer)
@@ -1293,7 +1315,7 @@ void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins
 				}
 				if (info->particletype == pt_decal)
 					CL_SpawnDecalParticleForPoint(center, info->originjitter[0], lhrandom(info->size[0], info->size[1]), lhrandom(info->alpha[0], info->alpha[1]), tex, info->color[0], info->color[1]);
-				else if (info->orientation == PARTICLE_BEAM)
+				else if (info->orientation == PARTICLE_HBEAM)
 					CL_NewParticle(info->particletype, info->color[0], info->color[1], tex, lhrandom(info->size[0], info->size[1]), info->size[2], lhrandom(info->alpha[0], info->alpha[1]), info->alpha[2], 0, 0, originmins[0], originmins[1], originmins[2], originmaxs[0], originmaxs[1], originmaxs[2], 0, 0, 0, 0, false, lhrandom(info->time[0], info->time[1]), info->stretchfactor, info->blendmode, info->orientation, info->staincolor[0], info->staincolor[1], staintex);
 				else
 				{
@@ -1440,9 +1462,9 @@ void CL_ReadPointFile_f (void)
 	VectorCopy(leakorg, org);
 	Con_Printf("%i points read (%i particles spawned)\nLeak at %f %f %f\n", c, s, org[0], org[1], org[2]);
 
-	CL_NewParticle(pt_beam, 0xFF0000, 0xFF0000, tex_beam, 64, 0, 255, 0, 0, 0, org[0] - 4096, org[1], org[2], org[0] + 4096, org[1], org[2], 0, 0, 0, 0, false, 1<<30, 1, PBLEND_ADD, PARTICLE_BEAM, -1, -1, -1);
-	CL_NewParticle(pt_beam, 0x00FF00, 0x00FF00, tex_beam, 64, 0, 255, 0, 0, 0, org[0], org[1] - 4096, org[2], org[0], org[1] + 4096, org[2], 0, 0, 0, 0, false, 1<<30, 1, PBLEND_ADD, PARTICLE_BEAM, -1, -1, -1);
-	CL_NewParticle(pt_beam, 0x0000FF, 0x0000FF, tex_beam, 64, 0, 255, 0, 0, 0, org[0], org[1], org[2] - 4096, org[0], org[1], org[2] + 4096, 0, 0, 0, 0, false, 1<<30, 1, PBLEND_ADD, PARTICLE_BEAM, -1, -1, -1);
+	CL_NewParticle(pt_beam, 0xFF0000, 0xFF0000, tex_beam, 64, 0, 255, 0, 0, 0, org[0] - 4096, org[1], org[2], org[0] + 4096, org[1], org[2], 0, 0, 0, 0, false, 1<<30, 1, PBLEND_ADD, PARTICLE_HBEAM, -1, -1, -1);
+	CL_NewParticle(pt_beam, 0x00FF00, 0x00FF00, tex_beam, 64, 0, 255, 0, 0, 0, org[0], org[1] - 4096, org[2], org[0], org[1] + 4096, org[2], 0, 0, 0, 0, false, 1<<30, 1, PBLEND_ADD, PARTICLE_HBEAM, -1, -1, -1);
+	CL_NewParticle(pt_beam, 0x0000FF, 0x0000FF, tex_beam, 64, 0, 255, 0, 0, 0, org[0], org[1], org[2] - 4096, org[0], org[1], org[2] + 4096, 0, 0, 0, 0, false, 1<<30, 1, PBLEND_ADD, PARTICLE_HBEAM, -1, -1, -1);
 }
 
 /*
@@ -1648,19 +1670,6 @@ void CL_ParticleRain (const vec3_t mins, const vec3_t maxs, const vec3_t dir, in
 	}
 }
 
-#define MAX_PARTICLETEXTURES 64
-// particletexture_t is a rectangle in the particlefonttexture
-typedef struct particletexture_s
-{
-	rtexture_t *texture;
-	float s1, t1, s2, t2;
-}
-particletexture_t;
-
-static rtexturepool_t *particletexturepool;
-static rtexture_t *particlefonttexture;
-static particletexture_t particletexture[MAX_PARTICLETEXTURES];
-
 static cvar_t r_drawparticles = {0, "r_drawparticles", "1", "enables drawing of particles"};
 static cvar_t r_drawparticles_drawdistance = {CVAR_SAVE, "r_drawparticles_drawdistance", "2000", "particles further than drawdistance*size will not be drawn"};
 static cvar_t r_drawdecals = {0, "r_drawdecals", "1", "enables drawing of decals"};
@@ -1702,11 +1711,21 @@ static unsigned char shadebubble(float dx, float dy, vec3_t light)
 		return 0;
 }
 
+int particlefontwidth, particlefontheight, particlefontcellwidth, particlefontcellheight, particlefontrows, particlefontcols;
+void CL_Particle_PixelCoordsForTexnum(int texnum, int *basex, int *basey, int *width, int *height)
+{
+	*basex = (texnum % particlefontcols) * particlefontcellwidth;
+	*basey = ((texnum / particlefontcols) % particlefontrows) * particlefontcellheight;
+	*width = particlefontcellwidth;
+	*height = particlefontcellheight;
+}
+
 static void setuptex(int texnum, unsigned char *data, unsigned char *particletexturedata)
 {
-	int basex, basey, y;
-	basex = ((texnum >> 0) & 7) * PARTICLETEXTURESIZE;
-	basey = ((texnum >> 3) & 7) * PARTICLETEXTURESIZE;
+	int basex, basey, w, h, y;
+	CL_Particle_PixelCoordsForTexnum(texnum, &basex, &basey, &w, &h);
+	if(w != PARTICLETEXTURESIZE || h != PARTICLETEXTURESIZE)
+		Sys_Error("invalid particle texture size for autogenerating");
 	for (y = 0;y < PARTICLETEXTURESIZE;y++)
 		memcpy(particletexturedata + ((basey + y) * PARTICLEFONTSIZE + basex) * 4, data + y * PARTICLETEXTURESIZE * 4, PARTICLETEXTURESIZE * 4);
 }
@@ -1800,8 +1819,11 @@ static void R_InitBloodTextures (unsigned char *particletexturedata)
 static void R_InitParticleTexture (void)
 {
 	int x, y, d, i, k, m;
+	int basex, basey, w, h;
 	float dx, dy, f;
 	vec3_t light;
+	char *buf;
+	fs_offset_t filesize;
 
 	// a note: decals need to modulate (multiply) the background color to
 	// properly darken it (stain), and they need to be able to alpha fade,
@@ -1814,11 +1836,27 @@ static void R_InitParticleTexture (void)
 
 #ifndef DUMPPARTICLEFONT
 	particlefonttexture = loadtextureimage(particletexturepool, "particles/particlefont.tga", false, TEXF_ALPHA | TEXF_PRECACHE | TEXF_FORCELINEAR, true);
-	if (!particlefonttexture)
+	if (particlefonttexture)
+	{
+		// TODO maybe allow custom grid size?
+		particlefontwidth = image_width;
+		particlefontheight = image_height;
+		particlefontcellwidth = image_width / 8;
+		particlefontcellheight = image_height / 8;
+		particlefontcols = 8;
+		particlefontrows = 8;
+	}
+	else
 #endif
 	{
 		unsigned char *particletexturedata = (unsigned char *)Mem_Alloc(tempmempool, PARTICLEFONTSIZE*PARTICLEFONTSIZE*4);
 		unsigned char data[PARTICLETEXTURESIZE][PARTICLETEXTURESIZE][4];
+
+		particlefontwidth = particlefontheight = PARTICLETEXTURESIZE;
+		particlefontcellwidth = particlefontcellheight = PARTICLEFONTSIZE;
+		particlefontcols = 8;
+		particlefontrows = 8;
+
 		memset(particletexturedata, 255, PARTICLEFONTSIZE*PARTICLEFONTSIZE*4);
 
 		// smoke
@@ -1946,13 +1984,12 @@ static void R_InitParticleTexture (void)
 	}
 	for (i = 0;i < MAX_PARTICLETEXTURES;i++)
 	{
-		int basex = ((i >> 0) & 7) * PARTICLETEXTURESIZE;
-		int basey = ((i >> 3) & 7) * PARTICLETEXTURESIZE;
+		CL_Particle_PixelCoordsForTexnum(i, &basex, &basey, &w, &h);
 		particletexture[i].texture = particlefonttexture;
-		particletexture[i].s1 = (basex + 1) / (float)PARTICLEFONTSIZE;
-		particletexture[i].t1 = (basey + 1) / (float)PARTICLEFONTSIZE;
-		particletexture[i].s2 = (basex + PARTICLETEXTURESIZE - 1) / (float)PARTICLEFONTSIZE;
-		particletexture[i].t2 = (basey + PARTICLETEXTURESIZE - 1) / (float)PARTICLEFONTSIZE;
+		particletexture[i].s1 = (basex + 1) / (float)particlefontwidth;
+		particletexture[i].t1 = (basey + 1) / (float)particlefontheight;
+		particletexture[i].s2 = (basex + w - 1) / (float)particlefontwidth;
+		particletexture[i].t2 = (basey + h - 1) / (float)particlefontheight;
 	}
 
 #ifndef DUMPPARTICLEFONT
@@ -1985,6 +2022,60 @@ static void R_InitParticleTexture (void)
 	particletexture[tex_beam].t1 = 0;
 	particletexture[tex_beam].s2 = 1;
 	particletexture[tex_beam].t2 = 1;
+
+	// now load an texcoord/texture override file
+	buf = (char *) FS_LoadFile("particles/particlefont.txt", tempmempool, false, &filesize);
+	if(buf)
+	{
+		const char *bufptr;
+		bufptr = buf;
+		for(;;)
+		{
+			if(!COM_ParseToken_Simple(&bufptr, true, false))
+				break;
+			if(!strcmp(com_token, "\n"))
+				continue; // empty line
+			i = atoi(com_token) % MAX_PARTICLETEXTURES;
+			particletexture[i].texture = particlefonttexture;
+
+			if (!COM_ParseToken_Simple(&bufptr, true, false))
+				break;
+			if (!strcmp(com_token, "\n"))
+			{
+				Con_Printf("particlefont file: syntax should be texnum texturename or texnum x y w h\n");
+				continue;
+			}
+			particletexture[i].s1 = atof(com_token);
+
+			if (!COM_ParseToken_Simple(&bufptr, true, false))
+				break;
+			if (!strcmp(com_token, "\n"))
+			{
+				Con_Printf("particlefont file: syntax should be texnum texturename or texnum x y w h\n");
+				continue;
+			}
+			particletexture[i].t1 = atof(com_token);
+
+			if (!COM_ParseToken_Simple(&bufptr, true, false))
+				break;
+			if (!strcmp(com_token, "\n"))
+			{
+				Con_Printf("particlefont file: syntax should be texnum texturename or texnum x y w h\n");
+				continue;
+			}
+			particletexture[i].s2 = atof(com_token);
+
+			if (!COM_ParseToken_Simple(&bufptr, true, false))
+				break;
+			if (!strcmp(com_token, "\n"))
+			{
+				Con_Printf("particlefont file: syntax should be texnum texturename or texnum x y w h\n");
+				continue;
+			}
+			particletexture[i].t2 = atof(com_token);
+		}
+		Mem_Free(buf);
+	}
 }
 
 static void r_part_start(void)
@@ -2313,16 +2404,27 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 			t2f[4] = tex->s2;t2f[5] = tex->t1;
 			t2f[6] = tex->s2;t2f[7] = tex->t2;
 			break;
-		case PARTICLE_BEAM:
+		case PARTICLE_VBEAM:
 			R_CalcBeam_Vertex3f(v3f, p->org, p->vel, size);
 			VectorSubtract(p->vel, p->org, up);
 			VectorNormalize(up);
 			v[0] = DotProduct(p->org, up) * (1.0f / 64.0f) * p->stretch;
 			v[1] = DotProduct(p->vel, up) * (1.0f / 64.0f) * p->stretch;
-			t2f[0] = 1;t2f[1] = v[0];
-			t2f[2] = 0;t2f[3] = v[0];
-			t2f[4] = 0;t2f[5] = v[1];
-			t2f[6] = 1;t2f[7] = v[1];
+			t2f[0] = tex->s2;t2f[1] = v[0];
+			t2f[2] = tex->s1;t2f[3] = v[0];
+			t2f[4] = tex->s1;t2f[5] = v[1];
+			t2f[6] = tex->s2;t2f[7] = v[1];
+			break;
+		case PARTICLE_HBEAM:
+			R_CalcBeam_Vertex3f(v3f, p->org, p->vel, size);
+			VectorSubtract(p->vel, p->org, up);
+			VectorNormalize(up);
+			v[0] = DotProduct(p->org, up) * (1.0f / 64.0f) * p->stretch;
+			v[1] = DotProduct(p->vel, up) * (1.0f / 64.0f) * p->stretch;
+			t2f[0] = v[0];t2f[1] = tex->t1;
+			t2f[2] = v[0];t2f[3] = tex->t2;
+			t2f[4] = v[1];t2f[5] = tex->t2;
+			t2f[6] = v[1];t2f[7] = tex->t1;
 			break;
 		}
 	}
@@ -2424,7 +2526,7 @@ void R_DrawParticles (void)
 			if (p->alpha <= 0 || p->die <= cl.time)
 				goto killparticle;
 
-			if (p->orientation != PARTICLE_BEAM && frametime > 0)
+			if (p->orientation != PARTICLE_VBEAM && p->orientation != PARTICLE_HBEAM && frametime > 0)
 			{
 				if (p->liquidfriction && (CL_PointSuperContents(p->org) & SUPERCONTENTS_LIQUIDSMASK))
 				{
