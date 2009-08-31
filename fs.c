@@ -1038,7 +1038,7 @@ FS_AddPack
  */
 qboolean FS_AddPack(const char *pakfile, qboolean *already_loaded, qboolean keep_plain_dirs)
 {
-	char fullpath[MAX_QPATH];
+	char fullpath[MAX_OSPATH];
 	int index;
 	searchpath_t *search;
 
@@ -2841,7 +2841,7 @@ Look for a file in the packages and in the filesystem
 int FS_FileType (const char *filename)
 {
 	searchpath_t *search;
-	char fullpath[MAX_QPATH];
+	char fullpath[MAX_OSPATH];
 
 	search = FS_FindFile (filename, NULL, true);
 	if(!search)
