@@ -169,7 +169,7 @@ static dllhandle_t curl_dll = NULL;
 
 typedef struct downloadinfo_s
 {
-	char filename[MAX_QPATH];
+	char filename[MAX_OSPATH];
 	char url[1024];
 	char referer[256];
 	qfile_t *stream;
@@ -682,7 +682,7 @@ static qboolean Curl_Begin(const char *URL, const char *name, qboolean ispak, qb
 	}
 	else
 	{
-		char fn[MAX_QPATH];
+		char fn[MAX_OSPATH];
 		const char *p, *q;
 		size_t length;
 		downloadinfo *di;
@@ -1389,7 +1389,7 @@ static const char *Curl_FindPackURL(const char *filename)
 typedef struct requirement_s
 {
 	struct requirement_s *next;
-	char filename[MAX_QPATH];
+	char filename[MAX_OSPATH];
 }
 requirement;
 static requirement *requirements = NULL;
