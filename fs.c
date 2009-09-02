@@ -3337,6 +3337,10 @@ unsigned char *FS_Deflate(const unsigned char *data, size_t size, size_t *deflat
 	unsigned char *out = NULL;
 	unsigned char *tmp;
 
+	*deflated_size = 0;
+	if(!zlib_dll)
+		return NULL;
+
 	memset(&strm, 0, sizeof(strm));
 	strm.zalloc = Z_NULL;
 	strm.zfree = Z_NULL;
@@ -3429,6 +3433,10 @@ unsigned char *FS_Inflate(const unsigned char *data, size_t size, size_t *inflat
 	unsigned char tmp[2048];
 	unsigned int have;
 	sizebuf_t outbuf;
+
+	*inflated_size = 0;
+	if(!zlib_dll)
+		return NULL;
 
 	memset(&outbuf, 0, sizeof(outbuf));
 	outbuf.data = (unsigned char *) Mem_Alloc(tempmempool, sizeof(tmp));
