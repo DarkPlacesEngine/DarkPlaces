@@ -2283,7 +2283,7 @@ static void SV_Download_f(void)
 		
 		Con_DPrintf("Downloading %s to %s\n", host_client->download_name, host_client->name);
 
-		if(host_client->download_deflate)
+		if(host_client->download_deflate && svs.csqc_progdata_deflated)
 			host_client->download_file = FS_FileFromData(svs.csqc_progdata_deflated, svs.csqc_progsize_deflated, true);
 		else
 			host_client->download_file = FS_FileFromData(svs.csqc_progdata, sv.csqc_progsize, true);
@@ -2717,8 +2717,13 @@ void SV_Prepare_CSQC(void)
 		//unsigned char *FS_Deflate(const unsigned char *data, size_t size, size_t *deflated_size, int level, mempool_t *mempool);
 		svs.csqc_progdata_deflated = FS_Deflate(svs.csqc_progdata, progsize, &deflated_size, -1, sv_mempool);
 		svs.csqc_progsize_deflated = (int)deflated_size;
-		Con_Printf("Deflated: %g%%\n", 100.0 - 100.0 * (deflated_size / (float)progsize));
-		Con_DPrintf("Uncompressed: %u\nCompressed:   %u\n", (unsigned)sv.csqc_progsize, (unsigned)svs.csqc_progsize_deflated);
+		if(svs.csqc_progdata_deflated)
+		{
+			Con_Printf("Deflated: %g%%\n", 100.0 - 100.0 * (deflated_size / (float)progsize));
+			Con_DPrintf("Uncompressed: %u\nCompressed:   %u\n", (unsigned)sv.csqc_progsize, (unsigned)svs.csqc_progsize_deflated);
+		}
+		else
+			Con_Printf("Cannot compress - need zlib for this. Using uncompressed progs only.\n");
 	}
 }
 

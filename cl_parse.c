@@ -1299,9 +1299,18 @@ void CL_StopDownload(int size, int crc)
 			size_t inflated_size;
 			out = FS_Inflate(cls.qw_downloadmemory, cls.qw_downloadmemorycursize, &inflated_size, tempmempool);
 			Mem_Free(cls.qw_downloadmemory);
-			Con_Printf("Inflated download: new size: %u (%g%%)\n", (unsigned)inflated_size, 100.0 - 100.0*(cls.qw_downloadmemorycursize / (float)inflated_size));
-			cls.qw_downloadmemory = out;
-			cls.qw_downloadmemorycursize = inflated_size;
+			if(out)
+			{
+				Con_Printf("Inflated download: new size: %u (%g%%)\n", (unsigned)inflated_size, 100.0 - 100.0*(cls.qw_downloadmemorycursize / (float)inflated_size));
+				cls.qw_downloadmemory = out;
+				cls.qw_downloadmemorycursize = inflated_size;
+			}
+			else
+			{
+				cls.qw_downloadmemory = NULL;
+				cls.qw_downloadmemorycursize = 0;
+				Con_Printf("Cannot inflate download, possibly corrupt or zlib not present\n");
+			}
 		}
 
 		if(!cls.qw_downloadmemory)
