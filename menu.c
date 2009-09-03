@@ -2729,7 +2729,7 @@ static void M_Reset_Draw (void)
 //=============================================================================
 /* VIDEO MENU */
 
-static video_resolution_t video_resolutions_hardcoded[] =
+video_resolution_t video_resolutions_hardcoded[] =
 {
 {"Standard 4x3"              ,  320, 240, 320, 240, 1     },
 {"Standard 4x3"              ,  400, 300, 400, 300, 1     },
