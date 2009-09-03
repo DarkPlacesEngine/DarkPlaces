@@ -301,6 +301,7 @@ void IN_BestWeapon (void)
 	// if we couldn't find any of the weapons, there's nothing more we can do...
 }
 
+#if 0
 void IN_CycleWeapon (void)
 {
 	int i, n;
@@ -347,6 +348,7 @@ void IN_CycleWeapon (void)
 	}
 	// if we couldn't find any of the weapons, there's nothing more we can do...
 }
+#endif
 
 /*
 ===============
@@ -1978,7 +1980,9 @@ void CL_InitInput (void)
 
 	// LordHavoc: added bestweapon command
 	Cmd_AddCommand ("bestweapon", IN_BestWeapon, "send an impulse number to server to select the first usable weapon out of several (example: 8 7 6 5 4 3 2 1)");
+#if 0
 	Cmd_AddCommand ("cycleweapon", IN_CycleWeapon, "send an impulse number to server to select the next usable weapon out of several (example: 9 4 8) if you are holding one of these, and choose the first one if you are holding none of these");
+#endif
 	Cmd_AddCommand ("register_bestweapon", IN_BestWeapon_Register_f, "(for QC usage only) change weapon parameters to be used by bestweapon; stuffcmd this in ClientConnect");
 
 	Cvar_RegisterVariable(&cl_movecliptokeyboard);
