@@ -2800,9 +2800,9 @@ static int menu_video_resolution;
 video_resolution_t *video_resolutions;
 int video_resolutions_count;
 
-video_resolution_t *menu_video_resolutions;
-int menu_video_resolutions_count;
-qboolean menu_video_resolutions_forfullscreen;
+static video_resolution_t *menu_video_resolutions;
+static int menu_video_resolutions_count;
+static qboolean menu_video_resolutions_forfullscreen;
 
 static void M_Menu_Video_FindResolution(int w, int h, float a)
 {
