@@ -2790,54 +2790,75 @@ static video_resolution_t video_resolutions_hardcoded[] =
 {NULL, 0, 0, 0, 0, 0}
 };
 // this is the number of the default mode (640x480) in the list above
+int video_resolutions_hardcoded_count = sizeof(video_resolutions_hardcoded) / sizeof(*video_resolutions_hardcoded) - 1;
 
 #define VIDEO_ITEMS 11
 static int video_cursor = 0;
 static int video_cursor_table[VIDEO_ITEMS] = {68, 88, 96, 104, 112, 120, 128, 136, 144, 152, 168};
-static int video_resolution;
+static int menu_video_resolution;
 
 video_resolution_t *video_resolutions;
 int video_resolutions_count;
 
-void M_Menu_Video_f (void)
+video_resolution_t *menu_video_resolutions;
+int menu_video_resolutions_count;
+qboolean menu_video_resolutions_forfullscreen;
+
+static void M_Menu_Video_FindResolution(int w, int h, float a)
 {
 	int i;
 
+	if(menu_video_resolutions_forfullscreen)
+	{
+		menu_video_resolutions = video_resolutions;
+		menu_video_resolutions_count = video_resolutions_count;
+	}
+	else
+	{
+		menu_video_resolutions = video_resolutions_hardcoded;
+		menu_video_resolutions_count = video_resolutions_hardcoded_count;
+	}
+
+	// Look for the closest match to the current resolution
+	menu_video_resolution = 0;
+	for (i = 1;i < menu_video_resolutions_count;i++)
+	{
+		// if the new mode would be a worse match in width, skip it
+		if (fabs(menu_video_resolutions[i].width - w) > fabs(menu_video_resolutions[menu_video_resolution].width - w))
+			continue;
+		// if it is equal in width, check height
+		if (menu_video_resolutions[i].width == w && menu_video_resolutions[menu_video_resolution].width == w)
+		{
+			// if the new mode would be a worse match in height, skip it
+			if (fabs(menu_video_resolutions[i].height - h) > fabs(menu_video_resolutions[menu_video_resolution].height - h))
+				continue;
+			// if it is equal in width and height, check pixel aspect
+			if (menu_video_resolutions[i].height == h && menu_video_resolutions[menu_video_resolution].height == h)
+			{
+				// if the new mode would be a worse match in pixel aspect, skip it
+				if (fabs(menu_video_resolutions[i].pixelheight - a) > fabs(menu_video_resolutions[menu_video_resolution].pixelheight - a))
+					continue;
+				// if it is equal in everything, skip it (prefer earlier modes)
+				if (menu_video_resolutions[i].pixelheight == a && menu_video_resolutions[menu_video_resolution].pixelheight == a)
+					continue;
+				// better match for width, height, and pixel aspect
+				menu_video_resolution = i;
+			}
+			else // better match for width and height
+				menu_video_resolution = i;
+		}
+		else // better match for width
+			menu_video_resolution = i;
+	}
+}
+
+void M_Menu_Video_f (void)
+{
 	key_dest = key_menu;
 	m_state = m_video;
 	m_entersound = true;
 
-	// Look for the closest match to the current resolution
-	video_resolution = 0;
-	for (i = 1;i < video_resolutions_count;i++)
-	{
-		// if the new mode would be a worse match in width, skip it
-		if (fabs(video_resolutions[i].width - vid.width) > fabs(video_resolutions[video_resolution].width - vid.width))
-			continue;
-		// if it is equal in width, check height
-		if (video_resolutions[i].width == vid.width && video_resolutions[video_resolution].width == vid.width)
-		{
-			// if the new mode would be a worse match in height, skip it
-			if (fabs(video_resolutions[i].height - vid.height) > fabs(video_resolutions[video_resolution].height - vid.height))
-				continue;
-			// if it is equal in width and height, check pixel aspect
-			if (video_resolutions[i].height == vid.height && video_resolutions[video_resolution].height == vid.height)
-			{
-				// if the new mode would be a worse match in pixel aspect, skip it
-				if (fabs(video_resolutions[i].pixelheight - vid_pixelheight.value) > fabs(video_resolutions[video_resolution].pixelheight - vid_pixelheight.value))
-					continue;
-				// if it is equal in everything, skip it (prefer earlier modes)
-				if (video_resolutions[i].pixelheight == vid_pixelheight.value && video_resolutions[video_resolution].pixelheight == vid_pixelheight.value)
-					continue;
-				// better match for width, height, and pixel aspect
-				video_resolution = i;
-			}
-			else // better match for width and height
-				video_resolution = i;
-		}
-		else // better match for width
-			video_resolution = i;
-	}
+	M_Menu_Video_FindResolution(vid.width, vid.height, vid_pixelheight.value);
 }
 
 
@@ -2845,6 +2866,13 @@ static void M_Video_Draw (void)
 {
 	int t;
 	cachepic_t	*p;
+
+	if(!!vid_fullscreen.integer != menu_video_resolutions_forfullscreen)
+	{
+		video_resolution_t *res = &menu_video_resolutions[menu_video_resolution];
+		menu_video_resolutions_forfullscreen = !!vid_fullscreen.integer;
+		M_Menu_Video_FindResolution(res->width, res->height, res->pixelheight);
+	}
 
 	M_Background(320, 200);
 
@@ -2861,8 +2889,8 @@ static void M_Video_Draw (void)
 	else
 		M_Print(220, video_cursor_table[t] - 12, va("%dx%d", vid.width, vid.height));
 	M_Print(16, video_cursor_table[t], "        New Resolution");
-	M_Print(220, video_cursor_table[t], va("%dx%d", video_resolutions[video_resolution].width, video_resolutions[video_resolution].height));
-	M_Print(96, video_cursor_table[t] + 8, va("Type: %s", video_resolutions[video_resolution].type));
+	M_Print(220, video_cursor_table[t], va("%dx%d", menu_video_resolutions[menu_video_resolution].width, menu_video_resolutions[menu_video_resolution].height));
+	M_Print(96, video_cursor_table[t] + 8, va("Type: %s", menu_video_resolutions[menu_video_resolution].type));
 	t++;
 
 	// Bits per pixel
@@ -2927,14 +2955,14 @@ static void M_Menu_Video_AdjustSliders (int dir)
 	{
 		// Resolution
 		int r;
-		for(r = 0;r < video_resolutions_count;r++)
+		for(r = 0;r < menu_video_resolutions_count;r++)
 		{
-			video_resolution += dir;
-			if (video_resolution >= video_resolutions_count)
-				video_resolution = 0;
-			if (video_resolution < 0)
-				video_resolution = video_resolutions_count - 1;
-			if (video_resolutions[video_resolution].width >= vid_minwidth.integer && video_resolutions[video_resolution].height >= vid_minheight.integer)
+			menu_video_resolution += dir;
+			if (menu_video_resolution >= menu_video_resolutions_count)
+				menu_video_resolution = 0;
+			if (menu_video_resolution < 0)
+				menu_video_resolution = menu_video_resolutions_count - 1;
+			if (menu_video_resolutions[menu_video_resolution].width >= vid_minwidth.integer && menu_video_resolutions[menu_video_resolution].height >= vid_minheight.integer)
 				break;
 		}
 	}
@@ -2981,11 +3009,11 @@ static void M_Video_Key (int key, int ascii)
 			switch (video_cursor)
 			{
 				case (VIDEO_ITEMS - 1):
-					Cvar_SetValueQuick (&vid_width, video_resolutions[video_resolution].width);
-					Cvar_SetValueQuick (&vid_height, video_resolutions[video_resolution].height);
-					Cvar_SetValueQuick (&vid_conwidth, video_resolutions[video_resolution].conwidth);
-					Cvar_SetValueQuick (&vid_conheight, video_resolutions[video_resolution].conheight);
-					Cvar_SetValueQuick (&vid_pixelheight, video_resolutions[video_resolution].pixelheight);
+					Cvar_SetValueQuick (&vid_width, menu_video_resolutions[menu_video_resolution].width);
+					Cvar_SetValueQuick (&vid_height, menu_video_resolutions[menu_video_resolution].height);
+					Cvar_SetValueQuick (&vid_conwidth, menu_video_resolutions[menu_video_resolution].conwidth);
+					Cvar_SetValueQuick (&vid_conheight, menu_video_resolutions[menu_video_resolution].conheight);
+					Cvar_SetValueQuick (&vid_pixelheight, menu_video_resolutions[menu_video_resolution].pixelheight);
 					Cbuf_AddText ("vid_restart\n");
 					M_Menu_Options_f ();
 					break;
@@ -5370,6 +5398,9 @@ void MR_Init(void)
 		video_resolutions = video_resolutions_hardcoded;
 		video_resolutions_count = sizeof(video_resolutions_hardcoded) / sizeof(*video_resolutions_hardcoded) - 1;
 	}
+
+	menu_video_resolutions_forfullscreen = !!vid_fullscreen.integer;
+	M_Menu_Video_FindResolution(vid.width, vid.height, vid_pixelheight.value);
 
 	// use -forceqmenu to use always the normal quake menu (it sets forceqmenu to 1)
 // COMMANDLINEOPTION: Client: -forceqmenu disables menu.dat (same as +forceqmenu 1)
