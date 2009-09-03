@@ -224,12 +224,14 @@ vector	getresolution(float number)
 */
 void VM_M_getresolution(void)
 {
-	int nr;
-	VM_SAFEPARMCOUNT(1, VM_getresolution);
+	int nr, fs;
+	VM_SAFEPARMCOUNTRANGE(1, 2, VM_getresolution);
 
 	nr = (int)PRVM_G_FLOAT(OFS_PARM0);
 
-	if(nr < 0 || nr >= video_resolutions_count)
+	l = ((prog->argc <= 1) || ((int)PRVM_G_FLOAT(OFS_PARM1)));
+
+	if(nr < 0 || nr >= (l ? video_resolutions_count : video_resolutions_hardcoded_count))
 	{
 		PRVM_G_VECTOR(OFS_RETURN)[0] = 0;
 		PRVM_G_VECTOR(OFS_RETURN)[1] = 0;
@@ -237,8 +239,8 @@ void VM_M_getresolution(void)
 	}
 	else
 	{
-		PRVM_G_VECTOR(OFS_RETURN)[0] = video_resolutions[nr].width;
-		PRVM_G_VECTOR(OFS_RETURN)[1] = video_resolutions[nr].height;
+		PRVM_G_VECTOR(OFS_RETURN)[0] = (l ? video_resolutions : video_resolutions_hardcoded)[nr].width;
+		PRVM_G_VECTOR(OFS_RETURN)[1] = (l ? video_resolutions : video_resolutions_hardcoded)[nr].height;
 		PRVM_G_VECTOR(OFS_RETURN)[2] = 0;
 	}
 }
@@ -1450,7 +1452,7 @@ VM_M_getmousetarget,				// #604 float getmousetarget(void)
 VM_M_callfunction,				// #605 void callfunction(...)
 VM_writetofile,					// #606 void writetofile(float fhandle, entity ent)
 VM_M_isfunction,					// #607 float isfunction(string function_name)
-VM_M_getresolution,				// #608 vector getresolution(float number)
+VM_M_getresolution,				// #608 vector getresolution(float number, [float forfullscreen])
 VM_keynumtostring,				// #609 string keynumtostring(float keynum)
 VM_findkeysforcommand,		// #610 string findkeysforcommand(string command)
 VM_M_getserverliststat,			// #611 float gethostcachevalue(float type)
