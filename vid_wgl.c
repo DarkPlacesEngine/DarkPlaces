@@ -17,10 +17,16 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
-// gl_vidnt.c -- NT GL vid component
+// vid_wgl.c -- NT GL vid component
 
-// we don't need a very new dinput
-#define DIRECTINPUT_VERSION 0x0300
+#ifdef SUPPORTDIRECTX
+// Include DX libs
+#pragma comment(lib, "dinput8.lib")
+#pragma comment(lib, "dxguid.lib")
+#ifndef DIRECTINPUT_VERSION
+#	define DIRECTINPUT_VERSION 0x0500  /* Version 5.0 */
+#endif
+#endif
 
 #include "quakedef.h"
 #include <windows.h>
