@@ -11,6 +11,8 @@ Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
 		Debug|x64 = Debug|x64
+		Profile|Win32 = Profile|Win32
+		Profile|x64 = Profile|x64
 		Release|Win32 = Release|Win32
 		Release|x64 = Release|x64
 	EndGlobalSection
@@ -19,6 +21,10 @@ Global
 		{2A31FD21-E0DF-462F-BB97-844CCD7B9E19}.Debug|Win32.Build.0 = Debug|Win32
 		{2A31FD21-E0DF-462F-BB97-844CCD7B9E19}.Debug|x64.ActiveCfg = Debug|x64
 		{2A31FD21-E0DF-462F-BB97-844CCD7B9E19}.Debug|x64.Build.0 = Debug|x64
+		{2A31FD21-E0DF-462F-BB97-844CCD7B9E19}.Profile|Win32.ActiveCfg = Profile|Win32
+		{2A31FD21-E0DF-462F-BB97-844CCD7B9E19}.Profile|Win32.Build.0 = Profile|Win32
+		{2A31FD21-E0DF-462F-BB97-844CCD7B9E19}.Profile|x64.ActiveCfg = Profile|x64
+		{2A31FD21-E0DF-462F-BB97-844CCD7B9E19}.Profile|x64.Build.0 = Profile|x64
 		{2A31FD21-E0DF-462F-BB97-844CCD7B9E19}.Release|Win32.ActiveCfg = Release|Win32
 		{2A31FD21-E0DF-462F-BB97-844CCD7B9E19}.Release|Win32.Build.0 = Release|Win32
 		{2A31FD21-E0DF-462F-BB97-844CCD7B9E19}.Release|x64.ActiveCfg = Release|x64
@@ -27,6 +33,10 @@ Global
 		{F8FBA9F0-F4E4-4B22-B6D1-21F7FB9C72F7}.Debug|Win32.Build.0 = Debug|Win32
 		{F8FBA9F0-F4E4-4B22-B6D1-21F7FB9C72F7}.Debug|x64.ActiveCfg = Debug|x64
 		{F8FBA9F0-F4E4-4B22-B6D1-21F7FB9C72F7}.Debug|x64.Build.0 = Debug|x64
+		{F8FBA9F0-F4E4-4B22-B6D1-21F7FB9C72F7}.Profile|Win32.ActiveCfg = Profile|Win32
+		{F8FBA9F0-F4E4-4B22-B6D1-21F7FB9C72F7}.Profile|Win32.Build.0 = Profile|Win32
+		{F8FBA9F0-F4E4-4B22-B6D1-21F7FB9C72F7}.Profile|x64.ActiveCfg = Profile|x64
+		{F8FBA9F0-F4E4-4B22-B6D1-21F7FB9C72F7}.Profile|x64.Build.0 = Profile|x64
 		{F8FBA9F0-F4E4-4B22-B6D1-21F7FB9C72F7}.Release|Win32.ActiveCfg = Release|Win32
 		{F8FBA9F0-F4E4-4B22-B6D1-21F7FB9C72F7}.Release|Win32.Build.0 = Release|Win32
 		{F8FBA9F0-F4E4-4B22-B6D1-21F7FB9C72F7}.Release|x64.ActiveCfg = Release|x64
@@ -35,6 +45,10 @@ Global
 		{4C61C95C-3753-46B8-B817-4D57E48A9C45}.Debug|Win32.Build.0 = Debug|Win32
 		{4C61C95C-3753-46B8-B817-4D57E48A9C45}.Debug|x64.ActiveCfg = Debug|x64
 		{4C61C95C-3753-46B8-B817-4D57E48A9C45}.Debug|x64.Build.0 = Debug|x64
+		{4C61C95C-3753-46B8-B817-4D57E48A9C45}.Profile|Win32.ActiveCfg = Profile|Win32
+		{4C61C95C-3753-46B8-B817-4D57E48A9C45}.Profile|Win32.Build.0 = Profile|Win32
+		{4C61C95C-3753-46B8-B817-4D57E48A9C45}.Profile|x64.ActiveCfg = Profile|x64
+		{4C61C95C-3753-46B8-B817-4D57E48A9C45}.Profile|x64.Build.0 = Profile|x64
 		{4C61C95C-3753-46B8-B817-4D57E48A9C45}.Release|Win32.ActiveCfg = Release|Win32
 		{4C61C95C-3753-46B8-B817-4D57E48A9C45}.Release|Win32.Build.0 = Release|Win32
 		{4C61C95C-3753-46B8-B817-4D57E48A9C45}.Release|x64.ActiveCfg = Release|x64
@@ -42,5 +56,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		AMDCaProjectFile = C:\Development\Quake\DarkPlaces\CodeAnalyst\darkplaces.caw
 	EndGlobalSection
 EndGlobal
