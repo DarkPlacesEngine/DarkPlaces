@@ -301,6 +301,9 @@ typedef struct entity_render_s
 	// subframe numbers (-1 if not used) and their blending scalers (0-1), if interpolation is not desired, use subframeblend[0].subframe
 	frameblend_t frameblend[MAX_FRAMEBLENDS];
 
+	// animation cache index
+	int animcacheindex;
+
 	// current lighting from map (updated ONLY by client code, not renderer)
 	vec3_t modellight_ambient;
 	vec3_t modellight_diffuse; // q3bsp

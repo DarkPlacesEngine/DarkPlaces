@@ -45,6 +45,8 @@ cvar_t r_motionblur_maxblur = {CVAR_SAVE, "r_motionblur_maxblur", "0.88", "cap f
 cvar_t r_motionblur_randomize = {CVAR_SAVE, "r_motionblur_randomize", "0.1", "randomizing coefficient to workaround ghosting"};
 cvar_t r_motionblur_debug = {0, "r_motionblur_debug", "0", "outputs current motionblur alpha value"};
 
+cvar_t r_animcache = {CVAR_SAVE, "r_animcache", "1", "cache animation frames to save CPU usage, primarily optimizes shadows and reflections"};
+
 cvar_t r_depthfirst = {CVAR_SAVE, "r_depthfirst", "0", "renders a depth-only version of the scene before normal rendering begins to eliminate overdraw, values: 0 = off, 1 = world depth, 2 = world and model depth"};
 cvar_t r_useinfinitefarclip = {CVAR_SAVE, "r_useinfinitefarclip", "1", "enables use of a special kind of projection matrix that has an extremely large farclip"};
 cvar_t r_nearclip = {0, "r_nearclip", "1", "distance from camera of nearclip plane" };
@@ -2405,6 +2407,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_motionblur_vcoeff);
 	Cvar_RegisterVariable(&r_motionblur_randomize);
 	Cvar_RegisterVariable(&r_damageblur);
+	Cvar_RegisterVariable(&r_animcache);
 	Cvar_RegisterVariable(&r_motionblur_debug);
 	Cvar_RegisterVariable(&r_depthfirst);
 	Cvar_RegisterVariable(&r_useinfinitefarclip);
@@ -2646,6 +2649,132 @@ int R_CullBoxCustomPlanes(const vec3_t mins, const vec3_t maxs, int numplanes, c
 		}
 	}
 	return false;
+}
+
+//==================================================================================
+
+/**
+ * Animation cache helps save re-animating a player mesh if it's re-rendered again in a given frame
+ * (reflections, lighting, etc). All animation cache becomes invalid on the next frame and is flushed
+ * (well, over-wrote). The memory for each cache is kept around to save on allocation thrashing.
+ */
+
+typedef struct
+{
+	int numVerts;
+	float *vertexes;
+	float *normals;
+	float *sVectors;
+	float *tVectors;
+} anim_cache_t;
+
+static anim_cache_t r_animCache[MAX_EDICTS];
+static int r_numAnimCache;
+
+void R_EmptyAnimCache()
+{
+	int idx;
+	for (idx=0 ; idx<r_numAnimCache ; idx++)
+	{
+		r_animCache[idx].numVerts = 0;
+		Mem_Free(r_animCache[idx].vertexes);
+		r_animCache[idx].vertexes = NULL;
+		r_animCache[idx].normals = NULL;
+		r_animCache[idx].sVectors = NULL;
+		r_animCache[idx].tVectors = NULL;
+	}
+	r_numAnimCache = 0;
+}
+
+void R_ResizeAnimCache(const int cacheIdx, const int numVerts)
+{
+	int arraySize;
+	float *base;
+	anim_cache_t *cache = &r_animCache[cacheIdx];
+
+	if (cache->numVerts >= numVerts)
+		return;
+
+	// Release existing memory
+	if (cache->vertexes)
+		Mem_Free(cache->vertexes);
+
+	// Pad by 1024 verts
+	cache->numVerts = (numVerts + 1023) & ~1023;
+	arraySize = cache->numVerts * 3;
+
+	// Allocate, even if we don't need this memory in this instance it will get ignored and potentially used later
+	base = (float *)Mem_Alloc(r_main_mempool, arraySize * sizeof(float) * 4);
+	r_animCache[cacheIdx].vertexes = base;
+	r_animCache[cacheIdx].normals = base + arraySize;
+	r_animCache[cacheIdx].sVectors = base + arraySize*2;
+	r_animCache[cacheIdx].tVectors = base + arraySize*3;
+
+//	Con_Printf("allocated cache for %i (%f KB)\n", cacheIdx, (arraySize*sizeof(float)*4)/1024.0f);
+}
+
+void R_RunAnimCache()
+{
+	int entIdx, cacheIdx;
+	entity_render_t *ent;
+	dp_model_t *model;
+
+	// Only proceed if desired
+	if (!r_animcache.integer || !r_drawentities.integer)
+	{
+		// Flush memory
+		if (r_numAnimCache != 0)
+		{
+			R_EmptyAnimCache();
+
+			// Clear any existing animcacheindex references
+			for (entIdx=0 ; entIdx<r_refdef.scene.numentities ; entIdx++)
+			{
+				ent = r_refdef.scene.entities[entIdx];
+				ent->animcacheindex = 0;
+			}
+		}
+		return;
+	}
+
+	// Generate new cache
+	cacheIdx = 0;
+	for (entIdx=0 ; entIdx<r_refdef.scene.numentities ; entIdx++)
+	{
+		ent = r_refdef.scene.entities[entIdx];
+
+		if (!r_refdef.viewcache.entityvisible[entIdx])
+		{
+			ent->animcacheindex = 0;
+			continue;
+		}
+
+		model = ent->model;
+		if (model && model->Draw != NULL
+		&& model->surfmesh.isanimated && model->AnimateVertices && (ent->frameblend[0].lerp != 1 || ent->frameblend[0].subframe != 0))
+		{
+			R_ResizeAnimCache(cacheIdx, model->surfmesh.num_vertices);
+
+			// FIXME: Some stable way of determining if normals/tangets aren't going to be needed would be good for optimizing this
+			model->AnimateVertices(
+				model, ent->frameblend,
+				r_animCache[cacheIdx].vertexes,
+				r_animCache[cacheIdx].normals,
+				r_animCache[cacheIdx].sVectors,
+				r_animCache[cacheIdx].tVectors
+			);
+
+			cacheIdx++;
+			ent->animcacheindex = cacheIdx;
+		}
+		else
+		{
+			ent->animcacheindex = 0;
+		}
+	}
+
+	// Increase our limit if necessary
+	r_numAnimCache = max(r_numAnimCache, cacheIdx);
 }
 
 //==================================================================================
@@ -4164,6 +4293,7 @@ void R_RenderScene(void)
 	if (r_refdef.scene.extraupdate)
 		S_ExtraUpdate ();
 
+	R_RunAnimCache();
 	R_DrawModels();
 	if (r_timereport_active)
 		R_TimeReport("models");
@@ -5144,7 +5274,14 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 	}
 	if (model->surfmesh.isanimated && model->AnimateVertices && (rsurface.frameblend[0].lerp != 1 || rsurface.frameblend[0].subframe != 0))
 	{
-		if (wanttangents)
+		if (ent->animcacheindex != 0)
+		{
+			rsurface.modelvertex3f = r_animCache[ent->animcacheindex-1].vertexes;
+			rsurface.modelsvector3f = r_animCache[ent->animcacheindex-1].sVectors;
+			rsurface.modeltvector3f = r_animCache[ent->animcacheindex-1].tVectors;
+			rsurface.modelnormal3f = r_animCache[ent->animcacheindex-1].normals;
+		}
+		else if (wanttangents)
 		{
 			rsurface.modelvertex3f = rsurface.array_modelvertex3f;
 			rsurface.modelsvector3f = rsurface.array_modelsvector3f;
