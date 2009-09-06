@@ -2671,7 +2671,7 @@ typedef struct
 static anim_cache_t r_animCache[MAX_EDICTS];
 static int r_numAnimCache;
 
-void R_EmptyAnimCache()
+void R_EmptyAnimCache(void)
 {
 	int idx;
 	for (idx=0 ; idx<r_numAnimCache ; idx++)
@@ -2713,7 +2713,7 @@ void R_ResizeAnimCache(const int cacheIdx, const int numVerts)
 //	Con_Printf("allocated cache for %i (%f KB)\n", cacheIdx, (arraySize*sizeof(float)*4)/1024.0f);
 }
 
-void R_RunAnimCache()
+void R_RunAnimCache(void)
 {
 	int entIdx, cacheIdx;
 	entity_render_t *ent;
