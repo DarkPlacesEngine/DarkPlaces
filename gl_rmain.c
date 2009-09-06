@@ -2718,6 +2718,8 @@ void R_RunAnimCache(void)
 	int entIdx, cacheIdx;
 	entity_render_t *ent;
 	dp_model_t *model;
+	qboolean bWantNormals;
+	qboolean bWantTangents;
 
 	// Only proceed if desired
 	if (!r_animcache.integer || !r_drawentities.integer)
@@ -2756,12 +2758,15 @@ void R_RunAnimCache(void)
 			R_ResizeAnimCache(cacheIdx, model->surfmesh.num_vertices);
 
 			// FIXME: Some stable way of determining if normals/tangets aren't going to be needed would be good for optimizing this
+			// Need to consider deformvertexes and tcgens that need normals and/or tangents (otherwise they'll slow-path generate them later), as well as some rendering settings
+			bWantNormals = true;
+			bWantTangents = bWantNormals && (r_glsl.integer && gl_support_fragment_shader);
 			model->AnimateVertices(
 				model, ent->frameblend,
 				r_animCache[cacheIdx].vertexes,
-				r_animCache[cacheIdx].normals,
-				r_animCache[cacheIdx].sVectors,
-				r_animCache[cacheIdx].tVectors
+				bWantNormals ? r_animCache[cacheIdx].normals : NULL,
+				bWantTangents ? r_animCache[cacheIdx].sVectors : NULL,
+				bWantTangents ? r_animCache[cacheIdx].tVectors : NULL
 			);
 
 			cacheIdx++;
