@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 10.00
-# Visual C++ Express 2008
+# Visual Studio 2008
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "darkplaces", "darkplaces.vcproj", "{2A31FD21-E0DF-462F-BB97-844CCD7B9E19}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "darkplaces-dedicated", "darkplaces-dedicated.vcproj", "{F8FBA9F0-F4E4-4B22-B6D1-21F7FB9C72F7}"
