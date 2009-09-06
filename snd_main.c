@@ -166,6 +166,7 @@ cvar_t snd_spatialization_min = {CVAR_SAVE, "snd_spatialization_min", "0.70", "m
 cvar_t snd_spatialization_max = {CVAR_SAVE, "snd_spatialization_max", "0.95", "maximum spatialization of sounds"};
 cvar_t snd_spatialization_power = {CVAR_SAVE, "snd_spatialization_power", "0", "exponent of the spatialization falloff curve (0: logarithmic)"};
 cvar_t snd_spatialization_control = {CVAR_SAVE, "snd_spatialization_control", "0", "enable spatialization control (headphone friendly mode)"};
+cvar_t snd_spatialization_occlusion = {CVAR_SAVE, "snd_spatialization_occlusion", "1", "enable occlusion testing on spatialized sounds, which simply quiets sounds that are blocked by the world"};
 
 // Cvars declared in snd_main.h (shared with other snd_*.c files)
 cvar_t _snd_mixahead = {CVAR_SAVE, "_snd_mixahead", "0.11", "how much sound to mix ahead of time"};
@@ -809,6 +810,7 @@ void S_Init(void)
 	Cvar_RegisterVariable(&snd_spatialization_max);
 	Cvar_RegisterVariable(&snd_spatialization_power);
 	Cvar_RegisterVariable(&snd_spatialization_control);
+	Cvar_RegisterVariable(&snd_spatialization_occlusion);
 
 	Cvar_RegisterVariable(&snd_speed);
 	Cvar_RegisterVariable(&snd_width);
@@ -1370,6 +1372,17 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 				}
 
 				vol = intensity * max(0, source_vec[0] * snd_speakerlayout.listeners[i].dotscale + snd_speakerlayout.listeners[i].dotbias);
+
+				if (snd_spatialization_occlusion.integer)
+				{
+					if (cl.worldmodel
+					&& cl.worldmodel->brush.TraceLineOfSight
+					&& !cl.worldmodel->brush.TraceLineOfSight(cl.worldmodel, listener_origin, source_vec))
+					{
+						vol *= 0.5f;
+					}
+				}
+
 				ch->listener_volume[i] = (int)bound(0, vol, 255);
 			}
 		}
