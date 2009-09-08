@@ -1488,7 +1488,7 @@ static void FS_ListGameDirs(void)
 	}
 	stringlistfreecontents(&list);
 
-	fs_all_gamedirs = Mem_Alloc(fs_mempool, list2.numstrings * sizeof(*fs_all_gamedirs));
+	fs_all_gamedirs = (gamedir_t *)Mem_Alloc(fs_mempool, list2.numstrings * sizeof(*fs_all_gamedirs));
 	for(i = 0; i < list2.numstrings; ++i)
 	{
 		info = FS_CheckGameDir(list2.strings[i]);
