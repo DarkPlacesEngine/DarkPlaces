@@ -2760,7 +2760,7 @@ void R_RunAnimCache(void)
 			// FIXME: Some stable way of determining if normals/tangets aren't going to be needed would be good for optimizing this
 			// Need to consider deformvertexes and tcgens that need normals and/or tangents (otherwise they'll slow-path generate them later), as well as some rendering settings
 			bWantNormals = true;
-			bWantTangents = bWantNormals && (r_glsl.integer && gl_support_fragment_shader);
+			bWantTangents = true;//bWantNormals && (r_glsl.integer && gl_support_fragment_shader);
 			model->AnimateVertices(
 				model, ent->frameblend,
 				r_animCache[cacheIdx].vertexes,
@@ -5282,9 +5282,9 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 		if (ent->animcacheindex != 0)
 		{
 			rsurface.modelvertex3f = r_animCache[ent->animcacheindex-1].vertexes;
-			rsurface.modelsvector3f = r_animCache[ent->animcacheindex-1].sVectors;
-			rsurface.modeltvector3f = r_animCache[ent->animcacheindex-1].tVectors;
-			rsurface.modelnormal3f = r_animCache[ent->animcacheindex-1].normals;
+			rsurface.modelsvector3f = wanttangents ? r_animCache[ent->animcacheindex-1].sVectors : NULL;
+			rsurface.modeltvector3f = wanttangents ? r_animCache[ent->animcacheindex-1].tVectors : NULL;
+			rsurface.modelnormal3f = wantnormals ? r_animCache[ent->animcacheindex-1].normals : NULL;
 		}
 		else if (wanttangents)
 		{
