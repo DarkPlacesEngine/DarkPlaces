@@ -1377,7 +1377,7 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 				{
 					if (cl.worldmodel
 					&& cl.worldmodel->brush.TraceLineOfSight
-					&& !cl.worldmodel->brush.TraceLineOfSight(cl.worldmodel, listener_origin, source_vec))
+					&& !cl.worldmodel->brush.TraceLineOfSight(cl.worldmodel, listener_origin, ch->origin))
 					{
 						vol *= 0.5f;
 					}
