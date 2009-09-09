@@ -991,8 +991,12 @@ static void Host_Init (void)
 		srand(time(NULL));
 
 	// FIXME: this is evil, but possibly temporary
+	// LordHavoc: doesn't seem very temporary...
+	// LordHavoc: enabled this by default on debug
+#ifndef DEBUG
 // COMMANDLINEOPTION: Console: -developer enables warnings and other notices (RECOMMENDED for mod developers)
 	if (COM_CheckParm("-developer"))
+#endif
 	{
 		developer.value = developer.integer = 1;
 		developer.string = "1";
