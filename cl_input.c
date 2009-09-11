@@ -1338,6 +1338,7 @@ void CL_UpdateMoveVars(void)
 	}
 	else if (cl.stats[STAT_MOVEVARS_TICRATE])
 	{
+		cl.movevars_ticrate = cl.statsf[STAT_MOVEVARS_TICRATE];
 		cl.movevars_timescale = cl.statsf[STAT_MOVEVARS_TIMESCALE];
 		cl.movevars_gravity = cl.statsf[STAT_MOVEVARS_GRAVITY];
 		cl.movevars_stopspeed = cl.statsf[STAT_MOVEVARS_STOPSPEED] ;
@@ -1368,6 +1369,7 @@ void CL_UpdateMoveVars(void)
 	}
 	else
 	{
+		cl.movevars_ticrate = slowmo.value / bound(1.0f, cl_netfps.value, 1000.0f);
 		cl.movevars_timescale = slowmo.value;
 		cl.movevars_gravity = sv_gravity.value;
 		cl.movevars_stopspeed = cl_movement_stopspeed.value;
@@ -1655,6 +1657,11 @@ void CL_SendMove(void)
 	// don't send too often or else network connections can get clogged by a
 	// high renderer framerate
 	packettime = 1.0 / bound(1, cl_netfps.value, 1000);
+	if (cl.movevars_timescale && cl.movevars_ticrate)
+	{
+		float maxtic = cl.movevars_ticrate / cl.movevars_timescale;
+		packettime = min(packettime, maxtic);
+	}
 	// send input every frame in singleplayer
 	if (cl.islocalgame)
 		packettime = 0;
