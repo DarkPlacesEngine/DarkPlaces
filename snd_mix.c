@@ -105,6 +105,10 @@ static void S_ConvertPaintBuffer(const portable_sampleframe_t *painted_ptr, void
 				*snd_out++ = bound(-32768, val, 32767);
 			}
 		}
+
+		// noise is really really annoying
+		if (cls.timedemo)
+			memset(rb_ptr, 0, nbframes * channels * width);
 	}
 	else  // 8bit
 	{
@@ -161,6 +165,10 @@ static void S_ConvertPaintBuffer(const portable_sampleframe_t *painted_ptr, void
 				*snd_out++ = bound(0, val, 255);
 			}
 		}
+
+		// noise is really really annoying
+		if (cls.timedemo)
+			memset(rb_ptr, 128, nbframes * channels);
 	}
 }
 
