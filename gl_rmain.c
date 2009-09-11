@@ -2675,7 +2675,7 @@ r_animcache_entity_t;
 
 typedef struct r_animcache_s
 {
-	r_animcache_entity_t entity[MAX_EDICTS];
+	r_animcache_entity_t entity[MAX_EDICTS*2];
 	int maxindex;
 	int currentindex;
 }
