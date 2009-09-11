@@ -63,7 +63,6 @@ cvar_t sv_areagrid_mingridsize = {CVAR_NOTIFY, "sv_areagrid_mingridsize", "64", 
 cvar_t sv_checkforpacketsduringsleep = {0, "sv_checkforpacketsduringsleep", "0", "uses select() function to wait between frames which can be interrupted by packets being received, instead of Sleep()/usleep()/SDL_Sleep() functions which do not check for packets"};
 cvar_t sv_clmovement_enable = {0, "sv_clmovement_enable", "1", "whether to allow clients to use cl_movement prediction, which can cause choppy movement on the server which may annoy other players"};
 cvar_t sv_clmovement_minping = {0, "sv_clmovement_minping", "0", "if client ping is below this time in milliseconds, then their ability to use cl_movement prediction is disabled for a while (as they don't need it)"};
-cvar_t sv_clmovement_maxnetfps = {0, "sv_clmovement_maxnetfps", "0", "max amount of movement packets to accept per second"};
 cvar_t sv_clmovement_minping_disabletime = {0, "sv_clmovement_minping_disabletime", "1000", "when client falls below minping, disable their prediction for this many milliseconds (should be at least 1000 or else their prediction may turn on/off frequently)"};
 cvar_t sv_clmovement_inputtimeout = {0, "sv_clmovement_inputtimeout", "0.2", "when a client does not send input for this many seconds, force them to move anyway (unlike QuakeWorld)"};
 cvar_t sv_cullentities_nevercullbmodels = {0, "sv_cullentities_nevercullbmodels", "0", "if enabled the clients are always notified of moving doors and lifts and other submodels of world (warning: eats a lot of network bandwidth on some levels!)"};
@@ -350,7 +349,6 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_areagrid_mingridsize);
 	Cvar_RegisterVariable (&sv_checkforpacketsduringsleep);
 	Cvar_RegisterVariable (&sv_clmovement_enable);
-	Cvar_RegisterVariable (&sv_clmovement_maxnetfps);
 	Cvar_RegisterVariable (&sv_clmovement_minping);
 	Cvar_RegisterVariable (&sv_clmovement_minping_disabletime);
 	Cvar_RegisterVariable (&sv_clmovement_inputtimeout);
