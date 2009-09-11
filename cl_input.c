@@ -1785,7 +1785,7 @@ void CL_SendMove(void)
 		case PROTOCOL_DARKPLACES6:
 		case PROTOCOL_DARKPLACES7:
 			// set the maxusercmds variable to limit how many should be sent
-			maxusercmds = bound(1, cl_netrepeatinput.integer + 1, CL_MAX_USERCMDS);
+			maxusercmds = bound(1, cl_netrepeatinput.integer + 1, min(3, CL_MAX_USERCMDS));
 			// when movement prediction is off, there's not much point in repeating old input as it will just be ignored
 			if (!cl.cmd.predicted)
 				maxusercmds = 1;
