@@ -2775,6 +2775,28 @@ qboolean R_AnimCache_GetEntity(entity_render_t *ent, qboolean wantnormals, qbool
 	return true;
 }
 
+void R_AnimCache_CacheVisibleEntities(void)
+{
+	int i;
+	qboolean wantnormals;
+	qboolean wanttangents;
+
+	if (!r_animcachestate.maxindex)
+		return;
+
+	wantnormals = !r_showsurfaces.integer;
+	wanttangents = !r_showsurfaces.integer && (r_glsl.integer || r_refdef.scene.rtworld || r_refdef.scene.rtdlight);
+
+	// TODO: thread this?
+
+	for (i = 0;i < r_refdef.scene.numentities;i++)
+	{
+		if (!r_refdef.viewcache.entityvisible[i])
+			continue;
+		R_AnimCache_GetEntity(r_refdef.scene.entities[i], wantnormals, wanttangents);
+	}
+}
+
 //==================================================================================
 
 static void R_View_UpdateEntityLighting (void)
@@ -4268,6 +4290,8 @@ void R_RenderScene(void)
 		if (R_DrawBrushModelsSky() && r_timereport_active)
 			R_TimeReport("bmodelsky");
 	}
+
+	R_AnimCache_CacheVisibleEntities();
 
 	if (r_depthfirst.integer >= 1 && cl.csqc_vidvars.drawworld && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->DrawDepth)
 	{
@@ -6921,7 +6945,7 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 	// to a model, knowing that they are meaningless otherwise
 	if (ent == r_refdef.scene.worldentity)
 		RSurf_ActiveWorldEntity();
-	else if ((ent->effects & EF_FULLBRIGHT) || (r_showsurfaces.integer && r_showsurfaces.integer != 3))
+	else if (r_showsurfaces.integer && r_showsurfaces.integer != 3)
 		RSurf_ActiveModelEntity(ent, false, false);
 	else
 		RSurf_ActiveModelEntity(ent, true, r_glsl.integer && gl_support_fragment_shader);
@@ -7484,7 +7508,7 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 	// to a model, knowing that they are meaningless otherwise
 	if (ent == r_refdef.scene.worldentity)
 		RSurf_ActiveWorldEntity();
-	else if ((ent->effects & EF_FULLBRIGHT) || (r_showsurfaces.integer && r_showsurfaces.integer != 3))
+	else if (r_showsurfaces.integer && r_showsurfaces.integer != 3)
 		RSurf_ActiveModelEntity(ent, false, false);
 	else
 		RSurf_ActiveModelEntity(ent, true, r_glsl.integer && gl_support_fragment_shader && !depthonly);
