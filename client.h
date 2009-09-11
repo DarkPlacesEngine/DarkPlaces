@@ -1076,6 +1076,7 @@ typedef struct client_state_s
 	float movevars_warsowbunny_topspeed;
 	float movevars_warsowbunny_turnaccel;
 	float movevars_warsowbunny_backtosideratio;
+	float movevars_ticrate;
 
 	// models used by qw protocol
 	int qw_modelindex_spike;
