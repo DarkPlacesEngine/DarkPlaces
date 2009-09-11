@@ -94,6 +94,7 @@ void Mod_Skeletal_AnimateVertices(const dp_model_t *model, const frameblend_t *f
 	// blend the vertex bone weights
 	// special case for the extremely common wf[0] == 1 because it saves 3 multiplies per array when compared to the other case (w[0] is always 1 if only one bone controls this vertex, artists only use multiple bones for certain special cases)
 	// special case for the first bone because it avoids the need to memset the arrays before filling
+	if (vertex3f)
 	{
 		const float *v = model->surfmesh.data_vertex3f;
 		const int *wi = model->surfmesh.data_vertexweightindex4i;
@@ -243,23 +244,26 @@ void Mod_MD3_AnimateVertices(const dp_model_t *model, const frameblend_t *frameb
 	for (blendnum = 0;blendnum < numblends;blendnum++)
 	{
 		const md3vertex_t *verts = model->surfmesh.data_morphmd3vertex + numverts * frameblend[blendnum].subframe;
-		float scale = frameblend[blendnum].lerp * (1.0f / 64.0f);
-		if (blendnum == 0)
+		if (vertex3f)
 		{
-			for (i = 0;i < numverts;i++)
+			float scale = frameblend[blendnum].lerp * (1.0f / 64.0f);
+			if (blendnum == 0)
 			{
-				vertex3f[i * 3 + 0] = verts[i].origin[0] * scale;
-				vertex3f[i * 3 + 1] = verts[i].origin[1] * scale;
-				vertex3f[i * 3 + 2] = verts[i].origin[2] * scale;
+				for (i = 0;i < numverts;i++)
+				{
+					vertex3f[i * 3 + 0] = verts[i].origin[0] * scale;
+					vertex3f[i * 3 + 1] = verts[i].origin[1] * scale;
+					vertex3f[i * 3 + 2] = verts[i].origin[2] * scale;
+				}
 			}
-		}
-		else
-		{
-			for (i = 0;i < numverts;i++)
+			else
 			{
-				vertex3f[i * 3 + 0] += verts[i].origin[0] * scale;
-				vertex3f[i * 3 + 1] += verts[i].origin[1] * scale;
-				vertex3f[i * 3 + 2] += verts[i].origin[2] * scale;
+				for (i = 0;i < numverts;i++)
+				{
+					vertex3f[i * 3 + 0] += verts[i].origin[0] * scale;
+					vertex3f[i * 3 + 1] += verts[i].origin[1] * scale;
+					vertex3f[i * 3 + 2] += verts[i].origin[2] * scale;
+				}
 			}
 		}
 		// the yaw and pitch stored in md3 models are 8bit quantized angles
@@ -336,27 +340,30 @@ void Mod_MDL_AnimateVertices(const dp_model_t *model, const frameblend_t *frameb
 	for (blendnum = 0;blendnum < numblends;blendnum++)
 	{
 		const trivertx_t *verts = model->surfmesh.data_morphmdlvertex + numverts * frameblend[blendnum].subframe;
-		float scale[3];
-		if (model->surfmesh.data_morphmd2framesize6f)
-			VectorScale(model->surfmesh.data_morphmd2framesize6f + frameblend[blendnum].subframe * 6, frameblend[blendnum].lerp, scale);
-		else
-			VectorScale(model->surfmesh.num_morphmdlframescale, frameblend[blendnum].lerp, scale);
-		if (blendnum == 0)
+		if (vertex3f)
 		{
-			for (i = 0;i < numverts;i++)
+			float scale[3];
+			if (model->surfmesh.data_morphmd2framesize6f)
+				VectorScale(model->surfmesh.data_morphmd2framesize6f + frameblend[blendnum].subframe * 6, frameblend[blendnum].lerp, scale);
+			else
+				VectorScale(model->surfmesh.num_morphmdlframescale, frameblend[blendnum].lerp, scale);
+			if (blendnum == 0)
 			{
-				vertex3f[i * 3 + 0] = translate[0] + verts[i].v[0] * scale[0];
-				vertex3f[i * 3 + 1] = translate[1] + verts[i].v[1] * scale[1];
-				vertex3f[i * 3 + 2] = translate[2] + verts[i].v[2] * scale[2];
+				for (i = 0;i < numverts;i++)
+				{
+					vertex3f[i * 3 + 0] = translate[0] + verts[i].v[0] * scale[0];
+					vertex3f[i * 3 + 1] = translate[1] + verts[i].v[1] * scale[1];
+					vertex3f[i * 3 + 2] = translate[2] + verts[i].v[2] * scale[2];
+				}
 			}
-		}
-		else
-		{
-			for (i = 0;i < numverts;i++)
+			else
 			{
-				vertex3f[i * 3 + 0] += verts[i].v[0] * scale[0];
-				vertex3f[i * 3 + 1] += verts[i].v[1] * scale[1];
-				vertex3f[i * 3 + 2] += verts[i].v[2] * scale[2];
+				for (i = 0;i < numverts;i++)
+				{
+					vertex3f[i * 3 + 0] += verts[i].v[0] * scale[0];
+					vertex3f[i * 3 + 1] += verts[i].v[1] * scale[1];
+					vertex3f[i * 3 + 2] += verts[i].v[2] * scale[2];
+				}
 			}
 		}
 		// the vertex normals in mdl models are an index into a table of
