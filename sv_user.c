@@ -590,8 +590,7 @@ void SV_ExecuteClientMoves(void)
 				// discard (treat like lost) moves with too low distance from
 				// the previous one to prevent hacks using float inaccuracy
 				// clients will see this as packet loss in the netgraph
-				if(sv_clmovement_maxnetfps.value > 0)
-				if(moveframetime + 0.0001 < 1 / sv_clmovement_maxnetfps.value)
+				if(moveframetime < 0.0005)
 					continue;
 
 				//Con_Printf("movesequence = %i (%i lost), moveframetime = %f\n", move->sequence, move->sequence ? move->sequence - host_client->movesequence - 1 : 0, moveframetime);
