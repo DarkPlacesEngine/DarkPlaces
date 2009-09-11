@@ -1658,6 +1658,10 @@ void CL_SendMove(void)
 	// send input every frame in singleplayer
 	if (cl.islocalgame)
 		packettime = 0;
+
+	// do not send if we do not have anything useful to send
+	if(msecdelta <= 0)
+		return;
 	// always send if buttons changed or an impulse is pending
 	// even if it violates the rate limit!
 	if (!cl.movecmd[0].impulse && (!cl_netimmediatebuttons.integer || cl.movecmd[0].buttons == cl.movecmd[1].buttons))
