@@ -505,10 +505,13 @@ static void Mod_BuildBaseBonePoses(void)
 {
 	int i, k;
 	double scale;
-	float *basebonepose = (float *) Mem_Alloc(tempmempool, loadmodel->num_bones * sizeof(float[12]));
+	float *basebonepose;
 	float *in12f = loadmodel->data_poses;
-	float *out12f = basebonepose;
+	float *out12f;
 	float *outinv12f = loadmodel->data_baseboneposeinverse;
+	if (!loadmodel->num_bones)
+		return;
+	out12f = basebonepose = (float *) Mem_Alloc(tempmempool, loadmodel->num_bones * sizeof(float[12]))
 	for (i = 0;i < loadmodel->num_bones;i++, in12f += 12, out12f += 12, outinv12f += 12)
 	{
 		if (loadmodel->data_bones[i].parent >= 0)
