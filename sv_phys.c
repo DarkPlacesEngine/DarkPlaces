@@ -2251,7 +2251,7 @@ static void SV_Physics_Entity (prvm_edict_t *ent)
 	//  ents in the first frame regardless)
 	qboolean runmove = ent->priv.server->move;
 	ent->priv.server->move = true;
-	if (!runmove && sv_gameplayfix_delayprojectiles.integer)
+	if (!runmove && sv_gameplayfix_delayprojectiles.integer > 0)
 		return;
 	switch ((int) ent->fields.server->movetype)
 	{
@@ -2487,9 +2487,17 @@ void SV_Physics (void)
 
 	// run physics on all the non-client entities
 	if (!sv_freezenonclients.integer)
+	{
 		for (;i < prog->num_edicts;i++, ent = PRVM_NEXT_EDICT(ent))
 			if (!ent->priv.server->free)
 				SV_Physics_Entity(ent);
+		// make a second pass to see if any ents spawned this frame and make
+		// sure they run their move/think
+		if (sv_gameplayfix_delayprojectiles.integer < 0)
+			for (i = svs.maxclients + 1, ent = PRVM_EDICT_NUM(i);i < prog->num_edicts;i++, ent = PRVM_NEXT_EDICT(ent))
+				if (!ent->priv.server->move && !ent->priv.server->free)
+					SV_Physics_Entity(ent);
+	}
 
 	if (prog->globals.server->force_retouch > 0)
 		prog->globals.server->force_retouch = max(0, prog->globals.server->force_retouch - 1);
