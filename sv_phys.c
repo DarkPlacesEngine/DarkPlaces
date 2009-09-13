@@ -2035,7 +2035,8 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 			// and groundentity is now freed, set groundentity to 0 (world)
 			// which leaves it suspended in the air
 			ent->fields.server->groundentity = 0;
-			return;
+			if (sv_gameplayfix_noairborncorpse_allowsuspendeditems.integer)
+				return;
 		}
 	}
 	ent->priv.server->suspendedinairflag = false;
