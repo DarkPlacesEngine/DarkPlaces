@@ -551,7 +551,7 @@ static void VM_CL_lightstyle (void)
 		VM_Warning("VM_CL_lightstyle >= MAX_LIGHTSTYLES\n");
 		return;
 	}
-	strlcpy (cl.lightstyle[i].map,  MSG_ReadString(), sizeof (cl.lightstyle[i].map));
+	strlcpy (cl.lightstyle[i].map, c, sizeof (cl.lightstyle[i].map));
 	cl.lightstyle[i].map[MAX_STYLESTRING - 1] = 0;
 	cl.lightstyle[i].length = (int)strlen(cl.lightstyle[i].map);
 }
