@@ -43,7 +43,6 @@ cvar_t r_motionblur_bmin = {CVAR_SAVE, "r_motionblur_bmin", "0.5", "velocity at 
 cvar_t r_motionblur_vcoeff = {CVAR_SAVE, "r_motionblur_vcoeff", "0.05", "sliding average reaction time for velocity"};
 cvar_t r_motionblur_maxblur = {CVAR_SAVE, "r_motionblur_maxblur", "0.88", "cap for motionblur alpha value"};
 cvar_t r_motionblur_randomize = {CVAR_SAVE, "r_motionblur_randomize", "0.1", "randomizing coefficient to workaround ghosting"};
-cvar_t r_motionblur_debug = {0, "r_motionblur_debug", "0", "outputs current motionblur alpha value"};
 
 cvar_t r_animcache = {CVAR_SAVE, "r_animcache", "1", "cache animation frames to save CPU usage, primarily optimizes shadows and reflections"};
 
@@ -2408,7 +2407,6 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_motionblur_randomize);
 	Cvar_RegisterVariable(&r_damageblur);
 	Cvar_RegisterVariable(&r_animcache);
-	Cvar_RegisterVariable(&r_motionblur_debug);
 	Cvar_RegisterVariable(&r_depthfirst);
 	Cvar_RegisterVariable(&r_useinfinitefarclip);
 	Cvar_RegisterVariable(&r_nearclip);
@@ -3772,22 +3770,21 @@ static void R_BlendView(void)
 
 		if(!R_Stereo_Active() && (r_motionblur.value > 0 || r_damageblur.value > 0))
 		{  
-			// declare alpha variable
-			float a;
+			// declare variables
 			float speed;
 			static float avgspeed;
 
 			speed = VectorLength(cl.movement_velocity);
 
-			a = bound(0, (cl.time - cl.oldtime) / max(0.001, r_motionblur_vcoeff.value), 1);
-			avgspeed = avgspeed * (1 - a) + speed * a;
+			cl.motionbluralpha = bound(0, (cl.time - cl.oldtime) / max(0.001, r_motionblur_vcoeff.value), 1);
+			avgspeed = avgspeed * (1 - cl.motionbluralpha) + speed * cl.motionbluralpha;
 
 			speed = (avgspeed - r_motionblur_vmin.value) / max(1, r_motionblur_vmax.value - r_motionblur_vmin.value);
 			speed = bound(0, speed, 1);
 			speed = speed * (1 - r_motionblur_bmin.value) + r_motionblur_bmin.value;
 
 			// calculate values into a standard alpha
-			a = 1 - exp(-
+			cl.motionbluralpha = 1 - exp(-
 					(
 					 (r_motionblur.value * speed / 80)
 					 +
@@ -3797,18 +3794,14 @@ static void R_BlendView(void)
 					max(0.0001, cl.time - cl.oldtime) // fps independent
 				   );
 
-			a *= lhrandom(1 - r_motionblur_randomize.value, 1 + r_motionblur_randomize.value);
-			a = bound(0, a, r_motionblur_maxblur.value);
-
-			// developer debug of current value
-			if (r_motionblur_debug.value) { Con_Printf("blur alpha = %f\n", a); }
-
+			cl.motionbluralpha *= lhrandom(1 - r_motionblur_randomize.value, 1 + r_motionblur_randomize.value);
+			cl.motionbluralpha = bound(0, cl.motionbluralpha, r_motionblur_maxblur.value);
 			// apply the blur
-			if (a > 0)
+			if (cl.motionbluralpha > 0)
 			{
 				R_SetupGenericShader(true);
 				GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-				GL_Color(1, 1, 1, a); // to do: add color changing support for damage blur
+				GL_Color(1, 1, 1, cl.motionbluralpha);
 				R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_screen));
 				R_Mesh_TexCoordPointer(0, 2, r_bloomstate.screentexcoord2f, 0, 0);
 				R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);

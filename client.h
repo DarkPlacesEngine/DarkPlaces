@@ -893,6 +893,9 @@ typedef struct client_state_s
 	// fade var for fading while dead
 	float deathfade;
 
+	// motionblur alpha level variable
+	float motionbluralpha;
+
 	// copy of realtime from last recieved message, for net trouble icon
 	float last_received_message;
 
