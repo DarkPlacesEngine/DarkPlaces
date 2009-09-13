@@ -889,6 +889,9 @@ typedef struct client_state_s
 	// how long it has been since the previous client frame in real time
 	// (not game time, for that use cl.time - cl.oldtime)
 	double realframetime;
+	
+	// fade var for fading while dead
+	float deathfade;
 
 	// copy of realtime from last recieved message, for net trouble icon
 	float last_received_message;
