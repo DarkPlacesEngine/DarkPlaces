@@ -175,6 +175,8 @@ extern cvar_t r_glsl_deluxemapping;
 extern cvar_t gl_polyblend;
 extern cvar_t gl_dither;
 
+extern cvar_t cl_deathfade;
+
 extern cvar_t r_smoothnormals_areaweighting;
 
 extern cvar_t r_test;
