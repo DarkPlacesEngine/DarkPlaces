@@ -417,6 +417,7 @@ extern cvar_t sv_gameplayfix_grenadebouncedownslopes;
 extern cvar_t sv_gameplayfix_multiplethinksperframe;
 extern cvar_t sv_gameplayfix_slidemoveprojectiles;
 extern cvar_t sv_gameplayfix_noairborncorpse;
+extern cvar_t sv_gameplayfix_noairborncorpse_allowsuspendeditems;
 extern cvar_t sv_gameplayfix_setmodelrealbox;
 extern cvar_t sv_gameplayfix_stepdown;
 extern cvar_t sv_gameplayfix_stepwhilejumping;
