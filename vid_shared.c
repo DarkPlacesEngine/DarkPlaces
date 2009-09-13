@@ -61,6 +61,8 @@ int gl_support_vertex_shader = false;
 int gl_support_fragment_shader = false;
 //GL_ARB_vertex_buffer_object
 int gl_support_arb_vertex_buffer_object = false;
+//GL_EXT_framebuffer_object
+int gl_support_ext_framebuffer_object = false;
 //GL_ARB_texture_compression
 int gl_support_texture_compression = false;
 //GL_ARB_occlusion_query
@@ -375,6 +377,25 @@ GLvoid* (GLAPIENTRY *qglMapBufferARB) (GLenum target, GLenum access);
 GLboolean (GLAPIENTRY *qglUnmapBufferARB) (GLenum target);
 void (GLAPIENTRY *qglBufferDataARB) (GLenum target, GLsizeiptrARB size, const GLvoid *data, GLenum usage);
 void (GLAPIENTRY *qglBufferSubDataARB) (GLenum target, GLintptrARB offset, GLsizeiptrARB size, const GLvoid *data);
+
+//GL_EXT_framebuffer_object
+GLboolean (GLAPIENTRY *qglIsRenderbufferEXT)(GLuint renderbuffer);
+void (GLAPIENTRY *qglBindRenderbufferEXT)(GLenum target, GLuint renderbuffer);
+void (GLAPIENTRY *qglDeleteRenderbuffersEXT)(GLsizei n, const GLuint *renderbuffers);
+void (GLAPIENTRY *qglGenRenderbuffersEXT)(GLsizei n, GLuint *renderbuffers);
+void (GLAPIENTRY *qglRenderbufferStorageEXT)(GLenum target, GLenum internalformat, GLsizei width, GLsizei height);
+void (GLAPIENTRY *qglGetRenderbufferParameterivEXT)(GLenum target, GLenum pname, GLint *params);
+GLboolean (GLAPIENTRY *qglIsFramebufferEXT)(GLuint framebuffer);
+void (GLAPIENTRY *qglBindFramebufferEXT)(GLenum target, GLuint framebuffer);
+void (GLAPIENTRY *qglDeleteFramebuffersEXT)(GLsizei n, const GLuint *framebuffers);
+void (GLAPIENTRY *qglGenFramebuffersEXT)(GLsizei n, GLuint *framebuffers);
+GLenum (GLAPIENTRY *qglCheckFramebufferStatusEXT)(GLenum target);
+void (GLAPIENTRY *qglFramebufferTexture1DEXT)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
+void (GLAPIENTRY *qglFramebufferTexture2DEXT)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
+void (GLAPIENTRY *qglFramebufferTexture3DEXT)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint zoffset);
+void (GLAPIENTRY *qglFramebufferRenderbufferEXT)(GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer);
+void (GLAPIENTRY *qglGetFramebufferAttachmentParameterivEXT)(GLenum target, GLenum attachment, GLenum pname, GLint *params);
+void (GLAPIENTRY *qglGenerateMipmapEXT)(GLenum target);
 
 void (GLAPIENTRY *qglCompressedTexImage3DARB)(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLsizei imageSize, const void *data);
 void (GLAPIENTRY *qglCompressedTexImage2DARB)(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border,  GLsizei imageSize, const void *data);
@@ -741,6 +762,28 @@ static dllfunction_t vbofuncs[] =
 	{NULL, NULL}
 };
 
+static dllfunction_t fbofuncs[] =
+{
+	{"glIsRenderbufferEXT"                      , (void **) &qglIsRenderbufferEXT},
+	{"glBindRenderbufferEXT"                    , (void **) &qglBindRenderbufferEXT},
+	{"glDeleteRenderbuffersEXT"                 , (void **) &qglDeleteRenderbuffersEXT},
+	{"glGenRenderbuffersEXT"                    , (void **) &qglGenRenderbuffersEXT},
+	{"glRenderbufferStorageEXT"                 , (void **) &qglRenderbufferStorageEXT},
+	{"glGetRenderbufferParameterivEXT"          , (void **) &qglGetRenderbufferParameterivEXT},
+	{"glIsFramebufferEXT"                       , (void **) &qglIsFramebufferEXT},
+	{"glBindFramebufferEXT"                     , (void **) &qglBindFramebufferEXT},
+	{"glDeleteFramebuffersEXT"                  , (void **) &qglDeleteFramebuffersEXT},
+	{"glGenFramebuffersEXT"                     , (void **) &qglGenFramebuffersEXT},
+	{"glCheckFramebufferStatusEXT"              , (void **) &qglCheckFramebufferStatusEXT},
+	{"glFramebufferTexture1DEXT"                , (void **) &qglFramebufferTexture1DEXT},
+	{"glFramebufferTexture2DEXT"                , (void **) &qglFramebufferTexture2DEXT},
+	{"glFramebufferTexture3DEXT"                , (void **) &qglFramebufferTexture3DEXT},
+	{"glFramebufferRenderbufferEXT"             , (void **) &qglFramebufferRenderbufferEXT},
+	{"glGetFramebufferAttachmentParameterivEXT" , (void **) &qglGetFramebufferAttachmentParameterivEXT},
+	{"glGenerateMipmapEXT"                      , (void **) &qglGenerateMipmapEXT},
+	{NULL, NULL}
+};
+
 static dllfunction_t texturecompressionfuncs[] =
 {
 	{"glCompressedTexImage3DARB",    (void **) &qglCompressedTexImage3DARB},
@@ -794,6 +837,7 @@ void VID_CheckExtensions(void)
 	gl_support_vertex_shader = false;
 	gl_support_fragment_shader = false;
 	gl_support_arb_vertex_buffer_object = false;
+	gl_support_ext_framebuffer_object = false;
 	gl_support_texture_compression = false;
 	gl_support_arb_occlusion_query = false;
 
@@ -855,6 +899,9 @@ void VID_CheckExtensions(void)
 
 // COMMANDLINEOPTION: GL: -novbo disables GL_ARB_vertex_buffer_object (which accelerates rendering)
 	gl_support_arb_vertex_buffer_object = GL_CheckExtension("GL_ARB_vertex_buffer_object", vbofuncs, "-novbo", false);
+
+// COMMANDLINEOPTION: GL: -nofbo disables GL_EXT_framebuffer_object (which accelerates rendering)
+	gl_support_ext_framebuffer_object = GL_CheckExtension("GL_EXT_framebuffer_object", fbofuncs, "-nofbo", false);
 
 	// we don't care if it's an extension or not, they are identical functions, so keep it simple in the rendering code
 	if (qglDrawRangeElements == NULL)

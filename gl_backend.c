@@ -16,6 +16,7 @@ cvar_t gl_dither = {CVAR_SAVE, "gl_dither", "1", "enables OpenGL dithering (16bi
 cvar_t gl_lockarrays = {0, "gl_lockarrays", "0", "enables use of glLockArraysEXT, may cause glitches with some broken drivers, and may be slower than normal"};
 cvar_t gl_lockarrays_minimumvertices = {0, "gl_lockarrays_minimumvertices", "1", "minimum number of vertices required for use of glLockArraysEXT, setting this too low may reduce performance"};
 cvar_t gl_vbo = {CVAR_SAVE, "gl_vbo", "3", "make use of GL_ARB_vertex_buffer_object extension to store static geometry in video memory for faster rendering, 0 disables VBO allocation or use, 1 enables VBOs for vertex and triangle data, 2 only for vertex data, 3 for vertex data and triangle data of simple meshes (ones with only one surface)"};
+cvar_t gl_fbo = {CVAR_SAVE, "gl_fbo", "1", "make use of GL_ARB_framebuffer_object extension to enable shadowmaps and other features using pixel formats different from the framebuffer"};
 
 cvar_t v_flipped = {0, "v_flipped", "0", "mirror the screen (poor man's left handed mode)"};
 qboolean v_flipped_state = false;
@@ -694,6 +695,12 @@ void GL_Backend_ResetState(void)
 	{
 		qglBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
 		qglBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
+	}
+
+	if (gl_support_ext_framebuffer_object)
+	{
+		qglBindRenderbufferEXT(GL_RENDERBUFFER_EXT, 0);
+		qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
 	}
 
 	qglVertexPointer(3, GL_FLOAT, sizeof(float[3]), NULL);CHECKGLERROR
