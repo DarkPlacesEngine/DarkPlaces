@@ -3717,7 +3717,7 @@ void R_HDR_RenderBloomTexture(void)
 
 	// TODO: support GL_EXT_framebuffer_object rather than reusing the framebuffer?  it might improve SLI performance.
 	// TODO: add exposure compensation features
-	// TODO: add fp16 framebuffer support
+	// TODO: add fp16 framebuffer support (using GL_EXT_framebuffer_object)
 
 	r_refdef.view.showdebug = false;
 	r_refdef.view.colorscale *= r_bloom_colorscale.value / bound(1, r_hdr_range.value, 16);
