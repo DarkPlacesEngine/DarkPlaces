@@ -701,24 +701,30 @@ void V_CalcViewBlend(void)
 			a2 = 1 / r_refdef.viewblend[3];
 			VectorScale(r_refdef.viewblend, a2, r_refdef.viewblend);
 		}
+		r_refdef.viewblend[0] = bound(0.0f, r_refdef.viewblend[0] * (1.0f/255.0f), 1.0f);
+		r_refdef.viewblend[1] = bound(0.0f, r_refdef.viewblend[1] * (1.0f/255.0f), 1.0f);
+		r_refdef.viewblend[2] = bound(0.0f, r_refdef.viewblend[2] * (1.0f/255.0f), 1.0f);
+		r_refdef.viewblend[3] = bound(0.0f, r_refdef.viewblend[3] * gl_polyblend.value, 1.0f);
+		
 		// Samual: Ugly hack, I know. But it's the best we can do since
 		// there is no way to detect client states from the engine.
 		if (cl.stats[STAT_HEALTH] <= 0 && cl.stats[STAT_HEALTH] != -666 && 
 			cl.stats[STAT_HEALTH] != -2342 && cl_deathfade.value > 0)
 		{
-			cl.deathfade += bound(0.0f, cl_deathfade.value, 2.0f) * max(0.0001, cl.time - cl.oldtime);
-			r_refdef.viewblend[0] = 0.3f;
-			r_refdef.viewblend[1] = 0.0f;
-			r_refdef.viewblend[2] = 0.0f;
-			r_refdef.viewblend[3] = bound(0.0f, cl.deathfade, 0.9f);
+			cl.deathfade += cl_deathfade.value * max(0.00001, cl.time - cl.oldtime);
+			cl.deathfade = bound(0.0f, cl.deathfade, 0.9f);
 		}
 		else
-		{
 			cl.deathfade = 0.0f;
-			r_refdef.viewblend[0] = bound(0.0f, r_refdef.viewblend[0] * (1.0f/255.0f), 1.0f);
-			r_refdef.viewblend[1] = bound(0.0f, r_refdef.viewblend[1] * (1.0f/255.0f), 1.0f);
-			r_refdef.viewblend[2] = bound(0.0f, r_refdef.viewblend[2] * (1.0f/255.0f), 1.0f);
-			r_refdef.viewblend[3] = bound(0.0f, r_refdef.viewblend[3] * gl_polyblend.value, 1.0f);
+
+		if(cl.deathfade > 0)
+		{
+			float a;
+			float deathfadevec[3] = {0.3f, 0.0f, 0.0f};
+			a = r_refdef.viewblend[3] + cl.deathfade - r_refdef.viewblend[3]*cl.deathfade;
+			if(a > 0)
+				VectorMAM(r_refdef.viewblend[3] * (1 - cl.deathfade) / a, r_refdef.viewblend, cl.deathfade / a, deathfadevec, r_refdef.viewblend);
+			r_refdef.viewblend[3] = a;
 		}
 	}
 }
