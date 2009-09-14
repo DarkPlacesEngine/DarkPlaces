@@ -1106,6 +1106,9 @@ void CL_ClientMovement_Physics_PM_Accelerate(cl_clientmovement_state_t *s, vec3_
 	vec_t vel_straight, vel_z;
 	vec3_t vel_perpend;
 	vec_t addspeed;
+	vec_t savespeed;
+
+	savespeed = VectorLength2(s->velocity);
 
 	vel_straight = DotProduct(s->velocity, wishdir);
 	vel_z = s->velocity[2];
@@ -1117,7 +1120,18 @@ void CL_ClientMovement_Physics_PM_Accelerate(cl_clientmovement_state_t *s, vec3_
 	if(wishspeed > 0)
 		vel_straight = vel_straight + min(wishspeed, accel * s->cmd.frametime * wishspeed) * (1 - accelqw);
 	
-	VectorScale(vel_perpend, 1 - s->cmd.frametime * wishspeed * sidefric, vel_perpend);
+	if(sidefric < 0 && VectorLength2(vel_perpend))
+	{
+		vec_t f, fmin;
+		f = 1 + s->cmd.frametime * wishspeed * sidefric;
+		fmin = (savespeed - vel_straight*vel_straight) / VectorLength2(vel_perpend);
+		if(fmin <= 0)
+			VectorScale(vel_perpend, f, vel_perpend);
+		else
+			VectorScale(vel_perpend, min(1.0f, max(fmin, f)), vel_perpend);
+	}
+	else
+		VectorScale(vel_perpend, 1 - s->cmd.frametime * wishspeed * sidefric, vel_perpend);
 
 	VectorMA(vel_perpend, vel_straight, wishdir, s->velocity);
 	s->velocity[2] += vel_z;
