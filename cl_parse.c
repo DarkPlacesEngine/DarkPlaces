@@ -3112,7 +3112,7 @@ static void CL_NetworkTimeReceived(double newtime)
 	double timehigh;
 	cl.mtime[1] = cl.mtime[0];
 	cl.mtime[0] = newtime;
-	if (cls.timedemo || (cl.islocalgame && !sv_fixedframeratesingleplayer.integer) || cl.mtime[1] == cl.mtime[0] || cls.signon < SIGNONS)
+	if (cl_nolerp.integer || cls.timedemo || (cl.islocalgame && !sv_fixedframeratesingleplayer.integer) || cl.mtime[1] == cl.mtime[0] || cls.signon < SIGNONS)
 		cl.time = cl.mtime[1] = newtime;
 	else if (cls.demoplayback)
 	{
