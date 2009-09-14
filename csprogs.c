@@ -106,7 +106,7 @@ static void CSQC_SetGlobals (void)
 		// CSQC is useless as it can't alter the view origin without
 		// completely replacing it
 		VectorCopy(cl.csqc_origin, prog->globals.client->pmove_org);
-		VectorCopy(cl.velocity, prog->globals.client->pmove_vel);
+		VectorCopy(cl.movement_velocity, prog->globals.client->pmove_vel);
 
 		if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.view_angles)))
 			VectorCopy(cl.viewangles, val->vector);
