@@ -3385,7 +3385,11 @@ void R_ShadowVolumeLighting(qboolean visible)
 
 extern void R_SetupView(qboolean allowwaterclippingplane);
 extern cvar_t r_shadows;
+extern cvar_t r_shadows_darken;
+extern cvar_t r_shadows_drawafterrtlightning;
+extern cvar_t r_shadows_castfrombmodels;
 extern cvar_t r_shadows_throwdistance;
+extern cvar_t r_shadows_throwdirection;
 void R_DrawModelShadows(void)
 {
 	int i;
@@ -3394,7 +3398,7 @@ void R_DrawModelShadows(void)
 	vec3_t relativelightorigin;
 	vec3_t relativelightdirection;
 	vec3_t relativeshadowmins, relativeshadowmaxs;
-	vec3_t tmp;
+	vec3_t tmp, shadowdir;
 	float vertex3f[12];
 
 	if (!r_drawentities.integer || !gl_stencil)
@@ -3421,24 +3425,27 @@ void R_DrawModelShadows(void)
 		r_shadow_shadowingrendermode_zfail = R_SHADOW_RENDERMODE_ZFAIL_STENCIL;
 	}
 
+	// get shadow dir
+	if (r_shadows.integer == 2)
+	{
+		Math_atov(r_shadows_throwdirection.string, shadowdir);
+		VectorNormalize(shadowdir);
+	}
+
 	R_Shadow_ClearStencil();
 
 	for (i = 0;i < r_refdef.scene.numentities;i++)
 	{
 		ent = r_refdef.scene.entities[i];
-		// cast shadows from anything that is not a submodel of the map
-		if (ent->model && ent->model->DrawShadowVolume != NULL && !ent->model->brush.submodel && (ent->flags & RENDER_SHADOW))
+
+		// cast shadows from anything of the map (submodels are optional)
+		if (ent->model && ent->model->DrawShadowVolume != NULL && (!ent->model->brush.submodel || r_shadows_castfrombmodels.integer) && (ent->flags & RENDER_SHADOW))
 		{
 			relativethrowdistance = r_shadows_throwdistance.value * Matrix4x4_ScaleFromMatrix(&ent->inversematrix);
 			VectorSet(relativeshadowmins, -relativethrowdistance, -relativethrowdistance, -relativethrowdistance);
 			VectorSet(relativeshadowmaxs, relativethrowdistance, relativethrowdistance, relativethrowdistance);
-
-			if(r_shadows.integer == 2)
-			{
-				// 2: simpler mode, throw shadows always DOWN
-				VectorSet(tmp, 0, 0, -1);
-				Matrix4x4_Transform3x3(&ent->inversematrix, tmp, relativelightdirection);
-			}
+			if (r_shadows.integer == 2) // 2: simpler mode, throw shadows always in same direction
+				Matrix4x4_Transform3x3(&ent->inversematrix, shadowdir, relativelightdirection);
 			else
 			{
 				if(ent->entitynumber != 0)
@@ -3494,13 +3501,13 @@ void R_DrawModelShadows(void)
 	R_Mesh_VertexPointer(vertex3f, 0, 0);
 	R_Mesh_ColorPointer(NULL, 0, 0);
 
-	// set up a 50% darkening blend on shadowed areas
+	// set up a darkening blend on shadowed areas
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	GL_DepthRange(0, 1);
 	GL_DepthTest(false);
 	GL_DepthMask(false);
 	GL_PolygonOffset(0, 0);CHECKGLERROR
-	GL_Color(0, 0, 0, 0.5);
+	GL_Color(0, 0, 0, r_shadows_darken.value);
 	GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
 	qglDepthFunc(GL_ALWAYS);CHECKGLERROR
 	qglEnable(GL_STENCIL_TEST);CHECKGLERROR
