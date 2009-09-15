@@ -301,8 +301,8 @@ void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend)
 			info->lightshadow = true;
 			info->lighttime = 9999;
 			info->stretchfactor = 1;
-			info->staincolor[0] = -1;
-			info->staincolor[1] = -1;
+			info->staincolor[0] = (unsigned int)-1;
+			info->staincolor[1] = (unsigned int)-1;
 			info->staintex[0] = -1;
 			info->staintex[1] = -1;
 		}
@@ -376,7 +376,7 @@ void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend)
 		else if (!strcmp(argv[0], "stretchfactor")) {readfloat(info->stretchfactor);}
 		else if (!strcmp(argv[0], "staincolor")) {readints(info->staincolor, 2);}
 		else if (!strcmp(argv[0], "staintex")) {readints(info->staintex, 2);}
-		else if (!strcmp(argv[0], "stainless")) {info->staintex[0] = -2; info->staincolor[0] = -1; info->staincolor[1] = -1;}
+		else if (!strcmp(argv[0], "stainless")) {info->staintex[0] = -2; info->staincolor[0] = (unsigned int)-1; info->staincolor[1] = (unsigned int)-1;}
 		else
 			Con_Printf("effectinfo.txt:%i: skipping unknown command %s\n", linenumber, argv[0]);
 #undef checkparms

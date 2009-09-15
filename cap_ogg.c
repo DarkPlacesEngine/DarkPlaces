@@ -1009,13 +1009,13 @@ void SCR_CaptureVideo_Ogg_BeginVideo(void)
 			if(ti.quality < 0)
 			{
 				ti.target_bitrate = -1;
-				ti.keyframe_data_target_bitrate = -1;
+				ti.keyframe_data_target_bitrate = (unsigned int)-1;
 				ti.quality = 63;
 			}
 			else
 			{
 				ti.target_bitrate = -1;
-				ti.keyframe_data_target_bitrate = -1;
+				ti.keyframe_data_target_bitrate = (unsigned int)-1;
 				ti.quality = bound(0, ti.quality, 63);
 			}
 		}
