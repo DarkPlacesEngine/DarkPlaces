@@ -1914,7 +1914,7 @@ void NetConn_QueryQueueFrame(void)
 
 	if(!net_slist_pause.integer && serverlist_paused)
 		ServerList_RebuildViewList();
-	serverlist_paused = net_slist_pause.integer;
+	serverlist_paused = net_slist_pause.integer != 0;
 
 	if (serverlist_querysleep)
 		return;

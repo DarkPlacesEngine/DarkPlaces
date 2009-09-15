@@ -263,7 +263,7 @@ Returns true if a download needed for the current game is running.
 */
 qboolean Curl_Have_forthismap(void)
 {
-	return numdownloads_added;
+	return numdownloads_added != 0;
 }
 
 void Curl_Register_predownload(void)

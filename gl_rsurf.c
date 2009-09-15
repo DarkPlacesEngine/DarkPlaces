@@ -978,7 +978,7 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 		// optionally using svbsp for exact culling of compiled lights
 		// (or if the user enables dlight svbsp culling, which is mostly for
 		//  debugging not actual use)
-		R_Q1BSP_CallRecursiveGetLightInfo(&info, r_shadow_compilingrtlight ? r_shadow_realtime_world_compilesvbsp.integer : r_shadow_realtime_dlight_svbspculling.integer);
+		R_Q1BSP_CallRecursiveGetLightInfo(&info, (r_shadow_compilingrtlight ? r_shadow_realtime_world_compilesvbsp.integer : r_shadow_realtime_dlight_svbspculling.integer) != 0);
 	}
 
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity

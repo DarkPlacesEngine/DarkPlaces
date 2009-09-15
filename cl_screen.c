@@ -1969,6 +1969,7 @@ void CL_UpdateScreen(void)
 {
 	double rendertime1;
 	float conwidth, conheight;
+	float f;
 
 	if (!scr_initialized || !con_initialized)
 		return;				// not initialized yet
@@ -1976,12 +1977,12 @@ void CL_UpdateScreen(void)
 	if(gamemode == GAME_NEXUIZ)
 	{
 		// play a bit with the palette (experimental)
-		palette_rgb_pantscolormap[15][0] = (unsigned char) (128 + 127 * sin(cl.time / exp(1) + 0*M_PI/3));
-		palette_rgb_pantscolormap[15][1] = (unsigned char) (128 + 127 * sin(cl.time / exp(1) + 2*M_PI/3));
-		palette_rgb_pantscolormap[15][2] = (unsigned char) (128 + 127 * sin(cl.time / exp(1) + 4*M_PI/3));
-		palette_rgb_shirtcolormap[15][0] = (unsigned char) (128 + 127 * sin(cl.time /  M_PI  + 5*M_PI/3));
-		palette_rgb_shirtcolormap[15][1] = (unsigned char) (128 + 127 * sin(cl.time /  M_PI  + 3*M_PI/3));
-		palette_rgb_shirtcolormap[15][2] = (unsigned char) (128 + 127 * sin(cl.time /  M_PI  + 1*M_PI/3));
+		palette_rgb_pantscolormap[15][0] = (unsigned char) (128 + 127 * sin(cl.time / exp(1.0f) + 0.0f*M_PI/3.0f));
+		palette_rgb_pantscolormap[15][1] = (unsigned char) (128 + 127 * sin(cl.time / exp(1.0f) + 2.0f*M_PI/3.0f));
+		palette_rgb_pantscolormap[15][2] = (unsigned char) (128 + 127 * sin(cl.time / exp(1.0f) + 4.0f*M_PI/3.0f));
+		palette_rgb_shirtcolormap[15][0] = (unsigned char) (128 + 127 * sin(cl.time /  M_PI  + 5.0f*M_PI/3.0f));
+		palette_rgb_shirtcolormap[15][1] = (unsigned char) (128 + 127 * sin(cl.time /  M_PI  + 3.0f*M_PI/3.0f));
+		palette_rgb_shirtcolormap[15][2] = (unsigned char) (128 + 127 * sin(cl.time /  M_PI  + 1.0f*M_PI/3.0f));
 		memcpy(palette_rgb_pantsscoreboard[15], palette_rgb_pantscolormap[15], sizeof(*palette_rgb_pantscolormap));
 		memcpy(palette_rgb_shirtscoreboard[15], palette_rgb_shirtcolormap[15], sizeof(*palette_rgb_shirtcolormap));
 	}
@@ -2049,7 +2050,8 @@ void CL_UpdateScreen(void)
 	R_ClearScreen(false);
 	r_refdef.view.clear = false;
 	r_refdef.view.isoverlay = false;
-	r_refdef.view.quality = bound(cl_minfps_qualitymin.value, pow(cl_updatescreen_quality, cl_minfps_qualitypower.value) * cl_minfps_qualityscale.value, cl_minfps_qualitymax.value);
+	f = pow((float)cl_updatescreen_quality, cl_minfps_qualitypower.value) * cl_minfps_qualityscale.value;
+	r_refdef.view.quality = bound(cl_minfps_qualitymin.value, f, cl_minfps_qualitymax.value);
 
 	if(scr_stipple.integer)
 	{

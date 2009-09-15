@@ -728,7 +728,7 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 						int ipv6_only = 1;
 						if (address->addresstype != LHNETADDRESSTYPE_INET6
 							|| setsockopt (lhnetsocket->inetsocket, IPPROTO_IPV6, IPV6_V6ONLY,
-										   (const void *)&ipv6_only, sizeof(ipv6_only)) == 0
+										   (const char *)&ipv6_only, sizeof(ipv6_only)) == 0
 #ifdef WIN32
 							// The Win32 API only supports IPV6_V6ONLY since Windows Vista, but fortunately
 							// the default value is what we want on Win32 anyway (IPV6_V6ONLY = true)

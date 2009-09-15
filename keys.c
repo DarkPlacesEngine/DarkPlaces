@@ -711,10 +711,10 @@ Key_Console (int key, int ascii)
 	{
 		if(keydown[K_CTRL])
 		{
-			con_backscroll += (int)floor((vid_conheight.integer >> 2) / con_textsize.integer)-1;
+			con_backscroll += ((vid_conheight.integer >> 2) / con_textsize.integer)-1;
 		}
 		else
-			con_backscroll += (int)floor((vid_conheight.integer >> 1) / con_textsize.integer)-3;
+			con_backscroll += ((vid_conheight.integer >> 1) / con_textsize.integer)-3;
 		return;
 	}
 
@@ -722,10 +722,10 @@ Key_Console (int key, int ascii)
 	{
 		if(keydown[K_CTRL])
 		{
-			con_backscroll -= (int)floor((vid_conheight.integer >> 2) / con_textsize.integer)-1;
+			con_backscroll -= ((vid_conheight.integer >> 2) / con_textsize.integer)-1;
 		}
 		else
-			con_backscroll -= (int)floor((vid_conheight.integer >> 1) / con_textsize.integer)-3;
+			con_backscroll -= ((vid_conheight.integer >> 1) / con_textsize.integer)-3;
 		return;
 	}
  
@@ -734,7 +734,7 @@ Key_Console (int key, int ascii)
 		if(keydown[K_CTRL])
 			con_backscroll += 1;
 		else if(keydown[K_SHIFT])
-			con_backscroll += (int)floor((vid_conheight.integer >> 2) / con_textsize.integer)-1;
+			con_backscroll += ((vid_conheight.integer >> 2) / con_textsize.integer)-1;
 		else
 			con_backscroll += 5;
 		return;
@@ -745,7 +745,7 @@ Key_Console (int key, int ascii)
 		if(keydown[K_CTRL])
 			con_backscroll -= 1;
 		else if(keydown[K_SHIFT])
-			con_backscroll -= (int)floor((vid_conheight.integer >> 2) / con_textsize.integer)-1;
+			con_backscroll -= ((vid_conheight.integer >> 2) / con_textsize.integer)-1;
 		else
 			con_backscroll -= 5;
 		return;

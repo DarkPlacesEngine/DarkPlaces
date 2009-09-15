@@ -2824,19 +2824,19 @@ static void M_Menu_Video_FindResolution(int w, int h, float a)
 	for (i = 1;i < menu_video_resolutions_count;i++)
 	{
 		// if the new mode would be a worse match in width, skip it
-		if (fabs(menu_video_resolutions[i].width - w) > fabs(menu_video_resolutions[menu_video_resolution].width - w))
+		if (abs(menu_video_resolutions[i].width - w) > abs(menu_video_resolutions[menu_video_resolution].width - w))
 			continue;
 		// if it is equal in width, check height
 		if (menu_video_resolutions[i].width == w && menu_video_resolutions[menu_video_resolution].width == w)
 		{
 			// if the new mode would be a worse match in height, skip it
-			if (fabs(menu_video_resolutions[i].height - h) > fabs(menu_video_resolutions[menu_video_resolution].height - h))
+			if (abs(menu_video_resolutions[i].height - h) > abs(menu_video_resolutions[menu_video_resolution].height - h))
 				continue;
 			// if it is equal in width and height, check pixel aspect
 			if (menu_video_resolutions[i].height == h && menu_video_resolutions[menu_video_resolution].height == h)
 			{
 				// if the new mode would be a worse match in pixel aspect, skip it
-				if (fabs(menu_video_resolutions[i].pixelheight - a) > fabs(menu_video_resolutions[menu_video_resolution].pixelheight - a))
+				if (abs(menu_video_resolutions[i].pixelheight - a) > abs(menu_video_resolutions[menu_video_resolution].pixelheight - a))
 					continue;
 				// if it is equal in everything, skip it (prefer earlier modes)
 				if (menu_video_resolutions[i].pixelheight == a && menu_video_resolutions[menu_video_resolution].pixelheight == a)

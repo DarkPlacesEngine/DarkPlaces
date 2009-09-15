@@ -150,7 +150,7 @@ static int current_swapstereo = false;
 static int current_channellayout = SND_CHANNELLAYOUT_AUTO;
 static int current_channellayout_used = SND_CHANNELLAYOUT_AUTO;
 
-static double spatialpower, spatialmin, spatialdiff, spatialoffset, spatialfactor;
+static float spatialpower, spatialmin, spatialdiff, spatialoffset, spatialfactor;
 typedef enum { SPATIAL_NONE, SPATIAL_LOG, SPATIAL_POW, SPATIAL_THRESH } spatialmethod_t;
 spatialmethod_t spatialmethod;
 
@@ -1359,7 +1359,8 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 						VectorScale(source_vec, f, source_vec);
 						break;
 					case SPATIAL_POW:
-						f = spatialmin + spatialdiff * bound(0, (pow(dist, spatialpower) - spatialoffset) * spatialfactor, 1);
+						f = (pow(dist, spatialpower) - spatialoffset) * spatialfactor;
+						f = spatialmin + spatialdiff * bound(0, f, 1);
 						VectorScale(source_vec, f, source_vec);
 						break;
 					case SPATIAL_THRESH:

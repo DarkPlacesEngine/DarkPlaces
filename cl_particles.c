@@ -252,6 +252,7 @@ void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend)
 #define readfloats(array, n) checkparms(n+1);for (arrayindex = 0;arrayindex < argc - 1;arrayindex++) array[arrayindex] = atof(argv[1+arrayindex])
 #define readint(var) checkparms(2);var = strtol(argv[1], NULL, 0)
 #define readfloat(var) checkparms(2);var = atof(argv[1])
+#define readbool(var) checkparms(2);var = strtol(argv[1], NULL, 0) != 0
 		if (!strcmp(argv[0], "effect"))
 		{
 			int effectnameindex;
@@ -368,7 +369,7 @@ void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend)
 		else if (!strcmp(argv[0], "lightradiusfade")) {readfloat(info->lightradiusfade);}
 		else if (!strcmp(argv[0], "lighttime")) {readfloat(info->lighttime);}
 		else if (!strcmp(argv[0], "lightcolor")) {readfloats(info->lightcolor, 3);}
-		else if (!strcmp(argv[0], "lightshadow")) {readint(info->lightshadow);}
+		else if (!strcmp(argv[0], "lightshadow")) {readbool(info->lightshadow);}
 		else if (!strcmp(argv[0], "lightcubemapnum")) {readint(info->lightcubemapnum);}
 		else if (!strcmp(argv[0], "underwater")) {checkparms(1);info->flags |= PARTICLEEFFECT_UNDERWATER;}
 		else if (!strcmp(argv[0], "notunderwater")) {checkparms(1);info->flags |= PARTICLEEFFECT_NOTUNDERWATER;}

@@ -32,10 +32,10 @@ typedef struct viddef_s
 	int width;
 	int height;
 	int bitsperpixel;
-	int fullscreen;
+	qboolean fullscreen;
 	int refreshrate;
 	qboolean userefreshrate;
-	int stereobuffer;
+	qboolean stereobuffer;
 	int samples;
 } viddef_t;
 

@@ -3877,7 +3877,7 @@ void VM_bitshift (void)
 	int n1, n2;
 	VM_SAFEPARMCOUNT(2, VM_bitshift);
 
-	n1 = (int)fabs((int)PRVM_G_FLOAT(OFS_PARM0));
+	n1 = (int)fabs((float)((int)PRVM_G_FLOAT(OFS_PARM0)));
 	n2 = (int)PRVM_G_FLOAT(OFS_PARM1);
 	if(!n1)
 		PRVM_G_FLOAT(OFS_RETURN) = n1;

@@ -287,7 +287,7 @@ void GL_SetupView_Orientation_FromEntity(const matrix4x4_t *matrix)
 	Matrix4x4_ConcatRotate(&basematrix, 90, 0, 0, 1);
 	Matrix4x4_Concat(&backend_viewmatrix, &basematrix, &tempmatrix);
 
-	GL_SetMirrorState(v_flipped.integer);
+	GL_SetMirrorState(v_flipped.integer != 0);
 	if(v_flipped_state)
 	{
 		Matrix4x4_Transpose(&basematrix, &backend_viewmatrix);

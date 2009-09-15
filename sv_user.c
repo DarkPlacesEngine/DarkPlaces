@@ -392,7 +392,7 @@ void SV_ClientThink (void)
 	if (host_client->edict->fields.server->movetype == MOVETYPE_NONE)
 		return;
 
-	onground = (int)host_client->edict->fields.server->flags & FL_ONGROUND;
+	onground = ((int)host_client->edict->fields.server->flags & FL_ONGROUND) != 0;
 
 	DropPunchAngle ();
 

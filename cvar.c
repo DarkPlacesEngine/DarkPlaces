@@ -234,7 +234,7 @@ void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 	qboolean changed;
 	size_t valuelen;
 
-	changed = strcmp(var->string, value);
+	changed = strcmp(var->string, value) != 0;
 	// LordHavoc: don't reallocate when there is no change
 	if (!changed)
 		return;

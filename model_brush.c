@@ -4621,12 +4621,12 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 		;
 	// i is now 0 for 128, 1 for 256, etc
 
-	for (power = 1;power + i <= mod_q3bsp_lightmapmergepower.integer && (size << power) <= gl_max_texture_size && (1 << (power * 2)) < 4 * (count >> loadmodel->brushq3.deluxemapping); power++)
+	for (power = 1;power + i <= mod_q3bsp_lightmapmergepower.integer && (size << power) <= gl_max_texture_size && (1 << (power * 2)) < 4 * (count >> (loadmodel->brushq3.deluxemapping ? 1 : 0)); power++)
 		loadmodel->brushq3.num_lightmapmergepower = power;
 
 	loadmodel->brushq3.num_lightmapmerge = 1 << loadmodel->brushq3.num_lightmapmergepower;
 
-	loadmodel->brushq3.num_mergedlightmaps = ((count >> loadmodel->brushq3.deluxemapping) + (1 << (loadmodel->brushq3.num_lightmapmergepower * 2)) - 1) >> (loadmodel->brushq3.num_lightmapmergepower * 2);
+	loadmodel->brushq3.num_mergedlightmaps = ((count >> (loadmodel->brushq3.deluxemapping ? 1 : 0)) + (1 << (loadmodel->brushq3.num_lightmapmergepower * 2)) - 1) >> (loadmodel->brushq3.num_lightmapmergepower * 2);
 	loadmodel->brushq3.data_lightmaps = (rtexture_t **)Mem_Alloc(loadmodel->mempool, loadmodel->brushq3.num_mergedlightmaps * sizeof(rtexture_t *));
 	if (loadmodel->brushq3.deluxemapping)
 		loadmodel->brushq3.data_deluxemaps = (rtexture_t **)Mem_Alloc(loadmodel->mempool, loadmodel->brushq3.num_mergedlightmaps * sizeof(rtexture_t *));
@@ -4660,7 +4660,7 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 				// all be full size except the last one which may be smaller
 				// because it only needs to the remaining blocks, and it will often
 				// be odd sizes like 2048x512 due to only being 25% full or so.
-				j = (count >> loadmodel->brushq3.deluxemapping) - (lightmapindex << power2);
+				j = (count >> (loadmodel->brushq3.deluxemapping ? 1 : 0)) - (lightmapindex << power2);
 				for (mergewidth = 1;mergewidth < j && mergewidth < (1 << power);mergewidth *= 2)
 					;
 				for (mergeheight = 1;mergewidth*mergeheight < j && mergeheight < (1 << power);mergeheight *= 2)
@@ -4673,7 +4673,7 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 			}
 			mergewidth = R_TextureWidth(loadmodel->brushq3.data_lightmaps[lightmapindex]) / size;
 			mergeheight = R_TextureHeight(loadmodel->brushq3.data_lightmaps[lightmapindex]) / size;
-			j = (i >> loadmodel->brushq3.deluxemapping) & ((1 << power2) - 1);
+			j = (i >> (loadmodel->brushq3.deluxemapping ? 1 : 0)) & ((1 << power2) - 1);
 			if (loadmodel->brushq3.deluxemapping && (i & 1))
 				R_UpdateTexture(loadmodel->brushq3.data_deluxemaps[lightmapindex], convertedpixels, (j % mergewidth) * size, (j / mergewidth) * size, size, size);
 			else
@@ -5120,7 +5120,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			if (cls.state != ca_dedicated && out->lightmaptexture)
 			{
 				// figure out which part of the merged lightmap this fits into
-				int lightmapindex = LittleLong(in->lightmapindex) >> loadmodel->brushq3.deluxemapping;
+				int lightmapindex = LittleLong(in->lightmapindex) >> (loadmodel->brushq3.deluxemapping ? 1 : 0);
 				int mergewidth = R_TextureWidth(out->lightmaptexture) / loadmodel->brushq3.lightmapsize;
 				int mergeheight = R_TextureHeight(out->lightmaptexture) / loadmodel->brushq3.lightmapsize;
 				lightmapindex &= mergewidth * mergeheight - 1;

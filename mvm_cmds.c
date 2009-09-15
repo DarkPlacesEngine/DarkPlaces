@@ -452,7 +452,7 @@ void VM_M_setserverlistmasknumber( void )
 			mask->info.freeslots = number;
 			break;
 		case SLIF_ISFAVORITE:
-			mask->info.isfavorite = number;
+			mask->info.isfavorite = number != 0;
 			break;
 		default:
 			VM_Warning( "VM_M_setserverlistmasknumber: Bad field number %i passed!\n", field );
