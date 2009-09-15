@@ -1231,7 +1231,7 @@ void CL_UpdateViewModel(void)
 	ent->state_previous = ent->state_current;
 	ent->state_current = defaultstate;
 	ent->state_current.time = cl.time;
-	ent->state_current.number = (unsigned int)-1;
+	ent->state_current.number = (unsigned short)-1;
 	ent->state_current.active = true;
 	ent->state_current.modelindex = cl.stats[STAT_WEAPON];
 	ent->state_current.frame = cl.stats[STAT_WEAPONFRAME];
