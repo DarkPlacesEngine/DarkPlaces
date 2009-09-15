@@ -6,7 +6,7 @@
 #define _WIN32_WINNT 0x0501
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#include <wspiapi.h>
+//#include <wspiapi.h>
 #endif
 
 #ifndef STANDALONETEST
@@ -878,7 +878,7 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 		SOCKLEN_T inetaddresslength;
 		address->addresstype = LHNETADDRESSTYPE_NONE;
 		inetaddresslength = sizeof(address->addr.in);
-		value = recvfrom(lhnetsocket->inetsocket, content, maxcontentlength, 0, &address->addr.sock, &inetaddresslength);
+		value = recvfrom(lhnetsocket->inetsocket, (char *)content, maxcontentlength, 0, &address->addr.sock, &inetaddresslength);
 		if (value > 0)
 		{
 			address->addresstype = LHNETADDRESSTYPE_INET4;
@@ -904,7 +904,7 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 		SOCKLEN_T inetaddresslength;
 		address->addresstype = LHNETADDRESSTYPE_NONE;
 		inetaddresslength = sizeof(address->addr.in6);
-		value = recvfrom(lhnetsocket->inetsocket, content, maxcontentlength, 0, &address->addr.sock, &inetaddresslength);
+		value = recvfrom(lhnetsocket->inetsocket, (char *)content, maxcontentlength, 0, &address->addr.sock, &inetaddresslength);
 		if (value > 0)
 		{
 			address->addresstype = LHNETADDRESSTYPE_INET6;
@@ -957,7 +957,7 @@ int LHNET_Write(lhnetsocket_t *lhnetsocket, const void *content, int contentleng
 	}
 	else if (lhnetsocket->address.addresstype == LHNETADDRESSTYPE_INET4)
 	{
-		value = sendto(lhnetsocket->inetsocket, content, contentlength, 0, (struct sockaddr *)&address->addr.in, sizeof(struct sockaddr_in));
+		value = sendto(lhnetsocket->inetsocket, (char *)content, contentlength, 0, (struct sockaddr *)&address->addr.in, sizeof(struct sockaddr_in));
 		if (value == -1)
 		{
 			if (SOCKETERRNO == EWOULDBLOCK)
@@ -967,7 +967,7 @@ int LHNET_Write(lhnetsocket_t *lhnetsocket, const void *content, int contentleng
 	}
 	else if (lhnetsocket->address.addresstype == LHNETADDRESSTYPE_INET6)
 	{
-		value = sendto(lhnetsocket->inetsocket, content, contentlength, 0, (struct sockaddr *)&address->addr.in6, sizeof(struct sockaddr_in6));
+		value = sendto(lhnetsocket->inetsocket, (char *)content, contentlength, 0, (struct sockaddr *)&address->addr.in6, sizeof(struct sockaddr_in6));
 		if (value == -1)
 		{
 			if (SOCKETERRNO == EWOULDBLOCK)

@@ -318,7 +318,7 @@ dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk)
 			Con_Printf("loading model %s\n", mod->name);
 
 		mod->used = true;
-		mod->crc = -1;
+		mod->crc = (unsigned int)-1;
 		mod->loaded = false;
 
 		VectorClear(mod->normalmins);
