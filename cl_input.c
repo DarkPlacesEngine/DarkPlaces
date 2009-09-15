@@ -1681,7 +1681,7 @@ void CL_SendMove(void)
 		packettime = 0;
 
 	// do not send if we do not have anything useful to send
-	if(msecdelta <= 0)
+	if(msecdelta <= 0 && cls.signon == SIGNONS && !cl.paused)
 		return;
 	// always send if buttons changed or an impulse is pending
 	// even if it violates the rate limit!
