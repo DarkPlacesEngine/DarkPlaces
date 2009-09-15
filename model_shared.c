@@ -230,7 +230,7 @@ int Mod_FrameGroupify_ParseGroups(const char *buf, mod_framegroupify_parsegroups
 			if (!COM_ParseToken_Simple(&bufptr, true, false))
 				break;
 			if (strcmp(com_token, "\n"))
-				loop = atoi(com_token);
+				loop = atoi(com_token) != 0;
 			else
 				loop = true;
 		}

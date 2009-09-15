@@ -98,7 +98,7 @@ unsigned int CeilPowerOf2(unsigned int value);
 #define VectorNormalizeDouble(v) {double ilength = sqrt(DotProduct((v),(v)));if (ilength) ilength = 1.0 / ilength;(v)[0] *= ilength;(v)[1] *= ilength;(v)[2] *= ilength;}
 #define VectorDistance2(a, b) (((a)[0] - (b)[0]) * ((a)[0] - (b)[0]) + ((a)[1] - (b)[1]) * ((a)[1] - (b)[1]) + ((a)[2] - (b)[2]) * ((a)[2] - (b)[2]))
 #define VectorDistance(a, b) (sqrt(VectorDistance2(a,b)))
-#define VectorLength(a) (sqrt(DotProduct(a, a)))
+#define VectorLength(a) (sqrt((double)DotProduct(a, a)))
 #define VectorLength2(a) (DotProduct(a, a))
 #define VectorScale(in, scale, out) ((out)[0] = (in)[0] * (scale),(out)[1] = (in)[1] * (scale),(out)[2] = (in)[2] * (scale))
 #define VectorScaleCast(in, scale, outtype, out) ((out)[0] = (outtype) ((in)[0] * (scale)),(out)[1] = (outtype) ((in)[1] * (scale)),(out)[2] = (outtype) ((in)[2] * (scale)))

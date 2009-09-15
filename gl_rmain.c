@@ -3998,7 +3998,7 @@ void R_UpdateVariables(void)
 	r_refdef.shadowpolygonfactor = r_refdef.polygonfactor + r_shadow_polygonfactor.value * (r_shadow_frontsidecasting.integer ? 1 : -1);
 	r_refdef.shadowpolygonoffset = r_refdef.polygonoffset + r_shadow_polygonoffset.value * (r_shadow_frontsidecasting.integer ? 1 : -1);
 
-	r_refdef.scene.rtworld = r_shadow_realtime_world.integer;
+	r_refdef.scene.rtworld = r_shadow_realtime_world.integer != 0;
 	r_refdef.scene.rtworldshadows = r_shadow_realtime_world_shadows.integer && gl_stencil;
 	r_refdef.scene.rtdlight = (r_shadow_realtime_world.integer || r_shadow_realtime_dlight.integer) && !gl_flashblend.integer && r_dynamic.integer;
 	r_refdef.scene.rtdlightshadows = r_refdef.scene.rtdlight && r_shadow_realtime_dlight_shadows.integer && gl_stencil;
@@ -5080,7 +5080,8 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 	if (t->currentmaterialflags & MATERIALFLAG_WALL)
 	{
 		int layerflags = 0;
-		int blendfunc1, blendfunc2, depthmask;
+		int blendfunc1, blendfunc2;
+		qboolean depthmask;
 		if (t->currentmaterialflags & MATERIALFLAG_ADD)
 		{
 			blendfunc1 = GL_SRC_ALPHA;
@@ -5413,7 +5414,7 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 			rsurface.normal3f = rsurface.modelnormal3f = rsurface.array_modelnormal3f;
 			rsurface.normal3f_bufferobject = rsurface.modelnormal3f_bufferobject = 0;
 			rsurface.normal3f_bufferoffset = rsurface.modelnormal3f_bufferoffset = 0;
-			Mod_BuildNormals(0, rsurface.modelnum_vertices, rsurface.modelnum_triangles, rsurface.modelvertex3f, rsurface.modelelement3i, rsurface.array_modelnormal3f, r_smoothnormals_areaweighting.integer);
+			Mod_BuildNormals(0, rsurface.modelnum_vertices, rsurface.modelnum_triangles, rsurface.modelvertex3f, rsurface.modelelement3i, rsurface.array_modelnormal3f, r_smoothnormals_areaweighting.integer != 0);
 		}
 		if (generatetangents && !rsurface.modelsvector3f)
 		{
@@ -5423,7 +5424,7 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 			rsurface.tvector3f = rsurface.modeltvector3f = rsurface.array_modeltvector3f;
 			rsurface.tvector3f_bufferobject = rsurface.modeltvector3f_bufferobject = 0;
 			rsurface.tvector3f_bufferoffset = rsurface.modeltvector3f_bufferoffset = 0;
-			Mod_BuildTextureVectorsFromNormals(0, rsurface.modelnum_vertices, rsurface.modelnum_triangles, rsurface.modelvertex3f, rsurface.modeltexcoordtexture2f, rsurface.modelnormal3f, rsurface.modelelement3i, rsurface.array_modelsvector3f, rsurface.array_modeltvector3f, r_smoothnormals_areaweighting.integer);
+			Mod_BuildTextureVectorsFromNormals(0, rsurface.modelnum_vertices, rsurface.modelnum_triangles, rsurface.modelvertex3f, rsurface.modeltexcoordtexture2f, rsurface.modelnormal3f, rsurface.modelelement3i, rsurface.array_modelsvector3f, rsurface.array_modeltvector3f, r_smoothnormals_areaweighting.integer != 0);
 		}
 	}
 	rsurface.vertex3f  = rsurface.modelvertex3f;
@@ -5486,8 +5487,8 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 						VectorMAMAMAM(1, center, DotProduct(forward, v), newforward, DotProduct(right, v), newright, DotProduct(up, v), newup, rsurface.array_deformedvertex3f + (surface->num_firstvertex+i+j) * 3);
 					}
 				}
-				Mod_BuildNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface.vertex3f, rsurface.modelelement3i + surface->num_firsttriangle * 3, rsurface.array_deformednormal3f, r_smoothnormals_areaweighting.integer);
-				Mod_BuildTextureVectorsFromNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface.vertex3f, rsurface.modeltexcoordtexture2f, rsurface.array_deformednormal3f, rsurface.modelelement3i + surface->num_firsttriangle * 3, rsurface.array_deformedsvector3f, rsurface.array_deformedtvector3f, r_smoothnormals_areaweighting.integer);
+				Mod_BuildNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface.vertex3f, rsurface.modelelement3i + surface->num_firsttriangle * 3, rsurface.array_deformednormal3f, r_smoothnormals_areaweighting.integer != 0);
+				Mod_BuildTextureVectorsFromNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface.vertex3f, rsurface.modeltexcoordtexture2f, rsurface.array_deformednormal3f, rsurface.modelelement3i + surface->num_firsttriangle * 3, rsurface.array_deformedsvector3f, rsurface.array_deformedtvector3f, r_smoothnormals_areaweighting.integer != 0);
 			}
 			rsurface.vertex3f = rsurface.array_deformedvertex3f;
 			rsurface.vertex3f_bufferobject = 0;
@@ -5617,8 +5618,8 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 						VectorMAMAM(1, v1, -f, right, f, newright, rsurface.array_deformedvertex3f + (surface->num_firstvertex+i+j) * 3);
 					}
 				}
-				Mod_BuildNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface.vertex3f, rsurface.modelelement3i + surface->num_firsttriangle * 3, rsurface.array_deformednormal3f, r_smoothnormals_areaweighting.integer);
-				Mod_BuildTextureVectorsFromNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface.vertex3f, rsurface.modeltexcoordtexture2f, rsurface.array_deformednormal3f, rsurface.modelelement3i + surface->num_firsttriangle * 3, rsurface.array_deformedsvector3f, rsurface.array_deformedtvector3f, r_smoothnormals_areaweighting.integer);
+				Mod_BuildNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface.vertex3f, rsurface.modelelement3i + surface->num_firsttriangle * 3, rsurface.array_deformednormal3f, r_smoothnormals_areaweighting.integer != 0);
+				Mod_BuildTextureVectorsFromNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface.vertex3f, rsurface.modeltexcoordtexture2f, rsurface.array_deformednormal3f, rsurface.modelelement3i + surface->num_firsttriangle * 3, rsurface.array_deformedsvector3f, rsurface.array_deformedtvector3f, r_smoothnormals_areaweighting.integer != 0);
 			}
 			rsurface.vertex3f = rsurface.array_deformedvertex3f;
 			rsurface.vertex3f_bufferobject = 0;
@@ -5649,7 +5650,7 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 					normal[2] += deform->parms[0] * noise4f(196 + vertex[0], vertex[1], vertex[2], r_refdef.scene.time * deform->parms[1]);
 					VectorNormalize(normal);
 				}
-				Mod_BuildTextureVectorsFromNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface.vertex3f, rsurface.modeltexcoordtexture2f, rsurface.array_deformednormal3f, rsurface.modelelement3i + surface->num_firsttriangle * 3, rsurface.array_deformedsvector3f, rsurface.array_deformedtvector3f, r_smoothnormals_areaweighting.integer);
+				Mod_BuildTextureVectorsFromNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface.vertex3f, rsurface.modeltexcoordtexture2f, rsurface.array_deformednormal3f, rsurface.modelelement3i + surface->num_firsttriangle * 3, rsurface.array_deformedsvector3f, rsurface.array_deformedtvector3f, r_smoothnormals_areaweighting.integer != 0);
 			}
 			rsurface.svector3f = rsurface.array_deformedsvector3f;
 			rsurface.svector3f_bufferobject = 0;
@@ -6475,7 +6476,7 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, msurface_t **t
 		GL_Color(1, 1, 1, 1);
 		R_Mesh_ColorPointer(NULL, 0, 0);
 
-		R_SetupSurfaceShader(vec3_origin, rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT, 1, 1, rsurface.texture->specularscale, RSURFPASS_BACKGROUND);
+		R_SetupSurfaceShader(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, RSURFPASS_BACKGROUND);
 		if (r_glsl_permutation)
 		{
 			RSurf_PrepareVerticesForBatch(true, true, texturenumsurfaces, texturesurfacelist);
@@ -6498,7 +6499,7 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, msurface_t **t
 		R_Mesh_TexBind(GL20TU_REFLECTION, R_GetTexture(r_texture_white)); // changed per surface
 	}
 
-	R_SetupSurfaceShader(vec3_origin, rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT, 1, 1, rsurface.texture->specularscale, RSURFPASS_BASE);
+	R_SetupSurfaceShader(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, RSURFPASS_BASE);
 	if (!r_glsl_permutation)
 		return;
 

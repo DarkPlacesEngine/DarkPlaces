@@ -281,7 +281,7 @@ qboolean CL_VM_InputEvent (qboolean down, int key, int ascii)
 			PRVM_G_FLOAT(OFS_PARM1) = key;
 			PRVM_G_FLOAT(OFS_PARM2) = ascii;
 			PRVM_ExecuteProgram(prog->funcoffsets.CSQC_InputEvent, "QC function CSQC_InputEvent is missing");
-			r = CSQC_RETURNVAL;
+			r = CSQC_RETURNVAL != 0;
 		}
 	CSQC_END
 	return r;
@@ -332,7 +332,7 @@ qboolean CL_VM_ConsoleCommand (const char *cmd)
 		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(cmd);
 		PRVM_ExecuteProgram(prog->funcoffsets.CSQC_ConsoleCommand, "QC function CSQC_ConsoleCommand is missing");
 		vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
-		r = CSQC_RETURNVAL;
+		r = CSQC_RETURNVAL != 0;
 	}
 	CSQC_END
 	return r;
@@ -351,7 +351,7 @@ qboolean CL_VM_Parse_TempEntity (void)
 		prog->globals.client->time = cl.time;
 		prog->globals.client->self = cl.csqc_server2csqcentitynumber[cl.playerentity];
 		PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Parse_TempEntity, "QC function CSQC_Parse_TempEntity is missing");
-		r = CSQC_RETURNVAL;
+		r = CSQC_RETURNVAL != 0;
 		if(!r)
 		{
 			msg_readcount = t;
@@ -550,7 +550,7 @@ qboolean CL_VM_Event_Sound(int sound_num, float volume, int channel, float atten
 			PRVM_G_FLOAT(OFS_PARM4) = attenuation;
 			VectorCopy(pos, PRVM_G_VECTOR(OFS_PARM5) );
 			PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Event_Sound, "QC function CSQC_Event_Sound is missing");
-			r = CSQC_RETURNVAL;
+			r = CSQC_RETURNVAL != 0;
 		}
 		CSQC_END
 	}

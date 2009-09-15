@@ -1121,7 +1121,7 @@ float DrawQ_String_Font(float startx, float starty, const char *text, size_t max
 		else
 			colorindex = *outcolor;
 
-		DrawQ_GetTextColor(color, colorindex, basered, basegreen, baseblue, basealpha, shadow);
+		DrawQ_GetTextColor(color, colorindex, basered, basegreen, baseblue, basealpha, shadow != 0);
 
 		x = startx;
 		y = starty;
@@ -1143,7 +1143,7 @@ float DrawQ_String_Font(float startx, float starty, const char *text, size_t max
 				if (ch <= '9' && ch >= '0') // ^[0-9] found
 				{
 					colorindex = ch - '0';
-					DrawQ_GetTextColor(color, colorindex, basered, basegreen, baseblue, basealpha, shadow);
+					DrawQ_GetTextColor(color, colorindex, basered, basegreen, baseblue, basealpha, shadow != 0);
 					continue;
 				}
 				else if (ch == STRING_COLOR_RGB_TAG_CHAR && i+3 < maxlen ) // ^x found
@@ -1171,7 +1171,7 @@ float DrawQ_String_Font(float startx, float starty, const char *text, size_t max
 								colorindex = tempcolorindex | 0xf;
 								// ...done! now colorindex has rgba codes (1,rrrr,gggg,bbbb,aaaa)
 								//Con_Printf("^1colorindex:^7 %x\n", colorindex);
-								DrawQ_GetTextColor(color, colorindex, basered, basegreen, baseblue, basealpha, shadow);
+								DrawQ_GetTextColor(color, colorindex, basered, basegreen, baseblue, basealpha, shadow != 0);
 								i+=3;
 								continue;
 							}

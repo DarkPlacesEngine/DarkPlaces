@@ -2235,7 +2235,7 @@ void PRVM_InitProg(int prognr)
 	prog->starttime = Sys_DoubleTime();
 
 	prog->error_cmd = Host_Error;
-	prog->leaktest_active = prvm_leaktest.integer;
+	prog->leaktest_active = prvm_leaktest.integer != 0;
 }
 
 int PRVM_GetProgNr(void)

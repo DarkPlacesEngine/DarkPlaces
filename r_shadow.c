@@ -2596,7 +2596,7 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int firsttriangle
 	}
 }
 
-void R_RTLight_Update(rtlight_t *rtlight, int isstatic, matrix4x4_t *matrix, vec3_t color, int style, const char *cubemapname, qboolean shadow, vec_t corona, vec_t coronasizescale, vec_t ambientscale, vec_t diffusescale, vec_t specularscale, int flags)
+void R_RTLight_Update(rtlight_t *rtlight, int isstatic, matrix4x4_t *matrix, vec3_t color, int style, const char *cubemapname, int shadow, vec_t corona, vec_t coronasizescale, vec_t ambientscale, vec_t diffusescale, vec_t specularscale, int flags)
 {
 	matrix4x4_t tempmatrix = *matrix;
 	Matrix4x4_Scale(&tempmatrix, r_shadow_lightradiusscale.value, 1);

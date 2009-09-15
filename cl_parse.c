@@ -2994,7 +2994,7 @@ qboolean CL_ExaminePrintString(const char *text)
 	if (cl.parsingtextmode == CL_PARSETEXTMODE_PING)
 	{
 		// if anything goes wrong, we'll assume this is not a ping report
-		qboolean expected = cl.parsingtextexpectingpingforscores;
+		qboolean expected = cl.parsingtextexpectingpingforscores != 0;
 		cl.parsingtextexpectingpingforscores = 0;
 		cl.parsingtextmode = CL_PARSETEXTMODE_NONE;
 		t = text;
@@ -3576,7 +3576,7 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case qw_svc_setpause:
-				cl.paused = MSG_ReadByte ();
+				cl.paused = MSG_ReadByte () != 0;
 				if (cl.paused)
 					CDAudio_Pause ();
 				else
@@ -3867,7 +3867,7 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case svc_setpause:
-				cl.paused = MSG_ReadByte ();
+				cl.paused = MSG_ReadByte () != 0;
 				if (cl.paused)
 					CDAudio_Pause ();
 				else

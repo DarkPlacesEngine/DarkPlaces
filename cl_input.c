@@ -365,9 +365,9 @@ float CL_KeyState (kbutton_t *key)
 	float		val;
 	qboolean	impulsedown, impulseup, down;
 
-	impulsedown = key->state & 2;
-	impulseup = key->state & 4;
-	down = key->state & 1;
+	impulsedown = (key->state & 2) != 0;
+	impulseup = (key->state & 4) != 0;
+	down = (key->state & 1) != 0;
 	val = 0;
 
 	if (impulsedown && !impulseup)
@@ -1626,7 +1626,7 @@ void CL_SendMove(void)
 		cl.cmd.msec = 100;
 	cl.cmd.frametime = cl.cmd.msec * (1.0 / 1000.0);
 
-	cl.cmd.predicted = cl_movement.integer;
+	cl.cmd.predicted = cl_movement.integer != 0;
 
 	// movement is set by input code (forwardmove/sidemove/upmove)
 	// always dump the first two moves, because they may contain leftover inputs from the last level

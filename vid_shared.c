@@ -1193,14 +1193,14 @@ int VID_Mode(int fullscreen, int width, int height, int bpp, int refreshrate, in
 	Con_Printf("Initializing Video Mode: %s %dx%dx%dx%dhz%s%s\n", fullscreen ? "fullscreen" : "window", width, height, bpp, refreshrate, stereobuffer ? " stereo" : "", samples > 1 ? va(" (%ix AA)", samples) : "");
 	if (VID_InitMode(fullscreen, &width, &height, bpp, vid_userefreshrate.integer ? max(1, refreshrate) : 0, stereobuffer, samples))
 	{
-		vid.fullscreen = fullscreen;
+		vid.fullscreen = fullscreen != 0;
 		vid.width = width;
 		vid.height = height;
 		vid.bitsperpixel = bpp;
 		vid.samples = samples;
 		vid.refreshrate = refreshrate;
-		vid.stereobuffer = stereobuffer;
-		vid.userefreshrate = vid_userefreshrate.integer;
+		vid.stereobuffer = stereobuffer != 0;
+		vid.userefreshrate = vid_userefreshrate.integer != 0;
 		Cvar_SetValueQuick(&vid_fullscreen, fullscreen);
 		Cvar_SetValueQuick(&vid_width, width);
 		Cvar_SetValueQuick(&vid_height, height);

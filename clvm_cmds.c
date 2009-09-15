@@ -844,13 +844,13 @@ void VM_CL_R_SetView (void)
 		CSQC_R_RecalcView();
 		break;
 	case VF_DRAWWORLD:
-		cl.csqc_vidvars.drawworld = k;
+		cl.csqc_vidvars.drawworld = k != 0;
 		break;
 	case VF_DRAWENGINESBAR:
-		cl.csqc_vidvars.drawenginesbar = k;
+		cl.csqc_vidvars.drawenginesbar = k != 0;
 		break;
 	case VF_DRAWCROSSHAIR:
-		cl.csqc_vidvars.drawcrosshair = k;
+		cl.csqc_vidvars.drawcrosshair = k != 0;
 		break;
 	case VF_CL_VIEWANGLES:
 		VectorCopy(f, cl.viewangles);
@@ -1142,7 +1142,7 @@ static void VM_CL_getkeybind (void)
 static void VM_CL_setcursormode (void)
 {
 	VM_SAFEPARMCOUNT(1, VM_CL_setcursormode);
-	cl.csqc_wantsmousemove = PRVM_G_FLOAT(OFS_PARM0);
+	cl.csqc_wantsmousemove = PRVM_G_FLOAT(OFS_PARM0) != 0;
 	cl_ignoremousemoves = 2;
 }
 

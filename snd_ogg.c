@@ -792,7 +792,7 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *sfx)
 
 	if(peak)
 	{
-		sfx->volume_mult = min(1 / peak, exp(gaindb * 0.05 * log(10)));
+		sfx->volume_mult = min(1.0f / peak, exp(gaindb * 0.05f * log(10.0f)));
 		sfx->volume_peak = peak;
 		if (developer_loading.integer >= 2)
 			Con_Printf ("Ogg sound file \"%s\" uses ReplayGain (gain %f, peak %f)\n", filename, sfx->volume_mult, sfx->volume_peak);

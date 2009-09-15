@@ -61,7 +61,8 @@ static void Mod_SpriteSetupTexture(texture_t *texture, skinframe_t *skinframe, q
 
 static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version, const unsigned int *palette, qboolean additive)
 {
-	int					i, j, groupframes, realframes, x, y, origin[2], width, height, fullbright;
+	int					i, j, groupframes, realframes, x, y, origin[2], width, height;
+	qboolean			fullbright;
 	dspriteframetype_t	*pinframetype;
 	dspriteframe_t		*pinframe;
 	dspritegroup_t		*pingroup;
@@ -347,7 +348,8 @@ void Mod_IDSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 void Mod_IDS2_Load(dp_model_t *mod, void *buffer, void *bufferend)
 {
-	int i, version, fullbright;
+	int i, version;
+	qboolean fullbright;
 	const dsprite2_t *pinqsprite;
 	skinframe_t *skinframe;
 	float modelradius;

@@ -140,14 +140,14 @@ static int Q3PatchTesselation(float largestsquared3xcurvearea, float tolerance)
 {
 	float f;
 	// f is actually a squared 2x curve area... so the formula had to be adjusted to give roughly the same subdivisions
-	f = pow(largestsquared3xcurvearea / 64.0, 0.25) / tolerance;
+	f = pow(largestsquared3xcurvearea / 64.0f, 0.25f) / tolerance;
 	//if(f < 0.25) // VERY flat patches
 	if(f < 0.0001) // TOTALLY flat patches
 		return 0;
 	else if(f < 2)
 		return 1;
 	else
-		return (int) floor(log(f) / log(2)) + 1;
+		return (int) floor(log(f) / log(2.0f)) + 1;
 		// this is always at least 2
 		// maps [0.25..0.5[ to -1 (actually, 1 is returned)
 		// maps [0.5..1[ to 0 (actually, 1 is returned)
