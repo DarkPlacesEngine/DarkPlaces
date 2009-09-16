@@ -171,29 +171,16 @@ void Host_Status_f (void)
 		
 		if (in == 0) // default layout
 		{
-			print ("#%-3u ", i+1);
-			print ("%-16.16s ", client->name);
-			print ("%4i  ", frags);
-			print ("%2i:%02i:%02i\n   ", hours, minutes, seconds);
-			print ("%s\n", ip);
+			print ("#%-3u %-16.16s  %3i  %2i:%02i:%02i\n", i+1, client->name, frags, hours, minutes, seconds);
+			print ("  %s\n", ip);
 		}
 		else if (in == 1) // extended layout
 		{
-			k%2 ? print("^3") : print("^7");
-			print ("%-21s ", ip);
-			print ("%2i ", packetloss);
-			print ("%4i ", ping);
-			print ("%2i:%02i:%02i ", hours, minutes, seconds);
-			print ("%4i  ", frags);
-			print ("#%-3u ", i+1);
-			print ("^7%s\n", client->name);
+			print ("%s%-21s %2i %4i %2i:%02i:%02i %4i  #%-3u ^7%s\n", k%2 ? "^3" : "^7", ip, packetloss, ping, hours, minutes, seconds, frags, i+1, client->name);
 		}
 		else if (in == 2) // reduced layout
 		{
-			k%2 ? print("^3") : print("^7");
-			print ("%-21s ", ip);
-			print ("#%-3u ", i+1);
-			print ("^7%s\n", client->name);
+			print ("%s%-21s #%-3u ^7%s\n", k%2 ? "^3" : "^7", ip, i+1, client->name);
 		}
 	}
 
