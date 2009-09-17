@@ -334,13 +334,14 @@ void PRVM_CallProfile (void)
 	prog->starttime = Sys_DoubleTime();
 }
 
-void PRVM_Profile (int maxfunctions, int mininstructions)
+void PRVM_Profile (int maxfunctions, int mininstructions, int sortby)
 {
 	mfunction_t *f, *best;
 	int i, num;
 	double max;
 
-	Con_Printf( "%s Profile:\n[CallCount] [Statements] [BuiltinCost]\n", PRVM_NAME );
+	Con_Printf( "%s Profile:\n[CallCount] [Statement] [BuiltinCt] [StmtTotal] [BltnTotal] [self]\n", PRVM_NAME );
+	//                        12345678901 12345678901 12345678901 12345678901 12345678901 123.45%
 
 	num = 0;
 	do
@@ -350,10 +351,21 @@ void PRVM_Profile (int maxfunctions, int mininstructions)
 		for (i=0 ; i<prog->progs->numfunctions ; i++)
 		{
 			f = &prog->functions[i];
-			if (max < f->profile + f->builtinsprofile + f->callcount)
+			if(sortby)
 			{
-				max = f->profile + f->builtinsprofile + f->callcount;
-				best = f;
+				if (max < f->profile_total + f->builtinsprofile_total + f->callcount)
+				{
+					max = f->profile_total + f->builtinsprofile_total + f->callcount;
+					best = f;
+				}
+			}
+			else
+			{
+				if (max < f->profile + f->builtinsprofile + f->callcount)
+				{
+					max = f->profile + f->builtinsprofile + f->callcount;
+					best = f;
+				}
 			}
 		}
 		if (best)
@@ -361,13 +373,16 @@ void PRVM_Profile (int maxfunctions, int mininstructions)
 			if (num < maxfunctions && max >= mininstructions)
 			{
 				if (best->first_statement < 0)
-					Con_Printf("%9.0f ----- builtin ----- %s\n", best->callcount, PRVM_GetString(best->s_name));
+					Con_Printf("%11.0f ----------------------- builtin ----------------------- %s\n", best->callcount, PRVM_GetString(best->s_name));
+					//                 12345678901 12345678901 12345678901 12345678901 123.45%
 				else
-					Con_Printf("%9.0f %9.0f %9.0f %s\n", best->callcount, best->profile, best->builtinsprofile, PRVM_GetString(best->s_name));
+					Con_Printf("%11.0f %11.0f %11.0f %11.0f %11.0f %6.2f%% %s\n", best->callcount, best->profile, best->builtinsprofile, best->profile_total, best->builtinsprofile_total, (best->profile + best->builtinsprofile) * 100.0 / (best->profile_total + best->builtinsprofile_total), PRVM_GetString(best->s_name));
 			}
 			num++;
 			best->profile = 0;
 			best->builtinsprofile = 0;
+			best->profile_total = 0;
+			best->builtinsprofile_total = 0;
 			best->callcount = 0;
 		}
 	} while (best);
@@ -419,7 +434,29 @@ void PRVM_Profile_f (void)
 	if(!PRVM_SetProgFromString(Cmd_Argv(1)))
 		return;
 
-	PRVM_Profile(howmany, 1);
+	PRVM_Profile(howmany, 1, 0);
+
+	PRVM_End;
+}
+
+void PRVM_ChildProfile_f (void)
+{
+	int howmany;
+
+	howmany = 1<<30;
+	if (Cmd_Argc() == 3)
+		howmany = atoi(Cmd_Argv(2));
+	else if (Cmd_Argc() != 2)
+	{
+		Con_Print("prvm_childprofile <program name>\n");
+		return;
+	}
+
+	PRVM_Begin;
+	if(!PRVM_SetProgFromString(Cmd_Argv(1)))
+		return;
+
+	PRVM_Profile(howmany, 1, 1);
 
 	PRVM_End;
 }
@@ -515,6 +552,8 @@ int PRVM_EnterFunction (mfunction_t *f)
 
 	prog->stack[prog->depth].s = prog->xstatement;
 	prog->stack[prog->depth].f = prog->xfunction;
+	prog->stack[prog->depth].profile_acc = -f->profile;
+	prog->stack[prog->depth].builtinsprofile_acc = -f->builtinsprofile;
 	prog->depth++;
 	if (prog->depth >=PRVM_MAX_STACK_DEPTH)
 		PRVM_ERROR ("stack overflow");
@@ -539,6 +578,7 @@ int PRVM_EnterFunction (mfunction_t *f)
 		}
 	}
 
+	++f->recursion;
 	prog->xfunction = f;
 	return f->first_statement - 1;	// offset the s++
 }
@@ -551,6 +591,7 @@ PRVM_LeaveFunction
 int PRVM_LeaveFunction (void)
 {
 	int		i, c;
+	mfunction_t *f;
 
 	if (prog->depth <= 0)
 		PRVM_ERROR ("prog stack underflow in %s", PRVM_NAME);
@@ -568,7 +609,26 @@ int PRVM_LeaveFunction (void)
 
 // up stack
 	prog->depth--;
+	f = prog->xfunction;
+	--f->recursion;
 	prog->xfunction = prog->stack[prog->depth].f;
+	prog->stack[prog->depth].profile_acc += f->profile;
+	prog->stack[prog->depth].builtinsprofile_acc += f->builtinsprofile;
+	if(prog->depth > 0)
+	{
+		prog->stack[prog->depth-1].profile_acc += prog->stack[prog->depth].profile_acc;
+		prog->stack[prog->depth-1].builtinsprofile_acc += prog->stack[prog->depth].builtinsprofile_acc;
+	}
+	if(!f->recursion)
+	{
+		// if f is already on the call stack...
+		// we cannot add this profile data to it now
+		// or we would add it more than once
+		// so, let's only add to the function's profile if it is the outermost call
+		f->profile_total += prog->stack[prog->depth].profile_acc;
+		f->builtinsprofile_total += prog->stack[prog->depth].builtinsprofile_acc;
+	}
+	
 	return prog->stack[prog->depth].s;
 }
 
