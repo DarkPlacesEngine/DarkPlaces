@@ -237,7 +237,7 @@ static sndinitstat SndSys_InitDirectSound (const snd_format_t* requested)
 			return SIS_FAILURE;
 		}
 
-		pDirectSoundCreate = (void *)GetProcAddress(hInstDS,"DirectSoundCreate");
+		pDirectSoundCreate = (HRESULT (__stdcall *)(GUID *, LPDIRECTSOUND *,IUnknown *))GetProcAddress(hInstDS,"DirectSoundCreate");
 
 		if (!pDirectSoundCreate)
 		{
@@ -473,7 +473,7 @@ static qboolean SndSys_InitMmsystem (const snd_format_t* requested)
 		SndSys_Shutdown ();
 		return false;
 	}
-	lpData = GlobalLock(hData);
+	lpData = (HPSTR)GlobalLock(hData);
 	if (!lpData)
 	{
 		Con_Print("Sound: Failed to lock.\n");
