@@ -423,6 +423,7 @@ cvar_t cl_pitchspeed = {CVAR_SAVE, "cl_pitchspeed","150","keyboard pitch turning
 cvar_t cl_anglespeedkey = {CVAR_SAVE, "cl_anglespeedkey","1.5","how much +speed multiplies keyboard turning speed"};
 
 cvar_t cl_movement = {CVAR_SAVE, "cl_movement", "0", "enables clientside prediction of your player movement"};
+cvar_t cl_movement_nettimeout = {CVAR_SAVE, "cl_movement_nettimeout", "0.3", "stops predicting moves when server is lagging badly (avoids major performance problems), timeout in seconds"};
 cvar_t cl_movement_minping = {CVAR_SAVE, "cl_movement_minping", "0", "whether to use prediction when ping is lower than this value in milliseconds"};
 cvar_t cl_movement_track_canjump = {CVAR_SAVE, "cl_movement_track_canjump", "1", "track if the player released the jump key between two jumps to decide if he is able to jump or not; when off, this causes some \"sliding\" slightly above the floor when the jump key is held too long; if the mod allows repeated jumping by holding space all the time, this has to be set to zero too"};
 cvar_t cl_movement_maxspeed = {0, "cl_movement_maxspeed", "320", "how fast you can move (should match sv_maxspeed)"};
@@ -1572,14 +1573,18 @@ void CL_SendMove(void)
 	unsigned char data[1024];
 	double packettime;
 	int msecdelta;
+	qboolean quemove;
 
 	// if playing a demo, do nothing
 	if (!cls.netcon)
 		return;
 
-	// we build up cl.movecmd[0] and then decide whether to send or not
-	// the prediction code will use this command even though it has not been
-	// sent yet
+	// we don't que moves during a lag spike (potential network timeout)
+	quemove = realtime - cl.last_received_message < cl_movement_nettimeout.value;
+
+	// we build up cl.cmd and then decide whether to send or not
+	// we store this into cl.movecmd[0] for prediction each frame even if we
+	// do not send, to make sure that prediction is instant
 	cl.cmd.time = cl.time;
 	cl.cmd.sequence = cls.netcon->outgoing_unreliable_sequence;
 
@@ -1652,14 +1657,15 @@ void CL_SendMove(void)
 		break;
 	case PROTOCOL_DARKPLACES6:
 	case PROTOCOL_DARKPLACES7:
-		// FIXME: cl.movecmd[0].buttons & 16 is +button5, Nexuiz specific
+		// FIXME: cl.cmd.buttons & 16 is +button5, Nexuiz specific
 		cl.cmd.crouch = (cl.cmd.buttons & 16) != 0;
 		break;
 	case PROTOCOL_UNKNOWN:
 		break;
 	}
 
-	cl.movecmd[0] = cl.cmd;
+	if (quemove)
+		cl.movecmd[0] = cl.cmd;
 
 	// don't predict more than 200fps
 	if (realtime >= cl.lastpackettime + 0.005)
@@ -1685,7 +1691,7 @@ void CL_SendMove(void)
 		return;
 	// always send if buttons changed or an impulse is pending
 	// even if it violates the rate limit!
-	if (!cl.movecmd[0].impulse && (!cl_netimmediatebuttons.integer || cl.movecmd[0].buttons == cl.movecmd[1].buttons))
+	if (!cl.cmd.impulse && (!cl_netimmediatebuttons.integer || cl.cmd.buttons == cl.movecmd[1].buttons))
 	{
 		// don't choke the connection with packets (obey rate limit)
 		if ((cls.protocol == PROTOCOL_QUAKEWORLD || cls.signon == SIGNONS) && !NetConn_CanSend(cls.netcon) && !cl.islocalgame)
@@ -1739,7 +1745,7 @@ void CL_SendMove(void)
 			// write most recent 3 moves
 			QW_MSG_WriteDeltaUsercmd(&buf, &nullcmd, &cl.movecmd[2]);
 			QW_MSG_WriteDeltaUsercmd(&buf, &cl.movecmd[2], &cl.movecmd[1]);
-			QW_MSG_WriteDeltaUsercmd(&buf, &cl.movecmd[1], &cl.movecmd[0]);
+			QW_MSG_WriteDeltaUsercmd(&buf, &cl.movecmd[1], &cl.cmd);
 			// calculate the checksum
 			buf.data[checksumindex] = COM_BlockSequenceCRCByteQW(buf.data + checksumindex + 1, buf.cursize - checksumindex - 1, cls.netcon->outgoing_unreliable_sequence);
 			// if delta compression history overflows, request no delta
@@ -1763,50 +1769,50 @@ void CL_SendMove(void)
 		case PROTOCOL_NEHAHRABJP3:
 			// 5 bytes
 			MSG_WriteByte (&buf, clc_move);
-			MSG_WriteFloat (&buf, cl.movecmd[0].time); // last server packet time
+			MSG_WriteFloat (&buf, cl.cmd.time); // last server packet time
 			// 3 bytes
 			for (i = 0;i < 3;i++)
-				MSG_WriteAngle8i (&buf, cl.movecmd[0].viewangles[i]);
+				MSG_WriteAngle8i (&buf, cl.cmd.viewangles[i]);
 			// 6 bytes
-			MSG_WriteCoord16i (&buf, cl.movecmd[0].forwardmove);
-			MSG_WriteCoord16i (&buf, cl.movecmd[0].sidemove);
-			MSG_WriteCoord16i (&buf, cl.movecmd[0].upmove);
+			MSG_WriteCoord16i (&buf, cl.cmd.forwardmove);
+			MSG_WriteCoord16i (&buf, cl.cmd.sidemove);
+			MSG_WriteCoord16i (&buf, cl.cmd.upmove);
 			// 2 bytes
-			MSG_WriteByte (&buf, cl.movecmd[0].buttons);
-			MSG_WriteByte (&buf, cl.movecmd[0].impulse);
+			MSG_WriteByte (&buf, cl.cmd.buttons);
+			MSG_WriteByte (&buf, cl.cmd.impulse);
 			break;
 		case PROTOCOL_DARKPLACES2:
 		case PROTOCOL_DARKPLACES3:
 			// 5 bytes
 			MSG_WriteByte (&buf, clc_move);
-			MSG_WriteFloat (&buf, cl.movecmd[0].time); // last server packet time
+			MSG_WriteFloat (&buf, cl.cmd.time); // last server packet time
 			// 12 bytes
 			for (i = 0;i < 3;i++)
-				MSG_WriteAngle32f (&buf, cl.movecmd[0].viewangles[i]);
+				MSG_WriteAngle32f (&buf, cl.cmd.viewangles[i]);
 			// 6 bytes
-			MSG_WriteCoord16i (&buf, cl.movecmd[0].forwardmove);
-			MSG_WriteCoord16i (&buf, cl.movecmd[0].sidemove);
-			MSG_WriteCoord16i (&buf, cl.movecmd[0].upmove);
+			MSG_WriteCoord16i (&buf, cl.cmd.forwardmove);
+			MSG_WriteCoord16i (&buf, cl.cmd.sidemove);
+			MSG_WriteCoord16i (&buf, cl.cmd.upmove);
 			// 2 bytes
-			MSG_WriteByte (&buf, cl.movecmd[0].buttons);
-			MSG_WriteByte (&buf, cl.movecmd[0].impulse);
+			MSG_WriteByte (&buf, cl.cmd.buttons);
+			MSG_WriteByte (&buf, cl.cmd.impulse);
 			break;
 		case PROTOCOL_DARKPLACES1:
 		case PROTOCOL_DARKPLACES4:
 		case PROTOCOL_DARKPLACES5:
 			// 5 bytes
 			MSG_WriteByte (&buf, clc_move);
-			MSG_WriteFloat (&buf, cl.movecmd[0].time); // last server packet time
+			MSG_WriteFloat (&buf, cl.cmd.time); // last server packet time
 			// 6 bytes
 			for (i = 0;i < 3;i++)
-				MSG_WriteAngle16i (&buf, cl.movecmd[0].viewangles[i]);
+				MSG_WriteAngle16i (&buf, cl.cmd.viewangles[i]);
 			// 6 bytes
-			MSG_WriteCoord16i (&buf, cl.movecmd[0].forwardmove);
-			MSG_WriteCoord16i (&buf, cl.movecmd[0].sidemove);
-			MSG_WriteCoord16i (&buf, cl.movecmd[0].upmove);
+			MSG_WriteCoord16i (&buf, cl.cmd.forwardmove);
+			MSG_WriteCoord16i (&buf, cl.cmd.sidemove);
+			MSG_WriteCoord16i (&buf, cl.cmd.upmove);
 			// 2 bytes
-			MSG_WriteByte (&buf, cl.movecmd[0].buttons);
-			MSG_WriteByte (&buf, cl.movecmd[0].impulse);
+			MSG_WriteByte (&buf, cl.cmd.buttons);
+			MSG_WriteByte (&buf, cl.cmd.impulse);
 		case PROTOCOL_DARKPLACES6:
 		case PROTOCOL_DARKPLACES7:
 			// set the maxusercmds variable to limit how many should be sent
@@ -1892,12 +1898,15 @@ void CL_SendMove(void)
 	if (buf.cursize || cls.netcon->message.cursize)
 		NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol, max(20*(buf.cursize+40), cl_rate.integer), false);
 
-	// update the cl.movecmd array which holds the most recent moves,
-	// because we now need a new slot for the next input
-	for (i = CL_MAX_USERCMDS - 1;i >= 1;i--)
-		cl.movecmd[i] = cl.movecmd[i-1];
-	cl.movecmd[0].msec = 0;
-	cl.movecmd[0].frametime = 0;
+	if (quemove)
+	{
+		// update the cl.movecmd array which holds the most recent moves,
+		// because we now need a new slot for the next input
+		for (i = CL_MAX_USERCMDS - 1;i >= 1;i--)
+			cl.movecmd[i] = cl.movecmd[i-1];
+		cl.movecmd[0].msec = 0;
+		cl.movecmd[0].frametime = 0;
+	}
 
 	// clear button 'click' states
 	in_attack.state  &= ~2;
@@ -2012,6 +2021,7 @@ void CL_InitInput (void)
 
 	Cvar_RegisterVariable(&cl_movecliptokeyboard);
 	Cvar_RegisterVariable(&cl_movement);
+	Cvar_RegisterVariable(&cl_movement_nettimeout);
 	Cvar_RegisterVariable(&cl_movement_minping);
 	Cvar_RegisterVariable(&cl_movement_track_canjump);
 	Cvar_RegisterVariable(&cl_movement_maxspeed);
