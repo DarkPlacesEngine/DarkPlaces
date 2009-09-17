@@ -395,8 +395,8 @@ void AppActivate(BOOL fActive, BOOL minimize)
 {
 	static qboolean sound_active = false;  // initially blocked by Sys_InitConsole()
 
-	vid_activewindow = fActive;
-	vid_hidden = minimize;
+	vid_activewindow = fActive != FALSE;
+	vid_hidden = minimize != FALSE;
 
 	// enable/disable sound on focus gain/loss
 	if ((!vid_hidden && vid_activewindow) || !snd_mutewhenidle.integer)
@@ -1235,8 +1235,8 @@ int VID_InitMode (int fullscreen, int *width, int *height, int bpp, int refreshr
 
 	if (gl_videosyncavailable)
 	{
-		vid_usevsync = vid_vsync.integer;
-		vid_usingvsync = vid_vsync.integer;
+		vid_usevsync = vid_vsync.integer != 0;
+		vid_usingvsync = vid_vsync.integer != 0;
 		qwglSwapIntervalEXT (vid_usevsync);
 	}
 
@@ -1308,7 +1308,7 @@ void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecurso
 					newmouseparms[0] = 0; // threshold to double movement (only if accel level is >= 1)
 					newmouseparms[1] = 0; // threshold to quadruple movement (only if accel level is >= 2)
 					newmouseparms[2] = 0; // maximum level of acceleration (0 = off)
-					restore_spi = SystemParametersInfo (SPI_SETMOUSE, 0, newmouseparms, 0);
+					restore_spi = SystemParametersInfo (SPI_SETMOUSE, 0, newmouseparms, 0) != FALSE;
 				}
 				else
 					restore_spi = false;
@@ -1384,7 +1384,7 @@ static qboolean IN_InitDInput (void)
 
 	if (!pDirectInputCreate)
 	{
-		pDirectInputCreate = (void *)GetProcAddress(hInstDI,"DirectInputCreateA");
+		pDirectInputCreate = (HRESULT (__stdcall *)(HINSTANCE,DWORD,LPDIRECTINPUT *,LPUNKNOWN))GetProcAddress(hInstDI,"DirectInputCreateA");
 
 		if (!pDirectInputCreate)
 		{
@@ -1402,7 +1402,11 @@ static qboolean IN_InitDInput (void)
 	}
 
 // obtain an interface to the system mouse device.
+#ifdef __cplusplus
+	hr = IDirectInput_CreateDevice(g_pdi, GUID_SysMouse, &g_pMouse, NULL);
+#else
 	hr = IDirectInput_CreateDevice(g_pdi, &GUID_SysMouse, &g_pMouse, NULL);
+#endif
 
 	if (FAILED(hr))
 	{
@@ -1658,7 +1662,7 @@ static void IN_StartupJoystick (void)
 
 	// save the joystick's number of buttons and POV status
 	joy_numbuttons = jc.wNumButtons;
-	joy_haspov = jc.wCaps & JOYCAPS_HASPOV;
+	joy_haspov = (jc.wCaps & JOYCAPS_HASPOV) != 0;
 
 	// old button and POV states default to no buttons pressed
 	joy_oldbuttonstate = joy_oldpovstate = 0;

@@ -302,11 +302,11 @@ char *Sys_GetClipboardData (void)
 
 		if ((hClipboardData = GetClipboardData (CF_TEXT)) != 0)
 		{
-			if ((cliptext = GlobalLock (hClipboardData)) != 0)
+			if ((cliptext = (char *)GlobalLock (hClipboardData)) != 0)
 			{
 				size_t allocsize;
 				allocsize = GlobalSize (hClipboardData) + 1;
-				data = Z_Malloc (allocsize);
+				data = (char *)Z_Malloc (allocsize);
 				strlcpy (data, cliptext, allocsize);
 				GlobalUnlock (hClipboardData);
 			}
