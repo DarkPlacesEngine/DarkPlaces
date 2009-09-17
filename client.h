@@ -29,7 +29,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MAX_DLIGHTS 256
 
 /// this is the maximum number of input packets that can be predicted
-#define CL_MAX_USERCMDS 256
+#define CL_MAX_USERCMDS 128
 
 // flags for rtlight rendering
 #define LIGHTFLAG_NORMALMODE 1
