@@ -139,7 +139,7 @@ void Host_Status_f (void)
 			packetloss = 0;
 			if (client->netconnection)
 				for (j = 0;j < NETGRAPH_PACKETS;j++)
-					if (client->netconnection->incoming_unreliablesize[j] == NETGRAPH_LOSTPACKET)
+					if (client->netconnection->incoming_netgraph[j].unreliablebytes == NETGRAPH_LOSTPACKET)
 						packetloss++;
 			packetloss = packetloss * 100 / NETGRAPH_PACKETS;
 			ping = bound(0, (int)floor(client->ping*1000+0.5), 9999);
@@ -2715,7 +2715,7 @@ void Host_Pings_f (void)
 		packetloss = 0;
 		if (svs.clients[i].netconnection)
 			for (j = 0;j < NETGRAPH_PACKETS;j++)
-				if (svs.clients[i].netconnection->incoming_unreliablesize[j] == NETGRAPH_LOSTPACKET)
+				if (svs.clients[i].netconnection->incoming_netgraph[j].unreliablebytes == NETGRAPH_LOSTPACKET)
 					packetloss++;
 		packetloss = packetloss * 100 / NETGRAPH_PACKETS;
 		ping = (int)floor(svs.clients[i].ping*1000+0.5);

@@ -198,86 +198,67 @@ void SCR_CheckDrawCenterString (void)
 	SCR_DrawCenterString ();
 }
 
-void SCR_DrawNetGraph_DrawGraph (int graphx, int graphy, int barwidth, int barheight, int bardivide, const char *label, float textsize, int packetcounter, int numparameters, const int **parameters, const float parametercolors[][4])
+void SCR_DrawNetGraph_DrawGraph (int graphx, int graphy, int graphwidth, int graphheight, float graphscale, const char *label, float textsize, int packetcounter, netgraphitem_t *netgraph)
 {
-	int j, k, x, y, index, offset, height;
+	netgraphitem_t *graph;
+	int j, x, y;
+	int totalbytes = 0;
+	char bytesstring[128];
+	float g[NETGRAPH_PACKETS][6];
+	float *a;
+	float *b;
+	DrawQ_Fill(graphx, graphy, graphwidth, graphheight + textsize * 2, 0, 0, 0, 0.5, 0);
 	// draw the bar graph itself
 	// advance the packet counter because it is the latest packet column being
 	// built up and should come last
 	packetcounter = (packetcounter + 1) % NETGRAPH_PACKETS;
+	memset(g, 0, sizeof(g));
 	for (j = 0;j < NETGRAPH_PACKETS;j++)
 	{
-		x = graphx + j * barwidth;
-		y = graphy + barheight;
-		index = (packetcounter + j) % NETGRAPH_PACKETS;
-		if (parameters[0][index] == NETGRAPH_LOSTPACKET)
-			DrawQ_Fill(x, y - barheight, barwidth, barheight, 1, 0, 0, 1, 0);
-		else if (parameters[0][index] == NETGRAPH_CHOKEDPACKET)
-			DrawQ_Fill(x, y - min(2, barheight), barwidth, min(2, barheight), 1, 1, 0, 1, 0);
+		graph = netgraph + j;
+		g[j][0] = 1.0f - 0.25f * (realtime - graph->time);
+		g[j][1] = 1.0f;
+		g[j][2] = 1.0f;
+		g[j][3] = 1.0f;
+		g[j][4] = 1.0f;
+		g[j][5] = 1.0f;
+		if (graph->unreliablebytes == NETGRAPH_LOSTPACKET)
+			g[j][1] = 0.00f;
+		else if (graph->unreliablebytes == NETGRAPH_CHOKEDPACKET)
+			g[j][2] = 0.96f;
 		else
 		{
-			offset = 0;
-			for (k = 0;k < numparameters;k++)
-			{
-				height = (parameters[k][index] + bardivide - 1) / bardivide;
-				height = min(height, barheight - offset);
-				offset += height;
-				if (height)
-					DrawQ_Fill(x, y - offset, barwidth, height, parametercolors[k][0], parametercolors[k][1], parametercolors[k][2], parametercolors[k][3], 0);
-			}
+			g[j][3] = 1.0f    - graph->unreliablebytes * graphscale;
+			g[j][4] = g[j][3] - graph->reliablebytes   * graphscale;
+			g[j][5] = g[j][4] - graph->ackbytes        * graphscale;
+			// count bytes in the last second
+			if (realtime - graph->time < 1.0f)
+				totalbytes += graph->unreliablebytes + graph->reliablebytes + graph->ackbytes;
 		}
+		g[j][1] = bound(0.0f, g[j][1], 1.0f);
+		g[j][2] = bound(0.0f, g[j][2], 1.0f);
+		g[j][3] = bound(0.0f, g[j][3], 1.0f);
+		g[j][4] = bound(0.0f, g[j][4], 1.0f);
+		g[j][5] = bound(0.0f, g[j][5], 1.0f);
 	}
-}
-
-const float netgraphcolors[3][4] =
-{
-	{1  , 0.5, 0  , 1},
-	{1  , 1  , 1  , 1},
-	{0  , 1  , 0  , 1},
-};
-
-void SCR_DrawNetGraph_DrawConnection_Client (netconn_t *conn, int graphx, int graphy, int barwidth, int barheight, int bardivide, const char *labelincoming, int separator, const char *labeloutgoing, float textsize)
-{
-	int numparameters;
-	const int *parameters[3];
-	// dim background
-	DrawQ_Fill(graphx                                          , graphy, barwidth * NETGRAPH_PACKETS, barheight + textsize, 0, 0, 0, 0.5, 0);
-	DrawQ_Fill(graphx + barwidth * NETGRAPH_PACKETS + separator, graphy, barwidth * NETGRAPH_PACKETS, barheight + textsize, 0, 0, 0, 0.5, 0);
-	// draw the bar graphs
-	numparameters = 3;
-	parameters[0] = conn->incoming_unreliablesize;
-	parameters[1] = conn->incoming_reliablesize;
-	parameters[2] = conn->incoming_acksize;
-	SCR_DrawNetGraph_DrawGraph(graphx, graphy, barwidth, barheight, bardivide, labelincoming, textsize, conn->incoming_packetcounter, numparameters, parameters, netgraphcolors);
-	parameters[0] = conn->outgoing_unreliablesize;
-	parameters[1] = conn->outgoing_reliablesize;
-	parameters[2] = conn->outgoing_acksize;
-	SCR_DrawNetGraph_DrawGraph(graphx + barwidth * NETGRAPH_PACKETS + separator, graphy, barwidth, barheight, bardivide, labeloutgoing, textsize, conn->outgoing_packetcounter, numparameters, parameters, netgraphcolors);
-	// draw labels
-	DrawQ_String(graphx                                          , graphy + barheight, labelincoming, 0, textsize, textsize, 1, 1, 1, 1, 0, NULL, false);
-	DrawQ_String(graphx + barwidth * NETGRAPH_PACKETS + separator, graphy + barheight, labeloutgoing, 0, textsize, textsize, 1, 1, 1, 1, 0, NULL, false);
-}
-
-void SCR_DrawNetGraph_DrawConnection_Server (netconn_t *conn, int graphx, int graphy, int barwidth, int barheight, int bardivide, const char *labeloutgoing, int separator, const char *labelincoming, float textsize)
-{
-	int numparameters;
-	const int *parameters[3];
-	// dim background
-	DrawQ_Fill(graphx                                          , graphy, barwidth * NETGRAPH_PACKETS, barheight + textsize, 0, 0, 0, 0.5, 0);
-	DrawQ_Fill(graphx + barwidth * NETGRAPH_PACKETS + separator, graphy, barwidth * NETGRAPH_PACKETS, barheight + textsize, 0, 0, 0, 0.5, 0);
-	// draw the bar graphs
-	numparameters = 3;
-	parameters[0] = conn->outgoing_unreliablesize;
-	parameters[1] = conn->outgoing_reliablesize;
-	parameters[2] = conn->outgoing_acksize;
-	SCR_DrawNetGraph_DrawGraph(graphx                                          , graphy, barwidth, barheight, bardivide, labeloutgoing, textsize, conn->outgoing_packetcounter, numparameters, parameters, netgraphcolors);
-	parameters[0] = conn->incoming_unreliablesize;
-	parameters[1] = conn->incoming_reliablesize;
-	parameters[2] = conn->incoming_acksize;
-	SCR_DrawNetGraph_DrawGraph(graphx + barwidth * NETGRAPH_PACKETS + separator, graphy, barwidth, barheight, bardivide, labelincoming, textsize, conn->incoming_packetcounter, numparameters, parameters, netgraphcolors);
-	// draw labels
-	DrawQ_String(graphx                                          , graphy + barheight, labeloutgoing, 0, textsize, textsize, 1, 1, 1, 1, 0, NULL, false);
-	DrawQ_String(graphx + barwidth * NETGRAPH_PACKETS + separator, graphy + barheight, labelincoming, 0, textsize, textsize, 1, 1, 1, 1, 0, NULL, false);
+	// render the lines for the graph
+	for (j = 0;j < NETGRAPH_PACKETS;j++)
+	{
+		a = g[j];
+		b = g[(j+1)%NETGRAPH_PACKETS];
+		if (a[0] < 0.0f || b[0] > 1.0f || b[0] < a[0])
+			continue;
+		DrawQ_Line(0.0f, graphx + graphwidth * a[0], graphy + graphheight * a[2], graphx + graphwidth * b[0], graphy + graphheight * b[2], 1.0f, 1.0f, 0.0f, 1.0f, 0);
+		DrawQ_Line(0.0f, graphx + graphwidth * a[0], graphy + graphheight * a[1], graphx + graphwidth * b[0], graphy + graphheight * b[1], 1.0f, 0.0f, 0.0f, 1.0f, 0);
+		DrawQ_Line(0.0f, graphx + graphwidth * a[0], graphy + graphheight * a[5], graphx + graphwidth * b[0], graphy + graphheight * b[5], 0.0f, 1.0f, 0.0f, 1.0f, 0);
+		DrawQ_Line(0.0f, graphx + graphwidth * a[0], graphy + graphheight * a[4], graphx + graphwidth * b[0], graphy + graphheight * b[4], 1.0f, 1.0f, 1.0f, 1.0f, 0);
+		DrawQ_Line(0.0f, graphx + graphwidth * a[0], graphy + graphheight * a[3], graphx + graphwidth * b[0], graphy + graphheight * b[3], 1.0f, 0.5f, 0.0f, 1.0f, 0);
+	}
+	x = graphx;
+	y = graphy + graphheight;
+	dpsnprintf(bytesstring, sizeof(bytesstring), "%i", totalbytes);
+	DrawQ_String(x, y, label      , 0, textsize, textsize, 1.0f, 1.0f, 1.0f, 1.0f, 0, NULL, false);y += textsize;
+	DrawQ_String(x, y, bytesstring, 0, textsize, textsize, 1.0f, 1.0f, 1.0f, 1.0f, 0, NULL, false);y += textsize;
 }
 
 /*
@@ -287,7 +268,9 @@ SCR_DrawNetGraph
 */
 void SCR_DrawNetGraph (void)
 {
-	int i, separator1, separator2, barwidth, barheight, bardivide, netgraph_x, netgraph_y, textsize, index, netgraphsperrow;
+	int i, separator1, separator2, graphwidth, graphheight, netgraph_x, netgraph_y, textsize, index, netgraphsperrow;
+	float graphscale;
+	netconn_t *c;
 
 	if (cls.state != ca_connected)
 		return;
@@ -299,28 +282,32 @@ void SCR_DrawNetGraph (void)
 	separator1 = 2;
 	separator2 = 4;
 	textsize = 8;
-	barwidth = 1;
-	barheight = 50;
-	bardivide = 20;
+	graphwidth = 120;
+	graphheight = 70;
+	graphscale = 1.0f / 1500.0f;
 
-	netgraphsperrow = (vid_conwidth.integer + separator2) / (barwidth * NETGRAPH_PACKETS * 2 + separator1 + separator2);
+	netgraphsperrow = (vid_conwidth.integer + separator2) / (graphwidth * 2 + separator1 + separator2);
 	netgraphsperrow = max(netgraphsperrow, 1);
 
 	index = 0;
-	netgraph_x = (vid_conwidth.integer + separator2) - (1 + (index % netgraphsperrow)) * (barwidth * NETGRAPH_PACKETS * 2 + separator1 + separator2);
-	netgraph_y = (vid_conheight.integer - 48 - sbar_info_pos.integer + separator2) - (1 + (index / netgraphsperrow)) * (barheight + textsize + separator2);
-	SCR_DrawNetGraph_DrawConnection_Client(cls.netcon, netgraph_x, netgraph_y, barwidth, barheight, bardivide, "incoming", separator1, "outgoing", textsize);
+	netgraph_x = (vid_conwidth.integer + separator2) - (1 + (index % netgraphsperrow)) * (graphwidth * 2 + separator1 + separator2);
+	netgraph_y = (vid_conheight.integer - 48 - sbar_info_pos.integer + separator2) - (1 + (index / netgraphsperrow)) * (graphheight + textsize + separator2);
+	c = cls.netcon;
+	SCR_DrawNetGraph_DrawGraph(netgraph_x                          , netgraph_y, graphwidth, graphheight, graphscale, "incoming", textsize, c->incoming_packetcounter, c->incoming_netgraph);
+	SCR_DrawNetGraph_DrawGraph(netgraph_x + graphwidth + separator1, netgraph_y, graphwidth, graphheight, graphscale, "outgoing", textsize, c->outgoing_packetcounter, c->outgoing_netgraph);
 	index++;
 
 	if (sv.active && shownetgraph.integer >= 2)
 	{
 		for (i = 0;i < svs.maxclients;i++)
 		{
-			if (!svs.clients[i].netconnection)
+			c = svs.clients[i].netconnection;
+			if (!c)
 				continue;
-			netgraph_x = (vid_conwidth.integer + separator2) - (1 + (index % netgraphsperrow)) * (barwidth * NETGRAPH_PACKETS * 2 + separator1 + separator2);
-			netgraph_y = (vid_conheight.integer - 48 + separator2) - (1 + (index / netgraphsperrow)) * (barheight + textsize + separator2);
-			SCR_DrawNetGraph_DrawConnection_Server(svs.clients[i].netconnection, netgraph_x, netgraph_y, barwidth, barheight, bardivide, va("%s", svs.clients[i].name), separator1, "", textsize);
+			netgraph_x = (vid_conwidth.integer + separator2) - (1 + (index % netgraphsperrow)) * (graphwidth * 2 + separator1 + separator2);
+			netgraph_y = (vid_conheight.integer - 48 + separator2) - (1 + (index / netgraphsperrow)) * (graphheight + textsize + separator2);
+			SCR_DrawNetGraph_DrawGraph(netgraph_x                          , netgraph_y, graphwidth, graphheight, graphscale, va("%s", svs.clients[i].name), textsize, c->outgoing_packetcounter, c->outgoing_netgraph);
+			SCR_DrawNetGraph_DrawGraph(netgraph_x + graphwidth + separator1, netgraph_y, graphwidth, graphheight, graphscale, ""                           , textsize, c->incoming_packetcounter, c->incoming_netgraph);
 			index++;
 		}
 	}

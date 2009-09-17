@@ -603,14 +603,15 @@ int NetConn_WriteString(lhnetsocket_t *mysocket, const char *string, const lhnet
 qboolean NetConn_CanSend(netconn_t *conn)
 {
 	conn->outgoing_packetcounter = (conn->outgoing_packetcounter + 1) % NETGRAPH_PACKETS;
-	conn->outgoing_unreliablesize[conn->outgoing_packetcounter] = NETGRAPH_NOPACKET;
-	conn->outgoing_reliablesize[conn->outgoing_packetcounter] = NETGRAPH_NOPACKET;
-	conn->outgoing_acksize[conn->outgoing_packetcounter] = NETGRAPH_NOPACKET;
+	conn->outgoing_netgraph[conn->outgoing_packetcounter].time            = realtime;
+	conn->outgoing_netgraph[conn->outgoing_packetcounter].unreliablebytes = NETGRAPH_NOPACKET;
+	conn->outgoing_netgraph[conn->outgoing_packetcounter].reliablebytes   = NETGRAPH_NOPACKET;
+	conn->outgoing_netgraph[conn->outgoing_packetcounter].ackbytes        = NETGRAPH_NOPACKET;
 	if (realtime > conn->cleartime)
 		return true;
 	else
 	{
-		conn->outgoing_unreliablesize[conn->outgoing_packetcounter] = NETGRAPH_CHOKEDPACKET;
+		conn->outgoing_netgraph[conn->outgoing_packetcounter].unreliablebytes = NETGRAPH_CHOKEDPACKET;
 		return false;
 	}
 }
@@ -622,8 +623,8 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 	// if this packet was supposedly choked, but we find ourselves sending one
 	// anyway, make sure the size counting starts at zero
 	// (this mostly happens on level changes and disconnects and such)
-	if (conn->outgoing_unreliablesize[conn->outgoing_packetcounter] == NETGRAPH_CHOKEDPACKET)
-		conn->outgoing_unreliablesize[conn->outgoing_packetcounter] = NETGRAPH_NOPACKET;
+	if (conn->outgoing_netgraph[conn->outgoing_packetcounter].unreliablebytes == NETGRAPH_CHOKEDPACKET)
+		conn->outgoing_netgraph[conn->outgoing_packetcounter].unreliablebytes = NETGRAPH_NOPACKET;
 
 	if (protocol == PROTOCOL_QUAKEWORLD)
 	{
@@ -666,12 +667,12 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 			return -1;
 		}
 
-		conn->outgoing_unreliablesize[conn->outgoing_packetcounter] += packetLen;
+		conn->outgoing_netgraph[conn->outgoing_packetcounter].unreliablebytes += packetLen + 28;
 
 		// add the reliable message if there is one
 		if (sendreliable)
 		{
-			conn->outgoing_reliablesize[conn->outgoing_packetcounter] += conn->sendMessageLength;
+			conn->outgoing_netgraph[conn->outgoing_packetcounter].reliablebytes += conn->sendMessageLength + 28;
 			memcpy(sendbuffer + packetLen, conn->sendMessage, conn->sendMessageLength);
 			packetLen += conn->sendMessageLength;
 			conn->qw.last_reliable_sequence = conn->outgoing_unreliable_sequence;
@@ -680,7 +681,7 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 		// add the unreliable message if possible
 		if (packetLen + data->cursize <= 1400)
 		{
-			conn->outgoing_unreliablesize[conn->outgoing_packetcounter] += data->cursize;
+			conn->outgoing_netgraph[conn->outgoing_packetcounter].unreliablebytes += data->cursize + 28;
 			memcpy(sendbuffer + packetLen, data->data, data->cursize);
 			packetLen += data->cursize;
 		}
@@ -720,7 +721,7 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 			header[1] = BigLong(conn->nq.sendSequence - 1);
 			memcpy(sendbuffer + NET_HEADERSIZE, conn->sendMessage, dataLen);
 
-			conn->outgoing_reliablesize[conn->outgoing_packetcounter] += packetLen;
+			conn->outgoing_netgraph[conn->outgoing_packetcounter].reliablebytes += packetLen + 28;
 
 			if (NetConn_Write(conn->mysocket, (void *)&sendbuffer, packetLen, &conn->peeraddress) == (int)packetLen)
 			{
@@ -771,7 +772,7 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 
 			conn->nq.sendSequence++;
 
-			conn->outgoing_reliablesize[conn->outgoing_packetcounter] += packetLen;
+			conn->outgoing_netgraph[conn->outgoing_packetcounter].reliablebytes += packetLen + 28;
 
 			NetConn_Write(conn->mysocket, (void *)&sendbuffer, packetLen, &conn->peeraddress);
 
@@ -800,7 +801,7 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 
 			conn->outgoing_unreliable_sequence++;
 
-			conn->outgoing_unreliablesize[conn->outgoing_packetcounter] += packetLen;
+			conn->outgoing_netgraph[conn->outgoing_packetcounter].unreliablebytes += packetLen + 28;
 
 			NetConn_Write(conn->mysocket, (void *)&sendbuffer, packetLen, &conn->peeraddress);
 
@@ -1093,15 +1094,17 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 			while (count--)
 			{
 				conn->incoming_packetcounter = (conn->incoming_packetcounter + 1) % NETGRAPH_PACKETS;
-				conn->incoming_unreliablesize[conn->incoming_packetcounter] = NETGRAPH_LOSTPACKET;
-				conn->incoming_reliablesize[conn->incoming_packetcounter] = NETGRAPH_NOPACKET;
-				conn->incoming_acksize[conn->incoming_packetcounter] = NETGRAPH_NOPACKET;
+				conn->incoming_netgraph[conn->incoming_packetcounter].time            = realtime;
+				conn->incoming_netgraph[conn->incoming_packetcounter].unreliablebytes = NETGRAPH_LOSTPACKET;
+				conn->incoming_netgraph[conn->incoming_packetcounter].reliablebytes   = NETGRAPH_NOPACKET;
+				conn->incoming_netgraph[conn->incoming_packetcounter].ackbytes        = NETGRAPH_NOPACKET;
 			}
 		}
 		conn->incoming_packetcounter = (conn->incoming_packetcounter + 1) % NETGRAPH_PACKETS;
-		conn->incoming_unreliablesize[conn->incoming_packetcounter] = originallength;
-		conn->incoming_reliablesize[conn->incoming_packetcounter] = NETGRAPH_NOPACKET;
-		conn->incoming_acksize[conn->incoming_packetcounter] = NETGRAPH_NOPACKET;
+		conn->incoming_netgraph[conn->incoming_packetcounter].time            = realtime;
+		conn->incoming_netgraph[conn->incoming_packetcounter].unreliablebytes = originallength + 28;
+		conn->incoming_netgraph[conn->incoming_packetcounter].reliablebytes   = NETGRAPH_NOPACKET;
+		conn->incoming_netgraph[conn->incoming_packetcounter].ackbytes        = NETGRAPH_NOPACKET;
 		if (reliable_ack == conn->qw.reliable_sequence)
 		{
 			// received, now we will be able to send another reliable message
@@ -1152,15 +1155,17 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 						while (count--)
 						{
 							conn->incoming_packetcounter = (conn->incoming_packetcounter + 1) % NETGRAPH_PACKETS;
-							conn->incoming_unreliablesize[conn->incoming_packetcounter] = NETGRAPH_LOSTPACKET;
-							conn->incoming_reliablesize[conn->incoming_packetcounter] = NETGRAPH_NOPACKET;
-							conn->incoming_acksize[conn->incoming_packetcounter] = NETGRAPH_NOPACKET;
+							conn->incoming_netgraph[conn->incoming_packetcounter].time            = realtime;
+							conn->incoming_netgraph[conn->incoming_packetcounter].unreliablebytes = NETGRAPH_LOSTPACKET;
+							conn->incoming_netgraph[conn->incoming_packetcounter].reliablebytes   = NETGRAPH_NOPACKET;
+							conn->incoming_netgraph[conn->incoming_packetcounter].ackbytes        = NETGRAPH_NOPACKET;
 						}
 					}
 					conn->incoming_packetcounter = (conn->incoming_packetcounter + 1) % NETGRAPH_PACKETS;
-					conn->incoming_unreliablesize[conn->incoming_packetcounter] = originallength;
-					conn->incoming_reliablesize[conn->incoming_packetcounter] = NETGRAPH_NOPACKET;
-					conn->incoming_acksize[conn->incoming_packetcounter] = NETGRAPH_NOPACKET;
+					conn->incoming_netgraph[conn->incoming_packetcounter].time            = realtime;
+					conn->incoming_netgraph[conn->incoming_packetcounter].unreliablebytes = originallength + 28;
+					conn->incoming_netgraph[conn->incoming_packetcounter].reliablebytes   = NETGRAPH_NOPACKET;
+					conn->incoming_netgraph[conn->incoming_packetcounter].ackbytes        = NETGRAPH_NOPACKET;
 					conn->nq.unreliableReceiveSequence = sequence + 1;
 					conn->lastMessageTime = realtime;
 					conn->timeout = realtime + newtimeout;
@@ -1179,7 +1184,7 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 			}
 			else if (flags & NETFLAG_ACK)
 			{
-				conn->incoming_acksize[conn->incoming_packetcounter] += originallength;
+				conn->incoming_netgraph[conn->incoming_packetcounter].ackbytes += originallength + 28;
 				if (sequence == (conn->nq.sendSequence - 1))
 				{
 					if (sequence == conn->nq.ackSequence)
@@ -1238,8 +1243,8 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 			else if (flags & NETFLAG_DATA)
 			{
 				unsigned int temppacket[2];
-				conn->incoming_reliablesize[conn->incoming_packetcounter] += originallength;
-				conn->outgoing_acksize[conn->outgoing_packetcounter] += 8;
+				conn->incoming_netgraph[conn->incoming_packetcounter].reliablebytes   += originallength + 28;
+				conn->outgoing_netgraph[conn->outgoing_packetcounter].ackbytes        += 8 + 28;
 				temppacket[0] = BigLong(8 | NETFLAG_ACK);
 				temppacket[1] = BigLong(sequence);
 				NetConn_Write(conn->mysocket, (unsigned char *)temppacket, 8, &conn->peeraddress);
