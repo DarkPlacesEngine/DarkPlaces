@@ -726,6 +726,7 @@ extern void CSQC_Predraw (prvm_edict_t *ed);//csprogs.c
 extern void CSQC_Think (prvm_edict_t *ed);//csprogs.c
 void VM_CL_R_AddEntities (void)
 {
+	double t = Sys_DoubleTime();
 	int			i, drawmask;
 	prvm_edict_t *ed;
 	VM_SAFEPARMCOUNT(1, VM_CL_R_AddEntities);
@@ -750,13 +751,18 @@ void VM_CL_R_AddEntities (void)
 			continue;
 		CSQC_AddRenderEdict(ed);
 	}
+
+	// callprofile fixing hack: do not include this time in what is counted for CSQC_UpdateView
+	prog->functions[prog->funcoffsets.CSQC_UpdateView].totaltime -= Sys_DoubleTime() - t;
 }
 
 //#302 void(entity ent) addentity (EXT_CSQC)
 void VM_CL_R_AddEntity (void)
 {
+	double t = Sys_DoubleTime();
 	VM_SAFEPARMCOUNT(1, VM_CL_R_AddEntity);
 	CSQC_AddRenderEdict(PRVM_G_EDICT(OFS_PARM0));
+	prog->functions[prog->funcoffsets.CSQC_UpdateView].totaltime -= Sys_DoubleTime() - t;
 }
 
 //#303 float(float property, ...) setproperty (EXT_CSQC)
@@ -881,6 +887,7 @@ void VM_CL_R_SetView (void)
 //#305 void(vector org, float radius, vector lightcolours[, float style, string cubemapname, float pflags]) adddynamiclight (EXT_CSQC)
 void VM_CL_R_AddDynamicLight (void)
 {
+	double t = Sys_DoubleTime();
 	vec_t *org;
 	float radius = 300;
 	vec_t *col;
@@ -927,6 +934,7 @@ void VM_CL_R_AddDynamicLight (void)
 
 	R_RTLight_Update(&r_refdef.scene.templights[r_refdef.scene.numlights], false, &matrix, col, style, cubemapname, castshadow, coronaintensity, coronasizescale, ambientscale, diffusescale, specularscale, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	r_refdef.scene.lights[r_refdef.scene.numlights] = &r_refdef.scene.templights[r_refdef.scene.numlights++];
+	prog->functions[prog->funcoffsets.CSQC_UpdateView].totaltime -= Sys_DoubleTime() - t;
 }
 
 //============================================================================
@@ -2490,8 +2498,10 @@ vmpolygons_t vmpolygons[PRVM_MAXPROGS];
 // --blub
 void VM_CL_R_RenderScene (void)
 {
+	double t = Sys_DoubleTime();
 	vmpolygons_t* polys = vmpolygons + PRVM_GetProgNr();
 	VM_SAFEPARMCOUNT(0, VM_CL_R_RenderScene);
+
 	// we need to update any RENDER_VIEWMODEL entities at this point because
 	// csqc supplies its own view matrix
 	CL_UpdateViewEntities();
@@ -2500,6 +2510,9 @@ void VM_CL_R_RenderScene (void)
 
 	polys->num_vertices = polys->num_triangles = 0;
 	polys->progstarttime = prog->starttime;
+
+	// callprofile fixing hack: do not include this time in what is counted for CSQC_UpdateView
+	prog->functions[prog->funcoffsets.CSQC_UpdateView].totaltime -= Sys_DoubleTime() - t;
 }
 
 static void VM_ResizePolygons(vmpolygons_t *polys)

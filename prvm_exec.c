@@ -840,7 +840,7 @@ cleanup:
 	// delete tempstrings created by this function
 	vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 
-	prog->functions[fnum].totaltime += (Sys_DoubleTime() - calltime);
+	f->totaltime += (Sys_DoubleTime() - calltime);
 
 	SV_FlushBroadcastMessages();
 }
