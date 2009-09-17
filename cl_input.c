@@ -1738,7 +1738,7 @@ void CL_SendMove(void)
 			MSG_WriteByte(&buf, 0);
 			// packet loss percentage
 			for (j = 0, packetloss = 0;j < NETGRAPH_PACKETS;j++)
-				if (cls.netcon->incoming_unreliablesize[j] == NETGRAPH_LOSTPACKET)
+				if (cls.netcon->incoming_netgraph[j].unreliablebytes == NETGRAPH_LOSTPACKET)
 					packetloss++;
 			packetloss = packetloss * 100 / NETGRAPH_PACKETS;
 			MSG_WriteByte(&buf, packetloss);

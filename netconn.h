@@ -121,6 +121,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define CCREP_RULE_INFO		0x85
 #define CCREP_RCON		0x86 // RocketGuy: ProQuake rcon support
 
+typedef struct netgraphitem_s
+{
+	double time;
+	int reliablebytes;
+	int unreliablebytes;
+	int ackbytes;
+}
+netgraphitem_t;
+
 typedef struct netconn_s
 {
 	struct netconn_s *next;
@@ -200,18 +209,14 @@ typedef struct netconn_s
 
 	// this tracks packet loss and packet sizes on the most recent packets
 	// used by shownetgraph feature
-#define NETGRAPH_PACKETS 100
+#define NETGRAPH_PACKETS 256
 #define NETGRAPH_NOPACKET 0
 #define NETGRAPH_LOSTPACKET -1
 #define NETGRAPH_CHOKEDPACKET -2
 	int incoming_packetcounter;
-	int incoming_reliablesize[NETGRAPH_PACKETS];
-	int incoming_unreliablesize[NETGRAPH_PACKETS];
-	int incoming_acksize[NETGRAPH_PACKETS];
+	netgraphitem_t incoming_netgraph[NETGRAPH_PACKETS];
 	int outgoing_packetcounter;
-	int outgoing_reliablesize[NETGRAPH_PACKETS];
-	int outgoing_unreliablesize[NETGRAPH_PACKETS];
-	int outgoing_acksize[NETGRAPH_PACKETS];
+	netgraphitem_t outgoing_netgraph[NETGRAPH_PACKETS];
 
 	char address[128];
 } netconn_t;
