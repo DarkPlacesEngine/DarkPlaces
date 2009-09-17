@@ -168,6 +168,9 @@ typedef struct mfunction_s
 	double	builtinsprofile; // cost of builtin functions called by this function
 	double	callcount; // times the functions has been called since the last profile call
 	double  totaltime; // total execution time of this function DIRECTLY FROM THE ENGINE
+	double	profile_total;		// runtime
+	double	builtinsprofile_total; // cost of builtin functions called by this function
+	int     recursion;
 
 	int		s_name;
 	int		s_file;			// source file defined in
