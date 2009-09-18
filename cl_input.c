@@ -1102,12 +1102,15 @@ void CL_ClientMovement_Physics_CPM_PM_Aircontrol(cl_clientmovement_state_t *s, v
 	s->velocity[2] = zspeed;
 }
 
-void CL_ClientMovement_Physics_PM_Accelerate(cl_clientmovement_state_t *s, vec3_t wishdir, vec_t wishspeed, vec_t accel, vec_t accelqw, vec_t sidefric)
+void CL_ClientMovement_Physics_PM_Accelerate(cl_clientmovement_state_t *s, vec3_t wishdir, vec_t wishspeed, vec_t wishspeed0, vec_t accel, vec_t accelqw, vec_t sidefric)
 {
 	vec_t vel_straight, vel_z;
 	vec3_t vel_perpend;
 	vec_t addspeed;
 	vec_t savespeed;
+
+	if(cl.moveflags & MOVEFLAG_Q2AIRACCELERATE)
+		wishspeed0 = wishspeed; // don't need to emulate this Q1 bug
 
 	savespeed = VectorLength2(s->velocity);
 
@@ -1117,9 +1120,9 @@ void CL_ClientMovement_Physics_PM_Accelerate(cl_clientmovement_state_t *s, vec3_
 
 	addspeed = wishspeed - vel_straight;
 	if(addspeed > 0)
-		vel_straight = vel_straight + min(addspeed, accel * s->cmd.frametime * wishspeed) * accelqw;
+		vel_straight = vel_straight + min(addspeed, accel * s->cmd.frametime * wishspeed0) * accelqw;
 	if(wishspeed > 0)
-		vel_straight = vel_straight + min(wishspeed, accel * s->cmd.frametime * wishspeed) * (1 - accelqw);
+		vel_straight = vel_straight + min(wishspeed, accel * s->cmd.frametime * wishspeed0) * (1 - accelqw);
 	
 	if(sidefric < 0 && VectorLength2(vel_perpend))
 	{
@@ -1279,10 +1282,11 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 		if (s->waterjumptime <= 0)
 		{
 			// apply air speed limit
-			vec_t accel, wishspeed2, accelqw;
+			vec_t accel, wishspeed0, wishspeed2, accelqw;
 			qboolean accelerating;
 
 			accelqw = cl.movevars_airaccel_qw;
+			wishspeed0 = wishspeed;
 			wishspeed = min(wishspeed, cl.movevars_maxairspeed);
 			if (s->crouched)
 				wishspeed *= 0.5;
@@ -1322,7 +1326,7 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 			if(cl.movevars_warsowbunny_turnaccel && accelerating && s->cmd.sidemove == 0 && s->cmd.forwardmove != 0)
 				CL_ClientMovement_Physics_PM_AirAccelerate(s, wishdir, wishspeed2);
 			else
-				CL_ClientMovement_Physics_PM_Accelerate(s, wishdir, wishspeed, accel, accelqw, cl.movevars_airaccel_sideways_friction / cl.movevars_maxairspeed);
+				CL_ClientMovement_Physics_PM_Accelerate(s, wishdir, wishspeed, wishspeed0, accel, accelqw, cl.movevars_airaccel_sideways_friction / cl.movevars_maxairspeed);
 
 			if(cl.movevars_aircontrol)
 				CL_ClientMovement_Physics_CPM_PM_Aircontrol(s, wishdir, wishspeed2);
@@ -1350,9 +1354,11 @@ void CL_UpdateMoveVars(void)
 {
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
 	{
+		cl.moveflags = 0;
 	}
 	else if (cl.stats[STAT_MOVEVARS_TICRATE])
 	{
+		cl.moveflags = cl.stats[STAT_MOVEFLAGS];
 		cl.movevars_ticrate = cl.statsf[STAT_MOVEVARS_TICRATE];
 		cl.movevars_timescale = cl.statsf[STAT_MOVEVARS_TIMESCALE];
 		cl.movevars_gravity = cl.statsf[STAT_MOVEVARS_GRAVITY];
@@ -1384,6 +1390,7 @@ void CL_UpdateMoveVars(void)
 	}
 	else
 	{
+		cl.moveflags = 0;
 		cl.movevars_ticrate = slowmo.value / bound(1.0f, cl_netfps.value, 1000.0f);
 		cl.movevars_timescale = slowmo.value;
 		cl.movevars_gravity = sv_gravity.value;
@@ -1412,6 +1419,12 @@ void CL_UpdateMoveVars(void)
 		cl.movevars_warsowbunny_topspeed = 0;
 		cl.movevars_warsowbunny_turnaccel = 0;
 		cl.movevars_warsowbunny_backtosideratio = 0;
+	}
+
+	if(!(cl.moveflags & MOVEFLAG_VALID))
+	{
+		if(gamemode == GAME_NEXUIZ)
+			cl.moveflags = MOVEFLAG_Q2AIRACCELERATE;
 	}
 }
 

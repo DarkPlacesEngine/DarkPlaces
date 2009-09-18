@@ -165,6 +165,7 @@ void SV_Accelerate (void)
 		host_client->edict->fields.server->velocity[i] += accelspeed*wishdir[i];
 }
 
+extern cvar_t sv_gameplayfix_q2airaccelerate;
 void SV_AirAccelerate (vec3_t wishveloc)
 {
 	int i;
@@ -177,7 +178,7 @@ void SV_AirAccelerate (vec3_t wishveloc)
 	addspeed = wishspd - currentspeed;
 	if (addspeed <= 0)
 		return;
-	accelspeed = (sv_airaccelerate.value < 0 ? sv_accelerate.value : sv_airaccelerate.value)*wishspeed * sv.frametime;
+	accelspeed = (sv_airaccelerate.value < 0 ? sv_accelerate.value : sv_airaccelerate.value)*(sv_gameplayfix_q2airaccelerate.integer ? wishspd : wishspeed) * sv.frametime;
 	if (accelspeed > addspeed)
 		accelspeed = addspeed;
 

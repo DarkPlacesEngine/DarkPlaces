@@ -104,6 +104,7 @@ extern char engineversion[128];
 //#define STAT_TIME			17 ///< FTE
 //#define STAT_VIEW2		20 ///< FTE
 #define STAT_VIEWZOOM		21 ///< DP
+#define STAT_MOVEFLAGS                              225 ///< DP
 #define STAT_MOVEVARS_WARSOWBUNNY_AIRFORWARDACCEL	226 ///< DP
 #define STAT_MOVEVARS_WARSOWBUNNY_ACCEL				227 ///< DP
 #define STAT_MOVEVARS_WARSOWBUNNY_TOPSPEED			228 ///< DP
@@ -134,6 +135,10 @@ extern char engineversion[128];
 #define STAT_MOVEVARS_STEPHEIGHT					253 ///< DP
 #define STAT_MOVEVARS_AIRACCEL_QW					254 ///< DP
 #define STAT_MOVEVARS_AIRACCEL_SIDEWAYS_FRICTION	255 ///< DP
+
+// moveflags values
+#define MOVEFLAG_VALID 0x80000000
+#define MOVEFLAG_Q2AIRACCELERATE 0x00000001
 
 // stock defines
 
