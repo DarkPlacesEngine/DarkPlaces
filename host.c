@@ -823,7 +823,7 @@ void Host_Main(void)
 	//
 	//-------------------
 
-		if (cls.state != ca_dedicated && (cl_timer > 0 || cls.timedemo))
+		if (cls.state != ca_dedicated && (cl_timer > 0 || cls.timedemo || cl_maxfps.value < 1))
 		{
 			// decide the simulation time
 			if (cls.capturevideo.active)
