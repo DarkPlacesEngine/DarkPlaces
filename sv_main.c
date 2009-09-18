@@ -100,6 +100,7 @@ cvar_t sv_gameplayfix_stepwhilejumping = {0, "sv_gameplayfix_stepwhilejumping", 
 cvar_t sv_gameplayfix_swiminbmodels = {0, "sv_gameplayfix_swiminbmodels", "1", "causes pointcontents (used to determine if you are in a liquid) to check bmodel entities as well as the world model, so you can swim around in (possibly moving) water bmodel entities"};
 cvar_t sv_gameplayfix_upwardvelocityclearsongroundflag = {0, "sv_gameplayfix_upwardvelocityclearsongroundflag", "1", "prevents monsters, items, and most other objects from being stuck to the floor when pushed around by damage, and other situations in mods"};
 cvar_t sv_gameplayfix_gravityunaffectedbyticrate = {0, "sv_gameplayfix_gravityunaffectedbyticrate", "0", "fix some ticrate issues in physics."};
+cvar_t sv_gameplayfix_q2airaccelerate = {0, "sv_gameplayfix_q2airaccelerate", "0", "Quake2-style air acceleration"};
 cvar_t sv_gravity = {CVAR_NOTIFY, "sv_gravity","800", "how fast you fall (512 = roughly earth gravity)"};
 cvar_t sv_idealpitchscale = {0, "sv_idealpitchscale","0.8", "how much to look up/down slopes and stairs when not using freelook"};
 cvar_t sv_jumpstep = {CVAR_NOTIFY, "sv_jumpstep", "0", "whether you can step up while jumping (sv_gameplayfix_stepwhilejumping must also be 1)"};
@@ -388,6 +389,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_gameplayfix_swiminbmodels);
 	Cvar_RegisterVariable (&sv_gameplayfix_upwardvelocityclearsongroundflag);
 	Cvar_RegisterVariable (&sv_gameplayfix_gravityunaffectedbyticrate);
+	Cvar_RegisterVariable (&sv_gameplayfix_q2airaccelerate);
 	Cvar_RegisterVariable (&sv_gravity);
 	Cvar_RegisterVariable (&sv_idealpitchscale);
 	Cvar_RegisterVariable (&sv_jumpstep);
@@ -482,6 +484,11 @@ void SV_Init (void)
 	{
 		// rogue mission pack has a guardian boss that does not wake up if findradius returns one of the entities around its spawn area
 		Cvar_SetValueQuick (&sv_gameplayfix_findradiusdistancetobox, 0);
+	}
+	if (gamemode == GAME_NEXUIZ)
+	{
+		// rogue mission pack has a guardian boss that does not wake up if findradius returns one of the entities around its spawn area
+		Cvar_SetValueQuick (&sv_gameplayfix_q2airaccelerate, 1);
 	}
 
 	sv_mempool = Mem_AllocPool("server", 0, NULL);
@@ -1666,6 +1673,9 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 
 	// movement settings for prediction
 	// note: these are not sent in protocols with lower MAX_CL_STATS limits
+	stats[STAT_MOVEFLAGS] = MOVEFLAG_VALID
+		| (sv_gameplayfix_q2airaccelerate.integer ? MOVEFLAG_Q2AIRACCELERATE : 0)
+	;
 	statsf[STAT_MOVEVARS_TICRATE] = sys_ticrate.value;
 	statsf[STAT_MOVEVARS_TIMESCALE] = slowmo.value;
 	statsf[STAT_MOVEVARS_GRAVITY] = sv_gravity.value;

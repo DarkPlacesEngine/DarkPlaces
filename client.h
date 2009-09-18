@@ -1055,6 +1055,7 @@ typedef struct client_state_s
 	double lastpackettime;
 
 	// movement parameters for client prediction
+	unsigned int moveflags;
 	float movevars_wallfriction;
 	float movevars_waterfriction;
 	float movevars_friction;
