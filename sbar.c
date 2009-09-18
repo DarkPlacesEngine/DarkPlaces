@@ -1119,10 +1119,7 @@ void Sbar_ShowFPS(void)
 		newtime = Sys_DoubleTime();
 		if (newtime >= nexttime)
 		{
-			if (framecount > 1) // frames per second
-				framerate = framecount / interval;
-			else // seconds per frame
-				framerate = framecount / (newtime - lasttime);
+			framerate = framecount / (newtime - lasttime);
 			if (nexttime < newtime - interval * 1.5)
 				nexttime = newtime;
 			lasttime = newtime;
