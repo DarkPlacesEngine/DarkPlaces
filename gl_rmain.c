@@ -3086,10 +3086,10 @@ static void R_View_SetFrustum(void)
 		VectorNormalize(r_refdef.view.frustum[3].normal);
 
 		// calculate frustum corners, which are used to calculate deformed frustum planes for shadow caster culling
-		VectorMAMAMAM(1, r_refdef.view.origin, 1024, forward, -1024 * slopex, left, -1024 * slopey, up, r_refdef.view.frustumcorner[0]);
-		VectorMAMAMAM(1, r_refdef.view.origin, 1024, forward,  1024 * slopex, left, -1024 * slopey, up, r_refdef.view.frustumcorner[1]);
-		VectorMAMAMAM(1, r_refdef.view.origin, 1024, forward, -1024 * slopex, left,  1024 * slopey, up, r_refdef.view.frustumcorner[2]);
-		VectorMAMAMAM(1, r_refdef.view.origin, 1024, forward,  1024 * slopex, left,  1024 * slopey, up, r_refdef.view.frustumcorner[3]);
+		VectorMAMAMAM(1, r_refdef.view.origin, 1024, forward, -1024 * r_refdef.view.frustum_x, left, -1024 * r_refdef.view.frustum_y, up, r_refdef.view.frustumcorner[0]);
+		VectorMAMAMAM(1, r_refdef.view.origin, 1024, forward,  1024 * r_refdef.view.frustum_x, left, -1024 * r_refdef.view.frustum_y, up, r_refdef.view.frustumcorner[1]);
+		VectorMAMAMAM(1, r_refdef.view.origin, 1024, forward, -1024 * r_refdef.view.frustum_x, left,  1024 * r_refdef.view.frustum_y, up, r_refdef.view.frustumcorner[2]);
+		VectorMAMAMAM(1, r_refdef.view.origin, 1024, forward,  1024 * r_refdef.view.frustum_x, left,  1024 * r_refdef.view.frustum_y, up, r_refdef.view.frustumcorner[3]);
 
 		r_refdef.view.frustum[0].dist = DotProduct (r_refdef.view.origin, r_refdef.view.frustum[0].normal);
 		r_refdef.view.frustum[1].dist = DotProduct (r_refdef.view.origin, r_refdef.view.frustum[1].normal);
