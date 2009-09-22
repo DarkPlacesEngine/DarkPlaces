@@ -886,6 +886,7 @@ void Mod_IDP0_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->Draw = R_Q1BSP_Draw;
 	loadmodel->DrawDepth = R_Q1BSP_DrawDepth;
 	loadmodel->DrawDebug = R_Q1BSP_DrawDebug;
+	loadmodel->DrawShadowMap = R_Q1BSP_DrawShadowMap;
 	loadmodel->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
 	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	loadmodel->DrawLight = R_Q1BSP_DrawLight;
@@ -1216,6 +1217,7 @@ void Mod_IDP2_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->Draw = R_Q1BSP_Draw;
 	loadmodel->DrawDepth = R_Q1BSP_DrawDepth;
 	loadmodel->DrawDebug = R_Q1BSP_DrawDebug;
+	loadmodel->DrawShadowMap = R_Q1BSP_DrawShadowMap;
 	loadmodel->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
 	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	loadmodel->DrawLight = R_Q1BSP_DrawLight;
@@ -1456,6 +1458,7 @@ void Mod_IDP3_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->Draw = R_Q1BSP_Draw;
 	loadmodel->DrawDepth = R_Q1BSP_DrawDepth;
 	loadmodel->DrawDebug = R_Q1BSP_DrawDebug;
+	loadmodel->DrawShadowMap = R_Q1BSP_DrawShadowMap;
 	loadmodel->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
 	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	loadmodel->DrawLight = R_Q1BSP_DrawLight;
@@ -1669,6 +1672,7 @@ void Mod_ZYMOTICMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->Draw = R_Q1BSP_Draw;
 	loadmodel->DrawDepth = R_Q1BSP_DrawDepth;
 	loadmodel->DrawDebug = R_Q1BSP_DrawDebug;
+	loadmodel->DrawShadowMap = R_Q1BSP_DrawShadowMap;
 	loadmodel->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
 	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	loadmodel->DrawLight = R_Q1BSP_DrawLight;
@@ -1971,6 +1975,7 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->Draw = R_Q1BSP_Draw;
 	loadmodel->DrawDepth = R_Q1BSP_DrawDepth;
 	loadmodel->DrawDebug = R_Q1BSP_DrawDebug;
+	loadmodel->DrawShadowMap = R_Q1BSP_DrawShadowMap;
 	loadmodel->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
 	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	loadmodel->DrawLight = R_Q1BSP_DrawLight;
@@ -2250,6 +2255,7 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->Draw = R_Q1BSP_Draw;
 	loadmodel->DrawDepth = R_Q1BSP_DrawDepth;
 	loadmodel->DrawDebug = R_Q1BSP_DrawDebug;
+	loadmodel->DrawShadowMap = R_Q1BSP_DrawShadowMap;
 	loadmodel->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
 	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	loadmodel->DrawLight = R_Q1BSP_DrawLight;
@@ -2816,6 +2822,7 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->Draw = R_Q1BSP_Draw;
 	loadmodel->DrawDepth = R_Q1BSP_DrawDepth;
 	loadmodel->DrawDebug = R_Q1BSP_DrawDebug;
+	loadmodel->DrawShadowMap = R_Q1BSP_DrawShadowMap;
 	loadmodel->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
 	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	loadmodel->DrawLight = R_Q1BSP_DrawLight;

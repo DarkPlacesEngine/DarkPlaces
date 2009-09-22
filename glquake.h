@@ -259,6 +259,29 @@ extern int gl_max_anisotropy;
 #define GL_CLIP_PLANE4                    0x3004
 #define GL_CLIP_PLANE5                    0x3005
 
+#define GL_DEPTH_COMPONENT                0x1902
+#define GL_VIEWPORT                       0x0BA2
+#define GL_DRAW_BUFFER                    0x0C01
+#define GL_READ_BUFFER                    0x0C02
+#define GL_LUMINANCE                      0x1909
+#define GL_INTENSITY                      0x8049
+
+#endif
+
+// GL_ARB_depth_texture
+#ifndef GL_DEPTH_COMPOENNT32_ARB
+#define GL_DEPTH_COMPONENT16_ARB          0x81A5
+#define GL_DEPTH_COMPONENT24_ARB          0x81A6
+#define GL_DEPTH_COMPONENT32_ARB          0x81A7
+#define GL_TEXTURE_DEPTH_SIZE_ARB         0x884A
+#define GL_DEPTH_TEXTURE_MODE_ARB         0x884B
+#endif
+
+// GL_ARB_shadow
+#ifndef GL_TEXTURE_COMPARE_MODE_ARB
+#define GL_TEXTURE_COMPARE_MODE_ARB       0x884C
+#define GL_TEXTURE_COMPARE_FUNC_ARB       0x884D
+#define GL_COMPARE_R_TO_TEXTURE_ARB       0x884E
 #endif
 
 extern int gl_max_texture_size;
@@ -383,6 +406,27 @@ extern int gl_max_cube_map_texture_size;
 #define GL_PROXY_TEXTURE_CUBE_MAP_ARB	    0x851B
 #define GL_MAX_CUBE_MAP_TEXTURE_SIZE_ARB		0x851C
 #endif
+
+extern int gl_texturerectangle;
+extern int gl_max_rectangle_texture_size;
+#ifndef GL_TEXTURE_RECTANGLE_ARB
+#define GL_TEXTURE_RECTANGLE_ARB            0x84F5
+#define GL_TEXTURE_BINDING_RECTANGLE_ARB    0x84F6
+#define GL_PROXY_TEXTURE_RECTANGLE_ARB      0x84F7
+#define GL_MAX_RECTANGLE_TEXTURE_SIZE_ARB   0x84F8
+#define GL_SAMPLER_2D_RECT_ARB              0x8B63
+#define GL_SAMPLER_2D_RECT_SHADOW_ARB       0x8B64
+#endif
+
+extern int gl_depthtexture;
+#ifndef GL_DEPTH_COMPONENT16_ARB
+#define GL_DEPTH_COMPONENT16_ARB       0x81A5
+#define GL_DEPTH_COMPONENT24_ARB       0x81A6
+#define GL_DEPTH_COMPONENT32_ARB       0x81A7
+#define GL_TEXTURE_DEPTH_SIZE_ARB      0x884A
+#define GL_DEPTH_TEXTURE_MODE_ARB      0x884B
+#endif
+
 
 extern int gl_dot3arb;
 #ifndef GL_DOT3_RGB_ARB

@@ -1425,6 +1425,32 @@ typedef struct r_refdef_stats_s
 }
 r_refdef_stats_t;
 
+typedef enum r_viewport_type_e
+{
+	R_VIEWPORTTYPE_ORTHO,
+	R_VIEWPORTTYPE_PERSPECTIVE,
+	R_VIEWPORTTYPE_PERSPECTIVE_INFINITEFARCLIP,
+	R_VIEWPORTTYPE_PERSPECTIVECUBESIDE,
+	R_VIEWPORTTYPE_TOTAL
+}
+r_viewport_type_t;
+
+typedef struct r_viewport_s
+{
+	double m[16];
+	matrix4x4_t cameramatrix; // from entity (transforms from camera entity to world)
+	matrix4x4_t viewmatrix; // actual matrix for rendering (transforms to viewspace)
+	matrix4x4_t projectmatrix; // actual projection matrix (transforms from viewspace to screen)
+	int x;
+	int y;
+	int z;
+	int width;
+	int height;
+	int depth;
+	r_viewport_type_t type;
+}
+r_viewport_t;
+
 typedef struct r_refdef_view_s
 {
 	// view information (changes multiple times per frame)
@@ -1461,6 +1487,7 @@ typedef struct r_refdef_view_s
 	int width;
 	int height;
 	int depth;
+	r_viewport_t viewport;
 
 	// which color components to allow (for anaglyph glasses)
 	int colormask[4];

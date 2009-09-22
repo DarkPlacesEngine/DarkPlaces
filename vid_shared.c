@@ -20,6 +20,7 @@ float in_windowmouse_x, in_windowmouse_y;
 int gl_max_texture_size = 0;
 int gl_max_3d_texture_size = 0;
 int gl_max_cube_map_texture_size = 0;
+int gl_max_rectangle_texture_size = 0;
 // GL_ARB_multitexture
 int gl_textureunits = 1;
 // GL_ARB_texture_env_combine or GL_EXT_texture_env_combine
@@ -34,10 +35,14 @@ int gl_stencil = false;
 int gl_texture3d = false;
 // GL_ARB_texture_cubemap
 int gl_texturecubemap = false;
+// GL_ARB_texture_rectangle
+int gl_texturerectangle = false;
 // GL_ARB_texture_non_power_of_two
 int gl_support_arb_texture_non_power_of_two = false;
 // GL_ARB_texture_env_dot3
 int gl_dot3arb = false;
+// GL_ARB_depth_texture
+int gl_depthtexture = false;
 // GL_SGIS_texture_edge_clamp
 int gl_support_clamptoedge = false;
 // GL_EXT_texture_filter_anisotropic
@@ -823,8 +828,10 @@ void VID_CheckExtensions(void)
 	gl_supportslockarrays = false;
 	gl_texture3d = false;
 	gl_texturecubemap = false;
+	gl_texturerectangle = false;
 	gl_support_arb_texture_non_power_of_two = false;
 	gl_dot3arb = false;
+	gl_depthtexture = false;
 	gl_support_clamptoedge = false;
 	gl_support_anisotropy = false;
 	gl_max_anisotropy = 1;
@@ -877,6 +884,10 @@ void VID_CheckExtensions(void)
 // COMMANDLINEOPTION: GL: -nocubemap disables GL_ARB_texture_cube_map (required for bumpmapping)
 	if ((gl_texturecubemap = GL_CheckExtension("GL_ARB_texture_cube_map", NULL, "-nocubemap", false)))
 		qglGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE_ARB, &gl_max_cube_map_texture_size);
+// COMMANDLINEOPTION: GL: -norectangle disables GL_ARB_texture_rectangle (required for bumpmapping)
+	if ((gl_texturerectangle = GL_CheckExtension("GL_ARB_texture_rectangle", NULL, "-norectangle", false)))
+		qglGetIntegerv(GL_MAX_RECTANGLE_TEXTURE_SIZE_ARB, &gl_max_rectangle_texture_size);
+	gl_depthtexture = GL_CheckExtension("GL_ARB_depth_texture", NULL, "-nodepthtexture", false);
 // COMMANDLINEOPTION: GL: -notexturecompression disables GL_ARB_texture_compression (which saves video memory if it is supported, but can also degrade image quality, see gl_texturecompression cvar documentation for more information)
 	gl_support_texture_compression = GL_CheckExtension("GL_ARB_texture_compression", texturecompressionfuncs, "-notexturecompression", false);
 // COMMANDLINEOPTION: GL: -nocva disables GL_EXT_compiled_vertex_array (renders faster)

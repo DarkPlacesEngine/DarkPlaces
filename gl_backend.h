@@ -10,12 +10,15 @@ extern unsigned short polygonelements[(POLYGONELEMENTS_MAXPOINTS-2)*3];
 #define QUADELEMENTS_MAXQUADS 128
 extern unsigned short quadelements[QUADELEMENTS_MAXQUADS*6];
 
-void GL_SetupView_Orientation_Identity(void);
-void GL_SetupView_Orientation_FromEntity(const matrix4x4_t *matrix);
-void GL_SetupView_Mode_Perspective(double frustumx, double frustumy, double zNear, double zFar);
-void GL_SetupView_Mode_PerspectiveInfiniteFarClip(double frustumx, double frustumy, double zNear);
-void GL_SetupView_Mode_Ortho(double x1, double y1, double x2, double y2, double zNear, double zFar);
-void GL_SetupView_ApplyCustomNearClipPlane(double normalx, double normaly, double normalz, double dist);
+void R_Viewport_TransformToScreen(const r_viewport_t *v, const vec4_t in, vec4_t out);
+void R_Viewport_InitOrtho(r_viewport_t *v, const matrix4x4_t *cameramatrix, int x, int y, int width, int height, double x1, double y1, double x2, double y2, double zNear, double zFar, const double *nearplane);
+void R_Viewport_InitPerspective(r_viewport_t *v, const matrix4x4_t *cameramatrix, int x, int y, int width, int height, double frustumx, double frustumy, double zNear, double zFar, const double *nearplane);
+void R_Viewport_InitPerspectiveInfinite(r_viewport_t *v, const matrix4x4_t *cameramatrix, int x, int y, int width, int height, double frustumx, double frustumy, double zNear, const double *nearplane);
+void R_Viewport_InitCubeSideView(r_viewport_t *v, const matrix4x4_t *cameramatrix, int side, int size, float nearclip, float farclip, const float *nearplane);
+void R_Viewport_InitRectSideView(r_viewport_t *v, const matrix4x4_t *cameramatrix, int side, int size, int border, float nearclip, float farclip, const float *nearplane);
+void R_SetViewport(const r_viewport_t *v);
+void R_GetViewport(r_viewport_t *v);
+
 void GL_BlendFunc(int blendfunc1, int blendfunc2);
 void GL_DepthMask(int state);
 void GL_DepthTest(int state);
@@ -25,7 +28,6 @@ void GL_CullFace(int state);
 void GL_AlphaTest(int state);
 void GL_ColorMask(int r, int g, int b, int a);
 void GL_Color(float cr, float cg, float cb, float ca);
-void GL_TransformToScreen(const vec4_t in, vec4_t out);
 void GL_LockArrays(int first, int count);
 void GL_ActiveTexture(unsigned int num);
 void GL_ClientActiveTexture(unsigned int num);
@@ -49,6 +51,7 @@ typedef struct rmeshstate_s
 	int tex[MAX_TEXTUREUNITS];
 	int tex3d[MAX_TEXTUREUNITS];
 	int texcubemap[MAX_TEXTUREUNITS];
+	int texrectangle[MAX_TEXTUREUNITS];
 	// texture combine settings
 	int texrgbscale[MAX_TEXTUREUNITS]; // used only if COMBINE is present
 	int texalphascale[MAX_TEXTUREUNITS]; // used only if COMBINE is present
@@ -97,13 +100,14 @@ void R_Mesh_ColorPointer(const float *color4f, int bufferobject, size_t bufferof
 // sets the texcoord array pointer for an array unit
 void R_Mesh_TexCoordPointer(unsigned int unitnum, unsigned int numcomponents, const float *texcoord, int bufferobject, size_t bufferoffset);
 // sets all textures bound to an image unit (multiple can be non-zero at once, according to OpenGL rules the highest one overrides the others)
-void R_Mesh_TexBindAll(unsigned int unitnum, int tex1d, int tex2d, int tex3d, int texcubemap);
+void R_Mesh_TexBindAll(unsigned int unitnum, int tex1d, int tex2d, int tex3d, int texcubemap, int texrectangle);
 // sets these are like TexBindAll with only one of the texture indices non-zero
 // (binds one texture type and unbinds all other types)
 void R_Mesh_TexBind1D(unsigned int unitnum, int texnum);
 void R_Mesh_TexBind(unsigned int unitnum, int texnum);
 void R_Mesh_TexBind3D(unsigned int unitnum, int texnum);
 void R_Mesh_TexBindCubeMap(unsigned int unitnum, int texnum);
+void R_Mesh_TexBindRectangle(unsigned int unitnum, int texnum);
 // sets the texcoord matrix for a texenv unit
 void R_Mesh_TexMatrix(unsigned int unitnum, const matrix4x4_t *matrix);
 // sets the combine state for a texenv unit

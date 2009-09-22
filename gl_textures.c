@@ -44,30 +44,38 @@ typedef struct textypeinfo_s
 	float glinternalbytesperpixel;
 	int glformat;
 	int glinternalformat;
+	int gltype;
 }
 textypeinfo_t;
 
-static textypeinfo_t textype_palette                = {TEXTYPE_PALETTE, 1, 4, 4.0f, GL_BGRA   , 3};
-static textypeinfo_t textype_palette_alpha          = {TEXTYPE_PALETTE, 1, 4, 4.0f, GL_BGRA   , 4};
-static textypeinfo_t textype_palette_compress       = {TEXTYPE_PALETTE, 1, 4, 0.5f, GL_BGRA   , GL_COMPRESSED_RGB_ARB};
-static textypeinfo_t textype_palette_alpha_compress = {TEXTYPE_PALETTE, 1, 4, 1.0f, GL_BGRA   , GL_COMPRESSED_RGBA_ARB};
-static textypeinfo_t textype_rgba                   = {TEXTYPE_RGBA   , 4, 4, 4.0f, GL_RGBA   , 3};
-static textypeinfo_t textype_rgba_alpha             = {TEXTYPE_RGBA   , 4, 4, 4.0f, GL_RGBA   , 4};
-static textypeinfo_t textype_rgba_compress          = {TEXTYPE_RGBA   , 4, 4, 0.5f, GL_RGBA   , GL_COMPRESSED_RGB_ARB};
-static textypeinfo_t textype_rgba_alpha_compress    = {TEXTYPE_RGBA   , 4, 4, 1.0f, GL_RGBA   , GL_COMPRESSED_RGBA_ARB};
-static textypeinfo_t textype_bgra                   = {TEXTYPE_BGRA   , 4, 4, 4.0f, GL_BGRA   , 3};
-static textypeinfo_t textype_bgra_alpha             = {TEXTYPE_BGRA   , 4, 4, 4.0f, GL_BGRA   , 4};
-static textypeinfo_t textype_bgra_compress          = {TEXTYPE_BGRA   , 4, 4, 0.5f, GL_BGRA   , GL_COMPRESSED_RGB_ARB};
-static textypeinfo_t textype_bgra_alpha_compress    = {TEXTYPE_BGRA   , 4, 4, 1.0f, GL_BGRA   , GL_COMPRESSED_RGBA_ARB};
+static textypeinfo_t textype_palette                = {TEXTYPE_PALETTE, 1, 4, 4.0f, GL_BGRA   , 3, GL_UNSIGNED_BYTE};
+static textypeinfo_t textype_palette_alpha          = {TEXTYPE_PALETTE, 1, 4, 4.0f, GL_BGRA   , 4, GL_UNSIGNED_BYTE};
+static textypeinfo_t textype_palette_compress       = {TEXTYPE_PALETTE, 1, 4, 0.5f, GL_BGRA   , GL_COMPRESSED_RGB_ARB, GL_UNSIGNED_BYTE};
+static textypeinfo_t textype_palette_alpha_compress = {TEXTYPE_PALETTE, 1, 4, 1.0f, GL_BGRA   , GL_COMPRESSED_RGBA_ARB, GL_UNSIGNED_BYTE};
+static textypeinfo_t textype_rgba                   = {TEXTYPE_RGBA   , 4, 4, 4.0f, GL_RGBA   , 3, GL_UNSIGNED_BYTE};
+static textypeinfo_t textype_rgba_alpha             = {TEXTYPE_RGBA   , 4, 4, 4.0f, GL_RGBA   , 4, GL_UNSIGNED_BYTE};
+static textypeinfo_t textype_rgba_compress          = {TEXTYPE_RGBA   , 4, 4, 0.5f, GL_RGBA   , GL_COMPRESSED_RGB_ARB, GL_UNSIGNED_BYTE};
+static textypeinfo_t textype_rgba_alpha_compress    = {TEXTYPE_RGBA   , 4, 4, 1.0f, GL_RGBA   , GL_COMPRESSED_RGBA_ARB, GL_UNSIGNED_BYTE};
+static textypeinfo_t textype_bgra                   = {TEXTYPE_BGRA   , 4, 4, 4.0f, GL_BGRA   , 3, GL_UNSIGNED_BYTE};
+static textypeinfo_t textype_bgra_alpha             = {TEXTYPE_BGRA   , 4, 4, 4.0f, GL_BGRA   , 4, GL_UNSIGNED_BYTE};
+static textypeinfo_t textype_bgra_compress          = {TEXTYPE_BGRA   , 4, 4, 0.5f, GL_BGRA   , GL_COMPRESSED_RGB_ARB, GL_UNSIGNED_BYTE};
+static textypeinfo_t textype_bgra_alpha_compress    = {TEXTYPE_BGRA   , 4, 4, 1.0f, GL_BGRA   , GL_COMPRESSED_RGBA_ARB, GL_UNSIGNED_BYTE};
+static textypeinfo_t textype_shadowmap              = {TEXTYPE_SHADOWMAP,4,4, 4.0f, GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT32_ARB, GL_UNSIGNED_INT};
 
-#define GLTEXTURETYPE_1D 0
-#define GLTEXTURETYPE_2D 1
-#define GLTEXTURETYPE_3D 2
-#define GLTEXTURETYPE_CUBEMAP 3
+typedef enum gltexturetype_e
+{
+	GLTEXTURETYPE_1D,
+	GLTEXTURETYPE_2D,
+	GLTEXTURETYPE_3D,
+	GLTEXTURETYPE_CUBEMAP,
+	GLTEXTURETYPE_RECTANGLE,
+	GLTEXTURETYPE_TOTAL
+}
+gltexturetype_t;
 
-static int gltexturetypeenums[4] = {GL_TEXTURE_1D, GL_TEXTURE_2D, GL_TEXTURE_3D, GL_TEXTURE_CUBE_MAP_ARB};
-static int gltexturetypebindingenums[4] = {GL_TEXTURE_BINDING_1D, GL_TEXTURE_BINDING_2D, GL_TEXTURE_BINDING_3D, GL_TEXTURE_BINDING_CUBE_MAP_ARB};
-static int gltexturetypedimensions[4] = {1, 2, 3, 2};
+static int gltexturetypeenums[GLTEXTURETYPE_TOTAL] = {GL_TEXTURE_1D, GL_TEXTURE_2D, GL_TEXTURE_3D, GL_TEXTURE_CUBE_MAP_ARB, GL_TEXTURE_RECTANGLE_ARB};
+static int gltexturetypebindingenums[GLTEXTURETYPE_TOTAL] = {GL_TEXTURE_BINDING_1D, GL_TEXTURE_BINDING_2D, GL_TEXTURE_BINDING_3D, GL_TEXTURE_BINDING_CUBE_MAP_ARB, GL_TEXTURE_BINDING_RECTANGLE_ARB};
+static int gltexturetypedimensions[GLTEXTURETYPE_TOTAL] = {1, 2, 3, 2, 2};
 static int cubemapside[6] =
 {
 	GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB,
@@ -120,10 +128,12 @@ typedef struct gltexture_s
 	int sides;
 	// bytes per pixel
 	int bytesperpixel;
-	// GL_RGB or GL_RGBA
+	// GL_RGB or GL_RGBA or GL_DEPTH_COMPONENT
 	int glformat;
 	// 3 or 4
 	int glinternalformat;
+	// GL_UNSIGNED_BYTE or GL_UNSIGNED_INT or GL_UNSIGNED_SHORT or GL_FLOAT
+	int gltype;
 }
 gltexture_t;
 
@@ -206,6 +216,8 @@ static textypeinfo_t *R_GetTexTypeInfo(textype_t textype, int flags)
 				return &textype_rgba;
 			case TEXTYPE_BGRA:
 				return &textype_bgra;
+			case TEXTYPE_SHADOWMAP:
+				return &textype_shadowmap;
 			default:
 				Host_Error("R_GetTexTypeInfo: unknown texture format");
 				return NULL;
@@ -768,6 +780,19 @@ static void GL_SetupTextureParameters(int flags, int texturetype)
 		qglTexParameteri(textureenum, GL_TEXTURE_MAG_FILTER, gl_filter_mag);CHECKGLERROR
 	}
 
+	if (texturetype == TEXTYPE_SHADOWMAP)
+	{
+#if 1
+		qglTexParameteri(textureenum, GL_TEXTURE_COMPARE_MODE_ARB, GL_COMPARE_R_TO_TEXTURE_ARB);CHECKGLERROR
+		qglTexParameteri(textureenum, GL_TEXTURE_COMPARE_FUNC_ARB, GL_LEQUAL);CHECKGLERROR
+		qglTexParameteri(textureenum, GL_DEPTH_TEXTURE_MODE_ARB, GL_INTENSITY);CHECKGLERROR
+#else
+		qglTexParameteri(textureenum, GL_TEXTURE_COMPARE_MODE_ARB, GL_NONE);CHECKGLERROR
+		qglTexParameteri(textureenum, GL_TEXTURE_COMPARE_FUNC_ARB, GL_ALWAYS);CHECKGLERROR
+		qglTexParameteri(textureenum, GL_DEPTH_TEXTURE_MODE_ARB, GL_INTENSITY);CHECKGLERROR
+#endif
+	}
+
 	CHECKGLERROR
 }
 
@@ -819,13 +844,13 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 		switch(glt->texturetype)
 		{
 		case GLTEXTURETYPE_1D:
-			qglTexSubImage1D(GL_TEXTURE_1D, 0, fragx, fragwidth, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
+			qglTexSubImage1D(GL_TEXTURE_1D, 0, fragx, fragwidth, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
 			break;
 		case GLTEXTURETYPE_2D:
-			qglTexSubImage2D(GL_TEXTURE_2D, 0, fragx, fragy, fragwidth, fragheight, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
+			qglTexSubImage2D(GL_TEXTURE_2D, 0, fragx, fragy, fragwidth, fragheight, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
 			break;
 		case GLTEXTURETYPE_3D:
-			qglTexSubImage3D(GL_TEXTURE_3D, 0, fragx, fragy, fragz, fragwidth, fragheight, fragdepth, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
+			qglTexSubImage3D(GL_TEXTURE_3D, 0, fragx, fragy, fragz, fragwidth, fragheight, fragdepth, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
 			break;
 		default:
 			Host_Error("R_Upload: partial update of type other than 1D, 2D, or 3D");
@@ -867,38 +892,38 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 		switch(glt->texturetype)
 		{
 		case GLTEXTURETYPE_1D:
-			qglTexImage1D(GL_TEXTURE_1D, mip++, glt->glinternalformat, width, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
+			qglTexImage1D(GL_TEXTURE_1D, mip++, glt->glinternalformat, width, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
 			if (glt->flags & TEXF_MIPMAP)
 			{
 				while (width > 1 || height > 1 || depth > 1)
 				{
 					Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
 					prevbuffer = resizebuffer;
-					qglTexImage1D(GL_TEXTURE_1D, mip++, glt->glinternalformat, width, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
+					qglTexImage1D(GL_TEXTURE_1D, mip++, glt->glinternalformat, width, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
 				}
 			}
 			break;
 		case GLTEXTURETYPE_2D:
-			qglTexImage2D(GL_TEXTURE_2D, mip++, glt->glinternalformat, width, height, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
+			qglTexImage2D(GL_TEXTURE_2D, mip++, glt->glinternalformat, width, height, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
 			if (glt->flags & TEXF_MIPMAP)
 			{
 				while (width > 1 || height > 1 || depth > 1)
 				{
 					Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
 					prevbuffer = resizebuffer;
-					qglTexImage2D(GL_TEXTURE_2D, mip++, glt->glinternalformat, width, height, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
+					qglTexImage2D(GL_TEXTURE_2D, mip++, glt->glinternalformat, width, height, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
 				}
 			}
 			break;
 		case GLTEXTURETYPE_3D:
-			qglTexImage3D(GL_TEXTURE_3D, mip++, glt->glinternalformat, width, height, depth, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
+			qglTexImage3D(GL_TEXTURE_3D, mip++, glt->glinternalformat, width, height, depth, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
 			if (glt->flags & TEXF_MIPMAP)
 			{
 				while (width > 1 || height > 1 || depth > 1)
 				{
 					Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
 					prevbuffer = resizebuffer;
-					qglTexImage3D(GL_TEXTURE_3D, mip++, glt->glinternalformat, width, height, depth, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
+					qglTexImage3D(GL_TEXTURE_3D, mip++, glt->glinternalformat, width, height, depth, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
 				}
 			}
 			break;
@@ -922,17 +947,20 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 					prevbuffer = resizebuffer;
 				}
 				mip = 0;
-				qglTexImage2D(cubemapside[i], mip++, glt->glinternalformat, width, height, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
+				qglTexImage2D(cubemapside[i], mip++, glt->glinternalformat, width, height, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
 				if (glt->flags & TEXF_MIPMAP)
 				{
 					while (width > 1 || height > 1 || depth > 1)
 					{
 						Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
 						prevbuffer = resizebuffer;
-						qglTexImage2D(cubemapside[i], mip++, glt->glinternalformat, width, height, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);CHECKGLERROR
+						qglTexImage2D(cubemapside[i], mip++, glt->glinternalformat, width, height, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
 					}
 				}
 			}
+			break;
+		case GLTEXTURETYPE_RECTANGLE:
+			qglTexImage2D(GL_TEXTURE_RECTANGLE_ARB, mip++, glt->glinternalformat, width, height, 0, glt->glformat, glt->gltype, NULL);CHECKGLERROR
 			break;
 		}
 		GL_SetupTextureParameters(glt->flags, glt->texturetype);
@@ -968,6 +996,11 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	if (cls.state == ca_dedicated)
 		return NULL;
 
+	if (texturetype == GLTEXTURETYPE_RECTANGLE && !gl_texturerectangle)
+	{
+		Con_Printf ("R_LoadTexture: rectangle texture not supported by driver\n");
+		return NULL;
+	}
 	if (texturetype == GLTEXTURETYPE_CUBEMAP && !gl_texturecubemap)
 	{
 		Con_Printf ("R_LoadTexture: cubemap texture not supported by driver\n");
@@ -1025,6 +1058,8 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 			}
 		}
 		break;
+	case TEXTYPE_SHADOWMAP:
+		break;
 	default:
 		Host_Error("R_LoadTexture: unknown texture type");
 	}
@@ -1045,6 +1080,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	glt->palette = palette;
 	glt->glinternalformat = texinfo->glinternalformat;
 	glt->glformat = texinfo->glformat;
+	glt->gltype = texinfo->gltype;
 	glt->bytesperpixel = texinfo->internalbytesperpixel;
 	glt->sides = glt->texturetype == GLTEXTURETYPE_CUBEMAP ? 6 : 1;
 	glt->texnum = 0;
@@ -1088,6 +1124,26 @@ rtexture_t *R_LoadTexture3D(rtexturepool_t *rtexturepool, const char *identifier
 rtexture_t *R_LoadTextureCubeMap(rtexturepool_t *rtexturepool, const char *identifier, int width, const unsigned char *data, textype_t textype, int flags, const unsigned int *palette)
 {
 	return R_SetupTexture(rtexturepool, identifier, width, width, 1, 6, flags, textype, GLTEXTURETYPE_CUBEMAP, data, palette);
+}
+
+rtexture_t *R_LoadTextureShadowMapRectangle(rtexturepool_t *rtexturepool, const char *identifier, int width, int height)
+{
+	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, TEXF_ALWAYSPRECACHE | TEXF_FORCENEAREST | TEXF_CLAMP, TEXTYPE_SHADOWMAP, GLTEXTURETYPE_RECTANGLE, NULL, NULL);
+}
+
+rtexture_t *R_LoadTextureShadowMapCube(rtexturepool_t *rtexturepool, const char *identifier, int width)
+{
+	return R_SetupTexture(rtexturepool, identifier, width, width, 1, 6, TEXF_ALWAYSPRECACHE | TEXF_FORCENEAREST | TEXF_CLAMP, TEXTYPE_SHADOWMAP, GLTEXTURETYPE_CUBEMAP, NULL, NULL);
+}
+
+rtexture_t *R_LoadTextureShadowMap2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height)
+{
+	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, TEXF_ALWAYSPRECACHE | TEXF_FORCENEAREST | TEXF_CLAMP, TEXTYPE_SHADOWMAP, GLTEXTURETYPE_2D, NULL, NULL);
+}
+
+rtexture_t *R_LoadTextureCubeProjection(rtexturepool_t *rtexturepool, const char *identifier)
+{
+	return R_SetupTexture(rtexturepool, identifier, 2, 2, 1, 6, TEXF_ALWAYSPRECACHE | TEXF_FORCENEAREST | TEXF_CLAMP, TEXTYPE_SHADOWMAP, GLTEXTURETYPE_CUBEMAP, NULL, NULL);
 }
 
 int R_TextureHasAlpha(rtexture_t *rt)
