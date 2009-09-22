@@ -780,13 +780,14 @@ void GL_Draw_Init (void)
 
 void _DrawQ_Setup(void)
 {
+	r_viewport_t viewport;
 	if (r_refdef.draw2dstage)
 		return;
 	r_refdef.draw2dstage = true;
 	CHECKGLERROR
-	qglViewport(r_refdef.view.x, vid.height - (r_refdef.view.y + r_refdef.view.height), r_refdef.view.width, r_refdef.view.height);CHECKGLERROR
+	R_Viewport_InitOrtho(&viewport, &identitymatrix, r_refdef.view.x, r_refdef.view.y, r_refdef.view.width, r_refdef.view.height, 0, 0, vid_conwidth.integer, vid_conheight.integer, -10, 100, NULL);
+	R_SetViewport(&viewport);
 	GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
-	GL_SetupView_Mode_Ortho(0, 0, vid_conwidth.integer, vid_conheight.integer, -10, 100);
 	qglDepthFunc(GL_LEQUAL);CHECKGLERROR
 	qglDisable(GL_POLYGON_OFFSET_FILL);CHECKGLERROR
 	GL_CullFace(GL_FRONT); // quake is backwards, this culls back faces
@@ -1380,11 +1381,16 @@ void DrawQ_Line (float width, float x1, float y1, float x2, float y2, float r, f
 
 void DrawQ_SetClipArea(float x, float y, float width, float height)
 {
+	int ix, iy, iw, ih;
 	_DrawQ_Setup();
 
 	// We have to convert the con coords into real coords
 	// OGL uses top to bottom
-	GL_Scissor((int)(0.5 + x * ((float)vid.width / vid_conwidth.integer)), (int)(0.5 + y * ((float) vid.height / vid_conheight.integer)), (int)(width * ((float)vid.width / vid_conwidth.integer)), (int)(height * ((float)vid.height / vid_conheight.integer)));
+	ix = (int)(0.5 + x * ((float)vid.width / vid_conwidth.integer));
+	iy = (int)(0.5 + y * ((float) vid.height / vid_conheight.integer));
+	iw = (int)(width * ((float)vid.width / vid_conwidth.integer));
+	ih = (int)(height * ((float)vid.height / vid_conheight.integer));
+	GL_Scissor(ix, vid.height - iy - ih, iw, ih);
 
 	GL_ScissorTest(true);
 }

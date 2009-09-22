@@ -1818,12 +1818,14 @@ static float loadingscreenpic_texcoord2f[8];
 
 static void SCR_DrawLoadingScreen_SharedSetup (qboolean clear)
 {
+	r_viewport_t viewport;
 	float x, y;
 	// release mouse grab while loading
 	if (!vid.fullscreen)
 		VID_SetMouse(false, false, false);
 	CHECKGLERROR
-	qglViewport(0, 0, vid.width, vid.height);CHECKGLERROR
+	R_Viewport_InitOrtho(&viewport, &identitymatrix, 0, 0, vid.width, vid.height, 0, 0, vid_conwidth.integer, vid_conheight.integer, -10, 100, NULL);
+	R_SetViewport(&viewport);
 	//qglDisable(GL_SCISSOR_TEST);CHECKGLERROR
 	//qglDepthMask(1);CHECKGLERROR
 	qglColorMask(1,1,1,1);CHECKGLERROR
@@ -1832,7 +1834,6 @@ static void SCR_DrawLoadingScreen_SharedSetup (qboolean clear)
 	if (clear)
 		qglClear(GL_COLOR_BUFFER_BIT);CHECKGLERROR
 	R_Textures_Frame();
-	GL_SetupView_Mode_Ortho(0, 0, vid_conwidth.integer, vid_conheight.integer, -10, 100);
 	R_Mesh_Start();
 	R_Mesh_Matrix(&identitymatrix);
 	// draw the loading plaque

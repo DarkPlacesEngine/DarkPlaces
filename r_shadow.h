@@ -39,13 +39,14 @@ extern cvar_t gl_ext_stenciltwoside;
 
 void R_Shadow_Init(void);
 void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f, const int *elements, const int *neighbors, const vec3_t projectorigin, const vec3_t projectdirection, float projectdistance, int nummarktris, const int *marktris, vec3_t trismins, vec3_t trismaxs);
+void R_Shadow_ShadowMapFromList(int numverts, int numtris, const float *vertex3f, int vertex3f_bufferobject, int vertex3f_bufferoffset, const int *elements, int nummarktris, const int *marktris);
 void R_Shadow_MarkVolumeFromBox(int firsttriangle, int numtris, const float *invertex3f, const int *elements, const vec3_t projectorigin, const vec3_t projectdirection, const vec3_t lightmins, const vec3_t lightmaxs, const vec3_t surfacemins, const vec3_t surfacemaxs);
 void R_Shadow_RenderLighting(int firstvertex, int numvertices, int firsttriangle, int numtriangles, const int *element3i, const unsigned short *element3s, int element3i_bufferobject, int element3s_bufferobject);
 void R_Shadow_RenderMode_Begin(void);
 void R_Shadow_RenderMode_ActiveLight(const rtlight_t *rtlight);
 void R_Shadow_RenderMode_Reset(void);
 void R_Shadow_RenderMode_StencilShadowVolumes(qboolean zpass);
-void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent);
+void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent, qboolean shadowmapping);
 void R_Shadow_RenderMode_VisibleShadowVolumes(void);
 void R_Shadow_RenderMode_VisibleLighting(qboolean stenciltest, qboolean transparent);
 void R_Shadow_RenderMode_End(void);

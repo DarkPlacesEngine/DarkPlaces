@@ -408,12 +408,16 @@ typedef enum gl20_texunit_e
 	// conflicts with lightmap/deluxemap
 	GL20TU_ATTENUATION = 9,
 	GL20TU_CUBE = 10,
+	GL20TU_SHADOWMAPRECT = 11,
+	GL20TU_SHADOWMAPCUBE = 11,
+	GL20TU_SHADOWMAP2D = 11,
 }
 gl20_texunit;
 
 void R_SetupGenericShader(qboolean usetexture);
 void R_SetupGenericTwoTextureShader(int texturemode);
 void R_SetupDepthOrShadowShader(void);
+void R_SetupShowDepthShader(void);
 void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, float ambientscale, float diffusescale, float specularscale, rsurfacepass_t rsurfacepass);
 
 typedef struct r_waterstate_waterplane_s

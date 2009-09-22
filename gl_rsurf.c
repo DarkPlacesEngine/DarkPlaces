@@ -1059,6 +1059,45 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, const vec3_t relativelightor
 		GL_PolygonOffset(r_refdef.shadowpolygonfactor, r_refdef.shadowpolygonoffset);
 }
 
+void R_Q1BSP_DrawShadowMap(entity_render_t *ent, const vec3_t relativelightorigin, const vec3_t relativelightdirection, float lightradius, int modelnumsurfaces, const int *modelsurfacelist, const vec3_t lightmins, const vec3_t lightmaxs)
+{
+	dp_model_t *model = ent->model;
+	msurface_t *surface;
+	int modelsurfacelistindex;
+	float projectdistance = relativelightdirection ? lightradius : lightradius + model->radius*2 + r_shadow_projectdistance.value;
+	// check the box in modelspace, it was already checked in worldspace
+	if (!BoxesOverlap(model->normalmins, model->normalmaxs, lightmins, lightmaxs))
+		return;
+	if (model->brush.shadowmesh)
+	{
+		R_Shadow_PrepareShadowMark(model->brush.shadowmesh->numtriangles);
+		for (modelsurfacelistindex = 0;modelsurfacelistindex < modelnumsurfaces;modelsurfacelistindex++)
+		{
+			surface = model->data_surfaces + modelsurfacelist[modelsurfacelistindex];
+			if (R_GetCurrentTexture(surface->texture)->currentmaterialflags & MATERIALFLAG_NOSHADOW)
+				continue;
+			R_Shadow_MarkVolumeFromBox(surface->num_firstshadowmeshtriangle, surface->num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, relativelightorigin, relativelightdirection, lightmins, lightmaxs, surface->mins, surface->maxs);
+		}
+		R_Shadow_ShadowMapFromList(model->brush.shadowmesh->numverts, model->brush.shadowmesh->numtriangles, model->brush.shadowmesh->vertex3f, 0, 0, model->brush.shadowmesh->element3i, numshadowmark, shadowmarklist);
+	}
+	else
+	{
+		projectdistance = lightradius + model->radius*2;
+		R_Shadow_PrepareShadowMark(model->surfmesh.num_triangles);
+		// identify lit faces within the bounding box
+		for (modelsurfacelistindex = 0;modelsurfacelistindex < modelnumsurfaces;modelsurfacelistindex++)
+		{
+			surface = model->data_surfaces + modelsurfacelist[modelsurfacelistindex];
+			rsurface.texture = R_GetCurrentTexture(surface->texture);
+			if (rsurface.texture->currentmaterialflags & MATERIALFLAG_NOSHADOW)
+				continue;
+			RSurf_PrepareVerticesForBatch(false, false, 1, &surface);
+			R_Shadow_MarkVolumeFromBox(surface->num_firsttriangle, surface->num_triangles, rsurface.vertex3f, rsurface.modelelement3i, relativelightorigin, relativelightdirection, lightmins, lightmaxs, surface->mins, surface->maxs);
+		}
+		R_Shadow_ShadowMapFromList(model->surfmesh.num_vertices, model->surfmesh.num_triangles, rsurface.vertex3f, rsurface.vertex3f_bufferobject, rsurface.vertex3f_bufferoffset, model->surfmesh.data_element3i, numshadowmark, shadowmarklist);
+	}
+}
+
 #define BATCHSIZE 1024
 
 static void R_Q1BSP_DrawLight_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
@@ -1069,7 +1108,7 @@ static void R_Q1BSP_DrawLight_TransparentCallback(const entity_render_t *ent, co
 	// note: in practice this never actually receives batches), oh well
 	R_Shadow_RenderMode_Begin();
 	R_Shadow_RenderMode_ActiveLight(rtlight);
-	R_Shadow_RenderMode_Lighting(false, true);
+	R_Shadow_RenderMode_Lighting(false, true, false);
 	R_Shadow_SetupEntityLight(ent);
 	for (i = 0;i < numsurfaces;i = j)
 	{

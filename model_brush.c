@@ -3487,6 +3487,7 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	mod->DrawDepth = R_Q1BSP_DrawDepth;
 	mod->DrawDebug = R_Q1BSP_DrawDebug;
 	mod->GetLightInfo = R_Q1BSP_GetLightInfo;
+	mod->DrawShadowMap = R_Q1BSP_DrawShadowMap;
 	mod->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
 	mod->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	mod->DrawLight = R_Q1BSP_DrawLight;
@@ -5940,6 +5941,7 @@ void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	mod->DrawDepth = R_Q1BSP_DrawDepth;
 	mod->DrawDebug = R_Q1BSP_DrawDebug;
 	mod->GetLightInfo = R_Q1BSP_GetLightInfo;
+	mod->DrawShadowMap = R_Q1BSP_DrawShadowMap;
 	mod->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
 	mod->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	mod->DrawLight = R_Q1BSP_DrawLight;

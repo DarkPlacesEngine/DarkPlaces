@@ -33,6 +33,8 @@ typedef enum textype_e
 	TEXTYPE_RGBA,
 	// 32bit BGRA (preferred format due to faster uploads on most hardware)
 	TEXTYPE_BGRA,
+	// 32bit S8D24 (24bit depth, 8bit stencil unused)
+	TEXTYPE_SHADOWMAP,
 }
 textype_t;
 
@@ -77,6 +79,10 @@ rtexture_t *R_LoadTexture1D(rtexturepool_t *rtexturepool, const char *identifier
 rtexture_t *R_LoadTexture2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, const unsigned char *data, textype_t textype, int flags, const unsigned int *palette);
 rtexture_t *R_LoadTexture3D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int depth, const unsigned char *data, textype_t textype, int flags, const unsigned int *palette);
 rtexture_t *R_LoadTextureCubeMap(rtexturepool_t *rtexturepool, const char *identifier, int width, const unsigned char *data, textype_t textype, int flags, const unsigned int *palette);
+rtexture_t *R_LoadTextureShadowMapRectangle(rtexturepool_t *rtexturepool, const char *identifier, int width, int height);
+rtexture_t *R_LoadTextureShadowMapCube(rtexturepool_t *rtexturepool, const char *identifier, int width);
+rtexture_t *R_LoadTextureShadowMap2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height);
+rtexture_t *R_LoadTextureCubeProjection(rtexturepool_t *rtexturepool, const char *identifier);
 
 // free a texture
 void R_FreeTexture(rtexture_t *rt);
