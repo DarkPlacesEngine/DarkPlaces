@@ -1004,6 +1004,162 @@ void Matrix4x4_FromArrayDoubleD3D (matrix4x4_t *out, const double in[16])
 #endif
 }
 
+void Matrix4x4_ToArrayFloatGL(const matrix4x4_t *in, float out[16])
+{
+#ifdef MATRIX4x4_OPENGLORIENTATION
+	out[ 0] = in->m[0][0];
+	out[ 1] = in->m[0][1];
+	out[ 2] = in->m[0][2];
+	out[ 3] = in->m[0][3];
+	out[ 4] = in->m[1][0];
+	out[ 5] = in->m[1][1];
+	out[ 6] = in->m[1][2];
+	out[ 7] = in->m[1][3];
+	out[ 8] = in->m[2][0];
+	out[ 9] = in->m[2][1];
+	out[10] = in->m[2][2];
+	out[11] = in->m[2][3];
+	out[12] = in->m[3][0];
+	out[13] = in->m[3][1];
+	out[14] = in->m[3][2];
+	out[15] = in->m[3][3];
+#else
+	out[ 0] = in->m[0][0];
+	out[ 1] = in->m[1][0];
+	out[ 2] = in->m[2][0];
+	out[ 3] = in->m[3][0];
+	out[ 4] = in->m[0][1];
+	out[ 5] = in->m[1][1];
+	out[ 6] = in->m[2][1];
+	out[ 7] = in->m[3][1];
+	out[ 8] = in->m[0][2];
+	out[ 9] = in->m[1][2];
+	out[10] = in->m[2][2];
+	out[11] = in->m[3][2];
+	out[12] = in->m[0][3];
+	out[13] = in->m[1][3];
+	out[14] = in->m[2][3];
+	out[15] = in->m[3][3];
+#endif
+}
+
+void Matrix4x4_FromArrayFloatGL (matrix4x4_t *out, const float in[16])
+{
+#ifdef MATRIX4x4_OPENGLORIENTATION
+	out->m[0][0] = in[0];
+	out->m[0][1] = in[1];
+	out->m[0][2] = in[2];
+	out->m[0][3] = in[3];
+	out->m[1][0] = in[4];
+	out->m[1][1] = in[5];
+	out->m[1][2] = in[6];
+	out->m[1][3] = in[7];
+	out->m[2][0] = in[8];
+	out->m[2][1] = in[9];
+	out->m[2][2] = in[10];
+	out->m[2][3] = in[11];
+	out->m[3][0] = in[12];
+	out->m[3][1] = in[13];
+	out->m[3][2] = in[14];
+	out->m[3][3] = in[15];
+#else
+	out->m[0][0] = in[0];
+	out->m[1][0] = in[1];
+	out->m[2][0] = in[2];
+	out->m[3][0] = in[3];
+	out->m[0][1] = in[4];
+	out->m[1][1] = in[5];
+	out->m[2][1] = in[6];
+	out->m[3][1] = in[7];
+	out->m[0][2] = in[8];
+	out->m[1][2] = in[9];
+	out->m[2][2] = in[10];
+	out->m[3][2] = in[11];
+	out->m[0][3] = in[12];
+	out->m[1][3] = in[13];
+	out->m[2][3] = in[14];
+	out->m[3][3] = in[15];
+#endif
+}
+
+void Matrix4x4_ToArrayFloatD3D(const matrix4x4_t *in, float out[16])
+{
+#ifdef MATRIX4x4_OPENGLORIENTATION
+	out[ 0] = in->m[0][0];
+	out[ 1] = in->m[1][0];
+	out[ 2] = in->m[2][0];
+	out[ 3] = in->m[3][0];
+	out[ 4] = in->m[0][1];
+	out[ 5] = in->m[1][1];
+	out[ 6] = in->m[2][1];
+	out[ 7] = in->m[3][1];
+	out[ 8] = in->m[0][2];
+	out[ 9] = in->m[1][2];
+	out[10] = in->m[2][2];
+	out[11] = in->m[3][2];
+	out[12] = in->m[0][3];
+	out[13] = in->m[1][3];
+	out[14] = in->m[2][3];
+	out[15] = in->m[3][3];
+#else
+	out[ 0] = in->m[0][0];
+	out[ 1] = in->m[0][1];
+	out[ 2] = in->m[0][2];
+	out[ 3] = in->m[0][3];
+	out[ 4] = in->m[1][0];
+	out[ 5] = in->m[1][1];
+	out[ 6] = in->m[1][2];
+	out[ 7] = in->m[1][3];
+	out[ 8] = in->m[2][0];
+	out[ 9] = in->m[2][1];
+	out[10] = in->m[2][2];
+	out[11] = in->m[2][3];
+	out[12] = in->m[3][0];
+	out[13] = in->m[3][1];
+	out[14] = in->m[3][2];
+	out[15] = in->m[3][3];
+#endif
+}
+
+void Matrix4x4_FromArrayFloatD3D (matrix4x4_t *out, const float in[16])
+{
+#ifdef MATRIX4x4_OPENGLORIENTATION
+	out->m[0][0] = in[0];
+	out->m[1][0] = in[1];
+	out->m[2][0] = in[2];
+	out->m[3][0] = in[3];
+	out->m[0][1] = in[4];
+	out->m[1][1] = in[5];
+	out->m[2][1] = in[6];
+	out->m[3][1] = in[7];
+	out->m[0][2] = in[8];
+	out->m[1][2] = in[9];
+	out->m[2][2] = in[10];
+	out->m[3][2] = in[11];
+	out->m[0][3] = in[12];
+	out->m[1][3] = in[13];
+	out->m[2][3] = in[14];
+	out->m[3][3] = in[15];
+#else
+	out->m[0][0] = in[0];
+	out->m[0][1] = in[1];
+	out->m[0][2] = in[2];
+	out->m[0][3] = in[3];
+	out->m[1][0] = in[4];
+	out->m[1][1] = in[5];
+	out->m[1][2] = in[6];
+	out->m[1][3] = in[7];
+	out->m[2][0] = in[8];
+	out->m[2][1] = in[9];
+	out->m[2][2] = in[10];
+	out->m[2][3] = in[11];
+	out->m[3][0] = in[12];
+	out->m[3][1] = in[13];
+	out->m[3][2] = in[14];
+	out->m[3][3] = in[15];
+#endif
+}
+
 void Matrix4x4_ToArray12FloatGL(const matrix4x4_t *in, float out[12])
 {
 #ifdef MATRIX4x4_OPENGLORIENTATION
