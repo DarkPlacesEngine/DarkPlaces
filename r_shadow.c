@@ -1489,7 +1489,7 @@ void R_Shadow_RenderMode_ShadowMap(int side, qboolean clear, int size)
 	r_shadow_shadowmap_parameters[3] = -2.0f * nearclip * farclip / (farclip - nearclip);
 	if (!r_shadow_shadowmapcubeprojectiontexture)
 		r_shadow_shadowmapcubeprojectiontexture = R_LoadTextureCubeProjection(r_shadow_texturepool, "shadowmapcubeprojection");
-	if (r_shadow_shadowmapping.integer == 3)
+	if (r_shadow_shadowmapping.integer == 1)
 	{
 		// complex unrolled cube approach (more flexible)
 		if (!r_shadow_shadowmap2dtexture)
@@ -1565,7 +1565,7 @@ void R_Shadow_RenderMode_ShadowMap(int side, qboolean clear, int size)
 		r_shadow_shadowmap_texturescale[1] = size;
 		r_shadow_rendermode = R_SHADOW_RENDERMODE_SHADOWMAPRECTANGLE;
 	}
-	else
+	else if (r_shadow_shadowmapping.integer == 3)
 	{
 		// simple cube approach
 		if (!r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod])
@@ -1645,7 +1645,7 @@ void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent, qb
 		CHECKGLERROR
 		if (shadowmapping)
 		{
-			if (r_shadow_shadowmapping.integer == 3)
+			if (r_shadow_shadowmapping.integer == 1)
 			{
 				r_shadow_usingshadowmap2d = true;
 				R_Mesh_TexBind(GL20TU_SHADOWMAP2D, R_GetTexture(r_shadow_shadowmap2dtexture));
@@ -1657,7 +1657,7 @@ void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent, qb
 				R_Mesh_TexBindRectangle(GL20TU_SHADOWMAPRECT, R_GetTexture(r_shadow_shadowmaprectangletexture));
 				CHECKGLERROR
 			}
-			else
+			else if (r_shadow_shadowmapping.integer == 3)
 			{
 				r_shadow_usingshadowmapcube = true;
 				R_Mesh_TexBindCubeMap(GL20TU_SHADOWMAPCUBE, R_GetTexture(r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod]));
@@ -3688,7 +3688,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	lodlinear = (int)(r_shadow_shadowmapping_lod_bias.value + r_shadow_shadowmapping_lod_scale.value * rtlight->radius / max(1.0f, distance));
 	lodlinear = bound(r_shadow_shadowmapping_minsize.integer, lodlinear, r_shadow_shadowmapping_maxsize.integer);
 
-	if (castshadows && r_shadow_shadowmapping.integer/* && r_glsl.integer && gl_support_fragment_shader*/)
+	if (castshadows && r_shadow_shadowmapping.integer >= 1 && r_shadow_shadowmapping.integer <= 3 && r_glsl.integer && gl_support_fragment_shader)
 	{
 		int side;
 		int size;
@@ -3699,7 +3699,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 				r_shadow_shadowmaplod = i;
 
 		size = lodlinear;
-		if (r_shadow_shadowmapping.integer == 1)
+		if (r_shadow_shadowmapping.integer == 3)
 			size = bound(1, r_shadow_shadowmapping_maxsize.integer, 2048) >> r_shadow_shadowmaplod;
 		size = bound(1, size, 2048);
 
@@ -3730,8 +3730,8 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 			R_Shadow_RenderMode_ShadowMap(side, false, size);
 			for (i = 0;i < numshadowentities_noselfshadow;i++)
 				R_Shadow_DrawEntityShadow(shadowentities_noselfshadow[i]);
-#if 1
-			if (r_shadow_shadowmapping.integer == 3)
+#if 0
+			if (r_shadow_shadowmapping.integer == 1)
 			{
 				int w = R_TextureWidth(r_shadow_shadowmap2dtexture);
 				int h = R_TextureHeight(r_shadow_shadowmap2dtexture);
