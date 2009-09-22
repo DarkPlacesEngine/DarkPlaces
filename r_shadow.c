@@ -3703,7 +3703,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 			size = bound(1, r_shadow_shadowmapping_maxsize.integer, 2048) >> r_shadow_shadowmaplod;
 		size = bound(1, size, 2048);
 
-		Con_Printf("distance %f lodlinear %i (lod %i) size %i\n", distance, lodlinear, r_shadow_shadowmaplod, size);
+		//Con_Printf("distance %f lodlinear %i (lod %i) size %i\n", distance, lodlinear, r_shadow_shadowmaplod, size);
 
 		// render shadow casters into 6 sided depth texture
 		for (side = 0;side < 6;side++)
