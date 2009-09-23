@@ -60,7 +60,7 @@ static textypeinfo_t textype_bgra                   = {TEXTYPE_BGRA   , 4, 4, 4.
 static textypeinfo_t textype_bgra_alpha             = {TEXTYPE_BGRA   , 4, 4, 4.0f, GL_BGRA   , 4, GL_UNSIGNED_BYTE};
 static textypeinfo_t textype_bgra_compress          = {TEXTYPE_BGRA   , 4, 4, 0.5f, GL_BGRA   , GL_COMPRESSED_RGB_ARB, GL_UNSIGNED_BYTE};
 static textypeinfo_t textype_bgra_alpha_compress    = {TEXTYPE_BGRA   , 4, 4, 1.0f, GL_BGRA   , GL_COMPRESSED_RGBA_ARB, GL_UNSIGNED_BYTE};
-static textypeinfo_t textype_shadowmap              = {TEXTYPE_SHADOWMAP,4,4, 4.0f, GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT32_ARB, GL_UNSIGNED_INT};
+static textypeinfo_t textype_shadowmap              = {TEXTYPE_SHADOWMAP,4,4, 4.0f, GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT24_ARB, GL_UNSIGNED_INT};
 
 typedef enum gltexturetype_e
 {
@@ -1133,7 +1133,7 @@ rtexture_t *R_LoadTextureShadowMapRectangle(rtexturepool_t *rtexturepool, const 
 
 rtexture_t *R_LoadTextureShadowMapCube(rtexturepool_t *rtexturepool, const char *identifier, int width)
 {
-	return R_SetupTexture(rtexturepool, identifier, width, width, 1, 6, TEXF_ALWAYSPRECACHE | TEXF_FORCENEAREST | TEXF_CLAMP, TEXTYPE_SHADOWMAP, GLTEXTURETYPE_CUBEMAP, NULL, NULL);
+	return R_SetupTexture(rtexturepool, identifier, width, width, 1, 6, TEXF_ALWAYSPRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP, TEXTYPE_SHADOWMAP, GLTEXTURETYPE_CUBEMAP, NULL, NULL);
 }
 
 rtexture_t *R_LoadTextureShadowMap2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height)
@@ -1143,7 +1143,7 @@ rtexture_t *R_LoadTextureShadowMap2D(rtexturepool_t *rtexturepool, const char *i
 
 rtexture_t *R_LoadTextureCubeProjection(rtexturepool_t *rtexturepool, const char *identifier)
 {
-	return R_SetupTexture(rtexturepool, identifier, 2, 2, 1, 6, TEXF_ALWAYSPRECACHE | TEXF_FORCENEAREST | TEXF_CLAMP, TEXTYPE_SHADOWMAP, GLTEXTURETYPE_CUBEMAP, NULL, NULL);
+	return R_SetupTexture(rtexturepool, identifier, 2, 2, 1, 6, TEXF_ALWAYSPRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP, TEXTYPE_BGRA, GLTEXTURETYPE_CUBEMAP, NULL, NULL);
 }
 
 int R_TextureHasAlpha(rtexture_t *rt)
