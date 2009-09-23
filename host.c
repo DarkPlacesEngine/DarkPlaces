@@ -693,6 +693,7 @@ void Host_Main(void)
 		if (sv.active ? sv_timer > 0 : cl_timer > 0)
 		{
 			// process console commands
+			CL_VM_PreventInformationLeaks();
 			Cbuf_Execute();
 		}
 

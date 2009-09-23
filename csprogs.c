@@ -12,11 +12,21 @@
 
 #define CSQC_RETURNVAL	prog->globals.generic[OFS_RETURN]
 #define CSQC_BEGIN		csqc_tmpprog=prog;prog=0;PRVM_SetProg(PRVM_CLIENTPROG);
-#define CSQC_END		VM_ClearTraceGlobals(); prog=csqc_tmpprog;
-// TODO check if the clearing of trace globals takes too much CPU. If it does,
-// perform it before console command processing instead.
+#define CSQC_END		prog=csqc_tmpprog;
 
 static prvm_prog_t *csqc_tmpprog;
+
+void CL_VM_PreventInformationLeaks(void)
+{
+	prvm_eval_t *val;
+	if(!cl.csqc_loaded)
+		return;
+	CSQC_BEGIN
+		VM_ClearTraceGlobals();
+		if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_networkentity)))
+			val->_float = 0;
+	CSQC_END
+}
 
 //[515]: these are required funcs
 static char *cl_required_func[] =
