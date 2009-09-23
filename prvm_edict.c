@@ -1150,6 +1150,105 @@ void PRVM_GameCommand_Menu_f(void)
 
 /*
 =============
+PRVM_ED_EdictGet_f
+
+Console command to load a field of a specified edict
+=============
+*/
+void PRVM_ED_EdictGet_f(void)
+{
+	prvm_edict_t *ed;
+	ddef_t *key;
+	const char *s;
+	prvm_eval_t *v;
+
+	if(Cmd_Argc() != 4 && Cmd_Argc() != 5)
+	{
+		Con_Print("prvm_edictget <program name> <edict number> <field> [<cvar>]\n");
+		return;
+	}
+
+	PRVM_Begin;
+	if(!PRVM_SetProgFromString(Cmd_Argv(1)))
+	{
+		Con_Printf("Wrong program name %s !\n", Cmd_Argv(1));
+		return;
+	}
+
+	ed = PRVM_EDICT_NUM(atoi(Cmd_Argv(2)));
+
+	if((key = PRVM_ED_FindField(Cmd_Argv(3))) == 0)
+	{
+		Con_Printf("Key %s not found !\n", Cmd_Argv(3));
+		goto fail;
+	}
+
+	v = (prvm_eval_t *)((char *)ed->fields.vp + key->ofs*4);
+	s = PRVM_UglyValueString(key->type, v);
+	if(Cmd_Argc() == 5)
+	{
+		cvar_t *cvar = Cvar_FindVar(Cmd_Argv(4));
+		if (cvar && cvar->flags & CVAR_READONLY)
+		{
+			Con_Printf("prvm_edictget: %s is read-only\n", cvar->name);
+			goto fail;
+		}
+		Cvar_Get(Cmd_Argv(4), s, 0, NULL);
+	}
+	else
+		Con_Printf("%s\n", s);
+
+fail:
+	PRVM_End;
+}
+
+void PRVM_ED_GlobalGet_f(void)
+{
+	ddef_t *key;
+	const char *s;
+	prvm_eval_t *v;
+
+	if(Cmd_Argc() != 3 && Cmd_Argc() != 4)
+	{
+		Con_Print("prvm_globalget <program name> <global> [<cvar>]\n");
+		return;
+	}
+
+	PRVM_Begin;
+	if(!PRVM_SetProgFromString(Cmd_Argv(1)))
+	{
+		Con_Printf("Wrong program name %s !\n", Cmd_Argv(1));
+		return;
+	}
+
+	key = PRVM_ED_FindGlobal(Cmd_Argv(2));
+	if(!key)
+	{
+		Con_Printf( "No global '%s' in %s!\n", Cmd_Argv(2), Cmd_Argv(1) );
+		goto fail;
+	}
+
+	v = (prvm_eval_t *) &prog->globals.generic[key->ofs];
+	s = PRVM_UglyValueString(key->type, v);
+	if(Cmd_Argc() == 4)
+	{
+		cvar_t *cvar = Cvar_FindVar(Cmd_Argv(3));
+		if (cvar && cvar->flags & CVAR_READONLY)
+		{
+			Con_Printf("prvm_globalget: %s is read-only\n", cvar->name);
+			goto fail;
+		}
+		Cvar_Get(Cmd_Argv(3), s, 0, NULL);
+	}
+	else
+		Con_Printf("%s\n", s);
+
+fail:
+	PRVM_End;
+}
+
+/*
+=============
 PRVM_ED_EdictSet_f
 
 Console command to set a field of a specified edict
@@ -2196,6 +2295,8 @@ void PRVM_Init (void)
 	Cmd_AddCommand ("prvm_global", PRVM_Global_f, "prints value of a specified global variable in the selected VM (server, client, menu)");
 	Cmd_AddCommand ("prvm_globalset", PRVM_GlobalSet_f, "sets value of a specified global variable in the selected VM (server, client, menu)");
 	Cmd_AddCommand ("prvm_edictset", PRVM_ED_EdictSet_f, "changes value of a specified property of a specified entity in the selected VM (server, client, menu)");
+	Cmd_AddCommand ("prvm_edictget", PRVM_ED_EdictGet_f, "retrieves the value of a specified property of a specified entity in the selected VM (server, client menu) into a cvar or to the console");
+	Cmd_AddCommand ("prvm_globalget", PRVM_ED_GlobalGet_f, "retrieves the value of a specified global variable in the selected VM (server, client menu) into a cvar or to the console");
 	Cmd_AddCommand ("prvm_printfunction", PRVM_PrintFunction_f, "prints a disassembly (QuakeC instructions) of the specified function in the selected VM (server, client, menu)");
 	Cmd_AddCommand ("cl_cmd", PRVM_GameCommand_Client_f, "calls the client QC function GameCommand with the supplied string as argument");
 	Cmd_AddCommand ("menu_cmd", PRVM_GameCommand_Menu_f, "calls the menu QC function GameCommand with the supplied string as argument");
