@@ -53,6 +53,8 @@ extern cvar_t csqc_progname;	//[515]: csqc crc check and right csprogs name acco
 extern cvar_t csqc_progcrc;
 extern cvar_t csqc_progsize;
 
+void CL_VM_PreventInformationLeaks(void);
+
 qboolean MakeDownloadPacket(const char *filename, unsigned char *data, unsigned long len, int crc, int cnt, sizebuf_t *buf, int protocol);
 
 qboolean CL_VM_GetEntitySoundOrigin(int entnum, vec3_t out);
