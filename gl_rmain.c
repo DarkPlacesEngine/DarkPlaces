@@ -95,7 +95,6 @@ cvar_t gl_skyclip = {0, "gl_skyclip", "4608", "nehahra farclip distance - the re
 cvar_t r_textureunits = {0, "r_textureunits", "32", "number of hardware texture units reported by driver (note: setting this to 1 turns off gl_combine)"};
 
 cvar_t r_glsl = {CVAR_SAVE, "r_glsl", "1", "enables use of OpenGL 2.0 pixel shaders for lighting"};
-cvar_t r_glsl_contrastboost = {CVAR_SAVE, "r_glsl_contrastboost", "1", "by how much to multiply the contrast in dark areas (1 is no change)"};
 cvar_t r_glsl_deluxemapping = {CVAR_SAVE, "r_glsl_deluxemapping", "1", "use per pixel lighting on deluxemap-compiled q3bsp maps (or a value of 2 forces deluxemap shading even without deluxemaps)"};
 cvar_t r_glsl_offsetmapping = {CVAR_SAVE, "r_glsl_offsetmapping", "0", "offset mapping effect (also known as parallax mapping or virtual displacement mapping)"};
 cvar_t r_glsl_offsetmapping_reliefmapping = {CVAR_SAVE, "r_glsl_offsetmapping_reliefmapping", "0", "relief mapping effect (higher quality)"};
@@ -501,7 +500,7 @@ static const char *builtinshaderstring =
 "	gl_FrontColor = gl_Color;\n"
 "	gl_Position = ftransform();\n"
 "	gl_TexCoord[0] = gl_TextureMatrix[0] * gl_MultiTexCoord0;\n"
-"#ifdef USEGLOW\n"
+"#ifdef USEBLOOM\n"
 "	gl_TexCoord[1] = gl_TextureMatrix[1] * gl_MultiTexCoord1;\n"
 "#endif\n"
 "}\n"
@@ -509,7 +508,7 @@ static const char *builtinshaderstring =
 "# ifdef FRAGMENT_SHADER\n"
 "\n"
 "uniform sampler2D Texture_First;\n"
-"#ifdef USEGLOW\n"
+"#ifdef USEBLOOM\n"
 "uniform sampler2D Texture_Second;\n"
 "#endif\n"
 "#ifdef USEGAMMARAMPS\n"
@@ -518,11 +517,8 @@ static const char *builtinshaderstring =
 "#ifdef USESATURATION\n"
 "uniform float Saturation;\n"
 "#endif\n"
-"#ifdef USEVERTEXTEXTUREBLEND\n"
+"#ifdef USEVIEWTINT\n"
 "uniform vec4 TintColor;\n"
-"#endif\n"
-"#ifdef USECOLORMOD\n"
-"uniform vec3 Gamma;\n"
 "#endif\n"
 "//uncomment these if you want to use them:\n"
 "uniform vec4 UserVec1;\n"
@@ -534,10 +530,10 @@ static const char *builtinshaderstring =
 "void main(void)\n"
 "{\n"
 "	gl_FragColor = texture2D(Texture_First, gl_TexCoord[0].xy);\n"
-"#ifdef USEGLOW\n"
+"#ifdef USEBLOOM\n"
 "	gl_FragColor += texture2D(Texture_Second, gl_TexCoord[1].xy);\n"
 "#endif\n"
-"#ifdef USEVERTEXTEXTUREBLEND\n"
+"#ifdef USEVIEWTINT\n"
 "	gl_FragColor = mix(gl_FragColor, TintColor, TintColor.a);\n"
 "#endif\n"
 "\n"
@@ -831,9 +827,6 @@ static const char *builtinshaderstring =
 "\n"
 "uniform myhalf GlowScale;\n"
 "uniform myhalf SceneBrightness;\n"
-"#ifdef USECONTRASTBOOST\n"
-"uniform myhalf ContrastBoostCoeff;\n"
-"#endif\n"
 "\n"
 "uniform float OffsetMapping_Scale;\n"
 "uniform float OffsetMapping_Bias;\n"
@@ -1306,10 +1299,6 @@ static const char *builtinshaderstring =
 "#endif\n"
 "#endif\n"
 "\n"
-"#ifdef USECONTRASTBOOST\n"
-"	color.rgb = color.rgb / (ContrastBoostCoeff * color.rgb + myhalf3(1, 1, 1));\n"
-"#endif\n"
-"\n"
 "	color.rgb *= SceneBrightness;\n"
 "\n"
 "	// apply fog after Contrastboost/SceneBrightness because its color is already modified appropriately\n"
@@ -1385,24 +1374,25 @@ typedef enum shaderpermutation_e
 {
 	SHADERPERMUTATION_DIFFUSE = 1<<0, ///< (lightsource) whether to use directional shading
 	SHADERPERMUTATION_VERTEXTEXTUREBLEND = 1<<1, ///< indicates this is a two-layer material blend based on vertex alpha (q3bsp)
+	SHADERPERMUTATION_VIEWTINT = 1<<1, ///< view tint (postprocessing only)
 	SHADERPERMUTATION_COLORMAPPING = 1<<2, ///< indicates this is a colormapped skin
-	SHADERPERMUTATION_CONTRASTBOOST = 1<<3, ///< r_glsl_contrastboost boosts the contrast at low color levels (similar to gamma)
-	SHADERPERMUTATION_FOG = 1<<4, ///< tint the color by fog color or black if using additive blend mode
-	SHADERPERMUTATION_CUBEFILTER = 1<<5, ///< (lightsource) use cubemap light filter
-	SHADERPERMUTATION_GLOW = 1<<6, ///< (lightmap) blend in an additive glow texture
-	SHADERPERMUTATION_SPECULAR = 1<<7, ///< (lightsource or deluxemapping) render specular effects
-	SHADERPERMUTATION_EXACTSPECULARMATH = 1<<8, ///< (lightsource or deluxemapping) use exact reflection map for specular effects, as opposed to the usual OpenGL approximation
-	SHADERPERMUTATION_REFLECTION = 1<<9, ///< normalmap-perturbed reflection of the scene infront of the surface, preformed as an overlay on the surface
-	SHADERPERMUTATION_OFFSETMAPPING = 1<<10, ///< adjust texcoords to roughly simulate a displacement mapped surface
-	SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING = 1<<11, ///< adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
-	SHADERPERMUTATION_GAMMARAMPS = 1<<12, ///< gamma (postprocessing only)
-	SHADERPERMUTATION_POSTPROCESSING = 1<<13, ///< user defined postprocessing
-	SHADERPERMUTATION_SATURATION = 1<<14, ///< user defined postprocessing
-	SHADERPERMUTATION_SHADOWMAPRECT = 1<<15, ///< (lightsource) use shadowmap rectangle texture as light filter
-	SHADERPERMUTATION_SHADOWMAPCUBE = 1<<16, ///< (lightsource) use shadowmap cubemap texture as light filter
-	SHADERPERMUTATION_SHADOWMAP2D = 1<<17, ///< (lightsource) use shadowmap rectangle texture as light filter
-	SHADERPERMUTATION_LIMIT = 1<<18, ///< size of permutations array
-	SHADERPERMUTATION_COUNT = 18 ///< size of shaderpermutationinfo array
+	SHADERPERMUTATION_SATURATION = 1<<2, ///< saturation (postprocessing only)
+	SHADERPERMUTATION_FOG = 1<<3, ///< tint the color by fog color or black if using additive blend mode
+	SHADERPERMUTATION_GAMMARAMPS = 1<<3, ///< gamma (postprocessing only)
+	SHADERPERMUTATION_CUBEFILTER = 1<<4, ///< (lightsource) use cubemap light filter
+	SHADERPERMUTATION_GLOW = 1<<5, ///< (lightmap) blend in an additive glow texture
+	SHADERPERMUTATION_BLOOM = 1<<5, ///< bloom (postprocessing only)
+	SHADERPERMUTATION_SPECULAR = 1<<6, ///< (lightsource or deluxemapping) render specular effects
+	SHADERPERMUTATION_POSTPROCESSING = 1<<6, ///< user defined postprocessing (postprocessing only)
+	SHADERPERMUTATION_EXACTSPECULARMATH = 1<<7, ///< (lightsource or deluxemapping) use exact reflection map for specular effects, as opposed to the usual OpenGL approximation
+	SHADERPERMUTATION_REFLECTION = 1<<8, ///< normalmap-perturbed reflection of the scene infront of the surface, preformed as an overlay on the surface
+	SHADERPERMUTATION_OFFSETMAPPING = 1<<9, ///< adjust texcoords to roughly simulate a displacement mapped surface
+	SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING = 1<<10, ///< adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
+	SHADERPERMUTATION_SHADOWMAPRECT = 1<<11, ///< (lightsource) use shadowmap rectangle texture as light filter
+	SHADERPERMUTATION_SHADOWMAPCUBE = 1<<12, ///< (lightsource) use shadowmap cubemap texture as light filter
+	SHADERPERMUTATION_SHADOWMAP2D = 1<<13, ///< (lightsource) use shadowmap rectangle texture as light filter
+	SHADERPERMUTATION_LIMIT = 1<<14, ///< size of permutations array
+	SHADERPERMUTATION_COUNT = 14 ///< size of shaderpermutationinfo array
 }
 shaderpermutation_t;
 
@@ -1410,20 +1400,16 @@ shaderpermutation_t;
 shaderpermutationinfo_t shaderpermutationinfo[SHADERPERMUTATION_COUNT] =
 {
 	{"#define USEDIFFUSE\n", " diffuse"},
-	{"#define USEVERTEXTEXTUREBLEND\n", " vertextextureblend"},
-	{"#define USECOLORMAPPING\n", " colormapping"},
-	{"#define USECONTRASTBOOST\n", " contrastboost"},
-	{"#define USEFOG\n", " fog"},
+	{"#define USEVERTEXTEXTUREBLEND\n#define USEVIEWTINT\n", " vertextextureblend/tint"},
+	{"#define USECOLORMAPPING\n#define USESATURATION\n", " colormapping/saturation"},
+	{"#define USEFOG\n#define USEGAMMARAMPS\n", " fog/gammaramps"},
 	{"#define USECUBEFILTER\n", " cubefilter"},
-	{"#define USEGLOW\n", " glow"},
-	{"#define USESPECULAR\n", " specular"},
+	{"#define USEGLOW\n#define USEBLOOM\n", " glow/bloom"},
+	{"#define USESPECULAR\n#define USEPOSTPROCESSING", " specular/postprocessing"},
 	{"#define USEEXACTSPECULARMATH\n", " exactspecularmath"},
 	{"#define USEREFLECTION\n", " reflection"},
 	{"#define USEOFFSETMAPPING\n", " offsetmapping"},
 	{"#define USEOFFSETMAPPING_RELIEFMAPPING\n", " reliefmapping"},
-	{"#define USEGAMMARAMPS\n", " gammaramps"},
-	{"#define USEPOSTPROCESSING\n", " postprocessing"},
-	{"#define USESATURATION\n", " saturation"},
 	{"#define USESHADOWMAPRECT\n", " shadowmaprect"},
 	{"#define USESHADOWMAPCUBE\n", " shadowmapcube"},
 	{"#define USESHADOWMAP2D\n", " shadowmap2d"},
@@ -1763,13 +1749,13 @@ void R_GLSL_DumpShader_f(void)
 		return;
 	}
 
-	FS_Print(file, "// The engine may define the following macros:\n");
-	FS_Print(file, "// #define VERTEX_SHADER\n// #define GEOMETRY_SHADER\n// #define FRAGMENT_SHADER\n");
+	FS_Print(file, "/* The engine may define the following macros:\n");
+	FS_Print(file, "#define VERTEX_SHADER\n#define GEOMETRY_SHADER\n#define FRAGMENT_SHADER\n");
 	for (i = 0;i < SHADERMODE_COUNT;i++)
-		FS_Printf(file, "// %s", shadermodeinfo[i].pretext);
+		FS_Print(file, shadermodeinfo[i].pretext);
 	for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
-		FS_Printf(file, "// %s", shaderpermutationinfo[i].pretext);
-	FS_Print(file, "\n");
+		FS_Print(file, shaderpermutationinfo[i].pretext);
+	FS_Print(file, "*/\n");
 	FS_Print(file, builtinshaderstring);
 	FS_Close(file);
 
@@ -1927,8 +1913,6 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 			permutation |= SHADERPERMUTATION_FOG;
 		if (rsurface.texture->colormapping)
 			permutation |= SHADERPERMUTATION_COLORMAPPING;
-		if(r_glsl_contrastboost.value > 1 || r_glsl_contrastboost.value < 0)
-			permutation |= SHADERPERMUTATION_CONTRASTBOOST;
 		if (r_shadow_usingshadowmaprect)
 			permutation |= SHADERPERMUTATION_SHADOWMAPRECT;
 		if (r_shadow_usingshadowmapcube)
@@ -1954,8 +1938,6 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 			if (r_glsl_offsetmapping_reliefmapping.integer)
 				permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
 		}
-		if(r_glsl_contrastboost.value > 1 || r_glsl_contrastboost.value < 0)
-			permutation |= SHADERPERMUTATION_CONTRASTBOOST;
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
 			permutation |= SHADERPERMUTATION_REFLECTION;
 	}
@@ -1974,8 +1956,6 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 			permutation |= SHADERPERMUTATION_FOG;
 		if (rsurface.texture->colormapping)
 			permutation |= SHADERPERMUTATION_COLORMAPPING;
-		if(r_glsl_contrastboost.value > 1 || r_glsl_contrastboost.value < 0)
-			permutation |= SHADERPERMUTATION_CONTRASTBOOST;
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
 			permutation |= SHADERPERMUTATION_REFLECTION;
 	}
@@ -1991,8 +1971,6 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 			permutation |= SHADERPERMUTATION_FOG;
 		if (rsurface.texture->colormapping)
 			permutation |= SHADERPERMUTATION_COLORMAPPING;
-		if(r_glsl_contrastboost.value > 1 || r_glsl_contrastboost.value < 0)
-			permutation |= SHADERPERMUTATION_CONTRASTBOOST;
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
 			permutation |= SHADERPERMUTATION_REFLECTION;
 	}
@@ -2036,8 +2014,6 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 			permutation |= SHADERPERMUTATION_FOG;
 		if (rsurface.texture->colormapping)
 			permutation |= SHADERPERMUTATION_COLORMAPPING;
-		if(r_glsl_contrastboost.value > 1 || r_glsl_contrastboost.value < 0)
-			permutation |= SHADERPERMUTATION_CONTRASTBOOST;
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
 			permutation |= SHADERPERMUTATION_REFLECTION;
 	}
@@ -2103,19 +2079,7 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 		if (r_glsl_permutation->loc_ReflectFactor >= 0) qglUniform1fARB(r_glsl_permutation->loc_ReflectFactor, rsurface.texture->reflectmax - rsurface.texture->reflectmin);
 		if (r_glsl_permutation->loc_ReflectOffset >= 0) qglUniform1fARB(r_glsl_permutation->loc_ReflectOffset, rsurface.texture->reflectmin);
 	}
-	if (r_glsl_permutation->loc_ContrastBoostCoeff >= 0)
-	{
-		// The formula used is actually:
-		//   color.rgb *= ContrastBoost / ((ContrastBoost - 1) * color.rgb + 1);
-		//   color.rgb *= SceneBrightness;
-		// simplified:
-		//   color.rgb = [[SceneBrightness * ContrastBoost]] * color.rgb / ([[ContrastBoost - 1]] * color.rgb + 1);
-		// and do [[calculations]] here in the engine
-		qglUniform1fARB(r_glsl_permutation->loc_ContrastBoostCoeff, r_glsl_contrastboost.value - 1);
-		if (r_glsl_permutation->loc_SceneBrightness >= 0) qglUniform1fARB(r_glsl_permutation->loc_SceneBrightness, r_refdef.view.colorscale * r_glsl_contrastboost.value);
-	}
-	else
-		if (r_glsl_permutation->loc_SceneBrightness >= 0) qglUniform1fARB(r_glsl_permutation->loc_SceneBrightness, r_refdef.view.colorscale);
+	if (r_glsl_permutation->loc_SceneBrightness >= 0) qglUniform1fARB(r_glsl_permutation->loc_SceneBrightness, r_refdef.view.colorscale);
 	if (r_glsl_permutation->loc_EyePosition >= 0) qglUniform3fARB(r_glsl_permutation->loc_EyePosition, rsurface.modelorg[0], rsurface.modelorg[1], rsurface.modelorg[2]);
 	if (r_glsl_permutation->loc_Color_Pants >= 0)
 	{
@@ -2755,7 +2719,6 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_drawfog);
 	Cvar_RegisterVariable(&r_textureunits);
 	Cvar_RegisterVariable(&r_glsl);
-	Cvar_RegisterVariable(&r_glsl_contrastboost);
 	Cvar_RegisterVariable(&r_glsl_deluxemapping);
 	Cvar_RegisterVariable(&r_glsl_offsetmapping);
 	Cvar_RegisterVariable(&r_glsl_offsetmapping_reliefmapping);
@@ -4137,8 +4100,8 @@ static void R_BlendView(void)
 	if (r_glsl.integer && gl_support_fragment_shader && (r_bloomstate.texture_screen || r_bloomstate.texture_bloom))
 	{
 		unsigned int permutation =
-			  (r_bloomstate.texture_bloom ? SHADERPERMUTATION_GLOW : 0)
-			| (r_refdef.viewblend[3] > 0 ? SHADERPERMUTATION_VERTEXTEXTUREBLEND : 0)
+			  (r_bloomstate.texture_bloom ? SHADERPERMUTATION_BLOOM : 0)
+			| (r_refdef.viewblend[3] > 0 ? SHADERPERMUTATION_VIEWTINT : 0)
 			| ((v_glslgamma.value && !vid_gammatables_trivial) ? SHADERPERMUTATION_GAMMARAMPS : 0)
 			| (r_glsl_postprocess.integer ? SHADERPERMUTATION_POSTPROCESSING : 0)
 			| ((!R_Stereo_ColorMasking() && r_glsl_saturation.value != 1) ? SHADERPERMUTATION_SATURATION : 0);
@@ -4284,13 +4247,6 @@ void R_UpdateFogColor(void) // needs to be called before HDR subrender too, as t
 		{
 			vec3_t fogvec;
 			VectorCopy(r_refdef.fogcolor, fogvec);
-			if(r_glsl.integer && (r_glsl_contrastboost.value > 1 || r_glsl_contrastboost.value < 0)) // need to support contrast boost
-			{
-				//   color.rgb /= ((ContrastBoost - 1) * color.rgb + 1);
-				fogvec[0] *= r_glsl_contrastboost.value / ((r_glsl_contrastboost.value - 1) * fogvec[0] + 1);
-				fogvec[1] *= r_glsl_contrastboost.value / ((r_glsl_contrastboost.value - 1) * fogvec[1] + 1);
-				fogvec[2] *= r_glsl_contrastboost.value / ((r_glsl_contrastboost.value - 1) * fogvec[2] + 1);
-			}
 			//   color.rgb *= ContrastBoost * SceneBrightness;
 			VectorScale(fogvec, r_refdef.view.colorscale, fogvec);
 			r_refdef.fogcolor[0] = bound(0.0f, fogvec[0], 1.0f);
