@@ -377,6 +377,10 @@ void R_Viewport_InitPerspective(r_viewport_t *v, const matrix4x4_t *cameramatrix
 {
 	matrix4x4_t tempmatrix, basematrix;
 	memset(v, 0, sizeof(*v));
+
+	if(v_flipped.integer)
+		frustumx = -frustumx;
+
 	v->type = R_VIEWPORTTYPE_PERSPECTIVE;
 	v->cameramatrix = *cameramatrix;
 	v->x = x;
@@ -396,14 +400,6 @@ void R_Viewport_InitPerspective(r_viewport_t *v, const matrix4x4_t *cameramatrix
 	Matrix4x4_ConcatRotate(&basematrix, 90, 0, 0, 1);
 	Matrix4x4_Concat(&v->viewmatrix, &basematrix, &tempmatrix);
 
-	//FIXME v_flipped_state is evil, this probably screws things up somewhere
-	if(v_flipped_state)
-	{
-		Matrix4x4_Transpose(&basematrix, &v->viewmatrix);
-		Matrix4x4_ConcatScale3(&basematrix, -1, 1, 1);
-		Matrix4x4_Transpose(&v->viewmatrix, &basematrix);
-	}
-
 	Matrix4x4_FromArrayDoubleGL(&v->projectmatrix, v->m);
 
 	if (nearplane)
@@ -415,6 +411,10 @@ void R_Viewport_InitPerspectiveInfinite(r_viewport_t *v, const matrix4x4_t *came
 	matrix4x4_t tempmatrix, basematrix;
 	const double nudge = 1.0 - 1.0 / (1<<23);
 	memset(v, 0, sizeof(*v));
+
+	if(v_flipped.integer)
+		frustumx = -frustumx;
+
 	v->type = R_VIEWPORTTYPE_PERSPECTIVE_INFINITEFARCLIP;
 	v->cameramatrix = *cameramatrix;
 	v->x = x;
@@ -433,14 +433,6 @@ void R_Viewport_InitPerspectiveInfinite(r_viewport_t *v, const matrix4x4_t *came
 	Matrix4x4_CreateRotate(&basematrix, -90, 1, 0, 0);
 	Matrix4x4_ConcatRotate(&basematrix, 90, 0, 0, 1);
 	Matrix4x4_Concat(&v->viewmatrix, &basematrix, &tempmatrix);
-
-	//FIXME v_flipped_state is evil, this probably screws things up somewhere
-	if(v_flipped_state)
-	{
-		Matrix4x4_Transpose(&basematrix, &v->viewmatrix);
-		Matrix4x4_ConcatScale3(&basematrix, -1, 1, 1);
-		Matrix4x4_Transpose(&v->viewmatrix, &basematrix);
-	}
 
 	Matrix4x4_FromArrayDoubleGL(&v->projectmatrix, v->m);
 
@@ -552,7 +544,7 @@ void R_SetViewport(const r_viewport_t *v)
 	qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
 
 	// FIXME: v_flipped_state is evil, this probably breaks somewhere
-	GL_SetMirrorState(v_flipped.integer && v->type != R_VIEWPORTTYPE_ORTHO);
+	GL_SetMirrorState(v_flipped.integer && (v->type == R_VIEWPORTTYPE_PERSPECTIVE || v->type == R_VIEWPORTTYPE_PERSPECTIVE_INFINITEFARCLIP));
 
 	// directly force an update of the modelview matrix
 	Matrix4x4_Concat(&backend_modelviewmatrix, &backend_viewport.viewmatrix, &backend_modelmatrix);
