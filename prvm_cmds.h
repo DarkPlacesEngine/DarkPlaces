@@ -422,6 +422,7 @@ void VM_strireplace (void);
 void VM_crc16(void);
 
 void VM_SetTraceGlobals(const trace_t *trace);
+void VM_ClearTraceGlobals(void);
 
 void VM_Cmd_Init(void);
 void VM_Cmd_Reset(void);

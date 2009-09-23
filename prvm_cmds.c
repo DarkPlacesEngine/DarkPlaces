@@ -5044,6 +5044,38 @@ void VM_SetTraceGlobals(const trace_t *trace)
 		val->string = trace->hittexture ? PRVM_SetTempString(trace->hittexture->name) : 0;
 }
 
+void VM_ClearTraceGlobals(void)
+{
+	// clean up all trace globals when leaving the VM (anti-triggerbot safeguard)
+	prvm_eval_t *val;
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_allsolid)))
+		val->_float = 0;
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_startsolid)))
+		val->_float = 0;
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_fraction)))
+		val->_float = 0;
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_inwater)))
+		val->_float = 0;
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_inopen)))
+		val->_float = 0;
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_endpos)))
+		VectorClear(val->vector);
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_plane_normal)))
+		VectorClear(val->vector);
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_plane_dist)))
+		val->_float = 0;
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_ent)))
+		val->edict = PRVM_EDICT_TO_PROG(prog->edicts);
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dpstartcontents)))
+		val->_float = 0;
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphitcontents)))
+		val->_float = 0;
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphitq3surfaceflags)))
+		val->_float = 0;
+	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphittexturename)))
+		val->string = 0;
+}
+
 //=============
 
 void VM_Cmd_Init(void)
