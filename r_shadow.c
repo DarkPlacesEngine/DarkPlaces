@@ -432,7 +432,6 @@ void r_shadow_start(void)
 
 void r_shadow_shutdown(void)
 {
-	int i;
 	CHECKGLERROR
 	R_Shadow_UncompileWorldLights();
 
@@ -443,20 +442,6 @@ void r_shadow_shutdown(void)
 	r_shadow_attenuationgradienttexture = NULL;
 	r_shadow_attenuation2dtexture = NULL;
 	r_shadow_attenuation3dtexture = NULL;
-	CHECKGLERROR
-	if (r_shadow_fborectangle)
-		qglDeleteFramebuffersEXT(1, &r_shadow_fborectangle);
-	r_shadow_fborectangle = 0;
-	CHECKGLERROR
-	for (i = 0;i < R_SHADOW_SHADOWMAP_NUMCUBEMAPS;i++)
-		if (r_shadow_fbocubeside[i])
-			qglDeleteFramebuffersEXT(6, r_shadow_fbocubeside[i]);
-	memset(r_shadow_fbocubeside, 0, sizeof(r_shadow_fbocubeside));
-	CHECKGLERROR
-	if (r_shadow_fbo2d)
-		qglDeleteFramebuffersEXT(1, &r_shadow_fbo2d);
-	r_shadow_fbo2d = 0;
-	CHECKGLERROR
 	R_FreeTexturePool(&r_shadow_texturepool);
 	R_FreeTexturePool(&r_shadow_filters_texturepool);
 	maxshadowtriangles = 0;
