@@ -179,6 +179,7 @@ int r_shadow_readbuffer;
 GLuint r_shadow_fborectangle;
 GLuint r_shadow_fbocubeside[R_SHADOW_SHADOWMAP_NUMCUBEMAPS][6];
 GLuint r_shadow_fbo2d;
+int r_shadow_shadowmode;
 int r_shadow_shadowmapmaxsize;
 int r_shadow_lightscissor[4];
 
@@ -334,6 +335,51 @@ cachepic_t *r_editlights_sprcubemaplight;
 cachepic_t *r_editlights_sprcubemapnoshadowlight;
 cachepic_t *r_editlights_sprselection;
 
+void R_Shadow_FreeShadowMaps(void)
+{
+	int i;
+
+	r_shadow_shadowmapmaxsize = bound(1, r_shadow_shadowmapping_maxsize.integer, 2048);
+	r_shadow_shadowmode = r_shadow_shadowmapping.integer;
+	r_shadow_shadowmaplod = -1;
+
+	CHECKGLERROR
+	if (r_shadow_fborectangle)
+		qglDeleteFramebuffersEXT(1, &r_shadow_fborectangle);
+	r_shadow_fborectangle = 0;
+	CHECKGLERROR
+
+	if (r_shadow_fbo2d)
+		qglDeleteFramebuffersEXT(1, &r_shadow_fbo2d);
+	r_shadow_fbo2d = 0;
+	CHECKGLERROR
+
+	for (i = 0;i < R_SHADOW_SHADOWMAP_NUMCUBEMAPS;i++)
+		if (r_shadow_fbocubeside[i])
+			qglDeleteFramebuffersEXT(6, r_shadow_fbocubeside[i]);
+	memset(r_shadow_fbocubeside, 0, sizeof(r_shadow_fbocubeside));
+	CHECKGLERROR
+
+	if (r_shadow_shadowmaprectangletexture)
+		R_FreeTexture(r_shadow_shadowmaprectangletexture);
+	r_shadow_shadowmaprectangletexture = NULL;
+
+	if (r_shadow_shadowmap2dtexture)
+		R_FreeTexture(r_shadow_shadowmap2dtexture);
+	r_shadow_shadowmap2dtexture = NULL;
+
+	if (r_shadow_shadowmapcubeprojectiontexture)
+		R_FreeTexture(r_shadow_shadowmapcubeprojectiontexture);
+	r_shadow_shadowmapcubeprojectiontexture = NULL;
+
+	for (i = 0;i < R_SHADOW_SHADOWMAP_NUMCUBEMAPS;i++)
+		if (r_shadow_shadowmapcubetexture[i])
+			R_FreeTexture(r_shadow_shadowmapcubetexture[i]);
+	memset(r_shadow_shadowmapcubetexture, 0, sizeof(r_shadow_shadowmapcubetexture));
+
+	CHECKGLERROR
+}
+
 void r_shadow_start(void)
 {
 	// allocate vertex processing arrays
@@ -351,6 +397,9 @@ void r_shadow_start(void)
 	r_shadow_fborectangle = 0;
 	memset(r_shadow_fbocubeside, 0, sizeof(r_shadow_fbocubeside));
 	r_shadow_fbo2d = 0;
+
+	R_Shadow_FreeShadowMaps();
+
 	r_shadow_texturepool = NULL;
 	r_shadow_filters_texturepool = NULL;
 	R_Shadow_ValidateCvars();
@@ -386,18 +435,14 @@ void r_shadow_shutdown(void)
 	int i;
 	CHECKGLERROR
 	R_Shadow_UncompileWorldLights();
+
+	R_Shadow_FreeShadowMaps();
+
 	CHECKGLERROR
 	numcubemaps = 0;
 	r_shadow_attenuationgradienttexture = NULL;
 	r_shadow_attenuation2dtexture = NULL;
 	r_shadow_attenuation3dtexture = NULL;
-	r_shadow_shadowmaprectangletexture = NULL;
-	memset(r_shadow_shadowmapcubetexture, 0, sizeof(r_shadow_shadowmapcubetexture));
-	r_shadow_shadowmapcubeprojectiontexture = NULL;
-	r_shadow_shadowmap2dtexture = NULL;
-	r_shadow_shadowmapmaxsize = 0;
-	r_shadow_shadowmapsize = 0;
-	r_shadow_shadowmaplod = 0;
 	CHECKGLERROR
 	if (r_shadow_fborectangle)
 		qglDeleteFramebuffersEXT(1, &r_shadow_fborectangle);
@@ -1444,42 +1489,6 @@ void R_Shadow_RenderMode_ShadowMap(int side, qboolean clear, int size)
 	r_viewport_t viewport;
 	CHECKGLERROR
 	maxsize = bound(1, r_shadow_shadowmapping_maxsize.integer, 2048);
-	if (r_shadow_shadowmapmaxsize != maxsize)
-	{
-		r_shadow_shadowmapmaxsize = maxsize;
-
-		if (r_shadow_fborectangle)
-			qglDeleteFramebuffersEXT(1, &r_shadow_fborectangle);
-		r_shadow_fborectangle = 0;
-
-		if (r_shadow_fbo2d)
-			qglDeleteFramebuffersEXT(1, &r_shadow_fbo2d);
-		r_shadow_fbo2d = 0;
-
-		for (i = 0;i < R_SHADOW_SHADOWMAP_NUMCUBEMAPS;i++)
-			if (r_shadow_fbocubeside[i])
-				qglDeleteFramebuffersEXT(6, r_shadow_fbocubeside[i]);
-		memset(r_shadow_fbocubeside, 0, sizeof(r_shadow_fbocubeside));
-
-		if (r_shadow_shadowmaprectangletexture)
-			R_FreeTexture(r_shadow_shadowmaprectangletexture);
-		r_shadow_shadowmaprectangletexture = NULL;
-
-		if (r_shadow_shadowmap2dtexture)
-			R_FreeTexture(r_shadow_shadowmap2dtexture);
-		r_shadow_shadowmap2dtexture = NULL;
-
-		if (r_shadow_shadowmapcubeprojectiontexture)
-			R_FreeTexture(r_shadow_shadowmapcubeprojectiontexture);
-		r_shadow_shadowmapcubeprojectiontexture = NULL;
-
-		for (i = 0;i < R_SHADOW_SHADOWMAP_NUMCUBEMAPS;i++)
-			if (r_shadow_shadowmapcubetexture[i])
-				R_FreeTexture(r_shadow_shadowmapcubetexture[i]);
-		memset(r_shadow_shadowmapcubetexture, 0, sizeof(r_shadow_shadowmapcubetexture));
-
-		CHECKGLERROR
-	}
 	nearclip = r_shadow_shadowmapping_nearclip.value / rsurface.rtlight->radius;
 	farclip = 1.0f;
 	r_shadow_shadowmap_bias = r_shadow_shadowmapping_bias.value * nearclip * (1024.0f / size);// * rsurface.rtlight->radius;
@@ -1487,11 +1496,11 @@ void R_Shadow_RenderMode_ShadowMap(int side, qboolean clear, int size)
 	r_shadow_shadowmap_parameters[1] = 1.0f - r_shadow_shadowmapping_bordersize.value / size;
 	r_shadow_shadowmap_parameters[2] = -(farclip + nearclip) / (farclip - nearclip);
 	r_shadow_shadowmap_parameters[3] = -2.0f * nearclip * farclip / (farclip - nearclip);
-	if (!r_shadow_shadowmapcubeprojectiontexture)
-		r_shadow_shadowmapcubeprojectiontexture = R_LoadTextureCubeProjection(r_shadow_texturepool, "shadowmapcubeprojection");
 	if (r_shadow_shadowmapping.integer == 1)
 	{
 		// complex unrolled cube approach (more flexible)
+		//if (!r_shadow_shadowmapcubeprojectiontexture)
+		//	r_shadow_shadowmapcubeprojectiontexture = R_LoadTextureCubeProjection(r_shadow_texturepool, "shadowmapcubeprojection");
 		if (!r_shadow_shadowmap2dtexture)
 		{
 #if 1
@@ -1530,6 +1539,8 @@ void R_Shadow_RenderMode_ShadowMap(int side, qboolean clear, int size)
 	else if (r_shadow_shadowmapping.integer == 2)
 	{
 		// complex unrolled cube approach (more flexible)
+		//if (!r_shadow_shadowmapcubeprojectiontexture)
+		//	r_shadow_shadowmapcubeprojectiontexture = R_LoadTextureCubeProjection(r_shadow_texturepool, "shadowmapcubeprojection");
 		if (!r_shadow_shadowmaprectangletexture)
 		{
 #if 1
@@ -3819,6 +3830,9 @@ void R_ShadowVolumeLighting(qboolean visible)
 	size_t lightindex;
 	dlight_t *light;
 	size_t range;
+
+	if (r_shadow_shadowmapmaxsize != bound(1, r_shadow_shadowmapping_maxsize.integer, 2048) || r_shadow_shadowmode != r_shadow_shadowmapping.integer)
+		R_Shadow_FreeShadowMaps();
 
 	if (r_editlights.integer)
 		R_Shadow_DrawLightSprites();
