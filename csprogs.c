@@ -5,6 +5,7 @@
 #include "cl_collision.h"
 #include "snd_main.h"
 #include "clvm_cmds.h"
+#include "prvm_cmds.h"
 
 //============================================================================
 // Client prog handling
