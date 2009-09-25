@@ -1029,3 +1029,15 @@ int S_GetSoundChannels (void){
 	Con_Printf("So let's assume 2.\n");
 	return 2;
 }
+
+/*
+====================
+SndSys_SendKeyEvents
+
+Send keyboard events originating from the sound system (e.g. MIDI)
+====================
+*/
+void SndSys_SendKeyEvents(void)
+{
+	// not supported
+}

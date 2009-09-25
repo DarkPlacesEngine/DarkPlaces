@@ -385,3 +385,15 @@ void SndSys_UnlockRenderBuffer (void)
 {
 	pthread_mutex_unlock(&coreaudio_mutex);
 }
+
+/*
+====================
+SndSys_SendKeyEvents
+
+Send keyboard events originating from the sound system (e.g. MIDI)
+====================
+*/
+void SndSys_SendKeyEvents(void)
+{
+	// not supported
+}

@@ -36,6 +36,7 @@ static snd_pcm_t* pcm_handle = NULL;
 static snd_pcm_sframes_t expected_delay = 0;
 static unsigned int alsasoundtime;
 
+static snd_seq_t* seq_handle = NULL;
 
 /*
 ====================
@@ -47,14 +48,64 @@ May return a suggested format if the requested format isn't available
 */
 qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 {
-	const char* pcm_name;
-	int i, err;
+	const char* pcm_name, *seq_name;
+	int i, err, seq_client, seq_port;
 	snd_pcm_hw_params_t* hw_params = NULL;
 	snd_pcm_format_t snd_pcm_format;
 	snd_pcm_uframes_t buffer_size;
 
 	Con_Print ("SndSys_Init: using the ALSA module\n");
 
+	seq_name = NULL;
+	i = COM_CheckParm ("-sndseqin"); // TODO turn this into a cvar, maybe
+	if (i != 0 && i < com_argc - 1)
+		seq_name = com_argv[i + 1];
+	if(seq_name)
+	{
+		seq_client = atoi(seq_name);
+		seq_port = 0;
+		if(strchr(seq_name, ':'))
+			seq_port = atoi(strchr(seq_name, ':') + 1);
+		Con_Printf ("SndSys_Init: seq input port has been set to \"%d:%d\". Enabling sequencer input...\n", seq_client, seq_port);
+		err = snd_seq_open (&seq_handle, "default", SND_SEQ_OPEN_INPUT, 0);
+		if (err < 0)
+		{
+			Con_Print ("SndSys_Init: can't open seq device\n");
+			goto seqdone;
+		}
+		err = snd_seq_set_client_name(seq_handle, gamename);
+		if (err < 0)
+		{
+			Con_Print ("SndSys_Init: can't set name of seq device\n");
+			goto seqerror;
+		}
+		err = snd_seq_create_simple_port(seq_handle, gamename, SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE, SND_SEQ_PORT_TYPE_MIDI_GENERIC | SND_SEQ_PORT_TYPE_APPLICATION);
+		if(err < 0)
+		{
+			Con_Print ("SndSys_Init: can't create seq port\n");
+			goto seqerror;
+		}
+		err = snd_seq_connect_from(seq_handle, 0, seq_client, seq_port);
+		if(err < 0)
+		{
+			Con_Printf ("SndSys_Init: can't connect to seq port \"%d:%d\"\n", seq_client, seq_port);
+			goto seqerror;
+		}
+		err = snd_seq_nonblock(seq_handle, 1);
+		if(err < 0)
+		{
+			Con_Print ("SndSys_Init: can't make seq nonblocking\n");
+			goto seqerror;
+		}
+
+		goto seqdone;
+
+seqerror:
+		snd_seq_close(seq_handle);
+		seq_handle = NULL;
+	}
+
+seqdone:
 	// Check the requested sound format
 	if (requested->width < 1 || requested->width > 2)
 	{
@@ -212,7 +263,10 @@ init_error:
 
 	if (hw_params != NULL)
 		snd_pcm_hw_params_free (hw_params);
-	SndSys_Shutdown ();
+
+	snd_pcm_close(pcm_handle);
+	pcm_handle = NULL;
+
 	return false;
 }
 
@@ -226,6 +280,12 @@ Stop the sound card, delete "snd_renderbuffer" and free its other resources
 */
 void SndSys_Shutdown (void)
 {
+	if (seq_handle != NULL)
+	{
+		snd_seq_close(seq_handle);
+		seq_handle = NULL;
+	}
+
 	if (pcm_handle != NULL)
 	{
 		snd_pcm_close(pcm_handle);
@@ -417,4 +477,38 @@ Release the exclusive lock on "snd_renderbuffer"
 void SndSys_UnlockRenderBuffer (void)
 {
 	// Nothing to do
+}
+
+/*
+====================
+SndSys_SendKeyEvents
+
+Send keyboard events originating from the sound system (e.g. MIDI)
+====================
+*/
+void SndSys_SendKeyEvents(void)
+{
+	snd_seq_event_t *event;
+	if(!seq_handle)
+		return;
+	for(;;)
+	{
+		if(snd_seq_event_input(seq_handle, &event) <= 0)
+			break;
+		if(event)
+		{
+			switch(event->type)
+			{
+				case SND_SEQ_EVENT_NOTEON:
+					if(event->data.note.velocity)
+					{
+						Key_Event(K_MIDINOTE0 + event->data.note.note, 0, true);
+						break;
+					}
+				case SND_SEQ_EVENT_NOTEOFF:
+					Key_Event(K_MIDINOTE0 + event->data.note.note, 0, false);
+					break;
+			}
+		}
+	}
 }

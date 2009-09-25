@@ -29,6 +29,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "progsvm.h"
 #include "csprogs.h"
 #include "sv_demo.h"
+#include "snd_main.h"
 
 /*
 
@@ -671,6 +672,7 @@ void Host_Main(void)
 		cl.islocalgame = NetConn_IsLocalGame();
 
 		// get new key events
+		SndSys_SendKeyEvents();
 		Sys_SendKeyEvents();
 
 		NetConn_UpdateSockets();

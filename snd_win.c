@@ -874,3 +874,15 @@ void SndSys_UnlockRenderBuffer (void)
 		IDirectSoundBuffer_Unlock(pDSBuf, dsound_pbuf, dsound_dwSize, dsound_pbuf2, dsound_dwSize2);
 #endif
 }
+
+/*
+====================
+SndSys_SendKeyEvents
+
+Send keyboard events originating from the sound system (e.g. MIDI)
+====================
+*/
+void SndSys_SendKeyEvents(void)
+{
+	// not supported
+}

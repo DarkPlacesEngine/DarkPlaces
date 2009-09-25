@@ -184,6 +184,9 @@ qboolean SndSys_LockRenderBuffer (void);
 // Release the exclusive lock on "snd_renderbuffer"
 void SndSys_UnlockRenderBuffer (void);
 
+// if the sound system can generate events, send them
+void SndSys_SendKeyEvents(void);
+
 // exported for capturevideo so ogg can see all channels
 typedef struct portable_samplepair_s
 {

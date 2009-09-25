@@ -147,3 +147,6 @@ float S_GetChannelPosition (unsigned int ch_ind)
 	return -1;
 }
 
+void SndSys_SendKeyEvents(void)
+{
+}
