@@ -57,6 +57,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 	Con_Print ("SndSys_Init: using the ALSA module\n");
 
 	seq_name = NULL;
+// COMMANDLINEOPTION: Linux ALSA Sound: -sndseqin <client>:<port> selects which sequencer port to use for input, by default no sequencer port is used (MIDI note events from that port get mapped to MIDINOTE<n> keys that can be bound)
 	i = COM_CheckParm ("-sndseqin"); // TODO turn this into a cvar, maybe
 	if (i != 0 && i < com_argc - 1)
 		seq_name = com_argv[i + 1];
@@ -150,7 +151,7 @@ seqdone:
 			pcm_name = "default";
 			break;
 	}
-// COMMANDLINEOPTION: Linux ALSA Sound: -sndpcm <devicename> selects which pcm device to us, default is "default"
+// COMMANDLINEOPTION: Linux ALSA Sound: -sndpcm <devicename> selects which pcm device to use, default is "default"
 	i = COM_CheckParm ("-sndpcm");
 	if (i != 0 && i < com_argc - 1)
 		pcm_name = com_argv[i + 1];
