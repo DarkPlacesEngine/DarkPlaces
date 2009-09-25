@@ -230,3 +230,15 @@ void SndSys_UnlockRenderBuffer (void)
 {
 	// Nothing to do
 }
+
+/*
+====================
+SndSys_SendKeyEvents
+
+Send keyboard events originating from the sound system (e.g. MIDI)
+====================
+*/
+void SndSys_SendKeyEvents(void)
+{
+	// not supported
+}
