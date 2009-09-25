@@ -3875,6 +3875,10 @@ void R_DrawModelShadows(void)
 	GL_Scissor(r_refdef.view.x, vid.height - r_refdef.view.y - r_refdef.view.height, r_refdef.view.width, r_refdef.view.height);
 
 	r_shadow_rendermode = R_SHADOW_RENDERMODE_NONE;
+	r_shadow_lightscissor[0] = r_refdef.view.x;
+	r_shadow_lightscissor[1] = vid.height - r_refdef.view.y - r_refdef.view.height;
+	r_shadow_lightscissor[2] = r_refdef.view.width;
+	r_shadow_lightscissor[3] = r_refdef.view.height;
 
 	if (gl_ext_separatestencil.integer)
 	{
