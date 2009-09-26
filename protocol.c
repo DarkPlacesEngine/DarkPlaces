@@ -37,7 +37,7 @@ entity_state_t defaultstate =
 	0,//unsigned short nodrawtoclient; // !
 	0,//unsigned short drawonlytoclient; // !
 	{0,0,0,0},//unsigned short light[4]; // color*256 (0.00 to 255.996), and radius*1
-	0,//unsigned char active; // true if a valid state
+	ACTIVE_NOT,//unsigned char active; // true if a valid state
 	0,//unsigned char lightstyle;
 	0,//unsigned char lightpflags;
 	0,//unsigned char colormap;
@@ -165,7 +165,7 @@ void EntityFrameQuake_ReadEntity(int bits)
 	else
 	{
 		s = ent->state_baseline;
-		s.active = true;
+		s.active = ACTIVE_NETWORK;
 	}
 
 	cl.isquakeentity[num] = true;
@@ -226,7 +226,7 @@ void EntityFrameQuake_ReadEntity(int bits)
 
 	ent->state_previous = ent->state_current;
 	ent->state_current = s;
-	if (ent->state_current.active)
+	if (ent->state_current.active == ACTIVE_NETWORK)
 	{
 		CL_MoveLerpEntityStates(ent);
 		cl.entities_active[ent->state_current.number] = true;
@@ -255,7 +255,7 @@ void EntityFrameQuake_ISeeDeadEntities(void)
 			else
 			{
 				cl.isquakeentity[num] = false;
-				cl.entities_active[num] = false;
+				cl.entities_active[num] = ACTIVE_NOT;
 				cl.entities[num].state_current = defaultstate;
 				cl.entities[num].state_current.number = num;
 			}
@@ -430,11 +430,11 @@ static void EntityFrameCSQC_DeallocFrame(client_t *client, int framenum)
 //[515]: we use only one array per-client for SendEntity feature
 // TODO: add some handling for entity send priorities, to better deal with huge
 // amounts of csqc networked entities
-qboolean EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numstates, const entity_state_t *states, int framenum)
+qboolean EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numnumbers, const unsigned short *numbers, int framenum)
 {
 	int num, number, end, sendflags;
 	qboolean sectionstarted = false;
-	const entity_state_t *n;
+	const unsigned short *n;
 	prvm_edict_t *ed;
 	prvm_eval_t *val;
 	client_t *client = svs.clients + sv.writeentitiestoclient_clientnumber;
@@ -456,9 +456,9 @@ qboolean EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numstates,
 		client->csqcnumedicts = prog->num_edicts;
 
 	number = 1;
-	for (num = 0, n = states;num < numstates;num++, n++)
+	for (num = 0, n = numbers;num < numnumbers;num++, n++)
 	{
-		end = n->number;
+		end = *n;
 		for (;number < end;number++)
 		{
 			if (client->csqcentityscope[number])
@@ -494,9 +494,9 @@ qboolean EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numstates,
 		if (client->csqcentityscope[number])
 			client->csqcentityscope[number] = 1;
 	// keep visible entities
-	for (i = 0, n = states;i < numstates;i++, n++)
+	for (i = 0, n = numbers;i < numnumbers;i++, n++)
 	{
-		number = n->number;
+		number = *n;
 		ed = prog->edicts + number;
 		val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.SendEntity);
 		if (val->function)
@@ -851,7 +851,7 @@ int EntityState_DeltaBits(const entity_state_t *o, const entity_state_t *n)
 {
 	unsigned int bits;
 	// if o is not active, delta from default
-	if (!o->active)
+	if (o->active != ACTIVE_NETWORK)
 		o = &defaultstate;
 	bits = 0;
 	if (fabs(n->origin[0] - o->origin[0]) > (1.0f / 256.0f))
@@ -1030,7 +1030,7 @@ void EntityState_WriteUpdate(const entity_state_t *ent, sizebuf_t *msg, const en
 {
 	unsigned int bits;
 	ENTITYSIZEPROFILING_START(msg, ent->number);
-	if (ent->active)
+	if (ent->active == ACTIVE_NETWORK)
 	{
 		// entity is active, check for changes from the delta
 		if ((bits = EntityState_DeltaBits(delta, ent)))
@@ -1044,7 +1044,7 @@ void EntityState_WriteUpdate(const entity_state_t *ent, sizebuf_t *msg, const en
 	else
 	{
 		// entity is inactive, check if the delta was active
-		if (delta->active)
+		if (delta->active == ACTIVE_NETWORK)
 		{
 			// write the remove number
 			MSG_WriteShort(msg, ent->number | 0x8000);
@@ -1483,7 +1483,7 @@ void EntityFrame_CL_ReadFrame(void)
 					CL_ExpandEntities(number);
 			}
 			cl.entities_active[number] = true;
-			e->active = true;
+			e->active = ACTIVE_NETWORK;
 			e->time = cl.mtime[0];
 			e->number = number;
 			EntityState_ReadFields(e, EntityState_ReadExtendBits());
@@ -1507,7 +1507,7 @@ void EntityFrame_CL_ReadFrame(void)
 			if (cl.entities_active[number])
 			{
 				cl.entities_active[number] = false;
-				cl.entities[number].state_current.active = false;
+				cl.entities[number].state_current.active = ACTIVE_NOT;
 			}
 		}
 		if (number >= cl.num_entities)
@@ -1526,7 +1526,7 @@ void EntityFrame_CL_ReadFrame(void)
 		if (cl.entities_active[number])
 		{
 			cl.entities_active[number] = false;
-			cl.entities[number].state_current.active = false;
+			cl.entities[number].state_current.active = ACTIVE_NOT;
 		}
 	}
 }
@@ -1651,7 +1651,7 @@ int EntityFrame4_AckFrame(entityframe4_database_t *d, int framenum, int servermo
 							entity_state_t *s = EntityFrame4_GetReferenceEntity(d, commit->entity[j].number);
 							if (commit->entity[j].active != s->active)
 							{
-								if (commit->entity[j].active)
+								if (commit->entity[j].active == ACTIVE_NETWORK)
 									Con_Printf("commit entity %i has become active (modelindex %i)\n", commit->entity[j].number, commit->entity[j].modelindex);
 								else
 									Con_Printf("commit entity %i has become inactive (modelindex %i)\n", commit->entity[j].number, commit->entity[j].modelindex);
@@ -1779,20 +1779,20 @@ void EntityFrame4_CL_ReadFrame(void)
 					// read the changes
 					if (developer_networkentities.integer >= 2)
 						Con_Printf("entity %i: update\n", enumber);
-					s->active = true;
+					s->active = ACTIVE_NETWORK;
 					EntityState_ReadFields(s, EntityState_ReadExtendBits());
 				}
 			}
 			else if (developer_networkentities.integer >= 4)
 				Con_Printf("entity %i: copy\n", enumber);
 			// set the cl.entities_active flag
-			cl.entities_active[enumber] = s->active;
+			cl.entities_active[enumber] = (s->active == ACTIVE_NETWORK);
 			// set the update time
 			s->time = cl.mtime[0];
 			// fix the number (it gets wiped occasionally by copying from defaultstate)
 			s->number = enumber;
 			// check if we need to update the lerp stuff
-			if (s->active)
+			if (s->active == ACTIVE_NETWORK)
 				CL_MoveLerpEntityStates(&cl.entities[enumber]);
 			// add this to the commit entry whether it is modified or not
 			if (d->currentcommit)
@@ -1800,7 +1800,7 @@ void EntityFrame4_CL_ReadFrame(void)
 			// print extra messages if desired
 			if (developer_networkentities.integer >= 2 && cl.entities[enumber].state_current.active != cl.entities[enumber].state_previous.active)
 			{
-				if (cl.entities[enumber].state_current.active)
+				if (cl.entities[enumber].state_current.active == ACTIVE_NETWORK)
 					Con_Printf("entity #%i has become active\n", enumber);
 				else if (cl.entities[enumber].state_previous.active)
 					Con_Printf("entity #%i has become inactive\n", enumber);
@@ -1885,7 +1885,7 @@ qboolean EntityFrame4_WriteFrame(sizebuf_t *msg, int maxsize, entityframe4_datab
 		{
 			inactiveentitystate.number = n;
 			s = &inactiveentitystate;
-			if (e->active)
+			if (e->active == ACTIVE_NETWORK)
 			{
 				// entity used to exist but doesn't anymore, send remove
 				MSG_WriteShort(&buf, n | 0x8000);
@@ -1985,7 +1985,7 @@ static int EntityState5_Priority(entityframe5_database_t *d, int stateindex)
 	if (stateindex <= svs.maxclients)
 		priority++;
 	// remove dead entities very quickly because they are just 2 bytes
-	if (!d->states[stateindex].active)
+	if (d->states[stateindex].active != ACTIVE_NETWORK)
 	{
 		priority++;
 		return bound(1, priority, ENTITYFRAME5_PRIORITYLEVELS - 1);
@@ -2026,7 +2026,7 @@ void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbi
 	if(val && val->function)
 		return;
 
-	if (!s->active)
+	if (s->active != ACTIVE_NETWORK)
 		MSG_WriteShort(msg, number | 0x8000);
 	else
 	{
@@ -2180,7 +2180,7 @@ static void EntityState5_ReadUpdate(entity_state_t *s, int number)
 	if (bits & E5_FULLUPDATE)
 	{
 		*s = defaultstate;
-		s->active = true;
+		s->active = ACTIVE_NETWORK;
 	}
 	if (bits & E5_FLAGS)
 		s->flags = MSG_ReadByte();
@@ -2332,9 +2332,9 @@ static void EntityState5_ReadUpdate(entity_state_t *s, int number)
 static int EntityState5_DeltaBits(const entity_state_t *o, const entity_state_t *n)
 {
 	unsigned int bits = 0;
-	if (n->active)
+	if (n->active == ACTIVE_NETWORK)
 	{
-		if (!o->active)
+		if (o->active != ACTIVE_NETWORK)
 			bits |= E5_FULLUPDATE;
 		if (!VectorCompare(o->origin, n->origin))
 			bits |= E5_ORIGIN;
@@ -2366,7 +2366,7 @@ static int EntityState5_DeltaBits(const entity_state_t *o, const entity_state_t 
 			bits |= E5_COLORMOD;
 	}
 	else
-		if (o->active)
+		if (o->active == ACTIVE_NETWORK)
 			bits |= E5_FULLUPDATE;
 	return bits;
 }
@@ -2414,18 +2414,18 @@ void EntityFrame5_CL_ReadFrame(void)
 			EntityState5_ReadUpdate(s, enumber);
 		}
 		// set the cl.entities_active flag
-		cl.entities_active[enumber] = s->active;
+		cl.entities_active[enumber] = (s->active == ACTIVE_NETWORK);
 		// set the update time
 		s->time = cl.mtime[0];
 		// fix the number (it gets wiped occasionally by copying from defaultstate)
 		s->number = enumber;
 		// check if we need to update the lerp stuff
-		if (s->active)
+		if (s->active == ACTIVE_NETWORK)
 			CL_MoveLerpEntityStates(&cl.entities[enumber]);
 		// print extra messages if desired
 		if (developer_networkentities.integer >= 2 && cl.entities[enumber].state_current.active != cl.entities[enumber].state_previous.active)
 		{
-			if (cl.entities[enumber].state_current.active)
+			if (cl.entities[enumber].state_current.active == ACTIVE_NETWORK)
 				Con_Printf("entity #%i has become active\n", enumber);
 			else if (cl.entities[enumber].state_previous.active)
 				Con_Printf("entity #%i has become inactive\n", enumber);
@@ -2757,7 +2757,7 @@ void EntityStateQW_ReadPlayerUpdate(void)
 	// read the update
 	s = &ent->state_current;
 	*s = defaultstate;
-	s->active = true;
+	s->active = ACTIVE_NETWORK;
 	s->number = enumber;
 	s->colormap = enumber;
 	playerflags = MSG_ReadShort();
@@ -2860,18 +2860,18 @@ void EntityStateQW_ReadPlayerUpdate(void)
 	}
 
 	// set the cl.entities_active flag
-	cl.entities_active[enumber] = s->active;
+	cl.entities_active[enumber] = (s->active == ACTIVE_NETWORK);
 	// set the update time
 	s->time = cl.mtime[0] - msec * 0.001; // qw has no clock
 	// check if we need to update the lerp stuff
-	if (s->active)
+	if (s->active == ACTIVE_NETWORK)
 		CL_MoveLerpEntityStates(&cl.entities[enumber]);
 }
 
 static void EntityStateQW_ReadEntityUpdate(entity_state_t *s, int bits)
 {
 	int qweffects = 0;
-	s->active = true;
+	s->active = ACTIVE_NETWORK;
 	s->number = bits & 511;
 	bits &= ~511;
 	if (bits & QW_U_MOREBITS)
@@ -3071,7 +3071,7 @@ void EntityFrameQW_CL_ReadFrame(qboolean delta)
 			if (cl.entities_active[number])
 			{
 				cl.entities_active[number] = false;
-				cl.entities[number].state_current.active = false;
+				cl.entities[number].state_current.active = ACTIVE_NOT;
 			}
 		}
 		if (number >= cl.num_entities)
