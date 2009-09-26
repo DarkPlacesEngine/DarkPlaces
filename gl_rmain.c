@@ -75,7 +75,7 @@ cvar_t r_shadows = {CVAR_SAVE, "r_shadows", "0", "casts fake stencil shadows fro
 cvar_t r_shadows_darken = {CVAR_SAVE, "r_shadows_darken", "0.5", "how much shadowed areas will be darkened"};
 cvar_t r_shadows_throwdistance = {CVAR_SAVE, "r_shadows_throwdistance", "500", "how far to cast shadows from models"};
 cvar_t r_shadows_throwdirection = {CVAR_SAVE, "r_shadows_throwdirection", "0 0 -1", "override throwing direction for r_shadows 2"};
-cvar_t r_shadows_drawafterrtlightning = {CVAR_SAVE, "r_shadows_drawafterrtlightning", "0", "draw fake shadows AFTER realtime lightning is drawn. May be useful for simulating fast sunlight on large outdoor maps with only one noshadow rtlight. The price is less realistic appearance of dynamic light shadows."};
+cvar_t r_shadows_drawafterrtlighting = {CVAR_SAVE, "r_shadows_drawafterrtlighting", "0", "draw fake shadows AFTER realtime lightning is drawn. May be useful for simulating fast sunlight on large outdoor maps with only one noshadow rtlight. The price is less realistic appearance of dynamic light shadows."};
 cvar_t r_shadows_castfrombmodels = {CVAR_SAVE, "r_shadows_castfrombmodels", "0", "do cast shadows from bmodels"};
 cvar_t r_q1bsp_skymasking = {0, "r_q1bsp_skymasking", "1", "allows sky polygons in quake1 maps to obscure other geometry"};
 cvar_t r_polygonoffset_submodel_factor = {0, "r_polygonoffset_submodel_factor", "0", "biases depth values of world submodels such as doors, to prevent z-fighting artifacts in Quake maps"};
@@ -2746,7 +2746,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_fullbright);
 	Cvar_RegisterVariable(&r_shadows);
 	Cvar_RegisterVariable(&r_shadows_darken);
-	Cvar_RegisterVariable(&r_shadows_drawafterrtlightning);
+	Cvar_RegisterVariable(&r_shadows_drawafterrtlighting);
 	Cvar_RegisterVariable(&r_shadows_castfrombmodels);
 	Cvar_RegisterVariable(&r_shadows_throwdistance);
 	Cvar_RegisterVariable(&r_shadows_throwdirection);
@@ -4634,7 +4634,7 @@ void R_RenderScene(void)
 	if (r_refdef.scene.extraupdate)
 		S_ExtraUpdate ();
 
-	if (r_shadows.integer > 0 && !r_shadows_drawafterrtlightning.integer && r_refdef.lightmapintensity > 0)
+	if (r_shadows.integer > 0 && !r_shadows_drawafterrtlighting.integer && r_refdef.lightmapintensity > 0)
 	{
 		R_DrawModelShadows();
 		R_ResetViewRendering3D();
@@ -4651,7 +4651,7 @@ void R_RenderScene(void)
 	if (r_refdef.scene.extraupdate)
 		S_ExtraUpdate ();
 
-	if (r_shadows.integer > 0 && r_shadows_drawafterrtlightning.integer && r_refdef.lightmapintensity > 0)
+	if (r_shadows.integer > 0 && r_shadows_drawafterrtlighting.integer && r_refdef.lightmapintensity > 0)
 	{
 		R_DrawModelShadows();
 		R_ResetViewRendering3D();
