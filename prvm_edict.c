@@ -39,6 +39,7 @@ cvar_t prvm_backtraceforwarnings = {0, "prvm_backtraceforwarnings", "0", "print 
 cvar_t prvm_leaktest = {0, "prvm_leaktest", "0", "try to detect memory leaks in strings or entities"};
 cvar_t prvm_leaktest_ignore_classnames = {0, "prvm_leaktest_ignore_classnames", "", "classnames of entities to NOT leak check because they are found by find(world, classname, ...) but are actually spawned by QC code (NOT map entities)"};
 cvar_t prvm_errordump = {0, "prvm_errordump", "0", "write a savegame on crash to crash-server.dmp"};
+cvar_t prvm_startupreuseedicttime = {0, "prvm_startupreuseedicttime", "2", "allows immediate re-use of freed entity slots during start of new level (value in seconds)"};
 
 qboolean prvm_runawaycheck = true;
 
@@ -247,7 +248,7 @@ qboolean PRVM_ED_CanAlloc(prvm_edict_t *e)
 {
 	if(!e->priv.required->free)
 		return false;
-	if(e->priv.required->freetime < prog->starttime + 2)
+	if(e->priv.required->freetime < prog->starttime + prvm_startupreuseedicttime.value)
 		return true;
 	if(realtime > e->priv.required->freetime + 1)
 		return true;
@@ -2311,6 +2312,7 @@ void PRVM_Init (void)
 	Cvar_RegisterVariable (&prvm_leaktest);
 	Cvar_RegisterVariable (&prvm_leaktest_ignore_classnames);
 	Cvar_RegisterVariable (&prvm_errordump);
+	Cvar_RegisterVariable (&prvm_startupreuseedicttime);
 
 	// COMMANDLINEOPTION: PRVM: -norunaway disables the runaway loop check (it might be impossible to exit DarkPlaces if used!)
 	prvm_runawaycheck = !COM_CheckParm("-norunaway");
