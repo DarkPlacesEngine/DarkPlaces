@@ -785,7 +785,7 @@ void _DrawQ_Setup(void)
 		return;
 	r_refdef.draw2dstage = true;
 	CHECKGLERROR
-	R_Viewport_InitOrtho(&viewport, &identitymatrix, r_refdef.view.x, r_refdef.view.y, r_refdef.view.width, r_refdef.view.height, 0, 0, vid_conwidth.integer, vid_conheight.integer, -10, 100, NULL);
+	R_Viewport_InitOrtho(&viewport, &identitymatrix, r_refdef.view.x, vid.height - r_refdef.view.y - r_refdef.view.height, r_refdef.view.width, r_refdef.view.height, 0, 0, vid_conwidth.integer, vid_conheight.integer, -10, 100, NULL);
 	R_SetViewport(&viewport);
 	GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
 	qglDepthFunc(GL_LEQUAL);CHECKGLERROR

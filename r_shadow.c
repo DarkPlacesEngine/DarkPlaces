@@ -1332,7 +1332,7 @@ void R_Shadow_RenderMode_Begin(void)
 	GL_DepthTest(true);
 	GL_DepthMask(false);
 	GL_Color(0, 0, 0, 1);
-	GL_Scissor(r_refdef.view.x, vid.height - r_refdef.view.y - r_refdef.view.height, r_refdef.view.width, r_refdef.view.height);
+	GL_Scissor(r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
 
 	r_shadow_rendermode = R_SHADOW_RENDERMODE_NONE;
 
@@ -1706,7 +1706,7 @@ void R_Shadow_RenderMode_End(void)
 	R_Shadow_RenderMode_Reset();
 	R_Shadow_RenderMode_ActiveLight(NULL);
 	GL_DepthMask(true);
-	GL_Scissor(r_refdef.view.x, vid.height - r_refdef.view.y - r_refdef.view.height, r_refdef.view.width, r_refdef.view.height);
+	GL_Scissor(r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
 	r_shadow_rendermode = R_SHADOW_RENDERMODE_NONE;
 }
 
@@ -1743,10 +1743,10 @@ qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 	int sign[8];
 	float f;
 
-	r_shadow_lightscissor[0] = r_refdef.view.x;
-	r_shadow_lightscissor[1] = vid.height - r_refdef.view.y - r_refdef.view.height;
-	r_shadow_lightscissor[2] = r_refdef.view.width;
-	r_shadow_lightscissor[3] = r_refdef.view.height;
+	r_shadow_lightscissor[0] = r_refdef.view.viewport.x;
+	r_shadow_lightscissor[1] = r_refdef.view.viewport.y;
+	r_shadow_lightscissor[2] = r_refdef.view.viewport.width;
+	r_shadow_lightscissor[3] = r_refdef.view.viewport.height;
 
 	if (!r_shadow_scissor.integer)
 		return false;
@@ -1819,16 +1819,16 @@ qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 
 	// now convert the scissor rectangle to integer screen coordinates
 	ix1 = (int)(x1 - 1.0f);
-	iy1 = (int)(y1 - 1.0f);
+	iy1 = vid.height - (int)(y2 - 1.0f);
 	ix2 = (int)(x2 + 1.0f);
-	iy2 = (int)(y2 + 1.0f);
+	iy2 = vid.height - (int)(y1 + 1.0f);
 	//Con_Printf("%f %f %f %f\n", x1, y1, x2, y2);
 
 	// clamp it to the screen
-	if (ix1 < r_refdef.view.x) ix1 = r_refdef.view.x;
-	if (iy1 < r_refdef.view.y) iy1 = r_refdef.view.y;
-	if (ix2 > r_refdef.view.x + r_refdef.view.width) ix2 = r_refdef.view.x + r_refdef.view.width;
-	if (iy2 > r_refdef.view.y + r_refdef.view.height) iy2 = r_refdef.view.y + r_refdef.view.height;
+	if (ix1 < r_refdef.view.viewport.x) ix1 = r_refdef.view.viewport.x;
+	if (iy1 < r_refdef.view.viewport.y) iy1 = r_refdef.view.viewport.y;
+	if (ix2 > r_refdef.view.viewport.x + r_refdef.view.viewport.width) ix2 = r_refdef.view.viewport.x + r_refdef.view.viewport.width;
+	if (iy2 > r_refdef.view.viewport.y + r_refdef.view.viewport.height) iy2 = r_refdef.view.viewport.y + r_refdef.view.viewport.height;
 
 	// if it is inside out, it's not visible
 	if (ix2 <= ix1 || iy2 <= iy1)
@@ -1836,7 +1836,7 @@ qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 
 	// the light area is visible, set up the scissor rectangle
 	r_shadow_lightscissor[0] = ix1;
-	r_shadow_lightscissor[1] = vid.height - iy2;
+	r_shadow_lightscissor[1] = iy1;
 	r_shadow_lightscissor[2] = ix2 - ix1;
 	r_shadow_lightscissor[3] = iy2 - iy1;
 
@@ -3849,7 +3849,10 @@ void R_ShadowVolumeLighting(qboolean visible)
 	R_Shadow_RenderMode_End();
 }
 
+extern const float r_screenvertex3f[12];
 extern void R_SetupView(qboolean allowwaterclippingplane);
+extern void R_ResetViewRendering3D(void);
+extern void R_ResetViewRendering2D(void);
 extern cvar_t r_shadows;
 extern cvar_t r_shadows_darken;
 extern cvar_t r_shadows_drawafterrtlighting;
@@ -3865,36 +3868,21 @@ void R_DrawModelShadows(void)
 	vec3_t relativelightdirection;
 	vec3_t relativeshadowmins, relativeshadowmaxs;
 	vec3_t tmp, shadowdir;
-	float vertex3f[12];
-	r_viewport_t viewport;
 
 	if (!r_drawentities.integer || !gl_stencil)
 		return;
 
 	CHECKGLERROR
-	GL_Scissor(r_refdef.view.x, vid.height - r_refdef.view.y - r_refdef.view.height, r_refdef.view.width, r_refdef.view.height);
-
-	r_shadow_rendermode = R_SHADOW_RENDERMODE_NONE;
+	R_ResetViewRendering3D();
+	//GL_Scissor(r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
+	//GL_Scissor(r_refdef.view.x, vid.height - r_refdef.view.height - r_refdef.view.y, r_refdef.view.width, r_refdef.view.height);
+	R_Shadow_RenderMode_Begin();
+	R_Shadow_RenderMode_ActiveLight(NULL);
 	r_shadow_lightscissor[0] = r_refdef.view.x;
 	r_shadow_lightscissor[1] = vid.height - r_refdef.view.y - r_refdef.view.height;
 	r_shadow_lightscissor[2] = r_refdef.view.width;
 	r_shadow_lightscissor[3] = r_refdef.view.height;
-
-	if (gl_ext_separatestencil.integer)
-	{
-		r_shadow_shadowingrendermode_zpass = R_SHADOW_RENDERMODE_ZPASS_SEPARATESTENCIL;
-		r_shadow_shadowingrendermode_zfail = R_SHADOW_RENDERMODE_ZFAIL_SEPARATESTENCIL;
-	}
-	else if (gl_ext_stenciltwoside.integer)
-	{
-		r_shadow_shadowingrendermode_zpass = R_SHADOW_RENDERMODE_ZPASS_STENCILTWOSIDE;
-		r_shadow_shadowingrendermode_zfail = R_SHADOW_RENDERMODE_ZFAIL_STENCILTWOSIDE;
-	}
-	else
-	{
-		r_shadow_shadowingrendermode_zpass = R_SHADOW_RENDERMODE_ZPASS_STENCIL;
-		r_shadow_shadowingrendermode_zfail = R_SHADOW_RENDERMODE_ZFAIL_STENCIL;
-	}
+	R_Shadow_RenderMode_StencilShadowVolumes(false);
 
 	// get shadow dir
 	if (r_shadows.integer == 2)
@@ -3954,34 +3942,28 @@ void R_DrawModelShadows(void)
 	}
 
 	// not really the right mode, but this will disable any silly stencil features
-	R_Shadow_RenderMode_VisibleLighting(true, true);
-
-	// vertex coordinates for a quad that covers the screen exactly
-	vertex3f[0] = 0;vertex3f[1] = 0;vertex3f[2] = 0;
-	vertex3f[3] = 1;vertex3f[4] = 0;vertex3f[5] = 0;
-	vertex3f[6] = 1;vertex3f[7] = 1;vertex3f[8] = 0;
-	vertex3f[9] = 0;vertex3f[10] = 1;vertex3f[11] = 0;
+	R_Shadow_RenderMode_End();
 
 	// set up ortho view for rendering this pass
-	R_Viewport_InitOrtho(&viewport, &identitymatrix, r_refdef.view.x, r_refdef.view.y, r_refdef.view.width, r_refdef.view.height, 0, 0, 1, 1, -10, 100, NULL);
-	R_SetViewport(&viewport);
-	GL_Scissor(r_refdef.view.x, vid.height - r_refdef.view.y - r_refdef.view.height, r_refdef.view.width, r_refdef.view.height);
-	GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
-	GL_ScissorTest(true);
-	R_Mesh_Matrix(&identitymatrix);
-	R_Mesh_ResetTextureState();
-	R_Mesh_VertexPointer(vertex3f, 0, 0);
+	//GL_Scissor(r_refdef.view.x, vid.height - r_refdef.view.height - r_refdef.view.y, r_refdef.view.width, r_refdef.view.height);
+	//GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
+	//GL_ScissorTest(true);
+	//R_Mesh_Matrix(&identitymatrix);
+	//R_Mesh_ResetTextureState();
+	R_ResetViewRendering2D();
+	R_Mesh_VertexPointer(r_screenvertex3f, 0, 0);
 	R_Mesh_ColorPointer(NULL, 0, 0);
+	R_SetupGenericShader(false);
 
 	// set up a darkening blend on shadowed areas
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	GL_DepthRange(0, 1);
-	GL_DepthTest(false);
-	GL_DepthMask(false);
-	GL_PolygonOffset(0, 0);CHECKGLERROR
+	//GL_DepthRange(0, 1);
+	//GL_DepthTest(false);
+	//GL_DepthMask(false);
+	//GL_PolygonOffset(0, 0);CHECKGLERROR
 	GL_Color(0, 0, 0, r_shadows_darken.value);
-	GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
-	qglDepthFunc(GL_ALWAYS);CHECKGLERROR
+	//GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
+	//qglDepthFunc(GL_ALWAYS);CHECKGLERROR
 	qglEnable(GL_STENCIL_TEST);CHECKGLERROR
 	qglStencilMask(~0);CHECKGLERROR
 	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);CHECKGLERROR
@@ -3994,7 +3976,7 @@ void R_DrawModelShadows(void)
 	R_SetViewport(&r_refdef.view.viewport);
 
 	// restore other state to normal
-	R_Shadow_RenderMode_End();
+	//R_Shadow_RenderMode_End();
 }
 
 void R_BeginCoronaQuery(rtlight_t *rtlight, float scale, qboolean usequery)
