@@ -3852,7 +3852,7 @@ void R_ShadowVolumeLighting(qboolean visible)
 extern void R_SetupView(qboolean allowwaterclippingplane);
 extern cvar_t r_shadows;
 extern cvar_t r_shadows_darken;
-extern cvar_t r_shadows_drawafterrtlightning;
+extern cvar_t r_shadows_drawafterrtlighting;
 extern cvar_t r_shadows_castfrombmodels;
 extern cvar_t r_shadows_throwdistance;
 extern cvar_t r_shadows_throwdirection;
