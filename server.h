@@ -146,6 +146,7 @@ typedef struct server_s
 	int writeentitiestoclient_pvsbytes;
 	unsigned char writeentitiestoclient_pvs[MAX_MAP_LEAFS/8];
 	entity_state_t writeentitiestoclient_sendstates[MAX_EDICTS];
+	unsigned short writeentitiestoclient_csqcsendstates[MAX_EDICTS];
 
 	int numsendentities;
 	entity_state_t sendentities[MAX_EDICTS];

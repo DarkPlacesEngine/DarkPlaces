@@ -1103,7 +1103,7 @@ static qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *c
 		return false;
 
 	*cs = defaultstate;
-	cs->active = true;
+	cs->active = ACTIVE_NETWORK;
 	cs->number = enumber;
 	VectorCopy(ent->fields.server->origin, cs->origin);
 	VectorCopy(ent->fields.server->angles, cs->angles);
@@ -1268,6 +1268,8 @@ static qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *c
 		if (sendflags)
 			for (i = 0;i < svs.maxclients;i++)
 				svs.clients[i].csqcentitysendflags[enumber] |= sendflags;
+		// mark it as inactive for non-csqc networking
+		cs->active = ACTIVE_SHARED;
 	}
 
 	return true;
@@ -1449,7 +1451,7 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *msg, int maxsize)
 {
 	qboolean need_empty = false;
-	int i, numsendstates;
+	int i, numsendstates, numcsqcsendstates;
 	entity_state_t *s;
 	prvm_edict_t *camera;
 	qboolean success;
@@ -1482,14 +1484,22 @@ void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *
 		SV_MarkWriteEntityStateToClient(sv.sendentities + i);
 
 	numsendstates = 0;
+	numcsqcsendstates = 0;
 	for (i = 0;i < sv.numsendentities;i++)
 	{
 		if (sv.sententities[sv.sendentities[i].number] == sv.sententitiesmark)
 		{
-			s = &sv.writeentitiestoclient_sendstates[numsendstates++];
-			*s = sv.sendentities[i];
-			if (s->exteriormodelforclient && s->exteriormodelforclient == sv.writeentitiestoclient_cliententitynumber)
-				s->flags |= RENDER_EXTERIORMODEL;
+			if(sv.sendentities[i].active == ACTIVE_NETWORK)
+			{
+				s = &sv.writeentitiestoclient_sendstates[numsendstates++];
+				*s = sv.sendentities[i];
+				if (s->exteriormodelforclient && s->exteriormodelforclient == sv.writeentitiestoclient_cliententitynumber)
+					s->flags |= RENDER_EXTERIORMODEL;
+			}
+			else if(sv.sendentities[i].active == ACTIVE_SHARED)
+				sv.writeentitiestoclient_csqcsendstates[numcsqcsendstates++] = sv.sendentities[i].number;
+			else
+				Con_Printf("entity %d is in sv.sendentities and marked, but not active, please breakpoint me\n", sv.sendentities[i].number);
 		}
 	}
 
@@ -1497,9 +1507,9 @@ void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *
 		Con_Printf("client \"%s\" entities: %d total, %d visible, %d culled by: %d pvs %d trace\n", client->name, sv.writeentitiestoclient_stats_totalentities, sv.writeentitiestoclient_stats_visibleentities, sv.writeentitiestoclient_stats_culled_pvs + sv.writeentitiestoclient_stats_culled_trace, sv.writeentitiestoclient_stats_culled_pvs, sv.writeentitiestoclient_stats_culled_trace);
 
 	if(client->entitydatabase5)
-		need_empty = EntityFrameCSQC_WriteFrame(msg, maxsize, numsendstates, sv.writeentitiestoclient_sendstates, client->entitydatabase5->latestframenum + 1);
+		need_empty = EntityFrameCSQC_WriteFrame(msg, maxsize, numcsqcsendstates, sv.writeentitiestoclient_csqcsendstates, client->entitydatabase5->latestframenum + 1);
 	else
-		EntityFrameCSQC_WriteFrame(msg, maxsize, numsendstates, sv.writeentitiestoclient_sendstates, 0);
+		EntityFrameCSQC_WriteFrame(msg, maxsize, numcsqcsendstates, sv.writeentitiestoclient_csqcsendstates, 0);
 
 	if(client->num_skippedentityframes >= 10)
 		need_empty = true; // force every 10th frame to be not empty (or cl_movement replay takes too long)

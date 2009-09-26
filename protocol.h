@@ -337,6 +337,14 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define RENDER_NOSELFSHADOW 262144 // render lighting on this entity before its own shadow is added to the scene
 // (note: all RENDER_NOSELFSHADOW entities are grouped together and rendered in a batch before their shadows are rendered, so they can not shadow eachother either)
 
+typedef enum entity_state_active_e
+{
+	ACTIVE_NOT = 0,
+	ACTIVE_NETWORK = 1,
+	ACTIVE_SHARED = 2
+}
+entity_state_active_t;
+
 // this is 96 bytes
 typedef struct entity_state_s
 {
@@ -969,7 +977,7 @@ void EntityFrameQW_CL_ReadFrame(qboolean delta);
 
 struct client_s;
 void EntityFrameCSQC_LostFrame(struct client_s *client, int framenum);
-qboolean EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numstates, const entity_state_t *states, int framenum);
+qboolean EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numnumbers, const unsigned short *numbers, int framenum);
 
 #endif
 
