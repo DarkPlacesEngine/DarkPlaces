@@ -355,7 +355,7 @@ void R_Shadow_FreeShadowMaps(void)
 	CHECKGLERROR
 
 	for (i = 0;i < R_SHADOW_SHADOWMAP_NUMCUBEMAPS;i++)
-		if (r_shadow_fbocubeside[i])
+		if (r_shadow_fbocubeside[i][0])
 			qglDeleteFramebuffersEXT(6, r_shadow_fbocubeside[i]);
 	memset(r_shadow_fbocubeside, 0, sizeof(r_shadow_fbocubeside));
 	CHECKGLERROR
