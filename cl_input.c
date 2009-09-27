@@ -1698,7 +1698,7 @@ void CL_SendMove(void)
 	}
 
 	// do not send 0ms packets because they mess up physics
-	if(cl.cmd.msec == 0 && cl.cmd.time > cl.movecmd[1].time && (cls.protocol == PROTOCOL_QUAKEWORLD || cls.signon == SIGNONS))
+	if(cl.cmd.msec == 0 && cl.time > cl.oldtime && (cls.protocol == PROTOCOL_QUAKEWORLD || cls.signon == SIGNONS))
 		return;
 	// always send if buttons changed or an impulse is pending
 	// even if it violates the rate limit!
