@@ -821,8 +821,7 @@ If stepnormal is not NULL, the plane normal of any vertical wall hit will be sto
 */
 static float SV_Gravity (prvm_edict_t *ent);
 static qboolean SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, qboolean failonbmodelstartsolid, qboolean dolink);
-// LordHavoc: increased from 5 to 32
-#define MAX_CLIP_PLANES 32
+#define MAX_CLIP_PLANES 5
 static int SV_FlyMove (prvm_edict_t *ent, float time, qboolean applygravity, float *stepnormal, int hitsupercontentsmask)
 {
 	int blocked, bumpcount;
