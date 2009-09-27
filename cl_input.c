@@ -1587,6 +1587,7 @@ void CL_SendMove(void)
 	double packettime;
 	int msecdelta;
 	qboolean quemove;
+	qboolean important;
 
 	// if playing a demo, do nothing
 	if (!cls.netcon)
@@ -1695,24 +1696,23 @@ void CL_SendMove(void)
 		float maxtic = cl.movevars_ticrate / cl.movevars_timescale;
 		packettime = min(packettime, maxtic);
 	}
-	// send input every frame in singleplayer
-	if (cl.islocalgame)
-		packettime = 0;
 
-	// do not send if we do not have anything useful to send
-	if(msecdelta <= 0 && (cl.time > cl.oldtime) && cls.signon == SIGNONS && cl.movevars_ticrate > 0)
+	// do not send 0ms packets because they mess up physics
+	if(cl.cmd.msec == 0 && cl.cmd.time > cl.movecmd[1].time && (cls.protocol == PROTOCOL_QUAKEWORLD || cls.signon == SIGNONS))
 		return;
 	// always send if buttons changed or an impulse is pending
 	// even if it violates the rate limit!
-	if (!cl.cmd.impulse && (!cl_netimmediatebuttons.integer || cl.cmd.buttons == cl.movecmd[1].buttons))
-	{
-		// don't choke the connection with packets (obey rate limit)
-		if ((cls.protocol == PROTOCOL_QUAKEWORLD || cls.signon == SIGNONS) && !NetConn_CanSend(cls.netcon) && !cl.islocalgame)
-			return;
-		// don't send too often (cl_netfps)
-		if (realtime < cl.lastpackettime + packettime)
-			return;
-	}
+	important = !cl.cmd.impulse && (!cl_netimmediatebuttons.integer || cl.cmd.buttons == cl.movecmd[1].buttons);
+	// don't send too often (cl_netfps)
+	if (!important && realtime < cl.lastpackettime + packettime)
+		return;
+	// don't choke the connection with packets (obey rate limit)
+	// it is important that this check be last, because it adds a new
+	// frame to the shownetgraph output and any cancelation after this
+	// will produce a nasty spike-like look to the netgraph
+	// we also still send if it is important
+	if (!NetConn_CanSend(cls.netcon) && !important)
+		return;
 	// try to round off the lastpackettime to a multiple of the packet interval
 	// (this causes it to emit packets at a steady beat)
 	if (packettime > 0)
