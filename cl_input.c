@@ -1702,7 +1702,7 @@ void CL_SendMove(void)
 		return;
 	// always send if buttons changed or an impulse is pending
 	// even if it violates the rate limit!
-	important = !cl.cmd.impulse && (!cl_netimmediatebuttons.integer || cl.cmd.buttons == cl.movecmd[1].buttons);
+	important = (cl.cmd.impulse || (cl_netimmediatebuttons.integer && cl.cmd.buttons != cl.movecmd[1].buttons));
 	// don't send too often (cl_netfps)
 	if (!important && realtime < cl.lastpackettime + packettime)
 		return;
