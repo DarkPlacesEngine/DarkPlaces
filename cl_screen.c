@@ -62,7 +62,7 @@ cvar_t cl_demo_mousegrab = {0, "cl_demo_mousegrab", "0", "Allows reading the mou
 extern cvar_t r_glsl;
 extern cvar_t v_glslgamma;
 extern cvar_t sbar_info_pos;
-#define WANT_SCREENSHOT_HWGAMMA (scr_screenshot_hwgamma.integer && !(r_glsl.integer && v_glslgamma.integer))
+#define WANT_SCREENSHOT_HWGAMMA (scr_screenshot_hwgamma.integer && vid_usinghwgamma)
 
 int jpeg_supported = false;
 
