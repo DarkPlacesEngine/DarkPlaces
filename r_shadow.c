@@ -3757,6 +3757,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	{
 		// draw stencil shadow volumes to mask off pixels that are in shadow
 		// so that they won't receive lighting
+		GL_Scissor(r_shadow_lightscissor[0], r_shadow_lightscissor[1], r_shadow_lightscissor[2], r_shadow_lightscissor[3]);
 		R_Shadow_ClearStencil();
 		if (numsurfaces)
 			R_Shadow_DrawWorldShadow(numsurfaces, surfacelist, shadowtrispvs);
