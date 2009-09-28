@@ -714,7 +714,7 @@ void R_MakeResizeBufferBigger(int size)
 	}
 }
 
-static void GL_SetupTextureParameters(int flags, int texturetype)
+static void GL_SetupTextureParameters(int flags, textype_t textype, int texturetype)
 {
 	int textureenum = gltexturetypeenums[texturetype];
 	int wrapmode = ((flags & TEXF_CLAMP) && gl_support_clamptoedge) ? GL_CLAMP_TO_EDGE : GL_REPEAT;
@@ -780,7 +780,7 @@ static void GL_SetupTextureParameters(int flags, int texturetype)
 		qglTexParameteri(textureenum, GL_TEXTURE_MAG_FILTER, gl_filter_mag);CHECKGLERROR
 	}
 
-	if (texturetype == TEXTYPE_SHADOWMAP)
+	if (textype == TEXTYPE_SHADOWMAP)
 	{
 #if 1
 		qglTexParameteri(textureenum, GL_TEXTURE_COMPARE_MODE_ARB, GL_COMPARE_R_TO_TEXTURE_ARB);CHECKGLERROR
@@ -810,7 +810,7 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 	qglBindTexture(gltexturetypeenums[glt->texturetype], glt->texnum);CHECKGLERROR
 
 	// these are rounded up versions of the size to do better resampling
-	if (gl_support_arb_texture_non_power_of_two)
+	if (gl_support_arb_texture_non_power_of_two || glt->texturetype == GLTEXTURETYPE_RECTANGLE)
 	{
 		width = glt->inputwidth;
 		height = glt->inputheight;
@@ -963,7 +963,7 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 			qglTexImage2D(GL_TEXTURE_RECTANGLE_ARB, mip++, glt->glinternalformat, width, height, 0, glt->glformat, glt->gltype, NULL);CHECKGLERROR
 			break;
 		}
-		GL_SetupTextureParameters(glt->flags, glt->texturetype);
+		GL_SetupTextureParameters(glt->flags, glt->textype->textype, glt->texturetype);
 	}
 	qglBindTexture(gltexturetypeenums[glt->texturetype], oldbindtexnum);CHECKGLERROR
 }
