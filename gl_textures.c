@@ -1137,7 +1137,17 @@ rtexture_t *R_LoadTextureShadowMapRectangle(rtexturepool_t *rtexturepool, const 
 	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, TEXF_ALWAYSPRECACHE | TEXF_CLAMP | (filter ? TEXF_FORCELINEAR | TEXF_COMPARE : TEXF_FORCENEAREST), TEXTYPE_SHADOWMAP, GLTEXTURETYPE_RECTANGLE, NULL, NULL);
 }
 
-rtexture_t *R_LoadTextureCubeProjection(rtexturepool_t *rtexturepool, const char *identifier, int size, int border)
+rtexture_t *R_LoadTextureShadowMap2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, qboolean filter)
+{
+	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, TEXF_ALWAYSPRECACHE | TEXF_CLAMP | (filter ? TEXF_FORCELINEAR | TEXF_COMPARE : TEXF_FORCENEAREST), TEXTYPE_SHADOWMAP, GLTEXTURETYPE_2D, NULL, NULL);
+}
+
+rtexture_t *R_LoadTextureShadowMapCube(rtexturepool_t *rtexturepool, const char *identifier, int width, qboolean filter)
+{
+    return R_SetupTexture(rtexturepool, identifier, width, width, 1, 6, TEXF_ALWAYSPRECACHE | TEXF_CLAMP | TEXF_COMPARE | (filter ? TEXF_FORCELINEAR : TEXF_FORCENEAREST), TEXTYPE_SHADOWMAP, GLTEXTURETYPE_CUBEMAP, NULL, NULL);
+}
+
+rtexture_t *R_LoadTextureCubeProjection(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int size, int border)
 {
     // maps to a 2x3 texture rectangle with normalized coordinates (must be scaled by size after lookup)
     // +-
@@ -1156,13 +1166,13 @@ rtexture_t *R_LoadTextureCubeProjection(rtexturepool_t *rtexturepool, const char
 	texel = data;
 	for (i = 0;i < 6;i++) 
 	{
-		unsigned int x = (i&1)<<16, y = (i>>1)<<16;
+		unsigned int x = (i%2)<<16, y = (i/2)<<16;
 		for (j = 0;j < res;j++)
 		{
 			for (k = 0;k < res;k++)
 			{
-				*texel++ = (x + ((2*k + 1)<<stepbits))/2;
-				*texel++ = (y + ((2*j + 1)<<stepbits))/3;
+				*texel++ = (x + ((2*k + 1)<<stepbits))/width;
+				*texel++ = (y + ((2*j + 1)<<stepbits))/height;
 			}
 		}
 	}
