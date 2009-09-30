@@ -1522,8 +1522,8 @@ void R_Shadow_RenderMode_ShadowMap(int side, qboolean clear, int size)
 		R_Viewport_InitRectSideView(&viewport, &rsurface.rtlight->matrix_lighttoworld, side, size, r_shadow_shadowmapping_bordersize.integer, nearclip, farclip, NULL);
 		r_shadow_shadowmap_texturescale[0] = 1.0f / R_TextureWidth(r_shadow_shadowmap2dtexture);
 		r_shadow_shadowmap_texturescale[1] = 1.0f / R_TextureHeight(r_shadow_shadowmap2dtexture);
-		r_shadow_shadowmap_parameters[0] = (0.5f / 4) * (1.0f - r_shadow_shadowmapborder) / size;
-		r_shadow_shadowmap_parameters[1] = 1.0f / (3 * 4);
+		r_shadow_shadowmap_parameters[0] = (0.5f / 2) * (1.0f - r_shadow_shadowmapborder / (float)size);
+		r_shadow_shadowmap_parameters[1] = (0.5f / 4) * (1.0f - r_shadow_shadowmapborder / (float)size);
 		r_shadow_rendermode = R_SHADOW_RENDERMODE_SHADOWMAP2D;
 	}
 	else if (r_shadow_shadowmode == 2)
