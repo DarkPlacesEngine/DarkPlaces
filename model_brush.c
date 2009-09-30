@@ -2328,7 +2328,8 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 		{
 			int lindex = loadmodel->brushq1.surfedges[firstedge + i];
 			float s, t;
-			if (lindex > 0)
+			// note: the q1bsp format does not allow a 0 surfedge (it would have no negative counterpart)
+			if (lindex >= 0)
 				VectorCopy(loadmodel->brushq1.vertexes[loadmodel->brushq1.edges[lindex].v[0]].position, (loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + i * 3);
 			else
 				VectorCopy(loadmodel->brushq1.vertexes[loadmodel->brushq1.edges[-lindex].v[1]].position, (loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + i * 3);
