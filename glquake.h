@@ -949,6 +949,10 @@ extern void (GLAPIENTRY *qglGetQueryObjectuivARB)(GLuint qid, GLenum pname, GLui
 // GL_EXT_bgra
 #define GL_BGRA					0x80E1
 
+// GL_EXT_texture
+#define GL_LUMINANCE_ALPHA                0x190A
+#define GL_LUMINANCE16_ALPHA16            0x8048
+
 #define DEBUGGL
 
 #ifdef DEBUGGL
