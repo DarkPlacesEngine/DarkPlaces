@@ -61,6 +61,7 @@ static textypeinfo_t textype_bgra_alpha             = {TEXTYPE_BGRA   , 4, 4, 4.
 static textypeinfo_t textype_bgra_compress          = {TEXTYPE_BGRA   , 4, 4, 0.5f, GL_BGRA   , GL_COMPRESSED_RGB_ARB, GL_UNSIGNED_BYTE};
 static textypeinfo_t textype_bgra_alpha_compress    = {TEXTYPE_BGRA   , 4, 4, 1.0f, GL_BGRA   , GL_COMPRESSED_RGBA_ARB, GL_UNSIGNED_BYTE};
 static textypeinfo_t textype_shadowmap              = {TEXTYPE_SHADOWMAP,4,4, 4.0f, GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT24_ARB, GL_UNSIGNED_INT};
+static textypeinfo_t textype_projection             = {TEXTYPE_PROJECTION,4,4,4.0f, GL_LUMINANCE_ALPHA, GL_LUMINANCE16_ALPHA16, GL_UNSIGNED_SHORT};
 
 typedef enum gltexturetype_e
 {
@@ -218,6 +219,8 @@ static textypeinfo_t *R_GetTexTypeInfo(textype_t textype, int flags)
 				return &textype_bgra;
 			case TEXTYPE_SHADOWMAP:
 				return &textype_shadowmap;
+			case TEXTYPE_PROJECTION:
+				return &textype_projection;
 			default:
 				Host_Error("R_GetTexTypeInfo: unknown texture format");
 				return NULL;
@@ -782,15 +785,17 @@ static void GL_SetupTextureParameters(int flags, textype_t textype, int texturet
 
 	if (textype == TEXTYPE_SHADOWMAP)
 	{
-#if 1
-		qglTexParameteri(textureenum, GL_TEXTURE_COMPARE_MODE_ARB, GL_COMPARE_R_TO_TEXTURE_ARB);CHECKGLERROR
-		qglTexParameteri(textureenum, GL_TEXTURE_COMPARE_FUNC_ARB, GL_LEQUAL);CHECKGLERROR
+		if (flags & TEXF_COMPARE)
+		{
+			qglTexParameteri(textureenum, GL_TEXTURE_COMPARE_MODE_ARB, GL_COMPARE_R_TO_TEXTURE_ARB);CHECKGLERROR
+			qglTexParameteri(textureenum, GL_TEXTURE_COMPARE_FUNC_ARB, GL_LEQUAL);CHECKGLERROR
+		}
+		else
+		{
+			qglTexParameteri(textureenum, GL_TEXTURE_COMPARE_MODE_ARB, GL_NONE);CHECKGLERROR
+			qglTexParameteri(textureenum, GL_TEXTURE_COMPARE_FUNC_ARB, GL_ALWAYS);CHECKGLERROR
+		}
 		qglTexParameteri(textureenum, GL_DEPTH_TEXTURE_MODE_ARB, GL_INTENSITY);CHECKGLERROR
-#else
-		qglTexParameteri(textureenum, GL_TEXTURE_COMPARE_MODE_ARB, GL_NONE);CHECKGLERROR
-		qglTexParameteri(textureenum, GL_TEXTURE_COMPARE_FUNC_ARB, GL_ALWAYS);CHECKGLERROR
-		qglTexParameteri(textureenum, GL_DEPTH_TEXTURE_MODE_ARB, GL_INTENSITY);CHECKGLERROR
-#endif
 	}
 
 	CHECKGLERROR
@@ -1059,6 +1064,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 		}
 		break;
 	case TEXTYPE_SHADOWMAP:
+	case TEXTYPE_PROJECTION:
 		break;
 	default:
 		Host_Error("R_LoadTexture: unknown texture type");
@@ -1126,24 +1132,43 @@ rtexture_t *R_LoadTextureCubeMap(rtexturepool_t *rtexturepool, const char *ident
 	return R_SetupTexture(rtexturepool, identifier, width, width, 1, 6, flags, textype, GLTEXTURETYPE_CUBEMAP, data, palette);
 }
 
-rtexture_t *R_LoadTextureShadowMapRectangle(rtexturepool_t *rtexturepool, const char *identifier, int width, int height)
+rtexture_t *R_LoadTextureShadowMapRectangle(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, qboolean filter)
 {
-	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, TEXF_ALWAYSPRECACHE | TEXF_FORCENEAREST | TEXF_CLAMP, TEXTYPE_SHADOWMAP, GLTEXTURETYPE_RECTANGLE, NULL, NULL);
+	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, TEXF_ALWAYSPRECACHE | TEXF_CLAMP | (filter ? TEXF_FORCELINEAR | TEXF_COMPARE : TEXF_FORCENEAREST), TEXTYPE_SHADOWMAP, GLTEXTURETYPE_RECTANGLE, NULL, NULL);
 }
 
-rtexture_t *R_LoadTextureShadowMapCube(rtexturepool_t *rtexturepool, const char *identifier, int width)
+rtexture_t *R_LoadTextureCubeProjection(rtexturepool_t *rtexturepool, const char *identifier, int size, int border)
 {
-	return R_SetupTexture(rtexturepool, identifier, width, width, 1, 6, TEXF_ALWAYSPRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP, TEXTYPE_SHADOWMAP, GLTEXTURETYPE_CUBEMAP, NULL, NULL);
-}
-
-rtexture_t *R_LoadTextureShadowMap2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height)
-{
-	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, TEXF_ALWAYSPRECACHE | TEXF_FORCENEAREST | TEXF_CLAMP, TEXTYPE_SHADOWMAP, GLTEXTURETYPE_2D, NULL, NULL);
-}
-
-rtexture_t *R_LoadTextureCubeProjection(rtexturepool_t *rtexturepool, const char *identifier)
-{
-	return R_SetupTexture(rtexturepool, identifier, 2, 2, 1, 6, TEXF_ALWAYSPRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP, TEXTYPE_BGRA, GLTEXTURETYPE_CUBEMAP, NULL, NULL);
+    // maps to a 2x3 texture rectangle with normalized coordinates (must be scaled by size after lookup)
+    // +-
+    // XX
+    // YY
+    // ZZ
+    rtexture_t *projection;
+	unsigned short *data, *texel;
+	unsigned int sizebits = 0, stepbits = 0, res, i, j, k;
+	while ((1 << sizebits) < size) sizebits++;
+	while ((1 << stepbits) <= border) stepbits++;
+    stepbits = min(stepbits, sizebits);
+	res = size>>stepbits;
+	stepbits += 16 - sizebits - 1;
+	data = (unsigned short *)Mem_Alloc(texturemempool, 2*sizeof(unsigned short)*res*res*6);
+	texel = data;
+	for (i = 0;i < 6;i++) 
+	{
+		unsigned int x = (i&1)<<16, y = (i>>1)<<16;
+		for (j = 0;j < res;j++)
+		{
+			for (k = 0;k < res;k++)
+			{
+				*texel++ = (x + ((2*k + 1)<<stepbits))/2;
+				*texel++ = (y + ((2*j + 1)<<stepbits))/3;
+			}
+		}
+	}
+	projection = R_SetupTexture(rtexturepool, identifier, res, res, 1, 6, TEXF_ALWAYSPRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP, TEXTYPE_PROJECTION, GLTEXTURETYPE_CUBEMAP, (unsigned char *)data, NULL);
+	Mem_Free(data);
+    return projection;
 }
 
 int R_TextureHasAlpha(rtexture_t *rt)
