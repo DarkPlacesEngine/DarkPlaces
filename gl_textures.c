@@ -1144,7 +1144,7 @@ rtexture_t *R_LoadTextureShadowMap2D(rtexturepool_t *rtexturepool, const char *i
 
 rtexture_t *R_LoadTextureShadowMapCube(rtexturepool_t *rtexturepool, const char *identifier, int width, qboolean filter)
 {
-    return R_SetupTexture(rtexturepool, identifier, width, width, 1, 6, TEXF_ALWAYSPRECACHE | TEXF_CLAMP | TEXF_COMPARE | (filter ? TEXF_FORCELINEAR : TEXF_FORCENEAREST), TEXTYPE_SHADOWMAP, GLTEXTURETYPE_CUBEMAP, NULL, NULL);
+    return R_SetupTexture(rtexturepool, identifier, width, width, 1, 6, TEXF_ALWAYSPRECACHE | TEXF_CLAMP | (filter ? TEXF_FORCELINEAR | TEXF_COMPARE : TEXF_FORCENEAREST), TEXTYPE_SHADOWMAP, GLTEXTURETYPE_CUBEMAP, NULL, NULL);
 }
 
 rtexture_t *R_LoadTextureCubeProjection(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int size, int border)
