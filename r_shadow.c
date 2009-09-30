@@ -1482,10 +1482,8 @@ void R_Shadow_RenderMode_ShadowMap(int side, qboolean clear, int size)
 	nearclip = r_shadow_shadowmapping_nearclip.value / rsurface.rtlight->radius;
 	farclip = 1.0f;
 	bias = r_shadow_shadowmapping_bias.value * nearclip * (1024.0f / size);// * rsurface.rtlight->radius;
-	r_shadow_shadowmap_texturescale[2] = 0.5f + 0.5f * (farclip + nearclip) / (farclip - nearclip);
-	r_shadow_shadowmap_texturescale[3] = -nearclip * farclip / (farclip - nearclip) - 0.5f * bias;
-	r_shadow_shadowmap_parameters[2] = r_shadow_shadowmap_texturescale[2];
-	r_shadow_shadowmap_parameters[3] = r_shadow_shadowmap_texturescale[3];
+	r_shadow_shadowmap_parameters[2] = 0.5f + 0.5f * (farclip + nearclip) / (farclip - nearclip);
+	r_shadow_shadowmap_parameters[3] = -nearclip * farclip / (farclip - nearclip) - 0.5f * bias;
 	if (r_shadow_shadowmode == 1)
 	{
 		// complex unrolled cube approach (more flexible)
@@ -1609,10 +1607,12 @@ void R_Shadow_RenderMode_ShadowMap(int side, qboolean clear, int size)
 		R_Viewport_InitCubeSideView(&viewport, &rsurface.rtlight->matrix_lighttoworld, side, size, nearclip, farclip, NULL);
 		r_shadow_shadowmap_texturescale[0] = 1.0f / R_TextureWidth(r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod]);
 		r_shadow_shadowmap_texturescale[1] = 1.0f / R_TextureWidth(r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod]);
-		r_shadow_shadowmap_parameters[0] = r_shadow_shadowmap_texturescale[0];
-		r_shadow_shadowmap_parameters[1] = r_shadow_shadowmap_texturescale[1];
+		r_shadow_shadowmap_parameters[0] = 1.0f;
+		r_shadow_shadowmap_parameters[1] = 1.0f;
 		r_shadow_rendermode = R_SHADOW_RENDERMODE_SHADOWMAPCUBESIDE;
 	}
+	r_shadow_shadowmap_texturescale[2] = 1.0f / r_shadow_shadowmap_texturescale[0];
+	r_shadow_shadowmap_texturescale[3] = 1.0f / r_shadow_shadowmap_texturescale[1];
 	CHECKGLERROR
 	R_SetViewport(&viewport);
 	GL_PolygonOffset(0, 0);
