@@ -1406,10 +1406,12 @@ typedef enum shaderpermutation_e
 	SHADERPERMUTATION_OFFSETMAPPING = 1<<9, ///< adjust texcoords to roughly simulate a displacement mapped surface
 	SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING = 1<<10, ///< adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
 	SHADERPERMUTATION_SHADOWMAPRECT = 1<<11, ///< (lightsource) use shadowmap rectangle texture as light filter
-	SHADERPERMUTATION_SHADOWMAPPCF = 1<<12, //< (lightsource) use percentage closer filtering on shadowmap test results
-	SHADERPERMUTATION_SHADOWSAMPLER = 1<<13, //< (lightsource) use hardware shadowmap test
-	SHADERPERMUTATION_LIMIT = 1<<14, ///< size of permutations array
-	SHADERPERMUTATION_COUNT = 14 ///< size of shaderpermutationinfo array
+	SHADERPERMUTATION_SHADOWMAPCUBE = 1<<12, ///< (lightsource) use shadowmap cubemap texture as light filter
+	SHADERPERMUTATION_SHADOWMAP2D = 1<<13, ///< (lightsource) use shadowmap rectangle texture as light filter
+	SHADERPERMUTATION_SHADOWMAPPCF = 1<<14, //< (lightsource) use percentage closer filtering on shadowmap test results
+	SHADERPERMUTATION_SHADOWSAMPLER = 1<<15, //< (lightsource) use hardware shadowmap test
+	SHADERPERMUTATION_LIMIT = 1<<16, ///< size of permutations array
+	SHADERPERMUTATION_COUNT = 16 ///< size of shaderpermutationinfo array
 }
 shaderpermutation_t;
 
@@ -1428,6 +1430,8 @@ shaderpermutationinfo_t shaderpermutationinfo[SHADERPERMUTATION_COUNT] =
 	{"#define USEOFFSETMAPPING\n", " offsetmapping"},
 	{"#define USEOFFSETMAPPING_RELIEFMAPPING\n", " reliefmapping"},
 	{"#define USESHADOWMAPRECT\n", " shadowmaprect"},
+	{"#define USESHADOWMAPCUBE\n", " shadowmapcube"},
+	{"#define USESHADOWMAP2D\n", " shadowmap2d"},
 	{"#define USESHADOWMAPPCF\n", " shadowmappcf"},
 	{"#define USESHADOWSAMPLER\n", " shadowsampler"},
 };
@@ -1498,6 +1502,8 @@ typedef struct r_glsl_permutation_s
 	int loc_Texture_Refraction;
 	int loc_Texture_Reflection;
 	int loc_Texture_ShadowMapRect;
+	int loc_Texture_ShadowMapCube;
+	int loc_Texture_ShadowMap2D;
 	int loc_Texture_CubeProjection;
 	int loc_FogColor;
 	int loc_LightPosition;
@@ -1663,6 +1669,8 @@ static void R_GLSL_CompilePermutation(unsigned int mode, unsigned int permutatio
 		p->loc_Texture_Attenuation        = qglGetUniformLocationARB(p->program, "Texture_Attenuation");
 		p->loc_Texture_Cube               = qglGetUniformLocationARB(p->program, "Texture_Cube");
 		p->loc_Texture_ShadowMapRect      = qglGetUniformLocationARB(p->program, "Texture_ShadowMapRect");
+		p->loc_Texture_ShadowMapCube      = qglGetUniformLocationARB(p->program, "Texture_ShadowMapCube");
+		p->loc_Texture_ShadowMap2D        = qglGetUniformLocationARB(p->program, "Texture_ShadowMap2D");
 		p->loc_Texture_CubeProjection     = qglGetUniformLocationARB(p->program, "Texture_CubeProjection");  
 		p->loc_FogColor                   = qglGetUniformLocationARB(p->program, "FogColor");
 		p->loc_LightPosition              = qglGetUniformLocationARB(p->program, "LightPosition");
@@ -1722,6 +1730,8 @@ static void R_GLSL_CompilePermutation(unsigned int mode, unsigned int permutatio
 		if (p->loc_Texture_Refraction      >= 0) qglUniform1iARB(p->loc_Texture_Refraction     , GL20TU_REFRACTION);
 		if (p->loc_Texture_Reflection      >= 0) qglUniform1iARB(p->loc_Texture_Reflection     , GL20TU_REFLECTION);
 		if (p->loc_Texture_ShadowMapRect   >= 0) qglUniform1iARB(p->loc_Texture_ShadowMapRect  , GL20TU_SHADOWMAPRECT);
+		if (p->loc_Texture_ShadowMapCube   >= 0) qglUniform1iARB(p->loc_Texture_ShadowMapCube  , GL20TU_SHADOWMAPCUBE);
+		if (p->loc_Texture_ShadowMap2D     >= 0) qglUniform1iARB(p->loc_Texture_ShadowMap2D    , GL20TU_SHADOWMAP2D);
 		if (p->loc_Texture_CubeProjection  >= 0) qglUniform1iARB(p->loc_Texture_CubeProjection , GL20TU_CUBEPROJECTION);
 		CHECKGLERROR
 		if (developer.integer)
@@ -1880,7 +1890,9 @@ void R_SetupShowDepthShader(void)
 extern rtexture_t *r_shadow_attenuationgradienttexture;
 extern rtexture_t *r_shadow_attenuation2dtexture;
 extern rtexture_t *r_shadow_attenuation3dtexture;
-extern float r_shadow_shadowmap_bias;
+extern qboolean r_shadow_usingshadowmaprect;
+extern qboolean r_shadow_usingshadowmapcube;
+extern qboolean r_shadow_usingshadowmap2d;
 extern float r_shadow_shadowmap_texturescale[4];
 extern float r_shadow_shadowmap_parameters[4];
 extern int r_shadow_shadowmode;
@@ -1924,8 +1936,12 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 			permutation |= SHADERPERMUTATION_FOG;
 		if (rsurface.texture->colormapping)
 			permutation |= SHADERPERMUTATION_COLORMAPPING;
-		if (r_shadow_shadowmode)
+		if (r_shadow_usingshadowmaprect)
 			permutation |= SHADERPERMUTATION_SHADOWMAPRECT;
+		if (r_shadow_usingshadowmapcube)
+			permutation |= SHADERPERMUTATION_SHADOWMAPCUBE;
+		if (r_shadow_usingshadowmap2d)
+			permutation |= SHADERPERMUTATION_SHADOWMAP2D;
 		if (r_shadow_shadowmapfilter == 3)
 			permutation |= SHADERPERMUTATION_SHADOWMAPPCF;
 		else if (r_shadow_shadowmapfilter == 2)
