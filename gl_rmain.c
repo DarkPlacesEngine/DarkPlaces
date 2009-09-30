@@ -455,11 +455,13 @@ static const char *builtinshaderstring =
 "# ifdef GL_EXT_gpu_shader4\n"
 "#   extension GL_EXT_gpu_shader4 : enable\n"
 "# endif\n"
-"# ifdef HASTEXTUREGATHER\n"
+"# ifdef GL_ARB_texture_gather\n"
 "#   extension GL_ARB_texture_gather : enable\n"
+"#   define USETEXTUREGATHER\n"
 "# else\n"
-"#   ifdef HASTEXTURE4\n"
+"#   ifdef GL_AMD_texture_texture4\n"
 "#     extension GL_AMD_texture_texture4 : enable\n"
+"#     define USETEXTUREGATHER\n"
 "#     define textureGather texture4\n"
 "#   endif\n"
 "# endif\n"
@@ -793,7 +795,7 @@ static const char *builtinshaderstring =
 "# endif\n"
 "#endif\n"
 "\n"
-"#if defined(USESHADOWMAPRECT) || defined(USESHADOWMAP2D)\n"
+"#ifdef USESHADOWMAPVSDCT\n"
 "uniform samplerCube Texture_CubeProjection;\n"
 "#endif\n"
 "\n"
@@ -909,7 +911,7 @@ static const char *builtinshaderstring =
 "vec3 GetShadowMapTC2D(vec3 dir)\n"
 "{\n"
 "	vec3 adir = abs(dir);\n"
-"# if 0\n"
+"# ifndef USESHADOWMAPVSDCT\n"
 "#  ifdef USESHADOWMAPRECT\n"
 "#   define cubedir(dx, dy, ox, oy) { tc = vec2(dx, dy); offset = vec2(ox, oy); }\n"
 "#  else\n"
@@ -1035,14 +1037,14 @@ static const char *builtinshaderstring =
 "#    endif\n"
 "#  else\n"
 "#    ifdef USESHADOWMAPPCF\n"
-"#     if defined(HASTEXTUREGATHER) || defined(HASTEXTURE4)\n"
-"    vec2 center = shadowmaptc.xy*ShadowMap_TextureScale.zw, offset = fract(center - 0.5);\n"
+"#     ifdef USETEXTUREGATHER\n"
+"    vec2 center = shadowmaptc.xy*ShadowMap_TextureScale.zw - 0.5, offset = fract(center);\n"
 "    vec4 group1 = step(shadowmaptc.z, textureGather(Texture_ShadowMap2D, (center + vec2(-1.0, -1.0))*ShadowMap_TextureScale.xy)),\n"
 "         group2 = step(shadowmaptc.z, textureGather(Texture_ShadowMap2D, (center + vec2( 1.0, -1.0))*ShadowMap_TextureScale.xy)),\n"
 "         group3 = step(shadowmaptc.z, textureGather(Texture_ShadowMap2D, (center + vec2(-1.0,  1.0))*ShadowMap_TextureScale.xy)),\n"
 "         group4 = step(shadowmaptc.z, textureGather(Texture_ShadowMap2D, (center + vec2( 1.0,  1.0))*ShadowMap_TextureScale.xy)),\n"
-"         cols = vec4(group1.ab, group2.ab) + vec4(group3.rg, group4.rg) +\n"
-"                mix(vec4(group1.rg, group2.rg), vec4(group3.ab, group4.ab), offset.y);\n"
+"         cols = vec4(group1.rg, group2.rg) + vec4(group3.ab, group4.ab) +\n"
+"                mix(vec4(group1.ab, group2.ab), vec4(group3.rg, group4.rg), offset.y);\n"
 "    f = dot(mix(cols.xyz, cols.yzw, offset.x), vec3(1.0/9.0));\n"
 "#     else\n"
 "#       ifdef GL_EXT_gpu_shader4\n"
@@ -1461,8 +1463,9 @@ typedef enum shaderpermutation_e
 	SHADERPERMUTATION_SHADOWMAP2D = 1<<13, ///< (lightsource) use shadowmap rectangle texture as light filter
 	SHADERPERMUTATION_SHADOWMAPPCF = 1<<14, //< (lightsource) use percentage closer filtering on shadowmap test results
 	SHADERPERMUTATION_SHADOWSAMPLER = 1<<15, //< (lightsource) use hardware shadowmap test
-	SHADERPERMUTATION_LIMIT = 1<<16, ///< size of permutations array
-	SHADERPERMUTATION_COUNT = 16 ///< size of shaderpermutationinfo array
+	SHADERPERMUTATION_SHADOWMAPVSDCT = 1<<16, //< (lightsource) use virtual shadow depth cube texture for shadowmap indexing
+	SHADERPERMUTATION_LIMIT = 1<<17, ///< size of permutations array
+	SHADERPERMUTATION_COUNT = 17 ///< size of shaderpermutationinfo array
 }
 shaderpermutation_t;
 
@@ -1485,6 +1488,7 @@ shaderpermutationinfo_t shaderpermutationinfo[SHADERPERMUTATION_COUNT] =
 	{"#define USESHADOWMAP2D\n", " shadowmap2d"},
 	{"#define USESHADOWMAPPCF\n", " shadowmappcf"},
 	{"#define USESHADOWSAMPLER\n", " shadowsampler"},
+	{"#define USESHADOWMAPVSDCT\n", " shadowmapvsdct"},
 };
 
 /// this enum is multiplied by SHADERPERMUTATION_MODEBASE
@@ -1985,7 +1989,7 @@ extern qboolean r_shadow_usingshadowmapcube;
 extern qboolean r_shadow_usingshadowmap2d;
 extern float r_shadow_shadowmap_texturescale[4];
 extern float r_shadow_shadowmap_parameters[4];
-extern int r_shadow_shadowmode;
+extern int r_shadow_shadowmapvsdct;
 extern int r_shadow_shadowmapfilter;
 void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, float ambientscale, float diffusescale, float specularscale, rsurfacepass_t rsurfacepass)
 {
@@ -2026,18 +2030,24 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 			permutation |= SHADERPERMUTATION_FOG;
 		if (rsurface.texture->colormapping)
 			permutation |= SHADERPERMUTATION_COLORMAPPING;
-		if (r_shadow_usingshadowmaprect)
-			permutation |= SHADERPERMUTATION_SHADOWMAPRECT;
-		if (r_shadow_usingshadowmapcube)
-			permutation |= SHADERPERMUTATION_SHADOWMAPCUBE;
-		if (r_shadow_usingshadowmap2d)
-			permutation |= SHADERPERMUTATION_SHADOWMAP2D;
-		if (r_shadow_shadowmapfilter == 3)
-			permutation |= SHADERPERMUTATION_SHADOWMAPPCF;
-		else if (r_shadow_shadowmapfilter == 2)
-			permutation |= SHADERPERMUTATION_SHADOWMAPPCF | SHADERPERMUTATION_SHADOWSAMPLER;
-		else if (r_shadow_shadowmapfilter == 1)
-			permutation |= SHADERPERMUTATION_SHADOWSAMPLER;
+		if (r_shadow_usingshadowmaprect || r_shadow_usingshadowmap2d || r_shadow_usingshadowmapcube)
+		{
+			if (r_shadow_usingshadowmaprect)
+				permutation |= SHADERPERMUTATION_SHADOWMAPRECT;
+			if (r_shadow_usingshadowmap2d)
+				permutation |= SHADERPERMUTATION_SHADOWMAP2D;
+			if (r_shadow_usingshadowmapcube)
+				permutation |= SHADERPERMUTATION_SHADOWMAPCUBE;
+			else if(r_shadow_shadowmapvsdct)
+				permutation |= SHADERPERMUTATION_SHADOWMAPVSDCT;
+
+			if (r_shadow_shadowmapfilter == 3)
+				permutation |= SHADERPERMUTATION_SHADOWMAPPCF;
+			else if (r_shadow_shadowmapfilter == 2)
+				permutation |= SHADERPERMUTATION_SHADOWMAPPCF | SHADERPERMUTATION_SHADOWSAMPLER;
+			else if (r_shadow_shadowmapfilter == 1)
+				permutation |= SHADERPERMUTATION_SHADOWSAMPLER;
+		}
 	}
 	else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
 	{
