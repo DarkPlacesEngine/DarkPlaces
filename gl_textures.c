@@ -1147,7 +1147,7 @@ rtexture_t *R_LoadTextureShadowMapCube(rtexturepool_t *rtexturepool, const char 
     return R_SetupTexture(rtexturepool, identifier, width, width, 1, 6, TEXF_ALWAYSPRECACHE | TEXF_CLAMP | (filter ? TEXF_FORCELINEAR | TEXF_COMPARE : TEXF_FORCENEAREST), TEXTYPE_SHADOWMAP, GLTEXTURETYPE_CUBEMAP, NULL, NULL);
 }
 
-rtexture_t *R_LoadTextureCubeProjection(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int size, int border)
+rtexture_t *R_LoadTextureCubeProjection(rtexturepool_t *rtexturepool, const char *identifier, int size, int border)
 {
     // maps to a 2x3 texture rectangle with normalized coordinates (must be scaled by size after lookup)
     // +-
@@ -1171,8 +1171,8 @@ rtexture_t *R_LoadTextureCubeProjection(rtexturepool_t *rtexturepool, const char
 		{
 			for (k = 0;k < res;k++)
 			{
-				*texel++ = (x + ((2*k + 1)<<stepbits))/width;
-				*texel++ = (y + ((2*j + 1)<<stepbits))/height;
+				*texel++ = (x + ((2*k + 1)<<stepbits))/2;
+				*texel++ = (y + ((2*j + 1)<<stepbits))/3;
 			}
 		}
 	}

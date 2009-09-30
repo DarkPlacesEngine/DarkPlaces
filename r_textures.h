@@ -86,7 +86,7 @@ rtexture_t *R_LoadTextureCubeMap(rtexturepool_t *rtexturepool, const char *ident
 rtexture_t *R_LoadTextureShadowMapRectangle(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, qboolean filter);
 rtexture_t *R_LoadTextureShadowMap2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, qboolean filter);
 rtexture_t *R_LoadTextureShadowMapCube(rtexturepool_t *rtexturepool, const char *identifier, int width, qboolean filter);
-rtexture_t *R_LoadTextureCubeProjection(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int size, int border);
+rtexture_t *R_LoadTextureCubeProjection(rtexturepool_t *rtexturepool, const char *identifier, int size, int border);
 
 // free a texture
 void R_FreeTexture(rtexture_t *rt);

@@ -1493,7 +1493,7 @@ void R_Shadow_RenderMode_ShadowMap(int side, qboolean clear, int size)
 	{
 		// complex unrolled cube approach (more flexible)
 		if (r_shadow_shadowmapvsdct && !r_shadow_shadowmapcubeprojectiontexture[r_shadow_shadowmaplod])
-			r_shadow_shadowmapcubeprojectiontexture[r_shadow_shadowmaplod] = R_LoadTextureCubeProjection(r_shadow_texturepool, "shadowmapcubeprojection", 2, 4, size, r_shadow_shadowmapborder);
+			r_shadow_shadowmapcubeprojectiontexture[r_shadow_shadowmaplod] = R_LoadTextureCubeProjection(r_shadow_texturepool, "shadowmapcubeprojection", size, r_shadow_shadowmapborder);
 		if (!r_shadow_shadowmap2dtexture)
 		{
 #if 1
@@ -1527,15 +1527,15 @@ void R_Shadow_RenderMode_ShadowMap(int side, qboolean clear, int size)
 		R_Viewport_InitRectSideView(&viewport, &rsurface.rtlight->matrix_lighttoworld, side, size, r_shadow_shadowmapping_bordersize.integer, nearclip, farclip, NULL);
 		r_shadow_shadowmap_texturescale[0] = 1.0f / R_TextureWidth(r_shadow_shadowmap2dtexture);
 		r_shadow_shadowmap_texturescale[1] = 1.0f / R_TextureHeight(r_shadow_shadowmap2dtexture);
-		r_shadow_shadowmap_parameters[0] = (0.5f / 2) * (1.0f - r_shadow_shadowmapborder / (float)size);
-		r_shadow_shadowmap_parameters[1] = (0.5f / 4) * (1.0f - r_shadow_shadowmapborder / (float)size);
+		r_shadow_shadowmap_parameters[0] = r_shadow_shadowmapvsdct ? size / (float)maxsize : 0.5f * (size - r_shadow_shadowmapborder);
+		r_shadow_shadowmap_parameters[1] = r_shadow_shadowmapvsdct ? 0.75f * size / (float)maxsize : size;
 		r_shadow_rendermode = R_SHADOW_RENDERMODE_SHADOWMAP2D;
 	}
 	else if (r_shadow_shadowmode == 2)
 	{
 		// complex unrolled cube approach (more flexible)
 		if (r_shadow_shadowmapvsdct && !r_shadow_shadowmapcubeprojectiontexture[r_shadow_shadowmaplod])
-			r_shadow_shadowmapcubeprojectiontexture[r_shadow_shadowmaplod] = R_LoadTextureCubeProjection(r_shadow_texturepool, "shadowmapcubeprojection", 2, 3, size, r_shadow_shadowmapborder);
+			r_shadow_shadowmapcubeprojectiontexture[r_shadow_shadowmaplod] = R_LoadTextureCubeProjection(r_shadow_texturepool, "shadowmapcubeprojection", size, r_shadow_shadowmapborder);
 		if (!r_shadow_shadowmaprectangletexture)
 		{
 #if 1
@@ -1567,10 +1567,10 @@ void R_Shadow_RenderMode_ShadowMap(int side, qboolean clear, int size)
 			qglClearColor(1,1,1,1);CHECKGLERROR
 		}
 		R_Viewport_InitRectSideView(&viewport, &rsurface.rtlight->matrix_lighttoworld, side, size, r_shadow_shadowmapborder, nearclip, farclip, NULL);
-		r_shadow_shadowmap_texturescale[0] = 2*size;
-		r_shadow_shadowmap_texturescale[1] = 3*size;
-		r_shadow_shadowmap_parameters[0] = 0.5f * (size - r_shadow_shadowmapborder);
-		r_shadow_shadowmap_parameters[1] = size;
+		r_shadow_shadowmap_texturescale[0] = 1.0f;
+		r_shadow_shadowmap_texturescale[1] = 1.0f;
+		r_shadow_shadowmap_parameters[0] = r_shadow_shadowmapvsdct ? 2*size : 0.5f * (size - r_shadow_shadowmapborder);
+		r_shadow_shadowmap_parameters[1] = r_shadow_shadowmapvsdct ? 3*size : size;
 		r_shadow_rendermode = R_SHADOW_RENDERMODE_SHADOWMAPRECTANGLE;
 	}
 	else if (r_shadow_shadowmode == 3)
@@ -3716,7 +3716,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 			if ((r_shadow_shadowmapping_maxsize.integer >> i) > lodlinear)
 				r_shadow_shadowmaplod = i;
 
-		size = r_shadow_shadowmapvsdct || r_shadow_shadowmode ? r_shadow_shadowmapping_maxsize.integer >> r_shadow_shadowmaplod : lodlinear;
+		size = r_shadow_shadowmapvsdct || r_shadow_shadowmode == 3 ? r_shadow_shadowmapping_maxsize.integer >> r_shadow_shadowmaplod : lodlinear;
 		size = bound(1, size, 2048);
 
 		//Con_Printf("distance %f lodlinear %i (lod %i) size %i\n", distance, lodlinear, r_shadow_shadowmaplod, size);
