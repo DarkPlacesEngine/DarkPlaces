@@ -1550,8 +1550,14 @@ shadermodeinfo_t shadermodeinfo[SHADERMODE_COUNT] =
 	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_SHOWDEPTH\n", " showdepth"},
 };
 
+struct r_glsl_permutation_s;
 typedef struct r_glsl_permutation_s
 {
+	/// hash lookup data
+	struct r_glsl_permutation_s *hashnext;
+	unsigned int mode;
+	unsigned int permutation;
+
 	/// indicates if we have tried compiling this permutation already
 	qboolean compiled;
 	/// 0 if compilation failed
@@ -1620,10 +1626,39 @@ typedef struct r_glsl_permutation_s
 }
 r_glsl_permutation_t;
 
+#define SHADERPERMUTATION_HASHSIZE 4096
+
 /// information about each possible shader permutation
-r_glsl_permutation_t r_glsl_permutations[SHADERMODE_COUNT][SHADERPERMUTATION_LIMIT];
+r_glsl_permutation_t *r_glsl_permutationhash[SHADERMODE_COUNT][SHADERPERMUTATION_HASHSIZE];
 /// currently selected permutation
 r_glsl_permutation_t *r_glsl_permutation;
+/// storage for permutations linked in the hash table
+memexpandablearray_t r_glsl_permutationarray;
+
+static r_glsl_permutation_t *R_GLSL_FindPermutation(unsigned int mode, unsigned int permutation)
+{
+	//unsigned int hashdepth = 0;
+	unsigned int hashindex = (permutation * 0x1021) & (SHADERPERMUTATION_HASHSIZE - 1);
+	r_glsl_permutation_t *p;
+	for (p = r_glsl_permutationhash[mode][hashindex];p;p = p->hashnext)
+	{
+		if (p->mode == mode && p->permutation == permutation)
+		{
+			//if (hashdepth > 10)
+			//	Con_Printf("R_GLSL_FindPermutation: Warning: %i:%i has hashdepth %i\n", mode, permutation, hashdepth);
+			return p;
+		}
+		//hashdepth++;
+	}
+	p = (r_glsl_permutation_t*)Mem_ExpandableArray_AllocRecord(&r_glsl_permutationarray);
+	p->mode = mode;
+	p->permutation = permutation;
+	p->hashnext = r_glsl_permutationhash[mode][hashindex];
+	r_glsl_permutationhash[mode][hashindex] = p;
+	//if (hashdepth > 10)
+	//	Con_Printf("R_GLSL_FindPermutation: Warning: %i:%i has hashdepth %i\n", mode, permutation, hashdepth);
+	return p;
+}
 
 static char *R_GLSL_GetText(const char *filename, qboolean printfromdisknotice)
 {
@@ -1645,11 +1680,10 @@ static char *R_GLSL_GetText(const char *filename, qboolean printfromdisknotice)
 	return shaderstring;
 }
 
-static void R_GLSL_CompilePermutation(unsigned int mode, unsigned int permutation)
+static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode, unsigned int permutation)
 {
 	int i;
 	shadermodeinfo_t *modeinfo = shadermodeinfo + mode;
-	r_glsl_permutation_t *p = &r_glsl_permutations[mode][permutation];
 	int vertstrings_count = 0;
 	int geomstrings_count = 0;
 	int fragstrings_count = 0;
@@ -1827,13 +1861,18 @@ static void R_GLSL_CompilePermutation(unsigned int mode, unsigned int permutatio
 
 void R_GLSL_Restart_f(void)
 {
-	unsigned int mode;
-	unsigned int permutation;
-	for (mode = 0;mode < SHADERMODE_COUNT;mode++)
-		for (permutation = 0;permutation < SHADERPERMUTATION_LIMIT;permutation++)
-			if (r_glsl_permutations[mode][permutation].program)
-				GL_Backend_FreeProgram(r_glsl_permutations[mode][permutation].program);
-	memset(r_glsl_permutations, 0, sizeof(r_glsl_permutations));
+	unsigned int i, limit;
+	r_glsl_permutation_t *p;
+	limit = Mem_ExpandableArray_IndexRange(&r_glsl_permutationarray);
+	for (i = 0;i < limit;i++)
+	{
+		if ((p = (r_glsl_permutation_t*)Mem_ExpandableArray_RecordAtIndex(&r_glsl_permutationarray, i)))
+		{
+			GL_Backend_FreeProgram(p->program);
+			Mem_ExpandableArray_FreeRecord(&r_glsl_permutationarray, (void*)p);
+		}
+	}
+	memset(r_glsl_permutationhash, 0, sizeof(r_glsl_permutationhash));
 }
 
 void R_GLSL_DumpShader_f(void)
@@ -1862,14 +1901,14 @@ void R_GLSL_DumpShader_f(void)
 
 void R_SetupShader_SetPermutation(unsigned int mode, unsigned int permutation)
 {
-	r_glsl_permutation_t *perm = &r_glsl_permutations[mode][permutation];
+	r_glsl_permutation_t *perm = R_GLSL_FindPermutation(mode, permutation);
 	if (r_glsl_permutation != perm)
 	{
 		r_glsl_permutation = perm;
 		if (!r_glsl_permutation->program)
 		{
 			if (!r_glsl_permutation->compiled)
-				R_GLSL_CompilePermutation(mode, permutation);
+				R_GLSL_CompilePermutation(perm, mode, permutation);
 			if (!r_glsl_permutation->program)
 			{
 				// remove features until we find a valid permutation
@@ -1881,9 +1920,9 @@ void R_SetupShader_SetPermutation(unsigned int mode, unsigned int permutation)
 					if (!(permutation & j))
 						continue;
 					permutation -= j;
-					r_glsl_permutation = &r_glsl_permutations[mode][permutation];
+					r_glsl_permutation = R_GLSL_FindPermutation(mode, permutation);
 					if (!r_glsl_permutation->compiled)
-						R_GLSL_CompilePermutation(mode, permutation);
+						R_GLSL_CompilePermutation(perm, mode, permutation);
 					if (r_glsl_permutation->program)
 						break;
 				}
@@ -2691,7 +2730,8 @@ void gl_main_start(void)
 	//r_texture_fogintensity = NULL;
 	memset(&r_bloomstate, 0, sizeof(r_bloomstate));
 	memset(&r_waterstate, 0, sizeof(r_waterstate));
-	memset(r_glsl_permutations, 0, sizeof(r_glsl_permutations));
+	memset(r_glsl_permutationhash, 0, sizeof(r_glsl_permutationhash));
+	Mem_ExpandableArray_NewArray(&r_glsl_permutationarray, r_main_mempool, sizeof(r_glsl_permutation_t), 256);
 	memset(&r_svbsp, 0, sizeof (r_svbsp));
 
 	r_refdef.fogmasktable_density = 0;
