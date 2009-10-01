@@ -388,15 +388,15 @@ void R_Shadow_SetShadowMode(void)
 				break;
 			}
 		}
-        r_shadow_shadowmode = r_shadow_shadowmaptexturetype;
+		r_shadow_shadowmode = r_shadow_shadowmaptexturetype;
 		if(r_shadow_shadowmode <= 0)
 		{
-			if(!gl_texturerectangle || gl_support_arb_texture_non_power_of_two) 
+			if((gl_support_amd_texture_texture4 || gl_support_arb_texture_gather) && r_shadow_shadowmappcf && !r_shadow_shadowmapsampler)
 				r_shadow_shadowmode = 1;
-			else if((gl_support_amd_texture_texture4 || gl_support_arb_texture_gather) && r_shadow_shadowmappcf && !r_shadow_shadowmapsampler)
-				r_shadow_shadowmode = 1;
-			else 
+			else if(gl_texturerectangle) 
 				r_shadow_shadowmode = 2;
+			else
+				r_shadow_shadowmode = 1;
 		}
 	}
 }
