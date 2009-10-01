@@ -171,7 +171,7 @@ r_shadow_rendermode_t r_shadow_shadowingrendermode_zfail = R_SHADOW_RENDERMODE_N
 qboolean r_shadow_usingshadowmaprect;
 qboolean r_shadow_usingshadowmap2d;
 qboolean r_shadow_usingshadowmapcube;
-float r_shadow_shadowmap_texturescale[4];
+float r_shadow_shadowmap_texturescale[2];
 float r_shadow_shadowmap_parameters[4];
 int r_shadow_drawbuffer;
 int r_shadow_readbuffer;
@@ -1697,8 +1697,6 @@ void R_Shadow_RenderMode_ShadowMap(int side, qboolean clear, int size)
 		r_shadow_shadowmap_parameters[1] = 1.0f;
 		r_shadow_rendermode = R_SHADOW_RENDERMODE_SHADOWMAPCUBESIDE;
 	}
-	r_shadow_shadowmap_texturescale[2] = 1.0f / r_shadow_shadowmap_texturescale[0];
-	r_shadow_shadowmap_texturescale[3] = 1.0f / r_shadow_shadowmap_texturescale[1];
 	CHECKGLERROR
 	R_SetViewport(&viewport);
 	GL_PolygonOffset(0, 0);
