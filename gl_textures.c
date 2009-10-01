@@ -788,14 +788,13 @@ static void GL_SetupTextureParameters(int flags, textype_t textype, int texturet
 		if (flags & TEXF_COMPARE)
 		{
 			qglTexParameteri(textureenum, GL_TEXTURE_COMPARE_MODE_ARB, GL_COMPARE_R_TO_TEXTURE_ARB);CHECKGLERROR
-			qglTexParameteri(textureenum, GL_TEXTURE_COMPARE_FUNC_ARB, GL_LEQUAL);CHECKGLERROR
 		}
 		else
 		{
 			qglTexParameteri(textureenum, GL_TEXTURE_COMPARE_MODE_ARB, GL_NONE);CHECKGLERROR
-			qglTexParameteri(textureenum, GL_TEXTURE_COMPARE_FUNC_ARB, GL_ALWAYS);CHECKGLERROR
 		}
-		qglTexParameteri(textureenum, GL_DEPTH_TEXTURE_MODE_ARB, GL_INTENSITY);CHECKGLERROR
+		qglTexParameteri(textureenum, GL_TEXTURE_COMPARE_FUNC_ARB, GL_LEQUAL);CHECKGLERROR
+		qglTexParameteri(textureenum, GL_DEPTH_TEXTURE_MODE_ARB, GL_LUMINANCE);CHECKGLERROR
 	}
 
 	CHECKGLERROR
