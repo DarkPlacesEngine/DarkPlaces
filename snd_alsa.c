@@ -30,7 +30,7 @@
 #include "snd_main.h"
 
 
-#define NB_PERIODS 2
+#define NB_PERIODS 4
 
 static snd_pcm_t* pcm_handle = NULL;
 static snd_pcm_sframes_t expected_delay = 0;
@@ -222,7 +222,14 @@ seqdone:
 		goto init_error;
 	}
 
-	buffer_size = requested->speed / 5;
+	// pick a buffer size that is a power of 2 (by masking off low bits)
+	buffer_size = i = (int)(requested->speed * 0.15f);
+	while (buffer_size & (buffer_size-1))
+		buffer_size &= (buffer_size-1);
+	// then check if it is the nearest power of 2 and bump it up if not
+	if (i - buffer_size >= buffer_size >> 1)
+		buffer_size *= 2;
+
 	err = snd_pcm_hw_params_set_buffer_size_near (pcm_handle, hw_params, &buffer_size);
 	if (err < 0)
 	{
@@ -231,6 +238,8 @@ seqdone:
 		goto init_error;
 	}
 
+	// pick a period size near the buffer_size we got from ALSA
+	snd_pcm_hw_params_get_buffer_size (hw_params, &buffer_size);
 	buffer_size /= NB_PERIODS;
 	err = snd_pcm_hw_params_set_period_size_near(pcm_handle, hw_params, &buffer_size, 0);
 	if (err < 0)
