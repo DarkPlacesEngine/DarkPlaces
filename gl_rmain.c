@@ -981,8 +981,8 @@ static const char *builtinshaderstring =
 "#  else\n"
 "\n"
 "#    ifdef USESHADOWMAPPCF\n"
-"#      define texval(x, y) texture2DRect(Texture_ShadowMapRect, center + vec2(x, y)).r\n"
-"#      if 1\n"
+"#      if USESHADOWMAPPCF > 1\n"
+"#        define texval(x, y) texture2DRect(Texture_ShadowMapRect, center + vec2(x, y)).r\n"
 "    vec2 center = shadowmaptc.xy - 0.5, offset = fract(center);\n"
 "    vec4 row1 = step(shadowmaptc.z, vec4(texval(-1.0, -1.0), texval( 0.0, -1.0), texval( 1.0, -1.0), texval( 2.0, -1.0))),\n"
 "         row2 = step(shadowmaptc.z, vec4(texval(-1.0,  0.0), texval( 0.0,  0.0), texval( 1.0,  0.0), texval( 2.0,  0.0))),\n"
@@ -991,9 +991,10 @@ static const char *builtinshaderstring =
 "         cols = row2 + row3 + mix(row1, row4, offset.y);\n"
 "    f = dot(mix(cols.xyz, cols.yzw, offset.x), vec3(1.0/9.0));\n"
 "#      else\n"
+"#        define texval(x, y) texture2DRect(Texture_ShadowMapRect, shadowmaptc.xy + vec2(x, y)).r\n"
 "    vec2 offset = fract(shadowmaptc.xy);\n"
 "    vec3 row1 = step(shadowmaptc.z, vec3(texval(-1.0, -1.0), texval( 0.0, -1.0), texval( 1.0, -1.0))),\n"
-"         row2 = step(shadowmaptc.z, vec3(texval(-1.0,  0.0), texval( 0.0,  0.0), texval( 1.0,  0.0)))\n"
+"         row2 = step(shadowmaptc.z, vec3(texval(-1.0,  0.0), texval( 0.0,  0.0), texval( 1.0,  0.0))),\n"
 "         row3 = step(shadowmaptc.z, vec3(texval(-1.0,  1.0), texval( 0.0,  1.0), texval( 1.0,  1.0))),\n"
 "         cols = row2 + mix(row1, row3, offset.y);\n"
 "    f = dot(mix(cols.xy, cols.yz, offset.x), vec2(0.25));\n"
@@ -1036,6 +1037,7 @@ static const char *builtinshaderstring =
 "                mix(vec4(group1.ab, group2.ab), vec4(group3.rg, group4.rg), offset.y);\n"
 "    f = dot(mix(cols.xyz, cols.yzw, offset.x), vec3(1.0/9.0));\n"
 "#     else\n"
+"#      if USESHADOWMAPPCF > 1\n"
 "#       ifdef GL_EXT_gpu_shader4\n"
 "    vec2 center = shadowmaptc.xy - 0.5*ShadowMap_TextureScale.xy, offset = fract(center*ShadowMap_TextureScale.zw);\n"
 "#         define texval(x, y) texture2DOffset(Texture_ShadowMap2D, center, ivec2(x, y)).r\n"
@@ -1049,6 +1051,19 @@ static const char *builtinshaderstring =
 "         row4 = step(shadowmaptc.z, vec4(texval(-1.0,  2.0), texval( 0.0,  2.0), texval( 1.0,  2.0), texval( 2.0,  2.0))),\n"
 "         cols = row2 + row3 + mix(row1, row4, offset.y);\n"
 "    f = dot(mix(cols.xyz, cols.yzw, offset.x), vec3(1.0/9.0));\n"
+"#      else\n"
+"#       ifdef GL_EXT_gpu_shader4\n"
+"#         define texval(x, y) texture2DOffset(Texture_ShadowMap2D, shadowmaptc.xy, ivec2(x, y)).r\n"
+"#       else\n"
+"#         define texval(x, y) texture2D(Texture_ShadowMap2D, shadowmaptc.xy + vec2(x, y)*ShadowMap_TextureScale.xy).r  \n"
+"#       endif\n"
+"    vec2 offset = fract(shadowmaptc.xy*ShadowMap_TextureScale.zw);\n"
+"    vec3 row1 = step(shadowmaptc.z, vec3(texval(-1.0, -1.0), texval( 0.0, -1.0), texval( 1.0, -1.0))),\n"
+"         row2 = step(shadowmaptc.z, vec3(texval(-1.0,  0.0), texval( 0.0,  0.0), texval( 1.0,  0.0))),\n"
+"         row3 = step(shadowmaptc.z, vec3(texval(-1.0,  1.0), texval( 0.0,  1.0), texval( 1.0,  1.0))),\n"
+"         cols = row2 + mix(row1, row3, offset.y);\n"
+"    f = dot(mix(cols.xy, cols.yz, offset.x), vec2(0.25));\n"
+"#      endif\n"      
 "#     endif\n"
 "#    else\n"
 "    f = step(shadowmaptc.z, texture2D(Texture_ShadowMap2D, shadowmaptc.xy).r);\n"
@@ -1451,10 +1466,11 @@ typedef enum shaderpermutation_e
 	SHADERPERMUTATION_SHADOWMAPCUBE = 1<<12, ///< (lightsource) use shadowmap cubemap texture as light filter
 	SHADERPERMUTATION_SHADOWMAP2D = 1<<13, ///< (lightsource) use shadowmap rectangle texture as light filter
 	SHADERPERMUTATION_SHADOWMAPPCF = 1<<14, //< (lightsource) use percentage closer filtering on shadowmap test results
-	SHADERPERMUTATION_SHADOWSAMPLER = 1<<15, //< (lightsource) use hardware shadowmap test
-	SHADERPERMUTATION_SHADOWMAPVSDCT = 1<<16, //< (lightsource) use virtual shadow depth cube texture for shadowmap indexing
-	SHADERPERMUTATION_LIMIT = 1<<17, ///< size of permutations array
-	SHADERPERMUTATION_COUNT = 17 ///< size of shaderpermutationinfo array
+	SHADERPERMUTATION_SHADOWMAPPCF2 = 1<<15, //< (lightsource) use higher quality percentage closer filtering on shadowmap test results
+	SHADERPERMUTATION_SHADOWSAMPLER = 1<<16, //< (lightsource) use hardware shadowmap test
+	SHADERPERMUTATION_SHADOWMAPVSDCT = 1<<17, //< (lightsource) use virtual shadow depth cube texture for shadowmap indexing
+	SHADERPERMUTATION_LIMIT = 1<<18, ///< size of permutations array
+	SHADERPERMUTATION_COUNT = 18 ///< size of shaderpermutationinfo array
 }
 shaderpermutation_t;
 
@@ -1475,7 +1491,8 @@ shaderpermutationinfo_t shaderpermutationinfo[SHADERPERMUTATION_COUNT] =
 	{"#define USESHADOWMAPRECT\n", " shadowmaprect"},
 	{"#define USESHADOWMAPCUBE\n", " shadowmapcube"},
 	{"#define USESHADOWMAP2D\n", " shadowmap2d"},
-	{"#define USESHADOWMAPPCF\n", " shadowmappcf"},
+	{"#define USESHADOWMAPPCF 1\n", " shadowmappcf"},
+	{"#define USESHADOWMAPPCF 2\n", " shadowmappcf2"},
 	{"#define USESHADOWSAMPLER\n", " shadowsampler"},
 	{"#define USESHADOWMAPVSDCT\n", " shadowmapvsdct"},
 };
@@ -2030,12 +2047,21 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 			else if(r_shadow_shadowmapvsdct)
 				permutation |= SHADERPERMUTATION_SHADOWMAPVSDCT;
 
-			if (r_shadow_shadowmapfilter == 3)
-				permutation |= SHADERPERMUTATION_SHADOWMAPPCF;
-			else if (r_shadow_shadowmapfilter == 2)
-				permutation |= SHADERPERMUTATION_SHADOWMAPPCF | SHADERPERMUTATION_SHADOWSAMPLER;
-			else if (r_shadow_shadowmapfilter == 1)
+			switch (r_shadow_shadowmapfilter)
+			{
+			case 1:
 				permutation |= SHADERPERMUTATION_SHADOWSAMPLER;
+				break;
+			case 2:
+				permutation |= SHADERPERMUTATION_SHADOWSAMPLER | SHADERPERMUTATION_SHADOWMAPPCF;
+				break;
+			case 3:
+				permutation |= SHADERPERMUTATION_SHADOWMAPPCF;
+				break;
+			case 4:
+				permutation |= SHADERPERMUTATION_SHADOWMAPPCF2;
+				break;
+			} 
 		}
 	}
 	else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
