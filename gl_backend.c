@@ -442,42 +442,83 @@ void R_Viewport_InitPerspectiveInfinite(r_viewport_t *v, const matrix4x4_t *came
 
 float cubeviewmatrix[6][16] =
 {
-	{
-		 0, 0,-1, 0,
-		 0,-1, 0, 0,
-		-1, 0, 0, 0,
-		 0, 0, 0, 1,
-	},
-	{
-		 0, 0, 1, 0,
-		 0,-1, 0, 0,
-		 1, 0, 0, 0,
-		 0, 0, 0, 1,
-	},
-	{
-		 1, 0, 0, 0,
-		 0, 0,-1, 0,
-		 0, 1, 0, 0,
-		 0, 0, 0, 1,
-	},
-	{
-		 1, 0, 0, 0,
-		 0, 0, 1, 0,
-		 0,-1, 0, 0,
-		 0, 0, 0, 1,
-	},
-	{
-		 1, 0, 0, 0,
-		 0,-1, 0, 0,
-		 0, 0,-1, 0,
-		 0, 0, 0, 1,
-	},
-	{
-		-1, 0, 0, 0,
-		 0,-1, 0, 0,
-		 0, 0, 1, 0,
-		 0, 0, 0, 1,
-	},
+    // standard cubemap projections
+    { // +X
+         0, 0,-1, 0,
+         0,-1, 0, 0,
+        -1, 0, 0, 0,
+         0, 0, 0, 1,
+    },
+    { // -X
+         0, 0, 1, 0,
+         0,-1, 0, 0,
+         1, 0, 0, 0,
+         0, 0, 0, 1,
+    },
+    { // +Y
+         1, 0, 0, 0,
+         0, 0,-1, 0,
+         0, 1, 0, 0,
+         0, 0, 0, 1,
+    },
+    { // -Y
+         1, 0, 0, 0,
+         0, 0, 1, 0,
+         0,-1, 0, 0,
+         0, 0, 0, 1,
+    },
+    { // +Z
+         1, 0, 0, 0,
+         0,-1, 0, 0,
+         0, 0,-1, 0,
+         0, 0, 0, 1,
+    },
+    { // -Z
+        -1, 0, 0, 0,
+         0,-1, 0, 0,
+         0, 0, 1, 0,
+         0, 0, 0, 1,
+    },
+};
+float rectviewmatrix[6][16] =
+{
+    // sign-preserving cubemap projections
+    { // +X
+         0, 0,-1, 0,
+         0, 1, 0, 0,
+         1, 0, 0, 0,
+         0, 0, 0, 1,
+    },
+    { // -X
+         0, 0, 1, 0,
+         0, 1, 0, 0,
+         1, 0, 0, 0,
+         0, 0, 0, 1,
+    },
+    { // +Y
+         1, 0, 0, 0,
+         0, 0,-1, 0,
+         0, 1, 0, 0,
+         0, 0, 0, 1,
+    },
+    { // -Y
+         1, 0, 0, 0,
+         0, 0, 1, 0,
+         0, 1, 0, 0,
+         0, 0, 0, 1,
+    },
+    { // +Z
+         1, 0, 0, 0,
+         0, 1, 0, 0,
+         0, 0,-1, 0,
+         0, 0, 0, 1,
+    },
+    { // -Z
+         1, 0, 0, 0,
+         0, 1, 0, 0,
+         0, 0, 1, 0,
+         0, 0, 0, 1,
+    },
 };
 
 void R_Viewport_InitCubeSideView(r_viewport_t *v, const matrix4x4_t *cameramatrix, int side, int size, float nearclip, float farclip, const float *nearplane)
@@ -521,7 +562,7 @@ void R_Viewport_InitRectSideView(r_viewport_t *v, const matrix4x4_t *cameramatri
 	v->m[11] = -1;
 	v->m[14] = -2 * nearclip * farclip / (farclip - nearclip);
 
-	Matrix4x4_FromArrayFloatGL(&basematrix, cubeviewmatrix[side]);
+	Matrix4x4_FromArrayFloatGL(&basematrix, rectviewmatrix[side]);
 	Matrix4x4_Invert_Simple(&tempmatrix, &v->cameramatrix);
 	Matrix4x4_Concat(&v->viewmatrix, &basematrix, &tempmatrix);
 	Matrix4x4_FromArrayDoubleGL(&v->projectmatrix, v->m);
