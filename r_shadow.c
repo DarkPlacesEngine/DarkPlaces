@@ -1552,7 +1552,7 @@ static void R_Shadow_MakeVSDCT(void)
 		0,   0, 0x33, 0xFF, // +Z: <0, 0>, <0.5, 2.5>
 		0,   0, 0x99, 0xFF, // -Z: <0, 0>, <1.5, 2.5>
 	};
-	r_shadow_shadowmapvsdcttexture = R_LoadTextureCubeMap(r_shadow_texturepool, "shadowmapvsdct", 1, data, TEXTYPE_RGBA, TEXF_ALWAYSPRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_ALPHA, NULL); 
+	r_shadow_shadowmapvsdcttexture = R_LoadTextureCubeMap(r_shadow_texturepool, "shadowmapvsdct", 1, data, TEXTYPE_RGBA, TEXF_ALWAYSPRECACHE | TEXF_FORCENEAREST | TEXF_CLAMP | TEXF_ALPHA, NULL); 
 }
 
 void R_Shadow_RenderMode_ShadowMap(int side, qboolean clear, int size)
