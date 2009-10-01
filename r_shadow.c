@@ -179,9 +179,12 @@ GLuint r_shadow_fborectangle;
 GLuint r_shadow_fbocubeside[R_SHADOW_SHADOWMAP_NUMCUBEMAPS][6];
 GLuint r_shadow_fbo2d;
 int r_shadow_shadowmode;
-int r_shadow_shadowmapvsdct;
+int r_shadow_shadowmapfilterquality;
+int r_shadow_shadowmaptexturetype;
 int r_shadow_shadowmapmaxsize;
-int r_shadow_shadowmapfilter;
+qboolean r_shadow_shadowmapvsdct;
+qboolean r_shadow_shadowmapsampler;
+int r_shadow_shadowmappcf;
 int r_shadow_shadowmapborder;
 int r_shadow_lightscissor[4];
 
@@ -263,7 +266,8 @@ cvar_t r_shadow_realtime_world_compilesvbsp = {0, "r_shadow_realtime_world_compi
 cvar_t r_shadow_realtime_world_compileportalculling = {0, "r_shadow_realtime_world_compileportalculling", "1", "enables portal-based culling optimization during compilation"};
 cvar_t r_shadow_scissor = {0, "r_shadow_scissor", "1", "use scissor optimization of light rendering (restricts rendering to the portion of the screen affected by the light)"};
 cvar_t r_shadow_shadowmapping = {CVAR_SAVE, "r_shadow_shadowmapping", "0", "enables use of shadowmapping (depth texture sampling) instead of stencil shadow volumes, requires gl_fbo 1"};
-cvar_t r_shadow_shadowmapping_filterquality = {CVAR_SAVE, "r_shadow_shadowmapping_filterquality", "0", "shadowmap filter modes: 0 = no filtering, 1 = bilinear, 2 = bilinear 2x2 blur (fast), 3 = 3x3 blur (moderate), 4 = 4x4 blur (slow)"};
+cvar_t r_shadow_shadowmapping_texturetype = {CVAR_SAVE, "r_shadow_shadowmapping_texturetype", "0", "shadowmap texture types: 0 = auto-select, 1 = 2D, 2 = rectangle, 3 = cubemap"};
+cvar_t r_shadow_shadowmapping_filterquality = {CVAR_SAVE, "r_shadow_shadowmapping_filterquality", "-1", "shadowmap filter modes: -1 = auto-select, 0 = no filtering, 1 = bilinear, 2 = bilinear 2x2 blur (fast), 3 = 3x3 blur (moderate), 4 = 4x4 blur (slow)"};
 cvar_t r_shadow_shadowmapping_vsdct = {CVAR_SAVE, "r_shadow_shadowmapping_vsdct", "1", "enables use of virtual shadow depth cube texture"};
 cvar_t r_shadow_shadowmapping_minsize = {CVAR_SAVE, "r_shadow_shadowmapping_minsize", "32", "shadowmap size limit"};
 cvar_t r_shadow_shadowmapping_maxsize = {CVAR_SAVE, "r_shadow_shadowmapping_maxsize", "512", "shadowmap size limit"};
@@ -338,18 +342,71 @@ cachepic_t *r_editlights_sprcubemaplight;
 cachepic_t *r_editlights_sprcubemapnoshadowlight;
 cachepic_t *r_editlights_sprselection;
 
+void R_Shadow_SetShadowMode(void)
+{
+	r_shadow_shadowmapmaxsize = bound(1, r_shadow_shadowmapping_maxsize.integer, 2048);
+	r_shadow_shadowmapvsdct = r_shadow_shadowmapping_vsdct.integer != 0;
+	r_shadow_shadowmapfilterquality = r_shadow_shadowmapping_filterquality.integer;
+	r_shadow_shadowmaptexturetype = r_shadow_shadowmapping_texturetype.integer;
+	r_shadow_shadowmapborder = bound(0, r_shadow_shadowmapping_bordersize.integer, 16);
+	r_shadow_shadowmaplod = -1;
+	r_shadow_shadowmapsampler = false;
+	r_shadow_shadowmappcf = 0;
+	r_shadow_shadowmode = 0;
+	if(r_shadow_shadowmapping.integer)
+	{
+		if(r_shadow_shadowmapfilterquality < 0)
+		{
+			if(strstr(gl_vendor, "NVIDIA")) 
+			{
+				r_shadow_shadowmapsampler = gl_support_arb_shadow;
+				r_shadow_shadowmappcf = 1;
+			}
+			else if(gl_support_amd_texture_texture4 || gl_support_arb_texture_gather) 
+				r_shadow_shadowmappcf = 1;
+			else if(strstr(gl_vendor, "ATI")) 
+				r_shadow_shadowmappcf = 1;
+			else 
+				r_shadow_shadowmapsampler = gl_support_arb_shadow;
+		}
+		else 
+		{
+			switch (r_shadow_shadowmapfilterquality)
+			{
+			case 1:
+				r_shadow_shadowmapsampler = gl_support_arb_shadow;
+				break;
+			case 2:
+				r_shadow_shadowmapsampler = gl_support_arb_shadow;
+				r_shadow_shadowmappcf = 1;
+				break;
+			case 3:
+				r_shadow_shadowmappcf = 1;
+				break;
+			case 4:
+				r_shadow_shadowmappcf = 2;
+				break;
+			}
+		}
+        r_shadow_shadowmode = r_shadow_shadowmaptexturetype;
+		if(r_shadow_shadowmode <= 0)
+		{
+			if(!gl_texturerectangle || gl_support_arb_texture_non_power_of_two) 
+				r_shadow_shadowmode = 1;
+			else if((gl_support_amd_texture_texture4 || gl_support_arb_texture_gather) && r_shadow_shadowmappcf && !r_shadow_shadowmapsampler)
+				r_shadow_shadowmode = 1;
+			else 
+				r_shadow_shadowmode = 2;
+		}
+	}
+}
+
 void R_Shadow_FreeShadowMaps(void)
 {
 	int i;
 
-	r_shadow_shadowmapmaxsize = bound(1, r_shadow_shadowmapping_maxsize.integer, 2048);
-	r_shadow_shadowmode = r_shadow_shadowmapping.integer;
-	r_shadow_shadowmapvsdct = r_shadow_shadowmapping_vsdct.integer;
-	r_shadow_shadowmapfilter = r_shadow_shadowmapping_filterquality.integer;
-	r_shadow_shadowmapborder = bound(0, r_shadow_shadowmapping_bordersize.integer, 16);
-	r_shadow_shadowmaplod = -1;
+	R_Shadow_SetShadowMode();
 
-	CHECKGLERROR
 	if (r_shadow_fborectangle)
 		qglDeleteFramebuffersEXT(1, &r_shadow_fborectangle);
 	r_shadow_fborectangle = 0;
@@ -401,8 +458,11 @@ void r_shadow_start(void)
 	r_shadow_shadowmapmaxsize = 0;
 	r_shadow_shadowmapsize = 0;
 	r_shadow_shadowmaplod = 0;
-	r_shadow_shadowmapvsdct = 0;
-	r_shadow_shadowmapfilter = 0;
+	r_shadow_shadowmapfilterquality = 0;
+	r_shadow_shadowmaptexturetype = 0;
+	r_shadow_shadowmapvsdct = false;
+	r_shadow_shadowmapsampler = false;
+	r_shadow_shadowmappcf = 0;
 	r_shadow_fborectangle = 0;
 	r_shadow_fbo2d = 0;
 	memset(r_shadow_fbocubeside, 0, sizeof(r_shadow_fbocubeside));
@@ -575,6 +635,7 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_scissor);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_vsdct);
+	Cvar_RegisterVariable(&r_shadow_shadowmapping_texturetype);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_filterquality);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_maxsize);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_minsize);
@@ -1497,7 +1558,8 @@ void R_Shadow_RenderMode_ShadowMap(int side, qboolean clear, int size)
 		if (!r_shadow_shadowmap2dtexture)
 		{
 #if 1
-			r_shadow_shadowmap2dtexture = R_LoadTextureShadowMap2D(r_shadow_texturepool, "shadowmap", maxsize*2, maxsize*4, r_shadow_shadowmapfilter == 1 || r_shadow_shadowmapfilter == 2);
+			int w = maxsize*2, h = gl_support_arb_texture_non_power_of_two ? maxsize*3 : maxsize*4;
+			r_shadow_shadowmap2dtexture = R_LoadTextureShadowMap2D(r_shadow_texturepool, "shadowmap", w, h, r_shadow_shadowmapsampler);
 			qglGenFramebuffersEXT(1, &r_shadow_fbo2d);CHECKGLERROR
 			qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, r_shadow_fbo2d);CHECKGLERROR
 			qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_2D, R_GetTexture(r_shadow_shadowmap2dtexture), 0);CHECKGLERROR
@@ -1527,8 +1589,8 @@ void R_Shadow_RenderMode_ShadowMap(int side, qboolean clear, int size)
 		R_Viewport_InitRectSideView(&viewport, &rsurface.rtlight->matrix_lighttoworld, side, size, r_shadow_shadowmapping_bordersize.integer, nearclip, farclip, NULL);
 		r_shadow_shadowmap_texturescale[0] = 1.0f / R_TextureWidth(r_shadow_shadowmap2dtexture);
 		r_shadow_shadowmap_texturescale[1] = 1.0f / R_TextureHeight(r_shadow_shadowmap2dtexture);
-		r_shadow_shadowmap_parameters[0] = r_shadow_shadowmapvsdct ? size / (float)maxsize : 0.5f * (size - r_shadow_shadowmapborder);
-		r_shadow_shadowmap_parameters[1] = r_shadow_shadowmapvsdct ? 0.75f * size / (float)maxsize : size;
+		r_shadow_shadowmap_parameters[0] = r_shadow_shadowmapvsdct ? 2*size * r_shadow_shadowmap_texturescale[0] : 0.5f * (size - r_shadow_shadowmapborder);
+		r_shadow_shadowmap_parameters[1] = r_shadow_shadowmapvsdct ? 3*size * r_shadow_shadowmap_texturescale[1] : size;
 		r_shadow_rendermode = R_SHADOW_RENDERMODE_SHADOWMAP2D;
 	}
 	else if (r_shadow_shadowmode == 2)
@@ -1539,7 +1601,7 @@ void R_Shadow_RenderMode_ShadowMap(int side, qboolean clear, int size)
 		if (!r_shadow_shadowmaprectangletexture)
 		{
 #if 1
-			r_shadow_shadowmaprectangletexture = R_LoadTextureShadowMapRectangle(r_shadow_texturepool, "shadowmap", maxsize*2, maxsize*3, r_shadow_shadowmapfilter == 1 || r_shadow_shadowmapfilter == 2);
+			r_shadow_shadowmaprectangletexture = R_LoadTextureShadowMapRectangle(r_shadow_texturepool, "shadowmap", maxsize*2, maxsize*3, r_shadow_shadowmapsampler);
 			qglGenFramebuffersEXT(1, &r_shadow_fborectangle);CHECKGLERROR
 			qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, r_shadow_fborectangle);CHECKGLERROR
 			qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_RECTANGLE_ARB, R_GetTexture(r_shadow_shadowmaprectangletexture), 0);CHECKGLERROR
@@ -1579,7 +1641,7 @@ void R_Shadow_RenderMode_ShadowMap(int side, qboolean clear, int size)
 		if (!r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod])
 		{
  #if 1
-			r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod] = R_LoadTextureShadowMapCube(r_shadow_texturepool, "shadowmapcube", bound(1, maxsize >> r_shadow_shadowmaplod, 2048), r_shadow_shadowmapfilter == 1 || r_shadow_shadowmapfilter == 2);
+			r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod] = R_LoadTextureShadowMapCube(r_shadow_texturepool, "shadowmapcube", bound(1, maxsize >> r_shadow_shadowmaplod, 2048), r_shadow_shadowmapsampler);
 			qglGenFramebuffersEXT(6, r_shadow_fbocubeside[r_shadow_shadowmaplod]);CHECKGLERROR
 			for (i = 0;i < 6;i++)
 			{
@@ -3821,7 +3883,12 @@ void R_ShadowVolumeLighting(qboolean visible)
 	dlight_t *light;
 	size_t range;
 
-	if (r_shadow_shadowmapmaxsize != bound(1, r_shadow_shadowmapping_maxsize.integer, 2048) || r_shadow_shadowmode != r_shadow_shadowmapping.integer || r_shadow_shadowmapvsdct != r_shadow_shadowmapping_vsdct.integer || r_shadow_shadowmapfilter != r_shadow_shadowmapping_filterquality.integer || r_shadow_shadowmapborder != bound(0, r_shadow_shadowmapping_bordersize.integer, 16))
+	if (r_shadow_shadowmapmaxsize != bound(1, r_shadow_shadowmapping_maxsize.integer, 2048) || 
+		(r_shadow_shadowmode != 0) != (r_shadow_shadowmapping.integer != 0) || 
+		r_shadow_shadowmapvsdct != (r_shadow_shadowmapping_vsdct.integer != 0) || 
+		r_shadow_shadowmaptexturetype != r_shadow_shadowmapping_texturetype.integer ||
+		r_shadow_shadowmapfilterquality != r_shadow_shadowmapping_filterquality.integer || 
+		r_shadow_shadowmapborder != bound(0, r_shadow_shadowmapping_bordersize.integer, 16))
 		R_Shadow_FreeShadowMaps();
 
 	if (r_editlights.integer)

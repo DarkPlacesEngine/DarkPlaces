@@ -135,11 +135,6 @@ typedef ptrdiff_t GLsizeiptrARB;
 #define GL_LINE					0x1B01
 #define GL_FILL					0x1B02
 
-extern int gl_support_anisotropy;
-extern int gl_max_anisotropy;
-#define GL_TEXTURE_MAX_ANISOTROPY_EXT		0x84FE
-#define GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT	0x84FF
-
 #define GL_ADD					0x0104
 #define GL_DECAL				0x2101
 #define GL_MODULATE				0x2100
@@ -268,8 +263,16 @@ extern int gl_max_anisotropy;
 
 #endif
 
+//GL_EXT_texture_filter_anisotropic
+extern int gl_support_anisotropy;
+extern int gl_max_anisotropy;
+#ifndef GL_TEXTURE_MAX_ANISOTROPY_EXT
+#define GL_TEXTURE_MAX_ANISOTROPY_EXT       0x84FE
+#define GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT   0x84FF
+#endif
+
 // GL_ARB_depth_texture
-#ifndef GL_DEPTH_COMPOENNT32_ARB
+#ifndef GL_DEPTH_COMPONENT32_ARB
 #define GL_DEPTH_COMPONENT16_ARB          0x81A5
 #define GL_DEPTH_COMPONENT24_ARB          0x81A6
 #define GL_DEPTH_COMPONENT32_ARB          0x81A7
@@ -278,6 +281,7 @@ extern int gl_max_anisotropy;
 #endif
 
 // GL_ARB_shadow
+extern int gl_support_arb_shadow;
 #ifndef GL_TEXTURE_COMPARE_MODE_ARB
 #define GL_TEXTURE_COMPARE_MODE_ARB       0x884C
 #define GL_TEXTURE_COMPARE_FUNC_ARB       0x884D
@@ -952,6 +956,12 @@ extern void (GLAPIENTRY *qglGetQueryObjectuivARB)(GLuint qid, GLenum pname, GLui
 // GL_EXT_texture
 #define GL_LUMINANCE_ALPHA                0x190A
 #define GL_LUMINANCE16_ALPHA16            0x8048
+
+//GL_AMD_texture_texture4
+extern int gl_support_amd_texture_texture4;
+
+//GL_ARB_texture_gather
+extern int gl_support_arb_texture_gather;
 
 #define DEBUGGL
 

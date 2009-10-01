@@ -43,6 +43,8 @@ int gl_support_arb_texture_non_power_of_two = false;
 int gl_dot3arb = false;
 // GL_ARB_depth_texture
 int gl_depthtexture = false;
+// GL_ARB_shadow
+int gl_support_arb_shadow = false;
 // GL_SGIS_texture_edge_clamp
 int gl_support_clamptoedge = false;
 // GL_EXT_texture_filter_anisotropic
@@ -72,6 +74,10 @@ int gl_support_ext_framebuffer_object = false;
 int gl_support_texture_compression = false;
 //GL_ARB_occlusion_query
 int gl_support_arb_occlusion_query = false;
+//GL_AMD_texture_texture4
+int gl_support_amd_texture_texture4 = false;
+//GL_ARB_texture_gather
+int gl_support_arb_texture_gather = false;
 
 // LordHavoc: if window is hidden, don't update screen
 qboolean vid_hidden = true;
@@ -832,6 +838,7 @@ void VID_CheckExtensions(void)
 	gl_support_arb_texture_non_power_of_two = false;
 	gl_dot3arb = false;
 	gl_depthtexture = false;
+	gl_support_arb_shadow = false;
 	gl_support_clamptoedge = false;
 	gl_support_anisotropy = false;
 	gl_max_anisotropy = 1;
@@ -847,6 +854,8 @@ void VID_CheckExtensions(void)
 	gl_support_ext_framebuffer_object = false;
 	gl_support_texture_compression = false;
 	gl_support_arb_occlusion_query = false;
+	gl_support_amd_texture_texture4 = false;
+	gl_support_arb_texture_gather = false;
 
 	if (!GL_CheckExtension("1.1", opengl110funcs, NULL, false))
 		Sys_Error("OpenGL 1.1.0 functions not found");
@@ -887,7 +896,11 @@ void VID_CheckExtensions(void)
 // COMMANDLINEOPTION: GL: -norectangle disables GL_ARB_texture_rectangle (required for bumpmapping)
 	if ((gl_texturerectangle = GL_CheckExtension("GL_ARB_texture_rectangle", NULL, "-norectangle", false)))
 		qglGetIntegerv(GL_MAX_RECTANGLE_TEXTURE_SIZE_ARB, &gl_max_rectangle_texture_size);
+// COMMANDLINEOPTION: GL: -nodepthtexture disables use of GL_ARB_depth_texture (required for shadowmapping)
 	gl_depthtexture = GL_CheckExtension("GL_ARB_depth_texture", NULL, "-nodepthtexture", false);
+// COMMANDLINEOPTION: GL: -noshadow disables use of GL_ARB_shadow (required for hardware shadowmap filtering)
+	gl_support_arb_shadow = GL_CheckExtension("GL_ARB_shadow", NULL, "-noshadow", false);
+
 // COMMANDLINEOPTION: GL: -notexturecompression disables GL_ARB_texture_compression (which saves video memory if it is supported, but can also degrade image quality, see gl_texturecompression cvar documentation for more information)
 	gl_support_texture_compression = GL_CheckExtension("GL_ARB_texture_compression", texturecompressionfuncs, "-notexturecompression", false);
 // COMMANDLINEOPTION: GL: -nocva disables GL_EXT_compiled_vertex_array (renders faster)
@@ -942,6 +955,11 @@ void VID_CheckExtensions(void)
 
 // COMMANDLINEOPTION: GL: -noocclusionquery disables GL_ARB_occlusion_query (which allows coronas to fade according to visibility, and potentially used for rendering optimizations)
 	gl_support_arb_occlusion_query = GL_CheckExtension("GL_ARB_occlusion_query", occlusionqueryfuncs, "-noocclusionquery", false);
+
+// COMMANDLINEOPTION: GL: -notexture4 disables GL_AMD_texture_texture4 (which provides fetch4 sampling)
+    gl_support_amd_texture_texture4 = GL_CheckExtension("GL_AMD_texture_texture4", NULL, "-notexture4", false);
+// COMMANDLINEOPTION: GL: -notexturegather disables GL_ARB_texture_gather (which provides fetch4 sampling)
+    gl_support_arb_texture_gather = GL_CheckExtension("GL_ARB_texture_gather", NULL, "-notexturegather", false);
 }
 
 void Force_CenterView_f (void)
