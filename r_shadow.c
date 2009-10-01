@@ -227,7 +227,7 @@ rtexture_t *r_shadow_lightcorona;
 rtexture_t *r_shadow_shadowmaprectangletexture;
 rtexture_t *r_shadow_shadowmap2dtexture;
 rtexture_t *r_shadow_shadowmapcubetexture[R_SHADOW_SHADOWMAP_NUMCUBEMAPS];
-rtexture_t *r_shadow_shadowmapcubeprojectiontexture[R_SHADOW_SHADOWMAP_NUMCUBEMAPS];
+rtexture_t *r_shadow_shadowmapvsdcttexture;
 int r_shadow_shadowmapsize; // changes for each light based on distance
 int r_shadow_shadowmaplod; // changes for each light based on distance
 
@@ -435,10 +435,9 @@ void R_Shadow_FreeShadowMaps(void)
 			R_FreeTexture(r_shadow_shadowmapcubetexture[i]);
 	memset(r_shadow_shadowmapcubetexture, 0, sizeof(r_shadow_shadowmapcubetexture));
 
-	for (i = 0;i < R_SHADOW_SHADOWMAP_NUMCUBEMAPS;i++)
-		if (r_shadow_shadowmapcubeprojectiontexture[i])
-			R_FreeTexture(r_shadow_shadowmapcubeprojectiontexture[i]);
-	memset(r_shadow_shadowmapcubeprojectiontexture, 0, sizeof(r_shadow_shadowmapcubeprojectiontexture));
+	if (r_shadow_shadowmapvsdcttexture)
+		R_FreeTexture(r_shadow_shadowmapvsdcttexture);
+	r_shadow_shadowmapvsdcttexture = NULL;
 
 	CHECKGLERROR
 }
@@ -454,7 +453,7 @@ void r_shadow_start(void)
 	r_shadow_shadowmaprectangletexture = NULL;
 	r_shadow_shadowmap2dtexture = NULL;
 	memset(r_shadow_shadowmapcubetexture, 0, sizeof(r_shadow_shadowmapcubetexture));
-	memset(r_shadow_shadowmapcubeprojectiontexture, 0, sizeof(r_shadow_shadowmapcubeprojectiontexture));
+	r_shadow_shadowmapvsdcttexture = NULL;
 	r_shadow_shadowmapmaxsize = 0;
 	r_shadow_shadowmapsize = 0;
 	r_shadow_shadowmaplod = 0;
@@ -1536,6 +1535,26 @@ void R_Shadow_RenderMode_StencilShadowVolumes(qboolean zpass)
 	}
 }
 
+static void R_Shadow_MakeVSDCT(void)
+{
+	// maps to a 2x3 texture rectangle with normalized coordinates
+	// +-
+	// XX
+	// YY
+	// ZZ
+	// stores abs(dir.xy), offset.xy/2.5
+	unsigned char data[4*6] =
+	{
+		255, 0, 0x33, 0x33, // +X: <1, 0>, <0.5, 0.5>
+		255, 0, 0x99, 0x33, // -X: <1, 0>, <1.5, 0.5>
+		0, 255, 0x33, 0x99, // +Y: <0, 1>, <0.5, 1.5>
+		0, 255, 0x99, 0x99, // -Y: <0, 1>, <1.5, 1.5>
+		0,   0, 0x33, 0xFF, // +Z: <0, 0>, <0.5, 2.5>
+		0,   0, 0x99, 0xFF, // -Z: <0, 0>, <1.5, 2.5>
+	};
+	r_shadow_shadowmapvsdcttexture = R_LoadTextureCubeMap(r_shadow_texturepool, "shadowmapvsdct", 1, data, TEXTYPE_RGBA, TEXF_ALWAYSPRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_ALPHA, NULL); 
+}
+
 void R_Shadow_RenderMode_ShadowMap(int side, qboolean clear, int size)
 {
 	int i;
@@ -1553,8 +1572,8 @@ void R_Shadow_RenderMode_ShadowMap(int side, qboolean clear, int size)
 	if (r_shadow_shadowmode == 1)
 	{
 		// complex unrolled cube approach (more flexible)
-		if (r_shadow_shadowmapvsdct && !r_shadow_shadowmapcubeprojectiontexture[r_shadow_shadowmaplod])
-			r_shadow_shadowmapcubeprojectiontexture[r_shadow_shadowmaplod] = R_LoadTextureCubeProjection(r_shadow_texturepool, "shadowmapcubeprojection", size, r_shadow_shadowmapborder);
+		if (r_shadow_shadowmapvsdct && !r_shadow_shadowmapvsdcttexture)
+			R_Shadow_MakeVSDCT();
 		if (!r_shadow_shadowmap2dtexture)
 		{
 #if 1
@@ -1586,18 +1605,18 @@ void R_Shadow_RenderMode_ShadowMap(int side, qboolean clear, int size)
 			R_SetupShowDepthShader();
 			qglClearColor(1,1,1,1);CHECKGLERROR
 		}
-		R_Viewport_InitRectSideView(&viewport, &rsurface.rtlight->matrix_lighttoworld, side, size, r_shadow_shadowmapping_bordersize.integer, nearclip, farclip, NULL);
+		R_Viewport_InitRectSideView(&viewport, &rsurface.rtlight->matrix_lighttoworld, side, size, r_shadow_shadowmapborder, nearclip, farclip, NULL);
 		r_shadow_shadowmap_texturescale[0] = 1.0f / R_TextureWidth(r_shadow_shadowmap2dtexture);
 		r_shadow_shadowmap_texturescale[1] = 1.0f / R_TextureHeight(r_shadow_shadowmap2dtexture);
-		r_shadow_shadowmap_parameters[0] = r_shadow_shadowmapvsdct ? 2*size * r_shadow_shadowmap_texturescale[0] : 0.5f * (size - r_shadow_shadowmapborder);
-		r_shadow_shadowmap_parameters[1] = r_shadow_shadowmapvsdct ? 3*size * r_shadow_shadowmap_texturescale[1] : size;
+		r_shadow_shadowmap_parameters[0] = 0.5f * (size - r_shadow_shadowmapborder);
+		r_shadow_shadowmap_parameters[1] = r_shadow_shadowmapvsdct ? 2.5f*size : size;
 		r_shadow_rendermode = R_SHADOW_RENDERMODE_SHADOWMAP2D;
 	}
 	else if (r_shadow_shadowmode == 2)
 	{
 		// complex unrolled cube approach (more flexible)
-		if (r_shadow_shadowmapvsdct && !r_shadow_shadowmapcubeprojectiontexture[r_shadow_shadowmaplod])
-			r_shadow_shadowmapcubeprojectiontexture[r_shadow_shadowmaplod] = R_LoadTextureCubeProjection(r_shadow_texturepool, "shadowmapcubeprojection", size, r_shadow_shadowmapborder);
+		if (r_shadow_shadowmapvsdct && !r_shadow_shadowmapvsdcttexture)
+			R_Shadow_MakeVSDCT();
 		if (!r_shadow_shadowmaprectangletexture)
 		{
 #if 1
@@ -1631,8 +1650,8 @@ void R_Shadow_RenderMode_ShadowMap(int side, qboolean clear, int size)
 		R_Viewport_InitRectSideView(&viewport, &rsurface.rtlight->matrix_lighttoworld, side, size, r_shadow_shadowmapborder, nearclip, farclip, NULL);
 		r_shadow_shadowmap_texturescale[0] = 1.0f;
 		r_shadow_shadowmap_texturescale[1] = 1.0f;
-		r_shadow_shadowmap_parameters[0] = r_shadow_shadowmapvsdct ? 2*size : 0.5f * (size - r_shadow_shadowmapborder);
-		r_shadow_shadowmap_parameters[1] = r_shadow_shadowmapvsdct ? 3*size : size;
+		r_shadow_shadowmap_parameters[0] = 0.5f * (size - r_shadow_shadowmapborder);
+		r_shadow_shadowmap_parameters[1] = r_shadow_shadowmapvsdct ? 2.5f*size : size;
 		r_shadow_rendermode = R_SHADOW_RENDERMODE_SHADOWMAPRECTANGLE;
 	}
 	else if (r_shadow_shadowmode == 3)
@@ -1740,7 +1759,7 @@ void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent, qb
 
 			if (r_shadow_shadowmapvsdct && (r_shadow_usingshadowmap2d || r_shadow_usingshadowmaprect))
 			{
-				R_Mesh_TexBindCubeMap(GL20TU_CUBEPROJECTION, R_GetTexture(r_shadow_shadowmapcubeprojectiontexture[r_shadow_shadowmaplod]));
+				R_Mesh_TexBindCubeMap(GL20TU_CUBEPROJECTION, R_GetTexture(r_shadow_shadowmapvsdcttexture));
 				CHECKGLERROR
 			}
 		}
@@ -3778,7 +3797,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 			if ((r_shadow_shadowmapping_maxsize.integer >> i) > lodlinear)
 				r_shadow_shadowmaplod = i;
 
-		size = r_shadow_shadowmapvsdct || r_shadow_shadowmode == 3 ? r_shadow_shadowmapping_maxsize.integer >> r_shadow_shadowmaplod : lodlinear;
+		size = r_shadow_shadowmode == 3 ? r_shadow_shadowmapping_maxsize.integer >> r_shadow_shadowmaplod : lodlinear;
 		size = bound(1, size, 2048);
 
 		//Con_Printf("distance %f lodlinear %i (lod %i) size %i\n", distance, lodlinear, r_shadow_shadowmaplod, size);
