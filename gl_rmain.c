@@ -447,6 +447,9 @@ static void R_BuildFogTexture(void)
 static const char *builtinshaderstring =
 "// ambient+diffuse+specular+normalmap+attenuation+cubemap+fog shader\n"
 "// written by Forest 'LordHavoc' Hale\n"
+"\n"
+"// enable various extensions depending on permutation:\n"
+"\n" 
 "#ifdef USESHADOWMAPRECT\n"
 "# extension GL_ARB_texture_rectangle : enable\n"
 "#endif\n"
@@ -469,6 +472,10 @@ static const char *builtinshaderstring =
 "\n"
 "#ifdef USESHADOWMAPCUBE\n"
 "# extension GL_EXT_gpu_shader4 : enable\n"
+"#endif\n"
+"\n"
+"#ifdef USESHADOWSAMPLER\n"
+"# extension GL_ARB_shadow : enable\n"
 "#endif\n"
 "\n"
 "// common definitions between vertex shader and fragment shader:\n"
@@ -1995,8 +2002,9 @@ extern qboolean r_shadow_usingshadowmapcube;
 extern qboolean r_shadow_usingshadowmap2d;
 extern float r_shadow_shadowmap_texturescale[4];
 extern float r_shadow_shadowmap_parameters[4];
-extern int r_shadow_shadowmapvsdct;
-extern int r_shadow_shadowmapfilter;
+extern qboolean r_shadow_shadowmapvsdct;
+extern qboolean r_shadow_shadowmapsampler;
+extern int r_shadow_shadowmappcf;
 void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, float ambientscale, float diffusescale, float specularscale, rsurfacepass_t rsurfacepass)
 {
 	// select a permutation of the lighting shader appropriate to this
@@ -2047,21 +2055,12 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 			else if(r_shadow_shadowmapvsdct)
 				permutation |= SHADERPERMUTATION_SHADOWMAPVSDCT;
 
-			switch (r_shadow_shadowmapfilter)
-			{
-			case 1:
+			if (r_shadow_shadowmapsampler)
 				permutation |= SHADERPERMUTATION_SHADOWSAMPLER;
-				break;
-			case 2:
-				permutation |= SHADERPERMUTATION_SHADOWSAMPLER | SHADERPERMUTATION_SHADOWMAPPCF;
-				break;
-			case 3:
-				permutation |= SHADERPERMUTATION_SHADOWMAPPCF;
-				break;
-			case 4:
+			if (r_shadow_shadowmappcf > 1)
 				permutation |= SHADERPERMUTATION_SHADOWMAPPCF2;
-				break;
-			} 
+			else if (r_shadow_shadowmappcf)
+				permutation |= SHADERPERMUTATION_SHADOWMAPPCF;
 		}
 	}
 	else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
