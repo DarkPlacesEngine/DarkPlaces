@@ -3709,7 +3709,7 @@ static void R_Water_StartFrame(void)
 		r_waterstate.textureheight = textureheight;
 	}
 
-	if (r_waterstate.waterwidth)
+	if (r_waterstate.texturewidth)
 	{
 		r_waterstate.enabled = true;
 
