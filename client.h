@@ -581,10 +581,11 @@ typedef struct client_static_s
 	// (kept outside client_state_t because it's used between levels)
 	protocolversion_t protocol;
 
-#define MAX_RCONS 64
+#define MAX_RCONS 16
 	int rcon_trying;
 	lhnetaddress_t rcon_addresses[MAX_RCONS];
 	char rcon_commands[MAX_RCONS][MAX_INPUTLINE];
+	double rcon_timeout[MAX_RCONS];
 	int rcon_ringpos;
 
 // connection information

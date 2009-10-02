@@ -34,6 +34,7 @@ cvar_t sv_status_privacy = {CVAR_SAVE, "sv_status_privacy", "0", "do not show IP
 cvar_t sv_status_show_qcstatus = {CVAR_SAVE, "sv_status_show_qcstatus", "0", "show the 'qcstatus' field in status replies, not the 'frags' field. Turn this on if your mod uses this field, and the 'frags' field on the other hand has no meaningful value."};
 cvar_t rcon_password = {CVAR_PRIVATE, "rcon_password", "", "password to authenticate rcon commands; NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password"};
 cvar_t rcon_secure = {CVAR_NQUSERINFOHACK, "rcon_secure", "0", "force secure rcon authentication (1 = time based, 2 = challenge based); NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password"};
+cvar_t rcon_secure_challengetimeout = {0, "rcon_secure_challengetimeout", "5", "challenge-based secure rcon: time out requests if no challenge came within this time interval"};
 cvar_t rcon_address = {0, "rcon_address", "", "server address to send rcon commands to (when not connected to a server)"};
 cvar_t team = {CVAR_USERINFO | CVAR_SAVE, "team", "none", "QW team (4 character limit, example: blue)"};
 cvar_t skin = {CVAR_USERINFO | CVAR_SAVE, "skin", "", "QW player skin name (example: base)"};
@@ -2441,12 +2442,25 @@ void Host_Rcon_f (void) // credit: taken from QuakeWorld
 		// simply put together the rcon packet and send it
 		if(Cmd_Argv(0)[0] == 's' || rcon_secure.integer > 1)
 		{
-			if(!cls.rcon_commands[cls.rcon_ringpos][0])
-				++cls.rcon_trying;
+			if(cls.rcon_commands[cls.rcon_ringpos][0])
+			{
+				char s[128];
+				LHNETADDRESS_ToString(&cls.rcon_addresses[cls.rcon_ringpos], s, sizeof(s), true);
+				Con_Printf("rcon to %s (for command %s) failed: too many buffered commands (possibly increase MAX_RCONS)\n", s, cls.rcon_commands[cls.rcon_ringpos]);
+				cls.rcon_commands[cls.rcon_ringpos][0] = 0;
+				--cls.rcon_trying;
+			}
+			for (i = 0;i < MAX_RCONS;i++)
+				if(cls.rcon_commands[i][0])
+					if (!LHNETADDRESS_Compare(&to, &cls.rcon_addresses[i]))
+						break;
+			++cls.rcon_trying;
+			if(i >= MAX_RCONS)
+				NetConn_WriteString(mysocket, "\377\377\377\377getchallenge", &to); // otherwise we'll request the challenge later
 			strlcpy(cls.rcon_commands[cls.rcon_ringpos], Cmd_Args(), sizeof(cls.rcon_commands[cls.rcon_ringpos]));
 			cls.rcon_addresses[cls.rcon_ringpos] = to;
 			cls.rcon_ringpos = (cls.rcon_ringpos) % 64;
-			NetConn_WriteString(mysocket, "\377\377\377\377getchallenge", &to);
+			cls.rcon_timeout[i] = realtime + rcon_secure_challengetimeout.value;
 		}
 		else if(rcon_secure.integer)
 		{
@@ -2843,6 +2857,7 @@ void Host_InitCommands (void)
 	Cvar_RegisterVariable (&rcon_password);
 	Cvar_RegisterVariable (&rcon_address);
 	Cvar_RegisterVariable (&rcon_secure);
+	Cvar_RegisterVariable (&rcon_secure_challengetimeout);
 	Cmd_AddCommand ("rcon", Host_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's); note: if rcon_secure is set, client and server clocks must be synced e.g. via NTP");
 	Cmd_AddCommand ("srcon", Host_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's); this always works as if rcon_secure is set; note: client and server clocks must be synced e.g. via NTP");
 	Cmd_AddCommand ("pqrcon", Host_PQRcon_f, "sends a command to a proquake server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's)");
