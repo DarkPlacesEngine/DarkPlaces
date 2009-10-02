@@ -88,6 +88,7 @@ static cvar_t rcon_restricted_password = {CVAR_PRIVATE, "rcon_restricted_passwor
 static cvar_t rcon_restricted_commands = {0, "rcon_restricted_commands", "", "allowed commands for rcon when the restricted mode password was used"};
 static cvar_t rcon_secure_maxdiff = {0, "rcon_secure_maxdiff", "5", "maximum time difference between rcon request and server system clock (to protect against replay attack)"};
 extern cvar_t rcon_secure;
+extern cvar_t rcon_secure_challengetimeout;
 
 /* statistic counters */
 static int packetsSent = 0;
@@ -1022,6 +1023,8 @@ static int clientport2 = -1;
 static int hostport = -1;
 void NetConn_UpdateSockets(void)
 {
+	int i, j;
+
 	if (cls.state != ca_dedicated)
 	{
 		if (clientport2 != cl_netport.integer)
@@ -1044,6 +1047,23 @@ void NetConn_UpdateSockets(void)
 		hostport = sv_netport.integer;
 		if (sv.active)
 			Con_Print("Changing \"port\" will not take effect until \"map\" command is executed.\n");
+	}
+
+	for (j = 0;j < MAX_RCONS;j++)
+	{
+		i = (cls.rcon_ringpos + j + 1) % MAX_RCONS;
+		if(cls.rcon_commands[i][0])
+		{
+			if(realtime > cls.rcon_timeout[i])
+			{
+				char s[128];
+				LHNETADDRESS_ToString(&cls.rcon_addresses[i], s, sizeof(s), true);
+				Con_Printf("rcon to %s (for command %s) failed: challenge request timed out\n", s, cls.rcon_commands[i]);
+				cls.rcon_commands[i][0] = 0;
+				--cls.rcon_trying;
+				break;
+			}
+		}
 	}
 }
 
@@ -1556,12 +1576,15 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 
 		if (length > 10 && !memcmp(string, "challenge ", 10) && cls.rcon_trying)
 		{
-			int i;
-			for (i = 0;i < MAX_RCONS;i++)
+			int i, j;
+			for (j = 0;j < MAX_RCONS;j++)
+			{
+				i = (cls.rcon_ringpos + j + 1) % MAX_RCONS;
 				if(cls.rcon_commands[i][0])
 					if (!LHNETADDRESS_Compare(peeraddress, &cls.rcon_addresses[i]))
 						break;
-			if (i < MAX_RCONS)
+			}
+			if (j < MAX_RCONS)
 			{
 				char buf[1500];
 				char argbuf[1500];
@@ -1574,6 +1597,21 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 					NetConn_Write(mysocket, buf, 46 + strlen(buf + 46), peeraddress);
 					cls.rcon_commands[i][0] = 0;
 					--cls.rcon_trying;
+
+					for (i = 0;i < MAX_RCONS;i++)
+						if(cls.rcon_commands[i][0])
+							if (!LHNETADDRESS_Compare(peeraddress, &cls.rcon_addresses[i]))
+								break;
+					if(i < MAX_RCONS)
+					{
+						NetConn_WriteString(mysocket, "\377\377\377\377getchallenge", peeraddress);
+						// extend the timeout on other requests as we asked for a challenge
+						for (i = 0;i < MAX_RCONS;i++)
+							if(cls.rcon_commands[i][0])
+								if (!LHNETADDRESS_Compare(peeraddress, &cls.rcon_addresses[i]))
+									cls.rcon_timeout[i] = realtime + rcon_secure_challengetimeout.value;
+					}
+
 					return true; // we used up the challenge, so we can't use this oen for connecting now anyway
 				}
 			}
