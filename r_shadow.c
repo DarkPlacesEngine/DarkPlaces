@@ -1700,6 +1700,7 @@ void R_Shadow_RenderMode_ShadowMap(int side, qboolean clear, int size)
 	CHECKGLERROR
 	R_SetViewport(&viewport);
 	GL_PolygonOffset(0, 0);
+#if 0
 	if(r_shadow_shadowmode >= 1 && r_shadow_shadowmode <= 2)
 	{
 		static qboolean cullback[6] = { true, false, true, false, false, true };
@@ -1707,6 +1708,9 @@ void R_Shadow_RenderMode_ShadowMap(int side, qboolean clear, int size)
 	}
 	else if(r_shadow_shadowmode == 3)
 		GL_CullFace(r_refdef.view.cullface_back);
+#else
+	GL_CullFace(GL_NONE);
+#endif
 	GL_Scissor(viewport.x, viewport.y, viewport.width, viewport.height);
 	GL_DepthMask(true);
 	GL_DepthTest(true);
