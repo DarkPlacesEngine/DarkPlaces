@@ -1700,7 +1700,13 @@ void R_Shadow_RenderMode_ShadowMap(int side, qboolean clear, int size)
 	CHECKGLERROR
 	R_SetViewport(&viewport);
 	GL_PolygonOffset(0, 0);
-	GL_CullFace(GL_NONE); // quake is backwards
+	if(r_shadow_shadowmode >= 1 && r_shadow_shadowmode <= 2)
+	{
+		static qboolean cullback[6] = { true, false, true, false, false, true };
+		GL_CullFace(cullback[side] ? r_refdef.view.cullface_back :  r_refdef.view.cullface_front);
+	}
+	else if(r_shadow_shadowmode == 3)
+		GL_CullFace(r_refdef.view.cullface_back);
 	GL_Scissor(viewport.x, viewport.y, viewport.width, viewport.height);
 	GL_DepthMask(true);
 	GL_DepthTest(true);
