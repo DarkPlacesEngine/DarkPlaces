@@ -3709,13 +3709,13 @@ static void R_Water_StartFrame(void)
 		r_waterstate.textureheight = textureheight;
 	}
 
-	// when doing a reduced render (HDR) we want to use a smaller area
-	r_waterstate.waterwidth = (int)bound(1, r_refdef.view.width * r_water_resolutionmultiplier.value, r_refdef.view.width);
-	r_waterstate.waterheight = (int)bound(1, r_refdef.view.height * r_water_resolutionmultiplier.value, r_refdef.view.height);
-
 	if (r_waterstate.waterwidth)
 	{
 		r_waterstate.enabled = true;
+
+		// when doing a reduced render (HDR) we want to use a smaller area
+		r_waterstate.waterwidth = (int)bound(1, r_refdef.view.width * r_water_resolutionmultiplier.value, r_refdef.view.width);
+		r_waterstate.waterheight = (int)bound(1, r_refdef.view.height * r_water_resolutionmultiplier.value, r_refdef.view.height);
 
 		// set up variables that will be used in shader setup
 		r_waterstate.screenscale[0] = 0.5f * (float)r_waterstate.waterwidth / (float)r_waterstate.texturewidth;
