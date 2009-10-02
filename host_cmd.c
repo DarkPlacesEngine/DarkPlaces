@@ -33,7 +33,7 @@ cvar_t sv_adminnick = {CVAR_SAVE, "sv_adminnick", "", "nick name to use for admi
 cvar_t sv_status_privacy = {CVAR_SAVE, "sv_status_privacy", "0", "do not show IP addresses in 'status' replies to clients"};
 cvar_t sv_status_show_qcstatus = {CVAR_SAVE, "sv_status_show_qcstatus", "0", "show the 'qcstatus' field in status replies, not the 'frags' field. Turn this on if your mod uses this field, and the 'frags' field on the other hand has no meaningful value."};
 cvar_t rcon_password = {CVAR_PRIVATE, "rcon_password", "", "password to authenticate rcon commands; NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password"};
-cvar_t rcon_secure = {CVAR_NQUSERINFOHACK, "rcon_secure", "0", "force secure rcon authentication; NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password"};
+cvar_t rcon_secure = {CVAR_NQUSERINFOHACK, "rcon_secure", "0", "force secure rcon authentication (1 = time based, 2 = challenge based); NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password"};
 cvar_t rcon_address = {0, "rcon_address", "", "server address to send rcon commands to (when not connected to a server)"};
 cvar_t team = {CVAR_USERINFO | CVAR_SAVE, "team", "none", "QW team (4 character limit, example: blue)"};
 cvar_t skin = {CVAR_USERINFO | CVAR_SAVE, "skin", "", "QW player skin name (example: base)"};
@@ -2436,10 +2436,19 @@ void Host_Rcon_f (void) // credit: taken from QuakeWorld
 		LHNETADDRESS_FromString(&to, rcon_address.string, sv_netport.integer);
 	}
 	mysocket = NetConn_ChooseClientSocketForAddress(&to);
-	if (mysocket)
+	if (mysocket && Cmd_Args()[0])
 	{
 		// simply put together the rcon packet and send it
-		if(Cmd_Argv(0)[0] == 's' || rcon_secure.integer)
+		if(Cmd_Argv(0)[0] == 's' || rcon_secure.integer > 1)
+		{
+			if(!cls.rcon_commands[cls.rcon_ringpos][0])
+				++cls.rcon_trying;
+			strlcpy(cls.rcon_commands[cls.rcon_ringpos], Cmd_Args(), sizeof(cls.rcon_commands[cls.rcon_ringpos]));
+			cls.rcon_addresses[cls.rcon_ringpos] = to;
+			cls.rcon_ringpos = (cls.rcon_ringpos) % 64;
+			NetConn_WriteString(mysocket, "\377\377\377\377getchallenge", &to);
+		}
+		else if(rcon_secure.integer)
 		{
 			char buf[1500];
 			char argbuf[1500];

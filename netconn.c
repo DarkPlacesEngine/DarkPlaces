@@ -1554,6 +1554,30 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			Com_HexDumpToConsole(data, length);
 		}
 
+		if (length > 10 && !memcmp(string, "challenge ", 10) && cls.rcon_trying)
+		{
+			int i;
+			for (i = 0;i < MAX_RCONS;i++)
+				if(cls.rcon_commands[i][0])
+					if (!LHNETADDRESS_Compare(peeraddress, &cls.rcon_addresses[i]))
+						break;
+			if (i < MAX_RCONS)
+			{
+				char buf[1500];
+				char argbuf[1500];
+				dpsnprintf(argbuf, sizeof(argbuf), "%s %s", string + 10, cls.rcon_commands[i]);
+				memcpy(buf, "\377\377\377\377srcon HMAC-MD4 CHALLENGE ", 29);
+				if(HMAC_MDFOUR_16BYTES((unsigned char *) (buf + 29), (unsigned char *) argbuf, strlen(argbuf), (unsigned char *) rcon_password.string, strlen(rcon_password.string)))
+				{
+					buf[45] = ' ';
+					strlcpy(buf + 46, argbuf, sizeof(buf) - 46);
+					NetConn_Write(mysocket, buf, 46 + strlen(buf + 46), peeraddress);
+					cls.rcon_commands[i][0] = 0;
+					--cls.rcon_trying;
+					return true; // we used up the challenge, so we can't use this oen for connecting now anyway
+				}
+			}
+		}
 		if (length > 10 && !memcmp(string, "challenge ", 10) && cls.connect_trying)
 		{
 			// darkplaces or quake3
