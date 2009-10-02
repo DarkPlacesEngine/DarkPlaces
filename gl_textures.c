@@ -60,7 +60,8 @@ static textypeinfo_t textype_bgra                   = {TEXTYPE_BGRA   , 4, 4, 4.
 static textypeinfo_t textype_bgra_alpha             = {TEXTYPE_BGRA   , 4, 4, 4.0f, GL_BGRA   , 4, GL_UNSIGNED_BYTE};
 static textypeinfo_t textype_bgra_compress          = {TEXTYPE_BGRA   , 4, 4, 0.5f, GL_BGRA   , GL_COMPRESSED_RGB_ARB, GL_UNSIGNED_BYTE};
 static textypeinfo_t textype_bgra_alpha_compress    = {TEXTYPE_BGRA   , 4, 4, 1.0f, GL_BGRA   , GL_COMPRESSED_RGBA_ARB, GL_UNSIGNED_BYTE};
-static textypeinfo_t textype_shadowmap              = {TEXTYPE_SHADOWMAP,4,4, 4.0f, GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT24_ARB, GL_UNSIGNED_INT};
+static textypeinfo_t textype_shadowmap16            = {TEXTYPE_SHADOWMAP,2,2, 2.0f, GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT16_ARB, GL_UNSIGNED_SHORT};
+static textypeinfo_t textype_shadowmap24            = {TEXTYPE_SHADOWMAP,4,4, 4.0f, GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT24_ARB, GL_UNSIGNED_INT};
 
 typedef enum gltexturetype_e
 {
@@ -217,7 +218,7 @@ static textypeinfo_t *R_GetTexTypeInfo(textype_t textype, int flags)
 			case TEXTYPE_BGRA:
 				return &textype_bgra;
 			case TEXTYPE_SHADOWMAP:
-				return &textype_shadowmap;
+				return (flags & TEXF_LOWPRECISION) ? &textype_shadowmap16 : &textype_shadowmap24;
 			default:
 				Host_Error("R_GetTexTypeInfo: unknown texture format");
 				return NULL;
@@ -1130,19 +1131,31 @@ rtexture_t *R_LoadTextureCubeMap(rtexturepool_t *rtexturepool, const char *ident
 	return R_SetupTexture(rtexturepool, identifier, width, width, 1, 6, flags, textype, GLTEXTURETYPE_CUBEMAP, data, palette);
 }
 
-rtexture_t *R_LoadTextureShadowMapRectangle(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, qboolean filter)
+static int R_ShadowMapTextureFlags(int precision, qboolean filter)
 {
-	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, TEXF_ALWAYSPRECACHE | TEXF_CLAMP | (filter ? TEXF_FORCELINEAR | TEXF_COMPARE : TEXF_FORCENEAREST), TEXTYPE_SHADOWMAP, GLTEXTURETYPE_RECTANGLE, NULL, NULL);
+	int flags = TEXF_ALWAYSPRECACHE | TEXF_CLAMP;
+	if (filter)
+		flags |= TEXF_FORCELINEAR | TEXF_COMPARE;
+	else
+		flags |= TEXF_FORCENEAREST;
+	if (precision <= 16)
+		flags |= TEXF_LOWPRECISION;
+	return flags;
 }
 
-rtexture_t *R_LoadTextureShadowMap2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, qboolean filter)
+rtexture_t *R_LoadTextureShadowMapRectangle(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int precision, qboolean filter)
 {
-	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, TEXF_ALWAYSPRECACHE | TEXF_CLAMP | (filter ? TEXF_FORCELINEAR | TEXF_COMPARE : TEXF_FORCENEAREST), TEXTYPE_SHADOWMAP, GLTEXTURETYPE_2D, NULL, NULL);
+	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, R_ShadowMapTextureFlags(precision, filter), TEXTYPE_SHADOWMAP, GLTEXTURETYPE_RECTANGLE, NULL, NULL);
 }
 
-rtexture_t *R_LoadTextureShadowMapCube(rtexturepool_t *rtexturepool, const char *identifier, int width, qboolean filter)
+rtexture_t *R_LoadTextureShadowMap2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int precision, qboolean filter)
 {
-    return R_SetupTexture(rtexturepool, identifier, width, width, 1, 6, TEXF_ALWAYSPRECACHE | TEXF_CLAMP | (filter ? TEXF_FORCELINEAR | TEXF_COMPARE : TEXF_FORCENEAREST), TEXTYPE_SHADOWMAP, GLTEXTURETYPE_CUBEMAP, NULL, NULL);
+	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, R_ShadowMapTextureFlags(precision, filter), TEXTYPE_SHADOWMAP, GLTEXTURETYPE_2D, NULL, NULL);
+}
+
+rtexture_t *R_LoadTextureShadowMapCube(rtexturepool_t *rtexturepool, const char *identifier, int width, int precision, qboolean filter)
+{
+    return R_SetupTexture(rtexturepool, identifier, width, width, 1, 6, R_ShadowMapTextureFlags(precision, filter), TEXTYPE_SHADOWMAP, GLTEXTURETYPE_CUBEMAP, NULL, NULL);
 }
 
 int R_TextureHasAlpha(rtexture_t *rt)
