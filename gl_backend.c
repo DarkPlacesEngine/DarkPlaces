@@ -9,7 +9,8 @@ cvar_t gl_mesh_prefer_short_elements = {0, "gl_mesh_prefer_short_elements", "1",
 cvar_t gl_paranoid = {0, "gl_paranoid", "0", "enables OpenGL error checking and other tests"};
 cvar_t gl_printcheckerror = {0, "gl_printcheckerror", "0", "prints all OpenGL error checks, useful to identify location of driver crashes"};
 
-cvar_t r_render = {0, "r_render", "1", "enables rendering calls (you want this on!)"};
+cvar_t r_render = {0, "r_render", "1", "enables rendering 3D views (you want this on!)"};
+cvar_t r_renderview = {0, "r_renderview", "1", "enables rendering 3D views (you want this on!)"};
 cvar_t r_waterwarp = {CVAR_SAVE, "r_waterwarp", "1", "warp view while underwater"};
 cvar_t gl_polyblend = {CVAR_SAVE, "gl_polyblend", "1", "tints view while underwater, hurt, etc"};
 cvar_t gl_dither = {CVAR_SAVE, "gl_dither", "1", "enables OpenGL dithering (16bit looks bad with this off)"};
@@ -251,6 +252,7 @@ void gl_backend_init(void)
 	}
 
 	Cvar_RegisterVariable(&r_render);
+	Cvar_RegisterVariable(&r_renderview);
 	Cvar_RegisterVariable(&r_waterwarp);
 	Cvar_RegisterVariable(&gl_polyblend);
 	Cvar_RegisterVariable(&v_flipped);
@@ -260,9 +262,6 @@ void gl_backend_init(void)
 	Cvar_RegisterVariable(&gl_vbo);
 	Cvar_RegisterVariable(&gl_paranoid);
 	Cvar_RegisterVariable(&gl_printcheckerror);
-#ifdef NORENDER
-	Cvar_SetValue("r_render", 0);
-#endif
 
 	Cvar_RegisterVariable(&gl_mesh_drawrangeelements);
 	Cvar_RegisterVariable(&gl_mesh_testarrayelement);
@@ -1044,7 +1043,7 @@ void GL_LockArrays(int first, int count)
 			qglUnlockArraysEXT();
 			CHECKGLERROR
 		}
-		if (count && gl_supportslockarrays && gl_lockarrays.integer && r_render.integer)
+		if (count && gl_supportslockarrays && gl_lockarrays.integer)
 		{
 			gl_state.lockrange_first = first;
 			gl_state.lockrange_count = count;
@@ -1291,7 +1290,7 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 		}
 		CHECKGLERROR
 	}
-	if (r_render.integer)
+	if (r_render.integer || r_refdef.draw2dstage)
 	{
 		CHECKGLERROR
 		if (gl_mesh_testmanualfeeding.integer)

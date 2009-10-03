@@ -257,7 +257,7 @@ void VID_Finish (void)
 		qwglSwapIntervalEXT (vid_usevsync);
 	}
 
-	if (r_render.integer && !vid_hidden)
+	if (!vid_hidden)
 	{
 		CHECKGLERROR
 		if (r_speeds.integer == 2 || gl_finish.integer)
