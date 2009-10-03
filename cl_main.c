@@ -740,6 +740,16 @@ void CL_RelinkLightFlashes(void)
 		}
 	}
 
+	if (!cl.lightstyle)
+	{
+		for (j = 0;j < cl.max_lightstyle;j++)
+		{
+			r_refdef.scene.rtlightstylevalue[j] = 1;
+			r_refdef.scene.lightstylevalue[j] = 256;
+		}
+		return;
+	}
+
 // light animations
 // 'm' is normal light, 'a' is no light, 'z' is double bright
 	f = cl.time * 10;
@@ -747,7 +757,7 @@ void CL_RelinkLightFlashes(void)
 	frac = f - i;
 	for (j = 0;j < cl.max_lightstyle;j++)
 	{
-		if (!cl.lightstyle || !cl.lightstyle[j].length)
+		if (!cl.lightstyle[j].length)
 		{
 			r_refdef.scene.rtlightstylevalue[j] = 1;
 			r_refdef.scene.lightstylevalue[j] = 256;
