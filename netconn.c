@@ -2397,8 +2397,6 @@ qboolean hmac_mdfour_challenge_matching(lhnetaddress_t *peeraddress, const char 
 
 	// unmark challenge to prevent replay attacks
 	challenge[i].time = 0;
-	LHNETADDRESS_FromString(&challenge[i].address, "local:42", 42); // no rcon will come from there for sure
-	challenge[i].address = *peeraddress;
 
 	return true;
 }
