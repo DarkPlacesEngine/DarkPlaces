@@ -128,6 +128,7 @@ cvar_t sv_warsowbunny_accel = {0, "sv_warsowbunny_accel", "0.1585", "how fast yo
 cvar_t sv_warsowbunny_topspeed = {0, "sv_warsowbunny_topspeed", "925", "soft speed limit (can get faster with rjs and on ramps)"};
 cvar_t sv_warsowbunny_turnaccel = {0, "sv_warsowbunny_turnaccel", "0", "max sharpness of turns (also master switch for the sv_warsowbunny_* mode; set this to 9 to enable)"};
 cvar_t sv_warsowbunny_backtosideratio = {0, "sv_warsowbunny_backtosideratio", "0.8", "lower values make it easier to change direction without losing speed; the drawback is \"understeering\" in sharp turns"};
+cvar_t sv_onlycsqcnetworking = {0, "sv_onlycsqcnetworking", "0", "disables legacy entity networking code for higher performance"};
 cvar_t sys_ticrate = {CVAR_SAVE, "sys_ticrate","0.0138889", "how long a server frame is in seconds, 0.05 is 20fps server rate, 0.1 is 10fps (can not be set higher than 0.1), 0 runs as many server frames as possible (makes games against bots a little smoother, overwhelms network players), 0.0138889 matches QuakeWorld physics"};
 cvar_t teamplay = {CVAR_NOTIFY, "teamplay","0", "teamplay mode, values depend on mod but typically 0 = no teams, 1 = no team damage no self damage, 2 = team damage and self damage, some mods support 3 = no team damage but can damage self"};
 cvar_t timelimit = {CVAR_NOTIFY, "timelimit","0", "ends level at this time (in minutes)"};
@@ -417,6 +418,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_warsowbunny_topspeed);
 	Cvar_RegisterVariable (&sv_warsowbunny_turnaccel);
 	Cvar_RegisterVariable (&sv_warsowbunny_backtosideratio);
+	Cvar_RegisterVariable (&sv_onlycsqcnetworking);
 	Cvar_RegisterVariable (&sys_ticrate);
 	Cvar_RegisterVariable (&teamplay);
 	Cvar_RegisterVariable (&timelimit);
@@ -1010,10 +1012,16 @@ static qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *c
 	unsigned int version;
 	unsigned int modelindex, effects, flags, glowsize, lightstyle, lightpflags, light[4], specialvisibilityradius;
 	unsigned int customizeentityforclient;
+	unsigned int sendentity;
 	float f;
 	vec3_t cullmins, cullmaxs;
 	dp_model_t *model;
 	prvm_eval_t *val, *val2;
+
+	// fast path for games that do not use legacy entity networking
+	sendentity = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.SendEntity)->function;
+	if (sv_onlycsqcnetworking.integer && !sendentity)
+		return false;
 
 	// this 2 billion unit check is actually to detect NAN origins
 	// (we really don't want to send those)
@@ -1249,8 +1257,7 @@ static qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *c
 	// we need to do some csqc entity upkeep here
 	// get self.SendFlags and clear them
 	// (to let the QC know that they've been read)
-	val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.SendEntity);
-	if (val->function)
+	if (sendentity)
 	{
 		val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.SendFlags);
 		sendflags = (unsigned int)val->_float;
