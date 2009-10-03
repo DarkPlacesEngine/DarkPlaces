@@ -1569,6 +1569,76 @@ void Collision_ClipToWorld(trace_t *trace, dp_model_t *model, const vec3_t start
 	VectorLerp(start, trace->fraction, end, trace->endpos);
 }
 
+void Collision_ClipLineToGenericEntity(trace_t *trace, dp_model_t *model, int frame, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t end, int hitsupercontentsmask)
+{
+	float starttransformed[3], endtransformed[3];
+
+	memset(trace, 0, sizeof(*trace));
+	trace->fraction = trace->realfraction = 1;
+	VectorCopy(end, trace->endpos);
+
+	Matrix4x4_Transform(inversematrix, start, starttransformed);
+	Matrix4x4_Transform(inversematrix, end, endtransformed);
+#if COLLISIONPARANOID >= 3
+	Con_Printf("trans(%f %f %f -> %f %f %f, %f %f %f -> %f %f %f)", start[0], start[1], start[2], starttransformed[0], starttransformed[1], starttransformed[2], end[0], end[1], end[2], endtransformed[0], endtransformed[1], endtransformed[2]);
+#endif
+
+	if (model && model->TraceLine)
+		model->TraceLine(model, bound(0, frame, (model->numframes - 1)), trace, starttransformed, endtransformed, hitsupercontentsmask);
+	else
+		Collision_ClipTrace_Box(trace, bodymins, bodymaxs, starttransformed, vec3_origin, vec3_origin, endtransformed, hitsupercontentsmask, bodysupercontents, 0, NULL);
+	trace->fraction = bound(0, trace->fraction, 1);
+	trace->realfraction = bound(0, trace->realfraction, 1);
+
+	VectorLerp(start, trace->fraction, end, trace->endpos);
+	// transform plane
+	// NOTE: this relies on plane.dist being directly after plane.normal
+	Matrix4x4_TransformPositivePlane(matrix, trace->plane.normal[0], trace->plane.normal[1], trace->plane.normal[2], trace->plane.dist, trace->plane.normal);
+}
+
+void Collision_ClipLineToWorld(trace_t *trace, dp_model_t *model, const vec3_t start, const vec3_t end, int hitsupercontents)
+{
+	memset(trace, 0, sizeof(*trace));
+	trace->fraction = trace->realfraction = 1;
+	if (model && model->TraceLine)
+		model->TraceLine(model, 0, trace, start, end, hitsupercontents);
+	trace->fraction = bound(0, trace->fraction, 1);
+	trace->realfraction = bound(0, trace->realfraction, 1);
+	VectorLerp(start, trace->fraction, end, trace->endpos);
+}
+
+void Collision_ClipPointToGenericEntity(trace_t *trace, dp_model_t *model, int frame, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, int hitsupercontentsmask)
+{
+	float starttransformed[3];
+
+	memset(trace, 0, sizeof(*trace));
+	trace->fraction = trace->realfraction = 1;
+	VectorCopy(start, trace->endpos);
+
+	Matrix4x4_Transform(inversematrix, start, starttransformed);
+#if COLLISIONPARANOID >= 3
+	Con_Printf("trans(%f %f %f -> %f %f %f)", start[0], start[1], start[2], starttransformed[0], starttransformed[1], starttransformed[2]);
+#endif
+
+	if (model && model->TracePoint)
+		model->TracePoint(model, bound(0, frame, (model->numframes - 1)), trace, starttransformed, hitsupercontentsmask);
+	else
+		Collision_ClipTrace_Point(trace, bodymins, bodymaxs, starttransformed, hitsupercontentsmask, bodysupercontents, 0, NULL);
+
+	// transform plane
+	// NOTE: this relies on plane.dist being directly after plane.normal
+	Matrix4x4_TransformPositivePlane(matrix, trace->plane.normal[0], trace->plane.normal[1], trace->plane.normal[2], trace->plane.dist, trace->plane.normal);
+}
+
+void Collision_ClipPointToWorld(trace_t *trace, dp_model_t *model, const vec3_t start, int hitsupercontents)
+{
+	memset(trace, 0, sizeof(*trace));
+	trace->fraction = trace->realfraction = 1;
+	VectorCopy(start, trace->endpos);
+	if (model && model->TracePoint)
+		model->TracePoint(model, 0, trace, start, hitsupercontents);
+}
+
 void Collision_CombineTraces(trace_t *cliptrace, const trace_t *trace, void *touch, qboolean isbmodel)
 {
 	// take the 'best' answers from the new trace and combine with existing data
