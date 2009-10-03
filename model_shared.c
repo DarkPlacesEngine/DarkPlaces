@@ -1886,6 +1886,7 @@ void Mod_LoadQ3Shaders(void)
 		}
 		Mem_Free(f);
 	}
+	FS_FreeSearch(search);
 }
 
 q3shaderinfo_t *Mod_LookupQ3Shader(const char *name)

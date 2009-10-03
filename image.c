@@ -1021,6 +1021,7 @@ void Image_FixTransparentPixels_f(void)
 			Con_Printf("unchanged.\n");
 		Mem_Free(data);
 	}
+	FS_FreeSearch(search);
 }
 
 qboolean Image_WriteTGABGR_preflipped (const char *filename, int width, int height, const unsigned char *data, unsigned char *buffer)
