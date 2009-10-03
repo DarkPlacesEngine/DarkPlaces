@@ -2382,8 +2382,9 @@ qboolean hmac_mdfour_challenge_matching(lhnetaddress_t *peeraddress, const char 
 
 	// validate the challenge
 	for (i = 0;i < MAX_CHALLENGES;i++)
-		if (!LHNETADDRESS_Compare(peeraddress, &challenge[i].address) && !strncmp(challenge[i].string, s, sizeof(challenge[0].string) - 1))
-			break;
+		if(challenge[i].time > 0)
+			if (!LHNETADDRESS_Compare(peeraddress, &challenge[i].address) && !strncmp(challenge[i].string, s, sizeof(challenge[0].string) - 1))
+				break;
 	// if the challenge is not recognized, drop the packet
 	if (i == MAX_CHALLENGES)
 		return false;
@@ -2395,10 +2396,6 @@ qboolean hmac_mdfour_challenge_matching(lhnetaddress_t *peeraddress, const char 
 		return false;
 
 	// unmark challenge to prevent replay attacks
-	// FIXME as there is currently no unmark facility, let's invalidate it
-	// as much as possible
-	challenge[i].string[0] = '\\'; // not allowed in infostrings, so connects cannot match
-	NetConn_BuildChallengeString(challenge[i].string + 1, sizeof(challenge[i].string) - 1);
 	challenge[i].time = 0;
 	LHNETADDRESS_FromString(&challenge[i].address, "local:42", 42); // no rcon will come from there for sure
 	challenge[i].address = *peeraddress;
@@ -2551,8 +2548,9 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		{
 			for (i = 0, best = 0, besttime = realtime;i < MAX_CHALLENGES;i++)
 			{
-				if (!LHNETADDRESS_Compare(peeraddress, &challenge[i].address))
-					break;
+				if(challenge[i].time > 0)
+					if (!LHNETADDRESS_Compare(peeraddress, &challenge[i].address))
+						break;
 				if (besttime > challenge[i].time)
 					besttime = challenge[best = i].time;
 			}
@@ -2578,8 +2576,9 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				return true;
 			// validate the challenge
 			for (i = 0;i < MAX_CHALLENGES;i++)
-				if (!LHNETADDRESS_Compare(peeraddress, &challenge[i].address) && !strcmp(challenge[i].string, s))
-					break;
+				if(challenge[i].time > 0)
+					if (!LHNETADDRESS_Compare(peeraddress, &challenge[i].address) && !strcmp(challenge[i].string, s))
+						break;
 			// if the challenge is not recognized, drop the packet
 			if (i == MAX_CHALLENGES)
 				return true;
