@@ -1579,7 +1579,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			int i, j;
 			for (j = 0;j < MAX_RCONS;j++)
 			{
-				i = (cls.rcon_ringpos + j + 1) % MAX_RCONS;
+				i = (cls.rcon_ringpos + j) % MAX_RCONS;
 				if(cls.rcon_commands[i][0])
 					if (!LHNETADDRESS_Compare(peeraddress, &cls.rcon_addresses[i]))
 						break;
