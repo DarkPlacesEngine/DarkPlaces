@@ -965,6 +965,8 @@ shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts, int maxtria
 	newmesh->maxtriangles = maxtriangles;
 	newmesh->numverts = 0;
 	newmesh->numtriangles = 0;
+	memset(newmesh->sideoffsets, 0, sizeof(newmesh->sideoffsets));
+	memset(newmesh->sidetotals, 0, sizeof(newmesh->sidetotals));
 
 	newmesh->vertex3f = (float *)data;data += maxverts * sizeof(float[3]);
 	if (light)
@@ -995,6 +997,8 @@ shadowmesh_t *Mod_ShadowMesh_ReAlloc(mempool_t *mempool, shadowmesh_t *oldmesh, 
 	newmesh = Mod_ShadowMesh_Alloc(mempool, oldmesh->numverts, oldmesh->numtriangles, oldmesh->map_diffuse, oldmesh->map_specular, oldmesh->map_normal, light, neighbors, false);
 	newmesh->numverts = oldmesh->numverts;
 	newmesh->numtriangles = oldmesh->numtriangles;
+	memcpy(newmesh->sideoffsets, oldmesh->sideoffsets, sizeof(oldmesh->sideoffsets));
+	memcpy(newmesh->sidetotals, oldmesh->sidetotals, sizeof(oldmesh->sidetotals));
 
 	memcpy(newmesh->vertex3f, oldmesh->vertex3f, oldmesh->numverts * sizeof(float[3]));
 	if (newmesh->svector3f && oldmesh->svector3f)

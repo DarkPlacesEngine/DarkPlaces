@@ -39,8 +39,11 @@ extern cvar_t gl_ext_stenciltwoside;
 
 void R_Shadow_Init(void);
 void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f, const int *elements, const int *neighbors, const vec3_t projectorigin, const vec3_t projectdirection, float projectdistance, int nummarktris, const int *marktris, vec3_t trismins, vec3_t trismaxs);
-void R_Shadow_ShadowMapFromList(int numverts, int numtris, const float *vertex3f, int vertex3f_bufferobject, int vertex3f_bufferoffset, const int *elements, int nummarktris, const int *marktris);
+void R_Shadow_ShadowMapFromList(int numverts, int numtris, const float *vertex3f, const int *elements, int numsidetris, const int *sidetotals, const unsigned char *sides, const int *sidetris);
 void R_Shadow_MarkVolumeFromBox(int firsttriangle, int numtris, const float *invertex3f, const int *elements, const vec3_t projectorigin, const vec3_t projectdirection, const vec3_t lightmins, const vec3_t lightmaxs, const vec3_t surfacemins, const vec3_t surfacemaxs);
+int R_Shadow_CalcTriangleSideMask(const vec3_t p1, const vec3_t p2, const vec3_t p3, float bias);
+int R_Shadow_CalcSphereSideMask(const vec3_t p1, float radius, float bias);
+void R_Shadow_ChooseSidesFromBox(int firsttriangle, int numtris, const float *invertex3f, const int *elements, const matrix4x4_t *worldtolight, const vec3_t projectorigin, const vec3_t projectdirection, const vec3_t lightmins, const vec3_t lightmaxs, const vec3_t surfacemins, const vec3_t surfacemaxs, int *totals);
 void R_Shadow_RenderLighting(int firstvertex, int numvertices, int firsttriangle, int numtriangles, const int *element3i, const unsigned short *element3s, int element3i_bufferobject, int element3s_bufferobject);
 void R_Shadow_RenderMode_Begin(void);
 void R_Shadow_RenderMode_ActiveLight(const rtlight_t *rtlight);
@@ -72,14 +75,18 @@ void R_RTLight_Uncompile(rtlight_t *rtlight);
 void R_ShadowVolumeLighting(qboolean visible);
 void R_DrawCoronas(void);
 
-int *R_Shadow_ResizeShadowElements(int numtris);
-
 extern int maxshadowmark;
 extern int numshadowmark;
 extern int *shadowmark;
 extern int *shadowmarklist;
 extern int shadowmarkcount;
 void R_Shadow_PrepareShadowMark(int numtris);
+
+extern int maxshadowsides;
+extern int numshadowsides;
+extern unsigned char *shadowsides;
+extern int *shadowsideslist;
+void R_Shadow_PrepareShadowSides(int numtris);
 
 void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal, const vec3_t p, int dynamic);
 
