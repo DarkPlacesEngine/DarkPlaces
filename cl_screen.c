@@ -728,6 +728,14 @@ void R_TimeReport_BeginFrame(void)
 	}
 }
 
+static int R_CountLeafTriangles(const dp_model_t *model, const mleaf_t *leaf)
+{
+	int i, triangles = 0;
+	for (i = 0;i < leaf->numleafsurfaces;i++)
+		triangles += model->data_surfaces[leaf->firstleafsurface[i]].num_triangles;
+	return triangles;
+}
+
 void R_TimeReport_EndFrame(void)
 {
 	int i, j, lines, y;
@@ -745,17 +753,19 @@ void R_TimeReport_EndFrame(void)
 		dpsnprintf(string, sizeof(string),
 "%s%s\n"
 "%3i renders org:'%+8.2f %+8.2f %+8.2f' dir:'%+2.3f %+2.3f %+2.3f'\n"
+"%5i viewleaf%5i cluster%2i area%4i brushes%4i surfaces(%7i triangles)\n"
 "%7i surfaces%7i triangles %5i entities (%7i surfaces%7i triangles)\n"
 "%5i leafs%5i portals%6i/%6i particles%6i/%6i decals %3i%% quality\n"
-"%7i lightmap updates (%7i pixels)%s\n"
+"%7i lightmap updates (%7i pixels)\n"
 "%4i lights%4i clears%4i scissored%7i light%7i shadow%7i dynamic\n"
 "rendered%6i meshes%8i triangles bloompixels%8i copied%8i drawn\n"
 "%s"
 , loc ? "Location: " : "", loc ? loc->name : ""
 , r_refdef.stats.renders, r_refdef.view.origin[0], r_refdef.view.origin[1], r_refdef.view.origin[2], r_refdef.view.forward[0], r_refdef.view.forward[1], r_refdef.view.forward[2]
+, viewleaf ? (int)(viewleaf - r_refdef.scene.worldmodel->brush.data_leafs) : -1, viewleaf ? viewleaf->clusterindex : -1, viewleaf ? viewleaf->areaindex : -1, viewleaf ? viewleaf->numleafbrushes : 0, viewleaf ? viewleaf->numleafsurfaces : 0, viewleaf ? R_CountLeafTriangles(r_refdef.scene.worldmodel, viewleaf) : 0
 , r_refdef.stats.world_surfaces, r_refdef.stats.world_triangles, r_refdef.stats.entities, r_refdef.stats.entities_surfaces, r_refdef.stats.entities_triangles
 , r_refdef.stats.world_leafs, r_refdef.stats.world_portals, r_refdef.stats.particles, cl.num_particles, r_refdef.stats.decals, cl.num_decals, (int)(100 * r_refdef.view.quality)
-, r_refdef.stats.lightmapupdates, r_refdef.stats.lightmapupdatepixels, viewleaf ? va(" clusterindex%6i", viewleaf->clusterindex) : ""
+, r_refdef.stats.lightmapupdates, r_refdef.stats.lightmapupdatepixels
 , r_refdef.stats.lights, r_refdef.stats.lights_clears, r_refdef.stats.lights_scissored, r_refdef.stats.lights_lighttriangles, r_refdef.stats.lights_shadowtriangles, r_refdef.stats.lights_dynamicshadowtriangles
 , r_refdef.stats.meshes, r_refdef.stats.meshes_elements / 3, r_refdef.stats.bloom_copypixels, r_refdef.stats.bloom_drawpixels
 , r_speeds_timestring);
@@ -1186,7 +1196,7 @@ void SCR_CaptureVideo_SoundFrame(const portable_sampleframe_t *paintbuffer, size
 void SCR_CaptureVideo(void)
 {
 	int newframenum;
-	if (cl_capturevideo.integer && r_render.integer)
+	if (cl_capturevideo.integer)
 	{
 		if (!cls.capturevideo.active)
 			SCR_CaptureVideo_BeginVideo();
@@ -1401,9 +1411,6 @@ qboolean SCR_ScreenShot(char *filename, unsigned char *buffer1, unsigned char *b
 	int	indices[3] = {0,1,2};
 	qboolean ret;
 
-	if (!r_render.integer)
-		return false;
-
 	CHECKGLERROR
 	qglReadPixels (x, y, width, height, jpeg ? GL_RGB : GL_BGR, GL_UNSIGNED_BYTE, buffer1);CHECKGLERROR
 
@@ -1471,8 +1478,7 @@ void R_ClearScreen(qboolean fogcolor)
 		qglClearStencil(128);CHECKGLERROR
 	}
 	// clear the screen
-	if (r_render.integer)
-		GL_Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | (gl_stencil ? GL_STENCIL_BUFFER_BIT : 0));
+	GL_Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | (gl_stencil ? GL_STENCIL_BUFFER_BIT : 0));
 	// set dithering mode
 	if (gl_dither.integer)
 	{
@@ -1490,6 +1496,7 @@ void R_Shadow_EditLights_DrawSelectedLightProperties(void);
 
 int r_stereo_side;
 
+extern void Sbar_ShowFPS(void);
 void SCR_DrawScreen (void)
 {
 	R_Mesh_Start();
@@ -1592,6 +1599,7 @@ void SCR_DrawScreen (void)
 		SCR_DrawPause ();
 		if (!r_letterbox.value)
 			Sbar_Draw();
+		Sbar_ShowFPS();
 		SHOWLMP_drawall();
 		SCR_CheckDrawCenterString();
 	}
@@ -1892,7 +1900,7 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 	int			old_key_consoleactive;
 
 	// don't do anything if not initialized yet
-	if (vid_hidden || !scr_refresh.integer || cls.state == ca_dedicated)
+	if (vid_hidden || cls.state == ca_dedicated)
 		return;
 	
 	if(loadingscreentime == realtime)
@@ -1953,13 +1961,16 @@ extern cvar_t cl_minfps_qualitypower;
 extern cvar_t cl_minfps_qualityscale;
 static double cl_updatescreen_rendertime = 0;
 static double cl_updatescreen_quality = 1;
+extern void Sbar_ShowFPS_Update(void);
 void CL_UpdateScreen(void)
 {
 	double rendertime1;
 	float conwidth, conheight;
 	float f;
 
-	if (!scr_initialized || !con_initialized)
+	Sbar_ShowFPS_Update();
+
+	if (!scr_initialized || !con_initialized || !scr_refresh.integer)
 		return;				// not initialized yet
 
 	if(gamemode == GAME_NEXUIZ)
@@ -1975,7 +1986,7 @@ void CL_UpdateScreen(void)
 		memcpy(palette_rgb_shirtscoreboard[15], palette_rgb_shirtcolormap[15], sizeof(*palette_rgb_shirtcolormap));
 	}
 
-	if (vid_hidden || !scr_refresh.integer)
+	if (vid_hidden)
 		return;
 
 	rendertime1 = Sys_DoubleTime();

@@ -163,6 +163,7 @@ int R_CullBoxCustomPlanes(const vec3_t mins, const vec3_t maxs, int numplanes, c
 #include "r_lerpanim.h"
 
 extern cvar_t r_render;
+extern cvar_t r_renderview;
 extern cvar_t r_waterwarp;
 
 extern cvar_t r_textureunits;

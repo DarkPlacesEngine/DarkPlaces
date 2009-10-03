@@ -830,7 +830,7 @@ void VID_Finish (void)
 
 	VID_UpdateGamma(false, 256);
 
-	if (r_render.integer && !vid_hidden)
+	if (!vid_hidden)
 	{
 		CHECKGLERROR
 		if (r_speeds.integer == 2 || gl_finish.integer)

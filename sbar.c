@@ -1090,6 +1090,27 @@ static void get_showspeed_unit(int unitnumber, double *conversion_factor, const 
 	}
 }
 
+static double showfps_nexttime = 0, showfps_lasttime = -1;
+static double showfps_framerate = 0;
+static int showfps_framecount = 0;
+
+void Sbar_ShowFPS_Update(void)
+{
+	double interval = 1;
+	double newtime;
+	newtime = realtime;
+	if (newtime >= showfps_nexttime)
+	{
+		showfps_framerate = showfps_framecount / (newtime - showfps_lasttime);
+		if (showfps_nexttime < newtime - interval * 1.5)
+			showfps_nexttime = newtime;
+		showfps_lasttime = newtime;
+		showfps_nexttime += interval;
+		showfps_framecount = 0;
+	}
+	showfps_framecount++;
+}
+
 void Sbar_ShowFPS(void)
 {
 	float fps_x, fps_y, fps_scalex, fps_scaley, fps_height;
@@ -1110,32 +1131,13 @@ void Sbar_ShowFPS(void)
 	topspeedstring[0] = 0;
 	if (showfps.integer)
 	{
-		float calc;
-		static double nexttime = 0, lasttime = 0;
-		static double framerate = 0;
-		static int framecount = 0;
-		double interval = 1;
-		double newtime;
-		newtime = Sys_DoubleTime();
-		if (newtime >= nexttime)
-		{
-			framerate = framecount / (newtime - lasttime);
-			if (nexttime < newtime - interval * 1.5)
-				nexttime = newtime;
-			lasttime = newtime;
-			nexttime += interval;
-			framecount = 0;
-		}
-		framecount++;
-		calc = framerate;
-		red = (calc < 1.0f);
-
+		red = (showfps_framerate < 1.0f);
 		if(showfps.integer == 2)
-			dpsnprintf(fpsstring, sizeof(fpsstring), "%7.3f mspf", (1000.0 / calc));
+			dpsnprintf(fpsstring, sizeof(fpsstring), "%7.3f mspf", (1000.0 / showfps_framerate));
 		else if (red)
-			dpsnprintf(fpsstring, sizeof(fpsstring), "%4i spf", (int)(1.0 / calc + 0.5));
+			dpsnprintf(fpsstring, sizeof(fpsstring), "%4i spf", (int)(1.0 / showfps_framerate + 0.5));
 		else
-			dpsnprintf(fpsstring, sizeof(fpsstring), "%4i fps", (int)(calc + 0.5));
+			dpsnprintf(fpsstring, sizeof(fpsstring), "%4i fps", (int)(showfps_framerate + 0.5));
 	}
 	if (showtime.integer)
 		strlcpy(timestring, Sys_TimeString(showtime_format.string), sizeof(timestring));
@@ -1716,8 +1718,6 @@ void Sbar_Draw (void)
 			}
 		}
 	}
-
-	Sbar_ShowFPS();
 
 	if (cl.csqc_vidvars.drawcrosshair && crosshair.integer >= 1 && !cl.intermission && !r_letterbox.value)
 	{

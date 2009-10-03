@@ -219,7 +219,7 @@ void VID_Finish (void)
 			Con_Printf("ERROR: can't %s vsync\n", vid_usevsync ? "activate" : "deactivate");
 	}
 
-	if (r_render.integer)
+	if (!vid_hidden)
 	{
 		CHECKGLERROR
 		if (r_speeds.integer == 2 || gl_finish.integer)

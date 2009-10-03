@@ -4600,7 +4600,7 @@ void R_RenderView(void)
 		return;
 	}
 
-	if (!r_refdef.scene.entities || r_refdef.view.width * r_refdef.view.height == 0/* || !r_refdef.scene.worldmodel*/)
+	if (!r_refdef.scene.entities || r_refdef.view.width * r_refdef.view.height == 0 || !r_renderview.integer/* || !r_refdef.scene.worldmodel*/)
 		return; //Host_Error ("R_RenderView: NULL worldmodel");
 
 	r_refdef.view.colorscale = r_hdr_scenebrightness.value;

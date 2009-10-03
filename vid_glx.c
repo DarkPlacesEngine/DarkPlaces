@@ -697,7 +697,7 @@ void VID_Finish (void)
 			Con_Print("glXSwapIntervalSGI didn't accept the vid_vsync change, it will take effect on next vid_restart (GLX_SGI_swap_control does not allow turning off vsync)\n");
 	}
 
-	if (r_render.integer)
+	if (!vid_hidden)
 	{
 		CHECKGLERROR
 		if (r_speeds.integer == 2 || gl_finish.integer)
