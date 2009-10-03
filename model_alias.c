@@ -633,10 +633,9 @@ static void Mod_Alias_MorphMesh_CompileFrames(void)
 	}
 }
 
-static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, int frame, trace_t *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask)
+static void Mod_MDLMD2MD3_TraceLine(dp_model_t *model, int frame, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask)
 {
 	int i;
-	vec3_t shiftstart, shiftend;
 	float segmentmins[3], segmentmaxs[3];
 	frameblend_t frameblend[MAX_FRAMEBLENDS];
 	msurface_t *surface;
@@ -656,52 +655,78 @@ static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, int frame, trace_t *trace,
 		maxvertices = (model->surfmesh.num_vertices + 255) & ~255;
 		vertex3f = (float *)Z_Malloc(maxvertices * sizeof(float[3]));
 	}
+	segmentmins[0] = min(start[0], end[0]) - 1;
+	segmentmins[1] = min(start[1], end[1]) - 1;
+	segmentmins[2] = min(start[2], end[2]) - 1;
+	segmentmaxs[0] = max(start[0], end[0]) + 1;
+	segmentmaxs[1] = max(start[1], end[1]) + 1;
+	segmentmaxs[2] = max(start[2], end[2]) + 1;
+	for (i = 0, surface = model->data_surfaces;i < model->num_surfaces;i++, surface++)
+	{
+		model->AnimateVertices(model, frameblend, vertex3f, NULL, NULL, NULL);
+		Collision_TraceLineTriangleMeshFloat(trace, start, end, model->surfmesh.num_triangles, model->surfmesh.data_element3i, vertex3f, 0, NULL, SUPERCONTENTS_SOLID | (surface->texture->basematerialflags & MATERIALFLAGMASK_TRANSLUCENT ? 0 : SUPERCONTENTS_OPAQUE), 0, surface->texture, segmentmins, segmentmaxs);
+	}
+}
+
+static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, int frame, trace_t *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask)
+{
+	int i;
+	vec3_t shiftstart, shiftend;
+	float segmentmins[3], segmentmaxs[3];
+	frameblend_t frameblend[MAX_FRAMEBLENDS];
+	msurface_t *surface;
+	static int maxvertices = 0;
+	static float *vertex3f = NULL;
+	colbrushf_t *thisbrush_start, *thisbrush_end;
+	vec3_t boxstartmins, boxstartmaxs, boxendmins, boxendmaxs;
+
 	if (VectorCompare(boxmins, boxmaxs))
 	{
-		// line trace
 		VectorAdd(start, boxmins, shiftstart);
 		VectorAdd(end, boxmins, shiftend);
-		segmentmins[0] = min(shiftstart[0], shiftend[0]) - 1;
-		segmentmins[1] = min(shiftstart[1], shiftend[1]) - 1;
-		segmentmins[2] = min(shiftstart[2], shiftend[2]) - 1;
-		segmentmaxs[0] = max(shiftstart[0], shiftend[0]) + 1;
-		segmentmaxs[1] = max(shiftstart[1], shiftend[1]) + 1;
-		segmentmaxs[2] = max(shiftstart[2], shiftend[2]) + 1;
-		for (i = 0, surface = model->data_surfaces;i < model->num_surfaces;i++, surface++)
-		{
-			model->AnimateVertices(model, frameblend, vertex3f, NULL, NULL, NULL);
-			Collision_TraceLineTriangleMeshFloat(trace, shiftstart, shiftend, model->surfmesh.num_triangles, model->surfmesh.data_element3i, vertex3f, 0, NULL, SUPERCONTENTS_SOLID | (surface->texture->basematerialflags & MATERIALFLAGMASK_TRANSLUCENT ? 0 : SUPERCONTENTS_OPAQUE), 0, surface->texture, segmentmins, segmentmaxs);
-		}
+		Mod_MDLMD2MD3_TraceLine(model, frame, trace, start, end, hitsupercontentsmask);
+		VectorSubtract(trace->endpos, boxmins, trace->endpos);
+		return;
 	}
-	else
+
+	// box trace, performed as brush trace
+	memset(trace, 0, sizeof(*trace));
+	trace->fraction = 1;
+	trace->realfraction = 1;
+	trace->hitsupercontentsmask = hitsupercontentsmask;
+	memset(frameblend, 0, sizeof(frameblend));
+	frameblend[0].subframe = frame;
+	frameblend[0].lerp = 1;
+	if (maxvertices < model->surfmesh.num_vertices)
 	{
-		// box trace, performed as brush trace
-		colbrushf_t *thisbrush_start, *thisbrush_end;
-		vec3_t boxstartmins, boxstartmaxs, boxendmins, boxendmaxs;
-		segmentmins[0] = min(start[0], end[0]) + boxmins[0] - 1;
-		segmentmins[1] = min(start[1], end[1]) + boxmins[1] - 1;
-		segmentmins[2] = min(start[2], end[2]) + boxmins[2] - 1;
-		segmentmaxs[0] = max(start[0], end[0]) + boxmaxs[0] + 1;
-		segmentmaxs[1] = max(start[1], end[1]) + boxmaxs[1] + 1;
-		segmentmaxs[2] = max(start[2], end[2]) + boxmaxs[2] + 1;
-		VectorAdd(start, boxmins, boxstartmins);
-		VectorAdd(start, boxmaxs, boxstartmaxs);
-		VectorAdd(end, boxmins, boxendmins);
-		VectorAdd(end, boxmaxs, boxendmaxs);
-		thisbrush_start = Collision_BrushForBox(&identitymatrix, boxstartmins, boxstartmaxs, 0, 0, NULL);
-		thisbrush_end = Collision_BrushForBox(&identitymatrix, boxendmins, boxendmaxs, 0, 0, NULL);
-		for (i = 0, surface = model->data_surfaces;i < model->num_surfaces;i++, surface++)
+		if (vertex3f)
+			Z_Free(vertex3f);
+		maxvertices = (model->surfmesh.num_vertices + 255) & ~255;
+		vertex3f = (float *)Z_Malloc(maxvertices * sizeof(float[3]));
+	}
+	segmentmins[0] = min(start[0], end[0]) + boxmins[0] - 1;
+	segmentmins[1] = min(start[1], end[1]) + boxmins[1] - 1;
+	segmentmins[2] = min(start[2], end[2]) + boxmins[2] - 1;
+	segmentmaxs[0] = max(start[0], end[0]) + boxmaxs[0] + 1;
+	segmentmaxs[1] = max(start[1], end[1]) + boxmaxs[1] + 1;
+	segmentmaxs[2] = max(start[2], end[2]) + boxmaxs[2] + 1;
+	VectorAdd(start, boxmins, boxstartmins);
+	VectorAdd(start, boxmaxs, boxstartmaxs);
+	VectorAdd(end, boxmins, boxendmins);
+	VectorAdd(end, boxmaxs, boxendmaxs);
+	thisbrush_start = Collision_BrushForBox(&identitymatrix, boxstartmins, boxstartmaxs, 0, 0, NULL);
+	thisbrush_end = Collision_BrushForBox(&identitymatrix, boxendmins, boxendmaxs, 0, 0, NULL);
+	for (i = 0, surface = model->data_surfaces;i < model->num_surfaces;i++, surface++)
+	{
+		if (maxvertices < model->surfmesh.num_vertices)
 		{
-			if (maxvertices < model->surfmesh.num_vertices)
-			{
-				if (vertex3f)
-					Z_Free(vertex3f);
-				maxvertices = (model->surfmesh.num_vertices + 255) & ~255;
-				vertex3f = (float *)Z_Malloc(maxvertices * sizeof(float[3]));
-			}
-			model->AnimateVertices(model, frameblend, vertex3f, NULL, NULL, NULL);
-			Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, model->surfmesh.num_triangles, model->surfmesh.data_element3i, vertex3f, 0, NULL, SUPERCONTENTS_SOLID | (surface->texture->basematerialflags & MATERIALFLAGMASK_TRANSLUCENT ? 0 : SUPERCONTENTS_OPAQUE), 0, surface->texture, segmentmins, segmentmaxs);
+			if (vertex3f)
+				Z_Free(vertex3f);
+			maxvertices = (model->surfmesh.num_vertices + 255) & ~255;
+			vertex3f = (float *)Z_Malloc(maxvertices * sizeof(float[3]));
 		}
+		model->AnimateVertices(model, frameblend, vertex3f, NULL, NULL, NULL);
+		Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, model->surfmesh.num_triangles, model->surfmesh.data_element3i, vertex3f, 0, NULL, SUPERCONTENTS_SOLID | (surface->texture->basematerialflags & MATERIALFLAGMASK_TRANSLUCENT ? 0 : SUPERCONTENTS_OPAQUE), 0, surface->texture, segmentmins, segmentmaxs);
 	}
 }
 
@@ -892,6 +917,7 @@ void Mod_IDP0_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	loadmodel->DrawLight = R_Q1BSP_DrawLight;
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
+	loadmodel->TraceLine = Mod_MDLMD2MD3_TraceLine;
 	loadmodel->PointSuperContents = NULL;
 
 	loadmodel->num_surfaces = 1;
@@ -1224,6 +1250,7 @@ void Mod_IDP2_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	loadmodel->DrawLight = R_Q1BSP_DrawLight;
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
+	loadmodel->TraceLine = Mod_MDLMD2MD3_TraceLine;
 	loadmodel->PointSuperContents = NULL;
 
 	if (LittleLong(pinmodel->num_tris) < 1 || LittleLong(pinmodel->num_tris) > 65536)
@@ -1466,6 +1493,7 @@ void Mod_IDP3_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	loadmodel->DrawLight = R_Q1BSP_DrawLight;
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
+	loadmodel->TraceLine = Mod_MDLMD2MD3_TraceLine;
 	loadmodel->PointSuperContents = NULL;
 	loadmodel->synctype = ST_RAND;
 	// convert model flags to EF flags (MF_ROCKET becomes EF_ROCKET, etc)
@@ -1681,6 +1709,7 @@ void Mod_ZYMOTICMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	loadmodel->DrawLight = R_Q1BSP_DrawLight;
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
+	loadmodel->TraceLine = Mod_MDLMD2MD3_TraceLine;
 	loadmodel->PointSuperContents = NULL;
 
 	loadmodel->numframes = pheader->numscenes;
@@ -1985,6 +2014,7 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	loadmodel->DrawLight = R_Q1BSP_DrawLight;
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
+	loadmodel->TraceLine = Mod_MDLMD2MD3_TraceLine;
 	loadmodel->PointSuperContents = NULL;
 
 	// model bbox
@@ -2266,6 +2296,7 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	loadmodel->DrawLight = R_Q1BSP_DrawLight;
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
+	loadmodel->TraceLine = Mod_MDLMD2MD3_TraceLine;
 	loadmodel->PointSuperContents = NULL;
 	loadmodel->synctype = ST_RAND;
 
@@ -2834,6 +2865,7 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	loadmodel->DrawLight = R_Q1BSP_DrawLight;
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
+	loadmodel->TraceLine = Mod_MDLMD2MD3_TraceLine;
 	loadmodel->PointSuperContents = NULL;
 
 	// parse the OBJ text now

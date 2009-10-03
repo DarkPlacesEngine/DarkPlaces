@@ -57,6 +57,7 @@ trace_t;
 
 void Collision_Init(void);
 void Collision_ClipTrace_Box(trace_t *trace, const vec3_t cmins, const vec3_t cmaxs, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask, int boxsupercontents, int boxq3surfaceflags, texture_t *boxtexture);
+void Collision_ClipTrace_Point(trace_t *trace, const vec3_t cmins, const vec3_t cmaxs, const vec3_t start, int hitsupercontentsmask, int boxsupercontents, int boxq3surfaceflags, texture_t *boxtexture);
 
 typedef struct colpointf_s
 {
@@ -131,8 +132,12 @@ void Collision_TraceLineTriangleFloat(trace_t *trace, const vec3_t linestart, co
 //
 // passedict is excluded from clipping checks
 void Collision_ClipToGenericEntity(trace_t *trace, dp_model_t *model, int frame, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask);
+void Collision_ClipLineToGenericEntity(trace_t *trace, dp_model_t *model, int frame, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t end, int hitsupercontentsmask);
+void Collision_ClipPointToGenericEntity(trace_t *trace, dp_model_t *model, int frame, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, int hitsupercontentsmask);
 // like above but does not do a transform and does nothing if model is NULL
 void Collision_ClipToWorld(trace_t *trace, dp_model_t *model, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontents);
+void Collision_ClipLineToWorld(trace_t *trace, dp_model_t *model, const vec3_t start, const vec3_t end, int hitsupercontents);
+void Collision_ClipPointToWorld(trace_t *trace, dp_model_t *model, const vec3_t start, int hitsupercontents);
 // combines data from two traces:
 // merges contents flags, startsolid, allsolid, inwater
 // updates fraction, endpos, plane and surface info if new fraction is shorter

@@ -261,7 +261,7 @@ static void VM_CL_traceline (void)
 	if (IS_NAN(v1[0]) || IS_NAN(v1[1]) || IS_NAN(v1[2]) || IS_NAN(v2[0]) || IS_NAN(v2[1]) || IS_NAN(v2[2]))
 		PRVM_ERROR("%s: NAN errors detected in traceline('%f %f %f', '%f %f %f', %i, entity %i)\n", PRVM_NAME, v1[0], v1[1], v1[2], v2[0], v2[1], v2[2], move, PRVM_EDICT_TO_PROG(ent));
 
-	trace = CL_Move(v1, vec3_origin, vec3_origin, v2, move, ent, CL_GenericHitSuperContentsMask(ent), CL_HitNetworkBrushModels(move), CL_HitNetworkPlayers(move), &svent, true);
+	trace = CL_TraceLine(v1, v2, move, ent, CL_GenericHitSuperContentsMask(ent), CL_HitNetworkBrushModels(move), CL_HitNetworkPlayers(move), &svent, true);
 
 	CL_VM_SetTraceGlobals(&trace, svent);
 }
@@ -299,7 +299,7 @@ static void VM_CL_tracebox (void)
 	if (IS_NAN(v1[0]) || IS_NAN(v1[1]) || IS_NAN(v1[2]) || IS_NAN(v2[0]) || IS_NAN(v2[1]) || IS_NAN(v2[2]))
 		PRVM_ERROR("%s: NAN errors detected in tracebox('%f %f %f', '%f %f %f', '%f %f %f', '%f %f %f', %i, entity %i)\n", PRVM_NAME, v1[0], v1[1], v1[2], m1[0], m1[1], m1[2], m2[0], m2[1], m2[2], v2[0], v2[1], v2[2], move, PRVM_EDICT_TO_PROG(ent));
 
-	trace = CL_Move(v1, m1, m2, v2, move, ent, CL_GenericHitSuperContentsMask(ent), CL_HitNetworkBrushModels(move), CL_HitNetworkPlayers(move), &svent, true);
+	trace = CL_TraceBox(v1, m1, m2, v2, move, ent, CL_GenericHitSuperContentsMask(ent), CL_HitNetworkBrushModels(move), CL_HitNetworkPlayers(move), &svent, true);
 
 	CL_VM_SetTraceGlobals(&trace, svent);
 }
@@ -334,7 +334,7 @@ trace_t CL_Trace_Toss (prvm_edict_t *tossent, prvm_edict_t *ignore, int *svent)
 		VectorMA (tossent->fields.client->angles, 0.05, tossent->fields.client->avelocity, tossent->fields.client->angles);
 		VectorScale (tossent->fields.client->velocity, 0.05, move);
 		VectorAdd (tossent->fields.client->origin, move, end);
-		trace = CL_Move (tossent->fields.client->origin, tossent->fields.client->mins, tossent->fields.client->maxs, end, MOVE_NORMAL, tossent, CL_GenericHitSuperContentsMask(tossent), true, true, NULL, true);
+		trace = CL_TraceBox(tossent->fields.client->origin, tossent->fields.client->mins, tossent->fields.client->maxs, end, MOVE_NORMAL, tossent, CL_GenericHitSuperContentsMask(tossent), true, true, NULL, true);
 		VectorCopy (trace.endpos, tossent->fields.client->origin);
 
 		if (trace.fraction < 1)
@@ -522,7 +522,7 @@ static void VM_CL_droptofloor (void)
 	VectorCopy (ent->fields.client->origin, end);
 	end[2] -= 256;
 
-	trace = CL_Move(ent->fields.client->origin, ent->fields.client->mins, ent->fields.client->maxs, end, MOVE_NORMAL, ent, CL_GenericHitSuperContentsMask(ent), true, true, NULL, true);
+	trace = CL_TraceBox(ent->fields.client->origin, ent->fields.client->mins, ent->fields.client->maxs, end, MOVE_NORMAL, ent, CL_GenericHitSuperContentsMask(ent), true, true, NULL, true);
 
 	if (trace.fraction != 1)
 	{
@@ -601,7 +601,7 @@ realcheck:
 	start[0] = stop[0] = (mins[0] + maxs[0])*0.5;
 	start[1] = stop[1] = (mins[1] + maxs[1])*0.5;
 	stop[2] = start[2] - 2*sv_stepheight.value;
-	trace = CL_Move (start, vec3_origin, vec3_origin, stop, MOVE_NORMAL, ent, CL_GenericHitSuperContentsMask(ent), true, true, NULL, true);
+	trace = CL_TraceLine(start, stop, MOVE_NORMAL, ent, CL_GenericHitSuperContentsMask(ent), true, true, NULL, true);
 
 	if (trace.fraction == 1.0)
 		return;
@@ -615,7 +615,7 @@ realcheck:
 			start[0] = stop[0] = x ? maxs[0] : mins[0];
 			start[1] = stop[1] = y ? maxs[1] : mins[1];
 
-			trace = CL_Move (start, vec3_origin, vec3_origin, stop, MOVE_NORMAL, ent, CL_GenericHitSuperContentsMask(ent), true, true, NULL, true);
+			trace = CL_TraceLine(start, stop, MOVE_NORMAL, ent, CL_GenericHitSuperContentsMask(ent), true, true, NULL, true);
 
 			if (trace.fraction != 1.0 && trace.endpos[2] > bottom)
 				bottom = trace.endpos[2];
@@ -2882,7 +2882,7 @@ realcheck:
 	start[0] = stop[0] = (mins[0] + maxs[0])*0.5;
 	start[1] = stop[1] = (mins[1] + maxs[1])*0.5;
 	stop[2] = start[2] - 2*sv_stepheight.value;
-	trace = CL_Move (start, vec3_origin, vec3_origin, stop, MOVE_NOMONSTERS, ent, CL_GenericHitSuperContentsMask(ent), true, false, NULL, true);
+	trace = CL_TraceLine(start, stop, MOVE_NOMONSTERS, ent, CL_GenericHitSuperContentsMask(ent), true, false, NULL, true);
 
 	if (trace.fraction == 1.0)
 		return false;
@@ -2895,7 +2895,7 @@ realcheck:
 			start[0] = stop[0] = x ? maxs[0] : mins[0];
 			start[1] = stop[1] = y ? maxs[1] : mins[1];
 
-			trace = CL_Move (start, vec3_origin, vec3_origin, stop, MOVE_NOMONSTERS, ent, CL_GenericHitSuperContentsMask(ent), true, false, NULL, true);
+			trace = CL_TraceLine(start, stop, MOVE_NOMONSTERS, ent, CL_GenericHitSuperContentsMask(ent), true, false, NULL, true);
 
 			if (trace.fraction != 1.0 && trace.endpos[2] > bottom)
 				bottom = trace.endpos[2];
@@ -2944,7 +2944,7 @@ qboolean CL_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qboolean 
 				if (dz < 30)
 					neworg[2] += 8;
 			}
-			trace = CL_Move (ent->fields.client->origin, ent->fields.client->mins, ent->fields.client->maxs, neworg, MOVE_NORMAL, ent, CL_GenericHitSuperContentsMask(ent), true, true, &svent, true);
+			trace = CL_TraceBox(ent->fields.client->origin, ent->fields.client->mins, ent->fields.client->maxs, neworg, MOVE_NORMAL, ent, CL_GenericHitSuperContentsMask(ent), true, true, &svent, true);
 			if (settrace)
 				CL_VM_SetTraceGlobals(&trace, svent);
 
@@ -2972,14 +2972,14 @@ qboolean CL_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qboolean 
 	VectorCopy (neworg, end);
 	end[2] -= sv_stepheight.value*2;
 
-	trace = CL_Move (neworg, ent->fields.client->mins, ent->fields.client->maxs, end, MOVE_NORMAL, ent, CL_GenericHitSuperContentsMask(ent), true, true, &svent, true);
+	trace = CL_TraceBox(neworg, ent->fields.client->mins, ent->fields.client->maxs, end, MOVE_NORMAL, ent, CL_GenericHitSuperContentsMask(ent), true, true, &svent, true);
 	if (settrace)
 		CL_VM_SetTraceGlobals(&trace, svent);
 
 	if (trace.startsolid)
 	{
 		neworg[2] -= sv_stepheight.value;
-		trace = CL_Move (neworg, ent->fields.client->mins, ent->fields.client->maxs, end, MOVE_NORMAL, ent, CL_GenericHitSuperContentsMask(ent), true, true, &svent, true);
+		trace = CL_TraceBox(neworg, ent->fields.client->mins, ent->fields.client->maxs, end, MOVE_NORMAL, ent, CL_GenericHitSuperContentsMask(ent), true, true, &svent, true);
 		if (settrace)
 			CL_VM_SetTraceGlobals(&trace, svent);
 		if (trace.startsolid)

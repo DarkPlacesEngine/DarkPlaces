@@ -4338,7 +4338,7 @@ void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 	else
 	{
 		// FIXME: these traces should scan all render entities instead of cl.world
-		if (CL_Move(r_refdef.view.origin, vec3_origin, vec3_origin, rtlight->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction < 1)
+		if (CL_TraceLine(r_refdef.view.origin, rtlight->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction < 1)
 			return;
 	}
 	VectorScale(rtlight->color, cscale, color);
@@ -4719,7 +4719,7 @@ void R_Shadow_SelectLightInView(void)
 		if (rating >= 0.95)
 		{
 			rating /= (1 + 0.0625f * sqrt(DotProduct(temp, temp)));
-			if (bestrating < rating && CL_Move(light->origin, vec3_origin, vec3_origin, r_refdef.view.origin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction == 1.0f)
+			if (bestrating < rating && CL_TraceLine(light->origin, r_refdef.view.origin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction == 1.0f)
 			{
 				bestrating = rating;
 				best = light;
@@ -5165,7 +5165,7 @@ void R_Shadow_SetCursorLocationForView(void)
 	vec3_t dest, endpos;
 	trace_t trace;
 	VectorMA(r_refdef.view.origin, r_editlights_cursordistance.value, r_refdef.view.forward, dest);
-	trace = CL_Move(r_refdef.view.origin, vec3_origin, vec3_origin, dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false);
+	trace = CL_TraceLine(r_refdef.view.origin, dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false);
 	if (trace.fraction < 1)
 	{
 		dist = trace.fraction * r_editlights_cursordistance.value;
@@ -5839,7 +5839,7 @@ void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffu
 			light = r_refdef.scene.lights[i];
 			Matrix4x4_Transform(&light->matrix_worldtolight, p, v);
 			f = 1 - VectorLength2(v);
-			if (f > 0 && CL_Move(p, vec3_origin, vec3_origin, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction == 1)
+			if (f > 0 && CL_TraceLine(p, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction == 1)
 				VectorMA(ambientcolor, f, light->currentcolor, ambientcolor);
 		}
 	}
